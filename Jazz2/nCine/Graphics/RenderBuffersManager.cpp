@@ -1,0 +1,183 @@
+#include "RenderBuffersManager.h"
+#include "RenderStatistics.h"
+#include "GL/GLDebug.h"
+#include "../ServiceLocator.h"
+#include "IGfxCapabilities.h"
+
+namespace nCine {
+
+	namespace {
+		/// The string used to output OpenGL debug group information
+		static char debugString[64];
+	}
+
+	///////////////////////////////////////////////////////////
+	// CONSTRUCTORS and DESTRUCTOR
+	///////////////////////////////////////////////////////////
+
+	RenderBuffersManager::RenderBuffersManager(bool useBufferMapping, unsigned long vboMaxSize, unsigned long iboMaxSize)
+	{
+		buffers_.reserve(4);
+
+		BufferSpecifications& vboSpecs = specs_[(int)BufferTypes::ARRAY];
+		vboSpecs.type = BufferTypes::ARRAY;
+		vboSpecs.target = GL_ARRAY_BUFFER;
+		vboSpecs.mapFlags = useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0;
+		vboSpecs.usageFlags = GL_STREAM_DRAW;
+		vboSpecs.maxSize = vboMaxSize;
+		vboSpecs.alignment = sizeof(GLfloat);
+
+		BufferSpecifications& iboSpecs = specs_[(int)BufferTypes::ELEMENT_ARRAY];
+		iboSpecs.type = BufferTypes::ELEMENT_ARRAY;
+		iboSpecs.target = GL_ELEMENT_ARRAY_BUFFER;
+		iboSpecs.mapFlags = useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0;
+		iboSpecs.usageFlags = GL_STREAM_DRAW;
+		iboSpecs.maxSize = iboMaxSize;
+		iboSpecs.alignment = sizeof(GLushort);
+
+		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
+		const int maxUniformBlockSize = gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE);
+		const int offsetAlignment = gfxCaps.value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+
+		// Clamping the value as some drivers report a maximum size similar to SSBO one
+		const int uboMaxSize = maxUniformBlockSize <= 64 * 1024 ? maxUniformBlockSize : 64 * 1024;
+
+		BufferSpecifications& uboSpecs = specs_[(int)BufferTypes::UNIFORM];
+		uboSpecs.type = BufferTypes::UNIFORM;
+		uboSpecs.target = GL_UNIFORM_BUFFER;
+		uboSpecs.mapFlags = useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0;
+		uboSpecs.usageFlags = GL_STREAM_DRAW;
+		uboSpecs.maxSize = static_cast<unsigned long>(uboMaxSize);
+		uboSpecs.alignment = static_cast<unsigned int>(offsetAlignment);
+
+		// Create the first buffer for each type right away
+		for (unsigned int i = 0; i < (int)BufferTypes::COUNT; i++)
+			createBuffer(specs_[i]);
+	}
+
+	///////////////////////////////////////////////////////////
+	// PUBLIC FUNCTIONS
+	///////////////////////////////////////////////////////////
+
+	namespace {
+
+		const char* bufferTypeToString(RenderBuffersManager::BufferTypes type)
+		{
+			switch (type) {
+				case RenderBuffersManager::BufferTypes::ARRAY: return "Array";
+				case RenderBuffersManager::BufferTypes::ELEMENT_ARRAY: return "Element Array";
+				case RenderBuffersManager::BufferTypes::UNIFORM: return "Uniform";
+				case RenderBuffersManager::BufferTypes::COUNT: return "";
+			}
+
+			return "";
+		}
+
+	}
+
+	RenderBuffersManager::Parameters RenderBuffersManager::acquireMemory(BufferTypes type, unsigned long bytes, unsigned int alignment)
+	{
+		//FATAL_ASSERT_MSG_X(bytes <= specs_[type].maxSize, "Trying to acquire %lu bytes when the maximum for buffer type \"%s\" is %lu",
+		//				   bytes, bufferTypeToString(type), specs_[type].maxSize);
+
+		// Accepting a custom alignment only if it is a multiple of the specification one
+		if (alignment % specs_[(int)type].alignment != 0)
+			alignment = specs_[(int)type].alignment;
+
+		Parameters params;
+
+		for (ManagedBuffer& buffer : buffers_) {
+			if (buffer.type == type) {
+				const unsigned long offset = buffer.size - buffer.freeSpace;
+				const unsigned int alignAmount = (alignment - offset % alignment) % alignment;
+
+				if (buffer.freeSpace >= bytes + alignAmount) {
+					params.object = buffer.object.get();
+					params.offset = offset + alignAmount;
+					params.size = bytes;
+					buffer.freeSpace -= bytes + alignAmount;
+					params.mapBase = buffer.mapBase;
+					break;
+				}
+			}
+		}
+
+		if (params.object == nullptr) {
+			createBuffer(specs_[(int)type]);
+			params.object = buffers_.back().object.get();
+			params.offset = 0;
+			params.size = bytes;
+			buffers_.back().freeSpace -= bytes;
+			params.mapBase = buffers_.back().mapBase;
+		}
+
+		return params;
+	}
+
+	///////////////////////////////////////////////////////////
+	// PRIVATE FUNCTIONS
+	///////////////////////////////////////////////////////////
+
+	void RenderBuffersManager::flushUnmap()
+	{
+		GLDebug::ScopedGroup scoped("RenderBuffersManager::flushUnmap()");
+
+		for (ManagedBuffer& buffer : buffers_) {
+			RenderStatistics::gatherStatistics(buffer);
+			const unsigned long usedSize = buffer.size - buffer.freeSpace;
+			//FATAL_ASSERT(usedSize <= specs_[buffer.type].maxSize);
+			buffer.freeSpace = buffer.size;
+
+			if (specs_[(int)buffer.type].mapFlags == 0) {
+				if (usedSize > 0)
+					buffer.object->bufferSubData(0, usedSize, buffer.hostBuffer.get());
+			} else {
+				if (usedSize > 0)
+					buffer.object->flushMappedBufferRange(0, usedSize);
+				buffer.object->unmap();
+			}
+
+			buffer.mapBase = nullptr;
+		}
+	}
+
+	void RenderBuffersManager::remap()
+	{
+		GLDebug::ScopedGroup scoped("RenderBuffersManager::remap()");
+
+		for (ManagedBuffer& buffer : buffers_) {
+			//ASSERT(buffer.freeSpace == buffer.size);
+			//ASSERT(buffer.mapBase == nullptr);
+
+			if (specs_[(int)buffer.type].mapFlags == 0) {
+				buffer.object->bufferData(buffer.size, nullptr, specs_[(int)buffer.type].usageFlags);
+				buffer.mapBase = buffer.hostBuffer.get();
+			} else
+				buffer.mapBase = static_cast<GLubyte*>(buffer.object->mapBufferRange(0, buffer.size, specs_[(int)buffer.type].mapFlags));
+
+			//FATAL_ASSERT(buffer.mapBase != nullptr);
+		}
+	}
+
+	void RenderBuffersManager::createBuffer(const BufferSpecifications& specs)
+	{
+		ManagedBuffer& managedBuffer = buffers_.emplace_back();
+		managedBuffer.type = specs.type;
+		managedBuffer.size = specs.maxSize;
+		managedBuffer.object = std::make_unique<GLBufferObject>(specs.target);
+		managedBuffer.object->bufferData(managedBuffer.size, nullptr, specs.usageFlags);
+		managedBuffer.freeSpace = managedBuffer.size;
+
+		if (specs.mapFlags == 0) {
+			managedBuffer.hostBuffer = std::make_unique<GLubyte[]>(specs.maxSize);
+			managedBuffer.mapBase = managedBuffer.hostBuffer.get();
+		} else
+			managedBuffer.mapBase = static_cast<GLubyte*>(managedBuffer.object->mapBufferRange(0, managedBuffer.size, specs.mapFlags));
+
+		//FATAL_ASSERT(managedBuffer.mapBase != nullptr);
+
+		//debugString.format("Create %s buffer 0x%lx", bufferTypeToString(specs.type), uintptr_t(buffers_.back().object.get()));
+		//GLDebug::messageInsert(debugString.data());
+	}
+
+}

@@ -1,0 +1,77 @@
+#include "IFileStream.h"
+#include "MemoryFile.h"
+#include "StandardFile.h"
+
+#ifdef __ANDROID__
+#include <cstring>
+#include "AssetFile.h"
+#endif
+
+namespace nCine {
+
+	///////////////////////////////////////////////////////////
+	// CONSTRUCTORS and DESTRUCTOR
+	///////////////////////////////////////////////////////////
+
+	IFileStream::IFileStream(const char* filename)
+		: type_(FileType::Base), filename_(filename), fileDescriptor_(-1), filePointer_(nullptr),
+		shouldCloseOnDestruction_(true), shouldExitOnFailToOpen_(true), fileSize_(0)
+	{
+		//ASSERT(filename);
+	}
+
+	///////////////////////////////////////////////////////////
+	// PUBLIC FUNCTIONS
+	///////////////////////////////////////////////////////////
+
+	bool IFileStream::isOpened() const
+	{
+		if (fileDescriptor_ >= 0 || filePointer_ != nullptr)
+			return true;
+		else
+			return false;
+	}
+
+	std::unique_ptr<IFileStream> IFileStream::createFromMemory(const char* bufferName, unsigned char* bufferPtr, unsigned long int bufferSize)
+	{
+		//ASSERT(bufferName);
+		//ASSERT(bufferPtr);
+		//ASSERT(bufferSize > 0);
+		return std::make_unique<MemoryFile>(bufferName, bufferPtr, bufferSize);
+	}
+
+	std::unique_ptr<IFileStream> IFileStream::createFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
+	{
+		//ASSERT(bufferName);
+		//ASSERT(bufferPtr);
+		//ASSERT(bufferSize > 0);
+		return std::make_unique<MemoryFile>(bufferName, bufferPtr, bufferSize);
+	}
+
+	std::unique_ptr<IFileStream> IFileStream::createFromMemory(unsigned char* bufferPtr, unsigned long int bufferSize)
+	{
+		//ASSERT(bufferPtr);
+		//ASSERT(bufferSize > 0);
+		return std::make_unique<MemoryFile>(bufferPtr, bufferSize);
+	}
+
+	std::unique_ptr<IFileStream> IFileStream::createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
+	{
+		//ASSERT(bufferPtr);
+		//ASSERT(bufferSize > 0);
+		return std::make_unique<MemoryFile>(bufferPtr, bufferSize);
+	}
+
+	std::unique_ptr<IFileStream> IFileStream::createFileHandle(const char* filename)
+	{
+		//ASSERT(filename);
+#ifdef __ANDROID__
+		const char* assetFilename = AssetFile::assetPath(filename);
+		if (assetFilename)
+			return std::make_unique<AssetFile>(assetFilename);
+		else
+#endif
+			return std::make_unique<StandardFile>(filename);
+	}
+
+}

@@ -1,0 +1,1223 @@
+﻿#include "ActorBase.h"
+#include "ILevelHandler.h"
+#include "Events/EventMap.h"
+#include "Collisions/DynamicTreeBroadPhase.h"
+
+#include "../nCine/Primitives/Matrix4x4.h"
+#include "../nCine/Base/Random.h"
+#include "../nCine/Base/FrameTimer.h"
+
+using namespace nCine;
+
+namespace Jazz2
+{
+	ActorBase::ActorBase()
+		:
+		_flags(ActorFlags::None),
+		_levelHandler(nullptr),
+		_pos { },
+		_speed { },
+		_externalForce { },
+		_internalForceY(0),
+		_elasticity(0),
+		_friction(0),
+		_angle(0),
+		_frozenTimeLeft(0),
+		_maxHealth(1),
+		_health(1),
+		_suspendType(SuspendType::None),
+		_originTile { },
+		_metadata(nullptr),
+		_renderer(this),
+		_currentAnimation(nullptr),
+		_currentTransition(nullptr),
+		_currentAnimationState(AnimState::Uninitialized),
+		_currentTransitionState(AnimState::Idle),
+		_currentTransitionCancellable(false),
+		CollisionProxyID(Collisions::NullNode)
+	{
+	}
+
+	ActorBase::~ActorBase()
+	{
+		// TODO
+	}
+
+	bool ActorBase::IsFacingLeft()
+	{
+		return GetState(ActorFlags::IsFacingLeft);
+	}
+
+	void ActorBase::SetFacingLeft(bool value)
+	{
+		if (IsFacingLeft() == value) {
+			return;
+		}
+
+		SetState(ActorFlags::IsFacingLeft, value);
+		_renderer.setFlippedX(value);
+		
+		// Recalculate hotspot
+		GraphicResource* res = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
+		if (res != nullptr) {
+			_renderer._hotspot.X = -((res->Base->FrameDimensions.X / 2) - (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X));
+			_renderer._hotspot.Y = -((res->Base->FrameDimensions.Y / 2) - res->Base->Hotspot.Y);
+		}
+	}
+
+	void ActorBase::SetParent(SceneNode* parent)
+	{
+		_renderer.setParent(parent);
+	}
+
+	Task<bool> ActorBase::OnActivated(const ActorActivationDetails& details)
+	{
+		_flags = details.Flags | ActorFlags::Initializing | ActorFlags::CanBeFrozen;
+		_levelHandler = details.LevelHandler;
+		_friction = 1.5f;
+		_pos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
+		_originTile = Vector2i((int)details.Pos.X / 32, (int)details.Pos.Y / 32);
+
+		_renderer.setLayer((uint16_t)details.Pos.Z);
+
+		bool success = co_await OnActivatedAsync(details);
+
+		_renderer.setPosition(std::round(_pos.X), std::round(_pos.Y));
+		OnUpdateHitbox();
+
+		if ((_flags & ActorFlags::Initializing) == ActorFlags::Initializing) {
+			_flags |= ActorFlags::Initialized;
+			_flags &= ~ActorFlags::Initializing;
+		}
+
+		co_return success;
+	}
+
+	Task<bool> ActorBase::OnActivatedAsync(const ActorActivationDetails& details)
+	{
+		// This should be overridden and return true
+		co_return false;
+	}
+
+	void ActorBase::OnDestroyed()
+	{
+		// Can be overridden
+	}
+
+	bool ActorBase::OnTileDeactivate(int tx1, int ty1, int tx2, int ty2)
+	{
+		if ((_flags & (ActorFlags::IsCreatedFromEventMap | ActorFlags::IsFromGenerator)) != ActorFlags::None) {
+			if (_originTile.X < tx1 || _originTile.Y < ty1 || _originTile.X > tx2 || _originTile.Y > ty2) {
+				auto events = _levelHandler->EventMap();
+				if (events != nullptr) {
+					if ((_flags & ActorFlags::IsFromGenerator) == ActorFlags::IsFromGenerator) {
+						events->ResetGenerator(_originTile.X, _originTile.Y);
+					}
+
+					events->Deactivate(_originTile.X, _originTile.Y);
+				}
+
+				CollisionFlags |= CollisionFlags::IsDestroyed;
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	void ActorBase::OnUpdate(float timeMult)
+	{
+		TryStandardMovement(timeMult);
+		OnUpdateHitbox();
+
+		// TODO
+		/*if (renderer != null && renderer.AnimPaused) {
+			if (frozenTimeLeft <= 0f) {
+				renderer.AnimPaused = false;
+				// Reset renderer
+				renderer.CustomMaterial = null;
+				renderer.ShowOutline = false;
+			} else {
+				_frozenTimeLeft -= timeMult;
+			}
+		}*/
+	}
+
+	void ActorBase::OnHealthChanged(ActorBase* collider)
+	{
+		// Can be overridden
+	}
+
+	bool ActorBase::OnPerish(ActorBase* collider)
+	{
+		auto events = _levelHandler->EventMap();
+		if (events != nullptr && (_flags & ActorFlags::IsCreatedFromEventMap) == ActorFlags::IsCreatedFromEventMap) {
+			events->Deactivate(_originTile.X, _originTile.Y);
+			events->StoreTileEvent(_originTile.X, _originTile.Y, EventType::Empty);
+		}
+
+		CollisionFlags |= CollisionFlags::IsDestroyed;
+		return true;
+	}
+
+	void ActorBase::OnUpdateHitbox()
+	{
+		if (_metadata != nullptr) {
+			UpdateHitbox(_metadata->BoundingBox.X, _metadata->BoundingBox.Y);
+		}
+	}
+
+	void ActorBase::OnHitFloor()
+	{
+		// Called from inside the position update code when the object hits floor
+		// and was falling earlier. Objects should override this if they need to
+		// (e.g. the Player class playing a sound).
+	}
+
+	void ActorBase::OnHitCeiling()
+	{
+		// Called from inside the position update code when the object hits ceiling.
+		// Objects should override this if they need to.
+	}
+
+	void ActorBase::OnHitWall()
+	{
+		// Called from inside the position update code when the object hits a wall.
+		// Objects should override this if they need to.
+	}
+
+	bool ActorBase::OnHandleCollision(ActorBase* other)
+	{
+		// TODO
+		/*if (GetState(ActorFlags::CanBeFrozen)) {
+			HandleAmmoFrozenStateChange(other);
+		}*/
+		return false;
+	}
+
+	void ActorBase::OnTriggeredEvent(EventType eventType, uint16_t* eventParams)
+	{
+		// Can be overridden
+	}
+
+	void ActorBase::TryStandardMovement(float timeMult)
+	{
+		float currentGravity;
+		float currentElasticity = _elasticity;
+		if ((CollisionFlags & CollisionFlags::ApplyGravitation) == CollisionFlags::ApplyGravitation) {
+			currentGravity = _levelHandler->Gravity;
+			if (_pos.Y >= _levelHandler->WaterLevel()) {
+				currentGravity *= 0.5f;
+				currentElasticity *= 0.7f;
+			}
+		} else {
+			currentGravity = 0.0f;
+		}
+
+		// TODO: Review this new code
+		float accelY = (_internalForceY + _externalForce.Y) * timeMult;
+
+		float effectiveSpeedX, effectiveSpeedY;
+		if (_frozenTimeLeft > 0.0f) {
+			effectiveSpeedX = std::clamp(_externalForce.X * timeMult, -16.0f, 16.0f);
+			effectiveSpeedY = std::clamp(((currentGravity * 2) + _internalForceY) * timeMult, -16.0f, 16.0f);
+		} else {
+			effectiveSpeedX = _speed.X + _externalForce.X * timeMult;
+			effectiveSpeedY = _speed.Y - 0.5f  * accelY;
+		}
+		effectiveSpeedX *= timeMult;
+		effectiveSpeedY *= timeMult;
+
+		_speed.X = std::clamp(_speed.X, -16.0f, 16.0f);
+		_speed.Y = std::clamp(_speed.Y - accelY, -16.0f, 16.0f);
+
+		bool success = false;
+
+		if (GetState(ActorFlags::CanJump)) {
+			// All ground-bound movement is handled here. In the basic case, the actor
+			// moves horizontally, but it can also logically move up or down if it is
+			// moving across a slope. In here, angles between about 45 degrees down
+			// to 45 degrees up are attempted with some intervals to attempt to keep
+			// the actor attached to the slope in question.
+
+			// Always try values a bit over the 45 degree incline; subpixel coordinates
+			// may mean the actor actually needs to move a pixel up or down even though
+			// the speed wouldn't warrant that large of a change.
+			// Not doing this will cause hiccups with uphill slopes in particular.
+			// Beach tileset also has some spots where two properly set up adjacent
+			// tiles have a 2px jump, so adapt to that.
+			float maxYDiff = std::max(3.0f, std::abs(effectiveSpeedX) + 2.5f);
+			for (float yDiff = maxYDiff + effectiveSpeedY; yDiff >= -maxYDiff + effectiveSpeedY; yDiff -= CollisionCheckStep) {
+				if (MoveInstantly(Vector2f(effectiveSpeedX, yDiff), MoveType::Relative)) {
+					success = true;
+					break;
+				}
+			}
+
+			// Also try to move horizontally as far as possible
+			float xDiff = std::abs(effectiveSpeedX);
+			float maxXDiff = -xDiff;
+			if (!success) {
+				int sign = (effectiveSpeedX > 0.0f ? 1 : -1);
+				for (; xDiff >= maxXDiff; xDiff -= CollisionCheckStep) {
+					if (MoveInstantly(Vector2f(xDiff * sign, 0.0f), MoveType::Relative)) {
+						break;
+					}
+				}
+
+				// If no angle worked in the previous step, the actor is facing a wall
+				if (xDiff > CollisionCheckStep || (xDiff > 0.0f && currentElasticity > 0.0f)) {
+					_speed.X = -(currentElasticity * _speed.X);
+				}
+				OnHitWall();
+			}
+
+			// Run all floor-related hooks, such as the player's check for hurting positions
+			OnHitFloor();
+		} else {
+			// Airborne movement is handled here
+			// First, attempt to move directly based on the current speed values
+			if (MoveInstantly(Vector2f(effectiveSpeedX, effectiveSpeedY), MoveType::Relative)) {
+				if (std::abs(effectiveSpeedY) < std::numeric_limits<float>::epsilon()) {
+					SetState(ActorFlags::CanJump, true);
+				}
+			} else if (!success) {
+				// There is an obstacle so we need to make compromises
+
+				// First, attempt to move horizontally as much as possible
+				float maxDiff = std::abs(effectiveSpeedX);
+				int sign = (effectiveSpeedX > 0.0f ? 1 : -1);
+				float xDiff = maxDiff;
+				for (; xDiff > std::numeric_limits<float>::epsilon(); xDiff -= CollisionCheckStep) {
+					if (MoveInstantly(Vector2f(xDiff * sign, 0.0f), MoveType::Relative)) {
+						break;
+					}
+				}
+
+				// Then, try the same vertically
+				maxDiff = std::abs(effectiveSpeedY);
+				sign = (effectiveSpeedY > 0.0f ? 1 : -1);
+				float yDiff = maxDiff;
+				for (; yDiff > std::numeric_limits<float>::epsilon(); yDiff -= CollisionCheckStep) {
+					float yDiffSigned = (yDiff * sign);
+					if (MoveInstantly(Vector2f(0.0f, yDiffSigned), MoveType::Relative) ||
+						// Add horizontal tolerance
+						MoveInstantly(Vector2f(yDiff * 0.2f, yDiffSigned), MoveType::Relative) ||
+						MoveInstantly(Vector2f(yDiff * -0.2f, yDiffSigned), MoveType::Relative)) {
+						break;
+					}
+				}
+
+				// Place us to the ground only if no horizontal movement was
+				// involved (this prevents speeds resetting if the actor
+				// collides with a wall from the side while in the air)
+				if (yDiff < std::abs(effectiveSpeedY)) {
+					if (effectiveSpeedY > 0.0f) {
+						_speed.Y = -(currentElasticity * effectiveSpeedY / timeMult);
+
+						OnHitFloor();
+
+						if (_speed.Y > -CollisionCheckStep) {
+							_speed.Y = 0.0f;
+							SetState(ActorFlags::CanJump, true);
+						}
+					} else {
+						_speed.Y = 0.0f;
+						OnHitCeiling();
+					}
+				}
+
+				// If the actor didn't move all the way horizontally,
+				// it hit a wall (or was already touching it)
+				if (xDiff < std::abs(effectiveSpeedX)) {
+					if (xDiff > CollisionCheckStep || (xDiff > 0.0f && currentElasticity > 0.0f)) {
+						_speed.X = -(currentElasticity * _speed.X);
+					}
+					OnHitWall();
+				}
+			}
+		}
+
+		// Set the actor as airborne if there seems to be enough space below it
+		AABBf aabb = (AABBInner + Vector2f(0.0f, CollisionCheckStep));
+		if (_levelHandler->IsPositionEmpty(this, aabb, effectiveSpeedY >= 0)) {
+			_speed.Y += currentGravity * timeMult;
+			SetState(ActorFlags::CanJump, false);
+		}
+
+		// Reduce all forces if they are present
+		if (std::abs(_externalForce.X) > std::numeric_limits<float>::epsilon()) {
+			if (_externalForce.X > 0.0f) {
+				_externalForce.X = std::max(_externalForce.X - _friction * timeMult, 0.0f);
+			} else {
+				_externalForce.X = std::min(_externalForce.X + _friction * timeMult, 0.0f);
+			}
+		}
+		_externalForce.Y = std::max(_externalForce.Y - currentGravity * 0.33f * timeMult, 0.0f);
+		_internalForceY = std::max(_internalForceY - currentGravity * 0.33f * timeMult, 0.0f);
+	}
+
+	void ActorBase::UpdateHitbox(int w, int h)
+	{
+		if (_currentAnimation == nullptr) {
+			return;
+		}
+
+		auto& base = _currentAnimation->Base;
+		if (base->Coldspot != Vector2i(ContentResolver::InvalidValue, ContentResolver::InvalidValue)) {
+			AABBInner = AABBf(
+				_pos.X - base->Hotspot.X + base->Coldspot.X - (w / 2),
+				_pos.Y - base->Hotspot.Y + base->Coldspot.Y - h,
+				_pos.X - base->Hotspot.X + base->Coldspot.X + (w / 2),
+				_pos.Y - base->Hotspot.Y + base->Coldspot.Y
+			);
+		} else {
+			// Collision base set to the bottom of the sprite.
+			// This is probably still not the correct way to do it, but at least it works for now.
+			AABBInner = AABBf(
+				_pos.X - (w / 2),
+				_pos.Y - base->Hotspot.Y + base->FrameDimensions.Y - h,
+				_pos.X + (w / 2),
+				_pos.Y - base->Hotspot.Y + base->FrameDimensions.Y
+			);
+		}
+	}
+
+	void ActorBase::CreateParticleDebris()
+	{
+		// TODO
+	}
+
+	void ActorBase::CreateSpriteDebris(const std::string& identifier, int count)
+	{
+		// TODO
+	}
+
+	void ActorBase::SetAnimation(const std::string& identifier)
+	{
+		if (_metadata == nullptr) {
+			return;
+		}
+
+		auto it = _metadata->Graphics.find(identifier);
+		if (it == _metadata->Graphics.end()) {
+			return;
+		}
+
+		_currentAnimation = &it->second;
+		_currentAnimationState = AnimState::Idle;
+
+		RefreshAnimation();
+
+#if SERVER
+		_currentAnimationKey = &identifier;
+		_levelHandler->BroadcastAnimationChanged(this, _currentAnimationKey);
+#endif
+	}
+
+	bool ActorBase::SetAnimation(AnimState state)
+	{
+		if (_metadata == nullptr) {
+			return false;
+		}
+
+		if (_currentTransitionState != AnimState::Idle && !_currentTransitionCancellable) {
+			return false;
+		}
+
+		if (_currentAnimation != nullptr && _currentAnimation->HasState(state)) {
+			_currentAnimationState = state;
+			return false;
+		}
+
+		AnimationCandidate candidates[AnimationCandidatesCount];
+		int count = FindAnimationCandidates(state, candidates);
+		if (count == 0) {
+			return false;
+		}
+
+		if (_currentTransitionState != AnimState::Idle) {
+			_currentTransitionState = AnimState::Idle;
+
+			if (_currentTransitionCallback != nullptr) {
+				auto oldCallback = _currentTransitionCallback;
+				_currentTransitionCallback = nullptr;
+				oldCallback();
+			}
+		}
+
+		int index = (count > 1 ? nCine::random().Next(0, count) : 0);
+		_currentAnimation = candidates[index].Resource;
+		_currentAnimationState = state;
+
+		RefreshAnimation();
+
+#if SERVER
+		_currentAnimationKey = candidates[index].Identifier;
+		_levelHandler.BroadcastAnimationChanged(this, _currentAnimationKey);
+#endif
+		return true;
+	}
+
+	bool ActorBase::SetTransition(AnimState state, bool cancellable, const std::function<void()>& callback)
+	{
+		AnimationCandidate candidates[AnimationCandidatesCount];
+		int count = FindAnimationCandidates(state, candidates);
+		if (count == 0) {
+			if (callback != nullptr) {
+				callback();
+			}
+			return false;
+		}
+
+		if (_currentTransitionCallback != nullptr) {
+			auto oldCallback = _currentTransitionCallback;
+			_currentTransitionCallback = nullptr;
+			oldCallback();
+		}
+
+		_currentTransitionCallback = callback;
+
+		int index = (count > 1 ? nCine::random().Next(0, count) : 0);
+		_currentTransition = candidates[index].Resource;
+		_currentTransitionState = state;
+		_currentTransitionCancellable = cancellable;
+
+		RefreshAnimation();
+
+#if SERVER
+		_levelHandler->BroadcastAnimationChanged(this, candidates[index].Identifier);
+#endif
+		return true;
+	}
+
+	void ActorBase::CancelTransition()
+	{
+		if (_currentTransitionState != AnimState::Idle && _currentTransitionCancellable) {
+			if (_currentTransitionCallback != nullptr) {
+				auto oldCallback = _currentTransitionCallback;
+				_currentTransitionCallback = nullptr;
+				oldCallback();
+			}
+
+			_currentTransitionState = AnimState::Idle;
+
+			RefreshAnimation();
+
+#if SERVER
+			_levelHandler->BroadcastAnimationChanged(this, _currentAnimationKey);
+#endif
+		}
+	}
+
+	void ActorBase::ForceCancelTransition()
+	{
+		if (_currentTransitionState == AnimState::Idle) {
+			return;
+		}
+
+		_currentTransitionCancellable = true;
+		_currentTransitionCallback = nullptr;
+		_currentTransitionState = AnimState::Idle;
+
+		RefreshAnimation();
+
+#if SERVER
+		_levelHandler->BroadcastAnimationChanged(this, _currentAnimationKey);
+#endif
+	}
+
+	void ActorBase::OnAnimationStarted()
+	{
+		// Can be overriden
+	}
+
+	void ActorBase::OnAnimationFinished()
+	{
+		if (_currentTransitionState != AnimState::Idle) {
+			_currentTransitionState = AnimState::Idle;
+
+			RefreshAnimation();
+
+#if SERVER
+			_levelHandler->BroadcastAnimationChanged(this, _currentAnimationKey);
+#endif
+
+			if (_currentTransitionCallback != nullptr) {
+				auto oldCallback = _currentTransitionCallback;
+				_currentTransitionCallback = nullptr;
+				oldCallback();
+			}
+		}
+	}
+
+	bool ActorBase::IsCollidingWith(ActorBase* other)
+	{
+		bool perPixel1 = (CollisionFlags & CollisionFlags::SkipPerPixelCollisions) != CollisionFlags::SkipPerPixelCollisions;
+		bool perPixel2 = (other->CollisionFlags & CollisionFlags::SkipPerPixelCollisions) != CollisionFlags::SkipPerPixelCollisions;
+
+		if ((perPixel1 || perPixel2) && (std::abs(_angle) > 0.1f || std::abs(other->_angle) > 0.1f)) {
+			if (!perPixel1 && std::abs(other->_angle) > 0.1f) {
+				return other->IsCollidingWithAngled(AABBInner);
+			} else if (!perPixel2 && std::abs(_angle) > 0.1f) {
+				return IsCollidingWithAngled(other->AABBInner);
+			}
+			return IsCollidingWithAngled(other);
+		}
+
+		GraphicResource* res1 = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
+		GraphicResource* res2 = (other->_currentTransitionState != AnimState::Idle ? other->_currentTransition : other->_currentAnimation);
+		if (res1 == nullptr || res2 == nullptr) {
+			if (res1 != nullptr) {
+				return IsCollidingWith(other->AABBInner);
+			}
+			if (res2 != nullptr) {
+				return other->IsCollidingWith(AABBInner);
+			}
+			return false;
+		}
+
+		Vector2i& hotspot1 = res1->Base->Hotspot;
+		Vector2i& hotspot2 = res2->Base->Hotspot;
+
+		Vector2i& size1 = res1->Base->FrameDimensions;
+		Vector2i& size2 = res2->Base->FrameDimensions;
+
+		AABBf aabb1, aabb2;
+		if (!perPixel1) {
+			aabb1 = AABBInner;
+		} else if (GetState(ActorFlags::IsFacingLeft)) {
+			aabb1 = AABBf(_pos.X + hotspot1.X - size1.X, _pos.Y - hotspot1.Y, (float)size1.X, (float)size1.Y);
+			aabb1.B += aabb1.T;
+			aabb1.R += aabb1.L;
+		} else {
+			aabb1 = AABBf(_pos.X - hotspot1.X, _pos.Y - hotspot1.Y, (float)size1.X, (float)size1.Y);
+			aabb1.B += aabb1.T;
+			aabb1.R += aabb1.L;
+		}
+		if (!perPixel2) {
+			aabb2 = other->AABBInner;
+		} else if (other->GetState(ActorFlags::IsFacingLeft)) {
+			aabb2 = AABBf(other->_pos.X + hotspot2.X - size2.X, other->_pos.Y - hotspot2.Y, (float)size2.X, (float)size2.Y);
+			aabb2.B += aabb2.T;
+			aabb2.R += aabb2.L;
+		} else {
+			aabb2 = AABBf(other->_pos.X - hotspot2.X, other->_pos.Y - hotspot2.Y, (float)size2.X, (float)size2.Y);
+			aabb2.B += aabb2.T;
+			aabb2.R += aabb2.L;
+		}
+
+		// Bounding Box intersection
+		AABBf inter = AABBf::Intersect(aabb1, aabb2);
+		if (inter.R <= 0 || inter.B <= 0) {
+			return false;
+		}
+
+		if (!perPixel1 || !perPixel2) {
+			if (perPixel1 == perPixel2) {
+				return true;
+			}
+
+			//PixelData p;
+			uint8_t* p;
+			GraphicResource* res;
+			bool isFacingLeftCurrent;
+			int x1, y1, x2, y2, xs, dx, dy, stride;
+			if (perPixel1) {
+				res = res1;
+				p = res->Base->Mask.get();
+
+				isFacingLeftCurrent = GetState(ActorFlags::IsFacingLeft);
+
+				x1 = (int)std::max(inter.L, other->AABBInner.L);
+				y1 = (int)std::max(inter.T, other->AABBInner.T);
+				x2 = (int)std::min(inter.R, other->AABBInner.R);
+				y2 = (int)std::min(inter.B, other->AABBInner.B);
+
+				xs = (int)aabb1.L;
+
+				int frame1 = std::min(_renderer._curAnimFrame, res->FrameCount - 1);
+				dx = (frame1 % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
+				dy = (frame1 / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y - (int)aabb1.T;
+
+			} else {
+				res = res2;
+				p = res->Base->Mask.get();
+
+				isFacingLeftCurrent = other->GetState(ActorFlags::IsFacingLeft);
+
+				x1 = (int)std::max(inter.L, AABBInner.L);
+				y1 = (int)std::max(inter.T, AABBInner.T);
+				x2 = (int)std::min(inter.R, AABBInner.R);
+				y2 = (int)std::min(inter.B, AABBInner.B);
+
+				xs = (int)aabb2.L;
+
+				int frame2 = std::min(other->_renderer._curAnimFrame, res->FrameCount - 1);
+				dx = (frame2 % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
+				dy = (frame2 / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y - (int)aabb2.T;
+			}
+
+			stride = res->Base->FrameConfiguration.X * res->Base->FrameDimensions.X;
+
+			// Per-pixel collision check
+			for (int i = x1; i < x2; i += PerPixelCollisionStep) {
+				for (int j = y1; j < y2; j += PerPixelCollisionStep) {
+					int i1 = i - xs;
+					if (isFacingLeftCurrent) {
+						i1 = res->Base->FrameDimensions.X - i1 - 1;
+					}
+
+					if (p[((j + dy) * stride) + i1 + dx] > AlphaThreshold) {
+						return true;
+					}
+				}
+			}
+		} else {
+			int x1 = (int)inter.L;
+			int y1 = (int)inter.T;
+			int x2 = (int)inter.R;
+			int y2 = (int)inter.B;
+
+			int x1s = (int)aabb1.L;
+			int x2s = (int)aabb2.L;
+
+			int frame1 = std::min(_renderer._curAnimFrame, res1->FrameCount - 1);
+			int dx1 = (frame1 % res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.X;
+			int dy1 = (frame1 / res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.Y - (int)aabb1.T;
+			int stride1 = res1->Base->FrameConfiguration.X * res1->Base->FrameDimensions.X;
+
+			int frame2 = std::min(other->_renderer._curAnimFrame, res2->FrameCount - 1);
+			int dx2 = (frame2 % res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.X;
+			int dy2 = (frame2 / res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.Y - (int)aabb2.T;
+			int stride2 = res2->Base->FrameConfiguration.X * res2->Base->FrameDimensions.X;
+
+			// Per-pixel collision check
+			auto p1 = res1->Base->Mask.get();
+			auto p2 = res2->Base->Mask.get();
+
+			for (int i = x1; i < x2; i += PerPixelCollisionStep) {
+				for (int j = y1; j < y2; j += PerPixelCollisionStep) {
+					int i1 = i - x1s;
+					if (GetState(ActorFlags::IsFacingLeft)) {
+						i1 = res1->Base->FrameDimensions.X - i1 - 1;
+					}
+					int i2 = i - x2s;
+					if (other->GetState(ActorFlags::IsFacingLeft)) {
+						i2 = res2->Base->FrameDimensions.X - i2 - 1;
+					}
+
+					if (p1[((j + dy1) * stride1) + i1 + dx1] > AlphaThreshold && p2[((j + dy2) * stride2) + i2 + dx2] > AlphaThreshold) {
+						return true;
+					}
+				}
+			}
+		}
+
+		return false;
+	}
+
+	bool ActorBase::IsCollidingWith(const AABBf& aabb)
+	{
+		bool perPixel = (CollisionFlags & CollisionFlags::SkipPerPixelCollisions) != CollisionFlags::SkipPerPixelCollisions;
+		if (perPixel && std::abs(_angle) > 0.1f) {
+			return IsCollidingWithAngled(aabb);
+		}
+
+		GraphicResource* res = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
+		if (res == nullptr) {
+			return false;
+		}
+
+		Vector2i& hotspot = res->Base->Hotspot;
+		Vector2i& size = res->Base->FrameDimensions;
+
+		AABBf aabbSelf;
+		if (!perPixel) {
+			aabbSelf = AABBInner;
+		} else if (GetState(ActorFlags::IsFacingLeft)) {
+			aabbSelf = AABBf(_pos.X + hotspot.X - size.X, _pos.Y - hotspot.Y, (float)size.X, (float)size.Y);
+			aabbSelf.B += aabbSelf.T;
+			aabbSelf.R += aabbSelf.L;
+		} else {
+			aabbSelf = AABBf(_pos.X - hotspot.X, _pos.Y - hotspot.Y, (float)size.X, (float)size.Y);
+			aabbSelf.B += aabbSelf.T;
+			aabbSelf.R += aabbSelf.L;
+		}
+
+		// Bounding Box intersection
+		AABBf inter = AABBf::Intersect(aabb, aabbSelf);
+		if (inter.R <= 0 || inter.B <= 0) {
+			return false;
+		}
+
+		if (!perPixel) {
+			return true;
+		}
+
+		int x1 = (int)std::max(inter.L, aabb.L);
+		int y1 = (int)std::max(inter.T, aabb.T);
+		int x2 = (int)std::min(inter.R, aabb.R);
+		int y2 = (int)std::min(inter.B, aabb.B);
+
+		int xs = (int)aabbSelf.L;
+
+		int frame1 = std::min(_renderer._curAnimFrame, res->FrameCount - 1);
+		int dx = (frame1 % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
+		int dy = (frame1 / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y - (int)aabbSelf.T;
+		int stride = res->Base->FrameConfiguration.X * res->Base->FrameDimensions.X;
+
+		// Per-pixel collision check
+		auto p = res->Base->Mask.get();
+
+		for (int i = x1; i < x2; i += PerPixelCollisionStep) {
+			for (int j = y1; j < y2; j += PerPixelCollisionStep) {
+				int i1 = i - xs;
+				if (GetState(ActorFlags::IsFacingLeft)) {
+					i1 = res->Base->FrameDimensions.X - i1 - 1;
+				}
+
+				if (p[((j + dy) * stride) + i1 + dx] > AlphaThreshold) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	bool ActorBase::IsCollidingWithAngled(ActorBase* other)
+	{
+		GraphicResource* res1 = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
+		GraphicResource* res2 = (other->_currentTransitionState != AnimState::Idle ? other->_currentTransition : other->_currentAnimation);
+		if (res1 == nullptr || res2 == nullptr) {
+			return false;
+		}
+
+		Matrix4x4f transform1 = Matrix4x4f::Translation((float)-res1->Base->Hotspot.X, (float)-res1->Base->Hotspot.Y, 0.0f);
+		if (GetState(ActorFlags::IsFacingLeft)) {
+			transform1 = transform1.Scale(-1.0f, 1.0f, 1.0f);
+		}
+		transform1 *= Matrix4x4f::RotationZ(_angle) * Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f);
+
+		Matrix4x4f transform2 = Matrix4x4f::Translation((float)-res2->Base->Hotspot.X, (float)-res2->Base->Hotspot.Y, 0.0f);
+		if (other->GetState(ActorFlags::IsFacingLeft)) {
+			transform2 = transform2.Scale(-1.0f, 1.0f, 1.0f);
+		}
+		transform2 *= Matrix4x4f::RotationZ(other->_angle) * Matrix4x4f::Translation(other->_pos.X, other->_pos.Y, 0.0f);
+
+		int width1 = res1->Base->FrameDimensions.X;
+		int height1 = res1->Base->FrameDimensions.Y;
+		int width2 = res2->Base->FrameDimensions.X;
+		int height2 = res2->Base->FrameDimensions.Y;
+
+		// Bounding Box intersection
+		AABBf aabb1, aabb2;
+		{
+			Vector3f tl = Vector3f::Zero * transform1;
+			Vector3f tr = Vector3f((float)width1, 0.0f, 0.0f) * transform1;
+			Vector3f bl = Vector3f(0.0f, (float)height1, 0.0f) * transform1;
+			Vector3f br = Vector3f((float)width1, (float)height1, 0.0f) * transform1;
+
+			float minX = std::min(std::min(tl.X, tr.X), std::min(bl.X, br.X));
+			float minY = std::min(std::min(tl.Y, tr.Y), std::min(bl.Y, br.Y));
+			float maxX = std::max(std::max(tl.X, tr.X), std::max(bl.X, br.X));
+			float maxY = std::max(std::max(tl.Y, tr.Y), std::max(bl.Y, br.Y));
+
+			aabb1 = AABBf(std::floor(minX), std::floor(minY), std::ceil(maxX), std::ceil(maxY));
+		}
+		{
+			Vector3f tl = Vector3f::Zero * transform2;
+			Vector3f tr = Vector3f((float)width2, 0.0f, 0.0f) * transform2;
+			Vector3f bl = Vector3f(0.0f, (float)height2, 0.0f) * transform2;
+			Vector3f br = Vector3f((float)width2, (float)height2, 0.0f) * transform2;
+
+			float minX = std::min(std::min(tl.X, tr.X), std::min(bl.X, br.X));
+			float minY = std::min(std::min(tl.Y, tr.Y), std::min(bl.Y, br.Y));
+			float maxX = std::max(std::max(tl.X, tr.X), std::max(bl.X, br.X));
+			float maxY = std::max(std::max(tl.Y, tr.Y), std::max(bl.Y, br.Y));
+
+			aabb2 = AABBf(std::floor(minX), std::floor(minY), std::ceil(maxX), std::ceil(maxY));
+		}
+
+		if (!aabb1.Overlaps(aabb2)) {
+			return false;
+		}
+
+		// Per-pixel collision check
+		Matrix4x4f transformAToB = transform1 * transform2.Inverse();
+
+		// TransformNormal with [1, 0] and [0, 1] vectors
+		Vector3f stepX = Vector3f(transformAToB[0][0], transformAToB[0][1], 0.0f) * PerPixelCollisionStep;
+		Vector3f stepY = Vector3f(transformAToB[1][0], transformAToB[1][1], 0.0f) * PerPixelCollisionStep;
+
+		Vector3f yPosIn2 = Vector3f::Zero * transformAToB;
+
+		int frame1 = std::min(_renderer._curAnimFrame, res1->FrameCount - 1);
+		int dx1 = (frame1 % res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.X;
+		int dy1 = (frame1 / res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.Y;
+		int stride1 = res1->Base->FrameConfiguration.X * res1->Base->FrameDimensions.X;
+
+		int frame2 = std::min(other->_renderer._curAnimFrame, res2->FrameCount - 1);
+		int dx2 = (frame2 % res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.X;
+		int dy2 = (frame2 / res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.Y;
+		int stride2 = res2->Base->FrameConfiguration.X * res2->Base->FrameDimensions.X;
+
+		auto p1 = res1->Base->Mask.get();
+		auto p2 = res2->Base->Mask.get();
+
+		for (int y1 = 0; y1 < height1; y1 += PerPixelCollisionStep) {
+			Vector3f posIn2 = yPosIn2;
+
+			for (int x1 = 0; x1 < width1; x1 += PerPixelCollisionStep) {
+				int x2 = (int)std::round(posIn2.X);
+				int y2 = (int)std::round(posIn2.Y);
+
+				if (x2 >= 0 && x2 < width2 && y2 >= 0 && y2 < height2) {
+					if (p1[((y1 + dy1) * stride1) + x1 + dx1] > AlphaThreshold && p2[((y2 + dy2) * stride2) + x2 + dx2] > AlphaThreshold) {
+						return true;
+					}
+				}
+				posIn2 += stepX;
+			}
+			yPosIn2 += stepY;
+		}
+
+		return false;
+	}
+
+	bool ActorBase::IsCollidingWithAngled(const AABBf& aabb)
+	{
+		GraphicResource* res = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
+		if (res == nullptr) {
+			return false;
+		}
+
+		Matrix4x4f transform = Matrix4x4f::Translation((float)-res->Base->Hotspot.X, (float)-res->Base->Hotspot.Y, 0.0f);
+		if (GetState(ActorFlags::IsFacingLeft)) {
+			transform = transform.Scale(-1.0f, 1.0f, 1.0f);
+		}
+		transform *= Matrix4x4f::RotationZ(_angle) * Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f);
+
+		int width = res->Base->FrameDimensions.X;
+		int height = res->Base->FrameDimensions.Y;
+
+		// Bounding Box intersection
+		AABBf aabbSelf;
+		{
+			Vector3f tl = Vector3f::Zero * transform;
+			Vector3f tr = Vector3f((float)width, 0.0f, 0.0f) * transform;
+			Vector3f bl = Vector3f(0.0f, (float)height, 0.0f) * transform;
+			Vector3f br = Vector3f((float)width, (float)height, 0.0f) * transform;
+
+			float minX = std::min(std::min(tl.X, tr.X), std::min(bl.X, br.X));
+			float minY = std::min(std::min(tl.Y, tr.Y), std::min(bl.Y, br.Y));
+			float maxX = std::max(std::max(tl.X, tr.X), std::max(bl.X, br.X));
+			float maxY = std::max(std::max(tl.Y, tr.Y), std::max(bl.Y, br.Y));
+
+			aabbSelf = AABBf(std::floor(minX), std::floor(minY), std::ceil(maxX), std::ceil(maxY));
+		}
+
+		if (!aabb.Overlaps(aabbSelf)) {
+			return false;
+		}
+
+		// TransformNormal with [1, 0] and [0, 1] vectors
+		Vector3f stepX = Vector3f(transform[0][0], transform[0][1], 0.0f) * PerPixelCollisionStep;
+		Vector3f stepY = Vector3f(transform[1][0], transform[1][1], 0.0f) * PerPixelCollisionStep;
+
+		Vector3f yPosInAABB = Vector3f::Zero * transform;
+
+		int frame = std::min(_renderer._curAnimFrame, res->FrameCount - 1);
+		int dx = (frame % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
+		int dy = (frame / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y;
+		int stride = res->Base->FrameConfiguration.X * res->Base->FrameDimensions.X;
+
+		auto p = res->Base->Mask.get();
+
+		for (int y1 = 0; y1 < height; y1 += PerPixelCollisionStep) {
+			Vector3f posInAABB = yPosInAABB;
+
+			for (int x1 = 0; x1 < width; x1 += PerPixelCollisionStep) {
+				int x2 = (int)std::round(posInAABB.X);
+				int y2 = (int)std::round(posInAABB.Y);
+
+				if (p[((y1 + dy) * stride) + x1 + dx] > AlphaThreshold &&
+					x2 >= aabb.L && x2 < aabb.R && y2 >= aabb.T && y2 < aabb.B) {
+					return true;
+				}
+
+				posInAABB += stepX;
+			}
+			yPosInAABB += stepY;
+		}
+
+		return false;
+	}
+
+	void ActorBase::UpdateAABB()
+	{
+		if ((CollisionFlags & (CollisionFlags::CollideWithOtherActors | CollisionFlags::CollideWithSolidObjects | CollisionFlags::IsSolidObject)) == CollisionFlags::None) {
+			// Collisions are deactivated
+			return;
+		}
+
+		if ((CollisionFlags & CollisionFlags::SkipPerPixelCollisions) == CollisionFlags::None) {
+			GraphicResource* res = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
+			if (res == nullptr) {
+				return;
+			}
+
+			Vector2i hotspot = res->Base->Hotspot;
+			Vector2i size = res->Base->FrameDimensions;
+
+			if (std::abs(_angle) > 0.1f) {
+				Matrix4x4f transform = Matrix4x4f::Translation((float)-res->Base->Hotspot.X, (float)-res->Base->Hotspot.Y, 0.0f);
+				if (GetState(ActorFlags::IsFacingLeft)) {
+					transform = transform.Scale(-1.0f, 1.0f, 1.0f);
+				}
+				transform *= Matrix4x4f::RotationZ(_angle) * Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f);
+
+				Vector3f tl = Vector3f::Zero * transform;
+				Vector3f tr = Vector3f((float)size.X, 0.0f, 0.0f) * transform;
+				Vector3f bl = Vector3f(0.0f, (float)size.Y, 0.0f) * transform;
+				Vector3f br = Vector3f((float)size.X, (float)size.Y, 0.0f) * transform;
+
+				float minX = std::min(std::min(tl.X, tr.X), std::min(bl.X, br.X));
+				float minY = std::min(std::min(tl.Y, tr.Y), std::min(bl.Y, br.Y));
+				float maxX = std::max(std::max(tl.X, tr.X), std::max(bl.X, br.X));
+				float maxY = std::max(std::max(tl.Y, tr.Y), std::max(bl.Y, br.Y));
+
+				AABB.L = minX;
+				AABB.T = minY;
+				AABB.R = maxX;
+				AABB.B = maxY;
+			} else {
+				AABB.L = (IsFacingLeft() ? (_pos.X + res->Base->Hotspot.X - size.X) : (_pos.X - res->Base->Hotspot.X));
+				AABB.T = _pos.Y - res->Base->Hotspot.Y;
+				AABB.R = AABB.L + size.X;
+				AABB.B = AABB.T + size.Y;
+			}
+		} else {
+			OnUpdateHitbox();
+			AABB = AABBInner;
+		}
+	}
+
+	void ActorBase::RefreshAnimation()
+	{
+		GraphicResource* res = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
+		if (res == nullptr) {
+			return;
+		}
+
+		_renderer.FrameConfiguration = res->Base->FrameConfiguration;
+		_renderer.FrameDimensions = res->Base->FrameDimensions;
+		if (res->FrameDuration < 0) {
+			if (res->FrameCount > 1) {
+				_renderer._animFirstFrame = res->FrameOffset + random().Next(0, res->FrameCount);
+			} else {
+				_renderer._animFirstFrame = res->FrameOffset;
+			}
+
+			_renderer._animLoopMode = AnimationLoopMode::FixedSingle;
+		} else {
+			_renderer._animFirstFrame = res->FrameOffset;
+
+			_renderer._animLoopMode = res->LoopMode;
+		}
+
+		_renderer._animFrameCount = res->FrameCount;
+		_renderer._animDuration = res->FrameDuration;
+		_renderer._animTime = 0.0f;
+
+		_renderer._hotspot.X = -((res->Base->FrameDimensions.X / 2) - (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X));
+		_renderer._hotspot.Y = -((res->Base->FrameDimensions.Y / 2) - res->Base->Hotspot.Y);
+
+		_renderer.setTexture(res->Base->TextureDiffuse.get());
+		_renderer.UpdateVisibleFrames();
+
+		OnAnimationStarted();
+
+		if ((CollisionFlags & CollisionFlags::ForceDisableCollisions) != CollisionFlags::ForceDisableCollisions) {
+			CollisionFlags |= CollisionFlags::IsDirty;
+		}
+	}
+
+	int ActorBase::FindAnimationCandidates(AnimState state, AnimationCandidate candidates[AnimationCandidatesCount])
+	{
+		if (_metadata == nullptr) {
+			return 0;
+		}
+
+		int i = 0;
+		for (auto& anim : _metadata->Graphics) {
+			if (i >= AnimationCandidatesCount) {
+				break;
+			}
+
+			if (anim.second.HasState(state)) {
+				candidates[i].Identifier = &anim.first;
+				candidates[i].Resource = &anim.second;
+				i++;
+			}
+		}
+
+		return i;
+	}
+
+	bool ActorBase::IsInvulnerable()
+	{
+		return GetState(ActorFlags::IsInvulnerable);
+	}
+
+	int ActorBase::GetHealth()
+	{
+		return _health;
+	}
+
+	void ActorBase::SetHealth(int value)
+	{
+		_health = value;
+	}
+
+	int ActorBase::GetMaxHealth()
+	{
+		return _maxHealth;
+	}
+
+	void ActorBase::DecreaseHealth(int amount, ActorBase* collider)
+	{
+		if (amount == 0) {
+			return;
+		}
+
+		if (amount > _health) {
+			_health = 0;
+		} else {
+			_health -= amount;
+		}
+
+		if (_health <= 0) {
+			OnPerish(collider);
+		} else {
+			OnHealthChanged(collider);
+		}
+	}
+
+	bool ActorBase::MoveInstantly(const Vector2f& pos, MoveType type, bool force)
+	{
+		Vector2f newPos;
+		switch (type) {
+			default:
+			case MoveType::Absolute: {
+				newPos = pos;
+				break;
+			}
+			case MoveType::Relative: {
+				if (pos == Vector2f::Zero) {
+					return true;
+				}
+				newPos = _pos + pos;
+				break;
+			}
+		}
+
+		AABBf aabb = AABBInner + (newPos - _pos);
+
+		// TODO: Fix moving on roofs through windowsill in colon2
+		bool free = (force || _levelHandler->IsPositionEmpty(this, aabb, _speed.Y >= 0));
+		if (free) {
+			AABBInner = aabb;
+			_pos = newPos;
+			_renderer.setPosition(std::round(newPos.X), std::round(newPos.Y));
+
+			if ((CollisionFlags & CollisionFlags::ForceDisableCollisions) != CollisionFlags::ForceDisableCollisions) {
+				CollisionFlags |= CollisionFlags::IsDirty;
+			}
+		}
+		return free;
+	}
+
+	void ActorBase::AddExternalForce(float x, float y)
+	{
+		_externalForce.X += x;
+		_externalForce.Y += y;
+	}
+
+	void ActorBase::SpriteRenderer::OnUpdate(float timeMult)
+	{
+		_owner->OnUpdate(timeMult);
+
+		if (IsAnimationRunning()) {
+			// Advance animation timer
+			if (_animLoopMode == AnimationLoopMode::Loop) {
+				_animTime += timeMult * FrameTimer::SecondsPerFrame;
+				if (_animTime > _animDuration) {
+					int n = (int)(_animTime / _animDuration);
+					_animTime -= _animDuration * n;
+
+					_owner->OnAnimationFinished();
+				}
+			} else if (_animLoopMode == AnimationLoopMode::Once) {
+				float newAnimTime = _animTime + timeMult * FrameTimer::SecondsPerFrame;
+				if (_animTime > _animDuration) {
+					_owner->OnAnimationFinished();
+				} else {
+					_animTime = newAnimTime;
+				}
+			}
+
+			UpdateVisibleFrames();
+		}
+
+		Sprite::OnUpdate(timeMult);
+	}
+
+	void ActorBase::SpriteRenderer::UpdateVisibleFrames()
+	{
+		// Calculate visible frames
+		_curAnimFrame = 0;
+		_nextAnimFrame = 0;
+		_curAnimFrameFade = 0.0f;
+		if (_animFrameCount > 0 && _animDuration > 0) {
+			// Calculate currently visible frame
+			float frameTemp = _animFrameCount * _animTime / _animDuration;
+			_curAnimFrame = (int)frameTemp;
+
+			// Normalize current frame when exceeding anim duration
+			if (_animLoopMode == AnimationLoopMode::Once || _animLoopMode == AnimationLoopMode::FixedSingle) {
+				_curAnimFrame = std::clamp(_curAnimFrame, 0, _animFrameCount - 1);
+			} else {
+				_curAnimFrame = NormalizeFrame(_curAnimFrame, 0, _animFrameCount);
+			}
+
+			// Calculate second frame and fade value
+			_curAnimFrameFade = frameTemp - (int)frameTemp;
+			if (_animLoopMode == AnimationLoopMode::Loop) {
+				_nextAnimFrame = NormalizeFrame(_curAnimFrame + 1, 0, _animFrameCount);
+			} else {
+				_nextAnimFrame = _curAnimFrame + 1;
+			}
+		}
+		_curAnimFrame = _animFirstFrame + std::clamp(_curAnimFrame, 0, _animFrameCount - 1);
+		_nextAnimFrame = _animFirstFrame + std::clamp(_nextAnimFrame, 0, _animFrameCount - 1);
+
+		// Set current animation frame rectangle
+		int col = _curAnimFrame % FrameConfiguration.X;
+		int row = _curAnimFrame / FrameConfiguration.X;
+		setTexRect(Recti(FrameDimensions.X * col, FrameDimensions.Y * row, FrameDimensions.X, FrameDimensions.Y));
+		setAbsAnchorPoint((float)_hotspot.X, (float)_hotspot.Y);
+	}
+
+	int ActorBase::SpriteRenderer::NormalizeFrame(int frame, int min, int max)
+	{
+		if (frame >= min && frame < max) return frame;
+
+		if (frame < min) {
+			return max + ((frame - min) % max);
+		} else {
+			return min + frame % (max - min);
+		}
+	}
+}
