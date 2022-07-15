@@ -32,6 +32,9 @@ namespace Jazz2
 		_cheatsUsed(data.CheatsUsed),
 		_shakeDuration(0.0f),
 		_waterLevel(FLT_MAX),
+		_ambientLightDefault(1.0f),
+		_ambientLightCurrent(1.0f),
+		_ambientLightTarget(1.0f),
 		_pressedActions(0)
 	{
 		auto& resolver = Jazz2::ContentResolver::Current();
@@ -255,7 +258,7 @@ namespace Jazz2
 					}
 				}
 
-				_eventMap->ActivateEvents(tx1, ty1, tx2, ty2, /*initState != InitState.Initializing*/false);
+				_eventMap->ActivateEvents(tx1, ty1, tx2, ty2, true);
 			}
 
 			_eventMap->ProcessGenerators(timeMult);
@@ -264,17 +267,17 @@ namespace Jazz2
 		ResolveCollisions(timeMult);
 
 		// Ambient Light Transition
-		/*if (_ambientLightCurrent != _ambientLightTarget) {
+		if (_ambientLightCurrent != _ambientLightTarget) {
 			float step = timeMult * 0.012f;
-			if (std::abs(ambientLightCurrent - ambientLightTarget) < step) {
-				ambientLightCurrent = ambientLightTarget;
+			if (std::abs(_ambientLightCurrent - _ambientLightTarget) < step) {
+				_ambientLightCurrent = _ambientLightTarget;
 			} else {
-				ambientLightCurrent += step * ((ambientLightTarget < ambientLightCurrent) ? -1 : 1);
+				_ambientLightCurrent += step * ((_ambientLightTarget < _ambientLightCurrent) ? -1 : 1);
 			}
 		}
 
 		// Weather
-		if (_weatherType != WeatherType.None && commonResources.Graphics != null) {
+		/*if (_weatherType != WeatherType.None && commonResources.Graphics != null) {
 			// ToDo: Apply weather effect to all other cameras too
 			Vector3 viewPos = cameras[0].Transform.Pos;
 			for (int i = 0; i < weatherIntensity; i++) {

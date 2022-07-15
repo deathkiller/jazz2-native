@@ -120,6 +120,7 @@ namespace Jazz2
 		float _shakeDuration;
 		Vector2f _shakeOffset;
 		float _waterLevel;
+		float _ambientLightDefault, _ambientLightCurrent, _ambientLightTarget;
 
 		uint32_t _pressedActions;
 

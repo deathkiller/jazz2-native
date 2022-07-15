@@ -100,33 +100,6 @@ namespace Jazz2::Tiles
 			bool UseInherentOffset;
 		};
 
-		TileMap(LevelHandler* levelHandler, const std::string& tileSetPath);
-
-		Vector2i Size();
-		Recti LevelBounds();
-
-		void OnUpdate(float timeMult) override;
-		bool OnDraw(RenderQueue& renderQueue) override;
-
-		bool IsTileEmpty(int x, int y);
-		bool IsTileEmpty(const AABBf& aabb, bool downwards);
-		SuspendType GetTileSuspendState(float x, float y);
-
-		int CheckWeaponDestructible(const AABBf& aabb, WeaponType weapon, int strength);
-		int CheckSpecialDestructible(const AABBf& aabb);
-		int CheckSpecialSpeedDestructible(const AABBf& aabb, float speed);
-		int CheckCollapseDestructible(const AABBf& aabb);
-
-		void SetSolidLimit(int tileLeft, int tileWidth);
-
-		RenderCommand* RentRenderCommand();
-		void ReadLayerConfiguration(LayerType type, const std::unique_ptr<IFileStream>& s, const LayerDescription& layer);
-		void ReadAnimatedTiles(const std::unique_ptr<IFileStream>& s);
-		void SetTileEventFlags(int x, int y, EventType tileEvent, uint8_t* tileParams);
-
-		void CreateTileDebris(int tileId, int x, int y);
-
-	private:
 		enum class DebrisCollisionAction {
 			None,
 			Disappear,
@@ -157,12 +130,41 @@ namespace Jazz2::Tiles
 			float TexScaleY;
 			float TexBiasY;
 
-			//public Material Material;
-			//public Rect MaterialOffset;
+			Texture* DiffuseTexture;
 
 			DebrisCollisionAction CollisionAction;
 		};
 
+		TileMap(LevelHandler* levelHandler, const std::string& tileSetPath);
+
+		Vector2i Size();
+		Recti LevelBounds();
+
+		void OnUpdate(float timeMult) override;
+		bool OnDraw(RenderQueue& renderQueue) override;
+
+		bool IsTileEmpty(int x, int y);
+		bool IsTileEmpty(const AABBf& aabb, bool downwards);
+		SuspendType GetTileSuspendState(float x, float y);
+
+		int CheckWeaponDestructible(const AABBf& aabb, WeaponType weapon, int strength);
+		int CheckSpecialDestructible(const AABBf& aabb);
+		int CheckSpecialSpeedDestructible(const AABBf& aabb, float speed);
+		int CheckCollapseDestructible(const AABBf& aabb);
+
+		void SetSolidLimit(int tileLeft, int tileWidth);
+
+		RenderCommand* RentRenderCommand();
+		void ReadLayerConfiguration(LayerType type, const std::unique_ptr<IFileStream>& s, const LayerDescription& layer);
+		void ReadAnimatedTiles(const std::unique_ptr<IFileStream>& s);
+		void SetTileEventFlags(int x, int y, EventType tileEvent, uint8_t* tileParams);
+
+		void CreateDebris(const DestructibleDebris& debris);
+		void CreateTileDebris(int tileId, int x, int y);
+		void CreateParticleDebris(const GraphicResource* res, Vector3f pos, Vector2f force, int currentFrame, bool isFacingLeft);
+		void CreateSpriteDebris(const GraphicResource* res, Vector3f pos, int count);
+
+	private:
 		LevelHandler* _levelHandler;
 		int _sprLayerIndex;
 		bool _hasPit;

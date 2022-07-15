@@ -36,6 +36,7 @@ namespace Jazz2::Actors::Enemies
 		void SetHealthByDifficulty(int health);
 		bool CanMoveToPosition(float x, float y);
 		void TryGenerateRandomDrop();
+		void CreateDeathDebris(ActorBase* collider);
 
 	private:
 		float blinkingTimeout;

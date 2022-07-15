@@ -1,6 +1,7 @@
 ﻿#include "ActorBase.h"
 #include "ILevelHandler.h"
 #include "Events/EventMap.h"
+#include "Tiles/TileMap.h"
 #include "Collisions/DynamicTreeBroadPhase.h"
 
 #include "../nCine/Primitives/Matrix4x4.h"
@@ -60,8 +61,8 @@ namespace Jazz2
 		// Recalculate hotspot
 		GraphicResource* res = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
 		if (res != nullptr) {
-			_renderer._hotspot.X = -((res->Base->FrameDimensions.X / 2) - (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X));
-			_renderer._hotspot.Y = -((res->Base->FrameDimensions.Y / 2) - res->Base->Hotspot.Y);
+			_renderer.Hotspot.X = -((res->Base->FrameDimensions.X / 2) - (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X));
+			_renderer.Hotspot.Y = -((res->Base->FrameDimensions.Y / 2) - res->Base->Hotspot.Y);
 		}
 	}
 
@@ -385,12 +386,22 @@ namespace Jazz2
 
 	void ActorBase::CreateParticleDebris()
 	{
-		// TODO
+		auto tilemap = _levelHandler->TileMap();
+		if (tilemap != nullptr) {
+			tilemap->CreateParticleDebris(_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation,
+				Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), Vector2f::Zero, _renderer.CurrentFrame, IsFacingLeft());
+		}
 	}
 
 	void ActorBase::CreateSpriteDebris(const std::string& identifier, int count)
 	{
-		// TODO
+		auto tilemap = _levelHandler->TileMap();
+		if (tilemap != nullptr && _metadata != nullptr) {
+			auto it = _metadata->Graphics.find(identifier);
+			if (it != _metadata->Graphics.end()) {
+				tilemap->CreateSpriteDebris(&it->second, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), count);
+			}
+		}
 	}
 
 	void ActorBase::SetAnimation(const std::string& identifier)
@@ -636,7 +647,7 @@ namespace Jazz2
 
 				xs = (int)aabb1.L;
 
-				int frame1 = std::min(_renderer._curAnimFrame, res->FrameCount - 1);
+				int frame1 = std::min(_renderer.CurrentFrame, res->FrameCount - 1);
 				dx = (frame1 % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
 				dy = (frame1 / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y - (int)aabb1.T;
 
@@ -653,7 +664,7 @@ namespace Jazz2
 
 				xs = (int)aabb2.L;
 
-				int frame2 = std::min(other->_renderer._curAnimFrame, res->FrameCount - 1);
+				int frame2 = std::min(other->_renderer.CurrentFrame, res->FrameCount - 1);
 				dx = (frame2 % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
 				dy = (frame2 / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y - (int)aabb2.T;
 			}
@@ -682,12 +693,12 @@ namespace Jazz2
 			int x1s = (int)aabb1.L;
 			int x2s = (int)aabb2.L;
 
-			int frame1 = std::min(_renderer._curAnimFrame, res1->FrameCount - 1);
+			int frame1 = std::min(_renderer.CurrentFrame, res1->FrameCount - 1);
 			int dx1 = (frame1 % res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.X;
 			int dy1 = (frame1 / res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.Y - (int)aabb1.T;
 			int stride1 = res1->Base->FrameConfiguration.X * res1->Base->FrameDimensions.X;
 
-			int frame2 = std::min(other->_renderer._curAnimFrame, res2->FrameCount - 1);
+			int frame2 = std::min(other->_renderer.CurrentFrame, res2->FrameCount - 1);
 			int dx2 = (frame2 % res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.X;
 			int dy2 = (frame2 / res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.Y - (int)aabb2.T;
 			int stride2 = res2->Base->FrameConfiguration.X * res2->Base->FrameDimensions.X;
@@ -762,7 +773,7 @@ namespace Jazz2
 
 		int xs = (int)aabbSelf.L;
 
-		int frame1 = std::min(_renderer._curAnimFrame, res->FrameCount - 1);
+		int frame1 = std::min(_renderer.CurrentFrame, res->FrameCount - 1);
 		int dx = (frame1 % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
 		int dy = (frame1 / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y - (int)aabbSelf.T;
 		int stride = res->Base->FrameConfiguration.X * res->Base->FrameDimensions.X;
@@ -853,12 +864,12 @@ namespace Jazz2
 
 		Vector3f yPosIn2 = Vector3f::Zero * transformAToB;
 
-		int frame1 = std::min(_renderer._curAnimFrame, res1->FrameCount - 1);
+		int frame1 = std::min(_renderer.CurrentFrame, res1->FrameCount - 1);
 		int dx1 = (frame1 % res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.X;
 		int dy1 = (frame1 / res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.Y;
 		int stride1 = res1->Base->FrameConfiguration.X * res1->Base->FrameDimensions.X;
 
-		int frame2 = std::min(other->_renderer._curAnimFrame, res2->FrameCount - 1);
+		int frame2 = std::min(other->_renderer.CurrentFrame, res2->FrameCount - 1);
 		int dx2 = (frame2 % res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.X;
 		int dy2 = (frame2 / res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.Y;
 		int stride2 = res2->Base->FrameConfiguration.X * res2->Base->FrameDimensions.X;
@@ -928,7 +939,7 @@ namespace Jazz2
 
 		Vector3f yPosInAABB = Vector3f::Zero * transform;
 
-		int frame = std::min(_renderer._curAnimFrame, res->FrameCount - 1);
+		int frame = std::min(_renderer.CurrentFrame, res->FrameCount - 1);
 		int dx = (frame % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
 		int dy = (frame / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y;
 		int stride = res->Base->FrameConfiguration.X * res->Base->FrameDimensions.X;
@@ -1015,24 +1026,24 @@ namespace Jazz2
 		_renderer.FrameDimensions = res->Base->FrameDimensions;
 		if (res->FrameDuration < 0) {
 			if (res->FrameCount > 1) {
-				_renderer._animFirstFrame = res->FrameOffset + random().Next(0, res->FrameCount);
+				_renderer.FirstFrame = res->FrameOffset + random().Next(0, res->FrameCount);
 			} else {
-				_renderer._animFirstFrame = res->FrameOffset;
+				_renderer.FirstFrame = res->FrameOffset;
 			}
 
-			_renderer._animLoopMode = AnimationLoopMode::FixedSingle;
+			_renderer.LoopMode = AnimationLoopMode::FixedSingle;
 		} else {
-			_renderer._animFirstFrame = res->FrameOffset;
+			_renderer.FirstFrame = res->FrameOffset;
 
-			_renderer._animLoopMode = res->LoopMode;
+			_renderer.LoopMode = res->LoopMode;
 		}
 
-		_renderer._animFrameCount = res->FrameCount;
-		_renderer._animDuration = res->FrameDuration;
-		_renderer._animTime = 0.0f;
+		_renderer.FrameCount = res->FrameCount;
+		_renderer.AnimDuration = res->FrameDuration;
+		_renderer.AnimTime = 0.0f;
 
-		_renderer._hotspot.X = -((res->Base->FrameDimensions.X / 2) - (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X));
-		_renderer._hotspot.Y = -((res->Base->FrameDimensions.Y / 2) - res->Base->Hotspot.Y);
+		_renderer.Hotspot.X = -((res->Base->FrameDimensions.X / 2) - (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X));
+		_renderer.Hotspot.Y = -((res->Base->FrameDimensions.Y / 2) - res->Base->Hotspot.Y);
 
 		_renderer.setTexture(res->Base->TextureDiffuse.get());
 		_renderer.UpdateVisibleFrames();
@@ -1151,20 +1162,20 @@ namespace Jazz2
 
 		if (IsAnimationRunning()) {
 			// Advance animation timer
-			if (_animLoopMode == AnimationLoopMode::Loop) {
-				_animTime += timeMult * FrameTimer::SecondsPerFrame;
-				if (_animTime > _animDuration) {
-					int n = (int)(_animTime / _animDuration);
-					_animTime -= _animDuration * n;
+			if (LoopMode == AnimationLoopMode::Loop) {
+				AnimTime += timeMult * FrameTimer::SecondsPerFrame;
+				if (AnimTime > AnimDuration) {
+					int n = (int)(AnimTime / AnimDuration);
+					AnimTime -= AnimDuration * n;
 
 					_owner->OnAnimationFinished();
 				}
-			} else if (_animLoopMode == AnimationLoopMode::Once) {
-				float newAnimTime = _animTime + timeMult * FrameTimer::SecondsPerFrame;
-				if (_animTime > _animDuration) {
+			} else if (LoopMode == AnimationLoopMode::Once) {
+				float newAnimTime = AnimTime + timeMult * FrameTimer::SecondsPerFrame;
+				if (AnimTime > AnimDuration) {
 					_owner->OnAnimationFinished();
 				} else {
-					_animTime = newAnimTime;
+					AnimTime = newAnimTime;
 				}
 			}
 
@@ -1177,37 +1188,37 @@ namespace Jazz2
 	void ActorBase::SpriteRenderer::UpdateVisibleFrames()
 	{
 		// Calculate visible frames
-		_curAnimFrame = 0;
-		_nextAnimFrame = 0;
-		_curAnimFrameFade = 0.0f;
-		if (_animFrameCount > 0 && _animDuration > 0) {
+		CurrentFrame = 0;
+		NextFrame = 0;
+		CurrentFrameFade = 0.0f;
+		if (FrameCount > 0 && AnimDuration > 0) {
 			// Calculate currently visible frame
-			float frameTemp = _animFrameCount * _animTime / _animDuration;
-			_curAnimFrame = (int)frameTemp;
+			float frameTemp = FrameCount * AnimTime / AnimDuration;
+			CurrentFrame = (int)frameTemp;
 
 			// Normalize current frame when exceeding anim duration
-			if (_animLoopMode == AnimationLoopMode::Once || _animLoopMode == AnimationLoopMode::FixedSingle) {
-				_curAnimFrame = std::clamp(_curAnimFrame, 0, _animFrameCount - 1);
+			if (LoopMode == AnimationLoopMode::Once || LoopMode == AnimationLoopMode::FixedSingle) {
+				CurrentFrame = std::clamp(CurrentFrame, 0, FrameCount - 1);
 			} else {
-				_curAnimFrame = NormalizeFrame(_curAnimFrame, 0, _animFrameCount);
+				CurrentFrame = NormalizeFrame(CurrentFrame, 0, FrameCount);
 			}
 
 			// Calculate second frame and fade value
-			_curAnimFrameFade = frameTemp - (int)frameTemp;
-			if (_animLoopMode == AnimationLoopMode::Loop) {
-				_nextAnimFrame = NormalizeFrame(_curAnimFrame + 1, 0, _animFrameCount);
+			CurrentFrameFade = frameTemp - (int)frameTemp;
+			if (LoopMode == AnimationLoopMode::Loop) {
+				NextFrame = NormalizeFrame(CurrentFrame + 1, 0, FrameCount);
 			} else {
-				_nextAnimFrame = _curAnimFrame + 1;
+				NextFrame = CurrentFrame + 1;
 			}
 		}
-		_curAnimFrame = _animFirstFrame + std::clamp(_curAnimFrame, 0, _animFrameCount - 1);
-		_nextAnimFrame = _animFirstFrame + std::clamp(_nextAnimFrame, 0, _animFrameCount - 1);
+		CurrentFrame = FirstFrame + std::clamp(CurrentFrame, 0, FrameCount - 1);
+		NextFrame = FirstFrame + std::clamp(NextFrame, 0, FrameCount - 1);
 
 		// Set current animation frame rectangle
-		int col = _curAnimFrame % FrameConfiguration.X;
-		int row = _curAnimFrame / FrameConfiguration.X;
+		int col = CurrentFrame % FrameConfiguration.X;
+		int row = CurrentFrame / FrameConfiguration.X;
 		setTexRect(Recti(FrameDimensions.X * col, FrameDimensions.Y * row, FrameDimensions.X, FrameDimensions.Y));
-		setAbsAnchorPoint((float)_hotspot.X, (float)_hotspot.Y);
+		setAbsAnchorPoint((float)Hotspot.X, (float)Hotspot.Y);
 	}
 
 	int ActorBase::SpriteRenderer::NormalizeFrame(int frame, int min, int max)

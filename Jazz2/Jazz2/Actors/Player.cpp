@@ -1464,7 +1464,7 @@ namespace Jazz2::Actors
 				}
 
 				if (_currentTransitionState == AnimState::Idle) {
-					_renderer._animDuration = std::max(_currentAnimation->FrameDuration + 1.0f - Vector2f(_speed.X, _speed.Y).Length() * 0.26f, 0.4f);
+					_renderer.AnimDuration = std::max(_currentAnimation->FrameDuration + 1.0f - Vector2f(_speed.X, _speed.Y).Length() * 0.26f, 0.4f);
 				}
 
 			} else if (_waterCooldownLeft <= 0.0f) {
@@ -1918,7 +1918,7 @@ namespace Jazz2::Actors
 
 		// Rewind the animation, if it should be played only once
 		if (_currentAnimation->LoopMode == AnimationLoopMode::Once) {
-			_renderer._animTime = 0.0f;
+			_renderer.AnimTime = 0.0f;
 		}
 
 		uint16_t ammoDecrease = 100;

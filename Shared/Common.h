@@ -76,7 +76,7 @@ inline _ENUM_FLAG_CONSTEXPR ENUMTYPE operator ~ (ENUMTYPE a) throw() { return EN
 inline _ENUM_FLAG_CONSTEXPR ENUMTYPE operator ^ (ENUMTYPE a, ENUMTYPE b) throw() { return ENUMTYPE(((Death::EnumSizedInteger<ENUMTYPE>::Type)a) ^ ((Death::EnumSizedInteger<ENUMTYPE>::Type)b)); } \
 inline ENUMTYPE &operator ^= (ENUMTYPE &a, ENUMTYPE b) throw() { return (ENUMTYPE &)(((Death::EnumSizedInteger<ENUMTYPE>::Type &)a) ^= ((Death::EnumSizedInteger<ENUMTYPE>::Type)b)); }
 
-// Special version of DEFINE_ENUM_FLAG_OPERATORS that can be used in classes for private enums
+// Special version of DEFINE_ENUM_OPERATORS that can be used in classes for private enums
 #define DEFINE_PRIVATE_ENUM_OPERATORS(ENUMTYPE) \
 friend inline _ENUM_FLAG_CONSTEXPR ENUMTYPE operator | (ENUMTYPE a, ENUMTYPE b) throw() { return ENUMTYPE(((Death::EnumSizedInteger<ENUMTYPE>::Type)a) | ((Death::EnumSizedInteger<ENUMTYPE>::Type)b)); } \
 friend inline ENUMTYPE &operator |= (ENUMTYPE &a, ENUMTYPE b) throw() { return (ENUMTYPE &)(((Death::EnumSizedInteger<ENUMTYPE>::Type &)a) |= ((Death::EnumSizedInteger<ENUMTYPE>::Type)b)); } \
@@ -87,6 +87,6 @@ friend inline _ENUM_FLAG_CONSTEXPR ENUMTYPE operator ^ (ENUMTYPE a, ENUMTYPE b) 
 friend inline ENUMTYPE &operator ^= (ENUMTYPE &a, ENUMTYPE b) throw() { return (ENUMTYPE &)(((Death::EnumSizedInteger<ENUMTYPE>::Type &)a) ^= ((Death::EnumSizedInteger<ENUMTYPE>::Type)b)); }
 
 #else
-#	define DEFINE_ENUM_FLAG_OPERATORS(ENUMTYPE) // NOP, C allows these operators.
-#	define DEFINE_PRIVATE_ENUM_FLAG_OPERATORS(ENUMTYPE)
+#	define DEFINE_ENUM_OPERATORS(ENUMTYPE) // NOP, C allows these operators.
+#	define DEFINE_PRIVATE_ENUM_OPERATORS(ENUMTYPE)
 #endif

@@ -2,8 +2,11 @@
 #include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../../Events/EventMap.h"
+#include "../../Tiles/TileMap.h"
 #include "../Weapons/ShotBase.h"
 #include "../Player.h"
+
+#include "../../../nCine/Base/Random.h"
 
 namespace Jazz2::Actors::Enemies
 {
@@ -124,5 +127,101 @@ namespace Jazz2::Actors::Enemies
 		}*/
 
 		return ActorBase::OnPerish(collider);
+	}
+
+	void EnemyBase::CreateDeathDebris(ActorBase* collider)
+	{
+		auto tilemap = _levelHandler->TileMap();
+		if (tilemap == nullptr) {
+			return;
+		}
+
+		GraphicResource* res = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
+		Texture* texture = res->Base->TextureDiffuse.get();
+		float x = _pos.X - res->Base->Hotspot.X;
+		float y = _pos.Y - res->Base->Hotspot.Y;
+
+		// TODO
+		/*if (auto toasterShot = dynamic_cast<ToasterShot*>(collider)) {
+			constexpr int DebrisSizeX = 5;
+			constexpr int DebrisSizeY = 3;
+
+			int currentFrame = _renderer.CurrentFrame;
+
+			for (int fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSizeX + 1) {
+				for (int fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSizeY + 1) {
+					float currentSizeX = DebrisSizeX * random().NextFloat(0.8f, 1.1f);
+					float currentSizeY = DebrisSizeY * random().NextFloat(0.8f, 1.1f);
+					levelHandler.TileMap.CreateDebris(new DestructibleDebris {
+						Pos = new Vector3(x + (IsFacingLeft ? res.Base.FrameDimensions.X - fx : fx), y + fy, pos.Z),
+						Size = new Vector2(currentSizeX, currentSizeY),
+						Speed = new Vector2(((fx - res.Base.FrameDimensions.X / 2) + MathF.Rnd.NextFloat(-2f, 2f)) * (IsFacingLeft ? -1f : 1f) * MathF.Rnd.NextFloat(0.5f, 2f) / res.Base.FrameDimensions.X,
+							 MathF.Rnd.NextFloat(0f, 0.2f)),
+						Acceleration = new Vector2(0f, 0.06f),
+
+						Scale = 1f,
+						Alpha = 1f,
+						AlphaSpeed = -0.002f,
+
+						Time = 320f,
+
+						Material = material,
+						MaterialOffset = new Rect(
+							 (((float)(currentFrame % res.Base.FrameConfiguration.X) / res.Base.FrameConfiguration.X) + ((float)fx / texture.ContentWidth)) * texture.UVRatio.X,
+							 (((float)(currentFrame / res.Base.FrameConfiguration.X) / res.Base.FrameConfiguration.Y) + ((float)fy / texture.ContentHeight)) * texture.UVRatio.Y,
+							 (currentSizeX * texture.UVRatio.X / texture.ContentWidth),
+							 (currentSizeY * texture.UVRatio.Y / texture.ContentHeight)
+						 ),
+
+						CollisionAction = DebrisCollisionAction.Bounce
+					});
+				}
+			}
+		} else*/ if (_pos.Y > _levelHandler->WaterLevel()) {
+			constexpr int DebrisSize = 3;
+
+			Vector2i texSize = res->Base->TextureDiffuse->size();
+
+			for (int fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
+				for (int fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
+					float currentSize = DebrisSize * random().NextFloat(0.2f, 1.1f);
+
+					Tiles::TileMap::DestructibleDebris debris = { };
+					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - fx : fx), y + fy);
+					debris.Depth = _renderer.layer();
+					debris.Size = Vector2f(currentSize, currentSize);
+					debris.Speed = Vector2f(((fx - res->Base->FrameDimensions.X / 2) + random().NextFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * random().NextFloat(1.0f, 3.0f) / res->Base->FrameDimensions.X,
+						 ((fy - res->Base->FrameDimensions.Y / 2) + random().NextFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * random().NextFloat(1.0f, 3.0f) / res->Base->FrameDimensions.Y);
+					debris.Acceleration = Vector2f::Zero;
+
+					debris.Scale = 1.0f;
+					debris.Alpha = 1.0f;
+					debris.AlphaSpeed = -0.004f;
+
+					debris.Time = 340.0f;
+
+					debris.TexScaleX = (currentSize / float(texSize.X));
+					debris.TexBiasX = (((float)(_renderer.CurrentFrame % res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.X) + ((float)fx / float(texSize.X)));
+					debris.TexScaleY = (currentSize / float(texSize.Y));
+					debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
+
+					debris.DiffuseTexture = res->Base->TextureDiffuse.get();
+					debris.CollisionAction = Tiles::TileMap::DebrisCollisionAction::Disappear;
+
+					tilemap->CreateDebris(debris);
+				}
+			}
+		} else {
+			Vector2f force;
+			switch (_lastHitDir) {
+				case LastHitDirection::Left: force = Vector2f(-1.4f, 0.0f); break;
+				case LastHitDirection::Right: force = Vector2f(1.4f, 0.0f); break;
+				case LastHitDirection::Up: force = Vector2f(0.0f, -1.4f); break;
+				case LastHitDirection::Down: force = Vector2f(0.0f, 1.4f); break;
+				default: force = Vector2f::Zero; break;
+			}
+
+			tilemap->CreateParticleDebris(res, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), force, _renderer.CurrentFrame, IsFacingLeft());
+		}
 	}
 }

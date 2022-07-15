@@ -122,17 +122,14 @@ namespace Jazz2
 		class SpriteRenderer : public Sprite
 		{
 			friend class ActorBase;
-			friend class Actors::Player;
-			// TODO: DEBUG only
-			friend class LevelHandler;
 
 		public:
 			SpriteRenderer(ActorBase* owner)
 				:
 				_owner(owner), AnimPaused(false),
-				FrameConfiguration(), FrameDimensions(), _animLoopMode(AnimationLoopMode::Loop),
-				_animFirstFrame(0), _animFrameCount(0), _animDuration(0.0f), _animTime(0.0f),
-				_curAnimFrame(0), _nextAnimFrame(0), _curAnimFrameFade(0.0f), _hotspot()
+				FrameConfiguration(), FrameDimensions(), LoopMode(AnimationLoopMode::Loop),
+				FirstFrame(0), FrameCount(0), AnimDuration(0.0f), AnimTime(0.0f),
+				CurrentFrame(0), NextFrame(0), CurrentFrameFade(0.0f), Hotspot()
 			{
 			}
 
@@ -140,22 +137,30 @@ namespace Jazz2
 
 			Vector2i FrameConfiguration;
 			Vector2i FrameDimensions;
+			AnimationLoopMode LoopMode;
+			int FirstFrame;
+			int FrameCount;
+			float AnimDuration;
+			float AnimTime;
+			int CurrentFrame, NextFrame;
+			float CurrentFrameFade;
+			Vector2i Hotspot;
 
 			void OnUpdate(float timeMult) override;
 
 			bool IsAnimationRunning()
 			{
-				if (_animFrameCount <= 0) {
+				if (FrameCount <= 0) {
 					return false;
 				}
 
-				switch (_animLoopMode) {
+				switch (LoopMode) {
 					case AnimationLoopMode::FixedSingle:
 						return false;
 					case AnimationLoopMode::Loop:
 						return !AnimPaused;
 					case AnimationLoopMode::Once:
-						return !AnimPaused && _animTime < _animDuration;
+						return !AnimPaused && AnimTime < AnimDuration;
 					default:
 						return false;
 				}
@@ -163,15 +168,6 @@ namespace Jazz2
 
 		private:
 			ActorBase* _owner;
-
-			AnimationLoopMode _animLoopMode;
-			int _animFirstFrame;
-			int _animFrameCount;
-			float _animDuration;
-			float _animTime;
-			int _curAnimFrame, _nextAnimFrame;
-			float _curAnimFrameFade;
-			Vector2i _hotspot;
 
 			void UpdateVisibleFrames();
 			static int NormalizeFrame(int frame, int min, int max);

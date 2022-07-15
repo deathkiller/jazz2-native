@@ -18,6 +18,7 @@ namespace Jazz2::Tiles
 		_collapsingTimer(0.0f)
 	{
 		_tileSet = ContentResolver::Current().RequestTileSet(tileSetPath, true, nullptr);
+		_renderCommands.reserve(128);
 	}
 
 	Vector2i TileMap::Size()
@@ -640,11 +641,13 @@ namespace Jazz2::Tiles
 
 					auto spriteBlock_ = command->material().uniformBlock("SpriteBlock");
 					spriteBlock_->uniform("texRect")->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
+					spriteBlock_->uniform("spriteSize")->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 					spriteBlock_->uniform("color")->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, alpha / 255.0f).Data());
 
 					Matrix4x4f worldMatrix = Matrix4x4f::Translation(std::round(x2) + (TileSet::DefaultTileSize / 2), std::round(y2) + (TileSet::DefaultTileSize / 2), 0);
 					command->setTransformation(worldMatrix);
 					command->setLayer(layer.Depth);
+					command->material().setTexture(*_tileSet->_textureDiffuse);
 
 					renderQueue.addCommand(command);
 				}
@@ -677,12 +680,6 @@ namespace Jazz2::Tiles
 			command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
 			command->material().setBlendingEnabled(true);
 			command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-
-			auto spriteBlock_ = command->material().uniformBlock("SpriteBlock");
-			spriteBlock_->uniform("spriteSize")->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
-			spriteBlock_->uniform("color")->setFloatVector(Colorf::White.Data());
-
-			command->material().setTexture(*_tileSet->_textureDiffuse);
 			return command.get();
 		}
 	}
@@ -855,6 +852,40 @@ namespace Jazz2::Tiles
 		tile.ExtraData = extraData;
 	}
 
+	void TileMap::CreateDebris(const DestructibleDebris& debris)
+	{
+		auto& spriteLayer = _layers[_sprLayerIndex];
+		if (debris.CollisionAction == DebrisCollisionAction::Disappear && debris.Depth <= spriteLayer.Depth) {
+			int x = (int)debris.Pos.X / 32;
+			int y = (int)debris.Pos.Y / 32;
+			if (x < 0 || y < 0 || x >= spriteLayer.LayoutSize.X || y >= spriteLayer.LayoutSize.Y) {
+				return;
+			}
+
+			int idx = spriteLayer.Layout[x + y * spriteLayer.LayoutSize.X].TileID;
+			if (spriteLayer.Layout[x + y * spriteLayer.LayoutSize.X].IsAnimated) {
+				idx = _animatedTiles[idx].Tiles[_animatedTiles[idx].CurrentTileIdx].TileID;
+			}
+
+			if (_tileSet->IsTileFilled(idx)) {
+				return;
+			}
+
+			if (_sprLayerIndex + 1 < _layers.size() && _layers[_sprLayerIndex + 1].SpeedX == 1.0f && _layers[_sprLayerIndex + 1].SpeedY == 1.0f) {
+				idx = _layers[_sprLayerIndex + 1].Layout[x + y * spriteLayer.LayoutSize.X].TileID;
+				if (_layers[_sprLayerIndex + 1].Layout[x + y * spriteLayer.LayoutSize.X].IsAnimated) {
+					idx = _animatedTiles[idx].Tiles[_animatedTiles[idx].CurrentTileIdx].TileID;
+				}
+
+				if (_tileSet->IsTileFilled(idx)) {
+					return;
+				}
+			}
+		}
+
+		_debrisList.push_back(debris);
+	}
+
 	void TileMap::CreateTileDebris(int tileId, int x, int y)
 	{
 		constexpr float speedMultiplier[] = { -2, 2, -1, 1 };
@@ -900,7 +931,88 @@ namespace Jazz2::Tiles
 			debris.TexScaleY = texScaleY;
 			debris.TexBiasY = texBiasY + ((i / 2) * quarterSize / float(texSize.Y));
 
+			debris.DiffuseTexture = _tileSet->_textureDiffuse.get();
 			debris.CollisionAction = DebrisCollisionAction::None;
+		}
+	}
+
+	void TileMap::CreateParticleDebris(const GraphicResource* res, Vector3f pos, Vector2f force, int currentFrame, bool isFacingLeft)
+	{
+		constexpr int DebrisSize = 3;
+
+		float x = pos.X - res->Base->Hotspot.X;
+		float y = pos.Y - res->Base->Hotspot.Y;
+		Vector2i texSize = res->Base->TextureDiffuse->size();
+
+		for (int fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
+			for (int fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
+				float currentSize = DebrisSize * random().NextFloat(0.2f, 1.1f);
+
+				DestructibleDebris& debris = _debrisList.emplace_back();
+				debris.Pos = Vector2f(x + (isFacingLeft ? res->Base->FrameDimensions.X - fx : fx), y + fy);
+				debris.Depth = (uint16_t)pos.Z;
+				debris.Size = Vector2f(currentSize, currentSize);
+				debris.Speed = Vector2f(force.X + ((fx - res->Base->FrameDimensions.X / 2) + random().NextFloat(-2.0f, 2.0f)) * (isFacingLeft ? -1.0f : 1.0f) * random().NextFloat(2.0f, 8.0f) / res->Base->FrameDimensions.X,
+						force.Y - 1.0f * random().NextFloat(2.2f, 4.0f));
+				debris.Acceleration = Vector2f(0.0f, 0.2f);
+
+				debris.Scale = 1.0f;
+				debris.ScaleSpeed = 0.0f;
+				debris.Angle = 0.0f;
+				debris.AngleSpeed = 0.0f;
+
+				debris.Alpha = 1.0f;
+				debris.AlphaSpeed = -0.002f;
+
+				debris.Time = 320.0f;
+
+				debris.TexScaleX = (currentSize / float(texSize.X));
+				debris.TexBiasX = (((float)(currentFrame % res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.X) + ((float)fx / float(texSize.X)));
+				debris.TexScaleY = (currentSize / float(texSize.Y));
+				debris.TexBiasY = (((float)(currentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
+
+				debris.DiffuseTexture = res->Base->TextureDiffuse.get();
+				debris.CollisionAction = DebrisCollisionAction::Bounce;
+			}
+		}
+	}
+
+	void TileMap::CreateSpriteDebris(const GraphicResource* res, Vector3f pos, int count)
+	{
+		float x = pos.X - res->Base->Hotspot.X;
+		float y = pos.Y - res->Base->Hotspot.Y;
+		Vector2i texSize = res->Base->TextureDiffuse->size();
+
+		for (int i = 0; i < count; i++) {
+			float speedX = random().NextFloat(-1.0f, 1.0f) * random().NextFloat(0.2f, 0.8f) * count;
+
+			DestructibleDebris& debris = _debrisList.emplace_back();
+			debris.Pos = Vector2f(x, y);
+			debris.Depth = (uint16_t)pos.Z;
+			debris.Size = Vector2f((float)res->Base->FrameDimensions.X, (float)res->Base->FrameDimensions.Y);
+			debris.Speed = Vector2f(speedX, -1.0f * random().NextFloat(2.2f, 4.0f));
+			debris.Acceleration = Vector2f(0.0f, 0.2f);
+
+			debris.Scale = 1.0f;
+			debris.ScaleSpeed = -0.002f;
+			debris.Angle = random().NextFloat(0.0f, fTwoPi);
+			debris.AngleSpeed = speedX * 0.02f;
+
+			debris.Alpha = 1.0f;
+			debris.AlphaSpeed = -0.002f;
+
+			debris.Time = 560.0f;
+
+			int curAnimFrame = res->FrameOffset + random().Next(0, res->FrameCount);
+			int col = curAnimFrame % res->Base->FrameConfiguration.X;
+			int row = curAnimFrame / res->Base->FrameConfiguration.X;
+			debris.TexScaleX = (float(res->Base->FrameDimensions.X) / float(texSize.X));
+			debris.TexBiasX = (float(res->Base->FrameDimensions.X * col) / float(texSize.X));
+			debris.TexScaleY = (float(res->Base->FrameDimensions.Y) / float(texSize.Y));
+			debris.TexBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.X));
+
+			debris.DiffuseTexture = res->Base->TextureDiffuse.get();
+			debris.CollisionAction = DebrisCollisionAction::Bounce;
 		}
 	}
 
@@ -981,7 +1093,7 @@ namespace Jazz2::Tiles
 
 			auto spriteBlock_ = command->material().uniformBlock("SpriteBlock");
 			spriteBlock_->uniform("texRect")->setFloatValue(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);
-			spriteBlock_->uniform("spriteSize")->setFloatValue(TileSet::DefaultTileSize / 2, TileSet::DefaultTileSize / 2);
+			spriteBlock_->uniform("spriteSize")->setFloatValue(debris.Size.X, debris.Size.Y);
 			spriteBlock_->uniform("color")->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, debris.Alpha).Data());
 
 			Matrix4x4f worldMatrix = Matrix4x4f::Translation(debris.Pos.X, debris.Pos.Y, 0.0f);
@@ -989,6 +1101,7 @@ namespace Jazz2::Tiles
 			worldMatrix.Scale(debris.Scale, debris.Scale, 1.0f);
 			command->setTransformation(worldMatrix);
 			command->setLayer(debris.Depth);
+			command->material().setTexture(*debris.DiffuseTexture);
 
 			renderQueue.addCommand(command);
 		}

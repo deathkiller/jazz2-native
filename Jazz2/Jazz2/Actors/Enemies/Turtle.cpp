@@ -116,6 +116,8 @@ namespace Jazz2::Actors::Enemies
 			Explosion.Create(levelHandler, Transform.Pos, Explosion.SmokeGray);
 		}*/
 
+		CreateDeathDebris(collider);
+
 		return EnemyBase::OnPerish(collider);
 	}
 
