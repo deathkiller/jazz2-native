@@ -2,6 +2,7 @@
 #include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
+#include "TurtleShell.h"
 
 #include "../../../nCine/Base/Random.h"
 
@@ -24,7 +25,6 @@ namespace Jazz2::Actors::Enemies
 				PreloadMetadataAsync("Enemy/Turtle");
 				PreloadMetadataAsync("Enemy/TurtleShell");
 				break;
-
 			case 1: // Xmas
 				PreloadMetadataAsync("Enemy/TurtleXmas");
 				PreloadMetadataAsync("Enemy/TurtleShellXmas");
@@ -43,7 +43,6 @@ namespace Jazz2::Actors::Enemies
 			default:
 				co_await RequestMetadataAsync("Enemy/Turtle");
 				break;
-
 			case 1: // Xmas
 				co_await RequestMetadataAsync("Enemy/TurtleXmas");
 				break;
@@ -98,25 +97,25 @@ namespace Jazz2::Actors::Enemies
 
 	bool Turtle::OnPerish(ActorBase* collider)
 	{
-		/*if (renderer.AnimPaused) {
+		if (_renderer.AnimPaused) {
 			// Animation should be paused only if enemy is frozen
 			CreateDeathDebris(collider);
-			levelHandler.PlayCommonSound("Splat", Transform.Pos);
+			//_levelHandler->PlayCommonSound("Splat", Transform.Pos);
 
 			TryGenerateRandomDrop();
 		} else {
-			TurtleShell shell = new TurtleShell(speedX * 1.1f, 1.1f);
-			shell.OnActivated(new ActorActivationDetails {
-				LevelHandler = levelHandler,
-				Pos = Transform.Pos,
-				Params = new[] { theme }
+			std::shared_ptr<TurtleShell> shell = std::make_shared<TurtleShell>();
+			uint8_t shellParams[] = { _theme };
+			shell->OnActivated({
+				.LevelHandler = _levelHandler,
+				.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()),
+				.Params = shellParams
 			});
-			levelHandler.AddActor(shell);
+			_levelHandler->AddActor(shell);
 
-			Explosion.Create(levelHandler, Transform.Pos, Explosion.SmokeGray);
-		}*/
-
-		CreateDeathDebris(collider);
+			// TODO
+			//Explosion.Create(levelHandler, Transform.Pos, Explosion.SmokeGray);
+		}
 
 		return EnemyBase::OnPerish(collider);
 	}

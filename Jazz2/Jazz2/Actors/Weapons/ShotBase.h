@@ -17,7 +17,7 @@ namespace Jazz2::Actors::Weapons
 
 		bool OnHandleCollision(ActorBase* other) override;
 
-		float GetStrength() {
+		int GetStrength() {
 			return _strength;
 		}
 

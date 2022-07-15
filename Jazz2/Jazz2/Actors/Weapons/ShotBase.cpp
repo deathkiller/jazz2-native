@@ -52,7 +52,9 @@ namespace Jazz2::Actors::Weapons
 	bool ShotBase::OnHandleCollision(ActorBase* other)
 	{
 		if (auto enemyBase = dynamic_cast<Enemies::EnemyBase*>(other)) {
-			DecreaseHealth(INT32_MAX);
+			if (enemyBase->CanCollideWithAmmo) {
+				DecreaseHealth(INT32_MAX);
+			}
 		} else if (auto solidObjectBase = dynamic_cast<SolidObjectBase*>(other)) {
 			DecreaseHealth(INT32_MAX);
 		} /*else if (other is TriggerCrate || other is BarrelContainer || other is PowerUpWeaponMonitor) {

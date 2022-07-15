@@ -12,8 +12,8 @@ namespace Jazz2::Actors::Enemies
 {
 	EnemyBase::EnemyBase()
 		:
+		CanCollideWithAmmo(true),
 		_canHurtPlayer(true),
-		_canCollideWithAmmo(true),
 		_scoreValue(0),
 		_lastHitDir(LastHitDirection::None)
 	{

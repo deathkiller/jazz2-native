@@ -7,9 +7,11 @@
 #include "../Actors/Collectibles/AmmoCollectible.h"
 #include "../Actors/Collectibles/CoinCollectible.h"
 #include "../Actors/Collectibles/FoodCollectible.h"
+#include "../Actors/Collectibles/CarrotCollectible.h"
 
 #include "../Actors/Enemies/Bat.h"
 #include "../Actors/Enemies/Turtle.h"
+#include "../Actors/Enemies/TurtleShell.h"
 
 using namespace Jazz2::Actors;
 
@@ -86,11 +88,11 @@ namespace Jazz2::Events
 		RegisterSpawnable(EventType::EnemySkeleton, Skeleton.Create, Skeleton.Preload);
 		RegisterSpawnable(EventType::EnemyTurtleTough, TurtleTough.Create, TurtleTough.Preload);
 		RegisterSpawnable(EventType::EnemyTurtleTube, TurtleTube.Create, TurtleTube.Preload);
-		RegisterSpawnable(EventType::EnemyWitch, Witch.Create, Witch.Preload);
+		RegisterSpawnable(EventType::EnemyWitch, Witch.Create, Witch.Preload);*/
 
-		RegisterSpawnable(EventType::TurtleShell, TurtleShell.Create, TurtleShell.Preload);
+		RegisterSpawnable<Enemies::TurtleShell>(EventType::TurtleShell);
 
-		RegisterSpawnable(EventType::BossBilsy, Bilsy.Create, Bilsy.Preload);
+		/*RegisterSpawnable(EventType::BossBilsy, Bilsy.Create, Bilsy.Preload);
 		RegisterSpawnable(EventType::BossDevan, Devan.Create, Devan.Preload);
 		RegisterSpawnable(EventType::BossDevanRemote, DevanRemote.Create, DevanRemote.Preload);
 		RegisterSpawnable(EventType::BossQueen, Queen.Create, Queen.Preload);
@@ -104,8 +106,8 @@ namespace Jazz2::Events
 		// Collectibles
 		RegisterSpawnable(EventType::Gem, GemCollectible.Create, GemCollectible.Preload);*/
 		RegisterSpawnable<Collectibles::CoinCollectible>(EventType::Coin);
-		/*RegisterSpawnable(EventType::Carrot, CarrotCollectible.Create, CarrotCollectible.Preload);
-		RegisterSpawnable(EventType::CarrotFly, CarrotFlyCollectible.Create, CarrotFlyCollectible.Preload);
+		RegisterSpawnable<Collectibles::CarrotCollectible>(EventType::Carrot);
+		/*RegisterSpawnable(EventType::CarrotFly, CarrotFlyCollectible.Create, CarrotFlyCollectible.Preload);
 		RegisterSpawnable(EventType::CarrotInvincible, CarrotInvincibleCollectible.Create, CarrotInvincibleCollectible.Preload);
 		RegisterSpawnable(EventType::OneUp, OneUpCollectible.Create, OneUpCollectible.Preload);
 		RegisterSpawnable(EventType::FastFire, FastFireCollectible.Create, FastFireCollectible.Preload);

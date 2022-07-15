@@ -8,8 +8,10 @@
 #include "Environment/BonusWarp.h"
 #include "Environment/Spring.h"
 #include "Enemies/EnemyBase.h"
+#include "Enemies/TurtleShell.h"
 
 #include "Weapons/BlasterShot.h"
+#include "Weapons/BouncerShot.h"
 
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Base/FrameTimer.h"
@@ -841,7 +843,18 @@ namespace Jazz2::Actors
 	{
 		bool handled = false;
 		bool removeSpecialMove = false;
-		if (auto enemy = dynamic_cast<Enemies::EnemyBase*>(other)) {
+		if (auto turtleShell = dynamic_cast<Enemies::TurtleShell*>(other)) {
+			if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f) {
+				other->DecreaseHealth(INT32_MAX, this);
+
+				if ((_currentAnimationState & AnimState::Buttstomp) == AnimState::Buttstomp) {
+					removeSpecialMove = true;
+					_speed.Y *= -0.6f;
+					SetState(ActorFlags::CanJump, true);
+				}
+				return true;
+			}
+		} else if (auto enemy = dynamic_cast<Enemies::EnemyBase*>(other)) {
 			if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f /*|| _shieldTime > 0.0f*/) {
 				if (!enemy->IsInvulnerable()) {
 					enemy->DecreaseHealth(4, this);
@@ -1925,8 +1938,8 @@ namespace Jazz2::Actors
 
 		switch (weaponType) {
 			case WeaponType::Blaster: FireWeaponBlaster(); break;
-			/*case WeaponType::Bouncer: FireWeaponBouncer(); break;
-			case WeaponType::Freezer: FireWeaponFreezer(); break;
+			case WeaponType::Bouncer: FireWeaponBouncer(); break;
+			/*case WeaponType::Freezer: FireWeaponFreezer(); break;
 			case WeaponType::Seeker: FireWeaponSeeker(); break;
 			case WeaponType::RF: FireWeaponRF(); break;
 
@@ -1967,8 +1980,7 @@ namespace Jazz2::Actors
 
 			// No ammo, switch weapons
 			if (_weaponAmmo[(int)_currentWeapon] == 0) {
-				// TODO
-				//SwitchToNextWeapon();
+				SwitchToNextWeapon();
 			}
 		}
 
@@ -2019,6 +2031,26 @@ namespace Jazz2::Actors
 
 		//PlaySound("WeaponBlaster");
 		_weaponCooldown = 40.0f - (_weaponUpgrades[(int)WeaponType::Blaster] / 2) * 2.0f;
+	}
+
+	void Player::FireWeaponBouncer()
+	{
+		Vector3i initialPos;
+		Vector2f gunspotPos;
+		float angle;
+		GetFirePointAndAngle(initialPos, gunspotPos, angle);
+
+		std::shared_ptr<Weapons::BouncerShot> shot = std::make_shared<Weapons::BouncerShot>();
+		uint8_t shotParams[1] = { _weaponUpgrades[(int)_currentWeapon] };
+		shot->OnActivated({
+			.LevelHandler = _levelHandler,
+			.Pos = initialPos,
+			.Params = shotParams
+		});
+		shot->OnFire(shared_from_this(), gunspotPos, _speed, _angle, IsFacingLeft());
+		_levelHandler->AddActor(shot);
+
+		_weaponCooldown = 32.0f - (_weaponUpgrades[(int)WeaponType::Blaster] / 2) * 1.7f;
 	}
 
 	void Player::ReceiveLevelCarryOver(ExitType exitType, const PlayerCarryOver& carryOver)

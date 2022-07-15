@@ -154,5 +154,6 @@ namespace Jazz2::Actors
 		bool FireWeapon(WeaponType weaponType);
 		void GetFirePointAndAngle(Vector3i& initialPos, Vector2f& gunspotPos, float& angle);
 		void FireWeaponBlaster();
+		void FireWeaponBouncer();
 	};
 }

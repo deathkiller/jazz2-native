@@ -1,6 +1,8 @@
 ﻿#include "CollectibleBase.h"
 #include "../../LevelInitialization.h"
 #include "../Player.h"
+#include "../Weapons/ShotBase.h"
+#include "../Enemies/TurtleShell.h"
 
 #include "../../../nCine/Base/FrameTimer.h"
 #include "../../../nCine/Base/Random.h"
@@ -72,18 +74,18 @@ namespace Jazz2::Actors::Collectibles
 		if (auto player = dynamic_cast<Player*>(other)) {
 			OnCollect(player);
 			return true;
-		}
-		// TODO: weapons
-		/*else if (other is AmmoBase || other is AmmoTNT || other is TurtleShell) {
-			if (_untouched) {
-				Vector3 speed = other->Speed;
-				_externalForce.X += speed.X / 2.0f * (0.9f + random().real() * 0.2f);
-				_externalForce.Y += -speed.Y / 4.0f * (0.9f + random().real() * 0.2f);
+		} else {
+			// TODO: Add TNT
+			bool shouldDrop = _untouched && (dynamic_cast<Weapons::ShotBase*>(other) != nullptr || dynamic_cast<Enemies::TurtleShell*>(other) != nullptr);
+			if (shouldDrop) {
+				Vector2f speed = other->GetSpeed();
+				_externalForce.X += speed.X / 2.0f * (0.9f + random().NextFloat(0.0f, 0.2f));
+				_externalForce.Y += -speed.Y / 4.0f * (0.9f + random().NextFloat(0.0f, 0.2f));
 
-				untouched = false;
+				_untouched = false;
 				CollisionFlags |= CollisionFlags::ApplyGravitation;
 			}
-		}*/
+		}
 
 		return false;
 	}

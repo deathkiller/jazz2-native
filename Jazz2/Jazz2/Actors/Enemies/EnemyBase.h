@@ -9,6 +9,8 @@ namespace Jazz2::Actors::Enemies
 	public:
 		EnemyBase();
 
+		bool CanCollideWithAmmo;
+
 		bool OnHandleCollision(ActorBase* other) override;
 
 		bool CanHurtPlayer()
@@ -25,9 +27,8 @@ namespace Jazz2::Actors::Enemies
 			Down
 		};
 
-		uint32_t _scoreValue;
 		bool _canHurtPlayer;
-		bool _canCollideWithAmmo;
+		uint32_t _scoreValue;
 		LastHitDirection _lastHitDir;
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

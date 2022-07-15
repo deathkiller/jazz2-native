@@ -113,6 +113,11 @@ namespace Jazz2
 			return _speed;
 		}
 
+		constexpr bool GetState(ActorFlags flag) const noexcept
+		{
+			return (_flags & flag) == flag;
+		}
+
 	protected:
 		struct AnimationCandidate {
 			const std::string* Identifier;
@@ -271,10 +276,6 @@ namespace Jazz2
 			return awaitable { this, path };
 		}
 
-		constexpr bool GetState(ActorFlags flag) const noexcept
-		{
-			return (_flags & flag) == flag;
-		}
 		constexpr void SetState(ActorFlags flag, bool value) noexcept
 		{
 			if (value) {

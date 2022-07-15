@@ -57,7 +57,6 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
-  
   <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   <Import Project="$(SolutionDir)\VC-LTL helper for Visual Studio.props" />
   <Import Project="$(SolutionDir)\Sign.props" Condition="Exists('$(SolutionDir)\Sign.props')" />
@@ -83,7 +82,6 @@
       </PropertyGroup>
     </Otherwise>
   </Choose>
-  
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -202,6 +200,9 @@
     <ClInclude Include="$(ExtensionLibraryPath)\SmallVector.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Utf8.h" />
     <ClInclude Include="Common.h" />
+    <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
+    <ClInclude Include="Jazz2\Actors\Enemies\TurtleShell.h" />
+    <ClInclude Include="Jazz2\Actors\Weapons\BouncerShot.h" />
     <ClInclude Include="Jazz2\Compatibility\AnimSetMapping.h" />
     <ClInclude Include="Jazz2\Compatibility\EventConverter.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Anims.h" />
@@ -388,6 +389,9 @@
   <ItemGroup>
     <ClCompile Include="$(ExtensionLibraryPath)\SmallVector.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Utf8.cpp" />
+    <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
+    <ClCompile Include="Jazz2\Actors\Enemies\TurtleShell.cpp" />
+    <ClCompile Include="Jazz2\Actors\Weapons\BouncerShot.cpp" />
     <ClCompile Include="Jazz2\Compatibility\AnimSetMapping.cpp" />
     <ClCompile Include="Jazz2\Compatibility\EventConverter.cpp" />
     <ClCompile Include="Jazz2\Compatibility\JJ2Anims.cpp" />
