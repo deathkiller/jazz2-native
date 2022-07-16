@@ -53,9 +53,9 @@ namespace nCine {
 		if (fileDescriptor_ >= 0) {
 #if !(defined(_WIN32) && !defined(__MINGW32__))
 			const int retValue = ::close(fileDescriptor_);
-			if (retValue < 0)
+			if (retValue < 0) {
 				//LOGW_X("Cannot close the file \"%s\"", filename_.data());
-			else {
+			} else {
 				//LOGI_X("File \"%s\" closed", filename_.data());
 				fileDescriptor_ = -1;
 			}
@@ -150,7 +150,7 @@ namespace nCine {
 				openFlag = O_RDWR;
 				break;
 			default:
-				LOGE_X("Cannot open the file \"%s\", wrong open mode", filename_.data());
+				//LOGE_X("Cannot open the file \"%s\", wrong open mode", filename_.data());
 				break;
 		}
 
@@ -159,15 +159,15 @@ namespace nCine {
 
 			if (fileDescriptor_ < 0) {
 				if (shouldExitOnFailToOpen_) {
-					LOGF_X("Cannot open the file \"%s\"", filename_.data());
+					//LOGF_X("Cannot open the file \"%s\"", filename_.data());
 					exit(EXIT_FAILURE);
 				} else {
-					LOGE_X("Cannot open the file \"%s\"", filename_.data());
+					//LOGE_X("Cannot open the file \"%s\"", filename_.data());
 					return;
 				}
-			} else
-				LOGI_X("File \"%s\" opened", filename_.data());
-
+			} else {
+				//LOGI_X("File \"%s\" opened", filename_.data());
+			}
 			// Calculating file size
 			fileSize_ = lseek(fileDescriptor_, 0L, SEEK_END);
 			lseek(fileDescriptor_, 0L, SEEK_SET);
@@ -199,7 +199,11 @@ namespace nCine {
 		}
 
 		if (modeChars[0] != '\0') {
+#if defined(_WIN32) && !defined(__MINGW32__)
 			fopen_s(&filePointer_, filename_.data(), modeChars);
+#else
+			filePointer_ = fopen(filename_.data(), modeChars);
+#endif
 
 			if (filePointer_ == nullptr) {
 				if (shouldExitOnFailToOpen_) {

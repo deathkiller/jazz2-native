@@ -12,8 +12,10 @@ namespace nCine {
 		explicit TextureLoaderPng(std::unique_ptr<IFileStream> fileHandle);
 
 	private:
+#if !defined(__EMSCRIPTEN__)
 		static int ReadInt32BigEndian(const std::unique_ptr<IFileStream>& s);
 		static uint8_t UnapplyFilter(uint8_t filter, uint8_t x, uint8_t a, uint8_t b, uint8_t c);
+#endif
 	};
 
 }

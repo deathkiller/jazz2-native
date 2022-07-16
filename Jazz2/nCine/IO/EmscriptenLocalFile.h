@@ -14,7 +14,7 @@ namespace nCine
 		using LoadedCallbackType = void(const EmscriptenLocalFile& localFile, void* userData);
 
 		EmscriptenLocalFile()
-			: fileSize_(0), filename_(MaxFilenameLength), loading_(false), loadedCallback_(nullptr) {}
+			: fileSize_(0), /*filename_(MaxFilenameLength),*/ loading_(false), loadedCallback_(nullptr) {}
 
 		/// Opens a dialog in the browser to choose a file to load
 		void load();

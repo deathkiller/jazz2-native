@@ -77,7 +77,7 @@ namespace nCine
 			return;
 
 
-		const unsigned int amount = static_cast<unsigned int>(random().Next(init.rndAmount.X, init.rndAmount.Y));
+		const unsigned int amount = static_cast<unsigned int>(Random().Next(init.rndAmount.X, init.rndAmount.Y));
 #ifdef WITH_TRACY
 		tracyInfoString.format("Count: %d", amount);
 		ZoneText(tracyInfoString.data(), tracyInfoString.length());
@@ -90,11 +90,11 @@ namespace nCine
 			if (poolTop_ < 0)
 				break;
 
-			const float life = random().NextFloat(init.rndLife.X, init.rndLife.Y);
-			position.X = random().NextFloat(init.rndPositionX.X, init.rndPositionX.Y);
-			position.Y = random().NextFloat(init.rndPositionY.X, init.rndPositionY.Y);
-			velocity.X = random().NextFloat(init.rndVelocityX.X, init.rndVelocityX.Y);
-			velocity.Y = random().NextFloat(init.rndVelocityY.X, init.rndVelocityY.Y);
+			const float life = Random().NextFloat(init.rndLife.X, init.rndLife.Y);
+			position.X = Random().NextFloat(init.rndPositionX.X, init.rndPositionX.Y);
+			position.Y = Random().NextFloat(init.rndPositionY.X, init.rndPositionY.Y);
+			velocity.X = Random().NextFloat(init.rndVelocityX.X, init.rndVelocityX.Y);
+			velocity.Y = Random().NextFloat(init.rndVelocityY.X, init.rndVelocityY.Y);
 
 			float rotation = 0.0f;
 			if (init.emitterRotation) {
@@ -103,7 +103,7 @@ namespace nCine
 				if (rotation < 0.0f)
 					rotation += 360.0f;
 			} else
-				rotation = random().NextFloat(init.rndRotation.X, init.rndRotation.Y);
+				rotation = Random().NextFloat(init.rndRotation.X, init.rndRotation.Y);
 
 			if (inLocalSpace_ == false)
 				position += absPosition();

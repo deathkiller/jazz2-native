@@ -68,10 +68,19 @@ namespace nCine {
 	void GfxCapabilities::init()
 	{
 		const char* version = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+
 #if defined(WITH_OPENGLES) || defined(__EMSCRIPTEN__)
+#   if defined(_MSC_VER)
 		sscanf_s(version, "OpenGL ES %2d.%2d", &glMajorVersion_, &glMinorVersion_);
+#   else
+        sscanf(version, "OpenGL ES %2d.%2d", &glMajorVersion_, &glMinorVersion_);
+#   endif
 #else
+#   if defined(_MSC_VER)
 		sscanf_s(version, "%2d.%2d.%2d", &glMajorVersion_, &glMinorVersion_, &glReleaseVersion_);
+#   else
+        sscanf(version, "%2d.%2d.%2d", &glMajorVersion_, &glMinorVersion_, &glReleaseVersion_);
+#   endif
 #endif
 
 		glInfoStrings_.vendor = glGetString(GL_VENDOR);

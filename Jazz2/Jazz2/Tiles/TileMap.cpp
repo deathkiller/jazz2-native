@@ -704,7 +704,7 @@ namespace Jazz2::Tiles
 			bool isFlippedX = (flags & 0x01) != 0;
 			bool isFlippedY = (flags & 0x02) != 0;
 			bool isAnimated = (flags & 0x04) != 0;
-			byte tileModifier = (byte)(flags >> 4);
+			uint8_t tileModifier = (uint8_t)(flags >> 4);
 
 			LayerTile& tile = layout[i];
 			tile.TileID = tileType;
@@ -785,10 +785,10 @@ namespace Jazz2::Tiles
 			AnimatedTile& animTile = _animatedTiles.emplace_back();
 
 			for (int j = 0; j < frameCount; j++) {
-				uint16_t tileId = s->ReadValue<uint16_t>();
+				auto& frame = animTile.Tiles.emplace_back();
+				frame.TileID = s->ReadValue<uint16_t>();
 				// TODO: flags
 				uint8_t flag = s->ReadValue<uint8_t>();
-				animTile.Tiles.emplace_back(tileId);
 			}
 
 			// TODO: Adjust FPS in Import
@@ -913,13 +913,13 @@ namespace Jazz2::Tiles
 			debris.Pos = Vector2f(x * 32 + (i % 2) * quarterSize, y * 32 + (i / 2) * quarterSize);
 			debris.Depth = z;
 			debris.Size = Vector2f(quarterSize, quarterSize);
-			debris.Speed = Vector2f(speedMultiplier[i] * random().NextFloat(0.8f, 1.2f), -4.0f * random().NextFloat(0.8f, 1.2f));
+			debris.Speed = Vector2f(speedMultiplier[i] * nCine::Random().NextFloat(0.8f, 1.2f), -4.0f * nCine::Random().NextFloat(0.8f, 1.2f));
 			debris.Acceleration = Vector2f(0.0f, 0.3f);
 
 			debris.Scale = 1.0f;
-			debris.ScaleSpeed = random().NextFloat(-0.01f, -0.002f);
+			debris.ScaleSpeed = nCine::Random().NextFloat(-0.01f, -0.002f);
 			debris.Angle = 0.0f;
-			debris.AngleSpeed = speedMultiplier[i] * random().NextFloat(0.0f, 0.014f);
+			debris.AngleSpeed = speedMultiplier[i] * nCine::Random().NextFloat(0.0f, 0.014f);
 
 			debris.Alpha = 1.0f;
 			debris.AlphaSpeed = -0.01f;
@@ -946,14 +946,14 @@ namespace Jazz2::Tiles
 
 		for (int fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
 			for (int fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
-				float currentSize = DebrisSize * random().NextFloat(0.2f, 1.1f);
+				float currentSize = DebrisSize * nCine::Random().NextFloat(0.2f, 1.1f);
 
 				DestructibleDebris& debris = _debrisList.emplace_back();
 				debris.Pos = Vector2f(x + (isFacingLeft ? res->Base->FrameDimensions.X - fx : fx), y + fy);
 				debris.Depth = (uint16_t)pos.Z;
 				debris.Size = Vector2f(currentSize, currentSize);
-				debris.Speed = Vector2f(force.X + ((fx - res->Base->FrameDimensions.X / 2) + random().NextFloat(-2.0f, 2.0f)) * (isFacingLeft ? -1.0f : 1.0f) * random().NextFloat(2.0f, 8.0f) / res->Base->FrameDimensions.X,
-						force.Y - 1.0f * random().NextFloat(2.2f, 4.0f));
+				debris.Speed = Vector2f(force.X + ((fx - res->Base->FrameDimensions.X / 2) + nCine::Random().NextFloat(-2.0f, 2.0f)) * (isFacingLeft ? -1.0f : 1.0f) * nCine::Random().NextFloat(2.0f, 8.0f) / res->Base->FrameDimensions.X,
+						force.Y - 1.0f * nCine::Random().NextFloat(2.2f, 4.0f));
 				debris.Acceleration = Vector2f(0.0f, 0.2f);
 
 				debris.Scale = 1.0f;
@@ -984,18 +984,18 @@ namespace Jazz2::Tiles
 		Vector2i texSize = res->Base->TextureDiffuse->size();
 
 		for (int i = 0; i < count; i++) {
-			float speedX = random().NextFloat(-1.0f, 1.0f) * random().NextFloat(0.2f, 0.8f) * count;
+			float speedX = nCine::Random().NextFloat(-1.0f, 1.0f) * nCine::Random().NextFloat(0.2f, 0.8f) * count;
 
 			DestructibleDebris& debris = _debrisList.emplace_back();
 			debris.Pos = Vector2f(x, y);
 			debris.Depth = (uint16_t)pos.Z;
 			debris.Size = Vector2f((float)res->Base->FrameDimensions.X, (float)res->Base->FrameDimensions.Y);
-			debris.Speed = Vector2f(speedX, -1.0f * random().NextFloat(2.2f, 4.0f));
+			debris.Speed = Vector2f(speedX, -1.0f * nCine::Random().NextFloat(2.2f, 4.0f));
 			debris.Acceleration = Vector2f(0.0f, 0.2f);
 
 			debris.Scale = 1.0f;
 			debris.ScaleSpeed = -0.002f;
-			debris.Angle = random().NextFloat(0.0f, fTwoPi);
+			debris.Angle = nCine::Random().NextFloat(0.0f, fTwoPi);
 			debris.AngleSpeed = speedX * 0.02f;
 
 			debris.Alpha = 1.0f;
@@ -1003,7 +1003,7 @@ namespace Jazz2::Tiles
 
 			debris.Time = 560.0f;
 
-			int curAnimFrame = res->FrameOffset + random().Next(0, res->FrameCount);
+			int curAnimFrame = res->FrameOffset + nCine::Random().Next(0, res->FrameCount);
 			int col = curAnimFrame % res->Base->FrameConfiguration.X;
 			int row = curAnimFrame / res->Base->FrameConfiguration.X;
 			debris.TexScaleX = (float(res->Base->FrameDimensions.X) / float(texSize.X));

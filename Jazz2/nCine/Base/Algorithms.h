@@ -68,6 +68,18 @@ namespace nCine
 		static constexpr bool value = true;
 	};
 
+    template <class T>
+    inline bool IsLess(const T &a, const T &b)
+    {
+        return a < b;
+    }
+    
+    template <class T>
+    inline bool IsNotLess(const T &a, const T &b)
+    {
+        return !(a < b);
+    }
+
 	/// Returns true if the range is sorted into ascending order
 	template <class Iterator>
 	inline bool isSorted(Iterator first, const Iterator last)

@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "../Common.h"
 #include "../nCine/Input/InputEvents.h"
 
 namespace Jazz2

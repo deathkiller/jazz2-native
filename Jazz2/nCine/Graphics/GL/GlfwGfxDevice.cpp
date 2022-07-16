@@ -152,7 +152,11 @@ namespace nCine {
 #endif
 		glfwSetErrorCallback(errorCallback);
 		if (!glfwInit()) {
+#if defined(_MSC_VER)
 			__debugbreak();
+#else
+			printf("glfwInit() failed!\n");
+#endif
 		}
 		//FATAL_ASSERT_MSG(glfwInit() == GL_TRUE, "glfwInit() failed");
 	}

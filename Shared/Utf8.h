@@ -7,6 +7,7 @@
 
 namespace Death::Utf8
 {
+#if defined(_WIN32) || defined(UTF16_REQUIRED)
 	bool ToUtf16(const char* text, int size, wchar_t* outputBuffer, int outputBufferSize);
 
 	Array<wchar_t> ToUtf16(const char* text, int size);
@@ -28,6 +29,7 @@ namespace Death::Utf8
 	inline R ToUtf16(T&& text) {
 		return ToUtf16(text, -1);
 	}
+#endif
 
 #if defined(_WIN32)
 

@@ -190,7 +190,7 @@ namespace nCine
 #endif
 
 		// Initialization of the static random generator seeds
-		random().Initialize(static_cast<uint64_t>(TimeStamp::now().ticks()), static_cast<uint64_t>(profileStartTime_.ticks()));
+		Random().Initialize(static_cast<uint64_t>(TimeStamp::now().ticks()), static_cast<uint64_t>(profileStartTime_.ticks()));
 
 		//LOGI("Application initialized");
 

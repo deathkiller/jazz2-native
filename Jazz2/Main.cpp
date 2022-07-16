@@ -152,6 +152,14 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdSh
 int main(int argc, char** argv)
 #endif
 {
+
+#if !defined(_WIN32)
+	// TODO
+	printf("Jazz2 - Running the application!\n");
+#define __argc argc
+#define __argv argv
+#endif
+
 	return PCApplication::start([]() -> std::unique_ptr<IAppEventHandler> {
 		return std::make_unique<GameEventHandler>();
 	}, __argc, __argv);

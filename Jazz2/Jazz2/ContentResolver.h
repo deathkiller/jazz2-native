@@ -10,6 +10,7 @@
 
 #include "AnimState.h"
 
+#include <unordered_map>
 #include <SmallVector.h>
 
 using namespace nCine;

@@ -3,7 +3,7 @@
 #define QOI_IMPLEMENTATION
 #define QOI_DECODE_ONLY
 #define QOI_NO_STDIO
-#if defined(_MSC_VER) && defined(__has_include)
+#if defined(__has_include)
 #	if __has_include("../../../Libs/Qoi.h")
 #		define __HAS_LOCAL_QOI
 #	endif

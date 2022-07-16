@@ -79,8 +79,8 @@ namespace Jazz2::Actors::Collectibles
 			bool shouldDrop = _untouched && (dynamic_cast<Weapons::ShotBase*>(other) != nullptr || dynamic_cast<Enemies::TurtleShell*>(other) != nullptr);
 			if (shouldDrop) {
 				Vector2f speed = other->GetSpeed();
-				_externalForce.X += speed.X / 2.0f * (0.9f + random().NextFloat(0.0f, 0.2f));
-				_externalForce.Y += -speed.Y / 4.0f * (0.9f + random().NextFloat(0.0f, 0.2f));
+				_externalForce.X += speed.X / 2.0f * (0.9f + nCine::Random().NextFloat(0.0f, 0.2f));
+				_externalForce.Y += -speed.Y / 4.0f * (0.9f + nCine::Random().NextFloat(0.0f, 0.2f));
 
 				_untouched = false;
 				CollisionFlags |= CollisionFlags::ApplyGravitation;

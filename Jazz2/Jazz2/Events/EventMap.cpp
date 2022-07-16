@@ -23,7 +23,7 @@ namespace Jazz2::Events
 		}
 
 		if (targetCount > 0) {
-			int selectedTarget = random().Next(0, targetCount);
+			int selectedTarget = nCine::Random().Next(0, targetCount);
 			for (auto& target : _spawnPoints) {
 				if ((target.PlayerTypeMask & (1 << ((int)type - 1))) == 0) {
 					continue;
@@ -230,7 +230,7 @@ namespace Jazz2::Events
 			}
 		}
 
-		int selectedTarget = random().Next(0, targetCount);
+		int selectedTarget = nCine::Random().Next(0, targetCount);
 		for (auto& target : _warpTargets) {
 			if (target.Id != id) {
 				continue;

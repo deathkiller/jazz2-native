@@ -457,7 +457,7 @@ namespace Jazz2
 			}
 		}
 
-		int index = (count > 1 ? nCine::random().Next(0, count) : 0);
+		int index = (count > 1 ? nCine::Random().Next(0, count) : 0);
 		_currentAnimation = candidates[index].Resource;
 		_currentAnimationState = state;
 
@@ -489,7 +489,7 @@ namespace Jazz2
 
 		_currentTransitionCallback = callback;
 
-		int index = (count > 1 ? nCine::random().Next(0, count) : 0);
+		int index = (count > 1 ? nCine::Random().Next(0, count) : 0);
 		_currentTransition = candidates[index].Resource;
 		_currentTransitionState = state;
 		_currentTransitionCancellable = cancellable;
@@ -1026,7 +1026,7 @@ namespace Jazz2
 		_renderer.FrameDimensions = res->Base->FrameDimensions;
 		if (res->FrameDuration < 0) {
 			if (res->FrameCount > 1) {
-				_renderer.FirstFrame = res->FrameOffset + random().Next(0, res->FrameCount);
+				_renderer.FirstFrame = res->FrameOffset + nCine::Random().Next(0, res->FrameCount);
 			} else {
 				_renderer.FirstFrame = res->FrameOffset;
 			}

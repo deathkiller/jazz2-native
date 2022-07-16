@@ -184,14 +184,14 @@ namespace Jazz2::Actors::Enemies
 
 			for (int fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
 				for (int fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
-					float currentSize = DebrisSize * random().NextFloat(0.2f, 1.1f);
+					float currentSize = DebrisSize * nCine::Random().NextFloat(0.2f, 1.1f);
 
 					Tiles::TileMap::DestructibleDebris debris = { };
 					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - fx : fx), y + fy);
 					debris.Depth = _renderer.layer();
 					debris.Size = Vector2f(currentSize, currentSize);
-					debris.Speed = Vector2f(((fx - res->Base->FrameDimensions.X / 2) + random().NextFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * random().NextFloat(1.0f, 3.0f) / res->Base->FrameDimensions.X,
-						 ((fy - res->Base->FrameDimensions.Y / 2) + random().NextFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * random().NextFloat(1.0f, 3.0f) / res->Base->FrameDimensions.Y);
+					debris.Speed = Vector2f(((fx - res->Base->FrameDimensions.X / 2) + nCine::Random().NextFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * nCine::Random().NextFloat(1.0f, 3.0f) / res->Base->FrameDimensions.X,
+						 ((fy - res->Base->FrameDimensions.Y / 2) + nCine::Random().NextFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * nCine::Random().NextFloat(1.0f, 3.0f) / res->Base->FrameDimensions.Y);
 					debris.Acceleration = Vector2f::Zero;
 
 					debris.Scale = 1.0f;

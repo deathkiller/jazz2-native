@@ -21,6 +21,8 @@
 // SOFTWARE.
 #include "DynamicTree.h"
 
+#include <float.h>
+
 namespace Jazz2::Collisions
 {
 	DynamicTree::DynamicTree()

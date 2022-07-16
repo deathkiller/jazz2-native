@@ -698,7 +698,7 @@ namespace nCine
 		pointer += sizeof(hash_t) * capacity_;
 
 		const unsigned int bytes = capacity_ * (sizeof(uint8_t) * 2 + sizeof(hash_t));
-		FATAL_ASSERT(pointer == buffer_ + bytes);
+		//FATAL_ASSERT(pointer == buffer_ + bytes);
 	}
 
 	template <class K, class T, class HashFunc>

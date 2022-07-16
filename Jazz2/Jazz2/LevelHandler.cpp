@@ -12,6 +12,8 @@
 #include "Actors/Player.h"
 #include "Actors/SolidObjectBase.h"
 
+#include <float.h>
+
 using namespace nCine;
 
 // TODO: Debug only
@@ -829,8 +831,8 @@ namespace Jazz2
 				_shakeOffset = Vector2f::Zero;
 			} else {
 				float shakeFactor = 0.1f * timeMult;
-				_shakeOffset.X = lerp(_shakeOffset.X, random().NextFloat(-0.2f, 0.2f) * halfView.X, shakeFactor) * std::min(_shakeDuration * 0.1f, 1.0f);
-				_shakeOffset.Y = lerp(_shakeOffset.Y, random().NextFloat(-0.2f, 0.2f) * halfView.Y, shakeFactor) * std::min(_shakeDuration * 0.1f, 1.0f);
+				_shakeOffset.X = lerp(_shakeOffset.X, nCine::Random().NextFloat(-0.2f, 0.2f) * halfView.X, shakeFactor) * std::min(_shakeDuration * 0.1f, 1.0f);
+				_shakeOffset.Y = lerp(_shakeOffset.Y, nCine::Random().NextFloat(-0.2f, 0.2f) * halfView.Y, shakeFactor) * std::min(_shakeDuration * 0.1f, 1.0f);
 			}
 		}
 

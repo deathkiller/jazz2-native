@@ -10,7 +10,9 @@ namespace Jazz2::Actors::Weapons
 {
 	BouncerShot::BouncerShot()
 		:
-		_fired(false)
+		_fired(false),
+		_hitLimit(0.0f),
+		_targetSpeedX(0.0f)
 	{
 	}
 
@@ -18,7 +20,7 @@ namespace Jazz2::Actors::Weapons
 	{
 		co_await ShotBase::OnActivatedAsync(details);
 
-		_upgrades = (byte)details.Params[0];
+		_upgrades = details.Params[0];
 		_strength = 1;
 
 		co_await RequestMetadataAsync("Weapon/Bouncer");

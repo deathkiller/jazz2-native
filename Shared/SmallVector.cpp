@@ -58,7 +58,9 @@ namespace Death
 		//	std::to_string(MaxSize) + ")";
 		//throw std::length_error(Reason);
 
+#if defined(__cpp_exceptions)
 		throw std::length_error("SmallVector capacity unable to grow");
+#endif
 	}
 
 	/// Report that this vector is already at maximum capacity. Throws
@@ -70,7 +72,9 @@ namespace Death
 		//	std::to_string(MaxSize);
 		//throw std::length_error(Reason);
 
+#if defined(__cpp_exceptions)
 		throw std::length_error("SmallVector capacity already at maximum size");
+#endif
 	}
 
 	// Note: Moving this function into the header may cause performance regression.

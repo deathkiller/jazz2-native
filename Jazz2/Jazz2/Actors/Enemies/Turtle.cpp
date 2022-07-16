@@ -50,7 +50,7 @@ namespace Jazz2::Actors::Enemies
 
 		SetAnimation(AnimState::Walk);
 
-		SetFacingLeft(random().NextBool());
+		SetFacingLeft(nCine::Random().NextBool());
 		_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
 
 		co_return true;

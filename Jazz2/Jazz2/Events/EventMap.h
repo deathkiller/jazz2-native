@@ -48,7 +48,7 @@ namespace Jazz2::Events
 
 			EventType EventType;
 			uint8_t EventParams[16];
-			byte Delay;
+			uint8_t Delay;
 			float TimeLeft;
 
 			std::shared_ptr<ActorBase> SpawnedActor;

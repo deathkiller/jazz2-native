@@ -389,9 +389,13 @@ namespace nCine
 			return false;
 
 		const char* pathExtension = FileSystem::extension(path);
-		if (pathExtension != nullptr)
+		if (pathExtension != nullptr) {
+#if defined(_WIN32) && !defined(__MINGW32__)
 			return (_stricmp(pathExtension, extension) == 0);
-
+#else
+			return (::strcasecmp(pathExtension, extension) == 0);
+#endif
+		}
 		return false;
 	}
 
@@ -735,7 +739,7 @@ namespace nCine
 		strncpy(buffer, path, MaxPathLength - 1);
 		const char* baseName = ::basename(buffer);
 		if (hidden && baseName && baseName[0] != '.') {
-			std::string newPath(MaxPathLength);
+			std::string newPath(MaxPathLength, '\0');
 			newPath = joinPath(dirName(path), ".");
 			newPath.append(baseName);
 			const int status = ::rename(path, newPath.data());
@@ -745,7 +749,7 @@ namespace nCine
 			while (baseName[numDots] == '.')
 				numDots++;
 
-			std::string newPath(MaxPathLength);
+			std::string newPath(MaxPathLength, '\0');
 			newPath = joinPath(dirName(path), &buffer[numDots]);
 			const int status = ::rename(path, newPath.data());
 			return (status == 0);
@@ -949,7 +953,7 @@ namespace nCine
 
 	FileSystem::FileDate FileSystem::lastAccessTime(const char* path)
 	{
-		FileDate date = {};
+		FileDate date = { };
 #ifdef _WIN32
 		HANDLE hFile = ::CreateFile(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 		FILETIME fileTime;

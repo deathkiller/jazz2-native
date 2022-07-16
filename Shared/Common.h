@@ -9,6 +9,12 @@
 
 #if defined(_WIN32)
 #   include <windows.h>
+#else
+// TODO
+typedef unsigned long size_t;
+#if !defined(_countof)
+#   define _countof(arr) (sizeof(arr) / sizeof(arr[0]))
+#endif
 #endif
 
 // Undefine "far" and "near" keywords, not used anymore

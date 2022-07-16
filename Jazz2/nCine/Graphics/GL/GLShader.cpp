@@ -30,7 +30,10 @@ namespace nCine {
 			// A small array size will also make shader compilation a lot faster.
 			if (theApplication().appConfiguration().fixedBatchSize > 0) {
 				patchLines.append("#define WITH_FIXED_BATCH_SIZE\n");
-				patchLines.formatAppend("#define BATCH_SIZE (%u)\n", theApplication().appConfiguration().fixedBatchSize);
+				//patchLines.formatAppend("#define BATCH_SIZE (%u)\n", theApplication().appConfiguration().fixedBatchSize);
+				patchLines.append("#define BATCH_SIZE (");
+				patchLines.append(std::to_string(theApplication().appConfiguration().fixedBatchSize));
+				patchLines.append(")\n");
 			}
 #endif
 		}

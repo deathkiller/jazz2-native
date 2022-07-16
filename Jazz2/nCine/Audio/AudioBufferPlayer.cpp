@@ -28,10 +28,12 @@ namespace nCine {
 	{
 		stop();
 
+#if !defined(__EMSCRIPTEN__)
 		if (filterHandle_ != 0) {
 			alDeleteFilters(1, &filterHandle_);
 			filterHandle_ = 0;
 		}
+#endif
 	}
 
 	///////////////////////////////////////////////////////////
@@ -106,6 +108,7 @@ namespace nCine {
 				alSourcef(sourceId_, AL_GAIN, gain_);
 				alSourcef(sourceId_, AL_PITCH, pitch_);
 
+#if !defined(__EMSCRIPTEN__)
 				if (lowPass_ < 1.0f) {
 					if (filterHandle_ == 0) {
 						alGenFilters(1, &filterHandle_);
@@ -117,6 +120,7 @@ namespace nCine {
 						alSourcei(sourceId_, AL_DIRECT_FILTER, filterHandle_);
 					}
 				}
+#endif
 
 				alSourcefv(sourceId_, AL_POSITION, position_.Data());
 
@@ -171,10 +175,11 @@ namespace nCine {
 				alSourceStop(sourceId_);
 				// Detach the buffer from source
 				alSourcei(sourceId_, AL_BUFFER, 0);
-
+#if !defined(__EMSCRIPTEN__)
 				if (filterHandle_ != 0) {
 					alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
 				}
+#endif
 				sourceId_ = 0;
 				state_ = PlayerState::Stopped;
 				break;
@@ -191,9 +196,11 @@ namespace nCine {
 			if (alState != AL_PLAYING) {
 				// Detach the buffer from source
 				alSourcei(sourceId_, AL_BUFFER, 0);
+#if !defined(__EMSCRIPTEN__)
 				if (filterHandle_ != 0) {
 					alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
 				}
+#endif
 				sourceId_ = 0;
 				state_ = PlayerState::Stopped;
 			} else {

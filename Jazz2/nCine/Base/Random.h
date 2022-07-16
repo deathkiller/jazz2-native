@@ -8,13 +8,13 @@ namespace nCine
 	/*!
 	 * Based on the Apache License 2.0 code from pcg-random.org
 	 */
-	class Random
+	class RandomGenerator
 	{
 	public:
 		/// Creates a new generator with default seeds
-		Random();
+		RandomGenerator();
 		/// Creates a new generator with the specified seeds
-		Random(uint64_t initState, uint64_t initSequence);
+		RandomGenerator(uint64_t initState, uint64_t initSequence);
 
 		/// Initializes the generator with the specified seeds
 		void Initialize(uint64_t initState, uint64_t initSequence);
@@ -43,6 +43,6 @@ namespace nCine
 	};
 
 	// Meyers' Singleton
-	extern Random& random();
+	extern RandomGenerator& Random();
 
 }

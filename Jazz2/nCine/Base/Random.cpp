@@ -29,9 +29,9 @@ namespace nCine {
 
 	}
 
-	Random& random()
+	RandomGenerator& Random()
 	{
-		static Random instance;
+		static RandomGenerator instance;
 		return instance;
 	}
 
@@ -39,12 +39,12 @@ namespace nCine {
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
 
-	Random::Random()
-		: Random(DefaultInitState, DefaultInitSequence)
+	RandomGenerator::RandomGenerator()
+		: RandomGenerator(DefaultInitState, DefaultInitSequence)
 	{
 	}
 
-	Random::Random(uint64_t initState, uint64_t initSequence)
+	RandomGenerator::RandomGenerator(uint64_t initState, uint64_t initSequence)
 		: state_(0ULL), increment_(0ULL)
 	{
 		Initialize(initState, initSequence);
@@ -54,7 +54,7 @@ namespace nCine {
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void Random::Initialize(uint64_t initState, uint64_t initSequence)
+	void RandomGenerator::Initialize(uint64_t initState, uint64_t initSequence)
 	{
 		state_ = 0U;
 		increment_ = (initSequence << 1u) | 1u;
@@ -63,12 +63,12 @@ namespace nCine {
 		random(state_, increment_);
 	}
 
-	uint32_t Random::Next()
+	uint32_t RandomGenerator::Next()
 	{
 		return random(state_, increment_);
 	}
 
-	uint32_t Random::Next(uint32_t min, uint32_t max)
+	uint32_t RandomGenerator::Next(uint32_t min, uint32_t max)
 	{
 		//ASSERT(min <= max);
 
@@ -78,23 +78,23 @@ namespace nCine {
 			return min + boundRandom(state_, increment_, max - min);
 	}
 
-	float Random::NextFloat()
+	float RandomGenerator::NextFloat()
 	{
 		return static_cast<float>(ldexp(random(state_, increment_), -32));
 	}
 
-	float Random::NextFloat(float min, float max)
+	float RandomGenerator::NextFloat(float min, float max)
 	{
 		//ASSERT(min <= max);
 		return min + static_cast<float>(ldexp(random(state_, increment_), -32)) * (max - min);
 	}
 
-	bool Random::NextBool()
+	bool RandomGenerator::NextBool()
 	{
 		return (boundRandom(state_, increment_, 2) != 0);
 	}
 
-	uint32_t Random::Fast(uint32_t min, uint32_t max)
+	uint32_t RandomGenerator::Fast(uint32_t min, uint32_t max)
 	{
 		//ASSERT(min <= max);
 
@@ -104,12 +104,12 @@ namespace nCine {
 			return min + random(state_, increment_) % (max - min);
 	}
 
-	float Random::FastFloat()
+	float RandomGenerator::FastFloat()
 	{
 		return static_cast<float>(random(state_, increment_) / static_cast<float>(UINT32_MAX));
 	}
 
-	float Random::FastFloat(float min, float max)
+	float RandomGenerator::FastFloat(float min, float max)
 	{
 		//ASSERT(min <= max);
 		return min + static_cast<float>(random(state_, increment_) / static_cast<float>(UINT32_MAX)) * (max - min);

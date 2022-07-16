@@ -74,8 +74,8 @@ namespace Jazz2::Actors::Weapons
 	{
 		MoveInstantly(Vector2f(-_speed.X, -_speed.Y), MoveType::Relative, true);
 
-		_speed.Y = _speed.Y * -0.9f + (random().Next() % 100 - 50) * 0.1f;
-		_speed.X = _speed.X * -0.9f + (random().Next() % 100 - 50) * 0.1f;
+		_speed.Y = _speed.Y * -0.9f + (nCine::Random().Next() % 100 - 50) * 0.1f;
+		_speed.X = _speed.X * -0.9f + (nCine::Random().Next() % 100 - 50) * 0.1f;
 	}
 
 	void ShotBase::CheckCollisions(float timeMult)

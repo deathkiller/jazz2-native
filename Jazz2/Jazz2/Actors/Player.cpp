@@ -1294,8 +1294,8 @@ namespace Jazz2::Actors
 					_levelHandler->EventMap()->StoreTileEvent(tx, ty, EventType::Empty);
 
 					for (int i = 0; i < 8; i++) {
-						float fx = random().NextFloat(-18.0f, 18.0f);
-						float fy = random().NextFloat(-8.0f, 0.2f);
+						float fx = nCine::Random().NextFloat(-18.0f, 18.0f);
+						float fy = nCine::Random().NextFloat(-8.0f, 0.2f);
 
 						uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { };
 						std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, spawnParams, ActorFlags::None, Vector3i((int)(pos.X + fx * 2.0f), (int)(pos.Y + fy * 4.0f), 10));
@@ -1831,7 +1831,7 @@ namespace Jazz2::Actors
 				}
 
 				// Remove fast fires
-				_weaponUpgrades[(int)WeaponType::Blaster] = (byte)(_weaponUpgrades[(int)WeaponType::Blaster] & 0x1);
+				_weaponUpgrades[(int)WeaponType::Blaster] = (uint8_t)(_weaponUpgrades[(int)WeaponType::Blaster] & 0x1);
 
 				SetState(ActorFlags::CanJump, false);
 				_speed.X = 0.0f;
@@ -2561,7 +2561,7 @@ namespace Jazz2::Actors
 
 		current = std::min(current + count, FastFireLimit);
 
-		_weaponUpgrades[(int)WeaponType::Blaster] = (byte)((_weaponUpgrades[(int)WeaponType::Blaster] & 0x1) | (current << 1));
+		_weaponUpgrades[(int)WeaponType::Blaster] = (uint8_t)((_weaponUpgrades[(int)WeaponType::Blaster] & 0x1) | (current << 1));
 
 		//PlaySound("PickupAmmo");
 

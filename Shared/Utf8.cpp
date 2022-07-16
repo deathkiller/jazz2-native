@@ -44,7 +44,7 @@ namespace Death::Utf8
 		return Array<char>(result.release(), lengthNeeded);
 	}
 
-#else
+#elif defined(UTF16_REQUIRED)
 
 	// Copyright (c) 2008-2009 Bjoern Hoehrmann <bjoern@hoehrmann.de>
 	// See http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ for details.
