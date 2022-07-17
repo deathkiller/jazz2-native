@@ -46,7 +46,7 @@ namespace nCine {
 	{
 		// Checking if the file is already opened
 		if (fileDescriptor_ >= 0) {
-			//LOGW_X("Memory file \"%s\" at address 0x%lx is already opened", filename_.data(), bufferPtr_);
+			LOGW_X("Memory file \"%s\" at address 0x%lx is already opened", filename_.data(), bufferPtr_);
 		} else {
 			isWritable_ = ((mode & FileAccessMode::Write) == FileAccessMode::Write);
 		}

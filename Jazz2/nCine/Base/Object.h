@@ -10,6 +10,7 @@ namespace nCine
 		enum class ObjectType {
 			BASE = 0,
 			TEXTURE,
+			SHADER,
 			SCENENODE,
 			SPRITE,
 			MESH_SPRITE,

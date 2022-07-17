@@ -27,11 +27,14 @@ namespace nCine
 		GLenum basicType() const;
 		int numComponents() const;
 
+		/// Returns true if the attribute name starts with `gl_`
+		bool hasReservedPrefix() const;
+
 	private:
 		GLint location_;
 		GLint size_;
 		GLenum type_;
-		static const unsigned int MaxNameLength = 32;
+		static constexpr int MaxNameLength = 32;
 		char name_[MaxNameLength];
 	};
 

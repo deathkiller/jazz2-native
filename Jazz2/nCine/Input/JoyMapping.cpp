@@ -78,7 +78,7 @@ namespace nCine
 	}
 
 	JoyMapping::JoyMapping()
-		: mappings_(256), inputManager_(nullptr), inputEventHandler_(nullptr)
+		: inputManager_(nullptr), inputEventHandler_(nullptr)
 	{
 		for (unsigned int i = 0; i < MaxNumJoysticks; i++)
 			mappingIndex_[i] = -1;
@@ -91,12 +91,13 @@ namespace nCine
 		while (*mappingStrings) {
 			numStrings++;
 			const bool parsed = parseMappingFromString(*mappingStrings, mapping);
-			if (parsed)
+			if (parsed) {
 				mappings_.push_back(mapping);
+			}
 			mappingStrings++;
 		}
 
-		//LOGI_X("Parsed %u strings for %u mappings", numStrings, mappings_.size());
+		LOGI_X("Parsed %u strings for %u mappings", numStrings, mappings_.size());
 	}
 
 	///////////////////////////////////////////////////////////
@@ -198,7 +199,7 @@ namespace nCine
 
 		} while (strchr(buffer, '\n') && (buffer = strchr(buffer, '\n') + 1) < fileBuffer.get() + fileSize);
 
-		//LOGI_X("Joystick mapping file parsed: %u mappings in %u lines", numParsed, fileLine);
+		LOGI_X("Joystick mapping file parsed: %u mappings in %u lines", numParsed, fileLine);
 
 		fileBuffer.reset(nullptr);
 
@@ -310,13 +311,13 @@ namespace nCine
 			const int index = findMappingByGuid(guid);
 			if (index != -1) {
 				mappingIndex_[event.joyId] = index;
-				//LOGI_X("Joystick mapping found for \"%s\" with GUID \"%s\" (%d)", joyName, joyGuid, event.joyId);
+				LOGI_X("Joystick mapping found for \"%s\" with GUID \"%s\" (%d)", joyName, joyGuid, event.joyId);
 			}
 		} else {
 			const int index = findMappingByName(joyName);
 			if (index != -1) {
 				mappingIndex_[event.joyId] = index;
-				//LOGI_X("Joystick mapping found for \"%s\" (%d)", joyName, event.joyId);
+				LOGI_X("Joystick mapping found for \"%s\" (%d)", joyName, event.joyId);
 			}
 		}
 
@@ -429,7 +430,7 @@ namespace nCine
 		trimSpaces(&subStart, &subEnd);
 
 		if (subEndUntrimmed == nullptr) {
-			//LOGE("Invalid mapping string");
+			LOGE("Invalid mapping string");
 			return false;
 		}
 		unsigned int subLength = static_cast<unsigned int>(subEnd - subStart);
@@ -440,7 +441,7 @@ namespace nCine
 		const unsigned int GuidNumCharacters = 7; // "default"
 #endif
 		if (subLength != GuidNumCharacters) {
-			//LOGE_X("GUID length is %u instead of %u characters", subLength, GuidNumCharacters);
+			LOGE_X("GUID length is %u instead of %u characters", subLength, GuidNumCharacters);
 			return false;
 		}
 		map.guid.fromString(subStart);
@@ -448,7 +449,7 @@ namespace nCine
 		subStartUntrimmed = subEndUntrimmed + 1; // GUID plus the following  ',' character
 		subEndUntrimmed = strchr(subStartUntrimmed, ',');
 		if (subEndUntrimmed == nullptr) {
-			//LOGE("Invalid mapping string");
+			LOGE("Invalid mapping string");
 			return false;
 		}
 		subStart = subStartUntrimmed;
@@ -468,7 +469,7 @@ namespace nCine
 
 			const char* subMid = strchr(subStart, ':');
 			if (subMid == nullptr || subEnd == nullptr) {
-				//LOGE("Invalid mapping string");
+				LOGE("Invalid mapping string");
 				return false;
 			}
 
@@ -648,12 +649,14 @@ namespace nCine
 
 	void JoyMapping::trimSpaces(const char** start, const char** end) const
 	{
-		while (**start == ' ')
+		while (**start == ' ') {
 			(*start)++;
+		}
 
 		(*end)--;
-		while (**end == ' ')
+		while (**end == ' ') {
 			(*end)--;
+		}
 		(*end)++;
 	}
 

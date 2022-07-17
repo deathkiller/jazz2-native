@@ -1,4 +1,5 @@
 #include "ServiceLocator.h"
+#include "../Common.h"
 
 namespace nCine
 {
@@ -85,7 +86,7 @@ namespace nCine
 
 	void ServiceLocator::unregisterAll()
 	{
-		//LOGI("Unregistering all services");
+		LOGI("Unregistering all services");
 
 		registeredIndexer_.reset(nullptr);
 		indexerService_ = &nullIndexer_;

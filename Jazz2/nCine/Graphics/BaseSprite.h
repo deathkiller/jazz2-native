@@ -65,7 +65,7 @@ namespace nCine
 		/// A flag indicating if the sprite texture is vertically flipped
 		bool flippedY_;
 
-		GLUniformBlockCache* spriteBlock_;
+		GLUniformBlockCache* instanceBlock_;
 
 		/// Protected constructor accessible only by derived sprite classes
 		BaseSprite(SceneNode* parent, Texture* texture, float xx, float yy);
@@ -75,13 +75,16 @@ namespace nCine
 		/// Protected copy constructor used to clone objects
 		BaseSprite(const BaseSprite& other);
 
+		/// Performs the required tasks upon a change to the shader
+		void shaderHasChanged() override;
+
+		/// Performs the required tasks upon a change to the texture
+		virtual void textureHasChanged(Texture* newTexture) = 0;
+
 		void updateRenderCommand() override;
 
 		/// Deleted assignment operator
 		BaseSprite& operator=(const BaseSprite&) = delete;
-
-		/// Performs the required tasks upon a change in the texture
-		virtual void textureHasChanged(Texture* newTexture) = 0;
 	};
 
 }

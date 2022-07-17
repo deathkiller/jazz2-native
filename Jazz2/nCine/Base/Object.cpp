@@ -1,5 +1,6 @@
 #include "Object.h"
 #include "../ServiceLocator.h"
+#include "../../Common.h"
 
 namespace nCine {
 
@@ -69,15 +70,14 @@ namespace nCine {
 		const Object* object = theServiceLocator().indexer().object(id);
 
 		if (object) {
-			if (object->type_ == T::sType())
+			if (object->type_ == T::sType()) {
 				return static_cast<T*>(object);
-			else // Cannot cast
-			{
-				//LOGF_X("Object \"%s\" (%u) is of type %u instead of %u", object->name_, id, object->type_, T::sType());
+			} else { // Cannot cast
+				LOGF_X("Object \"%s\" (%u) is of type %u instead of %u", /*object->name_*/"", id, object->type_, T::sType());
 				return nullptr;
 			}
 		} else {
-			//LOGW_X("Object %u not found", id);
+			LOGW_X("Object %u not found", id);
 			return nullptr;
 		}
 	}

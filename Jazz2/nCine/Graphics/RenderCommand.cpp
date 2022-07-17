@@ -3,24 +3,10 @@
 #include "GL/GLScissorTest.h"
 #include "RenderResources.h"
 #include "Camera.h"
+#include "DrawableNode.h"
 
 namespace nCine
 {
-	namespace
-	{
-		bool isBatchedType(Material::ShaderProgramType type)
-		{
-			return (type == Material::ShaderProgramType::BATCHED_SPRITES ||
-					type == Material::ShaderProgramType::BATCHED_SPRITES_GRAY ||
-					type == Material::ShaderProgramType::BATCHED_SPRITES_NO_TEXTURE ||
-					type == Material::ShaderProgramType::BATCHED_MESH_SPRITES ||
-					type == Material::ShaderProgramType::BATCHED_MESH_SPRITES_GRAY ||
-					type == Material::ShaderProgramType::BATCHED_MESH_SPRITES_NO_TEXTURE ||
-					type == Material::ShaderProgramType::BATCHED_TEXTNODES_ALPHA ||
-					type == Material::ShaderProgramType::BATCHED_TEXTNODES_RED);
-		}
-	}
-
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS
 	///////////////////////////////////////////////////////////
@@ -99,21 +85,13 @@ namespace nCine
 		modelMatrix_[3][2] = calculateDepth(layer_, cameraValues.near, cameraValues.far);
 
 		if (material_.shaderProgram_ && material_.shaderProgram_->status() == GLShaderProgram::Status::LINKED_WITH_INTROSPECTION) {
-			const Material::ShaderProgramType shaderProgramType = material_.shaderProgramType();
-
-			if (shaderProgramType == Material::ShaderProgramType::SPRITE ||
-				shaderProgramType == Material::ShaderProgramType::SPRITE_GRAY ||
-				shaderProgramType == Material::ShaderProgramType::SPRITE_NO_TEXTURE)
-				material_.uniformBlock("SpriteBlock")->uniform("modelMatrix")->setFloatVector(modelMatrix_.Data());
-			else if (shaderProgramType == Material::ShaderProgramType::MESH_SPRITE ||
-					 shaderProgramType == Material::ShaderProgramType::MESH_SPRITE_GRAY ||
-					 shaderProgramType == Material::ShaderProgramType::MESH_SPRITE_NO_TEXTURE)
-				material_.uniformBlock("MeshSpriteBlock")->uniform("modelMatrix")->setFloatVector(modelMatrix_.Data());
-			else if (shaderProgramType == Material::ShaderProgramType::TEXTNODE_ALPHA ||
-					 shaderProgramType == Material::ShaderProgramType::TEXTNODE_RED)
-				material_.uniformBlock("TextnodeBlock")->uniform("modelMatrix")->setFloatVector(modelMatrix_.Data());
-			else if (!isBatchedType(shaderProgramType) && shaderProgramType != Material::ShaderProgramType::CUSTOM)
-				material_.uniform("modelMatrix")->setFloatVector(modelMatrix_.Data());
+			GLUniformBlockCache* instanceBlock = material_.uniformBlock(Material::InstanceBlockName);
+			GLUniformCache* matrixUniform = instanceBlock
+				? instanceBlock->uniform(Material::ModelMatrixUniformName)
+				: material_.uniform(Material::ModelMatrixUniformName);
+			if (matrixUniform) {
+				matrixUniform->setFloatVector(modelMatrix_.Data());
+			}
 		}
 
 		transformationCommitted_ = true;
@@ -121,19 +99,17 @@ namespace nCine
 
 	void RenderCommand::commitCameraTransformation()
 	{
-		RenderResources::CameraUniformData* cameraUniformData = RenderResources::cameraUniformDataMap().find(material_.shaderProgram_);
+		RenderResources::CameraUniformData* cameraUniformData = RenderResources::findCameraUniformData(material_.shaderProgram_);
 		if (cameraUniformData == nullptr) {
 			RenderResources::CameraUniformData newCameraUniformData;
-			newCameraUniformData.shaderUniforms.setProgram(material_.shaderProgram_, "uProjectionMatrix\0uViewMatrix\0", nullptr);
+			newCameraUniformData.shaderUniforms.setProgram(material_.shaderProgram_, Material::ProjectionViewMatrixExcludeString, nullptr);
 			if (newCameraUniformData.shaderUniforms.numUniforms() == 2) {
 				newCameraUniformData.shaderUniforms.setUniformsDataPointer(RenderResources::cameraUniformsBuffer());
-				newCameraUniformData.shaderUniforms.uniform("uProjectionMatrix")->setDirty(true);
-				newCameraUniformData.shaderUniforms.uniform("uViewMatrix")->setDirty(true);
+				newCameraUniformData.shaderUniforms.uniform(Material::ProjectionMatrixUniformName)->setDirty(true);
+				newCameraUniformData.shaderUniforms.uniform(Material::ViewMatrixUniformName)->setDirty(true);
 				newCameraUniformData.shaderUniforms.commitUniforms();
 
-				if (RenderResources::cameraUniformDataMap().loadFactor() >= 0.8f)
-					RenderResources::cameraUniformDataMap().rehash(RenderResources::cameraUniformDataMap().capacity() * 2);
-				RenderResources::cameraUniformDataMap().insert(material_.shaderProgram_, std::move(newCameraUniformData));
+				RenderResources::insertCameraUniformData(material_.shaderProgram_, std::move(newCameraUniformData));
 			}
 		} else
 			cameraUniformData->shaderUniforms.commitUniforms();

@@ -92,9 +92,9 @@ namespace nCine
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	Viewport& Application::rootViewport()
+	Viewport& Application::screenViewport()
 	{
-		return *rootViewport_;
+		return *screenViewport_;
 	}
 
 	unsigned long int Application::numFrames() const
@@ -112,11 +112,11 @@ namespace nCine
 		return frameTimer_->timeMult();
 	}
 
-	void Application::resizeRootViewport(int width, int height)
+	void Application::resizeScreenViewport(int width, int height)
 	{
-		if (rootViewport_ != nullptr) {
-			bool sizeChanged = (width != rootViewport_->width_ || height != rootViewport_->height_);
-			rootViewport_->resize(width, height);
+		if (screenViewport_ != nullptr) {
+			bool sizeChanged = (width != screenViewport_->width_ || height != screenViewport_->height_);
+			screenViewport_->resize(width, height);
 			if (sizeChanged) {
 				appEventHandler_->onRootViewportResized(width, height);
 			}
@@ -137,7 +137,7 @@ namespace nCine
 		//#else
 			//sprintf_s(appInfoString, "nCine compiled on %s at %s", VersionStrings::CompilationDate, VersionStrings::CompilationTime);
 		//#endif
-			//LOGI_X("%s", appInfoString.data());
+		//	LOGI_X("%s", appInfoString.data());
 		//#ifdef WITH_TRACY
 		//	TracyAppInfo(appInfoString.data(), appInfoString.length());
 		//#endif
@@ -154,8 +154,8 @@ namespace nCine
 		theServiceLocator().registerGfxCapabilities(std::make_unique<GfxCapabilities>());
 		GLDebug::init(theServiceLocator().gfxCapabilities());
 
-		//LOGI_X("Data path: \"%s\"", fs::dataPath().data());
-		//LOGI_X("Save path: \"%s\"", fs::savePath().data());
+		LOGI_X("Data path: \"%s\"", fs::dataPath().data());
+		LOGI_X("Save path: \"%s\"", fs::savePath().data());
 
 #ifdef WITH_RENDERDOC
 		RenderDocCapture::init();
@@ -178,8 +178,8 @@ namespace nCine
 			gfxDevice_->setupGL();
 			RenderResources::create();
 			rootNode_ = std::make_unique<SceneNode>();
-			rootViewport_ = std::make_unique<ScreenViewport>();
-			rootViewport_->setRootNode(rootNode_.get());
+			screenViewport_ = std::make_unique<ScreenViewport>();
+			screenViewport_->setRootNode(rootNode_.get());
 		} else
 			RenderResources::createMinimal(); // some resources are still required for rendering
 
@@ -192,7 +192,7 @@ namespace nCine
 		// Initialization of the static random generator seeds
 		Random().Initialize(static_cast<uint64_t>(TimeStamp::now().ticks()), static_cast<uint64_t>(profileStartTime_.ticks()));
 
-		//LOGI("Application initialized");
+		LOGI("Application initialized");
 
 		timings_[Timings::INIT_COMMON] = profileStartTime_.secondsSince();
 
@@ -200,7 +200,7 @@ namespace nCine
 			profileStartTime_ = TimeStamp::now();
 			appEventHandler_->onInit();
 			timings_[Timings::APP_INIT] = profileStartTime_.secondsSince();
-			//LOGI("IAppEventHandler::onInit() invoked");
+			LOGI("IAppEventHandler::onInit() invoked");
 		}
 
 		// Give user code a chance to add custom GUI fonts
@@ -255,7 +255,7 @@ namespace nCine
 		if (appCfg_.withScenegraph) {
 			{
 				profileStartTime_ = TimeStamp::now();
-				rootViewport_->update();
+				screenViewport_->update();
 				timings_[Timings::UPDATE] = profileStartTime_.secondsSince();
 			}
 
@@ -267,7 +267,7 @@ namespace nCine
 
 			{
 				profileStartTime_ = TimeStamp::now();
-				rootViewport_->visit();
+				screenViewport_->visit();
 				timings_[Timings::VISIT] = profileStartTime_.secondsSince();
 			}
 
@@ -277,7 +277,7 @@ namespace nCine
 				profileStartTime_ = TimeStamp::now();
 				RenderQueue* imguiRenderQueue = (guiSettings_.imguiViewport) ?
 					guiSettings_.imguiViewport->renderQueue_.get() :
-					rootViewport_->renderQueue_.get();
+					screenViewport_->renderQueue_.get();
 				imguiDrawing_->endFrame(*imguiRenderQueue);
 				timings_[Timings::IMGUI] += profileStartTime_.secondsSince();
 			}
@@ -289,7 +289,7 @@ namespace nCine
 				profileStartTime_ = TimeStamp::now();
 				RenderQueue* nuklearRenderQueue = (guiSettings_.nuklearViewport) ?
 					guiSettings_.nuklearViewport->renderQueue_.get() :
-					rootViewport_->renderQueue_.get();
+					screenViewport_->renderQueue_.get();
 				nuklearDrawing_->endFrame(*nuklearRenderQueue);
 				timings_[Timings::NUKLEAR] += profileStartTime_.secondsSince();
 			}
@@ -297,8 +297,8 @@ namespace nCine
 
 			{
 				profileStartTime_ = TimeStamp::now();
-				rootViewport_->sortAndCommitQueue();
-				rootViewport_->draw();
+				screenViewport_->sortAndCommitQueue();
+				screenViewport_->draw();
 				timings_[Timings::DRAW] = profileStartTime_.secondsSince();
 			}
 		} else {
@@ -349,7 +349,7 @@ namespace nCine
 
 		{
 			appEventHandler_->onShutdown();
-			//LOGI("IAppEventHandler::onShutdown() invoked");
+			LOGI("IAppEventHandler::onShutdown() invoked");
 			appEventHandler_.reset(nullptr);
 		}
 
@@ -372,11 +372,11 @@ namespace nCine
 		gfxDevice_.reset(nullptr);
 
 		if (!theServiceLocator().indexer().empty()) {
-			//LOGW_X("The object indexer is not empty, %u object(s) left", theServiceLocator().indexer().size());
+			LOGW_X("The object indexer is not empty, %u object(s) left", theServiceLocator().indexer().size());
 			//theServiceLocator().indexer().logReport();
 		}
 
-		//LOGI("Application shut down");
+		LOGI("Application shut down");
 
 		theServiceLocator().unregisterAll();
 	}
@@ -395,7 +395,7 @@ namespace nCine
 		frameTimer_->suspend();
 		if (appEventHandler_)
 			appEventHandler_->onSuspend();
-		//LOGI("IAppEventHandler::onSuspend() invoked");
+		LOGI("IAppEventHandler::onSuspend() invoked");
 	}
 
 	void Application::resume()
@@ -403,9 +403,9 @@ namespace nCine
 		if (appEventHandler_)
 			appEventHandler_->onResume();
 		const TimeStamp suspensionDuration = frameTimer_->resume();
-		//LOGV_X("Suspended for %.3f seconds", suspensionDuration.seconds());
+		LOGV_X("Suspended for %.3f seconds", suspensionDuration.seconds());
 		profileStartTime_ += suspensionDuration;
-		//LOGI("IAppEventHandler::onResume() invoked");
+		LOGI("IAppEventHandler::onResume() invoked");
 	}
 
 	///////////////////////////////////////////////////////////

@@ -1,7 +1,8 @@
 #include "GLBufferObject.h"
+#include "GLDebug.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS
 	///////////////////////////////////////////////////////////
@@ -141,6 +142,11 @@ namespace nCine {
 		glTexBuffer(GL_TEXTURE_BUFFER, internalformat, glHandle_);
 	}
 #endif
+
+	void GLBufferObject::setObjectLabel(const char* label)
+	{
+		GLDebug::objectLabel(GLDebug::LabelTypes::BUFFER, glHandle_, label);
+	}
 
 	///////////////////////////////////////////////////////////
 	// PRIVATE FUNCTIONS

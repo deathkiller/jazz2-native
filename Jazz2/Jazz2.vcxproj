@@ -57,6 +57,7 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
+  
   <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   <Import Project="$(SolutionDir)\VC-LTL helper for Visual Studio.props" />
   <Import Project="$(SolutionDir)\Sign.props" Condition="Exists('$(SolutionDir)\Sign.props')" />
@@ -82,6 +83,7 @@
       </PropertyGroup>
     </Otherwise>
   </Choose>
+  
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -270,7 +272,6 @@
     <ClInclude Include="nCine\Graphics\GL\GLRenderbuffer.h" />
     <ClInclude Include="nCine\Graphics\GL\GLScissorTest.h" />
     <ClInclude Include="nCine\Graphics\GL\GLShader.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLShaderAttributes.h" />
     <ClInclude Include="nCine\Graphics\GL\GLShaderProgram.h" />
     <ClInclude Include="nCine\Graphics\GL\GLShaderUniformBlocks.h" />
     <ClInclude Include="nCine\Graphics\GL\GLShaderUniforms.h" />
@@ -308,6 +309,8 @@
     <ClInclude Include="nCine\Graphics\RenderVaoPool.h" />
     <ClInclude Include="nCine\Graphics\SceneNode.h" />
     <ClInclude Include="nCine\Graphics\ScreenViewport.h" />
+    <ClInclude Include="nCine\Graphics\Shader.h" />
+    <ClInclude Include="nCine\Graphics\ShaderState.h" />
     <ClInclude Include="nCine\Graphics\Sprite.h" />
     <ClInclude Include="nCine\Graphics\TextNode.h" />
     <ClInclude Include="nCine\Graphics\Texture.h" />
@@ -418,6 +421,7 @@
     <ClCompile Include="nCine\Base\BitArray.cpp" />
     <ClCompile Include="nCine\Base\Clock.cpp" />
     <ClCompile Include="nCine\Base\FrameTimer.cpp" />
+    <ClCompile Include="nCine\Base\HashFunctions.cpp" />
     <ClCompile Include="nCine\Base\Object.cpp" />
     <ClCompile Include="nCine\Base\Random.cpp" />
     <ClCompile Include="nCine\Base\Timer.cpp" />
@@ -440,7 +444,6 @@
     <ClCompile Include="nCine\Graphics\GL\GLRenderbuffer.cpp" />
     <ClCompile Include="nCine\Graphics\GL\GLScissorTest.cpp" />
     <ClCompile Include="nCine\Graphics\GL\GLShader.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLShaderAttributes.cpp" />
     <ClCompile Include="nCine\Graphics\GL\GLShaderProgram.cpp" />
     <ClCompile Include="nCine\Graphics\GL\GLShaderUniformBlocks.cpp" />
     <ClCompile Include="nCine\Graphics\GL\GLShaderUniforms.cpp" />
@@ -478,6 +481,8 @@
     <ClCompile Include="nCine\Graphics\RenderVaoPool.cpp" />
     <ClCompile Include="nCine\Graphics\SceneNode.cpp" />
     <ClCompile Include="nCine\Graphics\ScreenViewport.cpp" />
+    <ClCompile Include="nCine\Graphics\Shader.cpp" />
+    <ClCompile Include="nCine\Graphics\ShaderState.cpp" />
     <ClCompile Include="nCine\Graphics\Sprite.cpp" />
     <ClCompile Include="nCine\Graphics\TextNode.cpp" />
     <ClCompile Include="nCine\Graphics\Texture.cpp" />

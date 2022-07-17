@@ -128,9 +128,7 @@ namespace nCine
 			return isCompressed_;
 		}
 		/// Returns the number of color channels
-		inline unsigned int numChannels() const {
-			return numChannels_;
-		}
+		unsigned int numChannels() const;
 		/// Returns the amount of video memory needed to load the texture
 		inline unsigned long dataSize() const {
 			return dataSize_;
@@ -155,6 +153,9 @@ namespace nCine
 		/// Sets texture wrap for both `s` and `t` coordinates
 		void setWrap(SamplerWrapping wrapMode);
 
+		/// Sets the OpenGL object label for the texture
+		void setGLTextureLabel(const char* label);
+
 		/// Returns the user data opaque pointer for ImGui's `ImTextureID` or Nuklear's texture handle
 		void* guiTexId() const;
 
@@ -168,7 +169,7 @@ namespace nCine
 		int height_;
 		int mipMapLevels_;
 		bool isCompressed_;
-		unsigned int numChannels_;
+		Format format_;
 		unsigned long dataSize_;
 
 		SamplerFilter minFiltering_;
@@ -184,9 +185,6 @@ namespace nCine
 		void initialize(const ITextureLoader& texLoader);
 		/// Loads the data in a previously initialized texture
 		void load(const ITextureLoader& texLoader);
-
-		/// Sets the OpenGL object label for the texture
-		void setGLTextureLabel(const char* filename);
 
 		friend class Material;
 		friend class Viewport;

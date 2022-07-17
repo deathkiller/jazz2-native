@@ -1,6 +1,7 @@
 #include "PCApplication.h"
 #include "IAppEventHandler.h"
 #include "IO/FileSystem.h"
+#include "../Common.h"
 
 #if defined(_WIN32)
 #define NOMINMAX
@@ -91,7 +92,7 @@ namespace nCine
 		modifiableAppCfg.argc_ = argc;
 		modifiableAppCfg.argv_ = argv;
 		appEventHandler_->onPreInit(modifiableAppCfg);
-		//LOGI("IAppEventHandler::onPreInit() invoked");
+		LOGI("IAppEventHandler::onPreInit() invoked");
 
 		// Setting log levels and filename based on application configuration
 		//FileLogger &fileLogger = static_cast<FileLogger &>(theServiceLocator().logger());
@@ -173,7 +174,7 @@ namespace nCine
 					else if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
 						gfxDevice_->width_ = event.window.data1;
 						gfxDevice_->height_ = event.window.data2;
-						resizeRootViewport(event.window.data1, event.window.data2);
+						resizeScreenViewport(event.window.data1, event.window.data2);
 					}
 					break;
 				default:

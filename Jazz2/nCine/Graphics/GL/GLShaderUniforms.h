@@ -13,6 +13,9 @@ namespace nCine
 	class GLShaderUniforms
 	{
 	public:
+		static constexpr int UniformCachesHashSize = 16;
+		using UniformHashMapType = StaticHashMap<std::string, GLUniformCache, UniformCachesHashSize>;
+
 		GLShaderUniforms();
 		explicit GLShaderUniforms(GLShaderProgram* shaderProgram);
 		GLShaderUniforms(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude);
@@ -30,15 +33,14 @@ namespace nCine
 			return (uniformCaches_.find(name) != nullptr);
 		}
 		GLUniformCache* uniform(const char* name);
+		inline const UniformHashMapType allUniforms() const {
+			return uniformCaches_;
+		}
 		void commitUniforms();
 
 	private:
 		GLShaderProgram* shaderProgram_;
-
-		static constexpr int UniformCachesHashSize = 16;
-		StaticHashMap<std::string, GLUniformCache, UniformCachesHashSize> uniformCaches_;
-		/// A dummy uniform cache returned when a uniform is not found in the hashmap
-		static GLUniformCache uniformNotFound_;
+		UniformHashMapType uniformCaches_;
 
 		/// Imports the uniforms with the option of including only some or excluing others
 		void importUniforms(const char* includeOnly, const char* exclude);

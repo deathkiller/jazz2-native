@@ -1,17 +1,12 @@
 #include "GLShaderUniformBlocks.h"
 #include "GLShaderProgram.h"
 #include "../RenderResources.h"
-//#include <nctl/StaticHashMapIterator.h>
-//#include <nctl/CString.h>
+#include "../../../Common.h"
+
 #include <cstring> // for memcpy()
 
-namespace nCine {
-
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
-	GLUniformBlockCache GLShaderUniformBlocks::uniformBlockNotFound_;
+namespace nCine
+{
 
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
@@ -74,7 +69,7 @@ namespace nCine {
 		int offset = 0;
 		for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
 			uniformBlockCache.setDataPointer(dataPointer + offset);
-			offset += uniformBlockCache.uniformBlock()->size();
+			offset += uniformBlockCache.uniformBlock()->size() - uniformBlockCache.uniformBlock()->alignAmount();
 		}
 	}
 
@@ -85,14 +80,8 @@ namespace nCine {
 
 		if (shaderProgram_) {
 			uniformBlockCache = uniformBlockCaches_.find(name);
-
-			if (uniformBlockCache == nullptr) {
-				// Returning the dummy uniform cache to prevent the application from crashing
-				uniformBlockCache = &uniformBlockNotFound_;
-				//LOGW_X("Uniform block \"%s\" not found in shader program %u", name, shaderProgram_->glHandle());
-			}
 		} else {
-			//LOGE_X("Cannot find uniform block \"%s\", no shader program associated", name);
+			LOGE_X("Cannot find uniform block \"%s\", no shader program associated", name);
 		}
 		return uniformBlockCache;
 	}
@@ -102,18 +91,31 @@ namespace nCine {
 		if (shaderProgram_) {
 			if (shaderProgram_->status() == GLShaderProgram::Status::LINKED_WITH_INTROSPECTION) {
 				int totalUsedSize = 0;
-				for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_)
+				bool hasMemoryGaps = false;
+				for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
+					// There is a gap if at least one block cache (not in last position) uses less memory than its size
+					if (uniformBlockCache.dataPointer() != dataPointer_ + totalUsedSize)
+						hasMemoryGaps = true;
 					totalUsedSize += uniformBlockCache.usedSize();
+				}
 
 				if (totalUsedSize > 0) {
 					const RenderBuffersManager::BufferTypes bufferType = RenderBuffersManager::BufferTypes::UNIFORM;
 					uboParams_ = RenderResources::buffersManager().acquireMemory(bufferType, totalUsedSize);
-					if (uboParams_.mapBase)
-						memcpy(uboParams_.mapBase + uboParams_.offset, dataPointer_, totalUsedSize);
+					if (uboParams_.mapBase) {
+						if (hasMemoryGaps) {
+							int offset = 0;
+							for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
+								memcpy(uboParams_.mapBase + uboParams_.offset + offset, uniformBlockCache.dataPointer(), uniformBlockCache.usedSize());
+								offset += uniformBlockCache.usedSize();
+							}
+						} else
+							memcpy(uboParams_.mapBase + uboParams_.offset, dataPointer_, totalUsedSize);
+					}
 				}
 			}
 		} else {
-			//LOGE("No shader program associated");
+			LOGE("No shader program associated");
 		}
 	}
 
@@ -161,7 +163,7 @@ namespace nCine {
 		}
 
 		if (importedCount > UniformBlockCachesHashSize) {
-			//LOGW_X("More imported uniform blocks (%d) than hashmap buckets (%d)", importedCount, UniformBlockCachesHashSize);
+			LOGW_X("More imported uniform blocks (%d) than hashmap buckets (%d)", importedCount, UniformBlockCachesHashSize);
 		}
 	}
 

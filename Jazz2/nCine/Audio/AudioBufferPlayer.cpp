@@ -3,6 +3,7 @@
 
 #include "AudioBufferPlayer.h"
 #include "AudioBuffer.h"
+#include "../../Common.h"
 
 #include "../ServiceLocator.h"
 
@@ -96,7 +97,7 @@ namespace nCine {
 
 				const unsigned int source = device.nextAvailableSource();
 				if (source == IAudioDevice::UnavailableSource) {
-					//LOGW("No more available audio sources for playing");
+					LOGW("No more available audio sources for playing");
 					return;
 				}
 				sourceId_ = source;

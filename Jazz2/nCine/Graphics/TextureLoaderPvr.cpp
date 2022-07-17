@@ -12,11 +12,11 @@ namespace nCine
 		Pvr3Header header;
 
 		fileHandle_->Open(FileAccessMode::Read);
-		//RETURN_ASSERT_MSG_X(fileHandle_->isOpened(), "File \"%s\" cannot be opened", fileHandle_->filename());
+		RETURN_ASSERT_MSG_X(fileHandle_->isOpened(), "File \"%s\" cannot be opened", fileHandle_->filename());
 		const bool headerRead = readHeader(header);
-		//RETURN_ASSERT_MSG(headerRead, "PVR header cannot be read");
+		RETURN_ASSERT_MSG(headerRead, "PVR header cannot be read");
 		const bool formatParsed = parseFormat(header);
-		//RETURN_ASSERT_MSG(formatParsed, "PVR format cannot be parsed");
+		RETURN_ASSERT_MSG(formatParsed, "PVR format cannot be parsed");
 
 		hasLoaded_ = true;
 	}
@@ -52,7 +52,7 @@ namespace nCine
 
 		// Texture contains compressed data, most significant 4 bytes have been set to zero
 		if (pixelFormat < 0x0000000100000000ULL) {
-			//LOGI_X("Compressed format: %u", pixelFormat);
+			LOGI_X("Compressed format: %u", pixelFormat);
 
 			// Parsing the pixel format
 			switch (pixelFormat) {
@@ -156,11 +156,11 @@ namespace nCine
 		else {
 			GLenum type = GL_UNSIGNED_BYTE;
 
-			//LOGI_X("Uncompressed format: %c%c%c%c (%u, %u, %u, %u)",
-			//	   reinterpret_cast<char*>(&pixelFormat)[0], reinterpret_cast<char*>(&pixelFormat)[1],
-			//	   reinterpret_cast<char*>(&pixelFormat)[2], reinterpret_cast<char*>(&pixelFormat)[3],
-			//	   reinterpret_cast<unsigned char*>(&pixelFormat)[4], reinterpret_cast<unsigned char*>(&pixelFormat)[5],
-			//	   reinterpret_cast<unsigned char*>(&pixelFormat)[6], reinterpret_cast<unsigned char*>(&pixelFormat)[7]);
+			LOGI_X("Uncompressed format: %c%c%c%c (%u, %u, %u, %u)",
+				   reinterpret_cast<char*>(&pixelFormat)[0], reinterpret_cast<char*>(&pixelFormat)[1],
+				   reinterpret_cast<char*>(&pixelFormat)[2], reinterpret_cast<char*>(&pixelFormat)[3],
+				   reinterpret_cast<unsigned char*>(&pixelFormat)[4], reinterpret_cast<unsigned char*>(&pixelFormat)[5],
+				   reinterpret_cast<unsigned char*>(&pixelFormat)[6], reinterpret_cast<unsigned char*>(&pixelFormat)[7]);
 
 			switch (pixelFormat) {
 				case FMT_BGRA_8888:
@@ -206,12 +206,12 @@ namespace nCine
 		}
 
 		if (mipMapCount_ > 1) {
-			//LOGI_X("MIP Maps: %d", mipMapCount_);
+			LOGI_X("MIP Maps: %d", mipMapCount_);
 			mipDataOffsets_ = std::make_unique<unsigned long[]>(mipMapCount_);
 			mipDataSizes_ = std::make_unique<unsigned long[]>(mipMapCount_);
 			unsigned long dataSizesSum = TextureFormat::calculateMipSizes(internalFormat, width_, height_, mipMapCount_, mipDataOffsets_.get(), mipDataSizes_.get());
 			if (dataSizesSum != dataSize_) {
-				//LOGW_X("The sum of MIP maps size (%ld) is different than texture total data (%ld)", dataSizesSum, dataSize_);
+				LOGW_X("The sum of MIP maps size (%ld) is different than texture total data (%ld)", dataSizesSum, dataSize_);
 			}
 		}
 

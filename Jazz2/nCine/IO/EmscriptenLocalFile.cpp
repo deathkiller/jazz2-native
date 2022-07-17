@@ -3,6 +3,7 @@
 
 #include <emscripten/bind.h>
 #include "EmscriptenLocalFile.h"
+#include "../../Common.h"
 
 namespace nCine
 {
@@ -139,7 +140,7 @@ namespace nCine
 		//FATAL_ASSERT(filename);
 		//ASSERT(fileSize_ > 0);
 
-		//LOGI_X("Saving file: \"%s\" (%u bytes)", filename, fileSize_);
+		LOGI_X("Saving file: \"%s\" (%u bytes)", filename, fileSize_);
 		saveFile(fileBuffer_.get(), fileSize_, filename);
 	}
 
@@ -180,7 +181,7 @@ namespace nCine
 		//FATAL_ASSERT(contentPointer);
 		//ASSERT(contentSize > 0);
 
-		//LOGI_X("Loading file: \"%s\" (%u bytes)", filename, contentSize);
+		LOGI_X("Loading file: \"%s\" (%u bytes)", filename, contentSize);
 
 		EmscriptenLocalFile* localFile = reinterpret_cast<EmscriptenLocalFile*>(context);
 		localFile->fileBuffer_ = std::make_unique<char[]>(contentSize);

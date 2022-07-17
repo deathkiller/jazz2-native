@@ -110,7 +110,7 @@
 //		FATAL_ASSERT_MSG_X(!error, "Error in pthread_create(): %d", error);
 //	}
 //	else
-//		//LOGW_X("Thread %u is already running", tid_);
+//		LOGW_X("Thread %u is already running", tid_);
 //}
 //
 //void *Thread::join()
@@ -239,7 +239,7 @@
 //		#endif
 //	}
 //	else
-//		//LOGW("Cannot get the affinity for a thread that has not been created yet");
+//		LOGW("Cannot get the affinity for a thread that has not been created yet");
 //
 //	return affinityMask;
 //}
@@ -257,7 +257,7 @@
 //		#endif
 //	}
 //	else
-//		//LOGW("Cannot set the affinity mask for a not yet created thread");
+//		LOGW("Cannot set the affinity mask for a not yet created thread");
 //}
 //	#endif
 //#endif

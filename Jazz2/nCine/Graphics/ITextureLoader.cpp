@@ -65,13 +65,13 @@ namespace nCine {
 
 	std::unique_ptr<ITextureLoader> ITextureLoader::createFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
-		//LOGI_X("Loading memory file: \"%s\" (0x%lx, %lu bytes)", bufferName, bufferPtr, bufferSize);
+		LOGI_X("Loading memory file: \"%s\" (0x%lx, %lu bytes)", bufferName, bufferPtr, bufferSize);
 		return createLoader(std::move(IFileStream::createFromMemory(bufferName, bufferPtr, bufferSize)), bufferName);
 	}
 
 	std::unique_ptr<ITextureLoader> ITextureLoader::createFromFile(const char* filename)
 	{
-		//LOGI_X("Loading file: \"%s\"", filename);
+		LOGI_X("Loading file: \"%s\"", filename);
 		// Creating a handle from IFile static method to detect assets file
 		return createLoader(std::move(IFileStream::createFileHandle(filename)), filename);
 	}
@@ -105,7 +105,7 @@ namespace nCine {
 		else if (fs::hasExtension(filename, "qoi")) {
 			return std::make_unique<TextureLoaderQoi>(std::move(fileHandle));
 		} else {
-			//LOGF_X("Extension unknown: \"%s\"", fs::extension(filename));
+			LOGF_X("Extension unknown: \"%s\"", fs::extension(filename));
 			fileHandle.reset(nullptr);
 			return std::make_unique<InvalidTextureLoader>(std::move(fileHandle));
 		}
@@ -118,7 +118,7 @@ namespace nCine {
 
 	void ITextureLoader::loadPixels(GLenum internalFormat, GLenum type)
 	{
-		//LOGI_X("Loading \"%s\"", fileHandle_->filename());
+		LOGI_X("Loading \"%s\"", fileHandle_->filename());
 		if (type) // overriding pixel type
 			texFormat_ = TextureFormat(internalFormat, type);
 		else

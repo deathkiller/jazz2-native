@@ -11,7 +11,8 @@ namespace Jazz2
 		IStateHandler() { }
 		virtual ~IStateHandler() { }
 
-		virtual void OnFrameStart() { }
+		virtual void OnBeginFrame() { }
+		virtual void OnEndFrame() { }
 		virtual void OnRootViewportResized(int width, int height) { }
 
 		virtual void OnKeyPressed(const nCine::KeyboardEvent& event) { }

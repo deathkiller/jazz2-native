@@ -18,6 +18,8 @@ namespace nCine
 		bool bind() const;
 		static bool unbind();
 
+		void setObjectLabel(const char* label);
+
 	private:
 		static GLuint boundVAO_;
 

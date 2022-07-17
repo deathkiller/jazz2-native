@@ -3,14 +3,10 @@
 #include "GLUniformCache.h"
 #include "../RenderResources.h"
 #include "../../Base/StaticHashMapIterator.h"
+#include "../../../Common.h"
 
-namespace nCine {
-
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
-	GLUniformCache GLShaderUniforms::uniformNotFound_;
+namespace nCine
+{
 
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
@@ -80,14 +76,8 @@ namespace nCine {
 
 		if (shaderProgram_) {
 			uniformCache = uniformCaches_.find(name);
-
-			if (uniformCache == nullptr) {
-				// Returning the dummy uniform cache to prevent the application from crashing
-				uniformCache = &uniformNotFound_;
-				//LOGW_X("Uniform \"%s\" not found in shader program %u", name, shaderProgram_->glHandle());
-			}
 		} else {
-			//LOGE_X("Cannot find uniform \"%s\", no shader program associated", name);
+			LOGE_X("Cannot find uniform \"%s\", no shader program associated", name);
 		}
 		return uniformCache;
 	}
@@ -102,7 +92,7 @@ namespace nCine {
 				}
 			}
 		} else {
-			//LOGE("No shader program associated");
+			LOGE("No shader program associated");
 		}
 	}
 
@@ -150,7 +140,7 @@ namespace nCine {
 		}
 
 		if (importedCount > UniformCachesHashSize) {
-			//LOGW_X("More imported uniform blocks (%d) than hashmap buckets (%d)", importedCount, UniformCachesHashSize);
+			LOGW_X("More imported uniform blocks (%d) than hashmap buckets (%d)", importedCount, UniformCachesHashSize);
 		}
 	}
 

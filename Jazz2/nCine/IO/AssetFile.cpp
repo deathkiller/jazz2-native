@@ -39,7 +39,7 @@ namespace nCine
 	{
 		// Checking if the file is already opened
 		if (fileDescriptor_ >= 0 || asset_ != nullptr) {
-			//LOGW_X("File \"%s\" is already opened", filename_.data());
+			LOGW_X("File \"%s\" is already opened", filename_.data());
 		} else {
 			// Opening with a file descriptor
 			if (mode & FileAccessMode::FileDescriptor) {
@@ -242,10 +242,10 @@ namespace nCine
 			asset_ = AAssetManager_open(assetManager_, filename_.data(), AASSET_MODE_UNKNOWN);
 			if (asset_ == nullptr) {
 				if (shouldExitOnFailToOpen_) {
-					//LOGF_X("Cannot open the file \"%s\"", filename_.data());
+					LOGF_X("Cannot open the file \"%s\"", filename_.data());
 					exit(EXIT_FAILURE);
 				} else {
-					//LOGE_X("Cannot open the file \"%s\"", filename_.data());
+					LOGE_X("Cannot open the file \"%s\"", filename_.data());
 					return;
 				}
 			}
@@ -262,17 +262,17 @@ namespace nCine
 
 			if (fileDescriptor_ < 0) {
 				if (shouldExitOnFailToOpen_) {
-					//LOGF_X("Cannot open the file \"%s\"", filename_.data());
+					LOGF_X("Cannot open the file \"%s\"", filename_.data());
 					exit(EXIT_FAILURE);
 				} else {
-					//LOGE_X("Cannot open the file \"%s\"", filename_.data());
+					LOGE_X("Cannot open the file \"%s\"", filename_.data());
 					return;
 				}
 			} else {
-				//LOGI_X("File \"%s\" opened", filename_.data());
+				LOGI_X("File \"%s\" opened", filename_.data());
 			}
 		} else {
-			//LOGE_X("Cannot open the file \"%s\", wrong open mode", filename_.data());
+			LOGE_X("Cannot open the file \"%s\", wrong open mode", filename_.data());
 		}
 	}
 
@@ -283,20 +283,20 @@ namespace nCine
 			asset_ = AAssetManager_open(assetManager_, filename_.data(), AASSET_MODE_UNKNOWN);
 			if (asset_ == nullptr) {
 				if (shouldExitOnFailToOpen_) {
-					//LOGF_X("Cannot open the file \"%s\"", filename_.data());
+					LOGF_X("Cannot open the file \"%s\"", filename_.data());
 					exit(EXIT_FAILURE);
 				} else {
-					//LOGE_X("Cannot open the file \"%s\"", filename_.data());
+					LOGE_X("Cannot open the file \"%s\"", filename_.data());
 					return;
 				}
 			} else {
-				//LOGI_X("File \"%s\" opened", filename_.data());
+				LOGI_X("File \"%s\" opened", filename_.data());
 			}
 
 			// Calculating file size
 			fileSize_ = AAsset_getLength(asset_);
 		} else {
-			//LOGE_X("Cannot open the file \"%s\", wrong open mode", filename_.data());
+			LOGE_X("Cannot open the file \"%s\", wrong open mode", filename_.data());
 		}
 	}
 

@@ -26,34 +26,12 @@ namespace nCine {
 		return player.get();
 	}
 
-	RenderCommand* RenderCommandPool::add(Material::ShaderProgramType shaderProgramType)
+	RenderCommand* RenderCommandPool::add(GLShaderProgram* shaderProgram)
 	{
 		RenderCommand* newCommand = add();
-		newCommand->material().setShaderProgramType(shaderProgramType);
+		newCommand->material().setShaderProgram(shaderProgram);
 
 		return newCommand;
-	}
-
-	RenderCommand* RenderCommandPool::retrieve(Material::ShaderProgramType shaderProgramType)
-	{
-		RenderCommand* retrievedCommand = nullptr;
-
-		for (unsigned int i = 0; i < freeCommandsPool_.size(); i++) {
-			const unsigned int poolSize = freeCommandsPool_.size();
-			std::unique_ptr<RenderCommand>& command = freeCommandsPool_[i];
-			if (command && command->material().shaderProgramType() == shaderProgramType) {
-				retrievedCommand = command.get();
-				usedCommandsPool_.push_back(std::move(command));
-				command = std::move(freeCommandsPool_[poolSize - 1]);
-				freeCommandsPool_.pop_back();
-				break;
-			}
-		}
-
-		if (retrievedCommand)
-			RenderStatistics::addCommandPoolRetrieval();
-
-		return retrievedCommand;
 	}
 
 	RenderCommand* RenderCommandPool::retrieve(GLShaderProgram* shaderProgram)
@@ -78,13 +56,13 @@ namespace nCine {
 		return retrievedCommand;
 	}
 
-	RenderCommand* RenderCommandPool::retrieveOrAdd(Material::ShaderProgramType shaderProgramType, bool& commandAdded)
+	RenderCommand* RenderCommandPool::retrieveOrAdd(GLShaderProgram* shaderProgram, bool& commandAdded)
 	{
-		RenderCommand* retrievedCommand = retrieve(shaderProgramType);
+		RenderCommand* retrievedCommand = retrieve(shaderProgram);
 
 		commandAdded = false;
 		if (retrievedCommand == nullptr) {
-			retrievedCommand = add(shaderProgramType);
+			retrievedCommand = add(shaderProgram);
 			commandAdded = true;
 		}
 

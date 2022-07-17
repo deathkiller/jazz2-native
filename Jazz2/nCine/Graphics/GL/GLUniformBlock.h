@@ -14,10 +14,12 @@ namespace nCine
 	class GLUniformBlock
 	{
 	public:
+		static constexpr int MaxNameLength = 32;
+
 		enum class DiscoverUniforms
 		{
 			ENABLED,
-			DISBLED
+			DISABLED
 		};
 
 		GLUniformBlock();
@@ -30,8 +32,13 @@ namespace nCine
 		inline GLint bindingIndex() const {
 			return bindingIndex_;
 		}
+		/// Returns the size of the block aligned to the uniform buffer offset
 		inline GLint size() const {
 			return size_;
+		}
+		/// Returns the uniform buffer offset alignment added to the original size
+		inline unsigned char alignAmount() const {
+			return alignAmount_;
 		}
 		inline const char* name() const {
 			return name_;
@@ -51,10 +58,12 @@ namespace nCine
 
 		GLuint program_;
 		GLuint index_;
+		/// Offset aligned size for `glBindBufferRange()` calls
 		GLint size_;
+		/// Uniform buffer offset alignment added to `size_`
+		unsigned char alignAmount_;
 		/// Current binding index for the uniform block. Negative if not bound.
 		GLint bindingIndex_;
-		static const int MaxNameLength = 32;
 		char name_[MaxNameLength];
 
 		friend class GLUniformBlockCache;

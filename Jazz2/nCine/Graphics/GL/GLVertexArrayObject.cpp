@@ -1,7 +1,8 @@
 #include "GLVertexArrayObject.h"
+#include "GLDebug.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS
 	///////////////////////////////////////////////////////////
@@ -48,6 +49,11 @@ namespace nCine {
 			return true;
 		}
 		return false;
+	}
+
+	void GLVertexArrayObject::setObjectLabel(const char* label)
+	{
+		GLDebug::objectLabel(GLDebug::LabelTypes::VERTEX_ARRAY, glHandle_, label);
 	}
 
 }

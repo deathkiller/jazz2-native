@@ -16,7 +16,7 @@ namespace Jazz2::Actors::Enemies
 
 	void TurtleShell::Preload(const ActorActivationDetails& details)
 	{
-		uint8_t theme = details.Params[0];
+		uint8_t theme = details.Params[8];
 		switch (theme) {
 			case 0:
 			default:
@@ -38,7 +38,9 @@ namespace Jazz2::Actors::Enemies
 
 		_scoreValue = 100;
 
-		uint8_t theme = details.Params[0];
+		_speed.X = *(float*)&details.Params[0];
+		_externalForce.Y = *(float*)&details.Params[4];
+		uint8_t theme = details.Params[8];
 		switch (theme) {
 			case 0:
 			default:
@@ -83,9 +85,7 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		_lastAngle = lerp(_lastAngle, _speed.X * 0.06f, timeMult * 0.2f);
-		if (std::abs(_angle - /*MathF.NormalizeAngle*/(_lastAngle)) > 0.01f) {
-			_angle = _lastAngle;
-		}
+		_renderer.setRotation(_lastAngle);
 	}
 
 	void TurtleShell::OnUpdateHitbox()

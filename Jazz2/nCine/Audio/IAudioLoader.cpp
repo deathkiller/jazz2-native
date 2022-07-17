@@ -24,13 +24,13 @@ namespace nCine {
 
 	std::unique_ptr<IAudioLoader> IAudioLoader::createFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
-		//LOGI_X("Loading memory file: \"%s\" (0x%lx, %lu bytes)", bufferName, bufferPtr, bufferSize);
+		LOGI_X("Loading memory file: \"%s\" (0x%lx, %lu bytes)", bufferName, bufferPtr, bufferSize);
 		return createLoader(std::move(IFileStream::createFromMemory(bufferName, bufferPtr, bufferSize)), bufferName);
 	}
 
 	std::unique_ptr<IAudioLoader> IAudioLoader::createFromFile(const char* filename)
 	{
-		//LOGI_X("Loading file: \"%s\"", filename);
+		LOGI_X("Loading file: \"%s\"", filename);
 		// Creating a handle from IFile static method to detect assets file
 		return createLoader(std::move(IFileStream::createFileHandle(filename)), filename);
 	}
@@ -50,7 +50,7 @@ namespace nCine {
 			return std::make_unique<AudioLoaderOgg>(std::move(fileHandle));
 #endif
 		else {
-			//LOGF_X("Extension unknown: \"%s\"", fs::extension(filename));
+			LOGF_X("Extension unknown: \"%s\"", fs::extension(filename));
 			fileHandle.reset(nullptr);
 			return std::make_unique<InvalidAudioLoader>(std::move(fileHandle));
 		}

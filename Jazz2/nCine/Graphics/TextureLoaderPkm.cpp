@@ -12,7 +12,7 @@ namespace nCine
 		: ITextureLoader(std::move(fileHandle))
 	{
 		fileHandle_->Open(FileAccessMode::Read);
-		//RETURN_ASSERT_MSG_X(fileHandle_->isOpened(), "File \"%s\" cannot be opened", fileHandle_->filename());
+		RETURN_ASSERT_MSG_X(fileHandle_->isOpened(), "File \"%s\" cannot be opened", fileHandle_->filename());
 
 		PkmHeader header;
 		// PKM header is 16 bytes long
@@ -22,10 +22,10 @@ namespace nCine
 		if (IFileStream::int32FromBE(header.magicId) == 0x504B4D20) // "PKM 10"
 		{
 			if (IFileStream::int16FromBE(header.version) != 0x3130) { // "10"
-				//RETURN_MSG_X("PKM version not supported: 0x%04x", header.version);
+				RETURN_MSG_X("PKM version not supported: 0x%04x", header.version);
 			}
 			if (IFileStream::int16FromBE(header.dataType) != 0) {
-				//RETURN_MSG_X("PKM data type not supported: 0x%04x", header.dataType);
+				RETURN_MSG_X("PKM data type not supported: 0x%04x", header.dataType);
 			}
 
 			headerSize_ = 16;
@@ -35,7 +35,7 @@ namespace nCine
 			const int extWidth = IFileStream::int16FromBE(header.extendedWidth);
 			const int extHeight = IFileStream::int16FromBE(header.extendedHeight);
 
-			//LOGI_X("Header found: w:%d h:%d, xw:%d xh:%d", width_, height_, extWidth, extHeight);
+			LOGI_X("Header found: w:%d h:%d, xw:%d xh:%d", width_, height_, extWidth, extHeight);
 		}
 
 		loadPixels(GL_ETC1_RGB8_OES);

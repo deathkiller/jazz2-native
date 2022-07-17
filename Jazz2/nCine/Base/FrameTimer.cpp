@@ -1,4 +1,5 @@
 #include "FrameTimer.h"
+#include "../../Common.h"
 
 #include <algorithm>
 
@@ -45,7 +46,7 @@ namespace nCine {
 		if (logInterval_ > 0.0f && avgNumFrames_ != 0 && secsSinceLastLogUpdate > logInterval_) {
 			fps_ = static_cast<float>(logNumFrames_) / logInterval_;
 			const float msPerFrame = (logInterval_ * 1000.0f) / static_cast<float>(logNumFrames_);
-			//LOGV_X("%lu frames in %.0f seconds = %f FPS (%.3fms per frame)", logNumFrames_, logInterval_, fps_, msPerFrame);
+			LOGV_X("%lu frames in %.0f seconds = %f FPS (%.3fms per frame)", logNumFrames_, logInterval_, fps_, msPerFrame);
 
 			logNumFrames_ = 0L;
 			lastLogUpdate_ = TimeStamp::now();

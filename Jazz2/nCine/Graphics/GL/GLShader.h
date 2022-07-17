@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../../Common.h"
+
 #define NCINE_INCLUDE_OPENGL
 #include "../../CommonHeaders.h"
 
@@ -36,11 +38,18 @@ namespace nCine
 
 		void loadFromString(const char* string);
 		void loadFromFile(const char* filename);
-		void compile(ErrorChecking errorChecking);
+		bool compile(ErrorChecking errorChecking, bool logOnErrors);
 
-		bool checkCompilation();
+		bool checkCompilation(bool logOnErrors);
+
+		void setObjectLabel(const char* label);
 
 	private:
+#if defined(ENABLE_LOG)
+		static constexpr unsigned int MaxInfoLogLength = 512;
+		static char infoLogString_[MaxInfoLogLength];
+#endif
+
 		GLuint glHandle_;
 		Status status_;
 

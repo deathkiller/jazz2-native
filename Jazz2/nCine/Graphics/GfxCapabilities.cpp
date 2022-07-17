@@ -5,6 +5,7 @@
 #include "../CommonHeaders.h"
 
 #include "GfxCapabilities.h"
+#include "../../Common.h"
 
 namespace nCine {
 
@@ -73,13 +74,13 @@ namespace nCine {
 #   if defined(_MSC_VER)
 		sscanf_s(version, "OpenGL ES %2d.%2d", &glMajorVersion_, &glMinorVersion_);
 #   else
-        sscanf(version, "OpenGL ES %2d.%2d", &glMajorVersion_, &glMinorVersion_);
+		sscanf(version, "OpenGL ES %2d.%2d", &glMajorVersion_, &glMinorVersion_);
 #   endif
 #else
 #   if defined(_MSC_VER)
 		sscanf_s(version, "%2d.%2d.%2d", &glMajorVersion_, &glMinorVersion_, &glReleaseVersion_);
 #   else
-        sscanf(version, "%2d.%2d.%2d", &glMajorVersion_, &glMinorVersion_, &glReleaseVersion_);
+		sscanf(version, "%2d.%2d.%2d", &glMajorVersion_, &glMinorVersion_, &glReleaseVersion_);
 #   endif
 #endif
 
@@ -95,6 +96,10 @@ namespace nCine {
 		glGetIntegerv(GL_MAX_VERTEX_UNIFORM_BLOCKS, &glIntValues_[GLIntValues::MAX_VERTEX_UNIFORM_BLOCKS]);
 		glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &glIntValues_[GLIntValues::MAX_FRAGMENT_UNIFORM_BLOCKS]);
 		glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &glIntValues_[GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT]);
+#if !defined(EMSCRIPTEN) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_1))
+		glGetIntegerv(GL_MAX_VERTEX_ATTRIB_STRIDE, &glIntValues_[GLIntValues::MAX_VERTEX_ATTRIB_STRIDE]);
+#endif
+		glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &glIntValues_[GLIntValues::MAX_COLOR_ATTACHMENTS]);
 
 #ifndef __EMSCRIPTEN__
 		const char* extensionNames[GLExtensions::COUNT] = {
@@ -116,28 +121,29 @@ namespace nCine {
 
 	void GfxCapabilities::logGLInfo()
 	{
-		/*LOGI("--- OpenGL device info ---");
+		LOGI("--- OpenGL device info ---");
 		LOGI_X("Vendor: %s", glInfoStrings_.vendor);
 		LOGI_X("Renderer: %s", glInfoStrings_.renderer);
 		LOGI_X("OpenGL Version: %s", glInfoStrings_.glVersion);
 		LOGI_X("GLSL Version: %s", glInfoStrings_.glslVersion);
-		LOGI("--- OpenGL device info ---");*/
+		LOGI("--- OpenGL device info ---");
 	}
 
 	void GfxCapabilities::logGLExtensions()
 	{
-		/*GLint numExtensions;
+		GLint numExtensions;
 		glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
 
 		LOGI("--- OpenGL extensions ---");
-		for (GLuint i = 0; i < static_cast<GLuint>(numExtensions); i++)
+		for (GLuint i = 0; i < static_cast<GLuint>(numExtensions); i++) {
 			LOGI_X("Extension %u: %s", i, glGetStringi(GL_EXTENSIONS, i));
-		LOGI("--- OpenGL extensions ---");*/
+		}
+		LOGI("--- OpenGL extensions ---");
 	}
 
 	void GfxCapabilities::logGLCaps() const
 	{
-		/*LOGI("--- OpenGL device capabilities ---");
+		LOGI("--- OpenGL device capabilities ---");
 		LOGI_X("GL_MAX_TEXTURE_SIZE: %d", glIntValues_[GLIntValues::MAX_TEXTURE_SIZE]);
 		LOGI_X("GL_MAX_TEXTURE_IMAGE_UNITS: %d", glIntValues_[GLIntValues::MAX_TEXTURE_IMAGE_UNITS]);
 		LOGI_X("GL_MAX_UNIFORM_BLOCK_SIZE: %d", glIntValues_[GLIntValues::MAX_UNIFORM_BLOCK_SIZE]);
@@ -145,6 +151,10 @@ namespace nCine {
 		LOGI_X("GL_MAX_VERTEX_UNIFORM_BLOCKS: %d", glIntValues_[GLIntValues::MAX_VERTEX_UNIFORM_BLOCKS]);
 		LOGI_X("GL_MAX_FRAGMENT_UNIFORM_BLOCKS: %d", glIntValues_[GLIntValues::MAX_FRAGMENT_UNIFORM_BLOCKS]);
 		LOGI_X("GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT: %d", glIntValues_[GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT]);
+#if !defined(EMSCRIPTEN) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_1))
+		LOGI_X("GL_MAX_VERTEX_ATTRIB_STRIDE: %d", glIntValues_[GLIntValues::MAX_VERTEX_ATTRIB_STRIDE]);
+#endif
+		LOGI_X("GL_MAX_COLOR_ATTACHMENTS: %d", glIntValues_[GLIntValues::MAX_COLOR_ATTACHMENTS]);
 		LOGI("---");
 		LOGI_X("GL_KHR_debug: %d", glExtensions_[GLExtensions::KHR_DEBUG]);
 		LOGI_X("GL_ARB_texture_storage: %d", glExtensions_[GLExtensions::ARB_TEXTURE_STORAGE]);
@@ -153,7 +163,7 @@ namespace nCine {
 		LOGI_X("GL_AMD_compressed_ATC_texture: %d", glExtensions_[GLExtensions::AMD_COMPRESSED_ATC_TEXTURE]);
 		LOGI_X("GL_IMG_texture_compression_pvrtc: %d", glExtensions_[GLExtensions::IMG_TEXTURE_COMPRESSION_PVRTC]);
 		LOGI_X("GL_KHR_texture_compression_astc_ldr: %d", glExtensions_[GLExtensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR]);
-		LOGI("--- OpenGL device capabilities ---");*/
+		LOGI("--- OpenGL device capabilities ---");
 	}
 
 	void GfxCapabilities::checkGLExtensions(const char* extensionNames[], bool results[], unsigned int numExtensionsToCheck) const

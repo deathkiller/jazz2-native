@@ -8,14 +8,12 @@ using namespace Death;
 
 namespace nCine
 {
-	class Viewport;
-
 	/// A class that sorts and issues the render commands collected by the scenegraph visit
 	class RenderQueue
 	{
 	public:
 		/// Constructor that sets the owning viewport
-		explicit RenderQueue(Viewport& viewport);
+		RenderQueue();
 
 		/// Returns true if the queue does not contain any render commands
 		bool empty() const;
@@ -28,15 +26,10 @@ namespace nCine
 		/// Issues every render command in order
 		void draw();
 
-		/// Returns the viewport that owns this render queue
-		inline Viewport& viewport() const {
-			return viewport_;
-		}
+		/// Clears all the queues and resets the render batcher
+		void clear();
 
 	private:
-		/// The viewport that owns this render queue
-		Viewport& viewport_;
-
 		/// Array of opaque render command pointers
 		SmallVector<RenderCommand*, 0> opaqueQueue_;
 		/// Array of opaque batched render command pointers

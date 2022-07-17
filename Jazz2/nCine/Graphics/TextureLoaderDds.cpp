@@ -12,11 +12,11 @@ namespace nCine {
 		DdsHeader header;
 
 		fileHandle_->Open(FileAccessMode::Read);
-		//RETURN_ASSERT_MSG_X(fileHandle_->isOpened(), "File \"%s\" cannot be opened", fileHandle_->filename());
+		RETURN_ASSERT_MSG_X(fileHandle_->isOpened(), "File \"%s\" cannot be opened", fileHandle_->filename());
 		const bool headerRead = readHeader(header);
-		//RETURN_ASSERT_MSG(headerRead, "DDS header cannot be read");
+		RETURN_ASSERT_MSG(headerRead, "DDS header cannot be read");
 		const bool formatParsed = parseFormat(header);
-		//RETURN_ASSERT_MSG(formatParsed, "DDS format cannot be parsed");
+		RETURN_ASSERT_MSG(formatParsed, "DDS format cannot be parsed");
 
 		hasLoaded_ = true;
 	}
@@ -57,7 +57,7 @@ namespace nCine {
 			const uint32_t fourCC = IFileStream::int32FromLE(header.ddspf.dwFourCC);
 
 			const char* fourCCchars = reinterpret_cast<const char*>(&fourCC);
-			//LOGI_X("FourCC: \"%c%c%c%c\" (0x%x)", fourCCchars[0], fourCCchars[1], fourCCchars[2], fourCCchars[3], fourCC);
+			LOGI_X("FourCC: \"%c%c%c%c\" (0x%x)", fourCCchars[0], fourCCchars[1], fourCCchars[2], fourCCchars[3], fourCC);
 
 			// Parsing the FourCC format
 			switch (fourCC) {
@@ -101,7 +101,7 @@ namespace nCine {
 			const uint32_t blueMask = IFileStream::int32FromLE(header.ddspf.dwBBitMask);
 			const uint32_t alphaMask = IFileStream::int32FromLE(header.ddspf.dwABitMask);
 
-			//LOGI_X("Pixel masks (%ubit): R:0x%x G:0x%x B:0x%x A:0x%x", bitCount, redMask, greenMask, blueMask, alphaMask);
+			LOGI_X("Pixel masks (%ubit): R:0x%x G:0x%x B:0x%x A:0x%x", bitCount, redMask, greenMask, blueMask, alphaMask);
 
 			// Texture contains uncompressed RGB data
 			// dwRGBBitCount and the RGB masks (dwRBitMask, dwRBitMask, dwRBitMask) contain valid data
@@ -157,12 +157,12 @@ namespace nCine {
 		}
 
 		if (mipMapCount_ > 1) {
-			//LOGI_X("MIP Maps: %d", mipMapCount_);
+			LOGI_X("MIP Maps: %d", mipMapCount_);
 			mipDataOffsets_ = std::make_unique<unsigned long[]>(mipMapCount_);
 			mipDataSizes_ = std::make_unique<unsigned long[]>(mipMapCount_);
 			unsigned long dataSizesSum = TextureFormat::calculateMipSizes(internalFormat, width_, height_, mipMapCount_, mipDataOffsets_.get(), mipDataSizes_.get());
 			if (dataSizesSum != dataSize_) {
-				//LOGW_X("The sum of MIP maps size (%ld) is different than texture total data (%ld)", dataSizesSum, dataSize_);
+				LOGW_X("The sum of MIP maps size (%ld) is different than texture total data (%ld)", dataSizesSum, dataSize_);
 			}
 		}
 

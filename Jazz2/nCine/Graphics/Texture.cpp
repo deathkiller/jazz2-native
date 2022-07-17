@@ -24,18 +24,34 @@ namespace nCine {
 		}
 	}
 
-	GLenum channelsToFormat(int numChannels)
+	GLenum ncFormatToNonInternal(Texture::Format format)
 	{
-		switch (numChannels) {
-			case 1:
+		switch (format) {
+			case Texture::Format::R8:
 				return GL_RED;
-			case 2:
+			case Texture::Format::RG8:
 				return GL_RG;
-			case 3:
+			case Texture::Format::RGB8:
 				return GL_RGB;
-			case 4:
+			case Texture::Format::RGBA8:
 			default:
 				return GL_RGBA;
+		}
+	}
+
+	Texture::Format internalFormatToNc(GLenum format)
+	{
+		switch (format) {
+			case GL_R8:
+				return Texture::Format::R8;
+			case GL_RG8:
+				return Texture::Format::RG8;
+			case GL_RGB8:
+				return Texture::Format::RGB8;
+			case GL_RGBA8:
+				return Texture::Format::RGBA8;
+			default:
+				return Texture::Format::Unknown;
 		}
 	}
 
@@ -45,7 +61,7 @@ namespace nCine {
 
 	Texture::Texture()
 		: Object(ObjectType::TEXTURE), glTexture_(std::make_unique<GLTexture>(GL_TEXTURE_2D)),
-		width_(0), height_(0), mipMapLevels_(0), isCompressed_(false), numChannels_(0), dataSize_(0),
+		width_(0), height_(0), mipMapLevels_(0), isCompressed_(false), format_(Format::Unknown), dataSize_(0),
 		minFiltering_(SamplerFilter::Nearest), magFiltering_(SamplerFilter::Nearest), wrapMode_(SamplerWrapping::ClampToEdge)
 	{
 	}
@@ -80,16 +96,18 @@ namespace nCine {
 		: Texture()
 	{
 		const bool hasLoaded = loadFromMemory(bufferName, bufferPtr, bufferSize);
-		//if (hasLoaded == false)
-		//	LOGE_X("Texture \"%s\" cannot be loaded", bufferName);
+		if (!hasLoaded) {
+			LOGE_X("Texture \"%s\" cannot be loaded", bufferName);
+		}
 	}
 
 	Texture::Texture(const char* filename)
 		: Texture()
 	{
 		const bool hasLoaded = loadFromFile(filename);
-		//if (hasLoaded == false)
-		//	LOGE_X("Texture \"%s\" cannot be loaded", filename);
+		if (!hasLoaded) {
+			LOGE_X("Texture \"%s\" cannot be loaded", filename);
+		}
 	}
 
 	Texture::~Texture()
@@ -123,7 +141,7 @@ namespace nCine {
 
 		glTexture_->bind();
 		//setName(name);
-		setGLTextureLabel(name);
+		glTexture_->setObjectLabel(name);
 		initialize(texLoader);
 
 		RenderStatistics::addTexture(dataSize_);
@@ -131,6 +149,7 @@ namespace nCine {
 
 	void Texture::init(const char* name, Format format, int mipMapCount, Vector2i size)
 	{
+		//ASSERT(mipMapCount > 0);
 		init(name, format, mipMapCount, size.X, size.Y);
 	}
 
@@ -163,7 +182,7 @@ namespace nCine {
 
 		glTexture_->bind();
 		//setName(bufferName);
-		setGLTextureLabel(bufferName);
+		glTexture_->setObjectLabel(bufferName);
 		initialize(*texLoader);
 		load(*texLoader);
 
@@ -185,7 +204,7 @@ namespace nCine {
 
 		glTexture_->bind();
 		//setName(filename);
-		setGLTextureLabel(filename);
+		glTexture_->setObjectLabel(filename);
 		initialize(*texLoader);
 		load(*texLoader);
 
@@ -216,7 +235,7 @@ namespace nCine {
 	{
 		const unsigned char* data = bufferPtr;
 
-		const GLenum format = channelsToFormat(numChannels_);
+		const GLenum format = ncFormatToNonInternal(format_);
 		glGetError();
 		glTexture_->texSubImage2D(level, x, y, width, height, format, GL_UNSIGNED_BYTE, data);
 		const GLenum error = glGetError();
@@ -238,7 +257,7 @@ namespace nCine {
 	bool Texture::saveToMemory(unsigned char* bufferPtr, unsigned int level)
 	{
 #if !defined(WITH_OPENGLES) && !defined(__EMSCRIPTEN__)
-		const GLenum format = channelsToFormat(numChannels_);
+		const GLenum format = ncFormatToNonInternal(format_);
 		glGetError();
 		glTexture_->getTexImage(level, format, GL_UNSIGNED_BYTE, bufferPtr);
 		const GLenum error = glGetError();
@@ -247,6 +266,23 @@ namespace nCine {
 #else
 		return false;
 #endif
+	}
+
+	unsigned int Texture::numChannels() const
+	{
+		switch (format_) {
+			case Texture::Format::R8:
+				return 1;
+			case Texture::Format::RG8:
+				return 2;
+			case Texture::Format::RGB8:
+				return 3;
+			case Texture::Format::RGBA8:
+				return 4;
+			case Texture::Format::Unknown:
+			default:
+				return 0;
+		}
 	}
 
 	void Texture::setMinFiltering(SamplerFilter filter)
@@ -303,6 +339,11 @@ namespace nCine {
 		wrapMode_ = wrapMode;
 	}
 
+	void Texture::setGLTextureLabel(const char* label)
+	{
+		glTexture_->setObjectLabel(label);
+	}
+
 	/*! The pointer is an opaque handle to be used only by ImGui or Nuklear.
 	 *  It is considered immutable from an user point of view and thus retrievable by a constant method. */
 	void* Texture::guiTexId() const
@@ -340,7 +381,6 @@ namespace nCine {
 		}
 
 		const TextureFormat& texFormat = texLoader.texFormat();
-		unsigned int numChannels = texFormat.numChannels();
 		GLenum internalFormat = texFormat.internalFormat();
 		GLenum format = texFormat.format();
 		unsigned long dataSize = texLoader.dataSize();
@@ -352,7 +392,7 @@ namespace nCine {
 #endif
 
 		if (withTexStorage && dataSize_ > 0 &&
-			(width_ != texLoader.width() || height_ != texLoader.height() || numChannels_ != numChannels)) {
+			(width_ != texLoader.width() || height_ != texLoader.height() || ncFormatToInternal(format_) != internalFormat)) {
 			// The OpenGL texture needs to be recreated as its storage is immutable
 			glTexture_ = std::make_unique<GLTexture>(GL_TEXTURE_2D);
 		}
@@ -374,7 +414,7 @@ namespace nCine {
 		height_ = texLoader.height();
 		mipMapLevels_ = texLoader.mipMapCount();
 		isCompressed_ = texFormat.isCompressed();
-		numChannels_ = numChannels;
+		format_ = internalFormatToNc(internalFormat);
 		dataSize_ = dataSize;
 	}
 
@@ -410,11 +450,6 @@ namespace nCine {
 			levelWidth /= 2;
 			levelHeight /= 2;
 		}
-	}
-
-	void Texture::setGLTextureLabel(const char* filename)
-	{
-		glTexture_->setObjectLabel(filename);
 	}
 
 }

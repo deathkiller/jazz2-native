@@ -1,14 +1,16 @@
 #include "GLUniformBlock.h"
 #include "GLShaderProgram.h"
+#include "../IGfxCapabilities.h"
+#include "../../ServiceLocator.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
 
 	GLUniformBlock::GLUniformBlock()
-		: program_(0), index_(0), size_(0), bindingIndex_(-1)
+		: program_(0), index_(0), size_(0), alignAmount_(0), bindingIndex_(-1)
 	{
 		name_[0] = '\0';
 	}
@@ -16,8 +18,8 @@ namespace nCine {
 	GLUniformBlock::GLUniformBlock(GLuint program, GLuint index, DiscoverUniforms discover)
 		: GLUniformBlock()
 	{
-		GLint nameLength;
-		GLint uniformCount;
+		GLint nameLength = 0;
+		GLint uniformCount = 0;
 		program_ = program;
 		index_ = index;
 
@@ -27,7 +29,7 @@ namespace nCine {
 		glGetActiveUniformBlockName(program, index, MaxNameLength, &nameLength, name_);
 		glGetActiveUniformBlockiv(program, index, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &uniformCount);
 
-		if (discover == DiscoverUniforms::ENABLED) {
+		if (discover == DiscoverUniforms::ENABLED && uniformCount > 0) {
 			//ASSERT(uniformCount <= MaxNumBlockUniforms);
 			GLuint uniformIndices[MaxNumBlockUniforms];
 			GLint uniformTypes[MaxNumBlockUniforms];
@@ -71,9 +73,10 @@ namespace nCine {
 			}
 		}
 
-		// Align to 16 bytes as required by the `std140` memory layout
-		const unsigned int alignAmount = (16 - size_ % 16) % 16;
-		size_ += alignAmount;
+		// Align to the uniform buffer offset alignment or `glBindBufferRange()` will generate an `INVALID_VALUE` error
+		static const int offsetAlignment = theServiceLocator().gfxCapabilities().value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		alignAmount_ = (offsetAlignment - size_ % offsetAlignment) % offsetAlignment;
+		size_ += alignAmount_;
 	}
 
 	GLUniformBlock::GLUniformBlock(GLuint program, GLuint index)

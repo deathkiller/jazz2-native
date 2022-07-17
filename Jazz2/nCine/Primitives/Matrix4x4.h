@@ -63,18 +63,18 @@ namespace nCine
 
 		Matrix4x4& Translate(T xx, T yy, T zz);
 		Matrix4x4& Translate(const Vector3<T>& v);
-		Matrix4x4& RotateX(T degrees);
-		Matrix4x4& RotateY(T degrees);
-		Matrix4x4& RotateZ(T degrees);
+		Matrix4x4& RotateX(T radians);
+		Matrix4x4& RotateY(T radians);
+		Matrix4x4& RotateZ(T radians);
 		Matrix4x4& Scale(T xx, T yy, T zz);
 		Matrix4x4& Scale(const Vector3<T>& v);
 		Matrix4x4& Scale(T s);
 
 		static Matrix4x4 Translation(T xx, T yy, T zz);
 		static Matrix4x4 Translation(const Vector3<T>& v);
-		static Matrix4x4 RotationX(T degrees);
-		static Matrix4x4 RotationY(T degrees);
-		static Matrix4x4 RotationZ(T degrees);
+		static Matrix4x4 RotationX(T radians);
+		static Matrix4x4 RotationY(T radians);
+		static Matrix4x4 RotationZ(T radians);
 		static Matrix4x4 Scaling(T xx, T yy, T zz);
 		static Matrix4x4 Scaling(const Vector3<T>& v);
 		static Matrix4x4 Scaling(T s);
@@ -480,7 +480,7 @@ namespace nCine
 	}
 
 	template <class T>
-	inline Matrix4x4<T>& Matrix4x4<T>::RotateX(T degrees)
+	inline Matrix4x4<T>& Matrix4x4<T>::RotateX(T radians)
 	{
 		Matrix4x4& m = *this;
 		const T m10 = m[1][0];
@@ -492,7 +492,6 @@ namespace nCine
 		const T m13 = m[1][3];
 		const T m23 = m[2][3];
 
-		const T radians = degrees * (static_cast<T>(Pi) / 180);
 		const T c = cos(radians);
 		const T s = sin(radians);
 
@@ -510,7 +509,7 @@ namespace nCine
 	}
 
 	template <class T>
-	inline Matrix4x4<T>& Matrix4x4<T>::RotateY(T degrees)
+	inline Matrix4x4<T>& Matrix4x4<T>::RotateY(T radians)
 	{
 		Matrix4x4& m = *this;
 		const T m00 = m[0][0];
@@ -522,7 +521,6 @@ namespace nCine
 		const T m03 = m[0][3];
 		const T m23 = m[2][3];
 
-		const T radians = degrees * (static_cast<T>(Pi) / 180);
 		const T c = cos(radians);
 		const T s = sin(radians);
 
@@ -540,7 +538,7 @@ namespace nCine
 	}
 
 	template <class T>
-	inline Matrix4x4<T>& Matrix4x4<T>::RotateZ(T degrees)
+	inline Matrix4x4<T>& Matrix4x4<T>::RotateZ(T radians)
 	{
 		Matrix4x4& m = *this;
 		const T m00 = m[0][0];
@@ -552,7 +550,6 @@ namespace nCine
 		const T m03 = m[0][3];
 		const T m13 = m[1][3];
 
-		const T radians = degrees * (static_cast<T>(Pi) / 180);
 		const T c = cos(radians);
 		const T s = sin(radians);
 
@@ -617,9 +614,8 @@ namespace nCine
 	}
 
 	template <class T>
-	inline Matrix4x4<T> Matrix4x4<T>::RotationX(T degrees)
+	inline Matrix4x4<T> Matrix4x4<T>::RotationX(T radians)
 	{
-		const T radians = degrees * (static_cast<T>(Pi) / 180);
 		const T c = cos(radians);
 		const T s = sin(radians);
 
@@ -630,9 +626,8 @@ namespace nCine
 	}
 
 	template <class T>
-	inline Matrix4x4<T> Matrix4x4<T>::RotationY(T degrees)
+	inline Matrix4x4<T> Matrix4x4<T>::RotationY(T radians)
 	{
-		const T radians = degrees * (static_cast<T>(Pi) / 180);
 		const T c = cos(radians);
 		const T s = sin(radians);
 
@@ -643,9 +638,8 @@ namespace nCine
 	}
 
 	template <class T>
-	inline Matrix4x4<T> Matrix4x4<T>::RotationZ(T degrees)
+	inline Matrix4x4<T> Matrix4x4<T>::RotationZ(T radians)
 	{
-		const T radians = degrees * (static_cast<T>(Pi) / 180);
 		const T c = cos(radians);
 		const T s = sin(radians);
 

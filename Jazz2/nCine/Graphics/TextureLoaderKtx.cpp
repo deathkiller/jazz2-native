@@ -20,11 +20,11 @@ namespace nCine
 		KtxHeader header;
 
 		fileHandle_->Open(FileAccessMode::Read);
-		//RETURN_ASSERT_MSG_X(fileHandle_->isOpened(), "File \"%s\" cannot be opened", fileHandle_->filename());
+		RETURN_ASSERT_MSG_X(fileHandle_->isOpened(), "File \"%s\" cannot be opened", fileHandle_->filename());
 		const bool headerRead = readHeader(header);
-		//RETURN_ASSERT_MSG(headerRead, "KTX header cannot be read");
+		RETURN_ASSERT_MSG(headerRead, "KTX header cannot be read");
 		const bool formatParsed = parseFormat(header);
-		//RETURN_ASSERT_MSG(formatParsed, "KTX format cannot be parsed");
+		RETURN_ASSERT_MSG(formatParsed, "KTX format cannot be parsed");
 
 		hasLoaded_ = true;
 	}
@@ -66,7 +66,7 @@ namespace nCine
 		loadPixels(internalFormat, type);
 
 		if (mipMapCount_ > 1) {
-			//LOGI_X("MIP Maps: %d", mipMapCount_);
+			LOGI_X("MIP Maps: %d", mipMapCount_);
 			mipDataOffsets_ = std::make_unique<unsigned long[]>(mipMapCount_);
 			mipDataSizes_ = std::make_unique<unsigned long[]>(mipMapCount_);
 			unsigned long dataSizesSum = TextureFormat::calculateMipSizes(internalFormat, width_, height_, mipMapCount_, mipDataOffsets_.get(), mipDataSizes_.get());
@@ -78,7 +78,7 @@ namespace nCine
 			dataSizesSum += 4 * mipMapCount_;
 
 			if (dataSizesSum != dataSize_) {
-				//LOGW_X("The sum of MIP maps size (%ld) is different than texture total data (%ld)", dataSizesSum, dataSize_);
+				LOGW_X("The sum of MIP maps size (%ld) is different than texture total data (%ld)", dataSizesSum, dataSize_);
 			}
 		}
 

@@ -3,7 +3,11 @@
 #include "GLUniform.h"
 #include "GLUniformBlock.h"
 #include "GLAttribute.h"
+#include "GLVertexFormat.h"
+#include "../../Base/StaticHashMap.h"
+#include "../../../Common.h"
 
+#include <string>
 #include <SmallVector.h>
 
 using namespace Death;
@@ -26,6 +30,7 @@ namespace nCine
 		enum class Status
 		{
 			NOT_LINKED,
+			COMPILATION_FAILED,
 			LINKING_FAILED,
 			LINKED,
 			LINKED_WITH_DEFERRED_QUERIES,
@@ -58,6 +63,13 @@ namespace nCine
 			return queryPhase_;
 		}
 
+		bool isLinked() const;
+
+		/// Returns the length of the information log including the null termination character
+		unsigned int retrieveInfoLogLength() const;
+		/// Retrieves the information log and copies it in the provided string object
+		void retrieveInfoLog(std::string& infoLog) const;
+
 		/// Returns the total memory needed for all uniforms outside of blocks
 		inline unsigned int uniformsSize() const {
 			return uniformsSize_;
@@ -67,14 +79,51 @@ namespace nCine
 			return uniformBlocksSize_;
 		}
 
-		void attachShader(GLenum type, const char* filename);
-		void attachShaderFromString(GLenum type, const char* string);
-		void link(Introspection introspection);
+		bool attachShader(GLenum type, const char* filename);
+		bool attachShaderFromString(GLenum type, const char* string);
+		bool link(Introspection introspection);
 		void use();
+		bool validate();
+
+		inline unsigned int numAttributes() const {
+			return attributeLocations_.size();
+		}
+		inline bool hasAttribute(const char* name) const {
+			return (attributeLocations_.find(name) != nullptr);
+		}
+		GLVertexFormat::Attribute* attribute(const char* name);
+
+		inline void defineVertexFormat(const GLBufferObject* vbo) {
+			defineVertexFormat(vbo, nullptr, 0);
+		}
+		inline void defineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo) {
+			defineVertexFormat(vbo, ibo, 0);
+		}
+		void defineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, unsigned int vboOffset);
+
+		/// Deletes the current OpenGL shader program so that new shaders can be attached
+		void reset();
+
+		void setObjectLabel(const char* label);
+
+		/// Returns the automatic log on errors flag
+		inline bool logOnErrors() const {
+			return shouldLogOnErrors_;
+		}
+		/// Sets the automatic log on errors flag
+		/*! If the flag is true the shader program will automatically log compilation and linking errors. */
+		inline void setLogOnErrors(bool shouldLogOnErrors) {
+			shouldLogOnErrors_ = shouldLogOnErrors;
+		}
 
 	private:
 		/// Max number of discoverable uniforms
-		static constexpr int MaxNumUniforms = 16;
+		static constexpr unsigned int MaxNumUniforms = 32;
+
+#if defined(ENABLE_LOG)
+		static constexpr unsigned int MaxInfoLogLength = 512;
+		static char infoLogString_[MaxInfoLogLength];
+#endif
 
 		static GLuint boundProgram_;
 
@@ -84,6 +133,9 @@ namespace nCine
 		Status status_;
 		Introspection introspection_;
 		QueryPhase queryPhase_;
+
+		/// A flag indicating whether the shader program should automatically log errors (the information log)
+		bool shouldLogOnErrors_;
 
 		unsigned int uniformsSize_;
 		unsigned int uniformBlocksSize_;
@@ -95,13 +147,17 @@ namespace nCine
 		static const int AttributesInitialSize = 4;
 		SmallVector<GLAttribute, 0> attributes_;
 
-		void deferredQueries();
+		StaticHashMap<std::string, int, GLVertexFormat::MaxAttributes> attributeLocations_;
+		GLVertexFormat vertexFormat_;
+
+		bool deferredQueries();
 		bool checkLinking();
 		void performIntrospection();
 
 		void discoverUniforms();
 		void discoverUniformBlocks(GLUniformBlock::DiscoverUniforms discover);
 		void discoverAttributes();
+		void initVertexFormat();
 
 		/// Deleted copy constructor
 		GLShaderProgram(const GLShaderProgram&) = delete;
@@ -110,7 +166,6 @@ namespace nCine
 
 		friend class GLShaderUniforms;
 		friend class GLShaderUniformBlocks;
-		friend class GLShaderAttributes;
 	};
 
 }

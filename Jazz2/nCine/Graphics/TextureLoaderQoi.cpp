@@ -20,6 +20,8 @@ namespace nCine
 		: ITextureLoader(std::move(fileHandle))
 	{
 		fileHandle_->Open(FileAccessMode::Read);
+		RETURN_ASSERT_MSG_X(fileHandle_->isOpened(), "File \"%s\" cannot be opened", fileHandle_->filename());
+
 		auto fileSize = fileHandle_->GetSize();
 		if (fileSize < QOI_HEADER_SIZE || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit, files are usually smaller than 1MB

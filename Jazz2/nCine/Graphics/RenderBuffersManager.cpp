@@ -168,6 +168,19 @@ namespace nCine {
 		managedBuffer.object->bufferData(managedBuffer.size, nullptr, specs.usageFlags);
 		managedBuffer.freeSpace = managedBuffer.size;
 
+		switch (managedBuffer.type) {
+			default:
+			case BufferTypes::ARRAY:
+				managedBuffer.object->setObjectLabel("Vertex_ManagedBuffer");
+				break;
+			case BufferTypes::ELEMENT_ARRAY:
+				managedBuffer.object->setObjectLabel("Index_ManagedBuffer");
+				break;
+			case BufferTypes::UNIFORM:
+				managedBuffer.object->setObjectLabel("Uniform_ManagedBuffer");
+				break;
+		}
+
 		if (specs.mapFlags == 0) {
 			managedBuffer.hostBuffer = std::make_unique<GLubyte[]>(specs.maxSize);
 			managedBuffer.mapBase = managedBuffer.hostBuffer.get();

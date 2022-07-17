@@ -26,6 +26,64 @@ extern char** __argv;
 
 using namespace nCine;
 
+#if defined(ENABLE_LOG)
+
+#if defined(_WIN32)
+#	include <Utf8.h>
+#elif defined(__ANDROID__)
+#	include <stdarg.h>
+#	include <android/log.h>
+#else
+#	include <cstdarg>
+#endif
+
+void __WriteLog(LogLevel logLevel, const char* fmt, ...)
+{
+	if (logLevel <= LogLevel::Verbose) {
+		return;
+	}
+
+	constexpr int MaxEntryLength = 1024;
+	char logEntry[MaxEntryLength];
+
+	va_list args;
+	va_start(args, fmt);
+	unsigned int length = vsnprintf(logEntry, MaxEntryLength, fmt, args);
+	va_end(args);
+
+	if (length < MaxEntryLength - 2) {
+		logEntry[length++] = '\n';
+		logEntry[length] = '\0';
+	}
+
+#if defined(_WIN32)
+	if (IsDebuggerPresent()) {
+		OutputDebugString(Utf8::ToUtf16(logEntry));
+	}
+#elif defined(__ANDROID__)
+	android_LogPriority priority;
+
+	// clang-format off
+	switch (level) {
+		case LogLevel::Fatal:		priority = ANDROID_LOG_FATAL; break;
+		case LogLevel::Error:		priority = ANDROID_LOG_ERROR; break;
+		case LogLevel::Warn:		priority = ANDROID_LOG_WARN; break;
+		case LogLevel::Info:		priority = ANDROID_LOG_INFO; break;
+		case LogLevel::Debug:		priority = ANDROID_LOG_DEBUG; break;
+		case LogLevel::Verbose:		priority = ANDROID_LOG_VERBOSE; break;
+		case LogLevel::Unknown:		priority = ANDROID_LOG_UNKNOWN; break;
+		default:					priority = ANDROID_LOG_UNKNOWN; break;
+	}
+	// clang-format on
+
+	__android_log_write(priority, "Jazz2", logEntry_);
+#else
+	fputs(logEntry, stdout);
+#endif
+}
+
+#endif
+
 class GameEventHandler : public IAppEventHandler, public IInputEventHandler
 {
 public:
@@ -35,6 +93,7 @@ public:
 	void onPreInit(AppConfiguration& config) override;
 	void onInit() override;
 	void onFrameStart() override;
+	void onPostUpdate() override;
 	void onShutdown() override;
 	void onRootViewportResized(int width, int height) override;
 
@@ -76,6 +135,8 @@ void GameEventHandler::onInit()
 	theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
 #endif
 
+	//theApplication().renderingSettings().batchingEnabled = false;
+
 	// TODO
 	Jazz2::PlayerType players[] = { Jazz2::PlayerType::Jazz };
 	Jazz2::LevelInitialization data("unknown", "unknown", Jazz2::GameDifficulty::Normal, false, false, players, _countof(players));
@@ -88,7 +149,14 @@ void GameEventHandler::onInit()
 void GameEventHandler::onFrameStart()
 {
 	if (_currentHandler != nullptr) {
-		_currentHandler->OnFrameStart();
+		_currentHandler->OnBeginFrame();
+	}
+}
+
+void GameEventHandler::onPostUpdate()
+{
+	if (_currentHandler != nullptr) {
+		_currentHandler->OnEndFrame();
 	}
 }
 
@@ -152,10 +220,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdSh
 int main(int argc, char** argv)
 #endif
 {
-
 #if !defined(_WIN32)
-	// TODO
-	printf("Jazz2 - Running the application!\n");
 #define __argc argc
 #define __argv argv
 #endif

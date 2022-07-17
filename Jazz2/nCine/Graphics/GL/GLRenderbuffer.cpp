@@ -1,7 +1,8 @@
 #include "GLRenderbuffer.h"
+#include "GLDebug.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS
 	///////////////////////////////////////////////////////////
@@ -13,7 +14,7 @@ namespace nCine {
 	///////////////////////////////////////////////////////////
 
 	GLRenderbuffer::GLRenderbuffer(GLenum internalFormat, GLsizei width, GLsizei height)
-		: glHandle_(0)
+		: glHandle_(0), attachment_(GL_NONE)
 	{
 		glGenRenderbuffers(1, &glHandle_);
 		storage(internalFormat, width, height);
@@ -49,6 +50,11 @@ namespace nCine {
 			return true;
 		}
 		return false;
+	}
+
+	void GLRenderbuffer::setObjectLabel(const char* label)
+	{
+		GLDebug::objectLabel(GLDebug::LabelTypes::RENDERBUFFER, glHandle_, label);
 	}
 
 	///////////////////////////////////////////////////////////

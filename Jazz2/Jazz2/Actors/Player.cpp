@@ -1473,7 +1473,7 @@ namespace Jazz2::Actors
 						angle = angle - fTwoPi;
 					}
 
-					_angle = std::clamp(angle, -fPiOver3, fPiOver3);
+					_renderer.setRotation(std::clamp(angle, -fPiOver3, fPiOver3));
 				}
 
 				if (_currentTransitionState == AnimState::Idle) {
@@ -1487,7 +1487,7 @@ namespace Jazz2::Actors
 				CollisionFlags |= CollisionFlags::ApplyGravitation;
 				SetState(ActorFlags::CanJump, true);
 				_externalForce.Y = 0.45f;
-				_angle = 0;
+				_renderer.setRotation(0.0f);
 
 				SetAnimation(AnimState::Jump);
 
@@ -1937,8 +1937,8 @@ namespace Jazz2::Actors
 		uint16_t ammoDecrease = 100;
 
 		switch (weaponType) {
-			case WeaponType::Blaster: FireWeaponBlaster(); break;
-			case WeaponType::Bouncer: FireWeaponBouncer(); break;
+			case WeaponType::Blaster: FireWeapon<Weapons::BlasterShot, WeaponType::Blaster, 40.0f, 1.0f>(); break;
+			case WeaponType::Bouncer: FireWeapon<Weapons::BouncerShot, WeaponType::Bouncer, 32.0f, 0.85f>(); break;
 			/*case WeaponType::Freezer: FireWeaponFreezer(); break;
 			case WeaponType::Seeker: FireWeaponSeeker(); break;
 			case WeaponType::RF: FireWeaponRF(); break;
@@ -1987,13 +1987,34 @@ namespace Jazz2::Actors
 		return true;
 	}
 
+	template<typename T, WeaponType weaponType, float cooldownBase, float cooldownUpgrade>
+	void Player::FireWeapon()
+	{
+		Vector3i initialPos;
+		Vector2f gunspotPos;
+		float angle;
+		GetFirePointAndAngle(initialPos, gunspotPos, angle);
+
+		std::shared_ptr<T> shot = std::make_shared<T>();
+		uint8_t shotParams[1] = { _weaponUpgrades[(int)weaponType] };
+		shot->OnActivated({
+			.LevelHandler = _levelHandler,
+			.Pos = initialPos,
+			.Params = shotParams
+		});
+		shot->OnFire(shared_from_this(), gunspotPos, _speed, angle, IsFacingLeft());
+		_levelHandler->AddActor(shot);
+
+		_weaponCooldown = cooldownBase - (_weaponUpgrades[(int)WeaponType::Blaster] * cooldownUpgrade);
+	}
+
 	void Player::GetFirePointAndAngle(Vector3i& initialPos, Vector2f& gunspotPos, float& angle)
 	{
 		initialPos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2);
 		gunspotPos = _pos;
 
 		if (_inWater) {
-			angle = _angle;
+			angle = _renderer.rotation();
 
 			int size = (_currentAnimation->Base->FrameDimensions.X / 2);
 			gunspotPos.X += (std::cosf(angle) * size) * (IsFacingLeft() ? -1.0f : 1.0f);
@@ -2010,47 +2031,6 @@ namespace Jazz2::Actors
 				angle = 0.0f;
 			}
 		}
-	}
-
-	void Player::FireWeaponBlaster()
-	{
-		Vector3i initialPos;
-		Vector2f gunspotPos;
-		float angle;
-		GetFirePointAndAngle(initialPos, gunspotPos, angle);
-
-		std::shared_ptr<Weapons::BlasterShot> shot = std::make_shared<Weapons::BlasterShot>();
-		uint8_t shotParams[1] = { _weaponUpgrades[(int)_currentWeapon] };
-		shot->OnActivated({
-			.LevelHandler = _levelHandler,
-			.Pos = initialPos,
-			.Params = shotParams
-		});
-		shot->OnFire(shared_from_this(), gunspotPos, _speed, _angle, IsFacingLeft());
-		_levelHandler->AddActor(shot);
-
-		//PlaySound("WeaponBlaster");
-		_weaponCooldown = 40.0f - (_weaponUpgrades[(int)WeaponType::Blaster] / 2) * 2.0f;
-	}
-
-	void Player::FireWeaponBouncer()
-	{
-		Vector3i initialPos;
-		Vector2f gunspotPos;
-		float angle;
-		GetFirePointAndAngle(initialPos, gunspotPos, angle);
-
-		std::shared_ptr<Weapons::BouncerShot> shot = std::make_shared<Weapons::BouncerShot>();
-		uint8_t shotParams[1] = { _weaponUpgrades[(int)_currentWeapon] };
-		shot->OnActivated({
-			.LevelHandler = _levelHandler,
-			.Pos = initialPos,
-			.Params = shotParams
-		});
-		shot->OnFire(shared_from_this(), gunspotPos, _speed, _angle, IsFacingLeft());
-		_levelHandler->AddActor(shot);
-
-		_weaponCooldown = 32.0f - (_weaponUpgrades[(int)WeaponType::Blaster] / 2) * 1.7f;
 	}
 
 	void Player::ReceiveLevelCarryOver(ExitType exitType, const PlayerCarryOver& carryOver)
@@ -2132,7 +2112,7 @@ namespace Jazz2::Actors
 			_pushFramesLeft = 0.0f;
 
 			// For warping from the water
-			_angle = 0.0f;
+			_renderer.setRotation(0.0f);
 
 			//PlaySound("WarpIn");
 

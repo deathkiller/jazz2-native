@@ -78,7 +78,7 @@ namespace nCine
 			shaderProgramType = Material::ShaderProgramType::SPRITE_NO_TEXTURE;
 		}
 		renderCommand_.material().setShaderProgramType(shaderProgramType);
-		spriteBlock_ = renderCommand_.material().uniformBlock("SpriteBlock");
+		shaderHasChanged();
 		renderCommand_.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
 		if (texture_) {
@@ -95,10 +95,9 @@ namespace nCine
 			} else {
 				shaderProgramType = Material::ShaderProgramType::SPRITE_NO_TEXTURE;
 			}
-			const bool shaderHasChanged = renderCommand_.material().setShaderProgramType(shaderProgramType);
-			if (shaderHasChanged) {
-				spriteBlock_ = renderCommand_.material().uniformBlock("SpriteBlock");
-				dirtyBits_.set(DirtyBitPositions::ColorBit);
+			const bool hasChanged = renderCommand_.material().setShaderProgramType(shaderProgramType);
+			if (hasChanged) {
+				shaderHasChanged();
 			}
 		}
 

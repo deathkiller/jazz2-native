@@ -22,8 +22,7 @@ namespace nCine {
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
 
-	RenderQueue::RenderQueue(Viewport& viewport)
-		: viewport_(viewport)
+	RenderQueue::RenderQueue()
 	{
 		opaqueQueue_.reserve(16);
 		opaqueBatchedQueue_.reserve(16);
@@ -107,7 +106,7 @@ namespace nCine {
 		// Avoid GPU stalls by uploading to VBOs, IBOs and UBOs before drawing
 		if (opaques->empty() == false) {
 #if _DEBUG
-			sprintf_s(debugString, "Commit %u opaque command(s) for viewport 0x%lx", opaques->size(), uintptr_t(&viewport_));
+			sprintf_s(debugString, "Commit %u opaque command(s) for viewport 0x%lx", opaques->size(), uintptr_t(RenderResources::currentViewport()));
 			GLDebug::ScopedGroup scoped(debugString);
 #endif
 			for (RenderCommand* opaqueRenderCommand : *opaques)
@@ -116,7 +115,7 @@ namespace nCine {
 
 		if (transparents->empty() == false) {
 #if _DEBUG
-			sprintf_s(debugString, "Commit %u transparent command(s) for viewport 0x%lx", transparents->size(), uintptr_t(&viewport_));
+			sprintf_s(debugString, "Commit %u transparent command(s) for viewport 0x%lx", transparents->size(), uintptr_t(RenderResources::currentViewport()));
 			GLDebug::ScopedGroup scoped(debugString);
 #endif
 			for (RenderCommand* transparentRenderCommand : *transparents)
@@ -193,7 +192,10 @@ namespace nCine {
 		GLBlending::disable();
 
 		GLScissorTest::disable();
+	}
 
+	void RenderQueue::clear()
+	{
 		opaqueQueue_.clear();
 		opaqueBatchedQueue_.clear();
 		transparentQueue_.clear();

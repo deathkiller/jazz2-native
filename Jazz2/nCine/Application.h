@@ -110,8 +110,8 @@ namespace nCine
 		inline SceneNode& rootNode() {
 			return *rootNode_;
 		}
-		/// Returns the root viewport (i.e. the screen)
-		Viewport& rootViewport();
+		/// Returns the screen viewport
+		Viewport& screenViewport();
 		/// Returns the input manager instance
 		inline IInputManager& inputManager() {
 			return *inputManager_;
@@ -150,8 +150,8 @@ namespace nCine
 			return gfxDevice_->resolution();
 		}
 
-		/// Resizes the root viewport if it exists
-		void resizeRootViewport(int width, int height);
+		/// Resizes the screen viewport, if exists
+		void resizeScreenViewport(int width, int height);
 
 		/// Returns the value of the suspension flag
 		/*! If `true` the application is suspended, it will neither update nor receive events */
@@ -202,7 +202,7 @@ namespace nCine
 		std::unique_ptr<FrameTimer> frameTimer_;
 		std::unique_ptr<IGfxDevice> gfxDevice_;
 		std::unique_ptr<SceneNode> rootNode_;
-		std::unique_ptr<ScreenViewport> rootViewport_;
+		std::unique_ptr<ScreenViewport> screenViewport_;
 		//std::unique_ptr<IDebugOverlay> debugOverlay_;
 		std::unique_ptr<IInputManager> inputManager_;
 		std::unique_ptr<IAppEventHandler> appEventHandler_;
@@ -244,6 +244,7 @@ namespace nCine
 #ifdef __EMSCRIPTEN__
 		friend class IGfxDevice;
 #endif
+		friend class Viewport;
 	};
 
 	// Meyers' Singleton

@@ -2,6 +2,7 @@ set(SOURCES
 	${NCINE_ROOT}/Jazz2/nCine/Base/BitArray.cpp
 	${NCINE_ROOT}/Jazz2/nCine/Base/Clock.cpp
 	${NCINE_ROOT}/Jazz2/nCine/Base/FrameTimer.cpp
+	${NCINE_ROOT}/Jazz2/nCine/Base/HashFunctions.cpp
 	${NCINE_ROOT}/Jazz2/nCine/Base/Object.cpp
 	${NCINE_ROOT}/Jazz2/nCine/Base/Random.cpp
 	${NCINE_ROOT}/Jazz2/nCine/Base/Timer.cpp
@@ -23,7 +24,6 @@ set(SOURCES
 	${NCINE_ROOT}/Jazz2/nCine/Graphics/GL/GLRenderbuffer.cpp
 	${NCINE_ROOT}/Jazz2/nCine/Graphics/GL/GLScissorTest.cpp
 	${NCINE_ROOT}/Jazz2/nCine/Graphics/GL/GLShader.cpp
-	${NCINE_ROOT}/Jazz2/nCine/Graphics/GL/GLShaderAttributes.cpp
 	${NCINE_ROOT}/Jazz2/nCine/Graphics/GL/GLShaderProgram.cpp
 	${NCINE_ROOT}/Jazz2/nCine/Graphics/GL/GLShaderUniformBlocks.cpp
 	${NCINE_ROOT}/Jazz2/nCine/Graphics/GL/GLShaderUniforms.cpp

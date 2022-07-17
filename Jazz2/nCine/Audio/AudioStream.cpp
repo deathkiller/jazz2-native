@@ -29,8 +29,9 @@ namespace nCine {
 		: AudioStream()
 	{
 		const bool hasLoaded = loadFromMemory(bufferName, bufferPtr, bufferSize);
-		//if (hasLoaded == false)
-		//	LOGE_X("Audio buffer \"%s\" cannot be loaded", bufferName);
+		if (!hasLoaded) {
+			LOGE_X("Audio buffer \"%s\" cannot be loaded", bufferName);
+		}
 	}
 
 	/*! Private constructor called only by `AudioStreamPlayer`. */
@@ -38,8 +39,9 @@ namespace nCine {
 		: AudioStream()
 	{
 		const bool hasLoaded = loadFromFile(filename);
-		//if (hasLoaded == false)
-		//	LOGE_X("Audio file \"%s\" cannot be loaded", filename);
+		if (!hasLoaded) {
+			LOGE_X("Audio file \"%s\" cannot be loaded", filename);
+		}
 	}
 
 	AudioStream::~AudioStream()

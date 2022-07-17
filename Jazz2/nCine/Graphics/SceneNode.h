@@ -6,6 +6,7 @@
 #include "../Primitives/Color.h"
 #include "../Primitives/Colorf.h"
 #include "../Base/BitSet.h"
+#include "../CommonConstants.h"
 
 #include <SmallVector.h>
 
@@ -28,7 +29,7 @@ namespace nCine
 		};
 
 		/// The minimum amount of rotation to trigger a sine and cosine calculation
-		static const float MinRotation;
+		static constexpr float MinRotation = 0.5f * fDegToRad;
 
 		/// Constructor for a node with a parent and a specified relative position
 		SceneNode(SceneNode* parent, float x, float y);
@@ -464,7 +465,7 @@ namespace nCine
 
 	inline void SceneNode::setRotation(float rotation)
 	{
-		rotation_ = fmodf(rotation, 360.0f);
+		rotation_ = fmodf(rotation, fRadAngle360);
 		dirtyBits_.set(DirtyBitPositions::TransformationBit);
 		dirtyBits_.set(DirtyBitPositions::AabbBit);
 	}

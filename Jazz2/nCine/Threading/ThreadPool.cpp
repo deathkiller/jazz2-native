@@ -1,7 +1,8 @@
 #include "ThreadPool.h"
+#include "../../Common.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -68,7 +69,7 @@ namespace nCine {
 	{
 		ThreadStruct* threadStruct = static_cast<ThreadStruct*>(arg);
 
-		//LOGD_X("Worker thread %u is starting", Thread::self());
+		LOGD_X("Worker thread %u is starting", Thread::self());
 
 		while (true) {
 			threadStruct->queueMutex->lock();
@@ -84,11 +85,11 @@ namespace nCine {
 			threadStruct->queue->pop_front();
 			threadStruct->queueMutex->unlock();
 
-			//LOGD_X("Worker thread %u is executing its command", Thread::self());
+			LOGD_X("Worker thread %u is executing its command", Thread::self());
 			threadCommand->execute();
 		}
 
-		//LOGD_X("Worker thread %u is exiting", Thread::self());
+		LOGD_X("Worker thread %u is exiting", Thread::self());
 	}
 
 }

@@ -41,16 +41,18 @@ namespace nCine {
 		: AudioBuffer()
 	{
 		const bool hasLoaded = loadFromMemory(bufferName, bufferPtr, bufferSize);
-		//if (hasLoaded == false)
-		//	LOGE_X("Audio buffer \"%s\" cannot be loaded", bufferName);
+		if (!hasLoaded) {
+			LOGE_X("Audio buffer \"%s\" cannot be loaded", bufferName);
+		}
 	}
 
 	AudioBuffer::AudioBuffer(const char* filename)
 		: AudioBuffer()
 	{
 		const bool hasLoaded = loadFromFile(filename);
-		//if (hasLoaded == false)
-		//	LOGE_X("Audio file \"%s\" cannot be loaded", filename);
+		if (!hasLoaded) {
+			LOGE_X("Audio file \"%s\" cannot be loaded", filename);
+		}
 	}
 
 	AudioBuffer::~AudioBuffer()
@@ -163,8 +165,9 @@ namespace nCine {
 		if (bytesPerSample_ == 0 || numChannels_ == 0 || frequency_ == 0)
 			return false;
 
-		//if (bufferSize % (bytesPerSample_ * numChannels_) != 0)
-			//LOGW("Buffer size is incompatible with format");
+		if (bufferSize % (bytesPerSample_ * numChannels_) != 0) {
+			LOGW("Buffer size is incompatible with format");
+		}
 		const ALenum format = alFormat(bytesPerSample_, numChannels_);
 
 		alGetError();

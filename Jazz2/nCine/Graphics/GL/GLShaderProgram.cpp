@@ -1,9 +1,9 @@
 #include "GLShaderProgram.h"
 #include "GLShader.h"
 #include "GLDebug.h"
-//#include <nctl/CString.h>
-//#include <nctl/String.h>
-//#include "tracy.h"
+#include "../RenderResources.h"
+#include "../RenderVaoPool.h"
+#include "../../Base/StaticHashMapIterator.h"
 
 #include <string>
 
@@ -14,6 +14,9 @@ namespace nCine {
 	///////////////////////////////////////////////////////////
 
 	GLuint GLShaderProgram::boundProgram_ = 0;
+#if defined(ENABLE_LOG)
+	char GLShaderProgram::infoLogString_[MaxInfoLogLength];
+#endif
 
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
@@ -26,7 +29,7 @@ namespace nCine {
 
 	GLShaderProgram::GLShaderProgram(QueryPhase queryPhase)
 		: glHandle_(0),
-		status_(Status::NOT_LINKED), queryPhase_(queryPhase),
+		status_(Status::NOT_LINKED), queryPhase_(queryPhase), shouldLogOnErrors_(true),
 		uniformsSize_(0), uniformBlocksSize_(0)
 	{
 		glHandle_ = glCreateProgram();
@@ -40,9 +43,11 @@ namespace nCine {
 	GLShaderProgram::GLShaderProgram(const char* vertexFile, const char* fragmentFile, Introspection introspection, QueryPhase queryPhase)
 		: GLShaderProgram(queryPhase)
 	{
-		attachShader(GL_VERTEX_SHADER, vertexFile);
-		attachShader(GL_FRAGMENT_SHADER, fragmentFile);
-		link(introspection);
+		const bool hasCompiledVS = attachShader(GL_VERTEX_SHADER, vertexFile);
+		const bool hasCompiledFS = attachShader(GL_FRAGMENT_SHADER, fragmentFile);
+
+		if (hasCompiledVS && hasCompiledFS)
+			link(introspection);
 	}
 
 	GLShaderProgram::GLShaderProgram(const char* vertexFile, const char* fragmentFile, Introspection introspection)
@@ -62,91 +67,197 @@ namespace nCine {
 		}
 
 		glDeleteProgram(glHandle_);
+
+		RenderResources::removeCameraUniformData(this);
 	}
 
 	///////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void GLShaderProgram::attachShader(GLenum type, const char* filename)
+	bool GLShaderProgram::isLinked() const
 	{
-		std::unique_ptr<GLShader>& shader = attachedShaders_.emplace_back(std::make_unique<GLShader>(type, filename));
+		return (status_ == Status::LINKED ||
+				status_ == Status::LINKED_WITH_DEFERRED_QUERIES ||
+				status_ == Status::LINKED_WITH_INTROSPECTION);
+	}
+
+	unsigned int GLShaderProgram::retrieveInfoLogLength() const
+	{
+		GLint length = 0;
+		glGetProgramiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
+
+		return static_cast<unsigned int>(length);
+	}
+
+	void GLShaderProgram::retrieveInfoLog(std::string& infoLog) const
+	{
+		GLint length = 0;
+		glGetProgramiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
+
+		if (length > 0 && infoLog.capacity() > 0) {
+			const unsigned int capacity = infoLog.capacity();
+			glGetProgramInfoLog(glHandle_, capacity, &length, infoLog.data());
+			infoLog.resize(static_cast<unsigned int>(length) < capacity - 1 ? static_cast<unsigned int>(length) : capacity - 1);
+		}
+	}
+
+	bool GLShaderProgram::attachShader(GLenum type, const char* filename)
+	{
+		std::unique_ptr<GLShader> shader = std::make_unique<GLShader>(type, filename);
 		glAttachShader(glHandle_, shader->glHandle());
 
 		const GLShader::ErrorChecking errorChecking = (queryPhase_ == GLShaderProgram::QueryPhase::IMMEDIATE)
 			? GLShader::ErrorChecking::IMMEDIATE
 			: GLShader::ErrorChecking::DEFERRED;
-		shader->compile(errorChecking);
-		//FATAL_ASSERT(shader->status() != GLShader::Status::COMPILATION_FAILED);
+		const bool hasCompiled = shader->compile(errorChecking, shouldLogOnErrors_);
 
-		const size_t length = strnlen(filename, GLDebug::maxLabelLength());
-		GLDebug::objectLabel(GLDebug::LabelTypes::SHADER, shader->glHandle(), length, filename);
+		if (hasCompiled) {
+			GLDebug::objectLabel(GLDebug::LabelTypes::SHADER, shader->glHandle(), filename);
+			attachedShaders_.push_back(std::move(shader));
+		} else {
+			status_ = Status::COMPILATION_FAILED;
+		}
+		return hasCompiled;
 	}
 
-	void GLShaderProgram::attachShaderFromString(GLenum type, const char* string)
+	bool GLShaderProgram::attachShaderFromString(GLenum type, const char* string)
 	{
-		std::unique_ptr<GLShader>& shader = attachedShaders_.emplace_back(std::make_unique<GLShader>(type));
+		std::unique_ptr<GLShader> shader = std::make_unique<GLShader>(type);
 		shader->loadFromString(string);
 		glAttachShader(glHandle_, shader->glHandle());
 
 		const GLShader::ErrorChecking errorChecking = (queryPhase_ == GLShaderProgram::QueryPhase::IMMEDIATE)
 			? GLShader::ErrorChecking::IMMEDIATE
 			: GLShader::ErrorChecking::DEFERRED;
-		shader->compile(errorChecking);
-		//FATAL_ASSERT(shader->status() != GLShader::Status::COMPILATION_FAILED);
+		const bool hasCompiled = shader->compile(errorChecking, shouldLogOnErrors_);
+
+		if (hasCompiled) {
+			attachedShaders_.push_back(std::move(shader));
+		} else {
+			status_ = Status::COMPILATION_FAILED;
+		}
+		return hasCompiled;
 	}
 
-	void GLShaderProgram::link(Introspection introspection)
+	bool GLShaderProgram::link(Introspection introspection)
 	{
 		introspection_ = introspection;
 		glLinkProgram(glHandle_);
 
 		if (queryPhase_ == QueryPhase::IMMEDIATE) {
-			checkLinking();
+			const bool linkCheck = checkLinking();
+			if (linkCheck == false)
+				return false;
 
 			// After linking, shader objects are not needed anymore
-			for (std::unique_ptr<GLShader>& attachedShader : attachedShaders_)
-				attachedShader.reset(nullptr);
+			attachedShaders_.clear();
 
 			performIntrospection();
-		} else
+			return linkCheck;
+		} else {
 			status_ = GLShaderProgram::Status::LINKED_WITH_DEFERRED_QUERIES;
+			return true;
+		}
 	}
 
 	void GLShaderProgram::use()
 	{
 		if (boundProgram_ != glHandle_) {
 			deferredQueries();
+
 			glUseProgram(glHandle_);
 			boundProgram_ = glHandle_;
 		}
+	}
+
+	bool GLShaderProgram::validate()
+	{
+		glValidateProgram(glHandle_);
+		GLint status;
+		glGetProgramiv(glHandle_, GL_VALIDATE_STATUS, &status);
+		return (status == GL_TRUE);
+	}
+
+	GLVertexFormat::Attribute* GLShaderProgram::attribute(const char* name)
+	{
+		//ASSERT(name);
+		GLVertexFormat::Attribute* vertexAttribute = nullptr;
+
+		int location = -1;
+		const bool attributeFound = attributeLocations_.contains(name, location);
+
+		if (attributeFound)
+			vertexAttribute = &vertexFormat_[location];
+
+		return vertexAttribute;
+	}
+
+	void GLShaderProgram::defineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, unsigned int vboOffset)
+	{
+		if (vbo) {
+			for (int location : attributeLocations_) {
+				vertexFormat_[location].setVbo(vbo);
+				vertexFormat_[location].setBaseOffset(vboOffset);
+			}
+			vertexFormat_.setIbo(ibo);
+
+			RenderResources::vaoPool().bindVao(vertexFormat_);
+		}
+	}
+
+	void GLShaderProgram::reset()
+	{
+		if (status_ != Status::NOT_LINKED && status_ != Status::COMPILATION_FAILED) {
+			uniforms_.clear();
+			uniformBlocks_.clear();
+			attributes_.clear();
+
+			attributeLocations_.clear();
+			vertexFormat_.reset();
+
+			if (boundProgram_ == glHandle_)
+				glUseProgram(0);
+			attachedShaders_.clear();
+			glDeleteProgram(glHandle_);
+
+			RenderResources::removeCameraUniformData(this);
+			RenderResources::unregisterBatchedShader(this);
+
+			glHandle_ = glCreateProgram();
+		}
+
+		status_ = Status::NOT_LINKED;
+	}
+
+	void GLShaderProgram::setObjectLabel(const char* label)
+	{
+		GLDebug::objectLabel(GLDebug::LabelTypes::PROGRAM, glHandle_, label);
 	}
 
 	///////////////////////////////////////////////////////////
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void GLShaderProgram::deferredQueries()
+	bool GLShaderProgram::deferredQueries()
 	{
 		if (status_ == GLShaderProgram::Status::LINKED_WITH_DEFERRED_QUERIES) {
-			for (auto& attachedShader : attachedShaders_) {
-				if (attachedShader != nullptr) {
-					attachedShader->checkCompilation();
-					//FATAL_ASSERT(attachedShader->checkCompilation());
-				}
+			for (std::unique_ptr<GLShader>& attachedShader : attachedShaders_) {
+				const bool compileCheck = attachedShader->checkCompilation(shouldLogOnErrors_);
+				if (compileCheck == false)
+					return false;
 			}
 
 			const bool linkCheck = checkLinking();
-			//FATAL_ASSERT(linkCheck);
+			if (linkCheck == false)
+				return false;
 
 			// After linking, shader objects are not needed anymore
-			for (std::unique_ptr<GLShader>& attachedShader : attachedShaders_)
-				attachedShader.reset(nullptr);
+			attachedShaders_.clear();
 
-			if (introspection_ != GLShaderProgram::Introspection::DISABLED) {
-				performIntrospection();
-			}
+			performIntrospection();
 		}
+		return true;
 	}
 
 	bool GLShaderProgram::checkLinking()
@@ -157,15 +268,16 @@ namespace nCine {
 		GLint status;
 		glGetProgramiv(glHandle_, GL_LINK_STATUS, &status);
 		if (status == GL_FALSE) {
-			GLint length = 0;
-			glGetProgramiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
-
-			if (length > 0) {
-				// TODO
-				//nctl::String infoLog(length);
-				//glGetProgramInfoLog(glHandle_, length, &length, infoLog.data());
-				//LOGW_X("%s", infoLog.data());
+#if defined(ENABLE_LOG)
+			if (shouldLogOnErrors_) {
+				GLint length = 0;
+				glGetProgramiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
+				if (length > 0) {
+					glGetProgramInfoLog(glHandle_, MaxInfoLogLength, &length, infoLogString_);
+					LOGW_X("%s", infoLogString_);
+				}
 			}
+#endif
 
 			status_ = Status::LINKING_FAILED;
 			return false;
@@ -179,40 +291,58 @@ namespace nCine {
 	{
 		if (introspection_ != Introspection::DISABLED && status_ != Status::LINKED_WITH_INTROSPECTION) {
 			const GLUniformBlock::DiscoverUniforms discover = (introspection_ == Introspection::NO_UNIFORMS_IN_BLOCKS)
-				? GLUniformBlock::DiscoverUniforms::DISBLED
+				? GLUniformBlock::DiscoverUniforms::DISABLED
 				: GLUniformBlock::DiscoverUniforms::ENABLED;
 
 			discoverUniforms();
 			discoverUniformBlocks(discover);
 			discoverAttributes();
+			initVertexFormat();
 			status_ = Status::LINKED_WITH_INTROSPECTION;
 		}
 	}
 
 	void GLShaderProgram::discoverUniforms()
 	{
+		static const unsigned int NumIndices = 512;
+		static GLuint uniformIndices[NumIndices];
+		static GLint blockIndices[NumIndices];
 
-		GLint count;
-		glGetProgramiv(glHandle_, GL_ACTIVE_UNIFORMS, &count);
+		GLint uniformCount = 0;
+		glGetProgramiv(glHandle_, GL_ACTIVE_UNIFORMS, &uniformCount);
 
-		unsigned int uniformsOutsideBlocks = 0;
-		GLuint indices[MaxNumUniforms];
-		GLint blockIndex;
-		for (unsigned int i = 0; i < static_cast<unsigned int>(count); i++) {
-			glGetActiveUniformsiv(glHandle_, 1, &i, GL_UNIFORM_BLOCK_INDEX, &blockIndex);
-			if (blockIndex == -1) {
-				indices[uniformsOutsideBlocks] = i;
-				uniformsOutsideBlocks++;
+		if (uniformCount > 0) {
+			unsigned int uniformsOutsideBlocks = 0;
+			GLuint indices[MaxNumUniforms];
+			unsigned int remainingIndices = static_cast<unsigned int>(uniformCount);
+
+			while (remainingIndices > 0) {
+				const unsigned int uniformCountStep = (remainingIndices > NumIndices) ? NumIndices : remainingIndices;
+				const unsigned int startIndex = static_cast<unsigned int>(uniformCount) - remainingIndices;
+
+				for (unsigned int i = 0; i < uniformCountStep; i++)
+					uniformIndices[i] = startIndex + i;
+
+				glGetActiveUniformsiv(glHandle_, uniformCountStep, uniformIndices, GL_UNIFORM_BLOCK_INDEX, blockIndices);
+
+				for (unsigned int i = 0; i < uniformCountStep; i++) {
+					if (blockIndices[i] == -1) {
+						indices[uniformsOutsideBlocks] = startIndex + i;
+						uniformsOutsideBlocks++;
+					}
+					if (uniformsOutsideBlocks > MaxNumUniforms - 1)
+						break;
+				}
+
+				remainingIndices -= uniformCountStep;
 			}
-		}
 
-		//ASSERT(uniformsOutsideBlocks < MaxNumUniforms);
+			for (unsigned int i = 0; i < uniformsOutsideBlocks; i++) {
+				GLUniform& uniform = uniforms_.emplace_back(glHandle_, indices[i]);
+				uniformsSize_ += uniform.memorySize();
 
-		for (unsigned int i = 0; i < uniformsOutsideBlocks; i++) {
-			GLUniform& uniform = uniforms_.emplace_back(glHandle_, indices[i]);
-			uniformsSize_ += uniform.memorySize();
-
-			//LOGD_X("Shader %u - uniform %d : \"%s\"", glHandle_, uniform.location(), uniform.name());
+				LOGD_X("Shader %u - uniform %d : \"%s\"", glHandle_, uniform.location(), uniform.name());
+			}
 		}
 	}
 
@@ -226,7 +356,7 @@ namespace nCine {
 			GLUniformBlock& uniformBlock = uniformBlocks_.emplace_back(glHandle_, i, discover);
 			uniformBlocksSize_ += uniformBlock.size();
 
-			//LOGD_X("Shader %u - uniform block %u : \"%s\"", glHandle_, uniformBlock.index(), uniformBlock.name());
+			LOGD_X("Shader %u - uniform block %u : \"%s\"", glHandle_, uniformBlock.index(), uniformBlock.name());
 		}
 	}
 
@@ -239,7 +369,24 @@ namespace nCine {
 		for (int i = 0; i < count; i++) {
 			GLAttribute& attribute = attributes_.emplace_back(glHandle_, i);
 
-			//LOGD_X("Shader %u - attribute %d : \"%s\"", glHandle_, attribute.location(), attribute.name());
+			LOGD_X("Shader %u - attribute %d : \"%s\"", glHandle_, attribute.location(), attribute.name());
+		}
+	}
+
+	void GLShaderProgram::initVertexFormat()
+	{
+		const unsigned int count = attributes_.size();
+		if (count > GLVertexFormat::MaxAttributes) {
+			LOGW_X("More active attributes (%d) than supported by the vertex format class (%d)", count, GLVertexFormat::MaxAttributes);
+		}
+		for (unsigned int i = 0; i < attributes_.size(); i++) {
+			const GLAttribute& attribute = attributes_[i];
+			const int location = attribute.location();
+			if (location < 0)
+				continue;
+
+			attributeLocations_[attribute.name()] = location;
+			vertexFormat_[location].init(attribute.location(), attribute.numComponents(), attribute.basicType());
 		}
 	}
 

@@ -3,8 +3,10 @@
 #define NCINE_INCLUDE_OPENGL
 #include "../CommonHeaders.h"
 
+#include "Material.h"
 #include "../Primitives/Matrix4x4.h"
 #include "GL/GLShaderUniforms.h"
+#include "GL/GLShaderProgram.h"
 #include "../Base/HashMap.h"
 
 #include <memory>
@@ -15,8 +17,8 @@ namespace nCine
 	class RenderVaoPool;
 	class RenderCommandPool;
 	class RenderBatcher;
-	class GLShaderProgram;
 	class Camera;
+	class Viewport;
 
 	/// The class that creates and handles application common OpenGL rendering resources
 	class RenderResources
@@ -74,66 +76,27 @@ namespace nCine
 			return *renderBatcher_;
 		}
 
-		static inline GLShaderProgram* spriteShaderProgram() {
-			return spriteShaderProgram_.get();
-		}
-		static inline GLShaderProgram* spriteGrayShaderProgram() {
-			return spriteGrayShaderProgram_.get();
-		}
-		static inline GLShaderProgram* spriteNoTextureShaderProgram() {
-			return spriteNoTextureShaderProgram_.get();
-		}
-		static inline GLShaderProgram* meshSpriteShaderProgram() {
-			return meshSpriteShaderProgram_.get();
-		}
-		static inline GLShaderProgram* meshSpriteGrayShaderProgram() {
-			return meshSpriteGrayShaderProgram_.get();
-		}
-		static inline GLShaderProgram* meshSpriteNoTextureShaderProgram() {
-			return meshSpriteNoTextureShaderProgram_.get();
-		}
-		static inline GLShaderProgram* textnodeAlphaShaderProgram() {
-			return textnodeAlphaShaderProgram_.get();
-		}
-		static inline GLShaderProgram* textnodeRedShaderProgram() {
-			return textnodeRedShaderProgram_.get();
-		}
-		static inline GLShaderProgram* batchedSpritesShaderProgram() {
-			return batchedSpritesShaderProgram_.get();
-		}
-		static inline GLShaderProgram* batchedSpritesGrayShaderProgram() {
-			return batchedSpritesGrayShaderProgram_.get();
-		}
-		static inline GLShaderProgram* batchedSpritesNoTextureShaderProgram() {
-			return batchedSpritesNoTextureShaderProgram_.get();
-		}
-		static inline GLShaderProgram* batchedMeshSpritesShaderProgram() {
-			return batchedMeshSpritesShaderProgram_.get();
-		}
-		static inline GLShaderProgram* batchedMeshSpritesGrayShaderProgram() {
-			return batchedMeshSpritesGrayShaderProgram_.get();
-		}
-		static inline GLShaderProgram* batchedMeshSpritesNoTextureShaderProgram() {
-			return batchedMeshSpritesNoTextureShaderProgram_.get();
-		}
-		static inline GLShaderProgram* batchedTextnodesAlphaShaderProgram() {
-			return batchedTextnodesAlphaShaderProgram_.get();
-		}
-		static inline GLShaderProgram* batchedTextnodesRedShaderProgram() {
-			return batchedTextnodesRedShaderProgram_.get();
-		}
+		static GLShaderProgram* shaderProgram(Material::ShaderProgramType shaderProgramType);
+
+		static GLShaderProgram* batchedShader(const GLShaderProgram* shader);
+		static bool registerBatchedShader(const GLShaderProgram* shader, GLShaderProgram* batchedShader);
+		static bool unregisterBatchedShader(const GLShaderProgram* shader);
 
 		static inline unsigned char* cameraUniformsBuffer() {
 			return cameraUniformsBuffer_;
 		}
-		static inline HashMap<GLShaderProgram*, CameraUniformData>& cameraUniformDataMap() {
-			return cameraUniformDataMap_;
-		}
+		static CameraUniformData* findCameraUniformData(GLShaderProgram* shaderProgram);
+		static void insertCameraUniformData(GLShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData);
+		static bool removeCameraUniformData(GLShaderProgram* shaderProgram);
+
 		static inline const Camera* currentCamera() {
 			return currentCamera_;
 		}
+		static inline const Viewport* currentViewport() {
+			return currentViewport_;
+		}
 
-		static void createMinimal();
+		static void setDefaultAttributesParameters(GLShaderProgram& shaderProgram);
 
 	private:
 		static std::unique_ptr<RenderBuffersManager> buffersManager_;
@@ -141,22 +104,8 @@ namespace nCine
 		static std::unique_ptr<RenderCommandPool> renderCommandPool_;
 		static std::unique_ptr<RenderBatcher> renderBatcher_;
 
-		static std::unique_ptr<GLShaderProgram> spriteShaderProgram_;
-		static std::unique_ptr<GLShaderProgram> spriteGrayShaderProgram_;
-		static std::unique_ptr<GLShaderProgram> spriteNoTextureShaderProgram_;
-		static std::unique_ptr<GLShaderProgram> meshSpriteShaderProgram_;
-		static std::unique_ptr<GLShaderProgram> meshSpriteGrayShaderProgram_;
-		static std::unique_ptr<GLShaderProgram> meshSpriteNoTextureShaderProgram_;
-		static std::unique_ptr<GLShaderProgram> textnodeAlphaShaderProgram_;
-		static std::unique_ptr<GLShaderProgram> textnodeRedShaderProgram_;
-		static std::unique_ptr<GLShaderProgram> batchedSpritesShaderProgram_;
-		static std::unique_ptr<GLShaderProgram> batchedSpritesGrayShaderProgram_;
-		static std::unique_ptr<GLShaderProgram> batchedSpritesNoTextureShaderProgram_;
-		static std::unique_ptr<GLShaderProgram> batchedMeshSpritesShaderProgram_;
-		static std::unique_ptr<GLShaderProgram> batchedMeshSpritesGrayShaderProgram_;
-		static std::unique_ptr<GLShaderProgram> batchedMeshSpritesNoTextureShaderProgram_;
-		static std::unique_ptr<GLShaderProgram> batchedTextnodesAlphaShaderProgram_;
-		static std::unique_ptr<GLShaderProgram> batchedTextnodesRedShaderProgram_;
+		static std::unique_ptr<GLShaderProgram> defaultShaderPrograms_[16];
+		static HashMap<const GLShaderProgram*, GLShaderProgram*> batchedShaders_;
 
 		static constexpr int UniformsBufferSize = 128; // two 4x4 float matrices
 		static unsigned char cameraUniformsBuffer_[UniformsBufferSize];
@@ -164,10 +113,17 @@ namespace nCine
 
 		static Camera* currentCamera_;
 		static std::unique_ptr<Camera> defaultCamera_;
+		static Viewport* currentViewport_;
 
-		static void setCamera(Camera* camera);
+		static void setCurrentCamera(Camera* camera);
+		static void updateCameraUniforms();
+		static void setCurrentViewport(Viewport* viewport);
+
 		static void create();
+		static void createMinimal();
 		static void dispose();
+
+		static void registerDefaultBatchedShaders();
 
 		/// Static class, deleted constructor
 		RenderResources() = delete;
@@ -180,6 +136,8 @@ namespace nCine
 		friend class Application;
 		/// The `Viewport` class needs to set the current camera
 		friend class Viewport;
+		/// The `ScreenViewport` class needs to change the projection of the default camera
+		friend class ScreenViewport;
 	};
 
 }

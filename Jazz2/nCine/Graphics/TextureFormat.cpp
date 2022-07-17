@@ -3,11 +3,11 @@
 #endif
 
 #include "TextureFormat.h"
-
 #include "../ServiceLocator.h"
+#include "../../Common.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -295,7 +295,7 @@ namespace nCine {
 
 		//FATAL_ASSERT_MSG_X(found, "Unknown internal format: 0x%x", internalFormat_);
 
-		//LOGI_X("Internal format: 0x%x - type: 0x%x", internalFormat_, type_);
+		LOGI_X("Internal format: 0x%x - type: 0x%x", internalFormat_, type_);
 	}
 
 	bool TextureFormat::integerFormat()

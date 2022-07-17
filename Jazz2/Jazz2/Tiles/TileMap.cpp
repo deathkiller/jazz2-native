@@ -625,9 +625,9 @@ namespace Jazz2::Tiles
 
 					Vector2i texSize = _tileSet->_textureDiffuse->size();
 					float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
-					float texBiasX = (-0.25f + (tileId % _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.X);
+					float texBiasX = ((tileId % _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.X);
 					float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
-					float texBiasY = (0.25f + (tileId / _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.Y);
+					float texBiasY = ((tileId / _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.Y);
 
 					// ToDo: Flip normal map somehow
 					if (isFlippedX) {
@@ -639,10 +639,10 @@ namespace Jazz2::Tiles
 						texScaleY *= -1;
 					}
 
-					auto spriteBlock_ = command->material().uniformBlock("SpriteBlock");
-					spriteBlock_->uniform("texRect")->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-					spriteBlock_->uniform("spriteSize")->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
-					spriteBlock_->uniform("color")->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, alpha / 255.0f).Data());
+					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+					instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
+					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
+					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, alpha / 255.0f).Data());
 
 					Matrix4x4f worldMatrix = Matrix4x4f::Translation(std::round(x2) + (TileSet::DefaultTileSize / 2), std::round(y2) + (TileSet::DefaultTileSize / 2), 0);
 					command->setTransformation(worldMatrix);
@@ -679,7 +679,13 @@ namespace Jazz2::Tiles
 			command->setType(RenderCommand::CommandTypes::SPRITE);
 			command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
 			command->material().setBlendingEnabled(true);
+			command->material().reserveUniformsDataMemory();
 			command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+
+			GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+			if (textureUniform && textureUniform->intValue(0) != 0) {
+				textureUniform->setIntValue(0); // GL_TEXTURE0
+			}
 			return command.get();
 		}
 	}
@@ -895,9 +901,9 @@ namespace Jazz2::Tiles
 
 		Vector2i texSize = _tileSet->_textureDiffuse->size();
 		float texScaleX = float(quarterSize) / float(texSize.X);
-		float texBiasX = (-0.25f + (tileId % _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.X);
+		float texBiasX = ((tileId % _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.X);
 		float texScaleY = float(quarterSize) / float(texSize.Y);
-		float texBiasY = (0.25f + (tileId / _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.Y);
+		float texBiasY = ((tileId / _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.Y);
 
 		/*if (isFlippedX) {
 			texBiasX += texScaleX;
@@ -1091,10 +1097,10 @@ namespace Jazz2::Tiles
 		for (auto& debris : _debrisList) {
 			auto command = RentRenderCommand();
 
-			auto spriteBlock_ = command->material().uniformBlock("SpriteBlock");
-			spriteBlock_->uniform("texRect")->setFloatValue(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);
-			spriteBlock_->uniform("spriteSize")->setFloatValue(debris.Size.X, debris.Size.Y);
-			spriteBlock_->uniform("color")->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, debris.Alpha).Data());
+			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+			instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);
+			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(debris.Size.X, debris.Size.Y);
+			instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, debris.Alpha).Data());
 
 			Matrix4x4f worldMatrix = Matrix4x4f::Translation(debris.Pos.X, debris.Pos.Y, 0.0f);
 			worldMatrix.RotateZ(debris.Angle);

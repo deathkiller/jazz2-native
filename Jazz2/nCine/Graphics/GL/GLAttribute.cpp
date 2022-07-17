@@ -1,7 +1,8 @@
 #include "GLAttribute.h"
+#include "../../../Common.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -17,10 +18,14 @@ namespace nCine {
 	{
 		GLsizei length;
 		glGetActiveAttrib(program, index, MaxNameLength, &length, &size_, &type_, name_);
-		location_ = glGetAttribLocation(program, name_);
+		//ASSERT(length <= MaxNameLength);
 
-		//if (location_ == -1)
-		//	LOGW_X("Attribute location not found for attribute \"%s\" (%u) in shader program %u", name_, index, program);
+		if (!hasReservedPrefix()) {
+			location_ = glGetAttribLocation(program, name_);
+			if (location_ == -1) {
+				LOGW_X("Attribute location not found for attribute \"%s\" (%u) in shader program %u", name_, index, program);
+			}
+		}
 	}
 
 	///////////////////////////////////////////////////////////
@@ -51,7 +56,7 @@ namespace nCine {
 			case GL_UNSIGNED_INT_VEC4:
 				return GL_UNSIGNED_INT;
 			default:
-				//LOGW_X("No available case to handle type: %u", type_);
+				LOGW_X("No available case to handle type: %u", type_);
 				return type_;
 		}
 	}
@@ -85,9 +90,14 @@ namespace nCine {
 			case GL_UNSIGNED_INT_VEC4:
 				return 4;
 			default:
-				//LOGW_X("No available case to handle type: %u", type_);
+				LOGW_X("No available case to handle type: %u", type_);
 				return 0;
 		}
+	}
+
+	bool GLAttribute::hasReservedPrefix() const
+	{
+		return (MaxNameLength >= 3 && name_[0] == 'g' && name_[1] == 'l' && name_[2] == '_');
 	}
 
 }

@@ -23,6 +23,10 @@ if(EMSCRIPTEN)
 	else()
 		list(APPEND EMSCRIPTEN_LINKER_OPTIONS "SHELL:-mnontrapping-fptoint")
 	endif()
+	
+	# TODO: added by me
+	list(APPEND EMSCRIPTEN_LINKER_OPTIONS "SHELL:--preload-file ${NCINE_DATA_DIR}@Content/")
+	list(APPEND EMSCRIPTEN_LINKER_OPTIONS "SHELL:-sUSE_ZLIB=1")
 
 	target_link_options(ncine PUBLIC ${EMSCRIPTEN_LINKER_OPTIONS})
 	target_link_options(ncine PUBLIC "$<$<CONFIG:Debug>:${EMSCRIPTEN_LINKER_OPTIONS_DEBUG}>")

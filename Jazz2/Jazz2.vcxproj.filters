@@ -312,9 +312,6 @@
     <ClInclude Include="nCine\Graphics\GL\GLShader.h">
       <Filter>Header Files\nCine\Graphics\GL</Filter>
     </ClInclude>
-    <ClInclude Include="nCine\Graphics\GL\GLShaderAttributes.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
-    </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLShaderProgram.h">
       <Filter>Header Files\nCine\Graphics\GL</Filter>
     </ClInclude>
@@ -711,6 +708,12 @@
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h">
       <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
     </ClInclude>
+    <ClInclude Include="nCine\Graphics\Shader.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\ShaderState.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -912,9 +915,6 @@
       <Filter>Source Files\nCine\Graphics\GL</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Graphics\GL\GLScissorTest.cpp">
-      <Filter>Source Files\nCine\Graphics\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\GL\GLShaderAttributes.cpp">
       <Filter>Source Files\nCine\Graphics\GL</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Graphics\GL\GLShader.cpp">
@@ -1207,6 +1207,15 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp">
       <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\Shader.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Base\HashFunctions.cpp">
+      <Filter>Source Files\nCine\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\ShaderState.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

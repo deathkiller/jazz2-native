@@ -32,7 +32,7 @@ namespace nCine {
 	{
 		// Checking if the file is already opened
 		if (fileDescriptor_ >= 0 || filePointer_ != nullptr) {
-			//LOGW_X("File \"%s\" is already opened", filename_.data());
+			LOGW_X("File \"%s\" is already opened", filename_.data());
 		} else {
 #if !(defined(_WIN32) && !defined(__MINGW32__))
 			if ((mode & FileAccessMode::FileDescriptor) == FileAccessMode::FileDescriptor) {
@@ -54,18 +54,18 @@ namespace nCine {
 #if !(defined(_WIN32) && !defined(__MINGW32__))
 			const int retValue = ::close(fileDescriptor_);
 			if (retValue < 0) {
-				//LOGW_X("Cannot close the file \"%s\"", filename_.data());
+				LOGW_X("Cannot close the file \"%s\"", filename_.data());
 			} else {
-				//LOGI_X("File \"%s\" closed", filename_.data());
+				LOGI_X("File \"%s\" closed", filename_.data());
 				fileDescriptor_ = -1;
 			}
 #endif
 		} else if (filePointer_) {
 			const int retValue = fclose(filePointer_);
 			if (retValue == EOF) {
-				//LOGW_X("Cannot close the file \"%s\"", filename_.data());
+				LOGW_X("Cannot close the file \"%s\"", filename_.data());
 			} else {
-				//LOGI_X("File \"%s\" closed", filename_.data());
+				LOGI_X("File \"%s\" closed", filename_.data());
 				filePointer_ = nullptr;
 			}
 		}
@@ -150,7 +150,7 @@ namespace nCine {
 				openFlag = O_RDWR;
 				break;
 			default:
-				//LOGE_X("Cannot open the file \"%s\", wrong open mode", filename_.data());
+				LOGE_X("Cannot open the file \"%s\", wrong open mode", filename_.data());
 				break;
 		}
 
@@ -159,14 +159,14 @@ namespace nCine {
 
 			if (fileDescriptor_ < 0) {
 				if (shouldExitOnFailToOpen_) {
-					//LOGF_X("Cannot open the file \"%s\"", filename_.data());
+					LOGF_X("Cannot open the file \"%s\"", filename_.data());
 					exit(EXIT_FAILURE);
 				} else {
-					//LOGE_X("Cannot open the file \"%s\"", filename_.data());
+					LOGE_X("Cannot open the file \"%s\"", filename_.data());
 					return;
 				}
 			} else {
-				//LOGI_X("File \"%s\" opened", filename_.data());
+				LOGI_X("File \"%s\" opened", filename_.data());
 			}
 			// Calculating file size
 			fileSize_ = lseek(fileDescriptor_, 0L, SEEK_END);
@@ -194,7 +194,7 @@ namespace nCine {
 				modeChars[2] = 'b';
 				break;
 			default:
-				//LOGE_X("Cannot open the file \"%s\", wrong open mode", filename_.data());
+				LOGE_X("Cannot open the file \"%s\", wrong open mode", filename_.data());
 				break;
 		}
 
@@ -207,14 +207,14 @@ namespace nCine {
 
 			if (filePointer_ == nullptr) {
 				if (shouldExitOnFailToOpen_) {
-					//LOGF_X("Cannot open the file \"%s\"", filename_.data());
+					LOGF_X("Cannot open the file \"%s\"", filename_.data());
 					exit(EXIT_FAILURE);
 				} else {
-					//LOGE_X("Cannot open the file \"%s\"", filename_.data());
+					LOGE_X("Cannot open the file \"%s\"", filename_.data());
 					return;
 				}
 			} else {
-				//LOGI_X("File \"%s\" opened", filename_.data());
+				LOGI_X("File \"%s\" opened", filename_.data());
 			}
 
 			// Calculating file size

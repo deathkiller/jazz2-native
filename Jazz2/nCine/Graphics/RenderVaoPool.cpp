@@ -58,8 +58,13 @@ namespace nCine {
 				vaoPool_.back().object = std::make_unique<GLVertexArrayObject>();
 				index = (unsigned int)vaoPool_.size() - 1;
 #if _DEBUG
-				sprintf_s(debugString, "Created and defined VAO 0x%lx (%u)", uintptr_t(vaoPool_[index].object.get()), index);
-				GLDebug::messageInsert(debugString);
+				/*if (GLDebug::isAvailable()) {
+					debugString.format("Created and defined VAO 0x%lx (%u)", uintptr_t(vaoPool_[index].object.get()), index);
+					GLDebug::messageInsert(debugString.data());
+
+					debugString.format("VAO_#%d", index);
+					vaoPool_.back().object->setObjectLabel(debugString.data());
+				}*/
 #endif
 			} else {
 				// Find the least recently used VAO

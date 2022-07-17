@@ -192,7 +192,6 @@ namespace Jazz2
 		float _internalForceY;
 		float _elasticity;
 		float _friction;
-		float _angle;
 
 		float _frozenTimeLeft;
 		int _maxHealth;

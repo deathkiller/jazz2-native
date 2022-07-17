@@ -5,6 +5,7 @@
 #include "IInputEventHandler.h"
 #include "../Application.h"
 #include "JoyMapping.h"
+#include "../../Common.h"
 
 #ifdef WITH_IMGUI
 #include "ImGuiGlfwInput.h"
@@ -263,7 +264,7 @@ namespace nCine {
 
 	void GlfwInputManager::framebufferSizeCallback(GLFWwindow* window, int width, int height)
 	{
-		theApplication().resizeRootViewport(width, height);
+		theApplication().resizeScreenViewport(width, height);
 	}
 
 	void GlfwInputManager::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -352,15 +353,15 @@ namespace nCine {
 			glfwGetJoystickAxes(joy, &numAxes);
 			updateJoystickStates();
 
-			//LOGI_X("Joystick %d \"%s\" (%s) has been connected - %d axes, %d buttons, %d hats",
-			//       joyId, glfwGetJoystickName(joy), guid, numAxes, numButtons, numHats);
+			LOGI_X("Joystick %d \"%s\" (%s) has been connected - %d axes, %d buttons, %d hats",
+			       joyId, glfwGetJoystickName(joy), guid, numAxes, numButtons, numHats);
 			if (inputEventHandler_ != nullptr) {
 				joyMapping_.onJoyConnected(joyConnectionEvent_);
 				inputEventHandler_->onJoyConnected(joyConnectionEvent_);
 			}
 		} else if (event == GLFW_DISCONNECTED) {
 			joyEventsSimulator_.resetJoystickState(joyId);
-			//LOGI_X("Joystick %d has been disconnected", joyId);
+			LOGI_X("Joystick %d has been disconnected", joyId);
 			if (inputEventHandler_ != nullptr) {
 				inputEventHandler_->onJoyDisconnected(joyConnectionEvent_);
 				joyMapping_.onJoyDisconnected(joyConnectionEvent_);

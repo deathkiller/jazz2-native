@@ -3,6 +3,7 @@
 #define NCINE_INCLUDE_OPENGL
 #include "../../CommonHeaders.h"
 
+#include <memory>
 #include <SmallVector.h>
 
 using namespace Death;
@@ -29,17 +30,26 @@ namespace nCine
 		bool bind(GLenum target) const;
 		static bool unbind(GLenum target);
 
+		bool drawBuffers(unsigned int numDrawBuffers);
+
+		void attachRenderbuffer(const char* label, GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment);
 		void attachRenderbuffer(GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment);
+		void detachRenderbuffer(GLenum internalFormat);
+
 		void attachTexture(GLTexture& texture, GLenum attachment);
+		void detachTexture(GLenum attachment);
 		void invalidate(GLsizei numAttachments, const GLenum* attachments);
 
 		bool isStatusComplete();
 
+		void setObjectLabel(const char* label);
+
 	private:
 		static unsigned int readBoundBuffer_;
 		static unsigned int drawBoundBuffer_;
+		unsigned int numDrawBuffers_;
 
-		SmallVector<GLRenderbuffer*, 0> attachedRenderbuffers_;
+		SmallVector<std::unique_ptr<GLRenderbuffer>, 0> attachedRenderbuffers_;
 
 		GLuint glHandle_;
 

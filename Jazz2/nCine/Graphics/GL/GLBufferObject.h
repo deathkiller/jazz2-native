@@ -39,6 +39,8 @@ namespace nCine
 		void texBuffer(GLenum internalformat);
 #endif
 
+		void setObjectLabel(const char* label);
+
 	private:
 		static class GLHashMap<GLBufferObjectMappingFunc::Size, GLBufferObjectMappingFunc> boundBuffers_;
 

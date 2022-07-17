@@ -22,7 +22,6 @@ namespace Jazz2
 		_internalForceY(0),
 		_elasticity(0),
 		_friction(0),
-		_angle(0),
 		_frozenTimeLeft(0),
 		_maxHealth(1),
 		_health(1),
@@ -567,10 +566,10 @@ namespace Jazz2
 		bool perPixel1 = (CollisionFlags & CollisionFlags::SkipPerPixelCollisions) != CollisionFlags::SkipPerPixelCollisions;
 		bool perPixel2 = (other->CollisionFlags & CollisionFlags::SkipPerPixelCollisions) != CollisionFlags::SkipPerPixelCollisions;
 
-		if ((perPixel1 || perPixel2) && (std::abs(_angle) > 0.1f || std::abs(other->_angle) > 0.1f)) {
-			if (!perPixel1 && std::abs(other->_angle) > 0.1f) {
+		if ((perPixel1 || perPixel2) && (std::abs(_renderer.rotation()) > 0.1f || std::abs(other->_renderer.rotation()) > 0.1f)) {
+			if (!perPixel1 && std::abs(other->_renderer.rotation()) > 0.1f) {
 				return other->IsCollidingWithAngled(AABBInner);
-			} else if (!perPixel2 && std::abs(_angle) > 0.1f) {
+			} else if (!perPixel2 && std::abs(_renderer.rotation()) > 0.1f) {
 				return IsCollidingWithAngled(other->AABBInner);
 			}
 			return IsCollidingWithAngled(other);
@@ -731,7 +730,7 @@ namespace Jazz2
 	bool ActorBase::IsCollidingWith(const AABBf& aabb)
 	{
 		bool perPixel = (CollisionFlags & CollisionFlags::SkipPerPixelCollisions) != CollisionFlags::SkipPerPixelCollisions;
-		if (perPixel && std::abs(_angle) > 0.1f) {
+		if (perPixel && std::abs(_renderer.rotation()) > 0.1f) {
 			return IsCollidingWithAngled(aabb);
 		}
 
@@ -809,13 +808,13 @@ namespace Jazz2
 		if (GetState(ActorFlags::IsFacingLeft)) {
 			transform1 = transform1.Scale(-1.0f, 1.0f, 1.0f);
 		}
-		transform1 *= Matrix4x4f::RotationZ(_angle) * Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f);
+		transform1 *= Matrix4x4f::RotationZ(_renderer.rotation()) * Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f);
 
 		Matrix4x4f transform2 = Matrix4x4f::Translation((float)-res2->Base->Hotspot.X, (float)-res2->Base->Hotspot.Y, 0.0f);
 		if (other->GetState(ActorFlags::IsFacingLeft)) {
 			transform2 = transform2.Scale(-1.0f, 1.0f, 1.0f);
 		}
-		transform2 *= Matrix4x4f::RotationZ(other->_angle) * Matrix4x4f::Translation(other->_pos.X, other->_pos.Y, 0.0f);
+		transform2 *= Matrix4x4f::RotationZ(other->_renderer.rotation()) * Matrix4x4f::Translation(other->_pos.X, other->_pos.Y, 0.0f);
 
 		int width1 = res1->Base->FrameDimensions.X;
 		int height1 = res1->Base->FrameDimensions.Y;
@@ -908,7 +907,7 @@ namespace Jazz2
 		if (GetState(ActorFlags::IsFacingLeft)) {
 			transform = transform.Scale(-1.0f, 1.0f, 1.0f);
 		}
-		transform *= Matrix4x4f::RotationZ(_angle) * Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f);
+		transform *= Matrix4x4f::RotationZ(_renderer.rotation()) * Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f);
 
 		int width = res->Base->FrameDimensions.X;
 		int height = res->Base->FrameDimensions.Y;
@@ -982,12 +981,12 @@ namespace Jazz2
 			Vector2i hotspot = res->Base->Hotspot;
 			Vector2i size = res->Base->FrameDimensions;
 
-			if (std::abs(_angle) > 0.1f) {
+			if (std::abs(_renderer.rotation()) > 0.1f) {
 				Matrix4x4f transform = Matrix4x4f::Translation((float)-res->Base->Hotspot.X, (float)-res->Base->Hotspot.Y, 0.0f);
 				if (GetState(ActorFlags::IsFacingLeft)) {
 					transform = transform.Scale(-1.0f, 1.0f, 1.0f);
 				}
-				transform *= Matrix4x4f::RotationZ(_angle) * Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f);
+				transform *= Matrix4x4f::RotationZ(_renderer.rotation()) * Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f);
 
 				Vector3f tl = Vector3f::Zero * transform;
 				Vector3f tr = Vector3f((float)size.X, 0.0f, 0.0f) * transform;
@@ -1167,7 +1166,6 @@ namespace Jazz2
 				if (AnimTime > AnimDuration) {
 					int n = (int)(AnimTime / AnimDuration);
 					AnimTime -= AnimDuration * n;
-
 					_owner->OnAnimationFinished();
 				}
 			} else if (LoopMode == AnimationLoopMode::Once) {

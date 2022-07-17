@@ -63,8 +63,7 @@ namespace Jazz2::Actors::Weapons
 		}
 		_speed.Y = std::sinf(angleRel) * baseSpeed;
 
-		_angle = angle;
-
+		_renderer.setRotation(angle);
 		_renderer.setDrawEnabled(false);
 	}
 
@@ -145,7 +144,7 @@ namespace Jazz2::Actors::Weapons
 	{
 		ShotBase::OnRicochet();
 
-		_angle = std::atan2(_speed.Y, _speed.X);
+		_renderer.setRotation(std::atan2(_speed.Y, _speed.X));
 
 		// TODO
 		//PlaySound(Transform.Pos, "Ricochet");

@@ -1,8 +1,9 @@
 #include "ParticleAffectors.h"
 #include "Particle.h"
+#include "../../Common.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
@@ -22,7 +23,7 @@ namespace nCine {
 		if (colorSteps_.empty() || age > colorSteps_[colorSteps_.size() - 1].age)
 			colorSteps_.push_back(ColorStep(age, color));
 		else {
-			//LOGW("Out of order step not added");
+			LOGW("Out of order step not added");
 		}
 	}
 
@@ -71,7 +72,7 @@ namespace nCine {
 		if (sizeSteps_.empty() || age > sizeSteps_[sizeSteps_.size() - 1].age)
 			sizeSteps_.push_back(SizeStep(age, scaleX, scaleY));
 		else {
-			//LOGW("Out of order step not added");
+			LOGW("Out of order step not added");
 		}
 	}
 
@@ -119,7 +120,7 @@ namespace nCine {
 		if (rotationSteps_.empty() || age > rotationSteps_[rotationSteps_.size() - 1].age)
 			rotationSteps_.push_back(RotationStep(age, angle));
 		else {
-			//LOGW("Out of order step not added");
+			LOGW("Out of order step not added");
 		}
 	}
 
@@ -164,7 +165,7 @@ namespace nCine {
 		if (positionSteps_.empty() || age > positionSteps_[positionSteps_.size() - 1].age)
 			positionSteps_.push_back(PositionStep(age, posX, posY));
 		else {
-			//LOGW("Out of order step not added");
+			LOGW("Out of order step not added");
 		}
 	}
 
@@ -209,7 +210,7 @@ namespace nCine {
 		if (velocitySteps_.empty() || age > velocitySteps_[velocitySteps_.size() - 1].age)
 			velocitySteps_.push_back(VelocityStep(age, velX, velY));
 		else {
-			//LOGW("Out of order step not added");
+			LOGW("Out of order step not added");
 		}
 	}
 

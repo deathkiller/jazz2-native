@@ -1,8 +1,10 @@
 #include "Thread.h"
+#include "../../Common.h"
 
-namespace nCine {
-
-	namespace {
+namespace nCine
+{
+	namespace
+	{
 
 #if !defined PTW32_VERSION && !defined __WINPTHREADS_VERSION
 		const unsigned int MaxThreadNameLength = 256;
@@ -109,7 +111,7 @@ namespace nCine {
 			handle_ = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0, wrapperFunction, &threadInfo_, 0, nullptr));
 			//FATAL_ASSERT_MSG(handle_, "Error in _beginthreadex()");
 		} else {
-			//LOGW_X("Thread %u is already running", handle_);
+			LOGW_X("Thread %u is already running", handle_);
 		}
 	}
 
@@ -178,7 +180,7 @@ namespace nCine {
 			affinityMask.affinityMask_ = ::SetThreadAffinityMask(handle_, allCpus);
 			::SetThreadAffinityMask(handle_, affinityMask.affinityMask_);
 		} else {
-			//LOGW("Cannot get the affinity for a thread that has not been created yet");
+			LOGW("Cannot get the affinity for a thread that has not been created yet");
 		}
 
 		return affinityMask;
@@ -189,7 +191,7 @@ namespace nCine {
 		if (handle_ != 0)
 			::SetThreadAffinityMask(handle_, affinityMask.affinityMask_);
 		else {
-			//LOGW("Cannot set the affinity mask for a not yet created thread");
+			LOGW("Cannot set the affinity mask for a not yet created thread");
 		}
 	}
 

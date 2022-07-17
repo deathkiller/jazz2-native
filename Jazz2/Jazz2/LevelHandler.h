@@ -56,7 +56,8 @@ namespace Jazz2
 
 		void LoadLevel(const std::string& levelFileName, const std::string& episodeName);
 
-		void OnFrameStart() override;
+		void OnBeginFrame() override;
+		void OnEndFrame() override;
 		void OnRootViewportResized(int width, int height) override;
 
 		void OnKeyPressed(const nCine::KeyboardEvent& event) override;
@@ -92,6 +93,7 @@ namespace Jazz2
 	private:
 		std::unique_ptr<SceneNode> _rootNode;
 		std::unique_ptr<Viewport> _view;
+		std::unique_ptr<Texture> _viewTexture;
 		std::unique_ptr<Camera> _camera;
 		std::unique_ptr<Sprite> _viewSprite;
 

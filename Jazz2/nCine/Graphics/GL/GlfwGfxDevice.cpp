@@ -233,7 +233,7 @@ namespace nCine {
 
 	void GlfwGfxDevice::errorCallback(int error, const char* description)
 	{
-		//LOGE_X("GLFW error %d: \"%s\"", error, description);
+		LOGE_X("GLFW error %d: \"%s\"", error, description);
 	}
 
 }

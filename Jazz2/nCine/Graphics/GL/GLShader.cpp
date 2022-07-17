@@ -1,4 +1,5 @@
 #include "GLShader.h"
+#include "GLDebug.h"
 #include "../../IO/IFileStream.h"
 
 #include <string>
@@ -10,6 +11,13 @@
 namespace nCine {
 
 	static std::string patchLines;
+
+	///////////////////////////////////////////////////////////
+	// STATIC DEFINITIONS
+	///////////////////////////////////////////////////////////
+#if defined(ENABLE_LOG)
+	char GLShader::infoLogString_[MaxInfoLogLength];
+#endif
 
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
@@ -36,6 +44,8 @@ namespace nCine {
 				patchLines.append(")\n");
 			}
 #endif
+			// Exclude patch lines when counting line numbers in info logs
+			patchLines.append("#line 0\n");
 		}
 
 		glHandle_ = glCreateShader(type);
@@ -67,6 +77,7 @@ namespace nCine {
 	void GLShader::loadFromFile(const char* filename)
 	{
 		std::unique_ptr<IFileStream> fileHandle = IFileStream::createFileHandle(filename);
+		fileHandle->setExitOnFailToOpen(false);
 
 		fileHandle->Open(FileAccessMode::Read);
 		if (fileHandle->isOpened()) {
@@ -77,20 +88,24 @@ namespace nCine {
 			const GLchar* source_lines[2] = { patchLines.data(), source.data() };
 			const GLint lengths[2] = { static_cast<GLint>(patchLines.length()), length };
 			glShaderSource(glHandle_, 2, source_lines, lengths);
+
+			setObjectLabel(filename);
 		}
 	}
 
-	void GLShader::compile(ErrorChecking errorChecking)
+	bool GLShader::compile(ErrorChecking errorChecking, bool logOnErrors)
 	{
 		glCompileShader(glHandle_);
 
-		if (errorChecking == ErrorChecking::IMMEDIATE)
-			checkCompilation();
-		else
+		if (errorChecking == ErrorChecking::IMMEDIATE) {
+			return checkCompilation(logOnErrors);
+		} else {
 			status_ = Status::COMPILED_WITH_DEFERRED_CHECKS;
+			return true;
+		}
 	}
 
-	bool GLShader::checkCompilation()
+	bool GLShader::checkCompilation(bool logOnErrors)
 	{
 		if (status_ == Status::COMPILED)
 			return true;
@@ -98,21 +113,27 @@ namespace nCine {
 		GLint status = 0;
 		glGetShaderiv(glHandle_, GL_COMPILE_STATUS, &status);
 		if (status == GL_FALSE) {
-			GLint length = 0;
-			glGetShaderiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
-
-			if (length > 0) {
-				std::string infoLog(length, '\0');
-				glGetShaderInfoLog(glHandle_, length, &length, infoLog.data());
-				//LOGW_X("%s", infoLog.data());
+#if defined(ENABLE_LOG)
+			if (logOnErrors) {
+				GLint length = 0;
+				glGetShaderiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
+				if (length > 0) {
+					glGetShaderInfoLog(glHandle_, MaxInfoLogLength, &length, infoLogString_);
+					LOGW_X("%s", infoLogString_);
+				}
 			}
-
+#endif
 			status_ = Status::COMPILATION_FAILED;
 			return false;
 		}
 
 		status_ = Status::COMPILED;
 		return true;
+	}
+
+	void GLShader::setObjectLabel(const char* label)
+	{
+		GLDebug::objectLabel(GLDebug::LabelTypes::SHADER, glHandle_, label);
 	}
 
 }

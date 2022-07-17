@@ -1,8 +1,8 @@
 #include "GLTexture.h"
-//#include "tracy_opengl.h"
+#include "GLDebug.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS
 	///////////////////////////////////////////////////////////
@@ -93,6 +93,11 @@ namespace nCine {
 	{
 		bind();
 		glTexParameteri(target_, pname, param);
+	}
+
+	void GLTexture::setObjectLabel(const char* label)
+	{
+		GLDebug::objectLabel(GLDebug::LabelTypes::TEXTURE, glHandle_, label);
 	}
 
 	///////////////////////////////////////////////////////////
