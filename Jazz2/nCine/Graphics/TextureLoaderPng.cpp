@@ -8,12 +8,12 @@
 #	include <zlib.h>
 #else
 #	if defined(_MSC_VER) && defined(__has_include)
-#		if __has_include("../../../Libs/Deflate/libdeflate.h")
+#		if __has_include("../../../Libs/libdeflate.h")
 #			define __HAS_LOCAL_LIBDEFLATE
 #		endif
 #	endif
 #	ifdef __HAS_LOCAL_LIBDEFLATE
-#		include "../../../Libs/Deflate/libdeflate.h"
+#		include "../../../Libs/libdeflate.h"
 #	else
 #		include <libdeflate.h>
 #	endif

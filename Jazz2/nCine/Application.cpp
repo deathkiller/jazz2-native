@@ -2,16 +2,16 @@
 #   pragma comment(lib, "opengl32.lib")
 
 #   if defined(_M_X64)
-#       pragma comment(lib, "../Libs/GL/x64/glew32.lib")
-#       pragma comment(lib, "../Libs/GL/x64/glfw3dll.lib")
+#       pragma comment(lib, "../Libs/x64/glew32.lib")
+#       pragma comment(lib, "../Libs/x64/glfw3dll.lib")
 #       ifdef WITH_AUDIO
-#           pragma comment(lib, "../Libs/AL/x64/OpenAL32.lib")
+#           pragma comment(lib, "../Libs/x64/OpenAL32.lib")
 #       endif
 #   elif defined(_M_IX86)
-#       pragma comment(lib, "../Libs/GL/x86/glew32.lib")
-#       pragma comment(lib, "../Libs/GL/x86/glfw3dll.lib")
+#       pragma comment(lib, "../Libs/x86/glew32.lib")
+#       pragma comment(lib, "../Libs/x86/glfw3dll.lib")
 #       ifdef WITH_AUDIO
-#           pragma comment(lib, "../Libs/AL/x86/OpenAL32.lib")
+#           pragma comment(lib, "../Libs/x86/OpenAL32.lib")
 #       endif
 #   else
 #       error Unsupported architecture

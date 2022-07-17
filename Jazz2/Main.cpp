@@ -1,8 +1,8 @@
 ﻿#if defined(_WIN32)
 #   if defined(_M_X64)
-#       pragma comment(lib, "../Libs/Deflate/x64/libdeflate.lib")
+#       pragma comment(lib, "../Libs/x64/libdeflate.lib")
 #   elif defined(_M_IX86)
-#       pragma comment(lib, "../Libs/Deflate/x86/libdeflate.lib")
+#       pragma comment(lib, "../Libs/x86/libdeflate.lib")
 #   else
 #       error Unsupported architecture
 #   endif

@@ -105,7 +105,7 @@ else() # GCC and LLVM
 		target_link_options(ncine PUBLIC $<$<CONFIG:Debug>:-fsanitize=address>)
 	endif()
 	
-    # Only in debug - preserve debug information
+	# Only in debug - preserve debug information
 	if(EMSCRIPTEN)
 		target_compile_options(ncine PUBLIC $<$<CONFIG:Debug>:-g>)
 		target_link_options(ncine PUBLIC $<$<CONFIG:Debug>:-g>)

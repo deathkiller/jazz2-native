@@ -16,8 +16,8 @@ else()
 endif()
 
 if(EMSCRIPTEN)
-	list(APPEND HEADERS ${NCINE_ROOT}/Jazz2/nCine/IO/EmscriptenLocalFile.h)
-	list(APPEND SOURCES ${NCINE_ROOT}/Jazz2/nCine/IO/EmscriptenLocalFile.cpp)
+	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/IO/EmscriptenLocalFile.h)
+	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/IO/EmscriptenLocalFile.cpp)
 endif()
 
 if(ANGLE_FOUND OR OPENGLES2_FOUND)
@@ -29,8 +29,8 @@ if(ANGLE_FOUND OR OPENGLES2_FOUND)
 		target_compile_definitions(ncine PRIVATE "WITH_ANGLE")
 	endif()
 
-	list(APPEND PRIVATE_HEADERS ${NCINE_ROOT}/Jazz2/nCine/Graphics/TextureLoaderPkm.h)
-	list(APPEND SOURCES ${NCINE_ROOT}/Jazz2/nCine/Graphics/TextureLoaderPkm.cpp)
+	list(APPEND PRIVATE_HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.h)
+	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.cpp)
 endif()
 
 if(GLEW_FOUND)
@@ -46,26 +46,26 @@ if(GLFW_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "GLFW")
 	target_link_libraries(ncine PRIVATE GLFW::GLFW)
 
 	list(APPEND PRIVATE_HEADERS
-		${NCINE_ROOT}/Jazz2/nCine/Input/GlfwInputManager.h
-		${NCINE_ROOT}/Jazz2/nCine/Graphics/GL/GlfwGfxDevice.h
+		${NCINE_SOURCE_DIR}/nCine/Input/GlfwInputManager.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GlfwGfxDevice.h
 	)
 	list(APPEND SOURCES
-		${NCINE_ROOT}/Jazz2/nCine/Input/GlfwInputManager.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Input/GlfwKeys.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Graphics/GL/GlfwGfxDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Input/GlfwInputManager.cpp
+		${NCINE_SOURCE_DIR}/nCine/Input/GlfwKeys.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GlfwGfxDevice.cpp
 	)
 elseif(SDL2_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "SDL2")
 	target_compile_definitions(ncine PRIVATE "WITH_SDL")
 	target_link_libraries(ncine PRIVATE SDL2::SDL2)
 
 	list(APPEND PRIVATE_HEADERS
-		${NCINE_ROOT}/Jazz2/nCine/Input/SdlInputManager.h
-		${NCINE_ROOT}/Jazz2/nCine/Graphics/GL/SdlGfxDevice.h
+		${NCINE_SOURCE_DIR}/nCine/Input/SdlInputManager.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/SdlGfxDevice.h
 	)
 	list(APPEND SOURCES
-		${NCINE_ROOT}/Jazz2/nCine/Input/SdlInputManager.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Input/SdlKeys.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Graphics/GL/SdlGfxDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Input/SdlInputManager.cpp
+		${NCINE_SOURCE_DIR}/nCine/Input/SdlKeys.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/SdlGfxDevice.cpp
 	)
 elseif(Qt5_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "QT5")
 	target_compile_definitions(ncine PRIVATE "WITH_QT5")
@@ -76,23 +76,23 @@ elseif(Qt5_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "QT5")
 		target_link_libraries(ncine PRIVATE Qt5::Gamepad)
 	endif()
 
-	list(APPEND HEADERS	${NCINE_ROOT}/Jazz2/nCine/Qt5Widget.h)
-	qt5_wrap_cpp(MOC_SOURCES ${NCINE_ROOT}/Jazz2/nCine/Qt5Widget.h)
+	list(APPEND HEADERS	${NCINE_SOURCE_DIR}/nCine/Qt5Widget.h)
+	qt5_wrap_cpp(MOC_SOURCES ${NCINE_SOURCE_DIR}/nCine/Qt5Widget.h)
 
 	list(APPEND PRIVATE_HEADERS
-		${NCINE_ROOT}/Jazz2/nCine/Input/Qt5InputManager.h
-		${NCINE_ROOT}/Jazz2/nCine/Graphics/GL/Qt5GfxDevice.h
+		${NCINE_SOURCE_DIR}/nCine/Input/Qt5InputManager.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/Qt5GfxDevice.h
 	)
 	list(APPEND SOURCES
-		${NCINE_ROOT}/Jazz2/nCine/Qt5Widget.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Input/Qt5InputManager.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Input/Qt5Keys.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Graphics/GL/Qt5GfxDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Qt5Widget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Input/Qt5InputManager.cpp
+		${NCINE_SOURCE_DIR}/nCine/Input/Qt5Keys.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/Qt5GfxDevice.cpp
 		${MOC_SOURCES}
 	)
 
-	list(REMOVE_ITEM SOURCES ${NCINE_ROOT}/Jazz2/nCine/Input/JoyMapping.cpp)
-	list(APPEND SOURCES ${NCINE_ROOT}/Jazz2/nCine/Input/Qt5JoyMapping.cpp)
+	list(REMOVE_ITEM SOURCES ${NCINE_SOURCE_DIR}/nCine/Input/JoyMapping.cpp)
+	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Input/Qt5JoyMapping.cpp)
 endif()
 
 if(OPENAL_FOUND)
@@ -100,31 +100,31 @@ if(OPENAL_FOUND)
 	target_link_libraries(ncine PRIVATE OpenAL::AL)
 
 	list(APPEND HEADERS
-		${NCINE_ROOT}/Jazz2/nCine/Audio/AudioBuffer.h
-		${NCINE_ROOT}/Jazz2/nCine/Audio/AudioStream.h
-		${NCINE_ROOT}/Jazz2/nCine/Audio/IAudioPlayer.h
-		${NCINE_ROOT}/Jazz2/nCine/Audio/AudioBufferPlayer.h
-		${NCINE_ROOT}/Jazz2/nCine/Audio/AudioStreamPlayer.h
+		${NCINE_SOURCE_DIR}/nCine/Audio/AudioBuffer.h
+		${NCINE_SOURCE_DIR}/nCine/Audio/AudioStream.h
+		${NCINE_SOURCE_DIR}/nCine/Audio/IAudioPlayer.h
+		${NCINE_SOURCE_DIR}/nCine/Audio/AudioBufferPlayer.h
+		${NCINE_SOURCE_DIR}/nCine/Audio/AudioStreamPlayer.h
 	)
 
 	list(APPEND PRIVATE_HEADERS
-		${NCINE_ROOT}/Jazz2/nCine/Audio/ALAudioDevice.h
-		${NCINE_ROOT}/Jazz2/nCine/Audio/IAudioLoader.h
-		${NCINE_ROOT}/Jazz2/nCine/Audio/AudioLoaderWav.h
-		${NCINE_ROOT}/Jazz2/nCine/Audio/AudioReaderWav.h
-		${NCINE_ROOT}/Jazz2/nCine/Audio/IAudioReader.h
+		${NCINE_SOURCE_DIR}/nCine/Audio/ALAudioDevice.h
+		${NCINE_SOURCE_DIR}/nCine/Audio/IAudioLoader.h
+		${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.h
+		${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderWav.h
+		${NCINE_SOURCE_DIR}/nCine/Audio/IAudioReader.h
 	)
 
 	list(APPEND SOURCES
-		${NCINE_ROOT}/Jazz2/nCine/Audio/ALAudioDevice.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Audio/IAudioLoader.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Audio/AudioLoaderWav.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Audio/AudioReaderWav.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Audio/AudioBuffer.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Audio/AudioStream.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Audio/IAudioPlayer.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Audio/AudioBufferPlayer.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Audio/AudioStreamPlayer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Audio/ALAudioDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Audio/IAudioLoader.cpp
+		${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.cpp
+		${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderWav.cpp
+		${NCINE_SOURCE_DIR}/nCine/Audio/AudioBuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Audio/AudioStream.cpp
+		${NCINE_SOURCE_DIR}/nCine/Audio/IAudioPlayer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Audio/AudioBufferPlayer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Audio/AudioStreamPlayer.cpp
 	)
 
 	if(VORBIS_FOUND)
@@ -132,12 +132,12 @@ if(OPENAL_FOUND)
 		target_link_libraries(ncine PRIVATE Vorbis::Vorbisfile)
 
 		list(APPEND PRIVATE_HEADERS
-			${NCINE_ROOT}/Jazz2/nCine/Audio/AudioLoaderOgg.h
-			${NCINE_ROOT}/Jazz2/nCine/Audio/AudioReaderOgg.h)
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderOgg.h
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderOgg.h)
 
 		list(APPEND SOURCES
-			${NCINE_ROOT}/Jazz2/nCine/Audio/AudioLoaderOgg.cpp
-			${NCINE_ROOT}/Jazz2/nCine/Audio/AudioReaderOgg.cpp)
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderOgg.cpp
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderOgg.cpp)
 	endif()
 endif()
 
@@ -145,21 +145,21 @@ endif()
 #	target_compile_definitions(ncine PRIVATE "WITH_PNG")
 #	target_link_libraries(ncine PRIVATE PNG::PNG)
 
-#	list(APPEND HEADERS ${NCINE_ROOT}/Jazz2/nCine/Graphics/TextureSaverPng.h)
-#	list(APPEND PRIVATE_HEADERS ${NCINE_ROOT}/Jazz2/nCine/Graphics/TextureLoaderPng.h)
+#	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureSaverPng.h)
+#	list(APPEND PRIVATE_HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPng.h)
 #	list(APPEND SOURCES
-#		${NCINE_ROOT}/Jazz2/nCine/Graphics/TextureLoaderPng.cpp
-#		${NCINE_ROOT}/Jazz2/nCine/Graphics/TextureSaverPng.cpp)
+#		${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPng.cpp
+#		${NCINE_SOURCE_DIR}/nCine/Graphics/TextureSaverPng.cpp)
 #endif()
 #if(WEBP_FOUND)
 #	target_compile_definitions(ncine PRIVATE "WITH_WEBP")
 #	target_link_libraries(ncine PRIVATE WebP::WebP)
 
-#	list(APPEND HEADERS ${NCINE_ROOT}/Jazz2/nCine/Graphics/TextureSaverWebP.h)
-#	list(APPEND PRIVATE_HEADERS ${NCINE_ROOT}/Jazz2/nCine/Graphics/TextureLoaderWebP.h)
+#	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureSaverWebP.h)
+#	list(APPEND PRIVATE_HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderWebP.h)
 #	list(APPEND SOURCES
-#		${NCINE_ROOT}/Jazz2/nCine/Graphics/TextureLoaderWebP.cpp
-#		${NCINE_ROOT}/Jazz2/nCine/Graphics/TextureSaverWebP.cpp)
+#		${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderWebP.cpp
+#		${NCINE_SOURCE_DIR}/nCine/Graphics/TextureSaverWebP.cpp)
 #endif()
 
 if(Threads_FOUND)
@@ -167,25 +167,25 @@ if(Threads_FOUND)
 	target_link_libraries(ncine PRIVATE Threads::Threads)
 
 	list(APPEND PRIVATE_HEADERS
-		${NCINE_ROOT}/Jazz2/nCine/Threading/Thread.h
-		${NCINE_ROOT}/Jazz2/nCine/Threading/ThreadSync.h
+		${NCINE_SOURCE_DIR}/nCine/Threading/Thread.h
+		${NCINE_SOURCE_DIR}/nCine/Threading/ThreadSync.h
 	)
 
 	if(WIN32)
 		list(APPEND SOURCES
-			${NCINE_ROOT}/Jazz2/nCine/Threading/WindowsThread.cpp
-			${NCINE_ROOT}/Jazz2/nCine/Threading/WindowsThreadSync.cpp
+			${NCINE_SOURCE_DIR}/nCine/Threading/WindowsThread.cpp
+			${NCINE_SOURCE_DIR}/nCine/Threading/WindowsThreadSync.cpp
 		)
 	else()
 		list(APPEND SOURCES
-			${NCINE_ROOT}/Jazz2/nCine/Threading/PosixThread.cpp
-			${NCINE_ROOT}/Jazz2/nCine/Threading/PosixThreadSync.cpp
+			${NCINE_SOURCE_DIR}/nCine/Threading/PosixThread.cpp
+			${NCINE_SOURCE_DIR}/nCine/Threading/PosixThreadSync.cpp
 		)
 	endif()
 
-	list(APPEND PRIVATE_HEADERS ${NCINE_ROOT}/Jazz2/nCine/Threading/ThreadPool.h)
-	list(APPEND SOURCES ${NCINE_ROOT}/Jazz2/nCine/Threading/ThreadPool.cpp)
-	list(APPEND PRIVATE_HEADERS ${NCINE_ROOT}/Jazz2/nCine/Threading/ThreadCommands.h)
+	list(APPEND PRIVATE_HEADERS ${NCINE_SOURCE_DIR}/nCine/Threading/ThreadPool.h)
+	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Threading/ThreadPool.cpp)
+	list(APPEND PRIVATE_HEADERS ${NCINE_SOURCE_DIR}/nCine/Threading/ThreadCommands.h)
 endif()
 
 #if(LUA_FOUND)
@@ -193,121 +193,121 @@ endif()
 #	target_link_libraries(ncine PRIVATE Lua::Lua)
 
 #	list(APPEND HEADERS
-#		${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaTypes.h
-#		${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaStateManager.h
-#		${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaUtils.h
-#		${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaDebug.h
-#		${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaRectUtils.h
-#		${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaVector2Utils.h
-#		${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaVector3Utils.h
-#		${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaColorUtils.h
+#		${NCINE_SOURCE_DIR}/nCine/Scripting/LuaTypes.h
+#		${NCINE_SOURCE_DIR}/nCine/Scripting/LuaStateManager.h
+#		${NCINE_SOURCE_DIR}/nCine/Scripting/LuaUtils.h
+#		${NCINE_SOURCE_DIR}/nCine/Scripting/LuaDebug.h
+#		${NCINE_SOURCE_DIR}/nCine/Scripting/LuaRectUtils.h
+#		${NCINE_SOURCE_DIR}/nCine/Scripting/LuaVector2Utils.h
+#		${NCINE_SOURCE_DIR}/nCine/Scripting/LuaVector3Utils.h
+#		${NCINE_SOURCE_DIR}/nCine/Scripting/LuaColorUtils.h
 #	)
 
 #	list(APPEND PRIVATE_HEADERS
-#		${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaNames.h
-#		${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaStatistics.h
+#		${NCINE_SOURCE_DIR}/nCine/Scripting/LuaNames.h
+#		${NCINE_SOURCE_DIR}/nCine/Scripting/LuaStatistics.h
 #	)
 
 #	list(APPEND SOURCES
-#		${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaStateManager.cpp
-#		${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaUtils.cpp
-#		${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaDebug.cpp
-#		${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaStatistics.cpp
-#		${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaColorUtils.cpp
+#		${NCINE_SOURCE_DIR}/nCine/Scripting/LuaStateManager.cpp
+#		${NCINE_SOURCE_DIR}/nCine/Scripting/LuaUtils.cpp
+#		${NCINE_SOURCE_DIR}/nCine/Scripting/LuaDebug.cpp
+#		${NCINE_SOURCE_DIR}/nCine/Scripting/LuaStatistics.cpp
+#		${NCINE_SOURCE_DIR}/nCine/Scripting/LuaColorUtils.cpp
 #	)
 
 #	if(NCINE_WITH_SCRIPTING_API)
 #		target_compile_definitions(ncine PRIVATE "WITH_SCRIPTING_API")
 
 #		list(APPEND HEADERS
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaUntrackedUserData.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaIAppEventHandler.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaIInputEventHandler.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaUntrackedUserData.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaIAppEventHandler.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaIInputEventHandler.h
 #		)
 
 #		list(APPEND PRIVATE_HEADERS
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaClassTracker.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaILogger.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaRect.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaVector2.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaVector3.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaColor.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaIInputManager.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaMouseEvents.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaKeys.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaKeyboardEvents.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaJoystickEvents.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaTouchEvents.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaTimeStamp.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaFileSystem.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaApplication.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaAppConfiguration.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaSceneNode.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaDrawableNode.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaTexture.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaBaseSprite.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaSprite.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaMeshSprite.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaRectAnimation.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaAnimatedSprite.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaFont.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaTextNode.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaParticleSystem.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaViewport.h
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaCamera.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaClassTracker.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaILogger.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaRect.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaVector2.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaVector3.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaColor.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaIInputManager.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaMouseEvents.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaKeys.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaKeyboardEvents.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaJoystickEvents.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaTouchEvents.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaTimeStamp.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaFileSystem.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaApplication.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaAppConfiguration.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaSceneNode.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaDrawableNode.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaTexture.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaBaseSprite.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaSprite.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaMeshSprite.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaRectAnimation.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaAnimatedSprite.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaFont.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaTextNode.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaParticleSystem.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaViewport.h
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaCamera.h
 #		)
 
 #		list(APPEND SOURCES
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaIAppEventHandler.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaILogger.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaColor.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaIInputManager.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaIInputEventHandler.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaMouseEvents.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaKeys.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaKeyboardEvents.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaJoystickEvents.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaTouchEvents.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaTimeStamp.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaFileSystem.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaApplication.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaAppConfiguration.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaSceneNode.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaDrawableNode.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaTexture.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaBaseSprite.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaSprite.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaMeshSprite.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaRectAnimation.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaAnimatedSprite.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaFont.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaTextNode.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaParticleSystem.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaViewport.cpp
-#			${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaCamera.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaIAppEventHandler.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaILogger.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaColor.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaIInputManager.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaIInputEventHandler.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaMouseEvents.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaKeys.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaKeyboardEvents.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaJoystickEvents.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaTouchEvents.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaTimeStamp.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaFileSystem.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaApplication.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaAppConfiguration.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaSceneNode.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaDrawableNode.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaTexture.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaBaseSprite.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaSprite.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaMeshSprite.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaRectAnimation.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaAnimatedSprite.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaFont.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaTextNode.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaParticleSystem.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaViewport.cpp
+#			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaCamera.cpp
 #		)
 
 #		if(OPENAL_FOUND)
 #			list(APPEND PRIVATE_HEADERS
-#				${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaIAudioDevice.h
-#				${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaIAudioPlayer.h
-#				${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaAudioStreamPlayer.h
-#				${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaAudioBuffer.h
-#				${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaAudioBufferPlayer.h
+#				${NCINE_SOURCE_DIR}/nCine/Scripting/LuaIAudioDevice.h
+#				${NCINE_SOURCE_DIR}/nCine/Scripting/LuaIAudioPlayer.h
+#				${NCINE_SOURCE_DIR}/nCine/Scripting/LuaAudioStreamPlayer.h
+#				${NCINE_SOURCE_DIR}/nCine/Scripting/LuaAudioBuffer.h
+#				${NCINE_SOURCE_DIR}/nCine/Scripting/LuaAudioBufferPlayer.h
 #			)
 
 #			list(APPEND SOURCES
-#				${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaIAudioDevice.cpp
-#				${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaIAudioPlayer.cpp
-#				${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaAudioStreamPlayer.cpp
-#				${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaAudioBuffer.cpp
-#				${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaAudioBufferPlayer.cpp
+#				${NCINE_SOURCE_DIR}/nCine/Scripting/LuaIAudioDevice.cpp
+#				${NCINE_SOURCE_DIR}/nCine/Scripting/LuaIAudioPlayer.cpp
+#				${NCINE_SOURCE_DIR}/nCine/Scripting/LuaAudioStreamPlayer.cpp
+#				${NCINE_SOURCE_DIR}/nCine/Scripting/LuaAudioBuffer.cpp
+#				${NCINE_SOURCE_DIR}/nCine/Scripting/LuaAudioBufferPlayer.cpp
 #			)
 #		endif()
 
 #		if(NOT ANDROID)
-#			list(APPEND PRIVATE_HEADERS ${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaEventHandler.h)
-#			list(APPEND SOURCES ${NCINE_ROOT}/Jazz2/nCine/Scripting/LuaEventHandler.cpp)
+#			list(APPEND PRIVATE_HEADERS ${NCINE_SOURCE_DIR}/nCine/Scripting/LuaEventHandler.h)
+#			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Scripting/LuaEventHandler.cpp)
 #		endif()
 #	endif()
 #endif()
@@ -487,28 +487,28 @@ endif()
 
 if(NCINE_BUILD_ANDROID)
 	list(APPEND HEADERS
-		${NCINE_ROOT}/Jazz2/nCine/Android/AndroidApplication.h
-		${NCINE_ROOT}/Jazz2/nCine/IO/AssetFile.h
+		${NCINE_SOURCE_DIR}/nCine/Android/AndroidApplication.h
+		${NCINE_SOURCE_DIR}/nCine/IO/AssetFile.h
 	)
 endif()
 
 if(ANDROID)
 	list(APPEND PRIVATE_HEADERS
-		${NCINE_ROOT}/Jazz2/nCine/Android/AndroidInputManager.h
-		${NCINE_ROOT}/Jazz2/nCine/Android/AndroidJniHelper.h
-		${NCINE_ROOT}/Jazz2/nCine/Android/EglGfxDevice.h
-		${NCINE_ROOT}/Jazz2/nCine/Graphics/TextureLoaderPkm.h
+		${NCINE_SOURCE_DIR}/nCine/Android/AndroidInputManager.h
+		${NCINE_SOURCE_DIR}/nCine/Android/AndroidJniHelper.h
+		${NCINE_SOURCE_DIR}/nCine/Android/EglGfxDevice.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.h
 	)
 
 	list(APPEND SOURCES
-		${NCINE_ROOT}/Jazz2/nCine/Android/AndroidApplication.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Android/AndroidInputManager.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Android/AndroidJniHelper.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Android/AndroidKeys.cpp
-		${NCINE_ROOT}/Jazz2/nCine/IO/AssetFile.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Android/EglGfxDevice.cpp
-		${NCINE_ROOT}/Jazz2/nCine/Graphics/TextureLoaderPkm.cpp
+		${NCINE_SOURCE_DIR}/nCine/Android/AndroidApplication.cpp
+		${NCINE_SOURCE_DIR}/nCine/Android/AndroidInputManager.cpp
+		${NCINE_SOURCE_DIR}/nCine/Android/AndroidJniHelper.cpp
+		${NCINE_SOURCE_DIR}/nCine/Android/AndroidKeys.cpp
+		${NCINE_SOURCE_DIR}/nCine/IO/AssetFile.cpp
+		${NCINE_SOURCE_DIR}/nCine/Android/EglGfxDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.cpp
 	)
 else()
-	list(APPEND SOURCES ${NCINE_ROOT}/Jazz2/nCine/PCApplication.cpp)
+	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/PCApplication.cpp)
 endif()

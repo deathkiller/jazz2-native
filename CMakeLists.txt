@@ -58,6 +58,8 @@ add_executable(ncine)
 include(ncine_compiler_options)
 
 set(NCINE_ROOT ${CMAKE_SOURCE_DIR})
+set(NCINE_SOURCE_DIR "${NCINE_ROOT}/Jazz2/")
+
 include(ncine_headers)
 #include(ncine_private_headers)
 include(ncine_sources)
@@ -111,8 +113,8 @@ target_sources(ncine PRIVATE ${SOURCES} ${HEADERS} ${SHADER_FILES} ${GENERATED_S
 target_include_directories(ncine
 	INTERFACE $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
 	INTERFACE $<INSTALL_INTERFACE:include>
-	PRIVATE Jazz2
-	PRIVATE Shared)
+	PRIVATE Shared
+	)
 if(NOT NCINE_DYNAMIC_LIBRARY)
 	target_include_directories(ncine
 		INTERFACE $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include/ncine>)

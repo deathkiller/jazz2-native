@@ -1,6 +1,3 @@
-set(HEADERS
-	${NCINE_ROOT}/Jazz2/Common.h)
-
 #set(HEADERS
 #	${NCINE_ROOT}/include/ncine/common_defines.h
 #	${NCINE_ROOT}/include/ncine/common_constants.h
