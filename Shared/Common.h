@@ -2,35 +2,50 @@
 
 // Undefine min()/max() macros, use std::min()/std::max() instead
 #if !defined(NOMINMAX)
-#   define NOMINMAX
+#	define NOMINMAX
 #endif
 
 #include <cstdint>
 
 #if defined(_WIN32)
-#   include <windows.h>
-#else
-// TODO
-typedef unsigned long size_t;
-#if !defined(_countof)
-#   define _countof(arr) (sizeof(arr) / sizeof(arr[0]))
+#	include <windows.h>
 #endif
+
+// These attributes are not defined outside of MSVC
+#if !defined(__in)
+#	define __in
+#endif
+#if !defined(__in_opt)
+#	define __in_opt
+#endif
+#if !defined(__out)
+#	define __out
+#endif
+#if !defined(__out_opt)
+#	define __out_opt
+#endif
+#if !defined(__success)
+#	define __success(expr)
+#endif
+
+#if !defined(_countof)
+#	define _countof(arr) (sizeof(arr) / sizeof(arr[0]))
 #endif
 
 // Undefine "far" and "near" keywords, not used anymore
 #ifdef far
-#   undef far
-#   ifdef FAR
-#       undef FAR
-#       define FAR
-#   endif
+#	undef far
+#	ifdef FAR
+#		undef FAR
+#		define FAR
+#	endif
 #endif
 #ifdef near
-#   undef near
-#   ifdef NEAR
-#       undef NEAR
-#       define NEAR
-#   endif
+#	undef near
+#	ifdef NEAR
+#		undef NEAR
+#		define NEAR
+#	endif
 #endif
 
 #define ASSERT_UNREACHABLE() __assume(0)
@@ -40,7 +55,7 @@ typedef unsigned long size_t;
 namespace Death
 {
 	// Used as an approximation of std::underlying_type<T>
-	template<size_t S>
+	template<int S>
 	struct _enum_type_for_size;
 
 	template<>

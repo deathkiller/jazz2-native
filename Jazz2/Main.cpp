@@ -37,11 +37,11 @@ using namespace nCine;
 #	include <cstdarg>
 #endif
 
-void __WriteLog(LogLevel logLevel, const char* fmt, ...)
+void __WriteLog(LogLevel level, const char* fmt, ...)
 {
-	if (logLevel <= LogLevel::Verbose) {
+	/*if (level <= LogLevel::Verbose) {
 		return;
-	}
+	}*/
 
 	constexpr int MaxEntryLength = 1024;
 	char logEntry[MaxEntryLength];
@@ -57,9 +57,9 @@ void __WriteLog(LogLevel logLevel, const char* fmt, ...)
 	}
 
 #if defined(_WIN32)
-	if (IsDebuggerPresent()) {
+	//if (IsDebuggerPresent()) {
 		OutputDebugString(Utf8::ToUtf16(logEntry));
-	}
+	//}
 #elif defined(__ANDROID__)
 	android_LogPriority priority;
 
@@ -78,7 +78,11 @@ void __WriteLog(LogLevel logLevel, const char* fmt, ...)
 
 	__android_log_write(priority, "Jazz2", logEntry_);
 #else
-	fputs(logEntry, stdout);
+	if (level == LogLevel::Error || level == LogLevel::Fatal) {
+		fputs(logEntry, stderr);
+	} else {
+		fputs(logEntry, stdout);
+	}
 #endif
 }
 
@@ -135,7 +139,10 @@ void GameEventHandler::onInit()
 	theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
 #endif
 
-	//theApplication().renderingSettings().batchingEnabled = false;
+#if defined(__EMSCRIPTEN__)
+	// TODO: Baching in Emscripten
+	theApplication().renderingSettings().batchingEnabled = false;
+#endif
 
 	// TODO
 	Jazz2::PlayerType players[] = { Jazz2::PlayerType::Jazz };

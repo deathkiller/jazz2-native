@@ -119,44 +119,44 @@ namespace Jazz2
 	{
 		// TODO
 		auto& resolver = Jazz2::ContentResolver::Current();
-		resolver.ApplyPalette("Content/Tilesets/castle1/Main.palette");
+		resolver.ApplyPalette("Content/Tilesets/labrat1n/Main.palette");
 
 		// TODO
-		_tileMap = std::make_unique<Tiles::TileMap>(this, "castle1");
+		_tileMap = std::make_unique<Tiles::TileMap>(this, "labrat1n");
 		_tileMap->setParent(_rootNode.get());
 
 		{
-			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "prince/01_castle1/Sprite.layer").c_str());
+			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "share/01_share1/Sprite.layer").c_str());
 			_tileMap->ReadLayerConfiguration(LayerType::Sprite, layerFile, { .SpeedX = 1, .SpeedY = 1 });
 		}
 		{
-			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "prince/01_castle1/Sky.layer").c_str());
-			_tileMap->ReadLayerConfiguration(LayerType::Other, layerFile, { .Depth = -400, .SpeedX = 0.04998779296875f, .SpeedY = 0.079986572265625f, .RepeatX = true, .RepeatY = true, .OffsetX = 180, .OffsetY = -300 });
+			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "share/01_share1/Sky.layer").c_str());
+			_tileMap->ReadLayerConfiguration(LayerType::Other, layerFile, { .Depth = -400, .RepeatX = true, .RepeatY = true, .OffsetX = 180, .OffsetY = -300 });
 		}
 		{
-			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "prince/01_castle1/2.layer").c_str());
-			_tileMap->ReadLayerConfiguration(LayerType::Other, layerFile, { .Depth = 200, .SpeedX = 1.5f, .SpeedY = 1.5f });
+			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "share/01_share1/2.layer").c_str());
+			_tileMap->ReadLayerConfiguration(LayerType::Other, layerFile, { .Depth = 200, .SpeedX = 1.25f, .SpeedY = 1.25f });
 		}
 		{
-			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "prince/01_castle1/3.layer").c_str());
-			_tileMap->ReadLayerConfiguration(LayerType::Other, layerFile, { .Depth = 100, .SpeedX = 1, .SpeedY = 1  });
+			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "share/01_share1/3.layer").c_str());
+			_tileMap->ReadLayerConfiguration(LayerType::Other, layerFile, { .Depth = 100, .SpeedX = 1, .SpeedY = 1 });
 		}
 		{
-			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "prince/01_castle1/5.layer").c_str());
-			_tileMap->ReadLayerConfiguration(LayerType::Other, layerFile, { .Depth = -100, .SpeedX = 0.5f, .SpeedY = 0.102996826171875f, .RepeatX = true });
+			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "share/01_share1/6.layer").c_str());
+			_tileMap->ReadLayerConfiguration(LayerType::Other, layerFile, { .Depth = -200, .SpeedX = 0.4444580078125f, .SpeedY = 0.0649871826171875f, .RepeatX = true, .UseInherentOffset = true });
 		}
 		{
-			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "prince/01_castle1/6.layer").c_str());
-			_tileMap->ReadLayerConfiguration(LayerType::Other, layerFile, { .Depth = -200, .SpeedX = 0.25f, .SpeedY = 0.05999755859375f, .RepeatX = true, .RepeatY = true });
+			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "share/01_share1/7.layer").c_str());
+			_tileMap->ReadLayerConfiguration(LayerType::Other, layerFile, { .Depth = -300, .SpeedX = 0.229598999023438f, .SpeedY = 0.05999755859375f, .RepeatX = true, .RepeatY = false, .UseInherentOffset = true });
 		}
 		{
-			auto animTilesFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "prince/01_castle1/Animated.tiles").c_str());
+			auto animTilesFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "share/01_share1/Animated.tiles").c_str());
 			_tileMap->ReadAnimatedTiles(animTilesFile);
 		}
 
 		_eventMap = std::make_unique<Events::EventMap>(this, _tileMap->Size());
 		{
-			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "prince/01_castle1/Events.layer").c_str());
+			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "share/01_share1/Events.layer").c_str());
 			_eventMap->ReadEvents(layerFile, 1, _difficulty);
 		}
 

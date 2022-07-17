@@ -19,6 +19,10 @@ namespace Jazz2::Tiles
 	{
 		_tileSet = ContentResolver::Current().RequestTileSet(tileSetPath, true, nullptr);
 		_renderCommands.reserve(128);
+
+		if (_tileSet == nullptr) {
+			LOGE_X("Cannot load tileset \"%s\"", tileSetPath.c_str());
+		}
 	}
 
 	Vector2i TileMap::Size()

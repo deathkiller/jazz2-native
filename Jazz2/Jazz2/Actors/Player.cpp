@@ -743,7 +743,7 @@ namespace Jazz2::Actors
 						//SetTransition(currentAnimationState | AnimState::TRANSITION_IDLE_TO_SHOOT, false);
 					}
 
-					weaponInUse = FireWeapon(_currentWeapon);
+					weaponInUse = FireCurrentWeapon(_currentWeapon);
 				}
 			}
 		} else if (_wasFirePressed) {
@@ -1529,7 +1529,7 @@ namespace Jazz2::Actors
 		switch (tileEvent) {
 			case EventType::LightSet: { // Intensity, Red, Green, Blue, Flicker
 				// ToDo: Change only player view, handle splitscreen multiplayer
-				//_levelHandler->AmbientLightCurrent = p[0] * 0.01f;
+				//_levelHandler->AmbientLightCurrent = *(uint16_t*)&p[0] * 0.01f;
 				break;
 			}
 			case EventType::WarpOrigin: { // Warp ID, Fast, Set Lap
@@ -1538,12 +1538,12 @@ namespace Jazz2::Actors
 					if (!(levelHandler is MultiplayerLevelHandler))
 #endif
 					{
-						Vector2f c = events->GetWarpTarget(p[0]);
+						Vector2f c = events->GetWarpTarget(*(uint16_t*)&p[0]);
 						if (c.X >= 0.0f && c.Y >= 0.0f) {
-							WarpToPosition(c, p[1] != 0);
+							WarpToPosition(c, p[2] != 0);
 
 #if MULTIPLAYER && SERVER
-							if (p[2] != 0) {
+							if (p[4] != 0) {
 								((LevelHandler)levelHandler).OnPlayerIncrementLaps(this);
 							}
 #endif
@@ -1562,7 +1562,7 @@ namespace Jazz2::Actors
 			}
 			case EventType::ModifierTube: { // XSpeed, YSpeed, Wait Time, Trig Sample, Become Noclip, Noclip Only
 				// ToDo: Implement other parameters
-				if (p[4] == 0 && p[5] != 0 && (CollisionFlags & CollisionFlags::CollideWithTileset) == CollisionFlags::CollideWithTileset) {
+				if (p[8] == 0 && p[10] != 0 && (CollisionFlags & CollisionFlags::CollideWithTileset) == CollisionFlags::CollideWithTileset) {
 					break;
 				}
 
@@ -1574,8 +1574,8 @@ namespace Jazz2::Actors
 				SetState(ActorFlags::CanJump, false);
 				CollisionFlags &= ~CollisionFlags::ApplyGravitation;
 
-				_speed.X = (short)p[0];
-				_speed.Y = (short)p[1];
+				_speed.X = (float)*(int16_t*)&p[0];
+				_speed.Y = (float)*(int16_t*)&p[2];
 
 				Vector2f pos = _pos;
 				if (_speed.X == 0.0f) {
@@ -1593,7 +1593,7 @@ namespace Jazz2::Actors
 					OnUpdateHitbox();
 				}
 
-				if (p[4] != 0) { // Become No-clip
+				if (p[8] != 0) { // Become No-clip
 					CollisionFlags &= ~CollisionFlags::CollideWithTileset;
 					_inTubeTime = 60.0f;
 				} else {
@@ -1608,8 +1608,9 @@ namespace Jazz2::Actors
 #endif
 					{
 						// ToDo: Implement Fast parameter
-						if (p[4] <= _coins) {
-							_coins -= p[4];
+						uint16_t coinsRequired = *(uint16_t*)&p[8];
+						if (coinsRequired <= _coins) {
+							_coins -= coinsRequired;
 
 							/*string nextLevel;
 							if (p[2] == 0) {
@@ -1641,7 +1642,7 @@ namespace Jazz2::Actors
 					attachedHud ? .ShowLevelText(text, false);
 				}*/
 #endif
-				if (p[2] != 0) {
+				if (p[4] != 0) {
 					events->StoreTileEvent((int)(_pos.X / 32), (int)(_pos.Y / 32), EventType::Empty);
 				}
 				break;
@@ -1651,7 +1652,7 @@ namespace Jazz2::Actors
 					// ToDo: Call function #{p[0]}(sender, p[1]); implement level extensions
 				//attachedHud ? .ShowLevelText("\f[s:75]\f[w:95]\f[c:6]\n\n\n\nWARNING: Callbacks aren't implemented yet. (" + p[0] + ", " + p[1] + ")", false);
 #endif
-				if (p[2] != 0) {
+				if (p[4] != 0) {
 					events->StoreTileEvent((int)(_pos.X / 32), (int)(_pos.Y / 32), EventType::Empty);
 				}
 				break;
@@ -1714,7 +1715,7 @@ namespace Jazz2::Actors
 #endif
 					{
 						// ToDo: Implement Switch parameter
-						//tiles->SetTrigger(p[0], p[1] != 0);
+						//tiles->SetTrigger(*(uint16_t*)&p[0], p[2] != 0);
 					}
 				}
 				break;
@@ -1736,7 +1737,9 @@ namespace Jazz2::Actors
 				break;
 			}
 			case EventType::ModifierLimitCameraView: { // Left, Width
-				//_levelHandler->LimitCameraView((p[0] == 0 ? (int)(_pos.X / 32) : p[0]) * 32, p[1] * 32);
+				//uint16_t left = *(uint16_t*)&p[0];
+				//uint16_t width = *(uint16_t*)&p[2];
+				//_levelHandler->LimitCameraView((left == 0 ? (int)(_pos.X / 32) : left) * 32, width * 32);
 				break;
 			}
 
@@ -1746,7 +1749,7 @@ namespace Jazz2::Actors
 			}
 
 			case EventType::AreaWaterBlock: {
-				areaWaterBlock = ((int)_pos.Y / 32) * 32 + p[0];
+				areaWaterBlock = ((int)_pos.Y / 32) * 32 + *(uint16_t*)&p[0];
 				break;
 			}
 		}
@@ -1767,7 +1770,6 @@ namespace Jazz2::Actors
 			) {
 				if ((CollisionFlags & CollisionFlags::ApplyGravitation) == CollisionFlags::ApplyGravitation) {
 					float gravity = _levelHandler->Gravity;
-
 					_externalForce.Y = gravity * 2.0f * timeMult;
 					_speed.Y = std::min(gravity * timeMult, _speed.Y);
 				} else {
@@ -1782,8 +1784,10 @@ namespace Jazz2::Actors
 			(events->GetEventByPosition(AABBInner.R + ExtendedHitbox, AABBInner.B + ExtendedHitbox, &p) == EventType::AreaHForce) ||
 			(events->GetEventByPosition(AABBInner.L - ExtendedHitbox, AABBInner.B + ExtendedHitbox, &p) == EventType::AreaHForce)
 		   ) {
-			if ((p[5] != 0 || p[4] != 0)) {
-				MoveInstantly(Vector2f((p[5] - p[4]) * 0.4f * timeMult, 0), MoveType::Relative);
+			uint16_t p1 = *(uint16_t*)&p[8];
+			uint16_t p2 = *(uint16_t*)&p[10];
+			if ((p2 != 0 || p1 != 0)) {
+				MoveInstantly(Vector2f((p2 - p1) * 0.4f * timeMult, 0), MoveType::Relative);
 			}
 		}
 
@@ -1793,11 +1797,15 @@ namespace Jazz2::Actors
 			tileEvent = events->GetEventByPosition(_pos.X, _pos.Y + 32, &p);
 			switch (tileEvent) {
 				case EventType::AreaHForce: {
-					if (p[1] != 0 || p[0] != 0) {
-						MoveInstantly(Vector2f((p[1] - p[0]) * 0.4f * timeMult, 0), MoveType::Relative);
+					uint16_t p1 = *(uint16_t*)&p[0];
+					uint16_t p2 = *(uint16_t*)&p[2];
+					uint16_t p3 = *(uint16_t*)&p[4];
+					uint16_t p4 = *(uint16_t*)&p[6];
+					if (p2 != 0 || p1 != 0) {
+						MoveInstantly(Vector2f((p2 - p1) * 0.4f * timeMult, 0), MoveType::Relative);
 					}
-					if (p[3] != 0 || p[2] != 0) {
-						_speed.X += (p[3] - p[2]) * 0.1f;
+					if (p4 != 0 || p3 != 0) {
+						_speed.X += (p4 - p3) * 0.1f;
 					}
 					break;
 				}
@@ -1923,7 +1931,29 @@ namespace Jazz2::Actors
 		//PreloadMetadataAsync("Weapon/" + currentWeapon);
 	}
 
-	bool Player::FireWeapon(WeaponType weaponType)
+	template<typename T, WeaponType weaponType>
+	void Player::FireWeapon(float cooldownBase, float cooldownUpgrade)
+	{
+		// NOTE: cooldownBase and cooldownUpgrade cannot be template parameters in Emscripten
+		Vector3i initialPos;
+		Vector2f gunspotPos;
+		float angle;
+		GetFirePointAndAngle(initialPos, gunspotPos, angle);
+
+		std::shared_ptr<T> shot = std::make_shared<T>();
+		uint8_t shotParams[1] = { _weaponUpgrades[(int)weaponType] };
+		shot->OnActivated({
+			.LevelHandler = _levelHandler,
+			.Pos = initialPos,
+			.Params = shotParams
+		});
+		shot->OnFire(shared_from_this(), gunspotPos, _speed, angle, IsFacingLeft());
+		_levelHandler->AddActor(shot);
+
+		_weaponCooldown = cooldownBase - (_weaponUpgrades[(int)WeaponType::Blaster] * cooldownUpgrade);
+	}
+
+	bool Player::FireCurrentWeapon(WeaponType weaponType)
 	{
 		if (_weaponCooldown > 0.0f) {
 			return true;
@@ -1937,35 +1967,35 @@ namespace Jazz2::Actors
 		uint16_t ammoDecrease = 100;
 
 		switch (weaponType) {
-			case WeaponType::Blaster: FireWeapon<Weapons::BlasterShot, WeaponType::Blaster, 40.0f, 1.0f>(); break;
-			case WeaponType::Bouncer: FireWeapon<Weapons::BouncerShot, WeaponType::Bouncer, 32.0f, 0.85f>(); break;
-			/*case WeaponType::Freezer: FireWeaponFreezer(); break;
-			case WeaponType::Seeker: FireWeaponSeeker(); break;
-			case WeaponType::RF: FireWeaponRF(); break;
+			case WeaponType::Blaster: FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(40.0f, 1.0f); break;
+			case WeaponType::Bouncer: FireWeapon<Weapons::BouncerShot, WeaponType::Bouncer>(32.0f, 0.85f); break;
+				/*case WeaponType::Freezer: FireWeaponFreezer(); break;
+				case WeaponType::Seeker: FireWeaponSeeker(); break;
+				case WeaponType::RF: FireWeaponRF(); break;
 
-			case WeaponType::Toaster: {
-				if (!FireWeaponToaster()) {
-					return false;
+				case WeaponType::Toaster: {
+					if (!FireWeaponToaster()) {
+						return false;
+					}
+					ammoDecrease = 20;
+					break;
 				}
-				ammoDecrease = 20;
-				break;
-			}
 
-			case WeaponType::TNT: FireWeaponTNT(); break;
-			case WeaponType::Pepper: FireWeaponPepper(); break;
-			case WeaponType::Electro: FireWeaponElectro(); break;
+				case WeaponType::TNT: FireWeaponTNT(); break;
+				case WeaponType::Pepper: FireWeaponPepper(); break;
+				case WeaponType::Electro: FireWeaponElectro(); break;
 
-			case WeaponType::Thunderbolt: {
-				if (!FireWeaponThunderbolt()) {
-					return false;
-				}
-				if ((_weaponUpgrades[(int)weaponType] & 0x1) != 0) {
-					ammoDecrease = 25; // Lower ammo consumption with upgrade
-				} else {
-					ammoDecrease = 50;
-				}
-				break;
-			}*/
+				case WeaponType::Thunderbolt: {
+					if (!FireWeaponThunderbolt()) {
+						return false;
+					}
+					if ((_weaponUpgrades[(int)weaponType] & 0x1) != 0) {
+						ammoDecrease = 25; // Lower ammo consumption with upgrade
+					} else {
+						ammoDecrease = 50;
+					}
+					break;
+				}*/
 
 			default:
 				return false;
@@ -1985,27 +2015,6 @@ namespace Jazz2::Actors
 		}
 
 		return true;
-	}
-
-	template<typename T, WeaponType weaponType, float cooldownBase, float cooldownUpgrade>
-	void Player::FireWeapon()
-	{
-		Vector3i initialPos;
-		Vector2f gunspotPos;
-		float angle;
-		GetFirePointAndAngle(initialPos, gunspotPos, angle);
-
-		std::shared_ptr<T> shot = std::make_shared<T>();
-		uint8_t shotParams[1] = { _weaponUpgrades[(int)weaponType] };
-		shot->OnActivated({
-			.LevelHandler = _levelHandler,
-			.Pos = initialPos,
-			.Params = shotParams
-		});
-		shot->OnFire(shared_from_this(), gunspotPos, _speed, angle, IsFacingLeft());
-		_levelHandler->AddActor(shot);
-
-		_weaponCooldown = cooldownBase - (_weaponUpgrades[(int)WeaponType::Blaster] * cooldownUpgrade);
 	}
 
 	void Player::GetFirePointAndAngle(Vector3i& initialPos, Vector2f& gunspotPos, float& angle)

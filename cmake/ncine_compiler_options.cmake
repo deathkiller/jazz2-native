@@ -104,6 +104,12 @@ else() # GCC and LLVM
 		target_compile_options(ncine PUBLIC $<$<CONFIG:Debug>:-O1 -g -fsanitize=address -fsanitize-address-use-after-scope -fno-optimize-sibling-calls -fno-common -fno-omit-frame-pointer -rdynamic>)
 		target_link_options(ncine PUBLIC $<$<CONFIG:Debug>:-fsanitize=address>)
 	endif()
+	
+    # Only in debug - preserve debug information
+	if(EMSCRIPTEN)
+		target_compile_options(ncine PUBLIC $<$<CONFIG:Debug>:-g>)
+		target_link_options(ncine PUBLIC $<$<CONFIG:Debug>:-g>)
+	endif()
 
 	# Only in debug
 	if(("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang") AND

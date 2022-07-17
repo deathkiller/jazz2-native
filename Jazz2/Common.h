@@ -13,23 +13,7 @@
 #   include <Common.h>
 #endif
 
-// These attributes are not defined outside of MSVC
-#if !defined(__in)
-#	define __in
-#endif
-#if !defined(__in_opt)
-#	define __in_opt
-#endif
-#if !defined(__out)
-#	define __out
-#endif
-#if !defined(__out_opt)
-#	define __out_opt
-#endif
-#if !defined(__success)
-#	define __success(expr)
-#endif
-
+// Logging
 #if defined(ENABLE_LOG)
 
 enum class LogLevel {
@@ -43,46 +27,43 @@ enum class LogLevel {
 	Off
 };
 
-void __WriteLog(LogLevel logLevel, const char* fmt, ...);
+void __WriteLog(LogLevel level, const char* fmt, ...);
 
-#ifdef __GNUC__
-#	define FUNCTION __PRETTY_FUNCTION__
-#elif _MSC_VER
-#	define FUNCTION __FUNCTION__
+#	ifdef __GNUC__
+#		define FUNCTION __PRETTY_FUNCTION__
+#	elif _MSC_VER
+#		define FUNCTION __FUNCTION__
+#	else
+#		define FUNCTION __func__
+#	endif
+#
+#	define LOGV_X(fmt, ...) __WriteLog(LogLevel::Verbose, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
+#	define LOGD_X(fmt, ...) __WriteLog(LogLevel::Debug, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
+#	define LOGI_X(fmt, ...) __WriteLog(LogLevel::Info, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
+#	define LOGW_X(fmt, ...) __WriteLog(LogLevel::Warn, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
+#	define LOGE_X(fmt, ...) __WriteLog(LogLevel::Error, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
+#	define LOGF_X(fmt, ...) __WriteLog(LogLevel::Fatal, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
+#
+#	define LOGV(fmt) __WriteLog(LogLevel::Verbose, static_cast<const char *>("%s -> " fmt), FUNCTION)
+#	define LOGD(fmt) __WriteLog(LogLevel::Debug, static_cast<const char *>("%s -> " fmt), FUNCTION)
+#	define LOGI(fmt) __WriteLog(LogLevel::Info, static_cast<const char *>("%s -> " fmt), FUNCTION)
+#	define LOGW(fmt) __WriteLog(LogLevel::Warn, static_cast<const char *>("%s -> " fmt), FUNCTION)
+#	define LOGE(fmt) __WriteLog(LogLevel::Error, static_cast<const char *>("%s -> " fmt), FUNCTION)
+#	define LOGF(fmt) __WriteLog(LogLevel::Fatal, static_cast<const char *>("%s -> " fmt), FUNCTION)
 #else
-#	define FUNCTION __func__
-#endif
-
-#define LOGV_X(fmt, ...) __WriteLog(LogLevel::Verbose, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
-#define LOGD_X(fmt, ...) __WriteLog(LogLevel::Debug, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
-#define LOGI_X(fmt, ...) __WriteLog(LogLevel::Info, static_cast<const char *>("%s, -> " fmt), FUNCTION, ##__VA_ARGS__)
-#define LOGW_X(fmt, ...) __WriteLog(LogLevel::Warn, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
-#define LOGE_X(fmt, ...) __WriteLog(LogLevel::Error, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
-#define LOGF_X(fmt, ...) __WriteLog(LogLevel::Fatal, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
-
-#define LOGV(fmt) __WriteLog(LogLevel::Verbose, static_cast<const char *>("%s -> " fmt), FUNCTION)
-#define LOGD(fmt) __WriteLog(LogLevel::Debug, static_cast<const char *>("%s -> " fmt), FUNCTION)
-#define LOGI(fmt) __WriteLog(LogLevel::Info, static_cast<const char *>("%s, -> " fmt), FUNCTION)
-#define LOGW(fmt) __WriteLog(LogLevel::Warn, static_cast<const char *>("%s -> " fmt), FUNCTION)
-#define LOGE(fmt) __WriteLog(LogLevel::Error, static_cast<const char *>("%s -> " fmt), FUNCTION)
-#define LOGF(fmt) __WriteLog(LogLevel::Fatal, static_cast<const char *>("%s -> " fmt), FUNCTION)
-
-#else
-
-#define LOGV_X(fmt, ...)
-#define LOGD_X(fmt, ...)
-#define LOGI_X(fmt, ...)
-#define LOGW_X(fmt, ...)
-#define LOGE_X(fmt, ...)
-#define LOGF_X(fmt, ...)
-
-#define LOGV(fmt)
-#define LOGD(fmt)
-#define LOGI(fmt)
-#define LOGW(fmt)
-#define LOGE(fmt)
-#define LOGF(fmt)
-
+#	define LOGV_X(fmt, ...)
+#	define LOGD_X(fmt, ...)
+#	define LOGI_X(fmt, ...)
+#	define LOGW_X(fmt, ...)
+#	define LOGE_X(fmt, ...)
+#	define LOGF_X(fmt, ...)
+#
+#	define LOGV(fmt)
+#	define LOGD(fmt)
+#	define LOGI(fmt)
+#	define LOGW(fmt)
+#	define LOGE(fmt)
+#	define LOGF(fmt)
 #endif
 
 // Return assert macros

@@ -375,7 +375,7 @@ namespace nCine
 		RenderResources::setCurrentViewport(this);
 		{
 			theApplication().appEventHandler_->onDrawViewport(*this);
-			LOGV_X("IAppEventHandler::onDrawViewport() invoked with viewport 0x%lx", uintptr_t(this));
+			//LOGV_X("IAppEventHandler::onDrawViewport() invoked with viewport 0x%lx", uintptr_t(this));
 		}
 
 		if (type_ == Type::WITH_TEXTURE) {

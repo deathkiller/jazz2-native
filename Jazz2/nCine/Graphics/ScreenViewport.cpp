@@ -44,9 +44,9 @@ namespace nCine {
 
 		viewportRect_.Set(0, 0, width, height);
 
-		if (camera_ != nullptr)
-			camera_->setOrthoProjection(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height));
-		//RenderResources::defaultCamera_->setOrthoProjection(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height));
+		if (camera_ != nullptr) {
+			camera_->setOrthoProjection(width * (-0.5f), width * (+0.5f), height * (+0.5f), height * (-0.5f));
+		}
 		RenderResources::defaultCamera_->setOrthoProjection(width * (-0.5f), width * (+0.5f), height * (+0.5f), height * (-0.5f));
 
 		width_ = width;
