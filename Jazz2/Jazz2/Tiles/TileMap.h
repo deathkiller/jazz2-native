@@ -154,7 +154,6 @@ namespace Jazz2::Tiles
 
 		void SetSolidLimit(int tileLeft, int tileWidth);
 
-		RenderCommand* RentRenderCommand();
 		void ReadLayerConfiguration(LayerType type, const std::unique_ptr<IFileStream>& s, const LayerDescription& layer);
 		void ReadAnimatedTiles(const std::unique_ptr<IFileStream>& s);
 		void SetTileEventFlags(int x, int y, EventType tileEvent, uint8_t* tileParams);
@@ -183,6 +182,7 @@ namespace Jazz2::Tiles
 
 		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer);
 		static float TranslateCoordinate(float coordinate, float speed, float offset, bool isY, int viewHeight, int viewWidth);
+		RenderCommand* RentRenderCommand();
 
 		bool AdvanceDestructibleTileAnimation(LayerTile& tile, int tx, int ty, int& amount, const std::string& soundName);
 		void AdvanceCollapsingTileTimers(float timeMult);

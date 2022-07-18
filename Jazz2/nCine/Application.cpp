@@ -1,21 +1,20 @@
-﻿#if defined(_WIN32)
-#   pragma comment(lib, "opengl32.lib")
-
-#   if defined(_M_X64)
-#       pragma comment(lib, "../Libs/x64/glew32.lib")
-#       pragma comment(lib, "../Libs/x64/glfw3dll.lib")
-#       ifdef WITH_AUDIO
-#           pragma comment(lib, "../Libs/x64/OpenAL32.lib")
-#       endif
-#   elif defined(_M_IX86)
-#       pragma comment(lib, "../Libs/x86/glew32.lib")
-#       pragma comment(lib, "../Libs/x86/glfw3dll.lib")
-#       ifdef WITH_AUDIO
-#           pragma comment(lib, "../Libs/x86/OpenAL32.lib")
-#       endif
-#   else
-#       error Unsupported architecture
-#   endif
+﻿#if defined(_WIN32) && !defined(CMAKE_BUILD)
+#	pragma comment(lib, "opengl32.lib")
+#	if defined(_M_X64)
+#		pragma comment(lib, "../Libs/x64/glew32.lib")
+#		pragma comment(lib, "../Libs/x64/glfw3dll.lib")
+#		ifdef WITH_AUDIO
+#			pragma comment(lib, "../Libs/x64/OpenAL32.lib")
+#		endif
+#	elif defined(_M_IX86)
+#		pragma comment(lib, "../Libs/x86/glew32.lib")
+#		pragma comment(lib, "../Libs/x86/glfw3dll.lib")
+#		ifdef WITH_AUDIO
+#			pragma comment(lib, "../Libs/x86/OpenAL32.lib")
+#		endif
+#	else
+#		error Unsupported architecture
+#	endif
 
 extern "C"
 {

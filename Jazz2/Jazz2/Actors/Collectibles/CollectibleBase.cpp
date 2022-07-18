@@ -69,6 +69,17 @@ namespace Jazz2::Actors::Collectibles
 		}
 	}
 
+	void CollectibleBase::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
+	{
+		// TODO: Illuminate
+		auto& light = lights.emplace_back();
+		light.Pos = _pos;
+		light.Intensity = 0.6f;
+		light.Brightness = 0.2f;
+		light.RadiusNear = 40;
+		light.RadiusFar = 80;
+	}
+
 	bool CollectibleBase::OnHandleCollision(ActorBase* other)
 	{
 		if (auto player = dynamic_cast<Player*>(other)) {

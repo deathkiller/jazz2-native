@@ -485,6 +485,10 @@ endif()
 #	list(APPEND SOURCES ${NCINE_ROOT}/src/graphics/RenderDocCapture.cpp)
 #endif()
 
+if(LIBDEFLATE_FOUND)
+    target_link_libraries(ncine PRIVATE libdeflate)
+endif()
+
 if(NCINE_BUILD_ANDROID)
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/nCine/Android/AndroidApplication.h

@@ -123,6 +123,7 @@ namespace nCine
 		Shader& operator=(const Shader&) = delete;
 
 		friend class ShaderState;
+		friend class Material;
 	};
 
 }

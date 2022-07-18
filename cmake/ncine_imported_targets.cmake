@@ -237,9 +237,14 @@ elseif(MSVC)
 		endif()
 
 		add_library(OpenGL::GL SHARED IMPORTED)
-		set_target_properties(OpenGL::GL PROPERTIES
+		if(EXISTS ${MSVC_LIBDIR}/opengl32.lib)
+			set_target_properties(OpenGL::GL PROPERTIES
+				IMPORTED_IMPLIB ${MSVC_LIBDIR}/opengl32.lib)
+		else()
+			set_target_properties(OpenGL::GL PROPERTIES
 				IMPORTED_IMPLIB opengl32.lib
 				IMPORTED_LOCATION opengl32.dll)
+		endif()
 		set(OPENGL_FOUND 1)
 	endif()
 
@@ -333,6 +338,15 @@ elseif(MSVC)
 			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_MSVC_DIR}")
 		set(LUA_FOUND 1)
 	endif()
+	
+	if(EXISTS ${MSVC_LIBDIR}/libdeflate.lib AND EXISTS ${MSVC_BINDIR}/libdeflate.dll)
+        add_library(libdeflate SHARED IMPORTED)
+        set_target_properties(libdeflate PROPERTIES
+            IMPORTED_IMPLIB ${MSVC_LIBDIR}/libdeflate.lib
+            IMPORTED_LOCATION ${MSVC_BINDIR}/libdeflate.dll
+            INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_MSVC_DIR}")
+        set(LIBDEFLATE_FOUND 1)
+    endif()
 elseif(MINGW OR MSYS)
 	function(set_msys_dll PREFIX DLL_NAME)
 		set(LIB_NAME "${DLL_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}")

@@ -36,12 +36,7 @@ namespace Jazz2::Actors::Weapons
 
 		SetAnimation(state);
 
-		// TODO
-		/*LightEmitter light = AddComponent<LightEmitter>();
-		light.Intensity = 0.8f;
-		light.Brightness = 0.6f;
-		light.RadiusNear = 5f;
-		light.RadiusFar = 20f;*/
+		_renderer.setBlendingPreset(DrawableNode::BlendingPreset::ADDITIVE);
 
 		co_return true;
 	}
@@ -99,6 +94,16 @@ namespace Jazz2::Actors::Weapons
 			_pos.X + 8,
 			_pos.Y + 8
 		);
+	}
+
+	void BlasterShot::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
+	{
+		auto& light = lights.emplace_back();
+		light.Pos = _pos;
+		light.Intensity = 0.8f;
+		light.Brightness = 0.6f;
+		light.RadiusNear = 5.0f;
+		light.RadiusFar = 20.0f;
 	}
 
 	bool BlasterShot::OnPerish(ActorBase* collider)

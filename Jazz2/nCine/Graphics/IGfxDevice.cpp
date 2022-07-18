@@ -1,6 +1,7 @@
 #define NCINE_INCLUDE_OPENGL
 #include "../CommonHeaders.h"
 
+#include "../../Common.h"
 #include "IGfxDevice.h"
 #include "../Primitives/Colorf.h"
 #include "GL/GLDepthTest.h"
@@ -13,16 +14,18 @@
 #include "../Application.h"
 #endif
 
-namespace nCine {
-
+namespace nCine
+{
 #ifdef __EMSCRIPTEN__
 	EM_BOOL IGfxDevice::resize_callback(int eventType, const EmscriptenUiEvent* event, void* userData)
 	{
+		LOGI_X("Canvas was resized to %ix%i", event->windowInnerWidth, event->windowInnerHeight);
+
 		// Change resolution only if the canvas fills all the available space
-		if (event->documentBodyClientWidth == 0 || event->documentBodyClientHeight == 0) {
+		//if (event->documentBodyClientWidth == 0 || event->documentBodyClientHeight == 0) {
 			IGfxDevice* gfxDevice = reinterpret_cast<IGfxDevice*>(userData);
 			gfxDevice->setResolution(event->windowInnerWidth, event->windowInnerHeight);
-		}
+		//}
 
 		return 1;
 	}

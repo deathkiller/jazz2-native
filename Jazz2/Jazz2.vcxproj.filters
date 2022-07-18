@@ -714,6 +714,9 @@
     <ClInclude Include="nCine\Graphics\ShaderState.h">
       <Filter>Header Files\nCine\Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\LightEmitter.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

@@ -783,6 +783,15 @@ namespace Jazz2::Actors
 		}
 	}
 
+	void Player::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
+	{
+		auto& light = lights.emplace_back();
+		light.Pos = _pos;
+		light.Intensity = 1.0f;
+		light.RadiusNear = 40;
+		light.RadiusFar = 110;
+	}
+
 	bool Player::OnPerish(ActorBase* collider)
 	{
 		if (_currentTransitionState == AnimState::TransitionDeath) {

@@ -6,8 +6,13 @@
 #include "Events/EventSpawner.h"
 #include "Tiles/TileMap.h"
 #include "Collisions/DynamicTreeBroadPhase.h"
+#include "../nCine/Graphics/Shader.h"
+#include "../nCine/Graphics/ShaderState.h"
 
 #include <SmallVector.h>
+
+// TODO
+#define ENABLE_POSTPROCESSING 1
 
 namespace Jazz2
 {
@@ -95,7 +100,96 @@ namespace Jazz2
 		std::unique_ptr<Viewport> _view;
 		std::unique_ptr<Texture> _viewTexture;
 		std::unique_ptr<Camera> _camera;
+#if ENABLE_POSTPROCESSING
+		class LightingRenderer : public SceneNode
+		{
+		public:
+			LightingRenderer(LevelHandler* owner)
+				: _owner(owner), _renderCommandsCount(0)
+			{
+			}
+
+			bool OnDraw(RenderQueue& renderQueue) override;
+
+		private:
+			LevelHandler* _owner;
+			Death::SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
+			int _renderCommandsCount;
+
+			RenderCommand* RentRenderCommand();
+		};
+
+		class BlurRenderPass : public SceneNode
+		{
+		public:
+			BlurRenderPass(LevelHandler* owner)
+				: _owner(owner)
+			{
+			}
+
+			void Initialize(Texture* source, int width, int height, const Vector2f& direction, int level);
+			void Register();
+
+			bool OnDraw(RenderQueue& renderQueue) override;
+
+			Texture* GetTarget() const {
+				return _target.get();
+			}
+
+		private:
+			LevelHandler* _owner;
+			std::unique_ptr<Texture> _target;
+			std::unique_ptr<Viewport> _view;
+			std::unique_ptr<Camera> _camera;
+			RenderCommand _renderCommand;
+
+			Texture* _source;
+			bool _downsample;
+			Vector2f _direction;
+		};
+
+		class CombineRenderer : public SceneNode
+		{
+		public:
+			CombineRenderer(LevelHandler* owner)
+				: _owner(owner)
+			{
+			}
+
+			void Initialize();
+
+			bool OnDraw(RenderQueue& renderQueue) override;
+
+			void setSize(float width, float height) {
+				_size.X = width;
+				_size.Y = height;
+			}
+
+		private:
+			LevelHandler* _owner;
+			RenderCommand _renderCommand;
+			Vector2f _size;
+		};
+
+		std::unique_ptr<LightingRenderer> _lightingRenderer;
+		std::unique_ptr<CombineRenderer> _viewSprite;
+		std::unique_ptr<Viewport> _lightingView;
+		std::unique_ptr<Texture> _lightingBuffer;
+
+
+		std::unique_ptr<Shader> _lightingShader;
+		std::unique_ptr<Shader> _blurShader;
+		std::unique_ptr<Shader> _downsampleShader;
+		std::unique_ptr<Shader> _combineShader;
+		
+		BlurRenderPass _downsamplePass;
+		BlurRenderPass _blurPass2;
+		BlurRenderPass _blurPass1;
+		BlurRenderPass _blurPass3;
+		BlurRenderPass _blurPass4;
+#else
 		std::unique_ptr<Sprite> _viewSprite;
+#endif
 
 		Death::SmallVector<std::shared_ptr<ActorBase>, 0> _actors;
 		Death::SmallVector<Actors::Player*, LevelInitialization::MaxPlayerCount> _players;

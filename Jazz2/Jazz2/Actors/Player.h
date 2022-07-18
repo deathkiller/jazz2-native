@@ -18,6 +18,7 @@ namespace Jazz2::Actors
 		Player();
 
 		void OnUpdate(float timeMult) override;
+		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 
 		void ReceiveLevelCarryOver(ExitType exitType, const PlayerCarryOver& carryOver);
 		PlayerCarryOver PrepareLevelCarryOver();

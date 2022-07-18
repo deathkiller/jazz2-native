@@ -627,11 +627,12 @@ namespace Jazz2::Tiles
 
 					auto command = RentRenderCommand();
 
+					// NOTE: Added offset to fix alignment issues
 					Vector2i texSize = _tileSet->_textureDiffuse->size();
-					float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
-					float texBiasX = ((tileId % _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.X);
-					float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
-					float texBiasY = ((tileId / _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.Y);
+					float texScaleX = (-0.5f + TileSet::DefaultTileSize) / float(texSize.X);
+					float texBiasX = (0.5f + (tileId % _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.X);
+					float texScaleY = (0.5f + TileSet::DefaultTileSize) / float(texSize.Y);
+					float texBiasY = (-0.5f + (tileId / _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.Y);
 
 					// ToDo: Flip normal map somehow
 					if (isFlippedX) {
@@ -648,7 +649,7 @@ namespace Jazz2::Tiles
 					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, alpha / 255.0f).Data());
 
-					Matrix4x4f worldMatrix = Matrix4x4f::Translation(std::round(x2) + (TileSet::DefaultTileSize / 2), std::round(y2) + (TileSet::DefaultTileSize / 2), 0);
+					Matrix4x4f worldMatrix = Matrix4x4f::Translation(std::floor(x2) + (TileSet::DefaultTileSize / 2), std::floor(y2) + (TileSet::DefaultTileSize / 2), 0);
 					command->setTransformation(worldMatrix);
 					command->setLayer(layer.Depth);
 					command->material().setTexture(*_tileSet->_textureDiffuse);

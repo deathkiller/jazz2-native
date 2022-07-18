@@ -18,6 +18,7 @@ namespace Jazz2::Actors::Weapons
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
+		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 		bool OnPerish(ActorBase* collider) override;
 		void OnHitWall() override;
 		void OnHitFloor() override;

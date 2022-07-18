@@ -7,6 +7,7 @@
 #include "../nCine/Graphics/Sprite.h"
 #include "../nCine/Graphics/Texture.h"
 #include "../nCine/Graphics/Viewport.h"
+#include "../nCine/Graphics/RenderQueue.h"
 #include "../nCine/Base/Random.h"
 
 #include "Actors/Player.h"
@@ -37,6 +38,13 @@ namespace Jazz2
 		_ambientLightDefault(1.0f),
 		_ambientLightCurrent(1.0f),
 		_ambientLightTarget(1.0f),
+#if ENABLE_POSTPROCESSING
+		_downsamplePass(this),
+		_blurPass1(this),
+		_blurPass2(this),
+		_blurPass3(this),
+		_blurPass4(this),
+#endif
 		_pressedActions(0)
 	{
 		auto& resolver = Jazz2::ContentResolver::Current();
@@ -163,6 +171,9 @@ namespace Jazz2
 		_levelBounds = _tileMap->LevelBounds();
 		_viewBounds = Rectf((float)_levelBounds.X, (float)_levelBounds.Y, (float)_levelBounds.W, (float)_levelBounds.H);
 		_viewBoundsTarget = _viewBounds;
+
+		// TODO
+		_ambientLightTarget = 0.4f;
 	}
 
 	void LevelHandler::OnBeginFrame()
@@ -344,6 +355,8 @@ namespace Jazz2
 
 		UpdateCamera(timeMult);
 
+		_lightingView->setClearColor(_ambientLightCurrent, 0.0f, 0.0f, 1.0f);
+
 		// TODO: DEBUG
 #if _DEBUG
 		static float _debugRefresh = 0;
@@ -432,16 +445,219 @@ namespace Jazz2
 		_view->setCamera(_camera.get());
 		_view->setRootNode(_rootNode.get());
 
-		Viewport::chain().push_back(_view.get());
+#if ENABLE_POSTPROCESSING
+		if (_lightingRenderer == nullptr) {
+			constexpr char LightingVs[] = R"(
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
 
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+out vec4 vTexCoords;
+out vec4 vColor;
+
+void main()
+{
+	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = texRect;
+	vColor = vec4(color.x, color.y, aPosition.x * 2.0, aPosition.y * 2.0);
+}
+)";
+
+			constexpr char LightingFs[] = R"(
+#ifdef GL_ES
+precision mediump float;
+#endif
+uniform vec2 ViewSize;
+
+uniform sampler2D uTexture; // Normal
+
+in vec4 vTexCoords;
+in vec4 vColor;
+
+out vec4 fragColor;
+
+float lightBlend(float t) {
+	return t * t;
+}
+
+void main() {
+	vec2 center = vTexCoords.xy;
+	float radiusNear = vTexCoords.z;
+	float intensity = vColor.r;
+	float brightness = vColor.g;
+
+	float dist = distance(vec2(0.0, 0.0), vec2(vColor.z, vColor.w));
+	if (dist > 1.0) {
+		fragColor = vec4(0.0, 0.0, 0.0, 1.0);
+		return;
+	}
+
+	// TODO
+	/*vec4 clrNormal = texture(uTexture, vec2(gl_FragCoord) / ViewSize);
+	vec3 normal = normalize(clrNormal.xyz - vec3(0.5, 0.5, 0.5));
+	normal.z = -normal.z;*/
+	vec3 normal = vec3(0.5, 0.5, 0.5);
+
+	vec3 lightDir = vec3((center.x - gl_FragCoord.x), (center.y - gl_FragCoord.y), 0);
+
+	// Diffuse lighting
+	float diffuseFactor = 1.0 - max(dot(normal, normalize(lightDir)), 0.0);
+	diffuseFactor = diffuseFactor * 0.8 + 0.2;
+	
+	float strength = diffuseFactor * lightBlend(clamp(1.0 - ((dist - radiusNear) / (1.0 - radiusNear)), 0.0, 1.0));
+	fragColor = vec4(strength * intensity, strength * brightness, 0.0, 1.0);
+}
+)";
+
+			constexpr char BlurFs[] = R"(
+#ifdef GL_ES
+precision mediump float;
+#endif
+uniform sampler2D uTexture;
+uniform vec2 uPixelOffset;
+uniform vec2 uDirection;
+in vec2 vTexCoords;
+out vec4 fragColor;
+void main()
+{
+	vec4 color = vec4(0.0);
+	vec2 off1 = vec2(1.3846153846) * uPixelOffset * uDirection;
+	vec2 off2 = vec2(3.2307692308) * uPixelOffset * uDirection;
+	color += texture(uTexture, vTexCoords) * 0.2270270270;
+	color += texture(uTexture, vTexCoords + off1) * 0.3162162162;
+	color += texture(uTexture, vTexCoords - off1) * 0.3162162162;
+	color += texture(uTexture, vTexCoords + off2) * 0.0702702703;
+	color += texture(uTexture, vTexCoords - off2) * 0.0702702703;
+	fragColor = color;
+}
+)";
+
+			constexpr char DownsampleFs[] = R"(
+#ifdef GL_ES
+precision mediump float;
+#endif
+uniform sampler2D uTexture;
+uniform vec2 uPixelOffset;
+in vec2 vTexCoords;
+out vec4 fragColor;
+void main()
+{
+	vec4 color = texture(uTexture, vTexCoords);
+	color += texture(uTexture, vTexCoords + vec2(0.0, uPixelOffset.y));
+	color += texture(uTexture, vTexCoords + vec2(uPixelOffset.x, 0.0));
+	color += texture(uTexture, vTexCoords + uPixelOffset);
+	fragColor = vec4(0.25) * color;
+}
+)";
+
+			constexpr char CombineFs[] = R"(
+#ifdef GL_ES
+precision mediump float;
+#endif
+uniform vec2 ViewSize;
+
+uniform sampler2D uTexture;
+uniform sampler2D lightTex;
+uniform sampler2D blurHalfTex;
+uniform sampler2D blurQuarterTex;
+
+uniform float ambientLight;
+uniform vec4 darknessColor;
+
+in vec2 vTexCoords;
+in vec4 vColor;
+
+out vec4 fragColor;
+
+float lightBlend(float t) {
+	return t * t;
+}
+
+void main() {
+	vec4 blur1 = texture(blurHalfTex, vTexCoords);
+	vec4 blur2 = texture(blurQuarterTex, vTexCoords);
+
+	vec4 main = texture(uTexture, vTexCoords);
+	vec4 light = texture(lightTex, vTexCoords);
+
+	vec4 blur = (blur1 + blur2) * vec4(0.5);
+
+	float gray = dot(blur.rgb, vec3(0.299, 0.587, 0.114));
+	blur = vec4(gray, gray, gray, blur.a);
+
+	fragColor = mix(mix(
+		main * (1.0 + light.g),
+		blur,
+		vec4(clamp((1.0 - light.r) / sqrt(max(ambientLight, 0.35)), 0.0, 1.0))
+	), darknessColor, vec4(1.0 - light.r));
+	fragColor.a = 1.0;
+}
+)";
+
+			_lightingShader = std::make_unique<Shader>("Lighting", Shader::LoadMode::STRING, LightingVs, LightingFs);
+			_blurShader = std::make_unique<Shader>("Blur", Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, BlurFs);
+			_downsampleShader = std::make_unique<Shader>("Downsample", Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, DownsampleFs);
+			_combineShader = std::make_unique<Shader>("Combine", Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, CombineFs);
+
+			_lightingRenderer = std::make_unique<LightingRenderer>(this);
+
+		}
+
+		if (_lightingBuffer == nullptr) {
+			_lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, w, h);
+		} else {
+			_lightingBuffer->init(nullptr, Texture::Format::RG8, w, h);
+		}
+		_lightingBuffer->setMagFiltering(SamplerFilter::Nearest);
+
+		_lightingView = std::make_unique<Viewport>(_lightingBuffer.get(), Viewport::DepthStencilFormat::NONE);
+		_lightingView->setRootNode(_lightingRenderer.get());
+		_lightingView->setCamera(_camera.get());
+
+		_downsamplePass.Initialize(_viewTexture.get(), w / 2, h / 2, Vector2f::Zero, 0);
+		_blurPass1.Initialize(_downsamplePass.GetTarget(), w / 2, h / 2, Vector2f(1.0f, 0.0f), 1);
+		_blurPass2.Initialize(_blurPass1.GetTarget(), w / 2, h / 2, Vector2f(0.0f, 1.0f), 1);
+		_blurPass3.Initialize(_blurPass2.GetTarget(), w / 4, h / 4, Vector2f(1.0f, 0.0f), 1);
+		_blurPass4.Initialize(_blurPass3.GetTarget(), w / 4, h / 4, Vector2f(0.0f, 1.0f), 1);
+
+		// Viewports must be registered in reverse order
+		_blurPass4.Register();
+		_blurPass3.Register();
+		_blurPass2.Register();
+		_blurPass1.Register();
+		_downsamplePass.Register();
+
+		Viewport::chain().push_back(_lightingView.get());
+
+		if (_viewSprite == nullptr) {
+			SceneNode& rootNode = theApplication().rootNode();
+			_viewSprite = std::make_unique<CombineRenderer>(this);
+			_viewSprite->setParent(&rootNode);
+		}
+
+		_viewSprite->Initialize();
+#else
 		if (_viewSprite == nullptr) {
 			SceneNode& rootNode = theApplication().rootNode();
 			_viewSprite = std::make_unique<Sprite>(&rootNode, _viewTexture.get(), 0.0f, 0.0f);
 		}
-		_viewSprite->setTexRect(Recti(0, 0, w, h));
+
+		_viewSprite->setBlendingEnabled(false);
+#endif
 		_viewSprite->setSize((float)width, (float)height);
 		_viewSprite->setPosition(0, 0);
-		_viewSprite->setBlendingEnabled(false);
+
+		Viewport::chain().push_back(_view.get());
 	}
 
 	void LevelHandler::OnKeyPressed(const KeyboardEvent& event)
@@ -877,4 +1093,166 @@ namespace Jazz2
 			_pressedActions |= (1 << (int)PlayerActions::SwitchWeapon);
 		}
 	}
+
+#if ENABLE_POSTPROCESSING
+	bool LevelHandler::LightingRenderer::OnDraw(RenderQueue& renderQueue)
+	{
+		_renderCommandsCount = 0;
+
+		// Collect all active light emitters
+		// TODO: move this to class variable
+		SmallVector<LightEmitter, 8> emittedLights;
+		for (auto& actor : _owner->_actors) {
+			actor->OnEmitLights(emittedLights);
+		}
+
+		auto viewSize = _owner->_viewTexture->size();
+		auto viewPos = _owner->_cameraPos;
+		for (auto& light : emittedLights) {
+			auto command = RentRenderCommand();
+			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+			instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(light.Pos.X, light.Pos.Y, light.RadiusNear / light.RadiusFar, 0.0f);
+			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(light.RadiusFar * 2, light.RadiusFar * 2);
+			instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(light.Intensity, light.Brightness, 0.0f, 0.0f);
+			command->setTransformation(Matrix4x4f::Translation(light.Pos.X, light.Pos.Y, 0));
+
+			renderQueue.addCommand(command);
+		}
+
+		return true;
+	}
+
+	RenderCommand* LevelHandler::LightingRenderer::RentRenderCommand()
+	{
+		if (_renderCommandsCount < _renderCommands.size()) {
+			RenderCommand* command = _renderCommands[_renderCommandsCount].get();
+			_renderCommandsCount++;
+			return command;
+		} else {
+			std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
+			command->setType(RenderCommand::CommandTypes::SPRITE);
+			command->material().setShader(_owner->_lightingShader.get());
+			command->material().setBlendingEnabled(true);
+			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+			command->material().reserveUniformsDataMemory();
+			command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+
+			GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+			if (textureUniform && textureUniform->intValue(0) != 0) {
+				textureUniform->setIntValue(0); // GL_TEXTURE0
+			}
+			return command.get();
+		}
+	}
+
+	void LevelHandler::BlurRenderPass::Initialize(Texture* source, int width, int height, const Vector2f& direction, int level)
+	{
+		bool downsample = false;
+		if (level < 1) {
+			downsample = true;
+			level = 1;
+		}
+
+		_source = source;
+		_downsample = downsample;
+		_direction = direction;
+
+		if (_camera == nullptr) {
+			_camera = std::make_unique<Camera>();
+		}
+		_camera->setOrthoProjection(width * (-0.5f), width * (+0.5f), height * (-0.5f), height * (+0.5f));
+		_camera->setView(0, 0, 0, 1);
+
+		if (_target == nullptr) {
+			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
+		} else {
+			_target->init(nullptr, Texture::Format::RGB8, width, height);
+		}
+		_target->setMagFiltering(SamplerFilter::Linear);
+
+		_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);
+		_view->setRootNode(this);
+		_view->setCamera(_camera.get());
+
+		// Prepare render command
+		_renderCommand.setType(RenderCommand::CommandTypes::SPRITE);
+		_renderCommand.material().setShader(downsample ? _owner->_downsampleShader.get() : _owner->_blurShader.get());
+		//_renderCommand.material().setBlendingEnabled(true);
+		_renderCommand.material().reserveUniformsDataMemory();
+		_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+
+		GLUniformCache* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
+		if (textureUniform && textureUniform->intValue(0) != 0) {
+			textureUniform->setIntValue(0); // GL_TEXTURE0
+		}
+	}
+
+	void LevelHandler::BlurRenderPass::Register()
+	{
+		Viewport::chain().push_back(_view.get());
+	}
+
+	bool LevelHandler::BlurRenderPass::OnDraw(RenderQueue& renderQueue)
+	{
+		auto size = _target->size();
+
+		auto instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
+		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, -1.0f, 1.0f);
+		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(size.X, size.Y);
+		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+
+		_renderCommand.material().uniform("uPixelOffset")->setFloatValue(1.0f / size.X, 1.0f / size.Y);
+		if (!_downsample) {
+			_renderCommand.material().uniform("uDirection")->setFloatValue(_direction.X, _direction.Y);
+		}
+		_renderCommand.material().setTexture(0, *_source);
+
+		renderQueue.addCommand(&_renderCommand);
+
+		return true;
+	}
+
+	void LevelHandler::CombineRenderer::Initialize()
+	{
+		_renderCommand.setType(RenderCommand::CommandTypes::SPRITE);
+		_renderCommand.material().setShader(_owner->_combineShader.get());
+		//_renderCommand.material().setBlendingEnabled(true);
+		_renderCommand.material().reserveUniformsDataMemory();
+		_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+
+		GLUniformCache* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
+		if (textureUniform && textureUniform->intValue(0) != 0) {
+			textureUniform->setIntValue(0); // GL_TEXTURE0
+		}
+		GLUniformCache* lightTexUniform = _renderCommand.material().uniform("lightTex");
+		if (lightTexUniform && lightTexUniform->intValue(0) != 1) {
+			lightTexUniform->setIntValue(1); // GL_TEXTURE1
+		}
+		GLUniformCache* blurHalfTexUniform = _renderCommand.material().uniform("blurHalfTex");
+		if (blurHalfTexUniform && blurHalfTexUniform->intValue(0) != 2) {
+			blurHalfTexUniform->setIntValue(2); // GL_TEXTURE2
+		}
+		GLUniformCache* blurQuarterTexUniform = _renderCommand.material().uniform("blurQuarterTex");
+		if (blurQuarterTexUniform && blurQuarterTexUniform->intValue(0) != 3) {
+			blurQuarterTexUniform->setIntValue(3); // GL_TEXTURE3
+		}
+	}
+
+	bool LevelHandler::CombineRenderer::OnDraw(RenderQueue& renderQueue)
+	{
+		_renderCommand.material().setTexture(0, *_owner->_viewTexture);
+		_renderCommand.material().setTexture(1, *_owner->_lightingBuffer);
+		_renderCommand.material().setTexture(2, *_owner->_blurPass2.GetTarget());
+		_renderCommand.material().setTexture(3, *_owner->_blurPass4.GetTarget());
+
+		auto instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
+		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
+		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(_size.X, _size.Y);
+		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+
+		renderQueue.addCommand(&_renderCommand);
+
+		return true;
+	}
+#endif
 }

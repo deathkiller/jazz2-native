@@ -1,4 +1,4 @@
-﻿#if defined(_WIN32)
+﻿#if defined(_WIN32) && !defined(CMAKE_BUILD)
 #   if defined(_M_X64)
 #       pragma comment(lib, "../Libs/x64/libdeflate.lib")
 #   elif defined(_M_IX86)

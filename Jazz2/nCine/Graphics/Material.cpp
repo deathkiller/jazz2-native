@@ -89,6 +89,17 @@ namespace nCine
 		RenderResources::setDefaultAttributesParameters(*shaderProgram_);
 	}
 
+	void Material::setShader(Shader* shader)
+	{
+		shaderProgramType_ = ShaderProgramType::CUSTOM;
+		shaderProgram_ = shader->glShaderProgram_.get();
+		// The camera uniforms are handled separately as they have a different update frequency
+		shaderUniforms_.setProgram(shaderProgram_, nullptr, ProjectionViewMatrixExcludeString);
+		shaderUniformBlocks_.setProgram(shaderProgram_);
+
+		RenderResources::setDefaultAttributesParameters(*shaderProgram_);
+	}
+
 	void Material::setDefaultAttributesParameters()
 	{
 		RenderResources::setDefaultAttributesParameters(*shaderProgram_);

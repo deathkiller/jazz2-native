@@ -186,6 +186,12 @@ endif()
 #	list(APPEND GENERATED_SOURCES ${VERSION_RC_FILE})
 #endif()
 
+if(WIN32)
+    list(APPEND GENERATED_SOURCES
+        ${NCINE_SOURCE_DIR}/Resources.rc
+        ${NCINE_SOURCE_DIR}/App.manifest)
+endif()
+
 # Generate Nuklear implementation file
 #if(NCINE_WITH_NUKLEAR)
 #	set(NUKLEAR_CPP_FILE "${GENERATED_SOURCE_DIR}/nuklear.cpp")

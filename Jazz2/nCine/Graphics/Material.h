@@ -3,6 +3,7 @@
 #include "GL/GLShaderUniforms.h"
 #include "GL/GLShaderUniformBlocks.h"
 #include "GL/GLTexture.h"
+#include "Shader.h"
 
 namespace nCine
 {
@@ -104,6 +105,7 @@ namespace nCine
 			return shaderProgram_;
 		}
 		void setShaderProgram(GLShaderProgram* program);
+		void setShader(Shader* shader);
 
 		void setDefaultAttributesParameters();
 		void reserveUniformsDataMemory();

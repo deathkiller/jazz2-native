@@ -2,6 +2,7 @@
 
 #include "ContentResolver.h"
 #include "EventType.h"
+#include "LightEmitter.h"
 #include "../nCine/Base/Task.h"
 #include "../nCine/Primitives/AABB.h"
 
@@ -91,6 +92,7 @@ namespace Jazz2
 		void SetParent(SceneNode* parent);
 		Task<bool> OnActivated(const ActorActivationDetails& details);
 		virtual bool OnHandleCollision(ActorBase* other);
+		virtual void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) { }
 
 		bool IsInvulnerable();
 		int GetHealth();

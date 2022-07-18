@@ -217,6 +217,7 @@
     <ClInclude Include="Jazz2\Compatibility\JJ2Text.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Tileset.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Version.h" />
+    <ClInclude Include="Jazz2\LightEmitter.h" />
     <ClInclude Include="nCine\AppConfiguration.h" />
     <ClInclude Include="nCine\Application.h" />
     <ClInclude Include="nCine\ArrayIndexer.h" />

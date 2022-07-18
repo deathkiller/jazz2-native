@@ -37,13 +37,6 @@ namespace Jazz2::Actors::Weapons
 
 		SetAnimation(state);
 
-		// TODO
-		/*LightEmitter light = AddComponent<LightEmitter>();
-		light.Intensity = 0.8f;
-		light.Brightness = 0.2f;
-		light.RadiusNear = 0f;
-		light.RadiusFar = 12f;*/
-
 		co_return true;
 	}
 
@@ -98,6 +91,16 @@ namespace Jazz2::Actors::Weapons
 			MoveInstantly(_gunspotPos, MoveType::Absolute, true);
 			_renderer.setDrawEnabled(true);
 		}
+	}
+
+	void BouncerShot::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
+	{
+		auto& light = lights.emplace_back();
+		light.Pos = _pos;
+		light.Intensity = 0.8f;
+		light.Brightness = 0.2f;
+		light.RadiusNear = 0.0f;
+		light.RadiusFar = 12.0f;
 	}
 
 	bool BouncerShot::OnPerish(ActorBase* collider)

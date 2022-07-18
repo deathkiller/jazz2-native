@@ -60,6 +60,8 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RenderVaoPool.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/SceneNode.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/ScreenViewport.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/Shader.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/ShaderState.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Sprite.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Texture.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/TextureFormat.cpp
