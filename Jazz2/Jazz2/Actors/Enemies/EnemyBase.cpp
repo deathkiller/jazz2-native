@@ -19,32 +19,6 @@ namespace Jazz2::Actors::Enemies
 	{
 	}
 
-	Task<bool> EnemyBase::OnActivatedAsync(const ActorActivationDetails& details)
-	{
-		// TODO: change these types to uint8_t
-		PlayerType playerType = (PlayerType)details.Params[0];
-		SetFacingLeft(details.Params[2] != 0);
-
-		switch (playerType) {
-			default:
-			case PlayerType::Jazz:
-				co_await RequestMetadataAsync("Interactive/PlayerJazz");
-				break;
-			case PlayerType::Spaz:
-				co_await RequestMetadataAsync("Interactive/PlayerSpaz");
-				break;
-			case PlayerType::Lori:
-				co_await RequestMetadataAsync("Interactive/PlayerLori");
-				break;
-		}
-
-		SetAnimation("Corpse");
-
-		CollisionFlags = CollisionFlags::ForceDisableCollisions;
-
-		co_return true;
-	}
-
 	void EnemyBase::SetHealthByDifficulty(int health)
 	{
 		switch (_levelHandler->Difficulty()) {

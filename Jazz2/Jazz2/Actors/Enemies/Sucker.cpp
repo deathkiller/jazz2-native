@@ -1,0 +1,114 @@
+﻿#include "Sucker.h"
+#include "../../LevelInitialization.h"
+#include "../../ILevelHandler.h"
+#include "../../Tiles/TileMap.h"
+
+#include "../../../nCine/Base/Random.h"
+
+namespace Jazz2::Actors::Enemies
+{
+	Sucker::Sucker()
+		:
+		_cycle(0),
+		_cycleTimer(0.0f),
+		_stuck(false)
+	{
+	}
+
+	void Sucker::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Enemy/Sucker");
+	}
+
+	Task<bool> Sucker::OnActivatedAsync(const ActorActivationDetails& details)
+	{
+		LastHitDirection parentLastHitDir = (LastHitDirection)details.Params[0];
+
+		SetHealthByDifficulty(1);
+		_scoreValue = 100;
+		_maxHealth = 4;
+
+		co_await RequestMetadataAsync("Enemy/Sucker");
+
+		SetAnimation(AnimState::Walk);
+
+		if (parentLastHitDir != LastHitDirection::None) {
+			SetFacingLeft(parentLastHitDir == LastHitDirection::Left);
+			_health = 1;
+			CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+			SetTransition((AnimState)1073741824, false, [this]() {
+				_speed.X = 0;
+				SetAnimation(AnimState::Walk);
+				CollisionFlags |= CollisionFlags::ApplyGravitation;
+			});
+			if (parentLastHitDir == LastHitDirection::Left || parentLastHitDir == LastHitDirection::Right) {
+				_speed.X = 3 * (parentLastHitDir == LastHitDirection::Left ? -1 : 1);
+			}
+			PlaySfx("Deflate");
+		} else {
+			_health = 4;
+		}
+
+		co_return true;
+	}
+
+	void Sucker::OnUpdate(float timeMult)
+	{
+		EnemyBase::OnUpdate(timeMult);
+
+		if (_frozenTimeLeft > 0) {
+			return;
+		}
+
+		if (_currentTransitionState == AnimState::Idle && std::abs(_speed.X) > 0 && GetState(ActorFlags::CanJump)) {
+			if (!CanMoveToPosition(_speed.X * 4, 0)) {
+				if (_stuck) {
+					MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative, true);
+				} else {
+					SetFacingLeft(!IsFacingLeft());
+					_speed.X *= -1;
+					_stuck = true;
+				}
+			} else {
+				_stuck = false;
+			}
+		}
+
+		if (_currentTransitionState == AnimState::Idle && _frozenTimeLeft <= 0) {
+			if (_cycleTimer < 0.0f) {
+				_cycle++;
+				if (_cycle == 12) {
+					_cycle = 0;
+				}
+
+				if (_cycle == 0) {
+					PlaySfx("Walk1", 0.2f);
+				} else if (_cycle == 6) {
+					PlaySfx("Walk2", 0.2f);
+				} else if (_cycle == 2 || _cycle == 7) {
+					PlaySfx("Walk3", 0.2f);
+				}
+
+				if ((_cycle >= 4 && _cycle < 7) || _cycle >= 9) {
+					_speed.X = 0.6f * (IsFacingLeft() ? -1 : 1);
+				} else {
+					_speed.X = 0;
+				}
+
+				_cycleTimer = 5.0f;
+			} else {
+				_cycleTimer -= timeMult;
+			}
+		}
+	}
+
+	bool Sucker::OnPerish(ActorBase* collider)
+	{
+		CreateDeathDebris(collider);
+		//_levelHandler->PlayCommonSound("Splat", Transform.Pos);
+
+		TryGenerateRandomDrop();
+
+		return EnemyBase::OnPerish(collider);
+	}
+}

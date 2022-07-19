@@ -4,6 +4,54 @@
 
 namespace nCine
 {
+	enum class ButtonName : short int
+	{
+		UNKNOWN = -1,
+		A = 0,
+		B,
+		X,
+		Y,
+		BACK,
+		GUIDE,
+		START,
+		LSTICK,
+		RSTICK,
+		LBUMPER,
+		RBUMPER,
+		DPAD_UP,
+		DPAD_DOWN,
+		DPAD_LEFT,
+		DPAD_RIGHT
+	};
+
+	enum class AxisName : short int
+	{
+		UNKNOWN = -1,
+		LX = 0,
+		LY,
+		RX,
+		RY,
+		LTRIGGER,
+		RTRIGGER,
+	};
+
+	/// A structure containing joystick hat values
+	struct HatState
+	{
+		enum
+		{
+			CENTERED = 0,
+			UP = 1,
+			RIGHT = 2,
+			DOWN = 4,
+			LEFT = 8,
+			RIGHT_UP = RIGHT | UP,
+			RIGHT_DOWN = RIGHT | DOWN,
+			LEFT_UP = LEFT | UP,
+			LEFT_DOWN = LEFT | DOWN
+		};
+	};
+
 	/// Information about a screen touch event
 	class TouchEvent
 	{
@@ -138,6 +186,10 @@ namespace nCine
 		virtual short int axisValue(int axisId) const = 0;
 		/// Returns a normalized value between -1.0 and 1.0 for a joystick axis
 		virtual float axisNormValue(int axisId) const = 0;
+
+		bool isButtonPressed(ButtonName buttonName) const {
+			return isButtonPressed((int)buttonName);
+		}
 	};
 
 	/// Information about a joystick button event
@@ -148,23 +200,6 @@ namespace nCine
 		int joyId;
 		/// Button id
 		int buttonId;
-	};
-
-	/// A structure containing joystick hat values
-	struct HatState
-	{
-		enum
-		{
-			CENTERED = 0,
-			UP = 1,
-			RIGHT = 2,
-			DOWN = 4,
-			LEFT = 8,
-			RIGHT_UP = RIGHT | UP,
-			RIGHT_DOWN = RIGHT | DOWN,
-			LEFT_UP = LEFT | UP,
-			LEFT_DOWN = LEFT | DOWN
-		};
 	};
 
 	/// Information about a joystick hat event
@@ -199,37 +234,6 @@ namespace nCine
 	public:
 		/// Joystick id
 		int joyId;
-	};
-
-	enum class ButtonName : short int
-	{
-		UNKNOWN = -1,
-		A = 0,
-		B,
-		X,
-		Y,
-		BACK,
-		GUIDE,
-		START,
-		LSTICK,
-		RSTICK,
-		LBUMPER,
-		RBUMPER,
-		DPAD_UP,
-		DPAD_DOWN,
-		DPAD_LEFT,
-		DPAD_RIGHT
-	};
-
-	enum class AxisName : short int
-	{
-		UNKNOWN = -1,
-		LX = 0,
-		LY,
-		RX,
-		RY,
-		LTRIGGER,
-		RTRIGGER,
 	};
 
 	/// Information about a mapped joystick state

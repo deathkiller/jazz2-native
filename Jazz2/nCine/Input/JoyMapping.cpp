@@ -51,7 +51,7 @@ namespace nCine
 	};
 
 	JoyMappedStateImpl JoyMapping::nullMappedJoyState_;
-	SmallVector<JoyMappedStateImpl, JoyMapping::MaxNumJoysticks> JoyMapping::mappedJoyStates_;
+	SmallVector<JoyMappedStateImpl, JoyMapping::MaxNumJoysticks> JoyMapping::mappedJoyStates_(JoyMapping::MaxNumJoysticks);
 	JoyMappedButtonEvent JoyMapping::mappedButtonEvent_;
 	JoyMappedAxisEvent JoyMapping::mappedAxisEvent_;
 
@@ -172,10 +172,12 @@ namespace nCine
 	{
 		std::unique_ptr<IFileStream> fileHandle = IFileStream::createFileHandle(filename);
 		fileHandle->Open(FileAccessMode::Read);
-
 		const long int fileSize = fileHandle->GetSize();
-		unsigned int fileLine = 0;
+		if (fileSize == 0) {
+			return;
+		}
 
+		unsigned int fileLine = 0;
 		std::unique_ptr<char[]> fileBuffer = std::make_unique<char[]>(fileSize + 1);
 		fileHandle->Read(fileBuffer.get(), fileSize);
 		fileHandle.reset(nullptr);
@@ -192,9 +194,11 @@ namespace nCine
 				numParsed++;
 				int index = findMappingByGuid(newMapping.guid);
 				// if GUID is not found then mapping has to be added, not replaced
-				if (index < 0)
-					index = mappings_.size();
-				mappings_[index] = newMapping;
+				if (index < 0) {
+					mappings_.push_back(newMapping);
+				} else {
+					mappings_[index] = newMapping;
+				}
 			}
 
 		} while (strchr(buffer, '\n') && (buffer = strchr(buffer, '\n') + 1) < fileBuffer.get() + fileSize);

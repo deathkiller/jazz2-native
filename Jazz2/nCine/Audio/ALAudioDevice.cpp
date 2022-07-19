@@ -29,19 +29,21 @@ namespace nCine {
 		}
 
 		alGetError();
-		alGenSources(MaxSources, sources_.data());
+		alGenSources(MaxSources, sources_);
 		const ALenum error = alGetError();
 		//ASSERT_MSG_X(error == AL_NO_ERROR, "alGenSources failed: 0x%x", error);
 
+		alDistanceModel(AL_INVERSE_DISTANCE_CLAMPED);
 		alListener3f(AL_POSITION, 0.0f, 0.0f, 0.0f);
 		alListenerf(AL_GAIN, gain_);
 	}
 
 	ALAudioDevice::~ALAudioDevice()
 	{
-		for (ALuint sourceId : sources_)
+		for (ALuint sourceId : sources_) {
 			alSourcei(sourceId, AL_BUFFER, AL_NONE);
-		alDeleteSources(MaxSources, sources_.data());
+		}
+		alDeleteSources(MaxSources, sources_);
 
 		alcDestroyContext(context_);
 
@@ -146,6 +148,19 @@ namespace nCine {
 
 		if (players_.size() < MaxSources)
 			players_.push_back(player);
+	}
+
+	void ALAudioDevice::unregisterPlayer(IAudioPlayer* player)
+	{
+		auto it = players_.begin();
+		while (it != players_.end()) {
+			if (*it == player) {
+				players_.erase(it);
+				break;
+			} else {
+				++it;
+			}
+		}
 	}
 
 	void ALAudioDevice::updatePlayers()

@@ -1,14 +1,13 @@
-#define NCINE_INCLUDE_OPENAL
-#include "../CommonHeaders.h"
-
 #include "AudioBufferPlayer.h"
 #include "AudioBuffer.h"
 #include "../../Common.h"
-
 #include "../ServiceLocator.h"
 
-namespace nCine {
+#define NCINE_INCLUDE_OPENAL
+#include "../CommonHeaders.h"
 
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -35,6 +34,10 @@ namespace nCine {
 			filterHandle_ = 0;
 		}
 #endif
+
+		// Force unregister to allow to destroy this player immediately
+		IAudioDevice& device = theServiceLocator().audioDevice();
+		device.unregisterPlayer(this);
 	}
 
 	///////////////////////////////////////////////////////////

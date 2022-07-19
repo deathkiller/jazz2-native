@@ -14,8 +14,8 @@ namespace nCine {
 	/*! Private constructor called only by `AudioStreamPlayer`. */
 	AudioStream::AudioStream()
 		: nextAvailableBufferIndex_(0),
-		currentBufferId_(0), bytesPerSample_(0), numChannels_(0),
-		frequency_(0), numSamples_(0), duration_(0.0f)
+		currentBufferId_(0), bytesPerSample_(0), numChannels_(0), isLooping_(false),
+		frequency_(0), numSamples_(0), duration_(0.0f), buffersIds_(NumBuffers)
 	{
 		alGetError();
 		alGenBuffers(NumBuffers, buffersIds_.data());
@@ -47,8 +47,9 @@ namespace nCine {
 	AudioStream::~AudioStream()
 	{
 		// Don't delete buffers if this is a moved out object
-		if (buffersIds_.size() == NumBuffers)
+		if (buffersIds_.size() == NumBuffers) {
 			alDeleteBuffers(NumBuffers, buffersIds_.data());
+		}
 	}
 
 	AudioStream::AudioStream(AudioStream&&) = default;
@@ -61,17 +62,19 @@ namespace nCine {
 
 	unsigned long int AudioStream::numStreamSamples() const
 	{
-		if (numChannels_ * bytesPerSample_ > 0)
+		if (numChannels_ * bytesPerSample_ > 0) {
 			return BufferSize / (numChannels_ * bytesPerSample_);
+		}
 		return 0UL;
 	}
 
 	/*! \return A flag indicating whether the stream has been entirely decoded and played or not. */
 	bool AudioStream::enqueue(unsigned int source, bool looping)
 	{
-		if (audioReader_ == nullptr)
+		if (audioReader_ == nullptr) {
 			return false;
-
+		}
+		
 		// Set to false when the queue is empty and there is no more data to decode
 		bool shouldKeepPlaying = true;
 
@@ -153,6 +156,15 @@ namespace nCine {
 		currentBufferId_ = 0;
 	}
 
+	void AudioStream::setLooping(bool isLooping)
+	{
+		isLooping_ = isLooping;
+
+		if (audioReader_ != nullptr) {
+			audioReader_->setLooping(isLooping_);
+		}
+	}
+
 	///////////////////////////////////////////////////////////
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
@@ -191,12 +203,27 @@ namespace nCine {
 	{
 		bytesPerSample_ = audioLoader.bytesPerSample();
 		numChannels_ = audioLoader.numChannels();
+
+		if (numChannels_ == 1) {
+			format_ = (bytesPerSample_ == 2 ? AL_FORMAT_MONO16 : AL_FORMAT_MONO8);
+		} else if (numChannels_ == 2) {
+			format_ = (bytesPerSample_ == 2 ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO8);
+		} else {
+			bytesPerSample_ = 0;
+			numChannels_ = 0;
+			RETURN_MSG_X("Audio stream with %i channels is not supported", numChannels_);
+		}
+
 		frequency_ = audioLoader.frequency();
 		numSamples_ = audioLoader.numSamples();
-		duration_ = float(numSamples_) / frequency_;
-		format_ = (numChannels_ == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
+		if (numSamples_ >= 0) {
+			duration_ = float(numSamples_) / frequency_;
+		} else {
+			duration_ = -1.0;
+		}
 
 		audioReader_ = audioLoader.createReader();
+		audioReader_->setLooping(isLooping_);
 	}
 
 }

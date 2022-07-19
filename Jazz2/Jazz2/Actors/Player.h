@@ -17,9 +17,13 @@ namespace Jazz2::Actors
 
 		Player();
 
+		bool CanBreakSolidObjects() const;
+		bool CanMoveVertically() const;
+
 		void OnUpdate(float timeMult) override;
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 
+		bool OnLevelChanging(ExitType exitType);
 		void ReceiveLevelCarryOver(ExitType exitType, const PlayerCarryOver& carryOver);
 		PlayerCarryOver PrepareLevelCarryOver();
 

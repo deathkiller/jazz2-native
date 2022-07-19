@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IAudioPlayer.h"
+#include "../IO/IFileStream.h"
 
 namespace nCine
 {
@@ -52,7 +53,7 @@ namespace nCine
 
 	private:
 		AudioBuffer* audioBuffer_;
-		ALuint filterHandle_;
+		unsigned int filterHandle_;
 
 		/// Deleted copy constructor
 		AudioBufferPlayer(const AudioBufferPlayer&) = delete;

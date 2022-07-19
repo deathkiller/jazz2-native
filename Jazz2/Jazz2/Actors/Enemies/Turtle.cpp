@@ -72,7 +72,7 @@ namespace Jazz2::Actors::Enemies
 				_isTurning = true;
 				_canHurtPlayer = false;
 				_speed.X = 0;
-				//PlaySound("Withdraw", 0.4f);
+				PlaySfx("Withdraw", 0.2f);
 			}
 		}
 
@@ -131,7 +131,7 @@ namespace Jazz2::Actors::Enemies
 				SetTransition(AnimState::TransitionWithdrawEnd, false, [this]() {
 				   HandleTurn(false);
 				});
-				//PlaySound("WithdrawEnd", 0.4f);
+				PlaySfx("WithdrawEnd", 0.2f);
 				_isWithdrawn = true;
 			} else {
 				_canHurtPlayer = true;
@@ -146,14 +146,14 @@ namespace Jazz2::Actors::Enemies
 	{
 		_speed.X = 0;
 		_isAttacking = true;
-		//PlaySound("Attack");
+		PlaySfx("Attack");
 
 		SetTransition(AnimState::TransitionAttack, false, [this]() {
 			_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
 			_isAttacking = false;
 
 			// ToDo: Bad timing
-			//PlaySound("Attack2");
+			PlaySfx("Attack2");
 		});
 	}
 }

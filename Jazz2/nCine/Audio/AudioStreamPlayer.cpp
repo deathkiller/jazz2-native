@@ -1,12 +1,12 @@
-#define NCINE_INCLUDE_OPENAL
-#include "../CommonHeaders.h"
-
 #include "AudioStreamPlayer.h"
 #include "../ServiceLocator.h"
 #include "../../Common.h"
 
-namespace nCine {
+#define NCINE_INCLUDE_OPENAL
+#include "../CommonHeaders.h"
 
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -28,8 +28,9 @@ namespace nCine {
 
 	AudioStreamPlayer::~AudioStreamPlayer()
 	{
-		if (state_ != PlayerState::Stopped)
+		if (state_ != PlayerState::Stopped) {
 			audioStream_.stop(sourceId_);
+		}
 
 #if !defined(__EMSCRIPTEN__)
 		if (filterHandle_ != 0) {
@@ -37,6 +38,10 @@ namespace nCine {
 			filterHandle_ = 0;
 		}
 #endif
+
+		// Force unregister to allow to destroy this player immediately
+		IAudioDevice& device = theServiceLocator().audioDevice();
+		device.unregisterPlayer(this);
 	}
 
 	///////////////////////////////////////////////////////////
@@ -172,6 +177,13 @@ namespace nCine {
 				break;
 			}
 		}
+	}
+
+	void AudioStreamPlayer::setLooping(bool isLooping)
+	{
+		IAudioPlayer::setLooping(isLooping);
+
+		audioStream_.setLooping(isLooping);
 	}
 
 	void AudioStreamPlayer::updateState()

@@ -58,7 +58,7 @@ namespace Jazz2::Actors::Environment
 			SetAnimation("Opened");
 			SetTransition(AnimState::TransitionActivate, false);
 
-			//PlaySound("TransitionActivate");
+			PlaySfx("TransitionActivate");
 
 			// Deactivate event in map
 			// TODO: change these types to uint8_t

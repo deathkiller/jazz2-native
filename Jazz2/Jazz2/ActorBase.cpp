@@ -79,10 +79,10 @@ namespace Jazz2
 		_originTile = Vector2i((int)details.Pos.X / 32, (int)details.Pos.Y / 32);
 
 		_renderer.setLayer((uint16_t)details.Pos.Z);
+		_renderer.setPosition(std::round(_pos.X), std::round(_pos.Y));
 
 		bool success = co_await OnActivatedAsync(details);
 
-		_renderer.setPosition(std::round(_pos.X), std::round(_pos.Y));
 		OnUpdateHitbox();
 
 		if ((_flags & ActorFlags::Initializing) == ActorFlags::Initializing) {
@@ -217,6 +217,9 @@ namespace Jazz2
 		// TODO: Review this new code
 		float accelY = (_internalForceY + _externalForce.Y) * timeMult;
 
+		_speed.X = std::clamp(_speed.X, -16.0f, 16.0f);
+		_speed.Y = std::clamp(_speed.Y - accelY, -16.0f, 16.0f);
+
 		float effectiveSpeedX, effectiveSpeedY;
 		if (_frozenTimeLeft > 0.0f) {
 			effectiveSpeedX = std::clamp(_externalForce.X * timeMult, -16.0f, 16.0f);
@@ -227,9 +230,6 @@ namespace Jazz2
 		}
 		effectiveSpeedX *= timeMult;
 		effectiveSpeedY *= timeMult;
-
-		_speed.X = std::clamp(_speed.X, -16.0f, 16.0f);
-		_speed.Y = std::clamp(_speed.Y - accelY, -16.0f, 16.0f);
 
 		bool success = false;
 
@@ -400,6 +400,15 @@ namespace Jazz2
 			if (it != _metadata->Graphics.end()) {
 				tilemap->CreateSpriteDebris(&it->second, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), count);
 			}
+		}
+	}
+
+	void ActorBase::PlaySfx(const std::string& identifier, float gain, float pitch)
+	{
+		auto it = _metadata->Sounds.find(identifier);
+		if (it != _metadata->Sounds.end()) {
+			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, it->second.Buffers.size()) : 0);
+			_levelHandler->PlaySfx(it->second.Buffers[idx].get(), Vector3f(_pos.X, _pos.Y, 0.0f), gain, pitch);
 		}
 	}
 
@@ -730,7 +739,10 @@ namespace Jazz2
 	bool ActorBase::IsCollidingWith(const AABBf& aabb)
 	{
 		bool perPixel = (CollisionFlags & CollisionFlags::SkipPerPixelCollisions) != CollisionFlags::SkipPerPixelCollisions;
-		if (perPixel && std::abs(_renderer.rotation()) > 0.1f) {
+		if (!perPixel) {
+			AABBf inter2 = AABBf::Intersect(aabb, AABBInner);
+			return (inter2.R > 0 && inter2.B > 0);
+		} else if (std::abs(_renderer.rotation()) > 0.1f) {
 			return IsCollidingWithAngled(aabb);
 		}
 
@@ -743,9 +755,7 @@ namespace Jazz2
 		Vector2i& size = res->Base->FrameDimensions;
 
 		AABBf aabbSelf;
-		if (!perPixel) {
-			aabbSelf = AABBInner;
-		} else if (GetState(ActorFlags::IsFacingLeft)) {
+		if (GetState(ActorFlags::IsFacingLeft)) {
 			aabbSelf = AABBf(_pos.X + hotspot.X - size.X, _pos.Y - hotspot.Y, (float)size.X, (float)size.Y);
 			aabbSelf.B += aabbSelf.T;
 			aabbSelf.R += aabbSelf.L;
@@ -759,10 +769,6 @@ namespace Jazz2
 		AABBf inter = AABBf::Intersect(aabb, aabbSelf);
 		if (inter.R <= 0 || inter.B <= 0) {
 			return false;
-		}
-
-		if (!perPixel) {
-			return true;
 		}
 
 		int x1 = (int)std::max(inter.L, aabb.L);

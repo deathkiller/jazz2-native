@@ -61,7 +61,7 @@ namespace Jazz2::Actors::Enemies
 		_elasticity = 0.5f;
 		_health = 8;
 
-		//PlaySound("Fly");
+		PlaySfx("Fly");
 
 		co_return true;
 	}
@@ -121,7 +121,7 @@ namespace Jazz2::Actors::Enemies
 			float otherSpeed = other->GetSpeed().X;
 			_speed.X = std::max(4.0f, std::abs(otherSpeed)) * (otherSpeed < 0.0f ? -0.5f : 0.5f);
 
-			//PlaySound("Fly");
+			PlaySfx("Fly");
 			return true;
 		} else if (auto shell = dynamic_cast<TurtleShell*>(other)) {
 			auto otherSpeed = shell->GetSpeed();
@@ -136,7 +136,7 @@ namespace Jazz2::Actors::Enemies
 				_speed.X = totalSpeed / 2.0f * (_speed.X >= 0.0f ? -1.0f : 1.0f);
 
 				shell->DecreaseHealth(1, this);
-				//PlaySound(Transform.Pos, "ImpactShell", 0.8f);
+				PlaySfx("ImpactShell", 0.8f);
 			}
 			return true;
 		} else if (auto enemyBase = dynamic_cast<EnemyBase*>(other)) {
@@ -154,9 +154,8 @@ namespace Jazz2::Actors::Enemies
 
 	void TurtleShell::OnHitFloor()
 	{
-		// TODO
-		/*if (std::abs(_speed.Y) > 1.0f) {
-			PlaySound(Transform.Pos, "ImpactGround");
-		}*/
+		if (std::abs(_speed.Y) > 1.0f) {
+			PlaySfx("ImpactGround");
+		}
 	}
 }

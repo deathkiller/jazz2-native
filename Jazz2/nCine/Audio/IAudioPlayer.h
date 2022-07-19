@@ -83,7 +83,7 @@ namespace nCine
 			return isLooping_;
 		}
 		/// Sets player looping property
-		inline void setLooping(bool isLooping) {
+		virtual void setLooping(bool isLooping) {
 			isLooping_ = isLooping;
 		}
 

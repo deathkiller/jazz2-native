@@ -29,10 +29,10 @@ namespace Jazz2::Actors::Weapons
 		if ((_upgrades & 0x1) != 0) {
 			_timeLeft = 130;
 			state |= (AnimState)1;
-			//PlaySound(Transform.Pos, "FireUpgraded", 1f, 0.5f);
+			PlaySfx("FireUpgraded", 1.0f, 0.5f);
 		} else {
 			_timeLeft = 90;
-			//PlaySound(Transform.Pos, "Fire", 1f, 0.5f);
+			PlaySfx("Fire", 1.0f, 0.5f);
 		}
 
 		SetAnimation(state);
@@ -119,7 +119,7 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		_hitLimit += 2.0f;
-		//PlaySound(Transform.Pos, "Bounce", 0.5f);
+		PlaySfx("Bounce", 0.5f);
 	}
 
 	void BouncerShot::OnHitFloor()
@@ -130,7 +130,7 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		_hitLimit += 2.0f;
-		//PlaySound(Transform.Pos, "Bounce", 0.5f);
+		PlaySfx("Bounce", 0.5f);
 	}
 
 	void BouncerShot::OnHitCeiling()
@@ -141,7 +141,7 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		_hitLimit += 2.0f;
-		//PlaySound(Transform.Pos, "Bounce", 0.5f);
+		PlaySfx("Bounce", 0.5f);
 	}
 
 	bool BouncerShot::OnHandleCollision(ActorBase* other)

@@ -49,6 +49,8 @@ namespace nCine
 		virtual unsigned int nextAvailableSource() = 0;
 		/// Registers a new stream player for buffer update
 		virtual void registerPlayer(IAudioPlayer* player) = 0;
+		/// Unregisters a stream player
+		virtual void unregisterPlayer(IAudioPlayer* player) = 0;
 		/// Updates players state (and buffer queue in the case of stream players)
 		virtual void updatePlayers() = 0;
 	};
@@ -90,6 +92,7 @@ namespace nCine
 			return UnavailableSource;
 		}
 		void registerPlayer(IAudioPlayer* player) override {}
+		void unregisterPlayer(IAudioPlayer* player) override {}
 		void updatePlayers() override {}
 	};
 

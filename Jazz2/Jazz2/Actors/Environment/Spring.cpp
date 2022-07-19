@@ -21,14 +21,14 @@ namespace Jazz2::Actors::Environment
 		SetTransition(_currentAnimationState | (AnimState)0x200, false);
 		switch (_orientation) {
 			case 0: // Bottom
-				//PlaySound("Vertical");
+				PlaySfx("Vertical");
 				return Vector2f(0, -_strength);
 			case 2: // Top
-				//PlaySound("VerticalReversed");
+				PlaySfx("VerticalReversed");
 				return Vector2f(0, _strength);
 			case 1: // Right
 			case 3: // Left
-				//PlaySound("Horizontal");
+				PlaySfx("Horizontal");
 				return Vector2f(_strength * (_orientation == 1 ? 1 : -1), 0);
 			default:
 				return Vector2f::Zero;

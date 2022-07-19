@@ -60,6 +60,7 @@ namespace nCine
 		void play() override;
 		void pause() override;
 		void stop() override;
+		void setLooping(bool isLooping) override;
 
 		/// Updates the player state and the stream buffer queue
 		void updateState() override;
@@ -70,7 +71,7 @@ namespace nCine
 
 	private:
 		AudioStream audioStream_;
-		ALuint filterHandle_;
+		unsigned int filterHandle_;
 
 		/// Deleted copy constructor
 		AudioStreamPlayer(const AudioStreamPlayer&) = delete;

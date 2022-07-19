@@ -85,16 +85,15 @@ namespace Jazz2::Tiles
 		static constexpr int AnimatedTileMask = 0x80000000;
 
 		struct LayerDescription {
-			int Depth;
 			float SpeedX;
 			float SpeedY;
 			float AutoSpeedX;
 			float AutoSpeedY;
 			bool RepeatX;
 			bool RepeatY;
-
 			float OffsetX;
 			float OffsetY;
+			int Depth;
 
 			// JJ2's "limit visible area" flag
 			bool UseInherentOffset;
@@ -163,6 +162,9 @@ namespace Jazz2::Tiles
 		void CreateParticleDebris(const GraphicResource* res, Vector3f pos, Vector2f force, int currentFrame, bool isFacingLeft);
 		void CreateSpriteDebris(const GraphicResource* res, Vector3f pos, int count);
 
+		bool GetTrigger(uint16_t triggerId);
+		void SetTrigger(uint16_t triggerId, bool newState);
+
 	private:
 		LevelHandler* _levelHandler;
 		int _sprLayerIndex;
@@ -174,9 +176,9 @@ namespace Jazz2::Tiles
 		Death::SmallVector<AnimatedTile, 0> _animatedTiles;
 		Death::SmallVector<Vector2i, 0> _activeCollapsingTiles;
 		float _collapsingTimer;
+		BitArray _triggerState;
 
 		Death::SmallVector<DestructibleDebris, 0> _debrisList;
-
 		Death::SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
 		int _renderCommandsCount;
 

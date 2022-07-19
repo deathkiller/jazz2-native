@@ -15,7 +15,8 @@ namespace Jazz2::Tiles
 		_hasPit(false),
 		_limitLeft(0), _limitRight(0),
 		_renderCommandsCount(0),
-		_collapsingTimer(0.0f)
+		_collapsingTimer(0.0f),
+		_triggerState(TriggerCount)
 	{
 		_tileSet = ContentResolver::Current().RequestTileSet(tileSetPath, true, nullptr);
 		_renderCommands.reserve(128);
@@ -1115,6 +1116,37 @@ namespace Jazz2::Tiles
 			command->material().setTexture(*debris.DiffuseTexture);
 
 			renderQueue.addCommand(command);
+		}
+	}
+
+	bool TileMap::GetTrigger(uint16_t triggerId)
+	{
+		return _triggerState[triggerId];
+	}
+
+	void TileMap::SetTrigger(uint16_t triggerId, bool newState)
+	{
+		if (_triggerState[triggerId] == newState) {
+			return;
+		}
+
+		if (newState) {
+			_triggerState.SetBit(triggerId);
+		} else {
+			_triggerState.ClearBit(triggerId);
+		}
+
+		// Go through all tiles and update any that are influenced by this trigger
+		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+		int n = layoutSize.X * layoutSize.Y;
+		for (int i = 0; i < n; i++) {
+			LayerTile& tile = _layers[_sprLayerIndex].Layout[i];
+			if (tile.DestructType == TileDestructType::Trigger && tile.ExtraData == triggerId) {
+				if (_animatedTiles[tile.DestructAnimation].Tiles.size() > 1) {
+					tile.DestructFrameIndex = (newState ? 1 : 0);
+					tile.TileID = _animatedTiles[tile.DestructAnimation].Tiles[tile.DestructFrameIndex].TileID;
+				}
+			}
 		}
 	}
 }

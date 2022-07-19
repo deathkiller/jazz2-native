@@ -231,12 +231,10 @@ namespace Jazz2
 
 		void UpdateHitbox(int w, int h);
 
-		//SoundInstance PlaySound(const std::string& name, float gain = 1.0f, float pitch = 1.0f);
-		//SoundInstance PlaySound(Vector3 pos, const std::string& name, float gain = 1.0f, float pitch = 1.0f)
-
 		void CreateParticleDebris();
 		void CreateSpriteDebris(const std::string& identifier, int count);
 
+		void PlaySfx(const std::string& identifier, float gain = 1.0f, float pitch = 1.0f);
 		void SetAnimation(const std::string& identifier);
 		bool SetAnimation(AnimState state);
 		bool SetTransition(AnimState state, bool cancellable, const std::function<void()>& callback = []() { });

@@ -74,9 +74,9 @@ namespace Jazz2::Actors::Weapons
 
 		ShotBase::OnUpdate(timeMult);
 
-		/*if (_timeLeft <= 0.0f) {
-			PlaySound(Transform.Pos, "WallPoof");
-		}*/
+		if (_timeLeft <= 0.0f) {
+			PlaySfx("WallPoof");
+		}
 
 		if (!_fired) {
 			_fired = true;
@@ -118,8 +118,7 @@ namespace Jazz2::Actors::Weapons
 	{
 		DecreaseHealth(INT32_MAX);
 
-		// TODO
-		//PlaySound(Transform.Pos, "WallPoof");
+		PlaySfx("WallPoof");
 	}
 
 	bool BlasterShot::OnHandleCollision(ActorBase* other)
@@ -151,7 +150,6 @@ namespace Jazz2::Actors::Weapons
 
 		_renderer.setRotation(std::atan2(_speed.Y, _speed.X));
 
-		// TODO
-		//PlaySound(Transform.Pos, "Ricochet");
+		PlaySfx("Ricochet");
 	}
 }

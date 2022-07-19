@@ -116,7 +116,7 @@ namespace nCine
 		if (screenViewport_ != nullptr) {
 			bool sizeChanged = (width != screenViewport_->width_ || height != screenViewport_->height_);
 			screenViewport_->resize(width, height);
-			if (sizeChanged) {
+			if (sizeChanged && width > 0 && height > 0) {
 				appEventHandler_->onRootViewportResized(width, height);
 			}
 		}
@@ -162,7 +162,6 @@ namespace nCine
 
 		// Swapping frame now for a cleaner API trace capture when debugging
 		gfxDevice_->update();
-		//FrameMark;
 
 		frameTimer_ = std::make_unique<FrameTimer>(appCfg_.frameTimerLogInterval, appCfg_.profileTextUpdateTime());
 
@@ -212,7 +211,6 @@ namespace nCine
 
 		// Swapping frame now for a cleaner API trace capture when debugging
 		gfxDevice_->update();
-		//FrameMark;
 	}
 
 	void Application::step()
@@ -334,23 +332,20 @@ namespace nCine
 		//	debugOverlay_->updateFrameTimings();
 
 		gfxDevice_->update();
-		//FrameMark;
 
 		if (appCfg_.frameLimit > 0) {
 			const float frameTimeDuration = 1.0f / static_cast<float>(appCfg_.frameLimit);
-			while (frameTimer_->frameInterval() < frameTimeDuration)
+			while (frameTimer_->frameInterval() < frameTimeDuration) {
 				Timer::sleep(0.0f);
+			}
 		}
 	}
 
 	void Application::shutdownCommon()
 	{
-
-		{
-			appEventHandler_->onShutdown();
-			LOGI("IAppEventHandler::onShutdown() invoked");
-			appEventHandler_.reset(nullptr);
-		}
+		appEventHandler_->onShutdown();
+		LOGI("IAppEventHandler::onShutdown() invoked");
+		appEventHandler_.reset(nullptr);
 
 #ifdef WITH_NUKLEAR
 		nuklearDrawing_.reset(nullptr);
@@ -392,15 +387,17 @@ namespace nCine
 	void Application::suspend()
 	{
 		frameTimer_->suspend();
-		if (appEventHandler_)
+		if (appEventHandler_) {
 			appEventHandler_->onSuspend();
+		}
 		LOGI("IAppEventHandler::onSuspend() invoked");
 	}
 
 	void Application::resume()
 	{
-		if (appEventHandler_)
+		if (appEventHandler_) {
 			appEventHandler_->onResume();
+		}
 		const TimeStamp suspensionDuration = frameTimer_->resume();
 		LOGV_X("Suspended for %.3f seconds", suspensionDuration.seconds());
 		profileStartTime_ += suspensionDuration;
@@ -415,5 +412,4 @@ namespace nCine
 	{
 		return ((!hasFocus_ && autoSuspension_) || isSuspended_);
 	}
-
 }

@@ -32,7 +32,7 @@ namespace nCine {
 	TextInputEvent GlfwInputManager::textInputEvent_;
 
 	GlfwJoystickState GlfwInputManager::nullJoystickState_;
-	SmallVector<GlfwJoystickState, GlfwInputManager::MaxNumJoysticks> GlfwInputManager::joystickStates_;
+	SmallVector<GlfwJoystickState, GlfwInputManager::MaxNumJoysticks> GlfwInputManager::joystickStates_(GlfwInputManager::MaxNumJoysticks);
 	JoyButtonEvent GlfwInputManager::joyButtonEvent_;
 	JoyHatEvent GlfwInputManager::joyHatEvent_;
 	JoyAxisEvent GlfwInputManager::joyAxisEvent_;

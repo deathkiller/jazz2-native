@@ -31,7 +31,6 @@ namespace Jazz2::Actors::Enemies
 		uint32_t _scoreValue;
 		LastHitDirection _lastHitDir;
 
-		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		bool OnPerish(ActorBase* collider) override;
 
 		void SetHealthByDifficulty(int health);

@@ -3,10 +3,11 @@
 #ifdef WITH_VORBIS
 #include "AudioLoaderOgg.h"
 #endif
+#include "AudioLoaderMpt.h"
 #include "../IO/FileSystem.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -43,13 +44,18 @@ namespace nCine {
 	{
 		fileHandle->setExitOnFailToOpen(false);
 
-		if (fs::hasExtension(filename, "wav"))
+		if (fs::hasExtension(filename, "wav")) {
 			return std::make_unique<AudioLoaderWav>(std::move(fileHandle));
+		}
 #ifdef WITH_VORBIS
-		else if (fs::hasExtension(filename, "ogg"))
+		else if (fs::hasExtension(filename, "ogg")) {
 			return std::make_unique<AudioLoaderOgg>(std::move(fileHandle));
+		}
 #endif
-		else {
+		if (fs::hasExtension(filename, "j2b") || fs::hasExtension(filename, "it") || fs::hasExtension(filename, "s3m") ||
+			fs::hasExtension(filename, "xm") || fs::hasExtension(filename, "mo3")) {
+			return std::make_unique<AudioLoaderMpt>(std::move(fileHandle));
+		} else {
 			LOGF_X("Extension unknown: \"%s\"", fs::extension(filename));
 			fileHandle.reset(nullptr);
 			return std::make_unique<InvalidAudioLoader>(std::move(fileHandle));

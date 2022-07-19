@@ -77,9 +77,13 @@ namespace Jazz2
 
         std::string LastEpisodeName;
 
+        LevelInitialization()
+            : PlayerCarryOvers { }
+        {
+        }
+
         LevelInitialization(const std::string& episode, const std::string& level, GameDifficulty difficulty, bool reduxMode, bool cheatsUsed, PlayerType playerType)
-            :
-            PlayerCarryOvers { }
+            : PlayerCarryOvers { }
         {
             LevelName = level;
             EpisodeName = episode;
@@ -98,8 +102,7 @@ namespace Jazz2
         }
 
         LevelInitialization(const std::string& episode, const std::string& level, GameDifficulty difficulty, bool reduxMode, bool cheatsUsed, const PlayerType* playerTypes, int playerCount)
-            :
-            PlayerCarryOvers { }
+            : PlayerCarryOvers { }
         {
             LevelName = level;
             EpisodeName = episode;
@@ -117,6 +120,19 @@ namespace Jazz2
             for (int i = playerCount; i < MaxPlayerCount; i++) {
                 PlayerCarryOvers[i].Type = PlayerType::None;
             }
+        }
+
+        LevelInitialization(const LevelInitialization& copy)
+        {
+            LevelName = copy.LevelName;
+            EpisodeName = copy.EpisodeName;
+            Difficulty = copy.Difficulty;
+            ReduxMode = copy.ReduxMode;
+            CheatsUsed = copy.CheatsUsed;
+            ExitType = copy.ExitType;
+            LastEpisodeName = copy.LastEpisodeName;
+
+            memcpy(PlayerCarryOvers, copy.PlayerCarryOvers, sizeof(PlayerCarryOvers));
         }
     };
 }

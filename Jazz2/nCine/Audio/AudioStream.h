@@ -60,6 +60,13 @@ namespace nCine
 		/// Unqueues any left buffer and rewinds the loader
 		void stop(unsigned int source);
 
+		/// Queries the looping property of the stream
+		inline bool isLooping() const {
+			return isLooping_;
+		}
+		/// Sets stream looping property
+		void setLooping(bool isLooping);
+
 	private:
 		/// Number of buffers for streaming
 		static const int NumBuffers = 3;
@@ -87,6 +94,8 @@ namespace nCine
 		unsigned long int numSamples_;
 		/// Duration in seconds
 		float duration_;
+
+		bool isLooping_;
 
 		/// OpenAL channel format enumeration
 		int format_;

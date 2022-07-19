@@ -2,6 +2,8 @@
 
 #include "../Actors/Environment/BonusWarp.h"
 #include "../Actors/Environment/Checkpoint.h"
+#include "../Actors/Environment/EndOfLevel.h"
+#include "../Actors/Environment/Moth.h"
 #include "../Actors/Environment/Spring.h"
 
 #include "../Actors/Collectibles/AmmoCollectible.h"
@@ -9,9 +11,15 @@
 #include "../Actors/Collectibles/FoodCollectible.h"
 #include "../Actors/Collectibles/CarrotCollectible.h"
 
-#include "../Actors/Enemies/Bat.h"
+#include "../Actors/Enemies/Bat.h",
+#include "../Actors/Enemies/LabRat.h"
+#include "../Actors/Enemies/Sucker.h"
+#include "../Actors/Enemies/SuckerFloat.h"
 #include "../Actors/Enemies/Turtle.h"
 #include "../Actors/Enemies/TurtleShell.h"
+
+#include "../Actors/Solid/Bridge.h"
+#include "../Actors/Solid/TriggerCrate.h"
 
 using namespace Jazz2::Actors;
 
@@ -31,10 +39,10 @@ namespace Jazz2::Events
 
 		// Area
 		/*RegisterSpawnable(EventType::AreaAmbientSound, AmbientSound.Create, AmbientSound.Preload);
-		RegisterSpawnable(EventType::AreaAmbientBubbles, AmbientBubbles.Create, AmbientBubbles.Preload);
+		RegisterSpawnable(EventType::AreaAmbientBubbles, AmbientBubbles.Create, AmbientBubbles.Preload);*/
 
 		// Triggers
-		RegisterSpawnable(EventType::TriggerCrate, TriggerCrate.Create, TriggerCrate.Preload);*/
+		RegisterSpawnable<Solid::TriggerCrate>(EventType::TriggerCrate);
 
 		// Warp
 		RegisterSpawnable<Environment::BonusWarp>(EventType::WarpCoinBonus);
@@ -47,15 +55,15 @@ namespace Jazz2::Events
 
 		// Environment
 		RegisterSpawnable<Environment::Spring>(EventType::Spring);
-		/*RegisterSpawnable(EventType::Bridge, Bridge.Create, Bridge.Preload);
-		RegisterSpawnable(EventType::MovingPlatform, MovingPlatform.Create, MovingPlatform.Preload);
+		RegisterSpawnable<Solid::Bridge>(EventType::Bridge);
+		/*RegisterSpawnable(EventType::MovingPlatform, MovingPlatform.Create, MovingPlatform.Preload);
 		RegisterSpawnable(EventType::SpikeBall, SpikeBall.Create, SpikeBall.Preload);
 		RegisterSpawnable(EventType::PushableBox, PushBox.Create, PushBox.Preload);
 		RegisterSpawnable(EventType::Eva, Eva.Create, Eva.Preload);
-		RegisterSpawnable(EventType::Pole, Pole.Create, Pole.Preload);
-		RegisterSpawnable(EventType::SignEOL, SignEol.Create, SignEol.Preload);
-		RegisterSpawnable(EventType::Moth, Moth.Create, Moth.Preload);
-		RegisterSpawnable(EventType::SteamNote, SteamNote.Create, SteamNote.Preload);
+		RegisterSpawnable(EventType::Pole, Pole.Create, Pole.Preload);*/
+		RegisterSpawnable<Environment::EndOfLevel>(EventType::SignEOL);
+		RegisterSpawnable<Environment::Moth>(EventType::Moth);
+		/*RegisterSpawnable(EventType::SteamNote, SteamNote.Create, SteamNote.Preload);
 		RegisterSpawnable(EventType::Bomb, Bomb.Create, Bomb.Preload);
 		RegisterSpawnable(EventType::PinballBumper, PinballBumper.Create, PinballBumper.Preload);
 		RegisterSpawnable(EventType::PinballPaddle, PinballPaddle.Create, PinballPaddle.Preload);*/
@@ -64,11 +72,11 @@ namespace Jazz2::Events
 		RegisterSpawnable<Enemies::Turtle>(EventType::EnemyTurtle);
 		/*RegisterSpawnable(EventType::EnemyLizard, Lizard.Create, Lizard.Preload);
 		RegisterSpawnable(EventType::EnemyLizardFloat, LizardFloat.Create, LizardFloat.Preload);
-		RegisterSpawnable(EventType::EnemyDragon, Dragon.Create, Dragon.Preload);
-		RegisterSpawnable(EventType::EnemySuckerFloat, SuckerFloat.Create, SuckerFloat.Preload);
-		RegisterSpawnable(EventType::EnemySucker, Sucker.Create, Sucker.Preload);
-		RegisterSpawnable(EventType::EnemyLabRat, LabRat.Create, LabRat.Preload);
-		RegisterSpawnable(EventType::EnemyHelmut, Helmut.Create, Helmut.Preload);*/
+		RegisterSpawnable(EventType::EnemyDragon, Dragon.Create, Dragon.Preload);*/
+		RegisterSpawnable<Enemies::SuckerFloat>(EventType::EnemySuckerFloat);
+		RegisterSpawnable<Enemies::Sucker>(EventType::EnemySucker);
+		RegisterSpawnable<Enemies::LabRat>(EventType::EnemyLabRat);
+		//RegisterSpawnable(EventType::EnemyHelmut, Helmut.Create, Helmut.Preload);
 		RegisterSpawnable<Enemies::Bat>(EventType::EnemyBat);
 		/*RegisterSpawnable(EventType::EnemyFatChick, FatChick.Create, FatChick.Preload);
 		RegisterSpawnable(EventType::EnemyFencer, Fencer.Create, Fencer.Preload);

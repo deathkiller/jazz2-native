@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IAudioReader.h"
+#include "../IO/IFileStream.h"
 
 #include <memory>
 

@@ -1,14 +1,15 @@
 ﻿#pragma once
 
 #include "../Common.h"
+#include "AnimState.h"
+#include "LevelInitialization.h"
 
+#include "../nCine/Audio/AudioBuffer.h"
 #include "../nCine/Graphics/Camera.h"
 #include "../nCine/Graphics/Sprite.h"
 #include "../nCine/Graphics/Texture.h"
 #include "../nCine/Graphics/Viewport.h"
 #include "../nCine/IO/FileSystem.h"
-
-#include "AnimState.h"
 
 #include <unordered_map>
 #include <SmallVector.h>
@@ -17,6 +18,8 @@ using namespace nCine;
 
 namespace Jazz2
 {
+	class LevelHandler;
+
 	namespace Tiles
 	{
 		class TileSet;
@@ -39,7 +42,8 @@ namespace Jazz2
 
 	DEFINE_ENUM_OPERATORS(GenericGraphicResourceFlags);
 
-	class GenericGraphicResource {
+	class GenericGraphicResource
+	{
 	public:
 		GenericGraphicResourceFlags Flags;
 		//GenericGraphicResourceAsyncFinalize AsyncFinalize;
@@ -56,7 +60,8 @@ namespace Jazz2
 		Vector2i Gunspot;
 	};
 
-	class GraphicResource {
+	class GraphicResource
+	{
 	public:
 		GenericGraphicResource* Base;
 		//GraphicResourceAsyncFinalize AsyncFinalize;
@@ -79,9 +84,10 @@ namespace Jazz2
 		}
 	};
 
-	class SoundResource {
+	class SoundResource
+	{
 	public:
-		//AudioBuffer* Sound;
+		SmallVector<std::unique_ptr<AudioBuffer>, 1> Buffers;
 	};
 
 	enum class MetadataFlags {
@@ -93,7 +99,8 @@ namespace Jazz2
 
 	DEFINE_ENUM_OPERATORS(MetadataFlags);
 
-	class Metadata {
+	class Metadata
+	{
 	public:
 		MetadataFlags Flags;
 
@@ -151,7 +158,7 @@ namespace Jazz2
 		GenericGraphicResource* RequestGraphics(const std::string& path);
 
 		std::unique_ptr<Tiles::TileSet> RequestTileSet(const std::string& path, bool applyPalette, Color* customPalette);
-
+		bool LoadLevel(LevelHandler* levelHandler, const std::string& path, GameDifficulty difficulty);
 		void ApplyPalette(const std::string& path);
 
 		static ContentResolver& Current();

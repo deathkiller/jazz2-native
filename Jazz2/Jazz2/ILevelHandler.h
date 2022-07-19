@@ -59,8 +59,11 @@ namespace Jazz2
 
 		virtual const Death::SmallVectorImpl<Actors::Player*>& GetPlayers() const = 0;
 
+		virtual void SetAmbientLight(float value) = 0;
+
 		virtual void AddActor(const std::shared_ptr<ActorBase>& actor) = 0;
 
+		virtual void PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain, float pitch) = 0;
 		virtual void WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor) = 0;
 		virtual bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, bool downwards, __out ActorBase** collider) = 0;
 
@@ -72,6 +75,7 @@ namespace Jazz2
 
 		virtual void GetCollidingPlayers(const AABBf& aabb, const std::function<bool(ActorBase*)> callback) = 0;
 
+		virtual void BeginLevelChange(ExitType exitType, const std::string& nextLevel) = 0;
 		virtual void HandleGameOver() = 0;
 		virtual bool HandlePlayerDied(const std::shared_ptr<ActorBase>& player) = 0;
 

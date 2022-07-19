@@ -717,6 +717,36 @@
     <ClInclude Include="Jazz2\LightEmitter.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\SuckerFloat.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Sucker.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\LabRat.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\Bridge.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\TriggerCrate.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\AudioReaderMpt.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\AudioLoaderMpt.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\EndOfLevel.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\Moth.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\IRootController.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1219,6 +1249,33 @@
     </ClCompile>
     <ClCompile Include="nCine\Graphics\ShaderState.cpp">
       <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Sucker.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\SuckerFloat.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\LabRat.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\Bridge.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\TriggerCrate.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Audio\AudioReaderMpt.cpp">
+      <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Audio\AudioLoaderMpt.cpp">
+      <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\EndOfLevel.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\Moth.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

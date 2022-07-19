@@ -1,4 +1,5 @@
 ﻿#include "LevelHandler.h"
+#include "../Common.h"
 
 #include "../nCine/PCApplication.h"
 #include "../nCine/IAppEventHandler.h"
@@ -25,14 +26,15 @@ int _debugCollisionPairCount = 0;
 
 namespace Jazz2
 {
-	LevelHandler::LevelHandler(const LevelInitialization& data)
+	LevelHandler::LevelHandler(IRootController* root, const LevelInitialization& levelInit)
 		:
+		_root(root),
 		_eventSpawner(this),
-		_levelFileName(data.LevelName),
-		_episodeName(data.EpisodeName),
-		_difficulty(data.Difficulty),
-		_reduxMode(data.ReduxMode),
-		_cheatsUsed(data.CheatsUsed),
+		_levelFileName(levelInit.LevelName),
+		_episodeName(levelInit.EpisodeName),
+		_difficulty(levelInit.Difficulty),
+		_reduxMode(levelInit.ReduxMode),
+		_cheatsUsed(levelInit.CheatsUsed),
 		_shakeDuration(0.0f),
 		_waterLevel(FLT_MAX),
 		_ambientLightDefault(1.0f),
@@ -52,19 +54,17 @@ namespace Jazz2
 
 		_rootNode = std::make_unique<SceneNode>();
 
-		// Setup rendering scene
-		Vector2i res = theApplication().resolutionInt();
-		OnRootViewportResized(res.X, res.Y);
-
-		LoadLevel(_levelFileName, _episodeName);
+		if (!ContentResolver::Current().LoadLevel(this, _episodeName + "/" + _levelFileName, _difficulty)) {
+			LOGE("Cannot load specified level");
+		}
 
 		// Process carry overs
-		for (int i = 0; i < _countof(data.PlayerCarryOvers); i++) {
-			if (data.PlayerCarryOvers[i].Type == PlayerType::None) {
+		for (int i = 0; i < _countof(levelInit.PlayerCarryOvers); i++) {
+			if (levelInit.PlayerCarryOvers[i].Type == PlayerType::None) {
 				continue;
 			}
 
-			Vector2 spawnPosition = _eventMap->GetSpawnPosition(data.PlayerCarryOvers[i].Type);
+			Vector2 spawnPosition = _eventMap->GetSpawnPosition(levelInit.PlayerCarryOvers[i].Type);
 			if (spawnPosition.X < 0.0f && spawnPosition.Y < 0.0f) {
 				spawnPosition = _eventMap->GetSpawnPosition(PlayerType::Jazz);
 				if (spawnPosition.X < 0.0f && spawnPosition.Y < 0.0f) {
@@ -73,7 +73,7 @@ namespace Jazz2
 			}
 
 			std::shared_ptr<Actors::Player> player = std::make_shared<Actors::Player>();
-			uint8_t playerParams[2] = { (uint8_t)data.PlayerCarryOvers[i].Type, (uint8_t)i };
+			uint8_t playerParams[2] = { (uint8_t)levelInit.PlayerCarryOvers[i].Type, (uint8_t)i };
 			player->OnActivated({
 				.LevelHandler = this,
 				.Pos = Vector3i(spawnPosition.X + (i * 30), spawnPosition.Y - (i * 30), PlayerZ - i),
@@ -89,10 +89,8 @@ namespace Jazz2
 				player.AttachToHud(hud);
 			}*/
 
-			ptr->ReceiveLevelCarryOver(data.ExitType, data.PlayerCarryOvers[i]);
+			ptr->ReceiveLevelCarryOver(levelInit.ExitType, levelInit.PlayerCarryOvers[i]);
 		}
-
-		InitializeCamera();
 
 		// TODO
 		//_commonResources = ContentResolver::Current().RequestMetadata("Common/Scenery");
@@ -104,8 +102,6 @@ namespace Jazz2
 
 	LevelHandler::~LevelHandler()
 	{
-		// TODO
-		Viewport::chain().clear();
 	}
 
 	Recti LevelHandler::LevelBounds() const
@@ -123,57 +119,37 @@ namespace Jazz2
 		return _players;
 	}
 
-	void LevelHandler::LoadLevel(const std::string& levelFileName, const std::string& episodeName)
+	void LevelHandler::SetAmbientLight(float value)
 	{
-		// TODO
-		auto& resolver = Jazz2::ContentResolver::Current();
-		resolver.ApplyPalette("Content/Tilesets/labrat1n/Main.palette");
+		_ambientLightTarget = value;
+	}
 
-		// TODO
-		_tileMap = std::make_unique<Tiles::TileMap>(this, "labrat1n");
+	void LevelHandler::OnLevelLoaded(const std::string& name, const std::string& nextLevel, const std::string& secretLevel, std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap, const std::string& musicPath, float ambientLight)
+	{
+		//_name = name;
+		_defaultNextLevel = nextLevel;
+		_defaultSecretLevel = secretLevel;
+
+		_tileMap = std::move(tileMap);
 		_tileMap->setParent(_rootNode.get());
 
-		{
-			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "share/01_share1/Sprite.layer").c_str());
-			_tileMap->ReadLayerConfiguration(LayerType::Sprite, layerFile, { .SpeedX = 1, .SpeedY = 1 });
-		}
-		{
-			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "share/01_share1/Sky.layer").c_str());
-			_tileMap->ReadLayerConfiguration(LayerType::Other, layerFile, { .Depth = -400, .RepeatX = true, .RepeatY = true, .OffsetX = 180, .OffsetY = -300 });
-		}
-		{
-			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "share/01_share1/2.layer").c_str());
-			_tileMap->ReadLayerConfiguration(LayerType::Other, layerFile, { .Depth = 200, .SpeedX = 1.25f, .SpeedY = 1.25f });
-		}
-		{
-			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "share/01_share1/3.layer").c_str());
-			_tileMap->ReadLayerConfiguration(LayerType::Other, layerFile, { .Depth = 100, .SpeedX = 1, .SpeedY = 1 });
-		}
-		{
-			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "share/01_share1/6.layer").c_str());
-			_tileMap->ReadLayerConfiguration(LayerType::Other, layerFile, { .Depth = -200, .SpeedX = 0.4444580078125f, .SpeedY = 0.0649871826171875f, .RepeatX = true, .UseInherentOffset = true });
-		}
-		{
-			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "share/01_share1/7.layer").c_str());
-			_tileMap->ReadLayerConfiguration(LayerType::Other, layerFile, { .Depth = -300, .SpeedX = 0.229598999023438f, .SpeedY = 0.05999755859375f, .RepeatX = true, .RepeatY = false, .UseInherentOffset = true });
-		}
-		{
-			auto animTilesFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "share/01_share1/Animated.tiles").c_str());
-			_tileMap->ReadAnimatedTiles(animTilesFile);
-		}
-
-		_eventMap = std::make_unique<Events::EventMap>(this, _tileMap->Size());
-		{
-			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath("Content/Episodes", "share/01_share1/Events.layer").c_str());
-			_eventMap->ReadEvents(layerFile, 1, _difficulty);
-		}
+		_eventMap = std::move(eventMap);
 
 		_levelBounds = _tileMap->LevelBounds();
 		_viewBounds = Rectf((float)_levelBounds.X, (float)_levelBounds.Y, (float)_levelBounds.W, (float)_levelBounds.H);
-		_viewBoundsTarget = _viewBounds;
+		_viewBoundsTarget = _viewBounds;		
 
-		// TODO
-		_ambientLightTarget = 0.4f;
+		_ambientLightDefault = ambientLight;
+		_ambientLightCurrent = ambientLight;
+		_ambientLightTarget = ambientLight;
+
+		_musicPath = musicPath;
+		if (!musicPath.empty()) {
+			_music = std::make_unique<AudioStreamPlayer>(FileSystem::joinPath("Content/Music", musicPath).c_str());
+			_music->setLooping(true);
+			_music->setGain(0.2f);
+			_music->play();
+		}
 	}
 
 	void LevelHandler::OnBeginFrame()
@@ -181,6 +157,15 @@ namespace Jazz2
 		float timeMult = theApplication().timeMult();
 
 		UpdatePressedActions();
+
+		// Destroy stopped players
+		for (int i = _playingSounds.size() - 1; i >= 0; i--) {
+			if (_playingSounds[i]->state() == IAudioPlayer::PlayerState::Stopped) {
+				_playingSounds.erase(&_playingSounds[i]);
+			} else {
+				break;
+			}
+		}
 
 		/*if (nextLevelInit.HasValue) {
 			bool playersReady = true;
@@ -409,7 +394,7 @@ namespace Jazz2
 #endif
 	}
 
-	void LevelHandler::OnRootViewportResized(int width, int height)
+	void LevelHandler::OnInitializeViewport(int width, int height)
 	{
 		constexpr float defaultRatio = (float)DefaultWidth / DefaultHeight;
 		float currentRatio = (float)width / height;
@@ -426,8 +411,6 @@ namespace Jazz2
 			h = std::min(DefaultHeight, height);
 		}
 
-		Viewport::chain().clear();
-
 		if (_viewTexture == nullptr) {
 			_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
 		} else {
@@ -440,6 +423,7 @@ namespace Jazz2
 
 		if (_camera == nullptr) {
 			_camera = std::make_unique<Camera>();
+			InitializeCamera();
 		}
 		_camera->setOrthoProjection(w * (-0.5f), w * (+0.5f), h * (-0.5f), h * (+0.5f));
 		_view->setCamera(_camera.get());
@@ -505,14 +489,14 @@ void main() {
 	// TODO
 	/*vec4 clrNormal = texture(uTexture, vec2(gl_FragCoord) / ViewSize);
 	vec3 normal = normalize(clrNormal.xyz - vec3(0.5, 0.5, 0.5));
-	normal.z = -normal.z;*/
-	vec3 normal = vec3(0.5, 0.5, 0.5);
+	normal.z = -normal.z;
 
 	vec3 lightDir = vec3((center.x - gl_FragCoord.x), (center.y - gl_FragCoord.y), 0);
 
 	// Diffuse lighting
 	float diffuseFactor = 1.0 - max(dot(normal, normalize(lightDir)), 0.0);
-	diffuseFactor = diffuseFactor * 0.8 + 0.2;
+	diffuseFactor = diffuseFactor * 0.8 + 0.2;*/
+	float diffuseFactor = 1.0f;
 	
 	float strength = diffuseFactor * lightBlend(clamp(1.0 - ((dist - radiusNear) / (1.0 - radiusNear)), 0.0, 1.0));
 	fragColor = vec4(strength * intensity, strength * brightness, 0.0, 1.0);
@@ -624,11 +608,11 @@ void main() {
 		_lightingView->setRootNode(_lightingRenderer.get());
 		_lightingView->setCamera(_camera.get());
 
-		_downsamplePass.Initialize(_viewTexture.get(), w / 2, h / 2, Vector2f::Zero, 0);
-		_blurPass1.Initialize(_downsamplePass.GetTarget(), w / 2, h / 2, Vector2f(1.0f, 0.0f), 1);
-		_blurPass2.Initialize(_blurPass1.GetTarget(), w / 2, h / 2, Vector2f(0.0f, 1.0f), 1);
-		_blurPass3.Initialize(_blurPass2.GetTarget(), w / 4, h / 4, Vector2f(1.0f, 0.0f), 1);
-		_blurPass4.Initialize(_blurPass3.GetTarget(), w / 4, h / 4, Vector2f(0.0f, 1.0f), 1);
+		_downsamplePass.Initialize(_viewTexture.get(), w / 2, h / 2, Vector2f::Zero);
+		_blurPass1.Initialize(_downsamplePass.GetTarget(), w / 2, h / 2, Vector2f(1.0f, 0.0f));
+		_blurPass2.Initialize(_blurPass1.GetTarget(), w / 2, h / 2, Vector2f(0.0f, 1.0f));
+		_blurPass3.Initialize(_blurPass2.GetTarget(), w / 4, h / 4, Vector2f(1.0f, 0.0f));
+		_blurPass4.Initialize(_blurPass3.GetTarget(), w / 4, h / 4, Vector2f(0.0f, 1.0f));
 
 		// Viewports must be registered in reverse order
 		_blurPass4.Register();
@@ -680,6 +664,15 @@ void main() {
 		}
 
 		_actors.emplace_back(actor);
+	}
+
+	void LevelHandler::PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain, float pitch)
+	{
+		auto& player = _playingSounds.emplace_back(std::make_unique<AudioBufferPlayer>(buffer));
+		player->setPosition(Vector3f((pos.X - _cameraPos.X) / (DefaultWidth * 3), (pos.Y - _cameraPos.Y) / (DefaultHeight * 3), 0.8f));
+		player->setGain(gain * 0.6f);
+		player->setPitch(pitch);
+		player->play();
 	}
 
 	void LevelHandler::WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor)
@@ -805,6 +798,56 @@ void main() {
 		}
 	}
 
+	void LevelHandler::BeginLevelChange(ExitType exitType, const std::string& nextLevel)
+	{
+		/*if (initState == InitState.Disposing) {
+			return;
+		}
+
+		initState = InitState.Disposing;*/
+
+		for (auto& player : _players) {
+			player->OnLevelChanging(exitType);
+		}
+
+		std::string realNextLevel;
+		if (nextLevel.empty()) {
+			realNextLevel = (exitType == ExitType::Bonus ? _defaultSecretLevel : _defaultNextLevel);
+		} else {
+			realNextLevel = nextLevel;
+		}
+
+		LevelInitialization levelInit;
+
+		if (!realNextLevel.empty()) {
+			int i = realNextLevel.find('/');
+			if (i == std::string::npos) {
+				levelInit.EpisodeName = _episodeName;
+				levelInit.LevelName = realNextLevel;
+			} else {
+				levelInit.EpisodeName = realNextLevel.substr(0, i);
+				levelInit.LevelName = realNextLevel.substr(i + 1);
+			}
+		}
+
+		levelInit.Difficulty = _difficulty;
+		levelInit.ReduxMode = _reduxMode;
+		levelInit.CheatsUsed = _cheatsUsed;
+		levelInit.ExitType = exitType;
+
+		for (int i = 0; i < _players.size(); i++) {
+			levelInit.PlayerCarryOvers[i] = _players[i]->PrepareLevelCarryOver();
+		}
+
+		levelInit.LastEpisodeName = _episodeName;
+
+		// TODO
+		//_nextLevelInit = levelInit;
+		//_levelChangeTimer = 50.0f;
+
+		_root->ChangeLevel(levelInit);
+	}
+
 	void LevelHandler::HandleGameOver()
 	{
 		// TODO: Implement Game Over screen
@@ -842,12 +885,8 @@ void main() {
 
 	bool LevelHandler::PlayerActionPressed(int index, PlayerActions action, bool includeGamepads)
 	{
-		// TODO
-		if (index != 0) {
-			return false;
-		}
-
-		return ((_pressedActions & (1 << (int)action)) != 0);
+		bool isGamepad;
+		return PlayerActionPressed(index, action, includeGamepads, isGamepad);
 	}
 
 	__success(return) bool LevelHandler::PlayerActionPressed(int index, PlayerActions action, bool includeGamepads, __out bool& isGamepad)
@@ -858,17 +897,26 @@ void main() {
 		}
 
 		isGamepad = false;
-		return ((_pressedActions & (1 << (int)action)) != 0);
+		if ((_pressedActions & (1 << (int)action)) != 0) {
+			return true;
+		}
+		
+		if (includeGamepads) {
+			switch (action) {
+				case PlayerActions::Left: if (_playerRequiredMovement.X < -0.8f) { isGamepad = true; return true; } break;
+				case PlayerActions::Right: if (_playerRequiredMovement.X > 0.8f) { isGamepad = true; return true; } break;
+				case PlayerActions::Up: if (_playerRequiredMovement.Y < -0.8f) { isGamepad = true; return true; } break;
+				case PlayerActions::Down: if (_playerRequiredMovement.Y > 0.8f) { isGamepad = true; return true; } break;
+			}
+		}
+
+		return false;
 	}
 
 	bool LevelHandler::PlayerActionHit(int index, PlayerActions action, bool includeGamepads)
 	{
-		// TODO
-		if (index != 0) {
-			return false;
-		}
-
-		return ((_pressedActions & ((1 << (int)action) | (1 << (16 + (int)action)))) == (1 << (int)action));
+		bool isGamepad;
+		return PlayerActionHit(index, action, includeGamepads, isGamepad);
 	}
 
 	__success(return) bool LevelHandler::PlayerActionHit(int index, PlayerActions action, bool includeGamepads, __out bool& isGamepad)
@@ -879,14 +927,18 @@ void main() {
 		}
 
 		isGamepad = false;
-		return ((_pressedActions & ((1 << (int)action) | (1 << (16 + (int)action)))) == (1 << (int)action));
+		if ((_pressedActions & ((1 << (int)action) | (1 << (16 + (int)action)))) == (1 << (int)action)) {
+			return true;
+		}
+
+		return false;
 	}
 
 	float LevelHandler::PlayerHorizontalMovement(int index)
 	{
 		// TODO
 		if (index != 0) {
-			return 0;
+			return 0.0f;
 		}
 
 		if ((_pressedActions & (1 << (int)PlayerActions::Right)) != 0) {
@@ -895,14 +947,14 @@ void main() {
 			return -1.0f;
 		}
 
-		return 0.0f;
+		return _playerRequiredMovement.X;
 	}
 
 	float LevelHandler::PlayerVerticalMovement(int index)
 	{
 		// TODO
 		if (index != 0) {
-			return 0;
+			return 0.0f;
 		}
 
 		if ((_pressedActions & (1 << (int)PlayerActions::Up)) != 0) {
@@ -911,7 +963,7 @@ void main() {
 			return 1.0f;
 		}
 
-		return 0.0f;
+		return _playerRequiredMovement.Y;
 	}
 
 	void LevelHandler::PlayerFreezeMovement(int index, bool enable)
@@ -1064,7 +1116,8 @@ void main() {
 
 	void LevelHandler::UpdatePressedActions()
 	{
-		auto& keyState = theApplication().inputManager().keyboardState();
+		auto& input = theApplication().inputManager();
+		auto& keyState = input.keyboardState();
 
 		_pressedActions = ((_pressedActions & 0xffff) << 16);
 
@@ -1091,6 +1144,50 @@ void main() {
 		}
 		if (keyState.isKeyDown(KeySym::X)) {
 			_pressedActions |= (1 << (int)PlayerActions::SwitchWeapon);
+		}
+
+		int firstJoy = -1;
+		for (int i = 0; i < IInputManager::MaxNumJoysticks; i++) {
+			if (input.isJoyPresent(i)) {
+				const int numButtons = input.joyNumButtons(i);
+				const int numAxes = input.joyNumAxes(i);
+				if (numButtons >= 4 && numAxes >= 2) {
+					firstJoy = i;
+					break;
+				}
+			}
+		}
+
+		if (firstJoy >= 0) {
+			const auto& joyState = input.joystickState(firstJoy);
+			if (joyState.isButtonPressed(ButtonName::DPAD_LEFT)) {
+				_pressedActions |= (1 << (int)PlayerActions::Left);
+			}
+			if (joyState.isButtonPressed(ButtonName::DPAD_RIGHT)) {
+				_pressedActions |= (1 << (int)PlayerActions::Right);
+			}
+			if (joyState.isButtonPressed(ButtonName::DPAD_UP)) {
+				_pressedActions |= (1 << (int)PlayerActions::Up);
+			}
+			if (joyState.isButtonPressed(ButtonName::DPAD_DOWN)) {
+				_pressedActions |= (1 << (int)PlayerActions::Down);
+			}
+
+			if (joyState.isButtonPressed(ButtonName::A)) {
+				_pressedActions |= (1 << (int)PlayerActions::Jump);
+			}
+			if (joyState.isButtonPressed(ButtonName::B)) {
+				_pressedActions |= (1 << (int)PlayerActions::Run);
+			}
+			if (joyState.isButtonPressed(ButtonName::X)) {
+				_pressedActions |= (1 << (int)PlayerActions::Fire);
+			}
+			if (joyState.isButtonPressed(ButtonName::Y)) {
+				_pressedActions |= (1 << (int)PlayerActions::SwitchWeapon);
+			}
+
+			_playerRequiredMovement.X = joyState.axisNormValue(0);
+			_playerRequiredMovement.Y = joyState.axisNormValue(1);
 		}
 	}
 
@@ -1145,16 +1242,10 @@ void main() {
 		}
 	}
 
-	void LevelHandler::BlurRenderPass::Initialize(Texture* source, int width, int height, const Vector2f& direction, int level)
+	void LevelHandler::BlurRenderPass::Initialize(Texture* source, int width, int height, const Vector2f& direction)
 	{
-		bool downsample = false;
-		if (level < 1) {
-			downsample = true;
-			level = 1;
-		}
-
 		_source = source;
-		_downsample = downsample;
+		_downsampleOnly = (direction.X <= std::numeric_limits<float>::epsilon() && direction.Y <= std::numeric_limits<float>::epsilon());
 		_direction = direction;
 
 		if (_camera == nullptr) {
@@ -1176,7 +1267,7 @@ void main() {
 
 		// Prepare render command
 		_renderCommand.setType(RenderCommand::CommandTypes::SPRITE);
-		_renderCommand.material().setShader(downsample ? _owner->_downsampleShader.get() : _owner->_blurShader.get());
+		_renderCommand.material().setShader(_downsampleOnly ? _owner->_downsampleShader.get() : _owner->_blurShader.get());
 		//_renderCommand.material().setBlendingEnabled(true);
 		_renderCommand.material().reserveUniformsDataMemory();
 		_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
@@ -1202,7 +1293,7 @@ void main() {
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
 		_renderCommand.material().uniform("uPixelOffset")->setFloatValue(1.0f / size.X, 1.0f / size.Y);
-		if (!_downsample) {
+		if (!_downsampleOnly) {
 			_renderCommand.material().uniform("uDirection")->setFloatValue(_direction.X, _direction.Y);
 		}
 		_renderCommand.material().setTexture(0, *_source);

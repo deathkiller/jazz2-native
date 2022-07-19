@@ -13,7 +13,7 @@ namespace Jazz2
 
 		virtual void OnBeginFrame() { }
 		virtual void OnEndFrame() { }
-		virtual void OnRootViewportResized(int width, int height) { }
+		virtual void OnInitializeViewport(int width, int height) { }
 
 		virtual void OnKeyPressed(const nCine::KeyboardEvent& event) { }
 		virtual void OnKeyReleased(const nCine::KeyboardEvent& event) { }

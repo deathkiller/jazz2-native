@@ -3,6 +3,7 @@
 #include "../nCine/IO/IFileStream.h"
 #include "../nCine/Graphics/ITextureLoader.h"
 
+#include "LevelHandler.h"
 #include "Tiles/TileSet.h"
 
 #if defined(_WIN32)
@@ -141,7 +142,7 @@ namespace Jazz2
 				const auto& animations_ = document.FindMember("Animations");
 				if (animations_ != document.MemberEnd() && animations_->value.IsObject()) {
 					auto& animations = animations_->value;
-					for (rapidjson::Value::ConstMemberIterator it2 = animations.MemberBegin(); it2 != animations.MemberEnd(); ++it2) {
+					for (auto it2 = animations.MemberBegin(); it2 != animations.MemberEnd(); ++it2) {
 						if (!it2->name.IsString() || !it2->value.IsObject()) {
 							continue;
 						}
@@ -215,7 +216,40 @@ namespace Jazz2
 							metadata->BoundingBox = graphicsBase->FrameDimensions - Vector2i(2, 2);
 						}
 
-						metadata->Graphics[key] = graphics;
+						metadata->Graphics[key] = std::move(graphics);
+					}
+				}
+
+				const auto& sounds_ = document.FindMember("Sounds");
+				if (sounds_ != document.MemberEnd() && sounds_->value.IsObject()) {
+					auto& sounds = sounds_->value;
+					for (auto it2 = sounds.MemberBegin(); it2 != sounds.MemberEnd(); ++it2) {
+						if (!it2->name.IsString() || !it2->value.IsObject()) {
+							continue;
+						}
+
+						const auto& key = it2->name.GetString();
+						const auto& item = it2->value;
+						const auto& pathsItem = item.FindMember("Paths");
+						if (key[0] == '\0' || pathsItem == item.MemberEnd() || !pathsItem->value.IsArray() || pathsItem->value.Empty()) {
+							continue;
+						}
+
+						SoundResource sound;
+
+						for (int i = 0; i < pathsItem->value.Size(); i++) {
+							const auto& pathItem = pathsItem->value[i];
+							const auto& path = pathItem.GetString();
+							if (path[0] == '\0') {
+								continue;
+							}
+
+							sound.Buffers.emplace_back(std::make_unique<AudioBuffer>(fs::joinPath("Content/Animations", path).c_str()));
+						}
+
+						if (!sound.Buffers.empty()) {
+							metadata->Sounds[key] = std::move(sound);
+						}
 					}
 				}
 			}
@@ -287,12 +321,18 @@ namespace Jazz2
 
 				const auto& frameDimensions = document["FrameSize"].GetArray();
 				const auto& frameConfiguration = document["FrameConfiguration"].GetArray();
-				const auto& frameRate = document["FrameRate"].GetInt();
 				const auto& frameCount = document["FrameCount"].GetInt();
+
+				const auto& frameRateItem = document.FindMember("FrameRate");
+				if (frameRateItem != document.MemberEnd() && frameRateItem->value.IsNumber()) {
+					const auto& frameRate = frameRateItem->value.GetFloat();
+					graphics->FrameDuration = (frameRate <= 0 ? -1.0f : (1.0f / frameRate) * 5.0f);
+				} else {
+					graphics->FrameDuration = -1.0f;
+				}
 
 				graphics->FrameDimensions = Vector2i(frameDimensions[0].GetInt(), frameDimensions[1].GetInt());
 				graphics->FrameConfiguration = Vector2i(frameConfiguration[0].GetInt(), frameConfiguration[1].GetInt());
-				graphics->FrameDuration = (frameRate <= 0 ? -1.0f : (1.0f / frameRate) * 5.0f);
 				graphics->FrameCount = frameCount;
 
 				const auto& hotspotItem = document.FindMember("Hotspot");
@@ -412,16 +452,148 @@ namespace Jazz2
 		return std::make_unique<Tiles::TileSet>(std::move(textureDiffuse), std::move(mask));
 	}
 
+	bool ContentResolver::LoadLevel(LevelHandler* levelHandler, const std::string& path, GameDifficulty difficulty)
+	{
+		std::string levelRoot = FileSystem::joinPath("Content/Episodes", path);
+
+		// Try to load level description
+		auto fileHandle = IFileStream::createFileHandle(FileSystem::joinPath(levelRoot, ".res").c_str());
+		fileHandle->Open(FileAccessMode::Read);
+		auto fileSize = fileHandle->GetSize();
+		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
+			// 64 MB file size limit
+			return false;
+		}
+
+		auto buffer = std::make_unique<char[]>(fileSize + 1);
+		fileHandle->Read(buffer.get(), fileSize);
+		buffer[fileSize] = '\0';
+
+		Document document;
+		if (document.ParseInsitu(buffer.get()).HasParseError() || !document.IsObject()) {
+			return false;
+		}
+
+		// These 3 sections are required
+		const auto& versionItem = document.FindMember("Version");
+		const auto& descriptionItem = document.FindMember("Description");
+		const auto& layersItem = document.FindMember("Layers");
+		if (versionItem == document.MemberEnd() || !versionItem->value.IsObject() ||
+			descriptionItem == document.MemberEnd() || !descriptionItem->value.IsObject() ||
+			layersItem == document.MemberEnd() || !layersItem->value.IsObject()) {
+			return false;
+		}
+
+		const auto& layerFormatItem = versionItem->value.FindMember("LayerFormat");
+		const auto& eventSetItem = versionItem->value.FindMember("EventSet");
+
+		const auto& nameItem = descriptionItem->value.FindMember("Name");
+		const auto& nextLevelItem = descriptionItem->value.FindMember("NextLevel");
+		const auto& secretLevelItem = descriptionItem->value.FindMember("SecretLevel");
+		const auto& defaultTilesetItem = descriptionItem->value.FindMember("DefaultTileset");
+		const auto& defaultMusicItem = descriptionItem->value.FindMember("DefaultMusic");
+		const auto& defaultLightItem = descriptionItem->value.FindMember("DefaultLight");
+
+		if (layerFormatItem == versionItem->value.MemberEnd() || !layerFormatItem->value.IsNumber() ||
+			eventSetItem == versionItem->value.MemberEnd() || !eventSetItem->value.IsNumber() ||
+			defaultTilesetItem == descriptionItem->value.MemberEnd() || !defaultTilesetItem->value.IsString()) {
+			return false;
+		}
+
+		std::unique_ptr<Tiles::TileMap> tileMap = std::make_unique<Tiles::TileMap>(levelHandler, defaultTilesetItem->value.GetString());
+
+		// Sprite layer is mandatory
+		{
+			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath(levelRoot, "Sprite.layer").c_str());
+			tileMap->ReadLayerConfiguration(LayerType::Sprite, layerFile, { .SpeedX = 1, .SpeedY = 1 });
+		}
+
+		// Load all layers
+		auto it = layersItem->value.MemberBegin();
+		while (it != layersItem->value.MemberEnd()) {
+			const auto& layerName = it->name.GetString();
+			const auto& speedXItem = it->value.FindMember("XSpeed");
+			const auto& speedYItem = it->value.FindMember("YSpeed");
+			const auto& autoSpeedXItem = it->value.FindMember("XAutoSpeed");
+			const auto& autoSpeedYItem = it->value.FindMember("YAutoSpeed");
+			const auto& repeatXItem = it->value.FindMember("XRepeat");
+			const auto& repeatYItem = it->value.FindMember("YRepeat");
+			const auto& offsetXItem = it->value.FindMember("XOffset");
+			const auto& offsetYItem = it->value.FindMember("YOffset");
+			const auto& depthItem = it->value.FindMember("Depth");
+			const auto& inherentOffsetItem = it->value.FindMember("InherentOffset");
+			const auto& backgroundStyleItem = it->value.FindMember("BackgroundStyle");
+			//const auto& backgroundColorItem = it->value.FindMember("BackgroundColor");
+			//const auto& parallaxStarsItem = it->value.FindMember("ParallaxStarsEnabled");
+
+			if (backgroundStyleItem != it->value.MemberEnd() && backgroundStyleItem->value.IsNumber() && backgroundStyleItem->value.GetInt() != 0) {
+				// TODO: Implement special backgrounds
+				++it;
+				continue;
+			}
+
+			LayerType type;
+			if (strcmp(layerName, "Sprite") == 0) {
+				type = LayerType::Sprite;
+			} else if (strcmp(layerName, "Sky") == 0) {
+				type = LayerType::Sky;
+			} else {
+				type = LayerType::Other;
+			}
+
+			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath(levelRoot, std::string(layerName) + ".layer").c_str());
+			tileMap->ReadLayerConfiguration(type, layerFile, {
+				.SpeedX = (speedXItem != it->value.MemberEnd() && speedXItem->value.IsNumber() ? speedXItem->value.GetFloat() : 0.0f),
+				.SpeedY = (speedYItem != it->value.MemberEnd() && speedYItem->value.IsNumber() ? speedYItem->value.GetFloat() : 0.0f),
+				.AutoSpeedX = (autoSpeedXItem != it->value.MemberEnd() && autoSpeedXItem->value.IsNumber() ? autoSpeedXItem->value.GetFloat() : 0.0f),
+				.AutoSpeedY = (autoSpeedYItem != it->value.MemberEnd() && autoSpeedYItem->value.IsNumber() ? autoSpeedYItem->value.GetFloat() : 0.0f),
+				.RepeatX = (repeatXItem != it->value.MemberEnd() && repeatXItem->value.IsBool() && repeatXItem->value.GetBool()),
+				.RepeatY = (repeatYItem != it->value.MemberEnd() && repeatYItem->value.IsBool() && repeatYItem->value.GetBool()),
+				.OffsetX = (offsetXItem != it->value.MemberEnd() && offsetXItem->value.IsNumber() ? offsetXItem->value.GetFloat() : 0.0f),
+				.OffsetY = (offsetYItem != it->value.MemberEnd() && offsetYItem->value.IsNumber() ? offsetYItem->value.GetFloat() : 0.0f),
+				// TODO: Depth is negative
+				.Depth = (depthItem != it->value.MemberEnd() && depthItem->value.IsNumber() ? -depthItem->value.GetInt() : 0),
+				.UseInherentOffset = (inherentOffsetItem != it->value.MemberEnd() && inherentOffsetItem->value.IsBool() && inherentOffsetItem->value.GetBool())
+			});
+
+			++it;
+		}
+
+		// Load animated tiles
+		auto animTilesFile = IFileStream::createFileHandle(FileSystem::joinPath(levelRoot, "Animated.tiles").c_str());
+		tileMap->ReadAnimatedTiles(animTilesFile);
+
+		// Load events
+		std::unique_ptr<Events::EventMap> eventMap = std::make_unique<Events::EventMap>(levelHandler, tileMap->Size());
+		{
+			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath(levelRoot, "Events.layer").c_str());
+			eventMap->ReadEvents(layerFile, tileMap, eventSetItem->value.GetInt(), difficulty);
+		}
+
+		levelHandler->OnLevelLoaded(
+			nameItem != descriptionItem->value.MemberEnd() && nameItem->value.IsString() ? nameItem->value.GetString() : std::string(),
+			nextLevelItem != descriptionItem->value.MemberEnd() && nextLevelItem->value.IsString() ? nextLevelItem->value.GetString() : std::string(),
+			secretLevelItem != descriptionItem->value.MemberEnd() && defaultMusicItem->value.IsString() ? secretLevelItem->value.GetString() : std::string(),
+			tileMap, eventMap,
+			defaultMusicItem != descriptionItem->value.MemberEnd() && defaultMusicItem->value.IsString() ? defaultMusicItem->value.GetString() : std::string(),
+			defaultLightItem != descriptionItem->value.MemberEnd() && defaultLightItem->value.IsNumber() ? (defaultLightItem->value.GetFloat() * 0.01f) : 1.0f
+		);
+
+		return true;
+	}
+
 	void ContentResolver::ApplyPalette(const std::string& path)
 	{
 		std::unique_ptr<IFileStream> file = nullptr;
 		if (!path.empty()) {
 			file = IFileStream::createFileHandle(path.c_str());
+			file->setExitOnFailToOpen(false);
 			file->Open(FileAccessMode::Read);
 		}
 		if (file == nullptr || file->GetSize() == 0) {
 			// Try to load default palette
 			file = IFileStream::createFileHandle("Content/Animations/Main.palette");
+			file->setExitOnFailToOpen(false);
 			file->Open(FileAccessMode::Read);
 		}
 

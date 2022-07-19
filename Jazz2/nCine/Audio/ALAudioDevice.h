@@ -45,6 +45,7 @@ namespace nCine
 
 		unsigned int nextAvailableSource() override;
 		void registerPlayer(IAudioPlayer* player) override;
+		void unregisterPlayer(IAudioPlayer* player) override;
 		void updatePlayers() override;
 
 	private:
@@ -58,7 +59,7 @@ namespace nCine
 		/// The listener gain value (master volume)
 		ALfloat gain_;
 		/// The sources pool
-		SmallVector<ALuint, MaxSources> sources_;
+		ALuint sources_[MaxSources];
 		/// The array of currently active audio players
 		SmallVector<IAudioPlayer*, MaxSources> players_;
 

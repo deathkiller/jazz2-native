@@ -18,6 +18,9 @@ namespace nCine
 
 		/// Resets the audio file seek value
 		virtual void rewind() const = 0;
+
+		/// Enables native stream looping if supported
+		virtual void setLooping(bool isLooping) { }
 	};
 
 	class InvalidAudioReader : IAudioReader

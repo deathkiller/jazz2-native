@@ -1,13 +1,17 @@
 ﻿#pragma once
 
 #include "ILevelHandler.h"
+#include "IRootController.h"
 #include "LevelInitialization.h"
 #include "Events/EventMap.h"
 #include "Events/EventSpawner.h"
 #include "Tiles/TileMap.h"
 #include "Collisions/DynamicTreeBroadPhase.h"
+
 #include "../nCine/Graphics/Shader.h"
 #include "../nCine/Graphics/ShaderState.h"
+#include "../nCine/Audio/AudioBufferPlayer.h"
+#include "../nCine/Audio/AudioStreamPlayer.h"
 
 #include <SmallVector.h>
 
@@ -23,6 +27,8 @@ namespace Jazz2
 
 	class LevelHandler : public ILevelHandler
 	{
+		friend class ContentResolver;
+
 	public:
 		static constexpr int DefaultWidth = 720;
 		static constexpr int DefaultHeight = 405;
@@ -31,7 +37,7 @@ namespace Jazz2
 		static constexpr int EventSetVersion = 2;
 
 
-		LevelHandler(const LevelInitialization& data);
+		LevelHandler(IRootController* root, const LevelInitialization& levelInit);
 		~LevelHandler() override;
 
 		Events::EventSpawner* EventSpawner() override {
@@ -59,23 +65,25 @@ namespace Jazz2
 
 		const Death::SmallVectorImpl<Actors::Player*>& GetPlayers() const override;
 
-		void LoadLevel(const std::string& levelFileName, const std::string& episodeName);
+		void SetAmbientLight(float value) override;
 
 		void OnBeginFrame() override;
 		void OnEndFrame() override;
-		void OnRootViewportResized(int width, int height) override;
+		void OnInitializeViewport(int width, int height) override;
 
 		void OnKeyPressed(const nCine::KeyboardEvent& event) override;
 		void OnKeyReleased(const nCine::KeyboardEvent& event) override;
 
 		void AddActor(const std::shared_ptr<ActorBase>& actor) override;
 
+		void PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain, float pitch) override;
 		void WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor) override;
 		bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, bool downwards, __out ActorBase** collider) override;
 		void FindCollisionActorsByAABB(ActorBase* self, const AABBf& aabb, const std::function<bool(ActorBase*)>& callback);
 		void FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(ActorBase*)>& callback);
 		void GetCollidingPlayers(const AABBf& aabb, const std::function<bool(ActorBase*)> callback) override;
 
+		void BeginLevelChange(ExitType exitType, const std::string& nextLevel) override;
 		void HandleGameOver() override;
 		bool HandlePlayerDied(const std::shared_ptr<ActorBase>& player) override;
 
@@ -96,6 +104,8 @@ namespace Jazz2
 		}
 
 	private:
+		IRootController* _root;
+
 		std::unique_ptr<SceneNode> _rootNode;
 		std::unique_ptr<Viewport> _view;
 		std::unique_ptr<Texture> _viewTexture;
@@ -127,7 +137,7 @@ namespace Jazz2
 			{
 			}
 
-			void Initialize(Texture* source, int width, int height, const Vector2f& direction, int level);
+			void Initialize(Texture* source, int width, int height, const Vector2f& direction);
 			void Register();
 
 			bool OnDraw(RenderQueue& renderQueue) override;
@@ -144,7 +154,7 @@ namespace Jazz2
 			RenderCommand _renderCommand;
 
 			Texture* _source;
-			bool _downsample;
+			bool _downsampleOnly;
 			Vector2f _direction;
 		};
 
@@ -217,8 +227,15 @@ namespace Jazz2
 		Vector2f _shakeOffset;
 		float _waterLevel;
 		float _ambientLightDefault, _ambientLightCurrent, _ambientLightTarget;
+		std::unique_ptr<AudioStreamPlayer> _music;
+		SmallVector<std::unique_ptr<AudioBufferPlayer>> _playingSounds;
 
 		uint32_t _pressedActions;
+		Vector2f _playerRequiredMovement;
+
+		void OnLevelLoaded(const std::string& name, const std::string& nextLevel, const std::string& secretLevel,
+			std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap,
+			const std::string& musicPath, float ambientLight);
 
 		void ResolveCollisions(float timeMult);
 		void InitializeCamera();

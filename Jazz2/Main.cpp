@@ -15,6 +15,7 @@
 #include "nCine/Input/IInputEventHandler.h"
 #include "nCine/IO/FileSystem.h"
 
+#include "Jazz2/IRootController.h"
 #include "Jazz2/ContentResolver.h"
 #include "Jazz2/LevelHandler.h"
 
@@ -88,7 +89,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 
 #endif
 
-class GameEventHandler : public IAppEventHandler, public IInputEventHandler
+class GameEventHandler : public IAppEventHandler, public IInputEventHandler, public Jazz2::IRootController
 {
 public:
 	static constexpr int DefaultWidth = 720;
@@ -112,8 +113,11 @@ public:
 	void onJoyMappedButtonPressed(const JoyMappedButtonEvent& event) override;
 	void onJoyMappedButtonReleased(const JoyMappedButtonEvent& event) override;
 
+	void ChangeLevel(const Jazz2::LevelInitialization& levelInit) override;
+
 private:
 	std::unique_ptr<Jazz2::ILevelHandler> _currentHandler;
+	std::unique_ptr<Jazz2::LevelInitialization> _pendingLevelChange;
 };
 
 void GameEventHandler::onPreInit(AppConfiguration& config)
@@ -144,17 +148,28 @@ void GameEventHandler::onInit()
 	theApplication().renderingSettings().batchingEnabled = false;
 #endif
 
+#if !defined(__EMSCRIPTEN__)
+	theApplication().inputManager().addJoyMappingsFromFile("Content/gamecontrollerdb.txt");
+#endif
+
 	// TODO
 	Jazz2::PlayerType players[] = { Jazz2::PlayerType::Jazz };
-	Jazz2::LevelInitialization data("unknown", "unknown", Jazz2::GameDifficulty::Normal, false, false, players, _countof(players));
-
-
-	_currentHandler = std::make_unique<Jazz2::LevelHandler>(data);
-
+	Jazz2::LevelInitialization levelInit("share", "01_share1", Jazz2::GameDifficulty::Normal, false, false, players, _countof(players));
+	ChangeLevel(levelInit);
 }
 
 void GameEventHandler::onFrameStart()
 {
+	if (_pendingLevelChange != nullptr) {
+		_currentHandler = std::make_unique<Jazz2::LevelHandler>(this, *_pendingLevelChange.get());
+
+		Viewport::chain().clear();
+		Vector2i res = theApplication().resolutionInt();
+		_currentHandler->OnInitializeViewport(res.X, res.Y);
+
+		_pendingLevelChange = nullptr;
+	}
+
 	if (_currentHandler != nullptr) {
 		_currentHandler->OnBeginFrame();
 	}
@@ -176,8 +191,11 @@ void GameEventHandler::onShutdown()
 
 void GameEventHandler::onRootViewportResized(int width, int height)
 {
+	// Resolution was changed, all viewports have to be recreated
+	Viewport::chain().clear();
+
 	if (_currentHandler != nullptr) {
-		_currentHandler->OnRootViewportResized(width, height);
+		_currentHandler->OnInitializeViewport(width, height);
 	}
 }
 
@@ -219,6 +237,12 @@ void GameEventHandler::onJoyMappedButtonPressed(const JoyMappedButtonEvent& even
 
 void GameEventHandler::onJoyMappedButtonReleased(const JoyMappedButtonEvent& event)
 {
+}
+
+void GameEventHandler::ChangeLevel(const Jazz2::LevelInitialization& levelInit)
+{
+	// Level will be changed in the next frame
+	_pendingLevelChange = std::make_unique<Jazz2::LevelInitialization>(levelInit);
 }
 
 #if defined(_WIN32) && !defined(WITH_QT5)

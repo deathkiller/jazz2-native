@@ -8,9 +8,9 @@ namespace Jazz2::Actors
 	{
 	public:
 		SolidObjectBase();
-		~SolidObjectBase();
 
 		bool IsOneWay;
+		bool Movable;
 
 		bool Push(bool left, float timeMult);
 

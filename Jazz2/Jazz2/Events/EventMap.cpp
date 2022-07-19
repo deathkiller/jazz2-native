@@ -97,7 +97,7 @@ namespace Jazz2::Events
 					generator.TimeLeft = generator.Delay * FrameTimer::FramesPerSecond;
 
 					int x = generator.EventPos % _layoutSize.X;
-					int y = generator.EventPos / _layoutSize.Y;
+					int y = generator.EventPos / _layoutSize.X;
 
 					std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(generator.EventType,
 						generator.EventParams, ActorFlags::IsFromGenerator, x, y, ILevelHandler::MainPlaneZ);
@@ -244,7 +244,7 @@ namespace Jazz2::Events
 		return Vector2f(-1, -1);
 	}
 
-	void EventMap::ReadEvents(const std::unique_ptr<IFileStream>& s, uint32_t layoutVersion, GameDifficulty difficulty)
+	void EventMap::ReadEvents(const std::unique_ptr<IFileStream>& s, const std::unique_ptr<Tiles::TileMap>& tileMap, uint32_t layoutVersion, GameDifficulty difficulty)
 	{
 		s->Open(FileAccessMode::Read);
 
@@ -254,6 +254,10 @@ namespace Jazz2::Events
 
 		int32_t width = s->ReadValue<int32_t>();
 		int32_t height = s->ReadValue<int32_t>();
+
+		if (_layoutSize.X != width || _layoutSize.Y != height) {
+			return;
+		}
 
 		_eventLayout.resize(width * height);
 
@@ -353,10 +357,7 @@ namespace Jazz2::Events
 						case EventType::ModifierHPole:
 						case EventType::ModifierVPole: {
 							StoreTileEvent(x, y, (EventType)eventID, eventFlags, eventParams);
-							auto tiles = _levelHandler->TileMap();
-							if (tiles != nullptr) {
-								tiles->SetTileEventFlags(x, y, (EventType)eventID, eventParams);
-							}
+							tileMap->SetTileEventFlags(x, y, (EventType)eventID, eventParams);
 							break;
 						}
 

@@ -65,7 +65,7 @@ namespace Jazz2::Actors::Enemies
 					_noiseCooldown -= timeMult;
 				} else {
 					_noiseCooldown = 60.0f;
-					//PlaySound("Noise");
+					PlaySfx("Noise");
 				}
 			} else {
 				if (_currentTransitionState != AnimState::Idle) {
