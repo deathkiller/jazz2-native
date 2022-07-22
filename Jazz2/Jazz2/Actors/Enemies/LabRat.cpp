@@ -86,7 +86,7 @@ namespace Jazz2::Actors::Enemies
 			_stateTime -= timeMult;
 
 			if (Random().NextFloat() < 0.008f * timeMult) {
-				PlaySfx("Idle", 0.4f);
+				PlaySfx("Idle", 0.2f);
 			}
 		}
 	}
@@ -128,7 +128,7 @@ namespace Jazz2::Actors::Enemies
 			}
 
 			if (Random().NextFloat() < 0.004f * timeMult) {
-				PlaySfx("Noise", 0.4f);
+				PlaySfx("Noise", 0.2f);
 			}
 
 			if (_canIdle) {

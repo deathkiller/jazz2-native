@@ -6,6 +6,8 @@
 
 #include <SmallVector.h>
 
+using namespace Death;
+
 namespace Jazz2::Compatibility
 {
     class JJ2Anims // .j2a
@@ -30,7 +32,7 @@ namespace Jazz2::Compatibility
         struct AnimSection {
             uint16_t FrameCount;
             uint16_t FrameRate;
-            Death::SmallVector<AnimFrameSection, 0> Frames;
+            SmallVector<AnimFrameSection, 0> Frames;
             int Set;
             uint16_t Anim;
 
@@ -48,8 +50,8 @@ namespace Jazz2::Compatibility
             uint16_t Multiplier;
         };
 
-        static void ImportAnimations(const std::string& targetPath, JJ2Version version, Death::SmallVectorImpl<AnimSection> anims);
+        static void ImportAnimations(const std::string& targetPath, JJ2Version version, SmallVectorImpl<AnimSection> anims);
         static void CreateAnimationMetadataFile(const std::string& filename, AnimSection currentAnim, AnimSetMapping::Entry data, JJ2Version version, int sizeX, int sizeY);
-        static void ImportAudioSamples(const std::string& targetPath, JJ2Version version, Death::SmallVectorImpl<SampleSection> samples);
+        static void ImportAudioSamples(const std::string& targetPath, JJ2Version version, SmallVectorImpl<SampleSection> samples);
     };
 }

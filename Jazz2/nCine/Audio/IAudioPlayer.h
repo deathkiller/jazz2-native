@@ -104,7 +104,7 @@ namespace nCine
 			return lowPass_;
 		}
 		/// Sets player low-pass value
-		void setLowPass(float pitch);
+		void setLowPass(float value);
 		/// Returns player position value
 		inline Vector3f position() const {
 			return position_;

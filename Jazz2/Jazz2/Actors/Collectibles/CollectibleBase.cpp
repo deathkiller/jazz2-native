@@ -41,10 +41,16 @@ namespace Jazz2::Actors::Collectibles
 			_timeLeft = 90.0f * FrameTimer::FramesPerSecond;
 		}
 
-		// TODO: lights
-		/*if ((details.Flags & ActorInstantiationFlags::Illuminated) != 0) {
-			Illuminate();
-		}*/
+		if ((details.Flags & ActorFlags::Illuminated) == ActorFlags::Illuminated) {
+			_illuminateLights.reserve(IlluminateLightCount);
+			for (int i = 0; i < IlluminateLightCount; i++) {
+				auto& light = _illuminateLights.emplace_back();
+				light.Intensity = Random().NextFloat(0.22f, 0.42f);
+				light.Distance = Random().NextFloat(6.0f, 46.0f);
+				light.Phase = Random().NextFloat(0.0f, fTwoPi);
+				light.Speed = Random().NextFloat(-0.12f, -0.04f);
+			}
+		}
 
 		co_return true;
 	}
@@ -67,17 +73,23 @@ namespace Jazz2::Actors::Collectibles
 				DecreaseHealth(INT32_MAX);
 			}
 		}
+
+		for (auto& current : _illuminateLights) {
+			current.Phase += current.Speed * timeMult;
+		}
 	}
 
 	void CollectibleBase::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
-		// TODO: Illuminate
-		auto& light = lights.emplace_back();
-		light.Pos = _pos;
-		light.Intensity = 0.6f;
-		light.Brightness = 0.2f;
-		light.RadiusNear = 40;
-		light.RadiusFar = 80;
+		for (auto& current : _illuminateLights) {
+			auto& light = lights.emplace_back();
+			light.Pos = Vector2f(_pos.X + std::cosf(current.Phase + std::cosf(current.Phase * 0.33f) * 0.33f) * current.Distance,
+				_pos.Y + std::sinf(current.Phase + std::sinf(current.Phase) * 0.33f) * current.Distance);
+			light.Intensity = current.Intensity * 0.7f;
+			light.Brightness = current.Intensity;
+			light.RadiusNear = 0.0f;
+			light.RadiusFar = current.Intensity * 80.0f;
+		}
 	}
 
 	bool CollectibleBase::OnHandleCollision(ActorBase* other)

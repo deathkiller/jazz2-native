@@ -1030,7 +1030,7 @@ namespace Jazz2::Tiles
 
 	void TileMap::UpdateDebris(float timeMult)
 	{
-		for (int i = _debrisList.size() - 1; i >= 0; i--) {
+		for (int i = (int)_debrisList.size() - 1; i >= 0; i--) {
 			DestructibleDebris& debris = _debrisList[i];
 
 			debris.Time -= timeMult;

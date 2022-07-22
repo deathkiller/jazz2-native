@@ -252,8 +252,8 @@ int main(int argc, char** argv)
 #endif
 {
 #if !defined(_WIN32)
-#define __argc argc
-#define __argv argv
+#	define __argc argc
+#	define __argv argv
 #endif
 
 	return PCApplication::start([]() -> std::unique_ptr<IAppEventHandler> {

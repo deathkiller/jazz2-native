@@ -4,6 +4,8 @@
 #include "ActorBase.h"
 #include "LevelInitialization.h"
 
+#include "../nCine/Audio/AudioBufferPlayer.h"
+
 namespace Jazz2
 {
 	enum class PlayerActions {
@@ -42,7 +44,8 @@ namespace Jazz2
 	{
 	public:
 		static constexpr int MainPlaneZ = 500;
-		static constexpr int PlayerZ = MainPlaneZ + 10;
+		static constexpr int SpritePlaneZ = MainPlaneZ + 10;
+		static constexpr int PlayerZ = MainPlaneZ + 20;
 
 		static constexpr float DefaultGravity = 0.3f;
 
@@ -57,13 +60,13 @@ namespace Jazz2
 		virtual Recti LevelBounds() const = 0;
 		virtual float WaterLevel() const = 0;
 
-		virtual const Death::SmallVectorImpl<Actors::Player*>& GetPlayers() const = 0;
+		virtual const SmallVectorImpl<Actors::Player*>& GetPlayers() const = 0;
 
 		virtual void SetAmbientLight(float value) = 0;
 
 		virtual void AddActor(const std::shared_ptr<ActorBase>& actor) = 0;
 
-		virtual void PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain, float pitch) = 0;
+		virtual std::shared_ptr<AudioBufferPlayer>& PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain, float pitch) = 0;
 		virtual void WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor) = 0;
 		virtual bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, bool downwards, __out ActorBase** collider) = 0;
 

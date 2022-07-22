@@ -57,6 +57,26 @@ namespace nCine {
 			alSourcef(sourceId_, AL_PITCH, pitch_);
 	}
 
+	void IAudioPlayer::setLowPass(float value)
+	{
+		lowPass_ = value;
+//#if !defined(__EMSCRIPTEN__)
+//		if (state_ == PlayerState::Playing) {
+//			if (lowPass_ < 1.0f) {
+//				if (filterHandle_ == 0) {
+//					alGenFilters(1, &filterHandle_);
+//					alFilteri(filterHandle_, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
+//					alFilterf(filterHandle_, AL_LOWPASS_GAIN, 1.0f);
+//				}
+//				if (filterHandle_ != 0) {
+//					alFilterf(filterHandle_, AL_LOWPASS_GAINHF, lowPass_);
+//					alSourcei(sourceId_, AL_DIRECT_FILTER, filterHandle_);
+//				}
+//			}
+//		}
+//#endif
+	}
+
 	/*! The change is applied to the OpenAL source only when playing. */
 	void IAudioPlayer::setPosition(const Vector3f& position)
 	{

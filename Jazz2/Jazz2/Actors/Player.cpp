@@ -2574,6 +2574,11 @@ namespace Jazz2::Actors
 		return true;
 	}
 
+	void Player::AddLives(int amount)
+	{
+		// TODO
+	}
+
 	void Player::AddCoins(int count)
 	{
 		_coins += count;

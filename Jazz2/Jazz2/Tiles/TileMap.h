@@ -69,7 +69,7 @@ namespace Jazz2::Tiles
 	};
 
 	struct AnimatedTile {
-		Death::SmallVector<AnimatedTileFrame, 0> Tiles;
+		SmallVector<AnimatedTileFrame, 0> Tiles;
 		int Delay;
 		bool PingPong;
 		int PingPongDelay;
@@ -172,14 +172,14 @@ namespace Jazz2::Tiles
 		int _limitLeft, _limitRight;
 
 		std::unique_ptr<TileSet> _tileSet;
-		Death::SmallVector<TileMapLayer, 0> _layers;
-		Death::SmallVector<AnimatedTile, 0> _animatedTiles;
-		Death::SmallVector<Vector2i, 0> _activeCollapsingTiles;
+		SmallVector<TileMapLayer, 0> _layers;
+		SmallVector<AnimatedTile, 0> _animatedTiles;
+		SmallVector<Vector2i, 0> _activeCollapsingTiles;
 		float _collapsingTimer;
 		BitArray _triggerState;
 
-		Death::SmallVector<DestructibleDebris, 0> _debrisList;
-		Death::SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
+		SmallVector<DestructibleDebris, 0> _debrisList;
+		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
 		int _renderCommandsCount;
 
 		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer);

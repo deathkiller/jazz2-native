@@ -407,7 +407,7 @@ namespace Jazz2
 	{
 		auto it = _metadata->Sounds.find(identifier);
 		if (it != _metadata->Sounds.end()) {
-			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, it->second.Buffers.size()) : 0);
+			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
 			_levelHandler->PlaySfx(it->second.Buffers[idx].get(), Vector3f(_pos.X, _pos.Y, 0.0f), gain, pitch);
 		}
 	}

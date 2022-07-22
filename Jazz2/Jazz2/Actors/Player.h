@@ -34,6 +34,7 @@ namespace Jazz2::Actors
 
 		void AddScore(uint32_t amount);
 		bool AddHealth(int amount);
+		void AddLives(int amount);
 		void AddCoins(int count);
 		void AddGems(int count);
 		void ConsumeFood(bool isDrinkable);

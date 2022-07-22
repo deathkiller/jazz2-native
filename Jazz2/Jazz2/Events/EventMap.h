@@ -66,9 +66,9 @@ namespace Jazz2::Events
 
 		ILevelHandler* _levelHandler;
 		Vector2i _layoutSize;
-		Death::SmallVector<EventTile, 0> _eventLayout;
-		Death::SmallVector<GeneratorInfo, 0> _generators;
-		Death::SmallVector<SpawnPoint, 0> _spawnPoints;
-		Death::SmallVector<WarpTarget, 0> _warpTargets;
+		SmallVector<EventTile, 0> _eventLayout;
+		SmallVector<GeneratorInfo, 0> _generators;
+		SmallVector<SpawnPoint, 0> _spawnPoints;
+		SmallVector<WarpTarget, 0> _warpTargets;
 	};
 }

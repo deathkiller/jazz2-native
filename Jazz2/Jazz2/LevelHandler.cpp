@@ -114,7 +114,7 @@ namespace Jazz2
 		return _waterLevel;
 	}
 
-	const Death::SmallVectorImpl<Actors::Player*>& LevelHandler::GetPlayers() const
+	const SmallVectorImpl<Actors::Player*>& LevelHandler::GetPlayers() const
 	{
 		return _players;
 	}
@@ -159,7 +159,7 @@ namespace Jazz2
 		UpdatePressedActions();
 
 		// Destroy stopped players
-		for (int i = _playingSounds.size() - 1; i >= 0; i--) {
+		for (int i = (int)_playingSounds.size() - 1; i >= 0; i--) {
 			if (_playingSounds[i]->state() == IAudioPlayer::PlayerState::Stopped) {
 				_playingSounds.erase(&_playingSounds[i]);
 			} else {
@@ -666,13 +666,14 @@ void main() {
 		_actors.emplace_back(actor);
 	}
 
-	void LevelHandler::PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain, float pitch)
+	std::shared_ptr<AudioBufferPlayer>& LevelHandler::PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain, float pitch)
 	{
-		auto& player = _playingSounds.emplace_back(std::make_unique<AudioBufferPlayer>(buffer));
+		auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(buffer));
 		player->setPosition(Vector3f((pos.X - _cameraPos.X) / (DefaultWidth * 3), (pos.Y - _cameraPos.Y) / (DefaultHeight * 3), 0.8f));
 		player->setGain(gain * 0.6f);
 		player->setPitch(pitch);
 		player->play();
+		return player;
 	}
 
 	void LevelHandler::WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor)
@@ -820,7 +821,7 @@ void main() {
 		LevelInitialization levelInit;
 
 		if (!realNextLevel.empty()) {
-			int i = realNextLevel.find('/');
+			size_t i = realNextLevel.find('/');
 			if (i == std::string::npos) {
 				levelInit.EpisodeName = _episodeName;
 				levelInit.LevelName = realNextLevel;

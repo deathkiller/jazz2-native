@@ -100,7 +100,7 @@ namespace Jazz2::Events
 					int y = generator.EventPos / _layoutSize.X;
 
 					std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(generator.EventType,
-						generator.EventParams, ActorFlags::IsFromGenerator, x, y, ILevelHandler::MainPlaneZ);
+						generator.EventParams, ActorFlags::IsFromGenerator, x, y, ILevelHandler::SpritePlaneZ);
 					if (actor != nullptr) {
 						_levelHandler->AddActor(actor);
 						generator.SpawnedActor = actor;
@@ -140,7 +140,7 @@ namespace Jazz2::Events
 							flags |= ActorFlags::Async;
 						}
 
-						std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(tile.EventType, tile.EventParams, flags, x, y, ILevelHandler::MainPlaneZ);
+						std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(tile.EventType, tile.EventParams, flags, x, y, ILevelHandler::SpritePlaneZ);
 						if (actor != nullptr) {
 							_levelHandler->AddActor(actor);
 						}

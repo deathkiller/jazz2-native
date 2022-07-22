@@ -203,6 +203,8 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Utf8.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
+    <ClInclude Include="Jazz2\Actors\Collectibles\GemCollectible.h" />
+    <ClInclude Include="Jazz2\Actors\Collectibles\OneUpCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\LabRat.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Sucker.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\SuckerFloat.h" />
@@ -210,6 +212,8 @@
     <ClInclude Include="Jazz2\Actors\Environment\EndOfLevel.h" />
     <ClInclude Include="Jazz2\Actors\Environment\Moth.h" />
     <ClInclude Include="Jazz2\Actors\Solid\Bridge.h" />
+    <ClInclude Include="Jazz2\Actors\Solid\CrateContainer.h" />
+    <ClInclude Include="Jazz2\Actors\Solid\GenericContainer.h" />
     <ClInclude Include="Jazz2\Actors\Solid\TriggerCrate.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\BouncerShot.h" />
     <ClInclude Include="Jazz2\Compatibility\AnimSetMapping.h" />
@@ -404,6 +408,8 @@
     <ClCompile Include="$(ExtensionLibraryPath)\SmallVector.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Utf8.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
+    <ClCompile Include="Jazz2\Actors\Collectibles\GemCollectible.cpp" />
+    <ClCompile Include="Jazz2\Actors\Collectibles\OneUpCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\LabRat.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Sucker.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\SuckerFloat.cpp" />
@@ -411,6 +417,8 @@
     <ClCompile Include="Jazz2\Actors\Environment\EndOfLevel.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\Moth.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\Bridge.cpp" />
+    <ClCompile Include="Jazz2\Actors\Solid\CrateContainer.cpp" />
+    <ClCompile Include="Jazz2\Actors\Solid\GenericContainer.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\TriggerCrate.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\BouncerShot.cpp" />
     <ClCompile Include="Jazz2\Compatibility\AnimSetMapping.cpp" />

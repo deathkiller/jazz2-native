@@ -63,7 +63,7 @@ namespace Jazz2
 
 		float WaterLevel() const override;
 
-		const Death::SmallVectorImpl<Actors::Player*>& GetPlayers() const override;
+		const SmallVectorImpl<Actors::Player*>& GetPlayers() const override;
 
 		void SetAmbientLight(float value) override;
 
@@ -76,7 +76,7 @@ namespace Jazz2
 
 		void AddActor(const std::shared_ptr<ActorBase>& actor) override;
 
-		void PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain, float pitch) override;
+		std::shared_ptr<AudioBufferPlayer>& PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain, float pitch) override;
 		void WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor) override;
 		bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, bool downwards, __out ActorBase** collider) override;
 		void FindCollisionActorsByAABB(ActorBase* self, const AABBf& aabb, const std::function<bool(ActorBase*)>& callback);
@@ -123,7 +123,7 @@ namespace Jazz2
 
 		private:
 			LevelHandler* _owner;
-			Death::SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
+			SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
 			int _renderCommandsCount;
 
 			RenderCommand* RentRenderCommand();
@@ -201,8 +201,8 @@ namespace Jazz2
 		std::unique_ptr<Sprite> _viewSprite;
 #endif
 
-		Death::SmallVector<std::shared_ptr<ActorBase>, 0> _actors;
-		Death::SmallVector<Actors::Player*, LevelInitialization::MaxPlayerCount> _players;
+		SmallVector<std::shared_ptr<ActorBase>, 0> _actors;
+		SmallVector<Actors::Player*, LevelInitialization::MaxPlayerCount> _players;
 
 		std::string _levelFileName;
 		std::string _episodeName;
@@ -228,7 +228,7 @@ namespace Jazz2
 		float _waterLevel;
 		float _ambientLightDefault, _ambientLightCurrent, _ambientLightTarget;
 		std::unique_ptr<AudioStreamPlayer> _music;
-		SmallVector<std::unique_ptr<AudioBufferPlayer>> _playingSounds;
+		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
 
 		uint32_t _pressedActions;
 		Vector2f _playerRequiredMovement;

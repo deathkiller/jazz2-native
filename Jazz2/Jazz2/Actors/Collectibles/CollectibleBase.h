@@ -15,6 +15,15 @@ namespace Jazz2::Actors::Collectibles
 		CollectibleBase();
 
 	protected:
+		static constexpr int IlluminateLightCount = 20;
+
+		struct IlluminateLight {
+			float Intensity;
+			float Distance;
+			float Phase;
+			float Speed;
+		};
+
 		bool _untouched;
 		uint32_t _scoreValue;
 
@@ -30,6 +39,6 @@ namespace Jazz2::Actors::Collectibles
 	private:
 		float _phase, _timeLeft;
 		float _startingY;
-
+		SmallVector<IlluminateLight, 0> _illuminateLights;
 	};
 }

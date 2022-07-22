@@ -26,6 +26,8 @@
 
 #include <SmallVector.h>
 
+using namespace Death;
+
 namespace Jazz2::Collisions
 {
 	using nCine::AABBf;
@@ -194,7 +196,7 @@ namespace Jazz2::Collisions
 	template<typename T>
 	inline void DynamicTree::Query(T* callback, const AABBf& aabb) const
 	{
-		Death::SmallVector<int32_t, 256> stack;
+		SmallVector<int32_t, 256> stack;
 		stack.push_back(m_root);
 
 		while (!stack.empty()) {

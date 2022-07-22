@@ -66,7 +66,7 @@ namespace Jazz2
 		GenericGraphicResource* Base;
 		//GraphicResourceAsyncFinalize AsyncFinalize;
 
-		Death::SmallVector<AnimState, 4> State;
+		SmallVector<AnimState, 4> State;
 		//std::unique_ptr<Material> Material;
 		float FrameDuration;
 		int FrameCount;

@@ -39,7 +39,7 @@ namespace Jazz2::Actors::Solid
 				Piece piece = new Piece();
 				piece.OnActivated(new ActorActivationDetails {
 					LevelHandler = levelHandler,
-					Pos = new Vector3(pos.X + widthCovered - 16, pos.Y - 20, LevelHandler.MainPlaneZ + 10),
+					Pos = new Vector3(pos.X + widthCovered - 16, pos.Y - 20, LevelHandler.MainPlaneZ + 30),
 					Params = new[] { (ushort)bridgeType, (ushort)i }
 				});
 				levelHandler.AddActor(piece);
