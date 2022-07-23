@@ -9,6 +9,7 @@
 #include "../nCine/Graphics/Texture.h"
 #include "../nCine/Graphics/Viewport.h"
 #include "../nCine/Graphics/RenderQueue.h"
+#include "../nCine/Audio/AudioReaderMpt.h"
 #include "../nCine/Base/Random.h"
 
 #include "Actors/Player.h"
@@ -92,8 +93,7 @@ namespace Jazz2
 			ptr->ReceiveLevelCarryOver(levelInit.ExitType, levelInit.PlayerCarryOvers[i]);
 		}
 
-		// TODO
-		//_commonResources = ContentResolver::Current().RequestMetadata("Common/Scenery");
+		_commonResources = ContentResolver::Current().RequestMetadata("Common/Scenery");
 
 		_eventMap->PreloadEventsAsync();
 
@@ -144,12 +144,14 @@ namespace Jazz2
 		_ambientLightTarget = ambientLight;
 
 		_musicPath = musicPath;
+#ifdef WITH_OPENMPT
 		if (!musicPath.empty()) {
 			_music = std::make_unique<AudioStreamPlayer>(FileSystem::joinPath("Content/Music", musicPath).c_str());
 			_music->setLooping(true);
 			_music->setGain(0.2f);
 			_music->play();
 		}
+#endif
 	}
 
 	void LevelHandler::OnBeginFrame()
@@ -411,11 +413,7 @@ namespace Jazz2
 			h = std::min(DefaultHeight, height);
 		}
 
-		if (_viewTexture == nullptr) {
-			_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
-		} else {
-			_viewTexture->init(nullptr, Texture::Format::RGB8, w, h);
-		}
+		_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
 		_viewTexture->setMagFiltering(SamplerFilter::Nearest);
 
 		_view = std::make_unique<Viewport>(_viewTexture.get(), Viewport::DepthStencilFormat::DEPTH24_STENCIL8);
@@ -597,11 +595,7 @@ void main() {
 
 		}
 
-		if (_lightingBuffer == nullptr) {
-			_lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, w, h);
-		} else {
-			_lightingBuffer->init(nullptr, Texture::Format::RG8, w, h);
-		}
+		_lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, w, h);
 		_lightingBuffer->setMagFiltering(SamplerFilter::Nearest);
 
 		_lightingView = std::make_unique<Viewport>(_lightingBuffer.get(), Viewport::DepthStencilFormat::NONE);
@@ -666,14 +660,44 @@ void main() {
 		_actors.emplace_back(actor);
 	}
 
-	std::shared_ptr<AudioBufferPlayer>& LevelHandler::PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain, float pitch)
+	const std::shared_ptr<AudioBufferPlayer>& LevelHandler::PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain, float pitch)
 	{
 		auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(buffer));
-		player->setPosition(Vector3f((pos.X - _cameraPos.X) / (DefaultWidth * 3), (pos.Y - _cameraPos.Y) / (DefaultHeight * 3), 0.8f));
-		player->setGain(gain * 0.6f);
-		player->setPitch(pitch);
+		player->setPosition(Vector3f((pos.X - _cameraPos.X) / (DefaultWidth * 4), (pos.Y - _cameraPos.Y) / (DefaultHeight * 4), 0.8f));
+		player->setGain(gain);
+
+		if (pos.Y >= _waterLevel) {
+			player->setLowPass(/*0.2f*/0.05f);
+			player->setPitch(pitch * 0.7f);
+		} else {
+			player->setPitch(pitch);
+		}
+
 		player->play();
 		return player;
+	}
+
+	const std::shared_ptr<AudioBufferPlayer>& LevelHandler::PlayCommonSfx(const std::string& identifier, const Vector3f& pos, float gain, float pitch)
+	{
+		auto it = _commonResources->Sounds.find(identifier);
+		if (it != _commonResources->Sounds.end()) {
+			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
+			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(it->second.Buffers[idx].get()));
+			player->setPosition(Vector3f((pos.X - _cameraPos.X) / (DefaultWidth * 4), (pos.Y - _cameraPos.Y) / (DefaultHeight * 4), 0.8f));
+			player->setGain(gain);
+
+			if (pos.Y >= _waterLevel) {
+				player->setLowPass(/*0.2f*/0.05f);
+				player->setPitch(pitch * 0.7f);
+			} else {
+				player->setPitch(pitch);
+			}
+
+			player->play();
+			return player;
+		} else {
+			return std::shared_ptr<AudioBufferPlayer>(nullptr);
+		}
 	}
 
 	void LevelHandler::WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor)
@@ -1255,11 +1279,7 @@ void main() {
 		_camera->setOrthoProjection(width * (-0.5f), width * (+0.5f), height * (-0.5f), height * (+0.5f));
 		_camera->setView(0, 0, 0, 1);
 
-		if (_target == nullptr) {
-			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
-		} else {
-			_target->init(nullptr, Texture::Format::RGB8, width, height);
-		}
+		_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
 		_target->setMagFiltering(SamplerFilter::Linear);
 
 		_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);

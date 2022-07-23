@@ -52,10 +52,13 @@ namespace nCine
 			return std::make_unique<AudioLoaderOgg>(std::move(fileHandle));
 		}
 #endif
-		if (fs::hasExtension(filename, "j2b") || fs::hasExtension(filename, "it") || fs::hasExtension(filename, "s3m") ||
-			fs::hasExtension(filename, "xm") || fs::hasExtension(filename, "mo3")) {
+#ifdef WITH_OPENMPT
+		else if (fs::hasExtension(filename, "j2b") || fs::hasExtension(filename, "it") || fs::hasExtension(filename, "s3m") ||
+				 fs::hasExtension(filename, "xm") || fs::hasExtension(filename, "mo3")) {
 			return std::make_unique<AudioLoaderMpt>(std::move(fileHandle));
-		} else {
+		}
+#endif
+		else {
 			LOGF_X("Extension unknown: \"%s\"", fs::extension(filename));
 			fileHandle.reset(nullptr);
 			return std::make_unique<InvalidAudioLoader>(std::move(fileHandle));

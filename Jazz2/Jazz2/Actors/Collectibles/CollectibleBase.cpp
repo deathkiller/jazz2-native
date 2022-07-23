@@ -46,7 +46,7 @@ namespace Jazz2::Actors::Collectibles
 			for (int i = 0; i < IlluminateLightCount; i++) {
 				auto& light = _illuminateLights.emplace_back();
 				light.Intensity = Random().NextFloat(0.22f, 0.42f);
-				light.Distance = Random().NextFloat(6.0f, 46.0f);
+				light.Distance = Random().NextFloat(4.0f, 36.0f);
 				light.Phase = Random().NextFloat(0.0f, fTwoPi);
 				light.Speed = Random().NextFloat(-0.12f, -0.04f);
 			}

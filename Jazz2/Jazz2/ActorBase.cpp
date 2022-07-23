@@ -403,12 +403,14 @@ namespace Jazz2
 		}
 	}
 
-	void ActorBase::PlaySfx(const std::string& identifier, float gain, float pitch)
+	const std::shared_ptr<AudioBufferPlayer>& ActorBase::PlaySfx(const std::string& identifier, float gain, float pitch)
 	{
 		auto it = _metadata->Sounds.find(identifier);
 		if (it != _metadata->Sounds.end()) {
 			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
-			_levelHandler->PlaySfx(it->second.Buffers[idx].get(), Vector3f(_pos.X, _pos.Y, 0.0f), gain, pitch);
+			return _levelHandler->PlaySfx(it->second.Buffers[idx].get(), Vector3f(_pos.X, _pos.Y, 0.0f), gain, pitch);
+		} else {
+			return std::shared_ptr<AudioBufferPlayer>(nullptr);
 		}
 	}
 

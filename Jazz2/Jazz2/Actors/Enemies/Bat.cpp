@@ -112,8 +112,7 @@ namespace Jazz2::Actors::Enemies
 	bool Bat::OnPerish(ActorBase* collider)
 	{
 		CreateDeathDebris(collider);
-		// TODO
-		//_levelHandler->PlayCommonSound("Splat", Transform.Pos);
+		_levelHandler->PlayCommonSfx("Splat", Vector3f(_pos.X, _pos.Y, 0.0f));
 
 		TryGenerateRandomDrop();
 

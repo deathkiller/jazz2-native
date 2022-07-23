@@ -1,5 +1,11 @@
 #pragma once
 
+#if defined(_WIN32) && !defined(CMAKE_BUILD)
+#	define WITH_OPENMPT
+#endif
+
+#ifdef WITH_OPENMPT
+
 #include "IAudioReader.h"
 #include "../IO/IFileStream.h"
 
@@ -41,12 +47,13 @@ namespace nCine
 		static int stream_seek_func(void* stream, int64_t offset, int whence);
 		static int64_t stream_tell_func(void* stream);
 
-		static void LibraryLog(const char* message, void* user);
+		static void InternalLog(const char* message, void* user);
 
 		/// Deleted copy constructor
 		AudioReaderMpt(const AudioReaderMpt&) = delete;
 		/// Deleted assignment operator
 		AudioReaderMpt& operator=(const AudioReaderMpt&) = delete;
 	};
-
 }
+
+#endif

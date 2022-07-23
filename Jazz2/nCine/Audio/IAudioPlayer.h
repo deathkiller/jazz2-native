@@ -20,7 +20,7 @@ namespace nCine
 
 		IAudioPlayer(ObjectType type, const char* name);
 		IAudioPlayer(ObjectType type);
-		~IAudioPlayer() override {}
+		~IAudioPlayer() override;
 
 		/// Default move constructor
 		IAudioPlayer(IAudioPlayer&&) = default;
@@ -129,11 +129,15 @@ namespace nCine
 		float lowPass_;
 		/// Player position in space
 		Vector3f position_;
+		/// Filter handle
+		unsigned int filterHandle_;
 
 		/// Updates the state of the player if the source has done playing
 		/*! It is called every frame by the `IAudioDevice` class and it is
 		 *  also responsible for buffer queueing/unqueueing in stream players. */
 		virtual void updateState() = 0;
+
+		virtual void updateFilters();
 
 		friend class ALAudioDevice;
 	};

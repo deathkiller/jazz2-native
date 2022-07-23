@@ -96,7 +96,7 @@ namespace Jazz2::Actors::Enemies
 	bool TurtleShell::OnPerish(ActorBase* collider)
 	{
 		CreateDeathDebris(collider);
-		//_levelHandler->PlayCommonSound("Splat", _pos);
+		_levelHandler->PlayCommonSfx("Splat", Vector3f(_pos.X, _pos.Y, 0.0f));
 
 		TryGenerateRandomDrop();
 

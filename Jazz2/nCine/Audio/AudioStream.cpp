@@ -4,9 +4,10 @@
 #include "AudioStream.h"
 #include "IAudioLoader.h"
 #include "IAudioReader.h"
+#include "../ServiceLocator.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -107,8 +108,17 @@ namespace nCine {
 
 			// If it is still decoding data then enqueue
 			if (bytes > 0) {
+				int freq;
+				if (frequency_ == IAudioLoader::UseNativeFrequency) {
+					// If no frequency is specified, use native frequency
+					IAudioDevice& device = theServiceLocator().audioDevice();
+					freq = device.nativeFrequency();
+				} else {
+					freq = frequency_;
+				}
+
 				// On iOS `alBufferDataStatic()` could be used instead
-				alBufferData(currentBufferId_, format_, memBuffer_.get(), bytes, frequency_);
+				alBufferData(currentBufferId_, format_, memBuffer_.get(), bytes, freq);
 				alSourceQueueBuffers(source, 1, &currentBufferId_);
 				nextAvailableBufferIndex_++;
 			}
@@ -171,7 +181,6 @@ namespace nCine {
 
 	bool AudioStream::loadFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
-
 		/*if (bufferName)
 		{
 			// When Tracy is disabled the statement body is empty and braces are needed
@@ -188,7 +197,6 @@ namespace nCine {
 
 	bool AudioStream::loadFromFile(const char* filename)
 	{
-
 		//ZoneText(filename, nctl::strnlen(filename, std::string::MaxCStringLength));
 
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromFile(filename);

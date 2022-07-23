@@ -42,6 +42,9 @@
 #		else
 #			include <AL/al.h>
 #		endif
+#		if !defined(__EMSCRIPTEN__)
+#			define OPENAL_FILTERS_SUPPORTED 1
+#		endif
 #	endif
 #endif
 

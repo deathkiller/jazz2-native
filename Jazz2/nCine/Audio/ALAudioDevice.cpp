@@ -1,16 +1,16 @@
 #include "ALAudioDevice.h"
 #include "AudioBufferPlayer.h"
 #include "AudioStreamPlayer.h"
+#include "../ServiceLocator.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
 
 	ALAudioDevice::ALAudioDevice()
-		: device_(nullptr), context_(nullptr), gain_(1.0f),
-		deviceName_(nullptr)
+		: device_(nullptr), context_(nullptr), gain_(1.0f), deviceName_(nullptr), nativeFreq_(44100)
 	{
 		device_ = alcOpenDevice(nullptr);
 		//FATAL_ASSERT_MSG_X(device_ != nullptr, "alcOpenDevice failed: 0x%x", alGetError());
@@ -21,6 +21,24 @@ namespace nCine {
 			alcCloseDevice(device_);
 			//FATAL_MSG_X("alcCreateContext failed: 0x%x", alGetError());
 		}
+
+#if !defined(__EMSCRIPTEN__)
+		ALCint attributes_size;
+		alcGetIntegerv(device_, ALC_ATTRIBUTES_SIZE, 1, &attributes_size);
+		if (attributes_size > 0) {
+			SmallVector<ALCint, 0> attributes(attributes_size);
+			alcGetIntegerv(device_, ALC_ALL_ATTRIBUTES, attributes_size, &attributes[0]);
+
+			for (size_t i = 0; i + 1 < attributes_size; i += 2) {
+				if (attributes[i] == ALC_FREQUENCY) {
+					nativeFreq_ = attributes[i + 1];
+					break;
+				}
+			}
+		} else {
+			LOGW("Cannot get native frequency - no attributes found");
+		}
+#endif
 
 		if (!alcMakeContextCurrent(context_)) {
 			alcDestroyContext(context_);
@@ -91,7 +109,7 @@ namespace nCine {
 			? AudioBufferPlayer::sType()
 			: AudioStreamPlayer::sType();
 
-		for (int i = players_.size() - 1; i >= 0; i--) {
+		for (int i = (int)players_.size() - 1; i >= 0; i--) {
 			if (players_[i]->type() == objectType) {
 				players_[i]->stop();
 				players_.erase(&players_[i]);
@@ -105,7 +123,7 @@ namespace nCine {
 			? AudioBufferPlayer::sType()
 			: AudioStreamPlayer::sType();
 
-		for (int i = players_.size() - 1; i >= 0; i--) {
+		for (int i = (int)players_.size() - 1; i >= 0; i--) {
 			if (players_[i]->type() == objectType) {
 				players_[i]->pause();
 				players_.erase(&players_[i]);
@@ -146,8 +164,9 @@ namespace nCine {
 		//ASSERT(player);
 		//ASSERT(players_.size() < MaxSources);
 
-		if (players_.size() < MaxSources)
+		if (players_.size() < MaxSources) {
 			players_.push_back(player);
+		}
 	}
 
 	void ALAudioDevice::unregisterPlayer(IAudioPlayer* player)
@@ -165,12 +184,17 @@ namespace nCine {
 
 	void ALAudioDevice::updatePlayers()
 	{
-		for (int i = players_.size() - 1; i >= 0; i--) {
-			if (players_[i]->isPlaying())
+		for (int i = (int)players_.size() - 1; i >= 0; i--) {
+			if (players_[i]->isPlaying()) {
 				players_[i]->updateState();
-			else
+			} else {
 				players_.erase(&players_[i]);
+			}
 		}
 	}
 
+	int ALAudioDevice::nativeFrequency()
+	{
+		return nativeFreq_;
+	}
 }

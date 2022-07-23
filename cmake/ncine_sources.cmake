@@ -108,6 +108,8 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/CoinCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/CollectibleBase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/FoodCollectible.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/GemCollectible.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/OneUpCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bat.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/EnemyBase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/LabRat.cpp
@@ -117,10 +119,12 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/TurtleShell.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/BonusWarp.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Checkpoint.cpp
-    ${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/EndOfLevel.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/EndOfLevel.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Moth.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Spring.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/Bridge.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/CrateContainer.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/GenericContainer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/TriggerCrate.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BlasterShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BouncerShot.cpp

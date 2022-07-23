@@ -1,3 +1,7 @@
+#include "AudioReaderMpt.h"
+
+#ifdef WITH_OPENMPT
+
 #if defined(_WIN32) && !defined(CMAKE_BUILD)
 #   if defined(_M_X64)
 #       pragma comment(lib, "../Libs/x64/libopenmpt.lib")
@@ -8,7 +12,6 @@
 #   endif
 #endif
 
-#include "AudioReaderMpt.h"
 #include "../IO/IFileStream.h"
 
 #include <cstring>
@@ -25,7 +28,7 @@ namespace nCine
 		stream_callbacks.read = stream_read_func;
 		stream_callbacks.seek = stream_seek_func;
 		stream_callbacks.tell = stream_tell_func;
-		_module = openmpt_module_create2(stream_callbacks, this, LibraryLog, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+		_module = openmpt_module_create2(stream_callbacks, this, InternalLog, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 	}
 
 	AudioReaderMpt::~AudioReaderMpt()
@@ -99,8 +102,10 @@ namespace nCine
 		return _this->_fileHandle->GetPosition();
 	}
 
-	void AudioReaderMpt::LibraryLog(const char* message, void* user)
+	void AudioReaderMpt::InternalLog(const char* message, void* user)
 	{
 		LOGI_X("%s", message);
 	}
 }
+
+#endif

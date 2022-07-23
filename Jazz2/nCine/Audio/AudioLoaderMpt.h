@@ -1,5 +1,9 @@
 #pragma once
 
+#include "AudioReaderMpt.h"
+
+#ifdef WITH_OPENMPT
+
 #include "IAudioLoader.h"
 
 namespace nCine
@@ -13,3 +17,5 @@ namespace nCine
 	};
 
 }
+
+#endif

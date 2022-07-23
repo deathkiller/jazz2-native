@@ -48,6 +48,8 @@ namespace nCine
 		void unregisterPlayer(IAudioPlayer* player) override;
 		void updatePlayers() override;
 
+		int nativeFrequency() override;
+
 	private:
 		/// Maximum number of OpenAL sources (HACK: should use a query)
 		static const unsigned int MaxSources = 16;
@@ -62,6 +64,8 @@ namespace nCine
 		ALuint sources_[MaxSources];
 		/// The array of currently active audio players
 		SmallVector<IAudioPlayer*, MaxSources> players_;
+		/// native device frequency
+		int nativeFreq_;
 
 		/// The OpenAL device name string
 		const char* deviceName_;

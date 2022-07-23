@@ -378,7 +378,7 @@ namespace Jazz2::Actors
 				//pos.Z -= 2.0f;
 
 				//Explosion.Create(levelHandler, pos, Explosion.WaterSplash);
-				//_levelHandler->PlayCommonSound("WaterSplash", this, 0.7f, 0.5f);
+				_levelHandler->PlayCommonSfx("WaterSplash", Vector3f(_pos.X, _pos.Y, 0.0f), 0.7f, 0.5f);
 			}
 
 			_inShallowWater = areaWaterBlock;
@@ -388,7 +388,7 @@ namespace Jazz2::Actors
 			//pos.Z -= 2f;
 
 			//Explosion.Create(levelHandler, pos, Explosion.WaterSplash);
-			//_levelHandler->PlayCommonSound("WaterSplash", this, 1f, 0.5f);
+			_levelHandler->PlayCommonSfx("WaterSplash", Vector3f(_pos.X, _pos.Y, 0.0f), 1.0f, 0.5f);
 
 			_inShallowWater = -1;
 		}
@@ -1515,7 +1515,7 @@ namespace Jazz2::Actors
 				pos.Y = _levelHandler->WaterLevel();
 				//pos.Z -= 2.0f;
 				//Explosion.Create(levelHandler, pos, Explosion.WaterSplash);
-				//_levelHandler->PlayCommonSound("WaterSplash", this, 1.0f, 0.5f);
+				_levelHandler->PlayCommonSfx("WaterSplash", Vector3f(_pos.X, _pos.Y, 0.0f), 1.0f, 0.5f);
 			}
 		} else {
 			if (_pos.Y >= _levelHandler->WaterLevel() && _waterCooldownLeft <= 0.0f) {
@@ -1529,7 +1529,7 @@ namespace Jazz2::Actors
 				pos.Y = _levelHandler->WaterLevel();
 				//pos.Z -= 2f;
 				//Explosion.Create(levelHandler, pos, Explosion.WaterSplash);
-				//_levelHandler->PlayCommonSound("WaterSplash", this, 0.7f, 0.5f);
+				_levelHandler->PlayCommonSfx("WaterSplash", Vector3f(_pos.X, _pos.Y, 0.0f), 0.7f, 0.5f);
 			}
 		}
 	}

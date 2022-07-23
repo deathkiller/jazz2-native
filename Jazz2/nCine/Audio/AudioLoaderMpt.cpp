@@ -1,15 +1,16 @@
 #include "AudioLoaderMpt.h"
 #include "AudioReaderMpt.h"
 
+#ifdef WITH_OPENMPT
+
 namespace nCine
 {
 	AudioLoaderMpt::AudioLoaderMpt(std::unique_ptr<IFileStream> fileHandle)
 		: IAudioLoader(std::move(fileHandle))
 	{
-		// TODO
 		bytesPerSample_ = 2;
 		numChannels_ = 2;
-		frequency_ = AudioReaderMpt::SampleRate;
+		frequency_ = UseNativeFrequency;
 		numSamples_ = -1;
 		hasLoaded_ = true;
 	}
@@ -20,3 +21,5 @@ namespace nCine
 	}
 
 }
+
+#endif

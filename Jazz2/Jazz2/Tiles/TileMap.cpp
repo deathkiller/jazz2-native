@@ -433,8 +433,7 @@ namespace Jazz2::Tiles
 			tile.TileID = _animatedTiles[tile.DestructAnimation].Tiles[tile.DestructFrameIndex].TileID;
 			if (tile.DestructFrameIndex >= max) {
 				if (!soundName.empty()) {
-					// TODO
-					//_levelHandler.PlayCommonSound(soundName, Vector2f(tx * 32 + 16, ty * 32 + 16));
+					_levelHandler->PlayCommonSfx(soundName, Vector3f(tx * 32 + 16, ty * 32 + 16, 0.0f));
 				}
 				AnimatedTile& anim = _animatedTiles[tile.DestructAnimation];
 				CreateTileDebris(anim.Tiles[anim.Tiles.size() - 1].TileID, tx, ty);

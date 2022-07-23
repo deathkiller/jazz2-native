@@ -53,6 +53,8 @@ namespace nCine
 		virtual void unregisterPlayer(IAudioPlayer* player) = 0;
 		/// Updates players state (and buffer queue in the case of stream players)
 		virtual void updatePlayers() = 0;
+
+		virtual int nativeFrequency() = 0;
 	};
 
 	inline IAudioDevice::~IAudioDevice() {}
@@ -94,6 +96,7 @@ namespace nCine
 		void registerPlayer(IAudioPlayer* player) override {}
 		void unregisterPlayer(IAudioPlayer* player) override {}
 		void updatePlayers() override {}
+		int nativeFrequency() override { return 0; }
 	};
 
 }

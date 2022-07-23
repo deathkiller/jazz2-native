@@ -21,11 +21,10 @@ namespace nCine
 	{
 		LOGI_X("Canvas was resized to %ix%i", event->windowInnerWidth, event->windowInnerHeight);
 
-		// Change resolution only if the canvas fills all the available space
-		//if (event->documentBodyClientWidth == 0 || event->documentBodyClientHeight == 0) {
+		if (event->windowInnerWidth > 0 && event->windowInnerHeight > 0) {
 			IGfxDevice* gfxDevice = reinterpret_cast<IGfxDevice*>(userData);
 			gfxDevice->setResolution(event->windowInnerWidth, event->windowInnerHeight);
-		//}
+		}
 
 		return 1;
 	}

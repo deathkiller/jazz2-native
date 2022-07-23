@@ -14,15 +14,27 @@ namespace nCine {
 	IAudioPlayer::IAudioPlayer(ObjectType type, const char* name)
 		: Object(type, name), sourceId_(IAudioDevice::UnavailableSource),
 		state_(PlayerState::Stopped), isLooping_(false),
-		gain_(1.0f), pitch_(1.0f), lowPass_(1.0f), position_(0.0f, 0.0f, 0.0f)
+		gain_(1.0f), pitch_(1.0f), lowPass_(1.0f), position_(0.0f, 0.0f, 0.0f),
+		filterHandle_(0)
 	{
 	}
 
 	IAudioPlayer::IAudioPlayer(ObjectType type)
 		: Object(type), sourceId_(IAudioDevice::UnavailableSource),
 		state_(PlayerState::Stopped), isLooping_(false),
-		gain_(1.0f), pitch_(1.0f), lowPass_(1.0f), position_(0.0f, 0.0f, 0.0f)
+		gain_(1.0f), pitch_(1.0f), lowPass_(1.0f), position_(0.0f, 0.0f, 0.0f),
+		filterHandle_(0)
 	{
+	}
+
+	IAudioPlayer::~IAudioPlayer()
+	{
+#if OPENAL_FILTERS_SUPPORTED
+		if (filterHandle_ != 0) {
+			alDeleteFilters(1, &filterHandle_);
+			filterHandle_ = 0;
+		}
+#endif
 	}
 
 	///////////////////////////////////////////////////////////
@@ -45,52 +57,63 @@ namespace nCine {
 	void IAudioPlayer::setGain(float gain)
 	{
 		gain_ = gain;
-		if (state_ == PlayerState::Playing)
+		if (state_ == PlayerState::Playing) {
 			alSourcef(sourceId_, AL_GAIN, gain_);
+		}
 	}
 
 	/*! The change is applied to the OpenAL source only when playing. */
 	void IAudioPlayer::setPitch(float pitch)
 	{
 		pitch_ = pitch;
-		if (state_ == PlayerState::Playing)
+		if (state_ == PlayerState::Playing) {
 			alSourcef(sourceId_, AL_PITCH, pitch_);
+		}
 	}
 
 	void IAudioPlayer::setLowPass(float value)
 	{
-		lowPass_ = value;
-//#if !defined(__EMSCRIPTEN__)
-//		if (state_ == PlayerState::Playing) {
-//			if (lowPass_ < 1.0f) {
-//				if (filterHandle_ == 0) {
-//					alGenFilters(1, &filterHandle_);
-//					alFilteri(filterHandle_, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
-//					alFilterf(filterHandle_, AL_LOWPASS_GAIN, 1.0f);
-//				}
-//				if (filterHandle_ != 0) {
-//					alFilterf(filterHandle_, AL_LOWPASS_GAINHF, lowPass_);
-//					alSourcei(sourceId_, AL_DIRECT_FILTER, filterHandle_);
-//				}
-//			}
-//		}
-//#endif
+		if (lowPass_ != value) {
+			lowPass_ = value;
+			updateFilters();
+		}
 	}
 
 	/*! The change is applied to the OpenAL source only when playing. */
 	void IAudioPlayer::setPosition(const Vector3f& position)
 	{
 		position_ = position;
-		if (state_ == PlayerState::Playing)
+		if (state_ == PlayerState::Playing) {
 			alSourcefv(sourceId_, AL_POSITION, position_.Data());
+		}
 	}
 
 	/*! The change is applied to the OpenAL source only when playing. */
 	void IAudioPlayer::setPosition(float x, float y, float z)
 	{
 		position_.Set(x, y, z);
-		if (state_ == PlayerState::Playing)
+		if (state_ == PlayerState::Playing) {
 			alSourcefv(sourceId_, AL_POSITION, position_.Data());
+		}
 	}
 
+	void IAudioPlayer::updateFilters()
+	{
+#if OPENAL_FILTERS_SUPPORTED
+		if (lowPass_ < 1.0f) {
+			if (filterHandle_ == 0) {
+				alGenFilters(1, &filterHandle_);
+				alFilteri(filterHandle_, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
+				alFilterf(filterHandle_, AL_LOWPASS_GAIN, 1.0f);
+			}
+			if (filterHandle_ != 0) {
+				alFilterf(filterHandle_, AL_LOWPASS_GAINHF, lowPass_);
+				alSourcei(sourceId_, AL_DIRECT_FILTER, filterHandle_);
+			}
+		} else if (filterHandle_ != 0) {
+			alFilterf(filterHandle_, AL_LOWPASS_GAINHF, 1.0f);
+			alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
+		}
+#endif
+	}
 }

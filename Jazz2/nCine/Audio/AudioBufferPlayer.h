@@ -53,7 +53,6 @@ namespace nCine
 
 	private:
 		AudioBuffer* audioBuffer_;
-		unsigned int filterHandle_;
 
 		/// Deleted copy constructor
 		AudioBufferPlayer(const AudioBufferPlayer&) = delete;

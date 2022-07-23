@@ -4,10 +4,10 @@
 #include "AudioBuffer.h"
 #include "IAudioLoader.h"
 
-namespace nCine {
-
-	namespace {
-
+namespace nCine
+{
+	namespace
+	{
 		ALenum alFormat(int bytesPerSample, int numChannels)
 		{
 			ALenum format = AL_FORMAT_MONO8;
@@ -171,6 +171,7 @@ namespace nCine {
 		const ALenum format = alFormat(bytesPerSample_, numChannels_);
 
 		alGetError();
+
 		// On iOS `alBufferDataStatic()` could be used instead
 		alBufferData(bufferId_, format, bufferPtr, bufferSize, frequency_);
 		const ALenum error = alGetError();

@@ -71,7 +71,6 @@ namespace nCine
 
 	private:
 		AudioStream audioStream_;
-		unsigned int filterHandle_;
 
 		/// Deleted copy constructor
 		AudioStreamPlayer(const AudioStreamPlayer&) = delete;

@@ -76,7 +76,8 @@ namespace Jazz2
 
 		void AddActor(const std::shared_ptr<ActorBase>& actor) override;
 
-		std::shared_ptr<AudioBufferPlayer>& PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain, float pitch) override;
+		const std::shared_ptr<AudioBufferPlayer>& PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
+		const std::shared_ptr<AudioBufferPlayer>& PlayCommonSfx(const std::string& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
 		void WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor) override;
 		bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, bool downwards, __out ActorBase** collider) override;
 		void FindCollisionActorsByAABB(ActorBase* self, const AABBf& aabb, const std::function<bool(ActorBase*)>& callback);
@@ -229,6 +230,7 @@ namespace Jazz2
 		float _ambientLightDefault, _ambientLightCurrent, _ambientLightTarget;
 		std::unique_ptr<AudioStreamPlayer> _music;
 		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
+		Metadata* _commonResources;
 
 		uint32_t _pressedActions;
 		Vector2f _playerRequiredMovement;

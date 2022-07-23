@@ -5,6 +5,7 @@
 #include "LightEmitter.h"
 #include "../nCine/Base/Task.h"
 #include "../nCine/Primitives/AABB.h"
+#include "../nCine/Audio/AudioBufferPlayer.h"
 
 namespace Jazz2
 {
@@ -234,7 +235,7 @@ namespace Jazz2
 		void CreateParticleDebris();
 		void CreateSpriteDebris(const std::string& identifier, int count);
 
-		void PlaySfx(const std::string& identifier, float gain = 1.0f, float pitch = 1.0f);
+		const std::shared_ptr<AudioBufferPlayer>& PlaySfx(const std::string& identifier, float gain = 1.0f, float pitch = 1.0f);
 		void SetAnimation(const std::string& identifier);
 		bool SetAnimation(AnimState state);
 		bool SetTransition(AnimState state, bool cancellable, const std::function<void()>& callback = []() { });

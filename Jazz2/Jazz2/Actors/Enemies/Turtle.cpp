@@ -100,7 +100,7 @@ namespace Jazz2::Actors::Enemies
 		if (_renderer.AnimPaused) {
 			// Animation should be paused only if enemy is frozen
 			CreateDeathDebris(collider);
-			//_levelHandler->PlayCommonSound("Splat", Transform.Pos);
+			_levelHandler->PlayCommonSfx("Splat", Vector3f(_pos.X, _pos.Y, 0.0f));
 
 			TryGenerateRandomDrop();
 		} else {

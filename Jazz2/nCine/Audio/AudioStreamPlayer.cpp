@@ -12,17 +12,17 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	AudioStreamPlayer::AudioStreamPlayer()
-		: IAudioPlayer(ObjectType::AUDIOSTREAM_PLAYER), audioStream_(), filterHandle_(0)
+		: IAudioPlayer(ObjectType::AUDIOSTREAM_PLAYER), audioStream_()
 	{
 	}
 
 	AudioStreamPlayer::AudioStreamPlayer(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
-		: IAudioPlayer(ObjectType::AUDIOSTREAM_PLAYER, bufferName), audioStream_(bufferName, bufferPtr, bufferSize), filterHandle_(0)
+		: IAudioPlayer(ObjectType::AUDIOSTREAM_PLAYER, bufferName), audioStream_(bufferName, bufferPtr, bufferSize)
 	{
 	}
 
 	AudioStreamPlayer::AudioStreamPlayer(const char* filename)
-		: IAudioPlayer(ObjectType::AUDIOSTREAM_PLAYER, filename), audioStream_(filename), filterHandle_(0)
+		: IAudioPlayer(ObjectType::AUDIOSTREAM_PLAYER, filename), audioStream_(filename)
 	{
 	}
 
@@ -31,13 +31,6 @@ namespace nCine
 		if (state_ != PlayerState::Stopped) {
 			audioStream_.stop(sourceId_);
 		}
-
-#if !defined(__EMSCRIPTEN__)
-		if (filterHandle_ != 0) {
-			alDeleteFilters(1, &filterHandle_);
-			filterHandle_ = 0;
-		}
-#endif
 
 		// Force unregister to allow to destroy this player immediately
 		IAudioDevice& device = theServiceLocator().audioDevice();
@@ -99,19 +92,7 @@ namespace nCine
 				alSourcef(sourceId_, AL_GAIN, gain_);
 				alSourcef(sourceId_, AL_PITCH, pitch_);
 
-#if !defined(__EMSCRIPTEN__)
-				if (lowPass_ < 1.0f) {
-					if (filterHandle_ == 0) {
-						alGenFilters(1, &filterHandle_);
-						alFilteri(filterHandle_, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
-						alFilterf(filterHandle_, AL_LOWPASS_GAIN, 1.0f);
-					}
-					if (filterHandle_ != 0) {
-						alFilterf(filterHandle_, AL_LOWPASS_GAINHF, lowPass_);
-						alSourcei(sourceId_, AL_DIRECT_FILTER, filterHandle_);
-					}
-				}
-#endif
+				updateFilters();
 
 				alSourcefv(sourceId_, AL_POSITION, position_.Data());
 
@@ -167,7 +148,7 @@ namespace nCine
 				audioStream_.stop(sourceId_);
 				// Detach the buffer from source
 				alSourcei(sourceId_, AL_BUFFER, 0);
-#if !defined(__EMSCRIPTEN__)
+#if OPENAL_FILTERS_SUPPORTED
 				if (filterHandle_ != 0) {
 					alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
 				}
@@ -193,7 +174,7 @@ namespace nCine
 			if (!shouldStillPlay) {
 				// Detach the buffer from source
 				alSourcei(sourceId_, AL_BUFFER, 0);
-#if !defined(__EMSCRIPTEN__)
+#if OPENAL_FILTERS_SUPPORTED
 				if (filterHandle_ != 0) {
 					alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
 				}
