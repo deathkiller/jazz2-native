@@ -342,7 +342,9 @@ namespace Jazz2
 
 		UpdateCamera(timeMult);
 
+#if ENABLE_POSTPROCESSING
 		_lightingView->setClearColor(_ambientLightCurrent, 0.0f, 0.0f, 1.0f);
+#endif
 
 		// TODO: DEBUG
 #if _DEBUG
@@ -413,19 +415,26 @@ namespace Jazz2
 			h = std::min(DefaultHeight, height);
 		}
 
-		_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
-		_viewTexture->setMagFiltering(SamplerFilter::Nearest);
+		bool notInitialized = (_view == nullptr);
 
-		_view = std::make_unique<Viewport>(_viewTexture.get(), Viewport::DepthStencilFormat::DEPTH24_STENCIL8);
-		_view->setViewportRect(0, 0, w, h);
+		if (notInitialized) {
+			_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
+			_view = std::make_unique<Viewport>(_viewTexture.get(), Viewport::DepthStencilFormat::DEPTH24_STENCIL8);
 
-		if (_camera == nullptr) {
 			_camera = std::make_unique<Camera>();
 			InitializeCamera();
+
+			_view->setCamera(_camera.get());
+			_view->setRootNode(_rootNode.get());
+		} else {
+			_viewTexture->init(nullptr, Texture::Format::RGB8, w, h);
+			_view->removeAllTextures();
+			_view->setTexture(_viewTexture.get());
 		}
+
+		_viewTexture->setMagFiltering(SamplerFilter::Nearest);
+
 		_camera->setOrthoProjection(w * (-0.5f), w * (+0.5f), h * (-0.5f), h * (+0.5f));
-		_view->setCamera(_camera.get());
-		_view->setRootNode(_rootNode.get());
 
 #if ENABLE_POSTPROCESSING
 		if (_lightingRenderer == nullptr) {
@@ -595,12 +604,17 @@ void main() {
 
 		}
 
-		_lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, w, h);
+		if (notInitialized) {
+			_lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, w, h);
+			_lightingView = std::make_unique<Viewport>(_lightingBuffer.get(), Viewport::DepthStencilFormat::NONE);
+			_lightingView->setRootNode(_lightingRenderer.get());
+			_lightingView->setCamera(_camera.get());
+		} else {
+			_lightingBuffer->init(nullptr, Texture::Format::RG8, w, h);
+			_lightingView->removeAllTextures();
+			_lightingView->setTexture(_lightingBuffer.get());
+		}
 		_lightingBuffer->setMagFiltering(SamplerFilter::Nearest);
-
-		_lightingView = std::make_unique<Viewport>(_lightingBuffer.get(), Viewport::DepthStencilFormat::NONE);
-		_lightingView->setRootNode(_lightingRenderer.get());
-		_lightingView->setCamera(_camera.get());
 
 		_downsamplePass.Initialize(_viewTexture.get(), w / 2, h / 2, Vector2f::Zero);
 		_blurPass1.Initialize(_downsamplePass.GetTarget(), w / 2, h / 2, Vector2f(1.0f, 0.0f));
@@ -617,7 +631,7 @@ void main() {
 
 		Viewport::chain().push_back(_lightingView.get());
 
-		if (_viewSprite == nullptr) {
+		if (notInitialized) {
 			SceneNode& rootNode = theApplication().rootNode();
 			_viewSprite = std::make_unique<CombineRenderer>(this);
 			_viewSprite->setParent(&rootNode);
@@ -625,7 +639,7 @@ void main() {
 
 		_viewSprite->Initialize();
 #else
-		if (_viewSprite == nullptr) {
+		if (notInitialized) {
 			SceneNode& rootNode = theApplication().rootNode();
 			_viewSprite = std::make_unique<Sprite>(&rootNode, _viewTexture.get(), 0.0f, 0.0f);
 		}
@@ -1279,12 +1293,22 @@ void main() {
 		_camera->setOrthoProjection(width * (-0.5f), width * (+0.5f), height * (-0.5f), height * (+0.5f));
 		_camera->setView(0, 0, 0, 1);
 
-		_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
+		if (_target == nullptr) {
+			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
+		} else {
+			_target->init(nullptr, Texture::Format::RGB8, width, height);
+		}
 		_target->setMagFiltering(SamplerFilter::Linear);
 
-		_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);
-		_view->setRootNode(this);
-		_view->setCamera(_camera.get());
+		if (_view == nullptr) {
+			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);
+			_view->setRootNode(this);
+			_view->setCamera(_camera.get());
+			_view->setClearMode(Viewport::ClearMode::NEVER);
+		} else {
+			_view->removeAllTextures();
+			_view->setTexture(_target.get());
+		}
 
 		// Prepare render command
 		_renderCommand.setType(RenderCommand::CommandTypes::SPRITE);

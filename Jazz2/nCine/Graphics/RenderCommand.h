@@ -62,19 +62,19 @@ namespace nCine
 			batchSize_ = batchSize;
 		}
 
-		/// Returns the rendering layer
+		/// Returns the drawing layer for this command
 		inline uint16_t layer() const {
 			return layer_;
 		}
-		/// Sets the rendering layer
+		/// Sets the drawing layer for this command
 		inline void setLayer(uint16_t layer) {
 			layer_ = layer;
 		}
-		/// Returns the rendering layer
+		/// Returns the visit order index for this command
 		inline uint16_t visitOrder() const {
 			return visitOrder_;
 		}
-		/// Sets the rendering layer
+		/// Sets the visit order index for this command
 		inline void setVisitOrder(uint16_t visitOrder) {
 			visitOrder_ = visitOrder;
 		}
@@ -150,7 +150,7 @@ namespace nCine
 		uint32_t idSortKey_;
 		/// The drawing layer for this command
 		uint16_t layer_;
-		/// The visit order for this command
+		/// The visit order index for this command
 		uint16_t visitOrder_;
 		int numInstances_;
 		int batchSize_;

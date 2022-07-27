@@ -250,7 +250,7 @@ namespace nCine {
 			shouldQuit = inputEventHandler_->onQuitRequest();
 
 		if (shouldQuit)
-			nCine::theApplication().quit();
+			theApplication().quit();
 		else
 			glfwSetWindowShouldClose(window, GLFW_FALSE);
 	}

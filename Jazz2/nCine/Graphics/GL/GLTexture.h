@@ -25,6 +25,8 @@ namespace nCine
 			return bind(0);
 		}
 		bool unbind() const;
+		static bool unbind(GLenum target, unsigned int textureUnit);
+		static bool unbind(unsigned int textureUnit);
 
 		void texImage2D(GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, const void* data);
 		void texSubImage2D(GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void* data);

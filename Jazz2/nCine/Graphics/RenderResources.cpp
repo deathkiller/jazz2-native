@@ -1,3 +1,4 @@
+#include <cstddef> // for `offsetof()`
 #include "RenderResources.h"
 #include "RenderBuffersManager.h"
 #include "RenderVaoPool.h"

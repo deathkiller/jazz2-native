@@ -8,9 +8,12 @@
 #include "../../Application.h"
 #endif
 
-namespace nCine {
-
-	static std::string patchLines;
+namespace nCine
+{
+	namespace
+	{
+		static std::string patchLines;
+	}
 
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS
@@ -31,6 +34,14 @@ namespace nCine {
 			patchLines.append("#version 300 es\n");
 #else
 			patchLines.append("#version 330\n");
+#endif
+
+#if defined(__EMSCRIPTEN__)
+			patchLines.append("#define __EMSCRIPTEN__\n");
+#elif defined(__ANDROID__)
+			patchLines.append("#define __ANDROID__\n");
+#elif defined(WITH_ANGLE)
+			patchLines.append("#define WITH_ANGLE\n");
 #endif
 
 #if defined(__EMSCRIPTEN__) || defined(WITH_ANGLE)

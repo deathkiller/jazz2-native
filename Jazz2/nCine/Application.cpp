@@ -117,7 +117,7 @@ namespace nCine
 			bool sizeChanged = (width != screenViewport_->width_ || height != screenViewport_->height_);
 			screenViewport_->resize(width, height);
 			if (sizeChanged && width > 0 && height > 0) {
-				appEventHandler_->onRootViewportResized(width, height);
+				appEventHandler_->onResizeWindow(width, height);
 			}
 		}
 	}

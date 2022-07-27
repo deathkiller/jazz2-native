@@ -1,9 +1,11 @@
 #pragma once
 
 #include "../../Common.h"
+#include "../Primitives/Vector4.h"
+#include "../Primitives/Colorf.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	class DrawableNode;
 	class Shader;
 	class Texture;
@@ -39,11 +41,20 @@ namespace nCine {
 		bool setUniformInt(const char* blockName, const char* name, int value0, int value1, int value2);
 		bool setUniformInt(const char* blockName, const char* name, int value0, int value1, int value2, int value3);
 
+		bool setUniformInt(const char* blockName, const char* name, const Vector2i& vector);
+		bool setUniformInt(const char* blockName, const char* name, const Vector3i& vector);
+		bool setUniformInt(const char* blockName, const char* name, const Vector4i& vector);
+
 		bool setUniformFloat(const char* blockName, const char* name, const float* vector);
 		bool setUniformFloat(const char* blockName, const char* name, float value0);
 		bool setUniformFloat(const char* blockName, const char* name, float value0, float value1);
 		bool setUniformFloat(const char* blockName, const char* name, float value0, float value1, float value2);
 		bool setUniformFloat(const char* blockName, const char* name, float value0, float value1, float value2, float value3);
+
+		bool setUniformFloat(const char* blockName, const char* name, const Vector2f& vector);
+		bool setUniformFloat(const char* blockName, const char* name, const Vector3f& vector);
+		bool setUniformFloat(const char* blockName, const char* name, const Vector4f& vector);
+		bool setUniformFloat(const char* blockName, const char* name, const Colorf& color);
 
 		unsigned int uniformBlockSize(const char* blockName);
 		bool copyToUniformBlock(const char* blockName, unsigned int destIndex, unsigned char* src, unsigned int numBytes);

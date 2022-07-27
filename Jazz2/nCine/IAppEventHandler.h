@@ -26,14 +26,14 @@ namespace nCine
 		virtual void onDrawViewport(Viewport& viewport) { }
 		/// Called at the end of each frame, just before swapping buffers
 		virtual void onFrameEnd() { }
+		/// Called every time the window is resized (by the system or the user)
+		virtual void onResizeWindow(int width, int height) { }
 		/// Called once on application shutdown
 		virtual void onShutdown() { }
 		/// Called every time the application needs to be suspended
 		virtual void onSuspend() { }
 		/// Called every time the application resumes from suspension
 		virtual void onResume() { }
-		/// Called every time the root viewport (window) is resized
-		virtual void onRootViewportResized(int width, int height) { }
 	};
 
 	inline IAppEventHandler::~IAppEventHandler() { }

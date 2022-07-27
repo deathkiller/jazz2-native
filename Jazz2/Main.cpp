@@ -100,7 +100,7 @@ public:
 	void onFrameStart() override;
 	void onPostUpdate() override;
 	void onShutdown() override;
-	void onRootViewportResized(int width, int height) override;
+	void onResizeWindow(int width, int height) override;
 
 #if defined(__ANDROID__)
 	void onTouchDown(const TouchEvent& event) override;
@@ -189,7 +189,7 @@ void GameEventHandler::onShutdown()
 	Jazz2::ContentResolver::Current().Release();
 }
 
-void GameEventHandler::onRootViewportResized(int width, int height)
+void GameEventHandler::onResizeWindow(int width, int height)
 {
 	// Resolution was changed, all viewports have to be recreated
 	Viewport::chain().clear();

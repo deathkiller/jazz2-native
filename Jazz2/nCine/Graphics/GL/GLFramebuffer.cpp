@@ -19,8 +19,6 @@ namespace nCine {
 	GLFramebuffer::GLFramebuffer()
 		: glHandle_(0)
 	{
-		attachedRenderbuffers_.reserve(4);
-
 		glGenFramebuffers(1, &glHandle_);
 	}
 
@@ -60,9 +58,9 @@ namespace nCine {
 
 	bool GLFramebuffer::drawBuffers(unsigned int numDrawBuffers)
 	{
-		static const GLenum drawBuffers[8] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3,
-											   GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6, GL_COLOR_ATTACHMENT7 };
-		if (numDrawBuffers_ != numDrawBuffers) {
+		static const GLenum drawBuffers[MaxDrawbuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3,
+															GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6, GL_COLOR_ATTACHMENT7 };
+		if (numDrawBuffers < MaxDrawbuffers && numDrawBuffers_ != numDrawBuffers) {
 			glDrawBuffers(numDrawBuffers, drawBuffers);
 			numDrawBuffers_ = numDrawBuffers;
 			return true;
@@ -70,11 +68,14 @@ namespace nCine {
 		return false;
 	}
 
-	void GLFramebuffer::attachRenderbuffer(const char* label, GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment)
+	bool GLFramebuffer::attachRenderbuffer(const char* label, GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment)
 	{
+		if (attachedRenderbuffers_.size() >= MaxRenderbuffers - 1)
+			return false;
+
 		for (unsigned int i = 0; i < attachedRenderbuffers_.size(); i++) {
 			if (attachedRenderbuffers_[i]->attachment() == attachment)
-				return;
+				return false;
 		}
 
 		std::unique_ptr<GLRenderbuffer>& buffer = attachedRenderbuffers_.emplace_back(std::make_unique<GLRenderbuffer>(internalFormat, width, height));
@@ -83,23 +84,25 @@ namespace nCine {
 
 		bind(GL_FRAMEBUFFER);
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, buffer->glHandle_);
+		return true;
 	}
 
-	void GLFramebuffer::attachRenderbuffer(GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment)
+	bool GLFramebuffer::attachRenderbuffer(GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment)
 	{
-		attachRenderbuffer(nullptr, internalFormat, width, height, attachment);
+		return attachRenderbuffer(nullptr, internalFormat, width, height, attachment);
 	}
 
-	void GLFramebuffer::detachRenderbuffer(GLenum attachment)
+	bool GLFramebuffer::detachRenderbuffer(GLenum attachment)
 	{
 		for (unsigned int i = 0; i < attachedRenderbuffers_.size(); i++) {
 			if (attachedRenderbuffers_[i]->attachment() == attachment) {
 				bind(GL_FRAMEBUFFER);
 				glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, 0);
 				attachedRenderbuffers_.erase(attachedRenderbuffers_.begin() + i);
-				break;
+				return true;
 			}
 		}
+		return false;
 	}
 
 	void GLFramebuffer::attachTexture(GLTexture& texture, GLenum attachment)

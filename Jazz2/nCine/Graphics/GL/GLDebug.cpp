@@ -41,7 +41,12 @@
 #define GL_DEBUG_SEVERITY_HIGH GL_DEBUG_SEVERITY_HIGH_KHR
 #endif
 
-namespace nCine {
+namespace nCine
+{
+	namespace
+	{
+		constexpr char emptyString[1] = { '\0' };
+	}
 
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS
@@ -72,7 +77,7 @@ namespace nCine {
 	{
 #if (!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21)
 		if (debugAvailable_)
-			glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, debugGroupId_++, -1, message);
+			glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, debugGroupId_++, -1, message ? message : emptyString);
 #endif
 	}
 
@@ -88,7 +93,7 @@ namespace nCine {
 	{
 #if (!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21)
 		if (debugAvailable_)
-			glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_MARKER, debugGroupId_++, GL_DEBUG_SEVERITY_NOTIFICATION, -1, message);
+			glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_MARKER, debugGroupId_++, GL_DEBUG_SEVERITY_NOTIFICATION, -1, message ? message : emptyString);
 #endif
 	}
 
@@ -96,7 +101,7 @@ namespace nCine {
 	{
 #if (!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21)
 		if (debugAvailable_)
-			glObjectLabel(static_cast<GLenum>(identifier), name, -1, label);
+			glObjectLabel(static_cast<GLenum>(identifier), name, -1, label ? label : emptyString);
 #endif
 	}
 
@@ -104,7 +109,7 @@ namespace nCine {
 	{
 #if (!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21)
 		if (debugAvailable_)
-			glObjectLabel(static_cast<GLenum>(identifier), name, length, label);
+			glObjectLabel(static_cast<GLenum>(identifier), name, label ? length : 0, label ? label : emptyString);
 #endif
 	}
 

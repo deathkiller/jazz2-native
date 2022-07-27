@@ -42,9 +42,7 @@ namespace nCine {
 	{
 		bool areDifferent = false;
 		for (unsigned int i = 0; i < GLTexture::MaxTextureUnits; i++) {
-			if (command->material().texture(i) != nullptr &&
-				prevCommand->material().texture(i) != nullptr &&
-				command->material().texture(i) != prevCommand->material().texture(i)) {
+			if (command->material().texture(i) != prevCommand->material().texture(i)) {
 				areDifferent = true;
 				break;
 			}
@@ -164,9 +162,14 @@ namespace nCine {
 		const GLUniformBlockCache* singleInstanceBlock = (*start)->material().uniformBlock(Material::InstanceBlockName);
 		const int singleInstanceBlockSize = singleInstanceBlock->size() - singleInstanceBlock->alignAmount();
 
-		batchCommand->setType(refCommand->type());
+		if (commandAdded) {
+			batchCommand->setType(refCommand->type());
+		}
 		instancesBlock = batchCommand->material().uniformBlock(Material::InstancesBlockName);
 		//FATAL_ASSERT_MSG_X(instancesBlock != nullptr, "Batched shader does not have an %s uniform block", Material::InstancesBlockName);
+		if (instancesBlock == nullptr) {
+			LOGE_X("Batched shader does not have an %s uniform block", Material::InstancesBlockName);
+		}
 
 		const unsigned long nonBlockUniformsSize = batchCommand->material().shaderProgram()->uniformsSize();
 		// Determine how much memory is needed by uniform blocks that are not for instances
@@ -219,11 +222,14 @@ namespace nCine {
 		const GLShaderUniforms::UniformHashMapType allUniforms = refCommand->material().allUniforms();
 		for (const GLUniformCache& uniformCache : allUniforms) {
 			if (uniformCache.uniform()->type() == GL_SAMPLER_2D) {
-				GLUniformCache* batchTextureUniform = batchCommand->material().uniform(uniformCache.uniform()->name());
+				GLUniformCache* batchUniformCache = batchCommand->material().uniform(uniformCache.uniform()->name());
 				const int refValue = uniformCache.intValue(0);
-				const int batchValue = batchTextureUniform->intValue(0);
-				if (batchValue != refValue)
-					batchTextureUniform->setIntValue(refValue);
+				const int batchValue = batchUniformCache->intValue(0);
+				// Also checking if the command has just been added, as the memory at the
+				// uniforms data pointer is not cleared and might contain the reference value
+				if (batchValue != refValue || commandAdded) {
+					batchUniformCache->setIntValue(refValue);
+				}
 			}
 		}
 

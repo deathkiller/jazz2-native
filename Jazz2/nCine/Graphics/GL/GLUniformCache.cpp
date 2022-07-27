@@ -59,7 +59,7 @@ namespace nCine
 	GLint GLUniformCache::intValue(unsigned int index) const
 	{
 		//ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && checkInt() && uniform_->numComponents() > index));
-		GLint value = 0.0f;
+		GLint value = 0;
 
 		if (dataPointer_)
 			value = static_cast<GLint>(*dataPointer_);

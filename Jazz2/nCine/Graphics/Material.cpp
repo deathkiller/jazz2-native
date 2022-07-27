@@ -141,12 +141,12 @@ namespace nCine
 
 	bool Material::setTexture(unsigned int unit, const GLTexture* texture)
 	{
-		bool success = false;
+		bool result = false;
 		if (unit < GLTexture::MaxTextureUnits) {
 			textures_[unit] = texture;
-			success = true;
+			result = true;
 		}
-		return success;
+		return result;
 	}
 
 	bool Material::setTexture(unsigned int unit, const Texture& texture)
@@ -161,8 +161,11 @@ namespace nCine
 	void Material::bind()
 	{
 		for (unsigned int i = 0; i < GLTexture::MaxTextureUnits; i++) {
-			if (textures_[i] != nullptr)
+			if (textures_[i] != nullptr) {
 				textures_[i]->bind(i);
+			} else {
+				GLTexture::unbind(i);
+			}
 		}
 
 		if (shaderProgram_) {

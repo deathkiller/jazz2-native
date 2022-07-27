@@ -17,6 +17,9 @@ namespace nCine
 	class GLFramebuffer
 	{
 	public:
+		static const unsigned int MaxDrawbuffers = 8;
+		static const unsigned int MaxRenderbuffers = 4;
+
 		explicit GLFramebuffer();
 		~GLFramebuffer();
 
@@ -30,11 +33,13 @@ namespace nCine
 		bool bind(GLenum target) const;
 		static bool unbind(GLenum target);
 
+		inline unsigned int numDrawbuffers() const { return numDrawBuffers_; }
 		bool drawBuffers(unsigned int numDrawBuffers);
 
-		void attachRenderbuffer(const char* label, GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment);
-		void attachRenderbuffer(GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment);
-		void detachRenderbuffer(GLenum internalFormat);
+		inline unsigned int numRenderbuffers() const { return attachedRenderbuffers_.size(); }
+		bool attachRenderbuffer(const char *label, GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment);
+		bool attachRenderbuffer(GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment);
+		bool detachRenderbuffer(GLenum internalFormat);
 
 		void attachTexture(GLTexture& texture, GLenum attachment);
 		void detachTexture(GLenum attachment);
@@ -49,7 +54,7 @@ namespace nCine
 		static unsigned int drawBoundBuffer_;
 		unsigned int numDrawBuffers_;
 
-		SmallVector<std::unique_ptr<GLRenderbuffer>, 0> attachedRenderbuffers_;
+		SmallVector<std::unique_ptr<GLRenderbuffer>, MaxRenderbuffers> attachedRenderbuffers_;
 
 		GLuint glHandle_;
 

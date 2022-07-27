@@ -128,6 +128,9 @@ namespace nCine {
 
 	float* MeshSprite::emplaceVertices(unsigned int numElements, unsigned int bytesPerVertex)
 	{
+		if (numElements == 0 || bytesPerVertex == 0)
+			return nullptr;
+
 		const unsigned int floatsPerVertex = bytesPerVertex / sizeof(float);
 		const unsigned int numVertices = numElements / floatsPerVertex;
 		vertices_.clear();
@@ -245,6 +248,9 @@ namespace nCine {
 
 	unsigned short* MeshSprite::emplaceIndices(unsigned int numIndices)
 	{
+		if (numIndices == 0)
+			return nullptr;
+
 		indices_.clear();
 		indices_.resize(numIndices);
 
