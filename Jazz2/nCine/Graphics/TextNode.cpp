@@ -162,7 +162,7 @@
 //
 //		// If the string does not end with a new line character,
 //		// last line height has not been taken into account before
-//		if (!string.isEmpty() && string[string.length() - 1] != '\n')
+//		if (!string.empty() && string[string.length() - 1] != '\n')
 //			yAdvance += lineHeight;
 //
 //		if (xAdvance > xAdvanceMax)
@@ -181,7 +181,7 @@
 //	bool TextNode::draw(RenderQueue& renderQueue)
 //	{
 //		// Early-out if the string is empty
-//		if (string_.isEmpty())
+//		if (string_.empty())
 //			return false;
 //
 //		if (font_ && dirtyDraw_) {
@@ -330,7 +330,7 @@
 //
 //			// If the string does not end with a new line character,
 //			// last line height has not been taken into account before
-//			if (!string_.isEmpty() && string_[string_.length() - 1] != '\n')
+//			if (!string_.empty() && string_[string_.length() - 1] != '\n')
 //				yAdvance_ += lineHeight_;
 //
 //			lineLengths_.pushBack(xAdvance_);

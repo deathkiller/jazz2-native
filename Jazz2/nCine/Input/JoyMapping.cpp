@@ -6,9 +6,9 @@
 #include "../IO/IFileStream.h"
 #include "../Primitives/Vector2.h"
 
-#include <SmallVector.h>
+#include <Containers/SmallVector.h>
 
-using namespace Death;
+using namespace Death::Containers;
 
 namespace nCine
 {
@@ -168,7 +168,7 @@ namespace nCine
 		checkConnectedJoystics();
 	}
 
-	void JoyMapping::addMappingsFromFile(const char* filename)
+	void JoyMapping::addMappingsFromFile(const StringView& filename)
 	{
 		std::unique_ptr<IFileStream> fileHandle = IFileStream::createFileHandle(filename);
 		fileHandle->Open(FileAccessMode::Read);

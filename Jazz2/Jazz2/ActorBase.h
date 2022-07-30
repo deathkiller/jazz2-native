@@ -123,7 +123,7 @@ namespace Jazz2
 
 	protected:
 		struct AnimationCandidate {
-			const std::string* Identifier;
+			const String* Identifier;
 			GraphicResource* Resource;
 		};
 
@@ -206,7 +206,7 @@ namespace Jazz2
 		SpriteRenderer _renderer;
 		GraphicResource* _currentAnimation;
 		GraphicResource* _currentTransition;
-		AnimState _currentAnimationState = AnimState::Uninitialized;
+		AnimState _currentAnimationState;
 		AnimState _currentTransitionState;
 		bool _currentTransitionCancellable;
 
@@ -233,10 +233,10 @@ namespace Jazz2
 		void UpdateHitbox(int w, int h);
 
 		void CreateParticleDebris();
-		void CreateSpriteDebris(const std::string& identifier, int count);
+		void CreateSpriteDebris(const StringView& identifier, int count);
 
-		const std::shared_ptr<AudioBufferPlayer>& PlaySfx(const std::string& identifier, float gain = 1.0f, float pitch = 1.0f);
-		void SetAnimation(const std::string& identifier);
+		const std::shared_ptr<AudioBufferPlayer>& PlaySfx(const StringView& identifier, float gain = 1.0f, float pitch = 1.0f);
+		void SetAnimation(const StringView& identifier);
 		bool SetAnimation(AnimState state);
 		bool SetTransition(AnimState state, bool cancellable, const std::function<void()>& callback = []() { });
 		void CancelTransition();
@@ -246,21 +246,21 @@ namespace Jazz2
 
 		int FindAnimationCandidates(AnimState state, AnimationCandidate candidates[AnimationCandidatesCount]);
 
-		static void PreloadMetadataAsync(const std::string& path)
+		static void PreloadMetadataAsync(const StringView& path)
 		{
 			ContentResolver::Current().PreloadMetadataAsync(path);
 		}
 
-		void RequestMetadata(const std::string& path)
+		void RequestMetadata(const StringView& path)
 		{
 			_metadata = ContentResolver::Current().RequestMetadata(path);
 		}
 
-		auto RequestMetadataAsync(const std::string& path)
+		auto RequestMetadataAsync(const StringView& path)
 		{
 			struct awaitable {
 				ActorBase* actor;
-				std::string path;
+				const StringView& path;
 
 				bool await_ready() {
 					return false;
@@ -294,7 +294,7 @@ namespace Jazz2
 		Metadata* _metadata;
 
 #if SERVER
-		const std::string* _currentAnimationKey;
+		const String* _currentAnimationKey;
 #endif
 
 		std::function<void()> _currentTransitionCallback;

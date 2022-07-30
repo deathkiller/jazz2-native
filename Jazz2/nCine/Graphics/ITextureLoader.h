@@ -55,7 +55,7 @@ namespace nCine
 		/// Returns the proper texture loader according to the memory buffer name extension
 		static std::unique_ptr<ITextureLoader> createFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// Returns the proper texture loader according to the file extension
-		static std::unique_ptr<ITextureLoader> createFromFile(const char* filename);
+		static std::unique_ptr<ITextureLoader> createFromFile(const StringView& filename);
 
 	protected:
 		/// A flag indicating if the loading process has been successful
@@ -77,7 +77,7 @@ namespace nCine
 		ITextureLoader();
 		explicit ITextureLoader(std::unique_ptr<IFileStream> fileHandle);
 
-		static std::unique_ptr<ITextureLoader> createLoader(std::unique_ptr<IFileStream> fileHandle, const char* filename);
+		static std::unique_ptr<ITextureLoader> createLoader(std::unique_ptr<IFileStream> fileHandle, const StringView& filename);
 		/// Loads pixel data from a texture file holding either compressed or uncompressed data
 		void loadPixels(GLenum internalFormat);
 		/// Loads pixel data from a texture file holding either compressed or uncompressed data, overriding pixel type

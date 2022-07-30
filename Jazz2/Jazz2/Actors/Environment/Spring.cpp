@@ -21,14 +21,14 @@ namespace Jazz2::Actors::Environment
 		SetTransition(_currentAnimationState | (AnimState)0x200, false);
 		switch (_orientation) {
 			case 0: // Bottom
-				PlaySfx("Vertical");
+				PlaySfx("Vertical"_s);
 				return Vector2f(0, -_strength);
 			case 2: // Top
-				PlaySfx("VerticalReversed");
+				PlaySfx("VerticalReversed"_s);
 				return Vector2f(0, _strength);
 			case 1: // Right
 			case 3: // Left
-				PlaySfx("Horizontal");
+				PlaySfx("Horizontal"_s);
 				return Vector2f(_strength * (_orientation == 1 ? 1 : -1), 0);
 			default:
 				return Vector2f::Zero;
@@ -47,7 +47,7 @@ namespace Jazz2::Actors::Environment
 
 		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
 
-		co_await RequestMetadataAsync("Object/Spring");
+		co_await RequestMetadataAsync("Object/Spring"_s);
 
 		Vector2f tileCorner = Vector2f((int)(_pos.X / Tiles::TileSet::DefaultTileSize) * Tiles::TileSet::DefaultTileSize,
 			(int)(_pos.Y / Tiles::TileSet::DefaultTileSize) * Tiles::TileSet::DefaultTileSize);

@@ -16,17 +16,17 @@ namespace Jazz2::Actors
 		switch (playerType) {
 			default:
 			case PlayerType::Jazz:
-				co_await RequestMetadataAsync("Interactive/PlayerJazz");
+				co_await RequestMetadataAsync("Interactive/PlayerJazz"_s);
 				break;
 			case PlayerType::Spaz:
-				co_await RequestMetadataAsync("Interactive/PlayerSpaz");
+				co_await RequestMetadataAsync("Interactive/PlayerSpaz"_s);
 				break;
 			case PlayerType::Lori:
-				co_await RequestMetadataAsync("Interactive/PlayerLori");
+				co_await RequestMetadataAsync("Interactive/PlayerLori"_s);
 				break;
 		}
 
-		SetAnimation("Corpse");
+		SetAnimation("Corpse"_s);
 
 		CollisionFlags = CollisionFlags::ForceDisableCollisions;
 

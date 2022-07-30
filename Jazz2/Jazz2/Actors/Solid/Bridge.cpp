@@ -11,7 +11,7 @@ namespace Jazz2::Actors::Solid
 
 	void Bridge::Preload(const ActorActivationDetails& details)
 	{
-		PreloadMetadataAsync("Bridge/Stone");
+		PreloadMetadataAsync("Bridge/Stone"_s);
 	}
 
 	Task<bool> Bridge::OnActivatedAsync(const ActorActivationDetails& details)
@@ -25,7 +25,7 @@ namespace Jazz2::Actors::Solid
 		int toughness = details.Params[2];
 		_heightFactor = std::sqrtf((16 - toughness) * _bridgeWidth) * 4.0f;
 
-		co_await RequestMetadataAsync("Bridge/Stone");
+		co_await RequestMetadataAsync("Bridge/Stone"_s);
 
 		SetAnimation(AnimState::Idle);
 

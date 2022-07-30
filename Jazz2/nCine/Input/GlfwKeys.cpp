@@ -1,7 +1,10 @@
 #include "GlfwInputManager.h"
 
-namespace nCine {
+#pragma push_macro("DELETE")
+#undef DELETE
 
+namespace nCine
+{
 	KeySym GlfwKeys::keySymValueToEnum(int keysym)
 	{
 		// clang-format off
@@ -271,3 +274,5 @@ namespace nCine {
 	}
 
 }
+
+#pragma pop_macro("DELETE")

@@ -199,8 +199,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="$(ExtensionLibraryPath)\Common.h" />
-    <ClInclude Include="$(ExtensionLibraryPath)\SmallVector.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Utf8.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\Array.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\ArrayView.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\GrowableArray.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\Pair.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\Reference.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\SmallVector.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\String.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringView.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\GemCollectible.h" />
@@ -405,8 +412,10 @@
     <ClInclude Include="Resources.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(ExtensionLibraryPath)\SmallVector.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Utf8.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\Containers\SmallVector.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\Containers\String.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\Containers\StringView.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\GemCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\OneUpCollectible.cpp" />

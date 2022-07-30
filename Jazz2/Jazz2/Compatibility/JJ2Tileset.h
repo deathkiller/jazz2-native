@@ -5,16 +5,20 @@
 #include "JJ2Version.h"
 
 #include <memory>
-#include <string>
+
+#include <Containers/String.h>
+#include <Containers/StringView.h>
+
+using namespace Death::Containers;
 
 namespace Jazz2::Compatibility
 {
     class JJ2Tileset // .j2t
     {
     public:
-        static JJ2Tileset Open(const std::string& path, bool strictParser);
+        static JJ2Tileset Open(const StringView& path, bool strictParser);
 
-        void Convert(const std::string& targetPath);
+        void Convert(const String& targetPath);
 
         int MaxSupportedTiles() {
             return (_version == JJ2Version::BaseGame ? 1024 : 4096);
@@ -30,7 +34,7 @@ namespace Jazz2::Compatibility
             std::unique_ptr<uint8_t[]> Mask;
         };
 
-        std::string _name;
+        String _name;
         JJ2Version _version;
         std::unique_ptr<uint8_t[]> _palette;
         std::unique_ptr<TilesetTileSection[]> _tiles;

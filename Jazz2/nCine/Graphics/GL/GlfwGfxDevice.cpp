@@ -67,7 +67,7 @@ namespace nCine {
 		}
 	}
 
-	void GlfwGfxDevice::setWindowIcon(const char* windowIconFilename)
+	void GlfwGfxDevice::setWindowIcon(const StringView& windowIconFilename)
 	{
 		std::unique_ptr<ITextureLoader> image = ITextureLoader::createFromFile(windowIconFilename);
 		GLFWimage glfwImage;

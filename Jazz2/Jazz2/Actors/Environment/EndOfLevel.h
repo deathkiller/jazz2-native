@@ -11,7 +11,7 @@ namespace Jazz2::Actors::Environment
 
 		static void Preload(const ActorActivationDetails& details)
 		{
-			PreloadMetadataAsync("Object/SignEol");
+			PreloadMetadataAsync("Object/SignEol"_s);
 		}
 
 	protected:

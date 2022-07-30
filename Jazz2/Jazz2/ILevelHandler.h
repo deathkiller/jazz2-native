@@ -67,7 +67,7 @@ namespace Jazz2
 		virtual void AddActor(const std::shared_ptr<ActorBase>& actor) = 0;
 
 		virtual const std::shared_ptr<AudioBufferPlayer>& PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) = 0;
-		virtual const std::shared_ptr<AudioBufferPlayer>& PlayCommonSfx(const std::string& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) = 0;
+		virtual const std::shared_ptr<AudioBufferPlayer>& PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) = 0;
 		virtual void WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor) = 0;
 		virtual bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, bool downwards, __out ActorBase** collider) = 0;
 
@@ -79,7 +79,7 @@ namespace Jazz2
 
 		virtual void GetCollidingPlayers(const AABBf& aabb, const std::function<bool(ActorBase*)> callback) = 0;
 
-		virtual void BeginLevelChange(ExitType exitType, const std::string& nextLevel) = 0;
+		virtual void BeginLevelChange(ExitType exitType, const StringView& nextLevel) = 0;
 		virtual void HandleGameOver() = 0;
 		virtual bool HandlePlayerDied(const std::shared_ptr<ActorBase>& player) = 0;
 

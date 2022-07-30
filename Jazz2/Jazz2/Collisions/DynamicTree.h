@@ -24,9 +24,9 @@
 #include "../../nCine/Primitives/AABB.h"
 #include "../../nCine/Primitives/Vector2.h"
 
-#include <SmallVector.h>
+#include <Containers/SmallVector.h>
 
-using namespace Death;
+using namespace Death::Containers;
 
 namespace Jazz2::Collisions
 {

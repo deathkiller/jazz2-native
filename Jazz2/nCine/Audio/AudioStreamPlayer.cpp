@@ -17,12 +17,12 @@ namespace nCine
 	}
 
 	AudioStreamPlayer::AudioStreamPlayer(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
-		: IAudioPlayer(ObjectType::AUDIOSTREAM_PLAYER, bufferName), audioStream_(bufferName, bufferPtr, bufferSize)
+		: IAudioPlayer(ObjectType::AUDIOSTREAM_PLAYER), audioStream_(bufferName, bufferPtr, bufferSize)
 	{
 	}
 
-	AudioStreamPlayer::AudioStreamPlayer(const char* filename)
-		: IAudioPlayer(ObjectType::AUDIOSTREAM_PLAYER, filename), audioStream_(filename)
+	AudioStreamPlayer::AudioStreamPlayer(const StringView& filename)
+		: IAudioPlayer(ObjectType::AUDIOSTREAM_PLAYER), audioStream_(filename)
 	{
 	}
 

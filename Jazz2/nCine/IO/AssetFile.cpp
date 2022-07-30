@@ -1,10 +1,11 @@
 #ifdef __ANDROID__
 
+#include "AssetFile.h"
+
 #include <sys/stat.h> // for open()
 #include <fcntl.h> // for open()
 #include <unistd.h> // for close()
 #include "common_macros.h"
-#include "AssetFile.h"
 
 namespace nCine
 {
@@ -19,7 +20,7 @@ namespace nCine
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
 
-	AssetFile::AssetFile(const char* filename)
+	AssetFile::AssetFile(const String& filename)
 		: IFile(filename), asset_(nullptr), startOffset_(0L)
 	{
 		type_ = FileType::Asset;

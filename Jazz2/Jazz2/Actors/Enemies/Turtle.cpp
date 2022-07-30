@@ -22,12 +22,12 @@ namespace Jazz2::Actors::Enemies
 		switch (theme) {
 			case 0:
 			default:
-				PreloadMetadataAsync("Enemy/Turtle");
-				PreloadMetadataAsync("Enemy/TurtleShell");
+				PreloadMetadataAsync("Enemy/Turtle"_s);
+				PreloadMetadataAsync("Enemy/TurtleShell"_s);
 				break;
 			case 1: // Xmas
-				PreloadMetadataAsync("Enemy/TurtleXmas");
-				PreloadMetadataAsync("Enemy/TurtleShellXmas");
+				PreloadMetadataAsync("Enemy/TurtleXmas"_s);
+				PreloadMetadataAsync("Enemy/TurtleShellXmas"_s);
 				break;
 		}
 	}
@@ -41,10 +41,10 @@ namespace Jazz2::Actors::Enemies
 		switch (_theme) {
 			case 0:
 			default:
-				co_await RequestMetadataAsync("Enemy/Turtle");
+				co_await RequestMetadataAsync("Enemy/Turtle"_s);
 				break;
 			case 1: // Xmas
-				co_await RequestMetadataAsync("Enemy/TurtleXmas");
+				co_await RequestMetadataAsync("Enemy/TurtleXmas"_s);
 				break;
 		}
 
@@ -72,7 +72,7 @@ namespace Jazz2::Actors::Enemies
 				_isTurning = true;
 				_canHurtPlayer = false;
 				_speed.X = 0;
-				PlaySfx("Withdraw", 0.2f);
+				PlaySfx("Withdraw"_s, 0.2f);
 			}
 		}
 
@@ -100,7 +100,7 @@ namespace Jazz2::Actors::Enemies
 		if (_renderer.AnimPaused) {
 			// Animation should be paused only if enemy is frozen
 			CreateDeathDebris(collider);
-			_levelHandler->PlayCommonSfx("Splat", Vector3f(_pos.X, _pos.Y, 0.0f));
+			_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
 			TryGenerateRandomDrop();
 		} else {
@@ -131,7 +131,7 @@ namespace Jazz2::Actors::Enemies
 				SetTransition(AnimState::TransitionWithdrawEnd, false, [this]() {
 				   HandleTurn(false);
 				});
-				PlaySfx("WithdrawEnd", 0.2f);
+				PlaySfx("WithdrawEnd"_s, 0.2f);
 				_isWithdrawn = true;
 			} else {
 				_canHurtPlayer = true;
@@ -146,14 +146,14 @@ namespace Jazz2::Actors::Enemies
 	{
 		_speed.X = 0;
 		_isAttacking = true;
-		PlaySfx("Attack");
+		PlaySfx("Attack"_s);
 
 		SetTransition(AnimState::TransitionAttack, false, [this]() {
 			_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
 			_isAttacking = false;
 
 			// ToDo: Bad timing
-			PlaySfx("Attack2");
+			PlaySfx("Attack2"_s);
 		});
 	}
 }

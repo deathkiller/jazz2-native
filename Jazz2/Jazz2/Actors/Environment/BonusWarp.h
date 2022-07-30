@@ -12,7 +12,7 @@ namespace Jazz2::Actors::Environment
 
 		static void Preload(const ActorActivationDetails& details)
 		{
-			PreloadMetadataAsync("Object/BonusWarp");
+			PreloadMetadataAsync("Object/BonusWarp"_s);
 		}
 
 		void Activate(Player* player);

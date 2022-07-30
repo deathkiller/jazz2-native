@@ -54,7 +54,7 @@ namespace Jazz2::Events
 		// Store event parameters
 		int i = 0;
 		if (tileParams != nullptr) {
-			memcpy(newEvent.EventParams, tileParams, sizeof(newEvent.EventParams));
+			std::memcpy(newEvent.EventParams, tileParams, sizeof(newEvent.EventParams));
 		}
 
 		previousEvent = newEvent;
@@ -315,7 +315,7 @@ namespace Jazz2::Events
 						GeneratorInfo& generator = _generators.emplace_back();
 						generator.EventPos = x + y * _layoutSize.X;
 						generator.EventType = (EventType)eventID;
-						memcpy(generator.EventParams, eventParams, sizeof(eventParams));
+						std::memcpy(generator.EventParams, eventParams, sizeof(eventParams));
 						generator.Delay = generatorDelay;
 						generator.TimeLeft = timeLeft;
 
@@ -397,7 +397,7 @@ namespace Jazz2::Events
 
 		// Store event parameters
 		if (tileParams != nullptr) {
-			memcpy(newEvent.EventParams, tileParams, sizeof(newEvent.EventParams));
+			std::memcpy(newEvent.EventParams, tileParams, sizeof(newEvent.EventParams));
 		}
 
 		previousEvent = newEvent;

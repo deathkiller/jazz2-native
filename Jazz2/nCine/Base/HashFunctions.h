@@ -2,7 +2,10 @@
 
 #include <cstdint>
 #include <cstring>
-#include <string>
+
+#include <Containers/String.h>
+
+using namespace Death::Containers;
 
 namespace nCine
 {
@@ -80,12 +83,12 @@ namespace nCine
 	 * \note Specialized version of the function for String objects
 	 */
 	template <>
-	class SaxHashFunc<std::string>
+	class SaxHashFunc<String>
 	{
 	public:
-		hash_t operator()(const std::string& string) const
+		hash_t operator()(const String& string) const
 		{
-			const unsigned int length = (unsigned int)string.length();
+			const unsigned int length = (unsigned int)string.size();
 			hash_t hash = static_cast<hash_t>(0);
 			for (unsigned int i = 0; i < length; i++)
 				hash ^= (hash << 5) + (hash >> 2) + static_cast<hash_t>(string[i]);
@@ -153,12 +156,12 @@ namespace nCine
 	 * For more information: http://en.wikipedia.org/wiki/Jenkins_hash_function
 	 */
 	template <>
-	class JenkinsHashFunc<std::string>
+	class JenkinsHashFunc<String>
 	{
 	public:
-		hash_t operator()(const std::string& string) const
+		hash_t operator()(const String& string) const
 		{
-			const unsigned int length = (unsigned int)string.length();
+			const unsigned int length = (unsigned int)string.size();
 			hash_t hash = static_cast<hash_t>(0);
 			for (unsigned int i = 0; i < length; i++) {
 				hash += static_cast<hash_t>(string[i]);
@@ -237,12 +240,12 @@ namespace nCine
 	 * For more information: http://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
 	 */
 	template <>
-	class FNV1aHashFunc<std::string>
+	class FNV1aHashFunc<String>
 	{
 	public:
-		hash_t operator()(const std::string& string) const
+		hash_t operator()(const String& string) const
 		{
-			const unsigned int length = (unsigned int)string.length();
+			const unsigned int length = (unsigned int)string.size();
 			hash_t hash = static_cast<hash_t>(Seed);
 			for (unsigned int i = 0; i < length; i++)
 				hash = fnv1a(static_cast<hash_t>(string[i]), hash);
@@ -308,11 +311,11 @@ namespace nCine
 	 * For more information: https://github.com/ztanml/fast-hash
 	 */
 	template <>
-	class FastHashFunc<std::string>
+	class FastHashFunc<String>
 	{
 	public:
-		hash_t operator()(const std::string& string) const {
-			return fasthash32(string.data(), string.length(), Seed);
+		hash_t operator()(const String& string) const {
+			return fasthash32(string.data(), string.size(), Seed);
 		}
 
 	private:

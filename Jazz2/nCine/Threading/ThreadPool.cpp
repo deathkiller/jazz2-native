@@ -22,7 +22,7 @@ namespace nCine
 
 		quitMutex_.lock();
 
-		std::string threadName;
+		//std::string threadName;
 		for (unsigned int i = 0; i < numThreads_; i++) {
 			threads_.emplace_back(workerFunction, &threadStruct_);
 #if !defined(__EMSCRIPTEN__)

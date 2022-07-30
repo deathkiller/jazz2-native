@@ -59,7 +59,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 
 #if defined(_WIN32)
 	//if (IsDebuggerPresent()) {
-		OutputDebugString(Utf8::ToUtf16(logEntry));
+		OutputDebugString(Death::Utf8::ToUtf16(logEntry));
 	//}
 #elif defined(__ANDROID__)
 	android_LogPriority priority;
@@ -113,7 +113,7 @@ public:
 	void onJoyMappedButtonPressed(const JoyMappedButtonEvent& event) override;
 	void onJoyMappedButtonReleased(const JoyMappedButtonEvent& event) override;
 
-	void ChangeLevel(const Jazz2::LevelInitialization& levelInit) override;
+	void ChangeLevel(Jazz2::LevelInitialization&& levelInit) override;
 
 private:
 	std::unique_ptr<Jazz2::ILevelHandler> _currentHandler;
@@ -122,17 +122,8 @@ private:
 
 void GameEventHandler::onPreInit(AppConfiguration& config)
 {
-#if defined(__ANDROID__)
-	config.dataPath() = "asset::";
-#elif defined(__EMSCRIPTEN__)
-	config.dataPath() = "/";
-#elif defined(NCPROJECT_DEFAULT_DATA_DIR)
-	config.dataPath() = NCPROJECT_DEFAULT_DATA_DIR;
-#else
-	config.dataPath() = "Content/";
-#endif
-
-	config.windowTitle = "Jazz² Resurrection";
+	//config.withVSync = false;
+	config.windowTitle = "Jazz² Resurrection"_s;
 	config.resolution.Set(Jazz2::LevelHandler::DefaultWidth, Jazz2::LevelHandler::DefaultHeight);
 }
 
@@ -154,8 +145,8 @@ void GameEventHandler::onInit()
 
 	// TODO
 	Jazz2::PlayerType players[] = { Jazz2::PlayerType::Jazz };
-	Jazz2::LevelInitialization levelInit("share", "01_share1", Jazz2::GameDifficulty::Normal, false, false, players, _countof(players));
-	ChangeLevel(levelInit);
+	Jazz2::LevelInitialization levelInit("share"_s, "01_share1"_s, Jazz2::GameDifficulty::Normal, false, false, players, _countof(players));
+	ChangeLevel(std::move(levelInit));
 }
 
 void GameEventHandler::onFrameStart()
@@ -239,10 +230,10 @@ void GameEventHandler::onJoyMappedButtonReleased(const JoyMappedButtonEvent& eve
 {
 }
 
-void GameEventHandler::ChangeLevel(const Jazz2::LevelInitialization& levelInit)
+void GameEventHandler::ChangeLevel(Jazz2::LevelInitialization&& levelInit)
 {
 	// Level will be changed in the next frame
-	_pendingLevelChange = std::make_unique<Jazz2::LevelInitialization>(levelInit);
+	_pendingLevelChange = std::make_unique<Jazz2::LevelInitialization>(std::move(levelInit));
 }
 
 #if defined(_WIN32) && !defined(WITH_QT5)

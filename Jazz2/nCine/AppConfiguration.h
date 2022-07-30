@@ -2,7 +2,9 @@
 
 #include "Primitives/Vector2.h"
 
-#include <string>
+#include <Containers/String.h>
+
+using namespace Death::Containers;
 
 namespace nCine
 {
@@ -35,9 +37,9 @@ namespace nCine
 		unsigned int frameLimit;
 
 		/// The window title
-		std::string windowTitle;
+		String windowTitle;
 		/// The window icon filename
-		std::string windowIconFilename;
+		String windowIconFilename;
 
 		/// The flag is `true` if mapping is used to update OpenGL buffers
 		bool useBufferMapping;
@@ -71,9 +73,9 @@ namespace nCine
 		bool withGlDebugContext;
 
 		/// \returns The path for the application to load data from
-		const std::string& dataPath() const;
+		const String& dataPath() const;
 		/// \returns The path for the application to load data from
-		std::string& dataPath();
+		String& dataPath();
 
 		/// \returns True if the OpenGL profile is going to be core
 		inline bool glCoreProfile() const {

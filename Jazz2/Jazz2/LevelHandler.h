@@ -13,8 +13,6 @@
 #include "../nCine/Audio/AudioBufferPlayer.h"
 #include "../nCine/Audio/AudioStreamPlayer.h"
 
-#include <SmallVector.h>
-
 // TODO
 #define ENABLE_POSTPROCESSING 1
 
@@ -77,14 +75,14 @@ namespace Jazz2
 		void AddActor(const std::shared_ptr<ActorBase>& actor) override;
 
 		const std::shared_ptr<AudioBufferPlayer>& PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
-		const std::shared_ptr<AudioBufferPlayer>& PlayCommonSfx(const std::string& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
+		const std::shared_ptr<AudioBufferPlayer>& PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
 		void WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor) override;
 		bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, bool downwards, __out ActorBase** collider) override;
 		void FindCollisionActorsByAABB(ActorBase* self, const AABBf& aabb, const std::function<bool(ActorBase*)>& callback);
 		void FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(ActorBase*)>& callback);
 		void GetCollidingPlayers(const AABBf& aabb, const std::function<bool(ActorBase*)> callback) override;
 
-		void BeginLevelChange(ExitType exitType, const std::string& nextLevel) override;
+		void BeginLevelChange(ExitType exitType, const StringView& nextLevel) override;
 		void HandleGameOver() override;
 		bool HandlePlayerDied(const std::shared_ptr<ActorBase>& player) override;
 
@@ -205,12 +203,12 @@ namespace Jazz2
 		SmallVector<std::shared_ptr<ActorBase>, 0> _actors;
 		SmallVector<Actors::Player*, LevelInitialization::MaxPlayerCount> _players;
 
-		std::string _levelFileName;
-		std::string _episodeName;
-		std::string _defaultNextLevel;
-		std::string _defaultSecretLevel;
+		String _levelFileName;
+		String _episodeName;
+		String _defaultNextLevel;
+		String _defaultSecretLevel;
 		GameDifficulty _difficulty;
-		std::string _musicPath;
+		String _musicPath;
 		Recti _levelBounds;
 		bool _reduxMode, _cheatsUsed;
 
@@ -235,9 +233,9 @@ namespace Jazz2
 		uint32_t _pressedActions;
 		Vector2f _playerRequiredMovement;
 
-		void OnLevelLoaded(const std::string& name, const std::string& nextLevel, const std::string& secretLevel,
+		void OnLevelLoaded(const StringView& name, const StringView& nextLevel, const StringView& secretLevel,
 			std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap,
-			const std::string& musicPath, float ambientLight);
+			const StringView& musicPath, float ambientLight);
 
 		void ResolveCollisions(float timeMult);
 		void InitializeCamera();

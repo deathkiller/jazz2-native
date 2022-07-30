@@ -176,11 +176,11 @@ namespace nCine {
 		unsigned long nonInstancesBlocksSize = 0;
 		const GLShaderUniformBlocks::UniformHashMapType allUniformBlocks = refCommand->material().allUniformBlocks();
 		for (const GLUniformBlockCache& uniformBlockCache : allUniformBlocks) {
-			const std::string/*<GLUniformBlock::MaxNameLength>*/ uniformBlockName = uniformBlockCache.uniformBlock()->name();
-			if (uniformBlockName == Material::InstanceBlockName)
+			const char* uniformBlockName = uniformBlockCache.uniformBlock()->name();
+			if (strcmp(uniformBlockName, Material::InstanceBlockName) == 0)
 				continue;
 
-			GLUniformBlockCache* batchBlock = batchCommand->material().uniformBlock(uniformBlockName.data());
+			GLUniformBlockCache* batchBlock = batchCommand->material().uniformBlock(uniformBlockName);
 			//ASSERT(batchBlock);
 			if (batchBlock)
 				nonInstancesBlocksSize += uniformBlockCache.size() - uniformBlockCache.alignAmount();
@@ -208,11 +208,11 @@ namespace nCine {
 		batchCommand->material().setUniformsDataPointer(acquireMemory(nonBlockUniformsSize + nonInstancesBlocksSize + instancesBlockSize));
 		// Copying data for non-instances uniform blocks from the first command in the batch
 		for (const GLUniformBlockCache& uniformBlockCache : allUniformBlocks) {
-			const std::string/*<GLUniformBlock::MaxNameLength>*/ uniformBlockName = uniformBlockCache.uniformBlock()->name();
-			if (uniformBlockName == Material::InstanceBlockName)
+			const char* uniformBlockName = uniformBlockCache.uniformBlock()->name();
+			if (strcmp(uniformBlockName, Material::InstanceBlockName) == 0)
 				continue;
 
-			GLUniformBlockCache* batchBlock = batchCommand->material().uniformBlock(uniformBlockName.data());
+			GLUniformBlockCache* batchBlock = batchCommand->material().uniformBlock(uniformBlockName);
 			const bool dataCopied = batchBlock->copyData(uniformBlockCache.dataPointer());
 			//ASSERT(dataCopied);
 			batchBlock->setUsedSize(uniformBlockCache.usedSize());

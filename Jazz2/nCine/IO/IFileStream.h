@@ -4,8 +4,11 @@
 
 #include <cstdio> // for FILE
 #include <cstdint> // for endianness conversions
-#include <string>
 #include <memory>
+
+#include <Containers/String.h>
+
+using namespace Death::Containers;
 
 namespace nCine
 {
@@ -38,7 +41,7 @@ namespace nCine
 
 		/// Constructs a base file object
 		/*! \param filename File name including its path */
-		explicit IFileStream(const char* filename);
+		explicit IFileStream(const String& filename);
 		virtual ~IFileStream() {}
 
 		/// Returns the file type (RTTI)
@@ -139,7 +142,7 @@ namespace nCine
 		static std::unique_ptr<IFileStream> createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
 
 		/// Returns the proper file handle according to prepended tags
-		static std::unique_ptr<IFileStream> createFileHandle(const char* filename);
+		static std::unique_ptr<IFileStream> createFileHandle(const String& filename);
 
 	protected:
 		/// File type
@@ -148,7 +151,7 @@ namespace nCine
 		/// Maximum number of characters for a file name (path included)
 		static const unsigned int MaxFilenameLength = 256;
 		/// File name with path
-		std::string filename_;
+		String filename_;
 
 		/// File descriptor for `open()` and `close()`
 		int fileDescriptor_;

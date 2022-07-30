@@ -1,9 +1,11 @@
 #pragma once
 
-#include <SmallVector.h>
 #include <memory>
 
-using namespace Death;
+#include <Containers/SmallVector.h>
+#include <Containers/StringView.h>
+
+using namespace Death::Containers;
 
 namespace nCine
 {
@@ -107,7 +109,7 @@ namespace nCine
 		/// Constructor creating an audio stream from a named memory buffer
 		AudioStream(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// Constructor creating an audio stream from an audio file
-		explicit AudioStream(const char* filename);
+		explicit AudioStream(const StringView& filename);
 
 		/// Default move constructor
 		AudioStream(AudioStream&&);
@@ -115,7 +117,7 @@ namespace nCine
 		AudioStream& operator=(AudioStream&&);
 
 		bool loadFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize);
-		bool loadFromFile(const char* filename);
+		bool loadFromFile(const StringView& filename);
 
 		void createReader(IAudioLoader& audioLoader);
 

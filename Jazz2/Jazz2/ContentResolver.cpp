@@ -2,6 +2,7 @@
 
 #include "../nCine/IO/IFileStream.h"
 #include "../nCine/Graphics/ITextureLoader.h"
+#include "../nCine/Base/HashMapIterator.h"
 
 #include "LevelHandler.h"
 #include "Tiles/TileSet.h"
@@ -30,7 +31,9 @@ namespace Jazz2
 
 	ContentResolver::ContentResolver()
 		:
-		_isLoading(false)
+		_isLoading(false),
+		_cachedMetadata(64),
+		_cachedGraphics(128)
 	{
 		memset(_palettes, 0, sizeof(_palettes));
 	}
@@ -57,15 +60,17 @@ namespace Jazz2
 
 		// Reset Referenced flag
 		for (auto& resource : _cachedMetadata) {
-			resource.second->Flags &= ~MetadataFlags::Referenced;
+			resource->Flags &= ~MetadataFlags::Referenced;
 		}
 		for (auto& resource : _cachedGraphics) {
-			resource.second->Flags &= ~GenericGraphicResourceFlags::Referenced;
+			resource->Flags &= ~GenericGraphicResourceFlags::Referenced;
 		}
 	}
 
 	void ContentResolver::EndLoading()
 	{
+		// TODO: critical
+		/*
 		// Release unreferenced metadata
 		{
 			auto it = _cachedMetadata.begin();
@@ -88,34 +93,34 @@ namespace Jazz2
 					++it;
 				}
 			}
-		}
+		}*/
 
 		_isLoading = false;
 	}
 
-	void ContentResolver::PreloadMetadataAsync(const std::string& path)
+	void ContentResolver::PreloadMetadataAsync(const StringView& path)
 	{
 		// TODO: reimplement async preloading
 		RequestMetadata(path);
 	}
 
-	Metadata* ContentResolver::RequestMetadata(const std::string& path)
+	Metadata* ContentResolver::RequestMetadata(const StringView& path)
 	{
 		// TODO: add locks?
 		auto it = _cachedMetadata.find(path);
-		if (it != _cachedMetadata.end()) {
+		if (it != nullptr) {
 			// Already loaded - Mark as referenced
-			it->second->Flags |= MetadataFlags::Referenced;
+			(*it)->Flags |= MetadataFlags::Referenced;
 
-			for (auto& resource : it->second->Graphics) {
-				resource.second.Base->Flags |= GenericGraphicResourceFlags::Referenced;
+			for (auto& resource : (*it)->Graphics) {
+				resource.Base->Flags |= GenericGraphicResourceFlags::Referenced;
 			}
 
-			return it->second.get();
+			return it->get();
 		} else {
 			// Try to load it
 			// TODO
-			auto fileHandle = IFileStream::createFileHandle(FileSystem::joinPath("Content/Metadata", path + ".res").c_str());
+			auto fileHandle = IFileStream::createFileHandle(fs::joinPath({ "Content"_s, "Metadata"_s, path + ".res"_s }));
 			fileHandle->Open(FileAccessMode::Read);
 			auto fileSize = fileHandle->GetSize();
 			if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
@@ -142,6 +147,9 @@ namespace Jazz2
 				const auto& animations_ = document.FindMember("Animations");
 				if (animations_ != document.MemberEnd() && animations_->value.IsObject()) {
 					auto& animations = animations_->value;
+
+					metadata->Graphics.rehash(animations.MemberCount());
+
 					for (auto it2 = animations.MemberBegin(); it2 != animations.MemberEnd(); ++it2) {
 						if (!it2->name.IsString() || !it2->value.IsObject()) {
 							continue;
@@ -216,13 +224,16 @@ namespace Jazz2
 							metadata->BoundingBox = graphicsBase->FrameDimensions - Vector2i(2, 2);
 						}
 
-						metadata->Graphics[key] = std::move(graphics);
+						metadata->Graphics.insert(key, std::move(graphics));
 					}
 				}
 
 				const auto& sounds_ = document.FindMember("Sounds");
 				if (sounds_ != document.MemberEnd() && sounds_->value.IsObject()) {
 					auto& sounds = sounds_->value;
+
+					metadata->Sounds.rehash(sounds.MemberCount());
+
 					for (auto it2 = sounds.MemberBegin(); it2 != sounds.MemberEnd(); ++it2) {
 						if (!it2->name.IsString() || !it2->value.IsObject()) {
 							continue;
@@ -244,35 +255,38 @@ namespace Jazz2
 								continue;
 							}
 
-							sound.Buffers.emplace_back(std::make_unique<AudioBuffer>(fs::joinPath("Content/Animations", path).c_str()));
+							sound.Buffers.emplace_back(std::make_unique<AudioBuffer>(fs::joinPath({ "Content"_s, "Animations"_s, path })));
 						}
 
 						if (!sound.Buffers.empty()) {
-							metadata->Sounds[key] = std::move(sound);
+							metadata->Sounds.insert(key, std::move(sound));
 						}
 					}
 				}
 			}
 
+			if (_cachedMetadata.loadFactor() >= 0.8f)
+				_cachedMetadata.rehash(_cachedMetadata.capacity() * 2);
+
 			Metadata* ptr = metadata.get();
-			_cachedMetadata.emplace(path, std::move(metadata));
+			_cachedMetadata.insert(path, std::move(metadata));
 			return ptr;
 		}
 	}
 
-	GenericGraphicResource* ContentResolver::RequestGraphics(const std::string& path)
+	GenericGraphicResource* ContentResolver::RequestGraphics(const StringView& path)
 	{
 		// First resources are requested, reset _isLoading flag, because palette should be already applied
 		_isLoading = false;
 
 		auto it = _cachedGraphics.find(path);
-		if (it != _cachedGraphics.end()) {
+		if (it != nullptr) {
 			// Already loaded - Mark as referenced
-			it->second->Flags |= GenericGraphicResourceFlags::Referenced;
-			return it->second.get();
+			(*it)->Flags |= GenericGraphicResourceFlags::Referenced;
+			return it->get();
 		} else {
 			// TODO
-			auto fileHandle = IFileStream::createFileHandle(FileSystem::joinPath("Content/Animations", path + ".res").c_str());
+			auto fileHandle = IFileStream::createFileHandle(fs::joinPath({ "Content"_s, "Animations"_s, path + ".res"_s }));
 			fileHandle->Open(FileAccessMode::Read);
 			auto fileSize = fileHandle->GetSize();
 			if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
@@ -293,8 +307,8 @@ namespace Jazz2
 			std::unique_ptr<GenericGraphicResource> graphics = std::make_unique<GenericGraphicResource>();
 			graphics->Flags |= GenericGraphicResourceFlags::Referenced;
 
-			std::string fullPath = fs::joinPath("Content/Animations", path);
-			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath.c_str());
+			String fullPath = fs::joinPath({ "Content"_s, "Animations"_s, path });
+			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
 			if (texLoader->hasLoaded()) {
 				auto texFormat = texLoader->texFormat().internalFormat();
 				if (texFormat != GL_RGBA8 && texFormat != GL_RGB8) {
@@ -314,7 +328,7 @@ namespace Jazz2
 					pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
 				}
 
-				graphics->TextureDiffuse = std::make_unique<Texture>(fullPath.c_str(), Texture::Format::RGBA8, w, h);
+				graphics->TextureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, w, h);
 				graphics->TextureDiffuse->loadFromTexels((unsigned char*)pixels, 0, 0, w, h);
 				graphics->TextureDiffuse->setMinFiltering(SamplerFilter::Nearest);
 				graphics->TextureDiffuse->setMagFiltering(SamplerFilter::Nearest);
@@ -356,8 +370,11 @@ namespace Jazz2
 					graphics->Gunspot = Vector2i(InvalidValue, InvalidValue);
 				}
 
+				if (_cachedGraphics.loadFactor() >= 0.8f)
+					_cachedGraphics.rehash(_cachedGraphics.capacity() * 2);
+
 				GenericGraphicResource* ptr = graphics.get();
-				_cachedGraphics.emplace(path, std::move(graphics));
+				_cachedGraphics.insert(path, std::move(graphics));
 				return ptr;
 			}
 		}
@@ -365,22 +382,22 @@ namespace Jazz2
 		return nullptr;
 	}
 
-	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(const std::string& path, bool applyPalette, Color* customPalette)
+	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(const StringView& path, bool applyPalette, Color* customPalette)
 	{
 		if (applyPalette) {
 			// TODO
 			/*if (customPalette != nullptr) {
 				//ApplyPalette(customPalette);
 			} else if (tilesetPackage.FileExists("Main.palette"))*/ {
-				ApplyPalette(fs::joinPath("Content/Tilesets", path + "/Main.palette"));
+				ApplyPalette(fs::joinPath({ "Content"_s, "Tilesets"_s, path, "Main.palette"_s }));
 			}
 		}
 
 		// Load diffuse texture
 		std::unique_ptr<Texture> textureDiffuse = nullptr;
 		{
-			std::string diffusePath = fs::joinPath("Content/Tilesets", path + "/Diffuse.png");
-			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(diffusePath.c_str());
+			String diffusePath = fs::joinPath({ "Content"_s, "Tilesets"_s, path, "Diffuse.png"_s });
+			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(diffusePath);
 			if (texLoader->hasLoaded()) {
 				auto texFormat = texLoader->texFormat().internalFormat();
 				if (texFormat == GL_RGBA8 || texFormat == GL_RGB8) {
@@ -393,7 +410,7 @@ namespace Jazz2
 						pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
 					}
 
-					textureDiffuse = std::make_unique<Texture>(diffusePath.c_str(), Texture::Format::RGBA8, w, h);
+					textureDiffuse = std::make_unique<Texture>(diffusePath.data(), Texture::Format::RGBA8, w, h);
 					textureDiffuse->loadFromTexels((unsigned char*)pixels, 0, 0, w, h);
 					textureDiffuse->setMinFiltering(SamplerFilter::Nearest);
 					textureDiffuse->setMagFiltering(SamplerFilter::Nearest);
@@ -410,8 +427,8 @@ namespace Jazz2
 		// Load collision mask
 		std::unique_ptr<uint8_t[]> mask = nullptr;
 		{
-			std::string maskPath = fs::joinPath("Content/Tilesets", path + "/Mask.png");
-			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(maskPath.c_str());
+			String maskPath = fs::joinPath({ "Content"_s, "Tilesets"_s, path, "Mask.png"_s });
+			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(maskPath);
 			if (texLoader->hasLoaded()) {
 				auto texFormat = texLoader->texFormat().internalFormat();
 				if (texFormat != GL_RGBA8 && texFormat != GL_RGB8) {
@@ -452,12 +469,12 @@ namespace Jazz2
 		return std::make_unique<Tiles::TileSet>(std::move(textureDiffuse), std::move(mask));
 	}
 
-	bool ContentResolver::LoadLevel(LevelHandler* levelHandler, const std::string& path, GameDifficulty difficulty)
+	bool ContentResolver::LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty)
 	{
-		std::string levelRoot = FileSystem::joinPath("Content/Episodes", path);
+		String levelRoot = fs::joinPath({ "Content"_s, "Episodes"_s, path });
 
 		// Try to load level description
-		auto fileHandle = IFileStream::createFileHandle(FileSystem::joinPath(levelRoot, ".res").c_str());
+		auto fileHandle = IFileStream::createFileHandle(fs::joinPath({ levelRoot, ".res"_s }));
 		fileHandle->Open(FileAccessMode::Read);
 		auto fileSize = fileHandle->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
@@ -504,7 +521,7 @@ namespace Jazz2
 
 		// Sprite layer is mandatory
 		{
-			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath(levelRoot, "Sprite.layer").c_str());
+			auto layerFile = IFileStream::createFileHandle(fs::joinPath({ levelRoot, "Sprite.layer"_s }));
 			tileMap->ReadLayerConfiguration(LayerType::Sprite, layerFile, { .SpeedX = 1, .SpeedY = 1 });
 		}
 
@@ -541,7 +558,7 @@ namespace Jazz2
 				type = LayerType::Other;
 			}
 
-			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath(levelRoot, std::string(layerName) + ".layer").c_str());
+			auto layerFile = IFileStream::createFileHandle(fs::joinPath({ levelRoot, StringView(layerName) + ".layer"_s }));
 			tileMap->ReadLayerConfiguration(type, layerFile, {
 				.SpeedX = (speedXItem != it->value.MemberEnd() && speedXItem->value.IsNumber() ? speedXItem->value.GetFloat() : 0.0f),
 				.SpeedY = (speedYItem != it->value.MemberEnd() && speedYItem->value.IsNumber() ? speedYItem->value.GetFloat() : 0.0f),
@@ -560,39 +577,39 @@ namespace Jazz2
 		}
 
 		// Load animated tiles
-		auto animTilesFile = IFileStream::createFileHandle(FileSystem::joinPath(levelRoot, "Animated.tiles").c_str());
+		auto animTilesFile = IFileStream::createFileHandle(fs::joinPath({ levelRoot, "Animated.tiles"_s }));
 		tileMap->ReadAnimatedTiles(animTilesFile);
 
 		// Load events
 		std::unique_ptr<Events::EventMap> eventMap = std::make_unique<Events::EventMap>(levelHandler, tileMap->Size());
 		{
-			auto layerFile = IFileStream::createFileHandle(FileSystem::joinPath(levelRoot, "Events.layer").c_str());
+			auto layerFile = IFileStream::createFileHandle(fs::joinPath({ levelRoot, "Events.layer"_s }));
 			eventMap->ReadEvents(layerFile, tileMap, eventSetItem->value.GetInt(), difficulty);
 		}
 
 		levelHandler->OnLevelLoaded(
-			nameItem != descriptionItem->value.MemberEnd() && nameItem->value.IsString() ? nameItem->value.GetString() : std::string(),
-			nextLevelItem != descriptionItem->value.MemberEnd() && nextLevelItem->value.IsString() ? nextLevelItem->value.GetString() : std::string(),
-			secretLevelItem != descriptionItem->value.MemberEnd() && defaultMusicItem->value.IsString() ? secretLevelItem->value.GetString() : std::string(),
+			nameItem != descriptionItem->value.MemberEnd() && nameItem->value.IsString() ? nameItem->value.GetString() : nullptr,
+			nextLevelItem != descriptionItem->value.MemberEnd() && nextLevelItem->value.IsString() ? nextLevelItem->value.GetString() : nullptr,
+			secretLevelItem != descriptionItem->value.MemberEnd() && defaultMusicItem->value.IsString() ? secretLevelItem->value.GetString() : nullptr,
 			tileMap, eventMap,
-			defaultMusicItem != descriptionItem->value.MemberEnd() && defaultMusicItem->value.IsString() ? defaultMusicItem->value.GetString() : std::string(),
+			defaultMusicItem != descriptionItem->value.MemberEnd() && defaultMusicItem->value.IsString() ? defaultMusicItem->value.GetString() : nullptr,
 			defaultLightItem != descriptionItem->value.MemberEnd() && defaultLightItem->value.IsNumber() ? (defaultLightItem->value.GetFloat() * 0.01f) : 1.0f
 		);
 
 		return true;
 	}
 
-	void ContentResolver::ApplyPalette(const std::string& path)
+	void ContentResolver::ApplyPalette(const StringView& path)
 	{
 		std::unique_ptr<IFileStream> file = nullptr;
 		if (!path.empty()) {
-			file = IFileStream::createFileHandle(path.c_str());
+			file = IFileStream::createFileHandle(path);
 			file->setExitOnFailToOpen(false);
 			file->Open(FileAccessMode::Read);
 		}
 		if (file == nullptr || file->GetSize() == 0) {
 			// Try to load default palette
-			file = IFileStream::createFileHandle("Content/Animations/Main.palette");
+			file = IFileStream::createFileHandle(fs::joinPath({ "Content"_s, "Animations"_s, "Main.palette"_s }));
 			file->setExitOnFailToOpen(false);
 			file->Open(FileAccessMode::Read);
 		}
@@ -611,14 +628,14 @@ namespace Jazz2
 		uint32_t newPalette[ColorsPerPalette];
 		file->Read(newPalette, colorCount * sizeof(uint32_t));
 
-		if (memcmp(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t)) != 0) {
+		if (std::memcmp(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t)) != 0) {
 			// Palettes differs, drop all cached resources, so it will be reloaded with new palette
 			if (_isLoading) {
 				_cachedMetadata.clear();
 				_cachedGraphics.clear();
 			}
 
-			memcpy(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t));
+			std::memcpy(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t));
 		}
 	}
 }

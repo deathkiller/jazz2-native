@@ -18,7 +18,6 @@ namespace nCine
 			Stopped
 		};
 
-		IAudioPlayer(ObjectType type, const char* name);
 		IAudioPlayer(ObjectType type);
 		~IAudioPlayer() override;
 

@@ -1,6 +1,8 @@
 ﻿#pragma once
 
-#include <string>
+#include <Containers/String.h>
+
+using namespace Death::Containers;
 
 namespace Jazz2
 {
@@ -66,8 +68,8 @@ namespace Jazz2
         static constexpr int MaxPlayerCount = 4;
         static constexpr int DefaultLives = 3;
 
-        std::string LevelName;
-        std::string EpisodeName;
+        String LevelName;
+        String EpisodeName;
 
         GameDifficulty Difficulty;
         bool ReduxMode, CheatsUsed;
@@ -75,14 +77,14 @@ namespace Jazz2
 
         PlayerCarryOver PlayerCarryOvers[MaxPlayerCount];
 
-        std::string LastEpisodeName;
+        String LastEpisodeName;
 
         LevelInitialization()
             : PlayerCarryOvers { }
         {
         }
 
-        LevelInitialization(const std::string& episode, const std::string& level, GameDifficulty difficulty, bool reduxMode, bool cheatsUsed, PlayerType playerType)
+        LevelInitialization(const String& episode, const String& level, GameDifficulty difficulty, bool reduxMode, bool cheatsUsed, PlayerType playerType)
             : PlayerCarryOvers { }
         {
             LevelName = level;
@@ -101,7 +103,7 @@ namespace Jazz2
             }
         }
 
-        LevelInitialization(const std::string& episode, const std::string& level, GameDifficulty difficulty, bool reduxMode, bool cheatsUsed, const PlayerType* playerTypes, int playerCount)
+        LevelInitialization(const String& episode, const String& level, GameDifficulty difficulty, bool reduxMode, bool cheatsUsed, const PlayerType* playerTypes, int playerCount)
             : PlayerCarryOvers { }
         {
             LevelName = level;
@@ -132,7 +134,20 @@ namespace Jazz2
             ExitType = copy.ExitType;
             LastEpisodeName = copy.LastEpisodeName;
 
-            memcpy(PlayerCarryOvers, copy.PlayerCarryOvers, sizeof(PlayerCarryOvers));
+            std::memcpy(PlayerCarryOvers, copy.PlayerCarryOvers, sizeof(PlayerCarryOvers));
+        }
+
+        LevelInitialization(LevelInitialization&& move)
+        {
+            LevelName = std::move(move.LevelName);
+            EpisodeName = std::move(move.EpisodeName);
+            Difficulty = move.Difficulty;
+            ReduxMode = move.ReduxMode;
+            CheatsUsed = move.CheatsUsed;
+            ExitType = move.ExitType;
+            LastEpisodeName = std::move(move.LastEpisodeName);
+
+            std::memcpy(PlayerCarryOvers, move.PlayerCarryOvers, sizeof(PlayerCarryOvers));
         }
     };
 }

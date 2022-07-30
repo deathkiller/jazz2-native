@@ -22,15 +22,15 @@ namespace Jazz2::Actors::Environment
 		switch (_theme) {
 			case 0:
 			default:
-				co_await RequestMetadataAsync("Object/Checkpoint");
+				co_await RequestMetadataAsync("Object/Checkpoint"_s);
 				break;
 
 			case 1: // Xmas
-				co_await RequestMetadataAsync("Object/CheckpointXmas");
+				co_await RequestMetadataAsync("Object/CheckpointXmas"_s);
 				break;
 		}
 
-		SetAnimation(_activated ? "Opened" : "Closed");
+		SetAnimation(_activated ? "Opened"_s : "Closed"_s);
 
 		co_return true;
 	}
@@ -55,10 +55,10 @@ namespace Jazz2::Actors::Environment
 				p.SetCheckpoint(_pos);
 			}*/
 
-			SetAnimation("Opened");
+			SetAnimation("Opened"_s);
 			SetTransition(AnimState::TransitionActivate, false);
 
-			PlaySfx("TransitionActivate");
+			PlaySfx("TransitionActivate"_s);
 
 			// Deactivate event in map
 			// TODO: change these types to uint8_t

@@ -54,7 +54,7 @@ namespace nCine
 		static const int MaxNumBlockUniforms = 16;
 
 		static const int BlockUniformHashSize = 8;
-		StaticHashMap<std::string, GLUniform, BlockUniformHashSize> blockUniforms_;
+		StaticHashMap<String, GLUniform, BlockUniformHashSize> blockUniforms_;
 
 		GLuint program_;
 		GLuint index_;

@@ -7,6 +7,10 @@
 
 #include <memory>
 
+#include <Containers/StringView.h>
+
+using namespace Death::Containers;
+
 namespace nCine
 {
 	class ITextureLoader;
@@ -65,7 +69,7 @@ namespace nCine
 		/// Creates a texture from a named memory buffer
 		Texture(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// Creates a texture from an image file
-		explicit Texture(const char* filename);
+		explicit Texture(const StringView& filename);
 
 		~Texture() override;
 
@@ -84,7 +88,7 @@ namespace nCine
 		void init(const char* name, Format format, Vector2i size);
 
 		bool loadFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize);
-		bool loadFromFile(const char* filename);
+		bool loadFromFile(const StringView& filename);
 
 		/// Loads all texture texels in raw format from a memory buffer in the first mip level
 		bool loadFromTexels(const unsigned char* bufferPtr);

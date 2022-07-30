@@ -1,9 +1,8 @@
 #include "GLUniformBlockCache.h"
 #include "GLUniformBlock.h"
-//#include <nctl/StaticHashMapIterator.h>
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -94,7 +93,7 @@ namespace nCine {
 		return true;
 	}
 
-	GLUniformCache* GLUniformBlockCache::uniform(const char* name)
+	GLUniformCache* GLUniformBlockCache::uniform(const StringView& name)
 	{
 		return uniformCaches_.find(name);
 	}

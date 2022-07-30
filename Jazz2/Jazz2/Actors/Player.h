@@ -34,7 +34,7 @@ namespace Jazz2::Actors
 
 		void AddScore(uint32_t amount);
 		bool AddHealth(int amount);
-		void AddLives(int amount);
+		void AddLives(int count);
 		void AddCoins(int count);
 		void AddGems(int count);
 		void ConsumeFood(bool isDrinkable);
@@ -100,7 +100,7 @@ namespace Jazz2::Actors
 		//MovingPlatform* _carryingObject;
 		//SwingingVine* _currentVine;
 		bool _canDoubleJump;
-		//SoundInstance* _copterSound;
+		std::shared_ptr<AudioBufferPlayer> _copterSound;
 
 		int _lives, _coins, _foodEaten, _score;
 		Vector2f _checkpointPos;

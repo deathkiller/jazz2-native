@@ -101,7 +101,7 @@ namespace nCine {
 		}
 	}
 
-	Texture::Texture(const char* filename)
+	Texture::Texture(const StringView& filename)
 		: Texture()
 	{
 		const bool hasLoaded = loadFromFile(filename);
@@ -127,20 +127,12 @@ namespace nCine {
 
 	void Texture::init(const char* name, Format format, int mipMapCount, int width, int height)
 	{
-
-		//if (name)
-		//{
-		//	// When Tracy is disabled the statement body is empty and braces are needed
-		//	ZoneText(name, nctl::strnlen(name, std::string::MaxCStringLength));
-		//}
-
 		TextureLoaderRaw texLoader(width, height, mipMapCount, ncFormatToInternal(format));
 
 		if (dataSize_ > 0)
 			RenderStatistics::removeTexture(dataSize_);
 
 		glTexture_->bind();
-		//setName(name);
 		glTexture_->setObjectLabel(name);
 		initialize(texLoader);
 
@@ -166,13 +158,6 @@ namespace nCine {
 	/*! \note It needs a `bufferName` with a valid file extension as it loads compressed data from a file in memory */
 	bool Texture::loadFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
-
-		//if (bufferName)
-		//{
-		//	// When Tracy is disabled the statement body is empty and braces are needed
-		//	ZoneText(bufferName, nctl::strnlen(bufferName, std::string::MaxCStringLength));
-		//}
-
 		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromMemory(bufferName, bufferPtr, bufferSize);
 		if (texLoader->hasLoaded() == false)
 			return false;
@@ -181,7 +166,6 @@ namespace nCine {
 			RenderStatistics::removeTexture(dataSize_);
 
 		glTexture_->bind();
-		//setName(bufferName);
 		glTexture_->setObjectLabel(bufferName);
 		initialize(*texLoader);
 		load(*texLoader);
@@ -190,11 +174,8 @@ namespace nCine {
 		return true;
 	}
 
-	bool Texture::loadFromFile(const char* filename)
+	bool Texture::loadFromFile(const StringView& filename)
 	{
-
-		//ZoneText(filename, nctl::strnlen(filename, std::string::MaxCStringLength));
-
 		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(filename);
 		if (!texLoader->hasLoaded())
 			return false;
@@ -203,8 +184,7 @@ namespace nCine {
 			RenderStatistics::removeTexture(dataSize_);
 
 		glTexture_->bind();
-		//setName(filename);
-		glTexture_->setObjectLabel(filename);
+		glTexture_->setObjectLabel(filename.data());
 		initialize(*texLoader);
 		load(*texLoader);
 

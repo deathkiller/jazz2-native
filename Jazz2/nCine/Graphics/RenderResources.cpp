@@ -10,9 +10,9 @@
 #include "../../Common.h"
 
 #ifdef WITH_EMBEDDED_SHADERS
-#include "shader_strings.h"
+#	include "shader_strings.h"
 #else
-#include "../IO/FileSystem.h" // for dataPath()
+#	include "../IO/FileSystem.h" // for dataPath()
 #endif
 
 namespace nCine
@@ -98,7 +98,7 @@ namespace nCine
 	{
 		bool hasRemoved = false;
 
-		if (cameraUniformDataMap_.isEmpty() == false)
+		if (!cameraUniformDataMap_.empty())
 			hasRemoved = cameraUniformDataMap_.remove(shaderProgram);
 
 		return hasRemoved;
@@ -252,8 +252,8 @@ namespace nCine
 
 			shaderToLoad.shaderProgram = std::make_unique<GLShaderProgram>(queryPhase);
 #ifndef WITH_EMBEDDED_SHADERS
-			shaderToLoad.shaderProgram->attachShader(GL_VERTEX_SHADER, (fs::dataPath() + "Shaders/" + shaderToLoad.vertexShader).data());
-			shaderToLoad.shaderProgram->attachShader(GL_FRAGMENT_SHADER, (fs::dataPath() + "Shaders/" + shaderToLoad.fragmentShader).data());
+			shaderToLoad.shaderProgram->attachShader(GL_VERTEX_SHADER, fs::joinPath({ fs::dataPath(), "Shaders"_s, StringView(shaderToLoad.vertexShader) }).data());
+			shaderToLoad.shaderProgram->attachShader(GL_FRAGMENT_SHADER, fs::joinPath({ fs::dataPath(), "Shaders"_s, StringView(shaderToLoad.fragmentShader) }).data());
 #else
 			shaderToLoad.shaderProgram->attachShaderFromString(GL_VERTEX_SHADER, shaderToLoad.vertexShader);
 			shaderToLoad.shaderProgram->attachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);
@@ -290,7 +290,7 @@ namespace nCine
 		for (auto& shaderProgram : defaultShaderPrograms_)
 			shaderProgram.reset(nullptr);
 
-		//ASSERT(cameraUniformDataMap_.isEmpty());
+		//ASSERT(cameraUniformDataMap_.empty());
 
 		defaultCamera_.reset(nullptr);
 		renderBatcher_.reset(nullptr);

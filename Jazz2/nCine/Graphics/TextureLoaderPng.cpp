@@ -19,9 +19,9 @@
 #	endif
 #endif
 
-#include <SmallVector.h>
+#include <Containers/SmallVector.h>
 
-using namespace Death;
+using namespace Death::Containers;
 
 namespace nCine
 {
@@ -39,7 +39,7 @@ namespace nCine
 		// Check header signature
 		uint8_t internalBuffer[sizeof(PngSignature)];
 		fileHandle_->Read(internalBuffer, sizeof(PngSignature));
-		if (memcmp(internalBuffer, PngSignature, sizeof(PngSignature)) != 0) {
+		if (std::memcmp(internalBuffer, PngSignature, sizeof(PngSignature)) != 0) {
 			RETURN_MSG_X("PNG signature check of file \"%s\" failed", fileHandle_->filename());
 		}
 

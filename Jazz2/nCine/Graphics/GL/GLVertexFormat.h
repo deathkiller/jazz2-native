@@ -3,9 +3,9 @@
 #define NCINE_INCLUDE_OPENGL
 #include "../../CommonHeaders.h"
 
-#include <SmallVector.h>
+#include <Containers/SmallVector.h>
 
-using namespace Death;
+using namespace Death::Containers;
 
 namespace nCine
 {

@@ -117,9 +117,11 @@ namespace nCine
 		inputManager_ = std::make_unique<Qt5InputManager>(*qt5Widget_);
 #endif
 		gfxDevice_->setWindowTitle(appCfg_.windowTitle.data());
-		std::string windowIconFilePath = fs::joinPath(fs::dataPath(), appCfg_.windowIconFilename);
-		if (fs::isReadableFile(windowIconFilePath.data())) {
-			gfxDevice_->setWindowIcon(windowIconFilePath.data());
+		if (!appCfg_.windowIconFilename.empty()) {
+			String windowIconFilePath = fs::joinPath(fs::dataPath(), appCfg_.windowIconFilename);
+			if (fs::isReadableFile(windowIconFilePath)) {
+				gfxDevice_->setWindowIcon(windowIconFilePath);
+			}
 		}
 
 		timings_[Timings::PRE_INIT] = profileStartTime_.secondsSince();

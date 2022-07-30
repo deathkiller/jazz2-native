@@ -2,7 +2,9 @@
 
 #include "../../Common.h"
 
-#include <string>
+#include <Containers/String.h>
+
+using namespace Death::Containers;
 
 namespace Jazz2::Compatibility
 {
@@ -10,8 +12,8 @@ namespace Jazz2::Compatibility
     {
     public:
         struct LevelToken {
-            std::string Episode;
-            std::string Level;
+            String Episode;
+            String Level;
         };
 
         enum class WeatherType {
@@ -23,7 +25,7 @@ namespace Jazz2::Compatibility
         };
 
         struct ExtraTilesetEntry {
-            std::string Name;
+            String Name;
             uint16_t Offset;
             uint16_t Count;
         };

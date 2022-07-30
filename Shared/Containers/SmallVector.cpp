@@ -1,13 +1,8 @@
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-//
-
 #include "SmallVector.h"
 #include <cstdint>
 #include <stdexcept>
 
-namespace Death
+namespace Death::Containers
 {
 	// Check that no bytes are wasted and everything is well-aligned.
 	namespace

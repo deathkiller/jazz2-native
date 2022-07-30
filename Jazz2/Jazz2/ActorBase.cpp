@@ -7,6 +7,7 @@
 #include "../nCine/Primitives/Matrix4x4.h"
 #include "../nCine/Base/Random.h"
 #include "../nCine/Base/FrameTimer.h"
+#include "../nCine/Base/HashMapIterator.h"
 
 using namespace nCine;
 
@@ -392,40 +393,43 @@ namespace Jazz2
 		}
 	}
 
-	void ActorBase::CreateSpriteDebris(const std::string& identifier, int count)
+	void ActorBase::CreateSpriteDebris(const StringView& identifier, int count)
 	{
 		auto tilemap = _levelHandler->TileMap();
 		if (tilemap != nullptr && _metadata != nullptr) {
 			auto it = _metadata->Graphics.find(identifier);
-			if (it != _metadata->Graphics.end()) {
-				tilemap->CreateSpriteDebris(&it->second, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), count);
+			if (it != nullptr) {
+				tilemap->CreateSpriteDebris(it, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), count);
 			}
 		}
 	}
 
-	const std::shared_ptr<AudioBufferPlayer>& ActorBase::PlaySfx(const std::string& identifier, float gain, float pitch)
+	const std::shared_ptr<AudioBufferPlayer>& ActorBase::PlaySfx(const StringView& identifier, float gain, float pitch)
 	{
 		auto it = _metadata->Sounds.find(identifier);
-		if (it != _metadata->Sounds.end()) {
-			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
-			return _levelHandler->PlaySfx(it->second.Buffers[idx].get(), Vector3f(_pos.X, _pos.Y, 0.0f), gain, pitch);
+		if (it != nullptr) {
+			int idx = (it->Buffers.size() > 1 ? Random().Next(0, (int)it->Buffers.size()) : 0);
+			return _levelHandler->PlaySfx(it->Buffers[idx].get(), Vector3f(_pos.X, _pos.Y, 0.0f), gain, pitch);
 		} else {
+			//LOGE_X("Sound effect \"%s\" was not found", identifier.data());
 			return std::shared_ptr<AudioBufferPlayer>(nullptr);
 		}
 	}
 
-	void ActorBase::SetAnimation(const std::string& identifier)
+	void ActorBase::SetAnimation(const StringView& identifier)
 	{
 		if (_metadata == nullptr) {
+			LOGE("No metadata loaded");
 			return;
 		}
 
 		auto it = _metadata->Graphics.find(identifier);
-		if (it == _metadata->Graphics.end()) {
+		if (it == nullptr) {
+			LOGE_X("No animation found for \"%s\"", identifier.data());
 			return;
 		}
 
-		_currentAnimation = &it->second;
+		_currentAnimation = it;
 		_currentAnimationState = AnimState::Idle;
 
 		RefreshAnimation();
@@ -439,6 +443,7 @@ namespace Jazz2
 	bool ActorBase::SetAnimation(AnimState state)
 	{
 		if (_metadata == nullptr) {
+			LOGE("No metadata loaded");
 			return false;
 		}
 
@@ -454,6 +459,7 @@ namespace Jazz2
 		AnimationCandidate candidates[AnimationCandidatesCount];
 		int count = FindAnimationCandidates(state, candidates);
 		if (count == 0) {
+			//LOGE_X("No animation found for state 0x%08x", state);
 			return false;
 		}
 
@@ -488,6 +494,7 @@ namespace Jazz2
 			if (callback != nullptr) {
 				callback();
 			}
+			//LOGE_X("No transition found for state 0x%08x", state);
 			return false;
 		}
 
@@ -1065,20 +1072,23 @@ namespace Jazz2
 	int ActorBase::FindAnimationCandidates(AnimState state, AnimationCandidate candidates[AnimationCandidatesCount])
 	{
 		if (_metadata == nullptr) {
+			LOGE("No metadata loaded");
 			return 0;
 		}
 
 		int i = 0;
-		for (auto& anim : _metadata->Graphics) {
+		auto it = _metadata->Graphics.begin();
+		while (it != _metadata->Graphics.end()) {
 			if (i >= AnimationCandidatesCount) {
 				break;
 			}
 
-			if (anim.second.HasState(state)) {
-				candidates[i].Identifier = &anim.first;
-				candidates[i].Resource = &anim.second;
+			if (it.node().value.HasState(state)) {
+				candidates[i].Identifier = &it.node().key;
+				candidates[i].Resource = &it.node().value;
 				i++;
 			}
+			++it;
 		}
 
 		return i;

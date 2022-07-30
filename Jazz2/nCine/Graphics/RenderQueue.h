@@ -2,9 +2,9 @@
 
 #include "RenderCommand.h"
 
-#include <SmallVector.h>
+#include <Containers/SmallVector.h>
 
-using namespace Death;
+using namespace Death::Containers;
 
 namespace nCine
 {

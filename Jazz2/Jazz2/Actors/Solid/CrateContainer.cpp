@@ -14,7 +14,7 @@ namespace Jazz2::Actors::Solid
 
 	void CrateContainer::Preload(const ActorActivationDetails& details)
 	{
-		PreloadMetadataAsync("Object/TriggerCrate");
+		PreloadMetadataAsync("Object/CrateContainer"_s);
 	}
 
 	Task<bool> CrateContainer::OnActivatedAsync(const ActorActivationDetails& details)
@@ -28,7 +28,7 @@ namespace Jazz2::Actors::Solid
 			AddContent(eventType, count, &details.Params[4], 16 - 4);
 		}
 
-		co_await RequestMetadataAsync("Object/CrateContainer");
+		co_await RequestMetadataAsync("Object/CrateContainer"_s);
 
 		SetAnimation(AnimState::Idle);
 
@@ -62,10 +62,10 @@ namespace Jazz2::Actors::Solid
 
 		CreateParticleDebris();
 
-		PlaySfx("Break");
+		PlaySfx("Break"_s);
 
-		CreateSpriteDebris("CrateShrapnel1", 3);
-		CreateSpriteDebris("CrateShrapnel2", 2);
+		CreateSpriteDebris("CrateShrapnel1"_s, 3);
+		CreateSpriteDebris("CrateShrapnel2"_s, 2);
 
 		SetTransition(AnimState::TransitionDeath, false, [this, collider]() {
 			GenericContainer::OnPerish(collider);

@@ -25,24 +25,24 @@ namespace Jazz2::Actors::Environment
 
 		SetState(ActorFlags::CanBeFrozen, false);
 
-		co_await RequestMetadataAsync("Object/BonusWarp");
+		co_await RequestMetadataAsync("Object/BonusWarp"_s);
 
 		switch (_cost) {
 			case 10:
-				SetAnimation("Bonus10");
+				SetAnimation("Bonus10"_s);
 				break;
 			case 20:
-				SetAnimation("Bonus20");
+				SetAnimation("Bonus20"_s);
 				break;
 			case 50:
-				SetAnimation("Bonus50");
+				SetAnimation("Bonus50"_s);
 				break;
 			case 100:
-				SetAnimation("Bonus100");
+				SetAnimation("Bonus100"_s);
 				break;
 			default:
 				// ToDo: Show rabbit + coins needed, if (showAnim)
-				SetAnimation("BonusGeneric");
+				SetAnimation("BonusGeneric"_s);
 				break;
 		}
 

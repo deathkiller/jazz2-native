@@ -3,21 +3,20 @@
 #include "StandardFile.h"
 
 #ifdef __ANDROID__
-#include <cstring>
-#include "AssetFile.h"
+#	include <cstring>
+#	include "AssetFile.h"
 #endif
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
 
-	IFileStream::IFileStream(const char* filename)
+	IFileStream::IFileStream(const String& filename)
 		: type_(FileType::Base), filename_(filename), fileDescriptor_(-1), filePointer_(nullptr),
 		shouldCloseOnDestruction_(true), shouldExitOnFailToOpen_(true), fileSize_(0)
 	{
-		//ASSERT(filename);
 	}
 
 	///////////////////////////////////////////////////////////
@@ -62,7 +61,7 @@ namespace nCine {
 		return std::make_unique<MemoryFile>(bufferPtr, bufferSize);
 	}
 
-	std::unique_ptr<IFileStream> IFileStream::createFileHandle(const char* filename)
+	std::unique_ptr<IFileStream> IFileStream::createFileHandle(const String& filename)
 	{
 		//ASSERT(filename);
 #ifdef __ANDROID__

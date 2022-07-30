@@ -15,7 +15,7 @@ namespace nCine
 	{
 	public:
 		static constexpr int UniformBlockCachesHashSize = 4;
-		using UniformHashMapType = StaticHashMap<std::string, GLUniformBlockCache, UniformBlockCachesHashSize>;
+		using UniformHashMapType = StaticHashMap<String, GLUniformBlockCache, UniformBlockCachesHashSize>;
 
 		GLShaderUniformBlocks();
 		explicit GLShaderUniformBlocks(GLShaderProgram* shaderProgram);

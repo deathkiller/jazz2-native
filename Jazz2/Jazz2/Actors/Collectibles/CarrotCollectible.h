@@ -13,9 +13,9 @@ namespace Jazz2::Actors::Collectibles
 		{
 			bool maxCarrot = (details.Params[0] != 0);
 			if (maxCarrot) {
-				PreloadMetadataAsync("Collectible/CarrotFull");
+				PreloadMetadataAsync("Collectible/CarrotFull"_s);
 			} else {
-				PreloadMetadataAsync("Collectible/Carrot");
+				PreloadMetadataAsync("Collectible/Carrot"_s);
 			}
 		}
 

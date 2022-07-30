@@ -9,7 +9,7 @@ namespace nCine
 		public:
 			BitArrayIndex(BitArray *array, const unsigned int index);
 
-			void operator=(const bool src);
+			void operator=(const bool value);
 
 		private:
 			BitArray* _bitArray;
@@ -29,8 +29,9 @@ namespace nCine
 
 			void SetAll(void);
 			void ClearAll(void);
-			void SetBit(const unsigned int bit);
-			void ClearBit(const unsigned int bit);
+			void Set(const unsigned int bit);
+			void Set(const unsigned int bit, bool value);
+			void Reset(const unsigned int bit);
 
 			BitArrayIndex operator()(const unsigned int bit);
 

@@ -3,9 +3,9 @@
 #include "IIndexer.h"
 #include "Base/Object.h"
 
-#include <SmallVector.h>
+#include <Containers/SmallVector.h>
 
-using namespace Death;
+using namespace Death::Containers;
 
 namespace nCine
 {

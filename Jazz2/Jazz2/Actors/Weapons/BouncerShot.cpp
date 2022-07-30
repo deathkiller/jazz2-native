@@ -23,16 +23,16 @@ namespace Jazz2::Actors::Weapons
 		_upgrades = details.Params[0];
 		_strength = 1;
 
-		co_await RequestMetadataAsync("Weapon/Bouncer");
+		co_await RequestMetadataAsync("Weapon/Bouncer"_s);
 
 		AnimState state = AnimState::Idle;
 		if ((_upgrades & 0x1) != 0) {
 			_timeLeft = 130;
 			state |= (AnimState)1;
-			PlaySfx("FireUpgraded", 1.0f, 0.5f);
+			PlaySfx("FireUpgraded"_s, 1.0f, 0.5f);
 		} else {
 			_timeLeft = 90;
-			PlaySfx("Fire", 1.0f, 0.5f);
+			PlaySfx("Fire"_s, 1.0f, 0.5f);
 		}
 
 		SetAnimation(state);
@@ -119,7 +119,7 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		_hitLimit += 2.0f;
-		PlaySfx("Bounce", 0.5f);
+		PlaySfx("Bounce"_s, 0.5f);
 	}
 
 	void BouncerShot::OnHitFloor()
@@ -130,7 +130,7 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		_hitLimit += 2.0f;
-		PlaySfx("Bounce", 0.5f);
+		PlaySfx("Bounce"_s, 0.5f);
 	}
 
 	void BouncerShot::OnHitCeiling()
@@ -141,7 +141,7 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		_hitLimit += 2.0f;
-		PlaySfx("Bounce", 0.5f);
+		PlaySfx("Bounce"_s, 0.5f);
 	}
 
 	bool BouncerShot::OnHandleCollision(ActorBase* other)

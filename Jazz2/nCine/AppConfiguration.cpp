@@ -8,25 +8,12 @@ namespace nCine {
 	///////////////////////////////////////////////////////////
 
 	AppConfiguration::AppConfiguration()
-		: /*logFile(128),
-	#ifdef NCINE_DEBUG
-		  consoleLogLevel(ILogger::LogLevel::INFO),
-	#else
-		#ifdef _WIN32
-		  // Disable console logging on Windows to avoid allocating a console
-		  consoleLogLevel(ILogger::LogLevel::OFF),
-		#else
-		  consoleLogLevel(ILogger::LogLevel::ERROR),
-		#endif
-	#endif
-		  fileLogLevel(ILogger::LogLevel::OFF),*/
+		:
 		frameTimerLogInterval(5.0f),
 		resolution(1280, 720),
 		inFullscreen(false),
 		isResizable(true),
 		frameLimit(0),
-		//windowTitle(128),
-		//windowIconFilename(128),
 		useBufferMapping(false),
 		deferShaderQueries(true),
 		fixedBatchSize(10),
@@ -60,16 +47,14 @@ namespace nCine {
 		argc_(0),
 		argv_(nullptr)
 	{
-		//logFile = "nCine_log.txt";
-		//windowTitle = "nCine";
-		//windowIconFilename = "icons/icon48.png";
-
 #if defined(__ANDROID__)
-		dataPath() = "asset::";
+		dataPath() = "asset::"_s;
 #elif defined(__EMSCRIPTEN__)
-		dataPath() = "/";
+		dataPath() = fs::PathSeparator;
 		// Always disable mapping on Emscripten as it is not supported by WebGL 2
 		useBufferMapping = false;
+#else
+		dataPath() = "Content"_s + fs::PathSeparator;
 #endif
 	}
 
@@ -77,12 +62,12 @@ namespace nCine {
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	const std::string& AppConfiguration::dataPath() const
+	const String& AppConfiguration::dataPath() const
 	{
 		return fs::dataPath_;
 	}
 
-	std::string& AppConfiguration::dataPath()
+	String& AppConfiguration::dataPath()
 	{
 		return fs::dataPath_;
 	}

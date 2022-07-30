@@ -16,19 +16,19 @@ namespace Jazz2::Actors::Collectibles
 
 		uint8_t coinType = details.Params[0];
 
-		co_await RequestMetadataAsync("Collectible/Coins");
+		co_await RequestMetadataAsync("Collectible/Coins"_s);
 
 		switch (coinType) {
 			default:
 			case 0: // Silver
 				_coinValue = 1;
 				_scoreValue = 500;
-				SetAnimation("CoinSilver");
+				SetAnimation("CoinSilver"_s);
 				break;
 			case 1: // Gold
 				_coinValue = 5;
 				_scoreValue = 1000;
-				SetAnimation("CoinGold");
+				SetAnimation("CoinGold"_s);
 				break;
 		}
 

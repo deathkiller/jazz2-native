@@ -3,9 +3,10 @@
 #include "GL/GLBufferObject.h"
 
 #include <memory>
-#include <SmallVector.h>
 
-using namespace Death;
+#include <Containers/SmallVector.h>
+
+using namespace Death::Containers;
 
 namespace nCine
 {

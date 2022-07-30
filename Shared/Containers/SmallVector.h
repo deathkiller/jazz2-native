@@ -1,7 +1,5 @@
-//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
-//
 
 #pragma once
 
@@ -24,7 +22,7 @@
 #undef min
 #undef max
 
-namespace Death
+namespace Death::Containers
 {
 	template <typename IteratorT> class iterator_range;
 
@@ -1347,14 +1345,14 @@ namespace std {
 	/// Implement std::swap in terms of SmallVector swap.
 	template<typename T>
 	inline void
-		swap(Death::SmallVectorImpl<T>& LHS, Death::SmallVectorImpl<T>& RHS) {
+		swap(Death::Containers::SmallVectorImpl<T>& LHS, Death::Containers::SmallVectorImpl<T>& RHS) {
 		LHS.swap(RHS);
 	}
 
 	/// Implement std::swap in terms of SmallVector swap.
 	template<typename T, unsigned N>
 	inline void
-		swap(Death::SmallVector<T, N>& LHS, Death::SmallVector<T, N>& RHS) {
+		swap(Death::Containers::SmallVector<T, N>& LHS, Death::Containers::SmallVector<T, N>& RHS) {
 		LHS.swap(RHS);
 	}
 

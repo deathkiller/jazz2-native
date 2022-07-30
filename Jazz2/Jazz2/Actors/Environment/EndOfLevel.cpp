@@ -15,9 +15,9 @@ namespace Jazz2::Actors::Environment
 
 		SetState(ActorFlags::CanBeFrozen, false);
 
-		co_await RequestMetadataAsync("Object/SignEol");
+		co_await RequestMetadataAsync("Object/SignEol"_s);
 
-		SetAnimation("SignEol");
+		SetAnimation("SignEol"_s);
 
 		co_return true;
 	}

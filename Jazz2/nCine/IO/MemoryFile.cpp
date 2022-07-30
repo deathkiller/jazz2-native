@@ -1,12 +1,12 @@
 #include "MemoryFile.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
 
-	MemoryFile::MemoryFile(const char* bufferName, unsigned char* bufferPtr, unsigned long int bufferSize)
+	MemoryFile::MemoryFile(const String& bufferName, unsigned char* bufferPtr, unsigned long int bufferSize)
 		: IFileStream(bufferName), bufferPtr_(bufferPtr), seekOffset_(0), isWritable_(true)
 	{
 		//ASSERT(bufferSize > 0);
@@ -17,7 +17,7 @@ namespace nCine {
 		fileDescriptor_ = (bufferSize > 0) ? 0 : -1;
 	}
 
-	MemoryFile::MemoryFile(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
+	MemoryFile::MemoryFile(const String& bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
 		: IFileStream(bufferName), bufferPtr_(const_cast<unsigned char*>(bufferPtr)), seekOffset_(0), isWritable_(false)
 	{
 		//ASSERT(bufferSize > 0);
@@ -29,12 +29,12 @@ namespace nCine {
 	}
 
 	MemoryFile::MemoryFile(unsigned char* bufferPtr, unsigned long int bufferSize)
-		: MemoryFile("MemoryFile", bufferPtr, bufferSize)
+		: MemoryFile({}, bufferPtr, bufferSize)
 	{
 	}
 
 	MemoryFile::MemoryFile(const unsigned char* bufferPtr, unsigned long int bufferSize)
-		: MemoryFile("MemoryFile", bufferPtr, bufferSize)
+		: MemoryFile({}, bufferPtr, bufferSize)
 	{
 	}
 
@@ -46,7 +46,7 @@ namespace nCine {
 	{
 		// Checking if the file is already opened
 		if (fileDescriptor_ >= 0) {
-			LOGW_X("Memory file \"%s\" at address 0x%lx is already opened", filename_.data(), bufferPtr_);
+			LOGW_X("Memory file at address 0x%lx is already opened", bufferPtr_);
 		} else {
 			isWritable_ = ((mode & FileAccessMode::Write) == FileAccessMode::Write);
 		}

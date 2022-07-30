@@ -36,7 +36,7 @@ namespace nCine
 	}
 
 	/*! Private constructor called only by `AudioStreamPlayer`. */
-	AudioStream::AudioStream(const char* filename)
+	AudioStream::AudioStream(const StringView& filename)
 		: AudioStream()
 	{
 		const bool hasLoaded = loadFromFile(filename);
@@ -181,12 +181,6 @@ namespace nCine
 
 	bool AudioStream::loadFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
-		/*if (bufferName)
-		{
-			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(bufferName, nctl::strnlen(bufferName, std::string::MaxCStringLength));
-		}*/
-
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromMemory(bufferName, bufferPtr, bufferSize);
 		if (audioLoader->hasLoaded() == false)
 			return false;
@@ -195,10 +189,8 @@ namespace nCine
 		return true;
 	}
 
-	bool AudioStream::loadFromFile(const char* filename)
+	bool AudioStream::loadFromFile(const StringView& filename)
 	{
-		//ZoneText(filename, nctl::strnlen(filename, std::string::MaxCStringLength));
-
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromFile(filename);
 		if (audioLoader->hasLoaded() == false)
 			return false;

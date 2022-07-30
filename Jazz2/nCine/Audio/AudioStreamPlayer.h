@@ -14,7 +14,7 @@ namespace nCine
 		/// A constructor creating a player from a named memory buffer
 		AudioStreamPlayer(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// A constructor creating a player from a file
-		explicit AudioStreamPlayer(const char* filename);
+		explicit AudioStreamPlayer(const StringView& filename);
 		~AudioStreamPlayer() override;
 
 		/// Default move constructor

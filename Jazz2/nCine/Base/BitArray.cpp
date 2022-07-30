@@ -4,22 +4,29 @@
 #include <climits>
 
 #ifndef CHAR_BIT
-#warning CHAR_BIT not defined.Assuming 8 bits.
-#define CHAR_BIT 8
+#	warning CHAR_BIT not defined.Assuming 8 bits.
+#	define CHAR_BIT 8
 #endif
 
+#if CHAR_BIT == 8
 // Array index for character containing bit
-#define BIT_CHAR(bit)         ((bit) / CHAR_BIT)
-
+#	define BIT_CHAR(bit)         ((bit) >> 3)
 // Position of bit within character
-#define BIT_IN_CHAR(bit)      (1 << (CHAR_BIT - 1 - ((bit)  % CHAR_BIT)))
-
+#	define BIT_IN_CHAR(bit)      (1 << ((bit) & 0x07))
 // Number of characters required to contain number of bits
-#define BITS_TO_CHARS(bits)   ((((bits) - 1) / CHAR_BIT) + 1)
-
+#	define BITS_TO_CHARS(bits)   ((((bits) - 1) >> 3) + 1)
 // Most significant bit in a character
-#define MS_BIT                (1 << (CHAR_BIT - 1))
-
+#	define MS_BIT                (1 << (CHAR_BIT - 1))
+#else
+// Array index for character containing bit
+#	define BIT_CHAR(bit)         ((bit) / CHAR_BIT)
+// Position of bit within character
+#	define BIT_IN_CHAR(bit)      (1 << ((bit) % CHAR_BIT))
+// Number of characters required to contain number of bits
+#	define BITS_TO_CHARS(bits)   ((((bits) - 1) / CHAR_BIT) + 1)
+// Most significant bit in a character
+#	define MS_BIT                (1 << (CHAR_BIT - 1))
+#endif
 
 namespace nCine
 {
@@ -54,8 +61,7 @@ namespace nCine
 
 		_size = numBits;
 		int numBytes = BITS_TO_CHARS(numBits);
-		_storage = new unsigned char[numBytes];
-		std::fill_n(_storage, numBytes, 0);
+		_storage = new unsigned char[numBytes] { };
 	}
 
 	void BitArray::SetAll(void)
@@ -81,7 +87,7 @@ namespace nCine
 		std::fill_n(_storage, size, 0);
 	}
 
-	void BitArray::SetBit(const unsigned int bit)
+	void BitArray::Set(const unsigned int bit)
 	{
 		if (_size <= bit) {
 			return;
@@ -90,7 +96,17 @@ namespace nCine
 		_storage[BIT_CHAR(bit)] |= BIT_IN_CHAR(bit);
 	}
 
-	void BitArray::ClearBit(const unsigned int bit)
+	void BitArray::Set(const unsigned int bit, bool value)
+	{
+		if (_size <= bit) {
+			return;
+		}
+
+		unsigned char& byte = _storage[BIT_CHAR(bit)];
+		byte ^= (-value ^ byte) & BIT_IN_CHAR(bit);
+	}
+
+	void BitArray::Reset(const unsigned int bit)
 	{
 		unsigned char mask;
 
@@ -99,9 +115,7 @@ namespace nCine
 		}
 
 		mask = BIT_IN_CHAR(bit);
-		mask = ~mask;
-
-		_storage[BIT_CHAR(bit)] &= mask;
+		_storage[BIT_CHAR(bit)] &= ~mask;
 	}
 
 	BitArrayIndex BitArray::operator()(const unsigned int bit)
@@ -121,7 +135,7 @@ namespace nCine
 		}
 
 		int size = BITS_TO_CHARS(_size);
-		return (memcmp(this->_storage, other._storage, size) == 0);
+		return (std::memcmp(this->_storage, other._storage, size) == 0);
 	}
 
 	BitArray BitArray::operator~(void) const
@@ -441,20 +455,10 @@ namespace nCine
 		_index = index;
 	}
 
-	void BitArrayIndex::operator=(const bool src)
+	void BitArrayIndex::operator=(const bool value)
 	{
-		if (_bitArray == nullptr) {
-			return;
-		}
-
-		if (_bitArray->Size() <= _index) {
-			return;
-		}
-
-		if (src) {
-			_bitArray->SetBit(_index);
-		} else {
-			_bitArray->ClearBit(_index);
+		if (_bitArray != nullptr) {
+			_bitArray->Set(_index, value);
 		}
 	}
 }

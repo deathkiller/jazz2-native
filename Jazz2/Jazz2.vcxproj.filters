@@ -142,6 +142,12 @@
     <Filter Include="Source Files\Jazz2\Compatibility">
       <UniqueIdentifier>{d48c8ef6-f2aa-4271-8969-2390b111249d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Shared\Containers">
+      <UniqueIdentifier>{6f48b4c9-dc8c-43cd-af13-0236fcd9130d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Shared\Containers">
+      <UniqueIdentifier>{9e5b0b19-ff74-4133-9a57-6a38648c2280}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -621,9 +627,6 @@
     <ClInclude Include="nCine\Graphics\GL\Qt5GfxDevice.h">
       <Filter>Header Files\nCine\Graphics\GL</Filter>
     </ClInclude>
-    <ClInclude Include="$(ExtensionLibraryPath)\SmallVector.h">
-      <Filter>Header Files\Shared</Filter>
-    </ClInclude>
     <ClInclude Include="$(ExtensionLibraryPath)\Utf8.h">
       <Filter>Header Files\Shared</Filter>
     </ClInclude>
@@ -758,6 +761,30 @@
     </ClInclude>
     <ClInclude Include="Jazz2\Actors\Solid\GenericContainer.h">
       <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\GrowableArray.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\Pair.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\Reference.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\SmallVector.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\String.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringView.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\Array.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\ArrayView.h">
+      <Filter>Header Files\Shared\Containers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1214,9 +1241,6 @@
     <ClCompile Include="$(ExtensionLibraryPath)\Utf8.cpp">
       <Filter>Source Files\Shared</Filter>
     </ClCompile>
-    <ClCompile Include="$(ExtensionLibraryPath)\SmallVector.cpp">
-      <Filter>Source Files\Shared</Filter>
-    </ClCompile>
     <ClCompile Include="Jazz2\Compatibility\JJ2Episode.cpp">
       <Filter>Source Files\Jazz2\Compatibility</Filter>
     </ClCompile>
@@ -1300,6 +1324,15 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Solid\CrateContainer.cpp">
       <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\Containers\StringView.cpp">
+      <Filter>Source Files\Shared\Containers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\Containers\SmallVector.cpp">
+      <Filter>Source Files\Shared\Containers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\Containers\String.cpp">
+      <Filter>Source Files\Shared\Containers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

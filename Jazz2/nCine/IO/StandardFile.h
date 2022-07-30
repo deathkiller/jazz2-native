@@ -10,7 +10,7 @@ namespace nCine
 	public:
 		/// Constructs a standard file object
 		/*! \param filename File name including its path */
-		explicit StandardFile(const char* filename)
+		explicit StandardFile(const String& filename)
 			: IFileStream(filename) {
 			type_ = FileType::Standard;
 		}

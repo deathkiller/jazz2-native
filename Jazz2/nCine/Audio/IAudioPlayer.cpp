@@ -11,14 +11,6 @@ namespace nCine {
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
 
-	IAudioPlayer::IAudioPlayer(ObjectType type, const char* name)
-		: Object(type, name), sourceId_(IAudioDevice::UnavailableSource),
-		state_(PlayerState::Stopped), isLooping_(false),
-		gain_(1.0f), pitch_(1.0f), lowPass_(1.0f), position_(0.0f, 0.0f, 0.0f),
-		filterHandle_(0)
-	{
-	}
-
 	IAudioPlayer::IAudioPlayer(ObjectType type)
 		: Object(type), sourceId_(IAudioDevice::UnavailableSource),
 		state_(PlayerState::Stopped), isLooping_(false),

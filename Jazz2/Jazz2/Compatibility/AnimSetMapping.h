@@ -3,7 +3,9 @@
 #include "../../Common.h"
 #include "JJ2Version.h"
 
-#include <string>
+#include <Containers/StringView.h>
+
+using namespace Death::Containers;
 
 namespace Jazz2::Compatibility
 {
@@ -13,8 +15,8 @@ namespace Jazz2::Compatibility
         static constexpr char Discard[] = ":discard";
 
         struct Entry {
-            std::string Category;
-            std::string Name;
+            String Category;
+            String Name;
 
             uint8_t Palette[256];
             bool SkipNormalMap;
@@ -38,7 +40,7 @@ namespace Jazz2::Compatibility
         void DiscardItems(int advanceBy, JJ2Version appliesTo = JJ2Version::All);
         void SkipItems(int advanceBy = 1);
         void NextSet(int advanceBy = 1, JJ2Version appliesTo = JJ2Version::All);
-        void Add(JJ2Version appliesTo, const std::string& category, const std::string& name, uint8_t* palette = nullptr, bool skipNormalMap = false, int addBorder = 0, bool allowRealtimePalette = false);
-        void Add(const std::string& category, const std::string& name, uint8_t* palette = nullptr, bool skipNormalMap = false, int addBorder = 0, bool allowRealtimePalette = false);
+        void Add(JJ2Version appliesTo, const StringView& category, const StringView& name, uint8_t* palette = nullptr, bool skipNormalMap = false, int addBorder = 0, bool allowRealtimePalette = false);
+        void Add(const StringView& category, const StringView& name, uint8_t* palette = nullptr, bool skipNormalMap = false, int addBorder = 0, bool allowRealtimePalette = false);
     };
 }

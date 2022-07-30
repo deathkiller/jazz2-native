@@ -18,7 +18,7 @@ namespace Jazz2::Actors::Enemies
 
 	void Bat::Preload(const ActorActivationDetails& details)
 	{
-		PreloadMetadataAsync("Enemy/Bat");
+		PreloadMetadataAsync("Enemy/Bat"_s);
 	}
 
 	Task<bool> Bat::OnActivatedAsync(const ActorActivationDetails& details)
@@ -30,7 +30,7 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(1);
 		_scoreValue = 100;
 
-		co_await RequestMetadataAsync("Enemy/Bat");
+		co_await RequestMetadataAsync("Enemy/Bat"_s);
 		SetAnimation(AnimState::Idle);
 
 		co_return true;
@@ -65,7 +65,7 @@ namespace Jazz2::Actors::Enemies
 					_noiseCooldown -= timeMult;
 				} else {
 					_noiseCooldown = 60.0f;
-					PlaySfx("Noise");
+					PlaySfx("Noise"_s);
 				}
 			} else {
 				if (_currentTransitionState != AnimState::Idle) {
@@ -112,7 +112,7 @@ namespace Jazz2::Actors::Enemies
 	bool Bat::OnPerish(ActorBase* collider)
 	{
 		CreateDeathDebris(collider);
-		_levelHandler->PlayCommonSfx("Splat", Vector3f(_pos.X, _pos.Y, 0.0f));
+		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
 		TryGenerateRandomDrop();
 

@@ -20,13 +20,13 @@ namespace Jazz2::Actors::Enemies
 		switch (theme) {
 			case 0:
 			default:
-				PreloadMetadataAsync("Enemy/TurtleShell");
+				PreloadMetadataAsync("Enemy/TurtleShell"_s);
 				break;
 			case 1: // Xmas
-				PreloadMetadataAsync("Enemy/TurtleShellXmas");
+				PreloadMetadataAsync("Enemy/TurtleShellXmas"_s);
 				break;
 			case 2: // Tough (Boss)
-				PreloadMetadataAsync("Boss/TurtleShellTough");
+				PreloadMetadataAsync("Boss/TurtleShellTough"_s);
 				break;
 		}
 	}
@@ -44,13 +44,13 @@ namespace Jazz2::Actors::Enemies
 		switch (theme) {
 			case 0:
 			default:
-				co_await RequestMetadataAsync("Enemy/TurtleShell");
+				co_await RequestMetadataAsync("Enemy/TurtleShell"_s);
 				break;
 			case 1: // Xmas
-				co_await RequestMetadataAsync("Enemy/TurtleShellXmas");
+				co_await RequestMetadataAsync("Enemy/TurtleShellXmas"_s);
 				break;
 			case 2: // Tough (Boss)
-				co_await RequestMetadataAsync("Boss/TurtleShellTough");
+				co_await RequestMetadataAsync("Boss/TurtleShellTough"_s);
 				break;
 		}
 
@@ -61,7 +61,7 @@ namespace Jazz2::Actors::Enemies
 		_elasticity = 0.5f;
 		_health = 8;
 
-		PlaySfx("Fly");
+		PlaySfx("Fly"_s);
 
 		co_return true;
 	}
@@ -96,7 +96,7 @@ namespace Jazz2::Actors::Enemies
 	bool TurtleShell::OnPerish(ActorBase* collider)
 	{
 		CreateDeathDebris(collider);
-		_levelHandler->PlayCommonSfx("Splat", Vector3f(_pos.X, _pos.Y, 0.0f));
+		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
 		TryGenerateRandomDrop();
 
@@ -115,14 +115,13 @@ namespace Jazz2::Actors::Enemies
 
 			if (other is AmmoToaster) {
 				DecreaseHealth(INT32_MAX, other);
-				return;
+				return true;
 			}*/
 
 			float otherSpeed = other->GetSpeed().X;
 			_speed.X = std::max(4.0f, std::abs(otherSpeed)) * (otherSpeed < 0.0f ? -0.5f : 0.5f);
 
-			PlaySfx("Fly");
-			return true;
+			PlaySfx("Fly"_s);
 		} else if (auto shell = dynamic_cast<TurtleShell*>(other)) {
 			auto otherSpeed = shell->GetSpeed();
 			if (std::abs(otherSpeed.Y - _speed.Y) > 1.0f && otherSpeed.Y > 0.0f) {
@@ -136,7 +135,7 @@ namespace Jazz2::Actors::Enemies
 				_speed.X = totalSpeed / 2.0f * (_speed.X >= 0.0f ? -1.0f : 1.0f);
 
 				shell->DecreaseHealth(1, this);
-				PlaySfx("ImpactShell", 0.8f);
+				PlaySfx("ImpactShell"_s, 0.8f);
 			}
 			return true;
 		} else if (auto enemyBase = dynamic_cast<EnemyBase*>(other)) {
@@ -155,7 +154,7 @@ namespace Jazz2::Actors::Enemies
 	void TurtleShell::OnHitFloor()
 	{
 		if (std::abs(_speed.Y) > 1.0f) {
-			PlaySfx("ImpactGround");
+			PlaySfx("ImpactGround"_s);
 		}
 	}
 }

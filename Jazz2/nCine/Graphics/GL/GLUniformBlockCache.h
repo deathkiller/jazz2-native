@@ -6,8 +6,6 @@
 #include "GLUniformCache.h"
 #include "../../Base/StaticHashMap.h"
 
-#include <string>
-
 namespace nCine
 {
 	class GLUniformBlock;
@@ -50,7 +48,7 @@ namespace nCine
 			return copyData(0, src, usedSize_);
 		}
 
-		GLUniformCache* uniform(const char* name);
+		GLUniformCache* uniform(const StringView& name);
 		/// Wrapper around `GLUniformBlock::setBlockBinding()`
 		void setBlockBinding(GLuint blockBinding);
 
@@ -61,7 +59,7 @@ namespace nCine
 		GLint usedSize_;
 
 		static const int UniformHashSize = 8;
-		StaticHashMap<std::string, GLUniformCache, UniformHashSize> uniformCaches_;
+		StaticHashMap<String, GLUniformCache, UniformHashSize> uniformCaches_;
 	};
 
 }

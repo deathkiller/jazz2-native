@@ -11,7 +11,7 @@ namespace Jazz2::Actors::Collectibles
 
 		static void Preload(const ActorActivationDetails& details)
 		{
-			PreloadMetadataAsync("Collectible/Gems");
+			PreloadMetadataAsync("Collectible/Gems"_s);
 		}
 
 	protected:

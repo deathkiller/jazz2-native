@@ -96,7 +96,7 @@ namespace nCine {
 		glGetProgramiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
 
 		if (length > 0 && infoLog.capacity() > 0) {
-			const unsigned int capacity = infoLog.capacity();
+			const unsigned int capacity = (unsigned int)infoLog.capacity();
 			glGetProgramInfoLog(glHandle_, capacity, &length, infoLog.data());
 			infoLog.resize(static_cast<unsigned int>(length) < capacity - 1 ? static_cast<unsigned int>(length) : capacity - 1);
 		}
@@ -375,7 +375,7 @@ namespace nCine {
 
 	void GLShaderProgram::initVertexFormat()
 	{
-		const unsigned int count = attributes_.size();
+		const unsigned int count = (unsigned int)attributes_.size();
 		if (count > GLVertexFormat::MaxAttributes) {
 			LOGW_X("More active attributes (%d) than supported by the vertex format class (%d)", count, GLVertexFormat::MaxAttributes);
 		}

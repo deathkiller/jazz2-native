@@ -14,7 +14,7 @@ namespace Jazz2::Actors::Solid
 
 	void TriggerCrate::Preload(const ActorActivationDetails& details)
 	{
-		PreloadMetadataAsync("Object/TriggerCrate");
+		PreloadMetadataAsync("Object/TriggerCrate"_s);
 	}
 
 	Task<bool> TriggerCrate::OnActivatedAsync(const ActorActivationDetails& details)
@@ -29,9 +29,9 @@ namespace Jazz2::Actors::Solid
 		Movable = true;
 		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
 
-		co_await RequestMetadataAsync("Object/TriggerCrate");
+		co_await RequestMetadataAsync("Object/TriggerCrate"_s);
 
-		SetAnimation("Crate");
+		SetAnimation("Crate"_s);
 
 		co_return true;
 	}
@@ -75,7 +75,7 @@ namespace Jazz2::Actors::Solid
 			}
 		}
 
-		PlaySfx("Break");
+		PlaySfx("Break"_s);
 
 		CreateParticleDebris();
 

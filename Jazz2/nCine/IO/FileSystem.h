@@ -1,17 +1,23 @@
 #pragma once
 
-#include <string>
+#include <Containers/StringView.h>
+
+using namespace Death::Containers;
+using namespace Death::Containers::Literals;
 
 #ifdef _WIN32
 typedef void* HANDLE;
-#elif defined(__APPLE__)
-#include <dirent.h>
-#elif defined(__ANDROID__)
+#else
+#	include <climits> // for `PATH_MAX`
+#	if defined(__APPLE__)
+#		include <dirent.h>
+#	elif defined(__ANDROID__)
 using DIR = struct DIR;
 using AAssetDir = struct AAssetDir;
-#else
+#	else
 struct __dirstream;
 using DIR = struct __dirstream;
+#	endif
 #endif
 
 namespace nCine
@@ -20,8 +26,14 @@ namespace nCine
 	class FileSystem
 	{
 	public:
-		/// Maximum allowed length for a path string
-		static const unsigned int MaxPathLength;
+		/// Maximum allowed length for a path string and native path separator
+#ifdef _WIN32
+		static constexpr unsigned int MaxPathLength = MAX_PATH;
+		static constexpr char PathSeparator[] = "\\";
+#else
+		static constexpr unsigned int MaxPathLength = PATH_MAX;
+		static constexpr char PathSeparator[] = "/";
+#endif
 
 		/// The available permissions to check or set
 		enum Permission
@@ -46,11 +58,11 @@ namespace nCine
 		class Directory
 		{
 		public:
-			Directory(const char* path);
+			Directory(const StringView& path);
 			~Directory();
 
 			/// Opens a directory for traversal
-			bool open(const char* path);
+			bool open(const StringView& path);
 			/// Closes an opened directory
 			void close();
 			/// Returns the name of the next file inside the directory or `nullptr`
@@ -70,104 +82,100 @@ namespace nCine
 		};
 
 		/// Joins together two path components
-		static std::string joinPath(const std::string& first, const std::string& second);
+		static String joinPath(const StringView& first, const StringView& second);
+		static String joinPath(const ArrayView<const StringView> paths);
+		static String joinPath(const std::initializer_list<StringView> paths);
+
 		/// Returns the aboslute path after joining together two path components
-		static std::string absoluteJoinPath(const std::string& first, const std::string& second);
+		static String absoluteJoinPath(const StringView& first, const StringView& second);
 
 		/// Returns the path up to, but not including, the final separator
-		static std::string dirName(const char* path);
+		static String dirName(const StringView& path);
 		/// Returns the path component after the final separator
-		static std::string baseName(const char* path);
+		static String baseName(const StringView& path);
 		/// Returns an absolute path from a relative one
 		/** Also resolves dot references to current and parent directory and double separators */
-		static std::string absolutePath(const char* path);
+		static String absolutePath(const StringView& path);
 
 		/// Returns the extension position in the string or `nullptr` if it is not found
-		static const char* extension(const char* path);
+		static StringView extension(const StringView& path);
 		/// Returns true if the file at `path` as the specified extension (case-insensitive comparison)
-		static bool hasExtension(const char* path, const char* extension);
-		/// Returns true if the path has been changed to fix the extension
-		static bool fixExtension(std::string& path, const char* extension);
-
-		/// Returns a bitmask representing the currently available disk drives on Windows
-		static unsigned long logicalDrives();
-		/// Returns a buffer with strings that specify valid drives in the system on Windows
-		static const char* logicalDriveStrings();
+		static bool hasExtension(const StringView& path, const StringView& extension);
 
 		/// Returns the path of current directory
-		static std::string currentDir();
+		static String currentDir();
 		/// Sets the current working directory, the starting point for interpreting relative paths
-		static bool setCurrentDir(const char* path);
+		static bool setCurrentDir(const StringView& path);
 		/// Returns the path of the user home directory
-		static std::string homeDir();
+		static String homeDir();
 #ifdef __ANDROID__
 		/// Returns the path of the Android external storage directory
-		static std::string externalStorageDir();
+		static String externalStorageDir();
 #endif
 
 		/// Returns true if the specified path is a directory
-		static bool isDirectory(const char* path);
+		static bool isDirectory(const StringView& path);
 		/// Returns true if the specified path is a file
-		static bool isFile(const char* path);
+		static bool isFile(const StringView& path);
 
 		/// Returns true if the file or directory exists
-		static bool exists(const char* path);
+		static bool exists(const StringView& path);
 		/// Returns true if the file or directory is readable
-		static bool isReadable(const char* path);
+		static bool isReadable(const StringView& path);
 		/// Returns true if the file or directory is writeable
-		static bool isWritable(const char* path);
+		static bool isWritable(const StringView& path);
 		/// Returns true if the file or directory is executable
-		static bool isExecutable(const char* path);
+		static bool isExecutable(const StringView& path);
 
 		/// Returns true if the path is a file and is readable
-		static bool isReadableFile(const char* path);
+		static bool isReadableFile(const StringView& path);
 		/// Returns true if the path is a file and is writeable
-		static bool isWritableFile(const char* path);
+		static bool isWritableFile(const StringView& path);
 
 		/// Returns true if the file or directory is hidden
-		static bool isHidden(const char* path);
+		static bool isHidden(const StringView& path);
 		/// Makes a file or directory hidden or not
-		static bool setHidden(const char* path, bool hidden);
+		static bool setHidden(const StringView& path, bool hidden);
 
 		/// Creates a new directory
-		static bool createDir(const char* path);
+		static bool createDir(const StringView& path);
 		/// Deletes an empty directory
-		static bool deleteEmptyDir(const char* path);
+		static bool deleteEmptyDir(const StringView& path);
 		/// Deletes a file
-		static bool deleteFile(const char* path);
+		static bool deleteFile(const StringView& path);
 		/// Renames or moves a file or a directory
-		static bool rename(const char* oldPath, const char* newPath);
+		static bool rename(const StringView& oldPath, const StringView& newPath);
 		/// Copies a file
-		static bool copy(const char* oldPath, const char* newPath);
+		static bool copy(const StringView& oldPath, const StringView& newPath);
 
 		/// Returns the file size in bytes
-		static long int fileSize(const char* path);
+		static long int fileSize(const StringView& path);
 		/// Returns the last time the file or directory was modified
-		static FileDate lastModificationTime(const char* path);
+		static FileDate lastModificationTime(const StringView& path);
 		/// Returns the last time the file or directory was accessed
-		static FileDate lastAccessTime(const char* path);
+		static FileDate lastAccessTime(const StringView& path);
 
 		/// Returns the file or directory permissions in a mask
-		static int permissions(const char* path);
+		static int permissions(const StringView& path);
 		/// Sets the file or directory permissions to those of the mask
-		static bool changePermissions(const char* path, int mode);
+		static bool changePermissions(const StringView& path, int mode);
 		/// Adds the permissions in the mask to a file or a directory
-		static bool addPermissions(const char* path, int mode);
+		static bool addPermissions(const StringView& path, int mode);
 		/// Removes the permissions in the mask from a file or a directory
-		static bool removePermissions(const char* path, int mode);
+		static bool removePermissions(const StringView& path, int mode);
 
 		/// Returns the base directory for data loading
-		inline static const std::string& dataPath() {
+		inline static const String& dataPath() {
 			return dataPath_;
 		}
 		/// Returns the writable directory for saving data
-		static const std::string& savePath();
+		static const String& savePath();
 
 	private:
 		/// The path for the application to load files from
-		static std::string dataPath_;
+		static String dataPath_;
 		/// The path for the application to write files into
-		static std::string savePath_;
+		static String savePath_;
 
 		/// Determines the correct save path based on the platform
 		static void initSavePath();

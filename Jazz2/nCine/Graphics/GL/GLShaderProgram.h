@@ -8,9 +8,10 @@
 #include "../../../Common.h"
 
 #include <string>
-#include <SmallVector.h>
 
-using namespace Death;
+#include <Containers/SmallVector.h>
+
+using namespace Death::Containers;
 
 namespace nCine
 {
@@ -147,7 +148,7 @@ namespace nCine
 		static const int AttributesInitialSize = 4;
 		SmallVector<GLAttribute, 0> attributes_;
 
-		StaticHashMap<std::string, int, GLVertexFormat::MaxAttributes> attributeLocations_;
+		StaticHashMap<String, int, GLVertexFormat::MaxAttributes> attributeLocations_;
 		GLVertexFormat vertexFormat_;
 
 		bool deferredQueries();

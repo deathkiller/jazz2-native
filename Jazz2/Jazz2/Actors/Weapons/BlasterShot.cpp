@@ -2,6 +2,8 @@
 #include "../../LevelInitialization.h"
 #include "../Player.h"
 
+#include "../Solid/TriggerCrate.h"
+
 #include "../../../nCine/Base/FrameTimer.h"
 #include "../../../nCine/Base/Random.h"
 #include "../../../nCine/CommonConstants.h"
@@ -22,7 +24,7 @@ namespace Jazz2::Actors::Weapons
 
 		CollisionFlags = (CollisionFlags & ~CollisionFlags::ApplyGravitation) | CollisionFlags::SkipPerPixelCollisions;
 
-		co_await RequestMetadataAsync("Weapon/Blaster");
+		co_await RequestMetadataAsync("Weapon/Blaster"_s);
 
 		AnimState state = AnimState::Idle;
 		if ((_upgrades & 0x1) != 0) {
@@ -75,7 +77,7 @@ namespace Jazz2::Actors::Weapons
 		ShotBase::OnUpdate(timeMult);
 
 		if (_timeLeft <= 0.0f) {
-			PlaySfx("WallPoof");
+			PlaySfx("WallPoof"_s);
 		}
 
 		if (!_fired) {
@@ -118,7 +120,7 @@ namespace Jazz2::Actors::Weapons
 	{
 		DecreaseHealth(INT32_MAX);
 
-		PlaySfx("WallPoof");
+		PlaySfx("WallPoof"_s);
 	}
 
 	bool BlasterShot::OnHandleCollision(ActorBase* other)
@@ -141,6 +143,14 @@ namespace Jazz2::Actors::Weapons
 				break;
 		}*/
 
+		if (auto triggerCrate = dynamic_cast<Solid::TriggerCrate*>(other)) {
+			if (_lastRicochet != other) {
+				_lastRicochet = other;
+				OnRicochet();
+			}
+			return true;
+		}
+
 		return ShotBase::OnHandleCollision(other);
 	}
 
@@ -150,6 +160,6 @@ namespace Jazz2::Actors::Weapons
 
 		_renderer.setRotation(std::atan2(_speed.Y, _speed.X));
 
-		PlaySfx("Ricochet");
+		PlaySfx("Ricochet"_s);
 	}
 }

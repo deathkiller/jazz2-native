@@ -14,9 +14,9 @@ namespace Jazz2::Actors::Collectibles
 
 		_scoreValue = 1000;
 
-		co_await RequestMetadataAsync("Collectible/OneUp");
+		co_await RequestMetadataAsync("Collectible/OneUp"_s);
 
-		SetAnimation("OneUp");
+		SetAnimation("OneUp"_s);
 
 		co_return true;
 	}

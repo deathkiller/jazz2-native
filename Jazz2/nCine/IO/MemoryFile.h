@@ -8,8 +8,8 @@ namespace nCine
 	class MemoryFile : public IFileStream
 	{
 	public:
-		MemoryFile(const char* bufferName, unsigned char* bufferPtr, unsigned long int bufferSize);
-		MemoryFile(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize);
+		MemoryFile(const String& bufferName, unsigned char* bufferPtr, unsigned long int bufferSize);
+		MemoryFile(const String& bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize);
 		MemoryFile(unsigned char* bufferPtr, unsigned long int bufferSize);
 		MemoryFile(const unsigned char* bufferPtr, unsigned long int bufferSize);
 

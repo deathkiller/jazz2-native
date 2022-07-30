@@ -4,16 +4,19 @@
 #include "JJ2Version.h"
 #include "AnimSetMapping.h"
 
-#include <SmallVector.h>
+#include <memory>
 
-using namespace Death;
+#include <Containers/SmallVector.h>
+#include <Containers/StringView.h>
+
+using namespace Death::Containers;
 
 namespace Jazz2::Compatibility
 {
     class JJ2Anims // .j2a
     {
     public:
-        static void Convert(const std::string& path, const std::string& targetPath, bool isPlus);
+        static void Convert(const StringView& path, const StringView& targetPath, bool isPlus);
 
     private:
         struct AnimFrameSection {
@@ -50,8 +53,8 @@ namespace Jazz2::Compatibility
             uint16_t Multiplier;
         };
 
-        static void ImportAnimations(const std::string& targetPath, JJ2Version version, SmallVectorImpl<AnimSection> anims);
-        static void CreateAnimationMetadataFile(const std::string& filename, AnimSection currentAnim, AnimSetMapping::Entry data, JJ2Version version, int sizeX, int sizeY);
-        static void ImportAudioSamples(const std::string& targetPath, JJ2Version version, SmallVectorImpl<SampleSection> samples);
+        static void ImportAnimations(const StringView& targetPath, JJ2Version version, SmallVectorImpl<AnimSection> anims);
+        static void CreateAnimationMetadataFile(const StringView& filename, AnimSection currentAnim, AnimSetMapping::Entry data, JJ2Version version, int sizeX, int sizeY);
+        static void ImportAudioSamples(const StringView& targetPath, JJ2Version version, SmallVectorImpl<SampleSection> samples);
     };
 }

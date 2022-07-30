@@ -17,7 +17,7 @@ namespace nCine
 
 		/// Constructs an asset file object
 		/*! \param filename File name including path relative to the assets directory */
-		explicit AssetFile(const char* filename);
+		explicit AssetFile(const String& filename);
 		~AssetFile() override;
 
 		/// Tries to open the asset file

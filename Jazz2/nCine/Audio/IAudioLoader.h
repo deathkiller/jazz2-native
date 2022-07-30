@@ -50,7 +50,7 @@ namespace nCine
 		/// Returns the proper audio loader according to the memory buffer name extension
 		static std::unique_ptr<IAudioLoader> createFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// Returns the proper audio loader according to the file extension
-		static std::unique_ptr<IAudioLoader> createFromFile(const char* filename);
+		static std::unique_ptr<IAudioLoader> createFromFile(const StringView& filename);
 
 		/// Returns the proper audio reader according to the loader instance
 		virtual std::unique_ptr<IAudioReader> createReader() = 0;
@@ -75,7 +75,7 @@ namespace nCine
 
 		explicit IAudioLoader(std::unique_ptr<IFileStream> fileHandle);
 
-		static std::unique_ptr<IAudioLoader> createLoader(std::unique_ptr<IFileStream> fileHandle, const char* filename);
+		static std::unique_ptr<IAudioLoader> createLoader(std::unique_ptr<IFileStream> fileHandle, const StringView& filename);
 	};
 
 	/// A class created when the audio file extension is not recognized

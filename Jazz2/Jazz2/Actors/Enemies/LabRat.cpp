@@ -20,7 +20,7 @@ namespace Jazz2::Actors::Enemies
 
 	void LabRat::Preload(const ActorActivationDetails& details)
 	{
-		PreloadMetadataAsync("Enemy/LabRat");
+		PreloadMetadataAsync("Enemy/LabRat"_s);
 	}
 
 	Task<bool> LabRat::OnActivatedAsync(const ActorActivationDetails& details)
@@ -28,7 +28,7 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(1);
 		_scoreValue = 200;
 
-		co_await RequestMetadataAsync("Enemy/LabRat");
+		co_await RequestMetadataAsync("Enemy/LabRat"_s);
 
 		SetAnimation(AnimState::Walk);
 
@@ -66,7 +66,7 @@ namespace Jazz2::Actors::Enemies
 	bool LabRat::OnPerish(ActorBase* collider)
 	{
 		CreateDeathDebris(collider);
-		_levelHandler->PlayCommonSfx("Splat", Vector3f(_pos.X, _pos.Y, 0.0f));
+		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
 		TryGenerateRandomDrop();
 
@@ -86,7 +86,7 @@ namespace Jazz2::Actors::Enemies
 			_stateTime -= timeMult;
 
 			if (Random().NextFloat() < 0.008f * timeMult) {
-				PlaySfx("Idle", 0.2f);
+				PlaySfx("Idle"_s, 0.2f);
 			}
 		}
 	}
@@ -128,7 +128,7 @@ namespace Jazz2::Actors::Enemies
 			}
 
 			if (Random().NextFloat() < 0.004f * timeMult) {
-				PlaySfx("Noise", 0.2f);
+				PlaySfx("Noise"_s, 0.2f);
 			}
 
 			if (_canIdle) {
@@ -168,6 +168,6 @@ namespace Jazz2::Actors::Enemies
 		_isAttacking = true;
 		SetState(ActorFlags::CanJump, false);
 
-		PlaySfx("Attack");
+		PlaySfx("Attack"_s);
 	}
 }

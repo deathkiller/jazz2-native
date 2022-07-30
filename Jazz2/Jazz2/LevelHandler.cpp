@@ -93,7 +93,7 @@ namespace Jazz2
 			ptr->ReceiveLevelCarryOver(levelInit.ExitType, levelInit.PlayerCarryOvers[i]);
 		}
 
-		_commonResources = ContentResolver::Current().RequestMetadata("Common/Scenery");
+		_commonResources = ContentResolver::Current().RequestMetadata("Common/Scenery"_s);
 
 		_eventMap->PreloadEventsAsync();
 
@@ -124,7 +124,7 @@ namespace Jazz2
 		_ambientLightTarget = value;
 	}
 
-	void LevelHandler::OnLevelLoaded(const std::string& name, const std::string& nextLevel, const std::string& secretLevel, std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap, const std::string& musicPath, float ambientLight)
+	void LevelHandler::OnLevelLoaded(const StringView& name, const StringView& nextLevel, const StringView& secretLevel, std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap, const StringView& musicPath, float ambientLight)
 	{
 		//_name = name;
 		_defaultNextLevel = nextLevel;
@@ -146,7 +146,7 @@ namespace Jazz2
 		_musicPath = musicPath;
 #ifdef WITH_OPENMPT
 		if (!musicPath.empty()) {
-			_music = std::make_unique<AudioStreamPlayer>(FileSystem::joinPath("Content/Music", musicPath).c_str());
+			_music = std::make_unique<AudioStreamPlayer>(fs::joinPath({ "Content"_s, "Music"_s, musicPath }));
 			_music->setLooping(true);
 			_music->setGain(0.2f);
 			_music->play();
@@ -691,12 +691,12 @@ void main() {
 		return player;
 	}
 
-	const std::shared_ptr<AudioBufferPlayer>& LevelHandler::PlayCommonSfx(const std::string& identifier, const Vector3f& pos, float gain, float pitch)
+	const std::shared_ptr<AudioBufferPlayer>& LevelHandler::PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain, float pitch)
 	{
 		auto it = _commonResources->Sounds.find(identifier);
-		if (it != _commonResources->Sounds.end()) {
-			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
-			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(it->second.Buffers[idx].get()));
+		if (it != nullptr) {
+			int idx = (it->Buffers.size() > 1 ? Random().Next(0, (int)it->Buffers.size()) : 0);
+			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(it->Buffers[idx].get()));
 			player->setPosition(Vector3f((pos.X - _cameraPos.X) / (DefaultWidth * 4), (pos.Y - _cameraPos.Y) / (DefaultHeight * 4), 0.8f));
 			player->setGain(gain);
 
@@ -710,6 +710,7 @@ void main() {
 			player->play();
 			return player;
 		} else {
+			LOGE_X("Sound effect \"%s\" was not found", identifier.data());
 			return std::shared_ptr<AudioBufferPlayer>(nullptr);
 		}
 	}
@@ -837,7 +838,7 @@ void main() {
 		}
 	}
 
-	void LevelHandler::BeginLevelChange(ExitType exitType, const std::string& nextLevel)
+	void LevelHandler::BeginLevelChange(ExitType exitType, const StringView& nextLevel)
 	{
 		/*if (initState == InitState.Disposing) {
 			return;
@@ -884,7 +885,7 @@ void main() {
 		//_nextLevelInit = levelInit;
 		//_levelChangeTimer = 50.0f;
 
-		_root->ChangeLevel(levelInit);
+		_root->ChangeLevel(std::move(levelInit));
 	}
 
 	void LevelHandler::HandleGameOver()

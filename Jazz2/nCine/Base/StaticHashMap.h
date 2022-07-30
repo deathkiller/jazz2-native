@@ -91,7 +91,7 @@ namespace nCine
 			return Capacity;
 		}
 		/// Returns true if the hashmap is empty
-		inline bool isEmpty() const {
+		inline bool empty() const {
 			return size_ == 0;
 		}
 		/// Returns the number of elements in the hashmap

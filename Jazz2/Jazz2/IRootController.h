@@ -11,7 +11,7 @@ namespace Jazz2
 		IRootController() { }
 		virtual ~IRootController() { }
 
-		virtual void ChangeLevel(const LevelInitialization& levelInit) = 0;
+		virtual void ChangeLevel(LevelInitialization&& levelInit) = 0;
 		
 	private:
 		/// Deleted copy constructor

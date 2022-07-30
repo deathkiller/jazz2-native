@@ -5,8 +5,12 @@
 
 #include <functional>
 #include <memory>
-#include <string>
 #include <utility>
+
+#include <Containers/String.h>
+#include <Containers/StringView.h>
+
+using namespace Death::Containers;
 
 namespace Jazz2::Compatibility
 {
@@ -14,18 +18,18 @@ namespace Jazz2::Compatibility
 	{
 	public:
 		int Position;
-		std::string EpisodeToken;
-		std::string EpisodeName;
-		std::string FirstLevel;
+		String EpisodeToken;
+		String EpisodeName;
+		String FirstLevel;
 
-		JJ2Episode(const std::string& episodeToken, const std::string& episodeName, const std::string& firstLevel, int position)
+		JJ2Episode(const String& episodeToken, const String& episodeName, const String& firstLevel, int position)
 			: EpisodeToken(episodeToken), EpisodeName(episodeName), FirstLevel(firstLevel), Position(position), _isRegistered(false)
 		{
 		}
 
-		static JJ2Episode Open(const std::string& path);
+		static JJ2Episode Open(const StringView& path);
 
-		void Convert(const std::string& targetPath, std::function<JJ2Level::LevelToken(const std::string&)> levelTokenConversion = nullptr, std::function<std::string(JJ2Episode&)> episodeNameConversion = nullptr, std::function<std::pair<std::string, std::string>(JJ2Episode&)> episodePrevNext = nullptr);
+		void Convert(const String& targetPath, std::function<JJ2Level::LevelToken(const String&)> levelTokenConversion = nullptr, std::function<String(JJ2Episode&)> episodeNameConversion = nullptr, std::function<std::pair<String, String>(JJ2Episode&)> episodePrevNext = nullptr);
 
 	private:
 		bool _isRegistered;

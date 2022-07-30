@@ -78,7 +78,7 @@ namespace nCine
 	size_t AudioReaderMpt::stream_read_func(void* stream, void* dst, size_t bytes)
 	{
 		AudioReaderMpt* _this = reinterpret_cast<AudioReaderMpt*>(stream);
-		return _this->_fileHandle->Read(dst, bytes);
+		return _this->_fileHandle->Read(dst, (unsigned long)bytes);
 	}
 
 	int AudioReaderMpt::stream_seek_func(void* stream, int64_t offset, int whence)

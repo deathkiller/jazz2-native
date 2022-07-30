@@ -47,13 +47,13 @@ namespace Jazz2::Tiles
 
 				int idx = (j + tw * i);
 				if (maskEmpty) {
-					_isMaskEmpty.SetBit(idx);
+					_isMaskEmpty.Set(idx);
 				}
 				if (maskFilled) {
-					_isMaskFilled.SetBit(idx);
+					_isMaskFilled.Set(idx);
 				}
 				if (/*tileFilled ||*/ !maskEmpty) {
-					_isTileFilled.SetBit(idx);
+					_isTileFilled.Set(idx);
 				}
 
 				/*defaultLayerTiles.Add(LayerTile {

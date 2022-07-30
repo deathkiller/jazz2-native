@@ -45,10 +45,10 @@ namespace nCine
 		inline void setWindowPosition(int x, int y) override {
 			glfwSetWindowPos(windowHandle_, x, y);
 		}
-		inline void setWindowTitle(const char* windowTitle) override {
-			glfwSetWindowTitle(windowHandle_, windowTitle);
+		inline void setWindowTitle(const StringView& windowTitle) override {
+			glfwSetWindowTitle(windowHandle_, String::nullTerminatedView(windowTitle).data());
 		}
-		void setWindowIcon(const char* windowIconFilename) override;
+		void setWindowIcon(const StringView& windowIconFilename) override;
 
 		int windowPositionX() const override;
 		int windowPositionY() const override;

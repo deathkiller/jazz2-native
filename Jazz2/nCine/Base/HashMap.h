@@ -8,7 +8,6 @@ namespace nCine
 {
 	template <class K, class T, class HashFunc, bool IsConst> class HashMapIterator;
 	template <class K, class T, class HashFunc, bool IsConst> struct HashMapHelperTraits;
-	class String;
 
 	/// A template based hashmap implementation with open addressing and leapfrog probing
 	template <class K, class T, class HashFunc = FNV1aHashFunc<K>>
@@ -103,7 +102,7 @@ namespace nCine
 			return capacity_;
 		}
 		/// Returns true if the hashmap is empty
-		inline bool isEmpty() const {
+		inline bool empty() const {
 			return size_ == 0;
 		}
 		/// Returns the number of elements in the hashmap
@@ -666,20 +665,23 @@ namespace nCine
 	template <class K, class T, class HashFunc>
 	void HashMap<K, T, HashFunc>::rehash(unsigned int count)
 	{
-		if (size_ == 0 || count < size_)
+		if (count <= size_) {
 			return;
+		}
 
 		HashMap<K, T, HashFunc> hashMap(count);
 
-		unsigned int rehashedNodes = 0;
-		for (unsigned int i = 0; i < capacity_; i++) {
-			if (hashes_[i] != NullHash) {
-				Node& node = nodes_[i];
-				hashMap.insert(node.key, std::move(node.value));
+		if (size_ > 0) {
+			unsigned int rehashedNodes = 0;
+			for (unsigned int i = 0; i < capacity_; i++) {
+				if (hashes_[i] != NullHash) {
+					Node& node = nodes_[i];
+					hashMap.insert(node.key, std::move(node.value));
 
-				rehashedNodes++;
-				if (rehashedNodes == size_)
-					break;
+					rehashedNodes++;
+					if (rehashedNodes == size_)
+						break;
+				}
 			}
 		}
 

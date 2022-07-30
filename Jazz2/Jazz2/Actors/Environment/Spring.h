@@ -13,7 +13,7 @@ namespace Jazz2::Actors::Environment
 
 		static void Preload(const ActorActivationDetails& details)
 		{
-			PreloadMetadataAsync("Object/Spring");
+			PreloadMetadataAsync("Object/Spring"_s);
 		}
 
 		Vector2f Activate();

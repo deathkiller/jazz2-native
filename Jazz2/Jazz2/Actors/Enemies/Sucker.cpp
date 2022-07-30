@@ -17,7 +17,7 @@ namespace Jazz2::Actors::Enemies
 
 	void Sucker::Preload(const ActorActivationDetails& details)
 	{
-		PreloadMetadataAsync("Enemy/Sucker");
+		PreloadMetadataAsync("Enemy/Sucker"_s);
 	}
 
 	Task<bool> Sucker::OnActivatedAsync(const ActorActivationDetails& details)
@@ -28,7 +28,7 @@ namespace Jazz2::Actors::Enemies
 		_scoreValue = 100;
 		_maxHealth = 4;
 
-		co_await RequestMetadataAsync("Enemy/Sucker");
+		co_await RequestMetadataAsync("Enemy/Sucker"_s);
 
 		SetAnimation(AnimState::Walk);
 
@@ -44,7 +44,7 @@ namespace Jazz2::Actors::Enemies
 			if (parentLastHitDir == LastHitDirection::Left || parentLastHitDir == LastHitDirection::Right) {
 				_speed.X = 3 * (parentLastHitDir == LastHitDirection::Left ? -1 : 1);
 			}
-			PlaySfx("Deflate");
+			PlaySfx("Deflate"_s);
 		} else {
 			_health = 4;
 		}
@@ -82,11 +82,11 @@ namespace Jazz2::Actors::Enemies
 				}
 
 				if (_cycle == 0) {
-					PlaySfx("Walk1", 0.2f);
+					PlaySfx("Walk1"_s, 0.2f);
 				} else if (_cycle == 6) {
-					PlaySfx("Walk2", 0.2f);
+					PlaySfx("Walk2"_s, 0.2f);
 				} else if (_cycle == 2 || _cycle == 7) {
-					PlaySfx("Walk3", 0.2f);
+					PlaySfx("Walk3"_s, 0.2f);
 				}
 
 				if ((_cycle >= 4 && _cycle < 7) || _cycle >= 9) {
@@ -105,7 +105,7 @@ namespace Jazz2::Actors::Enemies
 	bool Sucker::OnPerish(ActorBase* collider)
 	{
 		CreateDeathDebris(collider);
-		_levelHandler->PlayCommonSfx("Splat", Vector3f(_pos.X, _pos.Y, 0.0f));
+		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
 		TryGenerateRandomDrop();
 

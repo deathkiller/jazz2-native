@@ -27,9 +27,9 @@ namespace Jazz2::Actors::Solid
 				Type = eventType;
 				Count = count;
 
-				memcpy(EventParams, eventParams, eventParamsSize);
+				std::memcpy(EventParams, eventParams, eventParamsSize);
 				if (eventParamsSize < 16) {
-					memset(EventParams + eventParamsSize, 0, 16 - eventParamsSize);
+					std::memset(EventParams + eventParamsSize, 0, 16 - eventParamsSize);
 				}
 			}
 		};

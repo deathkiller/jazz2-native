@@ -18,16 +18,14 @@ namespace Jazz2::Actors::Collectibles
 
 		_maxCarrot = (details.Params[0] != 0);
 
-		co_await RequestMetadataAsync("Collectible/Coins");
-
 		if (_maxCarrot) {
 			_scoreValue = 500;
-			co_await RequestMetadataAsync("Collectible/CarrotFull");
+			co_await RequestMetadataAsync("Collectible/CarrotFull"_s);
 		} else {
 			_scoreValue = 200;
-			co_await RequestMetadataAsync("Collectible/Carrot");
+			co_await RequestMetadataAsync("Collectible/Carrot"_s);
 		}
-		SetAnimation("Carrot");
+		SetAnimation("Carrot"_s);
 		SetFacingDirection();
 
 		co_return true;

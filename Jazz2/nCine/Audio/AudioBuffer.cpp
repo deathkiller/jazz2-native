@@ -46,7 +46,7 @@ namespace nCine
 		}
 	}
 
-	AudioBuffer::AudioBuffer(const char* filename)
+	AudioBuffer::AudioBuffer(const StringView& filename)
 		: AudioBuffer()
 	{
 		const bool hasLoaded = loadFromFile(filename);
@@ -88,17 +88,8 @@ namespace nCine
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void AudioBuffer::init(const char* name, Format format, int frequency)
+	void AudioBuffer::init(Format format, int frequency)
 	{
-
-		/*if (name)
-		{
-			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(name, nctl::strnlen(name, std::string::MaxCStringLength));
-		}*/
-
-		//setName(name);
-
 		switch (format) {
 			case Format::MONO8:
 				bytesPerSample_ = 1;
@@ -124,13 +115,6 @@ namespace nCine
 
 	bool AudioBuffer::loadFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
-
-		/*if (bufferName)
-		{
-			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(bufferName, nctl::strnlen(bufferName, std::string::MaxCStringLength));
-		}*/
-
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromMemory(bufferName, bufferPtr, bufferSize);
 		if (audioLoader->hasLoaded() == false)
 			return false;
@@ -139,15 +123,11 @@ namespace nCine
 		if (samplesHaveLoaded == false)
 			return false;
 
-		//setName(bufferName);
 		return true;
 	}
 
-	bool AudioBuffer::loadFromFile(const char* filename)
+	bool AudioBuffer::loadFromFile(const StringView& filename)
 	{
-
-		//ZoneText(filename, nctl::strnlen(filename, std::string::MaxCStringLength));
-
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromFile(filename);
 		if (audioLoader->hasLoaded() == false)
 			return false;
@@ -156,7 +136,6 @@ namespace nCine
 		if (samplesHaveLoaded == false)
 			return false;
 
-		//setName(filename);
 		return true;
 	}
 

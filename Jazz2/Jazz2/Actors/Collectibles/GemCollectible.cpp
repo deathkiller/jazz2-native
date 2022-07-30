@@ -16,25 +16,25 @@ namespace Jazz2::Actors::Collectibles
 
 		_gemType = (uint16_t)(details.Params[0] & 0x3);
 
-		co_await RequestMetadataAsync("Collectible/Gems");
+		co_await RequestMetadataAsync("Collectible/Gems"_s);
 
 		switch (_gemType) {
 			default:
 			case 0: // Red (+1)
 				_scoreValue = 100;
-				SetAnimation("GemRed");
+				SetAnimation("GemRed"_s);
 				break;
 			case 1: // Green (+5)
 				_scoreValue = 500;
-				SetAnimation("GemGreen");
+				SetAnimation("GemGreen"_s);
 				break;
 			case 2: // Blue (+10)
 				_scoreValue = 1000;
-				SetAnimation("GemBlue");
+				SetAnimation("GemBlue"_s);
 				break;
 			case 3: // Purple
 				_scoreValue = 100;
-				SetAnimation("GemPurple");
+				SetAnimation("GemPurple"_s);
 				break;
 		}
 

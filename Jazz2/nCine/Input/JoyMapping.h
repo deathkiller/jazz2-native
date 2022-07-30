@@ -3,9 +3,10 @@
 #include <cstdint>
 #include "InputEvents.h"
 
-#include <SmallVector.h>
+#include <Containers/SmallVector.h>
+#include <Containers/StringView.h>
 
-using namespace Death;
+using namespace Death::Containers;
 
 namespace nCine
 {
@@ -67,7 +68,7 @@ namespace nCine
 
 		bool addMappingFromString(const char* mappingString);
 		void addMappingsFromStrings(const char** mappingStrings);
-		void addMappingsFromFile(const char* filename);
+		void addMappingsFromFile(const StringView& filename);
 		inline unsigned int numMappings() const {
 			return (unsigned int)mappings_.size();
 		}

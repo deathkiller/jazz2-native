@@ -16,8 +16,8 @@ namespace Jazz2::Actors::Enemies
 
 	void SuckerFloat::Preload(const ActorActivationDetails& details)
 	{
-		PreloadMetadataAsync("Enemy/SuckerFloat");
-		PreloadMetadataAsync("Enemy/Sucker");
+		PreloadMetadataAsync("Enemy/SuckerFloat"_s);
+		PreloadMetadataAsync("Enemy/Sucker"_s);
 	}
 
 	Task<bool> SuckerFloat::OnActivatedAsync(const ActorActivationDetails& details)
@@ -29,7 +29,7 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(1);
 		_scoreValue = 200;
 
-		co_await RequestMetadataAsync("Enemy/SuckerFloat");
+		co_await RequestMetadataAsync("Enemy/SuckerFloat"_s);
 
 		SetAnimation(AnimState::Idle);
 

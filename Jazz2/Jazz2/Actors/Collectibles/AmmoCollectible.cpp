@@ -14,16 +14,16 @@ namespace Jazz2::Actors::Collectibles
 	{
 		WeaponType weaponType = (WeaponType)details.Params[0];
 		switch (weaponType) {
-			case WeaponType::Blaster: PreloadMetadataAsync("Collectible/AmmoBlaster"); break;
-			case WeaponType::Bouncer: PreloadMetadataAsync("Collectible/AmmoBouncer"); break;
-			case WeaponType::Freezer: PreloadMetadataAsync("Collectible/AmmoFreezer"); break;
-			case WeaponType::Seeker: PreloadMetadataAsync("Collectible/AmmoSeeker"); break;
-			case WeaponType::RF: PreloadMetadataAsync("Collectible/AmmoRF"); break;
-			case WeaponType::Toaster: PreloadMetadataAsync("Collectible/AmmoToaster"); break;
-			case WeaponType::TNT: PreloadMetadataAsync("Collectible/AmmoTNT"); break;
-			case WeaponType::Pepper: PreloadMetadataAsync("Collectible/AmmoPepper"); break;
-			case WeaponType::Electro: PreloadMetadataAsync("Collectible/AmmoElectro"); break;
-			case WeaponType::Thunderbolt: PreloadMetadataAsync("Collectible/AmmoThunderbolt"); break;
+			case WeaponType::Blaster: PreloadMetadataAsync("Collectible/AmmoBlaster"_s); break;
+			case WeaponType::Bouncer: PreloadMetadataAsync("Collectible/AmmoBouncer"_s); break;
+			case WeaponType::Freezer: PreloadMetadataAsync("Collectible/AmmoFreezer"_s); break;
+			case WeaponType::Seeker: PreloadMetadataAsync("Collectible/AmmoSeeker"_s); break;
+			case WeaponType::RF: PreloadMetadataAsync("Collectible/AmmoRF"_s); break;
+			case WeaponType::Toaster: PreloadMetadataAsync("Collectible/AmmoToaster"_s); break;
+			case WeaponType::TNT: PreloadMetadataAsync("Collectible/AmmoTNT"_s); break;
+			case WeaponType::Pepper: PreloadMetadataAsync("Collectible/AmmoPepper"_s); break;
+			case WeaponType::Electro: PreloadMetadataAsync("Collectible/AmmoElectro"_s); break;
+			case WeaponType::Thunderbolt: PreloadMetadataAsync("Collectible/AmmoThunderbolt"_s); break;
 		}
 	}
 
@@ -35,19 +35,19 @@ namespace Jazz2::Actors::Collectibles
 
 		_weaponType = (WeaponType)details.Params[0];
 		switch (_weaponType) {
-			case WeaponType::Blaster: co_await RequestMetadataAsync("Collectible/AmmoBlaster"); break;
-			case WeaponType::Bouncer: co_await RequestMetadataAsync("Collectible/AmmoBouncer"); break;
-			case WeaponType::Freezer: co_await RequestMetadataAsync("Collectible/AmmoFreezer"); break;
-			case WeaponType::Seeker: co_await RequestMetadataAsync("Collectible/AmmoSeeker"); break;
-			case WeaponType::RF: co_await RequestMetadataAsync("Collectible/AmmoRF"); break;
-			case WeaponType::Toaster: co_await RequestMetadataAsync("Collectible/AmmoToaster"); break;
-			case WeaponType::TNT: co_await RequestMetadataAsync("Collectible/AmmoTNT"); break;
-			case WeaponType::Pepper: co_await RequestMetadataAsync("Collectible/AmmoPepper"); break;
-			case WeaponType::Electro: co_await RequestMetadataAsync("Collectible/AmmoElectro"); break;
-			case WeaponType::Thunderbolt: co_await RequestMetadataAsync("Collectible/AmmoThunderbolt"); break;
+			case WeaponType::Blaster: co_await RequestMetadataAsync("Collectible/AmmoBlaster"_s); break;
+			case WeaponType::Bouncer: co_await RequestMetadataAsync("Collectible/AmmoBouncer"_s); break;
+			case WeaponType::Freezer: co_await RequestMetadataAsync("Collectible/AmmoFreezer"_s); break;
+			case WeaponType::Seeker: co_await RequestMetadataAsync("Collectible/AmmoSeeker"_s); break;
+			case WeaponType::RF: co_await RequestMetadataAsync("Collectible/AmmoRF"_s); break;
+			case WeaponType::Toaster: co_await RequestMetadataAsync("Collectible/AmmoToaster"_s); break;
+			case WeaponType::TNT: co_await RequestMetadataAsync("Collectible/AmmoTNT"_s); break;
+			case WeaponType::Pepper: co_await RequestMetadataAsync("Collectible/AmmoPepper"_s); break;
+			case WeaponType::Electro: co_await RequestMetadataAsync("Collectible/AmmoElectro"_s); break;
+			case WeaponType::Thunderbolt: co_await RequestMetadataAsync("Collectible/AmmoThunderbolt"_s); break;
 		}
 
-		SetAnimation("Ammo");
+		SetAnimation("Ammo"_s);
 
 		SetFacingDirection();
 

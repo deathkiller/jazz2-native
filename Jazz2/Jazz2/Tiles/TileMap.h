@@ -5,8 +5,6 @@
 
 #include "../../nCine/IO/IFileStream.h"
 
-#include <SmallVector.h>
-
 namespace Jazz2
 {
 	class LevelHandler;
@@ -134,7 +132,7 @@ namespace Jazz2::Tiles
 			DebrisCollisionAction CollisionAction;
 		};
 
-		TileMap(LevelHandler* levelHandler, const std::string& tileSetPath);
+		TileMap(LevelHandler* levelHandler, const StringView& tileSetPath);
 
 		Vector2i Size();
 		Recti LevelBounds();
@@ -186,7 +184,7 @@ namespace Jazz2::Tiles
 		static float TranslateCoordinate(float coordinate, float speed, float offset, bool isY, int viewHeight, int viewWidth);
 		RenderCommand* RentRenderCommand();
 
-		bool AdvanceDestructibleTileAnimation(LayerTile& tile, int tx, int ty, int& amount, const std::string& soundName);
+		bool AdvanceDestructibleTileAnimation(LayerTile& tile, int tx, int ty, int& amount, const StringView& soundName);
 		void AdvanceCollapsingTileTimers(float timeMult);
 
 		void SetTileDestructibleEventFlag(LayerTile& tile, TileDestructType type, uint16_t extraData);

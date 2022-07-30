@@ -5,9 +5,10 @@
 #include "Thread.h"
 
 #include <list>
-#include <SmallVector.h>
 
-using namespace Death;
+#include <Containers/SmallVector.h>
+
+using namespace Death::Containers;
 
 namespace nCine
 {

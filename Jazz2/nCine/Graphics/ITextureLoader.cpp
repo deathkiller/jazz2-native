@@ -6,17 +6,17 @@
 #include "TextureLoaderPng.h"
 //#endif
 #ifdef WITH_WEBP
-#include "TextureLoaderWebP.h"
+#	include "TextureLoaderWebP.h"
 #endif
 #ifdef WITH_OPENGLES
-#include "TextureLoaderPkm.h"
+#	include "TextureLoaderPkm.h"
 #endif
 #include "TextureLoaderQoi.h"
 
 #include "../IO/FileSystem.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -69,9 +69,9 @@ namespace nCine {
 		return createLoader(std::move(IFileStream::createFromMemory(bufferName, bufferPtr, bufferSize)), bufferName);
 	}
 
-	std::unique_ptr<ITextureLoader> ITextureLoader::createFromFile(const char* filename)
+	std::unique_ptr<ITextureLoader> ITextureLoader::createFromFile(const StringView& filename)
 	{
-		LOGI_X("Loading file: \"%s\"", filename);
+		LOGI_X("Loading file: \"%s\"", filename.data());
 		// Creating a handle from IFile static method to detect assets file
 		return createLoader(std::move(IFileStream::createFileHandle(filename)), filename);
 	}
@@ -80,29 +80,29 @@ namespace nCine {
 	// PROTECTED FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	std::unique_ptr<ITextureLoader> ITextureLoader::createLoader(std::unique_ptr<IFileStream> fileHandle, const char* filename)
+	std::unique_ptr<ITextureLoader> ITextureLoader::createLoader(std::unique_ptr<IFileStream> fileHandle, const StringView& filename)
 	{
 		fileHandle->setExitOnFailToOpen(false);
 
-		if (fs::hasExtension(filename, "dds"))
+		if (fs::hasExtension(filename, "dds"_s))
 			return std::make_unique<TextureLoaderDds>(std::move(fileHandle));
-		else if (fs::hasExtension(filename, "pvr"))
+		else if (fs::hasExtension(filename, "pvr"_s))
 			return std::make_unique<TextureLoaderPvr>(std::move(fileHandle));
-		else if (fs::hasExtension(filename, "ktx"))
+		else if (fs::hasExtension(filename, "ktx"_s))
 			return std::make_unique<TextureLoaderKtx>(std::move(fileHandle));
 	//#ifdef WITH_PNG
-		else if (fs::hasExtension(filename, "png"))
+		else if (fs::hasExtension(filename, "png"_s))
 			return std::make_unique<TextureLoaderPng>(std::move(fileHandle));
 	//#endif
 	/*#ifdef WITH_WEBP
-		else if (fs::hasExtension(filename, "webp"))
+		else if (fs::hasExtension(filename, "webp"_s))
 			return std::make_unique<TextureLoaderWebP>(std::move(fileHandle));
 	#endif*/
 	#ifdef __ANDROID__
-		else if (fs::hasExtension(filename, "pkm"))
+		else if (fs::hasExtension(filename, "pkm"_s))
 			return std::make_unique<TextureLoaderPkm>(std::move(fileHandle));
 	#endif
-		else if (fs::hasExtension(filename, "qoi")) {
+		else if (fs::hasExtension(filename, "qoi"_s)) {
 			return std::make_unique<TextureLoaderQoi>(std::move(fileHandle));
 		} else {
 			LOGF_X("Extension unknown: \"%s\"", fs::extension(filename));

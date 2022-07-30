@@ -8,7 +8,7 @@
 
 namespace Jazz2::Tiles
 {
-	TileMap::TileMap(LevelHandler* levelHandler, const std::string& tileSetPath)
+	TileMap::TileMap(LevelHandler* levelHandler, const StringView& tileSetPath)
 		:
 		_levelHandler(levelHandler),
 		_sprLayerIndex(-1),
@@ -22,7 +22,7 @@ namespace Jazz2::Tiles
 		_renderCommands.reserve(128);
 
 		if (_tileSet == nullptr) {
-			LOGE_X("Cannot load tileset \"%s\"", tileSetPath.c_str());
+			LOGE_X("Cannot load tileset \"%s\"", tileSetPath.data());
 		}
 	}
 
@@ -325,7 +325,7 @@ namespace Jazz2::Tiles
 						levelHandler.AddActor(frozen);*/
 						hit++;
 					} else if (tile.ExtraData == 0 || tile.ExtraData == ((unsigned int)weapon + 1)) {
-						if (AdvanceDestructibleTileAnimation(tile, tx, ty, strength, "SceneryDestruct")) {
+						if (AdvanceDestructibleTileAnimation(tile, tx, ty, strength, "SceneryDestruct"_s)) {
 							hit++;
 						}
 
@@ -355,7 +355,7 @@ namespace Jazz2::Tiles
 				auto& tile = _layers[_sprLayerIndex].Layout[tx + ty * layoutSize.X];
 				if (tile.DestructType == TileDestructType::Special) {
 					int amount = 1;
-					if (AdvanceDestructibleTileAnimation(tile, tx, ty, amount, "SceneryDestruct")) {
+					if (AdvanceDestructibleTileAnimation(tile, tx, ty, amount, "SceneryDestruct"_s)) {
 						hit++;
 					}
 				}
@@ -379,7 +379,7 @@ namespace Jazz2::Tiles
 				auto& tile = _layers[_sprLayerIndex].Layout[tx + ty * layoutSize.X];
 				if (tile.DestructType == TileDestructType::Speed && /*tile.ExtraData +*/ 5 <= speed) {
 					int amount = 1;
-					if (AdvanceDestructibleTileAnimation(tile, tx, ty, amount, "SceneryDestruct")) {
+					if (AdvanceDestructibleTileAnimation(tile, tx, ty, amount, "SceneryDestruct"_s)) {
 						hit++;
 					}
 				}
@@ -422,7 +422,7 @@ namespace Jazz2::Tiles
 		return hit;
 	}
 
-	bool TileMap::AdvanceDestructibleTileAnimation(LayerTile& tile, int tx, int ty, int& amount, const std::string& soundName)
+	bool TileMap::AdvanceDestructibleTileAnimation(LayerTile& tile, int tx, int ty, int& amount, const StringView& soundName)
 	{
 		int max = (int)(_animatedTiles[tile.DestructAnimation].Tiles.size() - 2);
 		if (tile.DestructFrameIndex < max) {
@@ -465,7 +465,7 @@ namespace Jazz2::Tiles
 			auto& tile = _layers[_sprLayerIndex].Layout[tilePos.X + tilePos.Y * layoutSize.X];
 			if (tile.ExtraData == 0) {
 				int amount = 1;
-				if (!AdvanceDestructibleTileAnimation(tile, tilePos.X, tilePos.Y, amount, "SceneryCollapse")) {
+				if (!AdvanceDestructibleTileAnimation(tile, tilePos.X, tilePos.Y, amount, "SceneryCollapse"_s)) {
 					tile.DestructType = TileDestructType::None;
 					_activeCollapsingTiles.erase(_activeCollapsingTiles.begin() + i);
 					i--;
@@ -1129,11 +1129,7 @@ namespace Jazz2::Tiles
 			return;
 		}
 
-		if (newState) {
-			_triggerState.SetBit(triggerId);
-		} else {
-			_triggerState.ClearBit(triggerId);
-		}
+		_triggerState.Set(triggerId, newState);
 
 		// Go through all tiles and update any that are influenced by this trigger
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;

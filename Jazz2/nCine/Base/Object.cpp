@@ -9,12 +9,7 @@ namespace nCine {
 	///////////////////////////////////////////////////////////
 
 	Object::Object(ObjectType type)
-		: Object(type, "")
-	{
-	}
-
-	Object::Object(ObjectType type, const char* name)
-		: type_(type), id_(0)/*, name_(name)*/
+		: type_(type), id_(0)
 	{
 		id_ = theServiceLocator().indexer().addObject(this);
 	}

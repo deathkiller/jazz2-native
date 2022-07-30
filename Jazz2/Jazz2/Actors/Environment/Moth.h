@@ -11,7 +11,7 @@ namespace Jazz2::Actors::Environment
 
 		static void Preload(const ActorActivationDetails& details)
 		{
-			PreloadMetadataAsync("Object/Moth");
+			PreloadMetadataAsync("Object/Moth"_s);
 		}
 
 	protected:

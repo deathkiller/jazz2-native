@@ -10,10 +10,11 @@
 #include "../nCine/Graphics/Texture.h"
 #include "../nCine/Graphics/Viewport.h"
 #include "../nCine/IO/FileSystem.h"
+#include "../nCine/Base/HashMap.h"
 
-#include <unordered_map>
-#include <SmallVector.h>
+#include <Containers/SmallVector.h>
 
+using namespace Death::Containers;
 using namespace nCine;
 
 namespace Jazz2
@@ -104,9 +105,14 @@ namespace Jazz2
 	public:
 		MetadataFlags Flags;
 
-		std::unordered_map<std::string, GraphicResource> Graphics;
-		std::unordered_map<std::string, SoundResource> Sounds;
+		HashMap<String, GraphicResource> Graphics;
+		HashMap<String, SoundResource> Sounds;
 		Vector2i BoundingBox;
+
+		Metadata()
+			: Flags(MetadataFlags::None), Graphics(0), Sounds(0), BoundingBox()
+		{
+		}
 	};
 
 	enum class LayerType {
@@ -153,13 +159,13 @@ namespace Jazz2
 		void BeginLoading();
 		void EndLoading();
 
-		void PreloadMetadataAsync(const std::string& path);
-		Metadata* RequestMetadata(const std::string& path);
-		GenericGraphicResource* RequestGraphics(const std::string& path);
+		void PreloadMetadataAsync(const StringView& path);
+		Metadata* RequestMetadata(const StringView& path);
+		GenericGraphicResource* RequestGraphics(const StringView& path);
 
-		std::unique_ptr<Tiles::TileSet> RequestTileSet(const std::string& path, bool applyPalette, Color* customPalette);
-		bool LoadLevel(LevelHandler* levelHandler, const std::string& path, GameDifficulty difficulty);
-		void ApplyPalette(const std::string& path);
+		std::unique_ptr<Tiles::TileSet> RequestTileSet(const StringView& path, bool applyPalette, Color* customPalette);
+		bool LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty);
+		void ApplyPalette(const StringView& path);
 
 		static ContentResolver& Current();
 
@@ -173,7 +179,7 @@ namespace Jazz2
 
 		bool _isLoading;
 		uint32_t _palettes[PaletteCount * ColorsPerPalette];
-		std::unordered_map<std::string, std::unique_ptr<Metadata>> _cachedMetadata;
-		std::unordered_map<std::string, std::unique_ptr<GenericGraphicResource>> _cachedGraphics;
+		HashMap<String, std::unique_ptr<Metadata>> _cachedMetadata;
+		HashMap<String, std::unique_ptr<GenericGraphicResource>> _cachedGraphics;
 	};
 }

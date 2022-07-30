@@ -29,8 +29,6 @@ namespace nCine
 
 		/// Constructs an object with a specified type and adds it to the index
 		explicit Object(ObjectType type);
-		/// Constructs an object with a specified type and name and adds it to the index
-		Object(ObjectType type, const char* name);
 		/// Removes an object from the index and then destroys it
 		virtual ~Object();
 

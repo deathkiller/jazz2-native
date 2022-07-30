@@ -3,8 +3,6 @@
 #include "../ILevelHandler.h"
 #include "../../nCine/Base/BitArray.h"
 
-#include <SmallVector.h>
-
 namespace Jazz2::Tiles
 {
 	class TileSet

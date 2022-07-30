@@ -2,49 +2,41 @@
 
 #include "../../Common.h"
 #include <Utf8.h>
+#include <Containers/String.h>
 
 #ifdef _WIN32
-//#include <windef.h>
-//#include <WinBase.h>
-#include <fileapi.h>
-#include <Shlobj.h>
-#include <Timezoneapi.h>
+#	include <fileapi.h>
+#	include <Shlobj.h>
+#	include <Timezoneapi.h>
 #else
-#include <cerrno>
-#include <cstdio>
-#include <cstring>
-#include <ctime>
-#include <climits> // for `PATH_MAX`
-#include <unistd.h>
-#include <sys/stat.h>
-#include <libgen.h>
-#include <pwd.h>
-#include <dirent.h>
-#include <fcntl.h>
-#endif
-
-#if defined(__linux__)
-#include <sys/sendfile.h>
-#endif
-
-#ifdef __ANDROID__
-#include "AndroidApplication.h"
-#include "AssetFile.h"
+#	include <cerrno>
+#	include <cstdio>
+#	include <cstring>
+#	include <ctime>
+#	include <unistd.h>
+#	include <sys/stat.h>
+#	include <libgen.h>
+#	include <pwd.h>
+#	include <dirent.h>
+#	include <fcntl.h>
+#
+#	if defined(__linux__)
+#		include <sys/sendfile.h>
+#	endif
+#
+#	ifdef __ANDROID__
+#		include "AndroidApplication.h"
+#		include "AssetFile.h"
+#	endif
 #endif
 
 using namespace Death;
+using namespace Death::Containers;
 
 namespace nCine
 {
-
-#ifdef _WIN32
-	constexpr unsigned int FileSystem::MaxPathLength = MAX_PATH;
-#else
-	constexpr unsigned int FileSystem::MaxPathLength = PATH_MAX;
-#endif
-
-	namespace {
-
+	namespace
+	{
 		char buffer[fs::MaxPathLength];
 
 #ifndef _WIN32
@@ -134,14 +126,14 @@ namespace nCine
 	// STATIC DEFINITIONS
 	///////////////////////////////////////////////////////////
 
-	std::string FileSystem::dataPath_;
-	std::string FileSystem::savePath_;
+	String FileSystem::dataPath_;
+	String FileSystem::savePath_;
 
 	///////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	FileSystem::Directory::Directory(const char* path)
+	FileSystem::Directory::Directory(const StringView& path)
 	{
 		open(path);
 	}
@@ -151,7 +143,7 @@ namespace nCine
 		close();
 	}
 
-	bool FileSystem::Directory::open(const char* path)
+	bool FileSystem::Directory::open(const StringView& path)
 	{
 		close();
 
@@ -161,31 +153,32 @@ namespace nCine
 			WIN32_FIND_DATA findFileData;
 			firstFile_ = true;
 
-			auto buffer = Utf8::ToUtf16(path);
+			Array<wchar_t> buffer = Utf8::ToUtf16(path);
 			if (buffer.size() + 2 <= MaxPathLength) {
 				auto bufferExtended = Array<wchar_t>(buffer, buffer.size() + 2);
 
 				// Adding a wildcard to list all files in the directory
-				buffer[buffer.size() - 1] = '\\';
-				buffer[buffer.size()] = '*';
-				buffer[buffer.size() + 1] = '\0';
+				buffer[buffer.size() - 1] = L'\\';
+				buffer[buffer.size()] = L'*';
+				buffer[buffer.size() + 1] = L'\0';
 
 				hFindFile_ = ::FindFirstFile(buffer, &findFileData);
 				if (hFindFile_) {
-					strncpy_s(fileName_, Utf8::FromUtf16(findFileData.cFileName), MaxPathLength - 1);
+					strncpy_s(fileName_, Utf8::FromUtf16(findFileData.cFileName).data(), MaxPathLength - 1);
 				}
 			}
 		}
 		return (hFindFile_ != NULL && hFindFile_ != INVALID_HANDLE_VALUE);
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		const char* assetPath = AssetFile::assetPath(path);
+		const char* assetPath = AssetFile::assetPath(nullTerminatedPath.data());
 		if (assetPath)
 			assetDir_ = AssetFile::openDir(assetPath);
 		else
 #endif
-			if (path)
-				dirStream_ = opendir(path);
+		if (nullTerminatedPath.empty())
+			dirStream_ = opendir(nullTerminatedPath.data());
 		return (dirStream_ != nullptr);
 #endif
 	}
@@ -224,7 +217,7 @@ namespace nCine
 			WIN32_FIND_DATA findFileData;
 			const int status = ::FindNextFile(hFindFile_, &findFileData);
 			if (status != 0) {
-				strncpy_s(fileName_, Utf8::FromUtf16(findFileData.cFileName), MaxPathLength);
+				strncpy_s(fileName_, Utf8::FromUtf16(findFileData.cFileName).data(), MaxPathLength);
 				return fileName_;
 			}
 			return nullptr;
@@ -247,45 +240,62 @@ namespace nCine
 #endif
 	}
 
-	std::string FileSystem::joinPath(const std::string& first, const std::string& second)
+	String FileSystem::joinPath(const StringView& first, const StringView& second)
 	{
-		std::string returnedPath(MaxPathLength, '\0');
-
 		if (first.empty())
-			return (returnedPath = second);
+			return second;
 		else if (second.empty())
-			return (returnedPath = first);
+			return first;
 
-		const bool firstHasSeparator = first[first.length() - 1] == '/' || first[first.length() - 1] == '\\';
+		const bool firstHasSeparator = first[first.size() - 1] == '/' || first[first.size() - 1] == '\\';
 		const bool secondHasSeparator = second[0] == '/' || second[0] == '\\';
 
 #ifdef __ANDROID__
-		if (first == AssetFile::Prefix)
-			return (returnedPath = first + second);
+		if (first == AssetFile::Prefix) {
+			return first + second;
+		}	
 #endif
 
-		// One path has a trailing or leading separator, the other has not
-		if (firstHasSeparator != secondHasSeparator)
-			return (returnedPath = first + second);
-		// Both paths have no clashing separators
-		else if (firstHasSeparator == false && secondHasSeparator == false)
+		if (firstHasSeparator != secondHasSeparator) {
+			// One path has a trailing or leading separator, the other has not
+			return first + second;
+		} else if (!firstHasSeparator && !secondHasSeparator) {
+			// Both paths have no clashing separators
 #ifdef _WIN32
-			return (returnedPath = first + "\\" + second);
+			return "\\"_s.join({ first, second });
 #else
-			return (returnedPath = first + "/" + second);
+			return "/"_s.join({ first, second });
 #endif
-		else {
+		} else {
 			// Both paths have a clashing separator, removing the leading one from the second path
-			if (second.length() > 1)
-				return (returnedPath = first + &second[1]);
-			else
-				return (returnedPath = first);
+			if (second.size() > 1) {
+				return first + second.exceptPrefix(1);
+			} else {
+				return first;
+			}
 		}
 	}
 
-	std::string FileSystem::absoluteJoinPath(const std::string& first, const std::string& second)
+	String FileSystem::joinPath(const ArrayView<const StringView> paths)
 	{
-		std::string returnedPath = joinPath(first, second);
+		if (paths.empty()) return {};
+
+		// TODO: Optimize this
+		Containers::String path = paths.front();
+		for (std::size_t i = 1; i != paths.size(); ++i) {
+			path = joinPath(path, paths[i]);
+		}
+		return path;
+	}
+
+	String FileSystem::joinPath(const std::initializer_list<StringView> paths)
+	{
+		return joinPath(Containers::arrayView(paths));
+	}
+
+	String FileSystem::absoluteJoinPath(const StringView& first, const StringView& second)
+	{
+		String returnedPath = joinPath(first, second);
 #ifdef _WIN32
 		const char* resolvedPath = _fullpath(buffer, returnedPath.data(), MaxPathLength);
 #else
@@ -294,20 +304,18 @@ namespace nCine
 		if (resolvedPath == nullptr)
 			buffer[0] = '\0';
 
-		return (returnedPath = buffer);
+		return buffer;
 	}
 
-	std::string FileSystem::dirName(const char* path)
+	String FileSystem::dirName(const StringView& path)
 	{
-		if (path == nullptr)
-			return std::string();
+		if (path.empty()) return {};
 
-		std::string returnedPath(MaxPathLength, '\0');
 #ifdef _WIN32
 		static char drive[_MAX_DRIVE];
 		static char dir[_MAX_DIR];
 
-		_splitpath_s(path, drive, _MAX_DRIVE, dir, _MAX_DIR, nullptr, 0, nullptr, 0);
+		_splitpath_s(String::nullTerminatedView(path).data(), drive, _MAX_DRIVE, dir, _MAX_DIR, nullptr, 0, nullptr, 0);
 
 		strncpy_s(buffer, MaxPathLength, drive, _MAX_DRIVE);
 		strncat_s(buffer, MaxPathLength, dir, _MAX_DIR);
@@ -318,219 +326,166 @@ namespace nCine
 			buffer[pathLength - 1] = '\0';
 		}
 
-		return (returnedPath = buffer);
+		return buffer;
 #else
-		strncpy(buffer, path, MaxPathLength - 1);
-		return (returnedPath = ::dirname(buffer));
+		strncpy(buffer, path.data(), std::min((size_t)MaxPathLength - 1, path.size()));
+		return ::dirname(buffer);
 #endif
 	}
 
-	std::string FileSystem::baseName(const char* path)
+	String FileSystem::baseName(const StringView& path)
 	{
-		if (path == nullptr)
-			return std::string();
+		if (path.empty()) return {};
 
-		std::string returnedPath(MaxPathLength, '\0');
 #ifdef _WIN32
 		static char fname[_MAX_FNAME];
 		static char ext[_MAX_EXT];
 
-		_splitpath_s(path, nullptr, 0, nullptr, 0, fname, _MAX_FNAME, ext, _MAX_EXT);
+		_splitpath_s(String::nullTerminatedView(path).data(), nullptr, 0, nullptr, 0, fname, _MAX_FNAME, ext, _MAX_EXT);
 
 		strncpy_s(buffer, MaxPathLength, fname, _MAX_FNAME);
 		strncat_s(buffer, MaxPathLength, ext, _MAX_EXT);
-		return (returnedPath = buffer);
+		return buffer;
 #else
-		strncpy(buffer, path, MaxPathLength - 1);
-		return (returnedPath = ::basename(buffer));
+		strncpy(buffer, path.data(), std::min((size_t)MaxPathLength - 1, path.size()));
+		return ::basename(buffer);
 #endif
 	}
 
-	std::string FileSystem::absolutePath(const char* path)
+	String FileSystem::absolutePath(const StringView& path)
 	{
-		if (path == nullptr)
-			return std::string();
+		if (path.empty()) return {};
 
-		std::string returnedPath(MaxPathLength, '\0');
 #ifdef _WIN32
-		const char* resolvedPath = _fullpath(buffer, path, MaxPathLength);
+		const char* resolvedPath = _fullpath(buffer, String::nullTerminatedView(path).data(), MaxPathLength);
 #else
-		const char* resolvedPath = ::realpath(path, buffer);
+		const char* resolvedPath = ::realpath(String::nullTerminatedView(path).data(), buffer);
 #endif
 		if (resolvedPath == nullptr)
 			buffer[0] = '\0';
 
-		return (returnedPath = buffer);
+		return buffer;
 	}
 
-	const char* FileSystem::extension(const char* path)
+	StringView FileSystem::extension(const StringView& path)
 	{
-		if (path == nullptr)
-			return nullptr;
+		if (path.empty()) return nullptr;
 
-		const char* subStr = strrchr(path, '.');
-		if (subStr != nullptr) {
-			const unsigned long pathLength = strnlen(path, MaxPathLength);
-			const long extensionLength = path + pathLength - subStr - 1;
+		const StringView filename = path.suffix(path.findLastAnyOr("/\\"_s, path.begin()).end());
+		const StringView foundDot = path.findLastOr('.', path.end());
 
-			// The extension is valid if it is 3 or 4 characters long without any space in it
-			if ((extensionLength == 3 && subStr[1] != ' ' && subStr[2] != ' ' && subStr[3] != ' ') ||
-				(extensionLength == 4 && subStr[1] != ' ' && subStr[2] != ' ' && subStr[3] != ' ' && subStr[4] != ' ')) {
-				return subStr + 1;
+		if (foundDot) {
+			bool initialDots = true;
+			for (char i : filename.prefix(foundDot.begin())) {
+				if (i != '.') {
+					initialDots = false;
+					break;
+				}
+			}
+			if (initialDots) {
+				return path.suffix(filename.end());
 			}
 		}
 
-		return nullptr;
+		return path.suffix(foundDot.begin() + 1);
 	}
 
-	bool FileSystem::hasExtension(const char* path, const char* extension)
+	bool FileSystem::hasExtension(const StringView& path, const StringView& extension)
 	{
-		if (path == nullptr || extension == nullptr)
-			return false;
+		if (path.empty() || extension.empty()) return false;
 
-		const char* pathExtension = FileSystem::extension(path);
+		const StringView pathExtension = FileSystem::extension(path);
 		if (pathExtension != nullptr) {
 #if defined(_WIN32) && !defined(__MINGW32__)
-			return (_stricmp(pathExtension, extension) == 0);
+			return (_stricmp(String::nullTerminatedView(pathExtension).data(), String::nullTerminatedView(extension).data()) == 0);
 #else
-			return (::strcasecmp(pathExtension, extension) == 0);
+			return (::strcasecmp(String::nullTerminatedView(pathExtension).data(), String::nullTerminatedView(extension).data()) == 0);
 #endif
 		}
 		return false;
 	}
 
-	bool FileSystem::fixExtension(std::string& path, const char* extension)
-	{
-		const unsigned int MaxExtensionLength = 4;
-
-		if (hasExtension(path.data(), extension))
-			return false;
-		else {
-			const int findIndex = path.find_last_of('.');
-			if (findIndex >= 0 && path.length() - findIndex - 1 <= MaxExtensionLength) {
-				const unsigned int extLength = strnlen(extension, MaxExtensionLength);
-				const unsigned int newLength = findIndex + extLength + 1;
-				if (newLength + 1 > path.capacity())
-					path.reserve(newLength + 1);
-				path.resize(newLength);
-				path.data()[newLength] = '\0';
-
-				for (unsigned int i = 0; i < extLength; i++)
-					path[findIndex + i + 1] = extension[i];
-			} else {
-				path += ".";
-				path += extension;
-			}
-			return true;
-		}
-	}
-
-	/*! /note The function only works on Windows, it returns `0` on other platforms */
-	unsigned long FileSystem::logicalDrives()
-	{
-#ifdef _WIN32
-		return GetLogicalDrives();
-#else
-		return 0U;
-#endif
-	}
-
-	/*! /note The function only works on Windows, it returns `nullptr` on other platforms */
-	const char* FileSystem::logicalDriveStrings()
-	{
-#ifdef _WIN32
-		// maximum number of drives * length of "A:\\\0"
-		static char drivesString[26 * 4];
-		const unsigned int numCopiedChars = GetLogicalDriveStringsA(26 * 4, drivesString);
-		return (numCopiedChars > 0) ? drivesString : nullptr;
-#else
-		return nullptr;
-#endif
-	}
-
-	std::string FileSystem::currentDir()
+	String FileSystem::currentDir()
 	{
 #ifdef _WIN32
 		wchar_t buffer[MaxPathLength];
 		::GetCurrentDirectory(MaxPathLength, buffer);
-		return Utf8::FromUtf16(buffer).data();
+		return Utf8::FromUtf16(buffer);
 #else
-		std::string returnedPath(MaxPathLength, '\0');
 		::getcwd(buffer, MaxPathLength);
-		return (returnedPath = buffer);
+		return buffer;
 #endif
-
 	}
 
-	bool FileSystem::setCurrentDir(const char* path)
+	bool FileSystem::setCurrentDir(const StringView& path)
 	{
 #ifdef _WIN32
 		const int status = ::SetCurrentDirectory(Utf8::ToUtf16(path));
 		return (status != 0);
 #else
-		const int status = ::chdir(path);
+		const int status = ::chdir(String::nullTerminatedView(path).data());
 		return (status == 0);
 #endif
 	}
 
-	std::string FileSystem::homeDir()
+	String FileSystem::homeDir()
 	{
 #ifdef _WIN32
 		wchar_t buffer[MaxPathLength];
 		::SHGetFolderPath(HWND_DESKTOP, CSIDL_PROFILE, NULL, SHGFP_TYPE_CURRENT, buffer);
 		return Utf8::FromUtf16(buffer).data();
 #else
-		std::string returnedPath(MaxPathLength, '\0');
 		const char* homeEnv = getenv("HOME");
 		if (homeEnv == nullptr || strnlen(homeEnv, MaxPathLength) == 0) {
 #ifndef __EMSCRIPTEN__
 			// `getpwuid()` is not yet implemented on Emscripten
 			const struct passwd* pw = ::getpwuid(getuid());
 			if (pw)
-				return (returnedPath = pw->pw_dir);
+				return pw->pw_dir;
 			else
 #endif
 				return currentDir();
-		} else
-			return (returnedPath = homeEnv);
+		} else {
+			return homeEnv;
+		}
 #endif
 	}
 
 #ifdef __ANDROID__
-	std::string FileSystem::externalStorageDir()
+	String FileSystem::externalStorageDir()
 	{
-		std::string returnedPath(MaxPathLength);
 		const char* extStorage = getenv("EXTERNAL_STORAGE");
 
 		if (extStorage == nullptr || extStorage[0] == '\0')
-			return (returnedPath = "/scard");
-		return (returnedPath = extStorage);
+			return "/scard"_s;
+		return extStorage;
 	}
 #endif
 
-	bool FileSystem::isDirectory(const char* path)
+	bool FileSystem::isDirectory(const StringView& path)
 	{
-		if (path == nullptr)
-			return false;
+		if (path.empty()) return false;
 
 #ifdef _WIN32
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return (attrs != INVALID_FILE_ATTRIBUTES && attrs & FILE_ATTRIBUTE_DIRECTORY);
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
-			return AssetFile::tryOpenDirectory(path);
+		if (AssetFile::assetPath(nullTerminatedPath.data())) {
+			return AssetFile::tryOpenDirectory(nullTerminatedPath.data());
+		}
 #endif
 
 		struct stat sb;
-		const bool statCalled = callStat(path, sb);
+		const bool statCalled = callStat(nullTerminatedPath.data(), sb);
 		if (statCalled)
 			return (sb.st_mode & S_IFMT) == S_IFDIR;
 		return false;
 #endif
 	}
 
-	bool FileSystem::isFile(const char* path)
+	bool FileSystem::isFile(const StringView& path)
 	{
 		if (path == nullptr)
 			return false;
@@ -539,20 +494,21 @@ namespace nCine
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == 0);
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
-			return AssetFile::tryOpenFile(path);
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
+			return AssetFile::tryOpenFile(nullTerminatedPath.data());
 #endif
 
 		struct stat sb;
-		const bool statCalled = callStat(path, sb);
+		const bool statCalled = callStat(nullTerminatedPath.data(), sb);
 		if (statCalled)
 			return (sb.st_mode & S_IFMT) == S_IFREG;
 		return false;
 #endif
 	}
 
-	bool FileSystem::exists(const char* path)
+	bool FileSystem::exists(const StringView& path)
 	{
 		if (path == nullptr)
 			return false;
@@ -561,18 +517,19 @@ namespace nCine
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return !(attrs == INVALID_FILE_ATTRIBUTES && ::GetLastError() == ERROR_FILE_NOT_FOUND);
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
-			return AssetFile::tryOpen(path);
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
+			return AssetFile::tryOpen(nullTerminatedPath.data());
 #endif
 
 		struct stat sb;
-		const bool statCalled = callStat(path, sb);
+		const bool statCalled = callStat(nullTerminatedPath.data(), sb);
 		return statCalled;
 #endif
 	}
 
-	bool FileSystem::isReadable(const char* path)
+	bool FileSystem::isReadable(const StringView& path)
 	{
 		if (path == nullptr)
 			return false;
@@ -582,20 +539,21 @@ namespace nCine
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return !(attrs == INVALID_FILE_ATTRIBUTES && ::GetLastError() == ERROR_FILE_NOT_FOUND);
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
-			return AssetFile::tryOpen(path);
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
+			return AssetFile::tryOpen(nullTerminatedPath.data());
 #endif
 
 		struct stat sb;
-		const bool statCalled = callStat(path, sb);
+		const bool statCalled = callStat(nullTerminatedPath.data(), sb);
 		if (statCalled)
 			return (sb.st_mode & S_IRUSR);
 		return false;
 #endif
 	}
 
-	bool FileSystem::isWritable(const char* path)
+	bool FileSystem::isWritable(const StringView& path)
 	{
 		if (path == nullptr)
 			return false;
@@ -604,20 +562,21 @@ namespace nCine
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_READONLY) == 0);
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
 
 		struct stat sb;
-		const bool statCalled = callStat(path, sb);
+		const bool statCalled = callStat(nullTerminatedPath.data(), sb);
 		if (statCalled)
 			return (sb.st_mode & S_IWUSR);
 		return false;
 #endif
 	}
 
-	bool FileSystem::isExecutable(const char* path)
+	bool FileSystem::isExecutable(const StringView& path)
 	{
 		if (path == nullptr)
 			return false;
@@ -630,21 +589,22 @@ namespace nCine
 			return true;
 		// Using some of the Windows executable extensions to detect executable files
 		else if (attrs != INVALID_FILE_ATTRIBUTES &&
-				 (hasExtension(path, "exe") || hasExtension(path, "bat") || hasExtension(path, "com")))
+				 (hasExtension(path, "exe"_s) || hasExtension(path, "bat"_s) || hasExtension(path, "com"_s)))
 			return true;
 		else
 			return false;
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
-			return AssetFile::tryOpenDirectory(path);
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
+			return AssetFile::tryOpenDirectory(nullTerminatedPath.data());
 #endif
 
-		return (::access(path, X_OK) == 0);
+		return (::access(nullTerminatedPath.data(), X_OK) == 0);
 #endif
 	}
 
-	bool FileSystem::isReadableFile(const char* path)
+	bool FileSystem::isReadableFile(const StringView& path)
 	{
 		if (path == nullptr)
 			return false;
@@ -653,20 +613,21 @@ namespace nCine
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == 0);
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
-			return AssetFile::tryOpenFile(path);
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
+			return AssetFile::tryOpenFile(nullTerminatedPath.data());
 #endif
 
 		struct stat sb;
-		const bool statCalled = callStat(path, sb);
+		const bool statCalled = callStat(nullTerminatedPath.data(), sb);
 		if (statCalled)
 			return (sb.st_mode & S_IFMT) == S_IFREG && (sb.st_mode & S_IRUSR);
 #endif
 		return false;
 	}
 
-	bool FileSystem::isWritableFile(const char* path)
+	bool FileSystem::isWritableFile(const StringView& path)
 	{
 		if (path == nullptr)
 			return false;
@@ -677,20 +638,21 @@ namespace nCine
 				(attrs & FILE_ATTRIBUTE_READONLY) == 0 &&
 				(attrs & FILE_ATTRIBUTE_DIRECTORY) == 0);
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
 
 		struct stat sb;
-		const bool statCalled = callStat(path, sb);
+		const bool statCalled = callStat(nullTerminatedPath.data(), sb);
 		if (statCalled)
 			return (sb.st_mode & S_IFMT) == S_IFREG && (sb.st_mode & S_IWUSR);
 #endif
 		return false;
 	}
 
-	bool FileSystem::isHidden(const char* path)
+	bool FileSystem::isHidden(const StringView& path)
 	{
 		if (path == nullptr)
 			return false;
@@ -699,18 +661,19 @@ namespace nCine
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_HIDDEN));
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
 
-		strncpy(buffer, path, MaxPathLength - 1);
+		strncpy(buffer, path.data(), std::min((size_t)MaxPathLength - 1, path.size()));
 		const char* baseName = ::basename(buffer);
 		return (baseName && baseName[0] == '.');
 #endif
 	}
 
-	bool FileSystem::setHidden(const char* path, bool hidden)
+	bool FileSystem::setHidden(const StringView& path, bool hidden)
 	{
 		if (path == nullptr)
 			return false;
@@ -731,34 +694,33 @@ namespace nCine
 			return (status != 0);
 		}
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
 
-		strncpy(buffer, path, MaxPathLength - 1);
+		strncpy(buffer, nullTerminatedPath.data(), MaxPathLength - 1);
 		const char* baseName = ::basename(buffer);
 		if (hidden && baseName && baseName[0] != '.') {
-			std::string newPath(MaxPathLength, '\0');
-			newPath = joinPath(dirName(path), ".");
-			newPath.append(baseName);
-			const int status = ::rename(path, newPath.data());
+			String newPath = joinPath(dirName(nullTerminatedPath), "."_s);
+			newPath += baseName;
+			const int status = ::rename(nullTerminatedPath.data(), newPath.data());
 			return (status == 0);
 		} else if (hidden == false && baseName && baseName[0] == '.') {
 			int numDots = 0;
 			while (baseName[numDots] == '.')
 				numDots++;
 
-			std::string newPath(MaxPathLength, '\0');
-			newPath = joinPath(dirName(path), &buffer[numDots]);
-			const int status = ::rename(path, newPath.data());
+			String newPath = joinPath(dirName(nullTerminatedPath), &buffer[numDots]);
+			const int status = ::rename(nullTerminatedPath.data(), newPath.data());
 			return (status == 0);
 		}
 #endif
 		return false;
 	}
 
-	bool FileSystem::createDir(const char* path)
+	bool FileSystem::createDir(const StringView& path)
 	{
 		if (path == nullptr)
 			return false;
@@ -767,17 +729,18 @@ namespace nCine
 		const int status = ::CreateDirectory(Utf8::ToUtf16(path), NULL);
 		return (status != 0);
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
 
-		const int status = ::mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		const int status = ::mkdir(nullTerminatedPath.data(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 		return (status == 0);
 #endif
 	}
 
-	bool FileSystem::deleteEmptyDir(const char* path)
+	bool FileSystem::deleteEmptyDir(const StringView& path)
 	{
 		if (path == nullptr)
 			return false;
@@ -786,17 +749,18 @@ namespace nCine
 		const int status = ::RemoveDirectory(Utf8::ToUtf16(path));
 		return (status != 0);
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
 
-		const int status = ::rmdir(path);
+		const int status = ::rmdir(nullTerminatedPath.data());
 		return (status == 0);
 #endif
 	}
 
-	bool FileSystem::deleteFile(const char* path)
+	bool FileSystem::deleteFile(const StringView& path)
 	{
 		if (path == nullptr)
 			return false;
@@ -805,17 +769,18 @@ namespace nCine
 		const int status = ::DeleteFile(Utf8::ToUtf16(path));
 		return (status != 0);
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
 
-		const int status = ::unlink(path);
+		const int status = ::unlink(nullTerminatedPath.data());
 		return (status == 0);
 #endif
 	}
 
-	bool FileSystem::rename(const char* oldPath, const char* newPath)
+	bool FileSystem::rename(const StringView& oldPath, const StringView& newPath)
 	{
 		if (oldPath == nullptr || newPath == nullptr)
 			return false;
@@ -824,17 +789,19 @@ namespace nCine
 		const int status = ::MoveFile(Utf8::ToUtf16(oldPath), Utf8::ToUtf16(newPath));
 		return (status != 0);
 #else
+		auto nullTerminatedOldPath = String::nullTerminatedView(oldPath);
+		auto nullTerminatedNewPath = String::nullTerminatedView(newPath);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(oldPath))
+		if (AssetFile::assetPath(nullTerminatedOldPath.data()))
 			return false;
 #endif
 
-		const int status = ::rename(oldPath, newPath);
+		const int status = ::rename(nullTerminatedOldPath.data(), nullTerminatedNewPath.data());
 		return (status == 0);
 #endif
 	}
 
-	bool FileSystem::copy(const char* oldPath, const char* newPath)
+	bool FileSystem::copy(const StringView& oldPath, const StringView& newPath)
 	{
 		if (oldPath == nullptr || newPath == nullptr)
 			return false;
@@ -843,8 +810,10 @@ namespace nCine
 		const int status = ::CopyFile(Utf8::ToUtf16(oldPath), Utf8::ToUtf16(newPath), TRUE);
 		return (status != 0);
 #elif defined(__linux__)
+		auto nullTerminatedOldPath = String::nullTerminatedView(oldPath);
+		auto nullTerminatedNewPath = String::nullTerminatedView(newPath);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(oldPath))
+		if (AssetFile::assetPath(nullTerminatedOldPath.data()))
 			return false;
 #endif
 
@@ -852,11 +821,11 @@ namespace nCine
 		off_t bytes = 0;
 		struct stat sb;
 
-		if ((source = open(oldPath, O_RDONLY)) == -1)
+		if ((source = open(nullTerminatedOldPath.data(), O_RDONLY)) == -1)
 			return false;
 
 		fstat(source, &sb);
-		if ((dest = creat(newPath, sb.st_mode)) == -1) {
+		if ((dest = creat(nullTerminatedNewPath.data(), sb.st_mode)) == -1) {
 			close(source);
 			return false;
 		}
@@ -875,11 +844,11 @@ namespace nCine
 		size_t size = 0;
 		struct stat sb;
 
-		if ((source = open(oldPath, O_RDONLY)) == -1)
+		if ((source = open(String::nullTerminatedView(oldPath).data(), O_RDONLY)) == -1)
 			return false;
 
 		fstat(source, &sb);
-		if ((dest = open(newPath, O_WRONLY | O_CREAT, sb.st_mode)) == -1) {
+		if ((dest = open(String::nullTerminatedView(newPath).data(), O_WRONLY | O_CREAT, sb.st_mode)) == -1) {
 			close(source);
 			return false;
 		}
@@ -894,7 +863,7 @@ namespace nCine
 #endif
 	}
 
-	long int FileSystem::fileSize(const char* path)
+	long int FileSystem::fileSize(const StringView& path)
 	{
 		if (path == nullptr)
 			return -1;
@@ -907,13 +876,14 @@ namespace nCine
 		const int closed = CloseHandle(hFile);
 		return (status != 0 && closed != 0) ? static_cast<long int>(fileSize.QuadPart) : -1;
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
-			return AssetFile::length(path);
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
+			return AssetFile::length(nullTerminatedPath.data());
 #endif
 
 		struct stat sb;
-		const bool statCalled = callStat(path, sb);
+		const bool statCalled = callStat(nullTerminatedPath.data(), sb);
 		if (statCalled == false)
 			return -1;
 
@@ -921,7 +891,7 @@ namespace nCine
 #endif
 	}
 
-	FileSystem::FileDate FileSystem::lastModificationTime(const char* path)
+	FileSystem::FileDate FileSystem::lastModificationTime(const StringView& path)
 	{
 		FileDate date = {};
 #ifdef _WIN32
@@ -937,13 +907,14 @@ namespace nCine
 		}
 		const int closed = CloseHandle(hFile);
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return date;
 #endif
 
 		struct stat sb;
-		const bool statCalled = callStat(path, sb);
+		const bool statCalled = callStat(nullTerminatedPath.data(), sb);
 		if (statCalled)
 			date = nativeTimeToFileDate(&sb.st_mtime);
 #endif
@@ -951,7 +922,7 @@ namespace nCine
 		return date;
 	}
 
-	FileSystem::FileDate FileSystem::lastAccessTime(const char* path)
+	FileSystem::FileDate FileSystem::lastAccessTime(const StringView& path)
 	{
 		FileDate date = { };
 #ifdef _WIN32
@@ -967,13 +938,14 @@ namespace nCine
 		}
 		const int closed = CloseHandle(hFile);
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return date;
 #endif
 
 		struct stat sb;
-		const bool statCalled = callStat(path, sb);
+		const bool statCalled = callStat(nullTerminatedPath.data(), sb);
 		if (statCalled)
 			date = nativeTimeToFileDate(&sb.st_atime);
 #endif
@@ -981,7 +953,7 @@ namespace nCine
 		return date;
 	}
 
-	int FileSystem::permissions(const char* path)
+	int FileSystem::permissions(const StringView& path)
 	{
 		if (path == nullptr)
 			return 0;
@@ -994,17 +966,18 @@ namespace nCine
 			mode += Permission::WRITE;
 		return mode;
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path)) {
-			if (AssetFile::tryOpenDirectory(path))
+		if (AssetFile::assetPath(nullTerminatedPath.data())) {
+			if (AssetFile::tryOpenDirectory(nullTerminatedPath.data()))
 				return (Permission::READ + Permission::EXECUTE);
-			else if (AssetFile::tryOpenFile(path))
+			else if (AssetFile::tryOpenFile(nullTerminatedPath.data()))
 				return Permission::READ;
 		}
 #endif
 
 		struct stat sb;
-		const bool statCalled = callStat(path, sb);
+		const bool statCalled = callStat(nullTerminatedPath.data(), sb);
 		if (statCalled == false)
 			return 0;
 
@@ -1012,7 +985,7 @@ namespace nCine
 #endif
 	}
 
-	bool FileSystem::changePermissions(const char* path, int mode)
+	bool FileSystem::changePermissions(const StringView& path, int mode)
 	{
 		if (path == nullptr)
 			return false;
@@ -1036,13 +1009,14 @@ namespace nCine
 		}
 		return false;
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
 
 		struct stat sb;
-		const bool statCalled = callStat(path, sb);
+		const bool statCalled = callStat(nullTerminatedPath.data(), sb);
 		if (statCalled == false)
 			return false;
 
@@ -1051,12 +1025,12 @@ namespace nCine
 		const int complementMode = EXECUTE + WRITE + READ - mode;
 		newMode = removePermissionsFromCurrent(newMode, complementMode);
 
-		const int status = chmod(path, newMode);
+		const int status = chmod(nullTerminatedPath.data(), newMode);
 		return (status == 0);
 #endif
 	}
 
-	bool FileSystem::addPermissions(const char* path, int mode)
+	bool FileSystem::addPermissions(const StringView& path, int mode)
 	{
 		if (path == nullptr)
 			return false;
@@ -1074,24 +1048,25 @@ namespace nCine
 		}
 		return false;
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
 
 		struct stat sb;
-		const bool statCalled = callStat(path, sb);
+		const bool statCalled = callStat(nullTerminatedPath.data(), sb);
 		if (statCalled == false)
 			return false;
 
 		const unsigned int currentMode = sb.st_mode;
 		const unsigned int newMode = addPermissionsToCurrent(currentMode, mode);
-		const int status = chmod(path, newMode);
+		const int status = chmod(nullTerminatedPath.data(), newMode);
 		return (status == 0);
 #endif
 	}
 
-	bool FileSystem::removePermissions(const char* path, int mode)
+	bool FileSystem::removePermissions(const StringView& path, int mode)
 	{
 		if (path == nullptr)
 			return false;
@@ -1109,24 +1084,25 @@ namespace nCine
 		}
 		return false;
 #else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef __ANDROID__
-		if (AssetFile::assetPath(path))
+		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
 
 		struct stat sb;
-		const bool statCalled = callStat(path, sb);
+		const bool statCalled = callStat(nullTerminatedPath.data(), sb);
 		if (statCalled == false)
 			return false;
 
 		const unsigned int currentMode = sb.st_mode;
 		const unsigned int newMode = removePermissionsFromCurrent(currentMode, mode);
-		const int status = chmod(path, newMode);
+		const int status = chmod(nullTerminatedPath.data(), newMode);
 		return (status == 0);
 #endif
 	}
 
-	const std::string& FileSystem::savePath()
+	const String& FileSystem::savePath()
 	{
 		if (savePath_.empty())
 			initSavePath();

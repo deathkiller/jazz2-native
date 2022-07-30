@@ -2,6 +2,10 @@
 
 #include "../Base/Object.h"
 
+#include <Containers/StringView.h>
+
+using namespace Death::Containers;
+
 namespace nCine
 {
 	class IAudioLoader;
@@ -25,7 +29,7 @@ namespace nCine
 		/// A constructor creating a buffer from memory
 		AudioBuffer(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// A constructor creating a buffer from a file
-		explicit AudioBuffer(const char* filename);
+		explicit AudioBuffer(const StringView& filename);
 		~AudioBuffer() override;
 
 		/// Move constructor
@@ -34,10 +38,10 @@ namespace nCine
 		AudioBuffer& operator=(AudioBuffer&& other);
 
 		/// Initializes an empty buffer with the specified format and frequency
-		void init(const char* name, Format format, int frequency);
+		void init(Format format, int frequency);
 
 		bool loadFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize);
-		bool loadFromFile(const char* filename);
+		bool loadFromFile(const StringView& filename);
 		/// Loads samples in raw PCM format from a memory buffer
 		bool loadFromSamples(const unsigned char* bufferPtr, unsigned long int bufferSize);
 
