@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstring>
 
+#include <Containers/Pair.h>
 #include <Containers/String.h>
 
 using namespace Death::Containers;
@@ -260,6 +261,16 @@ namespace nCine
 		inline hash_t fnv1a(unsigned char oneByte, hash_t hash = Seed) const
 		{
 			return (oneByte ^ hash) * Prime;
+		}
+	};
+
+	template <class F, class S>
+	class FNV1aHashFunc<Pair<F, S>>
+	{
+	public:
+		hash_t operator()(const Pair<F, S>& pair) const
+		{
+			return FNV1aHashFunc<F>()(pair.first()) ^ FNV1aHashFunc<S>()(pair.second());
 		}
 	};
 

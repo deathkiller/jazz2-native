@@ -11,6 +11,20 @@ namespace Jazz2::Actors::Environment
 	{
 	}
 
+	void Checkpoint::Preload(const ActorActivationDetails& details)
+	{
+		uint8_t theme = details.Params[0];
+		switch (theme) {
+			case 0:
+			default:
+				PreloadMetadataAsync("Object/Checkpoint"_s);
+				break;
+			case 1: // Xmas
+				PreloadMetadataAsync("Object/CheckpointXmas"_s);
+				break;
+		}
+	}
+
 	Task<bool> Checkpoint::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		SetState(ActorFlags::CanBeFrozen, false);

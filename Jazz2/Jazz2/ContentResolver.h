@@ -12,6 +12,7 @@
 #include "../nCine/IO/FileSystem.h"
 #include "../nCine/Base/HashMap.h"
 
+#include <Containers/Pair.h>
 #include <Containers/SmallVector.h>
 
 using namespace Death::Containers;
@@ -161,7 +162,7 @@ namespace Jazz2
 
 		void PreloadMetadataAsync(const StringView& path);
 		Metadata* RequestMetadata(const StringView& path);
-		GenericGraphicResource* RequestGraphics(const StringView& path);
+		GenericGraphicResource* RequestGraphics(const StringView& path, uint16_t paletteOffset);
 
 		std::unique_ptr<Tiles::TileSet> RequestTileSet(const StringView& path, bool applyPalette, Color* customPalette);
 		bool LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty);
@@ -177,9 +178,11 @@ namespace Jazz2
 		/// Deleted assignment operator
 		ContentResolver& operator=(const ContentResolver&) = delete;
 
+		void RecreateGemPalettes();
+
 		bool _isLoading;
 		uint32_t _palettes[PaletteCount * ColorsPerPalette];
 		HashMap<String, std::unique_ptr<Metadata>> _cachedMetadata;
-		HashMap<String, std::unique_ptr<GenericGraphicResource>> _cachedGraphics;
+		HashMap<Pair<String, uint16_t>, std::unique_ptr<GenericGraphicResource>> _cachedGraphics;
 	};
 }

@@ -15,11 +15,6 @@ namespace nCine {
 	IInputManager::Cursor IInputManager::cursor_ = IInputManager::Cursor::Arrow;
 	JoyMapping IInputManager::joyMapping_;
 
-	// From `XInput.h` in DirectX SDK
-	const float IInputManager::LeftStickDeadZone = 7849 / 32767.0f;
-	const float IInputManager::RightStickDeadZone = 8689 / 32767.0f;
-	const float IInputManager::TriggerDeadZone = 30 / 32767.0f;
-
 	///////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
@@ -46,7 +41,7 @@ namespace nCine {
 		return joyMapping_.deadZoneNormalize(joyVector, deadZoneValue);
 	}
 
-	void IInputManager::addJoyMappingsFromFile(const char* filename)
+	void IInputManager::addJoyMappingsFromFile(const StringView& filename)
 	{
 		joyMapping_.addMappingsFromFile(filename);
 	}

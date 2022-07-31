@@ -59,7 +59,7 @@ namespace nCine {
 
 	void ScreenViewport::update()
 	{
-		for (int i = chain_.size() - 1; i >= 0; i--) {
+		for (int i = (int)chain_.size() - 1; i >= 0; i--) {
 			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::UpdatedBit))
 				chain_[i]->update();
 		}
@@ -68,7 +68,7 @@ namespace nCine {
 
 	void ScreenViewport::visit()
 	{
-		for (int i = chain_.size() - 1; i >= 0; i--) {
+		for (int i = (int)chain_.size() - 1; i >= 0; i--) {
 			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::VisitedBit))
 				chain_[i]->visit();
 		}
@@ -80,7 +80,7 @@ namespace nCine {
 		// Reset all rendering statistics
 		RenderStatistics::reset();
 
-		for (int i = chain_.size() - 1; i >= 0; i--) {
+		for (int i = (int)chain_.size() - 1; i >= 0; i--) {
 			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::CommittedBit))
 				chain_[i]->sortAndCommitQueue();
 		}

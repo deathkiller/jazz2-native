@@ -19,6 +19,13 @@ namespace Jazz2::Actors::Enemies
 	{
 	}
 
+	void EnemyBase::OnUpdate(float timeMult)
+	{
+		ActorBase::OnUpdate(timeMult);
+
+		HandleBlinking(timeMult);
+	}
+
 	void EnemyBase::SetHealthByDifficulty(int health)
 	{
 		switch (_levelHandler->Difficulty()) {
@@ -197,5 +204,10 @@ namespace Jazz2::Actors::Enemies
 
 			tilemap->CreateParticleDebris(res, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), force, _renderer.CurrentFrame, IsFacingLeft());
 		}
+	}
+
+	void EnemyBase::HandleBlinking(float timeMult)
+	{
+		// TODO: Blinking
 	}
 }

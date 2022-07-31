@@ -2,6 +2,10 @@
 
 #include "InputEvents.h"
 
+#include <Containers/StringView.h>
+
+using namespace Death::Containers;
+
 namespace nCine
 {
 	class IInputEventHandler;
@@ -28,9 +32,9 @@ namespace nCine
 		static const short int MaxAxisValue = 32767;
 
 		// From `XInput.h` in DirectX SDK
-		static const float LeftStickDeadZone;
-		static const float RightStickDeadZone;
-		static const float TriggerDeadZone;
+		static constexpr float LeftStickDeadZone = 7849 / 32767.0f;
+		static constexpr float RightStickDeadZone = 8689 / 32767.0f;
+		static constexpr float TriggerDeadZone = 30 / 32767.0f;
 
 		IInputManager() {}
 		virtual ~IInputManager() {}
@@ -69,7 +73,7 @@ namespace nCine
 		void deadZoneNormalize(Vector2f& joyVector, float deadZoneValue) const;
 
 		/// Adds joystick mapping configurations from a text file
-		void addJoyMappingsFromFile(const char* filename);
+		void addJoyMappingsFromFile(const StringView& filename);
 		/// Adds joystick mapping configurations from a strings array terminated by a `nullptr`
 		void addJoyMappingsFromStrings(const char** mappingStrings);
 		/// Returns the current number of valid joystick mappings

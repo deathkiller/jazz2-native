@@ -39,10 +39,9 @@ namespace Jazz2::Actors::Environment
 
 	bool Eva::OnHandleCollision(ActorBase* other)
 	{
-		// TODO
-		/*if (auto player = dynamic_cast<Player*>(other)) {
-			if (player->PlayerType == PlayerType::Frog && player->DisableControllable(160.0f)) {
-				SetTransition(AnimState::TransitionAttack, false, [this]() {
+		if (auto player = dynamic_cast<Player*>(other)) {
+			if (player->GetPlayerType() == PlayerType::Frog && player->DisableControllable(160.0f)) {
+				SetTransition(AnimState::TransitionAttack, false, [this, player]() {
 					player->MorphRevent();
 
 					PlaySfx("Kiss"_s, 0.8f);
@@ -50,7 +49,7 @@ namespace Jazz2::Actors::Environment
 				});
 			}
 			return true;
-		}*/
+		}
 
 		return ActorBase::OnHandleCollision(other);
 	}

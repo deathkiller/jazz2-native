@@ -1,6 +1,7 @@
 ﻿#include "CollectibleBase.h"
 #include "../../LevelInitialization.h"
 #include "../Player.h"
+#include "../Explosion.h"
 #include "../Weapons/ShotBase.h"
 #include "../Enemies/TurtleShell.h"
 
@@ -67,9 +68,7 @@ namespace Jazz2::Actors::Collectibles
 		} else if (_timeLeft > 0.0f) {
 			_timeLeft -= timeMult;
 			if (_timeLeft <= 0.0f) {
-				// TODO: exp
-				//Explosion.Create(_levelHandler, Transform.Pos, Explosion.Generator);
-
+				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()), Explosion::Type::Generator);
 				DecreaseHealth(INT32_MAX);
 			}
 		}
@@ -117,8 +116,7 @@ namespace Jazz2::Actors::Collectibles
 	{
 		player->AddScore(_scoreValue);
 
-		// TODO: explosions
-		//Explosion.Create(_levelHandler, _pos, Explosion.Generator);
+		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()), Explosion::Type::Generator);
 
 		DecreaseHealth(INT32_MAX);
 	}

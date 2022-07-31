@@ -1,6 +1,7 @@
 ﻿#include "BouncerShot.h"
 #include "../../LevelInitialization.h"
 #include "../Player.h"
+#include "../Explosion.h"
 
 #include "../../../nCine/Base/FrameTimer.h"
 #include "../../../nCine/Base/Random.h"
@@ -87,7 +88,6 @@ namespace Jazz2::Actors::Weapons
 
 		if (!_fired) {
 			_fired = true;
-
 			MoveInstantly(_gunspotPos, MoveType::Absolute, true);
 			_renderer.setDrawEnabled(true);
 		}
@@ -105,8 +105,7 @@ namespace Jazz2::Actors::Weapons
 
 	bool BouncerShot::OnPerish(ActorBase* collider)
 	{
-		// TODO
-		//Explosion.Create(levelHandler, Transform.Pos + Speed, Explosion.SmallDark);
+		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer()), Explosion::Type::SmallDark);
 
 		return ShotBase::OnPerish(collider);
 	}

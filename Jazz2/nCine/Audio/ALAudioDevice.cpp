@@ -188,7 +188,7 @@ namespace nCine
 		}
 	}
 
-	void ALAudioDevice::updateListener(Vector3f position, Vector3f velocity)
+	void ALAudioDevice::updateListener(const Vector3f& position, const Vector3f& velocity)
 	{
 		alListener3f(AL_POSITION, position.X * LengthToPhysical, position.Y * -LengthToPhysical, position.Z * -LengthToPhysical);
 		alListener3f(AL_VELOCITY, velocity.X * VelocityToPhysical, velocity.Y * -VelocityToPhysical, velocity.Z * -VelocityToPhysical);

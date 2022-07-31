@@ -113,12 +113,17 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/GemCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/OneUpCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bat.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Dragonfly.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/EnemyBase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/LabRat.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/MadderHatter.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Sucker.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/SuckerFloat.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Turtle.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/TurtleShell.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Witch.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/AmbientSound.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Bomb.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/BonusWarp.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Checkpoint.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/EndOfLevel.cpp
@@ -126,13 +131,19 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Moth.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Spring.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/SteamNote.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Explosion.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Lighting/FlickerLight.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Lighting/PulsatingRadialLight.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Lighting/StaticRadialLight.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/Bridge.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/CrateContainer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/GenericContainer.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/Pole.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/TriggerCrate.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BlasterShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BouncerShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ShotBase.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ToasterShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Collisions/DynamicTree.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Collisions/DynamicTreeBroadPhase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventMap.cpp

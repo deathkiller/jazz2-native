@@ -103,7 +103,6 @@ namespace Jazz2
 
 	Metadata* ContentResolver::RequestMetadata(const StringView& path)
 	{
-		// TODO: add locks?
 		auto it = _cachedMetadata.find(String::nullTerminatedView(path));
 		if (it != _cachedMetadata.end()) {
 			// Already loaded - Mark as referenced
@@ -114,259 +113,267 @@ namespace Jazz2
 			}
 
 			return it->second.get();
-		} else {
-			// Try to load it
-			// TODO
-			auto fileHandle = IFileStream::createFileHandle(fs::joinPath({ "Content"_s, "Metadata"_s, path + ".res"_s }));
-			fileHandle->Open(FileAccessMode::Read);
-			auto fileSize = fileHandle->GetSize();
-			if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
-				// 64 MB file size limit
-				return nullptr;
+		}
+
+		// Try to load it
+		auto fileHandle = IFileStream::createFileHandle(fs::joinPath({ "Content"_s, "Metadata"_s, path + ".res"_s }));
+		fileHandle->Open(FileAccessMode::Read);
+		auto fileSize = fileHandle->GetSize();
+		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
+			// 64 MB file size limit
+			return nullptr;
+		}
+
+		auto buffer = std::make_unique<char[]>(fileSize + 1);
+		fileHandle->Read(buffer.get(), fileSize);
+		buffer[fileSize] = '\0';
+
+		std::unique_ptr<Metadata> metadata = std::make_unique<Metadata>();
+		metadata->Flags |= MetadataFlags::Referenced;
+
+		Document document;
+		if (!document.ParseInsitu(buffer.get()).HasParseError() && document.IsObject()) {
+			const auto& boundingBoxItem = document.FindMember("BoundingBox");
+			if (boundingBoxItem != document.MemberEnd() && boundingBoxItem->value.IsArray() && boundingBoxItem->value.Size() >= 2) {
+				metadata->BoundingBox = Vector2i(boundingBoxItem->value[0].GetInt(), boundingBoxItem->value[1].GetInt());
+			} else {
+				metadata->BoundingBox = Vector2i(InvalidValue, InvalidValue);
 			}
 
-			auto buffer = std::make_unique<char[]>(fileSize + 1);
-			fileHandle->Read(buffer.get(), fileSize);
-			buffer[fileSize] = '\0';
+			const auto& animations_ = document.FindMember("Animations");
+			if (animations_ != document.MemberEnd() && animations_->value.IsObject()) {
+				auto& animations = animations_->value;
 
-			std::unique_ptr<Metadata> metadata = std::make_unique<Metadata>();
-			metadata->Flags |= MetadataFlags::Referenced;
+				metadata->Graphics.reserve(animations.MemberCount());
 
-			Document document;
-			if (!document.ParseInsitu(buffer.get()).HasParseError() && document.IsObject()) {
-				const auto& boundingBoxItem = document.FindMember("BoundingBox");
-				if (boundingBoxItem != document.MemberEnd() && boundingBoxItem->value.IsArray() && boundingBoxItem->value.Size() >= 2) {
-					metadata->BoundingBox = Vector2i(boundingBoxItem->value[0].GetInt(), boundingBoxItem->value[1].GetInt());
-				} else {
-					metadata->BoundingBox = Vector2i(InvalidValue, InvalidValue);
-				}
-
-				const auto& animations_ = document.FindMember("Animations");
-				if (animations_ != document.MemberEnd() && animations_->value.IsObject()) {
-					auto& animations = animations_->value;
-
-					metadata->Graphics.reserve(animations.MemberCount());
-
-					for (auto it2 = animations.MemberBegin(); it2 != animations.MemberEnd(); ++it2) {
-						if (!it2->name.IsString() || !it2->value.IsObject()) {
-							continue;
-						}
-
-						const auto& key = it2->name.GetString();
-						const auto& item = it2->value;
-						const auto& pathItem = item.FindMember("Path");
-						if (key[0] == '\0' || pathItem == item.MemberEnd() || !pathItem->value.IsString()) {
-							continue;
-						}
-
-						const auto& path = pathItem->value.GetString();
-						if (path == nullptr || path[0] == '\0') {
-							continue;
-						}
-
-						GenericGraphicResource* graphicsBase = RequestGraphics(path);
-						if (graphicsBase == nullptr) {
-							continue;
-						}
-
-						GraphicResource graphics;
-						graphics.Base = graphicsBase;
-						graphics.FrameDuration = graphicsBase->FrameDuration;
-						graphics.FrameCount = graphicsBase->FrameCount;
-						graphics.LoopMode = AnimationLoopMode::Loop;
-
-						const auto& statesItem = item.FindMember("States");
-						if (statesItem != item.MemberEnd() && statesItem->value.IsArray()) {
-							for (SizeType i = 0; i < statesItem->value.Size(); i++) {
-								const auto& state = statesItem->value[i];
-								if (!state.IsInt()) {
-									continue;
-								}
-
-								graphics.State.push_back((AnimState)state.GetInt());
-							}
-						}
-
-						const auto& frameOffsetItem = item.FindMember("FrameOffset");
-						if (frameOffsetItem != item.MemberEnd() && frameOffsetItem->value.IsInt()) {
-							graphics.FrameOffset = frameOffsetItem->value.GetInt();
-						} else {
-							graphics.FrameOffset = 0;
-						}
-
-						const auto& frameCountItem = item.FindMember("FrameCount");
-						if (frameCountItem != item.MemberEnd() && frameCountItem->value.IsInt()) {
-							graphics.FrameCount = frameCountItem->value.GetInt();
-						} else {
-							graphics.FrameCount -= graphics.FrameOffset;
-						}
-
-						const auto& frameRateItem = item.FindMember("FrameRate");
-						if (frameRateItem != item.MemberEnd() && frameRateItem->value.IsInt()) {
-							int frameRate = frameRateItem->value.GetInt();
-							graphics.FrameDuration = (frameRate <= 0 ? -1.0f : (1.0f / frameRate) * 5.0f);
-						}
-
-						const auto& flagsItem = item.FindMember("Flags");
-						if (flagsItem != item.MemberEnd() && flagsItem->value.IsInt()) {
-							int flags = flagsItem->value.GetInt();
-							if ((flags & 0x01) == 0x01) {
-								graphics.LoopMode = AnimationLoopMode::Once;
-							}
-						}
-
-						// If no bounding box is provided, use the first sprite
-						if (metadata->BoundingBox == Vector2i(InvalidValue, InvalidValue)) {
-							// TODO: Remove this bounding box reduction
-							metadata->BoundingBox = graphicsBase->FrameDimensions - Vector2i(2, 2);
-						}
-
-						metadata->Graphics.emplace(key, std::move(graphics));
+				for (auto it2 = animations.MemberBegin(); it2 != animations.MemberEnd(); ++it2) {
+					if (!it2->name.IsString() || !it2->value.IsObject()) {
+						continue;
 					}
-				}
 
-				const auto& sounds_ = document.FindMember("Sounds");
-				if (sounds_ != document.MemberEnd() && sounds_->value.IsObject()) {
-					auto& sounds = sounds_->value;
+					const auto& key = it2->name.GetString();
+					const auto& item = it2->value;
+					const auto& pathItem = item.FindMember("Path");
+					if (key[0] == '\0' || pathItem == item.MemberEnd() || !pathItem->value.IsString()) {
+						continue;
+					}
 
-					metadata->Sounds.reserve(sounds.MemberCount());
+					const auto& path = pathItem->value.GetString();
+					if (path == nullptr || path[0] == '\0') {
+						continue;
+					}
 
-					for (auto it2 = sounds.MemberBegin(); it2 != sounds.MemberEnd(); ++it2) {
-						if (!it2->name.IsString() || !it2->value.IsObject()) {
-							continue;
+					GraphicResource graphics;
+					graphics.LoopMode = AnimationLoopMode::Loop;
+
+					//bool keepIndexed = false;
+
+					const auto& flagsItem = item.FindMember("Flags");
+					if (flagsItem != item.MemberEnd() && flagsItem->value.IsInt()) {
+						int flags = flagsItem->value.GetInt();
+						if ((flags & 0x01) == 0x01) {
+							graphics.LoopMode = AnimationLoopMode::Once;
 						}
+						//if ((flags & 0x02) == 0x02) {
+						//	keepIndexed = true;
+						//}
+					}
 
-						const auto& key = it2->name.GetString();
-						const auto& item = it2->value;
-						const auto& pathsItem = item.FindMember("Paths");
-						if (key[0] == '\0' || pathsItem == item.MemberEnd() || !pathsItem->value.IsArray() || pathsItem->value.Empty()) {
-							continue;
-						}
+					uint16_t paletteOffset = 0;
+					// TODO: Implement true indexed sprites
+					const auto& paletteOffsetItem = item.FindMember("PaletteOffset");
+					if (paletteOffsetItem != item.MemberEnd() && paletteOffsetItem->value.IsInt()) {
+						paletteOffset = (uint16_t)paletteOffsetItem->value.GetInt();
+					}
 
-						SoundResource sound;
+					graphics.Base = RequestGraphics(path, paletteOffset);
+					if (graphics.Base == nullptr) {
+						continue;
+					}
 
-						for (int i = 0; i < pathsItem->value.Size(); i++) {
-							const auto& pathItem = pathsItem->value[i];
-							const auto& path = pathItem.GetString();
-							if (path[0] == '\0') {
+					const auto& frameOffsetItem = item.FindMember("FrameOffset");
+					if (frameOffsetItem != item.MemberEnd() && frameOffsetItem->value.IsInt()) {
+						graphics.FrameOffset = frameOffsetItem->value.GetInt();
+					} else {
+						graphics.FrameOffset = 0;
+					}
+
+					graphics.FrameDuration = graphics.Base->FrameDuration;
+					graphics.FrameCount = graphics.Base->FrameCount;
+
+					const auto& frameCountItem = item.FindMember("FrameCount");
+					if (frameCountItem != item.MemberEnd() && frameCountItem->value.IsInt()) {
+						graphics.FrameCount = frameCountItem->value.GetInt();
+					} else {
+						graphics.FrameCount -= graphics.FrameOffset;
+					}
+
+					const auto& frameRateItem = item.FindMember("FrameRate");
+					if (frameRateItem != item.MemberEnd() && frameRateItem->value.IsInt()) {
+						int frameRate = frameRateItem->value.GetInt();
+						graphics.FrameDuration = (frameRate <= 0 ? -1.0f : (1.0f / frameRate) * 5.0f);
+					}
+
+					const auto& statesItem = item.FindMember("States");
+					if (statesItem != item.MemberEnd() && statesItem->value.IsArray()) {
+						for (SizeType i = 0; i < statesItem->value.Size(); i++) {
+							const auto& state = statesItem->value[i];
+							if (!state.IsInt()) {
 								continue;
 							}
 
-							sound.Buffers.emplace_back(std::make_unique<AudioBuffer>(fs::joinPath({ "Content"_s, "Animations"_s, path })));
-						}
-
-						if (!sound.Buffers.empty()) {
-							metadata->Sounds.emplace(key, std::move(sound));
+							graphics.State.push_back((AnimState)state.GetInt());
 						}
 					}
+
+					// If no bounding box is provided, use the first sprite
+					if (metadata->BoundingBox == Vector2i(InvalidValue, InvalidValue)) {
+						// TODO: Remove this bounding box reduction
+						metadata->BoundingBox = graphics.Base->FrameDimensions - Vector2i(2, 2);
+					}
+
+					metadata->Graphics.emplace(key, std::move(graphics));
 				}
 			}
 
-			Metadata* ptr = metadata.get();
-			_cachedMetadata.emplace(path, std::move(metadata));
-			return ptr;
+			const auto& sounds_ = document.FindMember("Sounds");
+			if (sounds_ != document.MemberEnd() && sounds_->value.IsObject()) {
+				auto& sounds = sounds_->value;
+
+				metadata->Sounds.reserve(sounds.MemberCount());
+
+				for (auto it2 = sounds.MemberBegin(); it2 != sounds.MemberEnd(); ++it2) {
+					if (!it2->name.IsString() || !it2->value.IsObject()) {
+						continue;
+					}
+
+					const auto& key = it2->name.GetString();
+					const auto& item = it2->value;
+					const auto& pathsItem = item.FindMember("Paths");
+					if (key[0] == '\0' || pathsItem == item.MemberEnd() || !pathsItem->value.IsArray() || pathsItem->value.Empty()) {
+						continue;
+					}
+
+					SoundResource sound;
+
+					for (int i = 0; i < pathsItem->value.Size(); i++) {
+						const auto& pathItem = pathsItem->value[i];
+						const auto& path = pathItem.GetString();
+						if (path[0] == '\0') {
+							continue;
+						}
+
+						sound.Buffers.emplace_back(std::make_unique<AudioBuffer>(fs::joinPath({ "Content"_s, "Animations"_s, path })));
+					}
+
+					if (!sound.Buffers.empty()) {
+						metadata->Sounds.emplace(key, std::move(sound));
+					}
+				}
+			}
 		}
+
+		return _cachedMetadata.emplace(path, std::move(metadata)).first->second.get();
 	}
 
-	GenericGraphicResource* ContentResolver::RequestGraphics(const StringView& path)
+	GenericGraphicResource* ContentResolver::RequestGraphics(const StringView& path, uint16_t paletteOffset)
 	{
 		// First resources are requested, reset _isLoading flag, because palette should be already applied
 		_isLoading = false;
 
-		auto it = _cachedGraphics.find(String::nullTerminatedView(path));
+		auto it = _cachedGraphics.find(Pair(String::nullTerminatedView(path), paletteOffset));
 		if (it != _cachedGraphics.end()) {
 			// Already loaded - Mark as referenced
 			it->second->Flags |= GenericGraphicResourceFlags::Referenced;
 			return it->second.get();
-		} else {
-			auto fileHandle = IFileStream::createFileHandle(fs::joinPath({ "Content"_s, "Animations"_s, path + ".res"_s }));
-			fileHandle->Open(FileAccessMode::Read);
-			auto fileSize = fileHandle->GetSize();
-			if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
-				// 64 MB file size limit
+		}
+
+		auto fileHandle = IFileStream::createFileHandle(fs::joinPath({ "Content"_s, "Animations"_s, path + ".res"_s }));
+		fileHandle->Open(FileAccessMode::Read);
+		auto fileSize = fileHandle->GetSize();
+		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
+			// 64 MB file size limit
+			return nullptr;
+		}
+
+		auto buffer = std::make_unique<char[]>(fileSize + 1);
+		fileHandle->Read(buffer.get(), fileSize);
+		buffer[fileSize] = '\0';
+
+		Document document;
+		if (document.ParseInsitu(buffer.get()).HasParseError() || !document.IsObject()) {
+			return nullptr;
+		}
+
+		// Try to load it
+		std::unique_ptr<GenericGraphicResource> graphics = std::make_unique<GenericGraphicResource>();
+		graphics->Flags |= GenericGraphicResourceFlags::Referenced;
+
+		String fullPath = fs::joinPath({ "Content"_s, "Animations"_s, path });
+		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
+		if (texLoader->hasLoaded()) {
+			auto texFormat = texLoader->texFormat().internalFormat();
+			if (texFormat != GL_RGBA8 && texFormat != GL_RGB8) {
 				return nullptr;
 			}
 
-			auto buffer = std::make_unique<char[]>(fileSize + 1);
-			fileHandle->Read(buffer.get(), fileSize);
-			buffer[fileSize] = '\0';
+			int w = texLoader->width();
+			int h = texLoader->height();
+			auto pixels = (uint32_t*)texLoader->pixels();
+			uint32_t* palette = _palettes + paletteOffset;
 
-			Document document;
-			if (document.ParseInsitu(buffer.get()).HasParseError() || !document.IsObject()) {
-				return nullptr;
+			graphics->Mask = std::make_unique<uint8_t[]>(w * h);
+
+			for (int i = 0; i < w * h; i++) {
+				uint32_t color = palette[pixels[i] & 0xff];
+				// Save original alpha value for collision checking
+				graphics->Mask[i] = ((pixels[i] >> 24) & 0xff);
+				pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
 			}
 
-			// Try to load it
-			std::unique_ptr<GenericGraphicResource> graphics = std::make_unique<GenericGraphicResource>();
-			graphics->Flags |= GenericGraphicResourceFlags::Referenced;
+			graphics->TextureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, w, h);
+			graphics->TextureDiffuse->loadFromTexels((unsigned char*)pixels, 0, 0, w, h);
+			graphics->TextureDiffuse->setMinFiltering(SamplerFilter::Nearest);
+			graphics->TextureDiffuse->setMagFiltering(SamplerFilter::Nearest);
 
-			String fullPath = fs::joinPath({ "Content"_s, "Animations"_s, path });
-			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
-			if (texLoader->hasLoaded()) {
-				auto texFormat = texLoader->texFormat().internalFormat();
-				if (texFormat != GL_RGBA8 && texFormat != GL_RGB8) {
-					return nullptr;
-				}
+			const auto& frameDimensions = document["FrameSize"].GetArray();
+			const auto& frameConfiguration = document["FrameConfiguration"].GetArray();
+			const auto& frameCount = document["FrameCount"].GetInt();
 
-				int w = texLoader->width();
-				int h = texLoader->height();
-				auto pixels = (uint32_t*)texLoader->pixels();
-
-				graphics->Mask = std::make_unique<uint8_t[]>(w * h);
-
-				for (int i = 0; i < w * h; i++) {
-					uint32_t color = _palettes[pixels[i] & 0xff];
-					// Save original alpha value for collision checking
-					graphics->Mask[i] = ((pixels[i] >> 24) & 0xff);
-					pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
-				}
-
-				graphics->TextureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, w, h);
-				graphics->TextureDiffuse->loadFromTexels((unsigned char*)pixels, 0, 0, w, h);
-				graphics->TextureDiffuse->setMinFiltering(SamplerFilter::Nearest);
-				graphics->TextureDiffuse->setMagFiltering(SamplerFilter::Nearest);
-
-				const auto& frameDimensions = document["FrameSize"].GetArray();
-				const auto& frameConfiguration = document["FrameConfiguration"].GetArray();
-				const auto& frameCount = document["FrameCount"].GetInt();
-
-				const auto& frameRateItem = document.FindMember("FrameRate");
-				if (frameRateItem != document.MemberEnd() && frameRateItem->value.IsNumber()) {
-					const auto& frameRate = frameRateItem->value.GetFloat();
-					graphics->FrameDuration = (frameRate <= 0 ? -1.0f : (1.0f / frameRate) * 5.0f);
-				} else {
-					graphics->FrameDuration = -1.0f;
-				}
-
-				graphics->FrameDimensions = Vector2i(frameDimensions[0].GetInt(), frameDimensions[1].GetInt());
-				graphics->FrameConfiguration = Vector2i(frameConfiguration[0].GetInt(), frameConfiguration[1].GetInt());
-				graphics->FrameCount = frameCount;
-
-				const auto& hotspotItem = document.FindMember("Hotspot");
-				if (hotspotItem != document.MemberEnd() && hotspotItem->value.IsArray() && hotspotItem->value.Size() >= 2) {
-					graphics->Hotspot = Vector2i(hotspotItem->value[0].GetInt(), hotspotItem->value[1].GetInt());
-				} else {
-					graphics->Hotspot = Vector2i();
-				}
-
-				const auto& coldspotItem = document.FindMember("Coldspot");
-				if (coldspotItem != document.MemberEnd() && coldspotItem->value.IsArray() && hotspotItem->value.Size() >= 2) {
-					graphics->Coldspot = Vector2i(coldspotItem->value[0].GetInt(), coldspotItem->value[1].GetInt());
-				} else {
-					graphics->Coldspot = Vector2i(InvalidValue, InvalidValue);
-				}
-
-				const auto& gunspotItem = document.FindMember("Gunspot");
-				if (gunspotItem != document.MemberEnd() && gunspotItem->value.IsArray() && gunspotItem->value.Size() >= 2) {
-					graphics->Gunspot = Vector2i(gunspotItem->value[0].GetInt(), gunspotItem->value[1].GetInt());
-				} else {
-					graphics->Gunspot = Vector2i(InvalidValue, InvalidValue);
-				}
-
-				GenericGraphicResource* ptr = graphics.get();
-				_cachedGraphics.emplace(path, std::move(graphics));
-				return ptr;
+			const auto& frameRateItem = document.FindMember("FrameRate");
+			if (frameRateItem != document.MemberEnd() && frameRateItem->value.IsNumber()) {
+				const auto& frameRate = frameRateItem->value.GetFloat();
+				graphics->FrameDuration = (frameRate <= 0 ? -1.0f : (1.0f / frameRate) * 5.0f);
+			} else {
+				graphics->FrameDuration = -1.0f;
 			}
+
+			graphics->FrameDimensions = Vector2i(frameDimensions[0].GetInt(), frameDimensions[1].GetInt());
+			graphics->FrameConfiguration = Vector2i(frameConfiguration[0].GetInt(), frameConfiguration[1].GetInt());
+			graphics->FrameCount = frameCount;
+
+			const auto& hotspotItem = document.FindMember("Hotspot");
+			if (hotspotItem != document.MemberEnd() && hotspotItem->value.IsArray() && hotspotItem->value.Size() >= 2) {
+				graphics->Hotspot = Vector2i(hotspotItem->value[0].GetInt(), hotspotItem->value[1].GetInt());
+			} else {
+				graphics->Hotspot = Vector2i();
+			}
+
+			const auto& coldspotItem = document.FindMember("Coldspot");
+			if (coldspotItem != document.MemberEnd() && coldspotItem->value.IsArray() && hotspotItem->value.Size() >= 2) {
+				graphics->Coldspot = Vector2i(coldspotItem->value[0].GetInt(), coldspotItem->value[1].GetInt());
+			} else {
+				graphics->Coldspot = Vector2i(InvalidValue, InvalidValue);
+			}
+
+			const auto& gunspotItem = document.FindMember("Gunspot");
+			if (gunspotItem != document.MemberEnd() && gunspotItem->value.IsArray() && gunspotItem->value.Size() >= 2) {
+				graphics->Gunspot = Vector2i(gunspotItem->value[0].GetInt(), gunspotItem->value[1].GetInt());
+			} else {
+				graphics->Gunspot = Vector2i(InvalidValue, InvalidValue);
+			}
+
+			return _cachedGraphics.emplace(Pair(String(path), paletteOffset), std::move(graphics)).first->second.get();
 		}
 
 		return nullptr;
@@ -512,7 +519,7 @@ namespace Jazz2
 		// Sprite layer is mandatory
 		{
 			auto layerFile = IFileStream::createFileHandle(fs::joinPath({ levelRoot, "Sprite.layer"_s }));
-			tileMap->ReadLayerConfiguration(LayerType::Sprite, layerFile, { .SpeedX = 1, .SpeedY = 1 });
+			tileMap->ReadLayerConfiguration(LayerType::Sprite, layerFile, { .SpeedX = 1, .SpeedY = 1, .Depth = -50 });
 		}
 
 		// Load all layers
@@ -626,6 +633,46 @@ namespace Jazz2
 			}
 
 			std::memcpy(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t));
+			RecreateGemPalettes();
+		}
+	}
+
+	void ContentResolver::RecreateGemPalettes()
+	{
+		constexpr int GemColorCount = 4;
+		constexpr int Expansion = 32;
+
+		constexpr int PaletteStops[] = {
+			55, 52, 48, 15, 15,
+			87, 84, 80, 15, 15,
+			39, 36, 32, 15, 15,
+			95, 92, 88, 15, 15
+		};
+
+		constexpr int StopsPerGem = (_countof(PaletteStops) / GemColorCount) - 1;
+
+		// Start to fill palette texture from the second row (right after base palette)
+		int src = 0, dst = ColorsPerPalette;
+		for (int color = 0; color < GemColorCount; color++, src++) {
+			// Compress 2 gem color gradients to single palette row
+			for (int i = 0; i < StopsPerGem; i++) {
+				// Base Palette is in first row of "palette" array
+				uint32_t from = _palettes[PaletteStops[src++]];
+				uint32_t to = _palettes[PaletteStops[src]];
+
+				int r = (from & 0xff) * 8, dr = ((to & 0xff) * 8) - r;
+				int g = ((from >> 8) & 0xff) * 8, dg = (((to >> 8) & 0xff) * 8) - g;
+				int b = ((from >> 16) & 0xff) * 8, db = (((to >> 16) & 0xff) * 8) - b;
+				int a = (from & 0xff000000);
+				r *= Expansion; g *= Expansion; b *= Expansion;
+
+				for (int j = 0; j < Expansion; j++) {
+					_palettes[dst] = ((r / (8 * Expansion)) & 0xff) | (((g / (8 * Expansion)) & 0xff) << 8) |
+									 (((b / (8 * Expansion)) & 0xff) << 16) | a;
+					r += dr; g += dg; b += db;
+					dst++;
+				}
+			}
 		}
 	}
 }

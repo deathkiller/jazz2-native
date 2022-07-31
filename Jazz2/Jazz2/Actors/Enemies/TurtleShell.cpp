@@ -2,7 +2,8 @@
 #include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
-#include "../Weapons//ShotBase.h"
+#include "../Weapons/ShotBase.h"
+#include "../Weapons/ToasterShot.h"
 
 #include "../../../nCine/Base/Random.h"
 
@@ -111,12 +112,12 @@ namespace Jazz2::Actors::Enemies
 			// TODO
 			/*if (ammo is AmmoFreezer) {
 				break;
-			}
+			}*/
 
-			if (other is AmmoToaster) {
+			if (auto toasterShot = dynamic_cast<Weapons::ToasterShot*>(other)) {
 				DecreaseHealth(INT32_MAX, other);
 				return true;
-			}*/
+			}
 
 			float otherSpeed = other->GetSpeed().X;
 			_speed.X = std::max(4.0f, std::abs(otherSpeed)) * (otherSpeed < 0.0f ? -0.5f : 0.5f);

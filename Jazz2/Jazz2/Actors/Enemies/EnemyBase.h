@@ -31,12 +31,14 @@ namespace Jazz2::Actors::Enemies
 		uint32_t _scoreValue;
 		LastHitDirection _lastHitDir;
 
+		void OnUpdate(float timeMult) override;
 		bool OnPerish(ActorBase* collider) override;
 
 		void SetHealthByDifficulty(int health);
 		bool CanMoveToPosition(float x, float y);
 		void TryGenerateRandomDrop();
 		void CreateDeathDebris(ActorBase* collider);
+		void HandleBlinking(float timeMult);
 
 	private:
 		float blinkingTimeout;

@@ -3,6 +3,7 @@
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 
+#include "../Explosion.h"
 #include "../Player.h"
 #include "../Weapons/ShotBase.h"
 
@@ -79,7 +80,7 @@ namespace Jazz2::Actors::Solid
 
 		CreateParticleDebris();
 
-		//Explosion.Create(levelHandler, Transform.Pos, Explosion.SmokeBrown);
+		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()), Explosion::Type::SmokeBrown);
 
 		return SolidObjectBase::OnPerish(collider);
 	}

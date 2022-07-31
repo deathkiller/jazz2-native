@@ -62,7 +62,7 @@ namespace nCine
 		/// Updates players state (and buffer queue in the case of stream players)
 		virtual void updatePlayers() = 0;
 
-		virtual void updateListener(Vector3f position, Vector3f velocity) = 0;
+		virtual void updateListener(const Vector3f& position, const Vector3f& velocity) = 0;
 
 		virtual int nativeFrequency() = 0;
 	};
@@ -106,7 +106,7 @@ namespace nCine
 		void registerPlayer(IAudioPlayer* player) override {}
 		void unregisterPlayer(IAudioPlayer* player) override {}
 		void updatePlayers() override {}
-		void updateListener(Vector3f position, Vector3f velocity) override {}
+		void updateListener(const Vector3f& position, const Vector3f& velocity) override {}
 		int nativeFrequency() override { return 0; }
 	};
 

@@ -77,6 +77,8 @@ namespace Jazz2
 			return IsPositionEmpty(self, aabb, downwards, &collider);
 		}
 
+		virtual void FindCollisionActorsByAABB(ActorBase* self, const AABBf& aabb, const std::function<bool(ActorBase*)>& callback) = 0;
+		virtual void FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(ActorBase*)>& callback) = 0;
 		virtual void GetCollidingPlayers(const AABBf& aabb, const std::function<bool(ActorBase*)> callback) = 0;
 
 		virtual void BeginLevelChange(ExitType exitType, const StringView& nextLevel) = 0;

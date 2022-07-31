@@ -79,10 +79,10 @@ namespace Jazz2
 		_originTile = Vector2i((int)details.Pos.X / 32, (int)details.Pos.Y / 32);
 
 		uint16_t layer = (uint16_t)details.Pos.Z;
+		_renderer.setLayer(layer);
 
 		bool success = co_await OnActivatedAsync(details);
 
-		_renderer.setLayer(layer);
 		_renderer.setPosition(std::round(_pos.X), std::round(_pos.Y));
 
 		OnUpdateHitbox();
@@ -269,15 +269,32 @@ namespace Jazz2
 				int sign = (effectiveSpeedX > 0.0f ? 1 : -1);
 				for (; xDiff >= maxXDiff; xDiff -= CollisionCheckStep) {
 					if (MoveInstantly(Vector2f(xDiff * sign, 0.0f), MoveType::Relative)) {
+						success = true;
 						break;
 					}
 				}
 
-				// If no angle worked in the previous step, the actor is facing a wall
-				if (xDiff > CollisionCheckStep || (xDiff > 0.0f && currentElasticity > 0.0f)) {
-					_speed.X = -(currentElasticity * _speed.X);
+				bool moved = false;
+				if (!success) {
+					AABBf aabb = AABBInner;
+					aabb.T = aabb.B - 8;
+					if (!_levelHandler->IsPositionEmpty(this, aabb, true)) {
+						for (float yDiff = -2.0f; yDiff >= -16.0f; yDiff -= 2.0f) {
+							if (MoveInstantly(Vector2f(0.0f, yDiff), MoveType::Relative)) {
+								moved = true;
+								break;
+							}
+						}
+					}
 				}
-				OnHitWall();
+
+				if (!moved) {
+					// If no angle worked in the previous step, the actor is facing a wall
+					if (xDiff > CollisionCheckStep || (xDiff > 0.0f && currentElasticity > 0.0f)) {
+						_speed.X = -(currentElasticity * _speed.X);
+					}
+					OnHitWall();
+				}
 			}
 
 			// Run all floor-related hooks, such as the player's check for hurting positions
@@ -591,7 +608,7 @@ namespace Jazz2
 		bool perPixel1 = (CollisionFlags & CollisionFlags::SkipPerPixelCollisions) != CollisionFlags::SkipPerPixelCollisions;
 		bool perPixel2 = (other->CollisionFlags & CollisionFlags::SkipPerPixelCollisions) != CollisionFlags::SkipPerPixelCollisions;
 
-		if ((perPixel1 || perPixel2) && (std::abs(_renderer.rotation()) > 0.1f || std::abs(other->_renderer.rotation()) > 0.1f)) {
+		if ((perPixel1 && std::abs(_renderer.rotation()) > 0.1f) || (perPixel2 && std::abs(other->_renderer.rotation()) > 0.1f)) {
 			if (!perPixel1 && std::abs(other->_renderer.rotation()) > 0.1f) {
 				return other->IsCollidingWithAngled(AABBInner);
 			} else if (!perPixel2 && std::abs(_renderer.rotation()) > 0.1f) {
@@ -828,15 +845,15 @@ namespace Jazz2
 
 		Matrix4x4f transform1 = Matrix4x4f::Translation((float)-res1->Base->Hotspot.X, (float)-res1->Base->Hotspot.Y, 0.0f);
 		if (GetState(ActorFlags::IsFacingLeft)) {
-			transform1 = transform1.Scale(-1.0f, 1.0f, 1.0f);
+			transform1 = Matrix4x4f::Scaling(-1.0f, 1.0f, 1.0f) * transform1;
 		}
-		transform1 *= Matrix4x4f::RotationZ(_renderer.rotation()) * Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f);
+		transform1 = Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f) * Matrix4x4f::RotationZ(_renderer.rotation()) * transform1;
 
 		Matrix4x4f transform2 = Matrix4x4f::Translation((float)-res2->Base->Hotspot.X, (float)-res2->Base->Hotspot.Y, 0.0f);
 		if (other->GetState(ActorFlags::IsFacingLeft)) {
-			transform2 = transform2.Scale(-1.0f, 1.0f, 1.0f);
+			transform2 = Matrix4x4f::Scaling(-1.0f, 1.0f, 1.0f) * transform2;
 		}
-		transform2 *= Matrix4x4f::RotationZ(other->_renderer.rotation()) * Matrix4x4f::Translation(other->_pos.X, other->_pos.Y, 0.0f);
+		transform2 = Matrix4x4f::Translation(other->_pos.X, other->_pos.Y, 0.0f) * Matrix4x4f::RotationZ(other->_renderer.rotation()) * transform2;
 
 		int width1 = res1->Base->FrameDimensions.X;
 		int height1 = res1->Base->FrameDimensions.Y;
@@ -877,7 +894,7 @@ namespace Jazz2
 		}
 
 		// Per-pixel collision check
-		Matrix4x4f transformAToB = transform1 * transform2.Inverse();
+		Matrix4x4f transformAToB = transform2.Inverse() * transform1;
 
 		// TransformNormal with [1, 0] and [0, 1] vectors
 		Vector3f stepX = Vector3f(transformAToB[0][0], transformAToB[0][1], 0.0f) * PerPixelCollisionStep;
@@ -927,9 +944,9 @@ namespace Jazz2
 
 		Matrix4x4f transform = Matrix4x4f::Translation((float)-res->Base->Hotspot.X, (float)-res->Base->Hotspot.Y, 0.0f);
 		if (GetState(ActorFlags::IsFacingLeft)) {
-			transform = transform.Scale(-1.0f, 1.0f, 1.0f);
+			transform = Matrix4x4f::Scaling(-1.0f, 1.0f, 1.0f) * transform;
 		}
-		transform *= Matrix4x4f::RotationZ(_renderer.rotation()) * Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f);
+		transform = Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f) * Matrix4x4f::RotationZ(_renderer.rotation()) * transform;
 
 		int width = res->Base->FrameDimensions.X;
 		int height = res->Base->FrameDimensions.Y;
@@ -1006,9 +1023,9 @@ namespace Jazz2
 			if (std::abs(_renderer.rotation()) > 0.1f) {
 				Matrix4x4f transform = Matrix4x4f::Translation((float)-res->Base->Hotspot.X, (float)-res->Base->Hotspot.Y, 0.0f);
 				if (GetState(ActorFlags::IsFacingLeft)) {
-					transform = transform.Scale(-1.0f, 1.0f, 1.0f);
+					transform = Matrix4x4f::Scaling(-1.0f, 1.0f, 1.0f) * transform;
 				}
-				transform *= Matrix4x4f::RotationZ(_renderer.rotation()) * Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f);
+				transform = Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f) * Matrix4x4f::RotationZ(_renderer.rotation()) * transform;
 
 				Vector3f tl = Vector3f::Zero * transform;
 				Vector3f tr = Vector3f((float)size.X, 0.0f, 0.0f) * transform;
@@ -1143,10 +1160,12 @@ namespace Jazz2
 	bool ActorBase::MoveInstantly(const Vector2f& pos, MoveType type, bool force)
 	{
 		Vector2f newPos;
+		AABBf aabb;
 		switch (type) {
 			default:
 			case MoveType::Absolute: {
 				newPos = pos;
+				aabb = AABBInner + (pos - _pos);
 				break;
 			}
 			case MoveType::Relative: {
@@ -1154,14 +1173,12 @@ namespace Jazz2
 					return true;
 				}
 				newPos = _pos + pos;
+				aabb = AABBInner + pos;
 				break;
 			}
 		}
 
-		AABBf aabb = AABBInner + (newPos - _pos);
-
-		// TODO: Fix moving on roofs through windowsill in colon2
-		bool free = (force || _levelHandler->IsPositionEmpty(this, aabb, _speed.Y >= 0));
+		bool free = (force || _levelHandler->IsPositionEmpty(this, aabb, _speed.Y >= 0.0f));
 		if (free) {
 			AABBInner = aabb;
 			_pos = newPos;

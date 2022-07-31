@@ -151,6 +151,12 @@
     <Filter Include="Header Files\nCine\Base\ParallelHashMap">
       <UniqueIdentifier>{f14c807a-cda1-4d6b-8b0b-7b7b74a9f565}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Jazz2\Actors\Lighting">
+      <UniqueIdentifier>{4d146257-6633-4254-9029-55f805e74db6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Actors\Lighting">
+      <UniqueIdentifier>{57513633-b81a-446d-af22-8e3f73cf39f2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -810,6 +816,39 @@
     <ClInclude Include="nCine\Base\ParallelHashMap\phmap_base.h">
       <Filter>Header Files\nCine\Base\ParallelHashMap</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\Bomb.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\AmbientSound.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Explosion.h">
+      <Filter>Header Files\Jazz2\Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Dragonfly.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\ToasterShot.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\MadderHatter.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Witch.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Lighting\StaticRadialLight.h">
+      <Filter>Header Files\Jazz2\Actors\Lighting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Lighting\PulsatingRadialLight.h">
+      <Filter>Header Files\Jazz2\Actors\Lighting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Lighting\FlickerLight.h">
+      <Filter>Header Files\Jazz2\Actors\Lighting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\Pole.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1363,6 +1402,39 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Environment\Eva.cpp">
       <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\Bomb.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\AmbientSound.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Explosion.cpp">
+      <Filter>Source Files\Jazz2\Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Dragonfly.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\ToasterShot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\MadderHatter.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Witch.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Lighting\StaticRadialLight.cpp">
+      <Filter>Source Files\Jazz2\Actors\Lighting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Lighting\PulsatingRadialLight.cpp">
+      <Filter>Source Files\Jazz2\Actors\Lighting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Lighting\FlickerLight.cpp">
+      <Filter>Source Files\Jazz2\Actors\Lighting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\Pole.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

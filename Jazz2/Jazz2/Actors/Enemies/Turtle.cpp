@@ -2,6 +2,7 @@
 #include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
+#include "../Explosion.h"
 #include "TurtleShell.h"
 
 #include "../../../nCine/Base/Random.h"
@@ -116,8 +117,7 @@ namespace Jazz2::Actors::Enemies
 			});
 			_levelHandler->AddActor(shell);
 
-			// TODO
-			//Explosion.Create(levelHandler, Transform.Pos, Explosion.SmokeGray);
+			Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()), Explosion::Type::SmokeGray);
 		}
 
 		return EnemyBase::OnPerish(collider);

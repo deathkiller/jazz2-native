@@ -94,7 +94,8 @@ namespace Jazz2
 			ptr->ReceiveLevelCarryOver(levelInit.ExitType, levelInit.PlayerCarryOvers[i]);
 		}
 
-		_commonResources = ContentResolver::Current().RequestMetadata("Common/Scenery"_s);
+		_commonResources = resolver.RequestMetadata("Common/Scenery"_s);
+		resolver.PreloadMetadataAsync("Common/Explosions"_s);
 
 		_eventMap->PreloadEventsAsync();
 

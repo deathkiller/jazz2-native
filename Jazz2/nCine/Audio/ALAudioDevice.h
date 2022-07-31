@@ -48,7 +48,7 @@ namespace nCine
 		void unregisterPlayer(IAudioPlayer* player) override;
 		void updatePlayers() override;
 		
-		void updateListener(Vector3f position, Vector3f velocity) override;
+		void updateListener(const Vector3f& position, const Vector3f& velocity) override;
 
 		int nativeFrequency() override;
 

@@ -1,0 +1,218 @@
+﻿#include "Witch.h"
+#include "../../LevelInitialization.h"
+#include "../../ILevelHandler.h"
+#include "../../Tiles/TileMap.h"
+#include "../Player.h"
+#include "../Explosion.h"
+
+#include "../../../nCine/Base/Random.h"
+
+namespace Jazz2::Actors::Enemies
+{
+	Witch::Witch()
+		:
+		_attackTime(0.0f),
+		_playerHit(false)
+	{
+	}
+
+	void Witch::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Enemy/Witch"_s);
+	}
+
+	Task<bool> Witch::OnActivatedAsync(const ActorActivationDetails& details)
+	{
+		CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+
+		SetHealthByDifficulty(30);
+		_scoreValue = 1000;
+
+		co_await RequestMetadataAsync("Enemy/Witch"_s);
+		SetAnimation(AnimState::Idle);
+
+		PreloadMetadataAsync("Interactive/PlayerFrog"_s);
+
+		co_return true;
+	}
+
+	void Witch::OnUpdate(float timeMult)
+	{
+		OnUpdateHitbox();
+		HandleBlinking(timeMult);
+
+		if (_frozenTimeLeft > 0) {
+			_frozenTimeLeft -= timeMult;
+			return;
+		}
+
+		MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative, true);
+
+		if (_playerHit) {
+			if (_attackTime > 0.0f) {
+				_attackTime -= timeMult;
+			} else {
+				EnemyBase::OnPerish(nullptr);
+			}
+			return;
+		}
+
+		if (_attackTime > 0.0f) {
+			_attackTime -= timeMult;
+		}
+
+		Vector2f targetPos;
+
+		auto& players = _levelHandler->GetPlayers();
+		for (auto& player : players) {
+			targetPos = player->GetPos();
+			// Fly above the player
+			targetPos.Y -= 100.0f;
+
+			Vector2f direction = (_pos - targetPos);
+			float length = direction.Length();
+
+			if (_attackTime <= 0.0f && length < 260.0f) {
+				_attackTime = 450.0f;
+
+				PlaySfx("MagicFire"_s);
+
+				SetTransition(AnimState::TransitionAttack, true, [this]() {
+					Vector2f bulletPos = Vector2f(_pos.X + (IsFacingLeft() ? -24.0f : 24.0f), _pos.Y);
+
+					std::shared_ptr<MagicBullet> magicBullet = std::make_shared<MagicBullet>(this);
+					magicBullet->OnActivated({
+						.LevelHandler = _levelHandler,
+						.Pos = Vector3i((int)bulletPos.X, (int)bulletPos.Y, _renderer.layer() + 1)
+					});
+					_levelHandler->AddActor(magicBullet);
+
+					Explosion::Create(_levelHandler, Vector3i((int)bulletPos.X, (int)bulletPos.Y, _renderer.layer() + 2), Explosion::Type::TinyDark);
+				});
+			} else if (length > 10.0f && length < 500.0f) {
+				direction.Normalize();
+				_speed.X = (direction.X * DefaultSpeed + _speed.X) * 0.5f;
+				_speed.Y = (direction.Y * DefaultSpeed + _speed.Y) * 0.5f;
+
+				SetFacingLeft(_speed.X < 0.0f);
+				return;
+			}
+		}
+
+		_speed.X = 0.0f;
+		_speed.Y = 0.0f;
+	}
+
+	void Witch::OnUpdateHitbox()
+	{
+		UpdateHitbox(30, 30);
+	}
+
+	bool Witch::OnPerish(ActorBase* collider)
+	{
+		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
+
+		SetTransition(AnimState::TransitionDeath, false, [this, collider]() {
+			EnemyBase::OnPerish(collider);
+		});
+
+		CreateParticleDebris();
+
+		return false;
+	}
+
+	bool Witch::OnTileDeactivate(int tx1, int ty1, int tx2, int ty2)
+	{
+		return false;
+	}
+
+	void Witch::OnPlayerHit()
+	{
+		_playerHit = true;
+		_attackTime = 400.0f;
+
+		_speed.X = (IsFacingLeft() ? -9.0f : 9.0f);
+		_speed.Y = -0.8f;
+
+		PlaySfx("Laugh"_s);
+	}
+
+	Task<bool> Witch::MagicBullet::OnActivatedAsync(const ActorActivationDetails& details)
+	{
+		SetState(ActorFlags::CanBeFrozen, false);
+		SetState(ActorFlags::IsInvulnerable, true);
+
+		CollisionFlags = CollisionFlags::CollideWithOtherActors | CollisionFlags::SkipPerPixelCollisions;
+
+		_health = INT32_MAX;
+
+		co_await RequestMetadataAsync("Enemy/Witch"_s);
+		SetAnimation((AnimState)1073741828);
+
+		co_return true;
+	}
+
+	void Witch::MagicBullet::OnUpdate(float timeMult)
+	{
+		MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative, true);
+		OnUpdateHitbox();
+
+		if (_time <= 0.0f) {
+			DecreaseHealth(INT32_MAX);
+		} else {
+			_time -= timeMult;
+			FollowNearestPlayer();
+		}
+	}
+
+	void Witch::MagicBullet::OnUpdateHitbox()
+	{
+		UpdateHitbox(10, 10);
+	}
+
+	bool Witch::MagicBullet::OnHandleCollision(ActorBase* other)
+	{
+		if (auto player = dynamic_cast<Player*>(other)) {
+			DecreaseHealth(INT32_MAX);
+			_owner->OnPlayerHit();
+
+			player->MorphTo(PlayerType::Frog);
+			return true;
+		}
+
+		return false;
+	}
+
+	void Witch::MagicBullet::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
+	{
+		auto& light = lights.emplace_back();
+		light.Pos = _pos;
+		light.Intensity = 0.7f;
+		light.Brightness = 0.4f;
+		light.RadiusNear = 0.0f;
+		light.RadiusFar = 30.0f;
+	}
+
+	void Witch::MagicBullet::FollowNearestPlayer()
+	{
+		bool found = false;
+		Vector2f targetPos;
+
+		auto& players = _levelHandler->GetPlayers();
+		for (auto& player : players) {
+			Vector2f newPos = player->GetPos();
+			if (!found || (_pos - newPos).Length() < (_pos - targetPos).Length()) {
+				targetPos = newPos;
+				found = true;
+			}
+		}
+
+		if (found) {
+			Vector2f diff = (targetPos - _pos).Normalized();
+			Vector2f speed = (Vector2f(_speed.X, _speed.Y) + diff * 0.8f).Normalized();
+			_speed.X = speed.X * 5.0f;
+			_speed.Y = speed.Y * 5.0f;
+			_renderer.setRotation(std::atan2f(_speed.Y, _speed.X));
+		}
+	}
+}

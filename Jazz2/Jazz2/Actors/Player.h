@@ -16,6 +16,11 @@ namespace Jazz2::Actors
 		};
 
 		Player();
+		~Player();
+
+		PlayerType GetPlayerType() const {
+			return _playerType;
+		}
 
 		bool CanBreakSolidObjects() const;
 		bool CanMoveVertically() const;
@@ -41,6 +46,9 @@ namespace Jazz2::Actors
 		bool AddAmmo(WeaponType weaponType, int16_t count);
 		void AddWeaponUpgrade(WeaponType weaponType, uint8_t upgrade);
 		bool AddFastFire(int count);
+		void MorphTo(PlayerType type);
+		void MorphRevent();
+		bool DisableControllable(float timeout);
 
 	protected:
 		enum class SpecialMoveType {
@@ -127,6 +135,7 @@ namespace Jazz2::Actors
 		float _weaponCooldown;
 		int16_t _weaponAmmo[PlayerCarryOver::WeaponCount];
 		uint8_t _weaponUpgrades[PlayerCarryOver::WeaponCount];
+		std::shared_ptr<AudioBufferPlayer> _weaponToasterSound;
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		bool OnTileDeactivate(int tx1, int ty1, int tx2, int ty2) override;

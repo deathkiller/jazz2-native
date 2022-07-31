@@ -9,19 +9,7 @@ namespace Jazz2::Actors::Environment
 	public:
 		Checkpoint();
 
-		static void Preload(const ActorActivationDetails& details)
-		{
-			uint8_t theme = details.Params[0];
-			switch (theme) {
-				case 0:
-				default:
-					PreloadMetadataAsync("Object/Checkpoint"_s);
-					break;
-				case 1: // Xmas
-					PreloadMetadataAsync("Object/CheckpointXmas"_s);
-					break;
-			}
-		}
+		static void Preload(const ActorActivationDetails& details);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

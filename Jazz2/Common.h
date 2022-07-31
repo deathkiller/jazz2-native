@@ -51,19 +51,19 @@ void __WriteLog(LogLevel level, const char* fmt, ...);
 #	define LOGE(fmt) __WriteLog(LogLevel::Error, static_cast<const char *>("%s -> " fmt), FUNCTION)
 #	define LOGF(fmt) __WriteLog(LogLevel::Fatal, static_cast<const char *>("%s -> " fmt), FUNCTION)
 #else
-#	define LOGV_X(fmt, ...) do { } while(false)
-#	define LOGD_X(fmt, ...) do { } while(false)
-#	define LOGI_X(fmt, ...) do { } while(false)
-#	define LOGW_X(fmt, ...) do { } while(false)
-#	define LOGE_X(fmt, ...) do { } while(false)
-#	define LOGF_X(fmt, ...) do { } while(false)
+#	define LOGV_X(fmt, ...) do { } while (false)
+#	define LOGD_X(fmt, ...) do { } while (false)
+#	define LOGI_X(fmt, ...) do { } while (false)
+#	define LOGW_X(fmt, ...) do { } while (false)
+#	define LOGE_X(fmt, ...) do { } while (false)
+#	define LOGF_X(fmt, ...) do { } while (false)
 #
-#	define LOGV(fmt) do { } while(false)
-#	define LOGD(fmt) do { } while(false)
-#	define LOGI(fmt) do { } while(false)
-#	define LOGW(fmt) do { } while(false)
-#	define LOGE(fmt) do { } while(false)
-#	define LOGF(fmt) do { } while(false)
+#	define LOGV(fmt) do { } while (false)
+#	define LOGD(fmt) do { } while (false)
+#	define LOGI(fmt) do { } while (false)
+#	define LOGW(fmt) do { } while (false)
+#	define LOGE(fmt) do { } while (false)
+#	define LOGF(fmt) do { } while (false)
 #endif
 
 // Return assert macros

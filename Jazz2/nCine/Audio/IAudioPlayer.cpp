@@ -48,9 +48,11 @@ namespace nCine {
 	/*! The change is applied to the OpenAL source only when playing. */
 	void IAudioPlayer::setSourceRelative(bool isSourceRelative)
 	{
-		isSourceRelative_ = isSourceRelative;
-		if (state_ == PlayerState::Playing) {
-			alSourcei(sourceId_, AL_SOURCE_RELATIVE, isSourceRelative_ ? AL_TRUE : AL_FALSE);
+		if (isSourceRelative_ != isSourceRelative) {
+			isSourceRelative_ = isSourceRelative;
+			if (state_ == PlayerState::Playing) {
+				alSourcei(sourceId_, AL_SOURCE_RELATIVE, isSourceRelative_ ? AL_TRUE : AL_FALSE);
+			}
 		}
 	}
 
@@ -76,7 +78,9 @@ namespace nCine {
 	{
 		if (lowPass_ != value) {
 			lowPass_ = value;
-			updateFilters();
+			if (state_ == PlayerState::Playing) {
+				updateFilters();
+			}
 		}
 	}
 

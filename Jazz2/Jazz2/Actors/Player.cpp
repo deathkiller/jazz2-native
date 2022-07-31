@@ -3,7 +3,7 @@
 #include "../Events/EventMap.h"
 #include "../Tiles/TileMap.h"
 #include "SolidObjectBase.h"
-
+#include "Explosion.h"
 #include "PlayerCorpse.h"
 #include "Environment/BonusWarp.h"
 #include "Environment/Spring.h"
@@ -12,6 +12,7 @@
 
 #include "Weapons/BlasterShot.h"
 #include "Weapons/BouncerShot.h"
+#include "Weapons/ToasterShot.h"
 
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Base/FrameTimer.h"
@@ -54,6 +55,14 @@ namespace Jazz2::Actors
 		_dizzyTime(0),
 		_weaponAllowed(true)
 	{
+	}
+
+	Player::~Player()
+	{
+		if (_weaponToasterSound != nullptr) {
+			_weaponToasterSound->stop();
+			_weaponToasterSound = nullptr;
+		}
 	}
 
 	Task<bool> Player::OnActivatedAsync(const ActorActivationDetails& details)
@@ -375,22 +384,14 @@ namespace Jazz2::Actors
 		// Shallow Water
 		if (areaWaterBlock != -1) {
 			if (_inShallowWater == -1) {
-				Vector2f pos = _pos;
-				pos.Y = (float)areaWaterBlock;
-				//pos.Z -= 2.0f;
-
-				//Explosion.Create(levelHandler, pos, Explosion.WaterSplash);
-				_levelHandler->PlayCommonSfx("WaterSplash"_s, Vector3f(_pos.X, _pos.Y, 0.0f), 0.7f, 0.5f);
+				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, areaWaterBlock, _renderer.layer() + 2), Explosion::Type::WaterSplash);
+				_levelHandler->PlayCommonSfx("WaterSplash"_s, Vector3f(_pos.X, areaWaterBlock, 0.0f), 0.7f, 0.5f);
 			}
 
 			_inShallowWater = areaWaterBlock;
 		} else if (_inShallowWater != -1) {
-			Vector2f pos = _pos;
-			pos.Y = (float)_inShallowWater;
-			//pos.Z -= 2f;
-
-			//Explosion.Create(levelHandler, pos, Explosion.WaterSplash);
-			_levelHandler->PlayCommonSfx("WaterSplash"_s, Vector3f(_pos.X, _pos.Y, 0.0f), 1.0f, 0.5f);
+			Explosion::Create(_levelHandler, Vector3i((int)_pos.X, _inShallowWater, _renderer.layer() + 2), Explosion::Type::WaterSplash);
+			_levelHandler->PlayCommonSfx("WaterSplash"_s, Vector3f(_pos.X, _inShallowWater, 0.0f), 1.0f, 0.5f);
 
 			_inShallowWater = -1;
 		}
@@ -405,10 +406,10 @@ namespace Jazz2::Actors
 			} else {
 				// Skip controls, player is not controllable in tube
 				// Weapons are automatically disabled if player is not controllable
-				/*if (_weaponToasterSound != nullptr) {
-					_weaponToasterSound.Stop();
+				if (_weaponToasterSound != nullptr) {
+					_weaponToasterSound->stop();
 					_weaponToasterSound = nullptr;
-				}*/
+				}
 
 				return;
 			}
@@ -486,10 +487,10 @@ namespace Jazz2::Actors
 #if !SERVER
 		if (!_controllable || !_controllableExternal) {
 			// Weapons are automatically disabled if player is not controllable
-			/*if (weaponToasterSound != nullptr) {
-				weaponToasterSound.Stop();
-				weaponToasterSound = nullptr;
-			}*/
+			if (_weaponToasterSound != nullptr) {
+				_weaponToasterSound->stop();
+				_weaponToasterSound = nullptr;
+			}
 
 			return;
 		}
@@ -765,11 +766,13 @@ namespace Jazz2::Actors
 			_weaponCooldown = 0.0f;
 		}
 
-		if (!weaponInUse) {
-			/*if (_weaponToasterSound != nullptr) {
-				_weaponToasterSound.Stop();
+		if (_weaponToasterSound != nullptr) {
+			if (weaponInUse) {
+				_weaponToasterSound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+			} else {
+				_weaponToasterSound->stop();
 				_weaponToasterSound = nullptr;
-			}*/
+			}
 		}
 #endif
 
@@ -880,9 +883,9 @@ namespace Jazz2::Actors
 			if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f /*|| _shieldTime > 0.0f*/) {
 				if (!enemy->IsInvulnerable()) {
 					enemy->DecreaseHealth(4, this);
+					handled = true;
 
-					// TODO: exp
-					//Explosion.Create(levelHandler, collider.Transform.Pos, Explosion.Small);
+					Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()), Explosion::Type::Small);
 
 					if (_sugarRushLeft > 0.0f) {
 						if (GetState(ActorFlags::CanJump)) {
@@ -914,8 +917,6 @@ namespace Jazz2::Actors
 			} else if (enemy->CanHurtPlayer()) {
 				TakeDamage(1, 4 * (_pos.X > enemy->GetPos().X ? 1 : -1));
 			}
-
-			handled = true;
 		} else if (auto spring = dynamic_cast<Environment::Spring*>(other)) {
 			// Collide only with hitbox
 			if (_controllableExternal && spring->AABBInner.Overlaps(AABBInner)) {
@@ -1004,9 +1005,9 @@ namespace Jazz2::Actors
 			if (!GetState(ActorFlags::CanJump)) {
 				PlaySfx("Land"_s, 0.8f);
 
-				/*if (MathF.Rnd.NextFloat() < 0.6f) {
-					Explosion.Create(levelHandler, pos + new Vector3(0f, 20f, 0f), Explosion.TinyDark);
-				}*/
+				if (Random().NextFloat() < 0.6f) {
+					Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y + 20.0f, _renderer.layer()), Explosion::Type::TinyDark);
+				}
 			}
 		} else {
 			// Prevent stucking with water/airboard
@@ -1513,11 +1514,9 @@ namespace Jazz2::Actors
 
 				SetAnimation(AnimState::Jump);
 
-				Vector2f pos = _pos;
-				pos.Y = _levelHandler->WaterLevel();
-				//pos.Z -= 2.0f;
-				//Explosion.Create(levelHandler, pos, Explosion.WaterSplash);
-				_levelHandler->PlayCommonSfx("WaterSplash"_s, Vector3f(_pos.X, _pos.Y, 0.0f), 1.0f, 0.5f);
+				float y = _levelHandler->WaterLevel();
+				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, y, _renderer.layer() + 2), Explosion::Type::WaterSplash);
+				_levelHandler->PlayCommonSfx("WaterSplash"_s, Vector3f(_pos.X, y, 0.0f), 1.0f, 0.5f);
 			}
 		} else {
 			if (_pos.Y >= _levelHandler->WaterLevel() && _waterCooldownLeft <= 0.0f) {
@@ -1527,11 +1526,9 @@ namespace Jazz2::Actors
 				_controllable = true;
 				EndDamagingMove();
 
-				Vector2f pos = _pos;
-				pos.Y = _levelHandler->WaterLevel();
-				//pos.Z -= 2f;
-				//Explosion.Create(levelHandler, pos, Explosion.WaterSplash);
-				_levelHandler->PlayCommonSfx("WaterSplash"_s, Vector3f(_pos.X, _pos.Y, 0.0f), 0.7f, 0.5f);
+				float y = _levelHandler->WaterLevel();
+				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, y, _renderer.layer() + 2), Explosion::Type::WaterSplash);
+				_levelHandler->PlayCommonSfx("WaterSplash"_s, Vector3f(_pos.X, y, 0.0f), 0.7f, 0.5f);
 			}
 		}
 	}
@@ -1704,7 +1701,7 @@ namespace Jazz2::Actors
 					if (!(levelHandler is MultiplayerLevelHandler))
 #endif
 					{
-						//MorphRevent();
+						MorphRevent();
 					}
 				}
 				break;
@@ -1992,17 +1989,24 @@ namespace Jazz2::Actors
 			case WeaponType::Bouncer: FireWeapon<Weapons::BouncerShot, WeaponType::Bouncer>(32.0f, 0.85f); break;
 				/*case WeaponType::Freezer: FireWeaponFreezer(); break;
 				case WeaponType::Seeker: FireWeaponSeeker(); break;
-				case WeaponType::RF: FireWeaponRF(); break;
+				case WeaponType::RF: FireWeaponRF(); break;*/
 
 				case WeaponType::Toaster: {
-					if (!FireWeaponToaster()) {
+					if (_inWater) {
 						return false;
+					}
+					FireWeapon<Weapons::ToasterShot, WeaponType::Toaster>(6.0f, 0.0f);
+					if (_weaponToasterSound == nullptr) {
+						_weaponToasterSound = PlaySfx("WeaponToaster"_s, 0.6f);
+						if (_weaponToasterSound != nullptr) {
+							_weaponToasterSound->setLooping(true);
+						}
 					}
 					ammoDecrease = 20;
 					break;
 				}
 
-				case WeaponType::TNT: FireWeaponTNT(); break;
+				/*case WeaponType::TNT: FireWeaponTNT(); break;
 				case WeaponType::Pepper: FireWeaponPepper(); break;
 				case WeaponType::Electro: FireWeaponElectro(); break;
 
@@ -2671,6 +2675,127 @@ namespace Jazz2::Actors
 
 		PlaySfx("PickupAmmo"_s);
 
+		return true;
+	}
+
+	void Player::MorphTo(PlayerType type)
+	{
+		if (_playerType == type) {
+			return;
+		}
+
+		PlayerType playerTypePrevious = _playerType;
+
+		_playerType = type;
+
+		// Load new metadata
+		switch (type) {
+			case PlayerType::Jazz:
+				RequestMetadata("Interactive/PlayerJazz");
+				break;
+			case PlayerType::Spaz:
+				RequestMetadata("Interactive/PlayerSpaz");
+				break;
+			case PlayerType::Lori:
+				RequestMetadata("Interactive/PlayerLori");
+				break;
+			case PlayerType::Frog:
+				RequestMetadata("Interactive/PlayerFrog");
+				break;
+		}
+
+		// Refresh animation state
+		if ((_currentSpecialMove == SpecialMoveType::None) ||
+			(_currentSpecialMove == SpecialMoveType::Buttstomp && (type == PlayerType::Jazz || type == PlayerType::Spaz || type == PlayerType::Lori))) {
+			_currentAnimation = nullptr;
+			SetAnimation(_currentAnimationState);
+		} else {
+			_currentAnimation = nullptr;
+			SetAnimation(AnimState::Fall);
+
+			CollisionFlags |= CollisionFlags::ApplyGravitation;
+			_controllable = true;
+
+			if (_currentSpecialMove == SpecialMoveType::Uppercut && _externalForce.Y > 0.0f) {
+				_externalForce.Y = 0.0f;
+			}
+
+			_currentSpecialMove = SpecialMoveType::None;
+		}
+
+		// Set transition
+		if (type == PlayerType::Frog) {
+			PlaySfx("Transform");
+
+			_controllable = false;
+			_controllableTimeout = 120.0f;
+
+			switch (playerTypePrevious) {
+				case PlayerType::Jazz:
+					SetTransition((AnimState)0x60000000, false, [this]() {
+						_controllable = true;
+						_controllableTimeout = 0.0f;
+					});
+					break;
+				case PlayerType::Spaz:
+					SetTransition((AnimState)0x60000001, false, [this]() {
+						_controllable = true;
+						_controllableTimeout = 0.0f;
+					});
+					break;
+				case PlayerType::Lori:
+					SetTransition((AnimState)0x60000002, false, [this]() {
+						_controllable = true;
+						_controllableTimeout = 0.0f;
+					});
+					break;
+			}
+		} else if (playerTypePrevious == PlayerType::Frog) {
+			_controllable = false;
+			_controllableTimeout = 120.0f;
+
+			SetTransition(AnimState::TransitionFromFrog, false, [this]() {
+				_controllable = true;
+				_controllableTimeout = 0.0f;
+			});
+		} else {
+			Explosion::Create(_levelHandler, Vector3i((int)(_pos.X - 12.0f), (int)(_pos.Y - 6.0f), _renderer.layer() + 4), Explosion::Type::SmokeBrown);
+			Explosion::Create(_levelHandler, Vector3i((int)(_pos.X - 8.0f), (int)(_pos.Y + 28.0f), _renderer.layer() + 4), Explosion::Type::SmokeBrown);
+			Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + 12.0f), (int)(_pos.Y + 10.0f), _renderer.layer() + 4), Explosion::Type::SmokeBrown);
+
+			Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)(_pos.Y + 12.0f), _renderer.layer() + 6), Explosion::Type::SmokeBrown);
+		}
+	}
+
+	void Player::MorphRevent()
+	{
+		MorphTo(_playerTypeOriginal);
+	}
+
+	bool Player::DisableControllable(float timeout)
+	{
+		if (!_controllable) {
+			if (timeout <= 0.0f) {
+				_controllable = true;
+				_controllableTimeout = 0.0f;
+				return true;
+			} else {
+				return false;
+			}
+		}
+
+		if (timeout <= 0.0f) {
+			return false;
+		}
+
+		_controllable = false;
+		if (timeout == std::numeric_limits<float>::infinity()) {
+			_controllableTimeout = 0.0f;
+		} else {
+			_controllableTimeout = timeout;
+		}
+
+		SetAnimation(AnimState::Idle);
 		return true;
 	}
 }

@@ -17,7 +17,6 @@ namespace Jazz2::Actors::Enemies
 		void OnUpdateHitbox() override;
 		bool OnPerish(ActorBase* collider) override;
 
-
 	private:
 		static constexpr float DefaultSpeed = -1.0f;
 

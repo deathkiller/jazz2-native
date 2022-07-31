@@ -140,7 +140,7 @@ void GameEventHandler::onInit()
 #endif
 
 #if !defined(__EMSCRIPTEN__)
-	theApplication().inputManager().addJoyMappingsFromFile("Content/gamecontrollerdb.txt");
+	theApplication().inputManager().addJoyMappingsFromFile(fs::joinPath({ "Content"_s, "gamecontrollerdb.txt"_s }));
 #endif
 
 	// TODO
