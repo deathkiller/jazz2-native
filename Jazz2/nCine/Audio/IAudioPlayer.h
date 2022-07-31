@@ -10,8 +10,7 @@ namespace nCine
 	{
 	public:
 		/// Player state
-		enum class PlayerState
-		{
+		enum class PlayerState {
 			Initial = 0,
 			Playing,
 			Paused,
@@ -85,6 +84,12 @@ namespace nCine
 		virtual void setLooping(bool isLooping) {
 			isLooping_ = isLooping;
 		}
+		/// Queries the source relative property of the player
+		inline bool isSourceRelative() const {
+			return isSourceRelative_;
+		}
+		/// Sets player source relative property
+		void setSourceRelative(bool isSourceRelative);
 
 		/// Returns player gain value
 		inline float gain() const {
@@ -110,8 +115,6 @@ namespace nCine
 		}
 		/// Sets player position value through vector
 		void setPosition(const Vector3f& position);
-		/// Sets player position value through components
-		void setPosition(float x, float y, float z);
 
 	protected:
 		/// The OpenAL source id
@@ -120,6 +123,8 @@ namespace nCine
 		PlayerState state_;
 		/// Looping status flag
 		bool isLooping_;
+		/// Source relative flag
+		bool isSourceRelative_;
 		/// Player gain value
 		float gain_;
 		/// Player pitch value

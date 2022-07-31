@@ -46,9 +46,9 @@ namespace nCine
 
 		GLShaderProgram();
 		explicit GLShaderProgram(QueryPhase queryPhase);
-		GLShaderProgram(const char* vertexFile, const char* fragmentFile, Introspection introspection, QueryPhase queryPhase);
-		GLShaderProgram(const char* vertexFile, const char* fragmentFile, Introspection introspection);
-		GLShaderProgram(const char* vertexFile, const char* fragmentFile);
+		GLShaderProgram(const StringView& vertexFile, const StringView& fragmentFile, Introspection introspection, QueryPhase queryPhase);
+		GLShaderProgram(const StringView& vertexFile, const StringView& fragmentFile, Introspection introspection);
+		GLShaderProgram(const StringView& vertexFile, const StringView& fragmentFile);
 		~GLShaderProgram();
 
 		inline GLuint glHandle() const {
@@ -80,7 +80,7 @@ namespace nCine
 			return uniformBlocksSize_;
 		}
 
-		bool attachShader(GLenum type, const char* filename);
+		bool attachShader(GLenum type, const StringView& filename);
 		bool attachShaderFromString(GLenum type, const char* string);
 		bool link(Introspection introspection);
 		void use();
@@ -90,7 +90,7 @@ namespace nCine
 			return attributeLocations_.size();
 		}
 		inline bool hasAttribute(const char* name) const {
-			return (attributeLocations_.find(name) != nullptr);
+			return (attributeLocations_.find(String::nullTerminatedView(name)) != nullptr);
 		}
 		GLVertexFormat::Attribute* attribute(const char* name);
 

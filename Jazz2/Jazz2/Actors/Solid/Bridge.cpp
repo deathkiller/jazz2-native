@@ -3,6 +3,8 @@
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 
+#include "../../../nCine/Graphics/RenderQueue.h"
+
 namespace Jazz2::Actors::Solid
 {
 	Bridge::Bridge()
@@ -11,44 +13,63 @@ namespace Jazz2::Actors::Solid
 
 	void Bridge::Preload(const ActorActivationDetails& details)
 	{
-		PreloadMetadataAsync("Bridge/Stone"_s);
+		BridgeType bridgeType = (BridgeType)details.Params[2];
+		switch (bridgeType) {
+			default:
+			case BridgeType::Rope: PreloadMetadataAsync("Bridge/Rope"_s); break;
+			case BridgeType::Stone: PreloadMetadataAsync("Bridge/Stone"_s); break;
+			case BridgeType::Vine: PreloadMetadataAsync("Bridge/Vine"_s); break;
+			case BridgeType::StoneRed: PreloadMetadataAsync("Bridge/StoneRed"_s); break;
+			case BridgeType::Log: PreloadMetadataAsync("Bridge/Log"_s); break;
+			case BridgeType::Gem: PreloadMetadataAsync("Bridge/Gem"_s); break;
+			case BridgeType::Lab: PreloadMetadataAsync("Bridge/Lab"_s); break;
+		}
 	}
 
 	Task<bool> Bridge::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		_bridgeWidth = *(uint16_t*)&details.Params[0];
 		_bridgeType = (BridgeType)details.Params[2];
-		if (_bridgeType > BridgeType::Last) {
-			_bridgeType = BridgeType::Rope;
-		}
 
 		int toughness = details.Params[2];
 		_heightFactor = std::sqrtf((16 - toughness) * _bridgeWidth) * 4.0f;
 
-		co_await RequestMetadataAsync("Bridge/Stone"_s);
-
-		SetAnimation(AnimState::Idle);
-
 		_originalY = _pos.Y - 6;
 
-		/*if (bridgePieces.Count == 0) {
-			int[] widthList = PieceWidths[(int)bridgeType];
+		const int* widths;
+		int widthsCount;
+		int widthOffset = 0;
+		switch (_bridgeType) {
+			default:
+			case BridgeType::Rope: co_await RequestMetadataAsync("Bridge/Rope"_s); widths = PieceWidthsRope; widthsCount = _countof(PieceWidthsRope); break;
+			case BridgeType::Stone: co_await RequestMetadataAsync("Bridge/Stone"_s); widths = PieceWidthsStone; widthsCount = _countof(PieceWidthsStone); break;
+			case BridgeType::Vine: co_await RequestMetadataAsync("Bridge/Vine"_s); widths = PieceWidthsVine; widthsCount = _countof(PieceWidthsVine); widthOffset = 8; break;
+			case BridgeType::StoneRed: co_await RequestMetadataAsync("Bridge/StoneRed"_s); widths = PieceWidthsStoneRed; widthsCount = _countof(PieceWidthsStoneRed); break;
+			case BridgeType::Log: co_await RequestMetadataAsync("Bridge/Log"_s); widths = PieceWidthsLog; widthsCount = _countof(PieceWidthsLog); break;
+			case BridgeType::Gem: co_await RequestMetadataAsync("Bridge/Gem"_s); widths = PieceWidthsGem; widthsCount = _countof(PieceWidthsGem); break;
+			case BridgeType::Lab: co_await RequestMetadataAsync("Bridge/Lab"_s); widths = PieceWidthsLab; widthsCount = _countof(PieceWidthsLab); widthOffset = 12; break;
+		}
 
-			int widthCovered = widthList[0] / 2;
-			for (int i = 0; (widthCovered <= bridgeWidth * 16 + 6) || (i * 16 < bridgeWidth); i++) {
-				Piece piece = new Piece();
-				piece.OnActivated(new ActorActivationDetails {
-					LevelHandler = levelHandler,
-					Pos = new Vector3(pos.X + widthCovered - 16, pos.Y - 20, LevelHandler.MainPlaneZ + 30),
-					Params = new[] { (ushort)bridgeType, (ushort)i }
-				});
-				levelHandler.AddActor(piece);
+		SetAnimation("Piece"_s);
 
-				bridgePieces.Add(piece);
+		int widthCovered = widths[0] / 2 - widthOffset;
+		for (int i = 0; (widthCovered <= _bridgeWidth * 16 + 8) || (i * 16 < _bridgeWidth); i++) {
+			BridgePiece& piece = _pieces.emplace_back();
+			piece.Pos = Vector2f(_pos.X + widthCovered - 16, _pos.Y);
+			piece.Command = std::make_unique<RenderCommand>();
+			piece.Command->setType(RenderCommand::CommandTypes::SPRITE);
+			piece.Command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
+			piece.Command->material().setBlendingEnabled(true);
+			piece.Command->material().reserveUniformsDataMemory();
+			piece.Command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-				widthCovered += (widthList[i % widthList.Length] + widthList[(i + 1) % widthList.Length]) / 2;
+			GLUniformCache* textureUniform = piece.Command->material().uniform(Material::TextureUniformName);
+			if (textureUniform && textureUniform->intValue(0) != 0) {
+				textureUniform->setIntValue(0); // GL_TEXTURE0
 			}
-		}*/
+
+			widthCovered += (widths[i % widthsCount] + widths[(i + 1) % widthsCount]) / 2;
+		}
 
 		CollisionFlags = CollisionFlags::CollideWithOtherActors | CollisionFlags::SkipPerPixelCollisions | CollisionFlags::IsSolidObject;
 
@@ -62,6 +83,39 @@ namespace Jazz2::Actors::Solid
 
 	void Bridge::OnUpdateHitbox()
 	{
-		AABBInner = AABBf(_pos.X - 16, _pos.Y - 10, _pos.X - 16 + _bridgeWidth * 16, _pos.Y + 16);
+		AABBInner = AABBf(_pos.X - 16, _pos.Y - 6, _pos.X - 16 + _bridgeWidth * 16, _pos.Y + 16);
+	}
+
+	bool Bridge::OnDraw(RenderQueue& renderQueue)
+	{
+		if (_currentAnimation != nullptr) {
+			Vector2i texSize = _currentAnimation->Base->TextureDiffuse->size();
+
+			for (int i = 0; i < _pieces.size(); i++) {
+				auto command = _pieces[i].Command.get();
+
+				int curAnimFrame = _currentAnimation->FrameOffset + (i % _currentAnimation->FrameCount);
+				int col = curAnimFrame % _currentAnimation->Base->FrameConfiguration.X;
+				int row = curAnimFrame / _currentAnimation->Base->FrameConfiguration.X;
+				float texScaleX = (float(_currentAnimation->Base->FrameDimensions.X) / float(texSize.X));
+				float texBiasX = (float(_currentAnimation->Base->FrameDimensions.X * col) / float(texSize.X));
+				float texScaleY = (float(_currentAnimation->Base->FrameDimensions.Y) / float(texSize.Y));
+				float texBiasY = (float(_currentAnimation->Base->FrameDimensions.Y * row) / float(texSize.X));
+
+				auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+				instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
+				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(_currentAnimation->Base->FrameDimensions.X, _currentAnimation->Base->FrameDimensions.Y);
+				instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+
+				auto& pos = _pieces[i].Pos;
+				command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
+				command->setLayer(_renderer.layer());
+				command->material().setTexture(*_currentAnimation->Base->TextureDiffuse.get());
+
+				renderQueue.addCommand(command);
+			}
+		}
+
+		return true;
 	}
 }

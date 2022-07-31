@@ -3,8 +3,10 @@
 #include "../Actors/Environment/BonusWarp.h"
 #include "../Actors/Environment/Checkpoint.h"
 #include "../Actors/Environment/EndOfLevel.h"
+#include "../Actors/Environment/Eva.h"
 #include "../Actors/Environment/Moth.h"
 #include "../Actors/Environment/Spring.h"
+#include "../Actors/Environment/SteamNote.h"
 
 #include "../Actors/Collectibles/AmmoCollectible.h"
 #include "../Actors/Collectibles/CoinCollectible.h"
@@ -61,13 +63,13 @@ namespace Jazz2::Events
 		RegisterSpawnable<Solid::Bridge>(EventType::Bridge);
 		/*RegisterSpawnable(EventType::MovingPlatform, MovingPlatform.Create, MovingPlatform.Preload);
 		RegisterSpawnable(EventType::SpikeBall, SpikeBall.Create, SpikeBall.Preload);
-		RegisterSpawnable(EventType::PushableBox, PushBox.Create, PushBox.Preload);
-		RegisterSpawnable(EventType::Eva, Eva.Create, Eva.Preload);
-		RegisterSpawnable(EventType::Pole, Pole.Create, Pole.Preload);*/
+		RegisterSpawnable(EventType::PushableBox, PushBox.Create, PushBox.Preload);*/
+		RegisterSpawnable<Environment::Eva>(EventType::Eva);
+		/*RegisterSpawnable(EventType::Pole, Pole.Create, Pole.Preload);*/
 		RegisterSpawnable<Environment::EndOfLevel>(EventType::SignEOL);
 		RegisterSpawnable<Environment::Moth>(EventType::Moth);
-		/*RegisterSpawnable(EventType::SteamNote, SteamNote.Create, SteamNote.Preload);
-		RegisterSpawnable(EventType::Bomb, Bomb.Create, Bomb.Preload);
+		RegisterSpawnable<Environment::SteamNote>(EventType::SteamNote);
+		/*RegisterSpawnable(EventType::Bomb, Bomb.Create, Bomb.Preload);
 		RegisterSpawnable(EventType::PinballBumper, PinballBumper.Create, PinballBumper.Preload);
 		RegisterSpawnable(EventType::PinballPaddle, PinballPaddle.Create, PinballPaddle.Preload);*/
 

@@ -17,6 +17,7 @@ namespace nCine
 		: glHandle_(0)
 	{
 		glGenVertexArrays(1, &glHandle_);
+		GL_LOG_ERRORS();
 	}
 
 	GLVertexArrayObject::~GLVertexArrayObject()
@@ -25,6 +26,7 @@ namespace nCine
 			unbind();
 
 		glDeleteVertexArrays(1, &glHandle_);
+		GL_LOG_ERRORS();
 	}
 
 	///////////////////////////////////////////////////////////
@@ -35,6 +37,7 @@ namespace nCine
 	{
 		if (boundVAO_ != glHandle_) {
 			glBindVertexArray(glHandle_);
+			GL_LOG_ERRORS();
 			boundVAO_ = glHandle_;
 			return true;
 		}
@@ -45,6 +48,7 @@ namespace nCine
 	{
 		if (boundVAO_ != 0) {
 			glBindVertexArray(0);
+			GL_LOG_ERRORS();
 			boundVAO_ = 0;
 			return true;
 		}

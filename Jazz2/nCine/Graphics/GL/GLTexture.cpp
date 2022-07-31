@@ -18,6 +18,7 @@ namespace nCine
 		: glHandle_(0), target_(target), textureUnit_(0)
 	{
 		glGenTextures(1, &glHandle_);
+		GL_LOG_ERRORS();
 	}
 
 	GLTexture::~GLTexture()
@@ -26,6 +27,7 @@ namespace nCine
 			unbind();
 
 		glDeleteTextures(1, &glHandle_);
+		GL_LOG_ERRORS();
 	}
 
 	///////////////////////////////////////////////////////////
@@ -59,30 +61,35 @@ namespace nCine
 	{
 		bind();
 		glTexImage2D(target_, level, internalFormat, width, height, 0, format, type, data);
+		GL_LOG_ERRORS();
 	}
 
 	void GLTexture::texSubImage2D(GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void* data)
 	{
 		bind();
 		glTexSubImage2D(target_, level, xoffset, yoffset, width, height, format, type, data);
+		GL_LOG_ERRORS();
 	}
 
 	void GLTexture::compressedTexImage2D(GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLsizei imageSize, const void* data)
 	{
 		bind();
 		glCompressedTexImage2D(target_, level, internalFormat, width, height, 0, imageSize, data);
+		GL_LOG_ERRORS();
 	}
 
 	void GLTexture::compressedTexSubImage2D(GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void* data)
 	{
 		bind();
 		glCompressedTexSubImage2D(target_, level, xoffset, yoffset, width, height, format, imageSize, data);
+		GL_LOG_ERRORS();
 	}
 
 	void GLTexture::texStorage2D(GLsizei levels, GLint internalFormat, GLsizei width, GLsizei height)
 	{
 		bind();
 		glTexStorage2D(target_, levels, internalFormat, width, height);
+		GL_LOG_ERRORS();
 	}
 
 #if !defined(WITH_OPENGLES) && !defined(__EMSCRIPTEN__)
@@ -90,6 +97,7 @@ namespace nCine
 	{
 		bind();
 		glGetTexImage(target_, level, format, type, pixels);
+		GL_LOG_ERRORS();
 	}
 #endif
 
@@ -97,12 +105,14 @@ namespace nCine
 	{
 		bind();
 		glTexParameterf(target_, pname, param);
+		GL_LOG_ERRORS();
 	}
 
 	void GLTexture::texParameteri(GLenum pname, GLint param)
 	{
 		bind();
 		glTexParameteri(target_, pname, param);
+		GL_LOG_ERRORS();
 	}
 
 	void GLTexture::setObjectLabel(const char* label)
@@ -125,10 +135,10 @@ namespace nCine
 			}
 
 			glBindTexture(target, glHandle);
+			GL_LOG_ERRORS();
 			boundTextures_[textureUnit][target] = glHandle;
 			return true;
 		}
 		return false;
 	}
-
 }

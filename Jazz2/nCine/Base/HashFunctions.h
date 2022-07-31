@@ -296,7 +296,8 @@ namespace nCine
 	class FastHashFunc<const char*>
 	{
 	public:
-		hash_t operator()(const char* key) const {
+		hash_t operator()(const char* key) const
+		{
 			return fasthash32(key, strlen(key), Seed);
 		}
 
@@ -314,7 +315,8 @@ namespace nCine
 	class FastHashFunc<String>
 	{
 	public:
-		hash_t operator()(const String& string) const {
+		hash_t operator()(const String& string) const
+		{
 			return fasthash32(string.data(), string.size(), Seed);
 		}
 

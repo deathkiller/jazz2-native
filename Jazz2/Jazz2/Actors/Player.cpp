@@ -363,9 +363,13 @@ namespace Jazz2::Actors
 			}
 		}
 
-		if (_copterSound != nullptr && (_currentAnimationState & AnimState::Copter) != AnimState::Copter) {
-			_copterSound->stop();
-			_copterSound = nullptr;
+		if (_copterSound != nullptr) {
+			if ((_currentAnimationState & AnimState::Copter) == AnimState::Copter) {
+				_copterSound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+			} else {
+				_copterSound->stop();
+				_copterSound = nullptr;
+			}
 		}
 
 		// Shallow Water

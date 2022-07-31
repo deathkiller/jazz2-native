@@ -20,6 +20,7 @@ namespace nCine {
 		: glHandle_(0)
 	{
 		glGenFramebuffers(1, &glHandle_);
+		GL_LOG_ERRORS();
 	}
 
 	GLFramebuffer::~GLFramebuffer()
@@ -30,6 +31,7 @@ namespace nCine {
 			unbind(GL_DRAW_FRAMEBUFFER);
 
 		glDeleteFramebuffers(1, &glHandle_);
+		GL_LOG_ERRORS();
 	}
 
 	///////////////////////////////////////////////////////////
@@ -62,6 +64,7 @@ namespace nCine {
 															GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6, GL_COLOR_ATTACHMENT7 };
 		if (numDrawBuffers < MaxDrawbuffers && numDrawBuffers_ != numDrawBuffers) {
 			glDrawBuffers(numDrawBuffers, drawBuffers);
+			GL_LOG_ERRORS();
 			numDrawBuffers_ = numDrawBuffers;
 			return true;
 		}
@@ -84,6 +87,7 @@ namespace nCine {
 
 		bind(GL_FRAMEBUFFER);
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, buffer->glHandle_);
+		GL_LOG_ERRORS();
 		return true;
 	}
 
@@ -98,6 +102,7 @@ namespace nCine {
 			if (attachedRenderbuffers_[i]->attachment() == attachment) {
 				bind(GL_FRAMEBUFFER);
 				glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, 0);
+				GL_LOG_ERRORS();
 				attachedRenderbuffers_.erase(attachedRenderbuffers_.begin() + i);
 				return true;
 			}
@@ -109,18 +114,21 @@ namespace nCine {
 	{
 		bind(GL_FRAMEBUFFER);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, texture.target_, texture.glHandle_, 0);
+		GL_LOG_ERRORS();
 	}
 
 	void GLFramebuffer::detachTexture(GLenum attachment)
 	{
 		bind(GL_FRAMEBUFFER);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, 0, 0);
+		GL_LOG_ERRORS();
 	}
 
 	void GLFramebuffer::invalidate(GLsizei numAttachments, const GLenum* attachments)
 	{
 		bind(GL_FRAMEBUFFER);
 		glInvalidateFramebuffer(GL_FRAMEBUFFER, numAttachments, attachments);
+		GL_LOG_ERRORS();
 	}
 
 	bool GLFramebuffer::isStatusComplete()
@@ -148,15 +156,18 @@ namespace nCine {
 		if (target == GL_FRAMEBUFFER &&
 			(readBoundBuffer_ != glHandle || drawBoundBuffer_ != glHandle)) {
 			glBindFramebuffer(target, glHandle);
+			GL_LOG_ERRORS();
 			readBoundBuffer_ = glHandle;
 			drawBoundBuffer_ = glHandle;
 			return true;
 		} else if (target == GL_READ_FRAMEBUFFER && readBoundBuffer_ != glHandle) {
 			glBindFramebuffer(target, glHandle);
+			GL_LOG_ERRORS();
 			readBoundBuffer_ = glHandle;
 			return true;
 		} else if (target == GL_DRAW_FRAMEBUFFER && drawBoundBuffer_ != glHandle) {
 			glBindFramebuffer(target, glHandle);
+			GL_LOG_ERRORS();
 			drawBoundBuffer_ = glHandle;
 			return true;
 		}

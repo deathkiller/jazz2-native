@@ -7,7 +7,6 @@
 #include "../nCine/Primitives/Matrix4x4.h"
 #include "../nCine/Base/Random.h"
 #include "../nCine/Base/FrameTimer.h"
-#include "../nCine/Base/HashMapIterator.h"
 
 using namespace nCine;
 
@@ -79,10 +78,12 @@ namespace Jazz2
 		_pos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
 		_originTile = Vector2i((int)details.Pos.X / 32, (int)details.Pos.Y / 32);
 
-		_renderer.setLayer((uint16_t)details.Pos.Z);
-		_renderer.setPosition(std::round(_pos.X), std::round(_pos.Y));
+		uint16_t layer = (uint16_t)details.Pos.Z;
 
 		bool success = co_await OnActivatedAsync(details);
+
+		_renderer.setLayer(layer);
+		_renderer.setPosition(std::round(_pos.X), std::round(_pos.Y));
 
 		OnUpdateHitbox();
 
@@ -144,6 +145,19 @@ namespace Jazz2
 		}*/
 	}
 
+	void ActorBase::OnUpdateHitbox()
+	{
+		if (_metadata != nullptr) {
+			UpdateHitbox(_metadata->BoundingBox.X, _metadata->BoundingBox.Y);
+		}
+	}
+
+	bool ActorBase::OnDraw(RenderQueue& renderQueue)
+	{
+		// Override and return true to suppress default rendering
+		return false;
+	}
+
 	void ActorBase::OnHealthChanged(ActorBase* collider)
 	{
 		// Can be overridden
@@ -159,13 +173,6 @@ namespace Jazz2
 
 		CollisionFlags |= CollisionFlags::IsDestroyed;
 		return true;
-	}
-
-	void ActorBase::OnUpdateHitbox()
-	{
-		if (_metadata != nullptr) {
-			UpdateHitbox(_metadata->BoundingBox.X, _metadata->BoundingBox.Y);
-		}
 	}
 
 	void ActorBase::OnHitFloor()
@@ -397,19 +404,19 @@ namespace Jazz2
 	{
 		auto tilemap = _levelHandler->TileMap();
 		if (tilemap != nullptr && _metadata != nullptr) {
-			auto it = _metadata->Graphics.find(identifier);
-			if (it != nullptr) {
-				tilemap->CreateSpriteDebris(it, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), count);
+			auto it = _metadata->Graphics.find(String::nullTerminatedView(identifier));
+			if (it != _metadata->Graphics.end()) {
+				tilemap->CreateSpriteDebris(&it->second, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), count);
 			}
 		}
 	}
 
 	const std::shared_ptr<AudioBufferPlayer>& ActorBase::PlaySfx(const StringView& identifier, float gain, float pitch)
 	{
-		auto it = _metadata->Sounds.find(identifier);
-		if (it != nullptr) {
-			int idx = (it->Buffers.size() > 1 ? Random().Next(0, (int)it->Buffers.size()) : 0);
-			return _levelHandler->PlaySfx(it->Buffers[idx].get(), Vector3f(_pos.X, _pos.Y, 0.0f), gain, pitch);
+		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
+		if (it != _metadata->Sounds.end()) {
+			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
+			return _levelHandler->PlaySfx(it->second.Buffers[idx].get(), Vector3f(_pos.X, _pos.Y, 0.0f), gain, pitch);
 		} else {
 			//LOGE_X("Sound effect \"%s\" was not found", identifier.data());
 			return std::shared_ptr<AudioBufferPlayer>(nullptr);
@@ -423,13 +430,13 @@ namespace Jazz2
 			return;
 		}
 
-		auto it = _metadata->Graphics.find(identifier);
-		if (it == nullptr) {
+		auto it = _metadata->Graphics.find(String::nullTerminatedView(identifier));
+		if (it == _metadata->Graphics.end()) {
 			LOGE_X("No animation found for \"%s\"", identifier.data());
 			return;
 		}
 
-		_currentAnimation = it;
+		_currentAnimation = &it->second;
 		_currentAnimationState = AnimState::Idle;
 
 		RefreshAnimation();
@@ -1083,9 +1090,9 @@ namespace Jazz2
 				break;
 			}
 
-			if (it.node().value.HasState(state)) {
-				candidates[i].Identifier = &it.node().key;
-				candidates[i].Resource = &it.node().value;
+			if (it->second.HasState(state)) {
+				candidates[i].Identifier = &it->first;
+				candidates[i].Resource = &it->second;
 				i++;
 			}
 			++it;
@@ -1199,6 +1206,15 @@ namespace Jazz2
 		}
 
 		Sprite::OnUpdate(timeMult);
+	}
+
+	bool ActorBase::SpriteRenderer::OnDraw(RenderQueue& renderQueue)
+	{
+		if (_owner->OnDraw(renderQueue)) {
+			return true;
+		}
+
+		return Sprite::OnDraw(renderQueue);
 	}
 
 	void ActorBase::SpriteRenderer::UpdateVisibleFrames()

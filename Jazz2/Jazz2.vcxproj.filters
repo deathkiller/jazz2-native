@@ -148,6 +148,9 @@
     <Filter Include="Header Files\Shared\Containers">
       <UniqueIdentifier>{9e5b0b19-ff74-4133-9a57-6a38648c2280}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\nCine\Base\ParallelHashMap">
+      <UniqueIdentifier>{f14c807a-cda1-4d6b-8b0b-7b7b74a9f565}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -468,9 +471,6 @@
     <ClInclude Include="nCine\Base\HashMap.h">
       <Filter>Header Files\nCine\Base</Filter>
     </ClInclude>
-    <ClInclude Include="nCine\Base\HashMapIterator.h">
-      <Filter>Header Files\nCine\Base</Filter>
-    </ClInclude>
     <ClInclude Include="nCine\Input\GlfwInputManager.h">
       <Filter>Header Files\nCine\Input</Filter>
     </ClInclude>
@@ -785,6 +785,30 @@
     </ClInclude>
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\ArrayView.h">
       <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\SteamNote.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\Eva.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_bits.h">
+      <Filter>Header Files\nCine\Base\ParallelHashMap</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_config.h">
+      <Filter>Header Files\nCine\Base\ParallelHashMap</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_fwd_decl.h">
+      <Filter>Header Files\nCine\Base\ParallelHashMap</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_utils.h">
+      <Filter>Header Files\nCine\Base\ParallelHashMap</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap.h">
+      <Filter>Header Files\nCine\Base\ParallelHashMap</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_base.h">
+      <Filter>Header Files\nCine\Base\ParallelHashMap</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1333,6 +1357,12 @@
     </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\String.cpp">
       <Filter>Source Files\Shared\Containers</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\SteamNote.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\Eva.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

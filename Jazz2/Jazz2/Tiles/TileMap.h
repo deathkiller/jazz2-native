@@ -191,5 +191,14 @@ namespace Jazz2::Tiles
 
 		void UpdateDebris(float timeMult);
 		void DrawDebris(RenderQueue& renderQueue);
+
+		inline int ResolveTileID(LayerTile& tile)
+		{
+			int tileId = tile.TileID;
+			if (tile.IsAnimated) {
+				tileId = _animatedTiles[tileId].Tiles[_animatedTiles[tileId].CurrentTileIdx].TileID;
+			}
+			return tileId;
+		}
 	};
 }

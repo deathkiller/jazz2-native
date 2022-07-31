@@ -47,12 +47,18 @@ namespace nCine
 		void registerPlayer(IAudioPlayer* player) override;
 		void unregisterPlayer(IAudioPlayer* player) override;
 		void updatePlayers() override;
+		
+		void updateListener(Vector3f position, Vector3f velocity) override;
 
 		int nativeFrequency() override;
 
 	private:
-		/// Maximum number of OpenAL sources (HACK: should use a query)
-		static const unsigned int MaxSources = 16;
+		/// Maximum number of OpenAL sources
+#if defined(__ANDROID__) || defined(__EMSCRIPTEN__)
+		static const unsigned int MaxSources = 32;
+#else
+		static const unsigned int MaxSources = 64;
+#endif
 
 		/// The OpenAL device
 		ALCdevice* device_;

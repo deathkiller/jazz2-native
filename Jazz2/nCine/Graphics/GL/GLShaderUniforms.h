@@ -30,7 +30,7 @@ namespace nCine
 			return uniformCaches_.size();
 		}
 		inline bool hasUniform(const char* name) const {
-			return (uniformCaches_.find(name) != nullptr);
+			return (uniformCaches_.find(String::nullTerminatedView(name)) != nullptr);
 		}
 		GLUniformCache* uniform(const char* name);
 		inline const UniformHashMapType allUniforms() const {

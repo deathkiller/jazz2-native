@@ -22,6 +22,7 @@ namespace nCine
 			boundIndexBase_[i] = 0;
 
 		glGenBuffers(1, &glHandle_);
+		GL_LOG_ERRORS();
 	}
 
 	GLBufferObject::~GLBufferObject()
@@ -30,6 +31,7 @@ namespace nCine
 			unbind();
 
 		glDeleteBuffers(1, &glHandle_);
+		GL_LOG_ERRORS();
 	}
 
 	///////////////////////////////////////////////////////////
@@ -40,6 +42,7 @@ namespace nCine
 	{
 		if (boundBuffers_[target_] != glHandle_) {
 			glBindBuffer(target_, glHandle_);
+			GL_LOG_ERRORS();
 			boundBuffers_[target_] = glHandle_;
 			return true;
 		}
@@ -50,6 +53,7 @@ namespace nCine
 	{
 		if (boundBuffers_[target_] != 0) {
 			glBindBuffer(target_, 0);
+			GL_LOG_ERRORS();
 			boundBuffers_[target_] = 0;
 			return true;
 		}
@@ -60,6 +64,7 @@ namespace nCine
 	{
 		bind();
 		glBufferData(target_, size, data, usage);
+		GL_LOG_ERRORS();
 		size_ = size;
 	}
 
@@ -67,6 +72,7 @@ namespace nCine
 	{
 		bind();
 		glBufferSubData(target_, offset, size, data);
+		GL_LOG_ERRORS();
 	}
 
 #if !defined(WITH_OPENGLES)
@@ -74,6 +80,7 @@ namespace nCine
 	{
 		bind();
 		glBufferStorage(target_, size, data, flags);
+		GL_LOG_ERRORS();
 		size_ = size;
 	}
 #endif
@@ -92,6 +99,7 @@ namespace nCine
 			boundIndexBase_[index] = glHandle_;
 			glBindBufferBase(target_, index, glHandle_);
 		}
+		GL_LOG_ERRORS();
 	}
 
 	void GLBufferObject::bindBufferRange(GLuint index, GLintptr offset, GLsizei ptrsize)
@@ -110,6 +118,7 @@ namespace nCine
 			boundBufferRange_[index].ptrsize = ptrsize;
 			glBindBufferRange(target_, index, glHandle_, offset, ptrsize);
 		}
+		GL_LOG_ERRORS();
 	}
 
 	void* GLBufferObject::mapBufferRange(GLintptr offset, GLsizeiptr length, GLbitfield access)
@@ -140,6 +149,7 @@ namespace nCine
 	{
 		//FATAL_ASSERT(target_ == GL_TEXTURE_BUFFER);
 		glTexBuffer(GL_TEXTURE_BUFFER, internalformat, glHandle_);
+		GL_LOG_ERRORS();
 	}
 #endif
 
@@ -156,6 +166,7 @@ namespace nCine
 	{
 		if (boundBuffers_[target] != glHandle) {
 			glBindBuffer(target, glHandle);
+			GL_LOG_ERRORS();
 			boundBuffers_[target] = glHandle;
 			return true;
 		}

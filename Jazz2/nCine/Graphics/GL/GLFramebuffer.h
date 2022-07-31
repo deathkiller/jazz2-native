@@ -37,7 +37,7 @@ namespace nCine
 		inline unsigned int numDrawbuffers() const { return numDrawBuffers_; }
 		bool drawBuffers(unsigned int numDrawBuffers);
 
-		inline unsigned int numRenderbuffers() const { return attachedRenderbuffers_.size(); }
+		inline unsigned int numRenderbuffers() const { return (unsigned int)attachedRenderbuffers_.size(); }
 		bool attachRenderbuffer(const char *label, GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment);
 		bool attachRenderbuffer(GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment);
 		bool detachRenderbuffer(GLenum internalFormat);

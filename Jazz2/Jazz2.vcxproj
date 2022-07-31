@@ -217,7 +217,9 @@
     <ClInclude Include="Jazz2\Actors\Enemies\SuckerFloat.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\TurtleShell.h" />
     <ClInclude Include="Jazz2\Actors\Environment\EndOfLevel.h" />
+    <ClInclude Include="Jazz2\Actors\Environment\Eva.h" />
     <ClInclude Include="Jazz2\Actors\Environment\Moth.h" />
+    <ClInclude Include="Jazz2\Actors\Environment\SteamNote.h" />
     <ClInclude Include="Jazz2\Actors\Solid\Bridge.h" />
     <ClInclude Include="Jazz2\Actors\Solid\CrateContainer.h" />
     <ClInclude Include="Jazz2\Actors\Solid\GenericContainer.h" />
@@ -262,9 +264,14 @@
     <ClInclude Include="nCine\Base\FrameTimer.h" />
     <ClInclude Include="nCine\Base\HashFunctions.h" />
     <ClInclude Include="nCine\Base\HashMap.h" />
-    <ClInclude Include="nCine\Base\HashMapIterator.h" />
     <ClInclude Include="nCine\Base\Iterator.h" />
     <ClInclude Include="nCine\Base\Object.h" />
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap.h" />
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_base.h" />
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_bits.h" />
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_config.h" />
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_fwd_decl.h" />
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_utils.h" />
     <ClInclude Include="nCine\Base\Random.h" />
     <ClInclude Include="nCine\Base\ReverseIterator.h" />
     <ClInclude Include="nCine\Base\StaticHashMap.h" />
@@ -424,7 +431,9 @@
     <ClCompile Include="Jazz2\Actors\Enemies\SuckerFloat.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\TurtleShell.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\EndOfLevel.cpp" />
+    <ClCompile Include="Jazz2\Actors\Environment\Eva.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\Moth.cpp" />
+    <ClCompile Include="Jazz2\Actors\Environment\SteamNote.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\Bridge.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\CrateContainer.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\GenericContainer.cpp" />

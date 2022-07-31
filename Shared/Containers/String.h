@@ -84,7 +84,7 @@ namespace Death::Containers
 		/**
 		 * @brief Turn a view into a null-terminated string
 		 *
-		 * If the view is @ref StringViewFlag::NullTerminated, returns a
+		 * If the view is @ref StringViewFlags::NullTerminated, returns a
 		 * non-owning reference to it without any extra allocations or copies
 		 * involved. Otherwise creates a null-terminated owning copy using
 		 * @ref String(StringView).
@@ -107,8 +107,8 @@ namespace Death::Containers
 		/**
 		 * @brief Turn a view into a null-terminated global string
 		 *
-		 * If the view is both @ref StringViewFlag::NullTerminated and
-		 * @ref StringViewFlag::Global, returns a non-owning reference to it
+		 * If the view is both @ref StringViewFlags::NullTerminated and
+		 * @ref StringViewFlags::Global, returns a non-owning reference to it
 		 * without any extra allocations or copies involved. Otherwise creates
 		 * a null-terminated owning copy using @ref String(StringView).
 		 *
@@ -145,8 +145,7 @@ namespace Death::Containers
 		 */
 		/*implicit*/ String(StringView view);
 		/*implicit*/ String(Containers::ArrayView<const char> view);
-		/* Without these there's ambiguity between StringView / ArrayView and
-		   char* */
+		// Without these there's ambiguity between StringView / ArrayView and char*
 		/*implicit*/ String(MutableStringView view);
 		/*implicit*/ String(Containers::ArrayView<char> view);
 
@@ -473,7 +472,7 @@ namespace Death::Containers
 		 * Equivalent to @ref BasicStringView::slice(). Both arguments are
 		 * expected to be in range. If @p end points to (one item after) the
 		 * end of the original (null-terminated) string, the result has
-		 * @ref StringViewFlag::NullTerminated set.
+		 * @ref StringViewFlags::NullTerminated set.
 		 * @m_keywords{substr()}
 		 */
 		MutableStringView slice(char* begin, char* end);
@@ -486,7 +485,7 @@ namespace Death::Containers
 		 *
 		 * Equivalent to @ref BasicStringView::prefix(T*) const. If @p end
 		 * points to (one item after) the end of the original (null-terminated)
-		 * string, the result has @ref StringViewFlag::NullTerminated set.
+		 * string, the result has @ref StringViewFlags::NullTerminated set.
 		 */
 		MutableStringView prefix(char* end);
 		StringView prefix(const char* end) const;
@@ -495,7 +494,7 @@ namespace Death::Containers
 		 * @brief View on a suffix after a pointer
 		 *
 		 * Equivalent to @ref BasicStringView::suffix(T*) const. The result has
-		 * always @ref StringViewFlag::NullTerminated set.
+		 * always @ref StringViewFlags::NullTerminated set.
 		 */
 		MutableStringView suffix(char* begin);
 		StringView suffix(const char* begin) const;
@@ -505,7 +504,7 @@ namespace Death::Containers
 		 *
 		 * Equivalent to @ref BasicStringView::prefix(std::size_t) const. If
 		 * @p count is equal to @ref size(), the result has
-		 * @ref StringViewFlag::NullTerminated set.
+		 * @ref StringViewFlags::NullTerminated set.
 		 */
 		MutableStringView prefix(std::size_t count);
 		StringView prefix(std::size_t count) const;
@@ -514,7 +513,7 @@ namespace Death::Containers
 		 * @brief View except the first @p count bytes
 		 *
 		 * Equivalent to @ref BasicStringView::exceptPrefix(). The result has
-		 * always @ref StringViewFlag::NullTerminated set.
+		 * always @ref StringViewFlags::NullTerminated set.
 		 */
 		MutableStringView exceptPrefix(std::size_t count);
 		StringView exceptPrefix(std::size_t count) const;
@@ -524,7 +523,7 @@ namespace Death::Containers
 		 *
 		 * Equivalent to @ref BasicStringView::exceptSuffix(). If
 		 * @p count is @cpp 0 @ce, the result has
-		 * @ref StringViewFlag::NullTerminated set.
+		 * @ref StringViewFlags::NullTerminated set.
 		 */
 		MutableStringView exceptSuffix(std::size_t count);
 		StringView exceptSuffix(std::size_t count) const;
@@ -565,7 +564,7 @@ namespace Death::Containers
 		 * @brief Partition
 		 *
 		 * Equivalent to @ref BasicStringView::partition(). The last returned
-		 * value has always @ref StringViewFlag::NullTerminated set.
+		 * value has always @ref StringViewFlags::NullTerminated set.
 		 */
 		StaticArray<3, MutableStringView> partition(char separator);
 		StaticArray<3, StringView> partition(char separator) const;

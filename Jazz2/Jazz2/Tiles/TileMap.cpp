@@ -150,14 +150,8 @@ namespace Jazz2::Tiles
 		}
 
 		LayerTile& tile = _layers[_sprLayerIndex].Layout[y * layoutSize.X + x];
-
-		int tileId = tile.TileID;
-		if (tile.IsAnimated) {
-			tileId = _animatedTiles[tileId].Tiles[_animatedTiles[tileId].CurrentTileIdx].TileID;
-		}
-
+		int tileId = ResolveTileID(tile);
 		return _tileSet->IsTileMaskEmpty(tileId);
-		return true;
 	}
 
 	bool TileMap::IsTileEmpty(const AABBf& aabb, bool downwards)
@@ -187,7 +181,7 @@ namespace Jazz2::Tiles
 		int hy2 = std::min((int)std::ceil(aabb.B), limitBottomPx - 1);
 
 		const int SmallHitboxHeight = 8;
-		bool shouldUseSmallHitboxForOneWay = (hy1 + SmallHitboxHeight < hy2);
+		//bool shouldUseSmallHitboxForOneWay = (hy1 + SmallHitboxHeight < hy2);
 
 		int hx1t = hx1 / TileSet::DefaultTileSize; // Divide by tile size (32px)
 		int hx2t = hx2 / TileSet::DefaultTileSize;
@@ -199,12 +193,7 @@ namespace Jazz2::Tiles
 		for (int y = hy1t; y <= hy2t; y++) {
 			for (int x = hx1t; x <= hx2t; x++) {
 				LayerTile& tile = sprLayerLayout[y * layoutSize.X + x];
-
-				int tileId = tile.TileID;
-				if (tile.IsAnimated) {
-					tileId = _animatedTiles[tileId].Tiles[_animatedTiles[tileId].CurrentTileIdx].TileID;
-				}
-
+				int tileId = ResolveTileID(tile);
 				if (tile.SuspendType != SuspendType::None || _tileSet->IsTileMaskEmpty(tileId) || (tile.IsOneWay && !downwards)) {
 					continue;
 				}
@@ -213,23 +202,24 @@ namespace Jazz2::Tiles
 				int ty = y * TileSet::DefaultTileSize;
 
 				int left = std::max(hx1 - tx, 0);
-				int right = std::min(hx2 - tx, 31);
-				int top = std::max(tile.IsOneWay && shouldUseSmallHitboxForOneWay ? (hy2 - SmallHitboxHeight - ty) : (hy1 - ty), 0);
-				int bottom = std::min(hy2 - ty, 31);
+				int right = std::min(hx2 - tx, TileSet::DefaultTileSize - 1);
+				//int top = std::max(tile.IsOneWay && shouldUseSmallHitboxForOneWay ? (hy2 - SmallHitboxHeight - ty) : (hy1 - ty), 0);
+				int top = std::max(hy1 - ty, 0);
+				int bottom = std::min(hy2 - ty, TileSet::DefaultTileSize - 1);
 
 				if (tile.IsFlippedX) {
 					int left2 = left;
-					left = (31 - right);
-					right = (31 - left2);
+					left = (TileSet::DefaultTileSize - 1 - right);
+					right = (TileSet::DefaultTileSize - 1 - left2);
 				}
 				if (tile.IsFlippedY) {
 					int top2 = top;
-					top = (31 - bottom);
-					bottom = (31 - top2);
+					top = (TileSet::DefaultTileSize - 1 - bottom);
+					bottom = (TileSet::DefaultTileSize - 1 - top2);
 				}
 
-				top <<= 5;
-				bottom <<= 5;
+				top *= TileSet::DefaultTileSize;
+				bottom *= TileSet::DefaultTileSize;
 
 				uint8_t* mask = _tileSet->GetTileMask(tileId);
 				for (int ry = top; ry <= bottom; ry += TileSet::DefaultTileSize) {
@@ -267,17 +257,8 @@ namespace Jazz2::Tiles
 			return SuspendType::None;
 		}
 
-		int tileId;
-		if (tile.IsAnimated) {
-			if (tile.TileID < _animatedTiles.size()) {
-				tileId = _animatedTiles[tile.TileID].Tiles[_animatedTiles[tile.TileID].CurrentTileIdx].TileID;
-			} else {
-				return SuspendType::None;
-			}
-		} else {
-			tileId = tile.TileID;
-		}
-		uint8_t* mask = _tileSet->GetTileMask(tile.TileID);
+		int tileId = ResolveTileID(tile);
+		uint8_t* mask = _tileSet->GetTileMask(tileId);
 
 		int rx = (int)x & 31;
 		int ry = (int)y & 31;
@@ -628,11 +609,12 @@ namespace Jazz2::Tiles
 					auto command = RentRenderCommand();
 
 					// NOTE: Added offset to fix alignment issues
+					// TODO: This offset works everywhere but not in mobile browsers
 					Vector2i texSize = _tileSet->_textureDiffuse->size();
-					float texScaleX = (-0.5f + TileSet::DefaultTileSize) / float(texSize.X);
-					float texBiasX = (0.5f + (tileId % _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.X);
-					float texScaleY = (0.5f + TileSet::DefaultTileSize) / float(texSize.Y);
-					float texBiasY = (-0.5f + (tileId / _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.Y);
+					float texScaleX = (-0.25f + TileSet::DefaultTileSize) / float(texSize.X);
+					float texBiasX = (0.25f + (tileId % _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.X);
+					float texScaleY = (0.25f + TileSet::DefaultTileSize) / float(texSize.Y);
+					float texBiasY = (-0.25f + (tileId / _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.Y);
 
 					// ToDo: Flip normal map somehow
 					if (isFlippedX) {
@@ -649,7 +631,7 @@ namespace Jazz2::Tiles
 					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, alpha / 255.0f).Data());
 
-					Matrix4x4f worldMatrix = Matrix4x4f::Translation(std::floor(x2) + (TileSet::DefaultTileSize / 2), std::floor(y2) + (TileSet::DefaultTileSize / 2), 0);
+					Matrix4x4f worldMatrix = Matrix4x4f::Translation(std::floor(x2 + (TileSet::DefaultTileSize / 2)), std::floor(y2 + (TileSet::DefaultTileSize / 2)), 0);
 					command->setTransformation(worldMatrix);
 					command->setLayer(layer.Depth);
 					command->material().setTexture(*_tileSet->_textureDiffuse);
@@ -873,22 +855,14 @@ namespace Jazz2::Tiles
 				return;
 			}
 
-			int idx = spriteLayer.Layout[x + y * spriteLayer.LayoutSize.X].TileID;
-			if (spriteLayer.Layout[x + y * spriteLayer.LayoutSize.X].IsAnimated) {
-				idx = _animatedTiles[idx].Tiles[_animatedTiles[idx].CurrentTileIdx].TileID;
-			}
-
-			if (_tileSet->IsTileFilled(idx)) {
+			int tileId = ResolveTileID(spriteLayer.Layout[x + y * spriteLayer.LayoutSize.X]);
+			if (_tileSet->IsTileFilled(tileId)) {
 				return;
 			}
 
 			if (_sprLayerIndex + 1 < _layers.size() && _layers[_sprLayerIndex + 1].SpeedX == 1.0f && _layers[_sprLayerIndex + 1].SpeedY == 1.0f) {
-				idx = _layers[_sprLayerIndex + 1].Layout[x + y * spriteLayer.LayoutSize.X].TileID;
-				if (_layers[_sprLayerIndex + 1].Layout[x + y * spriteLayer.LayoutSize.X].IsAnimated) {
-					idx = _animatedTiles[idx].Tiles[_animatedTiles[idx].CurrentTileIdx].TileID;
-				}
-
-				if (_tileSet->IsTileFilled(idx)) {
+				tileId = ResolveTileID(_layers[_sprLayerIndex + 1].Layout[x + y * spriteLayer.LayoutSize.X]);
+				if (_tileSet->IsTileFilled(tileId)) {
 					return;
 				}
 			}

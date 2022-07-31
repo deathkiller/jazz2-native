@@ -40,7 +40,7 @@ namespace nCine {
 		attributes_.reserve(AttributesInitialSize);
 	}
 
-	GLShaderProgram::GLShaderProgram(const char* vertexFile, const char* fragmentFile, Introspection introspection, QueryPhase queryPhase)
+	GLShaderProgram::GLShaderProgram(const StringView& vertexFile, const StringView& fragmentFile, Introspection introspection, QueryPhase queryPhase)
 		: GLShaderProgram(queryPhase)
 	{
 		const bool hasCompiledVS = attachShader(GL_VERTEX_SHADER, vertexFile);
@@ -50,12 +50,12 @@ namespace nCine {
 			link(introspection);
 	}
 
-	GLShaderProgram::GLShaderProgram(const char* vertexFile, const char* fragmentFile, Introspection introspection)
+	GLShaderProgram::GLShaderProgram(const StringView& vertexFile, const StringView& fragmentFile, Introspection introspection)
 		: GLShaderProgram(vertexFile, fragmentFile, introspection, QueryPhase::IMMEDIATE)
 	{
 	}
 
-	GLShaderProgram::GLShaderProgram(const char* vertexFile, const char* fragmentFile)
+	GLShaderProgram::GLShaderProgram(const StringView& vertexFile, const StringView& fragmentFile)
 		: GLShaderProgram(vertexFile, fragmentFile, Introspection::ENABLED, QueryPhase::IMMEDIATE)
 	{
 	}
@@ -102,7 +102,7 @@ namespace nCine {
 		}
 	}
 
-	bool GLShaderProgram::attachShader(GLenum type, const char* filename)
+	bool GLShaderProgram::attachShader(GLenum type, const StringView& filename)
 	{
 		std::unique_ptr<GLShader> shader = std::make_unique<GLShader>(type, filename);
 		glAttachShader(glHandle_, shader->glHandle());
@@ -113,7 +113,7 @@ namespace nCine {
 		const bool hasCompiled = shader->compile(errorChecking, shouldLogOnErrors_);
 
 		if (hasCompiled) {
-			GLDebug::objectLabel(GLDebug::LabelTypes::SHADER, shader->glHandle(), filename);
+			GLDebug::objectLabel(GLDebug::LabelTypes::SHADER, shader->glHandle(), filename.data());
 			attachedShaders_.push_back(std::move(shader));
 		} else {
 			status_ = Status::COMPILATION_FAILED;

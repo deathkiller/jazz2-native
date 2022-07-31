@@ -13,45 +13,40 @@ namespace nCine
 		: device_(nullptr), context_(nullptr), gain_(1.0f), deviceName_(nullptr), nativeFreq_(44100)
 	{
 		device_ = alcOpenDevice(nullptr);
-		//FATAL_ASSERT_MSG_X(device_ != nullptr, "alcOpenDevice failed: 0x%x", alGetError());
+		RETURN_ASSERT_MSG_X(device_ != nullptr, "alcOpenDevice failed: 0x%x", alGetError());
 		deviceName_ = alcGetString(device_, ALC_DEVICE_SPECIFIER);
 
 		context_ = alcCreateContext(device_, nullptr);
 		if (context_ == nullptr) {
 			alcCloseDevice(device_);
-			//FATAL_MSG_X("alcCreateContext failed: 0x%x", alGetError());
+			RETURN_MSG_X("alcCreateContext failed: 0x%x", alGetError());
 		}
 
 #if !defined(__EMSCRIPTEN__)
-		ALCint attributes_size;
-		alcGetIntegerv(device_, ALC_ATTRIBUTES_SIZE, 1, &attributes_size);
-		if (attributes_size > 0) {
-			SmallVector<ALCint, 0> attributes(attributes_size);
-			alcGetIntegerv(device_, ALC_ALL_ATTRIBUTES, attributes_size, &attributes[0]);
-
-			for (size_t i = 0; i + 1 < attributes_size; i += 2) {
-				if (attributes[i] == ALC_FREQUENCY) {
-					nativeFreq_ = attributes[i + 1];
-					break;
-				}
-			}
-		} else {
-			LOGW("Cannot get native frequency - no attributes found");
+		// Try to get native sample rate of default audio device
+		ALCint nativeFreq = 0;
+		alcGetIntegerv(device_, ALC_FREQUENCY, 1, &nativeFreq);
+		if (nativeFreq >= 44100 && nativeFreq <= 192000) {
+			nativeFreq_ = nativeFreq;
 		}
 #endif
 
 		if (!alcMakeContextCurrent(context_)) {
 			alcDestroyContext(context_);
 			alcCloseDevice(device_);
-			//FATAL_MSG_X("alcMakeContextCurrent failed: 0x%x", alGetError());
+			RETURN_MSG_X("alcMakeContextCurrent failed: 0x%x", alGetError());
 		}
 
 		alGetError();
 		alGenSources(MaxSources, sources_);
 		const ALenum error = alGetError();
-		//ASSERT_MSG_X(error == AL_NO_ERROR, "alGenSources failed: 0x%x", error);
+		if (error != AL_NO_ERROR) {
+			LOGE_X("alGenSources failed: 0x%x", error);
+		}
 
-		alDistanceModel(AL_INVERSE_DISTANCE_CLAMPED);
+		alDistanceModel(AL_LINEAR_DISTANCE_CLAMPED);
+		alDopplerFactor(1.0f);
+		alSpeedOfSound(360.0f);
 		alListener3f(AL_POSITION, 0.0f, 0.0f, 0.0f);
 		alListenerf(AL_GAIN, gain_);
 	}
@@ -105,7 +100,7 @@ namespace nCine
 
 	void ALAudioDevice::stopPlayers(PlayerType playerType)
 	{
-		const Object::ObjectType objectType = (playerType == PlayerType::BUFFER)
+		const Object::ObjectType objectType = (playerType == PlayerType::Buffer)
 			? AudioBufferPlayer::sType()
 			: AudioStreamPlayer::sType();
 
@@ -119,7 +114,7 @@ namespace nCine
 
 	void ALAudioDevice::pausePlayers(PlayerType playerType)
 	{
-		const Object::ObjectType objectType = (playerType == PlayerType::BUFFER)
+		const Object::ObjectType objectType = (playerType == PlayerType::Buffer)
 			? AudioBufferPlayer::sType()
 			: AudioStreamPlayer::sType();
 
@@ -191,6 +186,12 @@ namespace nCine
 				players_.erase(&players_[i]);
 			}
 		}
+	}
+
+	void ALAudioDevice::updateListener(Vector3f position, Vector3f velocity)
+	{
+		alListener3f(AL_POSITION, position.X * LengthToPhysical, position.Y * -LengthToPhysical, position.Z * -LengthToPhysical);
+		alListener3f(AL_VELOCITY, velocity.X * VelocityToPhysical, velocity.Y * -VelocityToPhysical, velocity.Z * -VelocityToPhysical);
 	}
 
 	int ALAudioDevice::nativeFrequency()

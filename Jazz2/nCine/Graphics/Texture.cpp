@@ -379,7 +379,7 @@ namespace nCine {
 
 		if (withTexStorage)
 			glTexture_->texStorage2D(texLoader.mipMapCount(), internalFormat, texLoader.width(), texLoader.height());
-		else if (texFormat.isCompressed() == false) {
+		else if (!texFormat.isCompressed()) {
 			int levelWidth = texLoader.width();
 			int levelHeight = texLoader.height();
 

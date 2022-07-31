@@ -3,6 +3,7 @@
 
 #include "../nCine/PCApplication.h"
 #include "../nCine/IAppEventHandler.h"
+#include "../nCine/ServiceLocator.h"
 #include "../nCine/Input/IInputEventHandler.h"
 #include "../nCine/Graphics/Camera.h"
 #include "../nCine/Graphics/Sprite.h"
@@ -149,6 +150,7 @@ namespace Jazz2
 			_music = std::make_unique<AudioStreamPlayer>(fs::joinPath({ "Content"_s, "Music"_s, musicPath }));
 			_music->setLooping(true);
 			_music->setGain(0.2f);
+			_music->setSourceRelative(true);
 			_music->play();
 		}
 #endif
@@ -427,8 +429,10 @@ namespace Jazz2
 			_view->setCamera(_camera.get());
 			_view->setRootNode(_rootNode.get());
 		} else {
-			_viewTexture->init(nullptr, Texture::Format::RGB8, w, h);
 			_view->removeAllTextures();
+			// TODO: Fails with GL_INVALID_OPERATION (already has GL_TEXTURE_IMMUTABLE_FORMAT set to GL_TRUE)
+			//_viewTexture->init(nullptr, Texture::Format::RGB8, w, h);
+			_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
 			_view->setTexture(_viewTexture.get());
 		}
 
@@ -610,8 +614,10 @@ void main() {
 			_lightingView->setRootNode(_lightingRenderer.get());
 			_lightingView->setCamera(_camera.get());
 		} else {
-			_lightingBuffer->init(nullptr, Texture::Format::RG8, w, h);
 			_lightingView->removeAllTextures();
+			// TODO: Fails with GL_INVALID_OPERATION (already has GL_TEXTURE_IMMUTABLE_FORMAT set to GL_TRUE)
+			//_lightingBuffer->init(nullptr, Texture::Format::RG8, w, h);
+			_lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, w, h);
 			_lightingView->setTexture(_lightingBuffer.get());
 		}
 		_lightingBuffer->setMagFiltering(SamplerFilter::Nearest);
@@ -677,7 +683,8 @@ void main() {
 	const std::shared_ptr<AudioBufferPlayer>& LevelHandler::PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain, float pitch)
 	{
 		auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(buffer));
-		player->setPosition(Vector3f((pos.X - _cameraPos.X) / (DefaultWidth * 4), (pos.Y - _cameraPos.Y) / (DefaultHeight * 4), 0.8f));
+		//player->setPosition(Vector3f((pos.X - _cameraPos.X) / (DefaultWidth * 3), (pos.Y - _cameraPos.Y) / (DefaultHeight * 3), 0.8f));
+		player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
 		player->setGain(gain);
 
 		if (pos.Y >= _waterLevel) {
@@ -693,11 +700,12 @@ void main() {
 
 	const std::shared_ptr<AudioBufferPlayer>& LevelHandler::PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain, float pitch)
 	{
-		auto it = _commonResources->Sounds.find(identifier);
-		if (it != nullptr) {
-			int idx = (it->Buffers.size() > 1 ? Random().Next(0, (int)it->Buffers.size()) : 0);
-			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(it->Buffers[idx].get()));
-			player->setPosition(Vector3f((pos.X - _cameraPos.X) / (DefaultWidth * 4), (pos.Y - _cameraPos.Y) / (DefaultHeight * 4), 0.8f));
+		auto it = _commonResources->Sounds.find(String::nullTerminatedView(identifier));
+		if (it != _commonResources->Sounds.end()) {
+			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
+			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(it->second.Buffers[idx].get()));
+			//player->setPosition(Vector3f((pos.X - _cameraPos.X) / (DefaultWidth * 3), (pos.Y - _cameraPos.Y) / (DefaultHeight * 3), 0.8f));
+			player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
 			player->setGain(gain);
 
 			if (pos.Y >= _waterLevel) {
@@ -736,8 +744,21 @@ void main() {
 		*collider = nullptr;
 
 		if ((self->CollisionFlags & CollisionFlags::CollideWithTileset) == CollisionFlags::CollideWithTileset) {
-			if (_tileMap != nullptr && !_tileMap->IsTileEmpty(aabb, downwards)) {
-				return false;
+			if (_tileMap != nullptr) {
+				if (aabb.B - aabb.T >= 16) {
+					// If hitbox height is larger than 16px, check bottom and top separately (and top only if going upwards)
+					AABB aabbTop = aabb;
+					aabbTop.B = aabbTop.T + 8;
+					AABB aabbBottom = aabb;
+					aabbBottom.T = aabbBottom.B - 8;
+					if (!_tileMap->IsTileEmpty(aabbBottom, downwards) || (!downwards && !_tileMap->IsTileEmpty(aabbTop, false))) {
+						return false;
+					}
+				} else {
+					if (!_tileMap->IsTileEmpty(aabb, downwards)) {
+						return false;
+					}
+				}
 			}
 		}
 
@@ -1152,6 +1173,10 @@ void main() {
 		}
 
 		_camera->setView(_cameraPos, 0.0f, 1.0f);
+
+		// Update audio listener position
+		IAudioDevice& device = theServiceLocator().audioDevice();
+		device.updateListener(Vector3f(_cameraPos.X, _cameraPos.Y, 0.0f), Vector3f(speed.X, speed.Y, 0.0f));
 	}
 
 	void LevelHandler::UpdatePressedActions()
@@ -1288,28 +1313,28 @@ void main() {
 		_downsampleOnly = (direction.X <= std::numeric_limits<float>::epsilon() && direction.Y <= std::numeric_limits<float>::epsilon());
 		_direction = direction;
 
-		if (_camera == nullptr) {
+		bool notInitialized = (_view == nullptr);
+
+		if (notInitialized) {
 			_camera = std::make_unique<Camera>();
 		}
 		_camera->setOrthoProjection(width * (-0.5f), width * (+0.5f), height * (-0.5f), height * (+0.5f));
 		_camera->setView(0, 0, 0, 1);
 
-		if (_target == nullptr) {
+		if (notInitialized) {
 			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
-		} else {
-			_target->init(nullptr, Texture::Format::RGB8, width, height);
-		}
-		_target->setMagFiltering(SamplerFilter::Linear);
-
-		if (_view == nullptr) {
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);
 			_view->setRootNode(this);
 			_view->setCamera(_camera.get());
 			_view->setClearMode(Viewport::ClearMode::NEVER);
 		} else {
 			_view->removeAllTextures();
+			// TODO: Fails with GL_INVALID_OPERATION (already has GL_TEXTURE_IMMUTABLE_FORMAT set to GL_TRUE)
+			//_target->init(nullptr, Texture::Format::RGB8, width, height);
+			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
 			_view->setTexture(_target.get());
 		}
+		_target->setMagFiltering(SamplerFilter::Linear);
 
 		// Prepare render command
 		_renderCommand.setType(RenderCommand::CommandTypes::SPRITE);

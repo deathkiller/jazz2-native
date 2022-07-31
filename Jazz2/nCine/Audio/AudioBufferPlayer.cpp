@@ -107,7 +107,10 @@ namespace nCine
 
 				updateFilters();
 
-				alSourcefv(sourceId_, AL_POSITION, position_.Data());
+				alSourcei(sourceId_, AL_SOURCE_RELATIVE, isSourceRelative_ ? AL_TRUE : AL_FALSE);
+				alSource3f(sourceId_, AL_POSITION, position_.X * IAudioDevice::LengthToPhysical, position_.Y * -IAudioDevice::LengthToPhysical, position_.Z * -IAudioDevice::LengthToPhysical);
+				alSourcef(sourceId_, AL_REFERENCE_DISTANCE, IAudioDevice::ReferenceDistance);
+				alSourcef(sourceId_, AL_MAX_DISTANCE, IAudioDevice::MaxDistance);
 
 				alSourcePlay(sourceId_);
 				state_ = PlayerState::Playing;

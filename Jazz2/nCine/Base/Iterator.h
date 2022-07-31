@@ -120,7 +120,7 @@ namespace nCine
 		template <class RandomAccessIterator>
 		inline int distance(RandomAccessIterator& first, const RandomAccessIterator& last, RandomAccessIteratorTag)
 		{
-			return last - first;
+			return (int)(last - first);
 		}
 
 		/// Returns the distance in number of increments between two forward iterators

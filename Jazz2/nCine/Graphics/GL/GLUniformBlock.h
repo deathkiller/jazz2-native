@@ -45,7 +45,7 @@ namespace nCine
 		}
 
 		inline GLUniform* uniform(const char* name) {
-			return blockUniforms_.find(name);
+			return blockUniforms_.find(String::nullTerminatedView(name));
 		}
 		void setBlockBinding(GLuint blockBinding);
 

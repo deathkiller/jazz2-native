@@ -24,9 +24,6 @@ namespace nCine
 			AUDIOSTREAM_PLAYER
 		};
 
-		/// Maximum length for an object name
-		static const unsigned int MaxNameLength = 128;
-
 		/// Constructs an object with a specified type and adds it to the index
 		explicit Object(ObjectType type);
 		/// Removes an object from the index and then destroys it

@@ -14,16 +14,16 @@ namespace Jazz2::Actors::Collectibles
 	{
 		WeaponType weaponType = (WeaponType)details.Params[0];
 		switch (weaponType) {
-			case WeaponType::Blaster: PreloadMetadataAsync("Collectible/AmmoBlaster"_s); break;
-			case WeaponType::Bouncer: PreloadMetadataAsync("Collectible/AmmoBouncer"_s); break;
-			case WeaponType::Freezer: PreloadMetadataAsync("Collectible/AmmoFreezer"_s); break;
-			case WeaponType::Seeker: PreloadMetadataAsync("Collectible/AmmoSeeker"_s); break;
-			case WeaponType::RF: PreloadMetadataAsync("Collectible/AmmoRF"_s); break;
-			case WeaponType::Toaster: PreloadMetadataAsync("Collectible/AmmoToaster"_s); break;
-			case WeaponType::TNT: PreloadMetadataAsync("Collectible/AmmoTNT"_s); break;
-			case WeaponType::Pepper: PreloadMetadataAsync("Collectible/AmmoPepper"_s); break;
-			case WeaponType::Electro: PreloadMetadataAsync("Collectible/AmmoElectro"_s); break;
-			case WeaponType::Thunderbolt: PreloadMetadataAsync("Collectible/AmmoThunderbolt"_s); break;
+			case WeaponType::Blaster: PreloadMetadataAsync("Collectible/AmmoBlaster"_s); PreloadMetadataAsync("Weapon/Blaster"_s); break;
+			case WeaponType::Bouncer: PreloadMetadataAsync("Collectible/AmmoBouncer"_s); PreloadMetadataAsync("Weapon/Bouncer"_s); break;
+			case WeaponType::Freezer: PreloadMetadataAsync("Collectible/AmmoFreezer"_s); PreloadMetadataAsync("Weapon/Freezer"_s); break;
+			case WeaponType::Seeker: PreloadMetadataAsync("Collectible/AmmoSeeker"_s); PreloadMetadataAsync("Weapon/Seeker"_s); break;
+			case WeaponType::RF: PreloadMetadataAsync("Collectible/AmmoRF"_s); PreloadMetadataAsync("Weapon/RF"_s); break;
+			case WeaponType::Toaster: PreloadMetadataAsync("Collectible/AmmoToaster"_s); PreloadMetadataAsync("Weapon/Toaster"_s); break;
+			case WeaponType::TNT: PreloadMetadataAsync("Collectible/AmmoTNT"_s); PreloadMetadataAsync("Weapon/TNT"_s); break;
+			case WeaponType::Pepper: PreloadMetadataAsync("Collectible/AmmoPepper"_s); PreloadMetadataAsync("Weapon/Pepper"_s); break;
+			case WeaponType::Electro: PreloadMetadataAsync("Collectible/AmmoElectro"_s); PreloadMetadataAsync("Weapon/Electro"_s); break;
+			case WeaponType::Thunderbolt: PreloadMetadataAsync("Collectible/AmmoThunderbolt"_s); PreloadMetadataAsync("Weapon/Thunderbolt"_s); break;
 		}
 	}
 

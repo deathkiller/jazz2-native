@@ -155,6 +155,7 @@ namespace Jazz2
 			Vector2i Hotspot;
 
 			void OnUpdate(float timeMult) override;
+			bool OnDraw(RenderQueue& renderQueue) override;
 
 			bool IsAnimationRunning()
 			{
@@ -222,6 +223,7 @@ namespace Jazz2
 
 		virtual void OnUpdate(float timeMult);
 		virtual void OnUpdateHitbox();
+		virtual bool OnDraw(RenderQueue& renderQueue);
 		virtual void OnHitFloor();
 		virtual void OnHitCeiling();
 		virtual void OnHitWall();

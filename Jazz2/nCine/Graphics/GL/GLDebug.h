@@ -3,6 +3,13 @@
 #define NCINE_INCLUDE_OPENGL
 #include "../../CommonHeaders.h"
 
+#if ENABLE_GL_LOGGING
+#	include "../../../Common.h"
+#	define GL_LOG_ERRORS() do { GLenum __err = glGetError(); if (__err != GL_NO_ERROR) { LOGW_X("OpenGL returned error: %i", __err); } } while (false)
+#else
+#	define GL_LOG_ERRORS() do { } while (false)
+#endif
+
 namespace nCine
 {
 	class IGfxCapabilities;

@@ -95,7 +95,7 @@ namespace nCine
 
 	GLUniformCache* GLUniformBlockCache::uniform(const StringView& name)
 	{
-		return uniformCaches_.find(name);
+		return uniformCaches_.find(String::nullTerminatedView(name));
 	}
 
 	void GLUniformBlockCache::setBlockBinding(GLuint blockBinding)

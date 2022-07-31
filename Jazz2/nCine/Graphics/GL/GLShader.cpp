@@ -62,7 +62,7 @@ namespace nCine
 		glHandle_ = glCreateShader(type);
 	}
 
-	GLShader::GLShader(GLenum type, const char* filename)
+	GLShader::GLShader(GLenum type, const StringView& filename)
 		: GLShader(type)
 	{
 		loadFromFile(filename);
@@ -85,7 +85,7 @@ namespace nCine
 		glShaderSource(glHandle_, 2, source_lines, nullptr);
 	}
 
-	void GLShader::loadFromFile(const char* filename)
+	void GLShader::loadFromFile(const StringView& filename)
 	{
 		std::unique_ptr<IFileStream> fileHandle = IFileStream::createFileHandle(filename);
 		fileHandle->setExitOnFailToOpen(false);
@@ -100,7 +100,7 @@ namespace nCine
 			const GLint lengths[2] = { static_cast<GLint>(patchLines.length()), length };
 			glShaderSource(glHandle_, 2, source_lines, lengths);
 
-			setObjectLabel(filename);
+			setObjectLabel(filename.data());
 		}
 	}
 

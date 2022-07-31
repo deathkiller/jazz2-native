@@ -75,7 +75,7 @@ namespace nCine
 		GLUniformCache* uniformCache = nullptr;
 
 		if (shaderProgram_) {
-			uniformCache = uniformCaches_.find(name);
+			uniformCache = uniformCaches_.find(String::nullTerminatedView(name));
 		} else {
 			LOGE_X("Cannot find uniform \"%s\", no shader program associated", name);
 		}

@@ -79,7 +79,7 @@ namespace nCine
 		GLUniformBlockCache* uniformBlockCache = nullptr;
 
 		if (shaderProgram_) {
-			uniformBlockCache = uniformBlockCaches_.find(name);
+			uniformBlockCache = uniformBlockCaches_.find(String::nullTerminatedView(name));
 		} else {
 			LOGE_X("Cannot find uniform block \"%s\", no shader program associated", name);
 		}
@@ -156,8 +156,7 @@ namespace nCine
 			}
 
 			if (shouldImport) {
-				GLUniformBlockCache uniformBlockCache(&uniformBlock);
-				uniformBlockCaches_[uniformBlockName] = uniformBlockCache;
+				uniformBlockCaches_.emplace(uniformBlockName, &uniformBlock);
 				importedCount++;
 			}
 		}

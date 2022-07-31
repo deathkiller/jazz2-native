@@ -32,13 +32,13 @@ namespace Death::Containers
 	}
 
 	String String::nullTerminatedGlobalView(StringView view) {
-		if (view.flags() >= (StringViewFlags::NullTerminated | StringViewFlags::Global))
+		if ((view.flags() & (StringViewFlags::NullTerminated | StringViewFlags::Global)) == (StringViewFlags::NullTerminated | StringViewFlags::Global))
 			return String { view.data(), view.size(), [](char*, std::size_t) { } };
 		return String { view };
 	}
 
 	String String::nullTerminatedGlobalView(AllocatedInitT, StringView view) {
-		if (view.flags() >= (StringViewFlags::NullTerminated | StringViewFlags::Global))
+		if ((view.flags() & (StringViewFlags::NullTerminated | StringViewFlags::Global)) == (StringViewFlags::NullTerminated | StringViewFlags::Global))
 			return String { view.data(), view.size(), [](char*, std::size_t) { } };
 		return String { AllocatedInit, view };
 	}

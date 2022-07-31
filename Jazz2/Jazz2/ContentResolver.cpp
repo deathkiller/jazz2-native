@@ -2,7 +2,6 @@
 
 #include "../nCine/IO/IFileStream.h"
 #include "../nCine/Graphics/ITextureLoader.h"
-#include "../nCine/Base/HashMapIterator.h"
 
 #include "LevelHandler.h"
 #include "Tiles/TileSet.h"
@@ -60,17 +59,15 @@ namespace Jazz2
 
 		// Reset Referenced flag
 		for (auto& resource : _cachedMetadata) {
-			resource->Flags &= ~MetadataFlags::Referenced;
+			resource.second->Flags &= ~MetadataFlags::Referenced;
 		}
 		for (auto& resource : _cachedGraphics) {
-			resource->Flags &= ~GenericGraphicResourceFlags::Referenced;
+			resource.second->Flags &= ~GenericGraphicResourceFlags::Referenced;
 		}
 	}
 
 	void ContentResolver::EndLoading()
 	{
-		// TODO: critical
-		/*
 		// Release unreferenced metadata
 		{
 			auto it = _cachedMetadata.begin();
@@ -93,7 +90,7 @@ namespace Jazz2
 					++it;
 				}
 			}
-		}*/
+		}
 
 		_isLoading = false;
 	}
@@ -107,16 +104,16 @@ namespace Jazz2
 	Metadata* ContentResolver::RequestMetadata(const StringView& path)
 	{
 		// TODO: add locks?
-		auto it = _cachedMetadata.find(path);
-		if (it != nullptr) {
+		auto it = _cachedMetadata.find(String::nullTerminatedView(path));
+		if (it != _cachedMetadata.end()) {
 			// Already loaded - Mark as referenced
-			(*it)->Flags |= MetadataFlags::Referenced;
+			it->second->Flags |= MetadataFlags::Referenced;
 
-			for (auto& resource : (*it)->Graphics) {
-				resource.Base->Flags |= GenericGraphicResourceFlags::Referenced;
+			for (auto& resource : it->second->Graphics) {
+				resource.second.Base->Flags |= GenericGraphicResourceFlags::Referenced;
 			}
 
-			return it->get();
+			return it->second.get();
 		} else {
 			// Try to load it
 			// TODO
@@ -148,7 +145,7 @@ namespace Jazz2
 				if (animations_ != document.MemberEnd() && animations_->value.IsObject()) {
 					auto& animations = animations_->value;
 
-					metadata->Graphics.rehash(animations.MemberCount());
+					metadata->Graphics.reserve(animations.MemberCount());
 
 					for (auto it2 = animations.MemberBegin(); it2 != animations.MemberEnd(); ++it2) {
 						if (!it2->name.IsString() || !it2->value.IsObject()) {
@@ -224,7 +221,7 @@ namespace Jazz2
 							metadata->BoundingBox = graphicsBase->FrameDimensions - Vector2i(2, 2);
 						}
 
-						metadata->Graphics.insert(key, std::move(graphics));
+						metadata->Graphics.emplace(key, std::move(graphics));
 					}
 				}
 
@@ -232,7 +229,7 @@ namespace Jazz2
 				if (sounds_ != document.MemberEnd() && sounds_->value.IsObject()) {
 					auto& sounds = sounds_->value;
 
-					metadata->Sounds.rehash(sounds.MemberCount());
+					metadata->Sounds.reserve(sounds.MemberCount());
 
 					for (auto it2 = sounds.MemberBegin(); it2 != sounds.MemberEnd(); ++it2) {
 						if (!it2->name.IsString() || !it2->value.IsObject()) {
@@ -259,17 +256,14 @@ namespace Jazz2
 						}
 
 						if (!sound.Buffers.empty()) {
-							metadata->Sounds.insert(key, std::move(sound));
+							metadata->Sounds.emplace(key, std::move(sound));
 						}
 					}
 				}
 			}
 
-			if (_cachedMetadata.loadFactor() >= 0.8f)
-				_cachedMetadata.rehash(_cachedMetadata.capacity() * 2);
-
 			Metadata* ptr = metadata.get();
-			_cachedMetadata.insert(path, std::move(metadata));
+			_cachedMetadata.emplace(path, std::move(metadata));
 			return ptr;
 		}
 	}
@@ -279,13 +273,12 @@ namespace Jazz2
 		// First resources are requested, reset _isLoading flag, because palette should be already applied
 		_isLoading = false;
 
-		auto it = _cachedGraphics.find(path);
-		if (it != nullptr) {
+		auto it = _cachedGraphics.find(String::nullTerminatedView(path));
+		if (it != _cachedGraphics.end()) {
 			// Already loaded - Mark as referenced
-			(*it)->Flags |= GenericGraphicResourceFlags::Referenced;
-			return it->get();
+			it->second->Flags |= GenericGraphicResourceFlags::Referenced;
+			return it->second.get();
 		} else {
-			// TODO
 			auto fileHandle = IFileStream::createFileHandle(fs::joinPath({ "Content"_s, "Animations"_s, path + ".res"_s }));
 			fileHandle->Open(FileAccessMode::Read);
 			auto fileSize = fileHandle->GetSize();
@@ -370,11 +363,8 @@ namespace Jazz2
 					graphics->Gunspot = Vector2i(InvalidValue, InvalidValue);
 				}
 
-				if (_cachedGraphics.loadFactor() >= 0.8f)
-					_cachedGraphics.rehash(_cachedGraphics.capacity() * 2);
-
 				GenericGraphicResource* ptr = graphics.get();
-				_cachedGraphics.insert(path, std::move(graphics));
+				_cachedGraphics.emplace(path, std::move(graphics));
 				return ptr;
 			}
 		}

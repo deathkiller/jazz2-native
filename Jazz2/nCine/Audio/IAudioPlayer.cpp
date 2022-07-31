@@ -13,7 +13,7 @@ namespace nCine {
 
 	IAudioPlayer::IAudioPlayer(ObjectType type)
 		: Object(type), sourceId_(IAudioDevice::UnavailableSource),
-		state_(PlayerState::Stopped), isLooping_(false),
+		state_(PlayerState::Stopped), isLooping_(false), isSourceRelative_(false),
 		gain_(1.0f), pitch_(1.0f), lowPass_(1.0f), position_(0.0f, 0.0f, 0.0f),
 		filterHandle_(0)
 	{
@@ -43,6 +43,15 @@ namespace nCine {
 	void IAudioPlayer::setSampleOffset(int byteOffset)
 	{
 		alSourcei(sourceId_, AL_SAMPLE_OFFSET, byteOffset);
+	}
+
+	/*! The change is applied to the OpenAL source only when playing. */
+	void IAudioPlayer::setSourceRelative(bool isSourceRelative)
+	{
+		isSourceRelative_ = isSourceRelative;
+		if (state_ == PlayerState::Playing) {
+			alSourcei(sourceId_, AL_SOURCE_RELATIVE, isSourceRelative_ ? AL_TRUE : AL_FALSE);
+		}
 	}
 
 	/*! The change is applied to the OpenAL source only when playing. */
@@ -76,16 +85,7 @@ namespace nCine {
 	{
 		position_ = position;
 		if (state_ == PlayerState::Playing) {
-			alSourcefv(sourceId_, AL_POSITION, position_.Data());
-		}
-	}
-
-	/*! The change is applied to the OpenAL source only when playing. */
-	void IAudioPlayer::setPosition(float x, float y, float z)
-	{
-		position_.Set(x, y, z);
-		if (state_ == PlayerState::Playing) {
-			alSourcefv(sourceId_, AL_POSITION, position_.Data());
+			alSource3f(sourceId_, AL_POSITION, position.X * IAudioDevice::LengthToPhysical, position.Y * -IAudioDevice::LengthToPhysical, position.Z * -IAudioDevice::LengthToPhysical);
 		}
 	}
 

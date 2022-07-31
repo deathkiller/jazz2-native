@@ -78,7 +78,7 @@ namespace Death::Containers
 		/**
 		 * @brief Default constructor
 		 *
-		 * A default-constructed instance has @ref StringViewFlag::Global set.
+		 * A default-constructed instance has @ref StringViewFlags::Global set.
 		 */
 		constexpr /*implicit*/ BasicStringView(std::nullptr_t = nullptr) noexcept : _data {}, _sizePlusFlags { std::size_t(StringViewFlags::Global) } {}
 
@@ -88,9 +88,9 @@ namespace Death::Containers
 		 * @param size      Size of the C string, excluding the null terminator
 		 * @param flags     Flags describing additional string properties
 		 *
-		 * If @ref StringViewFlag::Global is set, the data pointer is assumed
+		 * If @ref StringViewFlags::Global is set, the data pointer is assumed
 		 * to never go out of scope, which can avoid copies and allocations in
-		 * code using the instance. If @ref StringViewFlag::NullTerminated is
+		 * code using the instance. If @ref StringViewFlags::NullTerminated is
 		 * set, it's expected that `data` is not @cpp nullptr @ce and
 		 * @cpp data[size] == '\0' @ce. That can avoid copies and allocations
 		 * in code that passes such string to APIs that expect null-terminated
@@ -109,7 +109,7 @@ namespace Death::Containers
 		/**
 		 * @brief Construct from a @ref String
 		 *
-		 * The resulting view has @ref StringViewFlag::NullTerminated set.
+		 * The resulting view has @ref StringViewFlags::NullTerminated set.
 		 */
 		/*implicit*/ BasicStringView(String& data) noexcept;
 
@@ -117,7 +117,7 @@ namespace Death::Containers
 		 * @brief Construct from a const @ref String
 		 *
 		 * Enabled only if the view is not mutable. The resulting view has
-		 * @ref StringViewFlag::NullTerminated set.
+		 * @ref StringViewFlags::NullTerminated set.
 		 */
 		template<class U = T, class = typename std::enable_if<std::is_const<U>::value>::type> /*implicit*/ BasicStringView(const String& data) noexcept;
 
@@ -142,8 +142,8 @@ namespace Death::Containers
 		 * @p size set to @ref std::strlen() of @p data if @p data is not
 		 * @cpp nullptr @ce. If @p data is @cpp nullptr @ce, @p size is set to
 		 * @cpp 0 @ce. In addition to @p extraFlags, if @p data is not
-		 * @cpp nullptr @ce, @ref StringViewFlag::NullTerminated is set,
-		 * otherwise @ref StringViewFlag::Global is set.
+		 * @cpp nullptr @ce, @ref StringViewFlags::NullTerminated is set,
+		 * otherwise @ref StringViewFlags::Global is set.
 		 *
 		 * The @ref BasicStringView(std::nullptr_t) overload (which is a
 		 * default constructor) is additionally @cpp constexpr @ce.
@@ -198,7 +198,7 @@ namespace Death::Containers
 		 * @brief String data
 		 *
 		 * The pointer is not guaranteed to be null-terminated, use
-		 * @ref flags() and @ref StringViewFlag::NullTerminated to check for
+		 * @ref flags() and @ref StringViewFlags::NullTerminated to check for
 		 * the presence of a null terminator.
 		 */
 		constexpr T* data() const {
@@ -264,9 +264,9 @@ namespace Death::Containers
 		 * @brief View slice
 		 *
 		 * Both arguments are expected to be in range. Propagates the
-		 * @ref StringViewFlag::Global flag and if @p end points to (one item
+		 * @ref StringViewFlags::Global flag and if @p end points to (one item
 		 * after) the end of the original null-terminated string, the result
-		 * has @ref StringViewFlag::NullTerminated also.
+		 * has @ref StringViewFlags::NullTerminated also.
 		 */
 		constexpr BasicStringView<T> slice(T* begin, T* end) const;
 
@@ -760,8 +760,8 @@ namespace Death::Containers
 		/** @relatesalso Corrade::Containers::BasicStringView
 			@brief String view literal
 
-			The returned instance has both @ref StringViewFlag::Global and
-			@ref StringViewFlag::NullTerminated set. See
+			The returned instance has both @ref StringViewFlags::Global and
+			@ref StringViewFlags::NullTerminated set. See
 			@ref Containers-BasicStringView-usage for more information.
 		*/
 		constexpr StringView operator"" _s(const char* data, std::size_t size) {

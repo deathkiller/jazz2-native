@@ -30,7 +30,7 @@ namespace nCine
 			return uniformBlockCaches_.size();
 		}
 		inline bool hasUniformBlock(const char* name) const {
-			return (uniformBlockCaches_.find(name) != nullptr);
+			return (uniformBlockCaches_.find(String::nullTerminatedView(name)) != nullptr);
 		}
 		GLUniformBlockCache* uniformBlock(const char* name);
 		inline const UniformHashMapType allUniformBlocks() const {

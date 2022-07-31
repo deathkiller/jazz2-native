@@ -5,6 +5,10 @@
 #define NCINE_INCLUDE_OPENGL
 #include "../../CommonHeaders.h"
 
+#include <Containers/StringView.h>
+
+using namespace Death::Containers;
+
 namespace nCine
 {
 	/// A class to handle OpenGL shader objects
@@ -26,7 +30,7 @@ namespace nCine
 		};
 
 		explicit GLShader(GLenum type);
-		GLShader(GLenum type, const char* filename);
+		GLShader(GLenum type, const StringView& filename);
 		~GLShader();
 
 		inline GLuint glHandle() const {
@@ -37,7 +41,7 @@ namespace nCine
 		}
 
 		void loadFromString(const char* string);
-		void loadFromFile(const char* filename);
+		void loadFromFile(const StringView& filename);
 		bool compile(ErrorChecking errorChecking, bool logOnErrors);
 
 		bool checkCompilation(bool logOnErrors);

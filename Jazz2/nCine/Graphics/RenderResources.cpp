@@ -6,7 +6,6 @@
 #include "RenderBatcher.h"
 #include "Camera.h"
 #include "../Application.h"
-#include "../Base/HashMapIterator.h"
 #include "../../Common.h"
 
 #ifdef WITH_EMBEDDED_SHADERS
@@ -52,9 +51,9 @@ namespace nCine
 	{
 		GLShaderProgram* batchedShader = nullptr;
 
-		GLShaderProgram** findResult = batchedShaders_.find(shader);
-		if (findResult != nullptr)
-			batchedShader = *findResult;
+		auto it = batchedShaders_.find(shader);
+		if (it != batchedShaders_.end())
+			batchedShader = it->second;
 
 		return batchedShader;
 	}
@@ -65,33 +64,29 @@ namespace nCine
 		//FATAL_ASSERT(batchedShader != nullptr);
 		//FATAL_ASSERT(shader != batchedShader);
 
-		if (batchedShaders_.loadFactor() >= 0.8f)
-			batchedShaders_.rehash(batchedShaders_.capacity() * 2);
-		const bool inserted = batchedShaders_.insert(shader, batchedShader);
-
-		return inserted;
+		return batchedShaders_.emplace(shader, batchedShader).second;
 	}
 
 	bool RenderResources::unregisterBatchedShader(const GLShaderProgram* shader)
 	{
 		//ASSERT(shader != nullptr);
-		const bool removed = batchedShaders_.remove(shader);
-		return removed;
+		return (batchedShaders_.erase(shader) > 0);
 	}
 
 	RenderResources::CameraUniformData* RenderResources::findCameraUniformData(GLShaderProgram* shaderProgram)
 	{
-		return cameraUniformDataMap_.find(shaderProgram);
+		auto it = cameraUniformDataMap_.find(shaderProgram);
+		return (it != cameraUniformDataMap_.end() ? &it->second : nullptr);
 	}
 
 	void RenderResources::insertCameraUniformData(GLShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData)
 	{
 		//FATAL_ASSERT(shaderProgram != nullptr);
 
-		if (cameraUniformDataMap_.loadFactor() >= 0.8f)
-			cameraUniformDataMap_.rehash(cameraUniformDataMap_.capacity() * 2);
+		//if (cameraUniformDataMap_.loadFactor() >= 0.8f)
+		//	cameraUniformDataMap_.rehash(cameraUniformDataMap_.capacity() * 2);
 
-		cameraUniformDataMap_.insert(shaderProgram, std::move(cameraUniformData));
+		cameraUniformDataMap_.emplace(shaderProgram, std::move(cameraUniformData));
 	}
 
 	bool RenderResources::removeCameraUniformData(GLShaderProgram* shaderProgram)
@@ -99,7 +94,7 @@ namespace nCine
 		bool hasRemoved = false;
 
 		if (!cameraUniformDataMap_.empty())
-			hasRemoved = cameraUniformDataMap_.remove(shaderProgram);
+			hasRemoved = cameraUniformDataMap_.erase(shaderProgram);
 
 		return hasRemoved;
 	}
@@ -171,16 +166,16 @@ namespace nCine
 		memcpy(cameraUniformsBuffer_, currentCamera_->projection().Data(), 64);
 		memcpy(cameraUniformsBuffer_ + 64, currentCamera_->view().Data(), 64);
 		for (auto i = cameraUniformDataMap_.begin(); i != cameraUniformDataMap_.end(); ++i) {
-			CameraUniformData& cameraUniformData = *i;
+			CameraUniformData& cameraUniformData = i->second;
 
 			if (cameraUniformData.camera != currentCamera_) {
-				(*i).shaderUniforms.setDirty(true);
+				i->second.shaderUniforms.setDirty(true);
 				cameraUniformData.camera = currentCamera_;
 			} else {
 				if (cameraUniformData.updateFrameProjectionMatrix < currentCamera_->updateFrameProjectionMatrix())
-					(*i).shaderUniforms.uniform(Material::ProjectionMatrixUniformName)->setDirty(true);
+					i->second.shaderUniforms.uniform(Material::ProjectionMatrixUniformName)->setDirty(true);
 				if (cameraUniformData.updateFrameViewMatrix < currentCamera_->updateFrameViewMatrix())
-					(*i).shaderUniforms.uniform(Material::ViewMatrixUniformName)->setDirty(true);
+					i->second.shaderUniforms.uniform(Material::ViewMatrixUniformName)->setDirty(true);
 			}
 
 			cameraUniformData.updateFrameProjectionMatrix = currentCamera_->updateFrameProjectionMatrix();
@@ -303,14 +298,14 @@ namespace nCine
 
 	void RenderResources::registerDefaultBatchedShaders()
 	{
-		batchedShaders_.insert(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_SPRITES)].get());
-		batchedShaders_.insert(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE_GRAY)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_SPRITES_GRAY)].get());
-		batchedShaders_.insert(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE_NO_TEXTURE)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_SPRITES_NO_TEXTURE)].get());
-		batchedShaders_.insert(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::MESH_SPRITE)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_MESH_SPRITES)].get());
-		batchedShaders_.insert(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::MESH_SPRITE_GRAY)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_MESH_SPRITES_GRAY)].get());
-		batchedShaders_.insert(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::MESH_SPRITE_NO_TEXTURE)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_MESH_SPRITES_NO_TEXTURE)].get());
-		batchedShaders_.insert(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::TEXTNODE_ALPHA)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_TEXTNODES_ALPHA)].get());
-		batchedShaders_.insert(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::TEXTNODE_RED)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_TEXTNODES_RED)].get());
+		batchedShaders_.emplace(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_SPRITES)].get());
+		batchedShaders_.emplace(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE_GRAY)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_SPRITES_GRAY)].get());
+		batchedShaders_.emplace(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE_NO_TEXTURE)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_SPRITES_NO_TEXTURE)].get());
+		batchedShaders_.emplace(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::MESH_SPRITE)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_MESH_SPRITES)].get());
+		batchedShaders_.emplace(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::MESH_SPRITE_GRAY)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_MESH_SPRITES_GRAY)].get());
+		batchedShaders_.emplace(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::MESH_SPRITE_NO_TEXTURE)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_MESH_SPRITES_NO_TEXTURE)].get());
+		batchedShaders_.emplace(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::TEXTNODE_ALPHA)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_TEXTNODES_ALPHA)].get());
+		batchedShaders_.emplace(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::TEXTNODE_RED)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_TEXTNODES_RED)].get());
 	}
 
 }

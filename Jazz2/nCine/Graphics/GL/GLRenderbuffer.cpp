@@ -36,6 +36,7 @@ namespace nCine
 	{
 		if (boundBuffer_ != glHandle_) {
 			glBindRenderbuffer(GL_RENDERBUFFER, glHandle_);
+			GL_LOG_ERRORS();
 			boundBuffer_ = glHandle_;
 			return true;
 		}
@@ -46,6 +47,7 @@ namespace nCine
 	{
 		if (boundBuffer_ != 0) {
 			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+			GL_LOG_ERRORS();
 			boundBuffer_ = 0;
 			return true;
 		}
@@ -66,6 +68,7 @@ namespace nCine
 		bind();
 		glRenderbufferStorage(GL_RENDERBUFFER, internalFormat, width, height);
 		unbind();
+		GL_LOG_ERRORS();
 	}
 
 }

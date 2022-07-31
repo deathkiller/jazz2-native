@@ -104,8 +104,8 @@ namespace nCine
 	bool DrawableNode::OnDraw(RenderQueue& renderQueue)
 	{
 		// Skip rendering a zero area drawable node
-			if (width_ == 0.0f || height_ == 0.0f)
-				return false;
+		if (width_ == 0.0f || height_ == 0.0f)
+			return false;
 
 		const bool cullingEnabled = theApplication().renderingSettings().cullingEnabled;
 

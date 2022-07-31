@@ -1,5 +1,8 @@
 #pragma once
 
+#include "../Primitives/Vector3.h"
+#include "../Base/FrameTimer.h"
+
 namespace nCine
 {
 	class IAudioPlayer;
@@ -8,12 +11,17 @@ namespace nCine
 	class IAudioDevice
 	{
 	public:
-		static const unsigned int UnavailableSource = ~0U;
+		static constexpr unsigned int UnavailableSource = ~0U;
 
-		enum class PlayerType
-		{
-			BUFFER,
-			AUDIOSTREAM
+		// TODO: Revise these constants
+		static constexpr float LengthToPhysical = 0.0000000005f;
+		static constexpr float VelocityToPhysical = 3.0f;
+		static constexpr float ReferenceDistance = 200.0f * LengthToPhysical;
+		static constexpr float MaxDistance = 900.0f * LengthToPhysical;
+
+		enum class PlayerType {
+			Buffer,
+			Stream
 		};
 
 		virtual const char* name() const = 0;
@@ -53,6 +61,8 @@ namespace nCine
 		virtual void unregisterPlayer(IAudioPlayer* player) = 0;
 		/// Updates players state (and buffer queue in the case of stream players)
 		virtual void updatePlayers() = 0;
+
+		virtual void updateListener(Vector3f position, Vector3f velocity) = 0;
 
 		virtual int nativeFrequency() = 0;
 	};
@@ -96,6 +106,7 @@ namespace nCine
 		void registerPlayer(IAudioPlayer* player) override {}
 		void unregisterPlayer(IAudioPlayer* player) override {}
 		void updatePlayers() override {}
+		void updateListener(Vector3f position, Vector3f velocity) override {}
 		int nativeFrequency() override { return 0; }
 	};
 

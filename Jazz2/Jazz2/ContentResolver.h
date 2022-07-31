@@ -110,7 +110,7 @@ namespace Jazz2
 		Vector2i BoundingBox;
 
 		Metadata()
-			: Flags(MetadataFlags::None), Graphics(0), Sounds(0), BoundingBox()
+			: Flags(MetadataFlags::None), BoundingBox()
 		{
 		}
 	};
