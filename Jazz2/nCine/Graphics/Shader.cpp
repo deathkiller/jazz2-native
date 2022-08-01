@@ -4,6 +4,7 @@
 #include "Shader.h"
 #include "GL/GLShaderProgram.h"
 #include "RenderResources.h"
+#include "../tracy.h"
 #include "../../Common.h"
 
 #ifdef WITH_EMBEDDED_SHADERS
@@ -152,6 +153,7 @@ namespace nCine
 
 	bool Shader::loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment)
 	{
+		ZoneScoped;
 		/*if (shaderName) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, nctl::strnlen(shaderName, nctl::String::MaxCStringLength));
@@ -179,6 +181,7 @@ namespace nCine
 
 	bool Shader::loadFromMemory(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment)
 	{
+		ZoneScoped;
 		/*if (shaderName) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, nctl::strnlen(shaderName, nctl::String::MaxCStringLength));
@@ -207,6 +210,7 @@ namespace nCine
 
 	bool Shader::loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment)
 	{
+		ZoneScoped;
 		/*if (shaderName) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, nctl::strnlen(shaderName, nctl::String::MaxCStringLength));
@@ -234,6 +238,7 @@ namespace nCine
 
 	bool Shader::loadFromFile(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment)
 	{
+		ZoneScoped;
 		/*if (shaderName) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, nctl::strnlen(shaderName, nctl::String::MaxCStringLength));
@@ -261,6 +266,7 @@ namespace nCine
 
 	bool Shader::loadFromFile(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment)
 	{
+		ZoneScoped;
 		/*if (shaderName) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, nctl::strnlen(shaderName, nctl::String::MaxCStringLength));
@@ -289,6 +295,7 @@ namespace nCine
 
 	bool Shader::loadFromFile(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment)
 	{
+		ZoneScoped;
 		/*if (shaderName) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, nctl::strnlen(shaderName, nctl::String::MaxCStringLength));

@@ -606,13 +606,11 @@ namespace Jazz2::Tiles
 
 					auto command = RentRenderCommand();
 
-					// NOTE: Added offset to fix alignment issues
-					// TODO: This offset works everywhere but not in mobile browsers
 					Vector2i texSize = _tileSet->_textureDiffuse->size();
-					float texScaleX = (-0.25f + TileSet::DefaultTileSize) / float(texSize.X);
-					float texBiasX = (0.25f + (tileId % _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.X);
-					float texScaleY = (0.25f + TileSet::DefaultTileSize) / float(texSize.Y);
-					float texBiasY = (-0.25f + (tileId / _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.Y);
+					float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
+					float texBiasX = (tileId % _tileSet->_tilesPerRow) * TileSet::DefaultTileSize / float(texSize.X);
+					float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
+					float texBiasY = (tileId / _tileSet->_tilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
 
 					// ToDo: Flip normal map somehow
 					if (isFlippedX) {
@@ -622,6 +620,13 @@ namespace Jazz2::Tiles
 					if (isFlippedY) {
 						texBiasY += texScaleY;
 						texScaleY *= -1;
+					}
+
+					if ((viewSize.X & 1) == 1) {
+						texBiasX += 0.5f / float(texSize.X);
+					}
+					if ((viewSize.Y & 1) == 1) {
+						texBiasY -= 0.5f / float(texSize.Y);
 					}
 
 					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
@@ -1392,6 +1397,7 @@ void main() {
 	{
 		TileMapLayer& layer = _owner->_layers[_owner->_texturedBackgroundLayer];
 		Vector2i layoutSize = layer.LayoutSize;
+		Vector2i targetSize = _target->size();
 
 		int renderCommandIndex = 0;
 		bool isAnimated = false;
@@ -1423,10 +1429,10 @@ void main() {
 				auto command = _renderCommands[renderCommandIndex++].get();
 
 				Vector2i texSize = _owner->_tileSet->_textureDiffuse->size();
-				float texScaleX = (-0.25f + TileSet::DefaultTileSize) / float(texSize.X);
-				float texBiasX = (0.25f + (tileId % _owner->_tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.X);
-				float texScaleY = (0.25f + TileSet::DefaultTileSize) / float(texSize.Y);
-				float texBiasY = (-0.25f + (tileId / _owner->_tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.Y);
+				float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
+				float texBiasX = (tileId % _owner->_tileSet->_tilesPerRow) * TileSet::DefaultTileSize / float(texSize.X);
+				float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
+				float texBiasY = (tileId / _owner->_tileSet->_tilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
 
 				// ToDo: Flip normal map somehow
 				if (isFlippedX) {
@@ -1436,6 +1442,13 @@ void main() {
 				if (isFlippedY) {
 					texBiasY += texScaleY;
 					texScaleY *= -1;
+				}
+
+				if ((targetSize.X & 1) == 1) {
+					texBiasX += 0.5f / float(texSize.X);
+				}
+				if ((targetSize.Y & 1) == 1) {
+					texBiasY -= 0.5f / float(texSize.Y);
 				}
 
 				auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);

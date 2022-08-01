@@ -1,5 +1,6 @@
 #include "GLTexture.h"
 #include "GLDebug.h"
+#include "../../tracy_opengl.h"
 
 namespace nCine
 {
@@ -59,6 +60,7 @@ namespace nCine
 
 	void GLTexture::texImage2D(GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, const void* data)
 	{
+		TracyGpuZone("glTexImage2D");
 		bind();
 		glTexImage2D(target_, level, internalFormat, width, height, 0, format, type, data);
 		GL_LOG_ERRORS();
@@ -66,6 +68,7 @@ namespace nCine
 
 	void GLTexture::texSubImage2D(GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void* data)
 	{
+		TracyGpuZone("glTexSubImage2D");
 		bind();
 		glTexSubImage2D(target_, level, xoffset, yoffset, width, height, format, type, data);
 		GL_LOG_ERRORS();
@@ -73,6 +76,7 @@ namespace nCine
 
 	void GLTexture::compressedTexImage2D(GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLsizei imageSize, const void* data)
 	{
+		TracyGpuZone("glCompressedTexImage2D");
 		bind();
 		glCompressedTexImage2D(target_, level, internalFormat, width, height, 0, imageSize, data);
 		GL_LOG_ERRORS();
@@ -80,6 +84,7 @@ namespace nCine
 
 	void GLTexture::compressedTexSubImage2D(GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void* data)
 	{
+		TracyGpuZone("glCompressedTexSubImage2D");
 		bind();
 		glCompressedTexSubImage2D(target_, level, xoffset, yoffset, width, height, format, imageSize, data);
 		GL_LOG_ERRORS();
@@ -87,6 +92,7 @@ namespace nCine
 
 	void GLTexture::texStorage2D(GLsizei levels, GLint internalFormat, GLsizei width, GLsizei height)
 	{
+		TracyGpuZone("glTexStorage2D");
 		bind();
 		glTexStorage2D(target_, levels, internalFormat, width, height);
 		GL_LOG_ERRORS();
@@ -95,6 +101,7 @@ namespace nCine
 #if !defined(WITH_OPENGLES) && !defined(__EMSCRIPTEN__)
 	void GLTexture::getTexImage(GLint level, GLenum format, GLenum type, void* pixels)
 	{
+		TracyGpuZone("glGetTexImage");
 		bind();
 		glGetTexImage(target_, level, format, type, pixels);
 		GL_LOG_ERRORS();

@@ -1,5 +1,6 @@
 #include "GLBufferObject.h"
 #include "GLDebug.h"
+#include "../../tracy_opengl.h"
 
 namespace nCine
 {
@@ -62,6 +63,7 @@ namespace nCine
 
 	void GLBufferObject::bufferData(GLsizeiptr size, const GLvoid* data, GLenum usage)
 	{
+		TracyGpuZone("glBufferData");
 		bind();
 		glBufferData(target_, size, data, usage);
 		GL_LOG_ERRORS();
@@ -70,6 +72,7 @@ namespace nCine
 
 	void GLBufferObject::bufferSubData(GLintptr offset, GLsizeiptr size, const GLvoid* data)
 	{
+		TracyGpuZone("glBufferSubData");
 		bind();
 		glBufferSubData(target_, offset, size, data);
 		GL_LOG_ERRORS();
@@ -78,6 +81,7 @@ namespace nCine
 #if !defined(WITH_OPENGLES)
 	void GLBufferObject::bufferStorage(GLsizeiptr size, const GLvoid* data, GLbitfield flags)
 	{
+		TracyGpuZone("glBufferStorage");
 		bind();
 		glBufferStorage(target_, size, data, flags);
 		GL_LOG_ERRORS();

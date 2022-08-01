@@ -12,6 +12,7 @@
 #include "GL/GLScissorTest.h"
 #include "GL/GLDebug.h"
 #include "../ServiceLocator.h"
+#include "../tracy.h"
 #include "../../Common.h"
 
 #ifdef WITH_QT5
@@ -83,8 +84,9 @@ namespace nCine
 				fbo_->setObjectLabel(name);
 				if (depthStencilFormat != DepthStencilFormat::NONE) {
 					const bool depthStencilAdded = setDepthStencilFormat(depthStencilFormat);
-					if (depthStencilAdded == false)
+					if (!depthStencilAdded) {
 						setTexture(nullptr);
+					}
 				}
 			}
 		}
@@ -253,6 +255,8 @@ namespace nCine
 
 	void Viewport::calculateCullingRect()
 	{
+		ZoneScoped;
+
 		const int width = (width_ != 0) ? width_ : viewportRect_.W;
 		const int height = (height_ != 0) ? height_ : viewportRect_.H;
 
@@ -321,6 +325,7 @@ namespace nCine
 
 		calculateCullingRect();
 		if (rootNode_) {
+			ZoneScoped;
 			if (rootNode_->lastFrameUpdated() < theApplication().numFrames())
 				rootNode_->OnUpdate(theApplication().timeMult());
 			// AABBs should update after nodes have been transformed
@@ -335,6 +340,7 @@ namespace nCine
 		RenderResources::setCurrentViewport(this);
 
 		if (rootNode_) {
+			ZoneScoped;
 			unsigned int visitOrderIndex = 0;
 			rootNode_->OnVisit(*renderQueue_, visitOrderIndex);
 		}
@@ -347,6 +353,7 @@ namespace nCine
 		RenderResources::setCurrentViewport(this);
 
 		if (!renderQueue_->empty()) {
+			ZoneScoped;
 			renderQueue_->sortAndCommit();
 		}
 
@@ -361,6 +368,7 @@ namespace nCine
 		if (nextViewport && nextViewport->type_ == Type::WITH_TEXTURE)
 			nextViewport->draw(nextIndex + 1);
 
+		ZoneScoped;
 #if _DEBUG
 		// TODO
 		/*if (type_ == Type::SCREEN)
@@ -374,6 +382,7 @@ namespace nCine
 
 		RenderResources::setCurrentViewport(this);
 		{
+			ZoneScopedN("onDrawViewport");
 			theApplication().appEventHandler_->onDrawViewport(*this);
 			//LOGV_X("IAppEventHandler::onDrawViewport() invoked with viewport 0x%lx", uintptr_t(this));
 		}

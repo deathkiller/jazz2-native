@@ -6,9 +6,10 @@
 #include "GL/GLTexture.h"
 #include "RenderStatistics.h"
 #include "../ServiceLocator.h"
+#include "../tracy.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	GLenum ncFormatToInternal(Texture::Format format)
 	{
 		switch (format) {
@@ -127,6 +128,8 @@ namespace nCine {
 
 	void Texture::init(const char* name, Format format, int mipMapCount, int width, int height)
 	{
+		ZoneScoped;
+
 		if (width == width_ && height == height_ && mipMapCount == mipMapLevels_ && format == format_) {
 			return;
 		}
@@ -162,6 +165,8 @@ namespace nCine {
 	/*! \note It needs a `bufferName` with a valid file extension as it loads compressed data from a file in memory */
 	bool Texture::loadFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
+		ZoneScoped;
+
 		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromMemory(bufferName, bufferPtr, bufferSize);
 		if (texLoader->hasLoaded() == false)
 			return false;
@@ -180,6 +185,8 @@ namespace nCine {
 
 	bool Texture::loadFromFile(const StringView& filename)
 	{
+		ZoneScoped;
+
 		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(filename);
 		if (!texLoader->hasLoaded())
 			return false;

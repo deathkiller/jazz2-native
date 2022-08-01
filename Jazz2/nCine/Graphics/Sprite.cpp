@@ -1,9 +1,9 @@
 #include "Sprite.h"
 #include "RenderCommand.h"
+#include "../tracy.h"
 
 namespace nCine
 {
-
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -61,7 +61,7 @@ namespace nCine
 
 	void Sprite::init()
 	{
-
+		ZoneScoped;
 		/*if (texture_ && texture_->name() != nullptr)
 		{
 			// When Tracy is disabled the statement body is empty and braces are needed

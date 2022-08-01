@@ -858,6 +858,12 @@
     <ClInclude Include="Jazz2\Actors\Enemies\Bee.h">
       <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
     </ClInclude>
+    <ClInclude Include="nCine\tracy.h">
+      <Filter>Header Files\nCine</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\tracy_opengl.h">
+      <Filter>Header Files\nCine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

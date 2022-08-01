@@ -430,6 +430,8 @@
     <ClInclude Include="Jazz2\LevelInitialization.h" />
     <ClInclude Include="Jazz2\Tiles\TileMap.h" />
     <ClInclude Include="Jazz2\Tiles\TileSet.h" />
+    <ClInclude Include="nCine\tracy.h" />
+    <ClInclude Include="nCine\tracy_opengl.h" />
     <ClInclude Include="Resources.h" />
   </ItemGroup>
   <ItemGroup>

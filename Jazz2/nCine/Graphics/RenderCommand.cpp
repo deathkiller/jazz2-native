@@ -4,6 +4,7 @@
 #include "RenderResources.h"
 #include "Camera.h"
 #include "DrawableNode.h"
+#include "../tracy.h"
 
 namespace nCine
 {
@@ -42,6 +43,8 @@ namespace nCine
 
 	void RenderCommand::issue()
 	{
+		ZoneScoped;
+
 		if (geometry_.numVertices_ == 0 && geometry_.numIndices_ == 0)
 			return;
 
@@ -81,6 +84,8 @@ namespace nCine
 		if (transformationCommitted_)
 			return;
 
+		ZoneScoped;
+
 		const Camera::ProjectionValues cameraValues = RenderResources::currentCamera()->projectionValues();
 		modelMatrix_[3][2] = calculateDepth(layer_, cameraValues.near, cameraValues.far);
 
@@ -90,6 +95,7 @@ namespace nCine
 				? instanceBlock->uniform(Material::ModelMatrixUniformName)
 				: material_.uniform(Material::ModelMatrixUniformName);
 			if (matrixUniform) {
+				ZoneScopedN("Set model matrix");
 				matrixUniform->setFloatVector(modelMatrix_.Data());
 			}
 		}
@@ -99,6 +105,8 @@ namespace nCine
 
 	void RenderCommand::commitCameraTransformation()
 	{
+		ZoneScoped;
+
 		RenderResources::CameraUniformData* cameraUniformData = RenderResources::findCameraUniformData(material_.shaderProgram_);
 		if (cameraUniformData == nullptr) {
 			RenderResources::CameraUniformData newCameraUniformData;

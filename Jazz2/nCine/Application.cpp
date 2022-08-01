@@ -182,7 +182,7 @@ namespace nCine
 			RenderResources::createMinimal(); // some resources are still required for rendering
 
 #ifdef WITH_IMGUI
-	// Debug overlay is available even when scenegraph is not
+		// Debug overlay is available even when scenegraph is not
 		if (appCfg_.withDebugOverlay)
 			debugOverlay_ = std::make_unique<ImGuiDebugOverlay>(appCfg_.profileTextUpdateTime());
 #endif

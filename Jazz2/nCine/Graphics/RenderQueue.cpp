@@ -8,9 +8,10 @@
 #include "GL/GLDepthTest.h"
 #include "GL/GLBlending.h"
 #include "../Base/Algorithms.h"
+#include "../tracy_opengl.h"
 
-namespace nCine {
-
+namespace nCine
+{
 #if _DEBUG
 	namespace {
 		/// The string used to output OpenGL debug group information
@@ -98,13 +99,15 @@ namespace nCine {
 		SmallVectorImpl<RenderCommand*>* transparents = batchingEnabled ? &transparentBatchedQueue_ : &transparentQueue_;
 
 		if (batchingEnabled) {
+			ZoneScopedN("Batching");
 			// Always create batches after sorting
 			RenderResources::renderBatcher().createBatches(opaqueQueue_, opaqueBatchedQueue_);
 			RenderResources::renderBatcher().createBatches(transparentQueue_, transparentBatchedQueue_);
 		}
 
 		// Avoid GPU stalls by uploading to VBOs, IBOs and UBOs before drawing
-		if (opaques->empty() == false) {
+		if (!opaques->empty()) {
+			ZoneScopedN("Commit opaques");
 #if _DEBUG
 			sprintf_s(debugString, "Commit %u opaque command(s) for viewport 0x%lx", opaques->size(), uintptr_t(RenderResources::currentViewport()));
 			GLDebug::ScopedGroup scoped(debugString);
@@ -113,7 +116,8 @@ namespace nCine {
 				opaqueRenderCommand->commitAll();
 		}
 
-		if (transparents->empty() == false) {
+		if (!transparents->empty()) {
+			ZoneScopedN("Commit transparents");
 #if _DEBUG
 			sprintf_s(debugString, "Commit %u transparent command(s) for viewport 0x%lx", transparents->size(), uintptr_t(RenderResources::currentViewport()));
 			GLDebug::ScopedGroup scoped(debugString);
@@ -132,6 +136,7 @@ namespace nCine {
 		unsigned int commandIndex = 0;
 		// Rendering opaque nodes front to back
 		for (RenderCommand* opaqueRenderCommand : *opaques) {
+			TracyGpuZone("Opaque");
 			const int numInstances = opaqueRenderCommand->numInstances();
 			const int batchSize = opaqueRenderCommand->batchSize();
 			const uint16_t layer = opaqueRenderCommand->layer();
@@ -161,6 +166,7 @@ namespace nCine {
 		GLDepthTest::disableDepthMask();
 		// Rendering transparent nodes back to front
 		for (RenderCommand* transparentRenderCommand : *transparents) {
+			TracyGpuZone("Transparent");
 			const int numInstances = transparentRenderCommand->numInstances();
 			const int batchSize = transparentRenderCommand->batchSize();
 			const uint16_t layer = transparentRenderCommand->layer();

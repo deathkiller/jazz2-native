@@ -1,7 +1,8 @@
 ﻿#include "RenderStatistics.h"
+#include "../tracy.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS
 	///////////////////////////////////////////////////////////
@@ -24,8 +25,8 @@ namespace nCine {
 
 	void RenderStatistics::reset()
 	{
-		//TracyPlot("Vertices", static_cast<int64_t>(allCommands_.vertices));
-		//TracyPlot("Render Commands", static_cast<int64_t>(allCommands_.commands));
+		TracyPlot("Vertices", static_cast<int64_t>(allCommands_.vertices));
+		TracyPlot("Render Commands", static_cast<int64_t>(allCommands_.commands));
 
 		for (unsigned int i = 0; i < (unsigned int)RenderCommand::CommandTypes::COUNT; i++)
 			typedCommands_[i].reset();

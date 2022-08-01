@@ -1,5 +1,6 @@
 #include "BaseSprite.h"
 #include "RenderCommand.h"
+#include "../tracy.h"
 
 namespace nCine {
 
@@ -124,6 +125,8 @@ namespace nCine {
 
 	void BaseSprite::updateRenderCommand()
 	{
+		ZoneScoped;
+
 		if (dirtyBits_.test(DirtyBitPositions::TransformationBit)) {
 			renderCommand_.setTransformation(worldMatrix_);
 			dirtyBits_.reset(DirtyBitPositions::TransformationBit);

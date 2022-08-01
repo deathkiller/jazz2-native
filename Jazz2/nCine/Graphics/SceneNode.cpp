@@ -1,5 +1,6 @@
 #include "SceneNode.h"
 #include "../Application.h"
+#include "../tracy.h"
 
 namespace nCine
 {
@@ -341,6 +342,8 @@ namespace nCine
 
 	void SceneNode::transform()
 	{
+		ZoneScoped;
+
 		if (parent_ && layer_ == 0)
 			absLayer_ = parent_->absLayer_;
 		else

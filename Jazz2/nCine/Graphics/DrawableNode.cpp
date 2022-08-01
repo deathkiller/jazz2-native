@@ -4,6 +4,7 @@
 #include "Viewport.h"
 #include "../Application.h"
 #include "RenderStatistics.h"
+#include "../tracy.h"
 
 namespace nCine
 {
@@ -191,6 +192,8 @@ namespace nCine
 
 	void DrawableNode::updateAabb()
 	{
+		ZoneScoped;
+
 		const float width = absWidth();
 		const float height = absHeight();
 		float rotatedWidth = width;

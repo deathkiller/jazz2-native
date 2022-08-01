@@ -3,13 +3,14 @@
 #include "GL/GLDebug.h"
 #include "../ServiceLocator.h"
 #include "IGfxCapabilities.h"
+#include "../tracy.h"
 
 namespace nCine {
 
-	namespace {
-		/// The string used to output OpenGL debug group information
-		static char debugString[64];
-	}
+	//namespace {
+	//	/// The string used to output OpenGL debug group information
+	//	static char debugString[64];
+	//}
 
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
@@ -120,6 +121,7 @@ namespace nCine {
 
 	void RenderBuffersManager::flushUnmap()
 	{
+		ZoneScoped;
 		GLDebug::ScopedGroup scoped("RenderBuffersManager::flushUnmap()");
 
 		for (ManagedBuffer& buffer : buffers_) {
@@ -143,6 +145,7 @@ namespace nCine {
 
 	void RenderBuffersManager::remap()
 	{
+		ZoneScoped;
 		GLDebug::ScopedGroup scoped("RenderBuffersManager::remap()");
 
 		for (ManagedBuffer& buffer : buffers_) {
@@ -161,6 +164,7 @@ namespace nCine {
 
 	void RenderBuffersManager::createBuffer(const BufferSpecifications& specs)
 	{
+		ZoneScoped;
 		ManagedBuffer& managedBuffer = buffers_.emplace_back();
 		managedBuffer.type = specs.type;
 		managedBuffer.size = specs.maxSize;
