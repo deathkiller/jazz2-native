@@ -422,7 +422,7 @@ namespace Jazz2
 
 		if (notInitialized) {
 			_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
-			_view = std::make_unique<Viewport>(_viewTexture.get(), Viewport::DepthStencilFormat::DEPTH24_STENCIL8);
+			_view = std::make_unique<Viewport>(_viewTexture.get(), Viewport::DepthStencilFormat::/*DEPTH24_STENCIL8*/NONE);
 
 			_camera = std::make_unique<Camera>();
 			InitializeCamera();
@@ -431,9 +431,7 @@ namespace Jazz2
 			_view->setRootNode(_rootNode.get());
 		} else {
 			_view->removeAllTextures();
-			// TODO: Fails with GL_INVALID_OPERATION (already has GL_TEXTURE_IMMUTABLE_FORMAT set to GL_TRUE)
-			//_viewTexture->init(nullptr, Texture::Format::RGB8, w, h);
-			_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
+			_viewTexture->init(nullptr, Texture::Format::RGB8, w, h);
 			_view->setTexture(_viewTexture.get());
 		}
 
@@ -616,11 +614,10 @@ void main() {
 			_lightingView->setCamera(_camera.get());
 		} else {
 			_lightingView->removeAllTextures();
-			// TODO: Fails with GL_INVALID_OPERATION (already has GL_TEXTURE_IMMUTABLE_FORMAT set to GL_TRUE)
-			//_lightingBuffer->init(nullptr, Texture::Format::RG8, w, h);
-			_lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, w, h);
+			_lightingBuffer->init(nullptr, Texture::Format::RG8, w, h);
 			_lightingView->setTexture(_lightingBuffer.get());
 		}
+
 		_lightingBuffer->setMagFiltering(SamplerFilter::Nearest);
 
 		_downsamplePass.Initialize(_viewTexture.get(), w / 2, h / 2, Vector2f::Zero);
@@ -657,6 +654,10 @@ void main() {
 		_viewSprite->setPosition(0, 0);
 
 		Viewport::chain().push_back(_view.get());
+
+		if (_tileMap != nullptr) {
+			_tileMap->OnInitializeViewport(width, height);
+		}
 	}
 
 	void LevelHandler::OnKeyPressed(const KeyboardEvent& event)
@@ -1330,9 +1331,7 @@ void main() {
 			_view->setClearMode(Viewport::ClearMode::NEVER);
 		} else {
 			_view->removeAllTextures();
-			// TODO: Fails with GL_INVALID_OPERATION (already has GL_TEXTURE_IMMUTABLE_FORMAT set to GL_TRUE)
-			//_target->init(nullptr, Texture::Format::RGB8, width, height);
-			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
+			_target->init(nullptr, Texture::Format::RGB8, width, height);
 			_view->setTexture(_target.get());
 		}
 		_target->setMagFiltering(SamplerFilter::Linear);

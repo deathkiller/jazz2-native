@@ -138,17 +138,14 @@ namespace Jazz2::Actors::Enemies
 
 	void Dragonfly::OnHitWall()
 	{
-
 	}
 
 	void Dragonfly::OnHitFloor()
 	{
-
 	}
 
 	void Dragonfly::OnHitCeiling()
 	{
-
 	}
 
 	bool Dragonfly::OnPerish(ActorBase* collider)

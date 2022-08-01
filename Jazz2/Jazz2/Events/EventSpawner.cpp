@@ -18,6 +18,8 @@
 #include "../Actors/Collectibles/OneUpCollectible.h"
 
 #include "../Actors/Enemies/Bat.h"
+#include "../Actors/Enemies/Bee.h"
+#include "../Actors/Enemies/Caterpillar.h"
 #include "../Actors/Enemies/Dragonfly.h"
 #include "../Actors/Enemies/LabRat.h"
 #include "../Actors/Enemies/MadderHatter.h"
@@ -98,11 +100,11 @@ namespace Jazz2::Events
 		RegisterSpawnable(EventType::EnemyRapier, Rapier.Create, Rapier.Preload);
 		RegisterSpawnable(EventType::EnemySparks, Sparks.Create, Sparks.Preload);
 		RegisterSpawnable(EventType::EnemyMonkey, Monkey.Create, Monkey.Preload);
-		RegisterSpawnable(EventType::EnemyDemon, Demon.Create, Demon.Preload);
-		RegisterSpawnable(EventType::EnemyBee, Bee.Create, Bee.Preload);
+		RegisterSpawnable(EventType::EnemyDemon, Demon.Create, Demon.Preload);*/
+		RegisterSpawnable<Enemies::Bee>(EventType::EnemyBee);
 		//RegisterSpawnable(EventType::EnemyBeeSwarm, BeeSwarm.Create, BeeSwarm.Preload);
-		RegisterSpawnable(EventType::EnemyCaterpillar, Caterpillar.Create, Caterpillar.Preload);
-		RegisterSpawnable(EventType::EnemyCrab, Crab.Create, Crab.Preload);
+		RegisterSpawnable<Enemies::Caterpillar>(EventType::EnemyCaterpillar);
+		/*RegisterSpawnable(EventType::EnemyCrab, Crab.Create, Crab.Preload);
 		RegisterSpawnable(EventType::EnemyDoggy, Doggy.Create, Doggy.Preload);*/
 		RegisterSpawnable<Enemies::Dragonfly>(EventType::EnemyDragonfly);
 		//RegisterSpawnable(EventType::EnemyFish, Fish.Create, Fish.Preload);

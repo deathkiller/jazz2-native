@@ -47,7 +47,7 @@ namespace Jazz2::Actors::Weapons
 		float ax = std::cosf(angle);
 		float ay = std::sinf(angle);
 
-		const float baseSpeed = 1.2f;
+		constexpr float baseSpeed = 1.2f;
 		if (isFacingLeft) {
 			_speed.X = std::min(0.0f, speed.X) - ax * (baseSpeed + Random().NextFloat(0.0f, 0.2f));
 		} else {

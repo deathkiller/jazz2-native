@@ -185,7 +185,6 @@ namespace Jazz2
 		std::unique_ptr<Viewport> _lightingView;
 		std::unique_ptr<Texture> _lightingBuffer;
 
-
 		std::unique_ptr<Shader> _lightingShader;
 		std::unique_ptr<Shader> _blurShader;
 		std::unique_ptr<Shader> _downsampleShader;

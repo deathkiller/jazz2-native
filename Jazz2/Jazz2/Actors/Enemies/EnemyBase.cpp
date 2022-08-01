@@ -88,7 +88,7 @@ namespace Jazz2::Actors::Enemies
 			}*/
 		}
 
-		return false;
+		return ActorBase::OnHandleCollision(other);
 	}
 
 	bool EnemyBase::OnPerish(ActorBase* collider)

@@ -15,11 +15,22 @@ namespace Jazz2::Actors
 			LizardCopter
 		};
 
+		enum class SpecialMoveType {
+			None,
+			Buttstomp,
+			Uppercut,
+			Sidekick
+		};
+
 		Player();
 		~Player();
 
 		PlayerType GetPlayerType() const {
 			return _playerType;
+		}
+
+		SpecialMoveType GetSpecialMove() const {
+			return _currentSpecialMove;
 		}
 
 		bool CanBreakSolidObjects() const;
@@ -48,16 +59,10 @@ namespace Jazz2::Actors
 		bool AddFastFire(int count);
 		void MorphTo(PlayerType type);
 		void MorphRevent();
+		bool SetDizzyTime(float time);
 		bool DisableControllable(float timeout);
 
 	protected:
-		enum class SpecialMoveType {
-			None,
-			Buttstomp,
-			Uppercut,
-			Sidekick
-		};
-
 		enum class LevelExitingState {
 			None,
 			Waiting,

@@ -537,14 +537,8 @@ namespace Jazz2
 			const auto& depthItem = it->value.FindMember("Depth");
 			const auto& inherentOffsetItem = it->value.FindMember("InherentOffset");
 			const auto& backgroundStyleItem = it->value.FindMember("BackgroundStyle");
-			//const auto& backgroundColorItem = it->value.FindMember("BackgroundColor");
-			//const auto& parallaxStarsItem = it->value.FindMember("ParallaxStarsEnabled");
-
-			if (backgroundStyleItem != it->value.MemberEnd() && backgroundStyleItem->value.IsNumber() && backgroundStyleItem->value.GetInt() != 0) {
-				// TODO: Implement special backgrounds
-				++it;
-				continue;
-			}
+			const auto& backgroundColorItem = it->value.FindMember("BackgroundColor");
+			const auto& parallaxStarsEnabledItem = it->value.FindMember("ParallaxStarsEnabled");
 
 			LayerType type;
 			if (strcmp(layerName, "Sprite") == 0) {
@@ -553,6 +547,21 @@ namespace Jazz2
 				type = LayerType::Sky;
 			} else {
 				type = LayerType::Other;
+			}
+
+			BackgroundStyle backgroundStyle = (backgroundStyleItem != it->value.MemberEnd() && backgroundStyleItem->value.IsInt() ? (BackgroundStyle)backgroundStyleItem->value.GetInt() : BackgroundStyle::Plain);
+			Vector3f backgroundColor;
+			bool parallaxStarsEnabled = false;
+			if (backgroundStyle != BackgroundStyle::Plain) {
+				if (backgroundColorItem != it->value.MemberEnd() && backgroundColorItem->value.IsArray() && backgroundColorItem->value.Size() >= 3) {
+					const auto& color = backgroundColorItem->value.GetArray();
+					backgroundColor = Vector3f(
+						color[0].GetInt() / 255.0f,
+						color[1].GetInt() / 255.0f,
+						color[2].GetInt() / 255.0f
+					);
+				}
+				parallaxStarsEnabled = (parallaxStarsEnabledItem != it->value.MemberEnd() && parallaxStarsEnabledItem->value.IsBool() && parallaxStarsEnabledItem->value.GetBool());
 			}
 
 			auto layerFile = IFileStream::createFileHandle(fs::joinPath({ levelRoot, StringView(layerName) + ".layer"_s }));
@@ -567,7 +576,10 @@ namespace Jazz2
 				.OffsetY = (offsetYItem != it->value.MemberEnd() && offsetYItem->value.IsNumber() ? offsetYItem->value.GetFloat() : 0.0f),
 				// TODO: Depth is negative
 				.Depth = (depthItem != it->value.MemberEnd() && depthItem->value.IsNumber() ? -depthItem->value.GetInt() : 0),
-				.UseInherentOffset = (inherentOffsetItem != it->value.MemberEnd() && inherentOffsetItem->value.IsBool() && inherentOffsetItem->value.GetBool())
+				.UseInherentOffset = (inherentOffsetItem != it->value.MemberEnd() && inherentOffsetItem->value.IsBool() && inherentOffsetItem->value.GetBool()),
+				.BackgroundStyle = backgroundStyle,
+				.BackgroundColor = backgroundColor,
+				.ParallaxStarsEnabled = parallaxStarsEnabled
 			});
 
 			++it;

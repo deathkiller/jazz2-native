@@ -3,6 +3,7 @@
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "../Explosion.h"
+#include "../Player.h"
 #include "TurtleShell.h"
 
 #include "../../../nCine/Base/Random.h"
@@ -98,8 +99,15 @@ namespace Jazz2::Actors::Enemies
 
 	bool Turtle::OnPerish(ActorBase* collider)
 	{
-		if (_renderer.AnimPaused) {
-			// Animation should be paused only if enemy is frozen
+		// Animation should be paused only if enemy is frozen
+		bool shouldDestroy = _renderer.AnimPaused;
+		if (auto player = dynamic_cast<Player*>(collider)) {
+			if (player->GetSpecialMove() != Player::SpecialMoveType::None) {
+				shouldDestroy = true;
+			}
+		}
+
+		if (shouldDestroy) {
 			CreateDeathDebris(collider);
 			_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 

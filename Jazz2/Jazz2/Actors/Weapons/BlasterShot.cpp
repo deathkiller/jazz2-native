@@ -27,7 +27,7 @@ namespace Jazz2::Actors::Weapons
 		co_await RequestMetadataAsync("Weapon/Blaster"_s);
 
 		AnimState state = AnimState::Idle;
-		if ((_upgrades & 0x1) != 0) {
+		if ((_upgrades & 0x01) != 0) {
 			_timeLeft = 28;
 			state |= (AnimState)1;
 			_strength = 2;
@@ -52,7 +52,7 @@ namespace Jazz2::Actors::Weapons
 
 		float angleRel = angle * (isFacingLeft ? -1 : 1);
 
-		const float baseSpeed = 10.0f;
+		constexpr float baseSpeed = 10.0f;
 		if (isFacingLeft) {
 			_speed.X = std::min(0.0f, speed.X) - std::cosf(angleRel) * baseSpeed;
 		} else {

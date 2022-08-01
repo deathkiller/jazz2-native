@@ -113,6 +113,8 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/GemCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/OneUpCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bat.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bee.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Caterpillar.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Dragonfly.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/EnemyBase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/LabRat.cpp
@@ -142,6 +144,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/TriggerCrate.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BlasterShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BouncerShot.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/FreezerShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ShotBase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ToasterShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Collisions/DynamicTree.cpp

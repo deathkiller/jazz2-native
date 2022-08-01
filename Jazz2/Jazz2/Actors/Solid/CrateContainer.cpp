@@ -22,7 +22,7 @@ namespace Jazz2::Actors::Solid
 		Movable = true;
 		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
 
-		EventType eventType = (EventType) * (uint16_t*)&details.Params[0];
+		EventType eventType = (EventType)*(uint16_t*)&details.Params[0];
 		int count = (int)*(uint16_t*)&details.Params[2];
 		if (eventType != EventType::Empty && count > 0) {
 			AddContent(eventType, count, &details.Params[4], 16 - 4);

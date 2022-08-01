@@ -50,7 +50,7 @@ namespace Jazz2::Actors::Weapons
 
 		float angleRel = angle * (isFacingLeft ? -1 : 1);
 
-		const float baseSpeed = 10.0f;
+		constexpr float baseSpeed = 10.0f;
 		if (isFacingLeft) {
 			_speed.X = std::min(0.0f, speed.X) - std::cosf(angleRel) * baseSpeed;
 		} else {

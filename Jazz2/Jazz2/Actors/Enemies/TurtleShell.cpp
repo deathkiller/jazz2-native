@@ -3,6 +3,7 @@
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "../Weapons/ShotBase.h"
+#include "../Weapons/FreezerShot.h"
 #include "../Weapons/ToasterShot.h"
 
 #include "../../../nCine/Base/Random.h"
@@ -109,10 +110,9 @@ namespace Jazz2::Actors::Enemies
 		EnemyBase::OnHandleCollision(other);
 
 		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other)) {
-			// TODO
-			/*if (ammo is AmmoFreezer) {
-				break;
-			}*/
+			if (auto freezerShot = dynamic_cast<Weapons::FreezerShot*>(other)) {
+				return false;
+			}
 
 			if (auto toasterShot = dynamic_cast<Weapons::ToasterShot*>(other)) {
 				DecreaseHealth(INT32_MAX, other);

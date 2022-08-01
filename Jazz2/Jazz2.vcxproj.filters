@@ -849,6 +849,15 @@
     <ClInclude Include="Jazz2\Actors\Solid\Pole.h">
       <Filter>Header Files\Jazz2\Actors\Solid</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Caterpillar.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\FreezerShot.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bee.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1435,6 +1444,15 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Solid\Pole.cpp">
       <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Caterpillar.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\FreezerShot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bee.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

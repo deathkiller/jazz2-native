@@ -144,7 +144,7 @@ void GameEventHandler::onInit()
 #endif
 
 	// TODO
-	Jazz2::PlayerType players[] = { Jazz2::PlayerType::Jazz };
+	Jazz2::PlayerType players[] = { Jazz2::PlayerType::Spaz };
 	Jazz2::LevelInitialization levelInit("share"_s, "01_share1"_s, Jazz2::GameDifficulty::Normal, false, false, players, _countof(players));
 	ChangeLevel(std::move(levelInit));
 }

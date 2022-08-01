@@ -196,6 +196,7 @@ namespace Jazz2
 		float _internalForceY;
 		float _elasticity;
 		float _friction;
+		float _unstuckCooldown;
 
 		float _frozenTimeLeft;
 		int _maxHealth;
@@ -305,6 +306,8 @@ namespace Jazz2
 		bool IsCollidingWithAngled(const AABBf& aabb);
 
 		void RefreshAnimation();
+
+		void HandleAmmoFrozenStateChange(ActorBase* shot);
 
 	};
 }

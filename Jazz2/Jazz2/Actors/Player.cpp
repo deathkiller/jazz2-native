@@ -12,6 +12,7 @@
 
 #include "Weapons/BlasterShot.h"
 #include "Weapons/BouncerShot.h"
+#include "Weapons/FreezerShot.h"
 #include "Weapons/ToasterShot.h"
 
 #include "../../nCine/Base/Random.h"
@@ -27,11 +28,11 @@ namespace Jazz2::Actors
 		_wasActivelyPushing(false),
 		_controllable(true),
 		_controllableExternal(true),
-		_controllableTimeout(0),
+		_controllableTimeout(0.0f),
 		_wasUpPressed(false), _wasDownPressed(false), _wasJumpPressed(false), _wasFirePressed(false),
 		_currentSpecialMove(SpecialMoveType::None),
 		_isAttachedToPole(false),
-		_copterFramesLeft(0), _fireFramesLeft(0), _pushFramesLeft(0), _waterCooldownLeft(0),
+		_copterFramesLeft(0.0f), _fireFramesLeft(0.0f), _pushFramesLeft(0.0f), _waterCooldownLeft(0.0f),
 		_levelExiting(LevelExitingState::None),
 		_isFreefall(false), _inWater(false), _isLifting(false), _isSpring(false),
 		_inShallowWater(-1),
@@ -40,19 +41,19 @@ namespace Jazz2::Actors
 		_canDoubleJump(true),
 		_lives(0), _coins(0), _foodEaten(0), _score(0),
 		_checkpointPos { },
-		_checkpointLight(0),
-		_sugarRushLeft(0), _sugarRushStarsTime(0),
+		_checkpointLight(0.0f),
+		_sugarRushLeft(0.0f), _sugarRushStarsTime(0.0f),
 		_gems(0), _gemsPitch(0),
-		_gemsTimer(0),
-		_bonusWarpTimer(0),
-		_invulnerableTime(0),
-		_invulnerableBlinkTime(0),
-		_idleTime(0),
-		_keepRunningTime(0),
-		_lastPoleTime(0),
+		_gemsTimer(0.0f),
+		_bonusWarpTimer(0.0f),
+		_invulnerableTime(0.0f),
+		_invulnerableBlinkTime(0.0f),
+		_idleTime(0.0f),
+		_keepRunningTime(0.0f),
+		_lastPoleTime(0.0f),
 		_lastPolePos { },
-		_inTubeTime(0),
-		_dizzyTime(0),
+		_inTubeTime(0.0f),
+		_dizzyTime(0.0f),
 		_weaponAllowed(true)
 	{
 	}
@@ -1987,9 +1988,12 @@ namespace Jazz2::Actors
 		switch (weaponType) {
 			case WeaponType::Blaster: FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(40.0f, 1.0f); PlaySfx("WeaponBlaster"_s); break;
 			case WeaponType::Bouncer: FireWeapon<Weapons::BouncerShot, WeaponType::Bouncer>(32.0f, 0.85f); break;
-				/*case WeaponType::Freezer: FireWeaponFreezer(); break;
-				case WeaponType::Seeker: FireWeaponSeeker(); break;
-				case WeaponType::RF: FireWeaponRF(); break;*/
+				case WeaponType::Freezer:
+					// TODO: Add upgraded freezer
+					FireWeapon<Weapons::FreezerShot, WeaponType::Freezer>(46.0f, 0.8f);
+					break;
+				//case WeaponType::Seeker: FireWeaponSeeker(); break;
+				//case WeaponType::RF: FireWeaponRF(); break;
 
 				case WeaponType::Toaster: {
 					if (_inWater) {
@@ -2770,6 +2774,13 @@ namespace Jazz2::Actors
 	void Player::MorphRevent()
 	{
 		MorphTo(_playerTypeOriginal);
+	}
+
+	bool Player::SetDizzyTime(float time)
+	{
+		bool wasNotDizzy = (_dizzyTime <= 0.0f);
+		_dizzyTime = time;
+		return wasNotDizzy;
 	}
 
 	bool Player::DisableControllable(float timeout)

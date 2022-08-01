@@ -212,6 +212,8 @@
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\GemCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\OneUpCollectible.h" />
+    <ClInclude Include="Jazz2\Actors\Enemies\Bee.h" />
+    <ClInclude Include="Jazz2\Actors\Enemies\Caterpillar.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Dragonfly.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\LabRat.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\MadderHatter.h" />
@@ -235,6 +237,7 @@
     <ClInclude Include="Jazz2\Actors\Solid\Pole.h" />
     <ClInclude Include="Jazz2\Actors\Solid\TriggerCrate.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\BouncerShot.h" />
+    <ClInclude Include="Jazz2\Actors\Weapons\FreezerShot.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\ToasterShot.h" />
     <ClInclude Include="Jazz2\Compatibility\AnimSetMapping.h" />
     <ClInclude Include="Jazz2\Compatibility\EventConverter.h" />
@@ -437,6 +440,8 @@
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\GemCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\OneUpCollectible.cpp" />
+    <ClCompile Include="Jazz2\Actors\Enemies\Bee.cpp" />
+    <ClCompile Include="Jazz2\Actors\Enemies\Caterpillar.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Dragonfly.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\LabRat.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\MadderHatter.cpp" />
@@ -460,6 +465,7 @@
     <ClCompile Include="Jazz2\Actors\Solid\Pole.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\TriggerCrate.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\BouncerShot.cpp" />
+    <ClCompile Include="Jazz2\Actors\Weapons\FreezerShot.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\ToasterShot.cpp" />
     <ClCompile Include="Jazz2\Compatibility\AnimSetMapping.cpp" />
     <ClCompile Include="Jazz2\Compatibility\EventConverter.cpp" />

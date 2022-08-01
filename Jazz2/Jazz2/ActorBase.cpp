@@ -4,6 +4,10 @@
 #include "Tiles/TileMap.h"
 #include "Collisions/DynamicTreeBroadPhase.h"
 
+#include "Actors/Player.h"
+#include "Actors/Weapons/FreezerShot.h"
+#include "Actors/Weapons/ToasterShot.h"
+
 #include "../nCine/Primitives/Matrix4x4.h"
 #include "../nCine/Base/Random.h"
 #include "../nCine/Base/FrameTimer.h"
@@ -16,17 +20,14 @@ namespace Jazz2
 		:
 		_flags(ActorFlags::None),
 		_levelHandler(nullptr),
-		_pos { },
-		_speed { },
-		_externalForce { },
-		_internalForceY(0),
-		_elasticity(0),
-		_friction(0),
-		_frozenTimeLeft(0),
+		_internalForceY(0.0f),
+		_elasticity(0.0f),
+		_friction(0.0f),
+		_unstuckCooldown(0.0f),
+		_frozenTimeLeft(0.0f),
 		_maxHealth(1),
 		_health(1),
 		_suspendType(SuspendType::None),
-		_originTile { },
 		_metadata(nullptr),
 		_renderer(this),
 		_currentAnimation(nullptr),
@@ -132,17 +133,14 @@ namespace Jazz2
 		TryStandardMovement(timeMult);
 		OnUpdateHitbox();
 
-		// TODO
-		/*if (renderer != null && renderer.AnimPaused) {
-			if (frozenTimeLeft <= 0f) {
-				renderer.AnimPaused = false;
-				// Reset renderer
-				renderer.CustomMaterial = null;
-				renderer.ShowOutline = false;
+		if (_renderer.AnimPaused) {
+			if (_frozenTimeLeft <= 0.0f) {
+				_renderer.AnimPaused = false;
+				// TODO: Frozen effect
 			} else {
 				_frozenTimeLeft -= timeMult;
 			}
-		}*/
+		}
 	}
 
 	void ActorBase::OnUpdateHitbox()
@@ -196,10 +194,9 @@ namespace Jazz2
 
 	bool ActorBase::OnHandleCollision(ActorBase* other)
 	{
-		// TODO
-		/*if (GetState(ActorFlags::CanBeFrozen)) {
+		if (GetState(ActorFlags::CanBeFrozen)) {
 			HandleAmmoFrozenStateChange(other);
-		}*/
+		}
 		return false;
 	}
 
@@ -210,6 +207,10 @@ namespace Jazz2
 
 	void ActorBase::TryStandardMovement(float timeMult)
 	{
+		if (_unstuckCooldown > 0.0f) {
+			_unstuckCooldown -= timeMult;
+		}
+
 		float currentGravity;
 		float currentElasticity = _elasticity;
 		if ((CollisionFlags & CollisionFlags::ApplyGravitation) == CollisionFlags::ApplyGravitation) {
@@ -275,13 +276,14 @@ namespace Jazz2
 				}
 
 				bool moved = false;
-				if (!success) {
+				if (!success && _unstuckCooldown <= 0.0f) {
 					AABBf aabb = AABBInner;
 					aabb.T = aabb.B - 8;
 					if (!_levelHandler->IsPositionEmpty(this, aabb, true)) {
 						for (float yDiff = -2.0f; yDiff >= -16.0f; yDiff -= 2.0f) {
 							if (MoveInstantly(Vector2f(0.0f, yDiff), MoveType::Relative)) {
 								moved = true;
+								_unstuckCooldown = 60.0f;
 								break;
 							}
 						}
@@ -1116,6 +1118,20 @@ namespace Jazz2
 		}
 
 		return i;
+	}
+
+	void ActorBase::HandleAmmoFrozenStateChange(ActorBase* shot)
+	{
+		if (auto freezerShot = dynamic_cast<Actors::Weapons::FreezerShot*>(shot)) {
+			if (dynamic_cast<ActorBase*>(freezerShot->GetOwner()) != this) {
+				_frozenTimeLeft = freezerShot->FrozenDuration();
+
+				_renderer.AnimPaused = true;
+				// TODO: Frozen effect
+			}
+		} else if(auto freezerShot = dynamic_cast<Actors::Weapons::ToasterShot*>(shot)) {
+			_frozenTimeLeft = 0.0f;
+		}
 	}
 
 	bool ActorBase::IsInvulnerable()

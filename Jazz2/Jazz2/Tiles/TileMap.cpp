@@ -16,7 +16,9 @@ namespace Jazz2::Tiles
 		_limitLeft(0), _limitRight(0),
 		_renderCommandsCount(0),
 		_collapsingTimer(0.0f),
-		_triggerState(TriggerCount)
+		_triggerState(TriggerCount),
+		_texturedBackgroundLayer(-1),
+		_texturedBackgroundPass(this)
 	{
 		_tileSet = ContentResolver::Current().RequestTileSet(tileSetPath, true, nullptr);
 		_renderCommands.reserve(128);
@@ -501,10 +503,7 @@ namespace Jazz2::Tiles
 		if (layer.BackgroundStyle != BackgroundStyle::Plain && tileCount.Y == 8 && tileCount.X == 8) {
 			constexpr float PerspectiveSpeedX = 0.4f;
 			constexpr float PerspectiveSpeedY = 0.16f;
-			// TODO
-			/*RenderTexturedBackground(device, ref layer, cacheIndex,
-				(x1 * PerspectiveSpeedX + loX),
-				(y1 * PerspectiveSpeedY + loY));*/
+			RenderTexturedBackground(renderQueue, layer, x1 * PerspectiveSpeedX + loX, y1 * PerspectiveSpeedY + loY);
 		} else {
 			// Figure out the floating point offset from the calculated coordinates and the actual tile corner coordinates
 			float xt = TranslateCoordinate(x1, layer.SpeedX, loX, false, viewSize.Y, viewSize.X);
@@ -630,7 +629,7 @@ namespace Jazz2::Tiles
 					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, alpha / 255.0f).Data());
 
-					Matrix4x4f worldMatrix = Matrix4x4f::Translation(std::floor(x2 + (TileSet::DefaultTileSize / 2)), std::floor(y2 + (TileSet::DefaultTileSize / 2)), 0);
+					Matrix4x4f worldMatrix = Matrix4x4f::Translation(std::floor(x2 + (TileSet::DefaultTileSize / 2)), std::floor(y2 + (TileSet::DefaultTileSize / 2)), 0.0f);
 					command->setTransformation(worldMatrix);
 					command->setLayer(layer.Depth);
 					command->material().setTexture(*_tileSet->_textureDiffuse);
@@ -728,6 +727,8 @@ namespace Jazz2::Tiles
 		if (type == LayerType::Sprite) {
 			_sprLayerIndex = (int)_layers.size();
 			_limitRight = width;
+		} else if (layer.BackgroundStyle != BackgroundStyle::Plain) {
+			_texturedBackgroundLayer = (int)_layers.size();
 		}
 
 		TileMapLayer& newLayer = _layers.emplace_back();
@@ -745,15 +746,9 @@ namespace Jazz2::Tiles
 		newLayer.OffsetY = layer.OffsetY;
 		newLayer.UseInherentOffset = layer.UseInherentOffset;
 		newLayer.Depth = (uint16_t)(ILevelHandler::MainPlaneZ + layer.Depth);
-
-		/*newLayer.BackgroundStyle = (BackgroundStyle)layer.BackgroundStyle;
+		newLayer.BackgroundStyle = layer.BackgroundStyle;
+		newLayer.BackgroundColor = layer.BackgroundColor;
 		newLayer.ParallaxStarsEnabled = layer.ParallaxStarsEnabled;
-		if (layer.BackgroundColor != null && layer.BackgroundColor.Count >= 3) {
-			newLayer.BackgroundColor = new Vector4f(layer.BackgroundColor[0] / 255.0f, layer.BackgroundColor[1] / 255.0f, layer.BackgroundColor[2] / 255.0f, 1.0f);
-		} else {
-			newLayer.BackgroundColor = new Vector4f(0, 0, 0, 1);
-		}*/
-
 	}
 
 	void TileMap::ReadAnimatedTiles(const std::unique_ptr<IFileStream>& s)
@@ -1116,5 +1111,359 @@ namespace Jazz2::Tiles
 				}
 			}
 		}
+	}
+
+	void TileMap::RenderTexturedBackground(RenderQueue& renderQueue, TileMapLayer& layer, float x, float y)
+	{
+		auto target = _texturedBackgroundPass._target.get();
+		if (target == nullptr) {
+			return;
+		}
+
+		Vector2i viewSize = _levelHandler->GetViewSize();
+		Vector2f viewCenter = _levelHandler->GetCameraPos();
+
+		auto command = &_texturedBackgroundPass._outputRenderCommand;
+
+		auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
+		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(viewSize.X, viewSize.Y);
+		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+
+		command->material().uniform("ViewSize")->setFloatValue(viewSize.X, viewSize.Y);
+		command->material().uniform("CameraPosition")->setFloatValue(viewCenter.X, viewCenter.Y);
+		command->material().uniform("shift")->setFloatValue(x, y);
+		command->material().uniform("horizonColor")->setFloatValue(layer.BackgroundColor.X, layer.BackgroundColor.Y, layer.BackgroundColor.Z);
+		command->material().uniform("parallaxStarsEnabled")->setFloatValue(layer.ParallaxStarsEnabled ? 1.0f : 0.0f);
+
+		Matrix4x4f worldMatrix = Matrix4x4f::Translation(viewCenter.X, viewCenter.Y, 0.0f);
+		command->setTransformation(worldMatrix);
+		command->setLayer(layer.Depth);
+		command->material().setTexture(*target);
+
+		renderQueue.addCommand(command);
+	}
+
+	void TileMap::OnInitializeViewport(int width, int height)
+	{
+		if (_texturedBackgroundLayer != -1) {
+			constexpr char TexturedBackgroundFs[] = R"(
+#ifdef GL_ES
+precision highp float;
+#endif
+
+uniform sampler2D uTexture; // Normal
+
+uniform vec2 ViewSize;
+uniform vec2 CameraPosition;
+
+uniform vec3 horizonColor;
+uniform vec2 shift;
+uniform float parallaxStarsEnabled;
+
+in vec2 vTexCoords;
+
+out vec4 fragColor;
+
+vec2 hash2D(in vec2 p) {
+	float h = dot(p, vec2(12.9898, 78.233));
+	float h2 = dot(p, vec2(37.271, 377.632));
+	return -1.0 + 2.0 * vec2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+}
+
+vec3 voronoi(in vec2 p) {
+	vec2 n = floor(p);
+	vec2 f = fract(p);
+
+	vec2 mg, mr;
+
+	float md = 8.0;
+	for (int j = -1; j <= 1; ++j) {
+		for (int i = -1; i <= 1; ++i) {
+			vec2 g = vec2(float(i), float(j));
+			vec2 o = hash2D(n + g);
+
+			vec2 r = g + o - f;
+			float d = dot(r, r);
+
+			if (d < md) {
+				md = d;
+				mr = r;
+				mg = g;
+			}
+		}
+	}
+	return vec3(md, mr);
+}
+
+float addStarField(vec2 samplePosition, float threshold) {
+	vec3 starValue = voronoi(samplePosition);
+	if (starValue.x < threshold) {
+		float power = 1.0 - (starValue.x / threshold);
+		return min(power * power * power, 0.5);
+	}
+	return 0.0;
+}
+
+void main() {
+	// Distance to center of screen from top or bottom (1: center of screen, 0: edge of screen)
+	float distance = 1.3 - abs(2.0 * vTexCoords.y - 1.0);
+	float horizonDepth = pow(distance, 2.0);
+
+	float yShift = (vTexCoords.y > 0.5 ? 1.0 : 0.0);
+
+	vec2 texturePos = vec2(
+		(shift.x / 256.0) + (vTexCoords.x - 0.5   ) * (0.5 + (1.5 * horizonDepth)),
+		(shift.y / 256.0) + (vTexCoords.y - yShift) * 2.0 * distance
+	);
+
+	vec4 texColor = texture(uTexture, texturePos);
+	float horizonOpacity = clamp(pow(distance, 1.8) - 0.4, 0.0, 1.0);
+	
+	vec4 horizonColorWithStars = vec4(horizonColor, 1.0);
+	if (parallaxStarsEnabled > 0.0) {
+		vec2 samplePosition = (vTexCoords * ViewSize / ViewSize.xx) + CameraPosition.xy * 0.00012;
+		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
+		
+		samplePosition = (vTexCoords * ViewSize / ViewSize.xx) + CameraPosition.xy * 0.00018 + 0.5;
+		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
+	}
+
+	fragColor = mix(texColor, horizonColorWithStars, horizonOpacity);
+	fragColor.a = 1.0;
+}
+)";
+
+			constexpr char TexturedBackgroundCircleFs[] = R"(
+#ifdef GL_ES
+precision highp float;
+#endif
+
+uniform sampler2D uTexture; // Normal
+
+uniform vec2 ViewSize;
+uniform vec2 CameraPosition;
+
+uniform vec3 horizonColor;
+uniform vec2 shift;
+uniform float parallaxStarsEnabled;
+
+in vec2 vTexCoords;
+
+out vec4 fragColor;
+
+#define INV_PI 0.31830988618379067153776752675
+
+vec2 hash2D(in vec2 p) {
+	float h = dot(p, vec2(12.9898, 78.233));
+	float h2 = dot(p, vec2(37.271, 377.632));
+	return -1.0 + 2.0 * vec2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+}
+
+vec3 voronoi(in vec2 p) {
+	vec2 n = floor(p);
+	vec2 f = fract(p);
+
+	vec2 mg, mr;
+
+	float md = 8.0;
+	for (int j = -1; j <= 1; ++j) {
+		for (int i = -1; i <= 1; ++i) {
+			vec2 g = vec2(float(i), float(j));
+			vec2 o = hash2D(n + g);
+
+			vec2 r = g + o - f;
+			float d = dot(r, r);
+
+			if (d < md) {
+				md = d;
+				mr = r;
+				mg = g;
+			}
+		}
+	}
+	return vec3(md, mr);
+}
+
+float addStarField(vec2 samplePosition, float threshold) {
+	vec3 starValue = voronoi(samplePosition);
+	if (starValue.x < threshold) {
+		float power = 1.0 - (starValue.x / threshold);
+		return min(power * power * power, 0.5);
+	}
+	return 0.0;
+}
+
+void main() {
+	// Position of pixel on screen (between -1 and 1)
+	vec2 targetCoord = vec2(2.0) * vTexCoords - vec2(1.0);
+
+	// Aspect ratio correction, so display circle instead of ellipse
+	targetCoord.x *= ViewSize.x / ViewSize.y;
+
+	// Distance to center of screen
+	float distance = length(targetCoord);
+
+	// x-coordinate of tunnel
+	float xShift = (targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan(targetCoord.y, targetCoord.x) * INV_PI);
+
+	vec2 texturePos = vec2(
+		(xShift)         * 1.0 + (shift.x * 0.01),
+		(1.0 / distance) * 1.4 + (shift.y * 0.002)
+	);
+
+	vec4 texColor = texture(uTexture, texturePos);
+	float horizonOpacity = 1.0 - clamp(pow(distance, 1.4) - 0.3, 0.0, 1.0);
+	
+	vec4 horizonColorWithStars = vec4(horizonColor, 1.0);
+	if (parallaxStarsEnabled > 0.0) {
+		vec2 samplePosition = (vTexCoords * ViewSize / ViewSize.xx) + CameraPosition.xy * 0.00012;
+		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
+		
+		samplePosition = (vTexCoords * ViewSize / ViewSize.xx) + CameraPosition.xy * 0.00018 + 0.5;
+		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
+	}
+
+	fragColor = mix(texColor, horizonColorWithStars, horizonOpacity);
+	fragColor.a = 1.0;
+}
+)";
+
+			if (_texturedBackgroundShader == nullptr) {
+				_texturedBackgroundShader = std::make_unique<Shader>("TexturedBackground", Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE,
+					_layers[_texturedBackgroundLayer].BackgroundStyle == BackgroundStyle::Circle ? TexturedBackgroundCircleFs : TexturedBackgroundFs);
+			}
+
+			Vector2i layoutSize = _layers[_texturedBackgroundLayer].LayoutSize;
+			width = layoutSize.X * TileSet::DefaultTileSize;
+			height = layoutSize.Y * TileSet::DefaultTileSize;
+			_texturedBackgroundPass.Initialize(width, height);
+		}
+	}
+
+	void TileMap::TexturedBackgroundPass::Initialize(int width, int height)
+	{
+		bool notInitialized = (_view == nullptr);
+
+		if (notInitialized) {
+			_camera = std::make_unique<Camera>();
+			_camera->setOrthoProjection(0, width, 0, height);
+			_camera->setView(0, 0, 0, 1);
+			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
+			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);
+			_view->setRootNode(this);
+			_view->setCamera(_camera.get());
+			_view->setClearMode(Viewport::ClearMode::NEVER);
+			_target->setMagFiltering(SamplerFilter::Linear);
+			_target->setWrap(SamplerWrapping::Repeat);
+
+			// Prepare render commands
+			int renderCommandCount = (width * height) / (TileSet::DefaultTileSize * TileSet::DefaultTileSize);
+			_renderCommands.reserve(renderCommandCount);
+			for (int i = 0; i < renderCommandCount; i++) {
+				std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
+				command->setType(RenderCommand::CommandTypes::SPRITE);
+				command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
+				command->material().reserveUniformsDataMemory();
+				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+
+				GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+				if (textureUniform && textureUniform->intValue(0) != 0) {
+					textureUniform->setIntValue(0); // GL_TEXTURE0
+				}
+			}
+
+			// Prepare output render command
+			_outputRenderCommand.setType(RenderCommand::CommandTypes::SPRITE);
+			_outputRenderCommand.material().setShader(_owner->_texturedBackgroundShader.get());
+			_outputRenderCommand.material().reserveUniformsDataMemory();
+			_outputRenderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+
+			GLUniformCache* textureUniform = _outputRenderCommand.material().uniform(Material::TextureUniformName);
+			if (textureUniform && textureUniform->intValue(0) != 0) {
+				textureUniform->setIntValue(0); // GL_TEXTURE0
+			}
+		}
+
+		Viewport::chain().push_back(_view.get());
+	}
+
+	bool TileMap::TexturedBackgroundPass::OnDraw(RenderQueue& renderQueue)
+	{
+		TileMapLayer& layer = _owner->_layers[_owner->_texturedBackgroundLayer];
+		Vector2i layoutSize = layer.LayoutSize;
+
+		int renderCommandIndex = 0;
+		bool isAnimated = false;
+
+		for (int y = 0; y < layoutSize.Y; y++) {
+			for (int x = 0; x < layoutSize.X; x++) {
+				LayerTile tile = layer.Layout[x + y * layer.LayoutSize.X];
+
+				int tileId;
+				bool isFlippedX, isFlippedY;
+				if (tile.IsAnimated) {
+					isAnimated = true;
+					if (tile.TileID < _owner->_animatedTiles.size()) {
+						tileId = _owner->_animatedTiles[tile.TileID].Tiles[_owner->_animatedTiles[tile.TileID].CurrentTileIdx].TileID;
+						// TODO
+						//isFlippedX = (_animatedTiles[tile.TileID].CurrentTile.IsFlippedX != tile.IsFlippedX);
+						//isFlippedY = (_animatedTiles[tile.TileID].CurrentTile.IsFlippedY != tile.IsFlippedY);
+						isFlippedX = false;
+						isFlippedY = false;
+					} else {
+						continue;
+					}
+				} else {
+					tileId = tile.TileID;
+					isFlippedX = tile.IsFlippedX;
+					isFlippedY = tile.IsFlippedY;
+				}
+
+				auto command = _renderCommands[renderCommandIndex++].get();
+
+				Vector2i texSize = _owner->_tileSet->_textureDiffuse->size();
+				float texScaleX = (-0.25f + TileSet::DefaultTileSize) / float(texSize.X);
+				float texBiasX = (0.25f + (tileId % _owner->_tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.X);
+				float texScaleY = (0.25f + TileSet::DefaultTileSize) / float(texSize.Y);
+				float texBiasY = (-0.25f + (tileId / _owner->_tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.Y);
+
+				// ToDo: Flip normal map somehow
+				if (isFlippedX) {
+					texBiasX += texScaleX;
+					texScaleX *= -1;
+				}
+				if (isFlippedY) {
+					texBiasY += texScaleY;
+					texScaleY *= -1;
+				}
+
+				auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+				instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
+				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
+				instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+
+				Matrix4x4f worldMatrix = Matrix4x4f::Translation(std::floor(x * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2)), std::floor(y * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2)), 0.0f);
+				command->setTransformation(worldMatrix);
+				command->material().setTexture(*_owner->_tileSet->_textureDiffuse);
+
+				renderQueue.addCommand(command);
+			}
+		}
+
+		if (!isAnimated && _alreadyRendered) {
+			// If it's not animated, it can be rendered only once
+			auto it = Viewport::chain().begin();
+			while (it != Viewport::chain().end()) {
+				if (*it == _view.get()) {
+					Viewport::chain().erase(it);
+					break;
+				}
+				++it;
+			}
+		}
+
+		_alreadyRendered = true;
+		return true;
 	}
 }

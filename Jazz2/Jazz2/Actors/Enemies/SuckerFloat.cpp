@@ -3,6 +3,7 @@
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "Sucker.h"
+#include "../Player.h"
 
 #include "../../../nCine/Base/Random.h"
 
@@ -50,14 +51,28 @@ namespace Jazz2::Actors::Enemies
 
 	bool SuckerFloat::OnPerish(ActorBase* collider)
 	{
-		std::shared_ptr<Sucker> sucker = std::make_shared<Sucker>();
-		uint8_t suckerParams[1] = { (uint8_t)_lastHitDir };
-		sucker->OnActivated({
-			.LevelHandler = _levelHandler,
-			.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()),
-			.Params = suckerParams
-		});
-		_levelHandler->AddActor(sucker);
+		bool shouldDestroy = _renderer.AnimPaused;
+		if (auto player = dynamic_cast<Player*>(collider)) {
+			if (player->GetSpecialMove() != Player::SpecialMoveType::None) {
+				shouldDestroy = true;
+			}
+		}
+
+		if (shouldDestroy) {
+			CreateDeathDebris(collider);
+			_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
+
+			TryGenerateRandomDrop();
+		} else {
+			std::shared_ptr<Sucker> sucker = std::make_shared<Sucker>();
+			uint8_t suckerParams[1] = { (uint8_t)_lastHitDir };
+			sucker->OnActivated({
+				.LevelHandler = _levelHandler,
+				.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()),
+				.Params = suckerParams
+			});
+			_levelHandler->AddActor(sucker);
+		}
 
 		return EnemyBase::OnPerish(collider);
 	}

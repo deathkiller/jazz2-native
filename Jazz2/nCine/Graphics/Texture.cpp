@@ -127,6 +127,10 @@ namespace nCine {
 
 	void Texture::init(const char* name, Format format, int mipMapCount, int width, int height)
 	{
+		if (width == width_ && height == height_ && mipMapCount == mipMapLevels_ && format == format_) {
+			return;
+		}
+
 		TextureLoaderRaw texLoader(width, height, mipMapCount, ncFormatToInternal(format));
 
 		if (dataSize_ > 0)

@@ -58,7 +58,7 @@ namespace Jazz2::Tiles
 		bool UseInherentOffset;
 
 		BackgroundStyle BackgroundStyle;
-		Vector4f BackgroundColor;
+		Vector3f BackgroundColor;
 		bool ParallaxStarsEnabled;
 	};
 
@@ -95,6 +95,10 @@ namespace Jazz2::Tiles
 
 			// JJ2's "limit visible area" flag
 			bool UseInherentOffset;
+
+			BackgroundStyle BackgroundStyle;
+			Vector3f BackgroundColor;
+			bool ParallaxStarsEnabled;
 		};
 
 		enum class DebrisCollisionAction {
@@ -163,7 +167,33 @@ namespace Jazz2::Tiles
 		bool GetTrigger(uint16_t triggerId);
 		void SetTrigger(uint16_t triggerId, bool newState);
 
+		void OnInitializeViewport(int width, int height);
+
 	private:
+		class TexturedBackgroundPass : public SceneNode
+		{
+			friend class TileMap;
+
+		public:
+			TexturedBackgroundPass(TileMap* owner)
+				: _owner(owner), _alreadyRendered(false)
+			{
+			}
+
+			void Initialize(int width, int height);
+
+			bool OnDraw(RenderQueue& renderQueue) override;
+
+		private:
+			TileMap* _owner;
+			std::unique_ptr<Texture> _target;
+			std::unique_ptr<Viewport> _view;
+			std::unique_ptr<Camera> _camera;
+			SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
+			RenderCommand _outputRenderCommand;
+			bool _alreadyRendered;
+		};
+
 		LevelHandler* _levelHandler;
 		int _sprLayerIndex;
 		bool _hasPit;
@@ -180,6 +210,10 @@ namespace Jazz2::Tiles
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
 		int _renderCommandsCount;
 
+		int _texturedBackgroundLayer;
+		TexturedBackgroundPass _texturedBackgroundPass;
+		std::unique_ptr<Shader> _texturedBackgroundShader;
+
 		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer);
 		static float TranslateCoordinate(float coordinate, float speed, float offset, bool isY, int viewHeight, int viewWidth);
 		RenderCommand* RentRenderCommand();
@@ -191,6 +225,8 @@ namespace Jazz2::Tiles
 
 		void UpdateDebris(float timeMult);
 		void DrawDebris(RenderQueue& renderQueue);
+
+		void RenderTexturedBackground(RenderQueue& renderQueue, TileMapLayer& layer, float x, float y);
 
 		inline int ResolveTileID(LayerTile& tile)
 		{
