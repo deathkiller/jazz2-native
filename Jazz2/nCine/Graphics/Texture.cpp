@@ -148,7 +148,7 @@ namespace nCine
 
 	void Texture::init(const char* name, Format format, int mipMapCount, Vector2i size)
 	{
-		//ASSERT(mipMapCount > 0);
+		ASSERT(mipMapCount > 0);
 		init(name, format, mipMapCount, size.X, size.Y);
 	}
 
@@ -247,7 +247,7 @@ namespace nCine
 
 	bool Texture::saveToMemory(unsigned char* bufferPtr, unsigned int level)
 	{
-#if !defined(WITH_OPENGLES) && !defined(__EMSCRIPTEN__)
+#if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		const GLenum format = ncFormatToNonInternal(format_);
 		glGetError();
 		glTexture_->getTexImage(level, format, GL_UNSIGNED_BYTE, bufferPtr);
@@ -350,8 +350,8 @@ namespace nCine
 	{
 		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
 		const int maxTextureSize = gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_TEXTURE_SIZE);
-		//FATAL_ASSERT_MSG_X(texLoader.width() <= maxTextureSize, "Texture width %d is bigger than device maximum %d", texLoader.width(), maxTextureSize);
-		//FATAL_ASSERT_MSG_X(texLoader.height() <= maxTextureSize, "Texture height %d is bigger than device maximum %d", texLoader.height(), maxTextureSize);
+		FATAL_ASSERT_MSG_X(texLoader.width() <= maxTextureSize, "Texture width %d is bigger than device maximum %d", texLoader.width(), maxTextureSize);
+		FATAL_ASSERT_MSG_X(texLoader.height() <= maxTextureSize, "Texture height %d is bigger than device maximum %d", texLoader.height(), maxTextureSize);
 
 		glTexture_->texParameteri(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexture_->texParameteri(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -376,28 +376,32 @@ namespace nCine
 		GLenum format = texFormat.format();
 		unsigned long dataSize = texLoader.dataSize();
 
-#if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(__EMSCRIPTEN__)
+#if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
 		const bool withTexStorage = true;
 #else
 		const bool withTexStorage = gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::ARB_TEXTURE_STORAGE);
 #endif
 
-		if (withTexStorage && dataSize_ > 0 &&
-			(width_ != texLoader.width() || height_ != texLoader.height() || ncFormatToInternal(format_) != internalFormat)) {
-			// The OpenGL texture needs to be recreated as its storage is immutable
-			glTexture_ = std::make_unique<GLTexture>(GL_TEXTURE_2D);
-		}
+		// Specify texture storage because it's either the very first time or there have been a change in size or format
+		if (dataSize_ == 0 || (width_ != texLoader.width() || height_ != texLoader.height() || ncFormatToInternal(format_) != internalFormat)) {
+			if (withTexStorage) {
+				if (dataSize_ > 0) {
+					// The OpenGL texture needs to be recreated as its storage is immutable
+					glTexture_ = std::make_unique<GLTexture>(GL_TEXTURE_2D);
+					dataSize_ = 0;
+				}
 
-		if (withTexStorage)
-			glTexture_->texStorage2D(texLoader.mipMapCount(), internalFormat, texLoader.width(), texLoader.height());
-		else if (!texFormat.isCompressed()) {
-			int levelWidth = texLoader.width();
-			int levelHeight = texLoader.height();
+				if (dataSize_ == 0)
+					glTexture_->texStorage2D(texLoader.mipMapCount(), internalFormat, texLoader.width(), texLoader.height());
+			} else if (!texFormat.isCompressed()) {
+				int levelWidth = texLoader.width();
+				int levelHeight = texLoader.height();
 
-			for (int i = 0; i < texLoader.mipMapCount(); i++) {
-				glTexture_->texImage2D(i, internalFormat, levelWidth, levelHeight, format, texFormat.type(), nullptr);
-				levelWidth /= 2;
-				levelHeight /= 2;
+				for (int i = 0; i < texLoader.mipMapCount(); i++) {
+					glTexture_->texImage2D(i, internalFormat, levelWidth, levelHeight, format, texFormat.type(), nullptr);
+					levelWidth /= 2;
+					levelHeight /= 2;
+				}
 			}
 		}
 
@@ -411,7 +415,7 @@ namespace nCine
 
 	void Texture::load(const ITextureLoader& texLoader)
 	{
-#if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(__EMSCRIPTEN__)
+#if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
 		const bool withTexStorage = true;
 #else
 		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();

@@ -2,7 +2,7 @@
 
 #include <Common.h>
 
-#if !defined(_WIN32)
+#if !defined(DEATH_TARGET_WINDOWS)
 #include <pthread.h>
 #endif
 
@@ -26,7 +26,7 @@ namespace nCine
 #endif
 
 	private:
-#if defined(_WIN32)
+#if defined(DEATH_TARGET_WINDOWS)
 		CRITICAL_SECTION handle_;
 #else
 		pthread_mutex_t mutex_;
@@ -54,7 +54,7 @@ namespace nCine
 		void broadcast();
 
 	private:
-#if defined(_WIN32)
+#if defined(DEATH_TARGET_WINDOWS)
 		HANDLE events_[2];
 		unsigned int waitersCount_;
 		CRITICAL_SECTION waitersCountLock_;
@@ -70,7 +70,7 @@ namespace nCine
 		CondVariable& operator=(const CondVariable&) = delete;
 	};
 
-#if !defined(_WIN32)
+#if !defined(DEATH_TARGET_WINDOWS)
 
 	/// Read/write lock class (threads synchronization)
 	class RWLock
@@ -104,7 +104,7 @@ namespace nCine
 		RWLock& operator=(const RWLock&) = delete;
 	};
 
-#if !defined(__ANDROID__) && !defined(__APPLE__)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE)
 
 	/// Barrier class (threads synchronization)
 	class Barrier

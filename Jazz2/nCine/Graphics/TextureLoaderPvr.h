@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint> // for header
+
 #include "ITextureLoader.h"
 
 namespace nCine

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Keys.h"
+#include "../../Common.h"
 
 namespace nCine
 {
@@ -84,7 +85,7 @@ namespace nCine
 		}
 	};
 
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 	/// Information about an accelerometer event
 	class AccelerometerEvent
 	{

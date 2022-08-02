@@ -5,6 +5,7 @@
 #include "Algorithms.h"
 #include "HashFunctions.h"
 #include "ReverseIterator.h"
+#include "../../Common.h"
 
 namespace nCine
 {
@@ -659,7 +660,7 @@ namespace nCine
 		else
 			delta = Capacity - bucketIndex + newIndex;
 
-		//FATAL_ASSERT(delta < 256); // deltas are uint8_t
+		FATAL_ASSERT(delta < 256); // deltas are uint8_t
 		return delta;
 	}
 
@@ -694,8 +695,8 @@ namespace nCine
 	template <class K, class T, unsigned int Capacity, class HashFunc>
 	T& StaticHashMap<K, T, Capacity, HashFunc>::addNode(unsigned int index, hash_t hash, const K& key)
 	{
-		//FATAL_ASSERT(size_ < Capacity);
-		//FATAL_ASSERT(hashes_[index] == NullHash);
+		FATAL_ASSERT(size_ < Capacity);
+		FATAL_ASSERT(hashes_[index] == NullHash);
 
 		size_++;
 		hashes_[index] = hash;
@@ -707,8 +708,8 @@ namespace nCine
 	template <class K, class T, unsigned int Capacity, class HashFunc>
 	void StaticHashMap<K, T, Capacity, HashFunc>::insertNode(unsigned int index, hash_t hash, const K& key, const T& value)
 	{
-		//FATAL_ASSERT(size_ < Capacity);
-		//FATAL_ASSERT(hashes_[index] == NullHash);
+		FATAL_ASSERT(size_ < Capacity);
+		FATAL_ASSERT(hashes_[index] == NullHash);
 
 		size_++;
 		hashes_[index] = hash;
@@ -718,8 +719,8 @@ namespace nCine
 	template <class K, class T, unsigned int Capacity, class HashFunc>
 	void StaticHashMap<K, T, Capacity, HashFunc>::insertNode(unsigned int index, hash_t hash, const K& key, T&& value)
 	{
-		//FATAL_ASSERT(size_ < Capacity);
-		//FATAL_ASSERT(hashes_[index] == NullHash);
+		FATAL_ASSERT(size_ < Capacity);
+		FATAL_ASSERT(hashes_[index] == NullHash);
 
 		size_++;
 		hashes_[index] = hash;
@@ -730,8 +731,8 @@ namespace nCine
 	template <typename... Args>
 	void StaticHashMap<K, T, Capacity, HashFunc>::emplaceNode(unsigned int index, hash_t hash, const K& key, Args &&... args)
 	{
-		//FATAL_ASSERT(size_ < Capacity);
-		//FATAL_ASSERT(hashes_[index] == NullHash);
+		FATAL_ASSERT(size_ < Capacity);
+		FATAL_ASSERT(hashes_[index] == NullHash);
 
 		size_++;
 		hashes_[index] = hash;

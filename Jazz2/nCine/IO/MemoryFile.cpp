@@ -9,7 +9,7 @@ namespace nCine
 	MemoryFile::MemoryFile(const String& bufferName, unsigned char* bufferPtr, unsigned long int bufferSize)
 		: IFileStream(bufferName), bufferPtr_(bufferPtr), seekOffset_(0), isWritable_(true)
 	{
-		//ASSERT(bufferSize > 0);
+		ASSERT(bufferSize > 0);
 		type_ = FileType::Memory;
 		fileSize_ = bufferSize;
 
@@ -20,7 +20,7 @@ namespace nCine
 	MemoryFile::MemoryFile(const String& bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
 		: IFileStream(bufferName), bufferPtr_(const_cast<unsigned char*>(bufferPtr)), seekOffset_(0), isWritable_(false)
 	{
-		//ASSERT(bufferSize > 0);
+		ASSERT(bufferSize > 0);
 		type_ = FileType::Memory;
 		fileSize_ = bufferSize;
 
@@ -97,7 +97,7 @@ namespace nCine
 
 	unsigned long int MemoryFile::Read(void* buffer, unsigned long int bytes) const
 	{
-		//ASSERT(buffer);
+		ASSERT(buffer);
 
 		unsigned long int bytesRead = 0;
 
@@ -112,7 +112,7 @@ namespace nCine
 
 	unsigned long int MemoryFile::Write(void* buffer, unsigned long int bytes)
 	{
-		//ASSERT(buffer);
+		ASSERT(buffer);
 
 		unsigned long int bytesWritten = 0;
 

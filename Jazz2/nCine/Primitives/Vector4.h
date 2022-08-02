@@ -2,6 +2,7 @@
 
 #include "Vector2.h"
 #include "Vector3.h"
+#include "../../Common.h"
 
 #include <cmath>
 
@@ -119,14 +120,14 @@ namespace nCine
 	template <class T>
 	inline T& Vector4<T>::operator[](unsigned int index)
 	{
-		//ASSERT(indeX < 4);
+		ASSERT(index < 4);
 		return (&X)[index];
 	}
 
 	template <class T>
 	inline const T& Vector4<T>::operator[](unsigned int index) const
 	{
-		//ASSERT(index < 4);
+		ASSERT(index < 4);
 		return (&X)[index];
 	}
 

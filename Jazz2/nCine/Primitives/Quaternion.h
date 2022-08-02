@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Matrix4x4.h"
+#include "../../Common.h"
 
 namespace nCine
 {
@@ -103,14 +104,14 @@ namespace nCine
 	template <class T>
 	inline T& Quaternion<T>::operator[](unsigned int index)
 	{
-		//ASSERT(index < 4);
+		ASSERT(index < 4);
 		return (&x)[index];
 	}
 
 	template <class T>
 	inline const T& Quaternion<T>::operator[](unsigned int index) const
 	{
-		//ASSERT(index < 4);
+		ASSERT(index < 4);
 		return (&x)[index];
 	}
 

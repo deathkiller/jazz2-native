@@ -1,4 +1,5 @@
 #include <cstring> // for memcpy()
+
 #include "GL/GLShaderProgram.h"
 #include "RenderBatcher.h"
 #include "RenderCommand.h"
@@ -8,8 +9,8 @@
 #include "../ServiceLocator.h"
 #include "../Base/StaticHashMapIterator.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS
 	///////////////////////////////////////////////////////////
@@ -22,8 +23,6 @@ namespace nCine {
 
 	RenderBatcher::RenderBatcher()
 	{
-		buffers_.reserve(1);
-
 		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
 		const unsigned int maxUniformBlockSize = static_cast<unsigned int>(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE));
 
@@ -52,7 +51,7 @@ namespace nCine {
 
 	void RenderBatcher::createBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue)
 	{
-#if defined(__EMSCRIPTEN__) || defined(WITH_ANGLE)
+#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE)
 		const unsigned int fixedBatchSize = theApplication().appConfiguration().fixedBatchSize;
 		const unsigned int minBatchSize = (fixedBatchSize > 0) ? fixedBatchSize : theApplication().renderingSettings().minBatchSize;
 		const unsigned int maxBatchSize = (fixedBatchSize > 0) ? fixedBatchSize : theApplication().renderingSettings().maxBatchSize;
@@ -140,7 +139,7 @@ namespace nCine {
 		SmallVectorImpl<RenderCommand*>::const_iterator end,
 		SmallVectorImpl<RenderCommand*>::const_iterator& nextStart)
 	{
-		//ASSERT(end > start);
+		ASSERT(end > start);
 
 		const RenderCommand* refCommand = *start;
 		RenderCommand* batchCommand = nullptr;
@@ -154,7 +153,7 @@ namespace nCine {
 		const GLShaderProgram* refShader = refCommand->material().shaderProgram();
 		GLShaderProgram* batchedShader = RenderResources::batchedShader(refShader);
 		// The following check should never fail as it is already checked by the calling function
-		//FATAL_ASSERT_MSG(batchedShader != nullptr, "Unsupported shader for batch element");
+		FATAL_ASSERT_MSG(batchedShader != nullptr, "Unsupported shader for batch element");
 		bool commandAdded = false;
 		batchCommand = RenderResources::renderCommandPool().retrieveOrAdd(batchedShader, commandAdded);
 
@@ -166,10 +165,7 @@ namespace nCine {
 			batchCommand->setType(refCommand->type());
 		}
 		instancesBlock = batchCommand->material().uniformBlock(Material::InstancesBlockName);
-		//FATAL_ASSERT_MSG_X(instancesBlock != nullptr, "Batched shader does not have an %s uniform block", Material::InstancesBlockName);
-		if (instancesBlock == nullptr) {
-			LOGE_X("Batched shader does not have an %s uniform block", Material::InstancesBlockName);
-		}
+		FATAL_ASSERT_MSG_X(instancesBlock != nullptr, "Batched shader does not have an %s uniform block", Material::InstancesBlockName);
 
 		const unsigned long nonBlockUniformsSize = batchCommand->material().shaderProgram()->uniformsSize();
 		// Determine how much memory is needed by uniform blocks that are not for instances
@@ -181,7 +177,7 @@ namespace nCine {
 				continue;
 
 			GLUniformBlockCache* batchBlock = batchCommand->material().uniformBlock(uniformBlockName);
-			//ASSERT(batchBlock);
+			ASSERT(batchBlock);
 			if (batchBlock)
 				nonInstancesBlocksSize += uniformBlockCache.size() - uniformBlockCache.alignAmount();
 		}
@@ -214,7 +210,7 @@ namespace nCine {
 
 			GLUniformBlockCache* batchBlock = batchCommand->material().uniformBlock(uniformBlockName);
 			const bool dataCopied = batchBlock->copyData(uniformBlockCache.dataPointer());
-			//ASSERT(dataCopied);
+			ASSERT(dataCopied);
 			batchBlock->setUsedSize(uniformBlockCache.usedSize());
 		}
 
@@ -300,14 +296,14 @@ namespace nCine {
 
 			const GLUniformBlockCache* singleInstanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 			const bool dataCopied = instancesBlock->copyData(instancesBlockOffset, singleInstanceBlock->dataPointer(), singleInstanceBlockSize);
-			//ASSERT(dataCopied);
+			ASSERT(dataCopied);
 			instancesBlockOffset += singleInstanceBlockSize;
 
 			if (batchedShaderHasAttributes) {
 				const unsigned int numVertices = command->geometry().numVertices();
 				const int meshIndex = it - start;
 				const float* srcVtx = command->geometry().hostVertexPointer();
-				//FATAL_ASSERT(srcVtx != nullptr);
+				FATAL_ASSERT(srcVtx != nullptr);
 
 				// Vertex of a degenerate triangle, if not a starting element and there are more than one in the batch
 				if (it != start && nextStart - start > 1 && !batchingWithIndices) {
@@ -389,7 +385,7 @@ namespace nCine {
 
 	unsigned char* RenderBatcher::acquireMemory(unsigned int bytes)
 	{
-		//FATAL_ASSERT(bytes <= UboMaxSize);
+		FATAL_ASSERT(bytes <= UboMaxSize);
 
 		unsigned char* ptr = nullptr;
 

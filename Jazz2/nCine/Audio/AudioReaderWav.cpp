@@ -3,8 +3,8 @@
 #include "AudioReaderWav.h"
 #include "AudioLoaderWav.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -12,7 +12,7 @@ namespace nCine {
 	AudioReaderWav::AudioReaderWav(std::unique_ptr<IFileStream> fileHandle)
 		: fileHandle_(std::move(fileHandle))
 	{
-		//ASSERT(fileHandle_->isOpened());
+		ASSERT(fileHandle_->isOpened());
 	}
 
 	///////////////////////////////////////////////////////////
@@ -21,8 +21,8 @@ namespace nCine {
 
 	unsigned long int AudioReaderWav::read(void* buffer, unsigned long int bufferSize) const
 	{
-		//ASSERT(buffer);
-		//ASSERT(bufferSize > 0);
+		ASSERT(buffer);
+		ASSERT(bufferSize > 0);
 
 		unsigned long int bytes = 0;
 		unsigned long int bufferSeek = 0;

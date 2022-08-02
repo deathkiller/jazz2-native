@@ -26,32 +26,9 @@
 #include <initializer_list>
 #include <type_traits>
 #include <utility>
-#if (!defined(DEATH_ASSERT) || !defined(DEATH_CONSTEXPR_ASSERT)) && !defined(NDEBUG)
-#   include <cassert>
-#endif
 
-#if defined(_MSC_VER) && _MSC_VER <= 1930
-#   define DEATH_MSVC2019_COMPATIBILITY
-#endif
 
-#ifndef DEATH_ASSERT
-#   ifdef NDEBUG
-#       define DEATH_ASSERT(condition, message, returnValue) do {} while(0)
-#   else
-#       define DEATH_ASSERT(condition, message, returnValue) assert(condition)
-#   endif
-#endif
-
-#ifndef DEATH_CONSTEXPR_ASSERT
-#   ifdef NDEBUG
-#       define DEATH_CONSTEXPR_ASSERT(condition, message) static_cast<void>(0)
-#   else
-#       define DEATH_CONSTEXPR_ASSERT(condition, message)                   \
-            static_cast<void>((condition) ? 0 : ([&]() {                    \
-                assert(!#condition);                                        \
-            }(), 0))
-#   endif
-#endif
+#include "../CommonInternal.h"
 
 namespace Death::Containers
 {

@@ -1,6 +1,8 @@
 #pragma once
 
-#if defined(_WIN32) && !defined(CMAKE_BUILD)
+#include "../../Common.h"
+
+#if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #	define WITH_OPENMPT
 #endif
 

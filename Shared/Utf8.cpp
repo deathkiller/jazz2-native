@@ -3,7 +3,51 @@
 
 namespace Death::Utf8
 {
-#if defined(_WIN32)
+	std::pair<char32_t, std::size_t> NextChar(const Containers::ArrayView<const char> text, std::size_t cursor)
+	{
+		DEATH_ASSERT(cursor < text.size(), "Utf8::NextChar(): Cursor out of range", {});
+
+		std::uint32_t character = text[cursor];
+		std::size_t end = cursor;
+		std::uint32_t mask;
+
+		// Sequence size
+		if (character < 128) {
+			end += 1;
+			mask = 0x7f;
+		} else if ((character & 0xe0) == 0xc0) {
+			end += 2;
+			mask = 0x1f;
+		} else if ((character & 0xf0) == 0xe0) {
+			end += 3;
+			mask = 0x0f;
+		} else if ((character & 0xf8) == 0xf0) {
+			end += 4;
+			mask = 0x07;
+		} else return { U'\xffffffff', cursor + 1 };
+
+		// Unexpected end
+		if (text.size() < end) return { U'\xffffffff', cursor + 1 };
+
+		char32_t result = character & mask;
+		for (std::size_t i = cursor + 1; i != end; ++i) {
+			// Garbage in the sequence
+			if ((text[i] & 0xc0) != 0x80)
+				return { U'\xffffffff', cursor + 1 };
+
+			result <<= 6;
+			result |= (text[i] & 0x3f);
+		}
+
+		return { result, end };
+	}
+
+	std::pair<char32_t, std::size_t> NextChar(const std::string& text, const std::size_t cursor)
+	{
+		return NextChar(Containers::ArrayView<const char>{text.data(), text.size()}, cursor);
+	}
+
+#if defined(DEATH_TARGET_WINDOWS)
 
 	bool ToUtf16(const char* text, int size, wchar_t* outputBuffer, int outputBufferSize)
 	{

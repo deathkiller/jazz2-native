@@ -3,27 +3,22 @@
 #include "IO/FileSystem.h"
 #include "../Common.h"
 
-#if defined(_WIN32)
-#define NOMINMAX
-#include <windows.h>
-#endif
-
 #if defined(WITH_SDL)
-#include "SdlGfxDevice.h"
-#include "SdlInputManager.h"
-#if WITH_NUKLEAR
-#include "NuklearSdlInput.h"
-#endif
+#	include "SdlGfxDevice.h"
+#	include "SdlInputManager.h"
+#	if WITH_NUKLEAR
+#		include "NuklearSdlInput.h"
+#	endif
 #elif defined(WITH_GLFW)
-#include "Graphics/GL/GlfwGfxDevice.h"
-#include "Input/GlfwInputManager.h"
+#	include "Graphics/GL/GlfwGfxDevice.h"
+#	include "Input/GlfwInputManager.h"
 #elif defined(WITH_QT5)
-#include "Qt5GfxDevice.h"
-#include "Qt5InputManager.h"
+#	include "Qt5GfxDevice.h"
+#	include "Qt5InputManager.h"
 #endif
 
-#ifdef __EMSCRIPTEN__
-#include "emscripten.h"
+#ifdef DEATH_TARGET_EMSCRIPTEN
+#	include "emscripten.h"
 #endif
 
 namespace nCine
@@ -44,7 +39,7 @@ namespace nCine
 			return EXIT_FAILURE;
 		}
 
-#if defined(_WIN32)
+#if defined(DEATH_TARGET_WINDOWS)
 		// Set current directory, so everything is loaded correctly
 		wchar_t pBuf[MAX_PATH];
 		DWORD pBufLength = ::GetModuleFileName(NULL, pBuf, MAX_PATH);
@@ -61,7 +56,7 @@ namespace nCine
 		PCApplication& app = static_cast<PCApplication&>(theApplication());
 		app.init(createAppEventHandler, argc, argv);
 
-#ifndef __EMSCRIPTEN__
+#ifndef DEATH_TARGET_EMSCRIPTEN
 		while (!app.shouldQuit_) {
 			app.run();
 		}
@@ -112,7 +107,7 @@ namespace nCine
 		gfxDevice_ = std::make_unique<GlfwGfxDevice>(windowMode, glContextInfo, displayMode);
 		inputManager_ = std::make_unique<GlfwInputManager>();
 #elif defined(WITH_QT5)
-		//FATAL_ASSERT_MSG(qt5Widget_, "The Qt5 widget has not been assigned");
+		FATAL_ASSERT_MSG(qt5Widget_, "The Qt5 widget has not been assigned");
 		gfxDevice_ = std::make_unique<Qt5GfxDevice>(windowMode, glContextInfo, displayMode, *qt5Widget_);
 		inputManager_ = std::make_unique<Qt5InputManager>(*qt5Widget_);
 #endif
@@ -183,7 +178,7 @@ namespace nCine
 					SdlInputManager::parseEvent(event);
 					break;
 			}
-#ifndef __EMSCRIPTEN__
+#ifndef DEATH_TARGET_EMSCRIPTEN
 			if (shouldSuspend()) {
 				SDL_WaitEvent(&event);
 				SDL_PushEvent(&event);
@@ -199,7 +194,7 @@ namespace nCine
 	void PCApplication::processEvents()
 	{
 		// GLFW does not seem to correctly handle Emscripten focus and blur events
-#ifndef __EMSCRIPTEN__
+#ifndef DEATH_TARGET_EMSCRIPTEN
 		setFocus(GlfwInputManager::hasFocus());
 #endif
 
@@ -212,7 +207,7 @@ namespace nCine
 	}
 #endif
 
-#ifdef __EMSCRIPTEN__
+#ifdef DEATH_TARGET_EMSCRIPTEN
 	void PCApplication::emscriptenStep()
 	{
 		reinterpret_cast<PCApplication&>(theApplication()).run();

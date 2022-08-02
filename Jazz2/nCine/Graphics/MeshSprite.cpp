@@ -1,10 +1,11 @@
-#include <cstring> // for memcpy()
 #include "MeshSprite.h"
 #include "RenderCommand.h"
 #include "RenderResources.h"
 
-namespace nCine {
+#include <cstring> // for memcpy()
 
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -68,13 +69,13 @@ namespace nCine {
 
 	void MeshSprite::copyVertices(unsigned int numVertices, const Vertex* vertices)
 	{
-		//ASSERT(texture_ != nullptr);
+		ASSERT(texture_ != nullptr);
 		copyVertices(numVertices, sizeof(Vertex), reinterpret_cast<const float*>(vertices));
 	}
 
 	void MeshSprite::copyVertices(unsigned int numVertices, const VertexNoTexture* vertices)
 	{
-		//ASSERT(texture_ == nullptr);
+		ASSERT(texture_ == nullptr);
 		copyVertices(numVertices, sizeof(VertexNoTexture), reinterpret_cast<const float*>(vertices));
 	}
 
@@ -106,13 +107,13 @@ namespace nCine {
 
 	void MeshSprite::setVertices(unsigned int numVertices, const Vertex* vertices)
 	{
-		//ASSERT(texture_ != nullptr);
+		ASSERT(texture_ != nullptr);
 		copyVertices(numVertices, sizeof(Vertex), reinterpret_cast<const void*>(vertices));
 	}
 
 	void MeshSprite::setVertices(unsigned int numVertices, const VertexNoTexture* vertices)
 	{
-		//ASSERT(texture_ == nullptr);
+		ASSERT(texture_ == nullptr);
 		copyVertices(numVertices, sizeof(VertexNoTexture), reinterpret_cast<const void*>(vertices));
 	}
 
@@ -154,7 +155,7 @@ namespace nCine {
 
 	void MeshSprite::createVerticesFromTexels(unsigned int numVertices, const Vector2f* points, TextureCutMode cutMode)
 	{
-		//FATAL_ASSERT(numVertices >= 3);
+		FATAL_ASSERT(numVertices >= 3);
 
 		const unsigned int numFloats = texture_ ? VertexFloats : VertexNoTextureFloats;
 		vertices_.resize(numVertices * numFloats);

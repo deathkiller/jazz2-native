@@ -1,6 +1,5 @@
 #include "AudioBufferPlayer.h"
 #include "AudioBuffer.h"
-#include "../../Common.h"
 #include "../ServiceLocator.h"
 
 #define NCINE_INCLUDE_OPENAL
@@ -20,8 +19,6 @@ namespace nCine
 	AudioBufferPlayer::AudioBufferPlayer(AudioBuffer* audioBuffer)
 		: IAudioPlayer(ObjectType::AUDIOBUFFER_PLAYER), audioBuffer_(audioBuffer)
 	{
-		//if (audioBuffer)
-		//	setName(audioBuffer->name());
 	}
 
 	AudioBufferPlayer::~AudioBufferPlayer()

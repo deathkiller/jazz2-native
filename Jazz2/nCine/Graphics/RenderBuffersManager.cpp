@@ -3,6 +3,7 @@
 #include "GL/GLDebug.h"
 #include "../ServiceLocator.h"
 #include "IGfxCapabilities.h"
+#include "../../Common.h"
 #include "../tracy.h"
 
 namespace nCine {
@@ -78,8 +79,8 @@ namespace nCine {
 
 	RenderBuffersManager::Parameters RenderBuffersManager::acquireMemory(BufferTypes type, unsigned long bytes, unsigned int alignment)
 	{
-		//FATAL_ASSERT_MSG_X(bytes <= specs_[type].maxSize, "Trying to acquire %lu bytes when the maximum for buffer type \"%s\" is %lu",
-		//				   bytes, bufferTypeToString(type), specs_[type].maxSize);
+		FATAL_ASSERT_MSG_X(bytes <= specs_[(int)type].maxSize, "Trying to acquire %lu bytes when the maximum for buffer type \"%s\" is %lu",
+						   bytes, bufferTypeToString(type), specs_[(int)type].maxSize);
 
 		// Accepting a custom alignment only if it is a multiple of the specification one
 		if (alignment % specs_[(int)type].alignment != 0)
@@ -127,7 +128,7 @@ namespace nCine {
 		for (ManagedBuffer& buffer : buffers_) {
 			RenderStatistics::gatherStatistics(buffer);
 			const unsigned long usedSize = buffer.size - buffer.freeSpace;
-			//FATAL_ASSERT(usedSize <= specs_[buffer.type].maxSize);
+			FATAL_ASSERT(usedSize <= specs_[(int)buffer.type].maxSize);
 			buffer.freeSpace = buffer.size;
 
 			if (specs_[(int)buffer.type].mapFlags == 0) {
@@ -149,8 +150,8 @@ namespace nCine {
 		GLDebug::ScopedGroup scoped("RenderBuffersManager::remap()");
 
 		for (ManagedBuffer& buffer : buffers_) {
-			//ASSERT(buffer.freeSpace == buffer.size);
-			//ASSERT(buffer.mapBase == nullptr);
+			ASSERT(buffer.freeSpace == buffer.size);
+			ASSERT(buffer.mapBase == nullptr);
 
 			if (specs_[(int)buffer.type].mapFlags == 0) {
 				buffer.object->bufferData(buffer.size, nullptr, specs_[(int)buffer.type].usageFlags);
@@ -158,7 +159,7 @@ namespace nCine {
 			} else
 				buffer.mapBase = static_cast<GLubyte*>(buffer.object->mapBufferRange(0, buffer.size, specs_[(int)buffer.type].mapFlags));
 
-			//FATAL_ASSERT(buffer.mapBase != nullptr);
+			FATAL_ASSERT(buffer.mapBase != nullptr);
 		}
 	}
 
@@ -191,7 +192,7 @@ namespace nCine {
 		} else
 			managedBuffer.mapBase = static_cast<GLubyte*>(managedBuffer.object->mapBufferRange(0, managedBuffer.size, specs.mapFlags));
 
-		//FATAL_ASSERT(managedBuffer.mapBase != nullptr);
+		FATAL_ASSERT(managedBuffer.mapBase != nullptr);
 
 		//debugString.format("Create %s buffer 0x%lx", bufferTypeToString(specs.type), uintptr_t(buffers_.back().object.get()));
 		//GLDebug::messageInsert(debugString.data());

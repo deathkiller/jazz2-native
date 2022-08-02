@@ -25,15 +25,15 @@ namespace nCine
 		//std::string threadName;
 		for (unsigned int i = 0; i < numThreads_; i++) {
 			threads_.emplace_back(workerFunction, &threadStruct_);
-#if !defined(__EMSCRIPTEN__)
-#if !defined(__APPLE__)
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if !defined(DEATH_TARGET_APPLE)
 			// TODO
 			//threadName.format("WorkerThread#%02d", i);
 			//threads_.back().setName(threadName.data());
-#endif
-#if !defined(__ANDROID__)
+#	endif
+#	if !defined(DEATH_TARGET_ANDROID)
 			threads_.back().setAffinityMask(ThreadAffinityMask(i));
-#endif
+#	endif
 #endif
 		}
 	}
@@ -53,7 +53,7 @@ namespace nCine
 
 	void ThreadPool::enqueueCommand(std::unique_ptr<IThreadCommand> threadCommand)
 	{
-		//ASSERT(threadCommand);
+		ASSERT(threadCommand);
 
 		queueMutex_.lock();
 		queue_.push_back(std::move(threadCommand));

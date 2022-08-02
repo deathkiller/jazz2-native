@@ -34,7 +34,7 @@ namespace nCine
 		alGetError();
 		alGenBuffers(1, &bufferId_);
 		const ALenum error = alGetError();
-		//FATAL_ASSERT_MSG_X(error == AL_NO_ERROR, "alGenBuffers failed: 0x%x", error);
+		FATAL_ASSERT_MSG_X(error == AL_NO_ERROR, "alGenBuffers failed: 0x%x", error);
 	}
 
 	AudioBuffer::AudioBuffer(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
@@ -51,7 +51,7 @@ namespace nCine
 	{
 		const bool hasLoaded = loadFromFile(filename);
 		if (!hasLoaded) {
-			LOGE_X("Audio file \"%s\" cannot be loaded", filename);
+			LOGE_X("Audio file \"%s\" cannot be loaded", filename.data());
 		}
 	}
 

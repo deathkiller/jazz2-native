@@ -2,13 +2,17 @@
 #include "GL/GLVertexArrayObject.h"
 #include "RenderStatistics.h"
 #include "GL/GLDebug.h"
+#include "../../Common.h"
 
-namespace nCine {
-
-	namespace {
+namespace nCine
+{
+#if _DEBUG
+	namespace
+	{
 		/// The string used to output OpenGL debug group information
 		static char debugString[128];
 	}
+#endif
 
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
@@ -54,8 +58,8 @@ namespace nCine {
 		if (vaoFound == false) {
 			unsigned int index = 0;
 			if (vaoPool_.size() < vaoPool_.capacity()) {
-				vaoPool_.emplace_back();
-				vaoPool_.back().object = std::make_unique<GLVertexArrayObject>();
+				auto& item = vaoPool_.emplace_back();
+				item.object = std::make_unique<GLVertexArrayObject>();
 				index = (unsigned int)vaoPool_.size() - 1;
 #if _DEBUG
 				/*if (GLDebug::isAvailable()) {
@@ -84,7 +88,7 @@ namespace nCine {
 			}
 
 			const bool bindChanged = vaoPool_[index].object->bind();
-			//ASSERT(bindChanged == true || vaoPool_.size() == 1);
+			ASSERT(bindChanged == true || vaoPool_.size() == 1);
 			// Binding a VAO changes the current bound element array buffer
 			const GLuint oldIboHandle = vaoPool_[index].format.ibo() ? vaoPool_[index].format.ibo()->glHandle() : 0;
 			GLBufferObject::setBoundHandle(GL_ELEMENT_ARRAY_BUFFER, oldIboHandle);

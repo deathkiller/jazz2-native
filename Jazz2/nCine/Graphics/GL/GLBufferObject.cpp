@@ -1,5 +1,6 @@
 #include "GLBufferObject.h"
 #include "GLDebug.h"
+#include "../../../Common.h"
 #include "../../tracy_opengl.h"
 
 namespace nCine
@@ -91,8 +92,8 @@ namespace nCine
 
 	void GLBufferObject::bindBufferBase(GLuint index)
 	{
-		//ASSERT(target_ == GL_UNIFORM_BUFFER);
-		//ASSERT(index < MaxIndexBufferRange);
+		ASSERT(target_ == GL_UNIFORM_BUFFER);
+		ASSERT(index < MaxIndexBufferRange);
 
 		if (index >= MaxIndexBufferRange)
 			glBindBufferBase(target_, index, glHandle_);
@@ -108,8 +109,8 @@ namespace nCine
 
 	void GLBufferObject::bindBufferRange(GLuint index, GLintptr offset, GLsizei ptrsize)
 	{
-		//ASSERT(target_ == GL_UNIFORM_BUFFER);
-		//ASSERT(index < MaxIndexBufferRange);
+		ASSERT(target_ == GL_UNIFORM_BUFFER);
+		ASSERT(index < MaxIndexBufferRange);
 
 		if (index >= MaxIndexBufferRange)
 			glBindBufferRange(target_, index, glHandle_, offset, ptrsize);
@@ -127,31 +128,36 @@ namespace nCine
 
 	void* GLBufferObject::mapBufferRange(GLintptr offset, GLsizeiptr length, GLbitfield access)
 	{
-		//FATAL_ASSERT(mapped_ == false);
+		FATAL_ASSERT(mapped_ == false);
 		mapped_ = true;
 		bind();
-		return glMapBufferRange(target_, offset, length, access);
+		void* result = glMapBufferRange(target_, offset, length, access);
+		GL_LOG_ERRORS();
+		return result;
 	}
 
 	void GLBufferObject::flushMappedBufferRange(GLintptr offset, GLsizeiptr length)
 	{
-		//FATAL_ASSERT(mapped_ == true);
+		FATAL_ASSERT(mapped_ == true);
 		bind();
 		glFlushMappedBufferRange(target_, offset, length);
+		GL_LOG_ERRORS();
 	}
 
 	GLboolean GLBufferObject::unmap()
 	{
-		//FATAL_ASSERT(mapped_ == true);
+		FATAL_ASSERT(mapped_ == true);
 		mapped_ = false;
 		bind();
-		return glUnmapBuffer(target_);
+		GLboolean result = glUnmapBuffer(target_);
+		GL_LOG_ERRORS();
+		return result;
 	}
 
 #if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
 	void GLBufferObject::texBuffer(GLenum internalformat)
 	{
-		//FATAL_ASSERT(target_ == GL_TEXTURE_BUFFER);
+		FATAL_ASSERT(target_ == GL_TEXTURE_BUFFER);
 		glTexBuffer(GL_TEXTURE_BUFFER, internalformat, glHandle_);
 		GL_LOG_ERRORS();
 	}

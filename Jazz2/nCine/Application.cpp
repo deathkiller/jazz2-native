@@ -1,4 +1,6 @@
-﻿#if defined(_WIN32) && !defined(CMAKE_BUILD)
+﻿#include "../Common.h"
+
+#if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #	pragma comment(lib, "opengl32.lib")
 #	if defined(_M_X64)
 #		pragma comment(lib, "../Libs/x64/glew32.lib")
@@ -377,7 +379,7 @@ namespace nCine
 
 	void Application::setFocus(bool hasFocus)
 	{
-#if defined(WITH_TRACY) && !defined(__ANDROID__)
+#if defined(WITH_TRACY) && !defined(DEATH_TARGET_ANDROID)
 		hasFocus = true;
 #endif
 

@@ -2,7 +2,7 @@
 
 #ifdef WITH_OPENMPT
 
-#if defined(_WIN32) && !defined(CMAKE_BUILD)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #   if defined(_M_X64)
 #       pragma comment(lib, "../Libs/x64/libopenmpt.lib")
 #   elif defined(_M_IX86)
@@ -22,7 +22,7 @@ namespace nCine
 		: _fileHandle(std::move(fileHandle)), _module(nullptr)
 	{
 		_fileHandle->Open(FileAccessMode::Read);
-		//ASSERT(fileHandle_->isOpened());
+		ASSERT(_fileHandle->isOpened());
 
 		openmpt_stream_callbacks stream_callbacks;
 		stream_callbacks.read = stream_read_func;

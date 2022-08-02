@@ -2,6 +2,7 @@
 #include "GLRenderbuffer.h"
 #include "GLTexture.h"
 #include "GLDebug.h"
+#include "../../../Common.h"
 
 namespace nCine {
 
@@ -151,7 +152,7 @@ namespace nCine {
 
 	bool GLFramebuffer::bindHandle(GLenum target, GLuint glHandle)
 	{
-		//FATAL_ASSERT(target == GL_FRAMEBUFFER || target == GL_READ_FRAMEBUFFER || target == GL_DRAW_FRAMEBUFFER);
+		FATAL_ASSERT(target == GL_FRAMEBUFFER || target == GL_READ_FRAMEBUFFER || target == GL_DRAW_FRAMEBUFFER);
 
 		if (target == GL_FRAMEBUFFER &&
 			(readBoundBuffer_ != glHandle || drawBoundBuffer_ != glHandle)) {

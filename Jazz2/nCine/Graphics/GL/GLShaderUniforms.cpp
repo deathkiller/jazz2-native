@@ -7,7 +7,6 @@
 
 namespace nCine
 {
-
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -35,7 +34,7 @@ namespace nCine
 
 	void GLShaderUniforms::setProgram(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
 	{
-		//ASSERT(shaderProgram);
+		ASSERT(shaderProgram);
 
 		shaderProgram_ = shaderProgram;
 		shaderProgram_->deferredQueries();
@@ -47,7 +46,7 @@ namespace nCine
 
 	void GLShaderUniforms::setUniformsDataPointer(GLubyte* dataPointer)
 	{
-		//ASSERT(dataPointer);
+		ASSERT(dataPointer);
 
 		if (shaderProgram_->status() != GLShaderProgram::Status::LINKED_WITH_INTROSPECTION)
 			return;
@@ -71,7 +70,7 @@ namespace nCine
 
 	GLUniformCache* GLShaderUniforms::uniform(const char* name)
 	{
-		//ASSERT(name);
+		ASSERT(name);
 		GLUniformCache* uniformCache = nullptr;
 
 		if (shaderProgram_) {

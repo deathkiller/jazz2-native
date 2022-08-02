@@ -1,4 +1,6 @@
 #include "ITextureLoader.h"
+#include "../../Common.h"
+
 #include "TextureLoaderDds.h"
 #include "TextureLoaderPvr.h"
 #include "TextureLoaderKtx.h"
@@ -98,7 +100,7 @@ namespace nCine
 		else if (fs::hasExtension(filename, "webp"_s))
 			return std::make_unique<TextureLoaderWebP>(std::move(fileHandle));
 	#endif*/
-	#ifdef __ANDROID__
+	#ifdef DEATH_TARGET_ANDROID
 		else if (fs::hasExtension(filename, "pkm"_s))
 			return std::make_unique<TextureLoaderPkm>(std::move(fileHandle));
 	#endif

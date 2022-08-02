@@ -4,8 +4,9 @@
 #include "../Primitives/Rect.h"
 #include "DisplayMode.h"
 #include "../AppConfiguration.h"
+#include "../../Common.h"
 
-#ifdef __EMSCRIPTEN__
+#ifdef DEATH_TARGET_EMSCRIPTEN
 class EmscriptenUiEvent;
 class EmscriptenFullscreenChangeEvent;
 class EmscriptenFocusEvent;
@@ -185,7 +186,7 @@ namespace nCine
 		/// Display properties
 		DisplayMode displayMode_;
 
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		static const int MaxVideoModes = 1;
 #else
 		static const int MaxVideoModes = 64;
@@ -206,7 +207,7 @@ namespace nCine
 		friend class PCApplication;
 #endif
 
-#ifdef __EMSCRIPTEN__
+#ifdef DEATH_TARGET_EMSCRIPTEN
 		static int resize_callback(int eventType, const EmscriptenUiEvent* event, void* userData);
 		static int fullscreenchange_callback(int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData);
 		static int focus_callback(int eventType, const EmscriptenFocusEvent* event, void* userData);

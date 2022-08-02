@@ -22,7 +22,7 @@ namespace nCine
 			RETURN_MSG_X("alcCreateContext failed: 0x%x", alGetError());
 		}
 
-#if !defined(__EMSCRIPTEN__)
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		// Try to get native sample rate of default audio device
 		ALCint nativeFreq = 0;
 		alcGetIntegerv(device_, ALC_FREQUENCY, 1, &nativeFreq);
@@ -61,7 +61,7 @@ namespace nCine
 		alcDestroyContext(context_);
 
 		ALCboolean result = alcCloseDevice(device_);
-		//FATAL_ASSERT_MSG_X(result, "alcCloseDevice failed: %d", alGetError());
+		FATAL_ASSERT_MSG_X(result, "alcCloseDevice failed: %d", alGetError());
 	}
 
 	///////////////////////////////////////////////////////////
@@ -156,8 +156,8 @@ namespace nCine
 
 	void ALAudioDevice::registerPlayer(IAudioPlayer* player)
 	{
-		//ASSERT(player);
-		//ASSERT(players_.size() < MaxSources);
+		ASSERT(player);
+		ASSERT(players_.size() < MaxSources);
 
 		if (players_.size() < MaxSources) {
 			players_.push_back(player);

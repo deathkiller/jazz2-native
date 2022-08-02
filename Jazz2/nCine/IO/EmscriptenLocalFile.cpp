@@ -131,14 +131,14 @@ namespace nCine
 
 	void EmscriptenLocalFile::load(const char* fileFilter)
 	{
-		//FATAL_ASSERT(fileFilter);
+		FATAL_ASSERT(fileFilter);
 		loadFile(fileFilter, fileDataCallback, loadingCallback, this);
 	}
 
 	void EmscriptenLocalFile::save(const char* filename)
 	{
-		//FATAL_ASSERT(filename);
-		//ASSERT(fileSize_ > 0);
+		FATAL_ASSERT(filename);
+		ASSERT(fileSize_ > 0);
 
 		LOGI_X("Saving file: \"%s\" (%u bytes)", filename, fileSize_);
 		saveFile(fileBuffer_.get(), fileSize_, filename);
@@ -146,8 +146,8 @@ namespace nCine
 
 	unsigned long int EmscriptenLocalFile::Read(void* buffer, unsigned long int bytes) const
 	{
-		//FATAL_ASSERT(buffer);
-		//ASSERT(bytes > 0);
+		FATAL_ASSERT(buffer);
+		ASSERT(bytes > 0);
 
 		memcpy(buffer, fileBuffer_.get(), bytes);
 		return bytes;
@@ -155,8 +155,8 @@ namespace nCine
 
 	unsigned long int EmscriptenLocalFile::Write(void* buffer, unsigned long int bytes)
 	{
-		//FATAL_ASSERT(buffer);
-		//ASSERT(bytes > 0);
+		FATAL_ASSERT(buffer);
+		ASSERT(bytes > 0);
 
 		fileBuffer_ = std::make_unique<char[]>(bytes);
 		memcpy(fileBuffer_.get(), buffer, bytes);
@@ -177,9 +177,9 @@ namespace nCine
 
 	void EmscriptenLocalFile::fileDataCallback(void* context, char* contentPointer, size_t contentSize, const char* filename)
 	{
-		//FATAL_ASSERT(context);
-		//FATAL_ASSERT(contentPointer);
-		//ASSERT(contentSize > 0);
+		FATAL_ASSERT(context);
+		FATAL_ASSERT(contentPointer);
+		ASSERT(contentSize > 0);
 
 		LOGI_X("Loading file: \"%s\" (%u bytes)", filename, contentSize);
 
@@ -198,7 +198,7 @@ namespace nCine
 
 	void EmscriptenLocalFile::loadingCallback(void* context)
 	{
-		//FATAL_ASSERT(context);
+		FATAL_ASSERT(context);
 
 		EmscriptenLocalFile* localFile = reinterpret_cast<EmscriptenLocalFile*>(context);
 		localFile->loading_ = true;

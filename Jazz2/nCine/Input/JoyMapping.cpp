@@ -125,14 +125,14 @@ namespace nCine
 
 	void JoyMapping::init(const IInputManager* inputManager)
 	{
-		////ASSERT(inputManager);
+		ASSERT(inputManager);
 		inputManager_ = inputManager;
 		checkConnectedJoystics();
 	}
 
 	bool JoyMapping::addMappingFromString(const char* mappingString)
 	{
-		////ASSERT(mappingString);
+		ASSERT(mappingString);
 
 		MappedJoystick newMapping;
 		const bool parsed = parseMappingFromString(mappingString, newMapping);
@@ -150,7 +150,7 @@ namespace nCine
 
 	void JoyMapping::addMappingsFromStrings(const char** mappingStrings)
 	{
-		////ASSERT(mappingStrings);
+		ASSERT(mappingStrings);
 
 		while (*mappingStrings) {
 			MappedJoystick newMapping;

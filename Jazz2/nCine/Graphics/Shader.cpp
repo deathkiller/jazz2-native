@@ -8,9 +8,9 @@
 #include "../../Common.h"
 
 #ifdef WITH_EMBEDDED_SHADERS
-#include "shader_strings.h"
+#	include "shader_strings.h"
 #else
-#include "../IO/FileSystem.h" // for dataPath()
+#	include "../IO/FileSystem.h" // for dataPath()
 #endif
 
 namespace nCine

@@ -1,6 +1,6 @@
 #include "TextureLoaderPng.h"
 
-#if defined(__EMSCRIPTEN__)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
 #	define __USE_ZLIB
 #endif
 

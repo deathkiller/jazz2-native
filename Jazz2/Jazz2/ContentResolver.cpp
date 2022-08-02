@@ -6,14 +6,12 @@
 #include "LevelHandler.h"
 #include "Tiles/TileSet.h"
 
-#if defined(_WIN32)
-#   if defined(__SSE4_2__) || defined(__AVX__)
-#       define RAPIDJSON_SSE42
-#   elif defined(__SSE2__)
-#       define RAPIDJSON_SSE2
-#   elif defined(__ARM_NEON)
-#       define RAPIDJSON_NEON
-#   endif
+#if defined(DEATH_TARGET_SSE42) || defined(DEATH_TARGET_AVX)
+#	define RAPIDJSON_SSE42
+#elif defined(DEATH_TARGET_SSE2)
+#	define RAPIDJSON_SSE2
+#elif defined(DEATH_TARGET_NEON)
+#	define RAPIDJSON_NEON
 #endif
 #include "../RapidJson/document.h"
 

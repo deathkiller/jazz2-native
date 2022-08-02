@@ -1338,7 +1338,7 @@ namespace Death::Containers
 		return { std::begin(Range), std::end(Range) };
 	}
 
-} // end namespace Death
+} // end namespace Death::Containers
 
 namespace std {
 

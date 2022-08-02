@@ -1,3 +1,5 @@
+#include <CommonInternal.h>
+
 #if defined(NCINE_INCLUDE_OPENGL)
 #	if defined(WITH_OPENGLES)
 #		define GL_GLEXT_PROTOTYPES

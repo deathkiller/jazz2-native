@@ -182,7 +182,7 @@ namespace nCine {
 
 	GLVertexFormat::Attribute* GLShaderProgram::attribute(const char* name)
 	{
-		//ASSERT(name);
+		ASSERT(name);
 		GLVertexFormat::Attribute* vertexAttribute = nullptr;
 
 		int location = -1;
@@ -346,6 +346,7 @@ namespace nCine {
 				LOGD_X("Shader %u - uniform %d : \"%s\"", glHandle_, uniform.location(), uniform.name());
 			}
 		}
+		GL_LOG_ERRORS();
 	}
 
 	void GLShaderProgram::discoverUniformBlocks(GLUniformBlock::DiscoverUniforms discover)
@@ -360,6 +361,7 @@ namespace nCine {
 
 			LOGD_X("Shader %u - uniform block %u : \"%s\"", glHandle_, uniformBlock.index(), uniformBlock.name());
 		}
+		GL_LOG_ERRORS();
 	}
 
 	void GLShaderProgram::discoverAttributes()
@@ -373,6 +375,7 @@ namespace nCine {
 
 			LOGD_X("Shader %u - attribute %d : \"%s\"", glHandle_, attribute.location(), attribute.name());
 		}
+		GL_LOG_ERRORS();
 	}
 
 	void GLShaderProgram::initVertexFormat()
@@ -392,5 +395,4 @@ namespace nCine {
 			vertexFormat_[location].init(attribute.location(), attribute.numComponents(), attribute.basicType());
 		}
 	}
-
 }

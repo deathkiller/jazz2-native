@@ -98,7 +98,7 @@ namespace nCine
 		GL_LOG_ERRORS();
 	}
 
-#if !defined(WITH_OPENGLES) && !defined(__EMSCRIPTEN__)
+#if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	void GLTexture::getTexImage(GLint level, GLenum format, GLenum type, void* pixels)
 	{
 		TracyGpuZone("glGetTexImage");
@@ -133,7 +133,7 @@ namespace nCine
 
 	bool GLTexture::bindHandle(GLenum target, GLuint glHandle, unsigned int textureUnit)
 	{
-		//FATAL_ASSERT(textureUnit < MaxTextureUnits);
+		FATAL_ASSERT(textureUnit < MaxTextureUnits);
 
 		if (boundTextures_[textureUnit][target] != glHandle) {
 			if (boundUnit_ != textureUnit) {

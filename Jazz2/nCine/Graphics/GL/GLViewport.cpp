@@ -16,7 +16,7 @@ namespace nCine {
 	{
 		if (rect.X != state_.rect.X || rect.Y != state_.rect.Y ||
 			rect.W != state_.rect.W || rect.H != state_.rect.H) {
-			//FATAL_ASSERT(rect.W >= 0 && rect.H >= 0);
+			FATAL_ASSERT(rect.W >= 0 && rect.H >= 0);
 			glViewport(rect.X, rect.Y, rect.W, rect.H);
 			state_.rect = rect;
 		}

@@ -1,5 +1,6 @@
 #include "GLUniformBlock.h"
 #include "GLShaderProgram.h"
+#include "GLDebug.h"
 #include "../IGfxCapabilities.h"
 #include "../../ServiceLocator.h"
 
@@ -25,12 +26,12 @@ namespace nCine
 
 		glGetActiveUniformBlockiv(program, index, GL_UNIFORM_BLOCK_DATA_SIZE, &size_);
 		glGetActiveUniformBlockiv(program, index, GL_UNIFORM_BLOCK_NAME_LENGTH, &nameLength);
-		//ASSERT(nameLength <= MaxNameLength);
+		ASSERT(nameLength <= MaxNameLength);
 		glGetActiveUniformBlockName(program, index, MaxNameLength, &nameLength, name_);
 		glGetActiveUniformBlockiv(program, index, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &uniformCount);
 
 		if (discover == DiscoverUniforms::ENABLED && uniformCount > 0) {
-			//ASSERT(uniformCount <= MaxNumBlockUniforms);
+			ASSERT(uniformCount <= MaxNumBlockUniforms);
 			GLuint uniformIndices[MaxNumBlockUniforms];
 			GLint uniformTypes[MaxNumBlockUniforms];
 			GLint uniformSizes[MaxNumBlockUniforms];
@@ -45,7 +46,7 @@ namespace nCine
 			glGetActiveUniformsiv(program, uniformCount, uniformIndices, GL_UNIFORM_TYPE, uniformTypes);
 			glGetActiveUniformsiv(program, uniformCount, uniformIndices, GL_UNIFORM_SIZE, uniformSizes);
 			glGetActiveUniformsiv(program, uniformCount, uniformIndices, GL_UNIFORM_OFFSET, uniformOffsets);
-#ifndef __EMSCRIPTEN__
+#ifndef DEATH_TARGET_EMSCRIPTEN
 			glGetActiveUniformsiv(program, uniformCount, uniformIndices, GL_UNIFORM_NAME_LENGTH, uniformNameLengths);
 #endif
 
@@ -57,11 +58,11 @@ namespace nCine
 				blockUniform.size_ = uniformSizes[i];
 				blockUniform.offset_ = uniformOffsets[i];
 
-#ifndef __EMSCRIPTEN__
-				//ASSERT_MSG_X(uniformNameLengths[i] <= GLUniform::MaxNameLength, "Uniform %d name length is %d, which is more than %d", i, uniformNameLengths[i], GLUniform::MaxNameLength);
+#ifndef DEATH_TARGET_EMSCRIPTEN
+				ASSERT_MSG_X(uniformNameLengths[i] <= GLUniform::MaxNameLength, "Uniform %d name length is %d, which is more than %d", i, uniformNameLengths[i], GLUniform::MaxNameLength);
 #endif
 
-#if !defined(WITH_OPENGLES) && !defined(__EMSCRIPTEN__)
+#if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)
 				glGetActiveUniformName(program, uniformIndices[i], MaxNameLength, &uniformNameLengths[i], blockUniform.name_);
 #else
 				// Some drivers do not accept a `nullptr` for size and type
@@ -72,6 +73,8 @@ namespace nCine
 				blockUniforms_[blockUniform.name_] = blockUniform;
 			}
 		}
+
+		GL_LOG_ERRORS();
 
 		// Align to the uniform buffer offset alignment or `glBindBufferRange()` will generate an `INVALID_VALUE` error
 		static const int offsetAlignment = theServiceLocator().gfxCapabilities().value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
@@ -90,10 +93,11 @@ namespace nCine
 
 	void GLUniformBlock::setBlockBinding(GLuint blockBinding)
 	{
-		//ASSERT(program_ != 0);
+		ASSERT(program_ != 0);
 
 		if (bindingIndex_ != static_cast<GLint>(blockBinding)) {
 			glUniformBlockBinding(program_, index_, blockBinding);
+			GL_LOG_ERRORS();
 			bindingIndex_ = static_cast<GLint>(blockBinding);
 		}
 	}

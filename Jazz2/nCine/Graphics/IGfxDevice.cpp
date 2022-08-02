@@ -9,14 +9,14 @@
 #include "GL/GLClearColor.h"
 #include "GL/GLViewport.h"
 
-#ifdef __EMSCRIPTEN__
+#ifdef DEATH_TARGET_EMSCRIPTEN
 #include <emscripten/html5.h>
 #include "../Application.h"
 #endif
 
 namespace nCine
 {
-#ifdef __EMSCRIPTEN__
+#ifdef DEATH_TARGET_EMSCRIPTEN
 	EM_BOOL IGfxDevice::resize_callback(int eventType, const EmscriptenUiEvent* event, void* userData)
 	{
 		LOGI_X("Canvas was resized to %ix%i", event->windowInnerWidth, event->windowInnerHeight);
@@ -57,7 +57,7 @@ namespace nCine
 		isFullScreen_(windowMode.isFullScreen), isResizable_(windowMode.isResizable),
 		glContextInfo_(glContextInfo), displayMode_(displayMode), numVideoModes_(0)
 	{
-#ifdef __EMSCRIPTEN__
+#ifdef DEATH_TARGET_EMSCRIPTEN
 		double cssWidth = 0.0;
 		double cssHeight = 0.0;
 		// Referring to the first element of type <canvas> in the DOM
@@ -98,7 +98,7 @@ namespace nCine
 
 	const IGfxDevice::VideoMode& IGfxDevice::videoMode(unsigned int index) const
 	{
-		//ASSERT(index < numVideoModes_);
+		ASSERT(index < numVideoModes_);
 		if (index >= numVideoModes_)
 			return videoModes_[0];
 		return videoModes_[index];

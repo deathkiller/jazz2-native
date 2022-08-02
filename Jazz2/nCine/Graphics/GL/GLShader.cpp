@@ -1,11 +1,12 @@
 #include "GLShader.h"
 #include "GLDebug.h"
 #include "../../IO/IFileStream.h"
+#include "../../../Common.h"
 
 #include <string>
 
-#if defined(__EMSCRIPTEN__) || defined(WITH_ANGLE)
-#include "../../Application.h"
+#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE)
+#	include "../../Application.h"
 #endif
 
 namespace nCine
@@ -30,21 +31,21 @@ namespace nCine
 		: glHandle_(0), status_(Status::NOT_COMPILED)
 	{
 		if (patchLines.empty()) {
-#if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(__EMSCRIPTEN__)
+#if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
 			patchLines.append("#version 300 es\n");
 #else
 			patchLines.append("#version 330\n");
 #endif
 
-#if defined(__EMSCRIPTEN__)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
 			patchLines.append("#define __EMSCRIPTEN__\n");
-#elif defined(__ANDROID__)
+#elif defined(DEATH_TARGET_ANDROID)
 			patchLines.append("#define __ANDROID__\n");
 #elif defined(WITH_ANGLE)
 			patchLines.append("#define WITH_ANGLE\n");
 #endif
 
-#if defined(__EMSCRIPTEN__) || defined(WITH_ANGLE)
+#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE)
 			// ANGLE does not seem capable of handling large arrays that are not entirely filled.
 			// A small array size will also make shader compilation a lot faster.
 			if (theApplication().appConfiguration().fixedBatchSize > 0) {
@@ -79,7 +80,7 @@ namespace nCine
 
 	void GLShader::loadFromString(const char* string)
 	{
-		////ASSERT(string);
+		ASSERT(string);
 
 		const GLchar* source_lines[2] = { patchLines.data(), string };
 		glShaderSource(glHandle_, 2, source_lines, nullptr);

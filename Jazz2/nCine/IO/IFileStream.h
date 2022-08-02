@@ -13,7 +13,7 @@ using namespace Death::Containers;
 namespace nCine
 {
 	enum struct FileAccessMode {
-#if !(defined(_WIN32) && !defined(__MINGW32__))
+#if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 		FileDescriptor = 1,
 #endif
 		Read = 2,

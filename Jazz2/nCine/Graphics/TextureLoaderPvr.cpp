@@ -1,4 +1,5 @@
 #include "TextureLoaderPvr.h"
+#include "../../Common.h"
 
 namespace nCine
 {
@@ -100,7 +101,7 @@ namespace nCine
 				case FMT_EAC_RG11:
 					internalFormat = GL_COMPRESSED_RG11_EAC;
 					break;
-#if (!defined(__ANDROID__) && defined(WITH_OPENGLES)) || (defined(__ANDROID__) && __ANDROID_API__ >= 21)
+#if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
 				case FMT_ASTC_4x4:
 					internalFormat = GL_COMPRESSED_RGBA_ASTC_4x4_KHR;
 					break;

@@ -1,14 +1,6 @@
 #pragma once
 
-#ifdef __ANDROID__
-#include <stdarg.h>
-#include <android/log.h>
-#else
-#include <cstdarg>
-#endif
-
 #include "IIndexer.h"
-//#include "ILogger.h"
 #include "Audio/IAudioDevice.h"
 #include "Threading/IThreadPool.h"
 #include "Graphics/IGfxCapabilities.h"
@@ -28,13 +20,6 @@ namespace nCine
 		void registerIndexer(std::unique_ptr<IIndexer> service);
 		/// Unregisters the index service provider and reinstates the null one
 		void unregisterIndexer();
-
-		/// Returns a reference to the current logger provider instance
-		//ILogger &logger() { return *loggerService_; }
-		/// Registers a logger service provider
-		//void registerLogger(std::unique_ptr<ILogger> service);
-		/// Unregisters the logger service provider and reinstates the null one
-		//void unregisterLogger();
 
 		/// Returns a reference to the current audio device instance
 		IAudioDevice& audioDevice() {
@@ -70,10 +55,6 @@ namespace nCine
 		IIndexer* indexerService_;
 		std::unique_ptr<IIndexer> registeredIndexer_;
 		NullIndexer nullIndexer_;
-
-		//ILogger *loggerService_;
-		//std::unique_ptr<ILogger> registeredLogger_;
-		//NullLogger nullLogger_;
 
 		IAudioDevice* audioDevice_;
 		std::unique_ptr<IAudioDevice> registeredAudioDevice_;

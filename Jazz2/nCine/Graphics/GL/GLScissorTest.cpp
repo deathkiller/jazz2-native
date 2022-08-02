@@ -1,7 +1,8 @@
 #include "GLScissorTest.h"
+#include "../../../Common.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS
 	///////////////////////////////////////////////////////////
@@ -21,7 +22,7 @@ namespace nCine {
 
 		if (rect.X != state_.rect.X || rect.Y != state_.rect.Y ||
 			rect.W != state_.rect.W || rect.H != state_.rect.H) {
-			//FATAL_ASSERT(rect.w >= 0 && rect.h >= 0);
+			FATAL_ASSERT(rect.W >= 0 && rect.H >= 0);
 			glScissor(rect.X, rect.Y, rect.W, rect.H);
 			state_.rect = rect;
 		}
@@ -35,7 +36,7 @@ namespace nCine {
 	void GLScissorTest::enable()
 	{
 		if (state_.enabled == false) {
-			//FATAL_ASSERT(state_.rect.w >= 0 && state_.rect.h >= 0);
+			FATAL_ASSERT(state_.rect.W >= 0 && state_.rect.H >= 0);
 			glEnable(GL_SCISSOR_TEST);
 			state_.enabled = true;
 		}

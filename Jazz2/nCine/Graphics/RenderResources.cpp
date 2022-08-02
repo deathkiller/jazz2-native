@@ -60,16 +60,16 @@ namespace nCine
 
 	bool RenderResources::registerBatchedShader(const GLShaderProgram* shader, GLShaderProgram* batchedShader)
 	{
-		//FATAL_ASSERT(shader != nullptr);
-		//FATAL_ASSERT(batchedShader != nullptr);
-		//FATAL_ASSERT(shader != batchedShader);
+		FATAL_ASSERT(shader != nullptr);
+		FATAL_ASSERT(batchedShader != nullptr);
+		FATAL_ASSERT(shader != batchedShader);
 
 		return batchedShaders_.emplace(shader, batchedShader).second;
 	}
 
 	bool RenderResources::unregisterBatchedShader(const GLShaderProgram* shader)
 	{
-		//ASSERT(shader != nullptr);
+		ASSERT(shader != nullptr);
 		return (batchedShaders_.erase(shader) > 0);
 	}
 
@@ -81,7 +81,7 @@ namespace nCine
 
 	void RenderResources::insertCameraUniformData(GLShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData)
 	{
-		//FATAL_ASSERT(shaderProgram != nullptr);
+		FATAL_ASSERT(shaderProgram != nullptr);
 
 		//if (cameraUniformDataMap_.loadFactor() >= 0.8f)
 		//	cameraUniformDataMap_.rehash(cameraUniformDataMap_.capacity() * 2);
@@ -185,7 +185,7 @@ namespace nCine
 
 	void RenderResources::setCurrentViewport(Viewport* viewport)
 	{
-		//FATAL_ASSERT(viewport != nullptr);
+		FATAL_ASSERT(viewport != nullptr);
 		currentViewport_ = viewport;
 	}
 
@@ -255,7 +255,7 @@ namespace nCine
 #endif
 			shaderToLoad.shaderProgram->setObjectLabel(shaderToLoad.objectLabel);
 			const bool hasLinked = shaderToLoad.shaderProgram->link(shaderToLoad.introspection);
-			//FATAL_ASSERT(hasLinked == true);
+			FATAL_ASSERT(hasLinked == true);
 		}
 
 		registerDefaultBatchedShaders();
@@ -285,7 +285,7 @@ namespace nCine
 		for (auto& shaderProgram : defaultShaderPrograms_)
 			shaderProgram.reset(nullptr);
 
-		//ASSERT(cameraUniformDataMap_.empty());
+		ASSERT(cameraUniformDataMap_.empty());
 
 		defaultCamera_.reset(nullptr);
 		renderBatcher_.reset(nullptr);

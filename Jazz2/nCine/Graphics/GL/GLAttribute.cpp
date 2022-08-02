@@ -1,4 +1,5 @@
 #include "GLAttribute.h"
+#include "GLDebug.h"
 #include "../../../Common.h"
 
 namespace nCine
@@ -18,7 +19,7 @@ namespace nCine
 	{
 		GLsizei length;
 		glGetActiveAttrib(program, index, MaxNameLength, &length, &size_, &type_, name_);
-		//ASSERT(length <= MaxNameLength);
+		ASSERT(length <= MaxNameLength);
 
 		if (!hasReservedPrefix()) {
 			location_ = glGetAttribLocation(program, name_);
@@ -26,6 +27,7 @@ namespace nCine
 				LOGW_X("Attribute location not found for attribute \"%s\" (%u) in shader program %u", name_, index, program);
 			}
 		}
+		GL_LOG_ERRORS();
 	}
 
 	///////////////////////////////////////////////////////////

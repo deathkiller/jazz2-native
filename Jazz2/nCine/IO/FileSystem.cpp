@@ -1,10 +1,9 @@
 #include "FileSystem.h"
 
-#include "../../Common.h"
 #include <Utf8.h>
 #include <Containers/String.h>
 
-#ifdef _WIN32
+#if defined(DEATH_TARGET_WINDOWS)
 #	include <fileapi.h>
 #	include <Shlobj.h>
 #	include <Timezoneapi.h>
@@ -24,7 +23,7 @@
 #		include <sys/sendfile.h>
 #	endif
 #
-#	ifdef __ANDROID__
+#	ifdef DEATH_TARGET_ANDROID
 #		include "AndroidApplication.h"
 #		include "AssetFile.h"
 #	endif
@@ -39,10 +38,10 @@ namespace nCine
 	{
 		char buffer[fs::MaxPathLength];
 
-#ifndef _WIN32
+#ifndef DEATH_TARGET_WINDOWS
 		bool callStat(const char* path, struct stat& sb)
 		{
-			//ASSERT(path);
+			ASSERT(path);
 			if (::lstat(path, &sb) == -1) {
 				LOGD_X("lstat error: %s", strerror(errno));
 				return false;
@@ -147,7 +146,7 @@ namespace nCine
 	{
 		close();
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		fileName_[0] = '\0';
 		if (path && isDirectory(path)) {
 			WIN32_FIND_DATA findFileData;
@@ -171,7 +170,7 @@ namespace nCine
 		return (hFindFile_ != NULL && hFindFile_ != INVALID_HANDLE_VALUE);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		const char* assetPath = AssetFile::assetPath(nullTerminatedPath.data());
 		if (assetPath)
 			assetDir_ = AssetFile::openDir(assetPath);
@@ -185,13 +184,13 @@ namespace nCine
 
 	void FileSystem::Directory::close()
 	{
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		if (hFindFile_ != NULL && hFindFile_ != INVALID_HANDLE_VALUE) {
 			FindClose(hFindFile_);
 			hFindFile_ = NULL;
 		}
 #else
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (assetDir_) {
 			AssetFile::closeDir(assetDir_);
 			assetDir_ = nullptr;
@@ -206,7 +205,7 @@ namespace nCine
 
 	const char* FileSystem::Directory::readNext()
 	{
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		if (hFindFile_ == NULL || hFindFile_ == INVALID_HANDLE_VALUE)
 			return nullptr;
 
@@ -223,7 +222,7 @@ namespace nCine
 			return nullptr;
 		}
 #else
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		// It does not return directory names
 		if (assetDir_)
 			return AssetFile::nextFileName(assetDir_);
@@ -250,7 +249,7 @@ namespace nCine
 		const bool firstHasSeparator = first[first.size() - 1] == '/' || first[first.size() - 1] == '\\';
 		const bool secondHasSeparator = second[0] == '/' || second[0] == '\\';
 
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (first == AssetFile::Prefix) {
 			return first + second;
 		}	
@@ -261,7 +260,7 @@ namespace nCine
 			return first + second;
 		} else if (!firstHasSeparator && !secondHasSeparator) {
 			// Both paths have no clashing separators
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 			return "\\"_s.join({ first, second });
 #else
 			return "/"_s.join({ first, second });
@@ -296,7 +295,7 @@ namespace nCine
 	String FileSystem::absoluteJoinPath(const StringView& first, const StringView& second)
 	{
 		String returnedPath = joinPath(first, second);
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		const char* resolvedPath = _fullpath(buffer, returnedPath.data(), MaxPathLength);
 #else
 		const char* resolvedPath = ::realpath(returnedPath.data(), buffer);
@@ -311,7 +310,7 @@ namespace nCine
 	{
 		if (path.empty()) return {};
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		static char drive[_MAX_DRIVE];
 		static char dir[_MAX_DIR];
 
@@ -337,7 +336,7 @@ namespace nCine
 	{
 		if (path.empty()) return {};
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		static char fname[_MAX_FNAME];
 		static char ext[_MAX_EXT];
 
@@ -356,7 +355,7 @@ namespace nCine
 	{
 		if (path.empty()) return {};
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		const char* resolvedPath = _fullpath(buffer, String::nullTerminatedView(path).data(), MaxPathLength);
 #else
 		const char* resolvedPath = ::realpath(String::nullTerminatedView(path).data(), buffer);
@@ -396,7 +395,7 @@ namespace nCine
 
 		const StringView pathExtension = FileSystem::extension(path);
 		if (pathExtension != nullptr) {
-#if defined(_WIN32) && !defined(__MINGW32__)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
 			return (_stricmp(String::nullTerminatedView(pathExtension).data(), String::nullTerminatedView(extension).data()) == 0);
 #else
 			return (::strcasecmp(String::nullTerminatedView(pathExtension).data(), String::nullTerminatedView(extension).data()) == 0);
@@ -407,7 +406,7 @@ namespace nCine
 
 	String FileSystem::currentDir()
 	{
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		wchar_t buffer[MaxPathLength];
 		::GetCurrentDirectory(MaxPathLength, buffer);
 		return Utf8::FromUtf16(buffer);
@@ -419,7 +418,7 @@ namespace nCine
 
 	bool FileSystem::setCurrentDir(const StringView& path)
 	{
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		const int status = ::SetCurrentDirectory(Utf8::ToUtf16(path));
 		return (status != 0);
 #else
@@ -430,14 +429,14 @@ namespace nCine
 
 	String FileSystem::homeDir()
 	{
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		wchar_t buffer[MaxPathLength];
 		::SHGetFolderPath(HWND_DESKTOP, CSIDL_PROFILE, NULL, SHGFP_TYPE_CURRENT, buffer);
 		return Utf8::FromUtf16(buffer).data();
 #else
 		const char* homeEnv = getenv("HOME");
 		if (homeEnv == nullptr || strnlen(homeEnv, MaxPathLength) == 0) {
-#ifndef __EMSCRIPTEN__
+#ifndef DEATH_TARGET_EMSCRIPTEN
 			// `getpwuid()` is not yet implemented on Emscripten
 			const struct passwd* pw = ::getpwuid(getuid());
 			if (pw)
@@ -451,7 +450,7 @@ namespace nCine
 #endif
 	}
 
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 	String FileSystem::externalStorageDir()
 	{
 		const char* extStorage = getenv("EXTERNAL_STORAGE");
@@ -466,12 +465,12 @@ namespace nCine
 	{
 		if (path.empty()) return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return (attrs != INVALID_FILE_ATTRIBUTES && attrs & FILE_ATTRIBUTE_DIRECTORY);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data())) {
 			return AssetFile::tryOpenDirectory(nullTerminatedPath.data());
 		}
@@ -490,12 +489,12 @@ namespace nCine
 		if (path == nullptr)
 			return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == 0);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return AssetFile::tryOpenFile(nullTerminatedPath.data());
 #endif
@@ -513,12 +512,12 @@ namespace nCine
 		if (path == nullptr)
 			return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return !(attrs == INVALID_FILE_ATTRIBUTES && ::GetLastError() == ERROR_FILE_NOT_FOUND);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return AssetFile::tryOpen(nullTerminatedPath.data());
 #endif
@@ -534,13 +533,13 @@ namespace nCine
 		if (path == nullptr)
 			return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		// Assuming that every file that exists is also readable
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return !(attrs == INVALID_FILE_ATTRIBUTES && ::GetLastError() == ERROR_FILE_NOT_FOUND);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return AssetFile::tryOpen(nullTerminatedPath.data());
 #endif
@@ -558,12 +557,12 @@ namespace nCine
 		if (path == nullptr)
 			return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_READONLY) == 0);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
@@ -581,7 +580,7 @@ namespace nCine
 		if (path == nullptr)
 			return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		// Assuming that every file that exists is also executable
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		// Assuming that every existing directory is accessible
@@ -595,7 +594,7 @@ namespace nCine
 			return false;
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return AssetFile::tryOpenDirectory(nullTerminatedPath.data());
 #endif
@@ -609,12 +608,12 @@ namespace nCine
 		if (path == nullptr)
 			return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == 0);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return AssetFile::tryOpenFile(nullTerminatedPath.data());
 #endif
@@ -632,14 +631,14 @@ namespace nCine
 		if (path == nullptr)
 			return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return (attrs != INVALID_FILE_ATTRIBUTES &&
 				(attrs & FILE_ATTRIBUTE_READONLY) == 0 &&
 				(attrs & FILE_ATTRIBUTE_DIRECTORY) == 0);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
@@ -657,12 +656,12 @@ namespace nCine
 		if (path == nullptr)
 			return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_HIDDEN));
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
@@ -678,7 +677,7 @@ namespace nCine
 		if (path == nullptr)
 			return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 
 		// Adding the hidden flag
@@ -695,7 +694,7 @@ namespace nCine
 		}
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
@@ -725,12 +724,12 @@ namespace nCine
 		if (path == nullptr)
 			return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		const int status = ::CreateDirectory(Utf8::ToUtf16(path), NULL);
 		return (status != 0);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
@@ -745,12 +744,12 @@ namespace nCine
 		if (path == nullptr)
 			return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		const int status = ::RemoveDirectory(Utf8::ToUtf16(path));
 		return (status != 0);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
@@ -765,12 +764,12 @@ namespace nCine
 		if (path == nullptr)
 			return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		const int status = ::DeleteFile(Utf8::ToUtf16(path));
 		return (status != 0);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
@@ -785,13 +784,13 @@ namespace nCine
 		if (oldPath == nullptr || newPath == nullptr)
 			return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		const int status = ::MoveFile(Utf8::ToUtf16(oldPath), Utf8::ToUtf16(newPath));
 		return (status != 0);
 #else
 		auto nullTerminatedOldPath = String::nullTerminatedView(oldPath);
 		auto nullTerminatedNewPath = String::nullTerminatedView(newPath);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedOldPath.data()))
 			return false;
 #endif
@@ -806,13 +805,13 @@ namespace nCine
 		if (oldPath == nullptr || newPath == nullptr)
 			return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		const int status = ::CopyFile(Utf8::ToUtf16(oldPath), Utf8::ToUtf16(newPath), TRUE);
 		return (status != 0);
 #elif defined(__linux__)
 		auto nullTerminatedOldPath = String::nullTerminatedView(oldPath);
 		auto nullTerminatedNewPath = String::nullTerminatedView(newPath);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedOldPath.data()))
 			return false;
 #endif
@@ -868,7 +867,7 @@ namespace nCine
 		if (path == nullptr)
 			return -1;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		HANDLE hFile = ::CreateFile(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 		LARGE_INTEGER fileSize;
 		fileSize.QuadPart = 0;
@@ -877,7 +876,7 @@ namespace nCine
 		return (status != 0 && closed != 0) ? static_cast<long int>(fileSize.QuadPart) : -1;
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return AssetFile::length(nullTerminatedPath.data());
 #endif
@@ -893,8 +892,8 @@ namespace nCine
 
 	FileSystem::FileDate FileSystem::lastModificationTime(const StringView& path)
 	{
-		FileDate date = {};
-#ifdef _WIN32
+		FileDate date = { };
+#ifdef DEATH_TARGET_WINDOWS
 		HANDLE hFile = ::CreateFile(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 		FILETIME fileTime;
 		const int status = GetFileTime(hFile, nullptr, nullptr, &fileTime);
@@ -908,7 +907,7 @@ namespace nCine
 		const int closed = CloseHandle(hFile);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return date;
 #endif
@@ -925,7 +924,7 @@ namespace nCine
 	FileSystem::FileDate FileSystem::lastAccessTime(const StringView& path)
 	{
 		FileDate date = { };
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		HANDLE hFile = ::CreateFile(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 		FILETIME fileTime;
 		const int status = GetFileTime(hFile, nullptr, &fileTime, nullptr);
@@ -939,7 +938,7 @@ namespace nCine
 		const int closed = CloseHandle(hFile);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return date;
 #endif
@@ -958,7 +957,7 @@ namespace nCine
 		if (path == nullptr)
 			return 0;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		int mode = Permission::READ;
 		mode += isExecutable(path) ? Permission::EXECUTE : 0;
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
@@ -967,7 +966,7 @@ namespace nCine
 		return mode;
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data())) {
 			if (AssetFile::tryOpenDirectory(nullTerminatedPath.data()))
 				return (Permission::READ + Permission::EXECUTE);
@@ -990,7 +989,7 @@ namespace nCine
 		if (path == nullptr)
 			return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		if (attrs != INVALID_FILE_ATTRIBUTES) {
 			// Adding the write permission
@@ -1010,7 +1009,7 @@ namespace nCine
 		return false;
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
@@ -1035,7 +1034,7 @@ namespace nCine
 		if (path == nullptr)
 			return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		if (attrs != INVALID_FILE_ATTRIBUTES) {
 			// Adding the write permission
@@ -1049,7 +1048,7 @@ namespace nCine
 		return false;
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
@@ -1071,7 +1070,7 @@ namespace nCine
 		if (path == nullptr)
 			return false;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		if (attrs != INVALID_FILE_ATTRIBUTES) {
 			// Removing the write permission
@@ -1085,7 +1084,7 @@ namespace nCine
 		return false;
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		if (AssetFile::assetPath(nullTerminatedPath.data()))
 			return false;
 #endif
@@ -1116,7 +1115,7 @@ namespace nCine
 
 	void FileSystem::initSavePath()
 	{
-#if defined(__ANDROID__)
+#if defined(DEATH_TARGET_ANDROID)
 		AndroidApplication& application = static_cast<AndroidApplication&>(theApplication());
 
 		// Get the internal data path from the Android application
@@ -1129,7 +1128,7 @@ namespace nCine
 				savePath_.clear();
 			}
 		}
-#elif defined(_WIN32)
+#elif defined(DEATH_TARGET_WINDOWS)
 		// TODO
 		//assert(false);
 		/*const char *userProfileEnv = _dupenv_s("USERPROFILE");

@@ -1,10 +1,11 @@
 #include <cmath> // for ldexp()
 #include "Random.h"
+#include "../../Common.h"
 
-namespace nCine {
-
-	namespace {
-
+namespace nCine
+{
+	namespace
+	{
 		const uint64_t DefaultInitState = 0x853c49e6748fea9bULL;
 		const uint64_t DefaultInitSequence = 0xda3e39cb94b95bdbULL;
 
@@ -70,7 +71,7 @@ namespace nCine {
 
 	uint32_t RandomGenerator::Next(uint32_t min, uint32_t max)
 	{
-		//ASSERT(min <= max);
+		ASSERT(min <= max);
 
 		if (min == max)
 			return min;
@@ -85,7 +86,7 @@ namespace nCine {
 
 	float RandomGenerator::NextFloat(float min, float max)
 	{
-		//ASSERT(min <= max);
+		ASSERT(min <= max);
 		return min + static_cast<float>(ldexp(random(state_, increment_), -32)) * (max - min);
 	}
 
@@ -96,7 +97,7 @@ namespace nCine {
 
 	uint32_t RandomGenerator::Fast(uint32_t min, uint32_t max)
 	{
-		//ASSERT(min <= max);
+		ASSERT(min <= max);
 
 		if (min == max)
 			return min;
@@ -111,7 +112,7 @@ namespace nCine {
 
 	float RandomGenerator::FastFloat(float min, float max)
 	{
-		//ASSERT(min <= max);
+		ASSERT(min <= max);
 		return min + static_cast<float>(random(state_, increment_) / static_cast<float>(UINT32_MAX)) * (max - min);
 	}
 

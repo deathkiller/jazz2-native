@@ -1,8 +1,8 @@
 #include "GlfwGfxDevice.h"
 #include "../ITextureLoader.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS
 	///////////////////////////////////////////////////////////
@@ -101,7 +101,7 @@ namespace nCine {
 
 	void GlfwGfxDevice::flashWindow() const
 	{
-#if (GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 3) && !defined(__EMSCRIPTEN__)
+#if (GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 3) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		glfwRequestWindowAttention(windowHandle_);
 #endif
 	}
@@ -116,7 +116,7 @@ namespace nCine {
 
 	bool GlfwGfxDevice::setVideoMode(unsigned int index)
 	{
-		//ASSERT(index < numVideoModes_);
+		ASSERT(index < numVideoModes_);
 
 		int modeIndex = index;
 		if (index >= numVideoModes_)
@@ -151,14 +151,7 @@ namespace nCine {
 		glfwInitHint(GLFW_JOYSTICK_HAT_BUTTONS, GLFW_FALSE);
 #endif
 		glfwSetErrorCallback(errorCallback);
-		if (!glfwInit()) {
-#if defined(_MSC_VER)
-			__debugbreak();
-#else
-			printf("glfwInit() failed!\n");
-#endif
-		}
-		//FATAL_ASSERT_MSG(glfwInit() == GL_TRUE, "glfwInit() failed");
+		FATAL_ASSERT_MSG(glfwInit() == GL_TRUE, "glfwInit() failed");
 	}
 
 	void GlfwGfxDevice::initDevice()
@@ -188,7 +181,7 @@ namespace nCine {
 #if defined(WITH_OPENGLES)
 		glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-#elif defined(__EMSCRIPTEN__)
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 		glfwWindowHint(GLFW_FOCUSED, 1);
 #else
@@ -197,7 +190,7 @@ namespace nCine {
 #endif
 
 		windowHandle_ = glfwCreateWindow(width_, height_, "", monitor, nullptr);
-		//FATAL_ASSERT_MSG(windowHandle_, "glfwCreateWindow() failed");
+		FATAL_ASSERT_MSG(windowHandle_, "glfwCreateWindow() failed");
 
 		glfwSetWindowSizeLimits(windowHandle_, 200, 160, GLFW_DONT_CARE, GLFW_DONT_CARE);
 
@@ -208,12 +201,7 @@ namespace nCine {
 
 #ifdef WITH_GLEW
 		const GLenum err = glewInit();
-		//FATAL_ASSERT_MSG_X(err == GLEW_OK, "GLEW error: %s", glewGetErrorString(err));
-		if (err != GLEW_OK) {
-			char errorMessage[128];
-			sprintf_s(errorMessage, "GLEW error: %s", glewGetErrorString(err));
-			__debugbreak();
-		}
+		FATAL_ASSERT_MSG_X(err == GLEW_OK, "GLEW error: %s", glewGetErrorString(err));
 
 		glContextInfo_.debugContext = glContextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output");
 #endif

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Common.h>
+
 #include <cstdint>
 
 namespace nCine
@@ -26,9 +28,9 @@ namespace nCine
 		}
 
 	private:
-#if defined(_WIN32)
+#if defined(DEATH_TARGET_WINDOWS)
 		bool hasPerfCounter_ = false;
-#elif !defined(__APPLE__)
+#elif !defined(DEATH_TARGET_APPLE)
 		bool hasMonotonicClock_ = false;
 #endif
 

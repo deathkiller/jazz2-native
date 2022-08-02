@@ -146,9 +146,9 @@ namespace nCine {
 
 	bool GlfwInputManager::isJoyPresent(int joyId) const
 	{
-		//ASSERT(joyId >= 0);
-		//ASSERT_MSG_X(GLFW_JOYSTICK_1 + joyId <= GLFW_JOYSTICK_LAST,
-		//             "joyId is %d and the maximum is %d", joyId, GLFW_JOYSTICK_LAST - GLFW_JOYSTICK_1);
+		ASSERT(joyId >= 0);
+		ASSERT_MSG_X(GLFW_JOYSTICK_1 + joyId <= GLFW_JOYSTICK_LAST,
+					 "joyId is %d and the maximum is %d", joyId, GLFW_JOYSTICK_LAST - GLFW_JOYSTICK_1);
 		return (glfwJoystickPresent(GLFW_JOYSTICK_1 + joyId) != 0);
 	}
 
@@ -162,7 +162,7 @@ namespace nCine {
 
 	const char* GlfwInputManager::joyGuid(int joyId) const
 	{
-#ifdef __EMSCRIPTEN__
+#ifdef DEATH_TARGET_EMSCRIPTEN
 		static const char* joyGuidString = "default";
 		return joyGuidString;
 #elif GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 3
@@ -340,7 +340,7 @@ namespace nCine {
 			int numAxes = -1;
 			int numHats = -1;
 			glfwGetJoystickButtons(joy, &numButtons);
-#ifdef __EMSCRIPTEN__
+#ifdef DEATH_TARGET_EMSCRIPTEN
 			numHats = 0;
 			const char* guid = "default";
 #elif GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 3

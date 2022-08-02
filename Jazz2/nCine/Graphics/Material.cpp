@@ -107,7 +107,7 @@ namespace nCine
 
 	void Material::reserveUniformsDataMemory()
 	{
-		//ASSERT(shaderProgram_);
+		ASSERT(shaderProgram_);
 
 		// Total memory size for all uniforms and uniform blocks
 		const unsigned int uniformsSize = shaderProgram_->uniformsSize() + shaderProgram_->uniformBlocksSize();
@@ -122,8 +122,8 @@ namespace nCine
 
 	void Material::setUniformsDataPointer(GLubyte* dataPointer)
 	{
-		//ASSERT(shaderProgram_);
-		//ASSERT(dataPointer);
+		ASSERT(shaderProgram_);
+		ASSERT(dataPointer);
 
 		uniformsHostBuffer_.reset(nullptr);
 		uniformsHostBufferSize_ = 0;

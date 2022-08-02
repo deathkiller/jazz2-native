@@ -2,7 +2,7 @@
 #include "MemoryFile.h"
 #include "StandardFile.h"
 
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 #	include <cstring>
 #	include "AssetFile.h"
 #endif
@@ -33,38 +33,38 @@ namespace nCine
 
 	std::unique_ptr<IFileStream> IFileStream::createFromMemory(const char* bufferName, unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
-		//ASSERT(bufferName);
-		//ASSERT(bufferPtr);
-		//ASSERT(bufferSize > 0);
+		ASSERT(bufferName);
+		ASSERT(bufferPtr);
+		ASSERT(bufferSize > 0);
 		return std::make_unique<MemoryFile>(bufferName, bufferPtr, bufferSize);
 	}
 
 	std::unique_ptr<IFileStream> IFileStream::createFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
-		//ASSERT(bufferName);
-		//ASSERT(bufferPtr);
-		//ASSERT(bufferSize > 0);
+		ASSERT(bufferName);
+		ASSERT(bufferPtr);
+		ASSERT(bufferSize > 0);
 		return std::make_unique<MemoryFile>(bufferName, bufferPtr, bufferSize);
 	}
 
 	std::unique_ptr<IFileStream> IFileStream::createFromMemory(unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
-		//ASSERT(bufferPtr);
-		//ASSERT(bufferSize > 0);
+		ASSERT(bufferPtr);
+		ASSERT(bufferSize > 0);
 		return std::make_unique<MemoryFile>(bufferPtr, bufferSize);
 	}
 
 	std::unique_ptr<IFileStream> IFileStream::createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
-		//ASSERT(bufferPtr);
-		//ASSERT(bufferSize > 0);
+		ASSERT(bufferPtr);
+		ASSERT(bufferSize > 0);
 		return std::make_unique<MemoryFile>(bufferPtr, bufferSize);
 	}
 
 	std::unique_ptr<IFileStream> IFileStream::createFileHandle(const String& filename)
 	{
-		//ASSERT(filename);
-#ifdef __ANDROID__
+		ASSERT(filename);
+#ifdef DEATH_TARGET_ANDROID
 		const char* assetFilename = AssetFile::assetPath(filename);
 		if (assetFilename)
 			return std::make_unique<AssetFile>(assetFilename);

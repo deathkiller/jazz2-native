@@ -1,14 +1,14 @@
-#include <cstdio> // for sscanf()
-#include <cstring> // for checkGLExtension()
-
 #define NCINE_INCLUDE_OPENGL
 #include "../CommonHeaders.h"
 
 #include "GfxCapabilities.h"
 #include "../../Common.h"
 
-namespace nCine {
+#include <cstdio> // for sscanf()
+#include <cstring> // for checkGLExtension()
 
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -70,7 +70,7 @@ namespace nCine {
 	{
 		const char* version = reinterpret_cast<const char*>(glGetString(GL_VERSION));
 
-#if defined(WITH_OPENGLES) || defined(__EMSCRIPTEN__)
+#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 #   if defined(_MSC_VER)
 		sscanf_s(version, "OpenGL ES %2d.%2d", &glMajorVersion_, &glMinorVersion_);
 #   else
@@ -101,7 +101,7 @@ namespace nCine {
 #endif
 		glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &glIntValues_[GLIntValues::MAX_COLOR_ATTACHMENTS]);
 
-#ifndef __EMSCRIPTEN__
+#ifndef DEATH_TARGET_EMSCRIPTEN
 		const char* extensionNames[GLExtensions::COUNT] = {
 			"GL_KHR_debug", "GL_ARB_texture_storage", "GL_EXT_texture_compression_s3tc", "GL_OES_compressed_ETC1_RGB8_texture",
 			"GL_AMD_compressed_ATC_texture", "GL_IMG_texture_compression_pvrtc", "GL_KHR_texture_compression_astc_ldr"

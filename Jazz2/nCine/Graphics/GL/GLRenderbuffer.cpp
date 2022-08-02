@@ -18,6 +18,7 @@ namespace nCine
 	{
 		glGenRenderbuffers(1, &glHandle_);
 		storage(internalFormat, width, height);
+		GL_LOG_ERRORS();
 	}
 
 	GLRenderbuffer::~GLRenderbuffer()
@@ -26,6 +27,7 @@ namespace nCine
 			unbind();
 
 		glDeleteRenderbuffers(1, &glHandle_);
+		GL_LOG_ERRORS();
 	}
 
 	///////////////////////////////////////////////////////////

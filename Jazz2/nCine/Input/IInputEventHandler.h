@@ -29,7 +29,7 @@ namespace nCine
 		inline virtual void onPointerDown(const TouchEvent& event) {}
 		/// Callback function called every time a screen touch different than the last one is released
 		inline virtual void onPointerUp(const TouchEvent& event) {}
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		/// Callback function called at fixed time with the updated reading from the accelerometer sensor
 		inline virtual void onAcceleration(const AccelerometerEvent& event) {}
 #endif

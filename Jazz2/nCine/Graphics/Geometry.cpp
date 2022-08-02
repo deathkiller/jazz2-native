@@ -1,10 +1,11 @@
 #include <cstring> // for memcpy()
+
 #include "Geometry.h"
 #include "RenderResources.h"
 #include "RenderStatistics.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -55,7 +56,7 @@ namespace nCine {
 
 	GLfloat* Geometry::acquireVertexPointer(unsigned int numFloats, unsigned int numFloatsAlignment)
 	{
-		//ASSERT(vbo_ == nullptr);
+		ASSERT(vbo_ == nullptr);
 		hasDirtyVertices_ = true;
 
 		if (sharedVboParams_)
@@ -72,12 +73,12 @@ namespace nCine {
 	/*! This method can only be used when mapping of OpenGL buffers is available */
 	GLfloat* Geometry::acquireVertexPointer()
 	{
-		//ASSERT(vbo_);
+		ASSERT(vbo_);
 		hasDirtyVertices_ = true;
 
 		if (vboParams_.mapBase == nullptr) {
 			const GLenum mapFlags = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ARRAY).mapFlags;
-			//FATAL_ASSERT_MSG(mapFlags, "Mapping of OpenGL buffers is not available");
+			FATAL_ASSERT_MSG(mapFlags, "Mapping of OpenGL buffers is not available");
 			vboParams_.mapBase = static_cast<GLubyte*>(vbo_->mapBufferRange(0, vbo_->size(), mapFlags));
 		}
 
@@ -126,7 +127,7 @@ namespace nCine {
 
 	GLushort* Geometry::acquireIndexPointer(unsigned int numIndices)
 	{
-		//ASSERT(ibo_ == nullptr);
+		ASSERT(ibo_ == nullptr);
 		hasDirtyIndices_ = true;
 
 		if (sharedIboParams_)
@@ -143,12 +144,12 @@ namespace nCine {
 	/*! This method can only be used when mapping of OpenGL buffers is available */
 	GLushort* Geometry::acquireIndexPointer()
 	{
-		//ASSERT(ibo_);
+		ASSERT(ibo_);
 		hasDirtyIndices_ = true;
 
 		if (iboParams_.mapBase == nullptr) {
 			const GLenum mapFlags = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ELEMENT_ARRAY).mapFlags;
-			//FATAL_ASSERT_MSG(mapFlags, "Mapping of OpenGL buffers is not available");
+			FATAL_ASSERT_MSG(mapFlags, "Mapping of OpenGL buffers is not available");
 			iboParams_.mapBase = static_cast<GLubyte*>(ibo_->mapBufferRange(0, ibo_->size(), mapFlags));
 		}
 
@@ -201,7 +202,7 @@ namespace nCine {
 
 		if (numInstances == 0) {
 			if (numIndices_ > 0)
-#if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(__EMSCRIPTEN__)
+#if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 				glDrawElements(primitiveType_, numIndices_, GL_UNSIGNED_SHORT, iboOffsetPtr);
 #else
 				glDrawElementsBaseVertex(primitiveType_, numIndices_, GL_UNSIGNED_SHORT, iboOffsetPtr, vboOffset);
@@ -210,7 +211,7 @@ namespace nCine {
 				glDrawArrays(primitiveType_, vboOffset, numVertices_);
 		} else if (numInstances > 0) {
 			if (numIndices_ > 0)
-#if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(__EMSCRIPTEN__)
+#if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 				glDrawElementsInstanced(primitiveType_, numIndices_, GL_UNSIGNED_SHORT, iboOffsetPtr, numInstances);
 #else
 				glDrawElementsInstancedBaseVertex(primitiveType_, numIndices_, GL_UNSIGNED_SHORT, iboOffsetPtr, numInstances, vboOffset);

@@ -1,4 +1,5 @@
 #include "GLUniform.h"
+#include "GLDebug.h"
 #include "../../../Common.h"
 
 namespace nCine
@@ -18,11 +19,12 @@ namespace nCine
 	{
 		GLsizei length;
 		glGetActiveUniform(program, index, MaxNameLength, &length, &size_, &type_, name_);
-		//ASSERT(length <= MaxNameLength);
+		ASSERT(length <= MaxNameLength);
 
 		if (!hasReservedPrefix()) {
 			location_ = glGetUniformLocation(program, name_);
 		}
+		GL_LOG_ERRORS();
 	}
 
 	///////////////////////////////////////////////////////////

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CommonInternal.h"
+
 // Undefine min()/max() macros, use std::min()/std::max() instead
 #if !defined(NOMINMAX)
 #	define NOMINMAX
@@ -47,8 +49,6 @@
 #		define NEAR
 #	endif
 #endif
-
-#define ASSERT_UNREACHABLE() __assume(0)
 
 #ifdef __cplusplus
 

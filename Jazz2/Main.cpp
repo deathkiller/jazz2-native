@@ -1,4 +1,6 @@
-﻿#if defined(_WIN32) && !defined(CMAKE_BUILD)
+﻿#include "Common.h"
+
+#if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #   if defined(_M_X64)
 #       pragma comment(lib, "../Libs/x64/libdeflate.lib")
 #   elif defined(_M_IX86)
@@ -8,18 +10,17 @@
 #   endif
 #endif
 
-#include "Common.h"
-
 #include "nCine/PCApplication.h"
 #include "nCine/IAppEventHandler.h"
 #include "nCine/Input/IInputEventHandler.h"
 #include "nCine/IO/FileSystem.h"
+#include "nCine/tracy.h"
 
 #include "Jazz2/IRootController.h"
 #include "Jazz2/ContentResolver.h"
 #include "Jazz2/LevelHandler.h"
 
-#if defined(_WIN32) && !defined(WITH_QT5)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
 #	include <cstdlib> // for `__argc` and `__argv`
 extern int __argc;
 extern char** __argv;
@@ -29,9 +30,9 @@ using namespace nCine;
 
 #if defined(ENABLE_LOG)
 
-#if defined(_WIN32)
+#if defined(DEATH_TARGET_WINDOWS)
 #	include <Utf8.h>
-#elif defined(__ANDROID__)
+#elif defined(DEATH_TARGET_ANDROID)
 #	include <stdarg.h>
 #	include <android/log.h>
 #else
@@ -57,11 +58,11 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 		logEntry[length] = '\0';
 	}
 
-#if defined(_WIN32)
+#if defined(DEATH_TARGET_WINDOWS)
 	//if (IsDebuggerPresent()) {
 		OutputDebugString(Death::Utf8::ToUtf16(logEntry));
 	//}
-#elif defined(__ANDROID__)
+#elif defined(DEATH_TARGET_ANDROID)
 	android_LogPriority priority;
 
 	// clang-format off
@@ -77,12 +78,32 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 	}
 	// clang-format on
 
-	__android_log_write(priority, "Jazz2", logEntry_);
+	__android_log_write(priority, "Jazz2", logEntry);
 #else
 	if (level == LogLevel::Error || level == LogLevel::Fatal) {
 		fputs(logEntry, stderr);
 	} else {
 		fputs(logEntry, stdout);
+	}
+#endif
+
+#ifdef WITH_TRACY
+	if (levelInt >= consoleLevelInt || levelInt >= fileLevelInt) {
+		uint32_t color = 0x999999;
+		// clang-format off
+		switch (level) {
+			case LogLevel::FATAL:		color = 0xec3e40; break;
+			case LogLevel::ERROR:		color = 0xff9b2b; break;
+			case LogLevel::WARN:		color = 0xf5d800; break;
+			case LogLevel::INFO:		color = 0x01a46d; break;
+			case LogLevel::DEBUG:		color = 0x377fc7; break;
+			case LogLevel::VERBOSE:		color = 0x73a5d7; break;
+			case LogLevel::UNKNOWN:		color = 0x999999; break;
+			default:					color = 0x999999; break;
+		}
+		// clang-format on
+
+		TracyMessageC(logEntry, length, color);
 	}
 #endif
 }
@@ -102,7 +123,7 @@ public:
 	void onShutdown() override;
 	void onResizeWindow(int width, int height) override;
 
-#if defined(__ANDROID__)
+#if defined(DEATH_TARGET_ANDROID)
 	void onTouchDown(const TouchEvent& event) override;
 	void onTouchUp(const TouchEvent& event) override;
 #endif
@@ -129,17 +150,17 @@ void GameEventHandler::onPreInit(AppConfiguration& config)
 
 void GameEventHandler::onInit()
 {
-#if !defined(__ANDROID__) && !defined(__EMSCRIPTEN__)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	theApplication().setAutoSuspension(false);
 	theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
 #endif
 
-#if defined(__EMSCRIPTEN__)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
 	// TODO: Baching in Emscripten
 	theApplication().renderingSettings().batchingEnabled = false;
 #endif
 
-#if !defined(__EMSCRIPTEN__)
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 	theApplication().inputManager().addJoyMappingsFromFile(fs::joinPath({ "Content"_s, "gamecontrollerdb.txt"_s }));
 #endif
 
@@ -190,7 +211,7 @@ void GameEventHandler::onResizeWindow(int width, int height)
 	}
 }
 
-#if defined(__ANDROID__)
+#if defined(DEATH_TARGET_ANDROID)
 void GameEventHandler::onTouchDown(const TouchEvent& event)
 {
 }
@@ -236,13 +257,13 @@ void GameEventHandler::ChangeLevel(Jazz2::LevelInitialization&& levelInit)
 	_pendingLevelChange = std::make_unique<Jazz2::LevelInitialization>(std::move(levelInit));
 }
 
-#if defined(_WIN32) && !defined(WITH_QT5)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 #else
 int main(int argc, char** argv)
 #endif
 {
-#if !defined(_WIN32)
+#if !defined(DEATH_TARGET_WINDOWS)
 #	define __argc argc
 #	define __argv argv
 #endif

@@ -3,10 +3,10 @@
 
 #include <Common.h>
 
-#if defined(_WIN32)
-#include <synchapi.h>
+#if defined(DEATH_TARGET_WINDOWS)
+#	include <synchapi.h>
 #else
-#include <unistd.h>
+#	include <unistd.h>
 #endif
 
 namespace nCine {
@@ -50,7 +50,7 @@ namespace nCine {
 
 	void Timer::sleep(float seconds)
 	{
-#if defined(_WIN32)
+#if defined(DEATH_TARGET_WINDOWS)
 		const unsigned int milliseconds = static_cast<unsigned int>(seconds) * 1000;
 		::SleepEx(milliseconds, FALSE);
 #else

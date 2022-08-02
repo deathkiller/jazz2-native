@@ -1,17 +1,19 @@
 #pragma once
 
+#include "../../Common.h"
+
 #include <Containers/StringView.h>
 
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;
 
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 typedef void* HANDLE;
 #else
 #	include <climits> // for `PATH_MAX`
-#	if defined(__APPLE__)
+#	if defined(DEATH_TARGET_APPLE)
 #		include <dirent.h>
-#	elif defined(__ANDROID__)
+#	elif defined(DEATH_TARGET_ANDROID)
 using DIR = struct DIR;
 using AAssetDir = struct AAssetDir;
 #	else
@@ -27,7 +29,7 @@ namespace nCine
 	{
 	public:
 		/// Maximum allowed length for a path string and native path separator
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 		static constexpr unsigned int MaxPathLength = MAX_PATH;
 		static constexpr char PathSeparator[] = "\\";
 #else
@@ -69,12 +71,12 @@ namespace nCine
 			const char* readNext();
 
 		private:
-#ifdef _WIN32
+#ifdef DEATH_TARGET_WINDOWS
 			bool firstFile_ = true;
 			HANDLE hFindFile_ = NULL;
 			char fileName_[260];
 #else
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 			AAssetDir* assetDir_ = nullptr;
 #endif
 			DIR* dirStream_ = nullptr;
@@ -108,7 +110,7 @@ namespace nCine
 		static bool setCurrentDir(const StringView& path);
 		/// Returns the path of the user home directory
 		static String homeDir();
-#ifdef __ANDROID__
+#ifdef DEATH_TARGET_ANDROID
 		/// Returns the path of the Android external storage directory
 		static String externalStorageDir();
 #endif

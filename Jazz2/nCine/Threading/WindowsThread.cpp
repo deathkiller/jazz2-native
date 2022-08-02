@@ -13,16 +13,16 @@ namespace nCine
 		{
 			if (handle == 0)
 				return;
-#if defined(NTDDI_WIN10_RS2) && NTDDI_VERSION >= NTDDI_WIN10_RS2
+#	if defined(NTDDI_WIN10_RS2) && NTDDI_VERSION >= NTDDI_WIN10_RS2
 			wchar_t buffer[MaxThreadNameLength];
 			size_t charsConverted;
 			mbstowcs_s(&charsConverted, buffer, name, MaxThreadNameLength);
 			const HANDLE threadHandle = (handle != reinterpret_cast<HANDLE>(-1)) ? handle : GetCurrentThread();
 			::SetThreadDescription(threadHandle, buffer);
-#elif !defined(__MINGW32__)
+#	elif !defined(DEATH_TARGET_MINGW)
 			const DWORD MS_VC_EXCEPTION = 0x406D1388;
 
-#pragma pack(push, 8)
+#		pragma pack(push, 8)
 			struct THREADNAME_INFO
 			{
 				DWORD dwType;
@@ -30,7 +30,7 @@ namespace nCine
 				DWORD dwThreadID;
 				DWORD dwFlags;
 			};
-#pragma pack(pop)
+#		pragma pack(pop)
 
 			const DWORD threadId = (handle != reinterpret_cast<HANDLE>(-1)) ? GetThreadId(handle) : GetCurrentThreadId();
 			THREADNAME_INFO info;
@@ -43,7 +43,7 @@ namespace nCine
 				RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), reinterpret_cast<ULONG_PTR*>(&info));
 			} __except (EXCEPTION_EXECUTE_HANDLER) {
 			}
-#endif
+#	endif
 		}
 #endif
 
@@ -109,7 +109,7 @@ namespace nCine
 			threadInfo_.startFunction = startFunction;
 			threadInfo_.threadArg = arg;
 			handle_ = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0, wrapperFunction, &threadInfo_, 0, nullptr));
-			//FATAL_ASSERT_MSG(handle_, "Error in _beginthreadex()");
+			FATAL_ASSERT_MSG(handle_, "Error in _beginthreadex()");
 		} else {
 			LOGW_X("Thread %u is already running", handle_);
 		}

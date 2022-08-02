@@ -3,6 +3,7 @@
 #include "Vector3.h"
 #include "Vector4.h"
 #include "../CommonConstants.h"
+#include "../../Common.h"
 
 namespace nCine
 {
@@ -124,14 +125,14 @@ namespace nCine
 	template <class T>
 	inline Vector4<T>& Matrix4x4<T>::operator[](unsigned int index)
 	{
-		//ASSERT(index < 4);
+		ASSERT(index < 4);
 		return vecs_[index];
 	}
 
 	template <class T>
 	inline const Vector4<T>& Matrix4x4<T>::operator[](unsigned int index) const
 	{
-		//ASSERT(index < 4);
+		ASSERT(index < 4);
 		return vecs_[index];
 	}
 

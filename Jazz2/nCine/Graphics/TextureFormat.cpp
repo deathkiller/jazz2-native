@@ -1,10 +1,10 @@
-#ifdef __ANDROID__
-#include <android/api-level.h>
-#endif
-
 #include "TextureFormat.h"
 #include "../ServiceLocator.h"
 #include "../../Common.h"
+
+#ifdef DEATH_TARGET_ANDROID
+#	include <android/api-level.h>
+#endif
 
 namespace nCine
 {
@@ -155,7 +155,7 @@ namespace nCine
 				bpp = 4;
 				minDataSize = 2 * 2 * ((blockWidth * blockHeight * bpp) / 8);
 				break;
-#if (!defined(__ANDROID__) && defined(WITH_OPENGLES)) || (defined(__ANDROID__) && __ANDROID_API__ >= 21)
+#if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
 			case GL_COMPRESSED_RGBA_ASTC_4x4_KHR:
 				blockWidth = 4;
 				blockHeight = 4;
@@ -243,7 +243,7 @@ namespace nCine
 #endif
 #endif
 			default:
-				//FATAL_MSG_X("MIP maps not supported for internal format: 0x%x", internalFormat);
+				FATAL_MSG_X("MIP maps not supported for internal format: 0x%x", internalFormat);
 				break;
 		}
 
@@ -251,8 +251,8 @@ namespace nCine
 		int levelHeight = height;
 		unsigned long dataSizesSum = 0;
 
-		//ASSERT(mipDataOffsets);
-		//ASSERT(mipDataSizes);
+		ASSERT(mipDataOffsets);
+		ASSERT(mipDataSizes);
 
 		for (int i = 0; i < mipMapCount; i++) {
 			mipDataOffsets[i] = dataSizesSum;
@@ -293,9 +293,9 @@ namespace nCine
 			found = oesCompressedFormat();
 #endif
 
-		//FATAL_ASSERT_MSG_X(found, "Unknown internal format: 0x%x", internalFormat_);
+		FATAL_ASSERT_MSG_X(found, "Unknown internal format: 0x%x", internalFormat_);
 
-		LOGI_X("Internal format: 0x%x - type: 0x%x", internalFormat_, type_);
+		//LOGI_X("Internal format: 0x%x - type: 0x%x", internalFormat_, type_);
 	}
 
 	bool TextureFormat::integerFormat()
@@ -424,7 +424,7 @@ namespace nCine
 			case GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG:
 			case GL_COMPRESSED_RGBA8_ETC2_EAC:
 			case GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2:
-#if (!defined(__ANDROID__) && defined(WITH_OPENGLES)) || (defined(__ANDROID__) && __ANDROID_API__ >= 21)
+#if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
 			case GL_COMPRESSED_RGBA_ASTC_4x4_KHR:
 			case GL_COMPRESSED_RGBA_ASTC_5x4_KHR:
 			case GL_COMPRESSED_RGBA_ASTC_5x5_KHR:
@@ -479,14 +479,14 @@ namespace nCine
 			case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
 			{
 				const bool hasS3tc = gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::EXT_TEXTURE_COMPRESSION_S3TC);
-				//FATAL_ASSERT_MSG(hasS3tc, "GL_EXT_texture_compression_s3tc not available");
+				FATAL_ASSERT_MSG(hasS3tc, "GL_EXT_texture_compression_s3tc not available");
 				break;
 			}
 #ifdef WITH_OPENGLES
 			case GL_ETC1_RGB8_OES:
 			{
 				const bool hasEct1 = gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE);
-				//FATAL_ASSERT_MSG(hasEct1, "GL_OES_compressed_etc1_rgb8_texture not available");
+				FATAL_ASSERT_MSG(hasEct1, "GL_OES_compressed_etc1_rgb8_texture not available");
 				break;
 			}
 			case GL_ATC_RGB_AMD:
@@ -494,7 +494,7 @@ namespace nCine
 			case GL_ATC_RGBA_INTERPOLATED_ALPHA_AMD:
 			{
 				const bool hasAtc = gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::AMD_COMPRESSED_ATC_TEXTURE);
-				//FATAL_ASSERT_MSG(hasAtc, "GL_AMD_compressed_ATC_texture not available");
+				FATAL_ASSERT_MSG(hasAtc, "GL_AMD_compressed_ATC_texture not available");
 				break;
 			}
 			case GL_COMPRESSED_RGB_PVRTC_2BPPV1_IMG:
@@ -503,10 +503,10 @@ namespace nCine
 			case GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG:
 			{
 				const bool hasPvr = gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::IMG_TEXTURE_COMPRESSION_PVRTC);
-				//FATAL_ASSERT_MSG(hasPvr, "GL_IMG_texture_compression_pvrtc not available");
+				FATAL_ASSERT_MSG(hasPvr, "GL_IMG_texture_compression_pvrtc not available");
 				break;
 			}
-#if (!defined(__ANDROID__) && defined(WITH_OPENGLES)) || (defined(__ANDROID__) && __ANDROID_API__ >= 21)
+#if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
 			case GL_COMPRESSED_RGBA_ASTC_4x4_KHR:
 			case GL_COMPRESSED_RGBA_ASTC_5x4_KHR:
 			case GL_COMPRESSED_RGBA_ASTC_5x5_KHR:
@@ -523,7 +523,7 @@ namespace nCine
 			case GL_COMPRESSED_RGBA_ASTC_12x12_KHR:
 			{
 				const bool hasAstc = gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR);
-				//FATAL_ASSERT_MSG(hasAstc, "GL_KHR_texture_compression_astc_ldr not available");
+				FATAL_ASSERT_MSG(hasAstc, "GL_KHR_texture_compression_astc_ldr not available");
 				break;
 			}
 #endif

@@ -1,8 +1,9 @@
 #include "AppConfiguration.h"
 #include "IO/FileSystem.h"
+#include "../Common.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -36,7 +37,7 @@ namespace nCine {
 		// Compile-time variables
 		glCoreProfile_(true),
 		glForwardCompatible_(true),
-#if defined(WITH_OPENGLES) || defined(__EMSCRIPTEN__)
+#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		glMajorVersion_(3),
 		glMinorVersion_(0),
 #else
@@ -47,9 +48,9 @@ namespace nCine {
 		argc_(0),
 		argv_(nullptr)
 	{
-#if defined(__ANDROID__)
+#if defined(DEATH_TARGET_ANDROID)
 		dataPath() = "asset::"_s;
-#elif defined(__EMSCRIPTEN__)
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
 		dataPath() = fs::PathSeparator;
 		// Always disable mapping on Emscripten as it is not supported by WebGL 2
 		useBufferMapping = false;

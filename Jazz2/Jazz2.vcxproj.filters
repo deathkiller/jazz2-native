@@ -270,9 +270,6 @@
     <ClInclude Include="nCine\Graphics\MeshSprite.h">
       <Filter>Header Files\nCine\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="nCine\Graphics\Quaternion.h">
-      <Filter>Header Files\nCine\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="nCine\Graphics\RectAnimation.h">
       <Filter>Header Files\nCine\Graphics</Filter>
     </ClInclude>
@@ -863,6 +860,12 @@
     </ClInclude>
     <ClInclude Include="nCine\tracy_opengl.h">
       <Filter>Header Files\nCine</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\CommonInternal.h">
+      <Filter>Header Files\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Primitives\Quaternion.h">
+      <Filter>Header Files\nCine\Primitives</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

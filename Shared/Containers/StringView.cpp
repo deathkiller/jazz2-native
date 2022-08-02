@@ -196,7 +196,7 @@ namespace Death::Containers
 		   but nothing helped. Only defining CORRADE_NO_ASSERT at the very top made
 		   the problem go away, and I discovered this only by accident after
 		   removing basically all other code. WHAT THE FUCK, MSVC. */
-#if /*!defined(DEATH_TARGET_MSVC) ||*/ defined(DEATH_TARGET_CLANG_CL) || _MSC_VER >= 1930 /* MSVC 2022 works */
+#if !defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_CLANG_CL) || _MSC_VER >= 1930 /* MSVC 2022 works */
 		using namespace Literals;
 		constexpr StringView Whitespace = " \t\f\v\r\n"_s;
 #else
@@ -205,7 +205,7 @@ namespace Death::Containers
 	}
 
 	template<class T> Array<BasicStringView<T>> BasicStringView<T>::splitOnWhitespaceWithoutEmptyParts() const {
-#if /*!defined(DEATH_TARGET_MSVC) ||*/ defined(DEATH_TARGET_CLANG_CL) || _MSC_VER >= 1930 /* MSVC 2022 works */
+#if !defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_CLANG_CL) || _MSC_VER >= 1930 /* MSVC 2022 works */
 		return splitOnAnyWithoutEmptyParts(Whitespace);
 #else
 		using namespace Containers::Literals;
@@ -337,7 +337,7 @@ namespace Death::Containers
 	}
 
 	template<class T> BasicStringView<T> BasicStringView<T>::trimmed() const {
-#if /*!defined(DEATH_TARGET_MSVC) ||*/ defined(DEATH_TARGET_CLANG_CL) || _MSC_VER >= 1930 /* MSVC 2022 works */
+#if !defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_CLANG_CL) || _MSC_VER >= 1930 /* MSVC 2022 works */
 		return trimmed(Whitespace);
 #else
 		using namespace Containers::Literals;
@@ -352,7 +352,7 @@ namespace Death::Containers
 	}
 
 	template<class T> BasicStringView<T> BasicStringView<T>::trimmedPrefix() const {
-#if /*!defined(DEATH_TARGET_MSVC) ||*/ defined(DEATH_TARGET_CLANG_CL) || _MSC_VER >= 1930 /* MSVC 2022 works */
+#if !defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_CLANG_CL) || _MSC_VER >= 1930 /* MSVC 2022 works */
 		return trimmedPrefix(Whitespace);
 #else
 		using namespace Containers::Literals;
@@ -366,7 +366,7 @@ namespace Death::Containers
 	}
 
 	template<class T> BasicStringView<T> BasicStringView<T>::trimmedSuffix() const {
-#if /*!defined(DEATH_TARGET_MSVC) ||*/ defined(DEATH_TARGET_CLANG_CL) || _MSC_VER >= 1930 /* MSVC 2022 works */
+#if !defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_CLANG_CL) || _MSC_VER >= 1930 /* MSVC 2022 works */
 		return trimmedSuffix(Whitespace);
 #else
 		using namespace Containers::Literals;

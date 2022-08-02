@@ -1,15 +1,15 @@
+#include "StandardFile.h"
+
 #include <cstdlib> // for exit()
 
 // All but MSVC: Linux, Android and MinGW.
-#if !(defined(_WIN32) && !defined(__MINGW32__))
+#if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 #	include <sys/stat.h> // for open()
 #	include <fcntl.h> // for open()
 #	include <unistd.h> // for close()
 #else
 #	include <io.h> // for _access()
 #endif
-
-#include "StandardFile.h"
 
 namespace nCine {
 
@@ -34,7 +34,7 @@ namespace nCine {
 		if (fileDescriptor_ >= 0 || filePointer_ != nullptr) {
 			LOGW_X("File \"%s\" is already opened", filename_.data());
 		} else {
-#if !(defined(_WIN32) && !defined(__MINGW32__))
+#if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 			if ((mode & FileAccessMode::FileDescriptor) == FileAccessMode::FileDescriptor) {
 				// Opening with a file descriptor
 				OpenFD(mode);
@@ -51,7 +51,7 @@ namespace nCine {
 	void StandardFile::Close()
 	{
 		if (fileDescriptor_ >= 0) {
-#if !(defined(_WIN32) && !defined(__MINGW32__))
+#if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 			const int retValue = ::close(fileDescriptor_);
 			if (retValue < 0) {
 				LOGW_X("Cannot close the file \"%s\"", filename_.data());
@@ -76,7 +76,7 @@ namespace nCine {
 		long int seekValue = -1;
 
 		if (fileDescriptor_ >= 0) {
-#if !(defined(_WIN32) && !defined(__MINGW32__))
+#if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 			seekValue = lseek(fileDescriptor_, offset, (int)origin);
 #endif
 		} else if (filePointer_) {
@@ -90,7 +90,7 @@ namespace nCine {
 		long int tellValue = -1;
 
 		if (fileDescriptor_ >= 0) {
-#if !(defined(_WIN32) && !defined(__MINGW32__))
+#if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 			tellValue = lseek(fileDescriptor_, 0L, SEEK_CUR);
 #endif
 		} else if (filePointer_) {
@@ -101,12 +101,12 @@ namespace nCine {
 
 	unsigned long int StandardFile::Read(void* buffer, unsigned long int bytes) const
 	{
-		//ASSERT(buffer);
+		ASSERT(buffer);
 
 		unsigned long int bytesRead = 0;
 
 		if (fileDescriptor_ >= 0) {
-#if !(defined(_WIN32) && !defined(__MINGW32__))
+#if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 			bytesRead = ::read(fileDescriptor_, buffer, bytes);
 #endif
 		} else if (filePointer_) {
@@ -117,12 +117,12 @@ namespace nCine {
 
 	unsigned long int StandardFile::Write(void* buffer, unsigned long int bytes)
 	{
-		//ASSERT(buffer);
+		ASSERT(buffer);
 
 		unsigned long int bytesWritten = 0;
 
 		if (fileDescriptor_ >= 0) {
-#if !(defined(_WIN32) && !defined(__MINGW32__))
+#if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 			bytesWritten = ::write(fileDescriptor_, buffer, bytes);
 #endif
 		} else if (filePointer_) {
@@ -134,7 +134,7 @@ namespace nCine {
 	///////////////////////////////////////////////////////////
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
-#if !(defined(_WIN32) && !defined(__MINGW32__))
+#if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 	void StandardFile::OpenFD(FileAccessMode mode)
 	{
 		int openFlag = -1;
@@ -199,7 +199,7 @@ namespace nCine {
 		}
 
 		if (modeChars[0] != '\0') {
-#if defined(_WIN32) && !defined(__MINGW32__)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
 			fopen_s(&filePointer_, filename_.data(), modeChars);
 #else
 			filePointer_ = fopen(filename_.data(), modeChars);

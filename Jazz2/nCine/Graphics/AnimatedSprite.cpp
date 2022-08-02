@@ -1,4 +1,5 @@
 #include "AnimatedSprite.h"
+#include "../../Common.h"
 
 namespace nCine
 {
@@ -96,7 +97,7 @@ namespace nCine
 	void AnimatedSprite::setAnimationIndex(unsigned int animIndex)
 	{
 		if (anims_.empty() == false) {
-			//ASSERT(animIndex < anims_.size());
+			ASSERT(animIndex < anims_.size());
 			currentAnimIndex_ = animIndex;
 			setTexRect(anims_[currentAnimIndex_].rect());
 		}

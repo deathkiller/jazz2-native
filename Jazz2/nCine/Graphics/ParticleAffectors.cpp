@@ -29,7 +29,7 @@ namespace nCine
 
 	void ColorAffector::affect(Particle* particle, float normalizedAge)
 	{
-		//ASSERT(particle);
+		ASSERT(particle);
 
 		// Zero steps in the affector
 		if (colorSteps_.empty())
@@ -49,7 +49,7 @@ namespace nCine
 				break;
 		}
 
-		//FATAL_ASSERT(index > 0);
+		FATAL_ASSERT(index > 0);
 		const ColorStep& prevStep = colorSteps_[index - 1];
 		const ColorStep& nextStep = colorSteps_[index];
 
@@ -78,7 +78,7 @@ namespace nCine
 
 	void SizeAffector::affect(Particle* particle, float normalizedAge)
 	{
-		//ASSERT(particle);
+		ASSERT(particle);
 
 		// Zero steps in the affector
 		if (sizeSteps_.empty()) {
@@ -101,7 +101,7 @@ namespace nCine
 				break;
 		}
 
-		//FATAL_ASSERT(index > 0);
+		FATAL_ASSERT(index > 0);
 		const SizeStep& prevStep = sizeSteps_[index - 1];
 		const SizeStep& nextStep = sizeSteps_[index];
 
@@ -126,7 +126,7 @@ namespace nCine
 
 	void RotationAffector::affect(Particle* particle, float normalizedAge)
 	{
-		//ASSERT(particle);
+		ASSERT(particle);
 
 		// Zero steps in the affector
 		if (rotationSteps_.empty())
@@ -146,7 +146,7 @@ namespace nCine
 				break;
 		}
 
-		//FATAL_ASSERT(index > 0);
+		FATAL_ASSERT(index > 0);
 		const RotationStep& prevStep = rotationSteps_[index - 1];
 		const RotationStep& nextStep = rotationSteps_[index];
 
@@ -171,7 +171,7 @@ namespace nCine
 
 	void PositionAffector::affect(Particle* particle, float normalizedAge)
 	{
-		//ASSERT(particle);
+		ASSERT(particle);
 
 		// Zero steps in the affector
 		if (positionSteps_.empty())
@@ -191,7 +191,7 @@ namespace nCine
 				break;
 		}
 
-		//FATAL_ASSERT(index > 0);
+		FATAL_ASSERT(index > 0);
 		const PositionStep& prevStep = positionSteps_[index - 1];
 		const PositionStep& nextStep = positionSteps_[index];
 
@@ -216,7 +216,7 @@ namespace nCine
 
 	void VelocityAffector::affect(Particle* particle, float normalizedAge)
 	{
-		//ASSERT(particle);
+		ASSERT(particle);
 
 		// Zero steps in the affector
 		if (velocitySteps_.empty())
@@ -236,7 +236,7 @@ namespace nCine
 				break;
 		}
 
-		//FATAL_ASSERT(index > 0);
+		FATAL_ASSERT(index > 0);
 		const VelocityStep& prevStep = velocitySteps_[index - 1];
 		const VelocityStep& nextStep = velocitySteps_[index];
 

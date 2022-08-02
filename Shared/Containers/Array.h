@@ -27,11 +27,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "../CommonInternal.h"
 #include "ArrayView.h"
-
-#ifdef __GNUC__
-#   define DEATH_TARGET_GCC
-#endif
 
 namespace Death::Containers
 {

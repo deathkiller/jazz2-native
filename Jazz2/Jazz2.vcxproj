@@ -208,6 +208,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\SmallVector.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\String.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringView.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\CommonInternal.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\GemCollectible.h" />
@@ -339,7 +340,6 @@
     <ClInclude Include="nCine\Graphics\ParticleAffectors.h" />
     <ClInclude Include="nCine\Graphics\ParticleInitializer.h" />
     <ClInclude Include="nCine\Graphics\ParticleSystem.h" />
-    <ClInclude Include="nCine\Graphics\Quaternion.h" />
     <ClInclude Include="nCine\Graphics\RectAnimation.h" />
     <ClInclude Include="nCine\Graphics\RenderBatcher.h" />
     <ClInclude Include="nCine\Graphics\RenderBuffersManager.h" />
@@ -390,6 +390,7 @@
     <ClInclude Include="nCine\Primitives\Colorf.h" />
     <ClInclude Include="nCine\Primitives\ColorHdr.h" />
     <ClInclude Include="nCine\Primitives\Matrix4x4.h" />
+    <ClInclude Include="nCine\Primitives\Quaternion.h" />
     <ClInclude Include="nCine\Primitives\Rect.h" />
     <ClInclude Include="nCine\Primitives\Vector2.h" />
     <ClInclude Include="nCine\Primitives\Vector3.h" />

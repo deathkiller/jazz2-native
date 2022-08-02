@@ -1,7 +1,8 @@
 #include "RectAnimation.h"
+#include "../../Common.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -57,7 +58,7 @@ namespace nCine {
 
 	void RectAnimation::setFrame(unsigned int frameNum)
 	{
-		//ASSERT(frameNum < rects_.size());
+		ASSERT(frameNum < rects_.size());
 		currentFrame_ = frameNum;
 	}
 

@@ -24,11 +24,8 @@
 
 #include <type_traits>
 
+#include "../CommonInternal.h"
 #include "Array.h"
-
-#if defined(_MSC_VER) && _MSC_VER <= 1900
-#	define DEATH_MSVC2015_COMPATIBILITY
-#endif
 
 namespace Death::Containers
 {

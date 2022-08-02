@@ -31,7 +31,7 @@ namespace nCine
 		/// Deleted assignment operator
 		StandardFile& operator=(const StandardFile&) = delete;
 
-#if !(defined(_WIN32) && !defined(__MINGW32__))
+#if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 		/// Opens the file with `open()`
 		void OpenFD(FileAccessMode mode);
 #endif

@@ -30,7 +30,7 @@ namespace nCine
 		void run();
 		/// Processes events inside the game loop
 		void processEvents();
-#ifdef __EMSCRIPTEN__
+#ifdef DEATH_TARGET_EMSCRIPTEN
 		static void emscriptenStep();
 #endif
 

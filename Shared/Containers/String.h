@@ -26,6 +26,7 @@
 #include <type_traits>
 #include <string>
 
+#include "../CommonInternal.h"
 #include "StringView.h" /* needs to be included for comparison operators */
 #include "Array.h"
 

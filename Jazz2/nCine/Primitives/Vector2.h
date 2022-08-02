@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../Common.h"
+
 #include <cmath>
 
 namespace nCine
@@ -105,14 +107,14 @@ namespace nCine
 	template <class T>
 	inline T& Vector2<T>::operator[](unsigned int index)
 	{
-		//ASSERT(index < 2);
+		ASSERT(index < 2);
 		return (&X)[index];
 	}
 
 	template <class T>
 	inline const T& Vector2<T>::operator[](unsigned int index) const
 	{
-		//ASSERT(index < 2);
+		ASSERT(index < 2);
 		return (&X)[index];
 	}
 

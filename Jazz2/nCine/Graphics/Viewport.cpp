@@ -233,7 +233,7 @@ namespace nCine
 
 	Texture* Viewport::texture(unsigned int index)
 	{
-		//ASSERT(index < MaxNumTextures);
+		ASSERT(index < MaxNumTextures);
 
 		Texture* texture = nullptr;
 		if (index < MaxNumTextures)
@@ -363,7 +363,7 @@ namespace nCine
 	void Viewport::draw(unsigned int nextIndex)
 	{
 		Viewport* nextViewport = (nextIndex < chain_.size()) ? chain_[nextIndex] : nullptr;
-		//FATAL_ASSERT(nextViewport == nullptr || nextViewport->type_ != Type::SCREEN);
+		FATAL_ASSERT(nextViewport == nullptr || nextViewport->type_ != Type::SCREEN);
 
 		if (nextViewport && nextViewport->type_ == Type::WITH_TEXTURE)
 			nextViewport->draw(nextIndex + 1);

@@ -1,5 +1,6 @@
 #include "SceneNode.h"
 #include "../Application.h"
+#include "../../Common.h"
 #include "../tracy.h"
 
 namespace nCine
@@ -20,8 +21,6 @@ namespace nCine
 		worldMatrix_(Matrix4x4f::Identity), localMatrix_(Matrix4x4f::Identity),
 		shouldDeleteChildrenOnDestruction_(true), dirtyBits_(0xFF), lastFrameUpdated_(0)
 	{
-		children_.reserve(4);
-
 		setParent(parent);
 	}
 
@@ -224,7 +223,7 @@ namespace nCine
 	{
 		unsigned int index = 0;
 		if (parent_) {
-			//ASSERT(parent_->children_[childOrderIndex_] == this);
+			ASSERT(parent_->children_[childOrderIndex_] == this);
 			index = childOrderIndex_;
 		}
 
@@ -325,7 +324,7 @@ namespace nCine
 	/*! \note It is faster than calling `setParent()` on the first child and `removeChildNode()` on the second one */
 	void SceneNode::swapChildPointer(SceneNode* first, SceneNode* second)
 	{
-		//ASSERT(first->parent_ == second->parent_);
+		ASSERT(first->parent_ == second->parent_);
 
 		SceneNode* parent = first->parent_;
 		if (parent) {
