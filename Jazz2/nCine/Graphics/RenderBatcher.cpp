@@ -159,7 +159,8 @@ namespace nCine
 
 		// Retrieving the original block instance size without the uniform buffer offset alignment
 		const GLUniformBlockCache* singleInstanceBlock = (*start)->material().uniformBlock(Material::InstanceBlockName);
-		const int singleInstanceBlockSize = singleInstanceBlock->size() - singleInstanceBlock->alignAmount();
+		const int singleInstanceBlockSizePacked = singleInstanceBlock->size() - singleInstanceBlock->alignAmount(); // remove the uniform buffer offset alignment
+		const int singleInstanceBlockSize = singleInstanceBlockSizePacked + (16 - singleInstanceBlockSizePacked % 16) % 16; // but add the std140 vec4 layout alignment
 
 		if (commandAdded) {
 			batchCommand->setType(refCommand->type());

@@ -1,6 +1,7 @@
 #include "GLShaderUniformBlocks.h"
 #include "GLShaderProgram.h"
 #include "../RenderResources.h"
+#include "../../ServiceLocator.h"
 #include "../../../Common.h"
 
 #include <cstring> // for memcpy()
@@ -29,13 +30,20 @@ namespace nCine
 
 	void GLShaderUniformBlocks::bind()
 	{
+#if _DEBUG
+		static const int offsetAlignment = theServiceLocator().gfxCapabilities().value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+#endif
 		if (uboParams_.object) {
 			uboParams_.object->bind();
 
 			GLintptr moreOffset = 0;
 			for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
 				uniformBlockCache.setBlockBinding(uniformBlockCache.index());
-				uboParams_.object->bindBufferRange(uniformBlockCache.bindingIndex(), uboParams_.offset + moreOffset, uniformBlockCache.usedSize());
+				const GLintptr offset = static_cast<GLintptr>(uboParams_.offset) + moreOffset;
+#if _DEBUG
+				ASSERT(offset % offsetAlignment == 0);
+#endif
+				uboParams_.object->bindBufferRange(uniformBlockCache.bindingIndex(), offset, uniformBlockCache.usedSize());
 				moreOffset += uniformBlockCache.usedSize();
 			}
 		}

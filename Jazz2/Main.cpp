@@ -155,11 +155,6 @@ void GameEventHandler::onInit()
 	theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
 #endif
 
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-	// TODO: Baching in Emscripten
-	theApplication().renderingSettings().batchingEnabled = false;
-#endif
-
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	theApplication().inputManager().addJoyMappingsFromFile(fs::joinPath({ "Content"_s, "gamecontrollerdb.txt"_s }));
 #endif
