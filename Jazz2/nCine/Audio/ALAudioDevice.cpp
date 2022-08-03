@@ -58,6 +58,11 @@ namespace nCine
 		alListener3f(AL_POSITION, 0.0f, 0.0f, 0.0f);
 		alListenerf(AL_GAIN, gain_);
 
+#if defined(AL_STOP_SOURCES_ON_DISCONNECT_SOFT)
+		// Don't stop sources when device is disconnected if supported
+		alDisable(AL_STOP_SOURCES_ON_DISCONNECT_SOFT);
+#endif
+
 #if defined(DEATH_TARGET_WINDOWS)
 		// Try to use ALC_SOFT_reopen_device extension to reopen the device
 		alcReopenDeviceSOFT_ = (LPALCREOPENDEVICESOFT)alGetProcAddress("alcReopenDeviceSOFT");

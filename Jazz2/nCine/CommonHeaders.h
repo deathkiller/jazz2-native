@@ -64,9 +64,19 @@
 #			include "../../Libs/AL/alc.h"
 #			include "../../Libs/AL/al.h"
 #			include "../../Libs/AL/alext.h"
+#			if defined(__has_include)
+#				if __has_include("../../Libs/AL/inprogext.h")
+#					include "../../Libs/AL/inprogext.h"
+#				endif
+#			endif
 #		else
 #			include <AL/alc.h>
 #			include <AL/al.h>
+#			if defined(__has_include)
+#				if __has_include(<AL/inprogext.h>)
+#					include <AL/inprogext.h>
+#				endif
+#			endif
 #		endif
 #	endif
 #endif

@@ -105,8 +105,8 @@ namespace nCine
 
 	void ParticleInitializer::setVelocityAndAngle(float x, float y, float angle)
 	{
-		const float sinAngle = sinf(angle * 0.5f * fDegToRad);
-		const float cosAngle = cosf(angle * 0.5f * fDegToRad);
+		const float sinAngle = sinf(angle * 0.5f);
+		const float cosAngle = cosf(angle * 0.5f);
 
 		rndVelocityX.X = x * cosAngle - y * sinAngle;
 		rndVelocityX.Y = x * cosAngle - y * -sinAngle;

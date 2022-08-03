@@ -200,8 +200,8 @@ namespace nCine
 		float rotatedHeight = height;
 
 		if (absRotation_ > MinRotation || absRotation_ < -MinRotation) {
-			const float sinRot = sinf(absRotation_ * fDegToRad);
-			const float cosRot = cosf(absRotation_ * fDegToRad);
+			const float sinRot = sinf(absRotation_);
+			const float cosRot = cosf(absRotation_);
 			rotatedWidth = fabsf(width * cosRot) + fabsf(height * sinRot);
 			rotatedHeight = fabsf(width * sinRot) + fabsf(height * cosRot);
 		}
