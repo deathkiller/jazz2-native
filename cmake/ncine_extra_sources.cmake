@@ -139,6 +139,19 @@ if(OPENAL_FOUND)
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderOgg.cpp
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderOgg.cpp)
 	endif()
+	
+	if(OPENMPT_FOUND)
+		target_compile_definitions(ncine PRIVATE "WITH_OPENMPT")
+		target_link_libraries(ncine PRIVATE libopenmpt::libopenmpt)
+		
+		list(APPEND PRIVATE_HEADERS
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderMpt.h
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderMpt.h)
+
+		list(APPEND SOURCES
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderMpt.cpp
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderMpt.cpp)
+	endif()
 endif()
 
 #if(PNG_FOUND)
@@ -486,7 +499,7 @@ endif()
 #endif()
 
 if(LIBDEFLATE_FOUND)
-    target_link_libraries(ncine PRIVATE libdeflate)
+	target_link_libraries(ncine PRIVATE libdeflate)
 endif()
 
 if(NCINE_BUILD_ANDROID)

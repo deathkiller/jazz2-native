@@ -1,8 +1,14 @@
 #pragma once
 
-#include <cstdio>
 #include "IInputManager.h"
 #include "../Graphics/GL/GlfwGfxDevice.h" // for WindowHandle()
+#include "../../Common.h"
+
+#include <cstdio>
+
+#ifdef DEATH_TARGET_EMSCRIPTEN
+#	include <emscripten/html5.h>
+#endif
 
 #include <Containers/SmallVector.h>
 
@@ -203,6 +209,9 @@ namespace nCine
 		static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 		static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 		static void joystickCallback(int joy, int event);
+#ifdef DEATH_TARGET_EMSCRIPTEN
+		static EM_BOOL emscriptenHandleTouch(int eventType, const EmscriptenTouchEvent* touchEvent, void* userData);
+#endif
 
 		static KeySym keySymValueToEnum(int keysym);
 		static KeyMod keyModValueToEnum(int keymod);

@@ -208,9 +208,9 @@ namespace nCine
 #endif
 
 #ifdef DEATH_TARGET_EMSCRIPTEN
-		static int resize_callback(int eventType, const EmscriptenUiEvent* event, void* userData);
-		static int fullscreenchange_callback(int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData);
-		static int focus_callback(int eventType, const EmscriptenFocusEvent* event, void* userData);
+		static int emscriptenHandleResize(int eventType, const EmscriptenUiEvent* event, void* userData);
+		static int emscriptenHandleFullscreen(int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData);
+		static int emscriptenHandleFocus(int eventType, const EmscriptenFocusEvent* event, void* userData);
 #endif
 	};
 

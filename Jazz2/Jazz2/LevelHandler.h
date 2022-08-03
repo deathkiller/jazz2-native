@@ -57,7 +57,7 @@ namespace Jazz2
 			return false;
 		}
 
-		Recti LevelBounds() const;
+		Recti LevelBounds() const override;
 
 		float WaterLevel() const override;
 
@@ -71,6 +71,8 @@ namespace Jazz2
 
 		void OnKeyPressed(const nCine::KeyboardEvent& event) override;
 		void OnKeyReleased(const nCine::KeyboardEvent& event) override;
+		void OnTouchDown(const nCine::TouchEvent& event) override;
+		void OnTouchUp(const nCine::TouchEvent& event) override;
 
 		void AddActor(const std::shared_ptr<ActorBase>& actor) override;
 
@@ -230,6 +232,7 @@ namespace Jazz2
 		Metadata* _commonResources;
 
 		uint32_t _pressedActions;
+		uint32_t _overrideActions;
 		Vector2f _playerRequiredMovement;
 
 		void OnLevelLoaded(const StringView& name, const StringView& nextLevel, const StringView& secretLevel,

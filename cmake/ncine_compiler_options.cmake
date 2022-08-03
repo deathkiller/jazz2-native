@@ -61,6 +61,10 @@ if(EMSCRIPTEN)
 	if(VORBIS_FOUND)
 		target_link_libraries(ncine PUBLIC Vorbis::Vorbisfile)
 	endif()
+	
+	if(OPENMPT_FOUND)
+		target_link_libraries(ncine PUBLIC libopenmpt::libopenmpt)
+	endif()
 endif()
 
 if(MSVC)

@@ -1,10 +1,10 @@
 if(EMSCRIPTEN)
-	#set(EXTERNAL_EMSCRIPTEN_DIR "${CMAKE_SOURCE_DIR}/Libs/Emscripten" CACHE PATH "Set the path to the Emscripten libraries directory")
-	#if(NOT IS_DIRECTORY ${EXTERNAL_EMSCRIPTEN_DIR})
-	#	message(FATAL_ERROR "nCine external Emscripten libraries directory not found at: ${EXTERNAL_EMSCRIPTEN_DIR}")
-	#else()
-	#	message(STATUS "nCine external Emscripten libraries directory: ${EXTERNAL_EMSCRIPTEN_DIR}")
-	#endif()
+	set(EXTERNAL_EMSCRIPTEN_DIR "${CMAKE_SOURCE_DIR}/Libs/Emscripten/" CACHE PATH "Set the path to the Emscripten libraries directory")
+	if(NOT IS_DIRECTORY ${EXTERNAL_EMSCRIPTEN_DIR})
+		message(STATUS "nCine external Emscripten libraries directory not found at: ${EXTERNAL_EMSCRIPTEN_DIR}")
+	else()
+		message(STATUS "nCine external Emscripten libraries directory: ${EXTERNAL_EMSCRIPTEN_DIR}")
+	endif()
 
 	if(NCINE_WITH_THREADS)
 		add_library(Threads::Threads INTERFACE IMPORTED)
@@ -61,6 +61,14 @@ if(EMSCRIPTEN)
 				INTERFACE_LINK_OPTIONS "SHELL:-s USE_VORBIS=1")
 			set(VORBIS_FOUND 1)
 		endif()
+		
+		if(EXISTS ${EXTERNAL_EMSCRIPTEN_DIR}/libopenmpt/bin/libopenmpt.a)
+			add_library(libopenmpt::libopenmpt STATIC IMPORTED)
+			set_target_properties(libopenmpt::libopenmpt PROPERTIES
+				IMPORTED_LOCATION ${EXTERNAL_EMSCRIPTEN_DIR}/libopenmpt/bin/libopenmpt.a
+				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_EMSCRIPTEN_DIR}/libopenmpt/libopenmpt/")
+			set(OPENMPT_FOUND 1)
+		endif()
 	endif()
 
 	if(NCINE_WITH_LUA)
@@ -80,7 +88,7 @@ endif()
 if(MSVC)
 	set(EXTERNAL_MSVC_DIR "${CMAKE_SOURCE_DIR}/Libs/" CACHE PATH "Set the path to the MSVC libraries directory")
 	if(NOT IS_DIRECTORY ${EXTERNAL_MSVC_DIR})
-		message(FATAL_ERROR "nCine external MSVC libraries directory not found at: ${EXTERNAL_MSVC_DIR}")
+		message(STATUS "nCine external MSVC libraries directory not found at: ${EXTERNAL_MSVC_DIR}")
 	else()
 		message(STATUS "nCine external MSVC libraries directory: ${EXTERNAL_MSVC_DIR}")
 	endif()
@@ -249,7 +257,7 @@ elseif(MSVC)
 	endif()
 
 	if(NCINE_PREFERRED_BACKEND STREQUAL "GLFW" AND
-	    EXISTS ${MSVC_LIBDIR}/glfw3dll.lib AND EXISTS ${MSVC_BINDIR}/glfw3.dll)
+		EXISTS ${MSVC_LIBDIR}/glfw3dll.lib AND EXISTS ${MSVC_BINDIR}/glfw3.dll)
 		add_library(GLFW::GLFW SHARED IMPORTED)
 		set_target_properties(GLFW::GLFW PROPERTIES
 			IMPORTED_IMPLIB ${MSVC_LIBDIR}/glfw3dll.lib
@@ -260,7 +268,7 @@ elseif(MSVC)
 	endif()
 
 	if(NCINE_PREFERRED_BACKEND STREQUAL "SDL2" AND
-	    EXISTS ${MSVC_LIBDIR}/SDL2.lib AND EXISTS ${MSVC_LIBDIR}/SDL2main.lib AND
+		EXISTS ${MSVC_LIBDIR}/SDL2.lib AND EXISTS ${MSVC_LIBDIR}/SDL2main.lib AND
 		EXISTS ${MSVC_BINDIR}/SDL2.dll)
 		add_library(SDL2::SDL2 SHARED IMPORTED)
 		set_target_properties(SDL2::SDL2 PROPERTIES
@@ -272,8 +280,8 @@ elseif(MSVC)
 	endif()
 
 	if(NCINE_WITH_PNG AND
-	    EXISTS ${MSVC_LIBDIR}/libpng16.lib AND EXISTS ${MSVC_LIBDIR}/zlib.lib AND
-	    EXISTS ${MSVC_BINDIR}/libpng16.dll AND EXISTS ${MSVC_BINDIR}/zlib.dll)
+		EXISTS ${MSVC_LIBDIR}/libpng16.lib AND EXISTS ${MSVC_LIBDIR}/zlib.lib AND
+		EXISTS ${MSVC_BINDIR}/libpng16.dll AND EXISTS ${MSVC_BINDIR}/zlib.dll)
 		add_library(ZLIB::ZLIB SHARED IMPORTED)
 		set_target_properties(ZLIB::ZLIB PROPERTIES
 			IMPORTED_IMPLIB ${MSVC_LIBDIR}/zlib.lib
@@ -289,7 +297,7 @@ elseif(MSVC)
 	endif()
 
 	if(NCINE_WITH_WEBP AND
-	    EXISTS ${MSVC_LIBDIR}/libwebp_dll.lib AND EXISTS ${MSVC_BINDIR}/libwebp.dll)
+		EXISTS ${MSVC_LIBDIR}/libwebp_dll.lib AND EXISTS ${MSVC_BINDIR}/libwebp.dll)
 		add_library(WebP::WebP SHARED IMPORTED)
 		set_target_properties(WebP::WebP PROPERTIES
 			IMPORTED_IMPLIB ${MSVC_LIBDIR}/libwebp_dll.lib
@@ -307,8 +315,8 @@ elseif(MSVC)
 		set(OPENAL_FOUND 1)
 
 		if(NCINE_WITH_VORBIS AND
-		    EXISTS ${MSVC_LIBDIR}/libogg.lib AND EXISTS ${MSVC_LIBDIR}/libvorbis.lib AND EXISTS ${MSVC_LIBDIR}/libvorbisfile.lib AND
-		    EXISTS ${MSVC_BINDIR}/libogg.dll AND EXISTS ${MSVC_BINDIR}/libvorbis.dll AND EXISTS ${MSVC_BINDIR}/libvorbisfile.dll)
+			EXISTS ${MSVC_LIBDIR}/libogg.lib AND EXISTS ${MSVC_LIBDIR}/libvorbis.lib AND EXISTS ${MSVC_LIBDIR}/libvorbisfile.lib AND
+			EXISTS ${MSVC_BINDIR}/libogg.dll AND EXISTS ${MSVC_BINDIR}/libvorbis.dll AND EXISTS ${MSVC_BINDIR}/libvorbisfile.dll)
 			add_library(Ogg::Ogg SHARED IMPORTED)
 			set_target_properties(Ogg::Ogg PROPERTIES
 				IMPORTED_IMPLIB ${MSVC_LIBDIR}/libogg.lib
@@ -340,13 +348,13 @@ elseif(MSVC)
 	endif()
 	
 	if(EXISTS ${MSVC_LIBDIR}/libdeflate.lib AND EXISTS ${MSVC_BINDIR}/libdeflate.dll)
-        add_library(libdeflate SHARED IMPORTED)
-        set_target_properties(libdeflate PROPERTIES
-            IMPORTED_IMPLIB ${MSVC_LIBDIR}/libdeflate.lib
-            IMPORTED_LOCATION ${MSVC_BINDIR}/libdeflate.dll
-            INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_MSVC_DIR}")
-        set(LIBDEFLATE_FOUND 1)
-    endif()
+		add_library(libdeflate SHARED IMPORTED)
+		set_target_properties(libdeflate PROPERTIES
+			IMPORTED_IMPLIB ${MSVC_LIBDIR}/libdeflate.lib
+			IMPORTED_LOCATION ${MSVC_BINDIR}/libdeflate.dll
+			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_MSVC_DIR}")
+		set(LIBDEFLATE_FOUND 1)
+	endif()
 elseif(MINGW OR MSYS)
 	function(set_msys_dll PREFIX DLL_NAME)
 		set(LIB_NAME "${DLL_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}")

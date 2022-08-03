@@ -60,8 +60,8 @@ const int AndroidJoystickState::AxesToMap[AndroidJoystickState::NumAxesToMap] = 
 ///////////////////////////////////////////////////////////
 
 AndroidJoystickState::AndroidJoystickState()
-    : deviceId_(-1), numButtons_(0), numAxes_(0),
-      hasDPad_(false), hasHatAxes_(false), hatState_(HatState::CENTERED)
+	: deviceId_(-1), numButtons_(0), numAxes_(0),
+	  hasDPad_(false), hasHatAxes_(false), hatState_(HatState::CENTERED)
 {
 	guid_[0] = '\0';
 	name_[0] = '\0';
@@ -251,29 +251,29 @@ bool AndroidInputManager::parseEvent(const AInputEvent *event)
 
 	// Checking for gamepad events first
 	if (((AInputEvent_getSource(event) & AINPUT_SOURCE_GAMEPAD) == AINPUT_SOURCE_GAMEPAD ||
-	     (AInputEvent_getSource(event) & AINPUT_SOURCE_JOYSTICK) == AINPUT_SOURCE_JOYSTICK ||
-	     (AInputEvent_getSource(event) & AINPUT_SOURCE_DPAD) == AINPUT_SOURCE_DPAD))
+		 (AInputEvent_getSource(event) & AINPUT_SOURCE_JOYSTICK) == AINPUT_SOURCE_JOYSTICK ||
+		 (AInputEvent_getSource(event) & AINPUT_SOURCE_DPAD) == AINPUT_SOURCE_DPAD))
 	{
 		isEventHandled = processGamepadEvent(event);
 	}
 	else if (((AInputEvent_getSource(event) & AINPUT_SOURCE_KEYBOARD) == AINPUT_SOURCE_KEYBOARD ||
-	          (AKeyEvent_getFlags(event) & AKEY_EVENT_FLAG_SOFT_KEYBOARD) == AKEY_EVENT_FLAG_SOFT_KEYBOARD) &&
-	         AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY)
+			  (AKeyEvent_getFlags(event) & AKEY_EVENT_FLAG_SOFT_KEYBOARD) == AKEY_EVENT_FLAG_SOFT_KEYBOARD) &&
+			 AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY)
 	{
 		isEventHandled = processKeyboardEvent(event);
 	}
 	else if ((AInputEvent_getSource(event) & AINPUT_SOURCE_TOUCHSCREEN) == AINPUT_SOURCE_TOUCHSCREEN &&
-	         AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION)
+			 AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION)
 	{
 		isEventHandled = processTouchEvent(event);
 	}
 	else if ((AInputEvent_getSource(event) & AINPUT_SOURCE_MOUSE) == AINPUT_SOURCE_MOUSE &&
-	         AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION)
+			 AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION)
 	{
 		isEventHandled = processMouseEvent(event);
 	}
 	else if ((AInputEvent_getSource(event) & AINPUT_SOURCE_MOUSE) == AINPUT_SOURCE_MOUSE &&
-	         AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY)
+			 AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY)
 	{
 		isEventHandled = processMouseKeyEvent(event);
 	}
@@ -521,7 +521,7 @@ bool AndroidInputManager::processKeyboardEvent(const AInputEvent *event)
 	}
 
 	if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_DOWN &&
-	    (AKeyEvent_getMetaState(event) & AMETA_CTRL_ON) == 0)
+		(AKeyEvent_getMetaState(event) & AMETA_CTRL_ON) == 0)
 	{
 		AndroidJniClass_KeyEvent keyEvent(AInputEvent_getType(event), keyCode);
 		if (keyEvent.isPrintingKey())
@@ -722,7 +722,7 @@ void AndroidInputManager::checkConnectedJoysticks()
 		const int sources = inputDevice.getSources();
 
 		if (((sources & AINPUT_SOURCE_GAMEPAD) == AINPUT_SOURCE_GAMEPAD) ||
-		    ((sources & AINPUT_SOURCE_JOYSTICK) == AINPUT_SOURCE_JOYSTICK))
+			((sources & AINPUT_SOURCE_JOYSTICK) == AINPUT_SOURCE_JOYSTICK))
 		{
 			const int joyId = findJoyId(deviceIds[i]);
 			if (joyId > -1)
@@ -757,7 +757,7 @@ int AndroidInputManager::findJoyId(int deviceId)
 	{
 		deviceInfo(deviceId, joyId);
 		LOGI_X("Device %d, \"%s\" (%s), has been connected as joystick %d - %d axes, %d buttons",
-		       deviceId, joystickStates_[joyId].name_, joystickStates_[joyId].guid_, joyId, joystickStates_[joyId].numAxes_, joystickStates_[joyId].numButtons_);
+			   deviceId, joystickStates_[joyId].name_, joystickStates_[joyId].guid_, joyId, joystickStates_[joyId].numAxes_, joystickStates_[joyId].numButtons_);
 		joystickStates_[joyId].deviceId_ = deviceId;
 
 		if (inputEventHandler_ != nullptr)
@@ -887,7 +887,7 @@ void AndroidInputManager::deviceInfo(int deviceId, int joyId)
 			else
 			{
 				if ((axis == AMOTION_EVENT_AXIS_HAT_X || axis == AMOTION_EVENT_AXIS_HAT_Y) &&
-				    joystickStates_[joyId].hasHatAxes_ == true)
+					joystickStates_[joyId].hasHatAxes_ == true)
 				{
 					joystickStates_[joyId].hasHatAxes_ = false;
 					LOGV_X("device (%d, %d) - Axis hats not detected", deviceId, joyId);

@@ -10,17 +10,21 @@
 #include "GL/GLViewport.h"
 
 #ifdef DEATH_TARGET_EMSCRIPTEN
-#include <emscripten/html5.h>
-#include "../Application.h"
+#	include <emscripten/html5.h>
+#	include "../Application.h"
 #endif
 
 namespace nCine
 {
 #ifdef DEATH_TARGET_EMSCRIPTEN
-	EM_BOOL IGfxDevice::resize_callback(int eventType, const EmscriptenUiEvent* event, void* userData)
+	EM_BOOL IGfxDevice::emscriptenHandleResize(int eventType, const EmscriptenUiEvent* event, void* userData)
 	{
-		LOGI_X("Canvas was resized to %ix%i", event->windowInnerWidth, event->windowInnerHeight);
-
+#if defined(ENABLE_LOG)
+		double cssWidth = 0.0;
+		double cssHeight = 0.0;
+		emscripten_get_element_css_size("canvas", &cssWidth, &cssHeight);
+		LOGI_X("Canvas was resized to %ix%i (canvas size is %ix%i)", event->windowInnerWidth, event->windowInnerHeight, (int)cssWidth, (int)cssHeight);
+#endif
 		if (event->windowInnerWidth > 0 && event->windowInnerHeight > 0) {
 			IGfxDevice* gfxDevice = reinterpret_cast<IGfxDevice*>(userData);
 			gfxDevice->setResolution(event->windowInnerWidth, event->windowInnerHeight);
@@ -29,7 +33,7 @@ namespace nCine
 		return 1;
 	}
 
-	EM_BOOL IGfxDevice::fullscreenchange_callback(int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData)
+	EM_BOOL IGfxDevice::emscriptenHandleFullscreen(int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData)
 	{
 		IGfxDevice* gfxDevice = reinterpret_cast<IGfxDevice*>(userData);
 		gfxDevice->setResolution(event->elementWidth, event->elementHeight);
@@ -37,7 +41,7 @@ namespace nCine
 		return 1;
 	}
 
-	EM_BOOL IGfxDevice::focus_callback(int eventType, const EmscriptenFocusEvent* event, void* userData)
+	EM_BOOL IGfxDevice::emscriptenHandleFocus(int eventType, const EmscriptenFocusEvent* event, void* userData)
 	{
 		if (eventType == EMSCRIPTEN_EVENT_FOCUS)
 			theApplication().setFocus(true);
@@ -71,14 +75,14 @@ namespace nCine
 		isFullScreen_ = fsce.isFullscreen;
 		isResizable_ = true;
 
-		emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, IGfxDevice::resize_callback);
-		emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, IGfxDevice::fullscreenchange_callback);
+		emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, IGfxDevice::emscriptenHandleResize);
+		emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, IGfxDevice::emscriptenHandleFullscreen);
 
 		// GLFW does not seem to correctly handle Emscripten focus and blur events
-#ifdef WITH_GLFW
-		emscripten_set_blur_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, true, IGfxDevice::focus_callback);
-		emscripten_set_focus_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, true, IGfxDevice::focus_callback);
-#endif
+#	ifdef WITH_GLFW
+		emscripten_set_blur_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, true, IGfxDevice::emscriptenHandleFocus);
+		emscripten_set_focus_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, true, IGfxDevice::emscriptenHandleFocus);
+#	endif
 #endif
 
 		GLViewport::initRect(0, 0, width_, height_);

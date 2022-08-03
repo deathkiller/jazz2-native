@@ -1,22 +1,21 @@
-#include <cstring> // for memset() and memcpy()
-#include <cmath> // for fabsf()
-
 #include "GlfwInputManager.h"
 #include "IInputEventHandler.h"
 #include "../Application.h"
 #include "JoyMapping.h"
-#include "../../Common.h"
+
+#include <cstring> // for memset() and memcpy()
+#include <cmath> // for fabsf()
 
 #ifdef WITH_IMGUI
-#include "ImGuiGlfwInput.h"
+#	include "ImGuiGlfwInput.h"
 #endif
 
 #ifdef WITH_NUKLEAR
-#include "NuklearGlfwInput.h"
+#	include "NuklearGlfwInput.h"
 #endif
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS
 	///////////////////////////////////////////////////////////
@@ -57,6 +56,13 @@ namespace nCine {
 		glfwSetJoystickCallback(joystickCallback);
 
 		joyMapping_.init(this);
+
+#ifdef DEATH_TARGET_EMSCRIPTEN
+		emscripten_set_touchstart_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, false, GlfwInputManager::emscriptenHandleTouch);
+		emscripten_set_touchend_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, false, GlfwInputManager::emscriptenHandleTouch);
+		emscripten_set_touchmove_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, false, GlfwInputManager::emscriptenHandleTouch);
+		emscripten_set_touchcancel_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, false, GlfwInputManager::emscriptenHandleTouch);
+#endif
 
 #ifdef WITH_IMGUI
 		ImGuiGlfwInput::init(GlfwGfxDevice::windowHandle(), true);
@@ -369,6 +375,70 @@ namespace nCine {
 		}
 	}
 
+#ifdef DEATH_TARGET_EMSCRIPTEN
+	EM_BOOL GlfwInputManager::emscriptenHandleTouch(int eventType, const EmscriptenTouchEvent* touchEvent, void* userData)
+	{
+		GlfwInputManager* inputManager = reinterpret_cast<GlfwInputManager*>(userData);
+
+		int preventDefault = 0;
+
+		double cssWidth = 0.0;
+		double cssHeight = 0.0;
+		emscripten_get_element_css_size("canvas", &cssWidth, &cssHeight);
+
+		for (int i = 0; i < touchEvent->numTouches; i++) {
+			if (!touchEvent->touches[i].isChanged) {
+				continue;
+			}
+
+			int id = touchEvent->touches[i].identifier;
+			float x = touchEvent->touches[i].targetX / cssWidth;
+			float y = touchEvent->touches[i].targetY / cssHeight;
+
+			// TODO: Revise this
+			if (eventType == EMSCRIPTEN_EVENT_TOUCHSTART) {
+				TouchEvent touchEvent;
+				touchEvent.count = 1;
+				touchEvent.actionIndex = id;
+				TouchEvent::Pointer& pointer = touchEvent.pointers[0];
+				pointer.id = id;
+				pointer.x = x;
+				pointer.y = y;
+				pointer.pressure = 1.0f;
+				inputManager->inputEventHandler_->onTouchDown(touchEvent);
+
+				// Disable browser scrolling/pinch-to-zoom if app handles touch events
+				//preventDefault = 1;
+			} else if (eventType == EMSCRIPTEN_EVENT_TOUCHMOVE) {
+				TouchEvent touchEvent;
+				touchEvent.count = 1;
+				touchEvent.actionIndex = id;
+				TouchEvent::Pointer& pointer = touchEvent.pointers[0];
+				pointer.id = id;
+				pointer.x = x;
+				pointer.y = y;
+				pointer.pressure = 1.0f;
+				inputManager->inputEventHandler_->onTouchMove(touchEvent);
+			} else {
+				TouchEvent touchEvent;
+				touchEvent.count = 1;
+				touchEvent.actionIndex = id;
+				TouchEvent::Pointer& pointer = touchEvent.pointers[0];
+				pointer.id = id;
+				pointer.x = x;
+				pointer.y = y;
+				pointer.pressure = 1.0f;
+				inputManager->inputEventHandler_->onTouchUp(touchEvent);
+
+				// Disable browser scrolling/pinch-to-zoom if app handles touch events
+				//preventDefault = 1;
+			}
+		}
+
+		return preventDefault;
+	}
+#endif
+
 	GlfwInputManager::JoystickEventsSimulator::JoystickEventsSimulator()
 	{
 		memset(buttonsState_, 0, sizeof(unsigned char) * MaxNumButtons * MaxNumJoysticks);
@@ -434,5 +504,4 @@ namespace nCine {
 		if (numAxes > 0)
 			memcpy(axesValuesState_[joyId], axesValues, sizeof(float) * numAxes);
 	}
-
 }

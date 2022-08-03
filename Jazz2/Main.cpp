@@ -123,12 +123,10 @@ public:
 	void onShutdown() override;
 	void onResizeWindow(int width, int height) override;
 
-#if defined(DEATH_TARGET_ANDROID)
-	void onTouchDown(const TouchEvent& event) override;
-	void onTouchUp(const TouchEvent& event) override;
-#endif
 	void onKeyPressed(const KeyboardEvent& event) override;
 	void onKeyReleased(const KeyboardEvent& event) override;
+	void onTouchDown(const TouchEvent& event) override;
+	void onTouchUp(const TouchEvent& event) override;
 	void onMouseButtonPressed(const MouseEvent& event) override;
 	void onMouseButtonReleased(const MouseEvent& event) override;
 	void onJoyMappedButtonPressed(const JoyMappedButtonEvent& event) override;
@@ -206,16 +204,6 @@ void GameEventHandler::onResizeWindow(int width, int height)
 	}
 }
 
-#if defined(DEATH_TARGET_ANDROID)
-void GameEventHandler::onTouchDown(const TouchEvent& event)
-{
-}
-
-void GameEventHandler::onTouchUp(const TouchEvent& event)
-{
-}
-#endif
-
 void GameEventHandler::onKeyPressed(const KeyboardEvent& event)
 {
 	if (_currentHandler != nullptr) {
@@ -227,6 +215,20 @@ void GameEventHandler::onKeyReleased(const KeyboardEvent& event)
 {
 	if (_currentHandler != nullptr) {
 		_currentHandler->OnKeyReleased(event);
+	}
+}
+
+void GameEventHandler::onTouchDown(const TouchEvent& event)
+{
+	if (_currentHandler != nullptr) {
+		_currentHandler->OnTouchDown(event);
+	}
+}
+
+void GameEventHandler::onTouchUp(const TouchEvent& event)
+{
+	if (_currentHandler != nullptr) {
+		_currentHandler->OnTouchUp(event);
 	}
 }
 

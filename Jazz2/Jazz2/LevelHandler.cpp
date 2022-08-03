@@ -49,7 +49,8 @@ namespace Jazz2
 		_blurPass3(this),
 		_blurPass4(this),
 #endif
-		_pressedActions(0)
+		_pressedActions(0),
+		_overrideActions(0)
 	{
 		auto& resolver = Jazz2::ContentResolver::Current();
 		resolver.BeginLoading();
@@ -670,6 +671,52 @@ void main() {
 		// TODO
 	}
 
+	void LevelHandler::OnTouchDown(const nCine::TouchEvent& event)
+	{
+		// TODO: Revise this
+		float x = event.pointers[0].x;
+		float y = event.pointers[0].y;
+
+		if (x < 0.14f * 3 && y >= 0.8f) {
+			_overrideActions |= (1 << (int)PlayerActions::Down);
+		} else if (x < 0.14f) {
+			_overrideActions |= (1 << (int)PlayerActions::Left);
+		} else if (x < 0.14f * 2) {
+			_overrideActions |= (1 << (int)PlayerActions::Right);
+		} else if (x > 1.0f - 0.14f) {
+			_overrideActions |= (1 << (int)PlayerActions::Jump);
+		} else if (x > 1.0f - 0.14f * 2) {
+			_overrideActions |= (1 << (int)PlayerActions::Fire);
+		} else if (x > 1.0f - 0.14f * 3) {
+			_overrideActions |= (1 << (int)PlayerActions::Run);
+		} else if (x > 1.0f - 0.14f * 4) {
+			_overrideActions |= (1 << (int)PlayerActions::SwitchWeapon);
+		}
+	}
+
+	void LevelHandler::OnTouchUp(const nCine::TouchEvent& event)
+	{
+		// TODO: Revise this
+		float x = event.pointers[0].x;
+		float y = event.pointers[0].y;
+
+		if (x < 0.14f * 3 && y >= 0.8f) {
+			_overrideActions &= ~(1 << (int)PlayerActions::Down);
+		} else if (x < 0.14f) {
+			_overrideActions &= ~(1 << (int)PlayerActions::Left);
+		} else if (x < 0.14f * 2) {
+			_overrideActions &= ~(1 << (int)PlayerActions::Right);
+		} else if (x > 1.0f - 0.14f) {
+			_overrideActions &= ~(1 << (int)PlayerActions::Jump);
+		} else if (x > 1.0f - 0.14f * 2) {
+			_overrideActions &= ~(1 << (int)PlayerActions::Fire);
+		} else if (x > 1.0f - 0.14f * 3) {
+			_overrideActions &= ~(1 << (int)PlayerActions::Run);
+		} else if (x > 1.0f - 0.14f * 4) {
+			_overrideActions &= ~(1 << (int)PlayerActions::SwitchWeapon);
+		}
+	}
+
 	void LevelHandler::AddActor(const std::shared_ptr<ActorBase>& actor)
 	{
 		actor->SetParent(_rootNode.get());
@@ -1256,6 +1303,8 @@ void main() {
 			_playerRequiredMovement.X = joyState.axisNormValue(0);
 			_playerRequiredMovement.Y = joyState.axisNormValue(1);
 		}
+
+		_pressedActions |= _overrideActions;
 	}
 
 #if ENABLE_POSTPROCESSING
