@@ -584,7 +584,7 @@ AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values);
 typedef ALCboolean (ALC_APIENTRY*LPALCREOPENDEVICESOFT)(ALCdevice *device,
     const ALCchar *deviceName, const ALCint *attribs);
 #ifdef AL_ALEXT_PROTOTYPES
-ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *deviceName,
+ALC_API ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *deviceName,
     const ALCint *attribs);
 #endif
 #endif

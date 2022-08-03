@@ -3,6 +3,11 @@
 #include "AudioStreamPlayer.h"
 #include "../ServiceLocator.h"
 
+#if defined(DEATH_TARGET_WINDOWS)
+#	include <Environment.h>
+#	include <Utf8.h>
+#endif
+
 namespace nCine
 {
 	///////////////////////////////////////////////////////////
@@ -11,6 +16,9 @@ namespace nCine
 
 	ALAudioDevice::ALAudioDevice()
 		: device_(nullptr), context_(nullptr), gain_(1.0f), deviceName_(nullptr), nativeFreq_(44100)
+#if defined(DEATH_TARGET_WINDOWS)
+		, alcReopenDeviceSOFT_(nullptr), pEnumerator_(nullptr), lastDeviceChangeTime_(0), shouldRecreate_(false)
+#endif
 	{
 		device_ = alcOpenDevice(nullptr);
 		RETURN_ASSERT_MSG_X(device_ != nullptr, "alcOpenDevice failed: 0x%x", alGetError());
@@ -23,7 +31,7 @@ namespace nCine
 		}
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-		// Try to get native sample rate of default audio device
+		// Try to get native sample rate of default audio device (default is 44100)
 		ALCint nativeFreq = 0;
 		alcGetIntegerv(device_, ALC_FREQUENCY, 1, &nativeFreq);
 		if (nativeFreq >= 44100 && nativeFreq <= 192000) {
@@ -49,10 +57,20 @@ namespace nCine
 		alSpeedOfSound(360.0f);
 		alListener3f(AL_POSITION, 0.0f, 0.0f, 0.0f);
 		alListenerf(AL_GAIN, gain_);
+
+#if defined(DEATH_TARGET_WINDOWS)
+		// Try to use ALC_SOFT_reopen_device extension to reopen the device
+		alcReopenDeviceSOFT_ = (LPALCREOPENDEVICESOFT)alGetProcAddress("alcReopenDeviceSOFT");
+		registerAudioEvents();
+#endif
 	}
 
 	ALAudioDevice::~ALAudioDevice()
 	{
+#if defined(DEATH_TARGET_WINDOWS)
+		unregisterAudioEvents();
+#endif
+
 		for (ALuint sourceId : sources_) {
 			alSourcei(sourceId, AL_BUFFER, AL_NONE);
 		}
@@ -179,6 +197,12 @@ namespace nCine
 
 	void ALAudioDevice::updatePlayers()
 	{
+		// Audio device cannot be recreated in event callback, so do it here
+		if (shouldRecreate_) {
+			shouldRecreate_ = false;
+			recreateAudioDevice();
+		}
+
 		for (int i = (int)players_.size() - 1; i >= 0; i--) {
 			if (players_[i]->isPlaying()) {
 				players_[i]->updateState();
@@ -198,4 +222,119 @@ namespace nCine
 	{
 		return nativeFreq_;
 	}
+
+#if defined(DEATH_TARGET_WINDOWS)
+	void ALAudioDevice::recreateAudioDevice()
+	{
+		// Try to use ALC_SOFT_reopen_device extension to reopen the device
+		// TODO: If the extension is not present, the device should be fully recreated
+		LOGI("Audio device must be recreated due to system changes");
+		if (alcReopenDeviceSOFT_ != nullptr) {
+			if (!alcReopenDeviceSOFT_(device_, nullptr, nullptr)) {
+				LOGE("Cannot recreate audio device - alcReopenDeviceSOFT() failed!");
+			}
+		} else {
+			LOGE("Cannot recreate audio device - missing extension");
+		}
+	}
+
+	void ALAudioDevice::registerAudioEvents()
+	{
+		HRESULT hr = ::CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, IID_PPV_ARGS(&pEnumerator_));
+		if (hr == CO_E_NOTINITIALIZED) {
+			LOGW("CoCreateInstance() failed with CO_E_NOTINITIALIZED");
+			hr = ::CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+			if (FAILED(hr)) {
+				hr = ::CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr,  CLSCTX_ALL, IID_PPV_ARGS(&pEnumerator_));
+				if (FAILED(hr)) {
+					LOGE_X("CoCreateInstance() failed: 0x%08x", hr);
+				}
+			}
+		} else if (FAILED(hr)) {
+			LOGE_X("CoCreateInstance() failed: 0x%08x", hr);
+		}
+
+		if (pEnumerator_ != nullptr) {
+			HRESULT hr = pEnumerator_->RegisterEndpointNotificationCallback(this);
+			if (FAILED(hr)) {
+				LOGE_X("RegisterEndpointNotificationCallback() failed: 0x%08x", hr);
+			}
+		}
+	}
+
+	void ALAudioDevice::unregisterAudioEvents()
+	{
+		if (pEnumerator_ == nullptr) {
+			return;
+		}
+
+		pEnumerator_->UnregisterEndpointNotificationCallback(this);
+		pEnumerator_->Release();
+		pEnumerator_ = nullptr;
+	}
+
+	ULONG ALAudioDevice::AddRef()
+	{
+		return 1;
+	}
+
+	ULONG ALAudioDevice::Release()
+	{
+		return 1;
+	}
+
+	HRESULT ALAudioDevice::QueryInterface(REFIID iid, void** object)
+	{
+		if (iid == IID_IUnknown || iid == __uuidof(IMMNotificationClient)) {
+			*object = static_cast<IMMNotificationClient*>(this);
+			return S_OK;
+		}
+		*object = nullptr;
+		return E_NOINTERFACE;
+	}
+
+	HRESULT ALAudioDevice::OnPropertyValueChanged(LPCWSTR pwstrDeviceId, const PROPERTYKEY key)
+	{
+		return S_OK;
+	}
+
+	HRESULT ALAudioDevice::OnDeviceAdded(LPCWSTR pwstrDeviceId)
+	{
+		return S_OK;
+	}
+
+	HRESULT ALAudioDevice::OnDeviceRemoved(LPCWSTR pwstrDeviceId)
+	{
+		return S_OK;
+	}
+
+	HRESULT ALAudioDevice::OnDeviceStateChanged(LPCWSTR pwstrDeviceId, DWORD dwNewState)
+	{
+		shouldRecreate_ = true;
+		return S_OK;
+	}
+
+	HRESULT ALAudioDevice::OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR pwstrDefaultDeviceId)
+	{
+		// Only listen for console device changes
+		if (flow != eRender || role != eConsole) {
+			return S_OK;
+		}
+
+		// If no device is now available, pwstrDefaultDeviceId will be nullptr
+		if (pwstrDefaultDeviceId == nullptr) {
+			return S_OK;
+		}
+
+		uint64_t now = Death::QueryUnbiasedInterruptTimeAsMs();
+		String newDeviceId = Death::Utf8::FromUtf16(pwstrDefaultDeviceId);
+		if (now - lastDeviceChangeTime_ > DeviceChangeLimitMs || newDeviceId != lastDeviceId_) {
+			lastDeviceChangeTime_ = now;
+			lastDeviceId_ = std::move(newDeviceId);
+			shouldRecreate_ = true;
+		}
+
+		return S_OK;
+	}
+#endif
 }

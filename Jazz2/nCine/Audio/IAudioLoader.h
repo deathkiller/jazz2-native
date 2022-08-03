@@ -11,8 +11,6 @@ namespace nCine
 	class IAudioLoader
 	{
 	public:
-		static constexpr int UseNativeFrequency = 0;
-
 		virtual ~IAudioLoader() {}
 
 		/// Returns true if the audio has been correctly loaded

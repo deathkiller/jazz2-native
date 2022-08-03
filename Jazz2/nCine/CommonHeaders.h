@@ -63,6 +63,7 @@
 #		ifdef __HAS_LOCAL_OPENALC
 #			include "../../Libs/AL/alc.h"
 #			include "../../Libs/AL/al.h"
+#			include "../../Libs/AL/alext.h"
 #		else
 #			include <AL/alc.h>
 #			include <AL/al.h>

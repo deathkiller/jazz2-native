@@ -209,6 +209,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\String.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringView.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\CommonInternal.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Environment.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\GemCollectible.h" />
@@ -440,6 +441,7 @@
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\SmallVector.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\String.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\StringView.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\Environment.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\GemCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\OneUpCollectible.cpp" />

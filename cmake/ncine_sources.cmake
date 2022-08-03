@@ -2,6 +2,7 @@ set(SOURCES
 	${NCINE_ROOT}/Shared/Containers/SmallVector.cpp
 	${NCINE_ROOT}/Shared/Containers/String.cpp
 	${NCINE_ROOT}/Shared/Containers/StringView.cpp
+	${NCINE_ROOT}/Shared/Environment.cpp
 	${NCINE_ROOT}/Shared/Utf8.cpp
 )
 

@@ -18,8 +18,8 @@
 
 namespace nCine
 {
-	AudioReaderMpt::AudioReaderMpt(std::unique_ptr<IFileStream> fileHandle)
-		: _fileHandle(std::move(fileHandle)), _module(nullptr)
+	AudioReaderMpt::AudioReaderMpt(std::unique_ptr<IFileStream> fileHandle, int frequency)
+		: _fileHandle(std::move(fileHandle)), _frequency(frequency), _module(nullptr)
 	{
 		_fileHandle->Open(FileAccessMode::Read);
 		ASSERT(_fileHandle->isOpened());
@@ -51,7 +51,7 @@ namespace nCine
 
 		int count = openmpt_module_read_interleaved_stereo(
 			_module,
-			SampleRate,
+			_frequency,
 			bufferSize / (2 * sizeof(int16_t)), // Buffer size per channel
 			(int16_t*)buffer
 		);

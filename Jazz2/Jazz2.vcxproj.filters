@@ -867,6 +867,9 @@
     <ClInclude Include="nCine\Primitives\Quaternion.h">
       <Filter>Header Files\nCine\Primitives</Filter>
     </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Environment.h">
+      <Filter>Header Files\Shared</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1462,6 +1465,9 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Enemies\Bee.cpp">
       <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\Environment.cpp">
+      <Filter>Source Files\Shared</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

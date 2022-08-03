@@ -5,7 +5,13 @@
 
 #include "IAudioDevice.h"
 
+#if defined(DEATH_TARGET_WINDOWS)
+#	include <mmdeviceapi.h>
+#	include <audiopolicy.h>
+#endif
+
 #include <Containers/SmallVector.h>
+#include <Containers/String.h>
 
 using namespace Death::Containers;
 
@@ -13,6 +19,9 @@ namespace nCine
 {
 	/// It represents the interface to the OpenAL audio device
 	class ALAudioDevice : public IAudioDevice
+#if defined(DEATH_TARGET_WINDOWS)
+		, public IMMNotificationClient
+#endif
 	{
 	public:
 		ALAudioDevice();
@@ -80,6 +89,30 @@ namespace nCine
 		ALAudioDevice(const ALAudioDevice&) = delete;
 		/// Deleted assignment operator
 		ALAudioDevice& operator=(const ALAudioDevice&) = delete;
+
+#if defined(DEATH_TARGET_WINDOWS)
+		static constexpr uint64_t DeviceChangeLimitMs = 250;
+
+		LPALCREOPENDEVICESOFT alcReopenDeviceSOFT_;
+		IMMDeviceEnumerator* pEnumerator_;
+		uint64_t lastDeviceChangeTime_;
+		String lastDeviceId_;
+		bool shouldRecreate_;
+
+		void recreateAudioDevice();
+		void registerAudioEvents();
+		void unregisterAudioEvents();
+
+		// IMMNotificationClient implementation
+		IFACEMETHODIMP_(ULONG) AddRef() override;
+		IFACEMETHODIMP_(ULONG) Release() override;
+		IFACEMETHODIMP QueryInterface(REFIID iid, void** object) override;
+		IFACEMETHODIMP OnPropertyValueChanged(LPCWSTR pwstrDeviceId, const PROPERTYKEY key) override;
+		IFACEMETHODIMP OnDeviceAdded(LPCWSTR pwstrDeviceId) override;
+		IFACEMETHODIMP OnDeviceRemoved(LPCWSTR pwstrDeviceId) override;
+		IFACEMETHODIMP OnDeviceStateChanged(LPCWSTR pwstrDeviceId, DWORD dwNewState) override;
+		IFACEMETHODIMP OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR pwstrDefaultDeviceId) override;
+#endif
 	};
 
 }

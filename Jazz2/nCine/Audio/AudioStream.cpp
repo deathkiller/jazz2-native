@@ -108,17 +108,8 @@ namespace nCine
 
 			// If it is still decoding data then enqueue
 			if (bytes > 0) {
-				int freq;
-				if (frequency_ == IAudioLoader::UseNativeFrequency) {
-					// If no frequency is specified, use native frequency
-					IAudioDevice& device = theServiceLocator().audioDevice();
-					freq = device.nativeFrequency();
-				} else {
-					freq = frequency_;
-				}
-
 				// On iOS `alBufferDataStatic()` could be used instead
-				alBufferData(currentBufferId_, format_, memBuffer_.get(), bytes, freq);
+				alBufferData(currentBufferId_, format_, memBuffer_.get(), bytes, frequency_);
 				alSourceQueueBuffers(source, 1, &currentBufferId_);
 				nextAvailableBufferIndex_++;
 			}

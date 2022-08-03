@@ -31,9 +31,7 @@ namespace nCine
 	class AudioReaderMpt : public IAudioReader
 	{
 	public:
-		static constexpr int SampleRate = /*48000*/44100;
-
-		AudioReaderMpt(std::unique_ptr<IFileStream> fileHandle);
+		AudioReaderMpt(std::unique_ptr<IFileStream> fileHandle, int frequency);
 		~AudioReaderMpt();
 
 		unsigned long int read(void* buffer, unsigned long int bufferSize) const override;
@@ -43,6 +41,7 @@ namespace nCine
 	private:
 		/// Audio file handle
 		std::unique_ptr<IFileStream> _fileHandle;
+		int _frequency;
 		openmpt_module* _module;
 
 		static size_t stream_read_func(void* stream, void* dst, size_t bytes);
