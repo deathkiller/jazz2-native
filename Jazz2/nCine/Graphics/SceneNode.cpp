@@ -170,11 +170,11 @@ namespace nCine
 		children_[index]->parent_ = nullptr;
 		dirtyBits_.set(DirtyBitPositions::TransformationBit);
 		dirtyBits_.set(DirtyBitPositions::AabbBit);
-		// Fast removal without preserving the order
+		// TODO: Fast removal without preserving the order
 		children_.erase(&children_[index]);
 		// The last child has been moved to this index position
-		if (children_.size() > index)
-			children_[index]->childOrderIndex_ = index;
+		//if (children_.size() > index)
+		//	children_[index]->childOrderIndex_ = index;
 		return true;
 	}
 
@@ -269,8 +269,9 @@ namespace nCine
 
 		if (updateEnabled_) {
 			transform();
-			for (SceneNode* child : children_) {
-				child->OnUpdate(timeMult);
+
+			for (unsigned int i = 0; i < (unsigned int)children_.size(); i++) {
+				children_[i]->OnUpdate(timeMult);
 			}
 
 			// A non drawable scenenode does not have the `updateRenderCommand()` method to reset the flags
@@ -310,7 +311,7 @@ namespace nCine
 
 	SceneNode::SceneNode(const SceneNode& other)
 		: Object(other), updateEnabled_(other.updateEnabled_),
-		drawEnabled_(other.drawEnabled_), parent_(nullptr), children_(4), childOrderIndex_(0),
+		drawEnabled_(other.drawEnabled_), parent_(nullptr), childOrderIndex_(0),
 		withVisitOrder_(true), visitOrderState_(other.visitOrderState_), visitOrderIndex_(0),
 		position_(other.position_), anchorPoint_(other.anchorPoint_),
 		scaleFactor_(other.scaleFactor_), rotation_(other.rotation_), color_(other.color_),

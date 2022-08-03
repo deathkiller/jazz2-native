@@ -1323,8 +1323,10 @@ namespace Jazz2::Actors
 
 						uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { };
 						std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, spawnParams, ActorFlags::None, Vector3i((int)(pos.X + fx * 2.0f), (int)(pos.Y + fy * 4.0f), 10));
-						actor->AddExternalForce(fx, fy);
-						_levelHandler->AddActor(actor);
+						if (actor != nullptr) {
+							actor->AddExternalForce(fx, fy);
+							_levelHandler->AddActor(actor);
+						}
 					}
 				}
 
