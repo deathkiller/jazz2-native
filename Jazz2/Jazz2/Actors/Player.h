@@ -3,10 +3,17 @@
 #include "../ActorBase.h"
 #include "../LevelInitialization.h"
 
+namespace Jazz2::UI
+{
+	class HUD;
+}
+
 namespace Jazz2::Actors
 {
 	class Player : public ActorBase
 	{
+		friend class UI::HUD;
+
 	public:
 		enum class Modifier {
 			None,

@@ -84,6 +84,10 @@ namespace Jazz2
 		virtual void BeginLevelChange(ExitType exitType, const StringView& nextLevel) = 0;
 		virtual void HandleGameOver() = 0;
 		virtual bool HandlePlayerDied(const std::shared_ptr<ActorBase>& player) = 0;
+		virtual void ShowLevelText(const StringView& text) = 0;
+		virtual void ShowCoins(int count) = 0;
+		virtual void ShowGems(int count) = 0;
+		virtual StringView GetLevelText(int textId, int index = -1, uint32_t delimiter = 0) = 0;
 
 		virtual bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads = true) = 0;
 		virtual bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads, __out bool& isGamepad) = 0;

@@ -23,6 +23,11 @@ namespace Jazz2
 		class Player;
 	}
 
+	namespace UI
+	{
+		class HUD;
+	}
+
 	class LevelHandler : public ILevelHandler
 	{
 		friend class ContentResolver;
@@ -87,6 +92,10 @@ namespace Jazz2
 		void BeginLevelChange(ExitType exitType, const StringView& nextLevel) override;
 		void HandleGameOver() override;
 		bool HandlePlayerDied(const std::shared_ptr<ActorBase>& player) override;
+		void ShowLevelText(const StringView& text) override;
+		void ShowCoins(int count) override;
+		void ShowGems(int count) override;
+		StringView GetLevelText(int textId, int index = -1, uint32_t delimiter = 0) override;
 
 		bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads = true) override;
 		__success(return) bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads, __out bool& isGamepad) override;
@@ -167,19 +176,41 @@ namespace Jazz2
 			{
 			}
 
-			void Initialize();
+			void Initialize(int width, int height);
 
 			bool OnDraw(RenderQueue& renderQueue) override;
-
-			void setSize(float width, float height) {
-				_size.X = width;
-				_size.Y = height;
-			}
 
 		private:
 			LevelHandler* _owner;
 			RenderCommand _renderCommand;
 			Vector2f _size;
+		};
+
+		class UpscaleRenderPass : public SceneNode
+		{
+		public:
+			UpscaleRenderPass(LevelHandler* owner)
+				: _owner(owner)
+			{
+			}
+
+			void Initialize(int width, int height, int targetWidth, int targetHeight);
+			void Register();
+
+			bool OnDraw(RenderQueue& renderQueue) override;
+
+			SceneNode* GetNode() const {
+				return _node.get();
+			}
+
+		private:
+			LevelHandler* _owner;
+			std::unique_ptr<SceneNode> _node;
+			std::unique_ptr<Texture> _target;
+			std::unique_ptr<Viewport> _view;
+			std::unique_ptr<Camera> _camera;
+			RenderCommand _renderCommand;
+			Vector2f _targetSize;
 		};
 
 		std::unique_ptr<LightingRenderer> _lightingRenderer;
@@ -197,6 +228,7 @@ namespace Jazz2
 		BlurRenderPass _blurPass1;
 		BlurRenderPass _blurPass3;
 		BlurRenderPass _blurPass4;
+		UpscaleRenderPass _upscalePass;
 #else
 		std::unique_ptr<Sprite> _viewSprite;
 #endif
@@ -212,6 +244,7 @@ namespace Jazz2
 		String _musicPath;
 		Recti _levelBounds;
 		bool _reduxMode, _cheatsUsed;
+		SmallVector<String, 0> _levelTexts;
 
 		Events::EventSpawner _eventSpawner;
 		std::unique_ptr<Events::EventMap> _eventMap;
@@ -230,6 +263,7 @@ namespace Jazz2
 		std::unique_ptr<AudioStreamPlayer> _music;
 		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
 		Metadata* _commonResources;
+		std::unique_ptr<UI::HUD> _hud;
 
 		uint32_t _pressedActions;
 		uint32_t _overrideActions;
@@ -237,7 +271,7 @@ namespace Jazz2
 
 		void OnLevelLoaded(const StringView& name, const StringView& nextLevel, const StringView& secretLevel,
 			std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap,
-			const StringView& musicPath, float ambientLight);
+			const StringView& musicPath, float ambientLight, SmallVectorImpl<String>& levelTexts);
 
 		void ResolveCollisions(float timeMult);
 		void InitializeCamera();

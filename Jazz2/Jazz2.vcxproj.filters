@@ -157,6 +157,12 @@
     <Filter Include="Header Files\Jazz2\Actors\Lighting">
       <UniqueIdentifier>{57513633-b81a-446d-af22-8e3f73cf39f2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Jazz2\UI">
+      <UniqueIdentifier>{eb7c0048-96a1-4540-9063-690a14a526cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\UI">
+      <UniqueIdentifier>{ba8465dc-da58-4362-b4fe-1c831c184563}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -870,6 +876,18 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Environment.h">
       <Filter>Header Files\Shared</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\HUD.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Canvas.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Font.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Alignment.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1468,6 +1486,15 @@
     </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\Environment.cpp">
       <Filter>Source Files\Shared</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\HUD.cpp">
+      <Filter>Source Files\Jazz2\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Canvas.cpp">
+      <Filter>Source Files\Jazz2\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Font.cpp">
+      <Filter>Source Files\Jazz2\UI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

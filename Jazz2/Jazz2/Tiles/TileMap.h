@@ -76,6 +76,7 @@ namespace Jazz2::Tiles
 		float FrameDuration;
 		float FramesLeft;
 	};
+
 	class TileMap : public SceneNode
 	{
 	public:

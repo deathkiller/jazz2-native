@@ -15,7 +15,7 @@ namespace nCine
 
 		// TODO: Revise these constants
 		static constexpr float LengthToPhysical = 0.0000000005f;
-		static constexpr float VelocityToPhysical = 3.0f;
+		static constexpr float VelocityToPhysical = 2.0f;
 		static constexpr float ReferenceDistance = 200.0f * LengthToPhysical;
 		static constexpr float MaxDistance = 900.0f * LengthToPhysical;
 

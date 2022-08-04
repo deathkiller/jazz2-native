@@ -634,8 +634,7 @@ namespace Jazz2::Tiles
 					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, alpha / 255.0f).Data());
 
-					Matrix4x4f worldMatrix = Matrix4x4f::Translation(std::floor(x2 + (TileSet::DefaultTileSize / 2)), std::floor(y2 + (TileSet::DefaultTileSize / 2)), 0.0f);
-					command->setTransformation(worldMatrix);
+					command->setTransformation(Matrix4x4f::Translation(std::floor(x2 + (TileSet::DefaultTileSize / 2)), std::floor(y2 + (TileSet::DefaultTileSize / 2)), 0.0f));
 					command->setLayer(layer.Depth);
 					command->material().setTexture(*_tileSet->_textureDiffuse);
 
@@ -993,7 +992,7 @@ namespace Jazz2::Tiles
 			debris.TexScaleX = (float(res->Base->FrameDimensions.X) / float(texSize.X));
 			debris.TexBiasX = (float(res->Base->FrameDimensions.X * col) / float(texSize.X));
 			debris.TexScaleY = (float(res->Base->FrameDimensions.Y) / float(texSize.Y));
-			debris.TexBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.X));
+			debris.TexBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.Y));
 
 			debris.DiffuseTexture = res->Base->TextureDiffuse.get();
 			debris.CollisionAction = DebrisCollisionAction::Bounce;

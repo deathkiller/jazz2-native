@@ -154,4 +154,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventSpawner.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileMap.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileSet.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Canvas.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Font.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/HUD.cpp
 )

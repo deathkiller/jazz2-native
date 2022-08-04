@@ -318,7 +318,7 @@ namespace Jazz2
 			int w = texLoader->width();
 			int h = texLoader->height();
 			auto pixels = (uint32_t*)texLoader->pixels();
-			uint32_t* palette = _palettes + paletteOffset;
+			const uint32_t* palette = _palettes + paletteOffset;
 
 			graphics->Mask = std::make_unique<uint8_t[]>(w * h);
 
@@ -594,13 +594,28 @@ namespace Jazz2
 			eventMap->ReadEvents(layerFile, tileMap, eventSetItem->value.GetInt(), difficulty);
 		}
 
+		// Load level texts
+		SmallVector<String, 0> levelTexts;
+		const auto& textEventsItem = document.FindMember("TextEvents");
+		if (textEventsItem != document.MemberEnd() && textEventsItem->value.IsArray()) {
+			for (int i = 0; i < textEventsItem->value.Size(); i++) {
+				if (textEventsItem->value[i].IsString()) {
+					const auto& text = textEventsItem->value[i].GetString();
+					levelTexts.emplace_back(text);
+				} else {
+					levelTexts.emplace_back();
+				}
+			}
+		}
+
 		levelHandler->OnLevelLoaded(
 			nameItem != descriptionItem->value.MemberEnd() && nameItem->value.IsString() ? nameItem->value.GetString() : nullptr,
 			nextLevelItem != descriptionItem->value.MemberEnd() && nextLevelItem->value.IsString() ? nextLevelItem->value.GetString() : nullptr,
 			secretLevelItem != descriptionItem->value.MemberEnd() && defaultMusicItem->value.IsString() ? secretLevelItem->value.GetString() : nullptr,
 			tileMap, eventMap,
 			defaultMusicItem != descriptionItem->value.MemberEnd() && defaultMusicItem->value.IsString() ? defaultMusicItem->value.GetString() : nullptr,
-			defaultLightItem != descriptionItem->value.MemberEnd() && defaultLightItem->value.IsNumber() ? (defaultLightItem->value.GetFloat() * 0.01f) : 1.0f
+			defaultLightItem != descriptionItem->value.MemberEnd() && defaultLightItem->value.IsNumber() ? (defaultLightItem->value.GetFloat() * 0.01f) : 1.0f,
+			levelTexts
 		);
 
 		return true;

@@ -255,6 +255,10 @@
     <ClInclude Include="Jazz2\Compatibility\JJ2Version.h" />
     <ClInclude Include="Jazz2\IRootController.h" />
     <ClInclude Include="Jazz2\LightEmitter.h" />
+    <ClInclude Include="Jazz2\UI\Alignment.h" />
+    <ClInclude Include="Jazz2\UI\Canvas.h" />
+    <ClInclude Include="Jazz2\UI\Font.h" />
+    <ClInclude Include="Jazz2\UI\HUD.h" />
     <ClInclude Include="nCine\AppConfiguration.h" />
     <ClInclude Include="nCine\Application.h" />
     <ClInclude Include="nCine\ArrayIndexer.h" />
@@ -481,6 +485,9 @@
     <ClCompile Include="Jazz2\Compatibility\JJ2Strings.cpp" />
     <ClCompile Include="Jazz2\Compatibility\JJ2Text.cpp" />
     <ClCompile Include="Jazz2\Compatibility\JJ2Tileset.cpp" />
+    <ClCompile Include="Jazz2\UI\Canvas.cpp" />
+    <ClCompile Include="Jazz2\UI\Font.cpp" />
+    <ClCompile Include="Jazz2\UI\HUD.cpp" />
     <ClCompile Include="nCine\AppConfiguration.cpp" />
     <ClCompile Include="nCine\Application.cpp" />
     <ClCompile Include="nCine\ArrayIndexer.cpp" />

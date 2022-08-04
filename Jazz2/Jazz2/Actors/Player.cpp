@@ -979,8 +979,7 @@ namespace Jazz2::Actors
 					_gems += _coins;
 					_coins = 0;
 				} else if (_bonusWarpTimer <= 0.0f) {
-					// TODO
-					//attachedHud ? .ShowCoins(coins);
+					_levelHandler->ShowCoins(_coins);
 					PlaySfx("BonusWarpNotEnoughCoins"_s);
 
 					_bonusWarpTimer = 400.0f;
@@ -1642,9 +1641,7 @@ namespace Jazz2::Actors
 							_levelHandler->BeginLevelChange((ExitType)p[0], nextLevel);
 							PlaySfx("EndOfLevel"_s);
 						} else if (_bonusWarpTimer <= 0.0f) {
-#if !SERVER
-							//attachedHud ? .ShowCoins(coins);
-#endif
+							_levelHandler->ShowCoins(_coins);
 							PlaySfx("BonusWarpNotEnoughCoins"_s);
 
 							_bonusWarpTimer = 400.0f;
@@ -1654,15 +1651,10 @@ namespace Jazz2::Actors
 				break;
 			}
 			case EventType::AreaText: { // Text, TextOffset, Vanish
-				/*string text = _levelHandler->GetLevelText(p[0]);
-				if (p[1] != 0) {
-					text = text.SubstringByOffset('|', p[1]);
-				}*/
-#if !SERVER
-				/*if (!string.IsNullOrEmpty(text)) {
-					attachedHud ? .ShowLevelText(text, false);
-				}*/
-#endif
+				uint16_t index = *(uint16_t*)&p[2];
+				StringView text = _levelHandler->GetLevelText(*(uint16_t*)&p[0], index != 0 ? index : -1, '|');
+				_levelHandler->ShowLevelText(text);
+
 				if (p[4] != 0) {
 					events->StoreTileEvent((int)(_pos.X / 32), (int)(_pos.Y / 32), EventType::Empty);
 				}
@@ -2596,15 +2588,14 @@ namespace Jazz2::Actors
 	void Player::AddCoins(int count)
 	{
 		_coins += count;
-
-		//attachedHud ? .ShowCoins(coins);
+		_levelHandler->ShowCoins(_coins);
 		PlaySfx("PickupCoin"_s);
 	}
 
 	void Player::AddGems(int count)
 	{
 		_gems += count;
-		//attachedHud ? .ShowGems(gems);
+		_levelHandler->ShowGems(_gems);
 		PlaySfx("PickupGem"_s, 1.0f, std::min(0.7f + _gemsPitch * 0.05f, 1.3f));
 
 		_gemsTimer = 120.0f;

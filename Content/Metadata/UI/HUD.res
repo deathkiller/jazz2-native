@@ -102,8 +102,7 @@
 
         "PickupGem": {
             "Path": "Pickup/Gem.png",
-            "Flags": 2,
-            "ShaderColor": [ 1, 128, 255, 190 ]
+            "PaletteOffset": 128
         },
         "PickupCoin": {
             "Path": "Pickup/coin_silver.png"

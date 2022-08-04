@@ -1,4 +1,5 @@
 ﻿#include "LevelHandler.h"
+#include "UI/HUD.h"
 #include "../Common.h"
 
 #include "../nCine/PCApplication.h"
@@ -17,6 +18,7 @@
 #include "Actors/SolidObjectBase.h"
 
 #include <float.h>
+#include <Utf8.h>
 
 using namespace nCine;
 
@@ -49,6 +51,7 @@ namespace Jazz2
 		_blurPass3(this),
 		_blurPass4(this),
 #endif
+		_upscalePass(this),
 		_pressedActions(0),
 		_overrideActions(0)
 	{
@@ -98,6 +101,9 @@ namespace Jazz2
 		_commonResources = resolver.RequestMetadata("Common/Scenery"_s);
 		resolver.PreloadMetadataAsync("Common/Explosions"_s);
 
+		// Create HUD
+		_hud = std::make_unique<UI::HUD>(this);
+
 		_eventMap->PreloadEventsAsync();
 
 		resolver.EndLoading();
@@ -105,6 +111,9 @@ namespace Jazz2
 
 	LevelHandler::~LevelHandler()
 	{
+		// Remove nodes from UpscaleRenderPass
+		_viewSprite->setParent(nullptr);
+		_hud->setParent(nullptr);
 	}
 
 	Recti LevelHandler::LevelBounds() const
@@ -127,7 +136,7 @@ namespace Jazz2
 		_ambientLightTarget = value;
 	}
 
-	void LevelHandler::OnLevelLoaded(const StringView& name, const StringView& nextLevel, const StringView& secretLevel, std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap, const StringView& musicPath, float ambientLight)
+	void LevelHandler::OnLevelLoaded(const StringView& name, const StringView& nextLevel, const StringView& secretLevel, std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap, const StringView& musicPath, float ambientLight, SmallVectorImpl<String>& levelTexts)
 	{
 		//_name = name;
 		_defaultNextLevel = nextLevel;
@@ -151,11 +160,17 @@ namespace Jazz2
 		if (!musicPath.empty()) {
 			_music = std::make_unique<AudioStreamPlayer>(fs::joinPath({ "Content"_s, "Music"_s, musicPath }));
 			_music->setLooping(true);
-			_music->setGain(0.2f);
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+			_music->setGain(1.0f);
+#	else
+			_music->setGain(0.3f);
+#	endif
 			_music->setSourceRelative(true);
 			_music->play();
 		}
 #endif
+
+		_levelTexts = std::move(levelTexts);
 	}
 
 	void LevelHandler::OnBeginFrame()
@@ -626,8 +641,10 @@ void main() {
 		_blurPass2.Initialize(_blurPass1.GetTarget(), w / 2, h / 2, Vector2f(0.0f, 1.0f));
 		_blurPass3.Initialize(_blurPass2.GetTarget(), w / 4, h / 4, Vector2f(1.0f, 0.0f));
 		_blurPass4.Initialize(_blurPass3.GetTarget(), w / 4, h / 4, Vector2f(0.0f, 1.0f));
+		_upscalePass.Initialize(w, h, width, height);
 
 		// Viewports must be registered in reverse order
+		_upscalePass.Register();
 		_blurPass4.Register();
 		_blurPass3.Register();
 		_blurPass2.Register();
@@ -637,12 +654,13 @@ void main() {
 		Viewport::chain().push_back(_lightingView.get());
 
 		if (notInitialized) {
-			SceneNode& rootNode = theApplication().rootNode();
 			_viewSprite = std::make_unique<CombineRenderer>(this);
-			_viewSprite->setParent(&rootNode);
+			_viewSprite->setParent(_upscalePass.GetNode());
+
+			_hud->setParent(_upscalePass.GetNode());
 		}
 
-		_viewSprite->Initialize();
+		_viewSprite->Initialize(w, h);
 #else
 		if (notInitialized) {
 			SceneNode& rootNode = theApplication().rootNode();
@@ -651,8 +669,6 @@ void main() {
 
 		_viewSprite->setBlendingEnabled(false);
 #endif
-		_viewSprite->setSize((float)width, (float)height);
-		_viewSprite->setPosition(0, 0);
 
 		Viewport::chain().push_back(_view.get());
 
@@ -991,6 +1007,54 @@ void main() {
 
 		// Single player can respawn immediately
 		return true;
+	}
+
+	void LevelHandler::ShowLevelText(const StringView& text)
+	{
+		_hud->ShowLevelText(text);
+	}
+
+	void LevelHandler::ShowCoins(int count)
+	{
+		_hud->ShowCoins(count);
+	}
+
+	void LevelHandler::ShowGems(int count)
+	{
+		_hud->ShowGems(count);
+	}
+
+	StringView LevelHandler::GetLevelText(int textId, int index, uint32_t delimiter)
+	{
+		if (textId < 0 || textId >= _levelTexts.size()) {
+			return { };
+		}
+
+		StringView text = _levelTexts[textId];
+		size_t textSize = text.size();
+
+		if (textSize > 0 && index >= 0) {
+			int delimiterCount = 0;
+			int start = 0;
+			int idx = 0;
+			do {
+				std::pair<char32_t, std::size_t> cursor = Death::Utf8::NextChar(text, idx);
+
+				if (cursor.first == delimiter) {
+					if (delimiterCount == index - 1) {
+						start = idx + 1;
+					} else if (delimiterCount == index) {
+						text = StringView(text.data() + start, idx - start);
+						break;
+					}
+					delimiterCount++;
+				}
+
+				idx = cursor.second;
+			} while (idx < textSize);
+		}
+
+		return text;
 	}
 
 	bool LevelHandler::PlayerActionPressed(int index, PlayerActions action, bool includeGamepads)
@@ -1423,8 +1487,10 @@ void main() {
 		return true;
 	}
 
-	void LevelHandler::CombineRenderer::Initialize()
+	void LevelHandler::CombineRenderer::Initialize(int width, int height)
 	{
+		_size = Vector2f(width, height);
+
 		_renderCommand.setType(RenderCommand::CommandTypes::SPRITE);
 		_renderCommand.material().setShader(_owner->_combineShader.get());
 		//_renderCommand.material().setBlendingEnabled(true);
@@ -1460,6 +1526,69 @@ void main() {
 		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(_size.X, _size.Y);
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+
+		renderQueue.addCommand(&_renderCommand);
+
+		return true;
+	}
+
+	void LevelHandler::UpscaleRenderPass::Initialize(int width, int height, int targetWidth, int targetHeight)
+	{
+		_targetSize = Vector2f(targetWidth, targetHeight);
+
+		bool notInitialized = (_view == nullptr);
+
+		if (notInitialized) {
+			_camera = std::make_unique<Camera>();
+		}
+		_camera->setOrthoProjection(width * (-0.5f), width * (+0.5f), height * (-0.5f), height * (+0.5f));
+		_camera->setView(0, 0, 0, 1);
+
+		if (notInitialized) {
+			_node = std::make_unique<SceneNode>();
+			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
+			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);
+			_view->setRootNode(_node.get());
+			_view->setCamera(_camera.get());
+			_view->setClearMode(Viewport::ClearMode::NEVER);
+
+			SceneNode& rootNode = theApplication().rootNode();
+			setParent(&rootNode);
+		} else {
+			_view->removeAllTextures();
+			_target->init(nullptr, Texture::Format::RGB8, width, height);
+			_view->setTexture(_target.get());
+		}
+		_target->setMagFiltering(SamplerFilter::Nearest);
+
+		// Prepare render command
+		_renderCommand.setType(RenderCommand::CommandTypes::SPRITE);
+		_renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
+		_renderCommand.material().setBlendingEnabled(true);
+		_renderCommand.material().reserveUniformsDataMemory();
+		_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+
+		GLUniformCache* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
+		if (textureUniform && textureUniform->intValue(0) != 0) {
+			textureUniform->setIntValue(0); // GL_TEXTURE0
+		}
+	}
+
+	void LevelHandler::UpscaleRenderPass::Register()
+	{
+		Viewport::chain().push_back(_view.get());
+	}
+
+	bool LevelHandler::UpscaleRenderPass::OnDraw(RenderQueue& renderQueue)
+	{
+		auto size = _target->size();
+
+		auto instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
+		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, -1.0f, 1.0f);
+		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(_targetSize.Data());
+		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+
+		_renderCommand.material().setTexture(0, *_target);
 
 		renderQueue.addCommand(&_renderCommand);
 

@@ -42,11 +42,6 @@ namespace Death::Utf8
 		return { result, end };
 	}
 
-	std::pair<char32_t, std::size_t> NextChar(const std::string& text, const std::size_t cursor)
-	{
-		return NextChar(Containers::ArrayView<const char>{text.data(), text.size()}, cursor);
-	}
-
 #if defined(DEATH_TARGET_WINDOWS)
 
 	bool ToUtf16(const char* text, int size, wchar_t* outputBuffer, int outputBufferSize)

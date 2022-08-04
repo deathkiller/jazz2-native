@@ -11,8 +11,6 @@ namespace Death::Utf8
 {
 	std::pair<char32_t, std::size_t> NextChar(Containers::ArrayView<const char> text, std::size_t cursor);
 
-	std::pair<char32_t, std::size_t> NextChar(const std::string& text, const std::size_t cursor);
-
 	template<std::size_t size>
 	inline std::pair<char32_t, std::size_t> nextChar(const char(&text)[size], const std::size_t cursor) {
 		return NextChar(Containers::ArrayView<const char>{text, size - 1}, cursor);

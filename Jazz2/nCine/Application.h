@@ -119,8 +119,8 @@ namespace nCine
 
 		/// Returns the total number of frames already rendered
 		unsigned long int numFrames() const;
-		/// Returns the elapsed time since the end of the previous frame in seconds
-		float interval() const;
+		/// Returns the average FPS during the update interval
+		float averageFps() const;
 		/// Returns a factor that represents how long the last frame took relative to the desired frame time
 		float timeMult() const;
 

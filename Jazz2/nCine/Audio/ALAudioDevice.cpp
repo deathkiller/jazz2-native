@@ -58,7 +58,7 @@ namespace nCine
 		alListener3f(AL_POSITION, 0.0f, 0.0f, 0.0f);
 		alListenerf(AL_GAIN, gain_);
 
-#if defined(AL_STOP_SOURCES_ON_DISCONNECT_SOFT)
+#if defined(AL_STOP_SOURCES_ON_DISCONNECT_SOFT) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		// Don't stop sources when device is disconnected if supported
 		alDisable(AL_STOP_SOURCES_ON_DISCONNECT_SOFT);
 #endif
@@ -202,11 +202,13 @@ namespace nCine
 
 	void ALAudioDevice::updatePlayers()
 	{
+#if defined(DEATH_TARGET_WINDOWS)
 		// Audio device cannot be recreated in event callback, so do it here
 		if (shouldRecreate_) {
 			shouldRecreate_ = false;
 			recreateAudioDevice();
 		}
+#endif
 
 		for (int i = (int)players_.size() - 1; i >= 0; i--) {
 			if (players_[i]->isPlaying()) {
@@ -238,6 +240,15 @@ namespace nCine
 			if (!alcReopenDeviceSOFT_(device_, nullptr, nullptr)) {
 				LOGE("Cannot recreate audio device - alcReopenDeviceSOFT() failed!");
 			}
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+			// Try to get native sample rate of new audio device
+			ALCint nativeFreq = 0;
+			alcGetIntegerv(device_, ALC_FREQUENCY, 1, &nativeFreq);
+			if (nativeFreq >= 44100 && nativeFreq <= 192000) {
+				nativeFreq_ = nativeFreq;
+			}
+#endif
 		} else {
 			LOGE("Cannot recreate audio device - missing extension");
 		}

@@ -103,9 +103,9 @@ namespace nCine
 		return frameTimer_->totalNumberFrames();
 	}
 
-	float Application::interval() const
+	float Application::averageFps() const
 	{
-		return frameTimer_->lastFrameInterval();
+		return frameTimer_->averageFps();
 	}
 
 	float Application::timeMult() const

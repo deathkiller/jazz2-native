@@ -168,6 +168,10 @@ namespace Jazz2
 		bool LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty);
 		void ApplyPalette(const StringView& path);
 
+		const uint32_t* GetPalettes() const {
+			return _palettes;
+		}
+
 		static ContentResolver& Current();
 
 	private:
