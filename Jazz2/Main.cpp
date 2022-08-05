@@ -125,8 +125,7 @@ public:
 
 	void onKeyPressed(const KeyboardEvent& event) override;
 	void onKeyReleased(const KeyboardEvent& event) override;
-	void onTouchDown(const TouchEvent& event) override;
-	void onTouchUp(const TouchEvent& event) override;
+	void onTouchEvent(const TouchEvent& event) override;
 	void onMouseButtonPressed(const MouseEvent& event) override;
 	void onMouseButtonReleased(const MouseEvent& event) override;
 	void onJoyMappedButtonPressed(const JoyMappedButtonEvent& event) override;
@@ -150,7 +149,7 @@ void GameEventHandler::onInit()
 {
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	theApplication().setAutoSuspension(false);
-	theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
+	//theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -218,17 +217,10 @@ void GameEventHandler::onKeyReleased(const KeyboardEvent& event)
 	}
 }
 
-void GameEventHandler::onTouchDown(const TouchEvent& event)
+void GameEventHandler::onTouchEvent(const TouchEvent& event)
 {
 	if (_currentHandler != nullptr) {
-		_currentHandler->OnTouchDown(event);
-	}
-}
-
-void GameEventHandler::onTouchUp(const TouchEvent& event)
-{
-	if (_currentHandler != nullptr) {
-		_currentHandler->OnTouchUp(event);
+		_currentHandler->OnTouchEvent(event);
 	}
 }
 

@@ -15,14 +15,29 @@ namespace Jazz2::UI
 		_graphics(nullptr),
 		_levelTextTime(-1.0f),
 		_coins(0), _gems(0),
-		_coinsTime(-1.0f), _gemsTime(-1.0f)
+		_coinsTime(-1.0f), _gemsTime(-1.0f),
+		_touchButtonsTimer(0.0f)
 	{
-		Metadata* metadata = ContentResolver::Current().RequestMetadata("UI/HUD");
+		Metadata* metadata = ContentResolver::Current().RequestMetadata("UI/HUD"_s);
 		if (metadata != nullptr) {
 			_graphics = &metadata->Graphics;
 		}
 
 		_smallFont = std::make_unique<Font>(fs::joinPath({ "Content"_s, "Animations"_s, "_custom"_s, "font_small.png"_s }));
+
+		_touchButtons[0] = CreateTouchButton(PlayerActions::None, "TouchDpad"_s, Alignment::BottomLeft, DpadLeft, DpadBottom, DpadSize, DpadSize);
+		// D-pad subsections
+		_touchButtons[1] = CreateTouchButton(PlayerActions::Left, { }, Alignment::BottomLeft | AllowRollover, DpadLeft - DpadThreshold, DpadBottom, (DpadSize / 3) + DpadThreshold, DpadSize);
+		_touchButtons[2] = CreateTouchButton(PlayerActions::Right, { }, Alignment::BottomLeft | AllowRollover, DpadLeft + (DpadSize * 2 / 3), DpadBottom, (DpadSize / 3) + DpadThreshold, DpadSize);
+		_touchButtons[3] = CreateTouchButton(PlayerActions::Up, { }, Alignment::BottomLeft, DpadLeft, DpadBottom + (DpadSize * 2 / 3), DpadSize, (DpadSize / 3) + DpadThreshold);
+		_touchButtons[4] = CreateTouchButton(PlayerActions::Down, { }, Alignment::BottomLeft, DpadLeft, DpadBottom - DpadThreshold, DpadSize, (DpadSize / 3) + DpadThreshold);
+		// Action buttons
+		_touchButtons[5] = CreateTouchButton(PlayerActions::Fire, "TouchFire"_s, Alignment::BottomRight, (ButtonSize + 0.02f) * 2, 0.04f, ButtonSize, ButtonSize);
+		_touchButtons[6] = CreateTouchButton(PlayerActions::Jump, "TouchJump"_s, Alignment::BottomRight, (ButtonSize + 0.02f), 0.04f + 0.08f, ButtonSize, ButtonSize);
+		_touchButtons[7] = CreateTouchButton(PlayerActions::Run, "TouchRun"_s, Alignment::BottomRight, 0.001f, 0.01f + 0.15f, ButtonSize, ButtonSize);
+		_touchButtons[8] = CreateTouchButton(PlayerActions::SwitchWeapon, "TouchSwitch"_s, Alignment::BottomRight, ButtonSize + 0.01f, 0.04f + 0.28f, SmallButtonSize, SmallButtonSize);
+
+		static_assert(_countof(_touchButtons) == 9, "Touch button count mismatch");
 	}
 
 	void HUD::OnUpdate(float timeMult)
@@ -38,6 +53,9 @@ namespace Jazz2::UI
 		if (_gemsTime >= 0.0f) {
 			_gemsTime += timeMult;
 		}
+		if (_touchButtonsTimer > 0.0f) {
+			_touchButtonsTimer -= timeMult;
+		}
 	}
 
 	bool HUD::OnDraw(RenderQueue& renderQueue)
@@ -52,7 +70,12 @@ namespace Jazz2::UI
 
 		Rectf view = Rectf(0, 0, ViewSize.X, ViewSize.Y);
 		Rectf adjustedView = view;
-		//AdjustVisibleZone(ref view);
+		if (_touchButtonsTimer > 0.0f) {
+			float width = adjustedView.W;
+
+			adjustedView.X = 90 + /*LeftPadding*/0.1f * width;
+			adjustedView.W = adjustedView.W - adjustedView.X - (140 + /*RightPadding*/0.1f * width);
+		}
 
 		float right = adjustedView.X + adjustedView.W;
 		float bottom = adjustedView.Y + adjustedView.H;
@@ -85,24 +108,24 @@ namespace Jazz2::UI
 			stringBuffer[player->_health] = '\0';
 
 			if (player->_lives > 0) {
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 36 - 3 - 0.5f, bottom - 16 + 0.5f, FontShadowLayer,
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 3 - 0.5f, bottom - 16 + 0.5f, FontShadowLayer,
 					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 36 - 3 + 0.5f, bottom - 16 - 0.5f, FontShadowLayer,
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 3 + 0.5f, bottom - 16 - 0.5f, FontShadowLayer,
 					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
-				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 36 - 3, bottom - 16, FontLayer,
+				_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36 - 3, bottom - 16, FontLayer,
 					Alignment::BottomLeft, Colorf::White, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
 
 				snprintf(stringBuffer, _countof(stringBuffer), "x%i", player->_lives);
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 36 - 4, bottom + 1.0f, FontShadowLayer,
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 4, bottom + 1.0f, FontShadowLayer,
 					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
-				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 36 - 4, bottom, FontLayer,
+				_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36 - 4, bottom, FontLayer,
 					Alignment::BottomLeft, Colorf::White);
 			} else {
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 36 - 3 - 0.5f, bottom - 3 + 0.5f, FontShadowLayer,
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 3 - 0.5f, bottom - 3 + 0.5f, FontShadowLayer,
 					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 36 - 3 + 0.5f, bottom - 3 - 0.5f, FontShadowLayer,
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 3 + 0.5f, bottom - 3 - 0.5f, FontShadowLayer,
 					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
-				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 36 - 3, bottom - 3, FontLayer,
+				_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36 - 3, bottom - 3, FontLayer,
 					Alignment::BottomLeft, Colorf::White, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
 			}
 
@@ -158,11 +181,185 @@ namespace Jazz2::UI
 
 			// FPS
 			snprintf(stringBuffer, _countof(stringBuffer), "%i", (int)std::round(theApplication().averageFps()));
-			_smallFont->DrawString(this, stringBuffer, charOffset, right - 4, 0, FontLayer,
+			_smallFont->DrawString(this, stringBuffer, charOffset, view.W - 4, 0, FontLayer,
 				Alignment::TopRight, Colorf::White, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+
+			// Touch Controls
+			if (_touchButtonsTimer > 0.0f) {
+				for (auto& button : _touchButtons) {
+					if (button.Graphics == nullptr) {
+						continue;
+					}
+
+					float x = button.Left;
+					float y = button.Top;
+					if ((button.Align & Alignment::Right) == Alignment::Right) {
+						x = ViewSize.X - button.Width * 0.5f - x;
+					} else {
+						x = x + button.Width * 0.5f;
+					}
+					if ((button.Align & Alignment::Bottom) == Alignment::Bottom) {
+						y = ViewSize.Y - button.Height * 0.5f - y;
+					} else {
+						y = y + button.Height * 0.5f;
+					}
+					x = x - ViewSize.X * 0.5f;
+					y = ViewSize.Y * 0.5f - y;
+
+					DrawTexture(*button.Graphics->Base->TextureDiffuse, Vector2f(x, y), TouchButtonsLayer, Vector2f(button.Width, button.Height), Vector4f(1.0f, 0.0f, -1.0f, 1.0f), Colorf::White);
+				}
+			}
 		}
 
 		return true;
+	}
+
+	void HUD::OnTouchEvent(const TouchEvent& event, uint32_t& overrideActions)
+	{
+		_touchButtonsTimer = 1200.0f;
+
+		if (event.type == TouchEventType::Down || event.type == TouchEventType::PointerDown) {
+			int pointerIndex = event.findPointerIndex(event.actionIndex);
+			if (pointerIndex != -1) {
+				float x = event.pointers[pointerIndex].x * (float)ViewSize.X;
+				float y = event.pointers[pointerIndex].y * (float)ViewSize.Y;
+				/*if (x < 0.5f) {
+					x -= LeftPadding;
+					y -= BottomPadding1;
+				} else {
+					x += RightPadding;
+					y -= BottomPadding2;
+				}*/
+
+				for (int i = 0; i < TouchButtonsCount; i++) {
+					auto& button = _touchButtons[i];
+					if (button.Action != PlayerActions::None) {
+						if (button.CurrentPointerId == -1 && IsOnButton(button, x, y)) {
+							button.CurrentPointerId = event.actionIndex;
+							overrideActions |= (1 << (int)button.Action);
+						}
+					}
+				}
+			}
+		} else if (event.type == TouchEventType::Move) {
+			for (int i = 0; i < TouchButtonsCount; i++) {
+				auto& button = _touchButtons[i];
+				if (button.Action != PlayerActions::None) {
+					if (button.CurrentPointerId != -1) {
+						bool isPressed = false;
+						int pointerIndex = event.findPointerIndex(button.CurrentPointerId);
+						if (pointerIndex != -1) {
+							float x = event.pointers[pointerIndex].x * (float)ViewSize.X;
+							float y = event.pointers[pointerIndex].y * (float)ViewSize.Y;
+							/*if (x < 0.5f) {
+								x -= LeftPadding;
+							} else {
+								x += RightPadding;
+							}*/
+
+							isPressed = IsOnButton(button, x, y);
+						}
+
+						if (!isPressed) {
+							button.CurrentPointerId = -1;
+							overrideActions &= ~(1 << (int)button.Action);
+						}
+					} else {
+						// Only some buttons should allow roll-over (only when the player's on foot)
+						auto& players = _levelHandler->GetPlayers();
+						bool canPlayerMoveVertically = (!players.empty() && players[0]->CanMoveVertically());
+						if ((button.Align & AllowRollover) != AllowRollover && !canPlayerMoveVertically) continue;
+
+						for (int j = 0; j < event.count; j++) {
+							float x = event.pointers[j].x * (float)ViewSize.X;
+							float y = event.pointers[j].y * (float)ViewSize.Y;
+							/*if (x < 0.5f) {
+								x -= LeftPadding;
+							} else {
+								x += RightPadding;
+							}*/
+
+							if (IsOnButton(button, x, y)) {
+								button.CurrentPointerId = event.pointers[j].id;
+								overrideActions |= (1 << (int)button.Action);
+								break;
+							}
+						}
+					}
+				}
+			}
+		} else if (event.type == TouchEventType::Up) {
+			for (int i = 0; i < TouchButtonsCount; i++) {
+				auto& button = _touchButtons[i];
+				if (button.CurrentPointerId != -1) {
+					button.CurrentPointerId = -1;
+					overrideActions &= ~(1 << (int)button.Action);
+				}
+			}
+
+		} else if (event.type == TouchEventType::PointerUp) {
+			for (int i = 0; i < TouchButtonsCount; i++) {
+				auto& button = _touchButtons[i];
+				if (button.CurrentPointerId == event.actionIndex) {
+					button.CurrentPointerId = -1;
+					overrideActions &= ~(1 << (int)button.Action);
+				}
+			}
+		}
+	}
+
+	void HUD::ShowLevelText(const StringView& text)
+	{
+		if (_levelText == text || text.empty()) {
+			return;
+		}
+
+		_levelText = text;
+		_levelTextTime = 0.0f;
+	}
+
+	void HUD::ShowCoins(int count)
+	{
+		constexpr float StillTime = 120.0f;
+		constexpr float TransitionTime = 60.0f;
+
+		_coins = count;
+
+		if (_coinsTime < 0.0f) {
+			_coinsTime = 0.0f;
+		} else if (_coinsTime > TransitionTime) {
+			_coinsTime = TransitionTime;
+		}
+
+		if (_gemsTime >= 0.0f) {
+			if (_gemsTime <= TransitionTime + StillTime) {
+				_gemsTime = TransitionTime + StillTime;
+			} else {
+				_gemsTime = -1.0f;
+			}
+		}
+	}
+
+	void HUD::ShowGems(int count)
+	{
+		constexpr float StillTime = 120.0f;
+		constexpr float TransitionTime = 60.0f;
+
+		_gems = count;
+
+		if (_gemsTime < 0.0f) {
+			_gemsTime = 0.0f;
+		} else if (_gemsTime > TransitionTime) {
+			_gemsTime = TransitionTime;
+		}
+
+		if (_coinsTime >= 0.0f) {
+			if (_coinsTime <= TransitionTime + StillTime) {
+				_coinsTime = TransitionTime + StillTime;
+			} else {
+				_coinsTime = -1.0f;
+			}
+		}
 	}
 
 	void HUD::DrawLevelText(int& charOffset)
@@ -185,10 +382,10 @@ namespace Jazz2::UI
 		}
 
 		int charOffsetShadow = charOffset;
-		_smallFont->DrawString(this, _levelText, charOffsetShadow, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.06f + 2.5f, FontShadowLayer,
+		_smallFont->DrawString(this, _levelText, charOffsetShadow, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.04f + 2.5f, FontShadowLayer,
 			Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 1.0f, 0.72f, 0.8f, 0.8f);
 
-		_smallFont->DrawString(this, _levelText, charOffset, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.06f, FontLayer,
+		_smallFont->DrawString(this, _levelText, charOffset, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.04f, FontLayer,
 			Alignment::Top, Colorf::White, 1.0f, 0.72f, 0.8f, 0.8f);
 
 		if (_levelTextTime > TotalTime) {
@@ -286,7 +483,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	void HUD::DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment alignment, const Colorf& color, float scaleX, float scaleY)
+	void HUD::DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY)
 	{
 		auto it = _graphics->find(String::nullTerminatedView(name));
 		if (it == _graphics->end()) {
@@ -299,8 +496,7 @@ namespace Jazz2::UI
 
 		GenericGraphicResource* base = it->second.Base;
 		Vector2f size = Vector2f(base->FrameDimensions.X * scaleX, base->FrameDimensions.Y * scaleY);
-		Vector2i viewSize = _levelHandler->GetViewSize();
-		Vector2f adjustedPos = ApplyAlignment(alignment, Vector2f(x - viewSize.X * 0.5f, viewSize.Y * 0.5f - y), size);
+		Vector2f adjustedPos = ApplyAlignment(align, Vector2f(x - ViewSize.X * 0.5f, ViewSize.Y * 0.5f - y), size);
 
 		Vector2i texSize = base->TextureDiffuse->size();
 		int col = frame % base->FrameConfiguration.X;
@@ -379,57 +575,43 @@ namespace Jazz2::UI
 		}
 	}
 
-	void HUD::ShowLevelText(const StringView& text)
+	HUD::TouchButtonInfo HUD::CreateTouchButton(PlayerActions action, const StringView& identifier, Alignment align, float x, float y, float w, float h)
 	{
-		if (_levelText == text || text.empty()) {
-			return;
+		TouchButtonInfo info;
+		info.Action = action;
+		info.Left = x * LevelHandler::DefaultWidth * 0.5f;
+		info.Top = y * LevelHandler::DefaultWidth * 0.5f;
+		info.Width = w * LevelHandler::DefaultWidth * 0.5f;
+		info.Height = h * LevelHandler::DefaultWidth * 0.5f;
+
+		if (!identifier.empty()) {
+			auto it = _graphics->find(String::nullTerminatedView(identifier));
+			info.Graphics = (it != _graphics->end() ? &it->second : nullptr);
+		} else {
+			info.Graphics = nullptr;
 		}
 
-		_levelText = text;
-		_levelTextTime = 0.0f;
+		info.CurrentPointerId = -1;
+		info.Align = align;
+		return info;
 	}
 
-	void HUD::ShowCoins(int count)
+	bool HUD::IsOnButton(const HUD::TouchButtonInfo& button, float x, float y)
 	{
-		constexpr float StillTime = 120.0f;
-		constexpr float TransitionTime = 60.0f;
+		float left = button.Left;
+		if ((button.Align & Alignment::Right) == Alignment::Right) { left = ViewSize.X - button.Width - left; }
+		if (x < left) return false;
 
-		_coins = count;
+		float top = button.Top;
+		if ((button.Align & Alignment::Bottom) == Alignment::Bottom) { top = ViewSize.Y - button.Height - top; }
+		if (y < top) return false;
 
-		if (_coinsTime < 0.0f) {
-			_coinsTime = 0.0f;
-		} else if (_coinsTime > TransitionTime) {
-			_coinsTime = TransitionTime;
-		}
+		float right = left + button.Width;
+		if (x > right) return false;
 
-		if (_gemsTime >= 0.0f) {
-			if (_gemsTime <= TransitionTime + StillTime) {
-				_gemsTime = TransitionTime + StillTime;
-			} else {
-				_gemsTime = -1.0f;
-			}
-		}
-	}
+		float bottom = top + button.Height;
+		if (y > bottom) return false;
 
-	void HUD::ShowGems(int count)
-	{
-		constexpr float StillTime = 120.0f;
-		constexpr float TransitionTime = 60.0f;
-
-		_gems = count;
-
-		if (_gemsTime < 0.0f) {
-			_gemsTime = 0.0f;
-		} else if (_gemsTime > TransitionTime) {
-			_gemsTime = TransitionTime;
-		}
-
-		if (_coinsTime >= 0.0f) {
-			if (_coinsTime <= TransitionTime + StillTime) {
-				_coinsTime = TransitionTime + StillTime;
-			} else {
-				_coinsTime = -1.0f;
-			}
-		}
+		return true;
 	}
 }

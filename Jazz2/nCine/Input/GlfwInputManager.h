@@ -210,7 +210,7 @@ namespace nCine
 		static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 		static void joystickCallback(int joy, int event);
 #ifdef DEATH_TARGET_EMSCRIPTEN
-		static EM_BOOL emscriptenHandleTouch(int eventType, const EmscriptenTouchEvent* touchEvent, void* userData);
+		static EM_BOOL emscriptenHandleTouch(int eventType, const EmscriptenTouchEvent* event, void* userData);
 #endif
 
 		static KeySym keySymValueToEnum(int keysym);

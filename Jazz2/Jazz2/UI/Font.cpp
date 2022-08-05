@@ -221,7 +221,8 @@ namespace Jazz2::UI
 					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(uvRect.W * scale, uvRect.H * scale);
 					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(color.Data());
 
-					command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
+					// TODO: It looks better with the "0.5f" offset
+					command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y + 0.5f, 0.0f));
 					command->setLayer(zz++);
 					command->material().setTexture(*_texture.get());
 

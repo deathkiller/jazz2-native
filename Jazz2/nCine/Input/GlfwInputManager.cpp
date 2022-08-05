@@ -376,66 +376,44 @@ namespace nCine
 	}
 
 #ifdef DEATH_TARGET_EMSCRIPTEN
-	EM_BOOL GlfwInputManager::emscriptenHandleTouch(int eventType, const EmscriptenTouchEvent* touchEvent, void* userData)
+	EM_BOOL GlfwInputManager::emscriptenHandleTouch(int eventType, const EmscriptenTouchEvent* event, void* userData)
 	{
 		GlfwInputManager* inputManager = reinterpret_cast<GlfwInputManager*>(userData);
-
-		int preventDefault = 0;
 
 		double cssWidth = 0.0;
 		double cssHeight = 0.0;
 		emscripten_get_element_css_size("canvas", &cssWidth, &cssHeight);
 
-		for (int i = 0; i < touchEvent->numTouches; i++) {
-			if (!touchEvent->touches[i].isChanged) {
+		TouchEvent touchEvent;
+		touchEvent.count = std::min((unsigned int)event->numTouches, TouchEvent::MaxPointers);
+		switch (eventType) {
+			case EMSCRIPTEN_EVENT_TOUCHSTART:
+				touchEvent.type = (touchEvent.count >= 2 ? TouchEventType::PointerDown : TouchEventType::Down);
+				break;
+			case EMSCRIPTEN_EVENT_TOUCHMOVE:
+				touchEvent.type = TouchEventType::Move;
+				break;
+			default:
+				touchEvent.type = (touchEvent.count >= 0 ? TouchEventType::PointerUp : TouchEventType::Up);
+				break;
+		}
+
+		for (int i = 0; i < touchEvent.count; i++) {
+			auto& pointer = touchEvent.pointers[i];
+			pointer.id = event->touches[i].identifier;
+			pointer.x = (float)(event->touches[i].targetX / cssWidth);
+			pointer.y = (float)(event->touches[i].targetY / cssHeight);
+			pointer.pressure = 1.0f;
+
+			if (!event->touches[i].isChanged) {
 				continue;
 			}
 
-			int id = touchEvent->touches[i].identifier;
-			float x = touchEvent->touches[i].targetX / cssWidth;
-			float y = touchEvent->touches[i].targetY / cssHeight;
-
-			// TODO: Revise this
-			if (eventType == EMSCRIPTEN_EVENT_TOUCHSTART) {
-				TouchEvent touchEvent;
-				touchEvent.count = 1;
-				touchEvent.actionIndex = id;
-				TouchEvent::Pointer& pointer = touchEvent.pointers[0];
-				pointer.id = id;
-				pointer.x = x;
-				pointer.y = y;
-				pointer.pressure = 1.0f;
-				inputManager->inputEventHandler_->onTouchDown(touchEvent);
-
-				// Disable browser scrolling/pinch-to-zoom if app handles touch events
-				//preventDefault = 1;
-			} else if (eventType == EMSCRIPTEN_EVENT_TOUCHMOVE) {
-				TouchEvent touchEvent;
-				touchEvent.count = 1;
-				touchEvent.actionIndex = id;
-				TouchEvent::Pointer& pointer = touchEvent.pointers[0];
-				pointer.id = id;
-				pointer.x = x;
-				pointer.y = y;
-				pointer.pressure = 1.0f;
-				inputManager->inputEventHandler_->onTouchMove(touchEvent);
-			} else {
-				TouchEvent touchEvent;
-				touchEvent.count = 1;
-				touchEvent.actionIndex = id;
-				TouchEvent::Pointer& pointer = touchEvent.pointers[0];
-				pointer.id = id;
-				pointer.x = x;
-				pointer.y = y;
-				pointer.pressure = 1.0f;
-				inputManager->inputEventHandler_->onTouchUp(touchEvent);
-
-				// Disable browser scrolling/pinch-to-zoom if app handles touch events
-				//preventDefault = 1;
-			}
+			touchEvent.actionIndex = pointer.id;
+			inputManager->inputEventHandler_->onTouchEvent(touchEvent);
 		}
 
-		return preventDefault;
+		return 0;
 	}
 #endif
 

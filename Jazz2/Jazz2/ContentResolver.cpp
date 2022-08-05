@@ -319,20 +319,47 @@ namespace Jazz2
 			int h = texLoader->height();
 			auto pixels = (uint32_t*)texLoader->pixels();
 			const uint32_t* palette = _palettes + paletteOffset;
+			bool linearSampling = false;
+			bool needsMask = true;
 
-			graphics->Mask = std::make_unique<uint8_t[]>(w * h);
+			const auto& flagsItem = document.FindMember("Flags");
+			if (flagsItem != document.MemberEnd() && flagsItem->value.IsInt()) {
+				int flags = flagsItem->value.GetInt();
+				// Palette already applied, keep as is
+				if ((flags & 0x01) != 0x01) {
+					palette = nullptr;
+					// TODO: Apply linear sampling only to these images
+					if ((flags & 0x02) == 0x02) {
+						linearSampling = true;
+					}
+				}
+				if ((flags & 0x08) == 0x08) {
+					needsMask = false;
+				}
+			}
 
-			for (int i = 0; i < w * h; i++) {
-				uint32_t color = palette[pixels[i] & 0xff];
-				// Save original alpha value for collision checking
-				graphics->Mask[i] = ((pixels[i] >> 24) & 0xff);
-				pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
+			if (needsMask) {
+				graphics->Mask = std::make_unique<uint8_t[]>(w * h);
+
+				for (int i = 0; i < w * h; i++) {
+					// Save original alpha value for collision checking
+					graphics->Mask[i] = ((pixels[i] >> 24) & 0xff);
+					if (palette != nullptr) {
+						uint32_t color = palette[pixels[i] & 0xff];
+						pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
+					}
+				}
+			} else if (palette != nullptr) {
+				for (int i = 0; i < w * h; i++) {
+					uint32_t color = palette[pixels[i] & 0xff];
+					pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
+				}
 			}
 
 			graphics->TextureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, w, h);
 			graphics->TextureDiffuse->loadFromTexels((unsigned char*)pixels, 0, 0, w, h);
-			graphics->TextureDiffuse->setMinFiltering(SamplerFilter::Nearest);
-			graphics->TextureDiffuse->setMagFiltering(SamplerFilter::Nearest);
+			graphics->TextureDiffuse->setMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
+			graphics->TextureDiffuse->setMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
 
 			const auto& frameDimensions = document["FrameSize"].GetArray();
 			const auto& frameConfiguration = document["FrameConfiguration"].GetArray();

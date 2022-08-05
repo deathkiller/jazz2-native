@@ -138,6 +138,12 @@ namespace Jazz2
 
 	void LevelHandler::OnLevelLoaded(const StringView& name, const StringView& nextLevel, const StringView& secretLevel, std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap, const StringView& musicPath, float ambientLight, SmallVectorImpl<String>& levelTexts)
 	{
+		if (!name.empty()) {
+			theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection - "_s + name);
+		} else {
+			theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection"_s);
+		}
+
 		//_name = name;
 		_defaultNextLevel = nextLevel;
 		_defaultSecretLevel = secretLevel;
@@ -687,50 +693,9 @@ void main() {
 		// TODO
 	}
 
-	void LevelHandler::OnTouchDown(const nCine::TouchEvent& event)
+	void LevelHandler::OnTouchEvent(const nCine::TouchEvent& event)
 	{
-		// TODO: Revise this
-		float x = event.pointers[0].x;
-		float y = event.pointers[0].y;
-
-		if (x < 0.14f * 3 && y >= 0.8f) {
-			_overrideActions |= (1 << (int)PlayerActions::Down);
-		} else if (x < 0.14f) {
-			_overrideActions |= (1 << (int)PlayerActions::Left);
-		} else if (x < 0.14f * 2) {
-			_overrideActions |= (1 << (int)PlayerActions::Right);
-		} else if (x > 1.0f - 0.14f) {
-			_overrideActions |= (1 << (int)PlayerActions::Jump);
-		} else if (x > 1.0f - 0.14f * 2) {
-			_overrideActions |= (1 << (int)PlayerActions::Fire);
-		} else if (x > 1.0f - 0.14f * 3) {
-			_overrideActions |= (1 << (int)PlayerActions::Run);
-		} else if (x > 1.0f - 0.14f * 4) {
-			_overrideActions |= (1 << (int)PlayerActions::SwitchWeapon);
-		}
-	}
-
-	void LevelHandler::OnTouchUp(const nCine::TouchEvent& event)
-	{
-		// TODO: Revise this
-		float x = event.pointers[0].x;
-		float y = event.pointers[0].y;
-
-		if (x < 0.14f * 3 && y >= 0.8f) {
-			_overrideActions &= ~(1 << (int)PlayerActions::Down);
-		} else if (x < 0.14f) {
-			_overrideActions &= ~(1 << (int)PlayerActions::Left);
-		} else if (x < 0.14f * 2) {
-			_overrideActions &= ~(1 << (int)PlayerActions::Right);
-		} else if (x > 1.0f - 0.14f) {
-			_overrideActions &= ~(1 << (int)PlayerActions::Jump);
-		} else if (x > 1.0f - 0.14f * 2) {
-			_overrideActions &= ~(1 << (int)PlayerActions::Fire);
-		} else if (x > 1.0f - 0.14f * 3) {
-			_overrideActions &= ~(1 << (int)PlayerActions::Run);
-		} else if (x > 1.0f - 0.14f * 4) {
-			_overrideActions &= ~(1 << (int)PlayerActions::SwitchWeapon);
-		}
+		_hud->OnTouchEvent(event, _overrideActions);
 	}
 
 	void LevelHandler::AddActor(const std::shared_ptr<ActorBase>& actor)

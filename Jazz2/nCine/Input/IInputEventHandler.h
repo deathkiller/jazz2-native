@@ -19,16 +19,8 @@ namespace nCine
 		inline virtual void onKeyReleased(const KeyboardEvent& event) {}
 		/// Callback function called every time a text input is generated
 		inline virtual void onTextInput(const TextInputEvent& event) {}
-		/// Callback function called every time the first screen touch is made
-		inline virtual void onTouchDown(const TouchEvent& event) {}
-		/// Callback function called every time the last screen touch is released
-		inline virtual void onTouchUp(const TouchEvent& event) {}
-		/// Callback function called every time a screen touch is moved
-		inline virtual void onTouchMove(const TouchEvent& event) {}
-		/// Callback function called every time a screen touch different than the first one is made
-		inline virtual void onPointerDown(const TouchEvent& event) {}
-		/// Callback function called every time a screen touch different than the last one is released
-		inline virtual void onPointerUp(const TouchEvent& event) {}
+		/// Callback function called every time a touch event is made
+		inline virtual void onTouchEvent(const TouchEvent& event) {}
 #ifdef DEATH_TARGET_ANDROID
 		/// Callback function called at fixed time with the updated reading from the accelerometer sensor
 		inline virtual void onAcceleration(const AccelerometerEvent& event) {}

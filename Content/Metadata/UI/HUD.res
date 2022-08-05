@@ -120,6 +120,22 @@
         },
         "WeaponWheelDim": {
             "Path": "_custom/dim.png"
+        },
+        
+        "TouchDpad": {
+            "Path": "_custom/touch_dpad.png"
+        },
+        "TouchFire": {
+            "Path": "_custom/touch_fire.png"
+        },
+        "TouchJump": {
+            "Path": "_custom/touch_jump.png"
+        },
+        "TouchRun": {
+            "Path": "_custom/touch_run.png"
+        },
+        "TouchSwitch": {
+            "Path": "_custom/touch_switch.png"
         }
     }
 }

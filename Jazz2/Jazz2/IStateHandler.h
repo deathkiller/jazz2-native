@@ -17,8 +17,7 @@ namespace Jazz2
 
 		virtual void OnKeyPressed(const nCine::KeyboardEvent& event) { }
 		virtual void OnKeyReleased(const nCine::KeyboardEvent& event) { }
-		virtual void OnTouchDown(const nCine::TouchEvent& event) { }
-		virtual void OnTouchUp(const nCine::TouchEvent& event) { }
+		virtual void OnTouchEvent(const nCine::TouchEvent& event) { }
 		
 	private:
 		/// Deleted copy constructor

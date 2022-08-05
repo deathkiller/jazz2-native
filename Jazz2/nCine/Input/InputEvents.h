@@ -53,11 +53,26 @@ namespace nCine
 		};
 	};
 
+	enum class TouchEventType
+	{
+		/// Called every time the first screen touch is made
+		Down,
+		/// Called every time the last screen touch is released
+		Up,
+		/// Called every time a screen touch is moved
+		Move,
+		/// Called every time a screen touch different than the first one is made
+		PointerDown,
+		/// Called every time a screen touch different than the last one is released
+		PointerUp
+	};
+
 	/// Information about a screen touch event
 	class TouchEvent
 	{
 	public:
-		static const unsigned int MaxPointers = 10;
+		static constexpr unsigned int MaxPointers = 10;
+
 		struct Pointer
 		{
 			int id;
@@ -68,6 +83,7 @@ namespace nCine
 		TouchEvent()
 			: count(0), actionIndex(-1) {}
 
+		TouchEventType type;
 		unsigned int count;
 		int actionIndex;
 		Pointer pointers[MaxPointers];
