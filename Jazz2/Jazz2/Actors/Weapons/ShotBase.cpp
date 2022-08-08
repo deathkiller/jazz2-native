@@ -43,12 +43,20 @@ namespace Jazz2::Actors::Weapons
 
 	void ShotBase::TriggerRicochet(ActorBase* other)
 	{
-		if (_lastRicochet != other) {
-			_lastRicochet = other;
-			_lastRicochetFrame = theApplication().numFrames();
-			OnRicochet();
-		} else if (_lastRicochetFrame + 2 >= theApplication().numFrames()) {
-			DecreaseHealth(INT32_MAX);
+		if (other == nullptr) {
+			if (_lastRicochetFrame + 2 < theApplication().numFrames()) {
+				_lastRicochet = nullptr;
+				_lastRicochetFrame = theApplication().numFrames();
+				OnRicochet();
+			}
+		} else {
+			if (_lastRicochet != other) {
+				_lastRicochet = other;
+				_lastRicochetFrame = theApplication().numFrames();
+				OnRicochet();
+			} else if (_lastRicochetFrame + 2 >= theApplication().numFrames()) {
+				DecreaseHealth(INT32_MAX);
+			}
 		}
 	}
 
@@ -60,9 +68,9 @@ namespace Jazz2::Actors::Weapons
 		}
 	}
 
-	bool ShotBase::OnHandleCollision(ActorBase* other)
+	bool ShotBase::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto enemyBase = dynamic_cast<Enemies::EnemyBase*>(other)) {
+		if (auto enemyBase = dynamic_cast<Enemies::EnemyBase*>(other.get())) {
 			if (enemyBase->CanCollideWithAmmo) {
 				DecreaseHealth(INT32_MAX);
 			}
@@ -73,64 +81,26 @@ namespace Jazz2::Actors::Weapons
 
 	void ShotBase::OnRicochet()
 	{
-		MoveInstantly(Vector2f(-_speed.X, -_speed.Y), MoveType::Relative, true);
+		MoveInstantly(Vector2f(_speed.X * -0.4f, _speed.Y * -0.4f), MoveType::Relative | MoveType::Force);
 
 		_speed.Y = _speed.Y * -0.9f + (nCine::Random().Next() % 100 - 50) * 0.1f;
 		_speed.X = _speed.X * -0.9f + (nCine::Random().Next() % 100 - 50) * 0.1f;
 	}
 
-	void ShotBase::CheckCollisions(float timeMult)
+	void ShotBase::TryMovement(float timeMult, TileCollisionParams& params)
 	{
-		if (_health <= 0) {
-			return;
-		}
+		float accelY = (_internalForceY + _externalForce.Y) * timeMult;
 
-		auto tiles = _levelHandler->TileMap();
-		if (tiles != nullptr) {
-			AABBf adjustedAABB = AABBInner + Vector2f(_speed.X * timeMult, _speed.Y * timeMult);
-			if (tiles->CheckWeaponDestructible(adjustedAABB, GetWeaponType(), _strength) > 0) {
-				if (GetWeaponType() != WeaponType::Freezer) {
-					if (auto player = dynamic_cast<Player*>(_owner.get())) {
-						player->AddScore(50);
-					}
-				}
-
-				DecreaseHealth(1);
-			} else if (!tiles->IsTileEmpty(AABBInner, false)) {
-				auto events = _levelHandler->EventMap();
-				bool handled = false;
-				if (events != nullptr) {
-					uint8_t* eventParams;
-					switch (events->GetEventByPosition(_pos.X + _speed.X * timeMult, _pos.Y + _speed.Y * timeMult, &eventParams)) {
-						case EventType::ModifierRicochet:
-							if (_lastRicochetFrame + 2 < theApplication().numFrames()) {
-								_lastRicochet = nullptr;
-								_lastRicochetFrame = theApplication().numFrames();
-								OnRicochet();
-								handled = true;
-							}
-							break;
-					}
-				}
-
-				if (!handled) {
-					OnHitWall();
-				}
-			}
-		}
-	}
-
-	void ShotBase::TryMovement(float timeMult)
-	{
 		_speed.X = std::clamp(_speed.X, -16.0f, 16.0f);
-		_speed.Y = std::clamp(_speed.Y - (_internalForceY + _externalForce.Y) * timeMult, -16.0f, 16.0f);
+		_speed.Y = std::clamp(_speed.Y - accelY, -16.0f, 16.0f);
 
-		float effectiveSpeedX, effectiveSpeedY;
-		effectiveSpeedX = _speed.X + _externalForce.X * timeMult;
-		effectiveSpeedY = _speed.Y;
+		float effectiveSpeedX = _speed.X + _externalForce.X * timeMult;
+		float effectiveSpeedY = _speed.Y - 0.5f * accelY;
 		effectiveSpeedX *= timeMult;
 		effectiveSpeedY *= timeMult;
 
-		MoveInstantly(Vector2f(effectiveSpeedX, effectiveSpeedY), MoveType::Relative, true);
+		if (!MoveInstantly(Vector2f(effectiveSpeedX, effectiveSpeedY), MoveType::Relative, params)) {
+			OnHitWall();
+		}
 	}
 }

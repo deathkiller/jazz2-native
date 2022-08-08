@@ -35,21 +35,21 @@ namespace Jazz2::Actors::Solid
 		co_return true;
 	}
 
-	bool CrateContainer::OnHandleCollision(ActorBase* other)
+	bool CrateContainer::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (_health == 0) {
 			return GenericContainer::OnHandleCollision(other);
 		}
 
-		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other)) {
-			DecreaseHealth(shotBase->GetStrength(), other);
+		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
+			DecreaseHealth(shotBase->GetStrength(), shotBase);
 			shotBase->DecreaseHealth(INT32_MAX);
 			return true;
 		} /*else if (auto shotTnt = dynamic_cast<Weapons::ShotTNT*>(other)) {
 			// TODO: TNT
-		}*/ else if (auto player = dynamic_cast<Player*>(other)) {
+		}*/ else if (auto player = dynamic_cast<Player*>(other.get())) {
 			if (player->CanBreakSolidObjects()) {
-				DecreaseHealth(INT32_MAX, other);
+				DecreaseHealth(INT32_MAX, player);
 				return true;
 			}
 		}

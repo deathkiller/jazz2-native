@@ -11,7 +11,7 @@ namespace Jazz2::Actors::Enemies
 
 		bool CanCollideWithAmmo;
 
-		bool OnHandleCollision(ActorBase* other) override;
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 		bool CanHurtPlayer()
 		{

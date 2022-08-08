@@ -75,13 +75,12 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		auto tiles = _levelHandler->TileMap();
-		if (tiles == nullptr || tiles->IsTileEmpty(AABBInner, false)) {
-			MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative, true);
-			CheckCollisions(timeMult);
+		TileCollisionParams params = { TileDestructType::Weapon, _speed.Y >= 0.0f, WeaponType::Toaster, _strength };
+		if (tiles == nullptr || tiles->IsTileEmpty(AABBInner, params)) {
+			MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative | MoveType::Force, params);
 		} else {
-			MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative, true);
-			CheckCollisions(timeMult);
-			MoveInstantly(Vector2f(-_speed.X * timeMult, -_speed.Y * timeMult), MoveType::Relative, true);
+			MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative | MoveType::Force, params);
+			MoveInstantly(Vector2f(-_speed.X * timeMult, -_speed.Y * timeMult), MoveType::Relative | MoveType::Force, params);
 
 			if ((_upgrades & 0x1) == 0) {
 				DecreaseHealth(INT32_MAX);
@@ -90,7 +89,7 @@ namespace Jazz2::Actors::Weapons
 
 		if (!_fired) {
 			_fired = true;
-			MoveInstantly(_gunspotPos, MoveType::Absolute, true);
+			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
 			_renderer.setDrawEnabled(true);
 		}
 

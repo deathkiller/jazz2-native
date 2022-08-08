@@ -1,8 +1,9 @@
 ﻿#include "BlasterShot.h"
+#include "../../ILevelHandler.h"
 #include "../../LevelInitialization.h"
+#include "../../Events/EventMap.h"
 #include "../Player.h"
 #include "../Explosion.h"
-#include "../Solid/TriggerCrate.h"
 
 #include "../../../nCine/Base/FrameTimer.h"
 #include "../../../nCine/Base/Random.h"
@@ -68,10 +69,13 @@ namespace Jazz2::Actors::Weapons
 	{
 		float halfTimeMult = timeMult * 0.5f;
 
-		for (int i = 0; i < 2; i++) {
-			TryMovement(halfTimeMult);
-			OnUpdateHitbox();
-			CheckCollisions(halfTimeMult);
+		TileCollisionParams params = { TileDestructType::Weapon, false, WeaponType::Blaster, _strength };
+		for (int i = 0; i < 2 && params.WeaponStrength > 0; i++) {
+			TryMovement(halfTimeMult, params);
+		}
+		if (params.WeaponStrength <= 0) {
+			DecreaseHealth(INT32_MAX);
+			return;
 		}
 
 		ShotBase::OnUpdate(timeMult);
@@ -82,7 +86,7 @@ namespace Jazz2::Actors::Weapons
 
 		if (!_fired) {
 			_fired = true;
-			MoveInstantly(_gunspotPos, MoveType::Absolute, true);
+			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
 			_renderer.setDrawEnabled(true);
 		}
 	}
@@ -109,54 +113,34 @@ namespace Jazz2::Actors::Weapons
 
 	bool BlasterShot::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer()), Explosion::Type::Small);
+		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::Small);
 
 		return ShotBase::OnPerish(collider);
 	}
 
 	void BlasterShot::OnHitWall()
 	{
+		auto events = _levelHandler->EventMap();
+		bool handled = false;
+		if (events != nullptr) {
+			uint8_t* eventParams;
+			switch (events->GetEventByPosition(_pos.X + _speed.X, _pos.Y + _speed.Y, &eventParams)) {
+				case EventType::ModifierRicochet:
+					TriggerRicochet(nullptr);
+					return;
+			}
+		}
+
 		DecreaseHealth(INT32_MAX);
 
 		PlaySfx("WallPoof"_s);
-	}
-
-	bool BlasterShot::OnHandleCollision(ActorBase* other)
-	{
-		// TODO
-		/*switch (other) {
-			case Queen queen :
-				if (queen.IsInvulnerable) {
-					if (lastRicochet != other) {
-						lastRicochet = other;
-						OnRicochet();
-					}
-				} else {
-					base.OnHandleCollision(other);
-				}
-				break;
-
-			default:
-				base.OnHandleCollision(other);
-				break;
-		}*/
-
-		if (auto triggerCrate = dynamic_cast<Solid::TriggerCrate*>(other)) {
-			if (_lastRicochet != other) {
-				_lastRicochet = other;
-				OnRicochet();
-			}
-			return true;
-		}
-
-		return ShotBase::OnHandleCollision(other);
 	}
 
 	void BlasterShot::OnRicochet()
 	{
 		ShotBase::OnRicochet();
 
-		_renderer.setRotation(std::atan2(_speed.Y, _speed.X));
+		_renderer.setRotation(std::atan2f(_speed.Y, _speed.X));
 
 		PlaySfx("Ricochet"_s);
 	}

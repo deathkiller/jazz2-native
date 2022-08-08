@@ -63,7 +63,7 @@ namespace Jazz2::Actors::Enemies
 		if (_currentTransitionState == AnimState::Idle && std::abs(_speed.X) > 0 && GetState(ActorFlags::CanJump)) {
 			if (!CanMoveToPosition(_speed.X * 4, 0)) {
 				if (_stuck) {
-					MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative, true);
+					MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative | MoveType::Force);
 				} else {
 					SetFacingLeft(!IsFacingLeft());
 					_speed.X *= -1;

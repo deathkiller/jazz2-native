@@ -90,9 +90,9 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
-	bool Caterpillar::OnHandleCollision(ActorBase* other)
+	bool Caterpillar::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other)) {
+		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
 			if (_state != StateDisoriented) {
 				Disoriented(Random().Next(8, 13));
 			}
@@ -141,7 +141,7 @@ namespace Jazz2::Actors::Enemies
 		_speed.X = _baseSpeed.X + std::cosf((500.0f - _time) * 0.09f) * 0.5f;
 		_speed.Y = _baseSpeed.Y + std::sinf((500.0f - _time) * 0.05f) * 0.5f;
 
-		MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative, true);
+		MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative | MoveType::Force);
 		_renderer.setScale(_renderer.scale() - 0.0011f * timeMult);
 
 		if (_time <= 0.0f) {
@@ -151,9 +151,9 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
-	bool Caterpillar::Smoke::OnHandleCollision(ActorBase* other)
+	bool Caterpillar::Smoke::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto player = dynamic_cast<Player*>(other)) {
+		if (auto player = dynamic_cast<Player*>(other.get())) {
 			if (player->SetDizzyTime(180.0f)) {
 				// TODO: Add fade-out
 				PlaySfx("Dizzy"_s);

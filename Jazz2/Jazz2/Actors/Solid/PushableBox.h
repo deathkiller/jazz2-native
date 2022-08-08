@@ -1,19 +1,17 @@
 ﻿#pragma once
 
-#include "GenericContainer.h"
+#include "../SolidObjectBase.h"
 
 namespace Jazz2::Actors::Solid
 {
-	class CrateContainer : public GenericContainer
+	class PushableBox : public SolidObjectBase
 	{
 	public:
-		CrateContainer();
+		PushableBox();
 
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
-		bool OnPerish(ActorBase* collider) override;
 	};
 }

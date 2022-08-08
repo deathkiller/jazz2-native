@@ -80,7 +80,8 @@ namespace Jazz2::Actors::Enemies
 
 		if (!_isTurning && !_isWithdrawn && !_isAttacking) {
 			AABBf aabb = AABBInner + Vector2f(_speed.X * 32, 0);
-			if (_levelHandler->TileMap()->IsTileEmpty(aabb, true)) {
+			TileCollisionParams params = { TileDestructType::None, false };
+			if (_levelHandler->TileMap()->IsTileEmpty(aabb, params)) {
 				_levelHandler->GetCollidingPlayers(aabb + Vector2f(_speed.X * 32, 0), [this](ActorBase* player) -> bool {
 					if (!player->IsInvulnerable()) {
 						Attack();
@@ -125,7 +126,7 @@ namespace Jazz2::Actors::Enemies
 			});
 			_levelHandler->AddActor(shell);
 
-			Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()), Explosion::Type::SmokeGray);
+			Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 2), Explosion::Type::SmokeGray);
 		}
 
 		return EnemyBase::OnPerish(collider);

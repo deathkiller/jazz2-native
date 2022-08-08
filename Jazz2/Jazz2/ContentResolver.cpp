@@ -1,4 +1,5 @@
 ﻿#include "ContentResolver.h"
+#include "ContentResolver.Shaders.h"
 
 #include "../nCine/IO/IFileStream.h"
 #include "../nCine/Graphics/ITextureLoader.h"
@@ -32,14 +33,11 @@ namespace Jazz2
 		_cachedGraphics(128)
 	{
 		memset(_palettes, 0, sizeof(_palettes));
+
+		CompileShaders();
 	}
 
 	ContentResolver::~ContentResolver()
-	{
-		// TODO
-	}
-
-	void ContentResolver::Initialize()
 	{
 		// TODO
 	}
@@ -48,6 +46,10 @@ namespace Jazz2
 	{
 		_cachedMetadata.clear();
 		_cachedGraphics.clear();
+
+		for (int i = 0; i < (int)PrecompiledShader::Unknown; i++) {
+			_precompiledShaders[i] = nullptr;
+		}
 	}
 
 	void ContentResolver::BeginLoading()
@@ -686,6 +688,28 @@ namespace Jazz2
 			std::memcpy(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t));
 			RecreateGemPalettes();
 		}
+	}
+
+	Shader* ContentResolver::GetShader(PrecompiledShader shader)
+	{
+		if (shader >= PrecompiledShader::Unknown) {
+			return nullptr;
+		}
+
+		return _precompiledShaders[(int)shader].get();
+	}
+
+	void ContentResolver::CompileShaders()
+	{
+		_precompiledShaders[(int)PrecompiledShader::Lighting] = std::make_unique<Shader>("Lighting", Shader::LoadMode::STRING, Shaders::LightingVs, Shaders::LightingFs);
+		_precompiledShaders[(int)PrecompiledShader::Blur] = std::make_unique<Shader>("Blur", Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::BlurFs);
+		_precompiledShaders[(int)PrecompiledShader::Downsample] = std::make_unique<Shader>("Downsample", Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::DownsampleFs);
+		_precompiledShaders[(int)PrecompiledShader::Combine] = std::make_unique<Shader>("Combine", Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::CombineFs);
+
+		_precompiledShaders[(int)PrecompiledShader::TexturedBackground] = std::make_unique<Shader>("TexturedBackground",
+			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundFs);
+		_precompiledShaders[(int)PrecompiledShader::TexturedBackgroundCircle] = std::make_unique<Shader>("TexturedBackground",
+			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundCircleFs);
 	}
 
 	void ContentResolver::RecreateGemPalettes()

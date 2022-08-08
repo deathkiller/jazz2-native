@@ -9,7 +9,6 @@ namespace Jazz2::Actors::Weapons
 	public:
 		BouncerShot();
 		void OnFire(const std::shared_ptr<ActorBase>& owner, Vector2f gunspotPos, Vector2f speed, float angle, bool isFacingLeft);
-		bool OnHandleCollision(ActorBase* other) override;
 
 		WeaponType GetWeaponType() override {
 			return WeaponType::Bouncer;

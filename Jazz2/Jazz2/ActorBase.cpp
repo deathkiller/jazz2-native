@@ -130,7 +130,8 @@ namespace Jazz2
 
 	void ActorBase::OnUpdate(float timeMult)
 	{
-		TryStandardMovement(timeMult);
+		TileCollisionParams params = { TileDestructType::None, _speed.Y >= 0.0f };
+		TryStandardMovement(timeMult, params);
 		OnUpdateHitbox();
 
 		if (_renderer.AnimPaused) {
@@ -192,10 +193,10 @@ namespace Jazz2
 		// Objects should override this if they need to.
 	}
 
-	bool ActorBase::OnHandleCollision(ActorBase* other)
+	bool ActorBase::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (GetState(ActorFlags::CanBeFrozen)) {
-			HandleAmmoFrozenStateChange(other);
+			HandleAmmoFrozenStateChange(other.get());
 		}
 		return false;
 	}
@@ -205,7 +206,7 @@ namespace Jazz2
 		// Can be overridden
 	}
 
-	void ActorBase::TryStandardMovement(float timeMult)
+	void ActorBase::TryStandardMovement(float timeMult, TileCollisionParams& params)
 	{
 		if (_unstuckCooldown > 0.0f) {
 			_unstuckCooldown -= timeMult;
@@ -223,7 +224,6 @@ namespace Jazz2
 			currentGravity = 0.0f;
 		}
 
-		// TODO: Review this new code
 		float accelY = (_internalForceY + _externalForce.Y) * timeMult;
 
 		_speed.X = std::clamp(_speed.X, -16.0f, 16.0f);
@@ -257,7 +257,7 @@ namespace Jazz2
 			// tiles have a 2px jump, so adapt to that.
 			float maxYDiff = std::max(3.0f, std::abs(effectiveSpeedX) + 2.5f);
 			for (float yDiff = maxYDiff + effectiveSpeedY; yDiff >= -maxYDiff + effectiveSpeedY; yDiff -= CollisionCheckStep) {
-				if (MoveInstantly(Vector2f(effectiveSpeedX, yDiff), MoveType::Relative)) {
+				if (MoveInstantly(Vector2f(effectiveSpeedX, yDiff), MoveType::Relative, params)) {
 					success = true;
 					break;
 				}
@@ -269,7 +269,7 @@ namespace Jazz2
 			if (!success) {
 				int sign = (effectiveSpeedX > 0.0f ? 1 : -1);
 				for (; xDiff >= maxXDiff; xDiff -= CollisionCheckStep) {
-					if (MoveInstantly(Vector2f(xDiff * sign, 0.0f), MoveType::Relative)) {
+					if (MoveInstantly(Vector2f(xDiff * sign, 0.0f), MoveType::Relative, params)) {
 						success = true;
 						break;
 					}
@@ -279,9 +279,10 @@ namespace Jazz2
 				if (!success && _unstuckCooldown <= 0.0f) {
 					AABBf aabb = AABBInner;
 					aabb.T = aabb.B - 8;
-					if (!_levelHandler->IsPositionEmpty(this, aabb, true)) {
+					TileCollisionParams params2 = { TileDestructType::None, true };
+					if (!_levelHandler->IsPositionEmpty(this, aabb, params2)) {
 						for (float yDiff = -2.0f; yDiff >= -16.0f; yDiff -= 2.0f) {
-							if (MoveInstantly(Vector2f(0.0f, yDiff), MoveType::Relative)) {
+							if (MoveInstantly(Vector2f(0.0f, yDiff), MoveType::Relative, params)) {
 								moved = true;
 								_unstuckCooldown = 60.0f;
 								break;
@@ -304,7 +305,7 @@ namespace Jazz2
 		} else {
 			// Airborne movement is handled here
 			// First, attempt to move directly based on the current speed values
-			if (MoveInstantly(Vector2f(effectiveSpeedX, effectiveSpeedY), MoveType::Relative)) {
+			if (MoveInstantly(Vector2f(effectiveSpeedX, effectiveSpeedY), MoveType::Relative, params)) {
 				if (std::abs(effectiveSpeedY) < std::numeric_limits<float>::epsilon()) {
 					SetState(ActorFlags::CanJump, true);
 				}
@@ -316,7 +317,7 @@ namespace Jazz2
 				int sign = (effectiveSpeedX > 0.0f ? 1 : -1);
 				float xDiff = maxDiff;
 				for (; xDiff > std::numeric_limits<float>::epsilon(); xDiff -= CollisionCheckStep) {
-					if (MoveInstantly(Vector2f(xDiff * sign, 0.0f), MoveType::Relative)) {
+					if (MoveInstantly(Vector2f(xDiff * sign, 0.0f), MoveType::Relative, params)) {
 						break;
 					}
 				}
@@ -327,10 +328,10 @@ namespace Jazz2
 				float yDiff = maxDiff;
 				for (; yDiff > std::numeric_limits<float>::epsilon(); yDiff -= CollisionCheckStep) {
 					float yDiffSigned = (yDiff * sign);
-					if (MoveInstantly(Vector2f(0.0f, yDiffSigned), MoveType::Relative) ||
+					if (MoveInstantly(Vector2f(0.0f, yDiffSigned), MoveType::Relative, params) ||
 						// Add horizontal tolerance
-						MoveInstantly(Vector2f(yDiff * 0.2f, yDiffSigned), MoveType::Relative) ||
-						MoveInstantly(Vector2f(yDiff * -0.2f, yDiffSigned), MoveType::Relative)) {
+						MoveInstantly(Vector2f(yDiff * 0.2f, yDiffSigned), MoveType::Relative, params) ||
+						MoveInstantly(Vector2f(yDiff * -0.2f, yDiffSigned), MoveType::Relative, params)) {
 						break;
 					}
 				}
@@ -367,7 +368,7 @@ namespace Jazz2
 
 		// Set the actor as airborne if there seems to be enough space below it
 		AABBf aabb = (AABBInner + Vector2f(0.0f, CollisionCheckStep));
-		if (_levelHandler->IsPositionEmpty(this, aabb, effectiveSpeedY >= 0)) {
+		if (_levelHandler->IsPositionEmpty(this, aabb, params)) {
 			_speed.Y += currentGravity * timeMult;
 			SetState(ActorFlags::CanJump, false);
 		}
@@ -1173,28 +1174,22 @@ namespace Jazz2
 		}
 	}
 
-	bool ActorBase::MoveInstantly(const Vector2f& pos, MoveType type, bool force)
+	bool ActorBase::MoveInstantly(const Vector2f& pos, MoveType type, TileCollisionParams& params)
 	{
 		Vector2f newPos;
 		AABBf aabb;
-		switch (type) {
-			default:
-			case MoveType::Absolute: {
-				newPos = pos;
-				aabb = AABBInner + (pos - _pos);
-				break;
+		if ((type & MoveType::Relative) == MoveType::Relative) {
+			if (pos == Vector2f::Zero) {
+				return true;
 			}
-			case MoveType::Relative: {
-				if (pos == Vector2f::Zero) {
-					return true;
-				}
-				newPos = _pos + pos;
-				aabb = AABBInner + pos;
-				break;
-			}
+			newPos = _pos + pos;
+			aabb = AABBInner + pos;
+		} else {
+			newPos = pos;
+			aabb = AABBInner + (pos - _pos);
 		}
 
-		bool free = (force || _levelHandler->IsPositionEmpty(this, aabb, _speed.Y >= 0.0f));
+		bool free = ((type & MoveType::Force) == MoveType::Force || _levelHandler->IsPositionEmpty(this, aabb, params));
 		if (free) {
 			AABBInner = aabb;
 			_pos = newPos;

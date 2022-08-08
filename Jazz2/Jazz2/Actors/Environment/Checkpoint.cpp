@@ -54,13 +54,13 @@ namespace Jazz2::Actors::Environment
 		UpdateHitbox(20, 20);
 	}
 
-	bool Checkpoint::OnHandleCollision(ActorBase* other)
+	bool Checkpoint::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (_activated) {
 			return true;
 		}
 
-		if (auto player = dynamic_cast<Player*>(other)) {
+		if (auto player = dynamic_cast<Player*>(other.get())) {
 			_activated = true;
 
 			// Set this checkpoint for all players

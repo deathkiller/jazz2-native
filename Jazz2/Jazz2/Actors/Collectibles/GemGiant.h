@@ -1,24 +1,19 @@
 ﻿#pragma once
 
-#include "../SolidObjectBase.h"
+#include "../../ActorBase.h"
 
-namespace Jazz2::Actors::Solid
+namespace Jazz2::Actors::Collectibles
 {
-	class PowerUpWeaponMonitor : public SolidObjectBase
+	class GemGiant : public ActorBase
 	{
 	public:
-		PowerUpWeaponMonitor();
+		GemGiant();
 
 		static void Preload(const ActorActivationDetails& details);
-
-		void DestroyAndApplyToPlayer(Player* player);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 		bool OnPerish(ActorBase* collider) override;
-
-	private:
-		WeaponType _weaponType;
 	};
 }

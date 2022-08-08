@@ -35,17 +35,17 @@ namespace Jazz2::Actors::Solid
 		co_return true;
 	}
 
-	bool AmmoBarrel::OnHandleCollision(ActorBase* other)
+	bool AmmoBarrel::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (_health == 0) {
 			return GenericContainer::OnHandleCollision(other);
 		}
 
-		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other)) {
+		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
 			WeaponType weaponType = shotBase->GetWeaponType();
 			if (weaponType == WeaponType::RF || weaponType == WeaponType::Seeker ||
 				weaponType == WeaponType::Pepper || weaponType == WeaponType::Electro) {
-				DecreaseHealth(shotBase->GetStrength(), other);
+				DecreaseHealth(shotBase->GetStrength(), shotBase);
 				shotBase->DecreaseHealth(INT32_MAX);
 			} else {
 				shotBase->TriggerRicochet(this);
@@ -53,9 +53,9 @@ namespace Jazz2::Actors::Solid
 			return true;
 		} /*else if (auto shotTnt = dynamic_cast<Weapons::ShotTNT*>(other)) {
 			// TODO: TNT
-		}*/ else if (auto player = dynamic_cast<Player*>(other)) {
+		}*/ else if (auto player = dynamic_cast<Player*>(other.get())) {
 			if (player->CanBreakSolidObjects()) {
-				DecreaseHealth(INT32_MAX, other);
+				DecreaseHealth(INT32_MAX, player);
 				return true;
 			}
 		}

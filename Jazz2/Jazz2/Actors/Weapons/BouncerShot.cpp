@@ -65,9 +65,12 @@ namespace Jazz2::Actors::Weapons
 
 	void BouncerShot::OnUpdate(float timeMult)
 	{
-		TryStandardMovement(timeMult);
-		OnUpdateHitbox();
-		CheckCollisions(timeMult);
+		TileCollisionParams params = { TileDestructType::Weapon, _speed.Y >= 0.0f, WeaponType::Bouncer, _strength };
+		TryStandardMovement(timeMult, params);
+		if (params.WeaponStrength <= 0) {
+			DecreaseHealth(INT32_MAX);
+			return;
+		}
 
 		ShotBase::OnUpdate(timeMult);
 
@@ -88,7 +91,7 @@ namespace Jazz2::Actors::Weapons
 
 		if (!_fired) {
 			_fired = true;
-			MoveInstantly(_gunspotPos, MoveType::Absolute, true);
+			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
 			_renderer.setDrawEnabled(true);
 		}
 	}
@@ -105,7 +108,7 @@ namespace Jazz2::Actors::Weapons
 
 	bool BouncerShot::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer()), Explosion::Type::SmallDark);
+		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::SmallDark);
 
 		return ShotBase::OnPerish(collider);
 	}
@@ -141,26 +144,6 @@ namespace Jazz2::Actors::Weapons
 
 		_hitLimit += 2.0f;
 		PlaySfx("Bounce"_s, 0.5f);
-	}
-
-	bool BouncerShot::OnHandleCollision(ActorBase* other)
-	{
-		// TODO
-		/*switch (other) {
-			case Queen queen :
-				if (queen.IsInvulnerable) {
-					OnRicochet();
-				} else {
-					base.OnHandleCollision(other);
-				}
-				break;
-
-			default:
-				base.OnHandleCollision(other);
-				break;
-		}*/
-
-		return ShotBase::OnHandleCollision(other);
 	}
 
 	void BouncerShot::OnRicochet()

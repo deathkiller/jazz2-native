@@ -15,7 +15,7 @@ namespace Jazz2::Actors::Weapons
 	public:
 		ShotBase();
 
-		bool OnHandleCollision(ActorBase* other) override;
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 		int GetStrength() {
 			return _strength;
@@ -35,10 +35,9 @@ namespace Jazz2::Actors::Weapons
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
-
 		virtual void OnRicochet();
-		void CheckCollisions(float timeMult);
-		void TryMovement(float timeMult);
+
+		void TryMovement(float timeMult, TileCollisionParams& params);
 
 	private:
 		int _lastRicochetFrame;

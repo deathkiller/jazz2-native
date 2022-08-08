@@ -129,12 +129,23 @@ namespace Jazz2
 	};
 
 	enum class TileDestructType {
-		None,
-		Weapon,
-		Speed,
-		Collapse,
-		Special,
-		Trigger
+		None = 0x00,
+		Weapon = 0x01,
+		Speed = 0x02,
+		Collapse = 0x04,
+		Special = 0x08,
+		Trigger = 0x10
+	};
+
+	DEFINE_ENUM_OPERATORS(TileDestructType);
+
+	struct TileCollisionParams {
+		TileDestructType DestructType;
+		bool Downwards;
+		WeaponType WeaponType;
+		int WeaponStrength;
+		float Speed;
+		/*out*/ int TilesDestroyed;
 	};
 
 	enum class SuspendType {
@@ -142,6 +153,18 @@ namespace Jazz2
 		Vine,
 		Hook,
 		SwingingVine
+	};
+
+	enum class PrecompiledShader {
+		Lighting,
+		Blur,
+		Downsample,
+		Combine,
+
+		TexturedBackground,
+		TexturedBackgroundCircle,
+
+		Unknown
 	};
 
 	class ContentResolver
@@ -154,7 +177,6 @@ namespace Jazz2
 		ContentResolver();
 		~ContentResolver();
 		
-		void Initialize();
 		void Release();
 
 		void BeginLoading();
@@ -168,6 +190,8 @@ namespace Jazz2
 		bool LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty);
 		void ApplyPalette(const StringView& path);
 
+		Shader* GetShader(PrecompiledShader shader);
+
 		const uint32_t* GetPalettes() const {
 			return _palettes;
 		}
@@ -180,11 +204,13 @@ namespace Jazz2
 		/// Deleted assignment operator
 		ContentResolver& operator=(const ContentResolver&) = delete;
 
+		void CompileShaders();
 		void RecreateGemPalettes();
 
 		bool _isLoading;
 		uint32_t _palettes[PaletteCount * ColorsPerPalette];
 		HashMap<String, std::unique_ptr<Metadata>> _cachedMetadata;
 		HashMap<Pair<String, uint16_t>, std::unique_ptr<GenericGraphicResource>> _cachedGraphics;
+		std::unique_ptr<Shader> _precompiledShaders[(int)PrecompiledShader::Unknown];
 	};
 }

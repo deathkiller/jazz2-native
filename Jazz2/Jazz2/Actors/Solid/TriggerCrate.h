@@ -19,7 +19,7 @@ namespace Jazz2::Actors::Solid
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
-		bool OnHandleCollision(ActorBase* other) override;
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 		bool OnPerish(ActorBase* collider) override;
 
 	private:

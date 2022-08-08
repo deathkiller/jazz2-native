@@ -214,6 +214,7 @@
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\FastFireCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\GemCollectible.h" />
+    <ClInclude Include="Jazz2\Actors\Collectibles\GemGiant.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\OneUpCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Bee.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Caterpillar.h" />
@@ -245,6 +246,7 @@
     <ClInclude Include="Jazz2\Actors\Solid\Pole.h" />
     <ClInclude Include="Jazz2\Actors\Solid\PowerUpMorphMonitor.h" />
     <ClInclude Include="Jazz2\Actors\Solid\PowerUpWeaponMonitor.h" />
+    <ClInclude Include="Jazz2\Actors\Solid\PushableBox.h" />
     <ClInclude Include="Jazz2\Actors\Solid\TriggerCrate.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\BouncerShot.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\FreezerShot.h" />
@@ -261,6 +263,7 @@
     <ClInclude Include="Jazz2\Compatibility\JJ2Text.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Tileset.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Version.h" />
+    <ClInclude Include="Jazz2\ContentResolver.Shaders.h" />
     <ClInclude Include="Jazz2\IRootController.h" />
     <ClInclude Include="Jazz2\LightEmitter.h" />
     <ClInclude Include="Jazz2\UI\Alignment.h" />
@@ -458,6 +461,7 @@
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\FastFireCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\GemCollectible.cpp" />
+    <ClCompile Include="Jazz2\Actors\Collectibles\GemGiant.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\OneUpCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Bee.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Caterpillar.cpp" />
@@ -489,6 +493,7 @@
     <ClCompile Include="Jazz2\Actors\Solid\Pole.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\PowerUpMorphMonitor.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\PowerUpWeaponMonitor.cpp" />
+    <ClCompile Include="Jazz2\Actors\Solid\PushableBox.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\TriggerCrate.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\BouncerShot.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\FreezerShot.cpp" />

@@ -46,7 +46,7 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative, true);
+		MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative | MoveType::Force);
 
 		if (_playerHit) {
 			if (_attackTime > 0.0f) {
@@ -154,7 +154,7 @@ namespace Jazz2::Actors::Enemies
 
 	void Witch::MagicBullet::OnUpdate(float timeMult)
 	{
-		MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative, true);
+		MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative | MoveType::Force);
 		OnUpdateHitbox();
 
 		if (_time <= 0.0f) {
@@ -170,9 +170,9 @@ namespace Jazz2::Actors::Enemies
 		UpdateHitbox(10, 10);
 	}
 
-	bool Witch::MagicBullet::OnHandleCollision(ActorBase* other)
+	bool Witch::MagicBullet::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto player = dynamic_cast<Player*>(other)) {
+		if (auto player = dynamic_cast<Player*>(other.get())) {
 			DecreaseHealth(INT32_MAX);
 			_owner->OnPlayerHit();
 

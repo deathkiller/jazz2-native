@@ -88,7 +88,7 @@ namespace Jazz2::Actors::Enemies
 				float length = direction.Length();
 				if (length < 2.0f) {
 					_attacking = false;
-					MoveInstantly(_originPos, MoveType::Absolute, true);
+					MoveInstantly(_originPos, MoveType::Absolute | MoveType::Force);
 					_speed.X = 0;
 					_speed.Y = 0;
 					SetAnimation(AnimState::Idle);

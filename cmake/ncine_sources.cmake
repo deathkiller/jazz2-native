@@ -110,9 +110,10 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/CarrotCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/CoinCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/CollectibleBase.cpp
-    ${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/FastFireCollectible.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/FastFireCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/FoodCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/GemCollectible.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/GemGiant.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/OneUpCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bat.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bee.cpp
@@ -139,9 +140,9 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Lighting/FlickerLight.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Lighting/PulsatingRadialLight.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Lighting/StaticRadialLight.cpp
-    ${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/AmmoBarrel.cpp
-    ${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/AmmoCrate.cpp
-    ${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/BarrelContainer.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/AmmoBarrel.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/AmmoCrate.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/BarrelContainer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/Bridge.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/CrateContainer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/GenericContainer.cpp
@@ -149,7 +150,8 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/GemCrate.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/Pole.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/PowerUpMorphMonitor.cpp
-    ${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/PowerUpWeaponMonitor.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/PowerUpWeaponMonitor.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/PushableBox.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/TriggerCrate.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BlasterShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BouncerShot.cpp

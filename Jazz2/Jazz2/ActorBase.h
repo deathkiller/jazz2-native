@@ -72,9 +72,12 @@ namespace Jazz2
 	DEFINE_ENUM_OPERATORS(CollisionFlags);
 
 	enum class MoveType {
-		Absolute,
-		Relative
+		Absolute = 0x00,
+		Relative = 0x01,
+		Force = 0x02
 	};
+
+	DEFINE_ENUM_OPERATORS(MoveType);
 
 	class ActorBase : public std::enable_shared_from_this<ActorBase>
 	{
@@ -92,7 +95,7 @@ namespace Jazz2
 
 		void SetParent(SceneNode* parent);
 		Task<bool> OnActivated(const ActorActivationDetails& details);
-		virtual bool OnHandleCollision(ActorBase* other);
+		virtual bool OnHandleCollision(std::shared_ptr<ActorBase> other);
 		virtual void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) { }
 
 		bool IsInvulnerable();
@@ -101,7 +104,13 @@ namespace Jazz2
 		int GetMaxHealth();
 		void DecreaseHealth(int amount = 1, ActorBase* collider = nullptr);
 
-		bool MoveInstantly(const Vector2f& pos, MoveType type, bool force = false);
+		bool MoveInstantly(const Vector2f& pos, MoveType type, TileCollisionParams& params);
+		bool MoveInstantly(const Vector2f& pos, MoveType type)
+		{
+			TileCollisionParams params = { TileDestructType::None, _speed.Y >= 0.0f };
+			return MoveInstantly(pos, type, params);
+		}
+
 		void AddExternalForce(float x, float y);
 
 		bool IsCollidingWith(ActorBase* other);
@@ -232,7 +241,7 @@ namespace Jazz2
 
 		virtual void OnTriggeredEvent(EventType eventType, uint16_t* eventParams);
 
-		void TryStandardMovement(float timeMult);
+		void TryStandardMovement(float timeMult, TileCollisionParams& params);
 
 		void UpdateHitbox(int w, int h);
 

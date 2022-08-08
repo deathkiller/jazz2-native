@@ -44,7 +44,8 @@ namespace Jazz2::Actors::Enemies
 		int direction = (IsFacingLeft() ? -1 : 1);
 		AABBf aabbA = AABBInner + Vector2f(x, y - 3);
 		AABBf aabbB = AABBInner + Vector2f(x, y + 3);
-		if (!_levelHandler->IsPositionEmpty(this, aabbA, true) && !_levelHandler->IsPositionEmpty(this, aabbB, true)) {
+		TileCollisionParams params = { TileDestructType::None, true };
+		if (!_levelHandler->IsPositionEmpty(this, aabbA, params) && !_levelHandler->IsPositionEmpty(this, aabbB, params)) {
 			return false;
 		}
 
@@ -52,7 +53,7 @@ namespace Jazz2::Actors::Enemies
 
 		uint8_t* eventParams;
 		auto events = _levelHandler->EventMap();
-		return ((events == nullptr || events->GetEventByPosition(_pos.X + x, _pos.Y + y, &eventParams) != EventType::AreaStopEnemy) && !_levelHandler->IsPositionEmpty(this, aabbDir, true));
+		return ((events == nullptr || events->GetEventByPosition(_pos.X + x, _pos.Y + y, &eventParams) != EventType::AreaStopEnemy) && !_levelHandler->IsPositionEmpty(this, aabbDir, params));
 	}
 
 	void EnemyBase::TryGenerateRandomDrop()
@@ -88,10 +89,10 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
-	bool EnemyBase::OnHandleCollision(ActorBase* other)
+	bool EnemyBase::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (!GetState(ActorFlags::IsInvulnerable)) {
-			if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other)) {
+			if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
 				Vector2f ammoSpeed = shotBase->GetSpeed();
 				if (std::abs(ammoSpeed.X) > 0.2f) {
 					_lastHitDir = (ammoSpeed.X > 0.0f ? LastHitDirection::Right : LastHitDirection::Left);
@@ -101,7 +102,7 @@ namespace Jazz2::Actors::Enemies
 				DecreaseHealth(shotBase->GetStrength(), shotBase);
 				// Collision must also be processed by the shot
 				//return true;
-			} /*else if (auto shotTnt = dynamic_cast<Weapons::ShotTNT*>(other)) {
+			} /*else if (auto shotTnt = dynamic_cast<Weapons::ShotTNT*>(other.get())) {
 				DecreaseHealth(5, shotTnt);
 				return true;
 			}*/

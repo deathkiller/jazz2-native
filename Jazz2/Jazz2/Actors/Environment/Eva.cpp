@@ -37,9 +37,9 @@ namespace Jazz2::Actors::Environment
 		}
 	}
 
-	bool Eva::OnHandleCollision(ActorBase* other)
+	bool Eva::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto player = dynamic_cast<Player*>(other)) {
+		if (auto player = dynamic_cast<Player*>(other.get())) {
 			if (player->GetPlayerType() == PlayerType::Frog && player->DisableControllable(160.0f)) {
 				SetTransition(AnimState::TransitionAttack, false, [this, player]() {
 					player->MorphRevent();

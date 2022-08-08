@@ -156,7 +156,7 @@ namespace Jazz2::Tiles
 		return _tileSet->IsTileMaskEmpty(tileId);
 	}
 
-	bool TileMap::IsTileEmpty(const AABBf& aabb, bool downwards)
+	bool TileMap::IsTileEmpty(const AABBf& aabb, TileCollisionParams& params)
 	{
 		if (_sprLayerIndex == -1) {
 			return false;
@@ -193,9 +193,10 @@ namespace Jazz2::Tiles
 
 		for (int y = hy1t; y <= hy2t; y++) {
 			for (int x = hx1t; x <= hx2t; x++) {
+			RecheckTile:
 				LayerTile& tile = sprLayerLayout[y * layoutSize.X + x];
 				int tileId = ResolveTileID(tile);
-				if (tile.SuspendType != SuspendType::None || _tileSet->IsTileMaskEmpty(tileId) || (tile.IsOneWay && !downwards)) {
+				if (tile.SuspendType != SuspendType::None || _tileSet->IsTileMaskEmpty(tileId) || (tile.IsOneWay && !params.Downwards)) {
 					continue;
 				}
 
@@ -225,7 +226,49 @@ namespace Jazz2::Tiles
 				for (int ry = top; ry <= bottom; ry += TileSet::DefaultTileSize) {
 					for (int rx = left; rx <= right; rx++) {
 						if (mask[ry | rx]) {
-							return false;
+							if (tile.DestructType == TileDestructType::Weapon && (params.DestructType & TileDestructType::Weapon) == TileDestructType::Weapon) {
+								if (params.WeaponType == WeaponType::Freezer && (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2) > tile.DestructFrameIndex) {
+									// TODO
+									/*FrozenBlock frozen = new FrozenBlock();
+									frozen.OnActivated(new ActorActivationDetails {
+										LevelHandler = _levelHandler,
+										Pos = new Vector3(32 * tx + 16 - 1, 32 * ty + 16 - 1, ILevelHandler::MainPlaneZ)
+									});
+									levelHandler.AddActor(frozen);*/
+									//params.TilesDestroyed++;
+									return false;
+								} else if (tile.ExtraData == 0 || tile.ExtraData == ((unsigned int)params.WeaponType + 1)) {
+									if (AdvanceDestructibleTileAnimation(tile, x, y, params.WeaponStrength, "SceneryDestruct"_s)) {
+										params.TilesDestroyed++;
+										if (params.WeaponStrength <= 0) {
+											return false;
+										} else {
+											goto RecheckTile;
+										}
+									} else {
+										return false;
+									}
+								}
+							} else if (tile.DestructType == TileDestructType::Special && (params.DestructType & TileDestructType::Special) == TileDestructType::Special) {
+								int amount = 1;
+								if (AdvanceDestructibleTileAnimation(tile, x, y, amount, "SceneryDestruct"_s)) {
+									params.TilesDestroyed++;
+									goto RecheckTile;
+								} else {
+									return false;
+								}
+							} else if (tile.DestructType == TileDestructType::Speed && (params.DestructType & TileDestructType::Speed) == TileDestructType::Speed) {
+								int amount = 1;
+								// TODO
+								if (/*tile.ExtraData +*/ 5 <= params.Speed && AdvanceDestructibleTileAnimation(tile, x, y, amount, "SceneryDestruct"_s)) {
+									params.TilesDestroyed++;
+									goto RecheckTile;
+								} else {
+									return false;
+								}
+							} else {
+								return false;
+							}
 						}
 					}
 				}
@@ -282,93 +325,93 @@ namespace Jazz2::Tiles
 		return SuspendType::None;
 	}
 
-	int TileMap::CheckWeaponDestructible(const AABBf& aabb, WeaponType weapon, int strength)
-	{
-		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+	//int TileMap::CheckWeaponDestructible(const AABBf& aabb, WeaponType weapon, int strength)
+	//{
+	//	Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
 
-		int x1 = std::max(0, (int)aabb.L / TileSet::DefaultTileSize);
-		int x2 = std::min((int)aabb.R / TileSet::DefaultTileSize, layoutSize.X - 1);
-		int y1 = std::max(0, (int)aabb.T / TileSet::DefaultTileSize);
-		int y2 = std::min((int)aabb.B / TileSet::DefaultTileSize, layoutSize.Y - 1);
+	//	int x1 = std::max(0, (int)aabb.L / TileSet::DefaultTileSize);
+	//	int x2 = std::min((int)aabb.R / TileSet::DefaultTileSize, layoutSize.X - 1);
+	//	int y1 = std::max(0, (int)aabb.T / TileSet::DefaultTileSize);
+	//	int y2 = std::min((int)aabb.B / TileSet::DefaultTileSize, layoutSize.Y - 1);
 
-		int hit = 0;
-		for (int tx = x1; tx <= x2; tx++) {
-			for (int ty = y1; ty <= y2; ty++) {
-				auto& tile = _layers[_sprLayerIndex].Layout[tx + ty * layoutSize.X];
-				if (tile.DestructType == TileDestructType::Weapon) {
-					if (weapon == WeaponType::Freezer && (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2) > tile.DestructFrameIndex) {
-						// TODO
-						/*FrozenBlock frozen = new FrozenBlock();
-						frozen.OnActivated(new ActorActivationDetails {
-							LevelHandler = _levelHandler,
-							Pos = new Vector3(32 * tx + 16 - 1, 32 * ty + 16 - 1, ILevelHandler::MainPlaneZ)
-						});
-						levelHandler.AddActor(frozen);*/
-						hit++;
-					} else if (tile.ExtraData == 0 || tile.ExtraData == ((unsigned int)weapon + 1)) {
-						if (AdvanceDestructibleTileAnimation(tile, tx, ty, strength, "SceneryDestruct"_s)) {
-							hit++;
-						}
+	//	int hit = 0;
+	//	for (int tx = x1; tx <= x2; tx++) {
+	//		for (int ty = y1; ty <= y2; ty++) {
+	//			auto& tile = _layers[_sprLayerIndex].Layout[tx + ty * layoutSize.X];
+	//			if (tile.DestructType == TileDestructType::Weapon) {
+	//				if (weapon == WeaponType::Freezer && (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2) > tile.DestructFrameIndex) {
+	//					// TODO
+	//					/*FrozenBlock frozen = new FrozenBlock();
+	//					frozen.OnActivated(new ActorActivationDetails {
+	//						LevelHandler = _levelHandler,
+	//						Pos = new Vector3(32 * tx + 16 - 1, 32 * ty + 16 - 1, ILevelHandler::MainPlaneZ)
+	//					});
+	//					levelHandler.AddActor(frozen);*/
+	//					hit++;
+	//				} else if (tile.ExtraData == 0 || tile.ExtraData == ((unsigned int)weapon + 1)) {
+	//					if (AdvanceDestructibleTileAnimation(tile, tx, ty, strength, "SceneryDestruct"_s)) {
+	//						hit++;
+	//					}
 
-						if (strength <= 0) {
-							goto Done;
-						}
-					}
-				}
-			}
-		}
-	Done:
-		return hit;
-	}
+	//					if (strength <= 0) {
+	//						goto Done;
+	//					}
+	//				}
+	//			}
+	//		}
+	//	}
+	//Done:
+	//	return hit;
+	//}
 
-	int TileMap::CheckSpecialDestructible(const AABBf& aabb)
-	{
-		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+	//int TileMap::CheckSpecialDestructible(const AABBf& aabb)
+	//{
+	//	Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
 
-		int x1 = std::max(0, (int)aabb.L / TileSet::DefaultTileSize);
-		int x2 = std::min((int)aabb.R / TileSet::DefaultTileSize, layoutSize.X - 1);
-		int y1 = std::max(0, (int)aabb.T / TileSet::DefaultTileSize);
-		int y2 = std::min((int)aabb.B / TileSet::DefaultTileSize, layoutSize.Y - 1);
+	//	int x1 = std::max(0, (int)aabb.L / TileSet::DefaultTileSize);
+	//	int x2 = std::min((int)aabb.R / TileSet::DefaultTileSize, layoutSize.X - 1);
+	//	int y1 = std::max(0, (int)aabb.T / TileSet::DefaultTileSize);
+	//	int y2 = std::min((int)aabb.B / TileSet::DefaultTileSize, layoutSize.Y - 1);
 
-		int hit = 0;
-		for (int tx = x1; tx <= x2; tx++) {
-			for (int ty = y1; ty <= y2; ty++) {
-				auto& tile = _layers[_sprLayerIndex].Layout[tx + ty * layoutSize.X];
-				if (tile.DestructType == TileDestructType::Special) {
-					int amount = 1;
-					if (AdvanceDestructibleTileAnimation(tile, tx, ty, amount, "SceneryDestruct"_s)) {
-						hit++;
-					}
-				}
-			}
-		}
-		return hit;
-	}
+	//	int hit = 0;
+	//	for (int tx = x1; tx <= x2; tx++) {
+	//		for (int ty = y1; ty <= y2; ty++) {
+	//			auto& tile = _layers[_sprLayerIndex].Layout[tx + ty * layoutSize.X];
+	//			if (tile.DestructType == TileDestructType::Special) {
+	//				int amount = 1;
+	//				if (AdvanceDestructibleTileAnimation(tile, tx, ty, amount, "SceneryDestruct"_s)) {
+	//					hit++;
+	//				}
+	//			}
+	//		}
+	//	}
+	//	return hit;
+	//}
 
-	int TileMap::CheckSpecialSpeedDestructible(const AABBf& aabb, float speed)
-	{
-		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+	//int TileMap::CheckSpecialSpeedDestructible(const AABBf& aabb, float speed)
+	//{
+	//	Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
 
-		int x1 = std::max(0, (int)aabb.L / TileSet::DefaultTileSize);
-		int x2 = std::min((int)aabb.R / TileSet::DefaultTileSize, layoutSize.X - 1);
-		int y1 = std::max(0, (int)aabb.T / TileSet::DefaultTileSize);
-		int y2 = std::min((int)aabb.B / TileSet::DefaultTileSize, layoutSize.Y - 1);
+	//	int x1 = std::max(0, (int)aabb.L / TileSet::DefaultTileSize);
+	//	int x2 = std::min((int)aabb.R / TileSet::DefaultTileSize, layoutSize.X - 1);
+	//	int y1 = std::max(0, (int)aabb.T / TileSet::DefaultTileSize);
+	//	int y2 = std::min((int)aabb.B / TileSet::DefaultTileSize, layoutSize.Y - 1);
 
-		int hit = 0;
-		for (int tx = x1; tx <= x2; tx++) {
-			for (int ty = y1; ty <= y2; ty++) {
-				auto& tile = _layers[_sprLayerIndex].Layout[tx + ty * layoutSize.X];
-				if (tile.DestructType == TileDestructType::Speed && /*tile.ExtraData +*/ 5 <= speed) {
-					int amount = 1;
-					if (AdvanceDestructibleTileAnimation(tile, tx, ty, amount, "SceneryDestruct"_s)) {
-						hit++;
-					}
-				}
-			}
-		}
+	//	int hit = 0;
+	//	for (int tx = x1; tx <= x2; tx++) {
+	//		for (int ty = y1; ty <= y2; ty++) {
+	//			auto& tile = _layers[_sprLayerIndex].Layout[tx + ty * layoutSize.X];
+	//			if (tile.DestructType == TileDestructType::Speed && /*tile.ExtraData +*/ 5 <= speed) {
+	//				int amount = 1;
+	//				if (AdvanceDestructibleTileAnimation(tile, tx, ty, amount, "SceneryDestruct"_s)) {
+	//					hit++;
+	//				}
+	//			}
+	//		}
+	//	}
 
-		return hit;
-	}
+	//	return hit;
+	//}
 
 	int TileMap::CheckCollapseDestructible(const AABBf& aabb)
 	{
@@ -1018,7 +1061,8 @@ namespace Jazz2::Tiles
 				float nx = debris.Pos.X + debris.Speed.X * timeMult;
 				float ny = debris.Pos.Y + debris.Speed.Y * timeMult;
 				AABB aabb = AABBf(nx - 1, ny - 1, nx + 1, ny + 1);
-				if (IsTileEmpty(aabb, true)) {
+				TileCollisionParams params = { TileDestructType::None, true };
+				if (IsTileEmpty(aabb, params)) {
 					// Nothing...
 				} else if (debris.CollisionAction == DebrisCollisionAction::Disappear) {
 					debris.ScaleSpeed = -0.02f;
@@ -1032,7 +1076,7 @@ namespace Jazz2::Tiles
 					aabb.T = debris.Pos.Y - 1;
 					aabb.B = debris.Pos.Y + 1;
 
-					if (IsTileEmpty(aabb, true)) {
+					if (IsTileEmpty(aabb, params)) {
 						if (debris.Speed.Y > 0.0f) {
 							debris.Speed.Y = -(0.8f/*elasticity*/ * debris.Speed.Y);
 							//OnHitFloorHook();
@@ -1045,7 +1089,7 @@ namespace Jazz2::Tiles
 					// If the actor didn't move all the way horizontally,
 					// it hit a wall (or was already touching it)
 					aabb = AABBf(debris.Pos.X - 1, ny - 1, debris.Pos.X + 1, ny + 1);
-					if (IsTileEmpty(aabb, true)) {
+					if (IsTileEmpty(aabb, params)) {
 						debris.Speed.X = -(0.8f/*elasticity*/ * debris.Speed.X);
 						debris.AngleSpeed = -(0.8f/*elasticity*/ * debris.AngleSpeed);
 						//OnHitWallHook();
@@ -1151,192 +1195,8 @@ namespace Jazz2::Tiles
 	void TileMap::OnInitializeViewport(int width, int height)
 	{
 		if (_texturedBackgroundLayer != -1) {
-			constexpr char TexturedBackgroundFs[] = R"(
-#ifdef GL_ES
-precision highp float;
-#endif
-
-uniform sampler2D uTexture; // Normal
-
-uniform vec2 ViewSize;
-uniform vec2 CameraPosition;
-
-uniform vec3 horizonColor;
-uniform vec2 shift;
-uniform float parallaxStarsEnabled;
-
-in vec2 vTexCoords;
-
-out vec4 fragColor;
-
-vec2 hash2D(in vec2 p) {
-	float h = dot(p, vec2(12.9898, 78.233));
-	float h2 = dot(p, vec2(37.271, 377.632));
-	return -1.0 + 2.0 * vec2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
-}
-
-vec3 voronoi(in vec2 p) {
-	vec2 n = floor(p);
-	vec2 f = fract(p);
-
-	vec2 mg, mr;
-
-	float md = 8.0;
-	for (int j = -1; j <= 1; ++j) {
-		for (int i = -1; i <= 1; ++i) {
-			vec2 g = vec2(float(i), float(j));
-			vec2 o = hash2D(n + g);
-
-			vec2 r = g + o - f;
-			float d = dot(r, r);
-
-			if (d < md) {
-				md = d;
-				mr = r;
-				mg = g;
-			}
-		}
-	}
-	return vec3(md, mr);
-}
-
-float addStarField(vec2 samplePosition, float threshold) {
-	vec3 starValue = voronoi(samplePosition);
-	if (starValue.x < threshold) {
-		float power = 1.0 - (starValue.x / threshold);
-		return min(power * power * power, 0.5);
-	}
-	return 0.0;
-}
-
-void main() {
-	// Distance to center of screen from top or bottom (1: center of screen, 0: edge of screen)
-	float distance = 1.3 - abs(2.0 * vTexCoords.y - 1.0);
-	float horizonDepth = pow(distance, 2.0);
-
-	float yShift = (vTexCoords.y > 0.5 ? 1.0 : 0.0);
-
-	vec2 texturePos = vec2(
-		(shift.x / 256.0) + (vTexCoords.x - 0.5   ) * (0.5 + (1.5 * horizonDepth)),
-		(shift.y / 256.0) + (vTexCoords.y - yShift) * 2.0 * distance
-	);
-
-	vec4 texColor = texture(uTexture, texturePos);
-	float horizonOpacity = clamp(pow(distance, 1.8) - 0.4, 0.0, 1.0);
-	
-	vec4 horizonColorWithStars = vec4(horizonColor, 1.0);
-	if (parallaxStarsEnabled > 0.0) {
-		vec2 samplePosition = (vTexCoords * ViewSize / ViewSize.xx) + CameraPosition.xy * 0.00012;
-		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
-		
-		samplePosition = (vTexCoords * ViewSize / ViewSize.xx) + CameraPosition.xy * 0.00018 + 0.5;
-		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
-	}
-
-	fragColor = mix(texColor, horizonColorWithStars, horizonOpacity);
-	fragColor.a = 1.0;
-}
-)";
-
-			constexpr char TexturedBackgroundCircleFs[] = R"(
-#ifdef GL_ES
-precision highp float;
-#endif
-
-uniform sampler2D uTexture; // Normal
-
-uniform vec2 ViewSize;
-uniform vec2 CameraPosition;
-
-uniform vec3 horizonColor;
-uniform vec2 shift;
-uniform float parallaxStarsEnabled;
-
-in vec2 vTexCoords;
-
-out vec4 fragColor;
-
-#define INV_PI 0.31830988618379067153776752675
-
-vec2 hash2D(in vec2 p) {
-	float h = dot(p, vec2(12.9898, 78.233));
-	float h2 = dot(p, vec2(37.271, 377.632));
-	return -1.0 + 2.0 * vec2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
-}
-
-vec3 voronoi(in vec2 p) {
-	vec2 n = floor(p);
-	vec2 f = fract(p);
-
-	vec2 mg, mr;
-
-	float md = 8.0;
-	for (int j = -1; j <= 1; ++j) {
-		for (int i = -1; i <= 1; ++i) {
-			vec2 g = vec2(float(i), float(j));
-			vec2 o = hash2D(n + g);
-
-			vec2 r = g + o - f;
-			float d = dot(r, r);
-
-			if (d < md) {
-				md = d;
-				mr = r;
-				mg = g;
-			}
-		}
-	}
-	return vec3(md, mr);
-}
-
-float addStarField(vec2 samplePosition, float threshold) {
-	vec3 starValue = voronoi(samplePosition);
-	if (starValue.x < threshold) {
-		float power = 1.0 - (starValue.x / threshold);
-		return min(power * power * power, 0.5);
-	}
-	return 0.0;
-}
-
-void main() {
-	// Position of pixel on screen (between -1 and 1)
-	vec2 targetCoord = vec2(2.0) * vTexCoords - vec2(1.0);
-
-	// Aspect ratio correction, so display circle instead of ellipse
-	targetCoord.x *= ViewSize.x / ViewSize.y;
-
-	// Distance to center of screen
-	float distance = length(targetCoord);
-
-	// x-coordinate of tunnel
-	float xShift = (targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan(targetCoord.y, targetCoord.x) * INV_PI);
-
-	vec2 texturePos = vec2(
-		(xShift)         * 1.0 + (shift.x * 0.01),
-		(1.0 / distance) * 1.4 + (shift.y * 0.002)
-	);
-
-	vec4 texColor = texture(uTexture, texturePos);
-	float horizonOpacity = 1.0 - clamp(pow(distance, 1.4) - 0.3, 0.0, 1.0);
-	
-	vec4 horizonColorWithStars = vec4(horizonColor, 1.0);
-	if (parallaxStarsEnabled > 0.0) {
-		vec2 samplePosition = (vTexCoords * ViewSize / ViewSize.xx) + CameraPosition.xy * 0.00012;
-		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
-		
-		samplePosition = (vTexCoords * ViewSize / ViewSize.xx) + CameraPosition.xy * 0.00018 + 0.5;
-		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
-	}
-
-	fragColor = mix(texColor, horizonColorWithStars, horizonOpacity);
-	fragColor.a = 1.0;
-}
-)";
-
-			if (_texturedBackgroundShader == nullptr) {
-				_texturedBackgroundShader = std::make_unique<Shader>("TexturedBackground", Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE,
-					_layers[_texturedBackgroundLayer].BackgroundStyle == BackgroundStyle::Circle ? TexturedBackgroundCircleFs : TexturedBackgroundFs);
-			}
+			_texturedBackgroundShader = ContentResolver::Current().GetShader(_layers[_texturedBackgroundLayer].BackgroundStyle == BackgroundStyle::Circle ?
+				PrecompiledShader::TexturedBackgroundCircle : PrecompiledShader::TexturedBackground);
 
 			Vector2i layoutSize = _layers[_texturedBackgroundLayer].LayoutSize;
 			width = layoutSize.X * TileSet::DefaultTileSize;
@@ -1379,7 +1239,7 @@ void main() {
 
 			// Prepare output render command
 			_outputRenderCommand.setType(RenderCommand::CommandTypes::SPRITE);
-			_outputRenderCommand.material().setShader(_owner->_texturedBackgroundShader.get());
+			_outputRenderCommand.material().setShader(_owner->_texturedBackgroundShader);
 			_outputRenderCommand.material().reserveUniformsDataMemory();
 			_outputRenderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 

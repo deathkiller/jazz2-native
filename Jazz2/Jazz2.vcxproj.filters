@@ -915,6 +915,15 @@
     <ClInclude Include="Jazz2\Actors\Solid\PowerUpMorphMonitor.h">
       <Filter>Header Files\Jazz2\Actors\Solid</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\GemGiant.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\PushableBox.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\ContentResolver.Shaders.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1548,6 +1557,12 @@
       <Filter>Source Files\Jazz2\Actors\Solid</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Solid\PowerUpMorphMonitor.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\GemGiant.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\PushableBox.cpp">
       <Filter>Source Files\Jazz2\Actors\Solid</Filter>
     </ClCompile>
   </ItemGroup>

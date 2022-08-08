@@ -55,26 +55,27 @@ namespace Jazz2::Actors::Environment
 			// JJ2 horizontal springs held no data about which way they were facing.
 			// For compatibility, the level converter sets their orientation to 5, which is interpreted here.
 			AABBf aabb = AABBf(_pos.X + 6, _pos.Y - 2, _pos.X + 22, _pos.Y + 2);
-			_orientation = (uint16_t)(_levelHandler->TileMap()->IsTileEmpty(aabb, false) != (_orientation == 5) ? 1 : 3);
+			TileCollisionParams params = { TileDestructType::None, true };
+			_orientation = (uint16_t)(_levelHandler->TileMap()->IsTileEmpty(aabb, params) != (_orientation == 5) ? 1 : 3);
 		}
 
 		int orientationBit = 0;
 		switch (_orientation) {
 			case 0: // Bottom
-				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 8), MoveType::Absolute, true);
+				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 8), MoveType::Absolute | MoveType::Force);
 				break;
 			case 1: // Right
-				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 16), MoveType::Absolute, true);
+				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 16), MoveType::Absolute | MoveType::Force);
 				orientationBit = 1;
 				CollisionFlags &= ~CollisionFlags::ApplyGravitation;
 				break;
 			case 2: // Top
-				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 8), MoveType::Absolute, true);
+				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 8), MoveType::Absolute | MoveType::Force);
 				orientationBit = 2;
 				CollisionFlags &= ~CollisionFlags::ApplyGravitation;
 				break;
 			case 3: // Left
-				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 16), MoveType::Absolute, true);
+				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 16), MoveType::Absolute | MoveType::Force);
 				orientationBit = 1;
 				CollisionFlags &= ~CollisionFlags::ApplyGravitation;
 				SetFacingLeft(true);

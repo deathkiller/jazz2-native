@@ -16,6 +16,7 @@
 #include "../Actors/Collectibles/FoodCollectible.h"
 #include "../Actors/Collectibles/CarrotCollectible.h"
 #include "../Actors/Collectibles/GemCollectible.h"
+#include "../Actors/Collectibles/GemGiant.h"
 #include "../Actors/Collectibles/OneUpCollectible.h"
 
 #include "../Actors/Enemies/Bat.h"
@@ -44,6 +45,7 @@
 #include "../Actors/Solid/Pole.h"
 #include "../Actors/Solid/PowerUpMorphMonitor.h"
 #include "../Actors/Solid/PowerUpWeaponMonitor.h"
+#include "../Actors/Solid/PushableBox.h"
 #include "../Actors/Solid/TriggerCrate.h"
 
 using namespace Jazz2::Actors;
@@ -83,8 +85,8 @@ namespace Jazz2::Events
 		RegisterSpawnable<Solid::Bridge>(EventType::Bridge);
 		RegisterSpawnable<Solid::Pole>(EventType::Pole);
 		/*RegisterSpawnable(EventType::MovingPlatform, MovingPlatform.Create, MovingPlatform.Preload);
-		RegisterSpawnable(EventType::SpikeBall, SpikeBall.Create, SpikeBall.Preload);
-		RegisterSpawnable(EventType::PushableBox, PushBox.Create, PushBox.Preload);*/
+		RegisterSpawnable(EventType::SpikeBall, SpikeBall.Create, SpikeBall.Preload);*/
+		RegisterSpawnable<Solid::PushableBox>(EventType::PushableBox);
 		RegisterSpawnable<Environment::Eva>(EventType::Eva);
 		RegisterSpawnable<Environment::EndOfLevel>(EventType::SignEOL);
 		RegisterSpawnable<Environment::Moth>(EventType::Moth);
@@ -138,6 +140,7 @@ namespace Jazz2::Events
 
 		// Collectibles
 		RegisterSpawnable<Collectibles::GemCollectible>(EventType::Gem);
+		RegisterSpawnable<Collectibles::GemGiant>(EventType::GemGiant);
 		RegisterSpawnable<Collectibles::CoinCollectible>(EventType::Coin);
 		RegisterSpawnable<Collectibles::CarrotCollectible>(EventType::Carrot);
 		/*RegisterSpawnable(EventType::CarrotFly, CarrotFlyCollectible.Create, CarrotFlyCollectible.Preload);
@@ -151,8 +154,7 @@ namespace Jazz2::Events
 		RegisterSpawnable<Solid::BarrelContainer>(EventType::Barrel);
 		RegisterSpawnable<Solid::GemCrate>(EventType::CrateGem);
 		RegisterSpawnable<Solid::GemBarrel>(EventType::BarrelGem);
-		/*RegisterSpawnable(EventType::GemGiant, GemGiant.Create, GemGiant.Preload);
-		RegisterSpawnable(EventType::GemRing, GemRing.Create, GemRing.Preload);*/
+		//RegisterSpawnable(EventType::GemRing, GemRing.Create, GemRing.Preload);
 
 		RegisterSpawnable<Solid::PowerUpMorphMonitor>(EventType::PowerUpMorph);
 		/*RegisterSpawnable(EventType::BirdCage, BirdCage.Create, BirdCage.Preload);

@@ -68,15 +68,18 @@ namespace Jazz2::Actors::Weapons
 	{
 		float halfTimeMult = timeMult * 0.5f;
 
-		for (int i = 0; i < 2; i++) {
-			TryMovement(halfTimeMult);
-			OnUpdateHitbox();
-			CheckCollisions(halfTimeMult);
+		TileCollisionParams params = { TileDestructType::Weapon, _speed.Y >= 0.0f, WeaponType::Freezer, _strength };
+		for (int i = 0; i < 2 && params.WeaponStrength > 0; i++) {
+			TryStandardMovement(halfTimeMult, params);
+		}
+		if (params.WeaponStrength <= 0) {
+			DecreaseHealth(INT32_MAX);
+			return;
 		}
 
 		ShotBase::OnUpdate(timeMult);
 
-		// TODO: Add poarticles
+		// TODO: Add particles
 
 		if (_timeLeft <= 0.0f) {
 			PlaySfx("WallPoof"_s);
@@ -84,7 +87,7 @@ namespace Jazz2::Actors::Weapons
 
 		if (!_fired) {
 			_fired = true;
-			MoveInstantly(_gunspotPos, MoveType::Absolute, true);
+			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
 			_renderer.setDrawEnabled(true);
 		}
 	}
@@ -112,7 +115,7 @@ namespace Jazz2::Actors::Weapons
 
 	bool FreezerShot::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer()), Explosion::Type::SmokeWhite);
+		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::SmokeWhite);
 
 		return ShotBase::OnPerish(collider);
 	}

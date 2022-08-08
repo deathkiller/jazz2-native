@@ -14,7 +14,7 @@ namespace Jazz2::Actors::Environment
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdateHitbox() override;
-		bool OnHandleCollision(ActorBase* other) override;
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 	private:
 		uint8_t _theme;

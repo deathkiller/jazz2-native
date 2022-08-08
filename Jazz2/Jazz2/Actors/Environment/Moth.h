@@ -17,7 +17,7 @@ namespace Jazz2::Actors::Environment
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
-		bool OnHandleCollision(ActorBase* other) override;
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 	private:
 		float _timer;

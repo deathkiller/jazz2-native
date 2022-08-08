@@ -83,7 +83,7 @@ namespace Jazz2
 		const std::shared_ptr<AudioBufferPlayer>& PlaySfx(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain = 1.0f, float pitch = 1.0f) override;
 		const std::shared_ptr<AudioBufferPlayer>& PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
 		void WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor) override;
-		bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, bool downwards, __out ActorBase** collider) override;
+		bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, TileCollisionParams& params, __out ActorBase** collider) override;
 		void FindCollisionActorsByAABB(ActorBase* self, const AABBf& aabb, const std::function<bool(ActorBase*)>& callback) override;
 		void FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(ActorBase*)>& callback) override;
 		void GetCollidingPlayers(const AABBf& aabb, const std::function<bool(ActorBase*)> callback) override;
@@ -215,10 +215,10 @@ namespace Jazz2
 		std::unique_ptr<Viewport> _lightingView;
 		std::unique_ptr<Texture> _lightingBuffer;
 
-		std::unique_ptr<Shader> _lightingShader;
-		std::unique_ptr<Shader> _blurShader;
-		std::unique_ptr<Shader> _downsampleShader;
-		std::unique_ptr<Shader> _combineShader;
+		Shader* _lightingShader;
+		Shader* _blurShader;
+		Shader* _downsampleShader;
+		Shader* _combineShader;
 		
 		BlurRenderPass _downsamplePass;
 		BlurRenderPass _blurPass2;

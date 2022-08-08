@@ -16,7 +16,7 @@ namespace Jazz2::Actors::Enemies
 		void OnUpdate(float timeMult) override;
 		void OnUpdateHitbox() override;
 		bool OnPerish(ActorBase* collider) override;
-		bool OnHandleCollision(ActorBase* other) override;
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 		void OnHitFloor() override;
 
 	private:

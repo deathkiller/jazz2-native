@@ -74,17 +74,24 @@ namespace Jazz2::Actors::Enemies
 		_speed.X = std::max(std::abs(_speed.X) - _friction, 0.0f) * (_speed.X < 0.0f ? -1.0f : 1.0f);
 
 		double posYBefore = _pos.Y;
-		EnemyBase::OnUpdate(timeMult);
+
+		TileCollisionParams params = { TileDestructType::Weapon | TileDestructType::Special, _speed.Y >= 0.0f, WeaponType::Blaster, 1 };
+		TryStandardMovement(timeMult, params);
+		OnUpdateHitbox();
+
+		if (_renderer.AnimPaused) {
+			if (_frozenTimeLeft <= 0.0f) {
+				_renderer.AnimPaused = false;
+				// TODO: Frozen effect
+			} else {
+				_frozenTimeLeft -= timeMult;
+			}
+		}
+
+		HandleBlinking(timeMult);
 
 		if (posYBefore - _pos.Y > 0.5 && std::abs(_speed.Y) < 1) {
 			_speed.X = std::max(std::abs(_speed.X) - 10.0f * _friction, 0.0f) * (_speed.X < 0.0f ? -1.0f : 1.0f);
-		}
-
-		auto tiles = _levelHandler->TileMap();
-		if (tiles != nullptr) {
-			tiles->CheckSpecialDestructible(AABBInner);
-			tiles->CheckCollapseDestructible(AABBInner);
-			tiles->CheckWeaponDestructible(AABBInner, WeaponType::Blaster, 1);
 		}
 
 		_lastAngle = lerp(_lastAngle, _speed.X * 0.06f, timeMult * 0.2f);
@@ -106,17 +113,17 @@ namespace Jazz2::Actors::Enemies
 		return EnemyBase::OnPerish(collider);
 	}
 
-	bool TurtleShell::OnHandleCollision(ActorBase* other)
+	bool TurtleShell::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		EnemyBase::OnHandleCollision(other);
 
-		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other)) {
-			if (auto freezerShot = dynamic_cast<Weapons::FreezerShot*>(other)) {
+		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
+			if (auto freezerShot = dynamic_cast<Weapons::FreezerShot*>(shotBase)) {
 				return false;
 			}
 
-			if (auto toasterShot = dynamic_cast<Weapons::ToasterShot*>(other)) {
-				DecreaseHealth(INT32_MAX, other);
+			if (auto toasterShot = dynamic_cast<Weapons::ToasterShot*>(shotBase)) {
+				DecreaseHealth(INT32_MAX, toasterShot);
 				return true;
 			}
 
@@ -124,7 +131,7 @@ namespace Jazz2::Actors::Enemies
 			_speed.X = std::max(4.0f, std::abs(otherSpeed)) * (otherSpeed < 0.0f ? -0.5f : 0.5f);
 
 			PlaySfx("Fly"_s);
-		} else if (auto shell = dynamic_cast<TurtleShell*>(other)) {
+		} else if (auto shell = dynamic_cast<TurtleShell*>(other.get())) {
 			auto otherSpeed = shell->GetSpeed();
 			if (std::abs(otherSpeed.Y - _speed.Y) > 1.0f && otherSpeed.Y > 0.0f) {
 				DecreaseHealth(10, this);
@@ -140,7 +147,7 @@ namespace Jazz2::Actors::Enemies
 				PlaySfx("ImpactShell"_s, 0.8f);
 			}
 			return true;
-		} else if (auto enemyBase = dynamic_cast<EnemyBase*>(other)) {
+		} else if (auto enemyBase = dynamic_cast<EnemyBase*>(other.get())) {
 			if (enemyBase->CanCollideWithAmmo) {
 				_speed.X = std::max(std::abs(_speed.X), 2.0f) * (_speed.X >= 0.0f ? -1.0f : 1.0f);
 				if (!enemyBase->GetState(ActorFlags::IsInvulnerable)) {
@@ -148,7 +155,7 @@ namespace Jazz2::Actors::Enemies
 					return true;
 				}
 			}
-		} else if (auto crateContainer = dynamic_cast<Solid::CrateContainer*>(other)) {
+		} else if (auto crateContainer = dynamic_cast<Solid::CrateContainer*>(other.get())) {
 			_speed.X = std::max(std::abs(_speed.X), 2.0f) * (_speed.X >= 0.0f ? -1.0f : 1.0f);
 			crateContainer->DecreaseHealth(1, this);
 			return true;

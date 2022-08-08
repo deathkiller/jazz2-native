@@ -116,9 +116,9 @@ namespace Jazz2::Actors::Solid
 		}
 	}
 
-	bool Pole::OnHandleCollision(ActorBase* other)
+	bool Pole::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other)) {
+		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
 			Fall(shotBase->GetSpeed().X < 0.0f ? FallDirection::Left : FallDirection::Right);
 			shotBase->DecreaseHealth(1, this);
 			return true;
@@ -150,6 +150,7 @@ namespace Jazz2::Actors::Solid
 		float rx = std::cosf(angle);
 		float ry = std::sinf(angle);
 		float radius = _currentAnimation->Base->FrameDimensions.Y;
+		TileCollisionParams params = { TileDestructType::None, true };
 
 		if (_fallTime > 20) {
 			// Check radius 1
@@ -157,7 +158,7 @@ namespace Jazz2::Actors::Solid
 				float x = _pos.X + (rx * Ratio1 * radius);
 				float y = _pos.Y + (ry * Ratio1 * radius);
 				AABBf aabb = AABBf(x - 3, y - 3, x + 7, y + 7);
-				if (!_levelHandler->IsPositionEmpty(this, aabb, true)) {
+				if (!_levelHandler->IsPositionEmpty(this, aabb, params)) {
 					return true;
 				}
 			}
@@ -166,7 +167,7 @@ namespace Jazz2::Actors::Solid
 				float x = _pos.X + (rx * Ratio2 * radius);
 				float y = _pos.Y + (ry * Ratio2 * radius);
 				AABBf aabb = AABBf(x - 3, y - 3, x + 7, y + 7);
-				if (!_levelHandler->IsPositionEmpty(this, aabb, true)) {
+				if (!_levelHandler->IsPositionEmpty(this, aabb, params)) {
 					return true;
 				}
 			}
@@ -176,7 +177,7 @@ namespace Jazz2::Actors::Solid
 			float x = _pos.X + (rx * Ratio3 * radius);
 			float y = _pos.Y + (ry * Ratio3 * radius);
 			AABBf aabb = AABBf(x - 3, y - 3, x + 7, y + 7);
-			if (!_levelHandler->IsPositionEmpty(this, aabb, true)) {
+			if (!_levelHandler->IsPositionEmpty(this, aabb, params)) {
 				return true;
 			}
 		}
@@ -185,7 +186,7 @@ namespace Jazz2::Actors::Solid
 			float x = _pos.X + (rx * Ratio4 * radius);
 			float y = _pos.Y + (ry * Ratio4 * radius);
 			AABBf aabb = AABBf(x - 3, y - 3, x + 7, y + 7);
-			if (!_levelHandler->IsPositionEmpty(this, aabb, true)) {
+			if (!_levelHandler->IsPositionEmpty(this, aabb, params)) {
 				return true;
 			}
 		}

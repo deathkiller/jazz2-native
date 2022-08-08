@@ -136,16 +136,16 @@ namespace Jazz2::Actors
 		if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::SwitchWeapon)) {
 			float moveDistance = (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Run) ? 400.0f : 100.0f);
 			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::Left)) {
-				MoveInstantly(Vector2f(-moveDistance, 0.0f), MoveType::Relative, true);
+				MoveInstantly(Vector2f(-moveDistance, 0.0f), MoveType::Relative | MoveType::Force);
 			}
 			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::Right)) {
-				MoveInstantly(Vector2f(moveDistance, 0.0f), MoveType::Relative, true);
+				MoveInstantly(Vector2f(moveDistance, 0.0f), MoveType::Relative | MoveType::Force);
 			}
 			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::Up)) {
-				MoveInstantly(Vector2f(0.0f, -moveDistance), MoveType::Relative, true);
+				MoveInstantly(Vector2f(0.0f, -moveDistance), MoveType::Relative | MoveType::Force);
 			}
 			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::Down)) {
-				MoveInstantly(Vector2f(0.0f, moveDistance), MoveType::Relative, true);
+				MoveInstantly(Vector2f(0.0f, moveDistance), MoveType::Relative | MoveType::Force);
 			}
 		}
 //#endif
@@ -165,11 +165,25 @@ namespace Jazz2::Actors
 
 		//base.OnFixedUpdate(timeMult);
 		{
-			if (timeMult > 1.25f) {
-				TryStandardMovement(1.0f);
-				TryStandardMovement(timeMult - 1.0f);
+			TileCollisionParams params = { };
+			params.Downwards = _speed.Y >= 0.0f;
+			if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f) {
+				params.DestructType |= TileDestructType::Special;
+			}
+			if (std::abs(_speed.X) > std::numeric_limits<float>::epsilon() || std::abs(_speed.Y) > std::numeric_limits<float>::epsilon() || _sugarRushLeft > 0.0f) {
+				params.DestructType |= TileDestructType::Speed;
+				params.Speed = (_sugarRushLeft > 0.0f ? 64.0f : std::max(std::abs(_speed.X), std::abs(_speed.Y)));
+			}
+
+			if (timeMult * (std::abs(_speed.X + _externalForce.X) + std::abs(_speed.Y - _externalForce.Y)) > 20.0f) {
+				TryStandardMovement(timeMult * 0.5f, params);
+				TryStandardMovement(timeMult * 0.5f, params);
 			} else {
-				TryStandardMovement(timeMult);
+				TryStandardMovement(timeMult, params);
+			}
+
+			if (params.TilesDestroyed > 0) {
+				AddScore(params.TilesDestroyed * 50);
 			}
 
 			OnUpdateHitbox();
@@ -542,7 +556,7 @@ namespace Jazz2::Actors
 				} else if (_suspendType != SuspendType::None) {
 					_wasDownPressed = true;
 
-					MoveInstantly(Vector2f(0.0f, 10.0f), MoveType::Relative, true);
+					MoveInstantly(Vector2f(0.0f, 10.0f), MoveType::Relative | MoveType::Force);
 					_suspendType = SuspendType::None;
 
 					CollisionFlags |= CollisionFlags::ApplyGravitation;
@@ -701,7 +715,7 @@ namespace Jazz2::Actors
 							//_currentVine = nullptr;
 							CollisionFlags |= CollisionFlags::ApplyGravitation;
 						} else {
-							MoveInstantly(Vector2(0.0f, -8.0f), MoveType::Relative, true);
+							MoveInstantly(Vector2(0.0f, -8.0f), MoveType::Relative | MoveType::Force);
 						}
 						SetState(ActorFlags::CanJump, true);
 					}
@@ -873,11 +887,11 @@ namespace Jazz2::Actors
 		AABBInner = AABBf(_pos.X - 11.0f, _pos.Y + 8.0f - 12.0f, _pos.X + 11.0f, _pos.Y + 8.0f + 12.0f);
 	}
 
-	bool Player::OnHandleCollision(ActorBase* other)
+	bool Player::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		bool handled = false;
 		bool removeSpecialMove = false;
-		if (auto turtleShell = dynamic_cast<Enemies::TurtleShell*>(other)) {
+		if (auto turtleShell = dynamic_cast<Enemies::TurtleShell*>(other.get())) {
 			if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f) {
 				other->DecreaseHealth(INT32_MAX, this);
 
@@ -888,13 +902,13 @@ namespace Jazz2::Actors
 				}
 				return true;
 			}
-		} else if (auto enemy = dynamic_cast<Enemies::EnemyBase*>(other)) {
+		} else if (auto enemy = dynamic_cast<Enemies::EnemyBase*>(other.get())) {
 			if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f /*|| _shieldTime > 0.0f*/) {
 				if (!enemy->IsInvulnerable()) {
 					enemy->DecreaseHealth(4, this);
 					handled = true;
 
-					Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()), Explosion::Type::Small);
+					Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 2), Explosion::Type::Small);
 
 					if (_sugarRushLeft > 0.0f) {
 						if (GetState(ActorFlags::CanJump)) {
@@ -926,7 +940,7 @@ namespace Jazz2::Actors
 			} else if (enemy->CanHurtPlayer()) {
 				TakeDamage(1, 4 * (_pos.X > enemy->GetPos().X ? 1 : -1));
 			}
-		} else if (auto spring = dynamic_cast<Environment::Spring*>(other)) {
+		} else if (auto spring = dynamic_cast<Environment::Spring*>(other.get())) {
 			// Collide only with hitbox
 			if (_controllableExternal && _springCooldown <= 0.0f && spring->AABBInner.Overlaps(AABBInner)) {
 				Vector2 force = spring->Activate();
@@ -978,7 +992,7 @@ namespace Jazz2::Actors
 			}
 
 			handled = true;
-		} else if (auto bonusWarp = dynamic_cast<Environment::BonusWarp*>(other)) {
+		} else if (auto bonusWarp = dynamic_cast<Environment::BonusWarp*>(other.get())) {
 			if (_currentTransitionState == AnimState::Idle || _currentTransitionCancellable) {
 				auto cost = bonusWarp->GetCost();
 				if (cost <= _coins) {
@@ -1016,7 +1030,7 @@ namespace Jazz2::Actors
 				PlaySfx("Land"_s, 0.8f);
 
 				if (Random().NextFloat() < 0.6f) {
-					Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y + 20.0f, _renderer.layer()), Explosion::Type::TinyDark);
+					Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y + 20.0f, _renderer.layer() - 2), Explosion::Type::TinyDark);
 				}
 			}
 		} else {
@@ -1069,19 +1083,20 @@ namespace Jazz2::Actors
 					AABBf hitbox3 = AABBInner + Vector2f(x, -42.0f + 2.0f + 24.0f);						// Wall between the player and the wall above (vertically)
 					AABBf hitbox4 = AABBInner + Vector2f(x, 20.0f);										// Wall below the player
 					AABBf hitbox5 = AABBf(AABBInner.L + 2, hitbox1.T, AABBInner.R - 2, AABBInner.B);	// Player can't climb through walls
-					if (_levelHandler->IsPositionEmpty(this, hitbox1, false) &&
-						!_levelHandler->IsPositionEmpty(this, hitbox2, false) &&
-						!_levelHandler->IsPositionEmpty(this, hitbox3, false) &&
-						!_levelHandler->IsPositionEmpty(this, hitbox4, false) &&
-						 _levelHandler->IsPositionEmpty(this, hitbox5, false)) {
+					TileCollisionParams params = { TileDestructType::None, false };
+					if (_levelHandler->IsPositionEmpty(this, hitbox1, params) &&
+						!_levelHandler->IsPositionEmpty(this, hitbox2, params) &&
+						!_levelHandler->IsPositionEmpty(this, hitbox3, params) &&
+						!_levelHandler->IsPositionEmpty(this, hitbox4, params) &&
+						 _levelHandler->IsPositionEmpty(this, hitbox5, params)) {
 
 						uint8_t* wallParams;
 						if (_levelHandler->EventMap()->GetEventByPosition(IsFacingLeft() ? hitbox2.L : hitbox2.R, hitbox2.B, &wallParams) != EventType::ModifierNoClimb) {
 							// Move the player upwards, if it is in tolerance, so the animation will look better
 							for (int y = 0; y >= -MaxTolerancePixels; y -= 2) {
 								AABBf aabb = AABBInner + Vector2f(x, -42.0f + y);
-								if (_levelHandler->IsPositionEmpty(this, aabb, false)) {
-									MoveInstantly(Vector2f(0.0f, (float)y), MoveType::Relative, true);
+								if (_levelHandler->IsPositionEmpty(this, aabb, params)) {
+									MoveInstantly(Vector2f(0.0f, (float)y), MoveType::Relative | MoveType::Force, params);
 									break;
 								}
 							}
@@ -1095,7 +1110,7 @@ namespace Jazz2::Actors
 							_pushFramesLeft = _fireFramesLeft = _copterFramesLeft = 0.0f;
 
 							// Stick the player to wall
-							MoveInstantly(Vector2f(IsFacingLeft() ? -6.0f : 6.0f, 0.0f), MoveType::Relative, true);
+							MoveInstantly(Vector2f(IsFacingLeft() ? -6.0f : 6.0f, 0.0f), MoveType::Relative | MoveType::Force, params);
 
 							SetAnimation(AnimState::Idle);
 							SetTransition(AnimState::TransitionLedgeClimb, false, [this]() {
@@ -1110,11 +1125,12 @@ namespace Jazz2::Actors
 								_speed.Y = 0.0f;
 
 								// Move it far from the ledge
-								MoveInstantly(Vector2f(IsFacingLeft() ? -4.0f : 4.0f, 0.0f), MoveType::Relative);
+								TileCollisionParams params = { TileDestructType::None, false };
+								MoveInstantly(Vector2f(IsFacingLeft() ? -4.0f : 4.0f, 0.0f), MoveType::Relative, params);
 
 								// Move the player upwards, so it will not be stuck in the wall
 								for (float y = -2; y > -24; y -= 2) {
-									if (MoveInstantly(Vector2f(0.0f, y), MoveType::Relative)) {
+									if (MoveInstantly(Vector2f(0.0f, y), MoveType::Relative, params)) {
 										break;
 									}
 								}
@@ -1251,9 +1267,10 @@ namespace Jazz2::Actors
 				} else if (!_inLedgeTransition) {
 					AABBf aabbL = AABBf(AABBInner.L + 2, AABBInner.B - 10, AABBInner.L + 4, AABBInner.B + 28);
 					AABBf aabbR = AABBf(AABBInner.R - 4, AABBInner.B - 10, AABBInner.R - 2, AABBInner.B + 28);
+					TileCollisionParams params = { TileDestructType::None, true };
 					if (IsFacingLeft()
-						? (_levelHandler->IsPositionEmpty(this, aabbL, true) && !_levelHandler->IsPositionEmpty(this, aabbR, true))
-						: (!_levelHandler->IsPositionEmpty(this, aabbL, true) && _levelHandler->IsPositionEmpty(this, aabbR, true))) {
+						? (_levelHandler->IsPositionEmpty(this, aabbL, params) && !_levelHandler->IsPositionEmpty(this, aabbR, params))
+						: (!_levelHandler->IsPositionEmpty(this, aabbL, params) && _levelHandler->IsPositionEmpty(this, aabbR, params))) {
 
 						_inLedgeTransition = true;
 						// ToDo: Spaz's and Lori's animation should be continual
@@ -1280,8 +1297,9 @@ namespace Jazz2::Actors
 
 		if (GetState(ActorFlags::CanJump) && _controllable && _controllableExternal && _isActivelyPushing && std::abs(_speed.X) > std::numeric_limits<float>::epsilon()) {
 			AABBf hitbox = AABBInner + Vector2f(_speed.X < 0.0f ? -2.0f : 2.0f, 0.0f);
+			TileCollisionParams params = { TileDestructType::None, false };
 			ActorBase* collider;
-			if (!_levelHandler->IsPositionEmpty(this, hitbox, false, &collider)) {
+			if (!_levelHandler->IsPositionEmpty(this, hitbox, params, &collider)) {
 				if (auto solidObject = dynamic_cast<SolidObjectBase*>(collider)) {
 					CollisionFlags &= ~CollisionFlags::IsSolidObject;
 					if (solidObject->Push(_speed.X < 0, timeMult)) {
@@ -1292,8 +1310,9 @@ namespace Jazz2::Actors
 			}
 		} else if ((CollisionFlags & CollisionFlags::IsSolidObject) == CollisionFlags::IsSolidObject) {
 			AABBf aabb = AABBInner + Vector2f(0.0f, -2.0f);
+			TileCollisionParams params = { TileDestructType::None, false };
 			ActorBase* collider;
-			if (!_levelHandler->IsPositionEmpty(this, aabb, false, &collider)) {
+			if (!_levelHandler->IsPositionEmpty(this, aabb, params, &collider)) {
 				if (auto solidObject = dynamic_cast<SolidObjectBase*>(collider)) {
 					if (AABBInner.T >= solidObject->AABBInner.T && !_isLifting) {
 						_isLifting = true;
@@ -1391,8 +1410,9 @@ namespace Jazz2::Actors
 
 		AABBf aabb = AABBInner + Vector2f((_speed.X + _externalForce.X) * 2.0f * timeMult, (_speed.Y - _externalForce.Y) * 2.0f * timeMult);
 
+		// TODO
 		// Buttstomp/etc. tiles checking
-		if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f) {
+		/*if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f) {
 			int destroyedCount = tiles->CheckSpecialDestructible(aabb);
 			AddScore(destroyedCount * 50);
 
@@ -1408,7 +1428,7 @@ namespace Jazz2::Actors
 				_sugarRushLeft > 0.0f ? 64.0f : std::max(std::abs(_speed.X), std::abs(_speed.Y)));
 
 			AddScore(destroyedCount * 50);
-		}
+		}*/
 
 		tiles->CheckCollapseDestructible(aabb);
 	}
@@ -1438,10 +1458,10 @@ namespace Jazz2::Actors
 					if (newSuspendState != SuspendType::Hook) {
 						return;
 					} else {
-						MoveInstantly(Vector2f(tolerance, 0.0f), MoveType::Relative, true);
+						MoveInstantly(Vector2f(tolerance, 0.0f), MoveType::Relative | MoveType::Force);
 					}
 				} else {
-					MoveInstantly(Vector2f(-tolerance, 0.0f), MoveType::Relative, true);
+					MoveInstantly(Vector2f(-tolerance, 0.0f), MoveType::Relative | MoveType::Force);
 				}
 			} else {
 				return;
@@ -1471,9 +1491,9 @@ namespace Jazz2::Actors
 
 				// Move downwards until we're on the standard height
 				while (tiles->GetTileSuspendState(_pos.X, _pos.Y - 1) != SuspendType::None) {
-					MoveInstantly(Vector2f(0.0f, 1.0f), MoveType::Relative, true);
+					MoveInstantly(Vector2f(0.0f, 1.0f), MoveType::Relative | MoveType::Force);
 				}
-				MoveInstantly(Vector2f(0.0f, -1.0f), MoveType::Relative, true);
+				MoveInstantly(Vector2f(0.0f, -1.0f), MoveType::Relative | MoveType::Force);
 			}
 		} else {
 			_suspendType = SuspendType::None;
@@ -1610,16 +1630,16 @@ namespace Jazz2::Actors
 				Vector2f pos = _pos;
 				if (_speed.X == 0.0f) {
 					pos.X = (std::floor(pos.X / 32) * 32) + 16;
-					MoveInstantly(pos, MoveType::Absolute, true);
+					MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 					OnUpdateHitbox();
 				} else if (_speed.Y == 0.0f) {
 					pos.Y = (std::floor(pos.Y / 32) * 32) + 8;
-					MoveInstantly(pos, MoveType::Absolute, true);
+					MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 					OnUpdateHitbox();
 				} else if (_inTubeTime <= 0.0f) {
 					pos.X = (std::floor(pos.X / 32) * 32) + 16;
 					pos.Y = (std::floor(pos.Y / 32) * 32) + 8;
-					MoveInstantly(pos, MoveType::Absolute, true);
+					MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 					OnUpdateHitbox();
 				}
 
@@ -1861,7 +1881,8 @@ namespace Jazz2::Actors
 	bool Player::CanFreefall()
 	{
 		AABBf aabb = AABBf(_pos.X - 14, _pos.Y + 8 - 12, _pos.X + 14, _pos.Y + 8 + 12 + 100);
-		return _levelHandler->IsPositionEmpty(this, aabb, true);
+		TileCollisionParams params = { TileDestructType::None, true };
+		return _levelHandler->IsPositionEmpty(this, aabb, params);
 	}
 
 	void Player::OnPerishInner()
@@ -1910,7 +1931,7 @@ namespace Jazz2::Actors
 					CollisionFlags |= CollisionFlags::ApplyGravitation | CollisionFlags::CollideWithTileset | CollisionFlags::CollideWithSolidObjects;
 
 					// Return to the last save point
-					MoveInstantly(_checkpointPos, MoveType::Absolute, true);
+					MoveInstantly(_checkpointPos, MoveType::Absolute | MoveType::Force);
 					// TODO
 					//_levelHandler->AmbientLightCurrent = _checkpointLight;
 					//_levelHandler->LimitCameraView(0, 0);
@@ -2156,7 +2177,7 @@ namespace Jazz2::Actors
 			_levelExiting = LevelExitingState::Waiting;
 
 			if (_suspendType != SuspendType::None) {
-				MoveInstantly(Vector2f(0.0f, 10.0f), MoveType::Relative, true);
+				MoveInstantly(Vector2f(0.0f, 10.0f), MoveType::Relative | MoveType::Force);
 				_suspendType = SuspendType::None;
 			}
 
@@ -2231,8 +2252,7 @@ namespace Jazz2::Actors
 	{
 		if (fast) {
 			Vector2f posOld = _pos;
-
-			MoveInstantly(pos, MoveType::Absolute, true);
+			MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 
 			if (Vector2f(posOld.X - pos.X, posOld.Y - pos.Y).Length() > 250) {
 				_levelHandler->WarpCameraToTarget(shared_from_this());
@@ -2260,8 +2280,7 @@ namespace Jazz2::Actors
 
 			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpInFreefall : AnimState::TransitionWarpIn, false, true, SpecialMoveType::None, [this, pos]() {
 				Vector2f posOld = _pos;
-
-				MoveInstantly(pos, MoveType::Absolute, true);
+				MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 				PlayPlayerSfx("WarpOut"_s);
 
 				if (Vector2f(posOld.X - pos.X, posOld.Y - pos.Y).Length() > 250) {
@@ -2304,7 +2323,7 @@ namespace Jazz2::Actors
 		}
 		bool positive = (activeForce >= 0);
 
-		MoveInstantly(Vector2f(x * 32 + 16, y * 32 + 16), MoveType::Absolute, true);
+		MoveInstantly(Vector2f(x * 32 + 16, y * 32 + 16), MoveType::Absolute | MoveType::Force);
 		OnUpdateHitbox();
 
 		_speed.X = 0.0f;
@@ -2360,7 +2379,7 @@ namespace Jazz2::Actors
 
 				SetPlayerTransition(AnimState::Dash | AnimState::Jump, true, true, SpecialMoveType::None);
 			} else {
-				MoveInstantly(Vector2f(0, sign * 16), MoveType::Relative, true);
+				MoveInstantly(Vector2f(0, sign * 16), MoveType::Relative | MoveType::Force);
 
 				_speed.Y = 4 * sign + lastSpeed * 1.4f;
 				_externalForce.Y = (-1.3f * sign);
@@ -2466,7 +2485,7 @@ namespace Jazz2::Actors
 		if (_currentTransitionState == AnimState::TransitionLedgeClimb) {
 			ForceCancelTransition();
 
-			MoveInstantly(Vector2f(IsFacingLeft() ? 6.0f : -6.0f, 0.0f), MoveType::Relative, true);
+			MoveInstantly(Vector2f(IsFacingLeft() ? 6.0f : -6.0f, 0.0f), MoveType::Relative | MoveType::Force);
 		}
 
 		DecreaseHealth(amount, nullptr);

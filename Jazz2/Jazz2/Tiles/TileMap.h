@@ -29,7 +29,7 @@ namespace Jazz2::Tiles
 		TileDestructType DestructType;
 		int DestructAnimation;   // Animation index for a destructible tile that uses an animation, but doesn't animate normally
 		int DestructFrameIndex;  // Denotes the specific frame from the above animation that is currently active
-										// Collapsible: delay ("wait" parameter); trigger: trigger id
+								 // Collapsible: delay ("wait" parameter); trigger: trigger id
 
 		// ToDo: I don't know if it's good solution for this
 		unsigned int ExtraData;
@@ -146,12 +146,12 @@ namespace Jazz2::Tiles
 		bool OnDraw(RenderQueue& renderQueue) override;
 
 		bool IsTileEmpty(int x, int y);
-		bool IsTileEmpty(const AABBf& aabb, bool downwards);
+		bool IsTileEmpty(const AABBf& aabb, TileCollisionParams& params);
 		SuspendType GetTileSuspendState(float x, float y);
 
-		int CheckWeaponDestructible(const AABBf& aabb, WeaponType weapon, int strength);
-		int CheckSpecialDestructible(const AABBf& aabb);
-		int CheckSpecialSpeedDestructible(const AABBf& aabb, float speed);
+		//int CheckWeaponDestructible(const AABBf& aabb, WeaponType weapon, int strength);
+		//int CheckSpecialDestructible(const AABBf& aabb);
+		//int CheckSpecialSpeedDestructible(const AABBf& aabb, float speed);
 		int CheckCollapseDestructible(const AABBf& aabb);
 
 		void SetSolidLimit(int tileLeft, int tileWidth);
@@ -213,7 +213,7 @@ namespace Jazz2::Tiles
 
 		int _texturedBackgroundLayer;
 		TexturedBackgroundPass _texturedBackgroundPass;
-		std::unique_ptr<Shader> _texturedBackgroundShader;
+		Shader* _texturedBackgroundShader;
 
 		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer);
 		static float TranslateCoordinate(float coordinate, float speed, float offset, bool isY, int viewHeight, int viewWidth);

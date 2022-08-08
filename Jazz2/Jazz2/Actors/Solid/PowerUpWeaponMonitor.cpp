@@ -54,13 +54,13 @@ namespace Jazz2::Actors::Solid
 		co_return true;
 	}
 
-	bool PowerUpWeaponMonitor::OnHandleCollision(ActorBase* other)
+	bool PowerUpWeaponMonitor::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (_health == 0) {
 			return SolidObjectBase::OnHandleCollision(other);
 		}
 
-		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other)) {
+		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
 			Player* owner = shotBase->GetOwner();
 			WeaponType weaponType = shotBase->GetWeaponType();
 			if (owner != nullptr && (weaponType == WeaponType::Blaster ||
@@ -78,7 +78,7 @@ namespace Jazz2::Actors::Solid
 			if (owner != nullptr) {
 				DestroyAndApplyToPlayer(owner);
 			}
-		}*/ else if (auto player = dynamic_cast<Player*>(other)) {
+		}*/ else if (auto player = dynamic_cast<Player*>(other.get())) {
 			if (player->CanBreakSolidObjects()) {
 				DestroyAndApplyToPlayer(player);
 				return true;

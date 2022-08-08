@@ -26,7 +26,7 @@ namespace Jazz2::Actors::Enemies
 		public:
 			MagicBullet(Witch* owner) : _owner(owner), _time(380.0f) { }
 
-			bool OnHandleCollision(ActorBase* other) override;
+			bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 		protected:
 			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

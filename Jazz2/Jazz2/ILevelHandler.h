@@ -69,12 +69,12 @@ namespace Jazz2
 		virtual const std::shared_ptr<AudioBufferPlayer>& PlaySfx(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain = 1.0f, float pitch = 1.0f) = 0;
 		virtual const std::shared_ptr<AudioBufferPlayer>& PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) = 0;
 		virtual void WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor) = 0;
-		virtual bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, bool downwards, __out ActorBase** collider) = 0;
+		virtual bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, TileCollisionParams& params, __out ActorBase** collider) = 0;
 
-		bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, bool downwards)
+		bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, TileCollisionParams& params)
 		{
 			ActorBase* collider;
-			return IsPositionEmpty(self, aabb, downwards, &collider);
+			return IsPositionEmpty(self, aabb, params, &collider);
 		}
 
 		virtual void FindCollisionActorsByAABB(ActorBase* self, const AABBf& aabb, const std::function<bool(ActorBase*)>& callback) = 0;

@@ -163,7 +163,7 @@ namespace Jazz2::Actors
 		bool OnPerish(ActorBase* collider) override;
 		void OnUpdateHitbox() override;
 
-		bool OnHandleCollision(ActorBase* other) override;
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 		void OnHitFloor() override;
 		void OnHitCeiling() override;
 		void OnHitWall() override;

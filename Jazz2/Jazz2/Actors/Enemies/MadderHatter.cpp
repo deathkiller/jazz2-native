@@ -82,7 +82,7 @@ namespace Jazz2::Actors::Enemies
 			if (GetState(ActorFlags::CanJump)) {
 				if (!CanMoveToPosition(_speed.X * 4, 0)) {
 					if (_stuck) {
-						MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative, true);
+						MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative | MoveType::Force);
 					} else {
 						SetFacingLeft(!IsFacingLeft());
 						_speed.X = (IsFacingLeft() ? -DefaultSpeed : DefaultSpeed);
@@ -136,7 +136,7 @@ namespace Jazz2::Actors::Enemies
 		UpdateHitbox(8, 8);
 	}
 
-	bool MadderHatter::BulletSpit::OnHandleCollision(ActorBase* other)
+	bool MadderHatter::BulletSpit::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		return false;
 	}
