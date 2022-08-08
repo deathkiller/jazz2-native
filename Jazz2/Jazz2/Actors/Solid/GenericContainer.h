@@ -11,12 +11,6 @@ namespace Jazz2::Actors::Solid
 		GenericContainer();
 
 	protected:
-		bool OnPerish(ActorBase* collider) override;
-
-		void AddContent(EventType eventType, int count, uint8_t* eventParams, int eventParamsSize);
-		void SpawnContent();
-
-	private:
 		struct ContainerContent {
 			EventType Type;
 			int Count;
@@ -35,5 +29,10 @@ namespace Jazz2::Actors::Solid
 		};
 
 		SmallVector<ContainerContent, 0> _content;
+
+		bool OnPerish(ActorBase* collider) override;
+
+		void AddContent(EventType eventType, int count, uint8_t* eventParams, int eventParamsSize);
+		void SpawnContent();
 	};
 }

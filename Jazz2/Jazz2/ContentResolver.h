@@ -175,8 +175,6 @@ namespace Jazz2
 		static ContentResolver& Current();
 
 	private:
-		static ContentResolver _current;
-
 		/// Deleted copy constructor
 		ContentResolver(const ContentResolver&) = delete;
 		/// Deleted assignment operator

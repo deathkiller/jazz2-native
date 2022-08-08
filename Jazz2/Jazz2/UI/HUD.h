@@ -61,6 +61,8 @@ namespace Jazz2::UI
 		int _gems;
 		float _coinsTime;
 		float _gemsTime;
+		float _healthLast;
+		float _rgbLightsTime;
 
 		TouchButtonInfo _touchButtons[TouchButtonsCount];
 		float _touchButtonsTimer;
@@ -74,5 +76,7 @@ namespace Jazz2::UI
 
 		TouchButtonInfo CreateTouchButton(PlayerActions action, const StringView& identifier, Alignment align, float x, float y, float w, float h);
 		bool IsOnButton(const TouchButtonInfo& button, float x, float y);
+
+		void UpdateRgbLights(Actors::Player* player);
 	};
 }

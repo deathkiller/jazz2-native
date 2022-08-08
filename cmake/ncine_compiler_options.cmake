@@ -65,6 +65,8 @@ if(EMSCRIPTEN)
 	if(OPENMPT_FOUND)
 		target_link_libraries(ncine PUBLIC libopenmpt::libopenmpt)
 	endif()
+	
+	target_link_libraries(ncine PUBLIC websocket.js)
 endif()
 
 if(MSVC)

@@ -12,6 +12,7 @@
 
 #include "../Actors/Collectibles/AmmoCollectible.h"
 #include "../Actors/Collectibles/CoinCollectible.h"
+#include "../Actors/Collectibles/FastFireCollectible.h"
 #include "../Actors/Collectibles/FoodCollectible.h"
 #include "../Actors/Collectibles/CarrotCollectible.h"
 #include "../Actors/Collectibles/GemCollectible.h"
@@ -33,9 +34,16 @@
 #include "../Actors/Lighting/PulsatingRadialLight.h"
 #include "../Actors/Lighting/StaticRadialLight.h"
 
+#include "../Actors/Solid/AmmoBarrel.h"
+#include "../Actors/Solid/AmmoCrate.h"
+#include "../Actors/Solid/BarrelContainer.h"
 #include "../Actors/Solid/Bridge.h"
 #include "../Actors/Solid/CrateContainer.h"
+#include "../Actors/Solid/GemBarrel.h"
+#include "../Actors/Solid/GemCrate.h"
 #include "../Actors/Solid/Pole.h"
+#include "../Actors/Solid/PowerUpMorphMonitor.h"
+#include "../Actors/Solid/PowerUpWeaponMonitor.h"
 #include "../Actors/Solid/TriggerCrate.h"
 
 using namespace Jazz2::Actors;
@@ -135,19 +143,19 @@ namespace Jazz2::Events
 		/*RegisterSpawnable(EventType::CarrotFly, CarrotFlyCollectible.Create, CarrotFlyCollectible.Preload);
 		RegisterSpawnable(EventType::CarrotInvincible, CarrotInvincibleCollectible.Create, CarrotInvincibleCollectible.Preload);*/
 		RegisterSpawnable<Collectibles::OneUpCollectible>(EventType::OneUp);
-		/*RegisterSpawnable(EventType::FastFire, FastFireCollectible.Create, FastFireCollectible.Preload);
+		RegisterSpawnable<Collectibles::FastFireCollectible>(EventType::FastFire);
 
-		RegisterSpawnable(EventType::CrateAmmo, AmmoCrate.Create, AmmoCrate.Preload);
-		RegisterSpawnable(EventType::BarrelAmmo, AmmoBarrel.Create, AmmoBarrel.Preload);*/
+		RegisterSpawnable<Solid::AmmoCrate>(EventType::CrateAmmo);
+		RegisterSpawnable<Solid::AmmoBarrel>(EventType::BarrelAmmo);
 		RegisterSpawnable<Solid::CrateContainer>(EventType::Crate);
-		/*RegisterSpawnable(EventType::Barrel, BarrelContainer.Create, BarrelContainer.Preload);
-		RegisterSpawnable(EventType::CrateGem, GemCrate.Create, GemCrate.Preload);
-		RegisterSpawnable(EventType::BarrelGem, GemBarrel.Create, GemBarrel.Preload);
-		RegisterSpawnable(EventType::GemGiant, GemGiant.Create, GemGiant.Preload);
-		RegisterSpawnable(EventType::GemRing, GemRing.Create, GemRing.Preload);
+		RegisterSpawnable<Solid::BarrelContainer>(EventType::Barrel);
+		RegisterSpawnable<Solid::GemCrate>(EventType::CrateGem);
+		RegisterSpawnable<Solid::GemBarrel>(EventType::BarrelGem);
+		/*RegisterSpawnable(EventType::GemGiant, GemGiant.Create, GemGiant.Preload);
+		RegisterSpawnable(EventType::GemRing, GemRing.Create, GemRing.Preload);*/
 
-		RegisterSpawnable(EventType::PowerUpMorph, PowerUpMorphMonitor.Create, PowerUpMorphMonitor.Preload);
-		RegisterSpawnable(EventType::BirdCage, BirdCage.Create, BirdCage.Preload);
+		RegisterSpawnable<Solid::PowerUpMorphMonitor>(EventType::PowerUpMorph);
+		/*RegisterSpawnable(EventType::BirdCage, BirdCage.Create, BirdCage.Preload);
 
 		RegisterSpawnable(EventType::AirboardGenerator, AirboardGenerator.Create, AirboardGenerator.Preload);
 		RegisterSpawnable(EventType::Copter, Copter.Create, Copter.Preload);
@@ -159,7 +167,7 @@ namespace Jazz2::Events
 		RegisterSpawnable(EventType::Stopwatch, Stopwatch.Create, Stopwatch.Preload);*/
 
 		RegisterSpawnable<Collectibles::AmmoCollectible>(EventType::Ammo);
-		//RegisterSpawnable(EventType::PowerUpWeapon, PowerUpWeaponMonitor.Create, PowerUpWeaponMonitor.Preload);
+		RegisterSpawnable<Solid::PowerUpWeaponMonitor>(EventType::PowerUpWeapon);
 		RegisterSpawnable<Collectibles::FoodCollectible>(EventType::Food);
 
 

@@ -41,6 +41,17 @@ namespace Jazz2::Actors::Weapons
 		return WeaponType::Unknown;
 	}
 
+	void ShotBase::TriggerRicochet(ActorBase* other)
+	{
+		if (_lastRicochet != other) {
+			_lastRicochet = other;
+			_lastRicochetFrame = theApplication().numFrames();
+			OnRicochet();
+		} else if (_lastRicochetFrame + 2 >= theApplication().numFrames()) {
+			DecreaseHealth(INT32_MAX);
+		}
+	}
+
 	void ShotBase::OnUpdate(float timeMult)
 	{
 		_timeLeft -= timeMult;
@@ -55,17 +66,7 @@ namespace Jazz2::Actors::Weapons
 			if (enemyBase->CanCollideWithAmmo) {
 				DecreaseHealth(INT32_MAX);
 			}
-		} else if (auto solidObjectBase = dynamic_cast<SolidObjectBase*>(other)) {
-			DecreaseHealth(INT32_MAX);
-		} /*else if (other is TriggerCrate || other is BarrelContainer || other is PowerUpWeaponMonitor) {
-			if (_lastRicochet != other) {
-				_lastRicochet = other;
-				_lastRicochetFrame = theApplication().numFrames();
-				OnRicochet();
-			} else if (_lastRicochetFrame + 2 >= theApplication().numFrames()) {
-				DecreaseHealth(INT32_MAX);
-			}
-		}*/
+		}
 
 		return false;
 	}

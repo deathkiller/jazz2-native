@@ -23,6 +23,7 @@ namespace Jazz2::Actors::Weapons
 
 		Player* GetOwner();
 		virtual WeaponType GetWeaponType();
+		void TriggerRicochet(ActorBase* other);
 
 	protected:
 		std::shared_ptr<ActorBase> _owner;

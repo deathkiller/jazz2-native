@@ -43,8 +43,9 @@ namespace Jazz2::Actors::Solid
 			}
 
 			std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(item.Type, item.EventParams,
-				ActorFlags::None, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 10));
+				ActorFlags::None, Vector3i((int)(_pos.X + fx * (2.0f + _content.size() * 0.1f)), (int)(_pos.Y + fy * (12.0f + _content.size() * 0.2f)), _renderer.layer() - 10));
 			if (actor != nullptr) {
+				actor->AddExternalForce(fx, fy);
 				_levelHandler->AddActor(actor);
 			}
 		}

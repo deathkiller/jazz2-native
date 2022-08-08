@@ -14,7 +14,7 @@ namespace Jazz2::Actors::Collectibles
 	{
 		co_await CollectibleBase::OnActivatedAsync(details);
 
-		_gemType = (uint16_t)(details.Params[0] & 0x3);
+		_gemType = (uint8_t)(details.Params[0] & 0x03);
 
 		co_await RequestMetadataAsync("Collectible/Gems"_s);
 

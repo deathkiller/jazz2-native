@@ -1,4 +1,4 @@
-﻿#include "CrateContainer.h"
+﻿#include "BarrelContainer.h"
 #include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
@@ -8,16 +8,16 @@
 
 namespace Jazz2::Actors::Solid
 {
-	CrateContainer::CrateContainer()
+	BarrelContainer::BarrelContainer()
 	{
 	}
 
-	void CrateContainer::Preload(const ActorActivationDetails& details)
+	void BarrelContainer::Preload(const ActorActivationDetails& details)
 	{
-		PreloadMetadataAsync("Object/CrateContainer"_s);
+		PreloadMetadataAsync("Object/BarrelContainer"_s);
 	}
 
-	Task<bool> CrateContainer::OnActivatedAsync(const ActorActivationDetails& details)
+	Task<bool> BarrelContainer::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		Movable = true;
 		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
@@ -28,22 +28,28 @@ namespace Jazz2::Actors::Solid
 			AddContent(eventType, count, &details.Params[4], 16 - 4);
 		}
 
-		co_await RequestMetadataAsync("Object/CrateContainer"_s);
+		co_await RequestMetadataAsync("Object/BarrelContainer"_s);
 
 		SetAnimation(AnimState::Idle);
 
 		co_return true;
 	}
 
-	bool CrateContainer::OnHandleCollision(ActorBase* other)
+	bool BarrelContainer::OnHandleCollision(ActorBase* other)
 	{
 		if (_health == 0) {
 			return GenericContainer::OnHandleCollision(other);
 		}
 
 		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other)) {
-			DecreaseHealth(shotBase->GetStrength(), other);
-			shotBase->DecreaseHealth(INT32_MAX);
+			WeaponType weaponType = shotBase->GetWeaponType();
+			if (weaponType == WeaponType::RF || weaponType == WeaponType::Seeker ||
+				weaponType == WeaponType::Pepper || weaponType == WeaponType::Electro) {
+				DecreaseHealth(shotBase->GetStrength(), other);
+				shotBase->DecreaseHealth(INT32_MAX);
+			} else {
+				shotBase->TriggerRicochet(this);
+			}
 			return true;
 		} /*else if (auto shotTnt = dynamic_cast<Weapons::ShotTNT*>(other)) {
 			// TODO: TNT
@@ -57,21 +63,17 @@ namespace Jazz2::Actors::Solid
 		return GenericContainer::OnHandleCollision(other);
 	}
 
-	bool CrateContainer::OnPerish(ActorBase* collider)
+	bool BarrelContainer::OnPerish(ActorBase* collider)
 	{
-		CollisionFlags = CollisionFlags::None;
+		PlaySfx("Break"_s);
 
 		CreateParticleDebris();
 
-		PlaySfx("Break"_s);
+		CreateSpriteDebris("BarrelShrapnel1"_s, 3);
+		CreateSpriteDebris("BarrelShrapnel2"_s, 3);
+		CreateSpriteDebris("BarrelShrapnel3"_s, 2);
+		CreateSpriteDebris("BarrelShrapnel4"_s, 1);
 
-		CreateSpriteDebris("CrateShrapnel1"_s, 3);
-		CreateSpriteDebris("CrateShrapnel2"_s, 2);
-
-		SetTransition(AnimState::TransitionDeath, false, [this, collider]() {
-			GenericContainer::OnPerish(collider);
-		});
-		SpawnContent();
-		return true;
+		return GenericContainer::OnPerish(collider);
 	}
 }

@@ -37,6 +37,7 @@ namespace Jazz2::Actors
 		_isFreefall(false), _inWater(false), _isLifting(false), _isSpring(false),
 		_inShallowWater(-1),
 		_activeModifier(Modifier::None),
+		_springCooldown(0.0f),
 		_inIdleTransition(false), _inLedgeTransition(false),
 		_canDoubleJump(true),
 		_lives(0), _coins(0), _foodEaten(0), _score(0),
@@ -257,6 +258,9 @@ namespace Jazz2::Actors
 			}
 		}
 
+		if (_springCooldown > 0.0f) {
+			_springCooldown -= timeMult;
+		}
 		if (_weaponCooldown > 0.0f) {
 			_weaponCooldown -= timeMult;
 		}
@@ -449,6 +453,10 @@ namespace Jazz2::Actors
 						if (_wasFirePressed) {
 							_speed.X = 0.0f;
 						} else {
+							// If Run is pressed, player moves faster on vines
+							if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Run)) {
+								playerMovementVelocity *= 1.6f;
+							}
 							_speed.X = std::clamp(_speed.X + Acceleration * timeMult * (IsFacingLeft() ? -1 : 1), -MaxVineSpeed * playerMovementVelocity, MaxVineSpeed * playerMovementVelocity);
 						}
 					} else if (_suspendType != SuspendType::Hook) {
@@ -638,7 +646,7 @@ namespace Jazz2::Actors
 										SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Sidekick);
 									});
 
-									PlaySfx("Sidekick"_s);
+									PlayPlayerSfx("Sidekick"_s);
 								} else {
 									if (!GetState(ActorFlags::CanJump) && _canDoubleJump) {
 										_canDoubleJump = false;
@@ -920,7 +928,7 @@ namespace Jazz2::Actors
 			}
 		} else if (auto spring = dynamic_cast<Environment::Spring*>(other)) {
 			// Collide only with hitbox
-			if (_controllableExternal && spring->AABBInner.Overlaps(AABBInner)) {
+			if (_controllableExternal && _springCooldown <= 0.0f && spring->AABBInner.Overlaps(AABBInner)) {
 				Vector2 force = spring->Activate();
 				int sign = ((force.X + force.Y) > std::numeric_limits<float>::epsilon() ? 1 : -1);
 				if (std::abs(force.X) > 0.0f) {
@@ -929,6 +937,7 @@ namespace Jazz2::Actors
 					//speedX = force.X;
 					_speed.X = (1 + std::abs(force.X)) * sign;
 					_externalForce.X = force.X * 0.6f;
+					_springCooldown = 3.0f;
 					SetState(ActorFlags::CanJump, false);
 
 					_wasActivelyPushing = false;
@@ -946,6 +955,7 @@ namespace Jazz2::Actors
 					_copterFramesLeft = 0.0f;
 					_speed.Y = (4 + std::abs(force.Y)) * sign;
 					_externalForce.Y = -force.Y;
+					_springCooldown = 3.0f;
 					SetState(ActorFlags::CanJump, false);
 
 					if (!spring->KeepSpeedX) {
@@ -1307,21 +1317,20 @@ namespace Jazz2::Actors
 		if (_currentSpecialMove == SpecialMoveType::Buttstomp && (GetState(ActorFlags::CanJump) || _suspendType != SuspendType::None)) {
 			EndDamagingMove();
 			if (_suspendType == SuspendType::None && !_isSpring) {
-				// ToDo: Refactor this
-				Vector2f pos = _pos;
-				int tx = (int)pos.X / 32;
-				int ty = ((int)pos.Y + 24) / 32;
+				// TODO: Refactor this
+				int tx = (int)_pos.X / 32;
+				int ty = ((int)_pos.Y + 24) / 32;
 
 				uint8_t* eventParams;
 				if (_levelHandler->EventMap()->GetEventByPosition(tx, ty, &eventParams) == EventType::GemStomp) {
 					_levelHandler->EventMap()->StoreTileEvent(tx, ty, EventType::Empty);
 
 					for (int i = 0; i < 8; i++) {
-						float fx = nCine::Random().NextFloat(-18.0f, 18.0f);
-						float fy = nCine::Random().NextFloat(-8.0f, 0.2f);
+						float fx = Random().NextFloat(-16.0f, 16.0f);
+						float fy = Random().NextFloat(-12.0f, 0.2f);
 
 						uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { };
-						std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, spawnParams, ActorFlags::None, Vector3i((int)(pos.X + fx * 2.0f), (int)(pos.Y + fy * 4.0f), 10));
+						std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, spawnParams, ActorFlags::None, Vector3i((int)(_pos.X + fx * 2.0f), (int)(_pos.Y + fy * 4.0f), _renderer.layer() - 10));
 						if (actor != nullptr) {
 							actor->AddExternalForce(fx, fy);
 							_levelHandler->AddActor(actor);
@@ -1639,7 +1648,7 @@ namespace Jazz2::Actors
 								nextLevel = _levelHandler->GetLevelText(p[4]).SubstringByOffset('|', p[6]);
 							}*/
 							_levelHandler->BeginLevelChange((ExitType)p[0], nextLevel);
-							PlaySfx("EndOfLevel"_s);
+							PlayPlayerSfx("EndOfLevel"_s);
 						} else if (_bonusWarpTimer <= 0.0f) {
 							_levelHandler->ShowCoins(_coins);
 							PlaySfx("BonusWarpNotEnoughCoins"_s);
@@ -1826,6 +1835,18 @@ namespace Jazz2::Actors
 		}
 	}
 
+	const std::shared_ptr<AudioBufferPlayer>& Player::PlayPlayerSfx(const StringView& identifier, float gain, float pitch)
+	{
+		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
+		if (it != _metadata->Sounds.end()) {
+			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
+			return _levelHandler->PlaySfx(it->second.Buffers[idx].get(), Vector3f(0.0f, 0.0f, 0.0f), true, gain, pitch);
+		} else {
+			//LOGE_X("Sound effect \"%s\" was not found", identifier.data());
+			return std::shared_ptr<AudioBufferPlayer>(nullptr);
+		}
+	}
+
 	bool Player::SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, const std::function<void()>& callback)
 	{
 		if (removeControl) {
@@ -1873,7 +1894,7 @@ namespace Jazz2::Actors
 				uint8_t playerParams[2] = { (uint8_t)_playerType, (uint8_t)(IsFacingLeft() ? 1 : 0) };
 				corpse->OnActivated({
 					.LevelHandler = _levelHandler,
-					.Pos = Vector3i(_pos.X, _pos.Y, _renderer.layer()),
+					.Pos = Vector3i(_pos.X, _pos.Y, _renderer.layer() - 10),
 					.Params = playerParams
 				});
 				_levelHandler->AddActor(corpse);
@@ -1915,7 +1936,7 @@ namespace Jazz2::Actors
 			}
 		});
 
-		PlaySfx("Die"_s, 1.3f);
+		PlayPlayerSfx("Die"_s, 1.3f);
 	}
 
 	void Player::SwitchToNextWeapon()
@@ -1977,7 +1998,7 @@ namespace Jazz2::Actors
 			_renderer.AnimTime = 0.0f;
 		}
 
-		uint16_t ammoDecrease = 100;
+		uint16_t ammoDecrease = 256;
 
 		switch (weaponType) {
 			case WeaponType::Blaster: FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(40.0f, 1.0f); PlaySfx("WeaponBlaster"_s); break;
@@ -2000,7 +2021,7 @@ namespace Jazz2::Actors
 							_weaponToasterSound->setLooping(true);
 						}
 					}
-					ammoDecrease = 20;
+					ammoDecrease = 50;
 					break;
 				}
 
@@ -2082,7 +2103,7 @@ namespace Jazz2::Actors
 						//attachedHud ? .BeginFadeOut(true);
 						_levelExiting = LevelExitingState::Ready;
 					});
-					PlaySfx("EndOfLevel1"_s);
+					PlayPlayerSfx("EndOfLevel1"_s);
 
 					CollisionFlags &= ~CollisionFlags::ApplyGravitation;
 					_speed.X = 0.0f;
@@ -2099,7 +2120,7 @@ namespace Jazz2::Actors
 						//attachedHud ? .BeginFadeOut(false);
 						_levelExiting = LevelExitingState::Ready;
 					});
-					PlaySfx("WarpIn"_s);
+					PlayPlayerSfx("WarpIn"_s);
 
 					CollisionFlags &= ~CollisionFlags::ApplyGravitation;
 					_speed.X = 0.0f;
@@ -2123,7 +2144,7 @@ namespace Jazz2::Actors
 				//attachedHud ? .BeginFadeOut(false);
 				_levelExiting = LevelExitingState::Ready;
 			});
-			PlaySfx("WarpIn"_s);
+			PlayPlayerSfx("WarpIn"_s);
 
 			CollisionFlags &= ~CollisionFlags::ApplyGravitation;
 			_speed.X = 0.0f;
@@ -2167,7 +2188,7 @@ namespace Jazz2::Actors
 		_weaponAmmo[(int)WeaponType::Blaster] = -1;
 
 		if (exitType == ExitType::Warp || exitType == ExitType::Bonus) {
-			PlaySfx("WarpOut"_s);
+			PlayPlayerSfx("WarpOut"_s);
 
 			CollisionFlags &= ~CollisionFlags::ApplyGravitation;
 
@@ -2235,13 +2256,13 @@ namespace Jazz2::Actors
 			// For warping from the water
 			_renderer.setRotation(0.0f);
 
-			PlaySfx("WarpIn"_s);
+			PlayPlayerSfx("WarpIn"_s);
 
 			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpInFreefall : AnimState::TransitionWarpIn, false, true, SpecialMoveType::None, [this, pos]() {
 				Vector2f posOld = _pos;
 
 				MoveInstantly(pos, MoveType::Absolute, true);
-				PlaySfx("WarpOut"_s);
+				PlayPlayerSfx("WarpOut"_s);
 
 				if (Vector2f(posOld.X - pos.X, posOld.Y - pos.Y).Length() > 250) {
 					_levelHandler->WarpCameraToTarget(shared_from_this());
@@ -2490,7 +2511,7 @@ namespace Jazz2::Actors
 			_externalForce.X = 0.0f;
 			_speed.Y = 0.0f;
 
-			PlaySfx("Die"_s, 1.3f);
+			PlayPlayerSfx("Die"_s, 1.3f);
 		}
 
 #if MULTIPLAYER && SERVER
@@ -2620,7 +2641,7 @@ namespace Jazz2::Actors
 
 	bool Player::AddAmmo(WeaponType weaponType, int16_t count)
 	{
-		constexpr int16_t Multiplier = 100;
+		constexpr int16_t Multiplier = 256;
 		constexpr int16_t AmmoLimit = 99 * Multiplier;
 
 		if (weaponType >= WeaponType::Count || _weaponAmmo[(int)weaponType] < 0 || _weaponAmmo[(int)weaponType] >= AmmoLimit) {

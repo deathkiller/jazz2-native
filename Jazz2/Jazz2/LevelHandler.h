@@ -80,7 +80,7 @@ namespace Jazz2
 
 		void AddActor(const std::shared_ptr<ActorBase>& actor) override;
 
-		const std::shared_ptr<AudioBufferPlayer>& PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
+		const std::shared_ptr<AudioBufferPlayer>& PlaySfx(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain = 1.0f, float pitch = 1.0f) override;
 		const std::shared_ptr<AudioBufferPlayer>& PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
 		void WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor) override;
 		bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, bool downwards, __out ActorBase** collider) override;
@@ -188,8 +188,7 @@ namespace Jazz2
 		class UpscaleRenderPass : public SceneNode
 		{
 		public:
-			UpscaleRenderPass(LevelHandler* owner)
-				: _owner(owner)
+			UpscaleRenderPass()
 			{
 			}
 
@@ -203,7 +202,6 @@ namespace Jazz2
 			}
 
 		private:
-			LevelHandler* _owner;
 			std::unique_ptr<SceneNode> _node;
 			std::unique_ptr<Texture> _target;
 			std::unique_ptr<Viewport> _view;
@@ -276,5 +274,6 @@ namespace Jazz2
 		void InitializeCamera();
 		void UpdateCamera(float timeMult);
 		void UpdatePressedActions();
+		void UpdateRgbLights();
 	};
 }

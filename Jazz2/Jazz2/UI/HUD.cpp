@@ -1,5 +1,5 @@
 ﻿#include "HUD.h"
-
+#include "RgbLights.h"
 #include "../LevelHandler.h"
 
 #include "../../nCine/Graphics/RenderQueue.h"
@@ -16,7 +16,9 @@ namespace Jazz2::UI
 		_levelTextTime(-1.0f),
 		_coins(0), _gems(0),
 		_coinsTime(-1.0f), _gemsTime(-1.0f),
-		_touchButtonsTimer(0.0f)
+		_touchButtonsTimer(0.0f),
+		_healthLast(0.0f),
+		_rgbLightsTime(0.0f)
 	{
 		Metadata* metadata = ContentResolver::Current().RequestMetadata("UI/HUD"_s);
 		if (metadata != nullptr) {
@@ -47,14 +49,28 @@ namespace Jazz2::UI
 		if (_levelTextTime >= 0.0f) {
 			_levelTextTime += timeMult;
 		}
-		if (_coinsTime >= 0.0f) {
-			_coinsTime += timeMult;
-		}
-		if (_gemsTime >= 0.0f) {
-			_gemsTime += timeMult;
-		}
 		if (_touchButtonsTimer > 0.0f) {
 			_touchButtonsTimer -= timeMult;
+		}
+
+		auto& players = _levelHandler->GetPlayers();
+		if (!players.empty()) {
+			if (_coinsTime >= 0.0f) {
+				_coinsTime += timeMult;
+			}
+			if (_gemsTime >= 0.0f) {
+				_gemsTime += timeMult;
+			}
+
+			// RGB lights
+			RgbLights& rgbLights = RgbLights::Current();
+			if (rgbLights.IsSupported()) {
+				_rgbLightsTime -= timeMult;
+				if (_rgbLightsTime <= 0.0f) {
+					UpdateRgbLights(players[0]);
+					_rgbLightsTime += RgbLights::RefreshRate;
+				}
+			}
 		}
 	}
 
@@ -149,7 +165,7 @@ namespace Jazz2::UI
 				if (player->_weaponAmmo[(int)weapon] < 0) {
 					ammoCount = "x\u221E"_s;
 				} else {
-					snprintf(stringBuffer, _countof(stringBuffer), "x%i", player->_weaponAmmo[(int)weapon] / 100);
+					snprintf(stringBuffer, _countof(stringBuffer), "x%i", player->_weaponAmmo[(int)weapon] / 256);
 					ammoCount = stringBuffer;
 				}
 				_smallFont->DrawString(this, ammoCount, charOffsetShadow, right - 40, bottom + 1.0f, FontShadowLayer,
@@ -613,5 +629,48 @@ namespace Jazz2::UI
 		if (y > bottom) return false;
 
 		return true;
+	}
+
+	void HUD::UpdateRgbLights(Actors::Player* player)
+	{
+		constexpr int32_t KeyMax2 = 14;
+		Color colors[RgbLights::ColorsSize] { };
+
+		colors[(int32_t)AuraLight::Esc] = Color(100, 100, 100);
+		colors[(int32_t)AuraLight::ArrowUp] = Color(100, 100, 100);
+		colors[(int32_t)AuraLight::ArrowLeft] = Color(100, 100, 100);
+		colors[(int32_t)AuraLight::ArrowDown] = Color(100, 100, 100);
+		colors[(int32_t)AuraLight::ArrowRight] = Color(100, 100, 100);
+
+		colors[(int32_t)AuraLight::Space] = Color(160, 10, 10);
+		colors[(int32_t)AuraLight::V] = Color(10, 80, 160);
+		colors[(int32_t)AuraLight::C] = Color(10, 170, 10);
+		colors[(int32_t)AuraLight::X] = Color(150, 140, 10);
+
+		float health = std::clamp((float)player->_health / player->_maxHealth, 0.0f, 1.0f);
+		if (std::abs(health - _healthLast) < 0.001f) {
+			return;
+		}
+
+		_healthLast = lerp(_healthLast, health, 0.2f);
+
+		int32_t percent, percentR, percentG;
+		percent = (int32_t)(_healthLast * 255);
+		percentG = percent * percent / 255;
+		percentR = (255 - (percent - 120) * 2);
+		percentR = std::clamp(percentR, 0, 255);
+
+		for (int32_t i = 0; i < KeyMax2; i++) {
+			int32_t intensity = (int32_t)((_healthLast - ((float)i / KeyMax2)) * 255 * KeyMax2);
+			intensity = std::clamp(intensity, 0, 255);
+
+			if (intensity > 0) {
+				colors[(int32_t)AuraLight::Tilde + i] = Color(percentR * intensity / 255, percentG * intensity / 255, 0);
+				colors[(int32_t)AuraLight::Tab + i] = Color(percentR * intensity / (255 * 12), percentG * intensity / (255 * 12), 0);
+			}
+		}
+
+		RgbLights& rgbLights = RgbLights::Current();
+		rgbLights.Update(colors);
 	}
 }

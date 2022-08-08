@@ -40,6 +40,14 @@ namespace Jazz2::Actors
 			return _currentSpecialMove;
 		}
 
+		const int16_t* GetWeaponAmmo() const {
+			return _weaponAmmo;
+		}
+
+		const uint8_t* GetWeaponUpgrades() const {
+			return _weaponUpgrades;
+		}
+
 		bool CanBreakSolidObjects() const;
 		bool CanMoveVertically() const;
 
@@ -115,6 +123,7 @@ namespace Jazz2::Actors
 		bool _isFreefall, _inWater, _isLifting, _isSpring;
 		int _inShallowWater;
 		Modifier _activeModifier;
+		float _springCooldown;
 
 		bool _inIdleTransition, _inLedgeTransition;
 		//MovingPlatform* _carryingObject;
@@ -168,6 +177,7 @@ namespace Jazz2::Actors
 		void OnHandleWater();
 		void OnHandleAreaEvents(float timeMult, __out bool& areaWeaponAllowed, __out int& areaWaterBlock);
 
+		const std::shared_ptr<AudioBufferPlayer>& PlayPlayerSfx(const StringView& identifier, float gain = 1.0f, float pitch = 1.0f);
 		bool SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, const std::function<void()>& callback = nullptr);
 		void InitialPoleStage(bool horizontal);
 		void NextPoleStage(bool horizontal, bool positive, int stagesLeft, float lastSpeed);

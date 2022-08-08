@@ -205,6 +205,7 @@ namespace Jazz2
 		SuspendType _suspendType;
 		Vector2i _originTile;
 
+		Metadata* _metadata;
 		SpriteRenderer _renderer;
 		GraphicResource* _currentAnimation;
 		GraphicResource* _currentTransition;
@@ -293,8 +294,6 @@ namespace Jazz2
 		ActorBase(const ActorBase&) = delete;
 		/// Deleted assignment operator
 		ActorBase& operator=(const ActorBase&) = delete;
-
-		Metadata* _metadata;
 
 #if SERVER
 		const String* _currentAnimationKey;

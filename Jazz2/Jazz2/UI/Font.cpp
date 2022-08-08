@@ -109,21 +109,28 @@ namespace Jazz2::UI
 		// TODO: Revise this
 		float phase = canvas->AnimTime * speed * 16.0f;
 
-		// Pre-compute text size
+		// Maximum number of lines - center and right alignment starts to glitch if text has more lines, but it should be enough in most cases
+		constexpr int MaxLines = 16;
+
+		// Preprocessing
 		float totalWidth = 0.0f, lastWidth = 0.0f, totalHeight = 0.0f;
+		float lineWidths[MaxLines];
 		float charSpacingPre = charSpacing;
 		float scalePre = scale;
 
 		int idx = 0;
+		int line = 0;
 		do {
 			std::pair<char32_t, std::size_t> cursor = Death::Utf8::NextChar(text, idx);
 
 			if (cursor.first == '\n') {
 				// New line
-				if (lastWidth < totalWidth) {
-					lastWidth = totalWidth;
+				if (totalWidth < lastWidth) {
+					totalWidth = lastWidth;
 				}
-				totalWidth = 0.0f;
+				lineWidths[line & (MaxLines - 1)] = lastWidth;
+				line++;
+				lastWidth = 0.0f;
 				totalHeight += (_charHeight * scale * lineSpacing);
 			} else {
 				Rectf uvRect;
@@ -139,16 +146,17 @@ namespace Jazz2::UI
 				}
 
 				if (uvRect.W > 0 && uvRect.H > 0) {
-					totalWidth += (uvRect.W + _baseSpacing) * charSpacingPre * scalePre;
+					lastWidth += (uvRect.W + _baseSpacing) * charSpacingPre * scalePre;
 				}
 			}
 
 			idx = cursor.second;
 		} while (idx < textSize);
 
-		if (lastWidth < totalWidth) {
-			lastWidth = totalWidth;
+		if (totalWidth < lastWidth) {
+			totalWidth = lastWidth;
 		}
+		lineWidths[line & (MaxLines - 1)] = lastWidth;
 		totalHeight += (_charHeight * scale * lineSpacing);
 
 		// Rendering
@@ -164,16 +172,27 @@ namespace Jazz2::UI
 
 		float lineStart = originPos.X;
 
+		switch (align & Alignment::HorizontalMask) {
+			case Alignment::Center: originPos.X += (totalWidth - lineWidths[0]) * 0.5f; break;
+			case Alignment::Right: originPos.X += (totalWidth - lineWidths[0]); break;
+		}
+
 		Vector2i texSize = _texture->size();
 
 		uint16_t zz = z;
 		idx = 0;
+		line = 0;
 		do {
 			std::pair<char32_t, std::size_t> cursor = Death::Utf8::NextChar(text, idx);
 
 			if (cursor.first == '\n') {
 				// New line
+				line++;
 				originPos.X = lineStart;
+				switch (align & Alignment::HorizontalMask) {
+					case Alignment::Center: originPos.X += (totalWidth - lineWidths[line & (MaxLines - 1)]) * 0.5f; break;
+					case Alignment::Right: originPos.X += (totalWidth - lineWidths[line & (MaxLines - 1)]); break;
+				}
 				originPos.Y -= (_charHeight * scale * lineSpacing);
 			} else {
 				Rectf uvRect;

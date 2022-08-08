@@ -19,11 +19,10 @@ using namespace rapidjson;
 
 namespace Jazz2
 {
-	ContentResolver ContentResolver::_current;
-
 	ContentResolver& ContentResolver::Current()
 	{
-		return _current;
+		static ContentResolver current;
+		return current;
 	}
 
 	ContentResolver::ContentResolver()

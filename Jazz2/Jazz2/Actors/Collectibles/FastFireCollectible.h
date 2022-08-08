@@ -1,24 +1,19 @@
 ﻿#pragma once
 
 #include "CollectibleBase.h"
+#include "../../LevelInitialization.h"
 
 namespace Jazz2::Actors::Collectibles
 {
-	class GemCollectible : public CollectibleBase
+	class FastFireCollectible : public CollectibleBase
 	{
 	public:
-		GemCollectible();
+		FastFireCollectible();
 
-		static void Preload(const ActorActivationDetails& details)
-		{
-			PreloadMetadataAsync("Collectible/Gems"_s);
-		}
+		static void Preload(const ActorActivationDetails& details);
 
 	protected:
-		uint8_t _gemType;
-
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
-		void OnUpdateHitbox() override;
 		void OnCollect(Player* player) override;
 	};
 }

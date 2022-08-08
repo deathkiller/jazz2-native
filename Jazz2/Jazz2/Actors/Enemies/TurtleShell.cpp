@@ -2,6 +2,7 @@
 #include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
+#include "../Solid/CrateContainer.h"
 #include "../Weapons/ShotBase.h"
 #include "../Weapons/FreezerShot.h"
 #include "../Weapons/ToasterShot.h"
@@ -141,12 +142,16 @@ namespace Jazz2::Actors::Enemies
 			return true;
 		} else if (auto enemyBase = dynamic_cast<EnemyBase*>(other)) {
 			if (enemyBase->CanCollideWithAmmo) {
+				_speed.X = std::max(std::abs(_speed.X), 2.0f) * (_speed.X >= 0.0f ? -1.0f : 1.0f);
 				if (!enemyBase->GetState(ActorFlags::IsInvulnerable)) {
 					enemyBase->DecreaseHealth(1, this);
+					return true;
 				}
-
-				_speed.X = std::max(std::abs(_speed.X), 2.0f) * (_speed.X >= 0.0f ? -1.0f : 1.0f);
 			}
+		} else if (auto crateContainer = dynamic_cast<Solid::CrateContainer*>(other)) {
+			_speed.X = std::max(std::abs(_speed.X), 2.0f) * (_speed.X >= 0.0f ? -1.0f : 1.0f);
+			crateContainer->DecreaseHealth(1, this);
+			return true;
 		}
 
 		return false;

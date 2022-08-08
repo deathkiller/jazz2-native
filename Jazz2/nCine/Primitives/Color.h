@@ -8,7 +8,8 @@ namespace nCine
 	class Color
 	{
 	public:
-		static const int NumChannels = 4;
+		static constexpr int NumChannels = 4;
+
 		static const Color Black;
 		static const Color White;
 		static const Color Red;
@@ -20,7 +21,7 @@ namespace nCine
 
 		/// Default constructor (white color)
 		constexpr Color()
-			: Color(255, 255, 255, 255)
+			: Color(0, 0, 0, 0)
 		{
 		}
 		/// Three channels constructor

@@ -49,8 +49,10 @@ namespace Jazz2::Actors::Solid
 				weaponType == WeaponType::Pepper || weaponType == WeaponType::Electro) {
 				DecreaseHealth(shotBase->GetStrength(), other);
 				shotBase->DecreaseHealth(INT32_MAX);
-				return true;
+			} else {
+				shotBase->TriggerRicochet(this);
 			}
+			return true;
 		} /*else if (auto shotTnt = dynamic_cast<Weapons::ShotTNT*>(other)) {
 			// TODO: TNT
 		}*/ else if (auto player = dynamic_cast<Player*>(other)) {

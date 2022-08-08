@@ -1,32 +1,35 @@
-﻿#include "CrateContainer.h"
+﻿#include "GemCrate.h"
 #include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
-
 #include "../Player.h"
 #include "../Weapons/ShotBase.h"
 
 namespace Jazz2::Actors::Solid
 {
-	CrateContainer::CrateContainer()
+	GemCrate::GemCrate()
 	{
 	}
 
-	void CrateContainer::Preload(const ActorActivationDetails& details)
+	void GemCrate::Preload(const ActorActivationDetails& details)
 	{
 		PreloadMetadataAsync("Object/CrateContainer"_s);
+		PreloadMetadataAsync("Collectible/Gems"_s);
 	}
 
-	Task<bool> CrateContainer::OnActivatedAsync(const ActorActivationDetails& details)
+	Task<bool> GemCrate::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		Movable = true;
 		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
 
-		EventType eventType = (EventType)*(uint16_t*)&details.Params[0];
-		int count = (int)*(uint16_t*)&details.Params[2];
-		if (eventType != EventType::Empty && count > 0) {
-			AddContent(eventType, count, &details.Params[4], 16 - 4);
-		}
+		uint8_t eventParam = 0;
+		AddContent(EventType::Gem, *(uint16_t*)&details.Params[0], &eventParam, sizeof(eventParam));
+		eventParam = 1;
+		AddContent(EventType::Gem, *(uint16_t*)&details.Params[2], &eventParam, sizeof(eventParam));
+		eventParam = 2;
+		AddContent(EventType::Gem, *(uint16_t*)&details.Params[4], &eventParam, sizeof(eventParam));
+		eventParam = 3;
+		AddContent(EventType::Gem, *(uint16_t*)&details.Params[6], &eventParam, sizeof(eventParam));
 
 		co_await RequestMetadataAsync("Object/CrateContainer"_s);
 
@@ -35,7 +38,7 @@ namespace Jazz2::Actors::Solid
 		co_return true;
 	}
 
-	bool CrateContainer::OnHandleCollision(ActorBase* other)
+	bool GemCrate::OnHandleCollision(ActorBase* other)
 	{
 		if (_health == 0) {
 			return GenericContainer::OnHandleCollision(other);
@@ -57,7 +60,7 @@ namespace Jazz2::Actors::Solid
 		return GenericContainer::OnHandleCollision(other);
 	}
 
-	bool CrateContainer::OnPerish(ActorBase* collider)
+	bool GemCrate::OnPerish(ActorBase* collider)
 	{
 		CollisionFlags = CollisionFlags::None;
 

@@ -8,6 +8,8 @@
 
 #include "../../../nCine/Base/Random.h"
 
+#include <numeric>
+
 namespace Jazz2::Actors::Enemies
 {
 	EnemyBase::EnemyBase()
@@ -55,18 +57,35 @@ namespace Jazz2::Actors::Enemies
 
 	void EnemyBase::TryGenerateRandomDrop()
 	{
-		// TODO
-		/*EventType drop = MathF.Rnd.OneOfWeighted(
-			new KeyValuePair<EventType, float>(EventType.Empty, 10),
-			new KeyValuePair<EventType, float>(EventType.Carrot, 2),
-			new KeyValuePair<EventType, float>(EventType.FastFire, 2),
-			new KeyValuePair<EventType, float>(EventType.Gem, 6)
-		);
+		constexpr struct {
+			EventType Event;
+			int Chance;
+		} DropChanges[] = {
+			{ EventType::Empty, 10 },
+			{ EventType::Carrot, 2 },
+			{ EventType::FastFire, 2 },
+			{ EventType::Gem, 6 }
+		};
 
-		if (drop != EventType.Empty) {
-			ActorBase actor = levelHandler.EventSpawner.SpawnEvent(drop, new ushort[8], ActorInstantiationFlags.None, Transform.Pos);
-			levelHandler.AddActor(actor);
-		}*/
+		constexpr int combinedChance = std::accumulate(DropChanges, DropChanges + _countof(DropChanges), 0, [](const int& sum, const auto& item) {
+			return sum + item.Chance;
+		});
+
+		int drop = Random().Next(0, combinedChance);
+		for (auto& item : DropChanges) {
+			if (drop < item.Chance) {
+				if (item.Event != EventType::Empty) {
+					uint8_t eventParams[16] { };
+					std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(item.Event, eventParams, ActorFlags::None, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()));
+					if (actor != nullptr) {
+						_levelHandler->AddActor(actor);
+					}
+				}
+				break;
+			}
+
+			drop -= item.Chance;
+		}
 	}
 
 	bool EnemyBase::OnHandleCollision(ActorBase* other)

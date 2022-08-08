@@ -14,7 +14,6 @@ namespace Jazz2::Actors::Collectibles
 	{
 		WeaponType weaponType = (WeaponType)details.Params[0];
 		switch (weaponType) {
-			case WeaponType::Blaster: PreloadMetadataAsync("Collectible/AmmoBlaster"_s); PreloadMetadataAsync("Weapon/Blaster"_s); break;
 			case WeaponType::Bouncer: PreloadMetadataAsync("Collectible/AmmoBouncer"_s); PreloadMetadataAsync("Weapon/Bouncer"_s); break;
 			case WeaponType::Freezer: PreloadMetadataAsync("Collectible/AmmoFreezer"_s); PreloadMetadataAsync("Weapon/Freezer"_s); break;
 			case WeaponType::Seeker: PreloadMetadataAsync("Collectible/AmmoSeeker"_s); PreloadMetadataAsync("Weapon/Seeker"_s); break;
@@ -35,7 +34,6 @@ namespace Jazz2::Actors::Collectibles
 
 		_weaponType = (WeaponType)details.Params[0];
 		switch (_weaponType) {
-			case WeaponType::Blaster: co_await RequestMetadataAsync("Collectible/AmmoBlaster"_s); break;
 			case WeaponType::Bouncer: co_await RequestMetadataAsync("Collectible/AmmoBouncer"_s); break;
 			case WeaponType::Freezer: co_await RequestMetadataAsync("Collectible/AmmoFreezer"_s); break;
 			case WeaponType::Seeker: co_await RequestMetadataAsync("Collectible/AmmoSeeker"_s); break;

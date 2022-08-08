@@ -51,7 +51,6 @@ namespace Jazz2
 		_blurPass3(this),
 		_blurPass4(this),
 #endif
-		_upscalePass(this),
 		_pressedActions(0),
 		_overrideActions(0)
 	{
@@ -167,7 +166,7 @@ namespace Jazz2
 			_music = std::make_unique<AudioStreamPlayer>(fs::joinPath({ "Content"_s, "Music"_s, musicPath }));
 			_music->setLooping(true);
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
-			_music->setGain(1.0f);
+			_music->setGain(0.5f);
 #	else
 			_music->setGain(0.3f);
 #	endif
@@ -710,12 +709,13 @@ void main() {
 		_actors.emplace_back(actor);
 	}
 
-	const std::shared_ptr<AudioBufferPlayer>& LevelHandler::PlaySfx(AudioBuffer* buffer, const Vector3f& pos, float gain, float pitch)
+	const std::shared_ptr<AudioBufferPlayer>& LevelHandler::PlaySfx(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch)
 	{
 		auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(buffer));
 		//player->setPosition(Vector3f((pos.X - _cameraPos.X) / (DefaultWidth * 3), (pos.Y - _cameraPos.Y) / (DefaultHeight * 3), 0.8f));
 		player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
 		player->setGain(gain);
+		player->setSourceRelative(sourceRelative);
 
 		if (pos.Y >= _waterLevel) {
 			player->setLowPass(/*0.2f*/0.05f);
@@ -775,12 +775,12 @@ void main() {
 
 		if ((self->CollisionFlags & CollisionFlags::CollideWithTileset) == CollisionFlags::CollideWithTileset) {
 			if (_tileMap != nullptr) {
-				if (aabb.B - aabb.T >= 16) {
-					// If hitbox height is larger than 16px, check bottom and top separately (and top only if going upwards)
+				if (aabb.B - aabb.T >= 20) {
+					// If hitbox height is larger than 20px, check bottom and top separately (and top only if going upwards)
 					AABB aabbTop = aabb;
-					aabbTop.B = aabbTop.T + 8;
+					aabbTop.B = aabbTop.T + 6;
 					AABB aabbBottom = aabb;
-					aabbBottom.T = aabbBottom.B - 8;
+					aabbBottom.T = aabbBottom.B - 14;
 					if (!_tileMap->IsTileEmpty(aabbBottom, downwards) || (!downwards && !_tileMap->IsTileEmpty(aabbTop, false))) {
 						return false;
 					}

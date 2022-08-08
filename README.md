@@ -20,7 +20,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 
 [![Build Status](https://img.shields.io/appveyor/ci/deathkiller/jazz2/master.svg?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI0IDIuNXYxOUwxOCAyNCAwIDE4LjV2LS41NjFsMTggMS41NDVWMHpNMSAxMy4xMTFMNC4zODUgMTAgMSA2Ljg4OWwxLjQxOC0uODI3TDUuODUzIDguNjUgMTIgM2wzIDEuNDU2djExLjA4OEwxMiAxN2wtNi4xNDctNS42NS0zLjQzNCAyLjU4OXpNNy42NDQgMTBMMTIgMTMuMjgzVjYuNzE3eiI+PC9wYXRoPjwvc3ZnPg==)](https://ci.appveyor.com/project/deathkiller/jazz2-native)
 [![Latest Release](https://img.shields.io/github/v/tag/deathkiller/jazz2-native?label=release)](https://github.com/deathkiller/jazz2-native/releases)
-[![Code Quality](https://img.shields.io/codacy/grade/7ef344d34def41a9b36e4a083f8b9542.svg?logo=codacy&logoColor=ffffff)](https://www.codacy.com/app/deathkiller/jazz2-native)
+[![Code Quality](https://img.shields.io/codacy/grade/64eb3ca12bd04c64bf3f3515744b591a.svg?logo=codacy&logoColor=ffffff)](https://www.codacy.com/app/deathkiller/jazz2-native)
 [![License](https://img.shields.io/github/license/deathkiller/jazz2-native.svg)](https://github.com/deathkiller/jazz2-native/blob/master/LICENSE)
 [![Discord](https://img.shields.io/discord/355651795390955520.svg?color=839ef7&label=chat&logo=discord&logoColor=ffffff&labelColor=586eb5)](https://discord.gg/Y7SBvkD)
 
@@ -37,11 +37,12 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 This is C++ port of [Jazz² Resurrection](https://github.com/deathkiller/jazz2), which is still under development. **Further information about original Jazz² Resurrection, which is fully playable, can be found [here](http://deat.tk/jazz2/).**
 
 
-## Building the solution
+## Building the application
 ### Windows
 * Open the solution in [Microsoft Visual Studio 2019](https://www.visualstudio.com/) (or newer) and build it
 
-Other platforms are not tested yet.
+### Other platforms
+* Run **CMake** in root directory
 
 
 ## License

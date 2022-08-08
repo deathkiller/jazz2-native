@@ -888,6 +888,33 @@
     <ClInclude Include="Jazz2\UI\Alignment.h">
       <Filter>Header Files\Jazz2\UI</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\RgbLights.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\BarrelContainer.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\GemCrate.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\AmmoBarrel.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\AmmoCrate.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\GemBarrel.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\FastFireCollectible.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\PowerUpWeaponMonitor.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\PowerUpMorphMonitor.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1495,6 +1522,33 @@
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Font.cpp">
       <Filter>Source Files\Jazz2\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\RgbLights.cpp">
+      <Filter>Source Files\Jazz2\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\BarrelContainer.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\GemCrate.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\AmmoBarrel.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\AmmoCrate.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\GemBarrel.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\FastFireCollectible.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\PowerUpWeaponMonitor.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\PowerUpMorphMonitor.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

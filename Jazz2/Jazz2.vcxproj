@@ -212,6 +212,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Environment.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
+    <ClInclude Include="Jazz2\Actors\Collectibles\FastFireCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\GemCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\OneUpCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Bee.h" />
@@ -233,10 +234,17 @@
     <ClInclude Include="Jazz2\Actors\Lighting\FlickerLight.h" />
     <ClInclude Include="Jazz2\Actors\Lighting\PulsatingRadialLight.h" />
     <ClInclude Include="Jazz2\Actors\Lighting\StaticRadialLight.h" />
+    <ClInclude Include="Jazz2\Actors\Solid\AmmoBarrel.h" />
+    <ClInclude Include="Jazz2\Actors\Solid\AmmoCrate.h" />
+    <ClInclude Include="Jazz2\Actors\Solid\BarrelContainer.h" />
     <ClInclude Include="Jazz2\Actors\Solid\Bridge.h" />
     <ClInclude Include="Jazz2\Actors\Solid\CrateContainer.h" />
+    <ClInclude Include="Jazz2\Actors\Solid\GemBarrel.h" />
+    <ClInclude Include="Jazz2\Actors\Solid\GemCrate.h" />
     <ClInclude Include="Jazz2\Actors\Solid\GenericContainer.h" />
     <ClInclude Include="Jazz2\Actors\Solid\Pole.h" />
+    <ClInclude Include="Jazz2\Actors\Solid\PowerUpMorphMonitor.h" />
+    <ClInclude Include="Jazz2\Actors\Solid\PowerUpWeaponMonitor.h" />
     <ClInclude Include="Jazz2\Actors\Solid\TriggerCrate.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\BouncerShot.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\FreezerShot.h" />
@@ -259,6 +267,7 @@
     <ClInclude Include="Jazz2\UI\Canvas.h" />
     <ClInclude Include="Jazz2\UI\Font.h" />
     <ClInclude Include="Jazz2\UI\HUD.h" />
+    <ClInclude Include="Jazz2\UI\RgbLights.h" />
     <ClInclude Include="nCine\AppConfiguration.h" />
     <ClInclude Include="nCine\Application.h" />
     <ClInclude Include="nCine\ArrayIndexer.h" />
@@ -447,6 +456,7 @@
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\StringView.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Environment.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
+    <ClCompile Include="Jazz2\Actors\Collectibles\FastFireCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\GemCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\OneUpCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Bee.cpp" />
@@ -468,10 +478,17 @@
     <ClCompile Include="Jazz2\Actors\Lighting\FlickerLight.cpp" />
     <ClCompile Include="Jazz2\Actors\Lighting\PulsatingRadialLight.cpp" />
     <ClCompile Include="Jazz2\Actors\Lighting\StaticRadialLight.cpp" />
+    <ClCompile Include="Jazz2\Actors\Solid\AmmoBarrel.cpp" />
+    <ClCompile Include="Jazz2\Actors\Solid\AmmoCrate.cpp" />
+    <ClCompile Include="Jazz2\Actors\Solid\BarrelContainer.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\Bridge.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\CrateContainer.cpp" />
+    <ClCompile Include="Jazz2\Actors\Solid\GemBarrel.cpp" />
+    <ClCompile Include="Jazz2\Actors\Solid\GemCrate.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\GenericContainer.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\Pole.cpp" />
+    <ClCompile Include="Jazz2\Actors\Solid\PowerUpMorphMonitor.cpp" />
+    <ClCompile Include="Jazz2\Actors\Solid\PowerUpWeaponMonitor.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\TriggerCrate.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\BouncerShot.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\FreezerShot.cpp" />
@@ -488,6 +505,7 @@
     <ClCompile Include="Jazz2\UI\Canvas.cpp" />
     <ClCompile Include="Jazz2\UI\Font.cpp" />
     <ClCompile Include="Jazz2\UI\HUD.cpp" />
+    <ClCompile Include="Jazz2\UI\RgbLights.cpp" />
     <ClCompile Include="nCine\AppConfiguration.cpp" />
     <ClCompile Include="nCine\Application.cpp" />
     <ClCompile Include="nCine\ArrayIndexer.cpp" />
