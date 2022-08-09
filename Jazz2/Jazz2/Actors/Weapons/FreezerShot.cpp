@@ -66,11 +66,10 @@ namespace Jazz2::Actors::Weapons
 
 	void FreezerShot::OnUpdate(float timeMult)
 	{
-		float halfTimeMult = timeMult * 0.5f;
-
+		int n = (timeMult > 0.9f ? 2 : 1);
 		TileCollisionParams params = { TileDestructType::Weapon, _speed.Y >= 0.0f, WeaponType::Freezer, _strength };
-		for (int i = 0; i < 2 && params.WeaponStrength > 0; i++) {
-			TryStandardMovement(halfTimeMult, params);
+		for (int i = 0; i < n && params.WeaponStrength > 0; i++) {
+			TryMovement(timeMult / n, params);
 		}
 		if (params.WeaponStrength <= 0) {
 			DecreaseHealth(INT32_MAX);

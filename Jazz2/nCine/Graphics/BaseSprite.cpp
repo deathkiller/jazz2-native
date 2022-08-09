@@ -134,7 +134,7 @@ namespace nCine {
 		if (dirtyBits_.test(DirtyBitPositions::ColorBit)) {
 			GLUniformCache* colorUniform = instanceBlock_->uniform(Material::ColorUniformName);
 			if (colorUniform)
-				colorUniform->setFloatVector(Colorf(absColor()).Data());
+				colorUniform->setFloatVector(absColor().Data());
 			dirtyBits_.reset(DirtyBitPositions::ColorBit);
 		}
 		if (dirtyBits_.test(DirtyBitPositions::SizeBit)) {

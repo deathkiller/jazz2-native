@@ -12,7 +12,7 @@ namespace nCine {
 	/*! Constructs a timer which calculates average FPS every `avgInterval`
 	 *  seconds and writes to the log every `logInterval` seconds. */
 	FrameTimer::FrameTimer(float logInterval, float avgInterval)
-		: logInterval_(logInterval), avgInterval_(avgInterval),
+		: logInterval_(logInterval), avgInterval_(avgInterval), lastAvgUpdate_(TimeStamp::now()),
 		totNumFrames_(0L), avgNumFrames_(0L), logNumFrames_(0L), fps_(0.0f)
 	{
 	}
@@ -38,7 +38,7 @@ namespace nCine {
 			fps_ = static_cast<float>(avgNumFrames_) / secsSinceLastAvgUpdate;
 
 			avgNumFrames_ = 0L;
-			lastAvgUpdate_ = TimeStamp::now();
+			lastAvgUpdate_ = frameStart_;
 		}
 
 		const float secsSinceLastLogUpdate = (frameStart_ - lastLogUpdate_).seconds();
@@ -49,7 +49,7 @@ namespace nCine {
 			LOGV_X("%lu frames in %.0f seconds = %f FPS (%.3fms per frame)", logNumFrames_, logInterval_, fps_, msPerFrame);
 
 			logNumFrames_ = 0L;
-			lastLogUpdate_ = TimeStamp::now();
+			lastLogUpdate_ = frameStart_;
 		}
 	}
 

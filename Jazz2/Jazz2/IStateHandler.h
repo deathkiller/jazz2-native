@@ -14,9 +14,6 @@ namespace Jazz2
 		virtual void OnBeginFrame() { }
 		virtual void OnEndFrame() { }
 		virtual void OnInitializeViewport(int width, int height) { }
-
-		virtual void OnKeyPressed(const nCine::KeyboardEvent& event) { }
-		virtual void OnKeyReleased(const nCine::KeyboardEvent& event) { }
 		virtual void OnTouchEvent(const nCine::TouchEvent& event) { }
 		
 	private:

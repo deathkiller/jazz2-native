@@ -13,6 +13,8 @@ namespace Jazz2::Events
 		EventMap(ILevelHandler* levelHandler, Vector2i layoutSize);
 
 		Vector2f GetSpawnPosition(PlayerType type);
+		void CreateCheckpointForRollback();
+		void RollbackToCheckpoint();
 
 		void StoreTileEvent(int x, int y, EventType eventType, ActorFlags eventFlags = ActorFlags::None, uint8_t* tileParams = nullptr);
 		void PreloadEventsAsync();
@@ -67,6 +69,7 @@ namespace Jazz2::Events
 		ILevelHandler* _levelHandler;
 		Vector2i _layoutSize;
 		SmallVector<EventTile, 0> _eventLayout;
+		SmallVector<EventTile, 0> _eventLayoutForRollback;
 		SmallVector<GeneratorInfo, 0> _generators;
 		SmallVector<SpawnPoint, 0> _spawnPoints;
 		SmallVector<WarpTarget, 0> _warpTargets;

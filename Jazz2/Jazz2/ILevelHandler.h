@@ -84,10 +84,15 @@ namespace Jazz2
 		virtual void BeginLevelChange(ExitType exitType, const StringView& nextLevel) = 0;
 		virtual void HandleGameOver() = 0;
 		virtual bool HandlePlayerDied(const std::shared_ptr<ActorBase>& player) = 0;
+		virtual void SetCheckpoint(Vector2f pos) = 0;
+		virtual void RollbackToCheckpoint() = 0;
 		virtual void ShowLevelText(const StringView& text) = 0;
 		virtual void ShowCoins(int count) = 0;
 		virtual void ShowGems(int count) = 0;
 		virtual StringView GetLevelText(int textId, int index = -1, uint32_t delimiter = 0) = 0;
+		virtual void LimitCameraView(float left, float width) = 0;
+		virtual void ShakeCameraView(float duration) = 0;
+		virtual void SetWaterLevel(float value) = 0;
 
 		virtual bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads = true) = 0;
 		virtual bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads, __out bool& isGamepad) = 0;

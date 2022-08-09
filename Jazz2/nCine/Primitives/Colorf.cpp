@@ -1,10 +1,9 @@
 #include "Colorf.h"
 #include "Color.h"
-#include "ColorHdr.h"
 #include "../Base/Algorithms.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS
 	///////////////////////////////////////////////////////////
@@ -29,16 +28,11 @@ namespace nCine {
 
 	Colorf::Colorf(const Color& color)
 	{
-		const float inv = 1.0f / 255.0f;
+		constexpr float inv = 1.0f / 255.0f;
 		red_ = static_cast<float>(color.R() * inv);
 		green_ = static_cast<float>(color.G() * inv);
 		blue_ = static_cast<float>(color.B() * inv);
 		alpha_ = static_cast<float>(color.A() * inv);
-	}
-
-	Colorf::Colorf(const ColorHdr& color)
-		: Colorf(color.R(), color.G(), color.B(), 1.0f)
-	{
 	}
 
 	///////////////////////////////////////////////////////////
@@ -47,9 +41,9 @@ namespace nCine {
 
 	void Colorf::Set(float red, float green, float blue)
 	{
-		red_ = std::clamp(red, 0.0f, 1.0f);
-		green_ = std::clamp(green, 0.0f, 1.0f);
-		blue_ = std::clamp(blue, 0.0f, 1.0f);
+		red_ = red;
+		green_ = green;
+		blue_ = blue;
 	}
 
 	void Colorf::SetVec(const float channels[NumChannels])
@@ -64,7 +58,7 @@ namespace nCine {
 
 	Colorf& Colorf::operator=(const Color& color)
 	{
-		const float inv = 1.0f / 255.0f;
+		constexpr float inv = 1.0f / 255.0f;
 		red_ = static_cast<float>(color.R() * inv);
 		green_ = static_cast<float>(color.G() * inv);
 		blue_ = static_cast<float>(color.B() * inv);
@@ -76,8 +70,7 @@ namespace nCine {
 	Colorf& Colorf::operator+=(const Colorf& color)
 	{
 		for (unsigned int i = 0; i < NumChannels; i++) {
-			const float channelValue = Data()[i] + color.Data()[i];
-			Data()[i] = std::clamp(channelValue, 0.0f, 1.0f);
+			Data()[i] = Data()[i] + color.Data()[i];
 		}
 
 		return *this;
@@ -86,8 +79,7 @@ namespace nCine {
 	Colorf& Colorf::operator-=(const Colorf& color)
 	{
 		for (unsigned int i = 0; i < NumChannels; i++) {
-			const float channelValue = Data()[i] - color.Data()[i];
-			Data()[i] = std::clamp(channelValue, 0.0f, 1.0f);
+			Data()[i] = Data()[i] - color.Data()[i];
 		}
 
 		return *this;
@@ -96,8 +88,7 @@ namespace nCine {
 	Colorf& Colorf::operator*=(const Colorf& color)
 	{
 		for (unsigned int i = 0; i < NumChannels; i++) {
-			const float channelValue = Data()[i] * color.Data()[i];
-			Data()[i] = std::clamp(channelValue, 0.0f, 1.0f);
+			Data()[i] = Data()[i] * color.Data()[i];
 		}
 
 		return *this;
@@ -106,8 +97,7 @@ namespace nCine {
 	Colorf& Colorf::operator*=(float scalar)
 	{
 		for (unsigned int i = 0; i < NumChannels; i++) {
-			const float channelValue = Data()[i] * scalar;
-			Data()[i] = std::clamp(channelValue, 0.0f, 1.0f);
+			Data()[i] = Data()[i] * scalar;
 		}
 
 		return *this;
@@ -118,8 +108,7 @@ namespace nCine {
 		Colorf result;
 
 		for (unsigned int i = 0; i < NumChannels; i++) {
-			const float channelValue = Data()[i] + color.Data()[i];
-			result.Data()[i] = std::clamp(channelValue, 0.0f, 1.0f);
+			result.Data()[i] = Data()[i] + color.Data()[i];
 		}
 
 		return result;
@@ -130,8 +119,7 @@ namespace nCine {
 		Colorf result;
 
 		for (unsigned int i = 0; i < NumChannels; i++) {
-			const float channelValue = Data()[i] - color.Data()[i];
-			result.Data()[i] = std::clamp(channelValue, 0.0f, 1.0f);
+			result.Data()[i] = Data()[i] - color.Data()[i];
 		}
 
 		return result;
@@ -142,8 +130,7 @@ namespace nCine {
 		Colorf result;
 
 		for (unsigned int i = 0; i < NumChannels; i++) {
-			const float channelValue = Data()[i] * color.Data()[i];
-			result.Data()[i] = std::clamp(channelValue, 0.0f, 1.0f);
+			result.Data()[i] = Data()[i] * color.Data()[i];
 		}
 
 		return result;
@@ -154,8 +141,7 @@ namespace nCine {
 		Colorf result;
 
 		for (unsigned int i = 0; i < NumChannels; i++) {
-			const float channelValue = Data()[i] * scalar;
-			result.Data()[i] = std::clamp(channelValue, 0.0f, 1.0f);
+			result.Data()[i] = Data()[i] * scalar;
 		}
 
 		return result;

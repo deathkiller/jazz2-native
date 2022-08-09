@@ -122,14 +122,7 @@ public:
 	void onPostUpdate() override;
 	void onShutdown() override;
 	void onResizeWindow(int width, int height) override;
-
-	void onKeyPressed(const KeyboardEvent& event) override;
-	void onKeyReleased(const KeyboardEvent& event) override;
 	void onTouchEvent(const TouchEvent& event) override;
-	void onMouseButtonPressed(const MouseEvent& event) override;
-	void onMouseButtonReleased(const MouseEvent& event) override;
-	void onJoyMappedButtonPressed(const JoyMappedButtonEvent& event) override;
-	void onJoyMappedButtonReleased(const JoyMappedButtonEvent& event) override;
 
 	void ChangeLevel(Jazz2::LevelInitialization&& levelInit) override;
 
@@ -203,41 +196,11 @@ void GameEventHandler::onResizeWindow(int width, int height)
 	}
 }
 
-void GameEventHandler::onKeyPressed(const KeyboardEvent& event)
-{
-	if (_currentHandler != nullptr) {
-		_currentHandler->OnKeyPressed(event);
-	}
-}
-
-void GameEventHandler::onKeyReleased(const KeyboardEvent& event)
-{
-	if (_currentHandler != nullptr) {
-		_currentHandler->OnKeyReleased(event);
-	}
-}
-
 void GameEventHandler::onTouchEvent(const TouchEvent& event)
 {
 	if (_currentHandler != nullptr) {
 		_currentHandler->OnTouchEvent(event);
 	}
-}
-
-void GameEventHandler::onMouseButtonPressed(const MouseEvent& event)
-{
-}
-
-void GameEventHandler::onMouseButtonReleased(const MouseEvent& event)
-{
-}
-
-void GameEventHandler::onJoyMappedButtonPressed(const JoyMappedButtonEvent& event)
-{
-}
-
-void GameEventHandler::onJoyMappedButtonReleased(const JoyMappedButtonEvent& event)
-{
 }
 
 void GameEventHandler::ChangeLevel(Jazz2::LevelInitialization&& levelInit)

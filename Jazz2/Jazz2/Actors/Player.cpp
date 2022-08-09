@@ -41,8 +41,7 @@ namespace Jazz2::Actors
 		_inIdleTransition(false), _inLedgeTransition(false),
 		_canDoubleJump(true),
 		_lives(0), _coins(0), _foodEaten(0), _score(0),
-		_checkpointPos { },
-		_checkpointLight(0.0f),
+		_checkpointLight(1.0f),
 		_sugarRushLeft(0.0f), _sugarRushStarsTime(0.0f),
 		_gems(0), _gemsPitch(0),
 		_gemsTimer(0.0f),
@@ -52,7 +51,6 @@ namespace Jazz2::Actors
 		_idleTime(0.0f),
 		_keepRunningTime(0.0f),
 		_lastPoleTime(0.0f),
-		_lastPolePos { },
 		_inTubeTime(0.0f),
 		_dizzyTime(0.0f),
 		_weaponAllowed(true)
@@ -90,13 +88,8 @@ namespace Jazz2::Actors
 
 		SetAnimation(AnimState::Fall);
 
-		/*LightEmitter light = AddComponent<LightEmitter>();
-		light.Intensity = 1.0f;
-		light.RadiusNear = 40;
-		light.RadiusFar = 110;*/
-
-		memset(_weaponAmmo, 0, sizeof(_weaponAmmo));
-		memset(_weaponUpgrades, 0, sizeof(_weaponUpgrades));
+		std::memset(_weaponAmmo, 0, sizeof(_weaponAmmo));
+		std::memset(_weaponUpgrades, 0, sizeof(_weaponUpgrades));
 
 		_weaponAmmo[(int)WeaponType::Blaster] = -1;
 
@@ -107,6 +100,7 @@ namespace Jazz2::Actors
 		_currentWeapon = WeaponType::Blaster;
 
 		_checkpointPos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
+		// TODO
 		//_checkpointLight = _levelHandler->AmbientLightCurrent;
 
 		co_return true;
@@ -163,10 +157,9 @@ namespace Jazz2::Actors
 
 		PushSolidObjects(timeMult);
 
-		//base.OnFixedUpdate(timeMult);
+		//ActorBase::OnUpdate(timeMult);
 		{
-			TileCollisionParams params = { };
-			params.Downwards = _speed.Y >= 0.0f;
+			TileCollisionParams params = { TileDestructType::Collapse, _speed.Y >= 0.0f };
 			if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f) {
 				params.DestructType |= TileDestructType::Special;
 			}
@@ -201,7 +194,6 @@ namespace Jazz2::Actors
 		UpdateAnimation(timeMult);
 
 		CheckSuspendedStatus();
-		CheckDestructibleTiles(timeMult);
 		CheckEndOfSpecialMoves(timeMult);
 
 		OnHandleWater();
@@ -884,7 +876,7 @@ namespace Jazz2::Actors
 		// but for falling sprites for some reason somewhere above the hotspot instead.
 		// It is absolutely important that the position of the hitbox stays constant
 		// to the hotspot, though; otherwise getting stuck at walls happens all the time.
-		AABBInner = AABBf(_pos.X - 11.0f, _pos.Y + 8.0f - 12.0f, _pos.X + 11.0f, _pos.Y + 8.0f + 12.0f);
+		AABBInner = AABBf(_pos.X - 11.0f, _pos.Y + 8.0f - 18.0f, _pos.X + 11.0f, _pos.Y + 8.0f + 12.0f);
 	}
 
 	bool Player::OnHandleCollision(std::shared_ptr<ActorBase> other)
@@ -1401,38 +1393,6 @@ namespace Jazz2::Actors
 		}
 	}
 
-	void Player::CheckDestructibleTiles(float timeMult)
-	{
-		auto tiles = _levelHandler->TileMap();
-		if (tiles == nullptr) {
-			return;
-		}
-
-		AABBf aabb = AABBInner + Vector2f((_speed.X + _externalForce.X) * 2.0f * timeMult, (_speed.Y - _externalForce.Y) * 2.0f * timeMult);
-
-		// TODO
-		// Buttstomp/etc. tiles checking
-		/*if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f) {
-			int destroyedCount = tiles->CheckSpecialDestructible(aabb);
-			AddScore(destroyedCount * 50);
-
-			ActorBase* solidObject;
-			if (!(_levelHandler->IsPositionEmpty(this, aabb, false, &solidObject)) && solidObject != nullptr) {
-				solidObject->OnHandleCollision(this);
-			}
-		}
-
-		// Speed tiles checking
-		if (std::abs(_speed.X) > std::numeric_limits<float>::epsilon() || std::abs(_speed.Y) > std::numeric_limits<float>::epsilon() || _sugarRushLeft > 0.0f) {
-			int destroyedCount = tiles->CheckSpecialSpeedDestructible(aabb,
-				_sugarRushLeft > 0.0f ? 64.0f : std::max(std::abs(_speed.X), std::abs(_speed.Y)));
-
-			AddScore(destroyedCount * 50);
-		}*/
-
-		tiles->CheckCollapseDestructible(aabb);
-	}
-
 	void Player::CheckSuspendedStatus()
 	{
 		if (_suspendType == SuspendType::SwingingVine) {
@@ -1578,26 +1538,21 @@ namespace Jazz2::Actors
 		EventType tileEvent = events->GetEventByPosition(_pos.X, _pos.Y, &p);
 		switch (tileEvent) {
 			case EventType::LightSet: { // Intensity, Red, Green, Blue, Flicker
-				// ToDo: Change only player view, handle splitscreen multiplayer
+				// TODO: Change only player view, handle splitscreen multiplayer
 				_levelHandler->SetAmbientLight(*(uint16_t*)&p[0] * 0.01f);
 				break;
 			}
 			case EventType::WarpOrigin: { // Warp ID, Fast, Set Lap
 				if (_currentTransitionState == AnimState::Idle || _currentTransitionState == (AnimState::Dash | AnimState::Jump) || _currentTransitionCancellable) {
-#if MULTIPLAYER && !SERVER
-					if (!(levelHandler is MultiplayerLevelHandler))
-#endif
-					{
-						Vector2f c = events->GetWarpTarget(*(uint16_t*)&p[0]);
-						if (c.X >= 0.0f && c.Y >= 0.0f) {
-							WarpToPosition(c, p[2] != 0);
+					Vector2f c = events->GetWarpTarget(*(uint16_t*)&p[0]);
+					if (c.X >= 0.0f && c.Y >= 0.0f) {
+						WarpToPosition(c, p[2] != 0);
 
 #if MULTIPLAYER && SERVER
-							if (p[4] != 0) {
-								((LevelHandler)levelHandler).OnPlayerIncrementLaps(this);
-							}
-#endif
+						if (p[4] != 0) {
+							((LevelHandler)levelHandler).OnPlayerIncrementLaps(this);
 						}
+#endif
 					}
 				}
 				break;
@@ -1611,7 +1566,7 @@ namespace Jazz2::Actors
 				break;
 			}
 			case EventType::ModifierTube: { // XSpeed, YSpeed, Wait Time, Trig Sample, Become Noclip, Noclip Only
-				// ToDo: Implement other parameters
+				// TODO: Implement other parameters
 				if (p[8] == 0 && p[10] != 0 && (CollisionFlags & CollisionFlags::CollideWithTileset) == CollisionFlags::CollideWithTileset) {
 					break;
 				}
@@ -1653,28 +1608,23 @@ namespace Jazz2::Actors
 			}
 			case EventType::AreaEndOfLevel: { // ExitType, Fast (No score count, only black screen), TextID, TextOffset, Coins
 				if (_levelExiting == LevelExitingState::None) {
-#if MULTIPLAYER && !SERVER
-					if (!(levelHandler is MultiplayerLevelHandler))
-#endif
-					{
-						// ToDo: Implement Fast parameter
-						uint16_t coinsRequired = *(uint16_t*)&p[8];
-						if (coinsRequired <= _coins) {
-							_coins -= coinsRequired;
+					// TODO: Implement Fast parameter
+					uint16_t coinsRequired = *(uint16_t*)&p[8];
+					if (coinsRequired <= _coins) {
+						_coins -= coinsRequired;
 
-							String nextLevel;
-							// TODO
-							/*if (p[4] != 0) {
-								nextLevel = _levelHandler->GetLevelText(p[4]).SubstringByOffset('|', p[6]);
-							}*/
-							_levelHandler->BeginLevelChange((ExitType)p[0], nextLevel);
-							PlayPlayerSfx("EndOfLevel"_s);
-						} else if (_bonusWarpTimer <= 0.0f) {
-							_levelHandler->ShowCoins(_coins);
-							PlaySfx("BonusWarpNotEnoughCoins"_s);
+						String nextLevel;
+						// TODO
+						/*if (p[4] != 0) {
+							nextLevel = _levelHandler->GetLevelText(p[4]).SubstringByOffset('|', p[6]);
+						}*/
+						_levelHandler->BeginLevelChange((ExitType)p[0], nextLevel);
+						PlayPlayerSfx("EndOfLevel"_s);
+					} else if (_bonusWarpTimer <= 0.0f) {
+						_levelHandler->ShowCoins(_coins);
+						PlaySfx("BonusWarpNotEnoughCoins"_s);
 
-							_bonusWarpTimer = 400.0f;
-						}
+						_bonusWarpTimer = 400.0f;
 					}
 				}
 				break;
@@ -1690,10 +1640,7 @@ namespace Jazz2::Actors
 				break;
 			}
 			case EventType::AreaCallback: { // Function, Param, Vanish
-#if !SERVER
-				// ToDo: Call function #{p[0]}(sender, p[1]); implement level extensions
-				//attachedHud ? .ShowLevelText("\f[s:75]\f[w:95]\f[c:6]\n\n\n\nWARNING: Callbacks aren't implemented yet. (" + p[0] + ", " + p[1] + ")", false);
-#endif
+				// TODO: Call function #{p[0]}(sender, p[1]); implement level extensions
 				if (p[4] != 0) {
 					events->StoreTileEvent((int)(_pos.X / 32), (int)(_pos.Y / 32), EventType::Empty);
 				}
@@ -1710,34 +1657,19 @@ namespace Jazz2::Actors
 			}
 			case EventType::AreaFlyOff: {
 				if (_activeModifier == Modifier::Airboard) {
-#if MULTIPLAYER && !SERVER
-					if (!(levelHandler is MultiplayerLevelHandler))
-#endif
-					{
-						SetModifier(Modifier::None);
-					}
+					SetModifier(Modifier::None);
 				}
 				break;
 			}
 			case EventType::AreaRevertMorph: {
 				if (_playerType != _playerTypeOriginal) {
-#if MULTIPLAYER && !SERVER
-					if (!(levelHandler is MultiplayerLevelHandler))
-#endif
-					{
-						MorphRevent();
-					}
+					MorphRevent();
 				}
 				break;
 			}
 			case EventType::AreaMorphToFrog: {
 				if (_playerType != PlayerType::Frog) {
-#if MULTIPLAYER && !SERVER
-					if (!(levelHandler is MultiplayerLevelHandler))
-#endif
-					{
-						//MorphTo(PlayerType::Frog);
-					}
+					MorphTo(PlayerType::Frog);
 				}
 				break;
 			}
@@ -1752,36 +1684,25 @@ namespace Jazz2::Actors
 			case EventType::TriggerZone: { // Trigger ID, Turn On, Switch
 				auto tiles = _levelHandler->TileMap();
 				if (tiles != nullptr) {
-#if MULTIPLAYER && !SERVER
-					if (!(levelHandler is MultiplayerLevelHandler))
-#endif
-					{
-						// ToDo: Implement Switch parameter
-						//tiles->SetTrigger(*(uint16_t*)&p[0], p[2] != 0);
-					}
+					// TODO: Implement Switch parameter
+					tiles->SetTrigger(*(uint16_t*)&p[0], p[2] != 0);
 				}
 				break;
 			}
 
 			case EventType::ModifierDeath: {
-#if MULTIPLAYER && !SERVER
-				if (!(levelHandler is MultiplayerLevelHandler))
-#endif
-				{
-					DecreaseHealth(INT32_MAX);
-				}
+				DecreaseHealth(INT32_MAX);
 				break;
 			}
 			case EventType::ModifierSetWater: { // Height, Instant, Lighting
-				// TODO
-				// ToDo: Implement Instant (non-instant transition), Lighting
-				//_levelHandler->WaterLevel = p[0];
+				// TODO: Implement Instant (non-instant transition), Lighting
+				_levelHandler->SetWaterLevel(*(uint16_t*)&p[0]);
 				break;
 			}
 			case EventType::ModifierLimitCameraView: { // Left, Width
-				//uint16_t left = *(uint16_t*)&p[0];
-				//uint16_t width = *(uint16_t*)&p[2];
-				//_levelHandler->LimitCameraView((left == 0 ? (int)(_pos.X / 32) : left) * 32, width * 32);
+				uint16_t left = *(uint16_t*)&p[0];
+				uint16_t width = *(uint16_t*)&p[2];
+				_levelHandler->LimitCameraView((left == 0 ? (int)(_pos.X / Tiles::TileSet::DefaultTileSize) : left) * Tiles::TileSet::DefaultTileSize, width * Tiles::TileSet::DefaultTileSize);
 				break;
 			}
 
@@ -1796,7 +1717,7 @@ namespace Jazz2::Actors
 			}
 		}
 
-		// ToDo: Implement Slide modifier with JJ2+ parameter
+		// TODO: Implement Slide modifier with JJ2+ parameter
 
 		// Check floating from each corner of an extended hitbox
 		// Player should not pass from a single tile wide gap if the columns left or right have
@@ -1829,7 +1750,7 @@ namespace Jazz2::Actors
 			uint16_t p1 = *(uint16_t*)&p[8];
 			uint16_t p2 = *(uint16_t*)&p[10];
 			if ((p2 != 0 || p1 != 0)) {
-				MoveInstantly(Vector2f((p2 - p1) * 0.4f * timeMult, 0), MoveType::Relative);
+				MoveInstantly(Vector2f((p2 - p1) * 0.7f * timeMult, 0), MoveType::Relative);
 			}
 		}
 
@@ -1844,7 +1765,7 @@ namespace Jazz2::Actors
 					uint16_t p3 = *(uint16_t*)&p[4];
 					uint16_t p4 = *(uint16_t*)&p[6];
 					if (p2 != 0 || p1 != 0) {
-						MoveInstantly(Vector2f((p2 - p1) * 0.4f * timeMult, 0), MoveType::Relative);
+						MoveInstantly(Vector2f((p2 - p1) * 0.7f * timeMult, 0), MoveType::Relative);
 					}
 					if (p4 != 0 || p3 != 0) {
 						_speed.X += (p4 - p3) * 0.1f;
@@ -1932,15 +1853,9 @@ namespace Jazz2::Actors
 
 					// Return to the last save point
 					MoveInstantly(_checkpointPos, MoveType::Absolute | MoveType::Force);
-					// TODO
-					//_levelHandler->AmbientLightCurrent = _checkpointLight;
-					//_levelHandler->LimitCameraView(0, 0);
-					_levelHandler->WarpCameraToTarget(shared_from_this());
+					_levelHandler->SetAmbientLight(_checkpointLight);
 
-					// TODO
-					//if (_levelHandler->Difficulty() != GameDifficulty::Multiplayer) {
-					//	_levelHandler->EventMap()->RollbackToCheckpoint();
-					//}
+					_levelHandler->RollbackToCheckpoint();
 
 				} else {
 					// Respawn is delayed
@@ -2841,5 +2756,11 @@ namespace Jazz2::Actors
 
 		SetAnimation(AnimState::Idle);
 		return true;
+	}
+
+	void Player::SetCheckpoint(Vector2f pos, float ambientLight)
+	{
+		_checkpointPos = Vector2f(pos.X, pos.Y - 20.0f);
+		_checkpointLight = ambientLight;
 	}
 }

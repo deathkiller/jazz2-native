@@ -31,10 +31,11 @@ namespace nCine
 		: frequency_(0UL), baseCount_(0ULL)
 	{
 #if defined(DEATH_TARGET_WINDOWS)
-		if (QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&frequency_)))
+		if (QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&frequency_))) {
 			hasPerfCounter_ = true;
-		else
+		} else {
 			frequency_ = 1000L;
+		}
 #elif defined(DEATH_TARGET_APPLE)
 #	if __MAC_10_12
 		frequency_ = 1.0e9L;
@@ -49,8 +50,9 @@ namespace nCine
 		if (clock_getres(CLOCK_MONOTONIC, &resolution) == 0) {
 			frequency_ = 1.0e9L;
 			hasMonotonicClock_ = true;
-		} else
+		} else {
 			frequency_ = 1.0e6L;
+		}
 #endif
 
 		baseCount_ = counter();
@@ -65,10 +67,11 @@ namespace nCine
 		uint64_t counter = 0LL;
 
 #if defined(DEATH_TARGET_WINDOWS)
-		if (hasPerfCounter_)
+		if (hasPerfCounter_) {
 			QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&counter));
-		else
+		} else {
 			counter = GetTickCount();
+		}
 #elif defined(DEATH_TARGET_APPLE)
 #	if __MAC_10_12
 		counter = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW);

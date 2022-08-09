@@ -63,12 +63,6 @@ namespace Jazz2::Actors::Environment
 		if (auto player = dynamic_cast<Player*>(other.get())) {
 			_activated = true;
 
-			// Set this checkpoint for all players
-			// TODO
-			/*for (auto& p : _levelHandler.Players) {
-				p.SetCheckpoint(_pos);
-			}*/
-
 			SetAnimation("Opened"_s);
 			SetTransition(AnimState::TransitionActivate, false);
 
@@ -79,10 +73,7 @@ namespace Jazz2::Actors::Environment
 			uint8_t playerParams[16] = { _theme, 0, 1 };
 			_levelHandler->EventMap()->StoreTileEvent(_originTile.X, _originTile.Y, EventType::Checkpoint, ActorFlags::None, playerParams);
 
-			// TODO
-			/*if (_levelHandler->Difficulty() != GameDifficulty::Multiplayer) {
-				_levelHandler->EventMap()->CreateCheckpointForRollback();
-			}*/
+			_levelHandler->SetCheckpoint(Vector2f(_pos.X, _pos.Y));
 			return true;
 		}
 

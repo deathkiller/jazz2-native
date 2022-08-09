@@ -170,7 +170,11 @@ namespace Jazz2
 			events->StoreTileEvent(_originTile.X, _originTile.Y, EventType::Empty);
 		}
 
-		CollisionFlags |= CollisionFlags::IsDestroyed;
+		bool forceDisableCollisions = ((CollisionFlags & CollisionFlags::ForceDisableCollisions) == CollisionFlags::ForceDisableCollisions);
+		CollisionFlags |= CollisionFlags::IsDestroyed | CollisionFlags::SkipPerPixelCollisions;
+		if (forceDisableCollisions) {
+			CollisionFlags |= CollisionFlags::ForceDisableCollisions;
+		}
 		return true;
 	}
 

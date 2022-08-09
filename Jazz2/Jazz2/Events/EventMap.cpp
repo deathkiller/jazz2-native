@@ -38,6 +38,42 @@ namespace Jazz2::Events
 		return Vector2f(-1, -1);
 	}
 
+	void EventMap::CreateCheckpointForRollback()
+	{
+		std::memcpy(_eventLayoutForRollback.data(), _eventLayout.data(), _eventLayout.size() * sizeof(EventTile));
+	}
+
+	void EventMap::RollbackToCheckpoint()
+	{
+		for (int y = 0; y < _layoutSize.Y; y++) {
+			for (int x = 0; x < _layoutSize.X; x++) {
+				int tileID = y * _layoutSize.X + x;
+				EventTile& tile = _eventLayout[tileID];
+				EventTile& tilePrev = _eventLayoutForRollback[tileID];
+
+				bool respawn = (tilePrev.IsEventActive && !tile.IsEventActive);
+
+				// Rollback tile
+				tile = tilePrev;
+
+				if (respawn && tile.EventType != EventType::Empty) {
+					tile.IsEventActive = true;
+
+					// TODO
+					/*if (tile.EventType == EventType::AreaWeather) {
+						levelHandler.ApplyWeather((LevelHandler::WeatherType)tile.EventParams[0], tile.EventParams[1], tile.EventParams[2] != 0);
+					} else*/ if (tile.EventType != EventType::Generator) {
+						ActorFlags flags = ActorFlags::IsCreatedFromEventMap | tile.EventFlags;
+						std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(tile.EventType, tile.EventParams, flags, x, y, ILevelHandler::MainPlaneZ);
+						if (actor != nullptr) {
+							_levelHandler->AddActor(actor);
+						}
+					}
+				}
+			}
+		}
+	}
+
 	void EventMap::StoreTileEvent(int x, int y, EventType eventType, ActorFlags eventFlags, uint8_t* tileParams)
 	{
 		if (eventType == EventType::Empty && (x < 0 || y < 0 || x >= _layoutSize.X || y >= _layoutSize.Y)) {
@@ -260,6 +296,7 @@ namespace Jazz2::Events
 		}
 
 		_eventLayout.resize(width * height);
+		_eventLayoutForRollback.resize(width * height);
 
 		uint8_t difficultyBit;
 		switch (difficulty) {
@@ -378,8 +415,7 @@ namespace Jazz2::Events
 			}
 		}
 
-		// TODO
-		//Array.Copy(eventLayout, eventLayoutForRollback, eventLayout.Length);
+		std::memcpy(_eventLayoutForRollback.data(), _eventLayout.data(), _eventLayout.size() * sizeof(EventTile));
 	}
 
 	void EventMap::StoreTileEvent(int x, int y, EventType eventType, ActorFlags eventFlags, uint16_t* tileParams)
@@ -407,7 +443,7 @@ namespace Jazz2::Events
 	{
 		WarpTarget& target = _warpTargets.emplace_back();
 		target.Id = id;
-		target.Pos = Vector2f(x * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2, y * Tiles::TileSet::DefaultTileSize + 12);
+		target.Pos = Vector2f(x * Tiles::TileSet::DefaultTileSize, y * Tiles::TileSet::DefaultTileSize + 12);
 	}
 
 	void EventMap::AddSpawnPosition(uint8_t typeMask, int x, int y)
@@ -418,6 +454,6 @@ namespace Jazz2::Events
 
 		SpawnPoint& target = _spawnPoints.emplace_back();
 		target.PlayerTypeMask = typeMask;
-		target.Pos = Vector2f(x * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2, y * Tiles::TileSet::DefaultTileSize - 8);
+		target.Pos = Vector2f(x * Tiles::TileSet::DefaultTileSize, y * Tiles::TileSet::DefaultTileSize - 8);
 	}
 }

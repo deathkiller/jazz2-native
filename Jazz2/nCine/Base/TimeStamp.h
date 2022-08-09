@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Clock.h"
+
 #include <cstdint>
 
 namespace nCine
@@ -12,7 +14,7 @@ namespace nCine
 
 		/// Returns a new time stamp initialized now
 		inline static TimeStamp now() {
-			return TimeStamp();
+			return TimeStamp(clock().now());
 		}
 
 		bool operator>(const TimeStamp& other) const;

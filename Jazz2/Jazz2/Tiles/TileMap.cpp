@@ -13,7 +13,6 @@ namespace Jazz2::Tiles
 		_levelHandler(levelHandler),
 		_sprLayerIndex(-1),
 		_hasPit(false),
-		_limitLeft(0), _limitRight(0),
 		_renderCommandsCount(0),
 		_collapsingTimer(0.0f),
 		_triggerState(TriggerCount),
@@ -142,11 +141,14 @@ namespace Jazz2::Tiles
 	{
 		// TODO: Is this function used correctly?
 		// Consider out-of-level coordinates as solid walls
-		if (x < _limitLeft || y < 0 || x >= _limitRight || _sprLayerIndex == -1) {
+		if (x < 0 || y < 0 || _sprLayerIndex == -1) {
 			return false;
 		}
 
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+		if (x >= layoutSize.X) {
+			return false;
+		}
 		if (y >= layoutSize.Y) {
 			return _hasPit;
 		}
@@ -164,12 +166,11 @@ namespace Jazz2::Tiles
 
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
 
-		int limitLeftPx = _limitLeft << 5;
-		int limitRightPx = _limitRight << 5;
-		int limitBottomPx = layoutSize.Y << 5;
+		int limitRightPx = layoutSize.X * TileSet::DefaultTileSize;
+		int limitBottomPx = layoutSize.Y * TileSet::DefaultTileSize;
 
 		// Consider out-of-level coordinates as solid walls
-		if (aabb.L < limitLeftPx || aabb.T < 0 || aabb.R >= limitRightPx) {
+		if (aabb.L < 0 || aabb.T < 0 || aabb.R >= limitRightPx) {
 			return false;
 		}
 		if (aabb.B >= limitBottomPx) {
@@ -177,7 +178,7 @@ namespace Jazz2::Tiles
 		}
 
 		// Check all covered tiles for collisions; if all are empty, no need to do pixel collision checking
-		int hx1 = std::max((int)aabb.L, limitLeftPx);
+		int hx1 = (int)aabb.L;
 		int hx2 = std::min((int)std::ceil(aabb.R), limitRightPx - 1);
 		int hy1 = (int)aabb.T;
 		int hy2 = std::min((int)std::ceil(aabb.B), limitBottomPx - 1);
@@ -266,6 +267,20 @@ namespace Jazz2::Tiles
 								} else {
 									return false;
 								}
+							} else if (tile.DestructType == TileDestructType::Collapse && (params.DestructType & TileDestructType::Collapse) == TileDestructType::Collapse) {
+								bool found = false;
+								for (auto& current : _activeCollapsingTiles) {
+									if (current == Vector2i(x, y)) {
+										found = true;
+										break;
+									}
+								}
+
+								if (!found) {
+									_activeCollapsingTiles.emplace_back(x, y);
+									params.TilesDestroyed++;
+								}
+								return false;
 							} else {
 								return false;
 							}
@@ -325,127 +340,6 @@ namespace Jazz2::Tiles
 		return SuspendType::None;
 	}
 
-	//int TileMap::CheckWeaponDestructible(const AABBf& aabb, WeaponType weapon, int strength)
-	//{
-	//	Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
-
-	//	int x1 = std::max(0, (int)aabb.L / TileSet::DefaultTileSize);
-	//	int x2 = std::min((int)aabb.R / TileSet::DefaultTileSize, layoutSize.X - 1);
-	//	int y1 = std::max(0, (int)aabb.T / TileSet::DefaultTileSize);
-	//	int y2 = std::min((int)aabb.B / TileSet::DefaultTileSize, layoutSize.Y - 1);
-
-	//	int hit = 0;
-	//	for (int tx = x1; tx <= x2; tx++) {
-	//		for (int ty = y1; ty <= y2; ty++) {
-	//			auto& tile = _layers[_sprLayerIndex].Layout[tx + ty * layoutSize.X];
-	//			if (tile.DestructType == TileDestructType::Weapon) {
-	//				if (weapon == WeaponType::Freezer && (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2) > tile.DestructFrameIndex) {
-	//					// TODO
-	//					/*FrozenBlock frozen = new FrozenBlock();
-	//					frozen.OnActivated(new ActorActivationDetails {
-	//						LevelHandler = _levelHandler,
-	//						Pos = new Vector3(32 * tx + 16 - 1, 32 * ty + 16 - 1, ILevelHandler::MainPlaneZ)
-	//					});
-	//					levelHandler.AddActor(frozen);*/
-	//					hit++;
-	//				} else if (tile.ExtraData == 0 || tile.ExtraData == ((unsigned int)weapon + 1)) {
-	//					if (AdvanceDestructibleTileAnimation(tile, tx, ty, strength, "SceneryDestruct"_s)) {
-	//						hit++;
-	//					}
-
-	//					if (strength <= 0) {
-	//						goto Done;
-	//					}
-	//				}
-	//			}
-	//		}
-	//	}
-	//Done:
-	//	return hit;
-	//}
-
-	//int TileMap::CheckSpecialDestructible(const AABBf& aabb)
-	//{
-	//	Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
-
-	//	int x1 = std::max(0, (int)aabb.L / TileSet::DefaultTileSize);
-	//	int x2 = std::min((int)aabb.R / TileSet::DefaultTileSize, layoutSize.X - 1);
-	//	int y1 = std::max(0, (int)aabb.T / TileSet::DefaultTileSize);
-	//	int y2 = std::min((int)aabb.B / TileSet::DefaultTileSize, layoutSize.Y - 1);
-
-	//	int hit = 0;
-	//	for (int tx = x1; tx <= x2; tx++) {
-	//		for (int ty = y1; ty <= y2; ty++) {
-	//			auto& tile = _layers[_sprLayerIndex].Layout[tx + ty * layoutSize.X];
-	//			if (tile.DestructType == TileDestructType::Special) {
-	//				int amount = 1;
-	//				if (AdvanceDestructibleTileAnimation(tile, tx, ty, amount, "SceneryDestruct"_s)) {
-	//					hit++;
-	//				}
-	//			}
-	//		}
-	//	}
-	//	return hit;
-	//}
-
-	//int TileMap::CheckSpecialSpeedDestructible(const AABBf& aabb, float speed)
-	//{
-	//	Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
-
-	//	int x1 = std::max(0, (int)aabb.L / TileSet::DefaultTileSize);
-	//	int x2 = std::min((int)aabb.R / TileSet::DefaultTileSize, layoutSize.X - 1);
-	//	int y1 = std::max(0, (int)aabb.T / TileSet::DefaultTileSize);
-	//	int y2 = std::min((int)aabb.B / TileSet::DefaultTileSize, layoutSize.Y - 1);
-
-	//	int hit = 0;
-	//	for (int tx = x1; tx <= x2; tx++) {
-	//		for (int ty = y1; ty <= y2; ty++) {
-	//			auto& tile = _layers[_sprLayerIndex].Layout[tx + ty * layoutSize.X];
-	//			if (tile.DestructType == TileDestructType::Speed && /*tile.ExtraData +*/ 5 <= speed) {
-	//				int amount = 1;
-	//				if (AdvanceDestructibleTileAnimation(tile, tx, ty, amount, "SceneryDestruct"_s)) {
-	//					hit++;
-	//				}
-	//			}
-	//		}
-	//	}
-
-	//	return hit;
-	//}
-
-	int TileMap::CheckCollapseDestructible(const AABBf& aabb)
-	{
-		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
-
-		int x1 = std::max(0, (int)aabb.L / TileSet::DefaultTileSize);
-		int x2 = std::min((int)aabb.R / TileSet::DefaultTileSize, layoutSize.X - 1);
-		int y1 = std::max(0, (int)aabb.T / TileSet::DefaultTileSize);
-		int y2 = std::min((int)aabb.B / TileSet::DefaultTileSize, layoutSize.Y - 1);
-
-		int hit = 0;
-		for (int tx = x1; tx <= x2; tx++) {
-			for (int ty = y1; ty <= y2; ty++) {
-				auto& tile = _layers[_sprLayerIndex].Layout[tx + ty * layoutSize.X];
-				if (tile.DestructType == TileDestructType::Collapse) {
-					bool found = false;
-					for (auto& current : _activeCollapsingTiles) {
-						if (current == Vector2i(tx, ty)) {
-							found = true;
-							break;
-						}
-					}
-
-					if (!found) {
-						_activeCollapsingTiles.emplace_back(tx, ty);
-						hit++;
-					}
-				}
-			}
-		}
-
-		return hit;
-	}
-
 	bool TileMap::AdvanceDestructibleTileAnimation(LayerTile& tile, int tx, int ty, int& amount, const StringView& soundName)
 	{
 		int max = (int)(_animatedTiles[tile.DestructAnimation].Tiles.size() - 2);
@@ -503,26 +397,6 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	void TileMap::SetSolidLimit(int tileLeft, int tileWidth)
-	{
-		if (tileLeft <= 0) {
-			_limitLeft = 0;
-		} else {
-			_limitLeft = tileLeft;
-		}
-
-		if (tileWidth > 0) {
-			_limitRight = tileLeft + tileWidth;
-		} else {
-			if (_sprLayerIndex == -1) {
-				_limitRight = 0;
-			} else {
-				Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
-				_limitRight = layoutSize.X;
-			}
-		}
-	}
-
 	void TileMap::DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer)
 	{
 		if (!layer.Visible) {
@@ -537,7 +411,7 @@ namespace Jazz2::Tiles
 
 		// Get current layer offsets and speeds
 		float loX = layer.OffsetX;
-		float loY = layer.OffsetY - (layer.UseInherentOffset ? (viewSize.Y - 200) / 2 : 0);
+		float loY = layer.OffsetY - (layer.UseInherentOffset ? (viewSize.Y - 200) / 2 : 0) + 1;
 
 		// Find out coordinates for a tile from outside the boundaries from topleft corner of the screen 
 		float x1 = viewCenter.X - 70 - (viewSize.X * 0.5f);
@@ -624,24 +498,16 @@ namespace Jazz2::Tiles
 					if (tile.IsAnimated) {
 						if (tile.TileID < _animatedTiles.size()) {
 							tileId = _animatedTiles[tile.TileID].Tiles[_animatedTiles[tile.TileID].CurrentTileIdx].TileID;
-							// TODO
-							//isFlippedX = (_animatedTiles[tile.TileID].CurrentTile.IsFlippedX != tile.IsFlippedX);
-							//isFlippedY = (_animatedTiles[tile.TileID].CurrentTile.IsFlippedY != tile.IsFlippedY);
-							isFlippedX = false;
-							isFlippedY = false;
-
-							//mainColor.A = tile.MaterialAlpha;
-							//alpha = _animatedTiles[tile.TileID].Tiles[_animatedTiles[tile.TileID].CurrentTileIdx].MaterialAlpha;
-							alpha = 255;
 						} else {
 							continue;
 						}
 					} else {
 						tileId = tile.TileID;
-						isFlippedX = tile.IsFlippedX;
-						isFlippedY = tile.IsFlippedY;
-						alpha = tile.MaterialAlpha;
 					}
+
+					isFlippedX = tile.IsFlippedX;
+					isFlippedY = tile.IsFlippedY;
+					alpha = tile.Alpha;
 
 					if (alpha == 0) {
 						continue;
@@ -747,33 +613,21 @@ namespace Jazz2::Tiles
 			LayerTile& tile = layout[i];
 			tile.TileID = tileType;
 
-			// Copy the default tile and do stuff with it
-			/*if (!isAnimated) {
-				tile = _tileSet->GetDefaultTile(tileType);
-			} else {
-				// Copy the template for isAnimated tiles from the first tile, then fix the tile ID.
-				// Cannot rely on copying the same tile as its own isAnimated tile ID, because it is
-				// possible that there are more isAnimated tiles than regular ones.
-				tile = _tileSet->GetDefaultTile(0);
-				tile.TileID = tileType;
-			}*/
-
 			tile.IsFlippedX = isFlippedX;
 			tile.IsFlippedY = isFlippedY;
 			tile.IsAnimated = isAnimated;
 
 			if (tileModifier == 1 /*Translucent*/) {
-				tile.MaterialAlpha = /*127*/140;
+				tile.Alpha = /*127*/140;
 			} else if (tileModifier == 2 /*Invisible*/) {
-				tile.MaterialAlpha = 0;
+				tile.Alpha = 0;
 			} else {
-				tile.MaterialAlpha = 255;
+				tile.Alpha = 255;
 			}
 		}
 
 		if (type == LayerType::Sprite) {
 			_sprLayerIndex = (int)_layers.size();
-			_limitRight = width;
 		} else if (layer.BackgroundStyle != BackgroundStyle::Plain) {
 			_texturedBackgroundLayer = (int)_layers.size();
 		}

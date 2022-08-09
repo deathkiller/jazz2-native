@@ -15,10 +15,7 @@ namespace Jazz2::Tiles
 	struct LayerTile {
 		int TileID;
 
-		//Material* Material;
-		//Vector2i MaterialOffset;
-		uint8_t MaterialAlpha;
-
+		uint8_t Alpha;
 		bool IsFlippedX;
 		bool IsFlippedY;
 		bool IsAnimated;
@@ -149,13 +146,6 @@ namespace Jazz2::Tiles
 		bool IsTileEmpty(const AABBf& aabb, TileCollisionParams& params);
 		SuspendType GetTileSuspendState(float x, float y);
 
-		//int CheckWeaponDestructible(const AABBf& aabb, WeaponType weapon, int strength);
-		//int CheckSpecialDestructible(const AABBf& aabb);
-		//int CheckSpecialSpeedDestructible(const AABBf& aabb, float speed);
-		int CheckCollapseDestructible(const AABBf& aabb);
-
-		void SetSolidLimit(int tileLeft, int tileWidth);
-
 		void ReadLayerConfiguration(LayerType type, const std::unique_ptr<IFileStream>& s, const LayerDescription& layer);
 		void ReadAnimatedTiles(const std::unique_ptr<IFileStream>& s);
 		void SetTileEventFlags(int x, int y, EventType tileEvent, uint8_t* tileParams);
@@ -198,7 +188,6 @@ namespace Jazz2::Tiles
 		LevelHandler* _levelHandler;
 		int _sprLayerIndex;
 		bool _hasPit;
-		int _limitLeft, _limitRight;
 
 		std::unique_ptr<TileSet> _tileSet;
 		SmallVector<TileMapLayer, 0> _layers;

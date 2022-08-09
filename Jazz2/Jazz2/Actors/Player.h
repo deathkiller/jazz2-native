@@ -76,6 +76,7 @@ namespace Jazz2::Actors
 		void MorphRevent();
 		bool SetDizzyTime(float time);
 		bool DisableControllable(float timeout);
+		void SetCheckpoint(Vector2f pos, float ambientLight);
 
 	protected:
 		enum class LevelExitingState {
@@ -172,7 +173,6 @@ namespace Jazz2::Actors
 		void UpdateAnimation(float timeMult);
 		void PushSolidObjects(float timeMult);
 		void CheckEndOfSpecialMoves(float timeMult);
-		void CheckDestructibleTiles(float timeMult);
 		void CheckSuspendedStatus();
 		void OnHandleWater();
 		void OnHandleAreaEvents(float timeMult, __out bool& areaWeaponAllowed, __out int& areaWaterBlock);

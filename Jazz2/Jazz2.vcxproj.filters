@@ -507,9 +507,6 @@
     <ClInclude Include="nCine\Base\FrameTimer.h">
       <Filter>Header Files\nCine\Base</Filter>
     </ClInclude>
-    <ClInclude Include="nCine\Primitives\ColorHdr.h">
-      <Filter>Header Files\nCine\Primitives</Filter>
-    </ClInclude>
     <ClInclude Include="nCine\Primitives\Matrix4x4.h">
       <Filter>Header Files\nCine\Primitives</Filter>
     </ClInclude>
@@ -1074,9 +1071,6 @@
       <Filter>Source Files\nCine\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Primitives\Colorf.cpp">
-      <Filter>Source Files\nCine\Primitives</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Primitives\ColorHdr.cpp">
       <Filter>Source Files\nCine\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="nCine\IO\AssetFile.cpp">

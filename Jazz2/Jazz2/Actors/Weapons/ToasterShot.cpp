@@ -101,7 +101,7 @@ namespace Jazz2::Actors::Weapons
 		auto& light = lights.emplace_back();
 		light.Pos = _pos;
 		light.Intensity = 0.85f;
-		light.Brightness = 0.4f;
+		light.Brightness = 0.6f;
 		light.RadiusNear = 0.0f;
 		light.RadiusFar = 30.0f;
 	}

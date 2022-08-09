@@ -405,7 +405,6 @@
     <ClInclude Include="nCine\Primitives\AABB.h" />
     <ClInclude Include="nCine\Primitives\Color.h" />
     <ClInclude Include="nCine\Primitives\Colorf.h" />
-    <ClInclude Include="nCine\Primitives\ColorHdr.h" />
     <ClInclude Include="nCine\Primitives\Matrix4x4.h" />
     <ClInclude Include="nCine\Primitives\Quaternion.h" />
     <ClInclude Include="nCine\Primitives\Rect.h" />
@@ -633,7 +632,6 @@
     <ClCompile Include="nCine\PCApplication.cpp" />
     <ClCompile Include="nCine\Primitives\Color.cpp" />
     <ClCompile Include="nCine\Primitives\Colorf.cpp" />
-    <ClCompile Include="nCine\Primitives\ColorHdr.cpp" />
     <ClCompile Include="nCine\Qt5Widget.cpp" />
     <ClCompile Include="nCine\ServiceLocator.cpp" />
     <ClCompile Include="nCine\Threading\PosixThread.cpp" />

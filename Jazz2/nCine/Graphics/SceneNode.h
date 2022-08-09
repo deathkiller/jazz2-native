@@ -198,21 +198,17 @@ namespace nCine
 		void setRotation(float rotation);
 
 		/// Gets the node color
-		inline Color color() const {
+		inline Colorf color() const {
 			return color_;
 		}
 		/// Gets the node absolute color
-		inline Color absColor() const {
+		inline Colorf absColor() const {
 			return absColor_;
 		}
 		/// Sets the node color through a `Color` object
-		void setColor(Color color);
+		void setColor(const Color& color);
 		/// Sets the node color through a `Colorf` object
-		void setColor(Colorf color);
-		/// Sets the node color through unsigned char components
-		void setColor(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha);
-		/// Sets the node color through float components
-		void setColorF(float red, float green, float blue, float alpha);
+		void setColor(const Colorf& color);
 		/// Gets the node alpha
 		inline float alpha() const {
 			return color_.A();
@@ -314,7 +310,7 @@ namespace nCine
 		/// Node color for transparency and translucency
 		/*! Even if the base scene node is not always drawable, it carries
 		 *  color information to easily pass that information to its children. */
-		Color color_;
+		Colorf color_;
 
 		/// The node rendering layer
 		/*! Even if the base scene node is not always drawable, it carries
@@ -329,7 +325,7 @@ namespace nCine
 		float absRotation_;
 
 		/// Absolute node color as calculated by the `transform()` function
-		Color absColor_;
+		Colorf absColor_;
 
 		/// Absolute node rendering layer as calculated by the `transform()` function
 		uint16_t absLayer_;
@@ -470,39 +466,27 @@ namespace nCine
 		dirtyBits_.set(DirtyBitPositions::AabbBit);
 	}
 
-	inline void SceneNode::setColor(Color color)
+	inline void SceneNode::setColor(const Color& color)
 	{
 		color_ = color;
 		dirtyBits_.set(DirtyBitPositions::ColorBit);
 	}
 
-	inline void SceneNode::setColor(Colorf color)
+	inline void SceneNode::setColor(const Colorf& color)
 	{
 		color_ = color;
-		dirtyBits_.set(DirtyBitPositions::ColorBit);
-	}
-
-	inline void SceneNode::setColor(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha)
-	{
-		color_.Set(red, green, blue, alpha);
-		dirtyBits_.set(DirtyBitPositions::ColorBit);
-	}
-
-	inline void SceneNode::setColorF(float red, float green, float blue, float alpha)
-	{
-		color_ = Colorf(red, green, blue, alpha);
 		dirtyBits_.set(DirtyBitPositions::ColorBit);
 	}
 
 	inline void SceneNode::setAlpha(unsigned char alpha)
 	{
-		color_.SetAlpha(alpha);
+		color_.SetAlpha(alpha / 255.0f);
 		dirtyBits_.set(DirtyBitPositions::ColorBit);
 	}
 
 	inline void SceneNode::setAlphaF(float alpha)
 	{
-		color_.SetAlpha(static_cast<unsigned char>(alpha * 255));
+		color_.SetAlpha(alpha);
 		dirtyBits_.set(DirtyBitPositions::ColorBit);
 	}
 

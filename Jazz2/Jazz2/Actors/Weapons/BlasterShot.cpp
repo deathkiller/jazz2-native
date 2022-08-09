@@ -29,11 +29,11 @@ namespace Jazz2::Actors::Weapons
 
 		AnimState state = AnimState::Idle;
 		if ((_upgrades & 0x01) != 0) {
-			_timeLeft = 28;
+			_timeLeft = 25;
 			state |= (AnimState)1;
 			_strength = 2;
 		} else {
-			_timeLeft = 25;
+			_timeLeft = 22;
 			_strength = 1;
 		}
 
@@ -53,7 +53,7 @@ namespace Jazz2::Actors::Weapons
 
 		float angleRel = angle * (isFacingLeft ? -1 : 1);
 
-		constexpr float baseSpeed = 10.0f;
+		constexpr float baseSpeed = 12.0f;
 		if (isFacingLeft) {
 			_speed.X = std::min(0.0f, speed.X) - std::cosf(angleRel) * baseSpeed;
 		} else {
@@ -67,11 +67,10 @@ namespace Jazz2::Actors::Weapons
 
 	void BlasterShot::OnUpdate(float timeMult)
 	{
-		float halfTimeMult = timeMult * 0.5f;
-
+		int n = (timeMult > 0.9f ? 2 : 1);
 		TileCollisionParams params = { TileDestructType::Weapon, false, WeaponType::Blaster, _strength };
-		for (int i = 0; i < 2 && params.WeaponStrength > 0; i++) {
-			TryMovement(halfTimeMult, params);
+		for (int i = 0; i < n && params.WeaponStrength > 0; i++) {
+			TryMovement(timeMult / n, params);
 		}
 		if (params.WeaponStrength <= 0) {
 			DecreaseHealth(INT32_MAX);
@@ -94,10 +93,10 @@ namespace Jazz2::Actors::Weapons
 	void BlasterShot::OnUpdateHitbox()
 	{
 		AABBInner = AABBf(
-			_pos.X - 8,
-			_pos.Y - 8,
-			_pos.X + 8,
-			_pos.Y + 8
+			_pos.X - 6,
+			_pos.Y - 6,
+			_pos.X + 6,
+			_pos.Y + 6
 		);
 	}
 

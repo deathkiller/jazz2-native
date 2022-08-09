@@ -83,7 +83,6 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/IO/StandardFile.cpp
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Color.cpp
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Colorf.cpp
-	${NCINE_SOURCE_DIR}/nCine/Primitives/ColorHdr.cpp
 	${NCINE_SOURCE_DIR}/nCine/AppConfiguration.cpp
 	${NCINE_SOURCE_DIR}/nCine/Application.cpp
 	${NCINE_SOURCE_DIR}/nCine/ArrayIndexer.cpp

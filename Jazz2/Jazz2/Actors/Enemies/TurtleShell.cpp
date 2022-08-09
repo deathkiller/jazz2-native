@@ -145,8 +145,8 @@ namespace Jazz2::Actors::Enemies
 
 				shell->DecreaseHealth(1, this);
 				PlaySfx("ImpactShell"_s, 0.8f);
+				return true;
 			}
-			return true;
 		} else if (auto enemyBase = dynamic_cast<EnemyBase*>(other.get())) {
 			if (enemyBase->CanCollideWithAmmo) {
 				_speed.X = std::max(std::abs(_speed.X), 2.0f) * (_speed.X >= 0.0f ? -1.0f : 1.0f);

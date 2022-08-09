@@ -3,6 +3,8 @@
 #include "../../ActorBase.h"
 #include "../../LevelInitialization.h"
 
+#include "../../../nCine/Base/TimeStamp.h"
+
 namespace Jazz2::Actors
 {
 	class Player;
@@ -40,7 +42,7 @@ namespace Jazz2::Actors::Weapons
 		void TryMovement(float timeMult, TileCollisionParams& params);
 
 	private:
-		int _lastRicochetFrame;
+		TimeStamp _lastRicochetTime;
 
 	};
 }

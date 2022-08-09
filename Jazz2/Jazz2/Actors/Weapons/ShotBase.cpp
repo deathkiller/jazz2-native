@@ -18,8 +18,7 @@ namespace Jazz2::Actors::Weapons
 		_firedUp(false),
 		_upgrades(0),
 		_strength(0),
-		_lastRicochet(nullptr),
-		_lastRicochetFrame(0)
+		_lastRicochet(nullptr)
 	{
 	}
 
@@ -43,18 +42,20 @@ namespace Jazz2::Actors::Weapons
 
 	void ShotBase::TriggerRicochet(ActorBase* other)
 	{
+		TimeStamp now = TimeStamp::now();
+
 		if (other == nullptr) {
-			if (_lastRicochetFrame + 2 < theApplication().numFrames()) {
+			if ((now - _lastRicochetTime).seconds() > 1.0f) {
 				_lastRicochet = nullptr;
-				_lastRicochetFrame = theApplication().numFrames();
+				_lastRicochetTime = now;
 				OnRicochet();
 			}
 		} else {
 			if (_lastRicochet != other) {
 				_lastRicochet = other;
-				_lastRicochetFrame = theApplication().numFrames();
+				_lastRicochetTime = now;
 				OnRicochet();
-			} else if (_lastRicochetFrame + 2 >= theApplication().numFrames()) {
+			} else if ((now - _lastRicochetTime).seconds() < 1.0f) {
 				DecreaseHealth(INT32_MAX);
 			}
 		}
@@ -83,8 +84,8 @@ namespace Jazz2::Actors::Weapons
 	{
 		MoveInstantly(Vector2f(_speed.X * -0.4f, _speed.Y * -0.4f), MoveType::Relative | MoveType::Force);
 
-		_speed.Y = _speed.Y * -0.9f + (nCine::Random().Next() % 100 - 50) * 0.1f;
-		_speed.X = _speed.X * -0.9f + (nCine::Random().Next() % 100 - 50) * 0.1f;
+		_speed.Y = _speed.Y * -0.9f + Random().NextFloat(-2.0f, 2.0f);
+		_speed.X = _speed.X * -0.9f + Random().NextFloat(-2.0f, 2.0f);
 	}
 
 	void ShotBase::TryMovement(float timeMult, TileCollisionParams& params)

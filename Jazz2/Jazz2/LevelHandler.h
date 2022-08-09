@@ -73,9 +73,6 @@ namespace Jazz2
 		void OnBeginFrame() override;
 		void OnEndFrame() override;
 		void OnInitializeViewport(int width, int height) override;
-
-		void OnKeyPressed(const nCine::KeyboardEvent& event) override;
-		void OnKeyReleased(const nCine::KeyboardEvent& event) override;
 		void OnTouchEvent(const nCine::TouchEvent& event) override;
 
 		void AddActor(const std::shared_ptr<ActorBase>& actor) override;
@@ -91,10 +88,15 @@ namespace Jazz2
 		void BeginLevelChange(ExitType exitType, const StringView& nextLevel) override;
 		void HandleGameOver() override;
 		bool HandlePlayerDied(const std::shared_ptr<ActorBase>& player) override;
+		void SetCheckpoint(Vector2f pos) override;
+		void RollbackToCheckpoint() override;
 		void ShowLevelText(const StringView& text) override;
 		void ShowCoins(int count) override;
 		void ShowGems(int count) override;
 		StringView GetLevelText(int textId, int index = -1, uint32_t delimiter = 0) override;
+		void LimitCameraView(float left, float width) override;
+		void ShakeCameraView(float duration) override;
+		void SetWaterLevel(float value) override;
 
 		bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads = true) override;
 		__success(return) bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads, __out bool& isGamepad) override;

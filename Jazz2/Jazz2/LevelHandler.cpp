@@ -526,16 +526,6 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::OnKeyPressed(const KeyboardEvent& event)
-	{
-		// TODO
-	}
-
-	void LevelHandler::OnKeyReleased(const KeyboardEvent& event)
-	{
-		// TODO
-	}
-
 	void LevelHandler::OnTouchEvent(const nCine::TouchEvent& event)
 	{
 		_hud->OnTouchEvent(event, _overrideActions);
@@ -646,20 +636,22 @@ namespace Jazz2
 		if ((self->CollisionFlags & CollisionFlags::CollideWithSolidObjects) == CollisionFlags::CollideWithSolidObjects) {
 			ActorBase* colliderActor = nullptr;
 			FindCollisionActorsByAABB(self, aabb, [&](ActorBase* actor) -> bool {
-				if ((actor->CollisionFlags & CollisionFlags::IsSolidObject) != CollisionFlags::IsSolidObject) {
+				if ((actor->CollisionFlags & (CollisionFlags::IsSolidObject | CollisionFlags::IsDestroyed)) != CollisionFlags::IsSolidObject) {
 					return true;
 				}
 
 				Actors::SolidObjectBase* solidObject = dynamic_cast<Actors::SolidObjectBase*>(actor);
 				if (solidObject == nullptr || !solidObject->IsOneWay || params.Downwards) {
-					colliderActor = actor;
-
 					if (self->IsCollidingWith(actor)) {
 						std::shared_ptr selfShared = self->shared_from_this();
 						std::shared_ptr actorShared = actor->shared_from_this();
-						if (!selfShared->OnHandleCollision(actorShared) && !actorShared->OnHandleCollision(selfShared->shared_from_this())) {
+						if (!selfShared->OnHandleCollision(actorShared) && !actorShared->OnHandleCollision(selfShared)) {
+							colliderActor = actor;
 							return false;
 						}
+					} else {
+						// TODO: It must be here for some reason, otherwise Poles are broken
+						colliderActor = actor;
 					}
 				}
 
@@ -682,7 +674,7 @@ namespace Jazz2
 
 			bool OnCollisionQuery(int32_t nodeId) {
 				ActorBase* actor = (ActorBase*)LevelHandler->_collisions.GetUserData(nodeId);
-				if (Self == actor || (actor->CollisionFlags & CollisionFlags::CollideWithOtherActors) != CollisionFlags::CollideWithOtherActors) {
+				if (Self == actor || (actor->CollisionFlags & (CollisionFlags::CollideWithOtherActors | CollisionFlags::IsDestroyed)) != CollisionFlags::CollideWithOtherActors) {
 					return true;
 				}
 				if (actor->IsCollidingWith(AABB)) {
@@ -709,7 +701,7 @@ namespace Jazz2
 
 			bool OnCollisionQuery(int32_t nodeId) {
 				ActorBase* actor = (ActorBase*)LevelHandler->_collisions.GetUserData(nodeId);
-				if ((actor->CollisionFlags & CollisionFlags::CollideWithOtherActors) != CollisionFlags::CollideWithOtherActors) {
+				if ((actor->CollisionFlags & (CollisionFlags::CollideWithOtherActors | CollisionFlags::IsDestroyed)) != CollisionFlags::CollideWithOtherActors) {
 					return true;
 				}
 
@@ -829,6 +821,31 @@ namespace Jazz2
 
 		// Single player can respawn immediately
 		return true;
+	}
+
+	void LevelHandler::SetCheckpoint(Vector2f pos)
+	{
+		for (auto& player : _players) {
+			player->SetCheckpoint(pos, _ambientLightTarget);
+		}
+
+		if (_difficulty != GameDifficulty::Multiplayer) {
+			_eventMap->CreateCheckpointForRollback();
+		}
+	}
+
+	void LevelHandler::RollbackToCheckpoint()
+	{
+		if (_players.empty()) {
+			return;
+		}
+
+		LimitCameraView(0, 0);
+		WarpCameraToTarget(_players[0]->shared_from_this());
+
+		if (_difficulty != GameDifficulty::Multiplayer) {
+			_eventMap->RollbackToCheckpoint();
+		}
 	}
 
 	void LevelHandler::ShowLevelText(const StringView& text)
@@ -1001,10 +1018,7 @@ namespace Jazz2
 			void OnPairAdded(void* proxyA, void* proxyB) {
 				ActorBase* actorA = (ActorBase*)proxyA;
 				ActorBase* actorB = (ActorBase*)proxyB;
-				if (((actorA->CollisionFlags | actorB->CollisionFlags) & CollisionFlags::CollideWithOtherActors) != CollisionFlags::CollideWithOtherActors) {
-					return;
-				}
-				if (actorA->GetHealth() <= 0 || actorB->GetHealth() <= 0) {
+				if (((actorA->CollisionFlags | actorB->CollisionFlags) & (CollisionFlags::CollideWithOtherActors | CollisionFlags::IsDestroyed)) != CollisionFlags::CollideWithOtherActors) {
 					return;
 				}
 
@@ -1114,6 +1128,47 @@ namespace Jazz2
 		// Update audio listener position
 		IAudioDevice& device = theServiceLocator().audioDevice();
 		device.updateListener(Vector3f(_cameraPos.X, _cameraPos.Y, 0.0f), Vector3f(speed.X, speed.Y, 0.0f));
+	}
+
+	void LevelHandler::LimitCameraView(float left, float width)
+	{
+		_levelBounds.X = left;
+		if (width > 0.0f) {
+			_levelBounds.W = left;
+		} else {
+			_levelBounds.W = _tileMap->LevelBounds().W - left;
+		}
+
+		if (left == 0 && width == 0) {
+			_viewBounds = Rectf((float)_levelBounds.X, (float)_levelBounds.Y, (float)_levelBounds.W, (float)_levelBounds.H);
+		} else {
+			Rectf bounds = Rectf((float)_levelBounds.X, (float)_levelBounds.Y, (float)_levelBounds.W, (float)_levelBounds.H);
+			float viewWidth = _view->size().X;
+			if (bounds.W < viewWidth) {
+				bounds.X -= (viewWidth - bounds.W);
+				bounds.W = viewWidth;
+			}
+
+			_viewBoundsTarget = bounds;
+
+			float limit = _cameraPos.X - viewWidth * 0.6f;
+			if (_viewBounds.X < limit) {
+				_viewBounds.W += (_viewBounds.X - limit);
+				_viewBounds.X = limit;
+			}
+		}
+	}
+
+	void LevelHandler::ShakeCameraView(float duration)
+	{
+		if (_shakeDuration < duration) {
+			_shakeDuration = duration;
+		}
+	}
+
+	void LevelHandler::SetWaterLevel(float value)
+	{
+		_waterLevel = value;
 	}
 
 	void LevelHandler::UpdatePressedActions()

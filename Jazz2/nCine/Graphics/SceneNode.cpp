@@ -16,8 +16,8 @@ namespace nCine
 		childOrderIndex_(0), withVisitOrder_(true),
 		visitOrderState_(VisitOrderState::SAME_AS_PARENT), visitOrderIndex_(0),
 		position_(x, y), anchorPoint_(0.0f, 0.0f), scaleFactor_(1.0f, 1.0f), rotation_(0.0f),
-		color_(Color::White), layer_(0), absPosition_(0.0f, 0.0f), absScaleFactor_(1.0f, 1.0f),
-		absRotation_(0.0f), absColor_(Color::White), absLayer_(0),
+		color_(Colorf::White), layer_(0), absPosition_(0.0f, 0.0f), absScaleFactor_(1.0f, 1.0f),
+		absRotation_(0.0f), absColor_(Colorf::White), absLayer_(0),
 		worldMatrix_(Matrix4x4f::Identity), localMatrix_(Matrix4x4f::Identity),
 		shouldDeleteChildrenOnDestruction_(true), dirtyBits_(0xFF), lastFrameUpdated_(0)
 	{
@@ -316,7 +316,7 @@ namespace nCine
 		position_(other.position_), anchorPoint_(other.anchorPoint_),
 		scaleFactor_(other.scaleFactor_), rotation_(other.rotation_), color_(other.color_),
 		layer_(other.layer_), absPosition_(0.0f, 0.0f), absScaleFactor_(1.0f, 1.0f), absRotation_(0.0f),
-		absColor_(Color::White), absLayer_(0), worldMatrix_(Matrix4x4f::Identity), localMatrix_(Matrix4x4f::Identity),
+		absColor_(Colorf::White), absLayer_(0), worldMatrix_(Matrix4x4f::Identity), localMatrix_(Matrix4x4f::Identity),
 		shouldDeleteChildrenOnDestruction_(other.shouldDeleteChildrenOnDestruction_), dirtyBits_(0xFF)
 	{
 		setParent(other.parent_);

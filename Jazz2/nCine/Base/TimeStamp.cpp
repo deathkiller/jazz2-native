@@ -1,5 +1,4 @@
 #include "TimeStamp.h"
-#include "Clock.h"
 #include "../../Common.h"
 
 namespace nCine
@@ -9,7 +8,7 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	TimeStamp::TimeStamp()
-		: counter_(clock().now())
+		: counter_(0)
 	{
 	}
 

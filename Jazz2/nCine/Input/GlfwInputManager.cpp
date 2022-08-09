@@ -413,7 +413,7 @@ namespace nCine
 			inputManager->inputEventHandler_->onTouchEvent(touchEvent);
 		}
 
-		return 0;
+		return 1;
 	}
 #endif
 

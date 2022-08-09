@@ -5,13 +5,13 @@
 namespace nCine
 {
 	class Color;
-	class ColorHdr;
 
 	/// A four channels normalized float color
 	class Colorf
 	{
 	public:
-		static const int NumChannels = 4;
+		static constexpr int NumChannels = 4;
+
 		static const Colorf Black;
 		static const Colorf White;
 		static const Colorf Red;
@@ -40,8 +40,6 @@ namespace nCine
 		explicit Colorf(const float channels[NumChannels]);
 		/// Constructor taking an unsigned char color
 		explicit Colorf(const Color& color);
-		/// Constructor taking an unclamped float color
-		explicit Colorf(const ColorHdr& color);
 
 		/// Gets the red channel of the color
 		inline float R() const {
@@ -71,9 +69,9 @@ namespace nCine
 		/// Sets four color channels
 		constexpr void Set(float red, float green, float blue, float alpha)
 		{
-			red_ = std::clamp(red, 0.0f, 1.0f);
-			green_ = std::clamp(green, 0.0f, 1.0f);
-			blue_ = std::clamp(blue, 0.0f, 1.0f);
+			red_ = red;
+			green_ = green;
+			blue_ = blue;
 			alpha_ = std::clamp(alpha, 0.0f, 1.0f);
 		}
 		/// Sets three color channels
