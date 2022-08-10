@@ -1,29 +1,13 @@
 ﻿#pragma once
 
-#include "IStateHandler.h"
 #include "ActorBase.h"
 #include "LevelInitialization.h"
+#include "PlayerActions.h"
 
 #include "../nCine/Audio/AudioBufferPlayer.h"
 
 namespace Jazz2
 {
-	enum class PlayerActions {
-		Left,
-		Right,
-		Up,
-		Down,
-		Fire,
-		Jump,
-		Run,
-		SwitchWeapon,
-		Menu,
-
-		Count,
-
-		None = -1
-	};
-
 	namespace Events
 	{
 		class EventSpawner;
@@ -40,7 +24,7 @@ namespace Jazz2
 		class Player;
 	}
 
-	class ILevelHandler : public IStateHandler
+	class ILevelHandler
 	{
 	public:
 		static constexpr int MainPlaneZ = 500;

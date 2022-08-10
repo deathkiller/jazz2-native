@@ -124,9 +124,7 @@ namespace Jazz2::Actors
 
 	void Player::OnUpdate(float timeMult)
 	{
-		//ActorBase::OnUpdate(timeMult);
-
-//#if _DEBUG
+#if _DEBUG
 		if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::SwitchWeapon)) {
 			float moveDistance = (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Run) ? 400.0f : 100.0f);
 			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::Left)) {
@@ -142,7 +140,7 @@ namespace Jazz2::Actors
 				MoveInstantly(Vector2f(0.0f, moveDistance), MoveType::Relative | MoveType::Force);
 			}
 		}
-//#endif
+#endif
 
 		// Process level bounds
 		Vector2f lastPos = _pos;
@@ -544,7 +542,7 @@ namespace Jazz2::Actors
 			// Crouch
 			if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Down)) {
 				if (_suspendType == SuspendType::SwingingVine) {
-					// ToDo
+					// TODO
 				} else if (_suspendType != SuspendType::None) {
 					_wasDownPressed = true;
 

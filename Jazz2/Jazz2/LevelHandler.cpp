@@ -54,7 +54,7 @@ namespace Jazz2
 		_pressedActions(0),
 		_overrideActions(0)
 	{
-		auto& resolver = Jazz2::ContentResolver::Current();
+		auto& resolver = ContentResolver::Current();
 		resolver.BeginLoading();
 
 		_rootNode = std::make_unique<SceneNode>();
@@ -160,10 +160,10 @@ namespace Jazz2
 		_ambientLightCurrent = ambientLight;
 		_ambientLightTarget = ambientLight;
 
-		_musicPath = musicPath;
 #ifdef WITH_OPENMPT
-		if (!musicPath.empty()) {
-			_music = std::make_unique<AudioStreamPlayer>(fs::joinPath({ "Content"_s, "Music"_s, musicPath }));
+		if (!musicPath.empty() && fs::isReadableFile(musicPath)) {
+			_musicPath = musicPath;
+			_music = std::make_unique<AudioStreamPlayer>(musicPath);
 			_music->setLooping(true);
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 			_music->setGain(0.5f);
@@ -443,7 +443,7 @@ namespace Jazz2
 
 		if (notInitialized) {
 			_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
-			_view = std::make_unique<Viewport>(_viewTexture.get(), Viewport::DepthStencilFormat::/*DEPTH24_STENCIL8*/NONE);
+			_view = std::make_unique<Viewport>(_viewTexture.get(), Viewport::DepthStencilFormat::NONE);
 
 			_camera = std::make_unique<Camera>();
 			InitializeCamera();
@@ -609,12 +609,12 @@ namespace Jazz2
 
 		if ((self->CollisionFlags & CollisionFlags::CollideWithTileset) == CollisionFlags::CollideWithTileset) {
 			if (_tileMap != nullptr) {
-				if (aabb.B - aabb.T >= 20) {
+				if (aabb.B - aabb.T >= 20.0f) {
 					// If hitbox height is larger than 20px, check bottom and top separately (and top only if going upwards)
-					AABB aabbTop = aabb;
-					aabbTop.B = aabbTop.T + 6;
-					AABB aabbBottom = aabb;
-					aabbBottom.T = aabbBottom.B - 14;
+					AABBf aabbTop = aabb;
+					aabbTop.B = aabbTop.T + 6.0f;
+					AABBf aabbBottom = aabb;
+					aabbBottom.T = aabbBottom.B - 14.0f;
 					if (!_tileMap->IsTileEmpty(aabbBottom, params)) {
 						return false;
 					}
@@ -1202,6 +1202,9 @@ namespace Jazz2
 		if (keyState.isKeyDown(KeySym::X)) {
 			_pressedActions |= (1 << (int)PlayerActions::SwitchWeapon);
 		}
+		if (keyState.isKeyDown(KeySym::ESCAPE)) {
+			_pressedActions |= (1 << (int)PlayerActions::Menu);
+		}
 
 		int firstJoy = -1;
 		for (int i = 0; i < IInputManager::MaxNumJoysticks; i++) {
@@ -1241,6 +1244,9 @@ namespace Jazz2
 			}
 			if (joyState.isButtonPressed(ButtonName::Y)) {
 				_pressedActions |= (1 << (int)PlayerActions::SwitchWeapon);
+			}
+			if (joyState.isButtonPressed(ButtonName::START)) {
+				_pressedActions |= (1 << (int)PlayerActions::Menu);
 			}
 
 			_playerRequiredMovement.X = joyState.axisNormValue(0);
@@ -1405,69 +1411,6 @@ namespace Jazz2
 		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(_size.X, _size.Y);
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
-
-		renderQueue.addCommand(&_renderCommand);
-
-		return true;
-	}
-
-	void LevelHandler::UpscaleRenderPass::Initialize(int width, int height, int targetWidth, int targetHeight)
-	{
-		_targetSize = Vector2f(targetWidth, targetHeight);
-
-		bool notInitialized = (_view == nullptr);
-
-		if (notInitialized) {
-			_camera = std::make_unique<Camera>();
-		}
-		_camera->setOrthoProjection(width * (-0.5f), width * (+0.5f), height * (-0.5f), height * (+0.5f));
-		_camera->setView(0, 0, 0, 1);
-
-		if (notInitialized) {
-			_node = std::make_unique<SceneNode>();
-			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
-			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);
-			_view->setRootNode(_node.get());
-			_view->setCamera(_camera.get());
-			_view->setClearMode(Viewport::ClearMode::NEVER);
-
-			SceneNode& rootNode = theApplication().rootNode();
-			setParent(&rootNode);
-		} else {
-			_view->removeAllTextures();
-			_target->init(nullptr, Texture::Format::RGB8, width, height);
-			_view->setTexture(_target.get());
-		}
-		_target->setMagFiltering(SamplerFilter::Nearest);
-
-		// Prepare render command
-		_renderCommand.setType(RenderCommand::CommandTypes::SPRITE);
-		_renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
-		_renderCommand.material().setBlendingEnabled(true);
-		_renderCommand.material().reserveUniformsDataMemory();
-		_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-
-		GLUniformCache* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
-		if (textureUniform && textureUniform->intValue(0) != 0) {
-			textureUniform->setIntValue(0); // GL_TEXTURE0
-		}
-	}
-
-	void LevelHandler::UpscaleRenderPass::Register()
-	{
-		Viewport::chain().push_back(_view.get());
-	}
-
-	bool LevelHandler::UpscaleRenderPass::OnDraw(RenderQueue& renderQueue)
-	{
-		auto size = _target->size();
-
-		auto instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
-		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, -1.0f, 1.0f);
-		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(_targetSize.Data());
-		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
-
-		_renderCommand.material().setTexture(0, *_target);
 
 		renderQueue.addCommand(&_renderCommand);
 

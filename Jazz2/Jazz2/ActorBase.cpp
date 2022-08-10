@@ -282,14 +282,27 @@ namespace Jazz2
 				bool moved = false;
 				if (!success && _unstuckCooldown <= 0.0f) {
 					AABBf aabb = AABBInner;
-					aabb.T = aabb.B - 8;
+					float t = aabb.B - 14.0f;
+					if (aabb.T < t) {
+						aabb.T = t;
+					}
 					TileCollisionParams params2 = { TileDestructType::None, true };
 					if (!_levelHandler->IsPositionEmpty(this, aabb, params2)) {
-						for (float yDiff = -2.0f; yDiff >= -16.0f; yDiff -= 2.0f) {
+						for (float yDiff = -2.0f; yDiff >= -12.0f; yDiff -= 2.0f) {
 							if (MoveInstantly(Vector2f(0.0f, yDiff), MoveType::Relative, params)) {
 								moved = true;
 								_unstuckCooldown = 60.0f;
 								break;
+							}
+						}
+
+						if (!moved) {
+							for (float yDiff = 2.0f; yDiff <= 14.0f; yDiff += 2.0f) {
+								if (MoveInstantly(Vector2f(0.0f, yDiff), MoveType::Relative, params)) {
+									moved = true;
+									_unstuckCooldown = 60.0f;
+									break;
+								}
 							}
 						}
 					}
@@ -1212,7 +1225,32 @@ namespace Jazz2
 		_externalForce.Y += y;
 	}
 
-	void ActorBase::SpriteRenderer::OnUpdate(float timeMult)
+	void ActorBase::ActorRenderer::Initialize(ActorRendererType type)
+	{
+		_rendererType = type;
+
+		bool shaderChanged;
+		switch (type) {
+			case ActorRendererType::Outline: shaderChanged = renderCommand_.material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::Outline)); break;
+			case ActorRendererType::WhiteMask: shaderChanged = renderCommand_.material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::WhiteMask)); break;
+			default: shaderChanged = renderCommand_.material().setShaderProgramType(Material::ShaderProgramType::SPRITE); break;
+		}
+		if (shaderChanged) {
+			shaderHasChanged();
+			renderCommand_.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+
+			if (type == ActorRendererType::Outline) {
+				if (texture_) {
+					Vector2i texSize = texture_->size();
+					setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, 1.0f));
+				}
+			} else {
+				setColor(Colorf::White);
+			}
+		}
+	}
+
+	void ActorBase::ActorRenderer::OnUpdate(float timeMult)
 	{
 		_owner->OnUpdate(timeMult);
 
@@ -1237,19 +1275,47 @@ namespace Jazz2
 			UpdateVisibleFrames();
 		}
 
-		Sprite::OnUpdate(timeMult);
+		BaseSprite::OnUpdate(timeMult);
 	}
 
-	bool ActorBase::SpriteRenderer::OnDraw(RenderQueue& renderQueue)
+	bool ActorBase::ActorRenderer::OnDraw(RenderQueue& renderQueue)
 	{
 		if (_owner->OnDraw(renderQueue)) {
 			return true;
 		}
 
-		return Sprite::OnDraw(renderQueue);
+		return BaseSprite::OnDraw(renderQueue);
 	}
 
-	void ActorBase::SpriteRenderer::UpdateVisibleFrames()
+	void ActorBase::ActorRenderer::textureHasChanged(Texture* newTexture)
+	{
+		if (_rendererType == ActorRendererType::Outline) {
+			if (newTexture) {
+				Vector2i texSize = newTexture->size();
+				setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, 1.0f));
+			}
+		}
+	}
+
+	bool ActorBase::ActorRenderer::IsAnimationRunning()
+	{
+		if (FrameCount <= 0) {
+			return false;
+		}
+
+		switch (LoopMode) {
+			case AnimationLoopMode::FixedSingle:
+				return false;
+			case AnimationLoopMode::Loop:
+				return !AnimPaused;
+			case AnimationLoopMode::Once:
+				return !AnimPaused && AnimTime < AnimDuration;
+			default:
+				return false;
+		}
+	}
+
+	void ActorBase::ActorRenderer::UpdateVisibleFrames()
 	{
 		// Calculate visible frames
 		CurrentFrame = 0;
@@ -1285,7 +1351,7 @@ namespace Jazz2
 		setAbsAnchorPoint((float)Hotspot.X, (float)Hotspot.Y);
 	}
 
-	int ActorBase::SpriteRenderer::NormalizeFrame(int frame, int min, int max)
+	int ActorBase::ActorRenderer::NormalizeFrame(int frame, int min, int max)
 	{
 		if (frame >= min && frame < max) return frame;
 

@@ -7,16 +7,18 @@ namespace Jazz2::Tiles
 {
 	class TileSet
 	{
-		friend class TileMap;
-
 	public:
 		static constexpr int DefaultTileSize = 32;
 
 		TileSet(std::unique_ptr<Texture> textureDiffuse, std::unique_ptr<uint8_t[]> mask);
 
+		std::unique_ptr<Texture> TextureDiffuse;
+		int TileCount;
+		int TilesPerRow;
+
 		uint8_t* GetTileMask(int tileId) const
 		{
-			if (tileId >= _tileCount) {
+			if (tileId >= TileCount) {
 				return nullptr;
 			}
 
@@ -25,7 +27,7 @@ namespace Jazz2::Tiles
 
 		bool IsTileMaskEmpty(int tileId) const
 		{
-			if (tileId >= _tileCount) {
+			if (tileId >= TileCount) {
 				return true;
 			}
 
@@ -34,7 +36,7 @@ namespace Jazz2::Tiles
 
 		bool IsTileMaskFilled(int tileId) const
 		{
-			if (tileId >= _tileCount) {
+			if (tileId >= TileCount) {
 				return false;
 			}
 
@@ -43,7 +45,7 @@ namespace Jazz2::Tiles
 
 		bool IsTileFilled(int tileId) const
 		{
-			if (tileId >= _tileCount) {
+			if (tileId >= TileCount) {
 				return false;
 			}
 
@@ -51,11 +53,7 @@ namespace Jazz2::Tiles
 		}
 
 	private:
-		std::unique_ptr<Texture> _textureDiffuse;
 		std::unique_ptr<uint8_t[]> _mask;
-
-		int _tileCount;
-		int _tilesPerRow;
 		BitArray _isMaskEmpty;
 		BitArray _isMaskFilled;
 		BitArray _isTileFilled;

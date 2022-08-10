@@ -171,7 +171,7 @@ namespace Jazz2::Tiles
 			{
 			}
 
-			void Initialize(int width, int height);
+			void Initialize();
 
 			bool OnDraw(RenderQueue& renderQueue) override;
 
@@ -202,7 +202,6 @@ namespace Jazz2::Tiles
 
 		int _texturedBackgroundLayer;
 		TexturedBackgroundPass _texturedBackgroundPass;
-		Shader* _texturedBackgroundShader;
 
 		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer);
 		static float TranslateCoordinate(float coordinate, float speed, float offset, bool isY, int viewHeight, int viewWidth);

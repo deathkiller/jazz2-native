@@ -23,11 +23,13 @@ namespace nCine
 		double cssWidth = 0.0;
 		double cssHeight = 0.0;
 		emscripten_get_element_css_size("canvas", &cssWidth, &cssHeight);
-		LOGI_X("Canvas was resized to %ix%i (canvas size is %ix%i)", event->windowInnerWidth, event->windowInnerHeight, (int)cssWidth, (int)cssHeight);
+		float pixelRatio2 = emscripten_get_device_pixel_ratio();
+		LOGI_X("Canvas was resized to %ix%i (canvas size is %ix%i; ratio is %f)", (int)(event->windowInnerWidth * pixelRatio2), (int)(event->windowInnerHeight * pixelRatio2), (int)cssWidth, (int)cssHeight, pixelRatio2);
 #endif
 		if (event->windowInnerWidth > 0 && event->windowInnerHeight > 0) {
+			float pixelRatio = emscripten_get_device_pixel_ratio();
 			IGfxDevice* gfxDevice = reinterpret_cast<IGfxDevice*>(userData);
-			gfxDevice->setResolution(event->windowInnerWidth, event->windowInnerHeight);
+			gfxDevice->setResolution(static_cast<int>(event->windowInnerWidth * pixelRatio), static_cast<int>(event->windowInnerHeight * pixelRatio));
 		}
 
 		return 1;
@@ -36,6 +38,7 @@ namespace nCine
 	EM_BOOL IGfxDevice::emscriptenHandleFullscreen(int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData)
 	{
 		IGfxDevice* gfxDevice = reinterpret_cast<IGfxDevice*>(userData);
+		// TODO: Is this correct?
 		gfxDevice->setResolution(event->elementWidth, event->elementHeight);
 		gfxDevice->setFullScreen(event->isFullscreen);
 		return 1;
@@ -66,12 +69,13 @@ namespace nCine
 		double cssHeight = 0.0;
 		// Referring to the first element of type <canvas> in the DOM
 		emscripten_get_element_css_size("canvas", &cssWidth, &cssHeight);
+		float pixelRatio = emscripten_get_device_pixel_ratio();
 
 		EmscriptenFullscreenChangeEvent fsce;
 		emscripten_get_fullscreen_status(&fsce);
 
-		width_ = static_cast<int>(cssWidth);
-		height_ = static_cast<int>(cssHeight);
+		width_ = static_cast<int>(cssWidth * pixelRatio);
+		height_ = static_cast<int>(cssHeight * pixelRatio);
 		isFullScreen_ = fsce.isFullscreen;
 		isResizable_ = true;
 

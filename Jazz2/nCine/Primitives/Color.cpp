@@ -105,8 +105,8 @@ namespace nCine {
 
 	bool Color::operator==(const Color& color) const
 	{
-		return (R() == color.R() && G() == color.G() &&
-				B() == color.B() && A() == color.A());
+		return (red_ == color.red_ && green_ == color.green_ &&
+				blue_ == color.blue_ && alpha_ == color.alpha_);
 	}
 
 	Color& Color::operator+=(const Color& color)

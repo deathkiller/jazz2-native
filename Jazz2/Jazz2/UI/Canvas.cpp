@@ -31,9 +31,18 @@ namespace Jazz2::UI
 		return false;
 	}
 
-	void Canvas::DrawTexture(const Texture& texture, const Vector2f& pos, uint16_t z, const Vector2f& size, const Vector4f& texCoords, const Colorf& color)
+	void Canvas::DrawTexture(const Texture& texture, const Vector2f& pos, uint16_t z, const Vector2f& size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending)
 	{
 		auto command = RentRenderCommand();
+		if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
+			command->material().reserveUniformsDataMemory();
+		}
+
+		if (additiveBlending) {
+			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+		} else {
+			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
 
 		auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 		instanceBlock->uniform(Material::TexRectUniformName)->setFloatVector(texCoords.Data());

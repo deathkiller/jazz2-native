@@ -21,9 +21,10 @@ namespace Jazz2::UI
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
 
-	protected:
-		void DrawTexture(const Texture& texture, const Vector2f& pos, uint16_t z, const Vector2f& size, const Vector4f& texCoords, const Colorf& color);
+		void DrawTexture(const Texture& texture, const Vector2f& pos, uint16_t z, const Vector2f& size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending = false);
 		static Vector2f ApplyAlignment(Alignment align, const Vector2f& vec, const Vector2f& size);
+
+	protected:
 		RenderCommand* RentRenderCommand();
 
 	private:

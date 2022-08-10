@@ -20,12 +20,14 @@ namespace Jazz2::UI
 		_healthLast(0.0f),
 		_rgbLightsTime(0.0f)
 	{
-		Metadata* metadata = ContentResolver::Current().RequestMetadata("UI/HUD"_s);
+		auto& resolver = ContentResolver::Current();
+
+		Metadata* metadata = resolver.RequestMetadata("UI/HUD"_s);
 		if (metadata != nullptr) {
 			_graphics = &metadata->Graphics;
 		}
 
-		_smallFont = std::make_unique<Font>(fs::joinPath({ "Content"_s, "Animations"_s, "_custom"_s, "font_small.png"_s }));
+		_smallFont = resolver.GetFont(FontType::Small);
 
 		_touchButtons[0] = CreateTouchButton(PlayerActions::None, "TouchDpad"_s, Alignment::BottomLeft, DpadLeft, DpadBottom, DpadSize, DpadSize);
 		// D-pad subsections
@@ -129,20 +131,20 @@ namespace Jazz2::UI
 				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 3 + 0.5f, bottom - 16 - 0.5f, FontShadowLayer,
 					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
 				_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36 - 3, bottom - 16, FontLayer,
-					Alignment::BottomLeft, Colorf::White, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
+					Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
 
 				snprintf(stringBuffer, _countof(stringBuffer), "x%i", player->_lives);
 				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 4, bottom + 1.0f, FontShadowLayer,
 					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
 				_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36 - 4, bottom, FontLayer,
-					Alignment::BottomLeft, Colorf::White);
+					Alignment::BottomLeft, Font::DefaultColor);
 			} else {
 				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 3 - 0.5f, bottom - 3 + 0.5f, FontShadowLayer,
 					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
 				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 3 + 0.5f, bottom - 3 - 0.5f, FontShadowLayer,
 					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
 				_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36 - 3, bottom - 3, FontLayer,
-					Alignment::BottomLeft, Colorf::White, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
+					Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
 			}
 
 			// Top left
@@ -153,7 +155,7 @@ namespace Jazz2::UI
 			_smallFont->DrawString(this, stringBuffer, charOffsetShadow, 14, 5 + 1, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 			_smallFont->DrawString(this, stringBuffer, charOffset, 14, 5, FontLayer,
-				Alignment::TopLeft, Colorf::White, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 
 			// Bottom right
 			if (playerType != PlayerType::Frog) {
@@ -171,7 +173,7 @@ namespace Jazz2::UI
 				_smallFont->DrawString(this, ammoCount, charOffsetShadow, right - 40, bottom + 1.0f, FontShadowLayer,
 					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 				_smallFont->DrawString(this, ammoCount, charOffset, right - 40, bottom, FontLayer,
-					Alignment::BottomLeft, Colorf::White, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+					Alignment::BottomLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 
 				auto it = _graphics->find(String::nullTerminatedView(currentWeaponString));
 				if (it != _graphics->end()) {
@@ -198,7 +200,7 @@ namespace Jazz2::UI
 			// FPS
 			snprintf(stringBuffer, _countof(stringBuffer), "%i", (int)std::round(theApplication().averageFps()));
 			_smallFont->DrawString(this, stringBuffer, charOffset, view.W - 4, 0, FontLayer,
-				Alignment::TopRight, Colorf::White, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+				Alignment::TopRight, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 
 			// Touch Controls
 			if (_touchButtonsTimer > 0.0f) {
@@ -402,7 +404,7 @@ namespace Jazz2::UI
 			Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 1.0f, 0.72f, 0.8f, 0.8f);
 
 		_smallFont->DrawString(this, _levelText, charOffset, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.04f, FontLayer,
-			Alignment::Top, Colorf::White, 1.0f, 0.72f, 0.8f, 0.8f);
+			Alignment::Top, Font::DefaultColor, 1.0f, 0.72f, 0.8f, 0.8f);
 
 		if (_levelTextTime > TotalTime) {
 			_levelTextTime = -1.0f;
@@ -446,8 +448,10 @@ namespace Jazz2::UI
 		_smallFont->DrawString(this, stringBuffer, charOffsetShadow, ViewSize.X * 0.5f, ViewSize.Y * 0.92f + 2.5f + offset, FontShadowLayer,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * alpha), 1.0f, 0.0f, 0.0f, 0.0f);
 
+		Colorf fontColor = Font::DefaultColor;
+		fontColor.SetAlpha(alpha);
 		_smallFont->DrawString(this, stringBuffer, charOffset, ViewSize.X * 0.5f, ViewSize.Y * 0.92f + offset, FontLayer,
-			Alignment::Left, Colorf(1.0f, 1.0f, 1.0f, alpha), 1.0f, 0.0f, 0.0f, 0.0f);
+			Alignment::Left, fontColor, 1.0f, 0.0f, 0.0f, 0.0f);
 
 		if (_coinsTime > TotalTime) {
 			_coinsTime = -1.0f;
@@ -491,8 +495,10 @@ namespace Jazz2::UI
 		_smallFont->DrawString(this, stringBuffer, charOffsetShadow, ViewSize.X * 0.5f, ViewSize.Y * 0.92f + 2.5f + offset, FontShadowLayer,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * alpha), 1.0f, 0.0f, 0.0f, 0.0f);
 
+		Colorf fontColor = Font::DefaultColor;
+		fontColor.SetAlpha(alpha);
 		_smallFont->DrawString(this, stringBuffer, charOffset, ViewSize.X * 0.5f, ViewSize.Y * 0.92f + offset, FontLayer,
-			Alignment::Left, Colorf(1.0f, 1.0f, 1.0f, alpha), 1.0f, 0.0f, 0.0f, 0.0f);
+			Alignment::Left, fontColor, 1.0f, 0.0f, 0.0f, 0.0f);
 
 		if (_gemsTime > TotalTime) {
 			_gemsTime = -1.0f;

@@ -1,15 +1,16 @@
 ﻿#pragma once
 
 #include "ILevelHandler.h"
+#include "IStateHandler.h"
 #include "IRootController.h"
 #include "LevelInitialization.h"
 #include "Events/EventMap.h"
 #include "Events/EventSpawner.h"
 #include "Tiles/TileMap.h"
 #include "Collisions/DynamicTreeBroadPhase.h"
+#include "UI/UpscaleRenderPass.h"
 
 #include "../nCine/Graphics/Shader.h"
-#include "../nCine/Graphics/ShaderState.h"
 #include "../nCine/Audio/AudioBufferPlayer.h"
 #include "../nCine/Audio/AudioStreamPlayer.h"
 
@@ -28,7 +29,7 @@ namespace Jazz2
 		class HUD;
 	}
 
-	class LevelHandler : public ILevelHandler
+	class LevelHandler : public ILevelHandler, public IStateHandler
 	{
 		friend class ContentResolver;
 
@@ -117,10 +118,6 @@ namespace Jazz2
 	private:
 		IRootController* _root;
 
-		std::unique_ptr<SceneNode> _rootNode;
-		std::unique_ptr<Viewport> _view;
-		std::unique_ptr<Texture> _viewTexture;
-		std::unique_ptr<Camera> _camera;
 #if ENABLE_POSTPROCESSING
 		class LightingRenderer : public SceneNode
 		{
@@ -187,31 +184,6 @@ namespace Jazz2
 			Vector2f _size;
 		};
 
-		class UpscaleRenderPass : public SceneNode
-		{
-		public:
-			UpscaleRenderPass()
-			{
-			}
-
-			void Initialize(int width, int height, int targetWidth, int targetHeight);
-			void Register();
-
-			bool OnDraw(RenderQueue& renderQueue) override;
-
-			SceneNode* GetNode() const {
-				return _node.get();
-			}
-
-		private:
-			std::unique_ptr<SceneNode> _node;
-			std::unique_ptr<Texture> _target;
-			std::unique_ptr<Viewport> _view;
-			std::unique_ptr<Camera> _camera;
-			RenderCommand _renderCommand;
-			Vector2f _targetSize;
-		};
-
 		std::unique_ptr<LightingRenderer> _lightingRenderer;
 		std::unique_ptr<CombineRenderer> _viewSprite;
 		std::unique_ptr<Viewport> _lightingView;
@@ -227,10 +199,14 @@ namespace Jazz2
 		BlurRenderPass _blurPass1;
 		BlurRenderPass _blurPass3;
 		BlurRenderPass _blurPass4;
-		UpscaleRenderPass _upscalePass;
+		UI::UpscaleRenderPass _upscalePass;
 #else
 		std::unique_ptr<Sprite> _viewSprite;
 #endif
+		std::unique_ptr<SceneNode> _rootNode;
+		std::unique_ptr<Viewport> _view;
+		std::unique_ptr<Texture> _viewTexture;
+		std::unique_ptr<Camera> _camera;
 
 		SmallVector<std::shared_ptr<ActorBase>, 0> _actors;
 		SmallVector<Actors::Player*, LevelInitialization::MaxPlayerCount> _players;

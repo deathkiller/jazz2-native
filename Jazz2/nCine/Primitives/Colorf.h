@@ -84,6 +84,9 @@ namespace nCine
 		/// Assignment operator from an unsigned char color
 		Colorf& operator=(const Color& color);
 
+		/// Equality operator
+		bool operator==(const Colorf& color) const;
+
 		Colorf& operator+=(const Colorf& v);
 		Colorf& operator-=(const Colorf& v);
 

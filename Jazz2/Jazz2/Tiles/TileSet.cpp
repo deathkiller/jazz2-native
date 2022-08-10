@@ -4,22 +4,21 @@ namespace Jazz2::Tiles
 {
 	TileSet::TileSet(std::unique_ptr<Texture> textureDiffuse, std::unique_ptr<uint8_t[]> mask)
 		:
-		_textureDiffuse(std::move(textureDiffuse)),
+		TextureDiffuse(std::move(textureDiffuse)),
 		_mask(std::move(mask)),
 		_isMaskEmpty(),
 		_isMaskFilled(),
 		_isTileFilled()
 	{
-		auto texSize = _textureDiffuse->size();
-
+		Vector2i texSize = TextureDiffuse->size();
 		int tw = (texSize.X / DefaultTileSize);
 		int th = (texSize.Y / DefaultTileSize);
 
-		_tileCount = tw * th;
-		_tilesPerRow = tw;
-		_isMaskEmpty.SetSize(_tileCount);
-		_isMaskFilled.SetSize(_tileCount);
-		_isTileFilled.SetSize(_tileCount);
+		TileCount = tw * th;
+		TilesPerRow = tw;
+		_isMaskEmpty.SetSize(TileCount);
+		_isMaskFilled.SetSize(TileCount);
+		_isTileFilled.SetSize(TileCount);
 
 		//_defaultLayerTiles.reserve(_tileCount);
 

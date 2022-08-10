@@ -126,7 +126,7 @@ namespace Jazz2::Actors::Enemies
 			});
 			_levelHandler->AddActor(shell);
 
-			Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 2), Explosion::Type::SmokeGray);
+			Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2), Explosion::Type::SmokeGray);
 		}
 
 		return EnemyBase::OnPerish(collider);

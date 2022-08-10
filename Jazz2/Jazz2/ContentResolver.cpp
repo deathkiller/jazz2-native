@@ -32,7 +32,7 @@ namespace Jazz2
 		_cachedMetadata(64),
 		_cachedGraphics(128)
 	{
-		memset(_palettes, 0, sizeof(_palettes));
+		std::memset(_palettes, 0, sizeof(_palettes));
 
 		CompileShaders();
 	}
@@ -46,6 +46,10 @@ namespace Jazz2
 	{
 		_cachedMetadata.clear();
 		_cachedGraphics.clear();
+
+		for (int i = 0; i < (int)FontType::Unknown; i++) {
+			_fonts[i] = nullptr;
+		}
 
 		for (int i = 0; i < (int)PrecompiledShader::Unknown; i++) {
 			_precompiledShaders[i] = nullptr;
@@ -386,7 +390,7 @@ namespace Jazz2
 			}
 
 			const auto& coldspotItem = document.FindMember("Coldspot");
-			if (coldspotItem != document.MemberEnd() && coldspotItem->value.IsArray() && hotspotItem->value.Size() >= 2) {
+			if (coldspotItem != document.MemberEnd() && coldspotItem->value.IsArray() && coldspotItem->value.Size() >= 2) {
 				graphics->Coldspot = Vector2i(coldspotItem->value[0].GetInt(), coldspotItem->value[1].GetInt());
 			} else {
 				graphics->Coldspot = Vector2i(InvalidValue, InvalidValue);
@@ -405,15 +409,10 @@ namespace Jazz2
 		return nullptr;
 	}
 
-	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(const StringView& path, bool applyPalette, Color* customPalette)
+	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(const StringView& path, bool applyPalette)
 	{
 		if (applyPalette) {
-			// TODO
-			/*if (customPalette != nullptr) {
-				//ApplyPalette(customPalette);
-			} else if (tilesetPackage.FileExists("Main.palette"))*/ {
-				ApplyPalette(fs::joinPath({ "Content"_s, "Tilesets"_s, path, "Main.palette"_s }));
-			}
+			ApplyPalette(fs::joinPath({ "Content"_s, "Tilesets"_s, path, "Main.palette"_s }));
 		}
 
 		// Load diffuse texture
@@ -641,7 +640,7 @@ namespace Jazz2
 			nextLevelItem != descriptionItem->value.MemberEnd() && nextLevelItem->value.IsString() ? nextLevelItem->value.GetString() : nullptr,
 			secretLevelItem != descriptionItem->value.MemberEnd() && defaultMusicItem->value.IsString() ? secretLevelItem->value.GetString() : nullptr,
 			tileMap, eventMap,
-			defaultMusicItem != descriptionItem->value.MemberEnd() && defaultMusicItem->value.IsString() ? defaultMusicItem->value.GetString() : nullptr,
+			defaultMusicItem != descriptionItem->value.MemberEnd() && defaultMusicItem->value.IsString() ? fs::joinPath({ "Content"_s, "Music"_s, defaultMusicItem->value.GetString() }) : nullptr,
 			defaultLightItem != descriptionItem->value.MemberEnd() && defaultLightItem->value.IsNumber() ? (defaultLightItem->value.GetFloat() * 0.01f) : 1.0f,
 			levelTexts
 		);
@@ -683,11 +682,33 @@ namespace Jazz2
 			if (_isLoading) {
 				_cachedMetadata.clear();
 				_cachedGraphics.clear();
+
+				for (int i = 0; i < (int)FontType::Unknown; i++) {
+					_fonts[i] = nullptr;
+				}
 			}
 
 			std::memcpy(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t));
 			RecreateGemPalettes();
 		}
+	}
+
+	UI::Font* ContentResolver::GetFont(FontType fontType)
+	{
+		if (fontType >= FontType::Unknown) {
+			return nullptr;
+		}
+
+		auto& font = _fonts[(int)fontType];
+		if (font == nullptr) {
+			switch (fontType) {
+				case FontType::Small: font = std::make_unique<UI::Font>(fs::joinPath({ "Content"_s, "Animations"_s, "_custom"_s, "font_small.png"_s }), _palettes); break;
+				case FontType::Medium: font = std::make_unique<UI::Font>(fs::joinPath({ "Content"_s, "Animations"_s, "_custom"_s, "font_medium.png"_s }), _palettes); break;
+				default: return nullptr;
+			}
+		}
+
+		return font.get();
 	}
 
 	Shader* ContentResolver::GetShader(PrecompiledShader shader)
@@ -701,15 +722,28 @@ namespace Jazz2
 
 	void ContentResolver::CompileShaders()
 	{
-		_precompiledShaders[(int)PrecompiledShader::Lighting] = std::make_unique<Shader>("Lighting", Shader::LoadMode::STRING, Shaders::LightingVs, Shaders::LightingFs);
-		_precompiledShaders[(int)PrecompiledShader::Blur] = std::make_unique<Shader>("Blur", Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::BlurFs);
-		_precompiledShaders[(int)PrecompiledShader::Downsample] = std::make_unique<Shader>("Downsample", Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::DownsampleFs);
-		_precompiledShaders[(int)PrecompiledShader::Combine] = std::make_unique<Shader>("Combine", Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::CombineFs);
+		_precompiledShaders[(int)PrecompiledShader::Lighting] = std::make_unique<Shader>("Lighting",
+			Shader::LoadMode::STRING, Shaders::LightingVs, Shaders::LightingFs);
+		_precompiledShaders[(int)PrecompiledShader::Blur] = std::make_unique<Shader>("Blur",
+			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::BlurFs);
+		_precompiledShaders[(int)PrecompiledShader::Downsample] = std::make_unique<Shader>("Downsample",
+			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::DownsampleFs);
+		_precompiledShaders[(int)PrecompiledShader::Combine] = std::make_unique<Shader>("Combine",
+			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::CombineFs);
+		_precompiledShaders[(int)PrecompiledShader::CombineWithWater] = std::make_unique<Shader>("CombineWithWater",
+			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::CombineWithWaterFs);
 
 		_precompiledShaders[(int)PrecompiledShader::TexturedBackground] = std::make_unique<Shader>("TexturedBackground",
 			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundFs);
 		_precompiledShaders[(int)PrecompiledShader::TexturedBackgroundCircle] = std::make_unique<Shader>("TexturedBackground",
 			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundCircleFs);
+
+		_precompiledShaders[(int)PrecompiledShader::Colorize] = std::make_unique<Shader>("Colorize",
+			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::ColorizeFs);
+		_precompiledShaders[(int)PrecompiledShader::Outline] = std::make_unique<Shader>("Outline",
+			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::OutlineFs);
+		_precompiledShaders[(int)PrecompiledShader::WhiteMask] = std::make_unique<Shader>("WhiteMask",
+			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::WhiteMaskFs);
 	}
 
 	void ContentResolver::RecreateGemPalettes()
@@ -731,7 +765,7 @@ namespace Jazz2
 		for (int color = 0; color < GemColorCount; color++, src++) {
 			// Compress 2 gem color gradients to single palette row
 			for (int i = 0; i < StopsPerGem; i++) {
-				// Base Palette is in first row of "palette" array
+				// Base Palette is in first row of "palettes" array
 				uint32_t from = _palettes[PaletteStops[src++]];
 				uint32_t to = _palettes[PaletteStops[src]];
 

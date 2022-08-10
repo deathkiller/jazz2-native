@@ -68,12 +68,8 @@ namespace Jazz2::Actors::Weapons
 	{
 		int n = (timeMult > 0.9f ? 2 : 1);
 		TileCollisionParams params = { TileDestructType::Weapon, _speed.Y >= 0.0f, WeaponType::Freezer, _strength };
-		for (int i = 0; i < n && params.WeaponStrength > 0; i++) {
+		for (int i = 0; i < n; i++) {
 			TryMovement(timeMult / n, params);
-		}
-		if (params.WeaponStrength <= 0) {
-			DecreaseHealth(INT32_MAX);
-			return;
 		}
 
 		ShotBase::OnUpdate(timeMult);

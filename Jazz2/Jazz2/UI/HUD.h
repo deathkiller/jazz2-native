@@ -5,6 +5,8 @@
 #include "../ILevelHandler.h"
 #include "../Actors/Player.h"
 
+#include "../../nCine/Input/InputEvents.h"
+
 namespace Jazz2::UI
 {
 	class HUD : public Canvas
@@ -53,7 +55,7 @@ namespace Jazz2::UI
 		LevelHandler* _levelHandler;
 		HashMap<String, GraphicResource>* _graphics;
 		std::shared_ptr<Actors::Player> _attachedPlayer;
-		std::unique_ptr<Font> _smallFont;
+		Font* _smallFont;
 
 		String _levelText;
 		float _levelTextTime;

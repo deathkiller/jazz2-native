@@ -234,22 +234,20 @@ namespace Jazz2::Actors::Enemies
 
 	void EnemyBase::StartBlinking()
 	{
-		// TODO: Blinking
-		/*if (_blinkingTimeout <= 0.0f) {
-			_renderer.setColor(Colorf(100.0f, 100.0f, 100.0f));
+		if (_blinkingTimeout <= 0.0f) {
+			_renderer.Initialize(ActorRendererType::WhiteMask);
 		}
 
-		_blinkingTimeout = 6.0f;*/
+		_blinkingTimeout = 6.0f;
 	}
 
 	void EnemyBase::HandleBlinking(float timeMult)
 	{
-		// TODO: Blinking
-		/*if (_blinkingTimeout > 0.0f) {
+		if (_blinkingTimeout > 0.0f) {
 			_blinkingTimeout -= timeMult;
 			if (_blinkingTimeout <= 0.0f) {
-				_renderer.setColor(Colorf::White);
+				_renderer.Initialize(ActorRendererType::Default);
 			}
-		}*/
+		}
 	}
 }

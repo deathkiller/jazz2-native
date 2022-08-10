@@ -105,7 +105,7 @@ namespace nCine
 			return shaderProgram_;
 		}
 		void setShaderProgram(GLShaderProgram* program);
-		void setShader(Shader* shader);
+		bool setShader(Shader* shader);
 
 		void setDefaultAttributesParameters();
 		void reserveUniformsDataMemory();

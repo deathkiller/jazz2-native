@@ -11,6 +11,9 @@
         "MenuLine": {
             "Path": "_custom/line.png"
         },
+        "MenuLineArrow": {
+            "Path": "_custom/line_arrow.png"
+        },
         "MenuDim": {
             "Path": "_custom/dim.png"
         },

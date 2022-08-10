@@ -19,7 +19,7 @@ namespace Jazz2::Tiles
 		_texturedBackgroundLayer(-1),
 		_texturedBackgroundPass(this)
 	{
-		_tileSet = ContentResolver::Current().RequestTileSet(tileSetPath, true, nullptr);
+		_tileSet = ContentResolver::Current().RequestTileSet(tileSetPath, true);
 		_renderCommands.reserve(128);
 
 		if (_tileSet == nullptr) {
@@ -57,31 +57,29 @@ namespace Jazz2::Tiles
 			}
 
 			animTile.FramesLeft -= timeMult;
-			if (animTile.FramesLeft >= 0.0f) {
-				continue;
-			}
-
-			if (animTile.Forwards) {
-				if (animTile.CurrentTileIdx == animTile.Tiles.size() - 1) {
-					if (animTile.PingPong) {
-						animTile.Forwards = false;
-						animTile.FramesLeft += (animTile.FrameDuration * (1 + animTile.PingPongDelay));
+			while (animTile.FramesLeft <= 0.0f) {
+				if (animTile.Forwards) {
+					if (animTile.CurrentTileIdx == animTile.Tiles.size() - 1) {
+						if (animTile.PingPong) {
+							animTile.Forwards = false;
+							animTile.FramesLeft += (animTile.FrameDuration * (1 + animTile.PingPongDelay));
+						} else {
+							animTile.CurrentTileIdx = 0;
+							animTile.FramesLeft += (animTile.FrameDuration * (1 + animTile.Delay));
+						}
 					} else {
-						animTile.CurrentTileIdx = 0;
-						animTile.FramesLeft += (animTile.FrameDuration * (1 + animTile.Delay));
+						animTile.CurrentTileIdx++;
+						animTile.FramesLeft += animTile.FrameDuration;
 					}
 				} else {
-					animTile.CurrentTileIdx++;
-					animTile.FramesLeft += animTile.FrameDuration;
-				}
-			} else {
-				if (animTile.CurrentTileIdx == 0) {
-					// Reverse only occurs on ping pong mode so no need to check for that here
-					animTile.Forwards = true;
-					animTile.FramesLeft += (animTile.FrameDuration * (1 + animTile.Delay));
-				} else {
-					animTile.CurrentTileIdx--;
-					animTile.FramesLeft += animTile.FrameDuration;
+					if (animTile.CurrentTileIdx == 0) {
+						// Reverse only occurs on ping pong mode so no need to check for that here
+						animTile.Forwards = true;
+						animTile.FramesLeft += (animTile.FrameDuration * (1 + animTile.Delay));
+					} else {
+						animTile.CurrentTileIdx--;
+						animTile.FramesLeft += animTile.FrameDuration;
+					}
 				}
 			}
 		}
@@ -515,11 +513,11 @@ namespace Jazz2::Tiles
 
 					auto command = RentRenderCommand();
 
-					Vector2i texSize = _tileSet->_textureDiffuse->size();
+					Vector2i texSize = _tileSet->TextureDiffuse->size();
 					float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
-					float texBiasX = (tileId % _tileSet->_tilesPerRow) * TileSet::DefaultTileSize / float(texSize.X);
+					float texBiasX = (tileId % _tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.X);
 					float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
-					float texBiasY = (tileId / _tileSet->_tilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
+					float texBiasY = (tileId / _tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
 
 					// ToDo: Flip normal map somehow
 					if (isFlippedX) {
@@ -545,7 +543,7 @@ namespace Jazz2::Tiles
 
 					command->setTransformation(Matrix4x4f::Translation(std::floor(x2 + (TileSet::DefaultTileSize / 2)), std::floor(y2 + (TileSet::DefaultTileSize / 2)), 0.0f));
 					command->setLayer(layer.Depth);
-					command->material().setTexture(*_tileSet->_textureDiffuse);
+					command->material().setTexture(*_tileSet->TextureDiffuse);
 
 					renderQueue.addCommand(command);
 				}
@@ -591,7 +589,6 @@ namespace Jazz2::Tiles
 	void TileMap::ReadLayerConfiguration(LayerType type, const std::unique_ptr<IFileStream>& s, const LayerDescription& layer)
 	{
 		s->Open(FileAccessMode::Read);
-
 		if (s->GetSize() < 8) {
 			return;
 		}
@@ -773,11 +770,11 @@ namespace Jazz2::Tiles
 
 		uint16_t z = _layers[_sprLayerIndex].Depth + 80;
 
-		Vector2i texSize = _tileSet->_textureDiffuse->size();
+		Vector2i texSize = _tileSet->TextureDiffuse->size();
 		float texScaleX = float(quarterSize) / float(texSize.X);
-		float texBiasX = ((tileId % _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.X);
+		float texBiasX = ((tileId % _tileSet->TilesPerRow) * TileSet::DefaultTileSize) / float(texSize.X);
 		float texScaleY = float(quarterSize) / float(texSize.Y);
-		float texBiasY = ((tileId / _tileSet->_tilesPerRow) * TileSet::DefaultTileSize) / float(texSize.Y);
+		float texBiasY = ((tileId / _tileSet->TilesPerRow) * TileSet::DefaultTileSize) / float(texSize.Y);
 
 		/*if (isFlippedX) {
 			texBiasX += texScaleX;
@@ -811,7 +808,7 @@ namespace Jazz2::Tiles
 			debris.TexScaleY = texScaleY;
 			debris.TexBiasY = texBiasY + ((i / 2) * quarterSize / float(texSize.Y));
 
-			debris.DiffuseTexture = _tileSet->_textureDiffuse.get();
+			debris.DiffuseTexture = _tileSet->TextureDiffuse.get();
 			debris.CollisionAction = DebrisCollisionAction::None;
 		}
 	}
@@ -1038,8 +1035,7 @@ namespace Jazz2::Tiles
 		command->material().uniform("horizonColor")->setFloatValue(layer.BackgroundColor.X, layer.BackgroundColor.Y, layer.BackgroundColor.Z);
 		command->material().uniform("parallaxStarsEnabled")->setFloatValue(layer.ParallaxStarsEnabled ? 1.0f : 0.0f);
 
-		Matrix4x4f worldMatrix = Matrix4x4f::Translation(viewCenter.X, viewCenter.Y, 0.0f);
-		command->setTransformation(worldMatrix);
+		command->setTransformation(Matrix4x4f::Translation(viewCenter.X, viewCenter.Y, 0.0f));
 		command->setLayer(layer.Depth);
 		command->material().setTexture(*target);
 
@@ -1049,21 +1045,19 @@ namespace Jazz2::Tiles
 	void TileMap::OnInitializeViewport(int width, int height)
 	{
 		if (_texturedBackgroundLayer != -1) {
-			_texturedBackgroundShader = ContentResolver::Current().GetShader(_layers[_texturedBackgroundLayer].BackgroundStyle == BackgroundStyle::Circle ?
-				PrecompiledShader::TexturedBackgroundCircle : PrecompiledShader::TexturedBackground);
-
-			Vector2i layoutSize = _layers[_texturedBackgroundLayer].LayoutSize;
-			width = layoutSize.X * TileSet::DefaultTileSize;
-			height = layoutSize.Y * TileSet::DefaultTileSize;
-			_texturedBackgroundPass.Initialize(width, height);
+			_texturedBackgroundPass.Initialize();
 		}
 	}
 
-	void TileMap::TexturedBackgroundPass::Initialize(int width, int height)
+	void TileMap::TexturedBackgroundPass::Initialize()
 	{
 		bool notInitialized = (_view == nullptr);
 
 		if (notInitialized) {
+			Vector2i layoutSize = _owner->_layers[_owner->_texturedBackgroundLayer].LayoutSize;
+			int width = layoutSize.X * TileSet::DefaultTileSize;
+			int height = layoutSize.Y * TileSet::DefaultTileSize;
+
 			_camera = std::make_unique<Camera>();
 			_camera->setOrthoProjection(0, width, 0, height);
 			_camera->setView(0, 0, 0, 1);
@@ -1093,7 +1087,9 @@ namespace Jazz2::Tiles
 
 			// Prepare output render command
 			_outputRenderCommand.setType(RenderCommand::CommandTypes::SPRITE);
-			_outputRenderCommand.material().setShader(_owner->_texturedBackgroundShader);
+			_outputRenderCommand.material().setShader(ContentResolver::Current().GetShader(_owner->_layers[_owner->_texturedBackgroundLayer].BackgroundStyle == BackgroundStyle::Circle
+				? PrecompiledShader::TexturedBackgroundCircle
+				: PrecompiledShader::TexturedBackground));
 			_outputRenderCommand.material().reserveUniformsDataMemory();
 			_outputRenderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -1117,7 +1113,7 @@ namespace Jazz2::Tiles
 
 		for (int y = 0; y < layoutSize.Y; y++) {
 			for (int x = 0; x < layoutSize.X; x++) {
-				LayerTile tile = layer.Layout[x + y * layer.LayoutSize.X];
+				LayerTile& tile = layer.Layout[x + y * layer.LayoutSize.X];
 
 				int tileId;
 				bool isFlippedX, isFlippedY;
@@ -1141,11 +1137,11 @@ namespace Jazz2::Tiles
 
 				auto command = _renderCommands[renderCommandIndex++].get();
 
-				Vector2i texSize = _owner->_tileSet->_textureDiffuse->size();
+				Vector2i texSize = _owner->_tileSet->TextureDiffuse->size();
 				float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
-				float texBiasX = (tileId % _owner->_tileSet->_tilesPerRow) * TileSet::DefaultTileSize / float(texSize.X);
+				float texBiasX = (tileId % _owner->_tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.X);
 				float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
-				float texBiasY = (tileId / _owner->_tileSet->_tilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
+				float texBiasY = (tileId / _owner->_tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
 
 				// ToDo: Flip normal map somehow
 				if (isFlippedX) {
@@ -1171,7 +1167,7 @@ namespace Jazz2::Tiles
 
 				Matrix4x4f worldMatrix = Matrix4x4f::Translation(std::floor(x * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2)), std::floor(y * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2)), 0.0f);
 				command->setTransformation(worldMatrix);
-				command->material().setTexture(*_owner->_tileSet->_textureDiffuse);
+				command->material().setTexture(*_owner->_tileSet->TextureDiffuse);
 
 				renderQueue.addCommand(command);
 			}

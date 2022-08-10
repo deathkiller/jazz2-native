@@ -67,6 +67,12 @@ namespace nCine
 		return *this;
 	}
 
+	bool Colorf::operator==(const Colorf& color) const
+	{
+		return (red_ == color.red_ && green_ == color.green_ &&
+				blue_ == color.blue_ && alpha_ == color.alpha_);
+	}
+
 	Colorf& Colorf::operator+=(const Colorf& color)
 	{
 		for (unsigned int i = 0; i < NumChannels; i++) {

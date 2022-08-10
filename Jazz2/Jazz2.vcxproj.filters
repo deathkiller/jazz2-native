@@ -163,6 +163,12 @@
     <Filter Include="Header Files\Jazz2\UI">
       <UniqueIdentifier>{ba8465dc-da58-4362-b4fe-1c831c184563}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Jazz2\UI\Menu">
+      <UniqueIdentifier>{5de8bce6-a2aa-4513-886c-4bdcb532a14e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\UI\Menu">
+      <UniqueIdentifier>{a65d3a71-4070-4f0b-84d8-d8be78337c28}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -921,6 +927,30 @@
     <ClInclude Include="Jazz2\ContentResolver.Shaders.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\MainMenu.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\UpscaleRenderPass.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\MenuSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\BeginSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\IMenuContainer.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\StartGameOptionsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\PlayerActions.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\AboutSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1558,6 +1588,21 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Solid\PushableBox.cpp">
       <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\MainMenu.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\UpscaleRenderPass.cpp">
+      <Filter>Source Files\Jazz2\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\BeginSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\StartGameOptionsSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\AboutSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

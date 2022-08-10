@@ -19,6 +19,7 @@
 #include "Jazz2/IRootController.h"
 #include "Jazz2/ContentResolver.h"
 #include "Jazz2/LevelHandler.h"
+#include "Jazz2/UI/Menu/MainMenu.h"
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
 #	include <cstdlib> // for `__argc` and `__argv`
@@ -127,7 +128,7 @@ public:
 	void ChangeLevel(Jazz2::LevelInitialization&& levelInit) override;
 
 private:
-	std::unique_ptr<Jazz2::ILevelHandler> _currentHandler;
+	std::unique_ptr<Jazz2::IStateHandler> _currentHandler;
 	std::unique_ptr<Jazz2::LevelInitialization> _pendingLevelChange;
 };
 
@@ -149,10 +150,10 @@ void GameEventHandler::onInit()
 	theApplication().inputManager().addJoyMappingsFromFile(fs::joinPath({ "Content"_s, "gamecontrollerdb.txt"_s }));
 #endif
 
-	// TODO
-	Jazz2::PlayerType players[] = { Jazz2::PlayerType::Spaz };
-	Jazz2::LevelInitialization levelInit("share"_s, "01_share1"_s, Jazz2::GameDifficulty::Normal, false, false, players, _countof(players));
-	ChangeLevel(std::move(levelInit));
+	_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this);
+	Viewport::chain().clear();
+	Vector2i res = theApplication().resolutionInt();
+	_currentHandler->OnInitializeViewport(res.X, res.Y);
 }
 
 void GameEventHandler::onFrameStart()

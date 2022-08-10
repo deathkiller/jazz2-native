@@ -41,14 +41,13 @@ namespace nCine
 		/// Protected copy constructor used to clone objects
 		Sprite(const Sprite& other);
 
+		void textureHasChanged(Texture* newTexture) override;
+
 	private:
 		/// Deleted assignment operator
 		Sprite& operator=(const Sprite&) = delete;
 
 		/// Initializer method for constructors and the copy constructor
 		void init();
-
-		void textureHasChanged(Texture* newTexture) override;
 	};
-
 }

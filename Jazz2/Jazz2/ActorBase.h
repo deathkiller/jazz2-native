@@ -136,18 +136,27 @@ namespace Jazz2
 			GraphicResource* Resource;
 		};
 
-		class SpriteRenderer : public Sprite
+		enum class ActorRendererType {
+			Default,
+			Outline,
+			WhiteMask
+		};
+
+		class ActorRenderer : public BaseSprite
 		{
 			friend class ActorBase;
 
 		public:
-			SpriteRenderer(ActorBase* owner)
+			ActorRenderer(ActorBase* owner)
 				:
-				_owner(owner), AnimPaused(false),
+				BaseSprite(nullptr, nullptr, 0.0f, 0.0f), _owner(owner), AnimPaused(false),
 				FrameConfiguration(), FrameDimensions(), LoopMode(AnimationLoopMode::Loop),
 				FirstFrame(0), FrameCount(0), AnimDuration(0.0f), AnimTime(0.0f),
 				CurrentFrame(0), NextFrame(0), CurrentFrameFade(0.0f), Hotspot()
 			{
+				type_ = ObjectType::SPRITE;
+				renderCommand_.setType(RenderCommand::CommandTypes::SPRITE);
+				Initialize(ActorRendererType::Default);
 			}
 
 			bool AnimPaused;
@@ -163,29 +172,19 @@ namespace Jazz2
 			float CurrentFrameFade;
 			Vector2i Hotspot;
 
+			void Initialize(ActorRendererType type);
+
 			void OnUpdate(float timeMult) override;
 			bool OnDraw(RenderQueue& renderQueue) override;
 
-			bool IsAnimationRunning()
-			{
-				if (FrameCount <= 0) {
-					return false;
-				}
+			bool IsAnimationRunning();
 
-				switch (LoopMode) {
-					case AnimationLoopMode::FixedSingle:
-						return false;
-					case AnimationLoopMode::Loop:
-						return !AnimPaused;
-					case AnimationLoopMode::Once:
-						return !AnimPaused && AnimTime < AnimDuration;
-					default:
-						return false;
-				}
-			}
+		protected:
+			void textureHasChanged(Texture* newTexture) override;
 
 		private:
 			ActorBase* _owner;
+			ActorRendererType _rendererType;
 
 			void UpdateVisibleFrames();
 			static int NormalizeFrame(int frame, int min, int max);
@@ -215,7 +214,7 @@ namespace Jazz2
 		Vector2i _originTile;
 
 		Metadata* _metadata;
-		SpriteRenderer _renderer;
+		ActorRenderer _renderer;
 		GraphicResource* _currentAnimation;
 		GraphicResource* _currentTransition;
 		AnimState _currentAnimationState;

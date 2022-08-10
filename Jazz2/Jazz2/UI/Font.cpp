@@ -11,7 +11,7 @@
 
 namespace Jazz2::UI
 {
-	Font::Font(const StringView& path)
+	Font::Font(const StringView& path, const uint32_t* palette)
 		:
 		_baseSpacing(0),
 		_charHeight(0)
@@ -34,7 +34,6 @@ namespace Jazz2::UI
 			int w = texLoader->width();
 			int h = texLoader->height();
 			auto pixels = (uint32_t*)texLoader->pixels();
-			const uint32_t* palette = ContentResolver::Current().GetPalettes();
 
 			uint8_t flags = fileHandle->ReadValue<uint8_t>();
 			uint16_t width = fileHandle->ReadValue<uint16_t>();
@@ -178,6 +177,16 @@ namespace Jazz2::UI
 		}
 
 		Vector2i texSize = _texture->size();
+		Shader* colorizeShader;
+		bool useRandomColor;
+		if (color.R() == DefaultColor.R() && color.G() == DefaultColor.G() && color.B() == DefaultColor.B()) {
+			colorizeShader = nullptr;
+			useRandomColor = false;
+			color = Colorf(1.0f, 1.0f, 1.0f, color.A());
+		} else {
+			colorizeShader = ContentResolver::Current().GetShader(PrecompiledShader::Colorize);
+			useRandomColor = (color.R() == RandomColor.R() && color.G() == RandomColor.G() && color.B() == RandomColor.B());
+		}
 
 		uint16_t zz = z;
 		idx = 0;
@@ -208,16 +217,21 @@ namespace Jazz2::UI
 				}
 
 				if (uvRect.W > 0 && uvRect.H > 0) {
+					if (useRandomColor) {
+						const Colorf& newColor = RandomColors[charOffset % _countof(RandomColors)];
+						color = Colorf(newColor.R(), newColor.G(), newColor.B(), color.A());
+					}
+
 					Vector2f pos = Vector2f(originPos);
 
 					if (angleOffset > 0.0f) {
 						float currentPhase = (phase + charOffset) * angleOffset * fPi;
-						if (speed > 0.0f && charOffset % 2 == 1) {
+						if (speed > 0.0f && (charOffset % 2) == 1) {
 							currentPhase = -currentPhase;
 						}
 
 						pos.X += std::cosf(currentPhase) * varianceX * scale;
-						pos.Y += std::sinf(currentPhase) * varianceY * scale;
+						pos.Y -= std::sinf(currentPhase) * varianceY * scale;
 					}
 
 					pos.X = std::round(pos.X + uvRect.W * scale * 0.5f);
@@ -234,6 +248,14 @@ namespace Jazz2::UI
 					texCoords.Z *= -1;
 
 					auto command = canvas->RentRenderCommand();
+					command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+					bool shaderChanged = (colorizeShader
+						? command->material().setShader(colorizeShader)
+						: command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE));
+					if (shaderChanged) {
+						command->material().reserveUniformsDataMemory();
+					}
 
 					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 					instanceBlock->uniform(Material::TexRectUniformName)->setFloatVector(texCoords.Data());
@@ -248,11 +270,12 @@ namespace Jazz2::UI
 					canvas->_currentRenderQueue->addCommand(command);
 
 					originPos.X += ((uvRect.W + _baseSpacing) * scale * charSpacing);
+					charOffset++;
 				}
 			}
 
 			idx = cursor.second;
-			charOffset++;
 		} while (idx < textSize);
+		charOffset++;
 	}
 }

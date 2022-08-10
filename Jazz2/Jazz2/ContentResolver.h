@@ -3,6 +3,7 @@
 #include "../Common.h"
 #include "AnimState.h"
 #include "LevelInitialization.h"
+#include "UI/Font.h"
 
 #include "../nCine/Audio/AudioBuffer.h"
 #include "../nCine/Graphics/Camera.h"
@@ -155,14 +156,26 @@ namespace Jazz2
 		SwingingVine
 	};
 
+	enum class FontType {
+		Small,
+		Medium,
+
+		Unknown
+	};
+
 	enum class PrecompiledShader {
 		Lighting,
 		Blur,
 		Downsample,
 		Combine,
+		CombineWithWater,
 
 		TexturedBackground,
 		TexturedBackgroundCircle,
+
+		Colorize,
+		Outline,
+		WhiteMask,
 
 		Unknown
 	};
@@ -186,10 +199,11 @@ namespace Jazz2
 		Metadata* RequestMetadata(const StringView& path);
 		GenericGraphicResource* RequestGraphics(const StringView& path, uint16_t paletteOffset);
 
-		std::unique_ptr<Tiles::TileSet> RequestTileSet(const StringView& path, bool applyPalette, Color* customPalette);
+		std::unique_ptr<Tiles::TileSet> RequestTileSet(const StringView& path, bool applyPalette);
 		bool LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty);
 		void ApplyPalette(const StringView& path);
 
+		UI::Font* GetFont(FontType fontType);
 		Shader* GetShader(PrecompiledShader shader);
 
 		const uint32_t* GetPalettes() const {
@@ -211,6 +225,7 @@ namespace Jazz2
 		uint32_t _palettes[PaletteCount * ColorsPerPalette];
 		HashMap<String, std::unique_ptr<Metadata>> _cachedMetadata;
 		HashMap<Pair<String, uint16_t>, std::unique_ptr<GenericGraphicResource>> _cachedGraphics;
+		std::unique_ptr<UI::Font> _fonts[(int)FontType::Unknown];
 		std::unique_ptr<Shader> _precompiledShaders[(int)PrecompiledShader::Unknown];
 	};
 }
