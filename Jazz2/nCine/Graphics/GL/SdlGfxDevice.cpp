@@ -135,14 +135,14 @@
 //
 //bool SdlGfxDevice::setVideoMode(unsigned int index)
 //{
-//	//ASSERT(index < numVideoModes_);
+//	ASSERT(index < videoModes_.size());
 //
-//	int modeIndex = index;
-//	if (index >= numVideoModes_)
-//		modeIndex = 0;
+//	if (index >= videoModes_.size()) {
+//		return false;
+//	}
 //
 //	SDL_DisplayMode mode;
-//	SDL_GetDisplayMode(0, modeIndex, &mode);
+//	SDL_GetDisplayMode(0, index, &mode);
 //
 //	return SDL_SetWindowDisplayMode(windowHandle_, &mode);
 //}
@@ -150,10 +150,10 @@
 //void SdlGfxDevice::updateVideoModes()
 //{
 //	const int count = SDL_GetNumDisplayModes(0);
-//	numVideoModes_ = (count < MaxVideoModes) ? count : MaxVideoModes;
+//	videoModes_.resize_for_overwrite(count);
 //
 //	SDL_DisplayMode mode;
-//	for (unsigned int i = 0; i < numVideoModes_; i++)
+//	for (unsigned int i = 0; i < count; i++)
 //	{
 //		SDL_GetDisplayMode(0, i, &mode);
 //		convertVideoModeInfo(mode, videoModes_[i]);

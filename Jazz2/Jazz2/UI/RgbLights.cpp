@@ -7,6 +7,17 @@
 #define KEYBOARD_WIDTH 22
 #define KEYBOARD_HEIGHT 6
 
+#if defined(DEATH_TARGET_WINDOWS)
+// Remapping from Razer to Aura™ indices
+static constexpr uint8_t KeyLayout[] = {
+	0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+	23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43,
+	44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 81, 59, 60, 61, 62, 63, 64, 65,
+	66, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 83, 84, 85, 89,
+	90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 104, 106, 107, 108, 109, 111,
+	112, 113, 117, 119, 121, 122, 123, 125, 126, 127, 128, 130
+};
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
 // Remapping from Razer to Aura™ indices
 static constexpr uint8_t KeyLayout[] = {
 	1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
@@ -16,6 +27,7 @@ static constexpr uint8_t KeyLayout[] = {
 	90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 102, 104, 106, 107, 108, 109, 111,
 	112, 113, 117, 119, 121, 122, 123, 125, 126, 127, 129, 130
 };
+#endif
 
 namespace Jazz2::UI
 {
@@ -27,10 +39,29 @@ namespace Jazz2::UI
 
 	RgbLights::RgbLights()
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_32BIT)
+		_hLib = ::LoadLibrary(L"RzChromaSDK.dll");
+#	else
+		_hLib = ::LoadLibrary(L"RzChromaSDK64.dll");
+#	endif
+		if (_hLib != NULL) {
+			RzInit init = (RzInit)::GetProcAddress(_hLib, "Init");
+			_UnInit = (RzUnInit)::GetProcAddress(_hLib, "UnInit");
+			_CreateKeyboardEffect = (RzCreateKeyboardEffect)::GetProcAddress(_hLib, "CreateKeyboardEffect");
+
+			std::memset(_lastColors, 0, sizeof(_lastColors));
+
+			init();
+		} else {
+			_UnInit = nullptr;
+			_CreateKeyboardEffect = nullptr;
+		}
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
 		_updateCount = 0;
 		_ws = NULL;
 		_isConnected = false;
+		std::memset(_lastColors, 0, sizeof(_lastColors));
 
 		if (emscripten_websocket_is_supported()) {
 			EmscriptenWebSocketCreateAttributes ws_attrs = { "wss://chromasdk.io:13339/razer/chromasdk", NULL, EM_FALSE };
@@ -46,7 +77,15 @@ namespace Jazz2::UI
 
 	RgbLights::~RgbLights()
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_WINDOWS)
+		if (_UnInit != nullptr) {
+			_UnInit();
+		}
+		if (_hLib != NULL) {
+			::FreeLibrary(_hLib);
+			_hLib = NULL;
+		}
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
 		_isConnected = false;
 		if (_ws != NULL) {
 			emscripten_websocket_delete(_ws);
@@ -57,7 +96,9 @@ namespace Jazz2::UI
 
 	bool RgbLights::IsSupported() const
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_WINDOWS)
+		return (_CreateKeyboardEffect != nullptr);
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
 		return _isConnected;
 #else
 		return false;
@@ -66,7 +107,25 @@ namespace Jazz2::UI
 
 	void RgbLights::Update(Color colors[ColorsSize])
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_WINDOWS)
+		if (_CreateKeyboardEffect == nullptr) {
+			return;
+		}
+
+		if (std::memcmp(_lastColors, colors, sizeof(_lastColors)) == 0) {
+			return;
+		}
+
+		std::memcpy(_lastColors, colors, sizeof(_lastColors));
+
+		ChromaSDK::Keyboard::CUSTOM_EFFECT_TYPE param = { };
+		for (int i = COLORS_LIMITED_SIZE; i < ColorsSize; i++) {
+			int idx = KeyLayout[i - COLORS_LIMITED_SIZE];
+			param.Color[idx / KEYBOARD_WIDTH][idx % KEYBOARD_WIDTH] = colors[i].Abgr();
+		}
+
+		_CreateKeyboardEffect(ChromaSDK::Keyboard::CHROMA_CUSTOM, &param, nullptr);
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
 		if (!_isConnected) {
 			return;
 		}
@@ -117,7 +176,27 @@ namespace Jazz2::UI
 
 	void RgbLights::Clear()
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_WINDOWS)
+		if (_CreateKeyboardEffect == nullptr) {
+			return;
+		}
+
+		bool isEmpty = true;
+		for (int i = 0; i < ColorsSize; i++) {
+			if (_lastColors[i] != Color(0, 0, 0, 0)) {
+				isEmpty = false;
+				break;
+			}
+		}
+
+		if (isEmpty) {
+			return;
+		}
+
+		std::memset(_lastColors, 0, sizeof(_lastColors));
+
+		_CreateKeyboardEffect(ChromaSDK::Keyboard::CHROMA_NONE, nullptr, nullptr);
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
 		if (!_isConnected) {
 			return;
 		}

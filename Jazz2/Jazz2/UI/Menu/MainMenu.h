@@ -57,8 +57,6 @@ namespace Jazz2::UI::Menu
 
 			bool OnDraw(RenderQueue& renderQueue) override;
 
-
-
 		private:
 			MainMenu* _owner;
 		};

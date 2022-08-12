@@ -724,6 +724,10 @@ namespace Jazz2
 	{
 		_precompiledShaders[(int)PrecompiledShader::Lighting] = std::make_unique<Shader>("Lighting",
 			Shader::LoadMode::STRING, Shaders::LightingVs, Shaders::LightingFs);
+		_precompiledShaders[(int)PrecompiledShader::BatchedLighting] = std::make_unique<Shader>("BatchedLighting",
+			Shader::LoadMode::STRING, Shader::Introspection::NO_UNIFORMS_IN_BLOCKS, Shaders::BatchedLightingVs, Shaders::LightingFs);
+		_precompiledShaders[(int)PrecompiledShader::Lighting]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedLighting]);
+
 		_precompiledShaders[(int)PrecompiledShader::Blur] = std::make_unique<Shader>("Blur",
 			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::BlurFs);
 		_precompiledShaders[(int)PrecompiledShader::Downsample] = std::make_unique<Shader>("Downsample",
@@ -740,10 +744,21 @@ namespace Jazz2
 
 		_precompiledShaders[(int)PrecompiledShader::Colorize] = std::make_unique<Shader>("Colorize",
 			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::ColorizeFs);
+		_precompiledShaders[(int)PrecompiledShader::BatchedColorize] = std::make_unique<Shader>("BatchedColorize",
+			Shader::LoadMode::STRING, Shader::Introspection::NO_UNIFORMS_IN_BLOCKS, Shader::DefaultVertex::BATCHED_SPRITES, Shaders::ColorizeFs);
+		_precompiledShaders[(int)PrecompiledShader::Colorize]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedColorize]);
+
 		_precompiledShaders[(int)PrecompiledShader::Outline] = std::make_unique<Shader>("Outline",
 			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::OutlineFs);
+		_precompiledShaders[(int)PrecompiledShader::BatchedOutline] = std::make_unique<Shader>("BatchedOutline",
+			Shader::LoadMode::STRING, Shader::Introspection::NO_UNIFORMS_IN_BLOCKS, Shader::DefaultVertex::BATCHED_SPRITES, Shaders::OutlineFs);
+		_precompiledShaders[(int)PrecompiledShader::Outline]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedOutline]);
+
 		_precompiledShaders[(int)PrecompiledShader::WhiteMask] = std::make_unique<Shader>("WhiteMask",
 			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::WhiteMaskFs);
+		_precompiledShaders[(int)PrecompiledShader::BatchedWhiteMask] = std::make_unique<Shader>("BatchedWhiteMask",
+			Shader::LoadMode::STRING, Shader::Introspection::NO_UNIFORMS_IN_BLOCKS, Shader::DefaultVertex::BATCHED_SPRITES, Shaders::WhiteMaskFs);
+		_precompiledShaders[(int)PrecompiledShader::WhiteMask]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedWhiteMask]);
 	}
 
 	void ContentResolver::RecreateGemPalettes()

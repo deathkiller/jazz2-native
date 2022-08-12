@@ -165,6 +165,8 @@ namespace Jazz2
 
 	enum class PrecompiledShader {
 		Lighting,
+		BatchedLighting,
+
 		Blur,
 		Downsample,
 		Combine,
@@ -174,8 +176,11 @@ namespace Jazz2
 		TexturedBackgroundCircle,
 
 		Colorize,
+		BatchedColorize,
 		Outline,
+		BatchedOutline,
 		WhiteMask,
+		BatchedWhiteMask,
 
 		Unknown
 	};

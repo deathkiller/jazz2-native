@@ -31,16 +31,25 @@ namespace nCine
 			IGfxDevice* gfxDevice = reinterpret_cast<IGfxDevice*>(userData);
 			gfxDevice->setResolution(static_cast<int>(event->windowInnerWidth * pixelRatio), static_cast<int>(event->windowInnerHeight * pixelRatio));
 		}
-
 		return 1;
 	}
 
 	EM_BOOL IGfxDevice::emscriptenHandleFullscreen(int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData)
 	{
-		IGfxDevice* gfxDevice = reinterpret_cast<IGfxDevice*>(userData);
-		// TODO: Is this correct?
-		gfxDevice->setResolution(event->elementWidth, event->elementHeight);
-		gfxDevice->setFullScreen(event->isFullscreen);
+#if defined(ENABLE_LOG)
+		double cssWidth = 0.0;
+		double cssHeight = 0.0;
+		emscripten_get_element_css_size("canvas", &cssWidth, &cssHeight);
+		float pixelRatio2 = emscripten_get_device_pixel_ratio();
+		LOGI_X("Canvas was resized to %ix%i (canvas size is %ix%i; ratio is %f)", (int)(event->elementWidth * pixelRatio2), (int)(event->elementHeight * pixelRatio2), (int)cssWidth, (int)cssHeight, pixelRatio2);
+#endif
+		if (event->elementWidth > 0 && event->elementHeight > 0) {
+			float pixelRatio = emscripten_get_device_pixel_ratio();
+			IGfxDevice* gfxDevice = reinterpret_cast<IGfxDevice*>(userData);
+			gfxDevice->setResolution(static_cast<int>(event->elementWidth * pixelRatio), static_cast<int>(event->elementHeight * pixelRatio));
+			// TODO: Fix this in Emscripten
+			//gfxDevice->setFullScreen(event->isFullscreen);
+		}
 		return 1;
 	}
 
@@ -52,7 +61,6 @@ namespace nCine
 			theApplication().setFocus(false);
 		return 1;
 	}
-
 #endif
 
 	///////////////////////////////////////////////////////////
@@ -62,7 +70,7 @@ namespace nCine
 	IGfxDevice::IGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
 		: width_(windowMode.width), height_(windowMode.height),
 		isFullScreen_(windowMode.isFullScreen), isResizable_(windowMode.isResizable),
-		glContextInfo_(glContextInfo), displayMode_(displayMode), numVideoModes_(0)
+		glContextInfo_(glContextInfo), displayMode_(displayMode)
 	{
 #ifdef DEATH_TARGET_EMSCRIPTEN
 		double cssWidth = 0.0;
@@ -90,14 +98,14 @@ namespace nCine
 #endif
 
 		GLViewport::initRect(0, 0, width_, height_);
+
 		currentVideoMode_.width = width_;
 		currentVideoMode_.height = height_;
 		currentVideoMode_.redBits = displayMode.redBits();
 		currentVideoMode_.greenBits = displayMode.greenBits();
 		currentVideoMode_.blueBits = displayMode.blueBits();
 		currentVideoMode_.refreshRate = 60;
-		videoModes_[0] = currentVideoMode_;
-		numVideoModes_ = 1;
+		videoModes_.push_back(currentVideoMode_);
 	}
 
 	///////////////////////////////////////////////////////////
@@ -106,8 +114,8 @@ namespace nCine
 
 	const IGfxDevice::VideoMode& IGfxDevice::videoMode(unsigned int index) const
 	{
-		ASSERT(index < numVideoModes_);
-		if (index >= numVideoModes_)
+		ASSERT(index < videoModes_.size());
+		if (index >= videoModes_.size())
 			return videoModes_[0];
 		return videoModes_[index];
 	}

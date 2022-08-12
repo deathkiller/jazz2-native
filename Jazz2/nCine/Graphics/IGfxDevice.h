@@ -6,6 +6,10 @@
 #include "../AppConfiguration.h"
 #include "../../Common.h"
 
+#include <Containers/SmallVector.h>
+
+using namespace Death::Containers;
+
 #ifdef DEATH_TARGET_EMSCRIPTEN
 class EmscriptenUiEvent;
 class EmscriptenFullscreenChangeEvent;
@@ -161,7 +165,7 @@ namespace nCine
 		}
 		/// Returns the number of video modes supported by the monitor
 		inline unsigned int numVideoModes() const {
-			return numVideoModes_;
+			return videoModes_.size();
 		}
 		/// Returns the specified monitor video mode
 		const VideoMode& videoMode(unsigned int index) const;
@@ -186,13 +190,7 @@ namespace nCine
 		/// Display properties
 		DisplayMode displayMode_;
 
-#ifdef DEATH_TARGET_ANDROID
-		static const int MaxVideoModes = 1;
-#else
-		static const int MaxVideoModes = 64;
-#endif
-		VideoMode videoModes_[MaxVideoModes];
-		unsigned int numVideoModes_;
+		SmallVector<VideoMode, 0> videoModes_;
 		mutable VideoMode currentVideoMode_;
 
 	private:

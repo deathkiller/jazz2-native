@@ -28,6 +28,43 @@ void main()
 }
 )";
 
+	constexpr char BatchedLightingVs[] = R"(
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+struct Instance
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+layout (std140) uniform InstancesBlock
+{
+#ifdef WITH_FIXED_BATCH_SIZE
+	Instance[BATCH_SIZE] instances;
+#else
+	Instance[585] instances;
+#endif
+} block;
+
+out vec4 vTexCoords;
+out vec4 vColor;
+
+#define i block.instances[gl_VertexID / 6]
+
+void main()
+{
+	vec2 aPosition = vec2(-0.5 + float(((gl_VertexID + 2) / 3) % 2), -0.5 + float(((gl_VertexID + 1) / 3) % 2));
+	vec4 position = vec4(aPosition.x * i.spriteSize.x, aPosition.y * i.spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * i.modelMatrix * position;
+	vTexCoords = i.texRect;
+	vColor = vec4(i.color.x, i.color.y, aPosition.x * 2.0, aPosition.y * 2.0);
+}
+)";
+
 	constexpr char LightingFs[] = R"(
 #ifdef GL_ES
 precision mediump float;

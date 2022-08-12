@@ -47,7 +47,7 @@ namespace Jazz2::Actors::Collectibles
 
 	void GemCollectible::OnUpdateHitbox()
 	{
-		UpdateHitbox(18, 18);
+		UpdateHitbox(20, 20);
 	}
 
 	void GemCollectible::OnCollect(Player* player)

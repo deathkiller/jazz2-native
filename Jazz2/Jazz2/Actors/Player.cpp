@@ -1734,7 +1734,7 @@ namespace Jazz2::Actors
 					_externalForce.Y = gravity * 2.0f * timeMult;
 					_speed.Y = std::min(gravity * timeMult, _speed.Y);
 				} else {
-					_speed.Y -= _levelHandler->Gravity * 1.2f * timeMult;
+					_speed.Y = std::max(_speed.Y - _levelHandler->Gravity * timeMult, -6.0f);
 				}
 			}
 		}
@@ -2341,7 +2341,7 @@ namespace Jazz2::Actors
 
 				_activeModifier = Modifier::Copter;
 
-				_copterFramesLeft = 350;
+				_copterFramesLeft = 350.0f;
 				break;
 			}
 			case Modifier::LizardCopter: {
@@ -2355,7 +2355,7 @@ namespace Jazz2::Actors
 
 				_activeModifier = Modifier::LizardCopter;
 
-				_copterFramesLeft = 150;
+				_copterFramesLeft = 150.0f;
 
 				/*CopterDecor copter = new CopterDecor();
 				copter.OnActivated(new ActorActivationDetails {

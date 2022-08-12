@@ -112,7 +112,7 @@
 //	else
 //		screen = QApplication::primaryScreen();
 //
-//	numVideoModes_ = 1;
+//	videoModes_.resize_for_overwrite(1);
 //	if (screen)
 //	{
 //		videoModes_[0].width = screen->size().width();

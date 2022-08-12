@@ -13,6 +13,7 @@ namespace Jazz2::UI
 	{
 	public:
 		HUD(LevelHandler* levelHandler);
+		~HUD();
 
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;

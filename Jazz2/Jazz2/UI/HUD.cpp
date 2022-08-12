@@ -44,6 +44,11 @@ namespace Jazz2::UI
 		static_assert(_countof(_touchButtons) == 9, "Touch button count mismatch");
 	}
 
+	HUD::~HUD()
+	{
+		RgbLights::Current().Clear();
+	}
+
 	void HUD::OnUpdate(float timeMult)
 	{
 		Canvas::OnUpdate(timeMult);
@@ -131,7 +136,7 @@ namespace Jazz2::UI
 				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 3 + 0.5f, bottom - 16 - 0.5f, FontShadowLayer,
 					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
 				_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36 - 3, bottom - 16, FontLayer,
-					Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
+					Alignment::BottomLeft, Font::RandomColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
 
 				snprintf(stringBuffer, _countof(stringBuffer), "x%i", player->_lives);
 				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 4, bottom + 1.0f, FontShadowLayer,
@@ -144,7 +149,7 @@ namespace Jazz2::UI
 				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 3 + 0.5f, bottom - 3 - 0.5f, FontShadowLayer,
 					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
 				_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36 - 3, bottom - 3, FontLayer,
-					Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
+					Alignment::BottomLeft, Font::RandomColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
 			}
 
 			// Top left

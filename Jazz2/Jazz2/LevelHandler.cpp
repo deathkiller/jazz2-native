@@ -642,16 +642,11 @@ namespace Jazz2
 
 				Actors::SolidObjectBase* solidObject = dynamic_cast<Actors::SolidObjectBase*>(actor);
 				if (solidObject == nullptr || !solidObject->IsOneWay || params.Downwards) {
-					if (self->IsCollidingWith(actor)) {
-						std::shared_ptr selfShared = self->shared_from_this();
-						std::shared_ptr actorShared = actor->shared_from_this();
-						if (!selfShared->OnHandleCollision(actorShared) && !actorShared->OnHandleCollision(selfShared)) {
-							colliderActor = actor;
-							return false;
-						}
-					} else {
-						// TODO: It must be here for some reason, otherwise Poles are broken
+					std::shared_ptr selfShared = self->shared_from_this();
+					std::shared_ptr actorShared = actor->shared_from_this();
+					if (!selfShared->OnHandleCollision(actorShared) && !actorShared->OnHandleCollision(selfShared)) {
 						colliderActor = actor;
+						return false;
 					}
 				}
 

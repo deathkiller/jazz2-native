@@ -244,147 +244,149 @@ namespace Jazz2
 		effectiveSpeedX *= timeMult;
 		effectiveSpeedY *= timeMult;
 
-		bool success = false;
+		if (std::abs(effectiveSpeedX) > 0.0f || std::abs(effectiveSpeedY) > 0.0f) {
+			if (GetState(ActorFlags::CanJump)) {
+				// All ground-bound movement is handled here. In the basic case, the actor
+				// moves horizontally, but it can also logically move up or down if it is
+				// moving across a slope. In here, angles between about 45 degrees down
+				// to 45 degrees up are attempted with some intervals to attempt to keep
+				// the actor attached to the slope in question.
 
-		if (GetState(ActorFlags::CanJump)) {
-			// All ground-bound movement is handled here. In the basic case, the actor
-			// moves horizontally, but it can also logically move up or down if it is
-			// moving across a slope. In here, angles between about 45 degrees down
-			// to 45 degrees up are attempted with some intervals to attempt to keep
-			// the actor attached to the slope in question.
-
-			// Always try values a bit over the 45 degree incline; subpixel coordinates
-			// may mean the actor actually needs to move a pixel up or down even though
-			// the speed wouldn't warrant that large of a change.
-			// Not doing this will cause hiccups with uphill slopes in particular.
-			// Beach tileset also has some spots where two properly set up adjacent
-			// tiles have a 2px jump, so adapt to that.
-			float maxYDiff = std::max(3.0f, std::abs(effectiveSpeedX) + 2.5f);
-			for (float yDiff = maxYDiff + effectiveSpeedY; yDiff >= -maxYDiff + effectiveSpeedY; yDiff -= CollisionCheckStep) {
-				if (MoveInstantly(Vector2f(effectiveSpeedX, yDiff), MoveType::Relative, params)) {
-					success = true;
-					break;
-				}
-			}
-
-			// Also try to move horizontally as far as possible
-			float xDiff = std::abs(effectiveSpeedX);
-			float maxXDiff = -xDiff;
-			if (!success) {
-				int sign = (effectiveSpeedX > 0.0f ? 1 : -1);
-				for (; xDiff >= maxXDiff; xDiff -= CollisionCheckStep) {
-					if (MoveInstantly(Vector2f(xDiff * sign, 0.0f), MoveType::Relative, params)) {
+				// Always try values a bit over the 45 degree incline; subpixel coordinates
+				// may mean the actor actually needs to move a pixel up or down even though
+				// the speed wouldn't warrant that large of a change.
+				// Not doing this will cause hiccups with uphill slopes in particular.
+				// Beach tileset also has some spots where two properly set up adjacent
+				// tiles have a 2px jump, so adapt to that.
+				bool success = false;
+				float maxYDiff = std::max(3.0f, std::abs(effectiveSpeedX) + 2.5f);
+				for (float yDiff = maxYDiff + effectiveSpeedY; yDiff >= -maxYDiff + effectiveSpeedY; yDiff -= CollisionCheckStep) {
+					if (MoveInstantly(Vector2f(effectiveSpeedX, yDiff), MoveType::Relative, params)) {
 						success = true;
 						break;
 					}
 				}
 
-				bool moved = false;
-				if (!success && _unstuckCooldown <= 0.0f) {
-					AABBf aabb = AABBInner;
-					float t = aabb.B - 14.0f;
-					if (aabb.T < t) {
-						aabb.T = t;
-					}
-					TileCollisionParams params2 = { TileDestructType::None, true };
-					if (!_levelHandler->IsPositionEmpty(this, aabb, params2)) {
-						for (float yDiff = -2.0f; yDiff >= -12.0f; yDiff -= 2.0f) {
-							if (MoveInstantly(Vector2f(0.0f, yDiff), MoveType::Relative, params)) {
-								moved = true;
-								_unstuckCooldown = 60.0f;
-								break;
-							}
+				// Also try to move horizontally as far as possible
+				float xDiff = std::abs(effectiveSpeedX);
+				float maxXDiff = -xDiff;
+				if (!success) {
+					int sign = (effectiveSpeedX > 0.0f ? 1 : -1);
+					for (; xDiff >= maxXDiff; xDiff -= CollisionCheckStep) {
+						if (MoveInstantly(Vector2f(xDiff * sign, 0.0f), MoveType::Relative, params)) {
+							success = true;
+							break;
 						}
+					}
 
-						if (!moved) {
-							for (float yDiff = 2.0f; yDiff <= 14.0f; yDiff += 2.0f) {
+					bool moved = false;
+					if (!success && _unstuckCooldown <= 0.0f) {
+						AABBf aabb = AABBInner;
+						float t = aabb.B - 14.0f;
+						if (aabb.T < t) {
+							aabb.T = t;
+						}
+						TileCollisionParams params2 = { TileDestructType::None, true };
+						if (!_levelHandler->IsPositionEmpty(this, aabb, params2)) {
+							for (float yDiff = -2.0f; yDiff >= -12.0f; yDiff -= 2.0f) {
 								if (MoveInstantly(Vector2f(0.0f, yDiff), MoveType::Relative, params)) {
 									moved = true;
 									_unstuckCooldown = 60.0f;
 									break;
 								}
 							}
+
+							if (!moved) {
+								for (float yDiff = 2.0f; yDiff <= 14.0f; yDiff += 2.0f) {
+									if (MoveInstantly(Vector2f(0.0f, yDiff), MoveType::Relative, params)) {
+										moved = true;
+										_unstuckCooldown = 60.0f;
+										break;
+									}
+								}
+							}
 						}
 					}
-				}
 
-				if (!moved) {
-					// If no angle worked in the previous step, the actor is facing a wall
-					if (xDiff > CollisionCheckStep || (xDiff > 0.0f && currentElasticity > 0.0f)) {
-						_speed.X = -(currentElasticity * _speed.X);
-					}
-					OnHitWall();
-				}
-			}
-
-			// Run all floor-related hooks, such as the player's check for hurting positions
-			OnHitFloor();
-		} else {
-			// Airborne movement is handled here
-			// First, attempt to move directly based on the current speed values
-			if (MoveInstantly(Vector2f(effectiveSpeedX, effectiveSpeedY), MoveType::Relative, params)) {
-				if (std::abs(effectiveSpeedY) < std::numeric_limits<float>::epsilon()) {
-					SetState(ActorFlags::CanJump, true);
-				}
-			} else if (!success) {
-				// There is an obstacle so we need to make compromises
-
-				// First, attempt to move horizontally as much as possible
-				float maxDiff = std::abs(effectiveSpeedX);
-				int sign = (effectiveSpeedX > 0.0f ? 1 : -1);
-				float xDiff = maxDiff;
-				for (; xDiff > std::numeric_limits<float>::epsilon(); xDiff -= CollisionCheckStep) {
-					if (MoveInstantly(Vector2f(xDiff * sign, 0.0f), MoveType::Relative, params)) {
-						break;
+					if (!moved) {
+						// If no angle worked in the previous step, the actor is facing a wall
+						if (xDiff > CollisionCheckStep || (xDiff > 0.0f && currentElasticity > 0.0f)) {
+							_speed.X = -(currentElasticity * _speed.X);
+						}
+						OnHitWall();
 					}
 				}
 
-				// Then, try the same vertically
-				maxDiff = std::abs(effectiveSpeedY);
-				sign = (effectiveSpeedY > 0.0f ? 1 : -1);
-				float yDiff = maxDiff;
-				for (; yDiff > std::numeric_limits<float>::epsilon(); yDiff -= CollisionCheckStep) {
-					float yDiffSigned = (yDiff * sign);
-					if (MoveInstantly(Vector2f(0.0f, yDiffSigned), MoveType::Relative, params) ||
-						// Add horizontal tolerance
-						MoveInstantly(Vector2f(yDiff * 0.2f, yDiffSigned), MoveType::Relative, params) ||
-						MoveInstantly(Vector2f(yDiff * -0.2f, yDiffSigned), MoveType::Relative, params)) {
-						break;
+				// Run all floor-related hooks, such as the player's check for hurting positions
+				OnHitFloor();
+			} else {
+				// Airborne movement is handled here
+				// First, attempt to move directly based on the current speed values
+				if (MoveInstantly(Vector2f(effectiveSpeedX, effectiveSpeedY), MoveType::Relative, params)) {
+					if (std::abs(effectiveSpeedY) < std::numeric_limits<float>::epsilon()) {
+						SetState(ActorFlags::CanJump, true);
 					}
-				}
+				} else {
+					// There is an obstacle so we need to make compromises
 
-				// Place us to the ground only if no horizontal movement was
-				// involved (this prevents speeds resetting if the actor
-				// collides with a wall from the side while in the air)
-				if (yDiff < std::abs(effectiveSpeedY)) {
-					if (effectiveSpeedY > 0.0f) {
-						_speed.Y = -(currentElasticity * effectiveSpeedY / timeMult);
+					// First, attempt to move horizontally as much as possible
+					float maxDiff = std::abs(effectiveSpeedX);
+					int sign = (effectiveSpeedX > 0.0f ? 1 : -1);
+					float xDiff = maxDiff;
+					for (; xDiff > std::numeric_limits<float>::epsilon(); xDiff -= CollisionCheckStep) {
+						if (MoveInstantly(Vector2f(xDiff * sign, 0.0f), MoveType::Relative, params)) {
+							break;
+						}
+					}
 
-						OnHitFloor();
+					// Then, try the same vertically
+					maxDiff = std::abs(effectiveSpeedY);
+					sign = (effectiveSpeedY > 0.0f ? 1 : -1);
+					float yDiff = maxDiff;
+					for (; yDiff > std::numeric_limits<float>::epsilon(); yDiff -= CollisionCheckStep) {
+						float yDiffSigned = (yDiff * sign);
+						if (MoveInstantly(Vector2f(0.0f, yDiffSigned), MoveType::Relative, params) ||
+							// Add horizontal tolerance
+							MoveInstantly(Vector2f(yDiff * 0.2f, yDiffSigned), MoveType::Relative, params) ||
+							MoveInstantly(Vector2f(yDiff * -0.2f, yDiffSigned), MoveType::Relative, params)) {
+							break;
+						}
+					}
 
-						if (_speed.Y > -CollisionCheckStep) {
+					// Place us to the ground only if no horizontal movement was
+					// involved (this prevents speeds resetting if the actor
+					// collides with a wall from the side while in the air)
+					if (yDiff < std::abs(effectiveSpeedY)) {
+						if (effectiveSpeedY > 0.0f) {
+							_speed.Y = -(currentElasticity * effectiveSpeedY / timeMult);
+
+							OnHitFloor();
+
+							if (_speed.Y > -CollisionCheckStep) {
+								_speed.Y = 0.0f;
+								SetState(ActorFlags::CanJump, true);
+							}
+						} else {
 							_speed.Y = 0.0f;
-							SetState(ActorFlags::CanJump, true);
+							OnHitCeiling();
 						}
-					} else {
-						_speed.Y = 0.0f;
-						OnHitCeiling();
 					}
-				}
 
-				// If the actor didn't move all the way horizontally,
-				// it hit a wall (or was already touching it)
-				if (xDiff < std::abs(effectiveSpeedX)) {
-					if (xDiff > CollisionCheckStep || (xDiff > 0.0f && currentElasticity > 0.0f)) {
-						_speed.X = -(currentElasticity * _speed.X);
+					// If the actor didn't move all the way horizontally,
+					// it hit a wall (or was already touching it)
+					if (xDiff < std::abs(effectiveSpeedX)) {
+						if (xDiff > CollisionCheckStep || (xDiff > 0.0f && currentElasticity > 0.0f)) {
+							_speed.X = -(currentElasticity * _speed.X);
+						}
+						OnHitWall();
 					}
-					OnHitWall();
 				}
 			}
 		}
 
 		// Set the actor as airborne if there seems to be enough space below it
-		AABBf aabb = (AABBInner + Vector2f(0.0f, CollisionCheckStep));
+		AABBf aabb = AABBInner;
+		aabb.B += CollisionCheckStep;
 		if (_levelHandler->IsPositionEmpty(this, aabb, params)) {
 			_speed.Y += currentGravity * timeMult;
 			SetState(ActorFlags::CanJump, false);

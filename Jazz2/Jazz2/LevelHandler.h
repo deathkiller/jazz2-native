@@ -252,6 +252,5 @@ namespace Jazz2
 		void InitializeCamera();
 		void UpdateCamera(float timeMult);
 		void UpdatePressedActions();
-		void UpdateRgbLights();
 	};
 }

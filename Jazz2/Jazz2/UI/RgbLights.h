@@ -11,6 +11,39 @@
 
 using namespace nCine;
 
+#if defined(DEATH_TARGET_WINDOWS)
+namespace ChromaSDK::Keyboard
+{
+	//! Chroma keyboard effect types
+	typedef enum EFFECT_TYPE
+	{
+		CHROMA_NONE = 0,            //!< No effect.
+		CHROMA_BREATHING,           //!< Breathing effect (This effect has deprecated and should not be used).
+		CHROMA_CUSTOM,              //!< Custom effect.
+		CHROMA_REACTIVE,            //!< Reactive effect (This effect has deprecated and should not be used).
+		CHROMA_STATIC,              //!< Static effect.
+		CHROMA_SPECTRUMCYCLING,     //!< Spectrum cycling effect (This effect has deprecated and should not be used).
+		CHROMA_WAVE,                //!< Wave effect (This effect has deprecated and should not be used).
+		CHROMA_RESERVED,            //!< Reserved.
+		CHROMA_CUSTOM_KEY,          //!< Custom effects with keys.
+		CHROMA_CUSTOM2,
+		CHROMA_INVALID              //!< Invalid effect.
+	} EFFECT_TYPE;
+
+	//! Maximum number of rows in a keyboard.
+	const size_t MAX_ROW = 6;
+
+	//! Maximum number of columns in a keyboard.
+	const size_t MAX_COLUMN = 22;
+
+	//! Custom effect (This effect type has deprecated and should not be used).
+	typedef struct CUSTOM_EFFECT_TYPE
+	{
+		COLORREF Color[MAX_ROW][MAX_COLUMN];      //!< Grid layout. 6 rows by 22 columns.
+	} CUSTOM_EFFECT_TYPE;
+}
+#endif
+
 namespace Jazz2::UI
 {
 	enum struct AuraLight
@@ -61,7 +94,16 @@ namespace Jazz2::UI
 		/// Deleted assignment operator
 		RgbLights& operator=(const RgbLights&) = delete;
 
-#if defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_WINDOWS)
+		using RzInit = int (*)();
+		using RzUnInit = int (*)();
+		using RzCreateKeyboardEffect = int (*)(ChromaSDK::Keyboard::EFFECT_TYPE Effect, void* pParam, void* pEffectId);
+
+		HMODULE _hLib;
+		RzUnInit _UnInit;
+		RzCreateKeyboardEffect _CreateKeyboardEffect;
+		Color _lastColors[ColorsSize];
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
 		uint32_t _updateCount;
 		EMSCRIPTEN_WEBSOCKET_T _ws;
 		bool _isConnected;

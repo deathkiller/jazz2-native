@@ -62,8 +62,11 @@ namespace nCine
 		if (isFullScreen_ != fullScreen) {
 			isFullScreen_ = fullScreen;
 
+			// TODO: Fix this in Emscripten
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 			GLFWmonitor* monitor = isFullScreen_ ? glfwGetPrimaryMonitor() : nullptr;
 			glfwSetWindowMonitor(windowHandle_, monitor, 0, 0, width_, height_, GLFW_DONT_CARE);
+#endif
 		}
 	}
 
@@ -116,15 +119,16 @@ namespace nCine
 
 	bool GlfwGfxDevice::setVideoMode(unsigned int index)
 	{
-		ASSERT(index < numVideoModes_);
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		ASSERT(index < videoModes_.size());
 
-		int modeIndex = index;
-		if (index >= numVideoModes_)
-			modeIndex = 0;
+		if (index >= videoModes_.size()) {
+			return false;
+		}
 
 		glfwSetWindowMonitor(windowHandle_, glfwGetPrimaryMonitor(), 0, 0,
-							 videoModes_[modeIndex].width, videoModes_[modeIndex].height, videoModes_[modeIndex].refreshRate);
-
+							 videoModes_[index].width, videoModes_[index].height, videoModes_[index].refreshRate);
+#endif
 		return true;
 	}
 
@@ -132,9 +136,9 @@ namespace nCine
 	{
 		int count;
 		const GLFWvidmode* modes = glfwGetVideoModes(glfwGetPrimaryMonitor(), &count);
-		numVideoModes_ = (count < MaxVideoModes) ? count : MaxVideoModes;
+		videoModes_.resize_for_overwrite(count);
 
-		for (unsigned int i = 0; i < numVideoModes_; i++) {
+		for (int i = 0; i < count; i++) {
 			// Reverse GLFW video mode array to be consistent with SDL
 			const int srcIndex = count - 1 - i;
 			convertVideoModeInfo(modes[srcIndex], videoModes_[i]);
