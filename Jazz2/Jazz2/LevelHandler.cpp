@@ -603,7 +603,7 @@ namespace Jazz2
 		_cameraDistanceFactor.Y = 0.0f;
 	}
 
-	bool LevelHandler::IsPositionEmpty(ActorBase* self, const AABBf& aabb, TileCollisionParams& params, __out ActorBase** collider)
+	bool LevelHandler::IsPositionEmpty(ActorBase* self, const AABBf& aabb, TileCollisionParams& params, ActorBase** collider)
 	{
 		*collider = nullptr;
 
@@ -897,7 +897,7 @@ namespace Jazz2
 		return PlayerActionPressed(index, action, includeGamepads, isGamepad);
 	}
 
-	__success(return) bool LevelHandler::PlayerActionPressed(int index, PlayerActions action, bool includeGamepads, __out bool& isGamepad)
+	bool LevelHandler::PlayerActionPressed(int index, PlayerActions action, bool includeGamepads, bool& isGamepad)
 	{
 		// TODO
 		if (index != 0) {
@@ -927,7 +927,7 @@ namespace Jazz2
 		return PlayerActionHit(index, action, includeGamepads, isGamepad);
 	}
 
-	__success(return) bool LevelHandler::PlayerActionHit(int index, PlayerActions action, bool includeGamepads, __out bool& isGamepad)
+	bool LevelHandler::PlayerActionHit(int index, PlayerActions action, bool includeGamepads, bool& isGamepad)
 	{
 		// TODO
 		if (index != 0) {

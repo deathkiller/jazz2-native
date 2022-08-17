@@ -29,9 +29,15 @@ namespace Jazz2
 		class HUD;
 	}
 
+	namespace UI::Menu
+	{
+		class InGameMenu;
+	}
+
 	class LevelHandler : public ILevelHandler, public IStateHandler
 	{
 		friend class ContentResolver;
+		friend class UI::Menu::InGameMenu;
 
 	public:
 		static constexpr int DefaultWidth = 720;
@@ -81,7 +87,7 @@ namespace Jazz2
 		const std::shared_ptr<AudioBufferPlayer>& PlaySfx(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain = 1.0f, float pitch = 1.0f) override;
 		const std::shared_ptr<AudioBufferPlayer>& PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
 		void WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor) override;
-		bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, TileCollisionParams& params, __out ActorBase** collider) override;
+		bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, TileCollisionParams& params, ActorBase** collider) override;
 		void FindCollisionActorsByAABB(ActorBase* self, const AABBf& aabb, const std::function<bool(ActorBase*)>& callback) override;
 		void FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(ActorBase*)>& callback) override;
 		void GetCollidingPlayers(const AABBf& aabb, const std::function<bool(ActorBase*)> callback) override;
@@ -100,9 +106,9 @@ namespace Jazz2
 		void SetWaterLevel(float value) override;
 
 		bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads = true) override;
-		__success(return) bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads, __out bool& isGamepad) override;
+		bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
 		bool PlayerActionHit(int index, PlayerActions action, bool includeGamepads = true) override;
-		__success(return) bool PlayerActionHit(int index, PlayerActions action, bool includeGamepads, __out bool& isGamepad) override;
+		bool PlayerActionHit(int index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
 		float PlayerHorizontalMovement(int index) override;
 		float PlayerVerticalMovement(int index) override;
 		void PlayerFreezeMovement(int index, bool enable) override;

@@ -147,7 +147,7 @@ void GameEventHandler::onInit()
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-	theApplication().inputManager().addJoyMappingsFromFile(fs::joinPath({ "Content"_s, "gamecontrollerdb.txt"_s }));
+	//theApplication().inputManager().addJoyMappingsFromFile(fs::joinPath({ "Content"_s, "gamecontrollerdb.txt"_s }));
 #endif
 
 	_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this);

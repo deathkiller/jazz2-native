@@ -34,7 +34,7 @@ namespace Death
 
     const uint64_t WindowsVersion = GetWindowsVersion();
 
-    bool GetProcessPath(HANDLE hProcess, __out wchar_t* szFilename, DWORD dwSize)
+    bool GetProcessPath(HANDLE hProcess, wchar_t* szFilename, DWORD dwSize)
     {
         if (IsWindowsVista() && ::QueryFullProcessImageName(hProcess, NULL, szFilename, &dwSize)) {
             return true;

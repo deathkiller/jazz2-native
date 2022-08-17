@@ -3,33 +3,29 @@
 #include "IMenuContainer.h"
 #include "MenuSection.h"
 #include "../../IStateHandler.h"
-#include "../../IRootController.h"
 #include "../Canvas.h"
-#include "../UpscaleRenderPass.h"
 #include "../../ContentResolver.h"
-#include "../../Tiles/TileMap.h"
 
 #include "../../../nCine/Graphics/Camera.h"
 #include "../../../nCine/Graphics/Shader.h"
 #include "../../../nCine/Input/InputEvents.h"
-#include "../../../nCine/Audio/AudioStreamPlayer.h"
+#include "../../../nCine/Audio/AudioBufferPlayer.h"
 
 using namespace Jazz2::Tiles;
 
 namespace Jazz2::UI::Menu
 {
-	class MainMenu : public IStateHandler, public IMenuContainer
+	class InGameMenu : public IMenuContainer
 	{
 	public:
 		static constexpr int DefaultWidth = 720;
 		static constexpr int DefaultHeight = 405;
 
-		MainMenu(IRootController* root);
-		~MainMenu() override;
+		InGameMenu(LevelHandler* root);
+		~InGameMenu();
 
-		void OnBeginFrame() override;
-		void OnInitializeViewport(int width, int height) override;
-		void OnTouchEvent(const nCine::TouchEvent& event) override;
+		void OnInitializeViewport(int width, int height);
+		void OnTouchEvent(const nCine::TouchEvent& event);
 
 		void SwitchToSectionPtr(std::unique_ptr<MenuSection> section) override;
 		void LeaveSection() override;
@@ -44,53 +40,22 @@ namespace Jazz2::UI::Menu
 		void PlaySfx(const StringView& identifier, float gain = 1.0f) override;
 
 	private:
-		IRootController* _root;
+		LevelHandler* _root;
 
 		class MenuCanvas : public Canvas
 		{
 		public:
-			MenuCanvas(MainMenu* owner)
+			MenuCanvas(InGameMenu* owner)
 				: _owner(owner)
 			{
 			}
 
+			void OnUpdate(float timeMult) override;
 			bool OnDraw(RenderQueue& renderQueue) override;
 
 		private:
-			MainMenu* _owner;
+			InGameMenu* _owner;
 		};
-
-		class TexturedBackgroundPass : public SceneNode
-		{
-			friend class MainMenu;
-
-		public:
-			TexturedBackgroundPass(MainMenu* owner)
-				: _owner(owner), _alreadyRendered(false)
-			{
-			}
-
-			void Initialize();
-
-			bool OnDraw(RenderQueue& renderQueue) override;
-
-		private:
-			MainMenu* _owner;
-			std::unique_ptr<Texture> _target;
-			std::unique_ptr<Viewport> _view;
-			std::unique_ptr<Camera> _camera;
-			SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
-			RenderCommand _outputRenderCommand;
-			bool _alreadyRendered;
-		};
-
-		TexturedBackgroundPass _texturedBackgroundPass;
-		UI::UpscaleRenderPass _upscalePass;
-
-		std::unique_ptr<TileSet> _tileSet;
-		TileMapLayer _texturedBackgroundLayer;
-		Vector2f _texturedBackgroundPos;
-		float _texturedBackgroundPhase;
 
 		std::unique_ptr<MenuCanvas> _canvas;
 		HashMap<String, GraphicResource>* _graphics;
@@ -98,7 +63,6 @@ namespace Jazz2::UI::Menu
 		Font* _mediumFont;
 
 		float _logoTransition;
-		std::unique_ptr<AudioStreamPlayer> _music;
 		HashMap<String, SoundResource>* _sounds;
 		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
 
@@ -107,7 +71,5 @@ namespace Jazz2::UI::Menu
 		float _touchButtonsTimer;
 
 		void UpdatePressedActions();
-		void PrepareTexturedBackground();
-		void RenderTexturedBackground(RenderQueue& renderQueue);
 	};
 }

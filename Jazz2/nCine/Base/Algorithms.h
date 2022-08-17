@@ -3,6 +3,7 @@
 #include "Iterator.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace nCine
 {
@@ -68,17 +69,17 @@ namespace nCine
 		static constexpr bool value = true;
 	};
 
-    template <class T>
-    inline bool IsLess(const T &a, const T &b)
-    {
-        return a < b;
-    }
-    
-    template <class T>
-    inline bool IsNotLess(const T &a, const T &b)
-    {
-        return !(a < b);
-    }
+	template <class T>
+	inline bool IsLess(const T &a, const T &b)
+	{
+		return a < b;
+	}
+	
+	template <class T>
+	inline bool IsNotLess(const T &a, const T &b)
+	{
+		return !(a < b);
+	}
 
 	/// Returns true if the range is sorted into ascending order
 	template <class Iterator>
@@ -246,6 +247,25 @@ namespace nCine
 		}
 	};
 
+	namespace detail {
+
+		template <class T>
+		struct typeIdentity
+		{
+			using type = T;
+		};
+
+		template <class T>
+		auto tryAddRValueReference(int)->typeIdentity<T&&>;
+		template <class T>
+		auto tryAddRValueReference(...)->typeIdentity<T>;
+	}
+
+	template <class T>
+	struct addRValueReference : decltype(detail::tryAddRValueReference<T>(0)) {};
+	template <class T>
+	typename addRValueReference<T>::type declVal();
+
 	/// Specialization for trivially destructible types
 	template <class T, typename = void>
 	struct isDestructible
@@ -312,6 +332,6 @@ namespace nCine
 
 	inline int lerp(int a, int b, float ratio)
 	{
-		return (int)round(a + ratio * (float)(b - a));
+		return (int)std::round(a + ratio * (float)(b - a));
 	}
 }

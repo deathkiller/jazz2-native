@@ -1471,14 +1471,14 @@ namespace Jazz2::Actors
 					float angle;
 					if (_speed.X == 0.0f) {
 						if (IsFacingLeft()) {
-							angle = std::atan2(-_speed.Y, -std::numeric_limits<float>::epsilon());
+							angle = atan2(-_speed.Y, -std::numeric_limits<float>::epsilon());
 						} else {
-							angle = std::atan2(_speed.Y, std::numeric_limits<float>::epsilon());
+							angle = atan2(_speed.Y, std::numeric_limits<float>::epsilon());
 						}
 					} else if (_speed.X < 0.0f) {
-						angle = std::atan2(-_speed.Y, -_speed.X);
+						angle = atan2(-_speed.Y, -_speed.X);
 					} else {
-						angle = std::atan2(_speed.Y, _speed.X);
+						angle = atan2(_speed.Y, _speed.X);
 					}
 
 					if (angle > fPi) {
@@ -1522,7 +1522,7 @@ namespace Jazz2::Actors
 		}
 	}
 
-	void Player::OnHandleAreaEvents(float timeMult, __out bool& areaWeaponAllowed, __out int& areaWaterBlock)
+	void Player::OnHandleAreaEvents(float timeMult, bool& areaWeaponAllowed, int& areaWaterBlock)
 	{
 		areaWeaponAllowed = true;
 		areaWaterBlock = -1;
@@ -2004,8 +2004,8 @@ namespace Jazz2::Actors
 			angle = _renderer.rotation();
 
 			int size = (_currentAnimation->Base->FrameDimensions.X / 2);
-			gunspotPos.X += (std::cosf(angle) * size) * (IsFacingLeft() ? -1.0f : 1.0f);
-			gunspotPos.Y += (std::sinf(angle) * size) * (IsFacingLeft() ? -1.0f : 1.0f) - (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);
+			gunspotPos.X += (cosf(angle) * size) * (IsFacingLeft() ? -1.0f : 1.0f);
+			gunspotPos.Y += (sinf(angle) * size) * (IsFacingLeft() ? -1.0f : 1.0f) - (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);
 		} else {
 			gunspotPos.X += (_currentAnimation->Base->Hotspot.X - _currentAnimation->Base->Gunspot.X) * (IsFacingLeft() ? 1 : -1);
 			gunspotPos.Y -= (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);

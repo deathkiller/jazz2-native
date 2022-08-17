@@ -315,7 +315,7 @@ namespace nCine
 	template <class T>
 	inline T Vector4<T>::Length() const
 	{
-		return std::sqrt(X * X + Y * Y + Z * Z + W * W);
+		return sqrt(X * X + Y * Y + Z * Z + W * W);
 	}
 
 	template <class T>

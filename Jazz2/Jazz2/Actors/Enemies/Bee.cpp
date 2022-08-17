@@ -91,7 +91,7 @@ namespace Jazz2::Actors::Enemies
 			});
 		}
 
-		MoveInstantly(_lastPos + Vector2f(std::cosf(_anglePhase) * 16.0f, std::sinf(_anglePhase) * -16.0f), MoveType::Relative | MoveType::Force);
+		MoveInstantly(_lastPos + Vector2f(cosf(_anglePhase) * 16.0f, sinf(_anglePhase) * -16.0f), MoveType::Relative | MoveType::Force);
 	}
 
 	bool Bee::OnPerish(ActorBase* collider)

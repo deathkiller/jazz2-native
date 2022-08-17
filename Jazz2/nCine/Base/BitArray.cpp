@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <climits>
+#include <cstring>
 
 #ifndef CHAR_BIT
 #	warning CHAR_BIT not defined.Assuming 8 bits.

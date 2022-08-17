@@ -13,23 +13,6 @@
 #	include <windows.h>
 #endif
 
-// These attributes are not defined outside of MSVC
-#if !defined(__in)
-#	define __in
-#endif
-#if !defined(__in_opt)
-#	define __in_opt
-#endif
-#if !defined(__out)
-#	define __out
-#endif
-#if !defined(__out_opt)
-#	define __out_opt
-#endif
-#if !defined(__success)
-#	define __success(expr)
-#endif
-
 #if !defined(_countof)
 #	define _countof(arr) (sizeof(arr) / sizeof(arr[0]))
 #endif

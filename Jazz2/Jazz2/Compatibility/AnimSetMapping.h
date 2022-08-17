@@ -3,6 +3,7 @@
 #include "../../Common.h"
 #include "JJ2Version.h"
 
+#include <Containers/String.h>
 #include <Containers/StringView.h>
 
 using namespace Death::Containers;

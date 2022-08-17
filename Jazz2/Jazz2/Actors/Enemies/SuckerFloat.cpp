@@ -41,7 +41,7 @@ namespace Jazz2::Actors::Enemies
 	{
 		if (_frozenTimeLeft <= 0) {
 			_phase = fmodf(_phase + 0.05f * timeMult, fTwoPi);
-			MoveInstantly(Vector2f(_originPos.X + 10 * std::cosf(_phase), _originPos.Y + 10 * std::sinf(_phase)), MoveType::Absolute | MoveType::Force);
+			MoveInstantly(Vector2f(_originPos.X + 10 * cosf(_phase), _originPos.Y + 10 * sinf(_phase)), MoveType::Absolute | MoveType::Force);
 
 			SetFacingLeft(_phase < fPiOver2 || _phase > 3 * fPiOver2);
 		}

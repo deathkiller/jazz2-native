@@ -1,5 +1,7 @@
 #include "MemoryFile.h"
 
+#include <cstring>
+
 namespace nCine
 {
 	///////////////////////////////////////////////////////////

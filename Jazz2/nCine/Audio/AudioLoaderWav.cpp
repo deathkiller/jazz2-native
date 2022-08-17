@@ -1,8 +1,10 @@
 #include "AudioLoaderWav.h"
 #include "AudioReaderWav.h"
 
-namespace nCine {
+#include <cstring>
 
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////

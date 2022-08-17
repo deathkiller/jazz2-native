@@ -46,7 +46,7 @@ namespace Jazz2::Actors::Environment
 			} else {
 				_timer -= timeMult;
 
-				_externalForce.X = std::sinf((100.0f - _timer) / 6.0f) * 4.0f * _direction;
+				_externalForce.X = sinf((100.0f - _timer) / 6.0f) * 4.0f * _direction;
 				_externalForce.Y = _timer * _timer * 0.000046f;
 
 				SetFacingLeft(_speed.X < 0.0f);

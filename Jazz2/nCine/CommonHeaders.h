@@ -43,6 +43,9 @@
 #			include "../../Libs/AL/alext.h"
 #		else
 #			include <AL/al.h>
+#			if !defined(__EMSCRIPTEN__)
+#				include <AL/alext.h>
+#			endif
 #		endif
 #		if !defined(__EMSCRIPTEN__)
 #			define OPENAL_FILTERS_SUPPORTED 1
@@ -72,6 +75,9 @@
 #		else
 #			include <AL/alc.h>
 #			include <AL/al.h>
+#			if !defined(__EMSCRIPTEN__)
+#				include <AL/alext.h>
+#			endif
 #			if defined(__has_include)
 #				if __has_include(<AL/inprogext.h>)
 #					include <AL/inprogext.h>

@@ -98,7 +98,7 @@ namespace Jazz2::Actors::Enemies
 					_speed.Y += _direction.Y * 0.14f * timeMult;
 				}
 			} else if (_state == StateBraking) {
-				float speedMult = std::powf(0.88f, timeMult);
+				float speedMult = powf(0.88f, timeMult);
 				_speed.X *= speedMult;
 				_speed.Y *= speedMult;
 

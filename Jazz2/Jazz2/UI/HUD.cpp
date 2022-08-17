@@ -397,9 +397,9 @@ namespace Jazz2::UI
 
 		float offset;
 		if (_levelTextTime < TransitionTime) {
-			offset = std::powf((TransitionTime - _levelTextTime) / 12.0f, 3);
+			offset = powf((TransitionTime - _levelTextTime) / 12.0f, 3);
 		} else if (_levelTextTime > TransitionTime + StillTime) {
-			offset = -std::powf((_levelTextTime - TransitionTime - StillTime) / 12.0f, 3);
+			offset = -powf((_levelTextTime - TransitionTime - StillTime) / 12.0f, 3);
 		} else {
 			offset = 0;
 		}

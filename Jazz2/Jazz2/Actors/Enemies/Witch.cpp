@@ -212,7 +212,7 @@ namespace Jazz2::Actors::Enemies
 			Vector2f speed = (Vector2f(_speed.X, _speed.Y) + diff * 0.8f).Normalized();
 			_speed.X = speed.X * 5.0f;
 			_speed.Y = speed.Y * 5.0f;
-			_renderer.setRotation(std::atan2f(_speed.Y, _speed.X));
+			_renderer.setRotation(atan2f(_speed.Y, _speed.X));
 		}
 	}
 }

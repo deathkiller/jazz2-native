@@ -52,11 +52,11 @@ namespace Jazz2::Actors::Weapons
 
 		constexpr float baseSpeed = 10.0f;
 		if (isFacingLeft) {
-			_speed.X = std::min(0.0f, speed.X) - std::cosf(angleRel) * baseSpeed;
+			_speed.X = std::min(0.0f, speed.X) - cosf(angleRel) * baseSpeed;
 		} else {
-			_speed.X = std::max(0.0f, speed.X) + std::cosf(angleRel) * baseSpeed;
+			_speed.X = std::max(0.0f, speed.X) + cosf(angleRel) * baseSpeed;
 		}
-		_speed.Y = std::sinf(angleRel) * baseSpeed;
+		_speed.Y = sinf(angleRel) * baseSpeed;
 
 		_elasticity = 0.9f;
 

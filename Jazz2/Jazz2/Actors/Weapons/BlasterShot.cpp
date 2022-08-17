@@ -55,11 +55,11 @@ namespace Jazz2::Actors::Weapons
 
 		constexpr float baseSpeed = 12.0f;
 		if (isFacingLeft) {
-			_speed.X = std::min(0.0f, speed.X) - std::cosf(angleRel) * baseSpeed;
+			_speed.X = std::min(0.0f, speed.X) - cosf(angleRel) * baseSpeed;
 		} else {
-			_speed.X = std::max(0.0f, speed.X) + std::cosf(angleRel) * baseSpeed;
+			_speed.X = std::max(0.0f, speed.X) + cosf(angleRel) * baseSpeed;
 		}
-		_speed.Y = std::sinf(angleRel) * baseSpeed;
+		_speed.Y = sinf(angleRel) * baseSpeed;
 
 		_renderer.setRotation(angle);
 		_renderer.setDrawEnabled(false);
@@ -139,7 +139,7 @@ namespace Jazz2::Actors::Weapons
 	{
 		ShotBase::OnRicochet();
 
-		_renderer.setRotation(std::atan2f(_speed.Y, _speed.X));
+		_renderer.setRotation(atan2f(_speed.Y, _speed.X));
 
 		PlaySfx("Ricochet"_s);
 	}

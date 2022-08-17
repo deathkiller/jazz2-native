@@ -53,7 +53,7 @@ namespace Jazz2
 		virtual const std::shared_ptr<AudioBufferPlayer>& PlaySfx(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain = 1.0f, float pitch = 1.0f) = 0;
 		virtual const std::shared_ptr<AudioBufferPlayer>& PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) = 0;
 		virtual void WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor) = 0;
-		virtual bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, TileCollisionParams& params, __out ActorBase** collider) = 0;
+		virtual bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, TileCollisionParams& params, ActorBase** collider) = 0;
 
 		bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, TileCollisionParams& params)
 		{
@@ -79,9 +79,9 @@ namespace Jazz2
 		virtual void SetWaterLevel(float value) = 0;
 
 		virtual bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads = true) = 0;
-		virtual bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads, __out bool& isGamepad) = 0;
+		virtual bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads, bool& isGamepad) = 0;
 		virtual bool PlayerActionHit(int index, PlayerActions action, bool includeGamepads = true) = 0;
-		virtual bool PlayerActionHit(int index, PlayerActions action, bool includeGamepads, __out bool& isGamepad) = 0;
+		virtual bool PlayerActionHit(int index, PlayerActions action, bool includeGamepads, bool& isGamepad) = 0;
 		virtual float PlayerHorizontalMovement(int index) = 0;
 		virtual float PlayerVerticalMovement(int index) = 0;
 		virtual void PlayerFreezeMovement(int index, bool enable) = 0;

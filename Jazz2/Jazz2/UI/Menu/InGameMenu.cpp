@@ -1,5 +1,5 @@
-﻿#include "MainMenu.h"
-#include "BeginSection.h"
+﻿#include "InGameMenu.h"
+#include "../../LevelHandler.h"
 
 #include "../../../nCine/Application.h"
 #include "../../../nCine/Graphics/RenderQueue.h"
@@ -10,12 +10,10 @@
 
 namespace Jazz2::UI::Menu
 {
-	MainMenu::MainMenu(IRootController* root)
+	InGameMenu::InGameMenu(LevelHandler* root)
 		:
 		_root(root),
 		_logoTransition(0.0f),
-		_texturedBackgroundPass(this),
-		_texturedBackgroundPhase(0.0f),
 		_pressedActions(0),
 		_touchButtonsTimer(0.0f)
 	{
@@ -35,72 +33,47 @@ namespace Jazz2::UI::Menu
 		_smallFont = resolver.GetFont(FontType::Small);
 		_mediumFont = resolver.GetFont(FontType::Medium);
 
-#ifdef WITH_OPENMPT
-		String musicPath = fs::joinPath({ "Content"_s, "Music"_s, Random().NextBool() ? "bonus2.j2b"_s : "bonus3.j2b"_s });
-		if (!fs::isReadableFile(musicPath)) {
-			musicPath = fs::joinPath({ "Content"_s, "Music"_s, "menu.j2b"_s });
-		}
-		if (fs::isReadableFile(musicPath)) {
-			_music = std::make_unique<AudioStreamPlayer>(musicPath);
-			_music->setLooping(true);
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
-			_music->setGain(0.5f);
-#	else
-			_music->setGain(0.3f);
-#	endif
-			_music->setSourceRelative(true);
-			_music->play();
-		}
-#endif
-
-		PrepareTexturedBackground();
-
-		SwitchToSection<BeginSection>();
+		//SwitchToSection<BeginSection>();
 	}
 
-	MainMenu::~MainMenu()
+	InGameMenu::~InGameMenu()
 	{
 		_canvas->setParent(nullptr);
 	}
 
-	void MainMenu::OnBeginFrame()
+	void InGameMenu::MenuCanvas::OnUpdate(float timeMult)
 	{
-		float timeMult = theApplication().timeMult();
-
-		UpdatePressedActions();
+		_owner->UpdatePressedActions();
 
 		// Destroy stopped players
-		for (int i = (int)_playingSounds.size() - 1; i >= 0; i--) {
+		/*for (int i = (int)_playingSounds.size() - 1; i >= 0; i--) {
 			if (_playingSounds[i]->state() == IAudioPlayer::PlayerState::Stopped) {
 				_playingSounds.erase(&_playingSounds[i]);
 			} else {
 				break;
 			}
-		}
+		}*/
 
-		_texturedBackgroundPos.X += timeMult * 1.2f;
-		_texturedBackgroundPos.Y += timeMult * -0.2f + timeMult * sinf(_texturedBackgroundPhase) * 0.6f;
-		_texturedBackgroundPhase += timeMult * 0.001f;
-
-		if (_logoTransition < 1.0f) {
-			_logoTransition += timeMult * 0.04f;
-			if (_logoTransition > 1.0f) {
-				_logoTransition = 1.0f;
+		if (_owner->_logoTransition < 1.0f) {
+			_owner->_logoTransition += timeMult * 0.04f;
+			if (_owner->_logoTransition > 1.0f) {
+				_owner->_logoTransition = 1.0f;
 			}
 		}
-		if (_touchButtonsTimer > 0.0f) {
-			_touchButtonsTimer -= timeMult;
+		if (_owner->_touchButtonsTimer > 0.0f) {
+			_owner->_touchButtonsTimer -= timeMult;
 		}
 
-		if (!_sections.empty()) {
-			auto& lastSection = _sections.back();
+		if (!_owner->_sections.empty()) {
+			auto& lastSection = _owner->_sections.back();
 			lastSection->OnUpdate(timeMult);
 		}
 	}
 
-	void MainMenu::OnInitializeViewport(int width, int height)
+	void InGameMenu::OnInitializeViewport(int width, int height)
 	{
-		constexpr float defaultRatio = (float)DefaultWidth / DefaultHeight;
+		// TODO
+		/*constexpr float defaultRatio = (float)DefaultWidth / DefaultHeight;
 		float currentRatio = (float)width / height;
 
 		int w, h;
@@ -122,10 +95,10 @@ namespace Jazz2::UI::Menu
 
 		_canvas->setParent(_upscalePass.GetNode());
 
-		_texturedBackgroundPass.Initialize();
+		_texturedBackgroundPass.Initialize();*/
 	}
 
-	void MainMenu::OnTouchEvent(const nCine::TouchEvent& event)
+	void InGameMenu::OnTouchEvent(const nCine::TouchEvent& event)
 	{
 		if (!_sections.empty()) {
 			_touchButtonsTimer = 1200.0f;
@@ -135,13 +108,11 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	bool MainMenu::MenuCanvas::OnDraw(RenderQueue& renderQueue)
+	bool InGameMenu::MenuCanvas::OnDraw(RenderQueue& renderQueue)
 	{
 		Canvas::OnDraw(renderQueue);
 
-		ViewSize = _owner->_upscalePass.GetViewSize();
-
-		_owner->RenderTexturedBackground(renderQueue);
+		ViewSize = _owner->_root->_upscalePass.GetViewSize();
 
 		Vector2i center = ViewSize / 2;
 
@@ -197,7 +168,7 @@ namespace Jazz2::UI::Menu
 		return true;
 	}
 
-	void MainMenu::SwitchToSectionPtr(std::unique_ptr<MenuSection> section)
+	void InGameMenu::SwitchToSectionPtr(std::unique_ptr<MenuSection> section)
 	{
 		if (!_sections.empty()) {
 			auto& lastSection = _sections.back();
@@ -208,7 +179,7 @@ namespace Jazz2::UI::Menu
 		currentSection->OnShow(this);
 	}
 
-	void MainMenu::LeaveSection()
+	void InGameMenu::LeaveSection()
 	{
 		if (_sections.empty()) {
 			return;
@@ -222,12 +193,12 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void MainMenu::ChangeLevel(Jazz2::LevelInitialization&& levelInit)
+	void InGameMenu::ChangeLevel(Jazz2::LevelInitialization&& levelInit)
 	{
-		_root->ChangeLevel(std::move(levelInit));
+		_root->_root->ChangeLevel(std::move(levelInit));
 	}
 
-	void MainMenu::DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending)
+	void InGameMenu::DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending)
 	{
 		auto it = _graphics->find(String::nullTerminatedView(name));
 		if (it == _graphics->end()) {
@@ -258,7 +229,7 @@ namespace Jazz2::UI::Menu
 		_canvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending);
 	}
 
-	void MainMenu::DrawStringShadow(const StringView& text, int charOffset, float x, float y, Alignment align, const Colorf& color, float scale,
+	void InGameMenu::DrawStringShadow(const StringView& text, int charOffset, float x, float y, Alignment align, const Colorf& color, float scale,
 		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
 		if (_logoTransition < 1.0f) {
@@ -276,7 +247,7 @@ namespace Jazz2::UI::Menu
 			align, color, scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
 	}
 
-	void MainMenu::PlaySfx(const StringView& identifier, float gain)
+	void InGameMenu::PlaySfx(const StringView& identifier, float gain)
 	{
 		auto it = _sounds->find(String::nullTerminatedView(identifier));
 		if (it != _sounds->end()) {
@@ -292,12 +263,12 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	bool MainMenu::ActionHit(PlayerActions action)
+	bool InGameMenu::ActionHit(PlayerActions action)
 	{
 		return ((_pressedActions & ((1 << (int)action) | (1 << (16 + (int)action)))) == (1 << (int)action));
 	}
 
-	void MainMenu::UpdatePressedActions()
+	void InGameMenu::UpdatePressedActions()
 	{
 		auto& input = theApplication().inputManager();
 		auto& keyState = input.keyboardState();
@@ -360,198 +331,5 @@ namespace Jazz2::UI::Menu
 				_pressedActions |= (1 << (int)PlayerActions::Menu);
 			}
 		}
-	}
-
-	void MainMenu::PrepareTexturedBackground()
-	{
-		_tileSet = ContentResolver::Current().RequestTileSet("easter99"_s, true);
-
-		auto s = IFileStream::createFileHandle(fs::joinPath({ "Content"_s, "Episodes"_s, "secretf"_s, "01_easter1"_s, "Sky.layer"_s }));
-		s->Open(FileAccessMode::Read);
-		if (s->GetSize() < 8) {
-			return;
-		}
-
-		int32_t width = s->ReadValue<int32_t>();
-		int32_t height = s->ReadValue<int32_t>();
-
-		std::unique_ptr<LayerTile[]> layout = std::make_unique<LayerTile[]>(width * height);
-
-		for (int i = 0; i < (width * height); i++) {
-			uint16_t tileType = s->ReadValue<uint16_t>();
-
-			uint8_t flags = s->ReadValue<uint8_t>();
-			bool isFlippedX = (flags & 0x01) != 0;
-			bool isFlippedY = (flags & 0x02) != 0;
-			bool isAnimated = (flags & 0x04) != 0;
-			uint8_t tileModifier = (uint8_t)(flags >> 4);
-
-			LayerTile& tile = layout[i];
-			tile.TileID = tileType;
-
-			tile.IsFlippedX = isFlippedX;
-			tile.IsFlippedY = isFlippedY;
-			tile.IsAnimated = isAnimated;
-
-			if (tileModifier == 1 /*Translucent*/) {
-				tile.Alpha = /*127*/140;
-			} else if (tileModifier == 2 /*Invisible*/) {
-				tile.Alpha = 0;
-			} else {
-				tile.Alpha = 255;
-			}
-		}
-
-		TileMapLayer& newLayer = _texturedBackgroundLayer;
-		newLayer.Visible = true;
-		newLayer.LayoutSize = Vector2i(width, height);
-		newLayer.Layout = std::move(layout);
-	}
-
-	void MainMenu::RenderTexturedBackground(RenderQueue& renderQueue)
-	{
-		auto target = _texturedBackgroundPass._target.get();
-		if (target == nullptr) {
-			return;
-		}
-
-		auto command = &_texturedBackgroundPass._outputRenderCommand;
-
-		auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
-		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(_canvas->ViewSize.X, _canvas->ViewSize.Y);
-		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
-
-		command->material().uniform("ViewSize")->setFloatValue(_canvas->ViewSize.X, _canvas->ViewSize.Y);
-		command->material().uniform("shift")->setFloatVector(_texturedBackgroundPos.Data());
-		// TODO: horizonColor
-		command->material().uniform("horizonColor")->setFloatValue(/*layer.BackgroundColor.X*/0.098f, /*layer.BackgroundColor.Y*/0.35f, /*layer.BackgroundColor.Z*/1.0f);
-		command->material().uniform("parallaxStarsEnabled")->setFloatValue(0.0f);
-
-		Matrix4x4f worldMatrix = Matrix4x4f::Translation(0.0f, 0.0f, 0.0f);
-		command->setTransformation(worldMatrix);
-		command->material().setTexture(*target);
-
-		renderQueue.addCommand(command);
-	}
-
-	void MainMenu::TexturedBackgroundPass::Initialize()
-	{
-		bool notInitialized = (_view == nullptr);
-
-		if (notInitialized) {
-			Vector2i layoutSize = _owner->_texturedBackgroundLayer.LayoutSize;
-			int width = layoutSize.X * TileSet::DefaultTileSize;
-			int height = layoutSize.Y * TileSet::DefaultTileSize;
-
-			_camera = std::make_unique<Camera>();
-			_camera->setOrthoProjection(0, width, 0, height);
-			_camera->setView(0, 0, 0, 1);
-			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
-			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);
-			_view->setRootNode(this);
-			_view->setCamera(_camera.get());
-			_view->setClearMode(Viewport::ClearMode::NEVER);
-			_target->setMagFiltering(SamplerFilter::Linear);
-			_target->setWrap(SamplerWrapping::Repeat);
-
-			// Prepare render commands
-			int renderCommandCount = (width * height) / (TileSet::DefaultTileSize * TileSet::DefaultTileSize);
-			_renderCommands.reserve(renderCommandCount);
-			for (int i = 0; i < renderCommandCount; i++) {
-				std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
-				command->setType(RenderCommand::CommandTypes::SPRITE);
-				command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
-				command->material().reserveUniformsDataMemory();
-				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-
-				GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
-				if (textureUniform && textureUniform->intValue(0) != 0) {
-					textureUniform->setIntValue(0); // GL_TEXTURE0
-				}
-			}
-
-			// Prepare output render command
-			_outputRenderCommand.setType(RenderCommand::CommandTypes::SPRITE);
-			_outputRenderCommand.material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::TexturedBackground));
-			_outputRenderCommand.material().reserveUniformsDataMemory();
-			_outputRenderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-
-			GLUniformCache* textureUniform = _outputRenderCommand.material().uniform(Material::TextureUniformName);
-			if (textureUniform && textureUniform->intValue(0) != 0) {
-				textureUniform->setIntValue(0); // GL_TEXTURE0
-			}
-		}
-
-		Viewport::chain().push_back(_view.get());
-	}
-
-	bool MainMenu::TexturedBackgroundPass::OnDraw(RenderQueue& renderQueue)
-	{
-		TileMapLayer& layer = _owner->_texturedBackgroundLayer;
-		Vector2i layoutSize = layer.LayoutSize;
-		Vector2i targetSize = _target->size();
-
-		int renderCommandIndex = 0;
-		bool isAnimated = false;
-
-		for (int y = 0; y < layoutSize.Y; y++) {
-			for (int x = 0; x < layoutSize.X; x++) {
-				LayerTile& tile = layer.Layout[y * layer.LayoutSize.X + x];
-
-				int tileId = tile.TileID;
-				bool isFlippedX = tile.IsFlippedX;
-				bool isFlippedY = tile.IsFlippedY;
-
-				auto command = _renderCommands[renderCommandIndex++].get();
-
-				Vector2i texSize = _owner->_tileSet->TextureDiffuse->size();
-				float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
-				float texBiasX = (tileId % _owner->_tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.X);
-				float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
-				float texBiasY = (tileId / _owner->_tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
-
-				// ToDo: Flip normal map somehow
-				if (isFlippedX) {
-					texBiasX += texScaleX;
-					texScaleX *= -1;
-				}
-				if (isFlippedY) {
-					texBiasY += texScaleY;
-					texScaleY *= -1;
-				}
-
-				if ((targetSize.X & 1) == 1) {
-					texBiasX += 0.5f / float(texSize.X);
-				}
-				if ((targetSize.Y & 1) == 1) {
-					texBiasY -= 0.5f / float(texSize.Y);
-				}
-
-				auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
-				instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
-				instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
-
-				command->setTransformation(Matrix4x4f::Translation(std::floor(x * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2)), std::floor(y * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2)), 0.0f));
-				command->material().setTexture(*_owner->_tileSet->TextureDiffuse);
-
-				renderQueue.addCommand(command);
-			}
-		}
-
-		if (!isAnimated && _alreadyRendered) {
-			// If it's not animated, it can be rendered only once
-			for (int i = Viewport::chain().size() - 1; i >= 0; i--) {
-				auto& item = Viewport::chain()[i];
-				if (item == _view.get()) {
-					Viewport::chain().erase(&item);
-					break;
-				}
-			}
-		}
-
-		_alreadyRendered = true;
-		return true;
 	}
 }

@@ -1030,7 +1030,7 @@ namespace Jazz2::Tiles
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
 		command->material().uniform("ViewSize")->setFloatValue(viewSize.X, viewSize.Y);
-		command->material().uniform("CameraPosition")->setFloatValue(viewCenter.X, viewCenter.Y);
+		command->material().uniform("CameraPosition")->setFloatVector(viewCenter.Data());
 		command->material().uniform("shift")->setFloatValue(x, y);
 		command->material().uniform("horizonColor")->setFloatValue(layer.BackgroundColor.X, layer.BackgroundColor.Y, layer.BackgroundColor.Z);
 		command->material().uniform("parallaxStarsEnabled")->setFloatValue(layer.ParallaxStarsEnabled ? 1.0f : 0.0f);
@@ -1163,10 +1163,9 @@ namespace Jazz2::Tiles
 				auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 				instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
-				instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+				instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 
-				Matrix4x4f worldMatrix = Matrix4x4f::Translation(std::floor(x * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2)), std::floor(y * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2)), 0.0f);
-				command->setTransformation(worldMatrix);
+				command->setTransformation(Matrix4x4f::Translation(std::floor(x * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2)), std::floor(y * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2)), 0.0f));
 				command->material().setTexture(*_owner->_tileSet->TextureDiffuse);
 
 				renderQueue.addCommand(command);
@@ -1175,13 +1174,12 @@ namespace Jazz2::Tiles
 
 		if (!isAnimated && _alreadyRendered) {
 			// If it's not animated, it can be rendered only once
-			auto it = Viewport::chain().begin();
-			while (it != Viewport::chain().end()) {
-				if (*it == _view.get()) {
-					Viewport::chain().erase(it);
+			for (int i = Viewport::chain().size() - 1; i >= 0; i--) {
+				auto& item = Viewport::chain()[i];
+				if (item == _view.get()) {
+					Viewport::chain().erase(&item);
 					break;
 				}
-				++it;
 			}
 		}
 

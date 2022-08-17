@@ -211,7 +211,7 @@ namespace nCine
 
 			GLUniformBlockCache* batchBlock = batchCommand->material().uniformBlock(uniformBlockName);
 			const bool dataCopied = batchBlock->copyData(uniformBlockCache.dataPointer());
-			ASSERT(dataCopied);
+			//ASSERT(dataCopied);
 			batchBlock->setUsedSize(uniformBlockCache.usedSize());
 		}
 
@@ -297,7 +297,7 @@ namespace nCine
 
 			const GLUniformBlockCache* singleInstanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 			const bool dataCopied = instancesBlock->copyData(instancesBlockOffset, singleInstanceBlock->dataPointer(), singleInstanceBlockSize);
-			ASSERT(dataCopied);
+			//ASSERT(dataCopied);
 			instancesBlockOffset += singleInstanceBlockSize;
 
 			if (batchedShaderHasAttributes) {

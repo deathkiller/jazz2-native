@@ -348,8 +348,8 @@ elseif(MSVC)
 	endif()
 	
 	if(EXISTS ${MSVC_LIBDIR}/libdeflate.lib AND EXISTS ${MSVC_BINDIR}/libdeflate.dll)
-		add_library(libdeflate SHARED IMPORTED)
-		set_target_properties(libdeflate PROPERTIES
+		add_library(libdeflate::libdeflate SHARED IMPORTED)
+		set_target_properties(libdeflate::libdeflate PROPERTIES
 			IMPORTED_IMPLIB ${MSVC_LIBDIR}/libdeflate.lib
 			IMPORTED_LOCATION ${MSVC_BINDIR}/libdeflate.dll
 			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_MSVC_DIR}")
@@ -510,6 +510,10 @@ else() # GCC and LLVM
 			IMPORTED_LOCATION ${LUA_LIBRARY}
 			INTERFACE_INCLUDE_DIRECTORIES ${LUA_INCLUDE_DIR})
 	endif()
+	
+	# TODO: added by me
+	find_package(ZLIB)
+	set(ZLIB_FOUND 1)
 
 	if(APPLE)
 		function(split_extra_frameworks PREFIX LIBRARIES)

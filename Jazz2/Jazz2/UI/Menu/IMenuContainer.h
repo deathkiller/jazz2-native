@@ -37,7 +37,7 @@ namespace Jazz2::UI::Menu
 		static float EaseOutElastic(float t)
 		{
 			constexpr float p = 0.3f;
-			return std::powf(2.0f, -10.0f * t) * std::sinf((t - p / 4.0f) * (2.0f * fPi) / p) + 1.0f;
+			return powf(2.0f, -10.0f * t) * sinf((t - p / 4.0f) * (2.0f * fPi) / p) + 1.0f;
 		}
 
 		static float EaseOutCubic(float t)

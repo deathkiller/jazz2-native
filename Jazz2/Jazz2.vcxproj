@@ -274,6 +274,7 @@
     <ClInclude Include="Jazz2\UI\Menu\AboutSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\BeginSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\IMenuContainer.h" />
+    <ClInclude Include="Jazz2\UI\Menu\InGameMenu.h" />
     <ClInclude Include="Jazz2\UI\Menu\MainMenu.h" />
     <ClInclude Include="Jazz2\UI\Menu\MenuSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\StartGameOptionsSection.h" />
@@ -519,6 +520,7 @@
     <ClCompile Include="Jazz2\UI\HUD.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\AboutSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\BeginSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\InGameMenu.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\MainMenu.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\StartGameOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\RgbLights.cpp" />

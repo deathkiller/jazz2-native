@@ -141,6 +141,12 @@ else() # GCC and LLVM
 		endif()
 	endif()
 
+	# TODO: added by me
+	if(ZLIB_FOUND)
+		target_link_libraries(ncine PUBLIC ZLIB::ZLIB)
+		target_compile_definitions(ncine PUBLIC "__USE_ZLIB")
+	endif()
+
 	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 		target_compile_options(ncine PRIVATE -fdiagnostics-color=auto)
 		target_compile_options(ncine PRIVATE -Wall -pedantic -Wextra -Wold-style-cast -Wno-long-long -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-variadic-macros)

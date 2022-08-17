@@ -230,8 +230,8 @@ namespace Jazz2::UI
 							currentPhase = -currentPhase;
 						}
 
-						pos.X += std::cosf(currentPhase) * varianceX * scale;
-						pos.Y -= std::sinf(currentPhase) * varianceY * scale;
+						pos.X += cosf(currentPhase) * varianceX * scale;
+						pos.Y -= sinf(currentPhase) * varianceY * scale;
 					}
 
 					pos.X = std::round(pos.X + uvRect.W * scale * 0.5f);

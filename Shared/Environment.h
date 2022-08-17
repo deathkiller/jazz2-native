@@ -19,7 +19,7 @@ namespace Death
         return WindowsVersion >= 0x0a0000000055f0; // 10.0.22000
     }
 
-    bool GetProcessPath(HANDLE hProcess, __out wchar_t* szFilename, DWORD dwSize);
+    bool GetProcessPath(HANDLE hProcess, wchar_t* szFilename, DWORD dwSize);
 
     inline uint64_t QueryUnbiasedInterruptTime()
     {

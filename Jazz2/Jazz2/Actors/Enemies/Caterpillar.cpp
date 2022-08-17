@@ -138,8 +138,8 @@ namespace Jazz2::Actors::Enemies
 
 	void Caterpillar::Smoke::OnUpdate(float timeMult)
 	{
-		_speed.X = _baseSpeed.X + std::cosf((500.0f - _time) * 0.09f) * 0.5f;
-		_speed.Y = _baseSpeed.Y + std::sinf((500.0f - _time) * 0.05f) * 0.5f;
+		_speed.X = _baseSpeed.X + cosf((500.0f - _time) * 0.09f) * 0.5f;
+		_speed.Y = _baseSpeed.Y + sinf((500.0f - _time) * 0.05f) * 0.5f;
 
 		MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative | MoveType::Force);
 		_renderer.setScale(_renderer.scale() - 0.0011f * timeMult);

@@ -63,7 +63,7 @@ namespace Jazz2::Actors::Collectibles
 		if (_untouched) {
 			_phase += timeMult * 0.15f;
 
-			float waveOffset = 3.2f * std::cosf((_phase * 0.25f) * fPi) + 0.6f;
+			float waveOffset = 3.2f * cosf((_phase * 0.25f) * fPi) + 0.6f;
 			MoveInstantly(Vector2f(_pos.X, _startingY + waveOffset), MoveType::Absolute);
 		} else if (_timeLeft > 0.0f) {
 			_timeLeft -= timeMult;
@@ -82,8 +82,8 @@ namespace Jazz2::Actors::Collectibles
 	{
 		for (auto& current : _illuminateLights) {
 			auto& light = lights.emplace_back();
-			light.Pos = Vector2f(_pos.X + std::cosf(current.Phase + std::cosf(current.Phase * 0.33f) * 0.33f) * current.Distance,
-				_pos.Y + std::sinf(current.Phase + std::sinf(current.Phase) * 0.33f) * current.Distance);
+			light.Pos = Vector2f(_pos.X + cosf(current.Phase + cosf(current.Phase * 0.33f) * 0.33f) * current.Distance,
+				_pos.Y + sinf(current.Phase + sinf(current.Phase) * 0.33f) * current.Distance);
 			light.Intensity = current.Intensity * 0.7f;
 			light.Brightness = current.Intensity;
 			light.RadiusNear = 0.0f;

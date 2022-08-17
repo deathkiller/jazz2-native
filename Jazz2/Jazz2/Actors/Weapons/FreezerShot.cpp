@@ -54,11 +54,11 @@ namespace Jazz2::Actors::Weapons
 
 		float baseSpeed = ((_upgrades & 0x01) != 0 ? 8.0f : 6.0f);
 		if (isFacingLeft) {
-			_speed.X = std::min(0.0f, speed.X) - std::cosf(angleRel) * baseSpeed;
+			_speed.X = std::min(0.0f, speed.X) - cosf(angleRel) * baseSpeed;
 		} else {
-			_speed.X = std::max(0.0f, speed.X) + std::cosf(angleRel) * baseSpeed;
+			_speed.X = std::max(0.0f, speed.X) + cosf(angleRel) * baseSpeed;
 		}
-		_speed.Y = std::sinf(angleRel) * baseSpeed;
+		_speed.Y = sinf(angleRel) * baseSpeed;
 
 		_renderer.setRotation(angle);
 		_renderer.setDrawEnabled(false);

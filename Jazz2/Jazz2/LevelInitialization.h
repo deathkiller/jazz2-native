@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include <cstring>
+
 #include <Containers/String.h>
 
 using namespace Death::Containers;

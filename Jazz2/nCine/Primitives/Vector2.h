@@ -268,7 +268,7 @@ namespace nCine
 	template <class T>
 	inline T Vector2<T>::Length() const
 	{
-		return std::sqrt(X * X + Y * Y);
+		return sqrt(X * X + Y * Y);
 	}
 
 	template <class T>

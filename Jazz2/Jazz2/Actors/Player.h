@@ -175,7 +175,7 @@ namespace Jazz2::Actors
 		void CheckEndOfSpecialMoves(float timeMult);
 		void CheckSuspendedStatus();
 		void OnHandleWater();
-		void OnHandleAreaEvents(float timeMult, __out bool& areaWeaponAllowed, __out int& areaWaterBlock);
+		void OnHandleAreaEvents(float timeMult, bool& areaWeaponAllowed, int& areaWaterBlock);
 
 		const std::shared_ptr<AudioBufferPlayer>& PlayPlayerSfx(const StringView& identifier, float gain = 1.0f, float pitch = 1.0f);
 		bool SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, const std::function<void()>& callback = nullptr);
