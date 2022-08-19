@@ -161,17 +161,19 @@ namespace Jazz2
 		_ambientLightTarget = ambientLight;
 
 #ifdef WITH_OPENMPT
-		if (!musicPath.empty() && fs::isReadableFile(musicPath)) {
-			_musicPath = musicPath;
-			_music = std::make_unique<AudioStreamPlayer>(musicPath);
-			_music->setLooping(true);
+		if (!musicPath.empty()) {
+			_music = ContentResolver::Current().GetMusic(musicPath);
+			if (_music != nullptr) {
+				_musicPath = musicPath;
+				_music->setLooping(true);
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
-			_music->setGain(0.5f);
+				_music->setGain(0.5f);
 #	else
-			_music->setGain(0.3f);
+				_music->setGain(0.3f);
 #	endif
-			_music->setSourceRelative(true);
-			_music->play();
+				_music->setSourceRelative(true);
+				_music->play();
+			}
 		}
 #endif
 

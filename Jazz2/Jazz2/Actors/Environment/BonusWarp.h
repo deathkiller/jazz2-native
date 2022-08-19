@@ -27,7 +27,7 @@ namespace Jazz2::Actors::Environment
 		void OnUpdateHitbox() override;
 
 	private:
-		uint16_t _warpTarget, _cost;
+		uint8_t _warpTarget, _cost;
 		bool _setLaps;
 		bool _fast;
 	};

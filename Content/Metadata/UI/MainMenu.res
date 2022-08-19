@@ -5,7 +5,7 @@
 
     "Animations": {
         "MenuCarrot": {
-            "Path": "Pickup/carrot_invincibility.png",
+            "Path": "Pickup/carrot_invincibility.aura",
             "FrameRate": 7
         },
         "MenuLine": {
@@ -25,13 +25,13 @@
             "Path": "_custom/episode_complete.png"
         },
         "MenuDifficultyJazz": {
-            "Path": "UI/character_art_difficulty_jazz.png"
+            "Path": "UI/character_art_difficulty_jazz.aura"
         },
         "MenuDifficultySpaz": {
-            "Path": "UI/character_art_difficulty_spaz.png"
+            "Path": "UI/character_art_difficulty_spaz.aura"
         },
         "MenuDifficultyLori": {
-            "Path": "UI/character_art_difficulty_lori.png"
+            "Path": "UI/character_art_difficulty_lori.aura"
         },
         
         "GamepadA": {

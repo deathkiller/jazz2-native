@@ -146,7 +146,7 @@ namespace Jazz2::Tiles
 		bool IsTileEmpty(const AABBf& aabb, TileCollisionParams& params);
 		SuspendType GetTileSuspendState(float x, float y);
 
-		void ReadLayerConfiguration(LayerType type, const std::unique_ptr<IFileStream>& s, const LayerDescription& layer);
+		void ReadLayerConfiguration(const std::unique_ptr<IFileStream>& s);
 		void ReadAnimatedTiles(const std::unique_ptr<IFileStream>& s);
 		void SetTileEventFlags(int x, int y, EventType tileEvent, uint8_t* tileParams);
 

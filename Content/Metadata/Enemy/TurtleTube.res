@@ -5,7 +5,7 @@
 
     "Animations": {
         "Idle": {
-            "Path": "TurtleTube/Idle.png",
+            "Path": "TurtleTube/Idle.aura",
             "FrameRate": 7,
             "States": [ 0 ]
         }

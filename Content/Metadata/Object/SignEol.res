@@ -5,7 +5,7 @@
 
     "Animations": {
         "SignEol": {
-            "Path": "Object/ExitSign.png"
+            "Path": "Object/ExitSign.aura"
         }
     }
 }

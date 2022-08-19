@@ -7,7 +7,7 @@
 
     "Animations": {
         "Crate": {
-            "Path": "Object/TriggerCrate.png"
+            "Path": "Object/TriggerCrate.aura"
         }
     },
 

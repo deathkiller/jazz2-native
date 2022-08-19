@@ -5,7 +5,7 @@
 
     "Animations": {
         "Carrot": {
-            "Path": "Pickup/carrot_fly.png",
+            "Path": "Pickup/carrot_fly.aura",
             "Shader": "SmoothAnimNormal"
         }
     }

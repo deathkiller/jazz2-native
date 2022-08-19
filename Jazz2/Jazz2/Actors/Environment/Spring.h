@@ -24,8 +24,8 @@ namespace Jazz2::Actors::Environment
 		void OnUpdateHitbox() override;
 
 	private:
-		uint16_t _type;
-		uint16_t _orientation;
+		uint8_t _type;
+		uint8_t _orientation;
 		float _strength;
 		//uint16_t delay;
 		//bool frozen;

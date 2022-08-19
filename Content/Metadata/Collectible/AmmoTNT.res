@@ -5,7 +5,7 @@
 
     "Animations": {
         "Ammo": {
-            "Path": "Object/tnt.png",
+            "Path": "Object/tnt.aura",
             "Shader": "SmoothAnimNormal"
         }
     }

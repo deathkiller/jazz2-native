@@ -5,11 +5,11 @@
 
     "Animations": {
         "TNT": {
-            "Path": "Weapon/bullet_tnt.png",
+            "Path": "Weapon/bullet_tnt.aura",
             "States": [ 0 ]
         },
         "Explosion": {
-            "Path": "Weapon/bullet_tnt_explosion.png",
+            "Path": "Weapon/bullet_tnt_explosion.aura",
             "States": [ 1325400064 ]
         }
     },

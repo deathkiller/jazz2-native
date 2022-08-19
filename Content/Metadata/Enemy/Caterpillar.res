@@ -5,37 +5,37 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Caterpillar/idle.png",
+            "Path": "Caterpillar/idle.aura",
             "States": [ 0 ]
         },
         "InhaleStart": {
-            "Path": "Caterpillar/inhale_start.png",
+            "Path": "Caterpillar/inhale_start.aura",
             "States": [ 1 ]
         },
         "Inhale": {
-            "Path": "Caterpillar/inhale.png",
+            "Path": "Caterpillar/inhale.aura",
             "States": [ 2 ]
         },
         "ExhaleStart": {
-            "Path": "Caterpillar/exhale_start.png",
+            "Path": "Caterpillar/exhale_start.aura",
             "States": [ 3 ]
         },
         "Exhale": {
-            "Path": "Caterpillar/exhale.png",
+            "Path": "Caterpillar/exhale.aura",
             "States": [ 4 ]
         },
         "ExhaleEnd": {
-            "Path": "Caterpillar/exhale.png",
+            "Path": "Caterpillar/exhale.aura",
             "FrameOffset": 2,
             "States": [ 5 ]
         },
         "Disoriented": {
-            "Path": "Caterpillar/disoriented.png",
+            "Path": "Caterpillar/disoriented.aura",
             "States": [ 6 ]
         },
 
         "Smoke": {
-            "Path": "Caterpillar/smoke.png",
+            "Path": "Caterpillar/smoke.aura",
             "FrameRate": 5
         }
     },

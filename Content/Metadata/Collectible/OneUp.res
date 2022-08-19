@@ -5,7 +5,7 @@
 
     "Animations": {
         "OneUp": {
-            "Path": "Pickup/1up.png"
+            "Path": "Pickup/1up.aura"
         }
     }
 }

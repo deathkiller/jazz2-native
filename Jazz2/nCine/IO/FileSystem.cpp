@@ -6,7 +6,7 @@
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <fileapi.h>
 #	include <Shlobj.h>
-#	include <Timezoneapi.h>
+#	include <timezoneapi.h>
 #else
 #	include <cerrno>
 #	include <cstdio>
@@ -18,6 +18,7 @@
 #	include <pwd.h>
 #	include <dirent.h>
 #	include <fcntl.h>
+#	include <time.h>
 #
 #	if defined(__linux__)
 #		include <sys/sendfile.h>
@@ -89,31 +90,31 @@ namespace nCine
 
 		FileSystem::FileDate nativeTimeToFileDate(const time_t* timer)
 		{
-			FileSystem::FileDate date = {};
+			FileSystem::FileDate date = { };
 
 			struct tm* local = localtime(timer);
-			date.year = local->tm_year + 1900;
-			date.month = local->tm_mon + 1;
-			date.day = local->tm_mday;
-			date.weekDay = local->tm_wday;
-			date.hour = local->tm_hour;
-			date.minute = local->tm_min;
-			date.second = local->tm_sec;
+			date.Year = local->tm_year + 1900;
+			date.Month = local->tm_mon + 1;
+			date.Day = local->tm_mday;
+			date.Hour = local->tm_hour;
+			date.Minute = local->tm_min;
+			date.Second = local->tm_sec;
+			date.Ticks = *(int64_t*)timer;
 
 			return date;
 		}
 #else
-		FileSystem::FileDate nativeTimeToFileDate(const SYSTEMTIME* sysTime)
+		FileSystem::FileDate nativeTimeToFileDate(const SYSTEMTIME* sysTime, int64_t ticks)
 		{
-			FileSystem::FileDate date = {};
+			FileSystem::FileDate date = { };
 
-			date.year = sysTime->wYear;
-			date.month = sysTime->wMonth;
-			date.day = sysTime->wDay;
-			date.weekDay = sysTime->wDayOfWeek;
-			date.hour = sysTime->wHour;
-			date.minute = sysTime->wMinute;
-			date.second = sysTime->wSecond;
+			date.Year = sysTime->wYear;
+			date.Month = sysTime->wMonth;
+			date.Day = sysTime->wDay;
+			date.Hour = sysTime->wHour;
+			date.Minute = sysTime->wMinute;
+			date.Second = sysTime->wSecond;
+			date.Ticks = ticks;
 
 			return date;
 		}
@@ -147,23 +148,40 @@ namespace nCine
 		close();
 
 #ifdef DEATH_TARGET_WINDOWS
-		fileName_[0] = '\0';
-		if (path && isDirectory(path)) {
-			WIN32_FIND_DATA findFileData;
+		path_[0] = '\0';
+		if (!path.empty() && isDirectory(path)) {
 			firstFile_ = true;
 
-			Array<wchar_t> buffer = Utf8::ToUtf16(path);
+			String absPath = GetAbsolutePath(path);
+			memcpy(path_, absPath.data(), absPath.size());
+			if (path_[absPath.size() - 1] == '\\') {
+				path_[absPath.size()] = '\0';
+				fileNamePart_ = path_ + absPath.size();
+			} else {
+				path_[absPath.size()] = '\\';
+				path_[absPath.size() + 1] = '\0';
+				fileNamePart_ = path_ + absPath.size() + 1;
+			}
+
+			Array<wchar_t> buffer = Utf8::ToUtf16(absPath);
 			if (buffer.size() + 2 <= MaxPathLength) {
-				auto bufferExtended = Array<wchar_t>(buffer, buffer.size() + 2);
+				auto bufferExtended = Array<wchar_t>(NoInit, buffer.size() + 3);
+				memcpy(bufferExtended.data(), buffer.data(), buffer.size() * sizeof(wchar_t));
 
 				// Adding a wildcard to list all files in the directory
-				buffer[buffer.size() - 1] = L'\\';
-				buffer[buffer.size()] = L'*';
-				buffer[buffer.size() + 1] = L'\0';
+				bufferExtended[buffer.size()] = L'\\';
+				bufferExtended[buffer.size() + 1] = L'*';
+				bufferExtended[buffer.size() + 2] = L'\0';
 
-				hFindFile_ = ::FindFirstFile(buffer, &findFileData);
+				WIN32_FIND_DATA findFileData;
+				hFindFile_ = ::FindFirstFile(bufferExtended, &findFileData);
 				if (hFindFile_) {
-					strncpy_s(fileName_, Utf8::FromUtf16(findFileData.cFileName).data(), MaxPathLength - 1);
+					if ((findFileData.cFileName[0] == L'.' && findFileData.cFileName[1] == L'\0') ||
+						(findFileData.cFileName[0] == L'.' && findFileData.cFileName[1] == L'.' && findFileData.cFileName[2] == L'\0')) {
+						firstFile_ = false;
+					} else {
+						strncpy_s(fileNamePart_, sizeof(path_) - (fileNamePart_ - path_), Utf8::FromUtf16(findFileData.cFileName).data(), MaxPathLength - 1);
+					}
 				}
 			}
 		}
@@ -211,13 +229,18 @@ namespace nCine
 
 		if (firstFile_) {
 			firstFile_ = false;
-			return fileName_;
+			return path_;
 		} else {
+		Retry:
 			WIN32_FIND_DATA findFileData;
-			const int status = ::FindNextFile(hFindFile_, &findFileData);
-			if (status != 0) {
-				strncpy_s(fileName_, Utf8::FromUtf16(findFileData.cFileName).data(), MaxPathLength);
-				return fileName_;
+			if (::FindNextFile(hFindFile_, &findFileData)) {
+				if ((findFileData.cFileName[0] == L'.' && findFileData.cFileName[1] == L'\0') ||
+					(findFileData.cFileName[0] == L'.' && findFileData.cFileName[1] == L'.' && findFileData.cFileName[2] == L'\0')) {
+					goto Retry;
+				} else {
+					strncpy_s(fileNamePart_, sizeof(path_) - (fileNamePart_ - path_), Utf8::FromUtf16(findFileData.cFileName).data(), MaxPathLength - 1);
+				}
+				return path_;
 			}
 			return nullptr;
 		}
@@ -277,7 +300,7 @@ namespace nCine
 
 	String FileSystem::joinPath(const ArrayView<const StringView> paths)
 	{
-		if (paths.empty()) return {};
+		if (paths.empty()) return { };
 
 		// TODO: Optimize this
 		Containers::String path = paths.front();
@@ -306,9 +329,9 @@ namespace nCine
 		return buffer;
 	}
 
-	String FileSystem::dirName(const StringView& path)
+	String FileSystem::GetDirectoryName(const StringView& path)
 	{
-		if (path.empty()) return {};
+		if (path.empty()) return { };
 
 #ifdef DEATH_TARGET_WINDOWS
 		static char drive[_MAX_DRIVE];
@@ -332,9 +355,9 @@ namespace nCine
 #endif
 	}
 
-	String FileSystem::baseName(const StringView& path)
+	String FileSystem::GetFileName(const StringView& path)
 	{
-		if (path.empty()) return {};
+		if (path.empty()) return { };
 
 #ifdef DEATH_TARGET_WINDOWS
 		static char fname[_MAX_FNAME];
@@ -351,9 +374,35 @@ namespace nCine
 #endif
 	}
 
-	String FileSystem::absolutePath(const StringView& path)
+	String FileSystem::GetFileNameWithoutExtension(const StringView& path)
 	{
-		if (path.empty()) return {};
+		if (path.empty()) return { };
+
+#ifdef DEATH_TARGET_WINDOWS
+		static char fname[_MAX_FNAME];
+
+		_splitpath_s(String::nullTerminatedView(path).data(), nullptr, 0, nullptr, 0, fname, _MAX_FNAME, nullptr, 0);
+
+		return fname;
+#else
+		strncpy(buffer, path.data(), std::min((size_t)MaxPathLength - 1, path.size()));
+		char* result = ::basename(buffer);
+		if (result == nullptr) {
+			return { };
+		}
+
+		char* lastDot = strrchr(result, '.');
+		if (result < lastDot) {
+			*lastDot = '\0';
+		}
+
+		return result;
+#endif
+	}
+
+	String FileSystem::GetAbsolutePath(const StringView& path)
+	{
+		if (path.empty()) return { };
 
 #ifdef DEATH_TARGET_WINDOWS
 		const char* resolvedPath = _fullpath(buffer, String::nullTerminatedView(path).data(), MaxPathLength);
@@ -368,22 +417,21 @@ namespace nCine
 
 	StringView FileSystem::extension(const StringView& path)
 	{
-		if (path.empty()) return nullptr;
+		if (path.empty()) return { };
 
 		const StringView filename = path.suffix(path.findLastAnyOr("/\\"_s, path.begin()).end());
 		const StringView foundDot = path.findLastOr('.', path.end());
+		if (foundDot == path.end()) return { };
 
-		if (foundDot) {
-			bool initialDots = true;
-			for (char i : filename.prefix(foundDot.begin())) {
-				if (i != '.') {
-					initialDots = false;
-					break;
-				}
+		bool initialDots = true;
+		for (char i : filename.prefix(foundDot.begin())) {
+			if (i != '.') {
+				initialDots = false;
+				break;
 			}
-			if (initialDots) {
-				return path.suffix(filename.end());
-			}
+		}
+		if (initialDots) {
+			return path.suffix(filename.end());
 		}
 
 		return path.suffix(foundDot.begin() + 1);
@@ -394,7 +442,7 @@ namespace nCine
 		if (path.empty() || extension.empty()) return false;
 
 		const StringView pathExtension = FileSystem::extension(path);
-		if (pathExtension != nullptr) {
+		if (!pathExtension.empty()) {
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
 			return (_stricmp(String::nullTerminatedView(pathExtension).data(), String::nullTerminatedView(extension).data()) == 0);
 #else
@@ -721,12 +769,45 @@ namespace nCine
 
 	bool FileSystem::createDir(const StringView& path)
 	{
-		if (path == nullptr)
+		if (path.empty())
 			return false;
 
+		if (isDirectory(path))
+			return true;
+
 #ifdef DEATH_TARGET_WINDOWS
-		const int status = ::CreateDirectory(Utf8::ToUtf16(path), NULL);
-		return (status != 0);
+		Array<wchar_t> fullPath = Utf8::ToUtf16(GetAbsolutePath(path));
+		bool slashWasLast = true;
+		for (int i = 4; i < fullPath.size(); i++) {
+			if (fullPath[i] == L'\0') {
+				break;
+			}
+
+			if (fullPath[i] == L'/' || fullPath[i] == L'\\') {
+				wchar_t prevChar = fullPath[i];
+				fullPath[i] = L'\0';
+				if (!::CreateDirectory(fullPath, NULL)) {
+					DWORD err = GetLastError();
+					if (err != ERROR_ALREADY_EXISTS) {
+						return false;
+					}
+				}
+				fullPath[i] = prevChar;
+				slashWasLast = true;
+			} else {
+				slashWasLast = false;
+			}
+		}
+
+		if (!slashWasLast) {
+			if (!::CreateDirectory(fullPath, NULL)) {
+				DWORD err = GetLastError();
+				if (err != ERROR_ALREADY_EXISTS) {
+					return false;
+				}
+			}
+		}
+		return true;
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #ifdef DEATH_TARGET_ANDROID
@@ -896,13 +977,10 @@ namespace nCine
 #ifdef DEATH_TARGET_WINDOWS
 		HANDLE hFile = ::CreateFile(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 		FILETIME fileTime;
-		const int status = GetFileTime(hFile, nullptr, nullptr, &fileTime);
-		if (status != 0) {
-			FILETIME localTime;
+		if (GetFileTime(hFile, nullptr, nullptr, &fileTime)) {
 			SYSTEMTIME sysTime;
-			FileTimeToLocalFileTime(&fileTime, &localTime);
-			FileTimeToSystemTime(&localTime, &sysTime);
-			date = nativeTimeToFileDate(&sysTime);
+			FileTimeToSystemTime(&fileTime, &sysTime);
+			date = nativeTimeToFileDate(&sysTime, *(int64_t*)&fileTime);
 		}
 		const int closed = CloseHandle(hFile);
 #else
@@ -927,13 +1005,10 @@ namespace nCine
 #ifdef DEATH_TARGET_WINDOWS
 		HANDLE hFile = ::CreateFile(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 		FILETIME fileTime;
-		const int status = GetFileTime(hFile, nullptr, &fileTime, nullptr);
-		if (status != 0) {
-			FILETIME localTime;
+		if (GetFileTime(hFile, nullptr, &fileTime, nullptr)) {
 			SYSTEMTIME sysTime;
-			FileTimeToLocalFileTime(&fileTime, &localTime);
-			FileTimeToSystemTime(&localTime, &sysTime);
-			date = nativeTimeToFileDate(&sysTime);
+			FileTimeToSystemTime(&fileTime, &sysTime);
+			date = nativeTimeToFileDate(&sysTime, *(int64_t*)&fileTime);
 		}
 		const int closed = CloseHandle(hFile);
 #else

@@ -31,8 +31,8 @@ namespace Jazz2::Actors::Solid
 	Task<bool> Pole::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		uint8_t theme = details.Params[0];
-		int16_t x = *(int16_t*)&details.Params[2];
-		int16_t y = *(int16_t*)&details.Params[4];
+		int16_t x = *(int16_t*)&details.Params[1];
+		int16_t y = *(int16_t*)&details.Params[3];
 
 		_pos.X += x;
 		_pos.Y += y;

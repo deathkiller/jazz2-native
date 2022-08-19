@@ -5,12 +5,12 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Birdy/caged.png",
+            "Path": "Birdy/caged.aura",
             "FrameRate": 1,
             "States": [ 0 ]
         },
         "Activated": {
-            "Path": "Birdy/cage_destroyed.png",
+            "Path": "Birdy/cage_destroyed.aura",
             "States": [ 32 ]
         }
     }

@@ -5,12 +5,12 @@
 
     "Animations": {
         "Bullet": {
-            "Path": "Weapon/bullet_blaster.png",
+            "Path": "Weapon/bullet_blaster.aura",
             "States": [ 0 ],
             "Shader": "BasicNormalAdd"
         },
         "BulletUpgraded": {
-            "Path": "Weapon/bullet_blaster_upgraded.png",
+            "Path": "Weapon/bullet_blaster_upgraded.aura",
             "States": [ 1 ],
             "Shader": "BasicNormalAdd"
         }

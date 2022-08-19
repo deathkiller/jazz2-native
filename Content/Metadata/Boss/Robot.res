@@ -5,66 +5,66 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Robot/idle.png",
+            "Path": "Robot/idle.aura",
             "States": [ 0 ]
         },
         "Run": {
-            "Path": "Robot/run.png",
+            "Path": "Robot/run.aura",
             "States": [ 2 ]
         },
         "AttackStart": {
-            "Path": "Robot/attack_start.png",
+            "Path": "Robot/attack_start.aura",
             "States": [ 1073741824 ]
         },
         "Attack": {
-            "Path": "Robot/attack.png",
+            "Path": "Robot/attack.aura",
             "States": [ 1073741825 ],
             "FrameRate": 12
         },
         "AttackEnd": {
-            "Path": "Robot/attack_end.png",
+            "Path": "Robot/attack_end.aura",
             "States": [ 1073741826 ]
         },
         "Copter": {
-            "Path": "Robot/copter.png",
+            "Path": "Robot/copter.aura",
             "States": [ 1073741828 ]
         },
         "CopterEnd": {
-            "Path": "Robot/copter_end.png",
+            "Path": "Robot/copter_end.aura",
             "States": [ 1073741829 ]
         },
         
         "SpikeBall": {
-            "Path": "Robot/spike_ball.png",
+            "Path": "Robot/spike_ball.aura",
             "States": [ 1073741827 ]
         },
         
         "Shrapnel1": {
-            "Path": "Robot/shrapnel_1.png"
+            "Path": "Robot/shrapnel_1.aura"
         },
         "Shrapnel2": {
-            "Path": "Robot/shrapnel_2.png"
+            "Path": "Robot/shrapnel_2.aura"
         },
         "Shrapnel3": {
-            "Path": "Robot/shrapnel_3.png"
+            "Path": "Robot/shrapnel_3.aura"
         },
         "Shrapnel4": {
-            "Path": "Robot/shrapnel_4.png"
+            "Path": "Robot/shrapnel_4.aura"
         },
         "Shrapnel5": {
-            "Path": "Robot/shrapnel_5.png"
+            "Path": "Robot/shrapnel_5.aura"
         },
         "Shrapnel6": {
-            "Path": "Robot/shrapnel_6.png"
+            "Path": "Robot/shrapnel_6.aura"
         },
         "Shrapnel7": {
-            "Path": "Robot/shrapnel_7.png"
+            "Path": "Robot/shrapnel_7.aura"
         },
         "Shrapnel8": {
-            "Path": "Robot/shrapnel_8.png"
+            "Path": "Robot/shrapnel_8.aura"
         },
         "Shrapnel9": {
-            "Path": "Robot/shrapnel_9.png"
+            "Path": "Robot/shrapnel_9.aura"
         }
     },
     

@@ -5,86 +5,86 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Frog/idle.png",
+            "Path": "Frog/idle.aura",
             "States": [ 0, 64, 128 ],
             "FrameRate": 8
         },
         "Walk": {
-            "Path": "Frog/run.png",
+            "Path": "Frog/run.aura",
             "States": [ 1, 2, 3, 17, 18, 19, 129, 145 ],
             "FrameRate": 12
         },
 
         "Jump": {
-            "Path": "Frog/jump_start.png",
+            "Path": "Frog/jump_start.aura",
             "States": [ 4, 5, 6, 7, 262144, 262145, 262146, 262147 ],
             "Flags": 1,
             "FrameRate": 30
         },
         "Fall": {
-            "Path": "Frog/fall.png",
+            "Path": "Frog/fall.aura",
             "States": [ 8, 9, 10, 11, 65536, 65537, 65538, 65539 ],
             "FrameRate": 18
         },
 
         "Crouch": {
-            "Path": "Frog/crouch.png",
+            "Path": "Frog/crouch.aura",
             "Flags": 1,
             "FrameRate": 40,
             "States": [ 32 ]
         },
 
         "Shoot": {
-            "Path": "Frog/tongue_hor.png",
+            "Path": "Frog/tongue_hor.aura",
             "States": [ 16, 144, 48 ],
             "FrameRate": 8
         },
 
         "LookupShoot": {
-            "Path": "Frog/tongue_ver.png",
+            "Path": "Frog/tongue_ver.aura",
             "States": [ 80 ],
             "FrameRate": 8
         },
         "Hurt": {
-            "Path": "Frog/hurt.png",
+            "Path": "Frog/hurt.aura",
             "FrameRate": 6,
             "States": [ 2048, 1073741839 ]
         },
         
         "FallToIdle": {
-            "Path": "Frog/fall_land.png",
+            "Path": "Frog/fall_land.aura",
             "States": [ 1073741826 ],
             "FrameRate": 28
         },
         
         "TransformFromJazz": {
-            "Path": "Jazz/transform_frog.png",
+            "Path": "Jazz/transform_frog.aura",
             "States": [ 1610612736 ],
             "FrameRate": 3
         },
         "TransformFromSpaz": {
-            "Path": "Spaz/transform_frog.png",
+            "Path": "Spaz/transform_frog.aura",
             "States": [ 1610612737 ],
             "FrameRate": 3
         },
         "TransformFromLori": {
-            "Path": "Lori/transform_frog.png",
+            "Path": "Lori/transform_frog.aura",
             "States": [ 1610612738 ],
             "FrameRate": 3
         },
         
         "TransformToJazz": {
-            "_Path": "Jazz/transform_frog_end.png",
+            "_Path": "Jazz/transform_frog_end.aura",
             "States": [ 1610612739 ],
             "FrameRate": 3
         },
         "TransformToSpaz": {
-            "_Path": "Spaz/transform_frog_end.png",
+            "_Path": "Spaz/transform_frog_end.aura",
             "States": [ 1610612740 ],
             "FrameRate": 3
         },
         "TransformToLori": {
-            "_Path": "Lori/transform_frog_end.png",
+            "_Path": "Lori/transform_frog_end.aura",
             "States": [ 1610612741 ],
             "FrameRate": 3
         }

@@ -36,12 +36,11 @@ namespace Jazz2::UI::Menu
 		_mediumFont = resolver.GetFont(FontType::Medium);
 
 #ifdef WITH_OPENMPT
-		String musicPath = fs::joinPath({ "Content"_s, "Music"_s, Random().NextBool() ? "bonus2.j2b"_s : "bonus3.j2b"_s });
-		if (!fs::isReadableFile(musicPath)) {
-			musicPath = fs::joinPath({ "Content"_s, "Music"_s, "menu.j2b"_s });
+		_music = resolver.GetMusic(Random().NextBool() ? "bonus2.j2b"_s : "bonus3.j2b"_s);
+		if (_music == nullptr) {
+			_music = resolver.GetMusic("menu.j2b"_s);
 		}
-		if (fs::isReadableFile(musicPath)) {
-			_music = std::make_unique<AudioStreamPlayer>(musicPath);
+		if (_music != nullptr) {
 			_music->setLooping(true);
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 			_music->setGain(0.5f);
@@ -366,7 +365,7 @@ namespace Jazz2::UI::Menu
 	{
 		_tileSet = ContentResolver::Current().RequestTileSet("easter99"_s, true);
 
-		auto s = IFileStream::createFileHandle(fs::joinPath({ "Content"_s, "Episodes"_s, "secretf"_s, "01_easter1"_s, "Sky.layer"_s }));
+		auto s = IFileStream::createFileHandle(fs::joinPath({ "Content"_s, "Animations"_s, "MainMenu.layer"_s }));
 		s->Open(FileAccessMode::Read);
 		if (s->GetSize() < 8) {
 			return;

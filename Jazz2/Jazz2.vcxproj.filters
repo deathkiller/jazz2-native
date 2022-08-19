@@ -954,6 +954,9 @@
     <ClInclude Include="Jazz2\UI\Menu\InGameMenu.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Compatibility\JJ2Anims.Palettes.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

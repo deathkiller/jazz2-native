@@ -5,19 +5,19 @@
 
     "Animations": {
         "500": {
-            "Path": "Pinball/Bumper500.png",
+            "Path": "Pinball/Bumper500.aura",
             "States": [ 0 ]
         },
         "500Hit": {
-            "Path": "Pinball/Bumper500Hit.png",
+            "Path": "Pinball/Bumper500Hit.aura",
             "States": [ 512 ]
         },
         "Carrot": {
-            "Path": "Pinball/BumperCarrot.png",
+            "Path": "Pinball/BumperCarrot.aura",
             "States": [ 1 ]
         },
         "CarrotHit": {
-            "Path": "Pinball/BumperCarrotHit.png",
+            "Path": "Pinball/BumperCarrotHit.aura",
             "States": [ 513 ]
         }
     },

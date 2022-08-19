@@ -5,7 +5,7 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Tweedle/idle.png",
+            "Path": "Tweedle/idle.aura",
             "States": [ 0 ]
         }
     }

@@ -159,6 +159,15 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ToasterShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Collisions/DynamicTree.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Collisions/DynamicTreeBroadPhase.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/AnimSetMapping.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/EventConverter.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Anims.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Block.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Episode.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Level.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Strings.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Text.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Tileset.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventMap.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventSpawner.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileMap.cpp

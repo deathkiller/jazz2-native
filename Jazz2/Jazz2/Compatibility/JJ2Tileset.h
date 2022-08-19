@@ -16,13 +16,18 @@ namespace Jazz2::Compatibility
     class JJ2Tileset // .j2t
     {
     public:
-        static JJ2Tileset Open(const StringView& path, bool strictParser);
+        static constexpr int BlockSize = 32;
 
-        void Convert(const String& targetPath);
+        JJ2Tileset() : _version(JJ2Version::Unknown), _tileCount(0) { }
 
-        int MaxSupportedTiles() {
+        void Open(const StringView& path, bool strictParser);
+
+        void Convert(const String& targetPath) const;
+
+        int GetMaxSupportedTiles() const {
             return (_version == JJ2Version::BaseGame ? 1024 : 4096);
         }
+
     private:
         struct TilesetTileSection {
             bool Opaque;
@@ -30,17 +35,16 @@ namespace Jazz2::Compatibility
             uint32_t AlphaDataOffset;
             uint32_t MaskDataOffset;
 
-            std::unique_ptr<uint8_t[]> Image;
-            std::unique_ptr<uint8_t[]> Mask;
+            uint8_t Image[BlockSize * BlockSize];
+            //uint8_t Mask[BlockSize * BlockSize];
+            uint8_t Mask[BlockSize * BlockSize / 8];
         };
 
         String _name;
         JJ2Version _version;
-        std::unique_ptr<uint8_t[]> _palette;
+        uint32_t _palette[256];
         std::unique_ptr<TilesetTileSection[]> _tiles;
         int _tileCount;
-
-        JJ2Tileset();
 
         void LoadMetadata(JJ2Block& block);
         void LoadImageData(JJ2Block& imageBlock, JJ2Block& alphaBlock);

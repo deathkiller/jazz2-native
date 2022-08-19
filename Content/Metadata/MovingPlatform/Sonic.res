@@ -5,10 +5,10 @@
 
     "Animations": {
         "Platform": {
-            "Path": "Platform/sonic.png"
+            "Path": "Platform/sonic.aura"
         },
         "Chain": {
-            "Path": "Platform/sonic_chain.png"
+            "Path": "Platform/sonic_chain.aura"
         }
     }
 }

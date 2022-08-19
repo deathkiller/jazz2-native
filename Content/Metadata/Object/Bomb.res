@@ -5,7 +5,7 @@
 
     "Animations": {
         "Bomb": {
-            "Path": "Common/Bomb.png"
+            "Path": "Common/Bomb.aura"
         }
     }
 }

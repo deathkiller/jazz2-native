@@ -21,6 +21,11 @@
 #include "Jazz2/LevelHandler.h"
 #include "Jazz2/UI/Menu/MainMenu.h"
 
+#include "Jazz2/Compatibility/JJ2Anims.h"
+#include "Jazz2/Compatibility/JJ2Level.h"
+#include "Jazz2/Compatibility/JJ2Tileset.h"
+#include "Jazz2/Compatibility/EventConverter.h"
+
 #if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
 #	include <cstdlib> // for `__argc` and `__argv`
 extern int __argc;
@@ -28,6 +33,7 @@ extern char** __argv;
 #endif
 
 using namespace nCine;
+using namespace Jazz2::Compatibility;
 
 #if defined(ENABLE_LOG)
 
@@ -130,6 +136,8 @@ public:
 private:
 	std::unique_ptr<Jazz2::IStateHandler> _currentHandler;
 	std::unique_ptr<Jazz2::LevelInitialization> _pendingLevelChange;
+
+	void RefreshCache();
 };
 
 void GameEventHandler::onPreInit(AppConfiguration& config)
@@ -149,6 +157,8 @@ void GameEventHandler::onInit()
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	//theApplication().inputManager().addJoyMappingsFromFile(fs::joinPath({ "Content"_s, "gamecontrollerdb.txt"_s }));
 #endif
+
+	RefreshCache();
 
 	_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this);
 	Viewport::chain().clear();
@@ -208,6 +218,93 @@ void GameEventHandler::ChangeLevel(Jazz2::LevelInitialization&& levelInit)
 {
 	// Level will be changed in the next frame
 	_pendingLevelChange = std::make_unique<Jazz2::LevelInitialization>(std::move(levelInit));
+}
+
+void GameEventHandler::RefreshCache()
+{
+	// Check cache state
+	{
+		auto s = IFileStream::createFileHandle(fs::joinPath({ "Cache"_s, "State"_s }));
+		s->setExitOnFailToOpen(false);
+		s->Open(FileAccessMode::Read);
+
+		if (s->GetSize() < 7) {
+			goto RecreateCache;
+		}
+
+		uint32_t signature = s->ReadValue<uint32_t>();
+		uint16_t version = s->ReadValue<uint16_t>();
+		if (signature != 0x2063324a || version != JJ2Anims::CacheVersion) {
+			goto RecreateCache;
+		}
+
+		uint8_t flags = s->ReadValue<uint8_t>();
+		if ((flags & 0x01) == 0x01) {
+			// Don't overwrite cache
+			LOGI("Cache is protected");
+			return;
+		}
+
+		int64_t animsCached = s->ReadValue<int64_t>();
+		int64_t animsModified = fs::lastModificationTime(fs::joinPath({ "Source"_s, "Anims.j2a"_s })).Ticks;
+		if (animsModified != 0 && animsCached != animsModified) {
+			goto RecreateCache;
+		}
+
+		// Cache is up-to-date
+		LOGI("Cache is already up-to-date");
+		return;
+	}
+
+RecreateCache:
+	{
+		JJ2Anims::Convert(fs::joinPath({ "Source"_s, "Anims.j2a"_s }), fs::joinPath({ "Cache"_s, "Animations"_s }), false);
+
+		EventConverter eventConverter;
+
+		fs::Directory dir("Source"_s);
+		while (true) {
+			StringView item = dir.readNext();
+			if (item == nullptr) {
+				break;
+			}
+
+			if (fs::hasExtension(item, "j2l")) {
+				// TODO: Check only filename
+				String levelName = fs::GetFileName(item);
+				if (levelName.findOr("-MLLE-Data-", levelName.end()) != levelName.end()) {
+					LOGI_X("Level \"%s\" skipped (MLLE extra layers).", item);
+				} else {
+					fs::createDir(fs::joinPath({ "Cache"_s, "Episodes"_s, "unknown"_s }));
+
+					JJ2Level level;
+					level.Open(item, false);
+					level.Convert(fs::joinPath({ "Cache"_s, "Episodes"_s, "unknown"_s, levelName }), eventConverter, nullptr);
+				}
+			} else if (fs::hasExtension(item, "j2t")) {
+				fs::createDir(fs::joinPath({ "Cache"_s, "Tilesets"_s }));
+
+				String tilesetName = fs::GetFileName(item);
+
+				JJ2Tileset tileset;
+				tileset.Open(item, false);
+				tileset.Convert(fs::joinPath({ "Cache"_s, "Tilesets"_s, tilesetName }));
+			}
+		}
+
+
+		auto s = IFileStream::createFileHandle(fs::joinPath({ "Cache"_s, "State"_s }));
+		s->setExitOnFailToOpen(false);
+		s->Open(FileAccessMode::Write);
+
+		s->WriteValue<uint32_t>(0x2063324a);	// Signature
+		s->WriteValue<uint16_t>(JJ2Anims::CacheVersion);
+		s->WriteValue<uint8_t>(0x00);			// Flags
+		int64_t animsModified = fs::lastModificationTime(fs::joinPath({ "Source"_s, "Anims.j2a"_s })).Ticks;
+		s->WriteValue<int64_t>(animsModified);
+
+		LOGI("Cache was recreated");
+	}
 }
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)

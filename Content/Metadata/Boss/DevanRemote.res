@@ -5,11 +5,11 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Devan/remote_idle.png",
+            "Path": "Devan/remote_idle.aura",
             "States": [ 0 ]
         },
         "WarpOut": {
-            "Path": "Devan/remote_warp_out.png",
+            "Path": "Devan/remote_warp_out.aura",
             "FrameRate": 10,
             "States": [ 1073741844 ]
         }

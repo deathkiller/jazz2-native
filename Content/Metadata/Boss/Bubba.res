@@ -5,18 +5,18 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Bubba/hop.png",
+            "Path": "Bubba/hop.aura",
             "States": [ 0 ],
             "FrameCount": 1
         },
         "JumpStart": {
-            "Path": "Bubba/hop.png",
+            "Path": "Bubba/hop.aura",
             "States": [ 1073741825 ],
             "FrameCount": 4,
             "FrameRate": 11
         },
         "Jump": {
-            "Path": "Bubba/hop.png",
+            "Path": "Bubba/hop.aura",
             "States": [ 4 ],
             "Flags": 1,
             "FrameOffset": 4,
@@ -24,57 +24,57 @@
             "FrameRate": 13
         },
         "Fall": {
-            "Path": "Bubba/jump.png",
+            "Path": "Bubba/jump.aura",
             "States": [ 8 ],
             "Flags": 1,
             "FrameCount": 3,
             "FrameRate": 12
         },
         "FallEnd": {
-            "Path": "Bubba/jump.png",
+            "Path": "Bubba/jump.aura",
             "States": [ 1073741826 ],
             "FrameOffset": 3,
             "FrameCount": 6,
             "FrameRate": 14
         },
         "SpewFireball": {
-            "Path": "Bubba/spew_fireball.png",
+            "Path": "Bubba/spew_fireball.aura",
             "FrameCount": 12,
             "FrameRate": 12,
             "States": [ 16 ]
         },
         "SpewFireballEnd": {
-            "Path": "Bubba/spew_fireball.png",
+            "Path": "Bubba/spew_fireball.aura",
             "FrameOffset": 12,
             "FrameCount": 4,
             "FrameRate": 16,
             "States": [ 1073741828 ]
         },
         "Corpse": {
-            "Path": "Bubba/corpse.png",
+            "Path": "Bubba/corpse.aura",
             "States": [ 1073741839 ],
             "FrameRate": 5
         },
 
         "TornadoStart": {
-            "Path": "Bubba/tornado_start.png",
+            "Path": "Bubba/tornado_start.aura",
             "States": [ 1073741830 ]
         },
         "Tornado": {
-            "Path": "Bubba/tornado.png",
+            "Path": "Bubba/tornado.aura",
             "States": [ 1073741831 ]
         },
         "TornadoEnd": {
-            "Path": "Bubba/tornado_end.png",
+            "Path": "Bubba/tornado_end.aura",
             "States": [ 1073741832 ]
         },
         "TornadoFall": {
-            "Path": "Bubba/jump_fall.png",
+            "Path": "Bubba/jump_fall.aura",
             "States": [ 1073741833 ]
         },
 
         "Fireball": {
-            "Path": "Bubba/fireball.png",
+            "Path": "Bubba/fireball.aura",
             "FrameRate": 24,
             "States": [ 1073741834 ]
         }

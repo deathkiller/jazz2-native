@@ -5,7 +5,7 @@
 
     "Animations": {
         "Vine": {
-            "Path": "Object/vine.png",
+            "Path": "Object/vine.aura",
             "States": [ 0 ]
         }
     }

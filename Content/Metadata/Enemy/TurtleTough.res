@@ -5,7 +5,7 @@
 
     "Animations": {
         "Walk": {
-            "Path": "TurtleTough/Walk.png",
+            "Path": "TurtleTough/Walk.aura",
             "FrameRate": 5,
             "States": [ 1 ]
         }

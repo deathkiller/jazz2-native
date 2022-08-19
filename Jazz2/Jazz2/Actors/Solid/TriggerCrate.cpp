@@ -20,11 +20,11 @@ namespace Jazz2::Actors::Solid
 
 	Task<bool> TriggerCrate::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_triggerId = *(uint16_t*)&details.Params[0];
-		if (details.Params[4] != 0) {
+		_triggerId = details.Params[0];
+		if (details.Params[2] != 0) {
 			_newState = TriggerCrateState::Toggle;
 		} else {
-			_newState = (details.Params[2] != 0 ? TriggerCrateState::On : TriggerCrateState::Off);
+			_newState = (details.Params[1] != 0 ? TriggerCrateState::On : TriggerCrateState::Off);
 		}
 
 		Movable = true;

@@ -5,12 +5,12 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Bee/Bee.png",
+            "Path": "Bee/Bee.aura",
             "FrameRate": 30,
             "States": [ 0 ]
         },
         "Turn": {
-            "Path": "Bee/bee_turn.png",
+            "Path": "Bee/bee_turn.aura",
             "FrameRate": 30,
             "States": [ 1073741840 ]
         }

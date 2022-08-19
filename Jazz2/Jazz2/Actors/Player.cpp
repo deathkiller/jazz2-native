@@ -1537,17 +1537,17 @@ namespace Jazz2::Actors
 		switch (tileEvent) {
 			case EventType::LightSet: { // Intensity, Red, Green, Blue, Flicker
 				// TODO: Change only player view, handle splitscreen multiplayer
-				_levelHandler->SetAmbientLight(*(uint16_t*)&p[0] * 0.01f);
+				_levelHandler->SetAmbientLight(p[0] * 0.01f);
 				break;
 			}
 			case EventType::WarpOrigin: { // Warp ID, Fast, Set Lap
 				if (_currentTransitionState == AnimState::Idle || _currentTransitionState == (AnimState::Dash | AnimState::Jump) || _currentTransitionCancellable) {
-					Vector2f c = events->GetWarpTarget(*(uint16_t*)&p[0]);
+					Vector2f c = events->GetWarpTarget(p[0]);
 					if (c.X >= 0.0f && c.Y >= 0.0f) {
-						WarpToPosition(c, p[2] != 0);
+						WarpToPosition(c, p[1] != 0);
 
 #if MULTIPLAYER && SERVER
-						if (p[4] != 0) {
+						if (p[2] != 0) {
 							((LevelHandler)levelHandler).OnPlayerIncrementLaps(this);
 						}
 #endif
@@ -1565,7 +1565,7 @@ namespace Jazz2::Actors
 			}
 			case EventType::ModifierTube: { // XSpeed, YSpeed, Wait Time, Trig Sample, Become Noclip, Noclip Only
 				// TODO: Implement other parameters
-				if (p[8] == 0 && p[10] != 0 && (CollisionFlags & CollisionFlags::CollideWithTileset) == CollisionFlags::CollideWithTileset) {
+				if (p[4] == 0 && p[5] != 0 && (CollisionFlags & CollisionFlags::CollideWithTileset) == CollisionFlags::CollideWithTileset) {
 					break;
 				}
 
@@ -1577,8 +1577,8 @@ namespace Jazz2::Actors
 				SetState(ActorFlags::CanJump, false);
 				CollisionFlags &= ~CollisionFlags::ApplyGravitation;
 
-				_speed.X = (float)*(int16_t*)&p[0];
-				_speed.Y = (float)*(int16_t*)&p[2];
+				_speed.X = (float)(int8_t)p[0];
+				_speed.Y = (float)(int8_t)p[1];
 
 				Vector2f pos = _pos;
 				if (_speed.X == 0.0f) {
@@ -1596,7 +1596,7 @@ namespace Jazz2::Actors
 					OnUpdateHitbox();
 				}
 
-				if (p[8] != 0) { // Become No-clip
+				if (p[4] != 0) { // Become No-clip
 					CollisionFlags &= ~CollisionFlags::CollideWithTileset;
 					_inTubeTime = 60.0f;
 				} else {
@@ -1607,14 +1607,14 @@ namespace Jazz2::Actors
 			case EventType::AreaEndOfLevel: { // ExitType, Fast (No score count, only black screen), TextID, TextOffset, Coins
 				if (_levelExiting == LevelExitingState::None) {
 					// TODO: Implement Fast parameter
-					uint16_t coinsRequired = *(uint16_t*)&p[8];
+					uint16_t coinsRequired = *(uint16_t*)&p[4];
 					if (coinsRequired <= _coins) {
 						_coins -= coinsRequired;
 
 						String nextLevel;
 						// TODO
 						/*if (p[4] != 0) {
-							nextLevel = _levelHandler->GetLevelText(p[4]).SubstringByOffset('|', p[6]);
+							nextLevel = _levelHandler->GetLevelText(p[2]).SubstringByOffset('|', p[3]);
 						}*/
 						_levelHandler->BeginLevelChange((ExitType)p[0], nextLevel);
 						PlayPlayerSfx("EndOfLevel"_s);
@@ -1628,18 +1628,18 @@ namespace Jazz2::Actors
 				break;
 			}
 			case EventType::AreaText: { // Text, TextOffset, Vanish
-				uint16_t index = *(uint16_t*)&p[2];
-				StringView text = _levelHandler->GetLevelText(*(uint16_t*)&p[0], index != 0 ? index : -1, '|');
+				uint8_t index = p[1];
+				StringView text = _levelHandler->GetLevelText(p[0], index != 0 ? index : -1, '|');
 				_levelHandler->ShowLevelText(text);
 
-				if (p[4] != 0) {
+				if (p[2] != 0) {
 					events->StoreTileEvent((int)(_pos.X / 32), (int)(_pos.Y / 32), EventType::Empty);
 				}
 				break;
 			}
 			case EventType::AreaCallback: { // Function, Param, Vanish
 				// TODO: Call function #{p[0]}(sender, p[1]); implement level extensions
-				if (p[4] != 0) {
+				if (p[2] != 0) {
 					events->StoreTileEvent((int)(_pos.X / 32), (int)(_pos.Y / 32), EventType::Empty);
 				}
 				break;
@@ -1683,7 +1683,7 @@ namespace Jazz2::Actors
 				auto tiles = _levelHandler->TileMap();
 				if (tiles != nullptr) {
 					// TODO: Implement Switch parameter
-					tiles->SetTrigger(*(uint16_t*)&p[0], p[2] != 0);
+					tiles->SetTrigger(p[0], p[1] != 0);
 				}
 				break;
 			}
@@ -1710,7 +1710,7 @@ namespace Jazz2::Actors
 			}
 
 			case EventType::AreaWaterBlock: {
-				areaWaterBlock = ((int)_pos.Y / 32) * 32 + *(uint16_t*)&p[0];
+				areaWaterBlock = ((int)_pos.Y / 32) * 32 + p[0];
 				break;
 			}
 		}
@@ -1745,8 +1745,8 @@ namespace Jazz2::Actors
 			(events->GetEventByPosition(AABBInner.R + ExtendedHitbox, AABBInner.B + ExtendedHitbox, &p) == EventType::AreaHForce) ||
 			(events->GetEventByPosition(AABBInner.L - ExtendedHitbox, AABBInner.B + ExtendedHitbox, &p) == EventType::AreaHForce)
 		   ) {
-			uint16_t p1 = *(uint16_t*)&p[8];
-			uint16_t p2 = *(uint16_t*)&p[10];
+			uint8_t p1 = p[4];
+			uint8_t p2 = p[5];
 			if ((p2 != 0 || p1 != 0)) {
 				MoveInstantly(Vector2f((p2 - p1) * 0.7f * timeMult, 0), MoveType::Relative);
 			}
@@ -1758,10 +1758,10 @@ namespace Jazz2::Actors
 			tileEvent = events->GetEventByPosition(_pos.X, _pos.Y + 32, &p);
 			switch (tileEvent) {
 				case EventType::AreaHForce: {
-					uint16_t p1 = *(uint16_t*)&p[0];
-					uint16_t p2 = *(uint16_t*)&p[2];
-					uint16_t p3 = *(uint16_t*)&p[4];
-					uint16_t p4 = *(uint16_t*)&p[6];
+					uint8_t p1 = p[0];
+					uint8_t p2 = p[1];
+					uint8_t p3 = p[2];
+					uint8_t p4 = p[3];
 					if (p2 != 0 || p1 != 0) {
 						MoveInstantly(Vector2f((p2 - p1) * 0.7f * timeMult, 0), MoveType::Relative);
 					}

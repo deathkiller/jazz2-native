@@ -5,32 +5,32 @@
 
     "Animations": {
         "Walk": {
-            "Path": "MadderHatter/walk.png",
+            "Path": "MadderHatter/walk.aura",
             "FrameRate": 4,
             "States": [ 1 ]
         },
         "AttackStart": {
-            "Path": "MadderHatter/attack.png",
+            "Path": "MadderHatter/attack.aura",
             "FrameCount": 12,
             "FrameRate": 5,
             "States": [ 1073741824 ]
         },
         "AttackEnd": {
-            "Path": "MadderHatter/attack.png",
+            "Path": "MadderHatter/attack.aura",
             "FrameOffset": 12,
             "FrameRate": 5,
             "States": [ 1073741825 ]
         },
 
         "Bullet": {
-            "Path": "MadderHatter/bullet_spit.png",
+            "Path": "MadderHatter/bullet_spit.aura",
             "States": [ 1073741826 ]
         },
         "Cup": {
-            "Path": "MadderHatter/cup.png"
+            "Path": "MadderHatter/cup.aura"
         },
         "Hat": {
-            "Path": "MadderHatter/hat.png"
+            "Path": "MadderHatter/hat.aura"
         }
     },
 

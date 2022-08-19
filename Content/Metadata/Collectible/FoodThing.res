@@ -5,7 +5,7 @@
 
     "Animations": {
         "Food": {
-            "Path": "Pickup/food_thing.png"
+            "Path": "Pickup/food_thing.aura"
         }
     }
 }

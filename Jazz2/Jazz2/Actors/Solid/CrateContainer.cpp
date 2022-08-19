@@ -23,9 +23,9 @@ namespace Jazz2::Actors::Solid
 		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
 
 		EventType eventType = (EventType)*(uint16_t*)&details.Params[0];
-		int count = (int)*(uint16_t*)&details.Params[2];
+		int count = details.Params[2];
 		if (eventType != EventType::Empty && count > 0) {
-			AddContent(eventType, count, &details.Params[4], 16 - 4);
+			AddContent(eventType, count, &details.Params[3], 16 - 4);
 		}
 
 		co_await RequestMetadataAsync("Object/CrateContainer"_s);

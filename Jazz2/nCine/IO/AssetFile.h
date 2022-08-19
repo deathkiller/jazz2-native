@@ -27,7 +27,7 @@ namespace nCine
 		long int Seek(long int offset, SeekOrigin origin) const override;
 		long int GetPosition() const override;
 		unsigned long int Read(void* buffer, unsigned long int bytes) const override;
-		unsigned long int Write(void* buffer, unsigned long int bytes) override {
+		unsigned long int Write(const void* buffer, unsigned long int bytes) override {
 			return 0;
 		}
 

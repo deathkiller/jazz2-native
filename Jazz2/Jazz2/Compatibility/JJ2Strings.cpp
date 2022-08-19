@@ -1,6 +1,4 @@
-﻿#pragma once
-
-#include "../../Common.h"
+﻿#include "JJ2Strings.h"
 
 namespace Jazz2::Compatibility
 {

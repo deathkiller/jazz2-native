@@ -254,6 +254,7 @@
     <ClInclude Include="Jazz2\Compatibility\AnimSetMapping.h" />
     <ClInclude Include="Jazz2\Compatibility\EventConverter.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Anims.h" />
+    <ClInclude Include="Jazz2\Compatibility\JJ2Anims.Palettes.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Block.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2DefaultPalette.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Episode.h" />

@@ -12,13 +12,13 @@ namespace Jazz2::Actors::Lighting
 
 	Task<bool> PulsatingRadialLight::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_intensity = (float)*(uint16_t*)&details.Params[0] / 255.0f;
-		_brightness = (float)*(uint16_t*)&details.Params[2] / 255.0f;
-		_radiusNear1 = (float)*(uint16_t*)&details.Params[4];
-		_radiusNear2 = (float)*(uint16_t*)&details.Params[6];
-		_radiusFar = (float)*(uint16_t*)&details.Params[8];
-		_speed = (float)*(uint16_t*)&details.Params[10] * 0.6f;
-		uint16_t sync = *(uint16_t*)&details.Params[12];
+		_intensity = details.Params[0] / 255.0f;
+		_brightness = details.Params[1] / 255.0f;
+		_radiusNear1 = (float)*(uint16_t*)&details.Params[2];
+		_radiusNear2 = (float)*(uint16_t*)&details.Params[4];
+		_radiusFar = (float)*(uint16_t*)&details.Params[6];
+		_speed = details.Params[8] * 0.6f;
+		uint8_t sync = details.Params[9];
 
 		_phase = fmodf(BaseCycleFrames - ((float)(fmodf(theApplication().numFrames() * FrameTimer::FramesPerSecond, BaseCycleFrames)) + sync * 175), BaseCycleFrames);
 

@@ -5,7 +5,7 @@
 
     "Animations": {
         "AmbientBubbles": {
-            "Path": "Common/water_bubble_2.png"
+            "Path": "Common/water_bubble_2.aura"
         }
     }
 }

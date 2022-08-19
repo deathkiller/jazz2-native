@@ -5,7 +5,7 @@
 
     "Animations": {
         "Walk": {
-            "Path": "Lizard/walk.png",
+            "Path": "Lizard/walk.aura",
             "FrameRate": 4,
             "States": [ 0, 1, 2, 8, 9, 10 ]
         }

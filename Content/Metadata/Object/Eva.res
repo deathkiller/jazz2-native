@@ -5,21 +5,21 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Eva/Idle.png",
+            "Path": "Eva/Idle.aura",
             "States": [ 0 ]
         },
         "Blink": {
-            "Path": "Eva/Blink.png",
+            "Path": "Eva/Blink.aura",
             "States": [ 1073741849 ],
             "FrameRate": 26
         },
         "KissStart": {
-            "Path": "Eva/KissStart.png",
+            "Path": "Eva/KissStart.aura",
             "States": [ 1325400065 ],
             "FrameRate": 4
         },
         "KissEnd": {
-            "Path": "Eva/KissEnd.png",
+            "Path": "Eva/KissEnd.aura",
             "States": [ 1325400066 ],
             "FrameRate": 4
         }

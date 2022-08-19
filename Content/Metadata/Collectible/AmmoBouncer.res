@@ -5,11 +5,11 @@
 
     "Animations": {
         "Ammo": {
-            "Path": "Pickup/ammo_bouncer.png",
+            "Path": "Pickup/ammo_bouncer.aura",
             "Shader": "SmoothAnimNormal"
         },
         "AmmoUpgraded": {
-            "_Path": "Pickup/ammo_bouncer_upgraded.png",
+            "_Path": "Pickup/ammo_bouncer_upgraded.aura",
             "Shader": "SmoothAnimNormal"
         }
     }

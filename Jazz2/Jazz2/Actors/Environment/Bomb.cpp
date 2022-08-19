@@ -26,7 +26,7 @@ namespace Jazz2::Actors::Environment
 	Task<bool> Bomb::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		uint8_t theme = details.Params[0];
-		SetFacingLeft(details.Params[2] != 0);
+		SetFacingLeft(details.Params[1] != 0);
 
 		_health = INT32_MAX;
 		_elasticity = 0.3f;

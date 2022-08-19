@@ -5,7 +5,7 @@
 
     "Animations": {
         "SteamNote": {
-            "Path": "Common/SteamNote.png",
+            "Path": "Common/SteamNote.aura",
             "FrameRate": 4
         }
     },

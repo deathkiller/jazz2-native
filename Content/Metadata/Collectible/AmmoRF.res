@@ -5,11 +5,11 @@
 
     "Animations": {
         "Ammo": {
-            "Path": "Pickup/ammo_rf.png",
+            "Path": "Pickup/ammo_rf.aura",
             "Shader": "SmoothAnimNormal"
         },
         "AmmoUpgraded": {
-            "_Path": "Pickup/ammo_rf_upgraded.png",
+            "_Path": "Pickup/ammo_rf_upgraded.aura",
             "Shader": "SmoothAnimNormal"
         }
     }

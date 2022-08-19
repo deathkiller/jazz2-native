@@ -5,12 +5,12 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Helmut/idle.png",
+            "Path": "Helmut/idle.aura",
             "FrameRate": 6,
             "States": [ 0 ]
         },
         "Walk": {
-            "Path": "Helmut/walk.png",
+            "Path": "Helmut/walk.aura",
             "FrameRate": 6,
             "States": [ 1, 2, 8, 9, 10 ]
         }

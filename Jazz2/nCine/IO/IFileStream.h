@@ -62,7 +62,7 @@ namespace nCine
 		virtual unsigned long int Read(void* buffer, unsigned long int bytes) const = 0;
 		/// Writes a certain amount of bytes from a buffer to the file
 		/*! \return Number of bytes written */
-		virtual unsigned long int Write(void* buffer, unsigned long int bytes) = 0;
+		virtual unsigned long int Write(const void* buffer, unsigned long int bytes) = 0;
 
 		/// Sets the close on destruction flag
 		/*! If the flag is true the file is closed upon object destruction. */
@@ -100,6 +100,11 @@ namespace nCine
 			T buffer;
 			Read(&buffer, sizeof(T));
 			return buffer;
+		}
+
+		template<typename T>
+		inline void WriteValue(const T& value) {
+			Write(&value, sizeof(T));
 		}
 
 		/// Reads a little endian 16 bit unsigned integer

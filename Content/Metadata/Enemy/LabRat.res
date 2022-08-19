@@ -5,17 +5,17 @@
 
     "Animations": {
         "Idle": {
-            "Path": "LabRat/idle.png",
+            "Path": "LabRat/idle.aura",
             "FrameRate": 5,
             "States": [ 0 ]
         },
         "Walk": {
-            "Path": "LabRat/walk.png",
+            "Path": "LabRat/walk.aura",
             "FrameRate": 5,
             "States": [ 1, 2, 8, 9, 10 ]
         },
         "Attack": {
-            "Path": "LabRat/attack.png",
+            "Path": "LabRat/attack.aura",
             "FrameRate": 5,
             "States": [ 1325400065 ]
         }

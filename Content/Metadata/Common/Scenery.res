@@ -5,7 +5,7 @@
 
     "Animations": {
         "Snow": {
-            "Path": "Common/Snow.png"
+            "Path": "Common/Snow.aura"
         },
         "Rain": {
             "Path": "_custom/rain.png"

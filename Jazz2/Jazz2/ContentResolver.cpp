@@ -266,7 +266,14 @@ namespace Jazz2
 							continue;
 						}
 
-						sound.Buffers.emplace_back(std::make_unique<AudioBuffer>(fs::joinPath({ "Content"_s, "Animations"_s, path })));
+						String fullPath = fs::joinPath({ "Content"_s, "Animations"_s, path });
+						if (!fs::isReadableFile(fullPath)) {
+							fullPath = fs::joinPath({ "Cache"_s, "Animations"_s, path });
+							if (!fs::isReadableFile(fullPath)) {
+								continue;
+							}
+						}
+						sound.Buffers.emplace_back(std::make_unique<AudioBuffer>(fullPath));
 					}
 
 					if (!sound.Buffers.empty()) {
@@ -292,11 +299,12 @@ namespace Jazz2
 		}
 
 		auto fileHandle = IFileStream::createFileHandle(fs::joinPath({ "Content"_s, "Animations"_s, path + ".res"_s }));
+		fileHandle->setExitOnFailToOpen(false);
 		fileHandle->Open(FileAccessMode::Read);
 		auto fileSize = fileHandle->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
-			// 64 MB file size limit
-			return nullptr;
+			// 64 MB file size limit, also if not found try to use cache
+			return RequestGraphicsFromCache(path, paletteOffset);
 		}
 
 		auto buffer = std::make_unique<char[]>(fileSize + 1);
@@ -409,241 +417,340 @@ namespace Jazz2
 		return nullptr;
 	}
 
+	GenericGraphicResource* ContentResolver::RequestGraphicsFromCache(const StringView& path, uint16_t paletteOffset)
+	{
+		if (!fs::hasExtension(path, "aura"_s)) {
+			return nullptr;
+		}
+
+		String fullPath = fs::joinPath({ "Cache"_s, "Animations"_s, path });
+		auto fileHandle = IFileStream::createFileHandle(fullPath);
+		fileHandle->setExitOnFailToOpen(false);
+		fileHandle->Open(FileAccessMode::Read);
+		auto fileSize = fileHandle->GetSize();
+		if (fileSize < 16 || fileSize > 64 * 1024 * 1024) {
+			// 64 MB file size limit, also if not found try to use cache
+			return nullptr;
+		}
+
+		uint64_t signature1 = fileHandle->ReadValue<uint64_t>();
+		uint32_t signature2 = fileHandle->ReadValue<uint16_t>();
+		uint8_t version = fileHandle->ReadValue<uint8_t>();
+		uint8_t flags = fileHandle->ReadValue<uint8_t>();
+
+		if (signature1 != 0xB8EF8498E2BFBBEF || signature2 != 0x208F || version != 2 || (flags & 0x80) != 0x80) {
+			return nullptr;
+		}
+
+		uint8_t channelCount = fileHandle->ReadValue<uint8_t>();
+		uint32_t frameDimensionsX = fileHandle->ReadValue<uint32_t>();
+		uint32_t frameDimensionsY = fileHandle->ReadValue<uint32_t>();
+
+		uint8_t frameConfigurationX = fileHandle->ReadValue<uint8_t>();
+		uint8_t frameConfigurationY = fileHandle->ReadValue<uint8_t>();
+		uint16_t frameCount = fileHandle->ReadValue<uint16_t>();
+		uint16_t frameRate = fileHandle->ReadValue<uint16_t>();
+
+		uint16_t hotspotX = fileHandle->ReadValue<uint16_t>();
+		uint16_t hotspotY = fileHandle->ReadValue<uint16_t>();
+
+		uint16_t coldspotX = fileHandle->ReadValue<uint16_t>();
+		uint16_t coldspotY = fileHandle->ReadValue<uint16_t>();
+
+		uint16_t gunspotX = fileHandle->ReadValue<uint16_t>();
+		uint16_t gunspotY = fileHandle->ReadValue<uint16_t>();
+
+		uint32_t width = frameDimensionsX * frameConfigurationX;
+		uint32_t height = frameDimensionsY * frameConfigurationY;
+
+		std::unique_ptr<uint32_t[]> pixels = std::make_unique<uint32_t[]>(width * height);
+
+		ReadImageFromFile(fileHandle, (uint8_t*)pixels.get(), width, height, channelCount);
+
+		std::unique_ptr<GenericGraphicResource> graphics = std::make_unique<GenericGraphicResource>();
+		graphics->Flags |= GenericGraphicResourceFlags::Referenced;
+
+		const uint32_t* palette = _palettes + paletteOffset;
+		bool linearSampling = false;
+		bool needsMask = true;
+		/*if ((flags & 0x01) != 0x01) {
+			palette = nullptr;
+			// TODO: Apply linear sampling only to these images
+			if ((flags & 0x02) == 0x02) {
+				linearSampling = true;
+			}
+		}*/
+		if ((flags & 0x01) == 0x01) {
+			palette = nullptr;
+			linearSampling = true;
+		}
+		if ((flags & 0x02) == 0x02) {
+			needsMask = false;
+		}
+
+		if (needsMask) {
+			graphics->Mask = std::make_unique<uint8_t[]>(width * height);
+
+			for (int i = 0; i < width * height; i++) {
+				// Save original alpha value for collision checking
+				graphics->Mask[i] = ((pixels[i] >> 24) & 0xff);
+				if (palette != nullptr) {
+					uint32_t color = palette[pixels[i] & 0xff];
+					pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
+				}
+			}
+		} else if (palette != nullptr) {
+			for (int i = 0; i < width * height; i++) {
+				uint32_t color = palette[pixels[i] & 0xff];
+				pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
+			}
+		}
+
+		graphics->TextureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, width, height);
+		graphics->TextureDiffuse->loadFromTexels((unsigned char*)pixels.get(), 0, 0, width, height);
+		graphics->TextureDiffuse->setMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
+		graphics->TextureDiffuse->setMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
+
+		if (frameRate != 0) {
+			graphics->FrameDuration = (frameRate <= 0 ? -1.0f : (1.0f / frameRate) * 5.0f);
+		} else {
+			graphics->FrameDuration = -1.0f;
+		}
+
+		graphics->FrameDimensions = Vector2i(frameDimensionsX, frameDimensionsY);
+		graphics->FrameConfiguration = Vector2i(frameConfigurationX, frameConfigurationY);
+		graphics->FrameCount = frameCount;
+
+		if (hotspotX != UINT16_MAX || hotspotY != UINT16_MAX) {
+			graphics->Hotspot = Vector2i(hotspotX, hotspotY);
+		} else {
+			graphics->Hotspot = Vector2i();
+		}
+
+		if (coldspotX != UINT16_MAX || coldspotY != UINT16_MAX) {
+			graphics->Coldspot = Vector2i(coldspotX, coldspotY);
+		} else {
+			graphics->Coldspot = Vector2i(InvalidValue, InvalidValue);
+		}
+
+		if (gunspotX != UINT16_MAX || gunspotY != UINT16_MAX) {
+			graphics->Gunspot = Vector2i(gunspotX, gunspotY);
+		} else {
+			graphics->Gunspot = Vector2i(InvalidValue, InvalidValue);
+		}
+
+		return _cachedGraphics.emplace(Pair(String(path), paletteOffset), std::move(graphics)).first->second.get();
+	}
+
+	void ContentResolver::ReadImageFromFile(std::unique_ptr<IFileStream>& s, uint8_t* data, int width, int height, int channelCount)
+	{
+		typedef union {
+			struct {
+				unsigned char r, g, b, a;
+			} rgba;
+			unsigned int v;
+		} rgba_t;
+
+		#define QOI_OP_INDEX  0x00 /* 00xxxxxx */
+		#define QOI_OP_DIFF   0x40 /* 01xxxxxx */
+		#define QOI_OP_LUMA   0x80 /* 10xxxxxx */
+		#define QOI_OP_RUN    0xc0 /* 11xxxxxx */
+		#define QOI_OP_RGB    0xfe /* 11111110 */
+		#define QOI_OP_RGBA   0xff /* 11111111 */
+
+		#define QOI_MASK_2    0xc0 /* 11000000 */
+
+		#define QOI_COLOR_HASH(C) (C.rgba.r*3 + C.rgba.g*5 + C.rgba.b*7 + C.rgba.a*11)
+
+		rgba_t index[64] { };
+		rgba_t px;
+		int run = 0;
+		int px_len = width * height * channelCount;
+
+		px.rgba.r = 0;
+		px.rgba.g = 0;
+		px.rgba.b = 0;
+		px.rgba.a = 255;
+
+		for (int px_pos = 0; px_pos < px_len; px_pos += channelCount) {
+			if (run > 0) {
+				run--;
+			} else {
+				int b1 = s->ReadValue<uint8_t>();
+
+				if (b1 == QOI_OP_RGB) {
+					px.rgba.r = s->ReadValue<uint8_t>();
+					px.rgba.g = s->ReadValue<uint8_t>();
+					px.rgba.b = s->ReadValue<uint8_t>();
+				} else if (b1 == QOI_OP_RGBA) {
+					px.rgba.r = s->ReadValue<uint8_t>();
+					px.rgba.g = s->ReadValue<uint8_t>();
+					px.rgba.b = s->ReadValue<uint8_t>();
+					px.rgba.a = s->ReadValue<uint8_t>();
+				} else if ((b1 & QOI_MASK_2) == QOI_OP_INDEX) {
+					px = index[b1];
+				} else if ((b1 & QOI_MASK_2) == QOI_OP_DIFF) {
+					px.rgba.r += ((b1 >> 4) & 0x03) - 2;
+					px.rgba.g += ((b1 >> 2) & 0x03) - 2;
+					px.rgba.b += (b1 & 0x03) - 2;
+				} else if ((b1 & QOI_MASK_2) == QOI_OP_LUMA) {
+					int b2 = s->ReadValue<uint8_t>();
+					int vg = (b1 & 0x3f) - 32;
+					px.rgba.r += vg - 8 + ((b2 >> 4) & 0x0f);
+					px.rgba.g += vg;
+					px.rgba.b += vg - 8 + (b2 & 0x0f);
+				} else if ((b1 & QOI_MASK_2) == QOI_OP_RUN) {
+					run = (b1 & 0x3f);
+				}
+
+				index[QOI_COLOR_HASH(px) & 63] = px;
+			}
+
+			*(rgba_t*)(data + px_pos) = px;
+		}
+	}
+
 	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(const StringView& path, bool applyPalette)
 	{
+		String fullPath = fs::joinPath({ "Cache"_s, "Tilesets"_s, path + ".j2t"_s });
+		auto s = IFileStream::createFileHandle(fullPath);
+		s->Open(FileAccessMode::Read);
+		ASSERT_MSG(s->isOpened(), "Cannot open file for reading");
+
+		uint64_t signature1 = s->ReadValue<uint64_t>();
+		uint16_t signature2 = s->ReadValue<uint16_t>();
+		uint8_t version = s->ReadValue<uint8_t>();
+		uint8_t flags = s->ReadValue<uint8_t>();
+		ASSERT(signature1 == 0xB8EF8498E2BFBBEF && signature2 == 0x208F && version == 2, "Invalid file");
+
+		// TODO: Use single channel instead
+		uint8_t channelCount = s->ReadValue<uint8_t>();
+		uint32_t width = s->ReadValue<uint32_t>();
+		uint32_t height = s->ReadValue<uint32_t>();
+
+		// Palette
 		if (applyPalette) {
-			ApplyPalette(fs::joinPath({ "Content"_s, "Tilesets"_s, path, "Main.palette"_s }));
+			uint32_t newPalette[ColorsPerPalette];
+			s->Read(newPalette, ColorsPerPalette * sizeof(uint32_t));
+
+			if (std::memcmp(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t)) != 0) {
+				// Palettes differs, drop all cached resources, so it will be reloaded with new palette
+				if (_isLoading) {
+					_cachedMetadata.clear();
+					_cachedGraphics.clear();
+
+					for (int i = 0; i < (int)FontType::Unknown; i++) {
+						_fonts[i] = nullptr;
+					}
+				}
+
+				std::memcpy(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t));
+				RecreateGemPalettes();
+			}
+		} else {
+			s->Seek(ColorsPerPalette * sizeof(uint32_t), SeekOrigin::Current);
 		}
 
-		// Load diffuse texture
-		std::unique_ptr<Texture> textureDiffuse = nullptr;
-		{
-			String diffusePath = fs::joinPath({ "Content"_s, "Tilesets"_s, path, "Diffuse.png"_s });
-			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(diffusePath);
-			if (texLoader->hasLoaded()) {
-				auto texFormat = texLoader->texFormat().internalFormat();
-				if (texFormat == GL_RGBA8 || texFormat == GL_RGB8) {
-					int w = texLoader->width();
-					int h = texLoader->height();
-					auto pixels = (uint32_t*)texLoader->pixels();
-
-					for (int i = 0; i < w * h; i++) {
-						uint32_t color = _palettes[pixels[i] & 0xff];
-						pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
-					}
-
-					textureDiffuse = std::make_unique<Texture>(diffusePath.data(), Texture::Format::RGBA8, w, h);
-					textureDiffuse->loadFromTexels((unsigned char*)pixels, 0, 0, w, h);
-					textureDiffuse->setMinFiltering(SamplerFilter::Nearest);
-					textureDiffuse->setMagFiltering(SamplerFilter::Nearest);
-				}
+		// Mask
+		uint32_t maskSize = s->ReadValue<uint32_t>();
+		std::unique_ptr<uint8_t[]> mask = std::make_unique<uint8_t[]>(maskSize * 8);
+		for (int j = 0; j < maskSize; j++) {
+			uint8_t idx = s->ReadValue<uint8_t>();
+			for (int k = 0; k < 8; k++) {
+				int pixelIdx = 8 * j + k;
+				mask[pixelIdx] = (((idx >> k) & 0x01) != 0);
 			}
 		}
 
-		if (textureDiffuse == nullptr) {
-			return nullptr;
+		// Image
+		std::unique_ptr<uint32_t[]> pixels = std::make_unique<uint32_t[]>(width * height);
+		ReadImageFromFile(s, (uint8_t*)pixels.get(), width, height, channelCount);
+
+		for (int i = 0; i < width * height; i++) {
+			uint32_t color = _palettes[pixels[i] & 0xff];
+			pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
 		}
 
-		// TODO: Load normal texture
-
-		// Load collision mask
-		std::unique_ptr<uint8_t[]> mask = nullptr;
-		{
-			String maskPath = fs::joinPath({ "Content"_s, "Tilesets"_s, path, "Mask.png"_s });
-			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(maskPath);
-			if (texLoader->hasLoaded()) {
-				auto texFormat = texLoader->texFormat().internalFormat();
-				if (texFormat != GL_RGBA8 && texFormat != GL_RGB8) {
-					return nullptr;
-				}
-
-				int w = texLoader->width();
-				int h = texLoader->height();
-				auto pixels = (uint32_t*)texLoader->pixels();
-
-				int tw = (w / Tiles::TileSet::DefaultTileSize);
-				int th = (h / Tiles::TileSet::DefaultTileSize);
-
-				mask = std::make_unique<uint8_t[]>(tw * th * (Tiles::TileSet::DefaultTileSize * Tiles::TileSet::DefaultTileSize));
-
-				int k = 0;
-				for (int i = 0; i < th; i++) {
-					for (int j = 0; j < tw; j++) {
-						//auto pixelOffset = &pixels[(i * Tiles::TileSet::DefaultTileSize * w) + (j * Tiles::TileSet::DefaultTileSize)];
-						int pixelsBase = (i * Tiles::TileSet::DefaultTileSize * w) + (j * Tiles::TileSet::DefaultTileSize);
-						auto maskOffset = &mask[k * Tiles::TileSet::DefaultTileSize * Tiles::TileSet::DefaultTileSize];
-						for (int y = 0; y < Tiles::TileSet::DefaultTileSize; y++) {
-							for (int x = 0; x < Tiles::TileSet::DefaultTileSize; x++) {
-								bool isFilled = ((pixels[pixelsBase + (y * w) + x] >> 24) & 0xff) > 0;
-								maskOffset[y * Tiles::TileSet::DefaultTileSize + x] = isFilled;
-							}
-						}
-						k++;
-					}
-				}
-			}
-		}
-
-		if (mask == nullptr) {
-			return nullptr;
-		}
+		std::unique_ptr<Texture> textureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, width, height);
+		textureDiffuse->loadFromTexels((unsigned char*)pixels.get(), 0, 0, width, height);
+		textureDiffuse->setMinFiltering(SamplerFilter::Nearest);
+		textureDiffuse->setMagFiltering(SamplerFilter::Nearest);
 
 		return std::make_unique<Tiles::TileSet>(std::move(textureDiffuse), std::move(mask));
 	}
 
 	bool ContentResolver::LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty)
 	{
-		String levelRoot = fs::joinPath({ "Content"_s, "Episodes"_s, path });
+		String fullPath = fs::joinPath({ "Cache"_s, "Episodes"_s, path + ".j2l"_s });
 
-		// Try to load level description
-		auto fileHandle = IFileStream::createFileHandle(fs::joinPath({ levelRoot, ".res"_s }));
-		fileHandle->Open(FileAccessMode::Read);
-		auto fileSize = fileHandle->GetSize();
-		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
-			// 64 MB file size limit
-			return false;
-		}
+		auto s = IFileStream::createFileHandle(fullPath);
+		s->Open(FileAccessMode::Read);
+		ASSERT_MSG(s->isOpened(), "Cannot open file for reading");
 
-		auto buffer = std::make_unique<char[]>(fileSize + 1);
-		fileHandle->Read(buffer.get(), fileSize);
-		buffer[fileSize] = '\0';
+		uint64_t signature = s->ReadValue<uint64_t>();
+		uint8_t version = s->ReadValue<uint8_t>();
+		ASSERT(signature == 0x2095A59FF0BFBBEF && version == 1, "Invalid file");
 
-		Document document;
-		if (document.ParseInsitu(buffer.get()).HasParseError() || !document.IsObject()) {
-			return false;
-		}
+		// TODO: Level flags
+		uint16_t flags = s->ReadValue<uint16_t>();
 
-		// These 3 sections are required
-		const auto& versionItem = document.FindMember("Version");
-		const auto& descriptionItem = document.FindMember("Description");
-		const auto& layersItem = document.FindMember("Layers");
-		if (versionItem == document.MemberEnd() || !versionItem->value.IsObject() ||
-			descriptionItem == document.MemberEnd() || !descriptionItem->value.IsObject() ||
-			layersItem == document.MemberEnd() || !layersItem->value.IsObject()) {
-			return false;
-		}
+		uint8_t nameSize = s->ReadValue<uint8_t>();
+		String name(NoInit, nameSize);
+		s->Read(name.data(), nameSize);
 
-		const auto& layerFormatItem = versionItem->value.FindMember("LayerFormat");
-		const auto& eventSetItem = versionItem->value.FindMember("EventSet");
+		nameSize = s->ReadValue<uint8_t>();
+		String nextLevel(NoInit, nameSize);
+		s->Read(nextLevel.data(), nameSize);
 
-		const auto& nameItem = descriptionItem->value.FindMember("Name");
-		const auto& nextLevelItem = descriptionItem->value.FindMember("NextLevel");
-		const auto& secretLevelItem = descriptionItem->value.FindMember("SecretLevel");
-		const auto& defaultTilesetItem = descriptionItem->value.FindMember("DefaultTileset");
-		const auto& defaultMusicItem = descriptionItem->value.FindMember("DefaultMusic");
-		const auto& defaultLightItem = descriptionItem->value.FindMember("DefaultLight");
+		nameSize = s->ReadValue<uint8_t>();
+		String secretLevel(NoInit, nameSize);
+		s->Read(secretLevel.data(), nameSize);
 
-		if (layerFormatItem == versionItem->value.MemberEnd() || !layerFormatItem->value.IsNumber() ||
-			eventSetItem == versionItem->value.MemberEnd() || !eventSetItem->value.IsNumber() ||
-			defaultTilesetItem == descriptionItem->value.MemberEnd() || !defaultTilesetItem->value.IsString()) {
-			return false;
-		}
+		nameSize = s->ReadValue<uint8_t>();
+		String bonusLevel(NoInit, nameSize);
+		s->Read(bonusLevel.data(), nameSize);
 
-		std::unique_ptr<Tiles::TileMap> tileMap = std::make_unique<Tiles::TileMap>(levelHandler, defaultTilesetItem->value.GetString());
+		// Default Tileset
+		nameSize = s->ReadValue<uint8_t>();
+		String defaultTileset(NoInit, nameSize);
+		s->Read(defaultTileset.data(), nameSize);
 
-		// Sprite layer is mandatory
-		{
-			auto layerFile = IFileStream::createFileHandle(fs::joinPath({ levelRoot, "Sprite.layer"_s }));
-			tileMap->ReadLayerConfiguration(LayerType::Sprite, layerFile, { .SpeedX = 1, .SpeedY = 1, .Depth = -50 });
-		}
+		// Default Music
+		nameSize = s->ReadValue<uint8_t>();
+		String defaultMusic(NoInit, nameSize);
+		s->Read(defaultMusic.data(), nameSize);
 
-		// Load all layers
-		auto it = layersItem->value.MemberBegin();
-		while (it != layersItem->value.MemberEnd()) {
-			const auto& layerName = it->name.GetString();
-			const auto& speedXItem = it->value.FindMember("XSpeed");
-			const auto& speedYItem = it->value.FindMember("YSpeed");
-			const auto& autoSpeedXItem = it->value.FindMember("XAutoSpeed");
-			const auto& autoSpeedYItem = it->value.FindMember("YAutoSpeed");
-			const auto& repeatXItem = it->value.FindMember("XRepeat");
-			const auto& repeatYItem = it->value.FindMember("YRepeat");
-			const auto& offsetXItem = it->value.FindMember("XOffset");
-			const auto& offsetYItem = it->value.FindMember("YOffset");
-			const auto& depthItem = it->value.FindMember("Depth");
-			const auto& inherentOffsetItem = it->value.FindMember("InherentOffset");
-			const auto& backgroundStyleItem = it->value.FindMember("BackgroundStyle");
-			const auto& backgroundColorItem = it->value.FindMember("BackgroundColor");
-			const auto& parallaxStarsEnabledItem = it->value.FindMember("ParallaxStarsEnabled");
+		float defaultLight = s->ReadValue<uint8_t>() / 255.0f;
+		uint32_t defaultDarknessColor = s->ReadValue<uint32_t>();
+		uint8_t defaultWeather = s->ReadValue<uint8_t>();
 
-			LayerType type;
-			if (strcmp(layerName, "Sprite") == 0) {
-				type = LayerType::Sprite;
-			} else if (strcmp(layerName, "Sky") == 0) {
-				type = LayerType::Sky;
-			} else {
-				type = LayerType::Other;
-			}
-
-			BackgroundStyle backgroundStyle = (backgroundStyleItem != it->value.MemberEnd() && backgroundStyleItem->value.IsInt() ? (BackgroundStyle)backgroundStyleItem->value.GetInt() : BackgroundStyle::Plain);
-			Vector3f backgroundColor;
-			bool parallaxStarsEnabled = false;
-			if (backgroundStyle != BackgroundStyle::Plain) {
-				if (backgroundColorItem != it->value.MemberEnd() && backgroundColorItem->value.IsArray() && backgroundColorItem->value.Size() >= 3) {
-					const auto& color = backgroundColorItem->value.GetArray();
-					backgroundColor = Vector3f(
-						color[0].GetInt() / 255.0f,
-						color[1].GetInt() / 255.0f,
-						color[2].GetInt() / 255.0f
-					);
-				}
-				parallaxStarsEnabled = (parallaxStarsEnabledItem != it->value.MemberEnd() && parallaxStarsEnabledItem->value.IsBool() && parallaxStarsEnabledItem->value.GetBool());
-			}
-
-			auto layerFile = IFileStream::createFileHandle(fs::joinPath({ levelRoot, StringView(layerName) + ".layer"_s }));
-			tileMap->ReadLayerConfiguration(type, layerFile, {
-				.SpeedX = (speedXItem != it->value.MemberEnd() && speedXItem->value.IsNumber() ? speedXItem->value.GetFloat() : 0.0f),
-				.SpeedY = (speedYItem != it->value.MemberEnd() && speedYItem->value.IsNumber() ? speedYItem->value.GetFloat() : 0.0f),
-				.AutoSpeedX = (autoSpeedXItem != it->value.MemberEnd() && autoSpeedXItem->value.IsNumber() ? autoSpeedXItem->value.GetFloat() : 0.0f),
-				.AutoSpeedY = (autoSpeedYItem != it->value.MemberEnd() && autoSpeedYItem->value.IsNumber() ? autoSpeedYItem->value.GetFloat() : 0.0f),
-				.RepeatX = (repeatXItem != it->value.MemberEnd() && repeatXItem->value.IsBool() && repeatXItem->value.GetBool()),
-				.RepeatY = (repeatYItem != it->value.MemberEnd() && repeatYItem->value.IsBool() && repeatYItem->value.GetBool()),
-				.OffsetX = (offsetXItem != it->value.MemberEnd() && offsetXItem->value.IsNumber() ? offsetXItem->value.GetFloat() : 0.0f),
-				.OffsetY = (offsetYItem != it->value.MemberEnd() && offsetYItem->value.IsNumber() ? offsetYItem->value.GetFloat() : 0.0f),
-				// TODO: Depth is negative
-				.Depth = (depthItem != it->value.MemberEnd() && depthItem->value.IsNumber() ? -depthItem->value.GetInt() : 0),
-				.UseInherentOffset = (inherentOffsetItem != it->value.MemberEnd() && inherentOffsetItem->value.IsBool() && inherentOffsetItem->value.GetBool()),
-				.BackgroundStyle = backgroundStyle,
-				.BackgroundColor = backgroundColor,
-				.ParallaxStarsEnabled = parallaxStarsEnabled
-			});
-
-			++it;
-		}
-
-		// Load animated tiles
-		auto animTilesFile = IFileStream::createFileHandle(fs::joinPath({ levelRoot, "Animated.tiles"_s }));
-		tileMap->ReadAnimatedTiles(animTilesFile);
-
-		// Load events
-		std::unique_ptr<Events::EventMap> eventMap = std::make_unique<Events::EventMap>(levelHandler, tileMap->Size());
-		{
-			auto layerFile = IFileStream::createFileHandle(fs::joinPath({ levelRoot, "Events.layer"_s }));
-			eventMap->ReadEvents(layerFile, tileMap, eventSetItem->value.GetInt(), difficulty);
-		}
-
-		// Load level texts
+		// Text Event Strings
+		uint8_t textEventStringsCount = s->ReadValue<uint8_t>();
 		SmallVector<String, 0> levelTexts;
-		const auto& textEventsItem = document.FindMember("TextEvents");
-		if (textEventsItem != document.MemberEnd() && textEventsItem->value.IsArray()) {
-			for (int i = 0; i < textEventsItem->value.Size(); i++) {
-				if (textEventsItem->value[i].IsString()) {
-					const auto& text = textEventsItem->value[i].GetString();
-					levelTexts.emplace_back(text);
-				} else {
-					levelTexts.emplace_back();
-				}
-			}
+		levelTexts.reserve(textEventStringsCount);
+		for (int i = 0; i < textEventStringsCount; i++) {
+			uint8_t textLength = s->ReadValue<uint16_t>();
+			String& text = levelTexts.emplace_back(NoInit, textLength);
+			s->Read(text.data(), textLength);
 		}
 
-		levelHandler->OnLevelLoaded(
-			nameItem != descriptionItem->value.MemberEnd() && nameItem->value.IsString() ? nameItem->value.GetString() : nullptr,
-			nextLevelItem != descriptionItem->value.MemberEnd() && nextLevelItem->value.IsString() ? nextLevelItem->value.GetString() : nullptr,
-			secretLevelItem != descriptionItem->value.MemberEnd() && defaultMusicItem->value.IsString() ? secretLevelItem->value.GetString() : nullptr,
-			tileMap, eventMap,
-			defaultMusicItem != descriptionItem->value.MemberEnd() && defaultMusicItem->value.IsString() ? fs::joinPath({ "Content"_s, "Music"_s, defaultMusicItem->value.GetString() }) : nullptr,
-			defaultLightItem != descriptionItem->value.MemberEnd() && defaultLightItem->value.IsNumber() ? (defaultLightItem->value.GetFloat() * 0.01f) : 1.0f,
-			levelTexts
-		);
+		std::unique_ptr<Tiles::TileMap> tileMap = std::make_unique<Tiles::TileMap>(levelHandler, defaultTileset);
+
+		// Animated Tiles
+		tileMap->ReadAnimatedTiles(s);
+
+		// Layers
+		uint8_t layerCount = s->ReadValue<uint8_t>();
+		for (int i = 0; i < layerCount; i++) {
+			tileMap->ReadLayerConfiguration(s);
+		}
+
+		// Events
+		std::unique_ptr<Events::EventMap> eventMap = std::make_unique<Events::EventMap>(levelHandler, tileMap->Size());
+		eventMap->ReadEvents(s, tileMap, difficulty);
+
+		// TODO: Bonus level and darkness color
+		levelHandler->OnLevelLoaded(name, nextLevel, secretLevel, tileMap, eventMap, defaultMusic, defaultLight, levelTexts);
 
 		return true;
 	}
@@ -690,6 +797,19 @@ namespace Jazz2
 
 			std::memcpy(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t));
 			RecreateGemPalettes();
+		}
+	}
+
+	std::unique_ptr<AudioStreamPlayer> ContentResolver::GetMusic(const StringView& path)
+	{
+		String fullPath = fs::joinPath({ "Content"_s, "Music"_s, path });
+		if (!fs::isReadableFile(fullPath)) {
+			fullPath = fs::joinPath({ "Source"_s, path });
+		}
+		if (fs::isReadableFile(fullPath)) {
+			return std::make_unique<AudioStreamPlayer>(fullPath);
+		} else {
+			return nullptr;
 		}
 	}
 

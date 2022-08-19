@@ -5,114 +5,114 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Devan/idle.png",
+            "Path": "Devan/idle.aura",
             "States": [ 0 ]
         },
         "Run": {
-            "Path": "Devan/run.png",
+            "Path": "Devan/run.aura",
             "States": [ 2 ]
         },
         "WarpIn": {
-            "Path": "Devan/warp_in.png",
+            "Path": "Devan/warp_in.aura",
             "States": [ 1073741843 ]
         },
         "WarpOut": {
-            "Path": "Devan/warp_out.png",
+            "Path": "Devan/warp_out.aura",
             "States": [ 1073741844 ]
         },
         "RunEnd": {
-            "Path": "Devan/run_end.png",
+            "Path": "Devan/run_end.aura",
             "FrameRate": 20,
             "States": [ 1073741824 ]
         },
         "ShootStart": {
-            "Path": "Devan/shoot.png",
+            "Path": "Devan/shoot.aura",
             "FrameCount": 3,
             "FrameRate": 20,
             "States": [ 15 ]
         },
         "Shoot": {
-            "Path": "Devan/shoot.png",
+            "Path": "Devan/shoot.aura",
             "FrameOffset": 3,
             "FrameCount": 3,
             "FrameRate": 30,
             "States": [ 16 ]
         },
         "ShootEnd": {
-            "Path": "Devan/shoot.png",
+            "Path": "Devan/shoot.aura",
             "FrameOffset": 6,
             "FrameCount": 1,
             "FrameRate": 40,
             "States": [ 17 ]
         },
         "ShootEnd2": {
-            "Path": "Devan/shoot.png",
+            "Path": "Devan/shoot.aura",
             "FrameOffset": 7,
             "FrameRate": 28,
             "States": [ 18 ]
         },
         
         "JumpEnd": {
-            "Path": "Devan/jump_end.png",
+            "Path": "Devan/jump_end.aura",
             "States": [ 1073741826 ]
         },
         "Freefall": {
-            "Path": "Devan/freefall.png",
+            "Path": "Devan/freefall.aura",
             "States": [ 65536 ]
         },
 
         "DisorientedStart": {
-            "Path": "Devan/disoriented_start.png",
+            "Path": "Devan/disoriented_start.aura",
             "States": [ 666 ]
         },
         "Disoriented": {
-            "Path": "Devan/disoriented.png",
+            "Path": "Devan/disoriented.aura",
             "States": [ 667 ]
         },
         "DisorientedWarpOut": {
-            "Path": "Devan/disoriented_warp_out.png",
+            "Path": "Devan/disoriented_warp_out.aura",
             "States": [ 6670 ]
         },
 
         "Bullet": {
-            "Path": "Devan/bullet.png",
+            "Path": "Devan/bullet.aura",
             "States": [ 668 ]
         },
         
         "DemonFly": {
-            "Path": "Devan/demon_fly.png",
+            "Path": "Devan/demon_fly.aura",
             "FrameRate": 5,
             "States": [ 669 ]
         },
         "DemonTransformStart": {
-            "Path": "Devan/demon_transform_start.png",
+            "Path": "Devan/demon_transform_start.aura",
             "FrameRate": 2,
             "States": [ 670 ]
         },
         "DemonTransformEnd": {
-            "Path": "Devan/demon_transform_end.png",
+            "Path": "Devan/demon_transform_end.aura",
             "FrameRate": 2,
             "States": [ 671 ]
         },
         "DemonTurn": {
-            "Path": "Devan/demon_turn.png",
+            "Path": "Devan/demon_turn.aura",
             "FrameRate": 20,
             "States": [ 1073741840 ]
         },
         "DemonSpewFireball": {
-            "Path": "Devan/demon_spew_fireball.png",
+            "Path": "Devan/demon_spew_fireball.aura",
             "FrameCount": 9,
             "States": [ 673 ]
         },
         "DemonSpewFireballEnd": {
-            "Path": "Devan/demon_spew_fireball.png",
+            "Path": "Devan/demon_spew_fireball.aura",
             "FrameOffset": 9,
             "FrameRate": 20,
             "States": [ 674 ]
         },
         
         "DemonFireball": {
-            "Path": "Devan/demon_fireball.png",
+            "Path": "Devan/demon_fireball.aura",
             "States": [ 675 ]
         }
     },

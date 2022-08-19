@@ -5,277 +5,277 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Jazz/idle.png",
+            "Path": "Jazz/idle.aura",
             "States": [ 0 ]
         },
         "Walk": {
-            "Path": "Jazz/run.png",
+            "Path": "Jazz/run.aura",
             "FrameRate": 8,
             "States": [ 1, 17 ]
         },
         "Run": {
-            "Path": "Jazz/dash_start.png",
+            "Path": "Jazz/dash_start.aura",
             "FrameRate": 12,
             "States": [ 2, 18 ]
         },
         "Jump": {
-            "Path": "Jazz/jump.png",
+            "Path": "Jazz/jump.aura",
             "States": [ 4 ]
         },
         "RunJump": {
-            "Path": "Jazz/jump_diag.png",
+            "Path": "Jazz/jump_diag.aura",
             "Flags": 1,
             "States": [ 5, 6 ]
         },
         "Fall": {
-            "Path": "Jazz/fall.png",
+            "Path": "Jazz/fall.aura",
             "States": [ 8 ]
         },
         "FallDiag": {
-            "Path": "Jazz/fall_diag.png",
+            "Path": "Jazz/fall_diag.aura",
             "States": [ 9, 10, 11 ]
         },
         "Freefall": {
-            "Path": "Jazz/freefall.png",
+            "Path": "Jazz/freefall.aura",
             "States": [ 65536, 65537, 65538, 65539 ]
         },
         "Dash": {
-            "Path": "Jazz/dash.png",
+            "Path": "Jazz/dash.aura",
             "FrameRate": 20,
             "States": [ 3, 19 ]
         },
         "DashJump": {
-            "Path": "Jazz/ball.png",
+            "Path": "Jazz/ball.aura",
             "States": [ 7 ]
         },
         "Lookup": {
-            "Path": "Jazz/lookup_start.png",
+            "Path": "Jazz/lookup_start.aura",
             "Flags": 1,
             "FrameRate": 34,
             "States": [ 64 ]
         },
         "Crouch": {
-            "Path": "Jazz/crouch_start.png",
+            "Path": "Jazz/crouch_start.aura",
             "Flags": 1,
             "FrameRate": 40,
             "States": [ 32 ]
         },
         "DizzyIdle": {
-            "Path": "Jazz/dizzy.png",
+            "Path": "Jazz/dizzy.aura",
             "FrameRate": 7,
             "States": [ 128 ]
         },
         "DizzyWalk": {
-            "Path": "Jazz/dizzy_walk.png",
+            "Path": "Jazz/dizzy_walk.aura",
             "FrameRate": 6,
             "States": [ 129, 145 ]
         },
         "Shoot": {
-            "Path": "Jazz/shoot.png",
+            "Path": "Jazz/shoot.aura",
             "States": [ 16, 144 ],
             "Flags": 1
         },
         "CrouchShoot": {
-            "Path": "Jazz/crouch_shoot.png",
+            "Path": "Jazz/crouch_shoot.aura",
             "States": [ 48 ],
             "Flags": 1
         },
         "LookupShoot": {
-            "Path": "Jazz/shoot_ver.png",
+            "Path": "Jazz/shoot_ver.aura",
             "States": [ 80 ],
             "Flags": 1
         },
         "Hurt": {
-            "Path": "Jazz/hurt.png",
+            "Path": "Jazz/hurt.aura",
             "FrameRate": 6,
             "States": [ 2048 ]
         },
         "Uppercut": {
-            "Path": "Jazz/uppercut.png",
+            "Path": "Jazz/uppercut.aura",
             "States": [ 512 ]
         },
         "Buttstomp": {
-            "Path": "Jazz/buttstomp.png",
+            "Path": "Jazz/buttstomp.aura",
             "States": [ 256 ]
         },
         "Hook": {
-            "Path": "Jazz/vine_idle.png",
+            "Path": "Jazz/vine_idle.aura",
             "States": [ 12 ]
         },
         "HookLookup": {
-            "Path": "Jazz/vine_shoot_up_end.png",
+            "Path": "Jazz/vine_shoot_up_end.aura",
             "States": [ 76 ]
         },
         "HookMove": {
-            "Path": "Jazz/vine_walk.png",
+            "Path": "Jazz/vine_walk.aura",
             "States": [ 13, 14, 15 ]
         },
         "Copter": {
-            "Path": "Jazz/copter.png",
+            "Path": "Jazz/copter.aura",
             "FrameRate": 6,
             "States": [ 8192, 8193, 8194, 8195 ]
         },
         "CopterShoot": {
-            "Path": "Jazz/copter_shoot.png",
+            "Path": "Jazz/copter_shoot.aura",
             "FrameRate": 22,
             "States": [ 8208, 8209, 8210, 8211 ]
         },
         "AerialShoot": {
-            "Path": "Jazz/fall_shoot.png",
+            "Path": "Jazz/fall_shoot.aura",
             "FrameRate": 14,
             "States": [ 20, 21, 22, 23, 24, 25, 26, 27, 262160, 262161, 262162, 262163 ]
         },
         "HookShoot": {
-            "Path": "Jazz/vine_shoot.png",
+            "Path": "Jazz/vine_shoot.aura",
             "States": [ 28, 29, 30, 31 ],
             "Flags": 1
         },
         "HookLookupShoot": {
-            "Path": "Jazz/vine_shoot_up.png",
+            "Path": "Jazz/vine_shoot_up.aura",
             "States": [ 92 ],
             "Flags": 1
         },
         "RunToIdle": {
-            "Path": "Jazz/run_stop.png",
+            "Path": "Jazz/run_stop.aura",
             "States": [ 1073741824 ]
         },
         "RunToDash": {
-            "Path": "Jazz/dash_start.png",
+            "Path": "Jazz/dash_start.aura",
             "States": [ 1073741825 ]
         },
         "DashToIdle": {
-            "Path": "Jazz/dash_stop.png",
+            "Path": "Jazz/dash_stop.aura",
             "States": [ 1073741856 ]
         },
         "FallToIdle": {
-            "Path": "Jazz/fall_end.png",
+            "Path": "Jazz/fall_end.aura",
             "States": [ 1073741826 ]
         },
         "ShootToIdle": {
-            "Path": "Jazz/shoot_end.png",
+            "Path": "Jazz/shoot_end.aura",
             "FrameRate": 20,
             "States": [ 1073741828 ]
         },
         "HookShootToHook": {
-            "Path": "Jazz/vine_shoot_end.png",
+            "Path": "Jazz/vine_shoot_end.aura",
             "FrameRate": 20,
             "States": [ 1073741829 ]
         },
         "CopterShootToCopter": {
-            "Path": "Jazz/copter_shoot_start.png",
+            "Path": "Jazz/copter_shoot_start.aura",
             "FrameRate": 27,
             "States": [ 1073741830 ]
         },
         "FallShootToFall": {
-            "Path": "Jazz/unused_jump_shoot_end.png",
+            "Path": "Jazz/unused_jump_shoot_end.aura",
             "FrameRate": 20,
             "States": [ 1073741872 ]
         },
         "UppercutA": {
-            "Path": "Jazz/uppercut_start.png",
+            "Path": "Jazz/uppercut_start.aura",
             "FrameCount": 3,
             "FrameRate": 20,
             "States": [ 1073741831 ]
         },
         "UppercutB": {
-            "Path": "Jazz/uppercut_start.png",
+            "Path": "Jazz/uppercut_start.aura",
             "FrameOffset": 3,
             "FrameRate": 20,
             "States": [ 1073741832 ]
         },
         "UppercutC": {
-            "Path": "Jazz/uppercut_end.png",
+            "Path": "Jazz/uppercut_end.aura",
             "FrameRate": 20,
             "States": [ 1073741833 ]
         },
         "ButtstompStart": {
-            "Path": "Jazz/Spring.png",
+            "Path": "Jazz/Spring.aura",
             "States": [ 1073741834 ]
         },
         "ButtstompEnd": {
-            "Path": "Jazz/buttstomp_end.png",
+            "Path": "Jazz/buttstomp_end.aura",
             "States": [ 1073741858 ]
         },
         "PoleH": {
-            "Path": "Jazz/pole_h.png",
+            "Path": "Jazz/pole_h.aura",
             "FrameRate": 20,
             "States": [ 1073741835 ]
         },
         "PoleHSlow": {
-            "Path": "Jazz/pole_h.png",
+            "Path": "Jazz/pole_h.aura",
             "States": [ 1073741837 ]
         },
         "PoleV": {
-            "Path": "Jazz/pole_v.png",
+            "Path": "Jazz/pole_v.aura",
             "FrameRate": 20,
             "States": [ 1073741836 ]
         },
         "PoleVSlow": {
-            "Path": "Jazz/pole_v.png",
+            "Path": "Jazz/pole_v.aura",
             "States": [ 1073741838 ]
         },
         "Death": {
-            "Path": "Jazz/die.png",
+            "Path": "Jazz/die.aura",
             "FrameRate": 3,
             "States": [ 1073741839 ]
         },
         "WarpIn": {
-            "Path": "Jazz/warp_in.png",
+            "Path": "Jazz/warp_in.aura",
             "States": [ 1073741843 ]
         },
         "WarpOut": {
-            "Path": "Jazz/warp_out.png",
+            "Path": "Jazz/warp_out.aura",
             "States": [ 1073741844 ]
         },
         "WarpInFreefall": {
-            "Path": "Jazz/warp_in_freefall.png",
+            "Path": "Jazz/warp_in_freefall.aura",
             "States": [ 1073741847 ]
         },
         "WarpOutFreefall": {
-            "Path": "Jazz/warp_out_freefall.png",
+            "Path": "Jazz/warp_out_freefall.aura",
             "States": [ 1073741848 ]
         },
         "Spring": {
-            "Path": "Jazz/Spring.png",
+            "Path": "Jazz/Spring.aura",
             "States": [ 262144, 262145, 262146, 262147 ]
         },
         "Push": {
-            "Path": "Jazz/push.png",
+            "Path": "Jazz/push.aura",
             "FrameRate": 6,
             "States": [ 16384, 16385 ]
         },
         "EndOfLevel": {
-            "Path": "Jazz/eol.png",
+            "Path": "Jazz/eol.aura",
             "FrameRate": 3,
             "States": [ 1073741846 ]
         },
         "Swim": {
-            "Path": "Jazz/swim_right.png",
+            "Path": "Jazz/swim_right.aura",
             "FrameRate": 6,
             "States": [ 4096 ]
         },
         "Lift": {
-            "Path": "Jazz/lift.png",
+            "Path": "Jazz/lift.aura",
             "Flags": 1,
             "FrameRate": 16,
             "States": [ 131072 ]
         },
         "LiftStart": {
-            "Path": "Jazz/lift_jump_heavy.png",
+            "Path": "Jazz/lift_jump_heavy.aura",
             "FrameRate": 16,
             "States": [ 1073741859 ]
         },
         "LiftEnd": {
-            "Path": "Jazz/lift_jump_light.png",
+            "Path": "Jazz/lift_jump_light.aura",
             "States": [ 1073741860 ]
         },
         "Ledge": {
-            "Path": "Jazz/ledge.png",
+            "Path": "Jazz/ledge.aura",
             "FrameRate": 3,
             "States": [ 1073741861 ]
         },
         "Airboard": {
-            "Path": "Jazz/airboard.png",
+            "Path": "Jazz/airboard.aura",
             "FrameRate": 6,
             "States": [ 1024 ]
         },
@@ -285,50 +285,50 @@
             "States": [ 1073741862 ]
         },
         "Swing": {
-            "Path": "Jazz/swing.png",
+            "Path": "Jazz/swing.aura",
             "FrameRate": 4,
             "States": [ 32768 ],
             "Flags": 1
         },
         
         "IdleBored1": {
-            "Path": "Jazz/idle_flavor_1.png",
+            "Path": "Jazz/idle_flavor_1.aura",
             "FrameRate": 2,
             "States": [ 1073741849 ]
         },
         "IdleBored2": {
-            "Path": "Jazz/idle_flavor_2.png",
+            "Path": "Jazz/idle_flavor_2.aura",
             "FrameRate": 1,
             "States": [ 1073741849 ]
         },
         "IdleBored3": {
-            "Path": "Jazz/idle_flavor_3.png",
+            "Path": "Jazz/idle_flavor_3.aura",
             "FrameRate": 2,
             "States": [ 1073741849 ]
         },
         "IdleBored4": {
-            "Path": "Jazz/idle_flavor_4.png",
+            "Path": "Jazz/idle_flavor_4.aura",
             "FrameRate": 3,
             "States": [ 1073741849 ]
         },
         "IdleBored5": {
-            "Path": "Jazz/idle_flavor_5.png",
+            "Path": "Jazz/idle_flavor_5.aura",
             "FrameRate": 3,
             "States": [ 1073741849 ]
         },
         
         "TransformFromFrog": {
-            "Path": "Jazz/transform_frog_end.png",
+            "Path": "Jazz/transform_frog_end.aura",
             "States": [ 1073741888 ],
             "FrameRate": 3
         },
         
         "Corpse": {
-            "Path": "Jazz/corpse.png"
+            "Path": "Jazz/corpse.aura"
         },
 
         "SugarRush": {
-            "Path": "Common/SugarRushStars.png"
+            "Path": "Common/SugarRushStars.aura"
         }
     },
 

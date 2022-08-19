@@ -5,12 +5,12 @@
 
     "Animations": {
         "Fly": {
-            "Path": "Birdy/fly.png",
+            "Path": "Birdy/fly.aura",
             "States": [ 0 ],
             "FrameRate": 7
         },
         "Idle": {
-            "Path": "Birdy/idle.png",
+            "Path": "Birdy/idle.aura",
             "States": [ 1073741849 ]
         }
     },

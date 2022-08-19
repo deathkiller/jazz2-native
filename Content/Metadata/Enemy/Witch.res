@@ -5,23 +5,23 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Witch/idle.png",
+            "Path": "Witch/idle.aura",
             "FrameRate": 8,
             "States": [ 0 ]
         },
         "Attack": {
-            "Path": "Witch/attack.png",
+            "Path": "Witch/attack.aura",
             "FrameRate": 8,
             "States": [ 1325400065 ]
         },
         "Die": {
-            "Path": "Witch/die.png",
+            "Path": "Witch/die.aura",
             "FrameRate": 8,
             "States": [ 1073741839 ]
         },
         
         "MagicBullet": {
-            "Path": "Witch/bullet_magic.png",
+            "Path": "Witch/bullet_magic.aura",
             "States": [ 1073741828 ]
         }
     },

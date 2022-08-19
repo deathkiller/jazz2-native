@@ -5,7 +5,7 @@
 
     "Animations": {
         "Pole": {
-            "Path": "Pole/Jungle.png"
+            "Path": "Pole/Jungle.aura"
         }
     }
 }

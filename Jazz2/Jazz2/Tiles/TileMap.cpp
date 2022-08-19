@@ -586,29 +586,72 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	void TileMap::ReadLayerConfiguration(LayerType type, const std::unique_ptr<IFileStream>& s, const LayerDescription& layer)
+	void TileMap::ReadLayerConfiguration(const std::unique_ptr<IFileStream>& s)
 	{
-		s->Open(FileAccessMode::Read);
-		if (s->GetSize() < 8) {
-			return;
+		LayerType layerType = (LayerType)s->ReadValue<uint8_t>();
+		uint8_t layerFlags = s->ReadValue<uint8_t>();
+		bool hasTexturedBackground = (layerType == LayerType::Sky && (layerFlags & 0x08) == 0x08);
+
+		if (layerType == LayerType::Sprite) {
+			_sprLayerIndex = (int)_layers.size();
+		} else if (hasTexturedBackground) {
+			_texturedBackgroundLayer = (int)_layers.size();
 		}
+
+		TileMapLayer& newLayer = _layers.emplace_back();
 
 		int32_t width = s->ReadValue<int32_t>();
 		int32_t height = s->ReadValue<int32_t>();
+		newLayer.LayoutSize = Vector2i(width, height);
+		newLayer.Visible = true;
 
-		std::unique_ptr<LayerTile[]> layout = std::make_unique<LayerTile[]>(width * height);
+		if (layerType != LayerType::Sprite) {
+			newLayer.OffsetX = s->ReadValue<float>();
+			newLayer.OffsetY = s->ReadValue<float>();
+			newLayer.SpeedX = s->ReadValue<float>();
+			newLayer.SpeedY = s->ReadValue<float>();
+			newLayer.AutoSpeedX = s->ReadValue<float>();
+			newLayer.AutoSpeedY = s->ReadValue<float>();
+			newLayer.RepeatX = ((layerFlags & 0x01) == 0x01);
+			newLayer.RepeatY = ((layerFlags & 0x02) == 0x02);
+			int16_t depth = s->ReadValue<int16_t>();
+			newLayer.Depth = (uint16_t)(ILevelHandler::MainPlaneZ - depth);
+			newLayer.UseInherentOffset = ((layerFlags & 0x04) == 0x04);
+
+			if (hasTexturedBackground) {
+				newLayer.BackgroundStyle = (BackgroundStyle)s->ReadValue<uint8_t>();
+				uint8_t param1 = s->ReadValue<uint8_t>();
+				uint8_t param2 = s->ReadValue<uint8_t>();
+				uint8_t param3 = s->ReadValue<uint8_t>();
+				newLayer.BackgroundColor = Vector3f(param1 / 255.0f, param2 / 255.0f, param3 / 255.0f);
+				newLayer.ParallaxStarsEnabled = ((layerFlags & 0x10) == 0x10);
+			}
+		} else {
+			newLayer.OffsetX = 0.0f;
+			newLayer.OffsetY = 0.0f;
+			newLayer.SpeedX = 1.0f;
+			newLayer.SpeedY = 1.0f;
+			newLayer.AutoSpeedX = 0.0f;
+			newLayer.AutoSpeedY = 0.0f;
+			newLayer.RepeatX = false;
+			newLayer.RepeatY = false;
+			newLayer.Depth = (uint16_t)(ILevelHandler::MainPlaneZ - 50);
+			newLayer.UseInherentOffset = false;
+		}
+
+		newLayer.Layout = std::make_unique<LayerTile[]>(width * height);
 
 		for (int i = 0; i < (width * height); i++) {
-			uint16_t tileType = s->ReadValue<uint16_t>();
+			uint8_t tileFlags = s->ReadValue<uint8_t>();
+			uint16_t tileIdx = s->ReadValue<uint16_t>();
 
-			uint8_t flags = s->ReadValue<uint8_t>();
-			bool isFlippedX = (flags & 0x01) != 0;
-			bool isFlippedY = (flags & 0x02) != 0;
-			bool isAnimated = (flags & 0x04) != 0;
-			uint8_t tileModifier = (uint8_t)(flags >> 4);
+			bool isFlippedX = (tileFlags & 0x01) != 0;
+			bool isFlippedY = (tileFlags & 0x02) != 0;
+			bool isAnimated = (tileFlags & 0x04) != 0;
+			uint8_t tileModifier = (uint8_t)(tileFlags >> 4);
 
-			LayerTile& tile = layout[i];
-			tile.TileID = tileType;
+			LayerTile& tile = newLayer.Layout[i];
+			tile.TileID = tileIdx;
 
 			tile.IsFlippedX = isFlippedX;
 			tile.IsFlippedY = isFlippedY;
@@ -622,59 +665,21 @@ namespace Jazz2::Tiles
 				tile.Alpha = 255;
 			}
 		}
-
-		if (type == LayerType::Sprite) {
-			_sprLayerIndex = (int)_layers.size();
-		} else if (layer.BackgroundStyle != BackgroundStyle::Plain) {
-			_texturedBackgroundLayer = (int)_layers.size();
-		}
-
-		TileMapLayer& newLayer = _layers.emplace_back();
-		newLayer.Visible = true;
-		newLayer.LayoutSize = Vector2i(width, height);
-		newLayer.Layout = std::move(layout);
-
-		newLayer.SpeedX = layer.SpeedX;
-		newLayer.SpeedY = layer.SpeedY;
-		newLayer.AutoSpeedX = layer.AutoSpeedX;
-		newLayer.AutoSpeedY = layer.AutoSpeedY;
-		newLayer.RepeatX = layer.RepeatX;
-		newLayer.RepeatY = layer.RepeatY;
-		newLayer.OffsetX = layer.OffsetX;
-		newLayer.OffsetY = layer.OffsetY;
-		newLayer.UseInherentOffset = layer.UseInherentOffset;
-		newLayer.Depth = (uint16_t)(ILevelHandler::MainPlaneZ + layer.Depth);
-		newLayer.BackgroundStyle = layer.BackgroundStyle;
-		newLayer.BackgroundColor = layer.BackgroundColor;
-		newLayer.ParallaxStarsEnabled = layer.ParallaxStarsEnabled;
 	}
 
 	void TileMap::ReadAnimatedTiles(const std::unique_ptr<IFileStream>& s)
 	{
-		s->Open(FileAccessMode::Read);
-
-		if (s->GetSize() < 4) {
-			return;
-		}
-
-		int32_t count = s->ReadValue<int32_t>();
+		int16_t count = s->ReadValue<int16_t>();
 
 		_animatedTiles.reserve(count);
 
 		for (int i = 0; i < count; i++) {
-			uint16_t frameCount = s->ReadValue<uint16_t>();
+			uint8_t frameCount = s->ReadValue<uint8_t>();
 			if (frameCount == 0) {
 				continue;
 			}
 
 			AnimatedTile& animTile = _animatedTiles.emplace_back();
-
-			for (int j = 0; j < frameCount; j++) {
-				auto& frame = animTile.Tiles.emplace_back();
-				frame.TileID = s->ReadValue<uint16_t>();
-				// TODO: flags
-				uint8_t flag = s->ReadValue<uint8_t>();
-			}
 
 			// TODO: Adjust FPS in Import
 			uint8_t speed = s->ReadValue<uint8_t>();
@@ -686,6 +691,13 @@ namespace Jazz2::Tiles
 
 			animTile.PingPong = s->ReadValue<uint8_t>();
 			animTile.PingPongDelay = s->ReadValue<uint16_t>();
+
+			for (int j = 0; j < frameCount; j++) {
+				auto& frame = animTile.Tiles.emplace_back();
+				// TODO: flags
+				uint8_t flag = s->ReadValue<uint8_t>();
+				frame.TileID = s->ReadValue<uint16_t>();
+			}
 		}
 	}
 

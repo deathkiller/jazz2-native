@@ -23,13 +23,13 @@ namespace Jazz2::Actors::Solid
 		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
 
 		uint8_t eventParam = 0;
-		AddContent(EventType::Gem, *(uint16_t*)&details.Params[0], &eventParam, sizeof(eventParam));
+		AddContent(EventType::Gem, details.Params[0], &eventParam, sizeof(eventParam));
 		eventParam = 1;
-		AddContent(EventType::Gem, *(uint16_t*)&details.Params[2], &eventParam, sizeof(eventParam));
+		AddContent(EventType::Gem, details.Params[1], &eventParam, sizeof(eventParam));
 		eventParam = 2;
-		AddContent(EventType::Gem, *(uint16_t*)&details.Params[4], &eventParam, sizeof(eventParam));
+		AddContent(EventType::Gem, details.Params[2], &eventParam, sizeof(eventParam));
 		eventParam = 3;
-		AddContent(EventType::Gem, *(uint16_t*)&details.Params[6], &eventParam, sizeof(eventParam));
+		AddContent(EventType::Gem, details.Params[3], &eventParam, sizeof(eventParam));
 
 		co_await RequestMetadataAsync("Object/CrateContainer"_s);
 

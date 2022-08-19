@@ -5,19 +5,19 @@
 
     "Animations": {
         "Walk": {
-            "Path": "Crab/walk.png",
+            "Path": "Crab/walk.aura",
             "FrameRate": 6,
             "States": [ 1 ]
         },
         
         "Fall": {
-            "Path": "Crab/fall.png",
+            "Path": "Crab/fall.aura",
             "FrameRate": 14,
             "States": [ 8 ]
         },
         
         "FallEnd": {
-            "Path": "Crab/fall_end.png",
+            "Path": "Crab/fall_end.aura",
             "FrameRate": 30,
             "States": [ 1073741826 ]
         }

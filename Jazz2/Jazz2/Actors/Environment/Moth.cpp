@@ -19,7 +19,7 @@ namespace Jazz2::Actors::Environment
 		SetState(ActorFlags::CanBeFrozen, false);
 		_renderer.setLayer(_renderer.layer() - 20);
 
-		uint16_t theme = *(uint16_t*)&details.Params[0];
+		uint8_t theme = details.Params[0];
 
 		co_await RequestMetadataAsync("Object/Moth"_s);
 

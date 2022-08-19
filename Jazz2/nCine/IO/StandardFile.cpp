@@ -115,7 +115,7 @@ namespace nCine {
 		return bytesRead;
 	}
 
-	unsigned long int StandardFile::Write(void* buffer, unsigned long int bytes)
+	unsigned long int StandardFile::Write(const void* buffer, unsigned long int bytes)
 	{
 		ASSERT(buffer);
 

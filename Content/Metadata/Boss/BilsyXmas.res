@@ -5,35 +5,35 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Bilsy/xmas_idle.png",
+            "Path": "Bilsy/xmas_idle.aura",
             "States": [ 0 ],
             "FrameRate": 7
         },
         "Appear": {
-            "Path": "Bilsy/xmas_appear.png",
+            "Path": "Bilsy/xmas_appear.aura",
             "States": [ 1073741824 ],
             "FrameRate": 6
         },
         "Vanish": {
-            "Path": "Bilsy/xmas_vanish.png",
+            "Path": "Bilsy/xmas_vanish.aura",
             "States": [ 1073741825 ],
             "FrameRate": 6
         },
         "ThrowFireball": {
-            "Path": "Bilsy/xmas_throw_fireball.png",
+            "Path": "Bilsy/xmas_throw_fireball.aura",
             "States": [ 1073741826 ],
             "FrameRate": 4,
             "FrameCount": 15
         },
         "ThrowFireballEnd": {
-            "Path": "Bilsy/xmas_throw_fireball.png",
+            "Path": "Bilsy/xmas_throw_fireball.aura",
             "States": [ 1073741827 ],
             "FrameRate": 17,
             "FrameOffset": 15
         },
         
         "Fireball": {
-            "Path": "Bilsy/xmas_bullet_fireball.png",
+            "Path": "Bilsy/xmas_bullet_fireball.aura",
             "FrameRate": 20,
             "States": [ 1073741828 ]
         }

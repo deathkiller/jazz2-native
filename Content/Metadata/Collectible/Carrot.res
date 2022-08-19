@@ -5,7 +5,7 @@
 
     "Animations": {
         "Carrot": {
-            "Path": "Pickup/carrot.png"
+            "Path": "Pickup/carrot.aura"
         }
     }
 }

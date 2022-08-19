@@ -5,7 +5,7 @@
 
     "Animations": {
         "Stopwatch": {
-            "Path": "Pickup/stopwatch.png"
+            "Path": "Pickup/stopwatch.aura"
         }
     }
 }

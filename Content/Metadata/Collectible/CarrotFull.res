@@ -5,7 +5,7 @@
 
     "Animations": {
         "Carrot": {
-            "Path": "Pickup/carrot_full.png",
+            "Path": "Pickup/carrot_full.aura",
             "FrameRate": 8,
             "Shader": "SmoothAnimNormal"
         }

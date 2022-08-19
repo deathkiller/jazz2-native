@@ -5,12 +5,12 @@
 
     "Animations": {
         "Walk": {
-            "Path": "Doggy/xmas_walk.png",
+            "Path": "Doggy/xmas_walk.aura",
             "FrameRate": 6,
             "States": [ 1 ]
         },
         "Attack": {
-            "Path": "Doggy/xmas_attack.png",
+            "Path": "Doggy/xmas_attack.aura",
             "States": [ 1325400065 ]
         }
     },

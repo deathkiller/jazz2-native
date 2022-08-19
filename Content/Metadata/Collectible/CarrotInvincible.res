@@ -5,7 +5,7 @@
 
     "Animations": {
         "Carrot": {
-            "Path": "Pickup/carrot_invincibility.png",
+            "Path": "Pickup/carrot_invincibility.aura",
             "FrameRate": 8,
             "Shader": "SmoothAnimNormal"
         }

@@ -5,7 +5,7 @@
 
     "Animations": {
         "Airboard": {
-            "Path": "Pickup/airboard.png",
+            "Path": "Pickup/airboard.aura",
             "FrameRate": 6
         }
     }

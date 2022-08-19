@@ -5,10 +5,10 @@
 
     "Animations": {
         "Platform": {
-            "Path": "Platform/carrotus_fruit.png"
+            "Path": "Platform/carrotus_fruit.aura"
         },
         "Chain": {
-            "Path": "Platform/carrotus_fruit_chain.png"
+            "Path": "Platform/carrotus_fruit_chain.aura"
         }
     }
 }

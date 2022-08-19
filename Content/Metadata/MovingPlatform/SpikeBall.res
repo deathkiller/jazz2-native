@@ -5,10 +5,10 @@
 
     "Animations": {
         "Platform": {
-            "Path": "Object/3d_spike.png"
+            "Path": "Object/3d_spike.aura"
         },
         "Chain": {
-            "Path": "Object/3d_spike_chain.png"
+            "Path": "Object/3d_spike_chain.aura"
         }
     }
 }

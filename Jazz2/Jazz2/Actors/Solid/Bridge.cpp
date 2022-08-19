@@ -31,7 +31,7 @@ namespace Jazz2::Actors::Solid
 		_bridgeWidth = *(uint16_t*)&details.Params[0];
 		_bridgeType = (BridgeType)details.Params[2];
 
-		int toughness = details.Params[2];
+		int toughness = details.Params[3];
 		_heightFactor = sqrtf((16 - toughness) * _bridgeWidth) * 4.0f;
 
 		_originalY = _pos.Y - 6;

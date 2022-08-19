@@ -16,15 +16,15 @@ namespace Jazz2::Actors::Environment
 
 	Task<bool> BonusWarp::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_warpTarget = *(uint16_t*)&details.Params[0];
-		_fast = (details.Params[2] != 0);
-		_setLaps = details.Params[4] != 0;
-		_cost = *(uint16_t*)&details.Params[6];
+		_warpTarget = details.Params[0];
+		_fast = (details.Params[1] != 0);
+		_setLaps = details.Params[2] != 0;
+		_cost = details.Params[3];
 		// ToDo: Show rabbit for non-listed number of coins (use JJ2+ anim set 8)
 		//_showAnim = details.Params[4] != 0;
 
 		SetState(ActorFlags::CanBeFrozen, false);
-		_renderer.setLayer(_renderer.layer() - 30);
+		_renderer.setLayer(_renderer.layer() - 20);
 
 		co_await RequestMetadataAsync("Object/BonusWarp"_s);
 

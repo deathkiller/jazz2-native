@@ -5,11 +5,11 @@
 
     "Animations": {
         "Ammo": {
-            "Path": "Pickup/ammo_pepper.png",
+            "Path": "Pickup/ammo_pepper.aura",
             "Shader": "SmoothAnimNormal"
         },
         "AmmoUpgraded": {
-            "_Path": "Pickup/ammo_pepper_upgraded.png",
+            "_Path": "Pickup/ammo_pepper_upgraded.aura",
             "Shader": "SmoothAnimNormal"
         }
     }

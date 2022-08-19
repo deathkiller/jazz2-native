@@ -5,7 +5,7 @@
 
     "Animations": {
         "Pole": {
-            "Path": "Pole/Psych.png"
+            "Path": "Pole/Psych.aura"
         }
     }
 }

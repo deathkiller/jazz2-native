@@ -38,10 +38,10 @@ namespace Jazz2::Actors::Environment
 	Task<bool> Spring::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		// TODO: change these types to uint8_t
-		_type = *(uint16_t*)&details.Params[0];
-		_orientation = *(uint16_t*)&details.Params[2];
-		KeepSpeedX = (details.Params[4] != 0);
-		KeepSpeedY = (details.Params[6] != 0);
+		_type = details.Params[0];
+		_orientation = details.Params[1];
+		KeepSpeedX = (details.Params[2] != 0);
+		KeepSpeedY = (details.Params[3] != 0);
 		//delay = details.Params[4];
 		//frozen = (details.Params[5] != 0);
 

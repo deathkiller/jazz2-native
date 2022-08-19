@@ -5,7 +5,7 @@
 
     "Animations": {
         "GemGiant": {
-            "Path": "Object/GemSuper.png",
+            "Path": "Object/GemSuper.aura",
             "Flags": 2,
             "ShaderColor": [ 1, 128, 255, 190 ]
         }

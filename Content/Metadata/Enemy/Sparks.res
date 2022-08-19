@@ -5,7 +5,7 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Sparks/idle.png",
+            "Path": "Sparks/idle.aura",
             "States": [ 0 ]
         }
     }

@@ -5,7 +5,7 @@
 
     "Animations": {
         "Pole": {
-            "Path": "Pole/DiamondusTree.png"
+            "Path": "Pole/DiamondusTree.aura"
         }
     }
 }

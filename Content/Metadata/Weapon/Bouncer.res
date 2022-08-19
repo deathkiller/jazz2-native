@@ -5,11 +5,11 @@
 
     "Animations": {
         "Bullet": {
-            "Path": "Weapon/bullet_bouncer.png",
+            "Path": "Weapon/bullet_bouncer.aura",
             "States": [ 0 ]
         },
         "BulletUpgraded": {
-            "Path": "Weapon/bullet_bouncer_upgraded.png",
+            "Path": "Weapon/bullet_bouncer_upgraded.aura",
             "States": [ 1 ]
         }
     },

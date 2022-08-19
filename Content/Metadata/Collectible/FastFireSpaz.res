@@ -5,7 +5,7 @@
 
     "Animations": {
         "FastFire": {
-            "Path": "Pickup/fast_fire_spaz.png"
+            "Path": "Pickup/fast_fire_spaz.aura"
         }
     }
 }

@@ -5,35 +5,35 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Bilsy/idle.png",
+            "Path": "Bilsy/idle.aura",
             "States": [ 0 ],
             "FrameRate": 7
         },
         "Appear": {
-            "Path": "Bilsy/appear.png",
+            "Path": "Bilsy/appear.aura",
             "States": [ 1073741824 ],
             "FrameRate": 6
         },
         "Vanish": {
-            "Path": "Bilsy/vanish.png",
+            "Path": "Bilsy/vanish.aura",
             "States": [ 1073741825 ],
             "FrameRate": 6
         },
         "ThrowFireball": {
-            "Path": "Bilsy/throw_fireball.png",
+            "Path": "Bilsy/throw_fireball.aura",
             "States": [ 1073741826 ],
             "FrameRate": 4,
             "FrameCount": 15
         },
         "ThrowFireballEnd": {
-            "Path": "Bilsy/throw_fireball.png",
+            "Path": "Bilsy/throw_fireball.aura",
             "States": [ 1073741827 ],
             "FrameRate": 17,
             "FrameOffset": 15
         },
         
         "Fireball": {
-            "Path": "Bilsy/bullet_fireball.png",
+            "Path": "Bilsy/bullet_fireball.aura",
             "FrameRate": 20,
             "States": [ 1073741828 ]
         }

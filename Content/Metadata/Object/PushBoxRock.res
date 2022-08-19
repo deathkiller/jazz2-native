@@ -5,7 +5,7 @@
 
     "Animations": {
         "PushBox": {
-            "Path": "Object/PushBoxRock.png"
+            "Path": "Object/PushBoxRock.aura"
         }
     }
 }

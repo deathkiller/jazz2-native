@@ -5,7 +5,7 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Sucker/inflated.png",
+            "Path": "Sucker/inflated.aura",
             "FrameRate": 5,
             "States": [ 0 ]
         }

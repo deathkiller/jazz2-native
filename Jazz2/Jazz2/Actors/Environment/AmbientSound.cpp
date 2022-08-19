@@ -22,7 +22,7 @@ namespace Jazz2::Actors::Environment
 		// TODO: Implement Fade:1|Sine:1
 
 		uint16_t sfx = *(uint16_t*)&details.Params[0];
-		float gain = 0.2f * (details.Params[2] / 255.0f);
+		float gain = 0.2f * (details.Params[1] / 255.0f);
 
 		CollisionFlags = CollisionFlags::ForceDisableCollisions;
 

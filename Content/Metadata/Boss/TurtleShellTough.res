@@ -5,7 +5,7 @@
 
     "Animations": {
         "Idle": {
-            "Path": "TurtleToughBoss/shell.png",
+            "Path": "TurtleToughBoss/shell.aura",
             "States": [ 0 ]
         }
     },

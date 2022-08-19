@@ -47,13 +47,14 @@ namespace nCine
 
 		struct FileDate
 		{
-			int year;
-			int month;
-			int day;
-			int weekDay;
-			int hour;
-			int minute;
-			int second;
+			int32_t Year;
+			int32_t Month;
+			int32_t Day;
+			int32_t Hour;
+			int32_t Minute;
+			int32_t Second;
+
+			int64_t Ticks;
 		};
 
 		/// The class that handles directory traversal
@@ -74,7 +75,8 @@ namespace nCine
 #ifdef DEATH_TARGET_WINDOWS
 			bool firstFile_ = true;
 			HANDLE hFindFile_ = NULL;
-			char fileName_[260];
+			char path_[260];
+			char* fileNamePart_ = nullptr;
 #else
 #ifdef DEATH_TARGET_ANDROID
 			AAssetDir* assetDir_ = nullptr;
@@ -92,12 +94,14 @@ namespace nCine
 		static String absoluteJoinPath(const StringView& first, const StringView& second);
 
 		/// Returns the path up to, but not including, the final separator
-		static String dirName(const StringView& path);
+		static String GetDirectoryName(const StringView& path);
 		/// Returns the path component after the final separator
-		static String baseName(const StringView& path);
+		static String GetFileName(const StringView& path);
+		/// Returns the path component after the final separator without extension
+		static String GetFileNameWithoutExtension(const StringView& path);
 		/// Returns an absolute path from a relative one
 		/** Also resolves dot references to current and parent directory and double separators */
-		static String absolutePath(const StringView& path);
+		static String GetAbsolutePath(const StringView& path);
 
 		/// Returns the extension position in the string or `nullptr` if it is not found
 		static StringView extension(const StringView& path);

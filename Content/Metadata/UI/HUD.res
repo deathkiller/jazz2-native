@@ -5,75 +5,75 @@
 
     "Animations": {
         "WeaponBlasterJazz": {
-            "Path": "Pickup/fast_fire_jazz.png"
+            "Path": "Pickup/fast_fire_jazz.aura"
         },
         "WeaponBlasterSpaz": {
-            "Path": "Pickup/fast_fire_spaz.png"
+            "Path": "Pickup/fast_fire_spaz.aura"
         },
         "WeaponBlasterLori": {
-            "Path": "Pickup/fast_fire_lori.png"
+            "Path": "Pickup/fast_fire_lori.aura"
         },
         "WeaponBouncer": {
-            "Path": "Pickup/ammo_bouncer.png"
+            "Path": "Pickup/ammo_bouncer.aura"
         },
         "WeaponFreezer": {
-            "Path": "Pickup/ammo_freezer.png",
+            "Path": "Pickup/ammo_freezer.aura",
             "FrameRate": 8
         },
         "WeaponSeeker": {
-            "Path": "Pickup/ammo_seeker.png"
+            "Path": "Pickup/ammo_seeker.aura"
         },
         "WeaponRF": {
-            "Path": "Pickup/ammo_rf.png"
+            "Path": "Pickup/ammo_rf.aura"
         },
         "WeaponToaster": {
-            "Path": "Pickup/ammo_toaster.png"
+            "Path": "Pickup/ammo_toaster.aura"
         },
         "WeaponTNT": {
-            "Path": "Object/tnt.png"
+            "Path": "Object/tnt.aura"
         },
         "WeaponPepper": {
-            "Path": "Pickup/ammo_pepper.png"
+            "Path": "Pickup/ammo_pepper.aura"
         },
         "WeaponElectro": {
-            "Path": "Pickup/ammo_electro.png"
+            "Path": "Pickup/ammo_electro.aura"
         },
         "WeaponThunderbolt": {
             "Path": "_custom/thunderbolt_ammo.png"
         },
 
         "WeaponPowerUpBlasterJazz": {
-            "Path": "UI/blaster_upgraded_jazz.png"
+            "Path": "UI/blaster_upgraded_jazz.aura"
         },
         "WeaponPowerUpBlasterSpaz": {
-            "Path": "UI/blaster_upgraded_spaz.png"
+            "Path": "UI/blaster_upgraded_spaz.aura"
         },
         "WeaponPowerUpBlasterLori": {
-            "Path": "UI/blaster_upgraded_lori.png"
+            "Path": "UI/blaster_upgraded_lori.aura"
         },
         "WeaponPowerUpBouncer": {
-            "Path": "Pickup/ammo_bouncer_upgraded.png"
+            "Path": "Pickup/ammo_bouncer_upgraded.aura"
         },
         "WeaponPowerUpFreezer": {
-            "Path": "Pickup/ammo_freezer_upgraded.png"
+            "Path": "Pickup/ammo_freezer_upgraded.aura"
         },
         "WeaponPowerUpSeeker": {
-            "Path": "Pickup/ammo_seeker_upgraded.png"
+            "Path": "Pickup/ammo_seeker_upgraded.aura"
         },
         "WeaponPowerUpRF": {
-            "Path": "Pickup/ammo_rf_upgraded.png"
+            "Path": "Pickup/ammo_rf_upgraded.aura"
         },
         "WeaponPowerUpToaster": {
-            "Path": "Pickup/ammo_toaster_upgraded.png"
+            "Path": "Pickup/ammo_toaster_upgraded.aura"
         },
         "WeaponPowerUpTNT": {
-            "Path": "Object/tnt.png"
+            "Path": "Object/tnt.aura"
         },
         "WeaponPowerUpPepper": {
-            "Path": "Pickup/ammo_pepper_upgraded.png"
+            "Path": "Pickup/ammo_pepper_upgraded.aura"
         },
         "WeaponPowerUpElectro": {
-            "Path": "Pickup/ammo_electro_upgraded.png"
+            "Path": "Pickup/ammo_electro_upgraded.aura"
         },
         "WeaponPowerUpThunderbolt": {
             "Path": "_custom/thunderbolt_ammo.png"
@@ -84,35 +84,35 @@
         },
 
         "CharacterJazz": {
-            "Path": "UI/icon_jazz.png",
+            "Path": "UI/icon_jazz.aura",
             "FrameRate": 2
         },
         "CharacterSpaz": {
-            "Path": "UI/icon_spaz.png",
+            "Path": "UI/icon_spaz.aura",
             "FrameRate": 2
         },
         "CharacterLori": {
-            "Path": "UI/icon_lori.png",
+            "Path": "UI/icon_lori.aura",
             "FrameRate": 2
         },
         "CharacterFrog": {
-            "Path": "UI/icon_frog.png",
+            "Path": "UI/icon_frog.aura",
             "FrameRate": 2
         },
 
         "PickupGem": {
-            "Path": "Pickup/Gem.png",
+            "Path": "Pickup/Gem.aura",
             "PaletteOffset": 128
         },
         "PickupCoin": {
-            "Path": "Pickup/coin_silver.png"
+            "Path": "Pickup/coin_silver.aura"
         },
         "PickupFood": {
-            "Path": "Pickup/food_pizza.png"
+            "Path": "Pickup/food_pizza.aura"
         },
         
         "BossHealthBar": {
-            "Path": "UI/boss_health_bar.png"
+            "Path": "UI/boss_health_bar.aura"
         },
         
         "WeaponWheel": {

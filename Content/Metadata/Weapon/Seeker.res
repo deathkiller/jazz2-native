@@ -5,11 +5,11 @@
 
     "Animations": {
         "Bullet": {
-            "Path": "Weapon/bullet_seeker_hor.png",
+            "Path": "Weapon/bullet_seeker_hor.aura",
             "States": [ 0 ]
         },
         "BulletUpgraded": {
-            "Path": "Weapon/bullet_seeker_upgraded_hor.png",
+            "Path": "Weapon/bullet_seeker_upgraded_hor.aura",
             "States": [ 1 ]
         }
     },

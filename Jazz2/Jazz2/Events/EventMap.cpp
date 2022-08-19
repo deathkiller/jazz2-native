@@ -280,23 +280,10 @@ namespace Jazz2::Events
 		return Vector2f(-1, -1);
 	}
 
-	void EventMap::ReadEvents(const std::unique_ptr<IFileStream>& s, const std::unique_ptr<Tiles::TileMap>& tileMap, uint32_t layoutVersion, GameDifficulty difficulty)
+	void EventMap::ReadEvents(const std::unique_ptr<IFileStream>& s, const std::unique_ptr<Tiles::TileMap>& tileMap, GameDifficulty difficulty)
 	{
-		s->Open(FileAccessMode::Read);
-
-		if (s->GetSize() < 4) {
-			return;
-		}
-
-		int32_t width = s->ReadValue<int32_t>();
-		int32_t height = s->ReadValue<int32_t>();
-
-		if (_layoutSize.X != width || _layoutSize.Y != height) {
-			return;
-		}
-
-		_eventLayout.resize(width * height);
-		_eventLayoutForRollback.resize(width * height);
+		_eventLayout.resize(_layoutSize.X * _layoutSize.Y);
+		_eventLayoutForRollback.resize(_layoutSize.X * _layoutSize.Y);
 
 		uint8_t difficultyBit;
 		switch (difficulty) {
@@ -314,17 +301,17 @@ namespace Jazz2::Events
 				break;
 		}
 
-		for (int y = 0; y < height; y++) {
-			for (int x = 0; x < width; x++) {
-				uint16_t eventID = s->ReadValue<uint16_t>();
-				uint8_t flags = s->ReadValue<uint8_t>();
+		for (int y = 0; y < _layoutSize.Y; y++) {
+			for (int x = 0; x < _layoutSize.X; x++) {
+				uint16_t eventType = s->ReadValue<uint16_t>();
+				uint8_t eventFlags = s->ReadValue<uint8_t>();
 				uint8_t eventParams[16];
 
 				// ToDo: Remove inlined constants
 
 				// Flag 0x02: Generator
 				uint8_t generatorFlags, generatorDelay;
-				if ((flags & 0x02) != 0) {
+				if ((eventFlags & 0x02) != 0) {
 					//eventFlags ^= 0x02;
 					generatorFlags = s->ReadValue<uint8_t>();
 					generatorDelay = s->ReadValue<uint8_t>();
@@ -334,38 +321,38 @@ namespace Jazz2::Events
 				}
 
 				// Flag 0x01: No params provided
-				if ((flags & 0x01) == 0) {
-					flags ^= 0x01;
+				if ((eventFlags & 0x01) == 0) {
+					eventFlags ^= 0x01;
 					s->Read(eventParams, sizeof(eventParams));
 				} else {
 					memset(eventParams, 0, sizeof(eventParams));
 				}
 
-				ActorFlags eventFlags = (ActorFlags)(flags & 0x04);
+				ActorFlags actorFlags = (ActorFlags)(eventFlags & 0x04);
 
 				// Flag 0x02: Generator
-				if ((flags & 0x02) != 0) {
-					if ((EventType)eventID != EventType::Empty && (flags & (0x01 << difficultyBit)) != 0 && (flags & 0x80) == 0) {
+				if ((eventFlags & 0x02) != 0) {
+					if ((EventType)eventType != EventType::Empty && (eventFlags & (0x01 << difficultyBit)) != 0 && (eventFlags & 0x80) == 0) {
 						uint16_t generatorIdx = (uint16_t)_generators.size();
 						float timeLeft = ((generatorFlags & 0x01) != 0 ? generatorDelay : 0.0f);
 
 						GeneratorInfo& generator = _generators.emplace_back();
 						generator.EventPos = x + y * _layoutSize.X;
-						generator.EventType = (EventType)eventID;
+						generator.EventType = (EventType)eventType;
 						std::memcpy(generator.EventParams, eventParams, sizeof(eventParams));
 						generator.Delay = generatorDelay;
 						generator.TimeLeft = timeLeft;
 
 						*(uint16_t*)eventParams = generatorIdx;
-						StoreTileEvent(x, y, EventType::Generator, eventFlags, eventParams);
+						StoreTileEvent(x, y, EventType::Generator, actorFlags, eventParams);
 					}
 					continue;
 				}
 
 				// If the difficulty bytes for the event don't match the selected difficulty, don't add anything to the event map
 				// Additionally, never show events that are multiplayer-only
-				if (flags == 0 || ((flags & (0x01 << difficultyBit)) != 0 && (flags & 0x80) == 0)) {
-					switch ((EventType)eventID) {
+				if (eventFlags == 0 || ((eventFlags & (0x01 << difficultyBit)) != 0 && (eventFlags & 0x80) == 0)) {
+					switch ((EventType)eventType) {
 						case EventType::Empty:
 							break;
 
@@ -393,8 +380,8 @@ namespace Jazz2::Events
 						case EventType::SceneryCollapse:
 						case EventType::ModifierHPole:
 						case EventType::ModifierVPole: {
-							StoreTileEvent(x, y, (EventType)eventID, eventFlags, eventParams);
-							tileMap->SetTileEventFlags(x, y, (EventType)eventID, eventParams);
+							StoreTileEvent(x, y, (EventType)eventType, actorFlags, eventParams);
+							tileMap->SetTileEventFlags(x, y, (EventType)eventType, eventParams);
 							break;
 						}
 
@@ -402,13 +389,13 @@ namespace Jazz2::Events
 							AddWarpTarget(eventParams[0], x, y);
 							break;
 						case EventType::LightReset:
-							// TODO
+							// TODO: Light reset
 							//eventParams[0] = (uint16_t)_levelHandler.AmbientLightDefault;
-							//StoreTileEvent(x, y, EventType::LightSet, eventFlags, eventParams);
+							//StoreTileEvent(x, y, EventType::LightSet, actorFlags, eventParams);
 							break;
 
 						default:
-							StoreTileEvent(x, y, (EventType)eventID, eventFlags, eventParams);
+							StoreTileEvent(x, y, (EventType)eventType, actorFlags, eventParams);
 							break;
 					}
 				}

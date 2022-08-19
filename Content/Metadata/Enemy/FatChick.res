@@ -5,12 +5,12 @@
 
     "Animations": {
         "Walk": {
-            "Path": "FatChick/walk.png",
+            "Path": "FatChick/walk.aura",
             "FrameRate": 4,
             "States": [ 1 ]
         },
         "Attack": {
-            "Path": "FatChick/attack.png",
+            "Path": "FatChick/attack.aura",
             "FrameRate": 6,
             "States": [ 1325400065 ]
         }

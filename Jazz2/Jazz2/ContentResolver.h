@@ -6,11 +6,13 @@
 #include "UI/Font.h"
 
 #include "../nCine/Audio/AudioBuffer.h"
+#include "../nCine/Audio/AudioStreamPlayer.h"
 #include "../nCine/Graphics/Camera.h"
 #include "../nCine/Graphics/Sprite.h"
 #include "../nCine/Graphics/Texture.h"
 #include "../nCine/Graphics/Viewport.h"
 #include "../nCine/IO/FileSystem.h"
+#include "../nCine/IO/IFileStream.h"
 #include "../nCine/Base/HashMap.h"
 
 #include <Containers/Pair.h>
@@ -118,9 +120,9 @@ namespace Jazz2
 	};
 
 	enum class LayerType {
-		Sprite,
+		Other,
 		Sky,
-		Other
+		Sprite
 	};
 
 	enum class BackgroundStyle {
@@ -208,6 +210,7 @@ namespace Jazz2
 		bool LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty);
 		void ApplyPalette(const StringView& path);
 
+		std::unique_ptr<AudioStreamPlayer> GetMusic(const StringView& path);
 		UI::Font* GetFont(FontType fontType);
 		Shader* GetShader(PrecompiledShader shader);
 
@@ -223,6 +226,8 @@ namespace Jazz2
 		/// Deleted assignment operator
 		ContentResolver& operator=(const ContentResolver&) = delete;
 
+		GenericGraphicResource* RequestGraphicsFromCache(const StringView& path, uint16_t paletteOffset);
+		static void ReadImageFromFile(std::unique_ptr<IFileStream>& s, uint8_t* data, int width, int height, int channelCount);
 		void CompileShaders();
 		void RecreateGemPalettes();
 

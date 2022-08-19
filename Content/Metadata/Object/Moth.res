@@ -5,16 +5,16 @@
 
     "Animations": {
         "Gray": {
-            "Path": "Moth/Gray.png"
+            "Path": "Moth/Gray.aura"
         },
         "Green": {
-            "Path": "Moth/Green.png"
+            "Path": "Moth/Green.aura"
         },
         "Pink": {
-            "Path": "Moth/Pink.png"
+            "Path": "Moth/Pink.aura"
         },
         "Purple": {
-            "Path": "Moth/Purple.png"
+            "Path": "Moth/Purple.aura"
         }
     }
 }

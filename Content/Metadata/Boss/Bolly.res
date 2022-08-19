@@ -5,31 +5,31 @@
 
     "Animations": {
         "Top": {
-            "Path": "Bolly/top.png",
+            "Path": "Bolly/top.aura",
             "States": [ 0 ],
             "FrameRate": 5
         },
         "Bottom": {
-            "Path": "Bolly/bottom.png",
+            "Path": "Bolly/bottom.aura",
             "States": [ 1 ]
         },
         "Turret": {
-            "Path": "Bolly/turret.png",
+            "Path": "Bolly/turret.aura",
             "States": [ 2 ],
             "FrameRate": 0
         },
 
         "Mace": {
-            "Path": "Bolly/mace.png",
+            "Path": "Bolly/mace.aura",
             "States": [ 3 ]
         },
         "MaceChain": {
-            "Path": "Bolly/mace_chain.png",
+            "Path": "Bolly/mace_chain.aura",
             "States": [ 4 ]
         },
 
         "Rocket": {
-            "Path": "Bolly/rocket.png",
+            "Path": "Bolly/rocket.aura",
             "States": [ 5 ]
         }
     },

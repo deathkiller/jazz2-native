@@ -31,7 +31,7 @@ namespace Jazz2::Actors::Environment
 
 		// TODO: change these types to uint8_t
 		_theme = details.Params[0];
-		_activated = (details.Params[2] != 0);
+		_activated = (details.Params[1] != 0);
 
 		switch (_theme) {
 			case 0:
@@ -70,7 +70,7 @@ namespace Jazz2::Actors::Environment
 
 			// Deactivate event in map
 			// TODO: change these types to uint8_t
-			uint8_t playerParams[16] = { _theme, 0, 1 };
+			uint8_t playerParams[16] = { _theme, 1 };
 			_levelHandler->EventMap()->StoreTileEvent(_originTile.X, _originTile.Y, EventType::Checkpoint, ActorFlags::None, playerParams);
 
 			_levelHandler->SetCheckpoint(Vector2f(_pos.X, _pos.Y));

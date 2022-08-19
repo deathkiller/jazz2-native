@@ -5,17 +5,17 @@
 
     "Animations": {
         "Walk": {
-            "Path": "Sucker/walk.png",
+            "Path": "Sucker/walk.aura",
             "FrameRate": 5,
             "States": [ 0, 1, 2, 3 ]
         },
         "Fall": {
-            "Path": "Sucker/fall.png",
+            "Path": "Sucker/fall.aura",
             "FrameRate": 5,
             "States": [ 8, 9, 10, 11 ]
         },
         "Deflation": {
-            "Path": "Sucker/inflated_deflate.png",
+            "Path": "Sucker/inflated_deflate.aura",
             "FrameRate": 9,
             "States": [ 1073741824 ]
         }

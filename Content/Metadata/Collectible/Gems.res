@@ -5,19 +5,19 @@
 
     "Animations": {
         "GemRed": {
-            "Path": "Pickup/Gem.png",
+            "Path": "Pickup/Gem.aura",
             "PaletteOffset": 128
         },
         "GemGreen": {
-            "Path": "Pickup/Gem.png",
+            "Path": "Pickup/Gem.aura",
             "PaletteOffset": 256
         },
         "GemBlue": {
-            "Path": "Pickup/Gem.png",
+            "Path": "Pickup/Gem.aura",
             "PaletteOffset": 384
         },
         "GemPurple": {
-            "Path": "Pickup/Gem.png",
+            "Path": "Pickup/Gem.aura",
             "PaletteOffset": 512
         }
     }

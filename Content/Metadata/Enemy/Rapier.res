@@ -5,27 +5,27 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Rapier/idle.png",
+            "Path": "Rapier/idle.aura",
             "FrameRate": 5,
             "States": [ 0 ]
         },
         "Attack": {
-            "Path": "Rapier/attack.png",
+            "Path": "Rapier/attack.aura",
             "FrameRate": 5,
             "States": [ 1073741824 ]
         },
         "AttackStart": {
-            "Path": "Rapier/attack_start.png",
+            "Path": "Rapier/attack_start.aura",
             "FrameRate": 10,
             "States": [ 1073741825 ]
         },
         "AttackEnd": {
-            "Path": "Rapier/attack_end.png",
+            "Path": "Rapier/attack_end.aura",
             "FrameRate": 10,
             "States": [ 1073741826 ]
         },
         "AttackSwing": {
-            "Path": "Rapier/attack_swing.png",
+            "Path": "Rapier/attack_swing.aura",
             "FrameRate": 5,
             "States": [ 1073741827 ]
         }

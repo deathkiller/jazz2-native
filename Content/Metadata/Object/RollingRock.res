@@ -5,7 +5,7 @@
 
     "Animations": {
         "Rock": {
-            "Path": "Object/rolling_rock.png",
+            "Path": "Object/rolling_rock.aura",
             "States": [ 0 ]
         }
     },

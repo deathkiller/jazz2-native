@@ -5,7 +5,7 @@
 
     "Animations": {
         "Idle": {
-            "Path": "Dragonfly/idle.png",
+            "Path": "Dragonfly/idle.aura",
             "FrameRate": 20,
             "States": [ 0 ]
         }
