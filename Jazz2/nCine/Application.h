@@ -241,7 +241,7 @@ namespace nCine
 
 		friend class PCApplication;
 		friend class AndroidApplication;
-#ifdef DEATH_TARGET_EMSCRIPTEN
+#if defined(DEATH_TARGET_EMSCRIPTEN)
 		friend class IGfxDevice;
 #endif
 		friend class Viewport;

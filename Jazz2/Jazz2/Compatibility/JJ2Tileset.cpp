@@ -5,9 +5,8 @@ namespace Jazz2::Compatibility
 {
 	void JJ2Tileset::Open(const StringView& path, bool strictParser)
 	{
-		auto s = IFileStream::createFileHandle(path);
-		s->Open(FileAccessMode::Read);
-		ASSERT_MSG(s->isOpened(), "Cannot open file for reading");
+		auto s = fs::Open(path, FileAccessMode::Read);
+		ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
 
 		// Skip copyright notice
 		s->Seek(180, SeekOrigin::Current);
@@ -161,9 +160,8 @@ namespace Jazz2::Compatibility
 		int height = ((_tileCount - 1) / TilesPerRow + 1) * BlockSize;
 		int maxTiles = GetMaxSupportedTiles();
 
-		auto so = IFileStream::createFileHandle(targetPath);
-		so->Open(FileAccessMode::Write);
-		ASSERT_MSG(so->isOpened(), "Cannot open file for writing");
+		auto so = fs::Open(targetPath, FileAccessMode::Write);
+		ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
 
 		constexpr uint8_t flags = 0x20 | 0x40; // Mask and palette included
 

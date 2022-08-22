@@ -3,7 +3,7 @@
 #include <cstring> // for memcpy()
 #include <cstdlib> // for strtoul()
 #include "IInputEventHandler.h"
-#include "../IO/IFileStream.h"
+#include "../IO/FileSystem.h"
 #include "../Primitives/Vector2.h"
 
 #include <Containers/SmallVector.h>
@@ -170,8 +170,7 @@ namespace nCine
 
 	void JoyMapping::addMappingsFromFile(const StringView& filename)
 	{
-		std::unique_ptr<IFileStream> fileHandle = IFileStream::createFileHandle(filename);
-		fileHandle->Open(FileAccessMode::Read);
+		std::unique_ptr<IFileStream> fileHandle = fs::Open(filename, FileAccessMode::Read);
 		const long int fileSize = fileHandle->GetSize();
 		if (fileSize == 0) {
 			return;

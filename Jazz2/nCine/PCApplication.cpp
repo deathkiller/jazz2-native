@@ -4,8 +4,8 @@
 #include "../Common.h"
 
 #if defined(WITH_SDL)
-#	include "SdlGfxDevice.h"
-#	include "SdlInputManager.h"
+#	include "Graphics/GL/SdlGfxDevice.h"
+#	include "Input/SdlInputManager.h"
 #	if WITH_NUKLEAR
 #		include "NuklearSdlInput.h"
 #	endif
@@ -17,7 +17,7 @@
 #	include "Qt5InputManager.h"
 #endif
 
-#ifdef DEATH_TARGET_EMSCRIPTEN
+#if defined(DEATH_TARGET_EMSCRIPTEN)
 #	include "emscripten.h"
 #endif
 
@@ -56,7 +56,7 @@ namespace nCine
 		PCApplication& app = static_cast<PCApplication&>(theApplication());
 		app.init(createAppEventHandler, argc, argv);
 
-#ifndef DEATH_TARGET_EMSCRIPTEN
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		while (!app.shouldQuit_) {
 			app.run();
 		}
@@ -113,8 +113,8 @@ namespace nCine
 #endif
 		gfxDevice_->setWindowTitle(appCfg_.windowTitle.data());
 		if (!appCfg_.windowIconFilename.empty()) {
-			String windowIconFilePath = fs::joinPath(fs::dataPath(), appCfg_.windowIconFilename);
-			if (fs::isReadableFile(windowIconFilePath)) {
+			String windowIconFilePath = fs::JoinPath(fs::GetDataPath(), appCfg_.windowIconFilename);
+			if (fs::IsReadableFile(windowIconFilePath)) {
 				gfxDevice_->setWindowIcon(windowIconFilePath);
 			}
 		}
@@ -178,7 +178,7 @@ namespace nCine
 					SdlInputManager::parseEvent(event);
 					break;
 			}
-#ifndef DEATH_TARGET_EMSCRIPTEN
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 			if (shouldSuspend()) {
 				SDL_WaitEvent(&event);
 				SDL_PushEvent(&event);
@@ -194,7 +194,7 @@ namespace nCine
 	void PCApplication::processEvents()
 	{
 		// GLFW does not seem to correctly handle Emscripten focus and blur events
-#ifndef DEATH_TARGET_EMSCRIPTEN
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		setFocus(GlfwInputManager::hasFocus());
 #endif
 
@@ -207,7 +207,7 @@ namespace nCine
 	}
 #endif
 
-#ifdef DEATH_TARGET_EMSCRIPTEN
+#if defined(DEATH_TARGET_EMSCRIPTEN)
 	void PCApplication::emscriptenStep()
 	{
 		reinterpret_cast<PCApplication&>(theApplication()).run();

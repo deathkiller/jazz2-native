@@ -12,21 +12,20 @@ namespace nCine
 	AudioLoaderWav::AudioLoaderWav(std::unique_ptr<IFileStream> fileHandle)
 		: IAudioLoader(std::move(fileHandle))
 	{
-		LOGI_X("Loading \"%s\"", fileHandle_->filename());
-		fileHandle_->Open(FileAccessMode::Read);
-		RETURN_ASSERT_MSG_X(fileHandle_->isOpened(), "File \"%s\" cannot be opened", fileHandle_->filename());
+		LOGI_X("Loading \"%s\"", fileHandle_->GetFilename());
+		RETURN_ASSERT_MSG_X(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->GetFilename());
 
 		WavHeader header;
 		fileHandle_->Read(&header, sizeof(WavHeader));
 
 		if (strncmp(header.chunkId, "RIFF", 4) != 0 || strncmp(header.format, "WAVE", 4) != 0) {
-			RETURN_MSG_X("\"%s\" is not a WAV file", fileHandle_->filename());
+			RETURN_MSG_X("\"%s\" is not a WAV file", fileHandle_->GetFilename());
 		}
 		if (strncmp(header.subchunk1Id, "fmt ", 4) != 0) {
-			RETURN_MSG_X("\"%s\" is an invalid WAV file", fileHandle_->filename());
+			RETURN_MSG_X("\"%s\" is an invalid WAV file", fileHandle_->GetFilename());
 		}
 		if (IFileStream::int16FromLE(header.audioFormat) != 1) {
-			RETURN_MSG_X("Data in \"%s\" is not in PCM format", fileHandle_->filename());
+			RETURN_MSG_X("Data in \"%s\" is not in PCM format", fileHandle_->GetFilename());
 		}
 
 		bytesPerSample_ = IFileStream::int16FromLE(header.bitsPerSample) / 8;

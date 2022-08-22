@@ -2,15 +2,15 @@
 #include "EventConverter.h"
 #include "../EventType.h"
 
+#include "../../nCine/Base/Algorithms.h"
 #include "../../nCine/IO/FileSystem.h"
 
 namespace Jazz2::Compatibility
 {
 	void JJ2Level::Open(const StringView& path, bool strictParser)
 	{
-		auto s = IFileStream::createFileHandle(path);
-		s->Open(FileAccessMode::Read);
-		ASSERT_MSG(s->isOpened(), "Cannot open file for reading");
+		auto s = fs::Open(path, FileAccessMode::Read);
+		ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
 
 		// Skip copyright notice
 		s->Seek(180, SeekOrigin::Current);
@@ -122,7 +122,7 @@ namespace Jazz2::Compatibility
 
 			auto& tile = _staticTiles[i];
 			tile.Event.EventType = (JJ2Event)(uint8_t)(tileEvent & 0x000000FF);
-			tile.Event.Difficulty = (byte)((tileEvent & 0x0000C000) >> 14);
+			tile.Event.Difficulty = (uint8_t)((tileEvent & 0x0000C000) >> 14);
 			tile.Event.Illuminate = ((tileEvent & 0x00002000) >> 13 == 1);
 			tile.Event.TileParams = (uint32_t)(((tileEvent >> 12) & 0x000FFFF0) | ((tileEvent >> 8) & 0x0000000F));
 		}
@@ -241,8 +241,8 @@ namespace Jazz2::Compatibility
 				uint32_t eventData = block.ReadUInt32();
 
 				auto& tileEvent = _events[x + y * width];
-				tileEvent.EventType = (JJ2Event)(byte)(eventData & 0x000000FF);
-				tileEvent.Difficulty = (byte)((eventData & 0x00000300) >> 8);
+				tileEvent.EventType = (JJ2Event)(uint8_t)(eventData & 0x000000FF);
+				tileEvent.Difficulty = (uint8_t)((eventData & 0x00000300) >> 8);
 				tileEvent.Illuminate = ((eventData & 0x00000400) >> 10 == 1);
 				tileEvent.TileParams = ((eventData & 0xFFFFF000) >> 12);
 			}
@@ -311,9 +311,8 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::Convert(const String& targetPath, const EventConverter& eventConverter, const std::function<LevelToken(const StringView&)>& levelTokenConversion)
 	{
-		auto so = IFileStream::createFileHandle(targetPath);
-		so->Open(FileAccessMode::Write);
-		ASSERT_MSG(so->isOpened(), "Cannot open file for writing");
+		auto so = fs::Open(targetPath, FileAccessMode::Write);
+		ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
 
 		so->WriteValue<uint64_t>(0x2095A59FF0BFBBEF);
 		so->WriteValue<uint8_t>(1); // Version
@@ -340,11 +339,16 @@ namespace Jazz2::Compatibility
 		so->WriteValue<uint8_t>((uint8_t)_name.size());
 		so->Write(_name.data(), _name.size());
 
+		lowercaseInPlace(_nextLevel);
+		lowercaseInPlace(_secretLevel);
+		lowercaseInPlace(_bonusLevel);
+
 		WriteLevelName(so, _nextLevel, levelTokenConversion);
 		WriteLevelName(so, _secretLevel, levelTokenConversion);
 		WriteLevelName(so, _bonusLevel, levelTokenConversion);
 
 		// Default Tileset
+		lowercaseInPlace(_tileset);
 		StringView tileset = _tileset;
 		if (StringHasSuffixIgnoreCase(tileset, ".j2t"_s)) {
 			tileset = tileset.exceptSuffix(4);
@@ -353,6 +357,7 @@ namespace Jazz2::Compatibility
 		so->Write(tileset.data(), tileset.size());
 
 		// Default Music
+		lowercaseInPlace(_music);
 		if (_music.findOr('.', _music.end()) == _music.end()) {
 			String music = _music + ".j2b"_s;
 			so->WriteValue<uint8_t>((uint8_t)music.size());
@@ -570,7 +575,7 @@ namespace Jazz2::Compatibility
 
 				JJ2Event eventType;
 				int generatorDelay;
-				byte generatorFlags;
+				uint8_t generatorFlags;
 				if (tileEvent.EventType == JJ2Event::MODIFIER_GENERATOR) {
 					// Generators are converted differently
 					uint8_t eventParams[8];
@@ -582,7 +587,7 @@ namespace Jazz2::Compatibility
 
 					eventType = (JJ2Event)eventParams[0];
 					generatorDelay = eventParams[1];
-					generatorFlags = (byte)eventParams[2];
+					generatorFlags = (uint8_t)eventParams[2];
 				} else {
 					eventType = tileEvent.EventType;
 					generatorDelay = -1;

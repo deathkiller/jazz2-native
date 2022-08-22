@@ -4,7 +4,7 @@
 #include "JJ2Version.h"
 #include "AnimSetMapping.h"
 
-#include "../../nCine/IO/IFileStream.h"
+#include "../../nCine/IO/FileSystem.h"
 
 #include <memory>
 

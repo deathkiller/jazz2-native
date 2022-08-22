@@ -1,6 +1,6 @@
 #include "GLShader.h"
 #include "GLDebug.h"
-#include "../../IO/IFileStream.h"
+#include "../../IO/FileSystem.h"
 #include "../../../Common.h"
 
 #include <string>
@@ -88,11 +88,8 @@ namespace nCine
 
 	void GLShader::loadFromFile(const StringView& filename)
 	{
-		std::unique_ptr<IFileStream> fileHandle = IFileStream::createFileHandle(filename);
-		fileHandle->setExitOnFailToOpen(false);
-
-		fileHandle->Open(FileAccessMode::Read);
-		if (fileHandle->isOpened()) {
+		std::unique_ptr<IFileStream> fileHandle = fs::Open(filename, FileAccessMode::Read);
+		if (fileHandle->IsOpened()) {
 			const GLint length = static_cast<int>(fileHandle->GetSize());
 			std::string source(length, '\0');
 			fileHandle->Read(source.data(), length);

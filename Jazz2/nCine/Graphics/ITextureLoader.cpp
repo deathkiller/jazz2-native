@@ -68,14 +68,14 @@ namespace nCine
 	std::unique_ptr<ITextureLoader> ITextureLoader::createFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
 		LOGI_X("Loading memory file: \"%s\" (0x%lx, %lu bytes)", bufferName, bufferPtr, bufferSize);
-		return createLoader(std::move(IFileStream::createFromMemory(bufferName, bufferPtr, bufferSize)), bufferName);
+		return createLoader(std::move(fs::CreateFromMemory(bufferName, bufferPtr, bufferSize)), bufferName);
 	}
 
 	std::unique_ptr<ITextureLoader> ITextureLoader::createFromFile(const StringView& filename)
 	{
 		LOGI_X("Loading file: \"%s\"", filename.data());
 		// Creating a handle from IFile static method to detect assets file
-		return createLoader(std::move(IFileStream::createFileHandle(filename)), filename);
+		return createLoader(std::move(fs::Open(filename, FileAccessMode::Read)), filename);
 	}
 
 	///////////////////////////////////////////////////////////
@@ -84,30 +84,28 @@ namespace nCine
 
 	std::unique_ptr<ITextureLoader> ITextureLoader::createLoader(std::unique_ptr<IFileStream> fileHandle, const StringView& filename)
 	{
-		fileHandle->setExitOnFailToOpen(false);
-
-		if (fs::hasExtension(filename, "dds"_s))
+		if (fs::HasExtension(filename, "dds"_s))
 			return std::make_unique<TextureLoaderDds>(std::move(fileHandle));
-		else if (fs::hasExtension(filename, "pvr"_s))
+		else if (fs::HasExtension(filename, "pvr"_s))
 			return std::make_unique<TextureLoaderPvr>(std::move(fileHandle));
-		else if (fs::hasExtension(filename, "ktx"_s))
+		else if (fs::HasExtension(filename, "ktx"_s))
 			return std::make_unique<TextureLoaderKtx>(std::move(fileHandle));
 	//#ifdef WITH_PNG
-		else if (fs::hasExtension(filename, "png"_s))
+		else if (fs::HasExtension(filename, "png"_s))
 			return std::make_unique<TextureLoaderPng>(std::move(fileHandle));
 	//#endif
 	/*#ifdef WITH_WEBP
-		else if (fs::hasExtension(filename, "webp"_s))
+		else if (fs::HasExtension(filename, "webp"_s))
 			return std::make_unique<TextureLoaderWebP>(std::move(fileHandle));
 	#endif*/
 	#ifdef DEATH_TARGET_ANDROID
-		else if (fs::hasExtension(filename, "pkm"_s))
+		else if (fs::HasExtension(filename, "pkm"_s))
 			return std::make_unique<TextureLoaderPkm>(std::move(fileHandle));
 	#endif
-		else if (fs::hasExtension(filename, "qoi"_s)) {
+		else if (fs::HasExtension(filename, "qoi"_s)) {
 			return std::make_unique<TextureLoaderQoi>(std::move(fileHandle));
 		} else {
-			LOGF_X("Extension unknown: \"%s\"", fs::extension(filename));
+			LOGF_X("Extension unknown: \"%s\"", fs::GetExtension(filename));
 			fileHandle.reset(nullptr);
 			return std::make_unique<InvalidTextureLoader>(std::move(fileHandle));
 		}
@@ -120,15 +118,16 @@ namespace nCine
 
 	void ITextureLoader::loadPixels(GLenum internalFormat, GLenum type)
 	{
-		LOGI_X("Loading \"%s\"", fileHandle_->filename());
+		LOGI_X("Loading \"%s\"", fileHandle_->GetFilename());
 		if (type) // overriding pixel type
 			texFormat_ = TextureFormat(internalFormat, type);
 		else
 			texFormat_ = TextureFormat(internalFormat);
 
 		// If the file has not been already opened by a header reader method
-		if (!fileHandle_->isOpened())
-			fileHandle_->Open(FileAccessMode::Read);
+		if (!fileHandle_->IsOpened()) {
+			fileHandle_->Open(FileAccessMode::Read, false);
+		}
 
 		dataSize_ = fileHandle_->GetSize() - headerSize_;
 		fileHandle_->Seek(headerSize_, SeekOrigin::Current);

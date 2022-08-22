@@ -10,7 +10,7 @@
 #ifdef WITH_EMBEDDED_SHADERS
 #	include "shader_strings.h"
 #else
-#	include "../IO/FileSystem.h" // for dataPath()
+#	include "../IO/FileSystem.h" // for GetDataPath()
 #endif
 
 namespace nCine
@@ -405,7 +405,7 @@ namespace nCine
 				vertexShader = "batched_textnodes_vs.glsl";
 				break;
 		}
-		const bool hasCompiled = glShaderProgram_->attachShader(GL_VERTEX_SHADER, (fs::dataPath() + "shaders/" + vertexShader).data());
+		const bool hasCompiled = glShaderProgram_->attachShader(GL_VERTEX_SHADER, fs::JoinPath({ fs::GetDataPath(), "shaders"_s, vertexShader }));
 #else
 		// Skipping the initial new line character of the raw string literal
 		switch (vertex) {
@@ -465,7 +465,7 @@ namespace nCine
 			case DefaultFragment::TEXTNODE_RED:
 				fragmentShader = "textnode_red_fs.glsl";
 		}
-		const bool hasCompiled = glShaderProgram_->attachShader(GL_FRAGMENT_SHADER, (fs::dataPath() + "shaders/" + fragmentShader).data());
+		const bool hasCompiled = glShaderProgram_->attachShader(GL_FRAGMENT_SHADER, fs::JoinPath({ fs::GetDataPath(), "shaders"_s, fragmentShader }));
 #else
 		// Skipping the initial new line character of the raw string literal
 		switch (fragment) {

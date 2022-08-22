@@ -1,12 +1,14 @@
 #pragma once
 
+#if defined(WITH_GLFW)
+
 #include "IInputManager.h"
 #include "../Graphics/GL/GlfwGfxDevice.h" // for WindowHandle()
 #include "../../Common.h"
 
 #include <cstdio>
 
-#ifdef DEATH_TARGET_EMSCRIPTEN
+#if defined(DEATH_TARGET_EMSCRIPTEN)
 #	include <emscripten/html5.h>
 #endif
 
@@ -209,7 +211,7 @@ namespace nCine
 		static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 		static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 		static void joystickCallback(int joy, int event);
-#ifdef DEATH_TARGET_EMSCRIPTEN
+#if defined(DEATH_TARGET_EMSCRIPTEN)
 		static EM_BOOL emscriptenHandleTouch(int eventType, const EmscriptenTouchEvent* event, void* userData);
 #endif
 
@@ -228,5 +230,6 @@ namespace nCine
 
 		return mouseState_;
 	}
-
 }
+
+#endif

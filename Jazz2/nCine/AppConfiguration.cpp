@@ -65,12 +65,12 @@ namespace nCine
 
 	const String& AppConfiguration::dataPath() const
 	{
-		return fs::dataPath_;
+		return fs::_dataPath;
 	}
 
 	String& AppConfiguration::dataPath()
 	{
-		return fs::dataPath_;
+		return fs::_dataPath;
 	}
 
 	const char* AppConfiguration::argv(int index) const

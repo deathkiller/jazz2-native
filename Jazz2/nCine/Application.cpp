@@ -3,14 +3,28 @@
 #if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #	pragma comment(lib, "opengl32.lib")
 #	if defined(_M_X64)
-#		pragma comment(lib, "../Libs/x64/glew32.lib")
-#		pragma comment(lib, "../Libs/x64/glfw3dll.lib")
+#		ifdef WITH_GLEW
+#			pragma comment(lib, "../Libs/x64/glew32.lib")
+#		endif
+#		ifdef WITH_GLFW
+#			pragma comment(lib, "../Libs/x64/glfw3dll.lib")
+#		endif
+#		ifdef WITH_SDL
+#			pragma comment(lib, "../Libs/x64/SDL2.lib")
+#		endif
 #		ifdef WITH_AUDIO
 #			pragma comment(lib, "../Libs/x64/OpenAL32.lib")
 #		endif
 #	elif defined(_M_IX86)
-#		pragma comment(lib, "../Libs/x86/glew32.lib")
-#		pragma comment(lib, "../Libs/x86/glfw3dll.lib")
+#		ifdef WITH_GLEW
+#			pragma comment(lib, "../Libs/x86/glew32.lib")
+#		endif
+#		ifdef WITH_GLFW
+#			pragma comment(lib, "../Libs/x86/glfw3dll.lib")
+#		endif
+#		ifdef WITH_SDL
+#			pragma comment(lib, "../Libs/x86/SDL2.lib")
+#		endif
 #		ifdef WITH_AUDIO
 #			pragma comment(lib, "../Libs/x86/OpenAL32.lib")
 #		endif
@@ -155,8 +169,7 @@ namespace nCine
 		theServiceLocator().registerGfxCapabilities(std::make_unique<GfxCapabilities>());
 		GLDebug::init(theServiceLocator().gfxCapabilities());
 
-		LOGI_X("Data path: \"%s\"", fs::dataPath().data());
-		LOGI_X("Save path: \"%s\"", fs::savePath().data());
+		LOGI_X("Data path: \"%s\"", fs::GetDataPath().data());
 
 #ifdef WITH_RENDERDOC
 		RenderDocCapture::init();
@@ -180,8 +193,9 @@ namespace nCine
 			rootNode_ = std::make_unique<SceneNode>();
 			screenViewport_ = std::make_unique<ScreenViewport>();
 			screenViewport_->setRootNode(rootNode_.get());
-		} else
+		} else {
 			RenderResources::createMinimal(); // some resources are still required for rendering
+		}
 
 #ifdef WITH_IMGUI
 		// Debug overlay is available even when scenegraph is not

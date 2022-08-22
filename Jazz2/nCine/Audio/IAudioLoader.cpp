@@ -26,14 +26,14 @@ namespace nCine
 	std::unique_ptr<IAudioLoader> IAudioLoader::createFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
 		LOGI_X("Loading memory file: \"%s\" (0x%lx, %lu bytes)", bufferName, bufferPtr, bufferSize);
-		return createLoader(std::move(IFileStream::createFromMemory(bufferName, bufferPtr, bufferSize)), bufferName);
+		return createLoader(std::move(fs::CreateFromMemory(bufferName, bufferPtr, bufferSize)), bufferName);
 	}
 
 	std::unique_ptr<IAudioLoader> IAudioLoader::createFromFile(const StringView& filename)
 	{
 		LOGI_X("Loading file: \"%s\"", filename.data());
 		// Creating a handle from IFile static method to detect assets file
-		return createLoader(std::move(IFileStream::createFileHandle(filename)), filename);
+		return createLoader(std::move(fs::Open(filename, FileAccessMode::Read)), filename);
 	}
 
 	///////////////////////////////////////////////////////////
@@ -42,24 +42,22 @@ namespace nCine
 
 	std::unique_ptr<IAudioLoader> IAudioLoader::createLoader(std::unique_ptr<IFileStream> fileHandle, const StringView& filename)
 	{
-		fileHandle->setExitOnFailToOpen(false);
-
-		if (fs::hasExtension(filename, "wav"_s)) {
+		if (fs::HasExtension(filename, "wav"_s)) {
 			return std::make_unique<AudioLoaderWav>(std::move(fileHandle));
 		}
 #ifdef WITH_VORBIS
-		else if (fs::hasExtension(filename, "ogg"_s)) {
+		else if (fs::HasExtension(filename, "ogg"_s)) {
 			return std::make_unique<AudioLoaderOgg>(std::move(fileHandle));
 		}
 #endif
 #ifdef WITH_OPENMPT
-		else if (fs::hasExtension(filename, "j2b"_s) || fs::hasExtension(filename, "it"_s) || fs::hasExtension(filename, "s3m"_s) ||
-				 fs::hasExtension(filename, "xm"_s) || fs::hasExtension(filename, "mo3"_s)) {
+		else if (fs::HasExtension(filename, "j2b"_s) || fs::HasExtension(filename, "it"_s) || fs::HasExtension(filename, "s3m"_s) ||
+				 fs::HasExtension(filename, "xm"_s) || fs::HasExtension(filename, "mo3"_s)) {
 			return std::make_unique<AudioLoaderMpt>(std::move(fileHandle));
 		}
 #endif
 		else {
-			LOGF_X("Extension unknown: \"%s\"", fs::extension(filename).data());
+			LOGF_X("Extension unknown: \"%s\"", fs::GetExtension(filename).data());
 			fileHandle.reset(nullptr);
 			return std::make_unique<InvalidAudioLoader>(std::move(fileHandle));
 		}

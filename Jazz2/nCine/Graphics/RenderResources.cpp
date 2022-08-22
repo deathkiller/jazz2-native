@@ -11,7 +11,7 @@
 #ifdef WITH_EMBEDDED_SHADERS
 #	include "shader_strings.h"
 #else
-#	include "../IO/FileSystem.h" // for dataPath()
+#	include "../IO/FileSystem.h" // for GetDataPath()
 #endif
 
 namespace nCine
@@ -247,8 +247,8 @@ namespace nCine
 
 			shaderToLoad.shaderProgram = std::make_unique<GLShaderProgram>(queryPhase);
 #ifndef WITH_EMBEDDED_SHADERS
-			shaderToLoad.shaderProgram->attachShader(GL_VERTEX_SHADER, fs::joinPath({ fs::dataPath(), "Shaders"_s, StringView(shaderToLoad.vertexShader) }).data());
-			shaderToLoad.shaderProgram->attachShader(GL_FRAGMENT_SHADER, fs::joinPath({ fs::dataPath(), "Shaders"_s, StringView(shaderToLoad.fragmentShader) }).data());
+			shaderToLoad.shaderProgram->attachShader(GL_VERTEX_SHADER, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.vertexShader) }).data());
+			shaderToLoad.shaderProgram->attachShader(GL_FRAGMENT_SHADER, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.fragmentShader) }).data());
 #else
 			shaderToLoad.shaderProgram->attachShaderFromString(GL_VERTEX_SHADER, shaderToLoad.vertexShader);
 			shaderToLoad.shaderProgram->attachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);

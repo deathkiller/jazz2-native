@@ -24,7 +24,7 @@ namespace Jazz2::UI::Menu
 		_canvas = std::make_unique<MenuCanvas>(this);
 
 		auto& resolver = ContentResolver::Current();
-		resolver.ApplyPalette(fs::joinPath({ "Content"_s, "Animations"_s, "Main.palette"_s }));
+		resolver.ApplyPalette(fs::JoinPath({ "Content"_s, "Animations"_s, "Main.palette"_s }));
 
 		Metadata* metadata = resolver.RequestMetadata("UI/MainMenu"_s);
 		if (metadata != nullptr) {
@@ -365,8 +365,7 @@ namespace Jazz2::UI::Menu
 	{
 		_tileSet = ContentResolver::Current().RequestTileSet("easter99"_s, true);
 
-		auto s = IFileStream::createFileHandle(fs::joinPath({ "Content"_s, "Animations"_s, "MainMenu.layer"_s }));
-		s->Open(FileAccessMode::Read);
+		auto s = fs::Open(fs::JoinPath({ "Content"_s, "Animations"_s, "MainMenu.layer"_s }), FileAccessMode::Read);
 		if (s->GetSize() < 8) {
 			return;
 		}

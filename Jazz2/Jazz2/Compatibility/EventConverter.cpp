@@ -61,7 +61,7 @@ namespace Jazz2::Compatibility
 	{
 		return [ev, paramDefs](JJ2Level* level, uint32_t jj2Params) mutable -> ConversionResult {
 			uint8_t eventParams[16];
-			ConvertParamInt(jj2Params, std::initializer_list<Pair<int, int>>(paramDefs.data(), paramDefs.data() + paramDefs.size()), eventParams);
+			ConvertParamInt(jj2Params, arrayView(paramDefs.data(), paramDefs.size()), eventParams);
 
 			ConversionResult result;
 			result.Type = ev;
@@ -71,7 +71,7 @@ namespace Jazz2::Compatibility
 		};
 	}
 
-	void EventConverter::ConvertParamInt(uint32_t paramInt, const std::initializer_list<Pair<int, int>> paramTypes, uint8_t eventParams[16])
+	void EventConverter::ConvertParamInt(uint32_t paramInt, const ArrayView<const Pair<int, int>>& paramTypes, uint8_t eventParams[16])
 	{
 		int i = 0;
 		for (auto& param : paramTypes) {
@@ -115,7 +115,7 @@ namespace Jazz2::Compatibility
 				}
 
 				default:
-					ASSERT(false, "Unknown JJ2Param type specified");
+					ASSERT_MSG(false, "Unknown JJ2Param type specified");
 					break;
 			}
 		}

@@ -10,7 +10,7 @@
 
 using namespace Death::Containers;
 
-#ifdef DEATH_TARGET_EMSCRIPTEN
+#if defined(DEATH_TARGET_EMSCRIPTEN)
 class EmscriptenUiEvent;
 class EmscriptenFullscreenChangeEvent;
 class EmscriptenFocusEvent;
@@ -205,7 +205,7 @@ namespace nCine
 		friend class PCApplication;
 #endif
 
-#ifdef DEATH_TARGET_EMSCRIPTEN
+#if defined(DEATH_TARGET_EMSCRIPTEN)
 		static int emscriptenHandleResize(int eventType, const EmscriptenUiEvent* event, void* userData);
 		static int emscriptenHandleFullscreen(int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData);
 		static int emscriptenHandleFocus(int eventType, const EmscriptenFocusEvent* event, void* userData);

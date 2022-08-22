@@ -21,8 +21,7 @@ namespace nCine
 	AudioReaderMpt::AudioReaderMpt(std::unique_ptr<IFileStream> fileHandle, int frequency)
 		: _fileHandle(std::move(fileHandle)), _frequency(frequency), _module(nullptr)
 	{
-		_fileHandle->Open(FileAccessMode::Read);
-		ASSERT(_fileHandle->isOpened());
+		ASSERT(_fileHandle->IsOpened());
 
 		openmpt_stream_callbacks stream_callbacks;
 		stream_callbacks.read = stream_read_func;

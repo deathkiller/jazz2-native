@@ -16,9 +16,8 @@ namespace Jazz2::UI
 		_baseSpacing(0),
 		_charHeight(0)
 	{
-		auto fileHandle = IFileStream::createFileHandle(path + ".font");
-		fileHandle->Open(FileAccessMode::Read);
-		auto fileSize = fileHandle->GetSize();
+		auto s = fs::Open(path + ".font", FileAccessMode::Read);
+		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 8 * 1024 * 1024) {
 			// 8 MB file size limit
 			return;
@@ -35,17 +34,17 @@ namespace Jazz2::UI
 			int h = texLoader->height();
 			auto pixels = (uint32_t*)texLoader->pixels();
 
-			uint8_t flags = fileHandle->ReadValue<uint8_t>();
-			uint16_t width = fileHandle->ReadValue<uint16_t>();
-			uint16_t height = fileHandle->ReadValue<uint16_t>();
-			uint8_t cols = fileHandle->ReadValue<uint8_t>();
+			uint8_t flags = s->ReadValue<uint8_t>();
+			uint16_t width = s->ReadValue<uint16_t>();
+			uint16_t height = s->ReadValue<uint16_t>();
+			uint8_t cols = s->ReadValue<uint8_t>();
 			int rows = h / height;
-			int16_t spacing = fileHandle->ReadValue<int16_t>();
-			uint8_t asciiFirst = fileHandle->ReadValue<uint8_t>();
-			uint8_t asciiCount = fileHandle->ReadValue<uint8_t>();
+			int16_t spacing = s->ReadValue<int16_t>();
+			uint8_t asciiFirst = s->ReadValue<uint8_t>();
+			uint8_t asciiCount = s->ReadValue<uint8_t>();
 
 			uint8_t widths[128];
-			fileHandle->Read(widths, asciiCount);
+			s->Read(widths, asciiCount);
 
 			int i = 0;
 			for (; i < asciiCount; i++) {
@@ -57,10 +56,10 @@ namespace Jazz2::UI
 				);
 			}
 
-			int unicodeCharCount = asciiCount + fileHandle->ReadValue<int32_t>();
+			int unicodeCharCount = asciiCount + s->ReadValue<int32_t>();
 			for (; i < unicodeCharCount; i++) {
 				char c[4] = { };
-				fileHandle->Read(c, 1);
+				s->Read(c, 1);
 
 				int remainingBytes =
 					((c[0] & 240) == 240) ? 3 : (
@@ -71,8 +70,8 @@ namespace Jazz2::UI
 					return;
 				}
 
-				fileHandle->Read(c + 1, remainingBytes);
-				uint8_t charWidth = fileHandle->ReadValue<uint8_t>();
+				s->Read(c + 1, remainingBytes);
+				uint8_t charWidth = s->ReadValue<uint8_t>();
 
 				std::pair<char32_t, std::size_t> cursor = Death::Utf8::NextChar(c, 0);
 				_unicodeChars[cursor.first] = Rectf(

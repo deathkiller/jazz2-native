@@ -10,7 +10,7 @@
 //AudioReaderOgg::AudioReaderOgg(std::unique_ptr<IFile> fileHandle, const OggVorbis_File &oggFile)
 //    : fileHandle_(std::move(fileHandle)), oggFile_(oggFile)
 //{
-//	//ASSERT(fileHandle_->isOpened());
+//	ASSERT(fileHandle_->IsOpened());
 //}
 //
 //AudioReaderOgg::~AudioReaderOgg()

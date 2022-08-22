@@ -211,6 +211,7 @@ namespace nCine
 
 			GLUniformBlockCache* batchBlock = batchCommand->material().uniformBlock(uniformBlockName);
 			const bool dataCopied = batchBlock->copyData(uniformBlockCache.dataPointer());
+			// TODO: There is something wrong
 			//ASSERT(dataCopied);
 			batchBlock->setUsedSize(uniformBlockCache.usedSize());
 		}
@@ -297,6 +298,7 @@ namespace nCine
 
 			const GLUniformBlockCache* singleInstanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 			const bool dataCopied = instancesBlock->copyData(instancesBlockOffset, singleInstanceBlock->dataPointer(), singleInstanceBlockSize);
+			// TODO: There is something wrong
 			//ASSERT(dataCopied);
 			instancesBlockOffset += singleInstanceBlockSize;
 

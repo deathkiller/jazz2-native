@@ -2,8 +2,8 @@
 
 #include "../../Common.h"
 
-#include <cstdio> // for FILE
-#include <cstdint> // for endianness conversions
+#include <cstdio>	// for FILE
+#include <cstdint>	// for endianness conversions
 #include <memory>
 
 #include <Containers/String.h>
@@ -13,11 +13,13 @@ using namespace Death::Containers;
 namespace nCine
 {
 	enum struct FileAccessMode {
+		None = 0x00,
+
 #if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
-		FileDescriptor = 1,
+		FileDescriptor = 0x01,
 #endif
-		Read = 2,
-		Write = 4
+		Read = 0x02,
+		Write = 0x04
 	};
 
 	DEFINE_ENUM_OPERATORS(FileAccessMode);
@@ -45,49 +47,44 @@ namespace nCine
 		virtual ~IFileStream() {}
 
 		/// Returns the file type (RTTI)
-		FileType type() const {
+		FileType GetType() const {
 			return type_;
 		}
 
 		/// Tries to open the file
-		virtual void Open(FileAccessMode mode) = 0;
+		virtual void Open(FileAccessMode mode, bool shouldExitOnFailToOpen) = 0;
 		/// Closes the file
 		virtual void Close() = 0;
 		/// Seeks in an opened file
-		virtual long int Seek(long int offset, SeekOrigin origin) const = 0;
+		virtual int32_t Seek(int32_t offset, SeekOrigin origin) const = 0;
 		/// Tells the seek position of an opened file
-		virtual long int GetPosition() const = 0;
+		virtual int32_t GetPosition() const = 0;
 		/// Reads a certain amount of bytes from the file to a buffer
 		/*! \return Number of bytes read */
-		virtual unsigned long int Read(void* buffer, unsigned long int bytes) const = 0;
+		virtual uint32_t Read(void* buffer, uint32_t bytes) const = 0;
 		/// Writes a certain amount of bytes from a buffer to the file
 		/*! \return Number of bytes written */
-		virtual unsigned long int Write(const void* buffer, unsigned long int bytes) = 0;
+		virtual uint32_t Write(const void* buffer, uint32_t bytes) = 0;
 
 		/// Sets the close on destruction flag
 		/*! If the flag is true the file is closed upon object destruction. */
-		inline void setCloseOnDestruction(bool shouldCloseOnDestruction) {
+		inline void SetCloseOnDestruction(bool shouldCloseOnDestruction) {
 			shouldCloseOnDestruction_ = shouldCloseOnDestruction;
 		}
-		/// Sets the exit on fail to open flag
-		/*! If the flag is true the application exits if the file cannot be opened. */
-		inline void setExitOnFailToOpen(bool shouldExitOnFailToOpen) {
-			shouldExitOnFailToOpen_ = shouldExitOnFailToOpen;
-		}
 		/// Returns true if the file is already opened
-		virtual bool isOpened() const;
+		virtual bool IsOpened() const;
 
 		/// Returns file name with path
-		const char* filename() const {
+		const char* GetFilename() const {
 			return filename_.data();
 		}
 
 		/// Returns file descriptor
-		inline int fd() const {
+		inline int GetFileDescriptor() const {
 			return fileDescriptor_;
 		}
 		/// Returns file stream pointer
-		inline FILE* ptr() const {
+		inline FILE* Ptr() const {
 			return filePointer_;
 		}
 		/// Returns file size in bytes
@@ -137,18 +134,6 @@ namespace nCine
 				((number >> 24) & 0x0000000000FF0000ULL) | ((number >> 40) & 0x000000000000FF00ULL) | (number << 56);
 		}
 
-		/// Returns a memory file with the specified name
-		static std::unique_ptr<IFileStream> createFromMemory(const char* bufferName, unsigned char* bufferPtr, unsigned long int bufferSize);
-		/// Returns a read-only memory file with the specified name
-		static std::unique_ptr<IFileStream> createFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize);
-		/// Returns a memory file
-		static std::unique_ptr<IFileStream> createFromMemory(unsigned char* bufferPtr, unsigned long int bufferSize);
-		/// Returns a read-only memory file
-		static std::unique_ptr<IFileStream> createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
-
-		/// Returns the proper file handle according to prepended tags
-		static std::unique_ptr<IFileStream> createFileHandle(const String& filename);
-
 	protected:
 		/// File type
 		FileType type_;
@@ -165,16 +150,9 @@ namespace nCine
 		/// A flag indicating whether the destructor should also close the file
 		/*! Useful for `ov_open()`/`ov_fopen()` and `ov_clear()` functions of the <em>Vorbisfile</em> library. */
 		bool shouldCloseOnDestruction_;
-		/// A flag indicating whether the application should exit if the file cannot be opened
-		/*! Useful for the log file creation. */
-		bool shouldExitOnFailToOpen_;
 
 		/// File size in bytes
 		unsigned long int fileSize_;
-
-	private:
-		/// The `TextureSaverPng` class needs to access the `filePointer_`
-		//friend class TextureSaverPng;
 	};
 
 }

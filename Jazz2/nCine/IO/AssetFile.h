@@ -21,17 +21,17 @@ namespace nCine
 		~AssetFile() override;
 
 		/// Tries to open the asset file
-		void Open(FileAccessMode mode) override;
+		void Open(FileAccessMode mode, bool shouldExitOnFailToOpen) override;
 		/// Closes the asset file
 		void Close() override;
-		long int Seek(long int offset, SeekOrigin origin) const override;
-		long int GetPosition() const override;
-		unsigned long int Read(void* buffer, unsigned long int bytes) const override;
-		unsigned long int Write(const void* buffer, unsigned long int bytes) override {
+		int32_t Seek(int32_t offset, SeekOrigin origin) const override;
+		int32_t GetPosition() const override;
+		uint32_t Read(void* buffer, uint32_t bytes) const override;
+		uint32_t Write(const void* buffer, uint32_t bytes) override {
 			return 0;
 		}
 
-		bool isOpened() const override;
+		bool IsOpened() const override;
 
 		/// Sets the global pointer to the AAssetManager
 		static void initAssetManager(struct android_app* state) {
@@ -61,9 +61,9 @@ namespace nCine
 		unsigned long int startOffset_;
 
 		/// Opens the file with `AAsset_openFileDescriptor()`
-		void OpenFD(FileAccessMode mode);
+		void OpenFD(FileAccessMode mode, bool shouldExitOnFailToOpen);
 		/// Opens the file with `AAssetManager_open()` only
-		void OpenAsset(FileAccessMode mode);
+		void OpenAsset(FileAccessMode mode, bool shouldExitOnFailToOpen);
 	};
 
 }

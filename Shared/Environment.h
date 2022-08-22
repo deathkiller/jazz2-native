@@ -23,7 +23,7 @@ namespace Death
 
     inline uint64_t QueryUnbiasedInterruptTime()
     {
-        ULONGLONG now{ };
+        ULONGLONG now { };
         ::QueryUnbiasedInterruptTime(&now);
         return now;
     }

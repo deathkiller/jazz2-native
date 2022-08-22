@@ -45,22 +45,23 @@ namespace Jazz2::Compatibility
 			strm.zfree = Z_NULL;
 			strm.opaque = Z_NULL;
 			strm.avail_in = length;
-			strm.next_in = tmpBuffer.data();
+			strm.next_in = tmpBuffer.get();
 			strm.avail_out = uncompressedLength;
 			strm.next_out = _buffer.get();
 			int result = inflateInit2(&strm, -15);
-			RETURN_ASSERT_MSG_X(result == Z_OK, "JJ2Block in \"%s\" cannot be decompressed (%i)", s->filename(), result);
+			RETURN_ASSERT_MSG_X(result == Z_OK, "JJ2Block in \"%s\" cannot be decompressed (%i)", s->GetFilename(), result);
 			result = inflate(&strm, Z_NO_FLUSH);
 			inflateEnd(&strm);
-			RETURN_ASSERT_MSG_X(result == Z_OK || result == Z_STREAM_END, "JJ2Block in \"%s\" cannot be decompressed (%i)", s->filename(), result);
+			RETURN_ASSERT_MSG_X(result == Z_OK || result == Z_STREAM_END, "JJ2Block in \"%s\" cannot be decompressed (%i)", s->GetFilename(), result);
+			_length = uncompressedLength;
 #else
 			size_t bytesRead;
 			libdeflate_decompressor* decompressor = libdeflate_alloc_decompressor();
 			libdeflate_result result = libdeflate_deflate_decompress(decompressor, tmpBuffer.get(), length, _buffer.get(), uncompressedLength, &bytesRead);
 			libdeflate_free_decompressor(decompressor);
-			RETURN_ASSERT_MSG_X(result == LIBDEFLATE_SUCCESS, "JJ2Block in \"%s\" cannot be decompressed (%i)", s->filename(), result);
-#endif
+			RETURN_ASSERT_MSG_X(result == LIBDEFLATE_SUCCESS, "JJ2Block in \"%s\" cannot be decompressed (%i)", s->GetFilename(), result);
 			_length = (int)bytesRead;
+#endif
 		} else {
 			_buffer = std::move(tmpBuffer);
 			_length = length;
@@ -156,7 +157,7 @@ namespace Jazz2::Compatibility
 				break;
 			}
 
-			byte current = _buffer[_offset++];
+			uint8_t current = _buffer[_offset++];
 			result |= (current & 0x7F);
 			if (current >= 0x80) {
 				result <<= 7;

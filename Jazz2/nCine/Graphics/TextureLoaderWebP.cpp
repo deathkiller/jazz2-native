@@ -13,8 +13,7 @@
 //	LOGI_X("Loading \"%s\"", fileHandle_->filename());
 //
 //	// Loading the whole file in memory
-//	fileHandle_->open(IFileStream::OpenMode::READ | IFileStream::OpenMode::BINARY);
-//	RETURN_ASSERT_MSG_X(fileHandle_->isOpened(), "File \"%s\" cannot be opened", fileHandle_->filename());
+//	RETURN_ASSERT_MSG_X(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->filename());
 //	const long int fileSize = fileHandle_->size();
 //	std::unique_ptr<unsigned char[]> fileBuffer = std::make_unique<unsigned char[]>(fileSize);
 //	fileHandle_->read(fileBuffer.get(), fileSize);

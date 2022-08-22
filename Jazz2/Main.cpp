@@ -224,10 +224,7 @@ void GameEventHandler::RefreshCache()
 {
 	// Check cache state
 	{
-		auto s = IFileStream::createFileHandle(fs::joinPath({ "Cache"_s, "State"_s }));
-		s->setExitOnFailToOpen(false);
-		s->Open(FileAccessMode::Read);
-
+		auto s = fs::Open(fs::JoinPath("Cache"_s, "State"_s), FileAccessMode::Read);
 		if (s->GetSize() < 7) {
 			goto RecreateCache;
 		}
@@ -246,7 +243,7 @@ void GameEventHandler::RefreshCache()
 		}
 
 		int64_t animsCached = s->ReadValue<int64_t>();
-		int64_t animsModified = fs::lastModificationTime(fs::joinPath({ "Source"_s, "Anims.j2a"_s })).Ticks;
+		int64_t animsModified = fs::LastModificationTime(fs::JoinPath("Source"_s, "Anims.j2a"_s)).Ticks;
 		if (animsModified != 0 && animsCached != animsModified) {
 			goto RecreateCache;
 		}
@@ -258,49 +255,51 @@ void GameEventHandler::RefreshCache()
 
 RecreateCache:
 	{
-		JJ2Anims::Convert(fs::joinPath({ "Source"_s, "Anims.j2a"_s }), fs::joinPath({ "Cache"_s, "Animations"_s }), false);
+		// "Source" directory must be case in-sensitive
+		JJ2Anims::Convert(fs::FindPathCaseInsensitive(fs::JoinPath("Source"_s, "Anims.j2a"_s)), fs::JoinPath("Cache"_s, "Animations"_s), false);
 
 		EventConverter eventConverter;
 
 		fs::Directory dir("Source"_s);
 		while (true) {
-			StringView item = dir.readNext();
+			StringView item = dir.GetNext();
 			if (item == nullptr) {
 				break;
 			}
 
-			if (fs::hasExtension(item, "j2l")) {
+			if (fs::HasExtension(item, "j2l"_s)) {
 				// TODO: Check only filename
 				String levelName = fs::GetFileName(item);
-				if (levelName.findOr("-MLLE-Data-", levelName.end()) != levelName.end()) {
+				if (levelName.findOr("-MLLE-Data-"_s, levelName.end()) != levelName.end()) {
 					LOGI_X("Level \"%s\" skipped (MLLE extra layers).", item);
 				} else {
-					fs::createDir(fs::joinPath({ "Cache"_s, "Episodes"_s, "unknown"_s }));
+					fs::CreateDirectories(fs::JoinPath({ "Cache"_s, "Episodes"_s, "unknown"_s }));
+
+					lowercaseInPlace(levelName);
 
 					JJ2Level level;
 					level.Open(item, false);
-					level.Convert(fs::joinPath({ "Cache"_s, "Episodes"_s, "unknown"_s, levelName }), eventConverter, nullptr);
+					level.Convert(fs::JoinPath({ "Cache"_s, "Episodes"_s, "unknown"_s, levelName }), eventConverter, nullptr);
 				}
-			} else if (fs::hasExtension(item, "j2t")) {
-				fs::createDir(fs::joinPath({ "Cache"_s, "Tilesets"_s }));
+			} else if (fs::HasExtension(item, "j2t"_s)) {
+				fs::CreateDirectories(fs::JoinPath("Cache"_s, "Tilesets"_s));
 
 				String tilesetName = fs::GetFileName(item);
+				lowercaseInPlace(tilesetName);
 
 				JJ2Tileset tileset;
 				tileset.Open(item, false);
-				tileset.Convert(fs::joinPath({ "Cache"_s, "Tilesets"_s, tilesetName }));
+				tileset.Convert(fs::JoinPath({ "Cache"_s, "Tilesets"_s, tilesetName }));
 			}
 		}
 
 
-		auto s = IFileStream::createFileHandle(fs::joinPath({ "Cache"_s, "State"_s }));
-		s->setExitOnFailToOpen(false);
-		s->Open(FileAccessMode::Write);
+		auto s = fs::Open(fs::JoinPath("Cache"_s, "State"_s), FileAccessMode::Write);
 
 		s->WriteValue<uint32_t>(0x2063324a);	// Signature
 		s->WriteValue<uint16_t>(JJ2Anims::CacheVersion);
 		s->WriteValue<uint8_t>(0x00);			// Flags
-		int64_t animsModified = fs::lastModificationTime(fs::joinPath({ "Source"_s, "Anims.j2a"_s })).Ticks;
+		int64_t animsModified = fs::LastModificationTime(fs::JoinPath("Source"_s, "Anims.j2a"_s)).Ticks;
 		s->WriteValue<int64_t>(animsModified);
 
 		LOGI("Cache was recreated");

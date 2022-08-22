@@ -1,18 +1,22 @@
 #include "StandardFile.h"
 
-#include <cstdlib> // for exit()
+#include <cstdlib>			// for exit()
 
 // All but MSVC: Linux, Android and MinGW.
 #if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
-#	include <sys/stat.h> // for open()
-#	include <fcntl.h> // for open()
-#	include <unistd.h> // for close()
+#	include <sys/stat.h>	// for open()
+#	include <fcntl.h>		// for open()
+#	include <unistd.h>		// for close()
 #else
-#	include <io.h> // for _access()
+#	include <io.h>			// for _access()
 #endif
 
-namespace nCine {
+#include <Utf8.h>
 
+using namespace Death;
+
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -28,7 +32,7 @@ namespace nCine {
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void StandardFile::Open(FileAccessMode mode)
+	void StandardFile::Open(FileAccessMode mode, bool shouldExitOnFailToOpen)
 	{
 		// Checking if the file is already opened
 		if (fileDescriptor_ >= 0 || filePointer_ != nullptr) {
@@ -37,12 +41,12 @@ namespace nCine {
 #if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 			if ((mode & FileAccessMode::FileDescriptor) == FileAccessMode::FileDescriptor) {
 				// Opening with a file descriptor
-				OpenFD(mode);
+				OpenFD(mode, shouldExitOnFailToOpen);
 			} else
 #endif
 			{
 				// Opening with a file stream
-				OpenStream(mode);
+				OpenStream(mode, shouldExitOnFailToOpen);
 			}
 		}
 	}
@@ -61,7 +65,7 @@ namespace nCine {
 			}
 #endif
 		} else if (filePointer_) {
-			const int retValue = fclose(filePointer_);
+			const int retValue = ::fclose(filePointer_);
 			if (retValue == EOF) {
 				LOGW_X("Cannot close the file \"%s\"", filename_.data());
 			} else {
@@ -71,62 +75,62 @@ namespace nCine {
 		}
 	}
 
-	long int StandardFile::Seek(long int offset, SeekOrigin origin) const
+	int32_t StandardFile::Seek(int32_t offset, SeekOrigin origin) const
 	{
-		long int seekValue = -1;
+		int32_t seekValue = -1;
 
 		if (fileDescriptor_ >= 0) {
 #if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
-			seekValue = lseek(fileDescriptor_, offset, (int)origin);
+			seekValue = ::lseek(fileDescriptor_, offset, (int)origin);
 #endif
 		} else if (filePointer_) {
-			seekValue = fseek(filePointer_, offset, (int)origin);
+			seekValue = ::fseek(filePointer_, offset, (int)origin);
 		}
 		return seekValue;
 	}
 
-	long int StandardFile::GetPosition() const
+	int32_t StandardFile::GetPosition() const
 	{
-		long int tellValue = -1;
+		int32_t tellValue = -1;
 
 		if (fileDescriptor_ >= 0) {
 #if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
-			tellValue = lseek(fileDescriptor_, 0L, SEEK_CUR);
+			tellValue = ::lseek(fileDescriptor_, 0L, SEEK_CUR);
 #endif
 		} else if (filePointer_) {
-			tellValue = ftell(filePointer_);
+			tellValue = ::ftell(filePointer_);
 		}
 		return tellValue;
 	}
 
-	unsigned long int StandardFile::Read(void* buffer, unsigned long int bytes) const
+	uint32_t StandardFile::Read(void* buffer, uint32_t bytes) const
 	{
 		ASSERT(buffer);
 
-		unsigned long int bytesRead = 0;
+		uint32_t bytesRead = 0;
 
 		if (fileDescriptor_ >= 0) {
 #if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 			bytesRead = ::read(fileDescriptor_, buffer, bytes);
 #endif
 		} else if (filePointer_) {
-			bytesRead = static_cast<unsigned long int>(fread(buffer, 1, bytes, filePointer_));
+			bytesRead = static_cast<uint32_t>(::fread(buffer, 1, bytes, filePointer_));
 		}
 		return bytesRead;
 	}
 
-	unsigned long int StandardFile::Write(const void* buffer, unsigned long int bytes)
+	uint32_t StandardFile::Write(const void* buffer, uint32_t bytes)
 	{
 		ASSERT(buffer);
 
-		unsigned long int bytesWritten = 0;
+		uint32_t bytesWritten = 0;
 
 		if (fileDescriptor_ >= 0) {
 #if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 			bytesWritten = ::write(fileDescriptor_, buffer, bytes);
 #endif
 		} else if (filePointer_) {
-			bytesWritten = static_cast<unsigned long int>(fwrite(buffer, 1, bytes, filePointer_));
+			bytesWritten = static_cast<uint32_t>(::fwrite(buffer, 1, bytes, filePointer_));
 		}
 		return bytesWritten;
 	}
@@ -134,8 +138,9 @@ namespace nCine {
 	///////////////////////////////////////////////////////////
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
+
 #if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
-	void StandardFile::OpenFD(FileAccessMode mode)
+	void StandardFile::OpenFD(FileAccessMode mode, bool shouldExitOnFailToOpen)
 	{
 		int openFlag = -1;
 
@@ -158,9 +163,9 @@ namespace nCine {
 			fileDescriptor_ = ::open(filename_.data(), openFlag);
 
 			if (fileDescriptor_ < 0) {
-				if (shouldExitOnFailToOpen_) {
+				if (shouldExitOnFailToOpen) {
 					LOGF_X("Cannot open the file \"%s\"", filename_.data());
-					exit(EXIT_FAILURE);
+					::exit(EXIT_FAILURE);
 				} else {
 					LOGE_X("Cannot open the file \"%s\"", filename_.data());
 					return;
@@ -169,59 +174,55 @@ namespace nCine {
 				LOGI_X("File \"%s\" opened", filename_.data());
 			}
 			// Calculating file size
-			fileSize_ = lseek(fileDescriptor_, 0L, SEEK_END);
-			lseek(fileDescriptor_, 0L, SEEK_SET);
+			fileSize_ = ::lseek(fileDescriptor_, 0L, SEEK_END);
+			::lseek(fileDescriptor_, 0L, SEEK_SET);
 		}
 	}
 #endif
 
-	void StandardFile::OpenStream(FileAccessMode mode)
+	void StandardFile::OpenStream(FileAccessMode mode, bool shouldExitOnFailToOpen)
 	{
-		char modeChars[3] = { '\0', '\0', '\0' };
-
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
+		const wchar_t* modeInternal;
 		switch (mode) {
-			case FileAccessMode::Read:
-				modeChars[0] = 'r';
-				modeChars[1] = 'b';
-				break;
-			case FileAccessMode::Write:
-				modeChars[0] = 'w';
-				modeChars[1] = 'b';
-				break;
-			case FileAccessMode::Read | FileAccessMode::Write:
-				modeChars[0] = 'r';
-				modeChars[1] = '+';
-				modeChars[2] = 'b';
-				break;
+			case FileAccessMode::Read: modeInternal = L"rb"; break;
+			case FileAccessMode::Write: modeInternal = L"wb"; break;
+			case FileAccessMode::Read | FileAccessMode::Write: modeInternal = L"r+b"; break;
 			default:
 				LOGE_X("Cannot open the file \"%s\", wrong open mode", filename_.data());
-				break;
+				return;
 		}
 
-		if (modeChars[0] != '\0') {
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
-			fopen_s(&filePointer_, filename_.data(), modeChars);
+		_wfopen_s(&filePointer_, Utf8::ToUtf16(filename_), modeInternal);
 #else
-			filePointer_ = fopen(filename_.data(), modeChars);
+		const char* modeInternal;
+		switch (mode) {
+			case FileAccessMode::Read: modeInternal = "rb"; break;
+			case FileAccessMode::Write: modeInternal = "wb"; break;
+			case FileAccessMode::Read | FileAccessMode::Write: modeInternal = "r+b"; break;
+			default:
+				LOGE_X("Cannot open the file \"%s\", wrong open mode", filename_.data());
+				return;
+		}
+
+		filePointer_ = ::fopen(filename_.data(), modeInternal);
 #endif
 
-			if (filePointer_ == nullptr) {
-				if (shouldExitOnFailToOpen_) {
-					LOGF_X("Cannot open the file \"%s\"", filename_.data());
-					exit(EXIT_FAILURE);
-				} else {
-					LOGE_X("Cannot open the file \"%s\"", filename_.data());
-					return;
-				}
+		if (filePointer_ == nullptr) {
+			if (shouldExitOnFailToOpen) {
+				LOGF_X("Cannot open the file \"%s\"", filename_.data());
+				::exit(EXIT_FAILURE);
 			} else {
-				LOGI_X("File \"%s\" opened", filename_.data());
+				LOGE_X("Cannot open the file \"%s\"", filename_.data());
+				return;
 			}
-
-			// Calculating file size
-			fseek(filePointer_, 0L, SEEK_END);
-			fileSize_ = ftell(filePointer_);
-			fseek(filePointer_, 0L, SEEK_SET);
+		} else {
+			LOGI_X("File \"%s\" opened", filename_.data());
 		}
-	}
 
+		// Calculating file size
+		::fseek(filePointer_, 0L, SEEK_END);
+		fileSize_ = ::ftell(filePointer_);
+		::fseek(filePointer_, 0L, SEEK_SET);
+	}
 }

@@ -33,14 +33,13 @@ namespace nCine
 		constexpr uint8_t PngTypeColor = 2;
 
 		// Lightweight PNG reader using libdeflate
-		fileHandle_->Open(FileAccessMode::Read);
-		RETURN_ASSERT_MSG_X(fileHandle_->isOpened(), "File \"%s\" cannot be opened", fileHandle_->filename());
+		RETURN_ASSERT_MSG_X(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->GetFilename());
 
 		// Check header signature
 		uint8_t internalBuffer[sizeof(PngSignature)];
 		fileHandle_->Read(internalBuffer, sizeof(PngSignature));
 		if (std::memcmp(internalBuffer, PngSignature, sizeof(PngSignature)) != 0) {
-			RETURN_MSG_X("PNG signature check of file \"%s\" failed", fileHandle_->filename());
+			RETURN_MSG_X("PNG signature check of file \"%s\" failed", fileHandle_->GetFilename());
 		}
 
 		// Load image
@@ -56,14 +55,14 @@ namespace nCine
 
 			if (!headerParsed && type != 'IHDR') {
 				// Header does not appear first
-				RETURN_MSG_X("PNG file \"%s\" is corrupted", fileHandle_->filename());
+				RETURN_MSG_X("PNG file \"%s\" is corrupted", fileHandle_->GetFilename());
 			}
 
 			int blockEndPosition = (int)fileHandle_->GetPosition() + length;
 
 			switch (type) {
 				case 'IHDR': {
-					RETURN_ASSERT_MSG_X(!headerParsed, "PNG file \"%s\" is corrupted", fileHandle_->filename());
+					RETURN_ASSERT_MSG_X(!headerParsed, "PNG file \"%s\" is corrupted", fileHandle_->GetFilename());
 
 					width_ = ReadInt32BigEndian(fileHandle_);
 					height_ = ReadInt32BigEndian(fileHandle_);
@@ -94,11 +93,11 @@ namespace nCine
 
 					if (compression != 0) {
 						// Compression method is not supported
-						RETURN_MSG_X("PNG file \"%s\" is not supported", fileHandle_->filename());
+						RETURN_MSG_X("PNG file \"%s\" is not supported", fileHandle_->GetFilename());
 					}
 					if (interlace != 0) {
 						// Interlacing is not supported
-						RETURN_MSG_X("PNG file \"%s\" is not supported", fileHandle_->filename());
+						RETURN_MSG_X("PNG file \"%s\" is not supported", fileHandle_->GetFilename());
 					}
 
 					headerParsed = true;
@@ -127,16 +126,16 @@ namespace nCine
 					strm.avail_out = dataLength;
 					strm.next_out = buffer.get();
 					int result = inflateInit2(&strm, -15);
-					RETURN_ASSERT_MSG_X(result == Z_OK, "PNG file \"%s\" cannot be decompressed (%i)", fileHandle_->filename(), result);
+					RETURN_ASSERT_MSG_X(result == Z_OK, "PNG file \"%s\" cannot be decompressed (%i)", fileHandle_->GetFilename(), result);
 					result = inflate(&strm, Z_NO_FLUSH);
 					inflateEnd(&strm);
-					RETURN_ASSERT_MSG_X(result == Z_OK || result == Z_STREAM_END, "PNG file \"%s\" cannot be decompressed (%i)", fileHandle_->filename(), result);
+					RETURN_ASSERT_MSG_X(result == Z_OK || result == Z_STREAM_END, "PNG file \"%s\" cannot be decompressed (%i)", fileHandle_->GetFilename(), result);
 #else
 					size_t bytesRead;
 					libdeflate_decompressor* decompressor = libdeflate_alloc_decompressor();
 					libdeflate_result result = libdeflate_deflate_decompress(decompressor, data.data() + 2, data.size() - 2, buffer.get(), dataLength, &bytesRead);
 					libdeflate_free_decompressor(decompressor);
-					RETURN_ASSERT_MSG_X(result == LIBDEFLATE_SUCCESS, "PNG file \"%s\" cannot be decompressed (%i)", fileHandle_->filename(), result);
+					RETURN_ASSERT_MSG_X(result == LIBDEFLATE_SUCCESS, "PNG file \"%s\" cannot be decompressed (%i)", fileHandle_->GetFilename(), result);
 #endif
 					int o = 0;
 					int pxStride = (isPaletted ? 1 : (is24Bit ? 3 : 4));
@@ -187,14 +186,14 @@ namespace nCine
 
 			if (fileHandle_->GetPosition() != blockEndPosition) {
 				// Block has incorrect length
-				RETURN_MSG_X("PNG file \"%s\" is corrupted", fileHandle_->filename());
+				RETURN_MSG_X("PNG file \"%s\" is corrupted", fileHandle_->GetFilename());
 			}
 
 			// Skip CRC
 			fileHandle_->Seek(4, SeekOrigin::Current);
 		}
 
-		RETURN_MSG_X("PNG file \"%s\" is corrupted", fileHandle_->filename());
+		RETURN_MSG_X("PNG file \"%s\" is corrupted", fileHandle_->GetFilename());
 	}
 
 	int TextureLoaderPng::ReadInt32BigEndian(const std::unique_ptr<IFileStream>& s)

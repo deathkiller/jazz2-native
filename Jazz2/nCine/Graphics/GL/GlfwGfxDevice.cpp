@@ -1,3 +1,5 @@
+#if defined(WITH_GLFW)
+
 #include "GlfwGfxDevice.h"
 #include "../ITextureLoader.h"
 
@@ -229,3 +231,5 @@ namespace nCine
 	}
 
 }
+
+#endif

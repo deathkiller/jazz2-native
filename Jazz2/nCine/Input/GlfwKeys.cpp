@@ -1,3 +1,5 @@
+#if defined(WITH_GLFW)
+
 #include "GlfwInputManager.h"
 
 #pragma push_macro("DELETE")
@@ -276,3 +278,5 @@ namespace nCine
 }
 
 #pragma pop_macro("DELETE")
+
+#endif

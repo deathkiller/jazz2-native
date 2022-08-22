@@ -1,6 +1,9 @@
 #pragma once
 
+#include "IFileStream.h"
 #include "../../Common.h"
+
+#include <memory>
 
 #include <Containers/StringView.h>
 
@@ -38,12 +41,15 @@ namespace nCine
 #endif
 
 		/// The available permissions to check or set
-		enum Permission
+		enum class Permission
 		{
-			READ = 1,
-			WRITE = 2,
-			EXECUTE = 4
+			None = 0x00,
+			Read = 0x01,
+			Write = 0x02,
+			Execute = 0x04
 		};
+
+		DEFINE_PRIVATE_ENUM_OPERATORS(Permission);
 
 		struct FileDate
 		{
@@ -57,41 +63,67 @@ namespace nCine
 			int64_t Ticks;
 		};
 
+		enum class EnumerationOptions
+		{
+			None = 0x00,
+
+			// Skip regular files
+			SkipFiles = 0x01,
+			// Skip directories
+			SkipDirectories = 0x02,
+			// Skip everything that is not a file or directory
+			SkipSpecial = 0x04
+		};
+
+		DEFINE_PRIVATE_ENUM_OPERATORS(EnumerationOptions);
+
 		/// The class that handles directory traversal
 		class Directory
 		{
 		public:
-			Directory(const StringView& path);
+			Directory(const StringView& path, EnumerationOptions options = EnumerationOptions::None);
 			~Directory();
 
 			/// Opens a directory for traversal
-			bool open(const StringView& path);
+			bool Open(const StringView& path, EnumerationOptions options = EnumerationOptions::None);
 			/// Closes an opened directory
-			void close();
+			void Close();
 			/// Returns the name of the next file inside the directory or `nullptr`
-			const char* readNext();
+			const char* GetNext();
 
 		private:
-#ifdef DEATH_TARGET_WINDOWS
-			bool firstFile_ = true;
-			HANDLE hFindFile_ = NULL;
-			char path_[260];
-			char* fileNamePart_ = nullptr;
+			EnumerationOptions _options;
+
+			char _path[MaxPathLength];
+			char* _fileNamePart = nullptr;
+#if defined(DEATH_TARGET_WINDOWS)
+			bool _firstFile = true;
+			HANDLE _hFindFile = NULL;
 #else
-#ifdef DEATH_TARGET_ANDROID
-			AAssetDir* assetDir_ = nullptr;
-#endif
-			DIR* dirStream_ = nullptr;
+#	if defined(DEATH_TARGET_ANDROID)
+			AAssetDir* _assetDir = nullptr;
+#	endif
+			DIR* _dirStream = nullptr;
 #endif
 		};
 
+#if defined(DEATH_TARGET_WINDOWS)
+		// Windows is already case in-sensitive
+		static const StringView& FindPathCaseInsensitive(const StringView& path)
+		{
+			return path;
+		}
+#else
+		static String FindPathCaseInsensitive(const StringView& path);
+#endif
+
 		/// Joins together two path components
-		static String joinPath(const StringView& first, const StringView& second);
-		static String joinPath(const ArrayView<const StringView> paths);
-		static String joinPath(const std::initializer_list<StringView> paths);
+		static String JoinPath(const StringView& first, const StringView& second);
+		static String JoinPath(const ArrayView<const StringView> paths);
+		static String JoinPath(const std::initializer_list<StringView> paths);
 
 		/// Returns the aboslute path after joining together two path components
-		static String absoluteJoinPath(const StringView& first, const StringView& second);
+		static String JoinPathAbsolute(const StringView& first, const StringView& second);
 
 		/// Returns the path up to, but not including, the final separator
 		static String GetDirectoryName(const StringView& path);
@@ -104,87 +136,95 @@ namespace nCine
 		static String GetAbsolutePath(const StringView& path);
 
 		/// Returns the extension position in the string or `nullptr` if it is not found
-		static StringView extension(const StringView& path);
+		static StringView GetExtension(const StringView& path);
 		/// Returns true if the file at `path` as the specified extension (case-insensitive comparison)
-		static bool hasExtension(const StringView& path, const StringView& extension);
+		static bool HasExtension(const StringView& path, const StringView& extension);
 
-		/// Returns the path of current directory
-		static String currentDir();
+		/// Returns the path of executable
+		static String GetExecutablePath();
+		/// Returns the path of current working directory
+		static String GetWorkingDirectory();
 		/// Sets the current working directory, the starting point for interpreting relative paths
-		static bool setCurrentDir(const StringView& path);
+		static bool SetWorkingDirectory(const StringView& path);
 		/// Returns the path of the user home directory
-		static String homeDir();
-#ifdef DEATH_TARGET_ANDROID
+		static String GetHomeDirectory();
+#if defined(DEATH_TARGET_ANDROID)
 		/// Returns the path of the Android external storage directory
-		static String externalStorageDir();
+		static String GetExternalStorage();
 #endif
 
 		/// Returns true if the specified path is a directory
-		static bool isDirectory(const StringView& path);
+		static bool IsDirectory(const StringView& path);
 		/// Returns true if the specified path is a file
-		static bool isFile(const StringView& path);
+		static bool IsFile(const StringView& path);
 
 		/// Returns true if the file or directory exists
-		static bool exists(const StringView& path);
+		static bool Exists(const StringView& path);
 		/// Returns true if the file or directory is readable
-		static bool isReadable(const StringView& path);
+		static bool IsReadable(const StringView& path);
 		/// Returns true if the file or directory is writeable
-		static bool isWritable(const StringView& path);
+		static bool IsWritable(const StringView& path);
 		/// Returns true if the file or directory is executable
-		static bool isExecutable(const StringView& path);
+		static bool IsExecutable(const StringView& path);
 
 		/// Returns true if the path is a file and is readable
-		static bool isReadableFile(const StringView& path);
+		static bool IsReadableFile(const StringView& path);
 		/// Returns true if the path is a file and is writeable
-		static bool isWritableFile(const StringView& path);
+		static bool IsWritableFile(const StringView& path);
 
 		/// Returns true if the file or directory is hidden
-		static bool isHidden(const StringView& path);
+		static bool IsHidden(const StringView& path);
 		/// Makes a file or directory hidden or not
-		static bool setHidden(const StringView& path, bool hidden);
+		static bool SetHidden(const StringView& path, bool hidden);
 
 		/// Creates a new directory
-		static bool createDir(const StringView& path);
+		static bool CreateDirectories(const StringView& path);
 		/// Deletes an empty directory
-		static bool deleteEmptyDir(const StringView& path);
+		static bool RemoveEmptyDirectory(const StringView& path);
 		/// Deletes a file
-		static bool deleteFile(const StringView& path);
+		static bool RemoveFile(const StringView& path);
 		/// Renames or moves a file or a directory
-		static bool rename(const StringView& oldPath, const StringView& newPath);
+		static bool Rename(const StringView& oldPath, const StringView& newPath);
 		/// Copies a file
-		static bool copy(const StringView& oldPath, const StringView& newPath);
+		static bool Copy(const StringView& oldPath, const StringView& newPath, bool overwrite = true);
 
 		/// Returns the file size in bytes
-		static long int fileSize(const StringView& path);
+		static int64_t FileSize(const StringView& path);
 		/// Returns the last time the file or directory was modified
-		static FileDate lastModificationTime(const StringView& path);
+		static FileDate LastModificationTime(const StringView& path);
 		/// Returns the last time the file or directory was accessed
-		static FileDate lastAccessTime(const StringView& path);
+		static FileDate LastAccessTime(const StringView& path);
 
 		/// Returns the file or directory permissions in a mask
-		static int permissions(const StringView& path);
+		static Permission GetPermissions(const StringView& path);
 		/// Sets the file or directory permissions to those of the mask
-		static bool changePermissions(const StringView& path, int mode);
+		static bool ChangePermissions(const StringView& path, Permission mode);
 		/// Adds the permissions in the mask to a file or a directory
-		static bool addPermissions(const StringView& path, int mode);
+		static bool AddPermissions(const StringView& path, Permission mode);
 		/// Removes the permissions in the mask from a file or a directory
-		static bool removePermissions(const StringView& path, int mode);
+		static bool RemovePermissions(const StringView& path, Permission mode);
+
+		/// Opens file stream with specified access mode
+		static std::unique_ptr<IFileStream> Open(const String& path, FileAccessMode mode, bool shouldExitOnFailToOpen = false);
+
+		static std::unique_ptr<IFileStream> CreateFromMemory(const String& bufferName, unsigned char* bufferPtr, uint32_t bufferSize);
+		static std::unique_ptr<IFileStream> CreateFromMemory(const String& bufferName, const unsigned char* bufferPtr, uint32_t bufferSize);
 
 		/// Returns the base directory for data loading
-		inline static const String& dataPath() {
-			return dataPath_;
+		inline static const String& GetDataPath() {
+			return _dataPath;
 		}
 		/// Returns the writable directory for saving data
-		static const String& savePath();
+		static const String& GetSavePath(const StringView& applicationName);
 
 	private:
 		/// The path for the application to load files from
-		static String dataPath_;
+		static String _dataPath;
 		/// The path for the application to write files into
-		static String savePath_;
+		static String _savePath;
 
 		/// Determines the correct save path based on the platform
-		static void initSavePath();
+		static void InitializeSavePath(const StringView& applicationName);
 
 		/// The `AppConfiguration` class needs to access `dataPath_`
 		friend class AppConfiguration;

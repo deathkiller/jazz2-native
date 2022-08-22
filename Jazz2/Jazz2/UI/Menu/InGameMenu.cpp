@@ -22,7 +22,7 @@ namespace Jazz2::UI::Menu
 		_canvas = std::make_unique<MenuCanvas>(this);
 
 		auto& resolver = ContentResolver::Current();
-		resolver.ApplyPalette(fs::joinPath({ "Content"_s, "Animations"_s, "Main.palette"_s }));
+		resolver.ApplyPalette(fs::JoinPath({ "Content"_s, "Animations"_s, "Main.palette"_s }));
 
 		Metadata* metadata = resolver.RequestMetadata("UI/MainMenu"_s);
 		if (metadata != nullptr) {
@@ -119,9 +119,9 @@ namespace Jazz2::UI::Menu
 		int charOffset = 0;
 		int charOffsetShadow = 0;
 
-		float logoScale = 1.0 + (1.0f - _owner->_logoTransition) * 7.0f;
-		float logoTextScale = 1.0 + (1.0f - _owner->_logoTransition) * 2.0f;
-		float logoTranslateX = 1.0 + (1.0f - _owner->_logoTransition) * 1.2f;
+		float logoScale = 1.0f + (1.0f - _owner->_logoTransition) * 7.0f;
+		float logoTextScale = 1.0f + (1.0f - _owner->_logoTransition) * 2.0f;
+		float logoTranslateX = 1.0f + (1.0f - _owner->_logoTransition) * 1.2f;
 		float logoTranslateY = (1.0f - _owner->_logoTransition) * 120.0f;
 		float logoTextTranslate = (1.0f - _owner->_logoTransition) * 60.0f;
 

@@ -22,9 +22,18 @@
 #		include <OpenGL/gl3.h>
 #		include <OpenGL/gl3ext.h>
 #	else
-#		define GL_GLEXT_PROTOTYPES
-#		include <GL/gl.h>
-#		include <GL/glext.h>
+#		if defined(_MSC_VER) && defined(__has_include)
+#			if __has_include("../../Libs/GL/glew.h")
+#				define __HAS_LOCAL_OPENGL
+#			endif
+#		endif
+#		ifdef __HAS_LOCAL_OPENGL
+#			include "../../Libs/GL/glew.h"
+#		else
+#			define GL_GLEXT_PROTOTYPES
+#			include <GL/gl.h>
+#			include <GL/glext.h>
+#		endif
 #	endif
 #endif
 

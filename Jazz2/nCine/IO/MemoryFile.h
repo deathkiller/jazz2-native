@@ -8,23 +8,21 @@ namespace nCine
 	class MemoryFile : public IFileStream
 	{
 	public:
-		MemoryFile(const String& bufferName, unsigned char* bufferPtr, unsigned long int bufferSize);
-		MemoryFile(const String& bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize);
-		MemoryFile(unsigned char* bufferPtr, unsigned long int bufferSize);
-		MemoryFile(const unsigned char* bufferPtr, unsigned long int bufferSize);
+		MemoryFile(const String& bufferName, uint8_t* bufferPtr, uint32_t bufferSize);
+		MemoryFile(const String& bufferName, const uint8_t* bufferPtr, uint32_t bufferSize);
 
-		void Open(FileAccessMode mode) override;
+		void Open(FileAccessMode mode, bool shouldExitOnFailToOpen) override;
 		void Close() override;
-		long int Seek(long int offset, SeekOrigin origin) const override;
-		long int GetPosition() const override;
-		unsigned long int Read(void* buffer, unsigned long int bytes) const override;
-		unsigned long int Write(const void* buffer, unsigned long int bytes) override;
+		int32_t Seek(int32_t offset, SeekOrigin origin) const override;
+		int32_t GetPosition() const override;
+		uint32_t Read(void* buffer, uint32_t bytes) const override;
+		uint32_t Write(const void* buffer, uint32_t bytes) override;
 
 	private:
-		unsigned char* bufferPtr_;
+		uint8_t* _bufferPtr;
 		/// \note Modified by `seek` and `tell` constant methods
-		mutable unsigned long int seekOffset_;
-		bool isWritable_;
+		mutable uint32_t _seekOffset;
+		bool _isWritable;
 
 		/// Deleted copy constructor
 		MemoryFile(const MemoryFile&) = delete;

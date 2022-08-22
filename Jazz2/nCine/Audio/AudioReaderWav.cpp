@@ -12,7 +12,7 @@ namespace nCine
 	AudioReaderWav::AudioReaderWav(std::unique_ptr<IFileStream> fileHandle)
 		: fileHandle_(std::move(fileHandle))
 	{
-		ASSERT(fileHandle_->isOpened());
+		ASSERT(fileHandle_->IsOpened());
 	}
 
 	///////////////////////////////////////////////////////////
@@ -38,8 +38,9 @@ namespace nCine
 
 	void AudioReaderWav::rewind() const
 	{
-		if (fileHandle_->ptr())
-			clearerr(fileHandle_->ptr());
+		if (fileHandle_->Ptr()) {
+			::clearerr(fileHandle_->Ptr());
+		}
 		fileHandle_->Seek(AudioLoaderWav::HeaderSize, SeekOrigin::Begin);
 	}
 

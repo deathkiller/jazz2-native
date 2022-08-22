@@ -119,16 +119,15 @@ namespace Jazz2
 		}
 
 		// Try to load it
-		auto fileHandle = IFileStream::createFileHandle(fs::joinPath({ "Content"_s, "Metadata"_s, path + ".res"_s }));
-		fileHandle->Open(FileAccessMode::Read);
-		auto fileSize = fileHandle->GetSize();
+		auto s = fs::Open(fs::JoinPath({ "Content"_s, "Metadata"_s, path + ".res"_s }), FileAccessMode::Read);
+		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit
 			return nullptr;
 		}
 
 		auto buffer = std::make_unique<char[]>(fileSize + 1);
-		fileHandle->Read(buffer.get(), fileSize);
+		s->Read(buffer.get(), fileSize);
 		buffer[fileSize] = '\0';
 
 		std::unique_ptr<Metadata> metadata = std::make_unique<Metadata>();
@@ -266,10 +265,10 @@ namespace Jazz2
 							continue;
 						}
 
-						String fullPath = fs::joinPath({ "Content"_s, "Animations"_s, path });
-						if (!fs::isReadableFile(fullPath)) {
-							fullPath = fs::joinPath({ "Cache"_s, "Animations"_s, path });
-							if (!fs::isReadableFile(fullPath)) {
+						String fullPath = fs::JoinPath({ "Content"_s, "Animations"_s, path });
+						if (!fs::IsReadableFile(fullPath)) {
+							fullPath = fs::JoinPath({ "Cache"_s, "Animations"_s, path });
+							if (!fs::IsReadableFile(fullPath)) {
 								continue;
 							}
 						}
@@ -298,17 +297,15 @@ namespace Jazz2
 			return it->second.get();
 		}
 
-		auto fileHandle = IFileStream::createFileHandle(fs::joinPath({ "Content"_s, "Animations"_s, path + ".res"_s }));
-		fileHandle->setExitOnFailToOpen(false);
-		fileHandle->Open(FileAccessMode::Read);
-		auto fileSize = fileHandle->GetSize();
+		auto s = fs::Open(fs::JoinPath({ "Content"_s, "Animations"_s, path + ".res"_s }), FileAccessMode::Read);
+		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit, also if not found try to use cache
 			return RequestGraphicsFromCache(path, paletteOffset);
 		}
 
 		auto buffer = std::make_unique<char[]>(fileSize + 1);
-		fileHandle->Read(buffer.get(), fileSize);
+		s->Read(buffer.get(), fileSize);
 		buffer[fileSize] = '\0';
 
 		Document document;
@@ -320,7 +317,7 @@ namespace Jazz2
 		std::unique_ptr<GenericGraphicResource> graphics = std::make_unique<GenericGraphicResource>();
 		graphics->Flags |= GenericGraphicResourceFlags::Referenced;
 
-		String fullPath = fs::joinPath({ "Content"_s, "Animations"_s, path });
+		String fullPath = fs::JoinPath({ "Content"_s, "Animations"_s, path });
 		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
 		if (texLoader->hasLoaded()) {
 			auto texFormat = texLoader->texFormat().internalFormat();
@@ -419,53 +416,51 @@ namespace Jazz2
 
 	GenericGraphicResource* ContentResolver::RequestGraphicsFromCache(const StringView& path, uint16_t paletteOffset)
 	{
-		if (!fs::hasExtension(path, "aura"_s)) {
+		if (!fs::HasExtension(path, "aura"_s)) {
 			return nullptr;
 		}
 
-		String fullPath = fs::joinPath({ "Cache"_s, "Animations"_s, path });
-		auto fileHandle = IFileStream::createFileHandle(fullPath);
-		fileHandle->setExitOnFailToOpen(false);
-		fileHandle->Open(FileAccessMode::Read);
-		auto fileSize = fileHandle->GetSize();
+		String fullPath = fs::JoinPath({ "Cache"_s, "Animations"_s, path });
+		auto s = fs::Open(fullPath, FileAccessMode::Read);
+		auto fileSize = s->GetSize();
 		if (fileSize < 16 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit, also if not found try to use cache
 			return nullptr;
 		}
 
-		uint64_t signature1 = fileHandle->ReadValue<uint64_t>();
-		uint32_t signature2 = fileHandle->ReadValue<uint16_t>();
-		uint8_t version = fileHandle->ReadValue<uint8_t>();
-		uint8_t flags = fileHandle->ReadValue<uint8_t>();
+		uint64_t signature1 = s->ReadValue<uint64_t>();
+		uint32_t signature2 = s->ReadValue<uint16_t>();
+		uint8_t version = s->ReadValue<uint8_t>();
+		uint8_t flags = s->ReadValue<uint8_t>();
 
 		if (signature1 != 0xB8EF8498E2BFBBEF || signature2 != 0x208F || version != 2 || (flags & 0x80) != 0x80) {
 			return nullptr;
 		}
 
-		uint8_t channelCount = fileHandle->ReadValue<uint8_t>();
-		uint32_t frameDimensionsX = fileHandle->ReadValue<uint32_t>();
-		uint32_t frameDimensionsY = fileHandle->ReadValue<uint32_t>();
+		uint8_t channelCount = s->ReadValue<uint8_t>();
+		uint32_t frameDimensionsX = s->ReadValue<uint32_t>();
+		uint32_t frameDimensionsY = s->ReadValue<uint32_t>();
 
-		uint8_t frameConfigurationX = fileHandle->ReadValue<uint8_t>();
-		uint8_t frameConfigurationY = fileHandle->ReadValue<uint8_t>();
-		uint16_t frameCount = fileHandle->ReadValue<uint16_t>();
-		uint16_t frameRate = fileHandle->ReadValue<uint16_t>();
+		uint8_t frameConfigurationX = s->ReadValue<uint8_t>();
+		uint8_t frameConfigurationY = s->ReadValue<uint8_t>();
+		uint16_t frameCount = s->ReadValue<uint16_t>();
+		uint16_t frameRate = s->ReadValue<uint16_t>();
 
-		uint16_t hotspotX = fileHandle->ReadValue<uint16_t>();
-		uint16_t hotspotY = fileHandle->ReadValue<uint16_t>();
+		uint16_t hotspotX = s->ReadValue<uint16_t>();
+		uint16_t hotspotY = s->ReadValue<uint16_t>();
 
-		uint16_t coldspotX = fileHandle->ReadValue<uint16_t>();
-		uint16_t coldspotY = fileHandle->ReadValue<uint16_t>();
+		uint16_t coldspotX = s->ReadValue<uint16_t>();
+		uint16_t coldspotY = s->ReadValue<uint16_t>();
 
-		uint16_t gunspotX = fileHandle->ReadValue<uint16_t>();
-		uint16_t gunspotY = fileHandle->ReadValue<uint16_t>();
+		uint16_t gunspotX = s->ReadValue<uint16_t>();
+		uint16_t gunspotY = s->ReadValue<uint16_t>();
 
 		uint32_t width = frameDimensionsX * frameConfigurationX;
 		uint32_t height = frameDimensionsY * frameConfigurationY;
 
 		std::unique_ptr<uint32_t[]> pixels = std::make_unique<uint32_t[]>(width * height);
 
-		ReadImageFromFile(fileHandle, (uint8_t*)pixels.get(), width, height, channelCount);
+		ReadImageFromFile(s, (uint8_t*)pixels.get(), width, height, channelCount);
 
 		std::unique_ptr<GenericGraphicResource> graphics = std::make_unique<GenericGraphicResource>();
 		graphics->Flags |= GenericGraphicResourceFlags::Referenced;
@@ -612,16 +607,15 @@ namespace Jazz2
 
 	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(const StringView& path, bool applyPalette)
 	{
-		String fullPath = fs::joinPath({ "Cache"_s, "Tilesets"_s, path + ".j2t"_s });
-		auto s = IFileStream::createFileHandle(fullPath);
-		s->Open(FileAccessMode::Read);
-		ASSERT_MSG(s->isOpened(), "Cannot open file for reading");
+		String fullPath = fs::JoinPath({ "Cache"_s, "Tilesets"_s, path + ".j2t"_s });
+		auto s = fs::Open(fullPath, FileAccessMode::Read);
+		ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
 
 		uint64_t signature1 = s->ReadValue<uint64_t>();
 		uint16_t signature2 = s->ReadValue<uint16_t>();
 		uint8_t version = s->ReadValue<uint8_t>();
 		uint8_t flags = s->ReadValue<uint8_t>();
-		ASSERT(signature1 == 0xB8EF8498E2BFBBEF && signature2 == 0x208F && version == 2, "Invalid file");
+		ASSERT_MSG(signature1 == 0xB8EF8498E2BFBBEF && signature2 == 0x208F && version == 2, "Invalid file");
 
 		// TODO: Use single channel instead
 		uint8_t channelCount = s->ReadValue<uint8_t>();
@@ -681,15 +675,14 @@ namespace Jazz2
 
 	bool ContentResolver::LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty)
 	{
-		String fullPath = fs::joinPath({ "Cache"_s, "Episodes"_s, path + ".j2l"_s });
+		String fullPath = fs::JoinPath({ "Cache"_s, "Episodes"_s, path + ".j2l"_s });
 
-		auto s = IFileStream::createFileHandle(fullPath);
-		s->Open(FileAccessMode::Read);
-		ASSERT_MSG(s->isOpened(), "Cannot open file for reading");
+		auto s = fs::Open(fullPath, FileAccessMode::Read);
+		ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
 
 		uint64_t signature = s->ReadValue<uint64_t>();
 		uint8_t version = s->ReadValue<uint8_t>();
-		ASSERT(signature == 0x2095A59FF0BFBBEF && version == 1, "Invalid file");
+		ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && version == 1, "Invalid file");
 
 		// TODO: Level flags
 		uint16_t flags = s->ReadValue<uint16_t>();
@@ -759,15 +752,11 @@ namespace Jazz2
 	{
 		std::unique_ptr<IFileStream> file = nullptr;
 		if (!path.empty()) {
-			file = IFileStream::createFileHandle(path);
-			file->setExitOnFailToOpen(false);
-			file->Open(FileAccessMode::Read);
+			file = fs::Open(path, FileAccessMode::Read);
 		}
 		if (file == nullptr || file->GetSize() == 0) {
 			// Try to load default palette
-			file = IFileStream::createFileHandle(fs::joinPath({ "Content"_s, "Animations"_s, "Main.palette"_s }));
-			file->setExitOnFailToOpen(false);
-			file->Open(FileAccessMode::Read);
+			file = fs::Open(fs::JoinPath({ "Content"_s, "Animations"_s, "Main.palette"_s }), FileAccessMode::Read);
 		}
 
 		auto fileSize = file->GetSize();
@@ -802,11 +791,12 @@ namespace Jazz2
 
 	std::unique_ptr<AudioStreamPlayer> ContentResolver::GetMusic(const StringView& path)
 	{
-		String fullPath = fs::joinPath({ "Content"_s, "Music"_s, path });
-		if (!fs::isReadableFile(fullPath)) {
-			fullPath = fs::joinPath({ "Source"_s, path });
+		String fullPath = fs::JoinPath({ "Content"_s, "Music"_s, path });
+		if (!fs::IsReadableFile(fullPath)) {
+			// "Source" directory must be case in-sensitive
+			fullPath = fs::FindPathCaseInsensitive(fs::JoinPath("Source"_s, path));
 		}
-		if (fs::isReadableFile(fullPath)) {
+		if (fs::IsReadableFile(fullPath)) {
 			return std::make_unique<AudioStreamPlayer>(fullPath);
 		} else {
 			return nullptr;
@@ -822,8 +812,8 @@ namespace Jazz2
 		auto& font = _fonts[(int)fontType];
 		if (font == nullptr) {
 			switch (fontType) {
-				case FontType::Small: font = std::make_unique<UI::Font>(fs::joinPath({ "Content"_s, "Animations"_s, "_custom"_s, "font_small.png"_s }), _palettes); break;
-				case FontType::Medium: font = std::make_unique<UI::Font>(fs::joinPath({ "Content"_s, "Animations"_s, "_custom"_s, "font_medium.png"_s }), _palettes); break;
+				case FontType::Small: font = std::make_unique<UI::Font>(fs::JoinPath({ "Content"_s, "Animations"_s, "_custom"_s, "font_small.png"_s }), _palettes); break;
+				case FontType::Medium: font = std::make_unique<UI::Font>(fs::JoinPath({ "Content"_s, "Animations"_s, "_custom"_s, "font_medium.png"_s }), _palettes); break;
 				default: return nullptr;
 			}
 		}

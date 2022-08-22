@@ -1,5 +1,7 @@
 #pragma once
 
+#if defined(WITH_GLFW)
+
 #if defined(_MSC_VER) && defined(__has_include)
 #	if __has_include("../../../../Libs/GL/glew.h")
 #		define __HAS_LOCAL_GLEW
@@ -90,3 +92,5 @@ namespace nCine
 	};
 
 }
+
+#endif

@@ -149,7 +149,9 @@ else() # GCC and LLVM
 
 	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 		target_compile_options(ncine PRIVATE -fdiagnostics-color=auto)
-		target_compile_options(ncine PRIVATE -Wall -pedantic -Wextra -Wold-style-cast -Wno-long-long -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-variadic-macros)
+		# TODO: added by me
+		#target_compile_options(ncine PRIVATE -Wall -pedantic -Wextra -Wold-style-cast -Wno-long-long -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-variadic-macros)
+		target_compile_options(ncine PRIVATE -fpermissive)
 
 		if(NCINE_DYNAMIC_LIBRARY)
 			target_link_options(ncine PRIVATE -Wl,--no-undefined)

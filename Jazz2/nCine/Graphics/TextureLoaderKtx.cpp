@@ -19,8 +19,7 @@ namespace nCine
 	{
 		KtxHeader header;
 
-		fileHandle_->Open(FileAccessMode::Read);
-		RETURN_ASSERT_MSG_X(fileHandle_->isOpened(), "File \"%s\" cannot be opened", fileHandle_->filename());
+		RETURN_ASSERT_MSG_X(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->GetFilename());
 		const bool headerRead = readHeader(header);
 		RETURN_ASSERT_MSG(headerRead, "KTX header cannot be read");
 		const bool formatParsed = parseFormat(header);

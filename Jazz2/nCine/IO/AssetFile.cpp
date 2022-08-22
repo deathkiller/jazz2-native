@@ -36,7 +36,7 @@ namespace nCine
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void AssetFile::Open(FileAccessMode mode)
+	void AssetFile::Open(FileAccessMode mode, bool shouldExitOnFailToOpen)
 	{
 		// Checking if the file is already opened
 		if (fileDescriptor_ >= 0 || asset_ != nullptr) {
@@ -44,10 +44,10 @@ namespace nCine
 		} else {
 			// Opening with a file descriptor
 			if (mode & FileAccessMode::FileDescriptor) {
-				OpenFD(mode);
+				OpenFD(mode, shouldExitOnFailToOpen);
 				// Opening as an asset only
 			} else {
-				OpenAsset(mode);
+				OpenAsset(mode, shouldExitOnFailToOpen);
 			}
 		}
 	}
@@ -70,9 +70,9 @@ namespace nCine
 		}
 	}
 
-	long int AssetFile::Seek(long int offset, SeekOrigin origin) const
+	int32_t AssetFile::Seek(int32_t offset, SeekOrigin origin) const
 	{
-		long int seekValue = -1;
+		int32_t seekValue = -1;
 
 		if (fileDescriptor_ >= 0) {
 			switch (origin) {
@@ -93,9 +93,9 @@ namespace nCine
 		return seekValue;
 	}
 
-	long int AssetFile::GetPosition() const
+	int32_t AssetFile::GetPosition() const
 	{
-		long int tellValue = -1;
+		int32_t tellValue = -1;
 
 		if (fileDescriptor_ >= 0)
 			tellValue = lseek(fileDescriptor_, 0L, SEEK_CUR) - startOffset_;
@@ -105,20 +105,20 @@ namespace nCine
 		return tellValue;
 	}
 
-	unsigned long int AssetFile::Read(void* buffer, unsigned long int bytes) const
+	uint32_t AssetFile::Read(void* buffer, uint32_t bytes) const
 	{
 		ASSERT(buffer);
 
-		unsigned long int bytesRead = 0;
+		uint32_t bytesRead = 0;
 
 		if (fileDescriptor_ >= 0) {
-			int bytesToRead = bytes;
+			int32_t bytesToRead = bytes;
 
-			const long int seekValue = lseek(fileDescriptor_, 0L, SEEK_CUR);
+			const int32_t seekValue = lseek(fileDescriptor_, 0L, SEEK_CUR);
 
 			if (seekValue >= startOffset_ + fileSize_)
 				bytesToRead = 0; // simulating EOF
-			else if (seekValue + static_cast<long int>(bytes) > startOffset_ + fileSize_)
+			else if (seekValue + static_cast<int32_t>(bytes) > startOffset_ + fileSize_)
 				bytesToRead = (startOffset_ + fileSize_) - seekValue;
 
 			bytesRead = ::read(fileDescriptor_, buffer, bytesToRead);
@@ -128,7 +128,7 @@ namespace nCine
 		return bytesRead;
 	}
 
-	bool AssetFile::isOpened() const
+	bool AssetFile::IsOpened() const
 	{
 		if (fileDescriptor_ >= 0 || asset_ != nullptr)
 			return true;
@@ -236,13 +236,13 @@ namespace nCine
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void AssetFile::OpenFD(FileAccessMode mode)
+	void AssetFile::OpenFD(FileAccessMode mode, bool shouldExitOnFailToOpen)
 	{
 		// An asset file can only be read
 		if (mode == (FileAccessMode::FileDescriptor | FileAccessMode::Read)) {
 			asset_ = AAssetManager_open(assetManager_, filename_.data(), AASSET_MODE_UNKNOWN);
 			if (asset_ == nullptr) {
-				if (shouldExitOnFailToOpen_) {
+				if (shouldExitOnFailToOpen) {
 					LOGF_X("Cannot open the file \"%s\"", filename_.data());
 					exit(EXIT_FAILURE);
 				} else {
@@ -262,7 +262,7 @@ namespace nCine
 			asset_ = nullptr;
 
 			if (fileDescriptor_ < 0) {
-				if (shouldExitOnFailToOpen_) {
+				if (shouldExitOnFailToOpen) {
 					LOGF_X("Cannot open the file \"%s\"", filename_.data());
 					exit(EXIT_FAILURE);
 				} else {
@@ -277,13 +277,13 @@ namespace nCine
 		}
 	}
 
-	void AssetFile::OpenAsset(FileAccessMode mode)
+	void AssetFile::OpenAsset(FileAccessMode mode, bool shouldExitOnFailToOpen)
 	{
 		// An asset file can only be read
 		if (mode == FileAccessMode::Read) {
 			asset_ = AAssetManager_open(assetManager_, filename_.data(), AASSET_MODE_UNKNOWN);
 			if (asset_ == nullptr) {
-				if (shouldExitOnFailToOpen_) {
+				if (shouldExitOnFailToOpen) {
 					LOGF_X("Cannot open the file \"%s\"", filename_.data());
 					exit(EXIT_FAILURE);
 				} else {

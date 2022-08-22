@@ -8,8 +8,8 @@ namespace nCine
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
 
-	MemoryFile::MemoryFile(const String& bufferName, unsigned char* bufferPtr, unsigned long int bufferSize)
-		: IFileStream(bufferName), bufferPtr_(bufferPtr), seekOffset_(0), isWritable_(true)
+	MemoryFile::MemoryFile(const String& bufferName, uint8_t* bufferPtr, uint32_t bufferSize)
+		: IFileStream(bufferName), _bufferPtr(bufferPtr), _seekOffset(0), _isWritable(true)
 	{
 		ASSERT(bufferSize > 0);
 		type_ = FileType::Memory;
@@ -19,8 +19,8 @@ namespace nCine
 		fileDescriptor_ = (bufferSize > 0) ? 0 : -1;
 	}
 
-	MemoryFile::MemoryFile(const String& bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
-		: IFileStream(bufferName), bufferPtr_(const_cast<unsigned char*>(bufferPtr)), seekOffset_(0), isWritable_(false)
+	MemoryFile::MemoryFile(const String& bufferName, const uint8_t* bufferPtr, uint32_t bufferSize)
+		: IFileStream(bufferName), _bufferPtr(const_cast<uint8_t*>(bufferPtr)), _seekOffset(0), _isWritable(false)
 	{
 		ASSERT(bufferSize > 0);
 		type_ = FileType::Memory;
@@ -30,40 +30,30 @@ namespace nCine
 		fileDescriptor_ = (bufferSize > 0) ? 0 : -1;
 	}
 
-	MemoryFile::MemoryFile(unsigned char* bufferPtr, unsigned long int bufferSize)
-		: MemoryFile({}, bufferPtr, bufferSize)
-	{
-	}
-
-	MemoryFile::MemoryFile(const unsigned char* bufferPtr, unsigned long int bufferSize)
-		: MemoryFile({}, bufferPtr, bufferSize)
-	{
-	}
-
 	///////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void MemoryFile::Open(FileAccessMode mode)
+	void MemoryFile::Open(FileAccessMode mode, bool shouldExitOnFailToOpen)
 	{
 		// Checking if the file is already opened
 		if (fileDescriptor_ >= 0) {
-			LOGW_X("Memory file at address 0x%lx is already opened", bufferPtr_);
+			LOGW_X("Memory file at address 0x%lx is already opened", _bufferPtr);
 		} else {
-			isWritable_ = ((mode & FileAccessMode::Write) == FileAccessMode::Write);
+			_isWritable = ((mode & FileAccessMode::Write) == FileAccessMode::Write);
 		}
 	}
 
 	void MemoryFile::Close()
 	{
 		fileDescriptor_ = -1;
-		seekOffset_ = 0;
-		isWritable_ = false;
+		_seekOffset = 0;
+		_isWritable = false;
 	}
 
-	long int MemoryFile::Seek(long int offset, SeekOrigin origin) const
+	int32_t MemoryFile::Seek(int32_t offset, SeekOrigin origin) const
 	{
-		long int seekValue = -1;
+		int32_t seekValue = -1;
 
 		if (fileDescriptor_ >= 0) {
 			switch (origin) {
@@ -71,7 +61,7 @@ namespace nCine
 					seekValue = offset;
 					break;
 				case SeekOrigin::Current:
-					seekValue = seekOffset_ + offset;
+					seekValue = _seekOffset + offset;
 					break;
 				case SeekOrigin::End:
 					seekValue = fileSize_ + offset;
@@ -79,49 +69,49 @@ namespace nCine
 			}
 		}
 
-		if (seekValue < 0 || seekValue > static_cast<long int>(fileSize_)) {
+		if (seekValue < 0 || seekValue > static_cast<int32_t>(fileSize_)) {
 			seekValue = -1;
 		} else {
-			seekOffset_ = seekValue;
+			_seekOffset = seekValue;
 		}
 		return seekValue;
 	}
 
-	long int MemoryFile::GetPosition() const
+	int32_t MemoryFile::GetPosition() const
 	{
-		long int tellValue = -1;
+		int32_t tellValue = -1;
 
 		if (fileDescriptor_ >= 0)
-			tellValue = seekOffset_;
+			tellValue = _seekOffset;
 
 		return tellValue;
 	}
 
-	unsigned long int MemoryFile::Read(void* buffer, unsigned long int bytes) const
+	uint32_t MemoryFile::Read(void* buffer, uint32_t bytes) const
 	{
 		ASSERT(buffer);
 
-		unsigned long int bytesRead = 0;
+		uint32_t bytesRead = 0;
 
 		if (fileDescriptor_ >= 0) {
-			bytesRead = (seekOffset_ + bytes > fileSize_) ? fileSize_ - seekOffset_ : bytes;
-			memcpy(buffer, bufferPtr_ + seekOffset_, bytesRead);
-			seekOffset_ += bytesRead;
+			bytesRead = (_seekOffset + bytes > fileSize_) ? fileSize_ - _seekOffset : bytes;
+			memcpy(buffer, _bufferPtr + _seekOffset, bytesRead);
+			_seekOffset += bytesRead;
 		}
 
 		return bytesRead;
 	}
 
-	unsigned long int MemoryFile::Write(const void* buffer, unsigned long int bytes)
+	uint32_t MemoryFile::Write(const void* buffer, uint32_t bytes)
 	{
 		ASSERT(buffer);
 
-		unsigned long int bytesWritten = 0;
+		uint32_t bytesWritten = 0;
 
-		if (fileDescriptor_ >= 0 && isWritable_) {
-			bytesWritten = (seekOffset_ + bytes > fileSize_) ? fileSize_ - seekOffset_ : bytes;
-			memcpy(bufferPtr_ + seekOffset_, buffer, bytesWritten);
-			seekOffset_ += bytesWritten;
+		if (fileDescriptor_ >= 0 && _isWritable) {
+			bytesWritten = (_seekOffset + bytes > fileSize_) ? fileSize_ - _seekOffset : bytes;
+			memcpy(_bufferPtr + _seekOffset, buffer, bytesWritten);
+			_seekOffset += bytesWritten;
 		}
 
 		return bytesWritten;

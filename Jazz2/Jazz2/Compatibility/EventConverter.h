@@ -11,6 +11,7 @@
 
 using namespace nCine;
 
+#include <Containers/ArrayView.h>
 #include <Containers/Pair.h>
 
 namespace Jazz2::Compatibility
@@ -27,13 +28,6 @@ namespace Jazz2::Compatibility
     constexpr int JJ2ParamUInt = 2;
     constexpr int JJ2ParamInt = 3;
 
-    /*struct ParamDesc {
-        ParamDesc(int type, int size) : Type(type), Size(size) { }
-
-        int Type;
-        int Size;
-    };*/
-
     class EventConverter
     {
     public:
@@ -49,7 +43,12 @@ namespace Jazz2::Compatibility
         ConversionFunction ConstantParamList(EventType ev, const std::array<uint8_t, 16>& eventParams);
         ConversionFunction ParamIntToParamList(EventType ev, const std::array<Pair<int, int>, 6>& paramDefs);
 
-        static void ConvertParamInt(uint32_t paramInt, const std::initializer_list<Pair<int, int>> paramTypes, uint8_t eventParams[16]);
+        static void ConvertParamInt(uint32_t paramInt, const ArrayView<const Pair<int, int>>& paramTypes, uint8_t eventParams[16]);
+
+        static void ConvertParamInt(uint32_t paramInt, const std::initializer_list<const Pair<int, int>> paramTypes, uint8_t eventParams[16])
+        {
+            ConvertParamInt(paramInt, arrayView(paramTypes), eventParams);
+        }
 
     private:
         HashMap<JJ2Event, ConversionFunction> _converters;

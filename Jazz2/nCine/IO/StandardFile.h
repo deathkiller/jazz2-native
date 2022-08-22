@@ -17,13 +17,13 @@ namespace nCine
 		~StandardFile() override;
 
 		/// Tries to open the standard file
-		void Open(FileAccessMode mode) override;
+		void Open(FileAccessMode mode, bool shouldExitOnFailToOpen) override;
 		/// Closes the standard file
 		void Close() override;
-		long int Seek(long int offset, SeekOrigin origin) const override;
-		long int GetPosition() const override;
-		unsigned long int Read(void* buffer, unsigned long int bytes) const override;
-		unsigned long int Write(const void* buffer, unsigned long int bytes) override;
+		int32_t Seek(int32_t offset, SeekOrigin origin) const override;
+		int32_t GetPosition() const override;
+		uint32_t Read(void* buffer, uint32_t bytes) const override;
+		uint32_t Write(const void* buffer, uint32_t bytes) override;
 
 	private:
 		/// Deleted copy constructor
@@ -33,10 +33,10 @@ namespace nCine
 
 #if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 		/// Opens the file with `open()`
-		void OpenFD(FileAccessMode mode);
+		void OpenFD(FileAccessMode mode, bool shouldExitOnFailToOpen);
 #endif
 		/// Opens the file with `fopen()`
-		void OpenStream(FileAccessMode mode);
+		void OpenStream(FileAccessMode mode, bool shouldExitOnFailToOpen);
 	};
 
 }

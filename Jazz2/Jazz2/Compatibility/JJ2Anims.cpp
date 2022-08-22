@@ -13,9 +13,8 @@ namespace Jazz2::Compatibility
 		SmallVector<AnimSection, 0> anims;
 		SmallVector<SampleSection, 0> samples;
 
-		auto s = IFileStream::createFileHandle(path);
-		s->Open(FileAccessMode::Read);
-		ASSERT_MSG(s->isOpened(), "Cannot open file for reading");
+		auto s = fs::Open(path, FileAccessMode::Read);
+		ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
 
 		//Log.Write(LogType.Info, "Reading compressed stream...");
 		//Log.PushIndent();
@@ -363,9 +362,9 @@ namespace Jazz2::Compatibility
 				ASSERT(!entry->Name.empty());
 				continue;
 			} else {
-				fs::createDir(fs::joinPath({ targetPath, entry->Category }));
+				fs::CreateDirectories(fs::JoinPath(targetPath, entry->Category));
 
-				filename = fs::joinPath({ entry->Category, entry->Name + ".aura"_s });
+				filename = fs::JoinPath(entry->Category, entry->Name + ".aura"_s);
 			}
 
 			int stride = sizeX * anim.FrameConfigurationX;
@@ -429,7 +428,7 @@ namespace Jazz2::Compatibility
 			}
 
 			// TODO: Use single channel instead
-			String fullPath = fs::joinPath({ targetPath, filename });
+			String fullPath = fs::JoinPath(targetPath, filename);
 			WriteImageToFile(fullPath, pixels.get(), sizeX, sizeY, 4, &anim, entry);
 
 			/*if (!string.IsNullOrEmpty(data.Name) && !data.SkipNormalMap) {
@@ -467,14 +466,13 @@ namespace Jazz2::Compatibility
 				ASSERT(!entry->Name.empty());
 				continue;
 			} else {
-				fs::createDir(fs::joinPath({ targetPath, entry->Category }));
+				fs::CreateDirectories(fs::JoinPath(targetPath, entry->Category));
 
-				filename = fs::joinPath({ entry->Category, entry->Name + ".wav"_s });
+				filename = fs::JoinPath(entry->Category, entry->Name + ".wav"_s);
 			}
 
-			auto so = IFileStream::createFileHandle(fs::joinPath({ targetPath, filename }));
-			so->Open(FileAccessMode::Write);
-			ASSERT_MSG(so->isOpened(), "Cannot open file for writing");
+			auto so = fs::Open(fs::JoinPath(targetPath, filename), FileAccessMode::Write);
+			ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
 
 			// TODO: The modulo here essentially clips the sample to 8- or 16-bit.
 			// There are some samples (at least the Rapier random noise) that at least get reported as 24-bit
@@ -509,9 +507,8 @@ namespace Jazz2::Compatibility
 
 	void JJ2Anims::WriteImageToFile(const StringView& targetPath, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount, AnimSection* anim, AnimSetMapping::Entry* entry)
 	{
-		auto so = IFileStream::createFileHandle(targetPath);
-		so->Open(FileAccessMode::Write);
-		ASSERT_MSG(so->isOpened(), "Cannot open file for writing");
+		auto so = fs::Open(targetPath, FileAccessMode::Write);
+		ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
 
 		uint8_t flags = 0x00;
 		if (entry != nullptr) {

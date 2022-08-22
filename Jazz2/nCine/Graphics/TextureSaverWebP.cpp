@@ -34,8 +34,7 @@
 //	//ASSERT(properties.format == Format::RGB8 || properties.format == Format::RGBA8);
 //
 //	LOGI_X("Saving \"%s\"", fileHandle->filename());
-//	fileHandle->open(IFileStream::OpenMode::WRITE | IFileStream::OpenMode::BINARY);
-//	if (fileHandle->isOpened() == false)
+//	if (fileHandle->IsOpened() == false)
 //		return false;
 //
 //	// Flip pixels data vertically if the corresponding flag is true

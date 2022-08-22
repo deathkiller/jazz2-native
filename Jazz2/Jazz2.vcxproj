@@ -405,6 +405,7 @@
     <ClInclude Include="nCine\Input\JoyMapping.h" />
     <ClInclude Include="nCine\Input\JoyMappingDb.h" />
     <ClInclude Include="nCine\Input\Keys.h" />
+    <ClInclude Include="nCine\Input\SdlInputManager.h" />
     <ClInclude Include="nCine\IO\AssetFile.h" />
     <ClInclude Include="nCine\IO\EmscriptenLocalFile.h" />
     <ClInclude Include="nCine\IO\FileSystem.h" />

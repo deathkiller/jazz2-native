@@ -291,9 +291,9 @@ namespace Jazz2
 		constexpr void SetState(ActorFlags flag, bool value) noexcept
 		{
 			if (value) {
-				_flags |= flag;
+				_flags = _flags | flag;
 			} else {
-				_flags &= ~flag;
+				_flags = _flags & (~flag);
 			}
 		}
 

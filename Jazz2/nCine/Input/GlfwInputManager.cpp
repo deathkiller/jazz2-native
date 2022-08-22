@@ -1,3 +1,5 @@
+#if defined(WITH_GLFW)
+
 #include "GlfwInputManager.h"
 #include "IInputEventHandler.h"
 #include "../Application.h"
@@ -483,3 +485,5 @@ namespace nCine
 			memcpy(axesValuesState_[joyId], axesValues, sizeof(float) * numAxes);
 	}
 }
+
+#endif
