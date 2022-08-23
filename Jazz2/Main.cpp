@@ -131,11 +131,16 @@ public:
 
 	void ChangeLevel(Jazz2::LevelInitialization&& levelInit) override;
 
+	bool IsVerified() override {
+		return _isVerified;
+	}
+
 private:
+	bool _isVerified;
 	std::unique_ptr<Jazz2::IStateHandler> _currentHandler;
 	std::unique_ptr<Jazz2::LevelInitialization> _pendingLevelChange;
 
-	void RefreshCache();
+	bool RefreshCache();
 };
 
 void GameEventHandler::onPreInit(AppConfiguration& config)
@@ -156,7 +161,7 @@ void GameEventHandler::onInit()
 	//theApplication().inputManager().addJoyMappingsFromFile(fs::joinPath({ "Content"_s, "gamecontrollerdb.txt"_s }));
 #endif
 
-	RefreshCache();
+	_isVerified = RefreshCache();
 
 	_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this);
 	Viewport::chain().clear();
@@ -218,7 +223,7 @@ void GameEventHandler::ChangeLevel(Jazz2::LevelInitialization&& levelInit)
 	_pendingLevelChange = std::make_unique<Jazz2::LevelInitialization>(std::move(levelInit));
 }
 
-void GameEventHandler::RefreshCache()
+bool GameEventHandler::RefreshCache()
 {
 	// Check cache state
 	{
@@ -237,7 +242,7 @@ void GameEventHandler::RefreshCache()
 		if ((flags & 0x01) == 0x01) {
 			// Don't overwrite cache
 			LOGI("Cache is protected");
-			return;
+			return true;
 		}
 
 		int64_t animsCached = s->ReadValue<int64_t>();
@@ -248,13 +253,19 @@ void GameEventHandler::RefreshCache()
 
 		// Cache is up-to-date
 		LOGI("Cache is already up-to-date");
-		return;
+		return true;
 	}
 
 RecreateCache:
 	{
 		// "Source" directory must be case in-sensitive
-		JJ2Anims::Convert(fs::FindPathCaseInsensitive(fs::JoinPath("Source"_s, "Anims.j2a"_s)), fs::JoinPath("Cache"_s, "Animations"_s), false);
+		String animsPath = fs::FindPathCaseInsensitive(fs::JoinPath("Source"_s, "Anims.j2a"_s));
+		if (!fs::IsReadableFile(animsPath)) {
+			LOGE("Cannot open \"./Source/Anims.j2a\" file! Ensure that Jazz Jackrabbit 2 files are present in \"Source\" directory.");
+			return false;
+		}
+
+		JJ2Anims::Convert(animsPath, fs::JoinPath("Cache"_s, "Animations"_s), false);
 
 		EventConverter eventConverter;
 
@@ -301,6 +312,7 @@ RecreateCache:
 		s->WriteValue<int64_t>(animsModified);
 
 		LOGI("Cache was recreated");
+		return true;
 	}
 }
 

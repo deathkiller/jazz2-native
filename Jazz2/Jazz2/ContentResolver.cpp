@@ -609,7 +609,9 @@ namespace Jazz2
 	{
 		String fullPath = fs::JoinPath({ "Cache"_s, "Tilesets"_s, path + ".j2t"_s });
 		auto s = fs::Open(fullPath, FileAccessMode::Read);
-		ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
+		if (!s->IsOpened()) {
+			return nullptr;
+		}
 
 		uint64_t signature1 = s->ReadValue<uint64_t>();
 		uint16_t signature2 = s->ReadValue<uint16_t>();
@@ -678,11 +680,17 @@ namespace Jazz2
 		String fullPath = fs::JoinPath({ "Cache"_s, "Episodes"_s, path + ".j2l"_s });
 
 		auto s = fs::Open(fullPath, FileAccessMode::Read);
-		ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
+		if (!s->IsOpened()) {
+			LOGE("Cannot open file for reading");
+			return false;
+		}
 
 		uint64_t signature = s->ReadValue<uint64_t>();
 		uint8_t version = s->ReadValue<uint8_t>();
-		ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && version == 1, "Invalid file");
+		if (signature != 0x2095A59FF0BFBBEF || version != 1) {
+			LOGE("File has invalid signature");
+			return false;
+		}
 
 		// TODO: Level flags
 		uint16_t flags = s->ReadValue<uint16_t>();

@@ -12,6 +12,8 @@ namespace Jazz2
 		virtual ~IRootController() { }
 
 		virtual void ChangeLevel(LevelInitialization&& levelInit) = 0;
+
+		virtual bool IsVerified() = 0;
 		
 	private:
 		/// Deleted copy constructor

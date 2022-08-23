@@ -34,6 +34,7 @@ namespace Jazz2::UI::Menu
 		ItemData _items[(int)Item::Count];
 		int _selectedIndex;
 		float _animation;
+		bool _isVerified;
 
 		void ExecuteSelected();
 	};

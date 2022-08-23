@@ -61,6 +61,7 @@ namespace Jazz2
 
 		if (!ContentResolver::Current().LoadLevel(this, _episodeName + "/" + _levelFileName, _difficulty)) {
 			LOGE("Cannot load specified level");
+			return;
 		}
 
 		// Process carry overs
@@ -508,7 +509,9 @@ namespace Jazz2
 			_viewSprite = std::make_unique<CombineRenderer>(this);
 			_viewSprite->setParent(_upscalePass.GetNode());
 
-			_hud->setParent(_upscalePass.GetNode());
+			if (_hud != nullptr) {
+				_hud->setParent(_upscalePass.GetNode());
+			}
 		}
 
 		_viewSprite->Initialize(w, h);

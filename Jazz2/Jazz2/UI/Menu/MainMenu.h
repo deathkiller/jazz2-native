@@ -18,8 +18,12 @@ using namespace Jazz2::Tiles;
 
 namespace Jazz2::UI::Menu
 {
+	class BeginSection;
+
 	class MainMenu : public IStateHandler, public IMenuContainer
 	{
+		friend class BeginSection;
+
 	public:
 		static constexpr int DefaultWidth = 720;
 		static constexpr int DefaultHeight = 405;

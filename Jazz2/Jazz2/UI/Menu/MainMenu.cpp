@@ -21,6 +21,7 @@ namespace Jazz2::UI::Menu
 	{
 		theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection"_s);
 
+		_texturedBackgroundLayer.Visible = false;
 		_canvas = std::make_unique<MenuCanvas>(this);
 
 		auto& resolver = ContentResolver::Current();
@@ -364,6 +365,9 @@ namespace Jazz2::UI::Menu
 	void MainMenu::PrepareTexturedBackground()
 	{
 		_tileSet = ContentResolver::Current().RequestTileSet("easter99"_s, true);
+		if (_tileSet == nullptr) {
+			return;
+		}
 
 		auto s = fs::Open(fs::JoinPath({ "Content"_s, "Animations"_s, "MainMenu.layer"_s }), FileAccessMode::Read);
 		if (s->GetSize() < 8) {
@@ -422,8 +426,13 @@ namespace Jazz2::UI::Menu
 
 		command->material().uniform("ViewSize")->setFloatValue(_canvas->ViewSize.X, _canvas->ViewSize.Y);
 		command->material().uniform("shift")->setFloatVector(_texturedBackgroundPos.Data());
-		// TODO: horizonColor
-		command->material().uniform("horizonColor")->setFloatValue(/*layer.BackgroundColor.X*/0.098f, /*layer.BackgroundColor.Y*/0.35f, /*layer.BackgroundColor.Z*/1.0f);
+		if (_texturedBackgroundLayer.Visible) {
+			// TODO: horizonColor
+			command->material().uniform("horizonColor")->setFloatValue(/*layer.BackgroundColor.X*/0.098f, /*layer.BackgroundColor.Y*/0.35f, /*layer.BackgroundColor.Z*/1.0f);
+		} else {
+			// Visible is false only if textured background cannot be prepared, so make screen completely black instead
+			command->material().uniform("horizonColor")->setFloatValue(0.0f, 0.0f, 0.0f);
+		}
 		command->material().uniform("parallaxStarsEnabled")->setFloatValue(0.0f);
 
 		Matrix4x4f worldMatrix = Matrix4x4f::Translation(0.0f, 0.0f, 0.0f);
