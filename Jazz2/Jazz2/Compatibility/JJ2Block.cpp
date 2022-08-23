@@ -2,11 +2,7 @@
 
 #include <cstring>
 
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-#	define __USE_ZLIB
-#endif
-
-#if defined(__USE_ZLIB)
+#if defined(WITH_ZLIB)
 #	include <zlib.h>
 #else
 #	if defined(_MSC_VER) && defined(__has_include)
@@ -39,7 +35,7 @@ namespace Jazz2::Compatibility
 		if (uncompressedLength > 0) {
 			_buffer = std::make_unique<uint8_t[]>(uncompressedLength);
 
-#if defined(__USE_ZLIB)
+#if defined(WITH_ZLIB)
 			z_stream strm;
 			strm.zalloc = Z_NULL;
 			strm.zfree = Z_NULL;

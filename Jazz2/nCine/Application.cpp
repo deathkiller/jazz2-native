@@ -57,30 +57,22 @@ extern "C"
 #include "Input/IInputManager.h"
 #include "Input/JoyMapping.h"
 #include "ServiceLocator.h"
+#include "tracy.h"
 
 #ifdef WITH_AUDIO
-#include "Audio/ALAudioDevice.h"
+#	include "Audio/ALAudioDevice.h"
 #endif
 
 #ifdef WITH_THREADS
-#include "Threading/ThreadPool.h"
+#	include "Threading/ThreadPool.h"
 #endif
 
 #ifdef WITH_LUA
-#include "LuaStatistics.h"
-#endif
-
-#ifdef WITH_IMGUI
-#include "ImGuiDrawing.h"
-#include "ImGuiDebugOverlay.h"
-#endif
-
-#ifdef WITH_NUKLEAR
-#include "NuklearDrawing.h"
+#	include "LuaStatistics.h"
 #endif
 
 #ifdef WITH_RENDERDOC
-#include "RenderDocCapture.h"
+#	include "RenderDocCapture.h"
 #endif
 
 namespace nCine
@@ -95,13 +87,6 @@ namespace nCine
 	}
 
 	Application::~Application() = default;
-
-	/*Application::GuiSettings::GuiSettings()
-		: imguiLayer(0xffff - 1024),
-		nuklearLayer(0xffff - 512),
-		imguiViewport(nullptr), nuklearViewport(nullptr)
-	{
-	}*/
 
 	///////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS
@@ -150,12 +135,13 @@ namespace nCine
 		//	appInfoString.format("nCine %s (%s) compiled on %s at %s", VersionStrings::Version, VersionStrings::GitBranch,
 		//	                     VersionStrings::CompilationDate, VersionStrings::CompilationTime);
 		//#else
-			//sprintf_s(appInfoString, "nCine compiled on %s at %s", VersionStrings::CompilationDate, VersionStrings::CompilationTime);
+		//	sprintf_s(appInfoString, "nCine compiled on %s at %s", VersionStrings::CompilationDate, VersionStrings::CompilationTime);
 		//#endif
 		//	LOGI_X("%s", appInfoString.data());
-		//#ifdef WITH_TRACY
-		//	TracyAppInfo(appInfoString.data(), appInfoString.length());
-		//#endif
+#ifdef WITH_TRACY
+		TracyAppInfo("nCine", 5);
+		LOGI("Tracy integration is enabled");
+#endif
 
 		theServiceLocator().registerIndexer(std::make_unique<ArrayIndexer>());
 #ifdef WITH_AUDIO
@@ -180,13 +166,6 @@ namespace nCine
 
 		frameTimer_ = std::make_unique<FrameTimer>(appCfg_.frameTimerLogInterval, appCfg_.profileTextUpdateTime());
 
-#ifdef WITH_IMGUI
-		imguiDrawing_ = std::make_unique<ImGuiDrawing>(appCfg_.withScenegraph);
-#endif
-#ifdef WITH_NUKLEAR
-		nuklearDrawing_ = std::make_unique<NuklearDrawing>(appCfg_.withScenegraph);
-#endif
-
 		if (appCfg_.withScenegraph) {
 			gfxDevice_->setupGL();
 			RenderResources::create();
@@ -208,22 +187,14 @@ namespace nCine
 
 		LOGI("Application initialized");
 
-		timings_[Timings::INIT_COMMON] = profileStartTime_.secondsSince();
+		timings_[Timings::InitCommon] = profileStartTime_.secondsSince();
 
 		{
 			profileStartTime_ = TimeStamp::now();
 			appEventHandler_->onInit();
-			timings_[Timings::APP_INIT] = profileStartTime_.secondsSince();
+			timings_[Timings::AppInit] = profileStartTime_.secondsSince();
 			LOGI("IAppEventHandler::onInit() invoked");
 		}
-
-		// Give user code a chance to add custom GUI fonts
-#ifdef WITH_IMGUI
-		imguiDrawing_->buildFonts();
-#endif
-#ifdef WITH_NUKLEAR
-		nuklearDrawing_->bakeFonts();
-#endif
 
 		// Swapping frame now for a cleaner API trace capture when debugging
 		gfxDevice_->update();
@@ -234,24 +205,6 @@ namespace nCine
 
 		frameTimer_->addFrame();
 
-#ifdef WITH_IMGUI
-		{
-			ZoneScopedN("ImGui newFrame");
-			profileStartTime_ = TimeStamp::now();
-			imguiDrawing_->newFrame();
-			timings_[Timings::IMGUI] = profileStartTime_.secondsSince();
-		}
-#endif
-
-#ifdef WITH_NUKLEAR
-		{
-			ZoneScopedN("Nuklear newFrame");
-			profileStartTime_ = TimeStamp::now();
-			nuklearDrawing_->newFrame();
-			timings_[Timings::NUKLEAR] = profileStartTime_.secondsSince();
-		}
-#endif
-
 #ifdef WITH_LUA
 		LuaStatistics::update();
 #endif
@@ -259,7 +212,7 @@ namespace nCine
 		{
 			profileStartTime_ = TimeStamp::now();
 			appEventHandler_->onFrameStart();
-			timings_[Timings::FRAME_START] = profileStartTime_.secondsSince();
+			timings_[Timings::FrameStart] = profileStartTime_.secondsSince();
 		}
 
 		//if (debugOverlay_)
@@ -269,69 +222,27 @@ namespace nCine
 			{
 				profileStartTime_ = TimeStamp::now();
 				screenViewport_->update();
-				timings_[Timings::UPDATE] = profileStartTime_.secondsSince();
+				timings_[Timings::Update] = profileStartTime_.secondsSince();
 			}
 
 			{
 				profileStartTime_ = TimeStamp::now();
 				appEventHandler_->onPostUpdate();
-				timings_[Timings::POST_UPDATE] = profileStartTime_.secondsSince();
+				timings_[Timings::PostUpdate] = profileStartTime_.secondsSince();
 			}
 
 			{
 				profileStartTime_ = TimeStamp::now();
 				screenViewport_->visit();
-				timings_[Timings::VISIT] = profileStartTime_.secondsSince();
+				timings_[Timings::Visit] = profileStartTime_.secondsSince();
 			}
-
-#ifdef WITH_IMGUI
-			{
-				ZoneScopedN("ImGui endFrame");
-				profileStartTime_ = TimeStamp::now();
-				RenderQueue* imguiRenderQueue = (guiSettings_.imguiViewport) ?
-					guiSettings_.imguiViewport->renderQueue_.get() :
-					screenViewport_->renderQueue_.get();
-				imguiDrawing_->endFrame(*imguiRenderQueue);
-				timings_[Timings::IMGUI] += profileStartTime_.secondsSince();
-			}
-#endif
-
-#ifdef WITH_NUKLEAR
-			{
-				ZoneScopedN("Nuklear endFrame");
-				profileStartTime_ = TimeStamp::now();
-				RenderQueue* nuklearRenderQueue = (guiSettings_.nuklearViewport) ?
-					guiSettings_.nuklearViewport->renderQueue_.get() :
-					screenViewport_->renderQueue_.get();
-				nuklearDrawing_->endFrame(*nuklearRenderQueue);
-				timings_[Timings::NUKLEAR] += profileStartTime_.secondsSince();
-			}
-#endif
 
 			{
 				profileStartTime_ = TimeStamp::now();
 				screenViewport_->sortAndCommitQueue();
 				screenViewport_->draw();
-				timings_[Timings::DRAW] = profileStartTime_.secondsSince();
+				timings_[Timings::Draw] = profileStartTime_.secondsSince();
 			}
-		} else {
-#ifdef WITH_IMGUI
-			{
-				ZoneScopedN("ImGui endFrame");
-				profileStartTime_ = TimeStamp::now();
-				imguiDrawing_->endFrame();
-				timings_[Timings::IMGUI] += profileStartTime_.secondsSince();
-			}
-#endif
-
-#ifdef WITH_NUKLEAR
-			{
-				ZoneScopedN("Nuklear endFrame");
-				profileStartTime_ = TimeStamp::now();
-				nuklearDrawing_->endFrame();
-				timings_[Timings::NUKLEAR] += profileStartTime_.secondsSince();
-			}
-#endif
 		}
 
 		{
@@ -341,11 +252,8 @@ namespace nCine
 		{
 			profileStartTime_ = TimeStamp::now();
 			appEventHandler_->onFrameEnd();
-			timings_[Timings::FRAME_END] = profileStartTime_.secondsSince();
+			timings_[Timings::FrameEnd] = profileStartTime_.secondsSince();
 		}
-
-		//if (debugOverlay_)
-		//	debugOverlay_->updateFrameTimings();
 
 		gfxDevice_->update();
 
@@ -362,13 +270,6 @@ namespace nCine
 		appEventHandler_->onShutdown();
 		LOGI("IAppEventHandler::onShutdown() invoked");
 		appEventHandler_.reset(nullptr);
-
-#ifdef WITH_NUKLEAR
-		nuklearDrawing_.reset(nullptr);
-#endif
-#ifdef WITH_IMGUI
-		imguiDrawing_.reset(nullptr);
-#endif
 
 #ifdef WITH_RENDERDOC
 		RenderDocCapture::removeHooks();

@@ -69,7 +69,6 @@ elseif(SDL2_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "SDL2")
 	)
 elseif(Qt5_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "QT5")
 	target_compile_definitions(ncine PRIVATE "WITH_QT5")
-	target_compile_definitions(ncine_main PRIVATE "WITH_QT5")
 	target_link_libraries(ncine PUBLIC Qt5::Widgets)
 	if(Qt5Gamepad_FOUND)
 		target_compile_definitions(ncine PRIVATE "WITH_QT5GAMEPAD")
@@ -441,35 +440,35 @@ endif()
 #	endif()
 #endif()
 
-#if(NCINE_WITH_TRACY)
-#	target_compile_definitions(ncine PRIVATE "WITH_TRACY")
-#	if(NOT ANDROID AND NOT APPLE AND NOT EMSCRIPTEN)
-#		target_compile_definitions(ncine PRIVATE "WITH_TRACY_OPENGL")
-#	endif()
-#	target_compile_definitions(ncine PUBLIC "TRACY_ENABLE")
-#	target_compile_definitions(ncine PRIVATE "TRACY_DELAYED_INIT")
-#
-#	# For external projects compiling using an nCine build directory
-#	set(TRACY_INCLUDE_ONLY_DIR ${TRACY_SOURCE_DIR}/include_only)
-#	file(GLOB TRACY_ROOT_HPP "${TRACY_SOURCE_DIR}/*.hpp" "${TRACY_SOURCE_DIR}/*.h")
-#	file(COPY ${TRACY_ROOT_HPP} DESTINATION ${TRACY_INCLUDE_ONLY_DIR}/tracy)
-#	file(GLOB TRACY_COMMON_HPP "${TRACY_SOURCE_DIR}/common/*.hpp" "${TRACY_SOURCE_DIR}/common/*.h")
-#	file(COPY ${TRACY_COMMON_HPP} DESTINATION ${TRACY_INCLUDE_ONLY_DIR}/tracy/common)
-#	file(COPY "${TRACY_SOURCE_DIR}/common/TracySystem.cpp" DESTINATION ${TRACY_INCLUDE_ONLY_DIR}/tracy/common)
-#	file(GLOB TRACY_CLIENT_HPP "${TRACY_SOURCE_DIR}/client/*.hpp" "${TRACY_SOURCE_DIR}/client/*.h")
-#	file(COPY ${TRACY_CLIENT_HPP} DESTINATION ${TRACY_INCLUDE_ONLY_DIR}/tracy/client)
-#	file(COPY "${TRACY_SOURCE_DIR}/LICENSE" DESTINATION ${TRACY_INCLUDE_ONLY_DIR}/tracy)
-#
-#	list(APPEND HEADERS
-#		${NCINE_ROOT}/include/ncine/tracy.h
-#		${NCINE_ROOT}/include/ncine/tracy_opengl.h
-#	)
-#
-#	list(APPEND SOURCES
-#		${NCINE_ROOT}/src/tracy_memory.cpp
-#		${TRACY_SOURCE_DIR}/TracyClient.cpp
-#	)
-#endif()
+if(NCINE_WITH_TRACY)
+	target_compile_definitions(ncine PRIVATE "WITH_TRACY")
+	if(NOT ANDROID AND NOT APPLE AND NOT EMSCRIPTEN)
+		target_compile_definitions(ncine PRIVATE "WITH_TRACY_OPENGL")
+	endif()
+	target_compile_definitions(ncine PUBLIC "TRACY_ENABLE")
+	target_compile_definitions(ncine PRIVATE "TRACY_DELAYED_INIT")
+
+	# For external projects compiling using an nCine build directory
+	set(TRACY_INCLUDE_ONLY_DIR ${TRACY_SOURCE_DIR}/include_only)
+	file(GLOB TRACY_ROOT_HPP "${TRACY_SOURCE_DIR}/*.hpp" "${TRACY_SOURCE_DIR}/*.h")
+	file(COPY ${TRACY_ROOT_HPP} DESTINATION ${TRACY_INCLUDE_ONLY_DIR}/tracy)
+	file(GLOB TRACY_COMMON_HPP "${TRACY_SOURCE_DIR}/common/*.hpp" "${TRACY_SOURCE_DIR}/common/*.h")
+	file(COPY ${TRACY_COMMON_HPP} DESTINATION ${TRACY_INCLUDE_ONLY_DIR}/tracy/common)
+	file(COPY "${TRACY_SOURCE_DIR}/common/TracySystem.cpp" DESTINATION ${TRACY_INCLUDE_ONLY_DIR}/tracy/common)
+	file(GLOB TRACY_CLIENT_HPP "${TRACY_SOURCE_DIR}/client/*.hpp" "${TRACY_SOURCE_DIR}/client/*.h")
+	file(COPY ${TRACY_CLIENT_HPP} DESTINATION ${TRACY_INCLUDE_ONLY_DIR}/tracy/client)
+	#file(COPY "${TRACY_SOURCE_DIR}/LICENSE" DESTINATION ${TRACY_INCLUDE_ONLY_DIR}/tracy)
+
+	list(APPEND HEADERS
+		${NCINE_SOURCE_DIR}/nCine/tracy.h
+		${NCINE_SOURCE_DIR}/nCine/tracy_opengl.h
+	)
+
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/tracy_memory.cpp
+		${TRACY_SOURCE_DIR}/TracyClient.cpp
+	)
+endif()
 
 #if(NCINE_WITH_RENDERDOC AND NOT APPLE)
 #	find_file(RENDERDOC_API_H
@@ -497,6 +496,11 @@ endif()
 #	list(APPEND PRIVATE_HEADERS ${RENDERDOC_API_H})
 #	list(APPEND SOURCES ${NCINE_ROOT}/src/graphics/RenderDocCapture.cpp)
 #endif()
+
+if(ZLIB_FOUND)
+	target_compile_definitions(ncine PRIVATE "WITH_ZLIB")
+	target_link_libraries(ncine PRIVATE ZLIB::ZLIB)
+endif()
 
 if(LIBDEFLATE_FOUND)
 	target_link_libraries(ncine PRIVATE libdeflate::libdeflate)

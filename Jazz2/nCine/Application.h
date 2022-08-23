@@ -2,7 +2,6 @@
 
 #include "Graphics/IGfxDevice.h"
 #include "AppConfiguration.h"
-//#include "IDebugOverlay.h"
 #include "Base/TimeStamp.h"
 
 #include <memory>
@@ -15,8 +14,6 @@ namespace nCine
 	class ScreenViewport;
 	class IInputManager;
 	class IAppEventHandler;
-	//class ImGuiDrawing;
-	//class NuklearDrawing;
 
 	/// Main entry point and handler for nCine applications
 	class Application
@@ -41,41 +38,22 @@ namespace nCine
 			unsigned int maxBatchSize;
 		};
 
-		///// GUI settings (for ImGui and Nuklear) that can be changed at run-time
-		//struct GuiSettings
-		//{
-		//	GuiSettings();
-
-		//	/// ImGui drawable node layer
-		//	uint16_t imguiLayer;
-		//	/// Nuklear drawable node layer
-		//	uint16_t nuklearLayer;
-		//	/// ImGui viewport
-		//	/*! \note The viewport should mirror the screen dimensions or mouse input would not work. Setting `nullptr` is the same as setting the screen */
-		//	Viewport* imguiViewport;
-		//	/// Nuklear viewport
-		//	/*! \note The viewport should mirror the screen dimensions or mouse input would not work. Setting `nullptr` is the same as setting the screen */
-		//	Viewport* nuklearViewport;
-		//};
-
 		struct Timings
 		{
 			enum
 			{
-				PRE_INIT,
-				INIT_COMMON,
-				APP_INIT,
-				FRAME_START,
-				UPDATE_VISIT_DRAW,
-				UPDATE,
-				POST_UPDATE,
-				VISIT,
-				DRAW,
-				IMGUI,
-				NUKLEAR,
-				FRAME_END,
+				PreInit,
+				InitCommon,
+				AppInit,
+				FrameStart,
+				UpdateVisitDraw,
+				Update,
+				PostUpdate,
+				Visit,
+				Draw,
+				FrameEnd,
 
-				COUNT
+				Count
 			};
 		};
 
@@ -87,16 +65,6 @@ namespace nCine
 		inline RenderingSettings& renderingSettings() {
 			return renderingSettings_;
 		}
-		/// Returns the run-time GUI settings
-		/*inline GuiSettings& guiSettings() {
-			return guiSettings_;
-		}*/
-		/// Returns the debug overlay object, if any
-		/*inline IDebugOverlay::DisplaySettings &debugOverlaySettings()
-		{
-			return (debugOverlay_) ? debugOverlay_->settings() : debugOverlayNullSettings_;
-		}*/
-
 		/// Returns all timings
 		inline const float* timings() const {
 			return timings_;
@@ -194,24 +162,15 @@ namespace nCine
 		bool shouldQuit_;
 		const AppConfiguration appCfg_;
 		RenderingSettings renderingSettings_;
-		//GuiSettings guiSettings_;
-		float timings_[Timings::COUNT];
-		//IDebugOverlay::DisplaySettings debugOverlayNullSettings_;
+		float timings_[Timings::Count];
 
 		TimeStamp profileStartTime_;
 		std::unique_ptr<FrameTimer> frameTimer_;
 		std::unique_ptr<IGfxDevice> gfxDevice_;
 		std::unique_ptr<SceneNode> rootNode_;
 		std::unique_ptr<ScreenViewport> screenViewport_;
-		//std::unique_ptr<IDebugOverlay> debugOverlay_;
 		std::unique_ptr<IInputManager> inputManager_;
 		std::unique_ptr<IAppEventHandler> appEventHandler_;
-#ifdef WITH_IMGUI
-		std::unique_ptr<ImGuiDrawing> imguiDrawing_;
-#endif
-#ifdef WITH_NUKLEAR
-		std::unique_ptr<NuklearDrawing> nuklearDrawing_;
-#endif
 
 		Application();
 		~Application();
@@ -249,5 +208,4 @@ namespace nCine
 
 	// Meyers' Singleton
 	extern Application& theApplication();
-
 }

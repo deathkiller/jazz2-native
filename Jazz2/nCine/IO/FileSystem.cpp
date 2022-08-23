@@ -321,7 +321,7 @@ namespace nCine
 		size_t l = path.size();
 		String result(NoInit, path.size() + 2);
 
-		char* p = alloca(l + 1);
+		char* p = (char*)alloca(l + 1);
 		strncpy(p, path.data(), l);
 		p[l] = '\0';
 		size_t rl = 0;
@@ -990,24 +990,39 @@ namespace nCine
 	{
 		if (path.empty()) return false;
 
-		if (IsDirectory(path)) {
+#if defined(DEATH_TARGET_WINDOWS)
+		Array<wchar_t> fullPath = Utf8::ToUtf16(path);
+		// Don't use IsDirectory() to avoid calling Utf8::ToUtf16() twice
+		const DWORD attrs = ::GetFileAttributes(fullPath);
+		if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
 			return true;
 		}
 
-#if defined(DEATH_TARGET_WINDOWS)
-		Array<wchar_t> fullPath = Utf8::ToUtf16(path);
+		int fullPathSize = (int)fullPath.size();
+		int startIdx = 0;
+		if (fullPathSize >= 2) {
+			if (fullPath[1] == ':') {
+				startIdx = 3;
+			} else if (fullPath[0] == '\\' && fullPath[1] == '\\') {
+				startIdx = 4;
+			}
+		}
+
 		bool slashWasLast = true;
-		for (int i = 4; i < fullPath.size(); i++) {
+		for (int i = startIdx; i < fullPathSize; i++) {
 			if (fullPath[i] == L'\0') {
 				break;
 			}
 
 			if (fullPath[i] == L'/' || fullPath[i] == L'\\') {
 				fullPath[i] = L'\0';
-				if (!::CreateDirectory(fullPath, NULL)) {
-					DWORD err = GetLastError();
-					if (err != ERROR_ALREADY_EXISTS) {
-						return false;
+				const DWORD attrs = ::GetFileAttributes(fullPath);
+				if (attrs == INVALID_FILE_ATTRIBUTES) {
+					if (!::CreateDirectory(fullPath, NULL)) {
+						DWORD err = GetLastError();
+						if (err != ERROR_ALREADY_EXISTS) {
+							return false;
+						}
 					}
 				}
 				fullPath[i] = L'\\';
@@ -1027,6 +1042,10 @@ namespace nCine
 		}
 		return true;
 #else
+		if (IsDirectory(path)) {
+			return true;
+		}
+
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::assetPath(nullTerminatedPath.data())) {

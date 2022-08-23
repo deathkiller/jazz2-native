@@ -1,10 +1,6 @@
 #include "TextureLoaderPng.h"
 
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-#	define __USE_ZLIB
-#endif
-
-#if defined(__USE_ZLIB)
+#if defined(WITH_ZLIB)
 #	include <zlib.h>
 #else
 #	if defined(_MSC_VER) && defined(__has_include)
@@ -116,7 +112,7 @@ namespace nCine
 					size_t dataLength = 16 + (width_ * height_ * 5);
 					auto buffer = std::make_unique<GLubyte[]>(dataLength);
 
-#if defined(__USE_ZLIB)
+#if defined(WITH_ZLIB)
 					z_stream strm;
 					strm.zalloc = Z_NULL;
 					strm.zfree = Z_NULL;

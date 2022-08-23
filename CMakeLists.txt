@@ -22,7 +22,7 @@ include(ncine_get_version)
 include(ncine_imported_targets)
 #include(ncine_imgui)
 #include(ncine_nuklear)
-#include(ncine_tracy)
+include(ncine_tracy)
 
 # Falling back to either GLFW or SDL2 if the other one is not available
 if(NOT GLFW_FOUND AND NOT SDL2_FOUND AND NOT Qt5_FOUND)
@@ -105,11 +105,11 @@ target_sources(ncine PRIVATE ${SOURCES} ${HEADERS} ${SHADER_FILES} ${GENERATED_S
 #		INTERFACE $<BUILD_INTERFACE:${NUKLEAR_INCLUDE_ONLY_DIR}>
 #		PRIVATE $<BUILD_INTERFACE:${NUKLEAR_INCLUDE_ONLY_DIR}/ncine>)
 #endif()
-#if(NCINE_WITH_TRACY)
-#	target_include_directories(ncine
-#		PUBLIC $<BUILD_INTERFACE:${TRACY_INCLUDE_ONLY_DIR}/tracy>
-#		PUBLIC $<INSTALL_INTERFACE:include/tracy>)
-#endif()
+if(NCINE_WITH_TRACY)
+	target_include_directories(ncine
+		PUBLIC $<BUILD_INTERFACE:${TRACY_INCLUDE_ONLY_DIR}/tracy>
+		PUBLIC $<INSTALL_INTERFACE:include/tracy>)
+endif()
 target_include_directories(ncine
 	INTERFACE $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
 	INTERFACE $<INSTALL_INTERFACE:include>

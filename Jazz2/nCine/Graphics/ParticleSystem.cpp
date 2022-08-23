@@ -5,6 +5,7 @@
 #include "ParticleInitializer.h"
 #include "Texture.h"
 #include "../Application.h"
+#include "../tracy.h"
 
 namespace nCine
 {
@@ -79,8 +80,9 @@ namespace nCine
 
 		const unsigned int amount = static_cast<unsigned int>(Random().Next(init.rndAmount.X, init.rndAmount.Y));
 #ifdef WITH_TRACY
-		tracyInfoString.format("Count: %d", amount);
-		ZoneText(tracyInfoString.data(), tracyInfoString.length());
+		// TODO: Tracy
+		//tracyInfoString.format("Count: %d", amount);
+		//ZoneText(tracyInfoString.data(), tracyInfoString.length());
 #endif
 		Vector2f position(0.0f, 0.0f);
 		Vector2f velocity(0.0f, 0.0f);
@@ -222,8 +224,9 @@ namespace nCine
 		lastFrameUpdated_ = theApplication().numFrames();
 
 #ifdef WITH_TRACY
-		tracyInfoString.format("Alive: %d", numAliveParticles());
-		ZoneText(tracyInfoString.data(), tracyInfoString.length());
+		// TODO: Tracy
+		//tracyInfoString.format("Alive: %d", numAliveParticles());
+		//ZoneText(tracyInfoString.data(), tracyInfoString.length());
 #endif
 	}
 
@@ -264,6 +267,7 @@ namespace nCine
 		children_.reserve(poolSize_);
 		if (poolSize_ > 0) {
 			const Particle& otherParticle = *other.particlePool_.front();
+			// TODO: Tracy
 			/*if (otherParticle.texture() && otherParticle.texture()->name() != nullptr)
 			{
 				// When Tracy is disabled the statement body is empty and braces are needed

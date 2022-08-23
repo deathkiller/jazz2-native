@@ -33,7 +33,6 @@ if(EMSCRIPTEN)
 	
 	# TODO: added by me
 	list(APPEND EMSCRIPTEN_LINKER_OPTIONS "SHELL:--preload-file ${NCINE_DATA_DIR}@Content/")
-	list(APPEND EMSCRIPTEN_LINKER_OPTIONS "SHELL:-sUSE_ZLIB=1")
 
 	target_link_options(ncine PUBLIC ${EMSCRIPTEN_LINKER_OPTIONS})
 	target_link_options(ncine PUBLIC "$<$<CONFIG:Debug>:${EMSCRIPTEN_LINKER_OPTIONS_DEBUG}>")
@@ -58,10 +57,14 @@ if(EMSCRIPTEN)
 		target_link_libraries(ncine PUBLIC PNG::PNG)
 	endif()
 
+	if(ZLIB_FOUND)
+		target_link_libraries(ncine PUBLIC ZLIB::ZLIB)
+	endif()
+
 	if(VORBIS_FOUND)
 		target_link_libraries(ncine PUBLIC Vorbis::Vorbisfile)
 	endif()
-	
+
 	if(OPENMPT_FOUND)
 		target_link_libraries(ncine PUBLIC libopenmpt::libopenmpt)
 	endif()
