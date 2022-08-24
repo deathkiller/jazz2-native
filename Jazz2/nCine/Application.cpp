@@ -58,6 +58,7 @@ extern "C"
 #include "Input/JoyMapping.h"
 #include "ServiceLocator.h"
 #include "tracy.h"
+#include "tracy_opengl.h"
 
 #ifdef WITH_AUDIO
 #	include "Audio/ALAudioDevice.h"
@@ -129,6 +130,8 @@ namespace nCine
 
 	void Application::initCommon()
 	{
+		TracyGpuContext;
+		ZoneScoped;
 		profileStartTime_ = TimeStamp::now();
 
 		//#ifdef WITH_GIT_VERSION
@@ -163,6 +166,8 @@ namespace nCine
 
 		// Swapping frame now for a cleaner API trace capture when debugging
 		gfxDevice_->update();
+		FrameMark;
+		TracyGpuCollect;
 
 		frameTimer_ = std::make_unique<FrameTimer>(appCfg_.frameTimerLogInterval, appCfg_.profileTextUpdateTime());
 
@@ -190,6 +195,7 @@ namespace nCine
 		timings_[Timings::InitCommon] = profileStartTime_.secondsSince();
 
 		{
+			ZoneScopedN("onInit");
 			profileStartTime_ = TimeStamp::now();
 			appEventHandler_->onInit();
 			timings_[Timings::AppInit] = profileStartTime_.secondsSince();
@@ -198,6 +204,8 @@ namespace nCine
 
 		// Swapping frame now for a cleaner API trace capture when debugging
 		gfxDevice_->update();
+		FrameMark;
+		TracyGpuCollect;
 	}
 
 	void Application::step()
@@ -210,34 +218,37 @@ namespace nCine
 #endif
 
 		{
+			ZoneScopedN("onFrameStart");
 			profileStartTime_ = TimeStamp::now();
 			appEventHandler_->onFrameStart();
 			timings_[Timings::FrameStart] = profileStartTime_.secondsSince();
 		}
 
-		//if (debugOverlay_)
-		//	debugOverlay_->update();
-
 		if (appCfg_.withScenegraph) {
+			ZoneScopedN("SceneGraph");
 			{
+				ZoneScopedN("Update");
 				profileStartTime_ = TimeStamp::now();
 				screenViewport_->update();
 				timings_[Timings::Update] = profileStartTime_.secondsSince();
 			}
 
 			{
+				ZoneScopedN("onPostUpdate");
 				profileStartTime_ = TimeStamp::now();
 				appEventHandler_->onPostUpdate();
 				timings_[Timings::PostUpdate] = profileStartTime_.secondsSince();
 			}
 
 			{
+				ZoneScopedN("Visit");
 				profileStartTime_ = TimeStamp::now();
 				screenViewport_->visit();
 				timings_[Timings::Visit] = profileStartTime_.secondsSince();
 			}
 
 			{
+				ZoneScopedN("Draw");
 				profileStartTime_ = TimeStamp::now();
 				screenViewport_->sortAndCommitQueue();
 				screenViewport_->draw();
@@ -250,12 +261,15 @@ namespace nCine
 		}
 
 		{
+			ZoneScopedN("onFrameEnd");
 			profileStartTime_ = TimeStamp::now();
 			appEventHandler_->onFrameEnd();
 			timings_[Timings::FrameEnd] = profileStartTime_.secondsSince();
 		}
 
 		gfxDevice_->update();
+		FrameMark;
+		TracyGpuCollect;
 
 		if (appCfg_.frameLimit > 0) {
 			const float frameTimeDuration = 1.0f / static_cast<float>(appCfg_.frameLimit);
@@ -267,6 +281,7 @@ namespace nCine
 
 	void Application::shutdownCommon()
 	{
+		ZoneScoped;
 		appEventHandler_->onShutdown();
 		LOGI("IAppEventHandler::onShutdown() invoked");
 		appEventHandler_.reset(nullptr);
