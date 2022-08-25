@@ -15,8 +15,12 @@ using namespace Death::Containers;
 
 namespace Jazz2::Compatibility
 {
+    class JJ2Episode;
+
     class JJ2Level // .j2l
     {
+        friend class JJ2Episode;
+
     public:
         struct LevelToken {
             String Episode;
@@ -39,6 +43,8 @@ namespace Jazz2::Compatibility
 
         static constexpr int JJ2LayerCount = 8;
         static constexpr int TextEventStringsCount = 16;
+
+        String LevelName;
 
         JJ2Level() : _version(JJ2Version::Unknown), _verticalMPSplitscreen(false), _isMpLevel(false), _hasPit(false), _hasCTF(false), _hasLaps(false), _animCount(0) { }
 
@@ -113,8 +119,6 @@ namespace Jazz2::Compatibility
         bool _verticalMPSplitscreen, _isMpLevel;
         bool _hasPit, _hasCTF, _hasLaps;
 
-        String _path;
-        String _levelToken;
         String _name;
         String _tileset;
         String _music;

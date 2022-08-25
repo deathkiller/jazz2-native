@@ -27,7 +27,6 @@ namespace Jazz2
 		_frozenTimeLeft(0.0f),
 		_maxHealth(1),
 		_health(1),
-		_suspendType(SuspendType::None),
 		_metadata(nullptr),
 		_renderer(this),
 		_currentAnimation(nullptr),

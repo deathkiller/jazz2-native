@@ -22,6 +22,7 @@
 #include "Jazz2/UI/Menu/MainMenu.h"
 
 #include "Jazz2/Compatibility/JJ2Anims.h"
+#include "Jazz2/Compatibility/JJ2Episode.h"
 #include "Jazz2/Compatibility/JJ2Level.h"
 #include "Jazz2/Compatibility/JJ2Tileset.h"
 #include "Jazz2/Compatibility/EventConverter.h"
@@ -52,23 +53,34 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 		return;
 	}*/
 
-	constexpr int MaxEntryLength = 1024;
+	constexpr int MaxEntryLength = 4 * 1024;
 	char logEntry[MaxEntryLength];
+
+#if defined(DEATH_TARGET_WINDOWS)
+	logEntry[0] = '[';
+	switch (level) {
+		case LogLevel::Fatal:		logEntry[1] = 'F'; break;
+		case LogLevel::Error:		logEntry[1] = 'E'; break;
+		case LogLevel::Warn:		logEntry[1] = 'W'; break;
+		case LogLevel::Info:		logEntry[1] = 'I'; break;
+		default:					logEntry[1] = 'D'; break;
+	}
+	logEntry[2] = ']';
+	logEntry[3] = ' ';
 
 	va_list args;
 	va_start(args, fmt);
-	unsigned int length = vsnprintf(logEntry, MaxEntryLength, fmt, args);
+	unsigned int length = vsnprintf(logEntry + 4, MaxEntryLength - 4, fmt, args) + 4;
 	va_end(args);
 
-	if (length < MaxEntryLength - 2) {
-		logEntry[length++] = '\n';
-		logEntry[length] = '\0';
+	if (length >= MaxEntryLength - 2) {
+		length = MaxEntryLength - 2;
 	}
 
-#if defined(DEATH_TARGET_WINDOWS)
-	//if (IsDebuggerPresent()) {
-		OutputDebugString(Death::Utf8::ToUtf16(logEntry));
-	//}
+	logEntry[length++] = '\n';
+	logEntry[length] = '\0';
+
+	::OutputDebugString(Death::Utf8::ToUtf16(logEntry));
 #elif defined(DEATH_TARGET_ANDROID)
 	android_LogPriority priority;
 
@@ -87,10 +99,60 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 
 	__android_log_write(priority, "Jazz2", logEntry);
 #else
+	constexpr char Reset[] = "\033[0m";
+	constexpr char Bold[] = "\033[1m";
+	constexpr char Faint[] = "\033[2m";
+	constexpr char Black[] = "\033[30m";
+	constexpr char BrightRed[] = "\033[91m";
+	constexpr char BrightGreen[] = "\033[92m";
+	constexpr char BrightYellow[] = "\033[93m";
+	constexpr char BrightRedBg[] = "\033[101m";
+
+	char logEntryWithColors[MaxEntryLength];
+	logEntryWithColors[0] = '\0';
+	logEntryWithColors[MaxEntryLength - 1] = '\0';
+
+	va_list args;
+	va_start(args, fmt);
+	unsigned int length = vsnprintf(logEntry, MaxEntryLength, fmt, args);
+	va_end(args);
+
+	// Colorize the output
+	unsigned int length2 = snprintf(logEntryWithColors, MaxEntryLength - 1, "%s", Faint);
+
+	unsigned int logMsgFuncLength = 0;
+	while (logEntry[logMsgFuncLength] != '>' && logEntry[logMsgFuncLength] != '\0') {
+		logMsgFuncLength++;
+	}
+	logMsgFuncLength++; // Skip '>' character
+
+	strncpy(logEntryWithColors + length2, logEntry, std::min(logMsgFuncLength, MaxEntryLength - length2 - 1));
+	length2 += logMsgFuncLength;
+
+	length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Reset);
+
+	if (level == LogLevel::Warn || level == LogLevel::Error || level == LogLevel::Fatal) {
+		length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Bold);
+	}
+
+	strncpy(logEntryWithColors + length2, logEntry + logMsgFuncLength, std::min(length - logMsgFuncLength, MaxEntryLength - length2 - 1));
+	length2 += length - logMsgFuncLength;
+
+	if (level == LogLevel::Warn || level == LogLevel::Error || level == LogLevel::Fatal) {
+		length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Reset);
+	}
+
+	if (length2 >= MaxEntryLength - 2) {
+		length2 = MaxEntryLength - 2;
+	}
+
+	logEntryWithColors[length2++] = '\n';
+	logEntryWithColors[length2] = '\0';
+
 	if (level == LogLevel::Error || level == LogLevel::Fatal) {
-		fputs(logEntry, stderr);
+		fputs(logEntryWithColors, stderr);
 	} else {
-		fputs(logEntry, stdout);
+		fputs(logEntryWithColors, stdout);
 	}
 #endif
 
@@ -225,6 +287,10 @@ void GameEventHandler::ChangeLevel(Jazz2::LevelInitialization&& levelInit)
 
 bool GameEventHandler::RefreshCache()
 {
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+	// Emscripten version doesn't support external source (yet)
+	return true;
+#else
 	// Check cache state
 	{
 		auto s = fs::Open(fs::JoinPath("Cache"_s, "State"_s), FileAccessMode::Read);
@@ -257,63 +323,186 @@ bool GameEventHandler::RefreshCache()
 	}
 
 RecreateCache:
-	{
-		// "Source" directory must be case in-sensitive
-		String animsPath = fs::FindPathCaseInsensitive(fs::JoinPath("Source"_s, "Anims.j2a"_s));
-		if (!fs::IsReadableFile(animsPath)) {
-			LOGE("Cannot open \"./Source/Anims.j2a\" file! Ensure that Jazz Jackrabbit 2 files are present in \"Source\" directory.");
-			return false;
-		}
-
-		JJ2Anims::Convert(animsPath, fs::JoinPath("Cache"_s, "Animations"_s), false);
-
-		EventConverter eventConverter;
-
-		fs::Directory dir("Source"_s);
-		while (true) {
-			StringView item = dir.GetNext();
-			if (item == nullptr) {
-				break;
-			}
-
-			if (fs::HasExtension(item, "j2l"_s)) {
-				// TODO: Check only filename
-				String levelName = fs::GetFileName(item);
-				if (levelName.findOr("-MLLE-Data-"_s, levelName.end()) != levelName.end()) {
-					LOGI_X("Level \"%s\" skipped (MLLE extra layers).", item);
-				} else {
-					fs::CreateDirectories(fs::JoinPath({ "Cache"_s, "Episodes"_s, "unknown"_s }));
-
-					lowercaseInPlace(levelName);
-
-					JJ2Level level;
-					level.Open(item, false);
-					level.Convert(fs::JoinPath({ "Cache"_s, "Episodes"_s, "unknown"_s, levelName }), eventConverter, nullptr);
-				}
-			} else if (fs::HasExtension(item, "j2t"_s)) {
-				fs::CreateDirectories(fs::JoinPath("Cache"_s, "Tilesets"_s));
-
-				String tilesetName = fs::GetFileName(item);
-				lowercaseInPlace(tilesetName);
-
-				JJ2Tileset tileset;
-				tileset.Open(item, false);
-				tileset.Convert(fs::JoinPath({ "Cache"_s, "Tilesets"_s, tilesetName }));
-			}
-		}
-
-
-		auto s = fs::Open(fs::JoinPath("Cache"_s, "State"_s), FileAccessMode::Write);
-
-		s->WriteValue<uint32_t>(0x2063324a);	// Signature
-		s->WriteValue<uint16_t>(JJ2Anims::CacheVersion);
-		s->WriteValue<uint8_t>(0x00);			// Flags
-		int64_t animsModified = fs::LastModificationTime(fs::JoinPath("Source"_s, "Anims.j2a"_s)).Ticks;
-		s->WriteValue<int64_t>(animsModified);
-
-		LOGI("Cache was recreated");
-		return true;
+	// "Source" directory must be case in-sensitive
+	String animsPath = fs::FindPathCaseInsensitive(fs::JoinPath("Source"_s, "Anims.j2a"_s));
+	if (!fs::IsReadableFile(animsPath)) {
+		LOGE("Cannot open \"./Source/Anims.j2a\" file! Ensure that Jazz Jackrabbit 2 files are present in \"Source\" directory.");
+		return false;
 	}
+
+	JJ2Anims::Convert(animsPath, fs::JoinPath("Cache"_s, "Animations"_s), false);
+
+	EventConverter eventConverter;
+
+	String xmasEpisodeToken = (!fs::FindPathCaseInsensitive(fs::JoinPath("Cache"_s, "xmas99.j2e")).empty() ? "xmas99" : "xmas98");
+	HashMap<String, Pair<String, String>> knownLevels = {
+		{ "castle1"_s, { "prince"_s, "01"_s } },
+		{ "castle1n"_s, { "prince"_s, "02"_s } },
+		{ "carrot1"_s, { "prince"_s, "03"_s } },
+		{ "carrot1n"_s, { "prince"_s, "04"_s } },
+		{ "labrat1"_s, { "prince"_s, "05"_s } },
+		{ "labrat2"_s, { "prince"_s, "06"_s } },
+		{ "labrat3"_s, { "prince"_s, "bonus"_s } },
+
+		{ "colon1"_s, { "rescue"_s, "01"_s } },
+		{ "colon2"_s, { "rescue"_s, "02"_s } },
+		{ "psych1"_s, { "rescue"_s, "03"_s } },
+		{ "psych2"_s, { "rescue"_s, "04"_s } },
+		{ "beach"_s, { "rescue"_s, "05"_s } },
+		{ "beach2"_s, { "rescue"_s, "06"_s } },
+		{ "psych3"_s, { "rescue"_s, "bonus"_s } },
+
+		{ "diam1"_s, { "flash"_s, "01"_s } },
+		{ "diam3"_s, { "flash"_s, "02"_s } },
+		{ "tube1"_s, { "flash"_s, "03"_s } },
+		{ "tube2"_s, { "flash"_s, "04"_s } },
+		{ "medivo1"_s, { "flash"_s, "05"_s } },
+		{ "medivo2"_s, { "flash"_s, "06"_s } },
+		{ "garglair"_s, { "flash"_s, "bonus"_s } },
+		{ "tube3"_s, { "flash"_s, "bonus"_s } },
+
+		{ "jung1"_s, { "monk"_s, "01"_s } },
+		{ "jung2"_s, { "monk"_s, "02"_s } },
+		{ "hell"_s, { "monk"_s, "03"_s } },
+		{ "hell2"_s, { "monk"_s, "04"_s } },
+		{ "damn"_s, { "monk"_s, "05"_s } },
+		{ "damn2"_s, { "monk"_s, "06"_s } },
+
+		{ "share1"_s, { "share"_s, "01"_s } },
+		{ "share2"_s, { "share"_s, "02"_s } },
+		{ "share3"_s, { "share"_s, "03"_s } },
+
+		{ "xmas1"_s, { xmasEpisodeToken, "01"_s } },
+		{ "xmas2"_s, { xmasEpisodeToken, "02"_s } },
+		{ "xmas3"_s, { xmasEpisodeToken, "03"_s } },
+
+		{ "easter1"_s, { "secretf"_s, "01"_s } },
+		{ "easter2"_s, { "secretf"_s, "02"_s } },
+		{ "easter3"_s, { "secretf"_s, "03"_s } },
+		{ "haunted1"_s, { "secretf"_s, "04"_s } },
+		{ "haunted2"_s, { "secretf"_s, "05"_s } },
+		{ "haunted3"_s, { "secretf"_s, "06"_s } },
+		{ "town1"_s, { "secretf"_s, "07"_s } },
+		{ "town2"_s, { "secretf"_s, "08"_s } },
+		{ "town3"_s, { "secretf"_s, "09"_s } },
+
+		// Special names
+		{ "endepis"_s, { { }, ":end"_s } },
+		{ "ending"_s, { { }, ":credits"_s } }
+	};
+
+	auto LevelTokenConversion = [&knownLevels](String levelToken) -> JJ2Level::LevelToken {
+		lowercaseInPlace(levelToken);
+
+		//levelToken = levelToken.ToLower(CultureInfo.InvariantCulture).Replace(" ", "_").Replace("\"", "").Replace("'", "");
+
+		auto it = knownLevels.find(levelToken);
+		if (it != knownLevels.end()) {
+			if (it->second.second().empty()) {
+				return { it->second.first(), levelToken };
+			}
+			return { it->second.first(), (it->second.second()[0] == ':' ? it->second.second() : (it->second.second() + "_"_s + levelToken)) };
+		}
+		return { { }, levelToken };
+	};
+
+	auto EpisodeNameConversion = [](JJ2Episode* episode) -> String {
+		if (episode->Name == "share"_s && episode->DisplayName == "#Shareware@Levels"_s) {
+			return "Shareware Demo"_s;
+		} else if (episode->Name == "xmas98"_s && episode->DisplayName == "#Xmas 98@Levels"_s) {
+			return "Holiday Hare '98"_s;
+		} else if (episode->Name == "xmas99"_s && episode->DisplayName == "#Xmas 99@Levels"_s) {
+			return "The Christmas Chronicles"_s;
+		} else if (episode->Name == "secretf"_s && episode->DisplayName == "#Secret@Files"_s) {
+			return "The Secret Files"_s;
+		} else if (episode->Name == "hh17"_s && episode->DisplayName == "Holiday Hare 17"_s) {
+			return "Holiday Hare '17"_s;
+		} else if (episode->Name == "hh18"_s && episode->DisplayName == "Holiday Hare 18"_s) {
+			return "Holiday Hare '18"_s;
+		} else {
+			// TODO: Strip formatting - @ is new line, # is random color
+			return episode->DisplayName;
+		}
+	};
+	
+	auto EpisodePrevNext = [](JJ2Episode* episode) -> Pair<String, String> {
+		if (episode->Name == "prince"_s) {
+			return { { }, "rescue"_s };
+		} else if (episode->Name == "rescue"_s) {
+			return { "prince"_s, "flash"_s };
+		} else if (episode->Name == "flash"_s) {
+			return { "rescue"_s, "monk"_s };
+		} else if (episode->Name == "monk"_s) {
+			return { "flash"_s, { } };
+		} else {
+			return { { }, { } };
+		}
+	};
+
+	String episodesPath = fs::JoinPath("Cache"_s, "Episodes"_s);
+
+	fs::Directory dir("Source"_s, fs::EnumerationOptions::SkipDirectories);
+	while (true) {
+		StringView item = dir.GetNext();
+		if (item == nullptr) {
+			break;
+		}
+
+		if (fs::HasExtension(item, "j2e"_s)) {
+			JJ2Episode episode;
+			episode.Open(item);
+			if (episode.Name == "home"_s) {
+				continue;
+			}
+
+			String fullPath = fs::JoinPath(episodesPath, episode.Name + ".j2e"_s);
+			episode.Convert(fullPath, LevelTokenConversion, EpisodeNameConversion, EpisodePrevNext);
+		} else if (fs::HasExtension(item, "j2l"_s)) {
+			String levelName = fs::GetFileName(item);
+			if (levelName.findOr("-MLLE-Data-"_s, levelName.end()) != levelName.end()) {
+				LOGI_X("Level \"%s\" skipped (MLLE extra layers).", item);
+			} else {
+				JJ2Level level;
+				level.Open(item, false);
+
+				String fullPath;
+				auto it = knownLevels.find(level.LevelName);
+				if (it != knownLevels.end()) {
+					if (it->second.second().empty()) {
+						fullPath = fs::JoinPath({ episodesPath, it->second.first(), level.LevelName + ".j2l"_s });
+					} else {
+						fullPath = fs::JoinPath({ episodesPath, it->second.first(), it->second.second() + "_"_s + level.LevelName + ".j2l"_s });
+					}
+				} else {
+					fullPath = fs::JoinPath({ episodesPath, "unknown"_s, level.LevelName + ".j2l"_s });
+				}
+
+				fs::CreateDirectories(fs::GetDirectoryName(fullPath));
+				level.Convert(fullPath, eventConverter, LevelTokenConversion);
+			}
+		} else if (fs::HasExtension(item, "j2t"_s)) {
+			fs::CreateDirectories(fs::JoinPath("Cache"_s, "Tilesets"_s));
+
+			String tilesetName = fs::GetFileName(item);
+			lowercaseInPlace(tilesetName);
+
+			JJ2Tileset tileset;
+			tileset.Open(item, false);
+			tileset.Convert(fs::JoinPath({ "Cache"_s, "Tilesets"_s, tilesetName }));
+		}
+	}
+
+	auto s = fs::Open(fs::JoinPath("Cache"_s, "State"_s), FileAccessMode::Write);
+
+	s->WriteValue<uint32_t>(0x2063324a);	// Signature
+	s->WriteValue<uint16_t>(JJ2Anims::CacheVersion);
+	s->WriteValue<uint8_t>(0x00);			// Flags
+	int64_t animsModified = fs::LastModificationTime(fs::JoinPath("Source"_s, "Anims.j2a"_s)).Ticks;
+	s->WriteValue<int64_t>(animsModified);
+
+	LOGI("Cache was recreated");
+	return true;
+#endif
 }
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)

@@ -46,8 +46,11 @@ namespace Jazz2::Actors
 		_gems(0), _gemsPitch(0),
 		_gemsTimer(0.0f),
 		_bonusWarpTimer(0.0f),
+		_suspendType(SuspendType::None),
+		_suspendTime(0.0f),
 		_invulnerableTime(0.0f),
 		_invulnerableBlinkTime(0.0f),
+		_jumpTime(0.0f),
 		_idleTime(0.0f),
 		_keepRunningTime(0.0f),
 		_lastPoleTime(0.0f),
@@ -190,8 +193,7 @@ namespace Jazz2::Actors
 
 		//FollowCarryingPlatform();
 		UpdateAnimation(timeMult);
-
-		CheckSuspendedStatus();
+		CheckSuspendState(timeMult);
 		CheckEndOfSpecialMoves(timeMult);
 
 		OnHandleWater();
@@ -262,6 +264,9 @@ namespace Jazz2::Actors
 			}
 		}
 
+		if (_jumpTime > 0.0f) {
+			_jumpTime -= timeMult;
+		}
 		if (_springCooldown > 0.0f) {
 			_springCooldown -= timeMult;
 		}
@@ -375,7 +380,7 @@ namespace Jazz2::Actors
 		if (_activeModifier != Modifier::None) {
 			if (_activeModifier == Modifier::Copter || _activeModifier == Modifier::LizardCopter) {
 				_copterFramesLeft -= timeMult;
-				if (_copterFramesLeft <= 0) {
+				if (_copterFramesLeft <= 0.0f) {
 					SetModifier(Modifier::None);
 				}
 			}
@@ -588,115 +593,117 @@ namespace Jazz2::Actors
 				if (!_wasJumpPressed) {
 					_wasJumpPressed = true;
 
-					if (_isLifting && GetState(ActorFlags::CanJump) && _currentSpecialMove == SpecialMoveType::None) {
-						SetState(ActorFlags::CanJump, false);
-						SetAnimation(_currentAnimationState & (~AnimState::Lookup & ~AnimState::Crouch));
-						PlaySfx("Jump"_s);
-						//_carryingObject = null;
+					if (_suspendType == SuspendType::None && _jumpTime <= 0.0f) {
+						if (_isLifting && GetState(ActorFlags::CanJump) && _currentSpecialMove == SpecialMoveType::None) {
+							SetState(ActorFlags::CanJump, false);
+							SetAnimation(_currentAnimationState & (~AnimState::Lookup & ~AnimState::Crouch));
+							PlaySfx("Jump"_s);
+							//_carryingObject = null;
 
-						CollisionFlags &= ~CollisionFlags::IsSolidObject;
+							CollisionFlags &= ~CollisionFlags::IsSolidObject;
 
-						_isLifting = false;
-						_controllable = false;
+							_isLifting = false;
+							_controllable = false;
+							_jumpTime = 40.0f;
 
-						_speed.Y = -3.0f;
-						_internalForceY = 0.86f;
+							_speed.Y = -3.0f;
+							_internalForceY = 0.86f;
 
-						CollisionFlags &= ~CollisionFlags::CollideWithSolidObjects;
+							CollisionFlags &= ~CollisionFlags::CollideWithSolidObjects;
 
-						SetTransition(AnimState::TransitionLiftEnd, false, [this]() {
-							_controllable = true;
-							CollisionFlags |= CollisionFlags::CollideWithSolidObjects;
-						});
-					} else {
-						switch (_playerType) {
-							case PlayerType::Jazz: {
-								if ((_currentAnimationState & AnimState::Crouch) == AnimState::Crouch) {
-									_controllable = false;
-									SetAnimation(AnimState::Uppercut);
-									SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Uppercut, [this]() {
-										_externalForce.Y = 1.4f;
-										_speed.Y = -2.0f;
-										SetState(ActorFlags::CanJump, false);
-										SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Uppercut);
-									});
-								} else {
-									if (_speed.Y > 0.01f && !GetState(ActorFlags::CanJump) && (_currentAnimationState & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
-										CollisionFlags &= ~CollisionFlags::ApplyGravitation;
-										_speed.Y = 1.5f;
-										if ((_currentAnimationState & AnimState::Copter) != AnimState::Copter) {
-											SetAnimation(AnimState::Copter);
-										}
-										_copterFramesLeft = 70;
+							SetTransition(AnimState::TransitionLiftEnd, false, [this]() {
+								_controllable = true;
+								CollisionFlags |= CollisionFlags::CollideWithSolidObjects;
+							});
+						} else {
+							switch (_playerType) {
+								case PlayerType::Jazz: {
+									if ((_currentAnimationState & AnimState::Crouch) == AnimState::Crouch) {
+										_controllable = false;
+										SetAnimation(AnimState::Uppercut);
+										SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Uppercut, [this]() {
+											_externalForce.Y = 1.4f;
+											_speed.Y = -2.0f;
+											SetState(ActorFlags::CanJump, false);
+											SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Uppercut);
+										});
+									} else {
+										if (_speed.Y > 0.01f && !GetState(ActorFlags::CanJump) && (_currentAnimationState & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
+											CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+											_speed.Y = 1.5f;
+											if ((_currentAnimationState & AnimState::Copter) != AnimState::Copter) {
+												SetAnimation(AnimState::Copter);
+											}
+											_copterFramesLeft = 70.0f;
 
-										if (_copterSound == nullptr) {
-											_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
-											if (_copterSound != nullptr) {
-												_copterSound->setLooping(true);
+											if (_copterSound == nullptr) {
+												_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
+												if (_copterSound != nullptr) {
+													_copterSound->setLooping(true);
+												}
 											}
 										}
 									}
+									break;
 								}
-								break;
-							}
-							case PlayerType::Spaz: {
-								if ((_currentAnimationState & AnimState::Crouch) == AnimState::Crouch) {
-									_controllable = false;
-									SetAnimation(AnimState::Uppercut);
-									SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Sidekick, [this]() {
-										_externalForce.X = 8.0f * (IsFacingLeft() ? -1.0f : 1.0f);
-										_speed.X = 14.4f * (IsFacingLeft() ? -1.0f : 1.0f);
-										CollisionFlags &= ~CollisionFlags::ApplyGravitation;
-										SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Sidekick);
-									});
+								case PlayerType::Spaz: {
+									if ((_currentAnimationState & AnimState::Crouch) == AnimState::Crouch) {
+										_controllable = false;
+										SetAnimation(AnimState::Uppercut);
+										SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Sidekick, [this]() {
+											_externalForce.X = 8.0f * (IsFacingLeft() ? -1.0f : 1.0f);
+											_speed.X = 14.4f * (IsFacingLeft() ? -1.0f : 1.0f);
+											CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+											SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Sidekick);
+										});
 
-									PlayPlayerSfx("Sidekick"_s);
-								} else {
-									if (!GetState(ActorFlags::CanJump) && _canDoubleJump) {
-										_canDoubleJump = false;
-										_isFreefall = false;
+										PlayPlayerSfx("Sidekick"_s);
+									} else {
+										if (!GetState(ActorFlags::CanJump) && _canDoubleJump) {
+											_canDoubleJump = false;
+											_isFreefall = false;
 
-										_internalForceY = 1.15f;
-										_speed.Y = -0.6f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
-										_speed.X *= 0.4f;
+											_internalForceY = 1.15f;
+											_speed.Y = -0.6f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
+											_speed.X *= 0.4f;
 
-										PlaySfx("DoubleJump"_s);
+											PlaySfx("DoubleJump"_s);
 
-										SetTransition(AnimState::Spring, false);
-									}
-								}
-								break;
-							}
-							case PlayerType::Lori: {
-								if ((_currentAnimationState & AnimState::Crouch) == AnimState::Crouch) {
-									_controllable = false;
-									SetAnimation(AnimState::Uppercut);
-									SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Sidekick, [this]() {
-										_externalForce.X = 15.0f * (IsFacingLeft() ? -1.0f : 1.0f);
-										_speed.X = 6.0f * (IsFacingLeft() ? -1.0f : 1.0f);
-										CollisionFlags &= ~CollisionFlags::ApplyGravitation;
-									});
-								} else {
-									if (_speed.Y > 0.01f && !GetState(ActorFlags::CanJump) && (_currentAnimationState & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
-										CollisionFlags &= ~CollisionFlags::ApplyGravitation;
-										_speed.Y = 1.5f;
-										if ((_currentAnimationState & AnimState::Copter) != AnimState::Copter) {
-											SetAnimation(AnimState::Copter);
+											SetTransition(AnimState::Spring, false);
 										}
-										_copterFramesLeft = 70;
+									}
+									break;
+								}
+								case PlayerType::Lori: {
+									if ((_currentAnimationState & AnimState::Crouch) == AnimState::Crouch) {
+										_controllable = false;
+										SetAnimation(AnimState::Uppercut);
+										SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Sidekick, [this]() {
+											_externalForce.X = 15.0f * (IsFacingLeft() ? -1.0f : 1.0f);
+											_speed.X = 6.0f * (IsFacingLeft() ? -1.0f : 1.0f);
+											CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+										});
+									} else {
+										if (_speed.Y > 0.01f && !GetState(ActorFlags::CanJump) && (_currentAnimationState & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
+											CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+											_speed.Y = 1.5f;
+											if ((_currentAnimationState & AnimState::Copter) != AnimState::Copter) {
+												SetAnimation(AnimState::Copter);
+											}
+											_copterFramesLeft = 70.0f;
 
-										if (_copterSound == nullptr) {
-											_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
-											if (_copterSound != nullptr) {
-												_copterSound->setLooping(true);
+											if (_copterSound == nullptr) {
+												_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
+												if (_copterSound != nullptr) {
+													_copterSound->setLooping(true);
+												}
 											}
 										}
 									}
+									break;
 								}
-								break;
 							}
 						}
-
 					}
 				} else {
 					if (_suspendType != SuspendType::None) {
@@ -705,9 +712,10 @@ namespace Jazz2::Actors
 							//_currentVine = nullptr;
 							CollisionFlags |= CollisionFlags::ApplyGravitation;
 						} else {
-							MoveInstantly(Vector2(0.0f, -8.0f), MoveType::Relative | MoveType::Force);
+							MoveInstantly(Vector2(0.0f, -4.0f), MoveType::Relative | MoveType::Force);
 						}
 						SetState(ActorFlags::CanJump, true);
+						_canDoubleJump = true;
 					}
 					if (!GetState(ActorFlags::CanJump)) {
 						if (_copterFramesLeft > 0.0f) {
@@ -717,7 +725,10 @@ namespace Jazz2::Actors
 						SetState(ActorFlags::CanJump, false);
 						_isFreefall = false;
 						SetAnimation(_currentAnimationState & (~AnimState::Lookup & ~AnimState::Crouch));
-						PlaySfx("Jump"_s);
+						if (_jumpTime <= 0.0f) {
+							PlaySfx("Jump"_s);
+						}
+						_jumpTime = 40.0f;
 						//_carryingObject = nullptr;
 
 						// Gravitation is sometimes off because of active copter, turn it on again
@@ -1391,8 +1402,13 @@ namespace Jazz2::Actors
 		}
 	}
 
-	void Player::CheckSuspendedStatus()
+	void Player::CheckSuspendState(float timeMult)
 	{
+		if (_suspendTime > 0.0f) {
+			_suspendTime -= timeMult;
+			return;
+		}
+
 		if (_suspendType == SuspendType::SwingingVine) {
 			return;
 		}
@@ -1408,18 +1424,35 @@ namespace Jazz2::Actors
 
 		if (newSuspendState == _suspendType) {
 			if (newSuspendState == SuspendType::None) {
-				const float tolerance = 6.0f;
+				constexpr float ToleranceX = 8.0f;
+				constexpr float ToleranceY = 4.0f;
 
-				newSuspendState = tiles->GetTileSuspendState(_pos.X - tolerance, _pos.Y - 1.0f);
+				newSuspendState = tiles->GetTileSuspendState(_pos.X - ToleranceX, _pos.Y - 1.0f);
 				if (newSuspendState != SuspendType::Hook) {
-					newSuspendState = tiles->GetTileSuspendState(_pos.X + tolerance, _pos.Y - 1.0f);
+					newSuspendState = tiles->GetTileSuspendState(_pos.X + ToleranceX, _pos.Y - 1.0f);
 					if (newSuspendState != SuspendType::Hook) {
-						return;
+						// Also try with Y tolerance
+						newSuspendState = tiles->GetTileSuspendState(_pos.X, _pos.Y - 1.0f + ToleranceY);
+						if (newSuspendState != SuspendType::Hook) {
+							newSuspendState = tiles->GetTileSuspendState(_pos.X - ToleranceX, _pos.Y - 1.0f + ToleranceY);
+							if (newSuspendState != SuspendType::Hook) {
+								newSuspendState = tiles->GetTileSuspendState(_pos.X + ToleranceX, _pos.Y - 1.0f + ToleranceY);
+								if (newSuspendState != SuspendType::Hook) {
+									return;
+								} else {
+									MoveInstantly(Vector2f(ToleranceX, ToleranceY), MoveType::Relative | MoveType::Force);
+								}
+							} else {
+								MoveInstantly(Vector2f(-ToleranceX, ToleranceY), MoveType::Relative | MoveType::Force);
+							}
+						} else {
+							MoveInstantly(Vector2f(0.0f, ToleranceY), MoveType::Relative | MoveType::Force);
+						}
 					} else {
-						MoveInstantly(Vector2f(tolerance, 0.0f), MoveType::Relative | MoveType::Force);
+						MoveInstantly(Vector2f(ToleranceX, 0.0f), MoveType::Relative | MoveType::Force);
 					}
 				} else {
-					MoveInstantly(Vector2f(-tolerance, 0.0f), MoveType::Relative | MoveType::Force);
+					MoveInstantly(Vector2f(-ToleranceX, 0.0f), MoveType::Relative | MoveType::Force);
 				}
 			} else {
 				return;
@@ -1428,7 +1461,6 @@ namespace Jazz2::Actors
 
 		if (newSuspendState != SuspendType::None && _playerType != PlayerType::Frog) {
 			if (_currentSpecialMove == SpecialMoveType::None) {
-
 				_suspendType = newSuspendState;
 				CollisionFlags &= ~CollisionFlags::ApplyGravitation;
 
@@ -1452,9 +1484,12 @@ namespace Jazz2::Actors
 					MoveInstantly(Vector2f(0.0f, 1.0f), MoveType::Relative | MoveType::Force);
 				}
 				MoveInstantly(Vector2f(0.0f, -1.0f), MoveType::Relative | MoveType::Force);
+
+				SetAnimation(AnimState::Hook);
 			}
 		} else {
 			_suspendType = SuspendType::None;
+			_suspendTime = 20.0f;
 			if ((currentState & (AnimState::Buttstomp | AnimState::Copter)) == AnimState::Idle && !_isAttachedToPole) {
 				CollisionFlags |= CollisionFlags::ApplyGravitation;
 			}

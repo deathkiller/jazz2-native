@@ -317,7 +317,7 @@ namespace Jazz2::UI::Menu
 		});*/
 
 		PlayerType players[] = { (PlayerType)((int)PlayerType::Jazz + _selectedPlayerType) };
-		LevelInitialization levelInit("unknown"_s, "share1"_s, (GameDifficulty)((int)GameDifficulty::Easy + _selectedDifficulty),
+		LevelInitialization levelInit("share"_s, "01_share1"_s, (GameDifficulty)((int)GameDifficulty::Easy + _selectedDifficulty),
 			true, false, players, _countof(players));
 		_root->ChangeLevel(std::move(levelInit));
 	}

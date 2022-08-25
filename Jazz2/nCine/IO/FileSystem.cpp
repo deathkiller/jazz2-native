@@ -318,6 +318,10 @@ namespace nCine
 #if !defined(DEATH_TARGET_WINDOWS)
 	String FileSystem::FindPathCaseInsensitive(const StringView& path)
 	{
+		if (Exists(path)) {
+			return path;
+		}
+
 		size_t l = path.size();
 		String result(NoInit, path.size() + 2);
 

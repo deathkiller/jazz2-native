@@ -142,9 +142,11 @@ namespace Jazz2::Actors
 		float _gemsTimer;
 		float _bonusWarpTimer;
 
+		SuspendType _suspendType;
+		float _suspendTime;
 		float _invulnerableTime;
 		float _invulnerableBlinkTime;
-
+		float _jumpTime;
 		float _idleTime;
 		float _keepRunningTime;
 		float _lastPoleTime;
@@ -173,7 +175,7 @@ namespace Jazz2::Actors
 		void UpdateAnimation(float timeMult);
 		void PushSolidObjects(float timeMult);
 		void CheckEndOfSpecialMoves(float timeMult);
-		void CheckSuspendedStatus();
+		void CheckSuspendState(float timeMult);
 		void OnHandleWater();
 		void OnHandleAreaEvents(float timeMult, bool& areaWeaponAllowed, int& areaWaterBlock);
 

@@ -162,7 +162,7 @@ namespace Jazz2
 		Small,
 		Medium,
 
-		Unknown
+		Count
 	};
 
 	enum class PrecompiledShader {
@@ -184,7 +184,7 @@ namespace Jazz2
 		WhiteMask,
 		BatchedWhiteMask,
 
-		Unknown
+		Count
 	};
 
 	class ContentResolver
@@ -226,7 +226,7 @@ namespace Jazz2
 		/// Deleted assignment operator
 		ContentResolver& operator=(const ContentResolver&) = delete;
 
-		GenericGraphicResource* RequestGraphicsFromCache(const StringView& path, uint16_t paletteOffset);
+		GenericGraphicResource* RequestGraphicsAura(const StringView& path, uint16_t paletteOffset);
 		static void ReadImageFromFile(std::unique_ptr<IFileStream>& s, uint8_t* data, int width, int height, int channelCount);
 		void CompileShaders();
 		void RecreateGemPalettes();
@@ -235,7 +235,7 @@ namespace Jazz2
 		uint32_t _palettes[PaletteCount * ColorsPerPalette];
 		HashMap<String, std::unique_ptr<Metadata>> _cachedMetadata;
 		HashMap<Pair<String, uint16_t>, std::unique_ptr<GenericGraphicResource>> _cachedGraphics;
-		std::unique_ptr<UI::Font> _fonts[(int)FontType::Unknown];
-		std::unique_ptr<Shader> _precompiledShaders[(int)PrecompiledShader::Unknown];
+		std::unique_ptr<UI::Font> _fonts[(int)FontType::Count];
+		std::unique_ptr<Shader> _precompiledShaders[(int)PrecompiledShader::Count];
 	};
 }

@@ -47,11 +47,11 @@ namespace Jazz2
 		_cachedMetadata.clear();
 		_cachedGraphics.clear();
 
-		for (int i = 0; i < (int)FontType::Unknown; i++) {
+		for (int i = 0; i < (int)FontType::Count; i++) {
 			_fonts[i] = nullptr;
 		}
 
-		for (int i = 0; i < (int)PrecompiledShader::Unknown; i++) {
+		for (int i = 0; i < (int)PrecompiledShader::Count; i++) {
 			_precompiledShaders[i] = nullptr;
 		}
 	}
@@ -297,11 +297,15 @@ namespace Jazz2
 			return it->second.get();
 		}
 
+		if (fs::HasExtension(path, "aura"_s)) {
+			return RequestGraphicsAura(path, paletteOffset);
+		}
+
 		auto s = fs::Open(fs::JoinPath({ "Content"_s, "Animations"_s, path + ".res"_s }), FileAccessMode::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit, also if not found try to use cache
-			return RequestGraphicsFromCache(path, paletteOffset);
+			return nullptr;
 		}
 
 		auto buffer = std::make_unique<char[]>(fileSize + 1);
@@ -414,13 +418,14 @@ namespace Jazz2
 		return nullptr;
 	}
 
-	GenericGraphicResource* ContentResolver::RequestGraphicsFromCache(const StringView& path, uint16_t paletteOffset)
+	GenericGraphicResource* ContentResolver::RequestGraphicsAura(const StringView& path, uint16_t paletteOffset)
 	{
-		if (!fs::HasExtension(path, "aura"_s)) {
-			return nullptr;
+		// Try "Content" directory first, then "Cache" directory
+		String fullPath = fs::JoinPath({ "Content"_s, "Animations"_s, path });
+		if (!fs::IsReadableFile(fullPath)) {
+			fullPath = fs::JoinPath({ "Cache"_s, "Animations"_s, path });
 		}
 
-		String fullPath = fs::JoinPath({ "Cache"_s, "Animations"_s, path });
 		auto s = fs::Open(fullPath, FileAccessMode::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize < 16 || fileSize > 64 * 1024 * 1024) {
@@ -607,7 +612,12 @@ namespace Jazz2
 
 	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(const StringView& path, bool applyPalette)
 	{
-		String fullPath = fs::JoinPath({ "Cache"_s, "Tilesets"_s, path + ".j2t"_s });
+		// Try "Content" directory first, then "Cache" directory
+		String fullPath = fs::JoinPath({ "Content"_s, "Tilesets"_s, path + ".j2t"_s });
+		if (!fs::IsReadableFile(fullPath)) {
+			fullPath = fs::JoinPath({ "Cache"_s, "Tilesets"_s, path + ".j2t"_s });
+		}
+
 		auto s = fs::Open(fullPath, FileAccessMode::Read);
 		if (!s->IsOpened()) {
 			return nullptr;
@@ -635,7 +645,7 @@ namespace Jazz2
 					_cachedMetadata.clear();
 					_cachedGraphics.clear();
 
-					for (int i = 0; i < (int)FontType::Unknown; i++) {
+					for (int i = 0; i < (int)FontType::Count; i++) {
 						_fonts[i] = nullptr;
 					}
 				}
@@ -677,20 +687,18 @@ namespace Jazz2
 
 	bool ContentResolver::LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty)
 	{
-		String fullPath = fs::JoinPath({ "Cache"_s, "Episodes"_s, path + ".j2l"_s });
+		// Try "Content" directory first, then "Cache" directory
+		String fullPath = fs::JoinPath({ "Content"_s, "Episodes"_s, path + ".j2l"_s });
+		if (!fs::IsReadableFile(fullPath)) {
+			fullPath = fs::JoinPath({ "Cache"_s, "Episodes"_s, path + ".j2l"_s });
+		}
 
 		auto s = fs::Open(fullPath, FileAccessMode::Read);
-		if (!s->IsOpened()) {
-			LOGE("Cannot open file for reading");
-			return false;
-		}
+		ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
 
 		uint64_t signature = s->ReadValue<uint64_t>();
 		uint8_t version = s->ReadValue<uint8_t>();
-		if (signature != 0x2095A59FF0BFBBEF || version != 1) {
-			LOGE("File has invalid signature");
-			return false;
-		}
+		ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && version == 1, "File has invalid signature");
 
 		// TODO: Level flags
 		uint16_t flags = s->ReadValue<uint16_t>();
@@ -787,7 +795,7 @@ namespace Jazz2
 				_cachedMetadata.clear();
 				_cachedGraphics.clear();
 
-				for (int i = 0; i < (int)FontType::Unknown; i++) {
+				for (int i = 0; i < (int)FontType::Count; i++) {
 					_fonts[i] = nullptr;
 				}
 			}
@@ -813,7 +821,7 @@ namespace Jazz2
 
 	UI::Font* ContentResolver::GetFont(FontType fontType)
 	{
-		if (fontType >= FontType::Unknown) {
+		if (fontType >= FontType::Count) {
 			return nullptr;
 		}
 
@@ -831,7 +839,7 @@ namespace Jazz2
 
 	Shader* ContentResolver::GetShader(PrecompiledShader shader)
 	{
-		if (shader >= PrecompiledShader::Unknown) {
+		if (shader >= PrecompiledShader::Count) {
 			return nullptr;
 		}
 

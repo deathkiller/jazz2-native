@@ -210,9 +210,7 @@ namespace Jazz2
 		int _maxHealth;
 		int _health;
 
-		SuspendType _suspendType;
 		Vector2i _originTile;
-
 		Metadata* _metadata;
 		ActorRenderer _renderer;
 		GraphicResource* _currentAnimation;

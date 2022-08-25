@@ -15,8 +15,8 @@ namespace Jazz2::Compatibility
 		// Skip copyright notice
 		s->Seek(180, SeekOrigin::Current);
 
-		_path = path;
-		_levelToken = fs::GetFileNameWithoutExtension(path);
+		LevelName = fs::GetFileNameWithoutExtension(path);
+		lowercaseInPlace(LevelName);
 
 		JJ2Block headerBlock(s, 262 - 180);
 
