@@ -66,7 +66,9 @@ namespace Jazz2
 
 		ApplyGravitation = 0x40,
 		IsSolidObject = 0x80,
-		SkipPerPixelCollisions = 0x100
+		SkipPerPixelCollisions = 0x100,
+
+		CollideWithSolidObjectsBelow = 0x200
 	};
 
 	DEFINE_ENUM_OPERATORS(CollisionFlags);

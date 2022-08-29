@@ -37,7 +37,7 @@ namespace Jazz2::Actors::Enemies
 	Task<bool> TurtleShell::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		SetHealthByDifficulty(1);
-		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
+		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions | CollisionFlags::CollideWithSolidObjects | CollisionFlags::CollideWithSolidObjectsBelow;
 
 		_scoreValue = 100;
 

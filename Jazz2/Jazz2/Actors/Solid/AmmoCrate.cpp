@@ -21,7 +21,6 @@ namespace Jazz2::Actors::Solid
 	Task<bool> AmmoCrate::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		Movable = true;
-		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
 
 		WeaponType weaponType = (WeaponType)details.Params[0];
 		if (weaponType != WeaponType::Blaster) {

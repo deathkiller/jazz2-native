@@ -20,7 +20,6 @@ namespace Jazz2::Actors::Solid
 	Task<bool> GemBarrel::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		Movable = true;
-		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
 
 		uint8_t eventParam = 0;
 		AddContent(EventType::Gem, details.Params[0], &eventParam, sizeof(eventParam));

@@ -20,7 +20,6 @@ namespace Jazz2::Actors::Solid
 	Task<bool> CrateContainer::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		Movable = true;
-		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
 
 		EventType eventType = (EventType)*(uint16_t*)&details.Params[0];
 		int count = details.Params[2];

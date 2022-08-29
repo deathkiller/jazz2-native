@@ -1032,7 +1032,7 @@ namespace Jazz2
 			return;
 		}
 
-		if ((CollisionFlags & CollisionFlags::SkipPerPixelCollisions) == CollisionFlags::None) {
+		if ((CollisionFlags & CollisionFlags::SkipPerPixelCollisions) != CollisionFlags::SkipPerPixelCollisions) {
 			GraphicResource* res = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
 			if (res == nullptr) {
 				return;

@@ -600,10 +600,10 @@ namespace Jazz2::Actors
 
 							_isLifting = false;
 							_controllable = false;
-							_jumpTime = 40.0f;
+							_jumpTime = 12.0f;
 
 							_speed.Y = -3.0f;
-							_internalForceY = 0.86f;
+							_internalForceY = 0.88f;
 
 							CollisionFlags &= ~CollisionFlags::CollideWithSolidObjects;
 
@@ -724,7 +724,7 @@ namespace Jazz2::Actors
 						if (_jumpTime <= 0.0f) {
 							PlaySfx("Jump"_s);
 						}
-						_jumpTime = 40.0f;
+						_jumpTime = 12.0f;
 						//_carryingObject = nullptr;
 
 						// Gravitation is sometimes off because of active copter, turn it on again

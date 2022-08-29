@@ -220,10 +220,12 @@
     <ClInclude Include="Jazz2\Actors\Enemies\Caterpillar.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Dragonfly.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\LabRat.h" />
+    <ClInclude Include="Jazz2\Actors\Enemies\Lizard.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\MadderHatter.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Sucker.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\SuckerFloat.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\TurtleShell.h" />
+    <ClInclude Include="Jazz2\Actors\Enemies\TurtleTough.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Witch.h" />
     <ClInclude Include="Jazz2\Actors\Environment\AmbientSound.h" />
     <ClInclude Include="Jazz2\Actors\Environment\Bomb.h" />
@@ -479,10 +481,12 @@
     <ClCompile Include="Jazz2\Actors\Enemies\Caterpillar.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Dragonfly.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\LabRat.cpp" />
+    <ClCompile Include="Jazz2\Actors\Enemies\Lizard.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\MadderHatter.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Sucker.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\SuckerFloat.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\TurtleShell.cpp" />
+    <ClCompile Include="Jazz2\Actors\Enemies\TurtleTough.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Witch.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\AmbientSound.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\Bomb.cpp" />

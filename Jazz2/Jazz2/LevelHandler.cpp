@@ -646,6 +646,11 @@ namespace Jazz2
 					return true;
 				}
 
+				if ((self->CollisionFlags & CollisionFlags::CollideWithSolidObjectsBelow) == CollisionFlags::CollideWithSolidObjectsBelow &&
+					self->AABBInner.B > (actor->AABBInner.T + actor->AABBInner.B) * 0.5f) {
+					return true;
+				}
+
 				Actors::SolidObjectBase* solidObject = dynamic_cast<Actors::SolidObjectBase*>(actor);
 				if (solidObject == nullptr || !solidObject->IsOneWay || params.Downwards) {
 					std::shared_ptr selfShared = self->shared_from_this();

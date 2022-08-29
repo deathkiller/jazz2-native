@@ -5,6 +5,7 @@
 #include "../../Tiles/TileMap.h"
 #include "../Weapons/ShotBase.h"
 #include "../Player.h"
+#include "../Solid/PushableBox.h"
 
 #include "../../../nCine/Base/Random.h"
 
@@ -50,7 +51,7 @@ namespace Jazz2::Actors::Enemies
 			return false;
 		}
 
-		AABBf aabbDir = AABBInner + Vector2f(x + direction * (AABBInner.R - AABBInner.L) * 0.5f, y + 12);
+		AABBf aabbDir = AABBInner + Vector2f(x + direction * (AABBInner.R - AABBInner.L) * 0.5f, y + 12.0f);
 
 		uint8_t* eventParams;
 		auto events = _levelHandler->EventMap();
@@ -106,7 +107,13 @@ namespace Jazz2::Actors::Enemies
 			} /*else if (auto shotTnt = dynamic_cast<Weapons::ShotTNT*>(other.get())) {
 				DecreaseHealth(5, shotTnt);
 				return true;
-			}*/
+			}*/ else if (auto pushableBox = dynamic_cast<Solid::PushableBox*>(other.get())) {
+				if (pushableBox->GetSpeed().Y > 0.0f && pushableBox->AABBInner.B < _pos.Y) {
+					_lastHitDir = LastHitDirection::Up;
+					DecreaseHealth(10, pushableBox);
+					return true;
+				}
+			}
 		}
 
 		return ActorBase::OnHandleCollision(other);

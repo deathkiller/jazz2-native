@@ -9,7 +9,8 @@ namespace Jazz2::Actors
 		IsOneWay(false),
 		Movable(false)
 	{
-		CollisionFlags |= CollisionFlags::CollideWithSolidObjects | CollisionFlags::IsSolidObject | CollisionFlags::SkipPerPixelCollisions;
+		CollisionFlags |= CollisionFlags::CollideWithSolidObjects | CollisionFlags::CollideWithSolidObjectsBelow |
+			CollisionFlags::IsSolidObject | CollisionFlags::SkipPerPixelCollisions;
 	}
 
 	bool SolidObjectBase::Push(bool left, float timeMult)

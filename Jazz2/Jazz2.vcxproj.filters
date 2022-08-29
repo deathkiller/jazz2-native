@@ -966,6 +966,12 @@
     <ClInclude Include="Jazz2\UI\Menu\ControlsSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\TurtleTough.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Lizard.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1627,6 +1633,12 @@
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\ControlsSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\TurtleTough.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Lizard.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

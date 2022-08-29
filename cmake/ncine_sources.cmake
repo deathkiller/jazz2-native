@@ -120,11 +120,13 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Dragonfly.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/EnemyBase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/LabRat.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Lizard.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/MadderHatter.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Sucker.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/SuckerFloat.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Turtle.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/TurtleShell.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/TurtleTough.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Witch.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/AmbientSound.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Bomb.cpp

@@ -24,11 +24,13 @@
 #include "../Actors/Enemies/Caterpillar.h"
 #include "../Actors/Enemies/Dragonfly.h"
 #include "../Actors/Enemies/LabRat.h"
+#include "../Actors/Enemies/Lizard.h"
 #include "../Actors/Enemies/MadderHatter.h"
 #include "../Actors/Enemies/Sucker.h"
 #include "../Actors/Enemies/SuckerFloat.h"
 #include "../Actors/Enemies/Turtle.h"
 #include "../Actors/Enemies/TurtleShell.h"
+#include "../Actors/Enemies/TurtleTough.h"
 #include "../Actors/Enemies/Witch.h"
 
 #include "../Actors/Lighting/FlickerLight.h"
@@ -97,9 +99,9 @@ namespace Jazz2::Events
 
 		// Enemies
 		RegisterSpawnable<Enemies::Turtle>(EventType::EnemyTurtle);
-		/*RegisterSpawnable(EventType::EnemyLizard, Lizard.Create, Lizard.Preload);
-		RegisterSpawnable(EventType::EnemyLizardFloat, LizardFloat.Create, LizardFloat.Preload);
-		RegisterSpawnable(EventType::EnemyDragon, Dragon.Create, Dragon.Preload);*/
+		RegisterSpawnable<Enemies::Lizard>(EventType::EnemyLizard);
+		//RegisterSpawnable(EventType::EnemyLizardFloat, LizardFloat.Create, LizardFloat.Preload);
+		//RegisterSpawnable(EventType::EnemyDragon, Dragon.Create, Dragon.Preload);
 		RegisterSpawnable<Enemies::SuckerFloat>(EventType::EnemySuckerFloat);
 		RegisterSpawnable<Enemies::Sucker>(EventType::EnemySucker);
 		RegisterSpawnable<Enemies::LabRat>(EventType::EnemyLabRat);
@@ -119,10 +121,10 @@ namespace Jazz2::Events
 		RegisterSpawnable<Enemies::Dragonfly>(EventType::EnemyDragonfly);
 		//RegisterSpawnable(EventType::EnemyFish, Fish.Create, Fish.Preload);
 		RegisterSpawnable<Enemies::MadderHatter>(EventType::EnemyMadderHatter);
-		/*RegisterSpawnable(EventType::EnemyRaven, Raven.Create, Raven.Preload);
-		RegisterSpawnable(EventType::EnemySkeleton, Skeleton.Create, Skeleton.Preload);
-		RegisterSpawnable(EventType::EnemyTurtleTough, TurtleTough.Create, TurtleTough.Preload);
-		RegisterSpawnable(EventType::EnemyTurtleTube, TurtleTube.Create, TurtleTube.Preload);*/
+		//RegisterSpawnable(EventType::EnemyRaven, Raven.Create, Raven.Preload);
+		//RegisterSpawnable(EventType::EnemySkeleton, Skeleton.Create, Skeleton.Preload);
+		RegisterSpawnable<Enemies::TurtleTough>(EventType::EnemyTurtleTough);
+		//RegisterSpawnable(EventType::EnemyTurtleTube, TurtleTube.Create, TurtleTube.Preload);
 		RegisterSpawnable<Enemies::Witch>(EventType::EnemyWitch);
 
 		RegisterSpawnable<Enemies::TurtleShell>(EventType::TurtleShell);

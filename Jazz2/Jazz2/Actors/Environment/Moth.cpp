@@ -70,8 +70,8 @@ namespace Jazz2::Actors::Environment
 				SetState(ActorFlags::CanJump, false);
 
 				_direction = (Random().NextBool() ? -1 : 1);
-				_speed.X = Random().NextFloat(0.0f, -1.4f) * _direction;
-				_speed.Y = Random().NextFloat(0.0f, -0.4f);
+				_speed.X = Random().NextFloat(-1.4f, 0.0f) * _direction;
+				_speed.Y = Random().NextFloat(-0.4f, 0.0f);
 
 				_renderer.AnimPaused = false;
 			}

@@ -28,7 +28,6 @@ namespace Jazz2::Actors::Solid
 		}
 
 		Movable = true;
-		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
 
 		co_await RequestMetadataAsync("Object/TriggerCrate"_s);
 
