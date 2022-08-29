@@ -432,7 +432,6 @@ namespace Jazz2::Actors
 		// Controls
 		// Move
 		if (_keepRunningTime <= 0.0f) {
-#if !SERVER
 			bool canWalk = (_controllable && _controllableExternal && !_isLifting && _suspendType != SuspendType::SwingingVine &&
 				(_playerType != PlayerType::Frog || !_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Fire)));
 
@@ -476,9 +475,7 @@ namespace Jazz2::Actors
 				if (GetState(ActorFlags::CanJump)) {
 					_wasUpPressed = _wasDownPressed = false;
 				}
-			} else
-#endif
-			{
+			} else {
 				_speed.X = std::max((std::abs(_speed.X) - Deceleration * timeMult), 0.0f) * (_speed.X < 0.0f ? -1.0f : 1.0f);
 				_isActivelyPushing = false;
 
@@ -502,7 +499,6 @@ namespace Jazz2::Actors
 			}
 		}
 
-#if !SERVER
 		if (!_controllable || !_controllableExternal) {
 			// Weapons are automatically disabled if player is not controllable
 			if (_weaponToasterSound != nullptr) {
@@ -798,10 +794,6 @@ namespace Jazz2::Actors
 				_weaponToasterSound = nullptr;
 			}
 		}
-#endif
-
-
-
 
 		if (_controllable && _controllableExternal && _playerType != PlayerType::Frog) {
 			bool isGamepad;
@@ -1523,6 +1515,7 @@ namespace Jazz2::Actors
 					_renderer.setRotation(std::clamp(angle, -fPiOver3, fPiOver3));
 				}
 
+				// Adjust swimming animation speed
 				if (_currentTransitionState == AnimState::Idle) {
 					_renderer.AnimDuration = std::max(_currentAnimation->FrameDuration + 1.0f - Vector2f(_speed.X, _speed.Y).Length() * 0.26f, 0.4f);
 				}
@@ -1553,6 +1546,11 @@ namespace Jazz2::Actors
 				float y = _levelHandler->WaterLevel();
 				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, y, _renderer.layer() + 2), Explosion::Type::WaterSplash);
 				_levelHandler->PlayCommonSfx("WaterSplash"_s, Vector3f(_pos.X, y, 0.0f), 0.7f, 0.5f);
+			}
+
+			// Adjust walking animation speed
+			if (_currentAnimationState == AnimState::Walk && _currentTransitionState == AnimState::Idle) {
+				_renderer.AnimDuration = _currentAnimation->FrameDuration * (1.8f - 0.8f * std::min(std::abs(_speed.X), MaxRunningSpeed) / MaxRunningSpeed);
 			}
 		}
 	}

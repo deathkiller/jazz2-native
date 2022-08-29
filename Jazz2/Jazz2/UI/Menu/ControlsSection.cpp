@@ -41,14 +41,14 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (_waitForInput) {
-			if (_root->ActionHit(PlayerActions::Menu)) {
+			auto& input = theApplication().inputManager();
+			auto& keyState = input.keyboardState();
+
+			if (keyState.isKeyDown(KeySym::ESCAPE)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_waitForInput = false;
 				return;
 			}
-
-			auto& input = theApplication().inputManager();
-			auto& keyState = input.keyboardState();
 
 			switch (_selectedColumn) {
 				case 0: // Keyboard
@@ -74,27 +74,23 @@ namespace Jazz2::UI::Menu
 
 				case 2: // Gamepad
 					for (int i = 0, jc = 0; i < IInputManager::MaxNumJoysticks && _waitForInput; i++) {
-						if (input.isJoyPresent(i)) {
-							const int numButtons = input.joyNumButtons(i);
-							const int numAxes = input.joyNumAxes(i);
-							if (numButtons >= 4 && numAxes >= 2) {
-								auto& joyState = input.joystickState(i);
-								for (int j = 0; j < numButtons; j++) {
-									if (joyState.isButtonPressed(j)) {
-										auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int)PlayerActions::Count + _selectedIndex];
+						if (input.isJoyPresent(i) && input.isJoyMapped(i)) {
+							auto& joyState = input.joyMappedState(i);
+							for (int j = 0; j < JoyMappedState::NumButtons; j++) {
+								if (joyState.isButtonPressed((ButtonName)j)) {
+									auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int)PlayerActions::Count + _selectedIndex];
 
-										mapping.GamepadIndex = jc;
-										mapping.GamepadButton = (ButtonName)j;
+									mapping.GamepadIndex = jc;
+									mapping.GamepadButton = (ButtonName)j;
 
-										_root->PlaySfx("MenuSelect"_s, 0.5f);
-										_waitForInput = false;
-										_delay = 10.0f;
-										RefreshCollisions();
-										break;
-									}
+									_root->PlaySfx("MenuSelect"_s, 0.5f);
+									_waitForInput = false;
+									_delay = 10.0f;
+									RefreshCollisions();
+									break;
 								}
-								jc++;
 							}
+							jc++;
 						}
 					}
 					break;

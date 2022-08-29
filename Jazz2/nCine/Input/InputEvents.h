@@ -203,10 +203,6 @@ namespace nCine
 		virtual short int axisValue(int axisId) const = 0;
 		/// Returns a normalized value between -1.0 and 1.0 for a joystick axis
 		virtual float axisNormValue(int axisId) const = 0;
-
-		bool isButtonPressed(ButtonName buttonName) const {
-			return isButtonPressed((int)buttonName);
-		}
 	};
 
 	/// Information about a joystick button event

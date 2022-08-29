@@ -1208,15 +1208,11 @@ namespace Jazz2
 		}
 
 		// Try to get 8 connected joysticks
-		const JoystickState* joyStates[8];
+		const JoyMappedState* joyStates[8];
 		int jc = 0;
 		for (int i = 0; i < IInputManager::MaxNumJoysticks && jc < _countof(joyStates); i++) {
-			if (input.isJoyPresent(i)) {
-				const int numButtons = input.joyNumButtons(i);
-				const int numAxes = input.joyNumAxes(i);
-				if (numButtons >= 4 && numAxes >= 2) {
-					joyStates[jc++] = &input.joystickState(i);
-				}
+			if (input.isJoyPresent(i) && input.isJoyMapped(i)) {
+				joyStates[jc++] = &input.joyMappedState(i);
 			}
 		}
 
@@ -1241,8 +1237,12 @@ namespace Jazz2
 
 		// Use analog controls only if all movement buttons are mapped to the same joystick
 		if (ji1 == ji2 && ji2 == ji3 && ji3 == ji4 && ji1 >= 0 && ji1 < jc) {
-			_playerRequiredMovement.X = joyStates[ji1]->axisNormValue(0);
-			_playerRequiredMovement.Y = joyStates[ji1]->axisNormValue(1);
+			_playerRequiredMovement.X = joyStates[ji1]->axisValue(AxisName::LX);
+			_playerRequiredMovement.Y = joyStates[ji1]->axisValue(AxisName::LY);
+			input.deadZoneNormalize(_playerRequiredMovement, 0.05f);
+		} else {
+			_playerRequiredMovement.X = 0.0f;
+			_playerRequiredMovement.Y = 0.0f;
 		}
 
 		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Jump, ji1);

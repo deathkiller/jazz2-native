@@ -361,9 +361,9 @@ namespace nCine
 	{
 		deadZoneValue = std::clamp(deadZoneValue, 0.0f, 1.0f);
 
-		if (joyVector.Length() <= deadZoneValue)
+		if (joyVector.Length() <= deadZoneValue) {
 			joyVector = Vector2f::Zero;
-		else {
+		} else {
 			float normalizedLength = (joyVector.Length() - deadZoneValue) / (1.0f - deadZoneValue);
 			normalizedLength = std::clamp(normalizedLength, 0.0f, 1.0f);
 			joyVector = joyVector.Normalize() * normalizedLength;

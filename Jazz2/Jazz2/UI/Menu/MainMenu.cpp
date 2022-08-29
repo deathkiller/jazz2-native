@@ -330,56 +330,52 @@ namespace Jazz2::UI::Menu
 		}
 
 		// Try to get 8 connected joysticks
-		const JoystickState* joyStates[8];
+		const JoyMappedState* joyStates[8];
 		int jc = 0;
 		for (int i = 0; i < IInputManager::MaxNumJoysticks && jc < _countof(joyStates); i++) {
-			if (input.isJoyPresent(i)) {
-				const int numButtons = input.joyNumButtons(i);
-				const int numAxes = input.joyNumAxes(i);
-				if (numButtons >= 4 && numAxes >= 2) {
-					joyStates[jc++] = &input.joystickState(i);
-				}
+			if (input.isJoyPresent(i) && input.isJoyMapped(i)) {
+				joyStates[jc++] = &input.joyMappedState(i);
 			}
 		}
 
 		ButtonName jb; int ji1, ji2, ji3, ji4;
 
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Left, ji1);
+		jb = ControlScheme::Gamepad(0, PlayerActions::Left, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
 			_pressedActions |= (1 << (int)PlayerActions::Left);
 		}
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Right, ji2);
+		jb = ControlScheme::Gamepad(0, PlayerActions::Right, ji2);
 		if (ji2 >= 0 && ji2 < jc && joyStates[ji2]->isButtonPressed(jb)) {
 			_pressedActions |= (1 << (int)PlayerActions::Right);
 		}
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Up, ji3);
+		jb = ControlScheme::Gamepad(0, PlayerActions::Up, ji3);
 		if (ji3 >= 0 && ji3 < jc && joyStates[ji3]->isButtonPressed(jb)) {
 			_pressedActions |= (1 << (int)PlayerActions::Up);
 		}
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Down, ji4);
+		jb = ControlScheme::Gamepad(0, PlayerActions::Down, ji4);
 		if (ji4 >= 0 && ji4 < jc && joyStates[ji4]->isButtonPressed(jb)) {
 			_pressedActions |= (1 << (int)PlayerActions::Down);
 		}
 
 		// Use analog controls only if all movement buttons are mapped to the same joystick
 		if (ji1 == ji2 && ji2 == ji3 && ji3 == ji4 && ji1 >= 0 && ji1 < jc) {
-			float x = joyStates[ji1]->axisNormValue(0);
-			float y = joyStates[ji1]->axisNormValue(1);
+			float x = joyStates[ji1]->axisValue(AxisName::LX);
+			float y = joyStates[ji1]->axisValue(AxisName::LY);
 
-			if (x < -0.8f) {
+			if (x < -0.6f) {
 				_pressedActions |= (1 << (int)PlayerActions::Left);
-			} else if (x > 0.8f) {
+			} else if (x > 0.6f) {
 				_pressedActions |= (1 << (int)PlayerActions::Right);
 			}
-			if (y < -0.8f) {
+			if (y < -0.6f) {
 				_pressedActions |= (1 << (int)PlayerActions::Up);
-			} else if (y > 0.8f) {
+			} else if (y > 0.6f) {
 				_pressedActions |= (1 << (int)PlayerActions::Down);
 			}
 		}
 
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Jump, ji1);
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Fire, ji2);
+		jb = ControlScheme::Gamepad(0, PlayerActions::Jump, ji1);
+		jb = ControlScheme::Gamepad(0, PlayerActions::Fire, ji2);
 		if (ji1 == ji2) ji2 = -1;
 
 		if ((ji1 >= 0 && ji1 < jc && (joyStates[ji1]->isButtonPressed(ButtonName::A) || joyStates[ji1]->isButtonPressed(ButtonName::X))) ||
@@ -392,8 +388,8 @@ namespace Jazz2::UI::Menu
 			_pressedActions |= (1 << (int)PlayerActions::Menu);
 		}
 
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::SwitchWeapon, ji1);
-		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
+		jb = ControlScheme::Gamepad(0, PlayerActions::SwitchWeapon, ji1);
+		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(ButtonName::Y)) {
 			_pressedActions |= (1 << (int)PlayerActions::SwitchWeapon);
 		}
 	}
