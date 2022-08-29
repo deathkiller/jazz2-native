@@ -247,9 +247,10 @@ namespace nCine
 			case SDL_FINGERMOTION:
 			case SDL_FINGERUP:
 				touchEvent_.count = SDL_GetNumTouchFingers(event.tfinger.touchId);
+				touchEvent_.actionIndex = event.tfinger.fingerId;
 
 				switch (event.type) {
-					case SDL_FINGERDOWN: touchEvent_.type = (touchEvent_.count == 0 ? TouchEventType::Down : TouchEventType::PointerDown); break;
+					case SDL_FINGERDOWN: touchEvent_.type = (touchEvent_.count == 1 ? TouchEventType::Down : TouchEventType::PointerDown); break;
 					case SDL_FINGERMOTION: touchEvent_.type = TouchEventType::Move; break;
 					case SDL_FINGERUP: touchEvent_.type = (touchEvent_.count == 0 ? TouchEventType::Up : TouchEventType::PointerUp); break;
 				}
@@ -258,8 +259,8 @@ namespace nCine
 					SDL_Finger* finger = SDL_GetTouchFinger(event.tfinger.touchId, i);
 					TouchEvent::Pointer& pointer = touchEvent_.pointers[i];
 					pointer.id = static_cast<int>(finger->id);
-					pointer.x = theApplication().width() * finger->x;
-					pointer.y = theApplication().height() * (1.0f - finger->y);
+					pointer.x = finger->x;
+					pointer.y = finger->y;
 					pointer.pressure = finger->pressure;
 				}
 				break;

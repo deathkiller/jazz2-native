@@ -59,6 +59,7 @@ namespace nCine
 		const unsigned int minBatchSize = theApplication().renderingSettings().minBatchSize;
 		const unsigned int maxBatchSize = theApplication().renderingSettings().maxBatchSize;
 #endif
+		ASSERT(maxBatchSize >= minBatchSize);
 
 		unsigned int lastSplit = 0;
 
@@ -89,30 +90,36 @@ namespace nCine
 			// Also collect the very last command if it can be batched with the previous one
 			unsigned int endSplit = (i == srcQueue.size() - 1 && !shouldSplit) ? i + 1 : i;
 
-			const unsigned int batchSize = endSplit - lastSplit;
 			// Split point if last command or split condition
-			if (i == srcQueue.size() - 1 || shouldSplit || batchSize > maxBatchSize - 1) {
+			if (i == srcQueue.size() - 1 || shouldSplit) {
 				const GLShaderProgram* batchedShader = RenderResources::batchedShader(prevCommand->material().shaderProgram());
-				if (batchedShader && batchSize >= minBatchSize) {
-					SmallVectorImpl<RenderCommand*>::const_iterator start = srcQueue.begin() + lastSplit;
-					SmallVectorImpl<RenderCommand*>::const_iterator end = srcQueue.begin() + endSplit;
-					while (start != end) {
+				if (batchedShader && (endSplit - lastSplit) >= minBatchSize) {
+					// Split point for the maximum batch size
+					while (lastSplit < endSplit) {
+						const unsigned int batchSize = endSplit - lastSplit;
+						unsigned int nextSplit = endSplit;
+						if (batchSize > maxBatchSize)
+							nextSplit = lastSplit + maxBatchSize;
+						else if (batchSize < minBatchSize)
+							break;
+						
+						SmallVectorImpl<RenderCommand*>::const_iterator start = srcQueue.begin() + lastSplit;
+						SmallVectorImpl<RenderCommand*>::const_iterator end = srcQueue.begin() + nextSplit;
+
 						// Handling early splits while collecting (not enough UBO free space)
 						RenderCommand* batchCommand = collectCommands(start, end, start);
 						destQueue.push_back(batchCommand);
+						lastSplit = start - srcQueue.begin();
 					}
-
-					// If the very last command can't be part of this batch, it has to passthrough now
-					if (i == srcQueue.size() - 1 && shouldSplit)
-						destQueue.push_back(srcQueue[i]);
-				} else {
-					// Also collect the very last command
-					endSplit = (i == srcQueue.size() - 1) ? i + 1 : i;
-
-					// Passthrough for unsupported types
-					for (unsigned int j = lastSplit; j < endSplit; j++)
-						destQueue.push_back(srcQueue[j]);
 				}
+
+				// Also collect the very last command
+				endSplit = (i == srcQueue.size() - 1) ? i + 1 : i;
+
+				// Passthrough for unsupported command types and for the last few commands that are less than the minimum batch size
+				for (unsigned int j = lastSplit; j < endSplit; j++)
+					destQueue.push_back(srcQueue[j]);
+
 				lastSplit = endSplit;
 			}
 		}
@@ -211,8 +218,7 @@ namespace nCine
 
 			GLUniformBlockCache* batchBlock = batchCommand->material().uniformBlock(uniformBlockName);
 			const bool dataCopied = batchBlock->copyData(uniformBlockCache.dataPointer());
-			// TODO: There is something wrong
-			//ASSERT(dataCopied);
+			ASSERT(dataCopied);
 			batchBlock->setUsedSize(uniformBlockCache.usedSize());
 		}
 
@@ -298,8 +304,7 @@ namespace nCine
 
 			const GLUniformBlockCache* singleInstanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 			const bool dataCopied = instancesBlock->copyData(instancesBlockOffset, singleInstanceBlock->dataPointer(), singleInstanceBlockSize);
-			// TODO: There is something wrong
-			//ASSERT(dataCopied);
+			ASSERT(dataCopied);
 			instancesBlockOffset += singleInstanceBlockSize;
 
 			if (batchedShaderHasAttributes) {
