@@ -960,6 +960,12 @@
     <ClInclude Include="nCine\Input\SdlInputManager.h">
       <Filter>Header Files\nCine\Input</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\ControlScheme.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\ControlsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1614,6 +1620,12 @@
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\InGameMenu.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\ControlScheme.cpp">
+      <Filter>Source Files\Jazz2\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\ControlsSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
   </ItemGroup>

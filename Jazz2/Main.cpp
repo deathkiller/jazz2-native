@@ -19,6 +19,7 @@
 #include "Jazz2/IRootController.h"
 #include "Jazz2/ContentResolver.h"
 #include "Jazz2/LevelHandler.h"
+#include "Jazz2/UI/ControlScheme.h"
 #include "Jazz2/UI/Menu/MainMenu.h"
 
 #include "Jazz2/Compatibility/JJ2Anims.h"
@@ -219,9 +220,14 @@ void GameEventHandler::onInit()
 	//theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
 #endif
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
-	//theApplication().inputManager().addJoyMappingsFromFile(fs::joinPath({ "Content"_s, "gamecontrollerdb.txt"_s }));
+#if defined(DEATH_TARGET_WINDOWS)
+	//String mappingsPath = fs::JoinPath("Content"_s, "gamecontrollerdb.txt"_s);
+	//if (fs::IsReadableFile(mappingsPath)) {
+	//	theApplication().inputManager().addJoyMappingsFromFile(mappingsPath);
+	//}
 #endif
+
+	Jazz2::UI::ControlScheme::Initialize();
 
 	_isVerified = RefreshCache();
 

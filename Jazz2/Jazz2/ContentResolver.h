@@ -194,7 +194,6 @@ namespace Jazz2
 		static constexpr int ColorsPerPalette = 256;
 		static constexpr int InvalidValue = INT_MAX;
 
-		ContentResolver();
 		~ContentResolver();
 		
 		void Release();
@@ -221,6 +220,7 @@ namespace Jazz2
 		static ContentResolver& Current();
 
 	private:
+		ContentResolver();
 		/// Deleted copy constructor
 		ContentResolver(const ContentResolver&) = delete;
 		/// Deleted assignment operator

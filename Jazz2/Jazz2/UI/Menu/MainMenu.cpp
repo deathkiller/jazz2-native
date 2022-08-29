@@ -1,4 +1,5 @@
 ﻿#include "MainMenu.h"
+#include "../ControlScheme.h"
 #include "BeginSection.h"
 
 #include "../../../nCine/Application.h"
@@ -304,61 +305,96 @@ namespace Jazz2::UI::Menu
 
 		_pressedActions = ((_pressedActions & 0xffff) << 16);
 
-		if (keyState.isKeyDown(KeySym::LEFT)) {
+		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Left)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Left))) {
 			_pressedActions |= (1 << (int)PlayerActions::Left);
 		}
-		if (keyState.isKeyDown(KeySym::RIGHT)) {
+		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Right)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Right))) {
 			_pressedActions |= (1 << (int)PlayerActions::Right);
 		}
-		if (keyState.isKeyDown(KeySym::UP)) {
+		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Up)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Up))) {
 			_pressedActions |= (1 << (int)PlayerActions::Up);
 		}
-		if (keyState.isKeyDown(KeySym::DOWN)) {
+		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Down)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Down))) {
 			_pressedActions |= (1 << (int)PlayerActions::Down);
 		}
-		if (keyState.isKeyDown(KeySym::RETURN) || keyState.isKeyDown(KeySym::SPACE) || keyState.isKeyDown(KeySym::V) || keyState.isKeyDown(KeySym::C)) {
+		// Also allow Return (Enter) as confirm key
+		if (keyState.isKeyDown(KeySym::RETURN) || keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Fire)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Fire)) || keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Jump)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Jump))) {
 			_pressedActions |= (1 << (int)PlayerActions::Fire);
 		}
-		if (keyState.isKeyDown(KeySym::ESCAPE)) {
+		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Menu)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Menu))) {
 			_pressedActions |= (1 << (int)PlayerActions::Menu);
 		}
+		// Use SwitchWeapon action as Delete key
+		if (keyState.isKeyDown(KeySym::DELETE)) {
+			_pressedActions |= (1 << (int)PlayerActions::SwitchWeapon);
+		}
 
-		int firstJoy = -1;
-		for (int i = 0; i < IInputManager::MaxNumJoysticks; i++) {
+		// Try to get 8 connected joysticks
+		const JoystickState* joyStates[8];
+		int jc = 0;
+		for (int i = 0; i < IInputManager::MaxNumJoysticks && jc < _countof(joyStates); i++) {
 			if (input.isJoyPresent(i)) {
 				const int numButtons = input.joyNumButtons(i);
 				const int numAxes = input.joyNumAxes(i);
 				if (numButtons >= 4 && numAxes >= 2) {
-					firstJoy = i;
-					break;
+					joyStates[jc++] = &input.joystickState(i);
 				}
 			}
 		}
 
-		if (firstJoy >= 0) {
-			const auto& joyState = input.joystickState(firstJoy);
-			float x = joyState.axisNormValue(0);
-			float y = joyState.axisNormValue(1);
+		ButtonName jb; int ji1, ji2, ji3, ji4;
 
-			if (joyState.isButtonPressed(ButtonName::DPAD_LEFT) || x < -0.8f) {
+		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Left, ji1);
+		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
+			_pressedActions |= (1 << (int)PlayerActions::Left);
+		}
+		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Right, ji2);
+		if (ji2 >= 0 && ji2 < jc && joyStates[ji2]->isButtonPressed(jb)) {
+			_pressedActions |= (1 << (int)PlayerActions::Right);
+		}
+		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Up, ji3);
+		if (ji3 >= 0 && ji3 < jc && joyStates[ji3]->isButtonPressed(jb)) {
+			_pressedActions |= (1 << (int)PlayerActions::Up);
+		}
+		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Down, ji4);
+		if (ji4 >= 0 && ji4 < jc && joyStates[ji4]->isButtonPressed(jb)) {
+			_pressedActions |= (1 << (int)PlayerActions::Down);
+		}
+
+		// Use analog controls only if all movement buttons are mapped to the same joystick
+		if (ji1 == ji2 && ji2 == ji3 && ji3 == ji4 && ji1 >= 0 && ji1 < jc) {
+			float x = joyStates[ji1]->axisNormValue(0);
+			float y = joyStates[ji1]->axisNormValue(1);
+
+			if (x < -0.8f) {
 				_pressedActions |= (1 << (int)PlayerActions::Left);
-			}
-			if (joyState.isButtonPressed(ButtonName::DPAD_RIGHT) || x < 0.8f) {
+			} else if (x > 0.8f) {
 				_pressedActions |= (1 << (int)PlayerActions::Right);
 			}
-			if (joyState.isButtonPressed(ButtonName::DPAD_UP) || y < -0.8f) {
+			if (y < -0.8f) {
 				_pressedActions |= (1 << (int)PlayerActions::Up);
-			}
-			if (joyState.isButtonPressed(ButtonName::DPAD_DOWN) || y < 0.8f) {
+			} else if (y > 0.8f) {
 				_pressedActions |= (1 << (int)PlayerActions::Down);
 			}
+		}
 
-			if (joyState.isButtonPressed(ButtonName::A) || joyState.isButtonPressed(ButtonName::X)) {
-				_pressedActions |= (1 << (int)PlayerActions::Fire);
-			}
-			if (joyState.isButtonPressed(ButtonName::B) || joyState.isButtonPressed(ButtonName::START)) {
-				_pressedActions |= (1 << (int)PlayerActions::Menu);
-			}
+		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Jump, ji1);
+		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Fire, ji2);
+		if (ji1 == ji2) ji2 = -1;
+
+		if ((ji1 >= 0 && ji1 < jc && (joyStates[ji1]->isButtonPressed(ButtonName::A) || joyStates[ji1]->isButtonPressed(ButtonName::X))) ||
+			(ji2 >= 0 && ji2 < jc && (joyStates[ji2]->isButtonPressed(ButtonName::A) || joyStates[ji2]->isButtonPressed(ButtonName::X)))) {
+			_pressedActions |= (1 << (int)PlayerActions::Fire);
+		}
+
+		if ((ji1 >= 0 && ji1 < jc && (joyStates[ji1]->isButtonPressed(ButtonName::B) || joyStates[ji1]->isButtonPressed(ButtonName::START))) ||
+			(ji2 >= 0 && ji2 < jc && (joyStates[ji2]->isButtonPressed(ButtonName::B) || joyStates[ji2]->isButtonPressed(ButtonName::START)))) {
+			_pressedActions |= (1 << (int)PlayerActions::Menu);
+		}
+
+		jb = UI::ControlScheme::Gamepad(0, PlayerActions::SwitchWeapon, ji1);
+		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
+			_pressedActions |= (1 << (int)PlayerActions::SwitchWeapon);
 		}
 	}
 

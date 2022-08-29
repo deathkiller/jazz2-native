@@ -18,7 +18,7 @@ namespace Jazz2::UI::Menu
 		enum class Item {
 			PlayStory,
 			//PlayCustom,
-			//Settings,
+			Settings,
 			About,
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)
 			Quit,
