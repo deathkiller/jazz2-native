@@ -178,6 +178,12 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 
 #endif
 
+enum class PendingState {
+	None,
+	MainMenu,
+	LevelChange
+};
+
 class GameEventHandler : public IAppEventHandler, public IInputEventHandler, public Jazz2::IRootController
 {
 public:
@@ -192,6 +198,7 @@ public:
 	void onResizeWindow(int width, int height) override;
 	void onTouchEvent(const TouchEvent& event) override;
 
+	void GoToMainMenu() override;
 	void ChangeLevel(Jazz2::LevelInitialization&& levelInit) override;
 
 	bool IsVerified() override {
@@ -201,6 +208,7 @@ public:
 private:
 	bool _isVerified;
 	std::unique_ptr<Jazz2::IStateHandler> _currentHandler;
+	PendingState _pendingState;
 	std::unique_ptr<Jazz2::LevelInitialization> _pendingLevelChange;
 
 	bool RefreshCache();
@@ -229,6 +237,7 @@ void GameEventHandler::onInit()
 
 	_isVerified = RefreshCache();
 
+	_pendingState = PendingState::None;
 	_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this);
 	Viewport::chain().clear();
 	Vector2i res = theApplication().resolutionInt();
@@ -237,14 +246,21 @@ void GameEventHandler::onInit()
 
 void GameEventHandler::onFrameStart()
 {
-	if (_pendingLevelChange != nullptr) {
-		_currentHandler = std::make_unique<Jazz2::LevelHandler>(this, *_pendingLevelChange.get());
+	if (_pendingState != PendingState::None) {
+		switch (_pendingState) {
+			case PendingState::MainMenu:
+				_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this);
+				break;
+			case PendingState::LevelChange:
+				_currentHandler = std::make_unique<Jazz2::LevelHandler>(this, *_pendingLevelChange.get());
+				_pendingLevelChange = nullptr;
+				break;
+		}
+		_pendingState = PendingState::None;
 
 		Viewport::chain().clear();
 		Vector2i res = theApplication().resolutionInt();
 		_currentHandler->OnInitializeViewport(res.X, res.Y);
-
-		_pendingLevelChange = nullptr;
 	}
 
 	if (_currentHandler != nullptr) {
@@ -283,10 +299,16 @@ void GameEventHandler::onTouchEvent(const TouchEvent& event)
 	}
 }
 
+void GameEventHandler::GoToMainMenu()
+{
+	_pendingState = PendingState::MainMenu;
+}
+
 void GameEventHandler::ChangeLevel(Jazz2::LevelInitialization&& levelInit)
 {
 	// Level will be changed in the next frame
 	_pendingLevelChange = std::make_unique<Jazz2::LevelInitialization>(std::move(levelInit));
+	_pendingState = PendingState::LevelChange;
 }
 
 bool GameEventHandler::RefreshCache()

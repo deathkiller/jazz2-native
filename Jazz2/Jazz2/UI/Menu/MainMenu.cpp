@@ -56,6 +56,9 @@ namespace Jazz2::UI::Menu
 
 		PrepareTexturedBackground();
 
+		// Mark Fire button as already pressed to avoid some issues
+		_pressedActions = (1 << (int)PlayerActions::Fire) | (1 << ((int)PlayerActions::Fire + 16));
+
 		SwitchToSection<BeginSection>();
 	}
 

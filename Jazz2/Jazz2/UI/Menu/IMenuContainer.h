@@ -11,10 +11,10 @@ namespace Jazz2::UI::Menu
 	class IMenuContainer
 	{
 	public:
-		static constexpr uint16_t MainLayer = 100;
-		static constexpr uint16_t ShadowLayer = 80;
-		static constexpr uint16_t FontLayer = 400;
-		static constexpr uint16_t FontShadowLayer = 120;
+		static constexpr uint16_t MainLayer = 600;
+		static constexpr uint16_t ShadowLayer = 580;
+		static constexpr uint16_t FontLayer = 700;
+		static constexpr uint16_t FontShadowLayer = 620;
 
 		template<typename T>
 		void SwitchToSection()

@@ -24,7 +24,6 @@ namespace Jazz2::UI::Menu
 		InGameMenu(LevelHandler* root);
 		~InGameMenu();
 
-		void OnInitializeViewport(int width, int height);
 		void OnTouchEvent(const nCine::TouchEvent& event);
 
 		void SwitchToSectionPtr(std::unique_ptr<MenuSection> section) override;
@@ -38,6 +37,9 @@ namespace Jazz2::UI::Menu
 			float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f,
 			float speed = 0.4f, float charSpacing = 1.0f, float lineSpacing = 1.0f) override;
 		void PlaySfx(const StringView& identifier, float gain = 1.0f) override;
+
+		void ResumeGame();
+		void GoToMainMenu();
 
 	private:
 		LevelHandler* _root;
@@ -62,7 +64,6 @@ namespace Jazz2::UI::Menu
 		Font* _smallFont;
 		Font* _mediumFont;
 
-		float _logoTransition;
 		HashMap<String, SoundResource>* _sounds;
 		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
 

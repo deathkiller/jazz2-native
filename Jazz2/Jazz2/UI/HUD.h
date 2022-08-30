@@ -41,9 +41,9 @@ namespace Jazz2::UI
 
 		static constexpr uint16_t MainLayer = 100;
 		static constexpr uint16_t ShadowLayer = 80;
-		static constexpr uint16_t FontLayer = 400;
+		static constexpr uint16_t FontLayer = 200;
 		static constexpr uint16_t FontShadowLayer = 120;
-		static constexpr uint16_t TouchButtonsLayer = 900;
+		static constexpr uint16_t TouchButtonsLayer = 400;
 
 		static constexpr int32_t TouchButtonsCount = 9;
 		static constexpr float DpadLeft = 0.02f;

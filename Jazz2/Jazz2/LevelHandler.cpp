@@ -191,6 +191,10 @@ namespace Jazz2
 
 		UpdatePressedActions();
 
+		if (PlayerActionHit(0, PlayerActions::Menu) && _pauseMenu == nullptr) {
+			PauseGame();
+		}
+
 		// Destroy stopped players and resume music after Sugar Rush
 		if (_sugarRushMusic != nullptr && _sugarRushMusic->state() == IAudioPlayer::PlayerState::Stopped) {
 			_sugarRushMusic = nullptr;
@@ -226,7 +230,7 @@ namespace Jazz2
 			}
 		}*/
 
-		if (_difficulty != GameDifficulty::Multiplayer) {
+		if (_difficulty != GameDifficulty::Multiplayer && _pauseMenu == nullptr) {
 			if (!_players.empty()) {
 				auto& pos = _players[0]->GetPos();
 				int tx1 = (int)pos.X >> 5;
@@ -544,7 +548,11 @@ namespace Jazz2
 
 	void LevelHandler::OnTouchEvent(const nCine::TouchEvent& event)
 	{
-		_hud->OnTouchEvent(event, _overrideActions);
+		if (_pauseMenu != nullptr) {
+			_pauseMenu->OnTouchEvent(event);
+		} else {
+			_hud->OnTouchEvent(event, _overrideActions);
+		}
 	}
 
 	void LevelHandler::AddActor(const std::shared_ptr<ActorBase>& actor)
@@ -1306,21 +1314,59 @@ namespace Jazz2
 		_pressedActions |= _overrideActions;
 	}
 
+	void LevelHandler::PauseGame()
+	{
+		// Show in-game pause menu
+		_pauseMenu = std::make_shared<UI::Menu::InGameMenu>(this);
+		// Prevent updating of all level objects
+		_rootNode->setUpdateEnabled(false);
+
+		// Use low-pass filter on music
+		if (_music != nullptr) {
+			_music->setLowPass(0.1f);
+		}
+		// If Sugar Rush music is playing, pause it and play normal music instead
+		if (_sugarRushMusic != nullptr) {
+			_sugarRushMusic->pause();
+			if (_music != nullptr) {
+				_music->play();
+			}
+		}
+	}
+
+	void LevelHandler::ResumeGame()
+	{
+		// Resume all level objects
+		_rootNode->setUpdateEnabled(true);
+		// Hide in-game pause menu
+		_pauseMenu = nullptr;
+
+		// If Sugar Rush music was playing, resume it and pause normal music again
+		if (_sugarRushMusic != nullptr) {
+			_sugarRushMusic->play();
+			if (_music != nullptr) {
+				_music->pause();
+			}
+		}
+		if (_music != nullptr) {
+			_music->setLowPass(1.0f);
+		}
+	}
+
 #if ENABLE_POSTPROCESSING
 	bool LevelHandler::LightingRenderer::OnDraw(RenderQueue& renderQueue)
 	{
 		_renderCommandsCount = 0;
+		_emittedLightsCache.clear();
 
 		// Collect all active light emitters
-		// TODO: move this to class variable
-		SmallVector<LightEmitter, 8> emittedLights;
 		for (auto& actor : _owner->_actors) {
-			actor->OnEmitLights(emittedLights);
+			actor->OnEmitLights(_emittedLightsCache);
 		}
 
 		auto viewSize = _owner->_viewTexture->size();
 		auto viewPos = _owner->_cameraPos;
-		for (auto& light : emittedLights) {
+		for (auto& light : _emittedLightsCache) {
 			auto command = RentRenderCommand();
 			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 			instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(light.Pos.X, light.Pos.Y, light.RadiusNear / light.RadiusFar, 0.0f);

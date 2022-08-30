@@ -111,6 +111,8 @@ namespace nCine
 				if (canRegisterPlayer == false)
 					break;
 
+				updateFilters();
+
 				alSourcePlay(sourceId_);
 				state_ = PlayerState::Playing;
 

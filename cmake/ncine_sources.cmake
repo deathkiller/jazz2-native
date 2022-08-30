@@ -185,6 +185,8 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/AboutSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/BeginSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ControlsSection.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/InGameMenu.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MainMenu.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PauseSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/StartGameOptionsSection.cpp
 )

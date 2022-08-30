@@ -1,4 +1,5 @@
 ﻿#include "InGameMenu.h"
+#include "PauseSection.h"
 #include "../ControlScheme.h"
 #include "../../LevelHandler.h"
 
@@ -14,14 +15,13 @@ namespace Jazz2::UI::Menu
 	InGameMenu::InGameMenu(LevelHandler* root)
 		:
 		_root(root),
-		_logoTransition(0.0f),
 		_pressedActions(0),
 		_touchButtonsTimer(0.0f)
 	{
 		_canvas = std::make_unique<MenuCanvas>(this);
+		_canvas->setParent(root->_upscalePass.GetNode());
 
 		auto& resolver = ContentResolver::Current();
-		resolver.ApplyPalette(fs::JoinPath({ "Content"_s, "Animations"_s, "Main.palette"_s }));
 
 		Metadata* metadata = resolver.RequestMetadata("UI/MainMenu"_s);
 		if (metadata != nullptr) {
@@ -32,7 +32,10 @@ namespace Jazz2::UI::Menu
 		_smallFont = resolver.GetFont(FontType::Small);
 		_mediumFont = resolver.GetFont(FontType::Medium);
 
-		//SwitchToSection<BeginSection>();
+		// Mark Menu button as already pressed to avoid some issues
+		_pressedActions = (1 << (int)PlayerActions::Menu) | (1 << ((int)PlayerActions::Menu + 16));
+
+		SwitchToSection<PauseSection>();
 	}
 
 	InGameMenu::~InGameMenu()
@@ -42,23 +45,19 @@ namespace Jazz2::UI::Menu
 
 	void InGameMenu::MenuCanvas::OnUpdate(float timeMult)
 	{
+		Canvas::OnUpdate(timeMult);
+
 		_owner->UpdatePressedActions();
 
 		// Destroy stopped players
-		/*for (int i = (int)_playingSounds.size() - 1; i >= 0; i--) {
-			if (_playingSounds[i]->state() == IAudioPlayer::PlayerState::Stopped) {
-				_playingSounds.erase(&_playingSounds[i]);
+		for (int i = (int)_owner->_playingSounds.size() - 1; i >= 0; i--) {
+			if (_owner->_playingSounds[i]->state() == IAudioPlayer::PlayerState::Stopped) {
+				_owner->_playingSounds.erase(&_owner->_playingSounds[i]);
 			} else {
 				break;
 			}
-		}*/
-
-		if (_owner->_logoTransition < 1.0f) {
-			_owner->_logoTransition += timeMult * 0.04f;
-			if (_owner->_logoTransition > 1.0f) {
-				_owner->_logoTransition = 1.0f;
-			}
 		}
+
 		if (_owner->_touchButtonsTimer > 0.0f) {
 			_owner->_touchButtonsTimer -= timeMult;
 		}
@@ -67,34 +66,6 @@ namespace Jazz2::UI::Menu
 			auto& lastSection = _owner->_sections.back();
 			lastSection->OnUpdate(timeMult);
 		}
-	}
-
-	void InGameMenu::OnInitializeViewport(int width, int height)
-	{
-		// TODO
-		/*constexpr float defaultRatio = (float)DefaultWidth / DefaultHeight;
-		float currentRatio = (float)width / height;
-
-		int w, h;
-		if (currentRatio > defaultRatio) {
-			w = std::min(DefaultWidth, width);
-			h = (int)(w / currentRatio);
-		} else if (currentRatio < defaultRatio) {
-			h = std::min(DefaultHeight, height);
-			w = (int)(h * currentRatio);
-		} else {
-			w = std::min(DefaultWidth, width);
-			h = std::min(DefaultHeight, height);
-		}
-
-		_upscalePass.Initialize(w, h, width, height);
-
-		// Viewports must be registered in reverse order
-		_upscalePass.Register();
-
-		_canvas->setParent(_upscalePass.GetNode());
-
-		_texturedBackgroundPass.Initialize();*/
 	}
 
 	void InGameMenu::OnTouchEvent(const nCine::TouchEvent& event)
@@ -118,11 +89,14 @@ namespace Jazz2::UI::Menu
 		int charOffset = 0;
 		int charOffsetShadow = 0;
 
-		float logoScale = 1.0f + (1.0f - _owner->_logoTransition) * 7.0f;
-		float logoTextScale = 1.0f + (1.0f - _owner->_logoTransition) * 2.0f;
-		float logoTranslateX = 1.0f + (1.0f - _owner->_logoTransition) * 1.2f;
-		float logoTranslateY = (1.0f - _owner->_logoTransition) * 120.0f;
-		float logoTextTranslate = (1.0f - _owner->_logoTransition) * 60.0f;
+		constexpr float logoScale = 1.0f;
+		constexpr float logoTextScale = 1.0f;
+		constexpr float logoTranslateX = 1.0f;
+		constexpr float logoTranslateY = 0.0f;
+		constexpr float logoTextTranslate = 0.0f;
+
+		// Show blurred viewport behind
+		DrawTexture(*_owner->_root->_blurPass4.GetTarget(), Vector2f::Zero, 500, Vector2f(ViewSize.X, ViewSize.Y), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf(0.5f, 0.5f, 0.5f, 1.0f));
 
 		if (_owner->_touchButtonsTimer > 0.0f && _owner->_sections.size() >= 2) {
 			_owner->DrawElement("MenuLineArrow"_s, -1, center.X, 40.0f, ShadowLayer, Alignment::Center, Colorf::White);
@@ -151,13 +125,13 @@ namespace Jazz2::UI::Menu
 		bottomRight.X = ViewSize.X - 24.0f;
 		bottomRight.Y -= 10.0f;
 		_owner->DrawStringShadow("v1.0.0"_s, charOffset, bottomRight.X, bottomRight.Y,
-			Alignment::BottomRight, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+			Alignment::BottomRight, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
 		// Copyright
 		Vector2f bottomLeft = bottomRight;
 		bottomLeft.X = 24.0f;
 		_owner->DrawStringShadow("© 2016-2022  Dan R."_s, charOffset, bottomLeft.X, bottomLeft.Y,
-			Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+			Alignment::BottomLeft, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
 		if (!_owner->_sections.empty()) {
 			auto& lastSection = _owner->_sections.back();
@@ -231,14 +205,6 @@ namespace Jazz2::UI::Menu
 	void InGameMenu::DrawStringShadow(const StringView& text, int charOffset, float x, float y, Alignment align, const Colorf& color, float scale,
 		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
-		if (_logoTransition < 1.0f) {
-			float transitionText = (1.0f - _logoTransition) * 2.0f;
-			angleOffset += 0.5f * transitionText;
-			varianceX += 400.0f * transitionText;
-			varianceY += 400.0f * transitionText;
-			speed -= speed * 0.6f * transitionText;
-		}
-
 		int charOffsetShadow = charOffset;
 		_smallFont->DrawString(_canvas.get(), text, charOffsetShadow, x, y + 2.8f * scale, FontShadowLayer,
 			align, Colorf(0.0f, 0.0f, 0.0f, 0.29f), scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
@@ -260,6 +226,16 @@ namespace Jazz2::UI::Menu
 		} else {
 			LOGE_X("Sound effect \"%s\" was not found", identifier.data());
 		}
+	}
+
+	void InGameMenu::ResumeGame()
+	{
+		_root->ResumeGame();
+	}
+
+	void InGameMenu::GoToMainMenu()
+	{
+		_root->_root->GoToMainMenu();
 	}
 
 	bool InGameMenu::ActionHit(PlayerActions action)

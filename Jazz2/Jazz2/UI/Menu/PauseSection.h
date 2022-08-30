@@ -4,10 +4,10 @@
 
 namespace Jazz2::UI::Menu
 {
-	class BeginSection : public MenuSection
+	class PauseSection : public MenuSection
 	{
 	public:
-		BeginSection();
+		PauseSection();
 
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
@@ -17,12 +17,9 @@ namespace Jazz2::UI::Menu
 	private:
 		enum class Item {
 			PlayStory,
-			//PlayCustom,
 			Options,
-			About,
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)
-			Quit,
-#endif
+			Exit,
+
 			Count
 		};
 
@@ -34,7 +31,6 @@ namespace Jazz2::UI::Menu
 		ItemData _items[(int)Item::Count];
 		int _selectedIndex;
 		float _animation;
-		bool _isVerified;
 
 		void ExecuteSelected();
 	};

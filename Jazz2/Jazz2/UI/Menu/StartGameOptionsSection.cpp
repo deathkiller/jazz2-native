@@ -189,7 +189,7 @@ namespace Jazz2::UI::Menu
 		                _root->DrawElement("MenuGlow"_s, 0, center.X + (j - 1) * 100.0f, center.Y + 28.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (difficultyTypes[j].size() + 3) * 0.4f, 2.2f, true);
 
 		                _root->DrawStringShadow(difficultyTypes[j], charOffset, center.X + (j - 1) * 100.0f, center.Y + 28.0f, Alignment::Center,
-						   Colorf(0.501f, 0.501f, 0.501f, 0.5f), 1.0f, 0.4f, 0.55f, 0.55f, 0.8f, 0.9f);
+						   Colorf(0.45f, 0.45f, 0.45f, 0.5f), 1.0f, 0.4f, 0.55f, 0.55f, 0.8f, 0.9f);
 		            } else {
 		                _root->DrawStringShadow(difficultyTypes[j], charOffset, center.X + (j - 1) * 100.0f, center.Y + 28.0f, Alignment::Center,
 		                    Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.9f);

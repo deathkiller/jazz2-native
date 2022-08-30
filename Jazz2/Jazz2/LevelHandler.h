@@ -9,6 +9,7 @@
 #include "Tiles/TileMap.h"
 #include "Collisions/DynamicTreeBroadPhase.h"
 #include "UI/UpscaleRenderPass.h"
+#include "UI/Menu/InGameMenu.h"
 
 #include "../nCine/Graphics/Shader.h"
 #include "../nCine/Audio/AudioBufferPlayer.h"
@@ -133,6 +134,7 @@ namespace Jazz2
 			LightingRenderer(LevelHandler* owner)
 				: _owner(owner), _renderCommandsCount(0)
 			{
+				_emittedLightsCache.reserve(16);
 			}
 
 			bool OnDraw(RenderQueue& renderQueue) override;
@@ -141,6 +143,7 @@ namespace Jazz2
 			LevelHandler* _owner;
 			SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
 			int _renderCommandsCount;
+			SmallVector<LightEmitter, 0> _emittedLightsCache;
 
 			RenderCommand* RentRenderCommand();
 		};
@@ -247,6 +250,7 @@ namespace Jazz2
 		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
 		Metadata* _commonResources;
 		std::unique_ptr<UI::HUD> _hud;
+		std::shared_ptr<UI::Menu::InGameMenu> _pauseMenu;
 		std::shared_ptr<AudioBufferPlayer> _sugarRushMusic;
 
 		uint32_t _pressedActions;
@@ -261,5 +265,8 @@ namespace Jazz2
 		void InitializeCamera();
 		void UpdateCamera(float timeMult);
 		void UpdatePressedActions();
+
+		void PauseGame();
+		void ResumeGame();
 	};
 }

@@ -11,6 +11,7 @@ namespace Jazz2
 		IRootController() { }
 		virtual ~IRootController() { }
 
+		virtual void GoToMainMenu() = 0;
 		virtual void ChangeLevel(LevelInitialization&& levelInit) = 0;
 
 		virtual bool IsVerified() = 0;

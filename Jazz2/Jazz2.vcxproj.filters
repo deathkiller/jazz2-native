@@ -978,6 +978,9 @@
     <ClInclude Include="Jazz2\Actors\Environment\AirboardGenerator.h">
       <Filter>Header Files\Jazz2\Actors\Environment</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\PauseSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1651,6 +1654,9 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Environment\BirdCage.cpp">
       <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\PauseSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
