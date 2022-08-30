@@ -13,7 +13,7 @@
             "FrameRate": 6
         },
         "ShieldLaser": {
-            "Path": "Object/powerup_shield_laser.aura",
+            "Path": "Object/powerup_shield_laser.png",
             "FrameRate": 6
         },
         "ShieldLightning": {

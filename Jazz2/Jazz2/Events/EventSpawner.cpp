@@ -1,6 +1,8 @@
 ﻿#include "EventSpawner.h"
 
+#include "../Actors/Environment/AirboardGenerator.h"
 #include "../Actors/Environment/AmbientSound.h"
+#include "../Actors/Environment/BirdCage.h"
 #include "../Actors/Environment/Bomb.h"
 #include "../Actors/Environment/BonusWarp.h"
 #include "../Actors/Environment/Checkpoint.h"
@@ -159,12 +161,12 @@ namespace Jazz2::Events
 		//RegisterSpawnable(EventType::GemRing, GemRing.Create, GemRing.Preload);
 
 		RegisterSpawnable<Solid::PowerUpMorphMonitor>(EventType::PowerUpMorph);
-		/*RegisterSpawnable(EventType::BirdCage, BirdCage.Create, BirdCage.Preload);
+		RegisterSpawnable<Environment::BirdCage>(EventType::BirdCage);
 
-		RegisterSpawnable(EventType::AirboardGenerator, AirboardGenerator.Create, AirboardGenerator.Preload);
-		RegisterSpawnable(EventType::Copter, Copter.Create, Copter.Preload);
+		RegisterSpawnable<Environment::AirboardGenerator>(EventType::AirboardGenerator);
+		//RegisterSpawnable(EventType::Copter, Copter.Create, Copter.Preload);
 
-		RegisterSpawnable(EventType::RollingRock, RollingRock.Create, RollingRock.Preload);
+		/*RegisterSpawnable(EventType::RollingRock, RollingRock.Create, RollingRock.Preload);
 		RegisterSpawnable(EventType::SwingingVine, SwingingVine.Create, SwingingVine.Preload);
 
 		RegisterSpawnable(EventType::PowerUpShield, PowerUpShieldMonitor.Create, PowerUpShieldMonitor.Preload);
@@ -173,19 +175,6 @@ namespace Jazz2::Events
 		RegisterSpawnable<Collectibles::AmmoCollectible>(EventType::Ammo);
 		RegisterSpawnable<Solid::PowerUpWeaponMonitor>(EventType::PowerUpWeapon);
 		RegisterSpawnable<Collectibles::FoodCollectible>(EventType::Food);
-
-
-		// Multiplayer-only remotable actors
-		/*RegisterSpawnable(EventType::WeaponBlaster, AmmoBlaster.Create);
-		RegisterSpawnable(EventType::WeaponBouncer, AmmoBouncer.Create);
-		RegisterSpawnable(EventType::WeaponElectro, AmmoElectro.Create);
-		RegisterSpawnable(EventType::WeaponFreezer, AmmoFreezer.Create);
-		RegisterSpawnable(EventType::WeaponPepper, AmmoPepper.Create);
-		RegisterSpawnable(EventType::WeaponRF, AmmoRF.Create);
-		RegisterSpawnable(EventType::WeaponSeeker, AmmoSeeker.Create);
-		RegisterSpawnable(EventType::WeaponThunderbolt, AmmoThunderbolt.Create);
-		RegisterSpawnable(EventType::WeaponTNT, AmmoTNT.Create);
-		RegisterSpawnable(EventType::WeaponToaster, AmmoToaster.Create);*/
 	}
 
 	void EventSpawner::RegisterSpawnable(EventType type, CreateFunction create, PreloadFunction preload)

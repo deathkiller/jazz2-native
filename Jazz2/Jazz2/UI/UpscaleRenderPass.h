@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "../ContentResolver.h"
+
 #include "../../nCine/Graphics/RenderCommand.h"
 #include "../../nCine/Graphics/SceneNode.h"
 #include "../../nCine/Graphics/Camera.h"
@@ -34,6 +36,9 @@ namespace Jazz2::UI
 		std::unique_ptr<Texture> _target;
 		std::unique_ptr<Viewport> _view;
 		std::unique_ptr<Camera> _camera;
+#if defined(ALLOW_RESIZE_SHADERS)
+		Shader* _resizeShader;
+#endif
 		RenderCommand _renderCommand;
 		Vector2f _targetSize;
 	};

@@ -5,7 +5,7 @@
 
     "Animations": {
         "Empty": {
-            "Path": "Object/powerup_empty.aura",
+            "Path": "Object/powerup_empty.png",
             "FrameRate": 6
         },
 
@@ -18,7 +18,7 @@
             "FrameRate": 6
         },
         "BlasterLori": {
-            "Path": "Object/powerup_upgrade_blaster_lori.aura",
+            "Path": "Object/powerup_upgrade_blaster_lori.png",
             "FrameRate": 6
         },
         
@@ -60,7 +60,7 @@
             "FrameRate": 6
         },
         "Swap3": {
-            "Path": "Object/powerup_swap_characters_lori.aura",
+            "Path": "Object/powerup_swap_characters_lori.png",
             "FrameRate": 6
         },
         "Bird": {

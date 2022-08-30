@@ -11,7 +11,7 @@
             "Path": "Pickup/fast_fire_spaz.aura"
         },
         "WeaponBlasterLori": {
-            "Path": "Pickup/fast_fire_lori.aura"
+            "Path": "Pickup/fast_fire_lori.png"
         },
         "WeaponBouncer": {
             "Path": "Pickup/ammo_bouncer.aura"
@@ -49,7 +49,7 @@
             "Path": "UI/blaster_upgraded_spaz.aura"
         },
         "WeaponPowerUpBlasterLori": {
-            "Path": "UI/blaster_upgraded_lori.aura"
+            "Path": "UI/blaster_upgraded_lori.png"
         },
         "WeaponPowerUpBouncer": {
             "Path": "Pickup/ammo_bouncer_upgraded.aura"

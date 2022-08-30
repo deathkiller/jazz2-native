@@ -21,6 +21,11 @@
 using namespace Death::Containers;
 using namespace nCine;
 
+// TODO
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	define ALLOW_RESIZE_SHADERS
+#endif
+
 namespace Jazz2
 {
 	class LevelHandler;
@@ -183,6 +188,11 @@ namespace Jazz2
 		BatchedOutline,
 		WhiteMask,
 		BatchedWhiteMask,
+
+#if defined(ALLOW_RESIZE_SHADERS)
+		Resize3xBrz,
+		ResizeMonochrome,
+#endif
 
 		Count
 	};

@@ -280,7 +280,7 @@
             "States": [ 1024 ]
         },
         "LedgeClimb": {
-            "Path": "Jazz/unused_ledge_climb.png",
+            "Path": "Jazz/ledge_climb.png",
             "FrameRate": 8,
             "States": [ 1073741862 ]
         },
@@ -328,7 +328,7 @@
         },
 
         "SugarRush": {
-            "Path": "Common/SugarRushStars.aura"
+            "Path": "Common/sugar_rush_stars.png"
         }
     },
 

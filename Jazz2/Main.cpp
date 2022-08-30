@@ -218,13 +218,11 @@ void GameEventHandler::onInit()
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	theApplication().setAutoSuspension(false);
 	//theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
-#endif
 
-#if defined(DEATH_TARGET_WINDOWS)
-	//String mappingsPath = fs::JoinPath("Content"_s, "gamecontrollerdb.txt"_s);
-	//if (fs::IsReadableFile(mappingsPath)) {
-	//	theApplication().inputManager().addJoyMappingsFromFile(mappingsPath);
-	//}
+	String mappingsPath = fs::JoinPath("Content"_s, "gamecontrollerdb.txt"_s);
+	if (fs::IsReadableFile(mappingsPath)) {
+		theApplication().inputManager().addJoyMappingsFromFile(mappingsPath);
+	}
 #endif
 
 	Jazz2::UI::ControlScheme::Initialize();

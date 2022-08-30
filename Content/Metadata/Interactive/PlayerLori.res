@@ -314,7 +314,7 @@
         },
 
         "SugarRush": {
-            "Path": "Common/SugarRushStars.aura"
+            "Path": "Common/sugar_rush_stars.png"
         }
     },
 

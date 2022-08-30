@@ -525,7 +525,7 @@ namespace Jazz2::Compatibility
 			m.Add("Jazz"_s, "shoot_ver"_s);
 			m.Add("Jazz"_s, "shoot_end"_s);
 			m.Add("Jazz"_s, "transform_frog_end"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_ledge_climb"_s);
+			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "ledge_climb"_s);
 			m.Add("Jazz"_s, "vine_shoot_start"_s);
 			m.Add("Jazz"_s, "vine_shoot_up_end"_s);
 			m.Add("Jazz"_s, "vine_shoot_up"_s);
@@ -1007,7 +1007,7 @@ namespace Jazz2::Compatibility
 			m.Add("Spaz"_s, "shoot_ver"_s);
 			m.Add("Spaz"_s, "shoot_end"_s);
 			m.Add("Spaz"_s, "transform_frog_end"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "unused_ledge_climb"_s);
+			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "ledge_climb"_s);
 			m.Add("Spaz"_s, "vine_shoot_start"_s);
 			m.Add("Spaz"_s, "vine_shoot_up_end"_s);
 			m.Add("Spaz"_s, "vine_shoot_up"_s);
@@ -1784,7 +1784,7 @@ namespace Jazz2::Compatibility
 				m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Unknown"_s, "sugar_rush_heartbeat"_s);
 			}
 
-			m.Add("Common"_s, "SugarRush"_s);
+			m.Add("Common"_s, "sugar_rush"_s);
 
 			if (isFull) {
 				m.NextSet();

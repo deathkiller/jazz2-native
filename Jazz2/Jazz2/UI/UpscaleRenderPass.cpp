@@ -14,6 +14,9 @@ namespace Jazz2::UI
 
 		if (notInitialized) {
 			_camera = std::make_unique<Camera>();
+#if defined(ALLOW_RESIZE_SHADERS)
+			_resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::Resize3xBrz);
+#endif
 		}
 		_camera->setOrthoProjection(width * (-0.5f), width * (+0.5f), height * (-0.5f), height * (+0.5f));
 		_camera->setView(0, 0, 0, 1);
@@ -37,8 +40,12 @@ namespace Jazz2::UI
 
 		// Prepare render command
 		_renderCommand.setType(RenderCommand::CommandTypes::SPRITE);
+#if defined(ALLOW_RESIZE_SHADERS)
+		_renderCommand.material().setShader(_resizeShader);
+#else
 		_renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
-		_renderCommand.material().setBlendingEnabled(true);
+#endif
+		//_renderCommand.material().setBlendingEnabled(true);
 		_renderCommand.material().reserveUniformsDataMemory();
 		_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -61,6 +68,10 @@ namespace Jazz2::UI
 		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, -1.0f, 1.0f);
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(_targetSize.Data());
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+
+#if defined(ALLOW_RESIZE_SHADERS)
+		_renderCommand.material().uniform("uTextureSize")->setFloatValue(size.X, size.Y);
+#endif
 
 		_renderCommand.material().setTexture(0, *_target);
 

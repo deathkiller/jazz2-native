@@ -18,8 +18,6 @@ namespace Jazz2::UI::Menu
 		_pressedActions(0),
 		_touchButtonsTimer(0.0f)
 	{
-		theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection"_s);
-
 		_canvas = std::make_unique<MenuCanvas>(this);
 
 		auto& resolver = ContentResolver::Current();

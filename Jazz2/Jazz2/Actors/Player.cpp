@@ -103,8 +103,7 @@ namespace Jazz2::Actors
 		_currentWeapon = WeaponType::Blaster;
 
 		_checkpointPos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
-		// TODO
-		//_checkpointLight = _levelHandler->AmbientLightCurrent;
+		_checkpointLight = _levelHandler->GetAmbientLight();
 
 		co_return true;
 	}
@@ -331,50 +330,56 @@ namespace Jazz2::Actors
 		}
 
 		// Sugar Rush
-		/*if (_sugarRushLeft > 0.0f) {
+		if (_sugarRushLeft > 0.0f) {
 			_sugarRushLeft -= timeMult;
 
-			if (sugarRushLeft > 0.0f) {
+			if (_sugarRushLeft > 0.0f) {
 				if (_sugarRushStarsTime > 0.0f) {
 					_sugarRushStarsTime -= timeMult;
 				} else {
-					sugarRushStarsTime = MathF.Rnd.NextFloat(2.0f, 8.0f);
+					_sugarRushStarsTime = Random().NextFloat(2.0f, 8.0f);
 
 					auto tilemap = _levelHandler->TileMap();
-					if (tilemap != null) {
-						if (_availableAnimations.TryGetValue("SugarRush", out GraphicResource res)) {
-							Vector2f pos = _pos;
-							//pos.Z -= 30.0f;
+					if (tilemap != nullptr) {
+						auto it = _metadata->Graphics.find("SugarRush"_s);
+						if (it != _metadata->Graphics.end()) {
+							Vector2i texSize = it->second.Base->TextureDiffuse->size();
+							Vector2i size = it->second.Base->FrameDimensions;
+							Vector2i frameConf = it->second.Base->FrameConfiguration;
+							int frame = it->second.FrameOffset + Random().Next(0, it->second.FrameCount);
+							float speedX = Random().NextFloat(-4.0f, 4.0f);
 
-							Material material = res.Material.Res;
-							Texture texture = material.MainTexture.Res;
+							Tiles::TileMap::DestructibleDebris debris = { };
+							debris.Pos = _pos;
+							debris.Depth = _renderer.layer() - 2;
+							debris.Size = Vector2f(size.X, size.Y);
+							debris.Speed = Vector2f(speedX, Random().NextFloat(-4.0f, -2.2f));
+							debris.Acceleration = Vector2f(0.0f, 0.2f);
 
-							float speedX = MathF.Rnd.NextFloat(-1.0f, 1.0f) * MathF.Rnd.NextFloat(0.4f, 4.0f);
-							tilemap.CreateDebris(new TileMap.DestructibleDebris {
-								Pos = pos,
-								Size = res.Base.FrameDimensions,
-								Speed = new Vector2(speedX, -1f * MathF.Rnd.NextFloat(2.2f, 4.0f)),
-								Acceleration = new Vector2(0.0f, 0.2f),
+							debris.Scale = Random().NextFloat(0.1f, 0.5f);
+							debris.ScaleSpeed = -0.002f;
+							debris.Angle = Random().NextFloat(0.0f, fTwoPi);
+							debris.AngleSpeed = speedX * 0.04f;
+							debris.Alpha = 1.0f;
+							debris.AlphaSpeed = -0.018f;
 
-								Scale = MathF.Rnd.NextFloat(0.1f, 0.5f),
-								ScaleSpeed = -0.002f,
-								Angle = MathF.Rnd.NextFloat() * MathF.TwoPi,
-								AngleSpeed = speedX * 0.04f,
-								Alpha = 1f,
-								AlphaSpeed = -0.018f,
+							debris.Time = 160.0f;
 
-								Time = 160f,
+							debris.TexScaleX = (size.X / float(texSize.X));
+							debris.TexBiasX = ((float)(frame % frameConf.X) / frameConf.X);
+							debris.TexScaleY = (size.Y / float(texSize.Y));
+							debris.TexBiasY = ((float)(frame / frameConf.X) / frameConf.Y);
 
-								Material = material,
-								MaterialOffset = texture.LookupAtlas(res.FrameOffset + MathF.Rnd.Next(res.FrameCount))
-							});
+							debris.DiffuseTexture = it->second.Base->TextureDiffuse.get();
+
+							tilemap->CreateDebris(debris);
 						}
 					}
 				}
 			} else {
-				OnAnimationStarted();
+				_renderer.Initialize(ActorRendererType::Default);
 			}
-		}*/
+		}
 
 		// Copter
 		if (_activeModifier != Modifier::None) {
@@ -820,8 +825,14 @@ namespace Jazz2::Actors
 		auto& light = lights.emplace_back();
 		light.Pos = _pos;
 		light.Intensity = 1.0f;
-		light.RadiusNear = 40;
-		light.RadiusFar = 110;
+		if (_sugarRushLeft > 0.0f) {
+			light.Brightness = 0.4f;
+			light.RadiusNear = 60.0f;
+			light.RadiusFar = 180.0f;
+		} else {
+			light.RadiusNear = 40.0f;
+			light.RadiusFar = 110.0f;
+		}
 	}
 
 	bool Player::OnPerish(ActorBase* collider)
@@ -1550,7 +1561,7 @@ namespace Jazz2::Actors
 
 			// Adjust walking animation speed
 			if (_currentAnimationState == AnimState::Walk && _currentTransitionState == AnimState::Idle) {
-				_renderer.AnimDuration = _currentAnimation->FrameDuration * (1.8f - 0.8f * std::min(std::abs(_speed.X), MaxRunningSpeed) / MaxRunningSpeed);
+				_renderer.AnimDuration = _currentAnimation->FrameDuration * (1.6f - 0.6f * std::min(std::abs(_speed.X), MaxRunningSpeed) / MaxRunningSpeed);
 			}
 		}
 	}
@@ -2596,12 +2607,15 @@ namespace Jazz2::Actors
 			PlaySfx("PickupFood"_s);
 		}
 
-		// TODO
-		/*_foodEaten++;
-		if (foodEaten >= 100) {
-			foodEaten = foodEaten % 100;
-			BeginSugarRush();
-		}*/
+		_foodEaten++;
+		if (_foodEaten >= 100) {
+			_foodEaten = _foodEaten % 100;
+			if (_sugarRushLeft <= 0.0f) {
+				_sugarRushLeft = 1300.0f;
+				_renderer.Initialize(ActorRendererType::WhiteMask);
+				_levelHandler->ActivateSugarRush();
+			}
+		}
 	}
 
 	bool Player::AddAmmo(WeaponType weaponType, int16_t count)

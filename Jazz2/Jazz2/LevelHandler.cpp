@@ -42,7 +42,6 @@ namespace Jazz2
 		_cheatsUsed(levelInit.CheatsUsed),
 		_shakeDuration(0.0f),
 		_waterLevel(FLT_MAX),
-		_ambientLightDefault(1.0f),
 		_ambientLightCurrent(1.0f),
 		_ambientLightTarget(1.0f),
 #if ENABLE_POSTPROCESSING
@@ -132,6 +131,11 @@ namespace Jazz2
 		return _players;
 	}
 
+	float LevelHandler::GetAmbientLight() const
+	{
+		return _ambientLightTarget;
+	}
+
 	void LevelHandler::SetAmbientLight(float value)
 	{
 		_ambientLightTarget = value;
@@ -158,7 +162,6 @@ namespace Jazz2
 		_viewBounds = Rectf((float)_levelBounds.X, (float)_levelBounds.Y, (float)_levelBounds.W, (float)_levelBounds.H);
 		_viewBoundsTarget = _viewBounds;		
 
-		_ambientLightDefault = ambientLight;
 		_ambientLightCurrent = ambientLight;
 		_ambientLightTarget = ambientLight;
 
@@ -188,7 +191,14 @@ namespace Jazz2
 
 		UpdatePressedActions();
 
-		// Destroy stopped players
+		// Destroy stopped players and resume music after Sugar Rush
+		if (_sugarRushMusic != nullptr && _sugarRushMusic->state() == IAudioPlayer::PlayerState::Stopped) {
+			_sugarRushMusic = nullptr;
+			if (_music != nullptr) {
+				_music->play();
+			}
+		}
+
 		for (int i = (int)_playingSounds.size() - 1; i >= 0; i--) {
 			if (_playingSounds[i]->state() == IAudioPlayer::PlayerState::Stopped) {
 				_playingSounds.erase(&_playingSounds[i]);
@@ -851,6 +861,27 @@ namespace Jazz2
 
 		if (_difficulty != GameDifficulty::Multiplayer) {
 			_eventMap->RollbackToCheckpoint();
+		}
+	}
+
+	void LevelHandler::ActivateSugarRush()
+	{
+		if (_sugarRushMusic != nullptr) {
+			return;
+		}
+
+		auto it = _commonResources->Sounds.find(String::nullTerminatedView("SugarRush"_s));
+		if (it != _commonResources->Sounds.end()) {
+			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
+			_sugarRushMusic = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(it->second.Buffers[idx].get()));
+			_sugarRushMusic->setPosition(Vector3f(0.0f, 0.0f, 100.0f));
+			_sugarRushMusic->setGain(1.0f);
+			_sugarRushMusic->setSourceRelative(true);
+			_sugarRushMusic->play();
+
+			if (_music != nullptr) {
+				_music->pause();
+			}
 		}
 	}
 

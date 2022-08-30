@@ -46,6 +46,7 @@ namespace Jazz2
 
 		virtual const SmallVectorImpl<Actors::Player*>& GetPlayers() const = 0;
 
+		virtual float GetAmbientLight() const = 0;
 		virtual void SetAmbientLight(float value) = 0;
 
 		virtual void AddActor(const std::shared_ptr<ActorBase>& actor) = 0;
@@ -70,6 +71,7 @@ namespace Jazz2
 		virtual bool HandlePlayerDied(const std::shared_ptr<ActorBase>& player) = 0;
 		virtual void SetCheckpoint(Vector2f pos) = 0;
 		virtual void RollbackToCheckpoint() = 0;
+		virtual void ActivateSugarRush() = 0;
 		virtual void ShowLevelText(const StringView& text) = 0;
 		virtual void ShowCoins(int count) = 0;
 		virtual void ShowGems(int count) = 0;

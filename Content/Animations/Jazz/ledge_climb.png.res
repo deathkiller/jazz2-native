@@ -1,8 +1,6 @@
 {
     "Version": {
-        "Target": "Jazz² Resurrection",
-        "Source": "Base (1.20/1.23)",
-        "SourceIndex": "54:20"
+        "Target": "Jazz² Resurrection"
     },
     "Flags": 3,
     "FrameSize": [ 53, 64 ],

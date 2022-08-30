@@ -42,10 +42,10 @@
             "Path": "Object/crate_ammo_tnt.aura"
         },
         "CrateAmmoPepper": {
-            "Path": "Object/crate_ammo_pepper.aura"
+            "Path": "Object/crate_ammo_pepper.png"
         },
         "CrateAmmoElectro": {
-            "Path": "Object/crate_ammo_electro.aura"
+            "Path": "Object/crate_ammo_electro.png"
         },
         "CrateAmmoShrapnel1": {
             "Path": "Object/container_ammo_shrapnel_1.aura"

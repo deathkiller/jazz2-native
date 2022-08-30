@@ -104,7 +104,6 @@ namespace Jazz2::Actors
 			"TNT",
 			"Pepper",
 			"Electro",
-
 			"Thunderbolt"
 		};
 
@@ -137,7 +136,6 @@ namespace Jazz2::Actors
 		float _checkpointLight;
 
 		float _sugarRushLeft, _sugarRushStarsTime;
-
 		int _gems, _gemsPitch;
 		float _gemsTimer;
 		float _bonusWarpTimer;

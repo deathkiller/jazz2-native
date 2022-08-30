@@ -128,7 +128,9 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/TurtleShell.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/TurtleTough.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Witch.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/AirboardGenerator.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/AmbientSound.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/BirdCage.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Bomb.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/BonusWarp.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Checkpoint.cpp

@@ -227,7 +227,9 @@
     <ClInclude Include="Jazz2\Actors\Enemies\TurtleShell.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\TurtleTough.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Witch.h" />
+    <ClInclude Include="Jazz2\Actors\Environment\AirboardGenerator.h" />
     <ClInclude Include="Jazz2\Actors\Environment\AmbientSound.h" />
+    <ClInclude Include="Jazz2\Actors\Environment\BirdCage.h" />
     <ClInclude Include="Jazz2\Actors\Environment\Bomb.h" />
     <ClInclude Include="Jazz2\Actors\Environment\EndOfLevel.h" />
     <ClInclude Include="Jazz2\Actors\Environment\Eva.h" />
@@ -488,7 +490,9 @@
     <ClCompile Include="Jazz2\Actors\Enemies\TurtleShell.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\TurtleTough.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Witch.cpp" />
+    <ClCompile Include="Jazz2\Actors\Environment\AirboardGenerator.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\AmbientSound.cpp" />
+    <ClCompile Include="Jazz2\Actors\Environment\BirdCage.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\Bomb.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\EndOfLevel.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\Eva.cpp" />

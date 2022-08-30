@@ -75,6 +75,7 @@ namespace Jazz2
 
 		const SmallVectorImpl<Actors::Player*>& GetPlayers() const override;
 
+		float GetAmbientLight() const override;
 		void SetAmbientLight(float value) override;
 
 		void OnBeginFrame() override;
@@ -97,6 +98,7 @@ namespace Jazz2
 		bool HandlePlayerDied(const std::shared_ptr<ActorBase>& player) override;
 		void SetCheckpoint(Vector2f pos) override;
 		void RollbackToCheckpoint() override;
+		void ActivateSugarRush() override;
 		void ShowLevelText(const StringView& text) override;
 		void ShowCoins(int count) override;
 		void ShowGems(int count) override;
@@ -240,11 +242,12 @@ namespace Jazz2
 		float _shakeDuration;
 		Vector2f _shakeOffset;
 		float _waterLevel;
-		float _ambientLightDefault, _ambientLightCurrent, _ambientLightTarget;
+		float _ambientLightCurrent, _ambientLightTarget;
 		std::unique_ptr<AudioStreamPlayer> _music;
 		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
 		Metadata* _commonResources;
 		std::unique_ptr<UI::HUD> _hud;
+		std::shared_ptr<AudioBufferPlayer> _sugarRushMusic;
 
 		uint32_t _pressedActions;
 		uint32_t _overrideActions;
