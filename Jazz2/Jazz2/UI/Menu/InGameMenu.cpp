@@ -97,6 +97,10 @@ namespace Jazz2::UI::Menu
 
 		// Show blurred viewport behind
 		DrawTexture(*_owner->_root->_blurPass4.GetTarget(), Vector2f::Zero, 500, Vector2f(ViewSize.X, ViewSize.Y), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf(0.5f, 0.5f, 0.5f, 1.0f));
+		Vector4f ambientColor = _owner->_root->_ambientColor;
+		if (ambientColor.W < 1.0f) {
+			DrawSolid(Vector2f::Zero, 502, Vector2f(ViewSize.X, ViewSize.Y), Colorf(ambientColor.X, ambientColor.Y, ambientColor.Z, 1.0f - ambientColor.W));
+		}
 
 		if (_owner->_touchButtonsTimer > 0.0f && _owner->_sections.size() >= 2) {
 			_owner->DrawElement("MenuLineArrow"_s, -1, center.X, 40.0f, ShadowLayer, Alignment::Center, Colorf::White);

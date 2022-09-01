@@ -118,6 +118,10 @@ namespace Jazz2::Compatibility
         uint16_t _animCount;
         bool _verticalMPSplitscreen, _isMpLevel;
         bool _hasPit, _hasCTF, _hasLaps;
+        uint32_t _darknessColor;
+        WeatherType _weatherType;
+        uint8_t _weatherIntensity;
+        bool _weatherOutdoorsOnly;
 
         String _name;
         String _tileset;

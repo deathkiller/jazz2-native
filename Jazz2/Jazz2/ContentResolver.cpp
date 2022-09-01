@@ -3,6 +3,7 @@
 
 #include "../nCine/IO/IFileStream.h"
 #include "../nCine/Graphics/ITextureLoader.h"
+#include "../nCine/Base/Random.h"
 
 #include "LevelHandler.h"
 #include "Tiles/TileSet.h"
@@ -729,9 +730,13 @@ namespace Jazz2
 		String defaultMusic(NoInit, nameSize);
 		s->Read(defaultMusic.data(), nameSize);
 
-		float defaultLight = s->ReadValue<uint8_t>() / 255.0f;
-		uint32_t defaultDarknessColor = s->ReadValue<uint32_t>();
-		uint8_t defaultWeather = s->ReadValue<uint8_t>();
+		uint32_t rawAmbientColor = s->ReadValue<uint32_t>();
+		Vector4f ambientColor = Vector4f((rawAmbientColor & 0xff) / 255.0f, ((rawAmbientColor >> 8) & 0xff) / 255.0f,
+			((rawAmbientColor >> 16) & 0xff) / 255.0f, ((rawAmbientColor >> 24) & 0xff) / 255.0f);
+
+		// TODO: Weather
+		uint8_t defaultWeatherType = s->ReadValue<uint8_t>();
+		uint8_t defaultWeatherIntensity = s->ReadValue<uint8_t>();
 
 		// Text Event Strings
 		uint8_t textEventStringsCount = s->ReadValue<uint8_t>();
@@ -758,8 +763,8 @@ namespace Jazz2
 		std::unique_ptr<Events::EventMap> eventMap = std::make_unique<Events::EventMap>(levelHandler, tileMap->Size());
 		eventMap->ReadEvents(s, tileMap, difficulty);
 
-		// TODO: Bonus level and darkness color
-		levelHandler->OnLevelLoaded(name, nextLevel, secretLevel, tileMap, eventMap, defaultMusic, defaultLight, levelTexts);
+		// TODO: Bonus level
+		levelHandler->OnLevelLoaded(name, nextLevel, secretLevel, tileMap, eventMap, defaultMusic, ambientColor, levelTexts);
 
 		return true;
 	}
@@ -892,6 +897,21 @@ namespace Jazz2
 		_precompiledShaders[(int)PrecompiledShader::ResizeMonochrome] = std::make_unique<Shader>("ResizeMonochrome",
 			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::ResizeMonochromeFs);
 #endif
+	}
+
+	std::unique_ptr<Texture> ContentResolver::GetNoiseTexture()
+	{
+		uint32_t texels[64 * 64];
+
+		for (int i = 0; i < _countof(texels); i++) {
+			texels[i] = Random().Fast(0, INT32_MAX) | 0xff000000;
+		}
+
+		std::unique_ptr<Texture> tex = std::make_unique<Texture>("Noise", Texture::Format::RGBA8, 64, 64);
+		tex->loadFromTexels((unsigned char*)texels, 0, 0, 64, 64);
+		tex->setMagFiltering(SamplerFilter::Linear);
+		tex->setWrap(SamplerWrapping::Repeat);
+		return tex;
 	}
 
 	void ContentResolver::RecreateGemPalettes()

@@ -8,7 +8,7 @@ namespace nCine
 	class GLTexture
 	{
 	public:
-		static constexpr unsigned int MaxTextureUnits = 4;
+		static constexpr unsigned int MaxTextureUnits = 8;
 
 		explicit GLTexture(GLenum target_);
 		~GLTexture();

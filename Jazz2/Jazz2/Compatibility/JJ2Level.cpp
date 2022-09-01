@@ -30,6 +30,11 @@ namespace Jazz2::Compatibility
 		uint16_t version = headerBlock.ReadUInt16();
 		_version = (version <= 514 ? JJ2Version::BaseGame : JJ2Version::TSF);
 
+		_darknessColor = 0;
+		_weatherType = WeatherType::None;
+		_weatherIntensity = 0;
+		_weatherOutdoorsOnly = false;
+
 		int recordedSize = headerBlock.ReadInt32();
 		ASSERT_MSG(!strictParser || s->GetSize() == recordedSize, "Unexpected file size");
 
@@ -306,6 +311,34 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadMlleData(JJ2Block& block, uint32_t version, bool strictParser)
 	{
+		if (version != 0x104) {
+			LOGW_X("Unsupported version of MLLE stream found in level %s", LevelName);
+			return;
+		}
+
+		bool isSnowing = block.ReadBool();
+		bool isSnowingOutdoorsOnly = block.ReadBool();
+		uint8_t snowIntensity = block.ReadByte();
+		uint8_t snowType = block.ReadByte();
+
+		if (isSnowing) {
+			_weatherType = (WeatherType)(snowType + 1);
+			_weatherIntensity = snowIntensity;
+			_weatherOutdoorsOnly = isSnowingOutdoorsOnly;
+		}
+
+		bool warpsTransmuteCoins = block.ReadBool(); // TODO
+		bool delayGeneratedCrateOrigins = block.ReadBool(); // TODO
+		int32_t echo = block.ReadInt32(); // TODO
+		_darknessColor = block.ReadUInt32();
+		float waterChangeSpeed = block.ReadFloat(); // TODO
+		uint8_t waterInteraction = block.ReadByte(); // TODO
+		int32_t waterLayer = block.ReadInt32(); // TODO
+		uint8_t waterLighting = block.ReadByte(); // TODO
+		float waterLevel = block.ReadFloat(); // TODO
+		uint32_t waterGradient1 = block.ReadUInt32(); // TODO
+		uint32_t waterGradient2 = block.ReadUInt32(); // TODO
+
 		// TODO
 	}
 
@@ -333,6 +366,9 @@ namespace Jazz2::Compatibility
 			if (_hasCTF) {
 				flags |= 0x40;
 			}
+		}
+		if (_weatherOutdoorsOnly) {
+			flags |= 0x100;
 		}
 		so->WriteValue<uint16_t>(flags);
 
@@ -366,17 +402,14 @@ namespace Jazz2::Compatibility
 			so->WriteValue<uint8_t>((uint8_t)_music.size());
 			so->Write(_music.data(), _music.size());
 		}
-		
+
+		so->WriteValue<uint8_t>(_darknessColor & 0xff);
+		so->WriteValue<uint8_t>((_darknessColor >> 8) & 0xff);
+		so->WriteValue<uint8_t>((_darknessColor >> 16) & 0xff);
 		so->WriteValue<uint8_t>(_lightingStart * 255 / 64);
 
-		// TODO: Darkness color
-		so->WriteValue<uint8_t>(0);
-		so->WriteValue<uint8_t>(0);
-		so->WriteValue<uint8_t>(0);
-		so->WriteValue<uint8_t>(255);
-
-		// TODO: Weather
-		so->WriteValue<uint8_t>(0);
+		so->WriteValue<uint8_t>((uint8_t)_weatherType);
+		so->WriteValue<uint8_t>(_weatherIntensity);
 
 		// Text Event Strings
 		so->WriteValue<uint8_t>(TextEventStringsCount);
@@ -421,8 +454,6 @@ namespace Jazz2::Compatibility
 				}
 
 				if (tileIdx >= lastTilesetTileIndex) {
-					//Log.Write(LogType.Warning, "Level \"" + levelToken + "\" has animated tile in animated tile (" + (tileIdx - lastTilesetTileIndex) + " -> " + fixFrames[0] + ")! Applying quick tile redirection.");
-
 					tileIdx = _animatedTiles[tileIdx - lastTilesetTileIndex].Frames[0];
 				}
 
@@ -558,20 +589,20 @@ namespace Jazz2::Compatibility
 
 				int flags = 0;
 				if (tileEvent.Illuminate) flags |= 0x04; // Illuminated
-				if (tileEvent.Difficulty != 2 /*DIFFICULTY_HARD*/) {
+				if (tileEvent.Difficulty != 2 /*Hard*/) {
 					flags |= 0x10; // Difficulty: Easy
 				}
-				if (tileEvent.Difficulty == 0 /*DIFFICULTY_ALL*/) {
+				if (tileEvent.Difficulty == 0 /*All*/) {
 					flags |= 0x20; // Difficulty: Normal
 				}
-				if (tileEvent.Difficulty != 1 /*DIFFICULTY_EASY*/) {
+				if (tileEvent.Difficulty != 1 /*Easy*/) {
 					flags |= 0x40; // Difficulty: Hard
 				}
-				if (tileEvent.Difficulty == 3 /*DIFFICULTY_MULTIPLAYER*/) {
+				if (tileEvent.Difficulty == 3 /*Multiplayer*/) {
 					flags |= 0x80; // Multiplayer Only
 				}
 
-				// ToDo: Flag 0x08 not used
+				// TODO: Flag 0x08 not used
 
 				JJ2Event eventType;
 				int generatorDelay;
@@ -582,7 +613,7 @@ namespace Jazz2::Compatibility
 					EventConverter::ConvertParamInt(tileEvent.TileParams, {
 						{ JJ2ParamUInt, 8 },	// Event
 						{ JJ2ParamUInt, 8 },	// Delay
-						{ JJ2ParamBool, 1 }	// Initial Delay
+						{ JJ2ParamBool, 1 }		// Initial Delay
 					}, eventParams);
 
 					eventType = (JJ2Event)eventParams[0];

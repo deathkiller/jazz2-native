@@ -222,6 +222,7 @@ namespace Jazz2
 		std::unique_ptr<AudioStreamPlayer> GetMusic(const StringView& path);
 		UI::Font* GetFont(FontType fontType);
 		Shader* GetShader(PrecompiledShader shader);
+		static std::unique_ptr<Texture> GetNoiseTexture();
 
 		const uint32_t* GetPalettes() const {
 			return _palettes;

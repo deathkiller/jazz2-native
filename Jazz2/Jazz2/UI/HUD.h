@@ -45,7 +45,12 @@ namespace Jazz2::UI
 		static constexpr uint16_t FontShadowLayer = 120;
 		static constexpr uint16_t TouchButtonsLayer = 400;
 
+#if !defined(DEATH_TARGET_ANDROID)
+		static constexpr int32_t TouchButtonsCount = 10;
+#else
+		// Android has native Back button
 		static constexpr int32_t TouchButtonsCount = 9;
+#endif
 		static constexpr float DpadLeft = 0.02f;
 		static constexpr float DpadBottom = 0.1f;
 		static constexpr float DpadThreshold = 0.09f;
@@ -65,6 +70,8 @@ namespace Jazz2::UI
 		float _coinsTime;
 		float _gemsTime;
 		float _healthLast;
+		float _weaponWheelAnim;
+		int _lastWeaponWheelIndex;
 		float _rgbLightsTime;
 
 		TouchButtonInfo _touchButtons[TouchButtonsCount];
@@ -76,6 +83,11 @@ namespace Jazz2::UI
 
 		void DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX = 1.0f, float scaleY = 1.0f);
 		StringView GetCurrentWeapon(Actors::Player* player, WeaponType weapon, Vector2f& offset);
+
+		void DrawWeaponWheel(Actors::Player* player);
+		bool PrepareWeaponWheel(Actors::Player* player, int& weaponCount);
+		static int GetWeaponCount(Actors::Player* player);
+		void DrawWeaponWheelSegment(float x, float y, float width, float height, float minAngle, float maxAngle);
 
 		TouchButtonInfo CreateTouchButton(PlayerActions action, const StringView& identifier, Alignment align, float x, float y, float w, float h);
 		bool IsOnButton(const TouchButtonInfo& button, float x, float y);

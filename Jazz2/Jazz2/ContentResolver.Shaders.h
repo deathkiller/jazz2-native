@@ -162,8 +162,7 @@ uniform sampler2D lightTex;
 uniform sampler2D blurHalfTex;
 uniform sampler2D blurQuarterTex;
 
-uniform float ambientLight;
-uniform vec4 darknessColor;
+uniform vec4 ambientColor;
 
 in vec2 vTexCoords;
 in vec4 vColor;
@@ -185,8 +184,8 @@ void main() {
 	fragColor = mix(mix(
 		main * (1.0 + light.g),
 		blur,
-		vec4(clamp((1.0 - light.r) / sqrt(max(ambientLight, 0.35)), 0.0, 1.0))
-	), darknessColor, vec4(1.0 - light.r));
+		vec4(clamp((1.0 - light.r) / sqrt(max(ambientColor.w, 0.35)), 0.0, 1.0))
+	), ambientColor, vec4(1.0 - light.r));
 	fragColor.a = 1.0;
 }
 )";
@@ -195,8 +194,9 @@ void main() {
 #ifdef GL_ES
 precision mediump float;
 #endif
-uniform vec2 ViewSize;
-uniform vec3 CameraPosition;
+
+uniform vec2 ViewSizeInv;
+uniform vec2 CameraPosition;
 uniform float GameTime;
 
 uniform sampler2D uTexture;
@@ -205,8 +205,7 @@ uniform sampler2D blurHalfTex;
 uniform sampler2D blurQuarterTex;
 uniform sampler2D displacementTex;
 
-uniform float ambientLight;
-uniform vec4 darknessColor;
+uniform vec4 ambientColor;
 uniform float waterLevel;
 
 in vec2 vTexCoords;
@@ -269,43 +268,45 @@ float perlinNoise2D(vec2 P) {
 
 void main() {
 	vec3 waterColor = vec3(0.4, 0.6, 0.8);
-	// TODO: Remove this multiply
-	float time = GameTime * 0.065;
-	vec2 viewSizeInv = (1.0 / ViewSize);
+	float time = GameTime;
 
-	vec2 uvWorldCenter = (CameraPosition.xy * viewSizeInv.xy);
-	vec2 uvWorld = vTexCoords + uvWorldCenter;
+	// TODO: Remove this flip
+	vec2 uvLocal = vec2(vTexCoords.x, 1.0 - vTexCoords.y);
+	vec2 uvWorldCenter = (CameraPosition.xy * ViewSizeInv.xy);
+	vec2 uvWorld = uvLocal + uvWorldCenter;
 
 	float waveHeight = wave(uvWorld.x, time);
-	float isTexelBelow = aastep(waveHeight, vTexCoords.y - waterLevel);
+	float isTexelBelow = aastep(waveHeight, uvLocal.y - waterLevel);
 	float isTexelAbove = 1.0 - isTexelBelow;
 
 	// Displacement
 	vec2 disPos = uvWorld * vec2(0.4) + vec2(mod(time * 0.8, 2.0));
 	vec2 dis = (texture(displacementTex, disPos).xy - vec2(0.5)) * vec2(0.014);
 	
-	vec2 uv = vTexCoords + dis * vec2(isTexelBelow);
+	vec2 uv = uvLocal + dis * vec2(isTexelBelow);
+	// TODO: Remove this flip
+	uv.y = 1.0 - uv.y;
 	vec4 main = texture(uTexture, uv);
 
 	// Chromatic Aberration
-	float aberration = abs(vTexCoords.x - 0.5) * 0.012;
+	float aberration = abs(uvLocal.x - 0.5) * 0.012;
 	float red = texture(uTexture, vec2(uv.x - aberration, uv.y)).r;
 	float blue = texture(uTexture, vec2(uv.x + aberration, uv.y)).b;
 	main.rgb = mix(main.rgb, waterColor * (0.4 + 1.2 * vec3(red, main.g, blue)), vec3(isTexelBelow * 0.5));
 	
 	// Rays
-	float noisePos = uvWorld.x * 8.0 + uvWorldCenter.y * 0.5 + (1.0 - vTexCoords.y - vTexCoords.x) * -5.0;
+	float noisePos = uvWorld.x * 8.0 + uvWorldCenter.y * 0.5 + (1.0 - uvLocal.y - uvLocal.x) * -5.0;
 	float rays = perlinNoise2D(vec2(noisePos, time * 10.0 + uvWorldCenter.y)) * 0.5 + 0.4;
-	main.rgb += vec3(rays * isTexelBelow * max(1.0 - vTexCoords.y * 1.4, 0.0) * 0.6);
+	main.rgb += vec3(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6);
 	
 	// Waves
-	float topDist = abs(vTexCoords.y - waterLevel - waveHeight);
-	float isNearTop = 1.0 - aastep(viewSizeInv.y * 2.8, topDist);
-	float isVeryNearTop = 1.0 - aastep(viewSizeInv.y * (0.8 - 100.0 * waveHeight), topDist);
+	float topDist = abs(uvLocal.y - waterLevel - waveHeight);
+	float isNearTop = 1.0 - aastep(ViewSizeInv.y * 2.8, topDist);
+	float isVeryNearTop = 1.0 - aastep(ViewSizeInv.y * (0.8 - 100.0 * waveHeight), topDist);
 
 	float topColorBlendFac = isNearTop * isTexelBelow * 0.6;
-	main.rgb = mix(main.rgb, texture(uTexture, vec2(vTexCoords.x,
-		(waterLevel - vTexCoords.y + waterLevel) * 0.97 + waveHeight - viewSizeInv.y * 1.0
+	main.rgb = mix(main.rgb, texture(uTexture, vec2(uvLocal.x,
+		(waterLevel - uvLocal.y + waterLevel) * 0.97 + waveHeight - ViewSizeInv.y
 	)).rgb, vec3(topColorBlendFac));
 	main.rgb += vec3(0.2 * isVeryNearTop);
 	
@@ -330,8 +331,8 @@ void main() {
 	fragColor = mix(mix(
 		main * (1.0 + light.g),
 		blur,
-		vec4(clamp((1.0 - light.r) / sqrt(max(ambientLight, 0.35)), 0.0, 1.0))
-	), darknessColor, vec4(darknessStrength));
+		vec4(clamp((1.0 - light.r) / sqrt(max(ambientColor.w, 0.35)), 0.0, 1.0))
+	), ambientColor, vec4(darknessStrength));
 	fragColor.a = 1.0;
 }
 )";

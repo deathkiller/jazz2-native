@@ -192,6 +192,7 @@ namespace Jazz2
 		private:
 			LevelHandler* _owner;
 			RenderCommand _renderCommand;
+			RenderCommand _renderCommandWithWater;
 			Vector2f _size;
 		};
 
@@ -204,7 +205,8 @@ namespace Jazz2
 		Shader* _blurShader;
 		Shader* _downsampleShader;
 		Shader* _combineShader;
-		
+		Shader* _combineWithWaterShader;
+
 		BlurRenderPass _downsamplePass;
 		BlurRenderPass _blurPass2;
 		BlurRenderPass _blurPass1;
@@ -218,6 +220,7 @@ namespace Jazz2
 		std::unique_ptr<Viewport> _view;
 		std::unique_ptr<Texture> _viewTexture;
 		std::unique_ptr<Camera> _camera;
+		std::unique_ptr<Texture> _noiseTexture;
 
 		SmallVector<std::shared_ptr<ActorBase>, 0> _actors;
 		SmallVector<Actors::Player*, LevelInitialization::MaxPlayerCount> _players;
@@ -237,6 +240,7 @@ namespace Jazz2
 		std::unique_ptr<Tiles::TileMap> _tileMap;
 		Collisions::DynamicTreeBroadPhase _collisions;
 
+		float _levelTime;
 		Rectf _viewBounds;
 		Rectf _viewBoundsTarget;
 		Vector2f _cameraPos;
@@ -245,7 +249,8 @@ namespace Jazz2
 		float _shakeDuration;
 		Vector2f _shakeOffset;
 		float _waterLevel;
-		float _ambientLightCurrent, _ambientLightTarget;
+		float _ambientLightTarget;
+		Vector4f _ambientColor;
 		std::unique_ptr<AudioStreamPlayer> _music;
 		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
 		Metadata* _commonResources;
@@ -253,13 +258,13 @@ namespace Jazz2
 		std::shared_ptr<UI::Menu::InGameMenu> _pauseMenu;
 		std::shared_ptr<AudioBufferPlayer> _sugarRushMusic;
 
-		uint32_t _pressedActions;
+		uint64_t _pressedActions;
 		uint32_t _overrideActions;
 		Vector2f _playerRequiredMovement;
 
 		void OnLevelLoaded(const StringView& name, const StringView& nextLevel, const StringView& secretLevel,
 			std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap,
-			const StringView& musicPath, float ambientLight, SmallVectorImpl<String>& levelTexts);
+			const StringView& musicPath, const Vector4f& ambientColor, SmallVectorImpl<String>& levelTexts);
 
 		void ResolveCollisions(float timeMult);
 		void InitializeCamera();

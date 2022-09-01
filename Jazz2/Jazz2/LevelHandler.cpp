@@ -40,9 +40,9 @@ namespace Jazz2
 		_difficulty(levelInit.Difficulty),
 		_reduxMode(levelInit.ReduxMode),
 		_cheatsUsed(levelInit.CheatsUsed),
+		_levelTime(0.0f),
 		_shakeDuration(0.0f),
 		_waterLevel(FLT_MAX),
-		_ambientLightCurrent(1.0f),
 		_ambientLightTarget(1.0f),
 #if ENABLE_POSTPROCESSING
 		_downsamplePass(this),
@@ -56,6 +56,8 @@ namespace Jazz2
 	{
 		auto& resolver = ContentResolver::Current();
 		resolver.BeginLoading();
+
+		_noiseTexture = resolver.GetNoiseTexture();
 
 		_rootNode = std::make_unique<SceneNode>();
 
@@ -141,7 +143,7 @@ namespace Jazz2
 		_ambientLightTarget = value;
 	}
 
-	void LevelHandler::OnLevelLoaded(const StringView& name, const StringView& nextLevel, const StringView& secretLevel, std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap, const StringView& musicPath, float ambientLight, SmallVectorImpl<String>& levelTexts)
+	void LevelHandler::OnLevelLoaded(const StringView& name, const StringView& nextLevel, const StringView& secretLevel, std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap, const StringView& musicPath, const Vector4f& ambientColor, SmallVectorImpl<String>& levelTexts)
 	{
 		if (!name.empty()) {
 			theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection - "_s + name);
@@ -162,8 +164,8 @@ namespace Jazz2
 		_viewBounds = Rectf((float)_levelBounds.X, (float)_levelBounds.Y, (float)_levelBounds.W, (float)_levelBounds.H);
 		_viewBoundsTarget = _viewBounds;		
 
-		_ambientLightCurrent = ambientLight;
-		_ambientLightTarget = ambientLight;
+		_ambientColor = ambientColor;
+		_ambientLightTarget = ambientColor.W;
 
 #ifdef WITH_OPENMPT
 		if (!musicPath.empty()) {
@@ -370,22 +372,26 @@ namespace Jazz2
 	{
 		float timeMult = theApplication().timeMult();
 
-		ResolveCollisions(timeMult);
+		if (_pauseMenu == nullptr) {
+			ResolveCollisions(timeMult);
 
-		// Ambient Light Transition
-		if (_ambientLightCurrent != _ambientLightTarget) {
-			float step = timeMult * 0.012f;
-			if (std::abs(_ambientLightCurrent - _ambientLightTarget) < step) {
-				_ambientLightCurrent = _ambientLightTarget;
-			} else {
-				_ambientLightCurrent += step * ((_ambientLightTarget < _ambientLightCurrent) ? -1 : 1);
+			// Ambient Light Transition
+			if (_ambientColor.W != _ambientLightTarget) {
+				float step = timeMult * 0.012f;
+				if (std::abs(_ambientColor.W - _ambientLightTarget) < step) {
+					_ambientColor.W = _ambientLightTarget;
+				} else {
+					_ambientColor.W += step * ((_ambientLightTarget < _ambientColor.W) ? -1 : 1);
+				}
 			}
+
+			UpdateCamera(timeMult);
+
+			_levelTime += timeMult;
 		}
 
-		UpdateCamera(timeMult);
-
 #if ENABLE_POSTPROCESSING
-		_lightingView->setClearColor(_ambientLightCurrent, 0.0f, 0.0f, 1.0f);
+		_lightingView->setClearColor(_ambientColor.W, 0.0f, 0.0f, 1.0f);
 #endif
 
 		// TODO: DEBUG
@@ -485,6 +491,7 @@ namespace Jazz2
 			_blurShader = resolver.GetShader(PrecompiledShader::Blur);
 			_downsampleShader = resolver.GetShader(PrecompiledShader::Downsample);
 			_combineShader = resolver.GetShader(PrecompiledShader::Combine);
+			_combineWithWaterShader = resolver.GetShader(PrecompiledShader::CombineWithWater);
 
 			_lightingRenderer = std::make_unique<LightingRenderer>(this);
 
@@ -949,13 +956,13 @@ namespace Jazz2
 
 	bool LevelHandler::PlayerActionPressed(int index, PlayerActions action, bool includeGamepads, bool& isGamepad)
 	{
-		// TODO
 		if (index != 0) {
 			return false;
 		}
 
 		isGamepad = false;
 		if ((_pressedActions & (1 << (int)action)) != 0) {
+			isGamepad = (_pressedActions & (1 << (16 + (int)action))) != 0;
 			return true;
 		}
 		
@@ -979,13 +986,13 @@ namespace Jazz2
 
 	bool LevelHandler::PlayerActionHit(int index, PlayerActions action, bool includeGamepads, bool& isGamepad)
 	{
-		// TODO
 		if (index != 0) {
 			return false;
 		}
 
 		isGamepad = false;
-		if ((_pressedActions & ((1 << (int)action) | (1 << (16 + (int)action)))) == (1 << (int)action)) {
+		if ((_pressedActions & ((1ull << (int)action) | (1ull << (32 + (int)action)))) == (1ull << (int)action)) {
+			isGamepad = (_pressedActions & (1ull << (16 + (int)action))) != 0;
 			return true;
 		}
 
@@ -994,7 +1001,6 @@ namespace Jazz2
 
 	float LevelHandler::PlayerHorizontalMovement(int index)
 	{
-		// TODO
 		if (index != 0) {
 			return 0.0f;
 		}
@@ -1010,7 +1016,6 @@ namespace Jazz2
 
 	float LevelHandler::PlayerVerticalMovement(int index)
 	{
-		// TODO
 		if (index != 0) {
 			return 0.0f;
 		}
@@ -1221,7 +1226,7 @@ namespace Jazz2
 		auto& input = theApplication().inputManager();
 		auto& keyState = input.keyboardState();
 
-		_pressedActions = ((_pressedActions & 0xffff) << 16);
+		_pressedActions = ((_pressedActions & 0xffffffffu) << 32);
 
 		if (keyState.isKeyDown(UI::ControlScheme::Key1(0, PlayerActions::Left)) || keyState.isKeyDown(UI::ControlScheme::Key2(0, PlayerActions::Left))) {
 			_pressedActions |= (1 << (int)PlayerActions::Left);
@@ -1291,23 +1296,23 @@ namespace Jazz2
 
 		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Jump, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Jump);
+			_pressedActions |= (1 << (int)PlayerActions::Jump) | (1 << (16 + (int)PlayerActions::Jump));
 		}
 		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Run, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Run);
+			_pressedActions |= (1 << (int)PlayerActions::Run) | (1 << (16 + (int)PlayerActions::Run));
 		}
 		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Fire, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Fire);
+			_pressedActions |= (1 << (int)PlayerActions::Fire) | (1 << (16 + (int)PlayerActions::Fire));
 		}
 		jb = UI::ControlScheme::Gamepad(0, PlayerActions::SwitchWeapon, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::SwitchWeapon);
+			_pressedActions |= (1 << (int)PlayerActions::SwitchWeapon) | (1 << (16 + (int)PlayerActions::SwitchWeapon));
 		}
 		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Menu, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Menu);
+			_pressedActions |= (1 << (int)PlayerActions::Menu) | (1 << (16 + (int)PlayerActions::Menu));
 		}
 
 		// Also apply overriden actions (by touch controls)
@@ -1321,16 +1326,18 @@ namespace Jazz2
 		// Prevent updating of all level objects
 		_rootNode->setUpdateEnabled(false);
 
-		// Use low-pass filter on music
+		// Use low-pass filter on music and pause all SFX
 		if (_music != nullptr) {
 			_music->setLowPass(0.1f);
 		}
-		// If Sugar Rush music is playing, pause it and play normal music instead
-		if (_sugarRushMusic != nullptr) {
-			_sugarRushMusic->pause();
-			if (_music != nullptr) {
-				_music->play();
+		for (auto& sound : _playingSounds) {
+			if (sound->state() == IAudioPlayer::PlayerState::Playing) {
+				sound->pause();
 			}
+		}
+		// If Sugar Rush music is playing, pause it and play normal music instead
+		if (_sugarRushMusic != nullptr && _music != nullptr) {
+			_music->play();
 		}
 	}
 
@@ -1342,15 +1349,21 @@ namespace Jazz2
 		_pauseMenu = nullptr;
 
 		// If Sugar Rush music was playing, resume it and pause normal music again
-		if (_sugarRushMusic != nullptr) {
-			_sugarRushMusic->play();
-			if (_music != nullptr) {
-				_music->pause();
+		if (_sugarRushMusic != nullptr && _music != nullptr) {
+			_music->pause();
+		}
+		// Resume all SFX
+		for (auto& sound : _playingSounds) {
+			if (sound->state() == IAudioPlayer::PlayerState::Paused) {
+				sound->play();
 			}
 		}
 		if (_music != nullptr) {
 			_music->setLowPass(1.0f);
 		}
+
+		// Mark Menu button as already pressed to avoid some issues
+		_pressedActions |= (1ull << (int)PlayerActions::Menu) | (1ull << (32 + (int)PlayerActions::Menu));
 	}
 
 #if ENABLE_POSTPROCESSING
@@ -1370,7 +1383,7 @@ namespace Jazz2
 			auto command = RentRenderCommand();
 			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 			instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(light.Pos.X, light.Pos.Y, light.RadiusNear / light.RadiusFar, 0.0f);
-			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(light.RadiusFar * 2, light.RadiusFar * 2);
+			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(light.RadiusFar * 2.0f, light.RadiusFar * 2.0f);
 			instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(light.Intensity, light.Brightness, 0.0f, 0.0f);
 			command->setTransformation(Matrix4x4f::Translation(light.Pos.X, light.Pos.Y, 0));
 
@@ -1455,7 +1468,7 @@ namespace Jazz2
 		auto instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
 		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, -1.0f, 1.0f);
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(size.X, size.Y);
-		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 
 		_renderCommand.material().uniform("uPixelOffset")->setFloatValue(1.0f / size.X, 1.0f / size.Y);
 		if (!_downsampleOnly) {
@@ -1474,7 +1487,6 @@ namespace Jazz2
 
 		_renderCommand.setType(RenderCommand::CommandTypes::SPRITE);
 		_renderCommand.material().setShader(_owner->_combineShader);
-		//_renderCommand.material().setBlendingEnabled(true);
 		_renderCommand.material().reserveUniformsDataMemory();
 		_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -1494,21 +1506,64 @@ namespace Jazz2
 		if (blurQuarterTexUniform && blurQuarterTexUniform->intValue(0) != 3) {
 			blurQuarterTexUniform->setIntValue(3); // GL_TEXTURE3
 		}
+
+		_renderCommandWithWater.setType(RenderCommand::CommandTypes::SPRITE);
+		_renderCommandWithWater.material().setShader(_owner->_combineWithWaterShader);
+		_renderCommandWithWater.material().reserveUniformsDataMemory();
+		_renderCommandWithWater.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+
+		textureUniform = _renderCommandWithWater.material().uniform(Material::TextureUniformName);
+		if (textureUniform && textureUniform->intValue(0) != 0) {
+			textureUniform->setIntValue(0); // GL_TEXTURE0
+		}
+		lightTexUniform = _renderCommandWithWater.material().uniform("lightTex");
+		if (lightTexUniform && lightTexUniform->intValue(0) != 1) {
+			lightTexUniform->setIntValue(1); // GL_TEXTURE1
+		}
+		blurHalfTexUniform = _renderCommandWithWater.material().uniform("blurHalfTex");
+		if (blurHalfTexUniform && blurHalfTexUniform->intValue(0) != 2) {
+			blurHalfTexUniform->setIntValue(2); // GL_TEXTURE2
+		}
+		blurQuarterTexUniform = _renderCommandWithWater.material().uniform("blurQuarterTex");
+		if (blurQuarterTexUniform && blurQuarterTexUniform->intValue(0) != 3) {
+			blurQuarterTexUniform->setIntValue(3); // GL_TEXTURE3
+		}
+		GLUniformCache* displacementTexUniform = _renderCommandWithWater.material().uniform("displacementTex");
+		if (displacementTexUniform && displacementTexUniform->intValue(0) != 4) {
+			displacementTexUniform->setIntValue(4); // GL_TEXTURE4
+		}
 	}
 
 	bool LevelHandler::CombineRenderer::OnDraw(RenderQueue& renderQueue)
 	{
-		_renderCommand.material().setTexture(0, *_owner->_viewTexture);
-		_renderCommand.material().setTexture(1, *_owner->_lightingBuffer);
-		_renderCommand.material().setTexture(2, *_owner->_blurPass2.GetTarget());
-		_renderCommand.material().setTexture(3, *_owner->_blurPass4.GetTarget());
+		float viewWaterLevel = _owner->_waterLevel - _owner->_cameraPos.Y + _size.Y * 0.5f;
+		bool viewHasWater = (viewWaterLevel < _size.Y);
+		auto& command = (viewHasWater ? _renderCommandWithWater : _renderCommand);
 
-		auto instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
+		command.material().setTexture(0, *_owner->_viewTexture);
+		command.material().setTexture(1, *_owner->_lightingBuffer);
+		command.material().setTexture(2, *_owner->_blurPass2.GetTarget());
+		command.material().setTexture(3, *_owner->_blurPass4.GetTarget());
+		if (viewHasWater) {
+			command.material().setTexture(4, *_owner->_noiseTexture);
+		}
+
+		auto instanceBlock = command.material().uniformBlock(Material::InstanceBlockName);
 		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(_size.X, _size.Y);
-		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 
-		renderQueue.addCommand(&_renderCommand);
+		command.material().uniform("ambientColor")->setFloatVector(_owner->_ambientColor.Data());
+
+		if (viewHasWater) {
+			command.material().uniform("waterLevel")->setFloatValue(viewWaterLevel / _size.Y);
+
+			command.material().uniform("ViewSizeInv")->setFloatValue(1.0f / _size.X, 1.0f / _size.Y);
+			command.material().uniform("CameraPosition")->setFloatVector(_owner->_cameraPos.Data());
+			command.material().uniform("GameTime")->setFloatValue(_owner->_levelTime * 0.0014f);
+		}
+
+		renderQueue.addCommand(&command);
 
 		return true;
 	}

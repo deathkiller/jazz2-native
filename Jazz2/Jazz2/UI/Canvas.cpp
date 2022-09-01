@@ -56,6 +56,29 @@ namespace Jazz2::UI
 		_currentRenderQueue->addCommand(command);
 	}
 
+	void Canvas::DrawSolid(const Vector2f& pos, uint16_t z, const Vector2f& size, const Colorf& color, bool additiveBlending)
+	{
+		auto command = RentRenderCommand();
+		if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE_NO_TEXTURE)) {
+			command->material().reserveUniformsDataMemory();
+		}
+
+		if (additiveBlending) {
+			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+		} else {
+			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
+
+		auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(size.Data());
+		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(color.Data());
+
+		command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
+		command->setLayer(z);
+
+		_currentRenderQueue->addCommand(command);
+	}
+
 	Vector2f Canvas::ApplyAlignment(Alignment align, const Vector2f& vec, const Vector2f& size)
 	{
 		Vector2f result = vec;

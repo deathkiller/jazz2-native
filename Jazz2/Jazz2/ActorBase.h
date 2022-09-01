@@ -81,6 +81,12 @@ namespace Jazz2
 
 	DEFINE_ENUM_OPERATORS(MoveType);
 
+	enum class ActorRendererType {
+		Default,
+		Outline,
+		WhiteMask
+	};
+
 	class ActorBase : public std::enable_shared_from_this<ActorBase>
 	{
 		friend class LevelHandler;
@@ -138,12 +144,6 @@ namespace Jazz2
 			GraphicResource* Resource;
 		};
 
-		enum class ActorRendererType {
-			Default,
-			Outline,
-			WhiteMask
-		};
-
 		class ActorRenderer : public BaseSprite
 		{
 			friend class ActorBase;
@@ -151,7 +151,7 @@ namespace Jazz2
 		public:
 			ActorRenderer(ActorBase* owner)
 				:
-				BaseSprite(nullptr, nullptr, 0.0f, 0.0f), _owner(owner), AnimPaused(false),
+				BaseSprite(nullptr, nullptr, 0.0f, 0.0f), _owner(owner), _rendererType((ActorRendererType)-1), AnimPaused(false),
 				FrameConfiguration(), FrameDimensions(), LoopMode(AnimationLoopMode::Loop),
 				FirstFrame(0), FrameCount(0), AnimDuration(0.0f), AnimTime(0.0f),
 				CurrentFrame(0), NextFrame(0), CurrentFrameFade(0.0f), Hotspot()

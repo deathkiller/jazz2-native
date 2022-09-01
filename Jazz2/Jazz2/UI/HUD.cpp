@@ -18,6 +18,8 @@ namespace Jazz2::UI
 		_coinsTime(-1.0f), _gemsTime(-1.0f),
 		_touchButtonsTimer(0.0f),
 		_healthLast(0.0f),
+		_weaponWheelAnim(0.0f),
+		_lastWeaponWheelIndex(-1),
 		_rgbLightsTime(0.0f)
 	{
 		auto& resolver = ContentResolver::Current();
@@ -40,8 +42,10 @@ namespace Jazz2::UI
 		_touchButtons[6] = CreateTouchButton(PlayerActions::Jump, "TouchJump"_s, Alignment::BottomRight, (ButtonSize + 0.02f), 0.04f + 0.08f, ButtonSize, ButtonSize);
 		_touchButtons[7] = CreateTouchButton(PlayerActions::Run, "TouchRun"_s, Alignment::BottomRight, 0.001f, 0.01f + 0.15f, ButtonSize, ButtonSize);
 		_touchButtons[8] = CreateTouchButton(PlayerActions::SwitchWeapon, "TouchSwitch"_s, Alignment::BottomRight, ButtonSize + 0.01f, 0.04f + 0.28f, SmallButtonSize, SmallButtonSize);
-
-		static_assert(_countof(_touchButtons) == 9, "Touch button count mismatch");
+#if !defined(DEATH_TARGET_ANDROID)
+		// Android has native Back button
+		_touchButtons[9] = CreateTouchButton(PlayerActions::Menu, "TouchPause"_s, Alignment::TopRight, 0.02f, 0.02f, SmallButtonSize, SmallButtonSize);
+#endif
 	}
 
 	HUD::~HUD()
@@ -200,7 +204,7 @@ namespace Jazz2::UI
 			DrawGems(charOffset);
 
 			// TODO
-			//DrawWeaponWheel();
+			//DrawWeaponWheel(player);
 
 			// FPS
 			snprintf(stringBuffer, _countof(stringBuffer), "%i", (int)std::round(theApplication().averageFps()));
@@ -600,6 +604,186 @@ namespace Jazz2::UI
 				case WeaponType::Thunderbolt: return "WeaponThunderbolt"_s;
 			}
 		}
+	}
+
+	void HUD::DrawWeaponWheel(Actors::Player* player)
+	{
+		// TODO
+		float timeMult = 1.0f;
+
+		int weaponCount;
+		bool isVisible = PrepareWeaponWheel(player, weaponCount);
+
+		const float WeaponWheelAnimMax = 20.0f;
+
+		if (isVisible) {
+			if (_weaponWheelAnim < WeaponWheelAnimMax) {
+				_weaponWheelAnim += timeMult;
+				if (_weaponWheelAnim > WeaponWheelAnimMax) {
+					_weaponWheelAnim = WeaponWheelAnimMax;
+				}
+			}
+		} else {
+			if (_weaponWheelAnim > 0.0f) {
+				_weaponWheelAnim -= timeMult * 2.0f;
+				if (_weaponWheelAnim <= 0.0f) {
+					_weaponWheelAnim = 0.0f;
+
+					// TODO
+					//ControlScheme.EnableFreezeAnalog(player->_playerIndex, false);
+					//owner.WeaponWheelVisible = false;
+					player->_renderer.Initialize(ActorRendererType::Default);
+				}
+			}
+		}
+
+		if (_weaponWheelAnim <= 0.0f) {
+			return;
+		}
+
+		//if (!graphics.TryGetValue("WeaponWheel", out GraphicResource weaponWheelRes)) {
+		//	return;
+		//}
+
+		// TODO
+		//ControlScheme.EnableFreezeAnalog(owner.PlayerIndex, true);
+		//owner.WeaponWheelVisible = true;
+		player->_renderer.Initialize(ActorRendererType::Outline);
+
+		Vector2f center = Vector2f(ViewSize.X * 0.5f, ViewSize.Y * 0.5f);
+		float angleStep = fTwoPi / weaponCount;
+		float h = 0, v = 0;
+		// TODO
+		//ControlScheme.GetWeaponWheel(owner.PlayerIndex, h, v);
+
+		float requestedAngle;
+		int requestedIndex;
+		if (h == 0 && v == 0) {
+			requestedAngle = NAN;
+			requestedIndex = -1;
+		} else {
+			requestedAngle = atan2f(v, h);
+			if (requestedAngle < 0) {
+				requestedAngle += fTwoPi;
+			}
+
+			float adjustedAngle = requestedAngle + fPiOver2 + angleStep * 0.5f;
+			if (adjustedAngle >= fTwoPi) {
+				adjustedAngle -= fTwoPi;
+			}
+
+			requestedIndex = (int)(weaponCount * adjustedAngle / fTwoPi);
+		}
+
+		float alpha = _weaponWheelAnim / WeaponWheelAnimMax;
+		// TODO
+		float easing = /*Ease.OutCubic*/(alpha);
+		float distance = 20 + (70 * easing);
+		float distance2 = 10 + (50 * easing);
+
+		if (!isnan(requestedAngle)) {
+			float distance3 = distance * 0.86f;
+			float distance4 = distance2 * 0.93f;
+
+			/*canvas.State.TextureCoordinateRect = new Rect(0, 0, 1, 1);
+			canvas.State.SetMaterial(weaponWheelRes.Material);
+
+			float cx = cosf(requestedAngle);
+			float cy = sinf(requestedAngle);
+			canvas.State.ColorTint = Colorf(1.0f, 0.6f, 0.3f, alpha * 0.4f);
+			canvas.FillThickLine(center.X + cx * distance4, center.Y + cy * distance4, center.X + cx * distance3, center.Y + cy * distance3, 3.0f);
+			canvas.State.ColorTint = Colorf(1.0f, 0.6f, 0.3f, alpha);
+			canvas.FillThickLine(center.X + cx * distance4, center.Y + cy * distance4, center.X + cx * distance3, center.Y + cy * distance3, 1.0f);*/
+		}
+
+		float angle = -fPiOver2;
+		for (int i = 0, j = 0; i < _countof(player->_weaponAmmo); i++) {
+			if (player->_weaponAmmo[i] != 0) {
+				float x = cosf(angle) * distance;
+				float y = sinf(angle) * distance;
+
+				Vector2f pos = Vector2f(center.X + x, center.Y + y);
+				StringView weapon = GetCurrentWeapon(player, (WeaponType)i, pos);
+				bool isSelected = (j == requestedIndex);
+				if (isSelected) {
+					_lastWeaponWheelIndex = i;
+				}
+
+				DrawElement("WeaponWheelDim"_s, -1, pos.X, pos.Y, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, alpha * 0.6f), 5.0f, 5.0f);
+				DrawElement(weapon, -1, pos.X, pos.Y, MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, isSelected ? alpha : alpha * 0.7f));
+
+				//canvas.State.TextureCoordinateRect = new Rect(0, 0, 1, 1);
+				//canvas.State.SetMaterial(weaponWheelRes.Material);
+
+				float angle2 = fTwoPi - angle;
+				float angleFrom = angle2 - angleStep * 0.4f;
+				float angleTo = angle2 + angleStep * 0.4f;
+
+				//canvas.State.ColorTint = new Colorf(0.0f, 0.0f, 0.0f, alpha * 0.3f);
+				DrawWeaponWheelSegment(center.X - distance2 - 1, center.Y - distance2 - 1, distance2 * 2, distance2 * 2, angleFrom, angleTo);
+				DrawWeaponWheelSegment(center.X - distance2 - 1, center.Y - distance2 + 1, distance2 * 2, distance2 * 2, angleFrom, angleTo);
+				DrawWeaponWheelSegment(center.X - distance2 + 1, center.Y - distance2 - 1, distance2 * 2, distance2 * 2, angleFrom, angleTo);
+				DrawWeaponWheelSegment(center.X - distance2 + 1, center.Y - distance2 + 1, distance2 * 2, distance2 * 2, angleFrom, angleTo);
+
+				//canvas.State.ColorTint = (isSelected ? Colorf(1.0f, 0.8f, 0.5f, alpha) : Colorf(1.0f, 1.0f, 1.0f, alpha * 0.7f));
+				DrawWeaponWheelSegment(center.X - distance2, center.Y - distance2, distance2 * 2, distance2 * 2, angleFrom, angleTo);
+
+				angle += angleStep;
+				j++;
+			}
+		}
+	}
+
+	bool HUD::PrepareWeaponWheel(Actors::Player* player, int& weaponCount)
+	{
+		weaponCount = 0;
+
+		// TODO: Settings
+		if (/*!SettingsCache.EnableWeaponWheel ||*/ player == nullptr || !player->_controllable || !player->_controllableExternal || player->_playerType == PlayerType::Frog) {
+			if (_weaponWheelAnim > 0.0f) {
+				_lastWeaponWheelIndex = -1;
+			}
+			return false;
+		}
+
+		bool isGamepad;
+		if (!_levelHandler->PlayerActionPressed(player->_playerIndex, PlayerActions::SwitchWeapon, true, isGamepad) || !isGamepad) {
+			if (_weaponWheelAnim > 0.0f) {
+				if (_lastWeaponWheelIndex != -1) {
+					player->SwitchToWeaponByIndex(_lastWeaponWheelIndex);
+					_lastWeaponWheelIndex = -1;
+				}
+
+				weaponCount = GetWeaponCount(player);
+			}
+			return false;
+		}
+
+		weaponCount = GetWeaponCount(player);
+		return (weaponCount > 0);
+	}
+
+	int HUD::GetWeaponCount(Actors::Player* player)
+	{
+		int weaponCount = 0;
+
+		for (int i = 0; i < _countof(player->_weaponAmmo); i++) {
+			if (player->_weaponAmmo[i] != 0) {
+				weaponCount++;
+			}
+		}
+
+		// Player must have at least 2 weapons
+		if (weaponCount < 2) {
+			weaponCount = 0;
+		}
+
+		return weaponCount;
+	}
+
+	void HUD::DrawWeaponWheelSegment(float x, float y, float width, float height, float minAngle, float maxAngle)
+	{
+		// TODO
 	}
 
 	HUD::TouchButtonInfo HUD::CreateTouchButton(PlayerActions action, const StringView& identifier, Alignment align, float x, float y, float w, float h)

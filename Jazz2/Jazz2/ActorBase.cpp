@@ -1228,6 +1228,10 @@ namespace Jazz2
 
 	void ActorBase::ActorRenderer::Initialize(ActorRendererType type)
 	{
+		if (_rendererType == type) {
+			return;
+		}
+
 		_rendererType = type;
 
 		bool shaderChanged;

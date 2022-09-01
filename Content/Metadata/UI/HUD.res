@@ -136,6 +136,9 @@
         },
         "TouchSwitch": {
             "Path": "_custom/touch_switch.png"
+        },
+        "TouchPause": {
+            "Path": "_custom/touch_pause.png"
         }
     }
 }
