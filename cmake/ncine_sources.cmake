@@ -99,9 +99,10 @@ list(APPEND SOURCES
 
 list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Main.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/ActorBase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/ContentResolver.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/LevelHandler.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/PreferencesCache.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/ActorBase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Player.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/PlayerCorpse.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/SolidObjectBase.cpp

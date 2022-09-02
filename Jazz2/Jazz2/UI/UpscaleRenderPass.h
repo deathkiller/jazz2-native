@@ -36,7 +36,7 @@ namespace Jazz2::UI
 		std::unique_ptr<Texture> _target;
 		std::unique_ptr<Viewport> _view;
 		std::unique_ptr<Camera> _camera;
-#if defined(ALLOW_RESIZE_SHADERS)
+#if defined(ALLOW_RESCALE_SHADERS)
 		Shader* _resizeShader;
 #endif
 		RenderCommand _renderCommand;

@@ -19,6 +19,7 @@
 #include "Jazz2/IRootController.h"
 #include "Jazz2/ContentResolver.h"
 #include "Jazz2/LevelHandler.h"
+#include "Jazz2/PreferencesCache.h"
 #include "Jazz2/UI/ControlScheme.h"
 #include "Jazz2/UI/Menu/MainMenu.h"
 
@@ -30,8 +31,6 @@
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
 #	include <cstdlib> // for `__argc` and `__argv`
-extern int __argc;
-extern char** __argv;
 #endif
 
 using namespace nCine;
@@ -157,7 +156,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 	}
 #endif
 
-#ifdef WITH_TRACY
+#if defined(WITH_TRACY)
 	uint32_t color = 0x999999;
 	// clang-format off
 	switch (level) {
@@ -216,9 +215,12 @@ private:
 
 void GameEventHandler::onPreInit(AppConfiguration& config)
 {
-	//config.withVSync = false;
-	config.windowTitle = "Jazz² Resurrection"_s;
+	Jazz2::PreferencesCache::Initialize(config);
+
+	config.inFullscreen = Jazz2::PreferencesCache::EnableFullscreen;
+	config.withVSync = Jazz2::PreferencesCache::EnableVsync;
 	config.resolution.Set(Jazz2::LevelHandler::DefaultWidth, Jazz2::LevelHandler::DefaultHeight);
+	config.windowTitle = "Jazz² Resurrection"_s;
 }
 
 void GameEventHandler::onInit()
@@ -343,6 +345,12 @@ bool GameEventHandler::RefreshCache()
 			goto RecreateCache;
 		}
 
+		// If some events were added, recreate cache
+		uint16_t eventTypeCount = s->ReadValue<uint16_t>();
+		if (eventTypeCount != (uint16_t)Jazz2::EventType::Count) {
+			goto RecreateCache;
+		}
+
 		// Cache is up-to-date
 		LOGI("Cache is already up-to-date");
 		return true;
@@ -419,8 +427,6 @@ RecreateCache:
 
 	auto LevelTokenConversion = [&knownLevels](String levelToken) -> JJ2Level::LevelToken {
 		lowercaseInPlace(levelToken);
-
-		//levelToken = levelToken.ToLower(CultureInfo.InvariantCulture).Replace(" ", "_").Replace("\"", "").Replace("'", "");
 
 		auto it = knownLevels.find(levelToken);
 		if (it != knownLevels.end()) {
@@ -525,6 +531,7 @@ RecreateCache:
 	s->WriteValue<uint8_t>(0x00);			// Flags
 	int64_t animsModified = fs::LastModificationTime(fs::JoinPath("Source"_s, "Anims.j2a"_s)).Ticks;
 	s->WriteValue<int64_t>(animsModified);
+	s->WriteValue<uint16_t>((uint16_t)Jazz2::EventType::Count);
 
 	LOGI("Cache was recreated");
 	return true;
@@ -533,16 +540,16 @@ RecreateCache:
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
-#else
-int main(int argc, char** argv)
-#endif
 {
-#if !defined(DEATH_TARGET_WINDOWS)
-#	define __argc argc
-#	define __argv argv
-#endif
-
 	return PCApplication::start([]() -> std::unique_ptr<IAppEventHandler> {
 		return std::make_unique<GameEventHandler>();
-	}, __argc, __argv);
+	}, __argc, __wargv);
 }
+#else
+int main(int argc, char** argv)
+{
+	return PCApplication::start([]() -> std::unique_ptr<IAppEventHandler> {
+		return std::make_unique<GameEventHandler>();
+	}, argc, argv);
+}
+#endif

@@ -7,8 +7,8 @@ namespace Jazz2::Actors::Environment
 {
 	BonusWarp::BonusWarp()
 		:
-		_warpTarget(UINT16_MAX),
-		_cost(INT16_MAX),
+		_warpTarget(UINT8_MAX),
+		_cost(UINT8_MAX),
 		_setLaps(false),
 		_fast(false)
 	{

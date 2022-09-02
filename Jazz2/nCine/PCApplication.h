@@ -13,7 +13,7 @@ namespace nCine
 	{
 	public:
 		/// Entry point method to be called in the `main()` function
-		static int start(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, char** argv);
+		static int start(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv);
 
 	private:
 		/// Suspension state from last frame
@@ -25,7 +25,7 @@ namespace nCine
 #endif
 
 		/// Must be called at the beginning to initialize the application
-		void init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, char** argv);
+		void init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv);
 		/// Must be called continuously to keep the application running
 		void run();
 		/// Processes events inside the game loop

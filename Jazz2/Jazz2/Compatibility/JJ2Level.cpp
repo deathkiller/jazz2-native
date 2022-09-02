@@ -312,7 +312,7 @@ namespace Jazz2::Compatibility
 	void JJ2Level::LoadMlleData(JJ2Block& block, uint32_t version, bool strictParser)
 	{
 		if (version != 0x104) {
-			LOGW_X("Unsupported version of MLLE stream found in level %s", LevelName);
+			LOGW_X("Unsupported version of MLLE stream found in level \"%s\"", LevelName.data());
 			return;
 		}
 

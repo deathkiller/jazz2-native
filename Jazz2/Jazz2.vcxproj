@@ -211,6 +211,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\CommonInternal.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Environment.h" />
     <ClInclude Include="Common.h" />
+    <ClInclude Include="Jazz2\Actors\ActorBase.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\FastFireCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\GemCollectible.h" />
@@ -272,6 +273,7 @@
     <ClInclude Include="Jazz2\IRootController.h" />
     <ClInclude Include="Jazz2\LightEmitter.h" />
     <ClInclude Include="Jazz2\PlayerActions.h" />
+    <ClInclude Include="Jazz2\PreferencesCache.h" />
     <ClInclude Include="Jazz2\UI\Alignment.h" />
     <ClInclude Include="Jazz2\UI\Canvas.h" />
     <ClInclude Include="Jazz2\UI\ControlScheme.h" />
@@ -436,7 +438,6 @@
     <ClInclude Include="nCine\Threading\Thread.h" />
     <ClInclude Include="nCine\Threading\ThreadPool.h" />
     <ClInclude Include="nCine\Threading\ThreadSync.h" />
-    <ClInclude Include="Jazz2\ActorBase.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\AmmoCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CoinCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CollectibleBase.h" />
@@ -475,6 +476,7 @@
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\String.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\StringView.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Environment.cpp" />
+    <ClCompile Include="Jazz2\Actors\ActorBase.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\FastFireCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\GemCollectible.cpp" />
@@ -528,6 +530,7 @@
     <ClCompile Include="Jazz2\Compatibility\JJ2Strings.cpp" />
     <ClCompile Include="Jazz2\Compatibility\JJ2Text.cpp" />
     <ClCompile Include="Jazz2\Compatibility\JJ2Tileset.cpp" />
+    <ClCompile Include="Jazz2\PreferencesCache.cpp" />
     <ClCompile Include="Jazz2\UI\Canvas.cpp" />
     <ClCompile Include="Jazz2\UI\ControlScheme.cpp" />
     <ClCompile Include="Jazz2\UI\Font.cpp" />
@@ -670,7 +673,6 @@
     <ClCompile Include="nCine\Threading\ThreadPool.cpp" />
     <ClCompile Include="nCine\Threading\WindowsThread.cpp" />
     <ClCompile Include="nCine\Threading\WindowsThreadSync.cpp" />
-    <ClCompile Include="Jazz2\ActorBase.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\AmmoCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CoinCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CollectibleBase.cpp" />

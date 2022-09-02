@@ -891,7 +891,7 @@ namespace Jazz2
 			Shader::LoadMode::STRING, Shader::Introspection::NO_UNIFORMS_IN_BLOCKS, Shader::DefaultVertex::BATCHED_SPRITES, Shaders::WhiteMaskFs);
 		_precompiledShaders[(int)PrecompiledShader::WhiteMask]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedWhiteMask]);
 
-#if defined(ALLOW_RESIZE_SHADERS)
+#if defined(ALLOW_RESCALE_SHADERS)
 		_precompiledShaders[(int)PrecompiledShader::Resize3xBrz] = std::make_unique<Shader>("Resize3xBrz",
 			Shader::LoadMode::STRING, Shaders::Resize3xBrzVs, Shaders::Resize3xBrzFs);
 		_precompiledShaders[(int)PrecompiledShader::ResizeMonochrome] = std::make_unique<Shader>("ResizeMonochrome",

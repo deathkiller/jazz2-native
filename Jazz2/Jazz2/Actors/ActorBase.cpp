@@ -1,16 +1,16 @@
 ﻿#include "ActorBase.h"
-#include "ILevelHandler.h"
-#include "Events/EventMap.h"
-#include "Tiles/TileMap.h"
-#include "Collisions/DynamicTreeBroadPhase.h"
+#include "../ILevelHandler.h"
+#include "../Events/EventMap.h"
+#include "../Tiles/TileMap.h"
+#include "../Collisions/DynamicTreeBroadPhase.h"
 
-#include "Actors/Player.h"
-#include "Actors/Weapons/FreezerShot.h"
-#include "Actors/Weapons/ToasterShot.h"
+#include "Player.h"
+#include "Weapons/FreezerShot.h"
+#include "Weapons/ToasterShot.h"
 
-#include "../nCine/Primitives/Matrix4x4.h"
-#include "../nCine/Base/Random.h"
-#include "../nCine/Base/FrameTimer.h"
+#include "../../nCine/Primitives/Matrix4x4.h"
+#include "../../nCine/Base/Random.h"
+#include "../../nCine/Base/FrameTimer.h"
 
 using namespace nCine;
 

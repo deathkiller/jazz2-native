@@ -1,6 +1,7 @@
 ﻿#include "HUD.h"
 #include "RgbLights.h"
 #include "../LevelHandler.h"
+#include "../PreferencesCache.h"
 
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/IO/IFileStream.h"
@@ -50,7 +51,9 @@ namespace Jazz2::UI
 
 	HUD::~HUD()
 	{
-		RgbLights::Current().Clear();
+		if (PreferencesCache::EnableRgbLights) {
+			RgbLights::Current().Clear();
+		}
 	}
 
 	void HUD::OnUpdate(float timeMult)
@@ -74,12 +77,14 @@ namespace Jazz2::UI
 			}
 
 			// RGB lights
-			RgbLights& rgbLights = RgbLights::Current();
-			if (rgbLights.IsSupported()) {
-				_rgbLightsTime -= timeMult;
-				if (_rgbLightsTime <= 0.0f) {
-					UpdateRgbLights(players[0]);
-					_rgbLightsTime += RgbLights::RefreshRate;
+			if (PreferencesCache::EnableRgbLights) {
+				RgbLights& rgbLights = RgbLights::Current();
+				if (rgbLights.IsSupported()) {
+					_rgbLightsTime -= timeMult;
+					if (_rgbLightsTime <= 0.0f) {
+						UpdateRgbLights(players[0]);
+						_rgbLightsTime += RgbLights::RefreshRate;
+					}
 				}
 			}
 		}
@@ -95,13 +100,13 @@ namespace Jazz2::UI
 
 		ViewSize = _levelHandler->GetViewSize();
 
-		Rectf view = Rectf(0, 0, ViewSize.X, ViewSize.Y);
+		Rectf view = Rectf(0.0f, 0.0f, ViewSize.X, ViewSize.Y);
 		Rectf adjustedView = view;
 		if (_touchButtonsTimer > 0.0f) {
 			float width = adjustedView.W;
 
 			adjustedView.X = 90 + /*LeftPadding*/0.1f * width;
-			adjustedView.W = adjustedView.W - adjustedView.X - (140 + /*RightPadding*/0.1f * width);
+			adjustedView.W = adjustedView.W - adjustedView.X - (140.0f + /*RightPadding*/0.1f * width);
 		}
 
 		float right = adjustedView.X + adjustedView.W;
@@ -738,8 +743,7 @@ namespace Jazz2::UI
 	{
 		weaponCount = 0;
 
-		// TODO: Settings
-		if (/*!SettingsCache.EnableWeaponWheel ||*/ player == nullptr || !player->_controllable || !player->_controllableExternal || player->_playerType == PlayerType::Frog) {
+		if (!PreferencesCache::EnableWeaponWheel || player == nullptr || !player->_controllable || !player->_controllableExternal || player->_playerType == PlayerType::Frog) {
 			if (_weaponWheelAnim > 0.0f) {
 				_lastWeaponWheelIndex = -1;
 			}

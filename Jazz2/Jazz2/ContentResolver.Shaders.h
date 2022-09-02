@@ -590,7 +590,7 @@ void main() {
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
-uniform vec2 uTextureSize;
+uniform mediump vec2 uTextureSize;
 
 layout (std140) uniform InstanceBlock
 {

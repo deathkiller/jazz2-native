@@ -2,6 +2,7 @@
 #include "../ILevelHandler.h"
 #include "../Events/EventMap.h"
 #include "../Tiles/TileMap.h"
+#include "../PreferencesCache.h"
 #include "SolidObjectBase.h"
 #include "Explosion.h"
 #include "PlayerCorpse.h"
@@ -1069,7 +1070,7 @@ namespace Jazz2::Actors
 			TakeDamage(1, _speed.X * 0.25f);
 		} else {
 
-			if (/*SettingsCache.EnableLedgeClimb &&*/ _isActivelyPushing && _suspendType == SuspendType::None && _activeModifier == Modifier::None && !GetState(ActorFlags::CanJump) &&
+			if (PreferencesCache::EnableLedgeClimb && _isActivelyPushing && _suspendType == SuspendType::None && _activeModifier == Modifier::None && !GetState(ActorFlags::CanJump) &&
 				_currentSpecialMove == SpecialMoveType::None && _currentTransitionState != AnimState::TransitionUppercutEnd &&
 				_speed.Y >= -1.0f && _externalForce.Y <= 0.0f && _copterFramesLeft <= 0.0f && _keepRunningTime <= 0.0f) {
 

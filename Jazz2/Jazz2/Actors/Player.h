@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "../ActorBase.h"
+#include "ActorBase.h"
 #include "../LevelInitialization.h"
 
 namespace Jazz2::UI

@@ -21,10 +21,7 @@
 using namespace Death::Containers;
 using namespace nCine;
 
-// TODO
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
-#	define ALLOW_RESIZE_SHADERS
-#endif
+#define ALLOW_RESCALE_SHADERS
 
 namespace Jazz2
 {
@@ -189,7 +186,7 @@ namespace Jazz2
 		WhiteMask,
 		BatchedWhiteMask,
 
-#if defined(ALLOW_RESIZE_SHADERS)
+#if defined(ALLOW_RESCALE_SHADERS)
 		Resize3xBrz,
 		ResizeMonochrome,
 #endif

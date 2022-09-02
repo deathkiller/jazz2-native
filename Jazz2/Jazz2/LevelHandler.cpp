@@ -1,4 +1,5 @@
 ﻿#include "LevelHandler.h"
+#include "PreferencesCache.h"
 #include "UI/ControlScheme.h"
 #include "UI/HUD.h"
 #include "../Common.h"
@@ -173,11 +174,7 @@ namespace Jazz2
 			if (_music != nullptr) {
 				_musicPath = musicPath;
 				_music->setLooping(true);
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
-				_music->setGain(0.5f);
-#	else
-				_music->setGain(0.3f);
-#	endif
+				_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
 				_music->setSourceRelative(true);
 				_music->play();
 			}
@@ -579,11 +576,11 @@ namespace Jazz2
 		auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(buffer));
 		//player->setPosition(Vector3f((pos.X - _cameraPos.X) / (DefaultWidth * 3), (pos.Y - _cameraPos.Y) / (DefaultHeight * 3), 0.8f));
 		player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
-		player->setGain(gain);
+		player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
 		player->setSourceRelative(sourceRelative);
 
 		if (pos.Y >= _waterLevel) {
-			player->setLowPass(/*0.2f*/0.05f);
+			player->setLowPass(0.05f);
 			player->setPitch(pitch * 0.7f);
 		} else {
 			player->setPitch(pitch);
@@ -601,7 +598,7 @@ namespace Jazz2
 			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(it->second.Buffers[idx].get()));
 			//player->setPosition(Vector3f((pos.X - _cameraPos.X) / (DefaultWidth * 3), (pos.Y - _cameraPos.Y) / (DefaultHeight * 3), 0.8f));
 			player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
-			player->setGain(gain);
+			player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
 
 			if (pos.Y >= _waterLevel) {
 				player->setLowPass(/*0.2f*/0.05f);
@@ -890,7 +887,7 @@ namespace Jazz2
 			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
 			_sugarRushMusic = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(it->second.Buffers[idx].get()));
 			_sugarRushMusic->setPosition(Vector3f(0.0f, 0.0f, 100.0f));
-			_sugarRushMusic->setGain(1.0f);
+			_sugarRushMusic->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
 			_sugarRushMusic->setSourceRelative(true);
 			_sugarRushMusic->play();
 

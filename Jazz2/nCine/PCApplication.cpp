@@ -30,7 +30,7 @@ namespace nCine
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	int PCApplication::start(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, char** argv)
+	int PCApplication::start(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
 	{
 		if (createAppEventHandler == nullptr) {
 			return EXIT_FAILURE;
@@ -70,7 +70,7 @@ namespace nCine
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void PCApplication::init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, char** argv)
+	void PCApplication::init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
 	{
 		profileStartTime_ = TimeStamp::now();
 		wasSuspended_ = shouldSuspend();

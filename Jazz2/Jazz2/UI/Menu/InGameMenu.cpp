@@ -1,6 +1,7 @@
 ﻿#include "InGameMenu.h"
 #include "PauseSection.h"
 #include "../ControlScheme.h"
+#include "../../PreferencesCache.h"
 #include "../../LevelHandler.h"
 
 #include "../../../nCine/Application.h"
@@ -223,7 +224,7 @@ namespace Jazz2::UI::Menu
 			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
 			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(it->second.Buffers[idx].get()));
 			player->setPosition(Vector3f(0.0f, 0.0f, 100.0f));
-			player->setGain(gain);
+			player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
 			player->setSourceRelative(true);
 
 			player->play();

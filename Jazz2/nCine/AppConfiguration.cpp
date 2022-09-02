@@ -2,6 +2,8 @@
 #include "IO/FileSystem.h"
 #include "../Common.h"
 
+#include <Utf8.h>
+
 namespace nCine
 {
 	///////////////////////////////////////////////////////////
@@ -73,11 +75,21 @@ namespace nCine
 		return fs::_dataPath;
 	}
 
-	const char* AppConfiguration::argv(int index) const
+#if defined(DEATH_TARGET_WINDOWS)
+	const String AppConfiguration::argv(int index) const
 	{
-		if (index < argc_)
-			return argv_[index];
-		return nullptr;
+		if (index < argc_) {
+			return Death::Utf8::FromUtf16(argv_[index]);
+		}
+		return { };
 	}
-
+#else
+	const StringView AppConfiguration::argv(int index) const
+	{
+		if (index < argc_) {
+			return argv_[index];
+		}
+		return { };
+	}
+#endif
 }

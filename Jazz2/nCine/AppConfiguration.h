@@ -2,12 +2,19 @@
 
 #include "Primitives/Vector2.h"
 
+#include <Containers/Array.h>
 #include <Containers/String.h>
 
 using namespace Death::Containers;
 
 namespace nCine
 {
+#if defined(DEATH_TARGET_WINDOWS)
+	typedef wchar_t* NativeArgument;
+#else
+	typedef char* NativeArgument;
+#endif
+
 	/// The class storing initialization settings for an nCine application
 	class AppConfiguration
 	{
@@ -98,12 +105,16 @@ namespace nCine
 			return profileTextUpdateTime_;
 		}
 
-		/// \returns The number of arguments passed on the command line
+		/// \returns The number of arguments passed on the command-line
 		inline int argc() const {
 			return argc_;
 		}
-		/// \returns The selected argument from the ones passed on the command line
-		const char* argv(int index) const;
+		/// \returns The selected argument from the ones passed on the command-line
+#if defined(DEATH_TARGET_WINDOWS)
+		const String argv(int index) const;
+#else
+		const StringView argv(int index) const;
+#endif
 
 	private:
 		// Pre-configured compile-time variables
@@ -114,7 +125,7 @@ namespace nCine
 		const float profileTextUpdateTime_;
 
 		int argc_;
-		char** argv_;
+		NativeArgument* argv_;
 
 		friend class PCApplication;
 	};

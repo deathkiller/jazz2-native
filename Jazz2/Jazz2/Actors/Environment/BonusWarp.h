@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "../../ActorBase.h"
+#include "../ActorBase.h"
 #include "../Player.h"
 
 namespace Jazz2::Actors::Environment

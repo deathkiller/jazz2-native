@@ -1,9 +1,9 @@
 ﻿#pragma once
 
-#include "../ActorBase.h"
+#include "../Actors/ActorBase.h"
 #include "../ILevelHandler.h"
 
-#include <map>
+#include "../../nCine/Base/HashMap.h"
 
 namespace Jazz2::Events
 {
@@ -28,7 +28,7 @@ namespace Jazz2::Events
 		};
 
 		ILevelHandler* _levelHandler;
-		std::map<EventType, SpawnableEvent> _spawnableEvents;
+		HashMap<EventType, SpawnableEvent> _spawnableEvents;
 
 		void RegisterKnownSpawnables();
 		void RegisterSpawnable(EventType type, CreateFunction create, PreloadFunction preload = nullptr);

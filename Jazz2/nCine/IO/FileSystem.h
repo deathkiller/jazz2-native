@@ -32,7 +32,7 @@ namespace nCine
 	{
 	public:
 		/// Maximum allowed length for a path string and native path separator
-#ifdef DEATH_TARGET_WINDOWS
+#if defined(DEATH_TARGET_WINDOWS)
 		static constexpr unsigned int MaxPathLength = MAX_PATH;
 		static constexpr char PathSeparator[] = "\\";
 #else

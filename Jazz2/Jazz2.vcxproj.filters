@@ -531,9 +531,6 @@
     <ClInclude Include="Jazz2\EventType.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\ActorBase.h">
-      <Filter>Header Files\Jazz2</Filter>
-    </ClInclude>
     <ClInclude Include="Jazz2\Actors\Player.h">
       <Filter>Header Files\Jazz2\Actors</Filter>
     </ClInclude>
@@ -981,6 +978,12 @@
     <ClInclude Include="Jazz2\UI\Menu\PauseSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Actors\ActorBase.h">
+      <Filter>Header Files\Jazz2\Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\PreferencesCache.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1008,9 +1011,6 @@
       <Filter>Source Files\nCine</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\ContentResolver.cpp">
-      <Filter>Source Files\Jazz2</Filter>
-    </ClCompile>
-    <ClCompile Include="Jazz2\ActorBase.cpp">
       <Filter>Source Files\Jazz2</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Player.cpp">
@@ -1657,6 +1657,12 @@
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\PauseSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\ActorBase.cpp">
+      <Filter>Source Files\Jazz2\Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\PreferencesCache.cpp">
+      <Filter>Source Files\Jazz2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

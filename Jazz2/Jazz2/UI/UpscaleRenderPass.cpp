@@ -1,4 +1,5 @@
 ﻿#include "UpscaleRenderPass.h"
+#include "../PreferencesCache.h"
 
 #include "../../nCine/Application.h"
 #include "../../nCine/Graphics/RenderQueue.h"
@@ -14,8 +15,13 @@ namespace Jazz2::UI
 
 		if (notInitialized) {
 			_camera = std::make_unique<Camera>();
-#if defined(ALLOW_RESIZE_SHADERS)
-			_resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::Resize3xBrz);
+#if defined(ALLOW_RESCALE_SHADERS)
+			PrecompiledShader shader;
+			switch (PreferencesCache::ActiveRescaleMode) {
+				case RescaleMode::_3xBrz: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::Resize3xBrz); break;
+				case RescaleMode::Monochrome: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeMonochrome); break;
+				default: _resizeShader = nullptr;
+			}
 #endif
 		}
 		_camera->setOrthoProjection(width * (-0.5f), width * (+0.5f), height * (-0.5f), height * (+0.5f));
@@ -40,8 +46,12 @@ namespace Jazz2::UI
 
 		// Prepare render command
 		_renderCommand.setType(RenderCommand::CommandTypes::SPRITE);
-#if defined(ALLOW_RESIZE_SHADERS)
-		_renderCommand.material().setShader(_resizeShader);
+#if defined(ALLOW_RESCALE_SHADERS)
+		if (_resizeShader == nullptr) {
+			_renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
+		} else {
+			_renderCommand.material().setShader(_resizeShader);
+		}
 #else
 		_renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
 #endif
@@ -69,8 +79,10 @@ namespace Jazz2::UI
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(_targetSize.Data());
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
-#if defined(ALLOW_RESIZE_SHADERS)
-		_renderCommand.material().uniform("uTextureSize")->setFloatValue(size.X, size.Y);
+#if defined(ALLOW_RESCALE_SHADERS)
+		if (_resizeShader != nullptr) {
+			_renderCommand.material().uniform("uTextureSize")->setFloatValue(size.X, size.Y);
+		}
 #endif
 
 		_renderCommand.material().setTexture(0, *_target);

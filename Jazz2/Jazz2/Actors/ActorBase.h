@@ -1,11 +1,11 @@
 ﻿#pragma once
 
-#include "ContentResolver.h"
-#include "EventType.h"
-#include "LightEmitter.h"
-#include "../nCine/Base/Task.h"
-#include "../nCine/Primitives/AABB.h"
-#include "../nCine/Audio/AudioBufferPlayer.h"
+#include "../ContentResolver.h"
+#include "../EventType.h"
+#include "../LightEmitter.h"
+#include "../../nCine/Base/Task.h"
+#include "../../nCine/Primitives/AABB.h"
+#include "../../nCine/Audio/AudioBufferPlayer.h"
 
 namespace Jazz2
 {

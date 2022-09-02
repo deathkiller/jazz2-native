@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "ActorBase.h"
+#include "Actors/ActorBase.h"
 #include "LevelInitialization.h"
 #include "PlayerActions.h"
 
