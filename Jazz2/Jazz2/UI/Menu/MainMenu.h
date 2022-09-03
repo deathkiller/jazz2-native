@@ -42,6 +42,8 @@ namespace Jazz2::UI::Menu
 
 		void DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color,
 			float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false) override;
+		void DrawElement(const StringView& name, float x, float y, uint16_t z, Alignment align, const Colorf& color,
+			const Vector2f& size, const Vector4f& texCoords) override;
 		void DrawStringShadow(const StringView& text, int charOffset, float x, float y, Alignment align, const Colorf& color,
 			float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f,
 			float speed = 0.4f, float charSpacing = 1.0f, float lineSpacing = 1.0f) override;

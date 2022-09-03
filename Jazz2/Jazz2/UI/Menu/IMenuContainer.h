@@ -13,6 +13,7 @@ namespace Jazz2::UI::Menu
 	public:
 		static constexpr uint16_t MainLayer = 600;
 		static constexpr uint16_t ShadowLayer = 580;
+		static constexpr uint16_t BackgroundLayer = 550;
 		static constexpr uint16_t FontLayer = 700;
 		static constexpr uint16_t FontShadowLayer = 620;
 
@@ -29,6 +30,8 @@ namespace Jazz2::UI::Menu
 
 		virtual void DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align,
 			const Colorf& color, float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false) = 0;
+		virtual void DrawElement(const StringView& name, float x, float y, uint16_t z, Alignment align,
+			const Colorf& color, const Vector2f& size, const Vector4f& texCoords) = 0;
 		virtual void DrawStringShadow(const StringView& text, int charOffset, float x, float y, Alignment align,
 			const Colorf& color, float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f,
 			float speed = 0.4f, float charSpacing = 1.0f, float lineSpacing = 1.0f) = 0;

@@ -218,6 +218,8 @@
     <ClInclude Include="Jazz2\Actors\Collectibles\GemGiant.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\OneUpCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Bee.h" />
+    <ClInclude Include="Jazz2\Actors\Enemies\BossBase.h" />
+    <ClInclude Include="Jazz2\Actors\Enemies\Bubba.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Caterpillar.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Dragonfly.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\LabRat.h" />
@@ -286,6 +288,7 @@
     <ClInclude Include="Jazz2\UI\Menu\InGameMenu.h" />
     <ClInclude Include="Jazz2\UI\Menu\MainMenu.h" />
     <ClInclude Include="Jazz2\UI\Menu\MenuSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\OptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\PauseSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\StartGameOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\RgbLights.h" />
@@ -483,6 +486,8 @@
     <ClCompile Include="Jazz2\Actors\Collectibles\GemGiant.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\OneUpCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Bee.cpp" />
+    <ClCompile Include="Jazz2\Actors\Enemies\BossBase.cpp" />
+    <ClCompile Include="Jazz2\Actors\Enemies\Bubba.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Caterpillar.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Dragonfly.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\LabRat.cpp" />
@@ -540,6 +545,7 @@
     <ClCompile Include="Jazz2\UI\Menu\ControlsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\InGameMenu.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\MainMenu.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\OptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\PauseSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\StartGameOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\RgbLights.cpp" />

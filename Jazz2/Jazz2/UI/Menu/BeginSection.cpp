@@ -1,6 +1,6 @@
 ﻿#include "BeginSection.h"
 #include "StartGameOptionsSection.h"
-#include "ControlsSection.h"
+#include "OptionsSection.h"
 #include "AboutSection.h"
 #include "MainMenu.h"
 
@@ -16,7 +16,7 @@ namespace Jazz2::UI::Menu
 	{
 		_items[(int)Item::PlayStory].Name = "Play Shareware Demo"_s;
 		//_items[(int)Item::PlayCustom].Name = "Play Custom Game"_s;
-		_items[(int)Item::Options].Name = "Controls"_s;
+		_items[(int)Item::Options].Name = "Options"_s;
 		_items[(int)Item::About].Name = "About"_s;
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		_items[(int)Item::Quit].Name = "Quit"_s;
@@ -135,7 +135,7 @@ namespace Jazz2::UI::Menu
 		// TODO: Actions
 		switch (_selectedIndex) {
 			case (int)Item::PlayStory: if (_isVerified) _root->SwitchToSection<StartGameOptionsSection>(); break;
-			case (int)Item::Options: _root->SwitchToSection<ControlsSection>(); break;
+			case (int)Item::Options: _root->SwitchToSection<OptionsSection>(); break;
 			case (int)Item::About: _root->SwitchToSection<AboutSection>(); break;
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)
 			case (int)Item::Quit: theApplication().quit(); break;

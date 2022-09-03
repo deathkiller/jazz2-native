@@ -1690,7 +1690,7 @@ namespace Jazz2::Actors
 				break;
 			}
 			case EventType::AreaActivateBoss: { // Music
-				//_levelHandler->BroadcastTriggeredEvent(tileEvent, p);
+				_levelHandler->BroadcastTriggeredEvent(tileEvent, p);
 
 				// Deactivate sugar rush if it's active
 				if (_sugarRushLeft > 1.0f) {

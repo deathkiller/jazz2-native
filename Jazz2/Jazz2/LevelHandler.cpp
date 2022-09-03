@@ -18,6 +18,7 @@
 
 #include "Actors/Player.h"
 #include "Actors/SolidObjectBase.h"
+#include "Actors/Enemies/BossBase.h"
 
 #include <float.h>
 #include <Utf8.h>
@@ -350,19 +351,20 @@ namespace Jazz2
 					});
 				}
 			}
-		}
+		}*/
 
 		// Active Boss
-		if (activeBoss != null && activeBoss.Scene == null) {
-			activeBoss = null;
+		if (_activeBoss != nullptr && _activeBoss->GetHealth() <= 0) {
+			_activeBoss = nullptr;
 
-			Hud hud = rootObject.GetComponent<Hud>();
+			// TODO: Boss HUD
+			/*Hud hud = rootObject.GetComponent<Hud>();
 			if (hud != null) {
 				hud.ActiveBoss = null;
-			}
+			}*/
 
-			InitLevelChange(ExitType.Normal, null);
-		}*/
+			BeginLevelChange(ExitType::Normal, { });
+		}
 	}
 
 	void LevelHandler::OnEndFrame()
@@ -761,6 +763,47 @@ namespace Jazz2
 			if (aabb.Overlaps(player->AABB)) {
 				if (!callback(player)) {
 					break;
+				}
+			}
+		}
+	}
+
+	void LevelHandler::BroadcastTriggeredEvent(EventType eventType, uint8_t* eventParams)
+	{
+		if (eventType == EventType::AreaActivateBoss) {
+			if (_activeBoss == nullptr) {
+				for (auto& actor : _actors) {
+					_activeBoss = std::dynamic_pointer_cast<Actors::Enemies::BossBase>(actor);
+					if (_activeBoss != nullptr) {
+						break;
+					}
+				}
+
+				if (_activeBoss != nullptr && _activeBoss->OnActivatedBoss()) {
+					// TODO: Boss HUD
+					/*Hud hud = rootObject.GetComponent<Hud>();
+					if (hud != null) {
+						hud.ActiveBoss = activeBoss;
+					}*/
+
+					if (_sugarRushMusic != nullptr) {
+						_sugarRushMusic->stop();
+					}
+#ifdef WITH_OPENMPT
+					if (_music != nullptr) {
+						_music->stop();
+					}
+
+					char musicPath[10] = { 'b', 'o', 's', 's', '\0', '.', 'j', '2', 'b', '\0' };
+					musicPath[4] = '0' + eventParams[0];
+					_music = ContentResolver::Current().GetMusic(musicPath);
+					if (_music != nullptr) {
+						_music->setLooping(true);
+						_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+						_music->setSourceRelative(true);
+						_music->play();
+					}
+#endif
 				}
 			}
 		}

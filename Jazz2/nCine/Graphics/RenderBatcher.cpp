@@ -59,6 +59,7 @@ namespace nCine
 		const unsigned int minBatchSize = theApplication().renderingSettings().minBatchSize;
 		const unsigned int maxBatchSize = theApplication().renderingSettings().maxBatchSize;
 #endif
+		ASSERT(minBatchSize > 1);
 		ASSERT(maxBatchSize >= minBatchSize);
 
 		unsigned int lastSplit = 0;

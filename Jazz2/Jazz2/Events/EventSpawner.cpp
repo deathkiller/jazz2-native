@@ -23,6 +23,7 @@
 
 #include "../Actors/Enemies/Bat.h"
 #include "../Actors/Enemies/Bee.h"
+#include "../Actors/Enemies/Bubba.h"
 #include "../Actors/Enemies/Caterpillar.h"
 #include "../Actors/Enemies/Dragonfly.h"
 #include "../Actors/Enemies/LabRat.h"
@@ -138,9 +139,9 @@ namespace Jazz2::Events
 		RegisterSpawnable(EventType::BossRobot, Robot.Create, Robot.Preload);
 		RegisterSpawnable(EventType::BossTweedle, Tweedle.Create, Tweedle.Preload);
 		RegisterSpawnable(EventType::BossUterus, Uterus.Create, Uterus.Preload);
-		RegisterSpawnable(EventType::BossTurtleTough, TurtleToughBoss.Create, TurtleToughBoss.Preload);
-		RegisterSpawnable(EventType::BossBubba, Bubba.Create, Bubba.Preload);
-		RegisterSpawnable(EventType::BossBolly, Bolly.Create, Bolly.Preload);*/
+		RegisterSpawnable(EventType::BossTurtleTough, TurtleToughBoss.Create, TurtleToughBoss.Preload);*/
+		RegisterSpawnable<Enemies::Bubba>(EventType::BossBubba);
+		//RegisterSpawnable(EventType::BossBolly, Bolly.Create, Bolly.Preload);
 
 		// Collectibles
 		RegisterSpawnable<Collectibles::GemCollectible>(EventType::Gem);

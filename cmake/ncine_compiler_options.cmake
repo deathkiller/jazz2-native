@@ -4,9 +4,13 @@ set_target_properties(ncine PROPERTIES CXX_EXTENSIONS OFF)
 target_compile_definitions(ncine PUBLIC "CMAKE_BUILD")
 target_compile_definitions(ncine PUBLIC "$<$<CONFIG:Debug>:NCINE_DEBUG>")
 
+# Override output executable name and force Unicode mode on Windows
 if(WIN32)
 	set_target_properties(ncine PROPERTIES WIN32_EXECUTABLE TRUE)
 	target_compile_definitions(ncine PRIVATE "_UNICODE" "UNICODE")
+	set_target_properties(ncine PROPERTIES OUTPUT_NAME "Jazz2")
+else()
+	set_target_properties(ncine PROPERTIES OUTPUT_NAME "jazz2")
 endif()
 
 if(EMSCRIPTEN)

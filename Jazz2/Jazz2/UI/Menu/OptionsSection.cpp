@@ -1,39 +1,33 @@
-﻿#include "PauseSection.h"
-#include "OptionsSection.h"
-#include "InGameMenu.h"
+﻿#include "OptionsSection.h"
+#include "ControlsSection.h"
+#include "MainMenu.h"
 
 namespace Jazz2::UI::Menu
 {
-	PauseSection::PauseSection()
+	OptionsSection::OptionsSection()
 		:
 		_selectedIndex(0),
 		_animation(0.0f)
 	{
-		_items[(int)Item::PlayStory].Name = "Resume"_s;
-		_items[(int)Item::Options].Name = "Options"_s;
-		_items[(int)Item::Exit].Name = "Save & Exit"_s;
+		_items[(int)Item::Gameplay].Name = "Gameplay"_s;
+		_items[(int)Item::Graphics].Name = "Graphics"_s;
+		_items[(int)Item::Sounds].Name = "Sounds"_s;
+		_items[(int)Item::Controls].Name = "Controls"_s;
 	}
 
-	void PauseSection::OnShow(IMenuContainer* root)
-	{
-		MenuSection::OnShow(root);
-
-		_root->PlaySfx("MenuSelect"_s, 0.5f);
-	}
-
-	void PauseSection::OnUpdate(float timeMult)
+	void OptionsSection::OnUpdate(float timeMult)
 	{
 		if (_animation < 1.0f) {
-			_animation = std::min(_animation + timeMult * 0.02f, 1.0f);
+			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
 		}
 
 		if (_root->ActionHit(PlayerActions::Fire)) {
 			_root->PlaySfx("MenuSelect"_s, 0.6f);
 			ExecuteSelected();
 		} else if (_root->ActionHit(PlayerActions::Menu)) {
-			if (auto ingameMenu = dynamic_cast<InGameMenu*>(_root)) {
-				ingameMenu->ResumeGame();
-			}
+			_root->PlaySfx("MenuSelect"_s, 0.5f);
+			_root->LeaveSection();
+			return;
 		} else if (_root->ActionHit(PlayerActions::Up)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
@@ -53,11 +47,23 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void PauseSection::OnDraw(Canvas* canvas)
+	void OptionsSection::OnDraw(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
-		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f * (1.0f - 0.048f * (int)Item::Count));
+		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
+
+		constexpr float topLine = 131.0f;
+		float bottomLine = viewSize.Y - 42;
+		_root->DrawElement("MenuDim"_s, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
+			Alignment::Center, Colorf::White, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
+		_root->DrawElement("MenuLine", 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement("MenuLine", 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+
+		center.Y = topLine + (bottomLine - topLine) * 0.7f / (int)Item::Count;
 		int charOffset = 0;
+
+		_root->DrawStringShadow("Options"_s, charOffset, center.X, topLine - 21.0f,
+			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		for (int i = 0; i < (int)Item::Count; i++) {
 			_items[i].TouchY = center.Y;
@@ -71,14 +77,14 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 			} else {
 				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y,
-					Alignment::Center, Colorf(0.42f, 0.42f, 0.42f, 0.5f), 0.9f);
+					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
-			center.Y += 34.0f + 32.0f * (1.0f - 0.15f * (int)Item::Count);
+			center.Y += (bottomLine - topLine) * 0.9f / (int)Item::Count;
 		}
 	}
 
-	void PauseSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
+	void OptionsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
 		if (event.type == TouchEventType::Down) {
 			int pointerIndex = event.findPointerIndex(event.actionIndex);
@@ -103,21 +109,13 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void PauseSection::ExecuteSelected()
+	void OptionsSection::ExecuteSelected()
 	{
-		// TODO: Actions
 		switch (_selectedIndex) {
-			case (int)Item::PlayStory:
-				if (auto ingameMenu = dynamic_cast<InGameMenu*>(_root)) {
-					ingameMenu->ResumeGame();
-				}
-				break;
-			case (int)Item::Options: _root->SwitchToSection<OptionsSection>(); break;
-			case (int)Item::Exit:
-				if (auto ingameMenu = dynamic_cast<InGameMenu*>(_root)) {
-					ingameMenu->GoToMainMenu();
-				}
-				break;
+			case (int)Item::Gameplay: break;
+			case (int)Item::Graphics: break;
+			case (int)Item::Sounds: break;
+			case (int)Item::Controls: _root->SwitchToSection<ControlsSection>(); break;
 		}
 	}
 }

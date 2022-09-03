@@ -254,7 +254,20 @@ void GameEventHandler::onFrameStart()
 				_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this);
 				break;
 			case PendingState::LevelChange:
-				_currentHandler = std::make_unique<Jazz2::LevelHandler>(this, *_pendingLevelChange.get());
+				if (_pendingLevelChange->LevelName.empty()) {
+					// Next level not specified, so show main menu
+					_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this);
+				} else if (_pendingLevelChange->LevelName == ":end"_s) {
+					// End of episode
+					// TODO: Save state and go to next episode
+					_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this);
+				} else if (_pendingLevelChange->LevelName == ":credits"_s) {
+					// End of game
+					// TODO: Save state and play ending cinematics
+					_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this);
+				} else {
+					_currentHandler = std::make_unique<Jazz2::LevelHandler>(this, *_pendingLevelChange.get());
+				}
 				_pendingLevelChange = nullptr;
 				break;
 		}

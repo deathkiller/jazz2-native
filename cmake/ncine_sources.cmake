@@ -117,6 +117,8 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/OneUpCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bat.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bee.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/BossBase.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bubba.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Caterpillar.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Dragonfly.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/EnemyBase.cpp
@@ -188,6 +190,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ControlsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/InGameMenu.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MainMenu.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/OptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PauseSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/StartGameOptionsSection.cpp
 )

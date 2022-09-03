@@ -259,6 +259,19 @@ namespace Jazz2::UI::Menu
 		_canvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending);
 	}
 
+	void MainMenu::DrawElement(const StringView& name, float x, float y, uint16_t z, Alignment align, const Colorf& color, const Vector2f& size, const Vector4f& texCoords)
+	{
+		auto it = _graphics->find(String::nullTerminatedView(name));
+		if (it == _graphics->end()) {
+			return;
+		}
+
+		GenericGraphicResource* base = it->second.Base;
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - _canvas->ViewSize.X * 0.5f, _canvas->ViewSize.Y * 0.5f - y), size);
+
+		_canvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false);
+	}
+
 	void MainMenu::DrawStringShadow(const StringView& text, int charOffset, float x, float y, Alignment align, const Colorf& color, float scale,
 		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{

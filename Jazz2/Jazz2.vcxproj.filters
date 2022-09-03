@@ -984,6 +984,15 @@
     <ClInclude Include="Jazz2\PreferencesCache.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\OptionsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\BossBase.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bubba.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1663,6 +1672,15 @@
     </ClCompile>
     <ClCompile Include="Jazz2\PreferencesCache.cpp">
       <Filter>Source Files\Jazz2</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\OptionsSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\BossBase.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bubba.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

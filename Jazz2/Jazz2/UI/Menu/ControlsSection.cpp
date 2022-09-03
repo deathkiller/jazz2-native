@@ -163,13 +163,15 @@ namespace Jazz2::UI::Menu
 		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
 
 		char stringBuffer[16];
-		const float topLine = 131.0f;
+		constexpr float topLine = 131.0f;
 		float bottomLine = viewSize.Y - 42;
-		//_root->DrawElement("MenuDim", 0, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::MainLayer,
-		//	Alignment::Center, Font::RandomColor, 55.0f, (bottomLine - topLine) * 0.063f, Rect(0.0f, 0.3f, 1.0f, 0.4f));
+		_root->DrawElement("MenuDim"_s, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
+			Alignment::Center, Colorf::White, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
+		_root->DrawElement("MenuLine", 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement("MenuLine", 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int charOffset = 0;
-		_root->DrawStringShadow("Change controls"_s, charOffset, center.X * 0.3f, 110.0f,
+		_root->DrawStringShadow("Controls"_s, charOffset, center.X * 0.3f, 110.0f,
 			Alignment::Left, Colorf(0.5f, 0.5f, 0.5f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.8f, 0.88f);
 
 		_root->DrawStringShadow("Key 1"_s, charOffset, center.X * (0.9f + 0 * 0.34f), 110.0f,
@@ -296,9 +298,6 @@ namespace Jazz2::UI::Menu
 
 			topItem += itemSpacing;
 		}
-
-		_root->DrawElement("MenuLine", 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement("MenuLine", 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 	}
 
 	void ControlsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
