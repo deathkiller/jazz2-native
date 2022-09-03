@@ -137,7 +137,7 @@ namespace Jazz2::Actors::Enemies
 			_returning = false;
 
 			if (_noise == nullptr) {
-				_noise = PlaySfx("Noise", 0.5f, 2.0f);
+				_noise = PlaySfx("Noise"_s, 0.5f, 2.0f);
 				if (_noise != nullptr) {
 					_noise->setLooping(true);
 				}

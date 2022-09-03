@@ -40,7 +40,6 @@ namespace Jazz2
 
 	ActorBase::~ActorBase()
 	{
-		// TODO
 	}
 
 	bool ActorBase::IsFacingLeft()

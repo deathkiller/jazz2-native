@@ -2,6 +2,7 @@
 #include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../Weapons/ShotBase.h"
+#include "../Weapons/TNT.h"
 
 namespace Jazz2::Actors::Solid
 {
@@ -122,8 +123,10 @@ namespace Jazz2::Actors::Solid
 			Fall(shotBase->GetSpeed().X < 0.0f ? FallDirection::Left : FallDirection::Right);
 			shotBase->DecreaseHealth(1, this);
 			return true;
+		} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {
+			Fall(tnt->GetPos().X > _pos.X ? FallDirection::Left : FallDirection::Right);
+			return true;
 		}
-		// TODO: TNT
 
 		return false;
 	}

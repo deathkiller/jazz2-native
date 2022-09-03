@@ -1,5 +1,6 @@
 ﻿#include "EventMap.h"
 #include "../Tiles/TileMap.h"
+#include "../WeatherType.h"
 
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Base/FrameTimer.h"
@@ -59,10 +60,9 @@ namespace Jazz2::Events
 				if (respawn && tile.EventType != EventType::Empty) {
 					tile.IsEventActive = true;
 
-					// TODO
-					/*if (tile.EventType == EventType::AreaWeather) {
-						levelHandler.ApplyWeather((LevelHandler::WeatherType)tile.EventParams[0], tile.EventParams[1], tile.EventParams[2] != 0);
-					} else*/ if (tile.EventType != EventType::Generator) {
+					if (tile.EventType == EventType::AreaWeather) {
+						_levelHandler->SetWeather((WeatherType)tile.EventParams[0], tile.EventParams[1]);
+					} else if (tile.EventType != EventType::Generator) {
 						ActorFlags flags = ActorFlags::IsCreatedFromEventMap | tile.EventFlags;
 						std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(tile.EventType, tile.EventParams, flags, x, y, ILevelHandler::MainPlaneZ);
 						if (actor != nullptr) {
@@ -105,7 +105,7 @@ namespace Jazz2::Events
 
 		// Preload all events
 		for (auto& tile : _eventLayout) {
-			// ToDo: Exclude also some modifiers here ?
+			// TODO: Exclude also some modifiers here ?
 			if (tile.EventType != EventType::Empty && tile.EventType != EventType::Generator && tile.EventType != EventType::AreaWeather) {
 				eventSpawner->PreloadEvent(tile.EventType, tile.EventParams);
 			}
@@ -126,8 +126,7 @@ namespace Jazz2::Events
 			if (!_eventLayout[generator.EventPos].IsEventActive) {
 				// Generator is inactive (and recharging)
 				generator.TimeLeft -= timeMult;
-			} else if (generator.SpawnedActor == nullptr /*|| generator.SpawnedActor.Scene == null*/) {
-				// TODO: check if actor is still alive
+			} else if (generator.SpawnedActor == nullptr || generator.SpawnedActor->GetHealth() <= 0) {
 				if (generator.TimeLeft <= 0.0f) {
 					// Generator is active and is ready to spawn new actor
 					generator.TimeLeft = generator.Delay * FrameTimer::FramesPerSecond;
@@ -135,11 +134,10 @@ namespace Jazz2::Events
 					int x = generator.EventPos % _layoutSize.X;
 					int y = generator.EventPos / _layoutSize.X;
 
-					std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(generator.EventType,
+					generator.SpawnedActor = _levelHandler->EventSpawner()->SpawnEvent(generator.EventType,
 						generator.EventParams, ActorFlags::IsFromGenerator, x, y, ILevelHandler::SpritePlaneZ);
-					if (actor != nullptr) {
-						_levelHandler->AddActor(actor);
-						generator.SpawnedActor = actor;
+					if (generator.SpawnedActor != nullptr) {
+						_levelHandler->AddActor(generator.SpawnedActor);
 					}
 				} else {
 					// Generator is active and recharging
@@ -167,10 +165,9 @@ namespace Jazz2::Events
 				if (!tile.IsEventActive && tile.EventType != EventType::Empty) {
 					tile.IsEventActive = true;
 
-					// TODO
-					/*if (tile.EventType == EventType.AreaWeather) {
-						_levelHandler->ApplyWeather((LevelHandler.WeatherType)tile.EventParams[0], tile.EventParams[1], tile.EventParams[2] != 0);
-					} else*/ if (tile.EventType != EventType::Generator) {
+					if (tile.EventType == EventType::AreaWeather) {
+						_levelHandler->SetWeather((WeatherType)tile.EventParams[0], tile.EventParams[1]);
+					} else if (tile.EventType != EventType::Generator) {
 						ActorFlags flags = ActorFlags::IsCreatedFromEventMap | tile.EventFlags;
 						if (allowAsync) {
 							flags |= ActorFlags::Async;
@@ -226,7 +223,7 @@ namespace Jazz2::Events
 
 	bool EventMap::IsHurting(float x, float y)
 	{
-		// ToDo: Implement all JJ2+ parameters (directional hurt events)
+		// TODO: Implement all JJ2+ parameters (directional hurt events)
 		int tx = (int)x / 32;
 		int ty = (int)y / 32;
 
@@ -363,7 +360,7 @@ namespace Jazz2::Events
 
 #if MULTIPLAYER && SERVER
 						case EventType::LevelStartMultiplayer: {
-							// ToDo: check parameters
+							// TODO: check parameters
 							spawnPositionsForMultiplayer.Add(new Vector2(32 * x + 16, 32 * y + 16 - 8));
 							break;
 						}
@@ -387,11 +384,6 @@ namespace Jazz2::Events
 
 						case EventType::WarpTarget:
 							AddWarpTarget(eventParams[0], x, y);
-							break;
-						case EventType::LightReset:
-							// TODO: Light reset
-							//eventParams[0] = (uint16_t)_levelHandler.AmbientLightDefault;
-							//StoreTileEvent(x, y, EventType::LightSet, actorFlags, eventParams);
 							break;
 
 						default:

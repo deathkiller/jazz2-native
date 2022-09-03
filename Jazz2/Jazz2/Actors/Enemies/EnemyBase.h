@@ -35,6 +35,7 @@ namespace Jazz2::Actors::Enemies
 		void OnHealthChanged(ActorBase* collider) override;
 		bool OnPerish(ActorBase* collider) override;
 
+		void AddScoreToCollider(ActorBase* collider);
 		void SetHealthByDifficulty(int health);
 		bool CanMoveToPosition(float x, float y);
 		void TryGenerateRandomDrop();

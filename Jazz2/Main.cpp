@@ -438,7 +438,7 @@ RecreateCache:
 		{ "ending"_s, { { }, ":credits"_s } }
 	};
 
-	auto LevelTokenConversion = [&knownLevels](String levelToken) -> JJ2Level::LevelToken {
+	auto LevelTokenConversion = [&knownLevels](MutableStringView& levelToken) -> JJ2Level::LevelToken {
 		lowercaseInPlace(levelToken);
 
 		auto it = knownLevels.find(levelToken);

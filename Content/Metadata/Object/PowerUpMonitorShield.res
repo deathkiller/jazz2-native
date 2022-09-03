@@ -4,6 +4,11 @@
     },
 
     "Animations": {
+        "Empty": {
+            "Path": "Object/powerup_empty.png",
+            "FrameRate": 6
+        },
+        
         "ShieldFire": {
             "Path": "Object/powerup_shield_fire.aura",
             "FrameRate": 6

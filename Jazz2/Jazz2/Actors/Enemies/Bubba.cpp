@@ -137,6 +137,9 @@ namespace Jazz2::Actors::Enemies
 
 	bool Bubba::OnPerish(ActorBase* collider)
 	{
+		// It must be done here, because the player may not exist after animation callback 
+		AddScoreToCollider(collider);
+
 		CreateParticleDebris();
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
@@ -145,6 +148,8 @@ namespace Jazz2::Actors::Enemies
 
 		_speed.X = 0.0f;
 		_speed.Y = -2.0f;
+		_externalForce.X = 0.0f;
+		_externalForce.Y = 0.0f;
 		_internalForceY = 0.0f;
 		_frozenTimeLeft = 0.0f;
 

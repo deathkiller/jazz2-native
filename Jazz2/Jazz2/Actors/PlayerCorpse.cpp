@@ -9,7 +9,6 @@ namespace Jazz2::Actors
 
 	Task<bool> PlayerCorpse::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		// TODO: change these types to uint8_t
 		PlayerType playerType = (PlayerType)details.Params[0];
 		SetFacingLeft(details.Params[1] != 0);
 

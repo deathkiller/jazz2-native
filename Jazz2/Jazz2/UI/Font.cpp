@@ -16,7 +16,7 @@ namespace Jazz2::UI
 		_baseSpacing(0),
 		_charHeight(0)
 	{
-		auto s = fs::Open(path + ".font", FileAccessMode::Read);
+		auto s = fs::Open(path + ".font"_s, FileAccessMode::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 8 * 1024 * 1024) {
 			// 8 MB file size limit

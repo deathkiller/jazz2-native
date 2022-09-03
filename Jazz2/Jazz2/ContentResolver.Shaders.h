@@ -94,7 +94,7 @@ void main() {
 		return;
 	}
 
-	// TODO
+	// TODO: Normal maps
 	/*vec4 clrNormal = texture(uTexture, vec2(gl_FragCoord) / ViewSize);
 	vec3 normal = normalize(clrNormal.xyz - vec3(0.5, 0.5, 0.5));
 	normal.z = -normal.z;

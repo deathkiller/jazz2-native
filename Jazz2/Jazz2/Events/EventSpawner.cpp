@@ -49,6 +49,7 @@
 #include "../Actors/Solid/GemCrate.h"
 #include "../Actors/Solid/Pole.h"
 #include "../Actors/Solid/PowerUpMorphMonitor.h"
+#include "../Actors/Solid/PowerUpShieldMonitor.h"
 #include "../Actors/Solid/PowerUpWeaponMonitor.h"
 #include "../Actors/Solid/PushableBox.h"
 #include "../Actors/Solid/TriggerCrate.h"
@@ -168,10 +169,10 @@ namespace Jazz2::Events
 		//RegisterSpawnable(EventType::Copter, Copter.Create, Copter.Preload);
 
 		/*RegisterSpawnable(EventType::RollingRock, RollingRock.Create, RollingRock.Preload);
-		RegisterSpawnable(EventType::SwingingVine, SwingingVine.Create, SwingingVine.Preload);
+		RegisterSpawnable(EventType::SwingingVine, SwingingVine.Create, SwingingVine.Preload);*/
 
-		RegisterSpawnable(EventType::PowerUpShield, PowerUpShieldMonitor.Create, PowerUpShieldMonitor.Preload);
-		RegisterSpawnable(EventType::Stopwatch, Stopwatch.Create, Stopwatch.Preload);*/
+		RegisterSpawnable<Solid::PowerUpShieldMonitor>(EventType::PowerUpShield);
+		//RegisterSpawnable(EventType::Stopwatch, Stopwatch.Create, Stopwatch.Preload);*/
 
 		RegisterSpawnable<Collectibles::AmmoCollectible>(EventType::Ammo);
 		RegisterSpawnable<Solid::PowerUpWeaponMonitor>(EventType::PowerUpWeapon);

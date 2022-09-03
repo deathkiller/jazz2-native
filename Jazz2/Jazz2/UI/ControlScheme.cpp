@@ -41,6 +41,6 @@ namespace Jazz2::UI
 
 	void ControlScheme::Save()
 	{
-		// TODO
+		// TODO: Save to file
 	}
 }

@@ -176,9 +176,9 @@ namespace Jazz2::UI::Menu
 		            }
 		        }
 
-		        _root->DrawStringShadow("<", charOffset, center.X - (100.0f + 40.0f), center.Y + 28.0f, Alignment::Center,
+		        _root->DrawStringShadow("<"_s, charOffset, center.X - (100.0f + 40.0f), center.Y + 28.0f, Alignment::Center,
 					Font::DefaultColor, 0.7f);
-		        _root->DrawStringShadow(">", charOffset, center.X + (100.0f + 40.0f), center.Y + 28.0f, Alignment::Center,
+		        _root->DrawStringShadow(">"_s, charOffset, center.X + (100.0f + 40.0f), center.Y + 28.0f, Alignment::Center,
 					Font::DefaultColor, 0.7f);
 
 				_items[i].TouchY = center.Y + 28.0f;
@@ -221,7 +221,7 @@ namespace Jazz2::UI::Menu
 				float halfWidth = viewSize.X * 0.5f;
 
 				if (y < 80.0f) {
-					_root->PlaySfx("MenuSelect", 0.5f);
+					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_root->LeaveSection();
 					return;
 				}
@@ -274,7 +274,7 @@ namespace Jazz2::UI::Menu
 		// TODO
 		/*ControlScheme.IsSuspended = true;
 
-		_root->PlaySound("MenuSelect", 0.6f);
+		_root->PlaySound("MenuSelect"_s, 0.6f);
 		_root->BeginFadeOut(() = > {
 			ControlScheme.IsSuspended = false;
 

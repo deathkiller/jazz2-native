@@ -14,7 +14,10 @@
 #include "Weapons/BlasterShot.h"
 #include "Weapons/BouncerShot.h"
 #include "Weapons/FreezerShot.h"
+#include "Weapons/RFShot.h"
+#include "Weapons/SeekerShot.h"
 #include "Weapons/ToasterShot.h"
+#include "Weapons/TNT.h"
 
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Base/FrameTimer.h"
@@ -342,7 +345,7 @@ namespace Jazz2::Actors
 
 					auto tilemap = _levelHandler->TileMap();
 					if (tilemap != nullptr) {
-						auto it = _metadata->Graphics.find("SugarRush"_s);
+						auto it = _metadata->Graphics.find(String::nullTerminatedView("SugarRush"_s));
 						if (it != _metadata->Graphics.end()) {
 							Vector2i texSize = it->second.Base->TextureDiffuse->size();
 							Vector2i size = it->second.Base->FrameDimensions;
@@ -770,18 +773,17 @@ namespace Jazz2::Actors
 						});
 					}
 				} else if (_weaponAmmo[(int)_currentWeapon] != 0) {
-					if (_currentTransitionState == AnimState::Spring || _currentTransitionState == AnimState::TransitionShootToIdle) {
-						ForceCancelTransition();
+					if (_currentWeapon != WeaponType::TNT) {
+						if (_currentTransitionState == AnimState::Spring || _currentTransitionState == AnimState::TransitionShootToIdle) {
+							ForceCancelTransition();
+						}
+
+						SetAnimation(_currentAnimationState | AnimState::Shoot);
+
+						_fireFramesLeft = 20.0f;
 					}
 
-					SetAnimation(_currentAnimationState | AnimState::Shoot);
-
-					_fireFramesLeft = 20.0f;
-
-					if (!_wasFirePressed) {
-						_wasFirePressed = true;
-						//SetTransition(currentAnimationState | AnimState::TRANSITION_IDLE_TO_SHOOT, false);
-					}
+					_wasFirePressed = true;
 
 					weaponInUse = FireCurrentWeapon(_currentWeapon);
 				}
@@ -804,13 +806,12 @@ namespace Jazz2::Actors
 		if (_controllable && _controllableExternal && _playerType != PlayerType::Frog) {
 			bool isGamepad;
 			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::SwitchWeapon, true, isGamepad)) {
-				// TODO
-				//if (!isGamepad || !SettingsCache.EnableWeaponWheel) {
+				if (!isGamepad || !PreferencesCache::EnableWeaponWheel) {
 					SwitchToNextWeapon();
-				//}
+				}
 			} else if (_playerIndex == 0) {
 				// Use numeric key to switch weapons for the first player
-				// TODO
+				// TODO: Use numeric key to switch weapons for the first player
 				/*int maxWeaponCount = std::min(PlayerCarryOver::WeaponCount, 9);
 				for (int i = 0; i < maxWeaponCount; i++) {
 					if (_weaponAmmo[i] != 0 && DualityApp.Keyboard.KeyHit(Duality.Input.Key.Number1 + i)) {
@@ -883,7 +884,6 @@ namespace Jazz2::Actors
 
 	void Player::OnUpdateHitbox()
 	{
-		// ToDo: Figure out how to use hot/coldspots properly.
 		// The sprite is always located relative to the hotspot.
 		// The coldspot is usually located at the ground level of the sprite,
 		// but for falling sprites for some reason somewhere above the hotspot instead.
@@ -947,7 +947,7 @@ namespace Jazz2::Actors
 			}
 		} else if (auto spring = dynamic_cast<Environment::Spring*>(other.get())) {
 			// Collide only with hitbox
-			if (_controllableExternal && _springCooldown <= 0.0f && spring->AABBInner.Overlaps(AABBInner)) {
+			if (_controllableExternal && _currentTransitionState != AnimState::TransitionLedgeClimb && _springCooldown <= 0.0f && spring->AABBInner.Overlaps(AABBInner)) {
 				Vector2 force = spring->Activate();
 				int sign = ((force.X + force.Y) > std::numeric_limits<float>::epsilon() ? 1 : -1);
 				if (std::abs(force.X) > 0.0f) {
@@ -1278,7 +1278,7 @@ namespace Jazz2::Actors
 						: (!_levelHandler->IsPositionEmpty(this, aabbL, params) && _levelHandler->IsPositionEmpty(this, aabbR, params))) {
 
 						_inLedgeTransition = true;
-						// ToDo: Spaz's and Lori's animation should be continual
+						// TODO: Spaz's and Lori's animation should be continual
 						SetTransition(AnimState::TransitionLedge, true);
 
 						PlaySfx("Ledge"_s);
@@ -1341,7 +1341,6 @@ namespace Jazz2::Actors
 		if (_currentSpecialMove == SpecialMoveType::Buttstomp && (GetState(ActorFlags::CanJump) || _suspendType != SuspendType::None)) {
 			EndDamagingMove();
 			if (_suspendType == SuspendType::None && !_isSpring) {
-				// TODO: Refactor this
 				int tx = (int)_pos.X / 32;
 				int ty = ((int)_pos.Y + 24) / 32;
 
@@ -1386,7 +1385,7 @@ namespace Jazz2::Actors
 
 		// Copter Ears
 		if (_activeModifier != Modifier::Copter && _activeModifier != Modifier::LizardCopter) {
-			// ToDo: Is this still needed?
+			// TODO: Is this still needed?
 			bool cancelCopter;
 			if ((_currentAnimationState & AnimState::Copter) == AnimState::Copter) {
 				cancelCopter = (GetState(ActorFlags::CanJump) || _suspendType != SuspendType::None || _copterFramesLeft <= 0.0f);
@@ -1468,8 +1467,7 @@ namespace Jazz2::Actors
 				_suspendType = newSuspendState;
 				CollisionFlags &= ~CollisionFlags::ApplyGravitation;
 
-				if (_speed.Y > 0 && newSuspendState == SuspendType::Vine) {
-					// TODO
+				if (_speed.Y > 0.0f && newSuspendState == SuspendType::Vine) {
 					PlaySfx("HookAttach"_s, 0.8f, 1.2f);
 				}
 
@@ -1580,9 +1578,9 @@ namespace Jazz2::Actors
 		uint8_t* p;
 		EventType tileEvent = events->GetEventByPosition(_pos.X, _pos.Y, &p);
 		switch (tileEvent) {
-			case EventType::LightSet: { // Intensity, Red, Green, Blue, Flicker
+			case EventType::LightAmbient: { // Intensity, Red, Green, Blue, Flicker
 				// TODO: Change only player view, handle splitscreen multiplayer
-				_levelHandler->SetAmbientLight(p[0] * 0.01f);
+				_levelHandler->SetAmbientLight(p[0] / 255.0f);
 				break;
 			}
 			case EventType::WarpOrigin: { // Warp ID, Fast, Set Lap
@@ -1657,12 +1655,10 @@ namespace Jazz2::Actors
 						_coins -= coinsRequired;
 
 						String nextLevel;
-						// TODO
-						/*if (p[4] != 0) {
-							nextLevel = _levelHandler->GetLevelText(p[2]).SubstringByOffset('|', p[3]);
-						}*/
+						if (p[4] != 0) {
+							nextLevel = _levelHandler->GetLevelText(p[2], p[3], '|');
+						}
 						_levelHandler->BeginLevelChange((ExitType)p[0], nextLevel);
-						PlayPlayerSfx("EndOfLevel"_s);
 					} else if (_bonusWarpTimer <= 0.0f) {
 						_levelHandler->ShowCoins(_coins);
 						PlaySfx("BonusWarpNotEnoughCoins"_s);
@@ -1897,6 +1893,8 @@ namespace Jazz2::Actors
 					// Return to the last save point
 					MoveInstantly(_checkpointPos, MoveType::Absolute | MoveType::Force);
 					_levelHandler->SetAmbientLight(_checkpointLight);
+					_levelHandler->LimitCameraView(0, 0);
+					_levelHandler->WarpCameraToTarget(shared_from_this());
 
 					_levelHandler->RollbackToCheckpoint();
 
@@ -1905,7 +1903,7 @@ namespace Jazz2::Actors
 					_controllable = false;
 					_renderer.setDrawEnabled(false);
 
-					// ToDo: Turn off collisions
+					// TODO: Turn off collisions
 				}
 			} else {
 				_controllable = false;
@@ -1966,6 +1964,78 @@ namespace Jazz2::Actors
 		_weaponCooldown = cooldownBase - (_weaponUpgrades[(int)WeaponType::Blaster] * cooldownUpgrade);
 	}
 
+	void Player::FireWeaponRF()
+	{
+		Vector3i initialPos;
+		Vector2f gunspotPos;
+		float angle;
+		GetFirePointAndAngle(initialPos, gunspotPos, angle);
+
+		uint8_t shotParams[1] = { _weaponUpgrades[(int)WeaponType::RF] };
+
+		if ((_weaponUpgrades[(int)WeaponType::RF] & 0x1) != 0) {
+			std::shared_ptr<Weapons::RFShot> shot1 = std::make_shared<Weapons::RFShot>();
+			shot1->OnActivated({
+				.LevelHandler = _levelHandler,
+				.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2),
+				.Params = shotParams
+			});
+			shot1->OnFire(shared_from_this(), gunspotPos, _speed, angle - 0.3f, IsFacingLeft());
+			_levelHandler->AddActor(shot1);
+
+			std::shared_ptr<Weapons::RFShot> shot2 = std::make_shared<Weapons::RFShot>();
+			shot2->OnActivated({
+				.LevelHandler = _levelHandler,
+				.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2),
+				.Params = shotParams
+			});
+			shot2->OnFire(shared_from_this(), gunspotPos, _speed, angle, IsFacingLeft());
+			_levelHandler->AddActor(shot2);
+
+			std::shared_ptr<Weapons::RFShot> shot3 = std::make_shared<Weapons::RFShot>();
+			shot3->OnActivated({
+				.LevelHandler = _levelHandler,
+				.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2),
+				.Params = shotParams
+			});
+			shot3->OnFire(shared_from_this(), gunspotPos, _speed, angle + 0.3f, IsFacingLeft());
+			_levelHandler->AddActor(shot3);
+		} else {
+			std::shared_ptr<Weapons::RFShot> shot1 = std::make_shared<Weapons::RFShot>();
+			shot1->OnActivated({
+				.LevelHandler = _levelHandler,
+				.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2),
+				.Params = shotParams
+			});
+			shot1->OnFire(shared_from_this(), gunspotPos, _speed, angle - 0.22f, IsFacingLeft());
+			_levelHandler->AddActor(shot1);
+
+			std::shared_ptr<Weapons::RFShot> shot2 = std::make_shared<Weapons::RFShot>();
+			shot2->OnActivated({
+				.LevelHandler = _levelHandler,
+				.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2),
+				.Params = shotParams
+			});
+			shot2->OnFire(shared_from_this(), gunspotPos, _speed, angle + 0.22f, IsFacingLeft());
+			_levelHandler->AddActor(shot2);
+		}
+
+		_weaponCooldown = 100.0f - (_weaponUpgrades[(int)WeaponType::Blaster] * 1.0f);
+	}
+
+	void Player::FireWeaponTNT()
+	{
+		std::shared_ptr<Weapons::TNT> tnt = std::make_shared<Weapons::TNT>();
+		tnt->OnActivated({
+			.LevelHandler = _levelHandler,
+			.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2)
+		});
+		tnt->OnFire(shared_from_this());
+		_levelHandler->AddActor(tnt);
+
+		_weaponCooldown = 30.0f;
+	}
+
 	bool Player::FireCurrentWeapon(WeaponType weaponType)
 	{
 		if (_weaponCooldown > 0.0f) {
@@ -1986,8 +2056,8 @@ namespace Jazz2::Actors
 					// TODO: Add upgraded freezer
 					FireWeapon<Weapons::FreezerShot, WeaponType::Freezer>(46.0f, 0.8f);
 					break;
-				//case WeaponType::Seeker: FireWeaponSeeker(); break;
-				//case WeaponType::RF: FireWeaponRF(); break;
+				case WeaponType::Seeker: FireWeapon<Weapons::SeekerShot, WeaponType::Seeker>(100.0f, 1.0f); break;
+				case WeaponType::RF: FireWeaponRF(); break;
 
 				case WeaponType::Toaster: {
 					if (_inWater) {
@@ -2004,8 +2074,8 @@ namespace Jazz2::Actors
 					break;
 				}
 
-				/*case WeaponType::TNT: FireWeaponTNT(); break;
-				case WeaponType::Pepper: FireWeaponPepper(); break;
+				case WeaponType::TNT: FireWeaponTNT(); break;
+				/*case WeaponType::Pepper: FireWeaponPepper(); break;
 				case WeaponType::Electro: FireWeaponElectro(); break;
 
 				case WeaponType::Thunderbolt: {
@@ -2067,9 +2137,10 @@ namespace Jazz2::Actors
 
 	bool Player::OnLevelChanging(ExitType exitType)
 	{
-		/*if (activeBird != null) {
-			activeBird.FlyAway();
-			activeBird = null;
+		// TODO: Birds
+		/*if (_activeBird != nullptr) {
+			_activeBird->FlyAway();
+			_activeBird = nullptr;
 		}*/
 
 		if (_levelExiting != LevelExitingState::None) {
@@ -2079,7 +2150,6 @@ namespace Jazz2::Actors
 
 					SetPlayerTransition(AnimState::TransitionEndOfLevel, false, true, SpecialMoveType::None, [this]() {
 						_renderer.setDrawEnabled(false);
-						//attachedHud ? .BeginFadeOut(true);
 						_levelExiting = LevelExitingState::Ready;
 					});
 					PlayPlayerSfx("EndOfLevel1"_s);
@@ -2096,7 +2166,6 @@ namespace Jazz2::Actors
 
 					SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpInFreefall : AnimState::TransitionWarpIn, false, true, SpecialMoveType::None, [this]() {
 						_renderer.setDrawEnabled(false);
-						//attachedHud ? .BeginFadeOut(false);
 						_levelExiting = LevelExitingState::Ready;
 					});
 					PlayPlayerSfx("WarpIn"_s);
@@ -2115,12 +2184,13 @@ namespace Jazz2::Actors
 			return (_levelExiting == LevelExitingState::Ready);
 		}
 
+		PlayPlayerSfx("EndOfLevel"_s);
+
 		if (exitType == ExitType::Warp || exitType == ExitType::Bonus || _inWater) {
 			_levelExiting = LevelExitingState::Transition;
 
 			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpInFreefall : AnimState::TransitionWarpIn, false, true, SpecialMoveType::None, [this]() {
 				_renderer.setDrawEnabled(false);
-				//attachedHud ? .BeginFadeOut(false);
 				_levelExiting = LevelExitingState::Ready;
 			});
 			PlayPlayerSfx("WarpIn"_s);
@@ -2148,7 +2218,7 @@ namespace Jazz2::Actors
 		_copterFramesLeft = 0.0f;
 		_pushFramesLeft = 0.0f;
 
-		// Used for waiting timeout
+		// Re-used for waiting timeout
 		_lastPoleTime = 300.0f;
 
 		return false;
@@ -2455,7 +2525,7 @@ namespace Jazz2::Actors
 
 		_fireFramesLeft = _copterFramesLeft = _pushFramesLeft = 0.0f;
 
-		// TODO
+		// TODO: Birds
 		/*if (activeBird != null) {
 			activeBird.FlyAway();
 			activeBird = null;
@@ -2504,7 +2574,7 @@ namespace Jazz2::Actors
 			_invulnerableTime = 0;
 			_renderer.setDrawEnabled(true);
 
-			// TODO
+			// TODO: Circle effect
 			//SetCircleEffect(false);
 
 #if MULTIPLAYER && SERVER
@@ -2517,7 +2587,7 @@ namespace Jazz2::Actors
 		_invulnerableTime = time;
 
 		if (withCircleEffect) {
-			// TODO
+			// TODO: Circle effect
 			//SetCircleEffect(true);
 		}
 

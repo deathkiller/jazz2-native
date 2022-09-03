@@ -18,7 +18,6 @@ namespace Jazz2::Compatibility
 {
     enum class JJ2DefaultPalette {
         Sprite,
-        Snow,
         Menu
     };
 

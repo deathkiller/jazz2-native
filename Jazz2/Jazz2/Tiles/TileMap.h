@@ -24,14 +24,12 @@ namespace Jazz2::Tiles
 		bool IsOneWay;
 		SuspendType SuspendType;
 		TileDestructType DestructType;
-		int DestructAnimation;   // Animation index for a destructible tile that uses an animation, but doesn't animate normally
-		int DestructFrameIndex;  // Denotes the specific frame from the above animation that is currently active
-								 // Collapsible: delay ("wait" parameter); trigger: trigger id
+		int DestructAnimation;		// Animation index for a destructible tile that uses an animation, but doesn't animate normally
+		int DestructFrameIndex;		// Denotes the specific frame from the above animation that is currently active
+									// Collapsible: delay ("wait" parameter); trigger: trigger id
 
-		// ToDo: I don't know if it's good solution for this
+		// TODO: I don't know if it's good solution for this
 		unsigned int ExtraData;
-		// ToDo: I don't know if it's used at all
-		//public bool TilesetDefault;
 	};
 
 	struct TileMapLayer {

@@ -132,7 +132,6 @@ namespace Jazz2::UI::Menu
 
 	void BeginSection::ExecuteSelected()
 	{
-		// TODO: Actions
 		switch (_selectedIndex) {
 			case (int)Item::PlayStory: if (_isVerified) _root->SwitchToSection<StartGameOptionsSection>(); break;
 			case (int)Item::Options: _root->SwitchToSection<OptionsSection>(); break;

@@ -4,6 +4,7 @@
 #include "../../Events/EventSpawner.h"
 #include "../Player.h"
 #include "../Weapons/ShotBase.h"
+#include "../Weapons/TNT.h"
 
 #include "../../../nCine/Base/Random.h"
 
@@ -33,14 +34,15 @@ namespace Jazz2::Actors::Collectibles
 	bool GemGiant::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
-			DecreaseHealth(shotBase->GetStrength(), other.get());
+			DecreaseHealth(shotBase->GetStrength(), shotBase);
 			shotBase->DecreaseHealth(INT32_MAX);
 			return true;
-		} /*else if (auto shotTnt = dynamic_cast<Weapons::ShotTNT*>(other)) {
-			// TODO: TNT
-		}*/ else if (auto player = dynamic_cast<Player*>(other.get())) {
+		} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {
+			DecreaseHealth(INT32_MAX, tnt);
+			return true;
+		} else if (auto player = dynamic_cast<Player*>(other.get())) {
 			if (player->CanBreakSolidObjects()) {
-				DecreaseHealth(INT32_MAX, other.get());
+				DecreaseHealth(INT32_MAX, player);
 				return true;
 			}
 		}

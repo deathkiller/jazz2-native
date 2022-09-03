@@ -2,9 +2,9 @@
 #include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
-
 #include "../Player.h"
 #include "../Weapons/ShotBase.h"
+#include "../Weapons/TNT.h"
 
 namespace Jazz2::Actors::Solid
 {
@@ -44,9 +44,10 @@ namespace Jazz2::Actors::Solid
 			DecreaseHealth(shotBase->GetStrength(), shotBase);
 			shotBase->DecreaseHealth(INT32_MAX);
 			return true;
-		} /*else if (auto shotTnt = dynamic_cast<Weapons::ShotTNT*>(other)) {
-			// TODO: TNT
-		}*/ else if (auto player = dynamic_cast<Player*>(other.get())) {
+		} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {
+			DecreaseHealth(INT32_MAX, tnt);
+			return true;
+		} else if (auto player = dynamic_cast<Player*>(other.get())) {
 			if (player->CanBreakSolidObjects()) {
 				DecreaseHealth(INT32_MAX, player);
 				return true;

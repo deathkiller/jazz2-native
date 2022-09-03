@@ -81,7 +81,7 @@ namespace Jazz2::Compatibility
 		//}
 	}
 
-	void JJ2Episode::Convert(const String& targetPath, std::function<JJ2Level::LevelToken(const String&)> levelTokenConversion, std::function<String(JJ2Episode*)> episodeNameConversion, std::function<Pair<String, String>(JJ2Episode*)> episodePrevNext)
+	void JJ2Episode::Convert(const String& targetPath, std::function<JJ2Level::LevelToken(MutableStringView&)> levelTokenConversion, std::function<String(JJ2Episode*)> episodeNameConversion, std::function<Pair<String, String>(JJ2Episode*)> episodePrevNext)
 	{
 		auto so = fs::Open(targetPath, FileAccessMode::Write);
 		ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
@@ -98,7 +98,7 @@ namespace Jazz2::Compatibility
 
 		so->WriteValue<int32_t>(Position);
 
-		StringView firstLevel = FirstLevel;
+		MutableStringView firstLevel = FirstLevel;
 		if (JJ2Level::StringHasSuffixIgnoreCase(firstLevel, ".j2l"_s) ||
 			JJ2Level::StringHasSuffixIgnoreCase(firstLevel, ".lev"_s)) {
 			firstLevel = firstLevel.exceptSuffix(4);
@@ -106,11 +106,12 @@ namespace Jazz2::Compatibility
 
 		if (levelTokenConversion != nullptr) {
 			auto token = levelTokenConversion(firstLevel);
-			firstLevel = token.Level;
+			so->WriteValue<uint8_t>((uint8_t)token.Level.size());
+			so->Write(token.Level.data(), token.Level.size());
+		} else {
+			so->WriteValue<uint8_t>((uint8_t)firstLevel.size());
+			so->Write(firstLevel.data(), firstLevel.size());
 		}
-
-		so->WriteValue<uint8_t>((uint8_t)firstLevel.size());
-		so->Write(firstLevel.data(), firstLevel.size());
 
 		if (episodePrevNext != nullptr) {
 			auto prevNext = episodePrevNext(this);

@@ -29,7 +29,6 @@ namespace Jazz2::Actors::Environment
 	{
 		SetState(ActorFlags::CanBeFrozen, false);
 
-		// TODO: change these types to uint8_t
 		_theme = details.Params[0];
 		_activated = (details.Params[1] != 0);
 
@@ -69,7 +68,6 @@ namespace Jazz2::Actors::Environment
 			PlaySfx("TransitionActivate"_s);
 
 			// Deactivate event in map
-			// TODO: change these types to uint8_t
 			uint8_t playerParams[16] = { _theme, 1 };
 			_levelHandler->EventMap()->StoreTileEvent(_originTile.X, _originTile.Y, EventType::Checkpoint, ActorFlags::None, playerParams);
 

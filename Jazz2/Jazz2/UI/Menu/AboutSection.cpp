@@ -9,7 +9,7 @@ namespace Jazz2::UI::Menu
 	void AboutSection::OnUpdate(float timeMult)
 	{
 		if (_root->ActionHit(PlayerActions::Menu)) {
-			_root->PlaySfx("MenuSelect", 0.5f);
+			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_root->LeaveSection();
 		}
 	}
@@ -57,7 +57,7 @@ namespace Jazz2::UI::Menu
 			if (pointerIndex != -1) {
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 				if (y < 80.0f) {
-					_root->PlaySfx("MenuSelect", 0.5f);
+					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_root->LeaveSection();
 				}
 			}

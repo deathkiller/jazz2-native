@@ -3,6 +3,7 @@
 #include "../Player.h"
 #include "../Explosion.h"
 #include "../Weapons/ShotBase.h"
+#include "../Weapons/TNT.h"
 #include "../Enemies/TurtleShell.h"
 
 #include "../../../nCine/Base/FrameTimer.h"
@@ -97,8 +98,8 @@ namespace Jazz2::Actors::Collectibles
 			OnCollect(player);
 			return true;
 		} else {
-			// TODO: Add TNT
-			bool shouldDrop = _untouched && (dynamic_cast<Weapons::ShotBase*>(other.get()) != nullptr || dynamic_cast<Enemies::TurtleShell*>(other.get()) != nullptr);
+			bool shouldDrop = _untouched && (dynamic_cast<Weapons::ShotBase*>(other.get()) != nullptr ||
+				dynamic_cast<Weapons::TNT*>(other.get()) != nullptr || dynamic_cast<Enemies::TurtleShell*>(other.get()) != nullptr);
 			if (shouldDrop) {
 				Vector2f speed = other->GetSpeed();
 				_externalForce.X += speed.X / 2.0f * (0.9f + nCine::Random().NextFloat(0.0f, 0.2f));

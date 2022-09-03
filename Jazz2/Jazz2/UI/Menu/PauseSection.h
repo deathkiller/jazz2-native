@@ -16,7 +16,7 @@ namespace Jazz2::UI::Menu
 
 	private:
 		enum class Item {
-			PlayStory,
+			Resume,
 			Options,
 			Exit,
 

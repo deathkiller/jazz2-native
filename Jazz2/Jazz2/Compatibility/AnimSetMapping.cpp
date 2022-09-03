@@ -967,7 +967,7 @@ namespace Jazz2::Compatibility
 
 			if (isFull) {
 				m.NextSet();
-				m.Add("Common"_s, "Snow"_s, JJ2DefaultPalette::Snow);
+				m.Add("Common"_s, "Snow"_s);
 
 				m.NextSet();
 				m.Add("Bolly"_s, "rocket"_s);

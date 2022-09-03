@@ -110,6 +110,9 @@ namespace Jazz2::Actors::Enemies
 
 	bool Witch::OnPerish(ActorBase* collider)
 	{
+		// It must be done here, because the player may not exist after animation callback 
+		AddScoreToCollider(collider);
+
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
 		SetTransition(AnimState::TransitionDeath, false, [this, collider]() {

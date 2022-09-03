@@ -136,9 +136,8 @@ namespace Jazz2::Compatibility
 
 		Add(JJ2Event::SAVE_POINT, [](JJ2Level* level, uint32_t jj2Params) -> ConversionResult {
 			// Green xmas-themed checkpoints for some levels
-			// TODO
-			//uint8_t theme = (uint16_t)(level.Tileset.IndexOf("xmas", StringComparison.InvariantCultureIgnoreCase) != -1 ? 1 : 0);
-			uint8_t theme = 0;
+			bool isXmas = level->Tileset.findOr("xmas"_s, level->Tileset.end()) != level->Tileset.end();
+			uint8_t theme = (isXmas ? 1 : 0);
 			return { EventType::Checkpoint, { theme } };
 		});
 
@@ -297,9 +296,14 @@ namespace Jazz2::Compatibility
 		// Area events
 		Add(JJ2Event::AREA_STOP_ENEMY, NoParamList(EventType::AreaStopEnemy));
 		Add(JJ2Event::AREA_FLOAT_UP, NoParamList(EventType::AreaFloatUp));
-		Add(JJ2Event::AREA_ACTIVATE_BOSS, ParamIntToParamList(EventType::AreaActivateBoss, { {
-			{ JJ2ParamUInt, 1 }	// Music
-		}}));
+		Add(JJ2Event::AREA_ACTIVATE_BOSS, [](JJ2Level* level, uint32_t jj2Params) -> ConversionResult {
+			uint8_t eventParams[16];
+			ConvertParamInt(jj2Params, {
+				{ JJ2ParamUInt, 1 }	// Music
+			}, eventParams);
+
+			return { EventType::AreaActivateBoss, { 'b', 'o', 's', 's', (uint8_t)('1' + eventParams[0]), '.', 'j', '2', 'b', '\0' } };
+		});
 
 		Add(JJ2Event::AREA_EOL, [](JJ2Level* level, uint32_t jj2Params) -> ConversionResult {
 			uint8_t eventParams[16];
@@ -310,7 +314,7 @@ namespace Jazz2::Compatibility
 				{ JJ2ParamUInt, 4 }		// Offset (JJ2+)
 			}, eventParams);
 
-			// TODO
+			// TODO: JJ2+ Extension
 			/*if (eventParams[2] != 0) {
 				level.AddLevelTokenTextID(eventParams[2]);
 			}*/
@@ -326,7 +330,7 @@ namespace Jazz2::Compatibility
 				{ JJ2ParamUInt, 4 }		// Offset (JJ2+)
 			}, eventParams);
 
-			// TODO
+			// TODO: JJ2+ Extension
 			/*if (eventParams[2] != 0) {
 				level.AddLevelTokenTextID(eventParams[2]);
 			}*/
@@ -341,7 +345,7 @@ namespace Jazz2::Compatibility
 				{ JJ2ParamUInt, 4 }		// Offset (JJ2+)
 			}, eventParams);
 
-			// TODO
+			// TODO: JJ2+ Extension
 			/*if (eventParams[1] != 0) {
 				level.AddLevelTokenTextID(eventParams[1]);
 			}*/
@@ -413,7 +417,13 @@ namespace Jazz2::Compatibility
 				{ JJ2ParamUInt, 2 }		// Type
 			}, eventParams);
 
-			return { EventType::AreaWeather, { (uint8_t)(eventParams[2] == 1 ? 0 : eventParams[3] + 1), (uint8_t)((eventParams[0] + 1) * 5 / 3), eventParams[1] } };
+			WeatherType weatherType = (eventParams[2] == 0 ? (WeatherType)(eventParams[3] + 1) : WeatherType::None);
+			if (weatherType != WeatherType::None && eventParams[1] != 0) {
+				weatherType |= WeatherType::OutdoorsOnly;
+			}
+			uint8_t weatherIntensity = (weatherType != WeatherType::None ? (uint8_t)((eventParams[0] + 1) * 5 / 3) : 0);
+
+			return { EventType::AreaWeather, { (uint8_t)weatherType, weatherIntensity } };
 		});
 
 		Add(JJ2Event::AMBIENT_SOUND, ParamIntToParamList(EventType::AreaAmbientSound, {{
@@ -474,14 +484,21 @@ namespace Jazz2::Compatibility
 		}}));
 
 		// Lights events
-		Add(JJ2Event::LIGHT_SET, ParamIntToParamList(EventType::LightSet, {{
-			{ JJ2ParamUInt, 7 },	// Intensity
-			{ JJ2ParamUInt, 4 },	// Red
-			{ JJ2ParamUInt, 4 },	// Green
-			{ JJ2ParamUInt, 4 },	// Blue
-			{ JJ2ParamBool, 1 }		// Flicker
-		}}));
-		Add(JJ2Event::LIGHT_RESET, NoParamList(EventType::LightReset));
+		Add(JJ2Event::LIGHT_SET, [](JJ2Level* level, uint32_t jj2Params) -> ConversionResult {
+			uint8_t eventParams[16];
+			ConvertParamInt(jj2Params, {
+				{ JJ2ParamUInt, 7 },	// Intensity
+				{ JJ2ParamUInt, 4 },	// Red
+				{ JJ2ParamUInt, 4 },	// Green
+				{ JJ2ParamUInt, 4 },	// Blue
+				{ JJ2ParamBool, 1 }		// Flicker
+			}, eventParams);
+
+			return { EventType::LightAmbient, { (uint8_t)std::min(eventParams[0] * 255 / 100, 255), eventParams[1], eventParams[2], eventParams[3], eventParams[4] } };
+		});
+		Add(JJ2Event::LIGHT_RESET, [](JJ2Level* level, uint32_t jj2Params) -> ConversionResult {
+			return { EventType::LightAmbient, { (uint8_t)std::min(level->LightingStart * 255 / 64, 255), 255, 255, 255, 0 } };
+		});
 		Add(JJ2Event::LIGHT_DIM, ConstantParamList(EventType::LightSteady, { 127, 60, 100, 0, 0, 0, 0, 0 }));
 		Add(JJ2Event::LIGHT_STEADY, [](JJ2Level* level, uint32_t jj2Params) -> ConversionResult {
 			uint8_t eventParams[16];
@@ -521,11 +538,11 @@ namespace Jazz2::Compatibility
 				}
 
 				case 6: // Ring of light
-					// TODO
+					// TODO: JJ2+ Extension
 					return { EventType::Empty };
 
 				case 7: // Ring of light 2
-					// TODO
+					// TODO: JJ2+ Extension
 					return { EventType::Empty };
 			}
 		});

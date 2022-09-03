@@ -4,6 +4,7 @@
 #include "../../Events/EventMap.h"
 #include "../../Tiles/TileMap.h"
 #include "../Weapons/ShotBase.h"
+#include "../Weapons/TNT.h"
 #include "../Player.h"
 #include "../Solid/PushableBox.h"
 
@@ -28,6 +29,27 @@ namespace Jazz2::Actors::Enemies
 		ActorBase::OnUpdate(timeMult);
 
 		HandleBlinking(timeMult);
+	}
+
+	void EnemyBase::AddScoreToCollider(ActorBase* collider)
+	{
+		if (_scoreValue > 0) {
+			if (auto player = dynamic_cast<Player*>(collider)) {
+				player->AddScore(_scoreValue);
+			} else if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(collider)) {
+				auto owner = shotBase->GetOwner();
+				if (owner != nullptr) {
+					owner->AddScore(_scoreValue);
+				}
+			} else if (auto tnt = dynamic_cast<Weapons::TNT*>(collider)) {
+				auto owner = tnt->GetOwner();
+				if (owner != nullptr) {
+					owner->AddScore(_scoreValue);
+				}
+			}
+
+			_scoreValue = 0;
+		}
 	}
 
 	void EnemyBase::SetHealthByDifficulty(int health)
@@ -104,10 +126,10 @@ namespace Jazz2::Actors::Enemies
 				DecreaseHealth(shotBase->GetStrength(), shotBase);
 				// Collision must also be processed by the shot
 				//return true;
-			} /*else if (auto shotTnt = dynamic_cast<Weapons::ShotTNT*>(other.get())) {
-				DecreaseHealth(5, shotTnt);
+			} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {
+				DecreaseHealth(5, tnt);
 				return true;
-			}*/ else if (auto pushableBox = dynamic_cast<Solid::PushableBox*>(other.get())) {
+			} else if (auto pushableBox = dynamic_cast<Solid::PushableBox*>(other.get())) {
 				if (pushableBox->GetSpeed().Y > 0.0f && pushableBox->AABBInner.B < _pos.Y) {
 					_lastHitDir = LastHitDirection::Up;
 					DecreaseHealth(10, pushableBox);
@@ -126,19 +148,7 @@ namespace Jazz2::Actors::Enemies
 
 	bool EnemyBase::OnPerish(ActorBase* collider)
 	{
-		if (auto player = dynamic_cast<Player*>(collider)) {
-			player->AddScore(_scoreValue);
-		} else if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(collider)) {
-			auto owner = shotBase->GetOwner();
-			if (owner != nullptr) {
-				owner->AddScore(_scoreValue);
-			}
-		} /*else if(auto shotTnt = dynamic_cast<Weapons::ShotTNT*>(collider)) {
-			auto owner = shotTnt->GetOwner();
-			if (owner != nullptr) {
-				owner->AddScore(_scoreValue);
-			}
-		}*/
+		AddScoreToCollider(collider);
 
 		return ActorBase::OnPerish(collider);
 	}

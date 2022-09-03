@@ -9,7 +9,7 @@ namespace Jazz2::UI::Menu
 		_selectedIndex(0),
 		_animation(0.0f)
 	{
-		_items[(int)Item::PlayStory].Name = "Resume"_s;
+		_items[(int)Item::Resume].Name = "Resume"_s;
 		_items[(int)Item::Options].Name = "Options"_s;
 		_items[(int)Item::Exit].Name = "Save & Exit"_s;
 	}
@@ -105,9 +105,8 @@ namespace Jazz2::UI::Menu
 
 	void PauseSection::ExecuteSelected()
 	{
-		// TODO: Actions
 		switch (_selectedIndex) {
-			case (int)Item::PlayStory:
+			case (int)Item::Resume:
 				if (auto ingameMenu = dynamic_cast<InGameMenu*>(_root)) {
 					ingameMenu->ResumeGame();
 				}

@@ -2,6 +2,7 @@
 #include "../../ILevelHandler.h"
 #include "../Player.h"
 #include "../Weapons/ShotBase.h"
+#include "../Weapons/TNT.h"
 
 namespace Jazz2::Actors::Environment
 {
@@ -54,13 +55,17 @@ namespace Jazz2::Actors::Environment
 	bool BirdCage::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (!_activated) {
-			// TODO: TNT
 			if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
 				auto owner = shotBase->GetOwner();
 				if (owner != nullptr) {
 					ApplyToPlayer(owner);
-
 					shotBase->DecreaseHealth(INT32_MAX);
+				}
+				return true;
+			} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {
+				auto owner = tnt->GetOwner();
+				if (owner != nullptr) {
+					ApplyToPlayer(owner);
 				}
 				return true;
 			} else if (auto player = dynamic_cast<Player*>(other.get())) {

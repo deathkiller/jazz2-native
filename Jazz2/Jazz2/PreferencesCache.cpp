@@ -46,6 +46,6 @@ namespace Jazz2
 
 	void PreferencesCache::Save()
 	{
-		// TODO
+		// TODO: Save to file
 	}
 }

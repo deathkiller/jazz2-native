@@ -161,7 +161,7 @@ namespace Jazz2::Actors::Enemies
 			_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
 			_isAttacking = false;
 
-			// ToDo: Bad timing
+			// TODO: Bad timing
 			PlaySfx("Attack2"_s);
 		});
 	}

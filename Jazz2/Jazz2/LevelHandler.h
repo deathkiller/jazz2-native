@@ -4,6 +4,7 @@
 #include "IStateHandler.h"
 #include "IRootController.h"
 #include "LevelInitialization.h"
+#include "WeatherType.h"
 #include "Events/EventMap.h"
 #include "Events/EventSpawner.h"
 #include "Tiles/TileMap.h"
@@ -43,6 +44,7 @@ namespace Jazz2
 	class LevelHandler : public ILevelHandler, public IStateHandler
 	{
 		friend class ContentResolver;
+		friend class UI::HUD;
 		friend class UI::Menu::InGameMenu;
 
 	public:
@@ -71,8 +73,7 @@ namespace Jazz2
 		}
 
 		bool ReduxMode() const override {
-			// TODO
-			return false;
+			return _reduxMode;
 		}
 
 		Recti LevelBounds() const override;
@@ -113,6 +114,7 @@ namespace Jazz2
 		void LimitCameraView(float left, float width) override;
 		void ShakeCameraView(float duration) override;
 		void SetWaterLevel(float value) override;
+		void SetWeather(WeatherType type, uint8_t intensity) override;
 
 		bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads = true) override;
 		bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
@@ -241,6 +243,10 @@ namespace Jazz2
 		bool _reduxMode, _cheatsUsed;
 		SmallVector<String, 0> _levelTexts;
 
+		String _nextLevel;
+		ExitType _nextLevelType;
+		float _nextLevelTime;
+
 		Events::EventSpawner _eventSpawner;
 		std::unique_ptr<Events::EventMap> _eventMap;
 		std::unique_ptr<Tiles::TileMap> _tileMap;
@@ -264,6 +270,8 @@ namespace Jazz2
 		std::shared_ptr<UI::Menu::InGameMenu> _pauseMenu;
 		std::shared_ptr<AudioBufferPlayer> _sugarRushMusic;
 		std::shared_ptr<Actors::Enemies::BossBase> _activeBoss;
+		WeatherType _weatherType;
+		uint8_t _weatherIntensity;
 
 		uint64_t _pressedActions;
 		uint32_t _overrideActions;
@@ -271,7 +279,7 @@ namespace Jazz2
 
 		void OnLevelLoaded(const StringView& name, const StringView& nextLevel, const StringView& secretLevel,
 			std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap,
-			const StringView& musicPath, const Vector4f& ambientColor, SmallVectorImpl<String>& levelTexts);
+			const StringView& musicPath, const Vector4f& ambientColor, WeatherType weatherType, uint8_t weatherIntensity, SmallVectorImpl<String>& levelTexts);
 
 		void ResolveCollisions(float timeMult);
 		void InitializeCamera();

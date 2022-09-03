@@ -5,12 +5,12 @@
 
     "Animations": {
         "Bullet": {
-            "Path": "Weapon/bullet_freezer_hor.png",
+            "Path": "Weapon/bullet_freezer_hor.aura",
             "FrameRate": 26,
             "States": [ 0 ]
         },
         "BulletUpgraded": {
-            "Path": "Weapon/bullet_freezer_upgraded_hor.png",
+            "Path": "Weapon/bullet_freezer_upgraded_hor.aura",
             "FrameRate": 26,
             "States": [ 1 ]
         }

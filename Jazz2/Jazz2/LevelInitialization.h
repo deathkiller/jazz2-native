@@ -44,6 +44,15 @@ namespace Jazz2
         Unknown = UINT16_MAX
     };
 
+    enum class ShieldType {
+        None,
+
+        Fire,
+        Water,
+        Lightning,
+        Laser
+    };
+
     enum class PlayerType {
         None,
 

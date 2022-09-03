@@ -4,6 +4,7 @@
 #include "../../Tiles/TileMap.h"
 #include "../Player.h"
 #include "../Weapons/ShotBase.h"
+#include "../Weapons/TNT.h"
 
 #include "../../../nCine/Base/Random.h"
 
@@ -72,13 +73,13 @@ namespace Jazz2::Actors::Solid
 				shotBase->TriggerRicochet(this);
 			}
 			return true;
-		} /*else if (auto shotTnt = dynamic_cast<Weapons::ShotTNT*>(other)) {
-			// TODO: TNT
-			Player* owner = shotTnt->GetOwner();
+		} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {
+			Player* owner = tnt->GetOwner();
 			if (owner != nullptr) {
 				DestroyAndApplyToPlayer(owner);
 			}
-		}*/ else if (auto player = dynamic_cast<Player*>(other.get())) {
+			return true;
+		} else if (auto player = dynamic_cast<Player*>(other.get())) {
 			if (player->CanBreakSolidObjects()) {
 				DestroyAndApplyToPlayer(player);
 				return true;

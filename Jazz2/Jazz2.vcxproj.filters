@@ -993,6 +993,21 @@
     <ClInclude Include="Jazz2\Actors\Enemies\Bubba.h">
       <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\WeatherType.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\TNT.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\PowerUpShieldMonitor.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\SeekerShot.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\RFShot.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1681,6 +1696,18 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Enemies\Bubba.cpp">
       <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\TNT.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\PowerUpShieldMonitor.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\SeekerShot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\RFShot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -5,6 +5,7 @@
 #include "JJ2Event.h"
 #include "JJ2Version.h"
 #include "EventConverter.h"
+#include "../WeatherType.h"
 
 #include <functional>
 
@@ -27,14 +28,6 @@ namespace Jazz2::Compatibility
             String Level;
         };
 
-        enum class WeatherType {
-            None,
-            Snow,
-            Flowers,
-            Rain,
-            Leaf
-        };
-
         struct ExtraTilesetEntry {
             String Name;
             uint16_t Offset;
@@ -45,12 +38,20 @@ namespace Jazz2::Compatibility
         static constexpr int TextEventStringsCount = 16;
 
         String LevelName;
+        String Name;
+        String Tileset;
+        String Music;
+        String NextLevel;
+        String BonusLevel;
+        String SecretLevel;
+
+        uint8_t LightingMin, LightingStart;
 
         JJ2Level() : _version(JJ2Version::Unknown), _verticalMPSplitscreen(false), _isMpLevel(false), _hasPit(false), _hasCTF(false), _hasLaps(false), _animCount(0) { }
 
         void Open(const StringView& path, bool strictParser);
 
-        void Convert(const String& targetPath, const EventConverter& eventConverter, const std::function<LevelToken(const StringView&)>& levelTokenConversion = nullptr);
+        void Convert(const String& targetPath, const EventConverter& eventConverter, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion = nullptr);
 
         JJ2Version GetVersion() const {
             return _version;
@@ -114,21 +115,12 @@ namespace Jazz2::Compatibility
 
         JJ2Version _version;
 
-        uint8_t _lightingMin, _lightingStart;
         uint16_t _animCount;
         bool _verticalMPSplitscreen, _isMpLevel;
         bool _hasPit, _hasCTF, _hasLaps;
         uint32_t _darknessColor;
         WeatherType _weatherType;
         uint8_t _weatherIntensity;
-        bool _weatherOutdoorsOnly;
-
-        String _name;
-        String _tileset;
-        String _music;
-        String _nextLevel;
-        String _bonusLevel;
-        String _secretLevel;
 
         String _textEventStrings[TextEventStringsCount];
 
@@ -145,7 +137,7 @@ namespace Jazz2::Compatibility
         void LoadLayers(JJ2Block& dictBlock, int dictLength, JJ2Block& layoutBlock, bool strictParser);
         void LoadMlleData(JJ2Block& block, uint32_t version, bool strictParser);
 
-        static void WriteLevelName(const std::unique_ptr<IFileStream>& so, const StringView& value, const std::function<LevelToken(const StringView&)>& levelTokenConversion = nullptr);
+        static void WriteLevelName(const std::unique_ptr<IFileStream>& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion = nullptr);
         static bool StringHasSuffixIgnoreCase(const StringView& value, const StringView& suffix);
     };
 }

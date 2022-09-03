@@ -167,8 +167,8 @@ namespace Jazz2::UI::Menu
 		float bottomLine = viewSize.Y - 42;
 		_root->DrawElement("MenuDim"_s, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
 			Alignment::Center, Colorf::White, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement("MenuLine", 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement("MenuLine", 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement("MenuLine"_s, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement("MenuLine"_s, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int charOffset = 0;
 		_root->DrawStringShadow("Controls"_s, charOffset, center.X * 0.3f, 110.0f,
@@ -233,7 +233,7 @@ namespace Jazz2::UI::Menu
 							if (_selectedIndex == i && _selectedColumn == j) {
 								value = "<    >";
 							} else {
-								value = { };
+								value = nullptr;
 							}
 							hasCollision = HasCollision(mapping.GamepadIndex, mapping.GamepadButton);
 
@@ -272,7 +272,7 @@ namespace Jazz2::UI::Menu
 						}
 						break;
 
-					default: value = { }; break;
+					default: value = nullptr; break;
 				}
 
 				if (!value.empty()) {
@@ -453,7 +453,7 @@ namespace Jazz2::UI::Menu
 			case KeySym::PAUSE: return "Pause"_s;
 			case KeySym::MENU: return "Menu"_s;
 
-			default: return { };
+			default: return nullptr;
 		}
 	}
 }

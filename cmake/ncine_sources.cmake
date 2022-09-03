@@ -156,14 +156,18 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/GemCrate.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/Pole.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/PowerUpMorphMonitor.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/PowerUpShieldMonitor.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/PowerUpWeaponMonitor.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/PushableBox.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/TriggerCrate.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BlasterShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BouncerShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/FreezerShot.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/RFShot.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/SeekerShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ShotBase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ToasterShot.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/TNT.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Collisions/DynamicTree.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Collisions/DynamicTreeBroadPhase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/AnimSetMapping.cpp

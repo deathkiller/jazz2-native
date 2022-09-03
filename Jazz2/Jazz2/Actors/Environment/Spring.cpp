@@ -37,7 +37,6 @@ namespace Jazz2::Actors::Environment
 
 	Task<bool> Spring::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		// TODO: change these types to uint8_t
 		_type = details.Params[0];
 		_orientation = details.Params[1];
 		KeepSpeedX = (details.Params[2] != 0);

@@ -375,7 +375,7 @@ namespace Jazz2::Tiles
 
 		_collapsingTimer = 1.0f;
 
-		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+		const Vector2i& layoutSize = _layers[_sprLayerIndex].LayoutSize;
 
 		for (int i = 0; i < _activeCollapsingTiles.size(); i++) {
 			Vector2i tilePos = _activeCollapsingTiles[i];

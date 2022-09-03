@@ -190,6 +190,8 @@ namespace Jazz2::Actors
 		void SwitchToWeaponByIndex(int weaponIndex);
 		template<typename T, WeaponType weaponType>
 		void FireWeapon(float cooldownBase, float cooldownUpgrade);
+		void FireWeaponRF();
+		void FireWeaponTNT();
 		bool FireCurrentWeapon(WeaponType weaponType);
 		void GetFirePointAndAngle(Vector3i& initialPos, Vector2f& gunspotPos, float& angle);
 	};

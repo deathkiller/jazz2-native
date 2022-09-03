@@ -4,8 +4,7 @@
 
 namespace Jazz2
 {
-    enum class EventType : uint16_t
-    {
+    enum class EventType : uint16_t {
         Empty = 0,
 
         // Basic
@@ -62,8 +61,7 @@ namespace Jazz2
         WarpTarget,
 
         // Lights
-        LightSet,
-        LightReset,
+        LightAmbient,
         LightSteady,
         LightPulse,
         LightFlicker,

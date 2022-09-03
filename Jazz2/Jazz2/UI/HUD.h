@@ -69,6 +69,7 @@ namespace Jazz2::UI
 		int _gems;
 		float _coinsTime;
 		float _gemsTime;
+		float _activeBossTime;
 		float _healthLast;
 		float _weaponWheelAnim;
 		int _lastWeaponWheelIndex;
@@ -82,6 +83,7 @@ namespace Jazz2::UI
 		void DrawGems(int& charOffset);
 
 		void DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX = 1.0f, float scaleY = 1.0f);
+		void DrawElementClipped(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY);
 		StringView GetCurrentWeapon(Actors::Player* player, WeaponType weapon, Vector2f& offset);
 
 		void DrawWeaponWheel(Actors::Player* player);

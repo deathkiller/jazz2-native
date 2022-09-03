@@ -43,6 +43,5 @@ namespace Jazz2::Actors::Weapons
 
 	private:
 		TimeStamp _lastRicochetTime;
-
 	};
 }

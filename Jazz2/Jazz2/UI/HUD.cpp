@@ -2,6 +2,7 @@
 #include "RgbLights.h"
 #include "../LevelHandler.h"
 #include "../PreferencesCache.h"
+#include "../Actors/Enemies/BossBase.h"
 
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/IO/IFileStream.h"
@@ -17,6 +18,7 @@ namespace Jazz2::UI
 		_levelTextTime(-1.0f),
 		_coins(0), _gems(0),
 		_coinsTime(-1.0f), _gemsTime(-1.0f),
+		_activeBossTime(0.0f),
 		_touchButtonsTimer(0.0f),
 		_healthLast(0.0f),
 		_weaponWheelAnim(0.0f),
@@ -34,10 +36,10 @@ namespace Jazz2::UI
 
 		_touchButtons[0] = CreateTouchButton(PlayerActions::None, "TouchDpad"_s, Alignment::BottomLeft, DpadLeft, DpadBottom, DpadSize, DpadSize);
 		// D-pad subsections
-		_touchButtons[1] = CreateTouchButton(PlayerActions::Left, { }, Alignment::BottomLeft | AllowRollover, DpadLeft - DpadThreshold, DpadBottom, (DpadSize / 3) + DpadThreshold, DpadSize);
-		_touchButtons[2] = CreateTouchButton(PlayerActions::Right, { }, Alignment::BottomLeft | AllowRollover, DpadLeft + (DpadSize * 2 / 3), DpadBottom, (DpadSize / 3) + DpadThreshold, DpadSize);
-		_touchButtons[3] = CreateTouchButton(PlayerActions::Up, { }, Alignment::BottomLeft, DpadLeft, DpadBottom + (DpadSize * 2 / 3), DpadSize, (DpadSize / 3) + DpadThreshold);
-		_touchButtons[4] = CreateTouchButton(PlayerActions::Down, { }, Alignment::BottomLeft, DpadLeft, DpadBottom - DpadThreshold, DpadSize, (DpadSize / 3) + DpadThreshold);
+		_touchButtons[1] = CreateTouchButton(PlayerActions::Left, nullptr, Alignment::BottomLeft | AllowRollover, DpadLeft - DpadThreshold, DpadBottom, (DpadSize / 3) + DpadThreshold, DpadSize);
+		_touchButtons[2] = CreateTouchButton(PlayerActions::Right, nullptr, Alignment::BottomLeft | AllowRollover, DpadLeft + (DpadSize * 2 / 3), DpadBottom, (DpadSize / 3) + DpadThreshold, DpadSize);
+		_touchButtons[3] = CreateTouchButton(PlayerActions::Up, nullptr, Alignment::BottomLeft, DpadLeft, DpadBottom + (DpadSize * 2 / 3), DpadSize, (DpadSize / 3) + DpadThreshold);
+		_touchButtons[4] = CreateTouchButton(PlayerActions::Down, nullptr, Alignment::BottomLeft, DpadLeft, DpadBottom - DpadThreshold, DpadSize, (DpadSize / 3) + DpadThreshold);
 		// Action buttons
 		_touchButtons[5] = CreateTouchButton(PlayerActions::Fire, "TouchFire"_s, Alignment::BottomRight, (ButtonSize + 0.02f) * 2, 0.04f, ButtonSize, ButtonSize);
 		_touchButtons[6] = CreateTouchButton(PlayerActions::Jump, "TouchJump"_s, Alignment::BottomRight, (ButtonSize + 0.02f), 0.04f + 0.08f, ButtonSize, ButtonSize);
@@ -74,6 +76,16 @@ namespace Jazz2::UI
 			}
 			if (_gemsTime >= 0.0f) {
 				_gemsTime += timeMult;
+			}
+			if (_levelHandler->_activeBoss != nullptr) {
+				_activeBossTime += timeMult;
+
+				constexpr float TransitionTime = 60.0f;
+				if (_activeBossTime > TransitionTime) {
+					_activeBossTime = TransitionTime;
+				}
+			} else {
+				_activeBossTime = 0.0f;
 			}
 
 			// RGB lights
@@ -201,7 +213,26 @@ namespace Jazz2::UI
 			}
 
 			// Active Boss (health bar)
-			// TODO
+			if (_levelHandler->_activeBoss != nullptr && _levelHandler->_activeBoss->GetMaxHealth() != INT32_MAX) {
+				constexpr float TransitionTime = 60.0f;
+				float y, alpha;
+				if (_activeBossTime < TransitionTime) {
+					y = (TransitionTime - _activeBossTime) / 8.0f;
+					y = bottom * 0.1f - (y * y);
+					alpha = std::max(_activeBossTime / TransitionTime, 0.0f);
+				} else {
+					y = bottom * 0.1f;
+					alpha = 1.0f;
+				}
+
+				float perc = 0.08f + 0.84f * _levelHandler->_activeBoss->GetHealth() / _levelHandler->_activeBoss->GetMaxHealth();
+
+				DrawElement("BossHealthBar"_s, 0, ViewSize.X * 0.5f, y + 2.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.1f * alpha));
+				DrawElement("BossHealthBar"_s, 0, ViewSize.X * 0.5f, y + 1.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * alpha));
+
+				DrawElement("BossHealthBar"_s, 0, ViewSize.X * 0.5f, y, MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alpha));
+				DrawElementClipped("BossHealthBar"_s, 1, ViewSize.X * 0.5f, y, MainLayer + 2, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alpha), perc, 1.0f);
+			}
 
 			// Misc
 			DrawLevelText(charOffset);
@@ -543,6 +574,41 @@ namespace Jazz2::UI
 			float(base->FrameDimensions.Y) / float(texSize.Y),
 			float(base->FrameDimensions.Y * row) / float(texSize.Y)
 		);
+
+		texCoords.W += texCoords.Z;
+		texCoords.Z *= -1;
+
+		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color);
+	}
+
+	void HUD::DrawElementClipped(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY)
+	{
+		auto it = _graphics->find(String::nullTerminatedView(name));
+		if (it == _graphics->end()) {
+			return;
+		}
+
+		if (frame < 0) {
+			frame = it->second.FrameOffset + ((int)(AnimTime * it->second.FrameCount / it->second.FrameDuration) % it->second.FrameCount);
+		}
+
+		GenericGraphicResource* base = it->second.Base;
+		Vector2f size = Vector2f(base->FrameDimensions.X * clipX, base->FrameDimensions.Y * clipY);
+		Vector2f adjustedPos = ApplyAlignment(align, Vector2f(x - ViewSize.X * 0.5f - (1.0f - clipX) * 0.5f * base->FrameDimensions.X,
+			ViewSize.Y * 0.5f - y - (1.0f - clipY) * 0.5f * base->FrameDimensions.Y), size);
+
+		Vector2i texSize = base->TextureDiffuse->size();
+		int col = frame % base->FrameConfiguration.X;
+		int row = frame / base->FrameConfiguration.X;
+		Vector4f texCoords = Vector4f(
+			float(base->FrameDimensions.X) / float(texSize.X),
+			float(base->FrameDimensions.X * col) / float(texSize.X),
+			float(base->FrameDimensions.Y) / float(texSize.Y),
+			float(base->FrameDimensions.Y * row) / float(texSize.Y)
+		);
+
+		texCoords.X *= clipX;
+		texCoords.Z *= clipY;
 
 		texCoords.W += texCoords.Z;
 		texCoords.Z *= -1;

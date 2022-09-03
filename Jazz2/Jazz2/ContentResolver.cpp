@@ -40,7 +40,6 @@ namespace Jazz2
 
 	ContentResolver::~ContentResolver()
 	{
-		// TODO
 	}
 
 	void ContentResolver::Release()
@@ -734,8 +733,7 @@ namespace Jazz2
 		Vector4f ambientColor = Vector4f((rawAmbientColor & 0xff) / 255.0f, ((rawAmbientColor >> 8) & 0xff) / 255.0f,
 			((rawAmbientColor >> 16) & 0xff) / 255.0f, ((rawAmbientColor >> 24) & 0xff) / 255.0f);
 
-		// TODO: Weather
-		uint8_t defaultWeatherType = s->ReadValue<uint8_t>();
+		WeatherType defaultWeatherType = (WeatherType)s->ReadValue<uint8_t>();
 		uint8_t defaultWeatherIntensity = s->ReadValue<uint8_t>();
 
 		// Text Event Strings
@@ -764,7 +762,8 @@ namespace Jazz2
 		eventMap->ReadEvents(s, tileMap, difficulty);
 
 		// TODO: Bonus level
-		levelHandler->OnLevelLoaded(name, nextLevel, secretLevel, tileMap, eventMap, defaultMusic, ambientColor, levelTexts);
+		levelHandler->OnLevelLoaded(name, nextLevel, secretLevel, tileMap, eventMap, defaultMusic, ambientColor,
+			defaultWeatherType, defaultWeatherIntensity, levelTexts);
 
 		return true;
 	}

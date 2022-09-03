@@ -8,5 +8,11 @@ namespace Jazz2::Actors::Enemies
 	{
 	public:
 		virtual bool OnActivatedBoss() = 0;
+		virtual void OnDeactivatedBoss() { };
+
+		bool OnPlayerDied();
+
+	protected:
+		bool OnTileDeactivate(int tx1, int ty1, int tx2, int ty2) override;
 	};
 }

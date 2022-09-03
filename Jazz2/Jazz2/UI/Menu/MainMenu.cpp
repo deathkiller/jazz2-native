@@ -563,7 +563,7 @@ namespace Jazz2::UI::Menu
 				float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
 				float texBiasY = (tileId / _owner->_tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
 
-				// ToDo: Flip normal map somehow
+				// TODO: Flip normal map somehow
 				if (isFlippedX) {
 					texBiasX += texScaleX;
 					texScaleX *= -1;

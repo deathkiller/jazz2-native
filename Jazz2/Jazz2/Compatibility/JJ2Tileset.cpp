@@ -177,6 +177,7 @@ namespace Jazz2::Compatibility
 		so->Write(_palette, sizeof(_palette));
 
 		// Mask
+		// TODO: Compress this
 		so->WriteValue<uint32_t>(_tileCount * sizeof(_tiles[0].Mask));
 		for (int i = 0; i < _tileCount; i++) {
 			auto& tile = _tiles[i];

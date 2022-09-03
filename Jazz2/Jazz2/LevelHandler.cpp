@@ -42,10 +42,13 @@ namespace Jazz2
 		_difficulty(levelInit.Difficulty),
 		_reduxMode(levelInit.ReduxMode),
 		_cheatsUsed(levelInit.CheatsUsed),
+		_nextLevelType(ExitType::None),
+		_nextLevelTime(0.0f),
 		_levelTime(0.0f),
 		_shakeDuration(0.0f),
 		_waterLevel(FLT_MAX),
 		_ambientLightTarget(1.0f),
+		_weatherType(WeatherType::None),
 #if ENABLE_POSTPROCESSING
 		_downsamplePass(this),
 		_blurPass1(this),
@@ -94,11 +97,6 @@ namespace Jazz2
 			_players.push_back(ptr);
 			AddActor(player);
 
-			// TODO
-			/*if (i == 0) {
-				player.AttachToHud(hud);
-			}*/
-
 			ptr->ReceiveLevelCarryOver(levelInit.ExitType, levelInit.PlayerCarryOvers[i]);
 		}
 
@@ -145,7 +143,7 @@ namespace Jazz2
 		_ambientLightTarget = value;
 	}
 
-	void LevelHandler::OnLevelLoaded(const StringView& name, const StringView& nextLevel, const StringView& secretLevel, std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap, const StringView& musicPath, const Vector4f& ambientColor, SmallVectorImpl<String>& levelTexts)
+	void LevelHandler::OnLevelLoaded(const StringView& name, const StringView& nextLevel, const StringView& secretLevel, std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap, const StringView& musicPath, const Vector4f& ambientColor, WeatherType weatherType, uint8_t weatherIntensity, SmallVectorImpl<String>& levelTexts)
 	{
 		if (!name.empty()) {
 			theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection - "_s + name);
@@ -153,6 +151,7 @@ namespace Jazz2
 			theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection"_s);
 		}
 
+		// TODO: Unused
 		//_name = name;
 		_defaultNextLevel = nextLevel;
 		_defaultSecretLevel = secretLevel;
@@ -168,6 +167,9 @@ namespace Jazz2
 
 		_ambientColor = ambientColor;
 		_ambientLightTarget = ambientColor.W;
+
+		_weatherType = weatherType;
+		_weatherIntensity = weatherIntensity;
 
 #ifdef WITH_OPENMPT
 		if (!musicPath.empty()) {
@@ -211,24 +213,51 @@ namespace Jazz2
 			}
 		}
 
-		/*if (nextLevelInit.HasValue) {
+		if (_nextLevelType != ExitType::None) {
 			bool playersReady = true;
-			foreach(Player player in players) {
-				// Exit type is already provided
-				playersReady &= player.OnLevelChanging(ExitType.None);
+			for (auto player : _players) {
+				// Exit type was already provided in BeginLevelChange()
+				playersReady &= player->OnLevelChanging(ExitType::None);
 			}
 
 			if (playersReady) {
-				if (levelChangeTimer > 0) {
-					levelChangeTimer -= timeMult;
-				} else {
-					root.ChangeLevel(nextLevelInit.Value);
-					nextLevelInit = null;
-					initState = InitState.Disposed;
+				_nextLevelTime -= timeMult;
+				if (_nextLevelTime <= 0.0f) {
+					StringView realNextLevel;
+					if (!_nextLevel.empty()) {
+						realNextLevel = _nextLevel;
+					} else {
+						realNextLevel = (_nextLevelType == ExitType::Bonus ? _defaultSecretLevel : _defaultNextLevel);
+					}
+
+					LevelInitialization levelInit;
+
+					if (!realNextLevel.empty()) {
+						auto found = realNextLevel.partition('/');
+						if (found[2].empty()) {
+							levelInit.EpisodeName = _episodeName;
+							levelInit.LevelName = realNextLevel;
+						} else {
+							levelInit.EpisodeName = found[0];
+							levelInit.LevelName = found[2];
+						}
+					}
+
+					levelInit.Difficulty = _difficulty;
+					levelInit.ReduxMode = _reduxMode;
+					levelInit.CheatsUsed = _cheatsUsed;
+					levelInit.ExitType = _nextLevelType;
+					levelInit.LastEpisodeName = _episodeName;
+
+					for (int i = 0; i < _players.size(); i++) {
+						levelInit.PlayerCarryOvers[i] = _players[i]->PrepareLevelCarryOver();
+					}
+
+					_root->ChangeLevel(std::move(levelInit));
 					return;
 				}
 			}
-		}*/
+		}
 
 		if (_difficulty != GameDifficulty::Multiplayer && _pauseMenu == nullptr) {
 			if (!_players.empty()) {
@@ -275,95 +304,108 @@ namespace Jazz2
 		}
 
 		// Weather
-		/*if (_weatherType != WeatherType.None && commonResources.Graphics != null) {
-			// ToDo: Apply weather effect to all other cameras too
-			Vector3 viewPos = cameras[0].Transform.Pos;
+		if (_weatherType != WeatherType::None) {
+			int weatherIntensity = std::max((int)(_weatherIntensity * timeMult), 1);
 			for (int i = 0; i < weatherIntensity; i++) {
-				TileMap.DebrisCollisionAction collisionAction;
-				if (weatherOutdoors) {
-					collisionAction = TileMap.DebrisCollisionAction.Disappear;
+				TileMap::DebrisCollisionAction collisionAction;
+				if ((_weatherType & WeatherType::OutdoorsOnly) == WeatherType::OutdoorsOnly) {
+					collisionAction = TileMap::DebrisCollisionAction::Disappear;
 				} else {
-					collisionAction = (MathF.Rnd.NextFloat() > 0.7f
-						? TileMap.DebrisCollisionAction.None
-						: TileMap.DebrisCollisionAction.Disappear);
+					collisionAction = (Random().NextFloat() > 0.7f
+						? TileMap::DebrisCollisionAction::None
+						: TileMap::DebrisCollisionAction::Disappear);
 				}
 
-				Vector3 debrisPos = viewPos + MathF.Rnd.NextVector3((LevelRenderSetup.TargetSize.X / -2) - 40,
-								  (LevelRenderSetup.TargetSize.Y * -2 / 3), MainPlaneZ,
-								  LevelRenderSetup.TargetSize.X + 120, LevelRenderSetup.TargetSize.Y, 0);
+				Vector2i viewSize = _viewTexture->size();
+				Vector2f debrisPos = Vector2f(_cameraPos.X + Random().NextFloat(viewSize.X * -1.5f, viewSize.X * 1.5f),
+					_cameraPos.Y + Random().NextFloat(viewSize.Y * -1.5f, viewSize.Y * 1.5f));
 
-				if (weatherType == WeatherType.Rain) {
-					GraphicResource res = commonResources.Graphics["Rain"];
-					Material material = res.Material.Res;
-					Texture texture = material.MainTexture.Res;
+				WeatherType realWeatherType = (_weatherType & ~WeatherType::OutdoorsOnly);
+				if (realWeatherType == WeatherType::Rain) {
+					auto it = _commonResources->Graphics.find(String::nullTerminatedView("Rain"_s));
+					if (it != _commonResources->Graphics.end()) {
+						auto& resBase = it->second.Base;
+						Vector2i texSize = resBase->TextureDiffuse->size();
+						float scale = Random().NextFloat(0.4f, 1.1f);
+						float speedX = Random().NextFloat(2.2f, 2.7f) * scale;
+						float speedY = Random().NextFloat(7.6f, 8.6f) * scale;
 
-					float scale = MathF.Rnd.NextFloat(0.4f, 1.1f);
-					float speedX = MathF.Rnd.NextFloat(2.2f, 2.7f) * scale;
-					float speedY = MathF.Rnd.NextFloat(7.6f, 8.6f) * scale;
+						TileMap::DestructibleDebris debris = { };
+						debris.Pos = debrisPos;
+						debris.Depth = MainPlaneZ - 100 + 200 * scale;
+						debris.Size = Vector2f(resBase->FrameDimensions.X, resBase->FrameDimensions.Y);
+						debris.Speed = Vector2f(speedX, speedY);
+						debris.Acceleration = Vector2f(0.0f, 0.0f);
 
-					debrisPos.Z = MainPlaneZ * scale;
+						debris.Scale = scale;
+						debris.ScaleSpeed = 0.0f;
+						debris.Angle = atan2f(speedY, speedX);
+						debris.AngleSpeed = 0.0f;
+						debris.Alpha = 1.0f;
+						debris.AlphaSpeed = 0.0f;
 
-					tileMap.CreateDebris(new TileMap.DestructibleDebris {
-						Pos = debrisPos,
-						Size = res.Base.FrameDimensions,
-						Speed = new Vector2(speedX, speedY),
+						debris.Time = 180.0f;
 
-						Scale = scale,
-						Angle = MathF.Atan2(speedY, speedX),
-						Alpha = 1f,
+						int curAnimFrame = it->second.FrameOffset + Random().Next(0, it->second.FrameCount);
+						int col = curAnimFrame % resBase->FrameConfiguration.X;
+						int row = curAnimFrame / resBase->FrameConfiguration.X;
+						debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
+						debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
+						debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
+						debris.TexBiasY = (float(resBase->FrameDimensions.Y * row) / float(texSize.Y));
 
-						Time = 180f,
+						debris.DiffuseTexture = resBase->TextureDiffuse.get();
+						debris.CollisionAction = collisionAction;
 
-						Material = material,
-						MaterialOffset = texture.LookupAtlas(res.FrameOffset + MathF.Rnd.Next(res.FrameCount)),
-
-						CollisionAction = collisionAction
-					});
+						_tileMap->CreateDebris(debris);
+					}
 				} else {
-					GraphicResource res = commonResources.Graphics["Snow"];
-					Material material = res.Material.Res;
-					Texture texture = material.MainTexture.Res;
+					auto it = _commonResources->Graphics.find(String::nullTerminatedView("Snow"_s));
+					if (it != _commonResources->Graphics.end()) {
+						auto& resBase = it->second.Base;
+						Vector2i texSize = resBase->TextureDiffuse->size();
+						float scale = Random().NextFloat(0.4f, 1.1f);
+						float speedX = Random().NextFloat(-1.6f, -1.2f) * scale;
+						float speedY = Random().NextFloat(3.0f, 4.0f) * scale;
+						float accel = Random().NextFloat(-0.008f, 0.008f) * scale;
 
-					float scale = MathF.Rnd.NextFloat(0.4f, 1.1f);
-					float speedX = MathF.Rnd.NextFloat(-1.6f, -1.2f) * scale;
-					float speedY = MathF.Rnd.NextFloat(3f, 4f) * scale;
-					float accel = MathF.Rnd.NextFloat(-0.008f, 0.008f) * scale;
+						TileMap::DestructibleDebris debris = { };
+						debris.Pos = debrisPos;
+						debris.Depth = MainPlaneZ - 100 + 200 * scale;
+						debris.Size = Vector2f(resBase->FrameDimensions.X, resBase->FrameDimensions.Y);
+						debris.Speed = Vector2f(speedX, speedY);
+						debris.Acceleration = Vector2f(accel, -std::abs(accel));
 
-					debrisPos.Z = MainPlaneZ * scale;
+						debris.Scale = scale;
+						debris.ScaleSpeed = 0.0f;
+						debris.Angle = Random().FastFloat(0.0f, fTwoPi);
+						debris.AngleSpeed = speedX * 0.02f,
+						debris.Alpha = 1.0f;
+						debris.AlphaSpeed = 0.0f;
 
-					tileMap.CreateDebris(new TileMap.DestructibleDebris {
-						Pos = debrisPos,
-						Size = res.Base.FrameDimensions,
-						Speed = new Vector2(speedX, speedY),
-						Acceleration = new Vector2(accel, -MathF.Abs(accel)),
+						debris.Time = 180.0f;
 
-						Scale = scale,
-						Angle = MathF.Rnd.NextFloat() * MathF.TwoPi,
-						AngleSpeed = speedX * 0.02f,
-						Alpha = 1f,
+						int curAnimFrame = it->second.FrameOffset + Random().Next(0, it->second.FrameCount);
+						int col = curAnimFrame % resBase->FrameConfiguration.X;
+						int row = curAnimFrame / resBase->FrameConfiguration.X;
+						debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
+						debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
+						debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
+						debris.TexBiasY = (float(resBase->FrameDimensions.Y * row) / float(texSize.Y));
 
-						Time = 180f,
+						debris.DiffuseTexture = resBase->TextureDiffuse.get();
+						debris.CollisionAction = collisionAction;
 
-						Material = material,
-						MaterialOffset = texture.LookupAtlas(res.FrameOffset + MathF.Rnd.Next(res.FrameCount)),
-
-						CollisionAction = collisionAction
-					});
+						_tileMap->CreateDebris(debris);
+					}
 				}
 			}
-		}*/
+		}
 
 		// Active Boss
 		if (_activeBoss != nullptr && _activeBoss->GetHealth() <= 0) {
 			_activeBoss = nullptr;
-
-			// TODO: Boss HUD
-			/*Hud hud = rootObject.GetComponent<Hud>();
-			if (hud != null) {
-				hud.ActiveBoss = null;
-			}*/
-
-			BeginLevelChange(ExitType::Normal, { });
+			BeginLevelChange(ExitType::Normal, nullptr);
 		}
 	}
 
@@ -393,7 +435,7 @@ namespace Jazz2
 		_lightingView->setClearColor(_ambientColor.W, 0.0f, 0.0f, 1.0f);
 #endif
 
-		// TODO: DEBUG
+		// TODO: Debug only
 #if _DEBUG
 		static float _debugRefresh = 0;
 		static int _debugFramesCount = 0;
@@ -780,12 +822,6 @@ namespace Jazz2
 				}
 
 				if (_activeBoss != nullptr && _activeBoss->OnActivatedBoss()) {
-					// TODO: Boss HUD
-					/*Hud hud = rootObject.GetComponent<Hud>();
-					if (hud != null) {
-						hud.ActiveBoss = activeBoss;
-					}*/
-
 					if (_sugarRushMusic != nullptr) {
 						_sugarRushMusic->stop();
 					}
@@ -794,8 +830,8 @@ namespace Jazz2
 						_music->stop();
 					}
 
-					char musicPath[10] = { 'b', 'o', 's', 's', '\0', '.', 'j', '2', 'b', '\0' };
-					musicPath[4] = '0' + eventParams[0];
+					size_t musicPathLength = strnlen((const char*)eventParams, 16);
+					StringView musicPath((const char*)eventParams, musicPathLength);
 					_music = ContentResolver::Current().GetMusic(musicPath);
 					if (_music != nullptr) {
 						_music->setLooping(true);
@@ -811,84 +847,58 @@ namespace Jazz2
 
 	void LevelHandler::BeginLevelChange(ExitType exitType, const StringView& nextLevel)
 	{
-		/*if (initState == InitState.Disposing) {
+		if (_nextLevelType != ExitType::None) {
 			return;
 		}
 
-		initState = InitState.Disposing;*/
+		_nextLevel = nextLevel;
+		_nextLevelType = exitType;
+		_nextLevelTime = 220.0f;
 
-		for (auto& player : _players) {
+		if (_sugarRushMusic != nullptr) {
+			_sugarRushMusic->stop();
+		}
+#ifdef WITH_OPENMPT
+		if (_music != nullptr) {
+			_music->stop();
+		}
+#endif
+
+		for (auto player : _players) {
 			player->OnLevelChanging(exitType);
 		}
-
-		std::string realNextLevel;
-		if (nextLevel.empty()) {
-			realNextLevel = (exitType == ExitType::Bonus ? _defaultSecretLevel : _defaultNextLevel);
-		} else {
-			realNextLevel = nextLevel;
-		}
-
-		LevelInitialization levelInit;
-
-		if (!realNextLevel.empty()) {
-			size_t i = realNextLevel.find('/');
-			if (i == std::string::npos) {
-				levelInit.EpisodeName = _episodeName;
-				levelInit.LevelName = realNextLevel;
-			} else {
-				levelInit.EpisodeName = realNextLevel.substr(0, i);
-				levelInit.LevelName = realNextLevel.substr(i + 1);
-			}
-		}
-
-		levelInit.Difficulty = _difficulty;
-		levelInit.ReduxMode = _reduxMode;
-		levelInit.CheatsUsed = _cheatsUsed;
-		levelInit.ExitType = exitType;
-
-		for (int i = 0; i < _players.size(); i++) {
-			levelInit.PlayerCarryOvers[i] = _players[i]->PrepareLevelCarryOver();
-		}
-
-		levelInit.LastEpisodeName = _episodeName;
-
-		// TODO
-		//_nextLevelInit = levelInit;
-		//_levelChangeTimer = 50.0f;
-
-		_root->ChangeLevel(std::move(levelInit));
 	}
 
 	void LevelHandler::HandleGameOver()
 	{
 		// TODO: Implement Game Over screen
-		//root.ShowMainMenu(false);
+		_root->GoToMainMenu();
 	}
 
 	bool LevelHandler::HandlePlayerDied(const std::shared_ptr<ActorBase>& player)
 	{
-		// TODO
-		/*if (_activeBoss != null) {
-			if (activeBoss.HandlePlayerDied()) {
-				activeBoss = null;
+		if (_activeBoss != nullptr) {
+			if (_activeBoss->OnPlayerDied()) {
+				_activeBoss = nullptr;
 
-				Hud hud = rootObject.GetComponent<Hud>();
-				if (hud != null) {
-					hud.ActiveBoss = null;
-				}
-
-#if !DISABLE_SOUND
-				if (music != null) {
-					music.FadeOut(1.8f);
+#ifdef WITH_OPENMPT
+				if (_music != nullptr) {
+					_music->stop();
 				}
 
 				// Load default music again
-				music = new OpenMptStream(musicPath, true);
-				music.BeginFadeIn(0.4f);
-				DualityApp.Sound.PlaySound(music);
+				if (!_musicPath.empty()) {
+					_music = ContentResolver::Current().GetMusic(_musicPath);
+					if (_music != nullptr) {
+						_music->setLooping(true);
+						_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+						_music->setSourceRelative(true);
+						_music->play();
+					}
+				}
 #endif
 			}
-		}*/
+		}
 
 		// Single player can respawn immediately
 		return true;
@@ -1001,8 +1011,8 @@ namespace Jazz2
 		}
 
 		isGamepad = false;
-		if ((_pressedActions & (1 << (int)action)) != 0) {
-			isGamepad = (_pressedActions & (1 << (16 + (int)action))) != 0;
+		if ((_pressedActions & (1ull << (int)action)) != 0) {
+			isGamepad = (_pressedActions & (1ull << (16 + (int)action))) != 0;
 			return true;
 		}
 		
@@ -1045,9 +1055,9 @@ namespace Jazz2
 			return 0.0f;
 		}
 
-		if ((_pressedActions & (1 << (int)PlayerActions::Right)) != 0) {
+		if ((_pressedActions & (1ull << (int)PlayerActions::Right)) != 0) {
 			return 1.0f;
-		} else if ((_pressedActions & (1 << (int)PlayerActions::Left)) != 0) {
+		} else if ((_pressedActions & (1ull << (int)PlayerActions::Left)) != 0) {
 			return -1.0f;
 		}
 
@@ -1060,9 +1070,9 @@ namespace Jazz2
 			return 0.0f;
 		}
 
-		if ((_pressedActions & (1 << (int)PlayerActions::Up)) != 0) {
+		if ((_pressedActions & (1ull << (int)PlayerActions::Up)) != 0) {
 			return -1.0f;
-		} else if ((_pressedActions & (1 << (int)PlayerActions::Down)) != 0) {
+		} else if ((_pressedActions & (1ull << (int)PlayerActions::Down)) != 0) {
 			return 1.0f;
 		}
 
@@ -1071,7 +1081,7 @@ namespace Jazz2
 
 	void LevelHandler::PlayerFreezeMovement(int index, bool enable)
 	{
-		// TODO
+		// TODO: Weapon wheel
 	}
 
 	void LevelHandler::ResolveCollisions(float timeMult)
@@ -1231,6 +1241,7 @@ namespace Jazz2
 
 		if (left == 0 && width == 0) {
 			_viewBounds = Rectf((float)_levelBounds.X, (float)_levelBounds.Y, (float)_levelBounds.W, (float)_levelBounds.H);
+			_viewBoundsTarget = _viewBounds;
 		} else {
 			Rectf bounds = Rectf((float)_levelBounds.X, (float)_levelBounds.Y, (float)_levelBounds.W, (float)_levelBounds.H);
 			float viewWidth = _view->size().X;
@@ -1259,6 +1270,12 @@ namespace Jazz2
 	void LevelHandler::SetWaterLevel(float value)
 	{
 		_waterLevel = value;
+	}
+
+	void LevelHandler::SetWeather(WeatherType type, uint8_t intensity)
+	{
+		_weatherType = type;
+		_weatherIntensity = intensity;
 	}
 
 	void LevelHandler::UpdatePressedActions()

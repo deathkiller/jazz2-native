@@ -25,7 +25,7 @@ namespace Jazz2::Compatibility
 
 		uint32_t passwordHash = headerBlock.ReadUInt32();
 
-		_name = headerBlock.ReadString(32, true);
+		Name = headerBlock.ReadString(32, true);
 
 		uint16_t version = headerBlock.ReadUInt16();
 		_version = (version <= 514 ? JJ2Version::BaseGame : JJ2Version::TSF);
@@ -33,7 +33,6 @@ namespace Jazz2::Compatibility
 		_darknessColor = 0;
 		_weatherType = WeatherType::None;
 		_weatherIntensity = 0;
-		_weatherOutdoorsOnly = false;
 
 		int recordedSize = headerBlock.ReadInt32();
 		ASSERT_MSG(!strictParser || s->GetSize() == recordedSize, "Unexpected file size");
@@ -80,8 +79,8 @@ namespace Jazz2::Compatibility
 		// First 9 bytes are JCS coordinates on last save.
 		block.DiscardBytes(9);
 
-		_lightingMin = block.ReadByte();
-		_lightingStart = block.ReadByte();
+		LightingMin = block.ReadByte();
+		LightingStart = block.ReadByte();
 
 		_animCount = block.ReadUInt16();
 
@@ -92,13 +91,13 @@ namespace Jazz2::Compatibility
 		int headerSize = block.ReadInt32();
 
 		String secondLevelName = block.ReadString(32, true);
-		ASSERT_MSG(!strictParser || _name == secondLevelName, "Level name mismatch");
+		ASSERT_MSG(!strictParser || Name == secondLevelName, "Level name mismatch");
 
-		_tileset = block.ReadString(32, true);
-		_bonusLevel = block.ReadString(32, true);
-		_nextLevel = block.ReadString(32, true);
-		_secretLevel = block.ReadString(32, true);
-		_music = block.ReadString(32, true);
+		Tileset = block.ReadString(32, true);
+		BonusLevel = block.ReadString(32, true);
+		NextLevel = block.ReadString(32, true);
+		SecretLevel = block.ReadString(32, true);
+		Music = block.ReadString(32, true);
 
 		for (int i = 0; i < TextEventStringsCount; ++i) {
 			_textEventStrings[i] = block.ReadString(512, true);
@@ -322,9 +321,11 @@ namespace Jazz2::Compatibility
 		uint8_t snowType = block.ReadByte();
 
 		if (isSnowing) {
-			_weatherType = (WeatherType)(snowType + 1);
 			_weatherIntensity = snowIntensity;
-			_weatherOutdoorsOnly = isSnowingOutdoorsOnly;
+			_weatherType = (WeatherType)(snowType + 1);
+			if (_weatherType != WeatherType::None && isSnowingOutdoorsOnly) {
+				_weatherType |= WeatherType::OutdoorsOnly;
+			}
 		}
 
 		bool warpsTransmuteCoins = block.ReadBool(); // TODO
@@ -342,7 +343,7 @@ namespace Jazz2::Compatibility
 		// TODO
 	}
 
-	void JJ2Level::Convert(const String& targetPath, const EventConverter& eventConverter, const std::function<LevelToken(const StringView&)>& levelTokenConversion)
+	void JJ2Level::Convert(const String& targetPath, const EventConverter& eventConverter, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion)
 	{
 		auto so = fs::Open(targetPath, FileAccessMode::Write);
 		ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
@@ -367,25 +368,22 @@ namespace Jazz2::Compatibility
 				flags |= 0x40;
 			}
 		}
-		if (_weatherOutdoorsOnly) {
-			flags |= 0x100;
-		}
 		so->WriteValue<uint16_t>(flags);
 
-		so->WriteValue<uint8_t>((uint8_t)_name.size());
-		so->Write(_name.data(), _name.size());
+		so->WriteValue<uint8_t>((uint8_t)Name.size());
+		so->Write(Name.data(), Name.size());
 
-		lowercaseInPlace(_nextLevel);
-		lowercaseInPlace(_secretLevel);
-		lowercaseInPlace(_bonusLevel);
+		lowercaseInPlace(NextLevel);
+		lowercaseInPlace(SecretLevel);
+		lowercaseInPlace(BonusLevel);
 
-		WriteLevelName(so, _nextLevel, levelTokenConversion);
-		WriteLevelName(so, _secretLevel, levelTokenConversion);
-		WriteLevelName(so, _bonusLevel, levelTokenConversion);
+		WriteLevelName(so, NextLevel, levelTokenConversion);
+		WriteLevelName(so, SecretLevel, levelTokenConversion);
+		WriteLevelName(so, BonusLevel, levelTokenConversion);
 
 		// Default Tileset
-		lowercaseInPlace(_tileset);
-		StringView tileset = _tileset;
+		lowercaseInPlace(Tileset);
+		StringView tileset = Tileset;
 		if (StringHasSuffixIgnoreCase(tileset, ".j2t"_s)) {
 			tileset = tileset.exceptSuffix(4);
 		}
@@ -393,20 +391,20 @@ namespace Jazz2::Compatibility
 		so->Write(tileset.data(), tileset.size());
 
 		// Default Music
-		lowercaseInPlace(_music);
-		if (_music.findOr('.', _music.end()) == _music.end()) {
-			String music = _music + ".j2b"_s;
+		lowercaseInPlace(Music);
+		if (Music.findOr('.', Music.end()) == Music.end()) {
+			String music = Music + ".j2b"_s;
 			so->WriteValue<uint8_t>((uint8_t)music.size());
 			so->Write(music.data(), music.size());
 		} else {
-			so->WriteValue<uint8_t>((uint8_t)_music.size());
-			so->Write(_music.data(), _music.size());
+			so->WriteValue<uint8_t>((uint8_t)Music.size());
+			so->Write(Music.data(), Music.size());
 		}
 
 		so->WriteValue<uint8_t>(_darknessColor & 0xff);
 		so->WriteValue<uint8_t>((_darknessColor >> 8) & 0xff);
 		so->WriteValue<uint8_t>((_darknessColor >> 16) & 0xff);
-		so->WriteValue<uint8_t>(_lightingStart * 255 / 64);
+		so->WriteValue<uint8_t>((uint8_t)std::min(LightingStart * 255 / 64, 255));
 
 		so->WriteValue<uint8_t>((uint8_t)_weatherType);
 		so->WriteValue<uint8_t>(_weatherIntensity);
@@ -484,7 +482,7 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		// TODO: Compress layer data
+		// TODO: Compress layer + event data
 		so->WriteValue<uint8_t>(layerCount);
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			auto& layer = _layers[i];
@@ -669,10 +667,10 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Level::WriteLevelName(const std::unique_ptr<IFileStream>& so, const StringView& value, const std::function<LevelToken(const StringView&)>& levelTokenConversion)
+	void JJ2Level::WriteLevelName(const std::unique_ptr<IFileStream>& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion)
 	{
 		if (!value.empty()) {
-			StringView adjustedValue = value;
+			MutableStringView adjustedValue = value;
 			if (StringHasSuffixIgnoreCase(adjustedValue, ".j2l"_s) ||
 				StringHasSuffixIgnoreCase(adjustedValue, ".lev"_s)) {
 				adjustedValue = adjustedValue.exceptSuffix(4);

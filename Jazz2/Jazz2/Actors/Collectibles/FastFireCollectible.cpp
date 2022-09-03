@@ -11,7 +11,7 @@ namespace Jazz2::Actors::Collectibles
 
 	void FastFireCollectible::Preload(const ActorActivationDetails& details)
 	{
-		// TODO
+		// Preloading is not supported here
 	}
 
 	Task<bool> FastFireCollectible::OnActivatedAsync(const ActorActivationDetails& details)
