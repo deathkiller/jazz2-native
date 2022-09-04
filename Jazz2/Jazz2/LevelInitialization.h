@@ -24,7 +24,8 @@ namespace Jazz2
         Normal,
         Warp,
         Bonus,
-        Special
+        Special,
+        Boss
     };
 
     enum class WeaponType {

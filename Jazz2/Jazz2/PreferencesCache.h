@@ -19,6 +19,7 @@ namespace Jazz2
 		static RescaleMode ActiveRescaleMode;
 		static bool EnableFullscreen;
 		static bool EnableVsync;
+		static bool ShowFps;
 
 		// Gameplay
 		static bool ReduxMode;

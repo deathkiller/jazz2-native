@@ -9,11 +9,11 @@ namespace Jazz2::Actors::Weapons
 	public:
 		TNT();
 
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+
 		Player* GetOwner();
 
 		void OnFire(const std::shared_ptr<ActorBase>& owner);
-
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

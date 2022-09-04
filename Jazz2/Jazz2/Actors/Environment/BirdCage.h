@@ -9,11 +9,12 @@ namespace Jazz2::Actors::Environment
 	public:
 		BirdCage();
 
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 	private:
 		uint8_t _type;

@@ -341,7 +341,7 @@ namespace Jazz2::Tiles
 	bool TileMap::AdvanceDestructibleTileAnimation(LayerTile& tile, int tx, int ty, int& amount, const StringView& soundName)
 	{
 		int max = (int)(_animatedTiles[tile.DestructAnimation].Tiles.size() - 2);
-		if (tile.DestructFrameIndex < max) {
+		if (amount > 0 && tile.DestructFrameIndex < max) {
 			// Tile not destroyed yet, advance counter by one
 			int current = std::min(amount, max - tile.DestructFrameIndex);
 

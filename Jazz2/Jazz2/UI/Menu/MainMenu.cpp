@@ -12,9 +12,10 @@
 
 namespace Jazz2::UI::Menu
 {
-	MainMenu::MainMenu(IRootController* root)
+	MainMenu::MainMenu(IRootController* root, bool afterIntro)
 		:
 		_root(root),
+		_transitionWhite(afterIntro ? 1.0f : 0.0f),
 		_logoTransition(0.0f),
 		_texturedBackgroundPass(this),
 		_texturedBackgroundPhase(0.0f),
@@ -53,8 +54,9 @@ namespace Jazz2::UI::Menu
 
 		PrepareTexturedBackground();
 
-		// Mark Fire button as already pressed to avoid some issues
-		_pressedActions = (1 << (int)PlayerActions::Fire) | (1 << ((int)PlayerActions::Fire + 16));
+		// Mark Fire and Menu button as already pressed to avoid some issues
+		_pressedActions = (1 << (int)PlayerActions::Fire) | (1 << ((int)PlayerActions::Fire + 16)) |
+			(1 << (int)PlayerActions::Menu) | (1 << ((int)PlayerActions::Menu + 16));
 
 		SwitchToSection<BeginSection>();
 	}
@@ -83,6 +85,12 @@ namespace Jazz2::UI::Menu
 		_texturedBackgroundPos.Y += timeMult * -0.2f + timeMult * sinf(_texturedBackgroundPhase) * 0.6f;
 		_texturedBackgroundPhase += timeMult * 0.001f;
 
+		if (_transitionWhite > 0.0f) {
+			_transitionWhite -= 0.02f * timeMult;
+			if (_transitionWhite < 0.0f) {
+				_transitionWhite = 0.0f;
+			}
+		}
 		if (_logoTransition < 1.0f) {
 			_logoTransition += timeMult * 0.04f;
 			if (_logoTransition > 1.0f) {
@@ -160,21 +168,21 @@ namespace Jazz2::UI::Menu
 		}
 
 		// Title
-		_owner->DrawElement("MenuCarrot"_s, -1, center.X - 76.0f * logoTranslateX, 64.0f + logoTranslateY + 2.0f, ShadowLayer + 500, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f * logoScale, 0.8f * logoScale);
-		_owner->DrawElement("MenuCarrot"_s, -1, center.X - 76.0f * logoTranslateX, 64.0f + logoTranslateY, MainLayer + 500, Alignment::Center, Colorf::White, 0.8f * logoScale, 0.8f * logoScale);
+		_owner->DrawElement("MenuCarrot"_s, -1, center.X - 76.0f * logoTranslateX, 64.0f + logoTranslateY + 2.0f, ShadowLayer + 200, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f * logoScale, 0.8f * logoScale);
+		_owner->DrawElement("MenuCarrot"_s, -1, center.X - 76.0f * logoTranslateX, 64.0f + logoTranslateY, MainLayer + 200, Alignment::Center, Colorf::White, 0.8f * logoScale, 0.8f * logoScale);
 
-		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffsetShadow, center.X - 63.0f, 70.0f + logoTranslateY + 2.0f, FontShadowLayer + 500,
+		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffsetShadow, center.X - 63.0f, 70.0f + logoTranslateY + 2.0f, FontShadowLayer + 200,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.75f * logoTextScale, 1.65f, 3.0f, 3.0f, 0.0f, 0.92f);
-		_owner->_mediumFont->DrawString(this, "2"_s, charOffsetShadow, center.X - 19.0f, 70.0f - 8.0f + logoTranslateY + 2.0f, FontShadowLayer + 500,
+		_owner->_mediumFont->DrawString(this, "2"_s, charOffsetShadow, center.X - 19.0f, 70.0f - 8.0f + logoTranslateY + 2.0f, FontShadowLayer + 200,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.5f * logoTextScale, 0.0f, 0.0f, 0.0f, 0.0f);
-		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffsetShadow, center.X - 10.0f, 70.0f + 4.0f + logoTranslateY + 2.5f, FontShadowLayer + 500,
+		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffsetShadow, center.X - 10.0f, 70.0f + 4.0f + logoTranslateY + 2.5f, FontShadowLayer + 200,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.5f * logoTextScale, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
-		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffset, center.X - 63.0f * logoTranslateX + logoTextTranslate, 70.0f + logoTranslateY, FontLayer + 500,
+		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffset, center.X - 63.0f * logoTranslateX + logoTextTranslate, 70.0f + logoTranslateY, FontLayer + 200,
 			Alignment::Left, Colorf(0.54f, 0.44f, 0.34f, 0.5f), 0.75f * logoTextScale, 1.65f, 3.0f, 3.0f, 0.0f, 0.92f);
-		_owner->_mediumFont->DrawString(this, "2"_s, charOffset, center.X - 19.0f * logoTranslateX + logoTextTranslate, 70.0f - 8.0f + logoTranslateY, FontLayer + 500,
+		_owner->_mediumFont->DrawString(this, "2"_s, charOffset, center.X - 19.0f * logoTranslateX + logoTextTranslate, 70.0f - 8.0f + logoTranslateY, FontLayer + 200,
 			Alignment::Left, Colorf(0.54f, 0.44f, 0.34f, 0.5f), 0.5f * logoTextScale, 0.0f, 0.0f, 0.0f, 0.0f);
-		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffset, center.X - 10.0f * logoTranslateX + logoTextTranslate, 70.0f + 4.0f + logoTranslateY, FontLayer + 500,
+		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffset, center.X - 10.0f * logoTranslateX + logoTextTranslate, 70.0f + 4.0f + logoTranslateY, FontLayer + 200,
 			Alignment::Left, Colorf(0.6f, 0.42f, 0.42f, 0.5f), 0.5f * logoTextScale, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
 		// Version
@@ -193,6 +201,10 @@ namespace Jazz2::UI::Menu
 		if (!_owner->_sections.empty()) {
 			auto& lastSection = _owner->_sections.back();
 			lastSection->OnDraw(this);
+		}
+
+		if (_owner->_transitionWhite > 0.0f) {
+			DrawSolid(Vector2f::Zero, 950, Vector2f(ViewSize.X, ViewSize.Y), Colorf(1.0f, 1.0f, 1.0f, _owner->_transitionWhite));
 		}
 
 		return true;
@@ -331,7 +343,8 @@ namespace Jazz2::UI::Menu
 			_pressedActions |= (1 << (int)PlayerActions::Down);
 		}
 		// Also allow Return (Enter) as confirm key
-		if (keyState.isKeyDown(KeySym::RETURN) || keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Fire)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Fire)) || keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Jump)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Jump))) {
+		if (keyState.isKeyDown(KeySym::RETURN) || keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Fire)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Fire)) ||
+			keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Jump)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Jump))) {
 			_pressedActions |= (1 << (int)PlayerActions::Fire);
 		}
 		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Menu)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Menu))) {
@@ -480,8 +493,7 @@ namespace Jazz2::UI::Menu
 		}
 		command->material().uniform("parallaxStarsEnabled")->setFloatValue(0.0f);
 
-		Matrix4x4f worldMatrix = Matrix4x4f::Translation(0.0f, 0.0f, 0.0f);
-		command->setTransformation(worldMatrix);
+		command->setTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
 		command->material().setTexture(*target);
 
 		renderQueue.addCommand(command);

@@ -243,9 +243,11 @@ namespace Jazz2::UI
 			//DrawWeaponWheel(player);
 
 			// FPS
-			snprintf(stringBuffer, _countof(stringBuffer), "%i", (int)std::round(theApplication().averageFps()));
-			_smallFont->DrawString(this, stringBuffer, charOffset, view.W - 4, 0, FontLayer,
-				Alignment::TopRight, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+			if (PreferencesCache::ShowFps) {
+				snprintf(stringBuffer, _countof(stringBuffer), "%i", (int)std::round(theApplication().averageFps()));
+				_smallFont->DrawString(this, stringBuffer, charOffset, view.W - 4, 0, FontLayer,
+					Alignment::TopRight, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+			}
 
 			// Touch Controls
 			if (_touchButtonsTimer > 0.0f) {

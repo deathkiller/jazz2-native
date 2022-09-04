@@ -225,6 +225,7 @@
     <ClInclude Include="Jazz2\Actors\Enemies\LabRat.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Lizard.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\MadderHatter.h" />
+    <ClInclude Include="Jazz2\Actors\Enemies\Queen.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Sucker.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\SuckerFloat.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\TurtleShell.h" />
@@ -282,6 +283,7 @@
     <ClInclude Include="Jazz2\PreferencesCache.h" />
     <ClInclude Include="Jazz2\UI\Alignment.h" />
     <ClInclude Include="Jazz2\UI\Canvas.h" />
+    <ClInclude Include="Jazz2\UI\Cinematics.h" />
     <ClInclude Include="Jazz2\UI\ControlScheme.h" />
     <ClInclude Include="Jazz2\UI\Font.h" />
     <ClInclude Include="Jazz2\UI\HUD.h" />
@@ -498,6 +500,7 @@
     <ClCompile Include="Jazz2\Actors\Enemies\LabRat.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Lizard.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\MadderHatter.cpp" />
+    <ClCompile Include="Jazz2\Actors\Enemies\Queen.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Sucker.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\SuckerFloat.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\TurtleShell.cpp" />
@@ -546,6 +549,7 @@
     <ClCompile Include="Jazz2\Compatibility\JJ2Tileset.cpp" />
     <ClCompile Include="Jazz2\PreferencesCache.cpp" />
     <ClCompile Include="Jazz2\UI\Canvas.cpp" />
+    <ClCompile Include="Jazz2\UI\Cinematics.cpp" />
     <ClCompile Include="Jazz2\UI\ControlScheme.cpp" />
     <ClCompile Include="Jazz2\UI\Font.cpp" />
     <ClCompile Include="Jazz2\UI\HUD.cpp" />

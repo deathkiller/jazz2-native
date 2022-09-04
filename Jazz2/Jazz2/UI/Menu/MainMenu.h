@@ -28,7 +28,7 @@ namespace Jazz2::UI::Menu
 		static constexpr int DefaultWidth = 720;
 		static constexpr int DefaultHeight = 405;
 
-		MainMenu(IRootController* root);
+		MainMenu(IRootController* root, bool afterIntro);
 		~MainMenu() override;
 
 		void OnBeginFrame() override;
@@ -103,6 +103,7 @@ namespace Jazz2::UI::Menu
 		Font* _smallFont;
 		Font* _mediumFont;
 
+		float _transitionWhite;
 		float _logoTransition;
 		std::unique_ptr<AudioStreamPlayer> _music;
 		HashMap<String, SoundResource>* _sounds;

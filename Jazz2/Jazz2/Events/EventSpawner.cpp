@@ -29,6 +29,7 @@
 #include "../Actors/Enemies/LabRat.h"
 #include "../Actors/Enemies/Lizard.h"
 #include "../Actors/Enemies/MadderHatter.h"
+#include "../Actors/Enemies/Queen.h"
 #include "../Actors/Enemies/Sucker.h"
 #include "../Actors/Enemies/SuckerFloat.h"
 #include "../Actors/Enemies/Turtle.h"
@@ -135,9 +136,9 @@ namespace Jazz2::Events
 
 		/*RegisterSpawnable(EventType::BossBilsy, Bilsy.Create, Bilsy.Preload);
 		RegisterSpawnable(EventType::BossDevan, Devan.Create, Devan.Preload);
-		RegisterSpawnable(EventType::BossDevanRemote, DevanRemote.Create, DevanRemote.Preload);
-		RegisterSpawnable(EventType::BossQueen, Queen.Create, Queen.Preload);
-		RegisterSpawnable(EventType::BossRobot, Robot.Create, Robot.Preload);
+		RegisterSpawnable(EventType::BossDevanRemote, DevanRemote.Create, DevanRemote.Preload);*/
+		RegisterSpawnable<Enemies::Queen>(EventType::BossQueen);
+		/*RegisterSpawnable(EventType::BossRobot, Robot.Create, Robot.Preload);
 		RegisterSpawnable(EventType::BossTweedle, Tweedle.Create, Tweedle.Preload);
 		RegisterSpawnable(EventType::BossUterus, Uterus.Create, Uterus.Preload);
 		RegisterSpawnable(EventType::BossTurtleTough, TurtleToughBoss.Create, TurtleToughBoss.Preload);*/

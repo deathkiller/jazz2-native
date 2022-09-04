@@ -16,7 +16,7 @@ namespace nCine
 		fileSize_ = bufferSize;
 
 		// The memory file appears to be already opened when first created
-		fileDescriptor_ = (bufferSize > 0) ? 0 : -1;
+		fileDescriptor_ = (bufferSize > 0 ? 0 : -1);
 	}
 
 	MemoryFile::MemoryFile(const String& bufferName, const uint8_t* bufferPtr, uint32_t bufferSize)
@@ -27,7 +27,7 @@ namespace nCine
 		fileSize_ = bufferSize;
 
 		// The memory file appears to be already opened as read-only when first created
-		fileDescriptor_ = (bufferSize > 0) ? 0 : -1;
+		fileDescriptor_ = (bufferSize > 0 ? 0 : -1);
 	}
 
 	///////////////////////////////////////////////////////////
@@ -81,8 +81,9 @@ namespace nCine
 	{
 		int32_t tellValue = -1;
 
-		if (fileDescriptor_ >= 0)
+		if (fileDescriptor_ >= 0) {
 			tellValue = _seekOffset;
+		}
 
 		return tellValue;
 	}

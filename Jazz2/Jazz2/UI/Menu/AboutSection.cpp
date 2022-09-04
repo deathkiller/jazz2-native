@@ -30,8 +30,8 @@ namespace Jazz2::UI::Menu
 
 		int charOffset = 0;
 
-		_root->DrawStringShadow("Reimplementation of the game Jazz Jackrabbit 2 released in 1998. Supports various\nversions of the game (Shareware Demo, Holiday Hare '98, The Secret Files and\nChristmas Chronicles). Also, it partially supports some features of JJ2+ extension."_s, charOffset, pos.X, pos.Y - 22.0f,
-			Alignment::Left, Font::DefaultColor, 0.7f, 0.4f, 0.6f, 0.6f, 0.8f, 0.9f, 1.2f);
+		_root->DrawStringShadow("Reimplementation of the game Jazz Jackrabbit 2 released in 1998. Supports various\nversions of the game (Shareware Demo, Holiday Hare '98, The Secret Files and\nChristmas Chronicles). Also, it partially supports some features of JJ2+ extension."_s, charOffset, viewSize.X * 0.5f, pos.Y - 22.0f,
+			Alignment::Center, Font::DefaultColor, 0.7f, 0.4f, 0.6f, 0.6f, 0.8f, 0.9f, 1.2f);
 
 		_root->DrawStringShadow("Created By"_s, charOffset, pos.X, pos.Y + 20.0f,
 			Alignment::Left, Font::DefaultColor, 0.85f, 0.4f, 0.6f, 0.6f, 0.8f, 0.9f);

@@ -1,6 +1,7 @@
 ﻿#include "Bubba.h"
 #include "../../ILevelHandler.h"
 #include "../Player.h"
+#include "../Explosion.h"
 
 #include "../../../nCine/Base/Random.h"
 
@@ -82,14 +83,14 @@ namespace Jazz2::Actors::Enemies
 								float x = (IsFacingLeft() ? -16.0f : 16.0f);
 								float y = -5.0f;
 
-								// TODO: Fireball
-								/*Fireball fireball = new Fireball();
-								fireball.OnActivated(new ActorActivationDetails {
-									LevelHandler = levelHandler,
-									Pos = new Vector3(_pos.X + x, _pos.Y + y, _pos.Z + 2f),
-									Params = new[] { (ushort)(IsFacingLeft ? 1 : 0) }
+								std::shared_ptr<Fireball> fireball = std::make_shared<Fireball>();
+								uint8_t fireballParams[1] = { (uint8_t)(IsFacingLeft() ? 1 : 0) };
+								fireball->OnActivated({
+									.LevelHandler = _levelHandler,
+									.Pos = Vector3i((int)(_pos.X + x), (int)(_pos.Y + y), _renderer.layer() - 2),
+									.Params = fireballParams
 								});
-								levelHandler.AddActor(fireball);*/
+								_levelHandler->AddActor(fireball);
 
 								SetTransition(AnimState::TransitionShootToIdle, false, [this]() {
 									FollowNearestPlayer();
@@ -227,5 +228,66 @@ namespace Jazz2::Actors::Enemies
 				SetAnimation((AnimState)1073741831);
 			});
 		}
+	}
+
+	Task<bool> Bubba::Fireball::OnActivatedAsync(const ActorActivationDetails& details)
+	{
+		SetFacingLeft(details.Params[0] != 0);
+		_speed.X = (IsFacingLeft() ? -4.8f : 4.8f);
+		_timeLeft = 50.0f;
+
+		SetState(ActorFlags::CanBeFrozen, false);
+		SetState(ActorFlags::IsInvulnerable, true);
+		CanCollideWithAmmo = false;
+		CollisionFlags = CollisionFlags::CollideWithTileset | CollisionFlags::CollideWithOtherActors;
+
+		_health = INT32_MAX;
+
+		co_await RequestMetadataAsync("Boss/Bubba"_s);
+		SetAnimation((AnimState)1073741834);
+
+		co_return true;
+	}
+
+	void Bubba::Fireball::OnUpdate(float timeMult)
+	{
+		MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative | MoveType::Force);
+
+		if (_timeLeft <= 0.0f) {
+			DecreaseHealth(INT32_MAX);
+		} else {
+			_timeLeft -= timeMult;
+		}
+	}
+
+	void Bubba::Fireball::OnUpdateHitbox()
+	{
+		UpdateHitbox(18, 18);
+	}
+
+	void Bubba::Fireball::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
+	{
+		auto& light = lights.emplace_back();
+		light.Pos = _pos;
+		light.Intensity = 0.85f;
+		light.Brightness = 0.4f;
+		light.RadiusNear = 0.0f;
+		light.RadiusFar = 30.0f;
+	}
+
+	bool Bubba::Fireball::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	{
+		if (auto player = dynamic_cast<Player*>(other.get())) {
+			DecreaseHealth(INT32_MAX);
+		}
+
+		return ActorBase::OnHandleCollision(other);
+	}
+
+	bool Bubba::Fireball::OnPerish(ActorBase* collider)
+	{
+		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + _speed.X), (int)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::RF);
+
+		return EnemyBase::OnPerish(collider);
 	}
 }

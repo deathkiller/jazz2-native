@@ -4,10 +4,13 @@
 
 namespace Jazz2::Actors::Enemies
 {
-	class Bubba : public BossBase
+	class Queen : public BossBase
 	{
 	public:
-		Bubba();
+		Queen();
+		~Queen();
+
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other);
 
 		static void Preload(const ActorActivationDetails& details);
 
@@ -15,38 +18,40 @@ namespace Jazz2::Actors::Enemies
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		bool OnActivatedBoss() override;
 		void OnUpdate(float timeMult) override;
-		void OnUpdateHitbox() override;
-		bool OnPerish(ActorBase* collider) override;
 
 	private:
 		static constexpr int StateTransition = -1;
 		static constexpr int StateWaiting = 0;
-		static constexpr int StateJumping = 1;
-		static constexpr int StateFalling = 2;
-		static constexpr int StateTornado = 3;
-		static constexpr int StateDying = 4;
+		static constexpr int StateIdleToScream = 1;
+		static constexpr int StateIdleToStomp = 2;
+		static constexpr int StateIdleToBackstep = 3;
+		static constexpr int StateDead = 4;
+		static constexpr int StateScreaming = 5;
 
-		class Fireball : public EnemyBase
+		class Brick : public EnemyBase
 		{
-		public:
-			bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
-
 		protected:
 			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 			void OnUpdate(float timeMult) override;
-			void OnUpdateHitbox() override;
-			void OnEmitLights(SmallVectorImpl<LightEmitter>& lights);
 			bool OnPerish(ActorBase* collider) override;
 
 		private:
 			float _timeLeft;
 		};
 
+		class InvisibleBlock : public ActorBase
+		{
+		protected:
+			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
+			void OnUpdate(float timeMult) override;
+		};
+
 		int _state = StateWaiting;
 		float _stateTime;
 		uint8_t _endText;
-
-		void FollowNearestPlayer();
-		void TornadoToNearestPlayer();
+		int _lastHealth;
+		bool _queuedBackstep;
+		float _stepSize;
+		std::shared_ptr<InvisibleBlock> _block;
 	};
 }

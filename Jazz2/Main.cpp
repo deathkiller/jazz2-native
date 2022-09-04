@@ -20,6 +20,7 @@
 #include "Jazz2/ContentResolver.h"
 #include "Jazz2/LevelHandler.h"
 #include "Jazz2/PreferencesCache.h"
+#include "Jazz2/UI/Cinematics.h"
 #include "Jazz2/UI/ControlScheme.h"
 #include "Jazz2/UI/Menu/MainMenu.h"
 
@@ -180,6 +181,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 enum class PendingState {
 	None,
 	MainMenu,
+	MainMenuAfterIntro,
 	LevelChange
 };
 
@@ -197,7 +199,7 @@ public:
 	void onResizeWindow(int width, int height) override;
 	void onTouchEvent(const TouchEvent& event) override;
 
-	void GoToMainMenu() override;
+	void GoToMainMenu(bool afterIntro) override;
 	void ChangeLevel(Jazz2::LevelInitialization&& levelInit) override;
 
 	bool IsVerified() override {
@@ -240,7 +242,10 @@ void GameEventHandler::onInit()
 	_isVerified = RefreshCache();
 
 	_pendingState = PendingState::None;
-	_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this);
+	_currentHandler = std::make_unique<Jazz2::UI::Cinematics>(this, "intro"_s, [](IRootController* root, bool endOfStream) {
+		root->GoToMainMenu(endOfStream);
+	});
+
 	Viewport::chain().clear();
 	Vector2i res = theApplication().resolutionInt();
 	_currentHandler->OnInitializeViewport(res.X, res.Y);
@@ -251,20 +256,25 @@ void GameEventHandler::onFrameStart()
 	if (_pendingState != PendingState::None) {
 		switch (_pendingState) {
 			case PendingState::MainMenu:
-				_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this);
+				_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this, false);
+				break;
+			case PendingState::MainMenuAfterIntro:
+				_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this, true);
 				break;
 			case PendingState::LevelChange:
 				if (_pendingLevelChange->LevelName.empty()) {
 					// Next level not specified, so show main menu
-					_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this);
+					_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this, false);
 				} else if (_pendingLevelChange->LevelName == ":end"_s) {
 					// End of episode
 					// TODO: Save state and go to next episode
-					_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this);
+					_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this, false);
 				} else if (_pendingLevelChange->LevelName == ":credits"_s) {
 					// End of game
 					// TODO: Save state and play ending cinematics
-					_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this);
+					_currentHandler = std::make_unique<Jazz2::UI::Cinematics>(this, "ending"_s, [](IRootController* root, bool endOfStream) {
+						root->GoToMainMenu(false);
+					});
 				} else {
 					_currentHandler = std::make_unique<Jazz2::LevelHandler>(this, *_pendingLevelChange.get());
 				}
@@ -314,9 +324,9 @@ void GameEventHandler::onTouchEvent(const TouchEvent& event)
 	}
 }
 
-void GameEventHandler::GoToMainMenu()
+void GameEventHandler::GoToMainMenu(bool afterIntro)
 {
-	_pendingState = PendingState::MainMenu;
+	_pendingState = (afterIntro ? PendingState::MainMenuAfterIntro : PendingState::MainMenu);
 }
 
 void GameEventHandler::ChangeLevel(Jazz2::LevelInitialization&& levelInit)

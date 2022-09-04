@@ -125,6 +125,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/LabRat.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Lizard.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/MadderHatter.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Queen.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Sucker.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/SuckerFloat.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Turtle.cpp
@@ -184,6 +185,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileMap.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileSet.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Canvas.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Cinematics.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/ControlScheme.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Font.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/HUD.cpp

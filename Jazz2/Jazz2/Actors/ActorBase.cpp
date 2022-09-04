@@ -22,7 +22,7 @@ namespace Jazz2
 		_levelHandler(nullptr),
 		_internalForceY(0.0f),
 		_elasticity(0.0f),
-		_friction(0.0f),
+		_friction(1.5f),
 		_unstuckCooldown(0.0f),
 		_frozenTimeLeft(0.0f),
 		_maxHealth(1),
@@ -73,7 +73,6 @@ namespace Jazz2
 	{
 		_flags = details.Flags | ActorFlags::Initializing | ActorFlags::CanBeFrozen;
 		_levelHandler = details.LevelHandler;
-		_friction = 1.5f;
 		_pos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
 		_originTile = Vector2i((int)details.Pos.X / 32, (int)details.Pos.Y / 32);
 
@@ -162,10 +161,12 @@ namespace Jazz2
 
 	bool ActorBase::OnPerish(ActorBase* collider)
 	{
-		auto events = _levelHandler->EventMap();
-		if (events != nullptr && (_flags & ActorFlags::IsCreatedFromEventMap) == ActorFlags::IsCreatedFromEventMap) {
-			events->Deactivate(_originTile.X, _originTile.Y);
-			events->StoreTileEvent(_originTile.X, _originTile.Y, EventType::Empty);
+		if ((_flags & ActorFlags::IsCreatedFromEventMap) == ActorFlags::IsCreatedFromEventMap) {
+			auto events = _levelHandler->EventMap();
+			if (events != nullptr) {
+				events->Deactivate(_originTile.X, _originTile.Y);
+				events->StoreTileEvent(_originTile.X, _originTile.Y, EventType::Empty);
+			}
 		}
 
 		bool forceDisableCollisions = ((CollisionFlags & CollisionFlags::ForceDisableCollisions) == CollisionFlags::ForceDisableCollisions);
@@ -391,7 +392,7 @@ namespace Jazz2
 		}
 
 		// Reduce all forces if they are present
-		if (std::abs(_externalForce.X) > std::numeric_limits<float>::epsilon()) {
+		if (std::abs(_externalForce.X) > 0.0f) {
 			if (_externalForce.X > 0.0f) {
 				_externalForce.X = std::max(_externalForce.X - _friction * timeMult, 0.0f);
 			} else {

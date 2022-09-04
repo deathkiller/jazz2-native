@@ -92,6 +92,12 @@ namespace Jazz2::UI::Menu
 				float x = event.pointers[pointerIndex].x;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 
+				if (y < 80.0f) {
+					_root->PlaySfx("MenuSelect"_s, 0.5f);
+					_root->LeaveSection();
+					return;
+				}
+
 				for (int i = 0; i < (int)Item::Count; i++) {
 					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 30.0f) {
 						if (_selectedIndex == i) {

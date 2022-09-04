@@ -10,6 +10,7 @@ namespace Jazz2
 	RescaleMode PreferencesCache::ActiveRescaleMode = RescaleMode::None;
 	bool PreferencesCache::EnableFullscreen = false;
 	bool PreferencesCache::EnableVsync = true;
+	bool PreferencesCache::ShowFps = false;
 	bool PreferencesCache::ReduxMode = true;
 	bool PreferencesCache::EnableLedgeClimb = true;
 	bool PreferencesCache::AllowCheats = false;
@@ -38,6 +39,8 @@ namespace Jazz2
 				ActiveRescaleMode = RescaleMode::_3xBrz;
 			} else if (arg == "/monochrome"_s) {
 				ActiveRescaleMode = RescaleMode::Monochrome;
+			} else if (arg == "/fps"_s) {
+				ShowFps = true;
 			} else if (arg == "/mute"_s) {
 				MasterVolume = 0.0f;
 			}

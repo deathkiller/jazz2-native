@@ -1868,6 +1868,7 @@ namespace Jazz2::Actors
 				_weaponCooldown = 0.0f;
 				_controllable = true;
 				_inShallowWater = -1;
+				_invulnerableTime = 0.0f;
 				SetModifier(Modifier::None);
 
 				// Spawn corpse
@@ -1907,6 +1908,7 @@ namespace Jazz2::Actors
 				}
 			} else {
 				_controllable = false;
+				_invulnerableTime = 0.0f;
 				_renderer.setDrawEnabled(false);
 
 				_levelHandler->HandleGameOver();
@@ -2145,8 +2147,10 @@ namespace Jazz2::Actors
 
 		if (_levelExiting != LevelExitingState::None) {
 			if (_levelExiting == LevelExitingState::Waiting) {
-				if (GetState(ActorFlags::CanJump) && _speed.X < 1.0f && _speed.Y < 1.0f) {
+				if (GetState(ActorFlags::CanJump) && std::abs(_speed.X) < 1.0f && std::abs(_speed.Y) < 1.0f) {
 					_levelExiting = LevelExitingState::Transition;
+
+					ForceCancelTransition();
 
 					SetPlayerTransition(AnimState::TransitionEndOfLevel, false, true, SpecialMoveType::None, [this]() {
 						_renderer.setDrawEnabled(false);
@@ -2163,6 +2167,8 @@ namespace Jazz2::Actors
 				} else if (_lastPoleTime <= 0.0f) {
 					// Waiting timeout - use warp transition instead
 					_levelExiting = LevelExitingState::Transition;
+
+					ForceCancelTransition();
 
 					SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpInFreefall : AnimState::TransitionWarpIn, false, true, SpecialMoveType::None, [this]() {
 						_renderer.setDrawEnabled(false);
@@ -2186,8 +2192,10 @@ namespace Jazz2::Actors
 
 		PlayPlayerSfx("EndOfLevel"_s);
 
-		if (exitType == ExitType::Warp || exitType == ExitType::Bonus || _inWater) {
+		if (exitType == ExitType::Warp || exitType == ExitType::Bonus || exitType == ExitType::Boss || _inWater) {
 			_levelExiting = LevelExitingState::Transition;
+
+			ForceCancelTransition();
 
 			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpInFreefall : AnimState::TransitionWarpIn, false, true, SpecialMoveType::None, [this]() {
 				_renderer.setDrawEnabled(false);
@@ -2207,6 +2215,7 @@ namespace Jazz2::Actors
 			if (_suspendType != SuspendType::None) {
 				MoveInstantly(Vector2f(0.0f, 10.0f), MoveType::Relative | MoveType::Force);
 				_suspendType = SuspendType::None;
+				_suspendTime = 60.0f;
 			}
 
 			CollisionFlags |= CollisionFlags::ApplyGravitation;
@@ -2215,8 +2224,10 @@ namespace Jazz2::Actors
 		_controllable = false;
 		SetFacingLeft(false);
 		SetState(ActorFlags::IsInvulnerable, true);
+		_fireFramesLeft = 0.0f;
 		_copterFramesLeft = 0.0f;
 		_pushFramesLeft = 0.0f;
+		_invulnerableTime = 0.0f;
 
 		// Re-used for waiting timeout
 		_lastPoleTime = 300.0f;
@@ -2518,12 +2529,13 @@ namespace Jazz2::Actors
 
 		DecreaseHealth(amount, nullptr);
 
-		_internalForceY = 0.0f;
 		_speed.X = 0.0f;
+		_internalForceY = 0.0f;
+		_fireFramesLeft = 0.0f;
+		_copterFramesLeft = 0.0f;
+		_pushFramesLeft = 0.0f;
 		SetState(ActorFlags::CanJump, false);
 		_isAttachedToPole = false;
-
-		_fireFramesLeft = _copterFramesLeft = _pushFramesLeft = 0.0f;
 
 		// TODO: Birds
 		/*if (activeBird != null) {
@@ -2570,16 +2582,18 @@ namespace Jazz2::Actors
 	void Player::SetInvulnerability(float time, bool withCircleEffect)
 	{
 		if (time <= 0.0f) {
-			SetState(ActorFlags::IsInvulnerable, false);
-			_invulnerableTime = 0;
-			_renderer.setDrawEnabled(true);
+			if (_invulnerableTime > 0.0f) {
+				SetState(ActorFlags::IsInvulnerable, false);
+				_invulnerableTime = 0.0f;
+				_renderer.setDrawEnabled(true);
 
-			// TODO: Circle effect
-			//SetCircleEffect(false);
+				// TODO: Circle effect
+				//SetCircleEffect(false);
 
 #if MULTIPLAYER && SERVER
-			((LevelHandler)levelHandler).OnPlayerSetInvulnerability(this, 0f, false);
+				((LevelHandler)levelHandler).OnPlayerSetInvulnerability(this, 0f, false);
 #endif
+			}
 			return;
 		}
 

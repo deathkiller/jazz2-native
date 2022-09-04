@@ -142,6 +142,9 @@ namespace Jazz2::Events
 				} else {
 					// Generator is active and recharging
 					generator.TimeLeft -= timeMult;
+					if (generator.SpawnedActor != nullptr) {
+						generator.SpawnedActor = nullptr;
+					}
 				}
 			}
 		}
