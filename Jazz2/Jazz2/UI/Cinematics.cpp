@@ -293,7 +293,6 @@ namespace Jazz2::UI
 
 		_pressedActions = ((_pressedActions & 0xffff) << 16);
 
-		// Also allow Return (Enter) as confirm key
 		if (keyState.isKeyDown(KeySym::RETURN) || keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Fire)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Fire)) ||
 			keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Jump)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Jump)) ||
 			keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Menu)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Menu))) {

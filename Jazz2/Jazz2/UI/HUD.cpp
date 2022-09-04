@@ -754,7 +754,7 @@ namespace Jazz2::UI
 		float distance = 20 + (70 * easing);
 		float distance2 = 10 + (50 * easing);
 
-		if (!isnan(requestedAngle)) {
+		if (!std::isnan(requestedAngle)) {
 			float distance3 = distance * 0.86f;
 			float distance4 = distance2 * 0.93f;
 
