@@ -68,7 +68,8 @@ namespace Jazz2
 		IsSolidObject = 0x80,
 		SkipPerPixelCollisions = 0x100,
 
-		CollideWithSolidObjectsBelow = 0x200
+		CollideWithTilesetReduced = 0x200,
+		CollideWithSolidObjectsBelow = 0x400,
 	};
 
 	DEFINE_ENUM_OPERATORS(CollisionFlags);
@@ -247,7 +248,7 @@ namespace Jazz2
 		void CreateParticleDebris();
 		void CreateSpriteDebris(const StringView& identifier, int count);
 
-		const std::shared_ptr<AudioBufferPlayer>& PlaySfx(const StringView& identifier, float gain = 1.0f, float pitch = 1.0f);
+		std::shared_ptr<AudioBufferPlayer> PlaySfx(const StringView& identifier, float gain = 1.0f, float pitch = 1.0f);
 		void SetAnimation(const StringView& identifier);
 		bool SetAnimation(AnimState state);
 		bool SetTransition(AnimState state, bool cancellable, const std::function<void()>& callback = []() { });

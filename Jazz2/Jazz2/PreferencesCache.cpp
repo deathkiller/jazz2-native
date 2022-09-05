@@ -14,6 +14,7 @@ namespace Jazz2
 	bool PreferencesCache::ReduxMode = true;
 	bool PreferencesCache::EnableLedgeClimb = true;
 	bool PreferencesCache::AllowCheats = false;
+	bool PreferencesCache::AllowCheatsWeapons = false;
 	bool PreferencesCache::EnableWeaponWheel = false;
 	bool PreferencesCache::EnableRgbLights = true;
 	float PreferencesCache::MasterVolume = 0.8f;
@@ -29,6 +30,8 @@ namespace Jazz2
 			auto arg = config.argv(i);
 			if (arg == "/cheats"_s) {
 				AllowCheats = true;
+			} else if (arg == "/cheats-weapons"_s) {
+				AllowCheatsWeapons = true;
 			} else if (arg == "/fullscreen"_s) {
 				EnableFullscreen = true;
 			} else if (arg == "/no-vsync"_s) {

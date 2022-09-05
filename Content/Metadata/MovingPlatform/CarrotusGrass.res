@@ -1,14 +1,14 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "Platform": {
-            "Path": "Platform/carrotus_grass.aura"
-        },
-        "Chain": {
-            "Path": "Platform/carrotus_grass_chain.aura"
-        }
-    }
+	"Animations": {
+		"Platform": {
+			"Path": "Platform/carrotus_grass.aura"
+		},
+		"Chain": {
+			"Path": "Platform/carrotus_grass_chain.aura"
+		}
+	}
 }

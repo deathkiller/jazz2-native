@@ -1,12 +1,12 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "Idle": {
-            "Path": "Tweedle/idle.aura",
-            "States": [ 0 ]
-        }
-    }
+	"Animations": {
+		"Idle": {
+			"Path": "Tweedle/idle.aura",
+			"States": [ 0 ]
+		}
+	}
 }

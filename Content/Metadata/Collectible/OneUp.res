@@ -1,11 +1,11 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "OneUp": {
-            "Path": "Pickup/1up.aura"
-        }
-    }
+	"Animations": {
+		"OneUp": {
+			"Path": "Pickup/1up.aura"
+		}
+	}
 }

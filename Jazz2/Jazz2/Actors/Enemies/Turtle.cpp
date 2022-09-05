@@ -39,6 +39,8 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(1);
 		_scoreValue = 100;
 
+		CollisionFlags |= CollisionFlags::CollideWithTilesetReduced;
+
 		_theme = details.Params[0];
 		switch (_theme) {
 			case 0:

@@ -1,14 +1,14 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "Platform": {
-            "Path": "Platform/ball.aura"
-        },
-        "Chain": {
-            "Path": "Platform/ball_chain.aura"
-        }
-    }
+	"Animations": {
+		"Platform": {
+			"Path": "Platform/ball.aura"
+		},
+		"Chain": {
+			"Path": "Platform/ball_chain.aura"
+		}
+	}
 }

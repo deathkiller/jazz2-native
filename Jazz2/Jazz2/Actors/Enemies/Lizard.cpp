@@ -40,6 +40,8 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(_isFalling ? 6 : 1);
 		_scoreValue = 100;
 
+		CollisionFlags |= CollisionFlags::CollideWithTilesetReduced;
+
 		switch (theme) {
 			case 0:
 			default:

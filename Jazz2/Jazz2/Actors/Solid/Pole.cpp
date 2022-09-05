@@ -120,9 +120,11 @@ namespace Jazz2::Actors::Solid
 	bool Pole::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
-			Fall(shotBase->GetSpeed().X < 0.0f ? FallDirection::Left : FallDirection::Right);
-			shotBase->DecreaseHealth(1, this);
-			return true;
+			if (shotBase->GetStrength() > 0) {
+				Fall(shotBase->GetSpeed().X < 0.0f ? FallDirection::Left : FallDirection::Right);
+				shotBase->DecreaseHealth(1);
+				return true;
+			}
 		} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {
 			Fall(tnt->GetPos().X > _pos.X ? FallDirection::Left : FallDirection::Right);
 			return true;

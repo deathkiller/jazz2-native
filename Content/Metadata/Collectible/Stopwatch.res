@@ -1,11 +1,11 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "Stopwatch": {
-            "Path": "Pickup/stopwatch.aura"
-        }
-    }
+	"Animations": {
+		"Stopwatch": {
+			"Path": "Pickup/stopwatch.aura"
+		}
+	}
 }

@@ -1,13 +1,13 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "Walk": {
-            "Path": "TurtleTough/Walk.aura",
-            "FrameRate": 5,
-            "States": [ 1 ]
-        }
-    }
+	"Animations": {
+		"Walk": {
+			"Path": "TurtleTough/Walk.aura",
+			"FrameRate": 5,
+			"States": [ 1 ]
+		}
+	}
 }

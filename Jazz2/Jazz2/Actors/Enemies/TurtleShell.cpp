@@ -5,6 +5,7 @@
 #include "../Solid/CrateContainer.h"
 #include "../Weapons/ShotBase.h"
 #include "../Weapons/FreezerShot.h"
+#include "../Weapons/Thunderbolt.h"
 #include "../Weapons/ToasterShot.h"
 
 #include "../../../nCine/Base/Random.h"
@@ -37,9 +38,9 @@ namespace Jazz2::Actors::Enemies
 	Task<bool> TurtleShell::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		SetHealthByDifficulty(1);
-		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions | CollisionFlags::CollideWithSolidObjects | CollisionFlags::CollideWithSolidObjectsBelow;
-
 		_scoreValue = 100;
+
+		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions | CollisionFlags::CollideWithTilesetReduced | CollisionFlags::CollideWithSolidObjects | CollisionFlags::CollideWithSolidObjectsBelow;
 
 		_speed.X = *(float*)&details.Params[0];
 		_externalForce.Y = *(float*)&details.Params[4];
@@ -118,19 +119,27 @@ namespace Jazz2::Actors::Enemies
 		EnemyBase::OnHandleCollision(other);
 
 		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
-			if (auto freezerShot = dynamic_cast<Weapons::FreezerShot*>(shotBase)) {
-				return false;
+			if (shotBase->GetStrength() > 0) {
+				if (auto freezerShot = dynamic_cast<Weapons::FreezerShot*>(shotBase)) {
+					return false;
+				}
+
+				if (auto toasterShot = dynamic_cast<Weapons::ToasterShot*>(shotBase)) {
+					DecreaseHealth(INT32_MAX, toasterShot);
+					return true;
+				}
+
+				float shotSpeed;
+				if (auto thunderbolt = dynamic_cast<Weapons::Thunderbolt*>(shotBase)) {
+					shotSpeed = (_pos.X < shotBase->GetPos().X ? -8.0f : 8.0f);
+				} else {
+					shotSpeed = shotBase->GetSpeed().X;
+				}
+
+				_speed.X = std::max(4.0f, std::abs(shotSpeed)) * (shotSpeed < 0.0f ? -0.5f : 0.5f);
+
+				PlaySfx("Fly"_s);
 			}
-
-			if (auto toasterShot = dynamic_cast<Weapons::ToasterShot*>(shotBase)) {
-				DecreaseHealth(INT32_MAX, toasterShot);
-				return true;
-			}
-
-			float otherSpeed = other->GetSpeed().X;
-			_speed.X = std::max(4.0f, std::abs(otherSpeed)) * (otherSpeed < 0.0f ? -0.5f : 0.5f);
-
-			PlaySfx("Fly"_s);
 		} else if (auto shell = dynamic_cast<TurtleShell*>(other.get())) {
 			auto otherSpeed = shell->GetSpeed();
 			if (std::abs(otherSpeed.Y - _speed.Y) > 1.0f && otherSpeed.Y > 0.0f) {

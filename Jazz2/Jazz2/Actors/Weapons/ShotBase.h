@@ -19,7 +19,7 @@ namespace Jazz2::Actors::Weapons
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
-		int GetStrength() {
+		inline int GetStrength() {
 			return _strength;
 		}
 

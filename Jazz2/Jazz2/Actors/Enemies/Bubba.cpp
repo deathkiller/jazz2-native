@@ -29,6 +29,8 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(93);
 		_scoreValue = 4000;
 
+		CollisionFlags |= CollisionFlags::CollideWithTilesetReduced;
+
 		co_await RequestMetadataAsync("Boss/Bubba"_s);
 		SetAnimation(AnimState::Idle);
 
@@ -140,6 +142,8 @@ namespace Jazz2::Actors::Enemies
 	{
 		// It must be done here, because the player may not exist after animation callback 
 		AddScoreToCollider(collider);
+
+		ForceCancelTransition();
 
 		CreateParticleDebris();
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));

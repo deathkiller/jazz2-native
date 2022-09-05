@@ -617,7 +617,7 @@ namespace Jazz2
 		_actors.emplace_back(actor);
 	}
 
-	const std::shared_ptr<AudioBufferPlayer>& LevelHandler::PlaySfx(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch)
+	std::shared_ptr<AudioBufferPlayer> LevelHandler::PlaySfx(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch)
 	{
 		auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(buffer));
 		//player->setPosition(Vector3f((pos.X - _cameraPos.X) / (DefaultWidth * 3), (pos.Y - _cameraPos.Y) / (DefaultHeight * 3), 0.8f));
@@ -636,7 +636,7 @@ namespace Jazz2
 		return player;
 	}
 
-	const std::shared_ptr<AudioBufferPlayer>& LevelHandler::PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain, float pitch)
+	std::shared_ptr<AudioBufferPlayer> LevelHandler::PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain, float pitch)
 	{
 		auto it = _commonResources->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _commonResources->Sounds.end()) {
@@ -656,8 +656,7 @@ namespace Jazz2
 			player->play();
 			return player;
 		} else {
-			LOGE_X("Sound effect \"%s\" was not found", identifier.data());
-			return std::shared_ptr<AudioBufferPlayer>(nullptr);
+			return nullptr;
 		}
 	}
 
@@ -683,7 +682,7 @@ namespace Jazz2
 
 		if ((self->CollisionFlags & CollisionFlags::CollideWithTileset) == CollisionFlags::CollideWithTileset) {
 			if (_tileMap != nullptr) {
-				if (aabb.B - aabb.T >= 20.0f) {
+				if ((self->CollisionFlags & CollisionFlags::CollideWithTilesetReduced) == CollisionFlags::CollideWithTilesetReduced && aabb.B - aabb.T >= 20.0f) {
 					// If hitbox height is larger than 20px, check bottom and top separately (and top only if going upwards)
 					AABBf aabbTop = aabb;
 					aabbTop.B = aabbTop.T + 6.0f;
@@ -1313,6 +1312,16 @@ namespace Jazz2
 		}
 		if (keyState.isKeyDown(UI::ControlScheme::Key1(0, PlayerActions::Menu)) || keyState.isKeyDown(UI::ControlScheme::Key2(0, PlayerActions::Menu))) {
 			_pressedActions |= (1 << (int)PlayerActions::Menu);
+		}
+
+		// Use numeric key to switch weapons for the first player
+		if (!_players.empty()) {
+			for (int i = 0; i < 9; i++) {
+				if (keyState.isKeyDown((KeySym)((int)KeySym::N1 + i))) {
+					_players[0]->SwitchToWeaponByIndex(i);
+					break;
+				}
+			}
 		}
 
 		// Try to get 8 connected joysticks

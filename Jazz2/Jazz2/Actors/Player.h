@@ -40,7 +40,7 @@ namespace Jazz2::Actors
 			return _currentSpecialMove;
 		}
 
-		const int16_t* GetWeaponAmmo() const {
+		const uint16_t* GetWeaponAmmo() const {
 			return _weaponAmmo;
 		}
 
@@ -78,6 +78,8 @@ namespace Jazz2::Actors
 		bool DisableControllable(float timeout);
 		void SetCheckpoint(Vector2f pos, float ambientLight);
 
+		void SwitchToWeaponByIndex(int weaponIndex);
+
 	protected:
 		enum class LevelExitingState {
 			None,
@@ -94,7 +96,7 @@ namespace Jazz2::Actors
 		static constexpr float Acceleration = 0.2f;
 		static constexpr float Deceleration = 0.22f;
 
-		static constexpr const char* WeaponNames[PlayerCarryOver::WeaponCount] = {
+		static constexpr const char* WeaponNames[(int)WeaponType::Count] = {
 			"Blaster",
 			"Bouncer",
 			"Freezer",
@@ -155,9 +157,9 @@ namespace Jazz2::Actors
 		WeaponType _currentWeapon;
 		bool _weaponAllowed;
 		float _weaponCooldown;
-		int16_t _weaponAmmo[PlayerCarryOver::WeaponCount];
-		uint8_t _weaponUpgrades[PlayerCarryOver::WeaponCount];
-		std::shared_ptr<AudioBufferPlayer> _weaponToasterSound;
+		uint16_t _weaponAmmo[(int)WeaponType::Count];
+		uint8_t _weaponUpgrades[(int)WeaponType::Count];
+		std::shared_ptr<AudioBufferPlayer> _weaponSound;
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		bool OnTileDeactivate(int tx1, int ty1, int tx2, int ty2) override;
@@ -187,11 +189,11 @@ namespace Jazz2::Actors
 		void OnPerishInner();
 
 		void SwitchToNextWeapon();
-		void SwitchToWeaponByIndex(int weaponIndex);
 		template<typename T, WeaponType weaponType>
 		void FireWeapon(float cooldownBase, float cooldownUpgrade);
 		void FireWeaponRF();
 		void FireWeaponTNT();
+		bool FireWeaponThunderbolt();
 		bool FireCurrentWeapon(WeaponType weaponType);
 		void GetFirePointAndAngle(Vector3i& initialPos, Vector2f& gunspotPos, float& angle);
 	};

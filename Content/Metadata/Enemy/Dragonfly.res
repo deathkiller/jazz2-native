@@ -1,19 +1,19 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "Idle": {
-            "Path": "Dragonfly/idle.aura",
-            "FrameRate": 20,
-            "States": [ 0 ]
-        }
-    },
+	"Animations": {
+		"Idle": {
+			"Path": "Dragonfly/idle.aura",
+			"FrameRate": 20,
+			"States": [ 0 ]
+		}
+	},
 
-    "Sounds": {
-        "Noise": {
-            "Paths": [ "Dragonfly/noise.wav" ]
-        }
-    }
+	"Sounds": {
+		"Noise": {
+			"Paths": [ "Dragonfly/noise.wav" ]
+		}
+	}
 }

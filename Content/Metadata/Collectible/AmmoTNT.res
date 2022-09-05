@@ -1,12 +1,11 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "Ammo": {
-            "Path": "Object/tnt.aura",
-            "Shader": "SmoothAnimNormal"
-        }
-    }
+	"Animations": {
+		"Ammo": {
+			"Path": "Object/tnt.aura"
+		}
+	}
 }

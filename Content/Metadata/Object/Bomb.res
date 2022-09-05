@@ -1,11 +1,11 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "Bomb": {
-            "Path": "Common/Bomb.aura"
-        }
-    }
+	"Animations": {
+		"Bomb": {
+			"Path": "Common/Bomb.aura"
+		}
+	}
 }

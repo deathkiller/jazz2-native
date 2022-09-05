@@ -28,6 +28,8 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(4);
 		_scoreValue = 500;
 
+		CollisionFlags |= CollisionFlags::CollideWithTilesetReduced;
+
 		co_await RequestMetadataAsync("Enemy/TurtleTough"_s);
 
 		SetAnimation(AnimState::Walk);

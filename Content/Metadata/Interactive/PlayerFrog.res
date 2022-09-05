@@ -1,136 +1,136 @@
 {
-    "Version": {
-        "Target": "Jazz2² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz2² Resurrection"
+	},
 
-    "Animations": {
-        "Idle": {
-            "Path": "Frog/idle.aura",
-            "States": [ 0, 64, 128 ],
-            "FrameRate": 8
-        },
-        "Walk": {
-            "Path": "Frog/run.aura",
-            "States": [ 1, 2, 3, 17, 18, 19, 129, 145 ],
-            "FrameRate": 12
-        },
+	"Animations": {
+		"Idle": {
+			"Path": "Frog/idle.aura",
+			"States": [ 0, 64, 128 ],
+			"FrameRate": 8
+		},
+		"Walk": {
+			"Path": "Frog/run.aura",
+			"States": [ 1, 2, 3, 17, 18, 19, 129, 145 ],
+			"FrameRate": 12
+		},
 
-        "Jump": {
-            "Path": "Frog/jump_start.aura",
-            "States": [ 4, 5, 6, 7, 262144, 262145, 262146, 262147 ],
-            "Flags": 1,
-            "FrameRate": 30
-        },
-        "Fall": {
-            "Path": "Frog/fall.aura",
-            "States": [ 8, 9, 10, 11, 65536, 65537, 65538, 65539 ],
-            "FrameRate": 18
-        },
+		"Jump": {
+			"Path": "Frog/jump_start.aura",
+			"States": [ 4, 5, 6, 7, 262144, 262145, 262146, 262147 ],
+			"Flags": 1,
+			"FrameRate": 30
+		},
+		"Fall": {
+			"Path": "Frog/fall.aura",
+			"States": [ 8, 9, 10, 11, 65536, 65537, 65538, 65539 ],
+			"FrameRate": 18
+		},
 
-        "Crouch": {
-            "Path": "Frog/crouch.aura",
-            "Flags": 1,
-            "FrameRate": 40,
-            "States": [ 32 ]
-        },
+		"Crouch": {
+			"Path": "Frog/crouch.aura",
+			"Flags": 1,
+			"FrameRate": 40,
+			"States": [ 32 ]
+		},
 
-        "Shoot": {
-            "Path": "Frog/tongue_hor.aura",
-            "States": [ 16, 144, 48 ],
-            "FrameRate": 8
-        },
+		"Shoot": {
+			"Path": "Frog/tongue_hor.aura",
+			"States": [ 16, 144, 48 ],
+			"FrameRate": 8
+		},
 
-        "LookupShoot": {
-            "Path": "Frog/tongue_ver.aura",
-            "States": [ 80 ],
-            "FrameRate": 8
-        },
-        "Hurt": {
-            "Path": "Frog/hurt.aura",
-            "FrameRate": 6,
-            "States": [ 2048, 1073741839 ]
-        },
-        
-        "FallToIdle": {
-            "Path": "Frog/fall_land.aura",
-            "States": [ 1073741826 ],
-            "FrameRate": 28
-        },
-        
-        "TransformFromJazz": {
-            "Path": "Jazz/transform_frog.aura",
-            "States": [ 1610612736 ],
-            "FrameRate": 3
-        },
-        "TransformFromSpaz": {
-            "Path": "Spaz/transform_frog.aura",
-            "States": [ 1610612737 ],
-            "FrameRate": 3
-        },
-        "TransformFromLori": {
-            "Path": "Lori/transform_frog.aura",
-            "States": [ 1610612738 ],
-            "FrameRate": 3
-        },
-        
-        "TransformToJazz": {
-            "_Path": "Jazz/transform_frog_end.aura",
-            "States": [ 1610612739 ],
-            "FrameRate": 3
-        },
-        "TransformToSpaz": {
-            "_Path": "Spaz/transform_frog_end.aura",
-            "States": [ 1610612740 ],
-            "FrameRate": 3
-        },
-        "TransformToLori": {
-            "_Path": "Lori/transform_frog_end.aura",
-            "States": [ 1610612741 ],
-            "FrameRate": 3
-        }
-    },
+		"LookupShoot": {
+			"Path": "Frog/tongue_ver.aura",
+			"States": [ 80 ],
+			"FrameRate": 8
+		},
+		"Hurt": {
+			"Path": "Frog/hurt.aura",
+			"FrameRate": 6,
+			"States": [ 2048, 1073741839 ]
+		},
+		
+		"FallToIdle": {
+			"Path": "Frog/fall_land.aura",
+			"States": [ 1073741826 ],
+			"FrameRate": 28
+		},
+		
+		"TransformFromJazz": {
+			"Path": "Jazz/transform_frog.aura",
+			"States": [ 1610612736 ],
+			"FrameRate": 3
+		},
+		"TransformFromSpaz": {
+			"Path": "Spaz/transform_frog.aura",
+			"States": [ 1610612737 ],
+			"FrameRate": 3
+		},
+		"TransformFromLori": {
+			"Path": "Lori/transform_frog.aura",
+			"States": [ 1610612738 ],
+			"FrameRate": 3
+		},
+		
+		"TransformToJazz": {
+			"_Path": "Jazz/transform_frog_end.aura",
+			"States": [ 1610612739 ],
+			"FrameRate": 3
+		},
+		"TransformToSpaz": {
+			"_Path": "Spaz/transform_frog_end.aura",
+			"States": [ 1610612740 ],
+			"FrameRate": 3
+		},
+		"TransformToLori": {
+			"_Path": "Lori/transform_frog_end.aura",
+			"States": [ 1610612741 ],
+			"FrameRate": 3
+		}
+	},
 
-    "Sounds": {
-        "Tongue": {
-            "Paths": [ "Frog/tongue.wav" ]
-        },
-        "Transform": {
-            "Paths": [ "Frog/transform.wav" ]
-        },
-        "Jump": {
-            "Paths": [ "Frog/noise_1.wav" ]
-        },
-        "Land": {
-            "Paths": [ "Frog/noise_3.wav", "Frog/noise_5.wav", "Frog/noise_6.wav" ]
-        },
-        "Hurt": {
-            "Paths": [ "Frog/noise_4.wav" ]
-        },
-        
-        "PickupAmmo": {
-            "Paths": [ "Pickup/ammo.wav" ]
-        },
-        "PickupCoin": {
-            "Paths": [ "Pickup/coin.wav" ]
-        },
-        "PickupGem": {
-            "Paths": [ "Pickup/gem.wav" ]
-        },
-        "PickupOneUp": {
-            "Paths": [ "Pickup/1up.wav" ]
-        },
-        "PickupDrink": {
-            "Paths": [ "Pickup/food_drink_1.wav", "Pickup/food_drink_2.wav", "Pickup/food_drink_3.wav", "Pickup/food_drink_4.wav" ]
-        },
-        "PickupFood": {
-            "Paths": [ "Pickup/food_edible_1.wav", "Pickup/food_edible_2.wav", "Pickup/food_edible_3.wav", "Pickup/food_edible_4.wav" ]
-        },
-        "PickupMaxCarrot": {
-            "Paths": [ "Pickup/food_edible_1.wav" ]
-        },
-        
-        "BonusWarpNotEnoughCoins": {
-            "Paths": [ "Object/BonusNotEnoughCoins.wav" ]
-        }
-    }
+	"Sounds": {
+		"Tongue": {
+			"Paths": [ "Frog/tongue.wav" ]
+		},
+		"Transform": {
+			"Paths": [ "Frog/transform.wav" ]
+		},
+		"Jump": {
+			"Paths": [ "Frog/noise_1.wav" ]
+		},
+		"Land": {
+			"Paths": [ "Frog/noise_3.wav", "Frog/noise_5.wav", "Frog/noise_6.wav" ]
+		},
+		"Hurt": {
+			"Paths": [ "Frog/noise_4.wav" ]
+		},
+		
+		"PickupAmmo": {
+			"Paths": [ "Pickup/ammo.wav" ]
+		},
+		"PickupCoin": {
+			"Paths": [ "Pickup/coin.wav" ]
+		},
+		"PickupGem": {
+			"Paths": [ "Pickup/gem.wav" ]
+		},
+		"PickupOneUp": {
+			"Paths": [ "Pickup/1up.wav" ]
+		},
+		"PickupDrink": {
+			"Paths": [ "Pickup/food_drink_1.wav", "Pickup/food_drink_2.wav", "Pickup/food_drink_3.wav", "Pickup/food_drink_4.wav" ]
+		},
+		"PickupFood": {
+			"Paths": [ "Pickup/food_edible_1.wav", "Pickup/food_edible_2.wav", "Pickup/food_edible_3.wav", "Pickup/food_edible_4.wav" ]
+		},
+		"PickupMaxCarrot": {
+			"Paths": [ "Pickup/food_edible_1.wav" ]
+		},
+		
+		"BonusWarpNotEnoughCoins": {
+			"Paths": [ "Object/BonusNotEnoughCoins.wav" ]
+		}
+	}
 }

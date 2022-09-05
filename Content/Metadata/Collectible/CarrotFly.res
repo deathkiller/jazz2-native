@@ -1,12 +1,11 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "Carrot": {
-            "Path": "Pickup/carrot_fly.aura",
-            "Shader": "SmoothAnimNormal"
-        }
-    }
+	"Animations": {
+		"Carrot": {
+			"Path": "Pickup/carrot_fly.aura"
+		}
+	}
 }

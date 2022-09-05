@@ -153,10 +153,10 @@ namespace Jazz2::Compatibility
 			if (eventParams[2] > 0) {
 				return { EventType::SceneryDestructSpeed, { eventParams[2] } };
 			} else {
-				return { EventType::SceneryDestruct, { eventParams[2] } };
+				return { EventType::SceneryDestruct, { eventParams[3] } };
 			}
 		});
-		Add(JJ2Event::SCENERY_DESTR_BOMB, ConstantParamList(EventType::SceneryDestruct, { 7 /*TNT*/ }));
+		Add(JJ2Event::SCENERY_DESTR_BOMB, ConstantParamList(EventType::SceneryDestruct, { (uint8_t)(1 + (int)WeaponType::TNT) }));
 		Add(JJ2Event::SCENERY_BUTTSTOMP, NoParamList(EventType::SceneryDestructButtstomp));
 		Add(JJ2Event::SCENERY_COLLAPSE, [](JJ2Level* level, uint32_t jj2Params) -> ConversionResult {
 			uint8_t eventParams[16];

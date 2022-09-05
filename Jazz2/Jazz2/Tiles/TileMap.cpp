@@ -195,7 +195,8 @@ namespace Jazz2::Tiles
 			RecheckTile:
 				LayerTile& tile = sprLayerLayout[y * layoutSize.X + x];
 				int tileId = ResolveTileID(tile);
-				if (tile.SuspendType != SuspendType::None || _tileSet->IsTileMaskEmpty(tileId) || (tile.IsOneWay && !params.Downwards)) {
+				if (tile.SuspendType != SuspendType::None || _tileSet->IsTileMaskEmpty(tileId) ||
+					((tile.Flags & LayerTileFlags::OneWay) == LayerTileFlags::OneWay && !params.Downwards)) {
 					continue;
 				}
 
@@ -207,12 +208,12 @@ namespace Jazz2::Tiles
 				int top = std::max(hy1 - ty, 0);
 				int bottom = std::min(hy2 - ty, TileSet::DefaultTileSize - 1);
 
-				if (tile.IsFlippedX) {
+				if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
 					int left2 = left;
 					left = (TileSet::DefaultTileSize - 1 - right);
 					right = (TileSet::DefaultTileSize - 1 - left2);
 				}
-				if (tile.IsFlippedY) {
+				if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
 					int top2 = top;
 					top = (TileSet::DefaultTileSize - 1 - bottom);
 					bottom = (TileSet::DefaultTileSize - 1 - top2);
@@ -227,7 +228,7 @@ namespace Jazz2::Tiles
 						if (mask[ry | rx]) {
 							if (tile.DestructType == TileDestructType::Weapon && (params.DestructType & TileDestructType::Weapon) == TileDestructType::Weapon) {
 								if (params.WeaponType == WeaponType::Freezer && (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2) > tile.DestructFrameIndex) {
-									// TODO
+									// TODO: Frozen block
 									/*FrozenBlock frozen = new FrozenBlock();
 									frozen.OnActivated(new ActorActivationDetails {
 										LevelHandler = _levelHandler,
@@ -236,16 +237,18 @@ namespace Jazz2::Tiles
 									levelHandler.AddActor(frozen);*/
 									//params.TilesDestroyed++;
 									return false;
-								} else if (tile.ExtraData == 0 || tile.ExtraData == ((unsigned int)params.WeaponType + 1)) {
-									if (AdvanceDestructibleTileAnimation(tile, x, y, params.WeaponStrength, "SceneryDestruct"_s)) {
-										params.TilesDestroyed++;
-										if (params.WeaponStrength <= 0) {
-											return false;
+								} else {
+									if (tile.ExtraParam == 0 || tile.ExtraParam == ((uint8_t)params.WeaponType + 1)) {
+										if (AdvanceDestructibleTileAnimation(tile, x, y, params.WeaponStrength, "SceneryDestruct"_s)) {
+											params.TilesDestroyed++;
+											if (params.WeaponStrength <= 0) {
+												return false;
+											} else {
+												goto RecheckTile;
+											}
 										} else {
-											goto RecheckTile;
+											return false;
 										}
-									} else {
-										return false;
 									}
 								}
 							} else if (tile.DestructType == TileDestructType::Special && (params.DestructType & TileDestructType::Special) == TileDestructType::Special) {
@@ -258,8 +261,7 @@ namespace Jazz2::Tiles
 								}
 							} else if (tile.DestructType == TileDestructType::Speed && (params.DestructType & TileDestructType::Speed) == TileDestructType::Speed) {
 								int amount = 1;
-								// TODO
-								if (/*tile.ExtraData +*/ 5 <= params.Speed && AdvanceDestructibleTileAnimation(tile, x, y, amount, "SceneryDestruct"_s)) {
+								if (tile.ExtraParam + 3 <= params.Speed && AdvanceDestructibleTileAnimation(tile, x, y, amount, "SceneryDestruct"_s)) {
 									params.TilesDestroyed++;
 									goto RecheckTile;
 								} else {
@@ -279,7 +281,7 @@ namespace Jazz2::Tiles
 									params.TilesDestroyed++;
 								}
 								return false;
-							} else {
+							} else if ((params.DestructType & TileDestructType::IgnoreSolidTiles) != TileDestructType::IgnoreSolidTiles) {
 								return false;
 							}
 						}
@@ -319,10 +321,10 @@ namespace Jazz2::Tiles
 		int rx = (int)x & 31;
 		int ry = (int)y & 31;
 
-		if (tile.IsFlippedX) {
+		if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
 			rx = (TileSet::DefaultTileSize - 1 - rx);
 		}
-		if (tile.IsFlippedY) {
+		if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
 			ry = (TileSet::DefaultTileSize - 1 - ry);
 		}
 
@@ -380,17 +382,17 @@ namespace Jazz2::Tiles
 		for (int i = 0; i < _activeCollapsingTiles.size(); i++) {
 			Vector2i tilePos = _activeCollapsingTiles[i];
 			auto& tile = _layers[_sprLayerIndex].Layout[tilePos.X + tilePos.Y * layoutSize.X];
-			if (tile.ExtraData == 0) {
+			if (tile.ExtraParam == 0) {
 				int amount = 1;
 				if (!AdvanceDestructibleTileAnimation(tile, tilePos.X, tilePos.Y, amount, "SceneryCollapse"_s)) {
 					tile.DestructType = TileDestructType::None;
 					_activeCollapsingTiles.erase(_activeCollapsingTiles.begin() + i);
 					i--;
 				} else {
-					tile.ExtraData = 4;
+					tile.ExtraParam = 4;
 				}
 			} else {
-				tile.ExtraData--;
+				tile.ExtraParam--;
 			}
 		}
 	}
@@ -491,9 +493,7 @@ namespace Jazz2::Tiles
 					}
 
 					int tileId;
-					bool isFlippedX, isFlippedY;
-					int alpha;
-					if (tile.IsAnimated) {
+					if ((tile.Flags & LayerTileFlags::Animated) == LayerTileFlags::Animated) {
 						if (tile.TileID < _animatedTiles.size()) {
 							tileId = _animatedTiles[tile.TileID].Tiles[_animatedTiles[tile.TileID].CurrentTileIdx].TileID;
 						} else {
@@ -503,9 +503,7 @@ namespace Jazz2::Tiles
 						tileId = tile.TileID;
 					}
 
-					isFlippedX = tile.IsFlippedX;
-					isFlippedY = tile.IsFlippedY;
-					alpha = tile.Alpha;
+					uint8_t alpha = tile.Alpha;
 
 					if (alpha == 0) {
 						continue;
@@ -520,11 +518,11 @@ namespace Jazz2::Tiles
 					float texBiasY = (tileId / _tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
 
 					// ToDo: Flip normal map somehow
-					if (isFlippedX) {
+					if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
 						texBiasX += texScaleX;
 						texScaleX *= -1;
 					}
-					if (isFlippedY) {
+					if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
 						texBiasY += texScaleY;
 						texScaleY *= -1;
 					}
@@ -645,17 +643,12 @@ namespace Jazz2::Tiles
 			uint8_t tileFlags = s->ReadValue<uint8_t>();
 			uint16_t tileIdx = s->ReadValue<uint16_t>();
 
-			bool isFlippedX = (tileFlags & 0x01) != 0;
-			bool isFlippedY = (tileFlags & 0x02) != 0;
-			bool isAnimated = (tileFlags & 0x04) != 0;
 			uint8_t tileModifier = (uint8_t)(tileFlags >> 4);
 
 			LayerTile& tile = newLayer.Layout[i];
 			tile.TileID = tileIdx;
 
-			tile.IsFlippedX = isFlippedX;
-			tile.IsFlippedY = isFlippedY;
-			tile.IsAnimated = isAnimated;
+			tile.Flags = (LayerTileFlags)(tileFlags & 0x0f);
 
 			if (tileModifier == 1 /*Translucent*/) {
 				tile.Alpha = /*127*/140;
@@ -707,7 +700,7 @@ namespace Jazz2::Tiles
 
 		switch (tileEvent) {
 			case EventType::ModifierOneWay:
-				tile.IsOneWay = true;
+				tile.Flags |= LayerTileFlags::OneWay;
 				break;
 			case EventType::ModifierVine:
 				tile.SuspendType = SuspendType::Vine;
@@ -716,37 +709,36 @@ namespace Jazz2::Tiles
 				tile.SuspendType = SuspendType::Hook;
 				break;
 			case EventType::SceneryDestruct:
-				SetTileDestructibleEventFlag(tile, TileDestructType::Weapon, tileParams[0]);
+				SetTileDestructibleEventParams(tile, TileDestructType::Weapon, tileParams[0]);
 				break;
 			case EventType::SceneryDestructButtstomp:
-				SetTileDestructibleEventFlag(tile, TileDestructType::Special, tileParams[0]);
+				SetTileDestructibleEventParams(tile, TileDestructType::Special, tileParams[0]);
 				break;
 			case EventType::TriggerArea:
-				SetTileDestructibleEventFlag(tile, TileDestructType::Trigger, tileParams[0]);
+				SetTileDestructibleEventParams(tile, TileDestructType::Trigger, tileParams[0]);
 				break;
 			case EventType::SceneryDestructSpeed:
-				SetTileDestructibleEventFlag(tile, TileDestructType::Speed, tileParams[0]);
+				SetTileDestructibleEventParams(tile, TileDestructType::Speed, tileParams[0]);
 				break;
 			case EventType::SceneryCollapse:
-				// ToDo: FPS (tileParams[1]) not used...
-				SetTileDestructibleEventFlag(tile, TileDestructType::Collapse, tileParams[0]);
+				// ToDo: FPS (tileParams[1]) not used
+				SetTileDestructibleEventParams(tile, TileDestructType::Collapse, tileParams[0]);
 				break;
 		}
 	}
 
-	void TileMap::SetTileDestructibleEventFlag(LayerTile& tile, TileDestructType type, uint16_t extraData)
+	void TileMap::SetTileDestructibleEventParams(LayerTile& tile, TileDestructType type, uint8_t extraParam)
 	{
-		if (!tile.IsAnimated) {
+		if ((tile.Flags & LayerTileFlags::Animated) != LayerTileFlags::Animated) {
 			return;
 		}
 
 		tile.DestructType = type;
-		tile.IsAnimated = false;
+		tile.Flags &= ~LayerTileFlags::Animated;
 		tile.DestructAnimation = tile.TileID;
 		tile.TileID = _animatedTiles[tile.DestructAnimation].Tiles[0].TileID;
 		tile.DestructFrameIndex = 0;
-		//tile.MaterialOffset = tileset.GetTileTextureRect(tile.TileID);
-		tile.ExtraData = extraData;
+		tile.ExtraParam = extraParam;
 	}
 
 	void TileMap::CreateDebris(const DestructibleDebris& debris)
@@ -777,17 +769,18 @@ namespace Jazz2::Tiles
 
 	void TileMap::CreateTileDebris(int tileId, int x, int y)
 	{
-		constexpr float speedMultiplier[] = { -2, 2, -1, 1 };
-		constexpr int quarterSize = TileSet::DefaultTileSize / 2;
+		constexpr float SpeedMultiplier[] = { -2, 2, -1, 1 };
+		constexpr int QuarterSize = TileSet::DefaultTileSize / 2;
 
 		uint16_t z = _layers[_sprLayerIndex].Depth + 80;
 
 		Vector2i texSize = _tileSet->TextureDiffuse->size();
-		float texScaleX = float(quarterSize) / float(texSize.X);
+		float texScaleX = float(QuarterSize) / float(texSize.X);
 		float texBiasX = ((tileId % _tileSet->TilesPerRow) * TileSet::DefaultTileSize) / float(texSize.X);
-		float texScaleY = float(quarterSize) / float(texSize.Y);
+		float texScaleY = float(QuarterSize) / float(texSize.Y);
 		float texBiasY = ((tileId / _tileSet->TilesPerRow) * TileSet::DefaultTileSize) / float(texSize.Y);
 
+		// TODO: Implement flip here
 		/*if (isFlippedX) {
 			texBiasX += texScaleX;
 			texScaleX *= -1;
@@ -799,16 +792,16 @@ namespace Jazz2::Tiles
 
 		for (int i = 0; i < 4; i++) {
 			DestructibleDebris& debris = _debrisList.emplace_back();
-			debris.Pos = Vector2f(x * TileSet::DefaultTileSize + (i % 2) * quarterSize, y * TileSet::DefaultTileSize + (i / 2) * quarterSize);
+			debris.Pos = Vector2f(x * TileSet::DefaultTileSize + (i % 2) * QuarterSize, y * TileSet::DefaultTileSize + (i / 2) * QuarterSize);
 			debris.Depth = z;
-			debris.Size = Vector2f(quarterSize, quarterSize);
-			debris.Speed = Vector2f(speedMultiplier[i] * nCine::Random().NextFloat(0.8f, 1.2f), -4.0f * nCine::Random().NextFloat(0.8f, 1.2f));
+			debris.Size = Vector2f(QuarterSize, QuarterSize);
+			debris.Speed = Vector2f(SpeedMultiplier[i] * nCine::Random().NextFloat(0.8f, 1.2f), -4.0f * nCine::Random().NextFloat(0.8f, 1.2f));
 			debris.Acceleration = Vector2f(0.0f, 0.3f);
 
 			debris.Scale = 1.0f;
 			debris.ScaleSpeed = nCine::Random().NextFloat(-0.01f, -0.002f);
 			debris.Angle = 0.0f;
-			debris.AngleSpeed = speedMultiplier[i] * nCine::Random().NextFloat(0.0f, 0.014f);
+			debris.AngleSpeed = SpeedMultiplier[i] * nCine::Random().NextFloat(0.0f, 0.014f);
 
 			debris.Alpha = 1.0f;
 			debris.AlphaSpeed = -0.01f;
@@ -816,9 +809,9 @@ namespace Jazz2::Tiles
 			debris.Time = 120.0f;
 
 			debris.TexScaleX = texScaleX;
-			debris.TexBiasX = texBiasX + ((i % 2) * quarterSize / float(texSize.X));
+			debris.TexBiasX = texBiasX + ((i % 2) * QuarterSize / float(texSize.X));
 			debris.TexScaleY = texScaleY;
-			debris.TexBiasY = texBiasY + ((i / 2) * quarterSize / float(texSize.Y));
+			debris.TexBiasY = texBiasY + ((i / 2) * QuarterSize / float(texSize.Y));
 
 			debris.DiffuseTexture = _tileSet->TextureDiffuse.get();
 			debris.CollisionAction = DebrisCollisionAction::None;
@@ -997,12 +990,12 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	bool TileMap::GetTrigger(uint16_t triggerId)
+	bool TileMap::GetTrigger(uint8_t triggerId)
 	{
 		return _triggerState[triggerId];
 	}
 
-	void TileMap::SetTrigger(uint16_t triggerId, bool newState)
+	void TileMap::SetTrigger(uint8_t triggerId, bool newState)
 	{
 		if (_triggerState[triggerId] == newState) {
 			return;
@@ -1015,7 +1008,7 @@ namespace Jazz2::Tiles
 		int n = layoutSize.X * layoutSize.Y;
 		for (int i = 0; i < n; i++) {
 			LayerTile& tile = _layers[_sprLayerIndex].Layout[i];
-			if (tile.DestructType == TileDestructType::Trigger && tile.ExtraData == triggerId) {
+			if (tile.DestructType == TileDestructType::Trigger && tile.ExtraParam == triggerId) {
 				if (_animatedTiles[tile.DestructAnimation].Tiles.size() > 1) {
 					tile.DestructFrameIndex = (newState ? 1 : 0);
 					tile.TileID = _animatedTiles[tile.DestructAnimation].Tiles[tile.DestructFrameIndex].TileID;
@@ -1128,23 +1121,15 @@ namespace Jazz2::Tiles
 				LayerTile& tile = layer.Layout[x + y * layer.LayoutSize.X];
 
 				int tileId;
-				bool isFlippedX, isFlippedY;
-				if (tile.IsAnimated) {
+				if ((tile.Flags & LayerTileFlags::Animated) == LayerTileFlags::Animated) {
 					isAnimated = true;
 					if (tile.TileID < _owner->_animatedTiles.size()) {
 						tileId = _owner->_animatedTiles[tile.TileID].Tiles[_owner->_animatedTiles[tile.TileID].CurrentTileIdx].TileID;
-						// TODO
-						//isFlippedX = (_animatedTiles[tile.TileID].CurrentTile.IsFlippedX != tile.IsFlippedX);
-						//isFlippedY = (_animatedTiles[tile.TileID].CurrentTile.IsFlippedY != tile.IsFlippedY);
-						isFlippedX = false;
-						isFlippedY = false;
 					} else {
 						continue;
 					}
 				} else {
 					tileId = tile.TileID;
-					isFlippedX = tile.IsFlippedX;
-					isFlippedY = tile.IsFlippedY;
 				}
 
 				auto command = _renderCommands[renderCommandIndex++].get();
@@ -1155,12 +1140,12 @@ namespace Jazz2::Tiles
 				float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
 				float texBiasY = (tileId / _owner->_tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
 
-				// ToDo: Flip normal map somehow
-				if (isFlippedX) {
+				// TODO: Flip normal map somehow
+				if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
 					texBiasX += texScaleX;
 					texScaleX *= -1;
 				}
-				if (isFlippedY) {
+				if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
 					texBiasY += texScaleY;
 					texScaleY *= -1;
 				}

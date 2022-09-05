@@ -1,18 +1,18 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "Rock": {
-            "Path": "Object/rolling_rock.aura",
-            "States": [ 0 ]
-        }
-    },
+	"Animations": {
+		"Rock": {
+			"Path": "Object/rolling_rock.aura",
+			"States": [ 0 ]
+		}
+	},
 
-    "Sounds": {
-        "Hit": {
-            "Paths": [ "Object/rolling_rock.wav" ]
-        }
-    }
+	"Sounds": {
+		"Hit": {
+			"Paths": [ "Object/rolling_rock.wav" ]
+		}
+	}
 }

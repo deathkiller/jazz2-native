@@ -53,9 +53,11 @@ namespace Jazz2::Actors::Solid
 		}
 
 		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
-			DecreaseHealth(shotBase->GetStrength(), shotBase);
-			shotBase->DecreaseHealth(INT32_MAX);
-			return true;
+			if (shotBase->GetStrength() > 0) {
+				DecreaseHealth(shotBase->GetStrength(), shotBase);
+				shotBase->DecreaseHealth(1);
+				return true;
+			}
 		} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {
 			DecreaseHealth(INT32_MAX, tnt);
 			return true;
@@ -83,7 +85,7 @@ namespace Jazz2::Actors::Solid
 			auto& players = _levelHandler->GetPlayers();
 			for (auto& player : players) {
 				const auto playerAmmo = player->GetWeaponAmmo();
-				for (int i = 1; i < PlayerCarryOver::WeaponCount; i++) {
+				for (int i = 1; i < (int)WeaponType::Count; i++) {
 					if (playerAmmo[i] > 0) {
 						weaponTypes.push_back((WeaponType)i);
 					}

@@ -25,6 +25,7 @@ namespace Jazz2
 		static bool ReduxMode;
 		static bool EnableLedgeClimb;
 		static bool AllowCheats;
+		static bool AllowCheatsWeapons;
 
 		// Controls
 		static bool EnableWeaponWheel;

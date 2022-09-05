@@ -1,11 +1,11 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "PushBox": {
-            "Path": "Object/PushBoxCrate.aura"
-        }
-    }
+	"Animations": {
+		"PushBox": {
+			"Path": "Object/PushBoxCrate.aura"
+		}
+	}
 }

@@ -320,6 +320,14 @@ namespace Jazz2::UI::Menu
 		PlayerType players[] = { (PlayerType)((int)PlayerType::Jazz + _selectedPlayerType) };
 		LevelInitialization levelInit("share"_s, "01_share1"_s, (GameDifficulty)((int)GameDifficulty::Easy + _selectedDifficulty),
 			PreferencesCache::ReduxMode, false, players, _countof(players));
+
+		if (PreferencesCache::AllowCheatsWeapons) {
+			levelInit.CheatsUsed = true;
+			for (int i = 1; i < (int)WeaponType::Count; i++) {
+				levelInit.PlayerCarryOvers[0].Ammo[i] = 99 * 256;
+			}
+		}
+
 		_root->ChangeLevel(std::move(levelInit));
 	}
 

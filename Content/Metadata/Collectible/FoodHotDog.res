@@ -1,11 +1,11 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "Food": {
-            "Path": "Pickup/food_hotdog.aura"
-        }
-    }
+	"Animations": {
+		"Food": {
+			"Path": "Pickup/food_hotdog.aura"
+		}
+	}
 }

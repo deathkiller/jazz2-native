@@ -4,6 +4,7 @@
 #include "../../Events/EventMap.h"
 #include "../../Tiles/TileMap.h"
 #include "../Weapons/ShotBase.h"
+#include "../Weapons/Thunderbolt.h"
 #include "../Weapons/TNT.h"
 #include "../Player.h"
 #include "../Solid/PushableBox.h"
@@ -117,13 +118,21 @@ namespace Jazz2::Actors::Enemies
 	{
 		if (!GetState(ActorFlags::IsInvulnerable)) {
 			if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
-				Vector2f ammoSpeed = shotBase->GetSpeed();
-				if (std::abs(ammoSpeed.X) > 0.2f) {
-					_lastHitDir = (ammoSpeed.X > 0.0f ? LastHitDirection::Right : LastHitDirection::Left);
-				} else {
-					_lastHitDir = (ammoSpeed.Y > 0.0f ? LastHitDirection::Down : LastHitDirection::Up);
+				if (shotBase->GetStrength() > 0) {
+					Vector2f shotSpeed;
+					if (auto thunderbolt = dynamic_cast<Weapons::Thunderbolt*>(shotBase)) {
+						shotSpeed = _pos - shotBase->GetPos();
+					} else {
+						shotSpeed = shotBase->GetSpeed();
+					}
+
+					if (std::abs(shotSpeed.X) > 0.2f) {
+						_lastHitDir = (shotSpeed.X > 0.0f ? LastHitDirection::Right : LastHitDirection::Left);
+					} else {
+						_lastHitDir = (shotSpeed.Y > 0.0f ? LastHitDirection::Down : LastHitDirection::Up);
+					}
+					DecreaseHealth(shotBase->GetStrength(), shotBase);
 				}
-				DecreaseHealth(shotBase->GetStrength(), shotBase);
 				// Collision must also be processed by the shot
 				//return true;
 			} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {

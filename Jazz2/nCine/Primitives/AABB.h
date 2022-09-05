@@ -29,10 +29,10 @@ namespace nCine
 		AABB(const Vector2<S>& min, const Vector2<S>& max)
 			: L(std::min(min.X, max.X)), T(std::min(min.Y, max.Y)), R(std::max(min.X, max.X)), B(std::max(min.Y, max.Y)) { }
 
-		S width() const {
+		S GetWidth() const {
 			return R - L;
 		}
-		S height() const {
+		S GetHeight() const {
 			return B - T;
 		}
 

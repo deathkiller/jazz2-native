@@ -12,24 +12,28 @@ namespace Jazz2
 
 namespace Jazz2::Tiles
 {
+	enum class LayerTileFlags {
+		None = 0x00,
+
+		FlipX = 0x01,
+		FlipY = 0x02,
+		Animated = 0x04,
+
+		OneWay = 0x10
+	};
+
+	DEFINE_ENUM_OPERATORS(LayerTileFlags);
+
 	struct LayerTile {
-		int TileID;
-
+		int32_t TileID;
+		LayerTileFlags Flags;
+		uint8_t ExtraParam;
 		uint8_t Alpha;
-		bool IsFlippedX;
-		bool IsFlippedY;
-		bool IsAnimated;
-
-		// Collision affecting modifiers
-		bool IsOneWay;
 		SuspendType SuspendType;
 		TileDestructType DestructType;
-		int DestructAnimation;		// Animation index for a destructible tile that uses an animation, but doesn't animate normally
-		int DestructFrameIndex;		// Denotes the specific frame from the above animation that is currently active
-									// Collapsible: delay ("wait" parameter); trigger: trigger id
-
-		// TODO: I don't know if it's good solution for this
-		unsigned int ExtraData;
+		int32_t DestructAnimation;		// Animation index for a destructible tile that uses an animation, but doesn't animate normally
+		int32_t DestructFrameIndex;		// Denotes the specific frame from the above animation that is currently active
+										// Collapsible: delay ("wait" parameter); trigger: trigger id
 	};
 
 	struct TileMapLayer {
@@ -153,8 +157,8 @@ namespace Jazz2::Tiles
 		void CreateParticleDebris(const GraphicResource* res, Vector3f pos, Vector2f force, int currentFrame, bool isFacingLeft);
 		void CreateSpriteDebris(const GraphicResource* res, Vector3f pos, int count);
 
-		bool GetTrigger(uint16_t triggerId);
-		void SetTrigger(uint16_t triggerId, bool newState);
+		bool GetTrigger(uint8_t triggerId);
+		void SetTrigger(uint8_t triggerId, bool newState);
 
 		void OnInitializeViewport(int width, int height);
 
@@ -207,8 +211,7 @@ namespace Jazz2::Tiles
 
 		bool AdvanceDestructibleTileAnimation(LayerTile& tile, int tx, int ty, int& amount, const StringView& soundName);
 		void AdvanceCollapsingTileTimers(float timeMult);
-
-		void SetTileDestructibleEventFlag(LayerTile& tile, TileDestructType type, uint16_t extraData);
+		void SetTileDestructibleEventParams(LayerTile& tile, TileDestructType type, uint8_t extraParam);
 
 		void UpdateDebris(float timeMult);
 		void DrawDebris(RenderQueue& renderQueue);
@@ -218,7 +221,7 @@ namespace Jazz2::Tiles
 		inline int ResolveTileID(LayerTile& tile)
 		{
 			int tileId = tile.TileID;
-			if (tile.IsAnimated) {
+			if ((tile.Flags & LayerTileFlags::Animated) == LayerTileFlags::Animated) {
 				tileId = _animatedTiles[tileId].Tiles[_animatedTiles[tileId].CurrentTileIdx].TileID;
 			}
 			return tileId;

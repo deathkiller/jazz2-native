@@ -73,7 +73,7 @@ namespace Jazz2::Actors::Enemies
 
 	void Queen::OnUpdate(float timeMult)
 	{
-		TileCollisionParams params = { TileDestructType::Weapon, _speed.Y >= 0.0f, WeaponType::Blaster, 1 };
+		TileCollisionParams params = { TileDestructType::Weapon | TileDestructType::Speed, _speed.Y >= 0.0f, WeaponType::Unknown, 1 };
 		TryStandardMovement(timeMult, params);
 		OnUpdateHitbox();
 		if (params.TilesDestroyed > 0) {
@@ -310,6 +310,6 @@ namespace Jazz2::Actors::Enemies
 
 	void Queen::InvisibleBlock::OnUpdate(float timeMult)
 	{
-		// Nothing to do...
+		// Nothing to update
 	}
 }

@@ -439,19 +439,12 @@ namespace Jazz2::UI::Menu
 
 		for (int i = 0; i < (width * height); i++) {
 			uint16_t tileType = s->ReadValue<uint16_t>();
-
-			uint8_t flags = s->ReadValue<uint8_t>();
-			bool isFlippedX = (flags & 0x01) != 0;
-			bool isFlippedY = (flags & 0x02) != 0;
-			bool isAnimated = (flags & 0x04) != 0;
-			uint8_t tileModifier = (uint8_t)(flags >> 4);
+			uint8_t tileFlags = s->ReadValue<uint8_t>();
+			uint8_t tileModifier = (uint8_t)(tileFlags >> 4);
 
 			LayerTile& tile = layout[i];
 			tile.TileID = tileType;
-
-			tile.IsFlippedX = isFlippedX;
-			tile.IsFlippedY = isFlippedY;
-			tile.IsAnimated = isAnimated;
+			tile.Flags = (LayerTileFlags)(tileFlags & 0x0f);
 
 			if (tileModifier == 1 /*Translucent*/) {
 				tile.Alpha = /*127*/140;
@@ -563,24 +556,20 @@ namespace Jazz2::UI::Menu
 			for (int x = 0; x < layoutSize.X; x++) {
 				LayerTile& tile = layer.Layout[y * layer.LayoutSize.X + x];
 
-				int tileId = tile.TileID;
-				bool isFlippedX = tile.IsFlippedX;
-				bool isFlippedY = tile.IsFlippedY;
-
 				auto command = _renderCommands[renderCommandIndex++].get();
 
 				Vector2i texSize = _owner->_tileSet->TextureDiffuse->size();
 				float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
-				float texBiasX = (tileId % _owner->_tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.X);
+				float texBiasX = (tile.TileID % _owner->_tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.X);
 				float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
-				float texBiasY = (tileId / _owner->_tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
+				float texBiasY = (tile.TileID / _owner->_tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
 
 				// TODO: Flip normal map somehow
-				if (isFlippedX) {
+				if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
 					texBiasX += texScaleX;
 					texScaleX *= -1;
 				}
-				if (isFlippedY) {
+				if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
 					texBiasY += texScaleY;
 					texScaleY *= -1;
 				}

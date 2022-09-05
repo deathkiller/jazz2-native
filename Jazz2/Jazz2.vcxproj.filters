@@ -1014,6 +1014,9 @@
     <ClInclude Include="Jazz2\Actors\Enemies\Queen.h">
       <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\Thunderbolt.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1720,6 +1723,9 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Enemies\Queen.cpp">
       <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\Thunderbolt.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

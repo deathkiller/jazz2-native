@@ -1,11 +1,11 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "Food": {
-            "Path": "Pickup/food_eggplant.aura"
-        }
-    }
+	"Animations": {
+		"Food": {
+			"Path": "Pickup/food_eggplant.aura"
+		}
+	}
 }

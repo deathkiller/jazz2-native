@@ -25,6 +25,8 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(3);
 		_scoreValue = 200;
 
+		CollisionFlags |= CollisionFlags::CollideWithTilesetReduced;
+
 		co_await RequestMetadataAsync("Enemy/MadderHatter"_s);
 		SetAnimation(AnimState::Walk);
 

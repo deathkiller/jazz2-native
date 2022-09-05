@@ -42,7 +42,7 @@ namespace Jazz2
         Thunderbolt,
 
         Count,
-        Unknown = UINT16_MAX
+        Unknown = UINT8_MAX
     };
 
     enum class ShieldType {
@@ -69,7 +69,7 @@ namespace Jazz2
         PlayerType Type;
 
         int32_t Lives;
-        int16_t Ammo[WeaponCount];
+        uint16_t Ammo[WeaponCount];
         uint8_t WeaponUpgrades[WeaponCount];
         int32_t Score;
         int32_t FoodEaten;

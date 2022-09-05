@@ -1,11 +1,11 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "Pole": {
-            "Path": "Pole/Carrotus.aura"
-        }
-    }
+	"Animations": {
+		"Pole": {
+			"Path": "Pole/Carrotus.aura"
+		}
+	}
 }

@@ -18,6 +18,7 @@
 #include "Weapons/SeekerShot.h"
 #include "Weapons/ToasterShot.h"
 #include "Weapons/TNT.h"
+#include "Weapons/Thunderbolt.h"
 
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Base/FrameTimer.h"
@@ -66,9 +67,9 @@ namespace Jazz2::Actors
 
 	Player::~Player()
 	{
-		if (_weaponToasterSound != nullptr) {
-			_weaponToasterSound->stop();
-			_weaponToasterSound = nullptr;
+		if (_weaponSound != nullptr) {
+			_weaponSound->stop();
+			_weaponSound = nullptr;
 		}
 	}
 
@@ -98,9 +99,9 @@ namespace Jazz2::Actors
 		std::memset(_weaponAmmo, 0, sizeof(_weaponAmmo));
 		std::memset(_weaponUpgrades, 0, sizeof(_weaponUpgrades));
 
-		_weaponAmmo[(int)WeaponType::Blaster] = -1;
+		_weaponAmmo[(int)WeaponType::Blaster] = UINT16_MAX;
 
-		CollisionFlags = CollisionFlags::CollideWithTileset | CollisionFlags::CollideWithSolidObjects | CollisionFlags::CollideWithOtherActors | CollisionFlags::ApplyGravitation | CollisionFlags::IsSolidObject;
+		CollisionFlags = CollisionFlags::CollideWithTileset | CollisionFlags::CollideWithTilesetReduced | CollisionFlags::CollideWithSolidObjects | CollisionFlags::CollideWithOtherActors | CollisionFlags::ApplyGravitation | CollisionFlags::IsSolidObject;
 
 		_health = 5;
 		_maxHealth = _health;
@@ -429,9 +430,9 @@ namespace Jazz2::Actors
 			} else {
 				// Skip controls, player is not controllable in tube
 				// Weapons are automatically disabled if player is not controllable
-				if (_weaponToasterSound != nullptr) {
-					_weaponToasterSound->stop();
-					_weaponToasterSound = nullptr;
+				if (_weaponSound != nullptr) {
+					_weaponSound->stop();
+					_weaponSound = nullptr;
 				}
 
 				return;
@@ -510,9 +511,11 @@ namespace Jazz2::Actors
 
 		if (!_controllable || !_controllableExternal) {
 			// Weapons are automatically disabled if player is not controllable
-			if (_weaponToasterSound != nullptr) {
-				_weaponToasterSound->stop();
-				_weaponToasterSound = nullptr;
+			if (_currentWeapon != WeaponType::Thunderbolt || _fireFramesLeft <= 0.0f) {
+				if (_weaponSound != nullptr) {
+					_weaponSound->stop();
+					_weaponSound = nullptr;
+				}
 			}
 
 			return;
@@ -773,7 +776,10 @@ namespace Jazz2::Actors
 						});
 					}
 				} else if (_weaponAmmo[(int)_currentWeapon] != 0) {
-					if (_currentWeapon != WeaponType::TNT) {
+					_wasFirePressed = true;
+
+					weaponInUse = FireCurrentWeapon(_currentWeapon);
+					if (weaponInUse) {
 						if (_currentTransitionState == AnimState::Spring || _currentTransitionState == AnimState::TransitionShootToIdle) {
 							ForceCancelTransition();
 						}
@@ -782,10 +788,6 @@ namespace Jazz2::Actors
 
 						_fireFramesLeft = 20.0f;
 					}
-
-					_wasFirePressed = true;
-
-					weaponInUse = FireCurrentWeapon(_currentWeapon);
 				}
 			}
 		} else if (_wasFirePressed) {
@@ -794,12 +796,12 @@ namespace Jazz2::Actors
 			_weaponCooldown = 0.0f;
 		}
 
-		if (_weaponToasterSound != nullptr) {
+		if (_weaponSound != nullptr) {
 			if (weaponInUse) {
-				_weaponToasterSound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+				_weaponSound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
 			} else {
-				_weaponToasterSound->stop();
-				_weaponToasterSound = nullptr;
+				_weaponSound->stop();
+				_weaponSound = nullptr;
 			}
 		}
 
@@ -809,15 +811,6 @@ namespace Jazz2::Actors
 				if (!isGamepad || !PreferencesCache::EnableWeaponWheel) {
 					SwitchToNextWeapon();
 				}
-			} else if (_playerIndex == 0) {
-				// Use numeric key to switch weapons for the first player
-				// TODO: Use numeric key to switch weapons for the first player
-				/*int maxWeaponCount = std::min(PlayerCarryOver::WeaponCount, 9);
-				for (int i = 0; i < maxWeaponCount; i++) {
-					if (_weaponAmmo[i] != 0 && DualityApp.Keyboard.KeyHit(Duality.Input.Key.Number1 + i)) {
-						SwitchToWeaponByIndex(i);
-					}
-				}*/
 			}
 		}
 	}
@@ -1112,7 +1105,9 @@ namespace Jazz2::Actors
 
 							_speed.X = _externalForce.X = _externalForce.Y = 0.0f;
 							_speed.Y = -1.36f;
-							_pushFramesLeft = _fireFramesLeft = _copterFramesLeft = 0.0f;
+							_pushFramesLeft = 0.0f;
+							_fireFramesLeft = 0.0f;
+							_copterFramesLeft = 0.0f;
 
 							// Stick the player to wall
 							MoveInstantly(Vector2f(IsFacingLeft() ? -6.0f : 6.0f, 0.0f), MoveType::Relative | MoveType::Force, params);
@@ -1921,20 +1916,18 @@ namespace Jazz2::Actors
 	void Player::SwitchToNextWeapon()
 	{
 		// Find next available weapon
-		_currentWeapon = (WeaponType)(((int)_currentWeapon + 1) % PlayerCarryOver::WeaponCount);
+		_currentWeapon = (WeaponType)(((int)_currentWeapon + 1) % (int)WeaponType::Count);
 
-		for (int i = 0; i < (int)PlayerCarryOver::WeaponCount && _weaponAmmo[(int)_currentWeapon] == 0; i++) {
-			_currentWeapon = (WeaponType)(((int)_currentWeapon + 1) % PlayerCarryOver::WeaponCount);
+		for (int i = 0; i < (int)WeaponType::Count && _weaponAmmo[(int)_currentWeapon] == 0; i++) {
+			_currentWeapon = (WeaponType)(((int)_currentWeapon + 1) % (int)WeaponType::Count);
 		}
 
 		_weaponCooldown = 1.0f;
-
-		//PreloadMetadataAsync("Weapon/" + currentWeapon);
 	}
 
 	void Player::SwitchToWeaponByIndex(int weaponIndex)
 	{
-		if (weaponIndex >= PlayerCarryOver::WeaponCount || _weaponAmmo[weaponIndex] == 0) {
+		if (weaponIndex >= (int)WeaponType::Count || _weaponAmmo[weaponIndex] == 0) {
 			return;
 		}
 
@@ -2038,6 +2031,45 @@ namespace Jazz2::Actors
 		_weaponCooldown = 30.0f;
 	}
 
+	bool Player::FireWeaponThunderbolt()
+	{
+		if (_isActivelyPushing || _inWater || _isAttachedToPole || std::abs(_speed.X) > 1.0f || std::abs(_speed.Y) > 1.0f ||
+			!(GetState(ActorFlags::CanJump) || _activeModifier != Modifier::None || _suspendType == SuspendType::Vine || _suspendType == SuspendType::Hook)) {
+			return false;
+		}
+
+		// NOTE: cooldownBase and cooldownUpgrade cannot be template parameters in Emscripten
+		Vector3i initialPos;
+		Vector2f gunspotPos;
+		float angle;
+		GetFirePointAndAngle(initialPos, gunspotPos, angle);
+
+		std::shared_ptr<Weapons::Thunderbolt> shot = std::make_shared<Weapons::Thunderbolt>();
+		uint8_t shotParams[1] = { _weaponUpgrades[(int)WeaponType::Thunderbolt] };
+		shot->OnActivated({
+			.LevelHandler = _levelHandler,
+			.Pos = initialPos,
+			.Params = shotParams
+		});
+		shot->OnFire(shared_from_this(), gunspotPos, _speed, angle, IsFacingLeft());
+		_levelHandler->AddActor(shot);
+
+		_weaponCooldown = 12.0f - (_weaponUpgrades[(int)WeaponType::Blaster] * 0.1f);
+		_controllable = false;
+		_controllableTimeout = _weaponCooldown;
+
+		if (_weaponSound == nullptr) {
+			_weaponSound = PlaySfx("WeaponThunderbolt"_s, 1.0f);
+			if (_weaponSound != nullptr) {
+				_weaponSound->setLooping(true);
+				_weaponSound->setPitch(Random().FastFloat(1.05f, 1.2f));
+				_weaponSound->setLowPass(0.9f);
+			}
+		}
+
+		return true;
+	}
+
 	bool Player::FireCurrentWeapon(WeaponType weaponType)
 	{
 		if (_weaponCooldown > 0.0f) {
@@ -2052,7 +2084,12 @@ namespace Jazz2::Actors
 		uint16_t ammoDecrease = 256;
 
 		switch (weaponType) {
-			case WeaponType::Blaster: FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(40.0f, 1.0f); PlaySfx("WeaponBlaster"_s); break;
+			case WeaponType::Blaster:
+				FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(40.0f, 1.0f);
+				PlaySfx("WeaponBlaster"_s);
+				ammoDecrease = 0;
+				break;
+
 			case WeaponType::Bouncer: FireWeapon<Weapons::BouncerShot, WeaponType::Bouncer>(32.0f, 0.85f); break;
 				case WeaponType::Freezer:
 					// TODO: Add upgraded freezer
@@ -2066,10 +2103,10 @@ namespace Jazz2::Actors
 						return false;
 					}
 					FireWeapon<Weapons::ToasterShot, WeaponType::Toaster>(6.0f, 0.0f);
-					if (_weaponToasterSound == nullptr) {
-						_weaponToasterSound = PlaySfx("WeaponToaster"_s, 0.6f);
-						if (_weaponToasterSound != nullptr) {
-							_weaponToasterSound->setLooping(true);
+					if (_weaponSound == nullptr) {
+						_weaponSound = PlaySfx("WeaponToaster"_s, 0.6f);
+						if (_weaponSound != nullptr) {
+							_weaponSound->setLooping(true);
 						}
 					}
 					ammoDecrease = 50;
@@ -2077,39 +2114,35 @@ namespace Jazz2::Actors
 				}
 
 				case WeaponType::TNT: FireWeaponTNT(); break;
-				/*case WeaponType::Pepper: FireWeaponPepper(); break;
-				case WeaponType::Electro: FireWeaponElectro(); break;
+				//case WeaponType::Pepper: FireWeaponPepper(); break;
+				//case WeaponType::Electro: FireWeaponElectro(); break;
 
 				case WeaponType::Thunderbolt: {
 					if (!FireWeaponThunderbolt()) {
 						return false;
 					}
-					if ((_weaponUpgrades[(int)weaponType] & 0x1) != 0) {
-						ammoDecrease = 25; // Lower ammo consumption with upgrade
-					} else {
-						ammoDecrease = 50;
-					}
+					ammoDecrease = ((_weaponUpgrades[(int)WeaponType::Thunderbolt] & 0x1) != 0 ? 30 : 50); // Lower ammo consumption with upgrade
 					break;
-				}*/
+				}
 
 			default:
 				return false;
 		}
 
 		auto& currentAmmo = _weaponAmmo[(int)weaponType];
-		if (currentAmmo > 0) {
-			currentAmmo -= ammoDecrease;
-			if (currentAmmo < 0) {
-				currentAmmo = 0;
-			}
+		if (ammoDecrease > currentAmmo) {
+			ammoDecrease = currentAmmo;
+		}
+		currentAmmo -= ammoDecrease;
 
-			// No ammo, switch weapons
-			if (_weaponAmmo[(int)_currentWeapon] == 0) {
-				SwitchToNextWeapon();
-			}
+		// No ammo, switch weapons
+		if (currentAmmo == 0) {
+			SwitchToNextWeapon();
+			PlaySfx("ChangeWeapon"_s);
+			_weaponCooldown = 20.0f;
 		}
 
-		return true;
+		return (weaponType != WeaponType::TNT);
 	}
 
 	void Player::GetFirePointAndAngle(Vector3i& initialPos, Vector2f& gunspotPos, float& angle)
@@ -2245,7 +2278,7 @@ namespace Jazz2::Actors
 		std::memcpy(_weaponAmmo, carryOver.Ammo, sizeof(_weaponAmmo));
 		std::memcpy(_weaponUpgrades, carryOver.WeaponUpgrades, sizeof(_weaponUpgrades));
 
-		_weaponAmmo[(int)WeaponType::Blaster] = -1;
+		_weaponAmmo[(int)WeaponType::Blaster] = UINT16_MAX;
 
 		if (exitType == ExitType::Warp || exitType == ExitType::Bonus) {
 			PlayPlayerSfx("WarpOut"_s);
@@ -2259,9 +2292,9 @@ namespace Jazz2::Actors
 				_controllable = true;
 			});
 
-			//attachedHud ? .BeginFadeIn(false);
+			//attachedHud?.BeginFadeIn(false);
 		} else {
-			//attachedHud ? .BeginFadeIn(true);
+			//attachedHud?.BeginFadeIn(true);
 		}
 
 		// Preload all weapons

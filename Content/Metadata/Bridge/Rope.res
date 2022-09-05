@@ -1,12 +1,12 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "Piece": {
-            "Path": "Bridge/Rope.aura",
-            "FrameRate": 0
-        }
-    }
+	"Animations": {
+		"Piece": {
+			"Path": "Bridge/Rope.aura",
+			"FrameRate": 0
+		}
+	}
 }

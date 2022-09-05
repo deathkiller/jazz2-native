@@ -1,11 +1,11 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "Carrot": {
-            "Path": "Pickup/carrot.aura"
-        }
-    }
+	"Animations": {
+		"Carrot": {
+			"Path": "Pickup/carrot.aura"
+		}
+	}
 }

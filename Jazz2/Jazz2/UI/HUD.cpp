@@ -190,10 +190,10 @@ namespace Jazz2::UI
 				StringView currentWeaponString = GetCurrentWeapon(player, weapon, pos);
 
 				StringView ammoCount;
-				if (player->_weaponAmmo[(int)weapon] < 0) {
+				if (player->_weaponAmmo[(int)weapon] == UINT16_MAX) {
 					ammoCount = "x\u221E"_s;
 				} else {
-					snprintf(stringBuffer, _countof(stringBuffer), "x%i", player->_weaponAmmo[(int)weapon] / 256);
+					snprintf(stringBuffer, _countof(stringBuffer), "x%u", player->_weaponAmmo[(int)weapon] / 256);
 					ammoCount = stringBuffer;
 				}
 				_smallFont->DrawString(this, ammoCount, charOffsetShadow, right - 40, bottom + 1.0f, FontShadowLayer,

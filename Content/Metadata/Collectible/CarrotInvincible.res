@@ -1,13 +1,12 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "Carrot": {
-            "Path": "Pickup/carrot_invincibility.aura",
-            "FrameRate": 8,
-            "Shader": "SmoothAnimNormal"
-        }
-    }
+	"Animations": {
+		"Carrot": {
+			"Path": "Pickup/carrot_invincibility.aura",
+			"FrameRate": 8
+		}
+	}
 }

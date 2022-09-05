@@ -1,11 +1,11 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
 
-    "Animations": {
-        "Pole": {
-            "Path": "Pole/Diamondus.aura"
-        }
-    }
+	"Animations": {
+		"Pole": {
+			"Path": "Pole/Diamondus.aura"
+		}
+	}
 }

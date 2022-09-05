@@ -167,6 +167,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/RFShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/SeekerShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ShotBase.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/Thunderbolt.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ToasterShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/TNT.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Collisions/DynamicTree.cpp

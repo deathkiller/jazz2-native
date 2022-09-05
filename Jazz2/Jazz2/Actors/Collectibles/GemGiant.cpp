@@ -34,9 +34,11 @@ namespace Jazz2::Actors::Collectibles
 	bool GemGiant::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
-			DecreaseHealth(shotBase->GetStrength(), shotBase);
-			shotBase->DecreaseHealth(INT32_MAX);
-			return true;
+			if (shotBase->GetStrength() > 0) {
+				DecreaseHealth(shotBase->GetStrength(), shotBase);
+				shotBase->DecreaseHealth(1);
+				return true;
+			}
 		} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {
 			DecreaseHealth(INT32_MAX, tnt);
 			return true;

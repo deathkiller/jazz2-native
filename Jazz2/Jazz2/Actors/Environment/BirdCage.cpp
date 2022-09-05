@@ -31,7 +31,7 @@ namespace Jazz2::Actors::Environment
 	{
 		_renderer.setLayer(_renderer.layer() - 16);
 
-		CollisionFlags |= CollisionFlags::CollideWithSolidObjects;
+		CollisionFlags |= CollisionFlags::CollideWithTilesetReduced | CollisionFlags::CollideWithSolidObjects;
 
 		_type = details.Params[0];
 		_activated = (details.Params[1] != 0);
@@ -56,12 +56,14 @@ namespace Jazz2::Actors::Environment
 	{
 		if (!_activated) {
 			if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
-				auto owner = shotBase->GetOwner();
-				if (owner != nullptr) {
-					ApplyToPlayer(owner);
-					shotBase->DecreaseHealth(INT32_MAX);
+				if (shotBase->GetStrength() > 0) {
+					auto owner = shotBase->GetOwner();
+					if (owner != nullptr) {
+						ApplyToPlayer(owner);
+						shotBase->DecreaseHealth(1);
+					}
+					return true;
 				}
-				return true;
 			} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {
 				auto owner = tnt->GetOwner();
 				if (owner != nullptr) {

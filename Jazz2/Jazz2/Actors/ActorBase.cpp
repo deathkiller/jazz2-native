@@ -449,15 +449,14 @@ namespace Jazz2
 		}
 	}
 
-	const std::shared_ptr<AudioBufferPlayer>& ActorBase::PlaySfx(const StringView& identifier, float gain, float pitch)
+	std::shared_ptr<AudioBufferPlayer> ActorBase::PlaySfx(const StringView& identifier, float gain, float pitch)
 	{
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _metadata->Sounds.end()) {
 			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
 			return _levelHandler->PlaySfx(it->second.Buffers[idx].get(), Vector3f(_pos.X, _pos.Y, 0.0f), false, gain, pitch);
 		} else {
-			//LOGE_X("Sound effect \"%s\" was not found", identifier.data());
-			return std::shared_ptr<AudioBufferPlayer>(nullptr);
+			return nullptr;
 		}
 	}
 

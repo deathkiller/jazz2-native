@@ -72,7 +72,7 @@ namespace Jazz2::Actors::Solid
 			auto& players = _levelHandler->GetPlayers();
 			for (auto& player : players) {
 				const auto playerAmmo = player->GetWeaponAmmo();
-				for (int i = 1; i < PlayerCarryOver::WeaponCount; i++) {
+				for (int i = 1; i < (int)WeaponType::Count; i++) {
 					if (playerAmmo[i] > 0) {
 						weaponTypes.push_back((WeaponType)i);
 					}

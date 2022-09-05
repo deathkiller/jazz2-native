@@ -1,19 +1,19 @@
 {
-    "Version": {
-        "Target": "Jazz² Resurrection"
-    },
-    
-    "BoundingBox": [ 30, 28 ],
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
+	
+	"BoundingBox": [ 30, 28 ],
 
-    "Animations": {
-        "Crate": {
-            "Path": "Object/TriggerCrate.aura"
-        }
-    },
+	"Animations": {
+		"Crate": {
+			"Path": "Object/TriggerCrate.aura"
+		}
+	},
 
-    "Sounds": {
-        "Break": {
-            "Paths": [ "Object/PowerupBreak.wav" ]
-        }
-    }
+	"Sounds": {
+		"Break": {
+			"Paths": [ "Object/PowerupBreak.wav" ]
+		}
+	}
 }
