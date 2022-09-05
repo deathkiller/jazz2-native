@@ -778,6 +778,7 @@ namespace Jazz2::Actors
 				} else if (_weaponAmmo[(int)_currentWeapon] != 0) {
 					_wasFirePressed = true;
 
+					bool weaponCooledDown = (_weaponCooldown <= 0.0f);
 					weaponInUse = FireCurrentWeapon(_currentWeapon);
 					if (weaponInUse) {
 						if (_currentTransitionState == AnimState::Spring || _currentTransitionState == AnimState::TransitionShootToIdle) {
@@ -785,6 +786,10 @@ namespace Jazz2::Actors
 						}
 
 						SetAnimation(_currentAnimationState | AnimState::Shoot);
+						// Rewind the animation, if it should be played only once
+						if (weaponCooledDown && _currentAnimation->LoopMode == AnimationLoopMode::Once) {
+							_renderer.AnimTime = 0.0f;
+						}
 
 						_fireFramesLeft = 20.0f;
 					}
@@ -2073,12 +2078,7 @@ namespace Jazz2::Actors
 	bool Player::FireCurrentWeapon(WeaponType weaponType)
 	{
 		if (_weaponCooldown > 0.0f) {
-			return true;
-		}
-
-		// Rewind the animation, if it should be played only once
-		if (_currentAnimation->LoopMode == AnimationLoopMode::Once) {
-			_renderer.AnimTime = 0.0f;
+			return (weaponType != WeaponType::TNT);
 		}
 
 		uint16_t ammoDecrease = 256;

@@ -43,10 +43,12 @@
 
 namespace nCine
 {
+#if (!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21)
 	namespace
 	{
 		constexpr char emptyString[1] = { '\0' };
 	}
+#endif
 
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS

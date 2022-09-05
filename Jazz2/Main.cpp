@@ -362,8 +362,9 @@ bool GameEventHandler::RefreshCache()
 			return true;
 		}
 
+		String animsPath = fs::FindPathCaseInsensitive(fs::JoinPath("Source"_s, "Anims.j2a"_s));
 		int64_t animsCached = s->ReadValue<int64_t>();
-		int64_t animsModified = fs::LastModificationTime(fs::JoinPath("Source"_s, "Anims.j2a"_s)).Ticks;
+		int64_t animsModified = fs::LastModificationTime(animsPath).Ticks;
 		if (animsModified != 0 && animsCached != animsModified) {
 			goto RecreateCache;
 		}
@@ -391,7 +392,7 @@ RecreateCache:
 
 	EventConverter eventConverter;
 
-	String xmasEpisodeToken = (!fs::FindPathCaseInsensitive(fs::JoinPath("Cache"_s, "xmas99.j2e")).empty() ? "xmas99" : "xmas98");
+	String xmasEpisodeToken = (fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::JoinPath("Cache"_s, "xmas99.j2e"_s))) ? "xmas99"_s : "xmas98"_s);
 	HashMap<String, Pair<String, String>> knownLevels = {
 		{ "castle1"_s, { "prince"_s, "01"_s } },
 		{ "castle1n"_s, { "prince"_s, "02"_s } },
@@ -496,7 +497,7 @@ RecreateCache:
 
 	String episodesPath = fs::JoinPath("Cache"_s, "Episodes"_s);
 
-	fs::Directory dir("Source"_s, fs::EnumerationOptions::SkipDirectories);
+	fs::Directory dir(fs::FindPathCaseInsensitive("Source"_s), fs::EnumerationOptions::SkipDirectories);
 	while (true) {
 		StringView item = dir.GetNext();
 		if (item == nullptr) {
@@ -552,7 +553,7 @@ RecreateCache:
 	s->WriteValue<uint32_t>(0x2063324a);	// Signature
 	s->WriteValue<uint16_t>(JJ2Anims::CacheVersion);
 	s->WriteValue<uint8_t>(0x00);			// Flags
-	int64_t animsModified = fs::LastModificationTime(fs::JoinPath("Source"_s, "Anims.j2a"_s)).Ticks;
+	int64_t animsModified = fs::LastModificationTime(animsPath).Ticks;
 	s->WriteValue<int64_t>(animsModified);
 	s->WriteValue<uint16_t>((uint16_t)Jazz2::EventType::Count);
 
