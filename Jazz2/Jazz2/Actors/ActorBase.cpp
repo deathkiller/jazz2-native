@@ -177,20 +177,20 @@ namespace Jazz2
 		return true;
 	}
 
-	void ActorBase::OnHitFloor()
+	void ActorBase::OnHitFloor(float timeMult)
 	{
 		// Called from inside the position update code when the object hits floor
 		// and was falling earlier. Objects should override this if they need to
 		// (e.g. the Player class playing a sound).
 	}
 
-	void ActorBase::OnHitCeiling()
+	void ActorBase::OnHitCeiling(float timeMult)
 	{
 		// Called from inside the position update code when the object hits ceiling.
 		// Objects should override this if they need to.
 	}
 
-	void ActorBase::OnHitWall()
+	void ActorBase::OnHitWall(float timeMult)
 	{
 		// Called from inside the position update code when the object hits a wall.
 		// Objects should override this if they need to.
@@ -312,12 +312,12 @@ namespace Jazz2
 						if (xDiff > CollisionCheckStep || (xDiff > 0.0f && currentElasticity > 0.0f)) {
 							_speed.X = -(currentElasticity * _speed.X);
 						}
-						OnHitWall();
+						OnHitWall(timeMult);
 					}
 				}
 
 				// Run all floor-related hooks, such as the player's check for hurting positions
-				OnHitFloor();
+				OnHitFloor(timeMult);
 			} else {
 				// Airborne movement is handled here
 				// First, attempt to move directly based on the current speed values
@@ -359,7 +359,7 @@ namespace Jazz2
 						if (effectiveSpeedY > 0.0f) {
 							_speed.Y = -(currentElasticity * effectiveSpeedY / timeMult);
 
-							OnHitFloor();
+							OnHitFloor(timeMult);
 
 							if (_speed.Y > -CollisionCheckStep) {
 								_speed.Y = 0.0f;
@@ -367,7 +367,7 @@ namespace Jazz2
 							}
 						} else {
 							_speed.Y = 0.0f;
-							OnHitCeiling();
+							OnHitCeiling(timeMult);
 						}
 					}
 
@@ -377,7 +377,7 @@ namespace Jazz2
 						if (xDiff > CollisionCheckStep || (xDiff > 0.0f && currentElasticity > 0.0f)) {
 							_speed.X = -(currentElasticity * _speed.X);
 						}
-						OnHitWall();
+						OnHitWall(timeMult);
 					}
 				}
 			}

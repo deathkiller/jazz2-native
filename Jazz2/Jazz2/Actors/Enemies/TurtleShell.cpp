@@ -173,7 +173,7 @@ namespace Jazz2::Actors::Enemies
 		return false;
 	}
 
-	void TurtleShell::OnHitFloor()
+	void TurtleShell::OnHitFloor(float timeMult)
 	{
 		if (std::abs(_speed.Y) > 1.0f) {
 			PlaySfx("ImpactGround"_s);

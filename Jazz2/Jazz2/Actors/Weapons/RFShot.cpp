@@ -119,7 +119,7 @@ namespace Jazz2::Actors::Weapons
 		return ShotBase::OnPerish(collider);
 	}
 
-	void RFShot::OnHitWall()
+	void RFShot::OnHitWall(float timeMult)
 	{
 		DecreaseHealth(INT32_MAX);
 	}

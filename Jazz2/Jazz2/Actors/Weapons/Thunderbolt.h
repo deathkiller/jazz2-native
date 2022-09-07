@@ -23,7 +23,7 @@ namespace Jazz2::Actors::Weapons
 		void OnUpdateHitbox() override;
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 		void OnAnimationFinished() override;
-		void OnHitWall() override;
+		void OnHitWall(float timeMult) override;
 		void OnRicochet() override;
 
 	private:
@@ -31,5 +31,6 @@ namespace Jazz2::Actors::Weapons
 		float _lightProgress;
 		Vector2f _farPoint;
 		uint16_t _initialLayer;
+		bool _firedUp;
 	};
 }

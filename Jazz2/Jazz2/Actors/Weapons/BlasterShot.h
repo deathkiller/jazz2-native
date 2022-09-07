@@ -21,7 +21,7 @@ namespace Jazz2::Actors::Weapons
 		void OnUpdateHitbox() override;
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 		bool OnPerish(ActorBase* collider) override;
-		void OnHitWall() override;
+		void OnHitWall(float timeMult) override;
 		void OnRicochet() override;
 
 	private:

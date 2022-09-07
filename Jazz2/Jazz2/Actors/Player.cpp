@@ -342,7 +342,7 @@ namespace Jazz2::Actors
 				if (_sugarRushStarsTime > 0.0f) {
 					_sugarRushStarsTime -= timeMult;
 				} else {
-					_sugarRushStarsTime = Random().NextFloat(2.0f, 8.0f);
+					_sugarRushStarsTime = Random().FastFloat(2.0f, 8.0f);
 
 					auto tilemap = _levelHandler->TileMap();
 					if (tilemap != nullptr) {
@@ -352,18 +352,18 @@ namespace Jazz2::Actors
 							Vector2i size = it->second.Base->FrameDimensions;
 							Vector2i frameConf = it->second.Base->FrameConfiguration;
 							int frame = it->second.FrameOffset + Random().Next(0, it->second.FrameCount);
-							float speedX = Random().NextFloat(-4.0f, 4.0f);
+							float speedX = Random().FastFloat(-4.0f, 4.0f);
 
 							Tiles::TileMap::DestructibleDebris debris = { };
 							debris.Pos = _pos;
 							debris.Depth = _renderer.layer() - 2;
 							debris.Size = Vector2f(size.X, size.Y);
-							debris.Speed = Vector2f(speedX, Random().NextFloat(-4.0f, -2.2f));
+							debris.Speed = Vector2f(speedX, Random().FastFloat(-4.0f, -2.2f));
 							debris.Acceleration = Vector2f(0.0f, 0.2f);
 
-							debris.Scale = Random().NextFloat(0.1f, 0.5f);
+							debris.Scale = Random().FastFloat(0.1f, 0.5f);
 							debris.ScaleSpeed = -0.002f;
-							debris.Angle = Random().NextFloat(0.0f, fTwoPi);
+							debris.Angle = Random().FastFloat(0.0f, fTwoPi);
 							debris.AngleSpeed = speedX * 0.04f;
 							debris.Alpha = 1.0f;
 							debris.AlphaSpeed = -0.018f;
@@ -1024,7 +1024,7 @@ namespace Jazz2::Actors
 		return handled;
 	}
 
-	void Player::OnHitFloor()
+	void Player::OnHitFloor(float timeMult)
 	{
 		if (_levelHandler->EventMap()->IsHurting(_pos.X, _pos.Y + 24)) {
 			TakeDamage(1, _speed.X * 0.25f);
@@ -1050,14 +1050,14 @@ namespace Jazz2::Actors
 		CollisionFlags |= CollisionFlags::IsSolidObject;
 	}
 
-	void Player::OnHitCeiling()
+	void Player::OnHitCeiling(float timeMult)
 	{
 		if (_levelHandler->EventMap()->IsHurting(_pos.X, _pos.Y - 4.0f)) {
 			TakeDamage(1, _speed.X * 0.25f);
 		}
 	}
 
-	void Player::OnHitWall()
+	void Player::OnHitWall(float timeMult)
 	{
 		// Reset speed and show Push animation
 		_speed.X = 0.0f;
@@ -1096,20 +1096,29 @@ namespace Jazz2::Actors
 						uint8_t* wallParams;
 						if (_levelHandler->EventMap()->GetEventByPosition(IsFacingLeft() ? hitbox2.L : hitbox2.R, hitbox2.B, &wallParams) != EventType::ModifierNoClimb) {
 							// Move the player upwards, if it is in tolerance, so the animation will look better
-							for (int y = 0; y >= -MaxTolerancePixels; y -= 2) {
-								AABBf aabb = AABBInner + Vector2f(x, -42.0f + y);
+							AABBf aabb = AABBInner + Vector2f(x, -42.0f);
+							for (int y = 0; y >= -MaxTolerancePixels; y -= 1) {
 								if (_levelHandler->IsPositionEmpty(this, aabb, params)) {
 									MoveInstantly(Vector2f(0.0f, (float)y), MoveType::Relative | MoveType::Force, params);
 									break;
 								}
+								aabb.T -= 1.0f;
+								aabb.B -= 1.0f;
 							}
 
 							// Prepare the player for animation
 							_controllable = false;
 							CollisionFlags &= ~(CollisionFlags::ApplyGravitation | CollisionFlags::CollideWithTileset | CollisionFlags::CollideWithSolidObjects);
 
-							_speed.X = _externalForce.X = _externalForce.Y = 0.0f;
-							_speed.Y = -1.36f;
+							_speed.X = 0.0f;
+							_speed.Y = -1.4f;
+							if (timeMult < 1.0f) {
+								_speed.Y += (1.0f - timeMult) * 0.2f;
+							}
+
+							_externalForce.X = 0.0f;
+							_externalForce.Y = 0.0f;
+							_internalForceY = 0.0f;
 							_pushFramesLeft = 0.0f;
 							_fireFramesLeft = 0.0f;
 							_copterFramesLeft = 0.0f;
@@ -1134,7 +1143,7 @@ namespace Jazz2::Actors
 								MoveInstantly(Vector2f(IsFacingLeft() ? -4.0f : 4.0f, 0.0f), MoveType::Relative, params);
 
 								// Move the player upwards, so it will not be stuck in the wall
-								for (float y = -2; y > -24; y -= 2) {
+								for (float y = -1.0f; y > -24.0f; y -= 1.0f) {
 									if (MoveInstantly(Vector2f(0.0f, y), MoveType::Relative, params)) {
 										break;
 									}
@@ -1491,7 +1500,7 @@ namespace Jazz2::Actors
 			}
 		} else {
 			_suspendType = SuspendType::None;
-			_suspendTime = 20.0f;
+			_suspendTime = 8.0f;
 			if ((currentState & (AnimState::Buttstomp | AnimState::Copter)) == AnimState::Idle && !_isAttachedToPole) {
 				CollisionFlags |= CollisionFlags::ApplyGravitation;
 			}
@@ -1763,53 +1772,55 @@ namespace Jazz2::Actors
 		// float events, so checking for a wider box is necessary.
 		const float ExtendedHitbox = 2.0f;
 
-		if (_currentSpecialMove != SpecialMoveType::Buttstomp) {
-			if ((events->GetEventByPosition(_pos.X, _pos.Y, &p) == EventType::AreaFloatUp) ||
-				(events->GetEventByPosition(AABBInner.L - ExtendedHitbox, AABBInner.T - ExtendedHitbox, &p) == EventType::AreaFloatUp) ||
-				(events->GetEventByPosition(AABBInner.R + ExtendedHitbox, AABBInner.T - ExtendedHitbox, &p) == EventType::AreaFloatUp) ||
-				(events->GetEventByPosition(AABBInner.R + ExtendedHitbox, AABBInner.B + ExtendedHitbox, &p) == EventType::AreaFloatUp) ||
-				(events->GetEventByPosition(AABBInner.L - ExtendedHitbox, AABBInner.B + ExtendedHitbox, &p) == EventType::AreaFloatUp)
-			) {
-				if ((CollisionFlags & CollisionFlags::ApplyGravitation) == CollisionFlags::ApplyGravitation) {
-					float gravity = _levelHandler->Gravity;
-					_externalForce.Y = gravity * 2.0f * timeMult;
-					_speed.Y = std::min(gravity * timeMult, _speed.Y);
-				} else {
-					_speed.Y = std::max(_speed.Y - _levelHandler->Gravity * timeMult, -6.0f);
+		if (_currentTransitionState != AnimState::TransitionLedgeClimb) {
+			if (_currentSpecialMove != SpecialMoveType::Buttstomp) {
+				if ((events->GetEventByPosition(_pos.X, _pos.Y, &p) == EventType::AreaFloatUp) ||
+					(events->GetEventByPosition(AABBInner.L - ExtendedHitbox, AABBInner.T - ExtendedHitbox, &p) == EventType::AreaFloatUp) ||
+					(events->GetEventByPosition(AABBInner.R + ExtendedHitbox, AABBInner.T - ExtendedHitbox, &p) == EventType::AreaFloatUp) ||
+					(events->GetEventByPosition(AABBInner.R + ExtendedHitbox, AABBInner.B + ExtendedHitbox, &p) == EventType::AreaFloatUp) ||
+					(events->GetEventByPosition(AABBInner.L - ExtendedHitbox, AABBInner.B + ExtendedHitbox, &p) == EventType::AreaFloatUp)
+				) {
+					if ((CollisionFlags & CollisionFlags::ApplyGravitation) == CollisionFlags::ApplyGravitation) {
+						float gravity = _levelHandler->Gravity;
+						_externalForce.Y = gravity * 2.0f * timeMult;
+						_speed.Y = std::min(gravity * timeMult, _speed.Y);
+					} else {
+						_speed.Y = std::max(_speed.Y - _levelHandler->Gravity * timeMult, -6.0f);
+					}
 				}
 			}
-		}
 
-		if ((events->GetEventByPosition(_pos.X, _pos.Y, &p) == EventType::AreaHForce) ||
-			(events->GetEventByPosition(AABBInner.L - ExtendedHitbox, AABBInner.T - ExtendedHitbox, &p) == EventType::AreaHForce) ||
-			(events->GetEventByPosition(AABBInner.R + ExtendedHitbox, AABBInner.T - ExtendedHitbox, &p) == EventType::AreaHForce) ||
-			(events->GetEventByPosition(AABBInner.R + ExtendedHitbox, AABBInner.B + ExtendedHitbox, &p) == EventType::AreaHForce) ||
-			(events->GetEventByPosition(AABBInner.L - ExtendedHitbox, AABBInner.B + ExtendedHitbox, &p) == EventType::AreaHForce)
-		   ) {
-			uint8_t p1 = p[4];
-			uint8_t p2 = p[5];
-			if ((p2 != 0 || p1 != 0)) {
-				MoveInstantly(Vector2f((p2 - p1) * 0.7f * timeMult, 0), MoveType::Relative);
+			if ((events->GetEventByPosition(_pos.X, _pos.Y, &p) == EventType::AreaHForce) ||
+				(events->GetEventByPosition(AABBInner.L - ExtendedHitbox, AABBInner.T - ExtendedHitbox, &p) == EventType::AreaHForce) ||
+				(events->GetEventByPosition(AABBInner.R + ExtendedHitbox, AABBInner.T - ExtendedHitbox, &p) == EventType::AreaHForce) ||
+				(events->GetEventByPosition(AABBInner.R + ExtendedHitbox, AABBInner.B + ExtendedHitbox, &p) == EventType::AreaHForce) ||
+				(events->GetEventByPosition(AABBInner.L - ExtendedHitbox, AABBInner.B + ExtendedHitbox, &p) == EventType::AreaHForce)
+			   ) {
+				uint8_t p1 = p[4];
+				uint8_t p2 = p[5];
+				if ((p2 != 0 || p1 != 0)) {
+					MoveInstantly(Vector2f((p2 - p1) * 0.7f * timeMult, 0), MoveType::Relative);
+				}
 			}
-		}
 
-		//
-		if (GetState(ActorFlags::CanJump)) {
-			// Floor events
-			tileEvent = events->GetEventByPosition(_pos.X, _pos.Y + 32, &p);
-			switch (tileEvent) {
-				case EventType::AreaHForce: {
-					uint8_t p1 = p[0];
-					uint8_t p2 = p[1];
-					uint8_t p3 = p[2];
-					uint8_t p4 = p[3];
-					if (p2 != 0 || p1 != 0) {
-						MoveInstantly(Vector2f((p2 - p1) * 0.7f * timeMult, 0), MoveType::Relative);
+			//
+			if (GetState(ActorFlags::CanJump)) {
+				// Floor events
+				tileEvent = events->GetEventByPosition(_pos.X, _pos.Y + 32, &p);
+				switch (tileEvent) {
+					case EventType::AreaHForce: {
+						uint8_t p1 = p[0];
+						uint8_t p2 = p[1];
+						uint8_t p3 = p[2];
+						uint8_t p4 = p[3];
+						if (p2 != 0 || p1 != 0) {
+							MoveInstantly(Vector2f((p2 - p1) * 0.7f * timeMult, 0), MoveType::Relative);
+						}
+						if (p4 != 0 || p3 != 0) {
+							_speed.X += (p4 - p3) * 0.1f;
+						}
+						break;
 					}
-					if (p4 != 0 || p3 != 0) {
-						_speed.X += (p4 - p3) * 0.1f;
-					}
-					break;
 				}
 			}
 		}

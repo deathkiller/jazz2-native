@@ -1,4 +1,5 @@
 ﻿#include "BeginSection.h"
+#include "EpisodeSelectSection.h"
 #include "StartGameOptionsSection.h"
 #include "OptionsSection.h"
 #include "AboutSection.h"
@@ -14,7 +15,11 @@ namespace Jazz2::UI::Menu
 		_animation(0.0f),
 		_isVerified(true)
 	{
+#if defined(SHAREWARE_DEMO_ONLY)
 		_items[(int)Item::PlayStory].Name = "Play Shareware Demo"_s;
+#else
+		_items[(int)Item::PlayStory].Name = "Play Story"_s;
+#endif
 		//_items[(int)Item::PlayCustom].Name = "Play Custom Game"_s;
 		_items[(int)Item::Options].Name = "Options"_s;
 		_items[(int)Item::About].Name = "About"_s;
@@ -75,7 +80,7 @@ namespace Jazz2::UI::Menu
 		int charOffset = 0;
 
 		if (!_isVerified) {
-			_root->DrawStringShadow("Ensure that Jazz Jackrabbit 2 files are present in \"Source\" directory!", charOffset, center.X, center.Y * 0.75f,
+			_root->DrawStringShadow("Ensure that Jazz Jackrabbit 2 files are present in \"Source\" directory!", charOffset, center.X, center.Y * 0.75f, IMenuContainer::FontLayer,
 				Alignment::Center, Colorf(0.45f, 0.27f, 0.22f, 0.5f), 1.0f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f);
 		}
 
@@ -87,17 +92,17 @@ namespace Jazz2::UI::Menu
 					_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (_items[i].Name.size() + 3) * 0.5f, 4.0f, true);
 				}
 
-				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y,
+				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 					Alignment::Center, Colorf(0.51f, 0.51f, 0.51f, 0.35f), 0.9f);
 			} else if (_selectedIndex == i) {
 				float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
 				_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (_items[i].Name.size() + 3) * 0.5f * size, 4.0f * size, true);
 
-				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y,
+				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
 					Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 			} else {
-				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y,
+				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
@@ -133,7 +138,15 @@ namespace Jazz2::UI::Menu
 	void BeginSection::ExecuteSelected()
 	{
 		switch (_selectedIndex) {
-			case (int)Item::PlayStory: if (_isVerified) _root->SwitchToSection<StartGameOptionsSection>(); break;
+			case (int)Item::PlayStory:
+				if (_isVerified) {
+#if defined(SHAREWARE_DEMO_ONLY)
+					_root->SwitchToSectionPtr(std::make_unique<StartGameOptionsSection>("share"_s, "01_share1"_s, nullptr));
+#else
+					_root->SwitchToSection<EpisodeSelectSection>();
+#endif
+				}
+				break;
 			case (int)Item::Options: _root->SwitchToSection<OptionsSection>(); break;
 			case (int)Item::About: _root->SwitchToSection<AboutSection>(); break;
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)

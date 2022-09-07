@@ -11,7 +11,8 @@ namespace Jazz2::Actors::Weapons
 	Thunderbolt::Thunderbolt()
 		:
 		_hit(false),
-		_lightProgress(0.0f)
+		_lightProgress(0.0f),
+		_firedUp(false)
 	{
 	}
 
@@ -34,7 +35,7 @@ namespace Jazz2::Actors::Weapons
 
 	void Thunderbolt::OnFire(const std::shared_ptr<ActorBase>& owner, Vector2f gunspotPos, Vector2f speed, float angle, bool isFacingLeft)
 	{
-		angle += Random().FastFloat(-0.1f, 0.1f);
+		angle += Random().FastFloat(-0.16f, 0.16f);
 
 		float distance = (isFacingLeft ? -140.0f : 140.0f);
 		_farPoint = Vector2f(gunspotPos.X + cosf(angle) * distance, gunspotPos.Y + sinf(angle) * distance);
@@ -50,10 +51,23 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		_renderer.setRotation(angle);
+
+		if (auto player = dynamic_cast<Player*>(owner.get())) {
+			_firedUp = player->_wasUpPressed;
+		}
 	}
 
 	void Thunderbolt::OnUpdate(float timeMult)
 	{
+		if (auto player = dynamic_cast<Player*>(_owner.get())) {
+			if (_firedUp != player->_wasUpPressed) {
+				_hit = true;
+				_strength = 0;
+				DecreaseHealth(INT32_MAX);
+				return;
+			}
+		}
+
 		if (_hit) {
 			_strength = 0;
 		} else if (_strength > 0) {
@@ -118,7 +132,7 @@ namespace Jazz2::Actors::Weapons
 		return false;
 	}
 
-	void Thunderbolt::OnHitWall()
+	void Thunderbolt::OnHitWall(float timeMult)
 	{
 	}
 

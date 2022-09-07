@@ -117,7 +117,7 @@ namespace Jazz2::Actors::Weapons
 		return ShotBase::OnPerish(collider);
 	}
 
-	void BlasterShot::OnHitWall()
+	void BlasterShot::OnHitWall(float timeMult)
 	{
 		auto events = _levelHandler->EventMap();
 		bool handled = false;

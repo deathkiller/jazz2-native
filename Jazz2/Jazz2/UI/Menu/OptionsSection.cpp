@@ -62,7 +62,7 @@ namespace Jazz2::UI::Menu
 		center.Y = topLine + (bottomLine - topLine) * 0.7f / (int)Item::Count;
 		int charOffset = 0;
 
-		_root->DrawStringShadow("Options"_s, charOffset, center.X, topLine - 21.0f,
+		_root->DrawStringShadow("Options"_s, charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		for (int i = 0; i < (int)Item::Count; i++) {
@@ -73,10 +73,10 @@ namespace Jazz2::UI::Menu
 
 				_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (_items[i].Name.size() + 3) * 0.5f * size, 4.0f * size, true);
 
-				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y,
+				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
 					Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 			} else {
-				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y,
+				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 

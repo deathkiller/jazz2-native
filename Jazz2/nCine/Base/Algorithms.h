@@ -179,13 +179,13 @@ namespace nCine
 		return first;
 	}
 
-	namespace {
-
+	namespace
+	{
 		/// Quicksort implementation with random access iterators and custom compare function
 		template <class Iterator, class Compare>
 		inline void quicksort(Iterator first, Iterator last, RandomAccessIteratorTag, Compare comp)
 		{
-			int size = distance(first, last);
+			int size = distance(first, last, RandomAccessIteratorTag());
 			if (size > 1) {
 				Iterator p = prev(last);
 				std::swap(*next(first, size / 2), *p);
@@ -251,8 +251,8 @@ namespace nCine
 		}
 	};
 
-	namespace detail {
-
+	namespace detail
+	{
 		template <class T>
 		struct typeIdentity
 		{

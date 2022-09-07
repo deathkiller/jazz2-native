@@ -136,15 +136,15 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
-	void Dragonfly::OnHitWall()
+	void Dragonfly::OnHitWall(float timeMult)
 	{
 	}
 
-	void Dragonfly::OnHitFloor()
+	void Dragonfly::OnHitFloor(float timeMult)
 	{
 	}
 
-	void Dragonfly::OnHitCeiling()
+	void Dragonfly::OnHitCeiling(float timeMult)
 	{
 	}
 

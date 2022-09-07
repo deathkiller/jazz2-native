@@ -30,7 +30,6 @@ namespace Jazz2::Actors::Weapons
 	protected:
 		std::shared_ptr<ActorBase> _owner;
 		float _timeLeft;
-		bool _firedUp;
 		uint8_t _upgrades;
 		int _strength;
 		ActorBase* _lastRicochet;

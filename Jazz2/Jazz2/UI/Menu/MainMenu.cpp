@@ -40,7 +40,9 @@ namespace Jazz2::UI::Menu
 		_mediumFont = resolver.GetFont(FontType::Medium);
 
 #ifdef WITH_OPENMPT
-		_music = resolver.GetMusic(Random().NextBool() ? "bonus2.j2b"_s : "bonus3.j2b"_s);
+		if (PreferencesCache::ReduxMode) {
+			_music = resolver.GetMusic(Random().NextBool() ? "bonus2.j2b"_s : "bonus3.j2b"_s);
+		}
 		if (_music == nullptr) {
 			_music = resolver.GetMusic("menu.j2b"_s);
 		}
@@ -189,13 +191,13 @@ namespace Jazz2::UI::Menu
 		Vector2f bottomRight = Vector2f(ViewSize.X, ViewSize.Y);
 		bottomRight.X = ViewSize.X - 24.0f;
 		bottomRight.Y -= 10.0f;
-		_owner->DrawStringShadow("v1.0.0"_s, charOffset, bottomRight.X, bottomRight.Y,
+		_owner->DrawStringShadow("v1.0.0"_s, charOffset, bottomRight.X, bottomRight.Y, IMenuContainer::FontLayer,
 			Alignment::BottomRight, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
 		// Copyright
 		Vector2f bottomLeft = bottomRight;
 		bottomLeft.X = 24.0f;
-		_owner->DrawStringShadow("© 2016-2022  Dan R."_s, charOffset, bottomLeft.X, bottomLeft.Y,
+		_owner->DrawStringShadow("© 2016-2022  Dan R."_s, charOffset, bottomLeft.X, bottomLeft.Y, IMenuContainer::FontLayer,
 			Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
 		if (!_owner->_sections.empty()) {
@@ -284,7 +286,7 @@ namespace Jazz2::UI::Menu
 		_canvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false);
 	}
 
-	void MainMenu::DrawStringShadow(const StringView& text, int charOffset, float x, float y, Alignment align, const Colorf& color, float scale,
+	void MainMenu::DrawStringShadow(const StringView& text, int charOffset, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scale,
 		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
 		if (_logoTransition < 1.0f) {
@@ -298,7 +300,7 @@ namespace Jazz2::UI::Menu
 		int charOffsetShadow = charOffset;
 		_smallFont->DrawString(_canvas.get(), text, charOffsetShadow, x, y + 2.8f * scale, FontShadowLayer,
 			align, Colorf(0.0f, 0.0f, 0.0f, 0.29f), scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
-		_smallFont->DrawString(_canvas.get(), text, charOffset, x, y, FontLayer,
+		_smallFont->DrawString(_canvas.get(), text, charOffset, x, y, z,
 			align, color, scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
 	}
 

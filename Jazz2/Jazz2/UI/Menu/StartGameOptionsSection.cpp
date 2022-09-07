@@ -1,11 +1,16 @@
 ﻿#include "StartGameOptionsSection.h"
+#include "MainMenu.h"
 #include "../../PreferencesCache.h"
 
 namespace Jazz2::UI::Menu
 {
-	StartGameOptionsSection::StartGameOptionsSection()
+	StartGameOptionsSection::StartGameOptionsSection(const StringView& episodeName, const StringView& levelName, const StringView& previousEpisodeName)
 		:
+		_episodeName(episodeName),
+		_levelName(levelName),
+		_previousEpisodeName(previousEpisodeName),
 		_selectedIndex(2),
+		_availableCharacters(3),
 		_selectedPlayerType(0),
 		_selectedDifficulty(1),
 		_lastPlayerType(0),
@@ -21,12 +26,14 @@ namespace Jazz2::UI::Menu
 	void StartGameOptionsSection::OnShow(IMenuContainer* root)
 	{
 		MenuSection::OnShow(root);
+
+		if (auto mainMenu = dynamic_cast<MainMenu*>(_root)) {
+			_availableCharacters = (mainMenu->_graphics->find(String::nullTerminatedView("MenuDifficultyLori"_s)) != mainMenu->_graphics->end() ? 3 : 2);
+		}
 	}
 
 	void StartGameOptionsSection::OnUpdate(float timeMult)
 	{
-		constexpr int availableCharacters = 3;
-
 		if (_animation < 1.0f) {
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
 		}
@@ -48,7 +55,7 @@ namespace Jazz2::UI::Menu
 					_selectedPlayerType--;
 				} else {
 					StartImageTransition();
-					_selectedPlayerType = availableCharacters - 1;
+					_selectedPlayerType = _availableCharacters - 1;
 				}
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 			} else if (_selectedIndex == 1) {
@@ -60,7 +67,7 @@ namespace Jazz2::UI::Menu
 			}
 		} else if (_root->ActionHit(PlayerActions::Right)) {
 			if (_selectedIndex == 0) {
-				if (_selectedPlayerType < availableCharacters - 1) {
+				if (_selectedPlayerType < _availableCharacters - 1) {
 					StartImageTransition();
 					_selectedPlayerType++;
 				} else {
@@ -134,11 +141,11 @@ namespace Jazz2::UI::Menu
 
 		        _root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (_items[i].Name.size() + 3) * 0.5f * size, 4.0f * size, true);
 
-		        _root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y,
+		        _root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
 		            Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 		    } else {
-		        _root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, Alignment::Center,
-		            Font::DefaultColor, 0.9f);
+		        _root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
+					Alignment::Center, Font::DefaultColor, 0.9f);
 		    }
 
 		    if (i == 0) {
@@ -149,37 +156,35 @@ namespace Jazz2::UI::Menu
 		            Colorf(0.5f, 0.45f, 0.22f, 0.5f)
 		        };
 
-				constexpr int availableCharacters = 3;
-
 		        float offset, spacing;
-		        if (availableCharacters == 1) {
+		        if (_availableCharacters == 1) {
 		            offset = 0.0f;
 		            spacing = 0.0f;
-		        } else if (availableCharacters == 2) {
+		        } else if (_availableCharacters == 2) {
 		            offset = 50.0f;
 		            spacing = 100.0f;
 		        } else {
 		            offset = 100.0f;
-		            spacing = 300.0f / availableCharacters;
+		            spacing = 300.0f / _availableCharacters;
 		        }
 
-		        for (int j = 0; j < availableCharacters; j++) {
+		        for (int j = 0; j < _availableCharacters; j++) {
 		            float x = center.X - offset + j * spacing;
 		            if (_selectedPlayerType == j) {
 		                _root->DrawElement("MenuGlow"_s, 0, x, center.Y + 28.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (playerTypes[j].size() + 3) * 0.4f, 2.2f, true);
 
-		                _root->DrawStringShadow(playerTypes[j], charOffset, x, center.Y + 28.0f, Alignment::Center,
-		                   playerColors[j], 1.0f, 0.4f, 0.55f, 0.55f, 0.8f, 0.9f);
+		                _root->DrawStringShadow(playerTypes[j], charOffset, x, center.Y + 28.0f, IMenuContainer::FontLayer,
+							Alignment::Center, playerColors[j], 1.0f, 0.4f, 0.55f, 0.55f, 0.8f, 0.9f);
 		            } else {
-		                _root->DrawStringShadow(playerTypes[j], charOffset, x, center.Y + 28.0f, Alignment::Center,
-		                    Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.9f);
+		                _root->DrawStringShadow(playerTypes[j], charOffset, x, center.Y + 28.0f, IMenuContainer::FontLayer,
+							Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.9f);
 		            }
 		        }
 
-		        _root->DrawStringShadow("<"_s, charOffset, center.X - (100.0f + 40.0f), center.Y + 28.0f, Alignment::Center,
-					Font::DefaultColor, 0.7f);
-		        _root->DrawStringShadow(">"_s, charOffset, center.X + (100.0f + 40.0f), center.Y + 28.0f, Alignment::Center,
-					Font::DefaultColor, 0.7f);
+		        _root->DrawStringShadow("<"_s, charOffset, center.X - (100.0f + 40.0f), center.Y + 28.0f, IMenuContainer::FontLayer,
+					Alignment::Center, Font::DefaultColor, 0.7f);
+		        _root->DrawStringShadow(">"_s, charOffset, center.X + (100.0f + 40.0f), center.Y + 28.0f, IMenuContainer::FontLayer,
+					Alignment::Center, Font::DefaultColor, 0.7f);
 
 				_items[i].TouchY = center.Y + 28.0f;
 		    } else if (i == 1) {
@@ -189,18 +194,18 @@ namespace Jazz2::UI::Menu
 		            if (_selectedDifficulty == j) {
 		                _root->DrawElement("MenuGlow"_s, 0, center.X + (j - 1) * 100.0f, center.Y + 28.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (difficultyTypes[j].size() + 3) * 0.4f, 2.2f, true);
 
-		                _root->DrawStringShadow(difficultyTypes[j], charOffset, center.X + (j - 1) * 100.0f, center.Y + 28.0f, Alignment::Center,
-						   Colorf(0.45f, 0.45f, 0.45f, 0.5f), 1.0f, 0.4f, 0.55f, 0.55f, 0.8f, 0.9f);
+		                _root->DrawStringShadow(difficultyTypes[j], charOffset, center.X + (j - 1) * 100.0f, center.Y + 28.0f, IMenuContainer::FontLayer,
+							Alignment::Center, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 1.0f, 0.4f, 0.55f, 0.55f, 0.8f, 0.9f);
 		            } else {
-		                _root->DrawStringShadow(difficultyTypes[j], charOffset, center.X + (j - 1) * 100.0f, center.Y + 28.0f, Alignment::Center,
-		                    Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.9f);
+		                _root->DrawStringShadow(difficultyTypes[j], charOffset, center.X + (j - 1) * 100.0f, center.Y + 28.0f, IMenuContainer::FontLayer,
+							Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.9f);
 		            }
 		        }
 
-		        _root->DrawStringShadow("<"_s, charOffset, center.X - (100.0f + 40.0f), center.Y + 28.0f, Alignment::Center,
-		            Font::DefaultColor, 0.7f);
-		        _root->DrawStringShadow(">"_s, charOffset, center.X + (100.0f + 40.0f), center.Y + 28.0f, Alignment::Center,
-		            Font::DefaultColor, 0.7f);
+		        _root->DrawStringShadow("<"_s, charOffset, center.X - (100.0f + 40.0f), center.Y + 28.0f, IMenuContainer::FontLayer,
+					Alignment::Center, Font::DefaultColor, 0.7f);
+		        _root->DrawStringShadow(">"_s, charOffset, center.X + (100.0f + 40.0f), center.Y + 28.0f, IMenuContainer::FontLayer,
+					Alignment::Center, Font::DefaultColor, 0.7f);
 
 				_items[i].TouchY = center.Y + 28.0f;
 			} else {
@@ -318,7 +323,7 @@ namespace Jazz2::UI::Menu
 		});*/
 
 		PlayerType players[] = { (PlayerType)((int)PlayerType::Jazz + _selectedPlayerType) };
-		LevelInitialization levelInit("share"_s, "01_share1"_s, (GameDifficulty)((int)GameDifficulty::Easy + _selectedDifficulty),
+		LevelInitialization levelInit(_episodeName, _levelName, (GameDifficulty)((int)GameDifficulty::Easy + _selectedDifficulty),
 			PreferencesCache::ReduxMode, false, players, _countof(players));
 
 		if (PreferencesCache::AllowCheatsWeapons) {

@@ -235,9 +235,9 @@ namespace Jazz2
 		virtual void OnUpdate(float timeMult);
 		virtual void OnUpdateHitbox();
 		virtual bool OnDraw(RenderQueue& renderQueue);
-		virtual void OnHitFloor();
-		virtual void OnHitCeiling();
-		virtual void OnHitWall();
+		virtual void OnHitFloor(float timeMult);
+		virtual void OnHitCeiling(float timeMult);
+		virtual void OnHitWall(float timeMult);
 
 		virtual void OnTriggeredEvent(EventType eventType, uint16_t* eventParams);
 

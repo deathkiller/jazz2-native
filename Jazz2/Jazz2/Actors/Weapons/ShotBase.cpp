@@ -15,7 +15,6 @@ namespace Jazz2::Actors::Weapons
 		:
 		_owner(nullptr),
 		_timeLeft(0),
-		_firedUp(false),
 		_upgrades(0),
 		_strength(0),
 		_lastRicochet(nullptr)
@@ -101,7 +100,7 @@ namespace Jazz2::Actors::Weapons
 		effectiveSpeedY *= timeMult;
 
 		if (!MoveInstantly(Vector2f(effectiveSpeedX, effectiveSpeedY), MoveType::Relative, params)) {
-			OnHitWall();
+			OnHitWall(timeMult);
 		}
 	}
 }

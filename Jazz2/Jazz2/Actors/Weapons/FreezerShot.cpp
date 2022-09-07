@@ -115,7 +115,7 @@ namespace Jazz2::Actors::Weapons
 		return ShotBase::OnPerish(collider);
 	}
 
-	void FreezerShot::OnHitWall()
+	void FreezerShot::OnHitWall(float timeMult)
 	{
 		DecreaseHealth(INT32_MAX);
 

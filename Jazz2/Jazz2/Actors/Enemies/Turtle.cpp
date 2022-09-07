@@ -2,9 +2,11 @@
 #include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
+#include "TurtleShell.h"
 #include "../Explosion.h"
 #include "../Player.h"
-#include "TurtleShell.h"
+#include "../Weapons/Thunderbolt.h"
+#include "../Weapons/ToasterShot.h"
 
 #include "../../../nCine/Base/Random.h"
 
@@ -57,6 +59,14 @@ namespace Jazz2::Actors::Enemies
 		SetFacingLeft(nCine::Random().NextBool());
 		_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
 
+		OnUpdateHitbox();
+
+		// Apply instant gravitation
+		int i = 10;
+		while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative)) {
+			// Nothing to do...
+		}
+
 		co_return true;
 	}
 
@@ -80,7 +90,10 @@ namespace Jazz2::Actors::Enemies
 			}
 		}
 
-		if (!_isTurning && !_isWithdrawn && !_isAttacking) {
+		if (_isAttacking) {
+			// Turtles attack only with animation, so check collisions every frame
+			CollisionFlags |= CollisionFlags::IsDirty;
+		} else if (!_isTurning && !_isWithdrawn) {
 			AABBf aabb = AABBInner + Vector2f(_speed.X * 32, 0);
 			TileCollisionParams params = { TileDestructType::None, false };
 			if (_levelHandler->TileMap()->IsTileEmpty(aabb, params)) {
@@ -108,11 +121,18 @@ namespace Jazz2::Actors::Enemies
 			if (player->GetSpecialMove() != Player::SpecialMoveType::None) {
 				shouldDestroy = true;
 			}
+		} else if (auto toasterShot = dynamic_cast<Weapons::ToasterShot*>(collider)) {
+			shouldDestroy = true;
+		} else if (auto thunderbolt = dynamic_cast<Weapons::Thunderbolt*>(collider)) {
+			shouldDestroy = true;
 		}
 
 		if (shouldDestroy) {
 			CreateDeathDebris(collider);
 			_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
+
+			// Add score also for turtle shell
+			_scoreValue += 100;
 
 			TryGenerateRandomDrop();
 		} else {

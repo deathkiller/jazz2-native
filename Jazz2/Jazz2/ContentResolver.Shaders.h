@@ -306,7 +306,7 @@ void main() {
 
 	float topColorBlendFac = isNearTop * isTexelBelow * 0.6;
 	main.rgb = mix(main.rgb, texture(uTexture, vec2(uvLocal.x,
-		(waterLevel - uvLocal.y + waterLevel) * 0.97 + waveHeight - ViewSizeInv.y
+		(1.0 - (waterLevel - uvLocal.y + waterLevel) * 0.97) - waveHeight + ViewSizeInv.y
 	)).rgb, vec3(topColorBlendFac));
 	main.rgb += vec3(0.2 * isVeryNearTop);
 	

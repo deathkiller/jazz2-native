@@ -51,8 +51,8 @@ namespace nCine
 			transparentQueue_.push_back(command);
 	}
 
-	namespace {
-
+	namespace
+	{
 		bool descendingOrder(const RenderCommand* a, const RenderCommand* b)
 		{
 			return (a->materialSortKey() != b->materialSortKey())

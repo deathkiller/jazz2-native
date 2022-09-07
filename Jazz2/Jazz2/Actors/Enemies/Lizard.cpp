@@ -117,9 +117,9 @@ namespace Jazz2::Actors::Enemies
 		UpdateHitbox(30, 30);
 	}
 
-	void Lizard::OnHitFloor()
+	void Lizard::OnHitFloor(float timeMult)
 	{
-		EnemyBase::OnHitFloor();
+		EnemyBase::OnHitFloor(timeMult);
 
 		if (_isFalling) {
 			_isFalling = false;

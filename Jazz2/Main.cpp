@@ -476,8 +476,25 @@ RecreateCache:
 		} else if (episode->Name == "hh18"_s && episode->DisplayName == "Holiday Hare 18"_s) {
 			return "Holiday Hare '18"_s;
 		} else {
-			// TODO: Strip formatting - @ is new line, # is random color
-			return episode->DisplayName;
+			// Strip formatting - @ is new line, # is random color
+			int nameLength = 0;
+			for (auto& c : episode->DisplayName) {
+				if (c != '#') {
+					nameLength++;
+				}
+			}
+
+			String name(NoInit, nameLength);
+			int i = 0;
+			for (auto& c : episode->DisplayName) {
+				if (c == '@') {
+					name[i++] = ' ';
+				} else if (c != '#') {
+					name[i++] = c;
+				}
+			}
+
+			return name;
 		}
 	};
 	

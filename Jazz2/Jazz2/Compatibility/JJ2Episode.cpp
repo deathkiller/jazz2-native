@@ -96,7 +96,7 @@ namespace Jazz2::Compatibility
 		so->WriteValue<uint8_t>((uint8_t)displayName.size());
 		so->Write(displayName.data(), displayName.size());
 
-		so->WriteValue<int32_t>(Position);
+		so->WriteValue<uint16_t>((uint16_t)Position);
 
 		MutableStringView firstLevel = FirstLevel;
 		if (JJ2Level::StringHasSuffixIgnoreCase(firstLevel, ".j2l"_s) ||

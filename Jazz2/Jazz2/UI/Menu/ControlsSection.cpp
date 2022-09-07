@@ -171,14 +171,14 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement("MenuLine"_s, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int charOffset = 0;
-		_root->DrawStringShadow("Controls"_s, charOffset, center.X * 0.3f, 110.0f,
+		_root->DrawStringShadow("Controls"_s, charOffset, center.X * 0.3f, 110.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Colorf(0.5f, 0.5f, 0.5f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.8f, 0.88f);
 
-		_root->DrawStringShadow("Key 1"_s, charOffset, center.X * (0.9f + 0 * 0.34f), 110.0f,
+		_root->DrawStringShadow("Key 1"_s, charOffset, center.X * (0.9f + 0 * 0.34f), 110.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
-		_root->DrawStringShadow("Key 2"_s, charOffset, center.X * (0.9f + 1 * 0.34f), 110.0f,
+		_root->DrawStringShadow("Key 2"_s, charOffset, center.X * (0.9f + 1 * 0.34f), 110.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
-		_root->DrawStringShadow("Gamepad"_s, charOffset, center.X * (0.9f + 2 * 0.34f), 110.0f,
+		_root->DrawStringShadow("Gamepad"_s, charOffset, center.X * (0.9f + 2 * 0.34f), 110.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 
 		int n = (int)PlayerActions::Count;
@@ -206,7 +206,7 @@ namespace Jazz2::UI::Menu
 
 			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int)PlayerActions::Count + i];
 
-			_root->DrawStringShadow(name, charOffset, center.X * 0.3f, topItem, Alignment::Left, Font::DefaultColor, 0.8f);
+			_root->DrawStringShadow(name, charOffset, center.X * 0.3f, topItem, IMenuContainer::FontLayer, Alignment::Left, Font::DefaultColor, 0.8f);
 
 			for (int j = 0; j < PossibleButtons; j++) {
 				StringView value;
@@ -264,7 +264,7 @@ namespace Jazz2::UI::Menu
 								}
 								stringBuffer[mapping.GamepadIndex + 1] = '\0';
 
-								_root->DrawStringShadow(stringBuffer, charOffset, center.X * (0.9f + j * 0.34f) + 4, topItem - 5,
+								_root->DrawStringShadow(stringBuffer, charOffset, center.X * (0.9f + j * 0.34f) + 4, topItem - 5, IMenuContainer::FontLayer,
 									Alignment::Left, hasCollision ? Colorf(0.5f, 0.32f, 0.32f, 1.0f) : Font::DefaultColor, 0.75f, 0.0f, 0.0f, 0.0f, 0.4f, 0.6f);
 							}
 						} else {
@@ -286,11 +286,11 @@ namespace Jazz2::UI::Menu
 							color = Font::RandomColor;
 						}
 
-						_root->DrawStringShadow(value, charOffset, center.X * (0.9f + j * 0.34f), topItem,
+						_root->DrawStringShadow(value, charOffset, center.X * (0.9f + j * 0.34f), topItem, IMenuContainer::MainLayer - 10,
 							Alignment::Center, color, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 					} else {
-						_root->DrawStringShadow(value, charOffset, center.X * (0.9f + j * 0.34f), topItem,
+						_root->DrawStringShadow(value, charOffset, center.X * (0.9f + j * 0.34f), topItem, IMenuContainer::MainLayer - 20,
 							Alignment::Center, hasCollision ? Colorf(0.5f, 0.32f, 0.32f, 1.0f) : Font::DefaultColor, 0.8f);
 					}
 				}

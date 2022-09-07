@@ -28,9 +28,9 @@ namespace Jazz2::Actors::Enemies
 		protected:
 			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 			void OnUpdateHitbox() override;
-			void OnHitFloor();
-			void OnHitWall();
-			void OnHitCeiling();
+			void OnHitFloor(float timeMult) override;
+			void OnHitWall(float timeMult) override;
+			void OnHitCeiling(float timeMult) override;
 		};
 
 		float _attackTime;

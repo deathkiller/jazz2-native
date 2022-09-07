@@ -621,7 +621,7 @@ namespace Jazz2::UI
 	StringView HUD::GetCurrentWeapon(Actors::Player* player, WeaponType weapon, Vector2f& offset)
 	{
 		if (weapon == WeaponType::Toaster && player->_inWater) {
-			offset.X += 2;
+			offset.X += 1;
 			offset.Y += 2;
 			return "WeaponToasterDisabled"_s;
 		} else if (weapon == WeaponType::Seeker) {

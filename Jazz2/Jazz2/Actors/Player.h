@@ -10,9 +10,15 @@ namespace Jazz2::UI
 
 namespace Jazz2::Actors
 {
+	namespace Weapons
+	{
+		class Thunderbolt;
+	}
+
 	class Player : public ActorBase
 	{
 		friend class UI::HUD;
+		friend class Weapons::Thunderbolt;
 
 	public:
 		enum class Modifier {
@@ -167,9 +173,9 @@ namespace Jazz2::Actors
 		void OnUpdateHitbox() override;
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
-		void OnHitFloor() override;
-		void OnHitCeiling() override;
-		void OnHitWall() override;
+		void OnHitFloor(float timeMult) override;
+		void OnHitCeiling(float timeMult) override;
+		void OnHitWall(float timeMult) override;
 
 	private:
 		void UpdateAnimation(float timeMult);

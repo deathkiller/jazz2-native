@@ -312,13 +312,13 @@ namespace Jazz2
 					if ((_weatherType & WeatherType::OutdoorsOnly) == WeatherType::OutdoorsOnly) {
 						collisionAction = TileMap::DebrisCollisionAction::Disappear;
 					} else {
-						collisionAction = (Random().NextFloat() > 0.7f
+						collisionAction = (Random().FastFloat() > 0.7f
 							? TileMap::DebrisCollisionAction::None
 							: TileMap::DebrisCollisionAction::Disappear);
 					}
 
 					Vector2i viewSize = _viewTexture->size();
-					Vector2f debrisPos = Vector2f(_cameraPos.X + Random().NextFloat(viewSize.X * -1.5f, viewSize.X * 1.5f),
+					Vector2f debrisPos = Vector2f(_cameraPos.X + Random().FastFloat(viewSize.X * -1.5f, viewSize.X * 1.5f),
 						_cameraPos.Y + Random().NextFloat(viewSize.Y * -1.5f, viewSize.Y * 1.5f));
 
 					WeatherType realWeatherType = (_weatherType & ~WeatherType::OutdoorsOnly);
@@ -327,9 +327,9 @@ namespace Jazz2
 						if (it != _commonResources->Graphics.end()) {
 							auto& resBase = it->second.Base;
 							Vector2i texSize = resBase->TextureDiffuse->size();
-							float scale = Random().NextFloat(0.4f, 1.1f);
-							float speedX = Random().NextFloat(2.2f, 2.7f) * scale;
-							float speedY = Random().NextFloat(7.6f, 8.6f) * scale;
+							float scale = Random().FastFloat(0.4f, 1.1f);
+							float speedX = Random().FastFloat(2.2f, 2.7f) * scale;
+							float speedY = Random().FastFloat(7.6f, 8.6f) * scale;
 
 							TileMap::DestructibleDebris debris = { };
 							debris.Pos = debrisPos;
@@ -365,10 +365,10 @@ namespace Jazz2
 						if (it != _commonResources->Graphics.end()) {
 							auto& resBase = it->second.Base;
 							Vector2i texSize = resBase->TextureDiffuse->size();
-							float scale = Random().NextFloat(0.4f, 1.1f);
-							float speedX = Random().NextFloat(-1.6f, -1.2f) * scale;
-							float speedY = Random().NextFloat(3.0f, 4.0f) * scale;
-							float accel = Random().NextFloat(-0.008f, 0.008f) * scale;
+							float scale = Random().FastFloat(0.4f, 1.1f);
+							float speedX = Random().FastFloat(-1.6f, -1.2f) * scale;
+							float speedY = Random().FastFloat(3.0f, 4.0f) * scale;
+							float accel = Random().FastFloat(-0.008f, 0.008f) * scale;
 
 							TileMap::DestructibleDebris debris = { };
 							debris.Pos = debrisPos;
@@ -1628,7 +1628,7 @@ namespace Jazz2
 
 			command.material().uniform("ViewSizeInv")->setFloatValue(1.0f / _size.X, 1.0f / _size.Y);
 			command.material().uniform("CameraPosition")->setFloatVector(_owner->_cameraPos.Data());
-			command.material().uniform("GameTime")->setFloatValue(_owner->_levelTime * 0.0014f);
+			command.material().uniform("GameTime")->setFloatValue(_owner->_levelTime * 0.0018f);
 		}
 
 		renderQueue.addCommand(&command);

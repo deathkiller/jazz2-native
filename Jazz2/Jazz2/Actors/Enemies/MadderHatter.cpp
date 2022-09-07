@@ -143,17 +143,17 @@ namespace Jazz2::Actors::Enemies
 		return false;
 	}
 
-	void MadderHatter::BulletSpit::OnHitFloor()
+	void MadderHatter::BulletSpit::OnHitFloor(float timeMult)
 	{
 		DecreaseHealth(INT32_MAX);
 	}
 
-	void MadderHatter::BulletSpit::OnHitWall()
+	void MadderHatter::BulletSpit::OnHitWall(float timeMult)
 	{
 		DecreaseHealth(INT32_MAX);
 	}
 
-	void MadderHatter::BulletSpit::OnHitCeiling()
+	void MadderHatter::BulletSpit::OnHitCeiling(float timeMult)
 	{
 		DecreaseHealth(INT32_MAX);
 	}

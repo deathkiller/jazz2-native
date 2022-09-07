@@ -20,9 +20,9 @@ namespace Jazz2::Actors::Weapons
 		void OnUpdate(float timeMult) override;
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 		bool OnPerish(ActorBase* collider) override;
-		void OnHitWall() override;
-		void OnHitFloor() override;
-		void OnHitCeiling() override;
+		void OnHitWall(float timeMult) override;
+		void OnHitFloor(float timeMult) override;
+		void OnHitCeiling(float timeMult) override;
 		void OnRicochet() override;
 
 	private:

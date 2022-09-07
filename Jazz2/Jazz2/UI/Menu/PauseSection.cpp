@@ -67,10 +67,10 @@ namespace Jazz2::UI::Menu
 
 				_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (_items[i].Name.size() + 3) * 0.5f * size, 4.0f * size, true);
 
-				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y,
+				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
 					Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 			} else {
-				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y,
+				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 					Alignment::Center, Colorf(0.42f, 0.42f, 0.42f, 0.5f), 0.9f);
 			}
 

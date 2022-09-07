@@ -2,6 +2,7 @@
 #include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../Weapons/ShotBase.h"
+#include "../Weapons/Thunderbolt.h"
 #include "../Weapons/TNT.h"
 
 namespace Jazz2::Actors::Solid
@@ -121,7 +122,13 @@ namespace Jazz2::Actors::Solid
 	{
 		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
 			if (shotBase->GetStrength() > 0) {
-				Fall(shotBase->GetSpeed().X < 0.0f ? FallDirection::Left : FallDirection::Right);
+				FallDirection fallDirection;
+				if (auto thunderbolt = dynamic_cast<Weapons::Thunderbolt*>(shotBase)) {
+					fallDirection = (_pos.X < shotBase->GetPos().X ? FallDirection::Left : FallDirection::Right);
+				} else {
+					fallDirection = (shotBase->GetSpeed().X < 0.0f ? FallDirection::Left : FallDirection::Right);
+				}
+				Fall(fallDirection);
 				shotBase->DecreaseHealth(1);
 				return true;
 			}

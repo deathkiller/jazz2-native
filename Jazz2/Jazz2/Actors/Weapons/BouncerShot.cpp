@@ -113,7 +113,7 @@ namespace Jazz2::Actors::Weapons
 		return ShotBase::OnPerish(collider);
 	}
 
-	void BouncerShot::OnHitWall()
+	void BouncerShot::OnHitWall(float timeMult)
 	{
 		if (_hitLimit > 3.0f) {
 			DecreaseHealth(INT32_MAX);
@@ -124,7 +124,7 @@ namespace Jazz2::Actors::Weapons
 		PlaySfx("Bounce"_s, 0.5f);
 	}
 
-	void BouncerShot::OnHitFloor()
+	void BouncerShot::OnHitFloor(float timeMult)
 	{
 		if (_hitLimit > 3.0f) {
 			DecreaseHealth(INT32_MAX);
@@ -135,7 +135,7 @@ namespace Jazz2::Actors::Weapons
 		PlaySfx("Bounce"_s, 0.5f);
 	}
 
-	void BouncerShot::OnHitCeiling()
+	void BouncerShot::OnHitCeiling(float timeMult)
 	{
 		if (_hitLimit > 3.0f) {
 			DecreaseHealth(INT32_MAX);
