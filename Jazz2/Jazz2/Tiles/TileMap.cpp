@@ -194,94 +194,90 @@ namespace Jazz2::Tiles
 			for (int x = hx1t; x <= hx2t; x++) {
 			RecheckTile:
 				LayerTile& tile = sprLayerLayout[y * layoutSize.X + x];
-				int tileId = ResolveTileID(tile);
-				if (tile.HasSuspendType != SuspendType::None || _tileSet->IsTileMaskEmpty(tileId) ||
-					((tile.Flags & LayerTileFlags::OneWay) == LayerTileFlags::OneWay && !params.Downwards)) {
-					continue;
-				}
 
-				int tx = x * TileSet::DefaultTileSize;
-				int ty = y * TileSet::DefaultTileSize;
-
-				int left = std::max(hx1 - tx, 0);
-				int right = std::min(hx2 - tx, TileSet::DefaultTileSize - 1);
-				int top = std::max(hy1 - ty, 0);
-				int bottom = std::min(hy2 - ty, TileSet::DefaultTileSize - 1);
-
-				if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
-					int left2 = left;
-					left = (TileSet::DefaultTileSize - 1 - right);
-					right = (TileSet::DefaultTileSize - 1 - left2);
-				}
-				if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
-					int top2 = top;
-					top = (TileSet::DefaultTileSize - 1 - bottom);
-					bottom = (TileSet::DefaultTileSize - 1 - top2);
-				}
-
-				top *= TileSet::DefaultTileSize;
-				bottom *= TileSet::DefaultTileSize;
-
-				uint8_t* mask = _tileSet->GetTileMask(tileId);
-				for (int ry = top; ry <= bottom; ry += TileSet::DefaultTileSize) {
-					for (int rx = left; rx <= right; rx++) {
-						if (mask[ry | rx]) {
-							if (tile.DestructType == TileDestructType::Weapon && (params.DestructType & TileDestructType::Weapon) == TileDestructType::Weapon) {
-								if (params.UsedWeaponType == WeaponType::Freezer && tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2)) {
-									// TODO: Frozen block
-									/*FrozenBlock frozen = new FrozenBlock();
-									frozen.OnActivated(new ActorActivationDetails {
-										LevelHandler = _levelHandler,
-										Pos = new Vector3(32 * tx + 16 - 1, 32 * ty + 16 - 1, ILevelHandler::MainPlaneZ)
-									});
-									levelHandler.AddActor(frozen);*/
-									//params.TilesDestroyed++;
+				if (tile.DestructType == TileDestructType::Weapon && (params.DestructType & TileDestructType::Weapon) == TileDestructType::Weapon) {
+					if (params.UsedWeaponType == WeaponType::Freezer && tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2)) {
+						// TODO: Frozen block
+						/*FrozenBlock frozen = new FrozenBlock();
+						frozen.OnActivated(new ActorActivationDetails {
+							LevelHandler = _levelHandler,
+							Pos = new Vector3(32 * tx + 16 - 1, 32 * ty + 16 - 1, ILevelHandler::MainPlaneZ)
+						});
+						levelHandler.AddActor(frozen);*/
+						//params.TilesDestroyed++;
+						return false;
+					} else {
+						if (tile.ExtraParam == 0 || tile.ExtraParam == ((uint8_t)params.UsedWeaponType + 1)) {
+							if (AdvanceDestructibleTileAnimation(tile, x, y, params.WeaponStrength, "SceneryDestruct"_s)) {
+								params.TilesDestroyed++;
+								if (params.WeaponStrength <= 0) {
 									return false;
 								} else {
-									if (tile.ExtraParam == 0 || tile.ExtraParam == ((uint8_t)params.UsedWeaponType + 1)) {
-										if (AdvanceDestructibleTileAnimation(tile, x, y, params.WeaponStrength, "SceneryDestruct"_s)) {
-											params.TilesDestroyed++;
-											if (params.WeaponStrength <= 0) {
-												return false;
-											} else {
-												goto RecheckTile;
-											}
-										} else {
-											return false;
-										}
-									}
-								}
-							} else if (tile.DestructType == TileDestructType::Special && (params.DestructType & TileDestructType::Special) == TileDestructType::Special) {
-								int amount = 1;
-								if (AdvanceDestructibleTileAnimation(tile, x, y, amount, "SceneryDestruct"_s)) {
-									params.TilesDestroyed++;
 									goto RecheckTile;
-								} else {
-									return false;
 								}
-							} else if (tile.DestructType == TileDestructType::Speed && (params.DestructType & TileDestructType::Speed) == TileDestructType::Speed) {
-								int amount = 1;
-								if (tile.ExtraParam + 3 <= params.Speed && AdvanceDestructibleTileAnimation(tile, x, y, amount, "SceneryDestruct"_s)) {
-									params.TilesDestroyed++;
-									goto RecheckTile;
-								} else {
-									return false;
-								}
-							} else if (tile.DestructType == TileDestructType::Collapse && (params.DestructType & TileDestructType::Collapse) == TileDestructType::Collapse) {
-								bool found = false;
-								for (auto& current : _activeCollapsingTiles) {
-									if (current == Vector2i(x, y)) {
-										found = true;
-										break;
-									}
-								}
+							}
+						}
+					}
+				} else if (tile.DestructType == TileDestructType::Special && (params.DestructType & TileDestructType::Special) == TileDestructType::Special) {
+					int amount = 1;
+					if (AdvanceDestructibleTileAnimation(tile, x, y, amount, "SceneryDestruct"_s)) {
+						params.TilesDestroyed++;
+						goto RecheckTile;
+					}
+				} else if (tile.DestructType == TileDestructType::Speed && (params.DestructType & TileDestructType::Speed) == TileDestructType::Speed) {
+					int amount = 1;
+					if (tile.ExtraParam + 3 <= params.Speed && AdvanceDestructibleTileAnimation(tile, x, y, amount, "SceneryDestruct"_s)) {
+						params.TilesDestroyed++;
+						goto RecheckTile;
+					}
+				} else if (tile.DestructType == TileDestructType::Collapse && (params.DestructType & TileDestructType::Collapse) == TileDestructType::Collapse) {
+					bool found = false;
+					for (auto& current : _activeCollapsingTiles) {
+						if (current == Vector2i(x, y)) {
+							found = true;
+							break;
+						}
+					}
 
-								if (!found) {
-									_activeCollapsingTiles.emplace_back(x, y);
-									params.TilesDestroyed++;
-								}
-								return false;
-							} else if ((params.DestructType & TileDestructType::IgnoreSolidTiles) != TileDestructType::IgnoreSolidTiles) {
+					if (!found) {
+						_activeCollapsingTiles.emplace_back(x, y);
+						params.TilesDestroyed++;
+					}
+				}
+
+				if ((params.DestructType & TileDestructType::IgnoreSolidTiles) != TileDestructType::IgnoreSolidTiles &&
+					tile.HasSuspendType == SuspendType::None && ((tile.Flags & LayerTileFlags::OneWay) != LayerTileFlags::OneWay || params.Downwards)) {
+					int tileId = ResolveTileID(tile);
+					if (_tileSet->IsTileMaskEmpty(tileId)) {
+						continue;
+					}
+
+					int tx = x * TileSet::DefaultTileSize;
+					int ty = y * TileSet::DefaultTileSize;
+
+					int left = std::max(hx1 - tx, 0);
+					int right = std::min(hx2 - tx, TileSet::DefaultTileSize - 1);
+					int top = std::max(hy1 - ty, 0);
+					int bottom = std::min(hy2 - ty, TileSet::DefaultTileSize - 1);
+
+					if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
+						int left2 = left;
+						left = (TileSet::DefaultTileSize - 1 - right);
+						right = (TileSet::DefaultTileSize - 1 - left2);
+					}
+					if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
+						int top2 = top;
+						top = (TileSet::DefaultTileSize - 1 - bottom);
+						bottom = (TileSet::DefaultTileSize - 1 - top2);
+					}
+
+					top *= TileSet::DefaultTileSize;
+					bottom *= TileSet::DefaultTileSize;
+
+					uint8_t* mask = _tileSet->GetTileMask(tileId);
+					for (int ry = top; ry <= bottom; ry += TileSet::DefaultTileSize) {
+						for (int rx = left; rx <= right; rx++) {
+							if (mask[ry | rx]) {
 								return false;
 							}
 						}
@@ -342,19 +338,19 @@ namespace Jazz2::Tiles
 
 	bool TileMap::AdvanceDestructibleTileAnimation(LayerTile& tile, int tx, int ty, int& amount, const StringView& soundName)
 	{
-		int max = (int)(_animatedTiles[tile.DestructAnimation].Tiles.size() - 2);
+		AnimatedTile& anim = _animatedTiles[tile.DestructAnimation];
+		int max = (int)(anim.Tiles.size() - 2);
 		if (amount > 0 && tile.DestructFrameIndex < max) {
 			// Tile not destroyed yet, advance counter by one
 			int current = std::min(amount, max - tile.DestructFrameIndex);
 
 			tile.DestructFrameIndex += current;
-			tile.TileID = _animatedTiles[tile.DestructAnimation].Tiles[tile.DestructFrameIndex].TileID;
+			tile.TileID = anim.Tiles[tile.DestructFrameIndex].TileID;
 			if (tile.DestructFrameIndex >= max) {
 				if (!soundName.empty()) {
 					_levelHandler->PlayCommonSfx(soundName, Vector3f(tx * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2),
 						ty * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2), 0.0f));
 				}
-				AnimatedTile& anim = _animatedTiles[tile.DestructAnimation];
 				CreateTileDebris(anim.Tiles[anim.Tiles.size() - 1].TileID, tx, ty);
 			}
 

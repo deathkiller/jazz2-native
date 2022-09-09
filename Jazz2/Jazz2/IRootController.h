@@ -14,7 +14,8 @@ namespace Jazz2
 		virtual void GoToMainMenu(bool afterIntro) = 0;
 		virtual void ChangeLevel(LevelInitialization&& levelInit) = 0;
 
-		virtual bool IsVerified() = 0;
+		virtual bool IsVerified() const = 0;
+		virtual bool IsPlayable() const = 0;
 		
 	private:
 		/// Deleted copy constructor

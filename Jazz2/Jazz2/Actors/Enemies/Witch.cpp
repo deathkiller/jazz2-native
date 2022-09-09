@@ -89,7 +89,7 @@ namespace Jazz2::Actors::Enemies
 
 					Explosion::Create(_levelHandler, Vector3i((int)bulletPos.X, (int)bulletPos.Y, _renderer.layer() + 2), Explosion::Type::TinyDark);
 				});
-			} else if (length > 10.0f && length < 500.0f) {
+			} else if (length > 20.0f && length < 500.0f) {
 				direction.Normalize();
 				_speed.X = (direction.X * DefaultSpeed + _speed.X) * 0.5f;
 				_speed.Y = (direction.Y * DefaultSpeed + _speed.Y) * 0.5f;

@@ -96,11 +96,6 @@ namespace Jazz2
 		co_return false;
 	}
 
-	void ActorBase::OnDestroyed()
-	{
-		// Can be overridden
-	}
-
 	bool ActorBase::OnTileDeactivate(int tx1, int ty1, int tx2, int ty2)
 	{
 		if ((_state & (ActorState::IsCreatedFromEventMap | ActorState::IsFromGenerator)) != ActorState::None) {
@@ -158,7 +153,7 @@ namespace Jazz2
 
 	bool ActorBase::OnPerish(ActorBase* collider)
 	{
-		if ((_state & ActorState::IsCreatedFromEventMap) == ActorState::IsCreatedFromEventMap) {
+		if (GetState(ActorState::IsCreatedFromEventMap)) {
 			auto events = _levelHandler->EventMap();
 			if (events != nullptr) {
 				events->Deactivate(_originTile.X, _originTile.Y);
@@ -166,11 +161,7 @@ namespace Jazz2
 			}
 		}
 
-		bool forceDisableCollisions = ((_state & ActorState::ForceDisableCollisions) == ActorState::ForceDisableCollisions);
 		_state |= ActorState::IsDestroyed | ActorState::SkipPerPixelCollisions;
-		if (forceDisableCollisions) {
-			_state |= ActorState::ForceDisableCollisions;
-		}
 		return true;
 	}
 
@@ -318,13 +309,7 @@ namespace Jazz2
 			} else {
 				// Airborne movement is handled here
 				// First, attempt to move directly based on the current speed values
-				if (MoveInstantly(Vector2f(effectiveSpeedX, effectiveSpeedY), MoveType::Relative, params)) {
-					if (std::abs(effectiveSpeedY) < std::numeric_limits<float>::epsilon()) {
-						SetState(ActorState::CanJump, true);
-					}
-				} else {
-					// There is an obstacle so we need to make compromises
-
+				if (!MoveInstantly(Vector2f(effectiveSpeedX, effectiveSpeedY), MoveType::Relative, params)) {
 					// First, attempt to move horizontally as much as possible
 					float maxDiff = std::abs(effectiveSpeedX);
 					int sign = (effectiveSpeedX > 0.0f ? 1 : -1);
@@ -368,13 +353,16 @@ namespace Jazz2
 						}
 					}
 
-					// If the actor didn't move all the way horizontally,
-					// it hit a wall (or was already touching it)
-					if (xDiff < std::abs(effectiveSpeedX)) {
-						if (xDiff > CollisionCheckStep || (xDiff > 0.0f && currentElasticity > 0.0f)) {
+					// If the actor didn't move all the way horizontally, it hit a wall (or was already touching it)
+					if (xDiff < std::abs(effectiveSpeedX) * 0.3f) {
+						if (xDiff > 0.0f && currentElasticity > 0.0f) {
 							_speed.X = -(currentElasticity * _speed.X);
 						}
-						OnHitWall(timeMult);
+
+						// Don't call OnHitWall() if OnHitFloor() or OnHitCeiling() was called this step
+						if (yDiff >= std::abs(effectiveSpeedY)) {
+							OnHitWall(timeMult);
+						}
 					}
 				}
 			}

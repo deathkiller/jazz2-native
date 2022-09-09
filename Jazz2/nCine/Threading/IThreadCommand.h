@@ -9,7 +9,7 @@ namespace nCine
 		virtual ~IThreadCommand() {}
 
 		/// Executes the command on a worker thread
-		virtual void execute() = 0;
+		virtual void Execute() = 0;
 	};
 
 }

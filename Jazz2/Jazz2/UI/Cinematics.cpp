@@ -27,7 +27,7 @@
 
 namespace Jazz2::UI
 {
-	Cinematics::Cinematics(IRootController* root, const String& path, const std::function<void(IRootController*, bool)>& callback)
+	Cinematics::Cinematics(IRootController* root, const String& path, const std::function<bool(IRootController*, bool)>& callback)
 		:
 		_root(root),
 		_callback(callback),
@@ -72,7 +72,7 @@ namespace Jazz2::UI
 
 		if (_framesLeft <= 0) {
 			if (_callback != nullptr) {
-				_callback(_root, true);
+				_callback(_root, _frameDelay != 0.0f);
 				_callback = nullptr;
 			}
 			return;
@@ -89,9 +89,9 @@ namespace Jazz2::UI
 		UpdatePressedActions();
 
 		if ((_pressedActions & ((1 << (int)PlayerActions::Fire) | (1 << (16 + (int)PlayerActions::Fire)))) == (1 << (int)PlayerActions::Fire)) {
-			if (_callback != nullptr) {
-				_callback(_root, false);
+			if (_callback != nullptr && _callback(_root, false)) {
 				_callback = nullptr;
+				_framesLeft = 0;
 			}
 		}
 	}
@@ -124,9 +124,9 @@ namespace Jazz2::UI
 	void Cinematics::OnTouchEvent(const nCine::TouchEvent& event)
 	{
 		if (event.type == TouchEventType::Down) {
-			if (_callback != nullptr) {
-				_callback(_root, false);
+			if (_callback != nullptr && _callback(_root, false)) {
 				_callback = nullptr;
+				_framesLeft = 0;
 			}
 		}
 	}
@@ -335,6 +335,10 @@ namespace Jazz2::UI
 
 	bool Cinematics::CinematicsCanvas::OnDraw(RenderQueue& renderQueue)
 	{
+		if (_owner->_framesLeft <= 0) {
+			return false;
+		}
+
 		Vector2i viewSize = _owner->_upscalePass.GetViewSize();
 
 		float ratioTarget = (float)viewSize.Y / viewSize.X;

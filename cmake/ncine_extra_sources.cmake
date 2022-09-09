@@ -174,31 +174,31 @@ endif()
 #		${NCINE_SOURCE_DIR}/nCine/Graphics/TextureSaverWebP.cpp)
 #endif()
 
-#if(Threads_FOUND)
-#	target_compile_definitions(ncine PRIVATE "WITH_THREADS")
-#	target_link_libraries(ncine PRIVATE Threads::Threads)
+if(Threads_FOUND)
+	target_compile_definitions(ncine PRIVATE "WITH_THREADS")
+	target_link_libraries(ncine PRIVATE Threads::Threads)
 
-#	list(APPEND PRIVATE_HEADERS
-#		${NCINE_SOURCE_DIR}/nCine/Threading/Thread.h
-#		${NCINE_SOURCE_DIR}/nCine/Threading/ThreadSync.h
-#	)
+	list(APPEND PRIVATE_HEADERS
+		${NCINE_SOURCE_DIR}/nCine/Threading/Thread.h
+		${NCINE_SOURCE_DIR}/nCine/Threading/ThreadSync.h
+	)
 
-#	if(WIN32)
-#		list(APPEND SOURCES
-#			${NCINE_SOURCE_DIR}/nCine/Threading/WindowsThread.cpp
-#			${NCINE_SOURCE_DIR}/nCine/Threading/WindowsThreadSync.cpp
-#		)
-#	else()
-#		list(APPEND SOURCES
-#			${NCINE_SOURCE_DIR}/nCine/Threading/PosixThread.cpp
-#			${NCINE_SOURCE_DIR}/nCine/Threading/PosixThreadSync.cpp
-#		)
-#	endif()
+	if(WIN32)
+		list(APPEND SOURCES
+			${NCINE_SOURCE_DIR}/nCine/Threading/WindowsThread.cpp
+			${NCINE_SOURCE_DIR}/nCine/Threading/WindowsThreadSync.cpp
+		)
+	else()
+		list(APPEND SOURCES
+			${NCINE_SOURCE_DIR}/nCine/Threading/PosixThread.cpp
+			${NCINE_SOURCE_DIR}/nCine/Threading/PosixThreadSync.cpp
+		)
+	endif()
 
-#	list(APPEND PRIVATE_HEADERS ${NCINE_SOURCE_DIR}/nCine/Threading/ThreadPool.h)
-#	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Threading/ThreadPool.cpp)
-#	list(APPEND PRIVATE_HEADERS ${NCINE_SOURCE_DIR}/nCine/Threading/ThreadCommands.h)
-#endif()
+	list(APPEND PRIVATE_HEADERS ${NCINE_SOURCE_DIR}/nCine/Threading/ThreadPool.h)
+	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Threading/ThreadPool.cpp)
+	list(APPEND PRIVATE_HEADERS ${NCINE_SOURCE_DIR}/nCine/Threading/ThreadCommands.h)
+endif()
 
 #if(LUA_FOUND)
 #	target_compile_definitions(ncine PRIVATE "WITH_LUA")

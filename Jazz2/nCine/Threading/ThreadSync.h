@@ -3,7 +3,7 @@
 #include <Common.h>
 
 #if !defined(DEATH_TARGET_WINDOWS)
-#include <pthread.h>
+#	include <pthread.h>
 #endif
 
 namespace nCine
@@ -15,13 +15,13 @@ namespace nCine
 		Mutex();
 		~Mutex();
 
-		void lock();
-		void unlock();
-		int tryLock();
+		void Lock();
+		void Unlock();
+		int TryLock();
 
-#ifdef WITH_TRACY
+#if defined(WITH_TRACY)
 		inline int try_lock() {
-			return tryLock();
+			return TryLock();
 		}
 #endif
 
@@ -49,9 +49,9 @@ namespace nCine
 		CondVariable();
 		~CondVariable();
 
-		void wait(Mutex& mutex);
-		void signal();
-		void broadcast();
+		void Wait(Mutex& mutex);
+		void Signal();
+		void Broadcast();
 
 	private:
 #if defined(DEATH_TARGET_WINDOWS)
@@ -59,7 +59,7 @@ namespace nCine
 		unsigned int waitersCount_;
 		CRITICAL_SECTION waitersCountLock_;
 
-		void waitEvents();
+		void WaitEvents();
 #else
 		pthread_cond_t cond_;
 #endif
@@ -79,19 +79,19 @@ namespace nCine
 		RWLock();
 		~RWLock();
 
-		inline void readLock() {
+		inline void EnterReadLock() {
 			pthread_rwlock_rdlock(&rwlock_);
 		}
-		inline void writeLock() {
+		inline void EnterWriteLock() {
 			pthread_rwlock_wrlock(&rwlock_);
 		}
-		inline int tryReadLock() {
+		inline int TryEnterReadLock() {
 			return pthread_rwlock_tryrdlock(&rwlock_);
 		}
-		inline int tryWriteLock() {
+		inline int TryEnterWriteLock() {
 			return pthread_rwlock_trywrlock(&rwlock_);
 		}
-		inline void unlock() {
+		inline void Exit() {
 			pthread_rwlock_unlock(&rwlock_);
 		}
 
@@ -115,7 +115,7 @@ namespace nCine
 		~Barrier();
 
 		/// The calling thread waits at the barrier
-		inline int wait() {
+		inline int Wait() {
 			return pthread_barrier_wait(&barrier_);
 		}
 

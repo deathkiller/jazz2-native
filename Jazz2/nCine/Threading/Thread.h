@@ -21,23 +21,25 @@ namespace nCine
 	class ThreadAffinityMask
 	{
 	public:
-		ThreadAffinityMask() {
-			zero();
+		ThreadAffinityMask()
+		{
+			Zero();
 		}
+
 		ThreadAffinityMask(int cpuNum)
 		{
-			zero();
-			set(cpuNum);
+			Zero();
+			Set(cpuNum);
 		}
 
 		/// Clears the CPU set
-		void zero();
+		void Zero();
 		/// Sets the specified CPU number to be included in the set
-		void set(int cpuNum);
+		void Set(int cpuNum);
 		/// Sets the specified CPU number to be excluded by the set
-		void clear(int cpuNum);
+		void Clear(int cpuNum);
 		/// Returns true if the specified CPU number belongs to the set
-		bool isSet(int cpuNum);
+		bool IsSet(int cpuNum);
 
 	private:
 #if defined(DEATH_TARGET_WINDOWS)
@@ -65,44 +67,44 @@ namespace nCine
 		Thread(ThreadFunctionPtr startFunction, void* arg);
 
 		/// Returns the number of processors in the machine
-		static unsigned int numProcessors();
+		static unsigned int GetProcessorCount();
 
 		/// Spawns a new thread if the object hasn't one already associated
-		void run(ThreadFunctionPtr startFunction, void* arg);
+		void Run(ThreadFunctionPtr startFunction, void* arg);
 		/// Joins the thread
-		void* join();
+		void* Join();
 
-#ifndef DEATH_TARGET_EMSCRIPTEN
-#ifndef __APPLE__
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !defined(DEATH_TARGET_APPLE)
 		/// Sets the thread name
-		void setName(const char* name);
+		void SetName(const char* name);
 #endif
 
 		/// Sets the calling thread name
-		static void setSelfName(const char* name);
+		static void SetSelfName(const char* name);
 #endif
 
 		/// Gets the thread priority
-		int priority() const;
+		int GetPriority() const;
 		/// Sets the thread priority
-		void setPriority(int priority);
+		void SetPriority(int priority);
 
 		/// Returns the calling thread id
-		static long int self();
+		static long int Self();
 		/// Terminates the calling thread
-		[[noreturn]] static void exit(void* retVal);
+		[[noreturn]] static void Exit(void* retVal);
 		/// Yields the calling thread in favour of another one with the same priority
-		static void yieldExecution();
+		static void YieldExecution();
 
-#ifndef DEATH_TARGET_ANDROID
+#if !defined(DEATH_TARGET_ANDROID)
 		/// Asks the thread for termination
-		void cancel();
+		void Abort();
 
-#ifndef DEATH_TARGET_EMSCRIPTEN
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		/// Gets the thread affinity mask
-		ThreadAffinityMask affinityMask() const;
+		ThreadAffinityMask GetAffinityMask() const;
 		/// Sets the thread affinity mask
-		void setAffinityMask(ThreadAffinityMask affinityMask);
+		void SetAffinityMask(ThreadAffinityMask affinityMask);
 #endif
 #endif
 
@@ -126,12 +128,12 @@ namespace nCine
 		/// The wrapper start function for thread creation
 #if defined(DEATH_TARGET_WINDOWS)
 #	if defined(DEATH_TARGET_MINGW)
-		static unsigned int(__attribute__((__stdcall__)) wrapperFunction)(void* arg);
+		static unsigned int(__attribute__((__stdcall__)) WrapperFunction)(void* arg);
 #	else
-		static unsigned int __stdcall wrapperFunction(void* arg);
+		static unsigned int __stdcall WrapperFunction(void* arg);
 #	endif
 #else
-		static void* wrapperFunction(void* arg);
+		static void* WrapperFunction(void* arg);
 #endif
 	};
 

@@ -1,7 +1,10 @@
+#if defined(WITH_THREADS)
+
 #include "ThreadSync.h"
 
-namespace nCine {
-
+#if defined(DEATH_TARGET_WINDOWS)
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// Mutex CLASS
 	///////////////////////////////////////////////////////////
@@ -24,17 +27,17 @@ namespace nCine {
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void Mutex::lock()
+	void Mutex::Lock()
 	{
 		::EnterCriticalSection(&handle_);
 	}
 
-	void Mutex::unlock()
+	void Mutex::Unlock()
 	{
 		::LeaveCriticalSection(&handle_);
 	}
 
-	int Mutex::tryLock()
+	int Mutex::TryLock()
 	{
 		return ::TryEnterCriticalSection(&handle_);
 	}
@@ -66,42 +69,44 @@ namespace nCine {
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void CondVariable::wait(Mutex& mutex)
+	void CondVariable::Wait(Mutex& mutex)
 	{
 		::EnterCriticalSection(&waitersCountLock_);
 		waitersCount_++;
 		::LeaveCriticalSection(&waitersCountLock_);
 
-		mutex.unlock();
-		waitEvents();
-		mutex.lock();
+		mutex.Unlock();
+		WaitEvents();
+		mutex.Lock();
 	}
 
-	void CondVariable::signal()
+	void CondVariable::Signal()
 	{
 		::EnterCriticalSection(&waitersCountLock_);
 		const bool haveWaiters = (waitersCount_ > 0);
 		::LeaveCriticalSection(&waitersCountLock_);
 
-		if (haveWaiters)
+		if (haveWaiters) {
 			::SetEvent(events_[0]); // Signal
+		}
 	}
 
-	void CondVariable::broadcast()
+	void CondVariable::Broadcast()
 	{
 		::EnterCriticalSection(&waitersCountLock_);
 		const bool haveWaiters = (waitersCount_ > 0);
 		::LeaveCriticalSection(&waitersCountLock_);
 
-		if (haveWaiters)
+		if (haveWaiters) {
 			::SetEvent(events_[1]); // Broadcast
+		}
 	}
 
 	///////////////////////////////////////////////////////////
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void CondVariable::waitEvents()
+	void CondVariable::WaitEvents()
 	{
 		const int result = ::WaitForMultipleObjects(2, events_, FALSE, INFINITE);
 
@@ -110,8 +115,12 @@ namespace nCine {
 		const bool isLastWaiter = (result == (WAIT_OBJECT_0 + 1)) && (waitersCount_ == 0);
 		::LeaveCriticalSection(&waitersCountLock_);
 
-		if (isLastWaiter)
+		if (isLastWaiter) {
 			::ResetEvent(events_[1]); // Broadcast
+		}
 	}
 
 }
+#endif
+
+#endif

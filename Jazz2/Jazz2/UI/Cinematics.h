@@ -20,7 +20,7 @@ namespace Jazz2::UI
 		static constexpr int DefaultWidth = 720;
 		static constexpr int DefaultHeight = 405;
 
-		Cinematics(IRootController* root, const String& path, const std::function<void(IRootController*, bool)>& callback);
+		Cinematics(IRootController* root, const String& path, const std::function<bool(IRootController*, bool)>& callback);
 		~Cinematics() override;
 
 		void OnBeginFrame() override;
@@ -51,7 +51,7 @@ namespace Jazz2::UI
 		UI::UpscaleRenderPass _upscalePass;
 		std::unique_ptr<CinematicsCanvas> _canvas;
 		std::unique_ptr<AudioStreamPlayer> _music;
-		std::function<void(IRootController*, bool)> _callback;
+		std::function<bool(IRootController*, bool)> _callback;
 		uint32_t _width, _height;
 		float _frameDelay, _frameProgress;
 		int _framesLeft;

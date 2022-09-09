@@ -154,8 +154,8 @@ namespace Jazz2::UI::Menu
 		}
 
 		uint64_t signature = s->ReadValue<uint64_t>();
-		uint8_t version = s->ReadValue<uint8_t>();
-		if (signature != 0x2095A59FF0BFBBEF || version != 2) {
+		uint8_t fileType = s->ReadValue<uint8_t>();
+		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::EpisodeFile) {
 			return;
 		}
 

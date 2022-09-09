@@ -1446,6 +1446,31 @@ namespace nCine
 #endif
 	}
 
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+	void FileSystem::MountAsPersistent(const StringView& path)
+	{
+		EM_ASM({
+			var p = Module.UTF8ToString($0, $1);
+
+			FS.mkdir(p);
+			FS.mount(IDBFS, {}, p);
+
+			FS.syncfs(true, function(err) {
+				// TODO: Handle callback
+			});
+		}, path.data(), path.size());
+	}
+
+	void FileSystem::SyncToPersistent()
+	{
+		EM_ASM({
+			FS.syncfs(false, function(err) {
+				// TODO: Handle callback
+			});
+		});
+	}
+#endif
+
 	std::unique_ptr<IFileStream> FileSystem::Open(const String& path, FileAccessMode mode, bool shouldExitOnFailToOpen)
 	{
 		ASSERT(path);
@@ -1532,13 +1557,19 @@ namespace nCine
 #elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		wchar_t* path = nullptr;
 		bool success = (::SHGetKnownFolderPath(FOLDERID_SavedGames, KF_FLAG_DEFAULT, nullptr, &path) == S_OK);
-		::CoTaskMemFree(path);
-		if (!success || path[0] == L'\0') {
+		if (!success || path == nullptr || path[0] == L'\0') {
+			if (path != nullptr) {
+				::CoTaskMemFree(path);
+				path = nullptr;
+			}
+
 			success = (::SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DEFAULT, nullptr, &path) == S_OK);
-			::CoTaskMemFree(path);
 		}
-		if (success && path[0] != L'\0') {
+		if (success && path != nullptr && path[0] != L'\0') {
 			_savePath = JoinPath(Utf8::FromUtf16(path), applicationName);
+		}
+		if (path != nullptr) {
+			::CoTaskMemFree(path);
 		}
 #endif
 	}

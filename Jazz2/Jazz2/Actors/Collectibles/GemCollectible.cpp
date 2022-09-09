@@ -40,7 +40,7 @@ namespace Jazz2::Actors::Collectibles
 
 		SetFacingDirection();
 
-		_renderer.setAlphaF(0.9f);
+		_renderer.setAlphaF(0.7f);
 
 		co_return true;
 	}

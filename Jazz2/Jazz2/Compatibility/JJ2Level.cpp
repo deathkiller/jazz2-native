@@ -1,6 +1,6 @@
 ﻿#include "JJ2Level.h"
 #include "EventConverter.h"
-#include "../EventType.h"
+#include "../ContentResolver.h"
 
 #include "../../nCine/Base/Algorithms.h"
 #include "../../nCine/IO/FileSystem.h"
@@ -349,7 +349,7 @@ namespace Jazz2::Compatibility
 		ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
 
 		so->WriteValue<uint64_t>(0x2095A59FF0BFBBEF);
-		so->WriteValue<uint8_t>(1); // Version
+		so->WriteValue<uint8_t>(ContentResolver::LevelFile);
 
 		// Flags
 		uint16_t flags = 0;

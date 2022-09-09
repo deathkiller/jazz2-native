@@ -55,11 +55,13 @@ namespace Jazz2::Actors::Enemies
 				}
 
 				Vector2f direction = (_pos - targetPos);
-				direction.Normalize();
-				_speed.X = direction.X * DefaultSpeed;
-				_speed.Y = direction.Y * DefaultSpeed;
+				if (direction.Length() > 20.0f) {
+					direction.Normalize();
+					_speed.X = direction.X * DefaultSpeed;
+					_speed.Y = direction.Y * DefaultSpeed;
 
-				SetFacingLeft(_speed.X < 0.0f);
+					SetFacingLeft(_speed.X < 0.0f);
+				}
 
 				if (_noiseCooldown > 0.0f) {
 					_noiseCooldown -= timeMult;

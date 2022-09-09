@@ -223,7 +223,6 @@ namespace Jazz2
 		void SetFacingLeft(bool value);
 
 		virtual Task<bool> OnActivatedAsync(const ActorActivationDetails& details);
-		virtual void OnDestroyed();
 		virtual bool OnTileDeactivate(int tx1, int ty1, int tx2, int ty2);
 
 		virtual void OnHealthChanged(ActorBase* collider);

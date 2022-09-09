@@ -187,7 +187,6 @@ namespace Jazz2::UI
 			useRandomColor = (color.R() == RandomColor.R() && color.G() == RandomColor.G() && color.B() == RandomColor.B());
 		}
 
-		uint16_t zz = z;
 		idx = 0;
 		line = 0;
 		do {
@@ -263,7 +262,7 @@ namespace Jazz2::UI
 
 					// TODO: It looks better with the "0.5f" offset
 					command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y + 0.5f, 0.0f));
-					command->setLayer(zz++);
+					command->setLayer(z + (charOffset & 1));
 					command->material().setTexture(*_texture.get());
 
 					canvas->_currentRenderQueue->addCommand(command);

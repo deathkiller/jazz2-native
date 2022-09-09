@@ -44,5 +44,7 @@ namespace Jazz2
 		PreferencesCache(const PreferencesCache&) = delete;
 		/// Deleted assignment operator
 		PreferencesCache& operator=(const PreferencesCache&) = delete;
+
+		static String _configPath;
 	};
 }

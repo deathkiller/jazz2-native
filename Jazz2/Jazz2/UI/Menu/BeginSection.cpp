@@ -33,7 +33,7 @@ namespace Jazz2::UI::Menu
 		MenuSection::OnShow(root);
 
 		if (auto mainMenu = dynamic_cast<MainMenu*>(_root)) {
-			_isVerified = mainMenu->_root->IsVerified();
+			_isVerified = mainMenu->_root->IsPlayable();
 		}
 	}
 
@@ -80,7 +80,7 @@ namespace Jazz2::UI::Menu
 		int charOffset = 0;
 
 		if (!_isVerified) {
-			_root->DrawStringShadow("Ensure that Jazz Jackrabbit 2 files are present in \"Source\" directory!", charOffset, center.X, center.Y * 0.75f, IMenuContainer::FontLayer,
+			_root->DrawStringShadow("Make sure Jazz Jackrabbit 2 files are present in \"Source\" directory!", charOffset, center.X, center.Y * 0.75f, IMenuContainer::FontLayer,
 				Alignment::Center, Colorf(0.45f, 0.27f, 0.22f, 0.5f), 1.0f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f);
 		}
 

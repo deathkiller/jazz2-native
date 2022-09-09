@@ -63,7 +63,7 @@ namespace nCine
 
 	private:
 		/// Maximum number of OpenAL sources
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS)
 		static const unsigned int MaxSources = 32;
 #else
 		static const unsigned int MaxSources = 64;

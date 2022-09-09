@@ -1,8 +1,7 @@
 ﻿#include "PreferencesCache.h"
 
-#include <Containers/StringView.h>
+#include "../nCine/IO/FileSystem.h"
 
-using namespace Death::Containers;
 using namespace Death::Containers::Literals;
 
 namespace Jazz2
@@ -21,9 +20,35 @@ namespace Jazz2
 	float PreferencesCache::SfxVolume = 0.8f;
 	float PreferencesCache::MusicVolume = 0.4f;
 
+	String PreferencesCache::_configPath;
+
 	void PreferencesCache::Initialize(const AppConfiguration& config)
 	{
-		// TODO: Load preferences from file
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		fs::MountAsPersistent("/Persistent"_s);
+		_configPath = "/Persistent/Jazz2.config"_s;
+#else
+		_configPath = "Jazz2.config"_s;
+		bool overrideConfigPath = false;
+
+#	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
+		for (int i = 0; i < config.argc() - 1; i++) {
+			auto arg = config.argv(i);
+			if (arg == "/config"_s) {
+				_configPath = config.argv(i + 1);
+				overrideConfigPath = true;
+				i++;
+			}
+		}
+#	endif
+
+		// If config path is not overriden and portable config doesn't exist, use common path for current user
+		if (!overrideConfigPath && !fs::IsReadableFile(_configPath)) {
+			_configPath = fs::JoinPath(fs::GetSavePath("Jazz² Resurrection"_s), "Jazz2.config"_s);
+		}
+#endif
+
+		// TODO: Read config from file
 
 		// Override some settings by command-line arguments
 		for (int i = 0; i < config.argc(); i++) {
@@ -53,5 +78,9 @@ namespace Jazz2
 	void PreferencesCache::Save()
 	{
 		// TODO: Save to file
+
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		fs::SyncToPersistent();
+#endif
 	}
 }

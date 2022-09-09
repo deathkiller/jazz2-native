@@ -1,8 +1,9 @@
+#include "EmscriptenLocalFile.h"
+
 // Based on https://github.com/msorvig/qt-webassembly-examples/emscripten_localfiles
-#ifdef __EMSCRIPTEN__
+#if defined(DEATH_TARGET_EMSCRIPTEN)
 
 #include <emscripten/bind.h>
-#include "EmscriptenLocalFile.h"
 #include "../../Common.h"
 
 namespace nCine
@@ -12,7 +13,7 @@ namespace nCine
 		using FileDataCallbackType = void(void* context, char* data, size_t length, const char* name);
 		using LoadingCallbackType = void(void* context);
 
-		void readFileContent(emscripten::val event)
+		void ReadFileContent(emscripten::val event)
 		{
 			// Copy file content to WebAssembly memory and call the user file data handler
 			emscripten::val fileReader = event["target"];
@@ -34,7 +35,7 @@ namespace nCine
 			fileDataCallback(context, buffer, size, fileReader["data-name"].as<std::string>().c_str());
 		}
 
-		void readFiles(emscripten::val event)
+		void ReadFiles(emscripten::val event)
 		{
 			// Read all selected files using FileReader
 			emscripten::val target = event["target"];
@@ -59,7 +60,7 @@ namespace nCine
 		}
 
 		/// Loads a file by opening a native file dialog
-		void loadFile(const char* accept, FileDataCallbackType* filesReadyCallback, LoadingCallbackType* loadingCallback, void* context)
+		void LoadFile(const char* accept, FileDataCallbackType* filesReadyCallback, LoadingCallbackType* loadingCallback, void* context)
 		{
 			// Create file input element which will display a native file dialog.
 			emscripten::val document = emscripten::val::global("document");
@@ -85,7 +86,7 @@ namespace nCine
 		}
 
 		/// Saves file by triggering a browser file download.
-		void saveFile(const char* data, size_t length, const char* filenameHint)
+		void SaveFile(const char* data, size_t length, const char* filenameHint)
 		{
 			// Create file data Blob
 			emscripten::val Blob = emscripten::val::global("Blob");
@@ -114,8 +115,8 @@ namespace nCine
 
 		EMSCRIPTEN_BINDINGS(localfileaccess)
 		{
-			function("jsReadFiles", &readFiles);
-			function("jsReadFileContent", &readFileContent);
+			function("jsReadFiles", &ReadFiles);
+			function("jsReadFileContent", &ReadFileContent);
 		};
 
 	}
@@ -124,24 +125,24 @@ namespace nCine
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void EmscriptenLocalFile::load()
+	void EmscriptenLocalFile::Load()
 	{
-		loadFile("*", fileDataCallback, loadingCallback, this);
+		LoadFile("*", FileDataCallback, LoadingCallback, this);
 	}
 
-	void EmscriptenLocalFile::load(const char* fileFilter)
+	void EmscriptenLocalFile::Load(const char* fileFilter)
 	{
 		FATAL_ASSERT(fileFilter);
-		loadFile(fileFilter, fileDataCallback, loadingCallback, this);
+		LoadFile(fileFilter, FileDataCallback, LoadingCallback, this);
 	}
 
-	void EmscriptenLocalFile::save(const char* filename)
+	void EmscriptenLocalFile::Save(const char* filename)
 	{
 		FATAL_ASSERT(filename);
 		ASSERT(fileSize_ > 0);
 
 		LOGI_X("Saving file: \"%s\" (%u bytes)", filename, fileSize_);
-		saveFile(fileBuffer_.get(), fileSize_, filename);
+		SaveFile(fileBuffer_.get(), fileSize_, filename);
 	}
 
 	unsigned long int EmscriptenLocalFile::Read(void* buffer, unsigned long int bytes) const
@@ -165,7 +166,7 @@ namespace nCine
 		return bytes;
 	}
 
-	void EmscriptenLocalFile::setLoadedCallback(LoadedCallbackType* loadedCallback, void* userData)
+	void EmscriptenLocalFile::SetLoadedCallback(LoadedCallbackType* loadedCallback, void* userData)
 	{
 		loadedCallback_ = loadedCallback;
 		userData_ = userData;
@@ -175,7 +176,7 @@ namespace nCine
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void EmscriptenLocalFile::fileDataCallback(void* context, char* contentPointer, size_t contentSize, const char* filename)
+	void EmscriptenLocalFile::FileDataCallback(void* context, char* contentPointer, size_t contentSize, const char* filename)
 	{
 		FATAL_ASSERT(context);
 		FATAL_ASSERT(contentPointer);
@@ -192,11 +193,12 @@ namespace nCine
 		localFile->filename_ = filename;
 		localFile->loading_ = false;
 
-		if (localFile->loadedCallback_)
+		if (localFile->loadedCallback_) {
 			localFile->loadedCallback_(*localFile, localFile->userData_);
+		}
 	}
 
-	void EmscriptenLocalFile::loadingCallback(void* context)
+	void EmscriptenLocalFile::LoadingCallback(void* context)
 	{
 		FATAL_ASSERT(context);
 

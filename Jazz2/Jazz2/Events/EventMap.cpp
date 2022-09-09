@@ -197,13 +197,14 @@ namespace Jazz2::Events
 	{
 		// Linked actor was deactivated, but not destroyed
 		// Reset its generator, so it can be respawned immediately
-		uint16_t generatorIdx = *(uint16_t*)_eventLayout[tx + ty * _layoutSize.X].EventParams;
+		uint32_t generatorIdx = *(uint32_t*)_eventLayout[tx + ty * _layoutSize.X].EventParams;
 		_generators[generatorIdx].TimeLeft = 0.0f;
+		_generators[generatorIdx].SpawnedActor = nullptr;
 	}
 
 	EventType EventMap::GetEventByPosition(float x, float y, uint8_t** eventParams)
 	{
-		return GetEventByPosition((int)x / 32, (int)y / 32, eventParams);
+		return GetEventByPosition((int)x / Tiles::TileSet::DefaultTileSize, (int)y / Tiles::TileSet::DefaultTileSize, eventParams);
 	}
 
 	EventType EventMap::GetEventByPosition(int x, int y, uint8_t** eventParams)
@@ -227,8 +228,8 @@ namespace Jazz2::Events
 	bool EventMap::IsHurting(float x, float y)
 	{
 		// TODO: Implement all JJ2+ parameters (directional hurt events)
-		int tx = (int)x / 32;
-		int ty = (int)y / 32;
+		int tx = (int)x / Tiles::TileSet::DefaultTileSize;
+		int ty = (int)y / Tiles::TileSet::DefaultTileSize;
 
 		uint8_t* eventParams;
 		if (GetEventByPosition(tx, ty, &eventParams) != EventType::ModifierHurt) {
@@ -238,17 +239,10 @@ namespace Jazz2::Events
 		return !_levelHandler->TileMap()->IsTileEmpty(tx, ty);
 	}
 
-	int EventMap::IsPole(float x, float y)
-	{
-		uint8_t* eventParams;
-		EventType e = GetEventByPosition((int)x / 32, (int)y / 32, &eventParams);
-		return (e == EventType::ModifierHPole ? 2 : (e == EventType::ModifierVPole ? 1 : 0));
-	}
-
 	int EventMap::GetWarpByPosition(float x, float y)
 	{
-		int tx = (int)x / 32;
-		int ty = (int)y / 32;
+		int tx = (int)x / Tiles::TileSet::DefaultTileSize;
+		int ty = (int)y / Tiles::TileSet::DefaultTileSize;
 		uint8_t* eventParams;
 		if (GetEventByPosition(tx, ty, &eventParams) == EventType::WarpOrigin) {
 			return eventParams[0];
@@ -333,7 +327,7 @@ namespace Jazz2::Events
 				// Flag 0x02: Generator
 				if ((eventFlags & 0x02) != 0) {
 					if ((EventType)eventType != EventType::Empty && (eventFlags & (0x01 << difficultyBit)) != 0 && (eventFlags & 0x80) == 0) {
-						uint16_t generatorIdx = (uint16_t)_generators.size();
+						uint32_t generatorIdx = (uint32_t)_generators.size();
 						float timeLeft = ((generatorFlags & 0x01) != 0 ? generatorDelay : 0.0f);
 
 						GeneratorInfo& generator = _generators.emplace_back();
@@ -343,7 +337,7 @@ namespace Jazz2::Events
 						generator.Delay = generatorDelay;
 						generator.TimeLeft = timeLeft;
 
-						*(uint16_t*)eventParams = generatorIdx;
+						*(uint32_t*)eventParams = generatorIdx;
 						StoreTileEvent(x, y, EventType::Generator, actorFlags, eventParams);
 					}
 					continue;

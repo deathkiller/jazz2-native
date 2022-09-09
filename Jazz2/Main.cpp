@@ -14,6 +14,7 @@
 #include "nCine/IAppEventHandler.h"
 #include "nCine/Input/IInputEventHandler.h"
 #include "nCine/IO/FileSystem.h"
+#include "nCine/Threading/Thread.h"
 #include "nCine/tracy.h"
 
 #include "Jazz2/IRootController.h"
@@ -36,6 +37,7 @@
 
 using namespace nCine;
 using namespace Jazz2::Compatibility;
+using namespace Jazz2::UI;
 
 #if defined(ENABLE_LOG)
 
@@ -202,17 +204,32 @@ public:
 	void GoToMainMenu(bool afterIntro) override;
 	void ChangeLevel(Jazz2::LevelInitialization&& levelInit) override;
 
-	bool IsVerified() override {
-		return _isVerified;
+	bool IsVerified() const override {
+		return ((_flags & Flags::IsVerified) == Flags::IsVerified);
+	}
+
+	bool IsPlayable() const override {
+		return ((_flags & Flags::IsPlayable) == Flags::IsPlayable);
 	}
 
 private:
-	bool _isVerified;
+	enum class Flags {
+		None = 0,
+
+		IsVerified = 0x01,
+		IsPlayable = 0x02
+	};
+
+	DEFINE_PRIVATE_ENUM_OPERATORS(Flags);
+
+	Flags _flags;
 	std::unique_ptr<Jazz2::IStateHandler> _currentHandler;
 	PendingState _pendingState;
 	std::unique_ptr<Jazz2::LevelInitialization> _pendingLevelChange;
 
-	bool RefreshCache();
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+	void RefreshCache();
+#endif
 };
 
 void GameEventHandler::onPreInit(AppConfiguration& config)
@@ -227,9 +244,15 @@ void GameEventHandler::onPreInit(AppConfiguration& config)
 
 void GameEventHandler::onInit()
 {
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)
+	_flags = Flags::None;
+	_pendingState = PendingState::None;
+
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
 	theApplication().setAutoSuspension(false);
-	//theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
+
+	if (Jazz2::PreferencesCache::EnableFullscreen) {
+		theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
+	}
 
 	String mappingsPath = fs::JoinPath("Content"_s, "gamecontrollerdb.txt"_s);
 	if (fs::IsReadableFile(mappingsPath)) {
@@ -237,14 +260,37 @@ void GameEventHandler::onInit()
 	}
 #endif
 
-	Jazz2::UI::ControlScheme::Initialize();
+	ControlScheme::Initialize();
 
-	_isVerified = RefreshCache();
+#if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
+	// If threading support is enabled, refresh cache during intro cinematics and don't allow skip until it's completed
+	Thread thread([](void* arg) {
+		reinterpret_cast<GameEventHandler*>(arg)->RefreshCache();
+	}, this);
 
-	_pendingState = PendingState::None;
-	_currentHandler = std::make_unique<Jazz2::UI::Cinematics>(this, "intro"_s, [](IRootController* root, bool endOfStream) {
+	_currentHandler = std::make_unique<Cinematics>(this, "intro"_s, [thread](IRootController* root, bool endOfStream) mutable {
+		if (!root->IsVerified()) {
+			return false;
+		}
+
+		thread.Join();
 		root->GoToMainMenu(endOfStream);
+		return true;
 	});
+#else
+	// Building without threading support is not recommended, so it can look ugly
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+	// All required files are already included in Emscripten version, so nothing is verified
+	_flags = Flags::IsVerified | Flags::IsPlayable;
+#	else
+	RefreshCache();
+#	endif
+
+	_currentHandler = std::make_unique<Cinematics>(this, "intro"_s, [](IRootController* root, bool endOfStream) {
+		root->GoToMainMenu(endOfStream);
+		return true;
+	});
+#endif
 
 	Viewport::chain().clear();
 	Vector2i res = theApplication().resolutionInt();
@@ -256,24 +302,25 @@ void GameEventHandler::onFrameStart()
 	if (_pendingState != PendingState::None) {
 		switch (_pendingState) {
 			case PendingState::MainMenu:
-				_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this, false);
+				_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
 				break;
 			case PendingState::MainMenuAfterIntro:
-				_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this, true);
+				_currentHandler = std::make_unique<Menu::MainMenu>(this, true);
 				break;
 			case PendingState::LevelChange:
 				if (_pendingLevelChange->LevelName.empty()) {
 					// Next level not specified, so show main menu
-					_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this, false);
+					_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
 				} else if (_pendingLevelChange->LevelName == ":end"_s) {
 					// End of episode
 					// TODO: Save state and go to next episode
-					_currentHandler = std::make_unique<Jazz2::UI::Menu::MainMenu>(this, false);
+					_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
 				} else if (_pendingLevelChange->LevelName == ":credits"_s) {
 					// End of game
 					// TODO: Save state and play ending cinematics
-					_currentHandler = std::make_unique<Jazz2::UI::Cinematics>(this, "ending"_s, [](IRootController* root, bool endOfStream) {
+					_currentHandler = std::make_unique<Cinematics>(this, "ending"_s, [](IRootController* root, bool endOfStream) {
 						root->GoToMainMenu(false);
+						return true;
 					});
 				} else {
 					_currentHandler = std::make_unique<Jazz2::LevelHandler>(this, *_pendingLevelChange.get());
@@ -336,22 +383,20 @@ void GameEventHandler::ChangeLevel(Jazz2::LevelInitialization&& levelInit)
 	_pendingState = PendingState::LevelChange;
 }
 
-bool GameEventHandler::RefreshCache()
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+void GameEventHandler::RefreshCache()
 {
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-	// Emscripten version doesn't support external source (yet)
-	return true;
-#else
 	// Check cache state
 	{
-		auto s = fs::Open(fs::JoinPath("Cache"_s, "State"_s), FileAccessMode::Read);
+		auto s = fs::Open(fs::JoinPath("Cache"_s, "cache.j2i"_s), FileAccessMode::Read);
 		if (s->GetSize() < 7) {
 			goto RecreateCache;
 		}
 
-		uint32_t signature = s->ReadValue<uint32_t>();
+		uint64_t signature = s->ReadValue<uint64_t>();
+		uint8_t fileType = s->ReadValue<uint8_t>();
 		uint16_t version = s->ReadValue<uint16_t>();
-		if (signature != 0x2063324a || version != JJ2Anims::CacheVersion) {
+		if (signature != 0x2095A59FF0BFBBEF || fileType != Jazz2::ContentResolver::CacheIndexFile || version != JJ2Anims::CacheVersion) {
 			goto RecreateCache;
 		}
 
@@ -359,7 +404,8 @@ bool GameEventHandler::RefreshCache()
 		if ((flags & 0x01) == 0x01) {
 			// Don't overwrite cache
 			LOGI("Cache is protected");
-			return true;
+			_flags = Flags::IsVerified | Flags::IsPlayable;
+			return;
 		}
 
 		String animsPath = fs::FindPathCaseInsensitive(fs::JoinPath("Source"_s, "Anims.j2a"_s));
@@ -377,7 +423,8 @@ bool GameEventHandler::RefreshCache()
 
 		// Cache is up-to-date
 		LOGI("Cache is already up-to-date");
-		return true;
+		_flags = Flags::IsVerified | Flags::IsPlayable;
+		return;
 	}
 
 RecreateCache:
@@ -385,7 +432,8 @@ RecreateCache:
 	String animsPath = fs::FindPathCaseInsensitive(fs::JoinPath("Source"_s, "Anims.j2a"_s));
 	if (!fs::IsReadableFile(animsPath)) {
 		LOGE("Cannot open \"./Source/Anims.j2a\" file! Ensure that Jazz Jackrabbit 2 files are present in \"Source\" directory.");
-		return false;
+		_flags = Flags::IsVerified;
+		return;
 	}
 
 	JJ2Anims::Convert(animsPath, fs::JoinPath("Cache"_s, "Animations"_s), false);
@@ -565,19 +613,21 @@ RecreateCache:
 		}
 	}
 
-	auto s = fs::Open(fs::JoinPath("Cache"_s, "State"_s), FileAccessMode::Write);
+	auto so = fs::Open(fs::JoinPath("Cache"_s, "cache.j2i"_s), FileAccessMode::Write);
 
-	s->WriteValue<uint32_t>(0x2063324a);	// Signature
-	s->WriteValue<uint16_t>(JJ2Anims::CacheVersion);
-	s->WriteValue<uint8_t>(0x00);			// Flags
+	so->WriteValue<uint64_t>(0x2095A59FF0BFBBEF);	// Signature
+	so->WriteValue<uint8_t>(Jazz2::ContentResolver::CacheIndexFile);
+	so->WriteValue<uint16_t>(JJ2Anims::CacheVersion);
+	so->WriteValue<uint8_t>(0x00);					// Flags
 	int64_t animsModified = fs::LastModificationTime(animsPath).Ticks;
-	s->WriteValue<int64_t>(animsModified);
-	s->WriteValue<uint16_t>((uint16_t)Jazz2::EventType::Count);
+	so->WriteValue<int64_t>(animsModified);
+	so->WriteValue<uint16_t>((uint16_t)Jazz2::EventType::Count);
 
 	LOGI("Cache was recreated");
-	return true;
-#endif
+	_flags = Flags::IsVerified | Flags::IsPlayable;
+	return;
 }
+#endif
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)

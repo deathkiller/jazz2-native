@@ -23,7 +23,7 @@ namespace nCine
 		~ThreadPool() override;
 
 		/// Enqueues a command request for a worker thread
-		void enqueueCommand(std::unique_ptr<IThreadCommand> threadCommand) override;
+		void EnqueueCommand(std::unique_ptr<IThreadCommand> threadCommand) override;
 
 	private:
 		struct ThreadStruct
@@ -42,7 +42,7 @@ namespace nCine
 		unsigned int numThreads_;
 
 		ThreadStruct threadStruct_;
-		static void workerFunction(void* arg);
+		static void WorkerFunction(void* arg);
 
 		/// Deleted copy constructor
 		ThreadPool(const ThreadPool&) = delete;

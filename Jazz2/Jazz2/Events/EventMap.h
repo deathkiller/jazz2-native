@@ -28,7 +28,6 @@ namespace Jazz2::Events
 		EventType GetEventByPosition(int x, int y, uint8_t** eventParams);
 		bool HasEventByPosition(int x, int y);
 		bool IsHurting(float x, float y);
-		int IsPole(float x, float y);
 		int GetWarpByPosition(float x, float y);
 		Vector2f GetWarpTarget(uint32_t id);
 

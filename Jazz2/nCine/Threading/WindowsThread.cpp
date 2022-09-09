@@ -1,18 +1,23 @@
+#if defined(WITH_THREADS)
+
 #include "Thread.h"
+
+#if defined(DEATH_TARGET_WINDOWS)
 #include "../../Common.h"
+
+#include <utility>
 
 namespace nCine
 {
 	namespace
 	{
-
 #if !defined PTW32_VERSION && !defined __WINPTHREADS_VERSION
 		const unsigned int MaxThreadNameLength = 256;
 
-		void setThreadName(HANDLE handle, const char* name)
+		void SetThreadName(HANDLE handle, const char* name)
 		{
-			if (handle == 0)
-				return;
+			if (handle == 0) return;
+
 #	if defined(NTDDI_WIN10_RS2) && NTDDI_VERSION >= NTDDI_WIN10_RS2
 			wchar_t buffer[MaxThreadNameLength];
 			size_t charsConverted;
@@ -20,7 +25,7 @@ namespace nCine
 			const HANDLE threadHandle = (handle != reinterpret_cast<HANDLE>(-1)) ? handle : GetCurrentThread();
 			::SetThreadDescription(threadHandle, buffer);
 #	elif !defined(DEATH_TARGET_MINGW)
-			const DWORD MS_VC_EXCEPTION = 0x406D1388;
+			constexpr DWORD MS_VC_EXCEPTION = 0x406D1388;
 
 #		pragma pack(push, 8)
 			struct THREADNAME_INFO
@@ -46,29 +51,28 @@ namespace nCine
 #	endif
 		}
 #endif
-
 	}
 
 	///////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void ThreadAffinityMask::zero()
+	void ThreadAffinityMask::Zero()
 	{
 		affinityMask_ = 0LL;
 	}
 
-	void ThreadAffinityMask::set(int cpuNum)
+	void ThreadAffinityMask::Set(int cpuNum)
 	{
 		affinityMask_ |= 1LL << cpuNum;
 	}
 
-	void ThreadAffinityMask::clear(int cpuNum)
+	void ThreadAffinityMask::Clear(int cpuNum)
 	{
 		affinityMask_ &= ~(1LL << cpuNum);
 	}
 
-	bool ThreadAffinityMask::isSet(int cpuNum)
+	bool ThreadAffinityMask::IsSet(int cpuNum)
 	{
 		return ((affinityMask_ >> cpuNum) & 1LL) != 0;
 	}
@@ -85,14 +89,14 @@ namespace nCine
 	Thread::Thread(ThreadFunctionPtr startFunction, void* arg)
 		: handle_(0)
 	{
-		run(startFunction, arg);
+		Run(startFunction, arg);
 	}
 
 	///////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	unsigned int Thread::numProcessors()
+	unsigned int Thread::GetProcessorCount()
 	{
 		unsigned int numProcs = 0;
 
@@ -103,73 +107,74 @@ namespace nCine
 		return numProcs;
 	}
 
-	void Thread::run(ThreadFunctionPtr startFunction, void* arg)
+	void Thread::Run(ThreadFunctionPtr startFunction, void* arg)
 	{
 		if (handle_ == 0) {
 			threadInfo_.startFunction = startFunction;
 			threadInfo_.threadArg = arg;
-			handle_ = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0, wrapperFunction, &threadInfo_, 0, nullptr));
-			FATAL_ASSERT_MSG(handle_, "Error in _beginthreadex()");
+			handle_ = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0, WrapperFunction, &threadInfo_, 0, nullptr));
+			FATAL_ASSERT_MSG(handle_, "_beginthreadex() failed");
 		} else {
 			LOGW_X("Thread %u is already running", handle_);
 		}
 	}
 
-	void* Thread::join()
+	void* Thread::Join()
 	{
 		::WaitForSingleObject(handle_, INFINITE);
 		handle_ = 0;
 		return nullptr;
 	}
 
-	void Thread::setName(const char* name)
+	void Thread::SetName(const char* name)
 	{
-		setThreadName(handle_, name);
+		SetThreadName(handle_, name);
 	}
 
-	void Thread::setSelfName(const char* name)
+	void Thread::SetSelfName(const char* name)
 	{
-#ifdef WITH_TRACY
+#if defined(WITH_TRACY)
 		tracy::SetThreadName(name);
 #else
-		setThreadName(reinterpret_cast<HANDLE>(-1), name);
+		SetThreadName(reinterpret_cast<HANDLE>(-1), name);
 #endif
 	}
 
-	int Thread::priority() const
+	int Thread::GetPriority() const
 	{
-		return (handle_ != 0) ? GetThreadPriority(handle_) : 0;
+		return (handle_ != 0 ? GetThreadPriority(handle_) : 0);
 	}
 
-	void Thread::setPriority(int priority)
+	void Thread::SetPriority(int priority)
 	{
-		if (handle_ != 0)
+		if (handle_ != 0) {
 			::SetThreadPriority(handle_, priority);
+		}
 	}
 
-	long int Thread::self()
+	long int Thread::Self()
 	{
 		return ::GetCurrentThreadId();
 	}
 
-	[[noreturn]] void Thread::exit(void* retVal)
+	[[noreturn]] void Thread::Exit(void* retVal)
 	{
 		_endthreadex(0);
 		*static_cast<unsigned int*>(retVal) = 0;
 	}
 
-	void Thread::yieldExecution()
+	void Thread::YieldExecution()
 	{
 		Sleep(0);
 	}
 
-	void Thread::cancel()
+	void Thread::Abort()
 	{
 		::TerminateThread(handle_, 0);
 		handle_ = 0;
 	}
 
-	ThreadAffinityMask Thread::affinityMask() const
+	ThreadAffinityMask Thread::GetAffinityMask() const
 	{
 		ThreadAffinityMask affinityMask;
 
@@ -186,7 +191,7 @@ namespace nCine
 		return affinityMask;
 	}
 
-	void Thread::setAffinityMask(ThreadAffinityMask affinityMask)
+	void Thread::SetAffinityMask(ThreadAffinityMask affinityMask)
 	{
 		if (handle_ != 0)
 			::SetThreadAffinityMask(handle_, affinityMask.affinityMask_);
@@ -199,7 +204,7 @@ namespace nCine
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	unsigned int Thread::wrapperFunction(void* arg)
+	unsigned int Thread::WrapperFunction(void* arg)
 	{
 		ThreadInfo* threadInfo = static_cast<ThreadInfo*>(arg);
 		threadInfo->startFunction(threadInfo->threadArg);
@@ -208,3 +213,6 @@ namespace nCine
 	}
 
 }
+#endif
+
+#endif

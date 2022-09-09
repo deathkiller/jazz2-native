@@ -2340,7 +2340,7 @@ namespace Jazz2::Actors
 			Vector2f posOld = _pos;
 			MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 
-			if (Vector2f(posOld.X - pos.X, posOld.Y - pos.Y).Length() > 250) {
+			if (Vector2f(posOld.X - pos.X, posOld.Y - pos.Y).Length() > 250.0f) {
 				_levelHandler->WarpCameraToTarget(shared_from_this());
 			}
 		} else {
@@ -2388,9 +2388,9 @@ namespace Jazz2::Actors
 		if (_isAttachedToPole || _playerType == PlayerType::Frog) {
 			return;
 		}
-
-		int x = (int)_pos.X / 32;
-		int y = (int)_pos.Y / 32;
+		
+		int x = (int)_pos.X / Tiles::TileSet::DefaultTileSize;
+		int y = (int)_pos.Y / Tiles::TileSet::DefaultTileSize;
 
 		if (_lastPoleTime > 0.0f && _lastPolePos.X == x && _lastPolePos.Y == y) {
 			return;
@@ -2407,9 +2407,24 @@ namespace Jazz2::Actors
 			activeForce = _speed.Y;
 			lastSpeed = _speed.Y;
 		}
-		bool positive = (activeForce >= 0);
+		bool positive = (activeForce >= 0.0f);
 
-		MoveInstantly(Vector2f(x * 32 + 16, y * 32 + 16), MoveType::Absolute | MoveType::Force);
+		float tx = x * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2;
+		float ty = y * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2;
+
+		auto events = _levelHandler->EventMap();
+		uint8_t* p;
+		if (horizontal) {
+			if (events->GetEventByPosition(x, (_pos.Y < ty ? y - 1 : y + 1), &p) == EventType::ModifierHPole) {
+				ty = _pos.Y;
+			}
+		} else {
+			if (events->GetEventByPosition((_pos.X < tx ? x - 1 : x + 1), y, &p) == EventType::ModifierVPole) {
+				tx = _pos.X;
+			}
+		}
+
+		MoveInstantly(Vector2f(tx, ty), MoveType::Absolute | MoveType::Force);
 		OnUpdateHitbox();
 
 		_speed.X = 0.0f;
@@ -2422,6 +2437,9 @@ namespace Jazz2::Actors
 		_inIdleTransition = false;
 
 		_keepRunningTime = 0.0f;
+		_pushFramesLeft = 0.0f;
+		_fireFramesLeft = 0.0f;
+		_copterFramesLeft = 0.0f;
 
 		SetAnimation(_currentAnimationState & ~(AnimState::Uppercut /*| AnimState::Sidekick*/ | AnimState::Buttstomp));
 

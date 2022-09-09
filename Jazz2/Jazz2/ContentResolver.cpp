@@ -697,8 +697,8 @@ namespace Jazz2
 		ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
 
 		uint64_t signature = s->ReadValue<uint64_t>();
-		uint8_t version = s->ReadValue<uint8_t>();
-		ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && version == 1, "File has invalid signature");
+		uint8_t fileType = s->ReadValue<uint8_t>();
+		ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && fileType == LevelFile, "File has invalid signature");
 
 		// TODO: Level flags
 		uint16_t flags = s->ReadValue<uint16_t>();

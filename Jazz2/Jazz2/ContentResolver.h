@@ -200,6 +200,10 @@ namespace Jazz2
 	class ContentResolver
 	{
 	public:
+		static constexpr uint8_t LevelFile = 1;
+		static constexpr uint8_t EpisodeFile = 2;
+		static constexpr uint8_t CacheIndexFile = 3;
+
 		static constexpr int PaletteCount = 256;
 		static constexpr int ColorsPerPalette = 256;
 		static constexpr int InvalidValue = INT_MAX;

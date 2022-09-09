@@ -38,7 +38,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 * Copy original *Jazz Jackrabbit 2* directory to `‹Game›/Source/`
 * Run `‹Game›/Jazz2.exe` (on Windows) or `‹Game›/jazz2` (on other platforms)
 
-`‹Game›` *is path to Jazz² Resurrection. It may take a few minutes on the first startup, because cache is created.*
+`‹Game›` *is path to Jazz² Resurrection. Cache is recreated during intro cinematics on the first startup, so it can't be skipped until it's done.*
 
 
 ## Building the application

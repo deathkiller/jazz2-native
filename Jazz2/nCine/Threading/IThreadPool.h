@@ -13,7 +13,7 @@ namespace nCine
 		virtual ~IThreadPool() = 0;
 
 		/// Enqueues a command request for a worker thread
-		virtual void enqueueCommand(std::unique_ptr<IThreadCommand> threadCommand) = 0;
+		virtual void EnqueueCommand(std::unique_ptr<IThreadCommand> threadCommand) = 0;
 	};
 
 	inline IThreadPool::~IThreadPool() {}
@@ -22,7 +22,7 @@ namespace nCine
 	class NullThreadPool : public IThreadPool
 	{
 	public:
-		void enqueueCommand(std::unique_ptr<IThreadCommand> threadCommand) override {}
+		void EnqueueCommand(std::unique_ptr<IThreadCommand> threadCommand) override { }
 	};
 
 }
