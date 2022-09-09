@@ -22,7 +22,6 @@ namespace Jazz2::Actors::Solid
 	Task<bool> PowerUpMorphMonitor::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		Movable = true;
-		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
 
 		_morphType = (MorphType)details.Params[0];
 
@@ -121,7 +120,7 @@ namespace Jazz2::Actors::Solid
 
 			case MorphType::ToBird:
 				// TODO: Implement Birds
-				break;
+				return std::nullopt;
 
 			default:
 				return std::nullopt;

@@ -10,28 +10,28 @@ namespace Jazz2::Events
 	class EventSpawner
 	{
 	public:
-		using CreateFunction = std::shared_ptr<ActorBase> (*)(const ActorActivationDetails& details);
-		using PreloadFunction = void (*)(const ActorActivationDetails& details);
+		using CreateDelegate = std::shared_ptr<ActorBase> (*)(const ActorActivationDetails& details);
+		using PreloadDelegate = void (*)(const ActorActivationDetails& details);
 
 		static constexpr int SpawnParamsSize = 16;
 
 		EventSpawner(ILevelHandler* levelHandler);
 
 		void PreloadEvent(EventType type, uint8_t* spawnParams);
-		std::shared_ptr<ActorBase> SpawnEvent(EventType type, uint8_t* spawnParams, ActorFlags flags, int x, int y, int z);
-		std::shared_ptr<ActorBase> SpawnEvent(EventType type, uint8_t* spawnParams, ActorFlags flags, const Vector3i& pos);
+		std::shared_ptr<ActorBase> SpawnEvent(EventType type, uint8_t* spawnParams, ActorState flags, int x, int y, int z);
+		std::shared_ptr<ActorBase> SpawnEvent(EventType type, uint8_t* spawnParams, ActorState flags, const Vector3i& pos);
 
 	private:
 		struct SpawnableEvent {
-			CreateFunction CreateFunction;
-			PreloadFunction PreloadFunction;
+			CreateDelegate CreateFunction;
+			PreloadDelegate PreloadFunction;
 		};
 
 		ILevelHandler* _levelHandler;
 		HashMap<EventType, SpawnableEvent> _spawnableEvents;
 
 		void RegisterKnownSpawnables();
-		void RegisterSpawnable(EventType type, CreateFunction create, PreloadFunction preload = nullptr);
+		void RegisterSpawnable(EventType type, CreateDelegate create, PreloadDelegate preload = nullptr);
 
 		template<typename T>
 		void RegisterSpawnable(EventType type);

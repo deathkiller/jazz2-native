@@ -16,7 +16,7 @@ namespace Jazz2
 		class Player;
 	}
 
-	enum class ActorFlags {
+	enum class ActorState {
 		None = 0,
 
 		// Actor is created from event map 
@@ -33,46 +33,41 @@ namespace Jazz2
 		// Mask of all instantiation flags
 		InstantiationFlags = IsCreatedFromEventMap | IsFromGenerator | Illuminated | Async,
 
-		// Actor instance flags
-		Initializing = 0x0100,
-		Initialized = 0x0200,
+		// This flag is set automatically after call to OnActivatedAsync()
+		Initialized = 0x0100,
 
-		IsInvulnerable = 0x1000,
-		CanJump = 0x2000,
-		CanBeFrozen = 0x4000,
-		IsFacingLeft = 0x8000
+		// Actor instance flags
+		IsInvulnerable = 0x0200,
+		CanJump = 0x0400,
+		CanBeFrozen = 0x0800,
+		IsFacingLeft = 0x1000,
+
+		// Collision flags
+		CollideWithTileset = 0x10000,
+		CollideWithOtherActors = 0x20000,
+		CollideWithSolidObjects = 0x40000,
+
+		ForceDisableCollisions = 0x80000,
+
+		IsDirty = 0x100000,
+		IsDestroyed = 0x200000,
+
+		ApplyGravitation = 0x400000,
+		IsSolidObject = 0x800000,
+		SkipPerPixelCollisions = 0x1000000,
+
+		CollideWithTilesetReduced = 0x2000000,
+		CollideWithSolidObjectsBelow = 0x4000000,
 	};
 
-	DEFINE_ENUM_OPERATORS(ActorFlags);
+	DEFINE_ENUM_OPERATORS(ActorState);
 
 	struct ActorActivationDetails {
 		ILevelHandler* LevelHandler;
 		Vector3i Pos;
-		ActorFlags Flags;
+		ActorState State;
 		uint8_t* Params;
 	};
-
-	enum class CollisionFlags : uint16_t {
-		None = 0,
-
-		CollideWithTileset = 0x01,
-		CollideWithOtherActors = 0x02,
-		CollideWithSolidObjects = 0x04,
-
-		ForceDisableCollisions = 0x08,
-
-		IsDirty = 0x10,
-		IsDestroyed = 0x20,
-
-		ApplyGravitation = 0x40,
-		IsSolidObject = 0x80,
-		SkipPerPixelCollisions = 0x100,
-
-		CollideWithTilesetReduced = 0x200,
-		CollideWithSolidObjectsBelow = 0x400,
-	};
-
-	DEFINE_ENUM_OPERATORS(CollisionFlags);
 
 	enum class MoveType {
 		Absolute = 0x00,
@@ -95,8 +90,6 @@ namespace Jazz2
 	public:
 		ActorBase();
 		~ActorBase();
-
-		CollisionFlags CollisionFlags = CollisionFlags::CollideWithTileset | CollisionFlags::CollideWithOtherActors | CollisionFlags::ApplyGravitation;
 
 		AABBf AABB;
 		AABBf AABBInner;
@@ -134,9 +127,14 @@ namespace Jazz2
 			return _speed;
 		}
 
-		constexpr bool GetState(ActorFlags flag) const noexcept
+		constexpr ActorState GetState() const noexcept
 		{
-			return (_flags & flag) == flag;
+			return _state;
+		}
+
+		constexpr bool GetState(ActorState flag) const noexcept
+		{
+			return (_state & flag) == flag;
 		}
 
 	protected:
@@ -198,7 +196,6 @@ namespace Jazz2
 		static constexpr int PerPixelCollisionStep = 3;
 		static constexpr int AnimationCandidatesCount = 5;
 
-		ActorFlags _flags;
 		ILevelHandler* _levelHandler;
 
 		Vector2f _pos;
@@ -289,12 +286,17 @@ namespace Jazz2
 			return awaitable { this, path };
 		}
 
-		constexpr void SetState(ActorFlags flag, bool value) noexcept
+		constexpr void SetState(ActorState flags) noexcept
+		{
+			_state = flags;
+		}
+
+		constexpr void SetState(ActorState flag, bool value) noexcept
 		{
 			if (value) {
-				_flags = _flags | flag;
+				_state = _state | flag;
 			} else {
-				_flags = _flags & (~flag);
+				_state = _state & (~flag);
 			}
 		}
 
@@ -304,10 +306,7 @@ namespace Jazz2
 		/// Deleted assignment operator
 		ActorBase& operator=(const ActorBase&) = delete;
 
-#if SERVER
-		const String* _currentAnimationKey;
-#endif
-
+		ActorState _state;
 		std::function<void()> _currentTransitionCallback;
 
 		bool IsCollidingWithAngled(ActorBase* other);

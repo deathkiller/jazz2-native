@@ -24,7 +24,8 @@ namespace Jazz2::Actors::Environment
 		uint8_t sfx = details.Params[0];
 		float gain = 0.2f * (details.Params[1] / 255.0f);
 
-		CollisionFlags = CollisionFlags::ForceDisableCollisions;
+		SetState(ActorState::ForceDisableCollisions, true);
+		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		co_await RequestMetadataAsync("Common/AmbientSound"_s);
 

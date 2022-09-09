@@ -29,7 +29,7 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(93);
 		_scoreValue = 4000;
 
-		CollisionFlags |= CollisionFlags::CollideWithTilesetReduced;
+		SetState(ActorState::CollideWithTilesetReduced, true);
 
 		co_await RequestMetadataAsync("Boss/Bubba"_s);
 		SetAnimation(AnimState::Idle);
@@ -69,7 +69,7 @@ namespace Jazz2::Actors::Enemies
 			}
 
 			case StateFalling: {
-				if (GetState(ActorFlags::CanJump)) {
+				if (GetState(ActorState::CanJump)) {
 					_speed.Y = 0.0f;
 					_speed.X = 0.0f;
 
@@ -112,7 +112,7 @@ namespace Jazz2::Actors::Enemies
 				if (_stateTime <= 0.0f) {
 					_state = StateTransition;
 					SetTransition((AnimState)1073741832, false, [this]() {
-						CollisionFlags = CollisionFlags::CollideWithTileset | CollisionFlags::CollideWithOtherActors | CollisionFlags::ApplyGravitation;
+						SetState(ActorState::CollideWithTilesetReduced | ActorState::ApplyGravitation, true);
 
 						_state = StateFalling;
 
@@ -158,7 +158,7 @@ namespace Jazz2::Actors::Enemies
 		_internalForceY = 0.0f;
 		_frozenTimeLeft = 0.0f;
 
-		CollisionFlags = CollisionFlags::None;
+		SetState(ActorState::CollideWithTileset | ActorState::CollideWithTilesetReduced | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		_state = StateDying;
 		SetTransition(AnimState::TransitionDeath, false, [this, collider]() {
@@ -217,7 +217,7 @@ namespace Jazz2::Actors::Enemies
 			_state = StateTornado;
 			_stateTime = 60.0f;
 
-			CollisionFlags = CollisionFlags::CollideWithTileset | CollisionFlags::CollideWithOtherActors;
+			SetState(ActorState::CollideWithTilesetReduced | ActorState::ApplyGravitation, false);
 
 			MoveInstantly(Vector2f(0, -1), MoveType::Relative);
 
@@ -240,10 +240,9 @@ namespace Jazz2::Actors::Enemies
 		_speed.X = (IsFacingLeft() ? -4.8f : 4.8f);
 		_timeLeft = 50.0f;
 
-		SetState(ActorFlags::CanBeFrozen, false);
-		SetState(ActorFlags::IsInvulnerable, true);
+		SetState(ActorState::IsInvulnerable, true);
+		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
 		CanCollideWithAmmo = false;
-		CollisionFlags = CollisionFlags::CollideWithTileset | CollisionFlags::CollideWithOtherActors;
 
 		_health = INT32_MAX;
 

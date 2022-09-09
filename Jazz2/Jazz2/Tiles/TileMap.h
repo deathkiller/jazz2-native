@@ -12,6 +12,24 @@ namespace Jazz2
 
 namespace Jazz2::Tiles
 {
+	struct LayerDescription {
+		uint16_t Depth;
+		float SpeedX;
+		float SpeedY;
+		float AutoSpeedX;
+		float AutoSpeedY;
+		bool RepeatX;
+		bool RepeatY;
+
+		float OffsetX;
+		float OffsetY;
+		bool UseInherentOffset;
+
+		BackgroundStyle UseBackgroundStyle;
+		Vector3f BackgroundColor;
+		bool ParallaxStarsEnabled;
+	};
+
 	enum class LayerTileFlags {
 		None = 0x00,
 
@@ -29,7 +47,7 @@ namespace Jazz2::Tiles
 		LayerTileFlags Flags;
 		uint8_t ExtraParam;
 		uint8_t Alpha;
-		SuspendType SuspendType;
+		SuspendType HasSuspendType;
 		TileDestructType DestructType;
 		int32_t DestructAnimation;		// Animation index for a destructible tile that uses an animation, but doesn't animate normally
 		int32_t DestructFrameIndex;		// Denotes the specific frame from the above animation that is currently active
@@ -42,23 +60,7 @@ namespace Jazz2::Tiles
 		std::unique_ptr<LayerTile[]> Layout;
 		Vector2i LayoutSize;
 
-		uint16_t Depth;
-		float SpeedX;
-		float SpeedY;
-		float AutoSpeedX;
-		float AutoSpeedY;
-		bool RepeatX;
-		bool RepeatY;
-
-		float OffsetX;
-		float OffsetY;
-
-		// JJ2's "limit visible area" flag
-		bool UseInherentOffset;
-
-		BackgroundStyle BackgroundStyle;
-		Vector3f BackgroundColor;
-		bool ParallaxStarsEnabled;
+		LayerDescription Description;
 	};
 
 	struct AnimatedTileFrame {
@@ -81,25 +83,6 @@ namespace Jazz2::Tiles
 	public:
 		static constexpr int TriggerCount = 32;
 		static constexpr int AnimatedTileMask = 0x80000000;
-
-		struct LayerDescription {
-			float SpeedX;
-			float SpeedY;
-			float AutoSpeedX;
-			float AutoSpeedY;
-			bool RepeatX;
-			bool RepeatY;
-			float OffsetX;
-			float OffsetY;
-			int Depth;
-
-			// JJ2's "limit visible area" flag
-			bool UseInherentOffset;
-
-			BackgroundStyle BackgroundStyle;
-			Vector3f BackgroundColor;
-			bool ParallaxStarsEnabled;
-		};
 
 		enum class DebrisCollisionAction {
 			None,

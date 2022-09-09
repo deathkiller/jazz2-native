@@ -23,8 +23,7 @@ namespace Jazz2::Actors::Weapons
 
 	Task<bool> ShotBase::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		CollisionFlags = CollisionFlags::CollideWithTileset | CollisionFlags::CollideWithOtherActors | CollisionFlags::ApplyGravitation;
-		SetState(ActorFlags::CanBeFrozen, false);
+		SetState(ActorState::CanBeFrozen, false);
 
 		co_return true;
 	}

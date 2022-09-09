@@ -103,7 +103,7 @@ namespace Jazz2::Actors::Enemies
 			if (drop < item.Chance) {
 				if (item.Event != EventType::Empty) {
 					uint8_t eventParams[16] { };
-					std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(item.Event, eventParams, ActorFlags::None, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()));
+					std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(item.Event, eventParams, ActorState::None, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()));
 					if (actor != nullptr) {
 						_levelHandler->AddActor(actor);
 					}
@@ -117,7 +117,7 @@ namespace Jazz2::Actors::Enemies
 
 	bool EnemyBase::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (!GetState(ActorFlags::IsInvulnerable)) {
+		if (!GetState(ActorState::IsInvulnerable)) {
 			if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
 				if (shotBase->GetStrength() > 0) {
 					Vector2f shotSpeed;

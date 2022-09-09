@@ -14,7 +14,7 @@ namespace Jazz2::Actors::Environment
 
 	Task<bool> Eva::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+		SetState(ActorState::ApplyGravitation, false);
 
 		co_await RequestMetadataAsync("Object/Eva"_s);
 

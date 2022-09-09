@@ -36,6 +36,9 @@ namespace Jazz2::Actors::Solid
 
 		_originalY = _pos.Y - 6;
 
+		SetState(ActorState::SkipPerPixelCollisions | ActorState::IsSolidObject, true);
+		SetState(ActorState::CollideWithTileset | ActorState::ApplyGravitation, false);
+
 		const int* widths;
 		int widthsCount;
 		int widthOffset = 0;
@@ -70,8 +73,6 @@ namespace Jazz2::Actors::Solid
 
 			widthCovered += (widths[i % widthsCount] + widths[(i + 1) % widthsCount]) / 2;
 		}
-
-		CollisionFlags = CollisionFlags::CollideWithOtherActors | CollisionFlags::SkipPerPixelCollisions | CollisionFlags::IsSolidObject;
 
 		co_return true;
 	}

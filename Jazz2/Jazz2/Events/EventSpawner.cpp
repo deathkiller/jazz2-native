@@ -180,7 +180,7 @@ namespace Jazz2::Events
 		RegisterSpawnable<Collectibles::FoodCollectible>(EventType::Food);
 	}
 
-	void EventSpawner::RegisterSpawnable(EventType type, CreateFunction create, PreloadFunction preload)
+	void EventSpawner::RegisterSpawnable(EventType type, CreateDelegate create, PreloadDelegate preload)
 	{
 		_spawnableEvents[type] = { create, preload };
 	}
@@ -208,12 +208,12 @@ namespace Jazz2::Events
 		it->second.PreloadFunction(details);
 	}
 
-	std::shared_ptr<ActorBase> EventSpawner::SpawnEvent(EventType type, uint8_t* spawnParams, ActorFlags flags, int x, int y, int z)
+	std::shared_ptr<ActorBase> EventSpawner::SpawnEvent(EventType type, uint8_t* spawnParams, ActorState flags, int x, int y, int z)
 	{
 		return SpawnEvent(type, spawnParams, flags, Vector3i(x * 32 + 16, y * 32 + 16, (int)z));
 	}
 
-	std::shared_ptr<ActorBase> EventSpawner::SpawnEvent(EventType type, uint8_t* spawnParams, ActorFlags flags, const Vector3i& pos)
+	std::shared_ptr<ActorBase> EventSpawner::SpawnEvent(EventType type, uint8_t* spawnParams, ActorState flags, const Vector3i& pos)
 	{
 		auto it = _spawnableEvents.find(type);
 		if (it == _spawnableEvents.end() || it->second.CreateFunction == nullptr) {
@@ -224,7 +224,7 @@ namespace Jazz2::Events
 		details.LevelHandler = _levelHandler;
 		details.Params = spawnParams;
 		details.Pos = pos;
-		details.Flags = flags;
+		details.State = flags;
 		return it->second.CreateFunction(details);
 	}
 

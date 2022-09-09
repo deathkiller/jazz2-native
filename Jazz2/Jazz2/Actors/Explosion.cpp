@@ -31,9 +31,8 @@ namespace Jazz2::Actors
 	{
 		_type = (Type)*(uint16_t*)&details.Params[0];
 
-		CollisionFlags = CollisionFlags::ForceDisableCollisions;
-
-		SetState(ActorFlags::CanBeFrozen, false);
+		SetState(ActorState::ForceDisableCollisions, true);
+		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		co_await RequestMetadataAsync("Common/Explosions"_s);
 

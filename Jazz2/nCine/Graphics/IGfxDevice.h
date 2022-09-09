@@ -165,7 +165,7 @@ namespace nCine
 		}
 		/// Returns the number of video modes supported by the monitor
 		inline unsigned int numVideoModes() const {
-			return videoModes_.size();
+			return (unsigned int)videoModes_.size();
 		}
 		/// Returns the specified monitor video mode
 		const VideoMode& videoMode(unsigned int index) const;

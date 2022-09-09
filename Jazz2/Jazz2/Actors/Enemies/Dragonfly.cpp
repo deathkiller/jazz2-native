@@ -32,7 +32,7 @@ namespace Jazz2::Actors::Enemies
 
 	Task<bool> Dragonfly::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+		SetState(ActorState::ApplyGravitation, false);
 
 		SetHealthByDifficulty(1);
 		_scoreValue = 200;
@@ -53,7 +53,7 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		SetState(ActorFlags::CanJump, false);
+		SetState(ActorState::CanJump, false);
 
 		if (_attackCooldown < 0.0f) {
 			_attackCooldown = 40.0f;

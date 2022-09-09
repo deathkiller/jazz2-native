@@ -20,7 +20,7 @@ namespace Jazz2::Actors::Weapons
 		_strength = 1;
 		_upgrades = details.Params[0];
 
-		CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+		SetState(ActorState::ApplyGravitation, false);
 
 		co_await RequestMetadataAsync("Weapon/Toaster"_s);
 

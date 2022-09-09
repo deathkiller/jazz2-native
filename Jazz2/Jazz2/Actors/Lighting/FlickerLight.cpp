@@ -15,7 +15,8 @@ namespace Jazz2::Actors::Lighting
 		_radiusNear = (float)*(uint16_t*)&details.Params[2];
 		_radiusFar = (float)*(uint16_t*)&details.Params[4];
 
-		CollisionFlags = CollisionFlags::ForceDisableCollisions;
+		SetState(ActorState::ForceDisableCollisions, true);
+		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		co_return true;
 	}

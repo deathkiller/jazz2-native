@@ -41,10 +41,11 @@ namespace Jazz2::Actors::Solid
 		aabbExtended.R += 20.0f;
 		aabbExtended.T -= 20.0f;
 		TileCollisionParams params = { TileDestructType::None, true };
-		auto prevCollisionFlags = CollisionFlags;
-		CollisionFlags = CollisionFlags::CollideWithTileset | CollisionFlags::CollideWithSolidObjects | CollisionFlags::SkipPerPixelCollisions;
+		auto prevState = GetState();
+		SetState(ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects | ActorState::SkipPerPixelCollisions, true);
+		SetState(ActorState::IsSolidObject | ActorState::CollideWithSolidObjectsBelow, false);
 		bool canThrowFar = (_content.size() > 1 && _levelHandler->IsPositionEmpty(this, aabbExtended, params));
-		CollisionFlags = prevCollisionFlags;
+		SetState(prevState);
 
 		for (auto& item : _content) {
 			float x, y, fx, fy;
@@ -68,7 +69,7 @@ namespace Jazz2::Actors::Solid
 			}
 
 			std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(item.Type, item.EventParams,
-				ActorFlags::None, Vector3i((int)x, (int)y, _renderer.layer() - 10));
+				ActorState::None, Vector3i((int)x, (int)y, _renderer.layer() - 10));
 			if (actor != nullptr) {
 				actor->AddExternalForce(fx, fy);
 				_levelHandler->AddActor(actor);

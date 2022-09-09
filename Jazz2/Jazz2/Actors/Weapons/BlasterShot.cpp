@@ -23,7 +23,8 @@ namespace Jazz2::Actors::Weapons
 
 		_upgrades = details.Params[0];
 
-		CollisionFlags = (CollisionFlags & ~CollisionFlags::ApplyGravitation) | CollisionFlags::SkipPerPixelCollisions;
+		SetState(ActorState::SkipPerPixelCollisions, true);
+		SetState(ActorState::ApplyGravitation, false);
 
 		co_await RequestMetadataAsync("Weapon/Blaster"_s);
 

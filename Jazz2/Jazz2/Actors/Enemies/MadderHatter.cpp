@@ -25,7 +25,7 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(3);
 		_scoreValue = 200;
 
-		CollisionFlags |= CollisionFlags::CollideWithTilesetReduced;
+		SetState(ActorState::CollideWithTilesetReduced, true);
 
 		co_await RequestMetadataAsync("Enemy/MadderHatter"_s);
 		SetAnimation(AnimState::Walk);
@@ -81,7 +81,7 @@ namespace Jazz2::Actors::Enemies
 				_attackTime -= timeMult;
 			}
 
-			if (GetState(ActorFlags::CanJump)) {
+			if (GetState(ActorState::CanJump)) {
 				if (!CanMoveToPosition(_speed.X * 4, 0)) {
 					if (_stuck) {
 						MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative | MoveType::Force);
@@ -117,8 +117,8 @@ namespace Jazz2::Actors::Enemies
 
 	Task<bool> MadderHatter::BulletSpit::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		SetState(ActorFlags::CanBeFrozen, false);
-		SetState(ActorFlags::IsInvulnerable, true);
+		SetState(ActorState::CanBeFrozen, false);
+		SetState(ActorState::IsInvulnerable, true);
 		CanCollideWithAmmo = false;
 
 		SetFacingLeft(details.Params[0] != 0);

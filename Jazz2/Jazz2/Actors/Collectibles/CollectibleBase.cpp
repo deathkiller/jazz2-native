@@ -26,24 +26,24 @@ namespace Jazz2::Actors::Collectibles
 	{
 		_elasticity = 0.6f;
 
-		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
+		SetState(ActorState::SkipPerPixelCollisions, true);
 
 		Vector2f pos = _pos;
 		_phase = ((pos.X / 32) + (pos.Y / 32)) * 2.0f;
 
-		if ((_flags & (ActorFlags::IsCreatedFromEventMap | ActorFlags::IsFromGenerator)) != ActorFlags::None) {
+		if ((GetState() & (ActorState::IsCreatedFromEventMap | ActorState::IsFromGenerator)) != ActorState::None) {
 			_untouched = true;
-			CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+			SetState(ActorState::ApplyGravitation, false);
 
 			_startingY = pos.Y;
 		} else {
 			_untouched = false;
-			CollisionFlags |= CollisionFlags::ApplyGravitation;
+			SetState(ActorState::ApplyGravitation, true);
 
 			_timeLeft = 90.0f * FrameTimer::FramesPerSecond;
 		}
 
-		if ((details.Flags & ActorFlags::Illuminated) == ActorFlags::Illuminated) {
+		if ((details.State & ActorState::Illuminated) == ActorState::Illuminated) {
 			_illuminateLights.reserve(IlluminateLightCount);
 			for (int i = 0; i < IlluminateLightCount; i++) {
 				auto& light = _illuminateLights.emplace_back();
@@ -106,7 +106,7 @@ namespace Jazz2::Actors::Collectibles
 				_externalForce.Y += -speed.Y / 4.0f * (0.9f + Random().NextFloat(0.0f, 0.2f));
 
 				_untouched = false;
-				CollisionFlags |= CollisionFlags::ApplyGravitation;
+				SetState(ActorState::ApplyGravitation, true);
 			}
 		}
 

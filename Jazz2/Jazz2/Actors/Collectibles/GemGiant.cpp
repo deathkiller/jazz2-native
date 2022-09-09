@@ -22,7 +22,7 @@ namespace Jazz2::Actors::Collectibles
 
 	Task<bool> GemGiant::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+		SetState(ActorState::ApplyGravitation, false);
 
 		co_await RequestMetadataAsync("Object/GemGiant"_s);
 
@@ -62,7 +62,7 @@ namespace Jazz2::Actors::Collectibles
 			float fx = Random().NextFloat(-18.0f, 18.0f);
 			float fy = Random().NextFloat(-8.0f, 0.2f);
 			uint8_t eventParams[1] = { 0 };
-			std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, eventParams, ActorFlags::None, Vector3i((int)(_pos.X + fx * 2.0f), (int)(_pos.Y + fy * 4.0f), _renderer.layer() - 10.0f));
+			std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, eventParams, ActorState::None, Vector3i((int)(_pos.X + fx * 2.0f), (int)(_pos.Y + fy * 4.0f), _renderer.layer() - 10.0f));
 			if (actor != nullptr) {
 				actor->AddExternalForce(fx, fy);
 				_levelHandler->AddActor(actor);

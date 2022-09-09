@@ -28,7 +28,7 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(1);
 		_scoreValue = 200;
 
-		CollisionFlags |= CollisionFlags::CollideWithTilesetReduced;
+		SetState(ActorState::CollideWithTilesetReduced, true);
 
 		co_await RequestMetadataAsync("Enemy/LabRat"_s);
 
@@ -96,7 +96,7 @@ namespace Jazz2::Actors::Enemies
 	void LabRat::Walking(float timeMult)
 	{
 		if (!_isAttacking) {
-			if (GetState(ActorFlags::CanJump) && !CanMoveToPosition(_speed.X * 4, 0)) {
+			if (GetState(ActorState::CanJump) && !CanMoveToPosition(_speed.X * 4, 0)) {
 				SetFacingLeft(!IsFacingLeft());
 				_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
 			}
@@ -168,7 +168,7 @@ namespace Jazz2::Actors::Enemies
 		_speed.Y = -1;
 		_internalForceY = 0.5f;
 		_isAttacking = true;
-		SetState(ActorFlags::CanJump, false);
+		SetState(ActorState::CanJump, false);
 
 		PlaySfx("Attack"_s);
 	}

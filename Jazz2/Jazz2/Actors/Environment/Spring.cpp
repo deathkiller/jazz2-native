@@ -44,7 +44,7 @@ namespace Jazz2::Actors::Environment
 		//delay = details.Params[4];
 		//frozen = (details.Params[5] != 0);
 
-		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
+		SetState(ActorState::SkipPerPixelCollisions, true);
 
 		co_await RequestMetadataAsync("Object/Spring"_s);
 
@@ -66,17 +66,17 @@ namespace Jazz2::Actors::Environment
 			case 1: // Right
 				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 16), MoveType::Absolute | MoveType::Force);
 				orientationBit = 1;
-				CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+				SetState(ActorState::ApplyGravitation, false);
 				break;
 			case 2: // Top
 				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 8), MoveType::Absolute | MoveType::Force);
 				orientationBit = 2;
-				CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+				SetState(ActorState::ApplyGravitation, false);
 				break;
 			case 3: // Left
 				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 16), MoveType::Absolute | MoveType::Force);
 				orientationBit = 1;
-				CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+				SetState(ActorState::ApplyGravitation, false);
 				SetFacingLeft(true);
 				break;
 		}
@@ -106,7 +106,7 @@ namespace Jazz2::Actors::Environment
 			}
 		}
 
-		if ((CollisionFlags & CollisionFlags::ApplyGravitation) == CollisionFlags::ApplyGravitation) {
+		if (GetState(ActorState::ApplyGravitation)) {
 			OnUpdateHitbox();
 
 			// Apply instant gravitation

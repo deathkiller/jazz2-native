@@ -28,7 +28,7 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(4);
 		_scoreValue = 500;
 
-		CollisionFlags |= CollisionFlags::CollideWithTilesetReduced;
+		SetState(ActorState::CollideWithTilesetReduced, true);
 
 		co_await RequestMetadataAsync("Enemy/TurtleTough"_s);
 
@@ -48,7 +48,7 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		if (GetState(ActorFlags::CanJump)) {
+		if (GetState(ActorState::CanJump)) {
 			if (!CanMoveToPosition(_speed.X * 4.0f, 0)) {
 				if (_stuck) {
 					MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative | MoveType::Force);

@@ -27,7 +27,7 @@ namespace Jazz2::Actors::Environment
 
 	Task<bool> Checkpoint::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		SetState(ActorFlags::CanBeFrozen, false);
+		SetState(ActorState::CanBeFrozen, false);
 
 		_theme = details.Params[0];
 		_activated = (details.Params[1] != 0);
@@ -69,7 +69,7 @@ namespace Jazz2::Actors::Environment
 
 			// Deactivate event in map
 			uint8_t playerParams[16] = { _theme, 1 };
-			_levelHandler->EventMap()->StoreTileEvent(_originTile.X, _originTile.Y, EventType::Checkpoint, ActorFlags::None, playerParams);
+			_levelHandler->EventMap()->StoreTileEvent(_originTile.X, _originTile.Y, EventType::Checkpoint, ActorState::None, playerParams);
 
 			_levelHandler->SetCheckpoint(Vector2f(_pos.X, _pos.Y));
 			return true;

@@ -85,7 +85,7 @@ namespace Jazz2
 
         GameDifficulty Difficulty;
         bool ReduxMode, CheatsUsed;
-        ExitType ExitType;
+        ExitType LastExitType;
 
         PlayerCarryOver PlayerCarryOvers[MaxPlayerCount];
 
@@ -105,7 +105,7 @@ namespace Jazz2
             ReduxMode = reduxMode;
             CheatsUsed = cheatsUsed;
 
-            ExitType = ExitType::None;
+            LastExitType = ExitType::None;
 
             PlayerCarryOvers[0].Type = playerType;
             PlayerCarryOvers[0].Lives = DefaultLives;
@@ -124,7 +124,7 @@ namespace Jazz2
             ReduxMode = reduxMode;
             CheatsUsed = cheatsUsed;
 
-            ExitType = ExitType::None;
+            LastExitType = ExitType::None;
 
             for (int i = 0; i < playerCount; i++) {
                 PlayerCarryOvers[i].Type = playerTypes[i];
@@ -143,7 +143,7 @@ namespace Jazz2
             Difficulty = copy.Difficulty;
             ReduxMode = copy.ReduxMode;
             CheatsUsed = copy.CheatsUsed;
-            ExitType = copy.ExitType;
+            LastExitType = copy.LastExitType;
             LastEpisodeName = copy.LastEpisodeName;
 
             std::memcpy(PlayerCarryOvers, copy.PlayerCarryOvers, sizeof(PlayerCarryOvers));
@@ -156,7 +156,7 @@ namespace Jazz2
             Difficulty = move.Difficulty;
             ReduxMode = move.ReduxMode;
             CheatsUsed = move.CheatsUsed;
-            ExitType = move.ExitType;
+            LastExitType = move.LastExitType;
             LastEpisodeName = std::move(move.LastEpisodeName);
 
             std::memcpy(PlayerCarryOvers, move.PlayerCarryOvers, sizeof(PlayerCarryOvers));

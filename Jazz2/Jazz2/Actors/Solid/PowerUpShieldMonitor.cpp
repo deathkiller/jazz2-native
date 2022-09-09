@@ -19,7 +19,6 @@ namespace Jazz2::Actors::Solid
 	Task<bool> PowerUpShieldMonitor::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		Movable = true;
-		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
 
 		_shieldType = (ShieldType)details.Params[0];
 

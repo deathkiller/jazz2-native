@@ -23,7 +23,7 @@ namespace Jazz2::Actors::Enemies
 
 	Task<bool> Witch::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+		SetState(ActorState::ApplyGravitation, false);
 
 		SetHealthByDifficulty(30);
 		_scoreValue = 1000;
@@ -142,10 +142,8 @@ namespace Jazz2::Actors::Enemies
 
 	Task<bool> Witch::MagicBullet::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		SetState(ActorFlags::CanBeFrozen, false);
-		SetState(ActorFlags::IsInvulnerable, true);
-
-		CollisionFlags = CollisionFlags::CollideWithOtherActors | CollisionFlags::SkipPerPixelCollisions;
+		SetState(ActorState::IsInvulnerable | ActorState::SkipPerPixelCollisions, true);
+		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::ApplyGravitation, false);
 
 		_health = INT32_MAX;
 

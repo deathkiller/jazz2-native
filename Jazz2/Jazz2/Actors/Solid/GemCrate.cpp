@@ -65,7 +65,7 @@ namespace Jazz2::Actors::Solid
 
 	bool GemCrate::OnPerish(ActorBase* collider)
 	{
-		CollisionFlags = CollisionFlags::None;
+		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		CreateParticleDebris();
 

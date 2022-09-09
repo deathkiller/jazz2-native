@@ -25,7 +25,7 @@ namespace Jazz2::Actors::Enemies
 	{
 		_originPos = Vector2i(details.Pos.X, details.Pos.Y);
 
-		CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+		SetState(ActorState::ApplyGravitation, false);
 
 		SetHealthByDifficulty(1);
 		_scoreValue = 200;

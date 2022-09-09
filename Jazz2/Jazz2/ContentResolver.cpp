@@ -258,7 +258,7 @@ namespace Jazz2
 
 					SoundResource sound;
 
-					for (int i = 0; i < pathsItem->value.Size(); i++) {
+					for (uint32_t i = 0; i < pathsItem->value.Size(); i++) {
 						const auto& pathItem = pathsItem->value[i];
 						const auto& path = pathItem.GetString();
 						if (path[0] == '\0') {
@@ -491,7 +491,7 @@ namespace Jazz2
 		if (needsMask) {
 			graphics->Mask = std::make_unique<uint8_t[]>(width * height);
 
-			for (int i = 0; i < width * height; i++) {
+			for (uint32_t i = 0; i < width * height; i++) {
 				// Save original alpha value for collision checking
 				graphics->Mask[i] = ((pixels[i] >> 24) & 0xff);
 				if (palette != nullptr) {
@@ -500,7 +500,7 @@ namespace Jazz2
 				}
 			}
 		} else if (palette != nullptr) {
-			for (int i = 0; i < width * height; i++) {
+			for (uint32_t i = 0; i < width * height; i++) {
 				uint32_t color = palette[pixels[i] & 0xff];
 				pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
 			}
@@ -660,7 +660,7 @@ namespace Jazz2
 		// Mask
 		uint32_t maskSize = s->ReadValue<uint32_t>();
 		std::unique_ptr<uint8_t[]> mask = std::make_unique<uint8_t[]>(maskSize * 8);
-		for (int j = 0; j < maskSize; j++) {
+		for (uint32_t j = 0; j < maskSize; j++) {
 			uint8_t idx = s->ReadValue<uint8_t>();
 			for (int k = 0; k < 8; k++) {
 				int pixelIdx = 8 * j + k;
@@ -672,7 +672,7 @@ namespace Jazz2
 		std::unique_ptr<uint32_t[]> pixels = std::make_unique<uint32_t[]>(width * height);
 		ReadImageFromFile(s, (uint8_t*)pixels.get(), width, height, channelCount);
 
-		for (int i = 0; i < width * height; i++) {
+		for (uint32_t i = 0; i < width * height; i++) {
 			uint32_t color = _palettes[pixels[i] & 0xff];
 			pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
 		}
@@ -741,7 +741,7 @@ namespace Jazz2
 		SmallVector<String, 0> levelTexts;
 		levelTexts.reserve(textEventStringsCount);
 		for (int i = 0; i < textEventStringsCount; i++) {
-			uint8_t textLength = s->ReadValue<uint16_t>();
+			uint16_t textLength = s->ReadValue<uint16_t>();
 			String& text = levelTexts.emplace_back(NoInit, textLength);
 			s->Read(text.data(), textLength);
 		}

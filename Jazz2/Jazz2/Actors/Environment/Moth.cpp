@@ -16,7 +16,7 @@ namespace Jazz2::Actors::Environment
 
 	Task<bool> Moth::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		SetState(ActorFlags::CanBeFrozen, false);
+		SetState(ActorState::CanBeFrozen, false);
 		_renderer.setLayer(_renderer.layer() - 20);
 
 		uint8_t theme = details.Params[0];
@@ -41,7 +41,7 @@ namespace Jazz2::Actors::Environment
 		ActorBase::OnUpdate(timeMult);
 
 		if (_timer > 0.0f) {
-			if (GetState(ActorFlags::CanJump)) {
+			if (GetState(ActorState::CanJump)) {
 				_timer = 0.0f;
 			} else {
 				_timer -= timeMult;
@@ -51,7 +51,7 @@ namespace Jazz2::Actors::Environment
 
 				SetFacingLeft(_speed.X < 0.0f);
 			}
-		} else if (GetState(ActorFlags::CanJump)) {
+		} else if (GetState(ActorState::CanJump)) {
 			_speed.X = 0.0f;
 			_externalForce.Y = 0.0f;
 			_externalForce.X = 0.0f;
@@ -67,7 +67,7 @@ namespace Jazz2::Actors::Environment
 			if (_timer <= 50.0f) {
 				_timer = 100.0f - _timer * 0.2f;
 
-				SetState(ActorFlags::CanJump, false);
+				SetState(ActorState::CanJump, false);
 
 				_direction = (Random().NextBool() ? -1 : 1);
 				_speed.X = Random().NextFloat(-1.4f, 0.0f) * _direction;

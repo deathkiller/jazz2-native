@@ -31,7 +31,7 @@ namespace Jazz2::Actors::Environment
 	{
 		_renderer.setLayer(_renderer.layer() - 16);
 
-		CollisionFlags |= CollisionFlags::CollideWithTilesetReduced | CollisionFlags::CollideWithSolidObjects;
+		SetState(ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjects, true);
 
 		_type = details.Params[0];
 		_activated = (details.Params[1] != 0);

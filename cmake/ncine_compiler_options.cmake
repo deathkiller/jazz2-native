@@ -35,7 +35,7 @@ if(EMSCRIPTEN)
 		list(APPEND EMSCRIPTEN_LINKER_OPTIONS "SHELL:-mnontrapping-fptoint")
 	endif()
 	
-	# TODO: added by me
+	# Include all files in specified directory
 	list(APPEND EMSCRIPTEN_LINKER_OPTIONS "SHELL:--preload-file ${NCINE_DATA_DIR}@Content/")
 
 	target_link_options(ncine PUBLIC ${EMSCRIPTEN_LINKER_OPTIONS})
@@ -156,9 +156,7 @@ else() # GCC and LLVM
 
 	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 		target_compile_options(ncine PRIVATE -fdiagnostics-color=auto)
-		# TODO: added by me
-		#target_compile_options(ncine PRIVATE -Wall -pedantic -Wextra -Wold-style-cast -Wno-long-long -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-variadic-macros)
-		target_compile_options(ncine PRIVATE -fpermissive)
+		target_compile_options(ncine PRIVATE -Wall -pedantic -Wextra -Wold-style-cast -Wno-long-long -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-variadic-macros)
 
 		if(NCINE_DYNAMIC_LIBRARY)
 			target_link_options(ncine PRIVATE -Wl,--no-undefined)

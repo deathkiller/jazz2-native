@@ -24,7 +24,7 @@ namespace Jazz2::Actors::Weapons
 		_initialLayer = _renderer.layer();
 		_strength = 2;
 		_health = INT32_MAX;
-		CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+		SetState(ActorState::ApplyGravitation, false);
 
 		co_await RequestMetadataAsync("Weapon/Thunderbolt"_s);
 

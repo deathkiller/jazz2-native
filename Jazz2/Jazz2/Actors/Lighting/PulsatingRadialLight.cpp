@@ -22,7 +22,8 @@ namespace Jazz2::Actors::Lighting
 
 		_phase = fmodf(BaseCycleFrames - ((float)(fmodf(theApplication().numFrames() * FrameTimer::FramesPerSecond, BaseCycleFrames)) + sync * 175), BaseCycleFrames);
 
-		CollisionFlags = CollisionFlags::ForceDisableCollisions;
+		SetState(ActorState::ForceDisableCollisions, true);
+		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		co_return true;
 	}

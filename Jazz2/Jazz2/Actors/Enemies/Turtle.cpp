@@ -41,7 +41,7 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(1);
 		_scoreValue = 100;
 
-		CollisionFlags |= CollisionFlags::CollideWithTilesetReduced;
+		SetState(ActorState::CollideWithTilesetReduced, true);
 
 		_theme = details.Params[0];
 		switch (_theme) {
@@ -78,7 +78,7 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		if (GetState(ActorFlags::CanJump)) {
+		if (GetState(ActorState::CanJump)) {
 			if (std::abs(_speed.X) > std::numeric_limits<float>::epsilon() && !CanMoveToPosition(_speed.X * 4, 0)) {
 				SetTransition(AnimState::TransitionWithdraw, false, [this]() {
 					HandleTurn(true);
@@ -92,7 +92,7 @@ namespace Jazz2::Actors::Enemies
 
 		if (_isAttacking) {
 			// Turtles attack only with animation, so check collisions every frame
-			CollisionFlags |= CollisionFlags::IsDirty;
+			SetState(ActorState::IsDirty, true);
 		} else if (!_isTurning && !_isWithdrawn) {
 			AABBf aabb = AABBInner + Vector2f(_speed.X * 32, 0);
 			TileCollisionParams params = { TileDestructType::None, false };

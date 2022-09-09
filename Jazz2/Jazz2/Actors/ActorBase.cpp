@@ -18,7 +18,7 @@ namespace Jazz2
 {
 	ActorBase::ActorBase()
 		:
-		_flags(ActorFlags::None),
+		_state(ActorState::None),
 		_levelHandler(nullptr),
 		_internalForceY(0.0f),
 		_elasticity(0.0f),
@@ -44,7 +44,7 @@ namespace Jazz2
 
 	bool ActorBase::IsFacingLeft()
 	{
-		return GetState(ActorFlags::IsFacingLeft);
+		return GetState(ActorState::IsFacingLeft);
 	}
 
 	void ActorBase::SetFacingLeft(bool value)
@@ -53,7 +53,7 @@ namespace Jazz2
 			return;
 		}
 
-		SetState(ActorFlags::IsFacingLeft, value);
+		SetState(ActorState::IsFacingLeft, value);
 		_renderer.setFlippedX(value);
 		
 		// Recalculate hotspot
@@ -71,7 +71,7 @@ namespace Jazz2
 
 	Task<bool> ActorBase::OnActivated(const ActorActivationDetails& details)
 	{
-		_flags = details.Flags | ActorFlags::Initializing | ActorFlags::CanBeFrozen;
+		_state |= details.State | ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation;
 		_levelHandler = details.LevelHandler;
 		_pos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
 		_originTile = Vector2i((int)details.Pos.X / 32, (int)details.Pos.Y / 32);
@@ -85,10 +85,7 @@ namespace Jazz2
 
 		OnUpdateHitbox();
 
-		if ((_flags & ActorFlags::Initializing) == ActorFlags::Initializing) {
-			_flags |= ActorFlags::Initialized;
-			_flags &= ~ActorFlags::Initializing;
-		}
+		_state |= ActorState::Initialized;
 
 		co_return success;
 	}
@@ -106,18 +103,18 @@ namespace Jazz2
 
 	bool ActorBase::OnTileDeactivate(int tx1, int ty1, int tx2, int ty2)
 	{
-		if ((_flags & (ActorFlags::IsCreatedFromEventMap | ActorFlags::IsFromGenerator)) != ActorFlags::None) {
+		if ((_state & (ActorState::IsCreatedFromEventMap | ActorState::IsFromGenerator)) != ActorState::None) {
 			if (_originTile.X < tx1 || _originTile.Y < ty1 || _originTile.X > tx2 || _originTile.Y > ty2) {
 				auto events = _levelHandler->EventMap();
 				if (events != nullptr) {
-					if ((_flags & ActorFlags::IsFromGenerator) == ActorFlags::IsFromGenerator) {
+					if ((_state & ActorState::IsFromGenerator) == ActorState::IsFromGenerator) {
 						events->ResetGenerator(_originTile.X, _originTile.Y);
 					}
 
 					events->Deactivate(_originTile.X, _originTile.Y);
 				}
 
-				CollisionFlags |= CollisionFlags::IsDestroyed;
+				_state |= ActorState::IsDestroyed;
 				return true;
 			}
 		}
@@ -161,7 +158,7 @@ namespace Jazz2
 
 	bool ActorBase::OnPerish(ActorBase* collider)
 	{
-		if ((_flags & ActorFlags::IsCreatedFromEventMap) == ActorFlags::IsCreatedFromEventMap) {
+		if ((_state & ActorState::IsCreatedFromEventMap) == ActorState::IsCreatedFromEventMap) {
 			auto events = _levelHandler->EventMap();
 			if (events != nullptr) {
 				events->Deactivate(_originTile.X, _originTile.Y);
@@ -169,10 +166,10 @@ namespace Jazz2
 			}
 		}
 
-		bool forceDisableCollisions = ((CollisionFlags & CollisionFlags::ForceDisableCollisions) == CollisionFlags::ForceDisableCollisions);
-		CollisionFlags |= CollisionFlags::IsDestroyed | CollisionFlags::SkipPerPixelCollisions;
+		bool forceDisableCollisions = ((_state & ActorState::ForceDisableCollisions) == ActorState::ForceDisableCollisions);
+		_state |= ActorState::IsDestroyed | ActorState::SkipPerPixelCollisions;
 		if (forceDisableCollisions) {
-			CollisionFlags |= CollisionFlags::ForceDisableCollisions;
+			_state |= ActorState::ForceDisableCollisions;
 		}
 		return true;
 	}
@@ -198,7 +195,7 @@ namespace Jazz2
 
 	bool ActorBase::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (GetState(ActorFlags::CanBeFrozen)) {
+		if (GetState(ActorState::CanBeFrozen)) {
 			HandleAmmoFrozenStateChange(other.get());
 		}
 		return false;
@@ -217,7 +214,7 @@ namespace Jazz2
 
 		float currentGravity;
 		float currentElasticity = _elasticity;
-		if ((CollisionFlags & CollisionFlags::ApplyGravitation) == CollisionFlags::ApplyGravitation) {
+		if ((_state & ActorState::ApplyGravitation) == ActorState::ApplyGravitation) {
 			currentGravity = _levelHandler->Gravity;
 			if (_pos.Y >= _levelHandler->WaterLevel()) {
 				currentGravity *= 0.5f;
@@ -244,7 +241,7 @@ namespace Jazz2
 		effectiveSpeedY *= timeMult;
 
 		if (std::abs(effectiveSpeedX) > 0.0f || std::abs(effectiveSpeedY) > 0.0f) {
-			if (GetState(ActorFlags::CanJump)) {
+			if (GetState(ActorState::CanJump)) {
 				// All ground-bound movement is handled here. In the basic case, the actor
 				// moves horizontally, but it can also logically move up or down if it is
 				// moving across a slope. In here, angles between about 45 degrees down
@@ -323,7 +320,7 @@ namespace Jazz2
 				// First, attempt to move directly based on the current speed values
 				if (MoveInstantly(Vector2f(effectiveSpeedX, effectiveSpeedY), MoveType::Relative, params)) {
 					if (std::abs(effectiveSpeedY) < std::numeric_limits<float>::epsilon()) {
-						SetState(ActorFlags::CanJump, true);
+						SetState(ActorState::CanJump, true);
 					}
 				} else {
 					// There is an obstacle so we need to make compromises
@@ -363,7 +360,7 @@ namespace Jazz2
 
 							if (_speed.Y > -CollisionCheckStep) {
 								_speed.Y = 0.0f;
-								SetState(ActorFlags::CanJump, true);
+								SetState(ActorState::CanJump, true);
 							}
 						} else {
 							_speed.Y = 0.0f;
@@ -388,7 +385,7 @@ namespace Jazz2
 		aabb.B += CollisionCheckStep;
 		if (_levelHandler->IsPositionEmpty(this, aabb, params)) {
 			_speed.Y += currentGravity * timeMult;
-			SetState(ActorFlags::CanJump, false);
+			SetState(ActorState::CanJump, false);
 		}
 
 		// Reduce all forces if they are present
@@ -625,8 +622,8 @@ namespace Jazz2
 
 	bool ActorBase::IsCollidingWith(ActorBase* other)
 	{
-		bool perPixel1 = (CollisionFlags & CollisionFlags::SkipPerPixelCollisions) != CollisionFlags::SkipPerPixelCollisions;
-		bool perPixel2 = (other->CollisionFlags & CollisionFlags::SkipPerPixelCollisions) != CollisionFlags::SkipPerPixelCollisions;
+		bool perPixel1 = (_state & ActorState::SkipPerPixelCollisions) != ActorState::SkipPerPixelCollisions;
+		bool perPixel2 = (other->_state & ActorState::SkipPerPixelCollisions) != ActorState::SkipPerPixelCollisions;
 
 		if ((perPixel1 && std::abs(_renderer.rotation()) > 0.1f) || (perPixel2 && std::abs(other->_renderer.rotation()) > 0.1f)) {
 			if (!perPixel1 && std::abs(other->_renderer.rotation()) > 0.1f) {
@@ -658,7 +655,7 @@ namespace Jazz2
 		AABBf aabb1, aabb2;
 		if (!perPixel1) {
 			aabb1 = AABBInner;
-		} else if (GetState(ActorFlags::IsFacingLeft)) {
+		} else if (GetState(ActorState::IsFacingLeft)) {
 			aabb1 = AABBf(_pos.X + hotspot1.X - size1.X, _pos.Y - hotspot1.Y, (float)size1.X, (float)size1.Y);
 			aabb1.B += aabb1.T;
 			aabb1.R += aabb1.L;
@@ -669,7 +666,7 @@ namespace Jazz2
 		}
 		if (!perPixel2) {
 			aabb2 = other->AABBInner;
-		} else if (other->GetState(ActorFlags::IsFacingLeft)) {
+		} else if (other->GetState(ActorState::IsFacingLeft)) {
 			aabb2 = AABBf(other->_pos.X + hotspot2.X - size2.X, other->_pos.Y - hotspot2.Y, (float)size2.X, (float)size2.Y);
 			aabb2.B += aabb2.T;
 			aabb2.R += aabb2.L;
@@ -699,7 +696,7 @@ namespace Jazz2
 				res = res1;
 				p = res->Base->Mask.get();
 
-				isFacingLeftCurrent = GetState(ActorFlags::IsFacingLeft);
+				isFacingLeftCurrent = GetState(ActorState::IsFacingLeft);
 
 				x1 = (int)std::max(inter.L, other->AABBInner.L);
 				y1 = (int)std::max(inter.T, other->AABBInner.T);
@@ -716,7 +713,7 @@ namespace Jazz2
 				res = res2;
 				p = res->Base->Mask.get();
 
-				isFacingLeftCurrent = other->GetState(ActorFlags::IsFacingLeft);
+				isFacingLeftCurrent = other->GetState(ActorState::IsFacingLeft);
 
 				x1 = (int)std::max(inter.L, AABBInner.L);
 				y1 = (int)std::max(inter.T, AABBInner.T);
@@ -771,11 +768,11 @@ namespace Jazz2
 			for (int i = x1; i < x2; i += PerPixelCollisionStep) {
 				for (int j = y1; j < y2; j += PerPixelCollisionStep) {
 					int i1 = i - x1s;
-					if (GetState(ActorFlags::IsFacingLeft)) {
+					if (GetState(ActorState::IsFacingLeft)) {
 						i1 = res1->Base->FrameDimensions.X - i1 - 1;
 					}
 					int i2 = i - x2s;
-					if (other->GetState(ActorFlags::IsFacingLeft)) {
+					if (other->GetState(ActorState::IsFacingLeft)) {
 						i2 = res2->Base->FrameDimensions.X - i2 - 1;
 					}
 
@@ -791,7 +788,7 @@ namespace Jazz2
 
 	bool ActorBase::IsCollidingWith(const AABBf& aabb)
 	{
-		bool perPixel = (CollisionFlags & CollisionFlags::SkipPerPixelCollisions) != CollisionFlags::SkipPerPixelCollisions;
+		bool perPixel = (_state & ActorState::SkipPerPixelCollisions) != ActorState::SkipPerPixelCollisions;
 		if (!perPixel) {
 			AABBf inter2 = AABBf::Intersect(aabb, AABBInner);
 			return (inter2.R > 0 && inter2.B > 0);
@@ -808,7 +805,7 @@ namespace Jazz2
 		Vector2i& size = res->Base->FrameDimensions;
 
 		AABBf aabbSelf;
-		if (GetState(ActorFlags::IsFacingLeft)) {
+		if (GetState(ActorState::IsFacingLeft)) {
 			aabbSelf = AABBf(_pos.X + hotspot.X - size.X, _pos.Y - hotspot.Y, (float)size.X, (float)size.Y);
 			aabbSelf.B += aabbSelf.T;
 			aabbSelf.R += aabbSelf.L;
@@ -842,7 +839,7 @@ namespace Jazz2
 		for (int i = x1; i < x2; i += PerPixelCollisionStep) {
 			for (int j = y1; j < y2; j += PerPixelCollisionStep) {
 				int i1 = i - xs;
-				if (GetState(ActorFlags::IsFacingLeft)) {
+				if (GetState(ActorState::IsFacingLeft)) {
 					i1 = res->Base->FrameDimensions.X - i1 - 1;
 				}
 
@@ -864,13 +861,13 @@ namespace Jazz2
 		}
 
 		Matrix4x4f transform1 = Matrix4x4f::Translation((float)-res1->Base->Hotspot.X, (float)-res1->Base->Hotspot.Y, 0.0f);
-		if (GetState(ActorFlags::IsFacingLeft)) {
+		if (GetState(ActorState::IsFacingLeft)) {
 			transform1 = Matrix4x4f::Scaling(-1.0f, 1.0f, 1.0f) * transform1;
 		}
 		transform1 = Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f) * Matrix4x4f::RotationZ(_renderer.rotation()) * transform1;
 
 		Matrix4x4f transform2 = Matrix4x4f::Translation((float)-res2->Base->Hotspot.X, (float)-res2->Base->Hotspot.Y, 0.0f);
-		if (other->GetState(ActorFlags::IsFacingLeft)) {
+		if (other->GetState(ActorState::IsFacingLeft)) {
 			transform2 = Matrix4x4f::Scaling(-1.0f, 1.0f, 1.0f) * transform2;
 		}
 		transform2 = Matrix4x4f::Translation(other->_pos.X, other->_pos.Y, 0.0f) * Matrix4x4f::RotationZ(other->_renderer.rotation()) * transform2;
@@ -963,7 +960,7 @@ namespace Jazz2
 		}
 
 		Matrix4x4f transform = Matrix4x4f::Translation((float)-res->Base->Hotspot.X, (float)-res->Base->Hotspot.Y, 0.0f);
-		if (GetState(ActorFlags::IsFacingLeft)) {
+		if (GetState(ActorState::IsFacingLeft)) {
 			transform = Matrix4x4f::Scaling(-1.0f, 1.0f, 1.0f) * transform;
 		}
 		transform = Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f) * Matrix4x4f::RotationZ(_renderer.rotation()) * transform;
@@ -1026,12 +1023,12 @@ namespace Jazz2
 
 	void ActorBase::UpdateAABB()
 	{
-		if ((CollisionFlags & (CollisionFlags::CollideWithOtherActors | CollisionFlags::CollideWithSolidObjects | CollisionFlags::IsSolidObject)) == CollisionFlags::None) {
+		if ((_state & (ActorState::CollideWithOtherActors | ActorState::CollideWithSolidObjects | ActorState::IsSolidObject)) == ActorState::None) {
 			// Collisions are deactivated
 			return;
 		}
 
-		if ((CollisionFlags & CollisionFlags::SkipPerPixelCollisions) != CollisionFlags::SkipPerPixelCollisions) {
+		if ((_state & ActorState::SkipPerPixelCollisions) != ActorState::SkipPerPixelCollisions) {
 			GraphicResource* res = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
 			if (res == nullptr) {
 				return;
@@ -1042,7 +1039,7 @@ namespace Jazz2
 
 			if (std::abs(_renderer.rotation()) > 0.1f) {
 				Matrix4x4f transform = Matrix4x4f::Translation((float)-res->Base->Hotspot.X, (float)-res->Base->Hotspot.Y, 0.0f);
-				if (GetState(ActorFlags::IsFacingLeft)) {
+				if (GetState(ActorState::IsFacingLeft)) {
 					transform = Matrix4x4f::Scaling(-1.0f, 1.0f, 1.0f) * transform;
 				}
 				transform = Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f) * Matrix4x4f::RotationZ(_renderer.rotation()) * transform;
@@ -1108,8 +1105,8 @@ namespace Jazz2
 
 		OnAnimationStarted();
 
-		if ((CollisionFlags & CollisionFlags::ForceDisableCollisions) != CollisionFlags::ForceDisableCollisions) {
-			CollisionFlags |= CollisionFlags::IsDirty;
+		if ((_state & ActorState::ForceDisableCollisions) != ActorState::ForceDisableCollisions) {
+			_state |= ActorState::IsDirty;
 		}
 	}
 
@@ -1154,7 +1151,7 @@ namespace Jazz2
 
 	bool ActorBase::IsInvulnerable()
 	{
-		return GetState(ActorFlags::IsInvulnerable);
+		return GetState(ActorState::IsInvulnerable);
 	}
 
 	int ActorBase::GetHealth()
@@ -1212,8 +1209,8 @@ namespace Jazz2
 			_pos = newPos;
 			_renderer.setPosition(std::round(newPos.X), std::round(newPos.Y));
 
-			if ((CollisionFlags & CollisionFlags::ForceDisableCollisions) != CollisionFlags::ForceDisableCollisions) {
-				CollisionFlags |= CollisionFlags::IsDirty;
+			if ((_state & ActorState::ForceDisableCollisions) != ActorState::ForceDisableCollisions) {
+				_state |= ActorState::IsDirty;
 			}
 		}
 		return free;

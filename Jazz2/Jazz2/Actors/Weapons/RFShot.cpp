@@ -21,7 +21,7 @@ namespace Jazz2::Actors::Weapons
 		_upgrades = details.Params[0];
 		_strength = 2;
 
-		CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+		SetState(ActorState::ApplyGravitation, false);
 
 		co_await RequestMetadataAsync("Weapon/RF"_s);
 

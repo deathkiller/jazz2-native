@@ -6,10 +6,10 @@ namespace Jazz2::Actors::Enemies
 {
 	bool BossBase::OnPlayerDied()
 	{
-		if ((_flags & (ActorFlags::IsCreatedFromEventMap | ActorFlags::IsFromGenerator)) != ActorFlags::None) {
+		if ((GetState() & (ActorState::IsCreatedFromEventMap | ActorState::IsFromGenerator)) != ActorState::None) {
 			auto events = _levelHandler->EventMap();
 			if (events != nullptr) {
-				if ((_flags & ActorFlags::IsFromGenerator) == ActorFlags::IsFromGenerator) {
+				if (GetState(ActorState::IsFromGenerator)) {
 					events->ResetGenerator(_originTile.X, _originTile.Y);
 				}
 
@@ -17,7 +17,7 @@ namespace Jazz2::Actors::Enemies
 			}
 
 			OnDeactivatedBoss();
-			CollisionFlags |= CollisionFlags::IsDestroyed | CollisionFlags::SkipPerPixelCollisions;
+			SetState(ActorState::IsDestroyed | ActorState::SkipPerPixelCollisions, true);
 			return true;
 		}
 

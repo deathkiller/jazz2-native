@@ -40,8 +40,7 @@ namespace Jazz2::Actors::Solid
 		_pos.Y += y;
 		_renderer.setLayer(_renderer.layer() - 20);
 
-		SetState(ActorFlags::CanBeFrozen, false);
-		CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
 
 		bool isSolid = true;
 		switch (theme) {
@@ -54,7 +53,7 @@ namespace Jazz2::Actors::Solid
 		}
 
 		if (isSolid) {
-			CollisionFlags |= CollisionFlags::IsSolidObject;
+			SetState(ActorState::IsSolidObject, true);
 		}
 
 		SetAnimation("Pole"_s);
@@ -86,14 +85,14 @@ namespace Jazz2::Actors::Solid
 					_angleVel = Bounce * _bouncesLeft * _angleVelLast;
 				} else {
 					_fall = FallDirection::Fallen;
-					if (_fallTime < 10) {
-						CollisionFlags &= ~CollisionFlags::IsSolidObject;
+					if (_fallTime < 10.0f) {
+						SetState(ActorState::IsSolidObject, false);
 					}
 				}
 			} else {
 				_angleVel += FallMultiplier * timeMult;
 				_renderer.setRotation(_renderer.rotation() + _angleVel * timeMult);
-				CollisionFlags |= CollisionFlags::IsDirty;
+				SetState(ActorState::IsDirty, true);
 			}
 		} else if (_fall == FallDirection::Left) {
 			if (_angleVel < 0 && IsPositionBlocked()) {
@@ -107,13 +106,13 @@ namespace Jazz2::Actors::Solid
 				} else {
 					_fall = FallDirection::Fallen;
 					if (_fallTime < 10.0f) {
-						CollisionFlags &= ~CollisionFlags::IsSolidObject;
+						SetState(ActorState::IsSolidObject, false);
 					}
 				}
 			} else {
 				_angleVel -= FallMultiplier * timeMult;
 				_renderer.setRotation(_renderer.rotation() + _angleVel * timeMult);
-				CollisionFlags |= CollisionFlags::IsDirty;
+				SetState(ActorState::IsDirty, true);
 			}
 		}
 	}
@@ -147,8 +146,7 @@ namespace Jazz2::Actors::Solid
 		}
 
 		_fall = dir;
-		SetState(ActorFlags::IsInvulnerable, true);
-		CollisionFlags |= CollisionFlags::IsSolidObject;
+		SetState(ActorState::IsInvulnerable | ActorState::IsSolidObject, true);
 	}
 
 	bool Pole::IsPositionBlocked()

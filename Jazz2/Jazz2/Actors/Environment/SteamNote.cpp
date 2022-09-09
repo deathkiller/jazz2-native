@@ -14,9 +14,8 @@ namespace Jazz2::Actors::Environment
 		_pos.X -= 10.0f;
 		_pos.Y += 32.0f;
 
-		CollisionFlags = CollisionFlags::ForceDisableCollisions;
-
-		SetState(ActorFlags::CanBeFrozen, false);
+		SetState(ActorState::ForceDisableCollisions, true);
+		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		co_await RequestMetadataAsync("Object/SteamNote"_s);
 

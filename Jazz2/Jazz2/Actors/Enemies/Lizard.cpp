@@ -40,7 +40,7 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(_isFalling ? 6 : 1);
 		_scoreValue = 100;
 
-		CollisionFlags |= CollisionFlags::CollideWithTilesetReduced;
+		SetState(ActorState::CollideWithTilesetReduced, true);
 
 		switch (theme) {
 			case 0:
@@ -93,7 +93,7 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		if (GetState(ActorFlags::CanJump)) {
+		if (GetState(ActorState::CanJump)) {
 			if (!CanMoveToPosition(_speed.X * 4.0f, 0)) {
 				if (_stuck) {
 					MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative | MoveType::Force);

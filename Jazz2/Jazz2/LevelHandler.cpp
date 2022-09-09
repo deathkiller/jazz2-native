@@ -97,7 +97,7 @@ namespace Jazz2
 			_players.push_back(ptr);
 			AddActor(player);
 
-			ptr->ReceiveLevelCarryOver(levelInit.ExitType, levelInit.PlayerCarryOvers[i]);
+			ptr->ReceiveLevelCarryOver(levelInit.LastExitType, levelInit.PlayerCarryOvers[i]);
 		}
 
 		_commonResources = resolver.RequestMetadata("Common/Scenery"_s);
@@ -247,7 +247,7 @@ namespace Jazz2
 						levelInit.Difficulty = _difficulty;
 						levelInit.ReduxMode = _reduxMode;
 						levelInit.CheatsUsed = _cheatsUsed;
-						levelInit.ExitType = _nextLevelType;
+						levelInit.LastExitType = _nextLevelType;
 						levelInit.LastEpisodeName = _episodeName;
 
 						for (int i = 0; i < _players.size(); i++) {
@@ -609,7 +609,7 @@ namespace Jazz2
 	{
 		actor->SetParent(_rootNode.get());
 
-		if ((actor->CollisionFlags & CollisionFlags::ForceDisableCollisions) != CollisionFlags::ForceDisableCollisions) {
+		if (!actor->GetState(ActorState::ForceDisableCollisions)) {
 			actor->UpdateAABB();
 			actor->CollisionProxyID = _collisions.CreateProxy(actor->AABB, actor.get());
 		}
@@ -680,9 +680,9 @@ namespace Jazz2
 	{
 		*collider = nullptr;
 
-		if ((self->CollisionFlags & CollisionFlags::CollideWithTileset) == CollisionFlags::CollideWithTileset) {
+		if (self->GetState(ActorState::CollideWithTileset)) {
 			if (_tileMap != nullptr) {
-				if ((self->CollisionFlags & CollisionFlags::CollideWithTilesetReduced) == CollisionFlags::CollideWithTilesetReduced && aabb.B - aabb.T >= 20.0f) {
+				if (self->GetState(ActorState::CollideWithTilesetReduced) && aabb.B - aabb.T >= 20.0f) {
 					// If hitbox height is larger than 20px, check bottom and top separately (and top only if going upwards)
 					AABBf aabbTop = aabb;
 					aabbTop.B = aabbTop.T + 6.0f;
@@ -706,14 +706,14 @@ namespace Jazz2
 		}
 
 		// Check for solid objects
-		if ((self->CollisionFlags & CollisionFlags::CollideWithSolidObjects) == CollisionFlags::CollideWithSolidObjects) {
+		if (self->GetState(ActorState::CollideWithSolidObjects)) {
 			ActorBase* colliderActor = nullptr;
 			FindCollisionActorsByAABB(self, aabb, [&](ActorBase* actor) -> bool {
-				if ((actor->CollisionFlags & (CollisionFlags::IsSolidObject | CollisionFlags::IsDestroyed)) != CollisionFlags::IsSolidObject) {
+				if ((actor->GetState() & (ActorState::IsSolidObject | ActorState::IsDestroyed)) != ActorState::IsSolidObject) {
 					return true;
 				}
 
-				if ((self->CollisionFlags & CollisionFlags::CollideWithSolidObjectsBelow) == CollisionFlags::CollideWithSolidObjectsBelow &&
+				if (self->GetState(ActorState::CollideWithSolidObjectsBelow) &&
 					self->AABBInner.B > (actor->AABBInner.T + actor->AABBInner.B) * 0.5f) {
 					return true;
 				}
@@ -740,14 +740,14 @@ namespace Jazz2
 	void LevelHandler::FindCollisionActorsByAABB(ActorBase* self, const AABBf& aabb, const std::function<bool(ActorBase*)>& callback)
 	{
 		struct QueryHelper {
-			const LevelHandler* LevelHandler;
+			const LevelHandler* Handler;
 			const ActorBase* Self;
 			const AABBf& AABB;
 			const std::function<bool(ActorBase*)>& Callback;
 
 			bool OnCollisionQuery(int32_t nodeId) {
-				ActorBase* actor = (ActorBase*)LevelHandler->_collisions.GetUserData(nodeId);
-				if (Self == actor || (actor->CollisionFlags & (CollisionFlags::CollideWithOtherActors | CollisionFlags::IsDestroyed)) != CollisionFlags::CollideWithOtherActors) {
+				ActorBase* actor = (ActorBase*)Handler->_collisions.GetUserData(nodeId);
+				if (Self == actor || (actor->GetState() & (ActorState::CollideWithOtherActors | ActorState::IsDestroyed)) != ActorState::CollideWithOtherActors) {
 					return true;
 				}
 				if (actor->IsCollidingWith(AABB)) {
@@ -767,14 +767,14 @@ namespace Jazz2
 		float radiusSquared = (radius * radius);
 
 		struct QueryHelper {
-			const LevelHandler* LevelHandler;
+			const LevelHandler* Handler;
 			const float x, y;
 			const float RadiusSquared;
 			const std::function<bool(ActorBase*)>& Callback;
 
 			bool OnCollisionQuery(int32_t nodeId) {
-				ActorBase* actor = (ActorBase*)LevelHandler->_collisions.GetUserData(nodeId);
-				if ((actor->CollisionFlags & (CollisionFlags::CollideWithOtherActors | CollisionFlags::IsDestroyed)) != CollisionFlags::CollideWithOtherActors) {
+				ActorBase* actor = (ActorBase*)Handler->_collisions.GetUserData(nodeId);
+				if ((actor->GetState() & (ActorState::CollideWithOtherActors | ActorState::IsDestroyed)) != ActorState::CollideWithOtherActors) {
 					return true;
 				}
 
@@ -1089,8 +1089,8 @@ namespace Jazz2
 	{
 		auto actor = _actors.begin();
 		while (actor != _actors.end()) {
-			if (((*actor)->CollisionFlags & CollisionFlags::IsDestroyed) == CollisionFlags::IsDestroyed) {
-				if (((*actor)->CollisionFlags & CollisionFlags::ForceDisableCollisions) != CollisionFlags::ForceDisableCollisions) {
+			if ((*actor)->GetState(ActorState::IsDestroyed)) {
+				if ((*actor)->CollisionProxyID != Collisions::NullNode) {
 					_collisions.DestroyProxy((*actor)->CollisionProxyID);
 					(*actor)->CollisionProxyID = Collisions::NullNode;
 				}
@@ -1099,14 +1099,14 @@ namespace Jazz2
 				continue;
 			}
 			
-			if (((*actor)->CollisionFlags & CollisionFlags::IsDirty) == CollisionFlags::IsDirty) {
+			if ((*actor)->GetState(ActorState::IsDirty)) {
 				if ((*actor)->CollisionProxyID == Collisions::NullNode) {
 					continue;
 				}
 
 				(*actor)->UpdateAABB();
 				_collisions.MoveProxy((*actor)->CollisionProxyID, (*actor)->AABB, (*actor)->_speed * timeMult);
-				(*actor)->CollisionFlags &= ~CollisionFlags::IsDirty;
+				(*actor)->SetState(ActorState::IsDirty, false);
 
 #if _DEBUG
 				_debugActorDirtyCount++;
@@ -1119,7 +1119,7 @@ namespace Jazz2
 			void OnPairAdded(void* proxyA, void* proxyB) {
 				ActorBase* actorA = (ActorBase*)proxyA;
 				ActorBase* actorB = (ActorBase*)proxyB;
-				if (((actorA->CollisionFlags | actorB->CollisionFlags) & (CollisionFlags::CollideWithOtherActors | CollisionFlags::IsDestroyed)) != CollisionFlags::CollideWithOtherActors) {
+				if (((actorA->GetState() | actorB->GetState()) & (ActorState::CollideWithOtherActors | ActorState::IsDestroyed)) != ActorState::CollideWithOtherActors) {
 					return;
 				}
 
@@ -1214,14 +1214,14 @@ namespace Jazz2
 
 		// Clamp camera position to level bounds
 		if (_viewBounds.W > halfView.X * 2) {
-			_cameraPos.X = std::round(std::clamp(_cameraLastPos.X + _cameraDistanceFactor.X, _viewBounds.X + halfView.X, _viewBounds.X + _viewBounds.W - halfView.X) + _shakeOffset.X);
+			_cameraPos.X = std::floor(std::clamp(_cameraLastPos.X + _cameraDistanceFactor.X, _viewBounds.X + halfView.X, _viewBounds.X + _viewBounds.W - halfView.X) + _shakeOffset.X);
 		} else {
-			_cameraPos.X = std::round(_viewBounds.X + _viewBounds.W * 0.5f + _shakeOffset.X);
+			_cameraPos.X = std::floor(_viewBounds.X + _viewBounds.W * 0.5f + _shakeOffset.X);
 		}
 		if (_viewBounds.H > halfView.Y * 2) {
-			_cameraPos.Y = std::round(std::clamp(_cameraLastPos.Y + _cameraDistanceFactor.Y, _viewBounds.Y + halfView.Y, _viewBounds.Y + _viewBounds.H - halfView.Y) + _shakeOffset.Y);
+			_cameraPos.Y = std::floor(std::clamp(_cameraLastPos.Y + _cameraDistanceFactor.Y, _viewBounds.Y + halfView.Y, _viewBounds.Y + _viewBounds.H - halfView.Y - 1.0f) + _shakeOffset.Y);
 		} else {
-			_cameraPos.Y = std::round(_viewBounds.Y + _viewBounds.H * 0.5f + _shakeOffset.Y);
+			_cameraPos.Y = std::floor(_viewBounds.Y + _viewBounds.H * 0.5f + _shakeOffset.Y);
 		}
 
 		_camera->setView(_cameraPos, 0.0f, 1.0f);

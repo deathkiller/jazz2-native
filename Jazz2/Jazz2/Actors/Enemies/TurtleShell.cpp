@@ -40,7 +40,7 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(1);
 		_scoreValue = 100;
 
-		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions | CollisionFlags::CollideWithTilesetReduced | CollisionFlags::CollideWithSolidObjects | CollisionFlags::CollideWithSolidObjectsBelow;
+		SetState(ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjects | ActorState::CollideWithSolidObjectsBelow | ActorState::SkipPerPixelCollisions, true);
 
 		_speed.X = *(float*)&details.Params[0];
 		_externalForce.Y = *(float*)&details.Params[4];
@@ -159,7 +159,7 @@ namespace Jazz2::Actors::Enemies
 		} else if (auto enemyBase = dynamic_cast<EnemyBase*>(other.get())) {
 			if (enemyBase->CanCollideWithAmmo) {
 				_speed.X = std::max(std::abs(_speed.X), 2.0f) * (_speed.X >= 0.0f ? -1.0f : 1.0f);
-				if (!enemyBase->GetState(ActorFlags::IsInvulnerable)) {
+				if (!enemyBase->GetState(ActorState::IsInvulnerable)) {
 					enemyBase->DecreaseHealth(1, this);
 					return true;
 				}

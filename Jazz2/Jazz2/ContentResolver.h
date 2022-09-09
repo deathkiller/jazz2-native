@@ -150,7 +150,7 @@ namespace Jazz2
 	struct TileCollisionParams {
 		TileDestructType DestructType;
 		bool Downwards;
-		WeaponType WeaponType;
+		WeaponType UsedWeaponType;
 		int WeaponStrength;
 		float Speed;
 		/*out*/ int TilesDestroyed;

@@ -21,7 +21,7 @@ namespace Jazz2::Actors::Enemies
 	Queen::~Queen()
 	{
 		if (_block != nullptr) {
-			_block->CollisionFlags |= CollisionFlags::IsDestroyed;
+			_block->SetState(ActorState::IsDestroyed, true);
 			_block = nullptr;
 		}
 	}
@@ -37,15 +37,13 @@ namespace Jazz2::Actors::Enemies
 
 		_pos.Y -= 8.0f;
 		_canHurtPlayer = false;
-		SetState(ActorFlags::IsInvulnerable, true);
-		SetState(ActorFlags::CanBeFrozen, false);
+		SetState(ActorState::IsInvulnerable | ActorState::IsSolidObject | ActorState::SkipPerPixelCollisions, true);
+		SetState(ActorState::CanBeFrozen, false);
 		_health = INT32_MAX;
 		_maxHealth = INT32_MAX;
 		_scoreValue = 0;
 
 		_lastHealth = _health;
-
-		CollisionFlags |= CollisionFlags::IsSolidObject | CollisionFlags::SkipPerPixelCollisions;
 
 		_stepSize = 0.3f;
 		switch (_levelHandler->Difficulty()) {
@@ -104,7 +102,7 @@ namespace Jazz2::Actors::Enemies
 				// Scream towards the player
 				if (_stateTime <= 0.0f) {
 					_lastHealth = _health;
-					SetState(ActorFlags::IsInvulnerable, false);
+					SetState(ActorState::IsInvulnerable, false);
 
 					_state = StateScreaming;
 					PlaySfx("Scream"_s);
@@ -112,7 +110,7 @@ namespace Jazz2::Actors::Enemies
 						_state = (Random().NextFloat() < 0.8f ? StateIdleToStomp : StateIdleToBackstep);
 						_stateTime = Random().NextFloat(65.0f, 85.0f);
 
-						SetState(ActorFlags::IsInvulnerable, true);
+						SetState(ActorState::IsInvulnerable, true);
 
 						if (_lastHealth - _health >= 2) {
 							_queuedBackstep = true;
@@ -167,12 +165,12 @@ namespace Jazz2::Actors::Enemies
 							TileCollisionParams params = { TileDestructType::None, true };
 							if (!_levelHandler->IsPositionEmpty(this, aabb1, params) && _levelHandler->IsPositionEmpty(this, aabb2, params)) {
 								_lastHealth = _health;
-								SetState(ActorFlags::IsInvulnerable, false);
+								SetState(ActorState::IsInvulnerable, false);
 
 								// It's on the ledge
 								_state = StateTransition;
 								SetTransition((AnimState)1073741827, false, [this]() {
-									SetState(ActorFlags::IsInvulnerable, true);
+									SetState(ActorState::IsInvulnerable, true);
 
 									// 1 hits by player
 									if (_lastHealth - _health >= 1) {
@@ -243,7 +241,7 @@ namespace Jazz2::Actors::Enemies
 				} else {
 					return BossBase::OnHandleCollision(other);
 				}
-				SetState(ActorFlags::CanJump, false);
+				SetState(ActorState::CanJump, false);
 
 				SetAnimation(AnimState::Fall);
 				PlaySfx("Spring"_s);
@@ -263,8 +261,8 @@ namespace Jazz2::Actors::Enemies
 	{
 		_timeLeft = 50.0f;
 
-		SetState(ActorFlags::IsInvulnerable, true);
-		CollisionFlags = CollisionFlags::CollideWithOtherActors | CollisionFlags::ApplyGravitation | CollisionFlags::SkipPerPixelCollisions;
+		SetState(ActorState::IsInvulnerable | ActorState::SkipPerPixelCollisions, true);
+		SetState(ActorState::CollideWithTileset, false);
 
 		co_await RequestMetadataAsync("Boss/Queen"_s);
 		SetAnimation((AnimState)1073741829);
@@ -296,7 +294,8 @@ namespace Jazz2::Actors::Enemies
 
 	Task<bool> Queen::InvisibleBlock::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		CollisionFlags = CollisionFlags::CollideWithOtherActors | CollisionFlags::IsSolidObject | CollisionFlags::SkipPerPixelCollisions;
+		SetState(ActorState::IsSolidObject | ActorState::SkipPerPixelCollisions, true);
+		SetState(ActorState::CollideWithTileset, false);
 
 		_health = INT32_MAX;
 

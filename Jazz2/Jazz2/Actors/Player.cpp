@@ -101,7 +101,7 @@ namespace Jazz2::Actors
 
 		_weaponAmmo[(int)WeaponType::Blaster] = UINT16_MAX;
 
-		CollisionFlags = CollisionFlags::CollideWithTileset | CollisionFlags::CollideWithTilesetReduced | CollisionFlags::CollideWithSolidObjects | CollisionFlags::CollideWithOtherActors | CollisionFlags::ApplyGravitation | CollisionFlags::IsSolidObject;
+		SetState(ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjects | ActorState::IsSolidObject, true);
 
 		_health = 5;
 		_maxHealth = _health;
@@ -211,7 +211,7 @@ namespace Jazz2::Actors
 			_invulnerableTime -= timeMult;
 
 			if (_invulnerableTime <= 0.0f) {
-				SetState(ActorFlags::IsInvulnerable, false);
+				SetState(ActorState::IsInvulnerable, false);
 				_renderer.setDrawEnabled(true);
 
 #if !SERVER
@@ -256,7 +256,7 @@ namespace Jazz2::Actors
 						}
 					}
 
-					CollisionFlags |= CollisionFlags::ApplyGravitation;
+					SetState(ActorState::ApplyGravitation, true);
 					_isAttachedToPole = false;
 					_wasActivelyPushing = false;
 
@@ -426,7 +426,7 @@ namespace Jazz2::Actors
 
 			if (_inTubeTime <= 0.0f) {
 				_controllable = true;
-				CollisionFlags |= (CollisionFlags::ApplyGravitation | CollisionFlags::CollideWithTileset);
+				SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset, true);
 			} else {
 				// Skip controls, player is not controllable in tube
 				// Weapons are automatically disabled if player is not controllable
@@ -482,7 +482,7 @@ namespace Jazz2::Actors
 					}
 				}
 
-				if (GetState(ActorFlags::CanJump)) {
+				if (GetState(ActorState::CanJump)) {
 					_wasUpPressed = _wasDownPressed = false;
 				}
 			} else {
@@ -540,7 +540,7 @@ namespace Jazz2::Actors
 			// Look-up
 			if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Up)) {
 				if (!_wasUpPressed && _dizzyTime <= 0.0f) {
-					if ((GetState(ActorFlags::CanJump) || (_suspendType != SuspendType::None && _suspendType != SuspendType::SwingingVine)) && !_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
+					if ((GetState(ActorState::CanJump) || (_suspendType != SuspendType::None && _suspendType != SuspendType::SwingingVine)) && !_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
 						_wasUpPressed = true;
 
 						SetAnimation(AnimState::Lookup | (_currentAnimationState & AnimState::Hook));
@@ -562,9 +562,9 @@ namespace Jazz2::Actors
 					MoveInstantly(Vector2f(0.0f, 10.0f), MoveType::Relative | MoveType::Force);
 					_suspendType = SuspendType::None;
 
-					CollisionFlags |= CollisionFlags::ApplyGravitation;
+					SetState(ActorState::ApplyGravitation, true);
 				} else if (!_wasDownPressed && _dizzyTime <= 0.0f) {
-					if (GetState(ActorFlags::CanJump)) {
+					if (GetState(ActorState::CanJump)) {
 						if (!_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
 							_wasDownPressed = true;
 
@@ -578,12 +578,12 @@ namespace Jazz2::Actors
 						_speed.Y = 0.0f;
 						_internalForceY = 0.0f;
 						_externalForce.Y = 0.0f;
-						CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+						SetState(ActorState::ApplyGravitation, false);
 						_currentSpecialMove = SpecialMoveType::Buttstomp;
 						SetAnimation(AnimState::Buttstomp);
 						SetPlayerTransition(AnimState::TransitionButtstompStart, true, false, SpecialMoveType::Buttstomp, [this]() {
 							_speed.Y = 9.0f;
-							CollisionFlags |= CollisionFlags::ApplyGravitation;
+							SetState(ActorState::ApplyGravitation, true);
 							SetAnimation(AnimState::Buttstomp);
 							PlaySfx("Buttstomp"_s, 1.0f, 0.8f);
 							PlaySfx("Buttstomp2"_s);
@@ -602,13 +602,13 @@ namespace Jazz2::Actors
 					_wasJumpPressed = true;
 
 					if (_suspendType == SuspendType::None && _jumpTime <= 0.0f) {
-						if (_isLifting && GetState(ActorFlags::CanJump) && _currentSpecialMove == SpecialMoveType::None) {
-							SetState(ActorFlags::CanJump, false);
+						if (_isLifting && GetState(ActorState::CanJump) && _currentSpecialMove == SpecialMoveType::None) {
+							SetState(ActorState::CanJump, false);
 							SetAnimation(_currentAnimationState & (~AnimState::Lookup & ~AnimState::Crouch));
 							PlaySfx("Jump"_s);
 							//_carryingObject = null;
 
-							CollisionFlags &= ~CollisionFlags::IsSolidObject;
+							SetState(ActorState::IsSolidObject | ActorState::CollideWithSolidObjects, false);
 
 							_isLifting = false;
 							_controllable = false;
@@ -617,11 +617,9 @@ namespace Jazz2::Actors
 							_speed.Y = -3.0f;
 							_internalForceY = 0.88f;
 
-							CollisionFlags &= ~CollisionFlags::CollideWithSolidObjects;
-
 							SetTransition(AnimState::TransitionLiftEnd, false, [this]() {
 								_controllable = true;
-								CollisionFlags |= CollisionFlags::CollideWithSolidObjects;
+								SetState(ActorState::CollideWithSolidObjects, true);
 							});
 						} else {
 							switch (_playerType) {
@@ -632,12 +630,12 @@ namespace Jazz2::Actors
 										SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Uppercut, [this]() {
 											_externalForce.Y = 1.4f;
 											_speed.Y = -2.0f;
-											SetState(ActorFlags::CanJump, false);
+											SetState(ActorState::CanJump, false);
 											SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Uppercut);
 										});
 									} else {
-										if (_speed.Y > 0.01f && !GetState(ActorFlags::CanJump) && (_currentAnimationState & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
-											CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+										if (_speed.Y > 0.01f && !GetState(ActorState::CanJump) && (_currentAnimationState & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
+											SetState(ActorState::ApplyGravitation, false);
 											_speed.Y = 1.5f;
 											if ((_currentAnimationState & AnimState::Copter) != AnimState::Copter) {
 												SetAnimation(AnimState::Copter);
@@ -661,13 +659,13 @@ namespace Jazz2::Actors
 										SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Sidekick, [this]() {
 											_externalForce.X = 8.0f * (IsFacingLeft() ? -1.0f : 1.0f);
 											_speed.X = 14.4f * (IsFacingLeft() ? -1.0f : 1.0f);
-											CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+											SetState(ActorState::ApplyGravitation, false);
 											SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Sidekick);
 										});
 
 										PlayPlayerSfx("Sidekick"_s);
 									} else {
-										if (!GetState(ActorFlags::CanJump) && _canDoubleJump) {
+										if (!GetState(ActorState::CanJump) && _canDoubleJump) {
 											_canDoubleJump = false;
 											_isFreefall = false;
 
@@ -689,11 +687,11 @@ namespace Jazz2::Actors
 										SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Sidekick, [this]() {
 											_externalForce.X = 15.0f * (IsFacingLeft() ? -1.0f : 1.0f);
 											_speed.X = 6.0f * (IsFacingLeft() ? -1.0f : 1.0f);
-											CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+											SetState(ActorState::ApplyGravitation, false);
 										});
 									} else {
-										if (_speed.Y > 0.01f && !GetState(ActorFlags::CanJump) && (_currentAnimationState & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
-											CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+										if (_speed.Y > 0.01f && !GetState(ActorState::CanJump) && (_currentAnimationState & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
+											SetState(ActorState::ApplyGravitation, false);
 											_speed.Y = 1.5f;
 											if ((_currentAnimationState & AnimState::Copter) != AnimState::Copter) {
 												SetAnimation(AnimState::Copter);
@@ -718,19 +716,19 @@ namespace Jazz2::Actors
 						if (_suspendType == SuspendType::SwingingVine) {
 							_suspendType = SuspendType::None;
 							//_currentVine = nullptr;
-							CollisionFlags |= CollisionFlags::ApplyGravitation;
+							SetState(ActorState::ApplyGravitation, true);
 						} else {
 							MoveInstantly(Vector2(0.0f, -4.0f), MoveType::Relative | MoveType::Force);
 						}
-						SetState(ActorFlags::CanJump, true);
+						SetState(ActorState::CanJump, true);
 						_canDoubleJump = true;
 					}
-					if (!GetState(ActorFlags::CanJump)) {
+					if (!GetState(ActorState::CanJump)) {
 						if (_copterFramesLeft > 0.0f) {
 							_copterFramesLeft = 70.0f;
 						}
 					} else if (_currentSpecialMove == SpecialMoveType::None && !_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Down)) {
-						SetState(ActorFlags::CanJump, false);
+						SetState(ActorState::CanJump, false);
 						_isFreefall = false;
 						SetAnimation(_currentAnimationState & (~AnimState::Lookup & ~AnimState::Crouch));
 						if (_jumpTime <= 0.0f) {
@@ -740,9 +738,9 @@ namespace Jazz2::Actors
 						//_carryingObject = nullptr;
 
 						// Gravitation is sometimes off because of active copter, turn it on again
-						CollisionFlags |= CollisionFlags::ApplyGravitation;
+						SetState(ActorState::ApplyGravitation, true);
 
-						CollisionFlags &= ~CollisionFlags::IsSolidObject;
+						SetState(ActorState::IsSolidObject, false);
 
 						_internalForceY = 1.02f;
 						_speed.Y = -3.55f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
@@ -841,7 +839,7 @@ namespace Jazz2::Actors
 			return false;
 		}
 
-		SetState(ActorFlags::IsInvulnerable, true);
+		SetState(ActorState::IsInvulnerable, true);
 
 		ForceCancelTransition();
 
@@ -901,7 +899,7 @@ namespace Jazz2::Actors
 				if ((_currentAnimationState & AnimState::Buttstomp) == AnimState::Buttstomp) {
 					removeSpecialMove = true;
 					_speed.Y *= -0.6f;
-					SetState(ActorFlags::CanJump, true);
+					SetState(ActorState::CanJump, true);
 				}
 				return true;
 			}
@@ -914,9 +912,9 @@ namespace Jazz2::Actors
 					Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 2), Explosion::Type::Small);
 
 					if (_sugarRushLeft > 0.0f) {
-						if (GetState(ActorFlags::CanJump)) {
+						if (GetState(ActorState::CanJump)) {
 							_speed.Y = 3;
-							SetState(ActorFlags::CanJump, false);
+							SetState(ActorState::CanJump, false);
 							_externalForce.Y = 0.6f;
 						}
 						_speed.Y *= -0.5f;
@@ -924,7 +922,7 @@ namespace Jazz2::Actors
 					if ((_currentAnimationState & AnimState::Buttstomp) == AnimState::Buttstomp) {
 						removeSpecialMove = true;
 						_speed.Y *= -0.6f;
-						SetState(ActorFlags::CanJump, true);
+						SetState(ActorState::CanJump, true);
 					} else if (_currentSpecialMove != SpecialMoveType::None && enemy->GetHealth() >= 0) {
 						removeSpecialMove = true;
 						_externalForce.X = 0.0f;
@@ -955,7 +953,7 @@ namespace Jazz2::Actors
 					_speed.X = (1 + std::abs(force.X)) * sign;
 					_externalForce.X = force.X * 0.6f;
 					_springCooldown = 3.0f;
-					SetState(ActorFlags::CanJump, false);
+					SetState(ActorState::CanJump, false);
 
 					_wasActivelyPushing = false;
 
@@ -973,7 +971,7 @@ namespace Jazz2::Actors
 					_speed.Y = (4 + std::abs(force.Y)) * sign;
 					_externalForce.Y = -force.Y;
 					_springCooldown = 3.0f;
-					SetState(ActorFlags::CanJump, false);
+					SetState(ActorState::CanJump, false);
 
 					if (!spring->KeepSpeedX) {
 						_speed.X = 0.0f;
@@ -1029,7 +1027,7 @@ namespace Jazz2::Actors
 		if (_levelHandler->EventMap()->IsHurting(_pos.X, _pos.Y + 24)) {
 			TakeDamage(1, _speed.X * 0.25f);
 		} else if (!_inWater && _activeModifier == Modifier::None) {
-			if (!GetState(ActorFlags::CanJump)) {
+			if (!GetState(ActorState::CanJump)) {
 				PlaySfx("Land"_s, 0.8f);
 
 				if (Random().NextFloat() < 0.6f) {
@@ -1038,7 +1036,7 @@ namespace Jazz2::Actors
 			}
 		} else {
 			// Prevent stucking with water/airboard
-			SetState(ActorFlags::CanJump, false);
+			SetState(ActorState::CanJump, false);
 			if (_speed.Y > 0.0f) {
 				_speed.Y = 0.0f;
 			}
@@ -1047,7 +1045,7 @@ namespace Jazz2::Actors
 		_canDoubleJump = true;
 		_isFreefall = false;
 
-		CollisionFlags |= CollisionFlags::IsSolidObject;
+		SetState(ActorState::IsSolidObject, true);
 	}
 
 	void Player::OnHitCeiling(float timeMult)
@@ -1068,7 +1066,7 @@ namespace Jazz2::Actors
 			TakeDamage(1, _speed.X * 0.25f);
 		} else {
 
-			if (PreferencesCache::EnableLedgeClimb && _isActivelyPushing && _suspendType == SuspendType::None && _activeModifier == Modifier::None && !GetState(ActorFlags::CanJump) &&
+			if (PreferencesCache::EnableLedgeClimb && _isActivelyPushing && _suspendType == SuspendType::None && _activeModifier == Modifier::None && !GetState(ActorState::CanJump) &&
 				_currentSpecialMove == SpecialMoveType::None && _currentTransitionState != AnimState::TransitionUppercutEnd &&
 				_speed.Y >= -1.0f && _externalForce.Y <= 0.0f && _copterFramesLeft <= 0.0f && _keepRunningTime <= 0.0f) {
 
@@ -1108,7 +1106,7 @@ namespace Jazz2::Actors
 
 							// Prepare the player for animation
 							_controllable = false;
-							CollisionFlags &= ~(CollisionFlags::ApplyGravitation | CollisionFlags::CollideWithTileset | CollisionFlags::CollideWithSolidObjects);
+							SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects, false);
 
 							_speed.X = 0.0f;
 							_speed.Y = -1.4f;
@@ -1129,9 +1127,8 @@ namespace Jazz2::Actors
 							SetAnimation(AnimState::Idle);
 							SetTransition(AnimState::TransitionLedgeClimb, false, [this]() {
 								// Reset the player to normal state
-								SetState(ActorFlags::CanJump, true);
 								_controllable = true;
-								CollisionFlags |= CollisionFlags::ApplyGravitation | CollisionFlags::CollideWithTileset | CollisionFlags::CollideWithSolidObjects;
+								SetState(ActorState::CanJump | ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects, true);
 								_pushFramesLeft = 0.0f;
 								_fireFramesLeft = 0.0f;
 								_copterFramesLeft = 0.0f;
@@ -1178,7 +1175,7 @@ namespace Jazz2::Actors
 			newState = AnimState::Swing;
 		} else if (_isLifting) {
 			newState = AnimState::Lift;
-		} else if (GetState(ActorFlags::CanJump) && _isActivelyPushing && _pushFramesLeft > 0.0f && _keepRunningTime <= 0.0f) {
+		} else if (GetState(ActorState::CanJump) && _isActivelyPushing && _pushFramesLeft > 0.0f && _keepRunningTime <= 0.0f) {
 			newState = AnimState::Push;
 		} else {
 			// Only certain ones don't need to be preserved from earlier state, others should be set as expected
@@ -1206,7 +1203,7 @@ namespace Jazz2::Actors
 			if (_suspendType != SuspendType::None) {
 				composite |= AnimState::Hook;
 			} else {
-				if (GetState(ActorFlags::CanJump)) {
+				if (GetState(ActorState::CanJump)) {
 					// Grounded, no vertical speed
 					if (_dizzyTime > 0.0f) {
 						composite |= AnimState::Dizzy;
@@ -1309,20 +1306,20 @@ namespace Jazz2::Actors
 			_pushFramesLeft -= timeMult;
 		}
 
-		if (GetState(ActorFlags::CanJump) && _controllable && _controllableExternal && _isActivelyPushing && std::abs(_speed.X) > std::numeric_limits<float>::epsilon()) {
+		if (GetState(ActorState::CanJump) && _controllable && _controllableExternal && _isActivelyPushing && std::abs(_speed.X) > std::numeric_limits<float>::epsilon()) {
 			AABBf hitbox = AABBInner + Vector2f(_speed.X < 0.0f ? -2.0f : 2.0f, 0.0f);
 			TileCollisionParams params = { TileDestructType::None, false };
 			ActorBase* collider;
 			if (!_levelHandler->IsPositionEmpty(this, hitbox, params, &collider)) {
 				if (auto solidObject = dynamic_cast<SolidObjectBase*>(collider)) {
-					CollisionFlags &= ~CollisionFlags::IsSolidObject;
+					SetState(ActorState::IsSolidObject, false);
 					if (solidObject->Push(_speed.X < 0, timeMult)) {
 						_pushFramesLeft = 3.0f;
 					}
-					CollisionFlags |= CollisionFlags::IsSolidObject;
+					SetState(ActorState::IsSolidObject, true);
 				}
 			}
-		} else if ((CollisionFlags & CollisionFlags::IsSolidObject) == CollisionFlags::IsSolidObject) {
+		} else if (GetState(ActorState::IsSolidObject)) {
 			AABBf aabb = AABBInner + Vector2f(0.0f, -2.0f);
 			TileCollisionParams params = { TileDestructType::None, false };
 			ActorBase* collider;
@@ -1347,7 +1344,7 @@ namespace Jazz2::Actors
 	void Player::CheckEndOfSpecialMoves(float timeMult)
 	{
 		// Buttstomp
-		if (_currentSpecialMove == SpecialMoveType::Buttstomp && (GetState(ActorFlags::CanJump) || _suspendType != SuspendType::None)) {
+		if (_currentSpecialMove == SpecialMoveType::Buttstomp && (GetState(ActorState::CanJump) || _suspendType != SuspendType::None)) {
 			EndDamagingMove();
 			if (_suspendType == SuspendType::None && !_isSpring) {
 				int tx = (int)_pos.X / 32;
@@ -1362,7 +1359,7 @@ namespace Jazz2::Actors
 						float fy = Random().NextFloat(-12.0f, 0.2f);
 
 						uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { };
-						std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, spawnParams, ActorFlags::None, Vector3i((int)(_pos.X + fx * 2.0f), (int)(_pos.Y + fy * 4.0f), _renderer.layer() - 10));
+						std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, spawnParams, ActorState::None, Vector3i((int)(_pos.X + fx * 2.0f), (int)(_pos.Y + fy * 4.0f), _renderer.layer() - 10));
 						if (actor != nullptr) {
 							actor->AddExternalForce(fx, fy);
 							_levelHandler->AddActor(actor);
@@ -1397,7 +1394,7 @@ namespace Jazz2::Actors
 			// TODO: Is this still needed?
 			bool cancelCopter;
 			if ((_currentAnimationState & AnimState::Copter) == AnimState::Copter) {
-				cancelCopter = (GetState(ActorFlags::CanJump) || _suspendType != SuspendType::None || _copterFramesLeft <= 0.0f);
+				cancelCopter = (GetState(ActorState::CanJump) || _suspendType != SuspendType::None || _copterFramesLeft <= 0.0f);
 
 				_copterFramesLeft -= timeMult;
 			} else {
@@ -1408,7 +1405,7 @@ namespace Jazz2::Actors
 				_copterFramesLeft = 0.0f;
 				SetAnimation(_currentAnimationState & ~AnimState::Copter);
 				if (!_isAttachedToPole) {
-					CollisionFlags |= CollisionFlags::ApplyGravitation;
+					SetState(ActorState::ApplyGravitation, true);
 				}
 			}
 		}
@@ -1474,7 +1471,7 @@ namespace Jazz2::Actors
 		if (newSuspendState != SuspendType::None && _playerType != PlayerType::Frog) {
 			if (_currentSpecialMove == SpecialMoveType::None) {
 				_suspendType = newSuspendState;
-				CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+				SetState(ActorState::ApplyGravitation, false);
 
 				if (_speed.Y > 0.0f && newSuspendState == SuspendType::Vine) {
 					PlaySfx("HookAttach"_s, 0.8f, 1.2f);
@@ -1502,7 +1499,7 @@ namespace Jazz2::Actors
 			_suspendType = SuspendType::None;
 			_suspendTime = 8.0f;
 			if ((currentState & (AnimState::Buttstomp | AnimState::Copter)) == AnimState::Idle && !_isAttachedToPole) {
-				CollisionFlags |= CollisionFlags::ApplyGravitation;
+				SetState(ActorState::ApplyGravitation, true);
 			}
 		}
 	}
@@ -1511,7 +1508,7 @@ namespace Jazz2::Actors
 	{
 		if (_inWater) {
 			if (_pos.Y >= _levelHandler->WaterLevel()) {
-				CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+				SetState(ActorState::ApplyGravitation, false);
 
 				if (std::abs(_speed.X) > 1.0f || std::abs(_speed.Y) > 1.0f) {
 					float angle;
@@ -1543,8 +1540,7 @@ namespace Jazz2::Actors
 				_inWater = false;
 				_waterCooldownLeft = 20.0f;
 
-				CollisionFlags |= CollisionFlags::ApplyGravitation;
-				SetState(ActorFlags::CanJump, true);
+				SetState(ActorState::ApplyGravitation | ActorState::CanJump, true);
 				_externalForce.Y = 0.45f;
 				_renderer.setRotation(0.0f);
 
@@ -1617,7 +1613,7 @@ namespace Jazz2::Actors
 			}
 			case EventType::ModifierTube: { // XSpeed, YSpeed, Wait Time, Trig Sample, Become Noclip, Noclip Only
 				// TODO: Implement other parameters
-				if (p[4] == 0 && p[5] != 0 && (CollisionFlags & CollisionFlags::CollideWithTileset) == CollisionFlags::CollideWithTileset) {
+				if (p[4] == 0 && p[5] != 0 && GetState(ActorState::CollideWithTileset)) {
 					break;
 				}
 
@@ -1626,8 +1622,7 @@ namespace Jazz2::Actors
 				SetAnimation(AnimState::Dash | AnimState::Jump);
 
 				_controllable = false;
-				SetState(ActorFlags::CanJump, false);
-				CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+				SetState(ActorState::CanJump | ActorState::ApplyGravitation, false);
 
 				_speed.X = (float)(int8_t)p[0];
 				_speed.Y = (float)(int8_t)p[1];
@@ -1649,7 +1644,7 @@ namespace Jazz2::Actors
 				}
 
 				if (p[4] != 0) { // Become No-clip
-					CollisionFlags &= ~CollisionFlags::CollideWithTileset;
+					SetState(ActorState::CollideWithTileset, false);
 					_inTubeTime = 60.0f;
 				} else {
 					_inTubeTime = 10.0f;
@@ -1780,7 +1775,7 @@ namespace Jazz2::Actors
 					(events->GetEventByPosition(AABBInner.R + ExtendedHitbox, AABBInner.B + ExtendedHitbox, &p) == EventType::AreaFloatUp) ||
 					(events->GetEventByPosition(AABBInner.L - ExtendedHitbox, AABBInner.B + ExtendedHitbox, &p) == EventType::AreaFloatUp)
 				) {
-					if ((CollisionFlags & CollisionFlags::ApplyGravitation) == CollisionFlags::ApplyGravitation) {
+					if (GetState(ActorState::ApplyGravitation)) {
 						float gravity = _levelHandler->Gravity;
 						_externalForce.Y = gravity * 2.0f * timeMult;
 						_speed.Y = std::min(gravity * timeMult, _speed.Y);
@@ -1804,7 +1799,7 @@ namespace Jazz2::Actors
 			}
 
 			//
-			if (GetState(ActorFlags::CanJump)) {
+			if (GetState(ActorState::CanJump)) {
 				// Floor events
 				tileEvent = events->GetEventByPosition(_pos.X, _pos.Y + 32, &p);
 				switch (tileEvent) {
@@ -1867,7 +1862,7 @@ namespace Jazz2::Actors
 				// Remove fast fires
 				_weaponUpgrades[(int)WeaponType::Blaster] = (uint8_t)(_weaponUpgrades[(int)WeaponType::Blaster] & 0x1);
 
-				SetState(ActorFlags::CanJump, false);
+				SetState(ActorState::CanJump, false);
 				_speed.X = 0.0f;
 				_speed.Y = 0.0f;
 				_externalForce.X = 0.0f;
@@ -1899,8 +1894,8 @@ namespace Jazz2::Actors
 					_health = _maxHealth;
 
 					// Player can be respawned immediately
-					SetState(ActorFlags::IsInvulnerable, false);
-					CollisionFlags |= CollisionFlags::ApplyGravitation | CollisionFlags::CollideWithTileset | CollisionFlags::CollideWithSolidObjects;
+					SetState(ActorState::IsInvulnerable, false);
+					SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects, true);
 
 					// Return to the last save point
 					MoveInstantly(_checkpointPos, MoveType::Absolute | MoveType::Force);
@@ -1931,6 +1926,11 @@ namespace Jazz2::Actors
 
 	void Player::SwitchToNextWeapon()
 	{
+		if (_weaponSound != nullptr) {
+			_weaponSound->stop();
+			_weaponSound = nullptr;
+		}
+
 		// Find next available weapon
 		_currentWeapon = (WeaponType)(((int)_currentWeapon + 1) % (int)WeaponType::Count);
 
@@ -1947,10 +1947,13 @@ namespace Jazz2::Actors
 			return;
 		}
 
+		if (_weaponSound != nullptr) {
+			_weaponSound->stop();
+			_weaponSound = nullptr;
+		}
+
 		_currentWeapon = (WeaponType)weaponIndex;
 		_weaponCooldown = 1.0f;
-
-		//PreloadMetadataAsync("Weapon/" + currentWeapon);
 	}
 
 	template<typename T, WeaponType weaponType>
@@ -2050,7 +2053,7 @@ namespace Jazz2::Actors
 	bool Player::FireWeaponThunderbolt()
 	{
 		if (_isActivelyPushing || _inWater || _isAttachedToPole || std::abs(_speed.X) > 1.0f || std::abs(_speed.Y) > 1.0f ||
-			!(GetState(ActorFlags::CanJump) || _activeModifier != Modifier::None || _suspendType == SuspendType::Vine || _suspendType == SuspendType::Hook)) {
+			!(GetState(ActorState::CanJump) || _activeModifier != Modifier::None || _suspendType == SuspendType::Vine || _suspendType == SuspendType::Hook)) {
 			return false;
 		}
 
@@ -2172,10 +2175,10 @@ namespace Jazz2::Actors
 			gunspotPos.Y -= (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);
 
 			if ((_currentAnimationState & AnimState::Lookup) == AnimState::Lookup) {
-				initialPos.X = gunspotPos.X;
+				initialPos.X = (int)gunspotPos.X;
 				angle = (IsFacingLeft() ? fRadAngle90 : fRadAngle270);
 			} else {
-				initialPos.Y = gunspotPos.Y;
+				initialPos.Y = (int)gunspotPos.Y;
 				angle = 0.0f;
 			}
 		}
@@ -2191,7 +2194,7 @@ namespace Jazz2::Actors
 
 		if (_levelExiting != LevelExitingState::None) {
 			if (_levelExiting == LevelExitingState::Waiting) {
-				if (GetState(ActorFlags::CanJump) && std::abs(_speed.X) < 1.0f && std::abs(_speed.Y) < 1.0f) {
+				if (GetState(ActorState::CanJump) && std::abs(_speed.X) < 1.0f && std::abs(_speed.Y) < 1.0f) {
 					_levelExiting = LevelExitingState::Transition;
 
 					ForceCancelTransition();
@@ -2202,7 +2205,7 @@ namespace Jazz2::Actors
 					});
 					PlayPlayerSfx("EndOfLevel1"_s);
 
-					CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+					SetState(ActorState::ApplyGravitation, false);
 					_speed.X = 0.0f;
 					_speed.Y = 0.0f;
 					_externalForce.X = 0.0f;
@@ -2220,7 +2223,7 @@ namespace Jazz2::Actors
 					});
 					PlayPlayerSfx("WarpIn"_s);
 
-					CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+					SetState(ActorState::ApplyGravitation, false);
 					_speed.X = 0.0f;
 					_speed.Y = 0.0f;
 					_externalForce.X = 0.0f;
@@ -2247,7 +2250,7 @@ namespace Jazz2::Actors
 			});
 			PlayPlayerSfx("WarpIn"_s);
 
-			CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+			SetState(ActorState::ApplyGravitation, false);
 			_speed.X = 0.0f;
 			_speed.Y = 0.0f;
 			_externalForce.X = 0.0f;
@@ -2262,12 +2265,12 @@ namespace Jazz2::Actors
 				_suspendTime = 60.0f;
 			}
 
-			CollisionFlags |= CollisionFlags::ApplyGravitation;
+			SetState(ActorState::ApplyGravitation, true);
 		}
 
 		_controllable = false;
 		SetFacingLeft(false);
-		SetState(ActorFlags::IsInvulnerable, true);
+		SetState(ActorState::IsInvulnerable, true);
 		_fireFramesLeft = 0.0f;
 		_copterFramesLeft = 0.0f;
 		_pushFramesLeft = 0.0f;
@@ -2294,12 +2297,12 @@ namespace Jazz2::Actors
 		if (exitType == ExitType::Warp || exitType == ExitType::Bonus) {
 			PlayPlayerSfx("WarpOut"_s);
 
-			CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+			SetState(ActorState::ApplyGravitation, false);
 
 			_isFreefall = CanFreefall();
 			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this]() {
-				SetState(ActorFlags::IsInvulnerable, false);
-				CollisionFlags |= CollisionFlags::ApplyGravitation;
+				SetState(ActorState::IsInvulnerable, false);
+				SetState(ActorState::ApplyGravitation, true);
 				_controllable = true;
 			});
 
@@ -2342,8 +2345,8 @@ namespace Jazz2::Actors
 			}
 		} else {
 			EndDamagingMove();
-			SetState(ActorFlags::IsInvulnerable, true);
-			CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+			SetState(ActorState::IsInvulnerable, true);
+			SetState(ActorState::ApplyGravitation, false);
 
 			SetAnimation(_currentAnimationState & ~(AnimState::Uppercut | AnimState::Buttstomp));
 
@@ -2372,8 +2375,8 @@ namespace Jazz2::Actors
 
 				_isFreefall |= CanFreefall();
 				SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this]() {
-					SetState(ActorFlags::IsInvulnerable, false);
-					CollisionFlags |= CollisionFlags::ApplyGravitation;
+					SetState(ActorState::IsInvulnerable, false);
+					SetState(ActorState::ApplyGravitation, true);
 					_controllable = true;
 				});
 			});
@@ -2414,7 +2417,7 @@ namespace Jazz2::Actors
 		_externalForce.X = 0.0f;
 		_externalForce.Y = 0.0f;
 		_internalForceY = 0.0f;
-		CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+		SetState(ActorState::ApplyGravitation, false);
 		_isAttachedToPole = true;
 		_inIdleTransition = false;
 
@@ -2468,7 +2471,7 @@ namespace Jazz2::Actors
 				_externalForce.Y = (-1.3f * sign);
 			}
 
-			CollisionFlags |= CollisionFlags::ApplyGravitation;
+			SetState(ActorState::ApplyGravitation, true);
 			_isAttachedToPole = false;
 			_wasActivelyPushing = false;
 			_inIdleTransition = false;
@@ -2490,7 +2493,7 @@ namespace Jazz2::Actors
 			case Modifier::Airboard: {
 				_controllable = true;
 				EndDamagingMove();
-				CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+				SetState(ActorState::ApplyGravitation, false);
 
 				_speed.Y = 0.0f;
 				_externalForce.Y = 0.0f;
@@ -2504,7 +2507,7 @@ namespace Jazz2::Actors
 			case Modifier::Copter: {
 				_controllable = true;
 				EndDamagingMove();
-				CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+				SetState(ActorState::ApplyGravitation, false);
 
 				_speed.Y = 0.0f;
 				_externalForce.Y = 0.0f;
@@ -2517,7 +2520,7 @@ namespace Jazz2::Actors
 			case Modifier::LizardCopter: {
 				_controllable = true;
 				EndDamagingMove();
-				CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+				SetState(ActorState::ApplyGravitation, false);
 
 				_speed.Y = 0.0f;
 				_externalForce.Y = 0.0f;
@@ -2543,8 +2546,7 @@ namespace Jazz2::Actors
 					copterDecor.DecreaseHealth(int.MaxValue);
 				}*/
 
-				CollisionFlags |= CollisionFlags::ApplyGravitation;
-				SetState(ActorFlags::CanJump, true);
+				SetState(ActorState::CanJump | ActorState::ApplyGravitation, true);
 
 				SetAnimation(AnimState::Fall);
 				break;
@@ -2560,7 +2562,7 @@ namespace Jazz2::Actors
 
 	bool Player::TakeDamage(int amount, float pushForce)
 	{
-		if (GetState(ActorFlags::IsInvulnerable) || _levelExiting != LevelExitingState::None) {
+		if (GetState(ActorState::IsInvulnerable) || _levelExiting != LevelExitingState::None) {
 			return false;
 		}
 
@@ -2578,7 +2580,7 @@ namespace Jazz2::Actors
 		_fireFramesLeft = 0.0f;
 		_copterFramesLeft = 0.0f;
 		_pushFramesLeft = 0.0f;
-		SetState(ActorFlags::CanJump, false);
+		SetState(ActorState::CanJump, false);
 		_isAttachedToPole = false;
 
 		// TODO: Birds
@@ -2593,7 +2595,7 @@ namespace Jazz2::Actors
 			if (!_inWater && _activeModifier == Modifier::None) {
 				_speed.Y = -6.5f;
 
-				CollisionFlags |= CollisionFlags::ApplyGravitation | CollisionFlags::CollideWithTileset | CollisionFlags::CollideWithSolidObjects;
+				SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects, true);
 				SetAnimation(AnimState::Idle);
 			} else {
 				_speed.Y = -1.0f;
@@ -2627,7 +2629,7 @@ namespace Jazz2::Actors
 	{
 		if (time <= 0.0f) {
 			if (_invulnerableTime > 0.0f) {
-				SetState(ActorFlags::IsInvulnerable, false);
+				SetState(ActorState::IsInvulnerable, false);
 				_invulnerableTime = 0.0f;
 				_renderer.setDrawEnabled(true);
 
@@ -2641,7 +2643,7 @@ namespace Jazz2::Actors
 			return;
 		}
 
-		SetState(ActorFlags::IsInvulnerable, true);
+		SetState(ActorState::IsInvulnerable, true);
 		_invulnerableTime = time;
 
 		if (withCircleEffect) {
@@ -2656,7 +2658,7 @@ namespace Jazz2::Actors
 
 	void Player::EndDamagingMove()
 	{
-		CollisionFlags |= CollisionFlags::ApplyGravitation;
+		SetState(ActorState::ApplyGravitation, true);
 		SetAnimation(_currentAnimationState & ~(AnimState::Uppercut | AnimState::Buttstomp));
 
 		if (_currentSpecialMove == SpecialMoveType::Uppercut) {
@@ -2839,7 +2841,7 @@ namespace Jazz2::Actors
 			_currentAnimation = nullptr;
 			SetAnimation(AnimState::Fall);
 
-			CollisionFlags |= CollisionFlags::ApplyGravitation;
+			SetState(ActorState::ApplyGravitation, true);
 			_controllable = true;
 
 			if (_currentSpecialMove == SpecialMoveType::Uppercut && _externalForce.Y > 0.0f) {

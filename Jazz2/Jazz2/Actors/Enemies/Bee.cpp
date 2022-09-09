@@ -33,7 +33,7 @@ namespace Jazz2::Actors::Enemies
 
 	Task<bool> Bee::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		CollisionFlags = CollisionFlags::CollideWithOtherActors;
+		SetState(ActorState::CollideWithTileset | ActorState::ApplyGravitation, false);
 
 		SetHealthByDifficulty(1);
 		_scoreValue = 200;

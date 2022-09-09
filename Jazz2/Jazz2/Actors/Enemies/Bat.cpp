@@ -25,7 +25,7 @@ namespace Jazz2::Actors::Enemies
 	{
 		_originPos = _pos;
 
-		CollisionFlags = CollisionFlags::CollideWithOtherActors;
+		SetState(ActorState::CollideWithTileset | ActorState::ApplyGravitation, false);
 
 		SetHealthByDifficulty(1);
 		_scoreValue = 100;
@@ -44,7 +44,7 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		SetState(ActorFlags::CanJump, false);
+		SetState(ActorState::CanJump, false);
 
 		Vector2f targetPos;
 		if (FindNearestPlayer(targetPos)) {

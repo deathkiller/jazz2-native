@@ -23,7 +23,7 @@ namespace Jazz2::Actors::Environment
 		// ToDo: Show rabbit for non-listed number of coins (use JJ2+ anim set 8)
 		//_showAnim = details.Params[4] != 0;
 
-		SetState(ActorFlags::CanBeFrozen, false);
+		SetState(ActorState::CanBeFrozen, false);
 		_renderer.setLayer(_renderer.layer() - 20);
 
 		co_await RequestMetadataAsync("Object/BonusWarp"_s);

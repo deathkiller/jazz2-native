@@ -41,6 +41,8 @@ namespace Jazz2::Actors::Enemies
 
 		class InvisibleBlock : public ActorBase
 		{
+			friend class Queen;
+
 		protected:
 			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 			void OnUpdate(float timeMult) override;

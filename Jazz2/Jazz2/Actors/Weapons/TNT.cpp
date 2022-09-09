@@ -27,7 +27,7 @@ namespace Jazz2::Actors::Weapons
 	{
 		_timeLeft = 200.0f;
 
-		CollisionFlags = CollisionFlags::None;
+		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		co_await RequestMetadataAsync("Weapon/TNT"_s);
 

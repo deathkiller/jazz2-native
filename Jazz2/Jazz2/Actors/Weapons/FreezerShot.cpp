@@ -22,8 +22,8 @@ namespace Jazz2::Actors::Weapons
 
 		_upgrades = details.Params[0];
 
-		CollisionFlags &= ~CollisionFlags::ApplyGravitation;
-		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
+		SetState(ActorState::SkipPerPixelCollisions, true);
+		SetState(ActorState::ApplyGravitation, false);
 		_strength = 0;
 
 		co_await RequestMetadataAsync("Weapon/Freezer"_s);

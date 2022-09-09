@@ -12,6 +12,9 @@ namespace Jazz2::Actors
 		PlayerType playerType = (PlayerType)details.Params[0];
 		SetFacingLeft(details.Params[1] != 0);
 
+		SetState(ActorState::ForceDisableCollisions, true);
+		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
+
 		switch (playerType) {
 			default:
 			case PlayerType::Jazz:
@@ -26,8 +29,6 @@ namespace Jazz2::Actors
 		}
 
 		SetAnimation("Corpse"_s);
-
-		CollisionFlags = CollisionFlags::ForceDisableCollisions;
 
 		co_return true;
 	}

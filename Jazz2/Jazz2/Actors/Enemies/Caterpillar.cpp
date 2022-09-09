@@ -24,10 +24,10 @@ namespace Jazz2::Actors::Enemies
 
 	Task<bool> Caterpillar::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		SetState(ActorFlags::CanBeFrozen, false);
-		SetState(ActorFlags::IsInvulnerable, true);
+		SetState(ActorState::CanBeFrozen, false);
+		SetState(ActorState::IsInvulnerable, true);
 		SetFacingLeft(true);
-		CollisionFlags = CollisionFlags::CollideWithTileset | CollisionFlags::CollideWithOtherActors | CollisionFlags::ApplyGravitation;
+
 		_canHurtPlayer = false;
 		_health = INT32_MAX;
 
@@ -119,11 +119,10 @@ namespace Jazz2::Actors::Enemies
 
 	Task<bool> Caterpillar::Smoke::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		SetState(ActorFlags::CanBeFrozen, false);
-		SetState(ActorFlags::IsInvulnerable, true);
+		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::ApplyGravitation, false);
+		SetState(ActorState::IsInvulnerable | ActorState::SkipPerPixelCollisions, true);
 		CanCollideWithAmmo = false;
 		_canHurtPlayer = false;
-		CollisionFlags = CollisionFlags::CollideWithOtherActors | CollisionFlags::SkipPerPixelCollisions;
 
 		_health = INT32_MAX;
 		_baseSpeed.X = Random().NextFloat(-1.4f, -0.8f);

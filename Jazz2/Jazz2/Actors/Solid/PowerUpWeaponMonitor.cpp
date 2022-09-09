@@ -22,7 +22,6 @@ namespace Jazz2::Actors::Solid
 	Task<bool> PowerUpWeaponMonitor::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		Movable = true;
-		CollisionFlags |= CollisionFlags::SkipPerPixelCollisions;
 
 		_weaponType = (WeaponType)details.Params[0];
 

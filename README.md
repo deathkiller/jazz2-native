@@ -34,15 +34,88 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 
 
 ## Running the application
-This is C++ port of [Jazz² Resurrection](https://github.com/deathkiller/jazz2), which is still under development. **Further information about original Jazz² Resurrection, which is fully playable, can be found [here](http://deat.tk/jazz2/).**
+* Download or build the game
+* Copy original *Jazz Jackrabbit 2* directory to `‹Game›/Source/`
+* Run `‹Game›/Jazz2.exe` (on Windows) or `‹Game›/jazz2` (on other platforms)
+
+`‹Game›` *is path to Jazz² Resurrection. It may take a few minutes on the first startup, because cache is created.*
 
 
 ## Building the application
 ### Windows
+* Install build dependencies
 * Open the solution in [Microsoft Visual Studio 2019](https://www.visualstudio.com/) (or newer) and build it
+  * CMake is **not** recommended for Windows build, but it should work too
 
-### Other platforms
-* Run **CMake** in root directory
+### Linux
+* Install build dependencies
+```bash
+# Install OpenGL library
+sudo apt-get install -y libgl1-mesa-dev
+
+# Download nCine dependencies
+cd ..
+git clone https://github.com/nCine/nCine-libraries-artifacts.git
+cd nCine-libraries-artifacts
+
+# Replace "libraries-linux-gcc" with "libraries-linux-clang" if Clang compiler is used
+git checkout libraries-linux-gcc
+LIBRARIES_FILE=$(ls -t | head -n 1) && tar xpzf $LIBRARIES_FILE
+mv nCine-external ..
+cd ..
+rm -rf nCine-libraries-artifacts
+```
+* Build the solution with **CMake**
+  * Run `./BuildLinuxGcc.sh` to build with GCC compiler
+  * Run `./BuildLinuxClang.sh` to build with Clang compiler
+
+### Web (Emscripten)
+* Install build dependencies
+```bash
+# Install Emscripten SDK
+cd ..
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk
+./emsdk install latest
+./emsdk activate latest
+
+# Download nCine dependencies
+cd ..
+git clone https://github.com/nCine/nCine-libraries-artifacts.git
+cd nCine-libraries-artifacts
+
+git checkout libraries-emscripten-emcc
+LIBRARIES_FILE=$(ls -t | head -n 1) && tar xpzf $LIBRARIES_FILE
+mv nCine-external ..
+cd ..
+rm -rf nCine-libraries-artifacts
+```
+* Put required game files to `./Content/` directory – the files must be provided in advance
+* Build the solution with **CMake**
+  * Run `./BuildEmscripten.sh` to build with Emscripten
+
+### Android
+* Install build dependencies
+```bash
+# Install OpenGL library
+sudo apt-get install -y libgl1-mesa-dev
+
+# Download nCine dependencies
+cd ..
+git clone https://github.com/nCine/nCine-libraries-artifacts.git
+cd nCine-libraries-artifacts
+
+git checkout android-libraries-armeabi-v7a
+LIBRARIES_FILE=$(ls -t | head -n 1) && tar xpzf $LIBRARIES_FILE
+git checkout android-libraries-arm64-v8a
+LIBRARIES_FILE=$(ls -t | head -n 1) && tar xpzf $LIBRARIES_FILE
+git checkout android-libraries-x86_64
+LIBRARIES_FILE=$(ls -t | head -n 1) && tar xpzf $LIBRARIES_FILE
+mv nCine-android-external ..
+cd ..
+rm -rf nCine-libraries-artifacts
+```
+* Build the solution with **CMake**
 
 
 ## License

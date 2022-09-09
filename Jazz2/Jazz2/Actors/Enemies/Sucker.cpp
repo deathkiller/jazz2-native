@@ -35,11 +35,11 @@ namespace Jazz2::Actors::Enemies
 		if (parentLastHitDir != LastHitDirection::None) {
 			SetFacingLeft(parentLastHitDir == LastHitDirection::Left);
 			_health = 1;
-			CollisionFlags &= ~CollisionFlags::ApplyGravitation;
+			SetState(ActorState::ApplyGravitation, false);
 			SetTransition((AnimState)1073741824, false, [this]() {
 				_speed.X = 0;
 				SetAnimation(AnimState::Walk);
-				CollisionFlags |= CollisionFlags::ApplyGravitation;
+				SetState(ActorState::ApplyGravitation, true);
 			});
 			if (parentLastHitDir == LastHitDirection::Left || parentLastHitDir == LastHitDirection::Right) {
 				_speed.X = 3 * (parentLastHitDir == LastHitDirection::Left ? -1 : 1);
@@ -60,7 +60,7 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		if (_currentTransitionState == AnimState::Idle && std::abs(_speed.X) > 0 && GetState(ActorFlags::CanJump)) {
+		if (_currentTransitionState == AnimState::Idle && std::abs(_speed.X) > 0 && GetState(ActorState::CanJump)) {
 			if (!CanMoveToPosition(_speed.X * 4, 0)) {
 				if (_stuck) {
 					MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative | MoveType::Force);
