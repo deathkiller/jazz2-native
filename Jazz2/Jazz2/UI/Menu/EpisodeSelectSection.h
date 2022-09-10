@@ -14,8 +14,19 @@ namespace Jazz2::UI::Menu
 		void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) override;
 
 	private:
+		enum class EpisodeFlags {
+			None = 0x00,
+
+			IsAvailable = 0x01,
+			IsCompleted = 0x02,
+			CanContinue = 0x04
+		};
+
+		DEFINE_PRIVATE_ENUM_OPERATORS(EpisodeFlags);
+
 		struct ItemData {
 			Episode Description;
+			EpisodeFlags Flags;
 			float TouchY;
 		};
 

@@ -69,11 +69,11 @@ namespace Jazz2
         PlayerType Type;
 
         int32_t Lives;
-        uint16_t Ammo[WeaponCount];
-        uint8_t WeaponUpgrades[WeaponCount];
         int32_t Score;
         int32_t FoodEaten;
         WeaponType CurrentWeapon;
+        uint16_t Ammo[WeaponCount];
+        uint8_t WeaponUpgrades[WeaponCount];
     };
 
     struct LevelInitialization {

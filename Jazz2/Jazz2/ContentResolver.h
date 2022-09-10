@@ -163,23 +163,12 @@ namespace Jazz2
 		SwingingVine
 	};
 
-	enum class EpisodeFlags {
-		None = 0x00,
-
-		IsAvailable = 0x01,
-		IsCompleted = 0x02,
-		CanContinue = 0x04
-	};
-
-	DEFINE_ENUM_OPERATORS(EpisodeFlags);
-
 	struct Episode {
 		String Name;
 		String DisplayName;
 		String FirstLevel;
 		String PreviousEpisode;
 		String NextEpisode;
-		EpisodeFlags Flags;
 		uint16_t Position;
 	};
 
@@ -224,6 +213,7 @@ namespace Jazz2
 		static constexpr uint8_t LevelFile = 1;
 		static constexpr uint8_t EpisodeFile = 2;
 		static constexpr uint8_t CacheIndexFile = 3;
+		static constexpr uint8_t ConfigFile = 4;
 
 		static constexpr int PaletteCount = 256;
 		static constexpr int ColorsPerPalette = 256;

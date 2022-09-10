@@ -8,8 +8,6 @@ namespace nCine {
 
 	enum class KeySym
 	{
-		UNKNOWN = -1,
-
 		// Common keysyms
 		BACKSPACE,
 		TAB,
@@ -252,7 +250,9 @@ namespace nCine {
 		BUTTON_15,
 		BUTTON_16,
 
-		COUNT
+		COUNT,
+
+		UNKNOWN = COUNT
 	};
 
 	enum KeyMod

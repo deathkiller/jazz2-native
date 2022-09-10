@@ -71,8 +71,7 @@ namespace Jazz2::UI
 		float timeMult = theApplication().timeMult();
 
 		if (_framesLeft <= 0) {
-			if (_callback != nullptr) {
-				_callback(_root, _frameDelay != 0.0f);
+			if (_callback != nullptr && _callback(_root, _frameDelay != 0.0f)) {
 				_callback = nullptr;
 			}
 			return;
@@ -335,7 +334,7 @@ namespace Jazz2::UI
 
 	bool Cinematics::CinematicsCanvas::OnDraw(RenderQueue& renderQueue)
 	{
-		if (_owner->_framesLeft <= 0) {
+		if (_owner->_frameDelay == 0.0f) {
 			return false;
 		}
 

@@ -13,6 +13,7 @@ namespace Jazz2::UI::Menu
 	{
 	public:
 		MenuSection() : _root(nullptr) { }
+		virtual ~MenuSection() { }
 
 		virtual void OnShow(IMenuContainer* root)
 		{

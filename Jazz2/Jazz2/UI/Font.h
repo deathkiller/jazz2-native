@@ -15,6 +15,7 @@ namespace Jazz2::UI
 	public:
 		static constexpr Colorf DefaultColor = Colorf(333.0f, 333.0f, 333.0f, 1.0f);
 		static constexpr Colorf RandomColor = Colorf(444.0f, 444.0f, 444.0f, 0.5f);
+		static constexpr Colorf TransparentRandomColor = Colorf(444.0f, 444.0f, 444.0f, 0.36f);
 
 		Font(const StringView& path, const uint32_t* palette);
 

@@ -1,6 +1,11 @@
 ﻿#pragma once
 
+#include "LevelInitialization.h"
+#include "../Common.h"
 #include "../nCine/AppConfiguration.h"
+#include "../nCine/Base/HashMap.h"
+
+#include <Containers/Reference.h>
 
 using namespace nCine;
 
@@ -10,6 +15,23 @@ namespace Jazz2
 		None,
 		_3xBrz,
 		Monochrome
+	};
+
+	enum class EpisodeContinuationFlags : uint8_t {
+		None = 0x00,
+
+		Completed = 0x01,
+		CheatsUsed = 0x02
+	};
+
+	DEFINE_ENUM_OPERATORS(EpisodeContinuationFlags);
+
+	struct EpisodeContinuationState {
+		EpisodeContinuationFlags Flags;
+		int32_t Lives;
+		int32_t Score;
+		uint16_t Ammo[PlayerCarryOver::WeaponCount];
+		uint8_t WeaponUpgrades[PlayerCarryOver::WeaponCount];
 	};
 
 	class PreferencesCache
@@ -25,6 +47,7 @@ namespace Jazz2
 		static bool ReduxMode;
 		static bool EnableLedgeClimb;
 		static bool AllowCheats;
+		static bool AllowCheatsUnlock;
 		static bool AllowCheatsWeapons;
 
 		// Controls
@@ -39,12 +62,33 @@ namespace Jazz2
 		static void Initialize(const AppConfiguration& config);
 		static void Save();
 
+		static EpisodeContinuationState* GetEpisodeEnd(const StringView& episodeName, bool createIfNotFound = false);
+
 	private:
+		enum class BoolOptions {
+			None = 0x00,
+
+			EnableFullscreen = 0x01,
+			EnableVsync = 0x02,
+			ShowFps = 0x04,
+
+			ReduxMode = 0x100,
+			EnableLedgeClimb = 0x200,
+
+			EnableWeaponWheel = 0x10000,
+			EnableRgbLights = 0x20000
+		};
+
+		DEFINE_PRIVATE_ENUM_OPERATORS(BoolOptions);
+
+		static constexpr uint8_t FileVersion = 1;
+
 		/// Deleted copy constructor
 		PreferencesCache(const PreferencesCache&) = delete;
 		/// Deleted assignment operator
 		PreferencesCache& operator=(const PreferencesCache&) = delete;
 
 		static String _configPath;
+		static HashMap<String, EpisodeContinuationState> _episodeEnd;
 	};
 }

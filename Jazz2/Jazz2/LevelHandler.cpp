@@ -1307,8 +1307,8 @@ namespace Jazz2
 		if (keyState.isKeyDown(UI::ControlScheme::Key1(0, PlayerActions::Run)) || keyState.isKeyDown(UI::ControlScheme::Key2(0, PlayerActions::Run))) {
 			_pressedActions |= (1 << (int)PlayerActions::Run);
 		}
-		if (keyState.isKeyDown(UI::ControlScheme::Key1(0, PlayerActions::SwitchWeapon)) || keyState.isKeyDown(UI::ControlScheme::Key2(0, PlayerActions::SwitchWeapon))) {
-			_pressedActions |= (1 << (int)PlayerActions::SwitchWeapon);
+		if (keyState.isKeyDown(UI::ControlScheme::Key1(0, PlayerActions::ChangeWeapon)) || keyState.isKeyDown(UI::ControlScheme::Key2(0, PlayerActions::ChangeWeapon))) {
+			_pressedActions |= (1 << (int)PlayerActions::ChangeWeapon);
 		}
 		if (keyState.isKeyDown(UI::ControlScheme::Key1(0, PlayerActions::Menu)) || keyState.isKeyDown(UI::ControlScheme::Key2(0, PlayerActions::Menu))) {
 			_pressedActions |= (1 << (int)PlayerActions::Menu);
@@ -1374,9 +1374,9 @@ namespace Jazz2
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
 			_pressedActions |= (1 << (int)PlayerActions::Fire) | (1 << (16 + (int)PlayerActions::Fire));
 		}
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::SwitchWeapon, ji1);
+		jb = UI::ControlScheme::Gamepad(0, PlayerActions::ChangeWeapon, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::SwitchWeapon) | (1 << (16 + (int)PlayerActions::SwitchWeapon));
+			_pressedActions |= (1 << (int)PlayerActions::ChangeWeapon) | (1 << (16 + (int)PlayerActions::ChangeWeapon));
 		}
 		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Menu, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {

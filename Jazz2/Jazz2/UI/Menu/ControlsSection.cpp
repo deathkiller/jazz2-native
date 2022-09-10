@@ -1,5 +1,6 @@
 ﻿#include "ControlsSection.h"
 #include "../ControlScheme.h"
+#include "../../PreferencesCache.h"
 
 #include "../../../nCine/Application.h"
 
@@ -11,6 +12,7 @@ namespace Jazz2::UI::Menu
 		_selectedColumn(0),
 		_currentPlayerIndex(0),
 		_animation(0.0f),
+		_isDirty(false),
 		_waitForInput(false),
 		_delay(0.0f)
 	{
@@ -58,9 +60,15 @@ namespace Jazz2::UI::Menu
 							auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int)PlayerActions::Count + _selectedIndex];
 
 							if (_selectedColumn == 0) {
-								mapping.Key1 = (KeySym)key;
+								if (mapping.Key1 != (KeySym)key) {
+									mapping.Key1 = (KeySym)key;
+									_isDirty = true;
+								}
 							} else {
-								mapping.Key2 = (KeySym)key;
+								if (mapping.Key2 != (KeySym)key) {
+									mapping.Key2 = (KeySym)key;
+									_isDirty = true;
+								}
 							}
 
 							_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -80,8 +88,11 @@ namespace Jazz2::UI::Menu
 								if (joyState.isButtonPressed((ButtonName)j)) {
 									auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int)PlayerActions::Count + _selectedIndex];
 
-									mapping.GamepadIndex = jc;
-									mapping.GamepadButton = (ButtonName)j;
+									if (mapping.GamepadIndex != jc || mapping.GamepadButton != (ButtonName)j) {
+										mapping.GamepadIndex = jc;
+										mapping.GamepadButton = (ButtonName)j;
+										_isDirty = true;
+									}
 
 									_root->PlaySfx("MenuSelect"_s, 0.5f);
 									_waitForInput = false;
@@ -103,7 +114,7 @@ namespace Jazz2::UI::Menu
 			_root->LeaveSection();
 			return;
 		} else if (_root->ActionHit(PlayerActions::Fire)) {
-			if ((PlayerActions)_selectedIndex == PlayerActions::Menu && _selectedColumn == 0) {
+			if (_selectedIndex == (int)PlayerActions::Menu && _selectedColumn == 0) {
 				return;
 			}
 
@@ -111,14 +122,33 @@ namespace Jazz2::UI::Menu
 			_animation = 0.0f;
 			_waitForInput = true;
 			_delay = 30.0f;
-		} else if (_root->ActionHit(PlayerActions::SwitchWeapon)) {
+		} else if (_root->ActionHit(PlayerActions::ChangeWeapon)) {
+			if (_selectedIndex == (int)PlayerActions::Menu && _selectedColumn == 0) {
+				return;
+			}
+
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 
 			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int)PlayerActions::Count + _selectedIndex];
 			switch (_selectedColumn) {
-				case 0: mapping.Key1 = KeySym::UNKNOWN; break;
-				case 1: mapping.Key2 = KeySym::UNKNOWN; break;
-				case 2: mapping.GamepadIndex = -1; break;
+				case 0:
+					if (mapping.Key1 != KeySym::UNKNOWN) {
+						mapping.Key1 = KeySym::UNKNOWN;
+						_isDirty = true;
+					}
+					break;
+				case 1:
+					if (mapping.Key2 != KeySym::UNKNOWN) {
+						mapping.Key2 = KeySym::UNKNOWN;
+						_isDirty = true;
+					}
+					break;
+				case 2:
+					if (mapping.GamepadIndex != -1) {
+						mapping.GamepadIndex = -1;
+						_isDirty = true;
+					}
+					break;
 			}
 		}
 
@@ -200,7 +230,7 @@ namespace Jazz2::UI::Menu
 				case PlayerActions::Fire: name = "Fire"_s; break;
 				case PlayerActions::Jump: name = "Jump"_s; break;
 				case PlayerActions::Run: name = "Run"_s; break;
-				case PlayerActions::SwitchWeapon: name = "Change Weapon"_s; break;
+				case PlayerActions::ChangeWeapon: name = "Change Weapon"_s; break;
 				case PlayerActions::Menu: name = "Back"_s; break;
 			}
 
@@ -283,7 +313,7 @@ namespace Jazz2::UI::Menu
 						if (_waitForInput) {
 							color = Colorf(0.62f, 0.44f, 0.34f, 0.5f);
 						} else {
-							color = Font::RandomColor;
+							color = (_selectedIndex == (int)PlayerActions::Menu && _selectedColumn == 0 ? Font::TransparentRandomColor : Font::RandomColor);
 						}
 
 						_root->DrawStringShadow(value, charOffset, center.X * (0.9f + j * 0.34f), topItem, IMenuContainer::MainLayer - 10,
@@ -316,7 +346,10 @@ namespace Jazz2::UI::Menu
 
 	void ControlsSection::Commit()
 	{
-		ControlScheme::Save();
+		if (_isDirty) {
+			_isDirty = false;
+			PreferencesCache::Save();
+		}
 	}
 
 	void ControlsSection::RefreshCollisions()

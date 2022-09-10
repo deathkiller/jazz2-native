@@ -354,7 +354,7 @@ namespace Jazz2::UI::Menu
 		}
 		// Use SwitchWeapon action as Delete key
 		if (keyState.isKeyDown(KeySym::DELETE)) {
-			_pressedActions |= (1 << (int)PlayerActions::SwitchWeapon);
+			_pressedActions |= (1 << (int)PlayerActions::ChangeWeapon);
 		}
 
 		// Try to get 8 connected joysticks
@@ -416,9 +416,9 @@ namespace Jazz2::UI::Menu
 			_pressedActions |= (1 << (int)PlayerActions::Menu);
 		}
 
-		jb = ControlScheme::Gamepad(0, PlayerActions::SwitchWeapon, ji1);
+		jb = ControlScheme::Gamepad(0, PlayerActions::ChangeWeapon, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(ButtonName::Y)) {
-			_pressedActions |= (1 << (int)PlayerActions::SwitchWeapon);
+			_pressedActions |= (1 << (int)PlayerActions::ChangeWeapon);
 		}
 	}
 

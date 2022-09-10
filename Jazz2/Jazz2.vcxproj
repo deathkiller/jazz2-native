@@ -118,6 +118,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(ExtensionLibraryPath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -141,6 +142,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(ExtensionLibraryPath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -164,6 +166,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(ExtensionLibraryPath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -187,6 +190,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(ExtensionLibraryPath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -383,7 +387,6 @@
     <ClInclude Include="nCine\Graphics\ITextureSaver.h" />
     <ClInclude Include="nCine\Graphics\Material.h" />
     <ClInclude Include="nCine\Graphics\MeshSprite.h" />
-    <ClInclude Include="nCine\Graphics\NuklearDrawing.h" />
     <ClInclude Include="nCine\Graphics\Particle.h" />
     <ClInclude Include="nCine\Graphics\ParticleAffectors.h" />
     <ClInclude Include="nCine\Graphics\ParticleInitializer.h" />
@@ -426,6 +429,7 @@
     <ClInclude Include="nCine\Input\JoyMapping.h" />
     <ClInclude Include="nCine\Input\JoyMappingDb.h" />
     <ClInclude Include="nCine\Input\Keys.h" />
+    <ClInclude Include="nCine\Input\Qt5InputManager.h" />
     <ClInclude Include="nCine\Input\SdlInputManager.h" />
     <ClInclude Include="nCine\IO\AssetFile.h" />
     <ClInclude Include="nCine\IO\EmscriptenLocalFile.h" />
@@ -623,13 +627,10 @@
     <ClCompile Include="nCine\Graphics\GL\Qt5GfxDevice.cpp" />
     <ClCompile Include="nCine\Graphics\GL\SdlGfxDevice.cpp" />
     <ClCompile Include="nCine\Graphics\IGfxDevice.cpp" />
-    <ClCompile Include="nCine\Graphics\ImGuiDebugOverlay.cpp" />
-    <ClCompile Include="nCine\Graphics\ImGuiDrawing.cpp" />
     <ClCompile Include="nCine\Graphics\ITextureLoader.cpp" />
     <ClCompile Include="nCine\Graphics\ITextureSaver.cpp" />
     <ClCompile Include="nCine\Graphics\Material.cpp" />
     <ClCompile Include="nCine\Graphics\MeshSprite.cpp" />
-    <ClCompile Include="nCine\Graphics\NuklearDrawing.cpp" />
     <ClCompile Include="nCine\Graphics\Particle.cpp" />
     <ClCompile Include="nCine\Graphics\ParticleAffectors.cpp" />
     <ClCompile Include="nCine\Graphics\ParticleInitializer.cpp" />
@@ -666,14 +667,7 @@
     <ClCompile Include="nCine\Input\GlfwInputManager.cpp" />
     <ClCompile Include="nCine\Input\GlfwKeys.cpp" />
     <ClCompile Include="nCine\Input\IInputManager.cpp" />
-    <ClCompile Include="nCine\Input\ImGuiGlfwInput.cpp" />
-    <ClCompile Include="nCine\Input\ImGuiJoyMappedInput.cpp" />
-    <ClCompile Include="nCine\Input\ImGuiQt5Input.cpp" />
-    <ClCompile Include="nCine\Input\ImGuiSdlInput.cpp" />
     <ClCompile Include="nCine\Input\JoyMapping.cpp" />
-    <ClCompile Include="nCine\Input\NuklearGlfwInput.cpp" />
-    <ClCompile Include="nCine\Input\NuklearQt5Input.cpp" />
-    <ClCompile Include="nCine\Input\NuklearSdlInput.cpp" />
     <ClCompile Include="nCine\Input\Qt5InputManager.cpp" />
     <ClCompile Include="nCine\Input\Qt5JoyMapping.cpp" />
     <ClCompile Include="nCine\Input\Qt5Keys.cpp" />
@@ -685,7 +679,6 @@
     <ClCompile Include="nCine\IO\IFileStream.cpp" />
     <ClCompile Include="nCine\IO\MemoryFile.cpp" />
     <ClCompile Include="nCine\IO\StandardFile.cpp" />
-    <ClCompile Include="nCine\NuklearContext.cpp" />
     <ClCompile Include="nCine\PCApplication.cpp" />
     <ClCompile Include="nCine\Primitives\Color.cpp" />
     <ClCompile Include="nCine\Primitives\Colorf.cpp" />

@@ -134,8 +134,8 @@
 		"TouchRun": {
 			"Path": "_custom/touch_run.png"
 		},
-		"TouchSwitch": {
-			"Path": "_custom/touch_switch.png"
+		"TouchChange": {
+			"Path": "_custom/touch_change.png"
 		},
 		"TouchPause": {
 			"Path": "_custom/touch_pause.png"

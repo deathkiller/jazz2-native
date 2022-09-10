@@ -230,6 +230,7 @@ private:
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	void RefreshCache();
 #endif
+	static void SaveEpisodeEnd(const std::unique_ptr<LevelInitialization>& pendingLevelChange);
 };
 
 void GameEventHandler::onPreInit(AppConfiguration& config)
@@ -259,8 +260,6 @@ void GameEventHandler::onInit()
 		theApplication().inputManager().addJoyMappingsFromFile(mappingsPath);
 	}
 #endif
-
-	ControlScheme::Initialize();
 
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	// If threading support is enabled, refresh cache during intro cinematics and don't allow skip until it's completed
@@ -313,7 +312,8 @@ void GameEventHandler::onFrameStart()
 					_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
 				} else if (_pendingLevelChange->LevelName == ":end"_s) {
 					// End of episode
-					// TODO: Save state
+					SaveEpisodeEnd(_pendingLevelChange);
+
 					std::optional<Episode> lastEpisode = ContentResolver::Current().GetEpisode(_pendingLevelChange->LastEpisodeName);
 					if (lastEpisode.has_value()) {
 						// Redirect to next episode
@@ -331,7 +331,8 @@ void GameEventHandler::onFrameStart()
 					}
 				} else if (_pendingLevelChange->LevelName == ":credits"_s) {
 					// End of game
-					// TODO: Save state
+					SaveEpisodeEnd(_pendingLevelChange);
+
 					_currentHandler = std::make_unique<Cinematics>(this, "ending"_s, [](IRootController* root, bool endOfStream) {
 						root->GoToMainMenu(false);
 						return true;
@@ -403,7 +404,7 @@ void GameEventHandler::RefreshCache()
 	// Check cache state
 	{
 		auto s = fs::Open(fs::JoinPath("Cache"_s, "cache.j2i"_s), FileAccessMode::Read);
-		if (s->GetSize() < 7) {
+		if (s->GetSize() < 16) {
 			goto RecreateCache;
 		}
 
@@ -642,6 +643,37 @@ RecreateCache:
 	return;
 }
 #endif
+
+void GameEventHandler::SaveEpisodeEnd(const std::unique_ptr<LevelInitialization>& pendingLevelChange)
+{
+	if (pendingLevelChange->LastEpisodeName.empty()) {
+		return;
+	}
+
+	int playerCount = 0;
+	PlayerCarryOver* firstPlayer = nullptr;
+	for (int i = 0; i < _countof(pendingLevelChange->PlayerCarryOvers); i++) {
+		if (pendingLevelChange->PlayerCarryOvers[i].Type != PlayerType::None) {
+			firstPlayer = &pendingLevelChange->PlayerCarryOvers[i];
+			playerCount++;
+		}
+	}
+
+	if (playerCount == 1) {
+		auto episodeEnd = PreferencesCache::GetEpisodeEnd(pendingLevelChange->LastEpisodeName, true);
+		episodeEnd->Flags = EpisodeContinuationFlags::Completed;
+		if (pendingLevelChange->CheatsUsed) {
+			episodeEnd->Flags |= EpisodeContinuationFlags::CheatsUsed;
+		}
+
+		episodeEnd->Lives = firstPlayer->Lives;
+		episodeEnd->Score = firstPlayer->Score;
+		memcpy(episodeEnd->Ammo, firstPlayer->Ammo, sizeof(firstPlayer->Ammo));
+		memcpy(episodeEnd->WeaponUpgrades, firstPlayer->WeaponUpgrades, sizeof(firstPlayer->WeaponUpgrades));
+
+		PreferencesCache::Save();
+	}
+}
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)

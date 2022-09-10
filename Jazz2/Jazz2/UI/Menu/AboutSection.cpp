@@ -21,8 +21,6 @@ namespace Jazz2::UI::Menu
 		Vector2f pos = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
 		pos.Y = std::max(150.0f, pos.Y * 0.75f);
 
-		//_root->DrawElement("MenuDim"_s, 0, pos.X, pos.Y + 60.0f - 2.0f, IMenuContainer::MainLayer, Alignment::Top, Colorf::White, 55.0f, 14.2f, Rectf(0.0f, 0.3f, 1.0f, 0.7f));
-
 		_root->DrawElement("MenuDim"_s, pos.X, pos.Y + 60.0f - 2.0f, IMenuContainer::BackgroundLayer,
 			Alignment::Top, Colorf::White, Vector2f(680.0f, 200.0f), Vector4f(1.0f, 0.0f, 0.7f, 0.0f));
 
@@ -47,8 +45,6 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement("MenuLine"_s, 0, viewSize.X * 0.5f, pos.Y + 60.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		pos.Y = viewSize.Y - 100.0f;
-
-		//_root->DrawElement("MenuLine"_s, 1, viewSize.X * 0.5f, pos.Y + 60.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 	}
 
 	void AboutSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)

@@ -1,4 +1,5 @@
 #include "ControlScheme.h"
+#include "../PreferencesCache.h"
 
 namespace Jazz2::UI
 {
@@ -14,7 +15,7 @@ namespace Jazz2::UI
 		_mappings[(int)PlayerActions::Fire].Key1 = KeySym::SPACE;
 		_mappings[(int)PlayerActions::Jump].Key1 = KeySym::V;
 		_mappings[(int)PlayerActions::Run].Key1 = KeySym::C;
-		_mappings[(int)PlayerActions::SwitchWeapon].Key1 = KeySym::X;
+		_mappings[(int)PlayerActions::ChangeWeapon].Key1 = KeySym::X;
 		_mappings[(int)PlayerActions::Menu].Key1 = KeySym::ESCAPE;
 
 		_mappings[(int)PlayerActions::Left].GamepadButton = ButtonName::DPAD_LEFT;
@@ -24,7 +25,7 @@ namespace Jazz2::UI
 		_mappings[(int)PlayerActions::Fire].GamepadButton = ButtonName::X;
 		_mappings[(int)PlayerActions::Jump].GamepadButton = ButtonName::A;
 		_mappings[(int)PlayerActions::Run].GamepadButton = ButtonName::B;
-		_mappings[(int)PlayerActions::SwitchWeapon].GamepadButton = ButtonName::Y;
+		_mappings[(int)PlayerActions::ChangeWeapon].GamepadButton = ButtonName::Y;
 		_mappings[(int)PlayerActions::Menu].GamepadButton = ButtonName::START;
 
 		for (int i = 0; i < (int)PlayerActions::Count; i++) {
@@ -37,10 +38,5 @@ namespace Jazz2::UI
 			_mappings[i].Key2 = KeySym::UNKNOWN;
 			_mappings[i].GamepadIndex = -1;
 		}
-	}
-
-	void ControlScheme::Save()
-	{
-		// TODO: Save to file
 	}
 }

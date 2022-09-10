@@ -12,7 +12,7 @@ namespace Jazz2::UI::Menu
 		static constexpr int PossibleButtons = 3;
 
 		ControlsSection();
-		~ControlsSection();
+		~ControlsSection() override;
 
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
@@ -24,6 +24,7 @@ namespace Jazz2::UI::Menu
 		int _selectedColumn;
 		int _currentPlayerIndex;
 		float _animation;
+		bool _isDirty;
 		bool _waitForInput;
 		float _delay;
 

@@ -44,7 +44,7 @@ namespace Jazz2::UI
 		_touchButtons[5] = CreateTouchButton(PlayerActions::Fire, "TouchFire"_s, Alignment::BottomRight, (ButtonSize + 0.02f) * 2, 0.04f, ButtonSize, ButtonSize);
 		_touchButtons[6] = CreateTouchButton(PlayerActions::Jump, "TouchJump"_s, Alignment::BottomRight, (ButtonSize + 0.02f), 0.04f + 0.08f, ButtonSize, ButtonSize);
 		_touchButtons[7] = CreateTouchButton(PlayerActions::Run, "TouchRun"_s, Alignment::BottomRight, 0.001f, 0.01f + 0.15f, ButtonSize, ButtonSize);
-		_touchButtons[8] = CreateTouchButton(PlayerActions::SwitchWeapon, "TouchSwitch"_s, Alignment::BottomRight, ButtonSize + 0.01f, 0.04f + 0.28f, SmallButtonSize, SmallButtonSize);
+		_touchButtons[8] = CreateTouchButton(PlayerActions::ChangeWeapon, "TouchChange"_s, Alignment::BottomRight, ButtonSize + 0.01f, 0.04f + 0.28f, SmallButtonSize, SmallButtonSize);
 #if !defined(DEATH_TARGET_ANDROID)
 		// Android has native Back button
 		_touchButtons[9] = CreateTouchButton(PlayerActions::Menu, "TouchPause"_s, Alignment::TopRight, 0.02f, 0.02f, SmallButtonSize, SmallButtonSize);
@@ -819,7 +819,7 @@ namespace Jazz2::UI
 		}
 
 		bool isGamepad;
-		if (!_levelHandler->PlayerActionPressed(player->_playerIndex, PlayerActions::SwitchWeapon, true, isGamepad) || !isGamepad) {
+		if (!_levelHandler->PlayerActionPressed(player->_playerIndex, PlayerActions::ChangeWeapon, true, isGamepad) || !isGamepad) {
 			if (_weaponWheelAnim > 0.0f) {
 				if (_lastWeaponWheelIndex != -1) {
 					player->SwitchToWeaponByIndex(_lastWeaponWheelIndex);

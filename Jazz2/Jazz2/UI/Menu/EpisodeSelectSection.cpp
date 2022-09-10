@@ -1,6 +1,7 @@
 ﻿#include "EpisodeSelectSection.h"
 #include "StartGameOptionsSection.h"
 #include "MainMenu.h"
+#include "../../PreferencesCache.h"
 #include "../../../nCine/Base/Algorithms.h"
 
 namespace Jazz2::UI::Menu
@@ -43,7 +44,6 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (_root->ActionHit(PlayerActions::Fire)) {
-			_root->PlaySfx("MenuSelect"_s, 0.6f);
 			ExecuteSelected();
 		} else if (_root->ActionHit(PlayerActions::Menu)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -92,10 +92,35 @@ namespace Jazz2::UI::Menu
 			if (_selectedIndex == i) {
 				float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
-				_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (_items[i].Description.DisplayName.size() + 3) * 0.5f * size, 4.0f * size, true);
+				if ((_items[i].Flags & EpisodeFlags::IsAvailable) == EpisodeFlags::IsAvailable || PreferencesCache::AllowCheatsUnlock) {
+					_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (_items[i].Description.DisplayName.size() + 3) * 0.5f * size, 4.0f * size, true);
 
-				_root->DrawStringShadow(_items[i].Description.DisplayName, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
-					Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+					_root->DrawStringShadow(_items[i].Description.DisplayName, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
+						Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+				} else {
+					int prevEpisodeIndex = -1;
+					if (!_items[i].Description.PreviousEpisode.empty()) {
+						for (int j = 0; j < _items.size(); j++) {
+							if (i != j && _items[i].Description.PreviousEpisode == _items[j].Description.Name) {
+								prevEpisodeIndex = j;
+								break;
+							}
+						}
+					}
+
+					_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (_items[i].Description.DisplayName.size() + 3) * 0.5f * size, 4.0f * size, true);
+
+					_root->DrawStringShadow(_items[i].Description.DisplayName, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
+						Alignment::Center, Font::TransparentRandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+
+					if (prevEpisodeIndex != -1) {
+						_root->DrawStringShadow("You must complete \"" + _items[prevEpisodeIndex].Description.DisplayName + "\" first!"_s, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 20,
+							Alignment::Center, Colorf(0.66f, 0.42f, 0.32f, std::min(0.5f, 0.2f + 2.0f * _animation)), 0.7f * size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+					} else {
+						_root->DrawStringShadow("Episode is locked!"_s, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 20,
+							Alignment::Center, Colorf(0.66f, 0.42f, 0.32f, std::min(0.5f, 0.2f + 2.0f * _animation)), 0.7f * size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+					}
+				}
 			} else {
 				_root->DrawStringShadow(_items[i].Description.DisplayName, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 					Alignment::Center, Font::DefaultColor, 0.9f);
@@ -122,7 +147,6 @@ namespace Jazz2::UI::Menu
 				for (int i = 0; i < _items.size(); i++) {
 					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 30.0f) {
 						if (_selectedIndex == i) {
-							_root->PlaySfx("MenuSelect"_s, 0.6f);
 							ExecuteSelected();
 						} else {
 							_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -139,7 +163,10 @@ namespace Jazz2::UI::Menu
 	void EpisodeSelectSection::ExecuteSelected()
 	{
 		auto& selectedItem = _items[_selectedIndex];
-		_root->SwitchToSectionPtr(std::make_unique<StartGameOptionsSection>(selectedItem.Description.Name, selectedItem.Description.FirstLevel, selectedItem.Description.PreviousEpisode));
+		if ((selectedItem.Flags & EpisodeFlags::IsAvailable) == EpisodeFlags::IsAvailable || PreferencesCache::AllowCheatsUnlock) {
+			_root->PlaySfx("MenuSelect"_s, 0.6f);
+			_root->SwitchToSectionPtr(std::make_unique<StartGameOptionsSection>(selectedItem.Description.Name, selectedItem.Description.FirstLevel, selectedItem.Description.PreviousEpisode));
+		}
 	}
 
 	void EpisodeSelectSection::AddEpisode(const StringView& episodeFile)
@@ -152,6 +179,22 @@ namespace Jazz2::UI::Menu
 		if (description.has_value()) {
 			auto& episode = _items.emplace_back();
 			episode.Description = std::move(description.value());
+
+			if (!episode.Description.PreviousEpisode.empty()) {
+				auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(episode.Description.PreviousEpisode);
+				if (previousEpisodeEnd != nullptr && (previousEpisodeEnd->Flags & EpisodeContinuationFlags::Completed) == EpisodeContinuationFlags::Completed) {
+					episode.Flags |= EpisodeFlags::IsAvailable;
+				}
+			} else {
+				episode.Flags |= EpisodeFlags::IsAvailable;
+			}
+			
+			if ((episode.Flags & EpisodeFlags::IsAvailable) == EpisodeFlags::IsAvailable) {
+				auto currentEpisodeEnd = PreferencesCache::GetEpisodeEnd(episode.Description.Name);
+				if (currentEpisodeEnd != nullptr && (currentEpisodeEnd->Flags & EpisodeContinuationFlags::Completed) == EpisodeContinuationFlags::Completed) {
+					episode.Flags |= EpisodeFlags::IsCompleted;
+				}
+			}
 		}
 	}
 }

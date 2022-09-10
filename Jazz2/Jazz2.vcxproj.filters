@@ -387,9 +387,6 @@
     <ClInclude Include="nCine\Graphics\GL\GLDebug.h">
       <Filter>Header Files\nCine\Graphics\GL</Filter>
     </ClInclude>
-    <ClInclude Include="nCine\Graphics\NuklearDrawing.h">
-      <Filter>Header Files\nCine\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="nCine\Input\JoyMapping.h">
       <Filter>Header Files\nCine\Input</Filter>
     </ClInclude>
@@ -1020,6 +1017,9 @@
     <ClInclude Include="Jazz2\UI\Menu\EpisodeSelectSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
+    <ClInclude Include="nCine\Input\Qt5InputManager.h">
+      <Filter>Header Files\nCine\Input</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1035,9 +1035,6 @@
       <Filter>Source Files\nCine</Filter>
     </ClCompile>
     <ClCompile Include="nCine\ArrayIndexer.cpp">
-      <Filter>Source Files\nCine</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\NuklearContext.cpp">
       <Filter>Source Files\nCine</Filter>
     </ClCompile>
     <ClCompile Include="nCine\PCApplication.cpp">
@@ -1271,24 +1268,6 @@
     <ClCompile Include="nCine\Graphics\IGfxDevice.cpp">
       <Filter>Source Files\nCine\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="nCine\Graphics\ImGuiDebugOverlay.cpp">
-      <Filter>Source Files\nCine\Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\ImGuiDrawing.cpp">
-      <Filter>Source Files\nCine\Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Input\ImGuiQt5Input.cpp">
-      <Filter>Source Files\nCine\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Input\ImGuiSdlInput.cpp">
-      <Filter>Source Files\nCine\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Input\ImGuiJoyMappedInput.cpp">
-      <Filter>Source Files\nCine\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Input\ImGuiGlfwInput.cpp">
-      <Filter>Source Files\nCine\Input</Filter>
-    </ClCompile>
     <ClCompile Include="nCine\Input\IInputManager.cpp">
       <Filter>Source Files\nCine\Input</Filter>
     </ClCompile>
@@ -1302,9 +1281,6 @@
       <Filter>Source Files\nCine\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Graphics\MeshSprite.cpp">
-      <Filter>Source Files\nCine\Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\NuklearDrawing.cpp">
       <Filter>Source Files\nCine\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Graphics\ParticleAffectors.cpp">
@@ -1425,15 +1401,6 @@
       <Filter>Source Files\nCine\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Input\JoyMapping.cpp">
-      <Filter>Source Files\nCine\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Input\NuklearGlfwInput.cpp">
-      <Filter>Source Files\nCine\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Input\NuklearQt5Input.cpp">
-      <Filter>Source Files\nCine\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Input\NuklearSdlInput.cpp">
       <Filter>Source Files\nCine\Input</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Input\Qt5InputManager.cpp">

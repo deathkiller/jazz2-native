@@ -183,8 +183,8 @@ namespace nCine
 
 #ifdef WITH_IMGUI
 		// Debug overlay is available even when scenegraph is not
-		if (appCfg_.withDebugOverlay)
-			debugOverlay_ = std::make_unique<ImGuiDebugOverlay>(appCfg_.profileTextUpdateTime());
+		//if (appCfg_.withDebugOverlay)
+		//	debugOverlay_ = std::make_unique<ImGuiDebugOverlay>(appCfg_.profileTextUpdateTime());
 #endif
 
 		// Initialization of the static random generator seeds

@@ -5,7 +5,7 @@
 
 namespace nCine
 {
-	enum class ButtonName : short int
+	enum class ButtonName : int16_t
 	{
 		UNKNOWN = -1,
 		A = 0,
@@ -25,7 +25,7 @@ namespace nCine
 		DPAD_RIGHT
 	};
 
-	enum class AxisName : short int
+	enum class AxisName : int16_t
 	{
 		UNKNOWN = -1,
 		LX = 0,
@@ -200,7 +200,7 @@ namespace nCine
 		/// Returns the state of the specified hat
 		virtual unsigned char hatState(int hatId) const = 0;
 		/// Returns a value between -32768 and 32767 for a joystick axis
-		virtual short int axisValue(int axisId) const = 0;
+		virtual int16_t axisValue(int axisId) const = 0;
 		/// Returns a normalized value between -1.0 and 1.0 for a joystick axis
 		virtual float axisNormValue(int axisId) const = 0;
 	};
@@ -236,7 +236,7 @@ namespace nCine
 		/// Axis id
 		int axisId;
 		/// Axis value between -32768 and 32767
-		short int value;
+		int16_t value;
 		/// Axis value normalized between -1.0f and 1.0f
 		float normValue;
 	};

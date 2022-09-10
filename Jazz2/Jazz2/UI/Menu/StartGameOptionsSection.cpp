@@ -276,55 +276,31 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		// TODO
-		/*ControlScheme.IsSuspended = true;
-
-		_root->PlaySound("MenuSelect"_s, 0.6f);
-		_root->BeginFadeOut(() = > {
-			ControlScheme.IsSuspended = false;
-
-			bool enableReduxMode = Preferences.Get<bool>("ReduxMode", true);
-
-			LevelInitialization levelInit = new LevelInitialization(
-				episodeName,
-				levelName,
-				(GameDifficulty.Easy + selectedDifficulty),
-				enableReduxMode,
-				false,
-				(PlayerType.Jazz + selectedPlayerType)
-			);
-
-			if (!string.IsNullOrEmpty(previousEpisodeName)) {
-				ref PlayerCarryOver player = ref levelInit.PlayerCarryOvers[0];
-
-				byte lives = Preferences.Get<byte>("EpisodeEnd_Lives_" + previousEpisodeName);
-				uint score = Preferences.Get<uint>("EpisodeEnd_Score_" + previousEpisodeName);
-				short[] ammo = Preferences.Get<short[]>("EpisodeEnd_Ammo_" + previousEpisodeName);
-				byte[] upgrades = Preferences.Get<byte[]>("EpisodeEnd_Upgrades_" + previousEpisodeName);
-				bool cheatsUsed = Preferences.Get<bool>("EpisodeEnd_Cheats_" + previousEpisodeName, false);
-
-				if (lives > 0) {
-					player.Lives = lives;
-				}
-				if (score > 0) {
-					player.Score = score;
-				}
-				if (ammo != null) {
-					player.Ammo = ammo;
-				}
-				if (upgrades != null) {
-					player.WeaponUpgrades = upgrades;
-				}
-
-				levelInit.CheatsUsed = cheatsUsed;
-			}
-
-			_root->SwitchToLevel(levelInit);
-		});*/
-
 		PlayerType players[] = { (PlayerType)((int)PlayerType::Jazz + _selectedPlayerType) };
 		LevelInitialization levelInit(_episodeName, _levelName, (GameDifficulty)((int)GameDifficulty::Easy + _selectedDifficulty),
 			PreferencesCache::ReduxMode, false, players, _countof(players));
+
+		if (!_previousEpisodeName.empty()) {
+			auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(_previousEpisodeName);
+			if (previousEpisodeEnd != nullptr) {
+				// Set CheatsUsed to true if cheats were used in the previous episode or the previous episode is not completed
+				if ((previousEpisodeEnd->Flags & EpisodeContinuationFlags::CheatsUsed) == EpisodeContinuationFlags::CheatsUsed ||
+					(previousEpisodeEnd->Flags & EpisodeContinuationFlags::Completed) != EpisodeContinuationFlags::Completed) {
+					levelInit.CheatsUsed = true;
+				}
+
+				auto& firstPlayer = levelInit.PlayerCarryOvers[0];
+				if (previousEpisodeEnd->Lives > 0) {
+					firstPlayer.Lives = previousEpisodeEnd->Lives;
+				}
+				firstPlayer.Score = previousEpisodeEnd->Score;
+				memcpy(firstPlayer.Ammo, previousEpisodeEnd->Ammo, sizeof(levelInit.PlayerCarryOvers[0].Ammo));
+				memcpy(firstPlayer.WeaponUpgrades, previousEpisodeEnd->WeaponUpgrades, sizeof(levelInit.PlayerCarryOvers[0].WeaponUpgrades));
+			} else {
+				// Set CheatsUsed to true if the previous episode is not completed
+				levelInit.CheatsUsed = true;
+			}
+		}
 
 		if (PreferencesCache::AllowCheatsWeapons) {
 			levelInit.CheatsUsed = true;

@@ -10,7 +10,7 @@ namespace Jazz2
 		Fire,
 		Jump,
 		Run,
-		SwitchWeapon,
+		ChangeWeapon,
 		Menu,
 
 		Count,

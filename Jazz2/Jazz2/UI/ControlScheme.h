@@ -5,6 +5,11 @@
 
 using namespace nCine;
 
+namespace Jazz2
+{
+	class PreferencesCache;
+}
+
 namespace Jazz2::UI
 {
 	namespace Menu
@@ -23,13 +28,11 @@ namespace Jazz2::UI
 
 	class ControlScheme
 	{
+		friend class PreferencesCache;
 		friend class Menu::ControlsSection;
 
 	public:
 		static constexpr int MaxSupportedPlayers = 1;
-
-		static void Initialize();
-		static void Save();
 
 		static KeySym Key1(int playerIndex, PlayerActions action)
 		{
@@ -55,5 +58,7 @@ namespace Jazz2::UI
 		ControlScheme& operator=(const ControlScheme&) = delete;
 
 		static ControlSchemeMapping _mappings[MaxSupportedPlayers * (int)PlayerActions::Count];
+
+		static void Initialize();
 	};
 }
