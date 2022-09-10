@@ -532,11 +532,9 @@ out vec4 fragColor;
 
 void main() {
 	vec4 dye = vec4(1.0) + (vColor - vec4(0.5)) * vec4(4.0);
-
 	vec4 original = texture(uTexture, vTexCoords);
 	float average = (original.r + original.g + original.b) * 0.5;
 	vec4 gray = vec4(average, average, average, original.a);
-
 	fragColor = gray * dye;
 }
 )";
@@ -581,7 +579,24 @@ out vec4 fragColor;
 
 void main() {
 	vec4 tex = texture(uTexture, vTexCoords);
-	float color = step(0.1, max(max(tex.r, tex.g), tex.b));
+	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0f, 1.0f);
+	fragColor = vec4(color, color, color, tex.a) * vColor;
+}
+)";
+
+	constexpr char PartialWhiteMaskFs[] = R"(
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform sampler2D uTexture;
+in vec2 vTexCoords;
+in vec4 vColor;
+out vec4 fragColor;
+
+void main() {
+	vec4 tex = texture(uTexture, vTexCoords);
+	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 2.5f, 1.0f);
 	fragColor = vec4(color, color, color, tex.a) * vColor;
 }
 )";

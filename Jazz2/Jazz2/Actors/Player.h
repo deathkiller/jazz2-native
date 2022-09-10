@@ -90,6 +90,7 @@ namespace Jazz2::Actors
 		enum class LevelExitingState {
 			None,
 			Waiting,
+			WaitingForWarp,
 			Transition,
 			Ready
 		};
@@ -185,7 +186,7 @@ namespace Jazz2::Actors
 		void OnHandleWater();
 		void OnHandleAreaEvents(float timeMult, bool& areaWeaponAllowed, int& areaWaterBlock);
 
-		const std::shared_ptr<AudioBufferPlayer>& PlayPlayerSfx(const StringView& identifier, float gain = 1.0f, float pitch = 1.0f);
+		std::shared_ptr<AudioBufferPlayer> PlayPlayerSfx(const StringView& identifier, float gain = 1.0f, float pitch = 1.0f);
 		bool SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, const std::function<void()>& callback = nullptr);
 		void InitialPoleStage(bool horizontal);
 		void NextPoleStage(bool horizontal, bool positive, int stagesLeft, float lastSpeed);

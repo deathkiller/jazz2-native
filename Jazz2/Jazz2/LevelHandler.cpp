@@ -854,7 +854,7 @@ namespace Jazz2
 
 		_nextLevel = nextLevel;
 		_nextLevelType = exitType;
-		_nextLevelTime = (exitType == ExitType::Boss ? 420.0f : 240.0f);
+		_nextLevelTime = (exitType == ExitType::Boss ? 320.0f : 240.0f);
 
 		if (_sugarRushMusic != nullptr) {
 			_sugarRushMusic->stop();

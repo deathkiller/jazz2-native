@@ -32,7 +32,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		quicksort(_items.begin(), _items.end(), [](const EpisodeSelectSection::ItemData& a, const EpisodeSelectSection::ItemData& b) -> bool {
-			return (a.Position < b.Position);
+			return (a.Description.Position < b.Description.Position);
 		});
 	}
 
@@ -92,12 +92,12 @@ namespace Jazz2::UI::Menu
 			if (_selectedIndex == i) {
 				float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
-				_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (_items[i].DisplayName.size() + 3) * 0.5f * size, 4.0f * size, true);
+				_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (_items[i].Description.DisplayName.size() + 3) * 0.5f * size, 4.0f * size, true);
 
-				_root->DrawStringShadow(_items[i].DisplayName, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
+				_root->DrawStringShadow(_items[i].Description.DisplayName, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
 					Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 			} else {
-				_root->DrawStringShadow(_items[i].DisplayName, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
+				_root->DrawStringShadow(_items[i].Description.DisplayName, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
@@ -139,7 +139,7 @@ namespace Jazz2::UI::Menu
 	void EpisodeSelectSection::ExecuteSelected()
 	{
 		auto& selectedItem = _items[_selectedIndex];
-		_root->SwitchToSectionPtr(std::make_unique<StartGameOptionsSection>(selectedItem.Name, selectedItem.FirstLevel, selectedItem.PreviousEpisode));
+		_root->SwitchToSectionPtr(std::make_unique<StartGameOptionsSection>(selectedItem.Description.Name, selectedItem.Description.FirstLevel, selectedItem.Description.PreviousEpisode));
 	}
 
 	void EpisodeSelectSection::AddEpisode(const StringView& episodeFile)
@@ -148,34 +148,10 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		auto s = fs::Open(episodeFile, FileAccessMode::Read);
-		if (s->GetSize() < 16) {
-			return;
+		std::optional<Episode> description = ContentResolver::Current().GetEpisodeByPath(episodeFile);
+		if (description.has_value()) {
+			auto& episode = _items.emplace_back();
+			episode.Description = std::move(description.value());
 		}
-
-		uint64_t signature = s->ReadValue<uint64_t>();
-		uint8_t fileType = s->ReadValue<uint8_t>();
-		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::EpisodeFile) {
-			return;
-		}
-
-		auto& episode = _items.emplace_back();
-		episode.Name = fs::GetFileNameWithoutExtension(episodeFile);
-
-		uint16_t flags = s->ReadValue<uint16_t>();
-
-		uint8_t nameLength = s->ReadValue<uint8_t>();
-		episode.DisplayName = String(NoInit, nameLength);
-		s->Read(episode.DisplayName.data(), nameLength);
-
-		episode.Position = s->ReadValue<uint16_t>();
-
-		nameLength = s->ReadValue<uint8_t>();
-		episode.FirstLevel = String(NoInit, nameLength);
-		s->Read(episode.FirstLevel.data(), nameLength);
-
-		nameLength = s->ReadValue<uint8_t>();
-		episode.PreviousEpisode = String(NoInit, nameLength);
-		s->Read(episode.PreviousEpisode.data(), nameLength);
 	}
 }

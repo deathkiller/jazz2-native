@@ -42,7 +42,7 @@ namespace Jazz2
 	};
 
 	enum class GenericGraphicResourceFlags {
-		None = 0,
+		None = 0x00,
 
 		Referenced = 0x01
 	};
@@ -98,7 +98,7 @@ namespace Jazz2
 	};
 
 	enum class MetadataFlags {
-		None = 0,
+		None = 0x00,
 
 		Referenced = 0x01,
 		AsyncFinalizingRequired = 0x02
@@ -163,6 +163,26 @@ namespace Jazz2
 		SwingingVine
 	};
 
+	enum class EpisodeFlags {
+		None = 0x00,
+
+		IsAvailable = 0x01,
+		IsCompleted = 0x02,
+		CanContinue = 0x04
+	};
+
+	DEFINE_ENUM_OPERATORS(EpisodeFlags);
+
+	struct Episode {
+		String Name;
+		String DisplayName;
+		String FirstLevel;
+		String PreviousEpisode;
+		String NextEpisode;
+		EpisodeFlags Flags;
+		uint16_t Position;
+	};
+
 	enum class FontType {
 		Small,
 		Medium,
@@ -187,6 +207,7 @@ namespace Jazz2
 		Outline,
 		BatchedOutline,
 		WhiteMask,
+		PartialWhiteMask,
 		BatchedWhiteMask,
 
 #if defined(ALLOW_RESCALE_SHADERS)
@@ -223,6 +244,8 @@ namespace Jazz2
 		bool LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty);
 		void ApplyPalette(const StringView& path);
 
+		std::optional<Episode> GetEpisode(const StringView& name);
+		std::optional<Episode> GetEpisodeByPath(const StringView& path);
 		std::unique_ptr<AudioStreamPlayer> GetMusic(const StringView& path);
 		UI::Font* GetFont(FontType fontType);
 		Shader* GetShader(PrecompiledShader shader);

@@ -78,17 +78,6 @@ git clone https://github.com/emscripten-core/emsdk.git
 cd emsdk
 ./emsdk install latest
 ./emsdk activate latest
-
-# Download nCine dependencies
-cd ..
-git clone https://github.com/nCine/nCine-libraries-artifacts.git
-cd nCine-libraries-artifacts
-
-git checkout libraries-emscripten-emcc
-LIBRARIES_FILE=$(ls -t | head -n 1) && tar xpzf $LIBRARIES_FILE
-mv nCine-external ..
-cd ..
-rm -rf nCine-libraries-artifacts
 ```
 * Put required game files to `./Content/` directory – the files must be provided in advance
 * Build the solution with **CMake**

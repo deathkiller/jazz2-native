@@ -175,7 +175,7 @@ namespace Jazz2::Actors::Enemies
 									// 1 hits by player
 									if (_lastHealth - _health >= 1) {
 										// Fall off the ledge
-										_speed.X = 1.8f;
+										_speed.X = 2.2f;
 
 										SetAnimation(AnimState::Fall);
 									} else {

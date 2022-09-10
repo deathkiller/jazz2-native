@@ -559,8 +559,9 @@ namespace Jazz2::Actors
 				} else if (_suspendType != SuspendType::None) {
 					_wasDownPressed = true;
 
-					MoveInstantly(Vector2f(0.0f, 10.0f), MoveType::Relative | MoveType::Force);
+					MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative | MoveType::Force);
 					_suspendType = SuspendType::None;
+					_suspendTime = 4.0f;
 
 					SetState(ActorState::ApplyGravitation, true);
 				} else if (!_wasDownPressed && _dizzyTime <= 0.0f) {
@@ -742,7 +743,7 @@ namespace Jazz2::Actors
 
 						SetState(ActorState::IsSolidObject, false);
 
-						_internalForceY = 1.02f;
+						_internalForceY = 1.02f + (1.0f - timeMult) * 0.07f;
 						_speed.Y = -3.55f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
 					}
 				}
@@ -1078,6 +1079,8 @@ namespace Jazz2::Actors
 				if (canClimb) {
 					const int MaxTolerancePixels = 6;
 
+					SetState(ActorState::CollideWithTilesetReduced, false);
+
 					float x = (IsFacingLeft() ? -8.0f : 8.0f);
 					AABBf hitbox1 = AABBInner + Vector2f(x, -42.0f - MaxTolerancePixels);				// Empty space to climb to
 					AABBf hitbox2 = AABBInner + Vector2f(x, -42.0f + 2.0f);								// Wall below the empty space
@@ -1148,6 +1151,8 @@ namespace Jazz2::Actors
 							});
 						}
 					}
+
+					SetState(ActorState::CollideWithTilesetReduced, true);
 				}
 			}
 		}
@@ -1821,15 +1826,14 @@ namespace Jazz2::Actors
 		}
 	}
 
-	const std::shared_ptr<AudioBufferPlayer>& Player::PlayPlayerSfx(const StringView& identifier, float gain, float pitch)
+	std::shared_ptr<AudioBufferPlayer> Player::PlayPlayerSfx(const StringView& identifier, float gain, float pitch)
 	{
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _metadata->Sounds.end()) {
 			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
 			return _levelHandler->PlaySfx(it->second.Buffers[idx].get(), Vector3f(0.0f, 0.0f, 0.0f), true, gain, pitch);
 		} else {
-			//LOGE_X("Sound effect \"%s\" was not found", identifier.data());
-			return std::shared_ptr<AudioBufferPlayer>(nullptr);
+			return nullptr;
 		}
 	}
 
@@ -2192,8 +2196,8 @@ namespace Jazz2::Actors
 			_activeBird = nullptr;
 		}*/
 
-		if (_levelExiting != LevelExitingState::None) {
-			if (_levelExiting == LevelExitingState::Waiting) {
+		switch (_levelExiting) {
+			case LevelExitingState::Waiting: {
 				if (GetState(ActorState::CanJump) && std::abs(_speed.X) < 1.0f && std::abs(_speed.Y) < 1.0f) {
 					_levelExiting = LevelExitingState::Transition;
 
@@ -2230,54 +2234,65 @@ namespace Jazz2::Actors
 					_externalForce.Y = 0.0f;
 					_internalForceY = 0.0f;
 				}
-
 				return false;
 			}
 
-			return (_levelExiting == LevelExitingState::Ready);
+			case LevelExitingState::WaitingForWarp: {
+				if (_lastPoleTime <= 0.0f) {
+					_levelExiting = LevelExitingState::Transition;
+
+					ForceCancelTransition();
+
+					SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpInFreefall : AnimState::TransitionWarpIn, false, true, SpecialMoveType::None, [this]() {
+						_renderer.setDrawEnabled(false);
+						_levelExiting = LevelExitingState::Ready;
+					});
+					PlayPlayerSfx("WarpIn"_s);
+
+					SetState(ActorState::ApplyGravitation, false);
+					_speed.X = 0.0f;
+					_speed.Y = 0.0f;
+					_externalForce.X = 0.0f;
+					_externalForce.Y = 0.0f;
+					_internalForceY = 0.0f;
+				}
+				return false;
+			}
+
+			case LevelExitingState::Transition:
+				return false;
+
+			case LevelExitingState::Ready:
+				return true;
 		}
 
 		PlayPlayerSfx("EndOfLevel"_s);
 
-		if (exitType == ExitType::Warp || exitType == ExitType::Bonus || exitType == ExitType::Boss || _inWater) {
-			_levelExiting = LevelExitingState::Transition;
-
-			ForceCancelTransition();
-
-			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpInFreefall : AnimState::TransitionWarpIn, false, true, SpecialMoveType::None, [this]() {
-				_renderer.setDrawEnabled(false);
-				_levelExiting = LevelExitingState::Ready;
-			});
-			PlayPlayerSfx("WarpIn"_s);
-
-			SetState(ActorState::ApplyGravitation, false);
-			_speed.X = 0.0f;
-			_speed.Y = 0.0f;
-			_externalForce.X = 0.0f;
-			_externalForce.Y = 0.0f;
-			_internalForceY = 0.0f;
-		} else {
-			_levelExiting = LevelExitingState::Waiting;
-
-			if (_suspendType != SuspendType::None) {
-				MoveInstantly(Vector2f(0.0f, 10.0f), MoveType::Relative | MoveType::Force);
-				_suspendType = SuspendType::None;
-				_suspendTime = 60.0f;
-			}
-
-			SetState(ActorState::ApplyGravitation, true);
+		if (_suspendType != SuspendType::None) {
+			MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative | MoveType::Force);
+			_suspendType = SuspendType::None;
+			_suspendTime = 60.0f;
 		}
 
 		_controllable = false;
 		SetFacingLeft(false);
-		SetState(ActorState::IsInvulnerable, true);
+		SetState(ActorState::IsInvulnerable | ActorState::ApplyGravitation, true);
 		_fireFramesLeft = 0.0f;
 		_copterFramesLeft = 0.0f;
 		_pushFramesLeft = 0.0f;
 		_invulnerableTime = 0.0f;
 
-		// Re-used for waiting timeout
-		_lastPoleTime = 300.0f;
+		if (exitType == ExitType::Warp || exitType == ExitType::Bonus || exitType == ExitType::Boss || _inWater) {
+			_levelExiting = LevelExitingState::WaitingForWarp;
+
+			// Re-used for waiting timeout
+			_lastPoleTime = 100.0f;
+		} else {
+			_levelExiting = LevelExitingState::Waiting;
+
+			// Re-used for waiting timeout
+			_lastPoleTime = 300.0f;
+		}
 
 		return false;
 	}
@@ -2761,7 +2776,7 @@ namespace Jazz2::Actors
 			_foodEaten = _foodEaten % 100;
 			if (_sugarRushLeft <= 0.0f) {
 				_sugarRushLeft = 1300.0f;
-				_renderer.Initialize(ActorRendererType::WhiteMask);
+				_renderer.Initialize(ActorRendererType::PartialWhiteMask);
 				_levelHandler->ActivateSugarRush();
 			}
 		}

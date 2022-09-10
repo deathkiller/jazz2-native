@@ -36,7 +36,7 @@
 #endif
 
 using namespace nCine;
-using namespace Jazz2::Compatibility;
+using namespace Jazz2;
 using namespace Jazz2::UI;
 
 #if defined(ENABLE_LOG)
@@ -202,7 +202,7 @@ public:
 	void onTouchEvent(const TouchEvent& event) override;
 
 	void GoToMainMenu(bool afterIntro) override;
-	void ChangeLevel(Jazz2::LevelInitialization&& levelInit) override;
+	void ChangeLevel(LevelInitialization&& levelInit) override;
 
 	bool IsVerified() const override {
 		return ((_flags & Flags::IsVerified) == Flags::IsVerified);
@@ -214,7 +214,7 @@ public:
 
 private:
 	enum class Flags {
-		None = 0,
+		None = 0x00,
 
 		IsVerified = 0x01,
 		IsPlayable = 0x02
@@ -225,7 +225,7 @@ private:
 	Flags _flags;
 	std::unique_ptr<Jazz2::IStateHandler> _currentHandler;
 	PendingState _pendingState;
-	std::unique_ptr<Jazz2::LevelInitialization> _pendingLevelChange;
+	std::unique_ptr<LevelInitialization> _pendingLevelChange;
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	void RefreshCache();
@@ -234,11 +234,11 @@ private:
 
 void GameEventHandler::onPreInit(AppConfiguration& config)
 {
-	Jazz2::PreferencesCache::Initialize(config);
+	PreferencesCache::Initialize(config);
 
-	config.inFullscreen = Jazz2::PreferencesCache::EnableFullscreen;
-	config.withVSync = Jazz2::PreferencesCache::EnableVsync;
-	config.resolution.Set(Jazz2::LevelHandler::DefaultWidth, Jazz2::LevelHandler::DefaultHeight);
+	config.inFullscreen = PreferencesCache::EnableFullscreen;
+	config.withVSync = PreferencesCache::EnableVsync;
+	config.resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
 	config.windowTitle = "Jazz² Resurrection"_s;
 }
 
@@ -250,7 +250,7 @@ void GameEventHandler::onInit()
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
 	theApplication().setAutoSuspension(false);
 
-	if (Jazz2::PreferencesCache::EnableFullscreen) {
+	if (PreferencesCache::EnableFullscreen) {
 		theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
 	}
 
@@ -313,17 +313,31 @@ void GameEventHandler::onFrameStart()
 					_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
 				} else if (_pendingLevelChange->LevelName == ":end"_s) {
 					// End of episode
-					// TODO: Save state and go to next episode
-					_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
+					// TODO: Save state
+					std::optional<Episode> lastEpisode = ContentResolver::Current().GetEpisode(_pendingLevelChange->LastEpisodeName);
+					if (lastEpisode.has_value()) {
+						// Redirect to next episode
+						std::optional<Episode> nextEpisode = ContentResolver::Current().GetEpisode(lastEpisode->NextEpisode);
+						if (nextEpisode.has_value()) {
+							_pendingLevelChange->EpisodeName = lastEpisode->NextEpisode;
+							_pendingLevelChange->LevelName = nextEpisode->FirstLevel;
+						}
+					}
+
+					if (_pendingLevelChange->LevelName != ":end"_s) {
+						_currentHandler = std::make_unique<LevelHandler>(this, *_pendingLevelChange.get());
+					} else {
+						_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
+					}
 				} else if (_pendingLevelChange->LevelName == ":credits"_s) {
 					// End of game
-					// TODO: Save state and play ending cinematics
+					// TODO: Save state
 					_currentHandler = std::make_unique<Cinematics>(this, "ending"_s, [](IRootController* root, bool endOfStream) {
 						root->GoToMainMenu(false);
 						return true;
 					});
 				} else {
-					_currentHandler = std::make_unique<Jazz2::LevelHandler>(this, *_pendingLevelChange.get());
+					_currentHandler = std::make_unique<LevelHandler>(this, *_pendingLevelChange.get());
 				}
 				_pendingLevelChange = nullptr;
 				break;
@@ -351,7 +365,7 @@ void GameEventHandler::onShutdown()
 {
 	_currentHandler = nullptr;
 
-	Jazz2::ContentResolver::Current().Release();
+	ContentResolver::Current().Release();
 }
 
 void GameEventHandler::onResizeWindow(int width, int height)
@@ -376,10 +390,10 @@ void GameEventHandler::GoToMainMenu(bool afterIntro)
 	_pendingState = (afterIntro ? PendingState::MainMenuAfterIntro : PendingState::MainMenu);
 }
 
-void GameEventHandler::ChangeLevel(Jazz2::LevelInitialization&& levelInit)
+void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 {
 	// Level will be changed in the next frame
-	_pendingLevelChange = std::make_unique<Jazz2::LevelInitialization>(std::move(levelInit));
+	_pendingLevelChange = std::make_unique<LevelInitialization>(std::move(levelInit));
 	_pendingState = PendingState::LevelChange;
 }
 
@@ -396,7 +410,7 @@ void GameEventHandler::RefreshCache()
 		uint64_t signature = s->ReadValue<uint64_t>();
 		uint8_t fileType = s->ReadValue<uint8_t>();
 		uint16_t version = s->ReadValue<uint16_t>();
-		if (signature != 0x2095A59FF0BFBBEF || fileType != Jazz2::ContentResolver::CacheIndexFile || version != JJ2Anims::CacheVersion) {
+		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::CacheIndexFile || version != Compatibility::JJ2Anims::CacheVersion) {
 			goto RecreateCache;
 		}
 
@@ -417,7 +431,7 @@ void GameEventHandler::RefreshCache()
 
 		// If some events were added, recreate cache
 		uint16_t eventTypeCount = s->ReadValue<uint16_t>();
-		if (eventTypeCount != (uint16_t)Jazz2::EventType::Count) {
+		if (eventTypeCount != (uint16_t)EventType::Count) {
 			goto RecreateCache;
 		}
 
@@ -436,9 +450,9 @@ RecreateCache:
 		return;
 	}
 
-	JJ2Anims::Convert(animsPath, fs::JoinPath("Cache"_s, "Animations"_s), false);
+	Compatibility::JJ2Anims::Convert(animsPath, fs::JoinPath("Cache"_s, "Animations"_s), false);
 
-	EventConverter eventConverter;
+	Compatibility::EventConverter eventConverter;
 
 	String xmasEpisodeToken = (fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::JoinPath("Cache"_s, "xmas99.j2e"_s))) ? "xmas99"_s : "xmas98"_s);
 	HashMap<String, Pair<String, String>> knownLevels = {
@@ -497,7 +511,7 @@ RecreateCache:
 		{ "ending"_s, { { }, ":credits"_s } }
 	};
 
-	auto LevelTokenConversion = [&knownLevels](MutableStringView& levelToken) -> JJ2Level::LevelToken {
+	auto LevelTokenConversion = [&knownLevels](MutableStringView& levelToken) -> Compatibility::JJ2Level::LevelToken {
 		lowercaseInPlace(levelToken);
 
 		auto it = knownLevels.find(levelToken);
@@ -510,7 +524,7 @@ RecreateCache:
 		return { { }, levelToken };
 	};
 
-	auto EpisodeNameConversion = [](JJ2Episode* episode) -> String {
+	auto EpisodeNameConversion = [](Compatibility::JJ2Episode* episode) -> String {
 		if (episode->Name == "share"_s && episode->DisplayName == "#Shareware@Levels"_s) {
 			return "Shareware Demo"_s;
 		} else if (episode->Name == "xmas98"_s && episode->DisplayName == "#Xmas 98@Levels"_s) {
@@ -546,7 +560,7 @@ RecreateCache:
 		}
 	};
 	
-	auto EpisodePrevNext = [](JJ2Episode* episode) -> Pair<String, String> {
+	auto EpisodePrevNext = [](Compatibility::JJ2Episode* episode) -> Pair<String, String> {
 		if (episode->Name == "prince"_s) {
 			return { { }, "rescue"_s };
 		} else if (episode->Name == "rescue"_s) {
@@ -570,7 +584,7 @@ RecreateCache:
 		}
 
 		if (fs::HasExtension(item, "j2e"_s)) {
-			JJ2Episode episode;
+			Compatibility::JJ2Episode episode;
 			episode.Open(item);
 			if (episode.Name == "home"_s) {
 				continue;
@@ -583,7 +597,7 @@ RecreateCache:
 			if (levelName.findOr("-MLLE-Data-"_s, levelName.end()) != levelName.end()) {
 				LOGI_X("Level \"%s\" skipped (MLLE extra layers).", item);
 			} else {
-				JJ2Level level;
+				Compatibility::JJ2Level level;
 				level.Open(item, false);
 
 				String fullPath;
@@ -607,7 +621,7 @@ RecreateCache:
 			String tilesetName = fs::GetFileName(item);
 			lowercaseInPlace(tilesetName);
 
-			JJ2Tileset tileset;
+			Compatibility::JJ2Tileset tileset;
 			tileset.Open(item, false);
 			tileset.Convert(fs::JoinPath({ "Cache"_s, "Tilesets"_s, tilesetName }));
 		}
@@ -616,12 +630,12 @@ RecreateCache:
 	auto so = fs::Open(fs::JoinPath("Cache"_s, "cache.j2i"_s), FileAccessMode::Write);
 
 	so->WriteValue<uint64_t>(0x2095A59FF0BFBBEF);	// Signature
-	so->WriteValue<uint8_t>(Jazz2::ContentResolver::CacheIndexFile);
-	so->WriteValue<uint16_t>(JJ2Anims::CacheVersion);
+	so->WriteValue<uint8_t>(ContentResolver::CacheIndexFile);
+	so->WriteValue<uint16_t>(Compatibility::JJ2Anims::CacheVersion);
 	so->WriteValue<uint8_t>(0x00);					// Flags
 	int64_t animsModified = fs::LastModificationTime(animsPath).Ticks;
 	so->WriteValue<int64_t>(animsModified);
-	so->WriteValue<uint16_t>((uint16_t)Jazz2::EventType::Count);
+	so->WriteValue<uint16_t>((uint16_t)EventType::Count);
 
 	LOGI("Cache was recreated");
 	_flags = Flags::IsVerified | Flags::IsPlayable;

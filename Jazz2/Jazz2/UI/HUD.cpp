@@ -533,7 +533,7 @@ namespace Jazz2::UI
 		DrawElement("PickupGem"_s, -1, ViewSize.X * 0.5f, ViewSize.Y * 0.92f + 2.5f + offset, ShadowLayer, Alignment::Right,
 			Colorf(0.0f, 0.0f, 0.0f, 0.4f * animAlpha), 0.8f, 0.8f);
 		DrawElement("PickupGem"_s, -1, ViewSize.X * 0.5f, ViewSize.Y * 0.92f + offset, MainLayer, Alignment::Right,
-			Colorf(1.0f, 1.0f, 1.0f, animAlpha), 0.8f, 0.8f);
+			Colorf(1.0f, 1.0f, 1.0f, 0.8f * animAlpha), 0.8f, 0.8f);
 
 		char stringBuffer[32];
 		snprintf(stringBuffer, _countof(stringBuffer), "x%i", _gems);

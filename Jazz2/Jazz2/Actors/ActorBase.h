@@ -17,7 +17,7 @@ namespace Jazz2
 	}
 
 	enum class ActorState {
-		None = 0,
+		None = 0x00,
 
 		// Actor is created from event map 
 		IsCreatedFromEventMap = 0x01,
@@ -80,7 +80,8 @@ namespace Jazz2
 	enum class ActorRendererType {
 		Default,
 		Outline,
-		WhiteMask
+		WhiteMask,
+		PartialWhiteMask
 	};
 
 	class ActorBase : public std::enable_shared_from_this<ActorBase>

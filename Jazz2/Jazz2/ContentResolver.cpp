@@ -809,6 +809,54 @@ namespace Jazz2
 		}
 	}
 
+	std::optional<Episode> ContentResolver::GetEpisode(const StringView& name)
+	{
+		String fullPath = fs::JoinPath({ "Content"_s, "Episodes"_s, name + ".j2e"_s });
+		if (!fs::IsReadableFile(fullPath)) {
+			fullPath = fs::JoinPath({ "Cache"_s, "Episodes"_s, name + ".j2e"_s });
+		}
+		return GetEpisodeByPath(fullPath);
+	}
+
+	std::optional<Episode> ContentResolver::GetEpisodeByPath(const StringView& path)
+	{
+		auto s = fs::Open(path, FileAccessMode::Read);
+		if (s->GetSize() < 16) {
+			return std::nullopt;
+		}
+
+		uint64_t signature = s->ReadValue<uint64_t>();
+		uint8_t fileType = s->ReadValue<uint8_t>();
+		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::EpisodeFile) {
+			return std::nullopt;
+		}
+
+		Episode episode;
+		episode.Name = fs::GetFileNameWithoutExtension(path);
+
+		uint16_t flags = s->ReadValue<uint16_t>();
+
+		uint8_t nameLength = s->ReadValue<uint8_t>();
+		episode.DisplayName = String(NoInit, nameLength);
+		s->Read(episode.DisplayName.data(), nameLength);
+
+		episode.Position = s->ReadValue<uint16_t>();
+
+		nameLength = s->ReadValue<uint8_t>();
+		episode.FirstLevel = String(NoInit, nameLength);
+		s->Read(episode.FirstLevel.data(), nameLength);
+
+		nameLength = s->ReadValue<uint8_t>();
+		episode.PreviousEpisode = String(NoInit, nameLength);
+		s->Read(episode.PreviousEpisode.data(), nameLength);
+
+		nameLength = s->ReadValue<uint8_t>();
+		episode.NextEpisode = String(NoInit, nameLength);
+		s->Read(episode.NextEpisode.data(), nameLength);
+
+		return episode;
+	}
+
 	std::unique_ptr<AudioStreamPlayer> ContentResolver::GetMusic(const StringView& path)
 	{
 		String fullPath = fs::JoinPath({ "Content"_s, "Music"_s, path });
@@ -886,9 +934,12 @@ namespace Jazz2
 
 		_precompiledShaders[(int)PrecompiledShader::WhiteMask] = std::make_unique<Shader>("WhiteMask",
 			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::WhiteMaskFs);
+		_precompiledShaders[(int)PrecompiledShader::PartialWhiteMask] = std::make_unique<Shader>("PartialWhiteMask",
+			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::PartialWhiteMaskFs);
 		_precompiledShaders[(int)PrecompiledShader::BatchedWhiteMask] = std::make_unique<Shader>("BatchedWhiteMask",
 			Shader::LoadMode::STRING, Shader::Introspection::NO_UNIFORMS_IN_BLOCKS, Shader::DefaultVertex::BATCHED_SPRITES, Shaders::WhiteMaskFs);
 		_precompiledShaders[(int)PrecompiledShader::WhiteMask]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedWhiteMask]);
+		_precompiledShaders[(int)PrecompiledShader::PartialWhiteMask]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedWhiteMask]);
 
 #if defined(ALLOW_RESCALE_SHADERS)
 		_precompiledShaders[(int)PrecompiledShader::Resize3xBrz] = std::make_unique<Shader>("Resize3xBrz",
@@ -908,6 +959,7 @@ namespace Jazz2
 
 		std::unique_ptr<Texture> tex = std::make_unique<Texture>("Noise", Texture::Format::RGBA8, 64, 64);
 		tex->loadFromTexels((unsigned char*)texels, 0, 0, 64, 64);
+		tex->setMinFiltering(SamplerFilter::Linear);
 		tex->setMagFiltering(SamplerFilter::Linear);
 		tex->setWrap(SamplerWrapping::Repeat);
 		return tex;

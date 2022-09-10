@@ -28,6 +28,8 @@ namespace Jazz2::Actors::Collectibles
 
 		SetAnimation("GemGiant"_s);
 
+		_renderer.setAlphaF(0.7f);
+
 		co_return true;
 	}
 
