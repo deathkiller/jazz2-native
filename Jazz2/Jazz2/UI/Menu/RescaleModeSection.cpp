@@ -1,23 +1,19 @@
-﻿#include "OptionsSection.h"
-#include "GameplayOptionsSection.h"
-#include "GraphicsOptionsSection.h"
-#include "SoundsOptionsSection.h"
-#include "ControlsSection.h"
+﻿#include "RescaleModeSection.h"
+#include "../../PreferencesCache.h"
 
 namespace Jazz2::UI::Menu
 {
-	OptionsSection::OptionsSection()
+	RescaleModeSection::RescaleModeSection()
 		:
-		_selectedIndex(0),
+		_selectedIndex((int)PreferencesCache::ActiveRescaleMode),
 		_animation(0.0f)
 	{
-		_items[(int)Item::Gameplay].Name = "Gameplay"_s;
-		_items[(int)Item::Graphics].Name = "Graphics"_s;
-		_items[(int)Item::Sounds].Name = "Sounds"_s;
-		_items[(int)Item::Controls].Name = "Controls"_s;
+		_items[(int)Item::None].Name = "None / Pixel-perfect"_s;
+		_items[(int)Item::_3xBrz].Name = "3xBRZ"_s;
+		_items[(int)Item::Monochrome].Name = "Monochrome"_s;
 	}
 
-	void OptionsSection::OnUpdate(float timeMult)
+	void RescaleModeSection::OnUpdate(float timeMult)
 	{
 		if (_animation < 1.0f) {
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
@@ -48,7 +44,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void OptionsSection::OnDraw(Canvas* canvas)
+	void RescaleModeSection::OnDraw(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
 		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
@@ -63,7 +59,7 @@ namespace Jazz2::UI::Menu
 		center.Y = topLine + (bottomLine - topLine) * 0.7f / (int)Item::Count;
 		int charOffset = 0;
 
-		_root->DrawStringShadow("Options"_s, charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow("Select Rescale Mode"_s, charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		for (int i = 0; i < (int)Item::Count; i++) {
@@ -85,7 +81,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void OptionsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
+	void RescaleModeSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
 		if (event.type == TouchEventType::Down) {
 			int pointerIndex = event.findPointerIndex(event.actionIndex);
@@ -115,15 +111,21 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void OptionsSection::ExecuteSelected()
+	void RescaleModeSection::ExecuteSelected()
 	{
 		_root->PlaySfx("MenuSelect"_s, 0.6f);
 
+		RescaleMode newMode;
 		switch (_selectedIndex) {
-			case (int)Item::Gameplay: _root->SwitchToSection<GameplayOptionsSection>(); break;
-			case (int)Item::Graphics: _root->SwitchToSection<GraphicsOptionsSection>(); break;
-			case (int)Item::Sounds: _root->SwitchToSection<SoundsOptionsSection>(); break;
-			case (int)Item::Controls: _root->SwitchToSection<ControlsSection>(); break;
+			default:
+			case (int)Item::None: newMode = RescaleMode::None; break;
+			case (int)Item::_3xBrz: newMode = RescaleMode::_3xBrz; break;
+			case (int)Item::Monochrome: newMode = RescaleMode::Monochrome; break;
 		}
+
+		PreferencesCache::ActiveRescaleMode = newMode;
+		PreferencesCache::Save();
+		_root->ApplyPreferencesChanges();
+		_root->LeaveSection();
 	}
 }

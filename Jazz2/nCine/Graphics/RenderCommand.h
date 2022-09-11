@@ -142,7 +142,7 @@ namespace nCine
 
 	private:
 		/// The distance on the Z axis between adjacent layers
-		static const float LayerStep;
+		static constexpr float LayerStep = 1.0f / static_cast<float>(0xFFFF);
 
 		/// The material sort key minimizes state changes when rendering commands
 		uint64_t materialSortKey_;

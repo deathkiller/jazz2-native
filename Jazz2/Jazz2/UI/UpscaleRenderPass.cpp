@@ -15,14 +15,6 @@ namespace Jazz2::UI
 
 		if (notInitialized) {
 			_camera = std::make_unique<Camera>();
-#if defined(ALLOW_RESCALE_SHADERS)
-			PrecompiledShader shader;
-			switch (PreferencesCache::ActiveRescaleMode) {
-				case RescaleMode::_3xBrz: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::Resize3xBrz); break;
-				case RescaleMode::Monochrome: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeMonochrome); break;
-				default: _resizeShader = nullptr;
-			}
-#endif
 		}
 		_camera->setOrthoProjection(width * (-0.5f), width * (+0.5f), height * (-0.5f), height * (+0.5f));
 		_camera->setView(0, 0, 0, 1);
@@ -45,23 +37,34 @@ namespace Jazz2::UI
 		_target->setMagFiltering(SamplerFilter::Nearest);
 
 		// Prepare render command
-		_renderCommand.setType(RenderCommand::CommandTypes::SPRITE);
+		// TODO: Reset render command as workaround
+		(&_renderCommand)->~RenderCommand();
+		new (&_renderCommand) RenderCommand();
+
+		bool shaderChanged;
 #if defined(ALLOW_RESCALE_SHADERS)
-		if (_resizeShader == nullptr) {
-			_renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
+		PrecompiledShader shader;
+		switch (PreferencesCache::ActiveRescaleMode) {
+			case RescaleMode::_3xBrz: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::Resize3xBrz); break;
+			case RescaleMode::Monochrome: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeMonochrome); break;
+			default: _resizeShader = nullptr; break;
+		}
+		if (_resizeShader != nullptr) {
+			shaderChanged = _renderCommand.material().setShader(_resizeShader);
 		} else {
-			_renderCommand.material().setShader(_resizeShader);
+			shaderChanged = _renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
 		}
 #else
-		_renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
+		shaderChanged = _renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
 #endif
-		//_renderCommand.material().setBlendingEnabled(true);
-		_renderCommand.material().reserveUniformsDataMemory();
-		_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+		if (shaderChanged) {
+			_renderCommand.material().reserveUniformsDataMemory();
+			_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-		GLUniformCache* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
-		if (textureUniform && textureUniform->intValue(0) != 0) {
-			textureUniform->setIntValue(0); // GL_TEXTURE0
+			GLUniformCache* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
+			if (textureUniform && textureUniform->intValue(0) != 0) {
+				textureUniform->setIntValue(0); // GL_TEXTURE0
+			}
 		}
 	}
 

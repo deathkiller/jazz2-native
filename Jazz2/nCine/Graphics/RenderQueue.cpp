@@ -45,10 +45,11 @@ namespace nCine
 		// Calculating the material sorting key before adding the command to the queue
 		command->calculateMaterialSortKey();
 
-		if (command->material().isBlendingEnabled() == false)
+		if (!command->material().isBlendingEnabled()) {
 			opaqueQueue_.push_back(command);
-		else
+		} else {
 			transparentQueue_.push_back(command);
+		}
 	}
 
 	namespace

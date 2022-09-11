@@ -26,6 +26,7 @@ namespace Jazz2::UI::Menu
 		virtual void SwitchToSectionPtr(std::unique_ptr<MenuSection> section) = 0;
 		virtual void LeaveSection() = 0;
 		virtual void ChangeLevel(Jazz2::LevelInitialization&& levelInit) = 0;
+		virtual void ApplyPreferencesChanges() = 0;
 		virtual bool ActionHit(PlayerActions action) = 0;
 
 		virtual void DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align,

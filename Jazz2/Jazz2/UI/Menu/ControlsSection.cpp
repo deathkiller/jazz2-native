@@ -20,7 +20,10 @@ namespace Jazz2::UI::Menu
 
 	ControlsSection::~ControlsSection()
 	{
-		Commit();
+		if (_isDirty) {
+			_isDirty = false;
+			PreferencesCache::Save();
+		}
 	}
 
 	void ControlsSection::OnShow(IMenuContainer* root)
@@ -340,14 +343,6 @@ namespace Jazz2::UI::Menu
 					_root->LeaveSection();
 				}
 			}
-		}
-	}
-
-	void ControlsSection::Commit()
-	{
-		if (_isDirty) {
-			_isDirty = false;
-			PreferencesCache::Save();
 		}
 	}
 

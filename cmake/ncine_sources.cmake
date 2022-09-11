@@ -196,9 +196,14 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/BeginSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ControlsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/EpisodeSelectSection.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GameplayOptionsSection.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GraphicsOptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/InGameMenu.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MainMenu.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/OptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PauseSection.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RescaleModeSection.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/SoundsOptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/StartGameOptionsSection.cpp
 )

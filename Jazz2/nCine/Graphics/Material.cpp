@@ -1,4 +1,3 @@
-#include <cstddef> // for offsetof()
 #include "Material.h"
 #include "RenderResources.h"
 #include "GL/GLShaderProgram.h"
@@ -6,9 +5,10 @@
 #include "GL/GLTexture.h"
 #include "Texture.h"
 
+#include <cstddef> // for offsetof()
+
 namespace nCine
 {
-
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS
 	///////////////////////////////////////////////////////////

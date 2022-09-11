@@ -176,6 +176,22 @@ namespace Jazz2::UI::Menu
 		_root->_root->ChangeLevel(std::move(levelInit));
 	}
 
+	void InGameMenu::ApplyPreferencesChanges()
+	{
+		// Graphics
+		Viewport::chain().clear();
+		Vector2i res = theApplication().resolutionInt();
+		_root->OnInitializeViewport(res.X, res.Y);
+
+		// Sounds
+		if (_root->_music != nullptr) {
+			_root->_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+		}
+		if (_root->_sugarRushMusic != nullptr) {
+			_root->_sugarRushMusic->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+		}
+	}
+
 	void InGameMenu::DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending)
 	{
 		auto it = _graphics->find(String::nullTerminatedView(name));

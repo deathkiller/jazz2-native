@@ -242,6 +242,19 @@ namespace Jazz2::UI::Menu
 		_root->ChangeLevel(std::move(levelInit));
 	}
 
+	void MainMenu::ApplyPreferencesChanges()
+	{
+		// Graphics
+		Viewport::chain().clear();
+		Vector2i res = theApplication().resolutionInt();
+		OnInitializeViewport(res.X, res.Y);
+
+		// Sounds
+		if (_music != nullptr) {
+			_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+		}
+	}
+
 	void MainMenu::DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending)
 	{
 		auto it = _graphics->find(String::nullTerminatedView(name));

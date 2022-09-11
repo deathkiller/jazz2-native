@@ -49,7 +49,6 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (_root->ActionHit(PlayerActions::Fire)) {
-			_root->PlaySfx("MenuSelect"_s, 0.6f);
 			ExecuteSelected();
 		} else if (_root->ActionHit(PlayerActions::Menu)) {
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -135,7 +134,6 @@ namespace Jazz2::UI::Menu
 				for (int i = 0; i < (int)Item::Count; i++) {
 					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 30.0f) {
 						if (_selectedIndex == i) {
-							_root->PlaySfx("MenuSelect"_s, 0.6f);
 							ExecuteSelected();
 						} else {
 							_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -151,6 +149,8 @@ namespace Jazz2::UI::Menu
 
 	void BeginSection::ExecuteSelected()
 	{
+		_root->PlaySfx("MenuSelect"_s, 0.6f);
+
 		switch (_selectedIndex) {
 			case (int)Item::PlayStory:
 				if (_isVerified) {

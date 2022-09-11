@@ -204,7 +204,7 @@ namespace Jazz2::UI::Menu
 				for (int i = 0; i < _items.size(); i++) {
 					if (std::abs(y - _items[i].TouchY) < 30.0f) {
 						bool onItem = std::abs(x - 0.5f) < 0.22f;
-						bool onExpand = (x > 0.5f + 0.22f);
+						bool onExpand = (x > 0.5f + 0.22f && (_items[_selectedIndex].Flags & ItemFlags::CanContinue) == ItemFlags::CanContinue);
 						if (onExpand == _expanded) {
 							ExecuteSelected();
 						} else if (onExpand) {
