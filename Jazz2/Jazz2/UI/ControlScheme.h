@@ -3,12 +3,10 @@
 #include "../PlayerActions.h"
 #include "../../nCine/Input/InputEvents.h"
 
-using namespace nCine;
+#include <Containers/ArrayView.h>
 
-namespace Jazz2
-{
-	class PreferencesCache;
-}
+using namespace Death::Containers;
+using namespace nCine;
 
 namespace Jazz2::UI
 {
@@ -28,11 +26,12 @@ namespace Jazz2::UI
 
 	class ControlScheme
 	{
-		friend class PreferencesCache;
 		friend class Menu::ControlsSection;
 
 	public:
 		static constexpr int MaxSupportedPlayers = 1;
+
+		static void Reset();
 
 		static KeySym Key1(int playerIndex, PlayerActions action)
 		{
@@ -51,6 +50,11 @@ namespace Jazz2::UI
 			return mapping.GamepadButton;
 		}
 
+		static ArrayView<ControlSchemeMapping> GetMappings()
+		{
+			return _mappings;
+		}
+
 	private:
 		/// Deleted copy constructor
 		ControlScheme(const ControlScheme&) = delete;
@@ -58,7 +62,5 @@ namespace Jazz2::UI
 		ControlScheme& operator=(const ControlScheme&) = delete;
 
 		static ControlSchemeMapping _mappings[MaxSupportedPlayers * (int)PlayerActions::Count];
-
-		static void Initialize();
 	};
 }

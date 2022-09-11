@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#if !defined(SHAREWARE_DEMO_ONLY)
+
 #include "MenuSection.h"
 
 namespace Jazz2::UI::Menu
@@ -14,27 +16,32 @@ namespace Jazz2::UI::Menu
 		void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) override;
 
 	private:
-		enum class EpisodeFlags {
+		enum class ItemFlags {
 			None = 0x00,
 
 			IsAvailable = 0x01,
 			IsCompleted = 0x02,
-			CanContinue = 0x04
+			CanContinue = 0x04,
+			CheatsUsed = 0x08
 		};
 
-		DEFINE_PRIVATE_ENUM_OPERATORS(EpisodeFlags);
+		DEFINE_PRIVATE_ENUM_OPERATORS(ItemFlags);
 
 		struct ItemData {
 			Episode Description;
-			EpisodeFlags Flags;
+			ItemFlags Flags;
 			float TouchY;
 		};
 
 		SmallVector<ItemData> _items;
 		int _selectedIndex;
 		float _animation;
+		float _expandedAnimation;
+		bool _expanded;
 
 		void ExecuteSelected();
 		void AddEpisode(const StringView& episodeFile);
 	};
 }
+
+#endif

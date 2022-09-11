@@ -145,3 +145,6 @@ if("${NCINE_OPTIONS_PRESETS}" STREQUAL "BinDist" OR
 		set(NCINE_STRIP_BINARIES OFF)
 	endif()
 endif()
+
+# Jazz² Resurrection options
+option(SHAREWARE_DEMO_ONLY "Show only Shareware Demo episode" OFF)

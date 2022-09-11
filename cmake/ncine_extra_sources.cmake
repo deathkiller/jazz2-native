@@ -533,3 +533,9 @@ if(ANDROID)
 else()
 	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/PCApplication.cpp)
 endif()
+
+# Jazz² Resurrection options
+if(SHAREWARE_DEMO_ONLY)
+	message(STATUS "Building the game only with Shareware Demo episode")
+	target_compile_definitions(ncine PUBLIC "SHAREWARE_DEMO_ONLY")
+endif()

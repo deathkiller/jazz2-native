@@ -276,16 +276,23 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+#if !defined(SHAREWARE_DEMO_ONLY)
+		bool playTutorial = (!PreferencesCache::TutorialCompleted && _episodeName == "prince"_s && _levelName == "01_castle1"_s);
+#else
+		bool playTutorial = false;
+#endif
+
 		PlayerType players[] = { (PlayerType)((int)PlayerType::Jazz + _selectedPlayerType) };
-		LevelInitialization levelInit(_episodeName, _levelName, (GameDifficulty)((int)GameDifficulty::Easy + _selectedDifficulty),
+		LevelInitialization levelInit(_episodeName, (playTutorial ? "trainer"_s : StringView(_levelName)), (GameDifficulty)((int)GameDifficulty::Easy + _selectedDifficulty),
 			PreferencesCache::ReduxMode, false, players, _countof(players));
 
+#if !defined(SHAREWARE_DEMO_ONLY)
 		if (!_previousEpisodeName.empty()) {
 			auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(_previousEpisodeName);
 			if (previousEpisodeEnd != nullptr) {
 				// Set CheatsUsed to true if cheats were used in the previous episode or the previous episode is not completed
 				if ((previousEpisodeEnd->Flags & EpisodeContinuationFlags::CheatsUsed) == EpisodeContinuationFlags::CheatsUsed ||
-					(previousEpisodeEnd->Flags & EpisodeContinuationFlags::Completed) != EpisodeContinuationFlags::Completed) {
+					(previousEpisodeEnd->Flags & EpisodeContinuationFlags::IsCompleted) != EpisodeContinuationFlags::IsCompleted) {
 					levelInit.CheatsUsed = true;
 				}
 
@@ -301,6 +308,7 @@ namespace Jazz2::UI::Menu
 				levelInit.CheatsUsed = true;
 			}
 		}
+#endif
 
 		if (PreferencesCache::AllowCheatsWeapons) {
 			levelInit.CheatsUsed = true;

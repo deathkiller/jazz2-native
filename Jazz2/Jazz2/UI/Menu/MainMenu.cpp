@@ -286,7 +286,7 @@ namespace Jazz2::UI::Menu
 		_canvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false);
 	}
 
-	void MainMenu::DrawStringShadow(const StringView& text, int charOffset, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scale,
+	void MainMenu::DrawStringShadow(const StringView& text, int& charOffset, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scale,
 		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
 		if (_logoTransition < 1.0f) {
@@ -332,17 +332,17 @@ namespace Jazz2::UI::Menu
 
 		_pressedActions = ((_pressedActions & 0xffff) << 16);
 
-		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Left)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Left))) {
-			_pressedActions |= (1 << (int)PlayerActions::Left);
-		}
-		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Right)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Right))) {
-			_pressedActions |= (1 << (int)PlayerActions::Right);
-		}
 		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Up)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Up))) {
 			_pressedActions |= (1 << (int)PlayerActions::Up);
 		}
 		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Down)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Down))) {
 			_pressedActions |= (1 << (int)PlayerActions::Down);
+		}
+		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Left)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Left))) {
+			_pressedActions |= (1 << (int)PlayerActions::Left);
+		}
+		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Right)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Right))) {
+			_pressedActions |= (1 << (int)PlayerActions::Right);
 		}
 		// Also allow Return (Enter) as confirm key
 		if (keyState.isKeyDown(KeySym::RETURN) || keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Fire)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Fire)) ||
@@ -368,21 +368,21 @@ namespace Jazz2::UI::Menu
 
 		ButtonName jb; int ji1, ji2, ji3, ji4;
 
-		jb = ControlScheme::Gamepad(0, PlayerActions::Left, ji1);
+		jb = ControlScheme::Gamepad(0, PlayerActions::Up, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Left);
-		}
-		jb = ControlScheme::Gamepad(0, PlayerActions::Right, ji2);
-		if (ji2 >= 0 && ji2 < jc && joyStates[ji2]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Right);
-		}
-		jb = ControlScheme::Gamepad(0, PlayerActions::Up, ji3);
-		if (ji3 >= 0 && ji3 < jc && joyStates[ji3]->isButtonPressed(jb)) {
 			_pressedActions |= (1 << (int)PlayerActions::Up);
 		}
-		jb = ControlScheme::Gamepad(0, PlayerActions::Down, ji4);
-		if (ji4 >= 0 && ji4 < jc && joyStates[ji4]->isButtonPressed(jb)) {
+		jb = ControlScheme::Gamepad(0, PlayerActions::Down, ji2);
+		if (ji2 >= 0 && ji2 < jc && joyStates[ji2]->isButtonPressed(jb)) {
 			_pressedActions |= (1 << (int)PlayerActions::Down);
+		}
+		jb = ControlScheme::Gamepad(0, PlayerActions::Left, ji3);
+		if (ji3 >= 0 && ji3 < jc && joyStates[ji3]->isButtonPressed(jb)) {
+			_pressedActions |= (1 << (int)PlayerActions::Left);
+		}
+		jb = ControlScheme::Gamepad(0, PlayerActions::Right, ji4);
+		if (ji4 >= 0 && ji4 < jc && joyStates[ji4]->isButtonPressed(jb)) {
+			_pressedActions |= (1 << (int)PlayerActions::Right);
 		}
 
 		// Use analog controls only if all movement buttons are mapped to the same joystick

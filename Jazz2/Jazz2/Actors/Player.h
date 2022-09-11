@@ -21,14 +21,14 @@ namespace Jazz2::Actors
 		friend class Weapons::Thunderbolt;
 
 	public:
-		enum class Modifier {
+		enum class Modifier : uint8_t {
 			None,
 			Airboard,
 			Copter,
 			LizardCopter
 		};
 
-		enum class SpecialMoveType {
+		enum class SpecialMoveType : uint8_t {
 			None,
 			Buttstomp,
 			Uppercut,
@@ -132,12 +132,11 @@ namespace Jazz2::Actors
 		bool _isFreefall, _inWater, _isLifting, _isSpring;
 		int _inShallowWater;
 		Modifier _activeModifier;
-		float _springCooldown;
-
 		bool _inIdleTransition, _inLedgeTransition;
 		//MovingPlatform* _carryingObject;
 		//SwingingVine* _currentVine;
 		bool _canDoubleJump;
+		float _springCooldown;
 		std::shared_ptr<AudioBufferPlayer> _copterSound;
 
 		int _lives, _coins, _foodEaten, _score;
@@ -161,9 +160,9 @@ namespace Jazz2::Actors
 		float _inTubeTime;
 		float _dizzyTime;
 
+		float _weaponCooldown;
 		WeaponType _currentWeapon;
 		bool _weaponAllowed;
-		float _weaponCooldown;
 		uint16_t _weaponAmmo[(int)WeaponType::Count];
 		uint8_t _weaponUpgrades[(int)WeaponType::Count];
 		std::shared_ptr<AudioBufferPlayer> _weaponSound;

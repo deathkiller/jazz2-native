@@ -2,6 +2,10 @@
 
 #include "MenuSection.h"
 
+#if defined(SHAREWARE_DEMO_ONLY)
+#	include "../../PreferencesCache.h"
+#endif
+
 namespace Jazz2::UI::Menu
 {
 	class BeginSection : public MenuSection
@@ -35,6 +39,9 @@ namespace Jazz2::UI::Menu
 		int _selectedIndex;
 		float _animation;
 		bool _isVerified;
+#if defined(SHAREWARE_DEMO_ONLY)
+		EpisodeContinuationFlags _demoEpisodeFlags;
+#endif
 
 		void ExecuteSelected();
 	};

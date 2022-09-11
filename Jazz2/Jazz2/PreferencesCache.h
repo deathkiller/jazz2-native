@@ -20,7 +20,7 @@ namespace Jazz2
 	enum class EpisodeContinuationFlags : uint8_t {
 		None = 0x00,
 
-		Completed = 0x01,
+		IsCompleted = 0x01,
 		CheatsUsed = 0x02
 	};
 
@@ -28,10 +28,16 @@ namespace Jazz2
 
 	struct EpisodeContinuationState {
 		EpisodeContinuationFlags Flags;
-		int32_t Lives;
+		uint8_t DifficultyAndPlayerType;
+		uint8_t Lives;
 		int32_t Score;
 		uint16_t Ammo[PlayerCarryOver::WeaponCount];
 		uint8_t WeaponUpgrades[PlayerCarryOver::WeaponCount];
+	};
+
+	struct EpisodeContinuationStateWithLevel {
+		EpisodeContinuationState State;
+		String LevelName;
 	};
 
 	class PreferencesCache
@@ -46,6 +52,7 @@ namespace Jazz2
 		// Gameplay
 		static bool ReduxMode;
 		static bool EnableLedgeClimb;
+		static bool TutorialCompleted;
 		static bool AllowCheats;
 		static bool AllowCheatsUnlock;
 		static bool AllowCheatsWeapons;
@@ -63,6 +70,8 @@ namespace Jazz2
 		static void Save();
 
 		static EpisodeContinuationState* GetEpisodeEnd(const StringView& episodeName, bool createIfNotFound = false);
+		static EpisodeContinuationStateWithLevel* GetEpisodeContinue(const StringView& episodeName, bool createIfNotFound = false);
+		static void RemoveEpisodeContinue(const StringView& episodeName);
 
 	private:
 		enum class BoolOptions {
@@ -74,6 +83,7 @@ namespace Jazz2
 
 			ReduxMode = 0x100,
 			EnableLedgeClimb = 0x200,
+			TutorialCompleted = 0x400,
 
 			EnableWeaponWheel = 0x10000,
 			EnableRgbLights = 0x20000
@@ -90,5 +100,6 @@ namespace Jazz2
 
 		static String _configPath;
 		static HashMap<String, EpisodeContinuationState> _episodeEnd;
+		static HashMap<String, EpisodeContinuationStateWithLevel> _episodeContinue;
 	};
 }

@@ -16,6 +16,7 @@ namespace Jazz2::Actors::Enemies
 		void OnUpdate(float timeMult) override;
 		void OnUpdateHitbox() override;
 		void OnHitFloor(float timeMult) override;
+		void OnHitWall(float timeMult) override;
 		bool OnPerish(ActorBase* collider) override;
 
 	private:

@@ -79,7 +79,7 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		if (GetState(ActorState::CanJump)) {
-			if (std::abs(_speed.X) > std::numeric_limits<float>::epsilon() && !CanMoveToPosition(_speed.X * 4, 0)) {
+			if (std::abs(_speed.X) > 0.0f && !CanMoveToPosition(_speed.X * 4, 0)) {
 				SetTransition(AnimState::TransitionWithdraw, false, [this]() {
 					HandleTurn(true);
 				});

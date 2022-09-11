@@ -8,7 +8,7 @@ using namespace Death::Containers;
 
 namespace Jazz2
 {
-    enum class GameDifficulty {
+    enum class GameDifficulty : uint8_t {
         Default,
 
         Easy,
@@ -18,7 +18,7 @@ namespace Jazz2
         Multiplayer
     };
 
-    enum class ExitType {
+    enum class ExitType : uint8_t {
         None,
 
         Normal,
@@ -28,7 +28,7 @@ namespace Jazz2
         Boss
     };
 
-    enum class WeaponType {
+    enum class WeaponType : uint8_t {
         Blaster = 0,
         Bouncer,
         Freezer,
@@ -45,7 +45,7 @@ namespace Jazz2
         Unknown = UINT8_MAX
     };
 
-    enum class ShieldType {
+    enum class ShieldType : uint8_t {
         None,
 
         Fire,
@@ -54,7 +54,7 @@ namespace Jazz2
         Laser
     };
 
-    enum class PlayerType {
+    enum class PlayerType : uint8_t {
         None,
 
         Jazz,
@@ -67,11 +67,10 @@ namespace Jazz2
         static constexpr int WeaponCount = (int)WeaponType::Count;
 
         PlayerType Type;
-
-        int32_t Lives;
-        int32_t Score;
-        int32_t FoodEaten;
         WeaponType CurrentWeapon;
+        uint8_t Lives;
+        uint8_t FoodEaten;
+        int32_t Score;
         uint16_t Ammo[WeaponCount];
         uint8_t WeaponUpgrades[WeaponCount];
     };
@@ -82,6 +81,7 @@ namespace Jazz2
 
         String LevelName;
         String EpisodeName;
+        String LastEpisodeName;
 
         GameDifficulty Difficulty;
         bool ReduxMode, CheatsUsed;
@@ -89,14 +89,12 @@ namespace Jazz2
 
         PlayerCarryOver PlayerCarryOvers[MaxPlayerCount];
 
-        String LastEpisodeName;
-
         LevelInitialization()
             : PlayerCarryOvers { }
         {
         }
 
-        LevelInitialization(const String& episode, const String& level, GameDifficulty difficulty, bool reduxMode, bool cheatsUsed, PlayerType playerType)
+        LevelInitialization(const StringView& episode, const StringView& level, GameDifficulty difficulty, bool reduxMode, bool cheatsUsed, PlayerType playerType)
             : PlayerCarryOvers { }
         {
             LevelName = level;
@@ -115,7 +113,7 @@ namespace Jazz2
             }
         }
 
-        LevelInitialization(const String& episode, const String& level, GameDifficulty difficulty, bool reduxMode, bool cheatsUsed, const PlayerType* playerTypes, int playerCount)
+        LevelInitialization(const StringView& episode, const StringView& level, GameDifficulty difficulty, bool reduxMode, bool cheatsUsed, const PlayerType* playerTypes, int playerCount)
             : PlayerCarryOvers { }
         {
             LevelName = level;

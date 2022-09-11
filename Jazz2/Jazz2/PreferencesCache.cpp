@@ -14,6 +14,7 @@ namespace Jazz2
 	bool PreferencesCache::ShowFps = false;
 	bool PreferencesCache::ReduxMode = true;
 	bool PreferencesCache::EnableLedgeClimb = true;
+	bool PreferencesCache::TutorialCompleted = false;
 	bool PreferencesCache::AllowCheats = false;
 	bool PreferencesCache::AllowCheatsUnlock = false;
 	bool PreferencesCache::AllowCheatsWeapons = false;
@@ -25,6 +26,7 @@ namespace Jazz2
 
 	String PreferencesCache::_configPath;
 	HashMap<String, EpisodeContinuationState> PreferencesCache::_episodeEnd;
+	HashMap<String, EpisodeContinuationStateWithLevel> PreferencesCache::_episodeContinue;
 
 	void PreferencesCache::Initialize(const AppConfiguration& config)
 	{
@@ -52,11 +54,11 @@ namespace Jazz2
 		}
 #endif
 
-		UI::ControlScheme::Initialize();
+		UI::ControlScheme::Reset();
 
 		// Try to read config file
 		auto s = fs::Open(_configPath, FileAccessMode::Read);
-		if (s->GetSize() > 10) {
+		if (s->GetSize() > 32) {
 			uint64_t signature = s->ReadValue<uint64_t>();
 			uint8_t fileType = s->ReadValue<uint8_t>();
 			uint8_t version = s->ReadValue<uint8_t>();
@@ -67,6 +69,7 @@ namespace Jazz2
 				ShowFps = ((boolOptions & BoolOptions::ShowFps) == BoolOptions::ShowFps);
 				ReduxMode = ((boolOptions & BoolOptions::ReduxMode) == BoolOptions::ReduxMode);
 				EnableLedgeClimb = ((boolOptions & BoolOptions::EnableLedgeClimb) == BoolOptions::EnableLedgeClimb);
+				TutorialCompleted = ((boolOptions & BoolOptions::TutorialCompleted) == BoolOptions::TutorialCompleted);
 				EnableWeaponWheel = ((boolOptions & BoolOptions::EnableWeaponWheel) == BoolOptions::EnableWeaponWheel);
 				EnableRgbLights = ((boolOptions & BoolOptions::EnableRgbLights) == BoolOptions::EnableRgbLights);
 
@@ -77,6 +80,7 @@ namespace Jazz2
 				MusicVolume = s->ReadValue<float>();
 
 				// Controls
+				auto mappings = UI::ControlScheme::GetMappings();
 				uint8_t controlMappingCount = s->ReadValue<uint8_t>();
 				for (int i = 0; i < controlMappingCount; i++) {
 					KeySym key1 = (KeySym)s->ReadValue<uint8_t>();
@@ -84,8 +88,9 @@ namespace Jazz2
 					uint8_t gamepadIndex = s->ReadValue<uint8_t>();
 					ButtonName gamepadButton = (ButtonName)s->ReadValue<uint8_t>();
 
-					if (i < _countof(UI::ControlScheme::_mappings)) {
-						auto& mapping = UI::ControlScheme::_mappings[i];
+
+					if (i < mappings.size()) {
+						auto& mapping = mappings[i];
 						mapping.Key1 = key1;
 						mapping.Key2 = key2;
 						mapping.GamepadIndex = (gamepadIndex == 0xff ? -1 : gamepadIndex);
@@ -94,10 +99,10 @@ namespace Jazz2
 				}
 
 				// Episode End
-				uint16_t episodeContinuationSize = s->ReadValue<uint16_t>();
-				uint16_t episodeContinuationCount = s->ReadValue<uint16_t>();
+				uint16_t episodeEndSize = s->ReadValue<uint16_t>();
+				uint16_t episodeEndCount = s->ReadValue<uint16_t>();
 
-				for (int i = 0; i < episodeContinuationCount; i++) {
+				for (int i = 0; i < episodeEndCount; i++) {
 					uint8_t nameLength = s->ReadValue<uint8_t>();
 					String episodeName = String(NoInit, nameLength);
 					s->Read(episodeName.data(), nameLength);
@@ -107,15 +112,47 @@ namespace Jazz2
 					}
 
 					EpisodeContinuationState state = { };
-					if (episodeContinuationSize == sizeof(EpisodeContinuationState)) {
+					if (episodeEndSize == sizeof(EpisodeContinuationState)) {
 						s->Read(&state, sizeof(EpisodeContinuationState));
 					} else {
 						// Struct has different size, so it's better to skip it
-						s->Seek(episodeContinuationSize, SeekOrigin::Current);
-						state.Flags = EpisodeContinuationFlags::Completed;
+						s->Seek(episodeEndSize, SeekOrigin::Current);
+						state.Flags = EpisodeContinuationFlags::IsCompleted;
 					}
 
 					_episodeEnd.emplace(std::move(episodeName), std::move(state));
+				}
+
+				// Episode Continue
+				uint16_t episodeContinueSize = s->ReadValue<uint16_t>();
+				uint16_t episodeContinueCount = s->ReadValue<uint16_t>();
+
+				for (int i = 0; i < episodeContinueCount; i++) {
+					uint8_t nameLength = s->ReadValue<uint8_t>();
+					String episodeName = String(NoInit, nameLength);
+					s->Read(episodeName.data(), nameLength);
+
+					for (char& c : episodeName) {
+						c = ~c;
+					}
+
+					if (episodeContinueSize == sizeof(EpisodeContinuationState)) {
+						EpisodeContinuationStateWithLevel stateWithLevel = { };
+						nameLength = s->ReadValue<uint8_t>();
+						stateWithLevel.LevelName = String(NoInit, nameLength);
+						s->Read(stateWithLevel.LevelName.data(), nameLength);
+
+						for (char& c : stateWithLevel.LevelName) {
+							c = ~c;
+						}
+
+						s->Read(&stateWithLevel.State, sizeof(EpisodeContinuationState));
+						_episodeContinue.emplace(std::move(episodeName), std::move(stateWithLevel));
+					} else {
+						// Struct has different size, so it's better to skip it
+						nameLength = s->ReadValue<uint8_t>();
+						s->Seek(nameLength + episodeContinueSize, SeekOrigin::Current);
+					}
 				}
 			}
 		}
@@ -151,6 +188,8 @@ namespace Jazz2
 
 	void PreferencesCache::Save()
 	{
+		fs::CreateDirectories(fs::GetDirectoryName(_configPath));
+
 		auto so = fs::Open(_configPath, FileAccessMode::Write);
 		if (!so->IsOpened()) {
 			return;
@@ -166,6 +205,7 @@ namespace Jazz2
 		if (ShowFps) boolOptions |= BoolOptions::ShowFps;
 		if (ReduxMode) boolOptions |= BoolOptions::ReduxMode;
 		if (EnableLedgeClimb) boolOptions |= BoolOptions::EnableLedgeClimb;
+		if (TutorialCompleted) boolOptions |= BoolOptions::TutorialCompleted;
 		if (EnableWeaponWheel) boolOptions |= BoolOptions::EnableWeaponWheel;
 		if (EnableRgbLights) boolOptions |= BoolOptions::EnableRgbLights;
 		so->WriteValue<uint64_t>((uint64_t)boolOptions);
@@ -177,9 +217,10 @@ namespace Jazz2
 		so->WriteValue<float>(MusicVolume);
 
 		// Controls
-		so->WriteValue<uint8_t>((uint8_t)_countof(UI::ControlScheme::_mappings));
-		for (int i = 0; i < _countof(UI::ControlScheme::_mappings); i++) {
-			auto& mapping = UI::ControlScheme::_mappings[i];
+		auto mappings = UI::ControlScheme::GetMappings();
+		so->WriteValue<uint8_t>((uint8_t)mappings.size());
+		for (int i = 0; i < mappings.size(); i++) {
+			auto& mapping = mappings[i];
 			so->WriteValue<uint8_t>((uint8_t)mapping.Key1);
 			so->WriteValue<uint8_t>((uint8_t)mapping.Key2);
 			so->WriteValue<uint8_t>((uint8_t)(mapping.GamepadIndex == -1 ? 0xff : mapping.GamepadIndex));
@@ -191,15 +232,39 @@ namespace Jazz2
 		so->WriteValue<uint16_t>((uint16_t)_episodeEnd.size());
 
 		for (auto& pair : _episodeEnd) {
-			String episodeNameEncrypted = pair.first;
-			for (char& c : episodeNameEncrypted) {
+			String encryptedName = pair.first;
+			for (char& c : encryptedName) {
 				c = ~c;
 			}
 
-			so->WriteValue<uint8_t>((uint8_t)episodeNameEncrypted.size());
-			so->Write(episodeNameEncrypted.data(), episodeNameEncrypted.size());
+			so->WriteValue<uint8_t>((uint8_t)encryptedName.size());
+			so->Write(encryptedName.data(), encryptedName.size());
 
 			so->Write(&pair.second, sizeof(EpisodeContinuationState));
+		}
+
+		// Episode Continue
+		so->WriteValue<uint16_t>((uint16_t)sizeof(EpisodeContinuationState));
+		so->WriteValue<uint16_t>((uint16_t)_episodeContinue.size());
+
+		for (auto& pair : _episodeContinue) {
+			String encryptedName = pair.first;
+			for (char& c : encryptedName) {
+				c = ~c;
+			}
+
+			so->WriteValue<uint8_t>((uint8_t)encryptedName.size());
+			so->Write(encryptedName.data(), encryptedName.size());
+
+			encryptedName = pair.second.LevelName;
+			for (char& c : encryptedName) {
+				c = ~c;
+			}
+
+			so->WriteValue<uint8_t>((uint8_t)encryptedName.size());
+			so->Write(encryptedName.data(), encryptedName.size());
+
+			so->Write(&pair.second.State, sizeof(EpisodeContinuationState));
 		}
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
@@ -219,5 +284,24 @@ namespace Jazz2
 		}
 
 		return &it->second;
+	}
+
+	EpisodeContinuationStateWithLevel* PreferencesCache::GetEpisodeContinue(const StringView& episodeName, bool createIfNotFound)
+	{
+		auto it = _episodeContinue.find(String::nullTerminatedView(episodeName));
+		if (it == _episodeContinue.end()) {
+			if (createIfNotFound) {
+				return &_episodeContinue.emplace(String(episodeName), EpisodeContinuationStateWithLevel()).first->second;
+			} else {
+				return nullptr;
+			}
+		}
+
+		return &it->second;
+	}
+
+	void PreferencesCache::RemoveEpisodeContinue(const StringView& episodeName)
+	{
+		_episodeContinue.erase(String::nullTerminatedView(episodeName));
 	}
 }

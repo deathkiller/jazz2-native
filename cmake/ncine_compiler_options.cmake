@@ -16,6 +16,7 @@ endif()
 if(EMSCRIPTEN)
 	set(EMSCRIPTEN_LINKER_OPTIONS
 		"SHELL:-s WASM=1"
+		"SHELL:-s ASYNCIFY=1"
 		"SHELL:-s DISABLE_EXCEPTION_CATCHING=1"
 		"SHELL:-s FORCE_FILESYSTEM=1"
 		"SHELL:-s ALLOW_MEMORY_GROWTH=1"
@@ -73,6 +74,7 @@ if(EMSCRIPTEN)
 	#	target_link_libraries(ncine PUBLIC libopenmpt::libopenmpt)
 	#endif()
 	
+	target_link_libraries(ncine PUBLIC idbfs.js)
 	target_link_libraries(ncine PUBLIC websocket.js)
 endif()
 
@@ -85,7 +87,7 @@ if(MSVC)
 	target_compile_definitions(ncine PRIVATE "_HAS_EXCEPTIONS=0")
 	target_compile_options(ncine PRIVATE /EHsc)
 	# Extra optimizations in release
-	target_compile_options(ncine PRIVATE $<$<CONFIG:Release>:/fp:fast /Ox /Qpar>)
+	target_compile_options(ncine PRIVATE $<$<CONFIG:Release>:/fp:fast /O2 /Qpar>)
 
 	# Enabling Whole Program Optimization
 	if(NCINE_LINKTIME_OPTIMIZATION)
@@ -97,7 +99,6 @@ if(MSVC)
 		target_compile_options(ncine PRIVATE $<$<CONFIG:Release>:/Qvec-report:2 /Qpar-report:2>)
 	endif()
 
-	target_compile_definitions(ncine PRIVATE "_CRT_SECURE_NO_DEPRECATE")
 	# Suppress linker warning about templates
 	target_compile_options(ncine PUBLIC "/wd4251")
 

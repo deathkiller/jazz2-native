@@ -26,6 +26,11 @@ namespace Jazz2::UI::Menu
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		_items[(int)Item::Quit].Name = "Quit"_s;
 #endif
+
+#if defined(SHAREWARE_DEMO_ONLY)
+		auto demoEpisodeEnd = PreferencesCache::GetEpisodeEnd("share"_s);
+		_demoEpisodeFlags = (demoEpisodeEnd != nullptr ? demoEpisodeEnd->Flags : EpisodeContinuationFlags::None);
+#endif
 	}
 
 	void BeginSection::OnShow(IMenuContainer* root)
@@ -105,6 +110,15 @@ namespace Jazz2::UI::Menu
 				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
+
+#if defined(SHAREWARE_DEMO_ONLY)
+			if (i == 0 && (_demoEpisodeFlags & EpisodeContinuationFlags::IsCompleted) == EpisodeContinuationFlags::IsCompleted) {
+				float size = (_selectedIndex == i ? 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f : 0.7f);
+				float expandX = center.X - (_items[i].Name.size() + 3) * 4.0f * (_selectedIndex == i ? size : 1.1f) + 10.0f;
+				_root->DrawElement("EpisodeComplete"_s, 0, expandX, center.Y - 2.0f, IMenuContainer::MainLayer + (_selectedIndex == i ? 20 : 10), Alignment::Right,
+					((_demoEpisodeFlags & EpisodeContinuationFlags::CheatsUsed) == EpisodeContinuationFlags::CheatsUsed ? Colorf::Black : Colorf::White), size, size);
+			}
+#endif
 
 			center.Y += 34.0f + 32.0f * (1.0f - 0.15f * (int)Item::Count);
 		}

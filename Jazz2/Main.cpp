@@ -231,6 +231,7 @@ private:
 	void RefreshCache();
 #endif
 	static void SaveEpisodeEnd(const std::unique_ptr<LevelInitialization>& pendingLevelChange);
+	static void SaveEpisodeContinue(const std::unique_ptr<LevelInitialization>& pendingLevelChange);
 };
 
 void GameEventHandler::onPreInit(AppConfiguration& config)
@@ -338,6 +339,8 @@ void GameEventHandler::onFrameStart()
 						return true;
 					});
 				} else {
+					SaveEpisodeContinue(_pendingLevelChange);
+
 					_currentHandler = std::make_unique<LevelHandler>(this, *_pendingLevelChange.get());
 				}
 				_pendingLevelChange = nullptr;
@@ -457,6 +460,7 @@ RecreateCache:
 
 	String xmasEpisodeToken = (fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::JoinPath("Cache"_s, "xmas99.j2e"_s))) ? "xmas99"_s : "xmas98"_s);
 	HashMap<String, Pair<String, String>> knownLevels = {
+		{ "trainer"_s, { "prince"_s, { } } },
 		{ "castle1"_s, { "prince"_s, "01"_s } },
 		{ "castle1n"_s, { "prince"_s, "02"_s } },
 		{ "carrot1"_s, { "prince"_s, "03"_s } },
@@ -661,7 +665,7 @@ void GameEventHandler::SaveEpisodeEnd(const std::unique_ptr<LevelInitialization>
 
 	if (playerCount == 1) {
 		auto episodeEnd = PreferencesCache::GetEpisodeEnd(pendingLevelChange->LastEpisodeName, true);
-		episodeEnd->Flags = EpisodeContinuationFlags::Completed;
+		episodeEnd->Flags = EpisodeContinuationFlags::IsCompleted;
 		if (pendingLevelChange->CheatsUsed) {
 			episodeEnd->Flags |= EpisodeContinuationFlags::CheatsUsed;
 		}
@@ -673,6 +677,53 @@ void GameEventHandler::SaveEpisodeEnd(const std::unique_ptr<LevelInitialization>
 
 		PreferencesCache::Save();
 	}
+}
+
+void GameEventHandler::SaveEpisodeContinue(const std::unique_ptr<LevelInitialization>& pendingLevelChange)
+{
+#if !defined(SHAREWARE_DEMO_ONLY)
+	// Continue is disabled with SHAREWARE_DEMO_ONLY
+	if (pendingLevelChange->EpisodeName.empty() || pendingLevelChange->LevelName.empty() ||
+		pendingLevelChange->EpisodeName == "unknown"_s ||
+		(pendingLevelChange->EpisodeName == "prince"_s && pendingLevelChange->LevelName == "trainer"_s)) {
+		return;
+	}
+
+	std::optional<Episode> currentEpisode = ContentResolver::Current().GetEpisode(pendingLevelChange->EpisodeName);
+	if (!currentEpisode.has_value() || currentEpisode->FirstLevel == pendingLevelChange->LevelName) {
+		return;
+	}
+
+	int playerCount = 0;
+	PlayerCarryOver* firstPlayer = nullptr;
+	for (int i = 0; i < _countof(pendingLevelChange->PlayerCarryOvers); i++) {
+		if (pendingLevelChange->PlayerCarryOvers[i].Type != PlayerType::None) {
+			firstPlayer = &pendingLevelChange->PlayerCarryOvers[i];
+			playerCount++;
+		}
+	}
+
+	if (playerCount == 1) {
+		auto episodeContinue = PreferencesCache::GetEpisodeContinue(pendingLevelChange->EpisodeName, true);
+		episodeContinue->LevelName = pendingLevelChange->LevelName;
+		episodeContinue->State.Flags = EpisodeContinuationFlags::None;
+		if (pendingLevelChange->CheatsUsed) {
+			episodeContinue->State.Flags |= EpisodeContinuationFlags::CheatsUsed;
+		}
+
+		episodeContinue->State.DifficultyAndPlayerType = ((int)pendingLevelChange->Difficulty & 0x0f) | (((int)firstPlayer->Type & 0x0f) << 4);
+		episodeContinue->State.Lives = firstPlayer->Lives;
+		episodeContinue->State.Score = firstPlayer->Score;
+		memcpy(episodeContinue->State.Ammo, firstPlayer->Ammo, sizeof(firstPlayer->Ammo));
+		memcpy(episodeContinue->State.WeaponUpgrades, firstPlayer->WeaponUpgrades, sizeof(firstPlayer->WeaponUpgrades));
+
+		PreferencesCache::TutorialCompleted = true;
+		PreferencesCache::Save();
+	} else if (!PreferencesCache::TutorialCompleted) {
+		PreferencesCache::TutorialCompleted = true;
+		PreferencesCache::Save();
+	}
+#endif
 }
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)

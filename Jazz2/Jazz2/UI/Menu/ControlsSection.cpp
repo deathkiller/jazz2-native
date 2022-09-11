@@ -223,10 +223,10 @@ namespace Jazz2::UI::Menu
 		for (int i = 0; i < n; i++) {
 			StringView name;
 			switch ((PlayerActions)i) {
-				case PlayerActions::Left: name = "Left"_s; break;
-				case PlayerActions::Right: name = "Right"_s; break;
 				case PlayerActions::Up: name = "Up"_s; break;
 				case PlayerActions::Down: name = "Down"_s; break;
+				case PlayerActions::Left: name = "Left"_s; break;
+				case PlayerActions::Right: name = "Right"_s; break;
 				case PlayerActions::Fire: name = "Fire"_s; break;
 				case PlayerActions::Jump: name = "Jump"_s; break;
 				case PlayerActions::Run: name = "Run"_s; break;
@@ -318,7 +318,6 @@ namespace Jazz2::UI::Menu
 
 						_root->DrawStringShadow(value, charOffset, center.X * (0.9f + j * 0.34f), topItem, IMenuContainer::MainLayer - 10,
 							Alignment::Center, color, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
-
 					} else {
 						_root->DrawStringShadow(value, charOffset, center.X * (0.9f + j * 0.34f), topItem, IMenuContainer::MainLayer - 20,
 							Alignment::Center, hasCollision ? Colorf(0.5f, 0.32f, 0.32f, 1.0f) : Font::DefaultColor, 0.8f);

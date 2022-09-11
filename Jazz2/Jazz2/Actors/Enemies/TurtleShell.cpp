@@ -65,7 +65,10 @@ namespace Jazz2::Actors::Enemies
 		_elasticity = 0.5f;
 		_health = 8;
 
-		PlaySfx("Fly"_s);
+		if (std::abs(_speed.X) > 0.0f || std::abs(_externalForce.Y) > 0.0f) {
+			PlaySfx("Fly"_s);
+			StartBlinking();
+		}
 
 		co_return true;
 	}

@@ -215,48 +215,47 @@ namespace Jazz2
 
 		if (_pauseMenu == nullptr) {
 			if (_nextLevelType != ExitType::None) {
+				_nextLevelTime -= timeMult;
+
 				bool playersReady = true;
 				for (auto player : _players) {
 					// Exit type was already provided in BeginLevelChange()
 					playersReady &= player->OnLevelChanging(ExitType::None);
 				}
 
-				if (playersReady) {
-					_nextLevelTime -= timeMult;
-					if (_nextLevelTime <= 0.0f) {
-						StringView realNextLevel;
-						if (!_nextLevel.empty()) {
-							realNextLevel = _nextLevel;
-						} else {
-							realNextLevel = (_nextLevelType == ExitType::Bonus ? _defaultSecretLevel : _defaultNextLevel);
-						}
-
-						LevelInitialization levelInit;
-
-						if (!realNextLevel.empty()) {
-							auto found = realNextLevel.partition('/');
-							if (found[2].empty()) {
-								levelInit.EpisodeName = _episodeName;
-								levelInit.LevelName = realNextLevel;
-							} else {
-								levelInit.EpisodeName = found[0];
-								levelInit.LevelName = found[2];
-							}
-						}
-
-						levelInit.Difficulty = _difficulty;
-						levelInit.ReduxMode = _reduxMode;
-						levelInit.CheatsUsed = _cheatsUsed;
-						levelInit.LastExitType = _nextLevelType;
-						levelInit.LastEpisodeName = _episodeName;
-
-						for (int i = 0; i < _players.size(); i++) {
-							levelInit.PlayerCarryOvers[i] = _players[i]->PrepareLevelCarryOver();
-						}
-
-						_root->ChangeLevel(std::move(levelInit));
-						return;
+				if (playersReady && _nextLevelTime <= 0.0f) {
+					StringView realNextLevel;
+					if (!_nextLevel.empty()) {
+						realNextLevel = _nextLevel;
+					} else {
+						realNextLevel = (_nextLevelType == ExitType::Bonus ? _defaultSecretLevel : _defaultNextLevel);
 					}
+
+					LevelInitialization levelInit;
+
+					if (!realNextLevel.empty()) {
+						auto found = realNextLevel.partition('/');
+						if (found[2].empty()) {
+							levelInit.EpisodeName = _episodeName;
+							levelInit.LevelName = realNextLevel;
+						} else {
+							levelInit.EpisodeName = found[0];
+							levelInit.LevelName = found[2];
+						}
+					}
+
+					levelInit.Difficulty = _difficulty;
+					levelInit.ReduxMode = _reduxMode;
+					levelInit.CheatsUsed = _cheatsUsed;
+					levelInit.LastExitType = _nextLevelType;
+					levelInit.LastEpisodeName = _episodeName;
+
+					for (int i = 0; i < _players.size(); i++) {
+						levelInit.PlayerCarryOvers[i] = _players[i]->PrepareLevelCarryOver();
+					}
+
+					_root->ChangeLevel(std::move(levelInit));
+					return;
 				}
 			}
 
@@ -822,7 +821,14 @@ namespace Jazz2
 					}
 				}
 
-				if (_activeBoss != nullptr && _activeBoss->OnActivatedBoss()) {
+				if (_activeBoss == nullptr) {
+					// No boss was found, it's probably a bug in the level, so go to the next level
+					LOGW("No boss was found, skipping to the next level");
+					BeginLevelChange(ExitType::Boss, nullptr);
+					return;
+				}
+
+				if (_activeBoss->OnActivatedBoss()) {
 					if (_sugarRushMusic != nullptr) {
 						_sugarRushMusic->stop();
 					}
@@ -854,7 +860,7 @@ namespace Jazz2
 
 		_nextLevel = nextLevel;
 		_nextLevelType = exitType;
-		_nextLevelTime = (exitType == ExitType::Boss ? 320.0f : 240.0f);
+		_nextLevelTime = 360.0f;
 
 		if (_sugarRushMusic != nullptr) {
 			_sugarRushMusic->stop();
@@ -1286,17 +1292,17 @@ namespace Jazz2
 
 		_pressedActions = ((_pressedActions & 0xffffffffu) << 32);
 
-		if (keyState.isKeyDown(UI::ControlScheme::Key1(0, PlayerActions::Left)) || keyState.isKeyDown(UI::ControlScheme::Key2(0, PlayerActions::Left))) {
-			_pressedActions |= (1 << (int)PlayerActions::Left);
-		}
-		if (keyState.isKeyDown(UI::ControlScheme::Key1(0, PlayerActions::Right)) || keyState.isKeyDown(UI::ControlScheme::Key2(0, PlayerActions::Right))) {
-			_pressedActions |= (1 << (int)PlayerActions::Right);
-		}
 		if (keyState.isKeyDown(UI::ControlScheme::Key1(0, PlayerActions::Up)) || keyState.isKeyDown(UI::ControlScheme::Key2(0, PlayerActions::Up))) {
 			_pressedActions |= (1 << (int)PlayerActions::Up);
 		}
 		if (keyState.isKeyDown(UI::ControlScheme::Key1(0, PlayerActions::Down)) || keyState.isKeyDown(UI::ControlScheme::Key2(0, PlayerActions::Down))) {
 			_pressedActions |= (1 << (int)PlayerActions::Down);
+		}
+		if (keyState.isKeyDown(UI::ControlScheme::Key1(0, PlayerActions::Left)) || keyState.isKeyDown(UI::ControlScheme::Key2(0, PlayerActions::Left))) {
+			_pressedActions |= (1 << (int)PlayerActions::Left);
+		}
+		if (keyState.isKeyDown(UI::ControlScheme::Key1(0, PlayerActions::Right)) || keyState.isKeyDown(UI::ControlScheme::Key2(0, PlayerActions::Right))) {
+			_pressedActions |= (1 << (int)PlayerActions::Right);
 		}
 		if (keyState.isKeyDown(UI::ControlScheme::Key1(0, PlayerActions::Fire)) || keyState.isKeyDown(UI::ControlScheme::Key2(0, PlayerActions::Fire))) {
 			_pressedActions |= (1 << (int)PlayerActions::Fire);
@@ -1335,21 +1341,21 @@ namespace Jazz2
 
 		ButtonName jb; int ji1, ji2, ji3, ji4;
 
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Left, ji1);
+		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Up, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Left);
-		}
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Right, ji2);
-		if (ji2 >= 0 && ji2 < jc && joyStates[ji2]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Right);
-		}
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Up, ji3);
-		if (ji3 >= 0 && ji3 < jc && joyStates[ji3]->isButtonPressed(jb)) {
 			_pressedActions |= (1 << (int)PlayerActions::Up);
 		}
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Down, ji4);
-		if (ji4 >= 0 && ji4 < jc && joyStates[ji4]->isButtonPressed(jb)) {
+		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Down, ji2);
+		if (ji2 >= 0 && ji2 < jc && joyStates[ji2]->isButtonPressed(jb)) {
 			_pressedActions |= (1 << (int)PlayerActions::Down);
+		}
+		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Left, ji3);
+		if (ji3 >= 0 && ji3 < jc && joyStates[ji3]->isButtonPressed(jb)) {
+			_pressedActions |= (1 << (int)PlayerActions::Left);
+		}
+		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Right, ji4);
+		if (ji4 >= 0 && ji4 < jc && joyStates[ji4]->isButtonPressed(jb)) {
+			_pressedActions |= (1 << (int)PlayerActions::Right);
 		}
 
 		// Use analog controls only if all movement buttons are mapped to the same joystick

@@ -67,19 +67,29 @@ namespace Jazz2::Actors::Enemies
 
 	bool EnemyBase::CanMoveToPosition(float x, float y)
 	{
-		int direction = (IsFacingLeft() ? -1 : 1);
-		AABBf aabbA = AABBInner + Vector2f(x, y - 3);
-		AABBf aabbB = AABBInner + Vector2f(x, y + 3);
+		AABBf aabbA = AABBInner + Vector2f(x, y - 3.0f);
+		AABBf aabbB = AABBInner + Vector2f(x, y + 3.0f);
 		TileCollisionParams params = { TileDestructType::None, true };
-		if (!_levelHandler->IsPositionEmpty(this, aabbA, params) && !_levelHandler->IsPositionEmpty(this, aabbB, params)) {
+		bool isReduced = GetState(ActorState::CollideWithTilesetReduced), isEmpty;
+		if (isReduced) {
+			SetState(ActorState::CollideWithTilesetReduced, false);
+			isEmpty = _levelHandler->IsPositionEmpty(this, aabbA, params) || _levelHandler->IsPositionEmpty(this, aabbB, params);
+			SetState(ActorState::CollideWithTilesetReduced, true);
+		} else {
+			isEmpty = _levelHandler->IsPositionEmpty(this, aabbA, params) || _levelHandler->IsPositionEmpty(this, aabbB, params);
+		}
+		if (!isEmpty) {
 			return false;
 		}
 
-		AABBf aabbDir = AABBInner + Vector2f(x + direction * (AABBInner.R - AABBInner.L) * 0.5f, y + 12.0f);
-
 		uint8_t* eventParams;
 		auto events = _levelHandler->EventMap();
-		return ((events == nullptr || events->GetEventByPosition(_pos.X + x, _pos.Y + y, &eventParams) != EventType::AreaStopEnemy) && !_levelHandler->IsPositionEmpty(this, aabbDir, params));
+		if (events != nullptr && events->GetEventByPosition(_pos.X + x, _pos.Y + y, &eventParams) == EventType::AreaStopEnemy) {
+			return false;
+		}
+
+		AABBf aabbBelow = AABBInner + Vector2f((AABBInner.R - AABBInner.L) * (x < 0.0f ? -1.0f : 1.0f), 12.0f);
+		return !_levelHandler->IsPositionEmpty(this, aabbBelow, params);
 	}
 
 	void EnemyBase::TryGenerateRandomDrop()

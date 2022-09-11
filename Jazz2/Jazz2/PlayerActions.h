@@ -3,10 +3,10 @@
 namespace Jazz2
 {
 	enum class PlayerActions {
-		Left,
-		Right,
 		Up,
 		Down,
+		Left,
+		Right,
 		Fire,
 		Jump,
 		Run,

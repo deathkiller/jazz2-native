@@ -1213,7 +1213,7 @@ namespace Jazz2::Actors
 					if (_dizzyTime > 0.0f) {
 						composite |= AnimState::Dizzy;
 					}
-				} else if (_speed.Y < -std::numeric_limits<float>::epsilon()) {
+				} else if (_speed.Y < 0.0f) {
 					// Jumping, ver. speed is negative
 					if (_isSpring) {
 						composite |= AnimState::Spring;
@@ -2233,6 +2233,24 @@ namespace Jazz2::Actors
 					_externalForce.X = 0.0f;
 					_externalForce.Y = 0.0f;
 					_internalForceY = 0.0f;
+				} else {
+					// Refresh animation state, because UpdateAnimation() is not called when _controllable is false
+					AnimState oldState = _currentAnimationState;
+					AnimState newState = (_currentAnimationState & (AnimState)0xFFF83F60);
+					if (std::abs(_speed.X) > std::numeric_limits<float>::epsilon()) {
+						newState |= AnimState::Walk;
+					}
+					if (!GetState(ActorState::CanJump)) {
+						if (_speed.Y < 0.0f) {
+							newState |= AnimState::Jump;
+						} else {
+							newState |= AnimState::Fall;
+						}
+					}
+					SetAnimation(newState);
+					if ((oldState == AnimState::Fall || oldState == AnimState::Freefall) && newState == AnimState::Idle) {
+						SetTransition(AnimState::TransitionFallToIdle, true);
+					}
 				}
 				return false;
 			}
@@ -2255,6 +2273,24 @@ namespace Jazz2::Actors
 					_externalForce.X = 0.0f;
 					_externalForce.Y = 0.0f;
 					_internalForceY = 0.0f;
+				} else {
+					// Refresh animation state, because UpdateAnimation() is not called when _controllable is false
+					AnimState oldState = _currentAnimationState;
+					AnimState newState = (_currentAnimationState & (AnimState)0xFFF83F60);
+					if (std::abs(_speed.X) > std::numeric_limits<float>::epsilon()) {
+						newState |= AnimState::Walk;
+					}
+					if (!GetState(ActorState::CanJump)) {
+						if (_speed.Y < 0.0f) {
+							newState |= AnimState::Jump;
+						} else {
+							newState |= AnimState::Fall;
+						}
+					}
+					SetAnimation(newState);
+					if ((oldState == AnimState::Fall || oldState == AnimState::Freefall) && newState == AnimState::Idle) {
+						SetTransition(AnimState::TransitionFallToIdle, true);
+					}
 				}
 				return false;
 			}
@@ -2282,6 +2318,12 @@ namespace Jazz2::Actors
 		_pushFramesLeft = 0.0f;
 		_invulnerableTime = 0.0f;
 
+		if (_sugarRushLeft > 1.0f) {
+			_sugarRushLeft = 1.0f;
+		}
+
+		_renderer.setDrawEnabled(true);
+
 		if (exitType == ExitType::Warp || exitType == ExitType::Bonus || exitType == ExitType::Boss || _inWater) {
 			_levelExiting = LevelExitingState::WaitingForWarp;
 
@@ -2299,9 +2341,9 @@ namespace Jazz2::Actors
 
 	void Player::ReceiveLevelCarryOver(ExitType exitType, const PlayerCarryOver& carryOver)
 	{
-		_lives = carryOver.Lives;
+		_lives = (int)carryOver.Lives;
 		_score = carryOver.Score;
-		_foodEaten = carryOver.FoodEaten;
+		_foodEaten = (int)carryOver.FoodEaten;
 		_currentWeapon = carryOver.CurrentWeapon;
 
 		std::memcpy(_weaponAmmo, carryOver.Ammo, sizeof(_weaponAmmo));
@@ -2338,9 +2380,9 @@ namespace Jazz2::Actors
 	{
 		PlayerCarryOver carryOver;
 		carryOver.Type = _playerType;
-		carryOver.Lives = _lives;
+		carryOver.Lives = (_lives > UINT8_MAX ? UINT8_MAX : (uint8_t)_lives);
 		carryOver.Score = _score;
-		carryOver.FoodEaten = _foodEaten;
+		carryOver.FoodEaten = (_foodEaten > UINT8_MAX ? UINT8_MAX : (uint8_t)_foodEaten);
 		carryOver.CurrentWeapon = _currentWeapon;
 
 		std::memcpy(carryOver.Ammo, _weaponAmmo, sizeof(_weaponAmmo));

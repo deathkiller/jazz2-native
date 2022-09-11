@@ -121,10 +121,21 @@ namespace Jazz2::Actors::Enemies
 	{
 		EnemyBase::OnHitFloor(timeMult);
 
+		// TODO: Partial workaround for stuck enemies
+		SetState(ActorState::CanJump, true);
+
 		if (_isFalling) {
 			_isFalling = false;
 			SetHealthByDifficulty(1);
 		}
+	}
+
+	void Lizard::OnHitWall(float timeMult)
+	{
+		EnemyBase::OnHitWall(timeMult);
+
+		// TODO: Partial workaround for stuck enemies
+		SetState(ActorState::CanJump, true);
 	}
 
 	bool Lizard::OnPerish(ActorBase* collider)

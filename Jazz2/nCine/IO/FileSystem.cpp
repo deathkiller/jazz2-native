@@ -29,6 +29,10 @@
 #	endif
 #endif
 
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+#	include <emscripten.h>
+#endif
+
 #include <Utf8.h>
 #include <Containers/String.h>
 #include <Containers/GrowableArray.h>
@@ -121,6 +125,21 @@ namespace nCine
 
 			return date;
 		}
+#endif
+
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		EM_JS(int, __asyncjs__MountAsPersistent, (const char* path, int pathLength), {
+			return Asyncify.handleSleep(function(callback) {
+				var p = UTF8ToString(path, pathLength);
+
+				FS.mkdir(p);
+				FS.mount(IDBFS, { }, p);
+
+				FS.syncfs(true, function(err) {
+					callback(err ? 0 : 1);
+				});
+			});
+		});
 #endif
 	}
 
@@ -1449,23 +1468,18 @@ namespace nCine
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 	void FileSystem::MountAsPersistent(const StringView& path)
 	{
-		EM_ASM({
-			var p = Module.UTF8ToString($0, $1);
-
-			FS.mkdir(p);
-			FS.mount(IDBFS, {}, p);
-
-			FS.syncfs(true, function(err) {
-				// TODO: Handle callback
-			});
-		}, path.data(), path.size());
+		// It's calling asynchronous API synchronously, so it can block main thread for a while
+		int result = __asyncjs__MountAsPersistent(path.data(), path.size());
+		if (!result) {
+			LOGW_X("MountAsPersistent(\"%s\") failed", String::nullTerminatedView(path).data());
+		}
 	}
 
 	void FileSystem::SyncToPersistent()
 	{
 		EM_ASM({
 			FS.syncfs(false, function(err) {
-				// TODO: Handle callback
+				// Don't wait for completion, it should take ~1 second, so it doesn't matter
 			});
 		});
 	}
