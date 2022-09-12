@@ -199,6 +199,7 @@ public:
 	void onPostUpdate() override;
 	void onShutdown() override;
 	void onResizeWindow(int width, int height) override;
+	void onFullscreenChanged(bool isFullscreen) override;
 	void onTouchEvent(const TouchEvent& event) override;
 
 	void GoToMainMenu(bool afterIntro) override;
@@ -238,10 +239,9 @@ void GameEventHandler::onPreInit(AppConfiguration& config)
 {
 	PreferencesCache::Initialize(config);
 
-	config.inFullscreen = PreferencesCache::EnableFullscreen;
+	config.windowTitle = "Jazz² Resurrection"_s;
 	config.withVSync = PreferencesCache::EnableVsync;
 	config.resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
-	config.windowTitle = "Jazz² Resurrection"_s;
 }
 
 void GameEventHandler::onInit()
@@ -253,6 +253,7 @@ void GameEventHandler::onInit()
 	theApplication().setAutoSuspension(false);
 
 	if (PreferencesCache::EnableFullscreen) {
+		theApplication().gfxDevice().setResolution(true);
 		theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
 	}
 
@@ -380,6 +381,11 @@ void GameEventHandler::onResizeWindow(int width, int height)
 	if (_currentHandler != nullptr) {
 		_currentHandler->OnInitializeViewport(width, height);
 	}
+}
+
+void GameEventHandler::onFullscreenChanged(bool isFullscreen)
+{
+	PreferencesCache::EnableFullscreen = isFullscreen;
 }
 
 void GameEventHandler::onTouchEvent(const TouchEvent& event)

@@ -1030,11 +1030,11 @@ namespace Jazz2::Tiles
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(viewSize.X, viewSize.Y);
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
-		command->material().uniform("ViewSize")->setFloatValue(viewSize.X, viewSize.Y);
-		command->material().uniform("CameraPosition")->setFloatVector(viewCenter.Data());
-		command->material().uniform("shift")->setFloatValue(x, y);
-		command->material().uniform("horizonColor")->setFloatValue(layer.Description.BackgroundColor.X, layer.Description.BackgroundColor.Y, layer.Description.BackgroundColor.Z);
-		command->material().uniform("parallaxStarsEnabled")->setFloatValue(layer.Description.ParallaxStarsEnabled ? 1.0f : 0.0f);
+		command->material().uniform("uViewSize")->setFloatValue(viewSize.X, viewSize.Y);
+		command->material().uniform("uCameraPos")->setFloatVector(viewCenter.Data());
+		command->material().uniform("uShift")->setFloatValue(x, y);
+		command->material().uniform("uHorizonColor")->setFloatValue(layer.Description.BackgroundColor.X, layer.Description.BackgroundColor.Y, layer.Description.BackgroundColor.Z);
+		command->material().uniform("uParallaxStarsEnabled")->setFloatValue(layer.Description.ParallaxStarsEnabled ? 1.0f : 0.0f);
 
 		command->setTransformation(Matrix4x4f::Translation(viewCenter.X, viewCenter.Y, 0.0f));
 		command->setLayer(layer.Description.Depth);

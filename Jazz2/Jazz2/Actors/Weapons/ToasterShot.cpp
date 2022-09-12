@@ -98,12 +98,18 @@ namespace Jazz2::Actors::Weapons
 
 	void ToasterShot::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
-		auto& light = lights.emplace_back();
-		light.Pos = _pos;
-		light.Intensity = 0.85f;
-		light.Brightness = 0.6f;
-		light.RadiusNear = 0.0f;
-		light.RadiusFar = 30.0f;
+		auto& light1 = lights.emplace_back();
+		light1.Pos = _pos;
+		light1.Intensity = 0.85f;
+		light1.Brightness = 0.6f;
+		light1.RadiusNear = 0.0f;
+		light1.RadiusFar = 30.0f;
+
+		auto& light2 = lights.emplace_back();
+		light2.Pos = _pos;
+		light2.Intensity = 0.2f;
+		light2.RadiusNear = 0.0f;
+		light2.RadiusFar = 140.0f;
 	}
 
 	void ToasterShot::OnRicochet()

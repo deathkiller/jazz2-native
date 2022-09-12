@@ -200,7 +200,9 @@ namespace Jazz2
 		BatchedWhiteMask,
 
 #if defined(ALLOW_RESCALE_SHADERS)
+		ResizeHQ2x,
 		Resize3xBrz,
+		ResizeCrt,
 		ResizeMonochrome,
 #endif
 

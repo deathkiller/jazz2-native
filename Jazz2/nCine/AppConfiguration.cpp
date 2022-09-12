@@ -13,7 +13,7 @@ namespace nCine
 	AppConfiguration::AppConfiguration()
 		:
 		frameTimerLogInterval(5.0f),
-		resolution(1280, 720),
+		resolution(0, 0),
 		inFullscreen(false),
 		isResizable(true),
 		frameLimit(0),

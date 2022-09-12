@@ -69,13 +69,11 @@ void main()
 #ifdef GL_ES
 precision mediump float;
 #endif
-uniform vec2 ViewSize;
 
 uniform sampler2D uTexture; // Normal
 
 in vec4 vTexCoords;
 in vec4 vColor;
-
 out vec4 fragColor;
 
 float lightBlend(float t) {
@@ -115,11 +113,14 @@ void main() {
 #ifdef GL_ES
 precision mediump float;
 #endif
+
 uniform sampler2D uTexture;
 uniform vec2 uPixelOffset;
 uniform vec2 uDirection;
+
 in vec2 vTexCoords;
 out vec4 fragColor;
+
 void main()
 {
 	vec4 color = vec4(0.0);
@@ -138,10 +139,13 @@ void main()
 #ifdef GL_ES
 precision mediump float;
 #endif
+
 uniform sampler2D uTexture;
 uniform vec2 uPixelOffset;
+
 in vec2 vTexCoords;
 out vec4 fragColor;
+
 void main()
 {
 	vec4 color = texture(uTexture, vTexCoords);
@@ -152,29 +156,76 @@ void main()
 }
 )";
 
+	constexpr char CombineVs[] = R"(
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+out vec2 vTexCoords;
+out vec2 vViewSize;
+out vec2 vViewSizeInv;
+
+void main()
+{
+	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
+	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), 1.0 - float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aTexCoords.x * texRect.x + texRect.y, aTexCoords.y * texRect.z + texRect.w);
+	vViewSize = spriteSize;
+	vViewSizeInv = vec2(1.0) / spriteSize;
+}
+)";
+
 	constexpr char CombineFs[] = R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
 
-uniform sampler2D uTexture;
-uniform sampler2D lightTex;
-uniform sampler2D blurHalfTex;
-uniform sampler2D blurQuarterTex;
+mat4 bayerIndex = mat4(
+	vec4(00.0/16.0, 12.0/16.0, 03.0/16.0, 15.0/16.0),
+	vec4(08.0/16.0, 04.0/16.0, 11.0/16.0, 07.0/16.0),
+	vec4(02.0/16.0, 14.0/16.0, 01.0/16.0, 13.0/16.0),
+	vec4(10.0/16.0, 06.0/16.0, 09.0/16.0, 05.0/16.0));
 
-uniform vec4 ambientColor;
+uniform sampler2D uTexture;
+uniform sampler2D uTextureLighting;
+uniform sampler2D uTextureBlurHalf;
+uniform sampler2D uTextureBlurQuarter;
+
+uniform vec4 uAmbientColor;
+uniform float uTime;
 
 in vec2 vTexCoords;
-in vec4 vColor;
-
+in vec2 vViewSize;
+in vec2 vViewSizeInv;
 out vec4 fragColor;
 
+vec2 hash2D(in vec2 p) {
+	float h = dot(p, vec2(12.9898, 78.233));
+	float h2 = dot(p, vec2(37.271, 377.632));
+	return -1.0 + 2.0 * vec2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+}
+
+vec2 noiseTexCoords(vec2 position) {
+	vec2 seed = position + fract(uTime);
+	return position + hash2D(seed) * vViewSizeInv;
+}
+
 void main() {
-	vec4 blur1 = texture(blurHalfTex, vTexCoords);
-	vec4 blur2 = texture(blurQuarterTex, vTexCoords);
+	vec4 blur1 = texture(uTextureBlurHalf, vTexCoords);
+	vec4 blur2 = texture(uTextureBlurQuarter, vTexCoords);
 
 	vec4 main = texture(uTexture, vTexCoords);
-	vec4 light = texture(lightTex, vTexCoords);
+	vec4 light = texture(uTextureLighting, noiseTexCoords(vTexCoords));
 
 	vec4 blur = (blur1 + blur2) * vec4(0.5);
 
@@ -184,8 +235,8 @@ void main() {
 	fragColor = mix(mix(
 		main * (1.0 + light.g),
 		blur,
-		vec4(clamp((1.0 - light.r) / sqrt(max(ambientColor.w, 0.35)), 0.0, 1.0))
-	), ambientColor, vec4(1.0 - light.r));
+		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
+	), uAmbientColor, vec4(1.0 - light.r));
 	fragColor.a = 1.0;
 }
 )";
@@ -195,23 +246,38 @@ void main() {
 precision mediump float;
 #endif
 
-uniform vec2 ViewSizeInv;
-uniform vec2 CameraPosition;
-uniform float GameTime;
+mat4 bayerIndex = mat4(
+	vec4(00.0/16.0, 12.0/16.0, 03.0/16.0, 15.0/16.0),
+	vec4(08.0/16.0, 04.0/16.0, 11.0/16.0, 07.0/16.0),
+	vec4(02.0/16.0, 14.0/16.0, 01.0/16.0, 13.0/16.0),
+	vec4(10.0/16.0, 06.0/16.0, 09.0/16.0, 05.0/16.0));
 
 uniform sampler2D uTexture;
-uniform sampler2D lightTex;
-uniform sampler2D blurHalfTex;
-uniform sampler2D blurQuarterTex;
-uniform sampler2D displacementTex;
+uniform sampler2D uTextureLighting;
+uniform sampler2D uTextureBlurHalf;
+uniform sampler2D uTextureBlurQuarter;
+uniform sampler2D uTextureDisplacement;
 
-uniform vec4 ambientColor;
-uniform float waterLevel;
+uniform vec4 uAmbientColor;
+uniform float uTime;
+uniform vec2 uCameraPos;
+uniform float uWaterLevel;
 
 in vec2 vTexCoords;
-in vec4 vColor;
-
+in vec2 vViewSize;
+in vec2 vViewSizeInv;
 out vec4 fragColor;
+
+vec2 hash2D(in vec2 p) {
+	float h = dot(p, vec2(12.9898, 78.233));
+	float h2 = dot(p, vec2(37.271, 377.632));
+	return -1.0 + 2.0 * vec2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+}
+
+vec2 noiseTexCoords(vec2 position) {
+	vec2 seed = position + fract(uTime);
+	return position + hash2D(seed) * vViewSizeInv;
+}
 
 float wave(float x, float time) {
 	float waveOffset = cos((x - time) * 60.0) * 0.004
@@ -268,20 +334,19 @@ float perlinNoise2D(vec2 P) {
 
 void main() {
 	vec3 waterColor = vec3(0.4, 0.6, 0.8);
-	float time = GameTime;
 
 	// TODO: Remove this flip
 	vec2 uvLocal = vec2(vTexCoords.x, 1.0 - vTexCoords.y);
-	vec2 uvWorldCenter = (CameraPosition.xy * ViewSizeInv.xy);
+	vec2 uvWorldCenter = (uCameraPos.xy * vViewSizeInv.xy);
 	vec2 uvWorld = uvLocal + uvWorldCenter;
 
-	float waveHeight = wave(uvWorld.x, time);
-	float isTexelBelow = aastep(waveHeight, uvLocal.y - waterLevel);
+	float waveHeight = wave(uvWorld.x, uTime);
+	float isTexelBelow = aastep(waveHeight, uvLocal.y - uWaterLevel);
 	float isTexelAbove = 1.0 - isTexelBelow;
 
 	// Displacement
-	vec2 disPos = uvWorld * vec2(0.4) + vec2(mod(time * 0.8, 2.0));
-	vec2 dis = (texture(displacementTex, disPos).xy - vec2(0.5)) * vec2(0.014);
+	vec2 disPos = uvWorld * vec2(0.4) + vec2(mod(uTime * 0.8, 2.0));
+	vec2 dis = (texture(uTextureDisplacement, disPos).xy - vec2(0.5)) * vec2(0.014);
 	
 	vec2 uv = uvLocal + dis * vec2(isTexelBelow);
 	// TODO: Remove this flip
@@ -296,24 +361,24 @@ void main() {
 	
 	// Rays
 	float noisePos = uvWorld.x * 8.0 + uvWorldCenter.y * 0.5 + (1.0 - uvLocal.y - uvLocal.x) * -5.0;
-	float rays = perlinNoise2D(vec2(noisePos, time * 10.0 + uvWorldCenter.y)) * 0.5 + 0.4;
+	float rays = perlinNoise2D(vec2(noisePos, uTime * 10.0 + uvWorldCenter.y)) * 0.5 + 0.4;
 	main.rgb += vec3(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6);
 	
 	// Waves
-	float topDist = abs(uvLocal.y - waterLevel - waveHeight);
-	float isNearTop = 1.0 - aastep(ViewSizeInv.y * 2.8, topDist);
-	float isVeryNearTop = 1.0 - aastep(ViewSizeInv.y * (0.8 - 100.0 * waveHeight), topDist);
+	float topDist = abs(uvLocal.y - uWaterLevel - waveHeight);
+	float isNearTop = 1.0 - aastep(vViewSizeInv.y * 2.8, topDist);
+	float isVeryNearTop = 1.0 - aastep(vViewSizeInv.y * (0.8 - 100.0 * waveHeight), topDist);
 
 	float topColorBlendFac = isNearTop * isTexelBelow * 0.6;
 	main.rgb = mix(main.rgb, texture(uTexture, vec2(uvLocal.x,
-		(1.0 - (waterLevel - uvLocal.y + waterLevel) * 0.97) - waveHeight + ViewSizeInv.y
+		(1.0 - (uWaterLevel - uvLocal.y + uWaterLevel) * 0.97) - waveHeight + vViewSizeInv.y
 	)).rgb, vec3(topColorBlendFac));
 	main.rgb += vec3(0.2 * isVeryNearTop);
 	
 	// Lighting
-	vec4 blur1 = texture(blurHalfTex, uv);
-	vec4 blur2 = texture(blurQuarterTex, uv);
-	vec4 light = texture(lightTex, uv);
+	vec4 blur1 = texture(uTextureBlurHalf, uv);
+	vec4 blur2 = texture(uTextureBlurQuarter, uv);
+	vec4 light = texture(uTextureLighting, noiseTexCoords(uv));
 	
 	vec4 blur = (blur1 + blur2) * vec4(0.5);
 
@@ -323,16 +388,16 @@ void main() {
 	float darknessStrength = (1.0 - light.r);
 	
 	// Darkness above water
-	if (waterLevel < 0.4) {
-		float aboveWaterDarkness = isTexelAbove * (0.4 - waterLevel);
+	if (uWaterLevel < 0.4) {
+		float aboveWaterDarkness = isTexelAbove * (0.4 - uWaterLevel);
 		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
 	}
 
 	fragColor = mix(mix(
 		main * (1.0 + light.g),
 		blur,
-		vec4(clamp((1.0 - light.r) / sqrt(max(ambientColor.w, 0.35)), 0.0, 1.0))
-	), ambientColor, vec4(darknessStrength));
+		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
+	), uAmbientColor, vec4(darknessStrength));
 	fragColor.a = 1.0;
 }
 )";
@@ -342,17 +407,16 @@ void main() {
 precision highp float;
 #endif
 
-uniform sampler2D uTexture; // Normal
+uniform sampler2D uTexture;
 
-uniform vec2 ViewSize;
-uniform vec2 CameraPosition;
+uniform vec2 uViewSize;
+uniform vec2 uCameraPos;
 
-uniform vec3 horizonColor;
-uniform vec2 shift;
-uniform float parallaxStarsEnabled;
+uniform vec3 uHorizonColor;
+uniform vec2 uShift;
+uniform float uParallaxStarsEnabled;
 
 in vec2 vTexCoords;
-
 out vec4 fragColor;
 
 vec2 hash2D(in vec2 p) {
@@ -401,22 +465,22 @@ void main() {
 	float horizonDepth = pow(distance, 2.0);
 
 	float yShift = (vTexCoords.y > 0.5 ? 1.0 : 0.0);
-	float correction = ((ViewSize.x * 9.0) / (ViewSize.y * 16.0));
+	float correction = ((uViewSize.x * 9.0) / (uViewSize.y * 16.0));
 
 	vec2 texturePos = vec2(
-		(shift.x / 256.0) + (vTexCoords.x - 0.5   ) * (0.5 + (1.5 * horizonDepth)) * correction,
-		(shift.y / 256.0) + (vTexCoords.y - yShift) * 2.0 * distance
+		(uShift.x / 256.0) + (vTexCoords.x - 0.5   ) * (0.5 + (1.5 * horizonDepth)) * correction,
+		(uShift.y / 256.0) + (vTexCoords.y - yShift) * 2.0 * distance
 	);
 
 	vec4 texColor = texture(uTexture, texturePos);
 	float horizonOpacity = clamp(pow(distance, 1.8) - 0.4, 0.0, 1.0);
 	
-	vec4 horizonColorWithStars = vec4(horizonColor, 1.0);
-	if (parallaxStarsEnabled > 0.0) {
-		vec2 samplePosition = (vTexCoords * ViewSize / ViewSize.xx) + CameraPosition.xy * 0.00012;
+	vec4 horizonColorWithStars = vec4(uHorizonColor, 1.0);
+	if (uParallaxStarsEnabled > 0.0) {
+		vec2 samplePosition = (vTexCoords * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00012;
 		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
 		
-		samplePosition = (vTexCoords * ViewSize / ViewSize.xx) + CameraPosition.xy * 0.00018 + 0.5;
+		samplePosition = (vTexCoords * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00018 + 0.5;
 		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
 	}
 
@@ -432,15 +496,14 @@ precision highp float;
 
 uniform sampler2D uTexture; // Normal
 
-uniform vec2 ViewSize;
-uniform vec2 CameraPosition;
+uniform vec2 uViewSize;
+uniform vec2 uCameraPos;
 
-uniform vec3 horizonColor;
-uniform vec2 shift;
-uniform float parallaxStarsEnabled;
+uniform vec3 uHorizonColor;
+uniform vec2 uShift;
+uniform float uParallaxStarsEnabled;
 
 in vec2 vTexCoords;
-
 out vec4 fragColor;
 
 #define INV_PI 0.31830988618379067153776752675
@@ -490,7 +553,7 @@ void main() {
 	vec2 targetCoord = vec2(2.0) * vTexCoords - vec2(1.0);
 
 	// Aspect ratio correction, so display circle instead of ellipse
-	targetCoord.x *= ViewSize.x / ViewSize.y;
+	targetCoord.x *= uViewSize.x / uViewSize.y;
 
 	// Distance to center of screen
 	float distance = length(targetCoord);
@@ -499,19 +562,19 @@ void main() {
 	float xShift = (targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan(targetCoord.y, targetCoord.x) * INV_PI);
 
 	vec2 texturePos = vec2(
-		(xShift)         * 1.0 + (shift.x * 0.01),
-		(1.0 / distance) * 1.4 + (shift.y * 0.002)
+		(xShift)         * 1.0 + (uShift.x * 0.01),
+		(1.0 / distance) * 1.4 + (uShift.y * 0.002)
 	);
 
 	vec4 texColor = texture(uTexture, texturePos);
 	float horizonOpacity = 1.0 - clamp(pow(distance, 1.4) - 0.3, 0.0, 1.0);
 	
-	vec4 horizonColorWithStars = vec4(horizonColor, 1.0);
-	if (parallaxStarsEnabled > 0.0) {
-		vec2 samplePosition = (vTexCoords * ViewSize / ViewSize.xx) + CameraPosition.xy * 0.00012;
+	vec4 horizonColorWithStars = vec4(uHorizonColor, 1.0);
+	if (uParallaxStarsEnabled > 0.0) {
+		vec2 samplePosition = (vTexCoords * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00012;
 		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
 		
-		samplePosition = (vTexCoords * ViewSize / ViewSize.xx) + CameraPosition.xy * 0.00018 + 0.5;
+		samplePosition = (vTexCoords * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00018 + 0.5;
 		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
 	}
 
@@ -526,6 +589,7 @@ precision mediump float;
 #endif
 
 uniform sampler2D uTexture; // Normal
+
 in vec2 vTexCoords;
 in vec4 vColor;
 out vec4 fragColor;
@@ -545,6 +609,7 @@ precision mediump float;
 #endif
 
 uniform sampler2D uTexture; // Normal
+
 in vec2 vTexCoords;
 in vec4 vColor;
 out vec4 fragColor;
@@ -573,6 +638,7 @@ precision mediump float;
 #endif
 
 uniform sampler2D uTexture;
+
 in vec2 vTexCoords;
 in vec4 vColor;
 out vec4 fragColor;
@@ -590,6 +656,7 @@ precision mediump float;
 #endif
 
 uniform sampler2D uTexture;
+
 in vec2 vTexCoords;
 in vec4 vColor;
 out vec4 fragColor;
@@ -598,6 +665,114 @@ void main() {
 	vec4 tex = texture(uTexture, vTexCoords);
 	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 2.5f, 1.0f);
 	fragColor = vec4(color, color, color, tex.a) * vColor;
+}
+)";
+
+	constexpr char ResizeHQ2xVs[] = R"(
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+uniform mediump vec2 uTextureSize;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+out vec2 vTexCoords0;
+out vec4 vTexCoords1;
+out vec4 vTexCoords2;
+out vec4 vTexCoords3;
+out vec4 vTexCoords4;
+
+void main()
+{
+	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
+	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), 1.0 - float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	
+	float x = 0.5 / uTextureSize.x;
+	float y = 0.5 / uTextureSize.y;
+	vec2 dg1 = vec2( x, y);
+	vec2 dg2 = vec2(-x, y);
+	vec2 dx = vec2(x, 0.0);
+	vec2 dy = vec2(0.0, y);
+
+	vec2 texCoord = vec2(aTexCoords.x * texRect.x + texRect.y, aTexCoords.y * texRect.z + texRect.w);
+
+	vTexCoords0.xy = texCoord;
+	vTexCoords1.xy = texCoord - dg1;
+	vTexCoords1.zw = texCoord - dy;
+	vTexCoords2.xy = texCoord - dg2;
+	vTexCoords2.zw = texCoord + dx;
+	vTexCoords3.xy = texCoord + dg1;
+	vTexCoords3.zw = texCoord + dy;
+	vTexCoords4.xy = texCoord + dg2;
+	vTexCoords4.zw = texCoord - dx;
+}
+)";
+
+	constexpr char ResizeHQ2xFs[] = R"(
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+const float mx = 0.325;
+const float k = -0.250;
+const float max_w = 0.25;
+const float min_w = -0.05;
+const float lum_add = 0.25;
+
+uniform sampler2D uTexture;
+
+in vec2 vTexCoords0;
+in vec4 vTexCoords1;
+in vec4 vTexCoords2;
+in vec4 vTexCoords3;
+in vec4 vTexCoords4;
+out vec4 fragColor;
+
+void main() {
+	vec3 c00 = texture(uTexture, vTexCoords1.xy).xyz; 
+	vec3 c10 = texture(uTexture, vTexCoords1.zw).xyz; 
+	vec3 c20 = texture(uTexture, vTexCoords2.xy).xyz; 
+	vec3 c01 = texture(uTexture, vTexCoords4.zw).xyz; 
+	vec3 c11 = texture(uTexture, vTexCoords0.xy).xyz; 
+	vec3 c21 = texture(uTexture, vTexCoords2.zw).xyz; 
+	vec3 c02 = texture(uTexture, vTexCoords4.xy).xyz; 
+	vec3 c12 = texture(uTexture, vTexCoords3.zw).xyz; 
+	vec3 c22 = texture(uTexture, vTexCoords3.xy).xyz; 
+	vec3 dt = vec3(1.0, 1.0, 1.0);
+
+	float md1 = dot(abs(c00 - c22), dt);
+	float md2 = dot(abs(c02 - c20), dt);
+
+	highp float w1 = dot(abs(c22 - c11), dt) * md2;
+	highp float w2 = dot(abs(c02 - c11), dt) * md1;
+	highp float w3 = dot(abs(c00 - c11), dt) * md2;
+	highp float w4 = dot(abs(c20 - c11), dt) * md1;
+
+	highp float t1 = w1 + w3;
+	highp float t2 = w2 + w4;
+	highp float ww = max(t1, t2) + 0.0001;
+
+	highp vec3 cx = (w1 * c00 + w2 * c20 + w3 * c22 + w4 * c02 + ww * c11) / (t1 + t2 + ww);
+
+	highp float lc1 = k / (0.12 * dot(c10 + c12 + cx, dt) + lum_add);
+	highp float lc2 = k / (0.12 * dot(c01 + c21 + cx, dt) + lum_add);
+
+	w1 = clamp(lc1 * dot(abs(cx - c10), dt) + mx, min_w, max_w);
+	w2 = clamp(lc2 * dot(abs(cx - c21), dt) + mx, min_w, max_w);
+	w3 = clamp(lc1 * dot(abs(cx - c12), dt) + mx, min_w, max_w);
+	w4 = clamp(lc2 * dot(abs(cx - c01), dt) + mx, min_w, max_w);
+
+	fragColor.xyz = w1 * c10 + w2 * c21 + w3 * c12 + w4 * c01 + (1.0 - w1 - w2 - w3 - w4) * cx;
+	fragColor.w = 1.0;
 }
 )";
 
@@ -675,7 +850,6 @@ in vec4 vTexCoords4;
 in vec4 vTexCoords5;
 in vec4 vTexCoords6;
 in vec4 vTexCoords7;
-
 out vec4 fragColor;
 
 float Reduce(vec3 color) {
@@ -902,44 +1076,298 @@ void main() {
 }
 )";
 
+	constexpr char ResizeCrtVs[] = R"(
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+out vec4 vTexCoords;
+
+void main()
+{
+	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
+	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), 1.0 - float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec4(aTexCoords.x * texRect.x + texRect.y, aTexCoords.y * texRect.z + texRect.w, spriteSize.x, spriteSize.y);
+}
+)";
+
+	constexpr char ResizeCrtFs[] = R"(
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+#define hardScan -6.0 /*-8.0*/
+#define hardPix -3.0
+#define warpX 0.031
+#define warpY 0.041
+#define maskDark 0.7 /*0.5*/
+#define maskLight 1.5
+#define scaleInLinearGamma 1
+#define shadowMask 4
+#define brightboost 1.0
+#define hardBloomScan -2.0
+#define hardBloomPix -1.5
+#define bloomAmount 1.0/12.0 /*1.0/16.0*/
+#define shape 2.0
+
+uniform sampler2D uTexture;
+
+uniform mediump vec2 uTextureSize;
+
+in vec4 vTexCoords;
+out vec4 fragColor;
+
+#ifdef SIMPLE_LINEAR_GAMMA
+	float ToLinear1(float c) {
+		return c;
+	}
+	vec3 ToLinear(vec3 c) {
+		return c;
+	}
+	vec3 ToSrgb(vec3 c) {
+		return pow(c, 1.0 / 2.2);
+	}
+#else
+	float ToLinear1(float c) {
+		if (scaleInLinearGamma==0) return c;
+		return(c<=0.04045)?c/12.92:pow((c+0.055)/1.055,2.4);
+	}
+	vec3 ToLinear(vec3 c) {
+		if (scaleInLinearGamma==0) return c;
+		return vec3(ToLinear1(c.r),ToLinear1(c.g),ToLinear1(c.b));
+	}
+	float ToSrgb1(float c) {
+		if (scaleInLinearGamma==0) return c;
+		return(c<0.0031308?c*12.92:1.055*pow(c,0.41666)-0.055);
+	}
+	vec3 ToSrgb(vec3 c) {
+		if (scaleInLinearGamma==0) return c;
+		return vec3(ToSrgb1(c.r),ToSrgb1(c.g),ToSrgb1(c.b));
+	}
+#endif
+
+// Nearest emulated sample given floating point position and texel offset.
+// Also zero's off screen.
+vec3 Fetch(vec2 pos, vec2 off, vec2 texture_size) {
+	pos=(floor(pos*texture_size.xy+off)+vec2(0.5,0.5))/texture_size.xy;
+#ifdef SIMPLE_LINEAR_GAMMA
+	return ToLinear(vec3(brightboost) * pow(texture(uTexture,pos.xy).rgb, 2.2));
+#else
+	return ToLinear(vec3(brightboost) * texture(uTexture,pos.xy).rgb);
+#endif
+}
+
+// Distance in emulated pixels to nearest texel
+vec2 Dist(vec2 pos, vec2 texture_size) {
+	pos=pos*texture_size.xy;
+	return -((pos-floor(pos))-vec2(0.5, 0.5));
+}
+
+// 1D Gaussian
+float Gaus(float pos,float scale) {
+	return exp2(scale*pow(abs(pos),shape));
+}
+
+// 3-tap Gaussian filter along horz line
+vec3 Horz3(vec2 pos, float off, vec2 texture_size) {
+	vec3 b=Fetch(pos,vec2(-1.0,off),texture_size);
+	vec3 c=Fetch(pos,vec2( 0.0,off),texture_size);
+	vec3 d=Fetch(pos,vec2( 1.0,off),texture_size);
+	float dst=Dist(pos, texture_size).x;
+	// Convert distance to weight.
+	float scale=hardPix;
+	float wb=Gaus(dst-1.0,scale);
+	float wc=Gaus(dst+0.0,scale);
+	float wd=Gaus(dst+1.0,scale);
+	// Return filtered sample.
+	return (b*wb+c*wc+d*wd)/(wb+wc+wd);
+}
+  
+// 5-tap Gaussian filter along horz line
+vec3 Horz5(vec2 pos, float off, vec2 texture_size) {
+	vec3 a=Fetch(pos,vec2(-2.0,off),texture_size);
+	vec3 b=Fetch(pos,vec2(-1.0,off),texture_size);
+	vec3 c=Fetch(pos,vec2( 0.0,off),texture_size);
+	vec3 d=Fetch(pos,vec2( 1.0,off),texture_size);
+	vec3 e=Fetch(pos,vec2( 2.0,off),texture_size);
+	float dst=Dist(pos, texture_size).x;
+	// Convert distance to weight.
+	float scale=hardPix;
+	float wa=Gaus(dst-2.0,scale);
+	float wb=Gaus(dst-1.0,scale);
+	float wc=Gaus(dst+0.0,scale);
+	float wd=Gaus(dst+1.0,scale);
+	float we=Gaus(dst+2.0,scale);
+	// Return filtered sample.
+	return (a*wa+b*wb+c*wc+d*wd+e*we)/(wa+wb+wc+wd+we);
+}
+
+// 7-tap Gaussian filter along horz line
+vec3 Horz7(vec2 pos, float off, vec2 texture_size) {
+	vec3 a=Fetch(pos,vec2(-3.0,off),texture_size);
+	vec3 b=Fetch(pos,vec2(-2.0,off),texture_size);
+	vec3 c=Fetch(pos,vec2(-1.0,off),texture_size);
+	vec3 d=Fetch(pos,vec2( 0.0,off),texture_size);
+	vec3 e=Fetch(pos,vec2( 1.0,off),texture_size);
+	vec3 f=Fetch(pos,vec2( 2.0,off),texture_size);
+	vec3 g=Fetch(pos,vec2( 3.0,off),texture_size);
+	float dst=Dist(pos, texture_size).x;
+	// Convert distance to weight.
+	float scale=hardBloomPix;
+	float wa=Gaus(dst-3.0,scale);
+	float wb=Gaus(dst-2.0,scale);
+	float wc=Gaus(dst-1.0,scale);
+	float wd=Gaus(dst+0.0,scale);
+	float we=Gaus(dst+1.0,scale);
+	float wf=Gaus(dst+2.0,scale);
+	float wg=Gaus(dst+3.0,scale);
+	// Return filtered sample.
+	return (a*wa+b*wb+c*wc+d*wd+e*we+f*wf+g*wg)/(wa+wb+wc+wd+we+wf+wg);
+}
+
+// Return scanline weight
+float Scan(vec2 pos,float off, vec2 texture_size) {
+	float dst=Dist(pos, texture_size).y;
+	return Gaus(dst+off,hardScan);
+}
+  
+  // Return scanline weight for bloom
+float BloomScan(vec2 pos,float off, vec2 texture_size) {
+	float dst=Dist(pos, texture_size).y;
+	return Gaus(dst+off,hardBloomScan);
+}
+
+// Allow nearest three lines to effect pixel
+vec3 Tri(vec2 pos, vec2 texture_size){
+	vec3 a=Horz3(pos,-1.0, texture_size);
+	vec3 b=Horz5(pos, 0.0, texture_size);
+	vec3 c=Horz3(pos, 1.0, texture_size);
+	float wa=Scan(pos,-1.0, texture_size);
+	float wb=Scan(pos, 0.0, texture_size);
+	float wc=Scan(pos, 1.0, texture_size);
+	return a*wa+b*wb+c*wc;
+}
+  
+// Small bloom
+vec3 Bloom(vec2 pos, vec2 texture_size) {
+	vec3 a=Horz5(pos,-2.0, texture_size);
+	vec3 b=Horz7(pos,-1.0, texture_size);
+	vec3 c=Horz7(pos, 0.0, texture_size);
+	vec3 d=Horz7(pos, 1.0, texture_size);
+	vec3 e=Horz5(pos, 2.0, texture_size);
+	float wa=BloomScan(pos,-2.0, texture_size);
+	float wb=BloomScan(pos,-1.0, texture_size);
+	float wc=BloomScan(pos, 0.0, texture_size);
+	float wd=BloomScan(pos, 1.0, texture_size);
+	float we=BloomScan(pos, 2.0, texture_size);
+	return a*wa+b*wb+c*wc+d*wd+e*we;
+}
+
+// Distortion of scanlines, and end of screen alpha
+vec2 Warp(vec2 pos) {
+	pos=pos*2.0-1.0;    
+	pos*=vec2(1.0+(pos.y*pos.y)*warpX,1.0+(pos.x*pos.x)*warpY);
+	return pos*0.5+0.5;
+}
+
+// Shadow mask 
+vec3 Mask(vec2 pos) {
+	vec3 mask = vec3(maskDark,maskDark,maskDark);
+
+	// Very compressed TV style shadow mask
+	if (shadowMask == 1) {
+		float mask_line = maskLight;
+		float odd=0.0;
+		if(fract(pos.x/6.0)<0.5) odd = 1.0;
+		if(fract((pos.y+odd)/2.0)<0.5) mask_line = maskDark;  
+		pos.x=fract(pos.x/3.0);
+
+		if(pos.x<0.333)mask.r=maskLight;
+		else if(pos.x<0.666)mask.g=maskLight;
+		else mask.b=maskLight;
+		mask *= mask_line;  
+	} 
+	// Aperture-grille
+	else if (shadowMask == 2) {
+		pos.x=fract(pos.x/3.0);
+
+		if(pos.x<0.333)mask.r=maskLight;
+		else if(pos.x<0.666)mask.g=maskLight;
+		else mask.b=maskLight;
+	} 
+	// Stretched VGA style shadow mask (same as prior shaders)
+	else if (shadowMask == 3) {
+		pos.x+=pos.y*3.0;
+		pos.x=fract(pos.x/6.0);
+
+		if(pos.x<0.333)mask.r=maskLight;
+		else if(pos.x<0.666)mask.g=maskLight;
+		else mask.b=maskLight;
+	}
+	// VGA style shadow mask
+	else if (shadowMask == 4) {
+		pos.xy=floor(pos.xy*vec2(1.0,0.5));
+		pos.x+=pos.y*3.0;
+		pos.x=fract(pos.x/6.0);
+
+		if(pos.x<0.333)mask.r=maskLight;
+		else if(pos.x<0.666)mask.g=maskLight;
+		else mask.b=maskLight;
+	}
+
+	return mask;
+}    
+
+vec4 crt_lottes(vec2 texture_size, vec2 video_size, vec2 output_size, vec2 tex) {
+	vec2 pos=Warp(tex.xy*(texture_size.xy/video_size.xy))*(video_size.xy/texture_size.xy);
+	vec3 outColor = Tri(pos, texture_size);
+
+	// Add Bloom
+	outColor.rgb+=Bloom(pos, texture_size)*bloomAmount;
+
+	if(shadowMask != 0) {
+		outColor.rgb*=Mask(floor(tex.xy*(texture_size.xy/video_size.xy)*output_size.xy)+vec2(0.5,0.5));
+	}
+
+	return vec4(ToSrgb(outColor.rgb),1.0);
+}
+
+void main() {
+	fragColor = crt_lottes(uTextureSize, uTextureSize, vTexCoords.zw, vTexCoords.xy);
+}
+)";
+
 	constexpr char ResizeMonochromeFs[] = R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
 
+mat4 bayerIndex = mat4(
+	vec4(0.0625, 0.5625, 0.1875, 0.6875),
+	vec4(0.8125, 0.3125, 0.9375, 0.4375),
+	vec4(0.25, 0.75, 0.125, 0.625),
+	vec4(1.0, 0.5, 0.875, 0.375));
+
 uniform sampler2D uTexture;
+
 uniform vec2 uTextureSize;
 
 in vec2 vTexCoords;
-
 out vec4 fragColor;
 
 float dither4x4(vec2 position, float brightness) {
-  int x = int(mod(position.x, 4.0));
-  int y = int(mod(position.y, 4.0));
-  int index = x + y * 4;
-  float limit = 0.0;
-
-  if (x < 8) {
-	if (index == 0) limit = 0.0625;
-	if (index == 1) limit = 0.5625;
-	if (index == 2) limit = 0.1875;
-	if (index == 3) limit = 0.6875;
-	if (index == 4) limit = 0.8125;
-	if (index == 5) limit = 0.3125;
-	if (index == 6) limit = 0.9375;
-	if (index == 7) limit = 0.4375;
-	if (index == 8) limit = 0.25;
-	if (index == 9) limit = 0.75;
-	if (index == 10) limit = 0.125;
-	if (index == 11) limit = 0.625;
-	if (index == 12) limit = 1.0;
-	if (index == 13) limit = 0.5;
-	if (index == 14) limit = 0.875;
-	if (index == 15) limit = 0.375;
-  }
-
-  return brightness + (brightness < limit ? -0.05 : 0.1);
+	float bayerValue = bayerIndex[int(position.x) % 4][int(position.y) % 4];
+	return brightness + (brightness < bayerValue ? -0.05 : 0.1);
 }
 
 void main() {

@@ -911,9 +911,9 @@ namespace Jazz2
 		_precompiledShaders[(int)PrecompiledShader::Downsample] = std::make_unique<Shader>("Downsample",
 			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::DownsampleFs);
 		_precompiledShaders[(int)PrecompiledShader::Combine] = std::make_unique<Shader>("Combine",
-			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::CombineFs);
+			Shader::LoadMode::STRING, Shaders::CombineVs, Shaders::CombineFs);
 		_precompiledShaders[(int)PrecompiledShader::CombineWithWater] = std::make_unique<Shader>("CombineWithWater",
-			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::CombineWithWaterFs);
+			Shader::LoadMode::STRING, Shaders::CombineVs, Shaders::CombineWithWaterFs);
 
 		_precompiledShaders[(int)PrecompiledShader::TexturedBackground] = std::make_unique<Shader>("TexturedBackground",
 			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundFs);
@@ -942,8 +942,12 @@ namespace Jazz2
 		_precompiledShaders[(int)PrecompiledShader::PartialWhiteMask]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedWhiteMask]);
 
 #if defined(ALLOW_RESCALE_SHADERS)
+		_precompiledShaders[(int)PrecompiledShader::ResizeHQ2x] = std::make_unique<Shader>("ResizeHQ2x",
+			Shader::LoadMode::STRING, Shaders::ResizeHQ2xVs, Shaders::ResizeHQ2xFs);
 		_precompiledShaders[(int)PrecompiledShader::Resize3xBrz] = std::make_unique<Shader>("Resize3xBrz",
 			Shader::LoadMode::STRING, Shaders::Resize3xBrzVs, Shaders::Resize3xBrzFs);
+		_precompiledShaders[(int)PrecompiledShader::ResizeCrt] = std::make_unique<Shader>("ResizeCrt",
+			Shader::LoadMode::STRING, Shaders::ResizeCrtVs, Shaders::ResizeCrtFs);
 		_precompiledShaders[(int)PrecompiledShader::ResizeMonochrome] = std::make_unique<Shader>("ResizeMonochrome",
 			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::ResizeMonochromeFs);
 #endif

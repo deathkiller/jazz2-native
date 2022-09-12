@@ -19,7 +19,7 @@ namespace nCine
 		: IGfxDevice(windowMode, glContextInfo, displayMode)
 	{
 		initGraphics();
-		initDevice();
+		initDevice(windowMode.isFullscreen, windowMode.isResizable);
 	}
 
 	GlfwGfxDevice::~GlfwGfxDevice()
@@ -38,38 +38,40 @@ namespace nCine
 		glfwSwapInterval(interval);
 	}
 
-	void GlfwGfxDevice::setResolution(int width, int height)
+	void GlfwGfxDevice::setResolution(bool fullscreen, int width, int height)
 	{
-		// change resolution only in the case it really changes
-		if (width == width_ && height == height_)
-			return;
+		GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
+		const GLFWvidmode* mode = glfwGetVideoMode(primaryMonitor);
 
-		// asking for fullscreen mode that does not change current screen resolution
-		if (width == 0 || height == 0) {
-			GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
-			const GLFWvidmode* mode = glfwGetVideoMode(primaryMonitor);
-			width_ = mode->width;
-			height_ = mode->height;
-			isFullScreen_ = true;
-			glfwSetWindowMonitor(windowHandle_, primaryMonitor, 0, 0, width_, height_, GLFW_DONT_CARE);
+		if (fullscreen) {
+			if (width == 0 || height == 0) {
+				width_ = mode->width;
+				height_ = mode->height;
+			} else {
+				width_ = width;
+				height_ = height;
+			}
+			glfwSetWindowMonitor(windowHandle_, primaryMonitor, 0, 0, width_, height_, mode->refreshRate);
 		} else {
-			width_ = width;
-			height_ = height;
-			glfwSetWindowSize(windowHandle_, width, height);
+			if (width == 0 || height == 0) {
+				if (width_ > 400 && height_ > 400) {
+					width_ = width_ * 3 / 4;
+					height_ = height_ * 3 / 4;
+				}
+			} else {
+				width_ = width;
+				height_ = height;
+			}
+			glfwSetWindowMonitor(windowHandle_, nullptr, 0, 0, width_, height_, GLFW_DONT_CARE);
+			glfwSetWindowPos(windowHandle_, (mode->width - width_) / 2, (mode->height - height_) / 2);
 		}
 	}
 
-	void GlfwGfxDevice::setFullScreen(bool fullScreen)
+	void GlfwGfxDevice::setResolutionInternal(int width, int height)
 	{
-		if (isFullScreen_ != fullScreen) {
-			isFullScreen_ = fullScreen;
-
-			// TODO: Fix this in Emscripten
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
-			GLFWmonitor* monitor = isFullScreen_ ? glfwGetPrimaryMonitor() : nullptr;
-			glfwSetWindowMonitor(windowHandle_, monitor, 0, 0, width_, height_, GLFW_DONT_CARE);
-#endif
-		}
+		width_ = width;
+		height_ = height;
+		glfwSetWindowSize(windowHandle_, width, height);
 	}
 
 	void GlfwGfxDevice::setWindowIcon(const StringView& windowIconFilename)
@@ -160,21 +162,25 @@ namespace nCine
 		FATAL_ASSERT_MSG(glfwInit() == GL_TRUE, "glfwInit() failed");
 	}
 
-	void GlfwGfxDevice::initDevice()
+	void GlfwGfxDevice::initDevice(bool isFullscreen, bool isResizable)
 	{
-		// asking for a video mode that does not change current screen resolution
-		if (width_ == 0 || height_ == 0) {
+		GLFWmonitor* monitor = nullptr;
+		if (isFullscreen) {
+			monitor = glfwGetPrimaryMonitor();
+			const GLFWvidmode* vidMode = glfwGetVideoMode(monitor);
+			glfwWindowHint(GLFW_REFRESH_RATE, vidMode->refreshRate);
+			if (width_ == 0 || height_ == 0) {
+				width_ = vidMode->width;
+				height_ = vidMode->height;
+			}
+		} else if (width_ == 0 || height_ == 0) {
 			const GLFWvidmode* vidMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 			width_ = vidMode->width;
 			height_ = vidMode->height;
 		}
 
-		GLFWmonitor* monitor = nullptr;
-		if (isFullScreen_)
-			monitor = glfwGetPrimaryMonitor();
-
 		// setting window hints and creating a window with GLFW
-		glfwWindowHint(GLFW_RESIZABLE, isResizable_ ? GLFW_TRUE : GLFW_FALSE);
+		glfwWindowHint(GLFW_RESIZABLE, isResizable ? GLFW_TRUE : GLFW_FALSE);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, static_cast<int>(glContextInfo_.majorVersion));
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, static_cast<int>(glContextInfo_.minorVersion));
 		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, glContextInfo_.debugContext ? GLFW_TRUE : GLFW_FALSE);

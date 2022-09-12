@@ -107,9 +107,9 @@ namespace Jazz2::UI::Menu
 			bool enabled;
 			switch (i) {
 				default:
-				case 0: enabled = PreferencesCache::ReduxMode; break;
-				case 1: enabled = PreferencesCache::EnableLedgeClimb; break;
-				case 2: enabled = PreferencesCache::EnableWeaponWheel; break;
+				case (int)Item::ReduxMode: enabled = PreferencesCache::ReduxMode; break;
+				case (int)Item::LedgeClimb: enabled = PreferencesCache::EnableLedgeClimb; break;
+				case (int)Item::WeaponWheel: enabled = PreferencesCache::EnableWeaponWheel; break;
 			}
 
 			_root->DrawStringShadow(enabled ? "Enabled"_s : "Disabled"_s, charOffset, center.X, center.Y + 22.0f, IMenuContainer::FontLayer - 10,
@@ -152,15 +152,15 @@ namespace Jazz2::UI::Menu
 	void GameplayEnhancementsSection::ExecuteSelected()
 	{
 		switch (_selectedIndex) {
-			case 0:
+			case (int)Item::ReduxMode:
 				if (_isInGame) {
 					return;
 				}
 				PreferencesCache::ReduxMode = !PreferencesCache::ReduxMode;
 				break;
 
-			case 1: PreferencesCache::EnableLedgeClimb = !PreferencesCache::EnableLedgeClimb; break;
-			case 2: PreferencesCache::EnableWeaponWheel = !PreferencesCache::EnableWeaponWheel; break;
+			case (int)Item::LedgeClimb: PreferencesCache::EnableLedgeClimb = !PreferencesCache::EnableLedgeClimb; break;
+			case (int)Item::WeaponWheel: PreferencesCache::EnableWeaponWheel = !PreferencesCache::EnableWeaponWheel; break;
 		}
 
 		_isDirty = true;

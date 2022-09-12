@@ -705,7 +705,7 @@ namespace Jazz2::UI
 					// TODO
 					//ControlScheme.EnableFreezeAnalog(player->_playerIndex, false);
 					//owner.WeaponWheelVisible = false;
-					player->_renderer.Initialize(ActorRendererType::Default);
+					player->_renderer.Initialize(Actors::ActorRendererType::Default);
 				}
 			}
 		}
@@ -721,7 +721,7 @@ namespace Jazz2::UI
 		// TODO
 		//ControlScheme.EnableFreezeAnalog(owner.PlayerIndex, true);
 		//owner.WeaponWheelVisible = true;
-		player->_renderer.Initialize(ActorRendererType::Outline);
+		player->_renderer.Initialize(Actors::ActorRendererType::Outline);
 
 		Vector2f center = Vector2f(ViewSize.X * 0.5f, ViewSize.Y * 0.5f);
 		float angleStep = fTwoPi / weaponCount;

@@ -38,9 +38,9 @@ namespace nCine
 #endif
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-			patchLines.append("#define __EMSCRIPTEN__\n");
+			patchLines.append("#define DEATH_TARGET_EMSCRIPTEN\n");
 #elif defined(DEATH_TARGET_ANDROID)
-			patchLines.append("#define __ANDROID__\n");
+			patchLines.append("#define DEATH_TARGET_ANDROID\n");
 #elif defined(WITH_ANGLE)
 			patchLines.append("#define WITH_ANGLE\n");
 #endif

@@ -32,7 +32,7 @@ namespace nCine
 		: IGfxDevice(windowMode, glContextInfo, displayMode)
 	{
 		initGraphics();
-		initDevice();
+		initDevice(windowMode.isFullscreen, windowMode.isResizable);
 	}
 
 	SdlGfxDevice::~SdlGfxDevice()
@@ -53,37 +53,33 @@ namespace nCine
 		SDL_GL_SetSwapInterval(interval);
 	}
 
-	void SdlGfxDevice::setResolution(int width, int height)
+	void SdlGfxDevice::setResolution(bool fullscreen, int width, int height)
 	{
-		// change resolution only in the case it really changes
-		if (width == width_ && height == height_)
-			return;
-
-		// asking for fullscreen mode that does not change current screen resolution
-		if (width == 0 || height == 0) {
-			SDL_SetWindowFullscreen(windowHandle_, SDL_WINDOW_FULLSCREEN_DESKTOP);
-			SDL_GetWindowSize(windowHandle_, &width_, &height_);
-		} else {
-			width_ = width;
-			height_ = height;
-
-			unsigned int flags = SDL_GetWindowFlags(windowHandle_);
-			if (flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
-				isFullScreen_ = true;
+		if (fullscreen) {
+			if (width == 0 || height == 0) {
+				SDL_SetWindowFullscreen(windowHandle_, SDL_WINDOW_FULLSCREEN_DESKTOP);
+				SDL_GetWindowSize(windowHandle_, &width_, &height_);
+			} else {
+				width_ = width;
+				height_ = height;
 				SDL_SetWindowFullscreen(windowHandle_, SDL_WINDOW_FULLSCREEN);
+				SDL_SetWindowSize(windowHandle_, width, height);
 			}
-			SDL_SetWindowSize(windowHandle_, width, height);
+		} else {
+			SDL_SetWindowFullscreen(windowHandle_, 0);
+			if (width != 0 && height != 0) {
+				width_ = width;
+				height_ = height;
+				SDL_SetWindowSize(windowHandle_, width, height);
+			}
 		}
 	}
 
-	void SdlGfxDevice::setFullScreen(bool fullScreen)
+	void SdlGfxDevice::setResolutionInternal(int width, int height)
 	{
-		if (isFullScreen_ != fullScreen) {
-			isFullScreen_ = fullScreen;
-
-			const int flags = isFullScreen_ ? SDL_WINDOW_FULLSCREEN : 0;
-			SDL_SetWindowFullscreen(windowHandle_, flags);
-		}
+		width_ = width;
+		height_ = height;
+		SDL_SetWindowSize(windowHandle_, width, height);
 	}
 
 	void SdlGfxDevice::setWindowIcon(const StringView& windowIconFilename)
@@ -173,7 +169,7 @@ namespace nCine
 		FATAL_ASSERT_MSG_X(!err, "SDL_Init(SDL_INIT_VIDEO) failed: %s", SDL_GetError());
 	}
 
-	void SdlGfxDevice::initDevice()
+	void SdlGfxDevice::initDevice(bool isFullscreen, bool isResizable)
 	{
 		// asking for a video mode that does not change current screen resolution
 		if (width_ == 0 || height_ == 0) {
@@ -207,20 +203,22 @@ namespace nCine
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 
 		Uint32 flags = SDL_WINDOW_OPENGL;
-		if (isFullScreen_)
-			flags |= SDL_WINDOW_FULLSCREEN;
-		else if (width_ == 0 || height_ == 0)
+		if (width_ == 0 || height_ == 0) {
 			flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+		} else if (isFullscreen) {
+			flags |= SDL_WINDOW_FULLSCREEN;
+		}
 
 		// Creating a window with SDL2
 		windowHandle_ = SDL_CreateWindow("", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width_, height_, flags);
 		FATAL_ASSERT_MSG_X(windowHandle_, "SDL_CreateWindow failed: %s", SDL_GetError());
 
-		SDL_SetWindowResizable(windowHandle_, isResizable_ ? SDL_TRUE : SDL_FALSE);
+		SDL_SetWindowResizable(windowHandle_, isResizable ? SDL_TRUE : SDL_FALSE);
 
 		// resolution should be set to current screen size
-		if (width_ == 0 || height_ == 0)
+		if (width_ == 0 || height_ == 0) {
 			SDL_GetWindowSize(windowHandle_, &width_, &height_);
+		}
 
 		glContextHandle_ = SDL_GL_CreateContext(windowHandle_);
 		FATAL_ASSERT_MSG_X(glContextHandle_, "SDL_GL_CreateContext failed: %s", SDL_GetError());

@@ -16,7 +16,9 @@ namespace Jazz2::UI::Menu
 	private:
 		enum class Item {
 			None,
+			HQ2x,
 			_3xBrz,
+			Crt,
 			Monochrome,
 
 			Count

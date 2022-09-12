@@ -124,6 +124,11 @@ namespace nCine
 		}
 	}
 
+	void Application::handleFullscreenChanged(bool isFullscreen)
+	{
+		appEventHandler_->onFullscreenChanged(isFullscreen);
+	}
+
 	///////////////////////////////////////////////////////////
 	// PROTECTED FUNCTIONS
 	///////////////////////////////////////////////////////////

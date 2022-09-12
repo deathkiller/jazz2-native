@@ -90,20 +90,20 @@ namespace Jazz2
 		void OnInitializeViewport(int width, int height) override;
 		void OnTouchEvent(const nCine::TouchEvent& event) override;
 
-		void AddActor(const std::shared_ptr<ActorBase>& actor) override;
+		void AddActor(const std::shared_ptr<Actors::ActorBase>& actor) override;
 
 		std::shared_ptr<AudioBufferPlayer> PlaySfx(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain = 1.0f, float pitch = 1.0f) override;
 		std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
-		void WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor) override;
-		bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, TileCollisionParams& params, ActorBase** collider) override;
-		void FindCollisionActorsByAABB(ActorBase* self, const AABBf& aabb, const std::function<bool(ActorBase*)>& callback) override;
-		void FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(ActorBase*)>& callback) override;
-		void GetCollidingPlayers(const AABBf& aabb, const std::function<bool(ActorBase*)> callback) override;
+		void WarpCameraToTarget(const std::shared_ptr<Actors::ActorBase>& actor) override;
+		bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, TileCollisionParams& params, Actors::ActorBase** collider) override;
+		void FindCollisionActorsByAABB(Actors::ActorBase* self, const AABBf& aabb, const std::function<bool(Actors::ActorBase*)>& callback) override;
+		void FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(Actors::ActorBase*)>& callback) override;
+		void GetCollidingPlayers(const AABBf& aabb, const std::function<bool(Actors::ActorBase*)> callback) override;
 
 		void BroadcastTriggeredEvent(EventType eventType, uint8_t* eventParams) override;
 		void BeginLevelChange(ExitType exitType, const StringView& nextLevel) override;
 		void HandleGameOver() override;
-		bool HandlePlayerDied(const std::shared_ptr<ActorBase>& player) override;
+		bool HandlePlayerDied(const std::shared_ptr<Actors::ActorBase>& player) override;
 		void SetCheckpoint(Vector2f pos) override;
 		void RollbackToCheckpoint() override;
 		void ActivateSugarRush() override;
@@ -230,7 +230,7 @@ namespace Jazz2
 		std::unique_ptr<Camera> _camera;
 		std::unique_ptr<Texture> _noiseTexture;
 
-		SmallVector<std::shared_ptr<ActorBase>, 0> _actors;
+		SmallVector<std::shared_ptr<Actors::ActorBase>, 0> _actors;
 		SmallVector<Actors::Player*, LevelInitialization::MaxPlayerCount> _players;
 
 		String _levelFileName;

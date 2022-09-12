@@ -21,7 +21,7 @@ namespace nCine
 		inline virtual void onTextInput(const TextInputEvent& event) {}
 		/// Callback function called every time a touch event is made
 		inline virtual void onTouchEvent(const TouchEvent& event) {}
-#ifdef DEATH_TARGET_ANDROID
+#if defined(DEATH_TARGET_ANDROID)
 		/// Callback function called at fixed time with the updated reading from the accelerometer sensor
 		inline virtual void onAcceleration(const AccelerometerEvent& event) {}
 #endif

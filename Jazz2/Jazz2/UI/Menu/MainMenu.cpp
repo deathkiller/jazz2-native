@@ -490,16 +490,16 @@ namespace Jazz2::UI::Menu
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(_canvas->ViewSize.X, _canvas->ViewSize.Y);
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
-		command->material().uniform("ViewSize")->setFloatValue(_canvas->ViewSize.X, _canvas->ViewSize.Y);
-		command->material().uniform("shift")->setFloatVector(_texturedBackgroundPos.Data());
+		command->material().uniform("uViewSize")->setFloatValue(_canvas->ViewSize.X, _canvas->ViewSize.Y);
+		command->material().uniform("uShift")->setFloatVector(_texturedBackgroundPos.Data());
 		if (_texturedBackgroundLayer.Visible) {
 			// TODO: horizonColor
-			command->material().uniform("horizonColor")->setFloatValue(/*layer.BackgroundColor.X*/0.098f, /*layer.BackgroundColor.Y*/0.35f, /*layer.BackgroundColor.Z*/1.0f);
+			command->material().uniform("uHorizonColor")->setFloatValue(/*layer.BackgroundColor.X*/0.098f, /*layer.BackgroundColor.Y*/0.35f, /*layer.BackgroundColor.Z*/1.0f);
 		} else {
 			// Visible is false only if textured background cannot be prepared, so make screen completely black instead
-			command->material().uniform("horizonColor")->setFloatValue(0.0f, 0.0f, 0.0f);
+			command->material().uniform("uHorizonColor")->setFloatVector(Vector3f::Zero.Data());
 		}
-		command->material().uniform("parallaxStarsEnabled")->setFloatValue(0.0f);
+		command->material().uniform("uParallaxStarsEnabled")->setFloatValue(0.0f);
 
 		command->setTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
 		command->material().setTexture(*target);

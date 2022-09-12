@@ -64,8 +64,9 @@ namespace Jazz2
 			uint8_t version = s->ReadValue<uint8_t>();
 			if (signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::ConfigFile && version == FileVersion) {
 				BoolOptions boolOptions = (BoolOptions)s->ReadValue<uint64_t>();
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
 				EnableFullscreen = ((boolOptions & BoolOptions::EnableFullscreen) == BoolOptions::EnableFullscreen);
-				EnableVsync = ((boolOptions & BoolOptions::EnableVsync) == BoolOptions::EnableVsync);
+#endif
 				ShowFps = ((boolOptions & BoolOptions::ShowFps) == BoolOptions::ShowFps);
 				ReduxMode = ((boolOptions & BoolOptions::ReduxMode) == BoolOptions::ReduxMode);
 				EnableLedgeClimb = ((boolOptions & BoolOptions::EnableLedgeClimb) == BoolOptions::EnableLedgeClimb);
@@ -169,15 +170,12 @@ namespace Jazz2
 			} else if (arg == "/fullscreen"_s) {
 				EnableFullscreen = true;
 			} else if (arg == "/no-vsync"_s) {
+				// V-Sync can be turned off only with command-line parameter
 				EnableVsync = false;
 			} else if (arg == "/no-rgb"_s) {
 				EnableRgbLights = false;
 			} else if (arg == "/no-rescale"_s) {
 				ActiveRescaleMode = RescaleMode::None;
-			} else if (arg == "/3xbrz"_s) {
-				ActiveRescaleMode = RescaleMode::_3xBrz;
-			} else if (arg == "/monochrome"_s) {
-				ActiveRescaleMode = RescaleMode::Monochrome;
 			} else if (arg == "/fps"_s) {
 				ShowFps = true;
 			} else if (arg == "/mute"_s) {
@@ -201,7 +199,6 @@ namespace Jazz2
 
 		BoolOptions boolOptions = BoolOptions::None;
 		if (EnableFullscreen) boolOptions |= BoolOptions::EnableFullscreen;
-		if (EnableVsync) boolOptions |= BoolOptions::EnableVsync;
 		if (ShowFps) boolOptions |= BoolOptions::ShowFps;
 		if (ReduxMode) boolOptions |= BoolOptions::ReduxMode;
 		if (EnableLedgeClimb) boolOptions |= BoolOptions::EnableLedgeClimb;

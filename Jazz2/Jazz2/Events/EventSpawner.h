@@ -10,16 +10,16 @@ namespace Jazz2::Events
 	class EventSpawner
 	{
 	public:
-		using CreateDelegate = std::shared_ptr<ActorBase> (*)(const ActorActivationDetails& details);
-		using PreloadDelegate = void (*)(const ActorActivationDetails& details);
+		using CreateDelegate = std::shared_ptr<Actors::ActorBase> (*)(const Actors::ActorActivationDetails& details);
+		using PreloadDelegate = void (*)(const Actors::ActorActivationDetails& details);
 
 		static constexpr int SpawnParamsSize = 16;
 
 		EventSpawner(ILevelHandler* levelHandler);
 
 		void PreloadEvent(EventType type, uint8_t* spawnParams);
-		std::shared_ptr<ActorBase> SpawnEvent(EventType type, uint8_t* spawnParams, ActorState flags, int x, int y, int z);
-		std::shared_ptr<ActorBase> SpawnEvent(EventType type, uint8_t* spawnParams, ActorState flags, const Vector3i& pos);
+		std::shared_ptr<Actors::ActorBase> SpawnEvent(EventType type, uint8_t* spawnParams, Actors::ActorState flags, int x, int y, int z);
+		std::shared_ptr<Actors::ActorBase> SpawnEvent(EventType type, uint8_t* spawnParams, Actors::ActorState flags, const Vector3i& pos);
 
 	private:
 		struct SpawnableEvent {

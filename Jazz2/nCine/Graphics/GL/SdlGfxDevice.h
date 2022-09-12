@@ -28,9 +28,7 @@ namespace nCine {
 
 		void setSwapInterval(int interval) override;
 
-		void setResolution(int width, int height) override;
-
-		void setFullScreen(bool fullScreen) override;
+		void setResolution(bool fullscreen, int width = 0, int height = 0) override;
 
 		inline void update() override {
 			SDL_GL_SwapWindow(windowHandle_);
@@ -58,6 +56,9 @@ namespace nCine {
 			return windowHandle_;
 		}
 
+	protected:
+		void setResolutionInternal(int width, int height) override;
+
 	private:
 		/// SDL2 window handle
 		static SDL_Window* windowHandle_;
@@ -72,7 +73,7 @@ namespace nCine {
 		/// Initilizes the video subsystem (SDL)
 		void initGraphics();
 		/// Initilizes the OpenGL graphic context
-		void initDevice();
+		void initDevice(bool isFullscreen, bool isResizable);
 
 		void convertVideoModeInfo(const SDL_DisplayMode& sdlVideoMode, IGfxDevice::VideoMode& videoMode) const;
 

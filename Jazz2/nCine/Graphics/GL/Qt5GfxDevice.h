@@ -18,9 +18,7 @@ namespace nCine
 
 		void setSwapInterval(int interval) override;
 
-		void setResolution(int width, int height) override;
-
-		void setFullScreen(bool fullScreen) override;
+		void setResolution(bool fullscreen, int width = 0, int height = 0) override;
 
 		inline void update() override {}
 
@@ -46,8 +44,12 @@ namespace nCine
 		void resetTextureBinding();
 		void bindDefaultDrawFramebufferObject();
 
+	protected:
+		void setResolutionInternal(int width, int height) override;
+
 	private:
 		Qt5Widget& widget_;
+		bool isResizable_;
 
 		/// Deleted copy constructor
 		Qt5GfxDevice(const Qt5GfxDevice&) = delete;
@@ -55,7 +57,7 @@ namespace nCine
 		Qt5GfxDevice& operator=(const Qt5GfxDevice&) = delete;
 
 		/// Initilizes the OpenGL graphic context
-		void initDevice();
+		void initDevice(bool isFullscreen);
 
 		friend class Qt5InputManager;
 	};

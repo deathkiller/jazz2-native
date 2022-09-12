@@ -13,7 +13,9 @@ namespace Jazz2
 {
 	enum class RescaleMode {
 		None,
+		HQ2x,
 		_3xBrz,
+		Crt,
 		Monochrome
 	};
 
@@ -78,8 +80,7 @@ namespace Jazz2
 			None = 0x00,
 
 			EnableFullscreen = 0x01,
-			EnableVsync = 0x02,
-			ShowFps = 0x04,
+			ShowFps = 0x02,
 
 			ReduxMode = 0x100,
 			EnableLedgeClimb = 0x200,

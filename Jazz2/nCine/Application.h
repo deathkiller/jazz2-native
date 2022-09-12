@@ -121,6 +121,8 @@ namespace nCine
 		/// Resizes the screen viewport, if exists
 		void resizeScreenViewport(int width, int height);
 
+		void handleFullscreenChanged(bool isFullscreen);
+
 		/// Returns the value of the suspension flag
 		/*! If `true` the application is suspended, it will neither update nor receive events */
 		inline bool isSuspended() const {

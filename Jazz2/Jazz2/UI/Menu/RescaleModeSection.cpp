@@ -9,7 +9,9 @@ namespace Jazz2::UI::Menu
 		_animation(0.0f)
 	{
 		_items[(int)Item::None].Name = "None / Pixel-perfect"_s;
+		_items[(int)Item::HQ2x].Name = "HQ2x"_s;
 		_items[(int)Item::_3xBrz].Name = "3xBRZ"_s;
+		_items[(int)Item::Crt].Name = "CRT"_s;
 		_items[(int)Item::Monochrome].Name = "Monochrome"_s;
 	}
 
@@ -119,13 +121,18 @@ namespace Jazz2::UI::Menu
 		switch (_selectedIndex) {
 			default:
 			case (int)Item::None: newMode = RescaleMode::None; break;
+			case (int)Item::HQ2x: newMode = RescaleMode::HQ2x; break;
 			case (int)Item::_3xBrz: newMode = RescaleMode::_3xBrz; break;
+			case (int)Item::Crt: newMode = RescaleMode::Crt; break;
 			case (int)Item::Monochrome: newMode = RescaleMode::Monochrome; break;
 		}
 
-		PreferencesCache::ActiveRescaleMode = newMode;
-		PreferencesCache::Save();
-		_root->ApplyPreferencesChanges();
+		if (PreferencesCache::ActiveRescaleMode != newMode) {
+			PreferencesCache::ActiveRescaleMode = newMode;
+			PreferencesCache::Save();
+			_root->ApplyPreferencesChanges();
+		}
+		
 		_root->LeaveSection();
 	}
 }

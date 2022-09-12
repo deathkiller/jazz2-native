@@ -10,11 +10,12 @@
 namespace Jazz2
 {
 	class ILevelHandler;
+	class LevelHandler;
+}
 
-	namespace Actors
-	{
-		class Player;
-	}
+namespace Jazz2::Actors
+{
+	class Player;
 
 	enum class ActorState {
 		None = 0x00,
@@ -86,7 +87,7 @@ namespace Jazz2
 
 	class ActorBase : public std::enable_shared_from_this<ActorBase>
 	{
-		friend class LevelHandler;
+		friend class Jazz2::LevelHandler;
 
 	public:
 		ActorBase();

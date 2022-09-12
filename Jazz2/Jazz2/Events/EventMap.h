@@ -16,7 +16,7 @@ namespace Jazz2::Events
 		void CreateCheckpointForRollback();
 		void RollbackToCheckpoint();
 
-		void StoreTileEvent(int x, int y, EventType eventType, ActorState eventFlags = ActorState::None, uint8_t* tileParams = nullptr);
+		void StoreTileEvent(int x, int y, EventType eventType, Actors::ActorState eventFlags = Actors::ActorState::None, uint8_t* tileParams = nullptr);
 		void PreloadEventsAsync();
 
 		void ProcessGenerators(float timeMult);
@@ -32,14 +32,14 @@ namespace Jazz2::Events
 		Vector2f GetWarpTarget(uint32_t id);
 
 		void ReadEvents(const std::unique_ptr<IFileStream>& s, const std::unique_ptr<Tiles::TileMap>& tileMap, GameDifficulty difficulty);
-		void StoreTileEvent(int x, int y, EventType eventType, ActorState eventFlags, uint16_t* tileParams);
+		void StoreTileEvent(int x, int y, EventType eventType, Actors::ActorState eventFlags, uint16_t* tileParams);
 		void AddWarpTarget(uint16_t id, int x, int y);
 		void AddSpawnPosition(uint8_t typeMask, int x, int y);
 
 	private:
 		struct EventTile {
 			EventType Event;
-			ActorState EventFlags;
+			Actors::ActorState EventFlags;
 			uint8_t EventParams[16];
 			bool IsEventActive;
 		};
@@ -52,7 +52,7 @@ namespace Jazz2::Events
 			uint8_t Delay;
 			float TimeLeft;
 
-			std::shared_ptr<ActorBase> SpawnedActor;
+			std::shared_ptr<Actors::ActorBase> SpawnedActor;
 		};
 
 		struct SpawnPoint {

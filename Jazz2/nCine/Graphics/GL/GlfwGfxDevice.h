@@ -36,9 +36,7 @@ namespace nCine
 
 		void setSwapInterval(int interval) override;
 
-		void setResolution(int width, int height) override;
-
-		void setFullScreen(bool fullScreen) override;
+		void setResolution(bool fullscreen, int width = 0, int height = 0) override;
 
 		inline void update() override {
 			glfwSwapBuffers(windowHandle_);
@@ -62,6 +60,9 @@ namespace nCine
 		bool setVideoMode(unsigned int index) override;
 		void updateVideoModes() override;
 
+	protected:
+		void setResolutionInternal(int width, int height) override;
+
 	private:
 		/// GLFW3 window handle
 		static GLFWwindow* windowHandle_;
@@ -74,7 +75,7 @@ namespace nCine
 		/// Initilizes the video subsystem (GLFW)
 		void initGraphics();
 		/// Initilizes the OpenGL graphic context
-		void initDevice();
+		void initDevice(bool isFullscreen, bool isResizable);
 
 		void convertVideoModeInfo(const GLFWvidmode& glfwVideoMode, IGfxDevice::VideoMode& videoMode) const;
 

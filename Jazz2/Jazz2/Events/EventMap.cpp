@@ -63,8 +63,8 @@ namespace Jazz2::Events
 					if (tile.Event == EventType::AreaWeather) {
 						_levelHandler->SetWeather((WeatherType)tile.EventParams[0], tile.EventParams[1]);
 					} else if (tile.Event != EventType::Generator) {
-						ActorState flags = ActorState::IsCreatedFromEventMap | tile.EventFlags;
-						std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(tile.Event, tile.EventParams, flags, x, y, ILevelHandler::MainPlaneZ);
+						Actors::ActorState flags = Actors::ActorState::IsCreatedFromEventMap | tile.EventFlags;
+						std::shared_ptr<Actors::ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(tile.Event, tile.EventParams, flags, x, y, ILevelHandler::MainPlaneZ);
 						if (actor != nullptr) {
 							_levelHandler->AddActor(actor);
 						}
@@ -74,7 +74,7 @@ namespace Jazz2::Events
 		}
 	}
 
-	void EventMap::StoreTileEvent(int x, int y, EventType eventType, ActorState eventFlags, uint8_t* tileParams)
+	void EventMap::StoreTileEvent(int x, int y, EventType eventType, Actors::ActorState eventFlags, uint8_t* tileParams)
 	{
 		if (eventType == EventType::Empty && (x < 0 || y < 0 || x >= _layoutSize.X || y >= _layoutSize.Y)) {
 			return;
@@ -135,7 +135,7 @@ namespace Jazz2::Events
 					int y = generator.EventPos / _layoutSize.X;
 
 					generator.SpawnedActor = _levelHandler->EventSpawner()->SpawnEvent(generator.Event,
-						generator.EventParams, ActorState::IsFromGenerator, x, y, ILevelHandler::SpritePlaneZ);
+						generator.EventParams, Actors::ActorState::IsFromGenerator, x, y, ILevelHandler::SpritePlaneZ);
 					if (generator.SpawnedActor != nullptr) {
 						_levelHandler->AddActor(generator.SpawnedActor);
 					}
@@ -171,12 +171,12 @@ namespace Jazz2::Events
 					if (tile.Event == EventType::AreaWeather) {
 						_levelHandler->SetWeather((WeatherType)tile.EventParams[0], tile.EventParams[1]);
 					} else if (tile.Event != EventType::Generator) {
-						ActorState flags = ActorState::IsCreatedFromEventMap | tile.EventFlags;
+						Actors::ActorState flags = Actors::ActorState::IsCreatedFromEventMap | tile.EventFlags;
 						if (allowAsync) {
-							flags |= ActorState::Async;
+							flags |= Actors::ActorState::Async;
 						}
 
-						std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(tile.Event, tile.EventParams, flags, x, y, ILevelHandler::SpritePlaneZ);
+						std::shared_ptr<Actors::ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(tile.Event, tile.EventParams, flags, x, y, ILevelHandler::SpritePlaneZ);
 						if (actor != nullptr) {
 							_levelHandler->AddActor(actor);
 						}
@@ -322,7 +322,7 @@ namespace Jazz2::Events
 					memset(eventParams, 0, sizeof(eventParams));
 				}
 
-				ActorState actorFlags = (ActorState)(eventFlags & 0x04);
+				Actors::ActorState actorFlags = (Actors::ActorState)(eventFlags & 0x04);
 
 				// Flag 0x02: Generator
 				if ((eventFlags & 0x02) != 0) {
@@ -394,7 +394,7 @@ namespace Jazz2::Events
 		std::memcpy(_eventLayoutForRollback.data(), _eventLayout.data(), _eventLayout.size() * sizeof(EventTile));
 	}
 
-	void EventMap::StoreTileEvent(int x, int y, EventType eventType, ActorState eventFlags, uint16_t* tileParams)
+	void EventMap::StoreTileEvent(int x, int y, EventType eventType, Actors::ActorState eventFlags, uint16_t* tileParams)
 	{
 		if (eventType == EventType::Empty && (x < 0 || y < 0 || x >= _layoutSize.X || y >= _layoutSize.Y )) {
 			return;

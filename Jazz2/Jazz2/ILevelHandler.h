@@ -50,27 +50,27 @@ namespace Jazz2
 		virtual float GetAmbientLight() const = 0;
 		virtual void SetAmbientLight(float value) = 0;
 
-		virtual void AddActor(const std::shared_ptr<ActorBase>& actor) = 0;
+		virtual void AddActor(const std::shared_ptr<Actors::ActorBase>& actor) = 0;
 
 		virtual std::shared_ptr<AudioBufferPlayer> PlaySfx(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain = 1.0f, float pitch = 1.0f) = 0;
 		virtual std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) = 0;
-		virtual void WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor) = 0;
-		virtual bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, TileCollisionParams& params, ActorBase** collider) = 0;
+		virtual void WarpCameraToTarget(const std::shared_ptr<Actors::ActorBase>& actor) = 0;
+		virtual bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, TileCollisionParams& params, Actors::ActorBase** collider) = 0;
 
-		bool IsPositionEmpty(ActorBase* self, const AABBf& aabb, TileCollisionParams& params)
+		bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, TileCollisionParams& params)
 		{
-			ActorBase* collider;
+			Actors::ActorBase* collider;
 			return IsPositionEmpty(self, aabb, params, &collider);
 		}
 
-		virtual void FindCollisionActorsByAABB(ActorBase* self, const AABBf& aabb, const std::function<bool(ActorBase*)>& callback) = 0;
-		virtual void FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(ActorBase*)>& callback) = 0;
-		virtual void GetCollidingPlayers(const AABBf& aabb, const std::function<bool(ActorBase*)> callback) = 0;
+		virtual void FindCollisionActorsByAABB(Actors::ActorBase* self, const AABBf& aabb, const std::function<bool(Actors::ActorBase*)>& callback) = 0;
+		virtual void FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(Actors::ActorBase*)>& callback) = 0;
+		virtual void GetCollidingPlayers(const AABBf& aabb, const std::function<bool(Actors::ActorBase*)> callback) = 0;
 
 		virtual void BroadcastTriggeredEvent(EventType eventType, uint8_t* eventParams) = 0;
 		virtual void BeginLevelChange(ExitType exitType, const StringView& nextLevel) = 0;
 		virtual void HandleGameOver() = 0;
-		virtual bool HandlePlayerDied(const std::shared_ptr<ActorBase>& player) = 0;
+		virtual bool HandlePlayerDied(const std::shared_ptr<Actors::ActorBase>& player) = 0;
 		virtual void SetCheckpoint(Vector2f pos) = 0;
 		virtual void RollbackToCheckpoint() = 0;
 		virtual void ActivateSugarRush() = 0;

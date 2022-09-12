@@ -14,7 +14,7 @@
 
 using namespace nCine;
 
-namespace Jazz2
+namespace Jazz2::Actors
 {
 	ActorBase::ActorBase()
 		:

@@ -604,11 +604,11 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::AddActor(const std::shared_ptr<ActorBase>& actor)
+	void LevelHandler::AddActor(const std::shared_ptr<Actors::ActorBase>& actor)
 	{
 		actor->SetParent(_rootNode.get());
 
-		if (!actor->GetState(ActorState::ForceDisableCollisions)) {
+		if (!actor->GetState(Actors::ActorState::ForceDisableCollisions)) {
 			actor->UpdateAABB();
 			actor->CollisionProxyID = _collisions.CreateProxy(actor->AABB, actor.get());
 		}
@@ -659,7 +659,7 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::WarpCameraToTarget(const std::shared_ptr<ActorBase>& actor)
+	void LevelHandler::WarpCameraToTarget(const std::shared_ptr<Actors::ActorBase>& actor)
 	{
 		// TODO: Allow multiple cameras
 		if (_players[0] != actor.get()) {
@@ -675,13 +675,13 @@ namespace Jazz2
 		_cameraDistanceFactor.Y = 0.0f;
 	}
 
-	bool LevelHandler::IsPositionEmpty(ActorBase* self, const AABBf& aabb, TileCollisionParams& params, ActorBase** collider)
+	bool LevelHandler::IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, TileCollisionParams& params, Actors::ActorBase** collider)
 	{
 		*collider = nullptr;
 
-		if (self->GetState(ActorState::CollideWithTileset)) {
+		if (self->GetState(Actors::ActorState::CollideWithTileset)) {
 			if (_tileMap != nullptr) {
-				if (self->GetState(ActorState::CollideWithTilesetReduced) && aabb.B - aabb.T >= 20.0f) {
+				if (self->GetState(Actors::ActorState::CollideWithTilesetReduced) && aabb.B - aabb.T >= 20.0f) {
 					// If hitbox height is larger than 20px, check bottom and top separately (and top only if going upwards)
 					AABBf aabbTop = aabb;
 					aabbTop.B = aabbTop.T + 6.0f;
@@ -705,14 +705,14 @@ namespace Jazz2
 		}
 
 		// Check for solid objects
-		if (self->GetState(ActorState::CollideWithSolidObjects)) {
-			ActorBase* colliderActor = nullptr;
-			FindCollisionActorsByAABB(self, aabb, [&](ActorBase* actor) -> bool {
-				if ((actor->GetState() & (ActorState::IsSolidObject | ActorState::IsDestroyed)) != ActorState::IsSolidObject) {
+		if (self->GetState(Actors::ActorState::CollideWithSolidObjects)) {
+			Actors::ActorBase* colliderActor = nullptr;
+			FindCollisionActorsByAABB(self, aabb, [&](Actors::ActorBase* actor) -> bool {
+				if ((actor->GetState() & (Actors::ActorState::IsSolidObject | Actors::ActorState::IsDestroyed)) != Actors::ActorState::IsSolidObject) {
 					return true;
 				}
 
-				if (self->GetState(ActorState::CollideWithSolidObjectsBelow) &&
+				if (self->GetState(Actors::ActorState::CollideWithSolidObjectsBelow) &&
 					self->AABBInner.B > (actor->AABBInner.T + actor->AABBInner.B) * 0.5f) {
 					return true;
 				}
@@ -736,17 +736,17 @@ namespace Jazz2
 		return (*collider == nullptr);
 	}
 
-	void LevelHandler::FindCollisionActorsByAABB(ActorBase* self, const AABBf& aabb, const std::function<bool(ActorBase*)>& callback)
+	void LevelHandler::FindCollisionActorsByAABB(Actors::ActorBase* self, const AABBf& aabb, const std::function<bool(Actors::ActorBase*)>& callback)
 	{
 		struct QueryHelper {
 			const LevelHandler* Handler;
-			const ActorBase* Self;
+			const Actors::ActorBase* Self;
 			const AABBf& AABB;
-			const std::function<bool(ActorBase*)>& Callback;
+			const std::function<bool(Actors::ActorBase*)>& Callback;
 
 			bool OnCollisionQuery(int32_t nodeId) {
-				ActorBase* actor = (ActorBase*)Handler->_collisions.GetUserData(nodeId);
-				if (Self == actor || (actor->GetState() & (ActorState::CollideWithOtherActors | ActorState::IsDestroyed)) != ActorState::CollideWithOtherActors) {
+				Actors::ActorBase* actor = (Actors::ActorBase*)Handler->_collisions.GetUserData(nodeId);
+				if (Self == actor || (actor->GetState() & (Actors::ActorState::CollideWithOtherActors | Actors::ActorState::IsDestroyed)) != Actors::ActorState::CollideWithOtherActors) {
 					return true;
 				}
 				if (actor->IsCollidingWith(AABB)) {
@@ -760,7 +760,7 @@ namespace Jazz2
 		_collisions.Query(&helper, aabb);
 	}
 
-	void LevelHandler::FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(ActorBase*)>& callback)
+	void LevelHandler::FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(Actors::ActorBase*)>& callback)
 	{
 		AABBf aabb = AABBf(x - radius, y - radius, x + radius, y + radius);
 		float radiusSquared = (radius * radius);
@@ -769,11 +769,11 @@ namespace Jazz2
 			const LevelHandler* Handler;
 			const float x, y;
 			const float RadiusSquared;
-			const std::function<bool(ActorBase*)>& Callback;
+			const std::function<bool(Actors::ActorBase*)>& Callback;
 
 			bool OnCollisionQuery(int32_t nodeId) {
-				ActorBase* actor = (ActorBase*)Handler->_collisions.GetUserData(nodeId);
-				if ((actor->GetState() & (ActorState::CollideWithOtherActors | ActorState::IsDestroyed)) != ActorState::CollideWithOtherActors) {
+				Actors::ActorBase* actor = (Actors::ActorBase*)Handler->_collisions.GetUserData(nodeId);
+				if ((actor->GetState() & (Actors::ActorState::CollideWithOtherActors | Actors::ActorState::IsDestroyed)) != Actors::ActorState::CollideWithOtherActors) {
 					return true;
 				}
 
@@ -799,7 +799,7 @@ namespace Jazz2
 		_collisions.Query(&helper, aabb);
 	}
 
-	void LevelHandler::GetCollidingPlayers(const AABBf& aabb, const std::function<bool(ActorBase*)> callback)
+	void LevelHandler::GetCollidingPlayers(const AABBf& aabb, const std::function<bool(Actors::ActorBase*)> callback)
 	{
 		for (auto& player : _players) {
 			if (aabb.Overlaps(player->AABB)) {
@@ -882,7 +882,7 @@ namespace Jazz2
 		_root->GoToMainMenu(false);
 	}
 
-	bool LevelHandler::HandlePlayerDied(const std::shared_ptr<ActorBase>& player)
+	bool LevelHandler::HandlePlayerDied(const std::shared_ptr<Actors::ActorBase>& player)
 	{
 		if (_activeBoss != nullptr) {
 			if (_activeBoss->OnPlayerDied()) {
@@ -1095,7 +1095,7 @@ namespace Jazz2
 	{
 		auto actor = _actors.begin();
 		while (actor != _actors.end()) {
-			if ((*actor)->GetState(ActorState::IsDestroyed)) {
+			if ((*actor)->GetState(Actors::ActorState::IsDestroyed)) {
 				if ((*actor)->CollisionProxyID != Collisions::NullNode) {
 					_collisions.DestroyProxy((*actor)->CollisionProxyID);
 					(*actor)->CollisionProxyID = Collisions::NullNode;
@@ -1105,14 +1105,14 @@ namespace Jazz2
 				continue;
 			}
 			
-			if ((*actor)->GetState(ActorState::IsDirty)) {
+			if ((*actor)->GetState(Actors::ActorState::IsDirty)) {
 				if ((*actor)->CollisionProxyID == Collisions::NullNode) {
 					continue;
 				}
 
 				(*actor)->UpdateAABB();
 				_collisions.MoveProxy((*actor)->CollisionProxyID, (*actor)->AABB, (*actor)->_speed * timeMult);
-				(*actor)->SetState(ActorState::IsDirty, false);
+				(*actor)->SetState(Actors::ActorState::IsDirty, false);
 
 #if _DEBUG
 				_debugActorDirtyCount++;
@@ -1123,15 +1123,15 @@ namespace Jazz2
 
 		struct UpdatePairsHelper {
 			void OnPairAdded(void* proxyA, void* proxyB) {
-				ActorBase* actorA = (ActorBase*)proxyA;
-				ActorBase* actorB = (ActorBase*)proxyB;
-				if (((actorA->GetState() | actorB->GetState()) & (ActorState::CollideWithOtherActors | ActorState::IsDestroyed)) != ActorState::CollideWithOtherActors) {
+				Actors::ActorBase* actorA = (Actors::ActorBase*)proxyA;
+				Actors::ActorBase* actorB = (Actors::ActorBase*)proxyB;
+				if (((actorA->GetState() | actorB->GetState()) & (Actors::ActorState::CollideWithOtherActors | Actors::ActorState::IsDestroyed)) != Actors::ActorState::CollideWithOtherActors) {
 					return;
 				}
 
 				if (actorA->IsCollidingWith(actorB)) {
-					std::shared_ptr actorSharedA = actorA->shared_from_this();
-					std::shared_ptr actorSharedB = actorB->shared_from_this();
+					std::shared_ptr<Actors::ActorBase> actorSharedA = actorA->shared_from_this();
+					std::shared_ptr<Actors::ActorBase> actorSharedB = actorB->shared_from_this();
 					if (!actorSharedA->OnHandleCollision(actorSharedB->shared_from_this())) {
 						actorSharedB->OnHandleCollision(actorSharedA->shared_from_this());
 					}
@@ -1568,15 +1568,15 @@ namespace Jazz2
 		if (textureUniform && textureUniform->intValue(0) != 0) {
 			textureUniform->setIntValue(0); // GL_TEXTURE0
 		}
-		GLUniformCache* lightTexUniform = _renderCommand.material().uniform("lightTex");
+		GLUniformCache* lightTexUniform = _renderCommand.material().uniform("uTextureLighting");
 		if (lightTexUniform && lightTexUniform->intValue(0) != 1) {
 			lightTexUniform->setIntValue(1); // GL_TEXTURE1
 		}
-		GLUniformCache* blurHalfTexUniform = _renderCommand.material().uniform("blurHalfTex");
+		GLUniformCache* blurHalfTexUniform = _renderCommand.material().uniform("uTextureBlurHalf");
 		if (blurHalfTexUniform && blurHalfTexUniform->intValue(0) != 2) {
 			blurHalfTexUniform->setIntValue(2); // GL_TEXTURE2
 		}
-		GLUniformCache* blurQuarterTexUniform = _renderCommand.material().uniform("blurQuarterTex");
+		GLUniformCache* blurQuarterTexUniform = _renderCommand.material().uniform("uTextureBlurQuarter");
 		if (blurQuarterTexUniform && blurQuarterTexUniform->intValue(0) != 3) {
 			blurQuarterTexUniform->setIntValue(3); // GL_TEXTURE3
 		}
@@ -1590,19 +1590,19 @@ namespace Jazz2
 		if (textureUniform && textureUniform->intValue(0) != 0) {
 			textureUniform->setIntValue(0); // GL_TEXTURE0
 		}
-		lightTexUniform = _renderCommandWithWater.material().uniform("lightTex");
+		lightTexUniform = _renderCommandWithWater.material().uniform("uTextureLighting");
 		if (lightTexUniform && lightTexUniform->intValue(0) != 1) {
 			lightTexUniform->setIntValue(1); // GL_TEXTURE1
 		}
-		blurHalfTexUniform = _renderCommandWithWater.material().uniform("blurHalfTex");
+		blurHalfTexUniform = _renderCommandWithWater.material().uniform("uTextureBlurHalf");
 		if (blurHalfTexUniform && blurHalfTexUniform->intValue(0) != 2) {
 			blurHalfTexUniform->setIntValue(2); // GL_TEXTURE2
 		}
-		blurQuarterTexUniform = _renderCommandWithWater.material().uniform("blurQuarterTex");
+		blurQuarterTexUniform = _renderCommandWithWater.material().uniform("uTextureBlurQuarter");
 		if (blurQuarterTexUniform && blurQuarterTexUniform->intValue(0) != 3) {
 			blurQuarterTexUniform->setIntValue(3); // GL_TEXTURE3
 		}
-		GLUniformCache* displacementTexUniform = _renderCommandWithWater.material().uniform("displacementTex");
+		GLUniformCache* displacementTexUniform = _renderCommandWithWater.material().uniform("uTextureDisplacement");
 		if (displacementTexUniform && displacementTexUniform->intValue(0) != 4) {
 			displacementTexUniform->setIntValue(4); // GL_TEXTURE4
 		}
@@ -1627,14 +1627,12 @@ namespace Jazz2
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(_size.X, _size.Y);
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 
-		command.material().uniform("ambientColor")->setFloatVector(_owner->_ambientColor.Data());
+		command.material().uniform("uAmbientColor")->setFloatVector(_owner->_ambientColor.Data());
+		command.material().uniform("uTime")->setFloatValue(_owner->_levelTime * 0.0018f);
 
 		if (viewHasWater) {
-			command.material().uniform("waterLevel")->setFloatValue(viewWaterLevel / _size.Y);
-
-			command.material().uniform("ViewSizeInv")->setFloatValue(1.0f / _size.X, 1.0f / _size.Y);
-			command.material().uniform("CameraPosition")->setFloatVector(_owner->_cameraPos.Data());
-			command.material().uniform("GameTime")->setFloatValue(_owner->_levelTime * 0.0018f);
+			command.material().uniform("uWaterLevel")->setFloatValue(viewWaterLevel / _size.Y);
+			command.material().uniform("uCameraPos")->setFloatVector(_owner->_cameraPos.Data());
 		}
 
 		renderQueue.addCommand(&command);

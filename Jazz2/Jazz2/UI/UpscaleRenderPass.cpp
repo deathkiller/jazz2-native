@@ -45,7 +45,9 @@ namespace Jazz2::UI
 #if defined(ALLOW_RESCALE_SHADERS)
 		PrecompiledShader shader;
 		switch (PreferencesCache::ActiveRescaleMode) {
+			case RescaleMode::HQ2x: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeHQ2x); break;
 			case RescaleMode::_3xBrz: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::Resize3xBrz); break;
+			case RescaleMode::Crt: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeCrt); break;
 			case RescaleMode::Monochrome: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeMonochrome); break;
 			default: _resizeShader = nullptr; break;
 		}

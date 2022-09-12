@@ -52,9 +52,9 @@ namespace Jazz2::UI::Menu
 			float* value;
 			switch (_selectedIndex) {
 				default:
-				case 0: value = &PreferencesCache::MasterVolume; break;
-				case 1: value = &PreferencesCache::SfxVolume; break;
-				case 2: value = &PreferencesCache::MusicVolume; break;
+				case (int)Item::MasterVolume: value = &PreferencesCache::MasterVolume; break;
+				case (int)Item::SfxVolume: value = &PreferencesCache::SfxVolume; break;
+				case (int)Item::MusicVolume: value = &PreferencesCache::MusicVolume; break;
 			}
 
 			*value = std::clamp(*value + (_root->ActionHit(PlayerActions::Left) ? -0.03f : 0.03f), 0.0f, 1.0f);
@@ -110,9 +110,9 @@ namespace Jazz2::UI::Menu
 			int currentBlockCount;
 			switch (i) {
 				default:
-				case 0: currentBlockCount = (int)std::round(PreferencesCache::MasterVolume * BlockCount); break;
-				case 1: currentBlockCount = (int)std::round(PreferencesCache::SfxVolume * BlockCount); break;
-				case 2: currentBlockCount = (int)std::round(PreferencesCache::MusicVolume * BlockCount); break;
+				case (int)Item::MasterVolume: currentBlockCount = (int)std::round(PreferencesCache::MasterVolume * BlockCount); break;
+				case (int)Item::SfxVolume: currentBlockCount = (int)std::round(PreferencesCache::SfxVolume * BlockCount); break;
+				case (int)Item::MusicVolume: currentBlockCount = (int)std::round(PreferencesCache::MusicVolume * BlockCount); break;
 			}
 
 			for (int i = 0; i < BlockCount; i++) {
@@ -156,9 +156,9 @@ namespace Jazz2::UI::Menu
 							float* value;
 							switch (_selectedIndex) {
 								default:
-								case 0: value = &PreferencesCache::MasterVolume; break;
-								case 1: value = &PreferencesCache::SfxVolume; break;
-								case 2: value = &PreferencesCache::MusicVolume; break;
+								case (int)Item::MasterVolume: value = &PreferencesCache::MasterVolume; break;
+								case (int)Item::SfxVolume: value = &PreferencesCache::SfxVolume; break;
+								case (int)Item::MusicVolume: value = &PreferencesCache::MusicVolume; break;
 							}
 
 							*value = std::clamp(*value + (x < 0.5f ? -0.03f : 0.03f), 0.0f, 1.0f);

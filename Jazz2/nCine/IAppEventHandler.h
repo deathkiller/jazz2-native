@@ -28,6 +28,8 @@ namespace nCine
 		virtual void onFrameEnd() { }
 		/// Called every time the window is resized (by the system or the user)
 		virtual void onResizeWindow(int width, int height) { }
+		/// Called every time fullscreen state of the window is changed
+		virtual void onFullscreenChanged(bool isFullscreen) { }
 		/// Called once on application shutdown
 		virtual void onShutdown() { }
 		/// Called every time the application needs to be suspended

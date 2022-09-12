@@ -28,13 +28,13 @@ namespace nCine
 		struct WindowMode
 		{
 			WindowMode()
-				: width(0), height(0), isFullScreen(false), isResizable(false) {}
+				: width(0), height(0), isFullscreen(false), isResizable(false) {}
 			WindowMode(unsigned int w, unsigned int h, bool fullscreen, bool resizable)
-				: width(w), height(h), isFullScreen(fullscreen), isResizable(resizable) {}
+				: width(w), height(h), isFullscreen(fullscreen), isResizable(resizable) {}
 
 			unsigned int width;
 			unsigned int height;
-			bool isFullScreen;
+			bool isFullscreen;
 			bool isResizable;
 		};
 
@@ -84,23 +84,7 @@ namespace nCine
 		virtual void setSwapInterval(int interval) = 0;
 
 		/// Sets screen resolution with two integers
-		virtual void setResolution(int width, int height) = 0;
-		/// Sets screen resolution with a `Vector2<int>` object
-		inline void setResolution(Vector2i size) {
-			setResolution(size.X, size.Y);
-		}
-
-		/// Returns true if the device renders in full screen
-		inline bool isFullScreen() const {
-			return isFullScreen_;
-		}
-		/// Sets the full screen flag of the window
-		virtual void setFullScreen(bool fullScreen) = 0;
-
-		/// Returns true if the window is resizable
-		inline bool isResizable() const {
-			return isResizable_;
-		}
+		virtual void setResolution(bool fullscreen, int width = 0, int height = 0) = 0;
 
 		/// Sets the position of the application window with two integers
 		virtual void setWindowPosition(int x, int y) = 0;
@@ -181,10 +165,6 @@ namespace nCine
 		int width_;
 		/// Device height
 		int height_;
-		/// Whether device rendering occurs in full screen
-		bool isFullScreen_;
-		/// Whether the window is resizable
-		bool isResizable_;
 		/// OpenGL context creation attributes
 		GLContextInfo glContextInfo_;
 		/// Display properties
@@ -192,6 +172,8 @@ namespace nCine
 
 		SmallVector<VideoMode, 0> videoModes_;
 		mutable VideoMode currentVideoMode_;
+
+		virtual void setResolutionInternal(int width, int height) = 0;
 
 	private:
 		/// Sets up the initial OpenGL state for the scenegraph
@@ -208,7 +190,10 @@ namespace nCine
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		static int emscriptenHandleResize(int eventType, const EmscriptenUiEvent* event, void* userData);
 		static int emscriptenHandleFullscreen(int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData);
+
+#	if defined(WITH_GLFW)
 		static int emscriptenHandleFocus(int eventType, const EmscriptenFocusEvent* event, void* userData);
+#	endif
 #endif
 	};
 

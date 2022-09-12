@@ -23,9 +23,9 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	Qt5GfxDevice::Qt5GfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, Qt5Widget& widget)
-		: IGfxDevice(windowMode, glContextInfo, displayMode), widget_(widget)
+		: IGfxDevice(windowMode, glContextInfo, displayMode), widget_(widget), isResizable_(windowMode.isResizable)
 	{
-		initDevice();
+		initDevice(windowMode.isFullscreen);
 	}
 
 	///////////////////////////////////////////////////////////
@@ -37,7 +37,7 @@ namespace nCine
 		widget_.format().setSwapInterval(interval);
 	}
 
-	void Qt5GfxDevice::setResolution(int width, int height)
+	void Qt5GfxDevice::setResolution(bool fullscreen, int width, int height)
 	{
 		width_ = width;
 		height_ = height;
@@ -48,18 +48,28 @@ namespace nCine
 		rect.setHeight(height);
 		widget_.setGeometry(rect);
 
-		if (theApplication().appConfiguration().isResizable == false) {
-			widget_.setMinimumSize(width, height);
-			widget_.setMaximumSize(width, height);
+		if (fullscreen) {
+			widget_.setWindowState(widget_.windowState() | Qt::WindowFullScreen);
+		} else {
+			widget_.setWindowState(widget_.windowState() & ~Qt::WindowFullScreen);
+			if (!isResizable_) {
+				widget_.setMinimumSize(width, height);
+				widget_.setMaximumSize(width, height);
+			}
 		}
 	}
 
-	void Qt5GfxDevice::setFullScreen(bool fullScreen)
+	void Qt5GfxDevice::setResolutionInternal(int width, int height)
 	{
-		if (fullScreen)
-			widget_.setWindowState(widget_.windowState() | Qt::WindowFullScreen);
-		else
-			widget_.setWindowState(widget_.windowState() & ~Qt::WindowFullScreen);
+		width_ = width;
+		height_ = height;
+
+		theApplication().resizeRootViewport(width, height);
+
+		QRect rect = widget_.geometry();
+		rect.setWidth(width);
+		rect.setHeight(height);
+		widget_.setGeometry(rect);
 	}
 
 	void Qt5GfxDevice::setWindowTitle(const char* windowTitle)
@@ -152,7 +162,7 @@ namespace nCine
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void Qt5GfxDevice::initDevice()
+	void Qt5GfxDevice::initDevice(bool isFullscreen)
 	{
 		QSurfaceFormat format;
 		format.setRedBufferSize(displayMode_.redBits());
@@ -170,8 +180,9 @@ namespace nCine
 		if (glContextInfo_.debugContext)
 			format.setOptions(QSurfaceFormat::DebugContext);
 
-		if (isFullScreen())
+		if (isFullscreen) {
 			widget_.setWindowState(widget_.windowState() | Qt::WindowFullScreen);
+		}
 
 		const int interval = displayMode_.hasVSync() ? 1 : 0;
 		format.setSwapInterval(interval);

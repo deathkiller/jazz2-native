@@ -202,26 +202,31 @@ namespace Jazz2::UI::Menu
 				}
 
 				for (int i = 0; i < _items.size(); i++) {
-					if (std::abs(y - _items[i].TouchY) < 30.0f) {
-						bool onItem = std::abs(x - 0.5f) < 0.22f;
-						bool onExpand = (x > 0.5f + 0.22f && (_items[_selectedIndex].Flags & ItemFlags::CanContinue) == ItemFlags::CanContinue);
-						if (onExpand == _expanded) {
-							ExecuteSelected();
-						} else if (onExpand) {
-							_root->PlaySfx("MenuSelect"_s, 0.5f);
-							_expanded = true;
-						} else if (onItem) {
-							if (_expanded) {
-								_root->PlaySfx("MenuSelect"_s, 0.5f);
-								_expanded = false;
-								_expandedAnimation = 0.0f;
-							} else if (_selectedIndex == i) {
-								ExecuteSelected();
+					if (std::abs(x - 0.5f) < 0.3f && std::abs(y - _items[i].TouchY) < 30.0f) {
+						if (_selectedIndex == i) {
+							bool onExpand = (x > (0.5f + 0.2f) && (_items[i].Flags & ItemFlags::CanContinue) == ItemFlags::CanContinue);
+							if (onExpand) {
+								if (_expanded) {
+									ExecuteSelected();
+								} else {
+									_root->PlaySfx("MenuSelect"_s, 0.5f);
+									_expanded = true;
+								}
 							} else {
-								_root->PlaySfx("MenuSelect"_s, 0.5f);
-								_animation = 0.0f;
-								_selectedIndex = i;
+								if (_expanded) {
+									_root->PlaySfx("MenuSelect"_s, 0.5f);
+									_expanded = false;
+									_expandedAnimation = 0.0f;
+								} else {
+									ExecuteSelected();
+								}
 							}
+						} else {
+							_root->PlaySfx("MenuSelect"_s, 0.5f);
+							_animation = 0.0f;
+							_selectedIndex = i;
+							_expanded = false;
+							_expandedAnimation = 0.0f;
 						}
 						break;
 					}
