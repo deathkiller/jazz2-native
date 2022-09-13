@@ -17,6 +17,15 @@ namespace nCine
 			// Copy file content to WebAssembly memory and call the user file data handler
 			emscripten::val fileReader = event["target"];
 
+			auto eventType = event["type"].as<std::string>();
+			if (eventType != "load") {
+				// FileReader failed - Call user file data handler
+				EmscriptenLocalFile::FileDataCallbackType* fileDataCallback = reinterpret_cast<EmscriptenLocalFile::FileDataCallbackType*>(fileReader["data-dataCallback"].as<size_t>());
+				void* context = reinterpret_cast<void*>(fileReader["data-callbackContext"].as<size_t>());
+				fileDataCallback(context, nullptr, 0, nullptr);
+				return;
+			}
+
 			// Set up source typed array
 			emscripten::val result = fileReader["result"]; // ArrayBuffer
 			emscripten::val Uint8Array = emscripten::val::global("Uint8Array");
@@ -47,10 +56,14 @@ namespace nCine
 			void* context = reinterpret_cast<void*>(target["data-callbackContext"].as<size_t>());
 			doneCallback(context, fileCount);
 
+			auto fileCallback = emscripten::val::module_property("jsReadFileContent");
+
 			for (int i = 0; i < fileCount; i++) {
 				emscripten::val file = files[i];
 				emscripten::val fileReader = emscripten::val::global("FileReader").new_();
-				fileReader.set("onload", emscripten::val::module_property("jsReadFileContent"));
+				fileReader.set("onload", fileCallback);
+				fileReader.set("onerror", fileCallback);
+				fileReader.set("onabort", fileCallback);
 				fileReader.set("data-dataCallback", target["data-dataCallback"]);
 				fileReader.set("data-callbackContext", target["data-callbackContext"]);
 				fileReader.set("data-name", file["name"]);
@@ -131,84 +144,6 @@ namespace nCine
 	{
 		LoadFile(String::nullTerminatedView(fileFilter).data(), multiple, fileDataCallback, fileCountCallback, userData);
 	}
-
-	/*void EmscriptenLocalFile::Load()
-	{
-		LoadFile("*", FileDataCallback, LoadingCallback, this);
-	}
-
-	void EmscriptenLocalFile::Load(const char* fileFilter)
-	{
-		FATAL_ASSERT(fileFilter);
-		LoadFile(fileFilter, FileDataCallback, LoadingCallback, this);
-	}
-
-	void EmscriptenLocalFile::Save(const char* filename)
-	{
-		FATAL_ASSERT(filename);
-		ASSERT(fileSize_ > 0);
-
-		LOGI_X("Saving file: \"%s\" (%u bytes)", filename, fileSize_);
-		SaveFile(fileBuffer_.get(), fileSize_, filename);
-	}*/
-
-	unsigned long int EmscriptenLocalFile::Read(void* buffer, unsigned long int bytes) const
-	{
-		FATAL_ASSERT(buffer);
-		ASSERT(bytes > 0);
-
-		memcpy(buffer, fileBuffer_.get(), bytes);
-		return bytes;
-	}
-
-	unsigned long int EmscriptenLocalFile::Write(void* buffer, unsigned long int bytes)
-	{
-		FATAL_ASSERT(buffer);
-		ASSERT(bytes > 0);
-
-		fileBuffer_ = std::make_unique<char[]>(bytes);
-		memcpy(fileBuffer_.get(), buffer, bytes);
-		fileSize_ = bytes;
-
-		return bytes;
-	}
-
-	/*void EmscriptenLocalFile::SetLoadedCallback(LoadedCallbackType* loadedCallback, void* userData)
-	{
-		loadedCallback_ = loadedCallback;
-		userData_ = userData;
-	}*/
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
-
-	/*void EmscriptenLocalFile::FileDataCallback(void* context, char* contentPointer, size_t contentSize, const char* filename)
-	{
-		FATAL_ASSERT(context);
-		FATAL_ASSERT(contentPointer);
-		ASSERT(contentSize > 0);
-
-		LOGI_X("Loading file: \"%s\" (%u bytes)", filename, contentSize);
-
-		EmscriptenLocalFile* localFile = reinterpret_cast<EmscriptenLocalFile*>(context);
-		localFile->fileBuffer_ = std::make_unique<char[]>(contentSize);
-		memcpy(localFile->fileBuffer_.get(), contentPointer, contentSize);
-		delete[] contentPointer;
-
-		localFile->fileSize_ = contentSize;
-		localFile->filename_ = filename;
-		localFile->loading_ = false;
-
-		if (localFile->loadedCallback_) {
-			localFile->loadedCallback_(*localFile, localFile->userData_);
-		}
-	}
-
-	void EmscriptenLocalFile::LoadingCallback(void* context)
-	{
-	}*/
-
 }
 
 #endif

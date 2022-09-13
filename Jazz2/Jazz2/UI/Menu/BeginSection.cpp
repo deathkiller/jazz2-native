@@ -6,7 +6,9 @@
 #include "MainMenu.h"
 
 #if defined(SHAREWARE_DEMO_ONLY)
-#	include "ImportSection.h"
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+#		include "ImportSection.h"
+#	endif
 #	include "../../PreferencesCache.h"
 #endif
 
@@ -21,7 +23,9 @@ namespace Jazz2::UI::Menu
 		_isVerified(true)
 	{
 #if defined(SHAREWARE_DEMO_ONLY)
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
 		_items[(int)Item::Import].Name = "Import Episodes"_s;
+#	endif
 #else
 		_items[(int)Item::PlayStory].Name = "Play Story"_s;
 #endif
@@ -163,7 +167,7 @@ namespace Jazz2::UI::Menu
 #endif
 				}
 				break;
-#if defined(SHAREWARE_DEMO_ONLY)
+#if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
 			case (int)Item::Import: _root->SwitchToSection<ImportSection>(); break;
 #endif
 			case (int)Item::Options: _root->SwitchToSection<OptionsSection>(); break;

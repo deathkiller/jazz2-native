@@ -238,13 +238,8 @@ namespace Jazz2
 		co.WriteValue<uint16_t>((uint16_t)_episodeEnd.size());
 
 		for (auto& pair : _episodeEnd) {
-			String encryptedName = pair.first;
-			for (char& c : encryptedName) {
-				c = ~c;
-			}
-
-			co.WriteValue<uint8_t>((uint8_t)encryptedName.size());
-			co.Write(encryptedName.data(), encryptedName.size());
+			co.WriteValue<uint8_t>((uint8_t)pair.first.size());
+			co.Write(pair.first.data(), pair.first.size());
 
 			co.Write(&pair.second, sizeof(EpisodeContinuationState));
 		}

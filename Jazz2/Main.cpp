@@ -52,10 +52,6 @@ using namespace Jazz2::UI;
 
 void __WriteLog(LogLevel level, const char* fmt, ...)
 {
-	/*if (level <= LogLevel::Verbose) {
-		return;
-	}*/
-
 	constexpr int MaxEntryLength = 4 * 1024;
 	char logEntry[MaxEntryLength];
 
@@ -343,6 +339,7 @@ void GameEventHandler::onFrameStart()
 					SaveEpisodeContinue(_pendingLevelChange);
 
 #if defined(SHAREWARE_DEMO_ONLY)
+					// Check if specified episode is unlocked
 					bool hasEpisode = true;
 					if (_pendingLevelChange->EpisodeName == "prince"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::FormerlyAPrince) == UnlockableEpisodes::None) hasEpisode = false;
 					if (_pendingLevelChange->EpisodeName == "rescue"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::JazzInTime) == UnlockableEpisodes::None) hasEpisode = false;
@@ -701,7 +698,6 @@ void GameEventHandler::SaveEpisodeEnd(const std::unique_ptr<LevelInitialization>
 
 void GameEventHandler::SaveEpisodeContinue(const std::unique_ptr<LevelInitialization>& pendingLevelChange)
 {
-#if !defined(SHAREWARE_DEMO_ONLY)
 	// Continue is disabled with SHAREWARE_DEMO_ONLY
 	if (pendingLevelChange->EpisodeName.empty() || pendingLevelChange->LevelName.empty() ||
 		pendingLevelChange->EpisodeName == "unknown"_s ||
@@ -743,7 +739,6 @@ void GameEventHandler::SaveEpisodeContinue(const std::unique_ptr<LevelInitializa
 		PreferencesCache::TutorialCompleted = true;
 		PreferencesCache::Save();
 	}
-#endif
 }
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)

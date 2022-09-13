@@ -32,7 +32,6 @@ namespace nCine
 
 		return (int32_t)(destSize - strm.avail_out);
 #else
-		size_t inBytesRead, outBytesRead;
 		libdeflate_compressor* compressor = libdeflate_alloc_compressor(9);
 		size_t bytesWritten = libdeflate_deflate_compress(compressor, srcBuffer, srcSize, destBuffer, destSize);
 		libdeflate_free_compressor(compressor);
@@ -57,6 +56,7 @@ namespace nCine
 			return DecompressionResult::CorruptedData;
 		}
 
+		// Z_FINISH doesn't work sometimes, use Z_NO_FLUSH instead
 		result = inflate(&strm, /*Z_FINISH*/Z_NO_FLUSH);
 		inflateEnd(&strm);
 		if (result != Z_OK && result != Z_STREAM_END) {

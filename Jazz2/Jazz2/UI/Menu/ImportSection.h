@@ -1,6 +1,8 @@
 ﻿#pragma once
 
-#if defined(SHAREWARE_DEMO_ONLY)
+#include <CommonInternal.h>
+
+#if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
 
 #include "MenuSection.h"
 
@@ -36,7 +38,7 @@ namespace Jazz2::UI::Menu
 		static void FileDataCallback(void* context, std::unique_ptr<char[]> data, size_t length, const StringView& name);
 		static void FileCountCallback(void* context, int fileCount);
 
-		void ProcessFoundFiles();
+		void CheckFoundLevels();
 		bool HasAllLevels(const StringView* levelNames, int count);
 	};
 }

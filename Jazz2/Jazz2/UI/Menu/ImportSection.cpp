@@ -1,13 +1,11 @@
-﻿#if defined(SHAREWARE_DEMO_ONLY)
+﻿#include "ImportSection.h"
 
-#include "ImportSection.h"
+#if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
+
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/Base/Algorithms.h"
-
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-#	include "../../../nCine/IO/EmscriptenLocalFile.h"
-#endif
+#include "../../../nCine/IO/EmscriptenLocalFile.h"
 
 namespace Jazz2::UI::Menu
 {
@@ -120,28 +118,19 @@ namespace Jazz2::UI::Menu
 		auto _this = reinterpret_cast<ImportSection*>(context);
 		_this->_fileCount--;
 
-		if (!fs::HasExtension(name, ".j2l"_s) || length < 262) {
-			return;
-		}
-
 		int offset = 180;	// Skip header
+		if (data != nullptr && length >= 262 && fs::HasExtension(name, ".j2l"_s) && *(uint32_t*)&data[offset] == 0x4C56454C) {
+			offset += 4 + 4;
+			int nameLength = 0;
+			while (data[offset + nameLength] != '\0' && nameLength < 32) {
+				nameLength++;
+			}
 
-		uint32_t magic = *(uint32_t*)&data[offset];
-		if (magic != 0x4C56454C) {
-			return;
+			_this->_foundLevels.emplace(String(&data[offset], nameLength), true);
 		}
-
-		offset += 4 + 4;
-
-		int nameLength = 0;
-		while (data[offset + nameLength] != '\0' && nameLength < 32) {
-			nameLength++;
-		}
-
-		_this->_foundLevels.emplace(String(&data[offset], nameLength), true);
 
 		if (_this->_fileCount <= 0) {
-			_this->ProcessFoundFiles();
+			_this->CheckFoundLevels();
 		}
 	}
 
@@ -154,7 +143,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void ImportSection::ProcessFoundFiles()
+	void ImportSection::CheckFoundLevels()
 	{
 		constexpr StringView FormerlyAPrinceLevels[] = { "Dungeon Dilemma"_s, "Knight Cap"_s, "Tossed Salad"_s, "Carrot Juice"_s, "Weirder Science"_s, "Loose Screws"_s };
 		constexpr StringView JazzInTimeLevels[] = { "Victorian Secret"_s, "Colonial Chaos"_s, "Purple Haze Maze"_s, "Funky Grooveathon"_s, "Beach Bunny Bingo"_s, "Marinated Rabbit"_s };

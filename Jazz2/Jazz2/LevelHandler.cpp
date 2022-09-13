@@ -864,6 +864,7 @@ namespace Jazz2
 
 		if (_sugarRushMusic != nullptr) {
 			_sugarRushMusic->stop();
+			_sugarRushMusic = nullptr;
 		}
 #ifdef WITH_OPENMPT
 		if (_music != nullptr) {
