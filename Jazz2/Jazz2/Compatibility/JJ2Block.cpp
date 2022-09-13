@@ -1,21 +1,8 @@
 ﻿#include "JJ2Block.h"
 
-#include <cstring>
+#include "../../nCine/IO/CompressionUtils.h"
 
-#if defined(WITH_ZLIB)
-#	include <zlib.h>
-#else
-#	if defined(_MSC_VER) && defined(__has_include)
-#		if __has_include("../../../Libs/libdeflate.h")
-#			define __HAS_LOCAL_LIBDEFLATE
-#		endif
-#	endif
-#	ifdef __HAS_LOCAL_LIBDEFLATE
-#		include "../../../Libs/libdeflate.h"
-#	else
-#		include <libdeflate.h>
-#	endif
-#endif
+#include <cstring>
 
 namespace Jazz2::Compatibility
 {
@@ -24,40 +11,14 @@ namespace Jazz2::Compatibility
 		_length(0),
 		_offset(0)
 	{
-		if (uncompressedLength > 0) {
-			length -= 2;
-			s->Seek(2, SeekOrigin::Current);
-		}
-
 		std::unique_ptr<uint8_t[]> tmpBuffer = std::make_unique<uint8_t[]>(length);
 		s->Read(tmpBuffer.get(), length);
 
 		if (uncompressedLength > 0) {
+			_length -= 2;
 			_buffer = std::make_unique<uint8_t[]>(uncompressedLength);
-
-#if defined(WITH_ZLIB)
-			z_stream strm;
-			strm.zalloc = Z_NULL;
-			strm.zfree = Z_NULL;
-			strm.opaque = Z_NULL;
-			strm.avail_in = length;
-			strm.next_in = tmpBuffer.get();
-			strm.avail_out = uncompressedLength;
-			strm.next_out = _buffer.get();
-			int result = inflateInit2(&strm, -15);
-			RETURN_ASSERT_MSG_X(result == Z_OK, "JJ2Block in \"%s\" cannot be decompressed (%i)", s->GetFilename(), result);
-			result = inflate(&strm, Z_NO_FLUSH);
-			inflateEnd(&strm);
-			RETURN_ASSERT_MSG_X(result == Z_OK || result == Z_STREAM_END, "JJ2Block in \"%s\" cannot be decompressed (%i)", s->GetFilename(), result);
-			_length = uncompressedLength;
-#else
-			size_t bytesRead;
-			libdeflate_decompressor* decompressor = libdeflate_alloc_decompressor();
-			libdeflate_result result = libdeflate_deflate_decompress(decompressor, tmpBuffer.get(), length, _buffer.get(), uncompressedLength, &bytesRead);
-			libdeflate_free_decompressor(decompressor);
-			RETURN_ASSERT_MSG_X(result == LIBDEFLATE_SUCCESS, "JJ2Block in \"%s\" cannot be decompressed (%i)", s->GetFilename(), result);
-			_length = (int)bytesRead;
-#endif
+			auto result = CompressionUtils::Inflate(tmpBuffer.get() + 2, length, _buffer.get(), uncompressedLength);
+			_length = (result == DecompressionResult::Success ? uncompressedLength : 0);
 		} else {
 			_buffer = std::move(tmpBuffer);
 			_length = length;

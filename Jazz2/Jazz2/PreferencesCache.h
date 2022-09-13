@@ -19,6 +19,19 @@ namespace Jazz2
 		Monochrome
 	};
 
+	enum class UnlockableEpisodes : uint32_t {
+		None = 0x00,
+
+		FormerlyAPrince = 0x01,
+		JazzInTime = 0x02,
+		Flashback = 0x04,
+		FunkyMonkeys = 0x08,
+		HolidayHare98 = 0x10,
+		TheSecretFiles = 0x20,
+	};
+
+	DEFINE_ENUM_OPERATORS(UnlockableEpisodes);
+
 	enum class EpisodeContinuationFlags : uint8_t {
 		None = 0x00,
 
@@ -45,23 +58,23 @@ namespace Jazz2
 	class PreferencesCache
 	{
 	public:
+		static UnlockableEpisodes UnlockedEpisodes;
+
 		// Graphics
 		static RescaleMode ActiveRescaleMode;
 		static bool EnableFullscreen;
 		static bool EnableVsync;
-		static bool ShowFps;
+		static bool ShowPerformanceMetrics;
 
 		// Gameplay
 		static bool ReduxMode;
 		static bool EnableLedgeClimb;
+		static bool EnableWeaponWheel;
+		static bool EnableRgbLights;
 		static bool TutorialCompleted;
 		static bool AllowCheats;
 		static bool AllowCheatsUnlock;
 		static bool AllowCheatsWeapons;
-
-		// Controls
-		static bool EnableWeaponWheel;
-		static bool EnableRgbLights;
 
 		// Sounds
 		static float MasterVolume;
@@ -80,14 +93,14 @@ namespace Jazz2
 			None = 0x00,
 
 			EnableFullscreen = 0x01,
-			ShowFps = 0x02,
+			ShowPerformanceMetrics = 0x02,
 
 			ReduxMode = 0x100,
 			EnableLedgeClimb = 0x200,
-			TutorialCompleted = 0x400,
+			EnableWeaponWheel = 0x400,
+			EnableRgbLights = 0x800,
 
-			EnableWeaponWheel = 0x10000,
-			EnableRgbLights = 0x20000
+			TutorialCompleted = 0x10000
 		};
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(BoolOptions);

@@ -1,5 +1,5 @@
 ﻿#include "HUD.h"
-#include "RgbLights.h"
+#include "ControlScheme.h"
 #include "../LevelHandler.h"
 #include "../PreferencesCache.h"
 #include "../Actors/Enemies/BossBase.h"
@@ -8,6 +8,16 @@
 #include "../../nCine/IO/IFileStream.h"
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Application.h"
+
+// Position of key in 22x6 grid
+static constexpr uint8_t KeyLayout[] = {
+	0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17,
+	22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 37, 38, 39, 40, 41, 42, 43,
+	44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65,
+	66, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 84, 85, 86,
+	88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 101, 104, 106, 107, 108, 109,
+	110, 111, 112, 116, 120, 121, 122, 123, 125, 126, 127, 128, 130
+};
 
 namespace Jazz2::UI
 {
@@ -20,7 +30,8 @@ namespace Jazz2::UI
 		_coinsTime(-1.0f), _gemsTime(-1.0f),
 		_activeBossTime(0.0f),
 		_touchButtonsTimer(0.0f),
-		_healthLast(0.0f),
+		_rgbAmbientLight(0.0f),
+		_rgbHealthLast(0.0f),
 		_weaponWheelAnim(0.0f),
 		_lastWeaponWheelIndex(-1),
 		_rgbLightsTime(0.0f)
@@ -88,17 +99,7 @@ namespace Jazz2::UI
 				_activeBossTime = 0.0f;
 			}
 
-			// RGB lights
-			if (PreferencesCache::EnableRgbLights) {
-				RgbLights& rgbLights = RgbLights::Current();
-				if (rgbLights.IsSupported()) {
-					_rgbLightsTime -= timeMult;
-					if (_rgbLightsTime <= 0.0f) {
-						UpdateRgbLights(players[0]);
-						_rgbLightsTime += RgbLights::RefreshRate;
-					}
-				}
-			}
+			UpdateRgbLights(timeMult, players[0]);
 		}
 	}
 
@@ -243,10 +244,10 @@ namespace Jazz2::UI
 			//DrawWeaponWheel(player);
 
 			// FPS
-			if (PreferencesCache::ShowFps) {
+			if (PreferencesCache::ShowPerformanceMetrics) {
 				snprintf(stringBuffer, _countof(stringBuffer), "%i", (int)std::round(theApplication().averageFps()));
 				_smallFont->DrawString(this, stringBuffer, charOffset, view.W - 4, 0, FontLayer,
-					Alignment::TopRight, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+					Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 			}
 
 			// Touch Controls
@@ -898,38 +899,56 @@ namespace Jazz2::UI
 		return true;
 	}
 
-	void HUD::UpdateRgbLights(Actors::Player* player)
+	void HUD::UpdateRgbLights(float timeMult, Actors::Player* player)
 	{
-		constexpr int32_t KeyMax2 = 14;
-		Color colors[RgbLights::ColorsSize] { };
-
-		colors[(int32_t)AuraLight::Esc] = Color(100, 100, 100);
-		colors[(int32_t)AuraLight::ArrowUp] = Color(100, 100, 100);
-		colors[(int32_t)AuraLight::ArrowLeft] = Color(100, 100, 100);
-		colors[(int32_t)AuraLight::ArrowDown] = Color(100, 100, 100);
-		colors[(int32_t)AuraLight::ArrowRight] = Color(100, 100, 100);
-
-		colors[(int32_t)AuraLight::Space] = Color(160, 10, 10);
-		colors[(int32_t)AuraLight::V] = Color(10, 80, 160);
-		colors[(int32_t)AuraLight::C] = Color(10, 170, 10);
-		colors[(int32_t)AuraLight::X] = Color(150, 140, 10);
-
-		float health = std::clamp((float)player->_health / player->_maxHealth, 0.0f, 1.0f);
-		if (std::abs(health - _healthLast) < 0.001f) {
+		if (!PreferencesCache::EnableRgbLights) {
+			_rgbHealthLast = 0.0f;
 			return;
 		}
 
-		_healthLast = lerp(_healthLast, health, 0.2f);
+		RgbLights& rgbLights = RgbLights::Current();
+		if (!rgbLights.IsSupported()) {
+			return;
+		}
+
+		_rgbLightsTime -= timeMult;
+		if (_rgbLightsTime > 0.0f) {
+			return;
+		}
+
+		_rgbLightsTime += RgbLights::RefreshRate;
+
+		float health = std::clamp((float)player->_health / player->_maxHealth, 0.0f, 1.0f);
+		if (std::abs(health - _rgbHealthLast) < 0.001f && _rgbAmbientLight == _levelHandler->_ambientColor.W) {
+			return;
+		}
+
+		_rgbHealthLast = lerp(_rgbHealthLast, health, 0.2f);
+		_rgbAmbientLight = _levelHandler->_ambientColor.W;
+
+		constexpr int32_t KeyMax2 = 14;
+		Color colors[RgbLights::ColorsSize] { };
+
+		Color* captionTile = _levelHandler->_tileMap->GetCaptionTile();
+		if (captionTile != nullptr) {
+			uint8_t colorMultiplier = (uint8_t)(0.2f * 255.0f * _rgbAmbientLight);
+			for (int32_t i = 0; i < _countof(KeyLayout); i++) {
+				int32_t x = KeyLayout[i] % AURA_KEYBOARD_WIDTH;
+				int32_t y = KeyLayout[i] / AURA_KEYBOARD_WIDTH;
+				Color tileColor = captionTile[y * 32 + x];
+				colors[AURA_COLORS_LIMITED_SIZE + i] = Color(tileColor.R() * colorMultiplier / 255, tileColor.G() * colorMultiplier / 255, tileColor.B() * colorMultiplier / 255);
+			}
+		}
 
 		int32_t percent, percentR, percentG;
-		percent = (int32_t)(_healthLast * 255);
+		percent = (int32_t)(_rgbHealthLast * 255);
 		percentG = percent * percent / 255;
 		percentR = (255 - (percent - 120) * 2);
 		percentR = std::clamp(percentR, 0, 255);
 
 		for (int32_t i = 0; i < KeyMax2; i++) {
-			int32_t intensity = (int32_t)((_healthLast - ((float)i / KeyMax2)) * 255 * KeyMax2);
-			intensity = std::clamp(intensity, 0, 255);
+			int32_t intensity = (int32_t)((_rgbHealthLast - ((float)i / KeyMax2)) * 255 * KeyMax2);
+			intensity = std::clamp(intensity, 0, 200);
 
 			if (intensity > 0) {
 				colors[(int32_t)AuraLight::Tilde + i] = Color(percentR * intensity / 255, percentG * intensity / 255, 0);
@@ -937,7 +956,140 @@ namespace Jazz2::UI
 			}
 		}
 
-		RgbLights& rgbLights = RgbLights::Current();
+		auto mapings = ControlScheme::GetMappings();
+		AuraLight l = KeyToAuraLight(mapings[(int)PlayerActions::Up].Key1);
+		if (l != AuraLight::Unknown) colors[(int)l] = Color(100, 100, 100);
+		l = KeyToAuraLight(mapings[(int)PlayerActions::Down].Key1);
+		if (l != AuraLight::Unknown) colors[(int)l] = Color(100, 100, 100);
+		l = KeyToAuraLight(mapings[(int)PlayerActions::Left].Key1);
+		if (l != AuraLight::Unknown) colors[(int)l] = Color(100, 100, 100);
+		l = KeyToAuraLight(mapings[(int)PlayerActions::Right].Key1);
+		if (l != AuraLight::Unknown) colors[(int)l] = Color(100, 100, 100);
+
+		l = KeyToAuraLight(mapings[(int)PlayerActions::Fire].Key1);
+		if (l != AuraLight::Unknown) colors[(int)l] = Color(160, 10, 10);
+		l = KeyToAuraLight(mapings[(int)PlayerActions::Jump].Key1);
+		if (l != AuraLight::Unknown) colors[(int)l] = Color(10, 80, 160);
+		l = KeyToAuraLight(mapings[(int)PlayerActions::Run].Key1);
+		if (l != AuraLight::Unknown) colors[(int)l] = Color(10, 170, 10);
+		l = KeyToAuraLight(mapings[(int)PlayerActions::ChangeWeapon].Key1);
+		if (l != AuraLight::Unknown) colors[(int)l] = Color(150, 140, 10);
+
 		rgbLights.Update(colors);
+	}
+
+	AuraLight HUD::KeyToAuraLight(KeySym key)
+	{
+		switch (key) {
+			case KeySym::BACKSPACE: return AuraLight::Backspace;
+			case KeySym::TAB: return AuraLight::Tab;
+			case KeySym::RETURN: return AuraLight::Enter;
+			case KeySym::ESCAPE: return AuraLight::Esc;
+			case KeySym::SPACE: return AuraLight::Space;
+			//case KeySym::QUOTE: return AuraLight::Quote;
+			//case KeySym::PLUS: return AuraLight:: + ;
+			case KeySym::COMMA: return AuraLight::Comma;
+			case KeySym::MINUS: return AuraLight::Minus;
+			case KeySym::PERIOD: return AuraLight::Period;
+			case KeySym::SLASH: return AuraLight::Slash;
+			case KeySym::N0: return AuraLight::Zero;
+			case KeySym::N1: return AuraLight::One;
+			case KeySym::N2: return AuraLight::Two;
+			case KeySym::N3: return AuraLight::Three;
+			case KeySym::N4: return AuraLight::Four;
+			case KeySym::N5: return AuraLight::Five;
+			case KeySym::N6: return AuraLight::Six;
+			case KeySym::N7: return AuraLight::Seven;
+			case KeySym::N8: return AuraLight::Eight;
+			case KeySym::N9: return AuraLight::Nine;
+			case KeySym::SEMICOLON: return AuraLight::Semicolon;
+			case KeySym::LEFTBRACKET: return AuraLight::OpenBracket;
+			case KeySym::BACKSLASH: return AuraLight::Backslash;
+			case KeySym::RIGHTBRACKET: return AuraLight::CloseBracket;
+			//case KeySym::BACKQUOTE: return AuraLight::Backquote;
+
+			case KeySym::A: return AuraLight::A;
+			case KeySym::B: return AuraLight::B;
+			case KeySym::C: return AuraLight::C;
+			case KeySym::D: return AuraLight::D;
+			case KeySym::E: return AuraLight::E;
+			case KeySym::F: return AuraLight::F;
+			case KeySym::G: return AuraLight::G;
+			case KeySym::H: return AuraLight::H;
+			case KeySym::I: return AuraLight::I;
+			case KeySym::J: return AuraLight::J;
+			case KeySym::K: return AuraLight::K;
+			case KeySym::L: return AuraLight::L;
+			case KeySym::M: return AuraLight::M;
+			case KeySym::N: return AuraLight::N;
+			case KeySym::O: return AuraLight::O;
+			case KeySym::P: return AuraLight::P;
+			case KeySym::Q: return AuraLight::Q;
+			case KeySym::R: return AuraLight::R;
+			case KeySym::S: return AuraLight::S;
+			case KeySym::T: return AuraLight::T;
+			case KeySym::U: return AuraLight::U;
+			case KeySym::V: return AuraLight::V;
+			case KeySym::W: return AuraLight::W;
+			case KeySym::X: return AuraLight::X;
+			case KeySym::Y: return AuraLight::Y;
+			case KeySym::Z: return AuraLight::Z;
+			case KeySym::DELETE: return AuraLight::Delete;
+
+			case KeySym::KP0: return AuraLight::NumZero;
+			case KeySym::KP1: return AuraLight::NumOne;
+			case KeySym::KP2: return AuraLight::NumTwo;
+			case KeySym::KP3: return AuraLight::NumThree;
+			case KeySym::KP4: return AuraLight::NumFour;
+			case KeySym::KP5: return AuraLight::NumFive;
+			case KeySym::KP6: return AuraLight::NumSix;
+			case KeySym::KP7: return AuraLight::NumSeven;
+			case KeySym::KP8: return AuraLight::NumEight;
+			case KeySym::KP9: return AuraLight::NumNine;
+			case KeySym::KP_PERIOD: return AuraLight::NumPeriod;
+			case KeySym::KP_DIVIDE: return AuraLight::NumSlash;
+			case KeySym::KP_MULTIPLY: return AuraLight::NumAsterisk;
+			case KeySym::KP_MINUS: return AuraLight::NumMinus;
+			case KeySym::KP_PLUS: return AuraLight::NumPlus;
+			case KeySym::KP_ENTER: return AuraLight::NumEnter;
+			case KeySym::KP_EQUALS: return AuraLight::NumEnter;
+
+			case KeySym::UP: return AuraLight::ArrowUp;
+			case KeySym::DOWN: return AuraLight::ArrowDown;
+			case KeySym::RIGHT: return AuraLight::ArrowRight;
+			case KeySym::LEFT: return AuraLight::ArrowLeft;
+			case KeySym::INSERT: return AuraLight::Insert;
+			case KeySym::HOME: return AuraLight::Home;
+			case KeySym::END: return AuraLight::End;
+			case KeySym::PAGEUP: return AuraLight::PageUp;
+			case KeySym::PAGEDOWN: return AuraLight::PageDown;
+
+			case KeySym::F1: return AuraLight::F1;
+			case KeySym::F2: return AuraLight::F2;
+			case KeySym::F3: return AuraLight::F3;
+			case KeySym::F4: return AuraLight::F4;
+			case KeySym::F5: return AuraLight::F5;
+			case KeySym::F6: return AuraLight::F6;
+			case KeySym::F7: return AuraLight::F7;
+			case KeySym::F8: return AuraLight::F8;
+			case KeySym::F9: return AuraLight::F9;
+			case KeySym::F10: return AuraLight::F10;
+			case KeySym::F11: return AuraLight::F11;
+			case KeySym::F12: return AuraLight::F12;
+
+			case KeySym::NUM_LOCK: return AuraLight::NumLock;
+			case KeySym::CAPS_LOCK: return AuraLight::CapsLock;
+			case KeySym::SCROLL_LOCK: return AuraLight::ScrollLock;
+			case KeySym::RSHIFT: return AuraLight::RightShift;
+			case KeySym::LSHIFT: return AuraLight::LeftShift;
+			case KeySym::RCTRL: return AuraLight::RightCtrl;
+			case KeySym::LCTRL: return AuraLight::LeftCtrl;
+			case KeySym::RALT: return AuraLight::RightAlt;
+			case KeySym::LALT: return AuraLight::LeftAlt;
+			case KeySym::PAUSE: return AuraLight::PauseBreak;
+			case KeySym::MENU: return AuraLight::Menu;
+
+			default: return AuraLight::Unknown;
+		}
 	}
 }

@@ -1475,7 +1475,6 @@ namespace Jazz2
 			return command;
 		} else {
 			std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
-			command->setType(RenderCommand::CommandTypes::SPRITE);
 			command->material().setShader(_owner->_lightingShader);
 			command->material().setBlendingEnabled(true);
 			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);

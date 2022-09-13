@@ -1,6 +1,4 @@
-﻿#if !defined(SHAREWARE_DEMO_ONLY)
-
-#include "EpisodeSelectSection.h"
+﻿#include "EpisodeSelectSection.h"
 #include "StartGameOptionsSection.h"
 #include "MainMenu.h"
 #include "../../PreferencesCache.h"
@@ -281,6 +279,16 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+#if defined(SHAREWARE_DEMO_ONLY)
+		String fileName = fs::GetFileNameWithoutExtension(episodeFile);
+		if (fileName == "prince"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::FormerlyAPrince) == UnlockableEpisodes::None) return;
+		if (fileName == "rescue"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::JazzInTime) == UnlockableEpisodes::None) return;
+		if (fileName == "flash"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::Flashback) == UnlockableEpisodes::None) return;
+		if (fileName == "monk"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::FunkyMonkeys) == UnlockableEpisodes::None) return;
+		if ((fileName == "xmas98"_s || fileName == "xmas99"_s) && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::HolidayHare98) == UnlockableEpisodes::None) return;
+		if (fileName == "secretf"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::TheSecretFiles) == UnlockableEpisodes::None) return;
+#endif
+
 		std::optional<Episode> description = ContentResolver::Current().GetEpisodeByPath(episodeFile);
 		if (description.has_value()) {
 			auto& episode = _items.emplace_back();
@@ -312,5 +320,3 @@ namespace Jazz2::UI::Menu
 		}
 	}
 }
-
-#endif

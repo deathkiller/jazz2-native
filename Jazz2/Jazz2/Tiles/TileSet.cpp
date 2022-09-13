@@ -2,10 +2,11 @@
 
 namespace Jazz2::Tiles
 {
-	TileSet::TileSet(std::unique_ptr<Texture> textureDiffuse, std::unique_ptr<uint8_t[]> mask)
+	TileSet::TileSet(std::unique_ptr<Texture> textureDiffuse, std::unique_ptr<uint8_t[]> mask, std::unique_ptr<Color[]> captionTile)
 		:
 		TextureDiffuse(std::move(textureDiffuse)),
 		_mask(std::move(mask)),
+		_captionTile(std::move(captionTile)),
 		_isMaskEmpty(),
 		_isMaskFilled(),
 		_isTileFilled()

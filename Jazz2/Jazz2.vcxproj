@@ -300,6 +300,7 @@
     <ClInclude Include="Jazz2\UI\Menu\GameplayOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\GraphicsOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\IMenuContainer.h" />
+    <ClInclude Include="Jazz2\UI\Menu\ImportSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\InGameMenu.h" />
     <ClInclude Include="Jazz2\UI\Menu\MainMenu.h" />
     <ClInclude Include="Jazz2\UI\Menu\MenuSection.h" />
@@ -437,8 +438,10 @@
     <ClInclude Include="nCine\Input\Qt5InputManager.h" />
     <ClInclude Include="nCine\Input\SdlInputManager.h" />
     <ClInclude Include="nCine\IO\AssetFile.h" />
+    <ClInclude Include="nCine\IO\CompressionUtils.h" />
     <ClInclude Include="nCine\IO\EmscriptenLocalFile.h" />
     <ClInclude Include="nCine\IO\FileSystem.h" />
+    <ClInclude Include="nCine\IO\GrowableMemoryFile.h" />
     <ClInclude Include="nCine\IO\IFileStream.h" />
     <ClInclude Include="nCine\IO\MemoryFile.h" />
     <ClInclude Include="nCine\IO\StandardFile.h" />
@@ -572,6 +575,7 @@
     <ClCompile Include="Jazz2\UI\Menu\GameplayEnhancementsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\GameplayOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\GraphicsOptionsSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\ImportSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\InGameMenu.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\MainMenu.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\OptionsSection.cpp" />
@@ -684,8 +688,10 @@
     <ClCompile Include="nCine\Input\SdlInputManager.cpp" />
     <ClCompile Include="nCine\Input\SdlKeys.cpp" />
     <ClCompile Include="nCine\IO\AssetFile.cpp" />
+    <ClCompile Include="nCine\IO\CompressionUtils.cpp" />
     <ClCompile Include="nCine\IO\EmscriptenLocalFile.cpp" />
     <ClCompile Include="nCine\IO\FileSystem.cpp" />
+    <ClCompile Include="nCine\IO\GrowableMemoryFile.cpp" />
     <ClCompile Include="nCine\IO\IFileStream.cpp" />
     <ClCompile Include="nCine\IO\MemoryFile.cpp" />
     <ClCompile Include="nCine\IO\StandardFile.cpp" />

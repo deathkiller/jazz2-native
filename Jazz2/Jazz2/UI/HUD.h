@@ -2,6 +2,7 @@
 
 #include "Canvas.h"
 #include "Font.h"
+#include "RgbLights.h"
 #include "../ILevelHandler.h"
 #include "../Actors/Player.h"
 
@@ -70,7 +71,8 @@ namespace Jazz2::UI
 		float _coinsTime;
 		float _gemsTime;
 		float _activeBossTime;
-		float _healthLast;
+		float _rgbAmbientLight;
+		float _rgbHealthLast;
 		float _weaponWheelAnim;
 		int _lastWeaponWheelIndex;
 		float _rgbLightsTime;
@@ -94,6 +96,7 @@ namespace Jazz2::UI
 		TouchButtonInfo CreateTouchButton(PlayerActions action, const StringView& identifier, Alignment align, float x, float y, float w, float h);
 		bool IsOnButton(const TouchButtonInfo& button, float x, float y);
 
-		void UpdateRgbLights(Actors::Player* player);
+		void UpdateRgbLights(float timeMult, Actors::Player* player);
+		static AuraLight KeyToAuraLight(KeySym key);
 	};
 }

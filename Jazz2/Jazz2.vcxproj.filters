@@ -1035,6 +1035,15 @@
     <ClInclude Include="Jazz2\UI\Menu\GameplayEnhancementsSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
+    <ClInclude Include="nCine\IO\CompressionUtils.h">
+      <Filter>Header Files\nCine\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\IO\GrowableMemoryFile.h">
+      <Filter>Header Files\nCine\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\ImportSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1728,6 +1737,15 @@
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\GameplayEnhancementsSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\IO\CompressionUtils.cpp">
+      <Filter>Source Files\nCine\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\IO\GrowableMemoryFile.cpp">
+      <Filter>Source Files\nCine\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\ImportSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
   </ItemGroup>

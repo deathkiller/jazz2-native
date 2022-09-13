@@ -274,7 +274,7 @@ namespace Jazz2::Events
 		return Vector2f(-1, -1);
 	}
 
-	void EventMap::ReadEvents(const std::unique_ptr<IFileStream>& s, const std::unique_ptr<Tiles::TileMap>& tileMap, GameDifficulty difficulty)
+	void EventMap::ReadEvents(IFileStream& s, const std::unique_ptr<Tiles::TileMap>& tileMap, GameDifficulty difficulty)
 	{
 		_eventLayout.resize(_layoutSize.X * _layoutSize.Y);
 		_eventLayoutForRollback.resize(_layoutSize.X * _layoutSize.Y);
@@ -297,8 +297,8 @@ namespace Jazz2::Events
 
 		for (int y = 0; y < _layoutSize.Y; y++) {
 			for (int x = 0; x < _layoutSize.X; x++) {
-				uint16_t eventType = s->ReadValue<uint16_t>();
-				uint8_t eventFlags = s->ReadValue<uint8_t>();
+				uint16_t eventType = s.ReadValue<uint16_t>();
+				uint8_t eventFlags = s.ReadValue<uint8_t>();
 				uint8_t eventParams[16];
 
 				// ToDo: Remove inlined constants
@@ -307,8 +307,8 @@ namespace Jazz2::Events
 				uint8_t generatorFlags, generatorDelay;
 				if ((eventFlags & 0x02) != 0) {
 					//eventFlags ^= 0x02;
-					generatorFlags = s->ReadValue<uint8_t>();
-					generatorDelay = s->ReadValue<uint8_t>();
+					generatorFlags = s.ReadValue<uint8_t>();
+					generatorDelay = s.ReadValue<uint8_t>();
 				} else {
 					generatorFlags = 0;
 					generatorDelay = 0;
@@ -317,7 +317,7 @@ namespace Jazz2::Events
 				// Flag 0x01: No params provided
 				if ((eventFlags & 0x01) == 0) {
 					eventFlags ^= 0x01;
-					s->Read(eventParams, sizeof(eventParams));
+					s.Read(eventParams, sizeof(eventParams));
 				} else {
 					memset(eventParams, 0, sizeof(eventParams));
 				}

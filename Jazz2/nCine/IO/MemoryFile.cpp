@@ -8,8 +8,8 @@ namespace nCine
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
 
-	MemoryFile::MemoryFile(const String& bufferName, uint8_t* bufferPtr, uint32_t bufferSize)
-		: IFileStream(bufferName), _bufferPtr(bufferPtr), _seekOffset(0), _isWritable(true)
+	MemoryFile::MemoryFile(uint8_t* bufferPtr, uint32_t bufferSize)
+		: IFileStream(nullptr), _bufferPtr(bufferPtr), _seekOffset(0), _isWritable(true)
 	{
 		ASSERT(bufferSize > 0);
 		type_ = FileType::Memory;
@@ -19,8 +19,8 @@ namespace nCine
 		fileDescriptor_ = (bufferSize > 0 ? 0 : -1);
 	}
 
-	MemoryFile::MemoryFile(const String& bufferName, const uint8_t* bufferPtr, uint32_t bufferSize)
-		: IFileStream(bufferName), _bufferPtr(const_cast<uint8_t*>(bufferPtr)), _seekOffset(0), _isWritable(false)
+	MemoryFile::MemoryFile(const uint8_t* bufferPtr, uint32_t bufferSize)
+		: IFileStream(nullptr), _bufferPtr(const_cast<uint8_t*>(bufferPtr)), _seekOffset(0), _isWritable(false)
 	{
 		ASSERT(bufferSize > 0);
 		type_ = FileType::Memory;

@@ -16,7 +16,7 @@ namespace Jazz2::UI::Menu
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
 		_items[(int)Item::Fullscreen].Name = "Fullscreen"_s;
 #endif
-		_items[(int)Item::ShowFps].Name = "Show FPS"_s;
+		_items[(int)Item::ShowPerformanceMetrics].Name = "Performance Metrics"_s;
 	}
 
 	GraphicsOptionsSection::~GraphicsOptionsSection()
@@ -105,7 +105,7 @@ namespace Jazz2::UI::Menu
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
 					case (int)Item::Fullscreen: enabled = PreferencesCache::EnableFullscreen; break;
 #endif
-					case (int)Item::ShowFps: enabled = PreferencesCache::ShowFps; break;
+					case (int)Item::ShowPerformanceMetrics: enabled = PreferencesCache::ShowPerformanceMetrics; break;
 				}
 
 				_root->DrawStringShadow(enabled ? "Enabled"_s : "Disabled"_s, charOffset, center.X, center.Y + 22.0f, IMenuContainer::FontLayer - 10,
@@ -170,8 +170,8 @@ namespace Jazz2::UI::Menu
 				_animation = 0.0f;
 				break;
 #endif
-			case (int)Item::ShowFps:
-				PreferencesCache::ShowFps = !PreferencesCache::ShowFps;
+			case (int)Item::ShowPerformanceMetrics:
+				PreferencesCache::ShowPerformanceMetrics = !PreferencesCache::ShowPerformanceMetrics;
 				_isDirty = true;
 				_animation = 0.0f;
 				break;

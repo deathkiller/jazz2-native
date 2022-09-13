@@ -215,8 +215,8 @@ namespace nCine
 		/// Opens file stream with specified access mode
 		static std::unique_ptr<IFileStream> Open(const String& path, FileAccessMode mode, bool shouldExitOnFailToOpen = false);
 
-		static std::unique_ptr<IFileStream> CreateFromMemory(const String& bufferName, unsigned char* bufferPtr, uint32_t bufferSize);
-		static std::unique_ptr<IFileStream> CreateFromMemory(const String& bufferName, const unsigned char* bufferPtr, uint32_t bufferSize);
+		static std::unique_ptr<IFileStream> CreateFromMemory(unsigned char* bufferPtr, uint32_t bufferSize);
+		static std::unique_ptr<IFileStream> CreateFromMemory(const unsigned char* bufferPtr, uint32_t bufferSize);
 
 		/// Returns the base directory for data loading
 		inline static const String& GetDataPath() {
@@ -226,6 +226,11 @@ namespace nCine
 		static const String& GetSavePath(const StringView& applicationName);
 
 	private:
+		/// Deleted copy constructor
+		FileSystem(const FileSystem&) = delete;
+		/// Deleted assignment operator
+		FileSystem& operator=(const FileSystem&) = delete;
+		
 		/// The path for the application to load files from
 		static String _dataPath;
 		/// The path for the application to write files into

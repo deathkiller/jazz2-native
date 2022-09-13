@@ -214,8 +214,8 @@ namespace nCine
 
 	uint32_t Material::sortKey()
 	{
-		static const uint32_t Seed = 1697381921;
-		static SortHashData hashData;
+		constexpr uint32_t Seed = 1697381921;
+		SortHashData hashData;
 
 		for (unsigned int i = 0; i < GLTexture::MaxTextureUnits; i++)
 			hashData.textures[i] = (textures_[i] != nullptr) ? textures_[i]->glHandle() : 0;

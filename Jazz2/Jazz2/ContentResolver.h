@@ -232,7 +232,7 @@ namespace Jazz2
 		Metadata* RequestMetadata(const StringView& path);
 		GenericGraphicResource* RequestGraphics(const StringView& path, uint16_t paletteOffset);
 
-		std::unique_ptr<Tiles::TileSet> RequestTileSet(const StringView& path, bool applyPalette);
+		std::unique_ptr<Tiles::TileSet> RequestTileSet(const StringView& path, uint16_t captionTileId, bool applyPalette);
 		bool LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty);
 		void ApplyPalette(const StringView& path);
 

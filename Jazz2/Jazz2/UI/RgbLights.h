@@ -11,23 +11,28 @@
 
 using namespace nCine;
 
+#define AURA_REFRESH_INTERVAL 40		// 40 ms
+#define AURA_COLORS_SIZE (4 + 105)		// 4 Main colors + Keyboard mapping = 327 bytes, see AuraLight struct
+#define AURA_COLORS_LIMITED_SIZE 4		// Only first 4 main colors
+#define AURA_KEYBOARD_WIDTH 22
+#define AURA_KEYBOARD_HEIGHT 6
+
 #if defined(DEATH_TARGET_WINDOWS)
 namespace ChromaSDK::Keyboard
 {
 	//! Chroma keyboard effect types
-	typedef enum EFFECT_TYPE
-	{
-		CHROMA_NONE = 0,            //!< No effect.
-		CHROMA_BREATHING,           //!< Breathing effect (This effect has deprecated and should not be used).
-		CHROMA_CUSTOM,              //!< Custom effect.
-		CHROMA_REACTIVE,            //!< Reactive effect (This effect has deprecated and should not be used).
-		CHROMA_STATIC,              //!< Static effect.
-		CHROMA_SPECTRUMCYCLING,     //!< Spectrum cycling effect (This effect has deprecated and should not be used).
-		CHROMA_WAVE,                //!< Wave effect (This effect has deprecated and should not be used).
-		CHROMA_RESERVED,            //!< Reserved.
-		CHROMA_CUSTOM_KEY,          //!< Custom effects with keys.
+	typedef enum EFFECT_TYPE {
+		CHROMA_NONE = 0,			//!< No effect.
+		CHROMA_BREATHING,			//!< Breathing effect (This effect has deprecated and should not be used).
+		CHROMA_CUSTOM,				//!< Custom effect.
+		CHROMA_REACTIVE,			//!< Reactive effect (This effect has deprecated and should not be used).
+		CHROMA_STATIC,				//!< Static effect.
+		CHROMA_SPECTRUMCYCLING,		//!< Spectrum cycling effect (This effect has deprecated and should not be used).
+		CHROMA_WAVE,				//!< Wave effect (This effect has deprecated and should not be used).
+		CHROMA_RESERVED,			//!< Reserved.
+		CHROMA_CUSTOM_KEY,			//!< Custom effects with keys.
 		CHROMA_CUSTOM2,
-		CHROMA_INVALID              //!< Invalid effect.
+		CHROMA_INVALID				//!< Invalid effect.
 	} EFFECT_TYPE;
 
 	//! Maximum number of rows in a keyboard.
@@ -37,9 +42,8 @@ namespace ChromaSDK::Keyboard
 	const size_t MAX_COLUMN = 22;
 
 	//! Custom effect (This effect type has deprecated and should not be used).
-	typedef struct CUSTOM_EFFECT_TYPE
-	{
-		COLORREF Color[MAX_ROW][MAX_COLUMN];      //!< Grid layout. 6 rows by 22 columns.
+	typedef struct CUSTOM_EFFECT_TYPE {
+		COLORREF Color[MAX_ROW][MAX_COLUMN];	//!< Grid layout. 6 rows by 22 columns.
 	} CUSTOM_EFFECT_TYPE;
 }
 #endif
@@ -72,11 +76,9 @@ namespace Jazz2::UI
 
 	class RgbLights
 	{
-		friend class Font;
-
 	public:
-		static constexpr int ColorsSize = (4 + 105);
-		static constexpr int RefreshRate = FrameTimer::FramesPerSecond / (1000 / 40);
+		static constexpr int ColorsSize = AURA_COLORS_SIZE;
+		static constexpr int RefreshRate = FrameTimer::FramesPerSecond / (1000 / AURA_REFRESH_INTERVAL);
 
 		RgbLights();
 		~RgbLights();

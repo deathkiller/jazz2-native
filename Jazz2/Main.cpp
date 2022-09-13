@@ -342,6 +342,20 @@ void GameEventHandler::onFrameStart()
 				} else {
 					SaveEpisodeContinue(_pendingLevelChange);
 
+#if defined(SHAREWARE_DEMO_ONLY)
+					bool hasEpisode = true;
+					if (_pendingLevelChange->EpisodeName == "prince"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::FormerlyAPrince) == UnlockableEpisodes::None) hasEpisode = false;
+					if (_pendingLevelChange->EpisodeName == "rescue"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::JazzInTime) == UnlockableEpisodes::None) hasEpisode = false;
+					if (_pendingLevelChange->EpisodeName == "flash"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::Flashback) == UnlockableEpisodes::None) hasEpisode = false;
+					if (_pendingLevelChange->EpisodeName == "monk"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::FunkyMonkeys) == UnlockableEpisodes::None) hasEpisode = false;
+					if ((_pendingLevelChange->EpisodeName == "xmas98"_s || _pendingLevelChange->EpisodeName == "xmas99"_s) && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::HolidayHare98) == UnlockableEpisodes::None) hasEpisode = false;
+					if (_pendingLevelChange->EpisodeName == "secretf"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::TheSecretFiles) == UnlockableEpisodes::None) hasEpisode = false;
+
+					if (!hasEpisode) {
+						_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
+					}
+#endif
+
 					_currentHandler = std::make_unique<LevelHandler>(this, *_pendingLevelChange.get());
 				}
 				_pendingLevelChange = nullptr;

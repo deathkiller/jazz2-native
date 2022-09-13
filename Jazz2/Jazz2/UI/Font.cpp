@@ -246,14 +246,22 @@ namespace Jazz2::UI
 					texCoords.Z *= -1;
 
 					auto command = canvas->RentRenderCommand();
-					command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
 					bool shaderChanged = (colorizeShader
 						? command->material().setShader(colorizeShader)
 						: command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE));
 					if (shaderChanged) {
 						command->material().reserveUniformsDataMemory();
+						command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+						// Required to reset render command properly
+						command->setTransformation(command->transformation());
+
+						GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+						if (textureUniform && textureUniform->intValue(0) != 0) {
+							textureUniform->setIntValue(0); // GL_TEXTURE0
+						}
 					}
+
+					command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 					instanceBlock->uniform(Material::TexRectUniformName)->setFloatVector(texCoords.Data());
@@ -262,7 +270,7 @@ namespace Jazz2::UI
 
 					// TODO: It looks better with the "0.5f" offset
 					command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y + 0.5f, 0.0f));
-					command->setLayer(z + (charOffset & 1));
+					command->setLayer(z - (charOffset & 1));
 					command->material().setTexture(*_texture.get());
 
 					canvas->_currentRenderQueue->addCommand(command);

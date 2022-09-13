@@ -8,6 +8,7 @@ namespace Jazz2::UI::Menu
 	{
 	public:
 		GameplayOptionsSection();
+		~GameplayOptionsSection();
 
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
@@ -16,6 +17,7 @@ namespace Jazz2::UI::Menu
 	private:
 		enum class Item {
 			Enhancements,
+			EnableRgbLights,
 
 			Count
 		};
@@ -28,6 +30,7 @@ namespace Jazz2::UI::Menu
 		ItemData _items[(int)Item::Count];
 		int _selectedIndex;
 		float _animation;
+		bool _isDirty;
 
 		void ExecuteSelected();
 	};

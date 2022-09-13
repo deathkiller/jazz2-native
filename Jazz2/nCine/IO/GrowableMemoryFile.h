@@ -2,14 +2,18 @@
 
 #include "IFileStream.h"
 
+#include <Containers/SmallVector.h>
+
+using namespace Death::Containers;
+
 namespace nCine
 {
-	/// The class creating a file interface around a memory buffer
-	class MemoryFile : public IFileStream
+	/// The class creating a file interface around a growable memory buffer
+	class GrowableMemoryFile : public IFileStream
 	{
 	public:
-		MemoryFile(uint8_t* bufferPtr, uint32_t bufferSize);
-		MemoryFile(const uint8_t* bufferPtr, uint32_t bufferSize);
+		GrowableMemoryFile();
+		GrowableMemoryFile(int32_t initialCapacity);
 
 		void Open(FileAccessMode mode, bool shouldExitOnFailToOpen) override;
 		void Close() override;
@@ -18,16 +22,18 @@ namespace nCine
 		uint32_t Read(void* buffer, uint32_t bytes) const override;
 		uint32_t Write(const void* buffer, uint32_t bytes) override;
 
+		const uint8_t* GetBuffer() {
+			return &_buffer[0];
+		}
+
 	private:
-		uint8_t* _bufferPtr;
-		/// \note Modified by `seek` and `tell` constant methods
+		mutable SmallVector<uint8_t, 0> _buffer;
 		mutable uint32_t _seekOffset;
-		bool _isWritable;
 
 		/// Deleted copy constructor
-		MemoryFile(const MemoryFile&) = delete;
+		GrowableMemoryFile(const GrowableMemoryFile&) = delete;
 		/// Deleted assignment operator
-		MemoryFile& operator=(const MemoryFile&) = delete;
+		GrowableMemoryFile& operator=(const GrowableMemoryFile&) = delete;
 	};
 
 }

@@ -7,6 +7,8 @@
 #include "EventConverter.h"
 #include "../WeatherType.h"
 
+#include "../../nCine/IO/GrowableMemoryFile.h"
+
 #include <functional>
 
 #include <Containers/String.h>
@@ -137,7 +139,7 @@ namespace Jazz2::Compatibility
         void LoadLayers(JJ2Block& dictBlock, int dictLength, JJ2Block& layoutBlock, bool strictParser);
         void LoadMlleData(JJ2Block& block, uint32_t version, bool strictParser);
 
-        static void WriteLevelName(const std::unique_ptr<IFileStream>& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion = nullptr);
+        static void WriteLevelName(GrowableMemoryFile& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion = nullptr);
         static bool StringHasSuffixIgnoreCase(const StringView& value, const StringView& suffix);
     };
 }

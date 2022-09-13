@@ -6,13 +6,12 @@
 #include <emscripten/bind.h>
 #include "../../Common.h"
 
+#include <Containers/String.h>
+
 namespace nCine
 {
 	namespace
 	{
-		using FileDataCallbackType = void(void* context, char* data, size_t length, const char* name);
-		using LoadingCallbackType = void(void* context);
-
 		void ReadFileContent(emscripten::val event)
 		{
 			// Copy file content to WebAssembly memory and call the user file data handler
@@ -29,10 +28,12 @@ namespace nCine
 			emscripten::val destinationTypedArray = Uint8Array.new_(emscripten::val::module_property("HEAPU8")["buffer"], size_t(buffer), size);
 			destinationTypedArray.call<void>("set", sourceTypedArray);
 
+			auto fileName = fileReader["data-name"].as<std::string>();
+
 			// Call user file data handler
-			FileDataCallbackType* fileDataCallback = reinterpret_cast<FileDataCallbackType*>(fileReader["data-filesReadyCallback"].as<size_t>());
+			EmscriptenLocalFile::FileDataCallbackType* fileDataCallback = reinterpret_cast<EmscriptenLocalFile::FileDataCallbackType*>(fileReader["data-dataCallback"].as<size_t>());
 			void* context = reinterpret_cast<void*>(fileReader["data-callbackContext"].as<size_t>());
-			fileDataCallback(context, buffer, size, fileReader["data-name"].as<std::string>().c_str());
+			fileDataCallback(context, std::unique_ptr<char[]>(buffer), size, StringView(fileName.data(), fileName.size()));
 		}
 
 		void ReadFiles(emscripten::val event)
@@ -42,17 +43,15 @@ namespace nCine
 			emscripten::val files = target["files"];
 			const int fileCount = files["length"].as<int>();
 
-			if (fileCount > 0) {
-				LoadingCallbackType* loadingCallback = reinterpret_cast<LoadingCallbackType*>(target["data-loadingCallback"].as<size_t>());
-				void* context = reinterpret_cast<void*>(target["data-callbackContext"].as<size_t>());
-				loadingCallback(context);
-			}
+			EmscriptenLocalFile::FileCountCallbackType* doneCallback = reinterpret_cast<EmscriptenLocalFile::FileCountCallbackType*>(target["data-countCallback"].as<size_t>());
+			void* context = reinterpret_cast<void*>(target["data-callbackContext"].as<size_t>());
+			doneCallback(context, fileCount);
 
 			for (int i = 0; i < fileCount; i++) {
 				emscripten::val file = files[i];
 				emscripten::val fileReader = emscripten::val::global("FileReader").new_();
 				fileReader.set("onload", emscripten::val::module_property("jsReadFileContent"));
-				fileReader.set("data-filesReadyCallback", target["data-filesReadyCallback"]);
+				fileReader.set("data-dataCallback", target["data-dataCallback"]);
 				fileReader.set("data-callbackContext", target["data-callbackContext"]);
 				fileReader.set("data-name", file["name"]);
 				fileReader.call<void>("readAsArrayBuffer", file);
@@ -60,7 +59,7 @@ namespace nCine
 		}
 
 		/// Loads a file by opening a native file dialog
-		void LoadFile(const char* accept, FileDataCallbackType* filesReadyCallback, LoadingCallbackType* loadingCallback, void* context)
+		void LoadFile(const char* accept, bool multiple, EmscriptenLocalFile::FileDataCallbackType* fileDataCallback, EmscriptenLocalFile::FileCountCallbackType* fileCountCallback, void* context)
 		{
 			// Create file input element which will display a native file dialog.
 			emscripten::val document = emscripten::val::global("document");
@@ -68,14 +67,17 @@ namespace nCine
 			input.set("type", "file");
 			input.set("style", "display:none");
 			input.set("accept", emscripten::val(accept));
+			if (multiple) {
+				input.set("multiple", "multiple");
+			}
 
 			// Set JavaScript `onchange` callback which will be called on selected file(s),
 			// and also forward the user C callback pointers so that the `onchange`
 			// callback can call it. (The `onchange` callback is actually a C function
 			// exposed to JavaScript with EMSCRIPTEN_BINDINGS).
 			input.set("onchange", emscripten::val::module_property("jsReadFiles"));
-			input.set("data-filesReadyCallback", emscripten::val(size_t(filesReadyCallback)));
-			input.set("data-loadingCallback", emscripten::val(size_t(loadingCallback)));
+			input.set("data-dataCallback", emscripten::val(size_t(fileDataCallback)));
+			input.set("data-countCallback", emscripten::val(size_t(fileCountCallback)));
 			input.set("data-callbackContext", emscripten::val(size_t(context)));
 
 			// Programatically activate input
@@ -125,7 +127,12 @@ namespace nCine
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void EmscriptenLocalFile::Load()
+	void EmscriptenLocalFile::Load(const StringView& fileFilter, bool multiple, FileDataCallbackType fileDataCallback, FileCountCallbackType fileCountCallback, void* userData)
+	{
+		LoadFile(String::nullTerminatedView(fileFilter).data(), multiple, fileDataCallback, fileCountCallback, userData);
+	}
+
+	/*void EmscriptenLocalFile::Load()
 	{
 		LoadFile("*", FileDataCallback, LoadingCallback, this);
 	}
@@ -143,7 +150,7 @@ namespace nCine
 
 		LOGI_X("Saving file: \"%s\" (%u bytes)", filename, fileSize_);
 		SaveFile(fileBuffer_.get(), fileSize_, filename);
-	}
+	}*/
 
 	unsigned long int EmscriptenLocalFile::Read(void* buffer, unsigned long int bytes) const
 	{
@@ -166,17 +173,17 @@ namespace nCine
 		return bytes;
 	}
 
-	void EmscriptenLocalFile::SetLoadedCallback(LoadedCallbackType* loadedCallback, void* userData)
+	/*void EmscriptenLocalFile::SetLoadedCallback(LoadedCallbackType* loadedCallback, void* userData)
 	{
 		loadedCallback_ = loadedCallback;
 		userData_ = userData;
-	}
+	}*/
 
 	///////////////////////////////////////////////////////////
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void EmscriptenLocalFile::FileDataCallback(void* context, char* contentPointer, size_t contentSize, const char* filename)
+	/*void EmscriptenLocalFile::FileDataCallback(void* context, char* contentPointer, size_t contentSize, const char* filename)
 	{
 		FATAL_ASSERT(context);
 		FATAL_ASSERT(contentPointer);
@@ -200,11 +207,7 @@ namespace nCine
 
 	void EmscriptenLocalFile::LoadingCallback(void* context)
 	{
-		FATAL_ASSERT(context);
-
-		EmscriptenLocalFile* localFile = reinterpret_cast<EmscriptenLocalFile*>(context);
-		localFile->loading_ = true;
-	}
+	}*/
 
 }
 

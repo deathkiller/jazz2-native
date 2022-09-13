@@ -46,7 +46,7 @@ namespace nCine
 		}
 
 		/// Returns the proper audio loader according to the memory buffer name extension
-		static std::unique_ptr<IAudioLoader> createFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize);
+		static std::unique_ptr<IAudioLoader> createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// Returns the proper audio loader according to the file extension
 		static std::unique_ptr<IAudioLoader> createFromFile(const StringView& filename);
 

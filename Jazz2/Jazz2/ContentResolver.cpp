@@ -1,7 +1,9 @@
 ﻿#include "ContentResolver.h"
 #include "ContentResolver.Shaders.h"
 
+#include "../nCine/IO/CompressionUtils.h"
 #include "../nCine/IO/IFileStream.h"
+#include "../nCine/IO/MemoryFile.h"
 #include "../nCine/Graphics/ITextureLoader.h"
 #include "../nCine/Base/Random.h"
 
@@ -610,7 +612,7 @@ namespace Jazz2
 		}
 	}
 
-	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(const StringView& path, bool applyPalette)
+	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(const StringView& path, uint16_t captionTileId, bool applyPalette)
 	{
 		// Try "Content" directory first, then "Cache" directory
 		String fullPath = fs::JoinPath({ "Content"_s, "Tilesets"_s, path + ".j2t"_s });
@@ -634,10 +636,23 @@ namespace Jazz2
 		uint32_t width = s->ReadValue<uint32_t>();
 		uint32_t height = s->ReadValue<uint32_t>();
 
+		// Read compressed palette and mask
+		int32_t compressedSize = s->ReadValue<int32_t>();
+		int32_t uncompressedSize = s->ReadValue<int32_t>();
+		std::unique_ptr<uint8_t[]> compressedBuffer = std::make_unique<uint8_t[]>(compressedSize);
+		std::unique_ptr<uint8_t[]> uncompressedBuffer = std::make_unique<uint8_t[]>(uncompressedSize);
+		s->Read(compressedBuffer.get(), compressedSize);
+
+		auto result = CompressionUtils::Inflate(compressedBuffer.get(), compressedSize, uncompressedBuffer.get(), uncompressedSize);
+		if (result != DecompressionResult::Success) {
+			return nullptr;
+		}
+		MemoryFile uc(uncompressedBuffer.get(), uncompressedSize);
+
 		// Palette
 		if (applyPalette) {
 			uint32_t newPalette[ColorsPerPalette];
-			s->Read(newPalette, ColorsPerPalette * sizeof(uint32_t));
+			uc.Read(newPalette, ColorsPerPalette * sizeof(uint32_t));
 
 			if (std::memcmp(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t)) != 0) {
 				// Palettes differs, drop all cached resources, so it will be reloaded with new palette
@@ -654,14 +669,14 @@ namespace Jazz2
 				RecreateGemPalettes();
 			}
 		} else {
-			s->Seek(ColorsPerPalette * sizeof(uint32_t), SeekOrigin::Current);
+			uc.Seek(ColorsPerPalette * sizeof(uint32_t), SeekOrigin::Current);
 		}
 
 		// Mask
-		uint32_t maskSize = s->ReadValue<uint32_t>();
+		uint32_t maskSize = uc.ReadValue<uint32_t>();
 		std::unique_ptr<uint8_t[]> mask = std::make_unique<uint8_t[]>(maskSize * 8);
 		for (uint32_t j = 0; j < maskSize; j++) {
-			uint8_t idx = s->ReadValue<uint8_t>();
+			uint8_t idx = uc.ReadValue<uint8_t>();
 			for (int k = 0; k < 8; k++) {
 				int pixelIdx = 8 * j + k;
 				mask[pixelIdx] = (((idx >> k) & 0x01) != 0);
@@ -682,7 +697,26 @@ namespace Jazz2
 		textureDiffuse->setMinFiltering(SamplerFilter::Nearest);
 		textureDiffuse->setMagFiltering(SamplerFilter::Nearest);
 
-		return std::make_unique<Tiles::TileSet>(std::move(textureDiffuse), std::move(mask));
+		// Caption Tile
+		std::unique_ptr<Color[]> captionTile;
+		if (captionTileId > 0) {
+			int tw = (width / TileSet::DefaultTileSize);
+			int tx = (captionTileId % tw) * TileSet::DefaultTileSize;
+			int ty = (captionTileId / tw) * TileSet::DefaultTileSize;
+			captionTile = std::make_unique<Color[]>(TileSet::DefaultTileSize * TileSet::DefaultTileSize / 3);
+			for (int y = 0; y < TileSet::DefaultTileSize / 3; y++) {
+				for (int x = 0; x < TileSet::DefaultTileSize; x++) {
+					Color c1 = Color(pixels[((ty + y * 3) * width) + tx + x]);
+					Color c2 = Color(pixels[((ty + y * 3 + 1) * width) + tx + x]);
+					Color c3 = Color(pixels[((ty + y * 3 + 2) * width) + tx + x]);
+					captionTile[y * TileSet::DefaultTileSize + x] = Color((c1.B() + c2.B() + c3.B()) / 3, (c1.G() + c2.G() + c3.G()) / 3, (c1.R() + c2.R() + c3.R()) / 3);
+				}
+			}
+		} else {
+			captionTile = nullptr;
+		}
+
+		return std::make_unique<Tiles::TileSet>(std::move(textureDiffuse), std::move(mask), std::move(captionTile));
 	}
 
 	bool ContentResolver::LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty)
@@ -694,72 +728,86 @@ namespace Jazz2
 		}
 
 		auto s = fs::Open(fullPath, FileAccessMode::Read);
-		ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
+		RETURNF_ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
 
 		uint64_t signature = s->ReadValue<uint64_t>();
 		uint8_t fileType = s->ReadValue<uint8_t>();
-		ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && fileType == LevelFile, "File has invalid signature");
+		RETURNF_ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && fileType == LevelFile, "File has invalid signature");
 
 		// TODO: Level flags
 		uint16_t flags = s->ReadValue<uint16_t>();
 
-		uint8_t nameSize = s->ReadValue<uint8_t>();
+		// Read compressed data
+		int32_t compressedSize = s->ReadValue<int32_t>();
+		int32_t uncompressedSize = s->ReadValue<int32_t>();
+		std::unique_ptr<uint8_t[]> compressedBuffer = std::make_unique<uint8_t[]>(compressedSize);
+		std::unique_ptr<uint8_t[]> uncompressedBuffer = std::make_unique<uint8_t[]>(uncompressedSize);
+		s->Read(compressedBuffer.get(), compressedSize);
+
+		auto result = CompressionUtils::Inflate(compressedBuffer.get(), compressedSize, uncompressedBuffer.get(), uncompressedSize);
+		RETURNF_ASSERT_MSG(result == DecompressionResult::Success, "File cannot be uncompressed");
+		MemoryFile uc(uncompressedBuffer.get(), uncompressedSize);
+
+		// Read metadata
+		uint8_t nameSize = uc.ReadValue<uint8_t>();
 		String name(NoInit, nameSize);
-		s->Read(name.data(), nameSize);
+		uc.Read(name.data(), nameSize);
 
-		nameSize = s->ReadValue<uint8_t>();
+		nameSize = uc.ReadValue<uint8_t>();
 		String nextLevel(NoInit, nameSize);
-		s->Read(nextLevel.data(), nameSize);
+		uc.Read(nextLevel.data(), nameSize);
 
-		nameSize = s->ReadValue<uint8_t>();
+		nameSize = uc.ReadValue<uint8_t>();
 		String secretLevel(NoInit, nameSize);
-		s->Read(secretLevel.data(), nameSize);
+		uc.Read(secretLevel.data(), nameSize);
 
-		nameSize = s->ReadValue<uint8_t>();
+		nameSize = uc.ReadValue<uint8_t>();
 		String bonusLevel(NoInit, nameSize);
-		s->Read(bonusLevel.data(), nameSize);
+		uc.Read(bonusLevel.data(), nameSize);
 
 		// Default Tileset
-		nameSize = s->ReadValue<uint8_t>();
+		nameSize = uc.ReadValue<uint8_t>();
 		String defaultTileset(NoInit, nameSize);
-		s->Read(defaultTileset.data(), nameSize);
+		uc.Read(defaultTileset.data(), nameSize);
 
 		// Default Music
-		nameSize = s->ReadValue<uint8_t>();
+		nameSize = uc.ReadValue<uint8_t>();
 		String defaultMusic(NoInit, nameSize);
-		s->Read(defaultMusic.data(), nameSize);
+		uc.Read(defaultMusic.data(), nameSize);
 
-		uint32_t rawAmbientColor = s->ReadValue<uint32_t>();
+		uint32_t rawAmbientColor = uc.ReadValue<uint32_t>();
 		Vector4f ambientColor = Vector4f((rawAmbientColor & 0xff) / 255.0f, ((rawAmbientColor >> 8) & 0xff) / 255.0f,
 			((rawAmbientColor >> 16) & 0xff) / 255.0f, ((rawAmbientColor >> 24) & 0xff) / 255.0f);
 
-		WeatherType defaultWeatherType = (WeatherType)s->ReadValue<uint8_t>();
-		uint8_t defaultWeatherIntensity = s->ReadValue<uint8_t>();
+		WeatherType defaultWeatherType = (WeatherType)uc.ReadValue<uint8_t>();
+		uint8_t defaultWeatherIntensity = uc.ReadValue<uint8_t>();
+
+		uint16_t captionTileId = uc.ReadValue<uint16_t>();
 
 		// Text Event Strings
-		uint8_t textEventStringsCount = s->ReadValue<uint8_t>();
+		uint8_t textEventStringsCount = uc.ReadValue<uint8_t>();
 		SmallVector<String, 0> levelTexts;
 		levelTexts.reserve(textEventStringsCount);
 		for (int i = 0; i < textEventStringsCount; i++) {
-			uint16_t textLength = s->ReadValue<uint16_t>();
+			uint16_t textLength = uc.ReadValue<uint16_t>();
 			String& text = levelTexts.emplace_back(NoInit, textLength);
-			s->Read(text.data(), textLength);
+			uc.Read(text.data(), textLength);
 		}
 
-		std::unique_ptr<Tiles::TileMap> tileMap = std::make_unique<Tiles::TileMap>(levelHandler, defaultTileset);
+		std::unique_ptr<Tiles::TileMap> tileMap = std::make_unique<Tiles::TileMap>(levelHandler, defaultTileset, captionTileId);
 
 		// Animated Tiles
-		tileMap->ReadAnimatedTiles(s);
+		tileMap->ReadAnimatedTiles(uc);
 
 		// Layers
-		uint8_t layerCount = s->ReadValue<uint8_t>();
+		uint8_t layerCount = uc.ReadValue<uint8_t>();
 		for (int i = 0; i < layerCount; i++) {
-			tileMap->ReadLayerConfiguration(s);
+			tileMap->ReadLayerConfiguration(uc);
 		}
 
 		// Events
 		std::unique_ptr<Events::EventMap> eventMap = std::make_unique<Events::EventMap>(levelHandler, tileMap->Size());
-		eventMap->ReadEvents(s, tileMap, difficulty);
+		eventMap->ReadEvents(uc, tileMap, difficulty);
 
 		// TODO: Bonus level
 		levelHandler->OnLevelLoaded(name, nextLevel, secretLevel, tileMap, eventMap, defaultMusic, ambientColor,

@@ -93,12 +93,12 @@ namespace nCine
 	}
 
 	/*! \note It needs a `bufferName` with a valid file extension as it loads compressed data from a file in memory */
-	Texture::Texture(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
+	Texture::Texture(const unsigned char* bufferPtr, unsigned long int bufferSize)
 		: Texture()
 	{
-		const bool hasLoaded = loadFromMemory(bufferName, bufferPtr, bufferSize);
+		const bool hasLoaded = loadFromMemory(bufferPtr, bufferSize);
 		if (!hasLoaded) {
-			LOGE_X("Texture \"%s\" cannot be loaded", bufferName);
+			LOGE_X("Texture cannot be loaded");
 		}
 	}
 
@@ -163,11 +163,11 @@ namespace nCine
 	}
 
 	/*! \note It needs a `bufferName` with a valid file extension as it loads compressed data from a file in memory */
-	bool Texture::loadFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
+	bool Texture::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
 		ZoneScoped;
 
-		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromMemory(bufferName, bufferPtr, bufferSize);
+		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromMemory(bufferPtr, bufferSize);
 		if (texLoader->hasLoaded() == false)
 			return false;
 
@@ -175,7 +175,6 @@ namespace nCine
 			RenderStatistics::removeTexture(dataSize_);
 
 		glTexture_->bind();
-		glTexture_->setObjectLabel(bufferName);
 		initialize(*texLoader);
 		load(*texLoader);
 

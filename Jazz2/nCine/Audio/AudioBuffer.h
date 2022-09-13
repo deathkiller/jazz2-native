@@ -27,7 +27,7 @@ namespace nCine
 		/// Creates an OpenAL buffer name
 		AudioBuffer();
 		/// A constructor creating a buffer from memory
-		AudioBuffer(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize);
+		AudioBuffer(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// A constructor creating a buffer from a file
 		explicit AudioBuffer(const StringView& filename);
 		~AudioBuffer() override;
@@ -40,7 +40,7 @@ namespace nCine
 		/// Initializes an empty buffer with the specified format and frequency
 		void init(Format format, int frequency);
 
-		bool loadFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize);
+		bool loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		bool loadFromFile(const StringView& filename);
 		/// Loads samples in raw PCM format from a memory buffer
 		bool loadFromSamples(const unsigned char* bufferPtr, unsigned long int bufferSize);

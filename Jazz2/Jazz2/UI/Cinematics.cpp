@@ -9,21 +9,7 @@
 #include "../../nCine/Input/IInputManager.h"
 #include "../../nCine/Audio/AudioReaderMpt.h"
 #include "../../nCine/Base/FrameTimer.h"
-
-#if defined(WITH_ZLIB)
-#	include <zlib.h>
-#else
-#	if defined(_MSC_VER) && defined(__has_include)
-#		if __has_include("../../../Libs/libdeflate.h")
-#			define __HAS_LOCAL_LIBDEFLATE
-#		endif
-#	endif
-#	ifdef __HAS_LOCAL_LIBDEFLATE
-#		include "../../../Libs/libdeflate.h"
-#	else
-#		include <libdeflate.h>
-#	endif
-#endif
+#include "../../nCine/IO/CompressionUtils.h"
 
 namespace Jazz2::UI
 {
@@ -182,50 +168,21 @@ namespace Jazz2::UI
 			}
 		}
 
-#if !defined(WITH_ZLIB)
-		libdeflate_decompressor* decompressor = libdeflate_alloc_decompressor();
-#endif
-
 		for (int i = 0; i < _countof(_decompressedStreams); i++) {
 			// Stream 3 contains pixel data and is probably compressed with higher ratio
 			_decompressedStreams[i].resize_for_overwrite(currentOffsets[i] * (i == 3 ? 8 : 3));
 
 		Retry:
-#if defined(WITH_ZLIB)
-			z_stream strm;
-			strm.zalloc = Z_NULL;
-			strm.zfree = Z_NULL;
-			strm.opaque = Z_NULL;
-			strm.avail_in = currentOffsets[i] - 2;
-			strm.next_in = &compressedStreams[i][2];
-			strm.avail_out = _decompressedStreams[i].size();
-			strm.next_out = &_decompressedStreams[i][0];
-			int result = inflateInit2(&strm, -15);
-			RETURNF_ASSERT_MSG_X(result == Z_OK, "Cinematics stream %i in \"%s\" cannot be decompressed (%i)", i, s->GetFilename(), result);
-			result = inflate(&strm, Z_NO_FLUSH);
-			inflateEnd(&strm);
-			RETURNF_ASSERT_MSG_X(result == Z_OK || result == Z_STREAM_END, "Cinematics stream %i in \"%s\" cannot be decompressed (%i)", i, s->GetFilename(), result);
-#else
-			size_t bytesRead;
-			libdeflate_result result = libdeflate_deflate_decompress(decompressor, &compressedStreams[i][2], currentOffsets[i] - 2, &_decompressedStreams[i][0], _decompressedStreams[i].size(), &bytesRead);
-			//LOGI_X("UNCOMP: %u | %u", bytesRead, currentOffsets[i]);
-			//RETURNF_ASSERT_MSG_X(result == LIBDEFLATE_SUCCESS, "Cinematics stream %i in \"%s\" cannot be decompressed (%i)", i, s->GetFilename(), result);
-			if (result != LIBDEFLATE_SUCCESS) {
-				if (result == LIBDEFLATE_INSUFFICIENT_SPACE) {
-					_decompressedStreams[i].resize_for_overwrite(_decompressedStreams[i].size() * 2);
-					LOGI_X("Cinematics stream %i was larger than expected, resizing buffer to %i", i, _decompressedStreams[i].size());
-					goto Retry;
-				} else {
-					// It fails everytime for unknown reason, but it plays anyway
-					//LOGE_X("Cinematics stream %i failed (%u)", i, result);
-				}
+			int compressedSize = currentOffsets[i] - 2;
+			int decompressedSize = _decompressedStreams[i].size();
+			auto result = CompressionUtils::Inflate(compressedStreams[i].begin() + 2, compressedSize, _decompressedStreams[i].begin(), decompressedSize);
+			if (result == DecompressionResult::BufferTooSmall) {
+				_decompressedStreams[i].resize_for_overwrite(_decompressedStreams[i].size() * 2);
+				LOGI_X("Cinematics stream %i was larger than expected, resizing buffer to %i", i, _decompressedStreams[i].size());
+				goto Retry;
 			}
-#endif
 		}
 
-#if !defined(WITH_ZLIB)
-		libdeflate_free_decompressor(decompressor);
-#endif
 		return true;
 	}
 

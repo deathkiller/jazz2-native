@@ -437,7 +437,7 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::PrepareTexturedBackground()
 	{
-		_tileSet = ContentResolver::Current().RequestTileSet("easter99"_s, true);
+		_tileSet = ContentResolver::Current().RequestTileSet("easter99"_s, 0, true);
 		if (_tileSet == nullptr) {
 			return;
 		}

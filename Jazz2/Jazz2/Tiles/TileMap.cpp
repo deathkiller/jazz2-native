@@ -8,7 +8,7 @@
 
 namespace Jazz2::Tiles
 {
-	TileMap::TileMap(LevelHandler* levelHandler, const StringView& tileSetPath)
+	TileMap::TileMap(LevelHandler* levelHandler, const StringView& tileSetPath, uint16_t captionTileId)
 		:
 		_levelHandler(levelHandler),
 		_sprLayerIndex(-1),
@@ -19,7 +19,7 @@ namespace Jazz2::Tiles
 		_texturedBackgroundLayer(-1),
 		_texturedBackgroundPass(this)
 	{
-		_tileSet = ContentResolver::Current().RequestTileSet(tileSetPath, true);
+		_tileSet = ContentResolver::Current().RequestTileSet(tileSetPath, captionTileId, true);
 		_renderCommands.reserve(128);
 
 		if (_tileSet == nullptr) {
@@ -566,7 +566,6 @@ namespace Jazz2::Tiles
 			return command;
 		} else {
 			std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
-			command->setType(RenderCommand::CommandTypes::SPRITE);
 			command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
 			command->material().setBlendingEnabled(true);
 			command->material().reserveUniformsDataMemory();
@@ -580,10 +579,10 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	void TileMap::ReadLayerConfiguration(const std::unique_ptr<IFileStream>& s)
+	void TileMap::ReadLayerConfiguration(IFileStream& s)
 	{
-		LayerType layerType = (LayerType)s->ReadValue<uint8_t>();
-		uint8_t layerFlags = s->ReadValue<uint8_t>();
+		LayerType layerType = (LayerType)s.ReadValue<uint8_t>();
+		uint8_t layerFlags = s.ReadValue<uint8_t>();
 		bool hasTexturedBackground = (layerType == LayerType::Sky && (layerFlags & 0x08) == 0x08);
 
 		if (layerType == LayerType::Sprite) {
@@ -594,29 +593,29 @@ namespace Jazz2::Tiles
 
 		TileMapLayer& newLayer = _layers.emplace_back();
 
-		int32_t width = s->ReadValue<int32_t>();
-		int32_t height = s->ReadValue<int32_t>();
+		int32_t width = s.ReadValue<int32_t>();
+		int32_t height = s.ReadValue<int32_t>();
 		newLayer.LayoutSize = Vector2i(width, height);
 		newLayer.Visible = true;
 
 		if (layerType != LayerType::Sprite) {
-			newLayer.Description.OffsetX = s->ReadValue<float>();
-			newLayer.Description.OffsetY = s->ReadValue<float>();
-			newLayer.Description.SpeedX = s->ReadValue<float>();
-			newLayer.Description.SpeedY = s->ReadValue<float>();
-			newLayer.Description.AutoSpeedX = s->ReadValue<float>();
-			newLayer.Description.AutoSpeedY = s->ReadValue<float>();
+			newLayer.Description.OffsetX = s.ReadValue<float>();
+			newLayer.Description.OffsetY = s.ReadValue<float>();
+			newLayer.Description.SpeedX = s.ReadValue<float>();
+			newLayer.Description.SpeedY = s.ReadValue<float>();
+			newLayer.Description.AutoSpeedX = s.ReadValue<float>();
+			newLayer.Description.AutoSpeedY = s.ReadValue<float>();
 			newLayer.Description.RepeatX = ((layerFlags & 0x01) == 0x01);
 			newLayer.Description.RepeatY = ((layerFlags & 0x02) == 0x02);
-			int16_t depth = s->ReadValue<int16_t>();
+			int16_t depth = s.ReadValue<int16_t>();
 			newLayer.Description.Depth = (uint16_t)(ILevelHandler::MainPlaneZ - depth);
 			newLayer.Description.UseInherentOffset = ((layerFlags & 0x04) == 0x04);
 
 			if (hasTexturedBackground) {
-				newLayer.Description.UseBackgroundStyle = (BackgroundStyle)s->ReadValue<uint8_t>();
-				uint8_t param1 = s->ReadValue<uint8_t>();
-				uint8_t param2 = s->ReadValue<uint8_t>();
-				uint8_t param3 = s->ReadValue<uint8_t>();
+				newLayer.Description.UseBackgroundStyle = (BackgroundStyle)s.ReadValue<uint8_t>();
+				uint8_t param1 = s.ReadValue<uint8_t>();
+				uint8_t param2 = s.ReadValue<uint8_t>();
+				uint8_t param3 = s.ReadValue<uint8_t>();
 				newLayer.Description.BackgroundColor = Vector3f(param1 / 255.0f, param2 / 255.0f, param3 / 255.0f);
 				newLayer.Description.ParallaxStarsEnabled = ((layerFlags & 0x10) == 0x10);
 			}
@@ -636,8 +635,8 @@ namespace Jazz2::Tiles
 		newLayer.Layout = std::make_unique<LayerTile[]>(width * height);
 
 		for (int i = 0; i < (width * height); i++) {
-			uint8_t tileFlags = s->ReadValue<uint8_t>();
-			uint16_t tileIdx = s->ReadValue<uint16_t>();
+			uint8_t tileFlags = s.ReadValue<uint8_t>();
+			uint16_t tileIdx = s.ReadValue<uint16_t>();
 
 			uint8_t tileModifier = (uint8_t)(tileFlags >> 4);
 
@@ -656,14 +655,14 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	void TileMap::ReadAnimatedTiles(const std::unique_ptr<IFileStream>& s)
+	void TileMap::ReadAnimatedTiles(IFileStream& s)
 	{
-		int16_t count = s->ReadValue<int16_t>();
+		int16_t count = s.ReadValue<int16_t>();
 
 		_animatedTiles.reserve(count);
 
 		for (int i = 0; i < count; i++) {
-			uint8_t frameCount = s->ReadValue<uint8_t>();
+			uint8_t frameCount = s.ReadValue<uint8_t>();
 			if (frameCount == 0) {
 				continue;
 			}
@@ -671,21 +670,21 @@ namespace Jazz2::Tiles
 			AnimatedTile& animTile = _animatedTiles.emplace_back();
 
 			// TODO: Adjust FPS in Import
-			uint8_t speed = s->ReadValue<uint8_t>();
+			uint8_t speed = s.ReadValue<uint8_t>();
 			animTile.FrameDuration = 70.0f / (speed * 14 / 10);
-			animTile.Delay = s->ReadValue<uint16_t>();
+			animTile.Delay = s.ReadValue<uint16_t>();
 
 			//animTile.DelayJitter = s->ReadValue<uint16_t>();
-			uint16_t delayJitter = s->ReadValue<uint16_t>();
+			uint16_t delayJitter = s.ReadValue<uint16_t>();
 
-			animTile.PingPong = s->ReadValue<uint8_t>();
-			animTile.PingPongDelay = s->ReadValue<uint16_t>();
+			animTile.PingPong = s.ReadValue<uint8_t>();
+			animTile.PingPongDelay = s.ReadValue<uint16_t>();
 
 			for (int j = 0; j < frameCount; j++) {
 				auto& frame = animTile.Tiles.emplace_back();
 				// TODO: flags
-				uint8_t flag = s->ReadValue<uint8_t>();
-				frame.TileID = s->ReadValue<uint16_t>();
+				uint8_t flag = s.ReadValue<uint8_t>();
+				frame.TileID = s.ReadValue<uint16_t>();
 			}
 		}
 	}

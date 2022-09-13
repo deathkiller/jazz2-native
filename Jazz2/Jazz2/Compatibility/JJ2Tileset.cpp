@@ -1,6 +1,9 @@
 ﻿#include "JJ2Tileset.h"
 #include "JJ2Anims.h"
 
+#include "../../nCine/IO/CompressionUtils.h"
+#include "../../nCine/IO/GrowableMemoryFile.h"
+
 namespace Jazz2::Compatibility
 {
 	void JJ2Tileset::Open(const StringView& path, bool strictParser)
@@ -173,16 +176,27 @@ namespace Jazz2::Compatibility
 		so->WriteValue<uint32_t>(width);
 		so->WriteValue<uint32_t>(height);
 
+		GrowableMemoryFile co(1024 * 1024);
+
 		// Palette
-		so->Write(_palette, sizeof(_palette));
+		co.Write(_palette, sizeof(_palette));
 
 		// Mask
-		// TODO: Compress this
-		so->WriteValue<uint32_t>(_tileCount * sizeof(_tiles[0].Mask));
+		co.WriteValue<uint32_t>(_tileCount * sizeof(_tiles[0].Mask));
 		for (int i = 0; i < _tileCount; i++) {
 			auto& tile = _tiles[i];
-			so->Write(tile.Mask, sizeof(tile.Mask));
+			co.Write(tile.Mask, sizeof(tile.Mask));
 		}
+
+		// Compress palette and mask
+		int32_t compressedSize = CompressionUtils::GetMaxDeflatedSize(co.GetSize());
+		std::unique_ptr<uint8_t[]> compressedBuffer = std::make_unique<uint8_t[]>(compressedSize);
+		compressedSize = CompressionUtils::Deflate(co.GetBuffer(), co.GetSize(), compressedBuffer.get(), compressedSize);
+		ASSERT(compressedSize > 0);
+
+		so->WriteValue<int32_t>(compressedSize);
+		so->WriteValue<int32_t>(co.GetSize());
+		so->Write(compressedBuffer.get(), compressedSize);
 
 		// Image
 		std::unique_ptr<uint8_t[]> pixels = std::make_unique<uint8_t[]>(width * height * 4);

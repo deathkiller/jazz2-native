@@ -1,14 +1,26 @@
 ﻿#include "GameplayOptionsSection.h"
 #include "GameplayEnhancementsSection.h"
+#include "../RgbLights.h"
+#include "../../PreferencesCache.h"
 
 namespace Jazz2::UI::Menu
 {
 	GameplayOptionsSection::GameplayOptionsSection()
 		:
 		_selectedIndex(0),
-		_animation(0.0f)
+		_animation(0.0f),
+		_isDirty(false)
 	{
 		_items[(int)Item::Enhancements].Name = "Enhancements"_s;
+		_items[(int)Item::EnableRgbLights].Name = "Razer Chroma™"_s;
+	}
+
+	GameplayOptionsSection::~GameplayOptionsSection()
+	{
+		if (_isDirty) {
+			_isDirty = false;
+			PreferencesCache::Save();
+		}
 	}
 
 	void GameplayOptionsSection::OnUpdate(float timeMult)
@@ -17,7 +29,7 @@ namespace Jazz2::UI::Menu
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
 		}
 
-		if (_root->ActionHit(PlayerActions::Fire)) {
+		if (_root->ActionHit(PlayerActions::Fire) || (_selectedIndex >= 1 && (_root->ActionHit(PlayerActions::Left) || _root->ActionHit(PlayerActions::Right)))) {
 			ExecuteSelected();
 		} else if (_root->ActionHit(PlayerActions::Menu)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -70,12 +82,30 @@ namespace Jazz2::UI::Menu
 
 				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
 					Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+
+				if (i >= 1) {
+					_root->DrawStringShadow("<"_s, charOffset, center.X - 60.0f - 30.0f * size, center.Y + 22.0f, IMenuContainer::FontLayer + 20,
+						Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);
+					_root->DrawStringShadow(">"_s, charOffset, center.X + 70.0f + 30.0f * size, center.Y + 22.0f, IMenuContainer::FontLayer + 20,
+						Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, 1.1f, 0.4f, 0.4f);
+				}
 			} else {
 				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
-			center.Y += (bottomLine - topLine) * 0.9f / (int)Item::Count;
+			if (i >= 1) {
+				bool enabled;
+				switch (i) {
+					default:
+					case (int)Item::EnableRgbLights: enabled = PreferencesCache::EnableRgbLights; break;
+				}
+
+				_root->DrawStringShadow(enabled ? "Enabled"_s : "Disabled"_s, charOffset, center.X, center.Y + 22.0f, IMenuContainer::FontLayer - 10,
+					Alignment::Center, (_selectedIndex == i ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
+			}
+
+			center.Y += (bottomLine - topLine) * (i >= 1 ? 0.9f : 0.7f) / (int)Item::Count;
 		}
 	}
 
@@ -115,6 +145,14 @@ namespace Jazz2::UI::Menu
 
 		switch (_selectedIndex) {
 			case (int)Item::Enhancements: _root->SwitchToSection<GameplayEnhancementsSection>(); break;
+			case (int)Item::EnableRgbLights:
+				PreferencesCache::EnableRgbLights = !PreferencesCache::EnableRgbLights;
+				if (!PreferencesCache::EnableRgbLights) {
+					RgbLights::Current().Clear();
+				}
+				_isDirty = true;
+				_animation = 0.0f;
+				break;
 		}
 	}
 }

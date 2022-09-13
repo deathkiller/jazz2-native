@@ -77,7 +77,9 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Viewport.cpp
 	${NCINE_SOURCE_DIR}/nCine/Input/IInputManager.cpp
 	${NCINE_SOURCE_DIR}/nCine/Input/JoyMapping.cpp
+	${NCINE_SOURCE_DIR}/nCine/IO/CompressionUtils.cpp
 	${NCINE_SOURCE_DIR}/nCine/IO/FileSystem.cpp
+	${NCINE_SOURCE_DIR}/nCine/IO/GrowableMemoryFile.cpp
 	${NCINE_SOURCE_DIR}/nCine/IO/IFileStream.cpp
 	${NCINE_SOURCE_DIR}/nCine/IO/MemoryFile.cpp
 	${NCINE_SOURCE_DIR}/nCine/IO/StandardFile.cpp
@@ -199,6 +201,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GameplayOptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GraphicsOptionsSection.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ImportSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/InGameMenu.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MainMenu.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/OptionsSection.cpp

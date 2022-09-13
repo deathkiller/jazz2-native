@@ -1,19 +1,5 @@
 #include "TextureLoaderPng.h"
-
-#if defined(WITH_ZLIB)
-#	include <zlib.h>
-#else
-#	if defined(_MSC_VER) && defined(__has_include)
-#		if __has_include("../../../Libs/libdeflate.h")
-#			define __HAS_LOCAL_LIBDEFLATE
-#		endif
-#	endif
-#	ifdef __HAS_LOCAL_LIBDEFLATE
-#		include "../../../Libs/libdeflate.h"
-#	else
-#		include <libdeflate.h>
-#	endif
-#endif
+#include "../IO/CompressionUtils.h"
 
 #include <Containers/SmallVector.h>
 
@@ -112,27 +98,11 @@ namespace nCine
 					size_t dataLength = 16 + (width_ * height_ * 5);
 					auto buffer = std::make_unique<GLubyte[]>(dataLength);
 
-#if defined(WITH_ZLIB)
-					z_stream strm;
-					strm.zalloc = Z_NULL;
-					strm.zfree = Z_NULL;
-					strm.opaque = Z_NULL;
-					strm.avail_in = data.size() - 2;
-					strm.next_in = data.data() + 2;
-					strm.avail_out = dataLength;
-					strm.next_out = buffer.get();
-					int result = inflateInit2(&strm, -15);
-					RETURN_ASSERT_MSG_X(result == Z_OK, "PNG file \"%s\" cannot be decompressed (%i)", fileHandle_->GetFilename(), result);
-					result = inflate(&strm, Z_NO_FLUSH);
-					inflateEnd(&strm);
-					RETURN_ASSERT_MSG_X(result == Z_OK || result == Z_STREAM_END, "PNG file \"%s\" cannot be decompressed (%i)", fileHandle_->GetFilename(), result);
-#else
-					size_t bytesRead;
-					libdeflate_decompressor* decompressor = libdeflate_alloc_decompressor();
-					libdeflate_result result = libdeflate_deflate_decompress(decompressor, data.data() + 2, data.size() - 2, buffer.get(), dataLength, &bytesRead);
-					libdeflate_free_decompressor(decompressor);
-					RETURN_ASSERT_MSG_X(result == LIBDEFLATE_SUCCESS, "PNG file \"%s\" cannot be decompressed (%i)", fileHandle_->GetFilename(), result);
-#endif
+					int compressedSize = data.size() - 2;
+					int decompressedSize = dataLength;
+					auto result = CompressionUtils::Inflate(data.data() + 2, compressedSize, buffer.get(), decompressedSize);
+					RETURN_ASSERT_MSG_X(result == DecompressionResult::Success, "PNG file \"%s\" cannot be decompressed (%i)", fileHandle_->GetFilename(), result);
+
 					int o = 0;
 					int pxStride = (isPaletted ? 1 : (is24Bit ? 3 : 4));
 					int srcStride = width_ * pxStride;

@@ -119,7 +119,7 @@ namespace Jazz2::Tiles
 			DebrisCollisionAction CollisionAction;
 		};
 
-		TileMap(LevelHandler* levelHandler, const StringView& tileSetPath);
+		TileMap(LevelHandler* levelHandler, const StringView& tileSetPath, uint16_t captionTileId);
 
 		Vector2i Size();
 		Recti LevelBounds();
@@ -131,9 +131,14 @@ namespace Jazz2::Tiles
 		bool IsTileEmpty(const AABBf& aabb, TileCollisionParams& params);
 		SuspendType GetTileSuspendState(float x, float y);
 
-		void ReadLayerConfiguration(const std::unique_ptr<IFileStream>& s);
-		void ReadAnimatedTiles(const std::unique_ptr<IFileStream>& s);
+		void ReadLayerConfiguration(IFileStream& s);
+		void ReadAnimatedTiles(IFileStream& s);
 		void SetTileEventFlags(int x, int y, EventType tileEvent, uint8_t* tileParams);
+
+		Color* GetCaptionTile() const
+		{
+			return _tileSet->GetCaptionTile();
+		}
 
 		void CreateDebris(const DestructibleDebris& debris);
 		void CreateTileDebris(int tileId, int x, int y);

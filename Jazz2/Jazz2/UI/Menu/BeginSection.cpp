@@ -5,6 +5,11 @@
 #include "AboutSection.h"
 #include "MainMenu.h"
 
+#if defined(SHAREWARE_DEMO_ONLY)
+#	include "ImportSection.h"
+#	include "../../PreferencesCache.h"
+#endif
+
 #include "../../../nCine/Application.h"
 
 namespace Jazz2::UI::Menu
@@ -16,26 +21,28 @@ namespace Jazz2::UI::Menu
 		_isVerified(true)
 	{
 #if defined(SHAREWARE_DEMO_ONLY)
-		_items[(int)Item::PlayStory].Name = "Play Shareware Demo"_s;
+		_items[(int)Item::Import].Name = "Import Episodes"_s;
 #else
 		_items[(int)Item::PlayStory].Name = "Play Story"_s;
 #endif
-		//_items[(int)Item::PlayCustom].Name = "Play Custom Game"_s;
 		_items[(int)Item::Options].Name = "Options"_s;
 		_items[(int)Item::About].Name = "About"_s;
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		_items[(int)Item::Quit].Name = "Quit"_s;
-#endif
-
-#if defined(SHAREWARE_DEMO_ONLY)
-		auto demoEpisodeEnd = PreferencesCache::GetEpisodeEnd("share"_s);
-		_demoEpisodeFlags = (demoEpisodeEnd != nullptr ? demoEpisodeEnd->Flags : EpisodeContinuationFlags::None);
 #endif
 	}
 
 	void BeginSection::OnShow(IMenuContainer* root)
 	{
 		MenuSection::OnShow(root);
+
+#if defined(SHAREWARE_DEMO_ONLY)
+		if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None) {
+			_items[(int)Item::PlayStory].Name = "Play Story"_s;
+		} else {
+			_items[(int)Item::PlayStory].Name = "Play Shareware Demo"_s;
+		}
+#endif
 
 		if (auto mainMenu = dynamic_cast<MainMenu*>(_root)) {
 			_isVerified = mainMenu->_root->IsPlayable();
@@ -110,15 +117,6 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
-#if defined(SHAREWARE_DEMO_ONLY)
-			if (i == 0 && (_demoEpisodeFlags & EpisodeContinuationFlags::IsCompleted) == EpisodeContinuationFlags::IsCompleted) {
-				float size = (_selectedIndex == i ? 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f : 0.7f);
-				float expandX = center.X - (_items[i].Name.size() + 3) * 4.0f * (_selectedIndex == i ? size : 1.1f) + 10.0f;
-				_root->DrawElement("EpisodeComplete"_s, 0, expandX, center.Y - 2.0f, IMenuContainer::MainLayer + (_selectedIndex == i ? 20 : 10), Alignment::Right,
-					((_demoEpisodeFlags & EpisodeContinuationFlags::CheatsUsed) == EpisodeContinuationFlags::CheatsUsed ? Colorf::Black : Colorf::White), size, size);
-			}
-#endif
-
 			center.Y += 34.0f + 32.0f * (1.0f - 0.15f * (int)Item::Count);
 		}
 	}
@@ -155,12 +153,19 @@ namespace Jazz2::UI::Menu
 			case (int)Item::PlayStory:
 				if (_isVerified) {
 #if defined(SHAREWARE_DEMO_ONLY)
-					_root->SwitchToSectionPtr(std::make_unique<StartGameOptionsSection>("share"_s, "01_share1"_s, nullptr));
+					if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None) {
+						_root->SwitchToSection<EpisodeSelectSection>();
+					} else {
+						_root->SwitchToSectionPtr(std::make_unique<StartGameOptionsSection>("share"_s, "01_share1"_s, nullptr));
+					}
 #else
 					_root->SwitchToSection<EpisodeSelectSection>();
 #endif
 				}
 				break;
+#if defined(SHAREWARE_DEMO_ONLY)
+			case (int)Item::Import: _root->SwitchToSection<ImportSection>(); break;
+#endif
 			case (int)Item::Options: _root->SwitchToSection<OptionsSection>(); break;
 			case (int)Item::About: _root->SwitchToSection<AboutSection>(); break;
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)

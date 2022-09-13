@@ -3,6 +3,7 @@
 #include "../ContentResolver.h"
 
 #include "../../nCine/Base/Algorithms.h"
+#include "../../nCine/IO/CompressionUtils.h"
 #include "../../nCine/IO/FileSystem.h"
 
 namespace Jazz2::Compatibility
@@ -370,16 +371,18 @@ namespace Jazz2::Compatibility
 		}
 		so->WriteValue<uint16_t>(flags);
 
-		so->WriteValue<uint8_t>((uint8_t)Name.size());
-		so->Write(Name.data(), Name.size());
+		GrowableMemoryFile co(1024 * 1024);
+
+		co.WriteValue<uint8_t>((uint8_t)Name.size());
+		co.Write(Name.data(), Name.size());
 
 		lowercaseInPlace(NextLevel);
 		lowercaseInPlace(SecretLevel);
 		lowercaseInPlace(BonusLevel);
 
-		WriteLevelName(so, NextLevel, levelTokenConversion);
-		WriteLevelName(so, SecretLevel, levelTokenConversion);
-		WriteLevelName(so, BonusLevel, levelTokenConversion);
+		WriteLevelName(co, NextLevel, levelTokenConversion);
+		WriteLevelName(co, SecretLevel, levelTokenConversion);
+		WriteLevelName(co, BonusLevel, levelTokenConversion);
 
 		// Default Tileset
 		lowercaseInPlace(Tileset);
@@ -387,30 +390,42 @@ namespace Jazz2::Compatibility
 		if (StringHasSuffixIgnoreCase(tileset, ".j2t"_s)) {
 			tileset = tileset.exceptSuffix(4);
 		}
-		so->WriteValue<uint8_t>((uint8_t)tileset.size());
-		so->Write(tileset.data(), tileset.size());
+		co.WriteValue<uint8_t>((uint8_t)tileset.size());
+		co.Write(tileset.data(), tileset.size());
 
 		// Default Music
 		lowercaseInPlace(Music);
 		if (Music.findOr('.', Music.end()) == Music.end()) {
 			String music = Music + ".j2b"_s;
-			so->WriteValue<uint8_t>((uint8_t)music.size());
-			so->Write(music.data(), music.size());
+			co.WriteValue<uint8_t>((uint8_t)music.size());
+			co.Write(music.data(), music.size());
 		} else {
-			so->WriteValue<uint8_t>((uint8_t)Music.size());
-			so->Write(Music.data(), Music.size());
+			co.WriteValue<uint8_t>((uint8_t)Music.size());
+			co.Write(Music.data(), Music.size());
 		}
 
-		so->WriteValue<uint8_t>(_darknessColor & 0xff);
-		so->WriteValue<uint8_t>((_darknessColor >> 8) & 0xff);
-		so->WriteValue<uint8_t>((_darknessColor >> 16) & 0xff);
-		so->WriteValue<uint8_t>((uint8_t)std::min(LightingStart * 255 / 64, 255));
+		co.WriteValue<uint8_t>(_darknessColor & 0xff);
+		co.WriteValue<uint8_t>((_darknessColor >> 8) & 0xff);
+		co.WriteValue<uint8_t>((_darknessColor >> 16) & 0xff);
+		co.WriteValue<uint8_t>((uint8_t)std::min(LightingStart * 255 / 64, 255));
 
-		so->WriteValue<uint8_t>((uint8_t)_weatherType);
-		so->WriteValue<uint8_t>(_weatherIntensity);
+		co.WriteValue<uint8_t>((uint8_t)_weatherType);
+		co.WriteValue<uint8_t>(_weatherIntensity);
+
+		// Find caption tile
+		uint16_t maxTiles = (uint16_t)GetMaxSupportedTiles();
+
+		uint16_t captionTileId = 0;
+		for (uint16_t i = 0; i < maxTiles; i++) {
+			if (_staticTiles[i].Type == 4) {
+				captionTileId = i;
+				break;
+			}
+		}
+		co.WriteValue<uint16_t>(captionTileId);
 
 		// Text Event Strings
-		so->WriteValue<uint8_t>(TextEventStringsCount);
+		co.WriteValue<uint8_t>(TextEventStringsCount);
 		for (int i = 0; i < TextEventStringsCount; i++) {
 			size_t textLength = _textEventStrings[i].size();
 			for (int j = 0; j < textLength; j++) {
@@ -419,26 +434,26 @@ namespace Jazz2::Compatibility
 				}
 			}
 
-			so->WriteValue<uint16_t>((uint8_t)textLength);
-			so->Write(_textEventStrings[i].data(), textLength);
+			co.WriteValue<uint16_t>((uint8_t)textLength);
+			co.Write(_textEventStrings[i].data(), textLength);
 		}
 
 		// TODO: Additional Tilesets
 
-		uint16_t maxTiles = (uint16_t)GetMaxSupportedTiles();
+
 		uint16_t lastTilesetTileIndex = (uint16_t)(maxTiles - _animCount);
 
 		// Animated Tiles
-		so->WriteValue<uint16_t>(_animCount);
+		co.WriteValue<uint16_t>(_animCount);
 
 		for (int i = 0; i < _animCount; i++) {
 			auto& tile = _animatedTiles[i];
-			so->WriteValue<uint8_t>(tile.FrameCount);
-			so->WriteValue<uint8_t>(tile.Speed);
-			so->WriteValue<uint16_t>(tile.Delay);
-			so->WriteValue<uint16_t>(tile.DelayJitter);
-			so->WriteValue<uint8_t>(tile.IsReverse ? 1 : 0);
-			so->WriteValue<uint16_t>(tile.ReverseDelay);
+			co.WriteValue<uint8_t>(tile.FrameCount);
+			co.WriteValue<uint8_t>(tile.Speed);
+			co.WriteValue<uint16_t>(tile.Delay);
+			co.WriteValue<uint16_t>(tile.DelayJitter);
+			co.WriteValue<uint8_t>(tile.IsReverse ? 1 : 0);
+			co.WriteValue<uint16_t>(tile.ReverseDelay);
 
 			for (int j = 0; j < tile.FrameCount; j++) {
 				// Max. tiles is either 0x0400 or 0x1000 and doubles as a mask to separate flipped tiles.
@@ -469,8 +484,8 @@ namespace Jazz2::Compatibility
 					tileFlags |= 0x20; // Invisible
 				}
 
-				so->WriteValue<uint8_t>(tileFlags);
-				so->WriteValue<uint16_t>(tileIdx);
+				co.WriteValue<uint8_t>(tileFlags);
+				co.WriteValue<uint16_t>(tileIdx);
 			}
 		}
 
@@ -483,39 +498,39 @@ namespace Jazz2::Compatibility
 		}
 
 		// TODO: Compress layer + event data
-		so->WriteValue<uint8_t>(layerCount);
+		co.WriteValue<uint8_t>(layerCount);
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			auto& layer = _layers[i];
 			if (layer.Used) {
 				bool isSky = (i == 7);
 				bool isSprite = (i == 3);
-				so->WriteValue<uint8_t>(isSprite ? 2 : (isSky ? 1 : 0));	// Layer type
-				so->WriteValue<uint8_t>(layer.Flags & 0xff);				// Layer flags
+				co.WriteValue<uint8_t>(isSprite ? 2 : (isSky ? 1 : 0));	// Layer type
+				co.WriteValue<uint8_t>(layer.Flags & 0xff);				// Layer flags
 
-				so->WriteValue<int32_t>(layer.Width);
-				so->WriteValue<int32_t>(layer.Height);
+				co.WriteValue<int32_t>(layer.Width);
+				co.WriteValue<int32_t>(layer.Height);
 
 				if (!isSprite) {
 					bool hasTexturedBackground = ((layer.Flags & 0x08) == 0x08);
 					if (isSky && !hasTexturedBackground) {
-						so->WriteValue<float>(180.0f);
-						so->WriteValue<float>(-300.0f);
+						co.WriteValue<float>(180.0f);
+						co.WriteValue<float>(-300.0f);
 					} else {
-						so->WriteValue<float>(0.0f);
-						so->WriteValue<float>(0.0f);
+						co.WriteValue<float>(0.0f);
+						co.WriteValue<float>(0.0f);
 					}
 
-					so->WriteValue<float>(layer.SpeedX);
-					so->WriteValue<float>(layer.SpeedY);
-					so->WriteValue<float>(layer.AutoSpeedX);
-					so->WriteValue<float>(layer.AutoSpeedY);
-					so->WriteValue<int16_t>((int16_t)layer.Depth);
+					co.WriteValue<float>(layer.SpeedX);
+					co.WriteValue<float>(layer.SpeedY);
+					co.WriteValue<float>(layer.AutoSpeedX);
+					co.WriteValue<float>(layer.AutoSpeedY);
+					co.WriteValue<int16_t>((int16_t)layer.Depth);
 
 					if (isSky && hasTexturedBackground) {
-						so->WriteValue<uint8_t>(layer.TexturedBackgroundType + 1);
-						so->WriteValue<uint8_t>(layer.TexturedParams1);
-						so->WriteValue<uint8_t>(layer.TexturedParams2);
-						so->WriteValue<uint8_t>(layer.TexturedParams3);
+						co.WriteValue<uint8_t>(layer.TexturedBackgroundType + 1);
+						co.WriteValue<uint8_t>(layer.TexturedParams1);
+						co.WriteValue<uint8_t>(layer.TexturedParams2);
+						co.WriteValue<uint8_t>(layer.TexturedParams3);
 					}
 				}
 
@@ -573,8 +588,8 @@ namespace Jazz2::Compatibility
 							tileFlags |= 0x20;
 						}
 
-						so->WriteValue<uint8_t>(tileFlags);
-						so->WriteValue<uint16_t>(tileIdx);
+						co.WriteValue<uint8_t>(tileFlags);
+						co.WriteValue<uint16_t>(tileIdx);
 					}
 				}
 			}
@@ -632,7 +647,7 @@ namespace Jazz2::Compatibility
 					//_unsupportedEvents[eventType] = (count + 1);
 				}
 
-				so->WriteValue<uint16_t>((uint16_t)converted.Type);
+				co.WriteValue<uint16_t>((uint16_t)converted.Type);
 
 				bool allZeroes = true;
 				if (converted.Type != EventType::Empty) {
@@ -646,28 +661,37 @@ namespace Jazz2::Compatibility
 
 				if (allZeroes) {
 					if (generatorDelay == -1) {
-						so->WriteValue<uint8_t>(flags | 0x01 /*NoParams*/);
+						co.WriteValue<uint8_t>(flags | 0x01 /*NoParams*/);
 					} else {
-						so->WriteValue<uint8_t>(flags | 0x01 /*NoParams*/ | 0x02 /*Generator*/);
-						so->WriteValue<uint8_t>(generatorFlags);
-						so->WriteValue<uint8_t>(generatorDelay);
+						co.WriteValue<uint8_t>(flags | 0x01 /*NoParams*/ | 0x02 /*Generator*/);
+						co.WriteValue<uint8_t>(generatorFlags);
+						co.WriteValue<uint8_t>(generatorDelay);
 					}
 				} else {
 					if (generatorDelay == -1) {
-						so->WriteValue<uint8_t>(flags);
+						co.WriteValue<uint8_t>(flags);
 					} else {
-						so->WriteValue<uint8_t>(flags | 0x02 /*Generator*/);
-						so->WriteValue<uint8_t>(generatorFlags);
-						so->WriteValue<uint8_t>(generatorDelay);
+						co.WriteValue<uint8_t>(flags | 0x02 /*Generator*/);
+						co.WriteValue<uint8_t>(generatorFlags);
+						co.WriteValue<uint8_t>(generatorDelay);
 					}
 
-					so->Write(converted.Params, sizeof(converted.Params));
+					co.Write(converted.Params, sizeof(converted.Params));
 				}
 			}
 		}
+		
+		int32_t compressedSize = CompressionUtils::GetMaxDeflatedSize(co.GetSize());
+		std::unique_ptr<uint8_t[]> compressedBuffer = std::make_unique<uint8_t[]>(compressedSize);
+		compressedSize = CompressionUtils::Deflate(co.GetBuffer(), co.GetSize(), compressedBuffer.get(), compressedSize);
+		ASSERT(compressedSize > 0);
+
+		so->WriteValue<int32_t>(compressedSize);
+		so->WriteValue<int32_t>(co.GetSize());
+		so->Write(compressedBuffer.get(), compressedSize);
 	}
 
-	void JJ2Level::WriteLevelName(const std::unique_ptr<IFileStream>& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion)
+	void JJ2Level::WriteLevelName(GrowableMemoryFile& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion)
 	{
 		if (!value.empty()) {
 			MutableStringView adjustedValue = value;
@@ -680,18 +704,18 @@ namespace Jazz2::Compatibility
 				LevelToken token = levelTokenConversion(adjustedValue);
 				if (!token.Episode.empty()) {
 					String fullName = token.Episode + "/"_s + token.Level;
-					so->WriteValue<uint8_t>(fullName.size());
-					so->Write(fullName.data(), fullName.size());
+					so.WriteValue<uint8_t>(fullName.size());
+					so.Write(fullName.data(), fullName.size());
 				} else {
-					so->WriteValue<uint8_t>(token.Level.size());
-					so->Write(token.Level.data(), token.Level.size());
+					so.WriteValue<uint8_t>(token.Level.size());
+					so.Write(token.Level.data(), token.Level.size());
 				}
 			} else {
-				so->WriteValue<uint8_t>(adjustedValue.size());
-				so->Write(adjustedValue.data(), adjustedValue.size());
+				so.WriteValue<uint8_t>(adjustedValue.size());
+				so.Write(adjustedValue.data(), adjustedValue.size());
 			}
 		} else {
-			so->WriteValue<uint8_t>(0);
+			so.WriteValue<uint8_t>(0);
 		}
 	}
 

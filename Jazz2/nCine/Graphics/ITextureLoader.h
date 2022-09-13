@@ -53,7 +53,7 @@ namespace nCine
 		const GLubyte* pixels(unsigned int mipMapLevel) const;
 
 		/// Returns the proper texture loader according to the memory buffer name extension
-		static std::unique_ptr<ITextureLoader> createFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize);
+		static std::unique_ptr<ITextureLoader> createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// Returns the proper texture loader according to the file extension
 		static std::unique_ptr<ITextureLoader> createFromFile(const StringView& filename);
 

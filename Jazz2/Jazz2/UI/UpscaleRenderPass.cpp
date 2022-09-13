@@ -37,11 +37,6 @@ namespace Jazz2::UI
 		_target->setMagFiltering(SamplerFilter::Nearest);
 
 		// Prepare render command
-		// TODO: Reset render command as workaround
-		(&_renderCommand)->~RenderCommand();
-		new (&_renderCommand) RenderCommand();
-
-		bool shaderChanged;
 #if defined(ALLOW_RESCALE_SHADERS)
 		PrecompiledShader shader;
 		switch (PreferencesCache::ActiveRescaleMode) {
@@ -51,17 +46,18 @@ namespace Jazz2::UI
 			case RescaleMode::Monochrome: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeMonochrome); break;
 			default: _resizeShader = nullptr; break;
 		}
-		if (_resizeShader != nullptr) {
-			shaderChanged = _renderCommand.material().setShader(_resizeShader);
-		} else {
-			shaderChanged = _renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
-		}
+
+		bool shaderChanged = (_resizeShader != nullptr
+			? _renderCommand.material().setShader(_resizeShader)
+			: _renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE));
 #else
-		shaderChanged = _renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
+		bool shaderChanged = _renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
 #endif
 		if (shaderChanged) {
 			_renderCommand.material().reserveUniformsDataMemory();
 			_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			// Required to reset render command properly
+			_renderCommand.setTransformation(_renderCommand.transformation());
 
 			GLUniformCache* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->intValue(0) != 0) {

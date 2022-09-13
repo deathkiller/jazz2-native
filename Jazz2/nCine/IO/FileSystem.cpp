@@ -1085,14 +1085,16 @@ namespace nCine
 			}
 
 			if (fullPath[i] == '/' || fullPath[i] == '\\') {
-				fullPath[i] = '\0';
-				if (!CallStat(fullPath.data(), sb)) {
-					if (::mkdir(fullPath.data(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0 && errno != EEXIST) {
-						LOGW_X("Cannot create directory \"%s\"", fullPath.data());
-						return false;
+				if (i > 0) {
+					fullPath[i] = '\0';
+					if (!CallStat(fullPath.data(), sb)) {
+						if (::mkdir(fullPath.data(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0 && errno != EEXIST) {
+							LOGW_X("Cannot create directory \"%s\"", fullPath.data());
+							return false;
+						}
 					}
+					fullPath[i] = '/';
 				}
-				fullPath[i] = '/';
 				slashWasLast = true;
 			} else {
 				slashWasLast = false;
@@ -1505,18 +1507,18 @@ namespace nCine
 		return stream;
 	}
 
-	std::unique_ptr<IFileStream> FileSystem::CreateFromMemory(const String& bufferName, unsigned char* bufferPtr, uint32_t bufferSize)
+	std::unique_ptr<IFileStream> FileSystem::CreateFromMemory(unsigned char* bufferPtr, uint32_t bufferSize)
 	{
 		ASSERT(bufferPtr);
 		ASSERT(bufferSize > 0);
-		return std::make_unique<MemoryFile>(bufferName, bufferPtr, bufferSize);
+		return std::make_unique<MemoryFile>(bufferPtr, bufferSize);
 	}
 
-	std::unique_ptr<IFileStream> FileSystem::CreateFromMemory(const String& bufferName, const unsigned char* bufferPtr, uint32_t bufferSize)
+	std::unique_ptr<IFileStream> FileSystem::CreateFromMemory(const unsigned char* bufferPtr, uint32_t bufferSize)
 	{
 		ASSERT(bufferPtr);
 		ASSERT(bufferSize > 0);
-		return std::make_unique<MemoryFile>(bufferName, bufferPtr, bufferSize);
+		return std::make_unique<MemoryFile>(bufferPtr, bufferSize);
 	}
 
 	const String& FileSystem::GetSavePath(const StringView& applicationName)

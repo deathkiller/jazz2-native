@@ -15,8 +15,8 @@ namespace nCine
 	{
 	}
 
-	AudioStreamPlayer::AudioStreamPlayer(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
-		: IAudioPlayer(ObjectType::AUDIOSTREAM_PLAYER), audioStream_(bufferName, bufferPtr, bufferSize)
+	AudioStreamPlayer::AudioStreamPlayer(const unsigned char* bufferPtr, unsigned long int bufferSize)
+		: IAudioPlayer(ObjectType::AUDIOSTREAM_PLAYER), audioStream_(bufferPtr, bufferSize)
 	{
 	}
 
@@ -40,12 +40,12 @@ namespace nCine
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	bool AudioStreamPlayer::loadFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
+	bool AudioStreamPlayer::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
 		if (state_ != PlayerState::Stopped)
 			audioStream_.stop(sourceId_);
 
-		const bool hasLoaded = audioStream_.loadFromMemory(bufferName, bufferPtr, bufferSize);
+		const bool hasLoaded = audioStream_.loadFromMemory(bufferPtr, bufferSize);
 		if (hasLoaded == false)
 			return false;
 

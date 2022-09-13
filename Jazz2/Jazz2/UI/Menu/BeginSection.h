@@ -2,10 +2,6 @@
 
 #include "MenuSection.h"
 
-#if defined(SHAREWARE_DEMO_ONLY)
-#	include "../../PreferencesCache.h"
-#endif
-
 namespace Jazz2::UI::Menu
 {
 	class BeginSection : public MenuSection
@@ -21,7 +17,9 @@ namespace Jazz2::UI::Menu
 	private:
 		enum class Item {
 			PlayStory,
-			//PlayCustom,
+#if defined(SHAREWARE_DEMO_ONLY)
+			Import,
+#endif
 			Options,
 			About,
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -39,9 +37,6 @@ namespace Jazz2::UI::Menu
 		int _selectedIndex;
 		float _animation;
 		bool _isVerified;
-#if defined(SHAREWARE_DEMO_ONLY)
-		EpisodeContinuationFlags _demoEpisodeFlags;
-#endif
 
 		void ExecuteSelected();
 	};

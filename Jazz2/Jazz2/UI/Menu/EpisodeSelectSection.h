@@ -1,7 +1,5 @@
 ﻿#pragma once
 
-#if !defined(SHAREWARE_DEMO_ONLY)
-
 #include "MenuSection.h"
 
 namespace Jazz2::UI::Menu
@@ -43,5 +41,3 @@ namespace Jazz2::UI::Menu
 		void AddEpisode(const StringView& episodeFile);
 	};
 }
-
-#endif

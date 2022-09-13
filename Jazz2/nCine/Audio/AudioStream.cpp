@@ -26,12 +26,12 @@ namespace nCine
 	}
 
 	/*! Private constructor called only by `AudioStreamPlayer`. */
-	AudioStream::AudioStream(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
+	AudioStream::AudioStream(const unsigned char* bufferPtr, unsigned long int bufferSize)
 		: AudioStream()
 	{
-		const bool hasLoaded = loadFromMemory(bufferName, bufferPtr, bufferSize);
+		const bool hasLoaded = loadFromMemory(bufferPtr, bufferSize);
 		if (!hasLoaded) {
-			LOGE_X("Audio buffer \"%s\" cannot be loaded", bufferName);
+			LOGE("Audio buffer cannot be loaded");
 		}
 	}
 
@@ -170,9 +170,9 @@ namespace nCine
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	bool AudioStream::loadFromMemory(const char* bufferName, const unsigned char* bufferPtr, unsigned long int bufferSize)
+	bool AudioStream::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
-		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromMemory(bufferName, bufferPtr, bufferSize);
+		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromMemory(bufferPtr, bufferSize);
 		if (audioLoader->hasLoaded() == false)
 			return false;
 

@@ -10,7 +10,7 @@ namespace Jazz2::Tiles
 	public:
 		static constexpr int DefaultTileSize = 32;
 
-		TileSet(std::unique_ptr<Texture> textureDiffuse, std::unique_ptr<uint8_t[]> mask);
+		TileSet(std::unique_ptr<Texture> textureDiffuse, std::unique_ptr<uint8_t[]> mask, std::unique_ptr<Color[]> captionTile);
 
 		std::unique_ptr<Texture> TextureDiffuse;
 		int TileCount;
@@ -52,8 +52,14 @@ namespace Jazz2::Tiles
 			return _isTileFilled[tileId];
 		}
 
+		Color* GetCaptionTile() const
+		{
+			return _captionTile.get();
+		}
+
 	private:
 		std::unique_ptr<uint8_t[]> _mask;
+		std::unique_ptr<Color[]> _captionTile;
 		BitArray _isMaskEmpty;
 		BitArray _isMaskFilled;
 		BitArray _isTileFilled;

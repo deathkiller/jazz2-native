@@ -36,6 +36,14 @@ namespace Jazz2::UI
 		auto command = RentRenderCommand();
 		if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
 			command->material().reserveUniformsDataMemory();
+			command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			// Required to reset render command properly
+			command->setTransformation(command->transformation());
+
+			GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+			if (textureUniform && textureUniform->intValue(0) != 0) {
+				textureUniform->setIntValue(0); // GL_TEXTURE0
+			}
 		}
 
 		if (additiveBlending) {
@@ -61,6 +69,9 @@ namespace Jazz2::UI
 		auto command = RentRenderCommand();
 		if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE_NO_TEXTURE)) {
 			command->material().reserveUniformsDataMemory();
+			command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			// Required to reset render command properly
+			command->setTransformation(command->transformation());
 		}
 
 		if (additiveBlending) {
@@ -104,16 +115,7 @@ namespace Jazz2::UI
 			return command;
 		} else {
 			std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
-			command->setType(RenderCommand::CommandTypes::SPRITE);
-			command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
 			command->material().setBlendingEnabled(true);
-			command->material().reserveUniformsDataMemory();
-			command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-
-			GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
-			if (textureUniform && textureUniform->intValue(0) != 0) {
-				textureUniform->setIntValue(0); // GL_TEXTURE0
-			}
 			return command.get();
 		}
 	}
