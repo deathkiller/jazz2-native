@@ -41,11 +41,16 @@ namespace Jazz2
 
 	DEFINE_ENUM_OPERATORS(EpisodeContinuationFlags);
 
+#	pragma pack(push, 1)
+
+	// These structures are aligned manually, because they are serialized and it should work cross-platform
 	struct EpisodeContinuationState {
 		EpisodeContinuationFlags Flags;
 		uint8_t DifficultyAndPlayerType;
 		uint8_t Lives;
+		uint8_t Unused1;
 		int32_t Score;
+		uint16_t Unused2;
 		uint16_t Ammo[PlayerCarryOver::WeaponCount];
 		uint8_t WeaponUpgrades[PlayerCarryOver::WeaponCount];
 	};
@@ -54,6 +59,8 @@ namespace Jazz2
 		EpisodeContinuationState State;
 		String LevelName;
 	};
+
+#	pragma pack(pop)
 
 	class PreferencesCache
 	{

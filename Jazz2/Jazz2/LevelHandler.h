@@ -31,6 +31,13 @@ namespace Jazz2
 		class BossBase;
 	}
 
+#if defined(WITH_ANGELSCRIPT)
+	namespace Scripting
+	{
+		class LevelScripts;
+	}
+#endif
+
 	namespace UI
 	{
 		class HUD;
@@ -44,6 +51,9 @@ namespace Jazz2
 	class LevelHandler : public ILevelHandler, public IStateHandler
 	{
 		friend class ContentResolver;
+#if defined(WITH_ANGELSCRIPT)
+		friend class Scripting::LevelScripts;
+#endif
 		friend class UI::HUD;
 		friend class UI::Menu::InGameMenu;
 
@@ -251,6 +261,9 @@ namespace Jazz2
 		std::unique_ptr<Events::EventMap> _eventMap;
 		std::unique_ptr<Tiles::TileMap> _tileMap;
 		Collisions::DynamicTreeBroadPhase _collisions;
+#if defined(WITH_ANGELSCRIPT)
+		std::unique_ptr<Scripting::LevelScripts> _scripts;
+#endif
 
 		float _levelTime;
 		Rectf _viewBounds;
@@ -277,7 +290,7 @@ namespace Jazz2
 		uint32_t _overrideActions;
 		Vector2f _playerRequiredMovement;
 
-		void OnLevelLoaded(const StringView& name, const StringView& nextLevel, const StringView& secretLevel,
+		void OnLevelLoaded(const StringView& fullPath, const StringView& name, const StringView& nextLevel, const StringView& secretLevel,
 			std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap,
 			const StringView& musicPath, const Vector4f& ambientColor, WeatherType weatherType, uint8_t weatherIntensity, SmallVectorImpl<String>& levelTexts);
 

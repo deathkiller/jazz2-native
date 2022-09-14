@@ -3,7 +3,7 @@
 #include "IAudioDevice.h"
 #include "../ServiceLocator.h"
 
-#ifdef WITH_OPENMPT
+#if defined(WITH_OPENMPT)
 
 namespace nCine
 {

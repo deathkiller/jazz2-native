@@ -2,11 +2,7 @@
 
 #include "../../Common.h"
 
-#if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
-#	define WITH_OPENMPT
-#endif
-
-#ifdef WITH_OPENMPT
+#if defined(WITH_OPENMPT)
 
 #include "IAudioReader.h"
 #include "../IO/IFileStream.h"

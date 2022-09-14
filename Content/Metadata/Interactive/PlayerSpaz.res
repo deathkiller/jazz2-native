@@ -164,7 +164,7 @@
 			"States": [ 1073741830 ]
 		},
 		"FallShootToFall": {
-			"Path": "Spaz/unused_jump_shoot_end.aura",
+			"Path": "Spaz/jump_shoot_end.png",
 			"FrameRate": 20,
 			"States": [ 1073741872 ]
 		},

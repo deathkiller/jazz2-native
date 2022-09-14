@@ -109,7 +109,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_OPENMPT;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -133,7 +133,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_OPENMPT;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -157,7 +157,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_OPENMPT;WITH_ANGELSCRIPT;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -181,7 +181,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_OPENMPT;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -286,6 +286,8 @@
     <ClInclude Include="Jazz2\LightEmitter.h" />
     <ClInclude Include="Jazz2\PlayerActions.h" />
     <ClInclude Include="Jazz2\PreferencesCache.h" />
+    <ClInclude Include="Jazz2\Scripting\LevelScripts.h" />
+    <ClInclude Include="Jazz2\Scripting\RegisterString.h" />
     <ClInclude Include="Jazz2\UI\Alignment.h" />
     <ClInclude Include="Jazz2\UI\Canvas.h" />
     <ClInclude Include="Jazz2\UI\Cinematics.h" />
@@ -563,6 +565,8 @@
     <ClCompile Include="Jazz2\Compatibility\JJ2Text.cpp" />
     <ClCompile Include="Jazz2\Compatibility\JJ2Tileset.cpp" />
     <ClCompile Include="Jazz2\PreferencesCache.cpp" />
+    <ClCompile Include="Jazz2\Scripting\LevelScripts.cpp" />
+    <ClCompile Include="Jazz2\Scripting\RegisterString.cpp" />
     <ClCompile Include="Jazz2\UI\Canvas.cpp" />
     <ClCompile Include="Jazz2\UI\Cinematics.cpp" />
     <ClCompile Include="Jazz2\UI\ControlScheme.cpp" />

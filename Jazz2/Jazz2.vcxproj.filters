@@ -169,6 +169,12 @@
     <Filter Include="Header Files\Jazz2\UI\Menu">
       <UniqueIdentifier>{a65d3a71-4070-4f0b-84d8-d8be78337c28}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Jazz2\Scripting">
+      <UniqueIdentifier>{633274d8-a360-48ab-9529-d01e4b9cd4ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Scripting">
+      <UniqueIdentifier>{28b29c21-7d11-474a-bbf2-a494645dd07e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1044,6 +1050,12 @@
     <ClInclude Include="Jazz2\UI\Menu\ImportSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\LevelScripts.h">
+      <Filter>Header Files\Jazz2\Scripting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\RegisterString.h">
+      <Filter>Header Files\Jazz2\Scripting</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1747,6 +1759,12 @@
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\ImportSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\LevelScripts.cpp">
+      <Filter>Source Files\Jazz2\Scripting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\RegisterString.cpp">
+      <Filter>Source Files\Jazz2\Scripting</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

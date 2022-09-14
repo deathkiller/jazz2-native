@@ -119,7 +119,7 @@ namespace Jazz2::UI::Menu
 		_this->_fileCount--;
 
 		int offset = 180;	// Skip header
-		if (data != nullptr && length >= 262 && fs::HasExtension(name, ".j2l"_s) && *(uint32_t*)&data[offset] == 0x4C56454C) {
+		if (data != nullptr && length >= 262 && fs::HasExtension(name, "j2l"_s) && *(uint32_t*)&data[offset] == 0x4C56454C) {
 			offset += 4 + 4;
 			int nameLength = 0;
 			while (data[offset + nameLength] != '\0' && nameLength < 32) {

@@ -312,6 +312,8 @@ void GameEventHandler::onFrameStart()
 					// End of episode
 					SaveEpisodeEnd(_pendingLevelChange);
 
+					PreferencesCache::RemoveEpisodeContinue(_pendingLevelChange->LastEpisodeName);
+
 					std::optional<Episode> lastEpisode = ContentResolver::Current().GetEpisode(_pendingLevelChange->LastEpisodeName);
 					if (lastEpisode.has_value()) {
 						// Redirect to next episode
@@ -331,6 +333,8 @@ void GameEventHandler::onFrameStart()
 					// End of game
 					SaveEpisodeEnd(_pendingLevelChange);
 
+					PreferencesCache::RemoveEpisodeContinue(_pendingLevelChange->LastEpisodeName);
+
 					_currentHandler = std::make_unique<Cinematics>(this, "ending"_s, [](IRootController* root, bool endOfStream) {
 						root->GoToMainMenu(false);
 						return true;
@@ -339,7 +343,7 @@ void GameEventHandler::onFrameStart()
 					SaveEpisodeContinue(_pendingLevelChange);
 
 #if defined(SHAREWARE_DEMO_ONLY)
-					// Check if specified episode is unlocked
+					// Check if specified episode is unlocked, used only if compiled with SHAREWARE_DEMO_ONLY
 					bool hasEpisode = true;
 					if (_pendingLevelChange->EpisodeName == "prince"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::FormerlyAPrince) == UnlockableEpisodes::None) hasEpisode = false;
 					if (_pendingLevelChange->EpisodeName == "rescue"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::JazzInTime) == UnlockableEpisodes::None) hasEpisode = false;
@@ -597,6 +601,7 @@ RecreateCache:
 	};
 
 	String episodesPath = fs::JoinPath("Cache"_s, "Episodes"_s);
+	HashMap<String, bool> usedTilesets;
 
 	fs::Directory dir(fs::FindPathCaseInsensitive("Source"_s), fs::EnumerationOptions::SkipDirectories);
 	while (true) {
@@ -606,6 +611,7 @@ RecreateCache:
 		}
 
 		if (fs::HasExtension(item, "j2e"_s)) {
+			// Episode
 			Compatibility::JJ2Episode episode;
 			episode.Open(item);
 			if (episode.Name == "home"_s) {
@@ -615,6 +621,7 @@ RecreateCache:
 			String fullPath = fs::JoinPath(episodesPath, episode.Name + ".j2e"_s);
 			episode.Convert(fullPath, LevelTokenConversion, EpisodeNameConversion, EpisodePrevNext);
 		} else if (fs::HasExtension(item, "j2l"_s)) {
+			// Level
 			String levelName = fs::GetFileName(item);
 			if (levelName.findOr("-MLLE-Data-"_s, levelName.end()) != levelName.end()) {
 				LOGI_X("Level \"%s\" skipped (MLLE extra layers).", item);
@@ -636,19 +643,36 @@ RecreateCache:
 
 				fs::CreateDirectories(fs::GetDirectoryName(fullPath));
 				level.Convert(fullPath, eventConverter, LevelTokenConversion);
+
+				usedTilesets.emplace(level.Tileset, true);
+
+				// Also copy level script file if exists
+				StringView foundDot = item.findLastOr('.', item.end());
+				String scriptPath = item.prefix(foundDot.begin()) + ".j2as"_s;
+				auto adjustedPath = fs::FindPathCaseInsensitive(scriptPath);
+				if (fs::IsReadableFile(adjustedPath)) {
+					foundDot = fullPath.findLastOr('.', fullPath.end());
+					fs::Copy(adjustedPath, fullPath.prefix(foundDot.begin()) + ".j2as"_s);
+				}
 			}
-		} else if (fs::HasExtension(item, "j2t"_s)) {
-			fs::CreateDirectories(fs::JoinPath("Cache"_s, "Tilesets"_s));
-
-			String tilesetName = fs::GetFileName(item);
-			lowercaseInPlace(tilesetName);
-
-			Compatibility::JJ2Tileset tileset;
-			tileset.Open(item, false);
-			tileset.Convert(fs::JoinPath({ "Cache"_s, "Tilesets"_s, tilesetName }));
 		}
 	}
 
+	// Convert only used tilesets
+	String tilesetsPath = fs::JoinPath("Cache"_s, "Tilesets"_s);
+	fs::CreateDirectories(tilesetsPath);
+
+	for (auto& pair : usedTilesets) {
+		String tilesetPath = fs::JoinPath("Source"_s, pair.first + ".j2t"_s);
+		auto adjustedPath = fs::FindPathCaseInsensitive(tilesetPath);
+		if (fs::IsReadableFile(adjustedPath)) {
+			Compatibility::JJ2Tileset tileset;
+			tileset.Open(adjustedPath, false);
+			tileset.Convert(fs::JoinPath({ tilesetsPath, pair.first + ".j2t"_s }));
+		}
+	}
+
+	// Create cache index
 	auto so = fs::Open(fs::JoinPath("Cache"_s, "cache.j2i"_s), FileAccessMode::Write);
 
 	so->WriteValue<uint64_t>(0x2095A59FF0BFBBEF);	// Signature

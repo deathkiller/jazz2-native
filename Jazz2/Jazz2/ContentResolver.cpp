@@ -744,6 +744,8 @@ namespace Jazz2
 		std::unique_ptr<uint8_t[]> uncompressedBuffer = std::make_unique<uint8_t[]>(uncompressedSize);
 		s->Read(compressedBuffer.get(), compressedSize);
 
+		s->Close();
+
 		auto result = CompressionUtils::Inflate(compressedBuffer.get(), compressedSize, uncompressedBuffer.get(), uncompressedSize);
 		RETURNF_ASSERT_MSG(result == DecompressionResult::Success, "File cannot be uncompressed");
 		MemoryFile uc(uncompressedBuffer.get(), uncompressedSize);
@@ -810,7 +812,7 @@ namespace Jazz2
 		eventMap->ReadEvents(uc, tileMap, difficulty);
 
 		// TODO: Bonus level
-		levelHandler->OnLevelLoaded(name, nextLevel, secretLevel, tileMap, eventMap, defaultMusic, ambientColor,
+		levelHandler->OnLevelLoaded(fullPath, name, nextLevel, secretLevel, tileMap, eventMap, defaultMusic, ambientColor,
 			defaultWeatherType, defaultWeatherIntensity, levelTexts);
 
 		return true;

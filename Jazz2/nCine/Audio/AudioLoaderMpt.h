@@ -2,7 +2,7 @@
 
 #include "AudioReaderMpt.h"
 
-#ifdef WITH_OPENMPT
+#if defined(WITH_OPENMPT)
 
 #include "IAudioLoader.h"
 

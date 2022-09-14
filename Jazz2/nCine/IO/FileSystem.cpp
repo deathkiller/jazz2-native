@@ -1030,6 +1030,9 @@ namespace nCine
 				startIdx = 4;
 			}
 		}
+		if (startIdx == 0 && (fullPath[0] == L'/' || fullPath[0] == L'\\')) {
+			startIdx = 1;
+		}
 
 		bool slashWasLast = true;
 		for (int i = startIdx; i < fullPathSize; i++) {

@@ -1,6 +1,6 @@
 #include "AudioReaderMpt.h"
 
-#ifdef WITH_OPENMPT
+#if defined(WITH_OPENMPT)
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #   if defined(_M_X64)

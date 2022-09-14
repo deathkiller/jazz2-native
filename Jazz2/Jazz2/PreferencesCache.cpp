@@ -89,13 +89,14 @@ namespace Jazz2
 					EnableRgbLights = ((boolOptions & BoolOptions::EnableRgbLights) == BoolOptions::EnableRgbLights);
 					TutorialCompleted = ((boolOptions & BoolOptions::TutorialCompleted) == BoolOptions::TutorialCompleted);
 
+					// Bitmask of unlocked episodes, used only if compiled with SHAREWARE_DEMO_ONLY
 					UnlockedEpisodes = (UnlockableEpisodes)uc.ReadValue<uint32_t>();
 
 					ActiveRescaleMode = (RescaleMode)uc.ReadValue<uint8_t>();
 
-					MasterVolume = uc.ReadValue<float>();
-					SfxVolume = uc.ReadValue<float>();
-					MusicVolume = uc.ReadValue<float>();
+					MasterVolume = uc.ReadValue<uint8_t>() / 255.0f;
+					SfxVolume = uc.ReadValue<uint8_t>() / 255.0f;
+					MusicVolume = uc.ReadValue<uint8_t>() / 255.0f;
 
 					// Controls
 					auto mappings = UI::ControlScheme::GetMappings();
@@ -214,13 +215,14 @@ namespace Jazz2
 		if (TutorialCompleted) boolOptions |= BoolOptions::TutorialCompleted;
 		co.WriteValue<uint64_t>((uint64_t)boolOptions);
 
+		// Bitmask of unlocked episodes, used only if compiled with SHAREWARE_DEMO_ONLY
 		co.WriteValue<uint32_t>((uint32_t)UnlockedEpisodes);
 
 		co.WriteValue<uint8_t>((uint8_t)ActiveRescaleMode);
 
-		co.WriteValue<float>(MasterVolume);
-		co.WriteValue<float>(SfxVolume);
-		co.WriteValue<float>(MusicVolume);
+		co.WriteValue<uint8_t>((uint8_t)(MasterVolume * 255.0f));
+		co.WriteValue<uint8_t>((uint8_t)(SfxVolume * 255.0f));
+		co.WriteValue<uint8_t>((uint8_t)(MusicVolume * 255.0f));
 
 		// Controls
 		auto mappings = UI::ControlScheme::GetMappings();
@@ -267,6 +269,8 @@ namespace Jazz2
 		so->WriteValue<int32_t>(compressedSize);
 		so->WriteValue<int32_t>(co.GetSize());
 		so->Write(compressedBuffer.get(), compressedSize);
+
+		so->Close();
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		fs::SyncToPersistent();

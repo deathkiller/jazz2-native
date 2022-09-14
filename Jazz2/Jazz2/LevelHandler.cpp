@@ -4,6 +4,10 @@
 #include "UI/HUD.h"
 #include "../Common.h"
 
+#if defined(WITH_ANGELSCRIPT)
+#	include "Scripting/LevelScripts.h"
+#endif
+
 #include "../nCine/PCApplication.h"
 #include "../nCine/IAppEventHandler.h"
 #include "../nCine/ServiceLocator.h"
@@ -143,7 +147,7 @@ namespace Jazz2
 		_ambientLightTarget = value;
 	}
 
-	void LevelHandler::OnLevelLoaded(const StringView& name, const StringView& nextLevel, const StringView& secretLevel, std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap, const StringView& musicPath, const Vector4f& ambientColor, WeatherType weatherType, uint8_t weatherIntensity, SmallVectorImpl<String>& levelTexts)
+	void LevelHandler::OnLevelLoaded(const StringView& fullPath, const StringView& name, const StringView& nextLevel, const StringView& secretLevel, std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap, const StringView& musicPath, const Vector4f& ambientColor, WeatherType weatherType, uint8_t weatherIntensity, SmallVectorImpl<String>& levelTexts)
 	{
 		if (!name.empty()) {
 			theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection - "_s + name);
@@ -185,6 +189,18 @@ namespace Jazz2
 #endif
 
 		_levelTexts = std::move(levelTexts);
+
+#if defined(WITH_ANGELSCRIPT) || defined(ENABLE_LOG)
+		const StringView foundDot = fullPath.findLastOr('.', fullPath.end());
+		String scriptPath = (foundDot == fullPath.end() ? StringView(fullPath) : fullPath.prefix(foundDot.begin())) + ".j2as"_s;
+		if (fs::IsReadableFile(scriptPath)) {
+#	if defined(WITH_ANGELSCRIPT)
+			_scripts = std::make_unique<Scripting::LevelScripts>(this, scriptPath);
+#	else
+			LOGW_X("Level requires scripting, but scripting support is turned off");
+#	endif
+		}
+#endif
 	}
 
 	void LevelHandler::OnBeginFrame()

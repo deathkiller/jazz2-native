@@ -386,12 +386,11 @@ namespace Jazz2::Compatibility
 
 		// Default Tileset
 		lowercaseInPlace(Tileset);
-		StringView tileset = Tileset;
-		if (StringHasSuffixIgnoreCase(tileset, ".j2t"_s)) {
-			tileset = tileset.exceptSuffix(4);
+		if (StringHasSuffixIgnoreCase(Tileset, ".j2t"_s)) {
+			Tileset = Tileset.exceptSuffix(4);
 		}
-		co.WriteValue<uint8_t>((uint8_t)tileset.size());
-		co.Write(tileset.data(), tileset.size());
+		co.WriteValue<uint8_t>((uint8_t)Tileset.size());
+		co.Write(Tileset.data(), Tileset.size());
 
 		// Default Music
 		lowercaseInPlace(Music);
