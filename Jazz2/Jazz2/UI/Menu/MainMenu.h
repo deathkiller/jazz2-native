@@ -100,6 +100,7 @@ namespace Jazz2::UI::Menu
 		TileMapLayer _texturedBackgroundLayer;
 		Vector2f _texturedBackgroundPos;
 		float _texturedBackgroundPhase;
+		Vector3f _backgroundColor;
 
 		std::unique_ptr<MenuCanvas> _canvas;
 		HashMap<String, GraphicResource>* _graphics;

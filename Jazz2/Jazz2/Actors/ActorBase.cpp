@@ -187,7 +187,7 @@ namespace Jazz2::Actors
 	bool ActorBase::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (GetState(ActorState::CanBeFrozen)) {
-			HandleAmmoFrozenStateChange(other.get());
+			HandleFrozenStateChange(other.get());
 		}
 		return false;
 	}
@@ -1123,7 +1123,7 @@ namespace Jazz2::Actors
 		return i;
 	}
 
-	void ActorBase::HandleAmmoFrozenStateChange(ActorBase* shot)
+	void ActorBase::HandleFrozenStateChange(ActorBase* shot)
 	{
 		if (auto freezerShot = dynamic_cast<Actors::Weapons::FreezerShot*>(shot)) {
 			if (dynamic_cast<ActorBase*>(freezerShot->GetOwner()) != this) {
@@ -1132,7 +1132,7 @@ namespace Jazz2::Actors
 				_renderer.AnimPaused = true;
 				// TODO: Frozen effect
 			}
-		} else if(auto freezerShot = dynamic_cast<Actors::Weapons::ToasterShot*>(shot)) {
+		} else if(auto toasterShot = dynamic_cast<Actors::Weapons::ToasterShot*>(shot)) {
 			_frozenTimeLeft = 0.0f;
 		}
 	}

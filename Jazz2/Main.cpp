@@ -538,8 +538,6 @@ RecreateCache:
 	};
 
 	auto LevelTokenConversion = [&knownLevels](MutableStringView& levelToken) -> Compatibility::JJ2Level::LevelToken {
-		lowercaseInPlace(levelToken);
-
 		auto it = knownLevels.find(levelToken);
 		if (it != knownLevels.end()) {
 			if (it->second.second().empty()) {
@@ -610,7 +608,7 @@ RecreateCache:
 			break;
 		}
 
-		if (fs::HasExtension(item, "j2e"_s)) {
+		if (fs::HasExtension(item, "j2e"_s) || fs::HasExtension(item, "j2pe"_s)) {
 			// Episode
 			Compatibility::JJ2Episode episode;
 			episode.Open(item);

@@ -212,6 +212,11 @@ namespace Jazz2
 		if (PlayerActionHit(0, PlayerActions::Menu) && _pauseMenu == nullptr) {
 			PauseGame();
 		}
+#if _DEBUG
+		if (PlayerActionPressed(0, PlayerActions::ChangeWeapon) && PlayerActionHit(0, PlayerActions::Jump)) {
+			BeginLevelChange(ExitType::Normal, nullptr);
+		}
+#endif
 
 		// Destroy stopped players and resume music after Sugar Rush
 		if (_sugarRushMusic != nullptr && _sugarRushMusic->state() == IAudioPlayer::PlayerState::Stopped) {

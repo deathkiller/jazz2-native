@@ -17,16 +17,16 @@
 #	include <locale.h>		// setlocale()
 #endif
 
-namespace Jazz2::Scripting
+namespace Script
 {
-	// Strings
-
-
 	void Print(String& msg)
 	{
 		LOGI_X("%s", msg.data());
 	}
+}
 
+namespace Jazz2::Scripting
+{
 	LevelScripts::LevelScripts(LevelHandler* levelHandler, const StringView& scriptPath)
 		:
 		_levelHandler(levelHandler),
@@ -39,7 +39,8 @@ namespace Jazz2::Scripting
 		int r;
 		r = _engine->SetMessageCallback(asMETHOD(LevelScripts, Status), this, asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
-		r = _engine->RegisterGlobalFunction("void print(const string &in)", asFUNCTION(Print), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		// Game-specific functions
+		r = _engine->RegisterGlobalFunction("void print(const string &in)", asFUNCTION(Script::Print), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
 		_module = _engine->GetModule("Main", asGM_ALWAYS_CREATE); RETURN_ASSERT(_module != nullptr);
 		
@@ -131,7 +132,7 @@ namespace Jazz2::Scripting
 							nested++;
 						}
 					}
-				} else if (token == "endif") {
+				} else if (token == "endif"_s) {
 					// Only remove the #endif if there was a matching #if
 					if (nested > 0) {
 						for (int i = start; i < pos; i++) {

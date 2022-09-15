@@ -2,7 +2,6 @@
 #include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
-
 #include "../Player.h"
 
 #include "../../../nCine/Base/Random.h"
@@ -81,17 +80,16 @@ namespace Jazz2::Actors::Enemies
 		Vector2f speed = ((_targetPos - _lastPos) * (_returning ? 0.03f : 0.006f) + _lastSpeed * 1.4f) / 2.4f;
 		_lastPos.X += speed.X;
 		_lastPos.Y += speed.Y;
-
 		_lastSpeed = speed;
 
-		bool willFaceLeft = (_speed.X < 0.0f);
+		bool willFaceLeft = (speed.X < 0.0f);
 		if (IsFacingLeft() != willFaceLeft) {
 			SetTransition(AnimState::TransitionTurn, false, [this, willFaceLeft]() {
 				SetFacingLeft(willFaceLeft);
 			});
 		}
 
-		MoveInstantly(_lastPos + Vector2f(cosf(_anglePhase) * 16.0f, sinf(_anglePhase) * -16.0f), MoveType::Relative | MoveType::Force);
+		MoveInstantly(_lastPos + Vector2f(cosf(_anglePhase) * 16.0f, sinf(_anglePhase) * -16.0f), MoveType::Absolute | MoveType::Force);
 	}
 
 	bool Bee::OnPerish(ActorBase* collider)
@@ -112,17 +110,19 @@ namespace Jazz2::Actors::Enemies
 	void Bee::AttackNearestPlayer()
 	{
 		bool found = false;
+		float targetDistance = 300.0f;
 		auto& players = _levelHandler->GetPlayers();
 		for (auto& player : players) {
 			Vector2f newPos = player->GetPos();
-			if ((_lastPos - newPos).Length() < (_lastPos - _targetPos).Length()) {
+			float distance = (_lastPos - newPos).Length();
+			if (distance < targetDistance) {
 				_targetPos = newPos;
+				targetDistance = distance;
 				found = true;
 			}
 		}
 
-		Vector2f diff = (_targetPos - _lastPos);
-		if (found && diff.Length() <= 280.0f) {
+		if (found) {
 			_targetPos.X += (_targetPos.X - _originPos.X) * 1.8f;
 			_targetPos.Y += (_targetPos.Y - _originPos.Y) * 1.8f;
 

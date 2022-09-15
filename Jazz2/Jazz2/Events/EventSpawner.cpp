@@ -25,16 +25,24 @@
 #include "../Actors/Enemies/Bee.h"
 #include "../Actors/Enemies/Bubba.h"
 #include "../Actors/Enemies/Caterpillar.h"
+#include "../Actors/Enemies/Crab.h"
+#include "../Actors/Enemies/Demon.h"
+#include "../Actors/Enemies/Doggy.h"
 #include "../Actors/Enemies/Dragonfly.h"
+#include "../Actors/Enemies/FatChick.h"
+#include "../Actors/Enemies/Fencer.h"
+#include "../Actors/Enemies/Helmut.h"
 #include "../Actors/Enemies/LabRat.h"
 #include "../Actors/Enemies/Lizard.h"
 #include "../Actors/Enemies/MadderHatter.h"
 #include "../Actors/Enemies/Queen.h"
+#include "../Actors/Enemies/Raven.h"
 #include "../Actors/Enemies/Sucker.h"
 #include "../Actors/Enemies/SuckerFloat.h"
 #include "../Actors/Enemies/Turtle.h"
 #include "../Actors/Enemies/TurtleShell.h"
 #include "../Actors/Enemies/TurtleTough.h"
+#include "../Actors/Enemies/TurtleTube.h"
 #include "../Actors/Enemies/Witch.h"
 
 #include "../Actors/Lighting/FlickerLight.h"
@@ -110,26 +118,26 @@ namespace Jazz2::Events
 		RegisterSpawnable<Enemies::SuckerFloat>(EventType::EnemySuckerFloat);
 		RegisterSpawnable<Enemies::Sucker>(EventType::EnemySucker);
 		RegisterSpawnable<Enemies::LabRat>(EventType::EnemyLabRat);
-		//RegisterSpawnable(EventType::EnemyHelmut, Helmut.Create, Helmut.Preload);
+		RegisterSpawnable<Enemies::Helmut>(EventType::EnemyHelmut);
 		RegisterSpawnable<Enemies::Bat>(EventType::EnemyBat);
-		/*RegisterSpawnable(EventType::EnemyFatChick, FatChick.Create, FatChick.Preload);
-		RegisterSpawnable(EventType::EnemyFencer, Fencer.Create, Fencer.Preload);
-		RegisterSpawnable(EventType::EnemyRapier, Rapier.Create, Rapier.Preload);
-		RegisterSpawnable(EventType::EnemySparks, Sparks.Create, Sparks.Preload);
-		RegisterSpawnable(EventType::EnemyMonkey, Monkey.Create, Monkey.Preload);
-		RegisterSpawnable(EventType::EnemyDemon, Demon.Create, Demon.Preload);*/
+		RegisterSpawnable<Enemies::FatChick>(EventType::EnemyFatChick);
+		RegisterSpawnable<Enemies::Fencer>(EventType::EnemyFencer);
+		//RegisterSpawnable(EventType::EnemyRapier, Rapier.Create, Rapier.Preload);
+		//RegisterSpawnable(EventType::EnemySparks, Sparks.Create, Sparks.Preload);
+		//RegisterSpawnable(EventType::EnemyMonkey, Monkey.Create, Monkey.Preload);
+		RegisterSpawnable<Enemies::Demon>(EventType::EnemyDemon);
 		RegisterSpawnable<Enemies::Bee>(EventType::EnemyBee);
 		//RegisterSpawnable(EventType::EnemyBeeSwarm, BeeSwarm.Create, BeeSwarm.Preload);
 		RegisterSpawnable<Enemies::Caterpillar>(EventType::EnemyCaterpillar);
-		/*RegisterSpawnable(EventType::EnemyCrab, Crab.Create, Crab.Preload);
-		RegisterSpawnable(EventType::EnemyDoggy, Doggy.Create, Doggy.Preload);*/
+		RegisterSpawnable<Enemies::Crab>(EventType::EnemyCrab);
+		RegisterSpawnable<Enemies::Doggy>(EventType::EnemyDoggy);
 		RegisterSpawnable<Enemies::Dragonfly>(EventType::EnemyDragonfly);
 		//RegisterSpawnable(EventType::EnemyFish, Fish.Create, Fish.Preload);
 		RegisterSpawnable<Enemies::MadderHatter>(EventType::EnemyMadderHatter);
-		//RegisterSpawnable(EventType::EnemyRaven, Raven.Create, Raven.Preload);
+		RegisterSpawnable<Enemies::Raven>(EventType::EnemyRaven);
 		//RegisterSpawnable(EventType::EnemySkeleton, Skeleton.Create, Skeleton.Preload);
 		RegisterSpawnable<Enemies::TurtleTough>(EventType::EnemyTurtleTough);
-		//RegisterSpawnable(EventType::EnemyTurtleTube, TurtleTube.Create, TurtleTube.Preload);
+		RegisterSpawnable<Enemies::TurtleTube>(EventType::EnemyTurtleTube);
 		RegisterSpawnable<Enemies::Witch>(EventType::EnemyWitch);
 
 		RegisterSpawnable<Enemies::TurtleShell>(EventType::TurtleShell);

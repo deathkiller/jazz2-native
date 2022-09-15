@@ -20,27 +20,41 @@ namespace Jazz2::Compatibility
 		// and 1 meaning "requires the previous episode to be finished", stored as a 4-byte-long
 		// integer starting at byte 0x4), binary flags of various purpose (currently supported
 		// flags are 1 and 2 used to reset respectively player ammo and lives when the episode
-		// begins; stored as a 4-byte-long integer starting at byte 0x8), file name of the preceding
-		// episode (used mostly to determine whether the episode should be locked, stored
-		// as a 32-byte-long chain of characters starting at byte 0x4C), file name of the following
-		// episode (that is cycled to after the episode ends, stored as a 32-byte-long
-		// chain of characters starting at byte 0x6C)
+		// begins; stored as a 4-byte-long integer starting at byte 0x8)
 
 		// Header (208 bytes)
 		int32_t headerSize = s->ReadValue<int32_t>();
 		Position = s->ReadValue<int32_t>();
-		_isRegistered = (s->ReadValue<int32_t>() != 0);
-		int32_t unknown1 = s->ReadValue<int32_t>();
+		uint32_t flags = s->ReadValue<uint32_t>();	// 0x01 = Not Shareware
+		uint32_t unknown1 = s->ReadValue<uint32_t>();
+
+		char tmpBuffer[64];
 
 		// Episode name
-		char tmpBuffer[128];
-
-		s->Read(tmpBuffer, 128);
+		s->Read(tmpBuffer, 64);
 		int length = 0;
-		while (tmpBuffer[length] != '\0' && length < 128) {
+		while (tmpBuffer[length] != '\0' && length < 64) {
 			length++;
 		}
 		DisplayName = String(tmpBuffer, length);
+
+		// Previous Episode
+		s->Read(tmpBuffer, 32);
+		length = 0;
+		while (tmpBuffer[length] != '\0' && length < 32) {
+			length++;
+		}
+		PreviousEpisode = String(tmpBuffer, length);
+		lowercaseInPlace(PreviousEpisode);
+
+		// Next Episode
+		s->Read(tmpBuffer, 32);
+		length = 0;
+		while (tmpBuffer[length] != '\0' && length < 32) {
+			length++;
+		}
+		NextEpisode = String(tmpBuffer, length);
+		lowercaseInPlace(NextEpisode);
 
 		// First level
 		s->Read(tmpBuffer, 32);
@@ -49,6 +63,7 @@ namespace Jazz2::Compatibility
 			length++;
 		}
 		FirstLevel = String(tmpBuffer, length);
+		lowercaseInPlace(FirstLevel);
 
 		// TODO: Episode images are not supported yet
 		int32_t width = s->ReadValue<int32_t>();
@@ -114,7 +129,25 @@ namespace Jazz2::Compatibility
 			so->Write(firstLevel.data(), firstLevel.size());
 		}
 
-		if (episodePrevNext != nullptr) {
+		if (!PreviousEpisode.empty() || !NextEpisode.empty()) {
+			MutableStringView previousEpisode = PreviousEpisode;
+			if (JJ2Level::StringHasSuffixIgnoreCase(previousEpisode, ".j2e"_s)) {
+				previousEpisode = previousEpisode.exceptSuffix(4);
+			} else if (JJ2Level::StringHasSuffixIgnoreCase(previousEpisode, ".j2pe"_s)) {
+				previousEpisode = previousEpisode.exceptSuffix(5);
+			}
+			MutableStringView nextEpisode = NextEpisode;
+			if (JJ2Level::StringHasSuffixIgnoreCase(nextEpisode, ".j2e"_s)) {
+				nextEpisode = nextEpisode.exceptSuffix(4);
+			} else if(JJ2Level::StringHasSuffixIgnoreCase(nextEpisode, ".j2pe"_s)) {
+				nextEpisode = nextEpisode.exceptSuffix(5);
+			}
+
+			so->WriteValue<uint8_t>((uint8_t)previousEpisode.size());
+			so->Write(previousEpisode.data(), previousEpisode.size());
+			so->WriteValue<uint8_t>((uint8_t)nextEpisode.size());
+			so->Write(nextEpisode.data(), nextEpisode.size());
+		} else if (episodePrevNext != nullptr) {
 			auto prevNext = episodePrevNext(this);
 			so->WriteValue<uint8_t>((uint8_t)prevNext.first().size());
 			so->Write(prevNext.first().data(), prevNext.first().size());

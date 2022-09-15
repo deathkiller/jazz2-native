@@ -1056,6 +1056,30 @@
     <ClInclude Include="Jazz2\Scripting\RegisterString.h">
       <Filter>Header Files\Jazz2\Scripting</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Doggy.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Crab.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Demon.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Fencer.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\FatChick.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Helmut.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\TurtleTube.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Raven.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1765,6 +1789,30 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Scripting\RegisterString.cpp">
       <Filter>Source Files\Jazz2\Scripting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Doggy.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Crab.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Demon.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Fencer.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\FatChick.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Helmut.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\TurtleTube.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Raven.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

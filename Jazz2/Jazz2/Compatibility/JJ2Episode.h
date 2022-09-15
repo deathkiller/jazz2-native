@@ -14,18 +14,20 @@ using namespace Death::Containers;
 
 namespace Jazz2::Compatibility
 {
-	class JJ2Episode // .j2e
+	class JJ2Episode // .j2e / .j2pe
 	{
 	public:
 		int32_t Position;
 		String Name;
 		String DisplayName;
 		String FirstLevel;
+		String PreviousEpisode;
+		String NextEpisode;
 
 		JJ2Episode() { }
 
 		JJ2Episode(const String& name, const String& displayName, const String& firstLevel, int position)
-			: Name(name), DisplayName(displayName), FirstLevel(firstLevel), Position(position), _isRegistered(false)
+			: Name(name), DisplayName(displayName), FirstLevel(firstLevel), Position(position)
 		{
 		}
 
@@ -34,7 +36,6 @@ namespace Jazz2::Compatibility
 		void Convert(const String& targetPath, std::function<JJ2Level::LevelToken(MutableStringView&)> levelTokenConversion = nullptr, std::function<String(JJ2Episode*)> episodeNameConversion = nullptr, std::function<Pair<String, String>(JJ2Episode*)> episodePrevNext = nullptr);
 
 	private:
-		bool _isRegistered;
-		std::unique_ptr<uint8_t[]> _titleLight;
+		//std::unique_ptr<uint8_t[]> _titleLight;
 	};
 }

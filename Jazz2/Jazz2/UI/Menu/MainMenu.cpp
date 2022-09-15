@@ -28,7 +28,7 @@ namespace Jazz2::UI::Menu
 		_canvas = std::make_unique<MenuCanvas>(this);
 
 		auto& resolver = ContentResolver::Current();
-		resolver.ApplyPalette(fs::JoinPath({ "Content"_s, "Animations"_s, "Main.palette"_s }));
+		resolver.ApplyDefaultPalette();
 
 		Metadata* metadata = resolver.RequestMetadata("UI/MainMenu"_s);
 		if (metadata != nullptr) {
@@ -39,7 +39,7 @@ namespace Jazz2::UI::Menu
 		_smallFont = resolver.GetFont(FontType::Small);
 		_mediumFont = resolver.GetFont(FontType::Medium);
 
-#ifdef WITH_OPENMPT
+#if defined(WITH_OPENMPT)
 		if (PreferencesCache::ReduxMode) {
 			_music = resolver.GetMusic(Random().NextBool() ? "bonus2.j2b"_s : "bonus3.j2b"_s);
 		}
@@ -438,11 +438,17 @@ namespace Jazz2::UI::Menu
 	void MainMenu::PrepareTexturedBackground()
 	{
 		_tileSet = ContentResolver::Current().RequestTileSet("easter99"_s, 0, true);
+		_backgroundColor = Vector3f(0.098f, 0.35f, 1.0f);
 		if (_tileSet == nullptr) {
-			return;
+			_tileSet = ContentResolver::Current().RequestTileSet("carrot1"_s, 0, true);
+			_backgroundColor = Vector3f(0.007f, 0.18f, 0.4f);
+			if (_tileSet == nullptr) {
+				_backgroundColor = Vector3f::Zero;
+				return;
+			}
 		}
 
-		auto s = fs::Open(fs::JoinPath({ "Content"_s, "Animations"_s, "MainMenu.layer"_s }), FileAccessMode::Read);
+		auto s = fs::Open(fs::JoinPath({ "Content"_s, "Animations"_s, "main_menu.layer"_s }), FileAccessMode::Read);
 		if (s->GetSize() < 8) {
 			return;
 		}
@@ -492,13 +498,7 @@ namespace Jazz2::UI::Menu
 
 		command->material().uniform("uViewSize")->setFloatValue(_canvas->ViewSize.X, _canvas->ViewSize.Y);
 		command->material().uniform("uShift")->setFloatVector(_texturedBackgroundPos.Data());
-		if (_texturedBackgroundLayer.Visible) {
-			// TODO: horizonColor
-			command->material().uniform("uHorizonColor")->setFloatValue(/*layer.BackgroundColor.X*/0.098f, /*layer.BackgroundColor.Y*/0.35f, /*layer.BackgroundColor.Z*/1.0f);
-		} else {
-			// Visible is false only if textured background cannot be prepared, so make screen completely black instead
-			command->material().uniform("uHorizonColor")->setFloatVector(Vector3f::Zero.Data());
-		}
+		command->material().uniform("uHorizonColor")->setFloatVector(_backgroundColor.Data());
 		command->material().uniform("uParallaxStarsEnabled")->setFloatValue(0.0f);
 
 		command->setTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));

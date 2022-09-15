@@ -240,8 +240,8 @@ namespace Jazz2::Actors
 		virtual void OnTriggeredEvent(EventType eventType, uint16_t* eventParams);
 
 		void TryStandardMovement(float timeMult, TileCollisionParams& params);
-
 		void UpdateHitbox(int w, int h);
+		void HandleFrozenStateChange(ActorBase* shot);
 
 		void CreateParticleDebris();
 		void CreateSpriteDebris(const StringView& identifier, int count);
@@ -314,8 +314,5 @@ namespace Jazz2::Actors
 		bool IsCollidingWithAngled(const AABBf& aabb);
 
 		void RefreshAnimation();
-
-		void HandleAmmoFrozenStateChange(ActorBase* shot);
-
 	};
 }

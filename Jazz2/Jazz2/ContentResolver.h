@@ -234,7 +234,7 @@ namespace Jazz2
 
 		std::unique_ptr<Tiles::TileSet> RequestTileSet(const StringView& path, uint16_t captionTileId, bool applyPalette);
 		bool LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty);
-		void ApplyPalette(const StringView& path);
+		void ApplyDefaultPalette();
 
 		std::optional<Episode> GetEpisode(const StringView& name);
 		std::optional<Episode> GetEpisodeByPath(const StringView& path);

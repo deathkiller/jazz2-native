@@ -2165,6 +2165,12 @@ namespace Jazz2::Actors
 
 	void Player::GetFirePointAndAngle(Vector3i& initialPos, Vector2f& gunspotPos, float& angle)
 	{
+		if (_currentTransitionState == AnimState::Spring || _currentTransitionState == AnimState::TransitionShootToIdle) {
+			ForceCancelTransition();
+		}
+
+		SetAnimation(_currentAnimationState | AnimState::Shoot);
+
 		initialPos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2);
 		gunspotPos = _pos;
 
@@ -2311,7 +2317,9 @@ namespace Jazz2::Actors
 		}
 
 		_controllable = false;
-		SetFacingLeft(false);
+		if (!_inWater) {
+			SetFacingLeft(false);
+		}
 		SetState(ActorState::IsInvulnerable | ActorState::ApplyGravitation, true);
 		_fireFramesLeft = 0.0f;
 		_copterFramesLeft = 0.0f;

@@ -1,5 +1,6 @@
 ﻿#include "ContentResolver.h"
 #include "ContentResolver.Shaders.h"
+#include "Compatibility/JJ2Anims.Palettes.h"
 
 #include "../nCine/IO/CompressionUtils.h"
 #include "../nCine/IO/IFileStream.h"
@@ -818,32 +819,11 @@ namespace Jazz2
 		return true;
 	}
 
-	void ContentResolver::ApplyPalette(const StringView& path)
+	void ContentResolver::ApplyDefaultPalette()
 	{
-		std::unique_ptr<IFileStream> file = nullptr;
-		if (!path.empty()) {
-			file = fs::Open(path, FileAccessMode::Read);
-		}
-		if (file == nullptr || file->GetSize() == 0) {
-			// Try to load default palette
-			file = fs::Open(fs::JoinPath({ "Content"_s, "Animations"_s, "Main.palette"_s }), FileAccessMode::Read);
-		}
+		static_assert(sizeof(SpritePalette) == ColorsPerPalette * sizeof(uint32_t));
 
-		auto fileSize = file->GetSize();
-		if (fileSize < 5) {
-			return;
-		}
-
-		uint16_t colorCount;
-		file->Read(&colorCount, sizeof(colorCount));
-		if (colorCount <= 0 || colorCount > ColorsPerPalette) {
-			return;
-		}
-
-		uint32_t newPalette[ColorsPerPalette];
-		file->Read(newPalette, colorCount * sizeof(uint32_t));
-
-		if (std::memcmp(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t)) != 0) {
+		if (std::memcmp(_palettes, SpritePalette, ColorsPerPalette * sizeof(uint32_t)) != 0) {
 			// Palettes differs, drop all cached resources, so it will be reloaded with new palette
 			if (_isLoading) {
 				_cachedMetadata.clear();
@@ -854,7 +834,7 @@ namespace Jazz2
 				}
 			}
 
-			std::memcpy(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t));
+			std::memcpy(_palettes, SpritePalette, ColorsPerPalette * sizeof(uint32_t));
 			RecreateGemPalettes();
 		}
 	}
