@@ -61,7 +61,8 @@ namespace Jazz2
 		_blurPass4(this),
 #endif
 		_pressedActions(0),
-		_overrideActions(0)
+		_overrideActions(0),
+		_playerFrozenEnabled(false)
 	{
 		auto& resolver = ContentResolver::Current();
 		resolver.BeginLoading();
@@ -1047,10 +1048,10 @@ namespace Jazz2
 		
 		if (includeGamepads) {
 			switch (action) {
-				case PlayerActions::Left: if (_playerRequiredMovement.X < -0.8f) { isGamepad = true; return true; } break;
-				case PlayerActions::Right: if (_playerRequiredMovement.X > 0.8f) { isGamepad = true; return true; } break;
-				case PlayerActions::Up: if (_playerRequiredMovement.Y < -0.8f) { isGamepad = true; return true; } break;
-				case PlayerActions::Down: if (_playerRequiredMovement.Y > 0.8f) { isGamepad = true; return true; } break;
+				case PlayerActions::Left: if (_playerRequiredMovement.X < -0.8f && !_playerFrozenEnabled) { isGamepad = true; return true; } break;
+				case PlayerActions::Right: if (_playerRequiredMovement.X > 0.8f && !_playerFrozenEnabled) { isGamepad = true; return true; } break;
+				case PlayerActions::Up: if (_playerRequiredMovement.Y < -0.8f && !_playerFrozenEnabled) { isGamepad = true; return true; } break;
+				case PlayerActions::Down: if (_playerRequiredMovement.Y > 0.8f && !_playerFrozenEnabled) { isGamepad = true; return true; } break;
 			}
 		}
 
@@ -1090,7 +1091,7 @@ namespace Jazz2
 			return -1.0f;
 		}
 
-		return _playerRequiredMovement.X;
+		return (_playerFrozenEnabled ? _playerFrozenMovement.X : _playerRequiredMovement.X);
 	}
 
 	float LevelHandler::PlayerVerticalMovement(int index)
@@ -1105,12 +1106,7 @@ namespace Jazz2
 			return 1.0f;
 		}
 
-		return _playerRequiredMovement.Y;
-	}
-
-	void LevelHandler::PlayerFreezeMovement(int index, bool enable)
-	{
-		// TODO: Weapon wheel
+		return (_playerFrozenEnabled ? _playerFrozenMovement.Y : _playerRequiredMovement.Y);
 	}
 
 	void LevelHandler::ResolveCollisions(float timeMult)

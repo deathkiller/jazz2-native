@@ -100,10 +100,10 @@ namespace Jazz2::UI
 			}
 
 			if (PrepareWeaponWheel(players[0], _weaponWheelCount)) {
-				if (_weaponWheelAnim < WeaponWheelAnimMax) {
+				if (_weaponWheelAnim < WeaponWheelAnimDuration) {
 					_weaponWheelAnim += timeMult;
-					if (_weaponWheelAnim > WeaponWheelAnimMax) {
-						_weaponWheelAnim = WeaponWheelAnimMax;
+					if (_weaponWheelAnim > WeaponWheelAnimDuration) {
+						_weaponWheelAnim = WeaponWheelAnimDuration;
 					}
 				}
 			} else {
@@ -111,10 +111,8 @@ namespace Jazz2::UI
 					_weaponWheelAnim -= timeMult * 2.0f;
 					if (_weaponWheelAnim <= 0.0f) {
 						_weaponWheelAnim = 0.0f;
-
+						_levelHandler->_playerFrozenEnabled = false;
 						// TODO
-						//ControlScheme.EnableFreezeAnalog(player->_playerIndex, false);
-						//owner.WeaponWheelVisible = false;
 						//players[0]->_renderer.Initialize(Actors::ActorRendererType::Default);
 					}
 				}
@@ -713,19 +711,25 @@ namespace Jazz2::UI
 
 		Texture& lineTexture = *it->second.Base->TextureDiffuse.get();
 
+		if (!_levelHandler->_playerFrozenEnabled) {
+			_levelHandler->_playerFrozenEnabled = true;
+			_levelHandler->_playerFrozenMovement = _levelHandler->_playerRequiredMovement;
+		}
 		// TODO
-		//ControlScheme.EnableFreezeAnalog(owner.PlayerIndex, true);
-		//owner.WeaponWheelVisible = true;
 		//player->_renderer.Initialize(Actors::ActorRendererType::Outline);
 
 		Vector2f center = Vector2f(ViewSize.X * 0.5f, ViewSize.Y * 0.5f);
 		float angleStep = fTwoPi / _weaponWheelCount;
-		float h = 0, v = 0;
-		// TODO
-		//ControlScheme.GetWeaponWheel(owner.PlayerIndex, h, v);
+
+		float h = _levelHandler->_playerRequiredMovement.X;
+		float v = _levelHandler->_playerRequiredMovement.Y;
+		if (std::abs(h) + std::abs(v) < 0.5f) {
+			h = 0.0f;
+			v = 0.0f;
+		}
 
 		if (_weaponWheelVertices == nullptr) {
-			_weaponWheelVertices = std::make_unique<Vertex[]>(1024);
+			_weaponWheelVertices = std::make_unique<Vertex[]>(WeaponWheelMaxVertices);
 		}
 		_weaponWheelVerticesCount = 0;
 		_weaponWheelRenderCommandsCount = 0;
@@ -749,26 +753,10 @@ namespace Jazz2::UI
 			requestedIndex = (int)(_weaponWheelCount * adjustedAngle / fTwoPi);
 		}
 
-		float alpha = _weaponWheelAnim / WeaponWheelAnimMax;
+		float alpha = _weaponWheelAnim / WeaponWheelAnimDuration;
 		float easing = Menu::IMenuContainer::EaseOutCubic(alpha);
 		float distance = 20 + (70 * easing);
 		float distance2 = 10 + (50 * easing);
-
-		if (!std::isnan(requestedAngle)) {
-			float distance3 = distance * 0.86f;
-			float distance4 = distance2 * 0.93f;
-
-			// TODO
-			/*canvas.State.TextureCoordinateRect = new Rect(0, 0, 1, 1);
-			canvas.State.SetMaterial(weaponWheelRes.Material);
-
-			float cx = cosf(requestedAngle);
-			float cy = sinf(requestedAngle);
-			canvas.State.ColorTint = Colorf(1.0f, 0.6f, 0.3f, alpha * 0.4f);
-			canvas.FillThickLine(center.X + cx * distance4, center.Y + cy * distance4, center.X + cx * distance3, center.Y + cy * distance3, 3.0f);
-			canvas.State.ColorTint = Colorf(1.0f, 0.6f, 0.3f, alpha);
-			canvas.FillThickLine(center.X + cx * distance4, center.Y + cy * distance4, center.X + cx * distance3, center.Y + cy * distance3, 1.0f);*/
-		}
 
 		float angle = -fPiOver2;
 		for (int i = 0, j = 0; i < _countof(player->_weaponAmmo); i++) {
@@ -817,8 +805,7 @@ namespace Jazz2::UI
 		}
 
 		bool isGamepad;
-		// TODO: disabled for debugging
-		/*if (!_levelHandler->PlayerActionPressed(player->_playerIndex, PlayerActions::ChangeWeapon, true, isGamepad) || !isGamepad) {
+		if (!_levelHandler->PlayerActionPressed(player->_playerIndex, PlayerActions::ChangeWeapon, true, isGamepad) || !isGamepad) {
 			if (_weaponWheelAnim > 0.0f) {
 				if (_lastWeaponWheelIndex != -1) {
 					player->SwitchToWeaponByIndex(_lastWeaponWheelIndex);
@@ -828,7 +815,7 @@ namespace Jazz2::UI
 				weaponCount = GetWeaponCount(player);
 			}
 			return false;
-		}*/
+		}
 
 		weaponCount = GetWeaponCount(player);
 		return (weaponCount > 0);
@@ -859,33 +846,37 @@ namespace Jazz2::UI
 
 		x -= ViewSize.X * 0.5f;
 		y -= ViewSize.Y * 0.5f;
+		y = -y;
 
 		float angleRange = std::min(maxAngle - minAngle, fRadAngle360);
 		int segmentNum = std::clamp((int)std::round(powf(std::max(width, height), 0.65f) * 3.5f * angleRange / fRadAngle360), 4, 128);
 		float angleStep = angleRange / (segmentNum - 1);
-		int vertexCount = (segmentNum + 1) * 2;
+		int vertexCount = segmentNum + 2;
 		float angle = minAngle;
 
 		Vertex* vertices = &_weaponWheelVertices[_weaponWheelVerticesCount];
 		_weaponWheelVerticesCount += vertexCount;
+
+		if (_weaponWheelVerticesCount > WeaponWheelMaxVertices) {
+			// This shouldn't happen, 512 vertices should be enough
+			return;
+		}
 
 		constexpr float Mult = 2.2f;
 
 		{
 			int j = 0;
 			vertices[j].X = x + cosf(angle) * (width * Mult - 0.5f);
-			vertices[j].Y = y - sinf(angle) * (height * Mult - 0.5f);
+			vertices[j].Y = y + sinf(angle) * (height * Mult - 0.5f);
 			vertices[j].U = 0.0f;
 			vertices[j].V = 0.0f;
 		}
 
-		for (int i = 2; i < vertexCount - 1; i += 2) {
+		for (int i = 1; i < vertexCount - 1; i++) {
 			vertices[i].X = x + cosf(angle) * (width - 0.5f);
-			vertices[i].Y = y - sinf(angle) * (height - 0.5f);
+			vertices[i].Y = y + sinf(angle) * (height - 0.5f);
 			vertices[i].U = 0.15f + (0.7f * (float)(i - 1) / (vertexCount - 3));
 			vertices[i].V = 0.0f;
-
-			vertices[i - 1] = vertices[i];
 
 			angle += angleStep;
 		}
@@ -895,7 +886,7 @@ namespace Jazz2::UI
 
 			int j = vertexCount - 1;
 			vertices[j].X = x + cosf(angle) * (width * Mult - 0.5f);
-			vertices[j].Y = y - sinf(angle) * (height * Mult - 0.5f);
+			vertices[j].Y = y + sinf(angle) * (height * Mult - 0.5f);
 			vertices[j].U = 1.0f;
 			vertices[j].V = 0.0f;
 		}
@@ -919,7 +910,7 @@ namespace Jazz2::UI
 			}
 		}
 
-		command->geometry().setDrawParameters(GL_LINES, 0, vertexCount);
+		command->geometry().setDrawParameters(GL_LINE_STRIP, 0, vertexCount);
 		command->geometry().setNumElementsPerVertex(VertexFloats);
 		command->geometry().setHostVertexPointer((const float*)vertices);
 

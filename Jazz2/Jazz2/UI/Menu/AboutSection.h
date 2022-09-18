@@ -12,8 +12,5 @@ namespace Jazz2::UI::Menu
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
 		void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) override;
-
-	private:
-		char _additionalInfo[512];
 	};
 }

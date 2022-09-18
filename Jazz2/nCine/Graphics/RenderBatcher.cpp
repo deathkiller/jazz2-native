@@ -86,7 +86,7 @@ namespace nCine
 				(prevSrcBlendingFactor != srcBlendingFactor || prevDestBlendingFactor != destBlendingFactor);
 
 			// Should split if the shader differs or if it's the same but texture, blending or primitive type aren't
-			const bool shouldSplit = prevShaderProgram != shaderProgram || texturesDiffer || prevPrimitive != primitive || blendingDiffers;
+			const bool shouldSplit = prevShaderProgram != shaderProgram || texturesDiffer || prevPrimitive != primitive || primitive == GL_LINE_STRIP || blendingDiffers;
 
 			// Also collect the very last command if it can be batched with the previous one
 			unsigned int endSplit = (i == srcQueue.size() - 1 && !shouldSplit) ? i + 1 : i;

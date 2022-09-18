@@ -1,63 +1,95 @@
 ﻿#include "AboutSection.h"
 
+#if defined(_DEBUG)
+#	define INFO_BUILD_TYPE "debug"
+#else
+#	define INFO_BUILD_TYPE "release"
+#endif
+
+#if defined(WITH_OPENGLES)
+#	define INFO1 "OpenGL ES"
+#else
+#	define INFO1 "OpenGL"
+#endif
+
+#if defined(WITH_GLEW)
+#	define INFO2 ", GLEW"
+#else
+#	define INFO2 ""
+#endif
+
+#if defined(WITH_ANGLE)
+#	define INFO3 ", Angle"
+#else
+#	define INFO3 ""
+#endif
+
+#if defined(WITH_GLFW)
+#	define INFO4 ", GLFW"
+#else
+#	define INFO4 ""
+#endif
+
+#if defined(WITH_QT5)
+#	define INFO5 ", Qt"
+#else
+#	define INFO5 ""
+#endif
+
+#if defined(WITH_SDL)
+#	define INFO6 ", SDL"
+#else
+#	define INFO6 ""
+#endif
+
+#if defined(WITH_AUDIO)
+#	define INFO7 ", OpenAL"
+#else
+#	define INFO7 ""
+#endif
+
+#if defined(WITH_VORBIS)
+#	define INFO8 ", Vorbis"
+#else
+#	define INFO8 ""
+#endif
+
+#if defined(WITH_OPENMPT)
+#	define INFO9 ", libopenmpt"
+#else
+#	define INFO9 ""
+#endif
+
+#if defined(WITH_WEBP)
+#	define INFO10 ", libwebp"
+#else
+#	define INFO10 ""
+#endif
+
+#if defined(WITH_ZLIB)
+#	define INFO11 ", zlib"
+#else
+#	define INFO11 ", libdeflate"
+#endif
+
+#if defined(WITH_ANGELSCRIPT)
+#	define INFO12 ", AngelScript"
+#else
+#	define INFO12 ", libdeflate"
+#endif
+
+#if defined(WITH_TRACY)
+#	define INFO13 "\n\nTracy integration is enabled!"
+#else
+#	define INFO13 ""
+#endif
+
+#define ADDITIONAL_INFO "This project uses modified nCine game engine.\n\nThis " INFO_BUILD_TYPE " build uses these additional libraries:\n" INFO1 INFO2 INFO3 INFO4 INFO5 INFO6 INFO7 INFO8 INFO9 INFO10 INFO11 INFO12 INFO13
+
 namespace Jazz2::UI::Menu
 {
 	AboutSection::AboutSection()
 	{
-		_additionalInfo[0] = '\0';
-
-#if defined(_DEBUG)
-#	define BUILD_TYPE "debug"
-#else
-#	define BUILD_TYPE "release"
-#endif
-
-		strcat_s(_additionalInfo, "This project uses modified nCine game engine.\n\nThis " BUILD_TYPE " build uses these additional libraries:\n");
-#if defined(WITH_OPENGLES)
-		strcat_s(_additionalInfo, "OpenGL ES");
-#else
-		strcat_s(_additionalInfo, "OpenGL");
-#endif
-#if defined(WITH_GLEW)
-		strcat_s(_additionalInfo, ", GLEW");
-#endif
-#if defined(WITH_ANGLE)
-		strcat_s(_additionalInfo, ", Angle");
-#endif
-#if defined(WITH_GLFW)
-		strcat_s(_additionalInfo, ", GLFW");
-#endif
-#if defined(WITH_QT5)
-		strcat_s(_additionalInfo, ", Qt");
-#endif
-#if defined(WITH_SDL)
-		strcat_s(_additionalInfo, ", SDL");
-#endif
-#if defined(WITH_AUDIO)
-		strcat_s(_additionalInfo, ", OpenAL");
-#endif
-#if defined(WITH_VORBIS)
-		strcat_s(_additionalInfo, ", Vorbis");
-#endif
-#if defined(WITH_OPENMPT)
-		strcat_s(_additionalInfo, ", libopenmpt");
-#endif
-#if defined(WITH_WEBP)
-		strcat_s(_additionalInfo, ", libwebp");
-#endif
-#if defined(WITH_ZLIB)
-		strcat_s(_additionalInfo, ", zlib");
-#else
-		strcat_s(_additionalInfo, ", libdeflate");
-#endif
-#if defined(WITH_ANGELSCRIPT)
-		strcat_s(_additionalInfo, ", AngelScript");
-#endif
-#if defined(WITH_TRACY)
-		strcat_s(_additionalInfo, "\n\nTracy integration is enabled!");
-#endif
-		int s = (int)strlen(_additionalInfo);
-		LOGI_X("SIZE: %i", s);
 	}
 
 	void AboutSection::OnUpdate(float timeMult)
@@ -94,7 +126,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawStringShadow("<http://deat.tk/jazz2/>"_s, charOffset, pos.X + 25.0f + 70.0f, pos.Y + 20.0f + 20.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.7f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f);
 
-		_root->DrawStringShadow(_additionalInfo, charOffset, viewSize.X * 0.5f, pos.Y + 24.0f + pos.Y * 0.34f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(ADDITIONAL_INFO, charOffset, viewSize.X * 0.5f, pos.Y + 24.0f + pos.Y * 0.34f, IMenuContainer::FontLayer,
 			Alignment::Top, Font::DefaultColor, 0.8f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 
 		_root->DrawElement("MenuLine"_s, 0, viewSize.X * 0.5f, pos.Y + 60.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);

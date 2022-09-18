@@ -89,7 +89,6 @@ namespace Jazz2
 		virtual bool PlayerActionHit(int index, PlayerActions action, bool includeGamepads, bool& isGamepad) = 0;
 		virtual float PlayerHorizontalMovement(int index) = 0;
 		virtual float PlayerVerticalMovement(int index) = 0;
-		virtual void PlayerFreezeMovement(int index, bool enable) = 0;
 
 		float Gravity;
 	};

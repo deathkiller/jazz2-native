@@ -132,7 +132,6 @@ namespace Jazz2
 		bool PlayerActionHit(int index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
 		float PlayerHorizontalMovement(int index) override;
 		float PlayerVerticalMovement(int index) override;
-		void PlayerFreezeMovement(int index, bool enable) override;
 
 		Vector2f GetCameraPos() {
 			return _cameraPos;
@@ -289,6 +288,8 @@ namespace Jazz2
 		uint64_t _pressedActions;
 		uint32_t _overrideActions;
 		Vector2f _playerRequiredMovement;
+		Vector2f _playerFrozenMovement;
+		bool _playerFrozenEnabled;
 
 		void OnLevelLoaded(const StringView& fullPath, const StringView& name, const StringView& nextLevel, const StringView& secretLevel,
 			std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap,

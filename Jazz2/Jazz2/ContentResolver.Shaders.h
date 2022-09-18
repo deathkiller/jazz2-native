@@ -614,6 +614,11 @@ in vec2 vTexCoords;
 in vec4 vColor;
 out vec4 fragColor;
 
+float aastep(float threshold, float value) {
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value); 
+}
+
 void main() {
 	vec2 size = vColor.xy;
 
@@ -625,7 +630,7 @@ void main() {
 	outline += texture(uTexture, vTexCoords + vec2(size.x, size.y)).a;
 	outline += texture(uTexture, vTexCoords + vec2(-size.x, -size.y)).a;
 	outline += texture(uTexture, vTexCoords + vec2(size.x, -size.y)).a;
-	outline = min(outline, 1.0);
+	outline = aastep(1.0, outline);
 
 	vec4 color = texture(uTexture, vTexCoords);
 	fragColor = mix(color, vec4(vColor.z, vColor.z, vColor.z, vColor.w), outline - color.a);

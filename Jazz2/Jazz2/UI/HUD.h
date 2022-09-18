@@ -72,7 +72,8 @@ namespace Jazz2::UI
 		static constexpr float ButtonSize = 0.172f;
 		static constexpr float SmallButtonSize = 0.098f;
 
-		static constexpr float WeaponWheelAnimMax = 20.0f;
+		static constexpr float WeaponWheelAnimDuration = 20.0f;
+		static constexpr int WeaponWheelMaxVertices = 512;
 		
 		LevelHandler* _levelHandler;
 		HashMap<String, GraphicResource>* _graphics;
@@ -93,7 +94,6 @@ namespace Jazz2::UI
 		float _weaponWheelAnim;
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _weaponWheelRenderCommands;
 		int  _weaponWheelRenderCommandsCount;
-		//SmallVector<Vertex, 0> _weaponWheelVertices;
 		std::unique_ptr<Vertex[]> _weaponWheelVertices;
 		int _weaponWheelVerticesCount;
 		int _lastWeaponWheelIndex;
