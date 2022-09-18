@@ -12,7 +12,7 @@ namespace Jazz2::Actors
 		bool IsOneWay;
 		bool Movable;
 
-		bool Push(bool left, float timeMult);
+		float Push(bool left, float timeMult);
 
 	};
 }

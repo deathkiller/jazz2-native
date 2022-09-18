@@ -27,6 +27,7 @@ namespace Jazz2::UI
 
 	protected:
 		RenderCommand* RentRenderCommand();
+		void DrawRenderCommand(RenderCommand* command);
 
 	private:
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;

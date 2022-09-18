@@ -31,6 +31,11 @@ namespace Jazz2::UI
 		return false;
 	}
 
+	void Canvas::DrawRenderCommand(RenderCommand* command)
+	{
+		_currentRenderQueue->addCommand(command);
+	}
+
 	void Canvas::DrawTexture(const Texture& texture, const Vector2f& pos, uint16_t z, const Vector2f& size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending)
 	{
 		auto command = RentRenderCommand();

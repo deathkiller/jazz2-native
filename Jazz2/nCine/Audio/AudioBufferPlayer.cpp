@@ -162,7 +162,7 @@ namespace nCine
 				alSourceStop(sourceId_);
 				// Detach the buffer from source
 				alSourcei(sourceId_, AL_BUFFER, 0);
-#if OPENAL_FILTERS_SUPPORTED
+#if defined(OPENAL_FILTERS_SUPPORTED)
 				if (filterHandle_ != 0) {
 					alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
 				}
@@ -183,7 +183,7 @@ namespace nCine
 			if (alState != AL_PLAYING) {
 				// Detach the buffer from source
 				alSourcei(sourceId_, AL_BUFFER, 0);
-#if OPENAL_FILTERS_SUPPORTED
+#if defined(OPENAL_FILTERS_SUPPORTED)
 				if (filterHandle_ != 0) {
 					alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
 				}

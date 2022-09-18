@@ -57,7 +57,7 @@
 #			endif
 #		endif
 #		if !defined(__EMSCRIPTEN__)
-#			define OPENAL_FILTERS_SUPPORTED 1
+#			define OPENAL_FILTERS_SUPPORTED
 #		endif
 #	endif
 #endif

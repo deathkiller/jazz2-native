@@ -302,8 +302,7 @@ namespace Jazz2::Actors
 			if (_fireFramesLeft <= 0.0f) {
 				// Play post-fire animation
 				if ((_currentAnimationState & (AnimState::Walk | AnimState::Run | AnimState::Dash | AnimState::Crouch | AnimState::Buttstomp | AnimState::Swim | AnimState::Airboard | AnimState::Lift | AnimState::Spring)) == AnimState::Idle &&
-					_currentTransitionState != AnimState::TransitionRunToIdle &&
-					_currentTransitionState != AnimState::TransitionDashToIdle &&
+					_currentTransitionState != AnimState::TransitionRunToIdle && _currentTransitionState != AnimState::TransitionDashToIdle &&
 					!_isAttachedToPole) {
 
 					if ((_currentAnimationState & AnimState::Hook) == AnimState::Hook) {
@@ -951,13 +950,12 @@ namespace Jazz2::Actors
 					removeSpecialMove = true;
 					_copterFramesLeft = 0.0f;
 					//speedX = force.X;
-					_speed.X = (1 + std::abs(force.X)) * sign;
+					_speed.X = (1.0f + std::abs(force.X)) * sign;
 					_externalForce.X = force.X * 0.6f;
 					_springCooldown = 3.0f;
 					SetState(ActorState::CanJump, false);
 
 					_wasActivelyPushing = false;
-
 					_keepRunningTime = 100.0f;
 
 					if (!spring->KeepSpeedY) {
@@ -965,11 +963,16 @@ namespace Jazz2::Actors
 						_externalForce.Y = 0.0f;
 					}
 
+					if (_inIdleTransition) {
+						_inIdleTransition = false;
+						CancelTransition();
+					}
+
 					SetPlayerTransition(AnimState::Dash | AnimState::Jump, true, false, SpecialMoveType::None);
 					_controllableTimeout = 2.0f;
 				} else if (std::abs(force.Y) > 0.0f) {
 					_copterFramesLeft = 0.0f;
-					_speed.Y = (4 + std::abs(force.Y)) * sign;
+					_speed.Y = (4.0f + std::abs(force.Y)) * sign;
 					_externalForce.Y = -force.Y;
 					_springCooldown = 3.0f;
 					SetState(ActorState::CanJump, false);
@@ -978,6 +981,11 @@ namespace Jazz2::Actors
 						_speed.X = 0.0f;
 						_externalForce.X = 0.0f;
 						_keepRunningTime = 0.0f;
+					}
+
+					if (_inIdleTransition) {
+						_inIdleTransition = false;
+						CancelTransition();
 					}
 
 					if (sign > 0) {
@@ -1182,6 +1190,11 @@ namespace Jazz2::Actors
 			newState = AnimState::Lift;
 		} else if (GetState(ActorState::CanJump) && _isActivelyPushing && _pushFramesLeft > 0.0f && _keepRunningTime <= 0.0f) {
 			newState = AnimState::Push;
+
+			if (_inIdleTransition) {
+				_inIdleTransition = false;
+				CancelTransition();
+			}
 		} else {
 			// Only certain ones don't need to be preserved from earlier state, others should be set as expected
 			AnimState composite = (_currentAnimationState & (AnimState)0xFFF83F60);
@@ -1197,6 +1210,7 @@ namespace Jazz2::Actors
 				}
 
 				if (_inIdleTransition) {
+					_inIdleTransition = false;
 					CancelTransition();
 				}
 			}
@@ -1266,8 +1280,11 @@ namespace Jazz2::Actors
 				if (newState == AnimState::Idle) {
 					_inIdleTransition = true;
 					SetTransition(AnimState::TransitionDashToIdle, true, [this]() {
-						_inIdleTransition = false;
-						SetTransition(AnimState::TransitionRunToIdle, true);
+						if (_inIdleTransition) {
+							SetTransition(AnimState::TransitionRunToIdle, true, [this]() {
+								_inIdleTransition = false;
+							});
+						}
 					});
 				}
 				break;
@@ -1280,7 +1297,12 @@ namespace Jazz2::Actors
 			case AnimState::Idle:
 				if (newState == AnimState::Jump) {
 					SetTransition(AnimState::TransitionIdleToJump, true);
-				} else if (!_inLedgeTransition) {
+				} else if (newState != AnimState::Idle) {
+					_inLedgeTransition = false;
+					if (_currentTransitionState == AnimState::TransitionLedge) {
+						CancelTransition();
+					}
+				} else if (!_inLedgeTransition && std::abs(_speed.X) < 1.0f && std::abs(_speed.Y) < 1.0f) {
 					AABBf aabbL = AABBf(AABBInner.L + 2, AABBInner.B - 10, AABBInner.L + 4, AABBInner.B + 28);
 					AABBf aabbR = AABBf(AABBInner.R - 4, AABBInner.B - 10, AABBInner.R - 2, AABBInner.B + 28);
 					TileCollisionParams params = { TileDestructType::None, true };
@@ -1289,16 +1311,16 @@ namespace Jazz2::Actors
 						: (!_levelHandler->IsPositionEmpty(this, aabbL, params) && _levelHandler->IsPositionEmpty(this, aabbR, params))) {
 
 						_inLedgeTransition = true;
-						// TODO: Spaz's and Lori's animation should be continual
-						SetTransition(AnimState::TransitionLedge, true);
+						if (_playerType == PlayerType::Spaz) {
+							// Spaz's and Lori's animation should be continual, so reset it in callback
+							SetTransition(AnimState::TransitionLedge, true, [this]() {
+								_inLedgeTransition = false;
+							});
+						} else {
+							SetTransition(AnimState::TransitionLedge, true);
+						}
 
 						PlaySfx("Ledge"_s);
-					}
-				} else if (newState != AnimState::Idle) {
-					_inLedgeTransition = false;
-
-					if (_currentTransitionState == AnimState::TransitionLedge) {
-						CancelTransition();
 					}
 				}
 				break;
@@ -1318,7 +1340,9 @@ namespace Jazz2::Actors
 			if (!_levelHandler->IsPositionEmpty(this, hitbox, params, &collider)) {
 				if (auto solidObject = dynamic_cast<SolidObjectBase*>(collider)) {
 					SetState(ActorState::IsSolidObject, false);
-					if (solidObject->Push(_speed.X < 0, timeMult)) {
+					float pushSpeedX = solidObject->Push(_speed.X < 0, timeMult);
+					if (std::abs(pushSpeedX) > 0.0f) {
+						_speed.X = pushSpeedX * 1.2f;
 						_pushFramesLeft = 3.0f;
 					}
 					SetState(ActorState::IsSolidObject, true);
@@ -2499,7 +2523,10 @@ namespace Jazz2::Actors
 		_internalForceY = 0.0f;
 		SetState(ActorState::ApplyGravitation, false);
 		_isAttachedToPole = true;
-		_inIdleTransition = false;
+		if (_inIdleTransition) {
+			_inIdleTransition = false;
+			CancelTransition();
+		}
 
 		_keepRunningTime = 0.0f;
 		_pushFramesLeft = 0.0f;
@@ -2520,13 +2547,17 @@ namespace Jazz2::Actors
 
 	void Player::NextPoleStage(bool horizontal, bool positive, int stagesLeft, float lastSpeed)
 	{
+		if (_inIdleTransition) {
+			_inIdleTransition = false;
+			CancelTransition();
+		}
+
 		if (stagesLeft > 0) {
 			AnimState poleAnim = (horizontal ? AnimState::TransitionPoleH : AnimState::TransitionPoleV);
 			SetPlayerTransition(poleAnim, false, true, SpecialMoveType::None, [this, horizontal, positive, stagesLeft, lastSpeed]() {
 				NextPoleStage(horizontal, positive, stagesLeft - 1, lastSpeed);
 			});
 
-			_inIdleTransition = false;
 			_controllableTimeout = 80.0f;
 
 			PlaySfx("Pole"_s, 1.0f, 0.6f);
@@ -2557,7 +2588,6 @@ namespace Jazz2::Actors
 			SetState(ActorState::ApplyGravitation, true);
 			_isAttachedToPole = false;
 			_wasActivelyPushing = false;
-			_inIdleTransition = false;
 
 			_controllableTimeout = 4.0f;
 			_lastPoleTime = 10.0f;

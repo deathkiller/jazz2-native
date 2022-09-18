@@ -38,6 +38,19 @@ namespace Jazz2::UI
 			Alignment Align;
 		};
 
+		struct Vertex
+		{
+			float X, Y;
+			float U, V;
+
+			Vertex()
+				: X(0.0f), Y(0.0f), U(0.0f), V(0.0f) {}
+			Vertex(float x, float y, float u, float v)
+				: X(x), Y(y), U(u), V(v) {}
+		};
+		static constexpr unsigned int VertexBytes = sizeof(Vertex);
+		static constexpr unsigned int VertexFloats = VertexBytes / sizeof(float);
+
 		static constexpr Alignment AllowRollover = (Alignment)0x80;
 
 		static constexpr uint16_t MainLayer = 100;
@@ -59,6 +72,8 @@ namespace Jazz2::UI
 		static constexpr float ButtonSize = 0.172f;
 		static constexpr float SmallButtonSize = 0.098f;
 
+		static constexpr float WeaponWheelAnimMax = 20.0f;
+		
 		LevelHandler* _levelHandler;
 		HashMap<String, GraphicResource>* _graphics;
 		std::shared_ptr<Actors::Player> _attachedPlayer;
@@ -73,7 +88,14 @@ namespace Jazz2::UI
 		float _activeBossTime;
 		float _rgbAmbientLight;
 		float _rgbHealthLast;
+
+		int _weaponWheelCount;
 		float _weaponWheelAnim;
+		SmallVector<std::unique_ptr<RenderCommand>, 0> _weaponWheelRenderCommands;
+		int  _weaponWheelRenderCommandsCount;
+		//SmallVector<Vertex, 0> _weaponWheelVertices;
+		std::unique_ptr<Vertex[]> _weaponWheelVertices;
+		int _weaponWheelVerticesCount;
 		int _lastWeaponWheelIndex;
 		float _rgbLightsTime;
 
@@ -91,7 +113,7 @@ namespace Jazz2::UI
 		void DrawWeaponWheel(Actors::Player* player);
 		bool PrepareWeaponWheel(Actors::Player* player, int& weaponCount);
 		static int GetWeaponCount(Actors::Player* player);
-		void DrawWeaponWheelSegment(float x, float y, float width, float height, float minAngle, float maxAngle);
+		void DrawWeaponWheelSegment(float x, float y, float width, float height, uint16_t z, float minAngle, float maxAngle, const Texture& texture, const Colorf& color);
 
 		TouchButtonInfo CreateTouchButton(PlayerActions action, const StringView& identifier, Alignment align, float x, float y, float w, float h);
 		bool IsOnButton(const TouchButtonInfo& button, float x, float y);

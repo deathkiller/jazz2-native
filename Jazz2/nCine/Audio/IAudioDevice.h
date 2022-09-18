@@ -67,7 +67,7 @@ namespace nCine
 		virtual int nativeFrequency() = 0;
 	};
 
-	inline IAudioDevice::~IAudioDevice() {}
+	inline IAudioDevice::~IAudioDevice() { }
 
 	/// A fake audio device which doesn't play anything
 	class NullAudioDevice : public IAudioDevice
@@ -80,7 +80,7 @@ namespace nCine
 		float gain() const override {
 			return 1.0f;
 		}
-		void setGain(float gain) override {}
+		void setGain(float gain) override { }
 
 		unsigned int maxNumPlayers() const override {
 			return 0;
@@ -92,21 +92,21 @@ namespace nCine
 			return nullptr;
 		}
 
-		void stopPlayers() override {}
-		void pausePlayers() override {}
-		void stopPlayers(PlayerType playerType) override {}
-		void pausePlayers(PlayerType playerType) override {}
+		void stopPlayers() override { }
+		void pausePlayers() override { }
+		void stopPlayers(PlayerType playerType) override { }
+		void pausePlayers(PlayerType playerType) override { }
 
-		void freezePlayers() override {}
-		void unfreezePlayers() override {}
+		void freezePlayers() override { }
+		void unfreezePlayers() override { }
 
 		unsigned int nextAvailableSource() override {
 			return UnavailableSource;
 		}
-		void registerPlayer(IAudioPlayer* player) override {}
-		void unregisterPlayer(IAudioPlayer* player) override {}
+		void registerPlayer(IAudioPlayer* player) override { }
+		void unregisterPlayer(IAudioPlayer* player) override { }
 		void updatePlayers() override {}
-		void updateListener(const Vector3f& position, const Vector3f& velocity) override {}
+		void updateListener(const Vector3f& position, const Vector3f& velocity) override { }
 		int nativeFrequency() override { return 0; }
 	};
 

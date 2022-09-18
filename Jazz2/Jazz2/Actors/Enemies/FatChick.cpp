@@ -98,8 +98,8 @@ namespace Jazz2::Actors::Enemies
 
 	void FatChick::Attack()
 	{
-		// ToDo: Play sound in the middle of transition
-		   // ToDo: Apply force in the middle of transition
+		// TODO: Play sound in the middle of transition
+		// TODO: Apply force in the middle of transition
 		PlaySfx("Attack", 0.8f, 0.6f);
 
 		SetTransition(AnimState::TransitionAttack, false, [this]() {

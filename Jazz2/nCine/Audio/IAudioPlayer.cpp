@@ -21,7 +21,7 @@ namespace nCine {
 
 	IAudioPlayer::~IAudioPlayer()
 	{
-#if OPENAL_FILTERS_SUPPORTED
+#if defined(OPENAL_FILTERS_SUPPORTED)
 		if (filterHandle_ != 0) {
 			alDeleteFilters(1, &filterHandle_);
 			filterHandle_ = 0;
@@ -95,7 +95,7 @@ namespace nCine {
 
 	void IAudioPlayer::updateFilters()
 	{
-#if OPENAL_FILTERS_SUPPORTED
+#if defined(OPENAL_FILTERS_SUPPORTED)
 		if (lowPass_ < 1.0f) {
 			if (filterHandle_ == 0) {
 				alGenFilters(1, &filterHandle_);

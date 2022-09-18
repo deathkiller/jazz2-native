@@ -13,16 +13,17 @@ namespace Jazz2::Actors
 			ActorState::IsSolidObject | ActorState::SkipPerPixelCollisions, true);
 	}
 
-	bool SolidObjectBase::Push(bool left, float timeMult)
+	float SolidObjectBase::Push(bool left, float timeMult)
 	{
 		if (Movable) {
+			float x = (left ? -0.5f : 0.5f) * timeMult;
 			for (int i = 0; i >= -4; i -= 2) {
-				if (MoveInstantly(Vector2f((left ? -0.5f : 0.5f) * timeMult, i * timeMult), MoveType::Relative)) {
-					return true;
+				if (MoveInstantly(Vector2f(x, i * timeMult), MoveType::Relative)) {
+					return x;
 				}
 			}
 		}
 
-		return false;
+		return 0.0f;
 	}
 }

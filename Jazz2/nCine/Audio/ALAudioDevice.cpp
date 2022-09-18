@@ -259,7 +259,7 @@ namespace nCine
 		HRESULT hr = ::CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, IID_PPV_ARGS(&pEnumerator_));
 		if (hr == CO_E_NOTINITIALIZED) {
 			LOGW("CoCreateInstance() failed with CO_E_NOTINITIALIZED");
-			hr = ::CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+			hr = ::CoInitializeEx(nullptr, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
 			if (FAILED(hr)) {
 				hr = ::CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr,  CLSCTX_ALL, IID_PPV_ARGS(&pEnumerator_));
 				if (FAILED(hr)) {

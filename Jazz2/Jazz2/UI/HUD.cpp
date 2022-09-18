@@ -99,6 +99,27 @@ namespace Jazz2::UI
 				_activeBossTime = 0.0f;
 			}
 
+			if (PrepareWeaponWheel(players[0], _weaponWheelCount)) {
+				if (_weaponWheelAnim < WeaponWheelAnimMax) {
+					_weaponWheelAnim += timeMult;
+					if (_weaponWheelAnim > WeaponWheelAnimMax) {
+						_weaponWheelAnim = WeaponWheelAnimMax;
+					}
+				}
+			} else {
+				if (_weaponWheelAnim > 0.0f) {
+					_weaponWheelAnim -= timeMult * 2.0f;
+					if (_weaponWheelAnim <= 0.0f) {
+						_weaponWheelAnim = 0.0f;
+
+						// TODO
+						//ControlScheme.EnableFreezeAnalog(player->_playerIndex, false);
+						//owner.WeaponWheelVisible = false;
+						//players[0]->_renderer.Initialize(Actors::ActorRendererType::Default);
+					}
+				}
+			}
+
 			UpdateRgbLights(timeMult, players[0]);
 		}
 	}
@@ -240,8 +261,7 @@ namespace Jazz2::UI
 			DrawCoins(charOffset);
 			DrawGems(charOffset);
 
-			// TODO
-			//DrawWeaponWheel(player);
+			DrawWeaponWheel(player);
 
 			// FPS
 			if (PreferencesCache::ShowPerformanceMetrics) {
@@ -682,53 +702,33 @@ namespace Jazz2::UI
 
 	void HUD::DrawWeaponWheel(Actors::Player* player)
 	{
-		// TODO
-		float timeMult = 1.0f;
-
-		int weaponCount;
-		bool isVisible = PrepareWeaponWheel(player, weaponCount);
-
-		const float WeaponWheelAnimMax = 20.0f;
-
-		if (isVisible) {
-			if (_weaponWheelAnim < WeaponWheelAnimMax) {
-				_weaponWheelAnim += timeMult;
-				if (_weaponWheelAnim > WeaponWheelAnimMax) {
-					_weaponWheelAnim = WeaponWheelAnimMax;
-				}
-			}
-		} else {
-			if (_weaponWheelAnim > 0.0f) {
-				_weaponWheelAnim -= timeMult * 2.0f;
-				if (_weaponWheelAnim <= 0.0f) {
-					_weaponWheelAnim = 0.0f;
-
-					// TODO
-					//ControlScheme.EnableFreezeAnalog(player->_playerIndex, false);
-					//owner.WeaponWheelVisible = false;
-					player->_renderer.Initialize(Actors::ActorRendererType::Default);
-				}
-			}
-		}
-
 		if (_weaponWheelAnim <= 0.0f) {
 			return;
 		}
 
-		//if (!graphics.TryGetValue("WeaponWheel", out GraphicResource weaponWheelRes)) {
-		//	return;
-		//}
+		auto it = _graphics->find(String::nullTerminatedView("WeaponWheel"_s));
+		if (it == _graphics->end()) {
+			return;
+		}
+
+		Texture& lineTexture = *it->second.Base->TextureDiffuse.get();
 
 		// TODO
 		//ControlScheme.EnableFreezeAnalog(owner.PlayerIndex, true);
 		//owner.WeaponWheelVisible = true;
-		player->_renderer.Initialize(Actors::ActorRendererType::Outline);
+		//player->_renderer.Initialize(Actors::ActorRendererType::Outline);
 
 		Vector2f center = Vector2f(ViewSize.X * 0.5f, ViewSize.Y * 0.5f);
-		float angleStep = fTwoPi / weaponCount;
+		float angleStep = fTwoPi / _weaponWheelCount;
 		float h = 0, v = 0;
 		// TODO
 		//ControlScheme.GetWeaponWheel(owner.PlayerIndex, h, v);
+
+		if (_weaponWheelVertices == nullptr) {
+			_weaponWheelVertices = std::make_unique<Vertex[]>(1024);
+		}
+		_weaponWheelVerticesCount = 0;
+		_weaponWheelRenderCommandsCount = 0;
 
 		float requestedAngle;
 		int requestedIndex;
@@ -746,12 +746,11 @@ namespace Jazz2::UI
 				adjustedAngle -= fTwoPi;
 			}
 
-			requestedIndex = (int)(weaponCount * adjustedAngle / fTwoPi);
+			requestedIndex = (int)(_weaponWheelCount * adjustedAngle / fTwoPi);
 		}
 
 		float alpha = _weaponWheelAnim / WeaponWheelAnimMax;
-		// TODO
-		float easing = /*Ease.OutCubic*/(alpha);
+		float easing = Menu::IMenuContainer::EaseOutCubic(alpha);
 		float distance = 20 + (70 * easing);
 		float distance2 = 10 + (50 * easing);
 
@@ -759,6 +758,7 @@ namespace Jazz2::UI
 			float distance3 = distance * 0.86f;
 			float distance4 = distance2 * 0.93f;
 
+			// TODO
 			/*canvas.State.TextureCoordinateRect = new Rect(0, 0, 1, 1);
 			canvas.State.SetMaterial(weaponWheelRes.Material);
 
@@ -783,24 +783,21 @@ namespace Jazz2::UI
 					_lastWeaponWheelIndex = i;
 				}
 
-				DrawElement("WeaponWheelDim"_s, -1, pos.X, pos.Y, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, alpha * 0.6f), 5.0f, 5.0f);
-				DrawElement(weapon, -1, pos.X, pos.Y, MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, isSelected ? alpha : alpha * 0.7f));
-
-				//canvas.State.TextureCoordinateRect = new Rect(0, 0, 1, 1);
-				//canvas.State.SetMaterial(weaponWheelRes.Material);
+				DrawElement("WeaponWheelDim"_s, -1, pos.X, pos.Y, ShadowLayer - 10, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, alpha * 0.6f), 5.0f, 5.0f);
+				DrawElement(weapon, -1, pos.X, pos.Y, MainLayer + 10, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, isSelected ? alpha : alpha * 0.7f));
 
 				float angle2 = fTwoPi - angle;
 				float angleFrom = angle2 - angleStep * 0.4f;
 				float angleTo = angle2 + angleStep * 0.4f;
 
-				//canvas.State.ColorTint = new Colorf(0.0f, 0.0f, 0.0f, alpha * 0.3f);
-				DrawWeaponWheelSegment(center.X - distance2 - 1, center.Y - distance2 - 1, distance2 * 2, distance2 * 2, angleFrom, angleTo);
-				DrawWeaponWheelSegment(center.X - distance2 - 1, center.Y - distance2 + 1, distance2 * 2, distance2 * 2, angleFrom, angleTo);
-				DrawWeaponWheelSegment(center.X - distance2 + 1, center.Y - distance2 - 1, distance2 * 2, distance2 * 2, angleFrom, angleTo);
-				DrawWeaponWheelSegment(center.X - distance2 + 1, center.Y - distance2 + 1, distance2 * 2, distance2 * 2, angleFrom, angleTo);
+				Colorf color1 = Colorf(0.0f, 0.0f, 0.0f, alpha * 0.3f);
+				DrawWeaponWheelSegment(center.X - distance2 - 1, center.Y - distance2 - 1, distance2 * 2, distance2 * 2, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
+				DrawWeaponWheelSegment(center.X - distance2 - 1, center.Y - distance2 + 1, distance2 * 2, distance2 * 2, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
+				DrawWeaponWheelSegment(center.X - distance2 + 1, center.Y - distance2 - 1, distance2 * 2, distance2 * 2, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
+				DrawWeaponWheelSegment(center.X - distance2 + 1, center.Y - distance2 + 1, distance2 * 2, distance2 * 2, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
 
-				//canvas.State.ColorTint = (isSelected ? Colorf(1.0f, 0.8f, 0.5f, alpha) : Colorf(1.0f, 1.0f, 1.0f, alpha * 0.7f));
-				DrawWeaponWheelSegment(center.X - distance2, center.Y - distance2, distance2 * 2, distance2 * 2, angleFrom, angleTo);
+				Colorf color2 = (isSelected ? Colorf(1.0f, 0.8f, 0.5f, alpha) : Colorf(1.0f, 1.0f, 1.0f, alpha * 0.7f));
+				DrawWeaponWheelSegment(center.X - distance2, center.Y - distance2, distance2 * 2, distance2 * 2, MainLayer, angleFrom, angleTo, lineTexture, color2);
 
 				angle += angleStep;
 				j++;
@@ -820,7 +817,8 @@ namespace Jazz2::UI
 		}
 
 		bool isGamepad;
-		if (!_levelHandler->PlayerActionPressed(player->_playerIndex, PlayerActions::ChangeWeapon, true, isGamepad) || !isGamepad) {
+		// TODO: disabled for debugging
+		/*if (!_levelHandler->PlayerActionPressed(player->_playerIndex, PlayerActions::ChangeWeapon, true, isGamepad) || !isGamepad) {
 			if (_weaponWheelAnim > 0.0f) {
 				if (_lastWeaponWheelIndex != -1) {
 					player->SwitchToWeaponByIndex(_lastWeaponWheelIndex);
@@ -830,7 +828,7 @@ namespace Jazz2::UI
 				weaponCount = GetWeaponCount(player);
 			}
 			return false;
-		}
+		}*/
 
 		weaponCount = GetWeaponCount(player);
 		return (weaponCount > 0);
@@ -854,9 +852,89 @@ namespace Jazz2::UI
 		return weaponCount;
 	}
 
-	void HUD::DrawWeaponWheelSegment(float x, float y, float width, float height, float minAngle, float maxAngle)
+	void HUD::DrawWeaponWheelSegment(float x, float y, float width, float height, uint16_t z, float minAngle, float maxAngle, const Texture& texture, const Colorf& color)
 	{
-		// TODO
+		width *= 0.5f; x += width;
+		height *= 0.5f; y += height;
+
+		x -= ViewSize.X * 0.5f;
+		y -= ViewSize.Y * 0.5f;
+
+		float angleRange = std::min(maxAngle - minAngle, fRadAngle360);
+		int segmentNum = std::clamp((int)std::round(powf(std::max(width, height), 0.65f) * 3.5f * angleRange / fRadAngle360), 4, 128);
+		float angleStep = angleRange / (segmentNum - 1);
+		int vertexCount = (segmentNum + 1) * 2;
+		float angle = minAngle;
+
+		Vertex* vertices = &_weaponWheelVertices[_weaponWheelVerticesCount];
+		_weaponWheelVerticesCount += vertexCount;
+
+		constexpr float Mult = 2.2f;
+
+		{
+			int j = 0;
+			vertices[j].X = x + cosf(angle) * (width * Mult - 0.5f);
+			vertices[j].Y = y - sinf(angle) * (height * Mult - 0.5f);
+			vertices[j].U = 0.0f;
+			vertices[j].V = 0.0f;
+		}
+
+		for (int i = 2; i < vertexCount - 1; i += 2) {
+			vertices[i].X = x + cosf(angle) * (width - 0.5f);
+			vertices[i].Y = y - sinf(angle) * (height - 0.5f);
+			vertices[i].U = 0.15f + (0.7f * (float)(i - 1) / (vertexCount - 3));
+			vertices[i].V = 0.0f;
+
+			vertices[i - 1] = vertices[i];
+
+			angle += angleStep;
+		}
+
+		{
+			angle -= angleStep;
+
+			int j = vertexCount - 1;
+			vertices[j].X = x + cosf(angle) * (width * Mult - 0.5f);
+			vertices[j].Y = y - sinf(angle) * (height * Mult - 0.5f);
+			vertices[j].U = 1.0f;
+			vertices[j].V = 0.0f;
+		}
+
+		// Create render command
+		RenderCommand* command;
+		if (_weaponWheelRenderCommandsCount < _weaponWheelRenderCommands.size()) {
+			command = _weaponWheelRenderCommands[_weaponWheelRenderCommandsCount].get();
+			_weaponWheelRenderCommandsCount++;
+		} else {
+			command = _weaponWheelRenderCommands.emplace_back(std::make_unique<RenderCommand>()).get();
+			command->material().setBlendingEnabled(true);
+		}
+
+		if (command->material().setShaderProgramType(Material::ShaderProgramType::MESH_SPRITE)) {
+			command->material().reserveUniformsDataMemory();
+
+			GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+			if (textureUniform && textureUniform->intValue(0) != 0) {
+				textureUniform->setIntValue(0); // GL_TEXTURE0
+			}
+		}
+
+		command->geometry().setDrawParameters(GL_LINES, 0, vertexCount);
+		command->geometry().setNumElementsPerVertex(VertexFloats);
+		command->geometry().setHostVertexPointer((const float*)vertices);
+
+		command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
+		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(1.0f, 1.0f);
+		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(color.Data());
+
+		command->setTransformation(Matrix4x4f::Identity);
+		command->setLayer(z);
+		command->material().setTexture(texture);
+
+		DrawRenderCommand(command);
 	}
 
 	HUD::TouchButtonInfo HUD::CreateTouchButton(PlayerActions action, const StringView& identifier, Alignment align, float x, float y, float w, float h)

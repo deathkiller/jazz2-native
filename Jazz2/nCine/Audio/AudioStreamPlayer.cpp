@@ -152,7 +152,7 @@ namespace nCine
 				audioStream_.stop(sourceId_);
 				// Detach the buffer from source
 				alSourcei(sourceId_, AL_BUFFER, 0);
-#if OPENAL_FILTERS_SUPPORTED
+#if defined(OPENAL_FILTERS_SUPPORTED)
 				if (filterHandle_ != 0) {
 					alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
 				}
@@ -178,7 +178,7 @@ namespace nCine
 			if (!shouldStillPlay) {
 				// Detach the buffer from source
 				alSourcei(sourceId_, AL_BUFFER, 0);
-#if OPENAL_FILTERS_SUPPORTED
+#if defined(OPENAL_FILTERS_SUPPORTED)
 				if (filterHandle_ != 0) {
 					alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
 				}

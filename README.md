@@ -105,6 +105,7 @@ cd ..
 rm -rf nCine-libraries-artifacts
 ```
 * Build the solution with **CMake**
+  * Run `./BuildAndroid.sh` to build **APK** for Android
 
 
 ## License
