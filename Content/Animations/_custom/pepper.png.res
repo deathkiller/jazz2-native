@@ -2,6 +2,7 @@
     "Version": {
         "Target": "Jazz² Resurrection"
     },
+    "Flags": 0,
     "FrameSize": [ 5, 5 ],
     "FrameConfiguration": [ 1, 1 ],
     "FrameCount": 1,

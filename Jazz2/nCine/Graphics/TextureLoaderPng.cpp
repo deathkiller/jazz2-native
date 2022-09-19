@@ -88,7 +88,7 @@ namespace nCine
 
 				case 'IDAT': {
 					int prevlength = (int)data.size();
-					int newLength = length + length;
+					int newLength = prevlength + length;
 					data.resize_for_overwrite(newLength);
 					fileHandle_->Read(data.data() + prevlength, length);
 					break;

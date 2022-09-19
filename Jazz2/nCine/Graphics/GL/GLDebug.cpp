@@ -129,7 +129,7 @@ namespace nCine
 
 #if ((defined(__ANDROID__) && __ANDROID_API__ >= 21) || (!defined(__ANDROID__) && defined(WITH_OPENGLES))) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__) && GL_ES_VERSION_3_0
 
-/// Callback for `glDebugMessageCallback()`
+	/// Callback for `glDebugMessageCallback()`
 	void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const char* message, const void* userParam)
 	{
 		const char* sourceString = "Unknown";

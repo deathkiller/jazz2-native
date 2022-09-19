@@ -6,13 +6,13 @@
 
 namespace Jazz2::UI::Menu
 {
-	class ControlsSection : public MenuSection
+	class RemapControlsSection : public MenuSection
 	{
 	public:
 		static constexpr int PossibleButtons = 3;
 
-		ControlsSection();
-		~ControlsSection() override;
+		RemapControlsSection();
+		~RemapControlsSection() override;
 
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;

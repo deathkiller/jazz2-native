@@ -173,7 +173,9 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/TriggerCrate.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BlasterShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BouncerShot.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ElectroShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/FreezerShot.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/PepperShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/RFShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/SeekerShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ShotBase.cpp
@@ -206,7 +208,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/UpscaleRenderPass.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/AboutSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/BeginSection.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ControlsSection.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ControlsOptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/EpisodeSelectSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GameplayOptionsSection.cpp
@@ -216,7 +218,9 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MainMenu.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/OptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PauseSection.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RemapControlsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RescaleModeSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/SoundsOptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/StartGameOptionsSection.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp
 )

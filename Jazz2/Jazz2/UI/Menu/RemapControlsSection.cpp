@@ -1,4 +1,4 @@
-﻿#include "ControlsSection.h"
+﻿#include "RemapControlsSection.h"
 #include "../ControlScheme.h"
 #include "../../PreferencesCache.h"
 
@@ -6,7 +6,7 @@
 
 namespace Jazz2::UI::Menu
 {
-	ControlsSection::ControlsSection()
+	RemapControlsSection::RemapControlsSection()
 		:
 		_selectedIndex(0),
 		_selectedColumn(0),
@@ -18,7 +18,7 @@ namespace Jazz2::UI::Menu
 	{
 	}
 
-	ControlsSection::~ControlsSection()
+	RemapControlsSection::~RemapControlsSection()
 	{
 		if (_isDirty) {
 			_isDirty = false;
@@ -26,7 +26,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void ControlsSection::OnShow(IMenuContainer* root)
+	void RemapControlsSection::OnShow(IMenuContainer* root)
 	{
 		RefreshCollisions();
 
@@ -34,7 +34,7 @@ namespace Jazz2::UI::Menu
 		MenuSection::OnShow(root);
 	}
 
-	void ControlsSection::OnUpdate(float timeMult)
+	void RemapControlsSection::OnUpdate(float timeMult)
 	{
 		if (_animation < 1.0f) {
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
@@ -124,7 +124,7 @@ namespace Jazz2::UI::Menu
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 			_waitForInput = true;
-			_delay = 30.0f;
+			_delay = 20.0f;
 		} else if (_root->ActionHit(PlayerActions::ChangeWeapon)) {
 			if (_selectedIndex == (int)PlayerActions::Menu && _selectedColumn == 0) {
 				return;
@@ -190,7 +190,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void ControlsSection::OnDraw(Canvas* canvas)
+	void RemapControlsSection::OnDraw(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
 		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
@@ -199,12 +199,12 @@ namespace Jazz2::UI::Menu
 		constexpr float topLine = 131.0f;
 		float bottomLine = viewSize.Y - 42;
 		_root->DrawElement("MenuDim"_s, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
-			Alignment::Center, Colorf::White, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
+			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
 		_root->DrawElement("MenuLine"_s, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 		_root->DrawElement("MenuLine"_s, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int charOffset = 0;
-		_root->DrawStringShadow("Controls"_s, charOffset, center.X * 0.3f, 110.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow("Remap Controls"_s, charOffset, center.X * 0.3f, 110.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Colorf(0.5f, 0.5f, 0.5f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.8f, 0.88f);
 
 		_root->DrawStringShadow("Key 1"_s, charOffset, center.X * (0.9f + 0 * 0.34f), 110.0f, IMenuContainer::FontLayer,
@@ -332,7 +332,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void ControlsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
+	void RemapControlsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
 		if (event.type == TouchEventType::Down) {
 			int pointerIndex = event.findPointerIndex(event.actionIndex);
@@ -346,24 +346,24 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void ControlsSection::RefreshCollisions()
+	void RemapControlsSection::RefreshCollisions()
 	{
 		// TODO
 	}
 
-	bool ControlsSection::HasCollision(KeySym key)
-	{
-		// TODO
-		return false;
-	}
-
-	bool ControlsSection::HasCollision(int gamepadIndex, ButtonName gamepadButton)
+	bool RemapControlsSection::HasCollision(KeySym key)
 	{
 		// TODO
 		return false;
 	}
 
-	StringView ControlsSection::KeyToName(KeySym key)
+	bool RemapControlsSection::HasCollision(int gamepadIndex, ButtonName gamepadButton)
+	{
+		// TODO
+		return false;
+	}
+
+	StringView RemapControlsSection::KeyToName(KeySym key)
 	{
 		switch (key) {
 			case KeySym::BACKSPACE: return "Backspace"_s;

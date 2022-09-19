@@ -499,9 +499,8 @@ namespace Jazz2::Tiles
 						tileId = tile.TileID;
 					}
 
-					uint8_t alpha = tile.Alpha;
-
-					if (alpha == 0) {
+					// Tile #0 is always empty
+					if (tileId == 0 || tile.Alpha == 0) {
 						continue;
 					}
 
@@ -533,7 +532,7 @@ namespace Jazz2::Tiles
 					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 					instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
-					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, alpha / 255.0f).Data());
+					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, tile.Alpha / 255.0f).Data());
 
 					command->setTransformation(Matrix4x4f::Translation(std::floor(x2 + (TileSet::DefaultTileSize / 2)), std::floor(y2 + (TileSet::DefaultTileSize / 2)), 0.0f));
 					command->setLayer(layer.Description.Depth);
@@ -766,6 +765,11 @@ namespace Jazz2::Tiles
 	{
 		constexpr float SpeedMultiplier[] = { -2, 2, -1, 1 };
 		constexpr int QuarterSize = TileSet::DefaultTileSize / 2;
+
+		// Tile #0 is always empty
+		if (tileId == 0) {
+			return;
+		}
 
 		uint16_t z = _layers[_sprLayerIndex].Description.Depth + 80;
 
@@ -1074,7 +1078,6 @@ namespace Jazz2::Tiles
 			_renderCommands.reserve(renderCommandCount);
 			for (int i = 0; i < renderCommandCount; i++) {
 				std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
-				command->setType(RenderCommand::CommandTypes::SPRITE);
 				command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
 				command->material().reserveUniformsDataMemory();
 				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
@@ -1086,7 +1089,6 @@ namespace Jazz2::Tiles
 			}
 
 			// Prepare output render command
-			_outputRenderCommand.setType(RenderCommand::CommandTypes::SPRITE);
 			_outputRenderCommand.material().setShader(ContentResolver::Current().GetShader(_owner->_layers[_owner->_texturedBackgroundLayer].Description.UseBackgroundStyle == BackgroundStyle::Circle
 				? PrecompiledShader::TexturedBackgroundCircle
 				: PrecompiledShader::TexturedBackground));

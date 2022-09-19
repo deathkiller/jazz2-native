@@ -278,7 +278,6 @@ namespace Jazz2::UI
 	void Cinematics::CinematicsCanvas::Initialize()
 	{
 		// Prepare output render command
-		_renderCommand.setType(RenderCommand::CommandTypes::SPRITE);
 		_renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
 		_renderCommand.material().reserveUniformsDataMemory();
 		_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);

@@ -299,6 +299,12 @@ namespace Jazz2::UI::Menu
 		_canvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false);
 	}
 
+	void MainMenu::DrawSolid(float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool additiveBlending)
+	{
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - _canvas->ViewSize.X * 0.5f, _canvas->ViewSize.Y * 0.5f - y), size);
+		_canvas->DrawSolid(adjustedPos, z, size, color, additiveBlending);
+	}
+
 	void MainMenu::DrawStringShadow(const StringView& text, int& charOffset, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scale,
 		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
@@ -532,7 +538,6 @@ namespace Jazz2::UI::Menu
 			_renderCommands.reserve(renderCommandCount);
 			for (int i = 0; i < renderCommandCount; i++) {
 				std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
-				command->setType(RenderCommand::CommandTypes::SPRITE);
 				command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
 				command->material().reserveUniformsDataMemory();
 				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
@@ -544,7 +549,6 @@ namespace Jazz2::UI::Menu
 			}
 
 			// Prepare output render command
-			_outputRenderCommand.setType(RenderCommand::CommandTypes::SPRITE);
 			_outputRenderCommand.material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::TexturedBackground));
 			_outputRenderCommand.material().reserveUniformsDataMemory();
 			_outputRenderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);

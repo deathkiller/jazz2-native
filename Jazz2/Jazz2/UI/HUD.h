@@ -13,6 +13,13 @@ namespace Jazz2::UI
 	class HUD : public Canvas
 	{
 	public:
+		static constexpr float DpadLeft = 0.02f;
+		static constexpr float DpadBottom = 0.1f;
+		static constexpr float DpadThreshold = 0.09f;
+		static constexpr float DpadSize = 0.37f;
+		static constexpr float ButtonSize = 0.172f;
+		static constexpr float SmallButtonSize = 0.098f;
+
 		HUD(LevelHandler* levelHandler);
 		~HUD();
 
@@ -51,6 +58,7 @@ namespace Jazz2::UI
 		static constexpr unsigned int VertexBytes = sizeof(Vertex);
 		static constexpr unsigned int VertexFloats = VertexBytes / sizeof(float);
 
+		static constexpr Alignment Fixed = (Alignment)0x40;
 		static constexpr Alignment AllowRollover = (Alignment)0x80;
 
 		static constexpr uint16_t MainLayer = 100;
@@ -65,12 +73,6 @@ namespace Jazz2::UI
 		// Android has native Back button
 		static constexpr int32_t TouchButtonsCount = 9;
 #endif
-		static constexpr float DpadLeft = 0.02f;
-		static constexpr float DpadBottom = 0.1f;
-		static constexpr float DpadThreshold = 0.09f;
-		static constexpr float DpadSize = 0.37f;
-		static constexpr float ButtonSize = 0.172f;
-		static constexpr float SmallButtonSize = 0.098f;
 
 		static constexpr float WeaponWheelAnimDuration = 20.0f;
 		static constexpr int WeaponWheelMaxVertices = 512;

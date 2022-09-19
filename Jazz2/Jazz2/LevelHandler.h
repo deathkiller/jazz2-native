@@ -152,6 +152,7 @@ namespace Jazz2
 				: _owner(owner), _renderCommandsCount(0)
 			{
 				_emittedLightsCache.reserve(16);
+				setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
 			}
 
 			bool OnDraw(RenderQueue& renderQueue) override;
@@ -171,6 +172,7 @@ namespace Jazz2
 			BlurRenderPass(LevelHandler* owner)
 				: _owner(owner)
 			{
+				setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
 			}
 
 			void Initialize(Texture* source, int width, int height, const Vector2f& direction);
@@ -200,6 +202,7 @@ namespace Jazz2
 			CombineRenderer(LevelHandler* owner)
 				: _owner(owner)
 			{
+				setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
 			}
 
 			void Initialize(int width, int height);

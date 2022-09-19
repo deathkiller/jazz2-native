@@ -60,7 +60,6 @@ namespace Jazz2::Actors::Solid
 			BridgePiece& piece = _pieces.emplace_back();
 			piece.Pos = Vector2f(_pos.X + widthCovered - 16, _pos.Y);
 			piece.Command = std::make_unique<RenderCommand>();
-			piece.Command->setType(RenderCommand::CommandTypes::SPRITE);
 			piece.Command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
 			piece.Command->material().setBlendingEnabled(true);
 			piece.Command->material().reserveUniformsDataMemory();

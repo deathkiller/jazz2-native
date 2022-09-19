@@ -197,6 +197,7 @@ namespace Jazz2::Actors
 		void SwitchToNextWeapon();
 		template<typename T, WeaponType weaponType>
 		void FireWeapon(float cooldownBase, float cooldownUpgrade);
+		void FireWeaponPepper();
 		void FireWeaponRF();
 		void FireWeaponTNT();
 		bool FireWeaponThunderbolt();

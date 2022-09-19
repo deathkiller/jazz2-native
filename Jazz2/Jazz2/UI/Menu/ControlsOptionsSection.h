@@ -4,22 +4,20 @@
 
 namespace Jazz2::UI::Menu
 {
-	class GameplayEnhancementsSection : public MenuSection
+	class ControlsOptionsSection : public MenuSection
 	{
 	public:
-		GameplayEnhancementsSection();
-		~GameplayEnhancementsSection();
+		ControlsOptionsSection();
+		~ControlsOptionsSection();
 
-		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
 		void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) override;
 
 	private:
 		enum class Item {
-			ReduxMode,
-			LedgeClimb,
-			WeaponWheel,
+			RemapControls,
+			TouchControls,
 
 			Count
 		};
@@ -32,9 +30,7 @@ namespace Jazz2::UI::Menu
 		ItemData _items[(int)Item::Count];
 		int _selectedIndex;
 		float _animation;
-		float _transition;
 		bool _isDirty;
-		bool _isInGame;
 
 		void ExecuteSelected();
 	};

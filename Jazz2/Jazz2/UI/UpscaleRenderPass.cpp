@@ -21,6 +21,8 @@ namespace Jazz2::UI
 
 		if (notInitialized) {
 			_node = std::make_unique<SceneNode>();
+			_node->setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
+
 			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);
 			_view->setRootNode(_node.get());

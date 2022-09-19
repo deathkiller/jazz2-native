@@ -70,6 +70,7 @@ namespace Jazz2
 		_noiseTexture = resolver.GetNoiseTexture();
 
 		_rootNode = std::make_unique<SceneNode>();
+		_rootNode->setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
 
 		if (!ContentResolver::Current().LoadLevel(this, _episodeName + "/" + _levelFileName, _difficulty)) {
 			LOGE("Cannot load specified level");
@@ -1535,7 +1536,6 @@ namespace Jazz2
 		_target->setMagFiltering(SamplerFilter::Linear);
 
 		// Prepare render command
-		_renderCommand.setType(RenderCommand::CommandTypes::SPRITE);
 		_renderCommand.material().setShader(_downsampleOnly ? _owner->_downsampleShader : _owner->_blurShader);
 		//_renderCommand.material().setBlendingEnabled(true);
 		_renderCommand.material().reserveUniformsDataMemory();
@@ -1576,7 +1576,6 @@ namespace Jazz2
 	{
 		_size = Vector2f(width, height);
 
-		_renderCommand.setType(RenderCommand::CommandTypes::SPRITE);
 		_renderCommand.material().setShader(_owner->_combineShader);
 		_renderCommand.material().reserveUniformsDataMemory();
 		_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
@@ -1598,7 +1597,6 @@ namespace Jazz2
 			blurQuarterTexUniform->setIntValue(3); // GL_TEXTURE3
 		}
 
-		_renderCommandWithWater.setType(RenderCommand::CommandTypes::SPRITE);
 		_renderCommandWithWater.material().setShader(_owner->_combineWithWaterShader);
 		_renderCommandWithWater.material().reserveUniformsDataMemory();
 		_renderCommandWithWater.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);

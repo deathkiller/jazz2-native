@@ -4,17 +4,15 @@
 
 namespace Jazz2::Actors::Weapons
 {
-	class Thunderbolt : public ShotBase
+	class PepperShot : public ShotBase
 	{
 	public:
-		Thunderbolt();
+		PepperShot();
 
 		void OnFire(const std::shared_ptr<ActorBase>& owner, Vector2f gunspotPos, Vector2f speed, float angle, bool isFacingLeft);
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other);
-
 		WeaponType GetWeaponType() override {
-			return WeaponType::Thunderbolt;
+			return WeaponType::Pepper;
 		}
 
 	protected:
@@ -22,15 +20,12 @@ namespace Jazz2::Actors::Weapons
 		void OnUpdate(float timeMult) override;
 		void OnUpdateHitbox() override;
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
-		void OnAnimationFinished() override;
+		bool OnPerish(ActorBase* collider) override;
 		void OnHitWall(float timeMult) override;
 		void OnRicochet() override;
 
 	private:
-		bool _hit;
-		float _lightProgress;
-		Vector2f _farPoint;
-		uint16_t _initialLayer;
-		bool _firedUp;
+		Vector2f _gunspotPos;
+		bool _fired;
 	};
 }

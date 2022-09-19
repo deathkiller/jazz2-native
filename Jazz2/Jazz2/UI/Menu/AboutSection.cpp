@@ -6,7 +6,9 @@
 #	define INFO_BUILD_TYPE "release"
 #endif
 
-#if defined(WITH_OPENGLES)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+#	define INFO1 "WebGL"
+#elif defined(WITH_OPENGLES)
 #	define INFO1 "OpenGL ES"
 #else
 #	define INFO1 "OpenGL"
@@ -75,7 +77,7 @@
 #if defined(WITH_ANGELSCRIPT)
 #	define INFO12 ", AngelScript"
 #else
-#	define INFO12 ", libdeflate"
+#	define INFO12 ""
 #endif
 
 #if defined(WITH_TRACY)
@@ -108,7 +110,7 @@ namespace Jazz2::UI::Menu
 		pos.Y = std::round(std::max(130.0f, pos.Y * 0.86f));
 
 		_root->DrawElement("MenuDim"_s, pos.X, pos.Y + 60.0f - 2.0f, IMenuContainer::BackgroundLayer,
-			Alignment::Top, Colorf::White, Vector2f(680.0f, 200.0f), Vector4f(1.0f, 0.0f, 0.7f, 0.0f));
+			Alignment::Top, Colorf::Black, Vector2f(680.0f, 200.0f), Vector4f(1.0f, 0.0f, 0.7f, 0.0f));
 
 		pos.X = std::round(pos.X * 0.35f);
 

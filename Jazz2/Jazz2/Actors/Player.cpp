@@ -13,7 +13,9 @@
 
 #include "Weapons/BlasterShot.h"
 #include "Weapons/BouncerShot.h"
+#include "Weapons/ElectroShot.h"
 #include "Weapons/FreezerShot.h"
+#include "Weapons/PepperShot.h"
 #include "Weapons/RFShot.h"
 #include "Weapons/SeekerShot.h"
 #include "Weapons/ToasterShot.h"
@@ -2019,7 +2021,7 @@ namespace Jazz2::Actors
 			std::shared_ptr<Weapons::RFShot> shot1 = std::make_shared<Weapons::RFShot>();
 			shot1->OnActivated({
 				.LevelHandler = _levelHandler,
-				.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2),
+				.Pos = initialPos,
 				.Params = shotParams
 			});
 			shot1->OnFire(shared_from_this(), gunspotPos, _speed, angle - 0.3f, IsFacingLeft());
@@ -2028,7 +2030,7 @@ namespace Jazz2::Actors
 			std::shared_ptr<Weapons::RFShot> shot2 = std::make_shared<Weapons::RFShot>();
 			shot2->OnActivated({
 				.LevelHandler = _levelHandler,
-				.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2),
+				.Pos = initialPos,
 				.Params = shotParams
 			});
 			shot2->OnFire(shared_from_this(), gunspotPos, _speed, angle, IsFacingLeft());
@@ -2037,7 +2039,7 @@ namespace Jazz2::Actors
 			std::shared_ptr<Weapons::RFShot> shot3 = std::make_shared<Weapons::RFShot>();
 			shot3->OnActivated({
 				.LevelHandler = _levelHandler,
-				.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2),
+				.Pos = initialPos,
 				.Params = shotParams
 			});
 			shot3->OnFire(shared_from_this(), gunspotPos, _speed, angle + 0.3f, IsFacingLeft());
@@ -2046,7 +2048,7 @@ namespace Jazz2::Actors
 			std::shared_ptr<Weapons::RFShot> shot1 = std::make_shared<Weapons::RFShot>();
 			shot1->OnActivated({
 				.LevelHandler = _levelHandler,
-				.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2),
+				.Pos = initialPos,
 				.Params = shotParams
 			});
 			shot1->OnFire(shared_from_this(), gunspotPos, _speed, angle - 0.22f, IsFacingLeft());
@@ -2055,7 +2057,7 @@ namespace Jazz2::Actors
 			std::shared_ptr<Weapons::RFShot> shot2 = std::make_shared<Weapons::RFShot>();
 			shot2->OnActivated({
 				.LevelHandler = _levelHandler,
-				.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2),
+				.Pos = initialPos,
 				.Params = shotParams
 			});
 			shot2->OnFire(shared_from_this(), gunspotPos, _speed, angle + 0.22f, IsFacingLeft());
@@ -2063,6 +2065,36 @@ namespace Jazz2::Actors
 		}
 
 		_weaponCooldown = 100.0f - (_weaponUpgrades[(int)WeaponType::Blaster] * 1.0f);
+	}
+
+	void Player::FireWeaponPepper()
+	{
+		Vector3i initialPos;
+		Vector2f gunspotPos;
+		float angle;
+		GetFirePointAndAngle(initialPos, gunspotPos, angle);
+
+		uint8_t shotParams[1] = { _weaponUpgrades[(int)WeaponType::Pepper] };
+
+		std::shared_ptr<Weapons::PepperShot> shot1 = std::make_shared<Weapons::PepperShot>();
+		shot1->OnActivated({
+			.LevelHandler = _levelHandler,
+			.Pos = initialPos,
+			.Params = shotParams
+		});
+		shot1->OnFire(shared_from_this(), gunspotPos, _speed, angle - Random().NextFloat(-0.2f, 0.2f), IsFacingLeft());
+		_levelHandler->AddActor(shot1);
+
+		std::shared_ptr<Weapons::PepperShot> shot2 = std::make_shared<Weapons::PepperShot>();
+		shot2->OnActivated({
+			.LevelHandler = _levelHandler,
+			.Pos = initialPos,
+			.Params = shotParams
+		});
+		shot2->OnFire(shared_from_this(), gunspotPos, _speed, angle + Random().NextFloat(-0.2f, 0.2f), IsFacingLeft());
+		_levelHandler->AddActor(shot2);
+
+		_weaponCooldown = 36.0f - (_weaponUpgrades[(int)WeaponType::Blaster] * 1.6f);
 	}
 
 	void Player::FireWeaponTNT()
@@ -2156,8 +2188,8 @@ namespace Jazz2::Actors
 				}
 
 				case WeaponType::TNT: FireWeaponTNT(); break;
-				//case WeaponType::Pepper: FireWeaponPepper(); break;
-				//case WeaponType::Electro: FireWeaponElectro(); break;
+				case WeaponType::Pepper: FireWeaponPepper(); break;
+				case WeaponType::Electro: FireWeapon<Weapons::ElectroShot, WeaponType::Electro>(32.0f, 1.2f); break;
 
 				case WeaponType::Thunderbolt: {
 					if (!FireWeaponThunderbolt()) {

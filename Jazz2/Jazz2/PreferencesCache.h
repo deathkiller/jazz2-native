@@ -82,6 +82,8 @@ namespace Jazz2
 		static bool AllowCheats;
 		static bool AllowCheatsUnlock;
 		static bool AllowCheatsWeapons;
+		static Vector2f TouchLeftPadding;
+		static Vector2f TouchRightPadding;
 
 		// Sounds
 		static float MasterVolume;
@@ -113,6 +115,8 @@ namespace Jazz2
 		DEFINE_PRIVATE_ENUM_OPERATORS(BoolOptions);
 
 		static constexpr uint8_t FileVersion = 1;
+
+		static constexpr float TouchPaddingMultiplier = 0.003f;
 
 		/// Deleted copy constructor
 		PreferencesCache(const PreferencesCache&) = delete;

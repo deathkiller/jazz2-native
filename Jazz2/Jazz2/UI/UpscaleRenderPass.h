@@ -15,7 +15,10 @@ namespace Jazz2::UI
 	{
 	public:
 		UpscaleRenderPass()
+			:
+			_resizeShader(nullptr)
 		{
+			setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
 		}
 
 		void Initialize(int width, int height, int targetWidth, int targetHeight);

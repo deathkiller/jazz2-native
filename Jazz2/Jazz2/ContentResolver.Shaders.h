@@ -217,7 +217,7 @@ vec2 hash2D(in vec2 p) {
 
 vec2 noiseTexCoords(vec2 position) {
 	vec2 seed = position + fract(uTime);
-	return position + hash2D(seed) * vViewSizeInv;
+	return position + hash2D(seed) * vViewSizeInv * 1.4;
 }
 
 void main() {
@@ -276,7 +276,7 @@ vec2 hash2D(in vec2 p) {
 
 vec2 noiseTexCoords(vec2 position) {
 	vec2 seed = position + fract(uTime);
-	return position + hash2D(seed) * vViewSizeInv;
+	return position + hash2D(seed) * vViewSizeInv * 1.4;
 }
 
 float wave(float x, float time) {

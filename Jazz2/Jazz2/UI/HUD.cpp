@@ -58,7 +58,7 @@ namespace Jazz2::UI
 		_touchButtons[8] = CreateTouchButton(PlayerActions::ChangeWeapon, "TouchChange"_s, Alignment::BottomRight, ButtonSize + 0.01f, 0.04f + 0.28f, SmallButtonSize, SmallButtonSize);
 #if !defined(DEATH_TARGET_ANDROID)
 		// Android has native Back button
-		_touchButtons[9] = CreateTouchButton(PlayerActions::Menu, "TouchPause"_s, Alignment::TopRight, 0.02f, 0.02f, SmallButtonSize, SmallButtonSize);
+		_touchButtons[9] = CreateTouchButton(PlayerActions::Menu, "TouchPause"_s, Alignment::TopRight | Fixed, 0.02f, 0.02f, SmallButtonSize, SmallButtonSize);
 #endif
 	}
 
@@ -136,9 +136,8 @@ namespace Jazz2::UI
 		Rectf adjustedView = view;
 		if (_touchButtonsTimer > 0.0f) {
 			float width = adjustedView.W;
-
-			adjustedView.X = 90 + /*LeftPadding*/0.1f * width;
-			adjustedView.W = adjustedView.W - adjustedView.X - (140.0f + /*RightPadding*/0.1f * width);
+			adjustedView.X = 140.0f + PreferencesCache::TouchLeftPadding.X;
+			adjustedView.W = adjustedView.W - adjustedView.X - (195.0f + PreferencesCache::TouchRightPadding.X);
 		}
 
 		float right = adjustedView.X + adjustedView.W;
@@ -287,6 +286,15 @@ namespace Jazz2::UI
 					} else {
 						y = y + button.Height * 0.5f;
 					}
+					if ((button.Align & Fixed) != Fixed) {
+						if ((button.Align & Alignment::Right) == Alignment::Right) {
+							x -= PreferencesCache::TouchRightPadding.X;
+							y += PreferencesCache::TouchRightPadding.Y;
+						} else {
+							x += PreferencesCache::TouchLeftPadding.X;
+							y += PreferencesCache::TouchLeftPadding.Y;
+						}
+					}
 					x = x - ViewSize.X * 0.5f;
 					y = ViewSize.Y * 0.5f - y;
 
@@ -307,14 +315,6 @@ namespace Jazz2::UI
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x * (float)ViewSize.X;
 				float y = event.pointers[pointerIndex].y * (float)ViewSize.Y;
-				/*if (x < 0.5f) {
-					x -= LeftPadding;
-					y -= BottomPadding1;
-				} else {
-					x += RightPadding;
-					y -= BottomPadding2;
-				}*/
-
 				for (int i = 0; i < TouchButtonsCount; i++) {
 					auto& button = _touchButtons[i];
 					if (button.Action != PlayerActions::None) {
@@ -335,12 +335,6 @@ namespace Jazz2::UI
 						if (pointerIndex != -1) {
 							float x = event.pointers[pointerIndex].x * (float)ViewSize.X;
 							float y = event.pointers[pointerIndex].y * (float)ViewSize.Y;
-							/*if (x < 0.5f) {
-								x -= LeftPadding;
-							} else {
-								x += RightPadding;
-							}*/
-
 							isPressed = IsOnButton(button, x, y);
 						}
 
@@ -357,12 +351,6 @@ namespace Jazz2::UI
 						for (int j = 0; j < event.count; j++) {
 							float x = event.pointers[j].x * (float)ViewSize.X;
 							float y = event.pointers[j].y * (float)ViewSize.Y;
-							/*if (x < 0.5f) {
-								x -= LeftPadding;
-							} else {
-								x += RightPadding;
-							}*/
-
 							if (IsOnButton(button, x, y)) {
 								button.CurrentPointerId = event.pointers[j].id;
 								overrideActions |= (1 << (int)button.Action);
@@ -951,6 +939,16 @@ namespace Jazz2::UI
 
 	bool HUD::IsOnButton(const HUD::TouchButtonInfo& button, float x, float y)
 	{
+		if ((button.Align & Fixed) != Fixed) {
+			if ((button.Align & Alignment::Right) == Alignment::Right) {
+				x += PreferencesCache::TouchRightPadding.X;
+				y -= PreferencesCache::TouchRightPadding.Y;
+			} else {
+				x -= PreferencesCache::TouchLeftPadding.X;
+				y -= PreferencesCache::TouchLeftPadding.Y;
+			}
+		}
+
 		float left = button.Left;
 		if ((button.Align & Alignment::Right) == Alignment::Right) { left = ViewSize.X - button.Width - left; }
 		if (x < left) return false;

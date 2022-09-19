@@ -77,7 +77,7 @@ namespace Jazz2::Actors::Enemies
 
 		_anglePhase += timeMult * 0.05f;
 
-		Vector2f speed = ((_targetPos - _lastPos) * (_returning ? 0.03f : 0.006f) + _lastSpeed * 1.4f) / 2.4f;
+		Vector2f speed = ((_targetPos - _lastPos) * (_returning ? 0.01f : 0.002f) + _lastSpeed * 1.4f) / 2.4f;
 		_lastPos.X += speed.X;
 		_lastPos.Y += speed.Y;
 		_lastSpeed = speed;
@@ -123,8 +123,8 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		if (found) {
-			_targetPos.X += (_targetPos.X - _originPos.X) * 1.8f;
-			_targetPos.Y += (_targetPos.Y - _originPos.Y) * 1.8f;
+			_targetPos.X += (_targetPos.X - _originPos.X) * 1.6f;
+			_targetPos.Y += (_targetPos.Y - _originPos.Y) * 1.6f;
 
 			// Can't fly into the water
 			float waterLevel = _levelHandler->WaterLevel() - 12.0f;

@@ -1,5 +1,6 @@
 ﻿#include "PreferencesCache.h"
 #include "ContentResolver.h"
+#include "LevelHandler.h"
 #include "UI/ControlScheme.h"
 
 #include "../nCine/IO/CompressionUtils.h"
@@ -18,12 +19,14 @@ namespace Jazz2
 	bool PreferencesCache::ShowPerformanceMetrics = false;
 	bool PreferencesCache::ReduxMode = true;
 	bool PreferencesCache::EnableLedgeClimb = true;
+	bool PreferencesCache::EnableWeaponWheel = true;
+	bool PreferencesCache::EnableRgbLights = true;
 	bool PreferencesCache::TutorialCompleted = false;
 	bool PreferencesCache::AllowCheats = false;
 	bool PreferencesCache::AllowCheatsUnlock = false;
 	bool PreferencesCache::AllowCheatsWeapons = false;
-	bool PreferencesCache::EnableWeaponWheel = false;
-	bool PreferencesCache::EnableRgbLights = true;
+	Vector2f PreferencesCache::TouchLeftPadding;
+	Vector2f PreferencesCache::TouchRightPadding;
 	float PreferencesCache::MasterVolume = 0.8f;
 	float PreferencesCache::SfxVolume = 0.8f;
 	float PreferencesCache::MusicVolume = 0.4f;
@@ -34,20 +37,33 @@ namespace Jazz2
 
 	void PreferencesCache::Initialize(const AppConfiguration& config)
 	{
+		bool resetConfig = false;
+
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		fs::MountAsPersistent("/Persistent"_s);
 		_configPath = "/Persistent/Jazz2.config"_s;
+
+		for (int i = 0; i < config.argc(); i++) {
+			auto arg = config.argv(i);
+			if (arg == "/reset-config"_s) {
+				resetConfig = true;
+			}
+		}
 #else
 		_configPath = "Jazz2.config"_s;
 		bool overrideConfigPath = false;
 
 #	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
-		for (int i = 0; i < config.argc() - 1; i++) {
+		for (int i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
 			if (arg == "/config"_s) {
-				_configPath = config.argv(i + 1);
-				overrideConfigPath = true;
-				i++;
+				if (i + 1 < config.argc()) {
+					_configPath = config.argv(i + 1);
+					overrideConfigPath = true;
+					i++;
+				}
+			} else if (arg == "/reset-config"_s) {
+				resetConfig = true;
 			}
 		}
 #	endif
@@ -61,103 +77,112 @@ namespace Jazz2
 		UI::ControlScheme::Reset();
 
 		// Try to read config file
-		auto s = fs::Open(_configPath, FileAccessMode::Read);
-		if (s->GetSize() > 18) {
-			uint64_t signature = s->ReadValue<uint64_t>();
-			uint8_t fileType = s->ReadValue<uint8_t>();
-			uint8_t version = s->ReadValue<uint8_t>();
-			if (signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::ConfigFile && version == FileVersion) {
-				// Read compressed palette and mask
-				int32_t compressedSize = s->ReadValue<int32_t>();
-				int32_t uncompressedSize = s->ReadValue<int32_t>();
-				std::unique_ptr<uint8_t[]> compressedBuffer = std::make_unique<uint8_t[]>(compressedSize);
-				std::unique_ptr<uint8_t[]> uncompressedBuffer = std::make_unique<uint8_t[]>(uncompressedSize);
-				s->Read(compressedBuffer.get(), compressedSize);
+		if (!resetConfig) {
+			auto s = fs::Open(_configPath, FileAccessMode::Read);
+			if (s->GetSize() > 18) {
+				uint64_t signature = s->ReadValue<uint64_t>();
+				uint8_t fileType = s->ReadValue<uint8_t>();
+				uint8_t version = s->ReadValue<uint8_t>();
+				if (signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::ConfigFile && version == FileVersion) {
+					// Read compressed palette and mask
+					int32_t compressedSize = s->ReadValue<int32_t>();
+					int32_t uncompressedSize = s->ReadValue<int32_t>();
+					std::unique_ptr<uint8_t[]> compressedBuffer = std::make_unique<uint8_t[]>(compressedSize);
+					std::unique_ptr<uint8_t[]> uncompressedBuffer = std::make_unique<uint8_t[]>(uncompressedSize);
+					s->Read(compressedBuffer.get(), compressedSize);
 
-				auto result = CompressionUtils::Inflate(compressedBuffer.get(), compressedSize, uncompressedBuffer.get(), uncompressedSize);
-				if (result == DecompressionResult::Success) {
-					MemoryFile uc(uncompressedBuffer.get(), uncompressedSize);
+					auto result = CompressionUtils::Inflate(compressedBuffer.get(), compressedSize, uncompressedBuffer.get(), uncompressedSize);
+					if (result == DecompressionResult::Success) {
+						MemoryFile uc(uncompressedBuffer.get(), uncompressedSize);
 
-					BoolOptions boolOptions = (BoolOptions)uc.ReadValue<uint64_t>();
+						BoolOptions boolOptions = (BoolOptions)uc.ReadValue<uint64_t>();
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
-					EnableFullscreen = ((boolOptions & BoolOptions::EnableFullscreen) == BoolOptions::EnableFullscreen);
+						EnableFullscreen = ((boolOptions & BoolOptions::EnableFullscreen) == BoolOptions::EnableFullscreen);
 #endif
-					ShowPerformanceMetrics = ((boolOptions & BoolOptions::ShowPerformanceMetrics) == BoolOptions::ShowPerformanceMetrics);
-					ReduxMode = ((boolOptions & BoolOptions::ReduxMode) == BoolOptions::ReduxMode);
-					EnableLedgeClimb = ((boolOptions & BoolOptions::EnableLedgeClimb) == BoolOptions::EnableLedgeClimb);
-					EnableWeaponWheel = ((boolOptions & BoolOptions::EnableWeaponWheel) == BoolOptions::EnableWeaponWheel);
-					EnableRgbLights = ((boolOptions & BoolOptions::EnableRgbLights) == BoolOptions::EnableRgbLights);
-					TutorialCompleted = ((boolOptions & BoolOptions::TutorialCompleted) == BoolOptions::TutorialCompleted);
+						ShowPerformanceMetrics = ((boolOptions & BoolOptions::ShowPerformanceMetrics) == BoolOptions::ShowPerformanceMetrics);
+						ReduxMode = ((boolOptions & BoolOptions::ReduxMode) == BoolOptions::ReduxMode);
+						EnableLedgeClimb = ((boolOptions & BoolOptions::EnableLedgeClimb) == BoolOptions::EnableLedgeClimb);
+						EnableWeaponWheel = ((boolOptions & BoolOptions::EnableWeaponWheel) == BoolOptions::EnableWeaponWheel);
+						EnableRgbLights = ((boolOptions & BoolOptions::EnableRgbLights) == BoolOptions::EnableRgbLights);
+						TutorialCompleted = ((boolOptions & BoolOptions::TutorialCompleted) == BoolOptions::TutorialCompleted);
 
-					// Bitmask of unlocked episodes, used only if compiled with SHAREWARE_DEMO_ONLY
-					UnlockedEpisodes = (UnlockableEpisodes)uc.ReadValue<uint32_t>();
+						// Bitmask of unlocked episodes, used only if compiled with SHAREWARE_DEMO_ONLY
+						UnlockedEpisodes = (UnlockableEpisodes)uc.ReadValue<uint32_t>();
 
-					ActiveRescaleMode = (RescaleMode)uc.ReadValue<uint8_t>();
+						ActiveRescaleMode = (RescaleMode)uc.ReadValue<uint8_t>();
 
-					MasterVolume = uc.ReadValue<uint8_t>() / 255.0f;
-					SfxVolume = uc.ReadValue<uint8_t>() / 255.0f;
-					MusicVolume = uc.ReadValue<uint8_t>() / 255.0f;
+						MasterVolume = uc.ReadValue<uint8_t>() / 255.0f;
+						SfxVolume = uc.ReadValue<uint8_t>() / 255.0f;
+						MusicVolume = uc.ReadValue<uint8_t>() / 255.0f;
 
-					// Controls
-					auto mappings = UI::ControlScheme::GetMappings();
-					uint8_t controlMappingCount = uc.ReadValue<uint8_t>();
-					for (int i = 0; i < controlMappingCount; i++) {
-						KeySym key1 = (KeySym)uc.ReadValue<uint8_t>();
-						KeySym key2 = (KeySym)uc.ReadValue<uint8_t>();
-						uint8_t gamepadIndex = uc.ReadValue<uint8_t>();
-						ButtonName gamepadButton = (ButtonName)uc.ReadValue<uint8_t>();
+						TouchLeftPadding.X = std::round(uc.ReadValue<int8_t>() * LevelHandler::DefaultWidth * TouchPaddingMultiplier / INT8_MAX);
+						TouchLeftPadding.Y = std::round(uc.ReadValue<int8_t>() * LevelHandler::DefaultHeight * TouchPaddingMultiplier / INT8_MAX);
+						TouchRightPadding.X = std::round(uc.ReadValue<int8_t>() * LevelHandler::DefaultWidth * TouchPaddingMultiplier / INT8_MAX);
+						TouchRightPadding.Y = std::round(uc.ReadValue<int8_t>() * LevelHandler::DefaultHeight * TouchPaddingMultiplier / INT8_MAX);
 
-						if (i < mappings.size()) {
-							auto& mapping = mappings[i];
-							mapping.Key1 = key1;
-							mapping.Key2 = key2;
-							mapping.GamepadIndex = (gamepadIndex == 0xff ? -1 : gamepadIndex);
-							mapping.GamepadButton = gamepadButton;
+						// Controls
+						auto mappings = UI::ControlScheme::GetMappings();
+						uint8_t controlMappingCount = uc.ReadValue<uint8_t>();
+						for (int i = 0; i < controlMappingCount; i++) {
+							KeySym key1 = (KeySym)uc.ReadValue<uint8_t>();
+							KeySym key2 = (KeySym)uc.ReadValue<uint8_t>();
+							uint8_t gamepadIndex = uc.ReadValue<uint8_t>();
+							ButtonName gamepadButton = (ButtonName)uc.ReadValue<uint8_t>();
+
+							if (i < mappings.size()) {
+								auto& mapping = mappings[i];
+								mapping.Key1 = key1;
+								mapping.Key2 = key2;
+								mapping.GamepadIndex = (gamepadIndex == 0xff ? -1 : gamepadIndex);
+								mapping.GamepadButton = gamepadButton;
+							}
 						}
-					}
+						// Reset primary Menu action, because it's hardcoded
+						mappings[(int)PlayerActions::Menu].Key1 = KeySym::ESCAPE;
 
-					// Episode End
-					uint16_t episodeEndSize = uc.ReadValue<uint16_t>();
-					uint16_t episodeEndCount = uc.ReadValue<uint16_t>();
+						// Episode End
+						uint16_t episodeEndSize = uc.ReadValue<uint16_t>();
+						uint16_t episodeEndCount = uc.ReadValue<uint16_t>();
 
-					for (int i = 0; i < episodeEndCount; i++) {
-						uint8_t nameLength = uc.ReadValue<uint8_t>();
-						String episodeName = String(NoInit, nameLength);
-						uc.Read(episodeName.data(), nameLength);
+						for (int i = 0; i < episodeEndCount; i++) {
+							uint8_t nameLength = uc.ReadValue<uint8_t>();
+							String episodeName = String(NoInit, nameLength);
+							uc.Read(episodeName.data(), nameLength);
 
-						EpisodeContinuationState state = { };
-						if (episodeEndSize == sizeof(EpisodeContinuationState)) {
-							uc.Read(&state, sizeof(EpisodeContinuationState));
-						} else {
-							// Struct has different size, so it's better to skip it
-							uc.Seek(episodeEndSize, SeekOrigin::Current);
-							state.Flags = EpisodeContinuationFlags::IsCompleted;
+							EpisodeContinuationState state = { };
+							if (episodeEndSize == sizeof(EpisodeContinuationState)) {
+								uc.Read(&state, sizeof(EpisodeContinuationState));
+							} else {
+								// Struct has different size, so it's better to skip it
+								uc.Seek(episodeEndSize, SeekOrigin::Current);
+								state.Flags = EpisodeContinuationFlags::IsCompleted;
+							}
+
+							_episodeEnd.emplace(std::move(episodeName), std::move(state));
 						}
 
-						_episodeEnd.emplace(std::move(episodeName), std::move(state));
-					}
+						// Episode Continue
+						uint16_t episodeContinueSize = uc.ReadValue<uint16_t>();
+						uint16_t episodeContinueCount = uc.ReadValue<uint16_t>();
 
-					// Episode Continue
-					uint16_t episodeContinueSize = uc.ReadValue<uint16_t>();
-					uint16_t episodeContinueCount = uc.ReadValue<uint16_t>();
+						for (int i = 0; i < episodeContinueCount; i++) {
+							uint8_t nameLength = uc.ReadValue<uint8_t>();
+							String episodeName = String(NoInit, nameLength);
+							uc.Read(episodeName.data(), nameLength);
 
-					for (int i = 0; i < episodeContinueCount; i++) {
-						uint8_t nameLength = uc.ReadValue<uint8_t>();
-						String episodeName = String(NoInit, nameLength);
-						uc.Read(episodeName.data(), nameLength);
+							if (episodeContinueSize == sizeof(EpisodeContinuationState)) {
+								EpisodeContinuationStateWithLevel stateWithLevel = { };
+								nameLength = uc.ReadValue<uint8_t>();
+								stateWithLevel.LevelName = String(NoInit, nameLength);
+								uc.Read(stateWithLevel.LevelName.data(), nameLength);
 
-						if (episodeContinueSize == sizeof(EpisodeContinuationState)) {
-							EpisodeContinuationStateWithLevel stateWithLevel = { };
-							nameLength = uc.ReadValue<uint8_t>();
-							stateWithLevel.LevelName = String(NoInit, nameLength);
-							uc.Read(stateWithLevel.LevelName.data(), nameLength);
-
-							uc.Read(&stateWithLevel.State, sizeof(EpisodeContinuationState));
-							_episodeContinue.emplace(std::move(episodeName), std::move(stateWithLevel));
-						} else {
-							// Struct has different size, so it's better to skip it
-							nameLength = uc.ReadValue<uint8_t>();
-							uc.Seek(nameLength + episodeContinueSize, SeekOrigin::Current);
+								uc.Read(&stateWithLevel.State, sizeof(EpisodeContinuationState));
+								_episodeContinue.emplace(std::move(episodeName), std::move(stateWithLevel));
+							} else {
+								// Struct has different size, so it's better to skip it
+								nameLength = uc.ReadValue<uint8_t>();
+								uc.Seek(nameLength + episodeContinueSize, SeekOrigin::Current);
+							}
 						}
 					}
 				}
@@ -223,6 +248,11 @@ namespace Jazz2
 		co.WriteValue<uint8_t>((uint8_t)(MasterVolume * 255.0f));
 		co.WriteValue<uint8_t>((uint8_t)(SfxVolume * 255.0f));
 		co.WriteValue<uint8_t>((uint8_t)(MusicVolume * 255.0f));
+
+		co.WriteValue<int8_t>((int8_t)(TouchLeftPadding.X * INT8_MAX / (LevelHandler::DefaultWidth * TouchPaddingMultiplier)));
+		co.WriteValue<int8_t>((int8_t)(TouchLeftPadding.Y * INT8_MAX / (LevelHandler::DefaultHeight * TouchPaddingMultiplier)));
+		co.WriteValue<int8_t>((int8_t)(TouchRightPadding.X * INT8_MAX / (LevelHandler::DefaultWidth * TouchPaddingMultiplier)));
+		co.WriteValue<int8_t>((int8_t)(TouchRightPadding.Y * INT8_MAX / (LevelHandler::DefaultHeight * TouchPaddingMultiplier)));
 
 		// Controls
 		auto mappings = UI::ControlScheme::GetMappings();

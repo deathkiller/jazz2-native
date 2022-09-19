@@ -5,11 +5,11 @@
 
 	"Animations": {
 		"Bullet": {
-			"__Path": "_custom/pepper.png",
+			"Path": "_custom/pepper.png",
 			"States": [ 0 ]
 		},
 		"BulletUpgraded": {
-			"__Path": "_custom/pepper_upgraded.png",
+			"Path": "_custom/pepper_upgraded.png",
 			"States": [ 1 ]
 		}
 	},

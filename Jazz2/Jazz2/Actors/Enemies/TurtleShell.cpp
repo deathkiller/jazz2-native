@@ -152,8 +152,8 @@ namespace Jazz2::Actors::Enemies
 				//pos.X = collider.Transform.Pos.X + (speedX >= 0 ? -1f : 1f) * (currentAnimation.Base.FrameDimensions.X + 1);
 				float totalSpeed = std::abs(_speed.X) + std::abs(otherSpeed.X);
 
-				shell->_speed.X = totalSpeed / 2 * (_speed.X >= 0.0f ? 1.0f : -1.0f);
-				_speed.X = totalSpeed / 2.0f * (_speed.X >= 0.0f ? -1.0f : 1.0f);
+				shell->_speed.X = totalSpeed / 2 * (_speed.X < 0.0f ? -1.0f : 1.0f);
+				_speed.X = totalSpeed / 2.0f * (_speed.X < 0.0f ? 1.0f : -1.0f);
 
 				shell->DecreaseHealth(1, this);
 				PlaySfx("ImpactShell"_s, 0.8f);
@@ -161,16 +161,22 @@ namespace Jazz2::Actors::Enemies
 			}
 		} else if (auto enemyBase = dynamic_cast<EnemyBase*>(other.get())) {
 			if (enemyBase->CanCollideWithAmmo) {
-				_speed.X = std::max(std::abs(_speed.X), 2.0f) * (_speed.X >= 0.0f ? -1.0f : 1.0f);
-				if (!enemyBase->GetState(ActorState::IsInvulnerable)) {
-					enemyBase->DecreaseHealth(1, this);
-					return true;
+				float absSpeed = std::abs(_speed.X);
+				if (absSpeed > 2.0f) {
+					_speed.X = std::max(absSpeed, 2.0f) * (_speed.X < 0.0f ? 1.0f : -1.0f);
+					if (!enemyBase->GetState(ActorState::IsInvulnerable)) {
+						enemyBase->DecreaseHealth(1, this);
+						return true;
+					}
 				}
 			}
 		} else if (auto crateContainer = dynamic_cast<Solid::CrateContainer*>(other.get())) {
-			_speed.X = std::max(std::abs(_speed.X), 2.0f) * (_speed.X >= 0.0f ? -1.0f : 1.0f);
-			crateContainer->DecreaseHealth(1, this);
-			return true;
+			float absSpeed = std::abs(_speed.X);
+			if (absSpeed > 2.0f) {
+				_speed.X = std::max(absSpeed, 2.0f) * (_speed.X >= 0.0f ? -1.0f : 1.0f);
+				crateContainer->DecreaseHealth(1, this);
+				return true;
+			}
 		}
 
 		return false;

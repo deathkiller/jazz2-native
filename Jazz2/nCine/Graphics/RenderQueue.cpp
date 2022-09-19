@@ -13,9 +13,10 @@
 namespace nCine
 {
 #if _DEBUG
-	namespace {
+	namespace
+	{
 		/// The string used to output OpenGL debug group information
-		static char debugString[64];
+		static char debugString[128];
 	}
 #endif
 
@@ -110,7 +111,7 @@ namespace nCine
 		if (!opaques->empty()) {
 			ZoneScopedN("Commit opaques");
 #if _DEBUG
-			sprintf_s(debugString, "Commit %u opaque command(s) for viewport 0x%lx", opaques->size(), uintptr_t(RenderResources::currentViewport()));
+			sprintf_s(debugString, "Commit %u opaque command(s) for viewport 0x%lx", (uint32_t)opaques->size(), uintptr_t(RenderResources::currentViewport()));
 			GLDebug::ScopedGroup scoped(debugString);
 #endif
 			for (RenderCommand* opaqueRenderCommand : *opaques)
@@ -120,7 +121,7 @@ namespace nCine
 		if (!transparents->empty()) {
 			ZoneScopedN("Commit transparents");
 #if _DEBUG
-			sprintf_s(debugString, "Commit %u transparent command(s) for viewport 0x%lx", transparents->size(), uintptr_t(RenderResources::currentViewport()));
+			sprintf_s(debugString, "Commit %u transparent command(s) for viewport 0x%lx", (uint32_t)transparents->size(), uintptr_t(RenderResources::currentViewport()));
 			GLDebug::ScopedGroup scoped(debugString);
 #endif
 			for (RenderCommand* transparentRenderCommand : *transparents)
@@ -144,16 +145,16 @@ namespace nCine
 			const uint16_t visitOrder = opaqueRenderCommand->visitOrder();
 
 #if _DEBUG
-			if (numInstances > 0)
-				sprintf_s(debugString, "Opaque %u (%d %s on layer %u, visit order %u)",
-								   commandIndex, numInstances, commandTypeString(*opaqueRenderCommand), layer, visitOrder);
-			else if (batchSize > 0)
-				sprintf_s(debugString, "Opaque %u (%d %s on layer %u, visit order %u)",
-								   commandIndex, batchSize, commandTypeString(*opaqueRenderCommand), layer, visitOrder);
-			else
-				sprintf_s(debugString, "Opaque %u (%s on layer %u, visit order %u)",
-								   commandIndex, commandTypeString(*opaqueRenderCommand), layer, visitOrder);
-
+			if (numInstances > 0) {
+				sprintf_s(debugString, "Opaque %u (%d %s on layer %u, visit order %u, sort key %llx)",
+								   commandIndex, numInstances, commandTypeString(*opaqueRenderCommand), layer, visitOrder, opaqueRenderCommand->materialSortKey());
+			} else if (batchSize > 0) {
+				sprintf_s(debugString, "Opaque %u (%d %s on layer %u, visit order %u, sort key %llx)",
+								   commandIndex, batchSize, commandTypeString(*opaqueRenderCommand), layer, visitOrder, opaqueRenderCommand->materialSortKey());
+			} else {
+				sprintf_s(debugString, "Opaque %u (%s on layer %u, visit order %u, sort key %llx)",
+								   commandIndex, commandTypeString(*opaqueRenderCommand), layer, visitOrder, opaqueRenderCommand->materialSortKey());
+			}
 			GLDebug::ScopedGroup scoped(debugString);
 #endif
 			commandIndex++;
@@ -174,16 +175,16 @@ namespace nCine
 			const uint16_t visitOrder = transparentRenderCommand->visitOrder();
 
 #if _DEBUG
-			if (numInstances > 0)
-				sprintf_s(debugString, "Transparent %u (%d %s on layer %u, visit order %u)",
-								   commandIndex, numInstances, commandTypeString(*transparentRenderCommand), layer, visitOrder);
-			else if (batchSize > 0)
-				sprintf_s(debugString, "Transparent %u (%d %s on layer %u, visit order %u)",
-								   commandIndex, batchSize, commandTypeString(*transparentRenderCommand), layer, visitOrder);
-			else
-				sprintf_s(debugString, "Transparent %u (%s on layer %u, visit order %u)",
-								   commandIndex, commandTypeString(*transparentRenderCommand), layer, visitOrder);
-
+			if (numInstances > 0) {
+				sprintf_s(debugString, "Transparent %u (%d %s on layer %u, visit order %u, sort key %llx)",
+								   commandIndex, numInstances, commandTypeString(*transparentRenderCommand), layer, visitOrder, transparentRenderCommand->materialSortKey());
+			} else if (batchSize > 0) {
+				sprintf_s(debugString, "Transparent %u (%d %s on layer %u, visit order %u, sort key %llx)",
+								   commandIndex, batchSize, commandTypeString(*transparentRenderCommand), layer, visitOrder, transparentRenderCommand->materialSortKey());
+			} else {
+				sprintf_s(debugString, "Transparent %u (%s on layer %u, visit order %u, sort key %llx)",
+								   commandIndex, commandTypeString(*transparentRenderCommand), layer, visitOrder, transparentRenderCommand->materialSortKey());
+			}
 			GLDebug::ScopedGroup scoped(debugString);
 #endif
 			commandIndex++;

@@ -12,7 +12,7 @@ namespace Jazz2::UI
 {
 	namespace Menu
 	{
-		class ControlsSection;
+		class RemapControlsSection;
 	}
 
 	struct ControlSchemeMapping
@@ -26,7 +26,7 @@ namespace Jazz2::UI
 
 	class ControlScheme
 	{
-		friend class Menu::ControlsSection;
+		friend class Menu::RemapControlsSection;
 
 	public:
 		static constexpr int MaxSupportedPlayers = 1;

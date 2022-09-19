@@ -157,7 +157,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_OPENMPT;WITH_ANGELSCRIPT;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_OPENMPT;__WITH_ANGELSCRIPT;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -181,7 +181,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_OPENMPT;WITH_ANGELSCRIPT;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_OPENMPT;__WITH_ANGELSCRIPT;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -270,7 +270,9 @@
     <ClInclude Include="Jazz2\Actors\Solid\PushableBox.h" />
     <ClInclude Include="Jazz2\Actors\Solid\TriggerCrate.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\BouncerShot.h" />
+    <ClInclude Include="Jazz2\Actors\Weapons\ElectroShot.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\FreezerShot.h" />
+    <ClInclude Include="Jazz2\Actors\Weapons\PepperShot.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\RFShot.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\SeekerShot.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\Thunderbolt.h" />
@@ -304,6 +306,7 @@
     <ClInclude Include="Jazz2\UI\HUD.h" />
     <ClInclude Include="Jazz2\UI\Menu\AboutSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\BeginSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\ControlsOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\ControlsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\EpisodeSelectSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\GameplayEnhancementsSection.h" />
@@ -316,9 +319,11 @@
     <ClInclude Include="Jazz2\UI\Menu\MenuSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\OptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\PauseSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\RemapControlsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RescaleModeSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\SoundsOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\StartGameOptionsSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\TouchControlsOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\RgbLights.h" />
     <ClInclude Include="Jazz2\UI\UpscaleRenderPass.h" />
     <ClInclude Include="Jazz2\WeatherType.h" />
@@ -565,7 +570,9 @@
     <ClCompile Include="Jazz2\Actors\Solid\PushableBox.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\TriggerCrate.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\BouncerShot.cpp" />
+    <ClCompile Include="Jazz2\Actors\Weapons\ElectroShot.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\FreezerShot.cpp" />
+    <ClCompile Include="Jazz2\Actors\Weapons\PepperShot.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\RFShot.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\SeekerShot.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\Thunderbolt.cpp" />
@@ -590,7 +597,7 @@
     <ClCompile Include="Jazz2\UI\HUD.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\AboutSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\BeginSection.cpp" />
-    <ClCompile Include="Jazz2\UI\Menu\ControlsSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\ControlsOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\EpisodeSelectSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\GameplayEnhancementsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\GameplayOptionsSection.cpp" />
@@ -600,9 +607,11 @@
     <ClCompile Include="Jazz2\UI\Menu\MainMenu.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\OptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\PauseSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\RemapControlsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\RescaleModeSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\SoundsOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\StartGameOptionsSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\TouchControlsOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\RgbLights.cpp" />
     <ClCompile Include="Jazz2\UI\UpscaleRenderPass.cpp" />
     <ClCompile Include="nCine\AppConfiguration.cpp" />
