@@ -68,19 +68,21 @@ namespace nCine
 		/// Equality operator
 		friend inline bool operator==(const StaticHashMapIterator& lhs, const StaticHashMapIterator& rhs)
 		{
-			if (lhs.tag_ == SentinelTag::REGULAR && rhs.tag_ == SentinelTag::REGULAR)
+			if (lhs.tag_ == SentinelTag::REGULAR && rhs.tag_ == SentinelTag::REGULAR) {
 				return (lhs.hashMap_ == rhs.hashMap_ && lhs.bucketIndex_ == rhs.bucketIndex_);
-			else
+			} else {
 				return (lhs.tag_ == rhs.tag_);
+			}
 		}
 
 		/// Inequality operator
 		friend inline bool operator!=(const StaticHashMapIterator& lhs, const StaticHashMapIterator& rhs)
 		{
-			if (lhs.tag_ == SentinelTag::REGULAR && rhs.tag_ == SentinelTag::REGULAR)
+			if (lhs.tag_ == SentinelTag::REGULAR && rhs.tag_ == SentinelTag::REGULAR) {
 				return (lhs.hashMap_ != rhs.hashMap_ || lhs.bucketIndex_ != rhs.bucketIndex_);
-			else
+			} else {
 				return (lhs.tag_ != rhs.tag_);
+			}
 		}
 
 		/// Returns the hashmap node currently pointed by the iterator
@@ -228,20 +230,22 @@ namespace nCine
 			if (bucketIndex_ >= hashMap_->capacity() - 1) {
 				tag_ = SentinelTag::END;
 				return;
-			} else
+			} else {
 				bucketIndex_++;
+			}
 		} else if (tag_ == SentinelTag::BEGINNING) {
 			tag_ = SentinelTag::REGULAR;
 			bucketIndex_ = 0;
-		} else if (tag_ == SentinelTag::END)
+		} else if (tag_ == SentinelTag::END) {
 			return;
-
+		}
 		// Search the first non empty index starting from the current one
-		while (bucketIndex_ < hashMap_->capacity() - 1 && hashMap_->hashes_[bucketIndex_] == NullHash)
+		while (bucketIndex_ < hashMap_->capacity() - 1 && hashMap_->hashes_[bucketIndex_] == NullHash) {
 			bucketIndex_++;
-
-		if (hashMap_->hashes_[bucketIndex_] == NullHash)
+		}
+		if (hashMap_->hashes_[bucketIndex_] == NullHash) {
 			tag_ = SentinelTag::END;
+		}
 	}
 
 	template <class K, class T, class HashFunc, unsigned int Capacity, bool IsConst>
@@ -251,20 +255,22 @@ namespace nCine
 			if (bucketIndex_ == 0) {
 				tag_ = SentinelTag::BEGINNING;
 				return;
-			} else
+			} else {
 				bucketIndex_--;
+			}
 		} else if (tag_ == SentinelTag::END) {
 			tag_ = SentinelTag::REGULAR;
 			bucketIndex_ = hashMap_->capacity() - 1;
-		} else if (tag_ == SentinelTag::BEGINNING)
+		} else if (tag_ == SentinelTag::BEGINNING) {
 			return;
-
+		}
 		// Search the first non empty index starting from the current one
-		while (bucketIndex_ > 0 && hashMap_->hashes_[bucketIndex_] == NullHash)
+		while (bucketIndex_ > 0 && hashMap_->hashes_[bucketIndex_] == NullHash) {
 			bucketIndex_--;
-
-		if (hashMap_->hashes_[bucketIndex_] == NullHash)
+		}
+		if (hashMap_->hashes_[bucketIndex_] == NullHash) {
 			tag_ = SentinelTag::BEGINNING;
+		}
 	}
 
 }

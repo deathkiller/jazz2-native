@@ -2,8 +2,8 @@
 #include "../ServiceLocator.h"
 #include "../../Common.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -28,7 +28,7 @@ namespace nCine {
 		other.id_ = 0;
 	}
 
-	Object& Object::operator=(Object&& other)
+	Object& Object::operator=(Object&& other) noexcept
 	{
 		type_ = other.type_;
 		theServiceLocator().indexer().removeObject(id_);
@@ -43,32 +43,16 @@ namespace nCine {
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	/*const char *Object::name() const
-	{
-		if (name_.empty())
-			return nullptr;
-		else
-			return name_.data();
-	}
-
-	void Object::setName(const char *name)
-	{
-		if (name == nullptr)
-			name_.clear();
-		else
-			name_ = name;
-	}**/
-
 	template <class T>
 	T* Object::fromId(unsigned int id)
 	{
 		const Object* object = theServiceLocator().indexer().object(id);
 
-		if (object) {
+		if (object != nullptr) {
 			if (object->type_ == T::sType()) {
 				return static_cast<T*>(object);
 			} else { // Cannot cast
-				LOGF_X("Object \"%s\" (%u) is of type %u instead of %u", /*object->name_*/"", id, object->type_, T::sType());
+				LOGF_X("Object %u is of type %u instead of %u", id, object->type_, T::sType());
 				return nullptr;
 			}
 		} else {
@@ -82,9 +66,8 @@ namespace nCine {
 	///////////////////////////////////////////////////////////
 
 	Object::Object(const Object& other)
-		: type_(other.type_), id_(0)/*, name_(other.name_)*/
+		: type_(other.type_), id_(0)
 	{
 		id_ = theServiceLocator().indexer().addObject(this);
 	}
-
 }

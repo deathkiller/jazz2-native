@@ -14,7 +14,7 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	ServiceLocator::ServiceLocator()
-		: indexerService_(&nullIndexer_)/*, loggerService_(&nullLogger_)*/,
+		: indexerService_(&nullIndexer_),
 		audioDevice_(&nullAudioDevice_), threadPool_(&nullThreadPool_),
 		gfxCapabilities_(&nullGfxCapabilities_)
 	{
@@ -35,18 +35,6 @@ namespace nCine
 		registeredIndexer_.reset(nullptr);
 		indexerService_ = &nullIndexer_;
 	}
-
-	/*void ServiceLocator::registerLogger(std::unique_ptr<ILogger> service)
-	{
-		registeredLogger_ = std::move(service);
-		loggerService_ = registeredLogger_.get();
-	}
-
-	void ServiceLocator::unregisterLogger()
-	{
-		registeredLogger_.reset(nullptr);
-		loggerService_ = &nullLogger_;
-	}*/
 
 	void ServiceLocator::registerAudioDevice(std::unique_ptr<IAudioDevice> service)
 	{
@@ -99,10 +87,6 @@ namespace nCine
 
 		registeredGfxCapabilities_.reset(nullptr);
 		gfxCapabilities_ = &nullGfxCapabilities_;
-
-		// Logger unregistered at the end to give a last chance for logging
-		//registeredLogger_.reset(nullptr);
-		//loggerService_ = &nullLogger_;
 	}
 
 }

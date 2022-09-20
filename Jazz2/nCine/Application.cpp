@@ -73,7 +73,7 @@ extern "C"
 #endif
 
 #ifdef WITH_RENDERDOC
-#	include "RenderDocCapture.h"
+#	include "Graphics/RenderDocCapture.h"
 #endif
 
 namespace nCine
@@ -186,12 +186,6 @@ namespace nCine
 			RenderResources::createMinimal(); // some resources are still required for rendering
 		}
 
-#ifdef WITH_IMGUI
-		// Debug overlay is available even when scenegraph is not
-		//if (appCfg_.withDebugOverlay)
-		//	debugOverlay_ = std::make_unique<ImGuiDebugOverlay>(appCfg_.profileTextUpdateTime());
-#endif
-
 		// Initialization of the static random generator seeds
 		Random().Initialize(static_cast<uint64_t>(TimeStamp::now().ticks()), static_cast<uint64_t>(profileStartTime_.ticks()));
 
@@ -295,7 +289,6 @@ namespace nCine
 		RenderDocCapture::removeHooks();
 #endif
 
-		//debugOverlay_.reset(nullptr);
 		rootNode_.reset(nullptr);
 		RenderResources::dispose();
 		frameTimer_.reset(nullptr);

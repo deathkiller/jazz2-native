@@ -45,7 +45,6 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLViewport.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/IGfxDevice.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureLoader.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureSaver.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Material.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/MeshSprite.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Particle.cpp
@@ -96,6 +95,7 @@ list(APPEND SOURCES
 #	${NCINE_SOURCE_DIR}/nCine/FntParser.cpp
 #	${NCINE_SOURCE_DIR}/nCine/Font.cpp
 #	${NCINE_SOURCE_DIR}/nCine/FontGlyph.cpp
+#	${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureSaver.cpp
 #	${NCINE_SOURCE_DIR}/nCine/Graphics/TextNode.cpp
 )
 

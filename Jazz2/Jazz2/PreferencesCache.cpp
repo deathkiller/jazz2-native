@@ -83,7 +83,7 @@ namespace Jazz2
 				uint64_t signature = s->ReadValue<uint64_t>();
 				uint8_t fileType = s->ReadValue<uint8_t>();
 				uint8_t version = s->ReadValue<uint8_t>();
-				if (signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::ConfigFile && version == FileVersion) {
+				if (signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::ConfigFile && version <= FileVersion) {
 					// Read compressed palette and mask
 					int32_t compressedSize = s->ReadValue<int32_t>();
 					int32_t uncompressedSize = s->ReadValue<int32_t>();

@@ -17,8 +17,8 @@ namespace nCine
 			ANIMATED_SPRITE,
 			PARTICLE,
 			PARTICLE_SYSTEM,
-			FONT,
-			TEXTNODE,
+			//FONT,
+			//TEXTNODE,
 			AUDIOBUFFER,
 			AUDIOBUFFER_PLAYER,
 			AUDIOSTREAM_PLAYER
@@ -32,7 +32,7 @@ namespace nCine
 		/// Move constructor
 		Object(Object&& other);
 		/// Move assignment operator
-		Object& operator=(Object&& other);
+		Object& operator=(Object&& other) noexcept;
 
 		/// Returns the object identification number
 		inline unsigned int id() const {

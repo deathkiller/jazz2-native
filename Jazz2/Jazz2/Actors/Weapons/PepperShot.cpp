@@ -83,12 +83,7 @@ namespace Jazz2::Actors::Weapons
 			_renderer.setDrawEnabled(true);
 		}
 	}
-
-	void PepperShot::OnUpdateHitbox()
-	{
-		UpdateHitbox(2, 2);
-	}
-
+	
 	void PepperShot::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
 		if ((_upgrades & 0x1) != 0) {

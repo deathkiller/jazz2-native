@@ -37,7 +37,7 @@ namespace nCine
 				case Shader::DefaultVertex::BATCHED_SPRITES_NOTEXTURE:
 				case Shader::DefaultVertex::BATCHED_MESHSPRITES:
 				case Shader::DefaultVertex::BATCHED_MESHSPRITES_NOTEXTURE:
-				case Shader::DefaultVertex::BATCHED_TEXTNODES:
+				//case Shader::DefaultVertex::BATCHED_TEXTNODES:
 					return true;
 				default:
 					return false;
@@ -154,10 +154,10 @@ namespace nCine
 	bool Shader::loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment)
 	{
 		ZoneScoped;
-		/*if (shaderName) {
+		if (shaderName) {
 			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(shaderName, nctl::strnlen(shaderName, nctl::String::MaxCStringLength));
-		}*/
+			ZoneText(shaderName, strlen(shaderName));
+		}
 
 		glShaderProgram_->reset(); // reset before attaching new shaders
 		//setName(shaderName);
@@ -182,10 +182,10 @@ namespace nCine
 	bool Shader::loadFromMemory(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment)
 	{
 		ZoneScoped;
-		/*if (shaderName) {
+		if (shaderName) {
 			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(shaderName, nctl::strnlen(shaderName, nctl::String::MaxCStringLength));
-		}*/
+			ZoneText(shaderName, strlen(shaderName));
+		}
 
 		glShaderProgram_->reset(); // reset before attaching new shaders
 		//setName(shaderName);
@@ -211,10 +211,10 @@ namespace nCine
 	bool Shader::loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment)
 	{
 		ZoneScoped;
-		/*if (shaderName) {
+		if (shaderName) {
 			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(shaderName, nctl::strnlen(shaderName, nctl::String::MaxCStringLength));
-		}*/
+			ZoneText(shaderName, strlen(shaderName));
+		}
 
 		glShaderProgram_->reset(); // reset before attaching new shaders
 		//setName(shaderName);
@@ -239,10 +239,10 @@ namespace nCine
 	bool Shader::loadFromFile(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment)
 	{
 		ZoneScoped;
-		/*if (shaderName) {
+		if (shaderName) {
 			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(shaderName, nctl::strnlen(shaderName, nctl::String::MaxCStringLength));
-		}*/
+			ZoneText(shaderName, strlen(shaderName));
+		}
 
 		glShaderProgram_->reset(); // reset before attaching new shaders
 		//setName(shaderName);
@@ -267,10 +267,10 @@ namespace nCine
 	bool Shader::loadFromFile(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment)
 	{
 		ZoneScoped;
-		/*if (shaderName) {
+		if (shaderName) {
 			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(shaderName, nctl::strnlen(shaderName, nctl::String::MaxCStringLength));
-		}*/
+			ZoneText(shaderName, strlen(shaderName));
+		}
 
 		glShaderProgram_->reset(); // reset before attaching new shaders
 		//setName(shaderName);
@@ -296,10 +296,10 @@ namespace nCine
 	bool Shader::loadFromFile(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment)
 	{
 		ZoneScoped;
-		/*if (shaderName) {
+		if (shaderName) {
 			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(shaderName, nctl::strnlen(shaderName, nctl::String::MaxCStringLength));
-		}*/
+			ZoneText(shaderName, strlen(shaderName));
+		}
 
 		glShaderProgram_->reset(); // reset before attaching new shaders
 		//setName(shaderName);
@@ -324,9 +324,9 @@ namespace nCine
 	bool Shader::setAttribute(const char* name, int stride, unsigned long int pointer)
 	{
 		GLVertexFormat::Attribute* attribute = glShaderProgram_->attribute(name);
-		if (attribute != nullptr)
+		if (attribute != nullptr) {
 			attribute->setVboParameters(stride, reinterpret_cast<void*>(pointer));
-
+		}
 		return (attribute != nullptr);
 	}
 
@@ -386,9 +386,9 @@ namespace nCine
 			case DefaultVertex::MESHSPRITE_NOTEXTURE:
 				vertexShader = "meshsprite_notexture_vs.glsl";
 				break;
-			case DefaultVertex::TEXTNODE:
-				vertexShader = "textnode_vs.glsl";
-				break;
+			//case DefaultVertex::TEXTNODE:
+			//	vertexShader = "textnode_vs.glsl";
+			//	break;
 			case DefaultVertex::BATCHED_SPRITES:
 				vertexShader = "batched_sprites_vs.glsl";
 				break;
@@ -401,9 +401,9 @@ namespace nCine
 			case DefaultVertex::BATCHED_MESHSPRITES_NOTEXTURE:
 				vertexShader = "batched_meshsprites_notexture_vs.glsl";
 				break;
-			case DefaultVertex::BATCHED_TEXTNODES:
-				vertexShader = "batched_textnodes_vs.glsl";
-				break;
+			//case DefaultVertex::BATCHED_TEXTNODES:
+			//	vertexShader = "batched_textnodes_vs.glsl";
+			//	break;
 		}
 		const bool hasCompiled = glShaderProgram_->attachShader(GL_VERTEX_SHADER, fs::JoinPath({ fs::GetDataPath(), "shaders"_s, vertexShader }));
 #else
@@ -421,9 +421,9 @@ namespace nCine
 			case DefaultVertex::MESHSPRITE_NOTEXTURE:
 				vertexShader = ShaderStrings::meshsprite_notexture_vs + 1;
 				break;
-			case DefaultVertex::TEXTNODE:
-				vertexShader = ShaderStrings::textnode_vs + 1;
-				break;
+			//case DefaultVertex::TEXTNODE:
+			//	vertexShader = ShaderStrings::textnode_vs + 1;
+			//	break;
 			case DefaultVertex::BATCHED_SPRITES:
 				vertexShader = ShaderStrings::batched_sprites_vs + 1;
 				break;
@@ -436,9 +436,9 @@ namespace nCine
 			case DefaultVertex::BATCHED_MESHSPRITES_NOTEXTURE:
 				vertexShader = ShaderStrings::batched_meshsprites_notexture_vs + 1;
 				break;
-			case DefaultVertex::BATCHED_TEXTNODES:
-				vertexShader = ShaderStrings::batched_textnodes_vs + 1;
-				break;
+			//case DefaultVertex::BATCHED_TEXTNODES:
+			//	vertexShader = ShaderStrings::batched_textnodes_vs + 1;
+			//	break;
 		}
 		const bool hasCompiled = glShaderProgram_->attachShaderFromString(GL_VERTEX_SHADER, vertexShader);
 #endif
@@ -453,17 +453,18 @@ namespace nCine
 			case DefaultFragment::SPRITE:
 				fragmentShader = "sprite_fs.glsl";
 				break;
-			case DefaultFragment::SPRITE_GRAY:
-				fragmentShader = "sprite_gray_fs.glsl";
-				break;
+			//case DefaultFragment::SPRITE_GRAY:
+			//	fragmentShader = "sprite_gray_fs.glsl";
+			//	break;
 			case DefaultFragment::SPRITE_NOTEXTURE:
 				fragmentShader = "sprite_notexture_fs.glsl";
 				break;
-			case DefaultFragment::TEXTNODE_ALPHA:
-				fragmentShader = "textnode_alpha_fs.glsl";
-				break;
-			case DefaultFragment::TEXTNODE_RED:
-				fragmentShader = "textnode_red_fs.glsl";
+			//case DefaultFragment::TEXTNODE_ALPHA:
+			//	fragmentShader = "textnode_alpha_fs.glsl";
+			//	break;
+			//case DefaultFragment::TEXTNODE_RED:
+			//	fragmentShader = "textnode_red_fs.glsl";
+			//	break;
 		}
 		const bool hasCompiled = glShaderProgram_->attachShader(GL_FRAGMENT_SHADER, fs::JoinPath({ fs::GetDataPath(), "shaders"_s, fragmentShader }));
 #else
@@ -472,17 +473,18 @@ namespace nCine
 			case DefaultFragment::SPRITE:
 				fragmentShader = ShaderStrings::sprite_fs + 1;
 				break;
-			case DefaultFragment::SPRITE_GRAY:
-				fragmentShader = ShaderStrings::sprite_gray_fs + 1;
-				break;
+			//case DefaultFragment::SPRITE_GRAY:
+			//	fragmentShader = ShaderStrings::sprite_gray_fs + 1;
+			//	break;
 			case DefaultFragment::SPRITE_NOTEXTURE:
 				fragmentShader = ShaderStrings::sprite_notexture_fs + 1;
 				break;
-			case DefaultFragment::TEXTNODE_ALPHA:
-				fragmentShader = ShaderStrings::textnode_alpha_fs + 1;
-				break;
-			case DefaultFragment::TEXTNODE_RED:
-				fragmentShader = ShaderStrings::textnode_red_fs + 1;
+			//case DefaultFragment::TEXTNODE_ALPHA:
+			//	fragmentShader = ShaderStrings::textnode_alpha_fs + 1;
+			//	break;
+			//case DefaultFragment::TEXTNODE_RED:
+			//	fragmentShader = ShaderStrings::textnode_red_fs + 1;
+			//	break;
 		}
 		const bool hasCompiled = glShaderProgram_->attachShaderFromString(GL_FRAGMENT_SHADER, fragmentShader);
 #endif

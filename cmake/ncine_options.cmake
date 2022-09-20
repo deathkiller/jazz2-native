@@ -69,6 +69,7 @@ endif()
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	option(NCINE_ADDRESS_SANITIZER "Enable the AddressSanitizer memory error detector of GCC and Clang" OFF)
+	option(NCINE_UNDEFINED_SANITIZER "Enable the UndefinedBehaviorSanitizer detector of GCC and Clang" OFF)
 	option(NCINE_CODE_COVERAGE "Enable gcov instrumentation for testing code coverage" OFF)
 endif()
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")

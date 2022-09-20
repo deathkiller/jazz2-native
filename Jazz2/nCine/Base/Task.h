@@ -54,7 +54,7 @@ namespace nCine
 			return *m_handle.promise().m_value;
 		}
 
-		//manualy wait for finish
+		// Manualy wait for finish
 		bool one_step()
 		{
 			auto curr = m_handle;

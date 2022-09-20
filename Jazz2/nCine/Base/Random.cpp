@@ -1,6 +1,7 @@
-#include <cmath> // for ldexp()
 #include "Random.h"
 #include "../../Common.h"
+
+#include <cmath> // for ldexp()
 
 namespace nCine
 {

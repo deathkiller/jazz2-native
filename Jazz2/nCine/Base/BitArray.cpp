@@ -4,8 +4,8 @@
 #include <climits>
 #include <cstring>
 
-#ifndef CHAR_BIT
-#	warning CHAR_BIT not defined.Assuming 8 bits.
+#if !defined(CHAR_BIT)
+#	warning CHAR_BIT not defined, assuming 8 bits
 #	define CHAR_BIT 8
 #endif
 

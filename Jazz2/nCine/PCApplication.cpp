@@ -37,11 +37,14 @@ namespace nCine
 		}
 
 #if defined(DEATH_TARGET_WINDOWS)
-		// Set current directory, so everything is loaded correctly
+		// Force set current directory, so everything is loaded correctly, because it's not usually intended
 		wchar_t pBuf[MAX_PATH];
 		DWORD pBufLength = ::GetModuleFileName(nullptr, pBuf, _countof(pBuf));
 		if (pBufLength > 0) {
 			wchar_t* lastSlash = wcsrchr(pBuf, L'\\');
+			if (lastSlash == nullptr) {
+				lastSlash = wcsrchr(pBuf, L'/');
+			}
 			if (lastSlash != nullptr) {
 				lastSlash++;
 				*lastSlash = '\0';

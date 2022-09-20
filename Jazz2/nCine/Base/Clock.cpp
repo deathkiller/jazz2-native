@@ -31,7 +31,7 @@ namespace nCine
 		: frequency_(0UL), baseCount_(0ULL)
 	{
 #if defined(DEATH_TARGET_WINDOWS)
-		if (QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&frequency_))) {
+		if (::QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&frequency_))) {
 			hasPerfCounter_ = true;
 		} else {
 			frequency_ = 1000L;
@@ -68,9 +68,9 @@ namespace nCine
 
 #if defined(DEATH_TARGET_WINDOWS)
 		if (hasPerfCounter_) {
-			QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&counter));
+			::QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&counter));
 		} else {
-			counter = GetTickCount();
+			counter = ::GetTickCount();
 		}
 #elif defined(DEATH_TARGET_APPLE)
 #	if __MAC_10_12

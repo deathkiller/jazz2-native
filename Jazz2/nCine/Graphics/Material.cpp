@@ -10,29 +10,6 @@
 namespace nCine
 {
 	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
-	const char* Material::InstanceBlockName = "InstanceBlock";
-	const char* Material::InstancesBlockName = "InstancesBlock";
-	const char* Material::ModelMatrixUniformName = "modelMatrix";
-
-	const char* Material::GuiProjectionMatrixUniformName = "uGuiProjection";
-	const char* Material::DepthUniformName = "uDepth";
-	const char* Material::ProjectionMatrixUniformName = "uProjectionMatrix";
-	const char* Material::ViewMatrixUniformName = "uViewMatrix";
-	const char* Material::ProjectionViewMatrixExcludeString = "uProjectionMatrix\0uViewMatrix\0";
-
-	const char* Material::TextureUniformName = "uTexture";
-	const char* Material::ColorUniformName = "color";
-	const char* Material::SpriteSizeUniformName = "spriteSize";
-	const char* Material::TexRectUniformName = "texRect";
-	const char* Material::PositionAttributeName = "aPosition";
-	const char* Material::TexCoordsAttributeName = "aTexCoords";
-	const char* Material::MeshIndexAttributeName = "aMeshIndex";
-	const char* Material::ColorAttributeName = "aColor";
-
-	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
 
@@ -215,10 +192,12 @@ namespace nCine
 	uint32_t Material::sortKey()
 	{
 		constexpr uint32_t Seed = 1697381921;
-		SortHashData hashData;
+		// Align to 64 bits for `fasthash64()` to properly work on Emscripten without alignment faults
+		static SortHashData hashData alignas(8);
 
-		for (unsigned int i = 0; i < GLTexture::MaxTextureUnits; i++)
+		for (unsigned int i = 0; i < GLTexture::MaxTextureUnits; i++) {
 			hashData.textures[i] = (textures_[i] != nullptr) ? textures_[i]->glHandle() : 0;
+		}
 		hashData.shaderProgram = shaderProgram_->glHandle();
 		hashData.srcBlendingFactor = glBlendingFactorToInt(srcBlendingFactor_);
 		hashData.destBlendingFactor = glBlendingFactorToInt(destBlendingFactor_);

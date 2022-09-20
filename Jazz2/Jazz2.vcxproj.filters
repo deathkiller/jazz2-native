@@ -297,9 +297,6 @@
     <ClInclude Include="nCine\Graphics\Sprite.h">
       <Filter>Header Files\nCine\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="nCine\Graphics\TextNode.h">
-      <Filter>Header Files\nCine\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="nCine\Graphics\Texture.h">
       <Filter>Header Files\nCine\Graphics</Filter>
     </ClInclude>
@@ -1470,9 +1467,6 @@
       <Filter>Source Files\nCine\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Graphics\Texture.cpp">
-      <Filter>Source Files\nCine\Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\TextNode.cpp">
       <Filter>Source Files\nCine\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Input\JoyMapping.cpp">

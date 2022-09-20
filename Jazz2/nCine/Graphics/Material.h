@@ -57,26 +57,26 @@ namespace nCine
 		};
 
 		// Shader uniform block and model matrix uniform names
-		static const char* InstanceBlockName;
-		static const char* InstancesBlockName; // for batched shaders
-		static const char* ModelMatrixUniformName;
+		static constexpr char InstanceBlockName[] = "InstanceBlock";
+		static constexpr char InstancesBlockName[] = "InstancesBlock"; // for batched shaders
+		static constexpr char ModelMatrixUniformName[] = "modelMatrix";
 
 		// Camera related shader uniform names
-		static const char* GuiProjectionMatrixUniformName;
-		static const char* DepthUniformName;
-		static const char* ProjectionMatrixUniformName;
-		static const char* ViewMatrixUniformName;
-		static const char* ProjectionViewMatrixExcludeString;
+		static constexpr char GuiProjectionMatrixUniformName[] = "uGuiProjection";
+		static constexpr char DepthUniformName[] = "uDepth";
+		static constexpr char ProjectionMatrixUniformName[] = "uProjectionMatrix";
+		static constexpr char ViewMatrixUniformName[] = "uViewMatrix";
+		static constexpr char ProjectionViewMatrixExcludeString[] = "uProjectionMatrix\0uViewMatrix\0";
 
 		// Shader uniform and attribute names
-		static const char* TextureUniformName;
-		static const char* ColorUniformName;
-		static const char* SpriteSizeUniformName;
-		static const char* TexRectUniformName;
-		static const char* PositionAttributeName;
-		static const char* TexCoordsAttributeName;
-		static const char* MeshIndexAttributeName;
-		static const char* ColorAttributeName;
+		static constexpr char TextureUniformName[] = "uTexture";
+		static constexpr char ColorUniformName[] = "color";
+		static constexpr char SpriteSizeUniformName[] = "spriteSize";
+		static constexpr char TexRectUniformName[] = "texRect";
+		static constexpr char PositionAttributeName[] = "aPosition";
+		static constexpr char TexCoordsAttributeName[] = "aTexCoords";
+		static constexpr char MeshIndexAttributeName[] = "aMeshIndex";
+		static constexpr char ColorAttributeName[] = "aColor";
 
 		/// Default constructor
 		Material();

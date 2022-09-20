@@ -1,13 +1,13 @@
-#include <cstring> // for memcpy()
-
-#include "GL/GLShaderProgram.h"
 #include "RenderBatcher.h"
 #include "RenderCommand.h"
 #include "RenderCommandPool.h"
 #include "RenderResources.h"
+#include "GL/GLShaderProgram.h"
 #include "../Application.h"
 #include "../ServiceLocator.h"
 #include "../Base/StaticHashMapIterator.h"
+
+#include <cstring> // for memcpy()
 
 namespace nCine
 {
@@ -36,18 +36,6 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
-
-	bool areTexturesDifferent(const RenderCommand* command, const RenderCommand* prevCommand)
-	{
-		bool areDifferent = false;
-		for (unsigned int i = 0; i < GLTexture::MaxTextureUnits; i++) {
-			if (command->material().texture(i) != prevCommand->material().texture(i)) {
-				areDifferent = true;
-				break;
-			}
-		}
-		return areDifferent;
-	}
 
 	void RenderBatcher::createBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue)
 	{

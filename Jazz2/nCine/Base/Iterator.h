@@ -41,8 +41,8 @@ namespace nCine
 	// OPERATIONS
 	///////////////////////////////////////////////////////////
 
-	namespace {
-
+	namespace
+	{
 		/// Increments an iterator by n elements, for random access iterators
 		template <class Iterator>
 		inline void advance(Iterator& it, int n, RandomAccessIteratorTag)
@@ -72,7 +72,6 @@ namespace nCine
 					++it;
 			}
 		}
-
 	}
 
 	/// Increments an iterator by n elements
@@ -114,8 +113,8 @@ namespace nCine
 		return it;
 	}
 
-	namespace {
-
+	namespace
+	{
 		/// Returns the distance between two random access iterators with a pointer subtraction
 		template <class RandomAccessIterator>
 		inline int distance(RandomAccessIterator& first, const RandomAccessIterator& last, RandomAccessIteratorTag)

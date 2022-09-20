@@ -14,8 +14,8 @@ namespace nCine
 			case Object::ObjectType::MESH_SPRITE:			return "MeshSprite";
 			case Object::ObjectType::ANIMATED_SPRITE:		return "AnimatedSprite";
 			case Object::ObjectType::PARTICLE_SYSTEM:		return "ParticleSystem";
-			case Object::ObjectType::FONT:					return "Font";
-			case Object::ObjectType::TEXTNODE:				return "TextNode";
+			//case Object::ObjectType::FONT:					return "Font";
+			//case Object::ObjectType::TEXTNODE:				return "TextNode";
 			case Object::ObjectType::AUDIOBUFFER:			return "AudioBuffer";
 			case Object::ObjectType::AUDIOBUFFER_PLAYER:	return "AudioBufferPlayer";
 			case Object::ObjectType::AUDIOSTREAM_PLAYER:	return "AudioStreamPlayer";

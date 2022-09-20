@@ -427,7 +427,6 @@
     <ClInclude Include="nCine\Graphics\Shader.h" />
     <ClInclude Include="nCine\Graphics\ShaderState.h" />
     <ClInclude Include="nCine\Graphics\Sprite.h" />
-    <ClInclude Include="nCine\Graphics\TextNode.h" />
     <ClInclude Include="nCine\Graphics\Texture.h" />
     <ClInclude Include="nCine\Graphics\TextureFormat.h" />
     <ClInclude Include="nCine\Graphics\TextureLoaderDds.h" />
@@ -693,7 +692,6 @@
     <ClCompile Include="nCine\Graphics\Shader.cpp" />
     <ClCompile Include="nCine\Graphics\ShaderState.cpp" />
     <ClCompile Include="nCine\Graphics\Sprite.cpp" />
-    <ClCompile Include="nCine\Graphics\TextNode.cpp" />
     <ClCompile Include="nCine\Graphics\Texture.cpp" />
     <ClCompile Include="nCine\Graphics\TextureFormat.cpp" />
     <ClCompile Include="nCine\Graphics\TextureLoaderDds.cpp" />

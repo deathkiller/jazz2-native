@@ -227,9 +227,9 @@ namespace nCine
 		: size_(other.size_)
 	{
 		for (unsigned int i = 0; i < Capacity; i++) {
-			if (other.hashes_[i] != NullHash)
+			if (other.hashes_[i] != NullHash) {
 				new (nodes_ + i) Node(other.nodes_[i]);
-
+			}
 			delta1_[i] = other.delta1_[i];
 			delta2_[i] = other.delta2_[i];
 			hashes_[i] = other.hashes_[i];
@@ -241,9 +241,9 @@ namespace nCine
 		: size_(other.size_)
 	{
 		for (unsigned int i = 0; i < Capacity; i++) {
-			if (other.hashes_[i] != NullHash)
+			if (other.hashes_[i] != NullHash) {
 				new (nodes_ + i) Node(std::move(other.nodes_[i]));
-
+			}
 			delta1_[i] = other.delta1_[i];
 			delta2_[i] = other.delta2_[i];
 			hashes_[i] = other.hashes_[i];
@@ -256,13 +256,14 @@ namespace nCine
 	{
 		for (unsigned int i = 0; i < Capacity; i++) {
 			if (other.hashes_[i] != NullHash) {
-				if (hashes_[i] != NullHash)
+				if (hashes_[i] != NullHash) {
 					nodes_[i] = other.nodes_[i];
-				else
+				} else {
 					new (nodes_ + i) Node(other.nodes_[i]);
-			} else if (hashes_[i] != NullHash)
+				}
+			} else if (hashes_[i] != NullHash) {
 				destructObject(nodes_ + i);
-
+			}
 			delta1_[i] = other.delta1_[i];
 			delta2_[i] = other.delta2_[i];
 			hashes_[i] = other.hashes_[i];
@@ -277,13 +278,14 @@ namespace nCine
 	{
 		for (unsigned int i = 0; i < Capacity; i++) {
 			if (other.hashes_[i] != NullHash) {
-				if (hashes_[i] != NullHash)
+				if (hashes_[i] != NullHash) {
 					nodes_[i] = std::move(other.nodes_[i]);
-				else
+				} else {
 					new (nodes_ + i) Node(std::move(other.nodes_[i]));
-			} else if (hashes_[i] != NullHash)
+				}
+			} else if (hashes_[i] != NullHash) {
 				destructObject(nodes_ + i);
-
+			}
 			delta1_[i] = other.delta1_[i];
 			delta2_[i] = other.delta2_[i];
 			hashes_[i] = other.hashes_[i];
@@ -307,8 +309,9 @@ namespace nCine
 					while (delta2_[bucketIndex] != 0) {
 						bucketIndex = addDelta2(bucketIndex);
 						// Found at ideal index + delta1 + (n * delta2)
-						if (bucketFound(bucketIndex, hash, key))
+						if (bucketFound(bucketIndex, hash, key)) {
 							return nodes_[bucketIndex].value;
+						}
 					}
 
 					// Adding at ideal index + delta1 + (n * delta2)
@@ -327,10 +330,11 @@ namespace nCine
 			}
 		} else {
 			// Using the ideal bucket index for the node
-			if (hashes_[bucketIndex] == NullHash)
+			if (hashes_[bucketIndex] == NullHash) {
 				return addNode(bucketIndex, hash, key);
-			else
+			} else {
 				return nodes_[bucketIndex].value;
+			}
 		}
 	}
 
@@ -348,8 +352,9 @@ namespace nCine
 					while (delta2_[bucketIndex] != 0) {
 						bucketIndex = addDelta2(bucketIndex);
 						// Found at ideal index + delta1 + (n * delta2)
-						if (bucketFound(bucketIndex, hash, key))
+						if (bucketFound(bucketIndex, hash, key)) {
 							return false;
+						}
 					}
 
 					// Adding at ideal index + delta1 + (n * delta2)
@@ -373,8 +378,9 @@ namespace nCine
 			if (hashes_[bucketIndex] == NullHash) {
 				insertNode(bucketIndex, hash, key, value);
 				return true;
-			} else
+			} else {
 				return false;
+			}
 		}
 	}
 
@@ -392,8 +398,9 @@ namespace nCine
 					while (delta2_[bucketIndex] != 0) {
 						bucketIndex = addDelta2(bucketIndex);
 						// Found at ideal index + delta1 + (n * delta2)
-						if (bucketFound(bucketIndex, hash, key))
+						if (bucketFound(bucketIndex, hash, key)) {
 							return false;
+						}
 					}
 
 					// Adding at ideal index + delta1 + (n * delta2)
@@ -417,8 +424,9 @@ namespace nCine
 			if (hashes_[bucketIndex] == NullHash) {
 				insertNode(bucketIndex, hash, key, std::move(value));
 				return true;
-			} else
+			} else {
 				return false;
+			}
 		}
 	}
 
@@ -437,8 +445,9 @@ namespace nCine
 					while (delta2_[bucketIndex] != 0) {
 						bucketIndex = addDelta2(bucketIndex);
 						// Found at ideal index + delta1 + (n * delta2)
-						if (bucketFound(bucketIndex, hash, key))
+						if (bucketFound(bucketIndex, hash, key)) {
 							return false;
+						}
 					}
 
 					// Adding at ideal index + delta1 + (n * delta2)
@@ -462,8 +471,9 @@ namespace nCine
 			if (hashes_[bucketIndex] == NullHash) {
 				emplaceNode(bucketIndex, hash, key, std::forward<Args>(args)...);
 				return true;
-			} else
+			} else {
 				return false;
+			}
 		}
 	}
 
@@ -480,9 +490,9 @@ namespace nCine
 		int unsigned bucketIndex = 0;
 		const bool found = findBucketIndex(key, bucketIndex);
 
-		if (found)
+		if (found) {
 			returnedValue = nodes_[bucketIndex].value;
-
+		}
 		return found;
 	}
 
@@ -494,9 +504,9 @@ namespace nCine
 		const bool found = findBucketIndex(key, bucketIndex);
 
 		T* returnedPtr = nullptr;
-		if (found)
+		if (found) {
 			returnedPtr = &nodes_[bucketIndex].value;
-
+		}
 		return returnedPtr;
 	}
 
@@ -508,9 +518,9 @@ namespace nCine
 		const bool found = findBucketIndex(key, bucketIndex);
 
 		const T* returnedPtr = nullptr;
-		if (found)
+		if (found) {
 			returnedPtr = &nodes_[bucketIndex].value;
-
+		}
 		return returnedPtr;
 	}
 
@@ -526,16 +536,18 @@ namespace nCine
 		if (found) {
 			// The found bucket is the last of the chain, previous one needs a delta fix
 			if (foundBucketIndex != hashes_[foundBucketIndex] % Capacity && delta2_[foundBucketIndex] == 0) {
-				if (addDelta1(prevFoundBucketIndex) == foundBucketIndex)
+				if (addDelta1(prevFoundBucketIndex) == foundBucketIndex) {
 					delta1_[prevFoundBucketIndex] = 0;
-				else if (addDelta2(prevFoundBucketIndex) == foundBucketIndex)
+				} else if (addDelta2(prevFoundBucketIndex) == foundBucketIndex) {
 					delta2_[prevFoundBucketIndex] = 0;
+				}
 			}
 
 			while (delta1_[bucketIndex] != 0 || delta2_[bucketIndex] != 0) {
 				unsigned int lastBucketIndex = bucketIndex;
-				if (delta1_[lastBucketIndex] != 0)
+				if (delta1_[lastBucketIndex] != 0) {
 					lastBucketIndex = addDelta1(lastBucketIndex);
+				}
 				if (delta2_[lastBucketIndex] != 0) {
 					unsigned int secondLastBucketIndex = lastBucketIndex;
 					while (delta2_[lastBucketIndex] != 0) {
@@ -543,9 +555,9 @@ namespace nCine
 						lastBucketIndex = addDelta2(lastBucketIndex);
 					}
 					delta2_[secondLastBucketIndex] = 0;
-				} else
+				} else {
 					delta1_[bucketIndex] = 0;
-
+				}
 				if (bucketIndex != lastBucketIndex) {
 					nodes_[bucketIndex].key = std::move(nodes_[lastBucketIndex].key);
 					nodes_[bucketIndex].value = std::move(nodes_[lastBucketIndex].value);
@@ -566,12 +578,15 @@ namespace nCine
 	template <class K, class T, unsigned int Capacity, class HashFunc>
 	void StaticHashMap<K, T, Capacity, HashFunc>::init()
 	{
-		for (unsigned int i = 0; i < Capacity; i++)
+		for (unsigned int i = 0; i < Capacity; i++) {
 			delta1_[i] = 0;
-		for (unsigned int i = 0; i < Capacity; i++)
+		}
+		for (unsigned int i = 0; i < Capacity; i++) {
 			delta2_[i] = 0;
-		for (unsigned int i = 0; i < Capacity; i++)
+		}
+		for (unsigned int i = 0; i < Capacity; i++) {
 			hashes_[i] = NullHash;
+		}
 	}
 
 	template <class K, class T, unsigned int Capacity, class HashFunc>
@@ -637,8 +652,9 @@ namespace nCine
 	unsigned int StaticHashMap<K, T, Capacity, HashFunc>::addDelta1(unsigned int bucketIndex) const
 	{
 		unsigned int newIndex = bucketIndex + delta1_[bucketIndex];
-		if (newIndex > Capacity - 1)
+		if (newIndex > Capacity - 1) {
 			newIndex -= Capacity;
+		}
 		return newIndex;
 	}
 
@@ -646,8 +662,9 @@ namespace nCine
 	unsigned int StaticHashMap<K, T, Capacity, HashFunc>::addDelta2(unsigned int bucketIndex) const
 	{
 		unsigned int newIndex = bucketIndex + delta2_[bucketIndex];
-		if (newIndex > Capacity - 1)
+		if (newIndex > Capacity - 1) {
 			newIndex -= Capacity;
+		}
 		return newIndex;
 	}
 
@@ -655,11 +672,11 @@ namespace nCine
 	unsigned int StaticHashMap<K, T, Capacity, HashFunc>::calcNewDelta(unsigned int bucketIndex, unsigned int newIndex) const
 	{
 		unsigned int delta = 0;
-		if (newIndex >= bucketIndex)
+		if (newIndex >= bucketIndex) {
 			delta = newIndex - bucketIndex;
-		else
+		} else {
 			delta = Capacity - bucketIndex + newIndex;
-
+		}
 		FATAL_ASSERT(delta < 256); // deltas are uint8_t
 		return delta;
 	}
@@ -668,13 +685,15 @@ namespace nCine
 	unsigned int StaticHashMap<K, T, Capacity, HashFunc>::linearSearch(unsigned int index, hash_t hash, const K& key) const
 	{
 		for (unsigned int i = index; i < Capacity; i++) {
-			if (bucketFoundOrEmpty(i, hash, key))
+			if (bucketFoundOrEmpty(i, hash, key)) {
 				return i;
+			}
 		}
 
 		for (unsigned int i = 0; i < index; i++) {
-			if (bucketFoundOrEmpty(i, hash, key))
+			if (bucketFoundOrEmpty(i, hash, key)) {
 				return i;
+			}
 		}
 
 		return index;
@@ -738,5 +757,4 @@ namespace nCine
 		hashes_[index] = hash;
 		new (nodes_ + index) Node(key, std::forward<Args>(args)...);
 	}
-
 }
