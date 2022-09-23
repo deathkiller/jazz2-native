@@ -43,6 +43,7 @@ namespace Jazz2
 		virtual GameDifficulty Difficulty() const = 0;
 		virtual bool ReduxMode() const = 0;
 		virtual Recti LevelBounds() const = 0;
+		virtual float ElapsedFrames() const = 0;
 		virtual float WaterLevel() const = 0;
 
 		virtual const SmallVectorImpl<Actors::Player*>& GetPlayers() const = 0;

@@ -46,6 +46,7 @@ namespace Jazz2::Actors
 		_activeModifier(Modifier::None),
 		_springCooldown(0.0f),
 		_inIdleTransition(false), _inLedgeTransition(false),
+		_carryingObject(nullptr),
 		_canDoubleJump(true),
 		_lives(0), _coins(0), _foodEaten(0), _score(0),
 		_checkpointLight(1.0f),
@@ -608,7 +609,7 @@ namespace Jazz2::Actors
 							SetState(ActorState::CanJump, false);
 							SetAnimation(_currentAnimationState & (~AnimState::Lookup & ~AnimState::Crouch));
 							PlaySfx("Jump"_s);
-							//_carryingObject = null;
+							_carryingObject = nullptr;
 
 							SetState(ActorState::IsSolidObject | ActorState::CollideWithSolidObjects, false);
 
@@ -737,7 +738,7 @@ namespace Jazz2::Actors
 							PlaySfx("Jump"_s);
 						}
 						_jumpTime = 12.0f;
-						//_carryingObject = nullptr;
+						_carryingObject = nullptr;
 
 						// Gravitation is sometimes off because of active copter, turn it on again
 						SetState(ActorState::ApplyGravitation, true);
@@ -1224,7 +1225,7 @@ namespace Jazz2::Actors
 			if (_suspendType != SuspendType::None) {
 				composite |= AnimState::Hook;
 			} else {
-				if (GetState(ActorState::CanJump)) {
+				if (GetState(ActorState::CanJump) || _carryingObject != nullptr) {
 					// Grounded, no vertical speed
 					if (_dizzyTime > 0.0f) {
 						composite |= AnimState::Dizzy;
@@ -1304,7 +1305,7 @@ namespace Jazz2::Actors
 					if (_currentTransitionState == AnimState::TransitionLedge) {
 						CancelTransition();
 					}
-				} else if (!_inLedgeTransition && std::abs(_speed.X) < 1.0f && std::abs(_speed.Y) < 1.0f) {
+				} else if (!_inLedgeTransition && _carryingObject == nullptr && std::abs(_speed.X) < 1.0f && std::abs(_speed.Y) < 1.0f) {
 					AABBf aabbL = AABBf(AABBInner.L + 2, AABBInner.B - 10, AABBInner.L + 4, AABBInner.B + 28);
 					AABBf aabbR = AABBf(AABBInner.R - 4, AABBInner.B - 10, AABBInner.R - 2, AABBInner.B + 28);
 					TileCollisionParams params = { TileDestructType::None, true };
@@ -1351,14 +1352,13 @@ namespace Jazz2::Actors
 				}
 			}
 		} else if (GetState(ActorState::IsSolidObject)) {
-			AABBf aabb = AABBInner + Vector2f(0.0f, -2.0f);
+			AABBf aabb = AABBf(AABBInner.L, AABBInner.T - 2.0f, AABBInner.R, AABBInner.T + 6.0f);
 			TileCollisionParams params = { TileDestructType::None, false };
 			ActorBase* collider;
 			if (!_levelHandler->IsPositionEmpty(this, aabb, params, &collider)) {
 				if (auto solidObject = dynamic_cast<SolidObjectBase*>(collider)) {
-					if (AABBInner.T >= solidObject->AABBInner.T && !_isLifting) {
+					if (AABBInner.T >= solidObject->AABBInner.T && !_isLifting && std::abs(_speed.Y) < 1.0f) {
 						_isLifting = true;
-
 						SetTransition(AnimState::TransitionLiftStart, true);
 					}
 				} else {
@@ -1375,7 +1375,7 @@ namespace Jazz2::Actors
 	void Player::CheckEndOfSpecialMoves(float timeMult)
 	{
 		// Buttstomp
-		if (_currentSpecialMove == SpecialMoveType::Buttstomp && (GetState(ActorState::CanJump) || _suspendType != SuspendType::None)) {
+		if (_currentSpecialMove == SpecialMoveType::Buttstomp && (GetState(ActorState::CanJump) || _suspendType != SuspendType::None || _carryingObject != nullptr)) {
 			EndDamagingMove();
 			if (_suspendType == SuspendType::None && !_isSpring) {
 				int tx = (int)_pos.X / 32;
@@ -3083,5 +3083,17 @@ namespace Jazz2::Actors
 	{
 		_checkpointPos = Vector2f(pos.X, pos.Y - 20.0f);
 		_checkpointLight = ambientLight;
+	}
+
+	void Player::SetCarryingObject(ActorBase* actor, bool resetSpeed)
+	{
+		_carryingObject = actor;
+
+		if (resetSpeed) {
+			SetState(ActorState::CanJump, true);
+			_speed.Y = 0.0f;
+			_externalForce.Y = 0.0f;
+			_internalForceY = 0.0f;
+		}
 	}
 }

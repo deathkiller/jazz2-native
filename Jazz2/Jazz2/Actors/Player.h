@@ -10,6 +10,12 @@ namespace Jazz2::UI
 
 namespace Jazz2::Actors
 {
+	namespace Solid
+	{
+		class PinballBumper;
+		class PinballPaddle;
+	}
+
 	namespace Weapons
 	{
 		class Thunderbolt;
@@ -18,6 +24,8 @@ namespace Jazz2::Actors
 	class Player : public ActorBase
 	{
 		friend class UI::HUD;
+		friend class Solid::PinballBumper;
+		friend class Solid::PinballPaddle;
 		friend class Weapons::Thunderbolt;
 
 	public:
@@ -84,6 +92,11 @@ namespace Jazz2::Actors
 		bool DisableControllable(float timeout);
 		void SetCheckpoint(Vector2f pos, float ambientLight);
 
+		ActorBase* GetCarryingObject() const {
+			return _carryingObject;
+		}
+		void SetCarryingObject(ActorBase* actor, bool resetSpeed = false);
+
 		void SwitchToWeaponByIndex(int weaponIndex);
 
 	protected:
@@ -133,7 +146,7 @@ namespace Jazz2::Actors
 		int _inShallowWater;
 		Modifier _activeModifier;
 		bool _inIdleTransition, _inLedgeTransition;
-		//MovingPlatform* _carryingObject;
+		ActorBase* _carryingObject;
 		//SwingingVine* _currentVine;
 		bool _canDoubleJump;
 		float _springCooldown;

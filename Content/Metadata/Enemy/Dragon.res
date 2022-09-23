@@ -18,7 +18,7 @@
 			"Path": "Dragon/attack.aura",
 			"FrameOffset": 5,
 			"FrameCount": 2,
-			"FrameRate": 24,
+			"FrameRate": 30,
 			"States": [ 1073741825 ]
 		},
 		"AttackEnd": {
@@ -29,7 +29,7 @@
 		},
 		"Turn": {
 			"Path": "Dragon/turn.aura",
-			"FrameRate": 16,
+			"FrameRate": 20,
 			"States": [ 1073741840 ]
 		}
 	}

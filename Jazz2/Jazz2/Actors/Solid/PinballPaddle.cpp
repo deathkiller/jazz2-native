@@ -1,0 +1,90 @@
+﻿#include "PinballPaddle.h"
+#include "../../LevelInitialization.h"
+#include "../../ILevelHandler.h"
+#include "../Player.h"
+
+namespace Jazz2::Actors::Solid
+{
+	PinballPaddle::PinballPaddle()
+		:
+		_cooldown(0.0f)
+	{
+	}
+
+	void PinballPaddle::Preload(const ActorActivationDetails& details)
+	{
+		PreloadMetadataAsync("Object/PinballPaddle"_s);
+	}
+
+	Task<bool> PinballPaddle::OnActivatedAsync(const ActorActivationDetails& details)
+	{
+		bool facingLeft = (details.Params[0] != 0);
+
+		SetState(ActorState::CollideWithTileset | ActorState::IsSolidObject | ActorState::ApplyGravitation, false);
+
+		co_await RequestMetadataAsync("Object/PinballPaddle"_s);
+
+		SetAnimation(AnimState::Idle);
+
+		SetFacingLeft(facingLeft);
+
+		co_return true;
+	}
+
+	void PinballPaddle::OnUpdate(float timeMult)
+	{
+		if (_frozenTimeLeft > 0.0f) {
+			return;
+		}
+
+		if (_cooldown <= 0.0f) {
+			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 30.0f, [this](ActorBase* actor) {
+				if (auto player = dynamic_cast<Player*>(actor)) {
+					Vector2f playerPos = player->GetPos();
+					if (playerPos.Y > _pos.Y - 26.0f && playerPos.Y < _pos.Y + 10.0f) {
+						_cooldown = 10.0f;
+
+						SetTransition(AnimState::TransitionActivate, false);
+
+						float mult = (playerPos.X - _pos.X) / _currentAnimation->Base->FrameDimensions.X;
+						if (IsFacingLeft()) {
+							mult = 1.0f - mult;
+						}
+						mult = std::clamp(0.2f + mult * 1.6f, 0.4f, 1.0f);
+
+						float force = 1.9f * mult;
+						player->_speed.X = 0.0f;
+						player->_speed.Y = -1.0f;
+						player->_externalForce.Y += force;
+
+						player->_controllable = true;
+						player->SetState(ActorState::CanJump, false);
+						player->EndDamagingMove();
+
+						if (player->_copterFramesLeft > 1.0f) {
+							player->_copterFramesLeft = 1.0f;
+						}
+
+						// TODO: Check this
+						player->AddScore(500);
+					}
+				}
+				return true;
+			});
+		} else {
+			_cooldown -= timeMult;
+		}
+	}
+
+	void PinballPaddle::OnUpdateHitbox()
+	{
+		if (_currentAnimation != nullptr) {
+			AABBInner = AABBf(
+				_pos.X - _currentAnimation->Base->FrameDimensions.X * (IsFacingLeft() ? 0.7f : 0.3f),
+				_pos.Y - _currentAnimation->Base->FrameDimensions.Y * 0.1f,
+				_pos.X + _currentAnimation->Base->FrameDimensions.X * (IsFacingLeft() ? 0.3f : 0.7f),
+				_pos.Y + _currentAnimation->Base->FrameDimensions.Y * 0.3f
+			);
+		}
+	}
+}

@@ -21,6 +21,8 @@ namespace Jazz2::Events
 		std::shared_ptr<Actors::ActorBase> SpawnEvent(EventType type, uint8_t* spawnParams, Actors::ActorState flags, int x, int y, int z);
 		std::shared_ptr<Actors::ActorBase> SpawnEvent(EventType type, uint8_t* spawnParams, Actors::ActorState flags, const Vector3i& pos);
 
+		void RegisterSpawnable(EventType type, CreateDelegate create, PreloadDelegate preload = nullptr);
+
 	private:
 		struct SpawnableEvent {
 			CreateDelegate CreateFunction;
@@ -31,7 +33,6 @@ namespace Jazz2::Events
 		HashMap<EventType, SpawnableEvent> _spawnableEvents;
 
 		void RegisterKnownSpawnables();
-		void RegisterSpawnable(EventType type, CreateDelegate create, PreloadDelegate preload = nullptr);
 
 		template<typename T>
 		void RegisterSpawnable(EventType type);

@@ -7,9 +7,20 @@ namespace Jazz2::Actors::Solid
 	class Pole : public ActorBase
 	{
 	public:
+		enum class FallDirection {
+			None,
+			Right,
+			Left,
+			Fallen
+		};
+
 		Pole();
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other);
+
+		FallDirection GetFallDirection() const {
+			return _fall;
+		}
 
 		static void Preload(const ActorActivationDetails& details);
 
@@ -19,13 +30,6 @@ namespace Jazz2::Actors::Solid
 
 	private:
 		static constexpr int BouncesMax = 3;
-
-		enum class FallDirection {
-			None,
-			Right,
-			Left,
-			Fallen
-		};
 
 		FallDirection _fall;
 		float _angleVel;

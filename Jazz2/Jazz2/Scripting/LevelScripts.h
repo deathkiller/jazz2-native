@@ -17,11 +17,29 @@
 
 namespace Jazz2::Scripting
 {
+	class ScriptActorWrapper;
+
 	class LevelScripts
 	{
 	public:
+		static constexpr asPWORD ContextToController = 0;
+
 		LevelScripts(LevelHandler* levelHandler, const StringView& scriptPath);
 		~LevelScripts();
+
+		asIScriptEngine* GetEngine() const {
+			return _engine;
+		}
+
+		asIScriptModule* GetMainModule() const {
+			return _module;
+		}
+
+		asIScriptContext* GetMainContext() const {
+			return _ctx;
+		}
+
+		void OnBeginLevel();
 
 	private:
 		LevelHandler* _levelHandler;
@@ -30,11 +48,16 @@ namespace Jazz2::Scripting
 		asIScriptContext* _ctx;
 		HashMap<String, bool> _definedWords;
 
+		HashMap<int, String> _eventTypeToTypeName;
+
 		bool AddScriptFromFile(const StringView& path);
 		int ExcludeCode(String& scriptContent, int pos);
 		int SkipStatement(String& scriptContent, int pos);
 
 		void Status(const asSMessageInfo& msg);
+
+		static void asRegisterSpawnable(int eventType, String& typeName);
+		Actors::ActorBase* CreateActorInstance(const StringView& typeName);
 	};
 }
 

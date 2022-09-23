@@ -226,7 +226,7 @@ namespace Jazz2::Tiles
 					}
 				} else if (tile.DestructType == TileDestructType::Speed && (params.DestructType & TileDestructType::Speed) == TileDestructType::Speed) {
 					int amount = 1;
-					if (tile.ExtraParam + 3 <= params.Speed && AdvanceDestructibleTileAnimation(tile, x, y, amount, "SceneryDestruct"_s)) {
+					if (tile.ExtraParam + 4 <= params.Speed && AdvanceDestructibleTileAnimation(tile, x, y, amount, "SceneryDestruct"_s)) {
 						params.TilesDestroyed++;
 						goto RecheckTile;
 					}

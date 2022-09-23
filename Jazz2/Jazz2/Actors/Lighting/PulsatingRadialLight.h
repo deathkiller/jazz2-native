@@ -17,8 +17,6 @@ namespace Jazz2::Actors::Lighting
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights);
 
 	private:
-		static constexpr float BaseCycleFrames = 700.0f;
-
 		float _intensity;
 		float _brightness;
 		float _radiusNear1;

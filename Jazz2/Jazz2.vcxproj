@@ -157,7 +157,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_OPENMPT;__WITH_ANGELSCRIPT;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_OPENMPT;WITH_ANGELSCRIPT;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -220,6 +220,7 @@
     <ClInclude Include="Jazz2\Actors\Collectibles\FastFireCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\GemCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\GemGiant.h" />
+    <ClInclude Include="Jazz2\Actors\Collectibles\GemRing.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\OneUpCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Bee.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\BossBase.h" />
@@ -228,6 +229,7 @@
     <ClInclude Include="Jazz2\Actors\Enemies\Crab.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Demon.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Doggy.h" />
+    <ClInclude Include="Jazz2\Actors\Enemies\Dragon.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Dragonfly.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\FatChick.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Fencer.h" />
@@ -244,6 +246,7 @@
     <ClInclude Include="Jazz2\Actors\Enemies\TurtleTube.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Witch.h" />
     <ClInclude Include="Jazz2\Actors\Environment\AirboardGenerator.h" />
+    <ClInclude Include="Jazz2\Actors\Environment\AmbientBubbles.h" />
     <ClInclude Include="Jazz2\Actors\Environment\AmbientSound.h" />
     <ClInclude Include="Jazz2\Actors\Environment\BirdCage.h" />
     <ClInclude Include="Jazz2\Actors\Environment\Bomb.h" />
@@ -263,11 +266,15 @@
     <ClInclude Include="Jazz2\Actors\Solid\GemBarrel.h" />
     <ClInclude Include="Jazz2\Actors\Solid\GemCrate.h" />
     <ClInclude Include="Jazz2\Actors\Solid\GenericContainer.h" />
+    <ClInclude Include="Jazz2\Actors\Solid\MovingPlatform.h" />
+    <ClInclude Include="Jazz2\Actors\Solid\PinballBumper.h" />
+    <ClInclude Include="Jazz2\Actors\Solid\PinballPaddle.h" />
     <ClInclude Include="Jazz2\Actors\Solid\Pole.h" />
     <ClInclude Include="Jazz2\Actors\Solid\PowerUpMorphMonitor.h" />
     <ClInclude Include="Jazz2\Actors\Solid\PowerUpShieldMonitor.h" />
     <ClInclude Include="Jazz2\Actors\Solid\PowerUpWeaponMonitor.h" />
     <ClInclude Include="Jazz2\Actors\Solid\PushableBox.h" />
+    <ClInclude Include="Jazz2\Actors\Solid\SpikeBall.h" />
     <ClInclude Include="Jazz2\Actors\Solid\TriggerCrate.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\BouncerShot.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\ElectroShot.h" />
@@ -297,7 +304,9 @@
     <ClInclude Include="Jazz2\PlayerActions.h" />
     <ClInclude Include="Jazz2\PreferencesCache.h" />
     <ClInclude Include="Jazz2\Scripting\LevelScripts.h" />
+    <ClInclude Include="Jazz2\Scripting\RegisterArray.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterString.h" />
+    <ClInclude Include="Jazz2\Scripting\ScriptActorWrapper.h" />
     <ClInclude Include="Jazz2\UI\Alignment.h" />
     <ClInclude Include="Jazz2\UI\Canvas.h" />
     <ClInclude Include="Jazz2\UI\Cinematics.h" />
@@ -519,6 +528,7 @@
     <ClCompile Include="Jazz2\Actors\Collectibles\FastFireCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\GemCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\GemGiant.cpp" />
+    <ClCompile Include="Jazz2\Actors\Collectibles\GemRing.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\OneUpCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Bee.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\BossBase.cpp" />
@@ -527,6 +537,7 @@
     <ClCompile Include="Jazz2\Actors\Enemies\Crab.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Demon.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Doggy.cpp" />
+    <ClCompile Include="Jazz2\Actors\Enemies\Dragon.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Dragonfly.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\FatChick.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Fencer.cpp" />
@@ -543,6 +554,7 @@
     <ClCompile Include="Jazz2\Actors\Enemies\TurtleTube.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Witch.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\AirboardGenerator.cpp" />
+    <ClCompile Include="Jazz2\Actors\Environment\AmbientBubbles.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\AmbientSound.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\BirdCage.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\Bomb.cpp" />
@@ -562,11 +574,15 @@
     <ClCompile Include="Jazz2\Actors\Solid\GemBarrel.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\GemCrate.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\GenericContainer.cpp" />
+    <ClCompile Include="Jazz2\Actors\Solid\MovingPlatform.cpp" />
+    <ClCompile Include="Jazz2\Actors\Solid\PinballBumper.cpp" />
+    <ClCompile Include="Jazz2\Actors\Solid\PinballPaddle.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\Pole.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\PowerUpMorphMonitor.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\PowerUpShieldMonitor.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\PowerUpWeaponMonitor.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\PushableBox.cpp" />
+    <ClCompile Include="Jazz2\Actors\Solid\SpikeBall.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\TriggerCrate.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\BouncerShot.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\ElectroShot.cpp" />
@@ -588,7 +604,9 @@
     <ClCompile Include="Jazz2\Compatibility\JJ2Tileset.cpp" />
     <ClCompile Include="Jazz2\PreferencesCache.cpp" />
     <ClCompile Include="Jazz2\Scripting\LevelScripts.cpp" />
+    <ClCompile Include="Jazz2\Scripting\RegisterArray.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterString.cpp" />
+    <ClCompile Include="Jazz2\Scripting\ScriptActorWrapper.cpp" />
     <ClCompile Include="Jazz2\UI\Canvas.cpp" />
     <ClCompile Include="Jazz2\UI\Cinematics.cpp" />
     <ClCompile Include="Jazz2\UI\ControlScheme.cpp" />

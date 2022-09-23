@@ -116,6 +116,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/FoodCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/GemCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/GemGiant.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/GemRing.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/OneUpCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bat.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bee.cpp
@@ -125,6 +126,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Crab.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Demon.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Doggy.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Dragon.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Dragonfly.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/FatChick.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Fencer.cpp
@@ -143,6 +145,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/TurtleTube.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Witch.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/AirboardGenerator.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/AmbientBubbles.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/AmbientSound.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/BirdCage.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Bomb.cpp
@@ -165,11 +168,15 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/GenericContainer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/GemBarrel.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/GemCrate.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/MovingPlatform.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/PinballBumper.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/PinballPaddle.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/Pole.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/PowerUpMorphMonitor.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/PowerUpShieldMonitor.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/PowerUpWeaponMonitor.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/PushableBox.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/SpikeBall.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Solid/TriggerCrate.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BlasterShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/BouncerShot.cpp
@@ -196,7 +203,9 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventMap.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventSpawner.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScripts.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterString.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/ScriptActorWrapper.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileMap.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileSet.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Canvas.cpp

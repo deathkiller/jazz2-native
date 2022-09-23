@@ -73,7 +73,8 @@ namespace nCine
 
 		Material::ShaderProgramType shaderProgramType;
 		if (texture_) {
-			shaderProgramType = (texture_->numChannels() >= 3 ? Material::ShaderProgramType::SPRITE : Material::ShaderProgramType::SPRITE_GRAY);
+			//shaderProgramType = (texture_->numChannels() >= 3 ? Material::ShaderProgramType::SPRITE : Material::ShaderProgramType::SPRITE_GRAY);
+			shaderProgramType = Material::ShaderProgramType::SPRITE;
 		} else {
 			shaderProgramType = Material::ShaderProgramType::SPRITE_NO_TEXTURE;
 		}
@@ -91,7 +92,8 @@ namespace nCine
 		if (renderCommand_.material().shaderProgramType() != Material::ShaderProgramType::CUSTOM) {
 			Material::ShaderProgramType shaderProgramType;
 			if (newTexture) {
-				shaderProgramType = (newTexture->numChannels() >= 3 ? Material::ShaderProgramType::SPRITE : Material::ShaderProgramType::SPRITE_GRAY);
+				//shaderProgramType = (newTexture->numChannels() >= 3 ? Material::ShaderProgramType::SPRITE : Material::ShaderProgramType::SPRITE_GRAY);
+				shaderProgramType = Material::ShaderProgramType::SPRITE;
 			} else {
 				shaderProgramType = Material::ShaderProgramType::SPRITE_NO_TEXTURE;
 			}

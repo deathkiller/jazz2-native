@@ -293,11 +293,12 @@ namespace nCine
 		renderCommand_.setType(RenderCommand::CommandTypes::MESH_SPRITE);
 
 		const Material::ShaderProgramType shaderProgramType = [](Texture* texture) {
-			if (texture)
-				return (texture->numChannels() >= 3) ? Material::ShaderProgramType::MESH_SPRITE
-				: Material::ShaderProgramType::MESH_SPRITE_GRAY;
-			else
+			if (texture) {
+				//return (texture->numChannels() >= 3) ? Material::ShaderProgramType::MESH_SPRITE : Material::ShaderProgramType::MESH_SPRITE_GRAY;
+				return Material::ShaderProgramType::MESH_SPRITE;
+			} else {
 				return Material::ShaderProgramType::MESH_SPRITE_NO_TEXTURE;
+			}
 		}(texture_);
 		renderCommand_.material().setShaderProgramType(shaderProgramType);
 
@@ -320,11 +321,12 @@ namespace nCine
 	{
 		if (renderCommand_.material().shaderProgramType() != Material::ShaderProgramType::CUSTOM) {
 			const Material::ShaderProgramType shaderProgramType = [](Texture* texture) {
-				if (texture)
-					return (texture->numChannels() >= 3) ? Material::ShaderProgramType::MESH_SPRITE
-					: Material::ShaderProgramType::MESH_SPRITE_GRAY;
-				else
+				if (texture) {
+					//return (texture->numChannels() >= 3) ? Material::ShaderProgramType::MESH_SPRITE : Material::ShaderProgramType::MESH_SPRITE_GRAY;
+					return Material::ShaderProgramType::MESH_SPRITE;
+				} else {
 					return Material::ShaderProgramType::MESH_SPRITE_NO_TEXTURE;
+				}
 			}(newTexture);
 			const bool hasChanged = renderCommand_.material().setShaderProgramType(shaderProgramType);
 			if (hasChanged)

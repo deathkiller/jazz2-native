@@ -39,7 +39,7 @@ namespace Jazz2::Actors::Enemies
 
 	void SuckerFloat::OnUpdate(float timeMult)
 	{
-		if (_frozenTimeLeft <= 0) {
+		if (_frozenTimeLeft <= 0.0f) {
 			_phase = fmodf(_phase + 0.05f * timeMult, fTwoPi);
 			MoveInstantly(Vector2f(_originPos.X + 10 * cosf(_phase), _originPos.Y + 10 * sinf(_phase)), MoveType::Absolute | MoveType::Force);
 

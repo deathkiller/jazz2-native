@@ -20,21 +20,21 @@ namespace Jazz2::Actors
 	enum class ActorState {
 		None = 0x00,
 
-		// Actor is created from event map 
+		/// @brief Actor is created from event map, this flag is used automatically by event system
 		IsCreatedFromEventMap = 0x01,
-		// Actor is created by generator
+		/// @brief Actor is created by generator, this flag is used automatically by event system
 		IsFromGenerator = 0x02,
 
-		// Actor should be illuminated
+		/// @brief Actor should be illuminated
 		Illuminated = 0x04,
 
-		// Actor should be created asynchronously
+		/// @brief Actor should be created asynchronously, not to block main thread
 		Async = 0x08,
 
-		// Mask of all instantiation flags
+		/// @brief Mask of all instantiation flags that can be used in @ref ActorActivationDetails
 		InstantiationFlags = IsCreatedFromEventMap | IsFromGenerator | Illuminated | Async,
 
-		// This flag is set automatically after call to OnActivatedAsync()
+		// This flag is set automatically after call to @ref ActorBase::OnActivatedAsync()
 		Initialized = 0x0100,
 
 		// Actor instance flags
@@ -44,20 +44,31 @@ namespace Jazz2::Actors
 		IsFacingLeft = 0x1000,
 
 		// Collision flags
+	
+		/// @brief Collide with tiles
 		CollideWithTileset = 0x10000,
+		/// @brief Collide with other non-solid actors, @ref ActorBase::OnHandleCollision() will be called for each collision
 		CollideWithOtherActors = 0x20000,
+		/// @brief Collide with solid objects
 		CollideWithSolidObjects = 0x40000,
-
+		/// @brief Don't add object to collision tree at all (cannot be changed during object lifetime)
 		ForceDisableCollisions = 0x80000,
 
+		/// @brief Check collisions at the end of current frame, should be used if position or size changed
 		IsDirty = 0x100000,
+		/// @brief Remove object at the end of current frame
 		IsDestroyed = 0x200000,
 
+		/// @brief Apply gravitation
 		ApplyGravitation = 0x400000,
+		/// @brief Marks object as solid, so other objects with @ref CollideWithSolidObjects will collide with it
 		IsSolidObject = 0x800000,
+		/// @brief Check collisions only with hitbox
 		SkipPerPixelCollisions = 0x1000000,
 
+		/// @brief Don't use full hitbox for collisions with tiles, also exclude upper part of hitbox when falling down
 		CollideWithTilesetReduced = 0x2000000,
+		/// @brief Collide with other solid object only if it's above center of the other hitbox
 		CollideWithSolidObjectsBelow = 0x4000000,
 	};
 
@@ -67,6 +78,7 @@ namespace Jazz2::Actors
 		ILevelHandler* LevelHandler;
 		Vector3i Pos;
 		ActorState State;
+		EventType Type;
 		uint8_t* Params;
 	};
 

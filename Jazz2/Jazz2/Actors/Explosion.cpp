@@ -112,12 +112,20 @@ namespace Jazz2::Actors
 	void Explosion::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
 		if (_lightRadiusFar > 0.0f) {
-			auto& light = lights.emplace_back();
-			light.Pos = _pos;
-			light.Intensity = _lightIntensity;
-			light.Brightness = _lightBrightness;
-			light.RadiusNear = _lightRadiusNear;
-			light.RadiusFar = _lightRadiusFar;
+			auto& light1 = lights.emplace_back();
+			light1.Pos = _pos;
+			light1.Intensity = _lightIntensity;
+			light1.Brightness = _lightBrightness;
+			light1.RadiusNear = _lightRadiusNear;
+			light1.RadiusFar = _lightRadiusFar;
+		}
+
+		if (_type == Type::Pepper) {
+			auto& light2 = lights.emplace_back();
+			light2.Pos = _pos;
+			light2.Intensity = 0.1f;
+			light2.RadiusNear = 0.0f;
+			light2.RadiusFar = 160.0f;
 		}
 	}
 

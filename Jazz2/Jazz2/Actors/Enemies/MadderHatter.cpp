@@ -50,7 +50,6 @@ namespace Jazz2::Actors::Enemies
 				for (auto& player : players) {
 					Vector2f newPos = player->GetPos();
 					if ((newPos - _pos).Length() <= 200.0f) {
-
 						SetFacingLeft(newPos.X < _pos.X);
 						_speed.X = 0.0f;
 
@@ -63,7 +62,7 @@ namespace Jazz2::Actors::Enemies
 							bulletSpitParams[0] = (IsFacingLeft() ? 1 : 0);
 							bulletSpit->OnActivated({
 								.LevelHandler = _levelHandler,
-								.Pos = Vector3i((int)_pos.X + (IsFacingLeft() ? -42 : 42), (int)_pos.Y - 6, _renderer.layer() + 2),
+								.Pos = Vector3i((int)_pos.X + (IsFacingLeft() ? -42.0f : 42.0f), (int)_pos.Y - 6.0f, _renderer.layer() + 2),
 								.Params = bulletSpitParams
 							});
 							_levelHandler->AddActor(bulletSpit);
@@ -117,8 +116,8 @@ namespace Jazz2::Actors::Enemies
 
 	Task<bool> MadderHatter::BulletSpit::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		SetState(ActorState::CanBeFrozen, false);
 		SetState(ActorState::IsInvulnerable, true);
+		SetState(ActorState::CanBeFrozen, false);
 		CanCollideWithAmmo = false;
 
 		SetFacingLeft(details.Params[0] != 0);

@@ -61,10 +61,6 @@ namespace Jazz2
 		static constexpr int DefaultWidth = 720;
 		static constexpr int DefaultHeight = 405;
 
-		static constexpr int LayerFormatVersion = 1;
-		static constexpr int EventSetVersion = 2;
-
-
 		LevelHandler(IRootController* root, const LevelInitialization& levelInit);
 		~LevelHandler() override;
 
@@ -87,6 +83,10 @@ namespace Jazz2
 		}
 
 		Recti LevelBounds() const override;
+
+		float ElapsedFrames() const override {
+			return _elapsedFrames;
+		}
 
 		float WaterLevel() const override;
 
@@ -267,7 +267,7 @@ namespace Jazz2
 		std::unique_ptr<Scripting::LevelScripts> _scripts;
 #endif
 
-		float _levelTime;
+		float _elapsedFrames;
 		Rectf _viewBounds;
 		Rectf _viewBoundsTarget;
 		Vector2f _cameraPos;

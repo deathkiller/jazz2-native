@@ -12,6 +12,13 @@ namespace Jazz2::Scripting
 	class StringFactory : public asIStringFactory
 	{
 	public:
+		struct InternalData {
+			std::unique_ptr<String> Data;
+			int RefCount;
+
+			InternalData(int refCount) : RefCount(refCount) { }
+		};
+
 		StringFactory() {}
 		~StringFactory()
 		{
@@ -24,16 +31,17 @@ namespace Jazz2::Scripting
 			// The string factory might be modified from multiple threads, so it is necessary to use a mutex
 			asAcquireExclusiveLock();
 
-			String str(data, length);
-			auto it = _stringCache.find(str);
+			StringView stringView(data, length);
+			auto it = _stringCache.find(String::nullTerminatedView(stringView));
 			if (it != _stringCache.end()) {
-				it->second++;
+				it->second.RefCount++;;
 			} else {
-				it = _stringCache.emplace(str, 1).first;
+				it = _stringCache.emplace(String(stringView), 1).first;
+				it->second.Data = std::make_unique<String>(stringView);
 			}
 			asReleaseExclusiveLock();
 
-			return reinterpret_cast<const void*>(&it->first);
+			return reinterpret_cast<const void*>(it->second.Data.get());
 		}
 
 		int ReleaseStringConstant(const void* str)
@@ -49,8 +57,8 @@ namespace Jazz2::Scripting
 			if (it == _stringCache.end()) {
 				ret = asERROR;
 			} else {
-				it->second--;
-				if (it->second == 0) {
+				it->second.RefCount--;
+				if (it->second.RefCount == 0) {
 					_stringCache.erase(it);
 				}
 			}
@@ -64,16 +72,17 @@ namespace Jazz2::Scripting
 		{
 			if (str == nullptr) return asERROR;
 
+			const String* string = reinterpret_cast<const String*>(str);
 			if (length) {
-				*length = (asUINT)reinterpret_cast<const String*>(str)->size();
+				*length = (asUINT)string->size();
 			}
 			if (data) {
-				memcpy(data, reinterpret_cast<const String*>(str)->data(), reinterpret_cast<const String*>(str)->size());
+				memcpy(data, string->data(), string->size());
 			}
 			return asSUCCESS;
 		}
 
-		HashMap<String, int> _stringCache;
+		HashMap<String, InternalData> _stringCache;
 	};
 
 	static StringFactory* _stringFactory = nullptr;

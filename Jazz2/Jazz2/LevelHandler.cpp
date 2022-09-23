@@ -48,7 +48,7 @@ namespace Jazz2
 		_cheatsUsed(levelInit.CheatsUsed),
 		_nextLevelType(ExitType::None),
 		_nextLevelTime(0.0f),
-		_levelTime(0.0f),
+		_elapsedFrames(0.0f),
 		_shakeDuration(0.0f),
 		_waterLevel(FLT_MAX),
 		_ambientLightTarget(1.0f),
@@ -111,6 +111,12 @@ namespace Jazz2
 
 		// Create HUD
 		_hud = std::make_unique<UI::HUD>(this);
+
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts != nullptr) {
+			_scripts->OnBeginLevel();
+		}
+#endif
 
 		_eventMap->PreloadEventsAsync();
 
@@ -211,7 +217,7 @@ namespace Jazz2
 
 		UpdatePressedActions();
 
-		if (PlayerActionHit(0, PlayerActions::Menu) && _pauseMenu == nullptr) {
+		if (PlayerActionHit(0, PlayerActions::Menu) && _pauseMenu == nullptr && _nextLevelType == ExitType::None) {
 			PauseGame();
 		}
 #if _DEBUG
@@ -452,7 +458,7 @@ namespace Jazz2
 
 			UpdateCamera(timeMult);
 
-			_levelTime += timeMult;
+			_elapsedFrames += timeMult;
 		}
 
 #if ENABLE_POSTPROCESSING
@@ -1643,7 +1649,7 @@ namespace Jazz2
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 
 		command.material().uniform("uAmbientColor")->setFloatVector(_owner->_ambientColor.Data());
-		command.material().uniform("uTime")->setFloatValue(_owner->_levelTime * 0.0018f);
+		command.material().uniform("uTime")->setFloatValue(_owner->_elapsedFrames * 0.0018f);
 
 		if (viewHasWater) {
 			command.material().uniform("uWaterLevel")->setFloatValue(viewWaterLevel / _size.Y);

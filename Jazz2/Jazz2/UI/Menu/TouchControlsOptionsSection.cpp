@@ -50,15 +50,15 @@ namespace Jazz2::UI::Menu
 		_root->DrawStringShadow("Touch Controls"_s, charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
-		_root->DrawStringShadow("You can adjust position of the white zones by drag and drop."_s, charOffset, center.X, topLine + 40.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow("You can adjust position of the touch zones by drag and drop."_s, charOffset, center.X, topLine + 40.0f, IMenuContainer::FontLayer,
 			Alignment::Top, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 
 		float leftSize = HUD::DpadSize * LevelHandler::DefaultWidth * 0.45f;
-		_root->DrawSolid(HUD::DpadLeft * LevelHandler::DefaultWidth + PreferencesCache::TouchLeftPadding.X, viewSize.Y - HUD::DpadBottom * LevelHandler::DefaultHeight + PreferencesCache::TouchLeftPadding.Y, IMenuContainer::MainLayer + 20, Alignment::BottomLeft, Vector2f(leftSize, leftSize), Colorf(1.0f, 1.0f, 1.0f, 0.8f));
+		DrawOutlinedSolid(HUD::DpadLeft * LevelHandler::DefaultWidth + PreferencesCache::TouchLeftPadding.X, viewSize.Y - HUD::DpadBottom * LevelHandler::DefaultHeight + PreferencesCache::TouchLeftPadding.Y, IMenuContainer::MainLayer + 20, Alignment::BottomLeft, Vector2f(leftSize, leftSize));
 
 		float rightSizeX = HUD::ButtonSize * LevelHandler::DefaultWidth * 1.6f;
 		float rightSizeY = HUD::ButtonSize * LevelHandler::DefaultWidth * 0.8f;
-		_root->DrawSolid(viewSize.X - PreferencesCache::TouchRightPadding.X, viewSize.Y - 0.04f * LevelHandler::DefaultHeight + PreferencesCache::TouchRightPadding.Y, IMenuContainer::MainLayer + 20, Alignment::BottomRight, Vector2f(rightSizeX, rightSizeY), Colorf(1.0f, 1.0f, 1.0f, 0.8f));
+		DrawOutlinedSolid(viewSize.X - PreferencesCache::TouchRightPadding.X, viewSize.Y - 0.04f * LevelHandler::DefaultHeight + PreferencesCache::TouchRightPadding.Y, IMenuContainer::MainLayer + 20, Alignment::BottomRight, Vector2f(rightSizeX, rightSizeY));
 	}
 
 	void TouchControlsOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
@@ -124,6 +124,23 @@ namespace Jazz2::UI::Menu
 				}
 				break;
 			}
+		}
+	}
+
+	void TouchControlsOptionsSection::DrawOutlinedSolid(float x, float y, uint16_t z, Alignment align, const Vector2f& size)
+	{
+		_root->DrawSolid(x, y, z, align, size, Colorf(1.0f, 1.0f, 1.0f, 0.5f));
+
+		if ((align & Alignment::Right) == Alignment::Right) {
+			_root->DrawSolid(x + 2.0f, y - size.Y, z + 1, align, Vector2f(size.X + 4.0f, 2.0f), Colorf(0.0f, 0.0f, 0.0f, 1.0f));
+			_root->DrawSolid(x + 2.0f, y + 1.0f, z + 1, align, Vector2f(size.X + 4.0f, 2.0f), Colorf(0.0f, 0.0f, 0.0f, 1.0f));
+			_root->DrawSolid(x + 2.0f, y, z + 1, align, Vector2f(2.0f, size.Y), Colorf(0.0f, 0.0f, 0.0f, 1.0f));
+			_root->DrawSolid(x - size.X, y, z + 1, align, Vector2f(2.0f, size.Y), Colorf(0.0f, 0.0f, 0.0f, 1.0f));
+		} else {
+			_root->DrawSolid(x - 2.0f, y - size.Y, z + 1, align, Vector2f(size.X + 4.0f, 2.0f), Colorf(0.0f, 0.0f, 0.0f, 1.0f));
+			_root->DrawSolid(x - 2.0f, y + 1.0f, z + 1, align, Vector2f(size.X + 4.0f, 2.0f), Colorf(0.0f, 0.0f, 0.0f, 1.0f));
+			_root->DrawSolid(x - 2.0f, y, z + 1, align, Vector2f(2.0f, size.Y), Colorf(0.0f, 0.0f, 0.0f, 1.0f));
+			_root->DrawSolid(x + size.X, y, z + 1, align, Vector2f(2.0f, size.Y), Colorf(0.0f, 0.0f, 0.0f, 1.0f));
 		}
 	}
 }

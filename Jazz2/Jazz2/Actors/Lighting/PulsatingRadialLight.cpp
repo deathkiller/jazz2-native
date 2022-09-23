@@ -17,10 +17,10 @@ namespace Jazz2::Actors::Lighting
 		_radiusNear1 = (float)*(uint16_t*)&details.Params[2];
 		_radiusNear2 = (float)*(uint16_t*)&details.Params[4];
 		_radiusFar = (float)*(uint16_t*)&details.Params[6];
-		_speed = details.Params[8] * 0.6f;
+		_speed = details.Params[8] * 0.0072f;
 		uint8_t sync = details.Params[9];
 
-		_phase = fmodf(BaseCycleFrames - ((float)(fmodf(theApplication().numFrames() * FrameTimer::FramesPerSecond, BaseCycleFrames)) + sync * 175), BaseCycleFrames);
+		_phase = sync * fPiOver2 + _speed * _levelHandler->ElapsedFrames();
 
 		SetState(ActorState::ForceDisableCollisions, true);
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
@@ -30,7 +30,7 @@ namespace Jazz2::Actors::Lighting
 
 	void PulsatingRadialLight::OnUpdate(float timeMult)
 	{
-		_phase = fmodf(_phase + _speed * timeMult, BaseCycleFrames);
+		_phase += _speed * timeMult;
 	}
 
 	void PulsatingRadialLight::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
@@ -39,7 +39,7 @@ namespace Jazz2::Actors::Lighting
 		light.Pos = _pos;
 		light.Intensity = _intensity;
 		light.Brightness = _brightness;
-		light.RadiusNear = _radiusNear1 + sinf(fTwoPi * _phase / BaseCycleFrames) * _radiusNear2;
+		light.RadiusNear = _radiusNear1 + sinf(_phase) * _radiusNear2;
 		light.RadiusFar = light.RadiusNear + _radiusFar;
 	}
 }

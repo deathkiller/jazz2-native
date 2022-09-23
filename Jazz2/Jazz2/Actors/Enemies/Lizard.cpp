@@ -89,7 +89,7 @@ namespace Jazz2::Actors::Enemies
 	{
 		EnemyBase::OnUpdate(timeMult);
 
-		if (_frozenTimeLeft > 0 || _isFalling) {
+		if (_frozenTimeLeft > 0.0f || _isFalling) {
 			return;
 		}
 

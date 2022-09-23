@@ -4,22 +4,11 @@
 
 namespace Jazz2::Actors::Solid
 {
-	enum class BridgeType {
-		Rope = 0,
-		Stone = 1,
-		Vine = 2,
-		StoneRed = 3,
-		Log = 4,
-		Gem = 5,
-		Lab = 6,
-
-		Last = Lab
-	};
-
 	class Bridge : public ActorBase
 	{
 	public:
 		Bridge();
+		~Bridge();
 
 		static void Preload(const ActorActivationDetails& details);
 
@@ -30,6 +19,25 @@ namespace Jazz2::Actors::Solid
 		bool OnDraw(RenderQueue& renderQueue) override;
 
 	private:
+		enum class BridgeType {
+			Rope = 0,
+			Stone = 1,
+			Vine = 2,
+			StoneRed = 3,
+			Log = 4,
+			Gem = 5,
+			Lab = 6,
+
+			Last = Lab
+		};
+
+		struct BridgePiece {
+			Vector2f Pos;
+			std::unique_ptr<RenderCommand> Command;
+		};
+
+		static constexpr float BaseY = -6.0f;
+
 		static constexpr int PieceWidthsRope[] = { 13, 13, 10, 13, 13, 12, 11 };
 		static constexpr int PieceWidthsStone[] = { 15, 9, 10, 9, 15, 9, 15 };
 		static constexpr int PieceWidthsVine[] = { 7, 7, 7, 7, 10, 7, 7, 7, 7 };
@@ -38,15 +46,15 @@ namespace Jazz2::Actors::Solid
 		static constexpr int PieceWidthsGem[] = { 14 };
 		static constexpr int PieceWidthsLab[] = { 14 };
 
-		struct BridgePiece {
-			Vector2f Pos;
-			std::unique_ptr<RenderCommand> Command;
-		};
-
-		float _originalY;
 		BridgeType _bridgeType;
 		int _bridgeWidth;
 		float _heightFactor;
+		const int* _widths;
+		int _widthsCount;
+		int _widthOffset;
+
+		float _foundHeight;
+		float _foundX;
 
 		SmallVector<BridgePiece, 0> _pieces;
 	};

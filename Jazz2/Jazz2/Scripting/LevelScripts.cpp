@@ -1,7 +1,12 @@
 ﻿#if defined(WITH_ANGELSCRIPT)
 
 #include "LevelScripts.h"
+#include "RegisterArray.h"
 #include "RegisterString.h"
+#include "ScriptActorWrapper.h"
+
+#include "../LevelHandler.h"
+#include "../Actors/ActorBase.h"
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #   if defined(_M_X64)
@@ -25,11 +30,17 @@
 #	include <locale.h>		// setlocale()
 #endif
 
-namespace Script
+namespace
 {
-	void Print(String& msg)
+	void asPrint(String& msg)
 	{
 		LOGI_X("%s", msg.data());
+	}
+
+	float asFractionf(float v)
+	{
+		float intPart;
+		return modff(v, &intPart);
 	}
 }
 
@@ -42,16 +53,48 @@ namespace Jazz2::Scripting
 		_ctx(nullptr)
 	{
 		_engine = asCreateScriptEngine();
-		RegisterString(_engine);
 
 		int r;
 		r = _engine->SetMessageCallback(asMETHOD(LevelScripts, Status), this, asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
-		// Game-specific functions
-		r = _engine->RegisterGlobalFunction("void print(const string &in)", asFUNCTION(Script::Print), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		// Built-in types
+		RegisterArray(_engine);
+		RegisterString(_engine);
+		
+		// Math functions
+		r = _engine->RegisterGlobalFunction("float cos(float)", asFUNCTIONPR(cosf, (float), float), asCALL_CDECL); assert(r >= 0);
+		r = _engine->RegisterGlobalFunction("float sin(float)", asFUNCTIONPR(sinf, (float), float), asCALL_CDECL); assert(r >= 0);
+		r = _engine->RegisterGlobalFunction("float tan(float)", asFUNCTIONPR(tanf, (float), float), asCALL_CDECL); assert(r >= 0);
+
+		r = _engine->RegisterGlobalFunction("float acos(float)", asFUNCTIONPR(acosf, (float), float), asCALL_CDECL); assert(r >= 0);
+		r = _engine->RegisterGlobalFunction("float asin(float)", asFUNCTIONPR(asinf, (float), float), asCALL_CDECL); assert(r >= 0);
+		r = _engine->RegisterGlobalFunction("float atan(float)", asFUNCTIONPR(atanf, (float), float), asCALL_CDECL); assert(r >= 0);
+		r = _engine->RegisterGlobalFunction("float atan2(float,float)", asFUNCTIONPR(atan2f, (float, float), float), asCALL_CDECL); assert(r >= 0);
+
+		r = _engine->RegisterGlobalFunction("float cosh(float)", asFUNCTIONPR(coshf, (float), float), asCALL_CDECL); assert(r >= 0);
+		r = _engine->RegisterGlobalFunction("float sinh(float)", asFUNCTIONPR(sinhf, (float), float), asCALL_CDECL); assert(r >= 0);
+		r = _engine->RegisterGlobalFunction("float tanh(float)", asFUNCTIONPR(tanhf, (float), float), asCALL_CDECL); assert(r >= 0);
+
+		r = _engine->RegisterGlobalFunction("float log(float)", asFUNCTIONPR(logf, (float), float), asCALL_CDECL); assert(r >= 0);
+		r = _engine->RegisterGlobalFunction("float log10(float)", asFUNCTIONPR(log10f, (float), float), asCALL_CDECL); assert(r >= 0);
+
+		r = _engine->RegisterGlobalFunction("float pow(float, float)", asFUNCTIONPR(powf, (float, float), float), asCALL_CDECL); assert(r >= 0);
+		r = _engine->RegisterGlobalFunction("float sqrt(float)", asFUNCTIONPR(sqrtf, (float), float), asCALL_CDECL); assert(r >= 0);
+
+		r = _engine->RegisterGlobalFunction("float ceil(float)", asFUNCTIONPR(ceilf, (float), float), asCALL_CDECL); assert(r >= 0);
+		r = _engine->RegisterGlobalFunction("float abs(float)", asFUNCTIONPR(fabsf, (float), float), asCALL_CDECL); assert(r >= 0);
+		r = _engine->RegisterGlobalFunction("float floor(float)", asFUNCTIONPR(floorf, (float), float), asCALL_CDECL); assert(r >= 0);
+		r = _engine->RegisterGlobalFunction("float fraction(float)", asFUNCTIONPR(asFractionf, (float), float), asCALL_CDECL); assert(r >= 0);
 
 		_module = _engine->GetModule("Main", asGM_ALWAYS_CREATE); RETURN_ASSERT(_module != nullptr);
-		
+
+		// Game-specific functions
+		r = _engine->RegisterGlobalFunction("void print(const string &in)", asFUNCTION(asPrint), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+
+		r = _engine->RegisterGlobalFunction("void RegisterSpawnable(int, const string &in)", asFUNCTION(asRegisterSpawnable), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+
+		ScriptActorWrapper::RegisterFactory(_engine, _module);
+
 		if (!AddScriptFromFile(scriptPath)) {
 			LOGE("Cannot compile level script");
 			return;
@@ -60,6 +103,7 @@ namespace Jazz2::Scripting
 		r = _module->Build(); RETURN_ASSERT_MSG(r >= 0, "Cannot compile the script. Please correct the code and try again.");
 
 		_ctx = _engine->CreateContext();
+		_ctx->SetUserData(this, ContextToController);
 
 		asIScriptModule* mod = _engine->GetModule("Main");
 		asIScriptFunction* func = mod->GetFunctionByDecl("void main()");
@@ -69,7 +113,7 @@ namespace Jazz2::Scripting
 			if (r == asEXECUTION_EXCEPTION) {
 				LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", _ctx->GetExceptionString(), _ctx->GetExceptionFunction()->GetDeclaration());
 			}
-			_ctx->Unprepare();
+			//_ctx->Unprepare();
 		}
 	}
 
@@ -83,6 +127,23 @@ namespace Jazz2::Scripting
 			_engine->ShutDownAndRelease();
 			_engine = nullptr;
 		}
+	}
+
+	void LevelScripts::OnBeginLevel()
+	{
+		// TODO
+		auto testActor = CreateActorInstance("TestActor"_s);
+		uint8_t params[1];
+		params[0] = 1;
+		testActor->OnActivated({
+			.LevelHandler = _levelHandler,
+			.Pos = Vector3i(200, 100, ILevelHandler::MainPlaneZ),
+			.Params = params
+		});
+		_levelHandler->AddActor(std::shared_ptr<Actors::ActorBase>(testActor));
+
+		auto testActor2 = _levelHandler->EventSpawner()->SpawnEvent((EventType)6666, params, Actors::ActorState::None, Vector3i(400, 100, ILevelHandler::MainPlaneZ));
+		_levelHandler->AddActor(testActor2);
 	}
 
 	bool LevelScripts::AddScriptFromFile(const StringView& path)
@@ -340,6 +401,48 @@ namespace Jazz2::Scripting
 			case asMSGTYPE_WARNING: LOGW_X("%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
 			default: LOGI_X("%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
 		}
+	}
+
+	void LevelScripts::asRegisterSpawnable(int eventType, String& typeName)
+	{
+		// TODO
+		auto ctx = asGetActiveContext();
+		auto controller = reinterpret_cast<LevelScripts*>(ctx->GetUserData(LevelScripts::ContextToController));
+
+		controller->_eventTypeToTypeName.emplace(eventType, typeName);
+
+		controller->_levelHandler->EventSpawner()->RegisterSpawnable((EventType)eventType, [](const Actors::ActorActivationDetails& details) -> std::shared_ptr<Actors::ActorBase> {
+			if (auto levelHandler = dynamic_cast<LevelHandler*>(details.LevelHandler)) {
+				auto _this = levelHandler->_scripts.get();
+				auto it = _this->_eventTypeToTypeName.find((int)details.Type);
+				if (it != _this->_eventTypeToTypeName.end()) {
+					auto actor = _this->CreateActorInstance(it->second);
+					actor->OnActivated(details);
+					return std::shared_ptr<Actors::ActorBase>(actor);
+				}
+			}
+			return nullptr;
+		});
+	}
+
+	Actors::ActorBase* LevelScripts::CreateActorInstance(const StringView& typeName)
+	{
+		auto nullTerminatedTypeName = String::nullTerminatedView(typeName);
+
+		// Create an instance of the ActorBase script class that inherits from the ScriptActorWrapper C++ class
+		asITypeInfo* typeInfo = _module->GetTypeInfoByName(nullTerminatedTypeName.data());
+		asIScriptObject* obj = reinterpret_cast<asIScriptObject*>(_engine->CreateScriptObject(typeInfo));
+
+		// Get the pointer to the C++ side of the ActorBase class
+		ScriptActorWrapper* obj2 = *reinterpret_cast<ScriptActorWrapper**>(obj->GetAddressOfProperty(0));
+
+		// Increase the reference count to the C++ object, as this is what will be used to control the life time of the object from the application side 
+		obj2->AddRef();
+
+		// Release the reference to the script side
+		obj->Release();
+
+		return obj2;
 	}
 }
 

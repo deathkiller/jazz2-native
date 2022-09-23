@@ -2,6 +2,7 @@
 #include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../Weapons/ShotBase.h"
+#include "../Weapons/FreezerShot.h"
 #include "../Weapons/Thunderbolt.h"
 #include "../Weapons/TNT.h"
 
@@ -129,6 +130,9 @@ namespace Jazz2::Actors::Solid
 				}
 				Fall(fallDirection);
 				shotBase->DecreaseHealth(1);
+				return true;
+			} else if (auto freezerShot = dynamic_cast<Weapons::FreezerShot*>(shotBase)) {
+				shotBase->DecreaseHealth(INT32_MAX);
 				return true;
 			}
 		} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {

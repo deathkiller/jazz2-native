@@ -217,7 +217,7 @@ vec2 hash2D(in vec2 p) {
 
 vec2 noiseTexCoords(vec2 position) {
 	vec2 seed = position + fract(uTime);
-	return position + hash2D(seed) * vViewSizeInv * 1.4;
+	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, vec2(0.0), vec2(1.0));
 }
 
 void main() {
@@ -276,7 +276,7 @@ vec2 hash2D(in vec2 p) {
 
 vec2 noiseTexCoords(vec2 position) {
 	vec2 seed = position + fract(uTime);
-	return position + hash2D(seed) * vViewSizeInv * 1.4;
+	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, vec2(0.0), vec2(1.0));
 }
 
 float wave(float x, float time) {
@@ -348,7 +348,7 @@ void main() {
 	vec2 disPos = uvWorld * vec2(0.4) + vec2(mod(uTime * 0.8, 2.0));
 	vec2 dis = (texture(uTextureDisplacement, disPos).xy - vec2(0.5)) * vec2(0.014);
 	
-	vec2 uv = uvLocal + dis * vec2(isTexelBelow);
+	vec2 uv = clamp(uvLocal + dis * vec2(isTexelBelow), vec2(0.0), vec2(1.0));
 	// TODO: Remove this flip
 	uv.y = 1.0 - uv.y;
 	vec4 main = texture(uTexture, uv);

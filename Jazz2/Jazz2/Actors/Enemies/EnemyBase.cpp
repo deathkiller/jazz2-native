@@ -8,6 +8,7 @@
 #include "../Weapons/Thunderbolt.h"
 #include "../Weapons/TNT.h"
 #include "../Player.h"
+#include "../Solid/Pole.h"
 #include "../Solid/PushableBox.h"
 
 #include "../../../nCine/Base/Random.h"
@@ -67,29 +68,31 @@ namespace Jazz2::Actors::Enemies
 
 	bool EnemyBase::CanMoveToPosition(float x, float y)
 	{
-		AABBf aabbA = AABBInner + Vector2f(x, y - 3.0f);
-		AABBf aabbB = AABBInner + Vector2f(x, y + 3.0f);
-		TileCollisionParams params = { TileDestructType::None, true };
-		bool isReduced = GetState(ActorState::CollideWithTilesetReduced), isEmpty;
-		if (isReduced) {
-			SetState(ActorState::CollideWithTilesetReduced, false);
-			isEmpty = _levelHandler->IsPositionEmpty(this, aabbA, params) || _levelHandler->IsPositionEmpty(this, aabbB, params);
-			SetState(ActorState::CollideWithTilesetReduced, true);
-		} else {
-			isEmpty = _levelHandler->IsPositionEmpty(this, aabbA, params) || _levelHandler->IsPositionEmpty(this, aabbB, params);
-		}
-		if (!isEmpty) {
-			return false;
-		}
-
 		uint8_t* eventParams;
 		auto events = _levelHandler->EventMap();
 		if (events != nullptr && events->GetEventByPosition(_pos.X + x, _pos.Y + y, &eventParams) == EventType::AreaStopEnemy) {
 			return false;
 		}
 
-		AABBf aabbBelow = AABBInner + Vector2f((AABBInner.R - AABBInner.L) * (x < 0.0f ? -1.0f : 1.0f), 12.0f);
-		return !_levelHandler->IsPositionEmpty(this, aabbBelow, params);
+		bool tilesetReduced = GetState(ActorState::CollideWithTilesetReduced);
+		bool skipPerPixelCollisions = GetState(ActorState::SkipPerPixelCollisions);
+		SetState(ActorState::CollideWithTilesetReduced, false);
+		SetState(ActorState::SkipPerPixelCollisions, true);
+
+		bool success;
+		TileCollisionParams params = { TileDestructType::None, true };
+		AABBf aabbAbove = AABBf(x < 0.0f ? AABBInner.L - 8.0f - x : AABBInner.R, AABBInner.T, x < 0.0f ? AABBInner.L : AABBInner.R + 8.0f + x, AABBInner.B - 4.0f);
+		if (_levelHandler->IsPositionEmpty(this, aabbAbove, params)) {
+			AABBf aabbBelow = AABBf(x < 0.0f ? AABBInner.L - 8.0f - x : AABBInner.R + 2.0f, AABBInner.B, x < 0.0f ? AABBInner.L - 2.0f : AABBInner.R + 8.0f + x, AABBInner.B + 8.0f);
+			success = !_levelHandler->IsPositionEmpty(this, aabbBelow, params);
+		} else {
+			success = false;
+		}
+
+		SetState(ActorState::CollideWithTilesetReduced, tilesetReduced);
+		SetState(ActorState::SkipPerPixelCollisions, skipPerPixelCollisions);
+
+		return success;
 	}
 
 	void EnemyBase::TryGenerateRandomDrop()
@@ -149,6 +152,18 @@ namespace Jazz2::Actors::Enemies
 			} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {
 				DecreaseHealth(5, tnt);
 				return true;
+			} else if (auto pole = dynamic_cast<Solid::Pole*>(other.get())) {
+				bool hit;
+				switch (pole->GetFallDirection()) {
+					case Solid::Pole::FallDirection::Left: hit = (_pos.X < pole->GetPos().X); break;
+					case Solid::Pole::FallDirection::Right: hit = (_pos.X > pole->GetPos().X); break;
+					default: hit = false; break;
+				}
+				if (hit) {
+					_lastHitDir = LastHitDirection::Up;
+					DecreaseHealth(10, pole);
+					return true;
+				}
 			} else if (auto pushableBox = dynamic_cast<Solid::PushableBox*>(other.get())) {
 				if (pushableBox->GetSpeed().Y > 0.0f && pushableBox->AABBInner.B < _pos.Y) {
 					_lastHitDir = LastHitDirection::Up;

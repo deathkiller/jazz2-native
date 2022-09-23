@@ -1,17 +1,5 @@
 ﻿#include "EventSpawner.h"
 
-#include "../Actors/Environment/AirboardGenerator.h"
-#include "../Actors/Environment/AmbientSound.h"
-#include "../Actors/Environment/BirdCage.h"
-#include "../Actors/Environment/Bomb.h"
-#include "../Actors/Environment/BonusWarp.h"
-#include "../Actors/Environment/Checkpoint.h"
-#include "../Actors/Environment/EndOfLevel.h"
-#include "../Actors/Environment/Eva.h"
-#include "../Actors/Environment/Moth.h"
-#include "../Actors/Environment/Spring.h"
-#include "../Actors/Environment/SteamNote.h"
-
 #include "../Actors/Collectibles/AmmoCollectible.h"
 #include "../Actors/Collectibles/CoinCollectible.h"
 #include "../Actors/Collectibles/FastFireCollectible.h"
@@ -19,6 +7,7 @@
 #include "../Actors/Collectibles/CarrotCollectible.h"
 #include "../Actors/Collectibles/GemCollectible.h"
 #include "../Actors/Collectibles/GemGiant.h"
+#include "../Actors/Collectibles/GemRing.h"
 #include "../Actors/Collectibles/OneUpCollectible.h"
 
 #include "../Actors/Enemies/Bat.h"
@@ -28,6 +17,7 @@
 #include "../Actors/Enemies/Crab.h"
 #include "../Actors/Enemies/Demon.h"
 #include "../Actors/Enemies/Doggy.h"
+#include "../Actors/Enemies/Dragon.h"
 #include "../Actors/Enemies/Dragonfly.h"
 #include "../Actors/Enemies/FatChick.h"
 #include "../Actors/Enemies/Fencer.h"
@@ -45,6 +35,19 @@
 #include "../Actors/Enemies/TurtleTube.h"
 #include "../Actors/Enemies/Witch.h"
 
+#include "../Actors/Environment/AirboardGenerator.h"
+#include "../Actors/Environment/AmbientBubbles.h"
+#include "../Actors/Environment/AmbientSound.h"
+#include "../Actors/Environment/BirdCage.h"
+#include "../Actors/Environment/Bomb.h"
+#include "../Actors/Environment/BonusWarp.h"
+#include "../Actors/Environment/Checkpoint.h"
+#include "../Actors/Environment/EndOfLevel.h"
+#include "../Actors/Environment/Eva.h"
+#include "../Actors/Environment/Moth.h"
+#include "../Actors/Environment/Spring.h"
+#include "../Actors/Environment/SteamNote.h"
+
 #include "../Actors/Lighting/FlickerLight.h"
 #include "../Actors/Lighting/PulsatingRadialLight.h"
 #include "../Actors/Lighting/StaticRadialLight.h"
@@ -56,11 +59,15 @@
 #include "../Actors/Solid/CrateContainer.h"
 #include "../Actors/Solid/GemBarrel.h"
 #include "../Actors/Solid/GemCrate.h"
+#include "../Actors/Solid/MovingPlatform.h"
+#include "../Actors/Solid/PinballBumper.h"
+#include "../Actors/Solid/PinballPaddle.h"
 #include "../Actors/Solid/Pole.h"
 #include "../Actors/Solid/PowerUpMorphMonitor.h"
 #include "../Actors/Solid/PowerUpShieldMonitor.h"
 #include "../Actors/Solid/PowerUpWeaponMonitor.h"
 #include "../Actors/Solid/PushableBox.h"
+#include "../Actors/Solid/SpikeBall.h"
 #include "../Actors/Solid/TriggerCrate.h"
 
 using namespace Jazz2::Actors;
@@ -81,7 +88,7 @@ namespace Jazz2::Events
 
 		// Area
 		RegisterSpawnable<Environment::AmbientSound>(EventType::AreaAmbientSound);
-		//RegisterSpawnable(EventType::AreaAmbientBubbles, AmbientBubbles.Create, AmbientBubbles.Preload);
+		RegisterSpawnable<Environment::AmbientBubbles>(EventType::AreaAmbientBubbles);
 
 		// Triggers
 		RegisterSpawnable<Solid::TriggerCrate>(EventType::TriggerCrate);
@@ -99,22 +106,22 @@ namespace Jazz2::Events
 		RegisterSpawnable<Environment::Spring>(EventType::Spring);
 		RegisterSpawnable<Solid::Bridge>(EventType::Bridge);
 		RegisterSpawnable<Solid::Pole>(EventType::Pole);
-		/*RegisterSpawnable(EventType::MovingPlatform, MovingPlatform.Create, MovingPlatform.Preload);
-		RegisterSpawnable(EventType::SpikeBall, SpikeBall.Create, SpikeBall.Preload);*/
+		RegisterSpawnable<Solid::MovingPlatform>(EventType::MovingPlatform);
+		RegisterSpawnable<Solid::SpikeBall>(EventType::SpikeBall);
 		RegisterSpawnable<Solid::PushableBox>(EventType::PushableBox);
 		RegisterSpawnable<Environment::Eva>(EventType::Eva);
 		RegisterSpawnable<Environment::EndOfLevel>(EventType::SignEOL);
 		RegisterSpawnable<Environment::Moth>(EventType::Moth);
 		RegisterSpawnable<Environment::SteamNote>(EventType::SteamNote);
 		RegisterSpawnable<Environment::Bomb>(EventType::Bomb);
-		/*RegisterSpawnable(EventType::PinballBumper, PinballBumper.Create, PinballBumper.Preload);
-		RegisterSpawnable(EventType::PinballPaddle, PinballPaddle.Create, PinballPaddle.Preload);*/
+		RegisterSpawnable<Solid::PinballBumper>(EventType::PinballBumper);
+		RegisterSpawnable<Solid::PinballPaddle>(EventType::PinballPaddle);
 
 		// Enemies
 		RegisterSpawnable<Enemies::Turtle>(EventType::EnemyTurtle);
 		RegisterSpawnable<Enemies::Lizard>(EventType::EnemyLizard);
 		//RegisterSpawnable(EventType::EnemyLizardFloat, LizardFloat.Create, LizardFloat.Preload);
-		//RegisterSpawnable(EventType::EnemyDragon, Dragon.Create, Dragon.Preload);
+		RegisterSpawnable<Enemies::Dragon>(EventType::EnemyDragon);
 		RegisterSpawnable<Enemies::SuckerFloat>(EventType::EnemySuckerFloat);
 		RegisterSpawnable<Enemies::Sucker>(EventType::EnemySucker);
 		RegisterSpawnable<Enemies::LabRat>(EventType::EnemyLabRat);
@@ -156,6 +163,7 @@ namespace Jazz2::Events
 		// Collectibles
 		RegisterSpawnable<Collectibles::GemCollectible>(EventType::Gem);
 		RegisterSpawnable<Collectibles::GemGiant>(EventType::GemGiant);
+		RegisterSpawnable<Collectibles::GemRing>(EventType::GemRing);
 		RegisterSpawnable<Collectibles::CoinCollectible>(EventType::Coin);
 		RegisterSpawnable<Collectibles::CarrotCollectible>(EventType::Carrot);
 		/*RegisterSpawnable(EventType::CarrotFly, CarrotFlyCollectible.Create, CarrotFlyCollectible.Preload);
@@ -169,7 +177,6 @@ namespace Jazz2::Events
 		RegisterSpawnable<Solid::BarrelContainer>(EventType::Barrel);
 		RegisterSpawnable<Solid::GemCrate>(EventType::CrateGem);
 		RegisterSpawnable<Solid::GemBarrel>(EventType::BarrelGem);
-		//RegisterSpawnable(EventType::GemRing, GemRing.Create, GemRing.Preload);
 
 		RegisterSpawnable<Solid::PowerUpMorphMonitor>(EventType::PowerUpMorph);
 		RegisterSpawnable<Environment::BirdCage>(EventType::BirdCage);
@@ -230,9 +237,10 @@ namespace Jazz2::Events
 
 		ActorActivationDetails details;
 		details.LevelHandler = _levelHandler;
-		details.Params = spawnParams;
 		details.Pos = pos;
 		details.State = flags;
+		details.Type = type;
+		details.Params = spawnParams;
 		return it->second.CreateFunction(details);
 	}
 
