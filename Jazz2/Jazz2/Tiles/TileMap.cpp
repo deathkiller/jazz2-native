@@ -36,14 +36,14 @@ namespace Jazz2::Tiles
 		return _layers[_sprLayerIndex].LayoutSize;
 	}
 
-	Recti TileMap::LevelBounds()
+	Vector2i TileMap::LevelBounds()
 	{
 		if (_sprLayerIndex == -1) {
-			return Recti();
+			return Vector2i();
 		}
 
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
-		return Recti(0, 0, layoutSize.X * TileSet::DefaultTileSize, layoutSize.Y * TileSet::DefaultTileSize);
+		return Vector2i(layoutSize.X * TileSet::DefaultTileSize, layoutSize.Y * TileSet::DefaultTileSize);
 	}
 
 	void TileMap::OnUpdate(float timeMult)
@@ -505,6 +505,7 @@ namespace Jazz2::Tiles
 					}
 
 					auto command = RentRenderCommand();
+					command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 					Vector2i texSize = _tileSet->TextureDiffuse->size();
 					float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
@@ -738,7 +739,7 @@ namespace Jazz2::Tiles
 	void TileMap::CreateDebris(const DestructibleDebris& debris)
 	{
 		auto& spriteLayer = _layers[_sprLayerIndex];
-		if (debris.CollisionAction == DebrisCollisionAction::Disappear && debris.Depth <= spriteLayer.Description.Depth) {
+		if ((debris.Flags & DebrisFlags::Disappear) == DebrisFlags::Disappear && debris.Depth <= spriteLayer.Description.Depth) {
 			int x = (int)debris.Pos.X / TileSet::DefaultTileSize;
 			int y = (int)debris.Pos.Y / TileSet::DefaultTileSize;
 			if (x < 0 || y < 0 || x >= spriteLayer.LayoutSize.X || y >= spriteLayer.LayoutSize.Y) {
@@ -813,7 +814,7 @@ namespace Jazz2::Tiles
 			debris.TexBiasY = texBiasY + ((i / 2) * QuarterSize / float(texSize.Y));
 
 			debris.DiffuseTexture = _tileSet->TextureDiffuse.get();
-			debris.CollisionAction = DebrisCollisionAction::None;
+			debris.Flags = DebrisFlags::None;
 		}
 	}
 
@@ -853,7 +854,7 @@ namespace Jazz2::Tiles
 				debris.TexBiasY = (((float)(currentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
 
 				debris.DiffuseTexture = res->Base->TextureDiffuse.get();
-				debris.CollisionAction = DebrisCollisionAction::Bounce;
+				debris.Flags = DebrisFlags::Bounce;
 			}
 		}
 	}
@@ -893,7 +894,7 @@ namespace Jazz2::Tiles
 			debris.TexBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.Y));
 
 			debris.DiffuseTexture = res->Base->TextureDiffuse.get();
-			debris.CollisionAction = DebrisCollisionAction::Bounce;
+			debris.Flags = DebrisFlags::Bounce;
 		}
 	}
 
@@ -911,7 +912,7 @@ namespace Jazz2::Tiles
 				debris.AlphaSpeed = -std::min(0.02f, debris.Alpha);
 			}
 
-			if (debris.CollisionAction != DebrisCollisionAction::None) {
+			if ((debris.Flags & (DebrisFlags::Disappear | DebrisFlags::Bounce)) != DebrisFlags::None) {
 				// Debris should collide with tilemap
 				float nx = debris.Pos.X + debris.Speed.X * timeMult;
 				float ny = debris.Pos.Y + debris.Speed.Y * timeMult;
@@ -919,7 +920,7 @@ namespace Jazz2::Tiles
 				TileCollisionParams params = { TileDestructType::None, true };
 				if (IsTileEmpty(aabb, params)) {
 					// Nothing...
-				} else if (debris.CollisionAction == DebrisCollisionAction::Disappear) {
+				} else if ((debris.Flags & DebrisFlags::Disappear) == DebrisFlags::Disappear) {
 					debris.ScaleSpeed = -0.02f;
 					debris.AlphaSpeed = -0.006f;
 					debris.Speed = Vector2f::Zero;
@@ -972,6 +973,12 @@ namespace Jazz2::Tiles
 	{
 		for (auto& debris : _debrisList) {
 			auto command = RentRenderCommand();
+
+			if ((debris.Flags & DebrisFlags::AdditivaBlending) == DebrisFlags::AdditivaBlending) {
+				command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+			} else {
+				command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			}
 
 			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 			instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);

@@ -149,7 +149,7 @@ namespace Jazz2::Actors::Enemies
 				}
 			}
 		} else {
-			_internalForceY += 0.08f * timeMult;
+			_internalForceY -= 0.08f * timeMult;
 		}
 	}
 
@@ -166,7 +166,7 @@ namespace Jazz2::Actors::Enemies
 		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * 2.0f;
 		MoveInstantly(Vector2f(0.0f, -1.0f), MoveType::Relative);
 		_speed.Y = -1;
-		_internalForceY = 0.5f;
+		_internalForceY = -0.5f;
 		_isAttacking = true;
 		SetState(ActorState::CanJump, false);
 

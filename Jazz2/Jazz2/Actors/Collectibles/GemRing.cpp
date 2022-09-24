@@ -134,7 +134,7 @@ namespace Jazz2::Actors::Collectibles
 			_collected = true;
 			SetState(ActorState::CollideWithOtherActors, false);
 
-			player->AddGems(_pieces.size());
+			player->AddGems((int)_pieces.size());
 			player->AddScore(800);
 		}
 	}

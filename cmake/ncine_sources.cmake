@@ -7,6 +7,7 @@ set(SOURCES
 )
 
 list(APPEND SOURCES
+	${NCINE_SOURCE_DIR}/nCine/Base/Algorithms.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/BitArray.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/Clock.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/FrameTimer.cpp
@@ -110,6 +111,8 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/SolidObjectBase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/AmmoCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/CarrotCollectible.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/CarrotFlyCollectible.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/CarrotInvincibleCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/CoinCollectible.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/CollectibleBase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/FastFireCollectible.cpp
@@ -118,6 +121,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/GemGiant.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/GemRing.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/OneUpCollectible.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Collectibles/Stopwatch.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bat.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bee.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/BossBase.cpp
@@ -147,6 +151,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/AirboardGenerator.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/AmbientBubbles.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/AmbientSound.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Bird.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/BirdCage.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Bomb.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/BonusWarp.cpp

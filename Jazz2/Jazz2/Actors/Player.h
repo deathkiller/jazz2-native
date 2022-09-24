@@ -10,6 +10,11 @@ namespace Jazz2::UI
 
 namespace Jazz2::Actors
 {
+	namespace Environment
+	{
+		class Bird;
+	}
+
 	namespace Solid
 	{
 		class PinballBumper;
@@ -89,6 +94,7 @@ namespace Jazz2::Actors
 		void MorphTo(PlayerType type);
 		void MorphRevent();
 		bool SetDizzyTime(float time);
+		bool SpawnBird(uint8_t type, Vector2f pos);
 		bool DisableControllable(float timeout);
 		void SetCheckpoint(Vector2f pos, float ambientLight);
 
@@ -157,6 +163,7 @@ namespace Jazz2::Actors
 		float _checkpointLight;
 
 		float _sugarRushLeft, _sugarRushStarsTime;
+		float _shieldSpawnTime;
 		int _gems, _gemsPitch;
 		float _gemsTimer;
 		float _bonusWarpTimer;
@@ -172,6 +179,7 @@ namespace Jazz2::Actors
 		Vector2i _lastPolePos;
 		float _inTubeTime;
 		float _dizzyTime;
+		std::shared_ptr<Environment::Bird> _spawnedBird;
 
 		float _weaponCooldown;
 		WeaponType _currentWeapon;
@@ -181,7 +189,7 @@ namespace Jazz2::Actors
 		std::shared_ptr<AudioBufferPlayer> _weaponSound;
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
-		bool OnTileDeactivate(int tx1, int ty1, int tx2, int ty2) override;
+		bool OnTileDeactivated() override;
 		bool OnPerish(ActorBase* collider) override;
 		void OnUpdateHitbox() override;
 

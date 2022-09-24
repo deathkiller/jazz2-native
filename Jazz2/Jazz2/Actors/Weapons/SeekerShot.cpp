@@ -97,7 +97,7 @@ namespace Jazz2::Actors::Weapons
 		light.Pos = _pos;
 		light.Intensity = 0.8f;
 		light.RadiusNear = 3.0f;
-		light.RadiusFar = 8.0f;
+		light.RadiusFar = 10.0f;
 	}
 
 	bool SeekerShot::OnPerish(ActorBase* collider)

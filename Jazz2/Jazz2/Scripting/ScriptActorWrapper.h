@@ -3,11 +3,18 @@
 #if defined(WITH_ANGELSCRIPT)
 
 #include "../Actors/ActorBase.h"
+#include "../Actors/Collectibles/CollectibleBase.h"
 
 class asIScriptEngine;
 class asIScriptModule;
 class asIScriptObject;
+class asIScriptFunction;
 class asILockableSharedBool;
+
+namespace Jazz2::Actors
+{
+	class Player;
+}
 
 namespace Jazz2::Scripting
 {
@@ -20,7 +27,7 @@ namespace Jazz2::Scripting
 		~ScriptActorWrapper();
 
 		static void RegisterFactory(asIScriptEngine* engine, asIScriptModule* module);
-		static ScriptActorWrapper* Factory();
+		static ScriptActorWrapper* Factory(int actorType);
 
 		void AddRef();
 		void Release();
@@ -34,11 +41,10 @@ namespace Jazz2::Scripting
 		}
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
-		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 
 	protected:
 		Task<bool> OnActivatedAsync(const Actors::ActorActivationDetails& details) override;
-		bool OnTileDeactivate(int tx1, int ty1, int tx2, int ty2) override;
+		bool OnTileDeactivated() override;
 
 		void OnHealthChanged(ActorBase* collider) override;
 		bool OnPerish(ActorBase* collider) override;
@@ -52,20 +58,62 @@ namespace Jazz2::Scripting
 
 		//void OnTriggeredEvent(EventType eventType, uint16_t* eventParams) override;
 
-		//void OnAnimationStarted() override;
-		//void OnAnimationFinished() override;
+		void OnAnimationStarted() override;
+		void OnAnimationFinished() override;
 
-	private:
+	protected:
 		LevelScripts* _levelScripts;
-		asILockableSharedBool* _isDead;
 		asIScriptObject* _obj;
-		int _refCount;
+		asILockableSharedBool* _isDead;
 
+		uint32_t _scoreValue;
+
+		void asDecreaseHealth(int amount);
 		bool asMoveTo(float x, float y, bool force);
 		bool asMoveBy(float x, float y, bool force);
-		void asRequestMetadata(String& path);
-		void asSetAnimation(String& name);
+		void asTryStandardMovement(float timeMult);
+		void asRequestMetadata(const String& path);
+		void asPlaySfx(const String& identifier, float gain, float pitch);
+		void asSetAnimation(const String& name);
 		void asSetAnimationState(int state);
+
+		float asGetAlpha() const;
+		void asSetAlpha(float value);
+		uint16_t asGetLayer() const;
+		void asSetLayer(uint16_t value);
+
+	private:
+		int _refCount;
+
+		asIScriptFunction* _onTileDeactivated;
+		asIScriptFunction* _onHealthChanged;
+		asIScriptFunction* _onUpdate;
+		asIScriptFunction* _onUpdateHitbox;
+		asIScriptFunction* _onHitFloor;
+		asIScriptFunction* _onHitCeiling;
+		asIScriptFunction* _onHitWall;
+		asIScriptFunction* _onAnimationStarted;
+		asIScriptFunction* _onAnimationFinished;
+	};
+
+	class ScriptCollectibleWrapper : public ScriptActorWrapper
+	{
+	public:
+		ScriptCollectibleWrapper(LevelScripts* levelScripts, asIScriptObject* obj);
+
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+
+	protected:
+		Task<bool> OnActivatedAsync(const Actors::ActorActivationDetails& details) override;
+
+		void OnCollect(Actors::Player* player);
+
+	private:
+		bool _untouched;
+		float _phase, _timeLeft;
+		float _startingY;
+
+		asIScriptFunction* _onCollect;
 	};
 }
 

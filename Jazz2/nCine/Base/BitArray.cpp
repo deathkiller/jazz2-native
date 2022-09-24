@@ -90,7 +90,7 @@ namespace nCine
 
 	void BitArray::Set(const unsigned int bit)
 	{
-		if (_size <= bit) {
+		if (bit >= _size) {
 			return;
 		}
 
@@ -99,7 +99,7 @@ namespace nCine
 
 	void BitArray::Set(const unsigned int bit, bool value)
 	{
-		if (_size <= bit) {
+		if (bit >= _size) {
 			return;
 		}
 
@@ -109,13 +109,11 @@ namespace nCine
 
 	void BitArray::Reset(const unsigned int bit)
 	{
-		unsigned char mask;
-
-		if (_size <= bit) {
+		if (bit >= _size) {
 			return;
 		}
 
-		mask = BIT_IN_CHAR(bit);
+		unsigned char mask = BIT_IN_CHAR(bit);
 		_storage[BIT_CHAR(bit)] &= ~mask;
 	}
 
@@ -126,7 +124,7 @@ namespace nCine
 
 	bool BitArray::operator[](const unsigned int bit) const
 	{
-		return ((_storage[BIT_CHAR(bit)] & BIT_IN_CHAR(bit)) != 0);
+		return (bit < _size ? ((_storage[BIT_CHAR(bit)] & BIT_IN_CHAR(bit)) != 0) : false);
 	}
 
 	bool BitArray::operator==(const BitArray& other) const

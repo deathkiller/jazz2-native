@@ -181,7 +181,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_OPENMPT;__WITH_ANGELSCRIPT;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_OPENMPT;WITH_ANGELSCRIPT;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -217,11 +217,14 @@
     <ClInclude Include="Common.h" />
     <ClInclude Include="Jazz2\Actors\ActorBase.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
+    <ClInclude Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.h" />
+    <ClInclude Include="Jazz2\Actors\Collectibles\CarrotInvincibleCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\FastFireCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\GemCollectible.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\GemGiant.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\GemRing.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\OneUpCollectible.h" />
+    <ClInclude Include="Jazz2\Actors\Collectibles\Stopwatch.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Bee.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\BossBase.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Bubba.h" />
@@ -248,6 +251,7 @@
     <ClInclude Include="Jazz2\Actors\Environment\AirboardGenerator.h" />
     <ClInclude Include="Jazz2\Actors\Environment\AmbientBubbles.h" />
     <ClInclude Include="Jazz2\Actors\Environment\AmbientSound.h" />
+    <ClInclude Include="Jazz2\Actors\Environment\Bird.h" />
     <ClInclude Include="Jazz2\Actors\Environment\BirdCage.h" />
     <ClInclude Include="Jazz2\Actors\Environment\Bomb.h" />
     <ClInclude Include="Jazz2\Actors\Environment\EndOfLevel.h" />
@@ -525,11 +529,14 @@
     <ClCompile Include="$(ExtensionLibraryPath)\Environment.cpp" />
     <ClCompile Include="Jazz2\Actors\ActorBase.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
+    <ClCompile Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.cpp" />
+    <ClCompile Include="Jazz2\Actors\Collectibles\CarrotInvincibleCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\FastFireCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\GemCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\GemGiant.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\GemRing.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\OneUpCollectible.cpp" />
+    <ClCompile Include="Jazz2\Actors\Collectibles\Stopwatch.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Bee.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\BossBase.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Bubba.cpp" />
@@ -556,6 +563,7 @@
     <ClCompile Include="Jazz2\Actors\Environment\AirboardGenerator.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\AmbientBubbles.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\AmbientSound.cpp" />
+    <ClCompile Include="Jazz2\Actors\Environment\Bird.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\BirdCage.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\Bomb.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\EndOfLevel.cpp" />
@@ -647,6 +655,7 @@
     <ClCompile Include="nCine\Audio\AudioStreamPlayer.cpp" />
     <ClCompile Include="nCine\Audio\IAudioLoader.cpp" />
     <ClCompile Include="nCine\Audio\IAudioPlayer.cpp" />
+    <ClCompile Include="nCine\Base\Algorithms.cpp" />
     <ClCompile Include="nCine\Base\BitArray.cpp" />
     <ClCompile Include="nCine\Base\Clock.cpp" />
     <ClCompile Include="nCine\Base\FrameTimer.cpp" />

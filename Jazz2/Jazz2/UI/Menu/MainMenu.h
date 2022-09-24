@@ -35,6 +35,9 @@ namespace Jazz2::UI::Menu
 
 		void OnBeginFrame() override;
 		void OnInitializeViewport(int width, int height) override;
+
+		void OnKeyPressed(const KeyboardEvent& event) override;
+		void OnKeyReleased(const KeyboardEvent& event) override;
 		void OnTouchEvent(const nCine::TouchEvent& event) override;
 
 		void SwitchToSectionPtr(std::unique_ptr<MenuSection> section) override;
@@ -116,6 +119,7 @@ namespace Jazz2::UI::Menu
 		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
 
 		SmallVector<std::unique_ptr<MenuSection>, 8> _sections;
+		BitArray _pressedKeys;
 		uint32_t _pressedActions;
 		float _touchButtonsTimer;
 

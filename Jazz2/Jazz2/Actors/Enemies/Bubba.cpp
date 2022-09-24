@@ -190,7 +190,7 @@ namespace Jazz2::Actors::Enemies
 
 			_speed.X = (IsFacingLeft() ? -1.3f : 1.3f);
 
-			_internalForceY = 1.27f;
+			_internalForceY = -1.27f;
 
 			PlaySfx("Jump"_s);
 
@@ -226,8 +226,8 @@ namespace Jazz2::Actors::Enemies
 			SetTransition((AnimState)1073741830, false, [this, diff]() {
 				_speed.X = (diff.X / _stateTime);
 				_speed.Y = (diff.Y / _stateTime);
-				_internalForceY = 0;
-				_externalForce.Y = 0;
+				_internalForceY = 0.0f;
+				_externalForce.Y = 0.0f;
 
 				SetAnimation((AnimState)1073741831);
 			});

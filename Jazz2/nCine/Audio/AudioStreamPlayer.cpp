@@ -75,7 +75,7 @@ namespace nCine
 			case PlayerState::Initial:
 			case PlayerState::Stopped:
 			{
-				if (canRegisterPlayer == false)
+				if (!canRegisterPlayer)
 					break;
 
 				const unsigned int source = device.nextAvailableSource();
@@ -108,7 +108,7 @@ namespace nCine
 				break;
 			case PlayerState::Paused:
 			{
-				if (canRegisterPlayer == false)
+				if (!canRegisterPlayer)
 					break;
 
 				updateFilters();

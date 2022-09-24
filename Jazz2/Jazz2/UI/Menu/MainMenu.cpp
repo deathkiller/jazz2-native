@@ -19,6 +19,7 @@ namespace Jazz2::UI::Menu
 		_logoTransition(0.0f),
 		_texturedBackgroundPass(this),
 		_texturedBackgroundPhase(0.0f),
+		_pressedKeys((uint32_t)KeySym::COUNT_BASE),
 		_pressedActions(0),
 		_touchButtonsTimer(0.0f)
 	{
@@ -134,6 +135,16 @@ namespace Jazz2::UI::Menu
 		_canvas->setParent(_upscalePass.GetNode());
 
 		_texturedBackgroundPass.Initialize();
+	}
+
+	void MainMenu::OnKeyPressed(const KeyboardEvent& event)
+	{
+		_pressedKeys.Set((uint32_t)event.sym);
+	}
+
+	void MainMenu::OnKeyReleased(const KeyboardEvent& event)
+	{
+		_pressedKeys.Reset((uint32_t)event.sym);
 	}
 
 	void MainMenu::OnTouchEvent(const nCine::TouchEvent& event)
@@ -347,32 +358,30 @@ namespace Jazz2::UI::Menu
 	void MainMenu::UpdatePressedActions()
 	{
 		auto& input = theApplication().inputManager();
-		auto& keyState = input.keyboardState();
-
 		_pressedActions = ((_pressedActions & 0xffff) << 16);
 
-		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Up)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Up))) {
+		if (_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Up)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Up)]) {
 			_pressedActions |= (1 << (int)PlayerActions::Up);
 		}
-		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Down)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Down))) {
+		if (_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Down)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Down)]) {
 			_pressedActions |= (1 << (int)PlayerActions::Down);
 		}
-		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Left)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Left))) {
+		if (_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Left)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Left)]) {
 			_pressedActions |= (1 << (int)PlayerActions::Left);
 		}
-		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Right)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Right))) {
+		if (_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Right)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Right)]) {
 			_pressedActions |= (1 << (int)PlayerActions::Right);
 		}
 		// Also allow Return (Enter) as confirm key
-		if (keyState.isKeyDown(KeySym::RETURN) || keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Fire)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Fire)) ||
-			keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Jump)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Jump))) {
+		if (_pressedKeys[(uint32_t)KeySym::RETURN] || _pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Fire)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Fire)] ||
+			_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Jump)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Jump)]) {
 			_pressedActions |= (1 << (int)PlayerActions::Fire);
 		}
-		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Menu)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Menu))) {
+		if (_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Menu)]) {
 			_pressedActions |= (1 << (int)PlayerActions::Menu);
 		}
 		// Use SwitchWeapon action as Delete key
-		if (keyState.isKeyDown(KeySym::DELETE)) {
+		if (_pressedKeys[(uint32_t)KeySym::DELETE]) {
 			_pressedActions |= (1 << (int)PlayerActions::ChangeWeapon);
 		}
 
@@ -380,7 +389,7 @@ namespace Jazz2::UI::Menu
 		const JoyMappedState* joyStates[8];
 		int jc = 0;
 		for (int i = 0; i < IInputManager::MaxNumJoysticks && jc < _countof(joyStates); i++) {
-			if (input.isJoyPresent(i) && input.isJoyMapped(i)) {
+			if (input.isJoyMapped(i)) {
 				joyStates[jc++] = &input.joyMappedState(i);
 			}
 		}

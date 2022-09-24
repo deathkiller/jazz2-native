@@ -124,8 +124,9 @@ namespace Jazz2::Actors::Enemies
 		return false;
 	}
 
-	bool Witch::OnTileDeactivate(int tx1, int ty1, int tx2, int ty2)
+	bool Witch::OnTileDeactivated()
 	{
+		// Witch cannot be deactivated
 		return false;
 	}
 

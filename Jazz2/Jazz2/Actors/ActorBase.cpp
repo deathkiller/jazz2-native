@@ -96,25 +96,9 @@ namespace Jazz2::Actors
 		co_return false;
 	}
 
-	bool ActorBase::OnTileDeactivate(int tx1, int ty1, int tx2, int ty2)
+	bool ActorBase::OnTileDeactivated()
 	{
-		if ((_state & (ActorState::IsCreatedFromEventMap | ActorState::IsFromGenerator)) != ActorState::None) {
-			if (_originTile.X < tx1 || _originTile.Y < ty1 || _originTile.X > tx2 || _originTile.Y > ty2) {
-				auto events = _levelHandler->EventMap();
-				if (events != nullptr) {
-					if ((_state & ActorState::IsFromGenerator) == ActorState::IsFromGenerator) {
-						events->ResetGenerator(_originTile.X, _originTile.Y);
-					}
-
-					events->Deactivate(_originTile.X, _originTile.Y);
-				}
-
-				_state |= ActorState::IsDestroyed;
-				return true;
-			}
-		}
-
-		return false;
+		return true;
 	}
 
 	void ActorBase::OnUpdate(float timeMult)
@@ -218,7 +202,7 @@ namespace Jazz2::Actors
 		float accelY = (_internalForceY + _externalForce.Y) * timeMult;
 
 		_speed.X = std::clamp(_speed.X, -16.0f, 16.0f);
-		_speed.Y = std::clamp(_speed.Y - accelY, -16.0f, 16.0f);
+		_speed.Y = std::clamp(_speed.Y + accelY, -16.0f, 16.0f);
 
 		float effectiveSpeedX, effectiveSpeedY;
 		if (_frozenTimeLeft > 0.0f) {
@@ -226,7 +210,7 @@ namespace Jazz2::Actors
 			effectiveSpeedY = std::clamp(((currentGravity * 2) + _internalForceY) * timeMult, -16.0f, 16.0f);
 		} else {
 			effectiveSpeedX = _speed.X + _externalForce.X * timeMult;
-			effectiveSpeedY = _speed.Y - 0.5f  * accelY;
+			effectiveSpeedY = _speed.Y + 0.5f * accelY;
 		}
 		effectiveSpeedX *= timeMult;
 		effectiveSpeedY *= timeMult;
@@ -384,8 +368,8 @@ namespace Jazz2::Actors
 				_externalForce.X = std::min(_externalForce.X + _friction * timeMult, 0.0f);
 			}
 		}
-		_externalForce.Y = std::max(_externalForce.Y - currentGravity * 0.33f * timeMult, 0.0f);
-		_internalForceY = std::max(_internalForceY - currentGravity * 0.33f * timeMult, 0.0f);
+		_externalForce.Y = std::min(_externalForce.Y + currentGravity * 0.33f * timeMult, 0.0f);
+		_internalForceY = std::min(_internalForceY + currentGravity * 0.33f * timeMult, 0.0f);
 	}
 
 	void ActorBase::UpdateHitbox(int w, int h)

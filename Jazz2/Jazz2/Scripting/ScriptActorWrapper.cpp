@@ -8,15 +8,21 @@
 #include "../Events/EventSpawner.h"
 #include "../Tiles/TileMap.h"
 #include "../Collisions/DynamicTreeBroadPhase.h"
+#include "../Actors/Explosion.h"
+#include "../Actors/Player.h"
+#include "../Actors/Weapons/ShotBase.h"
+#include "../Actors/Weapons/TNT.h"
+#include "../Actors/Enemies/TurtleShell.h"
 
 #include "../../nCine/Primitives/Matrix4x4.h"
+#include "../../nCine/Base/FrameTimer.h"
 #include "../../nCine/Base/Random.h"
 
 using namespace nCine;
 using namespace Jazz2::Actors;
 
 #define AsClassName "ActorBase"
-#define AsClassNameWrapper "ActorBase_t"
+#define AsClassNameInternal "ActorBaseInternal"
 
 namespace Jazz2::Scripting
 {
@@ -24,14 +30,28 @@ namespace Jazz2::Scripting
 		:
 		_levelScripts(levelScripts),
 		_obj(obj),
-		_refCount(1)
+		_refCount(1),
+		_scoreValue(0)
 	{
 		_isDead = obj->GetWeakRefFlag();
 		_isDead->AddRef();
+
+		_onTileDeactivated = _obj->GetObjectType()->GetMethodByDecl("bool OnTileDeactivated()");
+		_onHealthChanged = _obj->GetObjectType()->GetMethodByDecl("void OnHealthChanged()");
+		_onUpdate = _obj->GetObjectType()->GetMethodByDecl("void OnUpdate(float)");
+		_onUpdateHitbox = _obj->GetObjectType()->GetMethodByDecl("void OnUpdateHitbox()");
+		_onHitFloor = _obj->GetObjectType()->GetMethodByDecl("void OnHitFloor(float)");
+		_onHitCeiling = _obj->GetObjectType()->GetMethodByDecl("void OnHitCeiling(float)");
+		_onHitWall = _obj->GetObjectType()->GetMethodByDecl("void OnHitWall(float)");
+		_onAnimationStarted = _obj->GetObjectType()->GetMethodByDecl("void OnAnimationStarted()");
+		_onAnimationFinished = _obj->GetObjectType()->GetMethodByDecl("void OnAnimationFinished()");
 	}
 
 	ScriptActorWrapper::~ScriptActorWrapper()
 	{
+		// This had to be added to release the object properly
+		_obj->Release();
+
 		_isDead->Release();
 	}
 
@@ -44,14 +64,14 @@ shared abstract class )" AsClassName R"(
 	)" AsClassName R"(()
 	{
 		// Create the C++ side of the proxy
-		@_obj = )" AsClassNameWrapper R"(();  
+		@_obj = )" AsClassNameInternal R"((GetActorType());  
 	}
 
 	// The copy constructor performs a deep copy
 	)" AsClassName R"((const )" AsClassName R"( &o)
 	{
 		// Create a new C++ instance and copy content
-		@_obj = )" AsClassNameWrapper R"(();
+		@_obj = )" AsClassNameInternal R"((GetActorType());
 		_obj = o._obj;
 	}
 
@@ -63,68 +83,118 @@ shared abstract class )" AsClassName R"(
 		return this;
 	}
 
-	
-	bool OnActivated(array<uint8> &in eventParams) { return false; }
-	bool OnTileDeactivate(int tx1, int ty1, int tx2, int ty2) { return true; }
-	void OnHealthChanged() { }
-	bool OnPerish() { return true; }
-	void OnUpdate(float timeMult) { }
-	void OnUpdateHitbox() { }
-
-	void OnHitFloor(float timeMult) { }
-	void OnHitCeiling(float timeMult) { }
-	void OnHitWall(float timeMult) { }
-
-	float X { get const { return _obj.X; } }
-	float Y { get const { return _obj.Y; } }
-
-	bool MoveTo(float x, float y, bool force = false) { return _obj.MoveTo(x, y); }
-	bool MoveBy(float x, float y, bool force = false) { return _obj.MoveBy(x, y); }
-
-	void RequestMetadata(const string &in path) { _obj.RequestMetadata(path); }
-	void SetAnimation(const string &in identifier) { _obj.SetAnimation(identifier); }
-	void SetAnimation(int state) { _obj.SetAnimation(state); }
-
 	// The script class can be implicitly cast to the C++ type through the opImplCast method
-	)" AsClassNameWrapper R"( @opImplCast() { return _obj; }
+	)" AsClassNameInternal R"( @opImplCast() { return _obj; }
 
 	// Hold a reference to the C++ side of the proxy
-	private )" AsClassNameWrapper R"( @_obj;
+	protected )" AsClassNameInternal R"( @_obj;
+
+	protected int GetActorType() { return 0; }
+
+	// Overridable events
+	//bool OnActivated(array<uint8> &in eventParams) { return false; }
+	//bool OnTileDeactivate(int tx1, int ty1, int tx2, int ty2) { return true; }
+	//void OnHealthChanged() { }
+	//bool OnPerish() { return true; }
+	//void OnUpdate(float timeMult) { }
+	//void OnUpdateHitbox() { }
+
+	//void OnHitFloor(float timeMult) { }
+	//void OnHitCeiling(float timeMult) { }
+	//void OnHitWall(float timeMult) { }
+
+	//void OnAnimationStarted() { }
+	//void OnAnimationFinished() { }
+
+	// Properties
+	float X { get const { return _obj.X; } }
+	float Y { get const { return _obj.Y; } }
+	float SpeedX { get const { return _obj.SpeedX; } set { _obj.SpeedX = value; } }
+	float SpeedY { get const { return _obj.SpeedY; } set { _obj.SpeedY = value; } }
+	float ExternalForceX { get const { return _obj.ExternalForceX; } set { _obj.ExternalForceX = value; } }
+	float ExternalForceY { get const { return _obj.ExternalForceY; } set { _obj.ExternalForceY = value; } }
+	float Elasticity { get const { return _obj.Elasticity; } set { _obj.Elasticity = value; } }
+	float Friction { get const { return _obj.Friction; } set { _obj.Friction = value; } }
+	int Health { get const { return _obj.Health; } set { _obj.Health = value; } }
+	float Alpha { get const { return _obj.Alpha; } set { _obj.Alpha = value; } }
+	uint16 Layer { get const { return _obj.Layer; } set { _obj.Layer = value; } }
+
+	// Methods
+	void DecreaseHealth(int amount) { _obj.DecreaseHealth(amount); }
+	bool MoveTo(float x, float y, bool force = false) { return _obj.MoveTo(x, y, force); }
+	bool MoveBy(float x, float y, bool force = false) { return _obj.MoveBy(x, y, force); }
+	void TryStandardMovement(float timeMult) { _obj.TryStandardMovement(timeMult); }
+
+	void RequestMetadata(const string &in path) { _obj.RequestMetadata(path); }
+	void PlaySfx(const string &in identifier, float gain = 1.0, float pitch = 1.0) { _obj.PlaySfx(identifier, gain, pitch); }
+	void SetAnimation(const string &in identifier) { _obj.SetAnimation(identifier); }
+	void SetAnimation(int state) { _obj.SetAnimation(state); }
+}
+
+shared abstract class CollectibleBase : )" AsClassName R"(
+{
+	protected int GetActorType() final { return 1; }
+
+	// Overridable events
+	//bool OnCollect() { return true; }
+
+	// Properties
+	int ScoreValue { get const { return _obj.ScoreValue; } set { _obj.ScoreValue = value; } }
 }
 )";
+		int r;
+		r = engine->RegisterObjectType(AsClassNameInternal, 0, asOBJ_REF); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectBehaviour(AsClassNameInternal, asBEHAVE_FACTORY, AsClassNameInternal " @f(int)", asFUNCTION(ScriptActorWrapper::Factory), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectBehaviour(AsClassNameInternal, asBEHAVE_ADDREF, "void f()", asMETHOD(ScriptActorWrapper, AddRef), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectBehaviour(AsClassNameInternal, asBEHAVE_RELEASE, "void f()", asMETHOD(ScriptActorWrapper, Release), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod(AsClassNameInternal, AsClassNameInternal " &opAssign(const " AsClassNameInternal " &in)", asMETHOD(ScriptActorWrapper, operator=), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
-		engine->RegisterObjectType(AsClassNameWrapper, 0, asOBJ_REF);
-		engine->RegisterObjectBehaviour(AsClassNameWrapper, asBEHAVE_FACTORY, AsClassNameWrapper " @f()", asFUNCTION(ScriptActorWrapper::Factory), asCALL_CDECL);
-		engine->RegisterObjectBehaviour(AsClassNameWrapper, asBEHAVE_ADDREF, "void f()", asMETHOD(ScriptActorWrapper, AddRef), asCALL_THISCALL);
-		engine->RegisterObjectBehaviour(AsClassNameWrapper, asBEHAVE_RELEASE, "void f()", asMETHOD(ScriptActorWrapper, Release), asCALL_THISCALL);
-		engine->RegisterObjectMethod(AsClassNameWrapper, AsClassNameWrapper " &opAssign(const " AsClassNameWrapper " &in)", asMETHOD(ScriptActorWrapper, operator=), asCALL_THISCALL);
+		r = engine->RegisterObjectProperty(AsClassNameInternal, "float X", asOFFSET(ScriptActorWrapper, _pos.X)); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectProperty(AsClassNameInternal, "float Y", asOFFSET(ScriptActorWrapper, _pos.Y)); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectProperty(AsClassNameInternal, "float SpeedX", asOFFSET(ScriptActorWrapper, _speed.X)); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectProperty(AsClassNameInternal, "float SpeedY", asOFFSET(ScriptActorWrapper, _speed.Y)); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectProperty(AsClassNameInternal, "float ExternalForceX", asOFFSET(ScriptActorWrapper, _externalForce.X)); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectProperty(AsClassNameInternal, "float ExternalForceY", asOFFSET(ScriptActorWrapper, _externalForce.Y)); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectProperty(AsClassNameInternal, "float Elasticity", asOFFSET(ScriptActorWrapper, _elasticity)); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectProperty(AsClassNameInternal, "float Friction", asOFFSET(ScriptActorWrapper, _friction)); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectProperty(AsClassNameInternal, "int Health", asOFFSET(ScriptActorWrapper, _health)); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectProperty(AsClassNameInternal, "int ScoreValue", asOFFSET(ScriptActorWrapper, _scoreValue)); RETURN_ASSERT(r >= 0);
 
-		engine->RegisterObjectProperty(AsClassNameWrapper, "float X", asOFFSET(ScriptActorWrapper, _pos.X));
-		engine->RegisterObjectProperty(AsClassNameWrapper, "float Y", asOFFSET(ScriptActorWrapper, _pos.Y));
+		r = engine->RegisterObjectMethod(AsClassNameInternal, "float get_Alpha() const property", asMETHOD(ScriptActorWrapper, asGetAlpha), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod(AsClassNameInternal, "void set_Alpha(float) property", asMETHOD(ScriptActorWrapper, asSetAlpha), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod(AsClassNameInternal, "uint16 get_Layer() const property", asMETHOD(ScriptActorWrapper, asGetLayer), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod(AsClassNameInternal, "void set_Layer(uint16) property", asMETHOD(ScriptActorWrapper, asSetLayer), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
-		engine->RegisterObjectMethod(AsClassNameWrapper, "bool MoveTo(float x, float y)", asMETHOD(ScriptActorWrapper, asMoveTo), asCALL_THISCALL);
-		engine->RegisterObjectMethod(AsClassNameWrapper, "bool MoveBy(float x, float y)", asMETHOD(ScriptActorWrapper, asMoveBy), asCALL_THISCALL);
-		engine->RegisterObjectMethod(AsClassNameWrapper, "void RequestMetadata(const string &in path)", asMETHOD(ScriptActorWrapper, asRequestMetadata), asCALL_THISCALL);
-		engine->RegisterObjectMethod(AsClassNameWrapper, "void SetAnimation(const string &in identifier)", asMETHOD(ScriptActorWrapper, asSetAnimation), asCALL_THISCALL);
-		engine->RegisterObjectMethod(AsClassNameWrapper, "void SetAnimation(int state)", asMETHOD(ScriptActorWrapper, asSetAnimationState), asCALL_THISCALL);
+		r = engine->RegisterObjectMethod(AsClassNameInternal, "void DecreaseHealth(int)", asMETHOD(ScriptActorWrapper, asDecreaseHealth), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod(AsClassNameInternal, "bool MoveTo(float, float, bool)", asMETHOD(ScriptActorWrapper, asMoveTo), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod(AsClassNameInternal, "bool MoveBy(float, float, bool)", asMETHOD(ScriptActorWrapper, asMoveBy), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod(AsClassNameInternal, "void TryStandardMovement(float)", asMETHOD(ScriptActorWrapper, asTryStandardMovement), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod(AsClassNameInternal, "void RequestMetadata(const string &in)", asMETHOD(ScriptActorWrapper, asRequestMetadata), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod(AsClassNameInternal, "void PlaySfx(const string &in, float, float)", asMETHOD(ScriptActorWrapper, asPlaySfx), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod(AsClassNameInternal, "void SetAnimation(const string &in)", asMETHOD(ScriptActorWrapper, asSetAnimation), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod(AsClassNameInternal, "void SetAnimation(int)", asMETHOD(ScriptActorWrapper, asSetAnimationState), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
-		module->AddScriptSection("__" AsClassName, AsLibrary, _countof(AsLibrary) - 1, 0);
+		r = module->AddScriptSection("__" AsClassName, AsLibrary, _countof(AsLibrary) - 1, 0); RETURN_ASSERT(r >= 0);
 	}
 
-	ScriptActorWrapper* ScriptActorWrapper::Factory()
+	ScriptActorWrapper* ScriptActorWrapper::Factory(int actorType)
 	{
 		auto ctx = asGetActiveContext();
-		auto controller = reinterpret_cast<LevelScripts*>(ctx->GetUserData(LevelScripts::ContextToController));
+		auto owner = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(LevelScripts::EngineToOwner));
 
 		// Get the function that is calling the factory, so we can be certain it is the our internal script class
 		asIScriptFunction* func = ctx->GetFunction(0);
 		if (func->GetObjectType() == 0 || StringView(func->GetObjectType()->GetName()) != StringView(AsClassName)) {
-			ctx->SetException("Invalid attempt to manually instantiate FooScript_t");
+			ctx->SetException("Cannot manually instantiate " AsClassNameInternal);
 			return nullptr;
 		}
 
-		asIScriptObject* obj = reinterpret_cast<asIScriptObject*>(ctx->GetThisPointer(0));
-		return new ScriptActorWrapper(controller, obj);
+		asIScriptObject* obj = reinterpret_cast<asIScriptObject*>(ctx->GetThisPointer());
+		switch (actorType) {
+			default:
+			case 0: return new ScriptActorWrapper(owner, obj);
+			case 1: return new ScriptCollectibleWrapper(owner, obj);
+		}
 	}
 
 	void ScriptActorWrapper::AddRef()
@@ -155,12 +225,16 @@ shared abstract class )" AsClassName R"(
 		}
 
 		asIScriptEngine* engine = _obj->GetEngine();
-		asIScriptContext* ctx = engine->RequestContext();
+		asIScriptFunction* func = _obj->GetObjectType()->GetMethodByDecl("bool OnActivated(array<uint8> &in)");
+		if (func == nullptr) {
+			co_return false;
+		}
 
 		CScriptArray* eventParams = CScriptArray::Create(engine->GetTypeInfoByDecl("array<uint8>"), Events::EventSpawner::SpawnParamsSize);
 		std::memcpy(eventParams->At(0), details.Params, Events::EventSpawner::SpawnParamsSize);
 
-		ctx->Prepare(_obj->GetObjectType()->GetMethodByDecl("bool OnActivated(array<uint8> &in eventParams)"));
+		asIScriptContext* ctx = engine->RequestContext();
+		ctx->Prepare(func);
 		ctx->SetObject(_obj);
 		ctx->SetArgObject(0, eventParams);
 		int r = ctx->Execute();
@@ -173,26 +247,22 @@ shared abstract class )" AsClassName R"(
 		}
 
 		eventParams->Release();
-
 		engine->ReturnContext(ctx);
+
 		co_return result;
 	}
 
-	bool ScriptActorWrapper::OnTileDeactivate(int tx1, int ty1, int tx2, int ty2)
+	bool ScriptActorWrapper::OnTileDeactivated()
 	{
-		if (_isDead->Get()) {
+		if (_onTileDeactivated == nullptr || _isDead->Get()) {
 			return true;
 		}
 
 		asIScriptEngine* engine = _obj->GetEngine();
 		asIScriptContext* ctx = engine->RequestContext();
 
-		ctx->Prepare(_obj->GetObjectType()->GetMethodByDecl("bool OnTileDeactivate(int tx1, int ty1, int tx2, int ty2)"));
+		ctx->Prepare(_onTileDeactivated);
 		ctx->SetObject(_obj);
-		ctx->SetArgDWord(0, tx1);
-		ctx->SetArgDWord(1, ty1);
-		ctx->SetArgDWord(2, tx2);
-		ctx->SetArgDWord(3, ty2);
 		int r = ctx->Execute();
 		bool result;
 		if (r == asEXECUTION_EXCEPTION) {
@@ -203,19 +273,20 @@ shared abstract class )" AsClassName R"(
 		}
 
 		engine->ReturnContext(ctx);
+
 		return result;
 	}
 
 	void ScriptActorWrapper::OnHealthChanged(ActorBase* collider)
 	{
-		if (_isDead->Get()) {
+		if (_onHealthChanged == nullptr || _isDead->Get()) {
 			return;
 		}
 
 		asIScriptEngine* engine = _obj->GetEngine();
 		asIScriptContext* ctx = engine->RequestContext();
 
-		ctx->Prepare(_obj->GetObjectType()->GetMethodByDecl("void OnHealthChanged()"));
+		ctx->Prepare(_onHealthChanged);
 		ctx->SetObject(_obj);
 		int r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
@@ -228,13 +299,18 @@ shared abstract class )" AsClassName R"(
 	bool ScriptActorWrapper::OnPerish(ActorBase* collider)
 	{
 		if (_isDead->Get()) {
-			return true;
+			return ActorBase::OnPerish(collider);
+		}
+
+		asIScriptFunction* func = _obj->GetObjectType()->GetMethodByDecl("bool OnPerish()");
+		if (func == nullptr) {
+			return ActorBase::OnPerish(collider);
 		}
 
 		asIScriptEngine* engine = _obj->GetEngine();
 		asIScriptContext* ctx = engine->RequestContext();
 
-		ctx->Prepare(_obj->GetObjectType()->GetMethodByDecl("bool OnPerish()"));
+		ctx->Prepare(func);
 		ctx->SetObject(_obj);
 		int r = ctx->Execute();
 		bool result;
@@ -246,19 +322,20 @@ shared abstract class )" AsClassName R"(
 		}
 
 		engine->ReturnContext(ctx);
-		return result;
+
+		return (result && ActorBase::OnPerish(collider));
 	}
 
 	void ScriptActorWrapper::OnUpdate(float timeMult)
 	{
-		if (_isDead->Get()) {
+		if (_onUpdate == nullptr || _isDead->Get()) {
 			return;
 		}
 
 		asIScriptEngine* engine = _obj->GetEngine();
 		asIScriptContext* ctx = engine->RequestContext();
 
-		ctx->Prepare(_obj->GetObjectType()->GetMethodByDecl("void OnUpdate(float timeMult)"));
+		ctx->Prepare(_onUpdate);
 		ctx->SetObject(_obj);
 		ctx->SetArgFloat(0, timeMult);
 		int r = ctx->Execute();
@@ -271,14 +348,17 @@ shared abstract class )" AsClassName R"(
 
 	void ScriptActorWrapper::OnUpdateHitbox()
 	{
-		if (_isDead->Get()) {
+		// Always call base implementation
+		ActorBase::OnUpdateHitbox();
+
+		if (_onUpdateHitbox == nullptr || _isDead->Get()) {
 			return;
 		}
 
 		asIScriptEngine* engine = _obj->GetEngine();
 		asIScriptContext* ctx = engine->RequestContext();
 
-		ctx->Prepare(_obj->GetObjectType()->GetMethodByDecl("void OnUpdateHitbox()"));
+		ctx->Prepare(_onUpdateHitbox);
 		ctx->SetObject(_obj);
 		int r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
@@ -290,29 +370,26 @@ shared abstract class )" AsClassName R"(
 
 	bool ScriptActorWrapper::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
+		// TODO
 		return ActorBase::OnHandleCollision(other);
 	}
 
 	bool ScriptActorWrapper::OnDraw(RenderQueue& renderQueue)
 	{
-		return ActorBase::OnDraw(renderQueue);
-	}
-
-	void ScriptActorWrapper::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
-	{
 		// TODO
+		return ActorBase::OnDraw(renderQueue);
 	}
 
 	void ScriptActorWrapper::OnHitFloor(float timeMult)
 	{
-		if (_isDead->Get()) {
+		if (_onHitFloor == nullptr || _isDead->Get()) {
 			return;
 		}
 
 		asIScriptEngine* engine = _obj->GetEngine();
 		asIScriptContext* ctx = engine->RequestContext();
 
-		ctx->Prepare(_obj->GetObjectType()->GetMethodByDecl("void OnHitFloor(float timeMult)"));
+		ctx->Prepare(_onHitFloor);
 		ctx->SetObject(_obj);
 		ctx->SetArgFloat(0, timeMult);
 		int r = ctx->Execute();
@@ -325,14 +402,14 @@ shared abstract class )" AsClassName R"(
 
 	void ScriptActorWrapper::OnHitCeiling(float timeMult)
 	{
-		if (_isDead->Get()) {
+		if (_onHitCeiling == nullptr || _isDead->Get()) {
 			return;
 		}
 
 		asIScriptEngine* engine = _obj->GetEngine();
 		asIScriptContext* ctx = engine->RequestContext();
 
-		ctx->Prepare(_obj->GetObjectType()->GetMethodByDecl("void OnHitCeiling(float timeMult)"));
+		ctx->Prepare(_onHitCeiling);
 		ctx->SetObject(_obj);
 		ctx->SetArgFloat(0, timeMult);
 		int r = ctx->Execute();
@@ -345,14 +422,14 @@ shared abstract class )" AsClassName R"(
 
 	void ScriptActorWrapper::OnHitWall(float timeMult)
 	{
-		if (_isDead->Get()) {
+		if (_onHitWall == nullptr || _isDead->Get()) {
 			return;
 		}
 
 		asIScriptEngine* engine = _obj->GetEngine();
 		asIScriptContext* ctx = engine->RequestContext();
 
-		ctx->Prepare(_obj->GetObjectType()->GetMethodByDecl("void OnHitWall(float timeMult)"));
+		ctx->Prepare(_onHitWall);
 		ctx->SetObject(_obj);
 		ctx->SetArgFloat(0, timeMult);
 		int r = ctx->Execute();
@@ -361,6 +438,52 @@ shared abstract class )" AsClassName R"(
 		}
 
 		engine->ReturnContext(ctx);
+	}
+
+	void ScriptActorWrapper::OnAnimationStarted()
+	{
+		if (_onAnimationStarted == nullptr || _isDead->Get()) {
+			return;
+		}
+
+		asIScriptEngine* engine = _obj->GetEngine();
+		asIScriptContext* ctx = engine->RequestContext();
+
+		ctx->Prepare(_onAnimationStarted);
+		ctx->SetObject(_obj);
+		int r = ctx->Execute();
+		if (r == asEXECUTION_EXCEPTION) {
+			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+		}
+
+		engine->ReturnContext(ctx);
+	}
+
+	void ScriptActorWrapper::OnAnimationFinished()
+	{
+		// Always call base implementation
+		ActorBase::OnAnimationFinished();
+
+		if (_onAnimationFinished == nullptr || _isDead->Get()) {
+			return;
+		}
+
+		asIScriptEngine* engine = _obj->GetEngine();
+		asIScriptContext* ctx = engine->RequestContext();
+
+		ctx->Prepare(_onAnimationFinished);
+		ctx->SetObject(_obj);
+		int r = ctx->Execute();
+		if (r == asEXECUTION_EXCEPTION) {
+			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+		}
+
+		engine->ReturnContext(ctx);
+	}
+
+	void ScriptActorWrapper::asDecreaseHealth(int amount)
+	{
+		DecreaseHealth(amount);
 	}
 
 	bool ScriptActorWrapper::asMoveTo(float x, float y, bool force)
@@ -373,12 +496,23 @@ shared abstract class )" AsClassName R"(
 		return MoveInstantly(Vector2f(x, y), (force ? MoveType::Relative | MoveType::Force : MoveType::Relative));
 	}
 
-	void ScriptActorWrapper::asRequestMetadata(String& path)
+	void ScriptActorWrapper::asTryStandardMovement(float timeMult)
+	{
+		TileCollisionParams params = { TileDestructType::None, _speed.Y >= 0.0f };
+		TryStandardMovement(timeMult, params);
+	}
+
+	void ScriptActorWrapper::asRequestMetadata(const String& path)
 	{
 		RequestMetadata(path);
 	}
 
-	void ScriptActorWrapper::asSetAnimation(String& identifier)
+	void ScriptActorWrapper::asPlaySfx(const String& identifier, float gain, float pitch)
+	{
+		PlaySfx(identifier, gain, pitch);
+	}
+
+	void ScriptActorWrapper::asSetAnimation(const String& identifier)
 	{
 		SetAnimation(identifier);
 	}
@@ -386,6 +520,113 @@ shared abstract class )" AsClassName R"(
 	void ScriptActorWrapper::asSetAnimationState(int state)
 	{
 		SetAnimation((AnimState)state);
+	}
+
+	float ScriptActorWrapper::asGetAlpha() const
+	{
+		return _renderer.alpha();
+	}
+
+	void ScriptActorWrapper::asSetAlpha(float value)
+	{
+		_renderer.setAlphaF(value);
+	}
+
+	uint16_t ScriptActorWrapper::asGetLayer() const
+	{
+		return _renderer.layer();
+	}
+
+	void ScriptActorWrapper::asSetLayer(uint16_t value)
+	{
+		_renderer.setLayer(value);
+	}
+
+	ScriptCollectibleWrapper::ScriptCollectibleWrapper(LevelScripts* levelScripts, asIScriptObject* obj)
+		:
+		ScriptActorWrapper(levelScripts, obj),
+		_untouched(true),
+		_phase(0.0f),
+		_timeLeft(0.0f),
+		_startingY(0.0f)
+	{
+		_onCollect = _obj->GetObjectType()->GetMethodByDecl("bool OnCollect()");
+	}
+
+	Task<bool> ScriptCollectibleWrapper::OnActivatedAsync(const ActorActivationDetails& details)
+	{
+		_elasticity = 0.6f;
+
+		SetState(ActorState::SkipPerPixelCollisions, true);
+
+		Vector2f pos = _pos;
+		_phase = ((pos.X / 32) + (pos.Y / 32)) * 2.0f;
+
+		if ((GetState() & (ActorState::IsCreatedFromEventMap | ActorState::IsFromGenerator)) != ActorState::None) {
+			_untouched = true;
+			SetState(ActorState::ApplyGravitation, false);
+
+			_startingY = pos.Y;
+		} else {
+			_untouched = false;
+			SetState(ActorState::ApplyGravitation, true);
+
+			_timeLeft = 90.0f * FrameTimer::FramesPerSecond;
+		}
+
+		bool success = co_await ScriptActorWrapper::OnActivatedAsync(details);
+
+		co_return success;
+	}
+
+	bool ScriptCollectibleWrapper::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	{
+		if (auto player = dynamic_cast<Player*>(other.get())) {
+			OnCollect(player);
+			return true;
+		} else {
+			bool shouldDrop = _untouched && (dynamic_cast<Weapons::ShotBase*>(other.get()) != nullptr ||
+				dynamic_cast<Weapons::TNT*>(other.get()) != nullptr || dynamic_cast<Enemies::TurtleShell*>(other.get()) != nullptr);
+			if (shouldDrop) {
+				Vector2f speed = other->GetSpeed();
+				_externalForce.X += speed.X / 2.0f * (0.9f + Random().NextFloat(0.0f, 0.2f));
+				_externalForce.Y += -speed.Y / 4.0f * (0.9f + Random().NextFloat(0.0f, 0.2f));
+
+				_untouched = false;
+				SetState(ActorState::ApplyGravitation, true);
+			}
+		}
+
+		return false;
+	}
+
+	void ScriptCollectibleWrapper::OnCollect(Player* player)
+	{
+		if (_onCollect == nullptr || _isDead->Get()) {
+			return;
+		}
+
+		asIScriptEngine* engine = _obj->GetEngine();
+		asIScriptContext* ctx = engine->RequestContext();
+
+		ctx->Prepare(_onCollect);
+		ctx->SetObject(_obj);
+		int r = ctx->Execute();
+		bool result;
+		if (r == asEXECUTION_EXCEPTION) {
+			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			result = true;
+		} else {
+			result = (ctx->GetReturnByte() != 0);
+		}
+
+		engine->ReturnContext(ctx);
+
+		if (result) {
+			player->AddScore(_scoreValue);
+			Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()), Explosion::Type::Generator);
+			DecreaseHealth(INT32_MAX);
+		}
 	}
 }
 

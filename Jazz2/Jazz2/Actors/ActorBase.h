@@ -3,6 +3,7 @@
 #include "../ContentResolver.h"
 #include "../EventType.h"
 #include "../LightEmitter.h"
+
 #include "../../nCine/Base/Task.h"
 #include "../../nCine/Primitives/AABB.h"
 #include "../../nCine/Audio/AudioBufferPlayer.h"
@@ -103,16 +104,17 @@ namespace Jazz2::Actors
 
 	public:
 		ActorBase();
-		~ActorBase();
+		virtual ~ActorBase();
 
 		AABBf AABB;
 		AABBf AABBInner;
 		int32_t CollisionProxyID;
 
+		bool IsFacingLeft();
+
 		void SetParent(SceneNode* parent);
 		Task<bool> OnActivated(const ActorActivationDetails& details);
 		virtual bool OnHandleCollision(std::shared_ptr<ActorBase> other);
-		virtual void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) { }
 
 		bool IsInvulnerable();
 		int GetHealth();
@@ -232,11 +234,10 @@ namespace Jazz2::Actors
 		AnimState _currentTransitionState;
 		bool _currentTransitionCancellable;
 
-		bool IsFacingLeft();
 		void SetFacingLeft(bool value);
 
 		virtual Task<bool> OnActivatedAsync(const ActorActivationDetails& details);
-		virtual bool OnTileDeactivate(int tx1, int ty1, int tx2, int ty2);
+		virtual bool OnTileDeactivated();
 
 		virtual void OnHealthChanged(ActorBase* collider);
 		virtual bool OnPerish(ActorBase* collider);
@@ -244,6 +245,7 @@ namespace Jazz2::Actors
 		virtual void OnUpdate(float timeMult);
 		virtual void OnUpdateHitbox();
 		virtual bool OnDraw(RenderQueue& renderQueue);
+		virtual void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) { }
 		virtual void OnHitFloor(float timeMult);
 		virtual void OnHitCeiling(float timeMult);
 		virtual void OnHitWall(float timeMult);

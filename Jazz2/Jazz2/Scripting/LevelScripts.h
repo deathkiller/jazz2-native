@@ -17,12 +17,13 @@
 
 namespace Jazz2::Scripting
 {
+	class CScriptArray;
 	class ScriptActorWrapper;
 
 	class LevelScripts
 	{
 	public:
-		static constexpr asPWORD ContextToController = 0;
+		static constexpr asPWORD EngineToOwner = 0;
 
 		LevelScripts(LevelHandler* levelHandler, const StringView& scriptPath);
 		~LevelScripts();
@@ -35,17 +36,14 @@ namespace Jazz2::Scripting
 			return _module;
 		}
 
-		asIScriptContext* GetMainContext() const {
-			return _ctx;
-		}
-
-		void OnBeginLevel();
+		void OnLevelBegin();
+		void OnLevelCallback(uint8_t* eventParams);
 
 	private:
 		LevelHandler* _levelHandler;
 		asIScriptEngine* _engine;
 		asIScriptModule* _module;
-		asIScriptContext* _ctx;
+		SmallVector<asIScriptContext*, 4> _contextPool;
 		HashMap<String, bool> _definedWords;
 
 		HashMap<int, String> _eventTypeToTypeName;
@@ -54,10 +52,31 @@ namespace Jazz2::Scripting
 		int ExcludeCode(String& scriptContent, int pos);
 		int SkipStatement(String& scriptContent, int pos);
 
-		void Status(const asSMessageInfo& msg);
+		static asIScriptContext* RequestContextCallback(asIScriptEngine* engine, void* param);
+		static void ReturnContextCallback(asIScriptEngine* engine, asIScriptContext* ctx, void* param);
 
-		static void asRegisterSpawnable(int eventType, String& typeName);
+		void Message(const asSMessageInfo& msg);
 		Actors::ActorBase* CreateActorInstance(const StringView& typeName);
+
+		static uint8_t asGetDifficulty();
+		static int asGetLevelWidth();
+		static int asGetLevelHeight();
+		static float asGetElapsedFrames();
+		static float asGetAmbientLight();
+		static void asSetAmbientLight(float value);
+		static float asGetWaterLevel();
+		static void asSetWaterLevel(float value);
+
+		static void asPreloadMetadata(const String& path);
+		static void asRegisterSpawnable(int eventType, const String& typeName);
+		static void asSpawnEvent(int eventType, int x, int y);
+		static void asSpawnEventParams(int eventType, int x, int y, const CScriptArray& eventParams);
+		static void asSpawnType(const String& typeName, int x, int y);
+		static void asSpawnTypeParams(const String& typeName, int x, int y, const CScriptArray& eventParams);
+
+		static void asMusicPlay(const String& path);
+		static void asShowLevelText(const String& text);
+		static void asSetWeather(uint8_t weatherType, uint8_t intensity);
 	};
 }
 

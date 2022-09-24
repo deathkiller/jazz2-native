@@ -53,7 +53,7 @@ namespace Jazz2::Actors::Solid
 					player->_speed.X += force.X * 0.4f;
 					player->_speed.Y += force.Y * 0.4f;
 					player->_externalForce.X += force.X * 0.04f;
-					player->_externalForce.Y -= force.Y * 0.04f;
+					player->_externalForce.Y += force.Y * 0.04f;
 
 					player->_controllable = true;
 					player->SetState(ActorState::CanJump, false);

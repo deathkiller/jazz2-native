@@ -98,7 +98,10 @@ namespace Jazz2
 		void OnBeginFrame() override;
 		void OnEndFrame() override;
 		void OnInitializeViewport(int width, int height) override;
-		void OnTouchEvent(const nCine::TouchEvent& event) override;
+
+		void OnKeyPressed(const KeyboardEvent& event) override;
+		void OnKeyReleased(const KeyboardEvent& event) override;
+		void OnTouchEvent(const TouchEvent& event) override;
 
 		void AddActor(const std::shared_ptr<Actors::ActorBase>& actor) override;
 
@@ -123,7 +126,6 @@ namespace Jazz2
 		StringView GetLevelText(int textId, int index = -1, uint32_t delimiter = 0) override;
 		void LimitCameraView(float left, float width) override;
 		void ShakeCameraView(float duration) override;
-		void SetWaterLevel(float value) override;
 		void SetWeather(WeatherType type, uint8_t intensity) override;
 
 		bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads = true) override;
@@ -242,6 +244,9 @@ namespace Jazz2
 		std::unique_ptr<Camera> _camera;
 		std::unique_ptr<Texture> _noiseTexture;
 
+#if defined(WITH_ANGELSCRIPT)
+		std::unique_ptr<Scripting::LevelScripts> _scripts;
+#endif
 		SmallVector<std::shared_ptr<Actors::ActorBase>, 0> _actors;
 		SmallVector<Actors::Player*, LevelInitialization::MaxPlayerCount> _players;
 
@@ -263,9 +268,6 @@ namespace Jazz2
 		std::unique_ptr<Events::EventMap> _eventMap;
 		std::unique_ptr<Tiles::TileMap> _tileMap;
 		Collisions::DynamicTreeBroadPhase _collisions;
-#if defined(WITH_ANGELSCRIPT)
-		std::unique_ptr<Scripting::LevelScripts> _scripts;
-#endif
 
 		float _elapsedFrames;
 		Rectf _viewBounds;
@@ -288,6 +290,7 @@ namespace Jazz2
 		WeatherType _weatherType;
 		uint8_t _weatherIntensity;
 
+		BitArray _pressedKeys;
 		uint64_t _pressedActions;
 		uint32_t _overrideActions;
 		Vector2f _playerRequiredMovement;

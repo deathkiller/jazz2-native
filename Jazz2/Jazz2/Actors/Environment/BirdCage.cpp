@@ -1,5 +1,7 @@
 ﻿#include "BirdCage.h"
 #include "../../ILevelHandler.h"
+#include "../../Events/EventMap.h"
+#include "../Explosion.h"
 #include "../Player.h"
 #include "../Weapons/ShotBase.h"
 #include "../Weapons/TNT.h"
@@ -31,19 +33,17 @@ namespace Jazz2::Actors::Environment
 	{
 		_renderer.setLayer(_renderer.layer() - 16);
 
-		SetState(ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjects, true);
-
 		_type = details.Params[0];
 		_activated = (details.Params[1] != 0);
+
+		SetState(ActorState::CollideWithSolidObjects | ActorState::IsSolidObject, !_activated);
 
 		switch (_type) {
 			case 0: // Chuck (red)
 				co_await RequestMetadataAsync("Object/BirdCageChuck"_s);
-				PreloadMetadataAsync("Object/BirdChuck"_s);
 				break;
 			case 1: // Birdy (yellow)
 				co_await RequestMetadataAsync("Object/BirdCageBirdy"_s);
-				PreloadMetadataAsync("Object/BirdBirdy"_s);
 				break;
 		}
 
@@ -83,6 +83,25 @@ namespace Jazz2::Actors::Environment
 
 	void BirdCage::ApplyToPlayer(Player* player)
 	{
-		// TODO: Birds
+		if (!player->SpawnBird(_type, _pos)) {
+			return;
+		}
+
+		_activated = true;
+		SetState(ActorState::CollideWithSolidObjects | ActorState::IsSolidObject, false);
+		SetAnimation(AnimState::Activated);
+
+		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X - 12.0f), (int)(_pos.Y - 6.0f), _renderer.layer() + 20), Explosion::Type::SmokeBrown);
+		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X - 8.0f), (int)(_pos.Y + 28.0f), _renderer.layer() + 20), Explosion::Type::SmokeBrown);
+		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + 12.0f), (int)(_pos.Y + 10.0f), _renderer.layer() + 20), Explosion::Type::SmokeBrown);
+
+		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)(_pos.Y + 12.0f), _renderer.layer() + 22), Explosion::Type::SmokePoof);
+
+		// Deactivate event in map
+		auto eventMap = _levelHandler->EventMap();
+		if (eventMap != nullptr) {
+			uint8_t eventParams[16] = { _type, 1 };
+			eventMap->StoreTileEvent(_originTile.X, _originTile.Y, EventType::BirdCage, ActorState::None, eventParams);
+		}
 	}
 }

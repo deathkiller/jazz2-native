@@ -251,6 +251,7 @@ namespace nCine {
 		BUTTON_16,
 
 		COUNT,
+		COUNT_BASE = SOFT_LEFT,
 
 		UNKNOWN = COUNT
 	};

@@ -1,14 +1,17 @@
 ﻿#include "EventSpawner.h"
 
 #include "../Actors/Collectibles/AmmoCollectible.h"
+#include "../Actors/Collectibles/CarrotCollectible.h"
+#include "../Actors/Collectibles/CarrotFlyCollectible.h"
+#include "../Actors/Collectibles/CarrotInvincibleCollectible.h"
 #include "../Actors/Collectibles/CoinCollectible.h"
 #include "../Actors/Collectibles/FastFireCollectible.h"
 #include "../Actors/Collectibles/FoodCollectible.h"
-#include "../Actors/Collectibles/CarrotCollectible.h"
 #include "../Actors/Collectibles/GemCollectible.h"
 #include "../Actors/Collectibles/GemGiant.h"
 #include "../Actors/Collectibles/GemRing.h"
 #include "../Actors/Collectibles/OneUpCollectible.h"
+#include "../Actors/Collectibles/Stopwatch.h"
 
 #include "../Actors/Enemies/Bat.h"
 #include "../Actors/Enemies/Bee.h"
@@ -161,15 +164,18 @@ namespace Jazz2::Events
 		//RegisterSpawnable(EventType::BossBolly, Bolly.Create, Bolly.Preload);
 
 		// Collectibles
+		RegisterSpawnable<Collectibles::AmmoCollectible>(EventType::Ammo);
+		RegisterSpawnable<Collectibles::FoodCollectible>(EventType::Food);
 		RegisterSpawnable<Collectibles::GemCollectible>(EventType::Gem);
 		RegisterSpawnable<Collectibles::GemGiant>(EventType::GemGiant);
 		RegisterSpawnable<Collectibles::GemRing>(EventType::GemRing);
 		RegisterSpawnable<Collectibles::CoinCollectible>(EventType::Coin);
 		RegisterSpawnable<Collectibles::CarrotCollectible>(EventType::Carrot);
-		/*RegisterSpawnable(EventType::CarrotFly, CarrotFlyCollectible.Create, CarrotFlyCollectible.Preload);
-		RegisterSpawnable(EventType::CarrotInvincible, CarrotInvincibleCollectible.Create, CarrotInvincibleCollectible.Preload);*/
+		RegisterSpawnable<Collectibles::CarrotFlyCollectible>(EventType::CarrotFly);
+		RegisterSpawnable<Collectibles::CarrotInvincibleCollectible>(EventType::CarrotInvincible);
 		RegisterSpawnable<Collectibles::OneUpCollectible>(EventType::OneUp);
 		RegisterSpawnable<Collectibles::FastFireCollectible>(EventType::FastFire);
+		RegisterSpawnable<Collectibles::Stopwatch>(EventType::Stopwatch);
 
 		RegisterSpawnable<Solid::AmmoCrate>(EventType::CrateAmmo);
 		RegisterSpawnable<Solid::AmmoBarrel>(EventType::BarrelAmmo);
@@ -188,11 +194,7 @@ namespace Jazz2::Events
 		RegisterSpawnable(EventType::SwingingVine, SwingingVine.Create, SwingingVine.Preload);*/
 
 		RegisterSpawnable<Solid::PowerUpShieldMonitor>(EventType::PowerUpShield);
-		//RegisterSpawnable(EventType::Stopwatch, Stopwatch.Create, Stopwatch.Preload);*/
-
-		RegisterSpawnable<Collectibles::AmmoCollectible>(EventType::Ammo);
 		RegisterSpawnable<Solid::PowerUpWeaponMonitor>(EventType::PowerUpWeapon);
-		RegisterSpawnable<Collectibles::FoodCollectible>(EventType::Food);
 	}
 
 	void EventSpawner::RegisterSpawnable(EventType type, CreateDelegate create, PreloadDelegate preload)

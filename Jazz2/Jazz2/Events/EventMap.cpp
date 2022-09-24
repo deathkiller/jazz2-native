@@ -88,7 +88,6 @@ namespace Jazz2::Events
 		newEvent.IsEventActive = (previousEvent.Event == eventType && previousEvent.IsEventActive);
 
 		// Store event parameters
-		int i = 0;
 		if (tileParams != nullptr) {
 			std::memcpy(newEvent.EventParams, tileParams, sizeof(newEvent.EventParams));
 		}
@@ -392,27 +391,6 @@ namespace Jazz2::Events
 		}
 
 		std::memcpy(_eventLayoutForRollback.data(), _eventLayout.data(), _eventLayout.size() * sizeof(EventTile));
-	}
-
-	void EventMap::StoreTileEvent(int x, int y, EventType eventType, Actors::ActorState eventFlags, uint16_t* tileParams)
-	{
-		if (eventType == EventType::Empty && (x < 0 || y < 0 || x >= _layoutSize.X || y >= _layoutSize.Y )) {
-			return;
-		}
-
-		auto& previousEvent = _eventLayout[x + y * _layoutSize.X];
-
-		EventTile newEvent = { };
-		newEvent.Event = eventType;
-		newEvent.EventFlags = eventFlags;
-		newEvent.IsEventActive = (previousEvent.Event == eventType && previousEvent.IsEventActive);
-
-		// Store event parameters
-		if (tileParams != nullptr) {
-			std::memcpy(newEvent.EventParams, tileParams, sizeof(newEvent.EventParams));
-		}
-
-		previousEvent = newEvent;
 	}
 
 	void EventMap::AddWarpTarget(uint16_t id, int x, int y)

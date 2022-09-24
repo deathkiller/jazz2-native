@@ -103,7 +103,7 @@ namespace Jazz2::Actors::Collectibles
 			if (shouldDrop) {
 				Vector2f speed = other->GetSpeed();
 				_externalForce.X += speed.X / 2.0f * (0.9f + Random().NextFloat(0.0f, 0.2f));
-				_externalForce.Y += -speed.Y / 4.0f * (0.9f + Random().NextFloat(0.0f, 0.2f));
+				_externalForce.Y += speed.Y / 4.0f * (0.9f + Random().NextFloat(0.0f, 0.2f));
 
 				_untouched = false;
 				SetState(ActorState::ApplyGravitation, true);
@@ -116,9 +116,7 @@ namespace Jazz2::Actors::Collectibles
 	void CollectibleBase::OnCollect(Player* player)
 	{
 		player->AddScore(_scoreValue);
-
 		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()), Explosion::Type::Generator);
-
 		DecreaseHealth(INT32_MAX);
 	}
 

@@ -14,6 +14,8 @@ namespace Jazz2::Actors::Collectibles
 	public:
 		CollectibleBase();
 
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+
 	protected:
 		static constexpr int IlluminateLightCount = 20;
 
@@ -30,7 +32,6 @@ namespace Jazz2::Actors::Collectibles
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 		virtual void OnCollect(Player* player);
 

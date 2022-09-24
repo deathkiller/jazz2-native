@@ -286,32 +286,32 @@ namespace Jazz2::UI::Menu
 	void InGameMenu::UpdatePressedActions()
 	{
 		auto& input = theApplication().inputManager();
-		auto& keyState = input.keyboardState();
+		auto& pressedKeys = _root->_pressedKeys;
 
 		_pressedActions = ((_pressedActions & 0xffff) << 16);
 
-		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Up)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Up))) {
+		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Up)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Up)]) {
 			_pressedActions |= (1 << (int)PlayerActions::Up);
 		}
-		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Down)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Down))) {
+		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Down)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Down)]) {
 			_pressedActions |= (1 << (int)PlayerActions::Down);
 		}
-		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Left)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Left))) {
+		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Left)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Left)]) {
 			_pressedActions |= (1 << (int)PlayerActions::Left);
 		}
-		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Right)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Right))) {
+		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Right)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Right)]) {
 			_pressedActions |= (1 << (int)PlayerActions::Right);
 		}
 		// Also allow Return (Enter) as confirm key
-		if (keyState.isKeyDown(KeySym::RETURN) || keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Fire)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Fire)) ||
-			keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Jump)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Jump))) {
+		if (pressedKeys[(uint32_t)KeySym::RETURN] || pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Fire)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Fire)] ||
+			pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Jump)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Jump)]) {
 			_pressedActions |= (1 << (int)PlayerActions::Fire);
 		}
-		if (keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Menu)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Menu))) {
+		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Menu)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Menu)]) {
 			_pressedActions |= (1 << (int)PlayerActions::Menu);
 		}
 		// Use SwitchWeapon action as Delete key
-		if (keyState.isKeyDown(KeySym::DELETE)) {
+		if (pressedKeys[(uint32_t)KeySym::DELETE]) {
 			_pressedActions |= (1 << (int)PlayerActions::ChangeWeapon);
 		}
 

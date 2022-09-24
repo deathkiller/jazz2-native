@@ -20,7 +20,9 @@ namespace Jazz2::UI
 		_frameDelay(0.0f),
 		_frameProgress(0.0f),
 		_framesLeft(0),
-		_currentOffsets { }
+		_currentOffsets { },
+		_pressedKeys((uint32_t)KeySym::COUNT_BASE),
+		_pressedActions(0)
 	{
 		theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection"_s);
 
@@ -106,7 +108,17 @@ namespace Jazz2::UI
 		_canvas->setParent(_upscalePass.GetNode());
 	}
 
-	void Cinematics::OnTouchEvent(const nCine::TouchEvent& event)
+	void Cinematics::OnKeyPressed(const KeyboardEvent& event)
+	{
+		_pressedKeys.Set((uint32_t)event.sym);
+	}
+
+	void Cinematics::OnKeyReleased(const KeyboardEvent& event)
+	{
+		_pressedKeys.Reset((uint32_t)event.sym);
+	}
+
+	void Cinematics::OnTouchEvent(const TouchEvent& event)
 	{
 		if (event.type == TouchEventType::Down) {
 			if (_callback != nullptr && _callback(_root, false)) {
@@ -245,13 +257,11 @@ namespace Jazz2::UI
 	void Cinematics::UpdatePressedActions()
 	{
 		auto& input = theApplication().inputManager();
-		auto& keyState = input.keyboardState();
-
 		_pressedActions = ((_pressedActions & 0xffff) << 16);
 
-		if (keyState.isKeyDown(KeySym::RETURN) || keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Fire)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Fire)) ||
-			keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Jump)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Jump)) ||
-			keyState.isKeyDown(ControlScheme::Key1(0, PlayerActions::Menu)) || keyState.isKeyDown(ControlScheme::Key2(0, PlayerActions::Menu))) {
+		if (_pressedKeys[(uint32_t)KeySym::RETURN] || _pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Fire)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Fire)] ||
+			_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Jump)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Jump)] ||
+			_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Menu)]) {
 			_pressedActions |= (1 << (int)PlayerActions::Fire);
 		}
 
@@ -259,7 +269,7 @@ namespace Jazz2::UI
 		const JoyMappedState* joyStates[8];
 		int jc = 0;
 		for (int i = 0; i < IInputManager::MaxNumJoysticks && jc < _countof(joyStates); i++) {
-			if (input.isJoyPresent(i) && input.isJoyMapped(i)) {
+			if (input.isJoyMapped(i)) {
 				joyStates[jc++] = &input.joyMappedState(i);
 			}
 		}

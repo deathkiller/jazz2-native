@@ -329,6 +329,9 @@
 
 		"SugarRush": {
 			"Path": "Common/sugar_rush_stars.png"
+		},
+		"Shield": {
+			"Path": "_custom/player_shield.png"
 		}
 	},
 

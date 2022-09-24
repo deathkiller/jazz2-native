@@ -17,7 +17,7 @@ namespace Jazz2::Actors::Environment
 	Task<bool> Moth::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		SetState(ActorState::CanBeFrozen, false);
-		_renderer.setLayer(_renderer.layer() - 20);
+		_renderer.setLayer(_renderer.layer() + 20);
 
 		uint8_t theme = details.Params[0];
 
@@ -47,7 +47,7 @@ namespace Jazz2::Actors::Environment
 				_timer -= timeMult;
 
 				_externalForce.X = sinf((100.0f - _timer) / 6.0f) * 4.0f * _direction;
-				_externalForce.Y = _timer * _timer * 0.000046f;
+				_externalForce.Y = -0.000046f * _timer * _timer;
 
 				SetFacingLeft(_speed.X < 0.0f);
 			}

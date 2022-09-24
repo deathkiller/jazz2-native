@@ -237,7 +237,7 @@ namespace Jazz2::Actors::Enemies
 					_externalForce.X = force.X;
 				} else if (std::abs(force.Y) > 0.0f) {
 					_speed.Y = (4.0f + std::abs(force.Y)) * sign;
-					_externalForce.Y = -force.Y;
+					_externalForce.Y = force.Y;
 				} else {
 					return BossBase::OnHandleCollision(other);
 				}

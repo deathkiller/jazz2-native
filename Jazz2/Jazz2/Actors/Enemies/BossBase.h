@@ -13,6 +13,6 @@ namespace Jazz2::Actors::Enemies
 		bool OnPlayerDied();
 
 	protected:
-		bool OnTileDeactivate(int tx1, int ty1, int tx2, int ty2) override;
+		bool OnTileDeactivated() override;
 	};
 }

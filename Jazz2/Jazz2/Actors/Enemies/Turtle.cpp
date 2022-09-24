@@ -139,7 +139,7 @@ namespace Jazz2::Actors::Enemies
 			std::shared_ptr<TurtleShell> shell = std::make_shared<TurtleShell>();
 			uint8_t shellParams[9];
 			*(float*)&shellParams[0] = _speed.X * 1.1f;
-			*(float*)&shellParams[4] = 1.1f;
+			*(float*)&shellParams[4] = (_pos.Y < _levelHandler->WaterLevel() ? -1.1f : -0.65f);
 			shellParams[8] = _theme;
 			shell->OnActivated({
 				.LevelHandler = _levelHandler,

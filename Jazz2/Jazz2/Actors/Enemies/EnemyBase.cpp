@@ -229,7 +229,7 @@ namespace Jazz2::Actors::Enemies
 					debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
 
 					debris.DiffuseTexture = res->Base->TextureDiffuse.get();
-					debris.CollisionAction = Tiles::TileMap::DebrisCollisionAction::Bounce;
+					debris.Flags = Tiles::TileMap::DebrisFlags::Bounce;
 
 					tilemap->CreateDebris(debris);
 				}
@@ -267,7 +267,7 @@ namespace Jazz2::Actors::Enemies
 					debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
 
 					debris.DiffuseTexture = res->Base->TextureDiffuse.get();
-					debris.CollisionAction = Tiles::TileMap::DebrisCollisionAction::Disappear;
+					debris.Flags = Tiles::TileMap::DebrisFlags::Disappear;
 
 					tilemap->CreateDebris(debris);
 				}
@@ -304,7 +304,7 @@ namespace Jazz2::Actors::Enemies
 					debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
 
 					debris.DiffuseTexture = res->Base->TextureDiffuse.get();
-					debris.CollisionAction = Tiles::TileMap::DebrisCollisionAction::Disappear;
+					debris.Flags = Tiles::TileMap::DebrisFlags::Disappear;
 
 					tilemap->CreateDebris(debris);
 				}

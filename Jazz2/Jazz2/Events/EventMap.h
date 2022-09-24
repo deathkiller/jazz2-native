@@ -32,7 +32,6 @@ namespace Jazz2::Events
 		Vector2f GetWarpTarget(uint32_t id);
 
 		void ReadEvents(IFileStream& s, const std::unique_ptr<Tiles::TileMap>& tileMap, GameDifficulty difficulty);
-		void StoreTileEvent(int x, int y, EventType eventType, Actors::ActorState eventFlags, uint16_t* tileParams);
 		void AddWarpTarget(uint16_t id, int x, int y);
 		void AddSpawnPosition(uint8_t typeMask, int x, int y);
 

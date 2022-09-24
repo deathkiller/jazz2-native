@@ -361,4 +361,10 @@ namespace nCine
 			}
 		}
 	}
+
+	void u32tos(uint32_t value, char* buffer);
+	void i32tos(int32_t value, char* buffer);
+	void u64tos(uint64_t value, char* buffer);
+	void i64tos(int64_t value, char* buffer);
+	void ftos(double value, char* buffer, int bufferSize);
 }

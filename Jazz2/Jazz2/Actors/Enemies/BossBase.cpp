@@ -24,8 +24,9 @@ namespace Jazz2::Actors::Enemies
 		return false;
 	}
 
-	bool BossBase::OnTileDeactivate(int tx1, int ty1, int tx2, int ty2)
+	bool BossBase::OnTileDeactivated()
 	{
+		// Boss cannot be deactivated
 		return false;
 	}
 }

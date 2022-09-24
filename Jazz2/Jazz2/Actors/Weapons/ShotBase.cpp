@@ -91,10 +91,10 @@ namespace Jazz2::Actors::Weapons
 		float accelY = (_internalForceY + _externalForce.Y) * timeMult;
 
 		_speed.X = std::clamp(_speed.X, -16.0f, 16.0f);
-		_speed.Y = std::clamp(_speed.Y - accelY, -16.0f, 16.0f);
+		_speed.Y = std::clamp(_speed.Y + accelY, -16.0f, 16.0f);
 
 		float effectiveSpeedX = _speed.X + _externalForce.X * timeMult;
-		float effectiveSpeedY = _speed.Y - 0.5f * accelY;
+		float effectiveSpeedY = _speed.Y + 0.5f * accelY;
 		effectiveSpeedX *= timeMult;
 		effectiveSpeedY *= timeMult;
 

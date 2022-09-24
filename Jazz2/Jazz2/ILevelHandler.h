@@ -81,7 +81,6 @@ namespace Jazz2
 		virtual StringView GetLevelText(int textId, int index = -1, uint32_t delimiter = 0) = 0;
 		virtual void LimitCameraView(float left, float width) = 0;
 		virtual void ShakeCameraView(float duration) = 0;
-		virtual void SetWaterLevel(float value) = 0;
 		virtual void SetWeather(WeatherType type, uint8_t intensity) = 0;
 
 		virtual bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads = true) = 0;

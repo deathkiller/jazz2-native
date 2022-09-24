@@ -38,7 +38,7 @@ namespace Jazz2::UI::Menu
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
 		}
 		if (_transition < 1.0f) {
-			_transition = std::min(_transition + timeMult * 0.08f, 1.0f);
+			_transition = std::min(_transition + timeMult * 0.2f, 1.0f);
 		}
 
 		if (_root->ActionHit(PlayerActions::Fire) || _root->ActionHit(PlayerActions::Left) || _root->ActionHit(PlayerActions::Right)) {
@@ -86,7 +86,7 @@ namespace Jazz2::UI::Menu
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		_root->DrawStringShadow("You can enable enhancements that were added to this remake."_s, charOffset, center.X, topLine - 21.0f - 4.0f, IMenuContainer::FontLayer - 2,
-			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.4f + 0.1f * _transition), 0.76f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.2f + 0.3f * _transition), 0.76f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		for (int i = 0; i < (int)Item::Count; i++) {
 			_items[i].TouchY = center.Y;

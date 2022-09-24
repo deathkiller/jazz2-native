@@ -1119,6 +1119,18 @@
     <ClInclude Include="Jazz2\Scripting\RegisterArray.h">
       <Filter>Header Files\Jazz2\Scripting</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\CarrotInvincibleCollectible.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\Stopwatch.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\Bird.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1888,6 +1900,21 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Scripting\RegisterArray.cpp">
       <Filter>Source Files\Jazz2\Scripting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\CarrotInvincibleCollectible.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\Stopwatch.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\Bird.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Base\Algorithms.cpp">
+      <Filter>Source Files\nCine\Base</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

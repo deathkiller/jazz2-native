@@ -106,8 +106,10 @@ namespace nCine {
 				alFilterf(filterHandle_, AL_LOWPASS_GAINHF, lowPass_);
 				alSourcei(sourceId_, AL_DIRECT_FILTER, filterHandle_);
 			}
-		} else if (filterHandle_ != 0) {
-			alFilterf(filterHandle_, AL_LOWPASS_GAINHF, 1.0f);
+		} else {
+			if (filterHandle_ != 0) {
+				alFilterf(filterHandle_, AL_LOWPASS_GAINHF, 1.0f);
+			}
 			alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
 		}
 #endif

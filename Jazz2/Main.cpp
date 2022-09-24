@@ -196,6 +196,9 @@ public:
 	void onShutdown() override;
 	void onResizeWindow(int width, int height) override;
 	void onFullscreenChanged(bool isFullscreen) override;
+
+	void onKeyPressed(const KeyboardEvent& event) override;
+	void onKeyReleased(const KeyboardEvent& event) override;
 	void onTouchEvent(const TouchEvent& event) override;
 
 	void GoToMainMenu(bool afterIntro) override;
@@ -369,16 +372,12 @@ void GameEventHandler::onFrameStart()
 		_currentHandler->OnInitializeViewport(res.X, res.Y);
 	}
 
-	if (_currentHandler != nullptr) {
-		_currentHandler->OnBeginFrame();
-	}
+	_currentHandler->OnBeginFrame();
 }
 
 void GameEventHandler::onPostUpdate()
 {
-	if (_currentHandler != nullptr) {
-		_currentHandler->OnEndFrame();
-	}
+	_currentHandler->OnEndFrame();
 }
 
 void GameEventHandler::onShutdown()
@@ -393,9 +392,7 @@ void GameEventHandler::onResizeWindow(int width, int height)
 	// Resolution was changed, all viewports have to be recreated
 	Viewport::chain().clear();
 
-	if (_currentHandler != nullptr) {
-		_currentHandler->OnInitializeViewport(width, height);
-	}
+	_currentHandler->OnInitializeViewport(width, height);
 }
 
 void GameEventHandler::onFullscreenChanged(bool isFullscreen)
@@ -403,11 +400,34 @@ void GameEventHandler::onFullscreenChanged(bool isFullscreen)
 	PreferencesCache::EnableFullscreen = isFullscreen;
 }
 
+void GameEventHandler::onKeyPressed(const KeyboardEvent& event)
+{
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
+	// Allow Alt+Enter to switch fullscreen
+	if (event.sym == KeySym::RETURN && event.mod == KeyMod::ALT) {
+		PreferencesCache::EnableFullscreen = !PreferencesCache::EnableFullscreen;
+		if (PreferencesCache::EnableFullscreen) {
+			theApplication().gfxDevice().setResolution(true);
+			theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
+		} else {
+			theApplication().gfxDevice().setResolution(false, LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
+			theApplication().inputManager().setCursor(IInputManager::Cursor::Arrow);
+		}
+		return;
+	}
+#endif
+
+	_currentHandler->OnKeyPressed(event);
+}
+
+void GameEventHandler::onKeyReleased(const KeyboardEvent& event)
+{
+	_currentHandler->OnKeyReleased(event);
+}
+
 void GameEventHandler::onTouchEvent(const TouchEvent& event)
 {
-	if (_currentHandler != nullptr) {
-		_currentHandler->OnTouchEvent(event);
-	}
+	_currentHandler->OnTouchEvent(event);
 }
 
 void GameEventHandler::GoToMainMenu(bool afterIntro)

@@ -19,7 +19,7 @@ namespace Jazz2::Scripting
 			InternalData(int refCount) : RefCount(refCount) { }
 		};
 
-		StringFactory() {}
+		StringFactory() { }
 		~StringFactory()
 		{
 			// The script engine must release each string constant that it has requested
@@ -148,155 +148,147 @@ namespace Jazz2::Scripting
 		return str.empty();
 	}
 
-	/*static String& AssignUInt64ToString(asQWORD i, String& dest)
+	static String& AssignUInt64ToString(asQWORD i, String& dest)
 	{
-		ostringstream stream;
-		stream << i;
-		dest = stream.str();
+		char tmpBuffer[32];
+		u64tos(i, tmpBuffer);
+		dest = String(tmpBuffer);
 		return dest;
 	}
 
 	static String& AddAssignUInt64ToString(asQWORD i, String& dest)
 	{
-		ostringstream stream;
-		stream << i;
-		dest += stream.str();
+		char tmpBuffer[32];
+		u64tos(i, tmpBuffer);
+		dest += StringView(tmpBuffer);
 		return dest;
 	}
 
 	static String AddStringUInt64(const String& str, asQWORD i)
 	{
-		ostringstream stream;
-		stream << i;
-		return str + stream.str();
+		char tmpBuffer[32];
+		u64tos(i, tmpBuffer);
+		return str + StringView(tmpBuffer);
 	}
 
 	static String AddInt64String(asINT64 i, const String& str)
 	{
-		ostringstream stream;
-		stream << i;
-		return stream.str() + str;
+		char tmpBuffer[32];
+		i64tos(i, tmpBuffer);
+		return StringView(tmpBuffer) + str;
 	}
 
 	static String& AssignInt64ToString(asINT64 i, String& dest)
 	{
-		ostringstream stream;
-		stream << i;
-		dest = stream.str();
+		char tmpBuffer[32];
+		i64tos(i, tmpBuffer);
+		dest = String(tmpBuffer);
 		return dest;
 	}
 
 	static String& AddAssignInt64ToString(asINT64 i, String& dest)
 	{
-		ostringstream stream;
-		stream << i;
-		dest += stream.str();
+		char tmpBuffer[32];
+		i64tos(i, tmpBuffer);
+		dest += StringView(tmpBuffer);
 		return dest;
 	}
 
 	static String AddStringInt64(const String& str, asINT64 i)
 	{
-		ostringstream stream;
-		stream << i;
-		return str + stream.str();
+		char tmpBuffer[32];
+		i64tos(i, tmpBuffer);
+		return str + StringView(tmpBuffer);
 	}
 
 	static String AddUInt64String(asQWORD i, const String& str)
 	{
-		ostringstream stream;
-		stream << i;
-		return stream.str() + str;
+		char tmpBuffer[32];
+		u64tos(i, tmpBuffer);
+		return StringView(tmpBuffer) + str;
 	}
 
 	static String& AssignDoubleToString(double f, String& dest)
 	{
-		ostringstream stream;
-		stream << f;
-		dest = stream.str();
+		char tmpBuffer[32];
+		ftos(f, tmpBuffer, _countof(tmpBuffer));
+		dest = String(tmpBuffer);
 		return dest;
 	}
 
 	static String& AddAssignDoubleToString(double f, String& dest)
 	{
-		ostringstream stream;
-		stream << f;
-		dest += stream.str();
+		char tmpBuffer[32];
+		ftos(f, tmpBuffer, _countof(tmpBuffer));
+		dest += StringView(tmpBuffer);
 		return dest;
 	}
 
 	static String& AssignFloatToString(float f, String& dest)
 	{
-		ostringstream stream;
-		stream << f;
-		dest = stream.str();
+		char tmpBuffer[32];
+		ftos(f, tmpBuffer, _countof(tmpBuffer));
+		dest = String(tmpBuffer);
 		return dest;
 	}
 
 	static String& AddAssignFloatToString(float f, String& dest)
 	{
-		ostringstream stream;
-		stream << f;
-		dest += stream.str();
+		char tmpBuffer[32];
+		ftos(f, tmpBuffer, _countof(tmpBuffer));
+		dest += StringView(tmpBuffer);
 		return dest;
 	}
 
 	static String& AssignBoolToString(bool b, String& dest)
 	{
-		ostringstream stream;
-		stream << (b ? "true" : "false");
-		dest = stream.str();
+		dest = (b ? "true"_s : "false"_s);
 		return dest;
 	}
 
 	static String& AddAssignBoolToString(bool b, String& dest)
 	{
-		ostringstream stream;
-		stream << (b ? "true" : "false");
-		dest += stream.str();
+		dest += (b ? "true"_s : "false"_s);
 		return dest;
 	}
 
 	static String AddStringDouble(const String& str, double f)
 	{
-		ostringstream stream;
-		stream << f;
-		return str + stream.str();
+		char tmpBuffer[32];
+		ftos(f, tmpBuffer, _countof(tmpBuffer));
+		return str + StringView(tmpBuffer);
 	}
 
 	static String AddDoubleString(double f, const String& str)
 	{
-		ostringstream stream;
-		stream << f;
-		return stream.str() + str;
+		char tmpBuffer[32];
+		ftos(f, tmpBuffer, _countof(tmpBuffer));
+		return StringView(tmpBuffer) + str;
 	}
 
 	static String AddStringFloat(const String& str, float f)
 	{
-		ostringstream stream;
-		stream << f;
-		return str + stream.str();
+		char tmpBuffer[32];
+		ftos(f, tmpBuffer, _countof(tmpBuffer));
+		return str + StringView(tmpBuffer);
 	}
 
 	static String AddFloatString(float f, const String& str)
 	{
-		ostringstream stream;
-		stream << f;
-		return stream.str() + str;
+		char tmpBuffer[32];
+		ftos(f, tmpBuffer, _countof(tmpBuffer));
+		return StringView(tmpBuffer) + str;
 	}
 
 	static String AddStringBool(const String& str, bool b)
 	{
-		ostringstream stream;
-		stream << (b ? "true" : "false");
-		return str + stream.str();
+		return str + (b ? "true"_s : "false"_s);
 	}
 
 	static String AddBoolString(bool b, const String& str)
 	{
-		ostringstream stream;
-		stream << (b ? "true" : "false");
-		return stream.str() + str;
-	}*/
+		return (b ? "true"_s : "false"_s) + str;
+	}
 
 	static char* StringCharAt(unsigned int i, String& str)
 	{
@@ -318,7 +310,6 @@ namespace Jazz2::Scripting
 		return cmp;
 	}
 
-	/*
 	// This function returns the index of the first position where the substring
 	// exists in the input string. If the substring doesn't exist in the input
 	// string -1 is returned.
@@ -326,8 +317,8 @@ namespace Jazz2::Scripting
 	// int string::findFirst(const string &in sub, uint start = 0) const
 	static int StringFindFirst(const String& sub, asUINT start, const String& str)
 	{
-		// We don't register the method directly because the argument types change between 32-bit and 64-bit platforms
-		return (int)str.find(sub, (size_t)(start < 0 ? string::npos : start));
+		auto found = str.exceptPrefix(start).find(sub);
+		return (found != nullptr ? (int)(found.begin() - str.begin()) : -1);
 	}
 
 	// This function returns the index of the first position where the one of the bytes in substring
@@ -337,21 +328,22 @@ namespace Jazz2::Scripting
 	// int string::findFirstOf(const string &in sub, uint start = 0) const
 	static int StringFindFirstOf(const String& sub, asUINT start, const String& str)
 	{
-		// We don't register the method directly because the argument types change between 32-bit and 64-bit platforms
-		return (int)str.find_first_of(sub, (size_t)(start < 0 ? string::npos : start));
+		auto found = str.exceptPrefix(start).findAny(sub);
+		return (found != nullptr ? (int)(found.begin() - str.begin()) : -1);
 	}
 
 	// This function returns the index of the last position where the one of the bytes in substring
 	// exists in the input string. If the characters in the substring doesn't exist in the input
 	// string -1 is returned.
 	//
-	// int string::findLastOf(const string &in sub, uint start = -1) const
+	// int string::findLastOf(const string &in sub, uint start = 0) const
 	static int StringFindLastOf(const String& sub, asUINT start, const String& str)
 	{
-		// We don't register the method directly because the argument types change between 32-bit and 64-bit platforms
-		return (int)str.find_last_of(sub, (size_t)(start < 0 ? string::npos : start));
+		auto found = str.exceptSuffix(start).findLastAny(sub);
+		return (found != nullptr ? (int)(found.begin() - str.begin()) : -1);
 	}
 
+	/*
 	// This function returns the index of the first position where a byte other than those in substring
 	// exists in the input string. If none is found -1 is returned.
 	//
@@ -370,19 +362,20 @@ namespace Jazz2::Scripting
 	{
 		// We don't register the method directly because the argument types change between 32-bit and 64-bit platforms
 		return (int)str.find_last_not_of(sub, (size_t)(start < 0 ? string::npos : start));
-	}
+	}*/
 
 	// This function returns the index of the last position where the substring
 	// exists in the input string. If the substring doesn't exist in the input
 	// string -1 is returned.
 	//
-	// int string::findLast(const string &in sub, int start = -1) const
+	// int string::findLast(const string &in sub, int start = 0) const
 	static int StringFindLast(const String& sub, int start, const String& str)
 	{
-		// We don't register the method directly because the argument types change between 32-bit and 64-bit platforms
-		return (int)str.rfind(sub, (size_t)(start < 0 ? string::npos : start));
+		auto found = str.exceptSuffix(start).findLast(sub);
+		return (found != nullptr ? (int)(found.begin() - str.begin()) : -1);
 	}
 
+	/*
 	// void string::insert(uint pos, const string &in other)
 	static void StringInsert(unsigned int pos, const String& other, String& str)
 	{
@@ -669,89 +662,89 @@ namespace Jazz2::Scripting
 
 	void RegisterString(asIScriptEngine* engine)
 	{
-		int r = 0;
+		int r;
 
 		// Register the string type
-		r = engine->RegisterObjectType("string", sizeof(String), asOBJ_VALUE | asGetTypeTraits<String>()); ASSERT(r >= 0);
+		r = engine->RegisterObjectType("string", sizeof(String), asOBJ_VALUE | asGetTypeTraits<String>()); RETURN_ASSERT(r >= 0);
 
 		r = engine->RegisterStringFactory("string", GetStringFactoryInstance());
 
 		// Register the object operator overloads
-		r = engine->RegisterObjectBehaviour("string", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(ConstructString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectBehaviour("string", asBEHAVE_CONSTRUCT, "void f(const string &in)", asFUNCTION(CopyConstructString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectBehaviour("string", asBEHAVE_DESTRUCT, "void f()", asFUNCTION(DestructString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string &opAssign(const string &in)", asMETHODPR(String, operator =, (const String&), String&), asCALL_THISCALL); ASSERT(r >= 0);
+		r = engine->RegisterObjectBehaviour("string", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(ConstructString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectBehaviour("string", asBEHAVE_CONSTRUCT, "void f(const string &in)", asFUNCTION(CopyConstructString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectBehaviour("string", asBEHAVE_DESTRUCT, "void f()", asFUNCTION(DestructString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string &opAssign(const string &in)", asMETHODPR(String, operator =, (const String&), String&), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		// Need to use a wrapper on Mac OS X 10.7/XCode 4.3 and CLang/LLVM, otherwise the linker fails
-		r = engine->RegisterObjectMethod("string", "string &opAddAssign(const string &in)", asFUNCTION(AddAssignStringToString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		//r = engine->RegisterObjectMethod("string", "string &opAddAssign(const string &in)", asMETHODPR(string, operator+=, (const string&), string&), asCALL_THISCALL); ASSERT( r >= 0 );
+		r = engine->RegisterObjectMethod("string", "string &opAddAssign(const string &in)", asFUNCTION(AddAssignStringToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		//r = engine->RegisterObjectMethod("string", "string &opAddAssign(const string &in)", asMETHODPR(string, operator+=, (const string&), string&), asCALL_THISCALL); RETURN_ASSERT( r >= 0 );
 
 		// Need to use a wrapper for operator== otherwise gcc 4.7 fails to compile
-		r = engine->RegisterObjectMethod("string", "bool opEquals(const string &in) const", asFUNCTIONPR(StringEquals, (const String&, const String&), bool), asCALL_CDECL_OBJFIRST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "int opCmp(const string &in) const", asFUNCTION(StringCmp), asCALL_CDECL_OBJFIRST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string opAdd(const string &in) const", asFUNCTION(StringConcat), asCALL_CDECL_OBJFIRST); ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "bool opEquals(const string &in) const", asFUNCTIONPR(StringEquals, (const String&, const String&), bool), asCALL_CDECL_OBJFIRST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "int opCmp(const string &in) const", asFUNCTION(StringCmp), asCALL_CDECL_OBJFIRST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string opAdd(const string &in) const", asFUNCTION(StringConcat), asCALL_CDECL_OBJFIRST); RETURN_ASSERT(r >= 0);
 
 		// The string length can be accessed through methods or through virtual property
 #if AS_USE_ACCESSORS != 1
-		r = engine->RegisterObjectMethod("string", "uint size() const", asFUNCTION(StringSize), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "uint size() const", asFUNCTION(StringSize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 #endif
-		//r = engine->RegisterObjectMethod("string", "void resize(uint)", asFUNCTION(StringResize), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
+		//r = engine->RegisterObjectMethod("string", "void resize(uint)", asFUNCTION(StringResize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 #if AS_USE_STLNAMES != 1 && AS_USE_ACCESSORS == 1
 		// Don't register these if STL names is used, as they conflict with the method size()
-		//r = engine->RegisterObjectMethod("string", "uint get_length() const property", asFUNCTION(StringSize), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		//r = engine->RegisterObjectMethod("string", "void set_length(uint) property", asFUNCTION(StringResize), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
+		//r = engine->RegisterObjectMethod("string", "uint get_length() const property", asFUNCTION(StringSize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		//r = engine->RegisterObjectMethod("string", "void set_length(uint) property", asFUNCTION(StringResize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 #endif
 		// Need to use a wrapper on Mac OS X 10.7/XCode 4.3 and CLang/LLVM, otherwise the linker fails
-		//r = engine->RegisterObjectMethod("string", "bool empty() const", asMETHOD(string, empty), asCALL_THISCALL); ASSERT( r >= 0 );
-		r = engine->RegisterObjectMethod("string", "bool empty() const", asFUNCTION(StringIsEmpty), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
+		//r = engine->RegisterObjectMethod("string", "bool empty() const", asMETHOD(string, empty), asCALL_THISCALL); RETURN_ASSERT( r >= 0 );
+		r = engine->RegisterObjectMethod("string", "bool empty() const", asFUNCTION(StringIsEmpty), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
 		// Register the index operator, both as a mutator and as an inspector
 		// Note that we don't register the operator[] directly, as it doesn't do bounds checking
-		r = engine->RegisterObjectMethod("string", "uint8 &opIndex(uint)", asFUNCTION(StringCharAt), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "const uint8 &opIndex(uint) const", asFUNCTION(StringCharAt), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "uint8 &opIndex(uint)", asFUNCTION(StringCharAt), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "const uint8 &opIndex(uint) const", asFUNCTION(StringCharAt), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
 		// Automatic conversion from values
-		/*r = engine->RegisterObjectMethod("string", "string &opAssign(double)", asFUNCTION(AssignDoubleToString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string &opAddAssign(double)", asFUNCTION(AddAssignDoubleToString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string opAdd(double) const", asFUNCTION(AddStringDouble), asCALL_CDECL_OBJFIRST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string opAdd_r(double) const", asFUNCTION(AddDoubleString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string &opAssign(double)", asFUNCTION(AssignDoubleToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string &opAddAssign(double)", asFUNCTION(AddAssignDoubleToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string opAdd(double) const", asFUNCTION(AddStringDouble), asCALL_CDECL_OBJFIRST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string opAdd_r(double) const", asFUNCTION(AddDoubleString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
-		r = engine->RegisterObjectMethod("string", "string &opAssign(float)", asFUNCTION(AssignFloatToString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string &opAddAssign(float)", asFUNCTION(AddAssignFloatToString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string opAdd(float) const", asFUNCTION(AddStringFloat), asCALL_CDECL_OBJFIRST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string opAdd_r(float) const", asFUNCTION(AddFloatString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string &opAssign(float)", asFUNCTION(AssignFloatToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string &opAddAssign(float)", asFUNCTION(AddAssignFloatToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string opAdd(float) const", asFUNCTION(AddStringFloat), asCALL_CDECL_OBJFIRST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string opAdd_r(float) const", asFUNCTION(AddFloatString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
-		r = engine->RegisterObjectMethod("string", "string &opAssign(int64)", asFUNCTION(AssignInt64ToString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string &opAddAssign(int64)", asFUNCTION(AddAssignInt64ToString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string opAdd(int64) const", asFUNCTION(AddStringInt64), asCALL_CDECL_OBJFIRST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string opAdd_r(int64) const", asFUNCTION(AddInt64String), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string &opAssign(int64)", asFUNCTION(AssignInt64ToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string &opAddAssign(int64)", asFUNCTION(AddAssignInt64ToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string opAdd(int64) const", asFUNCTION(AddStringInt64), asCALL_CDECL_OBJFIRST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string opAdd_r(int64) const", asFUNCTION(AddInt64String), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
-		r = engine->RegisterObjectMethod("string", "string &opAssign(uint64)", asFUNCTION(AssignUInt64ToString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string &opAddAssign(uint64)", asFUNCTION(AddAssignUInt64ToString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string opAdd(uint64) const", asFUNCTION(AddStringUInt64), asCALL_CDECL_OBJFIRST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string opAdd_r(uint64) const", asFUNCTION(AddUInt64String), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string &opAssign(uint64)", asFUNCTION(AssignUInt64ToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string &opAddAssign(uint64)", asFUNCTION(AddAssignUInt64ToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string opAdd(uint64) const", asFUNCTION(AddStringUInt64), asCALL_CDECL_OBJFIRST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string opAdd_r(uint64) const", asFUNCTION(AddUInt64String), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
-		r = engine->RegisterObjectMethod("string", "string &opAssign(bool)", asFUNCTION(AssignBoolToString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string &opAddAssign(bool)", asFUNCTION(AddAssignBoolToString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string opAdd(bool) const", asFUNCTION(AddStringBool), asCALL_CDECL_OBJFIRST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "string opAdd_r(bool) const", asFUNCTION(AddBoolString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);*/
+		r = engine->RegisterObjectMethod("string", "string &opAssign(bool)", asFUNCTION(AssignBoolToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string &opAddAssign(bool)", asFUNCTION(AddAssignBoolToString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string opAdd(bool) const", asFUNCTION(AddStringBool), asCALL_CDECL_OBJFIRST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "string opAdd_r(bool) const", asFUNCTION(AddBoolString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
 		// Utilities
-		r = engine->RegisterObjectMethod("string", "string substr(uint start = 0, int count = -1) const", asFUNCTION(StringSubString), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		/*r = engine->RegisterObjectMethod("string", "int findFirst(const string &in, uint start = 0) const", asFUNCTION(StringFindFirst), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "int findFirstOf(const string &in, uint start = 0) const", asFUNCTION(StringFindFirstOf), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "int findFirstNotOf(const string &in, uint start = 0) const", asFUNCTION(StringFindFirstNotOf), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "int findLast(const string &in, int start = -1) const", asFUNCTION(StringFindLast), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "int findLastOf(const string &in, int start = -1) const", asFUNCTION(StringFindLastOf), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "int findLastNotOf(const string &in, int start = -1) const", asFUNCTION(StringFindLastNotOf), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "void insert(uint pos, const string &in other)", asFUNCTION(StringInsert), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("string", "void erase(uint pos, int count = -1)", asFUNCTION(StringErase), asCALL_CDECL_OBJLAST); ASSERT(r >= 0);*/
+		r = engine->RegisterObjectMethod("string", "string substr(uint start = 0, int count = -1) const", asFUNCTION(StringSubString), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "int findFirst(const string &in, uint start = 0) const", asFUNCTION(StringFindFirst), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "int findFirstOf(const string &in, uint start = 0) const", asFUNCTION(StringFindFirstOf), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		//r = engine->RegisterObjectMethod("string", "int findFirstNotOf(const string &in, uint start = 0) const", asFUNCTION(StringFindFirstNotOf), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "int findLast(const string &in, int start = -1) const", asFUNCTION(StringFindLast), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "int findLastOf(const string &in, int start = -1) const", asFUNCTION(StringFindLastOf), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		//r = engine->RegisterObjectMethod("string", "int findLastNotOf(const string &in, int start = -1) const", asFUNCTION(StringFindLastNotOf), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		//r = engine->RegisterObjectMethod("string", "void insert(uint pos, const string &in other)", asFUNCTION(StringInsert), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		//r = engine->RegisterObjectMethod("string", "void erase(uint pos, int count = -1)", asFUNCTION(StringErase), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
-		/*r = engine->RegisterGlobalFunction("string formatInt(int64 val, const string &in options = \"\", uint width = 0)", asFUNCTION(formatInt), asCALL_CDECL); ASSERT(r >= 0);
-		r = engine->RegisterGlobalFunction("string formatUInt(uint64 val, const string &in options = \"\", uint width = 0)", asFUNCTION(formatUInt), asCALL_CDECL); ASSERT(r >= 0);
-		r = engine->RegisterGlobalFunction("string formatFloat(double val, const string &in options = \"\", uint width = 0, uint precision = 0)", asFUNCTION(formatFloat), asCALL_CDECL); ASSERT(r >= 0);*/
-		r = engine->RegisterGlobalFunction("int64 parseInt(const string &in, uint base = 10, uint &out byteCount = 0)", asFUNCTION(parseInt), asCALL_CDECL); ASSERT(r >= 0);
-		r = engine->RegisterGlobalFunction("uint64 parseUInt(const string &in, uint base = 10, uint &out byteCount = 0)", asFUNCTION(parseUInt), asCALL_CDECL); ASSERT(r >= 0);
-		r = engine->RegisterGlobalFunction("double parseFloat(const string &in, uint &out byteCount = 0)", asFUNCTION(parseFloat), asCALL_CDECL); ASSERT(r >= 0);
+		/*r = engine->RegisterGlobalFunction("string formatInt(int64 val, const string &in options = \"\", uint width = 0)", asFUNCTION(formatInt), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterGlobalFunction("string formatUInt(uint64 val, const string &in options = \"\", uint width = 0)", asFUNCTION(formatUInt), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterGlobalFunction("string formatFloat(double val, const string &in options = \"\", uint width = 0, uint precision = 0)", asFUNCTION(formatFloat), asCALL_CDECL); RETURN_ASSERT(r >= 0);*/
+		r = engine->RegisterGlobalFunction("int64 parseInt(const string &in, uint base = 10, uint &out byteCount = 0)", asFUNCTION(parseInt), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterGlobalFunction("uint64 parseUInt(const string &in, uint base = 10, uint &out byteCount = 0)", asFUNCTION(parseUInt), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterGlobalFunction("double parseFloat(const string &in, uint &out byteCount = 0)", asFUNCTION(parseFloat), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 	}
 }
 

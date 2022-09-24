@@ -5,6 +5,7 @@
 #include "UpscaleRenderPass.h"
 #include "../ContentResolver.h"
 
+#include "../../nCine/Base/BitArray.h"
 #include "../../nCine/Graphics/Camera.h"
 #include "../../nCine/Graphics/Shader.h"
 #include "../../nCine/Input/InputEvents.h"
@@ -25,7 +26,10 @@ namespace Jazz2::UI
 
 		void OnBeginFrame() override;
 		void OnInitializeViewport(int width, int height) override;
-		void OnTouchEvent(const nCine::TouchEvent& event) override;
+
+		void OnKeyPressed(const KeyboardEvent& event) override;
+		void OnKeyReleased(const KeyboardEvent& event) override;
+		void OnTouchEvent(const TouchEvent& event) override;
 
 	private:
 		IRootController* _root;
@@ -62,6 +66,8 @@ namespace Jazz2::UI
 		uint32_t _palette[256];
 		SmallVector<uint8_t, 0> _decompressedStreams[4];
 		uint32_t _currentOffsets[_countof(_decompressedStreams)];
+
+		BitArray _pressedKeys;
 		uint32_t _pressedActions;
 
 		bool LoadFromFile(const String& path);

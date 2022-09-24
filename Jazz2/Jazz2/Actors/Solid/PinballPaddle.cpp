@@ -55,7 +55,7 @@ namespace Jazz2::Actors::Solid
 						float force = 1.9f * mult;
 						player->_speed.X = 0.0f;
 						player->_speed.Y = -1.0f;
-						player->_externalForce.Y += force;
+						player->_externalForce.Y -= force;
 
 						player->_controllable = true;
 						player->SetState(ActorState::CanJump, false);

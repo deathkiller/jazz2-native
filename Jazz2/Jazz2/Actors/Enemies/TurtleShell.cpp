@@ -2,7 +2,9 @@
 #include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
+#include "../Solid/AmmoCrate.h"
 #include "../Solid/CrateContainer.h"
+#include "../Solid/GemCrate.h"
 #include "../Weapons/ShotBase.h"
 #include "../Weapons/FreezerShot.h"
 #include "../Weapons/Thunderbolt.h"
@@ -175,6 +177,20 @@ namespace Jazz2::Actors::Enemies
 			if (absSpeed > 2.0f) {
 				_speed.X = std::max(absSpeed, 2.0f) * (_speed.X >= 0.0f ? -1.0f : 1.0f);
 				crateContainer->DecreaseHealth(1, this);
+				return true;
+			}
+		} else if (auto ammoCrate = dynamic_cast<Solid::AmmoCrate*>(other.get())) {
+			float absSpeed = std::abs(_speed.X);
+			if (absSpeed > 2.0f) {
+				_speed.X = std::max(absSpeed, 2.0f) * (_speed.X >= 0.0f ? -1.0f : 1.0f);
+				ammoCrate->DecreaseHealth(1, this);
+				return true;
+			}
+		} else if (auto gemCrate = dynamic_cast<Solid::GemCrate*>(other.get())) {
+			float absSpeed = std::abs(_speed.X);
+			if (absSpeed > 2.0f) {
+				_speed.X = std::max(absSpeed, 2.0f) * (_speed.X >= 0.0f ? -1.0f : 1.0f);
+				gemCrate->DecreaseHealth(1, this);
 				return true;
 			}
 		}

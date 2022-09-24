@@ -84,11 +84,14 @@ namespace Jazz2::Tiles
 		static constexpr int TriggerCount = 32;
 		static constexpr int AnimatedTileMask = 0x80000000;
 
-		enum class DebrisCollisionAction {
-			None,
-			Disappear,
-			Bounce
+		enum class DebrisFlags {
+			None = 0x00,
+			Disappear = 0x01,
+			Bounce = 0x02,
+			AdditivaBlending = 0x04
 		};
+
+		DEFINE_PRIVATE_ENUM_OPERATORS(DebrisFlags);
 
 		struct DestructibleDebris {
 			Vector2f Pos;
@@ -116,13 +119,13 @@ namespace Jazz2::Tiles
 
 			Texture* DiffuseTexture;
 
-			DebrisCollisionAction CollisionAction;
+			DebrisFlags Flags;
 		};
 
 		TileMap(LevelHandler* levelHandler, const StringView& tileSetPath, uint16_t captionTileId);
 
 		Vector2i Size();
-		Recti LevelBounds();
+		Vector2i LevelBounds();
 
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
