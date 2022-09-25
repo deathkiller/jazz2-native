@@ -1,11 +1,22 @@
 ﻿#if defined(WITH_ANGELSCRIPT)
 
-#include "LevelScripts.h"
 #include "RegisterString.h"
+#include "../../Common.h"
+
+#include "../../nCine/Base/Algorithms.h"
+#include "../../nCine/Base/HashMap.h"
+
+#include <memory>
 
 #if !defined(DEATH_TARGET_ANDROID) && !defined(_WIN32_WCE) && !defined(__psp2__)
 #	include <locale.h>		// setlocale()
 #endif
+
+#include <Containers/String.h>
+
+using namespace Death::Containers;
+using namespace Death::Containers::Literals;
+using namespace nCine;
 
 namespace Jazz2::Scripting
 {

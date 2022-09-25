@@ -91,11 +91,13 @@ namespace Jazz2::Actors::Environment
 		SetState(ActorState::CollideWithSolidObjects | ActorState::IsSolidObject, false);
 		SetAnimation(AnimState::Activated);
 
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X - 12.0f), (int)(_pos.Y - 6.0f), _renderer.layer() + 20), Explosion::Type::SmokeBrown);
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X - 8.0f), (int)(_pos.Y + 28.0f), _renderer.layer() + 20), Explosion::Type::SmokeBrown);
-		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + 12.0f), (int)(_pos.Y + 10.0f), _renderer.layer() + 20), Explosion::Type::SmokeBrown);
+		PlaySfx("Break"_s);
 
-		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)(_pos.Y + 12.0f), _renderer.layer() + 22), Explosion::Type::SmokePoof);
+		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X - 12.0f), (int)(_pos.Y - 6.0f), _renderer.layer() + 90), Explosion::Type::SmokeBrown);
+		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X - 8.0f), (int)(_pos.Y + 28.0f), _renderer.layer() + 90), Explosion::Type::SmokeBrown);
+		Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + 12.0f), (int)(_pos.Y + 10.0f), _renderer.layer() + 90), Explosion::Type::SmokeBrown);
+
+		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)(_pos.Y + 12.0f), _renderer.layer() + 110), Explosion::Type::SmokePoof);
 
 		// Deactivate event in map
 		auto eventMap = _levelHandler->EventMap();

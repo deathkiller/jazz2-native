@@ -26,8 +26,6 @@
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Base/FrameTimer.h"
 
-#include <float.h>
-
 namespace Jazz2::Actors
 {
 	Player::Player()
@@ -54,7 +52,7 @@ namespace Jazz2::Actors
 		_lives(0), _coins(0), _foodEaten(0), _score(0),
 		_checkpointLight(1.0f),
 		_sugarRushLeft(0.0f), _sugarRushStarsTime(0.0f),
-		_shieldSpawnTime(FLT_MIN),
+		_shieldSpawnTime(ShieldDisabled),
 		_gems(0), _gemsPitch(0),
 		_gemsTimer(0.0f),
 		_bonusWarpTimer(0.0f),
@@ -224,8 +222,8 @@ namespace Jazz2::Actors
 			if (_invulnerableTime <= 0.0f) {
 				SetState(ActorState::IsInvulnerable, false);
 				_renderer.setDrawEnabled(true);
-				_shieldSpawnTime = FLT_MIN;
-			} else if (_shieldSpawnTime > FLT_MIN) {
+				_shieldSpawnTime = ShieldDisabled;
+			} else if (_shieldSpawnTime > ShieldDisabled) {
 				_shieldSpawnTime -= timeMult;
 				if (_shieldSpawnTime <= 0.0f) {
 					_shieldSpawnTime += 1.0f;
@@ -1109,7 +1107,7 @@ namespace Jazz2::Actors
 		} else {
 
 			if (PreferencesCache::EnableLedgeClimb && _isActivelyPushing && _suspendType == SuspendType::None && _activeModifier == Modifier::None && !GetState(ActorState::CanJump) &&
-				_currentSpecialMove == SpecialMoveType::None && _currentTransitionState != AnimState::TransitionUppercutEnd &&
+				!_inWater && _currentSpecialMove == SpecialMoveType::None && _currentTransitionState != AnimState::TransitionUppercutEnd &&
 				_speed.Y >= -1.0f && _externalForce.Y >= 0.0f && _copterFramesLeft <= 0.0f && _keepRunningTime <= 0.0f) {
 
 				// Character supports ledge climbing
@@ -1665,6 +1663,20 @@ namespace Jazz2::Actors
 				}
 				break;
 			}
+			case EventType::ModifierDeath: {
+				DecreaseHealth(INT32_MAX);
+				break;
+			}
+			case EventType::ModifierSetWater: {
+				_levelHandler->BroadcastTriggeredEvent(this, EventType::ModifierSetWater, p);
+				break;
+			}
+			case EventType::ModifierLimitCameraView: { // Left, Width
+				uint16_t left = *(uint16_t*)&p[0];
+				uint16_t width = *(uint16_t*)&p[2];
+				_levelHandler->LimitCameraView((left == 0 ? (int)(_pos.X / Tiles::TileSet::DefaultTileSize) : left) * Tiles::TileSet::DefaultTileSize, width * Tiles::TileSet::DefaultTileSize);
+				break;
+			}
 			case EventType::ModifierHPole: {
 				InitialPoleStage(true);
 				break;
@@ -1673,7 +1685,7 @@ namespace Jazz2::Actors
 				InitialPoleStage(false);
 				break;
 			}
-			case EventType::ModifierTube: { // XSpeed, YSpeed, Wait Time, Trig Sample, Become Noclip, Noclip Only
+			case EventType::ModifierTube: { // XSpeed, YSpeed, Wait Time, Trig Sample, Become No-clip, No-clip Only
 				// TODO: Implement other parameters
 				if (p[4] == 0 && p[5] != 0 && GetState(ActorState::CollideWithTileset)) {
 					break;
@@ -1745,14 +1757,14 @@ namespace Jazz2::Actors
 				break;
 			}
 			case EventType::AreaCallback: { // Function, Param, Vanish
-				_levelHandler->BroadcastTriggeredEvent(EventType::AreaCallback, p);
+				_levelHandler->BroadcastTriggeredEvent(this, EventType::AreaCallback, p);
 				if (p[2] != 0) {
 					events->StoreTileEvent((int)(_pos.X / 32), (int)(_pos.Y / 32), EventType::Empty);
 				}
 				break;
 			}
 			case EventType::AreaActivateBoss: { // Music
-				_levelHandler->BroadcastTriggeredEvent(tileEvent, p);
+				_levelHandler->BroadcastTriggeredEvent(this, EventType::AreaActivateBoss, p);
 
 				// Deactivate sugar rush if it's active
 				if (_sugarRushLeft > 1.0f) {
@@ -1768,7 +1780,7 @@ namespace Jazz2::Actors
 			}
 			case EventType::AreaRevertMorph: {
 				if (_playerType != _playerTypeOriginal) {
-					MorphRevent();
+					MorphRevert();
 				}
 				break;
 			}
@@ -1786,6 +1798,10 @@ namespace Jazz2::Actors
 				}
 				break;
 			}
+			case EventType::AreaWaterBlock: {
+				areaWaterBlock = ((int)_pos.Y / 32) * 32 + p[0];
+				break;
+			}
 			case EventType::TriggerZone: { // Trigger ID, Turn On, Switch
 				auto tiles = _levelHandler->TileMap();
 				if (tiles != nullptr) {
@@ -1795,24 +1811,8 @@ namespace Jazz2::Actors
 				break;
 			}
 
-			case EventType::ModifierDeath: {
-				DecreaseHealth(INT32_MAX);
-				break;
-			}
-			case EventType::ModifierLimitCameraView: { // Left, Width
-				uint16_t left = *(uint16_t*)&p[0];
-				uint16_t width = *(uint16_t*)&p[2];
-				_levelHandler->LimitCameraView((left == 0 ? (int)(_pos.X / Tiles::TileSet::DefaultTileSize) : left) * Tiles::TileSet::DefaultTileSize, width * Tiles::TileSet::DefaultTileSize);
-				break;
-			}
-
 			case EventType::RollingRockTrigger: { // Rock ID
 				//_levelHandler->BroadcastTriggeredEvent(tileEvent, p);
-				break;
-			}
-
-			case EventType::AreaWaterBlock: {
-				areaWaterBlock = ((int)_pos.Y / 32) * 32 + p[0];
 				break;
 			}
 		}
@@ -1822,7 +1822,7 @@ namespace Jazz2::Actors
 		// Check floating from each corner of an extended hitbox
 		// Player should not pass from a single tile wide gap if the columns left or right have
 		// float events, so checking for a wider box is necessary.
-		const float ExtendedHitbox = 2.0f;
+		constexpr float ExtendedHitbox = 2.0f;
 
 		if (_currentTransitionState != AnimState::TransitionLedgeClimb) {
 			if (_currentSpecialMove != SpecialMoveType::Buttstomp) {
@@ -2578,6 +2578,7 @@ namespace Jazz2::Actors
 		_externalForce.Y = 0.0f;
 		_internalForceY = 0.0f;
 		SetState(ActorState::ApplyGravitation, false);
+		_renderer.setRotation(0.0f);
 		_isAttachedToPole = true;
 		if (_inIdleTransition) {
 			_inIdleTransition = false;
@@ -2807,7 +2808,7 @@ namespace Jazz2::Actors
 			if (_invulnerableTime > 0.0f) {
 				SetState(ActorState::IsInvulnerable, false);
 				_invulnerableTime = 0.0f;
-				_shieldSpawnTime = FLT_MIN;
+				_shieldSpawnTime = ShieldDisabled;
 				_renderer.setDrawEnabled(true);
 			}
 			return;
@@ -2817,11 +2818,11 @@ namespace Jazz2::Actors
 		_invulnerableTime = time;
 
 		if (withCircleEffect) {
-			if (_shieldSpawnTime <= FLT_MIN) {
+			if (_shieldSpawnTime <= ShieldDisabled) {
 				_shieldSpawnTime = 1.0f;
 			}
 		} else {
-			_shieldSpawnTime = FLT_MIN;
+			_shieldSpawnTime = ShieldDisabled;
 		}
 	}
 
@@ -3064,7 +3065,7 @@ namespace Jazz2::Actors
 		}
 	}
 
-	void Player::MorphRevent()
+	void Player::MorphRevert()
 	{
 		MorphTo(_playerTypeOriginal);
 	}

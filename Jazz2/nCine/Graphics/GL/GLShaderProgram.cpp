@@ -148,10 +148,15 @@ namespace nCine {
 
 		if (queryPhase_ == QueryPhase::IMMEDIATE) {
 			const bool linkCheck = checkLinking();
-			if (linkCheck == false)
+			if (!linkCheck) {
 				return false;
+			}
 
 			// After linking, shader objects are not needed anymore
+			for (auto& shader : attachedShaders_) {
+				glDetachShader(glHandle_, shader->glHandle());
+			}
+
 			attachedShaders_.clear();
 
 			performIntrospection();
@@ -217,8 +222,14 @@ namespace nCine {
 			attributeLocations_.clear();
 			vertexFormat_.reset();
 
-			if (boundProgram_ == glHandle_)
+			if (boundProgram_ == glHandle_) {
 				glUseProgram(0);
+			}
+
+			for (auto& shader : attachedShaders_) {
+				glDetachShader(glHandle_, shader->glHandle());
+			}
+
 			attachedShaders_.clear();
 			glDeleteProgram(glHandle_);
 
@@ -250,10 +261,15 @@ namespace nCine {
 			}
 
 			const bool linkCheck = checkLinking();
-			if (linkCheck == false)
+			if (!linkCheck) {
 				return false;
+			}
 
 			// After linking, shader objects are not needed anymore
+			for (auto& shader : attachedShaders_) {
+				glDetachShader(glHandle_, shader->glHandle());
+			}
+
 			attachedShaders_.clear();
 
 			performIntrospection();

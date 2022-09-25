@@ -11,7 +11,6 @@
 
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;
-
 using namespace nCine;
 
 namespace Jazz2::Compatibility

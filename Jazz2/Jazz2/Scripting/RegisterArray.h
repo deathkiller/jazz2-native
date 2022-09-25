@@ -2,6 +2,8 @@
 
 #if defined(WITH_ANGELSCRIPT)
 
+#include "FindAngelScript.h"
+
 namespace Jazz2::Scripting
 {
 	struct SArrayBuffer;
@@ -10,9 +12,6 @@ namespace Jazz2::Scripting
 	class CScriptArray
 	{
 	public:
-		// Set the memory functions that should be used by all CScriptArrays
-		static void SetMemoryFunctions(asALLOCFUNC_t allocFunc, asFREEFUNC_t freeFunc);
-
 		// Factory functions
 		static CScriptArray* Create(asITypeInfo* ot);
 		static CScriptArray* Create(asITypeInfo* ot, asUINT length);

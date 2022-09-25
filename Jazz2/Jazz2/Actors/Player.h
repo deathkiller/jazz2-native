@@ -3,6 +3,13 @@
 #include "ActorBase.h"
 #include "../LevelInitialization.h"
 
+#if defined(WITH_ANGELSCRIPT)
+namespace Jazz2::Scripting
+{
+	class ScriptPlayerWrapper;
+}
+#endif
+
 namespace Jazz2::UI
 {
 	class HUD;
@@ -29,6 +36,9 @@ namespace Jazz2::Actors
 	class Player : public ActorBase
 	{
 		friend class UI::HUD;
+#if defined(WITH_ANGELSCRIPT)
+		friend class Scripting::ScriptPlayerWrapper;
+#endif
 		friend class Solid::PinballBumper;
 		friend class Solid::PinballPaddle;
 		friend class Weapons::Thunderbolt;
@@ -92,7 +102,7 @@ namespace Jazz2::Actors
 		void AddWeaponUpgrade(WeaponType weaponType, uint8_t upgrade);
 		bool AddFastFire(int count);
 		void MorphTo(PlayerType type);
-		void MorphRevent();
+		void MorphRevert();
 		bool SetDizzyTime(float time);
 		bool SpawnBird(uint8_t type, Vector2f pos);
 		bool DisableControllable(float timeout);
@@ -199,6 +209,8 @@ namespace Jazz2::Actors
 		void OnHitWall(float timeMult) override;
 
 	private:
+		static constexpr float ShieldDisabled = -1000000000000.0f;
+
 		void UpdateAnimation(float timeMult);
 		void PushSolidObjects(float timeMult);
 		void CheckEndOfSpecialMoves(float timeMult);

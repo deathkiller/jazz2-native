@@ -11,8 +11,8 @@ namespace Jazz2::Actors::Environment
 
 	Task<bool> SteamNote::OnActivatedAsync(const ActorActivationDetails& details)
 	{
+		// It's incorrectly positioned one tile up in "share2.j2l"
 		_pos.X -= 10.0f;
-		_pos.Y += 32.0f;
 
 		SetState(ActorState::ForceDisableCollisions, true);
 		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);

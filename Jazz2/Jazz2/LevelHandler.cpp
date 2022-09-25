@@ -454,6 +454,12 @@ namespace Jazz2
 				_activeBoss = nullptr;
 				BeginLevelChange(ExitType::Boss, nullptr);
 			}
+
+#if defined(WITH_ANGELSCRIPT)
+			if (_scripts != nullptr) {
+				_scripts->OnLevelUpdate(timeMult);
+			}
+#endif
 		}
 	}
 
@@ -867,7 +873,7 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::BroadcastTriggeredEvent(EventType eventType, uint8_t* eventParams)
+	void LevelHandler::BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, uint8_t* eventParams)
 	{
 		switch (eventType) {
 			case EventType::AreaActivateBoss: {
@@ -912,7 +918,7 @@ namespace Jazz2
 			case EventType::AreaCallback: {
 #if defined(WITH_ANGELSCRIPT)
 				if (_scripts != nullptr) {
-					_scripts->OnLevelCallback(eventParams);
+					_scripts->OnLevelCallback(initiator, eventParams);
 				}
 #endif
 				break;

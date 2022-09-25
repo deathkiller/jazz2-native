@@ -68,7 +68,7 @@ namespace Jazz2
 		virtual void FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(Actors::ActorBase*)>& callback) = 0;
 		virtual void GetCollidingPlayers(const AABBf& aabb, const std::function<bool(Actors::ActorBase*)> callback) = 0;
 
-		virtual void BroadcastTriggeredEvent(EventType eventType, uint8_t* eventParams) = 0;
+		virtual void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, uint8_t* eventParams) = 0;
 		virtual void BeginLevelChange(ExitType exitType, const StringView& nextLevel) = 0;
 		virtual void HandleGameOver() = 0;
 		virtual bool HandlePlayerDied(const std::shared_ptr<Actors::ActorBase>& player) = 0;

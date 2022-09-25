@@ -113,7 +113,7 @@ namespace Jazz2
 		void FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(Actors::ActorBase*)>& callback) override;
 		void GetCollidingPlayers(const AABBf& aabb, const std::function<bool(Actors::ActorBase*)> callback) override;
 
-		void BroadcastTriggeredEvent(EventType eventType, uint8_t* eventParams) override;
+		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, uint8_t* eventParams) override;
 		void BeginLevelChange(ExitType exitType, const StringView& nextLevel) override;
 		void HandleGameOver() override;
 		bool HandlePlayerDied(const std::shared_ptr<Actors::ActorBase>& player) override;

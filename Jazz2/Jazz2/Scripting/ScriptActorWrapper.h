@@ -43,6 +43,12 @@ namespace Jazz2::Scripting
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 	protected:
+		LevelScripts* _levelScripts;
+		asIScriptObject* _obj;
+		asILockableSharedBool* _isDead;
+
+		uint32_t _scoreValue;
+
 		Task<bool> OnActivatedAsync(const Actors::ActorActivationDetails& details) override;
 		bool OnTileDeactivated() override;
 
@@ -61,12 +67,10 @@ namespace Jazz2::Scripting
 		void OnAnimationStarted() override;
 		void OnAnimationFinished() override;
 
-	protected:
-		LevelScripts* _levelScripts;
-		asIScriptObject* _obj;
-		asILockableSharedBool* _isDead;
-
-		uint32_t _scoreValue;
+		float asGetAlpha() const;
+		void asSetAlpha(float value);
+		uint16_t asGetLayer() const;
+		void asSetLayer(uint16_t value);
 
 		void asDecreaseHealth(int amount);
 		bool asMoveTo(float x, float y, bool force);
@@ -77,11 +81,6 @@ namespace Jazz2::Scripting
 		void asSetAnimation(const String& name);
 		void asSetAnimationState(int state);
 
-		float asGetAlpha() const;
-		void asSetAlpha(float value);
-		uint16_t asGetLayer() const;
-		void asSetLayer(uint16_t value);
-
 	private:
 		int _refCount;
 
@@ -89,6 +88,7 @@ namespace Jazz2::Scripting
 		asIScriptFunction* _onHealthChanged;
 		asIScriptFunction* _onUpdate;
 		asIScriptFunction* _onUpdateHitbox;
+		asIScriptFunction* _onHandleCollision;
 		asIScriptFunction* _onHitFloor;
 		asIScriptFunction* _onHitCeiling;
 		asIScriptFunction* _onHitWall;
@@ -106,7 +106,7 @@ namespace Jazz2::Scripting
 	protected:
 		Task<bool> OnActivatedAsync(const Actors::ActorActivationDetails& details) override;
 
-		void OnCollect(Actors::Player* player);
+		bool OnCollect(Actors::Player* player);
 
 	private:
 		bool _untouched;

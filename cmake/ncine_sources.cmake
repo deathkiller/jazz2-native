@@ -209,8 +209,10 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventSpawner.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScripts.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterRef.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterString.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/ScriptActorWrapper.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/ScriptPlayerWrapper.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileMap.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileSet.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Canvas.cpp

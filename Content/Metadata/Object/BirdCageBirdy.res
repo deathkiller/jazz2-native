@@ -13,5 +13,11 @@
 			"Path": "BirdyYellow/cage_destroyed.aura",
 			"States": [ 32 ]
 		}
+	},
+
+	"Sounds": {
+		"Break": {
+			"Paths": [ "Object/PowerupBreak.wav" ]
+		}
 	}
 }

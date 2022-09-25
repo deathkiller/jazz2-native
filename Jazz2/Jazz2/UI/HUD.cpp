@@ -203,7 +203,7 @@ namespace Jazz2::UI
 				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 
 			// Bottom right
-			if (playerType != PlayerType::Frog) {
+			if (player->_weaponAllowed && playerType != PlayerType::Frog) {
 				WeaponType weapon = player->_currentWeapon;
 				Vector2f pos = Vector2f(right - 40, bottom);
 				StringView currentWeaponString = GetCurrentWeapon(player, weapon, pos);

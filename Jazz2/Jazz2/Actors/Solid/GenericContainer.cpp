@@ -52,12 +52,12 @@ namespace Jazz2::Actors::Solid
 			if (_content.size() > 1) {
 				if (canThrowFar) {
 					fx = Random().NextFloat(-6.0f, 6.0f);
-					fy = Random().NextFloat(-2.0f, 0.0f);
+					fy = Random().NextFloat(-0.8f, 0.0f);
 					x = _pos.X + fx * (2.0f + _content.size() * 0.1f);
 					y = _pos.Y + fy * (12.0f + _content.size() * 0.2f);
 				} else {
 					fx = Random().NextFloat(-4.0f, 4.0f);
-					fy = Random().NextFloat(-1.0f, 0.0f);
+					fy = Random().NextFloat(-0.4f, 0.0f);
 					x = _pos.X + fx * (1.0f + _content.size() * 0.1f);
 					y = _pos.Y + fy * (4.0f + _content.size() * 0.2f);
 				}

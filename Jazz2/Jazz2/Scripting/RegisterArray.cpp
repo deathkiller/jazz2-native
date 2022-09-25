@@ -1,34 +1,19 @@
 #if defined(WITH_ANGELSCRIPT)
 
-#include "LevelScripts.h"
 #include "RegisterArray.h"
+#include "../../Common.h"
 
 #include <new>
 #include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-#include <stdio.h>		// sprintf
-#include <string>
 #include <algorithm>	// std::sort
 
-using namespace std;
+#include <Containers/String.h>
+
+using namespace Death::Containers;
+using namespace Death::Containers::Literals;
 
 namespace Jazz2::Scripting
 {
-	// Use the angelscript engine's memory routines by default
-	static asALLOCFUNC_t userAlloc = asAllocMem;
-	static asFREEFUNC_t  userFree = asFreeMem;
-
-	// Allows the application to set which memory routines should be used by the array object
-	void CScriptArray::SetMemoryFunctions(asALLOCFUNC_t allocFunc, asFREEFUNC_t freeFunc)
-	{
-		userAlloc = allocFunc;
-		userFree = freeFunc;
-	}
-
-	static void RegisterScriptArray_Native(asIScriptEngine* engine);
-	static void RegisterScriptArray_Generic(asIScriptEngine* engine);
-
 	struct SArrayBuffer {
 		asDWORD maxElements;
 		asDWORD numElements;
@@ -52,14 +37,14 @@ namespace Jazz2::Scripting
 		SArrayCache* cache = reinterpret_cast<SArrayCache*>(type->GetUserData(ARRAY_CACHE));
 		if (cache) {
 			cache->~SArrayCache();
-			userFree(cache);
+			asFreeMem(cache);
 		}
 	}
 
 	CScriptArray* CScriptArray::Create(asITypeInfo* ti, asUINT length)
 	{
 		// Allocate the memory
-		void* mem = userAlloc(sizeof(CScriptArray));
+		void* mem = asAllocMem(sizeof(CScriptArray));
 		if (mem == 0) {
 			asIScriptContext* ctx = asGetActiveContext();
 			if (ctx) {
@@ -77,7 +62,7 @@ namespace Jazz2::Scripting
 	CScriptArray* CScriptArray::Create(asITypeInfo* ti, void* initList)
 	{
 		// Allocate the memory
-		void* mem = userAlloc(sizeof(CScriptArray));
+		void* mem = asAllocMem(sizeof(CScriptArray));
 		if (mem == 0) {
 			asIScriptContext* ctx = asGetActiveContext();
 			if (ctx) {
@@ -95,7 +80,7 @@ namespace Jazz2::Scripting
 	CScriptArray* CScriptArray::Create(asITypeInfo* ti, asUINT length, void* defVal)
 	{
 		// Allocate the memory
-		void* mem = userAlloc(sizeof(CScriptArray));
+		void* mem = asAllocMem(sizeof(CScriptArray));
 		if (mem == 0) {
 			asIScriptContext* ctx = asGetActiveContext();
 			if (ctx) {
@@ -513,9 +498,8 @@ namespace Jazz2::Scripting
 				// For objects that should work as handles we must use the opHndlAssign method
 				// TODO: Must support alternative syntaxes as well
 				// TODO: Move the lookup of the opHndlAssign method to Precache() so it is only done once
-				char decl[128];
-				sprintf_s(decl, "%s& opHndlAssign(const %s&in)", subType->GetName(), subType->GetName());
-				asIScriptFunction* func = subType->GetMethodByDecl(decl);
+				String decl = StringView(subType->GetName()) + "& opHndlAssign(const "_s + StringView(subType->GetName()) + "&in)"_s;
+				asIScriptFunction* func = subType->GetMethodByDecl(decl.data());
 				if (func) {
 					// TODO: Reuse active context if existing
 					asIScriptEngine* engine = objType->GetEngine();
@@ -584,7 +568,7 @@ namespace Jazz2::Scripting
 			return;
 
 		// Allocate memory for the buffer
-		SArrayBuffer* newBuffer = reinterpret_cast<SArrayBuffer*>(userAlloc(sizeof(SArrayBuffer) - 1 + elementSize * maxElements));
+		SArrayBuffer* newBuffer = reinterpret_cast<SArrayBuffer*>(asAllocMem(sizeof(SArrayBuffer) - 1 + elementSize * maxElements));
 		if (newBuffer) {
 			newBuffer->numElements = buffer->numElements;
 			newBuffer->maxElements = maxElements;
@@ -602,7 +586,7 @@ namespace Jazz2::Scripting
 		memcpy(newBuffer->data, buffer->data, buffer->numElements * elementSize);
 
 		// Release the old buffer
-		userFree(buffer);
+		asFreeMem(buffer);
 
 		buffer = newBuffer;
 	}
@@ -669,7 +653,7 @@ namespace Jazz2::Scripting
 
 		if (buffer->maxElements < buffer->numElements + delta) {
 			// Allocate memory for the buffer
-			SArrayBuffer* newBuffer = reinterpret_cast<SArrayBuffer*>(userAlloc(sizeof(SArrayBuffer) - 1 + elementSize * (buffer->numElements + delta)));
+			SArrayBuffer* newBuffer = reinterpret_cast<SArrayBuffer*>(asAllocMem(sizeof(SArrayBuffer) - 1 + elementSize * (buffer->numElements + delta)));
 			if (newBuffer) {
 				newBuffer->numElements = buffer->numElements + delta;
 				newBuffer->maxElements = newBuffer->numElements;
@@ -692,7 +676,7 @@ namespace Jazz2::Scripting
 			Construct(newBuffer, at, at + delta);
 
 			// Release the old buffer
-			userFree(buffer);
+			asFreeMem(buffer);
 
 			buffer = newBuffer;
 		} else if (delta < 0) {
@@ -870,7 +854,7 @@ namespace Jazz2::Scripting
 	// internal
 	void CScriptArray::CreateBuffer(SArrayBuffer** buf, asUINT numElements)
 	{
-		*buf = reinterpret_cast<SArrayBuffer*>(userAlloc(sizeof(SArrayBuffer) - 1 + elementSize * numElements));
+		*buf = reinterpret_cast<SArrayBuffer*>(asAllocMem(sizeof(SArrayBuffer) - 1 + elementSize * numElements));
 
 		if (*buf) {
 			(*buf)->numElements = numElements;
@@ -891,7 +875,7 @@ namespace Jazz2::Scripting
 		Destruct(buf, 0, buf->numElements);
 
 		// Free the buffer
-		userFree(buf);
+		asFreeMem(buf);
 	}
 
 	// internal
@@ -1076,14 +1060,14 @@ namespace Jazz2::Scripting
 			// Execute object opEquals if available
 			if (cache && cache->eqFunc) {
 				// TODO: Add proper error handling
-				r = ctx->Prepare(cache->eqFunc); assert(r >= 0);
+				r = ctx->Prepare(cache->eqFunc); ASSERT(r >= 0);
 
 				if (subTypeId & asTYPEID_OBJHANDLE) {
-					r = ctx->SetObject(*((void**)a)); assert(r >= 0);
-					r = ctx->SetArgObject(0, *((void**)b)); assert(r >= 0);
+					r = ctx->SetObject(*((void**)a)); ASSERT(r >= 0);
+					r = ctx->SetArgObject(0, *((void**)b)); ASSERT(r >= 0);
 				} else {
-					r = ctx->SetObject((void*)a); assert(r >= 0);
-					r = ctx->SetArgObject(0, (void*)b); assert(r >= 0);
+					r = ctx->SetObject((void*)a); ASSERT(r >= 0);
+					r = ctx->SetArgObject(0, (void*)b); ASSERT(r >= 0);
 				}
 
 				r = ctx->Execute();
@@ -1097,14 +1081,14 @@ namespace Jazz2::Scripting
 			// Execute object opCmp if available
 			if (cache && cache->cmpFunc) {
 				// TODO: Add proper error handling
-				r = ctx->Prepare(cache->cmpFunc); assert(r >= 0);
+				r = ctx->Prepare(cache->cmpFunc); ASSERT(r >= 0);
 
 				if (subTypeId & asTYPEID_OBJHANDLE) {
-					r = ctx->SetObject(*((void**)a)); assert(r >= 0);
-					r = ctx->SetArgObject(0, *((void**)b)); assert(r >= 0);
+					r = ctx->SetObject(*((void**)a)); ASSERT(r >= 0);
+					r = ctx->SetArgObject(0, *((void**)b)); ASSERT(r >= 0);
 				} else {
-					r = ctx->SetObject((void*)a); assert(r >= 0);
-					r = ctx->SetArgObject(0, (void*)b); assert(r >= 0);
+					r = ctx->SetObject((void*)a); ASSERT(r >= 0);
+					r = ctx->SetArgObject(0, (void*)b); ASSERT(r >= 0);
 				}
 
 				r = ctx->Execute();
@@ -1397,9 +1381,9 @@ namespace Jazz2::Scripting
 					// Execute object opCmp
 					if (cmpFunc) {
 						// TODO: Add proper error handling
-						r = cmpContext->Prepare(cmpFunc); assert(r >= 0);
-						r = cmpContext->SetObject(a); assert(r >= 0);
-						r = cmpContext->SetArgObject(0, b); assert(r >= 0);
+						r = cmpContext->Prepare(cmpFunc); ASSERT(r >= 0);
+						r = cmpContext->SetObject(a); ASSERT(r >= 0);
+						r = cmpContext->SetArgObject(0, b); ASSERT(r >= 0);
 						r = cmpContext->Execute();
 
 						if (r == asEXECUTION_FINISHED) {
@@ -1564,8 +1548,8 @@ namespace Jazz2::Scripting
 						// For objects that should work as handles we must use the opHndlAssign method
 						// TODO: Must support alternative syntaxes as well
 						// TODO: Move the lookup of the opHndlAssign method to Precache() so it is only done once
-						string decl = string(subType->GetName()) + "& opHndlAssign(const " + string(subType->GetName()) + "&in)";
-						asIScriptFunction* func = subType->GetMethodByDecl(decl.c_str());
+						String decl = StringView(subType->GetName()) + "& opHndlAssign(const "_s + StringView(subType->GetName()) + "&in)"_s;
+						asIScriptFunction* func = subType->GetMethodByDecl(decl.data());
 						if (func) {
 							// TODO: Reuse active context if existing
 							asIScriptContext* ctx = engine->RequestContext();
@@ -1627,7 +1611,7 @@ namespace Jazz2::Scripting
 		}
 
 		// Create the cache
-		cache = reinterpret_cast<SArrayCache*>(userAlloc(sizeof(SArrayCache)));
+		cache = reinterpret_cast<SArrayCache*>(asAllocMem(sizeof(SArrayCache)));
 		if (!cache) {
 			asIScriptContext* ctx = asGetActiveContext();
 			if (ctx) {
@@ -1764,7 +1748,7 @@ namespace Jazz2::Scripting
 			// When reaching 0 no more references to this instance
 			// exists and the object should be destroyed
 			this->~CScriptArray();
-			userFree(const_cast<CScriptArray*>(this));
+			asFreeMem(const_cast<CScriptArray*>(this));
 		}
 	}
 

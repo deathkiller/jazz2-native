@@ -1,20 +1,18 @@
 ﻿#if defined(WITH_ANGELSCRIPT)
 
 #include "ScriptActorWrapper.h"
+#include "ScriptPlayerWrapper.h"
 #include "LevelScripts.h"
 #include "RegisterArray.h"
+#include "RegisterRef.h"
 #include "../ILevelHandler.h"
-#include "../Events/EventMap.h"
 #include "../Events/EventSpawner.h"
-#include "../Tiles/TileMap.h"
-#include "../Collisions/DynamicTreeBroadPhase.h"
 #include "../Actors/Explosion.h"
 #include "../Actors/Player.h"
 #include "../Actors/Weapons/ShotBase.h"
 #include "../Actors/Weapons/TNT.h"
 #include "../Actors/Enemies/TurtleShell.h"
 
-#include "../../nCine/Primitives/Matrix4x4.h"
 #include "../../nCine/Base/FrameTimer.h"
 #include "../../nCine/Base/Random.h"
 
@@ -40,6 +38,7 @@ namespace Jazz2::Scripting
 		_onHealthChanged = _obj->GetObjectType()->GetMethodByDecl("void OnHealthChanged()");
 		_onUpdate = _obj->GetObjectType()->GetMethodByDecl("void OnUpdate(float)");
 		_onUpdateHitbox = _obj->GetObjectType()->GetMethodByDecl("void OnUpdateHitbox()");
+		_onHandleCollision = _obj->GetObjectType()->GetMethodByDecl("bool OnHandleCollision(ref other)");
 		_onHitFloor = _obj->GetObjectType()->GetMethodByDecl("void OnHitFloor(float)");
 		_onHitCeiling = _obj->GetObjectType()->GetMethodByDecl("void OnHitCeiling(float)");
 		_onHitWall = _obj->GetObjectType()->GetMethodByDecl("void OnHitWall(float)");
@@ -136,7 +135,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 	protected int GetActorType() final { return 1; }
 
 	// Overridable events
-	//bool OnCollect() { return true; }
+	//bool OnCollect(Player@ player) { return true; }
 
 	// Properties
 	int ScoreValue { get const { return _obj.ScoreValue; } set { _obj.ScoreValue = value; } }
@@ -184,7 +183,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 
 		// Get the function that is calling the factory, so we can be certain it is the our internal script class
 		asIScriptFunction* func = ctx->GetFunction(0);
-		if (func->GetObjectType() == 0 || StringView(func->GetObjectType()->GetName()) != StringView(AsClassName)) {
+		if (func->GetObjectType() == nullptr || StringView(func->GetObjectType()->GetName()) != StringView(AsClassName)) {
 			ctx->SetException("Cannot manually instantiate " AsClassNameInternal);
 			return nullptr;
 		}
@@ -192,8 +191,14 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		asIScriptObject* obj = reinterpret_cast<asIScriptObject*>(ctx->GetThisPointer());
 		switch (actorType) {
 			default:
-			case 0: return new ScriptActorWrapper(owner, obj);
-			case 1: return new ScriptCollectibleWrapper(owner, obj);
+			case 0: {
+				void* mem = asAllocMem(sizeof(ScriptActorWrapper));
+				return new(mem) ScriptActorWrapper(owner, obj);
+			}
+			case 1: {
+				void* mem = asAllocMem(sizeof(ScriptCollectibleWrapper));
+				return new(mem) ScriptCollectibleWrapper(owner, obj);
+			}
 		}
 	}
 
@@ -214,7 +219,8 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 			_obj->Release();
 		}
 		if (--_refCount == 0) {
-			delete this;
+			this->~ScriptActorWrapper();
+			asFreeMem(this);
 		}
 	}
 
@@ -229,6 +235,8 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		if (func == nullptr) {
 			co_return false;
 		}
+
+		SetState(ActorState::CollideWithOtherActors, _onHandleCollision != nullptr);
 
 		CScriptArray* eventParams = CScriptArray::Create(engine->GetTypeInfoByDecl("array<uint8>"), Events::EventSpawner::SpawnParamsSize);
 		std::memcpy(eventParams->At(0), details.Params, Events::EventSpawner::SpawnParamsSize);
@@ -348,10 +356,9 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 
 	void ScriptActorWrapper::OnUpdateHitbox()
 	{
-		// Always call base implementation
-		ActorBase::OnUpdateHitbox();
-
 		if (_onUpdateHitbox == nullptr || _isDead->Get()) {
+			// Call base implementation if not overriden
+			ActorBase::OnUpdateHitbox();
 			return;
 		}
 
@@ -370,7 +377,65 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 
 	bool ScriptActorWrapper::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		// TODO
+		if (_onHandleCollision != nullptr) {
+			if (auto otherWrapper = dynamic_cast<ScriptActorWrapper*>(other.get())) {
+				asIScriptEngine* engine = _obj->GetEngine();
+				asITypeInfo* typeInfo = _levelScripts->GetMainModule()->GetTypeInfoByName(AsClassName);
+				if (typeInfo != nullptr) {
+					asIScriptContext* ctx = engine->RequestContext();
+
+					CScriptHandle handle(otherWrapper->_obj, typeInfo);
+					ctx->Prepare(_onHandleCollision);
+					ctx->SetObject(_obj);
+					int p = ctx->SetArgObject(0, &handle);
+					int r = ctx->Execute();
+					bool result;
+					if (r == asEXECUTION_EXCEPTION) {
+						LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+						result = true;
+					} else {
+						result = (ctx->GetReturnByte() != 0);
+					}
+
+					engine->ReturnContext(ctx);
+
+					if (result) {
+						return true;
+					}
+				}
+			} else if (auto player = dynamic_cast<Player*>(other.get())) {
+				asIScriptEngine* engine = _obj->GetEngine();
+				asITypeInfo* typeInfo = engine->GetTypeInfoByName("Player");
+				if (typeInfo != nullptr) {
+					asIScriptContext* ctx = engine->RequestContext();
+
+					void* mem = asAllocMem(sizeof(ScriptPlayerWrapper));
+					ScriptPlayerWrapper* playerWrapper = new(mem) ScriptPlayerWrapper(_levelScripts, player);
+
+					CScriptHandle handle(playerWrapper, typeInfo);
+					ctx->Prepare(_onHandleCollision);
+					ctx->SetObject(_obj);
+					int p = ctx->SetArgObject(0, &handle);
+					int r = ctx->Execute();
+					bool result;
+					if (r == asEXECUTION_EXCEPTION) {
+						LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+						result = true;
+					} else {
+						result = (ctx->GetReturnByte() != 0);
+					}
+
+					engine->ReturnContext(ctx);
+
+					playerWrapper->Release();
+
+					if (result) {
+						return true;
+					}
+				}
+			}
+		}
+
 		return ActorBase::OnHandleCollision(other);
 	}
 
@@ -481,6 +546,26 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		engine->ReturnContext(ctx);
 	}
 
+	float ScriptActorWrapper::asGetAlpha() const
+	{
+		return _renderer.alpha();
+	}
+
+	void ScriptActorWrapper::asSetAlpha(float value)
+	{
+		_renderer.setAlphaF(value);
+	}
+
+	uint16_t ScriptActorWrapper::asGetLayer() const
+	{
+		return _renderer.layer();
+	}
+
+	void ScriptActorWrapper::asSetLayer(uint16_t value)
+	{
+		_renderer.setLayer(value);
+	}
+
 	void ScriptActorWrapper::asDecreaseHealth(int amount)
 	{
 		DecreaseHealth(amount);
@@ -522,26 +607,6 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		SetAnimation((AnimState)state);
 	}
 
-	float ScriptActorWrapper::asGetAlpha() const
-	{
-		return _renderer.alpha();
-	}
-
-	void ScriptActorWrapper::asSetAlpha(float value)
-	{
-		_renderer.setAlphaF(value);
-	}
-
-	uint16_t ScriptActorWrapper::asGetLayer() const
-	{
-		return _renderer.layer();
-	}
-
-	void ScriptActorWrapper::asSetLayer(uint16_t value)
-	{
-		_renderer.setLayer(value);
-	}
-
 	ScriptCollectibleWrapper::ScriptCollectibleWrapper(LevelScripts* levelScripts, asIScriptObject* obj)
 		:
 		ScriptActorWrapper(levelScripts, obj),
@@ -550,14 +615,12 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		_timeLeft(0.0f),
 		_startingY(0.0f)
 	{
-		_onCollect = _obj->GetObjectType()->GetMethodByDecl("bool OnCollect()");
+		_onCollect = _obj->GetObjectType()->GetMethodByDecl("bool OnCollect(Player@)");
 	}
 
 	Task<bool> ScriptCollectibleWrapper::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		_elasticity = 0.6f;
-
-		SetState(ActorState::SkipPerPixelCollisions, true);
 
 		Vector2f pos = _pos;
 		_phase = ((pos.X / 32) + (pos.Y / 32)) * 2.0f;
@@ -576,14 +639,17 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 
 		bool success = co_await ScriptActorWrapper::OnActivatedAsync(details);
 
+		SetState(ActorState::CollideWithOtherActors | ActorState::SkipPerPixelCollisions, true);
+
 		co_return success;
 	}
 
 	bool ScriptCollectibleWrapper::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (auto player = dynamic_cast<Player*>(other.get())) {
-			OnCollect(player);
-			return true;
+			if (OnCollect(player)) {
+				return true;
+			}
 		} else {
 			bool shouldDrop = _untouched && (dynamic_cast<Weapons::ShotBase*>(other.get()) != nullptr ||
 				dynamic_cast<Weapons::TNT*>(other.get()) != nullptr || dynamic_cast<Enemies::TurtleShell*>(other.get()) != nullptr);
@@ -597,20 +663,24 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 			}
 		}
 
-		return false;
+		return ScriptActorWrapper::OnHandleCollision(other);
 	}
 
-	void ScriptCollectibleWrapper::OnCollect(Player* player)
+	bool ScriptCollectibleWrapper::OnCollect(Player* player)
 	{
 		if (_onCollect == nullptr || _isDead->Get()) {
-			return;
+			return false;
 		}
 
 		asIScriptEngine* engine = _obj->GetEngine();
 		asIScriptContext* ctx = engine->RequestContext();
 
+		void* mem = asAllocMem(sizeof(ScriptPlayerWrapper));
+		ScriptPlayerWrapper* playerWrapper = new(mem) ScriptPlayerWrapper(_levelScripts, player);
+
 		ctx->Prepare(_onCollect);
 		ctx->SetObject(_obj);
+		ctx->SetArgObject(0, playerWrapper);
 		int r = ctx->Execute();
 		bool result;
 		if (r == asEXECUTION_EXCEPTION) {
@@ -622,10 +692,15 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 
 		engine->ReturnContext(ctx);
 
+		playerWrapper->Release();
+
 		if (result) {
 			player->AddScore(_scoreValue);
 			Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()), Explosion::Type::Generator);
 			DecreaseHealth(INT32_MAX);
+			return true;
+		} else {
+			return false;
 		}
 	}
 }

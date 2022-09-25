@@ -2,18 +2,8 @@
 
 #if defined(WITH_ANGELSCRIPT)
 
+#include "FindAngelScript.h"
 #include "../ILevelHandler.h"
-
-#if defined(_MSC_VER) && defined(__has_include)
-#	if __has_include("../../../Libs/angelscript.h")
-#		define __HAS_LOCAL_ANGELSCRIPT
-#	endif
-#endif
-#ifdef __HAS_LOCAL_ANGELSCRIPT
-#	include "../../../Libs/angelscript.h"
-#else
-#	include <angelscript.h>
-#endif
 
 namespace Jazz2::Scripting
 {
@@ -36,8 +26,11 @@ namespace Jazz2::Scripting
 			return _module;
 		}
 
+		const SmallVectorImpl<Actors::Player*>& GetPlayers() const;
+
 		void OnLevelBegin();
-		void OnLevelCallback(uint8_t* eventParams);
+		void OnLevelUpdate(float timeMult);
+		void OnLevelCallback(Actors::ActorBase* initiator, uint8_t* eventParams);
 
 	private:
 		LevelHandler* _levelHandler;
@@ -46,7 +39,9 @@ namespace Jazz2::Scripting
 		SmallVector<asIScriptContext*, 4> _contextPool;
 		HashMap<String, bool> _definedWords;
 
-		HashMap<int, String> _eventTypeToTypeName;
+		asIScriptFunction* _onLevelUpdate;
+
+		HashMap<int, asITypeInfo*> _eventTypeToTypeInfo;
 
 		bool AddScriptFromFile(const StringView& path);
 		int ExcludeCode(String& scriptContent, int pos);
@@ -69,6 +64,7 @@ namespace Jazz2::Scripting
 
 		static void asPreloadMetadata(const String& path);
 		static void asRegisterSpawnable(int eventType, const String& typeName);
+		static std::shared_ptr<Actors::ActorBase> asRegisterSpawnableCallback(const Actors::ActorActivationDetails& details);
 		static void asSpawnEvent(int eventType, int x, int y);
 		static void asSpawnEventParams(int eventType, int x, int y, const CScriptArray& eventParams);
 		static void asSpawnType(const String& typeName, int x, int y);

@@ -42,7 +42,7 @@ namespace Jazz2::Actors::Environment
 		if (auto player = dynamic_cast<Player*>(other.get())) {
 			if (player->GetPlayerType() == PlayerType::Frog && player->DisableControllable(160.0f)) {
 				SetTransition(AnimState::TransitionAttack, false, [this, player]() {
-					player->MorphRevent();
+					player->MorphRevert();
 
 					PlaySfx("Kiss"_s, 0.8f);
 					SetTransition(AnimState::TransitionAttackEnd, false);

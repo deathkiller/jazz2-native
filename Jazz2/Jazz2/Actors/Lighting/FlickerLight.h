@@ -21,5 +21,7 @@ namespace Jazz2::Actors::Lighting
 		float _brightness;
 		float _radiusNear;
 		float _radiusFar;
+
+		float _phase;
 	};
 }

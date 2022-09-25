@@ -2,8 +2,10 @@
 
 #include "LevelScripts.h"
 #include "RegisterArray.h"
+#include "RegisterRef.h"
 #include "RegisterString.h"
 #include "ScriptActorWrapper.h"
+#include "ScriptPlayerWrapper.h"
 
 #include "../LevelHandler.h"
 #include "../PreferencesCache.h"
@@ -65,7 +67,8 @@ namespace Jazz2::Scripting
 	LevelScripts::LevelScripts(LevelHandler* levelHandler, const StringView& scriptPath)
 		:
 		_levelHandler(levelHandler),
-		_module(nullptr)
+		_module(nullptr),
+		_onLevelUpdate(nullptr)
 	{
 		_engine = asCreateScriptEngine();
 		_engine->SetUserData(this, EngineToOwner);
@@ -78,8 +81,9 @@ namespace Jazz2::Scripting
 
 		// Built-in types
 		RegisterArray(_engine);
+		RegisterRef(_engine);
 		RegisterString(_engine);
-		
+
 		// Math functions
 		r = _engine->RegisterGlobalFunction("float cos(float)", asFUNCTIONPR(cosf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = _engine->RegisterGlobalFunction("float sin(float)", asFUNCTIONPR(sinf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
@@ -156,6 +160,7 @@ enum WeatherType {
 
 		// Game-specific classes
 		ScriptActorWrapper::RegisterFactory(_engine, _module);
+		ScriptPlayerWrapper::RegisterFactory(_engine);
 
 		if (!AddScriptFromFile(scriptPath)) {
 			LOGE("Cannot compile level script");
@@ -176,6 +181,8 @@ enum WeatherType {
 
 			_engine->ReturnContext(ctx);
 		}
+
+		_onLevelUpdate = _module->GetFunctionByDecl("void OnLevelUpdate(float)");
 	}
 
 	LevelScripts::~LevelScripts()
@@ -499,6 +506,11 @@ enum WeatherType {
 		return obj2;
 	}
 
+	const SmallVectorImpl<Actors::Player*>& LevelScripts::GetPlayers() const
+	{
+		return _levelHandler->_players;
+	}
+
 	void LevelScripts::OnLevelBegin()
 	{
 		asIScriptFunction* func = _module->GetFunctionByDecl("void OnLevelBegin()");
@@ -517,18 +529,65 @@ enum WeatherType {
 		_engine->ReturnContext(ctx);
 	}
 
-	void LevelScripts::OnLevelCallback(uint8_t* eventParams)
+	void LevelScripts::OnLevelUpdate(float timeMult)
 	{
-		// TODO: Call also other variants
-		// void onFunction…(Player@ player)
-		// void onFunction…(Player@ player, bool paramName)
-		// void onFunction…(Player@ player, uint8 paramName)
-		// void onFunction…(Player@ player, int8 paramName)
+		if (_onLevelUpdate == nullptr) {
+			return;
+		}
 
+		asIScriptContext* ctx = _engine->RequestContext();
+
+		ctx->Prepare(_onLevelUpdate);
+		ctx->SetArgFloat(0, timeMult);
+		int r = ctx->Execute();
+		if (r == asEXECUTION_EXCEPTION) {
+			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+		}
+
+		_engine->ReturnContext(ctx);
+	}
+
+	void LevelScripts::OnLevelCallback(Actors::ActorBase* initiator, uint8_t* eventParams)
+	{
 		char funcName[64];
-		sprintf_s(funcName, "void onFunction%i()", eventParams[0]);
+		asIScriptFunction* func;
 
-		asIScriptFunction* func = _module->GetFunctionByDecl(funcName);
+		// If known player is the initiator, try to call specific variant of the function
+		if (auto player = dynamic_cast<Actors::Player*>(initiator)) {
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
+			sprintf_s(funcName, "void OnFunction%i(Player@, uint8)", eventParams[0]);
+#else
+			snprintf(funcName, sizeof(funcName), bufferSize, "void OnFunction%i(Player@, uint8)", eventParams[0]);
+#endif
+			func = _module->GetFunctionByDecl(funcName);
+			if (func != nullptr) {
+				asIScriptContext* ctx = _engine->RequestContext();
+
+				void* mem = asAllocMem(sizeof(ScriptPlayerWrapper));
+				ScriptPlayerWrapper* playerWrapper = new(mem) ScriptPlayerWrapper(this, player);
+
+				ctx->Prepare(func);
+				ctx->SetArgObject(0, playerWrapper);
+				ctx->SetArgByte(1, eventParams[1]);
+				int r = ctx->Execute();
+				if (r == asEXECUTION_EXCEPTION) {
+					LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+				}
+
+				_engine->ReturnContext(ctx);
+
+				playerWrapper->Release();
+				return;
+			}
+		}
+
+		// Try to call parameter-less variant
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
+		sprintf_s(funcName, "void OnFunction%i()", eventParams[0]);
+#else
+		snprintf(funcName, sizeof(funcName), bufferSize, "void OnFunction%i()", eventParams[0]);
+#endif
+		func = _module->GetFunctionByDecl(funcName);
 		if (func != nullptr) {
 			asIScriptContext* ctx = _engine->RequestContext();
 
@@ -539,9 +598,10 @@ enum WeatherType {
 			}
 
 			_engine->ReturnContext(ctx);
-		} else {
-			LOGW_X("Callback function \"%s\" was not found in the script. Please correct the code and try again.", funcName);
+			return;
 		}
+
+		LOGW_X("Callback function \"%s\" was not found in the script. Please correct the code and try again.", funcName);
 	}
 
 	uint8_t LevelScripts::asGetDifficulty()
@@ -610,20 +670,35 @@ enum WeatherType {
 		auto ctx = asGetActiveContext();
 		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 
-		_this->_eventTypeToTypeName.emplace(eventType, typeName);
+		asITypeInfo* typeInfo = _this->_module->GetTypeInfoByName(typeName.data());
+		if (typeInfo == nullptr) {
+			return;
+		}
 
-		_this->_levelHandler->EventSpawner()->RegisterSpawnable((EventType)eventType, [](const Actors::ActorActivationDetails& details) -> std::shared_ptr<Actors::ActorBase> {
-			if (auto levelHandler = dynamic_cast<LevelHandler*>(details.LevelHandler)) {
-				auto _this = levelHandler->_scripts.get();
-				auto it = _this->_eventTypeToTypeName.find((int)details.Type);
-				if (it != _this->_eventTypeToTypeName.end()) {
-					auto actor = _this->CreateActorInstance(it->second);
-					actor->OnActivated(details);
-					return std::shared_ptr<Actors::ActorBase>(actor);
+		bool added = _this->_eventTypeToTypeInfo.emplace(eventType, typeInfo).second;
+		if (added) {
+			_this->_levelHandler->EventSpawner()->RegisterSpawnable((EventType)eventType, asRegisterSpawnableCallback);
+		}
+	}
+
+	std::shared_ptr<Actors::ActorBase> LevelScripts::asRegisterSpawnableCallback(const Actors::ActorActivationDetails& details)
+	{
+		if (auto levelHandler = dynamic_cast<LevelHandler*>(details.LevelHandler)) {
+			auto _this = levelHandler->_scripts.get();
+			// Spawn() function with custom event cannot be used in OnLevelLoad(), because _scripts is not assigned yet
+			if (_this != nullptr) {
+				auto it = _this->_eventTypeToTypeInfo.find((int)details.Type);
+				if (it != _this->_eventTypeToTypeInfo.end()) {
+					asIScriptObject* obj = reinterpret_cast<asIScriptObject*>(_this->_engine->CreateScriptObject(it->second));
+					ScriptActorWrapper* obj2 = *reinterpret_cast<ScriptActorWrapper**>(obj->GetAddressOfProperty(0));
+					obj2->AddRef();
+					obj->Release();
+					obj2->OnActivated(details);
+					return std::shared_ptr<Actors::ActorBase>(obj2);
 				}
 			}
-			return nullptr;
-		});
+		}
+		return nullptr;
 	}
 
 	void LevelScripts::asSpawnEvent(int eventType, int x, int y)
