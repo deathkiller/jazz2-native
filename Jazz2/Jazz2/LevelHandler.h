@@ -78,8 +78,8 @@ namespace Jazz2
 			return _difficulty;
 		}
 
-		bool ReduxMode() const override {
-			return _reduxMode;
+		bool IsReforged() const override {
+			return _isReforged;
 		}
 
 		Recti LevelBounds() const override;
@@ -257,7 +257,7 @@ namespace Jazz2
 		GameDifficulty _difficulty;
 		String _musicPath;
 		Recti _levelBounds;
-		bool _reduxMode, _cheatsUsed;
+		bool _isReforged, _cheatsUsed;
 		SmallVector<String, 0> _levelTexts;
 
 		String _nextLevel;

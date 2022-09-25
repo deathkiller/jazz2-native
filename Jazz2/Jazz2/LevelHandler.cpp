@@ -44,7 +44,7 @@ namespace Jazz2
 		_levelFileName(levelInit.LevelName),
 		_episodeName(levelInit.EpisodeName),
 		_difficulty(levelInit.Difficulty),
-		_reduxMode(levelInit.ReduxMode),
+		_isReforged(levelInit.IsReforged),
 		_cheatsUsed(levelInit.CheatsUsed),
 		_nextLevelType(ExitType::None),
 		_nextLevelTime(0.0f),
@@ -185,7 +185,7 @@ namespace Jazz2
 		_weatherType = weatherType;
 		_weatherIntensity = weatherIntensity;
 
-#ifdef WITH_OPENMPT
+#if defined(WITH_OPENMPT)
 		if (!musicPath.empty()) {
 			_music = ContentResolver::Current().GetMusic(musicPath);
 			if (_music != nullptr) {
@@ -224,6 +224,7 @@ namespace Jazz2
 		}
 #if _DEBUG
 		if (PlayerActionPressed(0, PlayerActions::ChangeWeapon) && PlayerActionHit(0, PlayerActions::Jump)) {
+			_cheatsUsed = true;
 			BeginLevelChange(ExitType::Normal, nullptr);
 		}
 #endif
@@ -276,7 +277,7 @@ namespace Jazz2
 					}
 
 					levelInit.Difficulty = _difficulty;
-					levelInit.ReduxMode = _reduxMode;
+					levelInit.IsReforged = _isReforged;
 					levelInit.CheatsUsed = _cheatsUsed;
 					levelInit.LastExitType = _nextLevelType;
 					levelInit.LastEpisodeName = _episodeName;
@@ -896,7 +897,7 @@ namespace Jazz2
 						if (_sugarRushMusic != nullptr) {
 							_sugarRushMusic->stop();
 						}
-#ifdef WITH_OPENMPT
+#if defined(WITH_OPENMPT)
 						if (_music != nullptr) {
 							_music->stop();
 						}
@@ -945,7 +946,7 @@ namespace Jazz2
 			_sugarRushMusic->stop();
 			_sugarRushMusic = nullptr;
 		}
-#ifdef WITH_OPENMPT
+#if defined(WITH_OPENMPT)
 		if (_music != nullptr) {
 			_music->stop();
 		}
@@ -968,7 +969,7 @@ namespace Jazz2
 			if (_activeBoss->OnPlayerDied()) {
 				_activeBoss = nullptr;
 
-#ifdef WITH_OPENMPT
+#if defined(WITH_OPENMPT)
 				if (_music != nullptr) {
 					_music->stop();
 				}

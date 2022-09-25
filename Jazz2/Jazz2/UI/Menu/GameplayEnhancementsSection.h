@@ -17,7 +17,7 @@ namespace Jazz2::UI::Menu
 
 	private:
 		enum class Item {
-			ReduxMode,
+			Reforged,
 			LedgeClimb,
 			WeaponWheel,
 

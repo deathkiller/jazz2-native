@@ -37,15 +37,15 @@ namespace Jazz2::Scripting
 		asIScriptEngine* _engine;
 		asIScriptModule* _module;
 		SmallVector<asIScriptContext*, 4> _contextPool;
-		HashMap<String, bool> _definedWords;
 
 		asIScriptFunction* _onLevelUpdate;
 
 		HashMap<int, asITypeInfo*> _eventTypeToTypeInfo;
 
-		bool AddScriptFromFile(const StringView& path);
+		bool AddScriptFromFile(const StringView& path, const HashMap<String, bool>& definedSymbols);
 		int ExcludeCode(String& scriptContent, int pos);
 		int SkipStatement(String& scriptContent, int pos);
+		void ProcessPragma(const StringView& content);
 
 		static asIScriptContext* RequestContextCallback(asIScriptEngine* engine, void* param);
 		static void ReturnContextCallback(asIScriptEngine* engine, asIScriptContext* ctx, void* param);
@@ -54,6 +54,7 @@ namespace Jazz2::Scripting
 		Actors::ActorBase* CreateActorInstance(const StringView& typeName);
 
 		static uint8_t asGetDifficulty();
+		static bool asIsReforged();
 		static int asGetLevelWidth();
 		static int asGetLevelHeight();
 		static float asGetElapsedFrames();

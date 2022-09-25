@@ -132,8 +132,8 @@ namespace Jazz2::Actors::Enemies
 	{
 		SetState(ActorState::IsInvulnerable, true);
 		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
-		// Collide with player ammo if Redux Mode is enabled
-		CanCollideWithAmmo = _levelHandler->ReduxMode();
+		// Collide with player ammo if Reforged Mode is enabled
+		CanCollideWithAmmo = _levelHandler->IsReforged();
 
 		SetFacingLeft(details.Params[0] != 0);
 

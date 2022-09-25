@@ -486,8 +486,8 @@ namespace Jazz2::Actors
 
 				if (_dizzyTime > 0.0f || _playerType == PlayerType::Frog) {
 					_speed.X = std::clamp(_speed.X + Acceleration * timeMult * (IsFacingLeft() ? -1 : 1), -MaxDizzySpeed * playerMovementVelocity, MaxDizzySpeed * playerMovementVelocity);
-				} else if (_inShallowWater != -1 && _levelHandler->ReduxMode() && _playerType != PlayerType::Lori) {
-					// Use lower speed in shallow water if Redux Mode is enabled
+				} else if (_inShallowWater != -1 && _levelHandler->IsReforged() && _playerType != PlayerType::Lori) {
+					// Use lower speed in shallow water if Reforged Mode is enabled
 					// Also, exclude Lori, because she can't ledge climb or double jump (rescue/01_colon1)
 					_speed.X = std::clamp(_speed.X + Acceleration * timeMult * (IsFacingLeft() ? -1 : 1), -MaxShallowWaterSpeed * playerMovementVelocity, MaxShallowWaterSpeed * playerMovementVelocity);
 				} else {

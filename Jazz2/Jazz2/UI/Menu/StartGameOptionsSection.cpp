@@ -284,7 +284,7 @@ namespace Jazz2::UI::Menu
 
 		PlayerType players[] = { (PlayerType)((int)PlayerType::Jazz + _selectedPlayerType) };
 		LevelInitialization levelInit(_episodeName, (playTutorial ? "trainer"_s : StringView(_levelName)), (GameDifficulty)((int)GameDifficulty::Easy + _selectedDifficulty),
-			PreferencesCache::ReduxMode, false, players, _countof(players));
+			PreferencesCache::EnableReforged, false, players, _countof(players));
 
 #if !defined(SHAREWARE_DEMO_ONLY)
 		if (!_previousEpisodeName.empty()) {

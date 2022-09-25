@@ -791,7 +791,7 @@ namespace Death::Containers
 
 	template<class T> constexpr BasicStringView<T> BasicStringView<T>::slice(const std::size_t begin, const std::size_t end) const {
 		return BasicStringView<T>{_data + begin, (end - begin) |
-			// Propagate the global flag always */
+			// Propagate the global flag always
 			(_sizePlusFlags & std::size_t(StringViewFlags::Global)) |
 			// The null termination flag only if the original is null-terminated and end points to the original end
 			((_sizePlusFlags & std::size_t(StringViewFlags::NullTerminated)) * (end == (_sizePlusFlags & ~Implementation::StringViewSizeMask))),

@@ -92,7 +92,7 @@ namespace Jazz2::Scripting
 		r = _engine->RegisterGlobalFunction("float acos(float)", asFUNCTIONPR(acosf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = _engine->RegisterGlobalFunction("float asin(float)", asFUNCTIONPR(asinf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = _engine->RegisterGlobalFunction("float atan(float)", asFUNCTIONPR(atanf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("float atan2(float,float)", asFUNCTIONPR(atan2f, (float, float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		r = _engine->RegisterGlobalFunction("float atan2(float, float)", asFUNCTIONPR(atan2f, (float, float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
 		r = _engine->RegisterGlobalFunction("float cosh(float)", asFUNCTIONPR(coshf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = _engine->RegisterGlobalFunction("float sinh(float)", asFUNCTIONPR(sinhf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
@@ -117,6 +117,7 @@ namespace Jazz2::Scripting
 		r = _engine->RegisterGlobalFunction("void Print(const string &in)", asFUNCTION(asScript), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
 		r = _engine->RegisterGlobalFunction("uint8 get_Difficulty() property", asFUNCTION(asGetDifficulty), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		r = _engine->RegisterGlobalFunction("bool get_IsReforged() property", asFUNCTION(asIsReforged), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = _engine->RegisterGlobalFunction("int get_LevelWidth() property", asFUNCTION(asGetLevelWidth), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = _engine->RegisterGlobalFunction("int get_LevelHeight() property", asFUNCTION(asGetLevelHeight), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = _engine->RegisterGlobalFunction("float get_ElapsedFrames() property", asFUNCTION(asGetElapsedFrames), asCALL_CDECL); RETURN_ASSERT(r >= 0);
@@ -162,7 +163,37 @@ enum WeatherType {
 		ScriptActorWrapper::RegisterFactory(_engine, _module);
 		ScriptPlayerWrapper::RegisterFactory(_engine);
 
-		if (!AddScriptFromFile(scriptPath)) {
+		// Try to load the script
+		HashMap<String, bool> definedSymbols = {
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+			{ "TARGET_EMSCRIPTEN"_s, true },
+#elif defined(DEATH_TARGET_ANDROID)
+			{ "TARGET_ANDROID"_s, true },
+#elif defined(DEATH_TARGET_APPLE)
+			{ "TARGET_APPLE"_s, true },
+#	if defined(DEATH_TARGET_IOS)
+			{ "TARGET_IOS"_s, true },
+#	endif
+#elif defined(DEATH_TARGET_WINDOWS)
+			{ "TARGET_WINDOWS"_s, true },
+#elif defined(DEATH_TARGET_UNIX)
+			{ "TARGET_UNIX"_s, true },
+#endif
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+			{ "TARGET_BIG_ENDIAN"_s, true },
+#endif
+#if defined(WITH_AUDIO)
+			{ "WITH_AUDIO"_s, true },
+#endif
+#if defined(WITH_OPENMPT)
+			{ "WITH_OPENMPT"_s, true },
+#endif
+#if defined(WITH_THREADS)
+			{ "WITH_THREADS"_s, true },
+#endif
+			{ "RESURRECTION"_s, true }
+		};
+		if (!AddScriptFromFile(scriptPath, definedSymbols)) {
 			LOGE("Cannot compile level script");
 			return;
 		}
@@ -197,7 +228,7 @@ enum WeatherType {
 		}
 	}
 
-	bool LevelScripts::AddScriptFromFile(const StringView& path)
+	bool LevelScripts::AddScriptFromFile(const StringView& path, const HashMap<String, bool>& definedSymbols)
 	{
 		auto s = fs::Open(path, FileAccessMode::Read);
 		if (s->GetSize() <= 0) {
@@ -245,7 +276,8 @@ enum WeatherType {
 						}
 
 						// Has this identifier been defined by the application or not?
-						if (_definedWords.find(String::nullTerminatedView(word)) == _definedWords.end()) {
+						auto it = definedSymbols.find(String::nullTerminatedView(word));
+						if (it == definedSymbols.end() || !it->second) {
 							// Exclude all the code until and including the #endif
 							pos = ExcludeCode(scriptContent, pos);
 						} else {
@@ -310,14 +342,7 @@ enum WeatherType {
 						pos += len;
 						for (; pos < scriptSize && scriptContent[pos] != '\n'; pos++);
 
-						// TODO: Call the pragma callback
-						/*string pragmaText(&scriptContent[start + 7], pos - start - 7);
-						int r = pragmaCallback ? pragmaCallback(pragmaText, *this, pragmaParam) : -1;
-						if (r < 0) {
-							// TODO: Report the correct line number
-							_engine->WriteMessage(sectionname, 0, 0, asMSGTYPE_ERROR, "Invalid #pragma directive");
-							return r;
-						}*/
+						ProcessPragma(scriptContent.slice(start + 7, (scriptContent[pos - 1] == '\r' ? pos - 1 : pos)));
 
 						// Overwrite the pragma directive with space characters to avoid compiler error
 						for (int i = start; i < pos; i++) {
@@ -357,7 +382,7 @@ enum WeatherType {
 
 			// Load the included scripts
 			for (auto& include : includes) {
-				if (!AddScriptFromFile(fs::JoinPath(currentDir, include[0] == '/' || include[0] == '\\' ? include.exceptPrefix(1) : StringView(include)))) {
+				if (!AddScriptFromFile(fs::JoinPath(currentDir, include[0] == '/' || include[0] == '\\' ? include.exceptPrefix(1) : StringView(include)), definedSymbols)) {
 					return false;
 				}
 			}
@@ -445,20 +470,21 @@ enum WeatherType {
 		return pos;
 	}
 
+	void LevelScripts::ProcessPragma(const StringView& content)
+	{
+		// TODO
+	}
+
 	asIScriptContext* LevelScripts::RequestContextCallback(asIScriptEngine* engine, void* param)
 	{
-		asIScriptContext* ctx = nullptr;
-
 		// Check if there is a free context available in the pool
 		auto _this = reinterpret_cast<LevelScripts*>(param);
 		if (!_this->_contextPool.empty()) {
-			ctx = _this->_contextPool.pop_back_val();
+			return _this->_contextPool.pop_back_val();
 		} else {
 			// No free context was available so we'll have to create a new one
-			ctx = engine->CreateContext();
+			return engine->CreateContext();
 		}
-
-		return ctx;
 	}
 
 	void LevelScripts::ReturnContextCallback(asIScriptEngine* engine, asIScriptContext* ctx, void* param)
@@ -542,6 +568,8 @@ enum WeatherType {
 		int r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
 			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			// Don't call the method again if an exception occurs
+			_onLevelUpdate = nullptr;
 		}
 
 		_engine->ReturnContext(ctx);
@@ -609,6 +637,13 @@ enum WeatherType {
 		auto ctx = asGetActiveContext();
 		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		return (uint8_t)_this->_levelHandler->_difficulty;
+	}
+
+	bool LevelScripts::asIsReforged()
+	{
+		auto ctx = asGetActiveContext();
+		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		return (uint8_t)_this->_levelHandler->_isReforged;
 	}
 
 	int LevelScripts::asGetLevelWidth()
@@ -771,6 +806,7 @@ enum WeatherType {
 
 	void LevelScripts::asMusicPlay(const String& path)
 	{
+#if defined(WITH_OPENMPT)
 		if (path.empty()) {
 			return;
 		}
@@ -789,6 +825,7 @@ enum WeatherType {
 				_levelHandler->_music->play();
 			}
 		}
+#endif
 	}
 
 	void LevelScripts::asShowLevelText(const String& text)

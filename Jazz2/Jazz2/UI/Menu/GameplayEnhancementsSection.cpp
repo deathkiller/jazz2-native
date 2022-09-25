@@ -12,7 +12,7 @@ namespace Jazz2::UI::Menu
 		_isDirty(false),
 		_isInGame(false)
 	{
-		_items[(int)Item::ReduxMode].Name = "Redux Mode"_s;
+		_items[(int)Item::Reforged].Name = "Reforged Mode"_s;
 		_items[(int)Item::LedgeClimb].Name = "Ledge Climbing"_s;
 		_items[(int)Item::WeaponWheel].Name = "Weapon Wheel"_s;
 	}
@@ -111,7 +111,7 @@ namespace Jazz2::UI::Menu
 			bool enabled;
 			switch (i) {
 				default:
-				case (int)Item::ReduxMode: enabled = PreferencesCache::ReduxMode; break;
+				case (int)Item::Reforged: enabled = PreferencesCache::EnableReforged; break;
 				case (int)Item::LedgeClimb: enabled = PreferencesCache::EnableLedgeClimb; break;
 				case (int)Item::WeaponWheel: enabled = PreferencesCache::EnableWeaponWheel; break;
 			}
@@ -156,11 +156,11 @@ namespace Jazz2::UI::Menu
 	void GameplayEnhancementsSection::ExecuteSelected()
 	{
 		switch (_selectedIndex) {
-			case (int)Item::ReduxMode:
+			case (int)Item::Reforged:
 				if (_isInGame) {
 					return;
 				}
-				PreferencesCache::ReduxMode = !PreferencesCache::ReduxMode;
+				PreferencesCache::EnableReforged = !PreferencesCache::EnableReforged;
 				break;
 
 			case (int)Item::LedgeClimb: PreferencesCache::EnableLedgeClimb = !PreferencesCache::EnableLedgeClimb; break;

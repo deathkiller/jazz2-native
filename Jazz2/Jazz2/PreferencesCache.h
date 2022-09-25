@@ -74,7 +74,7 @@ namespace Jazz2
 		static bool ShowPerformanceMetrics;
 
 		// Gameplay
-		static bool ReduxMode;
+		static bool EnableReforged;
 		static bool EnableLedgeClimb;
 		static bool EnableWeaponWheel;
 		static bool EnableRgbLights;
@@ -98,13 +98,13 @@ namespace Jazz2
 		static void RemoveEpisodeContinue(const StringView& episodeName);
 
 	private:
-		enum class BoolOptions {
+		enum class BoolOptions : uint64_t {
 			None = 0x00,
 
 			EnableFullscreen = 0x01,
 			ShowPerformanceMetrics = 0x02,
 
-			ReduxMode = 0x100,
+			EnableReforged = 0x100,
 			EnableLedgeClimb = 0x200,
 			EnableWeaponWheel = 0x400,
 			EnableRgbLights = 0x800,

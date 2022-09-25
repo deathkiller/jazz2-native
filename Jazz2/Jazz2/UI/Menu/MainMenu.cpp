@@ -41,7 +41,7 @@ namespace Jazz2::UI::Menu
 		_mediumFont = resolver.GetFont(FontType::Medium);
 
 #if defined(WITH_OPENMPT)
-		if (PreferencesCache::ReduxMode) {
+		if (PreferencesCache::EnableReforged) {
 			_music = resolver.GetMusic(Random().NextBool() ? "bonus2.j2b"_s : "bonus3.j2b"_s);
 		}
 		if (_music == nullptr) {

@@ -17,7 +17,7 @@ namespace Jazz2
 	bool PreferencesCache::EnableFullscreen = false;
 	bool PreferencesCache::EnableVsync = true;
 	bool PreferencesCache::ShowPerformanceMetrics = false;
-	bool PreferencesCache::ReduxMode = true;
+	bool PreferencesCache::EnableReforged = true;
 	bool PreferencesCache::EnableLedgeClimb = true;
 	bool PreferencesCache::EnableWeaponWheel = true;
 	bool PreferencesCache::EnableRgbLights = true;
@@ -100,7 +100,7 @@ namespace Jazz2
 						EnableFullscreen = ((boolOptions & BoolOptions::EnableFullscreen) == BoolOptions::EnableFullscreen);
 #endif
 						ShowPerformanceMetrics = ((boolOptions & BoolOptions::ShowPerformanceMetrics) == BoolOptions::ShowPerformanceMetrics);
-						ReduxMode = ((boolOptions & BoolOptions::ReduxMode) == BoolOptions::ReduxMode);
+						EnableReforged = ((boolOptions & BoolOptions::EnableReforged) == BoolOptions::EnableReforged);
 						EnableLedgeClimb = ((boolOptions & BoolOptions::EnableLedgeClimb) == BoolOptions::EnableLedgeClimb);
 						EnableWeaponWheel = ((boolOptions & BoolOptions::EnableWeaponWheel) == BoolOptions::EnableWeaponWheel);
 						EnableRgbLights = ((boolOptions & BoolOptions::EnableRgbLights) == BoolOptions::EnableRgbLights);
@@ -233,7 +233,7 @@ namespace Jazz2
 		BoolOptions boolOptions = BoolOptions::None;
 		if (EnableFullscreen) boolOptions |= BoolOptions::EnableFullscreen;
 		if (ShowPerformanceMetrics) boolOptions |= BoolOptions::ShowPerformanceMetrics;
-		if (ReduxMode) boolOptions |= BoolOptions::ReduxMode;
+		if (EnableReforged) boolOptions |= BoolOptions::EnableReforged;
 		if (EnableLedgeClimb) boolOptions |= BoolOptions::EnableLedgeClimb;
 		if (EnableWeaponWheel) boolOptions |= BoolOptions::EnableWeaponWheel;
 		if (EnableRgbLights) boolOptions |= BoolOptions::EnableRgbLights;
