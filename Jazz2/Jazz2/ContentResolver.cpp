@@ -213,6 +213,7 @@ namespace Jazz2
 						graphics.FrameCount -= graphics.FrameOffset;
 					}
 
+					// TODO: Use FrameDuration instead
 					const auto& frameRateItem = item.FindMember("FrameRate");
 					if (frameRateItem != item.MemberEnd() && frameRateItem->value.IsInt()) {
 						int frameRate = frameRateItem->value.GetInt();
@@ -382,12 +383,13 @@ namespace Jazz2
 			const auto& frameConfiguration = document["FrameConfiguration"].GetArray();
 			const auto& frameCount = document["FrameCount"].GetInt();
 
+			// TODO: Use FrameDuration instead
 			const auto& frameRateItem = document.FindMember("FrameRate");
 			if (frameRateItem != document.MemberEnd() && frameRateItem->value.IsNumber()) {
 				const auto& frameRate = frameRateItem->value.GetFloat();
-				graphics->FrameDuration = (frameRate <= 0 ? -1.0f : (1.0f / frameRate) * 5.0f);
+				graphics->FrameDuration = (frameRate <= 0 ? 0.0f : (1.0f / frameRate) * 5.0f);
 			} else {
-				graphics->FrameDuration = -1.0f;
+				graphics->FrameDuration = 0.0f;
 			}
 
 			graphics->FrameDimensions = Vector2i(frameDimensions[0].GetInt(), frameDimensions[1].GetInt());
@@ -452,7 +454,7 @@ namespace Jazz2
 		uint8_t frameConfigurationX = s->ReadValue<uint8_t>();
 		uint8_t frameConfigurationY = s->ReadValue<uint8_t>();
 		uint16_t frameCount = s->ReadValue<uint16_t>();
-		uint16_t frameRate = s->ReadValue<uint16_t>();
+		uint16_t frameDuration = s->ReadValue<uint16_t>();
 
 		uint16_t hotspotX = s->ReadValue<uint16_t>();
 		uint16_t hotspotY = s->ReadValue<uint16_t>();
@@ -514,12 +516,8 @@ namespace Jazz2
 		graphics->TextureDiffuse->setMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
 		graphics->TextureDiffuse->setMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
 
-		if (frameRate != 0) {
-			graphics->FrameDuration = (frameRate <= 0 ? -1.0f : (1.0f / frameRate) * 5.0f);
-		} else {
-			graphics->FrameDuration = -1.0f;
-		}
-
+		// FrameDuration is multiplied by 16 before saving, so divide it here back
+		graphics->FrameDuration = frameDuration / 16.0f;
 		graphics->FrameDimensions = Vector2i(frameDimensionsX, frameDimensionsY);
 		graphics->FrameConfiguration = Vector2i(frameConfigurationX, frameConfigurationY);
 		graphics->FrameCount = frameCount;

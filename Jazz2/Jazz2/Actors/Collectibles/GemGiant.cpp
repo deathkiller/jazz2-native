@@ -61,7 +61,7 @@ namespace Jazz2::Actors::Collectibles
 		PlaySfx("Break"_s);
 
 		for (int i = 0; i < 10; i++) {
-			float fx = Random().NextFloat(-18.0f, 18.0f);
+			float fx = Random().NextFloat(-16.0f, 16.0f);
 			float fy = Random().NextFloat(-2.0f, 2.0f);
 			uint8_t eventParams[1] = { 0 };
 			std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, eventParams, ActorState::None, Vector3i((int)(_pos.X + fx * 2.0f), (int)(_pos.Y + fy * 4.0f), _renderer.layer() - 10.0f));

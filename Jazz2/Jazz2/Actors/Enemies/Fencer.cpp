@@ -29,6 +29,8 @@ namespace Jazz2::Actors::Enemies
 
 		SetFacingLeft(true);
 
+		PlaceOnGround();
+
 		co_return true;
 	}
 

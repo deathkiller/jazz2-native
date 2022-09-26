@@ -23,8 +23,6 @@ namespace Jazz2::Actors::Enemies
 
 	Task<bool> FatChick::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_pos.Y -= 18.0f;
-
 		SetHealthByDifficulty(3);
 		_scoreValue = 300;
 
@@ -33,6 +31,8 @@ namespace Jazz2::Actors::Enemies
 
 		SetFacingLeft(Random().NextBool());
 		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
+
+		PlaceOnGround();
 
 		co_return true;
 	}

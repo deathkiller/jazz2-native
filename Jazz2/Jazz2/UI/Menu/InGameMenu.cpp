@@ -37,6 +37,8 @@ namespace Jazz2::UI::Menu
 		_pressedActions = (1 << (int)PlayerActions::Menu) | (1 << ((int)PlayerActions::Menu + 16));
 
 		SwitchToSection<PauseSection>();
+
+		PlaySfx("MenuSelect"_s, 0.5f);
 	}
 
 	InGameMenu::~InGameMenu()

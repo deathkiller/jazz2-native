@@ -40,6 +40,8 @@ namespace Jazz2::Actors::Enemies
 		_stateTime = Random().NextFloat(180.0f, 300.0f);
 		_attackTime = Random().NextFloat(300.0f, 400.0f);
 
+		PlaceOnGround();
+
 		co_return true;
 	}
 

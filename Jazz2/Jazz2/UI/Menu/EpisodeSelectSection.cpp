@@ -39,6 +39,13 @@ namespace Jazz2::UI::Menu
 		});
 	}
 
+	void EpisodeSelectSection::OnShow(IMenuContainer* root)
+	{
+		MenuSection::OnShow(root);
+
+		_animation = 0.0f;
+	}
+
 	void EpisodeSelectSection::OnUpdate(float timeMult)
 	{
 		if (_animation < 1.0f) {

@@ -21,6 +21,7 @@ namespace Jazz2
 	bool PreferencesCache::EnableLedgeClimb = true;
 	bool PreferencesCache::EnableWeaponWheel = true;
 	bool PreferencesCache::EnableRgbLights = true;
+	bool PreferencesCache::AllowUnsignedScripts = true;
 	bool PreferencesCache::TutorialCompleted = false;
 	bool PreferencesCache::AllowCheats = false;
 	bool PreferencesCache::AllowCheatsUnlock = false;
@@ -104,6 +105,7 @@ namespace Jazz2
 						EnableLedgeClimb = ((boolOptions & BoolOptions::EnableLedgeClimb) == BoolOptions::EnableLedgeClimb);
 						EnableWeaponWheel = ((boolOptions & BoolOptions::EnableWeaponWheel) == BoolOptions::EnableWeaponWheel);
 						EnableRgbLights = ((boolOptions & BoolOptions::EnableRgbLights) == BoolOptions::EnableRgbLights);
+						AllowUnsignedScripts = ((boolOptions & BoolOptions::AllowUnsignedScripts) == BoolOptions::AllowUnsignedScripts);
 						TutorialCompleted = ((boolOptions & BoolOptions::TutorialCompleted) == BoolOptions::TutorialCompleted);
 
 						// Bitmask of unlocked episodes, used only if compiled with SHAREWARE_DEMO_ONLY
@@ -237,6 +239,7 @@ namespace Jazz2
 		if (EnableLedgeClimb) boolOptions |= BoolOptions::EnableLedgeClimb;
 		if (EnableWeaponWheel) boolOptions |= BoolOptions::EnableWeaponWheel;
 		if (EnableRgbLights) boolOptions |= BoolOptions::EnableRgbLights;
+		if (AllowUnsignedScripts) boolOptions |= BoolOptions::AllowUnsignedScripts;
 		if (TutorialCompleted) boolOptions |= BoolOptions::TutorialCompleted;
 		co.WriteValue<uint64_t>((uint64_t)boolOptions);
 

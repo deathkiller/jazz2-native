@@ -18,8 +18,7 @@
 			"Path": "_custom/dim.png"
 		},
 		"MenuGlow": {
-			"Path": "_custom/glow.png",
-			"Shader": "Add"
+			"Path": "_custom/glow.png"
 		},
 		"EpisodeComplete": {
 			"Path": "_custom/episode_complete.png"
@@ -33,7 +32,10 @@
 		"MenuDifficultyLori": {
 			"Path": "UI/character_art_difficulty_lori.aura"
 		},
-		
+		"Uac": {
+			"Path": "_custom/uac.png"
+		},
+
 		"GamepadA": {
 			"Path": "_custom/gamepad_a.png"
 		},

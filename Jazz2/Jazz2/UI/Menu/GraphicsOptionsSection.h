@@ -10,6 +10,7 @@ namespace Jazz2::UI::Menu
 		GraphicsOptionsSection();
 		~GraphicsOptionsSection();
 
+		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
 		void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) override;

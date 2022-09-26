@@ -46,8 +46,8 @@ namespace Jazz2::Actors::Environment
 			} else {
 				_timer -= timeMult;
 
-				_externalForce.X = sinf((100.0f - _timer) / 6.0f) * 4.0f * _direction;
-				_externalForce.Y = -0.000046f * _timer * _timer;
+				_externalForce.X = lerp(_externalForce.X, sinf((100.0f - _timer) / 6.0f) * 4.0f * _direction, timeMult);
+				_externalForce.Y = lerp(_externalForce.Y, -0.00005f * _timer * _timer, timeMult);
 
 				SetFacingLeft(_speed.X < 0.0f);
 			}
@@ -58,6 +58,8 @@ namespace Jazz2::Actors::Environment
 
 			_renderer.AnimTime = 0.0f;
 			_renderer.AnimPaused = true;
+		} else if (GetState(ActorState::ApplyGravitation)) {
+			_externalForce.Y = _levelHandler->Gravity * -0.8f;
 		}
 	}
 

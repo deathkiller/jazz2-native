@@ -66,6 +66,30 @@ namespace Jazz2::Actors::Enemies
 		_maxHealth = _health;
 	}
 
+	void EnemyBase::PlaceOnGround()
+	{
+		if (!GetState(ActorState::CollideWithTileset | ActorState::ApplyGravitation)) {
+			return;
+		}
+
+		OnUpdateHitbox();
+
+		TileCollisionParams params = { TileDestructType::None, _speed.Y >= 0.0f };
+		if (_levelHandler->IsPositionEmpty(this, AABBInner, params)) {
+			// Apply instant gravitation
+			int i = 10;
+			while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative, params)) {
+				// Try it multiple times
+			}
+		} else {
+			// Enemy is probably stuck inside a tile, move up
+			int i = 1;
+			while (i++ <= 6 && !MoveInstantly(Vector2f(0.0f, i * -4.0f), MoveType::Relative, params)) {
+				// Try it multiple times
+			}
+		}
+	}
+
 	bool EnemyBase::CanMoveToPosition(float x, float y)
 	{
 		uint8_t* eventParams;

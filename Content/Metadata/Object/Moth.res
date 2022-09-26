@@ -5,16 +5,20 @@
 
 	"Animations": {
 		"Gray": {
-			"Path": "Moth/Gray.aura"
+			"Path": "Moth/Gray.aura",
+			"FrameRate": 40
 		},
 		"Green": {
-			"Path": "Moth/Green.aura"
+			"Path": "Moth/Green.aura",
+			"FrameRate": 40
 		},
 		"Pink": {
-			"Path": "Moth/Pink.aura"
+			"Path": "Moth/Pink.aura",
+			"FrameRate": 40
 		},
 		"Purple": {
-			"Path": "Moth/Purple.aura"
+			"Path": "Moth/Purple.aura",
+			"FrameRate": 40
 		}
 	}
 }

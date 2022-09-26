@@ -23,8 +23,6 @@ namespace Jazz2::Actors::Enemies
 
 	Task<bool> TurtleTough::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_pos.Y -= 24.0f;
-
 		SetHealthByDifficulty(4);
 		_scoreValue = 500;
 
@@ -36,6 +34,8 @@ namespace Jazz2::Actors::Enemies
 
 		SetFacingLeft(nCine::Random().NextBool());
 		_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
+
+		PlaceOnGround();
 
 		co_return true;
 	}

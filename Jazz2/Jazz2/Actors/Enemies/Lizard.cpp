@@ -32,8 +32,6 @@ namespace Jazz2::Actors::Enemies
 
 	Task<bool> Lizard::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_pos.Y -= 6.0f;
-
 		uint8_t theme = details.Params[0];
 		_isFalling = (details.Params[1] != 0);
 
@@ -80,6 +78,8 @@ namespace Jazz2::Actors::Enemies
 					}
 				}
 			}
+		} else {
+			PlaceOnGround();
 		}
 
 		co_return true;

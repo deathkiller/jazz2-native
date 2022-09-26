@@ -10,6 +10,7 @@ namespace Jazz2::UI::Menu
 		GameplayOptionsSection();
 		~GameplayOptionsSection();
 
+		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
 		void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) override;
@@ -18,6 +19,9 @@ namespace Jazz2::UI::Menu
 		enum class Item {
 			Enhancements,
 			EnableRgbLights,
+#if defined(WITH_ANGELSCRIPT)
+			AllowUnsignedScripts,
+#endif
 
 			Count
 		};

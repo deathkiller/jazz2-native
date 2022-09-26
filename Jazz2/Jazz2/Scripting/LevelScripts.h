@@ -46,6 +46,7 @@ namespace Jazz2::Scripting
 		int ExcludeCode(String& scriptContent, int pos);
 		int SkipStatement(String& scriptContent, int pos);
 		void ProcessPragma(const StringView& content);
+		static String MakePath(const StringView& path, const StringView& relativeToFile);
 
 		static asIScriptContext* RequestContextCallback(asIScriptEngine* engine, void* param);
 		static void ReturnContextCallback(asIScriptEngine* engine, asIScriptContext* ctx, void* param);

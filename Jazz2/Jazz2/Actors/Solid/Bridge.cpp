@@ -68,7 +68,7 @@ namespace Jazz2::Actors::Solid
 		SetAnimation("Piece"_s);
 
 		int widthCovered = _widths[0] / 2 - _widthOffset;
-		for (int i = 0; widthCovered <= _bridgeWidth + 8; i++) {
+		for (int i = 0; widthCovered <= _bridgeWidth + 4; i++) {
 			BridgePiece& piece = _pieces.emplace_back();
 			piece.Pos = Vector2f(_pos.X + widthCovered - 16, _pos.Y);
 			piece.Command = std::make_unique<RenderCommand>();
@@ -118,6 +118,7 @@ namespace Jazz2::Actors::Solid
 			auto player = foundPlayers[0];
 			auto playerPos = player->GetPos();
 			player->SetCarryingObject(this);
+			// TODO: With higher _heightFactor (for example in "04_haunted1") it starts to be inaccurate, std::floor() fixes this, but breaks other things
 			player->MoveInstantly(Vector2f(playerPos.X, _pos.Y + playerPos.Y - player->AABBInner.B + BaseY + _foundHeight), MoveType::Absolute | MoveType::Force);
 		} else {
 			_foundHeight = lerp(_foundHeight, 0.0f, timeMult * 0.1f);
@@ -129,7 +130,7 @@ namespace Jazz2::Actors::Solid
 		if (_foundHeight <= 0.001f) {
 			// Render straight bridge
 			int widthCovered = _widths[0] / 2 - _widthOffset;
-			for (int i = 0; widthCovered <= _bridgeWidth + 8; i++) {
+			for (int i = 0; widthCovered <= _bridgeWidth + 4; i++) {
 				BridgePiece& piece = _pieces[i];
 				piece.Pos = Vector2f(_pos.X + widthCovered - 16, _pos.Y);
 				widthCovered += (_widths[i % _widthsCount] + _widths[(i + 1) % _widthsCount]) / 2;
@@ -137,7 +138,7 @@ namespace Jazz2::Actors::Solid
 		} else {
 			// Render deformed bridge
 			int widthCovered = _widths[0] / 2 - _widthOffset;
-			for (int i = 0; widthCovered <= _bridgeWidth + 8; i++) {
+			for (int i = 0; widthCovered <= _bridgeWidth + 4; i++) {
 				float drop;
 				if (widthCovered < _foundX) {
 					drop = _foundHeight * sinf(fPiOver2 * widthCovered / _foundX);
@@ -155,7 +156,7 @@ namespace Jazz2::Actors::Solid
 
 	void Bridge::OnUpdateHitbox()
 	{
-		AABBInner = AABBf(_pos.X - 16.0f, _pos.Y + BaseY + _foundHeight, _pos.X + _bridgeWidth + 16.0f, _pos.Y + 6.0f + _foundHeight);
+		AABBInner = AABBf(_pos.X - 16.0f, _pos.Y + BaseY + _foundHeight, _pos.X + _bridgeWidth + 16.0f, _pos.Y + BaseY + 12.0f + _foundHeight);
 	}
 
 	bool Bridge::OnDraw(RenderQueue& renderQueue)

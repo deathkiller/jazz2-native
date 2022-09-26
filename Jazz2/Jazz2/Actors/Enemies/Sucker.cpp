@@ -47,6 +47,7 @@ namespace Jazz2::Actors::Enemies
 			PlaySfx("Deflate"_s);
 		} else {
 			_health = 4;
+			PlaceOnGround();
 		}
 
 		co_return true;

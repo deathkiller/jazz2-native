@@ -22,8 +22,6 @@ namespace Jazz2::Actors::Enemies
 
 	Task<bool> Helmut::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_pos.Y -= 6.0f;
-
 		SetHealthByDifficulty(1);
 		_scoreValue = 100;
 
@@ -32,6 +30,8 @@ namespace Jazz2::Actors::Enemies
 
 		SetFacingLeft(Random().NextBool());
 		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
+
+		PlaceOnGround();
 
 		co_return true;
 	}

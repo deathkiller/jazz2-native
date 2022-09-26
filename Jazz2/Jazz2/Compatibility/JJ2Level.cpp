@@ -439,16 +439,14 @@ namespace Jazz2::Compatibility
 
 		// TODO: Additional Tilesets
 
-
 		uint16_t lastTilesetTileIndex = (uint16_t)(maxTiles - _animCount);
 
 		// Animated Tiles
 		co.WriteValue<uint16_t>(_animCount);
-
 		for (int i = 0; i < _animCount; i++) {
 			auto& tile = _animatedTiles[i];
 			co.WriteValue<uint8_t>(tile.FrameCount);
-			co.WriteValue<uint8_t>(tile.Speed);
+			co.WriteValue<uint16_t>((uint16_t)(tile.Speed == 0 ? 0 : 16 * 50 / tile.Speed));
 			co.WriteValue<uint16_t>(tile.Delay);
 			co.WriteValue<uint16_t>(tile.DelayJitter);
 			co.WriteValue<uint8_t>(tile.IsReverse ? 1 : 0);
@@ -496,7 +494,6 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		// TODO: Compress layer + event data
 		co.WriteValue<uint8_t>(layerCount);
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			auto& layer = _layers[i];

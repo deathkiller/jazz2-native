@@ -78,6 +78,7 @@ namespace Jazz2
 		static bool EnableLedgeClimb;
 		static bool EnableWeaponWheel;
 		static bool EnableRgbLights;
+		static bool AllowUnsignedScripts;
 		static bool TutorialCompleted;
 		static bool AllowCheats;
 		static bool AllowCheatsUnlock;
@@ -108,6 +109,7 @@ namespace Jazz2
 			EnableLedgeClimb = 0x200,
 			EnableWeaponWheel = 0x400,
 			EnableRgbLights = 0x800,
+			AllowUnsignedScripts = 0x1000,
 
 			TutorialCompleted = 0x10000
 		};

@@ -540,7 +540,7 @@ namespace Jazz2::Compatibility
 			so->WriteValue<uint8_t>(anim->FrameConfigurationX);
 			so->WriteValue<uint8_t>(anim->FrameConfigurationY);
 			so->WriteValue<uint16_t>(anim->FrameCount);
-			so->WriteValue<uint16_t>(anim->FrameRate);
+			so->WriteValue<uint16_t>((uint16_t)(anim->FrameRate == 0 ? 0 : 16 * 5 / anim->FrameRate));
 
 			if (anim->NormalizedHotspotX != 0 || anim->NormalizedHotspotY != 0) {
 				so->WriteValue<uint16_t>(anim->NormalizedHotspotX + AddBorder);

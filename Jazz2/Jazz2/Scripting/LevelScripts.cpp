@@ -191,10 +191,10 @@ enum WeatherType {
 #if defined(WITH_THREADS)
 			{ "WITH_THREADS"_s, true },
 #endif
-			{ "RESURRECTION"_s, true }
+			{ "Resurrection"_s, true }
 		};
 		if (!AddScriptFromFile(scriptPath, definedSymbols)) {
-			LOGE("Cannot compile level script");
+			LOGE("Cannot compile the script. Please correct the code and try again.");
 			return;
 		}
 
@@ -237,8 +237,9 @@ enum WeatherType {
 
 		String scriptContent(NoInit, s->GetSize());
 		s->Read(scriptContent.data(), s->GetSize());
+		s->Close();
 
-		SmallVector<String> includes;
+		SmallVector<String, 4> includes;
 		int scriptSize = (int)scriptContent.size();
 
 		// First perform the checks for #if directives to exclude code that shouldn't be compiled
@@ -327,7 +328,10 @@ enum WeatherType {
 
 						if (t == asTC_VALUE && len > 2 && (scriptContent[pos] == '"' || scriptContent[pos] == '\'')) {
 							// Get the include file
-							includes.push_back(String(&scriptContent[pos + 1], len - 2));
+							String includePath = MakePath(StringView(&scriptContent[pos + 1], len - 2), path);
+							if (!includePath.empty()) {
+								includes.push_back(includePath);
+							}
 							pos += len;
 
 							// Overwrite the include directive with space characters to avoid compiler error
@@ -377,12 +381,9 @@ enum WeatherType {
 		_module->AddScriptSection(path.data(), scriptContent.data(), scriptSize, 0);
 
 		if (includes.size() > 0) {
-			// Try to load the included file from the relative directory of the current file
-			String currentDir = fs::GetDirectoryName(path);
-
 			// Load the included scripts
 			for (auto& include : includes) {
-				if (!AddScriptFromFile(fs::JoinPath(currentDir, include[0] == '/' || include[0] == '\\' ? include.exceptPrefix(1) : StringView(include)), definedSymbols)) {
+				if (!AddScriptFromFile(include, definedSymbols)) {
 					return false;
 				}
 			}
@@ -473,6 +474,139 @@ enum WeatherType {
 	void LevelScripts::ProcessPragma(const StringView& content)
 	{
 		// TODO
+	}
+
+	String LevelScripts::MakePath(const StringView& path, const StringView& relativeToFile)
+	{
+		if (path.empty() || path.size() > fs::MaxPathLength) return { };
+
+		char result[fs::MaxPathLength + 1];
+		size_t length = 0;
+
+		if (path[0] == '/' || path[0] == '\\') {
+			// Absolute path from "Content" directory
+			const char* src = &path[1];
+			const char* srcLast = src;
+
+			std::memcpy(result, "Content", sizeof("Content") - 1);
+			char* dst = result + sizeof("Content") - 1;
+			char* dstStart = dst;
+			char* dstLast = dstStart;
+
+			while (true) {
+				bool end = (src - path.begin()) >= path.size();
+				if (end || *src == '/' || *src == '\\') {
+					if (src > srcLast) {
+						size_t length = src - srcLast;
+						if (length == 1 && srcLast[0] == '.') {
+							// Ignore this
+						} else if (length == 2 && srcLast[0] == '.' && srcLast[1] == '.') {
+							if (dst != dstStart) {
+								if (dst == dstLast && dstStart <= dstLast - 1) {
+									dstLast--;
+									while (dstStart <= dstLast) {
+										if (*dstLast == '/' || *dstLast == '\\') {
+											break;
+										}
+										dstLast--;
+									}
+								}
+								dst = dstLast;
+							}
+						} else {
+							dstLast = dst;
+
+							if ((dst - result) + (sizeof(fs::PathSeparator) - 1) + (src - srcLast) >= fs::MaxPathLength) {
+								return { };
+							}
+
+							if (dst != result) {
+								std::memcpy(dst, fs::PathSeparator, sizeof(fs::PathSeparator) - 1);
+								dst += sizeof(fs::PathSeparator) - 1;
+							}
+							std::memcpy(dst, srcLast, src - srcLast);
+							dst += src - srcLast;
+						}
+					}
+					if (end) {
+						break;
+					}
+					srcLast = src + 1;
+				}
+				src++;
+			}
+			length = dst - result;
+		} else {
+			// Relative path to script file
+			String dirPath = fs::GetDirectoryName(relativeToFile);
+			if (dirPath.empty()) return { };
+
+			const char* src = &path[0];
+			const char* srcLast = src;
+
+			std::memcpy(result, dirPath.data(), dirPath.size());
+			char* dst = result + dirPath.size();
+			if (*(dst - 1) == '/' || *(dst - 1) == '\\') {
+				dst--;
+			}
+			char* searchBack = dst - 2;
+
+			char* dstStart = dst;
+			while (result <= searchBack) {
+				if (*searchBack == '/' || *searchBack == '\\') {
+					dstStart = searchBack + 1;
+					break;
+				}
+				searchBack--;
+			}
+			char* dstLast = dstStart;
+
+			while (true) {
+				bool end = (src - path.begin()) >= path.size();
+				if (end || *src == '/' || *src == '\\') {
+					if (src > srcLast) {
+						size_t length = src - srcLast;
+						if (length == 1 && srcLast[0] == '.') {
+							// Ignore this
+						} else if (length == 2 && srcLast[0] == '.' && srcLast[1] == '.') {
+							if (dst != dstStart) {
+								if (dst == dstLast && dstStart <= dstLast - 1) {
+									dstLast--;
+									while (dstStart <= dstLast) {
+										if (*dstLast == '/' || *dstLast == '\\') {
+											break;
+										}
+										dstLast--;
+									}
+								}
+								dst = dstLast;
+							}
+						} else {
+							dstLast = dst;
+
+							if ((dst - result) + (sizeof(fs::PathSeparator) - 1) + (src - srcLast) >= fs::MaxPathLength) {
+								return { };
+							}
+
+							if (dst != result) {
+								std::memcpy(dst, fs::PathSeparator, sizeof(fs::PathSeparator) - 1);
+								dst += sizeof(fs::PathSeparator) - 1;
+							}
+							std::memcpy(dst, srcLast, src - srcLast);
+							dst += src - srcLast;
+						}
+					}
+					if (end) {
+						break;
+					}
+					srcLast = src + 1;
+				}
+				src++;
+			}
+			length = dst - result;
+		}
+
+		return String(result, length);
 	}
 
 	asIScriptContext* LevelScripts::RequestContextCallback(asIScriptEngine* engine, void* param)

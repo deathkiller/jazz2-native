@@ -40,6 +40,8 @@ namespace Jazz2::UI::Menu
 	{
 		MenuSection::OnShow(root);
 
+		_animation = 0.0f;
+
 #if defined(SHAREWARE_DEMO_ONLY)
 		if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None) {
 			_items[(int)Item::PlayStory].Name = "Play Story"_s;

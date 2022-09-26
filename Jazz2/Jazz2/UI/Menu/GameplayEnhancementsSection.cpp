@@ -29,6 +29,7 @@ namespace Jazz2::UI::Menu
 	{
 		MenuSection::OnShow(root);
 
+		_animation = 0.0f;
 		_isInGame = (dynamic_cast<InGameMenu*>(_root) != nullptr);
 	}
 

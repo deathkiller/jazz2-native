@@ -34,8 +34,6 @@ namespace Jazz2::Actors::Enemies
 
 	Task<bool> Doggy::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_pos.Y -= 6.0f;
-
 		uint8_t theme = details.Params[0];
 
 		SetHealthByDifficulty(3);
@@ -59,6 +57,8 @@ namespace Jazz2::Actors::Enemies
 
 		SetFacingLeft(Random().NextBool());
 		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f);
+
+		PlaceOnGround();
 
 		co_return true;
 	}

@@ -33,6 +33,8 @@ namespace Jazz2::Actors::Enemies
 		SetFacingLeft(Random().NextBool());
 		_speed.X = (IsFacingLeft() ? -DefaultSpeed : DefaultSpeed);
 
+		PlaceOnGround();
+
 		co_return true;
 	}
 

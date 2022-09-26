@@ -27,6 +27,13 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+	void GraphicsOptionsSection::OnShow(IMenuContainer* root)
+	{
+		MenuSection::OnShow(root);
+
+		_animation = 0.0f;
+	}
+
 	void GraphicsOptionsSection::OnUpdate(float timeMult)
 	{
 		if (_animation < 1.0f) {

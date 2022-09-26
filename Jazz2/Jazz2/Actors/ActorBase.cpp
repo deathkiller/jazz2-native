@@ -1051,7 +1051,7 @@ namespace Jazz2::Actors
 
 		_renderer.FrameConfiguration = res->Base->FrameConfiguration;
 		_renderer.FrameDimensions = res->Base->FrameDimensions;
-		if (res->FrameDuration < 0) {
+		if (res->FrameDuration < 0.0f) {
 			if (res->FrameCount > 1) {
 				_renderer.FirstFrame = res->FrameOffset + nCine::Random().Next(0, res->FrameCount);
 			} else {

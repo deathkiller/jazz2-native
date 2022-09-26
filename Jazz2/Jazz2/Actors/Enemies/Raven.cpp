@@ -68,7 +68,7 @@ namespace Jazz2::Actors::Enemies
 		_anglePhase += timeMult * 0.04f;
 
 		if ((_targetPos - _lastPos).Length() > 5.0f) {
-			Vector2f speed = ((_targetPos - _lastPos).Normalized() * (_attacking ? 5.0f : 2.6f) + _lastSpeed * 1.4f) / 2.4f;
+			Vector2f speed = ((_targetPos - _lastPos).Normalized() * (_attacking ? 2.8f : 1.4f) + _lastSpeed * 1.4f) / 2.4f;
 			_lastPos.X += speed.X;
 			_lastPos.Y += speed.Y;
 			_lastSpeed = speed;

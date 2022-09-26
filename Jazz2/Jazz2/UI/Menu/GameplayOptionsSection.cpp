@@ -13,6 +13,9 @@ namespace Jazz2::UI::Menu
 	{
 		_items[(int)Item::Enhancements].Name = "Enhancements"_s;
 		_items[(int)Item::EnableRgbLights].Name = "Razer Chroma™"_s;
+#if defined(WITH_ANGELSCRIPT)
+		_items[(int)Item::AllowUnsignedScripts].Name = "Scripting"_s;
+#endif
 	}
 
 	GameplayOptionsSection::~GameplayOptionsSection()
@@ -21,6 +24,13 @@ namespace Jazz2::UI::Menu
 			_isDirty = false;
 			PreferencesCache::Save();
 		}
+	}
+
+	void GameplayOptionsSection::OnShow(IMenuContainer* root)
+	{
+		MenuSection::OnShow(root);
+
+		_animation = 0.0f;
 	}
 
 	void GameplayOptionsSection::OnUpdate(float timeMult)
@@ -99,10 +109,23 @@ namespace Jazz2::UI::Menu
 				switch (i) {
 					default:
 					case (int)Item::EnableRgbLights: enabled = PreferencesCache::EnableRgbLights; break;
+#if defined(WITH_ANGELSCRIPT)
+					case (int)Item::AllowUnsignedScripts: enabled = PreferencesCache::AllowUnsignedScripts; break;
+#endif
 				}
 
-				_root->DrawStringShadow(enabled ? "Enabled"_s : "Disabled"_s, charOffset, center.X, center.Y + 22.0f, IMenuContainer::FontLayer - 10,
-					Alignment::Center, (_selectedIndex == i ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
+#if defined(WITH_ANGELSCRIPT)
+				if (i == (int)Item::AllowUnsignedScripts && enabled) {
+					_root->DrawStringShadow("Enabled"_s, charOffset, center.X + 12.0f, center.Y + 22.0f, IMenuContainer::FontLayer - 10,
+						Alignment::Center, (_selectedIndex == i ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
+
+					_root->DrawElement("Uac"_s, 0, center.X - 28.0f, center.Y + 22.0f - 1.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.0f, 1.0f);
+				} else
+#endif
+				{
+					_root->DrawStringShadow(enabled ? "Enabled"_s : "Disabled"_s, charOffset, center.X, center.Y + 22.0f, IMenuContainer::FontLayer - 10,
+						Alignment::Center, (_selectedIndex == i ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
+				}
 			}
 
 			center.Y += (bottomLine - topLine) * (i >= 1 ? 0.9f : 0.7f) / (int)Item::Count;
@@ -150,6 +173,11 @@ namespace Jazz2::UI::Menu
 				if (!PreferencesCache::EnableRgbLights) {
 					RgbLights::Current().Clear();
 				}
+				_isDirty = true;
+				_animation = 0.0f;
+				break;
+			case (int)Item::AllowUnsignedScripts:
+				PreferencesCache::AllowUnsignedScripts = !PreferencesCache::AllowUnsignedScripts;
 				_isDirty = true;
 				_animation = 0.0f;
 				break;

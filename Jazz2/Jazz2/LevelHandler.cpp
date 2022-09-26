@@ -164,8 +164,6 @@ namespace Jazz2
 			theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection"_s);
 		}
 
-		// TODO: Unused
-		//_name = name;
 		_defaultNextLevel = nextLevel;
 		_defaultSecretLevel = secretLevel;
 
@@ -201,14 +199,17 @@ namespace Jazz2
 		_levelTexts = std::move(levelTexts);
 
 #if defined(WITH_ANGELSCRIPT) || defined(ENABLE_LOG)
-		const StringView foundDot = fullPath.findLastOr('.', fullPath.end());
-		String scriptPath = (foundDot == fullPath.end() ? StringView(fullPath) : fullPath.prefix(foundDot.begin())) + ".j2as"_s;
-		if (fs::IsReadableFile(scriptPath)) {
+		// TODO: Allow script signing
+		if (PreferencesCache::AllowUnsignedScripts) {
+			const StringView foundDot = fullPath.findLastOr('.', fullPath.end());
+			String scriptPath = (foundDot == fullPath.end() ? StringView(fullPath) : fullPath.prefix(foundDot.begin())) + ".j2as"_s;
+			if (fs::IsReadableFile(scriptPath)) {
 #	if defined(WITH_ANGELSCRIPT)
-			_scripts = std::make_unique<Scripting::LevelScripts>(this, scriptPath);
+				_scripts = std::make_unique<Scripting::LevelScripts>(this, scriptPath);
 #	else
-			LOGW_X("Level requires scripting, but scripting support is turned off");
+				LOGW_X("Level requires scripting, but scripting support is disabled in this version");
 #	endif
+			}
 		}
 #endif
 	}

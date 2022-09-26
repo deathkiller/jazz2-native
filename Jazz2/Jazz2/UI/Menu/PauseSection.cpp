@@ -18,7 +18,7 @@ namespace Jazz2::UI::Menu
 	{
 		MenuSection::OnShow(root);
 
-		_root->PlaySfx("MenuSelect"_s, 0.5f);
+		_animation = 0.0f;
 	}
 
 	void PauseSection::OnUpdate(float timeMult)
@@ -70,7 +70,7 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 			} else {
 				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
-					Alignment::Center, Colorf(0.42f, 0.42f, 0.42f, 0.5f), 0.9f);
+					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
 			center.Y += 34.0f + 32.0f * (1.0f - 0.15f * (int)Item::Count);

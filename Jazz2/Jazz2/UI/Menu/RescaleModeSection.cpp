@@ -15,6 +15,13 @@ namespace Jazz2::UI::Menu
 		_items[(int)Item::Monochrome].Name = "Monochrome"_s;
 	}
 
+	void RescaleModeSection::OnShow(IMenuContainer* root)
+	{
+		MenuSection::OnShow(root);
+
+		_animation = 0.0f;
+	}
+
 	void RescaleModeSection::OnUpdate(float timeMult)
 	{
 		if (_animation < 1.0f) {

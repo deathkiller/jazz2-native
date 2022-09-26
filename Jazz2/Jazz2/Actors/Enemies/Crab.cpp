@@ -36,6 +36,8 @@ namespace Jazz2::Actors::Enemies
 
 		_canJumpPrev = GetState(ActorState::CanJump);
 
+		PlaceOnGround();
+
 		co_return true;
 	}
 

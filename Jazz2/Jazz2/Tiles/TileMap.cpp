@@ -669,9 +669,8 @@ namespace Jazz2::Tiles
 
 			AnimatedTile& animTile = _animatedTiles.emplace_back();
 
-			// TODO: Adjust FPS in Import
-			uint8_t speed = s.ReadValue<uint8_t>();
-			animTile.FrameDuration = 70.0f / (speed * 14 / 10);
+			// FrameDuration is multiplied by 16 before saving, so divide it here back
+			animTile.FrameDuration = s.ReadValue<uint16_t>() / 16.0f;
 			animTile.Delay = s.ReadValue<uint16_t>();
 
 			//animTile.DelayJitter = s->ReadValue<uint16_t>();

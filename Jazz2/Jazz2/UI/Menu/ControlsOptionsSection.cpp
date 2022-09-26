@@ -23,6 +23,13 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+	void ControlsOptionsSection::OnShow(IMenuContainer* root)
+	{
+		MenuSection::OnShow(root);
+
+		_animation = 0.0f;
+	}
+
 	void ControlsOptionsSection::OnUpdate(float timeMult)
 	{
 		if (_animation < 1.0f) {

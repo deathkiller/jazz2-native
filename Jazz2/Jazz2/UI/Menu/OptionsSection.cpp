@@ -17,6 +17,13 @@ namespace Jazz2::UI::Menu
 		_items[(int)Item::Controls].Name = "Controls"_s;
 	}
 
+	void OptionsSection::OnShow(IMenuContainer* root)
+	{
+		MenuSection::OnShow(root);
+
+		_animation = 0.0f;
+	}
+
 	void OptionsSection::OnUpdate(float timeMult)
 	{
 		if (_animation < 1.0f) {

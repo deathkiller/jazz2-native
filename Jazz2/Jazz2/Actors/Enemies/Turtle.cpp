@@ -59,13 +59,7 @@ namespace Jazz2::Actors::Enemies
 		SetFacingLeft(nCine::Random().NextBool());
 		_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
 
-		OnUpdateHitbox();
-
-		// Apply instant gravitation
-		int i = 10;
-		while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative)) {
-			// Nothing to do...
-		}
+		PlaceOnGround();
 
 		co_return true;
 	}

@@ -33,6 +33,8 @@ namespace Jazz2::Actors::Enemies
 
 		SetFacingLeft(Random().NextBool());
 
+		PlaceOnGround();
+
 		co_return true;
 	}
 
