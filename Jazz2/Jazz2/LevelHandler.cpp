@@ -60,7 +60,7 @@ namespace Jazz2
 		_blurPass3(this),
 		_blurPass4(this),
 #endif
-		_pressedKeys((uint32_t)KeySym::COUNT_BASE),
+		_pressedKeys((uint32_t)KeySym::COUNT),
 		_pressedActions(0),
 		_overrideActions(0),
 		_playerFrozenEnabled(false)
@@ -1386,7 +1386,8 @@ namespace Jazz2
 		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::ChangeWeapon)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::ChangeWeapon)]) {
 			_pressedActions |= (1 << (int)PlayerActions::ChangeWeapon);
 		}
-		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Menu)]) {
+		// Allow Android Back button as menu key
+		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)KeySym::BACK]) {
 			_pressedActions |= (1 << (int)PlayerActions::Menu);
 		}
 

@@ -1,11 +1,11 @@
 #ifdef __ANDROID__
 
 #include "AssetFile.h"
+#include "../../Common.h"
 
 #include <sys/stat.h> // for open()
 #include <fcntl.h> // for open()
 #include <unistd.h> // for close()
-#include "common_macros.h"
 
 namespace nCine
 {
@@ -21,7 +21,7 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	AssetFile::AssetFile(const String& filename)
-		: IFile(filename), asset_(nullptr), startOffset_(0L)
+		: IFileStream(filename), asset_(nullptr), startOffset_(0L)
 	{
 		type_ = FileType::Asset;
 	}
@@ -29,7 +29,7 @@ namespace nCine
 	AssetFile::~AssetFile()
 	{
 		if (shouldCloseOnDestruction_)
-			close();
+			Close();
 	}
 
 	///////////////////////////////////////////////////////////
@@ -43,7 +43,7 @@ namespace nCine
 			LOGW_X("File \"%s\" is already opened", filename_.data());
 		} else {
 			// Opening with a file descriptor
-			if (mode & FileAccessMode::FileDescriptor) {
+			if ((mode & FileAccessMode::FileDescriptor) == FileAccessMode::FileDescriptor) {
 				OpenFD(mode, shouldExitOnFailToOpen);
 				// Opening as an asset only
 			} else {

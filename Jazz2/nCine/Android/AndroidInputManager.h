@@ -1,218 +1,223 @@
-#ifndef CLASS_NCINE_ANDROIDINPUTMANAGER
-#define CLASS_NCINE_ANDROIDINPUTMANAGER
+#pragma once
 
+#include "../Input/IInputManager.h"
+
+#include <android_native_app_glue.h>
 #include <android/keycodes.h>
-#include "IInputManager.h"
 
 struct AInputEvent;
 struct ASensorManager;
 struct ASensor;
 struct ASensorEventQueue;
 
-namespace ncine {
-
-class AndroidApplication;
-class Timer;
-
-/// Utility functions to convert between engine key enumerations and Android ones
-class AndroidKeys
+namespace nCine
 {
-  public:
-	static KeySym keySymValueToEnum(int keysym);
-	static int keyModMaskToEnumMask(int keymod);
-};
+	class AndroidApplication;
+	class Timer;
 
-/// Simulated information about Android keyboard state
-class AndroidKeyboardState : public KeyboardState
-{
-  public:
-	AndroidKeyboardState()
+	/// Utility functions to convert between engine key enumerations and Android ones
+	class AndroidKeys
 	{
-		for (unsigned int i = 0; i < NumKeys; i++)
-			keys_[i] = 0;
-	}
+	public:
+		static KeySym keySymValueToEnum(int keysym);
+		static int keyModMaskToEnumMask(int keymod);
+	};
 
-	inline bool isKeyDown(KeySym key) const override
+	/// Simulated information about Android keyboard state
+	class AndroidKeyboardState : public KeyboardState
 	{
-		if (key == KeySym::UNKNOWN)
-			return false;
-		else
-			return keys_[static_cast<unsigned int>(key)] != 0;
-	}
+	public:
+		AndroidKeyboardState()
+		{
+			for (unsigned int i = 0; i < NumKeys; i++)
+				keys_[i] = 0;
+		}
 
-  private:
-	static const unsigned int NumKeys = static_cast<unsigned int>(KeySym::COUNT);
-	unsigned char keys_[NumKeys];
+		inline bool isKeyDown(KeySym key) const override
+		{
+			if (key == KeySym::UNKNOWN)
+				return false;
+			else
+				return keys_[static_cast<unsigned int>(key)] != 0;
+		}
 
-	friend class AndroidInputManager;
-};
+	private:
+		static const unsigned int NumKeys = static_cast<unsigned int>(KeySym::COUNT);
+		unsigned char keys_[NumKeys];
 
-/// Information about Android mouse state
-class AndroidMouseState : public MouseState
-{
-  public:
-	AndroidMouseState()
-	    : buttonState_(0) {}
+		friend class AndroidInputManager;
+	};
 
-	bool isLeftButtonDown() const override;
-	bool isMiddleButtonDown() const override;
-	bool isRightButtonDown() const override;
-	bool isFourthButtonDown() const override;
-	bool isFifthButtonDown() const override;
+	/// Information about Android mouse state
+	class AndroidMouseState : public MouseState
+	{
+	public:
+		AndroidMouseState()
+			: buttonState_(0) {}
 
-  private:
-	int buttonState_;
+		bool isLeftButtonDown() const override;
+		bool isMiddleButtonDown() const override;
+		bool isRightButtonDown() const override;
+		bool isFourthButtonDown() const override;
+		bool isFifthButtonDown() const override;
 
-	friend class AndroidInputManager;
-};
+	private:
+		int buttonState_;
 
-/// Information about an Android mouse event
-class AndroidMouseEvent : public MouseEvent
-{
-  public:
-	AndroidMouseEvent()
-	    : button_(0) {}
+		friend class AndroidInputManager;
+	};
 
-	bool isLeftButton() const override;
-	bool isMiddleButton() const override;
-	bool isRightButton() const override;
-	bool isFourthButton() const override;
-	bool isFifthButton() const override;
+	/// Information about an Android mouse event
+	class AndroidMouseEvent : public MouseEvent
+	{
+	public:
+		AndroidMouseEvent()
+			: button_(0) {}
 
-  private:
-	int button_;
+		bool isLeftButton() const override;
+		bool isMiddleButton() const override;
+		bool isRightButton() const override;
+		bool isFourthButton() const override;
+		bool isFifthButton() const override;
 
-	friend class AndroidInputManager;
-};
+	private:
+		int button_;
 
-/// Information about Android joystick state
-class AndroidJoystickState : JoystickState
-{
-  public:
-	AndroidJoystickState();
+		friend class AndroidInputManager;
+	};
 
-	bool isButtonPressed(int buttonId) const override;
-	unsigned char hatState(int hatId) const override;
-	short int axisValue(int axisId) const override;
-	float axisNormValue(int axisId) const override;
+	/// Information about Android joystick state
+	class AndroidJoystickState : JoystickState
+	{
+	public:
+		AndroidJoystickState();
 
-  private:
-	static const unsigned int MaxNameLength = 256;
-	/// All AKEYCODE_BUTTON_* plus AKEYCODE_BACK
-	static const int MaxButtons = AKEYCODE_ESCAPE - AKEYCODE_BUTTON_A + 1;
-	static const int MaxAxes = 10;
-	static const int NumAxesToMap = 8;
-	static const int AxesToMap[NumAxesToMap];
+		bool isButtonPressed(int buttonId) const override;
+		unsigned char hatState(int hatId) const override;
+		short int axisValue(int axisId) const override;
+		float axisNormValue(int axisId) const override;
 
-	int deviceId_;
-	char guid_[33];
-	char name_[MaxNameLength];
+	private:
+		static constexpr unsigned int MaxNameLength = 256;
+		/// All AKEYCODE_BUTTON_* plus AKEYCODE_BACK
+		static constexpr int MaxButtons = AKEYCODE_ESCAPE - AKEYCODE_BUTTON_A + 1;
+		static constexpr int MaxAxes = 10;
+		static constexpr int NumAxesToMap = 8;
+		static const int AxesToMap[NumAxesToMap];
 
-	int numButtons_;
-	int numHats_;
-	int numAxes_;
-	bool hasDPad_;
-	bool hasHatAxes_;
-	short int buttonsMapping_[MaxButtons];
-	short int axesMapping_[MaxAxes];
-	bool buttons_[MaxButtons];
-	float axesValues_[MaxAxes];
-	unsigned char hatState_; // no more than one hat is supported
+		int deviceId_;
+		char guid_[33];
+		char name_[MaxNameLength];
 
-	friend class AndroidInputManager;
-};
+		int numButtons_;
+		int numHats_;
+		int numAxes_;
+		bool hasDPad_;
+		bool hasHatAxes_;
+		short int buttonsMapping_[MaxButtons];
+		short int axesMapping_[MaxAxes];
+		bool buttons_[MaxButtons];
+		float axesValues_[MaxAxes];
+		unsigned char hatState_; // no more than one hat is supported
 
-/// The class for parsing and dispatching Android input events
-class AndroidInputManager : public IInputManager
-{
-  public:
-	explicit AndroidInputManager(struct android_app *state);
-	~AndroidInputManager() override;
+		friend class AndroidInputManager;
+	};
 
-	/// Enables the accelerometer sensor
-	static void enableAccelerometerSensor();
-	/// Disables the accelerometer sensor
-	static void disableAccelerometerSensor();
+	/// The class for parsing and dispatching Android input events
+	class AndroidInputManager : public IInputManager
+	{
+	public:
+		explicit AndroidInputManager(struct android_app* state);
+		~AndroidInputManager() override;
 
-	/// Allows the application to make use of the accelerometer
-	static void enableAccelerometer(bool enabled);
+		/// Enables the accelerometer sensor
+		static void enableAccelerometerSensor();
+		/// Disables the accelerometer sensor
+		static void disableAccelerometerSensor();
 
-	inline const MouseState &mouseState() const override { return mouseState_; }
-	inline const KeyboardState &keyboardState() const override { return keyboardState_; }
+		/// Allows the application to make use of the accelerometer
+		static void enableAccelerometer(bool enabled);
 
-	/// Parses an Android sensor event related to the accelerometer
-	static void parseAccelerometerEvent();
-	/// Parses an Android input event
-	static bool parseEvent(const AInputEvent *event);
+		inline const MouseState& mouseState() const override {
+			return mouseState_;
+		}
+		inline const KeyboardState& keyboardState() const override {
+			return keyboardState_;
+		}
 
-	bool isJoyPresent(int joyId) const override;
-	const char *joyName(int joyId) const override;
-	const char *joyGuid(int joyId) const override;
-	int joyNumButtons(int joyId) const override;
-	int joyNumHats(int joyId) const override;
-	int joyNumAxes(int joyId) const override;
-	const JoystickState &joystickState(int joyId) const override;
+		/// Parses an Android sensor event related to the accelerometer
+		static void parseAccelerometerEvent();
+		/// Parses an Android input event
+		static bool parseEvent(const AInputEvent* event);
 
-	void setMouseCursorMode(MouseCursorMode mode) override { mouseCursorMode_ = mode; }
+		bool isJoyPresent(int joyId) const override;
+		const char* joyName(int joyId) const override;
+		const char* joyGuid(int joyId) const override;
+		int joyNumButtons(int joyId) const override;
+		int joyNumHats(int joyId) const override;
+		int joyNumAxes(int joyId) const override;
+		const JoystickState& joystickState(int joyId) const override;
 
-  private:
-	static const int MaxNumJoysticks = 4;
+		void setCursor(Cursor cursor) override {
+			cursor_ = cursor;
+		}
 
-	static ASensorManager *sensorManager_;
-	static const ASensor *accelerometerSensor_;
-	static ASensorEventQueue *sensorEventQueue_;
-	static bool accelerometerEnabled_;
+	private:
+		static constexpr int MaxNumJoysticks = 4;
 
-	static AccelerometerEvent accelerometerEvent_;
-	static TouchEvent touchEvent_;
-	static AndroidKeyboardState keyboardState_;
-	static KeyboardEvent keyboardEvent_;
-	static TextInputEvent textInputEvent_;
-	static AndroidMouseState mouseState_;
-	static AndroidMouseEvent mouseEvent_;
-	static ScrollEvent scrollEvent_;
-	/// Back and forward key events triggered by the mouse are simulated as right and middle button
-	static int simulatedMouseButtonState_;
+		static ASensorManager* sensorManager_;
+		static const ASensor* accelerometerSensor_;
+		static ASensorEventQueue* sensorEventQueue_;
+		static bool accelerometerEnabled_;
 
-	static AndroidJoystickState nullJoystickState_;
-	static AndroidJoystickState joystickStates_[MaxNumJoysticks];
-	static JoyButtonEvent joyButtonEvent_;
-	static JoyHatEvent joyHatEvent_;
-	static JoyAxisEvent joyAxisEvent_;
-	static JoyConnectionEvent joyConnectionEvent_;
-	/// Update rate of `updateJoystickConnections()` in seconds
-	static const float JoyCheckRate;
-	static Timer joyCheckTimer_;
+		static AccelerometerEvent accelerometerEvent_;
+		static TouchEvent touchEvent_;
+		static AndroidKeyboardState keyboardState_;
+		static KeyboardEvent keyboardEvent_;
+		static TextInputEvent textInputEvent_;
+		static AndroidMouseState mouseState_;
+		static AndroidMouseEvent mouseEvent_;
+		static ScrollEvent scrollEvent_;
+		/// Back and forward key events triggered by the mouse are simulated as right and middle button
+		static int simulatedMouseButtonState_;
 
-	/// Processes a gamepad event
-	static bool processGamepadEvent(const AInputEvent *event);
-	/// Processes a keyboard event
-	static bool processKeyboardEvent(const AInputEvent *event);
-	/// Processes a touch event
-	static bool processTouchEvent(const AInputEvent *event);
-	/// Processes a mouse event
-	static bool processMouseEvent(const AInputEvent *event);
-	/// Processes a keycode event generated by the mouse, like the back key on right mouse click
-	static bool processMouseKeyEvent(const AInputEvent *event);
+		static AndroidJoystickState nullJoystickState_;
+		static AndroidJoystickState joystickStates_[MaxNumJoysticks];
+		static JoyButtonEvent joyButtonEvent_;
+		static JoyHatEvent joyHatEvent_;
+		static JoyAxisEvent joyAxisEvent_;
+		static JoyConnectionEvent joyConnectionEvent_;
+		/// Update rate of `updateJoystickConnections()` in seconds
+		static const float JoyCheckRate;
+		static Timer joyCheckTimer_;
 
-	/// Initializes the accelerometer sensor
-	static void initAccelerometerSensor(struct android_app *state);
+		/// Processes a gamepad event
+		static bool processGamepadEvent(const AInputEvent* event);
+		/// Processes a keyboard event
+		static bool processKeyboardEvent(const AInputEvent* event);
+		/// Processes a touch event
+		static bool processTouchEvent(const AInputEvent* event);
+		/// Processes a mouse event
+		static bool processMouseEvent(const AInputEvent* event);
+		/// Processes a keycode event generated by the mouse, like the back key on right mouse click
+		static bool processMouseKeyEvent(const AInputEvent* event);
 
-	/// Updates joystick states after connections and disconnections
-	static void updateJoystickConnections();
-	/// Checks if a previously connected joystick has been disconnected
-	static void checkDisconnectedJoysticks();
-	/// Checks if a new joystick has been connected
-	static void checkConnectedJoysticks();
+		/// Initializes the accelerometer sensor
+		static void initAccelerometerSensor(struct android_app* state);
 
-	static int findJoyId(int deviceId);
-	static bool isDeviceConnected(int deviceId);
-	static void deviceInfo(int deviceId, int joyId);
+		/// Updates joystick states after connections and disconnections
+		static void updateJoystickConnections();
+		/// Checks if a previously connected joystick has been disconnected
+		static void checkDisconnectedJoysticks();
+		/// Checks if a new joystick has been connected
+		static void checkConnectedJoysticks();
 
-	/// To update joystick connections in `AndroidApplication::androidMain()`
-	friend class AndroidApplication;
-};
+		static int findJoyId(int deviceId);
+		static bool isDeviceConnected(int deviceId);
+		static void deviceInfo(int deviceId, int joyId);
+
+		/// To update joystick connections in `AndroidApplication::androidMain()`
+		friend class AndroidApplication;
+	};
 
 }
-
-#endif

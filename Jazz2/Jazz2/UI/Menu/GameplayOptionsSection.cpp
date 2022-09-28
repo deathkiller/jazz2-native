@@ -12,7 +12,9 @@ namespace Jazz2::UI::Menu
 		_isDirty(false)
 	{
 		_items[(int)Item::Enhancements].Name = "Enhancements"_s;
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
 		_items[(int)Item::EnableRgbLights].Name = "Razer Chroma™"_s;
+#endif
 #if defined(WITH_ANGELSCRIPT)
 		_items[(int)Item::AllowUnsignedScripts].Name = "Scripting"_s;
 #endif
@@ -107,11 +109,13 @@ namespace Jazz2::UI::Menu
 			if (i >= 1) {
 				bool enabled;
 				switch (i) {
-					default:
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
 					case (int)Item::EnableRgbLights: enabled = PreferencesCache::EnableRgbLights; break;
+#endif
 #if defined(WITH_ANGELSCRIPT)
 					case (int)Item::AllowUnsignedScripts: enabled = PreferencesCache::AllowUnsignedScripts; break;
 #endif
+					default: enabled = false;
 				}
 
 #if defined(WITH_ANGELSCRIPT)
@@ -168,6 +172,7 @@ namespace Jazz2::UI::Menu
 
 		switch (_selectedIndex) {
 			case (int)Item::Enhancements: _root->SwitchToSection<GameplayEnhancementsSection>(); break;
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
 			case (int)Item::EnableRgbLights:
 				PreferencesCache::EnableRgbLights = !PreferencesCache::EnableRgbLights;
 				if (!PreferencesCache::EnableRgbLights) {
@@ -176,11 +181,14 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 				_animation = 0.0f;
 				break;
+#endif
+#if defined(WITH_ANGELSCRIPT)
 			case (int)Item::AllowUnsignedScripts:
 				PreferencesCache::AllowUnsignedScripts = !PreferencesCache::AllowUnsignedScripts;
 				_isDirty = true;
 				_animation = 0.0f;
 				break;
+#endif
 		}
 	}
 }

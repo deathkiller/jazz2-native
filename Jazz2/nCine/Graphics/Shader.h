@@ -39,7 +39,7 @@ namespace nCine
 
 		enum class DefaultFragment {
 			SPRITE,
-			SPRITE_GRAY,
+			//SPRITE_GRAY,
 			SPRITE_NOTEXTURE,
 			//TEXTNODE_ALPHA,
 			//TEXTNODE_RED,

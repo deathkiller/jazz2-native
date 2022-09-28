@@ -17,6 +17,10 @@
 #include "nCine/Threading/Thread.h"
 #include "nCine/tracy.h"
 
+#if defined(DEATH_TARGET_ANDROID)
+#	include "nCine/Android/AndroidApplication.h"
+#endif
+
 #include "Jazz2/IRootController.h"
 #include "Jazz2/ContentResolver.h"
 #include "Jazz2/LevelHandler.h"
@@ -96,7 +100,12 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 	}
 	// clang-format on
 
-	__android_log_write(priority, "Jazz2", logEntry);
+	va_list args;
+	va_start(args, fmt);
+	unsigned int length = vsnprintf(logEntry, MaxEntryLength, fmt, args);
+	va_end(args);
+
+	__android_log_write(priority, "jazz2", logEntry);
 #else
 	constexpr char Reset[] = "\033[0m";
 	constexpr char Bold[] = "\033[1m";
@@ -247,8 +256,21 @@ void GameEventHandler::onInit()
 {
 	_flags = Flags::None;
 	_pendingState = PendingState::None;
-
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
+	
+	
+#if defined(DEATH_TARGET_ANDROID)
+	// Set working directory to external storage on Android
+	StringView externalPath = static_cast<AndroidApplication&>(theApplication()).externalDataPath();
+	if (!externalPath.empty()) {
+		if (fs::SetWorkingDirectory(externalPath)) {
+			LOGI_X("External storage path: %s", externalPath.data());
+		} else {
+			LOGE_X("Cannot set external storage path \"%s\"", externalPath.data());
+		}
+	} else {
+		LOGE("Cannot get external storage path");
+	}
+#elif !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
 	theApplication().setAutoSuspension(false);
 
 	if (PreferencesCache::EnableFullscreen) {
@@ -783,7 +805,12 @@ void GameEventHandler::SaveEpisodeContinue(const std::unique_ptr<LevelInitializa
 	}
 }
 
-#if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
+#if defined(DEATH_TARGET_ANDROID)
+std::unique_ptr<IAppEventHandler> createAppEventHandler()
+{
+	return std::make_unique<GameEventHandler>();
+}
+#elif defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
 	return PCApplication::start([]() -> std::unique_ptr<IAppEventHandler> {

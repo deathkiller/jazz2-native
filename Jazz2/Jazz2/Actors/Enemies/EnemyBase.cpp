@@ -131,7 +131,7 @@ namespace Jazz2::Actors::Enemies
 			{ EventType::Gem, 6 }
 		};
 
-		constexpr int combinedChance = std::accumulate(DropChanges, DropChanges + _countof(DropChanges), 0, [](const int& sum, const auto& item) {
+		int combinedChance = std::accumulate(DropChanges, DropChanges + _countof(DropChanges), 0, [](const int& sum, const auto& item) {
 			return sum + item.Chance;
 		});
 

@@ -8,6 +8,10 @@
 #include "Weapons/FreezerShot.h"
 #include "Weapons/ToasterShot.h"
 
+#if !defined(WITH_COROUTINES)
+#	pragma message("<coroutine> support was not found, building without asynchronous loading support")
+#endif
+
 #include "../../nCine/Primitives/Matrix4x4.h"
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Base/FrameTimer.h"

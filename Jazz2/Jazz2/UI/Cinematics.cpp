@@ -21,7 +21,7 @@ namespace Jazz2::UI
 		_frameProgress(0.0f),
 		_framesLeft(0),
 		_currentOffsets { },
-		_pressedKeys((uint32_t)KeySym::COUNT_BASE),
+		_pressedKeys((uint32_t)KeySym::COUNT),
 		_pressedActions(0)
 	{
 		theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection"_s);
@@ -261,7 +261,7 @@ namespace Jazz2::UI
 
 		if (_pressedKeys[(uint32_t)KeySym::RETURN] || _pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Fire)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Fire)] ||
 			_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Jump)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Jump)] ||
-			_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Menu)]) {
+			_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)KeySym::BACK]) {
 			_pressedActions |= (1 << (int)PlayerActions::Fire);
 		}
 

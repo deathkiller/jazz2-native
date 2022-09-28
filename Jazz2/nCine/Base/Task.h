@@ -1,6 +1,14 @@
 #pragma once
 
-#include <coroutine>
+#if defined(__has_include)
+#   if __has_include(<coroutine>)
+#		include <coroutine>
+#		define WITH_COROUTINES
+#   endif
+#else
+#	define WITH_COROUTINES
+#endif
+
 #include <optional>
 
 namespace nCine
@@ -8,6 +16,9 @@ namespace nCine
 	template <typename T>
 	struct Task
 	{
+
+#if defined(WITH_COROUTINES)
+
 		struct task_promise;
 
 		using promise_type = task_promise;
@@ -121,6 +132,17 @@ namespace nCine
 
 			}
 		};
+#else
+
+		Task(T value) : _value(value) { }
+
+		operator T() const {
+			return _value;
+		}
+
+		T _value;
+
+#endif
 
 	};
 }

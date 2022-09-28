@@ -19,7 +19,7 @@ namespace Jazz2::UI::Menu
 		_logoTransition(0.0f),
 		_texturedBackgroundPass(this),
 		_texturedBackgroundPhase(0.0f),
-		_pressedKeys((uint32_t)KeySym::COUNT_BASE),
+		_pressedKeys((uint32_t)KeySym::COUNT),
 		_pressedActions(0),
 		_touchButtonsTimer(0.0f)
 	{
@@ -377,7 +377,8 @@ namespace Jazz2::UI::Menu
 			_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Jump)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Jump)]) {
 			_pressedActions |= (1 << (int)PlayerActions::Fire);
 		}
-		if (_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Menu)]) {
+		// Allow Android Back button as menu key
+		if (_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)KeySym::BACK]) {
 			_pressedActions |= (1 << (int)PlayerActions::Menu);
 		}
 		// Use SwitchWeapon action as Delete key

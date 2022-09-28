@@ -18,7 +18,9 @@ namespace Jazz2::UI::Menu
 	private:
 		enum class Item {
 			Enhancements,
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
 			EnableRgbLights,
+#endif
 #if defined(WITH_ANGELSCRIPT)
 			AllowUnsignedScripts,
 #endif

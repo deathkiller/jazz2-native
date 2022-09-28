@@ -8,6 +8,12 @@
 #include "../../nCine/Primitives/AABB.h"
 #include "../../nCine/Audio/AudioBufferPlayer.h"
 
+// If coroutines are not supported, load resources synchronously
+#if !defined(WITH_COROUTINES)
+#	define co_return return
+#	define co_await
+#endif
+
 namespace Jazz2
 {
 	class ILevelHandler;
@@ -280,6 +286,7 @@ namespace Jazz2::Actors
 			_metadata = ContentResolver::Current().RequestMetadata(path);
 		}
 
+#if defined(WITH_COROUTINES)
 		auto RequestMetadataAsync(const StringView& path)
 		{
 			struct awaitable {
@@ -299,6 +306,13 @@ namespace Jazz2::Actors
 			};
 			return awaitable { this, path };
 		}
+#else
+		void RequestMetadataAsync(const StringView& path)
+		{
+			auto metadata = ContentResolver::Current().RequestMetadata(path);
+			_metadata = metadata;
+		}
+#endif
 
 		constexpr void SetState(ActorState flags) noexcept
 		{

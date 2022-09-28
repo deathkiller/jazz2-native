@@ -84,6 +84,9 @@ cd emsdk
   * Run `./BuildEmscripten.sh` to build with Emscripten
 
 ### Android
+* Install Android SDK (preferably to `../android-sdk/`)
+* Install Android NDK (preferably to `../android-ndk/`)
+* Install Gradle (preferably to `../gradle/`)
 * Install build dependencies
 ```bash
 # Install OpenGL library
@@ -106,7 +109,7 @@ rm -rf nCine-libraries-artifacts
 ```
 * Build the solution with **CMake**
   * Run `./BuildAndroid.sh` to build **APK** for Android
-
+  * **APK** will be located in `<build-target>/android/app/build/outputs/apk/release/`
 
 ## License
 This project is licensed under the terms of the [GNU General Public License v3.0](./LICENSE).

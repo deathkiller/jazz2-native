@@ -31,7 +31,7 @@ namespace Jazz2::UI::Menu
 #endif
 		_items[(int)Item::Options].Name = "Options"_s;
 		_items[(int)Item::About].Name = "About"_s;
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
 		_items[(int)Item::Quit].Name = "Quit"_s;
 #endif
 	}
@@ -64,7 +64,7 @@ namespace Jazz2::UI::Menu
 		if (_root->ActionHit(PlayerActions::Fire)) {
 			ExecuteSelected();
 		} else if (_root->ActionHit(PlayerActions::Menu)) {
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
 			if (_selectedIndex != (int)Item::Quit) {
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				_animation = 0.0f;
@@ -174,7 +174,7 @@ namespace Jazz2::UI::Menu
 #endif
 			case (int)Item::Options: _root->SwitchToSection<OptionsSection>(); break;
 			case (int)Item::About: _root->SwitchToSection<AboutSection>(); break;
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
 			case (int)Item::Quit: theApplication().quit(); break;
 #endif
 		}

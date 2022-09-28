@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="app_name">@NCINE_APP_NAME@</string>
+	<string name="app_desc">@NCINE_APP_DESCRIPTION@</string>
+</resources>

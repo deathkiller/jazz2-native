@@ -24,7 +24,7 @@
 #	endif
 #
 #	if defined(DEATH_TARGET_ANDROID)
-#		include "AndroidApplication.h"
+#		include "../Android/AndroidApplication.h"
 #		include "AssetFile.h"
 #	endif
 #endif
@@ -985,7 +985,7 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data()) {
+		if (AssetFile::assetPath(nullTerminatedPath.data())) {
 			return false;
 		}
 #endif
@@ -1496,7 +1496,7 @@ namespace nCine
 
 		std::unique_ptr<IFileStream> stream;
 #if defined(DEATH_TARGET_ANDROID)
-		const char* assetFilename = AssetFile::assetPath(path);
+		const char* assetFilename = AssetFile::assetPath(String::nullTerminatedView(path).data());
 		if (assetFilename) {
 			stream = std::make_unique<AssetFile>(assetFilename);
 		} else
@@ -1548,7 +1548,7 @@ namespace nCine
 			// Trying to create the data directory
 			if (!CreateDirectories(_savePath)) {
 				LOGE_X("Cannot create directory: %s", _savePath.data());
-				_savePath.clear();
+				_savePath = { };
 			}
 		}
 #elif defined(DEATH_TARGET_APPLE)
