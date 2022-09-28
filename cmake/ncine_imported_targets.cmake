@@ -220,6 +220,14 @@ if(ANDROID)
 				INTERFACE_LINK_LIBRARIES Vorbis::Vorbis)
 			set(VORBIS_FOUND 1)
 		endif()
+		
+		if(EXISTS ${EXTERNAL_ANDROID_DIR}/libopenmpt/${ANDROID_ABI}/libopenmpt.a)
+			add_library(libopenmpt::libopenmpt STATIC IMPORTED)
+			set_target_properties(libopenmpt::libopenmpt PROPERTIES
+				IMPORTED_LOCATION ${EXTERNAL_ANDROID_DIR}/libopenmpt/${ANDROID_ABI}/libopenmpt.a
+				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_ANDROID_DIR}/libopenmpt/")
+			set(OPENMPT_FOUND 1)
+		endif()
 	endif()
 
 	if(NCINE_WITH_LUA AND EXISTS ${EXTERNAL_ANDROID_DIR}/lua/${ANDROID_ABI}/liblua.a)

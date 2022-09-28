@@ -40,6 +40,19 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 
 `‹Game›` *is path to Jazz² Resurrection. Cache is recreated during intro cinematics on the first startup, so it can't be skipped until it's done.*
 
+### Web (Emscripten)
+* Go to http://deat.tk/jazz2/wasm/
+* Import episodes from original *Jazz Jackrabbit 2* directory to unlock additional content
+
+### Android
+* Download or build the game
+* Copy `Content` directory to `‹Storage›/Android/data/jazz2.resurrection/files/Content/`
+* Copy original *Jazz Jackrabbit 2* directory to `‹Storage›/Android/data/jazz2.resurrection/files/Source/`
+* Install `Jazz2.apk` on the device
+* Run the newly installed application
+
+`‹Storage›` *is usually internal storage on your device. The game requires device with **Android 5.0** (or newer) and **OpenGL ES 3.0** support.*
+
 
 ## Building the application
 ### Windows
@@ -109,7 +122,8 @@ rm -rf nCine-libraries-artifacts
 ```
 * Build the solution with **CMake**
   * Run `./BuildAndroid.sh` to build **APK** for Android
-  * **APK** will be located in `<build-target>/android/app/build/outputs/apk/release/`
+  * **APK** will be located in `‹build-target›/android/app/build/outputs/apk/release/`
+
 
 ## License
 This project is licensed under the terms of the [GNU General Public License v3.0](./LICENSE).

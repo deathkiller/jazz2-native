@@ -257,7 +257,6 @@ void GameEventHandler::onInit()
 	_flags = Flags::None;
 	_pendingState = PendingState::None;
 	
-	
 #if defined(DEATH_TARGET_ANDROID)
 	// Set working directory to external storage on Android
 	StringView externalPath = static_cast<AndroidApplication&>(theApplication()).externalDataPath();

@@ -20,8 +20,6 @@ endif()
 
 include(ncine_get_version)
 include(ncine_imported_targets)
-#include(ncine_imgui)
-#include(ncine_nuklear)
 include(ncine_tracy)
 
 if(NCINE_BUILD_ANDROID)
@@ -59,6 +57,7 @@ set(NCINE_SOURCE_DIR "${NCINE_ROOT}/Jazz2/")
 set(NCINE_REVERSE_DNS "jazz2.resurrection")
 set(NCINE_APP_NAME "Jazz² Resurrection")
 set(NCINE_APP_DESCRIPTION "Open-source reimplementation of Jazz Jackrabbit 2")
+set(NCINE_VERSION "1.0.0")
 
 include(ncine_headers)
 include(ncine_sources)
@@ -69,12 +68,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 foreach(SOURCE_FILE IN LISTS HEADERS)
 	source_group("Headers" FILES ${SOURCE_FILE})
 endforeach()
-#foreach(SOURCE_FILE IN LISTS NCTL_HEADERS)
-#	source_group("nCTL" FILES ${SOURCE_FILE})
-#endforeach()
-#foreach(SOURCE_FILE IN LISTS PRIVATE_HEADERS)
-#	source_group("Private Headers" FILES ${SOURCE_FILE})
-#endforeach()
 foreach(SOURCE_FILE IN LISTS SOURCES)
 	source_group("Sources" FILES ${SOURCE_FILE})
 endforeach()
@@ -90,20 +83,6 @@ if(OPENGL_FOUND)
 endif()
 target_sources(ncine PRIVATE ${SOURCES} ${HEADERS} ${SHADER_FILES} ${GENERATED_SOURCES})
 
-#if("${NCINE_OPTIONS_PRESETS}" STREQUAL "LuaDist" AND NOT NCINE_WITH_LUA)
-#	message(FATAL_ERROR "Cannot build a LuaDist version without Lua")
-#endif()
-
-#if(NCINE_WITH_IMGUI)
-#	target_include_directories(ncine
-#		INTERFACE $<BUILD_INTERFACE:${IMGUI_INCLUDE_ONLY_DIR}>
-#		PRIVATE $<BUILD_INTERFACE:${IMGUI_INCLUDE_ONLY_DIR}/ncine>)
-#endif()
-#if(NCINE_WITH_NUKLEAR)
-#	target_include_directories(ncine
-#		INTERFACE $<BUILD_INTERFACE:${NUKLEAR_INCLUDE_ONLY_DIR}>
-#		PRIVATE $<BUILD_INTERFACE:${NUKLEAR_INCLUDE_ONLY_DIR}/ncine>)
-#endif()
 if(NCINE_WITH_TRACY)
 	target_include_directories(ncine
 		PUBLIC $<BUILD_INTERFACE:${TRACY_INCLUDE_ONLY_DIR}/tracy>
@@ -123,11 +102,6 @@ if(IS_DIRECTORY ${GENERATED_INCLUDE_DIR})
 		PRIVATE $<BUILD_INTERFACE:${GENERATED_INCLUDE_DIR}>)
 endif()
 
-#if(NCINE_TESTS_DATA_DIR)
-#	file(TO_CMAKE_PATH "${NCINE_TESTS_DATA_DIR}" NCINE_TESTS_DATA_DIR) # Always strips trailing slash
-#	set(NCINE_TESTS_DATA_DIR "${NCINE_TESTS_DATA_DIR}/")
-#endif()
-
 if(IS_DIRECTORY ${CMAKE_BINARY_DIR}/project)
 	file(REMOVE_RECURSE ${CMAKE_BINARY_DIR}/project)
 endif()
@@ -139,9 +113,5 @@ endif()
 #endforeach()
 
 #include(ncine_installation)
-#include(ncine_build_documentation)
-#include(ncine_build_tests)
-#include(ncine_build_unit_tests)
-#include(ncine_build_benchmarks)
 include(ncine_build_android)
 include(ncine_strip_binaries)

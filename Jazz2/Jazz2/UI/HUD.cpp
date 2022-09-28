@@ -64,9 +64,11 @@ namespace Jazz2::UI
 
 	HUD::~HUD()
 	{
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
 		if (PreferencesCache::EnableRgbLights) {
 			RgbLights::Current().Clear();
 		}
+#endif
 	}
 
 	void HUD::OnUpdate(float timeMult)
@@ -968,6 +970,7 @@ namespace Jazz2::UI
 
 	void HUD::UpdateRgbLights(float timeMult, Actors::Player* player)
 	{
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
 		if (!PreferencesCache::EnableRgbLights) {
 			_rgbHealthLast = 0.0f;
 			return;
@@ -1043,6 +1046,7 @@ namespace Jazz2::UI
 		if (l != AuraLight::Unknown) colors[(int)l] = Color(150, 140, 10);
 
 		rgbLights.Update(colors);
+#endif
 	}
 
 	AuraLight HUD::KeyToAuraLight(KeySym key)

@@ -29,9 +29,12 @@ public class LoadLibraries extends NativeActivity {
 					}
 				}
 			);
-		}
-		else if (SDK_INT >= 30) {
+		} else if (SDK_INT >= 30) {
 			hideInsets();
+		}
+		
+		if (SDK_INT >= android.os.Build.VERSION_CODES.P) {
+			getWindow().getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
 		}
 	}
 
@@ -43,15 +46,12 @@ public class LoadLibraries extends NativeActivity {
 		int SDK_INT = android.os.Build.VERSION.SDK_INT;
 		if (SDK_INT >= 11 && SDK_INT < 14) {
 			getWindow().getDecorView().setSystemUiVisibility(View.STATUS_BAR_HIDDEN);
-		}
-		else if (SDK_INT >= 14 && SDK_INT < 19) {
+		} else if (SDK_INT >= 14 && SDK_INT < 19) {
 			getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN |
 			                                                 View.SYSTEM_UI_FLAG_LOW_PROFILE);
-		}
-		else if (SDK_INT >= 19 && SDK_INT < 30) {
+		} else if (SDK_INT >= 19 && SDK_INT < 30) {
 			setImmersiveSticky();
-		}
-		else if (SDK_INT >= 30) {
+		} else if (SDK_INT >= 30) {
 			hideInsets();
 		}
 	}

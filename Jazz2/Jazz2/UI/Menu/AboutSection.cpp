@@ -45,7 +45,11 @@
 #endif
 
 #if defined(WITH_AUDIO)
-#	define INFO7 ", OpenAL"
+#	if defined(DEATH_TARGET_ANDROID)
+#		define INFO7 ", OpenSL ES, OpenAL"
+#	else
+#		define INFO7 ", OpenAL"
+#	endif
 #else
 #	define INFO7 ""
 #endif

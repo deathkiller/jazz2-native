@@ -131,6 +131,7 @@ namespace Jazz2::Actors::Enemies
 			{ EventType::Gem, 6 }
 		};
 
+		// TODO: This cannot be constexpr because of Android
 		int combinedChance = std::accumulate(DropChanges, DropChanges + _countof(DropChanges), 0, [](const int& sum, const auto& item) {
 			return sum + item.Chance;
 		});

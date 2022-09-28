@@ -117,10 +117,10 @@ namespace Jazz2
 						SfxVolume = uc.ReadValue<uint8_t>() / 255.0f;
 						MusicVolume = uc.ReadValue<uint8_t>() / 255.0f;
 
-						TouchLeftPadding.X = std::round(uc.ReadValue<int8_t>() * LevelHandler::DefaultWidth * TouchPaddingMultiplier / INT8_MAX);
-						TouchLeftPadding.Y = std::round(uc.ReadValue<int8_t>() * LevelHandler::DefaultHeight * TouchPaddingMultiplier / INT8_MAX);
-						TouchRightPadding.X = std::round(uc.ReadValue<int8_t>() * LevelHandler::DefaultWidth * TouchPaddingMultiplier / INT8_MAX);
-						TouchRightPadding.Y = std::round(uc.ReadValue<int8_t>() * LevelHandler::DefaultHeight * TouchPaddingMultiplier / INT8_MAX);
+						TouchLeftPadding.X = std::round(uc.ReadValue<int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
+						TouchLeftPadding.Y = std::round(uc.ReadValue<int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
+						TouchRightPadding.X = std::round(uc.ReadValue<int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
+						TouchRightPadding.Y = std::round(uc.ReadValue<int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
 
 						// Controls
 						auto mappings = UI::ControlScheme::GetMappings();
@@ -252,10 +252,10 @@ namespace Jazz2
 		co.WriteValue<uint8_t>((uint8_t)(SfxVolume * 255.0f));
 		co.WriteValue<uint8_t>((uint8_t)(MusicVolume * 255.0f));
 
-		co.WriteValue<int8_t>((int8_t)(TouchLeftPadding.X * INT8_MAX / (LevelHandler::DefaultWidth * TouchPaddingMultiplier)));
-		co.WriteValue<int8_t>((int8_t)(TouchLeftPadding.Y * INT8_MAX / (LevelHandler::DefaultHeight * TouchPaddingMultiplier)));
-		co.WriteValue<int8_t>((int8_t)(TouchRightPadding.X * INT8_MAX / (LevelHandler::DefaultWidth * TouchPaddingMultiplier)));
-		co.WriteValue<int8_t>((int8_t)(TouchRightPadding.Y * INT8_MAX / (LevelHandler::DefaultHeight * TouchPaddingMultiplier)));
+		co.WriteValue<int8_t>((int8_t)(TouchLeftPadding.X * INT8_MAX * TouchPaddingMultiplier));
+		co.WriteValue<int8_t>((int8_t)(TouchLeftPadding.Y * INT8_MAX * TouchPaddingMultiplier));
+		co.WriteValue<int8_t>((int8_t)(TouchRightPadding.X * INT8_MAX * TouchPaddingMultiplier));
+		co.WriteValue<int8_t>((int8_t)(TouchRightPadding.Y * INT8_MAX * TouchPaddingMultiplier));
 
 		// Controls
 		auto mappings = UI::ControlScheme::GetMappings();

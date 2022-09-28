@@ -2,6 +2,10 @@
 
 #define ENABLE_LOG
 
+#if !defined(NCINE_VERSION)
+#	define NCINE_VERSION "1.0.0"
+#endif
+
 #if !defined(_MSC_VER) && defined(__has_include)
 #   if __has_include("../Shared/Common.h")
 #       define __HAS_LOCAL_COMMON

@@ -1,6 +1,7 @@
 target_compile_features(ncine PUBLIC cxx_std_20)
 set_target_properties(ncine PROPERTIES CXX_EXTENSIONS OFF)
 
+target_compile_definitions(ncine PUBLIC "NCINE_VERSION=\"${NCINE_VERSION}\"")
 target_compile_definitions(ncine PUBLIC "CMAKE_BUILD")
 target_compile_definitions(ncine PUBLIC "$<$<CONFIG:Debug>:NCINE_DEBUG>")
 
