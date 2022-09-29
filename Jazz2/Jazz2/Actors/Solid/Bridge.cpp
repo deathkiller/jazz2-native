@@ -47,7 +47,8 @@ namespace Jazz2::Actors::Solid
 	{
 		_bridgeWidth = *(uint16_t*)&details.Params[0] * 16;
 		_bridgeType = (BridgeType)details.Params[2];
-		_heightFactor = (float)_bridgeWidth / details.Params[3];
+		// Limit _heightFactor here, because with higher _heightFactor (for example in "04_haunted1") it starts to be inaccurate
+		_heightFactor = std::round(std::min((float)_bridgeWidth / details.Params[3], 38.0f));
 
 		_pos.Y -= 6.0f;
 
@@ -118,7 +119,6 @@ namespace Jazz2::Actors::Solid
 			auto player = foundPlayers[0];
 			auto playerPos = player->GetPos();
 			player->SetCarryingObject(this);
-			// TODO: With higher _heightFactor (for example in "04_haunted1") it starts to be inaccurate, std::floor() fixes this, but breaks other things
 			player->MoveInstantly(Vector2f(playerPos.X, _pos.Y + playerPos.Y - player->AABBInner.B + BaseY + _foundHeight), MoveType::Absolute | MoveType::Force);
 		} else {
 			_foundHeight = lerp(_foundHeight, 0.0f, timeMult * 0.1f);

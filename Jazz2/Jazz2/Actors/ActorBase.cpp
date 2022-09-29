@@ -356,14 +356,6 @@ namespace Jazz2::Actors
 			}
 		}
 
-		// Set the actor as airborne if there seems to be enough space below it
-		AABBf aabb = AABBInner;
-		aabb.B += CollisionCheckStep;
-		if (_levelHandler->IsPositionEmpty(this, aabb, params)) {
-			_speed.Y += currentGravity * timeMult;
-			SetState(ActorState::CanJump, false);
-		}
-
 		// Reduce all forces if they are present
 		if (std::abs(_externalForce.X) > 0.0f) {
 			if (_externalForce.X > 0.0f) {
@@ -372,8 +364,21 @@ namespace Jazz2::Actors
 				_externalForce.X = std::min(_externalForce.X + _friction * timeMult, 0.0f);
 			}
 		}
-		_externalForce.Y = std::min(_externalForce.Y + currentGravity * 0.33f * timeMult, 0.0f);
-		_internalForceY = std::min(_internalForceY + currentGravity * 0.33f * timeMult, 0.0f);
+
+		// Set the actor as airborne if there seems to be enough space below it
+		if (currentGravity > 0.0f) {
+			AABBf aabb = AABBInner;
+			aabb.B += CollisionCheckStep;
+			if (_levelHandler->IsPositionEmpty(this, aabb, params)) {
+				_speed.Y += currentGravity * timeMult;
+				SetState(ActorState::CanJump, false);
+			} else if (std::abs(effectiveSpeedY) <= std::numeric_limits<float>::epsilon()) {
+				SetState(ActorState::CanJump, true);
+			}
+
+			_externalForce.Y = std::min(_externalForce.Y + currentGravity * 0.33f * timeMult, 0.0f);
+			_internalForceY = std::min(_internalForceY + currentGravity * 0.33f * timeMult, 0.0f);
+		}
 	}
 
 	void ActorBase::UpdateHitbox(int w, int h)

@@ -29,12 +29,6 @@
 
 using namespace nCine;
 
-// TODO: Debug only
-#if _DEBUG
-int _debugActorDirtyCount = 0;
-int _debugCollisionPairCount = 0;
-#endif
-
 namespace Jazz2
 {
 	LevelHandler::LevelHandler(IRootController* root, const LevelInitialization& levelInit)
@@ -490,57 +484,6 @@ namespace Jazz2
 #if ENABLE_POSTPROCESSING
 		_lightingView->setClearColor(_ambientColor.W, 0.0f, 0.0f, 1.0f);
 #endif
-
-		// TODO: Debug only
-#if _DEBUG
-		static float _debugRefresh = 0;
-		static int _debugFramesCount = 0;
-		_debugFramesCount++;
-		if (_debugRefresh <= 0) {
-			_debugRefresh = 60;
-
-			std::string text = "Jazz² Resurrection | Time: ";
-			text += std::to_string(timeMult);
-			text += ", fps: ";
-			text += std::to_string((int)((1.0f / timeMult) * 60.0f));
-			text += ", camera: {";
-			text += std::to_string(_cameraLastPos.X);
-			text += ", ";
-			text += std::to_string(_cameraLastPos.Y);
-			text += "}; player: {";
-			text += std::to_string(_players[0]->_pos.X);
-			text += ", ";
-			text += std::to_string(_players[0]->_pos.Y);
-			text += "}; dirty: ";
-			text += std::to_string(_debugActorDirtyCount);
-			text += ", pairs: ";
-			text += std::to_string(_debugCollisionPairCount);
-			text += ", AABB: {";
-			text += std::to_string(_players[0]->AABBInner.L);
-			text += ", ";
-			text += std::to_string(_players[0]->AABBInner.T);
-			text += ", ";
-			text += std::to_string(_players[0]->AABBInner.R);
-			text += ", ";
-			text += std::to_string(_players[0]->AABBInner.B);
-			text += "}, level: {";
-			text += std::to_string(_levelBounds.X);
-			text += ", ";
-			text += std::to_string(_levelBounds.Y);
-			text += ", ";
-			text += std::to_string(_levelBounds.W);
-			text += ", ";
-			text += std::to_string(_levelBounds.H);
-			text += "}";
-			theApplication().gfxDevice().setWindowTitle(text.c_str());
-
-			_debugActorDirtyCount = 0;
-			_debugCollisionPairCount = 0;
-			_debugFramesCount = 0;
-		} else {
-			_debugRefresh -= timeMult;
-		}
-#endif
 	}
 
 	void LevelHandler::OnInitializeViewport(int width, int height)
@@ -951,17 +894,17 @@ namespace Jazz2
 			}
 		} else {
 			_nextLevelTime = 360.0f;
-		}
 
-		if (_sugarRushMusic != nullptr) {
-			_sugarRushMusic->stop();
-			_sugarRushMusic = nullptr;
-		}
+			if (_sugarRushMusic != nullptr) {
+				_sugarRushMusic->stop();
+				_sugarRushMusic = nullptr;
+			}
 #if defined(WITH_OPENMPT)
-		if (_music != nullptr) {
-			_music->stop();
-		}
+			if (_music != nullptr) {
+				_music->stop();
+			}
 #endif
+		}
 
 		for (auto player : _players) {
 			player->OnLevelChanging(exitType);
@@ -1200,10 +1143,6 @@ namespace Jazz2
 				(*actor)->UpdateAABB();
 				_collisions.MoveProxy((*actor)->CollisionProxyID, (*actor)->AABB, (*actor)->_speed * timeMult);
 				(*actor)->SetState(Actors::ActorState::IsDirty, false);
-
-#if _DEBUG
-				_debugActorDirtyCount++;
-#endif
 			}
 			++actor;
 		}
@@ -1223,10 +1162,6 @@ namespace Jazz2
 						actorSharedB->OnHandleCollision(actorSharedA->shared_from_this());
 					}
 				}
-
-#if _DEBUG
-				_debugCollisionPairCount++;
-#endif
 			}
 		};
 		UpdatePairsHelper helper;

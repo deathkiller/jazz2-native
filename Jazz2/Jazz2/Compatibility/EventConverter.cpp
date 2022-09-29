@@ -654,8 +654,24 @@ namespace Jazz2::Compatibility
 		Add(JJ2Event::ENEMY_NORMAL_TURTLE_XMAS, ConstantParamList(EventType::EnemyTurtle, { 1 }));
 		Add(JJ2Event::ENEMY_LIZARD, ConstantParamList(EventType::EnemyLizard, { 0 }));
 		Add(JJ2Event::ENEMY_LIZARD_XMAS, ConstantParamList(EventType::EnemyLizard, { 1 }));
-		Add(JJ2Event::ENEMY_LIZARD_FLOAT, ConstantParamList(EventType::EnemyLizardFloat, { 0 }));
-		Add(JJ2Event::ENEMY_LIZARD_FLOAT_XMAS, ConstantParamList(EventType::EnemyLizardFloat, { 1 }));
+		Add(JJ2Event::ENEMY_LIZARD_FLOAT, [](JJ2Level* level, uint32_t jj2Params) -> ConversionResult {
+			uint8_t eventParams[16];
+			ConvertParamInt(jj2Params, {
+				{ JJ2ParamUInt, 8 },	// Duration
+				{ JJ2ParamBool, 1 }		// Fly Away
+			}, eventParams);
+
+			return { EventType::EnemyLizardFloat, { 0, eventParams[0], eventParams[1] } };
+		});
+		Add(JJ2Event::ENEMY_LIZARD_FLOAT_XMAS, [](JJ2Level* level, uint32_t jj2Params) -> ConversionResult {
+			uint8_t eventParams[16];
+			ConvertParamInt(jj2Params, {
+				{ JJ2ParamUInt, 8 },	// Duration
+				{ JJ2ParamBool, 1 }		// Fly Away
+			}, eventParams);
+
+			return { EventType::EnemyLizardFloat, { 1, eventParams[0], eventParams[1] } };
+		});
 		Add(JJ2Event::ENEMY_DRAGON, NoParamList(EventType::EnemyDragon));
 		Add(JJ2Event::ENEMY_LAB_RAT, NoParamList(EventType::EnemyLabRat));
 		Add(JJ2Event::ENEMY_SUCKER_FLOAT, NoParamList(EventType::EnemySuckerFloat));

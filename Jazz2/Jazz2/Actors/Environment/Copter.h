@@ -16,7 +16,7 @@ namespace Jazz2::Actors::Environment
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other);
 
-		void Unmount();
+		void Unmount(float timeLeft);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

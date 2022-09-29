@@ -36,7 +36,7 @@ namespace Jazz2::Actors::Environment
 			ActorBase::OnUpdate(timeMult);
 
 			_speed.Y = _levelHandler->Gravity * -0.5f;
-			_renderer.setAlphaF(_renderer.alpha() - 0.007f * timeMult);
+			_renderer.setAlphaF(_renderer.alpha() - 0.004f * timeMult);
 			_phase -= timeMult;
 			if (_phase <= 0.0f) {
 				DecreaseHealth(INT32_MAX);
@@ -58,11 +58,11 @@ namespace Jazz2::Actors::Environment
 		return ActorBase::OnHandleCollision(other);
 	}
 
-	void Copter::Unmount()
+	void Copter::Unmount(float timeLeft)
 	{
 		if (_state == StateMounted) {
 			_state = StateUnmounted;
-			_phase = 120.0f;
+			_phase = timeLeft;
 
 			SetState(ActorState::ApplyGravitation, true);
 		}

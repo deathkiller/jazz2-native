@@ -9,6 +9,7 @@
 #include "../Player.h"
 
 #include "../../../nCine/Base/Random.h"
+#include "../../../nCine/Base/FrameTimer.h"
 
 #include <float.h>
 
@@ -39,6 +40,9 @@ namespace Jazz2::Actors::Enemies
 	Task<bool> LizardFloat::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		_theme = details.Params[0];
+		_copterDuration = details.Params[1];
+		// TODO: flyAway parameter
+		//bool flyAway = (details.Params[2] != 0);
 
 		SetState(ActorState::ApplyGravitation, false);
 		SetState(ActorState::CollideWithTileset, _levelHandler->IsReforged());
@@ -152,8 +156,8 @@ namespace Jazz2::Actors::Enemies
 	bool LizardFloat::OnPerish(ActorBase* collider)
 	{
 		if (_copter != nullptr) {
-			if (Random().NextBool()) {
-				_copter->Unmount();
+			if (_copterDuration > 0) {
+				_copter->Unmount(_copterDuration * FrameTimer::FramesPerSecond);
 			} else {
 				_copter->DecreaseHealth(INT32_MAX);
 			}
