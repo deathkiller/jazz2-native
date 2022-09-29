@@ -62,7 +62,7 @@ namespace Jazz2::Actors::Environment
 			} else {
 				_fireCooldown -= timeMult;
 				MoveInstantly(Vector2f((IsFacingLeft() ? -8.0f : 8.0f) * timeMult, -1.0f * timeMult), MoveType::Relative | MoveType::Force);
-				_renderer.setScale(_renderer.scale() + 0.012f * timeMult);
+				_renderer.setScale(_renderer.scale() + 0.014f * timeMult);
 			}
 			return;
 		}

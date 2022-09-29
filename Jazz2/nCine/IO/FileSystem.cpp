@@ -1492,8 +1492,6 @@ namespace nCine
 
 	std::unique_ptr<IFileStream> FileSystem::Open(const String& path, FileAccessMode mode, bool shouldExitOnFailToOpen)
 	{
-		ASSERT(path);
-
 		std::unique_ptr<IFileStream> stream;
 #if defined(DEATH_TARGET_ANDROID)
 		const char* assetFilename = AssetFile::assetPath(String::nullTerminatedView(path).data());

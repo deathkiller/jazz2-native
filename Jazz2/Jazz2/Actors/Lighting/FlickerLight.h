@@ -17,11 +17,20 @@ namespace Jazz2::Actors::Lighting
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights);
 
 	private:
+		struct LightPart {
+			Vector2f Pos;
+			float Radius;
+			float Phase;
+		};
+
+		static constexpr int LightPartCount = 16;
+
 		float _intensity;
 		float _brightness;
 		float _radiusNear;
 		float _radiusFar;
 
 		float _phase;
+		SmallVector<LightPart, LightPartCount> _parts;
 	};
 }

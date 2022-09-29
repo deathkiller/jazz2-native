@@ -19,6 +19,9 @@ namespace Jazz2::UI::Menu
 		enum class Item {
 			RemapControls,
 			TouchControls,
+#if defined(DEATH_TARGET_ANDROID)
+			UseNativeBackButton,
+#endif
 
 			Count
 		};

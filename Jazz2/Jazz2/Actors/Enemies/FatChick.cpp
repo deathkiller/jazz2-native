@@ -100,7 +100,7 @@ namespace Jazz2::Actors::Enemies
 	{
 		// TODO: Play sound in the middle of transition
 		// TODO: Apply force in the middle of transition
-		PlaySfx("Attack", 0.8f, 0.6f);
+		PlaySfx("Attack"_s, 0.8f, 0.6f);
 
 		SetTransition(AnimState::TransitionAttack, false, [this]() {
 			_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;

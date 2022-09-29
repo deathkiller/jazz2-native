@@ -13,6 +13,9 @@ namespace Jazz2::UI::Menu
 	{
 		_items[(int)Item::RemapControls].Name = "Remap Controls"_s;
 		_items[(int)Item::TouchControls].Name = "Touch Controls"_s;
+#if defined(DEATH_TARGET_ANDROID)
+		_items[(int)Item::UseNativeBackButton].Name = "Native Back Button"_s;
+#endif
 	}
 
 	ControlsOptionsSection::~ControlsOptionsSection()
@@ -101,16 +104,18 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
-			/*if (i >= 1) {
+			if (i >= 2) {
 				bool enabled;
 				switch (i) {
-					default:
-					case (int)Item::EnableRgbLights: enabled = PreferencesCache::EnableRgbLights; break;
+#if defined(DEATH_TARGET_ANDROID)
+					case (int)Item::UseNativeBackButton: enabled = PreferencesCache::UseNativeBackButton; break;
+#endif
+					default: enabled = false; break;
 				}
 
 				_root->DrawStringShadow(enabled ? "Enabled"_s : "Disabled"_s, charOffset, center.X, center.Y + 22.0f, IMenuContainer::FontLayer - 10,
 					Alignment::Center, (_selectedIndex == i ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
-			}*/
+			}
 
 			center.Y += (bottomLine - topLine) * (i >= 2 ? 0.9f : 0.7f) / (int)Item::Count;
 		}
@@ -153,6 +158,13 @@ namespace Jazz2::UI::Menu
 		switch (_selectedIndex) {
 			case (int)Item::RemapControls: _root->SwitchToSection<RemapControlsSection>(); break;
 			case (int)Item::TouchControls: _root->SwitchToSection<TouchControlsOptionsSection>(); break;
+#if defined(DEATH_TARGET_ANDROID)
+			case (int)Item::UseNativeBackButton:
+				PreferencesCache::UseNativeBackButton = !PreferencesCache::UseNativeBackButton;
+				_isDirty = true;
+				_animation = 0.0f;
+				break;
+#endif
 		}
 	}
 }

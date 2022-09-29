@@ -177,7 +177,7 @@ namespace Jazz2::UI::Menu
 		float logoTextTranslate = (1.0f - _owner->_logoTransition) * 60.0f;
 
 		if (_owner->_touchButtonsTimer > 0.0f && _owner->_sections.size() >= 2) {
-			_owner->DrawElement("MenuLineArrow"_s, -1, center.X, 40.0f, ShadowLayer, Alignment::Center, Colorf::White);
+			_owner->DrawElement("MenuLineArrow"_s, -1, static_cast<float>(center.X), 40.0f, ShadowLayer, Alignment::Center, Colorf::White);
 		}
 
 		// Title
@@ -217,7 +217,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (_owner->_transitionWhite > 0.0f) {
-			DrawSolid(Vector2f::Zero, 950, Vector2f(ViewSize.X, ViewSize.Y), Colorf(1.0f, 1.0f, 1.0f, _owner->_transitionWhite));
+			DrawSolid(Vector2f::Zero, 950, Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y)), Colorf(1.0f, 1.0f, 1.0f, _owner->_transitionWhite));
 		}
 
 		return true;
@@ -378,7 +378,7 @@ namespace Jazz2::UI::Menu
 			_pressedActions |= (1 << (int)PlayerActions::Fire);
 		}
 		// Allow Android Back button as menu key
-		if (_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)KeySym::BACK]) {
+		if (_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Menu)] || (PreferencesCache::UseNativeBackButton && _pressedKeys[(uint32_t)KeySym::BACK])) {
 			_pressedActions |= (1 << (int)PlayerActions::Menu);
 		}
 		// Use SwitchWeapon action as Delete key
@@ -509,10 +509,10 @@ namespace Jazz2::UI::Menu
 
 		auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
-		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(_canvas->ViewSize.X, _canvas->ViewSize.Y);
+		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(static_cast<float>(_canvas->ViewSize.X), static_cast<float>(_canvas->ViewSize.Y));
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
-		command->material().uniform("uViewSize")->setFloatValue(_canvas->ViewSize.X, _canvas->ViewSize.Y);
+		command->material().uniform("uViewSize")->setFloatValue(static_cast<float>(_canvas->ViewSize.X), static_cast<float>(_canvas->ViewSize.Y));
 		command->material().uniform("uShift")->setFloatVector(_texturedBackgroundPos.Data());
 		command->material().uniform("uHorizonColor")->setFloatVector(_backgroundColor.Data());
 		command->material().uniform("uParallaxStarsEnabled")->setFloatValue(0.0f);
@@ -533,7 +533,7 @@ namespace Jazz2::UI::Menu
 			int height = layoutSize.Y * TileSet::DefaultTileSize;
 
 			_camera = std::make_unique<Camera>();
-			_camera->setOrthoProjection(0, width, 0, height);
+			_camera->setOrthoProjection(0, static_cast<float>(width), 0, static_cast<float>(height));
 			_camera->setView(0, 0, 0, 1);
 			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);
@@ -593,7 +593,6 @@ namespace Jazz2::UI::Menu
 				float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
 				float texBiasY = (tile.TileID / _owner->_tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
 
-				// TODO: Flip normal map somehow
 				if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
 					texBiasX += texScaleX;
 					texScaleX *= -1;

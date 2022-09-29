@@ -22,7 +22,7 @@
 
 #include "Actors/Player.h"
 #include "Actors/SolidObjectBase.h"
-#include "Actors/Enemies/BossBase.h"
+#include "Actors/Enemies/Bosses/BossBase.h"
 
 #include <float.h>
 #include <Utf8.h>
@@ -226,7 +226,7 @@ namespace Jazz2
 #if _DEBUG
 		if (PlayerActionPressed(0, PlayerActions::ChangeWeapon) && PlayerActionHit(0, PlayerActions::Jump)) {
 			_cheatsUsed = true;
-			BeginLevelChange(ExitType::Normal, nullptr);
+			BeginLevelChange(ExitType::Warp | ExitType::FastTransition, nullptr);
 		}
 #endif
 
@@ -261,7 +261,7 @@ namespace Jazz2
 					if (!_nextLevel.empty()) {
 						realNextLevel = _nextLevel;
 					} else {
-						realNextLevel = (_nextLevelType == ExitType::Bonus ? _defaultSecretLevel : _defaultNextLevel);
+						realNextLevel = ((_nextLevelType & ExitType::TypeMask) == ExitType::Bonus ? _defaultSecretLevel : _defaultNextLevel);
 					}
 
 					LevelInitialization levelInit;
@@ -881,7 +881,7 @@ namespace Jazz2
 			case EventType::AreaActivateBoss: {
 				if (_activeBoss == nullptr) {
 					for (auto& actor : _actors) {
-						_activeBoss = std::dynamic_pointer_cast<Actors::Enemies::BossBase>(actor);
+						_activeBoss = std::dynamic_pointer_cast<Actors::Bosses::BossBase>(actor);
 						if (_activeBoss != nullptr) {
 							break;
 						}
@@ -941,7 +941,17 @@ namespace Jazz2
 
 		_nextLevel = nextLevel;
 		_nextLevelType = exitType;
-		_nextLevelTime = 360.0f;
+		
+		if ((exitType & ExitType::FastTransition) == ExitType::FastTransition) {
+			ExitType exitTypeMasked = (exitType & ExitType::TypeMask);
+			if (exitTypeMasked == ExitType::Warp || exitTypeMasked == ExitType::Bonus || exitTypeMasked == ExitType::Boss) {
+				_nextLevelTime = 70.0f;
+			} else {
+				_nextLevelTime = 0.0f;
+			}
+		} else {
+			_nextLevelTime = 360.0f;
+		}
 
 		if (_sugarRushMusic != nullptr) {
 			_sugarRushMusic->stop();
@@ -1387,7 +1397,7 @@ namespace Jazz2
 			_pressedActions |= (1 << (int)PlayerActions::ChangeWeapon);
 		}
 		// Allow Android Back button as menu key
-		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)KeySym::BACK]) {
+		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Menu)] || (PreferencesCache::UseNativeBackButton && _pressedKeys[(uint32_t)KeySym::BACK])) {
 			_pressedActions |= (1 << (int)PlayerActions::Menu);
 		}
 

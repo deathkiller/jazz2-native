@@ -370,7 +370,7 @@ namespace nCine
 
 		ZoneScoped;
 #if _DEBUG
-		// TODO
+		// TODO: GLDebug
 		/*if (type_ == Type::SCREEN)
 			sprintf_s(debugString, "Draw screen viewport (0x%lx)", uintptr_t(this));
 		else if (type_ == Type::WITH_TEXTURE && textures_[0]->name() != nullptr)

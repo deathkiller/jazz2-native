@@ -2,7 +2,7 @@
 #include "ControlScheme.h"
 #include "../LevelHandler.h"
 #include "../PreferencesCache.h"
-#include "../Actors/Enemies/BossBase.h"
+#include "../Actors/Enemies/Bosses/BossBase.h"
 
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/IO/IFileStream.h"
@@ -56,10 +56,7 @@ namespace Jazz2::UI
 		_touchButtons[6] = CreateTouchButton(PlayerActions::Jump, "TouchJump"_s, Alignment::BottomRight, (ButtonSize + 0.02f), 0.04f + 0.08f, ButtonSize, ButtonSize);
 		_touchButtons[7] = CreateTouchButton(PlayerActions::Run, "TouchRun"_s, Alignment::BottomRight, 0.001f, 0.01f + 0.15f, ButtonSize, ButtonSize);
 		_touchButtons[8] = CreateTouchButton(PlayerActions::ChangeWeapon, "TouchChange"_s, Alignment::BottomRight, ButtonSize + 0.01f, 0.04f + 0.28f, SmallButtonSize, SmallButtonSize);
-#if !defined(DEATH_TARGET_ANDROID)
-		// Android has native Back button
 		_touchButtons[9] = CreateTouchButton(PlayerActions::Menu, "TouchPause"_s, Alignment::TopRight | Fixed, 0.02f, 0.02f, SmallButtonSize, SmallButtonSize);
-#endif
 	}
 
 	HUD::~HUD()
@@ -114,7 +111,7 @@ namespace Jazz2::UI
 					if (_weaponWheelAnim <= 0.0f) {
 						_weaponWheelAnim = 0.0f;
 						_levelHandler->_playerFrozenEnabled = false;
-						// TODO
+						// TODO: Weapon wheel
 						//players[0]->_renderer.Initialize(Actors::ActorRendererType::Default);
 					}
 				}
@@ -134,7 +131,7 @@ namespace Jazz2::UI
 
 		ViewSize = _levelHandler->GetViewSize();
 
-		Rectf view = Rectf(0.0f, 0.0f, ViewSize.X, ViewSize.Y);
+		Rectf view = Rectf(0.0f, 0.0f, static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y));
 		Rectf adjustedView = view;
 		if (_touchButtonsTimer > 0.0f) {
 			float width = adjustedView.W;
@@ -180,7 +177,8 @@ namespace Jazz2::UI
 				_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36 - 3, bottom - 16, FontLayer,
 					Alignment::BottomLeft, Font::RandomColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
 
-				snprintf(stringBuffer, _countof(stringBuffer), "x%i", player->_lives);
+				stringBuffer[0] = 'x';
+				i32tos(player->_lives, stringBuffer + 1);
 				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 4, bottom + 1.0f, FontShadowLayer,
 					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
 				_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36 - 4, bottom, FontLayer,
@@ -214,7 +212,8 @@ namespace Jazz2::UI
 				if (player->_weaponAmmo[(int)weapon] == UINT16_MAX) {
 					ammoCount = "x\u221E"_s;
 				} else {
-					snprintf(stringBuffer, _countof(stringBuffer), "x%u", player->_weaponAmmo[(int)weapon] / 256);
+					stringBuffer[0] = 'x';
+					i32tos(player->_weaponAmmo[(int)weapon] / 256, stringBuffer + 1);
 					ammoCount = stringBuffer;
 				}
 				_smallFont->DrawString(this, ammoCount, charOffsetShadow, right - 40, bottom + 1.0f, FontShadowLayer,
@@ -264,7 +263,7 @@ namespace Jazz2::UI
 
 			// FPS
 			if (PreferencesCache::ShowPerformanceMetrics) {
-				snprintf(stringBuffer, _countof(stringBuffer), "%i", (int)std::round(theApplication().averageFps()));
+				i32tos((int)std::round(theApplication().averageFps()), stringBuffer);
 				_smallFont->DrawString(this, stringBuffer, charOffset, view.W - 4, 0, FontLayer,
 					Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 			}
@@ -272,7 +271,7 @@ namespace Jazz2::UI
 			// Touch Controls
 			if (_touchButtonsTimer > 0.0f) {
 				for (auto& button : _touchButtons) {
-					if (button.Graphics == nullptr) {
+					if (button.Graphics == nullptr || (PreferencesCache::UseNativeBackButton && button.Action == PlayerActions::Menu)) {
 						continue;
 					}
 
@@ -705,7 +704,7 @@ namespace Jazz2::UI
 			_levelHandler->_playerFrozenEnabled = true;
 			_levelHandler->_playerFrozenMovement = _levelHandler->_playerRequiredMovement;
 		}
-		// TODO
+		// TODO: Weapon wheel
 		//player->_renderer.Initialize(Actors::ActorRendererType::Outline);
 
 		Vector2f center = Vector2f(ViewSize.X * 0.5f, ViewSize.Y * 0.5f);

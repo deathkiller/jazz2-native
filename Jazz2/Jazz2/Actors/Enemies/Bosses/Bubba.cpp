@@ -1,13 +1,13 @@
 ﻿#include "Bubba.h"
-#include "../../ILevelHandler.h"
-#include "../Player.h"
-#include "../Explosion.h"
+#include "../../../ILevelHandler.h"
+#include "../../Player.h"
+#include "../../Explosion.h"
 
-#include "../../../nCine/Base/Random.h"
+#include "../../../../nCine/Base/Random.h"
 
 #include <float.h>
 
-namespace Jazz2::Actors::Enemies
+namespace Jazz2::Actors::Bosses
 {
 	Bubba::Bubba()
 		:

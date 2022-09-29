@@ -72,6 +72,7 @@ namespace Jazz2::Scripting
 		static void asSpawnType(const String& typeName, int x, int y);
 		static void asSpawnTypeParams(const String& typeName, int x, int y, const CScriptArray& eventParams);
 
+		static void asChangeLevel(int exitType, const String& path);
 		static void asMusicPlay(const String& path);
 		static void asShowLevelText(const String& text);
 		static void asSetWeather(uint8_t weatherType, uint8_t intensity);

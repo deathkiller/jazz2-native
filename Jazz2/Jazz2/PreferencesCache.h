@@ -79,6 +79,7 @@ namespace Jazz2
 		static bool EnableWeaponWheel;
 		static bool EnableRgbLights;
 		static bool AllowUnsignedScripts;
+		static bool UseNativeBackButton;
 		static bool TutorialCompleted;
 		static bool AllowCheats;
 		static bool AllowCheatsUnlock;
@@ -110,6 +111,7 @@ namespace Jazz2
 			EnableWeaponWheel = 0x400,
 			EnableRgbLights = 0x800,
 			AllowUnsignedScripts = 0x1000,
+			UseNativeBackButton = 0x2000,
 
 			TutorialCompleted = 0x10000
 		};

@@ -26,7 +26,7 @@ namespace Jazz2
 		class Player;
 	}
 
-	namespace Actors::Enemies
+	namespace Actors::Bosses
 	{
 		class BossBase;
 	}
@@ -153,7 +153,7 @@ namespace Jazz2
 			LightingRenderer(LevelHandler* owner)
 				: _owner(owner), _renderCommandsCount(0)
 			{
-				_emittedLightsCache.reserve(16);
+				_emittedLightsCache.reserve(32);
 				setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
 			}
 
@@ -286,7 +286,7 @@ namespace Jazz2
 		std::unique_ptr<UI::HUD> _hud;
 		std::shared_ptr<UI::Menu::InGameMenu> _pauseMenu;
 		std::shared_ptr<AudioBufferPlayer> _sugarRushMusic;
-		std::shared_ptr<Actors::Enemies::BossBase> _activeBoss;
+		std::shared_ptr<Actors::Bosses::BossBase> _activeBoss;
 		WeatherType _weatherType;
 		uint8_t _weatherIntensity;
 

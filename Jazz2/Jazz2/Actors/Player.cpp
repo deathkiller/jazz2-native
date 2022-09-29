@@ -581,7 +581,7 @@ namespace Jazz2::Actors
 			// Crouch
 			if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Down)) {
 				if (_suspendType == SuspendType::SwingingVine) {
-					// TODO
+					// TODO: Swinging vine
 				} else if (_suspendType != SuspendType::None) {
 					_wasDownPressed = true;
 
@@ -1732,11 +1732,15 @@ namespace Jazz2::Actors
 					if (coinsRequired <= _coins) {
 						_coins -= coinsRequired;
 
+						ExitType exitType = (ExitType)p[0];
+						if (p[1] != 0) {
+							exitType |= ExitType::FastTransition;
+						}
 						String nextLevel;
 						if (p[4] != 0) {
 							nextLevel = _levelHandler->GetLevelText(p[2], p[3], '|');
 						}
-						_levelHandler->BeginLevelChange((ExitType)p[0], nextLevel);
+						_levelHandler->BeginLevelChange(exitType, nextLevel);
 					} else if (_bonusWarpTimer <= 0.0f) {
 						_levelHandler->ShowCoins(_coins);
 						PlaySfx("BonusWarpNotEnoughCoins"_s);
@@ -2388,8 +2392,6 @@ namespace Jazz2::Actors
 				return true;
 		}
 
-		PlayPlayerSfx("EndOfLevel"_s);
-
 		if (_suspendType != SuspendType::None) {
 			MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative | MoveType::Force);
 			_suspendType = SuspendType::None;
@@ -2397,9 +2399,6 @@ namespace Jazz2::Actors
 		}
 
 		_controllable = false;
-		if (!_inWater) {
-			SetFacingLeft(false);
-		}
 		SetState(ActorState::IsInvulnerable | ActorState::ApplyGravitation, true);
 		_fireFramesLeft = 0.0f;
 		_copterFramesLeft = 0.0f;
@@ -2412,19 +2411,35 @@ namespace Jazz2::Actors
 
 		_renderer.setDrawEnabled(true);
 
-		if (exitType == ExitType::Warp || exitType == ExitType::Bonus || exitType == ExitType::Boss || _inWater) {
-			_levelExiting = LevelExitingState::WaitingForWarp;
+		ExitType exitTypeMasked = (exitType & ExitType::TypeMask);
+		if ((exitType & ExitType::FastTransition) == ExitType::FastTransition) {
+			if (exitTypeMasked == ExitType::Warp || exitTypeMasked == ExitType::Bonus || exitTypeMasked == ExitType::Boss) {
+				_levelExiting = LevelExitingState::WaitingForWarp;
 
-			// Re-used for waiting timeout
-			_lastPoleTime = 100.0f;
+				// Re-used for waiting timeout
+				_lastPoleTime = 0.0f;
+				return false;
+			} else {
+				_levelExiting = LevelExitingState::Ready;
+				return true;
+			}
 		} else {
-			_levelExiting = LevelExitingState::Waiting;
+			PlayPlayerSfx("EndOfLevel"_s);
 
-			// Re-used for waiting timeout
-			_lastPoleTime = 300.0f;
+			if (exitTypeMasked == ExitType::Warp || exitTypeMasked == ExitType::Bonus || exitTypeMasked == ExitType::Boss || _inWater) {
+				_levelExiting = LevelExitingState::WaitingForWarp;
+
+				// Re-used for waiting timeout
+				_lastPoleTime = 100.0f;
+			} else {
+				_levelExiting = LevelExitingState::Waiting;
+				SetFacingLeft(false);
+
+				// Re-used for waiting timeout
+				_lastPoleTime = 300.0f;
+			}
+			return false;
 		}
-
-		return false;
 	}
 
 	void Player::ReceiveLevelCarryOver(ExitType exitType, const PlayerCarryOver& carryOver)
@@ -2439,7 +2454,8 @@ namespace Jazz2::Actors
 
 		_weaponAmmo[(int)WeaponType::Blaster] = UINT16_MAX;
 
-		if (exitType == ExitType::Warp || exitType == ExitType::Bonus) {
+		ExitType exitTypeMasked = (exitType & ExitType::TypeMask);
+		if (exitTypeMasked == ExitType::Warp || exitTypeMasked == ExitType::Bonus || exitTypeMasked == ExitType::Boss) {
 			PlayPlayerSfx("WarpOut"_s);
 
 			SetState(ActorState::ApplyGravitation, false);
@@ -2708,6 +2724,7 @@ namespace Jazz2::Actors
 
 				_copterFramesLeft = 3.0f * FrameTimer::FramesPerSecond;
 
+				// TODO: Add copter decoration
 				/*CopterDecor copter = new CopterDecor();
 				copter.OnActivated(new ActorActivationDetails {
 					LevelHandler = levelHandler
@@ -2730,10 +2747,6 @@ namespace Jazz2::Actors
 				break;
 			}
 		}
-
-#if MULTIPLAYER && SERVER
-		((LevelHandler)levelHandler).OnPlayerSetModifier(this, modifier);
-#endif
 
 		return true;
 	}

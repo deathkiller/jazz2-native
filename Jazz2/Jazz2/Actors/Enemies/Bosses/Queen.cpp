@@ -1,13 +1,13 @@
 ﻿#include "Queen.h"
-#include "../../ILevelHandler.h"
-#include "../Player.h"
-#include "../Environment/Spring.h"
+#include "../../../ILevelHandler.h"
+#include "../../Player.h"
+#include "../../Environment/Spring.h"
 
-#include "../../../nCine/Base/Random.h"
+#include "../../../../nCine/Base/Random.h"
 
 #include <float.h>
 
-namespace Jazz2::Actors::Enemies
+namespace Jazz2::Actors::Bosses
 {
 	Queen::Queen()
 		:

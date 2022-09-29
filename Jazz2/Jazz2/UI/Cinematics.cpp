@@ -135,6 +135,9 @@ namespace Jazz2::UI
 		if (!fs::IsReadableFile(fullPath)) {
 			fullPath = fs::FindPathCaseInsensitive(fs::JoinPath("Source"_s, path + ".j2v"));
 		}
+		if (!fs::IsReadableFile(fullPath)) {
+			return false;
+		}
 
 		std::unique_ptr<IFileStream> s = fs::Open(fullPath, FileAccessMode::Read);
 		if (s->GetSize() < 32 || s->GetSize() > 64 * 1024 * 1024) {

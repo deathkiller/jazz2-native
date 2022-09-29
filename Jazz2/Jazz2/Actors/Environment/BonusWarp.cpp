@@ -20,7 +20,7 @@ namespace Jazz2::Actors::Environment
 		_fast = (details.Params[1] != 0);
 		_setLaps = details.Params[2] != 0;
 		_cost = details.Params[3];
-		// ToDo: Show rabbit for non-listed number of coins (use JJ2+ anim set 8)
+		// TODO: Show rabbit for non-listed number of coins (use JJ2+ anim set 8)
 		//_showAnim = details.Params[4] != 0;
 
 		SetState(ActorState::CanBeFrozen, false);
@@ -42,7 +42,7 @@ namespace Jazz2::Actors::Environment
 				SetAnimation("Bonus100"_s);
 				break;
 			default:
-				// ToDo: Show rabbit + coins needed, if (showAnim)
+				// TODO: Show rabbit + coins needed, if (showAnim)
 				SetAnimation("BonusGeneric"_s);
 				break;
 		}

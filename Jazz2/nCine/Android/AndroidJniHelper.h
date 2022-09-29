@@ -155,6 +155,19 @@ namespace nCine
 		static jmethodID midGetUnicodeChar_;
 		static jmethodID midIsPrintingKey_;
 	};
+	
+	/// A class to handle JNI requests to `android.app.Activity`
+	class AndroidJniWrap_Activity
+	{
+	public:
+		static void init(JNIEnv *jniEnv, struct android_app *state);
+		static void finishAndRemoveTask();
+
+	private:
+		static JNIEnv *jniEnv_;
+		static jobject activityObject_;
+		static jmethodID midFinishAndRemoveTask_;
+	};
 
 	/// A class to handle JNI requests to `android.view.inputmethod.InputMethodManager`
 	class AndroidJniWrap_InputMethodManager

@@ -4,11 +4,10 @@
 
 namespace Jazz2::Actors::Enemies
 {
-	class Dragonfly : public EnemyBase
+	class Fish : public EnemyBase
 	{
 	public:
-		Dragonfly();
-		~Dragonfly();
+		Fish();
 
 		static void Preload(const ActorActivationDetails& details);
 
@@ -29,6 +28,5 @@ namespace Jazz2::Actors::Enemies
 		float _idleTime;
 		float _attackCooldown;
 		Vector2f _direction;
-		std::shared_ptr<AudioBufferPlayer> _noise;
 	};
 }

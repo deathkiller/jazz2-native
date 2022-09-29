@@ -130,6 +130,19 @@ namespace Jazz2::UI
 				line++;
 				lastWidth = 0.0f;
 				totalHeight += (_charHeight * scale * lineSpacing);
+			} else if (cursor.first == '\f') {
+				// Formatting
+				cursor = Death::Utf8::NextChar(text, cursor.second);
+				if (cursor.first == '[') {
+					idx = cursor.second;
+					do {
+						cursor = Death::Utf8::NextChar(text, idx);
+						if (cursor.first == ']') {
+							break;
+						}
+						idx = cursor.second;
+					} while (idx < textSize);
+				}
 			} else {
 				Rectf uvRect;
 				if (cursor.first < 128) {
@@ -177,14 +190,19 @@ namespace Jazz2::UI
 
 		Vector2i texSize = _texture->size();
 		Shader* colorizeShader;
-		bool useRandomColor;
+		bool useRandomColor, isShadow;
+		float alpha;
 		if (color.R() == DefaultColor.R() && color.G() == DefaultColor.G() && color.B() == DefaultColor.B()) {
 			colorizeShader = nullptr;
 			useRandomColor = false;
-			color = Colorf(1.0f, 1.0f, 1.0f, color.A());
+			isShadow = false;
+			alpha = color.A();
+			color = Colorf(1.0f, 1.0f, 1.0f, alpha);
 		} else {
 			colorizeShader = ContentResolver::Current().GetShader(PrecompiledShader::Colorize);
 			useRandomColor = (color.R() == RandomColor.R() && color.G() == RandomColor.G() && color.B() == RandomColor.B());
+			isShadow = (color.R() == 0.0f && color.G() == 0.0f && color.B() == 0.0f);
+			alpha = std::min(color.A() * 2.0f, 1.0f);
 		}
 
 		idx = 0;
@@ -201,6 +219,60 @@ namespace Jazz2::UI
 					case Alignment::Right: originPos.X += (totalWidth - lineWidths[line & (MaxLines - 1)]); break;
 				}
 				originPos.Y -= (_charHeight * scale * lineSpacing);
+			} else if (cursor.first == '\f') {
+				// Formatting
+				cursor = Death::Utf8::NextChar(text, cursor.second);
+				if (cursor.first == '[') {
+					idx = cursor.second;
+					cursor = Death::Utf8::NextChar(text, idx);
+					if (cursor.first == 'c') {
+						idx = cursor.second;
+						cursor = Death::Utf8::NextChar(text, idx);
+						if (cursor.first == ':') {
+							// Set custom color
+							idx = cursor.second;
+							cursor = Death::Utf8::NextChar(text, idx);
+							if (cursor.first == '0') {
+								idx = cursor.second;
+								cursor = Death::Utf8::NextChar(text, idx);
+								if (cursor.first == 'x') {
+									idx = cursor.second;
+									int colorIdx = 0;
+									char colorBuffer[9];
+									do {
+										cursor = Death::Utf8::NextChar(text, idx);
+										if (cursor.first == ']') {
+											break;
+										}
+										if (colorIdx < _countof(colorBuffer) - 1) {
+											colorBuffer[colorIdx++] = (char)cursor.first;
+										}
+										idx = cursor.second;
+									} while (idx < textSize);
+
+									if (colorIdx > 0 && !useRandomColor && !isShadow) {
+										colorBuffer[colorIdx] = '\0';
+										char* end = colorBuffer + colorIdx;
+										unsigned long colorValue = strtoul(colorBuffer, &end, 16);
+										if (colorBuffer != end) {
+											color = Color(colorValue);
+											color.SetAlpha(0.5f * alpha * color.A());
+											if (colorizeShader == nullptr) {
+												colorizeShader = ContentResolver::Current().GetShader(PrecompiledShader::Colorize);
+											}
+										}
+									}
+								}
+							}
+						} else if (cursor.first == ']') {
+							// Reset color
+							if (!useRandomColor && !isShadow) {
+								color = Colorf(1.0f, 1.0f, 1.0f, alpha);
+								colorizeShader = nullptr;
+							}
+						}
+					}
+				}
 			} else {
 				Rectf uvRect;
 				if (cursor.first < 128) {

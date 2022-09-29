@@ -99,14 +99,14 @@ namespace Jazz2::UI::Menu
 		constexpr float logoTextTranslate = 0.0f;
 
 		// Show blurred viewport behind
-		DrawTexture(*_owner->_root->_blurPass4.GetTarget(), Vector2f::Zero, 500, Vector2f(ViewSize.X, ViewSize.Y), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf(0.5f, 0.5f, 0.5f, std::min(AnimTime * 8.0f, 1.0f)));
+		DrawTexture(*_owner->_root->_blurPass4.GetTarget(), Vector2f::Zero, 500, Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y)), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf(0.5f, 0.5f, 0.5f, std::min(AnimTime * 8.0f, 1.0f)));
 		Vector4f ambientColor = _owner->_root->_ambientColor;
 		if (ambientColor.W < 1.0f) {
-			DrawSolid(Vector2f::Zero, 502, Vector2f(ViewSize.X, ViewSize.Y), Colorf(ambientColor.X, ambientColor.Y, ambientColor.Z, (1.0f - ambientColor.W) * std::min(AnimTime * 8.0f, 1.0f)));
+			DrawSolid(Vector2f::Zero, 502, Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y)), Colorf(ambientColor.X, ambientColor.Y, ambientColor.Z, (1.0f - ambientColor.W) * std::min(AnimTime * 8.0f, 1.0f)));
 		}
 
 		if (_owner->_touchButtonsTimer > 0.0f && _owner->_sections.size() >= 2) {
-			_owner->DrawElement("MenuLineArrow"_s, -1, center.X, 40.0f, ShadowLayer, Alignment::Center, Colorf::White);
+			_owner->DrawElement("MenuLineArrow"_s, -1, static_cast<float>(center.X), 40.0f, ShadowLayer, Alignment::Center, Colorf::White);
 		}
 
 		// Title
@@ -128,7 +128,7 @@ namespace Jazz2::UI::Menu
 			Alignment::Left, Colorf(0.6f, 0.42f, 0.42f, 0.5f), 0.5f * logoTextScale, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
 		// Version
-		Vector2f bottomRight = Vector2f(ViewSize.X, ViewSize.Y);
+		Vector2f bottomRight = Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y));
 		bottomRight.X = ViewSize.X - 24.0f;
 		bottomRight.Y -= 10.0f;
 		_owner->DrawStringShadow("v" NCINE_VERSION, charOffset, bottomRight.X, bottomRight.Y, IMenuContainer::FontLayer,
@@ -310,7 +310,7 @@ namespace Jazz2::UI::Menu
 			_pressedActions |= (1 << (int)PlayerActions::Fire);
 		}
 		// Allow Android Back button as menu key
-		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Menu)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Menu)] || pressedKeys[(uint32_t)KeySym::BACK]) {
+		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Menu)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Menu)] || (PreferencesCache::UseNativeBackButton && pressedKeys[(uint32_t)KeySym::BACK])) {
 			_pressedActions |= (1 << (int)PlayerActions::Menu);
 		}
 		// Use SwitchWeapon action as Delete key

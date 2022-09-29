@@ -79,8 +79,9 @@ namespace nCine
 			}
 		}
 
+		AndroidJniWrap_Activity::finishAndRemoveTask();
 		theAndroidApplication().shutdown();
-		ANativeActivity_finish(state->activity);
+		exit(0);
 	}
 
 	void AndroidApplication::processCommand(struct android_app* state, int32_t cmd)

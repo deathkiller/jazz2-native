@@ -10,6 +10,13 @@ if (ARM_SUBSTRING_FOUND GREATER -1 OR AARCH64_SUBSTRING_FOUND GREATER -1)
 	set(NCINE_ARM_PROCESSOR TRUE)
 endif()
 
+set(NCINE_ROOT ${CMAKE_SOURCE_DIR})
+set(NCINE_SOURCE_DIR "${NCINE_ROOT}/Jazz2/")
+set(NCINE_REVERSE_DNS "jazz2.resurrection")
+set(NCINE_APP_NAME "Jazz² Resurrection")
+set(NCINE_APP_DESCRIPTION "Open-source reimplementation of Jazz Jackrabbit 2")
+set(NCINE_VERSION "1.0.0")
+
 include(ncine_options)
 
 if(NOT IS_DIRECTORY ${NCINE_DATA_DIR})
@@ -51,14 +58,6 @@ else()
 endif()
 
 include(ncine_compiler_options)
-
-set(NCINE_ROOT ${CMAKE_SOURCE_DIR})
-set(NCINE_SOURCE_DIR "${NCINE_ROOT}/Jazz2/")
-set(NCINE_REVERSE_DNS "jazz2.resurrection")
-set(NCINE_APP_NAME "Jazz² Resurrection")
-set(NCINE_APP_DESCRIPTION "Open-source reimplementation of Jazz Jackrabbit 2")
-set(NCINE_VERSION "1.0.0")
-
 include(ncine_headers)
 include(ncine_sources)
 include(ncine_extra_sources)

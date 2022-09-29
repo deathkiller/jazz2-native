@@ -1,10 +1,10 @@
 ﻿#pragma once
 
-#include "EnemyBase.h"
+#include "../EnemyBase.h"
 
-namespace Jazz2::Actors::Enemies
+namespace Jazz2::Actors::Bosses
 {
-	class BossBase : public EnemyBase
+	class BossBase : public Enemies::EnemyBase
 	{
 	public:
 		virtual bool OnActivatedBoss() = 0;

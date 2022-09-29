@@ -115,7 +115,7 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_ANGELSCRIPT)
 					case (int)Item::AllowUnsignedScripts: enabled = PreferencesCache::AllowUnsignedScripts; break;
 #endif
-					default: enabled = false;
+					default: enabled = false; break;
 				}
 
 #if defined(WITH_ANGELSCRIPT)

@@ -1,8 +1,8 @@
 ﻿#include "BossBase.h"
-#include "../../ILevelHandler.h"
-#include "../../Events/EventMap.h"
+#include "../../../ILevelHandler.h"
+#include "../../../Events/EventMap.h"
 
-namespace Jazz2::Actors::Enemies
+namespace Jazz2::Actors::Bosses
 {
 	bool BossBase::OnPlayerDied()
 	{

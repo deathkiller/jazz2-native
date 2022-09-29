@@ -66,13 +66,7 @@ namespace Jazz2::UI
 		static constexpr uint16_t FontLayer = 200;
 		static constexpr uint16_t FontShadowLayer = 120;
 		static constexpr uint16_t TouchButtonsLayer = 400;
-
-#if !defined(DEATH_TARGET_ANDROID)
 		static constexpr int32_t TouchButtonsCount = 10;
-#else
-		// Android has native Back button
-		static constexpr int32_t TouchButtonsCount = 9;
-#endif
 
 		static constexpr float WeaponWheelAnimDuration = 20.0f;
 		static constexpr int WeaponWheelMaxVertices = 512;

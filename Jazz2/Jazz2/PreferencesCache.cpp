@@ -22,6 +22,11 @@ namespace Jazz2
 	bool PreferencesCache::EnableWeaponWheel = true;
 	bool PreferencesCache::EnableRgbLights = true;
 	bool PreferencesCache::AllowUnsignedScripts = true;
+#if defined(DEATH_TARGET_ANDROID)
+	bool PreferencesCache::UseNativeBackButton = true;
+#else
+	bool PreferencesCache::UseNativeBackButton = false;
+#endif
 	bool PreferencesCache::TutorialCompleted = false;
 	bool PreferencesCache::AllowCheats = false;
 	bool PreferencesCache::AllowCheatsUnlock = false;
@@ -106,6 +111,9 @@ namespace Jazz2
 						EnableWeaponWheel = ((boolOptions & BoolOptions::EnableWeaponWheel) == BoolOptions::EnableWeaponWheel);
 						EnableRgbLights = ((boolOptions & BoolOptions::EnableRgbLights) == BoolOptions::EnableRgbLights);
 						AllowUnsignedScripts = ((boolOptions & BoolOptions::AllowUnsignedScripts) == BoolOptions::AllowUnsignedScripts);
+#if defined(DEATH_TARGET_ANDROID)
+						UseNativeBackButton = ((boolOptions & BoolOptions::UseNativeBackButton) == BoolOptions::UseNativeBackButton);
+#endif
 						TutorialCompleted = ((boolOptions & BoolOptions::TutorialCompleted) == BoolOptions::TutorialCompleted);
 
 						// Bitmask of unlocked episodes, used only if compiled with SHAREWARE_DEMO_ONLY
@@ -240,6 +248,7 @@ namespace Jazz2
 		if (EnableWeaponWheel) boolOptions |= BoolOptions::EnableWeaponWheel;
 		if (EnableRgbLights) boolOptions |= BoolOptions::EnableRgbLights;
 		if (AllowUnsignedScripts) boolOptions |= BoolOptions::AllowUnsignedScripts;
+		if (UseNativeBackButton) boolOptions |= BoolOptions::UseNativeBackButton;
 		if (TutorialCompleted) boolOptions |= BoolOptions::TutorialCompleted;
 		co.WriteValue<uint64_t>((uint64_t)boolOptions);
 

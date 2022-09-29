@@ -29,7 +29,7 @@ namespace Jazz2::Actors::Weapons
 		co_await RequestMetadataAsync("Weapon/Electro"_s);
 
 		AnimState state = AnimState::Idle;
-		// TODO
+		// TODO: Electro shot rendering
 
 		SetAnimation(state);
 

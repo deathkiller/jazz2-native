@@ -119,7 +119,7 @@ namespace Jazz2::UI::Menu
 		center.Y = topLine + (bottomLine - topLine) * 0.7f / _items.size();
 		int charOffset = 0;
 
-		_root->DrawStringShadow("Play Story"_s, charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow("Play Episodes"_s, charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		float expandedAnimation2 = std::min(_expandedAnimation * 6.0f, 1.0f);

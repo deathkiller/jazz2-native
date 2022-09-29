@@ -25,8 +25,13 @@ namespace Jazz2
 		Warp,
 		Bonus,
 		Special,
-		Boss
+		Boss,
+
+		TypeMask = 0x0f,
+		FastTransition = 0x80
 	};
+
+	DEFINE_ENUM_OPERATORS(ExitType);
 
 	enum class WeaponType : uint8_t {
 		Blaster = 0,

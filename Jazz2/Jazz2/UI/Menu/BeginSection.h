@@ -16,7 +16,7 @@ namespace Jazz2::UI::Menu
 
 	private:
 		enum class Item {
-			PlayStory,
+			PlayEpisodes,
 #if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
 			Import,
 #endif

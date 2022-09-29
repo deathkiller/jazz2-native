@@ -110,7 +110,7 @@ namespace nCine
 #if _DEBUG
 		sprintf_s(debugString, "Bind VAO 0x%lx (", uintptr_t(binding.object.get()));
 
-		// TODO
+		// TODO: GLDebug
 		/*bool firstVbo = true;
 		for (unsigned int i = 0; i < binding.format.numAttributes(); i++)
 		{

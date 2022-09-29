@@ -531,7 +531,7 @@ else() # GCC and LLVM
 			INTERFACE_INCLUDE_DIRECTORIES ${LUA_INCLUDE_DIR})
 	endif()
 	
-	# TODO: added by me
+	# Always use Zlib on Linux
 	find_package(ZLIB)
 	set(ZLIB_FOUND 1)
 

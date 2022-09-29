@@ -35,6 +35,10 @@ namespace nCine
 	jmethodID AndroidJniClass_KeyEvent::midGetUnicodeChar_ = nullptr;
 	jmethodID AndroidJniClass_KeyEvent::midIsPrintingKey_ = nullptr;
 
+	JNIEnv *AndroidJniWrap_Activity::jniEnv_ = nullptr;
+	jobject AndroidJniWrap_Activity::activityObject_ = nullptr;
+	jmethodID AndroidJniWrap_Activity::midFinishAndRemoveTask_ = nullptr;
+
 	JNIEnv* AndroidJniWrap_InputMethodManager::jniEnv_ = nullptr;
 	jobject AndroidJniWrap_InputMethodManager::inputMethodManagerObject_ = nullptr;
 	jmethodID AndroidJniWrap_InputMethodManager::midToggleSoftInput_ = nullptr;
@@ -70,6 +74,7 @@ namespace nCine
 				// Every JNI class will access the Java environment through this static pointer
 				AndroidJniClass::jniEnv_ = jniEnv_;
 				initClasses();
+				AndroidJniWrap_Activity::init(jniEnv_, state);
 				AndroidJniWrap_InputMethodManager::init(jniEnv_, state);
 
 				// Cache the value of SDK version to avoid going through JNI in the future
@@ -354,6 +359,28 @@ namespace nCine
 		return jniEnv_->CallBooleanMethod(javaObject_, midIsPrintingKey_);
 	}
 
+	// ------------------- AndroidJniWrap_Activity -------------------
+
+	void AndroidJniWrap_Activity::init(JNIEnv *jniEnv, struct android_app *state)
+	{
+		jniEnv_ = jniEnv;
+
+		// Retrieve `NativeActivity`
+		activityObject_ = state->activity->clazz;
+		jclass nativeActivityClass = jniEnv_->GetObjectClass(activityObject_);
+
+		midFinishAndRemoveTask_ = AndroidJniClass::getMethodID(nativeActivityClass, "finishAndRemoveTask", "()V");
+	}
+
+	void AndroidJniWrap_Activity::finishAndRemoveTask()
+	{
+		// Check if SDK version requirements are met
+		if (AndroidJniHelper::sdkVersion() >= 21)
+			jniEnv_->CallVoidMethod(activityObject_, midFinishAndRemoveTask_);
+	}
+
+	// ------------------- AndroidJniWrap_InputMethodManager -------------------
+	
 	void AndroidJniWrap_InputMethodManager::init(JNIEnv* jniEnv, struct android_app* state)
 	{
 		jniEnv_ = jniEnv;

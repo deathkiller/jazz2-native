@@ -2,7 +2,7 @@
 
 #include "BossBase.h"
 
-namespace Jazz2::Actors::Enemies
+namespace Jazz2::Actors::Bosses
 {
 	class Queen : public BossBase
 	{

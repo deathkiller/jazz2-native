@@ -27,7 +27,7 @@ namespace Jazz2::UI::Menu
 		_items[(int)Item::Import].Name = "Import Episodes"_s;
 #	endif
 #else
-		_items[(int)Item::PlayStory].Name = "Play Story"_s;
+		_items[(int)Item::PlayEpisodes].Name = "Play Episodes"_s;
 #endif
 		_items[(int)Item::Options].Name = "Options"_s;
 		_items[(int)Item::About].Name = "About"_s;
@@ -44,9 +44,9 @@ namespace Jazz2::UI::Menu
 
 #if defined(SHAREWARE_DEMO_ONLY)
 		if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None) {
-			_items[(int)Item::PlayStory].Name = "Play Story"_s;
+			_items[(int)Item::PlayEpisodes].Name = "Play Episodes"_s;
 		} else {
-			_items[(int)Item::PlayStory].Name = "Play Shareware Demo"_s;
+			_items[(int)Item::PlayEpisodes].Name = "Play Shareware Demo"_s;
 		}
 #endif
 
@@ -156,7 +156,7 @@ namespace Jazz2::UI::Menu
 		_root->PlaySfx("MenuSelect"_s, 0.6f);
 
 		switch (_selectedIndex) {
-			case (int)Item::PlayStory:
+			case (int)Item::PlayEpisodes:
 				if (_isVerified) {
 #if defined(SHAREWARE_DEMO_ONLY)
 					if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None) {

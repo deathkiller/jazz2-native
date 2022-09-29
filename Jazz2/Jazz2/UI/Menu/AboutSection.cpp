@@ -1,7 +1,7 @@
 ﻿#include "AboutSection.h"
 
 #if defined(_DEBUG)
-#	define INFO_BUILD_TYPE "debug"
+#	define INFO_BUILD_TYPE "\f[c:0x996b6b]debug\f[c]"
 #else
 #	define INFO_BUILD_TYPE "release"
 #endif
@@ -90,7 +90,7 @@
 #	define INFO13 ""
 #endif
 
-#define ADDITIONAL_INFO "This project uses modified nCine game engine.\n\nThis " INFO_BUILD_TYPE " build uses these additional libraries:\n" INFO1 INFO2 INFO3 INFO4 INFO5 INFO6 INFO7 INFO8 INFO9 INFO10 INFO11 INFO12 INFO13
+#define ADDITIONAL_INFO "This project uses modified \f[c:0x9e7056]nCine\f[c] game engine.\n\nThis " INFO_BUILD_TYPE " build uses these additional libraries:\n" INFO1 INFO2 INFO3 INFO4 INFO5 INFO6 INFO7 INFO8 INFO9 INFO10 INFO11 INFO12 INFO13
 
 namespace Jazz2::UI::Menu
 {
@@ -120,7 +120,7 @@ namespace Jazz2::UI::Menu
 
 		int charOffset = 0;
 
-		_root->DrawStringShadow("Reimplementation of the game Jazz Jackrabbit 2 released in 1998. Supports various\nversions of the game (Shareware Demo, Holiday Hare '98, The Secret Files and\nChristmas Chronicles). Also, it partially supports some features of JJ2+ extension."_s,
+		_root->DrawStringShadow("Reimplementation of the game \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] released in 1998. Supports various\nversions of the game (Shareware Demo, Holiday Hare '98, The Secret Files and\nChristmas Chronicles). Also, it partially supports some features of JJ2+ extension."_s,
 			charOffset, viewSize.X * 0.5f, pos.Y - 22.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Font::DefaultColor, 0.7f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 

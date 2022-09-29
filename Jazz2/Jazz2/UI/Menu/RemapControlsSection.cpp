@@ -348,18 +348,18 @@ namespace Jazz2::UI::Menu
 
 	void RemapControlsSection::RefreshCollisions()
 	{
-		// TODO
+		// TODO: Collisions
 	}
 
 	bool RemapControlsSection::HasCollision(KeySym key)
 	{
-		// TODO
+		// TODO: Collisions
 		return false;
 	}
 
 	bool RemapControlsSection::HasCollision(int gamepadIndex, ButtonName gamepadButton)
 	{
-		// TODO
+		// TODO: Collisions
 		return false;
 	}
 

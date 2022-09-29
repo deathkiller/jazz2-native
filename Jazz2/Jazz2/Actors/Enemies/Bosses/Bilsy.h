@@ -2,12 +2,12 @@
 
 #include "BossBase.h"
 
-namespace Jazz2::Actors::Enemies
+namespace Jazz2::Actors::Bosses
 {
-	class Bubba : public BossBase
+	class Bilsy : public BossBase
 	{
 	public:
-		Bubba();
+		Bilsy();
 
 		static void Preload(const ActorActivationDetails& details);
 
@@ -21,10 +21,7 @@ namespace Jazz2::Actors::Enemies
 	private:
 		static constexpr int StateTransition = -1;
 		static constexpr int StateWaiting = 0;
-		static constexpr int StateJumping = 1;
-		static constexpr int StateFalling = 2;
-		static constexpr int StateTornado = 3;
-		static constexpr int StateDying = 4;
+		static constexpr int StateWaiting2 = 1;
 
 		class Fireball : public EnemyBase
 		{
@@ -40,13 +37,15 @@ namespace Jazz2::Actors::Enemies
 
 		private:
 			float _timeLeft;
+
+			void FollowNearestPlayer();
 		};
 
-		int _state = StateWaiting;
+		int _state;
 		float _stateTime;
-		uint8_t _endText;
+		uint8_t _theme, _endText;
+		Vector2f _originPos;
 
-		void FollowNearestPlayer();
-		void TornadoToNearestPlayer();
+		void Teleport();
 	};
 }

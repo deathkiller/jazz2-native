@@ -15,7 +15,6 @@
 
 #include "../Actors/Enemies/Bat.h"
 #include "../Actors/Enemies/Bee.h"
-#include "../Actors/Enemies/Bubba.h"
 #include "../Actors/Enemies/Caterpillar.h"
 #include "../Actors/Enemies/Crab.h"
 #include "../Actors/Enemies/Demon.h"
@@ -24,12 +23,18 @@
 #include "../Actors/Enemies/Dragonfly.h"
 #include "../Actors/Enemies/FatChick.h"
 #include "../Actors/Enemies/Fencer.h"
+#include "../Actors/Enemies/Fish.h"
 #include "../Actors/Enemies/Helmut.h"
 #include "../Actors/Enemies/LabRat.h"
 #include "../Actors/Enemies/Lizard.h"
+#include "../Actors/Enemies/LizardFloat.h"
 #include "../Actors/Enemies/MadderHatter.h"
-#include "../Actors/Enemies/Queen.h"
+#include "../Actors/Enemies/Monkey.h"
+
+#include "../Actors/Enemies/Rapier.h"
 #include "../Actors/Enemies/Raven.h"
+#include "../Actors/Enemies/Skeleton.h"
+#include "../Actors/Enemies/Sparks.h"
 #include "../Actors/Enemies/Sucker.h"
 #include "../Actors/Enemies/SuckerFloat.h"
 #include "../Actors/Enemies/Turtle.h"
@@ -38,6 +43,11 @@
 #include "../Actors/Enemies/TurtleTube.h"
 #include "../Actors/Enemies/Witch.h"
 
+#include "../Actors/Enemies/Bosses/Bilsy.h"
+#include "../Actors/Enemies/Bosses/Bubba.h"
+#include "../Actors/Enemies/Bosses/Queen.h"
+#include "../Actors/Enemies/Bosses/TurtleBoss.h"
+
 #include "../Actors/Environment/AirboardGenerator.h"
 #include "../Actors/Environment/AmbientBubbles.h"
 #include "../Actors/Environment/AmbientSound.h"
@@ -45,6 +55,7 @@
 #include "../Actors/Environment/Bomb.h"
 #include "../Actors/Environment/BonusWarp.h"
 #include "../Actors/Environment/Checkpoint.h"
+#include "../Actors/Environment/Copter.h"
 #include "../Actors/Environment/EndOfLevel.h"
 #include "../Actors/Environment/Eva.h"
 #include "../Actors/Environment/Moth.h"
@@ -123,7 +134,7 @@ namespace Jazz2::Events
 		// Enemies
 		RegisterSpawnable<Enemies::Turtle>(EventType::EnemyTurtle);
 		RegisterSpawnable<Enemies::Lizard>(EventType::EnemyLizard);
-		//RegisterSpawnable(EventType::EnemyLizardFloat, LizardFloat.Create, LizardFloat.Preload);
+		RegisterSpawnable<Enemies::LizardFloat>(EventType::EnemyLizardFloat);
 		RegisterSpawnable<Enemies::Dragon>(EventType::EnemyDragon);
 		RegisterSpawnable<Enemies::SuckerFloat>(EventType::EnemySuckerFloat);
 		RegisterSpawnable<Enemies::Sucker>(EventType::EnemySucker);
@@ -132,9 +143,9 @@ namespace Jazz2::Events
 		RegisterSpawnable<Enemies::Bat>(EventType::EnemyBat);
 		RegisterSpawnable<Enemies::FatChick>(EventType::EnemyFatChick);
 		RegisterSpawnable<Enemies::Fencer>(EventType::EnemyFencer);
-		//RegisterSpawnable(EventType::EnemyRapier, Rapier.Create, Rapier.Preload);
-		//RegisterSpawnable(EventType::EnemySparks, Sparks.Create, Sparks.Preload);
-		//RegisterSpawnable(EventType::EnemyMonkey, Monkey.Create, Monkey.Preload);
+		RegisterSpawnable<Enemies::Rapier>(EventType::EnemyRapier);
+		RegisterSpawnable<Enemies::Sparks>(EventType::EnemySparks);
+		RegisterSpawnable<Enemies::Monkey>(EventType::EnemyMonkey);
 		RegisterSpawnable<Enemies::Demon>(EventType::EnemyDemon);
 		RegisterSpawnable<Enemies::Bee>(EventType::EnemyBee);
 		//RegisterSpawnable(EventType::EnemyBeeSwarm, BeeSwarm.Create, BeeSwarm.Preload);
@@ -142,25 +153,24 @@ namespace Jazz2::Events
 		RegisterSpawnable<Enemies::Crab>(EventType::EnemyCrab);
 		RegisterSpawnable<Enemies::Doggy>(EventType::EnemyDoggy);
 		RegisterSpawnable<Enemies::Dragonfly>(EventType::EnemyDragonfly);
-		//RegisterSpawnable(EventType::EnemyFish, Fish.Create, Fish.Preload);
+		RegisterSpawnable<Enemies::Fish>(EventType::EnemyFish);
 		RegisterSpawnable<Enemies::MadderHatter>(EventType::EnemyMadderHatter);
 		RegisterSpawnable<Enemies::Raven>(EventType::EnemyRaven);
-		//RegisterSpawnable(EventType::EnemySkeleton, Skeleton.Create, Skeleton.Preload);
+		RegisterSpawnable<Enemies::Skeleton>(EventType::EnemySkeleton);
 		RegisterSpawnable<Enemies::TurtleTough>(EventType::EnemyTurtleTough);
 		RegisterSpawnable<Enemies::TurtleTube>(EventType::EnemyTurtleTube);
 		RegisterSpawnable<Enemies::Witch>(EventType::EnemyWitch);
-
 		RegisterSpawnable<Enemies::TurtleShell>(EventType::TurtleShell);
 
-		/*RegisterSpawnable(EventType::BossBilsy, Bilsy.Create, Bilsy.Preload);
-		RegisterSpawnable(EventType::BossDevan, Devan.Create, Devan.Preload);
-		RegisterSpawnable(EventType::BossDevanRemote, DevanRemote.Create, DevanRemote.Preload);*/
-		RegisterSpawnable<Enemies::Queen>(EventType::BossQueen);
+		RegisterSpawnable<Bosses::Bilsy>(EventType::BossBilsy);
+		//RegisterSpawnable(EventType::BossDevan, Devan.Create, Devan.Preload);
+		//RegisterSpawnable(EventType::BossDevanRemote, DevanRemote.Create, DevanRemote.Preload);
+		RegisterSpawnable<Bosses::Queen>(EventType::BossQueen);
 		/*RegisterSpawnable(EventType::BossRobot, Robot.Create, Robot.Preload);
 		RegisterSpawnable(EventType::BossTweedle, Tweedle.Create, Tweedle.Preload);
-		RegisterSpawnable(EventType::BossUterus, Uterus.Create, Uterus.Preload);
-		RegisterSpawnable(EventType::BossTurtleTough, TurtleToughBoss.Create, TurtleToughBoss.Preload);*/
-		RegisterSpawnable<Enemies::Bubba>(EventType::BossBubba);
+		RegisterSpawnable(EventType::BossUterus, Uterus.Create, Uterus.Preload);*/
+		RegisterSpawnable<Bosses::TurtleBoss>(EventType::BossTurtleTough);
+		RegisterSpawnable<Bosses::Bubba>(EventType::BossBubba);
 		//RegisterSpawnable(EventType::BossBolly, Bolly.Create, Bolly.Preload);
 
 		// Collectibles
@@ -188,7 +198,7 @@ namespace Jazz2::Events
 		RegisterSpawnable<Environment::BirdCage>(EventType::BirdCage);
 
 		RegisterSpawnable<Environment::AirboardGenerator>(EventType::AirboardGenerator);
-		//RegisterSpawnable(EventType::Copter, Copter.Create, Copter.Preload);
+		RegisterSpawnable<Environment::Copter>(EventType::Copter);
 
 		/*RegisterSpawnable(EventType::RollingRock, RollingRock.Create, RollingRock.Preload);
 		RegisterSpawnable(EventType::SwingingVine, SwingingVine.Create, SwingingVine.Preload);*/

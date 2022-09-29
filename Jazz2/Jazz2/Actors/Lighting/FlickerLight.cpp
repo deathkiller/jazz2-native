@@ -16,17 +16,41 @@ namespace Jazz2::Actors::Lighting
 		_brightness = details.Params[1] / 255.0f;
 		_radiusNear = (float)*(uint16_t*)&details.Params[2];
 		_radiusFar = (float)*(uint16_t*)&details.Params[4];
-		_phase = 1.0;
+		_phase = 0.6;
 
 		SetState(ActorState::ForceDisableCollisions, true);
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
+
+		for (int i = 0; i < LightPartCount; i++) {
+			float radius = Random().FastFloat(20.0f, 40.0f);
+			float angle = Random().FastFloat(0.0f, fTwoPi);
+			float distance = Random().FastFloat(0.0f, _radiusFar * 0.6f);
+
+			LightPart& part = _parts.emplace_back();
+			part.Radius = radius;
+			part.Pos = Vector2f(_pos.X + cosf(angle) * distance, _pos.Y + sinf(angle) * distance);
+			part.Phase = (float)i / LightPartCount;
+		}
 
 		co_return true;
 	}
 
 	void FlickerLight::OnUpdate(float timeMult)
 	{
-		_phase = lerp(_phase, Random().FastFloat(), 0.04f * timeMult);
+		_phase = lerp(_phase, Random().FastFloat() * 0.6f, 0.04f * timeMult);
+
+		for (auto& part : _parts) {
+			part.Phase += timeMult * 0.01f;
+			if (part.Phase >= 1.0f) {
+				float radius = Random().FastFloat(20.0f, 40.0f);
+				float angle = Random().FastFloat(0.0f, fTwoPi);
+				float distance = Random().FastFloat(0.0f, _radiusFar * 0.6f);
+
+				part.Radius = radius;
+				part.Pos = Vector2f(_pos.X + cosf(angle) * distance, _pos.Y + sinf(angle) * distance);
+				part.Phase = 0.0f;
+			}
+		}
 	}
 
 	void FlickerLight::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
@@ -37,5 +61,16 @@ namespace Jazz2::Actors::Lighting
 		light.Brightness = _brightness;
 		light.RadiusNear = _radiusNear;
 		light.RadiusFar = lerp(_radiusNear, _radiusFar, _phase);
+
+		for (auto& part : _parts) {
+			float phase = sinf(part.Phase * fPi);
+
+			auto& light2 = lights.emplace_back();
+			light2.Pos = part.Pos;
+			light2.Intensity = _intensity * phase * 0.4f;
+			light2.Brightness = _brightness  * phase * 0.4f;
+			light2.RadiusNear = 0.0f;
+			light2.RadiusFar = part.Radius;
+		}
 	}
 }

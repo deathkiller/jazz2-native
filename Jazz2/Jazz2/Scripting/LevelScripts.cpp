@@ -133,12 +133,25 @@ namespace Jazz2::Scripting
 		r = _engine->RegisterGlobalFunction("void Spawn(const string &in, int, int)", asFUNCTION(asSpawnType), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = _engine->RegisterGlobalFunction("void Spawn(const string &in, int, int, const array<uint8> &in)", asFUNCTION(asSpawnTypeParams), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
+		r = _engine->RegisterGlobalFunction("void ChangeLevel(int, const string &in = string())", asFUNCTION(asChangeLevel), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = _engine->RegisterGlobalFunction("void MusicPlay(const string &in)", asFUNCTION(asMusicPlay), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = _engine->RegisterGlobalFunction("void ShowLevelText(const string &in)", asFUNCTION(asShowLevelText), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = _engine->RegisterGlobalFunction("void SetWeather(uint8, uint8)", asFUNCTION(asSetWeather), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
 		// Game-specific definitions
-		constexpr char AsLibrary[] = R"(
+		constexpr char AsDefinitionsLibrary[] = R"(
+enum ExitType {
+	None,
+
+	Normal,
+	Warp,
+	Bonus,
+	Special,
+	Boss,
+
+	FastTransition = 0x80
+}
+
 enum GameDifficulty {
 	Default,
 	Easy,
@@ -157,7 +170,7 @@ enum WeatherType {
 	OutdoorsOnly = 0x80
 };
 )";
-		r = _module->AddScriptSection("__Definitions", AsLibrary, _countof(AsLibrary) - 1, 0); RETURN_ASSERT(r >= 0);
+		r = _module->AddScriptSection("__Definitions", AsDefinitionsLibrary, _countof(AsDefinitionsLibrary) - 1, 0); RETURN_ASSERT(r >= 0);
 
 		// Game-specific classes
 		ScriptActorWrapper::RegisterFactory(_engine, _module);
@@ -270,19 +283,21 @@ enum WeatherType {
 						// Overwrite the #if directive with space characters to avoid compiler error
 						pos += len;
 
+						// Has this identifier been defined by the application or not?
+						auto it = definedSymbols.find(String::nullTerminatedView(word));
+						bool defined = (it != definedSymbols.end() && it->second);
+
 						for (int i = start; i < pos; i++) {
 							if (scriptContent[i] != '\n') {
 								scriptContent[i] = ' ';
 							}
 						}
 
-						// Has this identifier been defined by the application or not?
-						auto it = definedSymbols.find(String::nullTerminatedView(word));
-						if (it == definedSymbols.end() || !it->second) {
+						if (defined) {
+							nested++;
+						} else {
 							// Exclude all the code until and including the #endif
 							pos = ExcludeCode(scriptContent, pos);
-						} else {
-							nested++;
 						}
 					}
 				} else if (token == "endif"_s) {
@@ -413,6 +428,12 @@ enum WeatherType {
 					nested++;
 				} else if (token == "endif"_s) {
 					if (nested-- == 0) {
+						for (uint32_t i = pos; i < pos + len; i++) {
+							if (scriptContent[i] != '\n') {
+								scriptContent[i] = ' ';
+							}
+						}
+
 						pos += len;
 						break;
 					}
@@ -936,6 +957,13 @@ enum WeatherType {
 			.Params = spawnParams
 		});
 		_this->_levelHandler->AddActor(std::shared_ptr<Actors::ActorBase>(actor));
+	}
+
+	void LevelScripts::asChangeLevel(int exitType, const String& path)
+	{
+		auto ctx = asGetActiveContext();
+		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		_this->_levelHandler->BeginLevelChange((ExitType)exitType, path);
 	}
 
 	void LevelScripts::asMusicPlay(const String& path)

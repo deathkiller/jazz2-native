@@ -59,15 +59,9 @@ endif()
 target_compile_definitions(ncine PRIVATE ${ANDROID_GENERATED_FLAGS})
 target_link_libraries(ncine PRIVATE ${PRIVATE_LINK_LIBRARIES})
 
-# TODO: merged "native_app_glue" into "game"
-#add_library(native_app_glue STATIC ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
-#target_link_libraries(native_app_glue PRIVATE android log)
-
-#add_library(game SHARED ${NCINE_ROOT}/tests/${NCINE_STARTUP_TEST}.cpp)
-#target_link_libraries(game PRIVATE native_app_glue ncine_main ncine)
-
+# Merged "native_app_glue" into "game" target
 add_library(game SHARED ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
-target_link_libraries(game PRIVATE android log ncine_main ncine)
+target_link_libraries(game PRIVATE ${ANDROID_LIBRARY} ${LOG_LIBRARY} ncine_main ncine)
 target_include_directories(game PRIVATE ${ANDROID_NDK}/sources/android/native_app_glue)
 if(IS_DIRECTORY ${GENERATED_INCLUDE_DIR})
 	get_filename_component(PARENT_GENERATED_INCLUDE_DIR ${GENERATED_INCLUDE_DIR} DIRECTORY)
