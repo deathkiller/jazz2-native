@@ -60,11 +60,35 @@ namespace Jazz2::Actors::Weapons
 	void Thunderbolt::OnUpdate(float timeMult)
 	{
 		if (auto player = dynamic_cast<Player*>(_owner.get())) {
-			if (_firedUp != player->_wasUpPressed) {
+			if (_firedUp != player->_wasUpPressed || IsFacingLeft() != player->IsFacingLeft()) {
 				_hit = true;
 				_strength = 0;
 				DecreaseHealth(INT32_MAX);
 				return;
+			}
+
+			if (!_firedUp) {
+				Vector3i initialPos; Vector2f gunspotPos; float angle;
+				player->GetFirePointAndAngle(initialPos, gunspotPos, angle);
+				float scale = 1.0f - std::abs(gunspotPos.X - _pos.X) / _currentAnimation->Base->FrameDimensions.X;
+				MoveInstantly(gunspotPos, MoveType::Absolute | MoveType::Force);
+				_renderer.setScale(Vector2f(scale, 1.0f));
+
+				float anglePrev = _renderer.rotation();
+				if (IsFacingLeft()) {
+					angle = atan2f(_pos.Y - _farPoint.Y, _pos.X - _farPoint.X);
+				} else {
+					angle = atan2f(_farPoint.Y - _pos.Y, _farPoint.X - _pos.X);
+				}
+				angle = lerp(anglePrev, angle, 0.4f * timeMult);
+				if (std::abs(anglePrev - angle) > 0.06f) {
+					_renderer.setRotation(angle);
+				} else {
+					angle = _renderer.rotation();
+				}
+
+				float distance = (IsFacingLeft() ? -140.0f : 140.0f);
+				_farPoint = Vector2f(gunspotPos.X + cosf(angle) * distance, gunspotPos.Y + sinf(angle) * distance);
 			}
 		}
 

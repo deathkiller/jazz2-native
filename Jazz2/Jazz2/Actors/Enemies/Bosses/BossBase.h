@@ -10,7 +10,7 @@ namespace Jazz2::Actors::Bosses
 		virtual bool OnActivatedBoss() = 0;
 		virtual void OnDeactivatedBoss() { };
 
-		bool OnPlayerDied();
+		virtual bool OnPlayerDied();
 
 	protected:
 		bool OnTileDeactivated() override;

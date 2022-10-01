@@ -54,6 +54,7 @@ namespace Jazz2::Actors::Bosses
 		int _lastHealth;
 		bool _queuedBackstep;
 		float _stepSize;
+		Vector2f _originPos;
 		std::shared_ptr<InvisibleBlock> _block;
 	};
 }

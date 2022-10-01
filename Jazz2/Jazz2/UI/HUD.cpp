@@ -797,7 +797,7 @@ namespace Jazz2::UI
 		if (!_levelHandler->PlayerActionPressed(player->_playerIndex, PlayerActions::ChangeWeapon, true, isGamepad) || !isGamepad) {
 			if (_weaponWheelAnim > 0.0f) {
 				if (_lastWeaponWheelIndex != -1) {
-					player->SwitchToWeaponByIndex(_lastWeaponWheelIndex);
+					player->SwitchToWeaponByIndex((uint32_t)_lastWeaponWheelIndex);
 					_lastWeaponWheelIndex = -1;
 				}
 

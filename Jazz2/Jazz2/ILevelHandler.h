@@ -46,6 +46,7 @@ namespace Jazz2
 		virtual float ElapsedFrames() const = 0;
 		virtual float WaterLevel() const = 0;
 
+		virtual const SmallVectorImpl<std::shared_ptr<Actors::ActorBase>>& GetActors() const = 0;
 		virtual const SmallVectorImpl<Actors::Player*>& GetPlayers() const = 0;
 
 		virtual float GetAmbientLight() const = 0;

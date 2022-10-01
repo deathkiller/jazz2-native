@@ -154,8 +154,12 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bosses/BossBase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bosses/Bilsy.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bosses/Bubba.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bosses/Devan.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bosses/DevanRemote.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bosses/Queen.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bosses/Robot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bosses/TurtleBoss.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bosses/Uterus.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/AirboardGenerator.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/AmbientBubbles.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/AmbientSound.cpp

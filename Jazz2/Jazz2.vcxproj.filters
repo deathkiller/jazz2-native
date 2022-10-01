@@ -1173,6 +1173,18 @@
     <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Queen.h">
       <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\DevanRemote.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Robot.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Uterus.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Devan.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1989,6 +2001,18 @@
       <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Enemies\Bosses\TurtleBoss.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Uterus.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\DevanRemote.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Robot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Devan.cpp">
       <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
     </ClCompile>
   </ItemGroup>

@@ -135,6 +135,11 @@ namespace Jazz2
 		return _waterLevel;
 	}
 
+	const SmallVectorImpl<std::shared_ptr<Actors::ActorBase>>& LevelHandler::GetActors() const
+	{
+		return _actors;
+	}
+
 	const SmallVectorImpl<Actors::Player*>& LevelHandler::GetPlayers() const
 	{
 		return _players;

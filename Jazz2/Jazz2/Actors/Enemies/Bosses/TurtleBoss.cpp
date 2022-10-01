@@ -14,32 +14,32 @@ namespace Jazz2::Actors::Bosses
 		:
 		_state(StateWaiting),
 		_stateTime(0.0f),
-		_endText(0)
+		_endText(0),
+		_maceTime(0.0f)
 	{
 	}
 
 	TurtleBoss::~TurtleBoss()
 	{
-		if (_currentMace != nullptr) {
-			_currentMace->DecreaseHealth(INT32_MAX);
-			_currentMace = nullptr;
+		if (_mace != nullptr) {
+			_mace->DecreaseHealth(INT32_MAX);
+			_mace = nullptr;
 		}
 	}
 
 	void TurtleBoss::Preload(const ActorActivationDetails& details)
 	{
-		PreloadMetadataAsync("Boss/TurtleBoss"_s);
+		PreloadMetadataAsync("Boss/TurtleTough"_s);
 		PreloadMetadataAsync("Boss/TurtleShellTough"_s);
 	}
 
 	Task<bool> TurtleBoss::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		_endText = details.Params[1];
-
-		SetHealthByDifficulty(100);
+		_originPos = _pos;
 		_scoreValue = 5000;
 
-		co_await RequestMetadataAsync("Boss/TurtleBoss"_s);
+		co_await RequestMetadataAsync("Boss/TurtleTough"_s);
 		SetAnimation(AnimState::Idle);
 
 		SetFacingLeft(true);
@@ -49,6 +49,8 @@ namespace Jazz2::Actors::Bosses
 
 	bool TurtleBoss::OnActivatedBoss()
 	{
+		SetHealthByDifficulty(100);
+		MoveInstantly(_originPos, MoveType::Absolute | MoveType::Force);
 		FollowNearestPlayer(StateWalking1, Random().NextFloat(120.0f, 160.0f));
 		return true;
 	}
@@ -81,16 +83,17 @@ namespace Jazz2::Actors::Bosses
 					_state = StateTransition;
 					SetAnimation(AnimState::Idle);
 					SetTransition((AnimState)1073741824, false, [this]() {
-						_currentMace = std::make_shared<Mace>();
-						_currentMace->OnActivated({
+						_mace = std::make_shared<Mace>();
+						_mace->OnActivated({
 							.LevelHandler = _levelHandler,
 							.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 2)
 						});
-						_levelHandler->AddActor(_currentMace);
+						_levelHandler->AddActor(_mace);
 
 						SetTransition((AnimState)1073741825, false, [this]() {
 							_state = StateAttacking;
 							_stateTime = 10.0f;
+							_maceTime = 480.0f;
 						});
 					});
 				} else if (!CanMoveToPosition(_speed.X, 0)) {
@@ -100,9 +103,43 @@ namespace Jazz2::Actors::Bosses
 				}
 				break;
 			}
+
+			case StateAttacking: {
+				_maceTime -= timeMult;
+				if (_maceTime <= 0.0f && _mace != nullptr) {
+					_mace->DecreaseHealth(INT32_MAX);
+					_mace = nullptr;
+
+					SetTransition((AnimState)1073741826, false, [this]() {
+						FollowNearestPlayer(StateWalking1, Random().NextFloat(80.0f, 160.0f));
+					});
+				}
+				break;
+			}
 		}
 
 		_stateTime -= timeMult;
+	}
+
+	bool TurtleBoss::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	{
+		if (_state == StateAttacking && _stateTime <= 0.0f) {
+			if (auto mace = dynamic_cast<Mace*>(other.get())) {
+				if (mace == _mace.get()) {
+					_mace->DecreaseHealth(INT32_MAX);
+					_mace = nullptr;
+
+					PlaySfx("AttackEnd"_s);
+
+					SetTransition((AnimState)1073741826, false, [this]() {
+						FollowNearestPlayer(StateWalking1, Random().NextFloat(80.0f, 160.0f));
+					});
+					return true;
+				}
+			}
+		}
+
+		return EnemyBase::OnHandleCollision(other);
 	}
 
 	bool TurtleBoss::OnPerish(ActorBase* collider)
@@ -148,11 +185,19 @@ namespace Jazz2::Actors::Bosses
 			_state = newState;
 			_stateTime = time;
 
-			SetFacingLeft (targetPos.X < _pos.X);
+			SetFacingLeft(targetPos.X < _pos.X);
 
 			_speed.X = (IsFacingLeft() ? -1.6f : 1.6f);
 
 			SetAnimation(AnimState::Walk);
+		}
+	}
+
+	TurtleBoss::Mace::~Mace()
+	{
+		if (_sound != nullptr) {
+			_sound->stop();
+			_sound = nullptr;
 		}
 	}
 
@@ -164,7 +209,7 @@ namespace Jazz2::Actors::Bosses
 
 		_health = INT32_MAX;
 
-		co_await RequestMetadataAsync("Boss/TurtleBoss"_s);
+		co_await RequestMetadataAsync("Boss/TurtleTough"_s);
 		SetAnimation((AnimState)1073741827);
 
 		_originPos = _pos;
@@ -182,6 +227,10 @@ namespace Jazz2::Actors::Bosses
 	void TurtleBoss::Mace::OnUpdate(float timeMult)
 	{
 		MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative | MoveType::Force);
+
+		if (_sound != nullptr) {
+			_sound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+		}
 
 		if (_returning) {
 			Vector2f diff = (_targetSpeed - _speed);

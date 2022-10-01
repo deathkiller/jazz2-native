@@ -25,8 +25,6 @@ namespace Jazz2::Actors::Bosses
 	Task<bool> Bubba::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		_endText = details.Params[1];
-
-		SetHealthByDifficulty(93);
 		_scoreValue = 4000;
 
 		SetState(ActorState::CollideWithTilesetReduced, true);
@@ -39,6 +37,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Bubba::OnActivatedBoss()
 	{
+		SetHealthByDifficulty(93);
 		FollowNearestPlayer();
 		return true;
 	}

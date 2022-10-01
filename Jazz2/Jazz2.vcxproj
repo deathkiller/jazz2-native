@@ -229,8 +229,12 @@
     <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Bilsy.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Bosses\BossBase.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Bubba.h" />
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Devan.h" />
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\DevanRemote.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Queen.h" />
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Robot.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Bosses\TurtleBoss.h" />
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Uterus.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Caterpillar.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Crab.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Demon.h" />
@@ -553,8 +557,12 @@
     <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Bilsy.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Bosses\BossBase.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Bubba.cpp" />
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Devan.cpp" />
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\DevanRemote.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Queen.cpp" />
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Robot.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Bosses\TurtleBoss.cpp" />
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Uterus.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Caterpillar.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Crab.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Demon.cpp" />

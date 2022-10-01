@@ -113,7 +113,8 @@ namespace Jazz2::Actors
 		}
 		void SetCarryingObject(ActorBase* actor, bool resetSpeed = false);
 
-		void SwitchToWeaponByIndex(int weaponIndex);
+		void SwitchToWeaponByIndex(uint32_t weaponIndex);
+		void GetFirePointAndAngle(Vector3i& initialPos, Vector2f& gunspotPos, float& angle);
 
 	protected:
 		enum class LevelExitingState {
@@ -235,6 +236,5 @@ namespace Jazz2::Actors
 		void FireWeaponTNT();
 		bool FireWeaponThunderbolt();
 		bool FireCurrentWeapon(WeaponType weaponType);
-		void GetFirePointAndAngle(Vector3i& initialPos, Vector2f& gunspotPos, float& angle);
 	};
 }

@@ -90,6 +90,7 @@ namespace Jazz2
 
 		float WaterLevel() const override;
 
+		const SmallVectorImpl<std::shared_ptr<Actors::ActorBase>>& GetActors() const override;
 		const SmallVectorImpl<Actors::Player*>& GetPlayers() const override;
 
 		float GetAmbientLight() const override;

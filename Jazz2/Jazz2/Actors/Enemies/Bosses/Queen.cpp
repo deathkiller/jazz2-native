@@ -34,8 +34,9 @@ namespace Jazz2::Actors::Bosses
 	Task<bool> Queen::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		_endText = details.Params[1];
-
 		_pos.Y -= 8.0f;
+		_originPos = _pos;
+
 		_canHurtPlayer = false;
 		SetState(ActorState::IsInvulnerable | ActorState::IsSolidObject | ActorState::SkipPerPixelCollisions, true);
 		SetState(ActorState::CanBeFrozen, false);
@@ -66,6 +67,8 @@ namespace Jazz2::Actors::Bosses
 
 	bool Queen::OnActivatedBoss()
 	{
+		MoveInstantly(_originPos, MoveType::Absolute | MoveType::Force);
+		_state = StateWaiting;
 		return true;
 	}
 

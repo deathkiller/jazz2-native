@@ -2000,9 +2000,10 @@ namespace Jazz2::Actors
 		_weaponCooldown = 1.0f;
 	}
 
-	void Player::SwitchToWeaponByIndex(int weaponIndex)
+	void Player::SwitchToWeaponByIndex(uint32_t weaponIndex)
 	{
-		if (weaponIndex >= (int)WeaponType::Count || _weaponAmmo[weaponIndex] == 0) {
+		if (weaponIndex >= (uint32_t)WeaponType::Count || _weaponAmmo[weaponIndex] == 0) {
+			PlaySfx("ChangeWeapon"_s);
 			return;
 		}
 
@@ -2141,8 +2142,7 @@ namespace Jazz2::Actors
 
 	bool Player::FireWeaponThunderbolt()
 	{
-		if (_isActivelyPushing || _inWater || _isAttachedToPole || std::abs(_speed.X) > 1.0f || std::abs(_speed.Y) > 1.0f ||
-			!(GetState(ActorState::CanJump) || _activeModifier != Modifier::None || _suspendType == SuspendType::Vine || _suspendType == SuspendType::Hook)) {
+		if (_isActivelyPushing || _inWater || _isAttachedToPole) {
 			return false;
 		}
 
@@ -2163,8 +2163,9 @@ namespace Jazz2::Actors
 		_levelHandler->AddActor(shot);
 
 		_weaponCooldown = 12.0f - (_weaponUpgrades[(int)WeaponType::Blaster] * 0.1f);
-		_controllable = false;
-		_controllableTimeout = _weaponCooldown;
+		if (!_inWater && (_currentAnimationState & AnimState::Lookup) != AnimState::Lookup) {
+			AddExternalForce(IsFacingLeft() ? 0.1f : -0.1f, 0.0f);
+		}
 
 		if (_weaponSound == nullptr) {
 			_weaponSound = PlaySfx("WeaponThunderbolt"_s, 1.0f);

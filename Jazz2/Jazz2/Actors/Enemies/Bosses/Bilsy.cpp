@@ -11,7 +11,7 @@ namespace Jazz2::Actors::Bosses
 {
 	Bilsy::Bilsy()
 		:
-		_state(StateWaiting),
+		_state(StateTransition),
 		_stateTime(0.0f),
 		_endText(0)
 	{
@@ -35,10 +35,7 @@ namespace Jazz2::Actors::Bosses
 	{
 		_theme = details.Params[0];
 		_endText = details.Params[1];
-
 		_originPos = _pos;
-
-		SetHealthByDifficulty(120);
 		_scoreValue = 3000;
 
 		SetState(ActorState::ApplyGravitation, false);
@@ -62,6 +59,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Bilsy::OnActivatedBoss()
 	{
+		SetHealthByDifficulty(120);
 		Teleport();
 		return true;
 	}
@@ -277,7 +275,13 @@ namespace Jazz2::Actors::Bosses
 			_speed.X = speed.X * 4.0f;
 			_speed.Y = speed.Y * 4.0f;
 
-			_renderer.setRotation(atan2f(_speed.Y, _speed.X));
+			if (_speed.X < 0.0f) {
+				SetFacingLeft(true);
+				_renderer.setRotation(atan2f(-_speed.Y, -_speed.X));
+			} else {
+				SetFacingLeft(false);
+				_renderer.setRotation(atan2f(_speed.Y, _speed.X));
+			}
 		}
 	}
 }

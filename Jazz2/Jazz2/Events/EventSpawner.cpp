@@ -45,8 +45,12 @@
 
 #include "../Actors/Enemies/Bosses/Bilsy.h"
 #include "../Actors/Enemies/Bosses/Bubba.h"
+#include "../Actors/Enemies/Bosses/Devan.h"
+#include "../Actors/Enemies/Bosses/DevanRemote.h"
 #include "../Actors/Enemies/Bosses/Queen.h"
+#include "../Actors/Enemies/Bosses/Robot.h"
 #include "../Actors/Enemies/Bosses/TurtleBoss.h"
+#include "../Actors/Enemies/Bosses/Uterus.h"
 
 #include "../Actors/Environment/AirboardGenerator.h"
 #include "../Actors/Environment/AmbientBubbles.h"
@@ -163,12 +167,12 @@ namespace Jazz2::Events
 		RegisterSpawnable<Enemies::TurtleShell>(EventType::TurtleShell);
 
 		RegisterSpawnable<Bosses::Bilsy>(EventType::BossBilsy);
-		//RegisterSpawnable(EventType::BossDevan, Devan.Create, Devan.Preload);
-		//RegisterSpawnable(EventType::BossDevanRemote, DevanRemote.Create, DevanRemote.Preload);
+		RegisterSpawnable<Bosses::Devan>(EventType::BossDevan);
+		RegisterSpawnable<Bosses::DevanRemote>(EventType::BossDevanRemote);
 		RegisterSpawnable<Bosses::Queen>(EventType::BossQueen);
-		/*RegisterSpawnable(EventType::BossRobot, Robot.Create, Robot.Preload);
-		RegisterSpawnable(EventType::BossTweedle, Tweedle.Create, Tweedle.Preload);
-		RegisterSpawnable(EventType::BossUterus, Uterus.Create, Uterus.Preload);*/
+		RegisterSpawnable<Bosses::Robot>(EventType::BossRobot);
+		//RegisterSpawnable(EventType::BossTweedle, Tweedle.Create, Tweedle.Preload);
+		RegisterSpawnable<Bosses::Uterus>(EventType::BossUterus);
 		RegisterSpawnable<Bosses::TurtleBoss>(EventType::BossTurtleTough);
 		RegisterSpawnable<Bosses::Bubba>(EventType::BossBubba);
 		//RegisterSpawnable(EventType::BossBolly, Bolly.Create, Bolly.Preload);
