@@ -40,6 +40,24 @@ namespace nCine
 		int _frequency;
 		openmpt_module* _module;
 
+#if defined(WITH_OPENMPT_DYNAMIC)
+		using openmpt_module_create2_t = openmpt_module* (*)(openmpt_stream_callbacks stream_callbacks, void* stream, openmpt_log_func logfunc, void* loguser, openmpt_error_func errfunc, void* erruser, int* error, const char** error_message, const openmpt_module_initial_ctl* ctls);
+		using openmpt_module_destroy_t = void (*)(openmpt_module* mod);
+		using openmpt_module_read_interleaved_stereo_t = size_t (*)(openmpt_module* mod, int32_t samplerate, size_t count, int16_t* interleaved_stereo);
+		using openmpt_module_set_position_seconds_t = double (*)(openmpt_module* mod, double seconds);
+		using openmpt_module_set_repeat_count_t = int (*)(openmpt_module* mod, int32_t repeat_count);;
+
+		static void* _openmptLib;
+		static bool _openmptLibInitialized;
+		static openmpt_module_create2_t _openmpt_module_create2;
+		static openmpt_module_destroy_t _openmpt_module_destroy;
+		static openmpt_module_read_interleaved_stereo_t _openmpt_module_read_interleaved_stereo;
+		static openmpt_module_set_position_seconds_t _openmpt_module_set_position_seconds;
+		static openmpt_module_set_repeat_count_t _openmpt_module_set_repeat_count;
+
+		static bool TryLoadLibrary();
+#endif
+
 		static size_t stream_read_func(void* stream, void* dst, size_t bytes);
 		static int stream_seek_func(void* stream, int64_t offset, int whence);
 		static int64_t stream_tell_func(void* stream);

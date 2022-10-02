@@ -137,7 +137,7 @@ namespace Jazz2::UI::Menu
 		if (PreferencesCache::ActiveRescaleMode != newMode) {
 			PreferencesCache::ActiveRescaleMode = newMode;
 			PreferencesCache::Save();
-			_root->ApplyPreferencesChanges();
+			_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 		}
 		
 		_root->LeaveSection();

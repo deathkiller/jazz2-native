@@ -141,7 +141,13 @@ if(OPENAL_FOUND)
 	
 	if(OPENMPT_FOUND)
 		target_compile_definitions(ncine PRIVATE "WITH_OPENMPT")
-		target_link_libraries(ncine PRIVATE libopenmpt::libopenmpt)
+		if(OPENMPT_DYNAMIC_LINK)
+			target_compile_definitions(ncine PRIVATE "WITH_OPENMPT_DYNAMIC")
+			target_include_directories(ncine PRIVATE "${NCINE_SOURCE_DIR}/../Libs/libopenmpt/")
+			target_link_libraries(ncine PRIVATE ${CMAKE_DL_LIBS})
+		else()
+			target_link_libraries(ncine PRIVATE libopenmpt::libopenmpt)
+		endif()
 		
 		list(APPEND PRIVATE_HEADERS
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderMpt.h

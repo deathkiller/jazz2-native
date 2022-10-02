@@ -66,7 +66,7 @@ namespace Jazz2::UI::Menu
 
 			*value = std::clamp(*value + (_root->ActionHit(PlayerActions::Left) ? -0.03f : 0.03f), 0.0f, 1.0f);
 
-			_root->ApplyPreferencesChanges();
+			_root->ApplyPreferencesChanges(ChangedPreferencesType::Audio);
 			_root->PlaySfx("MenuSelect"_s, 0.6f);
 			_isDirty = true;
 		}
@@ -170,7 +170,7 @@ namespace Jazz2::UI::Menu
 
 							*value = std::clamp(*value + (x < 0.5f ? -0.03f : 0.03f), 0.0f, 1.0f);
 
-							_root->ApplyPreferencesChanges();
+							_root->ApplyPreferencesChanges(ChangedPreferencesType::Audio);
 							_root->PlaySfx("MenuSelect"_s, 0.6f);
 							_isDirty = true;
 						} else {

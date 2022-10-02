@@ -34,9 +34,18 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 
 
 ## Running the application
+### Windows
 * Download or build the game
 * Copy original *Jazz Jackrabbit 2* directory to `‹Game›/Source/`
-* Run `‹Game›/Jazz2.exe` (on Windows) or `‹Game›/jazz2` (on other platforms)
+* Run `‹Game›/Jazz2.exe` application
+
+`‹Game›` *is path to Jazz² Resurrection. Cache is recreated during intro cinematics on the first startup, so it can't be skipped until it's done.*
+
+### Linux
+* Download or build the game
+* Copy original *Jazz Jackrabbit 2* directory to `‹Game›/Source/`
+* Install `libopenmpt-dev`, `libopenmpt-devel` or `libopenmpt` package according to your distro to enable music playback
+* Run `‹Game›/jazz2` application
 
 `‹Game›` *is path to Jazz² Resurrection. Cache is recreated during intro cinematics on the first startup, so it can't be skipped until it's done.*
 

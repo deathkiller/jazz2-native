@@ -45,7 +45,7 @@ namespace Jazz2::UI::Menu
 		void SwitchToSectionPtr(std::unique_ptr<MenuSection> section) override;
 		void LeaveSection() override;
 		void ChangeLevel(Jazz2::LevelInitialization&& levelInit) override;
-		void ApplyPreferencesChanges() override;
+		void ApplyPreferencesChanges(ChangedPreferencesType type) override;
 		bool ActionHit(PlayerActions action) override;
 
 		void DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color,

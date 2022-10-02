@@ -178,19 +178,21 @@ namespace Jazz2::UI::Menu
 		_root->_root->ChangeLevel(std::move(levelInit));
 	}
 
-	void InGameMenu::ApplyPreferencesChanges()
+	void InGameMenu::ApplyPreferencesChanges(ChangedPreferencesType type)
 	{
-		// Graphics
-		Viewport::chain().clear();
-		Vector2i res = theApplication().resolutionInt();
-		_root->OnInitializeViewport(res.X, res.Y);
-
-		// Sounds
-		if (_root->_music != nullptr) {
-			_root->_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+		if ((type & ChangedPreferencesType::Graphics) == ChangedPreferencesType::Graphics) {
+			Viewport::chain().clear();
+			Vector2i res = theApplication().resolutionInt();
+			_root->OnInitializeViewport(res.X, res.Y);
 		}
-		if (_root->_sugarRushMusic != nullptr) {
-			_root->_sugarRushMusic->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+
+		if ((type & ChangedPreferencesType::Audio) == ChangedPreferencesType::Audio) {
+			if (_root->_music != nullptr) {
+				_root->_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+			}
+			if (_root->_sugarRushMusic != nullptr) {
+				_root->_sugarRushMusic->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+			}
 		}
 	}
 

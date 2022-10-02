@@ -108,7 +108,7 @@ if(MSVC)
 	set(MSVC_BINDIR "${EXTERNAL_MSVC_DIR}/${MSVC_ARCH_SUFFIX}/Bin/")
 elseif(NOT ANDROID) # GCC and LLVM
 	if(APPLE)
-		set(CMAKE_FRAMEWORK_PATH "${EXTERNAL_MSVC_DIR}/Libs/")
+		set(CMAKE_FRAMEWORK_PATH "${PARENT_SOURCE_DIR}/nCine-external")
 		set(CMAKE_MACOSX_RPATH ON)
 
 		if(NOT IS_DIRECTORY ${CMAKE_FRAMEWORK_PATH})
@@ -144,6 +144,9 @@ elseif(NOT ANDROID) # GCC and LLVM
 		if(NCINE_WITH_VORBIS)
 			find_package(Vorbis)
 		endif()
+
+		set(OPENMPT_FOUND 1)
+		set(OPENMPT_DYNAMIC_LINK 1)
 	endif()
 	if(NCINE_WITH_LUA)
 		# Older CMake versions do not support Lua 5.4 if not required explicitly
