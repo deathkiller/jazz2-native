@@ -153,6 +153,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Witch.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bosses/BossBase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bosses/Bilsy.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bosses/Bolly.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bosses/Bubba.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bosses/Devan.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Enemies/Bosses/DevanRemote.cpp
@@ -172,6 +173,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/EndOfLevel.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Eva.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Moth.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/RollingRock.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Spring.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/SteamNote.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Explosion.cpp
@@ -247,6 +249,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MainMenu.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/OptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PauseSection.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RefreshCacheSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RemapControlsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RescaleModeSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/SoundsOptionsSection.cpp

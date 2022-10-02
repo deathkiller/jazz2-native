@@ -1,5 +1,6 @@
 ﻿#include "GameplayOptionsSection.h"
 #include "GameplayEnhancementsSection.h"
+#include "RefreshCacheSection.h"
 #include "../RgbLights.h"
 #include "../../PreferencesCache.h"
 
@@ -17,6 +18,9 @@ namespace Jazz2::UI::Menu
 #endif
 #if defined(WITH_ANGELSCRIPT)
 		_items[(int)Item::AllowUnsignedScripts].Name = "Scripting"_s;
+#endif
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		_items[(int)Item::RefreshCache].Name = "Refresh Cache"_s;
 #endif
 	}
 
@@ -41,7 +45,13 @@ namespace Jazz2::UI::Menu
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
 		}
 
-		if (_root->ActionHit(PlayerActions::Fire) || (_selectedIndex >= 1 && (_root->ActionHit(PlayerActions::Left) || _root->ActionHit(PlayerActions::Right)))) {
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		int lastBoolOption = (int)Item::RefreshCache - 1;
+#else
+		int lastBoolOption = (int)Item::Count;
+#endif
+
+		if (_root->ActionHit(PlayerActions::Fire) || (_selectedIndex >= 1 && _selectedIndex <= lastBoolOption && (_root->ActionHit(PlayerActions::Left) || _root->ActionHit(PlayerActions::Right)))) {
 			ExecuteSelected();
 		} else if (_root->ActionHit(PlayerActions::Menu)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -78,11 +88,17 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement("MenuLine"_s, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 		_root->DrawElement("MenuLine"_s, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		center.Y = topLine + (bottomLine - topLine) * 0.5f / (int)Item::Count;
+		center.Y = topLine + (bottomLine - topLine) * 0.6f / (int)Item::Count;
 		int charOffset = 0;
 
 		_root->DrawStringShadow("Gameplay"_s, charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		int lastBoolOption = (int)Item::RefreshCache - 1;
+#else
+		int lastBoolOption = (int)Item::Count;
+#endif
 
 		for (int i = 0; i < (int)Item::Count; i++) {
 			_items[i].TouchY = center.Y;
@@ -95,7 +111,7 @@ namespace Jazz2::UI::Menu
 				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
 					Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
-				if (i >= 1) {
+				if (i >= 1 && i <= lastBoolOption) {
 					_root->DrawStringShadow("<"_s, charOffset, center.X - 60.0f - 30.0f * size, center.Y + 22.0f, IMenuContainer::FontLayer + 20,
 						Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);
 					_root->DrawStringShadow(">"_s, charOffset, center.X + 70.0f + 30.0f * size, center.Y + 22.0f, IMenuContainer::FontLayer + 20,
@@ -106,7 +122,7 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
-			if (i >= 1) {
+			if (i >= 1 && i <= lastBoolOption) {
 				bool enabled;
 				switch (i) {
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
@@ -132,7 +148,8 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			center.Y += (bottomLine - topLine) * (i >= 1 ? 0.9f : 0.7f) / (int)Item::Count;
+			float padding = (i >= lastBoolOption ? 1.1f : (i >= 1 ? 1.0f : 0.8f));
+			center.Y += (bottomLine - topLine) * padding / (int)Item::Count;
 		}
 	}
 
@@ -151,7 +168,7 @@ namespace Jazz2::UI::Menu
 				}
 
 				for (int i = 0; i < (int)Item::Count; i++) {
-					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 30.0f) {
+					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 22.0f) {
 						if (_selectedIndex == i) {
 							ExecuteSelected();
 						} else {
@@ -188,6 +205,9 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 				_animation = 0.0f;
 				break;
+#endif
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+			case (int)Item::RefreshCache: _root->SwitchToSection<RefreshCacheSection>(); break;
 #endif
 		}
 	}

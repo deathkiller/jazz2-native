@@ -30,12 +30,13 @@ namespace Jazz2::Actors::Enemies
 
 		co_await RequestMetadataAsync("Enemy/Sucker"_s);
 
-		SetAnimation(AnimState::Walk);
-
 		if (parentLastHitDir != LastHitDirection::None) {
 			SetFacingLeft(parentLastHitDir == LastHitDirection::Left);
+
 			_health = 1;
+
 			SetState(ActorState::ApplyGravitation, false);
+			SetAnimation(AnimState::Walk);
 			SetTransition((AnimState)1073741824, false, [this]() {
 				_speed.X = 0;
 				SetAnimation(AnimState::Walk);
@@ -46,6 +47,8 @@ namespace Jazz2::Actors::Enemies
 			}
 			PlaySfx("Deflate"_s);
 		} else {
+			SetAnimation(AnimState::Walk);
+
 			_health = 4;
 			PlaceOnGround();
 		}

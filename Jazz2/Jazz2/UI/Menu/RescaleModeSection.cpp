@@ -105,7 +105,7 @@ namespace Jazz2::UI::Menu
 				}
 
 				for (int i = 0; i < (int)Item::Count; i++) {
-					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 30.0f) {
+					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 22.0f) {
 						if (_selectedIndex == i) {
 							ExecuteSelected();
 						} else {

@@ -43,8 +43,11 @@ namespace Jazz2::UI::Menu
 		float _imageTransition;
 
 		float _animation;
+		float _transitionTime;
+		bool _shouldStart;
 
 		void ExecuteSelected();
+		void OnAfterTransition();
 		void StartImageTransition();
 	};
 }

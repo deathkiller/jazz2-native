@@ -11,7 +11,9 @@ namespace Jazz2::UI::Menu
 		_selectedIndex(0),
 		_animation(0.0f),
 		_expandedAnimation(0.0f),
-		_expanded(false)
+		_expanded(false),
+		_transitionTime(0.0f),
+		_shouldStart(false)
 	{
 		// Search both "Content/Episodes/" and "Cache/Episodes/"
 		fs::Directory dir(fs::JoinPath("Content"_s, "Episodes"_s), fs::EnumerationOptions::SkipDirectories);
@@ -56,50 +58,57 @@ namespace Jazz2::UI::Menu
 			_expandedAnimation = std::min(_expandedAnimation + timeMult * 0.016f, 1.0f);
 		}
 
-		if (!_items.empty()) {
-			if (_root->ActionHit(PlayerActions::Fire)) {
-				ExecuteSelected();
-			} else if (_root->ActionHit(PlayerActions::Left)) {
-				if (_expanded) {
-					_root->PlaySfx("MenuSelect"_s, 0.5f);
-					_expanded = false;
-					_expandedAnimation = 0.0f;
-				}
-			} else if (_root->ActionHit(PlayerActions::Right)) {
-				if ((_items[_selectedIndex].Flags & ItemFlags::CanContinue) == ItemFlags::CanContinue) {
-					_root->PlaySfx("MenuSelect"_s, 0.5f);
-					_expanded = true;
-				}
-			} else if (_items.size() > 1) {
-				if (_root->ActionHit(PlayerActions::Menu)) {
-					_root->PlaySfx("MenuSelect"_s, 0.5f);
-					_root->LeaveSection();
-					return;
-				} else if (_root->ActionHit(PlayerActions::Up)) {
-					_root->PlaySfx("MenuSelect"_s, 0.5f);
-					_animation = 0.0f;
-
-					_expanded = false;
-					_expandedAnimation = 0.0f;
-
-					if (_selectedIndex > 0) {
-						_selectedIndex--;
-					} else {
-						_selectedIndex = _items.size() - 1;
+		if (!_shouldStart) {
+			if (!_items.empty()) {
+				if (_root->ActionHit(PlayerActions::Fire)) {
+					ExecuteSelected();
+				} else if (_root->ActionHit(PlayerActions::Left)) {
+					if (_expanded) {
+						_root->PlaySfx("MenuSelect"_s, 0.5f);
+						_expanded = false;
+						_expandedAnimation = 0.0f;
 					}
-				} else if (_root->ActionHit(PlayerActions::Down)) {
-					_root->PlaySfx("MenuSelect"_s, 0.5f);
-					_animation = 0.0f;
+				} else if (_root->ActionHit(PlayerActions::Right)) {
+					if ((_items[_selectedIndex].Flags & ItemFlags::CanContinue) == ItemFlags::CanContinue) {
+						_root->PlaySfx("MenuSelect"_s, 0.5f);
+						_expanded = true;
+					}
+				} else if (_items.size() > 1) {
+					if (_root->ActionHit(PlayerActions::Menu)) {
+						_root->PlaySfx("MenuSelect"_s, 0.5f);
+						_root->LeaveSection();
+						return;
+					} else if (_root->ActionHit(PlayerActions::Up)) {
+						_root->PlaySfx("MenuSelect"_s, 0.5f);
+						_animation = 0.0f;
 
-					_expanded = false;
-					_expandedAnimation = 0.0f;
+						_expanded = false;
+						_expandedAnimation = 0.0f;
 
-					if (_selectedIndex < _items.size() - 1) {
-						_selectedIndex++;
-					} else {
-						_selectedIndex = 0;
+						if (_selectedIndex > 0) {
+							_selectedIndex--;
+						} else {
+							_selectedIndex = _items.size() - 1;
+						}
+					} else if (_root->ActionHit(PlayerActions::Down)) {
+						_root->PlaySfx("MenuSelect"_s, 0.5f);
+						_animation = 0.0f;
+
+						_expanded = false;
+						_expandedAnimation = 0.0f;
+
+						if (_selectedIndex < _items.size() - 1) {
+							_selectedIndex++;
+						} else {
+							_selectedIndex = 0;
+						}
 					}
 				}
+			}
+		} else {
+			_transitionTime -= 0.025f * timeMult;
+			if (_transitionTime <= 0.0f) {
+				OnAfterTransition();
 			}
 		}
 	}
@@ -110,7 +119,7 @@ namespace Jazz2::UI::Menu
 		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
 
 		constexpr float topLine = 131.0f;
-		float bottomLine = viewSize.Y - 42;
+		float bottomLine = viewSize.Y - 42.0f;
 		_root->DrawElement("MenuDim"_s, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
 			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
 		_root->DrawElement("MenuLine"_s, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
@@ -190,11 +199,31 @@ namespace Jazz2::UI::Menu
 
 			center.Y += (bottomLine - topLine) * 0.94f / _items.size();
 		}
+
+		if (_shouldStart) {
+			auto command = canvas->RentRenderCommand();
+			if (command->material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::Transition))) {
+				command->material().reserveUniformsDataMemory();
+				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			}
+
+			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+			instanceBlock->uniform(Material::TexRectUniformName)->setFloatVector(Vector4f(1.0f, 0.0f, 1.0f, 0.0f).Data());
+			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(Vector2f(static_cast<float>(canvas->ViewSize.X), static_cast<float>(canvas->ViewSize.Y)).Data());
+			instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(0.0f, 0.0f, 0.0f, _transitionTime).Data());
+
+			command->setTransformation(Matrix4x4f::Identity);
+			command->setLayer(999);
+
+			canvas->DrawRenderCommand(command);
+		}
 	}
 
 	void EpisodeSelectSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
-		if (event.type == TouchEventType::Down) {
+		if (!_shouldStart && event.type == TouchEventType::Down) {
 			int pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x;
@@ -207,7 +236,7 @@ namespace Jazz2::UI::Menu
 				}
 
 				for (int i = 0; i < _items.size(); i++) {
-					if (std::abs(x - 0.5f) < 0.3f && std::abs(y - _items[i].TouchY) < 30.0f) {
+					if (std::abs(x - 0.5f) < 0.3f && std::abs(y - _items[i].TouchY) < 22.0f) {
 						if (_selectedIndex == i) {
 							bool onExpand = (x > (0.5f + 0.2f) && (_items[i].Flags & ItemFlags::CanContinue) == ItemFlags::CanContinue);
 							if (onExpand) {
@@ -256,28 +285,35 @@ namespace Jazz2::UI::Menu
 
 					_root->SwitchToSectionPtr(std::make_unique<StartGameOptionsSection>(selectedItem.Description.Name, selectedItem.Description.FirstLevel, selectedItem.Description.PreviousEpisode));
 				} else {
-					auto episodeContinue = PreferencesCache::GetEpisodeContinue(selectedItem.Description.Name);
-
-					PlayerType players[] = { (PlayerType)((episodeContinue->State.DifficultyAndPlayerType >> 4) & 0x0f) };
-					LevelInitialization levelInit(selectedItem.Description.Name, episodeContinue->LevelName, (GameDifficulty)(episodeContinue->State.DifficultyAndPlayerType & 0x0f),
-						PreferencesCache::EnableReforged, false, players, _countof(players));
-
-					if ((episodeContinue->State.Flags & EpisodeContinuationFlags::CheatsUsed) == EpisodeContinuationFlags::CheatsUsed) {
-						levelInit.CheatsUsed = true;
-					}
-
-					auto& firstPlayer = levelInit.PlayerCarryOvers[0];
-					firstPlayer.Lives = episodeContinue->State.Lives;
-					firstPlayer.Score = episodeContinue->State.Score;
-					memcpy(firstPlayer.Ammo, episodeContinue->State.Ammo, sizeof(levelInit.PlayerCarryOvers[0].Ammo));
-					memcpy(firstPlayer.WeaponUpgrades, episodeContinue->State.WeaponUpgrades, sizeof(levelInit.PlayerCarryOvers[0].WeaponUpgrades));
-
-					_root->ChangeLevel(std::move(levelInit));
+					_shouldStart = true;
+					_transitionTime = 1.0f;
 				}
 			} else {
 				_root->SwitchToSectionPtr(std::make_unique<StartGameOptionsSection>(selectedItem.Description.Name, selectedItem.Description.FirstLevel, selectedItem.Description.PreviousEpisode));
 			}
 		}
+	}
+
+	void EpisodeSelectSection::OnAfterTransition()
+	{
+		auto& selectedItem = _items[_selectedIndex];
+		auto episodeContinue = PreferencesCache::GetEpisodeContinue(selectedItem.Description.Name);
+
+		PlayerType players[] = { (PlayerType)((episodeContinue->State.DifficultyAndPlayerType >> 4) & 0x0f) };
+		LevelInitialization levelInit(selectedItem.Description.Name, episodeContinue->LevelName, (GameDifficulty)(episodeContinue->State.DifficultyAndPlayerType & 0x0f),
+			PreferencesCache::EnableReforged, false, players, _countof(players));
+
+		if ((episodeContinue->State.Flags & EpisodeContinuationFlags::CheatsUsed) == EpisodeContinuationFlags::CheatsUsed) {
+			levelInit.CheatsUsed = true;
+		}
+
+		auto& firstPlayer = levelInit.PlayerCarryOvers[0];
+		firstPlayer.Lives = episodeContinue->State.Lives;
+		firstPlayer.Score = episodeContinue->State.Score;
+		memcpy(firstPlayer.Ammo, episodeContinue->State.Ammo, sizeof(levelInit.PlayerCarryOvers[0].Ammo));
+		memcpy(firstPlayer.WeaponUpgrades, episodeContinue->State.WeaponUpgrades, sizeof(levelInit.PlayerCarryOvers[0].WeaponUpgrades));
+
+		_root->ChangeLevel(std::move(levelInit));
 	}
 
 	void EpisodeSelectSection::AddEpisode(const StringView& episodeFile)

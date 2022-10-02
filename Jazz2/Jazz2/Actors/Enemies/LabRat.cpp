@@ -31,10 +31,9 @@ namespace Jazz2::Actors::Enemies
 		SetState(ActorState::CollideWithTilesetReduced, true);
 
 		co_await RequestMetadataAsync("Enemy/LabRat"_s);
-
+		SetFacingLeft(Random().NextBool());
 		SetAnimation(AnimState::Walk);
 
-		SetFacingLeft(Random().NextBool());
 		_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
 
 		_stateTime = Random().NextFloat(180.0f, 300.0f);

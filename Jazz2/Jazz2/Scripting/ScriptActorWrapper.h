@@ -62,7 +62,7 @@ namespace Jazz2::Scripting
 		void OnHitCeiling(float timeMult) override;
 		void OnHitWall(float timeMult) override;
 
-		//void OnTriggeredEvent(EventType eventType, uint16_t* eventParams) override;
+		//void OnTriggeredEvent(EventType eventType, uint8_t* eventParams) override;
 
 		void OnAnimationStarted() override;
 		void OnAnimationFinished() override;

@@ -16,6 +16,8 @@ namespace Jazz2
 
 		virtual bool IsVerified() const = 0;
 		virtual bool IsPlayable() const = 0;
+
+		virtual void RefreshCacheLevels() = 0;
 		
 	private:
 		/// Deleted copy constructor

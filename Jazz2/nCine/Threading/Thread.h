@@ -42,13 +42,13 @@ namespace nCine
 		bool IsSet(int cpuNum);
 
 	private:
-#if defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_WINDOWS)
 		DWORD_PTR affinityMask_;
-#elif defined(DEATH_TARGET_APPLE)
+#	elif defined(DEATH_TARGET_APPLE)
 		integer_t affinityTag_;
-#else
+#	else
 		cpu_set_t cpuSet_;
-#endif
+#	endif
 
 		friend class Thread;
 	};
@@ -75,10 +75,10 @@ namespace nCine
 		void* Join();
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-#if !defined(DEATH_TARGET_APPLE)
+#	if !defined(DEATH_TARGET_APPLE)
 		/// Sets the thread name
 		void SetName(const char* name);
-#endif
+#	endif
 
 		/// Sets the calling thread name
 		static void SetSelfName(const char* name);
@@ -100,12 +100,12 @@ namespace nCine
 		/// Asks the thread for termination
 		void Abort();
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
 		/// Gets the thread affinity mask
 		ThreadAffinityMask GetAffinityMask() const;
 		/// Sets the thread affinity mask
 		void SetAffinityMask(ThreadAffinityMask affinityMask);
-#endif
+#	endif
 #endif
 
 	private:

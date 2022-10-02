@@ -7,6 +7,9 @@
 		"Mask": {
 			"Path": "_custom/electro_mask.png",
 			"States": [ 0 ]
+		},
+		"Particle": {
+			"Path": "_custom/electro.png"
 		}
 	},
 

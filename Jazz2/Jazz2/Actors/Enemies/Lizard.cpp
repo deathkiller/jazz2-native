@@ -34,6 +34,7 @@ namespace Jazz2::Actors::Enemies
 	{
 		uint8_t theme = details.Params[0];
 		_isFalling = (details.Params[1] != 0);
+		bool isFacingLeft = (_isFalling ? details.Params[2] != 0 : Random().NextBool());
 
 		SetHealthByDifficulty(_isFalling ? 6 : 1);
 		_scoreValue = 100;
@@ -49,14 +50,9 @@ namespace Jazz2::Actors::Enemies
 				co_await RequestMetadataAsync("Enemy/LizardXmas"_s);
 				break;
 		}
-
+		SetFacingLeft(isFacingLeft);
 		SetAnimation(AnimState::Walk);
 
-		if (_isFalling) {
-			SetFacingLeft(details.Params[2] != 0);
-		} else {
-			SetFacingLeft(Random().NextBool());
-		}
 		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
 
 		if (_isFalling) {

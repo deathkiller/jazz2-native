@@ -979,6 +979,9 @@ namespace Jazz2
 		_precompiledShaders[(int)PrecompiledShader::ResizeMonochrome] = std::make_unique<Shader>("ResizeMonochrome",
 			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::ResizeMonochromeFs);
 #endif
+
+		_precompiledShaders[(int)PrecompiledShader::Transition] = std::make_unique<Shader>("Transition",
+			Shader::LoadMode::STRING, Shaders::TransitionVs, Shaders::TransitionFs);
 	}
 
 	std::unique_ptr<Texture> ContentResolver::GetNoiseTexture()

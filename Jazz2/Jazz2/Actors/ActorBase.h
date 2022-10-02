@@ -256,7 +256,7 @@ namespace Jazz2::Actors
 		virtual void OnHitCeiling(float timeMult);
 		virtual void OnHitWall(float timeMult);
 
-		virtual void OnTriggeredEvent(EventType eventType, uint16_t* eventParams);
+		virtual void OnTriggeredEvent(EventType eventType, uint8_t* eventParams);
 
 		void TryStandardMovement(float timeMult, TileCollisionParams& params);
 		void UpdateHitbox(int w, int h);

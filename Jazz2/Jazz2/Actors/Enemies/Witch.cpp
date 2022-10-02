@@ -19,6 +19,7 @@ namespace Jazz2::Actors::Enemies
 	void Witch::Preload(const ActorActivationDetails& details)
 	{
 		PreloadMetadataAsync("Enemy/Witch"_s);
+		PreloadMetadataAsync("Interactive/PlayerFrog"_s);
 	}
 
 	Task<bool> Witch::OnActivatedAsync(const ActorActivationDetails& details)
@@ -30,8 +31,6 @@ namespace Jazz2::Actors::Enemies
 
 		co_await RequestMetadataAsync("Enemy/Witch"_s);
 		SetAnimation(AnimState::Idle);
-
-		PreloadMetadataAsync("Interactive/PlayerFrog"_s);
 
 		co_return true;
 	}

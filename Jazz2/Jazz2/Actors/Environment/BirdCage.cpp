@@ -58,33 +58,30 @@ namespace Jazz2::Actors::Environment
 			if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
 				if (shotBase->GetStrength() > 0) {
 					auto owner = shotBase->GetOwner();
-					if (owner != nullptr) {
-						ApplyToPlayer(owner);
+					if (owner != nullptr && TryApplyToPlayer(owner)) {
 						shotBase->DecreaseHealth(1);
+						return true;
 					}
-					return true;
 				}
 			} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {
 				auto owner = tnt->GetOwner();
-				if (owner != nullptr) {
-					ApplyToPlayer(owner);
+				if (owner != nullptr && TryApplyToPlayer(owner)) {
+					return true;
 				}
-				return true;
 			} else if (auto player = dynamic_cast<Player*>(other.get())) {
-				if (player->CanBreakSolidObjects()) {
-					ApplyToPlayer(player);
+				if (player->CanBreakSolidObjects() && TryApplyToPlayer(player)) {
+					return true;
 				}
-				return true;
 			}
 		}
 
 		return ActorBase::OnHandleCollision(other);
 	}
 
-	void BirdCage::ApplyToPlayer(Player* player)
+	bool BirdCage::TryApplyToPlayer(Player* player)
 	{
 		if (!player->SpawnBird(_type, _pos)) {
-			return;
+			return false;
 		}
 
 		_activated = true;
@@ -105,5 +102,6 @@ namespace Jazz2::Actors::Environment
 			uint8_t eventParams[16] = { _type, 1 };
 			eventMap->StoreTileEvent(_originTile.X, _originTile.Y, EventType::BirdCage, ActorState::None, eventParams);
 		}
+		return true;
 	}
 }

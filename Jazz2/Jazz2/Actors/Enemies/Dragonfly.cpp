@@ -38,9 +38,8 @@ namespace Jazz2::Actors::Enemies
 		_scoreValue = 200;
 
 		co_await RequestMetadataAsync("Enemy/Dragonfly"_s);
-		SetAnimation(AnimState::Idle);
-
 		SetFacingLeft(Random().NextBool());
+		SetAnimation(AnimState::Idle);
 
 		co_return true;
 	}

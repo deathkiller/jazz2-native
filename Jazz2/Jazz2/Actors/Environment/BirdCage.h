@@ -20,6 +20,6 @@ namespace Jazz2::Actors::Environment
 		uint8_t _type;
 		bool _activated;
 
-		void ApplyToPlayer(Player* player);
+		bool TryApplyToPlayer(Player* player);
 	};
 }

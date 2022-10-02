@@ -26,10 +26,9 @@ namespace Jazz2::Actors::Enemies
 		SetState(ActorState::CollideWithTilesetReduced, true);
 
 		co_await RequestMetadataAsync("Enemy/Skeleton"_s);
-
+		SetFacingLeft(Random().NextBool());
 		SetAnimation(AnimState::Walk);
 
-		SetFacingLeft(Random().NextBool());
 		_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
 
 		PlaceOnGround();

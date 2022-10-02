@@ -205,6 +205,7 @@ namespace Jazz2
 		ResizeCrt,
 		ResizeMonochrome,
 #endif
+		Transition,
 
 		Count
 	};

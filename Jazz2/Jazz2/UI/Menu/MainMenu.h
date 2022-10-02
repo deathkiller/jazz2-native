@@ -19,11 +19,13 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::UI::Menu
 {
 	class BeginSection;
+	class RefreshCacheSection;
 	class StartGameOptionsSection;
 
 	class MainMenu : public IStateHandler, public IMenuContainer
 	{
 		friend class BeginSection;
+		friend class RefreshCacheSection;
 		friend class StartGameOptionsSection;
 
 	public:

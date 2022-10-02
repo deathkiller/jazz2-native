@@ -221,6 +221,12 @@ public:
 		return ((_flags & Flags::IsPlayable) == Flags::IsPlayable);
 	}
 
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+	void RefreshCacheLevels() override;
+#else
+	void RefreshCacheLevels() override { }
+#endif
+
 private:
 	enum class Flags {
 		None = 0x00,
@@ -468,7 +474,7 @@ void GameEventHandler::RefreshCache()
 {
 	// Check cache state
 	{
-		auto s = fs::Open(fs::JoinPath("Cache"_s, "cache.j2i"_s), FileAccessMode::Read);
+		auto s = fs::Open(fs::JoinPath({ "Cache"_s, "Animations"_s, "cache.index"_s }), FileAccessMode::Read);
 		if (s->GetSize() < 16) {
 			goto RecreateCache;
 		}
@@ -516,12 +522,33 @@ RecreateCache:
 		return;
 	}
 
-	Compatibility::JJ2Anims::Convert(animsPath, fs::JoinPath("Cache"_s, "Animations"_s), false);
+	String animationsPath = fs::JoinPath("Cache"_s, "Animations"_s);
+	fs::RemoveDirectoryRecursive(animationsPath);
+	Compatibility::JJ2Anims::Convert(animsPath, animationsPath, false);
 
+	RefreshCacheLevels();
+
+	// Create cache index
+	auto so = fs::Open(fs::JoinPath({ "Cache"_s, "Animations"_s, "cache.index"_s }), FileAccessMode::Write);
+
+	so->WriteValue<uint64_t>(0x2095A59FF0BFBBEF);	// Signature
+	so->WriteValue<uint8_t>(ContentResolver::CacheIndexFile);
+	so->WriteValue<uint16_t>(Compatibility::JJ2Anims::CacheVersion);
+	so->WriteValue<uint8_t>(0x00);					// Flags
+	int64_t animsModified = fs::LastModificationTime(animsPath).Ticks;
+	so->WriteValue<int64_t>(animsModified);
+	so->WriteValue<uint16_t>((uint16_t)EventType::Count);
+
+	LOGI("Cache was recreated");
+	_flags = Flags::IsVerified | Flags::IsPlayable;
+}
+
+void GameEventHandler::RefreshCacheLevels()
+{
 	Compatibility::EventConverter eventConverter;
 
 	String xmasEpisodeToken = (fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::JoinPath("Cache"_s, "xmas99.j2e"_s))) ? "xmas99"_s : "xmas98"_s);
-	HashMap<String, Pair<String, String>> knownLevels = {
+	const HashMap<String, Pair<String, String>> knownLevels = {
 		{ "trainer"_s, { "prince"_s, { } } },
 		{ "castle1"_s, { "prince"_s, "01"_s } },
 		{ "castle1n"_s, { "prince"_s, "02"_s } },
@@ -624,7 +651,7 @@ RecreateCache:
 			return name;
 		}
 	};
-	
+
 	auto EpisodePrevNext = [](Compatibility::JJ2Episode* episode) -> Pair<String, String> {
 		if (episode->Name == "prince"_s) {
 			return { { }, "rescue"_s };
@@ -640,6 +667,8 @@ RecreateCache:
 	};
 
 	String episodesPath = fs::JoinPath("Cache"_s, "Episodes"_s);
+	fs::RemoveDirectoryRecursive(episodesPath);
+
 	HashMap<String, bool> usedTilesets;
 
 	fs::Directory dir(fs::FindPathCaseInsensitive("Source"_s), fs::EnumerationOptions::SkipDirectories);
@@ -699,6 +728,7 @@ RecreateCache:
 
 	// Convert only used tilesets
 	String tilesetsPath = fs::JoinPath("Cache"_s, "Tilesets"_s);
+	fs::RemoveDirectoryRecursive(tilesetsPath);
 	fs::CreateDirectories(tilesetsPath);
 
 	for (auto& pair : usedTilesets) {
@@ -710,21 +740,6 @@ RecreateCache:
 			tileset.Convert(fs::JoinPath({ tilesetsPath, pair.first + ".j2t"_s }));
 		}
 	}
-
-	// Create cache index
-	auto so = fs::Open(fs::JoinPath("Cache"_s, "cache.j2i"_s), FileAccessMode::Write);
-
-	so->WriteValue<uint64_t>(0x2095A59FF0BFBBEF);	// Signature
-	so->WriteValue<uint8_t>(ContentResolver::CacheIndexFile);
-	so->WriteValue<uint16_t>(Compatibility::JJ2Anims::CacheVersion);
-	so->WriteValue<uint8_t>(0x00);					// Flags
-	int64_t animsModified = fs::LastModificationTime(animsPath).Ticks;
-	so->WriteValue<int64_t>(animsModified);
-	so->WriteValue<uint16_t>((uint16_t)EventType::Count);
-
-	LOGI("Cache was recreated");
-	_flags = Flags::IsVerified | Flags::IsPlayable;
-	return;
 }
 #endif
 
@@ -761,7 +776,6 @@ void GameEventHandler::SaveEpisodeEnd(const std::unique_ptr<LevelInitialization>
 
 void GameEventHandler::SaveEpisodeContinue(const std::unique_ptr<LevelInitialization>& pendingLevelChange)
 {
-	// Continue is disabled with SHAREWARE_DEMO_ONLY
 	if (pendingLevelChange->EpisodeName.empty() || pendingLevelChange->LevelName.empty() ||
 		pendingLevelChange->EpisodeName == "unknown"_s ||
 		(pendingLevelChange->EpisodeName == "prince"_s && pendingLevelChange->LevelName == "trainer"_s)) {

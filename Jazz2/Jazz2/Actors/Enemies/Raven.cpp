@@ -31,9 +31,8 @@ namespace Jazz2::Actors::Enemies
 		_originPos = _lastPos = _targetPos = _pos;
 
 		co_await RequestMetadataAsync("Enemy/Raven"_s);
-		SetAnimation(AnimState::Idle);
-
 		SetFacingLeft(Random().NextBool());
+		SetAnimation(AnimState::Idle);
 
 		co_return true;
 	}

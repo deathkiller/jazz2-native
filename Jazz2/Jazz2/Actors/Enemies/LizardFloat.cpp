@@ -60,9 +60,8 @@ namespace Jazz2::Actors::Enemies
 				co_await RequestMetadataAsync("Enemy/LizardFloatXmas"_s);
 				break;
 		}
-		SetAnimation(AnimState::Idle);
-
 		SetFacingLeft(Random().NextBool());
+		SetAnimation(AnimState::Idle);
 
 		_copter = std::make_shared<Environment::Copter>();
 		uint8_t copterParams[1];

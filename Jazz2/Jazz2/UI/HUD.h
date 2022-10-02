@@ -31,7 +31,17 @@ namespace Jazz2::UI
 		void ShowCoins(int count);
 		void ShowGems(int count);
 
+		void BeginFadeIn();
+		void BeginFadeOut(float delay = 0.0f);
+
 	private:
+		enum class TransitionState {
+			None,
+			FadeIn,
+			FadeOut,
+			WaitingForFadeOut
+		};
+
 		struct TouchButtonInfo {
 			PlayerActions Action;
 
@@ -94,6 +104,8 @@ namespace Jazz2::UI
 		int _weaponWheelVerticesCount;
 		int _lastWeaponWheelIndex;
 		float _rgbLightsTime;
+		TransitionState _transitionState;
+		float _transitionTime;
 
 		TouchButtonInfo _touchButtons[TouchButtonsCount];
 		float _touchButtonsTimer;

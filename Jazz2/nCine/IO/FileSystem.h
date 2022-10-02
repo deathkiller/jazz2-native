@@ -179,8 +179,8 @@ namespace nCine
 
 		/// Creates a new directory
 		static bool CreateDirectories(const StringView& path);
-		/// Deletes an empty directory
-		static bool RemoveEmptyDirectory(const StringView& path);
+		/// Deletes an directory and all its content
+		static bool RemoveDirectoryRecursive(const StringView& path);
 		/// Deletes a file
 		static bool RemoveFile(const StringView& path);
 		/// Renames or moves a file or a directory

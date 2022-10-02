@@ -78,7 +78,7 @@ namespace Jazz2::UI
 	{
 	public:
 		static constexpr int ColorsSize = AURA_COLORS_SIZE;
-		static constexpr int RefreshRate = FrameTimer::FramesPerSecond / (1000 / AURA_REFRESH_INTERVAL);
+		static constexpr int RefreshRate = (int)(FrameTimer::FramesPerSecond / (1000 / AURA_REFRESH_INTERVAL));
 
 		RgbLights();
 		~RgbLights();

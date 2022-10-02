@@ -1185,6 +1185,15 @@
     <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Devan.h">
       <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\RefreshCacheSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\RollingRock.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Bolly.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2013,6 +2022,15 @@
       <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Devan.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\RefreshCacheSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\RollingRock.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Bolly.cpp">
       <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
     </ClCompile>
   </ItemGroup>

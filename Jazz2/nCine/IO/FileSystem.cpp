@@ -18,6 +18,7 @@
 #	include <dirent.h>
 #	include <fcntl.h>
 #	include <time.h>
+#	include <ftw.h>
 #
 #	if defined(__linux__)
 #		include <sys/sendfile.h>
@@ -110,6 +111,16 @@ namespace nCine
 
 			return date;
 		}
+
+		int DeleteDirectoryInternalCallback(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
+		{
+			return ::remove(fpath);
+		}
+
+		bool DeleteDirectoryInternal(const StringView& path)
+		{
+			return ::nftw(String::nullTerminatedView(path).data(), DeleteDirectoryInternalCallback, 64, FTW_DEPTH | FTW_PHYS) == 0;
+		}
 #else
 		FileSystem::FileDate NativeTimeToFileDate(const SYSTEMTIME* sysTime, int64_t ticks)
 		{
@@ -124,6 +135,79 @@ namespace nCine
 			date.Ticks = ticks;
 
 			return date;
+		}
+
+		bool DeleteDirectoryInternal(const ArrayView<wchar_t>& path, bool recursive, int depth)
+		{
+			if (recursive) {
+				if (path.size() + 3 <= fs::MaxPathLength) {
+					auto bufferExtended = Array<wchar_t>(NoInit, fs::MaxPathLength);
+					std::memcpy(bufferExtended.data(), path.data(), path.size() * sizeof(wchar_t));
+
+					size_t bufferOffset = path.size();
+					if (bufferExtended[bufferOffset - 1] == L'/' || path[bufferOffset - 1] == L'\\') {
+						bufferExtended[bufferOffset - 1] = L'\\';
+					} else {
+						bufferExtended[bufferOffset] = L'\\';
+						bufferOffset++;
+					}
+
+					// Adding a wildcard to list all files in the directory
+					bufferExtended[bufferOffset] = L'*';
+					bufferExtended[bufferOffset + 1] = L'\0';
+
+					WIN32_FIND_DATA data;
+					HANDLE hFindFile = ::FindFirstFile(bufferExtended, &data);
+					if (hFindFile != NULL && hFindFile != INVALID_HANDLE_VALUE) {
+						do {
+							if (data.cFileName[0] == L'.' && (data.cFileName[1] == L'\0' || (data.cFileName[1] == L'.' && data.cFileName[2] == L'\0'))) {
+								continue;
+							}
+
+							size_t fileNameLength = wcslen(data.cFileName);
+							std::memcpy(&bufferExtended[bufferOffset], data.cFileName, fileNameLength * sizeof(wchar_t));
+
+							if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
+								bool shouldRecurse = ((data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != FILE_ATTRIBUTE_REPARSE_POINT);
+								if (shouldRecurse) {
+									bufferExtended[bufferOffset + fileNameLength] = L'\0';
+
+									if (depth < 16 && !DeleteDirectoryInternal(bufferExtended.prefix(bufferOffset + fileNameLength), true, depth + 1)) {
+										break;
+									}
+								} else {
+									bufferExtended[bufferOffset + fileNameLength] = L'\\';
+									bufferExtended[bufferOffset + fileNameLength + 1] = L'\0';
+
+									// Check to see if this is a mount point and unmount it
+									if (data.dwReserved0 == IO_REPARSE_TAG_MOUNT_POINT) {
+										// Use full path plus a trailing '\'
+										if (!::DeleteVolumeMountPoint(bufferExtended)) {
+											// Cannot unmount this mount point
+										}
+									}
+
+									// RemoveDirectory on a symbolic link will remove the link itself
+									if (!::RemoveDirectory(bufferExtended)) {
+										DWORD err = ::GetLastError();
+										if (err != ERROR_PATH_NOT_FOUND) {
+											// Cannot remove symbolic link
+										}
+									}
+								}
+							} else {
+								bufferExtended[bufferOffset + fileNameLength] = L'\0';
+
+								::DeleteFile(bufferExtended);
+							}
+						} while (::FindNextFile(hFindFile, &data));
+
+						::FindClose(hFindFile);
+					}
+				}
+			}
+
+			return ::RemoveDirectory(path);
 		}
 #endif
 
@@ -174,34 +258,36 @@ namespace nCine
 		if (!path.empty() && IsDirectory(path)) {
 			_firstFile = true;
 
-			String absPath = GetAbsolutePath(path);
-			memcpy(_path, absPath.data(), absPath.size());
-			if (_path[absPath.size() - 1] == '/' || _path[absPath.size() - 1] == '\\') {
-				_path[absPath.size() - 1] = '\\';
-				_path[absPath.size()] = '\0';
-				_fileNamePart = _path + absPath.size();
-			} else {
-				_path[absPath.size()] = '\\';
-				_path[absPath.size() + 1] = '\0';
-				_fileNamePart = _path + absPath.size() + 1;
+			// Prepare full path to found files
+			{
+				String absPath = GetAbsolutePath(path);
+				std::memcpy(_path, absPath.data(), absPath.size());
+				if (_path[absPath.size() - 1] == '/' || _path[absPath.size() - 1] == '\\') {
+					_path[absPath.size() - 1] = '\\';
+					_path[absPath.size()] = '\0';
+					_fileNamePart = _path + absPath.size();
+				} else {
+					_path[absPath.size()] = '\\';
+					_path[absPath.size() + 1] = '\0';
+					_fileNamePart = _path + absPath.size() + 1;
+				}
 			}
 
-			Array<wchar_t> buffer = Utf8::ToUtf16(absPath);
+			Array<wchar_t> buffer = Utf8::ToUtf16(_path, _fileNamePart - _path);
 			if (buffer.size() + 2 <= MaxPathLength) {
-				auto bufferExtended = Array<wchar_t>(NoInit, buffer.size() + 3);
-				memcpy(bufferExtended.data(), buffer.data(), buffer.size() * sizeof(wchar_t));
+				auto bufferExtended = Array<wchar_t>(NoInit, buffer.size() + 2);
+				std::memcpy(bufferExtended.data(), buffer.data(), buffer.size() * sizeof(wchar_t));
 
 				// Adding a wildcard to list all files in the directory
-				bufferExtended[buffer.size()] = L'\\';
-				bufferExtended[buffer.size() + 1] = L'*';
-				bufferExtended[buffer.size() + 2] = L'\0';
+				bufferExtended[buffer.size()] = L'*';
+				bufferExtended[buffer.size() + 1] = L'\0';
 
 				WIN32_FIND_DATA data;
 				_hFindFile = ::FindFirstFile(bufferExtended, &data);
 				if (_hFindFile) {
 					if ((data.cFileName[0] == L'.' && (data.cFileName[1] == L'\0' || (data.cFileName[1] == L'.' && data.cFileName[2] == L'\0'))) ||
-						((_options & EnumerationOptions::SkipDirectories) == EnumerationOptions::SkipDirectories && (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) ||
-						((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && !(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))) {
+						((_options & EnumerationOptions::SkipDirectories) == EnumerationOptions::SkipDirectories && (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) ||
+						((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY)) {
 						_firstFile = false;
 					} else {
 						strncpy_s(_fileNamePart, sizeof(_path) - (_fileNamePart - _path), Utf8::FromUtf16(data.cFileName).data(), MaxPathLength - 1);
@@ -227,7 +313,7 @@ namespace nCine
 			_dirStream = ::opendir(nullTerminatedPath.data());
 			if (_dirStream != nullptr) {
 				String absPath = GetAbsolutePath(path);
-				memcpy(_path, absPath.data(), absPath.size());
+				std::memcpy(_path, absPath.data(), absPath.size());
 				if (_path[absPath.size() - 1] == '/' || _path[absPath.size() - 1] == '\\') {
 					_path[absPath.size() - 1] = '/';
 					_path[absPath.size()] = '\0';
@@ -280,8 +366,8 @@ namespace nCine
 			WIN32_FIND_DATA data;
 			if (::FindNextFile(_hFindFile, &data)) {
 				if ((data.cFileName[0] == L'.' && (data.cFileName[1] == L'\0' || (data.cFileName[1] == L'.' && data.cFileName[2] == L'\0'))) ||
-					((_options & EnumerationOptions::SkipDirectories) == EnumerationOptions::SkipDirectories && (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) ||
-					((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && !(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))) {
+					((_options & EnumerationOptions::SkipDirectories) == EnumerationOptions::SkipDirectories && (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) ||
+					((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY)) {
 					goto Retry;
 				} else {
 					strncpy_s(_fileNamePart, sizeof(_path) - (_fileNamePart - _path), Utf8::FromUtf16(data.cFileName).data(), MaxPathLength - 1);
@@ -1114,21 +1200,21 @@ namespace nCine
 #endif
 	}
 
-	bool FileSystem::RemoveEmptyDirectory(const StringView& path)
+	bool FileSystem::RemoveDirectoryRecursive(const StringView& path)
 	{
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS)
-		return ::RemoveDirectory(Utf8::ToUtf16(path));
-#else
-		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
+		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
+		if (attrs == INVALID_FILE_ATTRIBUTES || (attrs & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY) {
 			return false;
 		}
-#endif
 
-		return (::rmdir(nullTerminatedPath.data()) == 0);
+		// Do not recursively delete through reparse points
+		Array<wchar_t> absPath = Utf8::ToUtf16(GetAbsolutePath(path));
+		return DeleteDirectoryInternal(absPath, (attrs & FILE_ATTRIBUTE_REPARSE_POINT) != FILE_ATTRIBUTE_REPARSE_POINT, 0);
+#else
+		return DeleteDirectoryInternal(path);
 #endif
 	}
 

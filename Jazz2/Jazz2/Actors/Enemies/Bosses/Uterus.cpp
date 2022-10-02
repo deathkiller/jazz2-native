@@ -43,7 +43,7 @@ namespace Jazz2::Actors::Bosses
 		_originPos = _pos;
 		_lastPos = _pos;
 
-		SetState(ActorState::SkipPerPixelCollisions, true);
+		SetState(ActorState::SkipPerPixelCollisions | ActorState::IsInvulnerable, true);
 		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
 
 		_scoreValue = 3000;

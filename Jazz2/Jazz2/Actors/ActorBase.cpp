@@ -180,7 +180,7 @@ namespace Jazz2::Actors
 		return false;
 	}
 
-	void ActorBase::OnTriggeredEvent(EventType eventType, uint16_t* eventParams)
+	void ActorBase::OnTriggeredEvent(EventType eventType, uint8_t* eventParams)
 	{
 		// Can be overridden
 	}

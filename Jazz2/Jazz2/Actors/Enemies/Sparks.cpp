@@ -26,9 +26,8 @@ namespace Jazz2::Actors::Enemies
 		_scoreValue = 100;
 
 		co_await RequestMetadataAsync("Enemy/Sparks"_s);
-		SetAnimation(AnimState::Idle);
-
 		SetFacingLeft(true);
+		SetAnimation(AnimState::Idle);
 
 		co_return true;
 	}

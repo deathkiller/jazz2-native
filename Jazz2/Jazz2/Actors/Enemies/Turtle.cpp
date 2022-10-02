@@ -53,10 +53,9 @@ namespace Jazz2::Actors::Enemies
 				co_await RequestMetadataAsync("Enemy/TurtleXmas"_s);
 				break;
 		}
-
+		SetFacingLeft(nCine::Random().NextBool());
 		SetAnimation(AnimState::Walk);
 
-		SetFacingLeft(nCine::Random().NextBool());
 		_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
 
 		PlaceOnGround();

@@ -45,7 +45,6 @@ namespace Jazz2::UI::Menu
 			if (_state != State::Loading) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_root->LeaveSection();
-				return;
 			}
 		}
 	}

@@ -44,6 +44,7 @@
 #include "../Actors/Enemies/Witch.h"
 
 #include "../Actors/Enemies/Bosses/Bilsy.h"
+#include "../Actors/Enemies/Bosses/Bolly.h"
 #include "../Actors/Enemies/Bosses/Bubba.h"
 #include "../Actors/Enemies/Bosses/Devan.h"
 #include "../Actors/Enemies/Bosses/DevanRemote.h"
@@ -63,6 +64,7 @@
 #include "../Actors/Environment/EndOfLevel.h"
 #include "../Actors/Environment/Eva.h"
 #include "../Actors/Environment/Moth.h"
+#include "../Actors/Environment/RollingRock.h"
 #include "../Actors/Environment/Spring.h"
 #include "../Actors/Environment/SteamNote.h"
 
@@ -175,7 +177,7 @@ namespace Jazz2::Events
 		RegisterSpawnable<Bosses::Uterus>(EventType::BossUterus);
 		RegisterSpawnable<Bosses::TurtleBoss>(EventType::BossTurtleTough);
 		RegisterSpawnable<Bosses::Bubba>(EventType::BossBubba);
-		//RegisterSpawnable(EventType::BossBolly, Bolly.Create, Bolly.Preload);
+		RegisterSpawnable<Bosses::Bolly>(EventType::BossBolly);
 
 		// Collectibles
 		RegisterSpawnable<Collectibles::AmmoCollectible>(EventType::Ammo);
@@ -204,8 +206,8 @@ namespace Jazz2::Events
 		RegisterSpawnable<Environment::AirboardGenerator>(EventType::AirboardGenerator);
 		RegisterSpawnable<Environment::Copter>(EventType::Copter);
 
-		/*RegisterSpawnable(EventType::RollingRock, RollingRock.Create, RollingRock.Preload);
-		RegisterSpawnable(EventType::SwingingVine, SwingingVine.Create, SwingingVine.Preload);*/
+		RegisterSpawnable<Environment::RollingRock>(EventType::RollingRock);
+		//RegisterSpawnable(EventType::SwingingVine, SwingingVine.Create, SwingingVine.Preload);
 
 		RegisterSpawnable<Solid::PowerUpShieldMonitor>(EventType::PowerUpShield);
 		RegisterSpawnable<Solid::PowerUpWeaponMonitor>(EventType::PowerUpWeapon);

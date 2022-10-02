@@ -34,12 +34,12 @@ namespace Jazz2::Actors::Enemies
 		co_await RequestMetadataAsync("Enemy/Monkey"_s);
 
 		if (_isWalking) {
+			SetFacingLeft(Random().NextBool());
 			SetAnimation(AnimState::Walk);
 
-			PlaceOnGround();
-
-			SetFacingLeft(Random().NextBool());
 			_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
+
+			PlaceOnGround();
 		} else {
 			SetAnimation(AnimState::Jump);
 		}

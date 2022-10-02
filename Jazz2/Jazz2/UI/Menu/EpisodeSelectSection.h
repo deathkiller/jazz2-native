@@ -37,8 +37,11 @@ namespace Jazz2::UI::Menu
 		float _animation;
 		float _expandedAnimation;
 		bool _expanded;
+		float _transitionTime;
+		bool _shouldStart;
 
 		void ExecuteSelected();
+		void OnAfterTransition();
 		void AddEpisode(const StringView& episodeFile);
 	};
 }

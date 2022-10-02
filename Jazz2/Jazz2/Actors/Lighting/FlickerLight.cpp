@@ -22,7 +22,7 @@ namespace Jazz2::Actors::Lighting
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		for (int i = 0; i < LightPartCount; i++) {
-			float radius = Random().FastFloat(20.0f, 40.0f);
+			float radius = Random().FastFloat(_radiusFar * 0.4f, _radiusFar * 0.7f);
 			float angle = Random().FastFloat(0.0f, fTwoPi);
 			float distance = Random().FastFloat(0.0f, _radiusFar * 0.6f);
 
@@ -42,7 +42,7 @@ namespace Jazz2::Actors::Lighting
 		for (auto& part : _parts) {
 			part.Phase += timeMult * 0.01f;
 			if (part.Phase >= 1.0f) {
-				float radius = Random().FastFloat(20.0f, 40.0f);
+				float radius = Random().FastFloat(_radiusFar * 0.4f, _radiusFar * 0.7f);
 				float angle = Random().FastFloat(0.0f, fTwoPi);
 				float distance = Random().FastFloat(0.0f, _radiusFar * 0.6f);
 

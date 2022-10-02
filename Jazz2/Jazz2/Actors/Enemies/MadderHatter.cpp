@@ -28,9 +28,9 @@ namespace Jazz2::Actors::Enemies
 		SetState(ActorState::CollideWithTilesetReduced, true);
 
 		co_await RequestMetadataAsync("Enemy/MadderHatter"_s);
+		SetFacingLeft(Random().NextBool());
 		SetAnimation(AnimState::Walk);
 
-		SetFacingLeft(Random().NextBool());
 		_speed.X = (IsFacingLeft() ? -DefaultSpeed : DefaultSpeed);
 
 		PlaceOnGround();

@@ -29,9 +29,8 @@ namespace Jazz2::Actors::Enemies
 		SetState(ActorState::CollideWithTilesetReduced, true);
 
 		co_await RequestMetadataAsync("Enemy/Demon"_s);
-		SetAnimation(AnimState::Idle);
-
 		SetFacingLeft(Random().NextBool());
+		SetAnimation(AnimState::Idle);
 
 		PlaceOnGround();
 

@@ -1816,7 +1816,7 @@ namespace Jazz2::Actors
 			}
 
 			case EventType::RollingRockTrigger: { // Rock ID
-				//_levelHandler->BroadcastTriggeredEvent(tileEvent, p);
+				_levelHandler->BroadcastTriggeredEvent(this, EventType::RollingRockTrigger, p);
 				break;
 			}
 		}

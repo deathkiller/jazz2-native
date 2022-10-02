@@ -25,7 +25,6 @@ namespace Jazz2::UI
 		void DrawSolid(const Vector2f& pos, uint16_t z, const Vector2f& size, const Colorf& color, bool additiveBlending = false);
 		static Vector2f ApplyAlignment(Alignment align, const Vector2f& vec, const Vector2f& size);
 
-	protected:
 		RenderCommand* RentRenderCommand();
 		void DrawRenderCommand(RenderCommand* command);
 

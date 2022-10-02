@@ -52,10 +52,9 @@ namespace Jazz2::Actors::Enemies
 				_attackSpeed = 3.8f;
 				break;
 		}
-
+		SetFacingLeft(Random().NextBool());
 		SetAnimation(AnimState::Walk);
 
-		SetFacingLeft(Random().NextBool());
 		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f);
 
 		PlaceOnGround();

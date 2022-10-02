@@ -106,6 +106,9 @@ namespace Jazz2
 
 		// Create HUD
 		_hud = std::make_unique<UI::HUD>(this);
+		if ((levelInit.LastExitType & ExitType::FastTransition) != ExitType::FastTransition) {
+			_hud->BeginFadeIn();
+		}
 
 #if defined(WITH_ANGELSCRIPT)
 		if (_scripts != nullptr) {
@@ -879,6 +882,10 @@ namespace Jazz2
 				break;
 			}
 		}
+
+		for (auto& actor : _actors) {
+			actor->OnTriggeredEvent(eventType, eventParams);
+		}
 	}
 
 	void LevelHandler::BeginLevelChange(ExitType exitType, const StringView& nextLevel)
@@ -899,6 +906,10 @@ namespace Jazz2
 			}
 		} else {
 			_nextLevelTime = 360.0f;
+
+			if (_hud != nullptr) {
+				_hud->BeginFadeOut(_nextLevelTime - 40.0f);
+			}
 
 			if (_sugarRushMusic != nullptr) {
 				_sugarRushMusic->stop();

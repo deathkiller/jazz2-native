@@ -34,7 +34,9 @@ namespace Jazz2::UI
 		_rgbHealthLast(0.0f),
 		_weaponWheelAnim(0.0f),
 		_lastWeaponWheelIndex(-1),
-		_rgbLightsTime(0.0f)
+		_rgbLightsTime(0.0f),
+		_transitionState(TransitionState::None),
+		_transitionTime(0.0f)
 	{
 		auto& resolver = ContentResolver::Current();
 
@@ -77,6 +79,30 @@ namespace Jazz2::UI
 		}
 		if (_touchButtonsTimer > 0.0f) {
 			_touchButtonsTimer -= timeMult;
+		}
+
+		switch (_transitionState) {
+			case TransitionState::FadeIn:
+				_transitionTime += 0.025f * timeMult;
+				if (_transitionTime >= 1.0f) {
+					_transitionState = TransitionState::None;
+				}
+				break;
+			case TransitionState::FadeOut:
+				if (_transitionTime > 0.0f) {
+					_transitionTime -= 0.025f * timeMult;
+					if (_transitionTime < 0.0f) {
+						_transitionTime = 0.0f;
+					}
+				}
+				break;
+			case TransitionState::WaitingForFadeOut:
+				_transitionTime -= timeMult;
+				if (_transitionTime <= 0.0f) {
+					_transitionState = TransitionState::FadeOut;
+					_transitionTime = 1.0f;
+				}
+				break;
 		}
 
 		auto& players = _levelHandler->GetPlayers();
@@ -304,6 +330,26 @@ namespace Jazz2::UI
 			}
 		}
 
+		if (_transitionState == TransitionState::FadeIn || _transitionState == TransitionState::FadeOut) {
+			auto command = RentRenderCommand();
+			if (command->material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::Transition))) {
+				command->material().reserveUniformsDataMemory();
+				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			}
+
+			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+			instanceBlock->uniform(Material::TexRectUniformName)->setFloatVector(Vector4f(1.0f, 0.0f, 1.0f, 0.0f).Data());
+			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y)).Data());
+			instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(0.0f, 0.0f, 0.0f, _transitionTime).Data());
+
+			command->setTransformation(Matrix4x4f::Identity);
+			command->setLayer(999);
+
+			renderQueue.addCommand(command);
+		}
+
 		return true;
 	}
 
@@ -432,6 +478,23 @@ namespace Jazz2::UI
 			} else {
 				_coinsTime = -1.0f;
 			}
+		}
+	}
+
+	void HUD::BeginFadeIn()
+	{
+		_transitionState = TransitionState::FadeIn;
+		_transitionTime = 0.0f;
+	}
+
+	void HUD::BeginFadeOut(float delay)
+	{
+		if (delay <= 0.0f) {
+			_transitionState = TransitionState::FadeOut;
+			_transitionTime = 1.0f;
+		} else {
+			_transitionState = TransitionState::WaitingForFadeOut;
+			_transitionTime = delay;
 		}
 	}
 

@@ -104,7 +104,7 @@ namespace Jazz2::UI::Menu
 		for (int i = 0; i < (int)Item::Count; i++) {
 			_items[i].TouchY = center.Y;
 
-			if (i == 0 && !_isVerified) {
+			if (i <= (int)Item::Options && !_isVerified) {
 				if (_selectedIndex == i) {
 					_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (_items[i].Name.size() + 3) * 0.5f, 4.0f, true);
 				}
@@ -136,7 +136,7 @@ namespace Jazz2::UI::Menu
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 
 				for (int i = 0; i < (int)Item::Count; i++) {
-					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 30.0f) {
+					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 22.0f) {
 						if (_selectedIndex == i) {
 							ExecuteSelected();
 						} else {
@@ -172,7 +172,11 @@ namespace Jazz2::UI::Menu
 #if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
 			case (int)Item::Import: _root->SwitchToSection<ImportSection>(); break;
 #endif
-			case (int)Item::Options: _root->SwitchToSection<OptionsSection>(); break;
+			case (int)Item::Options:
+				if (_isVerified) {
+					_root->SwitchToSection<OptionsSection>();
+				}
+				break;
 			case (int)Item::About: _root->SwitchToSection<AboutSection>(); break;
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
 			case (int)Item::Quit: theApplication().quit(); break;

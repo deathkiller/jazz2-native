@@ -39,4 +39,20 @@ namespace Jazz2::Actors::Solid
 
 		co_return true;
 	}
+
+	bool PushableBox::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	{
+		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
+			WeaponType weaponType = shotBase->GetWeaponType();
+			if (weaponType == WeaponType::Blaster || weaponType == WeaponType::RF ||
+				weaponType == WeaponType::Seeker || weaponType == WeaponType::Pepper) {
+				shotBase->DecreaseHealth(INT32_MAX);
+			} else if (weaponType != WeaponType::Electro) {
+				shotBase->TriggerRicochet(this);
+			}
+			return true;
+		}
+
+		return SolidObjectBase::OnHandleCollision(other);
+	}
 }

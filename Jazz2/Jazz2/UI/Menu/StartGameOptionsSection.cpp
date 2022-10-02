@@ -16,7 +16,9 @@ namespace Jazz2::UI::Menu
 		_lastPlayerType(0),
 		_lastDifficulty(0),
 		_imageTransition(1.0f),
-		_animation(0.0f)
+		_animation(0.0f),
+		_transitionTime(0.0f),
+		_shouldStart(false)
 	{
 		_items[(int)Item::Character].Name = "Character"_s;
 		_items[(int)Item::Difficulty].Name = "Difficulty"_s;
@@ -48,61 +50,68 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		if (_root->ActionHit(PlayerActions::Fire)) {
-			ExecuteSelected();
-		} else if (_root->ActionHit(PlayerActions::Left)) {
-			if (_selectedIndex == 0) {
-				if (_selectedPlayerType > 0) {
-					StartImageTransition();
-					_selectedPlayerType--;
-				} else {
-					StartImageTransition();
-					_selectedPlayerType = _availableCharacters - 1;
-				}
-				_root->PlaySfx("MenuSelect"_s, 0.5f);
-			} else if (_selectedIndex == 1) {
-				if (_selectedDifficulty > 0) {
-					StartImageTransition();
-					_selectedDifficulty--;
+		if (!_shouldStart) {
+			if (_root->ActionHit(PlayerActions::Fire)) {
+				ExecuteSelected();
+			} else if (_root->ActionHit(PlayerActions::Left)) {
+				if (_selectedIndex == 0) {
+					if (_selectedPlayerType > 0) {
+						StartImageTransition();
+						_selectedPlayerType--;
+					} else {
+						StartImageTransition();
+						_selectedPlayerType = _availableCharacters - 1;
+					}
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
+				} else if (_selectedIndex == 1) {
+					if (_selectedDifficulty > 0) {
+						StartImageTransition();
+						_selectedDifficulty--;
+						_root->PlaySfx("MenuSelect"_s, 0.5f);
+					}
 				}
-			}
-		} else if (_root->ActionHit(PlayerActions::Right)) {
-			if (_selectedIndex == 0) {
-				if (_selectedPlayerType < _availableCharacters - 1) {
-					StartImageTransition();
-					_selectedPlayerType++;
-				} else {
-					StartImageTransition();
-					_selectedPlayerType = 0;
+			} else if (_root->ActionHit(PlayerActions::Right)) {
+				if (_selectedIndex == 0) {
+					if (_selectedPlayerType < _availableCharacters - 1) {
+						StartImageTransition();
+						_selectedPlayerType++;
+					} else {
+						StartImageTransition();
+						_selectedPlayerType = 0;
+					}
+					_root->PlaySfx("MenuSelect"_s, 0.5f);
+				} else if (_selectedIndex == 1) {
+					if (_selectedDifficulty < 3 - 1) {
+						StartImageTransition();
+						_selectedDifficulty++;
+						_root->PlaySfx("MenuSelect"_s, 0.4f);
+					}
 				}
+			} else if (_root->ActionHit(PlayerActions::Up)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
-			} else if (_selectedIndex == 1) {
-				if (_selectedDifficulty < 3 - 1) {
-					StartImageTransition();
-					_selectedDifficulty++;
-					_root->PlaySfx("MenuSelect"_s, 0.4f);
+				_animation = 0.0f;
+				if (_selectedIndex > 0) {
+					_selectedIndex--;
+				} else {
+					_selectedIndex = (int)Item::Count - 1;
 				}
+			} else if (_root->ActionHit(PlayerActions::Down)) {
+				_root->PlaySfx("MenuSelect"_s, 0.5f);
+				_animation = 0.0f;
+				if (_selectedIndex < (int)Item::Count - 1) {
+					_selectedIndex++;
+				} else {
+					_selectedIndex = 0;
+				}
+			} else if (_root->ActionHit(PlayerActions::Menu)) {
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				_root->LeaveSection();
 			}
-		} else if (_root->ActionHit(PlayerActions::Up)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_animation = 0.0f;
-			if (_selectedIndex > 0) {
-				_selectedIndex--;
-			} else {
-				_selectedIndex = (int)Item::Count - 1;
+		} else {
+			_transitionTime -= 0.025f * timeMult;
+			if (_transitionTime <= 0.0f) {
+				OnAfterTransition();
 			}
-		} else if (_root->ActionHit(PlayerActions::Down)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_animation = 0.0f;
-			if (_selectedIndex < (int)Item::Count - 1) {
-				_selectedIndex++;
-			} else {
-				_selectedIndex = 0;
-			}
-		} else if (_root->ActionHit(PlayerActions::Menu)) {
-			_root->PlaySfx("MenuSelect"_s, 0.6f);
-			_root->LeaveSection();
 		}
 	}
 
@@ -216,11 +225,31 @@ namespace Jazz2::UI::Menu
 
 		    center.Y += 70.0f;
 		}
+
+		if (_shouldStart) {
+			auto command = canvas->RentRenderCommand();
+			if (command->material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::Transition))) {
+				command->material().reserveUniformsDataMemory();
+				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			}
+
+			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+			instanceBlock->uniform(Material::TexRectUniformName)->setFloatVector(Vector4f(1.0f, 0.0f, 1.0f, 0.0f).Data());
+			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(Vector2f(static_cast<float>(canvas->ViewSize.X), static_cast<float>(canvas->ViewSize.Y)).Data());
+			instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(0.0f, 0.0f, 0.0f, _transitionTime).Data());
+
+			command->setTransformation(Matrix4x4f::Identity);
+			command->setLayer(999);
+
+			canvas->DrawRenderCommand(command);
+		}
 	}
 
 	void StartGameOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
-		if (event.type == TouchEventType::Down) {
+		if (!_shouldStart && event.type == TouchEventType::Down) {
 			int pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x * (float)viewSize.X;
@@ -274,10 +303,16 @@ namespace Jazz2::UI::Menu
 
 	void StartGameOptionsSection::ExecuteSelected()
 	{
-		if (_selectedIndex != 2) {
-			return;
-		}
+		if (_selectedIndex == 2) {
+			_root->PlaySfx("MenuSelect"_s, 0.6f);
 
+			_shouldStart = true;
+			_transitionTime = 1.0f;
+		}
+	}
+
+	void StartGameOptionsSection::OnAfterTransition()
+	{
 #if !defined(SHAREWARE_DEMO_ONLY)
 		bool playTutorial = (!PreferencesCache::TutorialCompleted && _episodeName == "prince"_s && _levelName == "01_castle1"_s);
 #else

@@ -25,9 +25,8 @@ namespace Jazz2::Actors::Enemies
 		_scoreValue = 400;
 
 		co_await RequestMetadataAsync("Enemy/Fencer"_s);
-		SetAnimation(AnimState::Idle);
-
 		SetFacingLeft(true);
+		SetAnimation(AnimState::Idle);
 
 		PlaceOnGround();
 

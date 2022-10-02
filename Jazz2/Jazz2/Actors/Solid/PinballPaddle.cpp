@@ -24,9 +24,8 @@ namespace Jazz2::Actors::Solid
 
 		co_await RequestMetadataAsync("Object/PinballPaddle"_s);
 
-		SetAnimation(AnimState::Idle);
-
 		SetFacingLeft(facingLeft);
+		SetAnimation(AnimState::Idle);
 
 		co_return true;
 	}

@@ -2,6 +2,7 @@
 #include "../../ILevelHandler.h"
 #include "../../LevelInitialization.h"
 #include "../../Events/EventMap.h"
+#include "../../Tiles/TileMap.h"
 #include "../Enemies/EnemyBase.h"
 #include "../Explosion.h"
 
@@ -11,7 +12,9 @@ namespace Jazz2::Actors::Weapons
 {
 	ElectroShot::ElectroShot()
 		:
-		_fired(false)
+		_fired(false),
+		_currentStep(0.0f),
+		_particleSpawnTime(0.0f)
 	{
 	}
 
@@ -27,15 +30,10 @@ namespace Jazz2::Actors::Weapons
 		SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset, false);
 
 		co_await RequestMetadataAsync("Weapon/Electro"_s);
-
-		AnimState state = AnimState::Idle;
-		// TODO: Electro shot rendering
-
-		SetAnimation(state);
-
+		SetAnimation(AnimState::Idle);
 		PlaySfx("Fire"_s);
 
-		_renderer.setBlendingPreset(DrawableNode::BlendingPreset::ADDITIVE);
+		_renderer.setDrawEnabled(false);
 
 		co_return true;
 	}
@@ -56,8 +54,6 @@ namespace Jazz2::Actors::Weapons
 			_speed.X = std::max(0.0f, speed.X) + cosf(angleRel) * baseSpeed;
 		}
 		_speed.Y = sinf(angleRel) * baseSpeed;
-
-		_renderer.setDrawEnabled(false);
 	}
 
 	void ElectroShot::OnUpdate(float timeMult)
@@ -77,7 +73,59 @@ namespace Jazz2::Actors::Weapons
 		if (!_fired) {
 			_fired = true;
 			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
-			_renderer.setDrawEnabled(true);
+		} else {
+			_particleSpawnTime -= timeMult;
+			if (_particleSpawnTime <= 0.0f) {
+				_particleSpawnTime += 1.0f;
+
+				auto tilemap = _levelHandler->TileMap();
+				if (tilemap != nullptr) {
+					auto it = _metadata->Graphics.find(String::nullTerminatedView("Particle"_s));
+					if (it != _metadata->Graphics.end()) {
+						auto& resBase = it->second.Base;
+						Vector2i texSize = resBase->TextureDiffuse->size();
+
+						for (int i = 0; i < 6; i++) {
+							float angle = (_currentStep * 0.3f + i * 0.6f);
+							if (IsFacingLeft()) {
+								angle = -angle;
+							}
+
+							float size = (8.0f + _currentStep * 0.2f);
+							float dist = (2.0f + _currentStep * 0.01f);
+							float dx = dist * cosf(angle);
+							float dy = dist * sinf(angle);
+
+							Tiles::TileMap::DestructibleDebris debris = { };
+							debris.Pos = Vector2f(_pos.X + dx, _pos.Y + dy);
+							debris.Depth = _renderer.layer();
+							debris.Size = Vector2f(size, size);
+
+							debris.Scale = 1.0f;
+							debris.ScaleSpeed = -0.1f;
+							debris.Alpha = 1.0f;
+							debris.AlphaSpeed = -0.1f;
+							debris.Angle = angle;
+
+							debris.Time = 60.0f;
+
+							int curAnimFrame = ((_upgrades & 0x1) != 0 ? 2 : 0) + Random().Fast(0, 2);
+							int col = curAnimFrame % resBase->FrameConfiguration.X;
+							int row = curAnimFrame / resBase->FrameConfiguration.X;
+							debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
+							debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
+							debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
+							debris.TexBiasY = (float(resBase->FrameDimensions.Y * row) / float(texSize.Y));
+
+							debris.DiffuseTexture = resBase->TextureDiffuse.get();
+
+							tilemap->CreateDebris(debris);
+						}
+					}
+				}
+			}
+
+			_currentStep += timeMult;
 		}
 	}
 
@@ -90,10 +138,10 @@ namespace Jazz2::Actors::Weapons
 	{
 		auto& light = lights.emplace_back();
 		light.Pos = _pos;
-		light.Intensity = 0.4f;
-		light.Brightness = 0.2f;
+		light.Intensity = 0.4f + 0.016f * _currentStep;
+		light.Brightness = 0.2f + 0.02f * _currentStep;
 		light.RadiusNear = 0.0f;
-		light.RadiusFar = 12.0f;
+		light.RadiusFar = 12.0f + 0.4f * _currentStep;
 	}
 
 	bool ElectroShot::OnHandleCollision(std::shared_ptr<ActorBase> other)

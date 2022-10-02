@@ -93,12 +93,7 @@ namespace Jazz2::Actors::Weapons
 
 	void BlasterShot::OnUpdateHitbox()
 	{
-		AABBInner = AABBf(
-			_pos.X - 6,
-			_pos.Y - 6,
-			_pos.X + 6,
-			_pos.Y + 6
-		);
+		AABBInner = AABBf(_pos.X - 2, _pos.Y - 2, _pos.X + 2, _pos.Y + 2);
 	}
 
 	void BlasterShot::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)

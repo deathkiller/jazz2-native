@@ -27,9 +27,9 @@ namespace Jazz2::Actors::Enemies
 		_scoreValue = 300;
 
 		co_await RequestMetadataAsync("Enemy/FatChick"_s);
+		SetFacingLeft(Random().NextBool());
 		SetAnimation(AnimState::Walk);
 
-		SetFacingLeft(Random().NextBool());
 		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
 
 		PlaceOnGround();

@@ -227,6 +227,7 @@
     <ClInclude Include="Jazz2\Actors\Collectibles\Stopwatch.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Bee.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Bilsy.h" />
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Bolly.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Bosses\BossBase.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Bubba.h" />
     <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Devan.h" />
@@ -270,6 +271,7 @@
     <ClInclude Include="Jazz2\Actors\Environment\EndOfLevel.h" />
     <ClInclude Include="Jazz2\Actors\Environment\Eva.h" />
     <ClInclude Include="Jazz2\Actors\Environment\Moth.h" />
+    <ClInclude Include="Jazz2\Actors\Environment\RollingRock.h" />
     <ClInclude Include="Jazz2\Actors\Environment\SteamNote.h" />
     <ClInclude Include="Jazz2\Actors\Explosion.h" />
     <ClInclude Include="Jazz2\Actors\Lighting\FlickerLight.h" />
@@ -348,6 +350,7 @@
     <ClInclude Include="Jazz2\UI\Menu\MenuSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\OptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\PauseSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\RefreshCacheSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RemapControlsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RescaleModeSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\SoundsOptionsSection.h" />
@@ -555,6 +558,7 @@
     <ClCompile Include="Jazz2\Actors\Collectibles\Stopwatch.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Bee.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Bilsy.cpp" />
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Bolly.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Bosses\BossBase.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Bubba.cpp" />
     <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Devan.cpp" />
@@ -598,6 +602,7 @@
     <ClCompile Include="Jazz2\Actors\Environment\EndOfLevel.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\Eva.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\Moth.cpp" />
+    <ClCompile Include="Jazz2\Actors\Environment\RollingRock.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\SteamNote.cpp" />
     <ClCompile Include="Jazz2\Actors\Explosion.cpp" />
     <ClCompile Include="Jazz2\Actors\Lighting\FlickerLight.cpp" />
@@ -663,6 +668,7 @@
     <ClCompile Include="Jazz2\UI\Menu\MainMenu.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\OptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\PauseSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\RefreshCacheSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\RemapControlsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\RescaleModeSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\SoundsOptionsSection.cpp" />
