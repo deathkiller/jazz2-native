@@ -297,16 +297,16 @@ namespace Jazz2
 			if (_difficulty != GameDifficulty::Multiplayer) {
 				if (!_players.empty()) {
 					auto& pos = _players[0]->GetPos();
-					int tx1 = (int)pos.X >> 5;
-					int ty1 = (int)pos.Y >> 5;
+					int tx1 = (int)pos.X / Tiles::TileSet::DefaultTileSize;
+					int ty1 = (int)pos.Y / Tiles::TileSet::DefaultTileSize;
 					int tx2 = tx1;
 					int ty2 = ty1;
 
 #if ENABLE_SPLITSCREEN
 					for (int i = 1; i < players.Count; i++) {
 						Vector3 pos2 = players[i].Transform.Pos;
-						int tx = (int)pos2.X >> 5;
-						int ty = (int)pos2.Y >> 5;
+						int tx = (int)pos2.X / Tiles::TileSet::DefaultTileSize;
+						int ty = (int)pos2.Y / Tiles::TileSet::DefaultTileSize;
 						if (tx1 > tx) {
 							tx1 = tx;
 						} else if (tx2 < tx) {
@@ -918,6 +918,7 @@ namespace Jazz2
 #if defined(WITH_OPENMPT)
 			if (_music != nullptr) {
 				_music->stop();
+				_music = nullptr;
 			}
 #endif
 		}

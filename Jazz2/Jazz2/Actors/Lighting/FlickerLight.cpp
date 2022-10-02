@@ -22,7 +22,7 @@ namespace Jazz2::Actors::Lighting
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		for (int i = 0; i < LightPartCount; i++) {
-			float radius = Random().FastFloat(_radiusFar * 0.4f, _radiusFar * 0.7f);
+			float radius = Random().FastFloat(_radiusFar * 0.5f, _radiusFar * 0.8f);
 			float angle = Random().FastFloat(0.0f, fTwoPi);
 			float distance = Random().FastFloat(0.0f, _radiusFar * 0.6f);
 
@@ -37,12 +37,12 @@ namespace Jazz2::Actors::Lighting
 
 	void FlickerLight::OnUpdate(float timeMult)
 	{
-		_phase = lerp(_phase, Random().FastFloat() * 0.6f, 0.04f * timeMult);
+		_phase = lerp(_phase, Random().FastFloat(), 0.04f * timeMult);
 
 		for (auto& part : _parts) {
-			part.Phase += timeMult * 0.01f;
+			part.Phase += timeMult * 0.02f;
 			if (part.Phase >= 1.0f) {
-				float radius = Random().FastFloat(_radiusFar * 0.4f, _radiusFar * 0.7f);
+				float radius = Random().FastFloat(_radiusFar * 0.5f, _radiusFar * 0.8f);
 				float angle = Random().FastFloat(0.0f, fTwoPi);
 				float distance = Random().FastFloat(0.0f, _radiusFar * 0.6f);
 
@@ -57,8 +57,8 @@ namespace Jazz2::Actors::Lighting
 	{
 		auto& light = lights.emplace_back();
 		light.Pos = _pos;
-		light.Intensity = _intensity * _phase;
-		light.Brightness = _brightness;
+		light.Intensity = _intensity * _phase * 0.2f;
+		light.Brightness = _brightness * 0.4f;
 		light.RadiusNear = _radiusNear;
 		light.RadiusFar = lerp(_radiusNear, _radiusFar, _phase);
 
@@ -67,7 +67,7 @@ namespace Jazz2::Actors::Lighting
 
 			auto& light2 = lights.emplace_back();
 			light2.Pos = part.Pos;
-			light2.Intensity = _intensity * phase * 0.4f;
+			light2.Intensity = _intensity * phase * 0.6f;
 			light2.Brightness = _brightness  * phase * 0.4f;
 			light2.RadiusNear = 0.0f;
 			light2.RadiusFar = part.Radius;

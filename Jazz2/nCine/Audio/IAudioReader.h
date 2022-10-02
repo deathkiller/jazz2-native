@@ -6,7 +6,7 @@ namespace nCine
 	class IAudioReader
 	{
 	public:
-		virtual ~IAudioReader() {}
+		virtual ~IAudioReader() { }
 
 		/// Decodes audio data in a specified buffer
 		/*!
@@ -29,7 +29,7 @@ namespace nCine
 		inline unsigned long int read(void* buffer, unsigned long int bufferSize) const override {
 			return 0;
 		}
-		inline void rewind() const override {};
+		inline void rewind() const override { };
 	};
 
 }

@@ -21,5 +21,8 @@ namespace Jazz2::Actors::Environment
 
 	private:
 		std::shared_ptr<AudioBufferPlayer> _sound;
+		uint8_t _sfx;
+		float _gain;
+		float _delay;
 	};
 }
