@@ -11,7 +11,6 @@ namespace Jazz2::Actors::Lighting
 
 	Task<bool> FlickerLight::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		// TODO: Add noise
 		_intensity = details.Params[0] / 255.0f;
 		_brightness = details.Params[1] / 255.0f;
 		_radiusNear = (float)*(uint16_t*)&details.Params[2];

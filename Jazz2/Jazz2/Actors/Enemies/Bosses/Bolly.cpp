@@ -91,7 +91,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Bolly::OnActivatedBoss()
 	{
-		SetHealthByDifficulty(100);
+		SetHealthByDifficulty(42);
 
 		MoveInstantly(_originPos, MoveType::Absolute | MoveType::Force);
 
@@ -116,7 +116,7 @@ namespace Jazz2::Actors::Bosses
 				if (_stateTime <= 0.0f) {
 					if (Random().NextFloat() < 0.1f) {
 						_state = StatePrepairingToAttack;
-						_stateTime = 100.0f;
+						_stateTime = 120.0f;
 						_speed.X = 0;
 						_speed.Y = 0;
 					} else {
@@ -256,8 +256,8 @@ namespace Jazz2::Actors::Bosses
 			SetFacingLeft(targetPos.X < _pos.X);
 
 			Vector2f speed = (targetPos - _pos).Normalized();
-			_speed.X = speed.X * 0.8f;
-			_speed.Y = speed.Y * 0.8f;
+			_speed.X = speed.X * 0.6f;
+			_speed.Y = speed.Y * 0.6f;
 		}
 	}
 

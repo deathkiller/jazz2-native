@@ -15,7 +15,7 @@ namespace Jazz2::Actors::Enemies
 		_anglePhase(0.0f),
 		_attackTime(80.0f),
 		_attacking(false),
-		_noiseCooldown(Random().NextFloat(180, 300))
+		_noiseCooldown(Random().NextFloat(180.0f, 300.0f))
 	{
 	}
 
@@ -80,10 +80,11 @@ namespace Jazz2::Actors::Enemies
 
 		_anglePhase += timeMult * 0.02f;
 
-		Vector2f speed = ((_targetPos - _lastPos) / 26.0f + _lastSpeed * 1.4f) / 2.4f;
-		_lastPos.X += speed.X;
-		_lastPos.Y += speed.Y;
-		_lastSpeed = speed;
+		float speedX = ((_targetPos.X - _lastPos.X) * timeMult / 26.0f + _lastSpeed.X * 1.4f) / 2.4f;
+		float speedY = ((_targetPos.Y - _lastPos.Y) * timeMult / 26.0f + _lastSpeed.Y * 1.4f) / 2.4f;
+		_lastPos.X += speedX;
+		_lastPos.Y += speedY;
+		_lastSpeed = Vector2f(speedX, speedY);
 
 		bool willFaceLeft = (_speed.X < 0.0f);
 		if (IsFacingLeft() != willFaceLeft) {

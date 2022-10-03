@@ -144,9 +144,6 @@ elseif(NOT ANDROID) # GCC and LLVM
 		if(NCINE_WITH_VORBIS)
 			find_package(Vorbis)
 		endif()
-
-		set(OPENMPT_FOUND 1)
-		set(OPENMPT_DYNAMIC_LINK 1)
 	endif()
 	if(NCINE_WITH_LUA)
 		# Older CMake versions do not support Lua 5.4 if not required explicitly
@@ -524,6 +521,19 @@ else() # GCC and LLVM
 				IMPORTED_LOCATION ${VORBISFILE_LIBRARY}
 				INTERFACE_INCLUDE_DIRECTORIES ${VORBIS_INCLUDE_DIR}
 				INTERFACE_LINK_LIBRARIES "${VORBIS_LIBRARY};${OGG_LIBRARY}")
+		endif()
+		
+		set(OPENMPT_FOUND 1)
+		find_library(OPENMPT_LIBRARY libopenmpt.so PATHS /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64)
+		if(EXISTS ${OPENMPT_LIBRARY})
+			message(STATUS "Found libopenmpt: ${OPENMPT_LIBRARY}")
+			add_library(libopenmpt::libopenmpt SHARED IMPORTED)
+			set_target_properties(libopenmpt::libopenmpt PROPERTIES
+				IMPORTED_LOCATION "${OPENMPT_LIBRARY}"
+				INTERFACE_INCLUDE_DIRECTORIES "${NCINE_SOURCE_DIR}/../Libs/libopenmpt/")
+		else()
+			set(OPENMPT_DYNAMIC_LINK 1)
+			message(STATUS "Cannot find libopenmpt, using dynamic linking instead")
 		endif()
 	endif()
 

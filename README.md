@@ -16,10 +16,10 @@
 
 
 ## Introduction
-Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** released in 1998. Supports various versions of the game (Shareware Demo, Holiday Hare '98, The Secret Files and Christmas Chronicles). Also, it partially supports some features of JJ2+ extension and MLLE. Further information can be found [here](http://deat.tk/jazz2/).
+Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** released in 1998. Supports various versions of the game (Shareware Demo, Holiday Hare '98, The Secret Files and Christmas Chronicles). Also, it partially supports some features of JJ2+ extension and MLLE. This repository contains fully rewritten game in C++ with better performance and many improvements. Further information can be found [here](http://deat.tk/jazz2/).
 
 [![Build Status](https://img.shields.io/appveyor/ci/deathkiller/jazz2/master.svg?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI0IDIuNXYxOUwxOCAyNCAwIDE4LjV2LS41NjFsMTggMS41NDVWMHpNMSAxMy4xMTFMNC4zODUgMTAgMSA2Ljg4OWwxLjQxOC0uODI3TDUuODUzIDguNjUgMTIgM2wzIDEuNDU2djExLjA4OEwxMiAxN2wtNi4xNDctNS42NS0zLjQzNCAyLjU4OXpNNy42NDQgMTBMMTIgMTMuMjgzVjYuNzE3eiI+PC9wYXRoPjwvc3ZnPg==)](https://ci.appveyor.com/project/deathkiller/jazz2-native)
-[![Latest Release](https://img.shields.io/github/v/tag/deathkiller/jazz2-native?label=release)](https://github.com/deathkiller/jazz2-native/releases)
+[![Latest Release](https://img.shields.io/github/v/tag/deathkiller/jazz2?label=release)](https://github.com/deathkiller/jazz2/releases)
 [![Code Quality](https://img.shields.io/codacy/grade/64eb3ca12bd04c64bf3f3515744b591a.svg?logo=codacy&logoColor=ffffff)](https://www.codacy.com/app/deathkiller/jazz2-native)
 [![License](https://img.shields.io/github/license/deathkiller/jazz2-native.svg)](https://github.com/deathkiller/jazz2-native/blob/master/LICENSE)
 [![Discord](https://img.shields.io/discord/355651795390955520.svg?color=839ef7&label=chat&logo=discord&logoColor=ffffff&labelColor=586eb5)](https://discord.gg/Y7SBvkD)
@@ -35,32 +35,32 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 
 ## Running the application
 ### Windows
-* Download or build the game
-* Copy original *Jazz Jackrabbit 2* directory to `‹Game›/Source/`
-* Run `‹Game›/Jazz2.exe` application
+* Download the game
+* Copy original *Jazz Jackrabbit 2* directory to `‹Game›\Source\`
+* Run `‹Game›\Jazz2.exe` application
 
-`‹Game›` *is path to Jazz² Resurrection. Cache is recreated during intro cinematics on the first startup, so it can't be skipped until it's done.*
+`‹Game›` *is path to Jazz² Resurrection. Cache is recreated during intro cinematics on the first startup, so it can't be skipped.*
 
 ### Linux
-* Download or build the game
+* Download the game
+* Install dependencies: `sudo apt install libglew2.2 libglfw3 libopenal1 libopenmpt0`
 * Copy original *Jazz Jackrabbit 2* directory to `‹Game›/Source/`
-* Install `libopenmpt-dev`, `libopenmpt-devel` or `libopenmpt` package according to your distro to enable music playback
-* Run `‹Game›/jazz2` application
+* Run `‹Game›/jazz2` or `‹Game›/jazz2_clang` application
 
-`‹Game›` *is path to Jazz² Resurrection. Cache is recreated during intro cinematics on the first startup, so it can't be skipped until it's done.*
+`‹Game›` *is path to Jazz² Resurrection. Cache is recreated during intro cinematics on the first startup, so it can't be skipped.*
 
 ### Web (Emscripten)
 * Go to http://deat.tk/jazz2/wasm/
 * Import episodes from original *Jazz Jackrabbit 2* directory to unlock additional content
 
 ### Android
-* Download or build the game
+* Download the game
 * Copy `Content` directory to `‹Storage›/Android/data/jazz2.resurrection/files/Content/`
 * Copy original *Jazz Jackrabbit 2* directory to `‹Storage›/Android/data/jazz2.resurrection/files/Source/`
-* Install `Jazz2.apk` on the device
+* Install `Jazz2.apk` or `Jazz2_x86-64.apk` on the device
 * Run the newly installed application
 
-`‹Storage›` *is usually internal storage on your device. The game requires device with **Android 5.0** (or newer) and **OpenGL ES 3.0** support.*
+`‹Storage›` *is usually internal storage on your device. The game requires device with **Android 5.0** (or newer) and **OpenGL ES 3.0** support. Cache is recreated during intro cinematics on the first startup, so it can't be skipped.*
 
 
 ## Building the application
