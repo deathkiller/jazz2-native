@@ -67,7 +67,7 @@ namespace Jazz2
 		_rootNode = std::make_unique<SceneNode>();
 		_rootNode->setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
 
-		if (!ContentResolver::Current().LoadLevel(this, _episodeName + "/" + _levelFileName, _difficulty)) {
+		if (!ContentResolver::Current().LoadLevel(this, _episodeName + "/"_s + _levelFileName, _difficulty)) {
 			LOGE("Cannot load specified level");
 			return;
 		}

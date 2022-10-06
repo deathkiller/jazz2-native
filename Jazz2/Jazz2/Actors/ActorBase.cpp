@@ -1060,7 +1060,7 @@ namespace Jazz2::Actors
 
 		_renderer.FrameConfiguration = res->Base->FrameConfiguration;
 		_renderer.FrameDimensions = res->Base->FrameDimensions;
-		if (res->FrameDuration < 0.0f) {
+		if (res->AnimDuration < 0.0f) {
 			if (res->FrameCount > 1) {
 				_renderer.FirstFrame = res->FrameOffset + nCine::Random().Next(0, res->FrameCount);
 			} else {
@@ -1075,7 +1075,7 @@ namespace Jazz2::Actors
 		}
 
 		_renderer.FrameCount = res->FrameCount;
-		_renderer.AnimDuration = res->FrameDuration;
+		_renderer.AnimDuration = res->AnimDuration;
 		_renderer.AnimTime = 0.0f;
 
 		_renderer.Hotspot.X = -((res->Base->FrameDimensions.X / 2) - (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X));

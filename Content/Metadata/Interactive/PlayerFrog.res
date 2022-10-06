@@ -56,6 +56,10 @@
 			"States": [ 1073741826 ],
 			"FrameRate": 28
 		},
+
+		"Shield": {
+			"Path": "Common/player_shield.aura"
+		},
 		
 		"TransformFromJazz": {
 			"Path": "Jazz/transform_frog.aura",

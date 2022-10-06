@@ -1,15 +1,13 @@
 {
-	"Version": {
-		"Target": "Jazz² Resurrection"
-	},
+	"Target": "Jazz² Resurrection",
 
 	"Animations": {
 		"Bullet": {
-			"Path": "_custom/pepper.png",
+			"Path": "Weapon/pepper.aura",
 			"States": [ 0 ]
 		},
 		"BulletUpgraded": {
-			"Path": "_custom/pepper_upgraded.png",
+			"Path": "Weapon/pepper_upgraded.aura",
 			"States": [ 1 ]
 		}
 	},

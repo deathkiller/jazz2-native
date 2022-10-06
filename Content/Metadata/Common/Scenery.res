@@ -1,14 +1,12 @@
 {
-	"Version": {
-		"Target": "Jazz² Resurrection"
-	},
+	"Target": "Jazz² Resurrection",
 
 	"Animations": {
 		"Snow": {
-			"Path": "Common/Snow.aura"
+			"Path": "Common/snow.aura"
 		},
 		"Rain": {
-			"Path": "_custom/rain.png"
+			"Path": "Common/rain.aura"
 		}
 	},
 
@@ -31,9 +29,5 @@
 		"SugarRush": {
 			"Paths": [ "Common/sugar_rush.wav" ]
 		}
-	},
-
-	"Preload": [
-		"Common/Explosions"
-	]
+	}
 }

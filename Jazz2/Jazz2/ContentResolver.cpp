@@ -1,15 +1,17 @@
 ﻿#include "ContentResolver.h"
 #include "ContentResolver.Shaders.h"
 #include "Compatibility/JJ2Anims.Palettes.h"
+#include "LevelHandler.h"
+#include "Tiles/TileSet.h"
+#if _DEBUG
+#	include "Compatibility/JJ2Anims.h"
+#endif
 
 #include "../nCine/IO/CompressionUtils.h"
 #include "../nCine/IO/IFileStream.h"
 #include "../nCine/IO/MemoryFile.h"
 #include "../nCine/Graphics/ITextureLoader.h"
 #include "../nCine/Base/Random.h"
-
-#include "LevelHandler.h"
-#include "Tiles/TileSet.h"
 
 #if defined(DEATH_TARGET_SSE42) || defined(DEATH_TARGET_AVX)
 #	define RAPIDJSON_SSE42
@@ -203,7 +205,7 @@ namespace Jazz2
 						graphics.FrameOffset = 0;
 					}
 
-					graphics.FrameDuration = graphics.Base->FrameDuration;
+					graphics.AnimDuration = graphics.Base->AnimDuration;
 					graphics.FrameCount = graphics.Base->FrameCount;
 
 					const auto& frameCountItem = item.FindMember("FrameCount");
@@ -213,11 +215,11 @@ namespace Jazz2
 						graphics.FrameCount -= graphics.FrameOffset;
 					}
 
-					// TODO: Use FrameDuration instead
+					// TODO: Use AnimDuration instead
 					const auto& frameRateItem = item.FindMember("FrameRate");
 					if (frameRateItem != item.MemberEnd() && frameRateItem->value.IsInt()) {
 						int frameRate = frameRateItem->value.GetInt();
-						graphics.FrameDuration = (frameRate <= 0 ? -1.0f : (1.0f / frameRate) * 5.0f);
+						graphics.AnimDuration = (frameRate <= 0 ? -1.0f : (1.0f / frameRate) * 5.0f);
 					}
 
 					const auto& statesItem = item.FindMember("States");
@@ -314,6 +316,7 @@ namespace Jazz2
 
 		auto buffer = std::make_unique<char[]>(fileSize + 1);
 		s->Read(buffer.get(), fileSize);
+		s->Close();
 		buffer[fileSize] = '\0';
 
 		Document document;
@@ -384,12 +387,11 @@ namespace Jazz2
 			const auto& frameCount = document["FrameCount"].GetInt();
 
 			// TODO: Use FrameDuration instead
-			const auto& frameRateItem = document.FindMember("FrameRate");
-			if (frameRateItem != document.MemberEnd() && frameRateItem->value.IsNumber()) {
-				const auto& frameRate = frameRateItem->value.GetFloat();
-				graphics->FrameDuration = (frameRate <= 0 ? 0.0f : (1.0f / frameRate) * 5.0f);
+			const auto& durationItem = document.FindMember("Duration");
+			if (durationItem != document.MemberEnd() && durationItem->value.IsNumber()) {
+				graphics->AnimDuration = durationItem->value.GetFloat();
 			} else {
-				graphics->FrameDuration = 0.0f;
+				graphics->AnimDuration = 0.0f;
 			}
 
 			graphics->FrameDimensions = Vector2i(frameDimensions[0].GetInt(), frameDimensions[1].GetInt());
@@ -416,6 +418,10 @@ namespace Jazz2
 			} else {
 				graphics->Gunspot = Vector2i(InvalidValue, InvalidValue);
 			}
+
+#if _DEBUG
+			MigrateGraphics(path);
+#endif
 
 			return _cachedGraphics.emplace(Pair(String(path), paletteOffset), std::move(graphics)).first->second.get();
 		}
@@ -454,7 +460,7 @@ namespace Jazz2
 		uint8_t frameConfigurationX = s->ReadValue<uint8_t>();
 		uint8_t frameConfigurationY = s->ReadValue<uint8_t>();
 		uint16_t frameCount = s->ReadValue<uint16_t>();
-		uint16_t frameDuration = s->ReadValue<uint16_t>();
+		uint16_t animDuration = s->ReadValue<uint16_t>();
 
 		uint16_t hotspotX = s->ReadValue<uint16_t>();
 		uint16_t hotspotY = s->ReadValue<uint16_t>();
@@ -478,13 +484,6 @@ namespace Jazz2
 		const uint32_t* palette = _palettes + paletteOffset;
 		bool linearSampling = false;
 		bool needsMask = true;
-		/*if ((flags & 0x01) != 0x01) {
-			palette = nullptr;
-			// TODO: Apply linear sampling only to these images
-			if ((flags & 0x02) == 0x02) {
-				linearSampling = true;
-			}
-		}*/
 		if ((flags & 0x01) == 0x01) {
 			palette = nullptr;
 			linearSampling = true;
@@ -516,8 +515,8 @@ namespace Jazz2
 		graphics->TextureDiffuse->setMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
 		graphics->TextureDiffuse->setMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
 
-		// FrameDuration is multiplied by 16 before saving, so divide it here back
-		graphics->FrameDuration = frameDuration / 16.0f;
+		// AnimDuration is multiplied by 256 before saving, so divide it here back
+		graphics->AnimDuration = animDuration / 256.0f;
 		graphics->FrameDimensions = Vector2i(frameDimensionsX, frameDimensionsY);
 		graphics->FrameConfiguration = Vector2i(frameConfigurationX, frameConfigurationY);
 		graphics->FrameCount = frameCount;
@@ -908,8 +907,8 @@ namespace Jazz2
 		auto& font = _fonts[(int)fontType];
 		if (font == nullptr) {
 			switch (fontType) {
-				case FontType::Small: font = std::make_unique<UI::Font>(fs::JoinPath({ "Content"_s, "Animations"_s, "_custom"_s, "font_small.png"_s }), _palettes); break;
-				case FontType::Medium: font = std::make_unique<UI::Font>(fs::JoinPath({ "Content"_s, "Animations"_s, "_custom"_s, "font_medium.png"_s }), _palettes); break;
+				case FontType::Small: font = std::make_unique<UI::Font>(fs::JoinPath({ "Content"_s, "Animations"_s, "UI"_s, "font_small.png"_s }), _palettes); break;
+				case FontType::Medium: font = std::make_unique<UI::Font>(fs::JoinPath({ "Content"_s, "Animations"_s, "UI"_s, "font_medium.png"_s }), _palettes); break;
 				default: return nullptr;
 			}
 		}
@@ -1038,4 +1037,141 @@ namespace Jazz2
 			}
 		}
 	}
+
+#if _DEBUG
+	void ContentResolver::MigrateGraphics(const StringView& path)
+	{
+		String auraPath = fs::JoinPath({ "Content"_s, "Animations"_s, path.exceptSuffix(4) + ".aura"_s });
+		if (fs::IsFile(auraPath)) {
+			return;
+		}
+
+		auto s = fs::Open(fs::JoinPath({ "Content"_s, "Animations"_s, path + ".res"_s }), FileAccessMode::Read);
+		auto fileSize = s->GetSize();
+		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
+			// 64 MB file size limit, also if not found try to use cache
+			return;
+		}
+
+		auto buffer = std::make_unique<char[]>(fileSize + 1);
+		s->Read(buffer.get(), fileSize);
+		s->Close();
+		buffer[fileSize] = '\0';
+
+		Document document;
+		if (document.ParseInsitu(buffer.get()).HasParseError() || !document.IsObject()) {
+			return;
+		}
+
+		String fullPath = fs::JoinPath({ "Content"_s, "Animations"_s, path });
+		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
+		if (texLoader->hasLoaded()) {
+			auto texFormat = texLoader->texFormat().internalFormat();
+			if (texFormat != GL_RGBA8 && texFormat != GL_RGB8) {
+				return;
+			}
+
+			int w = texLoader->width();
+			int h = texLoader->height();
+			auto pixels = (uint32_t*)texLoader->pixels();
+			const uint32_t* palette = _palettes;
+			bool needsMask = true;
+
+			const auto& flagsItem = document.FindMember("Flags");
+			if (flagsItem != document.MemberEnd() && flagsItem->value.IsInt()) {
+				int flags = flagsItem->value.GetInt();
+				// Palette already applied, keep as is
+				if ((flags & 0x01) != 0x01) {
+					palette = nullptr;
+				}
+				if ((flags & 0x08) == 0x08) {
+					needsMask = false;
+				}
+			}
+
+			const auto& frameDimensions = document["FrameSize"].GetArray();
+			const auto& frameConfiguration = document["FrameConfiguration"].GetArray();
+			const auto& frameCount = document["FrameCount"].GetInt();
+
+			float animDuration;
+			const auto& durationItem = document.FindMember("Duration");
+			if (durationItem != document.MemberEnd() && durationItem->value.IsNumber()) {
+				animDuration = durationItem->value.GetFloat();
+			} else {
+				animDuration = 0.0f;
+			}
+
+			Vector2i hotspot, coldspot, gunspot;
+			const auto& hotspotItem = document.FindMember("Hotspot");
+			if (hotspotItem != document.MemberEnd() && hotspotItem->value.IsArray() && hotspotItem->value.Size() >= 2) {
+				hotspot = Vector2i(hotspotItem->value[0].GetInt(), hotspotItem->value[1].GetInt());
+			} else {
+				hotspot = Vector2i();
+			}
+
+			const auto& coldspotItem = document.FindMember("Coldspot");
+			if (coldspotItem != document.MemberEnd() && coldspotItem->value.IsArray() && coldspotItem->value.Size() >= 2) {
+				coldspot = Vector2i(coldspotItem->value[0].GetInt(), coldspotItem->value[1].GetInt());
+			} else {
+				coldspot = Vector2i(InvalidValue, InvalidValue);
+			}
+
+			const auto& gunspotItem = document.FindMember("Gunspot");
+			if (gunspotItem != document.MemberEnd() && gunspotItem->value.IsArray() && gunspotItem->value.Size() >= 2) {
+				gunspot = Vector2i(gunspotItem->value[0].GetInt(), gunspotItem->value[1].GetInt());
+			} else {
+				gunspot = Vector2i(InvalidValue, InvalidValue);
+			}
+
+			// Write to .aura file
+			auto so = fs::Open(auraPath, FileAccessMode::Write);
+			ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
+
+			uint8_t flags = 0x80;
+			if (palette == nullptr) {
+				flags |= 0x01;
+			}
+			if (!needsMask) {
+				flags |= 0x02;
+			}
+
+			so->WriteValue<uint64_t>(0xB8EF8498E2BFBBEF);
+			so->WriteValue<uint32_t>(0x0002208F | (flags << 24)); // Version 2 is reserved for sprites (or bigger images)
+
+			so->WriteValue<uint8_t>(4);
+			so->WriteValue<uint32_t>((uint32_t)frameDimensions[0].GetInt());
+			so->WriteValue<uint32_t>((uint32_t)frameDimensions[1].GetInt());
+
+			// Include Sprite extension
+			so->WriteValue<uint8_t>((uint8_t)frameConfiguration[0].GetInt());
+			so->WriteValue<uint8_t>((uint8_t)frameConfiguration[1].GetInt());
+			so->WriteValue<uint16_t>(frameCount);
+			so->WriteValue<uint16_t>((uint16_t)(animDuration <= 0.0f ? 0 : 256 * animDuration));
+
+			if (hotspot.X != InvalidValue || hotspot.Y != InvalidValue) {
+				so->WriteValue<uint16_t>((uint16_t)hotspot.X);
+				so->WriteValue<uint16_t>((uint16_t)hotspot.Y);
+			} else {
+				so->WriteValue<uint16_t>(UINT16_MAX);
+				so->WriteValue<uint16_t>(UINT16_MAX);
+			}
+			if (coldspot.X != InvalidValue || coldspot.Y != InvalidValue) {
+				so->WriteValue<uint16_t>((uint16_t)coldspot.X);
+				so->WriteValue<uint16_t>((uint16_t)coldspot.Y);
+			} else {
+				so->WriteValue<uint16_t>(UINT16_MAX);
+				so->WriteValue<uint16_t>(UINT16_MAX);
+			}
+			if (gunspot.X != InvalidValue || gunspot.Y != InvalidValue) {
+				so->WriteValue<uint16_t>((uint16_t)gunspot.X);
+				so->WriteValue<uint16_t>((uint16_t)gunspot.Y);
+			} else {
+				so->WriteValue<uint16_t>(UINT16_MAX);
+				so->WriteValue<uint16_t>(UINT16_MAX);
+			}
+
+			Compatibility::JJ2Anims::WriteImageToFileInternal(so, texLoader->pixels(), w, h, 4);
+		}
+	}
+#endif
 }

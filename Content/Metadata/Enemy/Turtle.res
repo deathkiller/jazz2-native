@@ -39,9 +39,5 @@
 		"Attack2": {
 			"Paths": [ "Turtle/attack_bite.wav" ]
 		}
-	},
-
-	"Preload": [
-		"Enemy/TurtleShell"
-	]
+	}
 }

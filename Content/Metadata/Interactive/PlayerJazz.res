@@ -167,7 +167,7 @@
 			"States": [ 1073741830 ]
 		},
 		"FallShootToFall": {
-			"Path": "Jazz/jump_shoot_end.png",
+			"Path": "Jazz/jump_shoot_end.aura",
 			"FrameRate": 20,
 			"States": [ 1073741872 ]
 		},
@@ -280,7 +280,7 @@
 			"States": [ 1024 ]
 		},
 		"LedgeClimb": {
-			"Path": "Jazz/ledge_climb.png",
+			"Path": "Jazz/ledge_climb.aura",
 			"FrameRate": 8,
 			"States": [ 1073741862 ]
 		},
@@ -328,10 +328,10 @@
 		},
 
 		"SugarRush": {
-			"Path": "Common/sugar_rush_stars.png"
+			"Path": "Common/sugar_rush_stars.aura"
 		},
 		"Shield": {
-			"Path": "_custom/player_shield.png"
+			"Path": "Common/player_shield.aura"
 		}
 	},
 

@@ -5,20 +5,20 @@
 
 	"Animations": {
 		"Closed": {
-			"Path": "_custom/checkpoint_xmas.png",
+			"Path": "Object/checkpoint_xmas.aura",
 			"FrameCount": 1,
 			"FrameRate": 0,
 			"States": [ 0 ]
 		},
 		"Opened": {
-			"Path": "_custom/checkpoint_xmas.png",
+			"Path": "Object/checkpoint_xmas.aura",
 			"FrameOffset": 13,
 			"FrameCount": 1,
 			"FrameRate": 0,
 			"States": [ 0 ]
 		},
 		"TransitionActivate": {
-			"Path": "_custom/checkpoint_xmas.png",
+			"Path": "Object/checkpoint_xmas.aura",
 			"FrameRate": 6,
 			"States": [ 1325400064 ]
 		}

@@ -1593,7 +1593,7 @@ namespace Jazz2::Actors
 
 				// Adjust swimming animation speed
 				if (_currentTransitionState == AnimState::Idle) {
-					_renderer.AnimDuration = std::max(_currentAnimation->FrameDuration + 1.0f - Vector2f(_speed.X, _speed.Y).Length() * 0.26f, 0.4f);
+					_renderer.AnimDuration = std::max(_currentAnimation->AnimDuration + 1.0f - Vector2f(_speed.X, _speed.Y).Length() * 0.26f, 0.4f);
 				}
 
 			} else if (_waterCooldownLeft <= 0.0f) {
@@ -1625,7 +1625,7 @@ namespace Jazz2::Actors
 
 			// Adjust walking animation speed
 			if (_currentAnimationState == AnimState::Walk && _currentTransitionState == AnimState::Idle) {
-				_renderer.AnimDuration = _currentAnimation->FrameDuration * (1.4f - 0.4f * std::min(std::abs(_speed.X), MaxRunningSpeed) / MaxRunningSpeed);
+				_renderer.AnimDuration = _currentAnimation->AnimDuration * (1.4f - 0.4f * std::min(std::abs(_speed.X), MaxRunningSpeed) / MaxRunningSpeed);
 			}
 		}
 	}

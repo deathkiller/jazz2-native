@@ -9,19 +9,19 @@
 			"FrameRate": 7
 		},
 		"MenuLine": {
-			"Path": "_custom/line.png"
+			"Path": "UI/line.aura"
 		},
 		"MenuLineArrow": {
-			"Path": "_custom/line_arrow.png"
+			"Path": "UI/line_arrow.aura"
 		},
 		"MenuDim": {
-			"Path": "_custom/dim.png"
+			"Path": "UI/dim.aura"
 		},
 		"MenuGlow": {
-			"Path": "_custom/glow.png"
+			"Path": "UI/glow.aura"
 		},
 		"EpisodeComplete": {
-			"Path": "_custom/episode_complete.png"
+			"Path": "UI/episode_complete.aura"
 		},
 		"MenuDifficultyJazz": {
 			"Path": "UI/character_art_difficulty_jazz.aura"
@@ -33,53 +33,53 @@
 			"Path": "UI/character_art_difficulty_lori.aura"
 		},
 		"Uac": {
-			"Path": "_custom/uac.png"
+			"Path": "UI/uac.aura"
 		},
 
 		"GamepadA": {
-			"Path": "_custom/gamepad_a.png"
+			"Path": "UI/gamepad_a.aura"
 		},
 		"GamepadB": {
-			"Path": "_custom/gamepad_b.png"
+			"Path": "UI/gamepad_b.aura"
 		},
 		"GamepadX": {
-			"Path": "_custom/gamepad_x.png"
+			"Path": "UI/gamepad_x.aura"
 		},
 		"GamepadY": {
-			"Path": "_custom/gamepad_y.png"
+			"Path": "UI/gamepad_y.aura"
 		},
 		"GamepadDPadLeft": {
-			"Path": "_custom/gamepad_left.png"
+			"Path": "UI/gamepad_left.aura"
 		},
 		"GamepadDPadRight": {
-			"Path": "_custom/gamepad_right.png"
+			"Path": "UI/gamepad_right.aura"
 		},
 		"GamepadDPadUp": {
-			"Path": "_custom/gamepad_up.png"
+			"Path": "UI/gamepad_up.aura"
 		},
 		"GamepadDPadDown": {
-			"Path": "_custom/gamepad_down.png"
+			"Path": "UI/gamepad_down.aura"
 		},
 		"GamepadBigButton": {
-			"Path": "_custom/gamepad_guide.png"
+			"Path": "UI/gamepad_guide.aura"
 		},
 		"GamepadBack": {
-			"Path": "_custom/gamepad_back.png"
+			"Path": "UI/gamepad_back.aura"
 		},
 		"GamepadStart": {
-			"Path": "_custom/gamepad_start.png"
+			"Path": "UI/gamepad_start.aura"
 		},
 		"GamepadLeftShoulder": {
-			"Path": "_custom/gamepad_lb.png"
+			"Path": "UI/gamepad_lb.aura"
 		},
 		"GamepadLeftStick": {
-			"Path": "_custom/gamepad_ls.png"
+			"Path": "UI/gamepad_ls.aura"
 		},
 		"GamepadRightShoulder": {
-			"Path": "_custom/gamepad_rb.png"
+			"Path": "UI/gamepad_rb.aura"
 		},
 		"GamepadRightStick": {
-			"Path": "_custom/gamepad_rs.png"
+			"Path": "UI/gamepad_rs.aura"
 		}
 	},
 

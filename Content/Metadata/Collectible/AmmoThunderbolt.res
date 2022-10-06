@@ -1,11 +1,9 @@
 {
-	"Version": {
-		"Target": "Jazz² Resurrection"
-	},
+	"Target": "Jazz² Resurrection",
 
 	"Animations": {
 		"Ammo": {
-			"Path": "_custom/thunderbolt_ammo.png"
+			"Path": "Pickup/ammo_thunderbolt.aura"
 		}
 	}
 }

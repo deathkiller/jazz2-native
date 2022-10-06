@@ -169,7 +169,7 @@ namespace Jazz2::Actors::Bosses
 
 			float mult = Random().NextFloat(0.6f, 0.9f);
 			_speed.X = (IsFacingLeft() ? -3.0f : 3.0f) * mult;
-			_renderer.AnimDuration = _currentAnimation->FrameDuration / mult;
+			_renderer.AnimDuration = _currentAnimation->AnimDuration / mult;
 
 			PlaySfx("Run"_s);
 			SetAnimation(AnimState::Run);

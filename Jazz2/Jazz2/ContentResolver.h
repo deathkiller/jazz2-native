@@ -60,7 +60,7 @@ namespace Jazz2
 		std::unique_ptr<uint8_t[]> Mask;
 		Vector2i FrameDimensions;
 		Vector2i FrameConfiguration;
-		float FrameDuration;
+		float AnimDuration;
 		int FrameCount;
 		Vector2i Hotspot;
 		Vector2i Coldspot;
@@ -75,7 +75,7 @@ namespace Jazz2
 
 		SmallVector<AnimState, 4> State;
 		//std::unique_ptr<Material> Material;
-		float FrameDuration;
+		float AnimDuration;
 		int FrameCount;
 		int FrameOffset;
 		AnimationLoopMode LoopMode;
@@ -261,6 +261,9 @@ namespace Jazz2
 		static void ReadImageFromFile(std::unique_ptr<IFileStream>& s, uint8_t* data, int width, int height, int channelCount);
 		void CompileShaders();
 		void RecreateGemPalettes();
+#if _DEBUG
+		void MigrateGraphics(const StringView& path);
+#endif
 
 		bool _isLoading;
 		uint32_t _palettes[PaletteCount * ColorsPerPalette];

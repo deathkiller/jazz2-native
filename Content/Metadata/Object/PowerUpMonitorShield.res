@@ -5,7 +5,7 @@
 
 	"Animations": {
 		"Empty": {
-			"Path": "Object/powerup_empty.png",
+			"Path": "Object/powerup_empty.aura",
 			"FrameRate": 6
 		},
 		
@@ -18,7 +18,7 @@
 			"FrameRate": 6
 		},
 		"ShieldLaser": {
-			"Path": "Object/powerup_shield_laser.png",
+			"Path": "Object/powerup_shield_laser.aura",
 			"FrameRate": 6
 		},
 		"ShieldLightning": {

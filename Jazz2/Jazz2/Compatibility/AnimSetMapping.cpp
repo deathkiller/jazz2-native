@@ -967,7 +967,7 @@ namespace Jazz2::Compatibility
 
 			if (isFull) {
 				m.NextSet();
-				m.Add("Common"_s, "Snow"_s);
+				m.Add("Common"_s, "snow"_s);
 
 				m.NextSet();
 				m.Add("Bolly"_s, "rocket"_s);
@@ -1156,12 +1156,12 @@ namespace Jazz2::Compatibility
 				m.Add("TurtleTube"_s, "Idle"_s);
 
 				m.NextSet();
-				m.Add("TurtleToughBoss"_s, "attack_start"_s);
-				m.Add("TurtleToughBoss"_s, "attack_end"_s);
-				m.Add("TurtleToughBoss"_s, "shell"_s);
-				m.Add("TurtleToughBoss"_s, "mace"_s);
-				m.Add("TurtleToughBoss"_s, "idle"_s);
-				m.Add("TurtleToughBoss"_s, "walk"_s);
+				m.Add("TurtleBoss"_s, "attack_start"_s);
+				m.Add("TurtleBoss"_s, "attack_end"_s);
+				m.Add("TurtleBoss"_s, "shell"_s);
+				m.Add("TurtleBoss"_s, "mace"_s);
+				m.Add("TurtleBoss"_s, "idle"_s);
+				m.Add("TurtleBoss"_s, "walk"_s);
 
 				m.NextSet();
 				m.Add("TurtleTough"_s, "Walk"_s);
@@ -1862,9 +1862,9 @@ namespace Jazz2::Compatibility
 
 			if (isFull) {
 				m.NextSet(2); // set 101 (1.24) / set 97 (1.23)
-				m.Add("TurtleToughBoss"_s, "attack_start"_s);
-				m.Add("TurtleToughBoss"_s, "attack_end"_s);
-				m.Add("TurtleToughBoss"_s, "mace"_s);
+				m.Add("TurtleBoss"_s, "attack_start"_s);
+				m.Add("TurtleBoss"_s, "attack_end"_s);
+				m.Add("TurtleBoss"_s, "mace"_s);
 				m.NextSet();
 			}
 

@@ -204,7 +204,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (frame < 0) {
-			frame = it->second.FrameOffset + ((int)(_canvas->AnimTime * it->second.FrameCount / it->second.FrameDuration) % it->second.FrameCount);
+			frame = it->second.FrameOffset + ((int)(_canvas->AnimTime * it->second.FrameCount / it->second.AnimDuration) % it->second.FrameCount);
 		}
 
 		GenericGraphicResource* base = it->second.Base;

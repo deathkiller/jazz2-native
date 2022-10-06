@@ -314,10 +314,10 @@
 		},
 
 		"SugarRush": {
-			"Path": "Common/sugar_rush_stars.png"
+			"Path": "Common/sugar_rush_stars.aura"
 		},
 		"Shield": {
-			"Path": "_custom/player_shield.png"
+			"Path": "Common/player_shield.aura"
 		}
 	},
 

@@ -19,10 +19,18 @@ android {
 		release {
 			minifyEnabled true
 			shrinkResources true
+			
+			ndk {
+				abiFilters '@GRADLE_NDK_ARCHITECTURES@'
+			}
 		}
 
 		debug {
 			applicationIdSuffix ".debug"
+			
+			ndk {
+				abiFilters '@GRADLE_NDK_ARCHITECTURES@'
+			}
 		}
 	}
 

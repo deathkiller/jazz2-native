@@ -11,7 +11,7 @@
 			"Path": "Pickup/fast_fire_spaz.aura"
 		},
 		"WeaponBlasterLori": {
-			"Path": "Pickup/fast_fire_lori.png"
+			"Path": "Pickup/fast_fire_lori.aura"
 		},
 		"WeaponBouncer": {
 			"Path": "Pickup/ammo_bouncer.aura"
@@ -39,7 +39,7 @@
 			"Path": "Pickup/ammo_electro.aura"
 		},
 		"WeaponThunderbolt": {
-			"Path": "_custom/thunderbolt_ammo.png"
+			"Path": "Pickup/ammo_thunderbolt.aura"
 		},
 
 		"WeaponPowerUpBlasterJazz": {
@@ -49,7 +49,7 @@
 			"Path": "UI/blaster_upgraded_spaz.aura"
 		},
 		"WeaponPowerUpBlasterLori": {
-			"Path": "UI/blaster_upgraded_lori.png"
+			"Path": "UI/blaster_upgraded_lori.aura"
 		},
 		"WeaponPowerUpBouncer": {
 			"Path": "Pickup/ammo_bouncer_upgraded.aura"
@@ -76,11 +76,11 @@
 			"Path": "Pickup/ammo_electro_upgraded.aura"
 		},
 		"WeaponPowerUpThunderbolt": {
-			"Path": "_custom/thunderbolt_ammo.png"
+			"Path": "Pickup/ammo_thunderbolt.aura"
 		},
 		
 		"WeaponToasterDisabled": {
-			"Path": "_custom/ammo_toaster_disabled.png"
+			"Path": "Pickup/ammo_toaster_disabled.aura"
 		},
 
 		"CharacterJazz": {
@@ -116,29 +116,29 @@
 		},
 		
 		"WeaponWheel": {
-			"Path": "_custom/weapon_wheel.png"
+			"Path": "UI/weapon_wheel.aura"
 		},
 		"WeaponWheelDim": {
-			"Path": "_custom/dim.png"
+			"Path": "UI/dim.aura"
 		},
 		
 		"TouchDpad": {
-			"Path": "_custom/touch_dpad.png"
+			"Path": "UI/touch_dpad.aura"
 		},
 		"TouchFire": {
-			"Path": "_custom/touch_fire.png"
+			"Path": "UI/touch_fire.aura"
 		},
 		"TouchJump": {
-			"Path": "_custom/touch_jump.png"
+			"Path": "UI/touch_jump.aura"
 		},
 		"TouchRun": {
-			"Path": "_custom/touch_run.png"
+			"Path": "UI/touch_run.aura"
 		},
 		"TouchChange": {
-			"Path": "_custom/touch_change.png"
+			"Path": "UI/touch_change.aura"
 		},
 		"TouchPause": {
-			"Path": "_custom/touch_pause.png"
+			"Path": "UI/touch_pause.aura"
 		}
 	}
 }

@@ -631,7 +631,7 @@ namespace Jazz2::UI
 		}
 
 		if (frame < 0) {
-			frame = it->second.FrameOffset + ((int)(AnimTime * it->second.FrameCount / it->second.FrameDuration) % it->second.FrameCount);
+			frame = it->second.FrameOffset + ((int)(AnimTime * it->second.FrameCount / it->second.AnimDuration) % it->second.FrameCount);
 		}
 
 		GenericGraphicResource* base = it->second.Base;
@@ -662,7 +662,7 @@ namespace Jazz2::UI
 		}
 
 		if (frame < 0) {
-			frame = it->second.FrameOffset + ((int)(AnimTime * it->second.FrameCount / it->second.FrameDuration) % it->second.FrameCount);
+			frame = it->second.FrameOffset + ((int)(AnimTime * it->second.FrameCount / it->second.AnimDuration) % it->second.FrameCount);
 		}
 
 		GenericGraphicResource* base = it->second.Base;

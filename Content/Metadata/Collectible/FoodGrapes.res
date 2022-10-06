@@ -1,7 +1,5 @@
 {
-	"Version": {
-		"Target": "Jazz² Resurrection"
-	},
+	"Target": "Jazz² Resurrection",
 
 	"Animations": {
 		"Food": {

@@ -1,15 +1,13 @@
 {
-	"Version": {
-		"Target": "Jazz² Resurrection"
-	},
+	"Target": "Jazz² Resurrection",
 
 	"Animations": {
 		"Mask": {
-			"Path": "_custom/electro_mask.png",
+			"Path": "Weapon/electro_mask.aura",
 			"States": [ 0 ]
 		},
 		"Particle": {
-			"Path": "_custom/electro.png"
+			"Path": "Weapon/electro.aura"
 		}
 	},
 

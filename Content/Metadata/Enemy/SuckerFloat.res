@@ -9,9 +9,5 @@
 			"FrameRate": 5,
 			"States": [ 0 ]
 		}
-	},
-
-	"Preload": [
-		"Enemy/Sucker"
-	]
+	}
 }

@@ -29,8 +29,8 @@ namespace Jazz2::Actors::Bosses
 
 	void TurtleBoss::Preload(const ActorActivationDetails& details)
 	{
-		PreloadMetadataAsync("Boss/TurtleTough"_s);
-		PreloadMetadataAsync("Boss/TurtleShellTough"_s);
+		PreloadMetadataAsync("Boss/TurtleBoss"_s);
+		PreloadMetadataAsync("Boss/TurtleBossShell"_s);
 	}
 
 	Task<bool> TurtleBoss::OnActivatedAsync(const ActorActivationDetails& details)
@@ -39,7 +39,7 @@ namespace Jazz2::Actors::Bosses
 		_originPos = _pos;
 		_scoreValue = 5000;
 
-		co_await RequestMetadataAsync("Boss/TurtleTough"_s);
+		co_await RequestMetadataAsync("Boss/TurtleBoss"_s);
 		SetAnimation(AnimState::Idle);
 
 		SetFacingLeft(true);
@@ -209,7 +209,7 @@ namespace Jazz2::Actors::Bosses
 
 		_health = INT32_MAX;
 
-		co_await RequestMetadataAsync("Boss/TurtleTough"_s);
+		co_await RequestMetadataAsync("Boss/TurtleBoss"_s);
 		SetAnimation((AnimState)1073741827);
 
 		_originPos = _pos;

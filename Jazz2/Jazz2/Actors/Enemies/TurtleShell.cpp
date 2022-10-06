@@ -32,7 +32,7 @@ namespace Jazz2::Actors::Enemies
 				PreloadMetadataAsync("Enemy/TurtleShellXmas"_s);
 				break;
 			case 2: // Tough (Boss)
-				PreloadMetadataAsync("Boss/TurtleShellTough"_s);
+				PreloadMetadataAsync("Boss/TurtleBossShell"_s);
 				break;
 		}
 	}
@@ -56,7 +56,7 @@ namespace Jazz2::Actors::Enemies
 				co_await RequestMetadataAsync("Enemy/TurtleShellXmas"_s);
 				break;
 			case 2: // Tough (Boss)
-				co_await RequestMetadataAsync("Boss/TurtleShellTough"_s);
+				co_await RequestMetadataAsync("Boss/TurtleBossShell"_s);
 				break;
 		}
 
