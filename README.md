@@ -130,8 +130,8 @@ cd ..
 rm -rf nCine-libraries-artifacts
 ```
 * Build the solution with **CMake**
-  * Run `./BuildAndroid.sh` to build **APK** for Android
-  * **APK** will be located in `‹build-target›/android/app/build/outputs/apk/release/`
+  * Run `./BuildAndroid.sh` or `./BuildAndroid_x86-64` to build **APK** for Android
+  * Run `./BuildAndroidSign.sh` to sign built **APKs**
 
 
 ## License
