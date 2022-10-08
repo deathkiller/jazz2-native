@@ -86,6 +86,7 @@ namespace Jazz2
 		static bool AllowCheatsWeapons;
 		static Vector2f TouchLeftPadding;
 		static Vector2f TouchRightPadding;
+		static uint8_t Language[4];
 
 		// Sounds
 		static float MasterVolume;
@@ -113,7 +114,8 @@ namespace Jazz2
 			AllowUnsignedScripts = 0x1000,
 			UseNativeBackButton = 0x2000,
 
-			TutorialCompleted = 0x10000
+			TutorialCompleted = 0x10000,
+			SetLanguage = 0x20000
 		};
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(BoolOptions);

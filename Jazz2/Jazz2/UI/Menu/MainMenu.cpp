@@ -202,8 +202,16 @@ namespace Jazz2::UI::Menu
 		Vector2f bottomRight = Vector2f(ViewSize.X, ViewSize.Y);
 		bottomRight.X = ViewSize.X - 24.0f;
 		bottomRight.Y -= 10.0f;
-		_owner->DrawStringShadow("v" NCINE_VERSION, charOffset, bottomRight.X, bottomRight.Y, IMenuContainer::FontLayer,
-			Alignment::BottomRight, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+
+		const char* newestVersion = _owner->_root->GetNewestVersion();
+		if (newestVersion != nullptr && std::strcmp(newestVersion, NCINE_VERSION) != 0) {
+			String newerVersion = StringView("v" NCINE_VERSION "  › \f[c:0x9e7056]v") + newestVersion;
+			_owner->DrawStringShadow(newerVersion, charOffset, bottomRight.X, bottomRight.Y, IMenuContainer::FontLayer,
+				Alignment::BottomRight, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+		} else {
+			_owner->DrawStringShadow("v" NCINE_VERSION, charOffset, bottomRight.X, bottomRight.Y, IMenuContainer::FontLayer,
+				Alignment::BottomRight, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+		}
 
 		// Copyright
 		Vector2f bottomLeft = bottomRight;

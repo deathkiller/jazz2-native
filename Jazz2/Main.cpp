@@ -1,4 +1,5 @@
-﻿#include "Common.h"
+﻿#define _WINSOCKAPI_	// To prevent include "winsock.h"
+#include "Common.h"
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #   if defined(_M_X64)
@@ -38,6 +39,8 @@
 #if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
 #	include <cstdlib> // for `__argc` and `__argv`
 #endif
+
+#include <HttpRequest.h>
 
 using namespace nCine;
 using namespace Jazz2;
@@ -221,6 +224,10 @@ public:
 		return ((_flags & Flags::IsPlayable) == Flags::IsPlayable);
 	}
 
+	const char* GetNewestVersion() const override {
+		return (_newestVersion[0] != '\0' ? _newestVersion : nullptr);
+	}
+
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	void RefreshCacheLevels() override;
 #else
@@ -241,9 +248,11 @@ private:
 	std::unique_ptr<Jazz2::IStateHandler> _currentHandler;
 	PendingState _pendingState;
 	std::unique_ptr<LevelInitialization> _pendingLevelChange;
+	char _newestVersion[8];
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	void RefreshCache();
+	void CheckUpdates();
 #endif
 	static void SaveEpisodeEnd(const std::unique_ptr<LevelInitialization>& pendingLevelChange);
 	static void SaveEpisodeContinue(const std::unique_ptr<LevelInitialization>& pendingLevelChange);
@@ -262,6 +271,8 @@ void GameEventHandler::onInit()
 {
 	_flags = Flags::None;
 	_pendingState = PendingState::None;
+
+	std::memset(_newestVersion, 0, sizeof(_newestVersion));
 	
 #if defined(DEATH_TARGET_ANDROID)
 	// Set working directory to external storage on Android
@@ -292,7 +303,9 @@ void GameEventHandler::onInit()
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	// If threading support is enabled, refresh cache during intro cinematics and don't allow skip until it's completed
 	Thread thread([](void* arg) {
-		reinterpret_cast<GameEventHandler*>(arg)->RefreshCache();
+		auto handler = reinterpret_cast<GameEventHandler*>(arg);
+		handler->RefreshCache();
+		handler->CheckUpdates();
 	}, this);
 
 	_currentHandler = std::make_unique<Cinematics>(this, "intro"_s, [thread](IRootController* root, bool endOfStream) mutable {
@@ -311,6 +324,7 @@ void GameEventHandler::onInit()
 	_flags = Flags::IsVerified | Flags::IsPlayable;
 #	else
 	RefreshCache();
+	CheckUpdates();
 #	endif
 
 	_currentHandler = std::make_unique<Cinematics>(this, "intro"_s, [](IRootController* root, bool endOfStream) {
@@ -739,6 +753,34 @@ void GameEventHandler::RefreshCacheLevels()
 			tileset.Open(adjustedPath, false);
 			tileset.Convert(fs::JoinPath({ tilesetsPath, pair.first + ".j2t"_s }));
 		}
+	}
+}
+
+void GameEventHandler::CheckUpdates()
+{
+#if defined(DEATH_TARGET_ANDROID)
+	constexpr char DeviceDesc[] = "|Android|";
+#elif defined(DEATH_TARGET_APPLE)
+	constexpr char DeviceDesc[] = "|macOS|";
+#elif defined(DEATH_TARGET_UNIX)
+	constexpr char DeviceDesc[] = "|Unix|";
+#elif defined(DEATH_TARGET_WINDOWS)
+	constexpr char DeviceDesc[] = "|Windows|";
+#else
+	constexpr char DeviceDesc[] = "||";
+#endif
+
+#if defined(DEATH_TARGET_ANDROID)
+	String url = "http://deat.tk/downloads/android/jazz2/updates?v=" NCINE_VERSION "&d=" + Http::EncodeBase64(DeviceDesc, DeviceDesc + sizeof(DeviceDesc) - 1);
+#else
+	String url = "http://deat.tk/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + Http::EncodeBase64(DeviceDesc, DeviceDesc + sizeof(DeviceDesc) - 1);
+#endif
+
+	Http::Request req(url, Http::InternetProtocol::V4);
+	Http::Response resp = req.Send("GET"_s, std::chrono::seconds(10));
+	if (resp.status.code == Http::Status::Ok && !resp.body.empty() && resp.body.size() < sizeof(_newestVersion) - 1) {
+		std::memcpy(_newestVersion, resp.body.data(), resp.body.size());
+		_newestVersion[resp.body.size()] = '\0';
 	}
 }
 #endif

@@ -37,7 +37,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 ### Windows
 * Download the game
 * Copy original *Jazz Jackrabbit 2* directory to `‹Game›\Source\`
-* Run `‹Game›\Jazz2.exe` application
+* Run `‹Game›\Jazz2.exe` or `‹Game›\Jazz2_avx2.exe` application
 
 `‹Game›` *is path to Jazz² Resurrection. Cache is recreated during intro cinematics on the first startup, so it can't be skipped.*
 
@@ -45,7 +45,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 * Download the game
 * Install dependencies: `sudo apt install libglew2.2 libglfw3 libopenal1 libopenmpt0`
 * Copy original *Jazz Jackrabbit 2* directory to `‹Game›/Source/`
-* Run `‹Game›/jazz2` or `‹Game›/jazz2_clang` application
+* Run `‹Game›/jazz2`, `‹Game›/jazz2_clang` or `‹Game›/jazz2_sdl2` application
 
 `‹Game›` *is path to Jazz² Resurrection. Cache is recreated during intro cinematics on the first startup, so it can't be skipped.*
 

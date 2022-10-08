@@ -33,6 +33,7 @@ namespace Jazz2
 	bool PreferencesCache::AllowCheatsWeapons = false;
 	Vector2f PreferencesCache::TouchLeftPadding;
 	Vector2f PreferencesCache::TouchRightPadding;
+	uint8_t PreferencesCache::Language[4] { };
 	float PreferencesCache::MasterVolume = 0.8f;
 	float PreferencesCache::SfxVolume = 0.8f;
 	float PreferencesCache::MusicVolume = 0.4f;
@@ -115,6 +116,12 @@ namespace Jazz2
 						UseNativeBackButton = ((boolOptions & BoolOptions::UseNativeBackButton) == BoolOptions::UseNativeBackButton);
 #endif
 						TutorialCompleted = ((boolOptions & BoolOptions::TutorialCompleted) == BoolOptions::TutorialCompleted);
+
+						if ((boolOptions & BoolOptions::SetLanguage) == BoolOptions::SetLanguage) {
+							uc.Read(Language, sizeof(Language));
+						} else {
+							std::memset(Language, 0, sizeof(Language));
+						}
 
 						// Bitmask of unlocked episodes, used only if compiled with SHAREWARE_DEMO_ONLY
 						UnlockedEpisodes = (UnlockableEpisodes)uc.ReadValue<uint32_t>();
@@ -250,7 +257,12 @@ namespace Jazz2
 		if (AllowUnsignedScripts) boolOptions |= BoolOptions::AllowUnsignedScripts;
 		if (UseNativeBackButton) boolOptions |= BoolOptions::UseNativeBackButton;
 		if (TutorialCompleted) boolOptions |= BoolOptions::TutorialCompleted;
+		if (Language[0] != '\0') boolOptions |= BoolOptions::SetLanguage;
 		co.WriteValue<uint64_t>((uint64_t)boolOptions);
+
+		if (Language[0] != '\0') {
+			co.Write(Language, sizeof(Language));
+		}
 
 		// Bitmask of unlocked episodes, used only if compiled with SHAREWARE_DEMO_ONLY
 		co.WriteValue<uint32_t>((uint32_t)UnlockedEpisodes);
@@ -283,7 +295,7 @@ namespace Jazz2
 
 		for (auto& pair : _episodeEnd) {
 			co.WriteValue<uint8_t>((uint8_t)pair.first.size());
-			co.Write(pair.first.data(), pair.first.size());
+			co.Write(pair.first.data(), (uint32_t)pair.first.size());
 
 			co.Write(&pair.second, sizeof(EpisodeContinuationState));
 		}
@@ -294,10 +306,10 @@ namespace Jazz2
 
 		for (auto& pair : _episodeContinue) {
 			co.WriteValue<uint8_t>((uint8_t)pair.first.size());
-			co.Write(pair.first.data(), pair.first.size());
+			co.Write(pair.first.data(), (uint32_t)pair.first.size());
 
 			co.WriteValue<uint8_t>((uint8_t)pair.second.LevelName.size());
-			co.Write(pair.second.LevelName.data(), pair.second.LevelName.size());
+			co.Write(pair.second.LevelName.data(), (uint32_t)pair.second.LevelName.size());
 
 			co.Write(&pair.second.State, sizeof(EpisodeContinuationState));
 		}

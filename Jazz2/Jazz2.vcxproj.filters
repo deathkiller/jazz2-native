@@ -1194,6 +1194,9 @@
     <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Bolly.h">
       <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
     </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\HttpRequest.h">
+      <Filter>Header Files\Shared</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
