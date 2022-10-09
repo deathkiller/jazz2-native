@@ -702,7 +702,8 @@ void GameEventHandler::RefreshCacheLevels()
 			break;
 		}
 
-		if (fs::HasExtension(item, "j2e"_s) || fs::HasExtension(item, "j2pe"_s)) {
+		auto extension = fs::GetExtension(item);
+		if (extension == "j2e"_s || extension == "j2pe"_s) {
 			// Episode
 			Compatibility::JJ2Episode episode;
 			episode.Open(item);
@@ -712,7 +713,7 @@ void GameEventHandler::RefreshCacheLevels()
 
 			String fullPath = fs::JoinPath(episodesPath, episode.Name + ".j2e"_s);
 			episode.Convert(fullPath, LevelTokenConversion, EpisodeNameConversion, EpisodePrevNext);
-		} else if (fs::HasExtension(item, "j2l"_s)) {
+		} else if (extension == "j2l"_s) {
 			// Level
 			String levelName = fs::GetFileName(item);
 			if (levelName.findOr("-MLLE-Data-"_s, levelName.end()) != levelName.end()) {

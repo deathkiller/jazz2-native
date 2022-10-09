@@ -1,6 +1,7 @@
 #include "FileSystem.h"
 #include "MemoryFile.h"
 #include "StandardFile.h"
+#include "../Base/Algorithms.h"
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <fileapi.h>
@@ -704,12 +705,12 @@ namespace nCine
 #endif
 	}
 
-	StringView FileSystem::GetExtension(const StringView& path)
+	String FileSystem::GetExtension(const StringView& path)
 	{
 		if (path.empty()) return { };
 
 		const StringView filename = path.suffix(path.findLastAnyOr("/\\"_s, path.begin()).end());
-		const StringView foundDot = path.findLastOr('.', path.end());
+		const StringView foundDot = filename.findLastOr('.', filename.end());
 		if (foundDot == path.end()) return { };
 
 		bool initialDots = true;
@@ -719,29 +720,10 @@ namespace nCine
 				break;
 			}
 		}
-		if (initialDots) {
-			return path.suffix(filename.end());
-		}
 
-		return path.suffix(foundDot.begin() + 1);
-	}
-
-	bool FileSystem::HasExtension(const StringView& path, const StringView& extension)
-	{
-		size_t pathSize = path.size();
-		size_t extSize = extension.size();
-		if (extSize == 0) return false;
-
-		bool hasInitialDot = (extension[0] == '.');
-		if (pathSize < (hasInitialDot ? extSize : extSize + 1)) return false;
-
-		if (!hasInitialDot && path[pathSize - extSize - 1] != '.') return false;
-
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
-		return (_strnicmp(&path[pathSize - extSize], &extension[0], extSize) == 0);
-#else
-		return (::strncasecmp(&path[pathSize - extSize], &extension[0], extSize) == 0);
-#endif
+		String result = (initialDots ? path.suffix(filename.end()) : path.suffix(foundDot.begin() + 1));
+		lowercaseInPlace(result);
+		return result;
 	}
 
 	String FileSystem::GetExecutablePath()
@@ -985,9 +967,10 @@ namespace nCine
 		// Assuming that every existing directory is accessible
 		if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
 			return true;
-		} else if (attrs != INVALID_FILE_ATTRIBUTES && (HasExtension(path, "exe"_s) || HasExtension(path, "bat"_s) || HasExtension(path, "com"_s))) {
+		} else if (attrs != INVALID_FILE_ATTRIBUTES) {
 			// Using some of the Windows executable extensions to detect executable files
-			return true;
+			auto extension = GetExtension(path);
+			return (extension == "exe"_s || extension == "bat"_s || extension == "com"_s);
 		} else {
 			return false;
 		}

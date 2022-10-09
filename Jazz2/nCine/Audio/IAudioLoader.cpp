@@ -42,7 +42,8 @@ namespace nCine
 
 	std::unique_ptr<IAudioLoader> IAudioLoader::createLoader(std::unique_ptr<IFileStream> fileHandle, const StringView& filename)
 	{
-		if (fs::HasExtension(filename, "wav"_s)) {
+		auto extension = fs::GetExtension(filename);
+		if (extension == "wav"_s) {
 			return std::make_unique<AudioLoaderWav>(std::move(fileHandle));
 		}
 #ifdef WITH_VORBIS
@@ -51,13 +52,13 @@ namespace nCine
 		}
 #endif
 #ifdef WITH_OPENMPT
-		else if (fs::HasExtension(filename, "j2b"_s) || fs::HasExtension(filename, "it"_s) || fs::HasExtension(filename, "s3m"_s) ||
-				 fs::HasExtension(filename, "xm"_s) || fs::HasExtension(filename, "mo3"_s)) {
+		else if (extension == "j2b"_s || extension == "it"_s || extension == "s3m"_s ||
+				 extension == "xm"_s || extension == "mo3"_s) {
 			return std::make_unique<AudioLoaderMpt>(std::move(fileHandle));
 		}
 #endif
 		else {
-			LOGF_X("Extension unknown: \"%s\"", fs::GetExtension(filename).data());
+			LOGF_X("Extension unknown: \"%s\"", extension.data());
 			fileHandle.reset(nullptr);
 			return std::make_unique<InvalidAudioLoader>(std::move(fileHandle));
 		}

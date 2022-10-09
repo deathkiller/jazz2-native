@@ -327,7 +327,7 @@ namespace Jazz2
 			return it->second.get();
 		}
 
-		if (fs::HasExtension(path, "aura"_s)) {
+		if (fs::GetExtension(path) == "aura"_s) {
 			return RequestGraphicsAura(path, paletteOffset);
 		}
 

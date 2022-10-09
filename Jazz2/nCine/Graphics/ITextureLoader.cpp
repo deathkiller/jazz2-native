@@ -84,28 +84,29 @@ namespace nCine
 
 	std::unique_ptr<ITextureLoader> ITextureLoader::createLoader(std::unique_ptr<IFileStream> fileHandle, const StringView& filename)
 	{
-		if (fs::HasExtension(filename, "dds"_s))
+		auto extension = fs::GetExtension(filename);
+		if (extension == "dds"_s)
 			return std::make_unique<TextureLoaderDds>(std::move(fileHandle));
-		else if (fs::HasExtension(filename, "pvr"_s))
+		else if (extension == "pvr"_s)
 			return std::make_unique<TextureLoaderPvr>(std::move(fileHandle));
-		else if (fs::HasExtension(filename, "ktx"_s))
+		else if (extension == "ktx"_s)
 			return std::make_unique<TextureLoaderKtx>(std::move(fileHandle));
 	//#ifdef WITH_PNG
-		else if (fs::HasExtension(filename, "png"_s))
+		else if (extension == "png"_s)
 			return std::make_unique<TextureLoaderPng>(std::move(fileHandle));
 	//#endif
 	/*#ifdef WITH_WEBP
-		else if (fs::HasExtension(filename, "webp"_s))
+		else if (extension == "webp"_s)
 			return std::make_unique<TextureLoaderWebP>(std::move(fileHandle));
 	#endif*/
 	#ifdef DEATH_TARGET_ANDROID
-		else if (fs::HasExtension(filename, "pkm"_s))
+		else if (extension == "pkm"_s)
 			return std::make_unique<TextureLoaderPkm>(std::move(fileHandle));
 	#endif
-		else if (fs::HasExtension(filename, "qoi"_s)) {
+		else if (extension == "qoi"_s) {
 			return std::make_unique<TextureLoaderQoi>(std::move(fileHandle));
 		} else {
-			LOGF_X("Extension unknown: \"%s\"", fs::GetExtension(filename));
+			LOGF_X("Extension unknown: \"%s\"", extension.data());
 			fileHandle.reset(nullptr);
 			return std::make_unique<InvalidTextureLoader>(std::move(fileHandle));
 		}

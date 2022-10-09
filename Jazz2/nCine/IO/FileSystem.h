@@ -135,10 +135,8 @@ namespace nCine
 		/** Also resolves dot references to current and parent directory and double separators */
 		static String GetAbsolutePath(const StringView& path);
 
-		/// Returns the extension position in the string or `nullptr` if it is not found
-		static StringView GetExtension(const StringView& path);
-		/// Returns true if the file at `path` as the specified extension (case-insensitive comparison)
-		static bool HasExtension(const StringView& path, const StringView& extension);
+		/// Returns the extension as lower-case string without dot or empty string if it is not found
+		static String GetExtension(const StringView& path);
 
 		/// Returns the path of executable
 		static String GetExecutablePath();

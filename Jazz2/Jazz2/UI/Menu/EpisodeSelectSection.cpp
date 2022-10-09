@@ -320,7 +320,7 @@ namespace Jazz2::UI::Menu
 
 	void EpisodeSelectSection::AddEpisode(const StringView& episodeFile)
 	{
-		if (!fs::HasExtension(episodeFile, "j2e"_s)) {
+		if (fs::GetExtension(episodeFile) != "j2e"_s) {
 			return;
 		}
 
