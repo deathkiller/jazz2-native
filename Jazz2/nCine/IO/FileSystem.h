@@ -151,6 +151,8 @@ namespace nCine
 #if defined(DEATH_TARGET_ANDROID)
 		/// Returns the path of the Android external storage directory
 		static String GetExternalStorage();
+#elif defined(DEATH_TARGET_UNIX)
+		static String GetLocalStorage();
 #endif
 
 		/// Returns true if the specified path is a directory

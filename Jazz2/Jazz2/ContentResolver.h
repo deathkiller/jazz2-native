@@ -248,6 +248,30 @@ namespace Jazz2
 			return _palettes;
 		}
 
+		StringView GetContentPath() const {
+#if defined(DEATH_TARGET_UNIX)
+			return _contentPath;
+#else
+			return "Content/"_s;
+#endif
+		}
+
+		StringView GetCachePath() const {
+#if defined(DEATH_TARGET_UNIX)
+			return _cachePath;
+#else
+			return "Cache/"_s;
+#endif
+		}
+
+		StringView GetSourcePath() const {
+#if defined(DEATH_TARGET_UNIX)
+			return _sourcePath;
+#else
+			return "Source/"_s;
+#endif
+		}
+
 		static ContentResolver& Current();
 
 	private:
@@ -271,5 +295,11 @@ namespace Jazz2
 		HashMap<Pair<String, uint16_t>, std::unique_ptr<GenericGraphicResource>> _cachedGraphics;
 		std::unique_ptr<UI::Font> _fonts[(int)FontType::Count];
 		std::unique_ptr<Shader> _precompiledShaders[(int)PrecompiledShader::Count];
+
+#if defined(DEATH_TARGET_UNIX)
+		String _contentPath;
+		String _cachePath;
+		String _sourcePath;
+#endif
 	};
 }

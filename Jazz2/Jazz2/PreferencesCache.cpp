@@ -217,6 +217,8 @@ namespace Jazz2
 				AllowCheatsWeapons = true;
 			} else if (arg == "/fullscreen"_s) {
 				EnableFullscreen = true;
+			} else if (arg == "/windowed"_s) {
+				EnableFullscreen = false;
 			} else if (arg == "/no-vsync"_s) {
 				// V-Sync can be turned off only with command-line parameter
 				EnableVsync = false;

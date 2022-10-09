@@ -65,6 +65,10 @@ namespace nCine
 			glfwSetWindowMonitor(windowHandle_, nullptr, 0, 0, width_, height_, GLFW_DONT_CARE);
 			glfwSetWindowPos(windowHandle_, (mode->width - width_) / 2, (mode->height - height_) / 2);
 		}
+
+		// Swap internal must be set again after glfwSetWindowMonitor, otherwise V-Sync is turned off
+		const int interval = (displayMode_.hasVSync() ? 1 : 0);
+		glfwSwapInterval(interval);
 	}
 
 	void GlfwGfxDevice::setResolutionInternal(int width, int height)
@@ -208,7 +212,7 @@ namespace nCine
 
 		glfwMakeContextCurrent(windowHandle_);
 
-		const int interval = displayMode_.hasVSync() ? 1 : 0;
+		const int interval = (displayMode_.hasVSync() ? 1 : 0);
 		glfwSwapInterval(interval);
 
 #ifdef WITH_GLEW

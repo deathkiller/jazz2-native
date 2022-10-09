@@ -474,7 +474,8 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		auto s = fs::Open(fs::JoinPath({ "Content"_s, "Animations"_s, "main_menu.layer"_s }), FileAccessMode::Read);
+		auto& resolver = ContentResolver::Current();
+		auto s = fs::Open(fs::JoinPath({ resolver.GetContentPath(), "Animations"_s, "main_menu.layer"_s }), FileAccessMode::Read);
 		if (s->GetSize() < 8) {
 			return;
 		}

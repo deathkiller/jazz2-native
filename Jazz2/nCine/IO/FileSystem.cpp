@@ -309,23 +309,23 @@ namespace nCine
 			return (_assetDir != nullptr);
 		} else
 #endif
-		if (!nullTerminatedPath.empty()) {
-			_dirStream = ::opendir(nullTerminatedPath.data());
-			if (_dirStream != nullptr) {
-				String absPath = GetAbsolutePath(path);
-				std::memcpy(_path, absPath.data(), absPath.size());
-				if (_path[absPath.size() - 1] == '/' || _path[absPath.size() - 1] == '\\') {
-					_path[absPath.size() - 1] = '/';
-					_path[absPath.size()] = '\0';
-					_fileNamePart = _path + absPath.size();
-				} else {
-					_path[absPath.size()] = '/';
-					_path[absPath.size() + 1] = '\0';
-					_fileNamePart = _path + absPath.size() + 1;
+			if (!nullTerminatedPath.empty()) {
+				_dirStream = ::opendir(nullTerminatedPath.data());
+				if (_dirStream != nullptr) {
+					String absPath = GetAbsolutePath(path);
+					std::memcpy(_path, absPath.data(), absPath.size());
+					if (_path[absPath.size() - 1] == '/' || _path[absPath.size() - 1] == '\\') {
+						_path[absPath.size() - 1] = '/';
+						_path[absPath.size()] = '\0';
+						_fileNamePart = _path + absPath.size();
+					} else {
+						_path[absPath.size()] = '/';
+						_path[absPath.size() + 1] = '\0';
+						_fileNamePart = _path + absPath.size() + 1;
+					}
+					return true;
 				}
-				return true;
 			}
-		}
 		return false;
 #endif
 	}
@@ -344,10 +344,10 @@ namespace nCine
 			_assetDir = nullptr;
 		} else
 #endif
-		if (_dirStream != nullptr) {
-			::closedir(_dirStream);
-			_dirStream = nullptr;
-		}
+			if (_dirStream != nullptr) {
+				::closedir(_dirStream);
+				_dirStream = nullptr;
+			}
 #endif
 	}
 
@@ -502,7 +502,7 @@ namespace nCine
 			// Absolute filename on Windows
 			|| (secondSize > 2 && second[1] == ':' && (second[2] == '/' || second[2] == '\\'))
 #endif
-		))) {
+			))) {
 			return second;
 		}
 
@@ -513,7 +513,7 @@ namespace nCine
 #if defined(DEATH_TARGET_ANDROID)
 		if (first == AssetFile::Prefix) {
 			return first + second;
-		}	
+		}
 #endif
 
 		if (first[firstSize - 1] == '/' || first[firstSize - 1] == '\\') {
@@ -836,9 +836,25 @@ namespace nCine
 	{
 		const char* extStorage = ::getenv("EXTERNAL_STORAGE");
 		if (extStorage == nullptr || extStorage[0] == '\0') {
-			return String { "/scard"_s };
+			return String { "/sdcard"_s };
 		}
 		return extStorage;
+	}
+#elif defined(DEATH_TARGET_UNIX)
+	String FileSystem::GetLocalStorage()
+	{
+		const char* localStorage = ::getenv("XDG_DATA_HOME");
+		if (localStorage != nullptr && localStorage[0] != '\0') {
+			return localStorage;
+		}
+
+		// Not delegating into homeDirectory() as the (admittedly rare) error message would have a confusing source
+		const char* home = ::getenv("HOME");
+		if (home != nullptr && home[0] != '\0') {
+			return StringView(home) + "/.local/share/"_s;
+		}
+
+		return { };
 	}
 #endif
 
@@ -1645,7 +1661,8 @@ namespace nCine
 		_savePath = JoinPath({ home, "Library/Application Support"_s, applicationName });
 #elif defined(__unix__) || defined(DEATH_TARGET_EMSCRIPTEN)
 		// XDG-compliant Unix (not using DEATH_TARGET_UNIX, because that is a superset), Emscripten
-		if (const char* config = ::getenv("XDG_CONFIG_HOME")) {
+		const char* config = ::getenv("XDG_CONFIG_HOME");
+		if (config != nullptr && config[0] != '\0') {
 			_savePath = JoinPath(config, applicationName);
 			return;
 		}

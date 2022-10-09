@@ -147,10 +147,10 @@ if(NCINE_BUILD_ANDROID)
 		set(GRADLE_JNILIBS_DIRS "${GRADLE_JNILIBS_DIRS}, 'src/main/cpp/openal'")
 	endif()
 
-	set(MANIFEST_PERMISSIONS "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\" android:maxSdkVersion=\"28\" />")
+	set(MANIFEST_PERMISSIONS "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\" android:maxSdkVersion=\"28\" />\n"
+		"\t<uses-permission android:name=\"android.permission.INTERNET\" />")
 	if(NCINE_WITH_TRACY)
 		string(CONCAT MANIFEST_PERMISSIONS "${MANIFEST_PERMISSIONS}\n"
-			"\t<uses-permission android:name=\"android.permission.INTERNET\" />\n"
 			"\t<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\" />")
 	endif()
 	set(ANDROID_MANIFEST_XML_IN ${CMAKE_SOURCE_DIR}/android/app/src/main/AndroidManifest.xml.in)

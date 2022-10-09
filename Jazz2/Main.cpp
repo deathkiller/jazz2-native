@@ -40,6 +40,7 @@
 #	include <cstdlib> // for `__argc` and `__argv`
 #endif
 
+#include <Environment.h>
 #include <HttpRequest.h>
 
 using namespace nCine;
@@ -132,7 +133,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 	unsigned int length2 = snprintf(logEntryWithColors, MaxEntryLength - 1, "%s", Faint);
 
 	unsigned int logMsgFuncLength = 0;
-	while (logEntry[logMsgFuncLength] != '>' && logEntry[logMsgFuncLength] != '\0') {
+	while (logEntry[logMsgFuncLength] != '\0' && (logMsgFuncLength == 0 || !(logEntry[logMsgFuncLength - 1] == '-' && logEntry[logMsgFuncLength] == '>'))) {
 		logMsgFuncLength++;
 	}
 	logMsgFuncLength++; // Skip '>' character
@@ -294,7 +295,8 @@ void GameEventHandler::onInit()
 		theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
 	}
 
-	String mappingsPath = fs::JoinPath("Content"_s, "gamecontrollerdb.txt"_s);
+	auto& resolver = ContentResolver::Current();
+	String mappingsPath = fs::JoinPath(resolver.GetContentPath(), "gamecontrollerdb.txt"_s);
 	if (fs::IsReadableFile(mappingsPath)) {
 		theApplication().inputManager().addJoyMappingsFromFile(mappingsPath);
 	}
@@ -433,7 +435,9 @@ void GameEventHandler::onResizeWindow(int width, int height)
 	// Resolution was changed, all viewports have to be recreated
 	Viewport::chain().clear();
 
-	_currentHandler->OnInitializeViewport(width, height);
+	if (_currentHandler != nullptr) {
+		_currentHandler->OnInitializeViewport(width, height);
+	}
 }
 
 void GameEventHandler::onFullscreenChanged(bool isFullscreen)
@@ -486,9 +490,11 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 void GameEventHandler::RefreshCache()
 {
+	auto& resolver = ContentResolver::Current();
+
 	// Check cache state
 	{
-		auto s = fs::Open(fs::JoinPath({ "Cache"_s, "Animations"_s, "cache.index"_s }), FileAccessMode::Read);
+		auto s = fs::Open(fs::JoinPath({ resolver.GetCachePath(), "Animations"_s, "cache.index"_s }), FileAccessMode::Read);
 		if (s->GetSize() < 16) {
 			goto RecreateCache;
 		}
@@ -508,7 +514,7 @@ void GameEventHandler::RefreshCache()
 			return;
 		}
 
-		String animsPath = fs::FindPathCaseInsensitive(fs::JoinPath("Source"_s, "Anims.j2a"_s));
+		String animsPath = fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "Anims.j2a"_s));
 		int64_t animsCached = s->ReadValue<int64_t>();
 		int64_t animsModified = fs::LastModificationTime(animsPath).Ticks;
 		if (animsModified != 0 && animsCached != animsModified) {
@@ -529,21 +535,21 @@ void GameEventHandler::RefreshCache()
 
 RecreateCache:
 	// "Source" directory must be case in-sensitive
-	String animsPath = fs::FindPathCaseInsensitive(fs::JoinPath("Source"_s, "Anims.j2a"_s));
+	String animsPath = fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "Anims.j2a"_s));
 	if (!fs::IsReadableFile(animsPath)) {
 		LOGE("Cannot open \"./Source/Anims.j2a\" file! Ensure that Jazz Jackrabbit 2 files are present in \"Source\" directory.");
 		_flags = Flags::IsVerified;
 		return;
 	}
 
-	String animationsPath = fs::JoinPath("Cache"_s, "Animations"_s);
+	String animationsPath = fs::JoinPath(resolver.GetCachePath(), "Animations"_s);
 	fs::RemoveDirectoryRecursive(animationsPath);
 	Compatibility::JJ2Anims::Convert(animsPath, animationsPath, false);
 
 	RefreshCacheLevels();
 
 	// Create cache index
-	auto so = fs::Open(fs::JoinPath({ "Cache"_s, "Animations"_s, "cache.index"_s }), FileAccessMode::Write);
+	auto so = fs::Open(fs::JoinPath({ resolver.GetCachePath(), "Animations"_s, "cache.index"_s }), FileAccessMode::Write);
 
 	so->WriteValue<uint64_t>(0x2095A59FF0BFBBEF);	// Signature
 	so->WriteValue<uint8_t>(ContentResolver::CacheIndexFile);
@@ -559,9 +565,11 @@ RecreateCache:
 
 void GameEventHandler::RefreshCacheLevels()
 {
+	auto& resolver = ContentResolver::Current();
+
 	Compatibility::EventConverter eventConverter;
 
-	String xmasEpisodeToken = (fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::JoinPath("Cache"_s, "xmas99.j2e"_s))) ? "xmas99"_s : "xmas98"_s);
+	String xmasEpisodeToken = (fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "xmas99.j2e"_s))) ? "xmas99"_s : "xmas98"_s);
 	const HashMap<String, Pair<String, String>> knownLevels = {
 		{ "trainer"_s, { "prince"_s, { } } },
 		{ "castle1"_s, { "prince"_s, "01"_s } },
@@ -680,12 +688,12 @@ void GameEventHandler::RefreshCacheLevels()
 		}
 	};
 
-	String episodesPath = fs::JoinPath("Cache"_s, "Episodes"_s);
+	String episodesPath = fs::JoinPath(resolver.GetCachePath(), "Episodes"_s);
 	fs::RemoveDirectoryRecursive(episodesPath);
 
 	HashMap<String, bool> usedTilesets;
 
-	fs::Directory dir(fs::FindPathCaseInsensitive("Source"_s), fs::EnumerationOptions::SkipDirectories);
+	fs::Directory dir(fs::FindPathCaseInsensitive(resolver.GetSourcePath()), fs::EnumerationOptions::SkipDirectories);
 	while (true) {
 		StringView item = dir.GetNext();
 		if (item == nullptr) {
@@ -741,12 +749,12 @@ void GameEventHandler::RefreshCacheLevels()
 	}
 
 	// Convert only used tilesets
-	String tilesetsPath = fs::JoinPath("Cache"_s, "Tilesets"_s);
+	String tilesetsPath = fs::JoinPath(resolver.GetCachePath(), "Tilesets"_s);
 	fs::RemoveDirectoryRecursive(tilesetsPath);
 	fs::CreateDirectories(tilesetsPath);
 
 	for (auto& pair : usedTilesets) {
-		String tilesetPath = fs::JoinPath("Source"_s, pair.first + ".j2t"_s);
+		String tilesetPath = fs::JoinPath(resolver.GetSourcePath(), pair.first + ".j2t"_s);
 		auto adjustedPath = fs::FindPathCaseInsensitive(tilesetPath);
 		if (fs::IsReadableFile(adjustedPath)) {
 			Compatibility::JJ2Tileset tileset;
@@ -758,22 +766,28 @@ void GameEventHandler::RefreshCacheLevels()
 
 void GameEventHandler::CheckUpdates()
 {
+#if !_DEBUG
 #if defined(DEATH_TARGET_ANDROID)
-	constexpr char DeviceDesc[] = "|Android|";
+	constexpr char DeviceDesc[] = "|Android|"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
 #elif defined(DEATH_TARGET_APPLE)
-	constexpr char DeviceDesc[] = "|macOS|";
+	constexpr char DeviceDesc[] = "|macOS|"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
 #elif defined(DEATH_TARGET_UNIX)
-	constexpr char DeviceDesc[] = "|Unix|";
+	constexpr char DeviceDesc[] = "|Unix|"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
 #elif defined(DEATH_TARGET_WINDOWS)
-	constexpr char DeviceDesc[] = "|Windows|";
+	auto osVersion = Death::WindowsVersion;
+	char DeviceDesc[64]; DWORD DeviceDescLength = _countof(DeviceDesc);
+	if (!::GetComputerNameA(DeviceDesc, &DeviceDescLength)) {
+		DeviceDescLength = 0;
+	}
+	DeviceDescLength += sprintf_s(DeviceDesc + DeviceDescLength, _countof(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i|", (int)((osVersion >> 48) & 0xffffu), (int)((osVersion >> 32) & 0xffffu), (int)(osVersion & 0xffffffffu));
 #else
-	constexpr char DeviceDesc[] = "||";
+	constexpr char DeviceDesc[] = "||"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
 #endif
 
 #if defined(DEATH_TARGET_ANDROID)
-	String url = "http://deat.tk/downloads/android/jazz2/updates?v=" NCINE_VERSION "&d=" + Http::EncodeBase64(DeviceDesc, DeviceDesc + sizeof(DeviceDesc) - 1);
+	String url = "http://deat.tk/downloads/android/jazz2/updates?v=" NCINE_VERSION "&d=" + Http::EncodeBase64(DeviceDesc, DeviceDesc + DeviceDescLength;
 #else
-	String url = "http://deat.tk/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + Http::EncodeBase64(DeviceDesc, DeviceDesc + sizeof(DeviceDesc) - 1);
+	String url = "http://deat.tk/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + Http::EncodeBase64(DeviceDesc, DeviceDesc + DeviceDescLength);
 #endif
 
 	Http::Request req(url, Http::InternetProtocol::V4);
@@ -782,6 +796,7 @@ void GameEventHandler::CheckUpdates()
 		std::memcpy(_newestVersion, resp.body.data(), resp.body.size());
 		_newestVersion[resp.body.size()] = '\0';
 	}
+#endif
 }
 #endif
 

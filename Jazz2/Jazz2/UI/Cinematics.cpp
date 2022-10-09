@@ -131,9 +131,10 @@ namespace Jazz2::UI
 	bool Cinematics::LoadFromFile(const String& path)
 	{
 		// Try "Content" directory first, then "Source" directory
-		String fullPath = fs::JoinPath({ "Content"_s, "Cinematics"_s, path + ".j2v" });
+		auto& resolver = ContentResolver::Current();
+		String fullPath = fs::JoinPath({ resolver.GetContentPath(), "Cinematics"_s, path + ".j2v" });
 		if (!fs::IsReadableFile(fullPath)) {
-			fullPath = fs::FindPathCaseInsensitive(fs::JoinPath("Source"_s, path + ".j2v"));
+			fullPath = fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), path + ".j2v"));
 		}
 		if (!fs::IsReadableFile(fullPath)) {
 			return false;

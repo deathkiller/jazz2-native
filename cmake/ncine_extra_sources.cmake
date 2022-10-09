@@ -157,6 +157,8 @@ if(OPENAL_FOUND)
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderMpt.cpp
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderMpt.cpp)
 	endif()
+else()
+	message(STATUS "Cannot find OpenAL library")
 endif()
 
 #if(PNG_FOUND)
