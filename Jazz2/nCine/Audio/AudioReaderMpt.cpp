@@ -14,7 +14,7 @@
 
 #include "../IO/IFileStream.h"
 
-#if defined(WITH_OPENMPT_DYNAMIC) && defined(DEATH_TARGET_UNIX)
+#if defined(WITH_OPENMPT_DYNAMIC) && (defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_APPLE))
 #	include <dlfcn.h>
 #endif
 

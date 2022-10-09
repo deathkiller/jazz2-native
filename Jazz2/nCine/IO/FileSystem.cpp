@@ -30,6 +30,10 @@
 #	endif
 #endif
 
+#if defined(DEATH_TARGET_APPLE)
+#	include <mach-o/dyld.h>
+#endif
+
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 #	include <emscripten.h>
 #endif
@@ -309,23 +313,23 @@ namespace nCine
 			return (_assetDir != nullptr);
 		} else
 #endif
-			if (!nullTerminatedPath.empty()) {
-				_dirStream = ::opendir(nullTerminatedPath.data());
-				if (_dirStream != nullptr) {
-					String absPath = GetAbsolutePath(path);
-					std::memcpy(_path, absPath.data(), absPath.size());
-					if (_path[absPath.size() - 1] == '/' || _path[absPath.size() - 1] == '\\') {
-						_path[absPath.size() - 1] = '/';
-						_path[absPath.size()] = '\0';
-						_fileNamePart = _path + absPath.size();
-					} else {
-						_path[absPath.size()] = '/';
-						_path[absPath.size() + 1] = '\0';
-						_fileNamePart = _path + absPath.size() + 1;
-					}
-					return true;
+		if (!nullTerminatedPath.empty()) {
+			_dirStream = ::opendir(nullTerminatedPath.data());
+			if (_dirStream != nullptr) {
+				String absPath = GetAbsolutePath(path);
+				std::memcpy(_path, absPath.data(), absPath.size());
+				if (_path[absPath.size() - 1] == '/' || _path[absPath.size() - 1] == '\\') {
+					_path[absPath.size() - 1] = '/';
+					_path[absPath.size()] = '\0';
+					_fileNamePart = _path + absPath.size();
+				} else {
+					_path[absPath.size()] = '/';
+					_path[absPath.size() + 1] = '\0';
+					_fileNamePart = _path + absPath.size() + 1;
 				}
+				return true;
 			}
+		}
 		return false;
 #endif
 	}
@@ -344,10 +348,10 @@ namespace nCine
 			_assetDir = nullptr;
 		} else
 #endif
-			if (_dirStream != nullptr) {
-				::closedir(_dirStream);
-				_dirStream = nullptr;
-			}
+		if (_dirStream != nullptr) {
+			::closedir(_dirStream);
+			_dirStream = nullptr;
+		}
 #endif
 	}
 
@@ -824,7 +828,7 @@ namespace nCine
 				return pw->pw_dir;
 			} else
 #endif
-				return GetWorkingDirectory();
+			return GetWorkingDirectory();
 		} else {
 			return homeEnv;
 		}
@@ -851,7 +855,7 @@ namespace nCine
 		// Not delegating into homeDirectory() as the (admittedly rare) error message would have a confusing source
 		const char* home = ::getenv("HOME");
 		if (home != nullptr && home[0] != '\0') {
-			return StringView(home) + "/.local/share/"_s;
+			return JoinPath(home, ".local/share/"_s);
 		}
 
 		return { };
@@ -1601,7 +1605,7 @@ namespace nCine
 			stream = std::make_unique<AssetFile>(assetFilename);
 		} else
 #endif
-			stream = std::make_unique<StandardFile>(path);
+		stream = std::make_unique<StandardFile>(path);
 
 		if (mode != FileAccessMode::None) {
 			stream->Open(mode, shouldExitOnFailToOpen);

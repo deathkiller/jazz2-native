@@ -97,10 +97,16 @@ namespace nCine
 		rndVelocityX.Set(x * minScale, x * maxScale);
 		rndVelocityY.Set(y * minScale, y * maxScale);
 
-		if (rndVelocityX.X > rndVelocityX.Y)
-			std::swap(rndVelocityX.X, rndVelocityX.Y);
-		if (rndVelocityY.X > rndVelocityY.Y)
-			std::swap(rndVelocityY.X, rndVelocityY.Y);
+		if (rndVelocityX.X > rndVelocityX.Y) {
+			float tmp = rndVelocityX.X;
+			rndVelocityX.X = rndVelocityX.Y;
+			rndVelocityX.Y = tmp;
+		}
+		if (rndVelocityY.X > rndVelocityY.Y) {
+			float tmp = rndVelocityY.X;
+			rndVelocityY.X = rndVelocityY.Y;
+			rndVelocityY.Y = tmp;
+		}
 	}
 
 	void ParticleInitializer::setVelocityAndAngle(float x, float y, float angle)
@@ -113,10 +119,16 @@ namespace nCine
 		rndVelocityY.X = x * sinAngle + y * cosAngle;
 		rndVelocityY.Y = x * -sinAngle + y * cosAngle;
 
-		if (rndVelocityX.X > rndVelocityX.Y)
-			std::swap(rndVelocityX.X, rndVelocityX.Y);
-		if (rndVelocityY.X > rndVelocityY.Y)
-			std::swap(rndVelocityY.X, rndVelocityY.Y);
+		if (rndVelocityX.X > rndVelocityX.Y) {
+			float tmp = rndVelocityX.X;
+			rndVelocityX.X = rndVelocityX.Y;
+			rndVelocityX.Y = tmp;
+		}
+		if (rndVelocityY.X > rndVelocityY.Y) {
+			float tmp = rndVelocityY.X;
+			rndVelocityY.X = rndVelocityY.Y;
+			rndVelocityY.Y = tmp;
+		}
 	}
 
 	void ParticleInitializer::setVelocity(const Vector2f& vel)

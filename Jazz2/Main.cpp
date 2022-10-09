@@ -20,6 +20,8 @@
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "nCine/Android/AndroidApplication.h"
+#elif defined(DEATH_TARGET_UNIX)
+#	include <unistd.h>
 #endif
 
 #include "Jazz2/IRootController.h"
@@ -772,7 +774,14 @@ void GameEventHandler::CheckUpdates()
 #elif defined(DEATH_TARGET_APPLE)
 	constexpr char DeviceDesc[] = "|macOS|"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
 #elif defined(DEATH_TARGET_UNIX)
-	constexpr char DeviceDesc[] = "|Unix|"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
+	char DeviceDesc[64]; int DeviceDescLength;
+	if (::gethostname(DeviceDesc, _countof(DeviceDesc) - (sizeof("|Unix|") - 1)) == 0) {
+		DeviceDescLength = strlen(DeviceDesc);
+	} else {
+		DeviceDescLength = 0;
+	}
+	std::memcpy(DeviceDesc + DeviceDescLength, "|Unix|", sizeof("|Unix|") - 1);
+	DeviceDescLength += sizeof("|Unix|") - 1;
 #elif defined(DEATH_TARGET_WINDOWS)
 	auto osVersion = Death::WindowsVersion;
 	char DeviceDesc[64]; DWORD DeviceDescLength = _countof(DeviceDesc);

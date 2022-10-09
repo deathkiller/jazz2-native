@@ -509,9 +509,12 @@ enum WeatherType {
 			const char* src = &path[1];
 			const char* srcLast = src;
 
-			const StringView& contentPath = ContentResolver::Current().GetContentPath();
+			auto contentPath = ContentResolver::Current().GetContentPath();
 			std::memcpy(result, contentPath.data(), contentPath.size());
 			char* dst = result + contentPath.size();
+			if (*(dst - 1) == '/' || *(dst - 1) == '\\') {
+				dst--;
+			}
 			char* dstStart = dst;
 			char* dstLast = dstStart;
 
