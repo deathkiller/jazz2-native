@@ -433,15 +433,16 @@ namespace nCine
 		}
 
 		size_t l = path.size();
-		String result(NoInit, path.size() + 2);
-
 		char* p = (char*)alloca(l + 1);
 		strncpy(p, path.data(), l);
 		p[l] = '\0';
 		size_t rl = 0;
+		bool isAbsolute = (p[0] == '/' || p[0] == '\\');
+
+		String result(NoInit, path.size() + (isAbsolute ? 0 : 2));
 
 		DIR* d;
-		if (p[0] == '/' || p[0] == '\\') {
+		if (isAbsolute) {
 			d = ::opendir("/");
 			p = p + 1;
 		} else {
