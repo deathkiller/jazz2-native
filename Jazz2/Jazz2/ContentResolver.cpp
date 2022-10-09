@@ -41,7 +41,11 @@ namespace Jazz2
 		std::memset(_palettes, 0, sizeof(_palettes));
 
 #if defined(DEATH_TARGET_UNIX)
-		_contentPath = "/usr/share/Jazz² Resurrection/Content/"_s;
+#	if !defined(NCINE_LINUX_PACKAGE)
+#		define NCINE_LINUX_PACKAGE "Jazz² Resurrection"
+#	endif
+
+		_contentPath = "/usr/share/" NCINE_LINUX_PACKAGE "/Content/";
 		if (fs::IsDirectory(_contentPath)) {
 			// Shared Content exists, try to use standard XDG paths
 			auto localStorage = fs::GetLocalStorage();
