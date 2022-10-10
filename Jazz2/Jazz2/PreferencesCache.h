@@ -16,8 +16,13 @@ namespace Jazz2
 		HQ2x,
 		_3xBrz,
 		Crt,
-		Monochrome
+		Monochrome,
+
+		TypeMask = 0x0f,
+		UseIntegerScaling = 0x80
 	};
+
+	DEFINE_ENUM_OPERATORS(RescaleMode);
 
 	enum class UnlockableEpisodes : uint32_t {
 		None = 0x00,

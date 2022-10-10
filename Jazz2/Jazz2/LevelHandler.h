@@ -16,9 +16,6 @@
 #include "../nCine/Audio/AudioBufferPlayer.h"
 #include "../nCine/Audio/AudioStreamPlayer.h"
 
-// TODO
-#define ENABLE_POSTPROCESSING 1
-
 namespace Jazz2
 {
 	namespace Actors
@@ -147,7 +144,6 @@ namespace Jazz2
 	private:
 		IRootController* _root;
 
-#if ENABLE_POSTPROCESSING
 		class LightingRenderer : public SceneNode
 		{
 		public:
@@ -220,7 +216,7 @@ namespace Jazz2
 		};
 
 		std::unique_ptr<LightingRenderer> _lightingRenderer;
-		std::unique_ptr<CombineRenderer> _viewSprite;
+		std::unique_ptr<CombineRenderer> _combineRenderer;
 		std::unique_ptr<Viewport> _lightingView;
 		std::unique_ptr<Texture> _lightingBuffer;
 
@@ -236,9 +232,7 @@ namespace Jazz2
 		BlurRenderPass _blurPass3;
 		BlurRenderPass _blurPass4;
 		UI::UpscaleRenderPass _upscalePass;
-#else
-		std::unique_ptr<Sprite> _viewSprite;
-#endif
+
 		std::unique_ptr<SceneNode> _rootNode;
 		std::unique_ptr<Viewport> _view;
 		std::unique_ptr<Texture> _viewTexture;

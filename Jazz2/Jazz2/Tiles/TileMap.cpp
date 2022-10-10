@@ -1052,7 +1052,7 @@ namespace Jazz2::Tiles
 		renderQueue.addCommand(command);
 	}
 
-	void TileMap::OnInitializeViewport(int width, int height)
+	void TileMap::OnInitializeViewport()
 	{
 		if (_texturedBackgroundLayer != -1) {
 			_texturedBackgroundPass.Initialize();

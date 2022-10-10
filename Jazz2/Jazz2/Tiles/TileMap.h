@@ -151,7 +151,7 @@ namespace Jazz2::Tiles
 		bool GetTrigger(uint8_t triggerId);
 		void SetTrigger(uint8_t triggerId, bool newState);
 
-		void OnInitializeViewport(int width, int height);
+		void OnInitializeViewport();
 
 	private:
 		class TexturedBackgroundPass : public SceneNode

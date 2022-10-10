@@ -5,7 +5,7 @@ namespace Jazz2::UI::Menu
 {
 	RescaleModeSection::RescaleModeSection()
 		:
-		_selectedIndex((int)PreferencesCache::ActiveRescaleMode),
+		_selectedIndex((int)(PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask)),
 		_animation(0.0f)
 	{
 		_items[(int)Item::None].Name = "None / Pixel-perfect"_s;
@@ -134,8 +134,8 @@ namespace Jazz2::UI::Menu
 			case (int)Item::Monochrome: newMode = RescaleMode::Monochrome; break;
 		}
 
-		if (PreferencesCache::ActiveRescaleMode != newMode) {
-			PreferencesCache::ActiveRescaleMode = newMode;
+		if ((PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask) != newMode) {
+			PreferencesCache::ActiveRescaleMode = newMode | (PreferencesCache::ActiveRescaleMode & ~RescaleMode::TypeMask);
 			PreferencesCache::Save();
 			_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 		}

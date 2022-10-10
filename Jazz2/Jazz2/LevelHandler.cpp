@@ -47,13 +47,11 @@ namespace Jazz2
 		_waterLevel(FLT_MAX),
 		_ambientLightTarget(1.0f),
 		_weatherType(WeatherType::None),
-#if ENABLE_POSTPROCESSING
 		_downsamplePass(this),
 		_blurPass1(this),
 		_blurPass2(this),
 		_blurPass3(this),
 		_blurPass4(this),
-#endif
 		_pressedKeys((uint32_t)KeySym::COUNT),
 		_pressedActions(0),
 		_overrideActions(0),
@@ -124,7 +122,7 @@ namespace Jazz2
 	LevelHandler::~LevelHandler()
 	{
 		// Remove nodes from UpscaleRenderPass
-		_viewSprite->setParent(nullptr);
+		_combineRenderer->setParent(nullptr);
 		_hud->setParent(nullptr);
 	}
 
@@ -489,9 +487,7 @@ namespace Jazz2
 			_elapsedFrames += timeMult;
 		}
 
-#if ENABLE_POSTPROCESSING
 		_lightingView->setClearColor(_ambientColor.W, 0.0f, 0.0f, 1.0f);
-#endif
 	}
 
 	void LevelHandler::OnInitializeViewport(int width, int height)
@@ -532,7 +528,6 @@ namespace Jazz2
 
 		_camera->setOrthoProjection(w * (-0.5f), w * (+0.5f), h * (-0.5f), h * (+0.5f));
 
-#if ENABLE_POSTPROCESSING
 		if (_lightingRenderer == nullptr) {
 			auto& resolver = ContentResolver::Current();
 			_lightingShader = resolver.GetShader(PrecompiledShader::Lighting);
@@ -576,28 +571,20 @@ namespace Jazz2
 		Viewport::chain().push_back(_lightingView.get());
 
 		if (notInitialized) {
-			_viewSprite = std::make_unique<CombineRenderer>(this);
-			_viewSprite->setParent(_upscalePass.GetNode());
+			_combineRenderer = std::make_unique<CombineRenderer>(this);
+			_combineRenderer->setParent(_upscalePass.GetNode());
 
 			if (_hud != nullptr) {
 				_hud->setParent(_upscalePass.GetNode());
 			}
 		}
 
-		_viewSprite->Initialize(w, h);
-#else
-		if (notInitialized) {
-			SceneNode& rootNode = theApplication().rootNode();
-			_viewSprite = std::make_unique<Sprite>(&rootNode, _viewTexture.get(), 0.0f, 0.0f);
-		}
-
-		_viewSprite->setBlendingEnabled(false);
-#endif
+		_combineRenderer->Initialize(w, h);
 
 		Viewport::chain().push_back(_view.get());
 
 		if (_tileMap != nullptr) {
-			_tileMap->OnInitializeViewport(width, height);
+			_tileMap->OnInitializeViewport();
 		}
 	}
 
@@ -1471,7 +1458,6 @@ namespace Jazz2
 		_pressedActions |= (1ull << (int)PlayerActions::Menu) | (1ull << (32 + (int)PlayerActions::Menu));
 	}
 
-#if ENABLE_POSTPROCESSING
 	bool LevelHandler::LightingRenderer::OnDraw(RenderQueue& renderQueue)
 	{
 		_renderCommandsCount = 0;
@@ -1666,5 +1652,4 @@ namespace Jazz2
 
 		return true;
 	}
-#endif
 }

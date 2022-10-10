@@ -16,6 +16,7 @@ namespace Jazz2::UI::Menu
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
 		_items[(int)Item::Fullscreen].Name = "Fullscreen"_s;
 #endif
+		_items[(int)Item::IntegerScaling].Name = "Integer Scaling"_s;
 		_items[(int)Item::ShowPerformanceMetrics].Name = "Performance Metrics"_s;
 	}
 
@@ -112,6 +113,7 @@ namespace Jazz2::UI::Menu
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
 					case (int)Item::Fullscreen: enabled = PreferencesCache::EnableFullscreen; break;
 #endif
+					case (int)Item::IntegerScaling: enabled = (PreferencesCache::ActiveRescaleMode & RescaleMode::UseIntegerScaling) == RescaleMode::UseIntegerScaling; break;
 					case (int)Item::ShowPerformanceMetrics: enabled = PreferencesCache::ShowPerformanceMetrics; break;
 				}
 
@@ -119,7 +121,7 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, (_selectedIndex == i ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
 			}
 
-			center.Y += (bottomLine - topLine) * (i >= 1 ? 0.9f : 0.7f) / (int)Item::Count;
+			center.Y += (bottomLine - topLine) * (i >= 1 ? 0.95f : 0.7f) / (int)Item::Count;
 		}
 	}
 
@@ -177,6 +179,17 @@ namespace Jazz2::UI::Menu
 				_animation = 0.0f;
 				break;
 #endif
+			case (int)Item::IntegerScaling: {
+				RescaleMode newMode = (PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask);
+				if ((PreferencesCache::ActiveRescaleMode & RescaleMode::UseIntegerScaling) != RescaleMode::UseIntegerScaling) {
+					newMode |= RescaleMode::UseIntegerScaling;
+				}
+				PreferencesCache::ActiveRescaleMode = newMode;
+				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
+				_isDirty = true;
+				_animation = 0.0f;
+				break;
+			}
 			case (int)Item::ShowPerformanceMetrics:
 				PreferencesCache::ShowPerformanceMetrics = !PreferencesCache::ShowPerformanceMetrics;
 				_isDirty = true;

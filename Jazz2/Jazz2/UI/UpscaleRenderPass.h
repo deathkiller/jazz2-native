@@ -35,10 +35,31 @@ namespace Jazz2::UI
 		}
 
 	private:
+		class IntegerScalingSubpass : public SceneNode
+		{
+			friend class UpscaleRenderPass;
+
+		public:
+			IntegerScalingSubpass()
+			{
+				setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
+			}
+
+			bool OnDraw(RenderQueue& renderQueue) override;
+
+		private:
+			std::unique_ptr<Texture> _target;
+			std::unique_ptr<Viewport> _view;
+			std::unique_ptr<Camera> _camera;
+			RenderCommand _renderCommand;
+			Vector2f _targetSize;
+		};
+
 		std::unique_ptr<SceneNode> _node;
 		std::unique_ptr<Texture> _target;
 		std::unique_ptr<Viewport> _view;
 		std::unique_ptr<Camera> _camera;
+		IntegerScalingSubpass _integerScaling;
 #if defined(ALLOW_RESCALE_SHADERS)
 		Shader* _resizeShader;
 #endif
