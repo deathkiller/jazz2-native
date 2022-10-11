@@ -35,12 +35,12 @@ namespace Jazz2::UI
 		}
 
 	private:
-		class IntegerScalingSubpass : public SceneNode
+		class AntialiasingSubpass : public SceneNode
 		{
 			friend class UpscaleRenderPass;
 
 		public:
-			IntegerScalingSubpass()
+			AntialiasingSubpass()
 			{
 				setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
 			}
@@ -59,7 +59,7 @@ namespace Jazz2::UI
 		std::unique_ptr<Texture> _target;
 		std::unique_ptr<Viewport> _view;
 		std::unique_ptr<Camera> _camera;
-		IntegerScalingSubpass _integerScaling;
+		AntialiasingSubpass _antialiasing;
 #if defined(ALLOW_RESCALE_SHADERS)
 		Shader* _resizeShader;
 #endif

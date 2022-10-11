@@ -15,7 +15,7 @@ namespace Jazz2::Actors::Enemies
 		_anglePhase(0.0f),
 		_attackTime(80.0f),
 		_attacking(false),
-		_noiseCooldown(Random().NextFloat(180.0f, 300.0f))
+		_noiseCooldown(Random().FastFloat(200.0f, 400.0f))
 	{
 	}
 
@@ -70,7 +70,7 @@ namespace Jazz2::Actors::Enemies
 			if (_noiseCooldown > 0.0f) {
 				_noiseCooldown -= timeMult;
 			} else {
-				_noiseCooldown = Random().NextFloat(300, 500);
+				_noiseCooldown = Random().FastFloat(300.0f, 600.0f);
 
 				if (Random().NextFloat() < 0.5f) {
 					PlaySfx("Noise"_s, 0.7f);

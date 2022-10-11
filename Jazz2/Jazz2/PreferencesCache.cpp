@@ -13,7 +13,7 @@ using namespace Death::Containers::Literals;
 namespace Jazz2
 {
 	UnlockableEpisodes PreferencesCache::UnlockedEpisodes = UnlockableEpisodes::None;
-	RescaleMode PreferencesCache::ActiveRescaleMode = RescaleMode::UseIntegerScaling;
+	RescaleMode PreferencesCache::ActiveRescaleMode = RescaleMode::None;
 	bool PreferencesCache::EnableFullscreen = false;
 	bool PreferencesCache::EnableVsync = true;
 	bool PreferencesCache::ShowPerformanceMetrics = false;

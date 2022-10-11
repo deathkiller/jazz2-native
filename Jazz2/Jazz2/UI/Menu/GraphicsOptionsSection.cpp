@@ -16,7 +16,7 @@ namespace Jazz2::UI::Menu
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
 		_items[(int)Item::Fullscreen].Name = "Fullscreen"_s;
 #endif
-		_items[(int)Item::IntegerScaling].Name = "Integer Scaling"_s;
+		_items[(int)Item::Antialiasing].Name = "Antialiasing"_s;
 		_items[(int)Item::ShowPerformanceMetrics].Name = "Performance Metrics"_s;
 	}
 
@@ -113,7 +113,7 @@ namespace Jazz2::UI::Menu
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
 					case (int)Item::Fullscreen: enabled = PreferencesCache::EnableFullscreen; break;
 #endif
-					case (int)Item::IntegerScaling: enabled = (PreferencesCache::ActiveRescaleMode & RescaleMode::UseIntegerScaling) == RescaleMode::UseIntegerScaling; break;
+					case (int)Item::Antialiasing: enabled = (PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing; break;
 					case (int)Item::ShowPerformanceMetrics: enabled = PreferencesCache::ShowPerformanceMetrics; break;
 				}
 
@@ -179,10 +179,10 @@ namespace Jazz2::UI::Menu
 				_animation = 0.0f;
 				break;
 #endif
-			case (int)Item::IntegerScaling: {
+			case (int)Item::Antialiasing: {
 				RescaleMode newMode = (PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask);
-				if ((PreferencesCache::ActiveRescaleMode & RescaleMode::UseIntegerScaling) != RescaleMode::UseIntegerScaling) {
-					newMode |= RescaleMode::UseIntegerScaling;
+				if ((PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) != RescaleMode::UseAntialiasing) {
+					newMode |= RescaleMode::UseAntialiasing;
 				}
 				PreferencesCache::ActiveRescaleMode = newMode;
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);

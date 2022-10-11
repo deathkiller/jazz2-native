@@ -11,30 +11,30 @@ namespace Jazz2::UI
 	{
 		_targetSize = Vector2f(targetWidth, targetHeight);
 
-		if ((PreferencesCache::ActiveRescaleMode & RescaleMode::UseIntegerScaling) == RescaleMode::UseIntegerScaling) {
+		if ((PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing) {
 			float widthRatio, heightRatio;
-			float widthFrac = modf((float)targetWidth / width, &widthRatio);
-			float heightFrac = modf((float)targetHeight / height, &heightRatio);
+			float widthFrac = modff((float)targetWidth / width, &widthRatio);
+			float heightFrac = modff((float)targetHeight / height, &heightRatio);
 
 			float requiredWidth = (widthFrac > 0.004f ? (width * (widthRatio + 1)) : targetWidth);
 			float requiredHeight = (heightFrac > 0.004f ? (height * (heightRatio + 1)) : targetHeight);
 
 			if (std::abs(requiredWidth - targetWidth) > 2 || std::abs(requiredHeight - targetHeight) > 2) {
-				if (_integerScaling._target == nullptr) {
-					_integerScaling._target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, requiredWidth, requiredHeight);
+				if (_antialiasing._target == nullptr) {
+					_antialiasing._target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, requiredWidth, requiredHeight);
 				} else {
-					_integerScaling._target->init(nullptr, Texture::Format::RGB8, requiredWidth, requiredHeight);
+					_antialiasing._target->init(nullptr, Texture::Format::RGB8, requiredWidth, requiredHeight);
 				}
-				_integerScaling._target->setMinFiltering(SamplerFilter::Linear);
-				_integerScaling._target->setMagFiltering(SamplerFilter::Linear);
+				_antialiasing._target->setMinFiltering(SamplerFilter::Linear);
+				_antialiasing._target->setMagFiltering(SamplerFilter::Linear);
 
-				_integerScaling._targetSize = _targetSize;
+				_antialiasing._targetSize = _targetSize;
 				_targetSize = Vector2f(requiredWidth, requiredHeight);
 			} else {
-				_integerScaling._target = nullptr;
+				_antialiasing._target = nullptr;
 			}
 		} else {
-			_integerScaling._target = nullptr;
+			_antialiasing._target = nullptr;
 		}
 
 		if (_camera == nullptr) {
@@ -60,39 +60,39 @@ namespace Jazz2::UI
 		_target->setMinFiltering(SamplerFilter::Nearest);
 		_target->setMagFiltering(SamplerFilter::Nearest);
 
-		if (_integerScaling._target != nullptr) {
-			if (_integerScaling._camera == nullptr) {
-				_integerScaling._camera = std::make_unique<Camera>();
+		if (_antialiasing._target != nullptr) {
+			if (_antialiasing._camera == nullptr) {
+				_antialiasing._camera = std::make_unique<Camera>();
 			}
-			_integerScaling._camera->setOrthoProjection(_targetSize.X * (-0.5f), _targetSize.X * (+0.5f), _targetSize.Y * (-0.5f), _targetSize.Y * (+0.5f));
-			_integerScaling._camera->setView(0, 0, 0, 1);
+			_antialiasing._camera->setOrthoProjection(_targetSize.X * (-0.5f), _targetSize.X * (+0.5f), _targetSize.Y * (-0.5f), _targetSize.Y * (+0.5f));
+			_antialiasing._camera->setView(0, 0, 0, 1);
 
-			_integerScaling._view = std::make_unique<Viewport>(_integerScaling._target.get(), Viewport::DepthStencilFormat::NONE);
-			_integerScaling._view->setRootNode(this);
-			_integerScaling._view->setCamera(_integerScaling._camera.get());
-			_integerScaling._view->setClearMode(Viewport::ClearMode::NEVER);
+			_antialiasing._view = std::make_unique<Viewport>(_antialiasing._target.get(), Viewport::DepthStencilFormat::NONE);
+			_antialiasing._view->setRootNode(this);
+			_antialiasing._view->setCamera(_antialiasing._camera.get());
+			_antialiasing._view->setClearMode(Viewport::ClearMode::NEVER);
 
 			SceneNode& rootNode = theApplication().rootNode();
-			_integerScaling.setParent(&rootNode);
+			_antialiasing.setParent(&rootNode);
 			setParent(nullptr);
 
-			if (_integerScaling._renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
-				_integerScaling._renderCommand.material().reserveUniformsDataMemory();
-				_integerScaling._renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			if (_antialiasing._renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
+				_antialiasing._renderCommand.material().reserveUniformsDataMemory();
+				_antialiasing._renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 				// Required to reset render command properly
-				_integerScaling._renderCommand.setTransformation(_integerScaling._renderCommand.transformation());
+				_antialiasing._renderCommand.setTransformation(_antialiasing._renderCommand.transformation());
 
-				GLUniformCache* textureUniform = _integerScaling._renderCommand.material().uniform(Material::TextureUniformName);
+				GLUniformCache* textureUniform = _antialiasing._renderCommand.material().uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->intValue(0) != 0) {
 					textureUniform->setIntValue(0); // GL_TEXTURE0
 				}
 			}
 		} else {
-			_integerScaling._camera = nullptr;
-			_integerScaling._view = nullptr;
+			_antialiasing._camera = nullptr;
+			_antialiasing._view = nullptr;
 
 			SceneNode& rootNode = theApplication().rootNode();
-			_integerScaling.setParent(nullptr);
+			_antialiasing.setParent(nullptr);
 			setParent(&rootNode);
 		}
 
@@ -128,8 +128,8 @@ namespace Jazz2::UI
 
 	void UpscaleRenderPass::Register()
 	{
-		if (_integerScaling._view != nullptr) {
-			Viewport::chain().push_back(_integerScaling._view.get());
+		if (_antialiasing._view != nullptr) {
+			Viewport::chain().push_back(_antialiasing._view.get());
 		}
 		Viewport::chain().push_back(_view.get());
 	}
@@ -156,7 +156,7 @@ namespace Jazz2::UI
 		return true;
 	}
 
-	bool UpscaleRenderPass::IntegerScalingSubpass::OnDraw(RenderQueue& renderQueue)
+	bool UpscaleRenderPass::AntialiasingSubpass::OnDraw(RenderQueue& renderQueue)
 	{
 		auto size = _target->size();
 

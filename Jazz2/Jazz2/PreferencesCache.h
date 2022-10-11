@@ -19,7 +19,7 @@ namespace Jazz2
 		Monochrome,
 
 		TypeMask = 0x0f,
-		UseIntegerScaling = 0x80
+		UseAntialiasing = 0x80
 	};
 
 	DEFINE_ENUM_OPERATORS(RescaleMode);

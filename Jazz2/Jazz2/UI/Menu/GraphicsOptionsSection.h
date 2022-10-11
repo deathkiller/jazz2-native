@@ -21,7 +21,7 @@ namespace Jazz2::UI::Menu
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
 			Fullscreen,
 #endif
-			IntegerScaling,
+			Antialiasing,
 			ShowPerformanceMetrics,
 
 			Count
