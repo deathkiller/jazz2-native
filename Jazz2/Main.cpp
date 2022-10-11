@@ -773,7 +773,14 @@ void GameEventHandler::CheckUpdates()
 #if defined(DEATH_TARGET_ANDROID)
 	constexpr char DeviceDesc[] = "|Android|"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
 #elif defined(DEATH_TARGET_APPLE)
-	constexpr char DeviceDesc[] = "|macOS|"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
+	char DeviceDesc[64]; int DeviceDescLength;
+	if (::gethostname(DeviceDesc, _countof(DeviceDesc) - (sizeof("|macOS|") - 1)) == 0) {
+		DeviceDescLength = strlen(DeviceDesc);
+	} else {
+		DeviceDescLength = 0;
+	}
+	std::memcpy(DeviceDesc + DeviceDescLength, "|macOS|", sizeof("|macOS|") - 1);
+	DeviceDescLength += sizeof("|macOS|") - 1;
 #elif defined(DEATH_TARGET_UNIX)
 	char DeviceDesc[64]; int DeviceDescLength;
 	if (::gethostname(DeviceDesc, _countof(DeviceDesc) - (sizeof("|Unix|") - 1)) == 0) {
@@ -789,7 +796,7 @@ void GameEventHandler::CheckUpdates()
 	if (!::GetComputerNameA(DeviceDesc, &DeviceDescLength)) {
 		DeviceDescLength = 0;
 	}
-	DeviceDescLength += sprintf_s(DeviceDesc + DeviceDescLength, _countof(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i|", (int)((osVersion >> 48) & 0xffffu), (int)((osVersion >> 32) & 0xffffu), (int)(osVersion & 0xffffffffu));
+	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, _countof(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i|", (int)((osVersion >> 48) & 0xffffu), (int)((osVersion >> 32) & 0xffffu), (int)(osVersion & 0xffffffffu));
 #else
 	constexpr char DeviceDesc[] = "||"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
 #endif

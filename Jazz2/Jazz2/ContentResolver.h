@@ -205,6 +205,7 @@ namespace Jazz2
 		ResizeCrt,
 		ResizeMonochrome,
 #endif
+		Antialiasing,
 		Transition,
 
 		Count
@@ -285,7 +286,7 @@ namespace Jazz2
 		static void ReadImageFromFile(std::unique_ptr<IFileStream>& s, uint8_t* data, int width, int height, int channelCount);
 		void CompileShaders();
 		void RecreateGemPalettes();
-#if _DEBUG
+#if NCINE_DEBUG
 		void MigrateGraphics(const StringView& path);
 #endif
 

@@ -3,7 +3,7 @@
 #include "Compatibility/JJ2Anims.Palettes.h"
 #include "LevelHandler.h"
 #include "Tiles/TileSet.h"
-#if _DEBUG
+#if NCINE_DEBUG
 #	include "Compatibility/JJ2Anims.h"
 #endif
 
@@ -443,7 +443,7 @@ namespace Jazz2
 				graphics->Gunspot = Vector2i(InvalidValue, InvalidValue);
 			}
 
-#if _DEBUG
+#if NCINE_DEBUG
 			MigrateGraphics(path);
 #endif
 
@@ -1000,8 +1000,10 @@ namespace Jazz2
 		_precompiledShaders[(int)PrecompiledShader::ResizeCrt] = std::make_unique<Shader>("ResizeCrt",
 			Shader::LoadMode::STRING, Shaders::ResizeCrtVs, Shaders::ResizeCrtFs);
 		_precompiledShaders[(int)PrecompiledShader::ResizeMonochrome] = std::make_unique<Shader>("ResizeMonochrome",
-			Shader::LoadMode::STRING, Shader::DefaultVertex::SPRITE, Shaders::ResizeMonochromeFs);
+			Shader::LoadMode::STRING, Shaders::ResizeMonochromeVs, Shaders::ResizeMonochromeFs);
 #endif
+		_precompiledShaders[(int)PrecompiledShader::Antialiasing] = std::make_unique<Shader>("Antialiasing",
+			Shader::LoadMode::STRING, Shaders::AntialiasingVs, Shaders::AntialiasingFs);
 
 		_precompiledShaders[(int)PrecompiledShader::Transition] = std::make_unique<Shader>("Transition",
 			Shader::LoadMode::STRING, Shaders::TransitionVs, Shaders::TransitionFs);
@@ -1062,7 +1064,7 @@ namespace Jazz2
 		}
 	}
 
-#if _DEBUG
+#if NCINE_DEBUG
 	void ContentResolver::MigrateGraphics(const StringView& path)
 	{
 		String auraPath = fs::JoinPath({ GetContentPath(), "Animations"_s, path.exceptSuffix(4) + ".aura"_s });

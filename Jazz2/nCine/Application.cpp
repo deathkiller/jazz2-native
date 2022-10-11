@@ -139,13 +139,14 @@ namespace nCine
 		ZoneScoped;
 		profileStartTime_ = TimeStamp::now();
 
+		//char appInfoString[128];
 		//#ifdef WITH_GIT_VERSION
-		//	appInfoString.format("nCine %s (%s) compiled on %s at %s", VersionStrings::Version, VersionStrings::GitBranch,
+		//	formatString(appInfoString, sizeof(appInfoString), "nCine %s (%s) compiled on %s at %s", VersionStrings::Version, VersionStrings::GitBranch,
 		//	                     VersionStrings::CompilationDate, VersionStrings::CompilationTime);
 		//#else
-		//	sprintf_s(appInfoString, "nCine compiled on %s at %s", VersionStrings::CompilationDate, VersionStrings::CompilationTime);
+		//	formatString(appInfoString, sizeof(appInfoString), "nCine compiled on %s at %s", VersionStrings::CompilationDate, VersionStrings::CompilationTime);
 		//#endif
-		//	LOGI_X("%s", appInfoString.data());
+		//	LOGI_X("%s", appInfoString);
 #ifdef WITH_TRACY
 		TracyAppInfo("nCine", 5);
 		LOGI("Tracy integration is enabled");

@@ -17,8 +17,7 @@ layout (std140) uniform InstanceBlock
 out vec4 vTexCoords;
 out vec4 vColor;
 
-void main()
-{
+void main() {
 	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
@@ -54,8 +53,7 @@ out vec4 vColor;
 
 #define i block.instances[gl_VertexID / 6]
 
-void main()
-{
+void main() {
 	vec2 aPosition = vec2(-0.5 + float(((gl_VertexID + 2) / 3) % 2), -0.5 + float(((gl_VertexID + 1) / 3) % 2));
 	vec4 position = vec4(aPosition.x * i.spriteSize.x, aPosition.y * i.spriteSize.y, 0.0, 1.0);
 
@@ -121,8 +119,7 @@ uniform vec2 uDirection;
 in vec2 vTexCoords;
 out vec4 fragColor;
 
-void main()
-{
+void main() {
 	vec4 color = vec4(0.0);
 	vec2 off1 = vec2(1.3846153846) * uPixelOffset * uDirection;
 	vec2 off2 = vec2(3.2307692308) * uPixelOffset * uDirection;
@@ -146,8 +143,7 @@ uniform vec2 uPixelOffset;
 in vec2 vTexCoords;
 out vec4 fragColor;
 
-void main()
-{
+void main() {
 	vec4 color = texture(uTexture, vTexCoords);
 	color += texture(uTexture, vTexCoords + vec2(0.0, uPixelOffset.y));
 	color += texture(uTexture, vTexCoords + vec2(uPixelOffset.x, 0.0));
@@ -172,8 +168,7 @@ out vec2 vTexCoords;
 out vec2 vViewSize;
 out vec2 vViewSizeInv;
 
-void main()
-{
+void main() {
 	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
 	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), 1.0 - float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
@@ -677,8 +672,6 @@ void main() {
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
-uniform mediump vec2 uTextureSize;
-
 layout (std140) uniform InstanceBlock
 {
 	mat4 modelMatrix;
@@ -693,32 +686,29 @@ out vec4 vTexCoords2;
 out vec4 vTexCoords3;
 out vec4 vTexCoords4;
 
-void main()
-{
+void main() {
 	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
-	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), 1.0 - float(gl_VertexID % 2));
+	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	
-	float x = 0.5 / uTextureSize.x;
-	float y = 0.5 / uTextureSize.y;
+	float x = 0.5 / texRect.x;
+	float y = 0.5 / texRect.y;
 	vec2 dg1 = vec2( x, y);
 	vec2 dg2 = vec2(-x, y);
 	vec2 dx = vec2(x, 0.0);
 	vec2 dy = vec2(0.0, y);
 
-	vec2 texCoord = vec2(aTexCoords.x * texRect.x + texRect.y, aTexCoords.y * texRect.z + texRect.w);
-
-	vTexCoords0.xy = texCoord;
-	vTexCoords1.xy = texCoord - dg1;
-	vTexCoords1.zw = texCoord - dy;
-	vTexCoords2.xy = texCoord - dg2;
-	vTexCoords2.zw = texCoord + dx;
-	vTexCoords3.xy = texCoord + dg1;
-	vTexCoords3.zw = texCoord + dy;
-	vTexCoords4.xy = texCoord + dg2;
-	vTexCoords4.zw = texCoord - dx;
+	vTexCoords0.xy = aTexCoords;
+	vTexCoords1.xy = aTexCoords - dg1;
+	vTexCoords1.zw = aTexCoords - dy;
+	vTexCoords2.xy = aTexCoords - dg2;
+	vTexCoords2.zw = aTexCoords + dx;
+	vTexCoords3.xy = aTexCoords + dg1;
+	vTexCoords3.zw = aTexCoords + dy;
+	vTexCoords4.xy = aTexCoords + dg2;
+	vTexCoords4.zw = aTexCoords - dx;
 }
 )";
 
@@ -785,8 +775,6 @@ void main() {
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
-uniform mediump vec2 uTextureSize;
-
 layout (std140) uniform InstanceBlock
 {
 	mat4 modelMatrix;
@@ -795,6 +783,7 @@ layout (std140) uniform InstanceBlock
 	vec2 spriteSize;
 };
 
+out vec2 vPixelCoords;
 out vec2 vTexCoords0;
 out vec4 vTexCoords1;
 out vec4 vTexCoords2;
@@ -804,20 +793,20 @@ out vec4 vTexCoords5;
 out vec4 vTexCoords6;
 out vec4 vTexCoords7;
 
-void main()
-{
+void main() {
 	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
-	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), 1.0 - float(gl_VertexID % 2));
+	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	
-	float dx = 1.0 / uTextureSize.x;
-	float dy = 1.0 / uTextureSize.y;
+	float dx = 1.0 / texRect.x;
+	float dy = 1.0 / texRect.y;
 
-	vec2 texCoord = vec2(aTexCoords.x * texRect.x + texRect.y, aTexCoords.y * texRect.z + texRect.w) + vec2(0.0000001, 0.0000001);
+	vec2 texCoord = aTexCoords + vec2(0.0000001, 0.0000001);
 
-	vTexCoords0.xy = texCoord;
+	vPixelCoords = texCoord * texRect.xy;
+	vTexCoords0 = texCoord;
 	vTexCoords1 = texCoord.xxxy + vec4( -dx, 0, dx, -2.0*dy);  // A1 B1 C1
 	vTexCoords2 = texCoord.xxxy + vec4( -dx, 0, dx, -dy);      // A  B  C
 	vTexCoords3 = texCoord.xxxy + vec4( -dx, 0, dx, 0);        // D  E  F
@@ -845,8 +834,8 @@ const float one_third = 1.0 / 3.0;
 const float two_third = 2.0 / 3.0;
 
 uniform sampler2D uTexture;
-uniform vec2 uTextureSize;
 
+in vec2 vPixelCoords;
 in vec2 vTexCoords0;
 in vec4 vTexCoords1;
 in vec4 vTexCoords2;
@@ -907,7 +896,7 @@ void ScalePixel(ivec4 blend, vec3 k[9], inout vec3 dst[9]) {
 }
 
 void main() {
-		vec2 f = fract(vTexCoords0.xy*uTextureSize);
+	vec2 f = fract(vPixelCoords);
 	vec3 src[25];
 
 	src[21] = texture(uTexture, vTexCoords1.xw).rgb;
@@ -1093,16 +1082,19 @@ layout (std140) uniform InstanceBlock
 	vec2 spriteSize;
 };
 
-out vec4 vTexCoords;
+out vec2 vTexCoords;
+out vec2 vTexSize;
+out vec2 vViewSize;
 
-void main()
-{
+void main() {
 	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
-	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), 1.0 - float(gl_VertexID % 2));
+	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
-	vTexCoords = vec4(aTexCoords.x * texRect.x + texRect.y, aTexCoords.y * texRect.z + texRect.w, spriteSize.x, spriteSize.y);
+	vTexCoords = aTexCoords;
+	vTexSize = texRect.xy;
+	vViewSize = spriteSize;
 }
 )";
 
@@ -1127,9 +1119,9 @@ precision mediump float;
 
 uniform sampler2D uTexture;
 
-uniform mediump vec2 uTextureSize;
-
-in vec4 vTexCoords;
+in vec2 vTexCoords;
+in vec2 vTexSize;
+in vec2 vViewSize;
 out vec4 fragColor;
 
 #ifdef SIMPLE_LINEAR_GAMMA
@@ -1348,7 +1340,33 @@ vec4 crt_lottes(vec2 texture_size, vec2 video_size, vec2 output_size, vec2 tex) 
 }
 
 void main() {
-	fragColor = crt_lottes(uTextureSize, uTextureSize, vTexCoords.zw, vTexCoords.xy);
+	fragColor = crt_lottes(vTexSize, vTexSize, vViewSize, vTexCoords);
+}
+)";
+
+	constexpr char ResizeMonochromeVs[] = R"(
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+out vec2 vPixelCoords;
+out vec2 vTexCoords;
+
+void main() {
+	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
+	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vPixelCoords = aTexCoords * texRect.xy;
+	vTexCoords = aTexCoords;
 }
 )";
 
@@ -1365,8 +1383,7 @@ mat4 bayerIndex = mat4(
 
 uniform sampler2D uTexture;
 
-uniform vec2 uTextureSize;
-
+in vec2 vPixelCoords;
 in vec2 vTexCoords;
 out vec4 fragColor;
 
@@ -1378,7 +1395,7 @@ float dither4x4(vec2 position, float brightness) {
 void main() {
 	vec3 color = texture(uTexture, vTexCoords).rgb;
 	float gray = dot(((color - vec3(0.5)) * vec3(1.4, 1.2, 1.0)) + vec3(0.5), vec3(0.3, 0.7, 0.1));
-	gray = dither4x4(vTexCoords * uTextureSize, gray);
+	gray = dither4x4(vPixelCoords, gray);
 	float palette = (abs(1.0 - gray) * 0.75) + 0.125;
 
 	if (palette < 0.25) {
@@ -1390,8 +1407,88 @@ void main() {
 	} else {
 		color = vec3(0.1, 0.134, 0.151);
 	}
-
 	fragColor = vec4(color, 1.0);
+}
+)";
+
+	constexpr char AntialiasingVs[] = R"(
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+out vec2 vPixelCoords;
+out vec2 vTexSizeInv;
+
+void main() {
+	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
+	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vPixelCoords = aTexCoords * texRect.xy + 0.5;
+	vTexSizeInv = 1.0 / texRect.xy;
+}
+)";
+
+	constexpr char AntialiasingFs[] = R"(
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform sampler2D uTexture;
+
+in vec2 vPixelCoords;
+in vec2 vTexSizeInv;
+out vec4 fragColor;
+
+vec3 cubicHermite(vec3 A, vec3 B, vec3 C, vec3 D, float t) {
+	float t2 = t*t;
+	float t3 = t*t*t;
+	vec3 a = -A/2.0 + (3.0*B)/2.0 - (3.0*C)/2.0 + D/2.0;
+	vec3 b = A - (5.0*B)/2.0 + 2.0*C - D / 2.0;
+	vec3 c = -A/2.0 + C/2.0;
+	vec3 d = B;
+	return a*t3 + b*t2 + c*t + d;
+}
+
+void main() {
+	vec2 frac = fract(vPixelCoords);
+	vec2 pixel = floor(vPixelCoords) * vTexSizeInv - vec2(vTexSizeInv * 0.5);
+	vec2 vTexSizeInv2 = 2.0 * vTexSizeInv;
+
+	vec3 C00 = texture(uTexture, pixel + vec2(-vTexSizeInv.x, -vTexSizeInv.y)).rgb;
+	vec3 C10 = texture(uTexture, pixel + vec2(0.0, -vTexSizeInv.y)).rgb;
+	vec3 C20 = texture(uTexture, pixel + vec2(vTexSizeInv.x, -vTexSizeInv.y)).rgb;
+	vec3 C30 = texture(uTexture, pixel + vec2(vTexSizeInv2.x, -vTexSizeInv.y)).rgb;
+
+	vec3 C01 = texture(uTexture, pixel + vec2(-vTexSizeInv.x, 0.0)).rgb;
+	vec3 C11 = texture(uTexture, pixel + vec2(0.0, 0.0)).rgb;
+	vec3 C21 = texture(uTexture, pixel + vec2(vTexSizeInv.x, 0.0)).rgb;
+	vec3 C31 = texture(uTexture, pixel + vec2(vTexSizeInv2.x, 0.0)).rgb;    
+
+	vec3 C02 = texture(uTexture, pixel + vec2(-vTexSizeInv.x , vTexSizeInv.y)).rgb;
+	vec3 C12 = texture(uTexture, pixel + vec2(0.0, vTexSizeInv.y)).rgb;
+	vec3 C22 = texture(uTexture, pixel + vec2(vTexSizeInv.x , vTexSizeInv.y)).rgb;
+	vec3 C32 = texture(uTexture, pixel + vec2(vTexSizeInv2.x, vTexSizeInv.y)).rgb;
+
+	vec3 C03 = texture(uTexture, pixel + vec2(-vTexSizeInv.x, vTexSizeInv2.y)).rgb;
+	vec3 C13 = texture(uTexture, pixel + vec2(0.0, vTexSizeInv2.y)).rgb;
+	vec3 C23 = texture(uTexture, pixel + vec2(vTexSizeInv.x, vTexSizeInv2.y)).rgb;
+	vec3 C33 = texture(uTexture, pixel + vec2(vTexSizeInv2.x, vTexSizeInv2.y)).rgb;
+
+	vec3 CP0X = cubicHermite(C00, C10, C20, C30, frac.x);
+	vec3 CP1X = cubicHermite(C01, C11, C21, C31, frac.x);
+	vec3 CP2X = cubicHermite(C02, C12, C22, C32, frac.x);
+	vec3 CP3X = cubicHermite(C03, C13, C23, C33, frac.x);
+
+	fragColor = vec4(cubicHermite(CP0X, CP1X, CP2X, CP3X, frac.y), 1.0);
 }
 )";
 
@@ -1411,8 +1508,7 @@ out vec2 vTexCoords;
 out vec2 vCorrection;
 out float vProgressTime;
 
-void main()
-{
+void main() {
 	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
 	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), 1.0 - float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);

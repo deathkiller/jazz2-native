@@ -362,6 +362,8 @@ namespace nCine
 		}
 	}
 
+	int formatString(char* buffer, size_t maxLen, const char* format, ...);
+
 	void u32tos(uint32_t value, char* buffer);
 	void i32tos(int32_t value, char* buffer);
 	void u64tos(uint64_t value, char* buffer);

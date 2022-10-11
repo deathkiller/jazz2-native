@@ -741,11 +741,7 @@ enum WeatherType {
 
 		// If known player is the initiator, try to call specific variant of the function
 		if (auto player = dynamic_cast<Actors::Player*>(initiator)) {
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
-			sprintf_s(funcName, "void OnFunction%i(Player@, uint8)", eventParams[0]);
-#else
-			snprintf(funcName, sizeof(funcName), bufferSize, "void OnFunction%i(Player@, uint8)", eventParams[0]);
-#endif
+			formatString(funcName, sizeof(funcName), "void OnFunction%i(Player@, uint8)", eventParams[0]);
 			func = _module->GetFunctionByDecl(funcName);
 			if (func != nullptr) {
 				asIScriptContext* ctx = _engine->RequestContext();
@@ -769,11 +765,7 @@ enum WeatherType {
 		}
 
 		// Try to call parameter-less variant
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
-		sprintf_s(funcName, "void OnFunction%i()", eventParams[0]);
-#else
-		snprintf(funcName, sizeof(funcName), bufferSize, "void OnFunction%i()", eventParams[0]);
-#endif
+		formatString(funcName, sizeof(funcName), "void OnFunction%i()", eventParams[0]);
 		func = _module->GetFunctionByDecl(funcName);
 		if (func != nullptr) {
 			asIScriptContext* ctx = _engine->RequestContext();

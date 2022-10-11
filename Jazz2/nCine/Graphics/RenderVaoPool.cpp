@@ -6,7 +6,7 @@
 
 namespace nCine
 {
-#if _DEBUG
+#if NCINE_DEBUG
 	namespace
 	{
 		/// The string used to output OpenGL debug group information
@@ -61,7 +61,7 @@ namespace nCine
 				auto& item = vaoPool_.emplace_back();
 				item.object = std::make_unique<GLVertexArrayObject>();
 				index = (unsigned int)vaoPool_.size() - 1;
-#if _DEBUG
+#if NCINE_DEBUG
 				/*if (GLDebug::isAvailable()) {
 					debugString.format("Created and defined VAO 0x%lx (%u)", uintptr_t(vaoPool_[index].object.get()), index);
 					GLDebug::messageInsert(debugString.data());
@@ -80,8 +80,8 @@ namespace nCine
 					}
 				}
 
-#if _DEBUG
-				sprintf_s(debugString, "Reuse and define VAO 0x%lx (%u)", uintptr_t(vaoPool_[index].object.get()), index);
+#if NCINE_DEBUG
+				formatString(debugString, sizeof(debugString), "Reuse and define VAO 0x%lx (%u)", uintptr_t(vaoPool_[index].object.get()), index);
 				GLDebug::messageInsert(debugString);
 #endif
 				RenderStatistics::addVaoPoolReuse();
@@ -107,8 +107,8 @@ namespace nCine
 
 	void RenderVaoPool::insertGLDebugMessage(const VaoBinding& binding)
 	{
-#if _DEBUG
-		sprintf_s(debugString, "Bind VAO 0x%lx (", uintptr_t(binding.object.get()));
+#if NCINE_DEBUG
+		formatString(debugString, sizeof(debugString), "Bind VAO 0x%lx (", uintptr_t(binding.object.get()));
 
 		// TODO: GLDebug
 		/*bool firstVbo = true;

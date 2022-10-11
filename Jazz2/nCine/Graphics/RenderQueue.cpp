@@ -12,7 +12,7 @@
 
 namespace nCine
 {
-#if _DEBUG
+#if NCINE_DEBUG
 	namespace
 	{
 		/// The string used to output OpenGL debug group information
@@ -110,8 +110,8 @@ namespace nCine
 		// Avoid GPU stalls by uploading to VBOs, IBOs and UBOs before drawing
 		if (!opaques->empty()) {
 			ZoneScopedN("Commit opaques");
-#if _DEBUG
-			sprintf_s(debugString, "Commit %u opaque command(s) for viewport 0x%lx", (uint32_t)opaques->size(), uintptr_t(RenderResources::currentViewport()));
+#if NCINE_DEBUG
+			formatString(debugString, sizeof(debugString), "Commit %u opaque command(s) for viewport 0x%lx", (uint32_t)opaques->size(), uintptr_t(RenderResources::currentViewport()));
 			GLDebug::ScopedGroup scoped(debugString);
 #endif
 			for (RenderCommand* opaqueRenderCommand : *opaques)
@@ -120,8 +120,8 @@ namespace nCine
 
 		if (!transparents->empty()) {
 			ZoneScopedN("Commit transparents");
-#if _DEBUG
-			sprintf_s(debugString, "Commit %u transparent command(s) for viewport 0x%lx", (uint32_t)transparents->size(), uintptr_t(RenderResources::currentViewport()));
+#if NCINE_DEBUG
+			formatString(debugString, sizeof(debugString), "Commit %u transparent command(s) for viewport 0x%lx", (uint32_t)transparents->size(), uintptr_t(RenderResources::currentViewport()));
 			GLDebug::ScopedGroup scoped(debugString);
 #endif
 			for (RenderCommand* transparentRenderCommand : *transparents)
@@ -144,15 +144,15 @@ namespace nCine
 			const uint16_t layer = opaqueRenderCommand->layer();
 			const uint16_t visitOrder = opaqueRenderCommand->visitOrder();
 
-#if _DEBUG
+#if NCINE_DEBUG
 			if (numInstances > 0) {
-				sprintf_s(debugString, "Opaque %u (%d %s on layer %u, visit order %u, sort key %llx)",
+				formatString(debugString, sizeof(debugString), "Opaque %u (%d %s on layer %u, visit order %u, sort key %llx)",
 								   commandIndex, numInstances, commandTypeString(*opaqueRenderCommand), layer, visitOrder, opaqueRenderCommand->materialSortKey());
 			} else if (batchSize > 0) {
-				sprintf_s(debugString, "Opaque %u (%d %s on layer %u, visit order %u, sort key %llx)",
+				formatString(debugString, sizeof(debugString), "Opaque %u (%d %s on layer %u, visit order %u, sort key %llx)",
 								   commandIndex, batchSize, commandTypeString(*opaqueRenderCommand), layer, visitOrder, opaqueRenderCommand->materialSortKey());
 			} else {
-				sprintf_s(debugString, "Opaque %u (%s on layer %u, visit order %u, sort key %llx)",
+				formatString(debugString, sizeof(debugString), "Opaque %u (%s on layer %u, visit order %u, sort key %llx)",
 								   commandIndex, commandTypeString(*opaqueRenderCommand), layer, visitOrder, opaqueRenderCommand->materialSortKey());
 			}
 			GLDebug::ScopedGroup scoped(debugString);
@@ -174,15 +174,15 @@ namespace nCine
 			const uint16_t layer = transparentRenderCommand->layer();
 			const uint16_t visitOrder = transparentRenderCommand->visitOrder();
 
-#if _DEBUG
+#if NCINE_DEBUG
 			if (numInstances > 0) {
-				sprintf_s(debugString, "Transparent %u (%d %s on layer %u, visit order %u, sort key %llx)",
+				formatString(debugString, sizeof(debugString), "Transparent %u (%d %s on layer %u, visit order %u, sort key %llx)",
 								   commandIndex, numInstances, commandTypeString(*transparentRenderCommand), layer, visitOrder, transparentRenderCommand->materialSortKey());
 			} else if (batchSize > 0) {
-				sprintf_s(debugString, "Transparent %u (%d %s on layer %u, visit order %u, sort key %llx)",
+				formatString(debugString, sizeof(debugString), "Transparent %u (%d %s on layer %u, visit order %u, sort key %llx)",
 								   commandIndex, batchSize, commandTypeString(*transparentRenderCommand), layer, visitOrder, transparentRenderCommand->materialSortKey());
 			} else {
-				sprintf_s(debugString, "Transparent %u (%s on layer %u, visit order %u, sort key %llx)",
+				formatString(debugString, sizeof(debugString), "Transparent %u (%s on layer %u, visit order %u, sort key %llx)",
 								   commandIndex, commandTypeString(*transparentRenderCommand), layer, visitOrder, transparentRenderCommand->materialSortKey());
 			}
 			GLDebug::ScopedGroup scoped(debugString);

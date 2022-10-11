@@ -223,7 +223,7 @@ namespace Jazz2
 		if (PlayerActionHit(0, PlayerActions::Menu) && _pauseMenu == nullptr && _nextLevelType == ExitType::None) {
 			PauseGame();
 		}
-#if _DEBUG
+#if NCINE_DEBUG
 		if (PlayerActionPressed(0, PlayerActions::ChangeWeapon) && PlayerActionHit(0, PlayerActions::Jump)) {
 			_cheatsUsed = true;
 			BeginLevelChange(ExitType::Warp | ExitType::FastTransition, nullptr);

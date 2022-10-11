@@ -1,5 +1,7 @@
 #include "Algorithms.h"
 
+#include <stdarg.h>
+
 #if defined(DEATH_TARGET_MSVC)
 #	include <intrin.h>
 #endif
@@ -9,6 +11,20 @@
 
 namespace nCine
 {
+	int formatString(char* buffer, size_t maxLen, const char* format, ...)
+	{
+		va_list args;
+		va_start(args, format);
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
+		const int writtenChars = vsnprintf_s(buffer, maxLen, maxLen - 1, format, args);
+		const int result = (writtenChars > -1 ? writtenChars : maxLen - 1);
+#else
+		const int result = ::vsnprintf(buffer, maxLen, format, args);
+#endif
+		va_end(args);
+		return result;
+	}
+
 	inline unsigned CountDecimalDigit32(uint32_t n)
 	{
 #if defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_GCC)

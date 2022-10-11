@@ -139,7 +139,7 @@ namespace Jazz2::UI::Menu
 					_root->DrawStringShadow("Enabled"_s, charOffset, center.X + 12.0f, center.Y + 22.0f, IMenuContainer::FontLayer - 10,
 						Alignment::Center, (_selectedIndex == i ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
 
-					_root->DrawElement("Uac"_s, 0, center.X - 28.0f, center.Y + 22.0f - 1.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.0f, 1.0f);
+					_root->DrawElement("Uac"_s, 0, center.X - 28.0f, center.Y + 22.0f - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Center, Colorf::White, 1.0f, 1.0f);
 				} else
 #endif
 				{

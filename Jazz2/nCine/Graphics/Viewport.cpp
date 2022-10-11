@@ -21,7 +21,7 @@
 
 namespace nCine
 {
-#if _DEBUG
+#if NCINE_DEBUG
 	namespace
 	{
 		/// The string used to output OpenGL debug group information
@@ -369,14 +369,14 @@ namespace nCine
 			nextViewport->draw(nextIndex + 1);
 
 		ZoneScoped;
-#if _DEBUG
+#if NCINE_DEBUG
 		// TODO: GLDebug
 		/*if (type_ == Type::SCREEN)
-			sprintf_s(debugString, "Draw screen viewport (0x%lx)", uintptr_t(this));
+			formatString(debugString, sizeof(debugString), "Draw screen viewport (0x%lx)", uintptr_t(this));
 		else if (type_ == Type::WITH_TEXTURE && textures_[0]->name() != nullptr)
-			sprintf_s(debugString, "Draw viewport \"%s\" (0x%lx)", textures_[0]->name(), uintptr_t(this));
+			formatString(debugString, sizeof(debugString), "Draw viewport \"%s\" (0x%lx)", textures_[0]->name(), uintptr_t(this));
 		else
-			sprintf_s(debugString, "Draw viewport (0x%lx)", uintptr_t(this));
+			formatString(debugString, sizeof(debugString), "Draw viewport (0x%lx)", uintptr_t(this));
 		GLDebug::ScopedGroup(debugString);*/
 #endif
 

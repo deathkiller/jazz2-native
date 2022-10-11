@@ -76,7 +76,7 @@ namespace Jazz2::UI
 			_antialiasing.setParent(&rootNode);
 			setParent(nullptr);
 
-			if (_antialiasing._renderCommand.material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
+			if (_antialiasing._renderCommand.material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::Antialiasing))) {
 				_antialiasing._renderCommand.material().reserveUniformsDataMemory();
 				_antialiasing._renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 				// Required to reset render command properly
@@ -136,18 +136,20 @@ namespace Jazz2::UI
 
 	bool UpscaleRenderPass::OnDraw(RenderQueue& renderQueue)
 	{
-		auto size = _target->size();
-
 		auto instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
-		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, -1.0f, 1.0f);
-		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(_targetSize.Data());
-		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
-
 #if defined(ALLOW_RESCALE_SHADERS)
 		if (_resizeShader != nullptr) {
-			_renderCommand.material().uniform("uTextureSize")->setFloatValue(size.X, size.Y);
-		}
+			// TexRectUniformName is reused for input texture size
+			auto size = _target->size();
+			instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(size.X, size.Y, 0.0f, 0.0f);
+		} else
 #endif
+		{
+			instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, -1.0f, 1.0f);
+		}
+
+		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(_targetSize.Data());
+		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
 		_renderCommand.material().setTexture(0, *_target);
 
@@ -159,9 +161,8 @@ namespace Jazz2::UI
 	bool UpscaleRenderPass::AntialiasingSubpass::OnDraw(RenderQueue& renderQueue)
 	{
 		auto size = _target->size();
-
 		auto instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
-		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, -1.0f, 1.0f);
+		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(size.X, size.Y, 0.0f, 0.0f);
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(_targetSize.Data());
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 

@@ -69,14 +69,14 @@ namespace Jazz2::Actors::Enemies
 
 			if (_noiseCooldown <= 0.0f) {
 				_noiseCooldown = Random().NextFloat(60, 160);
-				PlaySfx("Noise"_s, 0.4f);
+				PlaySfx("Noise"_s, 0.3f);
 			} else {
 				_noiseCooldown -= timeMult;
 			}
 
 			if (_stepCooldown <= 0.0f) {
 				_stepCooldown = Random().NextFloat(7, 10);
-				PlaySfx("Step"_s, 0.15f);
+				PlaySfx("Step"_s, 0.08f);
 			} else {
 				_stepCooldown -= timeMult;
 			}

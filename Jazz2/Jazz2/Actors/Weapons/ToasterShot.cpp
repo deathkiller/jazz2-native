@@ -96,6 +96,11 @@ namespace Jazz2::Actors::Weapons
 		ShotBase::OnUpdate(timeMult);
 	}
 
+	void ToasterShot::OnUpdateHitbox()
+	{
+		AABBInner = AABBf(_pos.X - 3, _pos.Y - 3, _pos.X + 3, _pos.Y + 3);
+	}
+
 	void ToasterShot::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
 		auto& light1 = lights.emplace_back();
