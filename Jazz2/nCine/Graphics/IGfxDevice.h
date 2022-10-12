@@ -38,16 +38,15 @@ namespace nCine
 			bool isResizable;
 		};
 
-		/// A structure representing a supported monitor video mode
+		/// A structure representing a video mode supported by a monitor
 		struct VideoMode
 		{
 			VideoMode()
-				: width(0), height(0), redBits(8), greenBits(8), blueBits(8), refreshRate(60) {}
+				: width(0), height(0), refreshRate(0.0f), redBits(8), greenBits(8), blueBits(8) {}
 			inline bool operator==(const VideoMode& mode) const
 			{
-				return (width == mode.width && height == mode.height &&
-						redBits == mode.redBits && greenBits == mode.greenBits &&
-						blueBits == mode.blueBits && refreshRate == mode.refreshRate);
+				return (width == mode.width && height == mode.height && refreshRate == mode.refreshRate &&
+						redBits == mode.redBits && greenBits == mode.greenBits && blueBits == mode.blueBits);
 			}
 			inline bool operator!=(const VideoMode& mode) const {
 				return !operator==(mode);
@@ -55,10 +54,10 @@ namespace nCine
 
 			unsigned int width;
 			unsigned int height;
-			unsigned int redBits;
-			unsigned int greenBits;
-			unsigned int blueBits;
-			unsigned int refreshRate;
+			float refreshRate;
+			unsigned char redBits;
+			unsigned char greenBits;
+			unsigned char blueBits;
 		};
 
 		/// Contains the attributes to create an OpenGL context

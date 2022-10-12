@@ -103,10 +103,10 @@ namespace nCine
 
 		currentVideoMode_.width = width_;
 		currentVideoMode_.height = height_;
+		currentVideoMode_.refreshRate = 60.0f;
 		currentVideoMode_.redBits = displayMode.redBits();
 		currentVideoMode_.greenBits = displayMode.greenBits();
 		currentVideoMode_.blueBits = displayMode.blueBits();
-		currentVideoMode_.refreshRate = 60;
 		videoModes_.push_back(currentVideoMode_);
 	}
 

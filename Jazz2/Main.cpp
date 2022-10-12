@@ -571,7 +571,8 @@ void GameEventHandler::RefreshCacheLevels()
 
 	Compatibility::EventConverter eventConverter;
 
-	String xmasEpisodeToken = (fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "xmas99.j2e"_s))) ? "xmas99"_s : "xmas98"_s);
+	bool hasChristmasChronicles = fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "xmas99.j2e"_s)));
+	String xmasEpisodeToken = (hasChristmasChronicles ? "xmas99"_s : "xmas98"_s);
 	const HashMap<String, Pair<String, String>> knownLevels = {
 		{ "trainer"_s, { "prince"_s, { } } },
 		{ "castle1"_s, { "prince"_s, "01"_s } },
@@ -707,7 +708,7 @@ void GameEventHandler::RefreshCacheLevels()
 			// Episode
 			Compatibility::JJ2Episode episode;
 			episode.Open(item);
-			if (episode.Name == "home"_s) {
+			if (episode.Name == "home"_s || (hasChristmasChronicles && episode.Name == "xmas98"_s)) {
 				continue;
 			}
 

@@ -229,10 +229,10 @@ namespace nCine
 	{
 		videoMode.width = static_cast<unsigned int>(glfwVideoMode.width);
 		videoMode.height = static_cast<unsigned int>(glfwVideoMode.height);
-		videoMode.redBits = static_cast<unsigned int>(glfwVideoMode.redBits);
-		videoMode.greenBits = static_cast<unsigned int>(glfwVideoMode.greenBits);
-		videoMode.blueBits = static_cast<unsigned int>(glfwVideoMode.blueBits);
-		videoMode.refreshRate = static_cast<unsigned int>(glfwVideoMode.refreshRate);
+		videoMode.refreshRate = static_cast<float>(glfwVideoMode.refreshRate);
+		videoMode.redBits = static_cast<unsigned char>(glfwVideoMode.redBits);
+		videoMode.greenBits = static_cast<unsigned char>(glfwVideoMode.greenBits);
+		videoMode.blueBits = static_cast<unsigned char>(glfwVideoMode.blueBits);
 	}
 
 	void GlfwGfxDevice::errorCallback(int error, const char* description)

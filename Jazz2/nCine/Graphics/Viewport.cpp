@@ -124,12 +124,14 @@ namespace nCine
 		if (type_ == Type::SCREEN)
 			return false;
 
-		static const int MaxColorAttachments = theServiceLocator().gfxCapabilities().value(IGfxCapabilities::GLIntValues::MAX_COLOR_ATTACHMENTS);
-		const bool indexOutOfRange = (index >= static_cast<unsigned int>(MaxColorAttachments) || index >= MaxNumTextures);
-		const bool widthDiffers = texture != nullptr && (width_ > 0 && texture->width() != width_);
-		const bool heightDiffers = texture != nullptr && (height_ > 0 && texture->height() != height_);
-		if (indexOutOfRange || textures_[index] == texture || widthDiffers || heightDiffers)
-			return false;
+		if (type_ != Type::NO_TEXTURE) {
+			static const int MaxColorAttachments = theServiceLocator().gfxCapabilities().value(IGfxCapabilities::GLIntValues::MAX_COLOR_ATTACHMENTS);
+			const bool indexOutOfRange = (index >= static_cast<unsigned int>(MaxColorAttachments) || index >= MaxNumTextures);
+			const bool widthDiffers = texture != nullptr && (width_ > 0 && texture->width() != width_);
+			const bool heightDiffers = texture != nullptr && (height_ > 0 && texture->height() != height_);
+			if (indexOutOfRange || textures_[index] == texture || widthDiffers || heightDiffers)
+				return false;
+		}
 
 		bool result = false;
 		if (texture != nullptr) {
@@ -158,8 +160,17 @@ namespace nCine
 				textures_[index] = nullptr;
 				numColorAttachments_--;
 
-				if (numColorAttachments_ == 0 && depthStencilFormat_ == DepthStencilFormat::NONE)
+				if (numColorAttachments_ == 0) {
+					// Removing the depth/stencil render target
+					if (depthStencilFormat_ != DepthStencilFormat::NONE) {
+						fbo_->detachRenderbuffer(depthStencilFormatToGLAttachment(depthStencilFormat_));
+						depthStencilFormat_ = Viewport::DepthStencilFormat::NONE;
+					}
+
 					type_ = Type::NO_TEXTURE;
+					width_ = 0;
+					height_ = 0;
+				}
 			}
 			result = true;
 		}
@@ -170,7 +181,7 @@ namespace nCine
 	/*! \note It can remove the depth and stencil render buffer of the viewport's FBO by specifying `DepthStencilFormat::NONE` */
 	bool Viewport::setDepthStencilFormat(DepthStencilFormat depthStencilFormat)
 	{
-		if (depthStencilFormat_ == depthStencilFormat || width_ == 0 || height_ == 0)
+		if (depthStencilFormat_ == depthStencilFormat || type_ == Type::NO_TEXTURE)
 			return false;
 
 		bool result = false;
@@ -185,7 +196,6 @@ namespace nCine
 
 			const bool isStatusComplete = fbo_->isStatusComplete();
 			if (isStatusComplete) {
-				type_ = Type::WITH_TEXTURE;
 				depthStencilFormat_ = depthStencilFormat;
 			}
 			result = isStatusComplete;
@@ -194,9 +204,6 @@ namespace nCine
 			if (fbo_ != nullptr) {
 				fbo_->detachRenderbuffer(depthStencilFormatToGLAttachment(depthStencilFormat_));
 				depthStencilFormat_ = Viewport::DepthStencilFormat::NONE;
-
-				if (numColorAttachments_ == 0)
-					type_ = Type::NO_TEXTURE;
 			}
 
 			result = true;
