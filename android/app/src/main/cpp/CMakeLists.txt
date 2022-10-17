@@ -10,8 +10,12 @@ else()
 	target_compile_definitions(ncine PUBLIC "NCINE_STATIC")
 endif()
 add_library(ncine_main STATIC main.cpp)
+add_library(jnicall_functions STATIC jnicall_functions.cpp)
 
 target_link_libraries(ncine PRIVATE ${ANDROID_LIBRARY} ${EGL_LIBRARY} ${GLES3_LIBRARY} ${LOG_LIBRARY})
+if(ANDROID_PLATFORM GREATER_EQUAL 30)
+	target_link_libraries(ncine PRIVATE ${NATIVEWINDOW_LIBRARY})
+endif()
 target_link_libraries(ncine_main PRIVATE ncine)
 
 include(ncine_compiler_options)
@@ -61,7 +65,8 @@ target_link_libraries(ncine PRIVATE ${PRIVATE_LINK_LIBRARIES})
 
 # Merged "native_app_glue" into "game" target
 add_library(game SHARED ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
-target_link_libraries(game PRIVATE ${ANDROID_LIBRARY} ${LOG_LIBRARY} ncine_main ncine)
+set(JNICALL_FUNCTIONS_LINKER_OPTIONS -Wl,--whole-archive jnicall_functions -Wl,--no-whole-archive)
+target_link_libraries(game PRIVATE ${ANDROID_LIBRARY} ${LOG_LIBRARY} ${JNICALL_FUNCTIONS_LINKER_OPTIONS} ncine_main ncine)
 target_include_directories(game PRIVATE ${ANDROID_NDK}/sources/android/native_app_glue)
 if(IS_DIRECTORY ${GENERATED_INCLUDE_DIR})
 	get_filename_component(PARENT_GENERATED_INCLUDE_DIR ${GENERATED_INCLUDE_DIR} DIRECTORY)

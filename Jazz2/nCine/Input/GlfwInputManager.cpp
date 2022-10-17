@@ -251,6 +251,12 @@ namespace nCine
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
 
+	void GlfwInputManager::monitorCallback(GLFWmonitor* monitor, int event)
+	{
+		GlfwGfxDevice& gfxDevice = static_cast<GlfwGfxDevice&>(theApplication().gfxDevice());
+		gfxDevice.updateMonitors();
+	}
+
 	void GlfwInputManager::windowCloseCallback(GLFWwindow* window)
 	{
 		bool shouldQuit = true;
@@ -268,10 +274,20 @@ namespace nCine
 		GlfwGfxDevice& gfxDevice = static_cast<GlfwGfxDevice&>(theApplication().gfxDevice());
 		gfxDevice.width_ = width;
 		gfxDevice.height_ = height;
+
+		bool isFullscreen = (glfwGetWindowMonitor(window) != nullptr);
+		if (!isFullscreen) {
+			gfxDevice.lastWindowWidth_ = width;
+			gfxDevice.lastWindowHeight_ = height;
+		}
 	}
 
 	void GlfwInputManager::framebufferSizeCallback(GLFWwindow* window, int width, int height)
 	{
+		GlfwGfxDevice& gfxDevice = static_cast<GlfwGfxDevice&>(theApplication().gfxDevice());
+		gfxDevice.drawableWidth_ = width;
+		gfxDevice.drawableHeight_ = height;
+
 		theApplication().resizeScreenViewport(width, height);
 	}
 

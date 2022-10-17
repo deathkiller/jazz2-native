@@ -101,10 +101,8 @@ if(NCINE_BUILD_ANDROID)
 	
 	if(NCINE_UNIVERSAL_APK)
 		set(GRADLE_UNIVERSAL_APK "true")
-		set(GRADLE_ABI_FILTERS "ndk { abiFilters '${GRADLE_NDK_ARCHITECTURES}' }")
 	else()
 		set(GRADLE_UNIVERSAL_APK "false")
-		set(GRADLE_ABI_FILTERS "")
 	endif()
 
 	set(JAVA_SYSTEM_LOADLIBRARY
@@ -127,6 +125,12 @@ if(NCINE_BUILD_ANDROID)
 	set(LOAD_LIBRARIES_TV_JAVA_IN ${CMAKE_SOURCE_DIR}/android/app/src/main/java/io/github/ncine/LoadLibrariesTV.java.in)
 	set(LOAD_LIBRARIES_TV_JAVA ${CMAKE_BINARY_DIR}/android/app/src/main/java/io/github/ncine/LoadLibrariesTV.java)
 	configure_file(${LOAD_LIBRARIES_TV_JAVA_IN} ${LOAD_LIBRARIES_TV_JAVA} @ONLY)
+
+	string(REPLACE "." "_" JNICALL_PACKAGE ${NCINE_REVERSE_DNS})
+	string(TOLOWER ${JNICALL_PACKAGE} JNICALL_PACKAGE)
+	set(JNICALL_FUNCTIONS_CPP_IN ${CMAKE_SOURCE_DIR}/android/app/src/main/cpp/jnicall_functions.cpp.in)
+	set(JNICALL_FUNCTIONS_CPP ${CMAKE_BINARY_DIR}/android/app/src/main/cpp/jnicall_functions.cpp)
+	configure_file(${JNICALL_FUNCTIONS_CPP_IN} ${JNICALL_FUNCTIONS_CPP} @ONLY)
 
 	file(COPY ${CMAKE_SOURCE_DIR}/android/build.gradle DESTINATION android)
 	file(COPY ${CMAKE_SOURCE_DIR}/android/settings.gradle DESTINATION android)
@@ -240,7 +244,7 @@ if(NCINE_BUILD_ANDROID)
 		add_custom_command(OUTPUT ${ANDROID_BINARY_DIR}/${ANDROID_LIBNAME} ${ANDROID_BINARY_DIR}/libncine_main.a
 			COMMAND ${CMAKE_COMMAND} -H${CMAKE_BINARY_DIR}/android/app/src/main/cpp/ -B${ANDROID_BINARY_DIR}
 				-DCMAKE_TOOLCHAIN_FILE=${NDK_DIR}/build/cmake/android.toolchain.cmake
-				-DANDROID_PLATFORM=android-${GRADLE_MINSDK_VERSION} -DANDROID_ABI=${ARCHITECTURE}
+				-DANDROID_PLATFORM=${GRADLE_MINSDK_VERSION} -DANDROID_ABI=${ARCHITECTURE}
 				${RESET_FLAGS_ARGS} ${ANDROID_PASSTHROUGH_ARGS} ${ANDROID_CMAKE_ARGS} ${ANDROID_ARCH_ARGS}
 			COMMAND ${CMAKE_COMMAND} --build ${ANDROID_BINARY_DIR}
 			COMMENT "Compiling the Android library for ${ARCHITECTURE}")

@@ -103,7 +103,7 @@ namespace nCine
 						eglGfxDevice = &static_cast<EglGfxDevice&>(theApplication().gfxDevice());
 						theApplication().step();
 					} else {
-						eglGfxDevice->createSurface(state);
+						eglGfxDevice->createSurface();
 						eglGfxDevice->bindContext();
 					}
 				}

@@ -24,6 +24,16 @@ namespace nCine
 	class IGfxDevice
 	{
 	public:
+		static constexpr unsigned int MaxMonitors = 4;
+#if defined(WITH_QT5)
+		// Qt5 cannot query the list of supported video modes of a monitor
+		static constexpr unsigned int MaxVideoModes = 1;
+#elif defined(DEATH_TARGET_ANDROID)
+		static constexpr unsigned int MaxVideoModes = 16;
+#else
+		static constexpr unsigned int MaxVideoModes = 128;
+#endif
+
 		/// A structure used to initialize window properties
 		struct WindowMode
 		{
@@ -60,13 +70,31 @@ namespace nCine
 			unsigned char blueBits;
 		};
 
+		/// A structure representing a connected monitor
+		struct Monitor
+		{
+			/// The monitor name
+			const char* name;
+			/// The position of the monitor's viewport on the virtual screen
+			Vector2i position;
+			/// The horizontal and vertical dots per inch
+			Vector2i dpi;
+			/// The content scale factor
+			Vector2f scale;
+
+			/// The number of video modes in the array
+			unsigned int numVideoModes;
+			/// The array of video modes supported by the monitor
+			VideoMode videoModes[MaxVideoModes];
+		};
+
 		/// Contains the attributes to create an OpenGL context
 		struct GLContextInfo
 		{
 			explicit GLContextInfo(const AppConfiguration& appCfg)
 				: majorVersion(appCfg.glMajorVersion()), minorVersion(appCfg.glMinorVersion()),
-				coreProfile(appCfg.glCoreProfile()), forwardCompatible(appCfg.glForwardCompatible()),
-				debugContext(appCfg.withGlDebugContext) {}
+				  coreProfile(appCfg.glCoreProfile()), forwardCompatible(appCfg.glForwardCompatible()),
+				  debugContext(appCfg.withGlDebugContext) { }
 
 			unsigned int majorVersion;
 			unsigned int minorVersion;
@@ -76,7 +104,7 @@ namespace nCine
 		};
 
 		IGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode);
-		virtual ~IGfxDevice() {}
+		virtual ~IGfxDevice() { }
 
 		/// Sets the number of vertical blanks to occur before a buffer swap
 		/*! An interval of `-1` will enable adaptive v-sync if available */
@@ -96,81 +124,90 @@ namespace nCine
 		/// Sets the application window icon
 		virtual void setWindowIcon(const StringView& iconFilename) = 0;
 
-		/// Returns device width
-		inline int width() const {
-			return width_;
-		}
-		/// Returns device height
-		inline int height() const {
-			return height_;
-		}
-		/// Returns device resolution as a `Vector2i` object
-		inline Vector2i resolution() const {
-			return Vector2i(width_, height_);
-		}
-		/// Returns device resolution as a `Rectf` object
-		inline Rectf screenRect() const {
-			return Rectf(0.0f, 0.0f, static_cast<float>(width_), static_cast<float>(height_));
-		}
-		/// Returns device aspect ratio
-		inline float aspect() const {
-			return width_ / static_cast<float>(height_);
-		}
+		/// Returns the window or video mode width in screen coordinates
+		inline int width() const { return width_; }
+		/// Returns the window or video mode height in screen coordinates
+		inline int height() const { return height_; }
+		/// Returns the window or video mode resolution in screen coordinates as a `Vector2i` object
+		inline Vector2i resolution() const { return Vector2i(width_, height_); }
+		/// Returns the window or video mode resolution in screen coordinates as a `Rectf` object
+		inline Rectf screenRect() const { return Rectf(0.0f, 0.0f, static_cast<float>(width_), static_cast<float>(height_)); }
+		/// Returns the window or video mode resolution aspect ratio
+		inline float aspect() const { return width_ / static_cast<float>(height_); }
 
 		/// Returns window horizontal position
-		inline virtual int windowPositionX() const {
-			return 0;
-		}
+		inline virtual int windowPositionX() const { return 0; }
 		/// Returns window vertical position
-		inline virtual int windowPositionY() const {
-			return 0;
-		}
+		inline virtual int windowPositionY() const { return 0; }
 		/// Returns window position as a `Vector2i` object
-		inline virtual const Vector2i windowPosition() const {
-			return Vector2i(0, 0);
-		}
+		inline virtual const Vector2i windowPosition() const { return Vector2i(0, 0);}
+
+		/// Returns the window width in pixels
+		/*! It may differs from `width()` on HiDPI screens */
+		inline int drawableWidth() const { return drawableWidth_; }
+		/// Returns the window height in pixels
+		/*! It may differs from `height()` on HiDPI screens */
+		inline int drawableHeight() const { return drawableHeight_; }
+		/// Returns the window resolution in pixels as a `Vector2i` object
+		inline Vector2i drawableResolution() const { return Vector2i(drawableWidth_, drawableHeight_); }
+		/// Returns the window resolution in pixels as a `Rectf` object
+		inline Rectf drawableScreenRect() const { return Rectf(0.0f, 0.0f, static_cast<float>(drawableWidth_), static_cast<float>(drawableHeight_)); }
+		/// Returns the window drawable resolution aspect ratio
+		inline float drawableAspect() const { return drawableWidth_ / static_cast<float>(drawableHeight_); }
 
 		/// Highlights the application window to notify the user
-		inline virtual void flashWindow() const {}
+		inline virtual void flashWindow() const { }
 
 		/// Returns the OpenGL context creation attributes
-		inline const GLContextInfo& glContextInfo() const {
-			return glContextInfo_;
-		}
+		inline const GLContextInfo &glContextInfo() const { return glContextInfo_; }
 		/// Returns display mode
-		inline const DisplayMode& displayMode() const {
-			return displayMode_;
-		}
+		inline const DisplayMode &displayMode() const { return displayMode_; }
 
-		/// Returns the current monitor video mode
-		inline virtual const VideoMode& currentVideoMode() const {
-			return currentVideoMode_;
-		}
-		/// Returns the number of video modes supported by the monitor
-		inline unsigned int numVideoModes() const {
-			return (unsigned int)videoModes_.size();
-		}
-		/// Returns the specified monitor video mode
-		const VideoMode& videoMode(unsigned int index) const;
-		/// Sets the specified monitor video mode
-		inline virtual bool setVideoMode(unsigned int index) {
-			return true;
-		}
-		/// Updates the array of supported monitor video modes
-		inline virtual void updateVideoModes() {}
+		/// Returns the number of connected monitors
+		unsigned int numMonitors() const;
+		/// Returns the array index of the primary monitor
+		virtual int primaryMonitorIndex() const;
+		/// Returns the array index of the monitor associated with the window
+		virtual int windowMonitorIndex() const;
+		/// Returns the specified monitor
+		const Monitor &monitor(unsigned int index) const;
+		/// Returns the monitor that hosts the window
+		inline const Monitor& monitor() const { return monitor(windowMonitorIndex()); }
+
+		/// Returns the current video mode for the specified monitor
+		virtual const VideoMode &currentVideoMode(unsigned int monitorIndex) const = 0;
+		/// Returns the current video mode for the monitor that hosts the window
+		inline const VideoMode &currentVideoMode() const { return currentVideoMode(windowMonitorIndex()); }
+		/// Sets the video mode that will be used in full screen by the monitor that hosts the window
+		/*! \note Call this method <b>before>/b> enabling full screen */
+		inline virtual bool setVideoMode(unsigned int modeIndex) { return false; }
 
 	protected:
-		/// Device width
+		static constexpr float DefaultDPI = 96.0f;
+
+		/// Window width in screen coordinates
 		int width_;
-		/// Device height
+		/// Window height in screen coordinates
 		int height_;
+		/// Window width in pixels (for HiDPI screens)
+		int drawableWidth_;
+		/// Window height in pixels (for HiDPI screens)
+		int drawableHeight_;
 		/// OpenGL context creation attributes
 		GLContextInfo glContextInfo_;
 		/// Display properties
 		DisplayMode displayMode_;
 
-		SmallVector<VideoMode, 0> videoModes_;
+		Monitor monitors_[MaxMonitors];
+		unsigned int numMonitors_;
+		/// Used as a cache to avoid searching the current video mode in a monitor's array
 		mutable VideoMode currentVideoMode_;
+
+		/// Inits the OpenGL viewport based on the drawable resolution
+		void initGLViewport();
+
+		/// Updates the array of connected monitors
+		inline virtual void updateMonitors() { }
 
 		virtual void setResolutionInternal(int width, int height) = 0;
 

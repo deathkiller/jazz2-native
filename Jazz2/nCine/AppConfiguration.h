@@ -37,9 +37,9 @@ namespace nCine
 		/*! \note If either `x` or `y` are zero then the screen resolution will not be changed. */
 		Vector2i resolution;
 		/// The flag is `true` if the screen is going to be in fullscreen mode
-		bool inFullscreen;
+		bool fullscreen;
 		/// The flag is `true` if the window is going to be resizable
-		bool isResizable;
+		bool resizable;
 		/// The maximum number of frames to render per second or 0 for no limit
 		unsigned int frameLimit;
 

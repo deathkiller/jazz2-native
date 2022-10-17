@@ -11,18 +11,22 @@
 #   endif
 #endif
 
-#include "nCine/PCApplication.h"
+#if defined(DEATH_TARGET_ANDROID)
+#	include "nCine/Android/AndroidApplication.h"
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+#	include "nCine/Uwp/UwpApplication.h"
+#else
+#	include "nCine/PCApplication.h"
+#	if defined(DEATH_TARGET_UNIX)
+#		include <unistd.h>
+#	endif
+#endif
+
 #include "nCine/IAppEventHandler.h"
 #include "nCine/Input/IInputEventHandler.h"
 #include "nCine/IO/FileSystem.h"
 #include "nCine/Threading/Thread.h"
 #include "nCine/tracy.h"
-
-#if defined(DEATH_TARGET_ANDROID)
-#	include "nCine/Android/AndroidApplication.h"
-#elif defined(DEATH_TARGET_UNIX)
-#	include <unistd.h>
-#endif
 
 #include "Jazz2/IRootController.h"
 #include "Jazz2/ContentResolver.h"
@@ -451,13 +455,13 @@ void GameEventHandler::onKeyPressed(const KeyboardEvent& event)
 {
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
 	// Allow Alt+Enter to switch fullscreen
-	if (event.sym == KeySym::RETURN && event.mod == KeyMod::ALT) {
+	if (event.sym == KeySym::RETURN && (event.mod & KeyMod::MASK) == KeyMod::LALT) {
 		PreferencesCache::EnableFullscreen = !PreferencesCache::EnableFullscreen;
 		if (PreferencesCache::EnableFullscreen) {
 			theApplication().gfxDevice().setResolution(true);
 			theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
 		} else {
-			theApplication().gfxDevice().setResolution(false, LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
+			theApplication().gfxDevice().setResolution(false);
 			theApplication().inputManager().setCursor(IInputManager::Cursor::Arrow);
 		}
 		return;
@@ -803,7 +807,7 @@ void GameEventHandler::CheckUpdates()
 #endif
 
 #if defined(DEATH_TARGET_ANDROID)
-	String url = "http://deat.tk/downloads/android/jazz2/updates?v=" NCINE_VERSION "&d=" + Http::EncodeBase64(DeviceDesc, DeviceDesc + DeviceDescLength;
+	String url = "http://deat.tk/downloads/android/jazz2/updates?v=" NCINE_VERSION "&d=" + Http::EncodeBase64(DeviceDesc, DeviceDesc + DeviceDescLength);
 #else
 	String url = "http://deat.tk/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + Http::EncodeBase64(DeviceDesc, DeviceDesc + DeviceDescLength);
 #endif
@@ -897,6 +901,13 @@ void GameEventHandler::SaveEpisodeContinue(const std::unique_ptr<LevelInitializa
 std::unique_ptr<IAppEventHandler> createAppEventHandler()
 {
 	return std::make_unique<GameEventHandler>();
+}
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
+{
+	return UwpApplication::start([]() -> std::unique_ptr<IAppEventHandler> {
+		return std::make_unique<GameEventHandler>();
+	});
 }
 #elif defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)

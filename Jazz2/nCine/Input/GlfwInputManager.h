@@ -202,6 +202,7 @@ namespace nCine
 		static JoyConnectionEvent joyConnectionEvent_;
 		static JoystickEventsSimulator joyEventsSimulator_;
 
+		static void monitorCallback(GLFWmonitor* monitor, int event);
 		static void windowCloseCallback(GLFWwindow* window);
 		static void windowSizeCallback(GLFWwindow* window, int width, int height);
 		static void framebufferSizeCallback(GLFWwindow* window, int width, int height);

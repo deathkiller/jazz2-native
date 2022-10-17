@@ -58,7 +58,6 @@ namespace nCine
 		if (fullscreen) {
 			if (width == 0 || height == 0) {
 				SDL_SetWindowFullscreen(windowHandle_, SDL_WINDOW_FULLSCREEN_DESKTOP);
-				SDL_GetWindowSize(windowHandle_, &width_, &height_);
 			} else {
 				width_ = width;
 				height_ = height;
@@ -73,6 +72,9 @@ namespace nCine
 				SDL_SetWindowSize(windowHandle_, width, height);
 			}
 		}
+
+		SDL_GetWindowSize(windowHandle_, &width_, &height_);
+		SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
 	}
 
 	void SdlGfxDevice::setResolutionInternal(int width, int height)
@@ -124,39 +126,36 @@ namespace nCine
 #endif
 	}
 
-	const IGfxDevice::VideoMode& SdlGfxDevice::currentVideoMode() const
+	int SdlGfxDevice::windowMonitorIndex() const
 	{
+		const int index = SDL_GetWindowDisplayIndex(windowHandle_);
+		return index;
+	}
+
+	const IGfxDevice::VideoMode& SdlGfxDevice::currentVideoMode(unsigned int monitorIndex) const
+	{
+		if (monitorIndex >= numMonitors_)
+			monitorIndex = 0;
+
 		SDL_DisplayMode mode;
-		SDL_GetCurrentDisplayMode(0, &mode);
+		SDL_GetCurrentDisplayMode(monitorIndex, &mode);
 		convertVideoModeInfo(mode, currentVideoMode_);
 
 		return currentVideoMode_;
 	}
 
-	bool SdlGfxDevice::setVideoMode(unsigned int index)
+	bool SdlGfxDevice::setVideoMode(unsigned int modeIndex)
 	{
-		ASSERT(index < videoModes_.size());
+		int displayIndex = SDL_GetWindowDisplayIndex(windowHandle_);
+		if (displayIndex < 0 || displayIndex >= numMonitors_)
+			displayIndex = 0;
 
-		if (index >= videoModes_.size()) {
-			return false;
+		if (modeIndex < monitors_[displayIndex].numVideoModes) {
+			SDL_DisplayMode mode;
+			SDL_GetDisplayMode(displayIndex, modeIndex, &mode);
+			return SDL_SetWindowDisplayMode(windowHandle_, &mode);
 		}
-
-		SDL_DisplayMode mode;
-		SDL_GetDisplayMode(0, index, &mode);
-
-		return SDL_SetWindowDisplayMode(windowHandle_, &mode);
-	}
-
-	void SdlGfxDevice::updateVideoModes()
-	{
-		const int count = SDL_GetNumDisplayModes(0);
-		videoModes_.resize_for_overwrite(count);
-
-		SDL_DisplayMode mode;
-		for (unsigned int i = 0; i < count; i++) {
-			SDL_GetDisplayMode(0, i, &mode);
-			convertVideoModeInfo(mode, videoModes_[i]);
-		}
+		return false;
 	}
 
 	///////////////////////////////////////////////////////////
@@ -171,11 +170,7 @@ namespace nCine
 
 	void SdlGfxDevice::initDevice(bool isFullscreen, bool isResizable)
 	{
-		// asking for a video mode that does not change current screen resolution
-		if (width_ == 0 || height_ == 0) {
-			width_ = 0;
-			height_ = 0;
-		}
+		updateMonitors();
 
 		// setting OpenGL attributes
 		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, displayMode_.redBits());
@@ -202,7 +197,7 @@ namespace nCine
 		if (glContextInfo_.debugContext)
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 
-		Uint32 flags = SDL_WINDOW_OPENGL;
+		Uint32 flags = SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI;
 		if (width_ == 0 || height_ == 0) {
 			flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 		} else if (isFullscreen) {
@@ -212,6 +207,8 @@ namespace nCine
 		// Creating a window with SDL2
 		windowHandle_ = SDL_CreateWindow("", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width_, height_, flags);
 		FATAL_ASSERT_MSG_X(windowHandle_, "SDL_CreateWindow failed: %s", SDL_GetError());
+		SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
+		initGLViewport();
 
 		SDL_SetWindowResizable(windowHandle_, isResizable ? SDL_TRUE : SDL_FALSE);
 
@@ -232,15 +229,55 @@ namespace nCine
 
 		glContextInfo_.debugContext = glContextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output");
 #endif
+	}
 
-		updateVideoModes();
+	void SdlGfxDevice::updateMonitors()
+	{
+		const int monitorCount = SDL_GetNumVideoDisplays();
+		ASSERT(monitorCount >= 1);
+		numMonitors_ = (monitorCount < MaxMonitors) ? monitorCount : MaxMonitors;
+
+		for (unsigned int i = 0; i < numMonitors_; i++) {
+			monitors_[i].name = SDL_GetDisplayName(i);
+			ASSERT(monitors_[i].name != nullptr);
+
+			SDL_Rect bounds;
+			SDL_GetDisplayBounds(i, &bounds);
+			monitors_[i].position.X = bounds.x;
+			monitors_[i].position.Y = bounds.y;
+
+			float hDpi, vDpi;
+			SDL_GetDisplayDPI(i, nullptr, &hDpi, &vDpi);
+			monitors_[i].dpi.X = hDpi;
+			monitors_[i].dpi.Y = vDpi;
+			monitors_[i].scale.X = hDpi / DefaultDPI;
+			monitors_[i].scale.Y = vDpi / DefaultDPI;
+
+			const int modeCount = SDL_GetNumDisplayModes(i);
+			monitors_[i].numVideoModes = (modeCount < MaxVideoModes) ? modeCount : MaxVideoModes;
+
+			SDL_DisplayMode mode;
+			for (unsigned int j = 0; j < monitors_[i].numVideoModes; j++) {
+				SDL_GetDisplayMode(i, j, &mode);
+				convertVideoModeInfo(mode, monitors_[i].videoModes[j]);
+			}
+		}
 	}
 
 	void SdlGfxDevice::convertVideoModeInfo(const SDL_DisplayMode& sdlVideoMode, IGfxDevice::VideoMode& videoMode) const
 	{
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		videoMode.width = static_cast<unsigned int>(sdlVideoMode.w);
 		videoMode.height = static_cast<unsigned int>(sdlVideoMode.h);
-		videoMode.refreshRate = static_cast<unsigned int>(sdlVideoMode.refresh_rate);
+#else
+		double canvasWidth = 0.0;
+		double canvasHeight = 0.0;
+
+		emscripten_get_element_css_size("#canvas", &canvasWidth, &canvasHeight);
+		videoMode.width = static_cast<unsigned int>(canvasWidth);
+		videoMode.height = static_cast<unsigned int>(canvasHeight);
+#endif
+		videoMode.refreshRate = static_cast<float>(sdlVideoMode.refresh_rate);
 
 		switch (sdlVideoMode.format) {
 			case SDL_PIXELFORMAT_RGB332:

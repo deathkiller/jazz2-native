@@ -277,6 +277,7 @@ namespace nCine {
 		SHIFT = (LSHIFT | RSHIFT),
 		ALT = (LALT | RALT),
 		SUPER = (LSUPER | RSUPER),
+		MASK = (CTRL | SHIFT | ALT | SUPER),
 
 		COUNT
 		// clang-format on

@@ -48,9 +48,10 @@ namespace nCine {
 
 		void flashWindow() const override;
 
-		const VideoMode& currentVideoMode() const override;
-		bool setVideoMode(unsigned int index) override;
-		void updateVideoModes() override;
+		int windowMonitorIndex() const override;
+
+		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override;
+		bool setVideoMode(unsigned int modeIndex) override;
 
 		static inline SDL_Window* windowHandle() {
 			return windowHandle_;
@@ -74,6 +75,8 @@ namespace nCine {
 		void initGraphics();
 		/// Initilizes the OpenGL graphic context
 		void initDevice(bool isFullscreen, bool isResizable);
+
+		void updateMonitors() override;
 
 		void convertVideoModeInfo(const SDL_DisplayMode& sdlVideoMode, IGfxDevice::VideoMode& videoMode) const;
 

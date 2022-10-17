@@ -168,11 +168,7 @@ namespace Jazz2::UI::Menu
 					theApplication().gfxDevice().setResolution(true);
 					theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
 				} else {
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
 					theApplication().gfxDevice().setResolution(false);
-#	else
-					theApplication().gfxDevice().setResolution(false, LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
-#	endif
 					theApplication().inputManager().setCursor(IInputManager::Cursor::Arrow);
 				}
 				_isDirty = true;

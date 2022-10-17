@@ -91,7 +91,7 @@ namespace nCine
 		const DisplayMode::VSync vSyncMode = (appCfg_.withVSync ? DisplayMode::VSync::Enabled : DisplayMode::VSync::Disabled);
 		DisplayMode displayMode(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, vSyncMode);
 
-		const IGfxDevice::WindowMode windowMode(appCfg_.resolution.X, appCfg_.resolution.Y, appCfg_.inFullscreen, appCfg_.isResizable);
+		const IGfxDevice::WindowMode windowMode(appCfg_.resolution.X, appCfg_.resolution.Y, appCfg_.fullscreen, appCfg_.resizable);
 #if defined(WITH_SDL)
 		gfxDevice_ = std::make_unique<SdlGfxDevice>(windowMode, glContextInfo, displayMode);
 		inputManager_ = std::make_unique<SdlInputManager>();
@@ -150,6 +150,9 @@ namespace nCine
 			switch (event.type) {
 				case SDL_QUIT:
 					shouldQuit_ = SdlInputManager::shouldQuitOnRequest();
+					break;
+				case SDL_DISPLAYEVENT:
+					gfxDevice_->updateMonitors();
 					break;
 				case SDL_WINDOWEVENT:
 					if (event.window.event == SDL_WINDOWEVENT_FOCUS_GAINED)

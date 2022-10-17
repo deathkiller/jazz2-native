@@ -241,14 +241,14 @@ namespace nCine
 	template <class T>
 	inline bool Rect<T>::Contains(const Vector2<T>& p) const
 	{
-		return contains(p.X, p.Y);
+		return Contains(p.X, p.Y);
 	}
 
 	template <class T>
 	inline bool Rect<T>::Contains(const Rect& rect) const
 	{
-		const bool containsMin = contains(rect.min());
-		const bool containsMax = contains(rect.max());
+		const bool containsMin = Contains(rect.min());
+		const bool containsMax = Contains(rect.max());
 		return (containsMin && containsMax);
 	}
 

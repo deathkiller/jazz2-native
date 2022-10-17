@@ -1,12 +1,7 @@
 #pragma once
 
-#if defined(__has_include)
-#   if __has_include(<coroutine>)
-#		include <coroutine>
-#		define WITH_COROUTINES
-#   endif
-#else
-#	define WITH_COROUTINES
+#if defined(WITH_COROUTINES)
+#	include <coroutine>
 #endif
 
 #include <optional>

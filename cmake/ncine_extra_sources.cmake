@@ -538,6 +538,11 @@ if(ANDROID)
 		${NCINE_SOURCE_DIR}/nCine/Android/EglGfxDevice.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.cpp
 	)
+elseif(WINDOWS_PHONE OR WINDOWS_STORE)
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Uwp/UwpApplication.cpp
+		${NCINE_SOURCE_DIR}/nCine/Uwp/AngleGfxDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Uwp/XinputInputManager.cpp)
 else()
 	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/PCApplication.cpp)
 endif()

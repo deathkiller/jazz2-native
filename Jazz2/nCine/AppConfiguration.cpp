@@ -14,8 +14,8 @@ namespace nCine
 		:
 		frameTimerLogInterval(5.0f),
 		resolution(0, 0),
-		inFullscreen(false),
-		isResizable(true),
+		fullscreen(false),
+		resizable(true),
 		frameLimit(0),
 		useBufferMapping(false),
 		deferShaderQueries(true),

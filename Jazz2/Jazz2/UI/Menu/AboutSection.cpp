@@ -8,6 +8,8 @@
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 #	define INFO1 "WebGL"
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+#	define INFO1 "UWP"
 #elif defined(WITH_OPENGLES)
 #	define INFO1 "OpenGL ES"
 #else

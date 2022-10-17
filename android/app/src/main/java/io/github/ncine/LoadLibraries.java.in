@@ -1,13 +1,14 @@
 package @NCINE_REVERSE_DNS@;
 
 import android.app.NativeActivity;
+import android.hardware.display.DisplayManager;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
 
-public class LoadLibraries extends NativeActivity {
+public class LoadLibraries extends NativeActivity implements DisplayManager.DisplayListener {
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +37,10 @@ public class LoadLibraries extends NativeActivity {
 		if (SDK_INT >= android.os.Build.VERSION_CODES.P) {
 			getWindow().getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
 		}
+		
+		// Register a display listener to update the monitors array
+		DisplayManager dm = getSystemService(DisplayManager.class);
+		dm.registerDisplayListener(this, null);
 	}
 
 	@Override
@@ -56,6 +61,21 @@ public class LoadLibraries extends NativeActivity {
 		}
 	}
 
+	@Override
+	public void onDisplayAdded(int displayId) {
+		updateMonitors();
+	}
+
+	@Override
+	public void onDisplayChanged(int displayId) {
+		updateMonitors();
+	}
+
+	@Override
+	public void onDisplayRemoved(int displayId) {
+		updateMonitors();
+	}
+
 	void setImmersiveSticky() {
 		View decorView = getWindow().getDecorView();
 		decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN |
@@ -74,9 +94,18 @@ public class LoadLibraries extends NativeActivity {
 		controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
 	}
 
+	// Calls `EglGfxDevice::updateMonitorsCallback()`
+	private native void updateMonitors();
+
 	static {
 		@JAVA_SYSTEM_LOADLIBRARY_OPENAL@
 		@JAVA_SYSTEM_LOADLIBRARY_NCINE@
+		// It needs to be explicitly loaded for jnicall_functions to work (despite `android.app.lib_name`)
+		try {
+			System.loadLibrary("game");
+		} catch (UnsatisfiedLinkError e) {
+			System.err.println("Caught UnsatisfiedLinkError: " + e.getMessage());
+		}
 	}
 
 }

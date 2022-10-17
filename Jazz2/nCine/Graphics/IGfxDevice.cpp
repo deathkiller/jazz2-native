@@ -71,8 +71,8 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	IGfxDevice::IGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
-		: width_(windowMode.width), height_(windowMode.height),
-		glContextInfo_(glContextInfo), displayMode_(displayMode)
+		: drawableWidth_(windowMode.width), drawableHeight_(windowMode.height), width_(windowMode.width), height_(windowMode.height),
+		  glContextInfo_(glContextInfo), displayMode_(displayMode), numMonitors_(0)
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		double cssWidth = 0.0;
@@ -82,6 +82,8 @@ namespace nCine
 		float pixelRatio = emscripten_get_device_pixel_ratio();
 		width_ = static_cast<int>(cssWidth * pixelRatio);
 		height_ = static_cast<int>(cssHeight * pixelRatio);
+		drawableWidth_ = width_;
+		drawableHeight_ = height_;
 
 		EmscriptenFullscreenChangeEvent fsce;
 		emscripten_get_fullscreen_status(&fsce);
@@ -99,32 +101,54 @@ namespace nCine
 #	endif
 #endif
 
-		GLViewport::initRect(0, 0, width_, height_);
-
 		currentVideoMode_.width = width_;
 		currentVideoMode_.height = height_;
 		currentVideoMode_.refreshRate = 60.0f;
 		currentVideoMode_.redBits = displayMode.redBits();
 		currentVideoMode_.greenBits = displayMode.greenBits();
 		currentVideoMode_.blueBits = displayMode.blueBits();
-		videoModes_.push_back(currentVideoMode_);
 	}
 
 	///////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	const IGfxDevice::VideoMode& IGfxDevice::videoMode(unsigned int index) const
+	/*! \internal Having this method inlined does not seem to work correctly with Qt5 on Linux */
+	unsigned int IGfxDevice::numMonitors() const
 	{
-		ASSERT(index < videoModes_.size());
-		if (index >= videoModes_.size())
-			return videoModes_[0];
-		return videoModes_[index];
+		return numMonitors_;
+	}
+
+	/*! \note This is usually the monitor where elements like the task bar or global menu bar are located. */
+	int IGfxDevice::primaryMonitorIndex() const
+	{
+		const int index = (numMonitors_ > 0) ? 0 : -1;
+		return index;
+	}
+
+	int IGfxDevice::windowMonitorIndex() const
+	{
+		const int index = (numMonitors_ > 0 ? 0 : -1);
+		return index;
+	}
+
+	const IGfxDevice::Monitor& IGfxDevice::monitor(unsigned int index) const
+	{
+		ASSERT(index < numMonitors_);
+		if (index >= numMonitors_) {
+			index = 0;
+		}
+		return monitors_[index];
 	}
 
 	///////////////////////////////////////////////////////////
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
+
+	void IGfxDevice::initGLViewport()
+	{
+		GLViewport::initRect(0, 0, drawableWidth_, drawableHeight_);
+	}
 
 	void IGfxDevice::setupGL()
 	{

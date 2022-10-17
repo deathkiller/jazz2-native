@@ -56,9 +56,11 @@ namespace nCine
 
 		void flashWindow() const override;
 
-		const VideoMode& currentVideoMode() const override;
-		bool setVideoMode(unsigned int index) override;
-		void updateVideoModes() override;
+		int primaryMonitorIndex() const override;
+		int windowMonitorIndex() const override;
+
+		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override;
+		bool setVideoMode(unsigned int modeIndex) override;
 
 	protected:
 		void setResolutionInternal(int width, int height) override;
@@ -66,6 +68,18 @@ namespace nCine
 	private:
 		/// GLFW3 window handle
 		static GLFWwindow* windowHandle_;
+
+		/// GLFW3 monitor pointers
+		/*! \note Used to retrieve the index in the monitors array */
+		static GLFWmonitor* monitorPointers_[MaxMonitors];
+
+		/// Monitor index to use in full screen
+		static int fsMonitorIndex_;
+		/// Video mode index to use in full screen
+		static int fsModeIndex_;
+
+		int lastWindowWidth_;
+		int lastWindowHeight_;
 
 		/// Deleted copy constructor
 		GlfwGfxDevice(const GlfwGfxDevice&) = delete;
@@ -77,6 +91,9 @@ namespace nCine
 		/// Initilizes the OpenGL graphic context
 		void initDevice(bool isFullscreen, bool isResizable);
 
+		void updateMonitors() override;
+
+		int retrieveMonitorIndex(GLFWmonitor* monitor) const;
 		void convertVideoModeInfo(const GLFWvidmode& glfwVideoMode, IGfxDevice::VideoMode& videoMode) const;
 
 		/// Returns the window handle used by GLFW3
