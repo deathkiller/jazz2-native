@@ -1,6 +1,6 @@
 #include "Environment.h"
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 #	pragma comment(lib, "psapi")
 #
 #	include <psapi.h>
@@ -9,7 +9,7 @@
 
 namespace Death
 {
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 	static uint64_t GetWindowsVersion()
 	{
 		using _RtlGetNtVersionNumbers = void (WINAPI*)(LPDWORD major, LPDWORD minor, LPDWORD build);

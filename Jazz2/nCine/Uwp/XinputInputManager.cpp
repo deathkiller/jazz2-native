@@ -1,4 +1,5 @@
 #include "XinputInputManager.h"
+#include "../Input/JoyMapping.h"
 
 namespace nCine
 {
@@ -7,4 +8,14 @@ namespace nCine
 	XinputMouseState XinputInputManager::mouseState_;
 	XinputKeyboardState XinputInputManager::keyboardState_;
 	XinputJoystickState XinputInputManager::joystickState_;
+
+	XinputInputManager::XinputInputManager()
+	{
+		joyMapping_.init(this);
+	}
+
+	XinputInputManager::~XinputInputManager()
+	{
+
+	}
 }

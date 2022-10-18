@@ -774,7 +774,7 @@ void GameEventHandler::RefreshCacheLevels()
 
 void GameEventHandler::CheckUpdates()
 {
-#if !_DEBUG
+#if !NCINE_DEBUG
 #if defined(DEATH_TARGET_ANDROID)
 	constexpr char DeviceDesc[] = "|Android|"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
 #elif defined(DEATH_TARGET_APPLE)
@@ -795,6 +795,13 @@ void GameEventHandler::CheckUpdates()
 	}
 	std::memcpy(DeviceDesc + DeviceDescLength, "|Unix|", sizeof("|Unix|") - 1);
 	DeviceDescLength += sizeof("|Unix|") - 1;
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+	char DeviceDesc[64]; DWORD DeviceDescLength = _countof(DeviceDesc);
+	if (!::GetComputerNameA(DeviceDesc, &DeviceDescLength)) {
+		DeviceDescLength = 0;
+	}
+	std::memcpy(DeviceDesc + DeviceDescLength, "|Windows RT|", sizeof("|Windows RT|") - 1);
+	DeviceDescLength += sizeof("|Windows RT|") - 1;
 #elif defined(DEATH_TARGET_WINDOWS)
 	auto osVersion = Death::WindowsVersion;
 	char DeviceDesc[64]; DWORD DeviceDescLength = _countof(DeviceDesc);

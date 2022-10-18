@@ -14,15 +14,23 @@ target_compile_definitions(ncine PUBLIC "$<$<CONFIG:Debug>:NCINE_DEBUG>")
 if(WIN32)
 	set_target_properties(ncine PROPERTIES WIN32_EXECUTABLE TRUE)
 	target_compile_definitions(ncine PRIVATE "_UNICODE" "UNICODE")
-	set_target_properties(ncine PROPERTIES OUTPUT_NAME "Jazz2")
 	
 	if(WINDOWS_PHONE OR WINDOWS_STORE)
 		target_compile_definitions(ncine PUBLIC "DEATH_TARGET_WINDOWS_RT")
 		
 		# TODO: Check this
 		target_compile_options(ncine PRIVATE "-await")
+		# Workaround for "error C2039: 'wait_for': is not a member of 'winrt::impl'"
+		target_compile_options(ncine PRIVATE /Zc:twoPhase-)
 		target_link_libraries(ncine PRIVATE "WindowsApp.lib" "rpcrt4.lib" "onecoreuap.lib")
 		set_target_properties(ncine PROPERTIES VS_GLOBAL_MinimalCoreWin "true")
+
+		# TODO: Check this
+		target_sources(ncine PRIVATE ${MSVC_BINDIR}/libEGL.dll ${MSVC_BINDIR}/libGLESv2.dll)
+		set_property(SOURCE ${MSVC_BINDIR}/libEGL.dll ${MSVC_BINDIR}/libGLESv2.dll PROPERTY VS_DEPLOYMENT_CONTENT 1)
+		set_property(SOURCE ${MSVC_BINDIR}/libEGL.dll ${MSVC_BINDIR}/libGLESv2.dll PROPERTY VS_DEPLOYMENT_LOCATION ".")
+	else()
+		set_target_properties(ncine PROPERTIES OUTPUT_NAME "Jazz2")
 	endif()
 else()
 	set_target_properties(ncine PROPERTIES OUTPUT_NAME "jazz2")

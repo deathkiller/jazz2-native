@@ -96,7 +96,7 @@ namespace Jazz2::UI
 		/// Deleted assignment operator
 		RgbLights& operator=(const RgbLights&) = delete;
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		using RzInit = int (*)();
 		using RzUnInit = int (*)();
 		using RzCreateKeyboardEffect = int (*)(ChromaSDK::Keyboard::EFFECT_TYPE Effect, void* pParam, void* pEffectId);

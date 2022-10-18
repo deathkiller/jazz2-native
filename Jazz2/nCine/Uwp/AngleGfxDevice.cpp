@@ -1,4 +1,5 @@
 #include "AngleGfxDevice.h"
+#include "../Application.h"
 
 namespace nCine
 {
@@ -138,12 +139,21 @@ namespace nCine
 		if (eglMakeCurrent(_eglDisplay, _renderSurface, _renderSurface, _eglContext) == EGL_FALSE) {
 			throw winrt::hresult_error(E_FAIL, L"Failed to make EGLSurface current");
 		}
+	}
 
+	void AngleGfxDevice::update()
+	{
+		eglSwapBuffers(_eglDisplay, _renderSurface);
+
+		// TODO: Check resolution change here for now
 		EGLint panelWidth = 0;
 		EGLint panelHeight = 0;
 		eglQuerySurface(_eglDisplay, _renderSurface, EGL_WIDTH, &panelWidth);
 		eglQuerySurface(_eglDisplay, _renderSurface, EGL_HEIGHT, &panelHeight);
-		width_ = drawableWidth_ = panelWidth;
-		height_ = drawableHeight_ = panelHeight;
+		if (panelWidth > 0 && panelHeight > 0 && (panelWidth != width_ || panelHeight != height_)) {
+			width_ = drawableWidth_ = panelWidth;
+			height_ = drawableHeight_ = panelHeight;
+			theApplication().resizeScreenViewport(width_, height_);
+		}
 	}
 }

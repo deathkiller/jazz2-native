@@ -49,9 +49,7 @@ namespace nCine
 			Cleanup();
 		}
 
-		inline void update() override {
-			eglSwapBuffers(_eglDisplay, _renderSurface);
-		}
+		void update() override;
 
 		void setSwapInterval(int interval) override { };
 		void setResolution(bool fullscreen, int width = 0, int height = 0) override { };

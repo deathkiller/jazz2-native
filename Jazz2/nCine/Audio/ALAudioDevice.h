@@ -5,7 +5,7 @@
 
 #include "IAudioDevice.h"
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 #	include <mmdeviceapi.h>
 #	include <audiopolicy.h>
 #endif
@@ -19,7 +19,7 @@ namespace nCine
 {
 	/// It represents the interface to the OpenAL audio device
 	class ALAudioDevice : public IAudioDevice
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		, public IMMNotificationClient
 #endif
 	{
@@ -90,7 +90,7 @@ namespace nCine
 		/// Deleted assignment operator
 		ALAudioDevice& operator=(const ALAudioDevice&) = delete;
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		static constexpr uint64_t DeviceChangeLimitMs = 250;
 
 		LPALCREOPENDEVICESOFT alcReopenDeviceSOFT_;

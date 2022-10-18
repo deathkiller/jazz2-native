@@ -3,7 +3,7 @@
 #include "AudioStreamPlayer.h"
 #include "../ServiceLocator.h"
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 #	include <Environment.h>
 #	include <Utf8.h>
 #endif
@@ -16,7 +16,7 @@ namespace nCine
 
 	ALAudioDevice::ALAudioDevice()
 		: device_(nullptr), context_(nullptr), gain_(1.0f), deviceName_(nullptr), nativeFreq_(44100)
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		, alcReopenDeviceSOFT_(nullptr), pEnumerator_(nullptr), lastDeviceChangeTime_(0), shouldRecreate_(false)
 #endif
 	{
@@ -63,7 +63,7 @@ namespace nCine
 		alDisable(AL_STOP_SOURCES_ON_DISCONNECT_SOFT);
 #endif
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		// Try to use ALC_SOFT_reopen_device extension to reopen the device
 		alcReopenDeviceSOFT_ = (LPALCREOPENDEVICESOFT)alGetProcAddress("alcReopenDeviceSOFT");
 		registerAudioEvents();
@@ -72,7 +72,7 @@ namespace nCine
 
 	ALAudioDevice::~ALAudioDevice()
 	{
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		unregisterAudioEvents();
 #endif
 
@@ -202,7 +202,7 @@ namespace nCine
 
 	void ALAudioDevice::updatePlayers()
 	{
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		// Audio device cannot be recreated in event callback, so do it here
 		if (shouldRecreate_) {
 			shouldRecreate_ = false;
@@ -230,7 +230,7 @@ namespace nCine
 		return nativeFreq_;
 	}
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 	void ALAudioDevice::recreateAudioDevice()
 	{
 		// Try to use ALC_SOFT_reopen_device extension to reopen the device

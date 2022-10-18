@@ -58,8 +58,8 @@ namespace nCine
 	class XinputInputManager : public IInputManager
 	{
 	public:
-		XinputInputManager() { }
-		~XinputInputManager() override { }
+		XinputInputManager();
+		~XinputInputManager() override;
 
 		const MouseState& mouseState() const override {
 			return mouseState_;

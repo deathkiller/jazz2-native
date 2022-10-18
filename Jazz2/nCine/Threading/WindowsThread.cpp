@@ -170,7 +170,10 @@ namespace nCine
 
 	void Thread::Abort()
 	{
+#if !defined(DEATH_TARGET_WINDOWS_RT)
+		// TerminateThread() is not supported on WinRT
 		::TerminateThread(handle_, 0);
+#endif
 		handle_ = 0;
 	}
 

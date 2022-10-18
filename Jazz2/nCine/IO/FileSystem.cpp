@@ -797,7 +797,10 @@ namespace nCine
 
 	String FileSystem::GetHomeDirectory()
 	{
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		// This method is not supported on WinRT
+		return { };
+#elif defined(DEATH_TARGET_WINDOWS)
 		wchar_t buffer[MaxPathLength];
 		::SHGetFolderPath(HWND_DESKTOP, CSIDL_PROFILE, NULL, SHGFP_TYPE_CURRENT, buffer);
 		return Utf8::FromUtf16(buffer);
@@ -1338,7 +1341,11 @@ namespace nCine
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+		HANDLE hFile = ::CreateFile2(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, NULL);
+#	else
 		HANDLE hFile = ::CreateFile(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+#	endif
 		LARGE_INTEGER fileSize;
 		fileSize.QuadPart = 0;
 		const BOOL status = ::GetFileSizeEx(hFile, &fileSize);
@@ -1366,7 +1373,11 @@ namespace nCine
 
 		FileDate date = { };
 #if defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+		HANDLE hFile = ::CreateFile2(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, NULL);
+#	else
 		HANDLE hFile = ::CreateFile(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+#	endif
 		FILETIME fileTime;
 		if (::GetFileTime(hFile, nullptr, nullptr, &fileTime)) {
 			SYSTEMTIME sysTime;
@@ -1397,7 +1408,11 @@ namespace nCine
 
 		FileDate date = { };
 #if defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+		HANDLE hFile = ::CreateFile2(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, NULL);
+#	else
 		HANDLE hFile = ::CreateFile(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+#	endif
 		FILETIME fileTime;
 		if (::GetFileTime(hFile, nullptr, &fileTime, nullptr)) {
 			SYSTEMTIME sysTime;

@@ -30,6 +30,7 @@ namespace nCine
 			_dispatcher { nullptr }
 		{
 		}
+		~UwpApplication() = default;
 
 		winrt::hstring GetRuntimeClassName() const override { return winrt::hstring(L"App"); }
 
@@ -46,8 +47,6 @@ namespace nCine
 
 		void run();
 
-		/// Private destructor
-		~UwpApplication() = default;
 		/// Deleted copy constructor
 		UwpApplication(const UwpApplication&) = delete;
 		/// Deleted assignment operator

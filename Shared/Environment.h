@@ -4,7 +4,7 @@
 
 namespace Death
 {
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 	extern const uint64_t WindowsVersion;
 
 	inline bool IsWindowsVista() {
@@ -20,7 +20,9 @@ namespace Death
 	}
 
 	bool GetProcessPath(HANDLE hProcess, wchar_t* szFilename, DWORD dwSize);
+#endif
 
+#if defined(DEATH_TARGET_WINDOWS)
 	inline uint64_t QueryUnbiasedInterruptTime()
 	{
 		ULONGLONG now { };
