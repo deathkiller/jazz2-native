@@ -124,12 +124,12 @@ if(NCINE_EMBED_SHADERS)
 	set(SHADER_FILES "")
 endif()
 
-#if(WIN32 AND EXISTS ${NCINE_ICONS_DIR}/icon.ico)
+#if(WIN32 AND EXISTS ${NCINE_SOURCE_DIR}/Icons/Main.ico)
 #	message(STATUS "Writing a resource file for executables icon")
-
+#
 #	set(RESOURCE_RC_FILE "${GENERATED_SOURCE_DIR}/resource.rc")
-#	file(WRITE ${RESOURCE_RC_FILE} "IDI_ICON1 ICON DISCARDABLE \"ncine/icon.ico\"")
-#	file(COPY ${NCINE_ICONS_DIR}/icon.ico DESTINATION ${GENERATED_INCLUDE_DIR})
+#	file(WRITE ${RESOURCE_RC_FILE} "GLFW_ICON ICON \"Main.ico\"")
+#	file(COPY ${NCINE_SOURCE_DIR}/Icons/Main.ico DESTINATION ${GENERATED_INCLUDE_DIR})
 #endif()
 
 #if(WIN32 AND NCINE_DYNAMIC_LIBRARY)
@@ -187,9 +187,9 @@ endif()
 #endif()
 
 if(WIN32)
-    list(APPEND GENERATED_SOURCES
-        ${NCINE_SOURCE_DIR}/Resources.rc
-        ${NCINE_SOURCE_DIR}/App.manifest)
+	list(APPEND GENERATED_SOURCES
+		${NCINE_SOURCE_DIR}/Resources.rc
+		${NCINE_SOURCE_DIR}/App.manifest)
 endif()
 
 # Generate Nuklear implementation file
@@ -200,25 +200,6 @@ endif()
 #	file(APPEND ${NUKLEAR_CPP_FILE} "#include \"nuklear.h\"\n")
 
 #	list(APPEND GENERATED_SOURCES ${NUKLEAR_CPP_FILE})
-#endif()
-
-# Generate custom allocators configuration file
-#if(NCINE_WITH_ALLOCATORS)
-#	set(CFGALLOC_H_FILE "${GENERATED_INCLUDE_DIR}/allocators_config.h")
-#	if(EXISTS ${CFGALLOC_H_FILE})
-#		file(REMOVE ${CFGALLOC_H_FILE})
-#	endif()
-#	file(WRITE ${CFGALLOC_H_FILE} "// Configuration file for the custom memory allocators\n")
-#	if(NCINE_RECORD_ALLOCATIONS)
-#		file(APPEND ${CFGALLOC_H_FILE} "#define RECORD_ALLOCATIONS\n")
-#	endif()
-#	if(NCINE_OVERRIDE_NEW)
-#		file(APPEND ${CFGALLOC_H_FILE} "#define OVERRIDE_NEW\n")
-#	endif()
-#	if(NCINE_USE_FREELIST)
-#		file(APPEND ${CFGALLOC_H_FILE} "#define USE_FREELIST\n")
-#		file(APPEND ${CFGALLOC_H_FILE} "#define FREELIST_BUFFER (${NCINE_FREELIST_BUFFER})\n")
-#	endif()
 #endif()
 
 if(EXISTS ${CMAKE_SOURCE_DIR}/config.h.in)

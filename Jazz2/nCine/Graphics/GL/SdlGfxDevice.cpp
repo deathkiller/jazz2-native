@@ -16,6 +16,10 @@
 #include "SdlGfxDevice.h"
 #include "../ITextureLoader.h"
 
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+#	include <emscripten/html5.h>
+#endif
+
 namespace nCine
 {
 	///////////////////////////////////////////////////////////
@@ -270,12 +274,11 @@ namespace nCine
 		videoMode.width = static_cast<unsigned int>(sdlVideoMode.w);
 		videoMode.height = static_cast<unsigned int>(sdlVideoMode.h);
 #else
-		double canvasWidth = 0.0;
-		double canvasHeight = 0.0;
-
-		emscripten_get_element_css_size("#canvas", &canvasWidth, &canvasHeight);
-		videoMode.width = static_cast<unsigned int>(canvasWidth);
-		videoMode.height = static_cast<unsigned int>(canvasHeight);
+		double cssWidth = 0.0;
+		double cssHeight = 0.0;
+		emscripten_get_element_css_size("canvas", &cssWidth, &cssHeight);
+		videoMode.width = static_cast<unsigned int>(cssWidth);
+		videoMode.height = static_cast<unsigned int>(cssHeight);
 #endif
 		videoMode.refreshRate = static_cast<float>(sdlVideoMode.refresh_rate);
 

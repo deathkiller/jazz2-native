@@ -1,18 +1,16 @@
 if(WIN32)
-#	list(APPEND HEADERS ${NCINE_ROOT}/include/ncine/common_windefines.h)
-#	list(APPEND SOURCES ${NCINE_ROOT}/src/FileLoggerWindows.cpp)
 #	if(NOT MINGW)
-#		list(APPEND SOURCES ${NCINE_ROOT}/src/base/WindowsAtomic.cpp)
+#		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Threading/WindowsAtomic.cpp)
 #	else()
-#		list(APPEND SOURCES ${NCINE_ROOT}/src/base/GccAtomic.cpp)
+#		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Threading/GccAtomic.cpp)
 #	endif()
 elseif(APPLE)
-#	list(APPEND SOURCES ${NCINE_ROOT}/src/base/StdAtomic.cpp)
+#	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Threading/StdAtomic.cpp)
 else()
 #	if(ATOMIC_FOUND)
 #		target_link_libraries(ncine PRIVATE Atomic::Atomic)
 #	endif()
-#	list(APPEND SOURCES ${NCINE_ROOT}/src/base/GccAtomic.cpp)
+#	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Threading/GccAtomic.cpp)
 endif()
 
 if(EMSCRIPTEN)
@@ -29,7 +27,7 @@ if(ANGLE_FOUND OR OPENGLES2_FOUND)
 		target_compile_definitions(ncine PRIVATE "WITH_ANGLE")
 	endif()
 
-	list(APPEND PRIVATE_HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.h)
+	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.h)
 	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.cpp)
 endif()
 
@@ -45,7 +43,7 @@ if(GLFW_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "GLFW")
 	target_compile_definitions(ncine PRIVATE "WITH_GLFW")
 	target_link_libraries(ncine PRIVATE GLFW::GLFW)
 
-	list(APPEND PRIVATE_HEADERS
+	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/nCine/Input/GlfwInputManager.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GlfwGfxDevice.h
 	)
@@ -58,7 +56,7 @@ elseif(SDL2_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "SDL2")
 	target_compile_definitions(ncine PRIVATE "WITH_SDL")
 	target_link_libraries(ncine PRIVATE SDL2::SDL2)
 
-	list(APPEND PRIVATE_HEADERS
+	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/nCine/Input/SdlInputManager.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/SdlGfxDevice.h
 	)
@@ -75,10 +73,10 @@ elseif(Qt5_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "QT5")
 		target_link_libraries(ncine PRIVATE Qt5::Gamepad)
 	endif()
 
-	list(APPEND HEADERS	${NCINE_SOURCE_DIR}/nCine/Qt5Widget.h)
 	qt5_wrap_cpp(MOC_SOURCES ${NCINE_SOURCE_DIR}/nCine/Qt5Widget.h)
 
-	list(APPEND PRIVATE_HEADERS
+	list(APPEND HEADERS
+		${NCINE_SOURCE_DIR}/nCine/Qt5Widget.h
 		${NCINE_SOURCE_DIR}/nCine/Input/Qt5InputManager.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/Qt5GfxDevice.h
 	)
@@ -104,9 +102,6 @@ if(OPENAL_FOUND)
 		${NCINE_SOURCE_DIR}/nCine/Audio/IAudioPlayer.h
 		${NCINE_SOURCE_DIR}/nCine/Audio/AudioBufferPlayer.h
 		${NCINE_SOURCE_DIR}/nCine/Audio/AudioStreamPlayer.h
-	)
-
-	list(APPEND PRIVATE_HEADERS
 		${NCINE_SOURCE_DIR}/nCine/Audio/ALAudioDevice.h
 		${NCINE_SOURCE_DIR}/nCine/Audio/IAudioLoader.h
 		${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.h
@@ -130,7 +125,7 @@ if(OPENAL_FOUND)
 		target_compile_definitions(ncine PRIVATE "WITH_VORBIS")
 		target_link_libraries(ncine PRIVATE Vorbis::Vorbisfile)
 
-		list(APPEND PRIVATE_HEADERS
+		list(APPEND HEADERS
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderOgg.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderOgg.h)
 
@@ -149,7 +144,7 @@ if(OPENAL_FOUND)
 			target_link_libraries(ncine PRIVATE libopenmpt::libopenmpt)
 		endif()
 		
-		list(APPEND PRIVATE_HEADERS
+		list(APPEND HEADERS
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderMpt.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderMpt.h)
 
@@ -186,7 +181,7 @@ if(Threads_FOUND)
 	target_compile_definitions(ncine PRIVATE "WITH_THREADS")
 	target_link_libraries(ncine PRIVATE Threads::Threads)
 
-	list(APPEND PRIVATE_HEADERS
+	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/nCine/Threading/Thread.h
 		${NCINE_SOURCE_DIR}/nCine/Threading/ThreadSync.h
 	)
@@ -203,9 +198,8 @@ if(Threads_FOUND)
 		)
 	endif()
 
-	list(APPEND PRIVATE_HEADERS ${NCINE_SOURCE_DIR}/nCine/Threading/ThreadPool.h)
+	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Threading/ThreadPool.h)
 	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Threading/ThreadPool.cpp)
-	list(APPEND PRIVATE_HEADERS ${NCINE_SOURCE_DIR}/nCine/Threading/ThreadCommands.h)
 endif()
 
 #if(LUA_FOUND)
@@ -500,18 +494,15 @@ endif()
 #		target_link_libraries(ncine PRIVATE dl)
 #	endif()
 #
-#	list(APPEND HEADERS ${NCINE_ROOT}/include/ncine/RenderDocCapture.h)
-#	list(APPEND PRIVATE_HEADERS ${RENDERDOC_API_H})
-#	list(APPEND SOURCES ${NCINE_ROOT}/src/graphics/RenderDocCapture.cpp)
+#	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/RenderDocCapture.h ${RENDERDOC_API_H})
+#	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Graphics/RenderDocCapture.cpp)
 #endif()
-
-if(ZLIB_FOUND)
-	target_compile_definitions(ncine PRIVATE "WITH_ZLIB")
-	target_link_libraries(ncine PRIVATE ZLIB::ZLIB)
-endif()
 
 if(LIBDEFLATE_FOUND)
 	target_link_libraries(ncine PRIVATE libdeflate::libdeflate)
+elseif(ZLIB_FOUND)
+	target_compile_definitions(ncine PRIVATE "WITH_ZLIB")
+	target_link_libraries(ncine PRIVATE ZLIB::ZLIB)
 endif()
 
 if(NCINE_BUILD_ANDROID)
@@ -522,7 +513,7 @@ if(NCINE_BUILD_ANDROID)
 endif()
 
 if(ANDROID)
-	list(APPEND PRIVATE_HEADERS
+	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/nCine/Android/AndroidInputManager.h
 		${NCINE_SOURCE_DIR}/nCine/Android/AndroidJniHelper.h
 		${NCINE_SOURCE_DIR}/nCine/Android/EglGfxDevice.h
@@ -539,11 +530,19 @@ if(ANDROID)
 		${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.cpp
 	)
 elseif(WINDOWS_PHONE OR WINDOWS_STORE)
+	list(APPEND HEADERS
+		${NCINE_SOURCE_DIR}/nCine/Uwp/UwpApplication.h
+		${NCINE_SOURCE_DIR}/nCine/Uwp/AngleGfxDevice.h
+		${NCINE_SOURCE_DIR}/nCine/Uwp/XinputInputManager.h
+	)
+	
 	list(APPEND SOURCES
 		${NCINE_SOURCE_DIR}/nCine/Uwp/UwpApplication.cpp
 		${NCINE_SOURCE_DIR}/nCine/Uwp/AngleGfxDevice.cpp
-		${NCINE_SOURCE_DIR}/nCine/Uwp/XinputInputManager.cpp)
+		${NCINE_SOURCE_DIR}/nCine/Uwp/XinputInputManager.cpp
+	)
 else()
+	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/PCApplication.h)
 	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/PCApplication.cpp)
 endif()
 

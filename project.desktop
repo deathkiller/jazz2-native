@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Name=@NCINE_APP_NAME@
+Comment=@NCINE_APP_DESCRIPTION@
+TryExec=@CPACK_EXECUTABLE_NAME@
+Exec=@CPACK_EXECUTABLE_NAME@
+Icon=@CPACK_EXECUTABLE_NAME@
+Terminal=false
+Type=Application
+Categories=Game;

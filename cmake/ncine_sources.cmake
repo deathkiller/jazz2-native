@@ -1,12 +1,16 @@
 set(SOURCES
+	${NCINE_ROOT}/Shared/Environment.cpp
+	${NCINE_ROOT}/Shared/Utf8.cpp
 	${NCINE_ROOT}/Shared/Containers/SmallVector.cpp
 	${NCINE_ROOT}/Shared/Containers/String.cpp
 	${NCINE_ROOT}/Shared/Containers/StringView.cpp
-	${NCINE_ROOT}/Shared/Environment.cpp
-	${NCINE_ROOT}/Shared/Utf8.cpp
 )
 
 list(APPEND SOURCES
+	${NCINE_SOURCE_DIR}/nCine/AppConfiguration.cpp
+	${NCINE_SOURCE_DIR}/nCine/Application.cpp
+	${NCINE_SOURCE_DIR}/nCine/ArrayIndexer.cpp
+	${NCINE_SOURCE_DIR}/nCine/ServiceLocator.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/Algorithms.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/BitArray.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/Clock.cpp
@@ -46,6 +50,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLViewport.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/IGfxDevice.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureLoader.cpp
+	#${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureSaver.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Material.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/MeshSprite.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Particle.cpp
@@ -85,19 +90,6 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/IO/StandardFile.cpp
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Color.cpp
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Colorf.cpp
-	${NCINE_SOURCE_DIR}/nCine/AppConfiguration.cpp
-	${NCINE_SOURCE_DIR}/nCine/Application.cpp
-	${NCINE_SOURCE_DIR}/nCine/ArrayIndexer.cpp
-	${NCINE_SOURCE_DIR}/nCine/ServiceLocator.cpp
-#	${NCINE_SOURCE_DIR}/nCine/Base/CString.cpp
-#	${NCINE_SOURCE_DIR}/nCine/Base/String.cpp
-#	${NCINE_SOURCE_DIR}/nCine/Base/Utf8.cpp
-#	${NCINE_SOURCE_DIR}/nCine/FileLogger.cpp
-#	${NCINE_SOURCE_DIR}/nCine/FntParser.cpp
-#	${NCINE_SOURCE_DIR}/nCine/Font.cpp
-#	${NCINE_SOURCE_DIR}/nCine/FontGlyph.cpp
-#	${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureSaver.cpp
-#	${NCINE_SOURCE_DIR}/nCine/Graphics/TextNode.cpp
 )
 
 list(APPEND SOURCES
