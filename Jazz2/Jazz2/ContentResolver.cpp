@@ -13,6 +13,10 @@
 #include "../nCine/Graphics/ITextureLoader.h"
 #include "../nCine/Base/Random.h"
 
+#if defined(DEATH_TARGET_WINDOWS_RT)
+#include "../nCine/Uwp/UwpFunc.h"
+#endif
+
 #if defined(DEATH_TARGET_SSE42) || defined(DEATH_TARGET_AVX)
 #	define RAPIDJSON_SSE42
 #elif defined(DEATH_TARGET_SSE2)
@@ -62,6 +66,13 @@ namespace Jazz2
 			_cachePath = "Cache/"_s;
 			_sourcePath = "Source/"_s;
 		}
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+		char localfolder[255];
+		uwp_get_localfolder(localfolder);
+		String localStorage = String(localfolder);
+		_cachePath = fs::JoinPath(localStorage, "Cache/"_s);
+		_sourcePath = fs::JoinPath(localStorage, "Source/"_s);
+		_contentPath = "Content/"_s;
 #endif
 
 		CompileShaders();
