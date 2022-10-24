@@ -250,7 +250,7 @@ namespace Jazz2
 		}
 
 		StringView GetContentPath() const {
-#if defined(DEATH_TARGET_UNIX)
+#if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 			return _contentPath;
 #else
 			return "Content/"_s;
@@ -258,7 +258,7 @@ namespace Jazz2
 		}
 
 		StringView GetCachePath() const {
-#if defined(DEATH_TARGET_UNIX)
+#if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 			return _cachePath;
 #else
 			return "Cache/"_s;
@@ -266,7 +266,7 @@ namespace Jazz2
 		}
 
 		StringView GetSourcePath() const {
-#if defined(DEATH_TARGET_UNIX)
+#if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 			return _sourcePath;
 #else
 			return "Source/"_s;
@@ -297,7 +297,7 @@ namespace Jazz2
 		std::unique_ptr<UI::Font> _fonts[(int)FontType::Count];
 		std::unique_ptr<Shader> _precompiledShaders[(int)PrecompiledShader::Count];
 
-#if defined(DEATH_TARGET_UNIX)
+#if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 		String _contentPath;
 		String _cachePath;
 		String _sourcePath;
