@@ -49,11 +49,11 @@ namespace Jazz2::Actors
 		_inIdleTransition(false), _inLedgeTransition(false),
 		_carryingObject(nullptr),
 		_canDoubleJump(true),
-		_lives(0), _coins(0), _foodEaten(0), _score(0),
+		_lives(0), _coins(0), _coinsCheckpoint(0), _foodEaten(0), _score(0),
 		_checkpointLight(1.0f),
 		_sugarRushLeft(0.0f), _sugarRushStarsTime(0.0f),
 		_shieldSpawnTime(ShieldDisabled),
-		_gems(0), _gemsPitch(0),
+		_gems(0), _gemsCheckpoint(0), _gemsPitch(0),
 		_gemsTimer(0.0f),
 		_bonusWarpTimer(0.0f),
 		_suspendType(SuspendType::None),
@@ -1932,9 +1932,16 @@ namespace Jazz2::Actors
 				_pushFramesLeft = 0.0f;
 				_weaponCooldown = 0.0f;
 				_controllable = true;
+				_controllableTimeout = 0.0f;
 				_inShallowWater = -1;
+				_keepRunningTime = 0.0f;
 				_invulnerableTime = 0.0f;
 				SetModifier(Modifier::None);
+				
+				if (_sugarRushLeft > 0.0f) {
+					_sugarRushLeft = 0.0f;
+					_renderer.Initialize(ActorRendererType::Default);
+				}
 
 				// Spawn corpse
 				std::shared_ptr<PlayerCorpse> corpse = std::make_shared<PlayerCorpse>();
@@ -1961,6 +1968,9 @@ namespace Jazz2::Actors
 					_levelHandler->SetAmbientLight(_checkpointLight);
 					_levelHandler->LimitCameraView(0, 0);
 					_levelHandler->WarpCameraToTarget(shared_from_this());
+
+					_coins = _coinsCheckpoint;
+					_gems = _gemsCheckpoint;
 
 					_levelHandler->RollbackToCheckpoint();
 
@@ -3139,6 +3149,9 @@ namespace Jazz2::Actors
 	{
 		_checkpointPos = Vector2f(pos.X, pos.Y - 20.0f);
 		_checkpointLight = ambientLight;
+		
+		_coinsCheckpoint = _coins;
+		_gemsCheckpoint = _gems;
 	}
 
 	void Player::SetCarryingObject(ActorBase* actor, bool resetSpeed)

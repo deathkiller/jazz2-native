@@ -39,6 +39,10 @@
 #	include <emscripten.h>
 #endif
 
+#if defined(DEATH_TARGET_WINDOWS_RT)
+#	include <winrt/Windows.Storage.h>
+#endif
+
 #include <Utf8.h>
 #include <Containers/String.h>
 #include <Containers/GrowableArray.h>
@@ -193,7 +197,11 @@ namespace nCine
 									}
 
 									// RemoveDirectory on a symbolic link will remove the link itself
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+									if (!::RemoveDirectoryFromAppW(bufferExtended)) {
+#	else
 									if (!::RemoveDirectory(bufferExtended)) {
+#	endif
 										DWORD err = ::GetLastError();
 										if (err != ERROR_PATH_NOT_FOUND) {
 											// Cannot remove symbolic link
@@ -212,7 +220,11 @@ namespace nCine
 				}
 			}
 
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+			return ::RemoveDirectoryFromAppW(path);
+#	else
 			return ::RemoveDirectory(path);
+#	endif
 		}
 #endif
 
@@ -1137,7 +1149,11 @@ namespace nCine
 				fullPath[i] = L'\0';
 				const DWORD attrs = ::GetFileAttributes(fullPath);
 				if (attrs == INVALID_FILE_ATTRIBUTES) {
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+					if (!::CreateDirectoryFromAppW(fullPath, NULL)) {
+#	else
 					if (!::CreateDirectory(fullPath, NULL)) {
+#	endif
 						DWORD err = GetLastError();
 						if (err != ERROR_ALREADY_EXISTS) {
 							return false;
@@ -1152,7 +1168,11 @@ namespace nCine
 		}
 
 		if (!slashWasLast) {
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+			if (!::CreateDirectoryFromAppW(fullPath, NULL)) {
+#	else
 			if (!::CreateDirectory(fullPath, NULL)) {
+#	endif
 				DWORD err = GetLastError();
 				if (err != ERROR_ALREADY_EXISTS) {
 					return false;
@@ -1230,7 +1250,11 @@ namespace nCine
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+		return ::DeleteFileFromAppW(Utf8::ToUtf16(path));
+#	else
 		return ::DeleteFile(Utf8::ToUtf16(path));
+#	endif
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
@@ -1267,7 +1291,11 @@ namespace nCine
 		if (oldPath.empty() || newPath.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+		return ::CopyFileFromAppW(Utf8::ToUtf16(oldPath), Utf8::ToUtf16(newPath), overwrite ? TRUE : FALSE);
+#	else
 		return ::CopyFile(Utf8::ToUtf16(oldPath), Utf8::ToUtf16(newPath), overwrite ? TRUE : FALSE);
+#	endif
 #elif defined(__linux__)
 		auto nullTerminatedOldPath = String::nullTerminatedView(oldPath);
 		auto nullTerminatedNewPath = String::nullTerminatedView(newPath);
@@ -1342,7 +1370,7 @@ namespace nCine
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	if defined(DEATH_TARGET_WINDOWS_RT)
-		HANDLE hFile = ::CreateFile2(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, NULL);
+		HANDLE hFile = ::CreateFileFromAppW(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 #	else
 		HANDLE hFile = ::CreateFile(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 #	endif
@@ -1374,7 +1402,7 @@ namespace nCine
 		FileDate date = { };
 #if defined(DEATH_TARGET_WINDOWS)
 #	if defined(DEATH_TARGET_WINDOWS_RT)
-		HANDLE hFile = ::CreateFile2(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, NULL);
+		HANDLE hFile = ::CreateFileFromAppW(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 #	else
 		HANDLE hFile = ::CreateFile(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 #	endif
@@ -1409,7 +1437,7 @@ namespace nCine
 		FileDate date = { };
 #if defined(DEATH_TARGET_WINDOWS)
 #	if defined(DEATH_TARGET_WINDOWS_RT)
-		HANDLE hFile = ::CreateFile2(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, NULL);
+		HANDLE hFile = ::CreateFileFromAppW(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 #	else
 		HANDLE hFile = ::CreateFile(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 #	endif
@@ -1677,7 +1705,10 @@ namespace nCine
 		}
 
 		_savePath = JoinPath({ home, ".config"_s, applicationName });
-#elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+		auto appData = winrt::Windows::Storage::ApplicationData::Current().LocalFolder().Path();
+		_savePath = Death::Utf8::FromUtf16(appData.data(), appData.size());
+#elif defined(DEATH_TARGET_WINDOWS)
 		wchar_t* path = nullptr;
 		bool success = (::SHGetKnownFolderPath(FOLDERID_SavedGames, KF_FLAG_DEFAULT, nullptr, &path) == S_OK);
 		if (!success || path == nullptr || path[0] == L'\0') {

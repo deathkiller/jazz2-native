@@ -7,6 +7,9 @@
 #include "../../Common.h"
 
 #include <winrt/Windows.Foundation.Metadata.h>
+#include <winrt/Windows.ApplicationModel.Activation.h>
+#include <winrt/Windows.UI.Core.h>
+#include <winrt/Windows.UI.Popups.h>
 #include <winrt/Windows.UI.ViewManagement.h>
 
 namespace nCine
@@ -20,13 +23,13 @@ namespace nCine
 		return *_instance;
 	}
 
-	/*static void RaiseExceptionDialog(const winrtWUC::CoreDispatcher& dispatcher, winrt::hstring const& msg)
+	static void RaiseExceptionDialog(const winrtWUC::CoreDispatcher& dispatcher, winrt::hstring const& msg)
 	{
 		dispatcher.RunIdleAsync([msg](auto args) {
 			winrtWUP::MessageDialog dialog(msg);
 			dialog.ShowAsync();
 		});
-	}*/
+	}
 
 	///////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS
@@ -65,32 +68,29 @@ namespace nCine
 	void UwpApplication::OnActivated(const winrtWAA::IActivatedEventArgs& args)
 	{
 		try {
-			/*const auto& kind = args.Kind();
+			const auto& kind = args.Kind();
 			if (kind == winrtWAA::ActivationKind::Protocol) {
 				auto protocolArgs = args.as<winrtWAA::ProtocolActivatedEventArgs>();
 				init(protocolArgs.Uri());
 			} else if (kind == winrtWAA::ActivationKind::CommandLineLaunch) {
 				auto cmd = args.as<winrtWAA::CommandLineActivatedEventArgs>().Operation().Arguments();
 				init(winrtWF::Uri(cmd));
-			} else*/ {
+			} else {
 				init({ nullptr });
 			}
 		} catch (std::exception const& ex) {
 			LOGE_X("Critical exception: %s", ex.what());
-			//RaiseExceptionDialog(_dispatcher, winrt::to_hstring(ex.what()));
+			RaiseExceptionDialog(_dispatcher, winrt::to_hstring(ex.what()));
 		}
 	}
 
 	void UwpApplication::OnLaunched(winrtWAA::LaunchActivatedEventArgs const& args)
 	{
-		/*auto arguments = args.Arguments();
-		auto info = args.TileActivatedInfo();
-		auto tileId = args.TileId();
-
+		auto arguments = args.Arguments();
 		if (!arguments.empty()) {
-			auto uri = winrtWF::Uri(L"jazz2:/" + (std::wstring)arguments);
+			auto uri = winrtWF::Uri(L"jazz2:" + (std::wstring)arguments);
 			init(uri);
-		} else*/ {
+		} else {
 			init({ nullptr });
 		}
 	}
@@ -99,7 +99,7 @@ namespace nCine
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void UwpApplication::init(winrtWF::Uri uri)
+	void UwpApplication::init(const winrtWF::Uri& uri)
 	{
 		_instance = this;
 
@@ -115,7 +115,7 @@ namespace nCine
 
 		// Only `onPreInit()` can modify the application configuration
 		AppConfiguration& modifiableAppCfg = const_cast<AppConfiguration&>(appCfg_);
-		// TODO
+		// TODO: Parse arguments from Uri
 		//modifiableAppCfg.argc_ = argc;
 		//modifiableAppCfg.argv_ = argv;
 		appEventHandler_->onPreInit(modifiableAppCfg);
