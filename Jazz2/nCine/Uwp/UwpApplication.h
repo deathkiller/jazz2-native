@@ -14,6 +14,7 @@ namespace winrtWUX = winrt::Windows::UI::Xaml;
 namespace winrtWUXC = winrt::Windows::UI::Xaml::Controls;
 namespace winrtWUC = winrt::Windows::UI::Core;
 namespace winrtWUP = winrt::Windows::UI::Popups;
+namespace winrtWUV = winrt::Windows::UI::ViewManagement;
 
 namespace nCine
 {

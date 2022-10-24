@@ -3,7 +3,7 @@
 #include "../Graphics/IGfxDevice.h"
 
 #ifdef GetCurrentTime
-#undef GetCurrentTime
+#	undef GetCurrentTime
 #endif
 #include <winrt/base.h>
 #include <winrt/Windows.UI.ViewManagement.h>
@@ -26,6 +26,7 @@ namespace winrtWUX = winrt::Windows::UI::Xaml;
 namespace winrtWUXC = winrt::Windows::UI::Xaml::Controls;
 namespace winrtWUC = winrt::Windows::UI::Core;
 namespace winrtWUP = winrt::Windows::UI::Popups;
+namespace winrtWUV = winrt::Windows::UI::ViewManagement;
 
 namespace nCine
 {
@@ -37,7 +38,7 @@ namespace nCine
 
 	public:
 		AngleGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const winrtWUXC::SwapChainPanel& withVisual)
-			: IGfxDevice(windowMode, glContextInfo, displayMode), _renderSurface { EGL_NO_SURFACE }, _hostVisual(withVisual)
+			: IGfxDevice(windowMode, glContextInfo, displayMode), _renderSurface { EGL_NO_SURFACE }, _hostVisual(withVisual), _sizeChanged(2)
 		{
 			Initialize();
 			CreateRenderSurface();
@@ -51,19 +52,19 @@ namespace nCine
 
 		void update() override;
 
-		void setSwapInterval(int interval) override { };
-		void setResolution(bool fullscreen, int width = 0, int height = 0) override { };
+		void setSwapInterval(int interval) override { }
+		void setResolution(bool fullscreen, int width = 0, int height = 0) override;
 
 		void setWindowPosition(int x, int y) override { };
-		void setWindowTitle(const StringView& windowTitle) override { };
-		void setWindowIcon(const StringView& iconFilename) override { };
+		void setWindowTitle(const StringView& windowTitle) override;
+		void setWindowIcon(const StringView& iconFilename) override { }
 
 		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override {
 			return { };
 		};
 
 	protected:
-		void setResolutionInternal(int width, int height) override { };
+		void setResolutionInternal(int width, int height) override { }
 
 	private:
 		void Initialize();
@@ -77,5 +78,6 @@ namespace nCine
 		EGLDisplay _eglDisplay;
 		EGLContext _eglContext;
 		EGLConfig  _eglConfig;
+		int _sizeChanged;
 	};
 }

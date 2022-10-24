@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"	xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest">
+  <Identity Name="@PACKAGE_GUID@" Publisher="CN=@NCINE_APP_VENDOR@" Version="@PACKAGE_VERSION@" />
+  <mp:PhoneIdentity PhoneProductId="@PACKAGE_GUID@" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <Properties>
+    <DisplayName>@NCINE_APP_NAME@</DisplayName>
+    <PublisherDisplayName>@NCINE_APP_VENDOR@</PublisherDisplayName>
+    <Logo>Assets/StoreLogo.png</Logo>
+  </Properties>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.0.0" MaxVersionTested="10.0.0.0" />
+  </Dependencies>
+  <Resources>
+    <Resource Language="x-generate" />
+  </Resources>
+  <Applications>
+    <Application Id="App" Executable="@PACKAGE_EXECUTABLE_NAME@.exe" EntryPoint="@PACKAGE_EXECUTABLE_NAME@.App">
+      <uap:VisualElements
+        DisplayName="@NCINE_APP_NAME@"
+        Description="@NCINE_APP_DESCRIPTION@"
+        BackgroundColor="#000000"
+        Square150x150Logo="Assets/Logo.png"
+        Square44x44Logo="Assets/SmallLogo.png">
+        <uap:SplashScreen Image="Assets/SplashScreen.png" />
+      </uap:VisualElements>
+    </Application>
+  </Applications>
+</Package>

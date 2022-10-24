@@ -541,6 +541,41 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 		${NCINE_SOURCE_DIR}/nCine/Uwp/AngleGfxDevice.cpp
 		${NCINE_SOURCE_DIR}/nCine/Uwp/XinputInputManager.cpp
 	)
+	
+	set(UWP_ASSETS
+		${NCINE_SOURCE_DIR}/Icons/Logo.png
+		${NCINE_SOURCE_DIR}/Icons/SmallLogo.png
+		${NCINE_SOURCE_DIR}/Icons/SplashScreen.png
+		${NCINE_SOURCE_DIR}/Icons/StoreLogo.png
+	)
+		
+	target_sources(ncine PRIVATE ${UWP_ASSETS})
+	set_property(SOURCE ${UWP_ASSETS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+	set_property(SOURCE ${UWP_ASSETS} PROPERTY VS_DEPLOYMENT_LOCATION "Assets")
+	source_group("Assets" FILES ${UWP_ASSETS})
+
+	string(REGEX MATCHALL "[0-9]+" _versionComponents "${NCINE_VERSION}")
+	list(LENGTH _versionComponents _versionComponentsLength)
+	if (${_versionComponentsLength} GREATER 0)
+		list(GET _versionComponents 0 PACKAGE_VERSION_MAJOR)
+	else()
+		set(PACKAGE_VERSION_MAJOR "0")
+	endif()
+	if (${_versionComponentsLength} GREATER 1)
+		list(GET _versionComponents 1 PACKAGE_VERSION_MINOR)
+	else()
+		set(PACKAGE_VERSION_MINOR "0")
+	endif()
+	if (${_versionComponentsLength} GREATER 2)
+		list(GET _versionComponents 2 PACKAGE_VERSION_PATCH)
+	else()
+		set(PACKAGE_VERSION_PATCH "0")
+	endif()
+	set(PACKAGE_VERSION "${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}.0")
+	set(PACKAGE_GUID "a7153bb5-7dc8-4985-9f9c-3853f96034c9")
+	set(PACKAGE_EXECUTABLE_NAME "ncine")
+	configure_file(Package.appxmanifest.in ${CMAKE_CURRENT_BINARY_DIR}/Package.appxmanifest @ONLY)
+	list(APPEND GENERATED_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/Package.appxmanifest)
 else()
 	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/PCApplication.h)
 	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/PCApplication.cpp)
