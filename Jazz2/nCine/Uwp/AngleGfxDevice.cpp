@@ -1,6 +1,10 @@
 #include "AngleGfxDevice.h"
 #include "../Application.h"
 
+#include <winrt/Windows.Graphics.Display.h>
+
+#include <Utf8.h>
+
 namespace nCine
 {
 	void AngleGfxDevice::Initialize()
@@ -145,15 +149,41 @@ namespace nCine
 	{
 		eglSwapBuffers(_eglDisplay, _renderSurface);
 
-		// TODO: Check resolution change here for now
-		EGLint panelWidth = 0;
-		EGLint panelHeight = 0;
-		eglQuerySurface(_eglDisplay, _renderSurface, EGL_WIDTH, &panelWidth);
-		eglQuerySurface(_eglDisplay, _renderSurface, EGL_HEIGHT, &panelHeight);
-		if (panelWidth > 0 && panelHeight > 0 && (panelWidth != width_ || panelHeight != height_)) {
-			width_ = drawableWidth_ = panelWidth;
-			height_ = drawableHeight_ = panelHeight;
-			theApplication().resizeScreenViewport(width_, height_);
+		if (_sizeChanged > 0) {
+			EGLint panelWidth = 0, panelHeight = 0;
+			eglQuerySurface(_eglDisplay, _renderSurface, EGL_WIDTH, &panelWidth);
+			eglQuerySurface(_eglDisplay, _renderSurface, EGL_HEIGHT, &panelHeight);
+			if (panelWidth > 0 && panelHeight > 0) {
+				_sizeChanged--;
+				if (panelWidth != width_ || panelHeight != height_) {
+					width_ = drawableWidth_ = panelWidth;
+					height_ = drawableHeight_ = panelHeight;
+					theApplication().resizeScreenViewport(width_, height_);
+				}
+			}
 		}
+	}
+
+	void AngleGfxDevice::setResolution(bool fullscreen, int width, int height)
+	{
+		if (fullscreen) {
+			winrtWUV::ApplicationView::GetForCurrentView().TryEnterFullScreenMode();
+		} else {
+			winrtWUV::ApplicationView::GetForCurrentView().ExitFullScreenMode();
+
+			if (width > 0 && height > 0) {
+				float dpi = winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView().LogicalDpi();
+				winrtWF::Size desiredSize = winrtWF::Size((width * DefaultDPI / dpi), (height * DefaultDPI / dpi));
+				winrtWUV::ApplicationView::GetForCurrentView().TryResizeView(desiredSize);
+			}
+		}
+
+		_sizeChanged = 2;
+	}
+
+	void AngleGfxDevice::setWindowTitle(const StringView& windowTitle)
+	{
+		//auto windowTitleW = Death::Utf8::ToUtf16(windowTitle);
+		//winrtWUV::ApplicationView::GetForCurrentView().Title(winrt::hstring(windowTitleW.data(), windowTitleW.size()));
 	}
 }

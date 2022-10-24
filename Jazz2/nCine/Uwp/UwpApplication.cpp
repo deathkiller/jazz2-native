@@ -11,6 +11,10 @@
 #include <winrt/Windows.UI.Core.h>
 #include <winrt/Windows.UI.Popups.h>
 #include <winrt/Windows.UI.ViewManagement.h>
+#include <winrt/Windows.Graphics.Display.h>
+#include <winrt/Windows.ApplicationModel.Core.h>
+
+#include <Utf8.h>
 
 namespace nCine
 {
@@ -123,8 +127,41 @@ namespace nCine
 
 		// Graphics device should always be created before the input manager!
 		auto window = winrtWUX::Window::Current();
+
+		window.SizeChanged([](const auto&, const winrtWUC::WindowSizeChangedEventArgs& args) {
+			auto& gfxDevice = dynamic_cast<AngleGfxDevice&>(theApplication().gfxDevice());
+			gfxDevice._sizeChanged = 2;
+		});
+
 		window.Content(_panel);
-		window.Activate();
+
+		winrtWUV::ApplicationView::TerminateAppOnFinalViewClose(true);
+		//auto windowTitleW = Death::Utf8::ToUtf16(appCfg_.windowTitle);
+		//winrtWUV::ApplicationView::GetForCurrentView().Title(winrt::hstring(windowTitleW.data(), windowTitleW.size()));
+
+		winrt::Windows::ApplicationModel::Core::CoreApplication::GetCurrentView().TitleBar().ExtendViewIntoTitleBar(true);
+		auto titleBar = winrtWUV::ApplicationView::GetForCurrentView().TitleBar();
+		titleBar.ButtonBackgroundColor(winrt::Windows::UI::Color { 0, 0, 0, 0 });
+		titleBar.ButtonForegroundColor(winrt::Windows::UI::Color { 255, 255, 255, 255 });
+		titleBar.ButtonHoverBackgroundColor(winrt::Windows::UI::Color { 80, 0, 0, 0 });
+		titleBar.ButtonHoverForegroundColor(winrt::Windows::UI::Color { 255, 255, 255, 255 });
+		titleBar.ButtonInactiveBackgroundColor(winrt::Windows::UI::Color { 0, 0, 0, 0 });
+		titleBar.ButtonInactiveForegroundColor(winrt::Windows::UI::Color { 160, 255, 255, 255 });
+
+		if (appCfg_.fullscreen) {
+			winrtWUV::ApplicationView::PreferredLaunchWindowingMode(winrtWUV::ApplicationViewWindowingMode::FullScreen);
+			window.Activate();
+		} else if (appCfg_.resolution.X > 0 && appCfg_.resolution.Y > 0) {
+			float dpi = winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView().LogicalDpi();
+			winrtWUV::ApplicationView::PreferredLaunchWindowingMode(winrtWUV::ApplicationViewWindowingMode::PreferredLaunchViewSize);
+			winrtWF::Size desiredSize = winrtWF::Size((appCfg_.resolution.X * IGfxDevice::DefaultDPI / dpi), (appCfg_.resolution.Y * IGfxDevice::DefaultDPI / dpi));
+			winrtWUV::ApplicationView::PreferredLaunchViewSize(desiredSize);
+			window.Activate();
+			winrtWUV::ApplicationView::GetForCurrentView().TryResizeView(desiredSize);
+		} else {
+			window.Activate();
+		}
+
 		_dispatcher = window.Dispatcher();
 
 		IGfxDevice::GLContextInfo glContextInfo(appCfg_);
