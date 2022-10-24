@@ -77,6 +77,10 @@ namespace Jazz2::Actors
 			return _weaponUpgrades;
 		}
 
+		bool HasSugarRush() const {
+			return (_sugarRushLeft > 0.0f);
+		}
+
 		bool CanBreakSolidObjects() const;
 		bool CanMoveVertically() const;
 
@@ -169,13 +173,13 @@ namespace Jazz2::Actors
 		float _springCooldown;
 		std::shared_ptr<AudioBufferPlayer> _copterSound;
 
-		int _lives, _coins, _foodEaten, _score;
+		int _lives, _coins, _coinsCheckpoint, _foodEaten, _score;
 		Vector2f _checkpointPos;
 		float _checkpointLight;
 
 		float _sugarRushLeft, _sugarRushStarsTime;
 		float _shieldSpawnTime;
-		int _gems, _gemsPitch;
+		int _gems, _gemsCheckpoint, _gemsPitch;
 		float _gemsTimer;
 		float _bonusWarpTimer;
 

@@ -243,6 +243,7 @@ namespace Jazz2
 		std::unique_ptr<AudioStreamPlayer> GetMusic(const StringView& path);
 		UI::Font* GetFont(FontType fontType);
 		Shader* GetShader(PrecompiledShader shader);
+		void CompileShaders();
 		static std::unique_ptr<Texture> GetNoiseTexture();
 
 		const uint32_t* GetPalettes() const {
@@ -284,7 +285,6 @@ namespace Jazz2
 
 		GenericGraphicResource* RequestGraphicsAura(const StringView& path, uint16_t paletteOffset);
 		static void ReadImageFromFile(std::unique_ptr<IFileStream>& s, uint8_t* data, int width, int height, int channelCount);
-		void CompileShaders();
 		void RecreateGemPalettes();
 #if NCINE_DEBUG
 		void MigrateGraphics(const StringView& path);

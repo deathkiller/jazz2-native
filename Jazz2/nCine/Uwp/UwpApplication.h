@@ -43,7 +43,7 @@ namespace nCine
 		std::thread _renderLoopThread;
 
 		/// Must be called at the beginning to initialize the application
-		void init(winrtWF::Uri uri);
+		void init(const winrtWF::Uri& uri);
 
 		void run();
 

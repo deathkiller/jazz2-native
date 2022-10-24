@@ -280,6 +280,8 @@ void GameEventHandler::onInit()
 	_pendingState = PendingState::None;
 
 	std::memset(_newestVersion, 0, sizeof(_newestVersion));
+
+	auto& resolver = ContentResolver::Current();
 	
 #if defined(DEATH_TARGET_ANDROID)
 	// Set working directory to external storage on Android
@@ -301,12 +303,13 @@ void GameEventHandler::onInit()
 		theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
 	}
 
-	auto& resolver = ContentResolver::Current();
 	String mappingsPath = fs::JoinPath(resolver.GetContentPath(), "gamecontrollerdb.txt"_s);
 	if (fs::IsReadableFile(mappingsPath)) {
 		theApplication().inputManager().addJoyMappingsFromFile(mappingsPath);
 	}
 #endif
+
+	resolver.CompileShaders();
 
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	// If threading support is enabled, refresh cache during intro cinematics and don't allow skip until it's completed
