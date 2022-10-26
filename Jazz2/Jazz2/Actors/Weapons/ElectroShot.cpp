@@ -20,7 +20,7 @@ namespace Jazz2::Actors::Weapons
 
 	Task<bool> ElectroShot::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await ShotBase::OnActivatedAsync(details);
+		async_await ShotBase::OnActivatedAsync(details);
 
 		_upgrades = details.Params[0];
 		_strength = 4;
@@ -29,13 +29,13 @@ namespace Jazz2::Actors::Weapons
 		SetState(ActorState::SkipPerPixelCollisions, true);
 		SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset, false);
 
-		co_await RequestMetadataAsync("Weapon/Electro"_s);
+		async_await RequestMetadataAsync("Weapon/Electro"_s);
 		SetAnimation(AnimState::Idle);
 		PlaySfx("Fire"_s);
 
 		_renderer.setDrawEnabled(false);
 
-		co_return true;
+		async_return true;
 	}
 
 	void ElectroShot::OnFire(const std::shared_ptr<ActorBase>& owner, Vector2f gunspotPos, Vector2f speed, float angle, bool isFacingLeft)

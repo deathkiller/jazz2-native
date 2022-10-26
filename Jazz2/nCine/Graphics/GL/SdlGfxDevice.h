@@ -34,16 +34,15 @@ namespace nCine {
 			SDL_GL_SwapWindow(windowHandle_);
 		}
 
-		inline void setWindowPosition(int x, int y) override {
-			SDL_SetWindowPosition(windowHandle_, x, y);
-		}
+		inline void setWindowPosition(int x, int y) override { SDL_SetWindowPosition(windowHandle_, x, y); }
+
+		void setWindowSize(int width, int height) override;
+
 		inline void setWindowTitle(const StringView& windowTitle) override {
 			SDL_SetWindowTitle(windowHandle_, String::nullTerminatedView(windowTitle).data());
 		}
 		void setWindowIcon(const StringView& windowIconFilename) override;
 
-		int windowPositionX() const override;
-		int windowPositionY() const override;
 		const Vector2i windowPosition() const override;
 
 		void flashWindow() const override;
@@ -60,6 +59,8 @@ namespace nCine {
 	protected:
 		void setResolutionInternal(int width, int height) override;
 
+		void updateMonitors() override;
+
 	private:
 		/// SDL2 window handle
 		static SDL_Window* windowHandle_;
@@ -74,9 +75,7 @@ namespace nCine {
 		/// Initilizes the video subsystem (SDL)
 		void initGraphics();
 		/// Initilizes the OpenGL graphic context
-		void initDevice(bool isFullscreen, bool isResizable);
-
-		void updateMonitors() override;
+		void initDevice(bool isResizable);
 
 		void convertVideoModeInfo(const SDL_DisplayMode& sdlVideoMode, IGfxDevice::VideoMode& videoMode) const;
 

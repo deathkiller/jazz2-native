@@ -48,12 +48,12 @@ namespace Jazz2::Actors::Bosses
 
 		_scoreValue = 3000;
 
-		co_await RequestMetadataAsync("Boss/Uterus"_s);
+		async_await RequestMetadataAsync("Boss/Uterus"_s);
 		SetAnimation(AnimState::Idle);
 
 		_renderer.setDrawEnabled(false);
 
-		co_return true;
+		async_return true;
 	}
 
 	bool Uterus::OnActivatedBoss()
@@ -241,10 +241,10 @@ namespace Jazz2::Actors::Bosses
 
 		_health = 3;
 
-		co_await RequestMetadataAsync("Boss/Uterus"_s);
+		async_await RequestMetadataAsync("Boss/Uterus"_s);
 		SetAnimation((AnimState)1073741827);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Uterus::ShieldPart::OnUpdate(float timeMult)

@@ -26,7 +26,7 @@ namespace Jazz2::Actors::Environment
 		SetState(ActorState::CanBeFrozen, false);
 		_renderer.setLayer(_renderer.layer() - 20);
 
-		co_await RequestMetadataAsync("Object/BonusWarp"_s);
+		async_await RequestMetadataAsync("Object/BonusWarp"_s);
 
 		switch (_cost) {
 			case 10:
@@ -47,7 +47,7 @@ namespace Jazz2::Actors::Environment
 				break;
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	void BonusWarp::OnUpdateHitbox()

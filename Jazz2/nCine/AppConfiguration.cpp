@@ -16,6 +16,7 @@ namespace nCine
 		resolution(0, 0),
 		fullscreen(false),
 		resizable(true),
+		windowScaling(true),
 		frameLimit(0),
 		useBufferMapping(false),
 		deferShaderQueries(true),
@@ -58,6 +59,11 @@ namespace nCine
 		useBufferMapping = false;
 #else
 		dataPath() = "Content"_s + fs::PathSeparator;
+#endif
+
+#if defined(DEATH_TARGET_UNIX) && defined(WITH_SDL)
+		// DPI queries do not seem to work reliably on X11 with SDL2
+		windowScaling = false;
 #endif
 	}
 

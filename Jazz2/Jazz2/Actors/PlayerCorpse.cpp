@@ -18,18 +18,18 @@ namespace Jazz2::Actors
 		switch (playerType) {
 			default:
 			case PlayerType::Jazz:
-				co_await RequestMetadataAsync("Interactive/PlayerJazz"_s);
+				async_await RequestMetadataAsync("Interactive/PlayerJazz"_s);
 				break;
 			case PlayerType::Spaz:
-				co_await RequestMetadataAsync("Interactive/PlayerSpaz"_s);
+				async_await RequestMetadataAsync("Interactive/PlayerSpaz"_s);
 				break;
 			case PlayerType::Lori:
-				co_await RequestMetadataAsync("Interactive/PlayerLori"_s);
+				async_await RequestMetadataAsync("Interactive/PlayerLori"_s);
 				break;
 		}
 
 		SetAnimation("Corpse"_s);
 
-		co_return true;
+		async_return true;
 	}
 }

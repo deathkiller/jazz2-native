@@ -21,16 +21,13 @@ namespace nCine
 	/// Handler class for nCine applications on UWP
 	class UwpApplication : public Application, public winrtWUX::ApplicationT<UwpApplication>
 	{
+		friend class AngleGfxDevice;
+
 	public:
 		/// Entry point method to be called in the `main()` function
 		static int start(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)());
 
-		UwpApplication()
-			:
-			Application(),
-			_dispatcher { nullptr }
-		{
-		}
+		UwpApplication() : Application() { }
 		~UwpApplication() = default;
 
 		winrt::hstring GetRuntimeClassName() const override { return winrt::hstring(L"App"); }
@@ -39,8 +36,8 @@ namespace nCine
 		void OnLaunched(winrtWAA::LaunchActivatedEventArgs const& args);
 
 	private:
+		static winrtWUC::CoreDispatcher _dispatcher;
 		winrtWUXC::SwapChainPanel _panel;
-		winrtWUC::CoreDispatcher _dispatcher;
 		std::thread _renderLoopThread;
 
 		/// Must be called at the beginning to initialize the application

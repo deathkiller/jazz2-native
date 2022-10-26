@@ -27,7 +27,7 @@ namespace Jazz2::Actors::Enemies
 
 		SetState(ActorState::CollideWithTilesetReduced, true);
 
-		co_await RequestMetadataAsync("Enemy/MadderHatter"_s);
+		async_await RequestMetadataAsync("Enemy/MadderHatter"_s);
 		SetFacingLeft(Random().NextBool());
 		SetAnimation(AnimState::Walk);
 
@@ -35,7 +35,7 @@ namespace Jazz2::Actors::Enemies
 
 		PlaceOnGround();
 
-		co_return true;
+		async_return true;
 	}
 
 	void MadderHatter::OnUpdate(float timeMult)
@@ -128,10 +128,10 @@ namespace Jazz2::Actors::Enemies
 
 		_health = INT32_MAX;
 
-		co_await RequestMetadataAsync("Enemy/MadderHatter"_s);
+		async_await RequestMetadataAsync("Enemy/MadderHatter"_s);
 		SetAnimation((AnimState)1073741826);
 
-		co_return true;
+		async_return true;
 	}
 
 	void MadderHatter::BulletSpit::OnUpdateHitbox()

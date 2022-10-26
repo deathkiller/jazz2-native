@@ -227,13 +227,13 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 	Task<bool> ScriptActorWrapper::OnActivatedAsync(const Actors::ActorActivationDetails& details)
 	{
 		if (_isDead->Get()) {
-			co_return false;
+			async_return false;
 		}
 
 		asIScriptEngine* engine = _obj->GetEngine();
 		asIScriptFunction* func = _obj->GetObjectType()->GetMethodByDecl("bool OnActivated(array<uint8> &in)");
 		if (func == nullptr) {
-			co_return false;
+			async_return false;
 		}
 
 		SetState(ActorState::CollideWithOtherActors, _onHandleCollision != nullptr);
@@ -257,7 +257,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		eventParams->Release();
 		engine->ReturnContext(ctx);
 
-		co_return result;
+		async_return result;
 	}
 
 	bool ScriptActorWrapper::OnTileDeactivated()
@@ -637,11 +637,11 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 			_timeLeft = 90.0f * FrameTimer::FramesPerSecond;
 		}
 
-		bool success = co_await ScriptActorWrapper::OnActivatedAsync(details);
+		bool success = async_await ScriptActorWrapper::OnActivatedAsync(details);
 
 		SetState(ActorState::CollideWithOtherActors | ActorState::SkipPerPixelCollisions, true);
 
-		co_return success;
+		async_return success;
 	}
 
 	bool ScriptCollectibleWrapper::OnHandleCollision(std::shared_ptr<ActorBase> other)

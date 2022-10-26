@@ -36,12 +36,12 @@ namespace Jazz2::Actors::Bosses
 
 		SetState(ActorState::CollideWithOtherActors | ActorState::CanBeFrozen, false);
 
-		co_await RequestMetadataAsync("Boss/DevanRemote"_s);
+		async_await RequestMetadataAsync("Boss/DevanRemote"_s);
 		SetAnimation(AnimState::Idle);
 
 		SetFacingLeft(true);
 
-		co_return true;
+		async_return true;
 	}
 
 	bool DevanRemote::OnActivatedBoss()

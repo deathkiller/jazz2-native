@@ -25,7 +25,7 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(1);
 		_scoreValue = 100;
 
-		co_await RequestMetadataAsync("Enemy/Helmut"_s);
+		async_await RequestMetadataAsync("Enemy/Helmut"_s);
 		SetFacingLeft(Random().NextBool());
 		SetAnimation(AnimState::Walk);
 
@@ -33,7 +33,7 @@ namespace Jazz2::Actors::Enemies
 
 		PlaceOnGround();
 
-		co_return true;
+		async_return true;
 	}
 
 	void Helmut::OnUpdate(float timeMult)

@@ -25,7 +25,7 @@ namespace Jazz2::Actors::Weapons
 	{
 		SetState(ActorState::CanBeFrozen, false);
 
-		co_return true;
+		async_return true;
 	}
 
 	Player* ShotBase::GetOwner()

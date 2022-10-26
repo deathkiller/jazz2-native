@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project(nCine)
+project(Jazz2)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 get_filename_component(PARENT_SOURCE_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
@@ -88,7 +88,7 @@ foreach(SOURCE_FILE IN LISTS SHADER_FILES)
 	source_group("Shaders" FILES ${SOURCE_FILE})
 endforeach()
 foreach(SOURCE_FILE ${GENERATED_SOURCES})
-	source_group("Generated" FILES ${SOURCE_FILE})
+	source_group("Generated Files" FILES ${SOURCE_FILE})
 endforeach()
 
 if(OPENGL_FOUND)

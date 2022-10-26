@@ -34,7 +34,7 @@ namespace nCine
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void MemoryFile::Open(FileAccessMode mode, bool shouldExitOnFailToOpen)
+	void MemoryFile::Open(FileAccessMode mode)
 	{
 		// Checking if the file is already opened
 		if (fileDescriptor_ >= 0) {

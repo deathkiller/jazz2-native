@@ -10,15 +10,15 @@ namespace Jazz2::Actors::Collectibles
 
 	Task<bool> OneUpCollectible::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await CollectibleBase::OnActivatedAsync(details);
+		async_await CollectibleBase::OnActivatedAsync(details);
 
 		_scoreValue = 1000;
 
-		co_await RequestMetadataAsync("Collectible/OneUp"_s);
+		async_await RequestMetadataAsync("Collectible/OneUp"_s);
 
 		SetAnimation("OneUp"_s);
 
-		co_return true;
+		async_return true;
 	}
 
 	void OneUpCollectible::OnCollect(Player* player)

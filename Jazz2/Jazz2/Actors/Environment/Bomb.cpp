@@ -32,14 +32,14 @@ namespace Jazz2::Actors::Environment
 		_elasticity = 0.3f;
 
 		switch (theme) {
-			case 0: co_await RequestMetadataAsync("Object/Bomb"_s); break;
-			case 1: co_await RequestMetadataAsync("Enemy/LizardFloat"_s); break;
-			case 2: co_await RequestMetadataAsync("Enemy/LizardFloatXmas"_s); break;
+			case 0: async_await RequestMetadataAsync("Object/Bomb"_s); break;
+			case 1: async_await RequestMetadataAsync("Enemy/LizardFloat"_s); break;
+			case 2: async_await RequestMetadataAsync("Enemy/LizardFloatXmas"_s); break;
 		}
 
 		SetAnimation("Bomb"_s);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Bomb::OnUpdate(float timeMult)

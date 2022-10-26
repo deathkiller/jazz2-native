@@ -29,10 +29,10 @@ namespace Jazz2::Actors::Bosses
 
 		SetState(ActorState::CollideWithTilesetReduced, true);
 
-		co_await RequestMetadataAsync("Boss/Bubba"_s);
+		async_await RequestMetadataAsync("Boss/Bubba"_s);
 		SetAnimation(AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	bool Bubba::OnActivatedBoss()
@@ -245,10 +245,10 @@ namespace Jazz2::Actors::Bosses
 
 		_health = INT32_MAX;
 
-		co_await RequestMetadataAsync("Boss/Bubba"_s);
+		async_await RequestMetadataAsync("Boss/Bubba"_s);
 		SetAnimation((AnimState)1073741834);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Bubba::Fireball::OnUpdate(float timeMult)

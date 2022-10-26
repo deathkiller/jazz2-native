@@ -28,13 +28,13 @@ namespace Jazz2::Actors::Enemies
 
 		SetState(ActorState::CollideWithTilesetReduced, true);
 
-		co_await RequestMetadataAsync("Enemy/Demon"_s);
+		async_await RequestMetadataAsync("Enemy/Demon"_s);
 		SetFacingLeft(Random().NextBool());
 		SetAnimation(AnimState::Idle);
 
 		PlaceOnGround();
 
-		co_return true;
+		async_return true;
 	}
 
 	void Demon::OnUpdate(float timeMult)

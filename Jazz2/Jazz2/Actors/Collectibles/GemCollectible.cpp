@@ -12,11 +12,11 @@ namespace Jazz2::Actors::Collectibles
 
 	Task<bool> GemCollectible::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await CollectibleBase::OnActivatedAsync(details);
+		async_await CollectibleBase::OnActivatedAsync(details);
 
 		_gemType = (uint8_t)(details.Params[0] & 0x03);
 
-		co_await RequestMetadataAsync("Collectible/Gems"_s);
+		async_await RequestMetadataAsync("Collectible/Gems"_s);
 
 		switch (_gemType) {
 			default:
@@ -42,7 +42,7 @@ namespace Jazz2::Actors::Collectibles
 
 		_renderer.setAlphaF(0.7f);
 
-		co_return true;
+		async_return true;
 	}
 
 	void GemCollectible::OnUpdateHitbox()

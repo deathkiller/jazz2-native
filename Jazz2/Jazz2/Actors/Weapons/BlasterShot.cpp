@@ -19,14 +19,14 @@ namespace Jazz2::Actors::Weapons
 
 	Task<bool> BlasterShot::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await ShotBase::OnActivatedAsync(details);
+		async_await ShotBase::OnActivatedAsync(details);
 
 		_upgrades = details.Params[0];
 
 		SetState(ActorState::SkipPerPixelCollisions, true);
 		SetState(ActorState::ApplyGravitation, false);
 
-		co_await RequestMetadataAsync("Weapon/Blaster"_s);
+		async_await RequestMetadataAsync("Weapon/Blaster"_s);
 
 		AnimState state = AnimState::Idle;
 		if ((_upgrades & 0x01) != 0) {
@@ -42,7 +42,7 @@ namespace Jazz2::Actors::Weapons
 
 		_renderer.setBlendingPreset(DrawableNode::BlendingPreset::ADDITIVE);
 
-		co_return true;
+		async_return true;
 	}
 
 	void BlasterShot::OnFire(const std::shared_ptr<ActorBase>& owner, Vector2f gunspotPos, Vector2f speed, float angle, bool isFacingLeft)

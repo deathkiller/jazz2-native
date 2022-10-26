@@ -52,7 +52,7 @@ namespace nCine
 		}
 
 		/// Tries to open the file
-		virtual void Open(FileAccessMode mode, bool shouldExitOnFailToOpen) = 0;
+		virtual void Open(FileAccessMode mode) = 0;
 		/// Closes the file
 		virtual void Close() = 0;
 		/// Seeks in an opened file
@@ -71,7 +71,7 @@ namespace nCine
 		inline void SetCloseOnDestruction(bool shouldCloseOnDestruction) {
 			shouldCloseOnDestruction_ = shouldCloseOnDestruction;
 		}
-		/// Returns true if the file is already opened
+		/// Returns true if the file has been sucessfully opened
 		virtual bool IsOpened() const;
 
 		/// Returns file name with path

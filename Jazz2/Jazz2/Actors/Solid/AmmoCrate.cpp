@@ -28,7 +28,7 @@ namespace Jazz2::Actors::Solid
 			AddContent(EventType::Ammo, 5, &details.Params[0], 1);
 		}
 
-		co_await RequestMetadataAsync("Object/CrateContainer"_s);
+		async_await RequestMetadataAsync("Object/CrateContainer"_s);
 
 		switch (weaponType) {
 			case WeaponType::Bouncer: SetAnimation("CrateAmmoBouncer"_s); break;
@@ -43,7 +43,7 @@ namespace Jazz2::Actors::Solid
 			default: SetAnimation(AnimState::Idle); break;
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	bool AmmoCrate::OnHandleCollision(std::shared_ptr<ActorBase> other)

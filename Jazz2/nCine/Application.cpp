@@ -124,11 +124,6 @@ namespace nCine
 		}
 	}
 
-	void Application::handleFullscreenChanged(bool isFullscreen)
-	{
-		appEventHandler_->onFullscreenChanged(isFullscreen);
-	}
-
 	///////////////////////////////////////////////////////////
 	// PROTECTED FUNCTIONS
 	///////////////////////////////////////////////////////////
@@ -151,6 +146,8 @@ namespace nCine
 		TracyAppInfo("nCine", 5);
 		LOGI("Tracy integration is enabled");
 #endif
+
+		renderingSettings_.windowScaling = appCfg_.windowScaling;
 
 		theServiceLocator().registerIndexer(std::make_unique<ArrayIndexer>());
 #ifdef WITH_AUDIO
@@ -215,6 +212,13 @@ namespace nCine
 
 #ifdef WITH_LUA
 		LuaStatistics::update();
+#endif
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		const bool scalingChanged = gfxDevice_->updateScaling(renderingSettings_.windowScaling);
+		if (scalingChanged) {
+			appEventHandler_->onChangeScalingFactor(gfxDevice_->windowScalingFactor());
+		}
 #endif
 
 		{

@@ -55,13 +55,13 @@ namespace Jazz2::Actors::Solid
 
 		switch (_type) {
 			default:
-			case PlatformType::CarrotusFruit: co_await RequestMetadataAsync("MovingPlatform/CarrotusFruit"_s); break;
-			case PlatformType::Ball: co_await RequestMetadataAsync("MovingPlatform/Ball"_s); break;
-			case PlatformType::CarrotusGrass: co_await RequestMetadataAsync("MovingPlatform/CarrotusGrass"_s); break;
-			case PlatformType::Lab: co_await RequestMetadataAsync("MovingPlatform/Lab"_s); break;
-			case PlatformType::Sonic: co_await RequestMetadataAsync("MovingPlatform/Sonic"_s); break;
-			case PlatformType::Spike: co_await RequestMetadataAsync("MovingPlatform/Spike"_s); break;
-			case PlatformType::SpikeBall: co_await RequestMetadataAsync("MovingPlatform/SpikeBall"_s); break;
+			case PlatformType::CarrotusFruit: async_await RequestMetadataAsync("MovingPlatform/CarrotusFruit"_s); break;
+			case PlatformType::Ball: async_await RequestMetadataAsync("MovingPlatform/Ball"_s); break;
+			case PlatformType::CarrotusGrass: async_await RequestMetadataAsync("MovingPlatform/CarrotusGrass"_s); break;
+			case PlatformType::Lab: async_await RequestMetadataAsync("MovingPlatform/Lab"_s); break;
+			case PlatformType::Sonic: async_await RequestMetadataAsync("MovingPlatform/Sonic"_s); break;
+			case PlatformType::Spike: async_await RequestMetadataAsync("MovingPlatform/Spike"_s); break;
+			case PlatformType::SpikeBall: async_await RequestMetadataAsync("MovingPlatform/SpikeBall"_s); break;
 		}
 
 		SetAnimation("Platform"_s);
@@ -80,7 +80,7 @@ namespace Jazz2::Actors::Solid
 			}
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	void MovingPlatform::OnUpdate(float timeMult)

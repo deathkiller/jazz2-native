@@ -16,7 +16,7 @@ namespace Jazz2::Actors::Weapons
 
 	Task<bool> PepperShot::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await ShotBase::OnActivatedAsync(details);
+		async_await ShotBase::OnActivatedAsync(details);
 
 		_upgrades = details.Params[0];
 		_strength = 1;
@@ -24,7 +24,7 @@ namespace Jazz2::Actors::Weapons
 		SetState(ActorState::SkipPerPixelCollisions, true);
 		SetState(ActorState::ApplyGravitation, false);
 
-		co_await RequestMetadataAsync("Weapon/Pepper"_s);
+		async_await RequestMetadataAsync("Weapon/Pepper"_s);
 
 		AnimState state = AnimState::Idle;
 		if ((_upgrades & 0x01) != 0) {
@@ -39,7 +39,7 @@ namespace Jazz2::Actors::Weapons
 
 		_renderer.setBlendingPreset(DrawableNode::BlendingPreset::ADDITIVE);
 
-		co_return true;
+		async_return true;
 	}
 
 	void PepperShot::OnFire(const std::shared_ptr<ActorBase>& owner, Vector2f gunspotPos, Vector2f speed, float angle, bool isFacingLeft)

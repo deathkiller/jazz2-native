@@ -24,13 +24,13 @@ namespace Jazz2::Actors::Collectibles
 	{
 		SetState(ActorState::ApplyGravitation, false);
 
-		co_await RequestMetadataAsync("Object/GemGiant"_s);
+		async_await RequestMetadataAsync("Object/GemGiant"_s);
 
 		SetAnimation("GemGiant"_s);
 
 		_renderer.setAlphaF(0.7f);
 
-		co_return true;
+		async_return true;
 	}
 
 	bool GemGiant::OnHandleCollision(std::shared_ptr<ActorBase> other)

@@ -25,7 +25,7 @@ namespace Jazz2::Actors::Lighting
 		SetState(ActorState::ForceDisableCollisions, true);
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
-		co_return true;
+		async_return true;
 	}
 
 	void PulsatingRadialLight::OnUpdate(float timeMult)

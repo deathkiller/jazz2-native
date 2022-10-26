@@ -19,8 +19,9 @@
 namespace nCine
 {
 	static UwpApplication* _instance;
-
 	static std::unique_ptr<IAppEventHandler>(*_createAppEventHandler)();
+
+	winrtWUC::CoreDispatcher UwpApplication::_dispatcher = nullptr;
 
 	Application& theApplication()
 	{
@@ -125,12 +126,15 @@ namespace nCine
 		appEventHandler_->onPreInit(modifiableAppCfg);
 		LOGI("IAppEventHandler::onPreInit() invoked");
 
-		// Graphics device should always be created before the input manager!
 		auto window = winrtWUX::Window::Current();
 
-		window.SizeChanged([](const auto&, const winrtWUC::WindowSizeChangedEventArgs& args) {
+		window.SizeChanged([](const auto&, winrtWUC::WindowSizeChangedEventArgs args) {
 			auto& gfxDevice = dynamic_cast<AngleGfxDevice&>(theApplication().gfxDevice());
-			gfxDevice._sizeChanged = 2;
+			gfxDevice._sizeChanged = 10;
+		});
+
+		winrtWUC::SystemNavigationManager::GetForCurrentView().BackRequested([](const auto&, winrtWUC::BackRequestedEventArgs args) {
+			args.Handled(true);
 		});
 
 		window.Content(_panel);
@@ -148,11 +152,13 @@ namespace nCine
 		titleBar.ButtonInactiveBackgroundColor(winrt::Windows::UI::Color { 0, 0, 0, 0 });
 		titleBar.ButtonInactiveForegroundColor(winrt::Windows::UI::Color { 160, 255, 255, 255 });
 
+		auto displayInfo = winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView();
+
 		if (appCfg_.fullscreen) {
 			winrtWUV::ApplicationView::PreferredLaunchWindowingMode(winrtWUV::ApplicationViewWindowingMode::FullScreen);
 			window.Activate();
 		} else if (appCfg_.resolution.X > 0 && appCfg_.resolution.Y > 0) {
-			float dpi = winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView().LogicalDpi();
+			float dpi = displayInfo.LogicalDpi();
 			winrtWUV::ApplicationView::PreferredLaunchWindowingMode(winrtWUV::ApplicationViewWindowingMode::PreferredLaunchViewSize);
 			winrtWF::Size desiredSize = winrtWF::Size((appCfg_.resolution.X * IGfxDevice::DefaultDPI / dpi), (appCfg_.resolution.Y * IGfxDevice::DefaultDPI / dpi));
 			winrtWUV::ApplicationView::PreferredLaunchViewSize(desiredSize);
@@ -167,10 +173,16 @@ namespace nCine
 		IGfxDevice::GLContextInfo glContextInfo(appCfg_);
 		const DisplayMode::VSync vSyncMode = (appCfg_.withVSync ? DisplayMode::VSync::Enabled : DisplayMode::VSync::Disabled);
 		DisplayMode displayMode(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, vSyncMode);
-		const IGfxDevice::WindowMode windowMode(appCfg_.resolution.X, appCfg_.resolution.Y, appCfg_.fullscreen, appCfg_.resizable);
+		const IGfxDevice::WindowMode windowMode(appCfg_.resolution.X, appCfg_.resolution.Y, appCfg_.fullscreen, appCfg_.resizable, appCfg_.windowScaling);
 
+		// Graphics device should always be created before the input manager!
 		gfxDevice_ = std::make_unique<AngleGfxDevice>(windowMode, glContextInfo, displayMode, _panel);
 		inputManager_ = std::make_unique<XinputInputManager>();
+
+		displayInfo.DpiChanged([](const auto&, const auto& args) {
+			auto& gfxDevice = dynamic_cast<AngleGfxDevice&>(theApplication().gfxDevice());
+			gfxDevice.updateMonitors();
+		});
 
 		_renderLoopThread = std::thread([this] { this->run(); });
 

@@ -25,7 +25,7 @@ namespace Jazz2::Actors::Solid
 
 		_morphType = (MorphType)details.Params[0];
 
-		co_await RequestMetadataAsync("Object/PowerUpMonitor"_s);
+		async_await RequestMetadataAsync("Object/PowerUpMonitor"_s);
 
 		switch (_morphType) {
 			case MorphType::Swap2: SetAnimation("Swap2"_s); break;
@@ -45,7 +45,7 @@ namespace Jazz2::Actors::Solid
 			}
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	bool PowerUpMorphMonitor::OnHandleCollision(std::shared_ptr<ActorBase> other)

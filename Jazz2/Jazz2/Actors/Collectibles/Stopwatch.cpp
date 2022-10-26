@@ -10,14 +10,14 @@ namespace Jazz2::Actors::Collectibles
 
 	Task<bool> Stopwatch::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await CollectibleBase::OnActivatedAsync(details);
+		async_await CollectibleBase::OnActivatedAsync(details);
 
-		co_await RequestMetadataAsync("Collectible/Stopwatch"_s);
+		async_await RequestMetadataAsync("Collectible/Stopwatch"_s);
 
 		SetAnimation("Stopwatch"_s);
 		SetFacingDirection();
 
-		co_return true;
+		async_return true;
 	}
 
 	void Stopwatch::OnCollect(Player* player)

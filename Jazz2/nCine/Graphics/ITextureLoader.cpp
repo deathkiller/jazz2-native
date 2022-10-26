@@ -133,7 +133,7 @@ namespace nCine
 
 		// If the file has not been already opened by a header reader method
 		if (!fileHandle_->IsOpened()) {
-			fileHandle_->Open(FileAccessMode::Read, false);
+			fileHandle_->Open(FileAccessMode::Read);
 		}
 
 		dataSize_ = fileHandle_->GetSize() - headerSize_;

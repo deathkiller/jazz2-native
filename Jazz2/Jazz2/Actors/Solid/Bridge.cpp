@@ -57,13 +57,13 @@ namespace Jazz2::Actors::Solid
 
 		switch (_bridgeType) {
 			default:
-			case BridgeType::Rope: co_await RequestMetadataAsync("Bridge/Rope"_s); _widths = PieceWidthsRope; _widthsCount = _countof(PieceWidthsRope); break;
-			case BridgeType::Stone: co_await RequestMetadataAsync("Bridge/Stone"_s); _widths = PieceWidthsStone; _widthsCount = _countof(PieceWidthsStone); break;
-			case BridgeType::Vine: co_await RequestMetadataAsync("Bridge/Vine"_s); _widths = PieceWidthsVine; _widthsCount = _countof(PieceWidthsVine); _widthOffset = 8; break;
-			case BridgeType::StoneRed: co_await RequestMetadataAsync("Bridge/StoneRed"_s); _widths = PieceWidthsStoneRed; _widthsCount = _countof(PieceWidthsStoneRed); break;
-			case BridgeType::Log: co_await RequestMetadataAsync("Bridge/Log"_s); _widths = PieceWidthsLog; _widthsCount = _countof(PieceWidthsLog); break;
-			case BridgeType::Gem: co_await RequestMetadataAsync("Bridge/Gem"_s); _widths = PieceWidthsGem; _widthsCount = _countof(PieceWidthsGem); break;
-			case BridgeType::Lab: co_await RequestMetadataAsync("Bridge/Lab"_s); _widths = PieceWidthsLab; _widthsCount = _countof(PieceWidthsLab); _widthOffset = 12; break;
+			case BridgeType::Rope: async_await RequestMetadataAsync("Bridge/Rope"_s); _widths = PieceWidthsRope; _widthsCount = _countof(PieceWidthsRope); break;
+			case BridgeType::Stone: async_await RequestMetadataAsync("Bridge/Stone"_s); _widths = PieceWidthsStone; _widthsCount = _countof(PieceWidthsStone); break;
+			case BridgeType::Vine: async_await RequestMetadataAsync("Bridge/Vine"_s); _widths = PieceWidthsVine; _widthsCount = _countof(PieceWidthsVine); _widthOffset = 8; break;
+			case BridgeType::StoneRed: async_await RequestMetadataAsync("Bridge/StoneRed"_s); _widths = PieceWidthsStoneRed; _widthsCount = _countof(PieceWidthsStoneRed); break;
+			case BridgeType::Log: async_await RequestMetadataAsync("Bridge/Log"_s); _widths = PieceWidthsLog; _widthsCount = _countof(PieceWidthsLog); break;
+			case BridgeType::Gem: async_await RequestMetadataAsync("Bridge/Gem"_s); _widths = PieceWidthsGem; _widthsCount = _countof(PieceWidthsGem); break;
+			case BridgeType::Lab: async_await RequestMetadataAsync("Bridge/Lab"_s); _widths = PieceWidthsLab; _widthsCount = _countof(PieceWidthsLab); _widthOffset = 12; break;
 		}
 
 		SetAnimation("Piece"_s);
@@ -86,7 +86,7 @@ namespace Jazz2::Actors::Solid
 			widthCovered += (_widths[i % _widthsCount] + _widths[(i + 1) % _widthsCount]) / 2;
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	void Bridge::OnUpdate(float timeMult)

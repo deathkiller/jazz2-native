@@ -54,7 +54,7 @@ namespace Jazz2::Actors::Bosses
 
 		_scoreValue = 3000;
 
-		co_await RequestMetadataAsync("Boss/Bolly"_s);
+		async_await RequestMetadataAsync("Boss/Bolly"_s);
 		SetAnimation(AnimState::Idle);
 
 		_bottom = std::make_shared<BollyPart>();
@@ -86,7 +86,7 @@ namespace Jazz2::Actors::Bosses
 			_levelHandler->AddActor(_chain[i]);
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	bool Bolly::OnActivatedBoss()
@@ -299,7 +299,7 @@ namespace Jazz2::Actors::Bosses
 
 		_health = INT32_MAX;
 
-		co_await RequestMetadataAsync("Boss/Bolly"_s);
+		async_await RequestMetadataAsync("Boss/Bolly"_s);
 		SetAnimation((AnimState)partType);
 
 		switch (partType) {
@@ -323,7 +323,7 @@ namespace Jazz2::Actors::Bosses
 				break;
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	void Bolly::BollyPart::OnUpdate(float timeMult)
@@ -341,11 +341,10 @@ namespace Jazz2::Actors::Bosses
 		_timeLeft = 300.0f;
 		_health = INT32_MAX;
 
-		co_await RequestMetadataAsync("Boss/Bolly"_s);
+		async_await RequestMetadataAsync("Boss/Bolly"_s);
 		SetAnimation((AnimState)5);
 
-
-		co_return true;
+		async_return true;
 	}
 
 	void Bolly::Rocket::OnUpdate(float timeMult)

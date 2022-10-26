@@ -30,10 +30,10 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(1);
 		_scoreValue = 100;
 
-		co_await RequestMetadataAsync("Enemy/Bat"_s);
+		async_await RequestMetadataAsync("Enemy/Bat"_s);
 		SetAnimation(AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Bat::OnUpdate(float timeMult)

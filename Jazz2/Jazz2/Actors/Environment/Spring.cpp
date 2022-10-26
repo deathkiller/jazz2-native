@@ -46,7 +46,7 @@ namespace Jazz2::Actors::Environment
 
 		SetState(ActorState::SkipPerPixelCollisions, true);
 
-		co_await RequestMetadataAsync("Object/Spring"_s);
+		async_await RequestMetadataAsync("Object/Spring"_s);
 
 		Vector2f tileCorner = Vector2f((int)(_pos.X / Tiles::TileSet::DefaultTileSize) * Tiles::TileSet::DefaultTileSize,
 			(int)(_pos.Y / Tiles::TileSet::DefaultTileSize) * Tiles::TileSet::DefaultTileSize);
@@ -119,7 +119,7 @@ namespace Jazz2::Actors::Environment
 			}
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	void Spring::OnUpdate(float timeMult)

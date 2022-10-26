@@ -41,13 +41,25 @@ namespace nCine
 	const float GlfwInputManager::JoystickEventsSimulator::AxisEventTolerance = 0.001f;
 	GlfwInputManager::JoystickEventsSimulator GlfwInputManager::joyEventsSimulator_;
 
+	int GlfwInputManager::preScalingWidth_ = 0;
+	int GlfwInputManager::preScalingHeight_ = 0;
+	unsigned long int GlfwInputManager::lastFrameWindowSizeChanged_ = 0;
+
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
 
 	GlfwInputManager::GlfwInputManager()
 	{
+		GlfwGfxDevice& gfxDevice = static_cast<GlfwGfxDevice&>(theApplication().gfxDevice());
+		preScalingWidth_ = gfxDevice.width_;
+		preScalingHeight_ = gfxDevice.height_;
+
+		glfwSetMonitorCallback(monitorCallback);
 		glfwSetWindowCloseCallback(GlfwGfxDevice::windowHandle(), windowCloseCallback);
+#if (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300)
+		glfwSetWindowContentScaleCallback(GlfwGfxDevice::windowHandle(), windowContentScaleCallback);
+#endif
 		glfwSetWindowSizeCallback(GlfwGfxDevice::windowHandle(), windowSizeCallback);
 		glfwSetFramebufferSizeCallback(GlfwGfxDevice::windowHandle(), framebufferSizeCallback);
 		glfwSetKeyCallback(GlfwGfxDevice::windowHandle(), keyCallback);
@@ -260,18 +272,39 @@ namespace nCine
 	void GlfwInputManager::windowCloseCallback(GLFWwindow* window)
 	{
 		bool shouldQuit = true;
-		if (inputEventHandler_)
+		if (inputEventHandler_) {
 			shouldQuit = inputEventHandler_->onQuitRequest();
+		}
 
-		if (shouldQuit)
+		if (shouldQuit) {
 			theApplication().quit();
-		else
+		} else {
 			glfwSetWindowShouldClose(window, GLFW_FALSE);
+		}
+	}
+
+	void GlfwInputManager::windowContentScaleCallback(GLFWwindow* window, float xscale, float yscale)
+	{
+		GlfwGfxDevice& gfxDevice = static_cast<GlfwGfxDevice&>(theApplication().gfxDevice());
+
+		// Revert the window size change if it happened the same frame its scale also changed
+		if (lastFrameWindowSizeChanged_ == theApplication().numFrames()) {
+			gfxDevice.width_ = preScalingWidth_;
+			gfxDevice.height_ = preScalingHeight_;
+		}
+
+		gfxDevice.updateMonitorScaling(gfxDevice.windowMonitorIndex());
 	}
 
 	void GlfwInputManager::windowSizeCallback(GLFWwindow* window, int width, int height)
 	{
 		GlfwGfxDevice& gfxDevice = static_cast<GlfwGfxDevice&>(theApplication().gfxDevice());
+
+		// Save previous resolution for if a content scale event is coming just after a resize
+		preScalingWidth_ = gfxDevice.width_;
+		preScalingHeight_ = gfxDevice.height_;
+		lastFrameWindowSizeChanged_ = theApplication().numFrames();
+
 		gfxDevice.width_ = width;
 		gfxDevice.height_ = height;
 

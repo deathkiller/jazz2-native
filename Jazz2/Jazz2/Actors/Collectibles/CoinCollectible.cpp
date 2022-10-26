@@ -12,11 +12,11 @@ namespace Jazz2::Actors::Collectibles
 
 	Task<bool> CoinCollectible::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await CollectibleBase::OnActivatedAsync(details);
+		async_await CollectibleBase::OnActivatedAsync(details);
 
 		uint8_t coinType = details.Params[0];
 
-		co_await RequestMetadataAsync("Collectible/Coins"_s);
+		async_await RequestMetadataAsync("Collectible/Coins"_s);
 
 		switch (coinType) {
 			default:
@@ -34,7 +34,7 @@ namespace Jazz2::Actors::Collectibles
 
 		SetFacingDirection();
 
-		co_return true;
+		async_return true;
 	}
 
 	void CoinCollectible::OnCollect(Player* player)

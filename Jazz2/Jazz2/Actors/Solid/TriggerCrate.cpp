@@ -29,11 +29,11 @@ namespace Jazz2::Actors::Solid
 
 		Movable = true;
 
-		co_await RequestMetadataAsync("Object/TriggerCrate"_s);
+		async_await RequestMetadataAsync("Object/TriggerCrate"_s);
 
 		SetAnimation("Crate"_s);
 
-		co_return true;
+		async_return true;
 	}
 
 	bool TriggerCrate::OnHandleCollision(std::shared_ptr<ActorBase> other)

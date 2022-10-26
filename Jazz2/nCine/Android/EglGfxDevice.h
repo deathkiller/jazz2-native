@@ -22,14 +22,14 @@ namespace nCine
 		~EglGfxDevice() override;
 
 		void setSwapInterval(int interval) override { }
-
 		void setResolution(bool fullscreen, int width = 0, int height = 0) override { }
+		void setWindowPosition(int x, int y) override { }
+		void setWindowSize(int width, int height) override { }
 
 		inline void update() override {
 			eglSwapBuffers(display_, surface_);
 		}
 
-		void setWindowPosition(int x, int y) override { }
 		void setWindowTitle(const StringView& windowTitle) override { }
 		void setWindowIcon(const StringView& windowIconFilename) override { }
 

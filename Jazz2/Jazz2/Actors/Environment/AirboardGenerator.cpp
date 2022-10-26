@@ -19,11 +19,11 @@ namespace Jazz2::Actors::Environment
 		_delay = details.Params[0];
 		_active = true;
 
-		co_await RequestMetadataAsync("Object/Airboard"_s);
+		async_await RequestMetadataAsync("Object/Airboard"_s);
 
 		SetAnimation("Airboard"_s);
 
-		co_return true;
+		async_return true;
 	}
 
 	void AirboardGenerator::OnUpdate(float timeMult)

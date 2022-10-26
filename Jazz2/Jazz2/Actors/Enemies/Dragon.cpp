@@ -28,11 +28,11 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(1);
 		_scoreValue = 200;
 
-		co_await RequestMetadataAsync("Enemy/Dragon"_s);
+		async_await RequestMetadataAsync("Enemy/Dragon"_s);
 		SetFacingLeft(Random().NextBool());
 		SetAnimation(AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Dragon::OnUpdate(float timeMult)
@@ -136,7 +136,7 @@ namespace Jazz2::Actors::Enemies
 
 		SetFacingLeft(details.Params[0] != 0);
 
-		co_await RequestMetadataAsync("Weapon/Toaster"_s);
+		async_await RequestMetadataAsync("Weapon/Toaster"_s);
 		SetAnimation("Fire"_s);
 
 		constexpr float BaseSpeed = 1.6f;
@@ -145,7 +145,7 @@ namespace Jazz2::Actors::Enemies
 
 		_timeLeft = 60.0f;
 
-		co_return true;
+		async_return true;
 	}
 
 	void Dragon::Fire::OnUpdate(float timeMult)

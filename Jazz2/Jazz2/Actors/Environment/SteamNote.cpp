@@ -17,13 +17,13 @@ namespace Jazz2::Actors::Environment
 		SetState(ActorState::ForceDisableCollisions, true);
 		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
-		co_await RequestMetadataAsync("Object/SteamNote"_s);
+		async_await RequestMetadataAsync("Object/SteamNote"_s);
 
 		SetAnimation("SteamNote"_s);
 
 		PlaySfx("Appear"_s, 0.4f);
 
-		co_return true;
+		async_return true;
 	}
 
 	void SteamNote::OnUpdate(float timeMult)

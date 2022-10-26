@@ -35,17 +35,17 @@ namespace Jazz2::Actors::Environment
 		switch (_theme) {
 			case 0:
 			default:
-				co_await RequestMetadataAsync("Object/Checkpoint"_s);
+				async_await RequestMetadataAsync("Object/Checkpoint"_s);
 				break;
 
 			case 1: // Xmas
-				co_await RequestMetadataAsync("Object/CheckpointXmas"_s);
+				async_await RequestMetadataAsync("Object/CheckpointXmas"_s);
 				break;
 		}
 
 		SetAnimation(_activated ? "Opened"_s : "Closed"_s);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Checkpoint::OnUpdateHitbox()

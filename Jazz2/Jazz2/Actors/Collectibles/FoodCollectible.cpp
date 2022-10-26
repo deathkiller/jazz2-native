@@ -55,48 +55,48 @@ namespace Jazz2::Actors::Collectibles
 
 	Task<bool> FoodCollectible::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await CollectibleBase::OnActivatedAsync(details);
+		async_await CollectibleBase::OnActivatedAsync(details);
 
 		_scoreValue = 50;
 
 		FoodType foodType = (FoodType)details.Params[0];
 		switch (foodType) {
-			case FoodType::Apple: co_await RequestMetadataAsync("Collectible/FoodApple"_s); break;
-			case FoodType::Banana: co_await RequestMetadataAsync("Collectible/FoodBanana"_s); break;
-			case FoodType::Cherry: co_await RequestMetadataAsync("Collectible/FoodCherry"_s); break;
-			case FoodType::Orange: co_await RequestMetadataAsync("Collectible/FoodOrange"_s); break;
-			case FoodType::Pear: co_await RequestMetadataAsync("Collectible/FoodPear"_s); break;
-			case FoodType::Pretzel: co_await RequestMetadataAsync("Collectible/FoodPretzel"_s); break;
-			case FoodType::Strawberry: co_await RequestMetadataAsync("Collectible/FoodStrawberry"_s); break;
-			case FoodType::Lemon: co_await RequestMetadataAsync("Collectible/FoodLemon"_s); break;
-			case FoodType::Lime: co_await RequestMetadataAsync("Collectible/FoodLime"_s); break;
-			case FoodType::Thing: co_await RequestMetadataAsync("Collectible/FoodThing"_s); break;
-			case FoodType::WaterMelon: co_await RequestMetadataAsync("Collectible/FoodWaterMelon"_s); break;
-			case FoodType::Peach: co_await RequestMetadataAsync("Collectible/FoodPeach"_s); break;
-			case FoodType::Grapes: co_await RequestMetadataAsync("Collectible/FoodGrapes"_s); break;
-			case FoodType::Lettuce: co_await RequestMetadataAsync("Collectible/FoodLettuce"_s); break;
-			case FoodType::Eggplant: co_await RequestMetadataAsync("Collectible/FoodEggplant"_s); break;
-			case FoodType::Cucumber: co_await RequestMetadataAsync("Collectible/FoodCucumber"_s); break;
-			case FoodType::Pepsi: co_await RequestMetadataAsync("Collectible/FoodPepsi"_s); break;
-			case FoodType::Coke: co_await RequestMetadataAsync("Collectible/FoodCoke"_s); break;
-			case FoodType::Milk: co_await RequestMetadataAsync("Collectible/FoodMilk"_s); break;
-			case FoodType::Pie: co_await RequestMetadataAsync("Collectible/FoodPie"_s); break;
-			case FoodType::Cake: co_await RequestMetadataAsync("Collectible/FoodCake"_s); break;
-			case FoodType::Donut: co_await RequestMetadataAsync("Collectible/FoodDonut"_s); break;
-			case FoodType::Cupcake: co_await RequestMetadataAsync("Collectible/FoodCupcake"_s); break;
-			case FoodType::Chips: co_await RequestMetadataAsync("Collectible/FoodChips"_s); break;
-			case FoodType::Candy: co_await RequestMetadataAsync("Collectible/FoodCandy"_s); break;
-			case FoodType::Chocolate: co_await RequestMetadataAsync("Collectible/FoodChocolate"_s); break;
-			case FoodType::IceCream: co_await RequestMetadataAsync("Collectible/FoodIceCream"_s); break;
-			case FoodType::Burger: co_await RequestMetadataAsync("Collectible/FoodBurger"_s); break;
-			case FoodType::Pizza: co_await RequestMetadataAsync("Collectible/FoodPizza"_s); break;
-			case FoodType::Fries: co_await RequestMetadataAsync("Collectible/FoodFries"_s); break;
-			case FoodType::ChickenLeg: co_await RequestMetadataAsync("Collectible/FoodChickenLeg"_s); break;
-			case FoodType::Sandwich: co_await RequestMetadataAsync("Collectible/FoodSandwich"_s); break;
-			case FoodType::Taco: co_await RequestMetadataAsync("Collectible/FoodTaco"_s); break;
-			case FoodType::HotDog: co_await RequestMetadataAsync("Collectible/FoodHotDog"_s); break;
-			case FoodType::Ham: co_await RequestMetadataAsync("Collectible/FoodHam"_s); break;
-			case FoodType::Cheese: co_await RequestMetadataAsync("Collectible/FoodCheese"_s); break;
+			case FoodType::Apple: async_await RequestMetadataAsync("Collectible/FoodApple"_s); break;
+			case FoodType::Banana: async_await RequestMetadataAsync("Collectible/FoodBanana"_s); break;
+			case FoodType::Cherry: async_await RequestMetadataAsync("Collectible/FoodCherry"_s); break;
+			case FoodType::Orange: async_await RequestMetadataAsync("Collectible/FoodOrange"_s); break;
+			case FoodType::Pear: async_await RequestMetadataAsync("Collectible/FoodPear"_s); break;
+			case FoodType::Pretzel: async_await RequestMetadataAsync("Collectible/FoodPretzel"_s); break;
+			case FoodType::Strawberry: async_await RequestMetadataAsync("Collectible/FoodStrawberry"_s); break;
+			case FoodType::Lemon: async_await RequestMetadataAsync("Collectible/FoodLemon"_s); break;
+			case FoodType::Lime: async_await RequestMetadataAsync("Collectible/FoodLime"_s); break;
+			case FoodType::Thing: async_await RequestMetadataAsync("Collectible/FoodThing"_s); break;
+			case FoodType::WaterMelon: async_await RequestMetadataAsync("Collectible/FoodWaterMelon"_s); break;
+			case FoodType::Peach: async_await RequestMetadataAsync("Collectible/FoodPeach"_s); break;
+			case FoodType::Grapes: async_await RequestMetadataAsync("Collectible/FoodGrapes"_s); break;
+			case FoodType::Lettuce: async_await RequestMetadataAsync("Collectible/FoodLettuce"_s); break;
+			case FoodType::Eggplant: async_await RequestMetadataAsync("Collectible/FoodEggplant"_s); break;
+			case FoodType::Cucumber: async_await RequestMetadataAsync("Collectible/FoodCucumber"_s); break;
+			case FoodType::Pepsi: async_await RequestMetadataAsync("Collectible/FoodPepsi"_s); break;
+			case FoodType::Coke: async_await RequestMetadataAsync("Collectible/FoodCoke"_s); break;
+			case FoodType::Milk: async_await RequestMetadataAsync("Collectible/FoodMilk"_s); break;
+			case FoodType::Pie: async_await RequestMetadataAsync("Collectible/FoodPie"_s); break;
+			case FoodType::Cake: async_await RequestMetadataAsync("Collectible/FoodCake"_s); break;
+			case FoodType::Donut: async_await RequestMetadataAsync("Collectible/FoodDonut"_s); break;
+			case FoodType::Cupcake: async_await RequestMetadataAsync("Collectible/FoodCupcake"_s); break;
+			case FoodType::Chips: async_await RequestMetadataAsync("Collectible/FoodChips"_s); break;
+			case FoodType::Candy: async_await RequestMetadataAsync("Collectible/FoodCandy"_s); break;
+			case FoodType::Chocolate: async_await RequestMetadataAsync("Collectible/FoodChocolate"_s); break;
+			case FoodType::IceCream: async_await RequestMetadataAsync("Collectible/FoodIceCream"_s); break;
+			case FoodType::Burger: async_await RequestMetadataAsync("Collectible/FoodBurger"_s); break;
+			case FoodType::Pizza: async_await RequestMetadataAsync("Collectible/FoodPizza"_s); break;
+			case FoodType::Fries: async_await RequestMetadataAsync("Collectible/FoodFries"_s); break;
+			case FoodType::ChickenLeg: async_await RequestMetadataAsync("Collectible/FoodChickenLeg"_s); break;
+			case FoodType::Sandwich: async_await RequestMetadataAsync("Collectible/FoodSandwich"_s); break;
+			case FoodType::Taco: async_await RequestMetadataAsync("Collectible/FoodTaco"_s); break;
+			case FoodType::HotDog: async_await RequestMetadataAsync("Collectible/FoodHotDog"_s); break;
+			case FoodType::Ham: async_await RequestMetadataAsync("Collectible/FoodHam"_s); break;
+			case FoodType::Cheese: async_await RequestMetadataAsync("Collectible/FoodCheese"_s); break;
 		}
 
 		switch (foodType) {
@@ -113,7 +113,7 @@ namespace Jazz2::Actors::Collectibles
 		SetAnimation("Food"_s);
 		SetFacingDirection();
 
-		co_return true;
+		async_return true;
 	}
 
 	void FoodCollectible::OnCollect(Player* player)

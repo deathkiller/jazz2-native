@@ -15,14 +15,14 @@ namespace Jazz2::Actors::Weapons
 
 	Task<bool> ToasterShot::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await ShotBase::OnActivatedAsync(details);
+		async_await ShotBase::OnActivatedAsync(details);
 
 		_strength = 1;
 		_upgrades = details.Params[0];
 
 		SetState(ActorState::ApplyGravitation, false);
 
-		co_await RequestMetadataAsync("Weapon/Toaster"_s);
+		async_await RequestMetadataAsync("Weapon/Toaster"_s);
 
 		AnimState state = AnimState::Idle;
 		if ((_upgrades & 0x01) != 0) {
@@ -34,7 +34,7 @@ namespace Jazz2::Actors::Weapons
 
 		SetAnimation(state);
 
-		co_return true;
+		async_return true;
 	}
 
 	void ToasterShot::OnFire(const std::shared_ptr<ActorBase>& owner, Vector2f gunspotPos, Vector2f speed, float angle, bool isFacingLeft)

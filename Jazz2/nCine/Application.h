@@ -23,15 +23,17 @@ namespace nCine
 		struct RenderingSettings
 		{
 			RenderingSettings()
-				: batchingEnabled(true), batchingWithIndices(false),
-				cullingEnabled(true), minBatchSize(4), maxBatchSize(500) {}
+				: windowScaling(true), batchingEnabled(true), batchingWithIndices(false), cullingEnabled(true),
+				  minBatchSize(4), maxBatchSize(500) {}
 
+			/// True if automatic window size scaling is enabled
+			bool windowScaling;
+			/// True if node culling is enabled
+			bool cullingEnabled;
 			/// True if batching is enabled
 			bool batchingEnabled;
 			/// True if using indices for vertex batching
 			bool batchingWithIndices;
-			/// True if node culling is enabled
-			bool cullingEnabled;
 			/// Minimum size for a batch to be collected
 			unsigned int minBatchSize;
 			/// Maximum size for a batch before a forced split
@@ -92,36 +94,22 @@ namespace nCine
 		/// Returns a factor that represents how long the last frame took relative to the desired frame time
 		float timeMult() const;
 
-		/// Returns the screen width as a float number
-		inline float width() const {
-			return static_cast<float>(gfxDevice_->width());
-		}
-		/// Returns the screen height as a float number
-		inline float height() const {
-			return static_cast<float>(gfxDevice_->height());
-		}
-		/// Returns the screen resolution as a `Vector2f` object
-		inline Vector2f resolution() const {
-			return Vector2f(width(), height());
-		}
+		/// Returns the drawable screen width as a float number
+		inline float width() const { return static_cast<float>(gfxDevice_->drawableWidth()); }
+		/// Returns the drawable screen height as a float number
+		inline float height() const { return static_cast<float>(gfxDevice_->drawableHeight()); }
+		/// Returns the drawable screen resolution as a `Vector2f` object
+		inline Vector2f resolution() const { return Vector2f(width(), height()); }
 
-		/// Returns the screen width as an integer number
-		inline int widthInt() const {
-			return gfxDevice_->width();
-		}
-		/// Returns the screen height as an integer number
-		inline int heightInt() const {
-			return gfxDevice_->height();
-		}
-		/// Returns the screen resolution as a `Vector2i` object
-		inline Vector2i resolutionInt() const {
-			return gfxDevice_->resolution();
-		}
+		/// Returns the drawable screen width as an integer number
+		inline int widthInt() const { return gfxDevice_->drawableWidth(); }
+		/// Returns the drawable screen height as an integer number
+		inline int heightInt() const { return gfxDevice_->drawableHeight(); }
+		/// Returns the drawable screen resolution as a `Vector2i` object
+		inline Vector2i resolutionInt() const { return gfxDevice_->resolution(); }
 
 		/// Resizes the screen viewport, if exists
 		void resizeScreenViewport(int width, int height);
-
-		void handleFullscreenChanged(bool isFullscreen);
 
 		/// Returns the value of the suspension flag
 		/*! If `true` the application is suspended, it will neither update nor receive events */

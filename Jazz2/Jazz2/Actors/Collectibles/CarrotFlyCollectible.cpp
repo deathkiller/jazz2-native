@@ -10,16 +10,16 @@ namespace Jazz2::Actors::Collectibles
 
 	Task<bool> CarrotFlyCollectible::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await CollectibleBase::OnActivatedAsync(details);
+		async_await CollectibleBase::OnActivatedAsync(details);
 
 		_scoreValue = 500;
 
-		co_await RequestMetadataAsync("Collectible/CarrotFly"_s);
+		async_await RequestMetadataAsync("Collectible/CarrotFly"_s);
 
 		SetAnimation("Carrot"_s);
 		SetFacingDirection();
 
-		co_return true;
+		async_return true;
 	}
 
 	void CarrotFlyCollectible::OnCollect(Player* player)

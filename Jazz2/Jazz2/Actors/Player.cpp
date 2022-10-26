@@ -90,16 +90,16 @@ namespace Jazz2::Actors
 
 		switch (_playerType) {
 			case PlayerType::Jazz:
-				co_await RequestMetadataAsync("Interactive/PlayerJazz"_s);
+				async_await RequestMetadataAsync("Interactive/PlayerJazz"_s);
 				break;
 			case PlayerType::Spaz:
-				co_await RequestMetadataAsync("Interactive/PlayerSpaz"_s);
+				async_await RequestMetadataAsync("Interactive/PlayerSpaz"_s);
 				break;
 			case PlayerType::Lori:
-				co_await RequestMetadataAsync("Interactive/PlayerLori"_s);
+				async_await RequestMetadataAsync("Interactive/PlayerLori"_s);
 				break;
 			case PlayerType::Frog:
-				co_await RequestMetadataAsync("Interactive/PlayerFrog"_s);
+				async_await RequestMetadataAsync("Interactive/PlayerFrog"_s);
 				break;
 		}
 
@@ -119,7 +119,7 @@ namespace Jazz2::Actors
 		_checkpointPos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
 		_checkpointLight = _levelHandler->GetAmbientLight();
 
-		co_return true;
+		async_return true;
 	}
 
 	bool Player::CanBreakSolidObjects() const

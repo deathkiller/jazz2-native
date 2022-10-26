@@ -44,10 +44,10 @@ namespace Jazz2::Actors::Enemies
 		switch (theme) {
 			case 0:
 			default:
-				co_await RequestMetadataAsync("Enemy/Lizard"_s);
+				async_await RequestMetadataAsync("Enemy/Lizard"_s);
 				break;
 			case 1: // Xmas
-				co_await RequestMetadataAsync("Enemy/LizardXmas"_s);
+				async_await RequestMetadataAsync("Enemy/LizardXmas"_s);
 				break;
 		}
 		SetFacingLeft(isFacingLeft);
@@ -78,7 +78,7 @@ namespace Jazz2::Actors::Enemies
 			PlaceOnGround();
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	void Lizard::OnUpdate(float timeMult)

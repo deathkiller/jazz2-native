@@ -40,16 +40,16 @@ namespace Jazz2::Actors::Environment
 
 		switch (_type) {
 			case 0: // Chuck (red)
-				co_await RequestMetadataAsync("Object/BirdCageChuck"_s);
+				async_await RequestMetadataAsync("Object/BirdCageChuck"_s);
 				break;
 			case 1: // Birdy (yellow)
-				co_await RequestMetadataAsync("Object/BirdCageBirdy"_s);
+				async_await RequestMetadataAsync("Object/BirdCageBirdy"_s);
 				break;
 		}
 
 		SetAnimation(_activated ? AnimState::Activated : AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	bool BirdCage::OnHandleCollision(std::shared_ptr<ActorBase> other)

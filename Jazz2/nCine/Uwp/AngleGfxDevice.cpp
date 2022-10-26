@@ -1,12 +1,31 @@
 #include "AngleGfxDevice.h"
-#include "../Application.h"
+#include "UwpApplication.h"
 
+#include <angle_windowsstore.h>
+
+#include <winrt/Windows.UI.Core.h>
 #include <winrt/Windows.Graphics.Display.h>
+#include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Foundation.Collections.h>
 
 #include <Utf8.h>
 
 namespace nCine
 {
+	AngleGfxDevice::AngleGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const winrtWUXC::SwapChainPanel& withVisual)
+		: IGfxDevice(windowMode, glContextInfo, displayMode), _renderSurface { EGL_NO_SURFACE }, _hostVisual(withVisual), _sizeChanged(2)
+	{
+		initWindowScaling(windowMode);
+		Initialize();
+		CreateRenderSurface();
+	}
+
+	AngleGfxDevice::~AngleGfxDevice()
+	{
+		DestroyRenderSurface();
+		Cleanup();
+	}
+
 	void AngleGfxDevice::Initialize()
 	{
 		const EGLint configAttributes[] = { EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8, EGL_DEPTH_SIZE, 8, EGL_STENCIL_SIZE, 8, EGL_NONE };
@@ -62,7 +81,6 @@ namespace nCine
 		// This tries to initialize EGL to D3D11 Feature Level 10_0+. See above comment for details.
 		_eglDisplay = eglGetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE, EGL_DEFAULT_DISPLAY, defaultDisplayAttributes);
 		if (_eglDisplay == EGL_NO_DISPLAY) {
-
 			throw winrt::hresult_error(E_FAIL, L"Failed to get EGL display");
 		}
 
@@ -124,7 +142,12 @@ namespace nCine
 			throw winrt::hresult_error(E_INVALIDARG, L"SwapChainPanel parameter is invalid");
 		}
 
-		_renderSurface = eglCreateWindowSurface(_eglDisplay, _eglConfig, static_cast<EGLNativeWindowType>(winrt::get_abi(_hostVisual)), nullptr);
+		winrtWF::Collections::PropertySet surfaceProperties;
+		surfaceProperties.Insert(EGLNativeWindowTypeProperty, _hostVisual);
+		// TODO: EGL_WIDTH, EGL_HEIGHT is divided by scale factor, it looks blurry, but this call doesn't work
+		//surfaceProperties.Insert(EGLRenderResolutionScaleProperty, winrtWF::PropertyValue::CreateSingle(monitors_[0].scale.X));
+
+		_renderSurface = eglCreateWindowSurface(_eglDisplay, _eglConfig, static_cast<EGLNativeWindowType>(winrt::get_abi(surfaceProperties)), nullptr);
 		if (_renderSurface == EGL_NO_SURFACE) {
 			throw winrt::hresult_error(E_FAIL, L"Failed to create EGL surface");
 		}
@@ -156,9 +179,12 @@ namespace nCine
 			if (panelWidth > 0 && panelHeight > 0) {
 				_sizeChanged--;
 				if (panelWidth != width_ || panelHeight != height_) {
-					width_ = drawableWidth_ = panelWidth;
-					height_ = drawableHeight_ = panelHeight;
-					theApplication().resizeScreenViewport(width_, height_);
+					// TODO: EGL_WIDTH, EGL_HEIGHT is divided by scale factor, it looks blurry
+					width_ = panelWidth;
+					height_ = panelHeight;
+					drawableWidth_ = width_; //* monitors_[0].scale.X;
+					drawableHeight_ = height_; //* monitors_[0].scale.Y;
+					theApplication().resizeScreenViewport(drawableWidth_, drawableHeight_);
 				}
 			}
 		}
@@ -178,12 +204,45 @@ namespace nCine
 			}
 		}
 
+		isFullscreen_ = fullscreen;
 		_sizeChanged = 2;
+	}
+
+	void AngleGfxDevice::setWindowSize(int width, int height)
+	{
+		// This method is usually called from main thread, but it's required on UI thread
+		UwpApplication::_dispatcher.RunIdleAsync([width, height](auto args) {
+			winrtWF::Size desiredSize = winrtWF::Size(width, height);
+			winrtWUV::ApplicationView::GetForCurrentView().TryResizeView(desiredSize);
+		});
 	}
 
 	void AngleGfxDevice::setWindowTitle(const StringView& windowTitle)
 	{
+		// TODO: Disabled for now for Windows RT, because it appends application name
+		// This method is usually called from main thread, but it's required on UI thread
 		//auto windowTitleW = Death::Utf8::ToUtf16(windowTitle);
-		//winrtWUV::ApplicationView::GetForCurrentView().Title(winrt::hstring(windowTitleW.data(), windowTitleW.size()));
+		//UwpApplication::_dispatcher.RunIdleAsync([windowTitleW = std::move(windowTitleW)](auto args) {
+		//	winrtWUV::ApplicationView::GetForCurrentView().Title(winrt::hstring(windowTitleW.data(), windowTitleW.size()));
+		//});
+	}
+
+	void AngleGfxDevice::updateMonitors()
+	{
+		auto displayInfo = winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView();
+
+		numMonitors_ = 1;
+		auto& monitor = monitors_[0];
+		monitor.name = nullptr;
+		monitor.position = Vector2i::Zero;
+
+		float dpi = displayInfo.LogicalDpi();
+		monitor.scale.X = dpi / DefaultDPI;
+		monitor.scale.Y = dpi / DefaultDPI;
+
+		monitor.numVideoModes = 1;
+		auto& videoMode = monitor.videoModes[0];
+		videoMode.width = displayInfo.ScreenWidthInRawPixels();
+		videoMode.height = displayInfo.ScreenHeightInRawPixels();
 	}
 }

@@ -29,12 +29,12 @@ namespace Jazz2::Actors::Weapons
 
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
-		co_await RequestMetadataAsync("Weapon/TNT"_s);
+		async_await RequestMetadataAsync("Weapon/TNT"_s);
 
 		AnimState state = AnimState::Idle;
 		SetAnimation(AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	Player* TNT::GetOwner()

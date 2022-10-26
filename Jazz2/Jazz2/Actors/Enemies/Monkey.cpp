@@ -31,7 +31,7 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(3);
 		_scoreValue = 200;
 
-		co_await RequestMetadataAsync("Enemy/Monkey"_s);
+		async_await RequestMetadataAsync("Enemy/Monkey"_s);
 
 		if (_isWalking) {
 			SetFacingLeft(Random().NextBool());
@@ -44,7 +44,7 @@ namespace Jazz2::Actors::Enemies
 			SetAnimation(AnimState::Jump);
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	void Monkey::OnUpdate(float timeMult)
@@ -157,12 +157,12 @@ namespace Jazz2::Actors::Enemies
 		_speed.X = (IsFacingLeft() ? -8.0f : 8.0f);
 		_speed.Y = -3.0f;
 
-		co_await RequestMetadataAsync("Enemy/Monkey"_s);
+		async_await RequestMetadataAsync("Enemy/Monkey"_s);
 		SetAnimation((AnimState)1073741828);
 
 		_soundThrow = PlaySfx("BananaThrow"_s);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Monkey::Banana::OnUpdateHitbox()

@@ -18,42 +18,12 @@ if(WIN32)
 	if(WINDOWS_PHONE OR WINDOWS_STORE)
 		target_compile_definitions(ncine PUBLIC "DEATH_TARGET_WINDOWS_RT")
 		
-		# TODO: Check this
-		target_compile_options(ncine PRIVATE "-await")
+		# Workaround for "error C1189: The <experimental/coroutine> and <experimental/resumable> headers are only supported with /await"
+		target_compile_options(ncine PRIVATE /await)
 		# Workaround for "error C2039: 'wait_for': is not a member of 'winrt::impl'"
 		target_compile_options(ncine PRIVATE /Zc:twoPhase-)
-		target_link_libraries(ncine PRIVATE "WindowsApp.lib" "rpcrt4.lib" "onecoreuap.lib")
+		target_link_libraries(ncine PRIVATE WindowsApp.lib rpcrt4.lib onecoreuap.lib)
 		set_target_properties(ncine PROPERTIES VS_GLOBAL_MinimalCoreWin "true")
-
-		# Include dependencies in UWP package
-		set(UWP_DEPENDENCIES
-			${MSVC_BINDIR}/libEGL.dll
-			${MSVC_BINDIR}/libGLESv2.dll
-			# TODO: Include also "zlib1.dll"
-		)
-		
-		if(LIBDEFLATE_FOUND)
-			list(APPEND UWP_DEPENDENCIES ${MSVC_BINDIR}/libdeflate.dll)
-		elseif(ZLIB_FOUND)
-			list(APPEND UWP_DEPENDENCIES ${MSVC_BINDIR}/zlib.dll)
-		endif()
-		
-		if(NCINE_WITH_WEBP AND WEBP_FOUND)
-			list(APPEND UWP_DEPENDENCIES ${MSVC_BINDIR}/libwebp.dll)
-		endif()
-		
-		if(NCINE_WITH_AUDIO AND OPENAL_FOUND)
-			list(APPEND UWP_DEPENDENCIES ${MSVC_BINDIR}/OpenAL32.dll)
-			
-			if(NCINE_WITH_VORBIS AND VORBIS_FOUND)
-				list(APPEND UWP_DEPENDENCIES ${MSVC_BINDIR}/libogg.dll ${MSVC_BINDIR}/libvorbis.dll ${MSVC_BINDIR}/libvorbisfile.dll)
-			endif()
-		endif()
-		
-		target_sources(ncine PRIVATE ${UWP_DEPENDENCIES})
-		set_property(SOURCE ${UWP_DEPENDENCIES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
-		set_property(SOURCE ${UWP_DEPENDENCIES} PROPERTY VS_DEPLOYMENT_LOCATION ".")
-		source_group("Dependencies" FILES ${UWP_DEPENDENCIES})
 	else()
 		set_target_properties(ncine PROPERTIES OUTPUT_NAME "Jazz2")
 	endif()

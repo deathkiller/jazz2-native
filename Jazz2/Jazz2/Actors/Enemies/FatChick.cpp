@@ -26,7 +26,7 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(3);
 		_scoreValue = 300;
 
-		co_await RequestMetadataAsync("Enemy/FatChick"_s);
+		async_await RequestMetadataAsync("Enemy/FatChick"_s);
 		SetFacingLeft(Random().NextBool());
 		SetAnimation(AnimState::Walk);
 
@@ -34,7 +34,7 @@ namespace Jazz2::Actors::Enemies
 
 		PlaceOnGround();
 
-		co_return true;
+		async_return true;
 	}
 
 	void FatChick::OnUpdate(float timeMult)

@@ -22,7 +22,7 @@ namespace Jazz2::Actors::Solid
 
 		_shieldType = (ShieldType)details.Params[0];
 
-		co_await RequestMetadataAsync("Object/PowerUpMonitorShield"_s);
+		async_await RequestMetadataAsync("Object/PowerUpMonitorShield"_s);
 
 		switch (_shieldType) {
 			case ShieldType::Fire: SetAnimation("ShieldFire"_s); break;
@@ -33,7 +33,7 @@ namespace Jazz2::Actors::Solid
 			default: SetAnimation("Empty"_s); break;
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	bool PowerUpShieldMonitor::OnHandleCollision(std::shared_ptr<ActorBase> other)

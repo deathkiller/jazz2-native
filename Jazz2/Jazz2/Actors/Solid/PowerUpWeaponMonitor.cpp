@@ -25,7 +25,7 @@ namespace Jazz2::Actors::Solid
 
 		_weaponType = (WeaponType)details.Params[0];
 
-		co_await RequestMetadataAsync("Object/PowerUpMonitor"_s);
+		async_await RequestMetadataAsync("Object/PowerUpMonitor"_s);
 
 		switch (_weaponType) {
 			default:
@@ -51,7 +51,7 @@ namespace Jazz2::Actors::Solid
 			case WeaponType::Thunderbolt: SetAnimation("Thunderbolt"_s); break;
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	bool PowerUpWeaponMonitor::OnHandleCollision(std::shared_ptr<ActorBase> other)

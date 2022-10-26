@@ -36,7 +36,8 @@ namespace nCine
 		: IGfxDevice(windowMode, glContextInfo, displayMode)
 	{
 		initGraphics();
-		initDevice(windowMode.isFullscreen, windowMode.isResizable);
+		initWindowScaling(windowMode);
+		initDevice(windowMode.isResizable);
 	}
 
 	SdlGfxDevice::~SdlGfxDevice()
@@ -59,6 +60,8 @@ namespace nCine
 
 	void SdlGfxDevice::setResolution(bool fullscreen, int width, int height)
 	{
+		isFullscreen_ = fullscreen;
+
 		if (fullscreen) {
 			if (width == 0 || height == 0) {
 				SDL_SetWindowFullscreen(windowHandle_, SDL_WINDOW_FULLSCREEN_DESKTOP);
@@ -102,18 +105,18 @@ namespace nCine
 		SDL_FreeSurface(surface);
 	}
 
-	int SdlGfxDevice::windowPositionX() const
+	void SdlGfxDevice::setWindowSize(int width, int height)
 	{
-		int posX = 0;
-		SDL_GetWindowPosition(windowHandle_, &posX, nullptr);
-		return posX;
-	}
+		// change resolution only in case it is valid and it really changes
+		if (width == 0 || height == 0 || (width == width_ && height == height_)) {
+			return;
+		}
 
-	int SdlGfxDevice::windowPositionY() const
-	{
-		int posY = 0;
-		SDL_GetWindowPosition(windowHandle_, nullptr, &posY);
-		return posY;
+		if (!isFullscreen_) {
+			SDL_SetWindowSize(windowHandle_, width, height);
+			SDL_GetWindowSize(windowHandle_, &width_, &height_);
+			SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
+		}
 	}
 
 	const Vector2i SdlGfxDevice::windowPosition() const
@@ -125,15 +128,14 @@ namespace nCine
 
 	void SdlGfxDevice::flashWindow() const
 	{
-#if SDL_MAJOR_VERSION >= 2 && SDL_PATCHLEVEL >= 16 && !defined(__EMSCRIPTEN__)
+#if SDL_MAJOR_VERSION >= 2 && SDL_PATCHLEVEL >= 16 && !defined(DEATH_TARGET_EMSCRIPTEN)
 		SDL_FlashWindow(windowHandle_, SDL_FLASH_UNTIL_FOCUSED);
 #endif
 	}
 
 	int SdlGfxDevice::windowMonitorIndex() const
 	{
-		const int index = SDL_GetWindowDisplayIndex(windowHandle_);
-		return index;
+		return (windowHandle_ ? SDL_GetWindowDisplayIndex(windowHandle_) : 0);
 	}
 
 	const IGfxDevice::VideoMode& SdlGfxDevice::currentVideoMode(unsigned int monitorIndex) const
@@ -151,8 +153,9 @@ namespace nCine
 	bool SdlGfxDevice::setVideoMode(unsigned int modeIndex)
 	{
 		int displayIndex = SDL_GetWindowDisplayIndex(windowHandle_);
-		if (displayIndex < 0 || displayIndex >= numMonitors_)
+		if (displayIndex < 0 || displayIndex >= numMonitors_) {
 			displayIndex = 0;
+		}
 
 		if (modeIndex < monitors_[displayIndex].numVideoModes) {
 			SDL_DisplayMode mode;
@@ -172,7 +175,7 @@ namespace nCine
 		FATAL_ASSERT_MSG_X(!err, "SDL_Init(SDL_INIT_VIDEO) failed: %s", SDL_GetError());
 	}
 
-	void SdlGfxDevice::initDevice(bool isFullscreen, bool isResizable)
+	void SdlGfxDevice::initDevice(bool isResizable)
 	{
 		updateMonitors();
 
@@ -201,10 +204,15 @@ namespace nCine
 		if (glContextInfo_.debugContext)
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		Uint32 flags = SDL_WINDOW_OPENGL;
+#else
 		Uint32 flags = SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI;
+#endif
 		if (width_ == 0 || height_ == 0) {
 			flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-		} else if (isFullscreen) {
+			isFullscreen_ = true;
+		} else if (isFullscreen_) {
 			flags |= SDL_WINDOW_FULLSCREEN;
 		}
 
@@ -252,8 +260,6 @@ namespace nCine
 
 			float hDpi, vDpi;
 			SDL_GetDisplayDPI(i, nullptr, &hDpi, &vDpi);
-			monitors_[i].dpi.X = hDpi;
-			monitors_[i].dpi.Y = vDpi;
 			monitors_[i].scale.X = hDpi / DefaultDPI;
 			monitors_[i].scale.Y = vDpi / DefaultDPI;
 

@@ -1,6 +1,7 @@
 #if defined(WITH_GLFW)
 
 #include "GlfwGfxDevice.h"
+#include "../../Input/GlfwInputManager.h"
 #include "../ITextureLoader.h"
 
 namespace nCine
@@ -22,7 +23,8 @@ namespace nCine
 		: IGfxDevice(windowMode, glContextInfo, displayMode)
 	{
 		initGraphics();
-		initDevice(windowMode.isFullscreen, windowMode.isResizable);
+		initWindowScaling(windowMode);
+		initDevice(windowMode.isResizable);
 	}
 
 	GlfwGfxDevice::~GlfwGfxDevice()
@@ -43,13 +45,14 @@ namespace nCine
 
 	void GlfwGfxDevice::setResolution(bool fullscreen, int width, int height)
 	{
-		if (fsMonitorIndex_ < 0 || fsMonitorIndex_ > numMonitors_) {
-			fsMonitorIndex_ = windowMonitorIndex();
-		}
+		// The windows goes in full screen on the same monitor
+		fsMonitorIndex_ = windowMonitorIndex();
 
-		// The windows goes in full screen on the monitor it was on on the last call to `setVideoMode()`
 		GLFWmonitor* monitor = monitorPointers_[fsMonitorIndex_];
 		const GLFWvidmode* currentMode = glfwGetVideoMode(monitorPointers_[fsMonitorIndex_]);
+
+		bool wasFullscreen = isFullscreen_;
+		isFullscreen_ = fullscreen;
 
 		if (fullscreen) {
 			int width = (monitor != nullptr ? currentMode->width : width_);
@@ -78,8 +81,12 @@ namespace nCine
 				width_ = width;
 				height_ = height;
 			}
+
 			glfwSetWindowMonitor(windowHandle_, nullptr, 0, 0, width_, height_, GLFW_DONT_CARE);
-			glfwSetWindowPos(windowHandle_, (currentMode->width - width_) / 2, (currentMode->height - height_) / 2);
+			if (wasFullscreen) {
+				glfwSetWindowPos(windowHandle_, monitors_[fsMonitorIndex_].position.X + (currentMode->width - width_) / 2,
+					monitors_[fsMonitorIndex_].position.Y + (currentMode->height - height_) / 2);
+			}
 		}
 
 		glfwGetWindowSize(windowHandle_, &width_, &height_);
@@ -109,25 +116,41 @@ namespace nCine
 		glfwSetWindowIcon(windowHandle_, 1, &glfwImage);
 	}
 
-	int GlfwGfxDevice::windowPositionX() const
-	{
-		int posX = 0;
-		glfwGetWindowPos(windowHandle_, &posX, nullptr);
-		return posX;
-	}
-
-	int GlfwGfxDevice::windowPositionY() const
-	{
-		int posY = 0;
-		glfwGetWindowPos(windowHandle_, nullptr, &posY);
-		return posY;
-	}
-
 	const Vector2i GlfwGfxDevice::windowPosition() const
 	{
 		Vector2i position(0, 0);
 		glfwGetWindowPos(windowHandle_, &position.X, &position.Y);
 		return position;
+	}
+
+	void GlfwGfxDevice::setWindowPosition(int x, int y)
+	{
+		int width = width_;
+		int height = height_;
+		glfwGetWindowSize(windowHandle_, &width_, &height_);
+
+		glfwSetWindowSizeCallback(GlfwGfxDevice::windowHandle(), nullptr);
+		glfwSetFramebufferSizeCallback(GlfwGfxDevice::windowHandle(), nullptr);
+
+		glfwSetWindowPos(windowHandle_, x, y);
+		glfwSetWindowSize(windowHandle_, width, height);
+
+		glfwSetWindowSizeCallback(GlfwGfxDevice::windowHandle(), GlfwInputManager::windowSizeCallback);
+		glfwSetFramebufferSizeCallback(GlfwGfxDevice::windowHandle(), GlfwInputManager::framebufferSizeCallback);
+	}
+
+	void GlfwGfxDevice::setWindowSize(int width, int height)
+	{
+		// change resolution only in case it is valid and it really changes
+		if (width == 0 || height == 0 || (width == width_ && height == height_)) {
+			return;
+		}
+
+		if (!isFullscreen_) {
+			glfwSetWindowSize(windowHandle_, width, height);
+			glfwGetWindowSize(windowHandle_, &width_, &height_);
+			glfwGetFramebufferSize(windowHandle_, &drawableWidth_, &drawableHeight_);
+		}
 	}
 
 	void GlfwGfxDevice::flashWindow() const
@@ -147,8 +170,9 @@ namespace nCine
 
 	int GlfwGfxDevice::windowMonitorIndex() const
 	{
-		if (numMonitors_ == 1)
+		if (numMonitors_ == 1 || windowHandle_ == nullptr) {
 			return 0;
+		}
 
 		GLFWmonitor* monitor = glfwGetWindowMonitor(windowHandle_);
 		if (monitor == nullptr) {
@@ -186,7 +210,9 @@ namespace nCine
 			monitor = monitorPointers_[monitorIndex];
 
 		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-		convertVideoModeInfo(*mode, currentVideoMode_);
+		if (mode != nullptr) {
+			convertVideoModeInfo(*mode, currentVideoMode_);
+		}
 
 		return currentVideoMode_;
 	}
@@ -225,12 +251,10 @@ namespace nCine
 		FATAL_ASSERT_MSG(glfwInit() == GL_TRUE, "glfwInit() failed");
 	}
 
-	void GlfwGfxDevice::initDevice(bool isFullscreen, bool isResizable)
+	void GlfwGfxDevice::initDevice(bool isResizable)
 	{
-		updateMonitors();
-
 		GLFWmonitor* monitor = nullptr;
-		if (isFullscreen) {
+		if (isFullscreen_) {
 			monitor = glfwGetPrimaryMonitor();
 			const GLFWvidmode* vidMode = glfwGetVideoMode(monitor);
 			glfwWindowHint(GLFW_REFRESH_RATE, vidMode->refreshRate);
@@ -315,8 +339,6 @@ namespace nCine
 			monitors_[i].scale.X = emscripten_get_device_pixel_ratio();
 			monitors_[i].scale.Y = monitors_[i].scale.X;
 #endif
-			monitors_[i].dpi.X = DefaultDPI * monitors_[i].scale.X;
-			monitors_[i].dpi.Y = DefaultDPI * monitors_[i].scale.Y;
 
 			int modeCount = 0;
 			const GLFWvidmode* modes = glfwGetVideoModes(monitor, &modeCount);
@@ -338,6 +360,23 @@ namespace nCine
 
 		fsMonitorIndex_ = -1;
 		fsModeIndex_ = -1;
+	}
+
+	void GlfwGfxDevice::updateMonitorScaling(unsigned int monitorIndex)
+	{
+		int monitorCount = 0;
+		GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
+
+		if (monitorIndex < monitorCount) {
+			IGfxDevice::Monitor& monitor = monitors_[monitorIndex];
+
+#if (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300)
+			glfwGetMonitorContentScale(monitors[monitorIndex], &monitor.scale.X, &monitor.scale.Y);
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
+			monitor.scale.X = emscripten_get_device_pixel_ratio();
+			monitor.scale.Y = monitor.scale.X;
+#endif
+		}
 	}
 
 	int GlfwGfxDevice::retrieveMonitorIndex(GLFWmonitor* monitor) const

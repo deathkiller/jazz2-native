@@ -41,16 +41,16 @@ namespace Jazz2::Actors::Environment
 
 		switch (_type) {
 			case 0: // Chuck (red)
-				co_await RequestMetadataAsync("Object/BirdChuck"_s);
+				async_await RequestMetadataAsync("Object/BirdChuck"_s);
 				break;
 			case 1: // Birdy (yellow)
-				co_await RequestMetadataAsync("Object/BirdBirdy"_s);
+				async_await RequestMetadataAsync("Object/BirdBirdy"_s);
 				break;
 		}
 
 		SetAnimation(AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Bird::OnUpdate(float timeMult)

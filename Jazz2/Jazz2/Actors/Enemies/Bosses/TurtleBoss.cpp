@@ -39,12 +39,12 @@ namespace Jazz2::Actors::Bosses
 		_originPos = _pos;
 		_scoreValue = 5000;
 
-		co_await RequestMetadataAsync("Boss/TurtleBoss"_s);
+		async_await RequestMetadataAsync("Boss/TurtleBoss"_s);
 		SetAnimation(AnimState::Idle);
 
 		SetFacingLeft(true);
 
-		co_return true;
+		async_return true;
 	}
 
 	bool TurtleBoss::OnActivatedBoss()
@@ -209,7 +209,7 @@ namespace Jazz2::Actors::Bosses
 
 		_health = INT32_MAX;
 
-		co_await RequestMetadataAsync("Boss/TurtleBoss"_s);
+		async_await RequestMetadataAsync("Boss/TurtleBoss"_s);
 		SetAnimation((AnimState)1073741827);
 
 		_originPos = _pos;
@@ -221,7 +221,7 @@ namespace Jazz2::Actors::Bosses
 			_sound->setLooping(true);
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	void TurtleBoss::Mace::OnUpdate(float timeMult)

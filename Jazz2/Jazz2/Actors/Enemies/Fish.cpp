@@ -33,11 +33,11 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(1);
 		_scoreValue = 100;
 
-		co_await RequestMetadataAsync("Enemy/Fish"_s);
+		async_await RequestMetadataAsync("Enemy/Fish"_s);
 		SetFacingLeft(Random().NextBool());
 		SetAnimation(AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Fish::OnUpdate(float timeMult)
