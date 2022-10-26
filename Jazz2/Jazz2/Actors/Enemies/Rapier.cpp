@@ -33,11 +33,11 @@ namespace Jazz2::Actors::Enemies
 
 		_originPos = _lastPos = _targetPos = _pos;
 
-		co_await RequestMetadataAsync("Enemy/Rapier"_s);
+		async_await RequestMetadataAsync("Enemy/Rapier"_s);
 		SetFacingLeft(Random().NextBool());
 		SetAnimation(AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Rapier::OnUpdate(float timeMult)

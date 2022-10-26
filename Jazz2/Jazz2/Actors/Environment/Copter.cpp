@@ -17,13 +17,13 @@ namespace Jazz2::Actors::Environment
 
 		SetState(ActorState::ApplyGravitation, false);
 
-		co_await RequestMetadataAsync("Enemy/LizardFloat"_s);
+		async_await RequestMetadataAsync("Enemy/LizardFloat"_s);
 
 		SetAnimation("Copter"_s);
 
 		_originPos = _pos;
 
-		co_return true;
+		async_return true;
 	}
 
 	void Copter::OnUpdate(float timeMult)

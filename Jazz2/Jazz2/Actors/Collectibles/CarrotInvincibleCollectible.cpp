@@ -12,16 +12,16 @@ namespace Jazz2::Actors::Collectibles
 
 	Task<bool> CarrotInvincibleCollectible::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await CollectibleBase::OnActivatedAsync(details);
+		async_await CollectibleBase::OnActivatedAsync(details);
 
 		_scoreValue = 500;
 
-		co_await RequestMetadataAsync("Collectible/CarrotInvincible"_s);
+		async_await RequestMetadataAsync("Collectible/CarrotInvincible"_s);
 
 		SetAnimation("Carrot"_s);
 		SetFacingDirection();
 
-		co_return true;
+		async_return true;
 	}
 
 	void CarrotInvincibleCollectible::OnCollect(Player* player)

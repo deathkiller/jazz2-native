@@ -22,12 +22,12 @@ namespace Jazz2::Actors::Solid
 
 		SetState(ActorState::CollideWithTileset | ActorState::IsSolidObject | ActorState::ApplyGravitation, false);
 
-		co_await RequestMetadataAsync("Object/PinballPaddle"_s);
+		async_await RequestMetadataAsync("Object/PinballPaddle"_s);
 
 		SetFacingLeft(facingLeft);
 		SetAnimation(AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	void PinballPaddle::OnUpdate(float timeMult)

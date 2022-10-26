@@ -27,14 +27,14 @@ namespace Jazz2::Actors::Bosses
 		_scoreValue = 2000;
 		_originPos = Vector2f(_pos.X, _pos.Y - 300.0f);
 
-		co_await RequestMetadataAsync("Boss/Robot"_s);
+		async_await RequestMetadataAsync("Boss/Robot"_s);
 		SetAnimation(AnimState::Idle);
 
 		SetFacingLeft(true);
 
 		_renderer.setDrawEnabled(false);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Robot::Activate()
@@ -228,10 +228,10 @@ namespace Jazz2::Actors::Bosses
 		_health = INT32_MAX;
 		_speed.X = (IsFacingLeft() ? -8.0f : 8.0f);
 
-		co_await RequestMetadataAsync("Boss/Robot"_s);
+		async_await RequestMetadataAsync("Boss/Robot"_s);
 		SetAnimation((AnimState)1073741827);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Robot::SpikeBall::OnUpdateHitbox()

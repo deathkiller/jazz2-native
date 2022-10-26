@@ -52,7 +52,7 @@ namespace Jazz2::Actors::Bosses
 			case GameDifficulty::Hard: _stepSize *= 0.7f; break;
 		}
 
-		co_await RequestMetadataAsync("Boss/Queen"_s);
+		async_await RequestMetadataAsync("Boss/Queen"_s);
 		SetAnimation(AnimState::Idle);
 
 		// Invisible block above the queen
@@ -62,7 +62,7 @@ namespace Jazz2::Actors::Bosses
 		});
 		_levelHandler->AddActor(_block);
 
-		co_return true;
+		async_return true;
 	}
 
 	bool Queen::OnActivatedBoss()
@@ -267,12 +267,12 @@ namespace Jazz2::Actors::Bosses
 		SetState(ActorState::IsInvulnerable | ActorState::SkipPerPixelCollisions, true);
 		SetState(ActorState::CollideWithTileset, false);
 
-		co_await RequestMetadataAsync("Boss/Queen"_s);
+		async_await RequestMetadataAsync("Boss/Queen"_s);
 		SetAnimation((AnimState)1073741829);
 
 		PlaySfx("BrickFalling"_s, 0.3f);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Queen::Brick::OnUpdate(float timeMult)
@@ -302,12 +302,12 @@ namespace Jazz2::Actors::Bosses
 
 		_health = INT32_MAX;
 
-		co_await RequestMetadataAsync("Boss/Queen"_s);
+		async_await RequestMetadataAsync("Boss/Queen"_s);
 		SetAnimation(AnimState::Idle);
 
 		_renderer.setDrawEnabled(false);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Queen::InvisibleBlock::OnUpdate(float timeMult)

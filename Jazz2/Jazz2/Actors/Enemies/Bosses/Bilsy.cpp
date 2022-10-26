@@ -43,10 +43,10 @@ namespace Jazz2::Actors::Bosses
 		switch (_theme) {
 			case 0:
 			default:
-				co_await RequestMetadataAsync("Boss/Bilsy"_s);
+				async_await RequestMetadataAsync("Boss/Bilsy"_s);
 				break;
 			case 1: // Xmas
-				co_await RequestMetadataAsync("Boss/BilsyXmas"_s);
+				async_await RequestMetadataAsync("Boss/BilsyXmas"_s);
 				break;
 		}
 
@@ -54,7 +54,7 @@ namespace Jazz2::Actors::Bosses
 
 		_renderer.setDrawEnabled(false);
 
-		co_return true;
+		async_return true;
 	}
 
 	bool Bilsy::OnActivatedBoss()
@@ -195,11 +195,11 @@ namespace Jazz2::Actors::Bosses
 		switch (theme) {
 			case 0:
 			default:
-				co_await RequestMetadataAsync("Boss/Bilsy"_s);
+				async_await RequestMetadataAsync("Boss/Bilsy"_s);
 				break;
 
 			case 1: // Xmas
-				co_await RequestMetadataAsync("Boss/BilsyXmas"_s);
+				async_await RequestMetadataAsync("Boss/BilsyXmas"_s);
 				break;
 		}
 
@@ -207,7 +207,7 @@ namespace Jazz2::Actors::Bosses
 
 		PlaySfx("FireStart"_s);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Bilsy::Fireball::OnUpdate(float timeMult)

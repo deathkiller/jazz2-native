@@ -34,7 +34,7 @@ namespace Jazz2::Actors
 		SetState(ActorState::ForceDisableCollisions, true);
 		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
-		co_await RequestMetadataAsync("Common/Explosions"_s);
+		async_await RequestMetadataAsync("Common/Explosions"_s);
 
 		switch (_type) {
 			default:
@@ -87,7 +87,7 @@ namespace Jazz2::Actors
 			}
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	void Explosion::OnUpdate(float timeMult)

@@ -15,7 +15,7 @@ namespace nCine
 		GrowableMemoryFile();
 		GrowableMemoryFile(int32_t initialCapacity);
 
-		void Open(FileAccessMode mode, bool shouldExitOnFailToOpen) override;
+		void Open(FileAccessMode mode) override;
 		void Close() override;
 		int32_t Seek(int32_t offset, SeekOrigin origin) const override;
 		int32_t GetPosition() const override;

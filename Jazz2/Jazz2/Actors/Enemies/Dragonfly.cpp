@@ -37,11 +37,11 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(1);
 		_scoreValue = 200;
 
-		co_await RequestMetadataAsync("Enemy/Dragonfly"_s);
+		async_await RequestMetadataAsync("Enemy/Dragonfly"_s);
 		SetFacingLeft(Random().NextBool());
 		SetAnimation(AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Dragonfly::OnUpdate(float timeMult)

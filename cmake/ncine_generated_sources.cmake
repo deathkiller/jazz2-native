@@ -81,7 +81,7 @@ set(GENERATED_INCLUDE_DIR "${GENERATED_SOURCE_DIR}")
 #file(COPY ${CMAKE_SOURCE_DIR}/include/ncine/common_defines.h DESTINATION ${GENERATED_INCLUDE_DIR})
 
 # Shader strings
-file(GLOB SHADER_FILES "Jazz2/nCine/Shaders/*.glsl")
+file(GLOB SHADER_FILES "${NCINE_SOURCE_DIR}/nCine/Shaders/*.glsl")
 if(NCINE_EMBED_SHADERS)
 	message(STATUS "Exporting shader files to C strings")
 

@@ -28,28 +28,28 @@ namespace Jazz2::Actors::Collectibles
 
 	Task<bool> AmmoCollectible::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await CollectibleBase::OnActivatedAsync(details);
+		async_await CollectibleBase::OnActivatedAsync(details);
 
 		_scoreValue = 100;
 
 		_weaponType = (WeaponType)details.Params[0];
 		switch (_weaponType) {
-			case WeaponType::Bouncer: co_await RequestMetadataAsync("Collectible/AmmoBouncer"_s); break;
-			case WeaponType::Freezer: co_await RequestMetadataAsync("Collectible/AmmoFreezer"_s); break;
-			case WeaponType::Seeker: co_await RequestMetadataAsync("Collectible/AmmoSeeker"_s); break;
-			case WeaponType::RF: co_await RequestMetadataAsync("Collectible/AmmoRF"_s); break;
-			case WeaponType::Toaster: co_await RequestMetadataAsync("Collectible/AmmoToaster"_s); break;
-			case WeaponType::TNT: co_await RequestMetadataAsync("Collectible/AmmoTNT"_s); break;
-			case WeaponType::Pepper: co_await RequestMetadataAsync("Collectible/AmmoPepper"_s); break;
-			case WeaponType::Electro: co_await RequestMetadataAsync("Collectible/AmmoElectro"_s); break;
-			case WeaponType::Thunderbolt: co_await RequestMetadataAsync("Collectible/AmmoThunderbolt"_s); break;
+			case WeaponType::Bouncer: async_await RequestMetadataAsync("Collectible/AmmoBouncer"_s); break;
+			case WeaponType::Freezer: async_await RequestMetadataAsync("Collectible/AmmoFreezer"_s); break;
+			case WeaponType::Seeker: async_await RequestMetadataAsync("Collectible/AmmoSeeker"_s); break;
+			case WeaponType::RF: async_await RequestMetadataAsync("Collectible/AmmoRF"_s); break;
+			case WeaponType::Toaster: async_await RequestMetadataAsync("Collectible/AmmoToaster"_s); break;
+			case WeaponType::TNT: async_await RequestMetadataAsync("Collectible/AmmoTNT"_s); break;
+			case WeaponType::Pepper: async_await RequestMetadataAsync("Collectible/AmmoPepper"_s); break;
+			case WeaponType::Electro: async_await RequestMetadataAsync("Collectible/AmmoElectro"_s); break;
+			case WeaponType::Thunderbolt: async_await RequestMetadataAsync("Collectible/AmmoThunderbolt"_s); break;
 		}
 
 		SetAnimation("Ammo"_s);
 
 		SetFacingDirection();
 
-		co_return true;
+		async_return true;
 	}
 
 	void AmmoCollectible::OnCollect(Player* player)

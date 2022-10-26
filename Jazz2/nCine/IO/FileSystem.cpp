@@ -1623,7 +1623,7 @@ namespace nCine
 	}
 #endif
 
-	std::unique_ptr<IFileStream> FileSystem::Open(const String& path, FileAccessMode mode, bool shouldExitOnFailToOpen)
+	std::unique_ptr<IFileStream> FileSystem::Open(const String& path, FileAccessMode mode)
 	{
 		std::unique_ptr<IFileStream> stream;
 #if defined(DEATH_TARGET_ANDROID)
@@ -1635,7 +1635,7 @@ namespace nCine
 		stream = std::make_unique<StandardFile>(path);
 
 		if (mode != FileAccessMode::None) {
-			stream->Open(mode, shouldExitOnFailToOpen);
+			stream->Open(mode);
 		}
 
 		return stream;

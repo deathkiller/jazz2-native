@@ -9,9 +9,12 @@
 #include "../../nCine/Audio/AudioBufferPlayer.h"
 
 // If coroutines are not supported, load resources synchronously
-#if !defined(WITH_COROUTINES)
-#	define co_return return
-#	define co_await
+#if defined(WITH_COROUTINES)
+#	define async_return async_return
+#	define async_await async_await
+#else
+#	define async_return return
+#	define async_await
 #endif
 
 namespace Jazz2

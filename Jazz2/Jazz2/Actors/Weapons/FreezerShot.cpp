@@ -18,7 +18,7 @@ namespace Jazz2::Actors::Weapons
 
 	Task<bool> FreezerShot::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await ShotBase::OnActivatedAsync(details);
+		async_await ShotBase::OnActivatedAsync(details);
 
 		_upgrades = details.Params[0];
 
@@ -26,7 +26,7 @@ namespace Jazz2::Actors::Weapons
 		SetState(ActorState::ApplyGravitation, false);
 		_strength = 0;
 
-		co_await RequestMetadataAsync("Weapon/Freezer"_s);
+		async_await RequestMetadataAsync("Weapon/Freezer"_s);
 
 		AnimState state = AnimState::Idle;
 		if ((_upgrades & 0x01) != 0) {
@@ -40,7 +40,7 @@ namespace Jazz2::Actors::Weapons
 
 		SetAnimation(state);
 
-		co_return true;
+		async_return true;
 	}
 
 	void FreezerShot::OnFire(const std::shared_ptr<ActorBase>& owner, Vector2f gunspotPos, Vector2f speed, float angle, bool isFacingLeft)

@@ -18,7 +18,7 @@ namespace Jazz2::Actors::Weapons
 
 	Task<bool> Thunderbolt::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await ShotBase::OnActivatedAsync(details);
+		async_await ShotBase::OnActivatedAsync(details);
 
 		_upgrades = details.Params[0];
 		_initialLayer = _renderer.layer();
@@ -26,11 +26,11 @@ namespace Jazz2::Actors::Weapons
 		_health = INT32_MAX;
 		SetState(ActorState::ApplyGravitation, false);
 
-		co_await RequestMetadataAsync("Weapon/Thunderbolt"_s);
+		async_await RequestMetadataAsync("Weapon/Thunderbolt"_s);
 
 		SetAnimation((AnimState)(Random().NextBool() ? 1 : 0));
 
-		co_return true;
+		async_return true;
 	}
 
 	void Thunderbolt::OnFire(const std::shared_ptr<ActorBase>& owner, Vector2f gunspotPos, Vector2f speed, float angle, bool isFacingLeft)

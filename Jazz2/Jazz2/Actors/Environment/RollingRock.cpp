@@ -28,10 +28,10 @@ namespace Jazz2::Actors::Environment
 		_elasticity = 0.4f;
 		_canHurtPlayer = false;
 
-		co_await RequestMetadataAsync("Object/RollingRock"_s);
+		async_await RequestMetadataAsync("Object/RollingRock"_s);
 		SetAnimation(AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	void RollingRock::OnUpdate(float timeMult)

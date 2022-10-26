@@ -24,7 +24,7 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(2);
 		_scoreValue = 200;
 
-		co_await RequestMetadataAsync("Enemy/TurtleTube"_s);
+		async_await RequestMetadataAsync("Enemy/TurtleTube"_s);
 		SetAnimation(AnimState::Idle);
 
 		if (_levelHandler->WaterLevel() + WaterDifference <= _pos.Y) {
@@ -37,7 +37,7 @@ namespace Jazz2::Actors::Enemies
 			_renderer.AnimPaused = true;
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	void TurtleTube::OnUpdate(float timeMult)

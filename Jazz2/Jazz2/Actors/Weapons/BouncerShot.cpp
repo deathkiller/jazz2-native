@@ -19,12 +19,12 @@ namespace Jazz2::Actors::Weapons
 
 	Task<bool> BouncerShot::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await ShotBase::OnActivatedAsync(details);
+		async_await ShotBase::OnActivatedAsync(details);
 
 		_upgrades = details.Params[0];
 		_strength = 1;
 
-		co_await RequestMetadataAsync("Weapon/Bouncer"_s);
+		async_await RequestMetadataAsync("Weapon/Bouncer"_s);
 
 		AnimState state = AnimState::Idle;
 		if ((_upgrades & 0x1) != 0) {
@@ -38,7 +38,7 @@ namespace Jazz2::Actors::Weapons
 
 		SetAnimation(state);
 
-		co_return true;
+		async_return true;
 	}
 
 	void BouncerShot::OnFire(const std::shared_ptr<ActorBase>& owner, Vector2f gunspotPos, Vector2f speed, float angle, bool isFacingLeft)

@@ -31,10 +31,10 @@ namespace Jazz2::Actors::Enemies
 		_canHurtPlayer = false;
 		_health = INT32_MAX;
 
-		co_await RequestMetadataAsync("Enemy/Caterpillar"_s);
+		async_await RequestMetadataAsync("Enemy/Caterpillar"_s);
 		SetAnimation(AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Caterpillar::OnUpdate(float timeMult)
@@ -129,10 +129,10 @@ namespace Jazz2::Actors::Enemies
 		_baseSpeed.Y = Random().NextFloat(-1.6f, -0.8f);
 		_time = 500.0f;
 
-		co_await RequestMetadataAsync("Enemy/Caterpillar"_s);
+		async_await RequestMetadataAsync("Enemy/Caterpillar"_s);
 		SetAnimation("Smoke"_s);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Caterpillar::Smoke::OnUpdate(float timeMult)

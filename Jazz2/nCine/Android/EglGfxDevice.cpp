@@ -45,8 +45,9 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	EglGfxDevice::EglGfxDevice(struct android_app* state, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
-		: IGfxDevice(WindowMode(0, 0, true, false), glContextInfo, displayMode), state_(state)
+		: IGfxDevice(WindowMode(0, 0, true, false, false), glContextInfo, displayMode), state_(state)
 	{
+		updateMonitors();
 		initDevice();
 	}
 
@@ -262,16 +263,15 @@ namespace nCine
 		eglGetConfigAttrib(display_, config_, EGL_SAMPLES, &samples);
 
 		LOGI_X("Surface configuration is size:%dx%d, RGBA:%d%d%d%d, depth:%d, stencil:%d, samples:%d", width_, height_, red, green, blue, alpha, depth, stencil, samples);
-	
-		updateMonitors();
 	}
 
 	void EglGfxDevice::updateMonitors()
 	{
 		const int32_t densityEnum = AConfiguration_getDensity(state_->config);
 		unsigned int density = ACONFIGURATION_DENSITY_LOW;
-		if (densityEnum != ACONFIGURATION_DENSITY_ANY && densityEnum != ACONFIGURATION_DENSITY_NONE)
+		if (densityEnum != ACONFIGURATION_DENSITY_ANY && densityEnum != ACONFIGURATION_DENSITY_NONE) {
 			density = static_cast<unsigned int>(densityEnum);
+		}
 
 		const float densityScale = density / static_cast<float>(ACONFIGURATION_DENSITY_LOW);
 
@@ -288,15 +288,14 @@ namespace nCine
 			monitors_[i].position.Y = 0;
 			monitors_[i].scale.X = densityScale;
 			monitors_[i].scale.Y = densityScale;
-			monitors_[i].dpi.X = density;
-			monitors_[i].dpi.Y = density;
 
 			AndroidJniClass_DisplayMode modes[MaxVideoModes];
 			const int modeCount = displays[i].getSupportedModes(modes, MaxVideoModes);
 			monitors_[i].numVideoModes = (modeCount < MaxVideoModes) ? modeCount : MaxVideoModes;
 
-			for (unsigned int j = 0; j < monitors_[i].numVideoModes; j++)
+			for (unsigned int j = 0; j < monitors_[i].numVideoModes; j++) {
 				convertVideoModeInfo(modes[j], monitors_[i].videoModes[j]);
+			}
 		}
 	}
 

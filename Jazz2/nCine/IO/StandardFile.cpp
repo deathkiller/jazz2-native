@@ -32,7 +32,7 @@ namespace nCine
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void StandardFile::Open(FileAccessMode mode, bool shouldExitOnFailToOpen)
+	void StandardFile::Open(FileAccessMode mode)
 	{
 		// Checking if the file is already opened
 		if (fileDescriptor_ >= 0 || filePointer_ != nullptr) {
@@ -41,12 +41,12 @@ namespace nCine
 #if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 			if ((mode & FileAccessMode::FileDescriptor) == FileAccessMode::FileDescriptor) {
 				// Opening with a file descriptor
-				OpenFD(mode, shouldExitOnFailToOpen);
+				OpenFD(mode);
 			} else
 #endif
 			{
 				// Opening with a file stream
-				OpenStream(mode, shouldExitOnFailToOpen);
+				OpenStream(mode);
 			}
 		}
 	}
@@ -140,7 +140,7 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 #if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
-	void StandardFile::OpenFD(FileAccessMode mode, bool shouldExitOnFailToOpen)
+	void StandardFile::OpenFD(FileAccessMode mode)
 	{
 		int openFlag = -1;
 
@@ -163,16 +163,12 @@ namespace nCine
 			fileDescriptor_ = ::open(filename_.data(), openFlag);
 
 			if (fileDescriptor_ < 0) {
-				if (shouldExitOnFailToOpen) {
-					LOGF_X("Cannot open the file \"%s\"", filename_.data());
-					::exit(EXIT_FAILURE);
-				} else {
-					LOGE_X("Cannot open the file \"%s\"", filename_.data());
-					return;
-				}
-			} else {
-				LOGI_X("File \"%s\" opened", filename_.data());
+				LOGE_X("Cannot open the file \"%s\"", filename_.data());
+				return;
 			}
+
+			LOGI_X("File \"%s\" opened", filename_.data());
+
 			// Calculating file size
 			fileSize_ = ::lseek(fileDescriptor_, 0L, SEEK_END);
 			::lseek(fileDescriptor_, 0L, SEEK_SET);
@@ -180,7 +176,7 @@ namespace nCine
 	}
 #endif
 
-	void StandardFile::OpenStream(FileAccessMode mode, bool shouldExitOnFailToOpen)
+	void StandardFile::OpenStream(FileAccessMode mode)
 	{
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
 		const wchar_t* modeInternal;
@@ -209,16 +205,11 @@ namespace nCine
 #endif
 
 		if (filePointer_ == nullptr) {
-			if (shouldExitOnFailToOpen) {
-				LOGF_X("Cannot open the file \"%s\"", filename_.data());
-				::exit(EXIT_FAILURE);
-			} else {
-				LOGE_X("Cannot open the file \"%s\"", filename_.data());
-				return;
-			}
-		} else {
-			LOGI_X("File \"%s\" opened", filename_.data());
+			LOGE_X("Cannot open the file \"%s\"", filename_.data());
+			return;
 		}
+
+		LOGI_X("File \"%s\" opened", filename_.data());
 
 		// Calculating file size
 		::fseek(filePointer_, 0L, SEEK_END);

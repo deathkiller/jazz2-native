@@ -38,21 +38,23 @@ namespace nCine
 		struct WindowMode
 		{
 			WindowMode()
-				: width(0), height(0), isFullscreen(false), isResizable(false) {}
-			WindowMode(unsigned int w, unsigned int h, bool fullscreen, bool resizable)
-				: width(w), height(h), isFullscreen(fullscreen), isResizable(resizable) {}
+				: width(0), height(0), isFullscreen(false), isResizable(false), hasWindowScaling(true) { }
+			WindowMode(unsigned int w, unsigned int h, bool fullscreen, bool resizable, bool windowScaling)
+				: width(w), height(h), isFullscreen(fullscreen), isResizable(resizable), hasWindowScaling(windowScaling) { }
 
 			unsigned int width;
 			unsigned int height;
 			bool isFullscreen;
 			bool isResizable;
+			bool hasWindowScaling;
 		};
 
 		/// A structure representing a video mode supported by a monitor
 		struct VideoMode
 		{
 			VideoMode()
-				: width(0), height(0), refreshRate(0.0f), redBits(8), greenBits(8), blueBits(8) {}
+				: width(0), height(0), refreshRate(0.0f), redBits(8), greenBits(8), blueBits(8) { }
+
 			inline bool operator==(const VideoMode& mode) const
 			{
 				return (width == mode.width && height == mode.height && refreshRate == mode.refreshRate &&
@@ -77,8 +79,6 @@ namespace nCine
 			const char* name;
 			/// The position of the monitor's viewport on the virtual screen
 			Vector2i position;
-			/// The horizontal and vertical dots per inch
-			Vector2i dpi;
 			/// The content scale factor
 			Vector2f scale;
 
@@ -110,6 +110,8 @@ namespace nCine
 		/*! An interval of `-1` will enable adaptive v-sync if available */
 		virtual void setSwapInterval(int interval) = 0;
 
+		/// Returns true if the device renders in full screen
+		inline bool isFullscreen() const { return isFullscreen_; }
 		/// Sets screen resolution with two integers
 		virtual void setResolution(bool fullscreen, int width = 0, int height = 0) = 0;
 
@@ -134,13 +136,12 @@ namespace nCine
 		inline Rectf screenRect() const { return Rectf(0.0f, 0.0f, static_cast<float>(width_), static_cast<float>(height_)); }
 		/// Returns the window or video mode resolution aspect ratio
 		inline float aspect() const { return width_ / static_cast<float>(height_); }
+		/// Sets the window size with two integers
+		/*! \note If the application is in full screen this method will have no effect. */
+		virtual void setWindowSize(int width, int height) = 0;
 
-		/// Returns window horizontal position
-		inline virtual int windowPositionX() const { return 0; }
-		/// Returns window vertical position
-		inline virtual int windowPositionY() const { return 0; }
 		/// Returns window position as a `Vector2i` object
-		inline virtual const Vector2i windowPosition() const { return Vector2i(0, 0);}
+		inline virtual const Vector2i windowPosition() const { return Vector2i(0, 0); }
 
 		/// Returns the window width in pixels
 		/*! It may differs from `width()` on HiDPI screens */
@@ -182,6 +183,9 @@ namespace nCine
 		/*! \note Call this method <b>before>/b> enabling full screen */
 		inline virtual bool setVideoMode(unsigned int modeIndex) { return false; }
 
+		/// Returns the scaling factor for application window
+		float windowScalingFactor() const;
+
 	protected:
 		static constexpr float DefaultDPI = 96.0f;
 
@@ -193,6 +197,8 @@ namespace nCine
 		int drawableWidth_;
 		/// Window height in pixels (for HiDPI screens)
 		int drawableHeight_;
+		/// Whether rendering occurs in full screen
+		bool isFullscreen_;
 		/// OpenGL context creation attributes
 		GLContextInfo glContextInfo_;
 		/// Display properties
@@ -202,6 +208,12 @@ namespace nCine
 		unsigned int numMonitors_;
 		/// Used as a cache to avoid searching the current video mode in a monitor's array
 		mutable VideoMode currentVideoMode_;
+
+		/// The window scaling factor from last frame
+		float previousScalingFactor_;
+
+		/// Scales the window size by the display factor before creating it for the first time
+		void initWindowScaling(const WindowMode& windowMode);
 
 		/// Inits the OpenGL viewport based on the drawable resolution
 		void initGLViewport();
@@ -217,6 +229,9 @@ namespace nCine
 
 		/// Updates the screen swapping back and front buffers
 		virtual void update() = 0;
+
+		/// Updates the window size based on the monitor´s scaling factor
+		bool updateScaling(bool windowScaling);
 
 		friend class Application;
 #if defined(WITH_SDL)

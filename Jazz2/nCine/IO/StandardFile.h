@@ -17,7 +17,7 @@ namespace nCine
 		~StandardFile() override;
 
 		/// Tries to open the standard file
-		void Open(FileAccessMode mode, bool shouldExitOnFailToOpen) override;
+		void Open(FileAccessMode mode) override;
 		/// Closes the standard file
 		void Close() override;
 		int32_t Seek(int32_t offset, SeekOrigin origin) const override;
@@ -33,10 +33,10 @@ namespace nCine
 
 #if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 		/// Opens the file with `open()`
-		void OpenFD(FileAccessMode mode, bool shouldExitOnFailToOpen);
+		void OpenFD(FileAccessMode mode);
 #endif
 		/// Opens the file with `fopen()`
-		void OpenStream(FileAccessMode mode, bool shouldExitOnFailToOpen);
+		void OpenStream(FileAccessMode mode);
 	};
 
 }

@@ -21,7 +21,7 @@ namespace nCine
 		~AssetFile() override;
 
 		/// Tries to open the asset file
-		void Open(FileAccessMode mode, bool shouldExitOnFailToOpen) override;
+		void Open(FileAccessMode mode) override;
 		/// Closes the asset file
 		void Close() override;
 		int32_t Seek(int32_t offset, SeekOrigin origin) const override;
@@ -61,9 +61,9 @@ namespace nCine
 		unsigned long int startOffset_;
 
 		/// Opens the file with `AAsset_openFileDescriptor()`
-		void OpenFD(FileAccessMode mode, bool shouldExitOnFailToOpen);
+		void OpenFD(FileAccessMode mode);
 		/// Opens the file with `AAssetManager_open()` only
-		void OpenAsset(FileAccessMode mode, bool shouldExitOnFailToOpen);
+		void OpenAsset(FileAccessMode mode);
 	};
 
 }

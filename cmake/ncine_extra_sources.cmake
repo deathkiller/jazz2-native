@@ -576,6 +576,52 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 	set(PACKAGE_EXECUTABLE_NAME "ncine")
 	configure_file(Package.appxmanifest.in ${CMAKE_CURRENT_BINARY_DIR}/Package.appxmanifest @ONLY)
 	list(APPEND GENERATED_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/Package.appxmanifest)
+	
+	# Include dependencies in UWP package
+	# `zlib1.dll` is required by `libGLESv2.dll`, so rename `zlib.dll` to `zlib1.dll` and include it too for now
+	configure_file(${MSVC_BINDIR}/zlib.dll ${CMAKE_BINARY_DIR}/Generated/zlib1.dll COPYONLY)
+
+	set(UWP_DEPENDENCIES
+		${MSVC_BINDIR}/libEGL.dll
+		${MSVC_BINDIR}/libGLESv2.dll
+		${CMAKE_BINARY_DIR}/Generated/zlib1.dll
+	)
+		
+	if(LIBDEFLATE_FOUND)
+		list(APPEND UWP_DEPENDENCIES ${MSVC_BINDIR}/libdeflate.dll)
+	elseif(ZLIB_FOUND)
+		list(APPEND UWP_DEPENDENCIES ${MSVC_BINDIR}/zlib.dll)
+	endif()
+
+	if(NCINE_WITH_WEBP AND WEBP_FOUND)
+		list(APPEND UWP_DEPENDENCIES ${MSVC_BINDIR}/libwebp.dll)
+	endif()
+
+	if(NCINE_WITH_AUDIO AND OPENAL_FOUND)
+		list(APPEND UWP_DEPENDENCIES ${MSVC_BINDIR}/OpenAL32.dll)
+
+		if(NCINE_WITH_VORBIS AND VORBIS_FOUND)
+			list(APPEND UWP_DEPENDENCIES ${MSVC_BINDIR}/libogg.dll ${MSVC_BINDIR}/libvorbis.dll ${MSVC_BINDIR}/libvorbisfile.dll)
+		endif()
+	endif()
+
+	target_sources(ncine PRIVATE ${UWP_DEPENDENCIES})
+	set_property(SOURCE ${UWP_DEPENDENCIES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+	set_property(SOURCE ${UWP_DEPENDENCIES} PROPERTY VS_DEPLOYMENT_LOCATION ".")
+	source_group("Dependencies" FILES ${UWP_DEPENDENCIES})
+	
+	# Include `Content` directory
+	file(GLOB_RECURSE PACKAGE_CONTENT_FILES "${NCINE_DATA_DIR}/*")
+	foreach(CONTENT_FILE ${PACKAGE_CONTENT_FILES})
+		# Preserving directory structure
+		file(RELATIVE_PATH CONTENT_FILE_RELPATH ${NCINE_DATA_DIR} ${CONTENT_FILE})
+		get_filename_component(CONTENT_FILE_RELPATH ${CONTENT_FILE_RELPATH} DIRECTORY)
+		
+		target_sources(ncine PRIVATE ${CONTENT_FILE})
+		set_property(SOURCE ${CONTENT_FILE} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+		set_property(SOURCE ${CONTENT_FILE} PROPERTY VS_DEPLOYMENT_LOCATION "Content/${CONTENT_FILE_RELPATH}")
+		source_group("Content/${CONTENT_FILE_RELPATH}" FILES ${CONTENT_FILE})
+	endforeach()
 else()
 	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/PCApplication.h)
 	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/PCApplication.cpp)

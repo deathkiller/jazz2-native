@@ -27,11 +27,11 @@ namespace Jazz2::Actors::Solid
 			AddContent(eventType, count, &details.Params[3], 16 - 4);
 		}
 
-		co_await RequestMetadataAsync("Object/BarrelContainer"_s);
+		async_await RequestMetadataAsync("Object/BarrelContainer"_s);
 
 		SetAnimation(AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	bool BarrelContainer::OnHandleCollision(std::shared_ptr<ActorBase> other)

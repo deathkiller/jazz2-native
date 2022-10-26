@@ -42,16 +42,14 @@ namespace nCine
 			glfwSwapBuffers(windowHandle_);
 		}
 
-		inline void setWindowPosition(int x, int y) override {
-			glfwSetWindowPos(windowHandle_, x, y);
-		}
+		void setWindowPosition(int x, int y) override;
+		void setWindowSize(int width, int height) override;
+
 		inline void setWindowTitle(const StringView& windowTitle) override {
 			glfwSetWindowTitle(windowHandle_, String::nullTerminatedView(windowTitle).data());
 		}
 		void setWindowIcon(const StringView& windowIconFilename) override;
 
-		int windowPositionX() const override;
-		int windowPositionY() const override;
 		const Vector2i windowPosition() const override;
 
 		void flashWindow() const override;
@@ -64,6 +62,8 @@ namespace nCine
 
 	protected:
 		void setResolutionInternal(int width, int height) override;
+
+		void updateMonitors() override;
 
 	private:
 		/// GLFW3 window handle
@@ -89,9 +89,9 @@ namespace nCine
 		/// Initilizes the video subsystem (GLFW)
 		void initGraphics();
 		/// Initilizes the OpenGL graphic context
-		void initDevice(bool isFullscreen, bool isResizable);
+		void initDevice(bool isResizable);
 
-		void updateMonitors() override;
+		void updateMonitorScaling(unsigned int monitorIndex);
 
 		int retrieveMonitorIndex(GLFWmonitor* monitor) const;
 		void convertVideoModeInfo(const GLFWvidmode& glfwVideoMode, IGfxDevice::VideoMode& videoMode) const;

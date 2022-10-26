@@ -46,11 +46,11 @@ namespace Jazz2::Actors::Solid
 		bool isSolid = true;
 		switch (theme) {
 			default:
-			case 0: co_await RequestMetadataAsync("Pole/Carrotus"_s); break;
-			case 1: co_await RequestMetadataAsync("Pole/Diamondus"_s); break;
-			case 2: co_await RequestMetadataAsync("Pole/DiamondusTree"_s); isSolid = false; break;
-			case 3: co_await RequestMetadataAsync("Pole/Jungle"_s); break;
-			case 4: co_await RequestMetadataAsync("Pole/Psych"_s); break;
+			case 0: async_await RequestMetadataAsync("Pole/Carrotus"_s); break;
+			case 1: async_await RequestMetadataAsync("Pole/Diamondus"_s); break;
+			case 2: async_await RequestMetadataAsync("Pole/DiamondusTree"_s); isSolid = false; break;
+			case 3: async_await RequestMetadataAsync("Pole/Jungle"_s); break;
+			case 4: async_await RequestMetadataAsync("Pole/Psych"_s); break;
 		}
 
 		if (isSolid) {
@@ -59,7 +59,7 @@ namespace Jazz2::Actors::Solid
 
 		SetAnimation("Pole"_s);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Pole::OnUpdate(float timeMult)

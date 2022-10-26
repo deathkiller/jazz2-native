@@ -21,7 +21,7 @@ namespace Jazz2::Actors::Environment
 
 		uint8_t theme = details.Params[0];
 
-		co_await RequestMetadataAsync("Object/Moth"_s);
+		async_await RequestMetadataAsync("Object/Moth"_s);
 
 		switch (theme) {
 			default:
@@ -33,7 +33,7 @@ namespace Jazz2::Actors::Environment
 
 		_renderer.AnimPaused = true;
 
-		co_return true;
+		async_return true;
 	}
 
 	void Moth::OnUpdate(float timeMult)

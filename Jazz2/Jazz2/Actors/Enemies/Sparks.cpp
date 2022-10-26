@@ -25,11 +25,11 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(1);
 		_scoreValue = 100;
 
-		co_await RequestMetadataAsync("Enemy/Sparks"_s);
+		async_await RequestMetadataAsync("Enemy/Sparks"_s);
 		SetFacingLeft(true);
 		SetAnimation(AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Sparks::OnUpdate(float timeMult)

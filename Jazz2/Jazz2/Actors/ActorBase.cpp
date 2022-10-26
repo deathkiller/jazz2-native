@@ -83,7 +83,7 @@ namespace Jazz2::Actors
 		uint16_t layer = (uint16_t)details.Pos.Z;
 		_renderer.setLayer(layer);
 
-		bool success = co_await OnActivatedAsync(details);
+		bool success = async_await OnActivatedAsync(details);
 
 		_renderer.setPosition(std::round(_pos.X), std::round(_pos.Y));
 
@@ -91,13 +91,13 @@ namespace Jazz2::Actors
 
 		_state |= ActorState::Initialized;
 
-		co_return success;
+		async_return success;
 	}
 
 	Task<bool> ActorBase::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		// This should be overridden and return true
-		co_return false;
+		async_return false;
 	}
 
 	bool ActorBase::OnTileDeactivated()

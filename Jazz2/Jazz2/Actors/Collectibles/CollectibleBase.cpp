@@ -54,7 +54,7 @@ namespace Jazz2::Actors::Collectibles
 			}
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	void CollectibleBase::OnUpdate(float timeMult)

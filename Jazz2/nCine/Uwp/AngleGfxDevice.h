@@ -37,18 +37,8 @@ namespace nCine
 		friend class UwpApplication;
 
 	public:
-		AngleGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const winrtWUXC::SwapChainPanel& withVisual)
-			: IGfxDevice(windowMode, glContextInfo, displayMode), _renderSurface { EGL_NO_SURFACE }, _hostVisual(withVisual), _sizeChanged(2)
-		{
-			Initialize();
-			CreateRenderSurface();
-		}
-
-		~AngleGfxDevice()
-		{
-			DestroyRenderSurface();
-			Cleanup();
-		}
+		AngleGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const winrtWUXC::SwapChainPanel& withVisual);
+		~AngleGfxDevice();
 
 		void update() override;
 
@@ -56,6 +46,8 @@ namespace nCine
 		void setResolution(bool fullscreen, int width = 0, int height = 0) override;
 
 		void setWindowPosition(int x, int y) override { };
+		void setWindowSize(int width, int height) override;
+
 		void setWindowTitle(const StringView& windowTitle) override;
 		void setWindowIcon(const StringView& iconFilename) override { }
 
@@ -65,6 +57,8 @@ namespace nCine
 
 	protected:
 		void setResolutionInternal(int width, int height) override { }
+
+		void updateMonitors() override;
 
 	private:
 		void Initialize();

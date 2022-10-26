@@ -16,7 +16,7 @@ namespace Jazz2::Actors::Collectibles
 
 	Task<bool> FastFireCollectible::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await CollectibleBase::OnActivatedAsync(details);
+		async_await CollectibleBase::OnActivatedAsync(details);
 
 		_scoreValue = 200;
 
@@ -24,16 +24,16 @@ namespace Jazz2::Actors::Collectibles
 		PlayerType playerType = (!players.empty() ? players[0]->GetPlayerType() : PlayerType::Jazz);
 		switch (playerType) {
 			default:
-			case PlayerType::Jazz: co_await RequestMetadataAsync("Collectible/FastFireJazz"_s); break;
-			case PlayerType::Spaz: co_await RequestMetadataAsync("Collectible/FastFireSpaz"_s); break;
-			case PlayerType::Lori: co_await RequestMetadataAsync("Collectible/FastFireLori"_s); break;
+			case PlayerType::Jazz: async_await RequestMetadataAsync("Collectible/FastFireJazz"_s); break;
+			case PlayerType::Spaz: async_await RequestMetadataAsync("Collectible/FastFireSpaz"_s); break;
+			case PlayerType::Lori: async_await RequestMetadataAsync("Collectible/FastFireLori"_s); break;
 		}
 
 		SetAnimation("FastFire"_s);
 
 		SetFacingDirection();
 
-		co_return true;
+		async_return true;
 	}
 
 	void FastFireCollectible::OnCollect(Player* player)

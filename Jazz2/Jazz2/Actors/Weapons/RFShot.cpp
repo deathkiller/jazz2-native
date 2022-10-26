@@ -16,14 +16,14 @@ namespace Jazz2::Actors::Weapons
 
 	Task<bool> RFShot::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await ShotBase::OnActivatedAsync(details);
+		async_await ShotBase::OnActivatedAsync(details);
 
 		_upgrades = details.Params[0];
 		_strength = 2;
 
 		SetState(ActorState::ApplyGravitation, false);
 
-		co_await RequestMetadataAsync("Weapon/RF"_s);
+		async_await RequestMetadataAsync("Weapon/RF"_s);
 
 		AnimState state = AnimState::Idle;
 		if ((_upgrades & 0x1) != 0) {
@@ -36,7 +36,7 @@ namespace Jazz2::Actors::Weapons
 		SetAnimation(state);
 		PlaySfx("Fire"_s, 0.4f);
 
-		co_return true;
+		async_return true;
 	}
 
 	void RFShot::OnFire(const std::shared_ptr<ActorBase>& owner, Vector2f gunspotPos, Vector2f speed, float angle, bool isFacingLeft)

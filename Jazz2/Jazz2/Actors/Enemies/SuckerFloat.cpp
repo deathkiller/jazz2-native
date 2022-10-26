@@ -30,11 +30,11 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(1);
 		_scoreValue = 200;
 
-		co_await RequestMetadataAsync("Enemy/SuckerFloat"_s);
+		async_await RequestMetadataAsync("Enemy/SuckerFloat"_s);
 
 		SetAnimation(AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	void SuckerFloat::OnUpdate(float timeMult)

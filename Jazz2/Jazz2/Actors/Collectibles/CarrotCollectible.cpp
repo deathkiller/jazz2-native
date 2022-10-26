@@ -14,21 +14,21 @@ namespace Jazz2::Actors::Collectibles
 
 	Task<bool> CarrotCollectible::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await CollectibleBase::OnActivatedAsync(details);
+		async_await CollectibleBase::OnActivatedAsync(details);
 
 		_maxCarrot = (details.Params[0] != 0);
 
 		if (_maxCarrot) {
 			_scoreValue = 500;
-			co_await RequestMetadataAsync("Collectible/CarrotFull"_s);
+			async_await RequestMetadataAsync("Collectible/CarrotFull"_s);
 		} else {
 			_scoreValue = 200;
-			co_await RequestMetadataAsync("Collectible/Carrot"_s);
+			async_await RequestMetadataAsync("Collectible/Carrot"_s);
 		}
 		SetAnimation("Carrot"_s);
 		SetFacingDirection();
 
-		co_return true;
+		async_return true;
 	}
 
 	void CarrotCollectible::OnCollect(Player* player)

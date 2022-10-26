@@ -31,7 +31,7 @@ namespace Jazz2::Actors::Solid
 		SetState(ActorState::IsInvulnerable, true);
 		SetState(ActorState::CollideWithTileset | ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
 
-		co_await RequestMetadataAsync("MovingPlatform/SpikeBall"_s);
+		async_await RequestMetadataAsync("MovingPlatform/SpikeBall"_s);
 		SetAnimation("Platform"_s);
 
 		for (int i = 0; i < length; i++) {
@@ -48,7 +48,7 @@ namespace Jazz2::Actors::Solid
 			}
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	void SpikeBall::OnUpdate(float timeMult)

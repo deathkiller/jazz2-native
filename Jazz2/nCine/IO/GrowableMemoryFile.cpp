@@ -24,7 +24,7 @@ namespace nCine
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void GrowableMemoryFile::Open(FileAccessMode mode, bool shouldExitOnFailToOpen)
+	void GrowableMemoryFile::Open(FileAccessMode mode)
 	{
 	}
 

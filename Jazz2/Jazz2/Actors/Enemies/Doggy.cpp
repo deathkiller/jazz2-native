@@ -44,11 +44,11 @@ namespace Jazz2::Actors::Enemies
 		switch (theme) {
 			case 0:
 			default:
-				co_await RequestMetadataAsync("Enemy/Doggy"_s);
+				async_await RequestMetadataAsync("Enemy/Doggy"_s);
 				_attackSpeed = 3.2f;
 				break;
 			case 1: // TSF Cat
-				co_await RequestMetadataAsync("Enemy/Cat"_s);
+				async_await RequestMetadataAsync("Enemy/Cat"_s);
 				_attackSpeed = 3.8f;
 				break;
 		}
@@ -59,7 +59,7 @@ namespace Jazz2::Actors::Enemies
 
 		PlaceOnGround();
 
-		co_return true;
+		async_return true;
 	}
 
 	void Doggy::OnUpdate(float timeMult)

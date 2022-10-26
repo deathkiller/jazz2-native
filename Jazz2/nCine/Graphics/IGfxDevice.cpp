@@ -43,13 +43,14 @@ namespace nCine
 		float pixelRatio2 = emscripten_get_device_pixel_ratio();
 		LOGI_X("Canvas was resized to %ix%i (canvas size is %ix%i; ratio is %f)", (int)(event->elementWidth * pixelRatio2), (int)(event->elementHeight * pixelRatio2), (int)cssWidth, (int)cssHeight, pixelRatio2);
 #endif
+		IGfxDevice* gfxDevice = reinterpret_cast<IGfxDevice*>(userData);
+		gfxDevice->isFullscreen_ = event->isFullscreen;
+
 		if (event->elementWidth > 0 && event->elementHeight > 0) {
 			float pixelRatio = emscripten_get_device_pixel_ratio();
-			IGfxDevice* gfxDevice = reinterpret_cast<IGfxDevice*>(userData);
 			gfxDevice->setResolutionInternal(static_cast<int>(event->elementWidth * pixelRatio), static_cast<int>(event->elementHeight * pixelRatio));
 		}
 
-		theApplication().handleFullscreenChanged(event->isFullscreen);
 		return 1;
 	}
 
@@ -72,7 +73,7 @@ namespace nCine
 
 	IGfxDevice::IGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
 		: drawableWidth_(windowMode.width), drawableHeight_(windowMode.height), width_(windowMode.width), height_(windowMode.height),
-		  glContextInfo_(glContextInfo), displayMode_(displayMode), numMonitors_(0)
+		  glContextInfo_(glContextInfo), isFullscreen_(windowMode.isFullscreen), displayMode_(displayMode), numMonitors_(0), previousScalingFactor_(1.0f)
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		double cssWidth = 0.0;
@@ -87,8 +88,9 @@ namespace nCine
 
 		EmscriptenFullscreenChangeEvent fsce;
 		emscripten_get_fullscreen_status(&fsce);
-		if (windowMode.isFullscreen != fsce.isFullscreen) {
-			theApplication().handleFullscreenChanged(fsce.isFullscreen);
+		if (isFullscreen_ != fsce.isFullscreen) {
+			isFullscreen_ = fsce.isFullscreen;
+			// TODO: Broadcast event here?
 		}
 
 		emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, IGfxDevice::emscriptenHandleResize);
@@ -103,7 +105,7 @@ namespace nCine
 
 		currentVideoMode_.width = width_;
 		currentVideoMode_.height = height_;
-		currentVideoMode_.refreshRate = 60.0f;
+		currentVideoMode_.refreshRate = 0.0f;
 		currentVideoMode_.redBits = displayMode.redBits();
 		currentVideoMode_.greenBits = displayMode.greenBits();
 		currentVideoMode_.blueBits = displayMode.blueBits();
@@ -141,9 +143,40 @@ namespace nCine
 		return monitors_[index];
 	}
 
+	float IGfxDevice::windowScalingFactor() const
+	{
+#if defined(DEATH_TARGET_APPLE)
+		const float factor = drawableWidth() / static_cast<float>(width());
+#else
+		const Vector2f& scale = monitor().scale;
+		const float factor = (scale.X > scale.Y ? scale.X : scale.Y);
+#endif
+
+		return factor;
+	}
+
 	///////////////////////////////////////////////////////////
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
+
+	void IGfxDevice::initWindowScaling(const WindowMode& windowMode)
+	{
+		updateMonitors();
+		const float factor = windowScalingFactor();
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		if (windowMode.hasWindowScaling) {
+#	if defined(WITH_QT5)
+			setWindowSize(width_ * factor, height_ * factor);
+#	else
+			width_ *= factor;
+			height_ *= factor;
+#	endif
+		}
+#endif
+
+		previousScalingFactor_ = factor;
+	}
 
 	void IGfxDevice::initGLViewport()
 	{
@@ -157,4 +190,21 @@ namespace nCine
 		GLDepthTest::enable();
 	}
 
+	bool IGfxDevice::updateScaling(bool windowScaling)
+	{
+		const Monitor& windowMonitor = monitor();
+		const float currentScalingFactor = windowMonitor.scale.X;
+		const bool scalingFactorChanged = (currentScalingFactor != previousScalingFactor_);
+
+#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_WINDOWS_RT)
+		// It's resized automatically on Apple and Windows RT
+		if (!isFullscreen_ && scalingFactorChanged && windowScaling) {
+			const float ratio = currentScalingFactor / previousScalingFactor_;
+			setWindowSize(width_ * ratio, height_ * ratio);
+		}
+#endif
+
+		previousScalingFactor_ = currentScalingFactor;
+		return scalingFactorChanged;
+	}
 }

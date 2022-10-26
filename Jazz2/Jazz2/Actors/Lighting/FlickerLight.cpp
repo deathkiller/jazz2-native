@@ -31,7 +31,7 @@ namespace Jazz2::Actors::Lighting
 			part.Phase = (float)i / LightPartCount;
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	void FlickerLight::OnUpdate(float timeMult)

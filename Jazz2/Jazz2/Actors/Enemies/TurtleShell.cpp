@@ -50,13 +50,13 @@ namespace Jazz2::Actors::Enemies
 		switch (theme) {
 			case 0:
 			default:
-				co_await RequestMetadataAsync("Enemy/TurtleShell"_s);
+				async_await RequestMetadataAsync("Enemy/TurtleShell"_s);
 				break;
 			case 1: // Xmas
-				co_await RequestMetadataAsync("Enemy/TurtleShellXmas"_s);
+				async_await RequestMetadataAsync("Enemy/TurtleShellXmas"_s);
 				break;
 			case 2: // Tough (Boss)
-				co_await RequestMetadataAsync("Boss/TurtleBossShell"_s);
+				async_await RequestMetadataAsync("Boss/TurtleBossShell"_s);
 				break;
 		}
 
@@ -72,7 +72,7 @@ namespace Jazz2::Actors::Enemies
 			StartBlinking();
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	void TurtleShell::OnUpdate(float timeMult)

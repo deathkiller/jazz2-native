@@ -23,7 +23,7 @@ namespace Jazz2::Actors::Collectibles
 
 	Task<bool> GemRing::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		co_await CollectibleBase::OnActivatedAsync(details);
+		async_await CollectibleBase::OnActivatedAsync(details);
 
 		int length = (details.Params[0] > 0 ? details.Params[0] : 8);
 		_speed = (details.Params[1] > 0 ? details.Params[1] : 8) * 0.00625f;
@@ -31,7 +31,7 @@ namespace Jazz2::Actors::Collectibles
 
 		SetState(ActorState::SkipPerPixelCollisions, true);
 
-		co_await RequestMetadataAsync("Collectible/Gems"_s);
+		async_await RequestMetadataAsync("Collectible/Gems"_s);
 
 		for (int i = 0; i < length; i++) {
 			ChainPiece& piece = _pieces.emplace_back();
@@ -48,7 +48,7 @@ namespace Jazz2::Actors::Collectibles
 			}
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	void GemRing::OnUpdate(float timeMult)

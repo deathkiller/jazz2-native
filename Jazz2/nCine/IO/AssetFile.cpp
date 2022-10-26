@@ -36,7 +36,7 @@ namespace nCine
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void AssetFile::Open(FileAccessMode mode, bool shouldExitOnFailToOpen)
+	void AssetFile::Open(FileAccessMode mode)
 	{
 		// Checking if the file is already opened
 		if (fileDescriptor_ >= 0 || asset_ != nullptr) {
@@ -44,10 +44,10 @@ namespace nCine
 		} else {
 			// Opening with a file descriptor
 			if ((mode & FileAccessMode::FileDescriptor) == FileAccessMode::FileDescriptor) {
-				OpenFD(mode, shouldExitOnFailToOpen);
+				OpenFD(mode);
 				// Opening as an asset only
 			} else {
-				OpenAsset(mode, shouldExitOnFailToOpen);
+				OpenAsset(mode);
 			}
 		}
 	}
@@ -236,19 +236,14 @@ namespace nCine
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void AssetFile::OpenFD(FileAccessMode mode, bool shouldExitOnFailToOpen)
+	void AssetFile::OpenFD(FileAccessMode mode)
 	{
 		// An asset file can only be read
 		if (mode == (FileAccessMode::FileDescriptor | FileAccessMode::Read)) {
 			asset_ = AAssetManager_open(assetManager_, filename_.data(), AASSET_MODE_UNKNOWN);
 			if (asset_ == nullptr) {
-				if (shouldExitOnFailToOpen) {
-					LOGF_X("Cannot open the file \"%s\"", filename_.data());
-					exit(EXIT_FAILURE);
-				} else {
-					LOGE_X("Cannot open the file \"%s\"", filename_.data());
-					return;
-				}
+				LOGE_X("Cannot open the file \"%s\"", filename_.data());
+				return;
 			}
 
 			off_t outStart = 0;
@@ -262,37 +257,27 @@ namespace nCine
 			asset_ = nullptr;
 
 			if (fileDescriptor_ < 0) {
-				if (shouldExitOnFailToOpen) {
-					LOGF_X("Cannot open the file \"%s\"", filename_.data());
-					exit(EXIT_FAILURE);
-				} else {
-					LOGE_X("Cannot open the file \"%s\"", filename_.data());
-					return;
-				}
-			} else {
-				LOGI_X("File \"%s\" opened", filename_.data());
+				LOGE_X("Cannot open the file \"%s\"", filename_.data());
+				return;
 			}
+
+			LOGI_X("File \"%s\" opened", filename_.data());
 		} else {
 			LOGE_X("Cannot open the file \"%s\", wrong open mode", filename_.data());
 		}
 	}
 
-	void AssetFile::OpenAsset(FileAccessMode mode, bool shouldExitOnFailToOpen)
+	void AssetFile::OpenAsset(FileAccessMode mode)
 	{
 		// An asset file can only be read
 		if (mode == FileAccessMode::Read) {
 			asset_ = AAssetManager_open(assetManager_, filename_.data(), AASSET_MODE_UNKNOWN);
 			if (asset_ == nullptr) {
-				if (shouldExitOnFailToOpen) {
-					LOGF_X("Cannot open the file \"%s\"", filename_.data());
-					exit(EXIT_FAILURE);
-				} else {
-					LOGE_X("Cannot open the file \"%s\"", filename_.data());
-					return;
-				}
-			} else {
-				LOGI_X("File \"%s\" opened", filename_.data());
+				LOGE_X("Cannot open the file \"%s\"", filename_.data());
+				return;
 			}
+
+			LOGI_X("File \"%s\" opened", filename_.data());
 
 			// Calculating file size
 			fileSize_ = AAsset_getLength(asset_);

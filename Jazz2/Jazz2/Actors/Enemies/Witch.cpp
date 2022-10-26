@@ -29,10 +29,10 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(30);
 		_scoreValue = 1000;
 
-		co_await RequestMetadataAsync("Enemy/Witch"_s);
+		async_await RequestMetadataAsync("Enemy/Witch"_s);
 		SetAnimation(AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Witch::OnUpdate(float timeMult)
@@ -147,10 +147,10 @@ namespace Jazz2::Actors::Enemies
 
 		_health = INT32_MAX;
 
-		co_await RequestMetadataAsync("Enemy/Witch"_s);
+		async_await RequestMetadataAsync("Enemy/Witch"_s);
 		SetAnimation((AnimState)1073741828);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Witch::MagicBullet::OnUpdate(float timeMult)

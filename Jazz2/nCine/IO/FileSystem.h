@@ -213,7 +213,7 @@ namespace nCine
 #endif
 
 		/// Opens file stream with specified access mode
-		static std::unique_ptr<IFileStream> Open(const String& path, FileAccessMode mode, bool shouldExitOnFailToOpen = false);
+		static std::unique_ptr<IFileStream> Open(const String& path, FileAccessMode mode);
 
 		static std::unique_ptr<IFileStream> CreateFromMemory(unsigned char* bufferPtr, uint32_t bufferSize);
 		static std::unique_ptr<IFileStream> CreateFromMemory(const unsigned char* bufferPtr, uint32_t bufferSize);

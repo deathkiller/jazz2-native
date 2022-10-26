@@ -39,10 +39,10 @@ namespace Jazz2::Actors::Enemies
 
 		_originPos = _lastPos = _targetPos = _pos;
 
-		co_await RequestMetadataAsync("Enemy/Bee"_s);
+		async_await RequestMetadataAsync("Enemy/Bee"_s);
 		SetAnimation(AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Bee::OnUpdate(float timeMult)

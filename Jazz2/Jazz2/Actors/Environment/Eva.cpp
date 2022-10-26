@@ -16,11 +16,11 @@ namespace Jazz2::Actors::Environment
 	{
 		SetState(ActorState::ApplyGravitation, false);
 
-		co_await RequestMetadataAsync("Object/Eva"_s);
+		async_await RequestMetadataAsync("Object/Eva"_s);
 
 		SetAnimation(AnimState::Idle);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Eva::OnUpdate(float timeMult)

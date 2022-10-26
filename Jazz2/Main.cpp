@@ -214,7 +214,6 @@ public:
 	void onPostUpdate() override;
 	void onShutdown() override;
 	void onResizeWindow(int width, int height) override;
-	void onFullscreenChanged(bool isFullscreen) override;
 
 	void onKeyPressed(const KeyboardEvent& event) override;
 	void onKeyReleased(const KeyboardEvent& event) override;
@@ -447,11 +446,8 @@ void GameEventHandler::onResizeWindow(int width, int height)
 	if (_currentHandler != nullptr) {
 		_currentHandler->OnInitializeViewport(width, height);
 	}
-}
 
-void GameEventHandler::onFullscreenChanged(bool isFullscreen)
-{
-	PreferencesCache::EnableFullscreen = isFullscreen;
+	PreferencesCache::EnableFullscreen = theApplication().gfxDevice().isFullscreen();
 }
 
 void GameEventHandler::onKeyPressed(const KeyboardEvent& event)

@@ -31,13 +31,13 @@ namespace Jazz2::Actors::Solid
 
 		switch (theme) {
 			default:
-			case 0: co_await RequestMetadataAsync("Object/PushBoxRock"); break;
-			case 1: co_await RequestMetadataAsync("Object/PushBoxCrate"); break;
+			case 0: async_await RequestMetadataAsync("Object/PushBoxRock"); break;
+			case 1: async_await RequestMetadataAsync("Object/PushBoxCrate"); break;
 		}
 
 		SetAnimation("PushBox"_s);
 
-		co_return true;
+		async_return true;
 	}
 
 	bool PushableBox::OnHandleCollision(std::shared_ptr<ActorBase> other)

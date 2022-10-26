@@ -91,7 +91,7 @@ namespace nCine
 		const DisplayMode::VSync vSyncMode = (appCfg_.withVSync ? DisplayMode::VSync::Enabled : DisplayMode::VSync::Disabled);
 		DisplayMode displayMode(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, vSyncMode);
 
-		const IGfxDevice::WindowMode windowMode(appCfg_.resolution.X, appCfg_.resolution.Y, appCfg_.fullscreen, appCfg_.resizable);
+		const IGfxDevice::WindowMode windowMode(appCfg_.resolution.X, appCfg_.resolution.Y, appCfg_.fullscreen, appCfg_.resizable, appCfg_.windowScaling);
 #if defined(WITH_SDL)
 		gfxDevice_ = std::make_unique<SdlGfxDevice>(windowMode, glContextInfo, displayMode);
 		inputManager_ = std::make_unique<SdlInputManager>();
@@ -162,6 +162,7 @@ namespace nCine
 					else if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
 						gfxDevice_->width_ = event.window.data1;
 						gfxDevice_->height_ = event.window.data2;
+						gfxDevice_->isFullscreen_ = SDL_GetWindowFlags(SDL_GetWindowFromID(event.window.windowID)) & SDL_WINDOW_FULLSCREEN;
 						resizeScreenViewport(event.window.data1, event.window.data2);
 					}
 					break;

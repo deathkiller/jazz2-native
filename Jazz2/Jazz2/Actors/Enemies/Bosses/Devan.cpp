@@ -33,12 +33,12 @@ namespace Jazz2::Actors::Bosses
 
 		SetState(ActorState::CollideWithOtherActors, false);
 
-		co_await RequestMetadataAsync("Boss/Devan"_s);
+		async_await RequestMetadataAsync("Boss/Devan"_s);
 		SetAnimation(AnimState::Idle);
 
 		_renderer.setDrawEnabled(false);
 
-		co_return true;
+		async_return true;
 	}
 
 	bool Devan::OnActivatedBoss()
@@ -370,10 +370,10 @@ namespace Jazz2::Actors::Bosses
 
 		_health = INT32_MAX;
 
-		co_await RequestMetadataAsync("Boss/Devan"_s);
+		async_await RequestMetadataAsync("Boss/Devan"_s);
 		SetAnimation((AnimState)668);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Devan::Bullet::OnUpdateHitbox()
@@ -428,10 +428,10 @@ namespace Jazz2::Actors::Bosses
 
 		_health = INT32_MAX;
 
-		co_await RequestMetadataAsync("Boss/Devan"_s);
+		async_await RequestMetadataAsync("Boss/Devan"_s);
 		SetAnimation((AnimState)675);
 
-		co_return true;
+		async_return true;
 	}
 
 	void Devan::Fireball::OnUpdateHitbox()

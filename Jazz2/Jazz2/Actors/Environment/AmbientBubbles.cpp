@@ -26,9 +26,9 @@ namespace Jazz2::Actors::Environment
 		SetState(ActorState::ForceDisableCollisions, true);
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
-		co_await RequestMetadataAsync("Common/AmbientBubbles"_s);
+		async_await RequestMetadataAsync("Common/AmbientBubbles"_s);
 
-		co_return true;
+		async_return true;
 	}
 
 	void AmbientBubbles::OnUpdate(float timeMult)

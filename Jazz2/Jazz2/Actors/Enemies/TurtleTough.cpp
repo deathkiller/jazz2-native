@@ -28,7 +28,7 @@ namespace Jazz2::Actors::Enemies
 
 		SetState(ActorState::CollideWithTilesetReduced, true);
 
-		co_await RequestMetadataAsync("Enemy/TurtleTough"_s);
+		async_await RequestMetadataAsync("Enemy/TurtleTough"_s);
 		SetFacingLeft(nCine::Random().NextBool());
 		SetAnimation(AnimState::Walk);
 
@@ -36,7 +36,7 @@ namespace Jazz2::Actors::Enemies
 
 		PlaceOnGround();
 
-		co_return true;
+		async_return true;
 	}
 
 	void TurtleTough::OnUpdate(float timeMult)

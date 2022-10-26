@@ -28,7 +28,7 @@ namespace Jazz2::Actors::Enemies
 		_scoreValue = 100;
 		_maxHealth = 4;
 
-		co_await RequestMetadataAsync("Enemy/Sucker"_s);
+		async_await RequestMetadataAsync("Enemy/Sucker"_s);
 
 		if (parentLastHitDir != LastHitDirection::None) {
 			SetFacingLeft(parentLastHitDir == LastHitDirection::Left);
@@ -53,7 +53,7 @@ namespace Jazz2::Actors::Enemies
 			PlaceOnGround();
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	void Sucker::OnUpdate(float timeMult)

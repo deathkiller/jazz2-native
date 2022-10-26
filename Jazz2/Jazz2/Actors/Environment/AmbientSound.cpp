@@ -29,9 +29,9 @@ namespace Jazz2::Actors::Environment
 		SetState(ActorState::ForceDisableCollisions, true);
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
-		co_await RequestMetadataAsync("Common/AmbientSound"_s);
+		async_await RequestMetadataAsync("Common/AmbientSound"_s);
 		
-		co_return true;
+		async_return true;
 	}
 
 	void AmbientSound::OnUpdate(float timeMult)

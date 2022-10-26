@@ -24,14 +24,14 @@ namespace Jazz2::Actors::Solid
 
 		SetState(ActorState::CollideWithTileset | ActorState::ApplyGravitation, false);
 
-		co_await RequestMetadataAsync("Object/PinballBumper"_s);
+		async_await RequestMetadataAsync("Object/PinballBumper"_s);
 
 		switch (theme) {
 			case 0: SetAnimation((AnimState)0); break;
 			case 1: SetAnimation((AnimState)1); break;
 		}
 
-		co_return true;
+		async_return true;
 	}
 
 	void PinballBumper::OnUpdate(float timeMult)

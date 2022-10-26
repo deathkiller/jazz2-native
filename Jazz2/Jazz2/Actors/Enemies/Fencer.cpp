@@ -24,13 +24,13 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(3);
 		_scoreValue = 400;
 
-		co_await RequestMetadataAsync("Enemy/Fencer"_s);
+		async_await RequestMetadataAsync("Enemy/Fencer"_s);
 		SetFacingLeft(true);
 		SetAnimation(AnimState::Idle);
 
 		PlaceOnGround();
 
-		co_return true;
+		async_return true;
 	}
 
 	void Fencer::OnUpdate(float timeMult)

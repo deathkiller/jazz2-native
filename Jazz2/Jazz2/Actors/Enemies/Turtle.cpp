@@ -47,10 +47,10 @@ namespace Jazz2::Actors::Enemies
 		switch (_theme) {
 			case 0:
 			default:
-				co_await RequestMetadataAsync("Enemy/Turtle"_s);
+				async_await RequestMetadataAsync("Enemy/Turtle"_s);
 				break;
 			case 1: // Xmas
-				co_await RequestMetadataAsync("Enemy/TurtleXmas"_s);
+				async_await RequestMetadataAsync("Enemy/TurtleXmas"_s);
 				break;
 		}
 		SetFacingLeft(nCine::Random().NextBool());
@@ -60,7 +60,7 @@ namespace Jazz2::Actors::Enemies
 
 		PlaceOnGround();
 
-		co_return true;
+		async_return true;
 	}
 
 	void Turtle::OnUpdate(float timeMult)
