@@ -74,8 +74,8 @@ namespace nCine
 		const char* joyName(int joyId) const override {
 			return "XInput";
 		}
-		const char* joyGuid(int joyId) const override {
-			return "XInput";
+		const JoystickGuid joyGuid(int joyId) const override {
+			return JoystickGuidType::Xinput;
 		}
 		int joyNumButtons(int joyId) const override {
 			return 0;

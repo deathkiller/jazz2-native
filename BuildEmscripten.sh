@@ -10,4 +10,4 @@ source ../emsdk/emsdk_env.sh
 
 # Use SDL2 as default for Emscripten for now, it has better touch support
 emcmake cmake -B ../Jazz2-Emscripten-${BuildType} -D CMAKE_BUILD_TYPE=${BuildType} -D NCINE_PREFERRED_BACKEND=SDL2 -D NCINE_LINKTIME_OPTIMIZATION=ON
-make -j2 -C ../Jazz2-Emscripten-${BuildType}
+make -j8 -C ../Jazz2-Emscripten-${BuildType}

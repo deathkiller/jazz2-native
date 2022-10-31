@@ -100,6 +100,7 @@ namespace nCine
 		static AndroidJniClass_InputDevice getDevice(int deviceId);
 		static int getDeviceIds(int* destination, int maxSize);
 		int getName(char* destination, int maxStringSize) const;
+		int getDescriptor(char* destination, int maxStringSize) const;
 		int getProductId() const;
 		int getVendorId() const;
 		AndroidJniClass_MotionRange getMotionRange(int axis) const;
@@ -111,6 +112,7 @@ namespace nCine
 		static jmethodID midGetDevice_;
 		static jmethodID midGetDeviceIds_;
 		static jmethodID midGetName_;
+		static jmethodID midGetDescriptor_;
 		static jmethodID midGetVendorId_;
 		static jmethodID midGetProductId_;
 		static jmethodID midGetMotionRange_;

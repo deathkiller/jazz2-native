@@ -55,7 +55,7 @@ namespace nCine
 		name[0] = '\0';
 
 		for (unsigned int i = 0; i < MaxNumAxes; i++)
-			axes[i].name = AxisName::UNKNOWN;
+			desc.axes[i].name = AxisName::UNKNOWN;
 		for (unsigned int i = 0; i < MaxNumButtons; i++)
 			buttons[i] = ButtonName::UNKNOWN;
 		for (unsigned int i = 0; i < MaxHatButtons; i++)

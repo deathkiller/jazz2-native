@@ -25,23 +25,6 @@
 
 namespace nCine
 {
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-	namespace
-	{
-		void setEmscriptenJoyGuidString(char* joyGuidString)
-		{
-			memset(joyGuidString, '\0', 33);
-			joyGuidString[0] = 'd';
-			joyGuidString[1] = 'e';
-			joyGuidString[2] = 'f';
-			joyGuidString[3] = 'a';
-			joyGuidString[4] = 'u';
-			joyGuidString[5] = 'l';
-			joyGuidString[6] = 't';
-		}
-	}
-#endif
-
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS
 	///////////////////////////////////////////////////////////
@@ -322,32 +305,31 @@ namespace nCine
 		ASSERT(joyId >= 0);
 		ASSERT_MSG_X(joyId < int(MaxNumJoysticks), "joyId is %d and the maximum is %u", joyId, MaxNumJoysticks - 1);
 
-		if (sdlJoysticks_[joyId] && SDL_JoystickGetAttached(sdlJoysticks_[joyId]))
-			return true;
-		else
-			return false;
+		return (sdlJoysticks_[joyId] && SDL_JoystickGetAttached(sdlJoysticks_[joyId]));
 	}
 
 	const char* SdlInputManager::joyName(int joyId) const
 	{
-		if (isJoyPresent(joyId))
+		if (isJoyPresent(joyId)) {
 			return SDL_JoystickName(sdlJoysticks_[joyId]);
-		else
+		} else {
 			return nullptr;
+		}
 	}
 
-	const char* SdlInputManager::joyGuid(int joyId) const
+	const JoystickGuid SdlInputManager::joyGuid(int joyId) const
 	{
 		if (isJoyPresent(joyId)) {
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+			return JoystickGuidType::Default;
+#else
 			const SDL_JoystickGUID joystickGuid = SDL_JoystickGetGUID(sdlJoysticks_[joyId]);
 			SDL_JoystickGetGUIDString(joystickGuid, joyGuidString_, 33);
-#else
-			setEmscriptenJoyGuidString(joyGuidString_);
+			return StringView(joyGuidString_);
 #endif
-			return joyGuidString_;
-		} else
-			return nullptr;
+		} else {
+			return JoystickGuidType::Unknown;
+		}
 	}
 
 	int SdlInputManager::joyNumButtons(int joyId) const
@@ -431,15 +413,12 @@ namespace nCine
 
 			SDL_Joystick* joy = sdlJoysticks_[deviceIndex];
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(ENABLE_LOG) && !defined(DEATH_TARGET_EMSCRIPTEN)
 			const SDL_JoystickGUID joystickGuid = SDL_JoystickGetGUID(joy);
 			SDL_JoystickGetGUIDString(joystickGuid, joyGuidString_, 33);
-#else
-			setEmscriptenJoyGuidString(joyGuidString_);
-#endif
-
 			LOGI_X("Joystick %d \"%s\" (%s) has been connected - %d hats, %d axes, %d buttons, %d balls",
 				   deviceIndex, SDL_JoystickName(joy), joyGuidString_, SDL_JoystickNumHats(joy), SDL_JoystickNumAxes(joy), SDL_JoystickNumButtons(joy), SDL_JoystickNumBalls(joy));
+#endif
 			joyMapping_.onJoyConnected(joyConnectionEvent_);
 			inputEventHandler_->onJoyConnected(joyConnectionEvent_);
 		} else if (event.type == SDL_JOYDEVICEREMOVED) {

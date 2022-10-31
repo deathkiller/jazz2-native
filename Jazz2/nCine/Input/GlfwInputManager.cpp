@@ -180,18 +180,25 @@ namespace nCine
 			return nullptr;
 	}
 
-	const char* GlfwInputManager::joyGuid(int joyId) const
+	const JoystickGuid GlfwInputManager::joyGuid(int joyId) const
 	{
-#ifdef DEATH_TARGET_EMSCRIPTEN
-		static const char* joyGuidString = "default";
-		return joyGuidString;
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		return JoystickGuidType::Default;
 #elif GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 3
-		if (isJoyPresent(joyId))
-			return glfwGetJoystickGUID(joyId);
-		else
-			return nullptr;
+		if (isJoyPresent(joyId)) {
+			constexpr char XinputPrefix[] = "78696e707574";
+			const char* guid = glfwGetJoystickGUID(joyId);
+			if (strncmp(guid, XinputPrefix, sizeof(XinputPrefix) - 1) == 0) {
+				return JoystickGuidType::Xinput;
+			} else {
+				return StringView(guid);
+			}
+
+		} else {
+			return JoystickGuidType::Unknown;
+		}
 #else
-		return nullptr;
+		return JoystickGuidType::Unknown;
 #endif
 	}
 
