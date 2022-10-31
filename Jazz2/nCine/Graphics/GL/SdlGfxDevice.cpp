@@ -204,10 +204,9 @@ namespace nCine
 		if (glContextInfo_.debugContext)
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 
-#if defined(DEATH_TARGET_EMSCRIPTEN)
 		Uint32 flags = SDL_WINDOW_OPENGL;
-#else
-		Uint32 flags = SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI;
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		flags |= SDL_WINDOW_ALLOW_HIGHDPI;
 #endif
 		if (width_ == 0 || height_ == 0) {
 			flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
@@ -217,7 +216,7 @@ namespace nCine
 		}
 
 		// Creating a window with SDL2
-		windowHandle_ = SDL_CreateWindow("", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width_, height_, flags);
+		windowHandle_ = SDL_CreateWindow("", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width_, height_, flags);
 		FATAL_ASSERT_MSG_X(windowHandle_, "SDL_CreateWindow failed: %s", SDL_GetError());
 		SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
 		initGLViewport();

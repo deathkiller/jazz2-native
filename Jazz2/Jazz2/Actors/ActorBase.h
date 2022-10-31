@@ -10,8 +10,8 @@
 
 // If coroutines are not supported, load resources synchronously
 #if defined(WITH_COROUTINES)
-#	define async_return async_return
-#	define async_await async_await
+#	define async_return co_return
+#	define async_await co_await
 #else
 #	define async_return return
 #	define async_await

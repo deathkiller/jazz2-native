@@ -106,7 +106,7 @@ namespace nCine
 		static const int AxesToMap[NumAxesToMap];
 
 		int deviceId_;
-		char guid_[33];
+		JoystickGuid guid_;
 		char name_[MaxNameLength];
 
 		int numButtons_;
@@ -152,7 +152,7 @@ namespace nCine
 
 		bool isJoyPresent(int joyId) const override;
 		const char* joyName(int joyId) const override;
-		const char* joyGuid(int joyId) const override;
+		const JoystickGuid joyGuid(int joyId) const override;
 		int joyNumButtons(int joyId) const override;
 		int joyNumHats(int joyId) const override;
 		int joyNumAxes(int joyId) const override;

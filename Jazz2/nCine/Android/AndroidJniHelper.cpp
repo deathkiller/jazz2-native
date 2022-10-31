@@ -20,6 +20,7 @@ namespace nCine
 	jmethodID AndroidJniClass_InputDevice::midGetDevice_ = nullptr;
 	jmethodID AndroidJniClass_InputDevice::midGetDeviceIds_ = nullptr;
 	jmethodID AndroidJniClass_InputDevice::midGetName_ = nullptr;
+	jmethodID AndroidJniClass_InputDevice::midGetDescriptor_ = nullptr;
 	jmethodID AndroidJniClass_InputDevice::midGetProductId_ = nullptr;
 	jmethodID AndroidJniClass_InputDevice::midGetVendorId_ = nullptr;
 	jmethodID AndroidJniClass_InputDevice::midGetMotionRange_ = nullptr;
@@ -220,6 +221,7 @@ namespace nCine
 		midGetDevice_ = getStaticMethodID(javaClass_, "getDevice", "(I)Landroid/view/InputDevice;");
 		midGetDeviceIds_ = getStaticMethodID(javaClass_, "getDeviceIds", "()[I");
 		midGetName_ = getMethodID(javaClass_, "getName", "()Ljava/lang/String;");
+		midGetDescriptor_ = getMethodID(javaClass_, "getDescriptor", "()Ljava/lang/String;");
 		midGetProductId_ = getMethodID(javaClass_, "getProductId", "()I");
 		midGetVendorId_ = getMethodID(javaClass_, "getVendorId", "()I");
 		midGetMotionRange_ = getMethodID(javaClass_, "getMotionRange", "(I)Landroid/view/InputDevice$MotionRange;");
@@ -260,6 +262,24 @@ namespace nCine
 			AndroidJniHelper::jniEnv->DeleteLocalRef(strDeviceName);
 		} else
 			strncpy(destination, static_cast<const char*>("Unknown"), maxStringSize);
+
+		return (int(length) < maxStringSize) ? int(length) : maxStringSize;
+	}
+
+	int AndroidJniClass_InputDevice::getDescriptor(char* destination, int maxStringSize) const
+	{
+		jstring strDeviceDescriptor = static_cast<jstring>(AndroidJniHelper::jniEnv->CallObjectMethod(javaObject_, midGetDescriptor_));
+		const jsize length = AndroidJniHelper::jniEnv->GetStringUTFLength(strDeviceDescriptor);
+
+		if (strDeviceDescriptor) {
+			const char* deviceName = AndroidJniHelper::jniEnv->GetStringUTFChars(strDeviceDescriptor, 0);
+			strncpy(destination, deviceName, maxStringSize);
+			destination[maxStringSize - 1] = '\0';
+			AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strDeviceDescriptor, deviceName);
+			AndroidJniHelper::jniEnv->DeleteLocalRef(strDeviceDescriptor);
+		} else if (maxStringSize > 0) {
+			destination[0] = '\0';
+		}
 
 		return (int(length) < maxStringSize) ? int(length) : maxStringSize;
 	}

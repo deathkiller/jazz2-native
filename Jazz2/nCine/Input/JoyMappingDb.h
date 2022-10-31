@@ -1,33 +1,16 @@
 #pragma once
 
 #if defined(_WIN32)
-#define SDL_JOYSTICK_XINPUT (1)
-#define SDL_JOYSTICK_WGI (1)
-#define SDL_JOYSTICK_DINPUT (1)
+#	define SDL_JOYSTICK_XINPUT (1)
+#	define SDL_JOYSTICK_WGI (1)
+#	define SDL_JOYSTICK_DINPUT (1)
 #endif
 
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 #	define SDL_JOYSTICK_EMSCRIPTEN (1)
 #endif
 
 static const char* ControllerMappings[] = {
-
-	// Default joystick mappings
-	#if defined(_WIN32)
-		#if defined(WITH_SDL)
-		"030000005e0400008e02000000007801,Xbox 360 Controller,platform:Windows,a:b0,b:b1,x:b2,y:b3,start:b7,guide:b10,back:b6,leftstick:b8,rightstick:b9,leftshoulder:b4,rightshoulder:b5,leftx:a0,lefty:a1,rightx:a3,righty:a4,lefttrigger:a2,righttrigger:a5,dpup:h0.1,dpdown:h0.4,dpleft:h0.8,dpright:h0.2",
-		#elif defined(WITH_GLFW) // only tested on GLFW 3.2
-		"030000005e0400008e02000000007801,Xbox 360 Controller,platform:Windows,a:b0,b:b1,x:b2,y:b3,start:b7,back:b6,leftstick:b8,rightstick:b9,leftshoulder:b4,rightshoulder:b5,dpup:b10,dpleft:b13,leftx:a0,lefty:a1~,rightx:a2,righty:a3~,lefttrigger:a4,righttrigger:a5",
-		// 8BitDo SN30 Pro connected via USB (XInput)
-		"78696e70757401000000000000000000,Xbox Controller,platform:Windows,a:b0,b:b1,x:b2,y:b3,start:b7,guide:b10,back:b6,leftstick:b8,rightstick:b9,leftshoulder:b4,rightshoulder:b5,leftx:a0,lefty:a1,rightx:a2,righty:a3,lefttrigger:a4,righttrigger:a5,dpup:h0.1,dpdown:h0.4,dpleft:h0.8,dpright:h0.2",
-		#endif
-	#endif
-	#if defined(__ANDROID__)
-		"045e028e000000000000000000000000,Microsoft X-Box 360 pad,platform:Android,a:b0,b:b1,x:b2,y:b3,leftshoulder:b4,rightshoulder:b5,leftstick:b6,rightstick:b7,start:b8,back:b9,leftx:a0,lefty:a1,lefttrigger:a4,righttrigger:a5,rightx:a2,righty:a3,dpup:h0.1,dpdown:h0.4,dpleft:h0.8,dpright:h0.2",
-		"1d790009000000000000000000000000,NYKO PLAYPAD PRO,platform:Android,a:b0,b:b1,x:b2,y:b3,leftshoulder:b4,rightshoulder:b5,leftstick:b6,rightstick:b7,start:b8,back:b9,leftx:a0,lefty:a1,rightx:a2,righty:a3,lefttrigger:a4,righttrigger:a5,dpup:h0.1,dpdown:h0.4,dpleft:h0.8,dpright:h0.2",
-		"09557210000000000000000000000000,NVIDIA Corporation Shield Controller,platform:Android,a:b0,b:b1,x:b2,y:b3,leftshoulder:b4,rightshoulder:b5,leftstick:b6,rightstick:b7,start:b8,back:b9,leftx:a0,lefty:a1,rightx:a2,righty:a3,lefttrigger:a4,righttrigger:a5,dpup:h0.1,dpdown:h0.4,dpleft:h0.8,dpright:h0.2",
-	#endif
-
 	// SDL2 mappings from `SDL2-2.24.1/src/joystick/SDL_gamecontrollerdb.h`
 	#if SDL_JOYSTICK_XINPUT
 		"xinput,XInput Controller,a:b0,b:b1,back:b6,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b8,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b9,righttrigger:a5,rightx:a3,righty:a4,start:b7,x:b2,y:b3,",

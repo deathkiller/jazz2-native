@@ -1,7 +1,6 @@
 #pragma once
 
-#include <cstdint>
-#include "InputEvents.h"
+#include "IInputManager.h"
 
 #include <Containers/SmallVector.h>
 #include <Containers/StringView.h>
@@ -83,11 +82,12 @@ namespace nCine
 		bool isJoyMapped(int joyId) const;
 		const JoyMappedStateImpl& joyMappedState(int joyId) const;
 		void deadZoneNormalize(Vector2f& joyVector, float deadZoneValue) const;
+		static JoystickGuid createJoystickGuid(uint16_t bus, uint16_t vendor, uint16_t product, uint16_t version, const StringView& name, uint8_t driverSignature, uint8_t driverData);
 
 	private:
 		static const unsigned int MaxNameLength = 64;
 
-		struct MappedJoystick
+		struct MappingDescription
 		{
 			struct Axis
 			{
@@ -100,35 +100,34 @@ namespace nCine
 			static const int MaxNumButtons = 16;
 			static const int MaxHatButtons = 4; // The four directions
 
-			class Guid
-			{
-			public:
-				Guid();
-				Guid(const char* string) {
-					fromString(string);
-				}
-				void fromString(const char* string);
-
-				bool operator==(const Guid& guid) const;
-
-			private:
-				uint32_t array_[4];
-			} guid;
-
-			char name[MaxNameLength];
 			Axis axes[MaxNumAxes];
 			ButtonName buttons[MaxNumButtons];
 			ButtonName hats[MaxHatButtons];
 
+			MappingDescription();
+		};
+
+		struct MappedJoystick
+		{
+			JoystickGuid guid;
+			char name[MaxNameLength];
+			MappingDescription desc;
+
 			MappedJoystick();
+		};
+
+		struct AssignedMapping
+		{
+			bool isValid;
+			MappingDescription desc;
 		};
 
 		static const char* AxesStrings[JoyMappedState::NumAxes];
 		static const char* ButtonsStrings[JoyMappedState::NumButtons];
 
 		static const int MaxNumJoysticks = 4;
-		int mappingIndex_[MaxNumJoysticks];
 		SmallVector<MappedJoystick, 0> mappings_;
+		AssignedMapping assignedMappings_[MaxNumJoysticks];
 
 		static JoyMappedStateImpl nullMappedJoyState_;
 		static SmallVector<JoyMappedStateImpl, MaxNumJoysticks> mappedJoyStates_;
@@ -139,14 +138,14 @@ namespace nCine
 		IInputEventHandler* inputEventHandler_;
 
 		void checkConnectedJoystics();
-		int findMappingByGuid(const MappedJoystick::Guid& guid);
+		int findMappingByGuid(const JoystickGuid& guid);
 		int findMappingByName(const char* name);
 		bool parseMappingFromString(const char* mappingString, MappedJoystick& map);
 		bool parsePlatformKeyword(const char* start, const char* end) const;
 		bool parsePlatformName(const char* start, const char* end) const;
 		int parseAxisName(const char* start, const char* end) const;
 		int parseButtonName(const char* start, const char* end) const;
-		int parseAxisMapping(const char* start, const char* end, MappedJoystick::Axis& axis) const;
+		int parseAxisMapping(const char* start, const char* end, MappingDescription::Axis& axis) const;
 		int parseButtonMapping(const char* start, const char* end) const;
 		int parseHatMapping(const char* start, const char* end) const;
 		int hatStateToIndex(unsigned char hatState) const;

@@ -205,8 +205,8 @@ namespace nCine
 #ifdef WITH_QT5GAMEPAD
 		bool isJoyPresent(int joyId) const override;
 		const char* joyName(int joyId) const override;
-		const char* joyGuid(int joyId) const override {
-			return nullptr;
+		const JoystickGuid joyGuid(int joyId) const override {
+			return { };
 		}
 		inline int joyNumButtons(int joyId) const override {
 			return Qt5JoystickState::NumButtons;
@@ -225,8 +225,8 @@ namespace nCine
 		inline const char* joyName(int joyId) const override {
 			return nullptr;
 		}
-		inline const char* joyGuid(int joyId) const override {
-			return nullptr;
+		inline const JoystickGuid joyGuid(int joyId) const override {
+			return { };
 		}
 		inline int joyNumButtons(int joyId) const override {
 			return 0;

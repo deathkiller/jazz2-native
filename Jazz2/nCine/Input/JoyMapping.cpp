@@ -14,7 +14,40 @@ namespace nCine
 {
 	namespace
 	{
-		#include "JoyMappingDb.h"
+#include "JoyMappingDb.h"
+
+#if defined(DEATH_TARGET_ANDROID)
+		constexpr AxisName AndroidAxisNameMapping[] = {
+			AxisName::LX,
+			AxisName::LY,
+			AxisName::RX,
+			AxisName::RY,
+			AxisName::LTRIGGER,
+			AxisName::RTRIGGER
+		};
+
+		constexpr ButtonName AndroidDpadButtonNameMapping[] = {
+			ButtonName::DPAD_UP,
+			ButtonName::DPAD_RIGHT,
+			ButtonName::DPAD_DOWN,
+			ButtonName::DPAD_LEFT
+		};
+#endif
+
+		// TODO: Implement CRC
+		//static uint16_t crc16(uint16_t crc, const void* data, size_t len)
+		//{
+		//	for (size_t i = 0; i < len; ++i) {
+		//		uint8_t r = (uint8_t)crc ^ ((const uint8_t*)data)[i];
+		//		uint16_t crcByte = 0;
+		//		for (int j = 0; j < 8; ++j) {
+		//			crcByte = ((crcByte ^ r) & 1 ? 0xA001 : 0) ^ crcByte >> 1;
+		//			r >>= 1;
+		//		}
+		//		crc = crcByte ^ crc >> 8;
+		//	}
+		//	return crc;
+		//}
 	}
 
 	///////////////////////////////////////////////////////////
@@ -59,10 +92,8 @@ namespace nCine
 	// CONSTRUCTORS AND DESTRUCTOR
 	///////////////////////////////////////////////////////////
 
-	JoyMapping::MappedJoystick::MappedJoystick()
+	JoyMapping::MappingDescription::MappingDescription()
 	{
-		name[0] = '\0';
-
 		for (unsigned int i = 0; i < MaxNumAxes; i++)
 			axes[i].name = AxisName::UNKNOWN;
 		for (unsigned int i = 0; i < MaxNumButtons; i++)
@@ -71,17 +102,17 @@ namespace nCine
 			hats[i] = ButtonName::UNKNOWN;
 	}
 
-	JoyMapping::MappedJoystick::Guid::Guid()
+	JoyMapping::MappedJoystick::MappedJoystick()
 	{
-		for (unsigned int i = 0; i < 4; i++)
-			array_[i] = 0;
+		name[0] = '\0';
 	}
 
 	JoyMapping::JoyMapping()
 		: inputManager_(nullptr), inputEventHandler_(nullptr)
 	{
-		for (unsigned int i = 0; i < MaxNumJoysticks; i++)
-			mappingIndex_[i] = -1;
+		for (unsigned int i = 0; i < MaxNumJoysticks; i++) {
+			assignedMappings_[i].isValid = false;
+		}
 
 		unsigned int numStrings = 0;
 
@@ -103,25 +134,6 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
-
-	void JoyMapping::MappedJoystick::Guid::fromString(const char* string)
-	{
-		char component[9];
-
-		unsigned int offset = 0;
-		for (unsigned int i = 0; i < 4; i++) {
-			memcpy(component, string + offset, 8);
-			component[8] = '\0';
-			array_[i] = strtoul(component, nullptr, 16);
-			offset += 8;
-		}
-	}
-
-	bool JoyMapping::MappedJoystick::Guid::operator==(const Guid& guid) const
-	{
-		return array_[0] == guid.array_[0] && array_[1] == guid.array_[1] &&
-			array_[2] == guid.array_[2] && array_[3] == guid.array_[3];
-	}
 
 	void JoyMapping::init(const IInputManager* inputManager)
 	{
@@ -214,11 +226,11 @@ namespace nCine
 		if (inputEventHandler_ == nullptr)
 			return;
 
-		const int idToIndex = mappingIndex_[event.joyId];
-		if (idToIndex != -1 &&
-			event.buttonId >= 0 && event.buttonId < static_cast<int>(MappedJoystick::MaxNumButtons)) {
+		const auto& mapping = assignedMappings_[event.joyId];
+		const bool mappingIsValid = (mapping.isValid && event.buttonId >= 0 && event.buttonId < static_cast<int>(MappingDescription::MaxNumButtons));
+		if (mappingIsValid) {
 			mappedButtonEvent_.joyId = event.joyId;
-			mappedButtonEvent_.buttonName = mappings_[idToIndex].buttons[event.buttonId];
+			mappedButtonEvent_.buttonName = mapping.desc.buttons[event.buttonId];
 			if (mappedButtonEvent_.buttonName != ButtonName::UNKNOWN) {
 				const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
 				mappedJoyStates_[event.joyId].buttons_[buttonId] = true;
@@ -232,11 +244,11 @@ namespace nCine
 		if (inputEventHandler_ == nullptr)
 			return;
 
-		const int idToIndex = mappingIndex_[event.joyId];
-		if (idToIndex != -1 &&
-			event.buttonId >= 0 && event.buttonId < static_cast<int>(MappedJoystick::MaxNumButtons)) {
+		const auto& mapping = assignedMappings_[event.joyId];
+		const bool mappingIsValid = (mapping.isValid && event.buttonId >= 0 && event.buttonId < static_cast<int>(MappingDescription::MaxNumButtons));
+		if (mappingIsValid) {
 			mappedButtonEvent_.joyId = event.joyId;
-			mappedButtonEvent_.buttonName = mappings_[idToIndex].buttons[event.buttonId];
+			mappedButtonEvent_.buttonName = mapping.desc.buttons[event.buttonId];
 			if (mappedButtonEvent_.buttonName != ButtonName::UNKNOWN) {
 				const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
 				mappedJoyStates_[event.joyId].buttons_[buttonId] = false;
@@ -250,10 +262,10 @@ namespace nCine
 		if (inputEventHandler_ == nullptr)
 			return;
 
-		const int idToIndex = mappingIndex_[event.joyId];
+		const auto& mapping = assignedMappings_[event.joyId];
 		// Only the first gamepad hat is mapped
-		if (idToIndex != -1 && event.hatId == 0 &&
-			mappedJoyStates_[event.joyId].lastHatState_ != event.hatState) {
+		const bool mappingIsValid = (mapping.isValid && event.hatId == 0 && mappedJoyStates_[event.joyId].lastHatState_ != event.hatState);
+		if (mappingIsValid) {
 			mappedButtonEvent_.joyId = event.joyId;
 
 			const unsigned char oldHatState = mappedJoyStates_[event.joyId].lastHatState_;
@@ -265,7 +277,7 @@ namespace nCine
 				if ((oldHatState & hatValue) != (newHatState & hatValue)) {
 					int hatIndex = hatStateToIndex(hatValue);
 
-					mappedButtonEvent_.buttonName = mappings_[idToIndex].hats[hatIndex];
+					mappedButtonEvent_.buttonName = mapping.desc.hats[hatIndex];
 					if (mappedButtonEvent_.buttonName != ButtonName::UNKNOWN) {
 						const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
 						if (newHatState & hatValue) {
@@ -287,10 +299,10 @@ namespace nCine
 		if (inputEventHandler_ == nullptr)
 			return;
 
-		const int idToIndex = mappingIndex_[event.joyId];
-		if (idToIndex != -1 &&
-			event.axisId >= 0 && event.axisId < static_cast<int>(MappedJoystick::MaxNumAxes)) {
-			const MappedJoystick::Axis& axis = mappings_[idToIndex].axes[event.axisId];
+		const auto& mapping = assignedMappings_[event.joyId];
+		const bool mappingIsValid = (mapping.isValid && event.axisId >= 0 && event.axisId < static_cast<int>(MappingDescription::MaxNumAxes));
+		if (mappingIsValid) {
+			const auto& axis = mapping.desc.axes[event.axisId];
 
 			mappedAxisEvent_.joyId = event.joyId;
 			mappedAxisEvent_.axisName = axis.name;
@@ -306,55 +318,89 @@ namespace nCine
 	bool JoyMapping::onJoyConnected(const JoyConnectionEvent& event)
 	{
 		const char* joyName = inputManager_->joyName(event.joyId);
-		const char* joyGuid = inputManager_->joyGuid(event.joyId);
+		const JoystickGuid joyGuid = inputManager_->joyGuid(event.joyId);
 
-		mappingIndex_[event.joyId] = -1;
-		if (joyGuid != nullptr) {
-			MappedJoystick::Guid guid(joyGuid);
-			const int index = findMappingByGuid(guid);
+		auto& mapping = assignedMappings_[event.joyId];
+		mapping.isValid = false;
+
+		if (joyGuid.isValid()) {
+			const int index = findMappingByGuid(joyGuid);
 			if (index != -1) {
-				mappingIndex_[event.joyId] = index;
-				LOGI_X("Joystick mapping found for \"%s\" with GUID \"%s\" (%d)", joyName, joyGuid, event.joyId);
+				mapping.isValid = true;
+				mapping.desc = mappings_[index].desc;
+
+				const uint8_t* g = joyGuid.data;
+				LOGI_X("Joystick mapping found for \"%s\" with GUID \"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\" also known as \"%s\" (%d)", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], mappings_[index].name, event.joyId);
 			}
-		} else {
+		}
+
+		if (!mapping.isValid) {
 			const int index = findMappingByName(joyName);
 			if (index != -1) {
-				mappingIndex_[event.joyId] = index;
+				mapping.isValid = true;
+				mapping.desc = mappings_[index].desc;
 				LOGI_X("Joystick mapping found for \"%s\" (%d)", joyName, event.joyId);
 			}
 		}
 
-		return (mappingIndex_[event.joyId] != -1);
+#if defined(DEATH_TARGET_ANDROID)
+		if (!mapping.isValid) {
+			LOGI_X("Joystick mapping not found for \"%s\" (%d), using system configuration", joyName, event.joyId);
+			mapping.isValid = true;
+
+			for (int i = 0; i < _countof(AndroidAxisNameMapping); i++) {
+				mapping.desc.axes[i].name = AndroidAxisNameMapping[i];
+				mapping.desc.axes[i].min = -1.0f;
+				mapping.desc.axes[i].max = 1.0f;
+			}
+			
+			for (int i = 0; i < _countof(mapping.desc.buttons); i++) {
+				mapping.desc.buttons[i] = (ButtonName)i;
+			}
+
+			for (int i = 0; i < _countof(AndroidDpadButtonNameMapping); i++) {
+				mapping.desc.hats[i] = AndroidDpadButtonNameMapping[i];
+			}
+		}
+#endif
+
+		if (!mapping.isValid) {
+			const int index = findMappingByGuid(JoystickGuidType::Xinput);
+			if (index != -1) {
+				mapping.isValid = true;
+				mapping.desc = mappings_[index].desc;
+				LOGI_X("Joystick mapping not found for \"%s\" (%d), using XInput", joyName, event.joyId);
+			}
+		}
+
+		return mapping.isValid;
 	}
 
 	void JoyMapping::onJoyDisconnected(const JoyConnectionEvent& event)
 	{
-#ifdef WITH_SDL
+#if defined(WITH_SDL)
 		// Compacting the array of mapping indices
-		for (int i = event.joyId; i < MaxNumJoysticks - 1; i++)
-			mappingIndex_[i] = mappingIndex_[i + 1];
-		mappingIndex_[MaxNumJoysticks - 1] = -1;
+		for (int i = event.joyId; i < MaxNumJoysticks - 1; i++) {
+			assignedMappings_[i] = assignedMappings_[i + 1];
+		}
+		assignedMappings_[MaxNumJoysticks - 1].isValid = false;
 #else
-		mappingIndex_[event.joyId] = -1;
+		assignedMappings_[event.joyId].isValid = false;
 #endif
 	}
 
 	bool JoyMapping::isJoyMapped(int joyId) const
 	{
-		bool result = false;
-
-		if (joyId >= 0 && joyId < MaxNumJoysticks)
-			result = mappingIndex_[joyId] != -1;
-
-		return result;
+		return (joyId >= 0 && joyId < MaxNumJoysticks&& assignedMappings_[joyId].isValid);
 	}
 
 	const JoyMappedStateImpl& JoyMapping::joyMappedState(int joyId) const
 	{
-		if (joyId < 0 || joyId > MaxNumJoysticks)
+		if (joyId < 0 || joyId > MaxNumJoysticks) {
 			return nullMappedJoyState_;
-		else
+		} else {
 			return mappedJoyStates_[joyId];
+		}
 	}
 
 	void JoyMapping::deadZoneNormalize(Vector2f& joyVector, float deadZoneValue) const
@@ -368,6 +414,40 @@ namespace nCine
 			normalizedLength = std::clamp(normalizedLength, 0.0f, 1.0f);
 			joyVector = joyVector.Normalize() * normalizedLength;
 		}
+	}
+
+	JoystickGuid JoyMapping::createJoystickGuid(uint16_t bus, uint16_t vendor, uint16_t product, uint16_t version, const StringView& name, uint8_t driverSignature, uint8_t driverData)
+	{
+		JoystickGuid guid;
+		uint16_t* guid16 = (uint16_t*)guid.data;
+
+		*guid16++ = bus;
+		// TODO: Implement CRC
+		//*guid16++ = crc16(0, name.data(), name.size());
+		*guid16++ = 0;
+
+		if (vendor && product) {
+			*guid16++ = vendor;
+			*guid16++ = 0;
+			*guid16++ = product;
+			*guid16++ = 0;
+			*guid16++ = version;
+			guid.data[14] = driverSignature;
+			guid.data[15] = driverData;
+		} else {
+			size_t availableSpace = sizeof(guid.data) - 4;
+
+			if (driverSignature) {
+				availableSpace -= 2;
+				guid.data[14] = driverSignature;
+				guid.data[15] = driverData;
+			}
+
+			if (!name.empty()) {
+				std::memcpy(guid16, name.data(), std::min(name.size(), availableSpace));
+			}
+		}
+		return guid;
 	}
 
 	///////////////////////////////////////////////////////////
@@ -385,7 +465,7 @@ namespace nCine
 		}
 	}
 
-	int JoyMapping::findMappingByGuid(const MappedJoystick::Guid& guid)
+	int JoyMapping::findMappingByGuid(const JoystickGuid& guid)
 	{
 		int index = -1;
 
@@ -418,9 +498,7 @@ namespace nCine
 	bool JoyMapping::parseMappingFromString(const char* mappingString, MappedJoystick& map)
 	{
 		// Early out if the string is empty or a comment
-		if (mappingString[0] == '\0' ||
-			mappingString[0] == '\n' ||
-			mappingString[0] == '#') {
+		if (mappingString[0] == '\0' || mappingString[0] == '\n' || mappingString[0] == '#') {
 			return false;
 		}
 
@@ -437,19 +515,9 @@ namespace nCine
 			return false;
 		}
 		unsigned int subLength = static_cast<unsigned int>(subEnd - subStart);
+		map.guid.fromString(StringView(subStart, subLength));
 
-#ifndef __EMSCRIPTEN__
-		const unsigned int GuidNumCharacters = 32;
-#else
-		const unsigned int GuidNumCharacters = 7; // "default"
-#endif
-		if (subLength != GuidNumCharacters) {
-			LOGE_X("GUID length is %u instead of %u characters", subLength, GuidNumCharacters);
-			return false;
-		}
-		map.guid.fromString(subStart);
-
-		subStartUntrimmed = subEndUntrimmed + 1; // GUID plus the following  ',' character
+		subStartUntrimmed = subEndUntrimmed + 1; // GUID plus the following ',' character
 		subEndUntrimmed = strchr(subStartUntrimmed, ',');
 		if (subEndUntrimmed == nullptr) {
 			LOGE("Invalid mapping string");
@@ -476,29 +544,28 @@ namespace nCine
 				return false;
 			}
 
-			const bool keywordFound = parsePlatformKeyword(subStart, subMid);
-			if (keywordFound) {
-				const bool thisPlatform = parsePlatformName(subMid + 1, subEnd);
-				if (thisPlatform == false)
+			if (parsePlatformKeyword(subStart, subMid)) {
+				if (!parsePlatformName(subMid + 1, subEnd)) {
 					return false;
+				}
 			} else {
 				const int axisIndex = parseAxisName(subStart, subMid);
 				if (axisIndex != -1) {
-					MappedJoystick::Axis axis;
+					MappingDescription::Axis axis;
 					axis.name = static_cast<AxisName>(axisIndex);
 					const int axisMapping = parseAxisMapping(subMid + 1, subEnd, axis);
-					if (axisMapping != -1 && axisMapping < MappedJoystick::MaxNumAxes)
-						map.axes[axisMapping] = axis;
+					if (axisMapping != -1 && axisMapping < MappingDescription::MaxNumAxes)
+						map.desc.axes[axisMapping] = axis;
 				} else {
 					const int buttonIndex = parseButtonName(subStart, subMid);
 					if (buttonIndex != -1) {
 						const int buttonMapping = parseButtonMapping(subMid + 1, subEnd);
-						if (buttonMapping != -1 && buttonMapping < MappedJoystick::MaxNumButtons)
-							map.buttons[buttonMapping] = static_cast<ButtonName>(buttonIndex);
+						if (buttonMapping != -1 && buttonMapping < MappingDescription::MaxNumButtons)
+							map.desc.buttons[buttonMapping] = static_cast<ButtonName>(buttonIndex);
 						else {
 							const int hatMapping = parseHatMapping(subMid + 1, subEnd);
-							if (hatMapping != -1 && hatMapping < MappedJoystick::MaxHatButtons)
-								map.hats[hatMapping] = static_cast<ButtonName>(buttonIndex);
+							if (hatMapping != -1 && hatMapping < MappingDescription::MaxHatButtons)
+								map.desc.hats[hatMapping] = static_cast<ButtonName>(buttonIndex);
 						}
 					}
 				}
@@ -517,32 +584,28 @@ namespace nCine
 
 	bool JoyMapping::parsePlatformKeyword(const char* start, const char* end) const
 	{
-		bool keywordFound = false;
-
-		if (strncmp(start, "platform", end - start) == 0)
-			keywordFound = true;
-
-		return keywordFound;
+		return (strncmp(start, "platform", end - start) == 0);
 	}
 
 	bool JoyMapping::parsePlatformName(const char* start, const char* end) const
 	{
-		bool thisPlatform = false;
-
-#if defined(_WIN32)
-		const char* platformName = "Windows";
-#elif defined(__APPLE__)
-		const char* platformName = "Mac OS X";
-#elif defined(__ANDROID__)
-		const char* platformName = "Android";
+#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_WINDOWS_RT)
+		return false;
 #else
-		const char* platformName = "Linux";
+#	if defined(DEATH_TARGET_WINDOWS)
+		constexpr char platformName[] = "Windows";
+#	elif defined(DEATH_TARGET_ANDROID)
+		constexpr char platformName[] = "Android";
+#	elif defined(DEATH_TARGET_IOS)
+		constexpr char platformName[] = "iOS";
+#	elif defined(DEATH_TARGET_APPLE)
+		constexpr char platformName[] = "Mac OS X";
+#	else
+		constexpr char platformName[] = "Linux";
+#	endif
+
+		return (strncmp(start, platformName, end - start) == 0);
 #endif
-
-		if (strncmp(start, platformName, end - start) == 0)
-			thisPlatform = true;
-
-		return thisPlatform;
 	}
 
 	int JoyMapping::parseAxisName(const char* start, const char* end) const
@@ -573,7 +636,7 @@ namespace nCine
 		return buttonIndex;
 	}
 
-	int JoyMapping::parseAxisMapping(const char* start, const char* end, MappedJoystick::Axis& axis) const
+	int JoyMapping::parseAxisMapping(const char* start, const char* end, MappingDescription::Axis& axis) const
 	{
 		int axisMapping = -1;
 

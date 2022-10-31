@@ -13,6 +13,33 @@ namespace nCine
 	template <class T> class Vector2;
 	using Vector2f = Vector2<float>;
 
+	enum class JoystickGuidType {
+		Unknown,
+		Standard,
+		Default,
+		Hidapi,
+		Xinput
+	};
+
+	class JoystickGuid
+	{
+	public:
+		JoystickGuid();
+		JoystickGuid(JoystickGuidType type) {
+			fromType(type);
+		}
+		JoystickGuid(const StringView& string) {
+			fromString(string);
+		}
+		void fromType(JoystickGuidType type);
+		void fromString(const StringView& string);
+		bool isValid() const;
+
+		bool operator==(const JoystickGuid& guid) const;
+
+		uint8_t data[16];
+	};
+
 	/// The interface class for parsing and dispatching input events
 	class IInputManager
 	{
@@ -55,7 +82,7 @@ namespace nCine
 		/// Returns the name of the specified joystick
 		virtual const char* joyName(int joyId) const = 0;
 		/// Returns the GUID of the specified joystick
-		virtual const char* joyGuid(int joyId) const = 0;
+		virtual const JoystickGuid joyGuid(int joyId) const = 0;
 		/// Returns the number of available buttons for the specified joystick
 		virtual int joyNumButtons(int joyId) const = 0;
 		/// Returns the number of available hats for the specified joystick
