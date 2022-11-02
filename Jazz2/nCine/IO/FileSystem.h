@@ -204,6 +204,9 @@ namespace nCine
 		/// Removes the permissions in the mask from a file or a directory
 		static bool RemovePermissions(const StringView& path, Permission mode);
 
+		/// Tries to open specified directory in operating system's file manager
+		static bool LaunchDirectoryAsync(const StringView& path);
+
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		/// Mounts specified path to persistent file system (Emscripten only)
 		static void MountAsPersistent(const StringView& path);

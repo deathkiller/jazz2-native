@@ -204,10 +204,9 @@ namespace Jazz2
 					}
 				}
 			} else {
-#if defined(DEATH_TARGET_WINDOWS_RT)
-				// Create "Cache" and "Source" directories on the first launch
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+				// Create "Source" directory on the first launch
 				auto& resolver = ContentResolver::Current();
-				fs::CreateDirectories(resolver.GetCachePath());
 				fs::CreateDirectories(resolver.GetSourcePath());
 #endif
 			}

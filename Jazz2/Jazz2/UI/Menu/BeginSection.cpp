@@ -52,6 +52,28 @@ namespace Jazz2::UI::Menu
 
 		if (auto mainMenu = dynamic_cast<MainMenu*>(_root)) {
 			_isVerified = mainMenu->_root->IsPlayable();
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+			if (!_isVerified) {
+				auto& resolver = ContentResolver::Current();
+				_sourcePath = fs::GetAbsolutePath(resolver.GetSourcePath());
+				if (_sourcePath.empty()) {
+					// If `Source` directory doesn't exist, GetAbsolutePath() will fail
+					_sourcePath = resolver.GetSourcePath();
+				}
+#	if defined(DEATH_TARGET_UNIX)
+				String homeDirectory = fs::GetHomeDirectory();
+				if (!homeDirectory.empty()) {
+					StringView pathSeparator = fs::PathSeparator;
+					if (!homeDirectory.hasSuffix(pathSeparator)) {
+						homeDirectory += pathSeparator;
+					}
+					if (_sourcePath.hasPrefix(homeDirectory)) {
+						_sourcePath = "~"_s + _sourcePath.exceptPrefix(homeDirectory.size() - pathSeparator.size());
+					}
+				}
+#	endif
+			}
+#endif
 		}
 	}
 
@@ -96,21 +118,36 @@ namespace Jazz2::UI::Menu
 		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f * (1.0f - 0.048f * (int)Item::Count));
 		int charOffset = 0;
 
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		if (!_isVerified) {
-			_root->DrawStringShadow("Make sure Jazz Jackrabbit 2 files are present in \"Source\" directory!", charOffset, center.X, center.Y * 0.75f, IMenuContainer::FontLayer,
-				Alignment::Center, Colorf(0.45f, 0.27f, 0.22f, 0.5f), 1.0f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f);
+			if (_selectedIndex == 0) {
+				_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y * 0.96f - 8.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.12f), 26.0f, 12.0f, true);
+			}
+
+			_root->DrawStringShadow("\f[c:0x704a4a]This game requires original \f[c:0x9e7056]Jazz Jackrabbit 2\f[c:0x704a4a] files!"_s, charOffset, center.X, center.Y * 0.96f - 10.0f, IMenuContainer::FontLayer,
+				Alignment::Bottom, Font::DefaultColor, 1.0f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
+			_root->DrawStringShadow("Make sure Jazz Jackrabbit 2 files are present in following path:"_s, charOffset, center.X, center.Y * 0.96f, IMenuContainer::FontLayer,
+				Alignment::Center, Colorf(0.44f, 0.29f, 0.29f, 0.5f), 0.8f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
+			_root->DrawStringShadow(_sourcePath.data(), charOffset, center.X, center.Y * 0.96f + 10.0f, IMenuContainer::FontLayer,
+				Alignment::Top, Colorf(0.44f, 0.44f, 0.44f, 0.5f), 0.8f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
 		}
+#endif
 
 		for (int i = 0; i < (int)Item::Count; i++) {
 			_items[i].TouchY = center.Y;
 
 			if (i <= (int)Item::Options && !_isVerified) {
-				if (_selectedIndex == i) {
-					_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (_items[i].Name.size() + 3) * 0.5f, 4.0f, true);
-				}
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+				if (i != 0)
+#endif
+				{
+					if (_selectedIndex == i) {
+						_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (_items[i].Name.size() + 3) * 0.5f, 4.0f, true);
+					}
 
-				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
-					Alignment::Center, Colorf(0.51f, 0.51f, 0.51f, 0.35f), 0.9f);
+					_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
+						Alignment::Center, Colorf(0.51f, 0.51f, 0.51f, 0.35f), 0.9f);
+				}
 			} else if (_selectedIndex == i) {
 				float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
@@ -153,11 +190,10 @@ namespace Jazz2::UI::Menu
 
 	void BeginSection::ExecuteSelected()
 	{
-		_root->PlaySfx("MenuSelect"_s, 0.6f);
-
 		switch (_selectedIndex) {
 			case (int)Item::PlayEpisodes:
 				if (_isVerified) {
+					_root->PlaySfx("MenuSelect"_s, 0.6f);
 #if defined(SHAREWARE_DEMO_ONLY)
 					if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None) {
 						_root->SwitchToSection<EpisodeSelectSection>();
@@ -168,16 +204,37 @@ namespace Jazz2::UI::Menu
 					_root->SwitchToSection<EpisodeSelectSection>();
 #endif
 				}
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+				else {
+					// `_sourcePath` contains adjusted path for display purposes
+					auto& resolver = ContentResolver::Current();
+					String sourcePath = fs::GetAbsolutePath(resolver.GetSourcePath());
+					if (sourcePath.empty()) {
+						// If `Source` directory doesn't exist, GetAbsolutePath() will fail
+						sourcePath = resolver.GetSourcePath();
+					}
+					if (fs::LaunchDirectoryAsync(sourcePath)) {
+						_root->PlaySfx("MenuSelect"_s, 0.6f);
+					}
+				}
+#endif
 				break;
 #if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
-			case (int)Item::Import: _root->SwitchToSection<ImportSection>(); break;
+			case (int)Item::Import:
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				_root->SwitchToSection<ImportSection>();
+				break;
 #endif
 			case (int)Item::Options:
 				if (_isVerified) {
+					_root->PlaySfx("MenuSelect"_s, 0.6f);
 					_root->SwitchToSection<OptionsSection>();
 				}
 				break;
-			case (int)Item::About: _root->SwitchToSection<AboutSection>(); break;
+			case (int)Item::About:
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				_root->SwitchToSection<AboutSection>();
+				break;
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
 			case (int)Item::Quit: theApplication().quit(); break;
 #endif

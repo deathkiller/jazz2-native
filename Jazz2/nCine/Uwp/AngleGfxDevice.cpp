@@ -211,7 +211,7 @@ namespace nCine
 	void AngleGfxDevice::setWindowSize(int width, int height)
 	{
 		// This method is usually called from main thread, but it's required on UI thread
-		UwpApplication::_dispatcher.RunIdleAsync([width, height](auto args) {
+		UwpApplication::GetDispatcher().RunIdleAsync([width, height](auto args) {
 			winrtWF::Size desiredSize = winrtWF::Size(width, height);
 			winrtWUV::ApplicationView::GetForCurrentView().TryResizeView(desiredSize);
 		});
@@ -222,7 +222,7 @@ namespace nCine
 		// TODO: Disabled for now for Windows RT, because it appends application name
 		// This method is usually called from main thread, but it's required on UI thread
 		//auto windowTitleW = Death::Utf8::ToUtf16(windowTitle);
-		//UwpApplication::_dispatcher.RunIdleAsync([windowTitleW = std::move(windowTitleW)](auto args) {
+		//UwpApplication::GetDispatcher().RunIdleAsync([windowTitleW = std::move(windowTitleW)](auto args) {
 		//	winrtWUV::ApplicationView::GetForCurrentView().Title(winrt::hstring(windowTitleW.data(), windowTitleW.size()));
 		//});
 	}
