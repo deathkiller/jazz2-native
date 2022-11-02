@@ -37,6 +37,9 @@ namespace Jazz2::UI::Menu
 		int _selectedIndex;
 		float _animation;
 		bool _isVerified;
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		String _sourcePath;
+#endif
 
 		void ExecuteSelected();
 	};

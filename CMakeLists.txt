@@ -16,7 +16,7 @@ set(NCINE_REVERSE_DNS "jazz2.resurrection")
 set(NCINE_APP_NAME "Jazz² Resurrection")
 set(NCINE_APP_DESCRIPTION "Open-source reimplementation of Jazz Jackrabbit 2")
 set(NCINE_APP_VENDOR "Dan R.")
-set(NCINE_VERSION "1.0.0")
+set(NCINE_VERSION "1.1.0")
 
 include(ncine_options)
 

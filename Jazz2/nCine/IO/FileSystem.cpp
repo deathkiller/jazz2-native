@@ -21,6 +21,9 @@
 #	include <time.h>
 #	include <ftw.h>
 #
+#	if defined(DEATH_TARGET_UNIX)
+#		include <sys/wait.h>
+#	endif
 #	if defined(__linux__)
 #		include <sys/sendfile.h>
 #	endif
@@ -40,7 +43,11 @@
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
+#	include <winrt/Windows.Foundation.h>
 #	include <winrt/Windows.Storage.h>
+#	include <winrt/Windows.System.h>
+#	include <winrt/Windows.UI.Core.h>
+#	include "../Uwp/UwpApplication.h"
 #endif
 
 #include <Utf8.h>
@@ -130,6 +137,65 @@ namespace nCine
 		{
 			return ::nftw(String::nullTerminatedView(path).data(), DeleteDirectoryInternalCallback, 64, FTW_DEPTH | FTW_PHYS) == 0;
 		}
+
+#	if defined(DEATH_TARGET_UNIX)
+		bool RedirectFileDescriptorToNull(int fd)
+		{
+			if (fd == -1) {
+				return false;
+			}
+
+			int tempfd;
+			do {
+				tempfd = ::open("/dev/null", O_RDWR | O_NOCTTY);
+			} while (tempfd == -1 && errno == EINTR);
+			if (tempfd == -1) {
+				return false;
+			}
+
+			if (tempfd != fd) {
+				if (::dup2(tempfd, fd) == -1) {
+					::close(tempfd);
+					return false;
+				}
+				if (::close(tempfd) == -1) {
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		void TryCloseAllFileDescriptors()
+		{
+			DIR* dir = ::opendir("/proc/self/fd/");
+			if (dir == nullptr) {
+				const long fd_max = ::sysconf(_SC_OPEN_MAX);
+				long fd;
+				for (fd = 0; fd <= fd_max; fd++) {
+					::close(fd);
+				}
+				return;
+			}
+
+			int dfd = ::dirfd(dir);
+			struct dirent* ent;
+			while ((ent = ::readdir(dir))) {
+				if (ent->d_name[0] >= '0' && ent->d_name[0] <= '9') {
+					const char* p = &ent->d_name[1];
+					int fd = ent->d_name[0] - '0';
+					while (*p >= '0' && *p <= '9') {
+						fd = (10 * fd) + *(p++) - '0';
+					}
+					if (*p || fd == dfd) {
+						continue;
+					}
+					::close(fd);
+				}
+			}
+			::closedir(dir);
+		}
+#	endif
 #else
 		FileSystem::FileDate NativeTimeToFileDate(const SYSTEMTIME* sysTime, int64_t ticks)
 		{
@@ -741,7 +807,22 @@ namespace nCine
 
 	String FileSystem::GetExecutablePath()
 	{
-#if defined(__linux__)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		return String { "/"_s };
+#elif defined(DEATH_TARGET_APPLE)
+		// Get path size (need to set it to 0 to avoid filling nullptr with random data and crashing)
+		uint32_t size = 0;
+		if (_NSGetExecutablePath(nullptr, &size) != -1) {
+			return { };
+		}
+
+		// Allocate proper size and get the path. The size includes a null terminator which the String handles on its own, so subtract it
+		String path { NoInit, size - 1 };
+		if (_NSGetExecutablePath(path.data(), &size) != 0) {
+			return { };
+		}
+		return path;
+#elif defined(DEATH_TARGET_UNIX)
 		// Reallocate like hell until we have enough place to store the path. Can't use lstat because
 		// the /proc/self/exe symlink is not a real symlink and so stat::st_size returns 0.
 		constexpr const char self[] = "/proc/self/exe";
@@ -757,26 +838,12 @@ namespace nCine
 		path[size] = '\0';
 		const auto deleter = path.deleter();
 		return String { path.release(), size_t(size), deleter };
-#elif defined(DEATH_TARGET_APPLE)
-		// Get path size (need to set it to 0 to avoid filling nullptr with random data and crashing)
-		uint32_t size = 0;
-		if (_NSGetExecutablePath(nullptr, &size) != -1) {
-			return { };
-		}
 
-		// Allocate proper size and get the path. The size includes a null terminator which the String handles on its own, so subtract it
-		String path { NoInit, size - 1 };
-		if (_NSGetExecutablePath(path.data(), &size) != 0) {
-			return { };
-		}
-		return path;
 #elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		wchar_t path[MaxPathLength];
 		// Returns size *without* the null terminator
 		const size_t size = ::GetModuleFileName(nullptr, path, _countof(path));
 		return Utf8::FromUtf16(arrayView(path, size));
-#elif defined(DEATH_TARGET_EMSCRIPTEN)
-		return String { "/"_s };
 #else
 		return { };
 #endif
@@ -798,7 +865,7 @@ namespace nCine
 
 	bool FileSystem::SetWorkingDirectory(const StringView& path)
 	{
-#if defined(CORRADE_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
 		return false;
 #elif defined(DEATH_TARGET_WINDOWS)
 		return ::SetCurrentDirectory(Utf8::ToUtf16(path));
@@ -817,18 +884,18 @@ namespace nCine
 		::SHGetFolderPath(HWND_DESKTOP, CSIDL_PROFILE, NULL, SHGFP_TYPE_CURRENT, buffer);
 		return Utf8::FromUtf16(buffer);
 #else
-		const char* homeEnv = ::getenv("HOME");
-		if (homeEnv == nullptr || strnlen(homeEnv, MaxPathLength) == 0) {
+		const char* home = ::getenv("HOME");
+		if (home != nullptr && home[0] != '\0') {
+			return home;
+		} else {
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 			// `getpwuid()` is not yet implemented on Emscripten
 			const struct passwd* pw = ::getpwuid(getuid());
 			if (pw) {
 				return pw->pw_dir;
-			} else
+			}
 #endif
-			return GetWorkingDirectory();
-		} else {
-			return homeEnv;
+			return { };
 		}
 #endif
 	}
@@ -850,7 +917,7 @@ namespace nCine
 			return localStorage;
 		}
 
-		// Not delegating into homeDirectory() as the (admittedly rare) error message would have a confusing source
+		// Not delegating into GetHomeDirectory() as the (admittedly rare) error message would have a confusing source
 		const char* home = ::getenv("HOME");
 		if (home != nullptr && home[0] != '\0') {
 			return JoinPath(home, ".local/share/"_s);
@@ -1076,16 +1143,17 @@ namespace nCine
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS)
-		DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
+		Array<wchar_t> nullTerminatedPath = Utf8::ToUtf16(path);
+		DWORD attrs = ::GetFileAttributes(nullTerminatedPath);
 
 		if (hidden && (attrs & FILE_ATTRIBUTE_HIDDEN) == 0) {
 			// Adding the hidden flag
 			attrs |= FILE_ATTRIBUTE_HIDDEN;
-			return ::SetFileAttributes(Utf8::ToUtf16(path), attrs);
+			return ::SetFileAttributes(nullTerminatedPath, attrs);
 		} else if (!hidden && (attrs & FILE_ATTRIBUTE_HIDDEN)) {
 			// Removing the hidden flag
 			attrs &= ~FILE_ATTRIBUTE_HIDDEN;
-			return ::SetFileAttributes(Utf8::ToUtf16(path), attrs);
+			return ::SetFileAttributes(nullTerminatedPath, attrs);
 		}
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
@@ -1603,6 +1671,64 @@ namespace nCine
 #endif
 	}
 
+	bool FileSystem::LaunchDirectoryAsync(const StringView& path)
+	{
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		return false;
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+		if (!IsDirectory(path)) {
+			return false;
+		}
+		Array<wchar_t> nullTerminatedPath = Utf8::ToUtf16(path);
+		UwpApplication::GetDispatcher().RunIdleAsync([nullTerminatedPath = std::move(nullTerminatedPath)](auto args) {
+			winrt::Windows::System::Launcher::LaunchFolderPathAsync(winrt::hstring(nullTerminatedPath.data(), nullTerminatedPath.size() - 1));
+		});
+		return true;
+#elif defined(DEATH_TARGET_WINDOWS)
+		if (!IsDirectory(path)) {
+			return false;
+		}
+		return (INT_PTR)::ShellExecute(NULL, nullptr, Utf8::ToUtf16(path), nullptr, nullptr, SW_SHOWNORMAL) > 32;
+#elif defined(DEATH_TARGET_UNIX)
+		if (!IsDirectory(path)) {
+			return false;
+		}
+
+		pid_t child = ::fork();
+		if (child < 0) {
+			return false;
+		}
+		if (child == 0) {
+			pid_t doubleFork = ::fork();
+			if (doubleFork < 0) {
+				_exit(1);
+			}
+			if (doubleFork == 0) {
+				TryCloseAllFileDescriptors();
+
+				RedirectFileDescriptorToNull(STDIN_FILENO);
+				RedirectFileDescriptorToNull(STDOUT_FILENO);
+				RedirectFileDescriptorToNull(STDERR_FILENO);
+
+				// Execute child process in a new process group
+				::setsid();
+
+				// Execute "xdg-open"
+				::execlp("xdg-open", "xdg-open", String::nullTerminatedView(path).data(), (char*)0);
+				_exit(1);
+			} else {
+				_exit(0);
+			}
+		}
+
+		int status;
+		::waitpid(child, &status, 0);
+		return (WEXITSTATUS(status) == 0);
+#else
+		return false;
+#endif
+	}
+
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 	void FileSystem::MountAsPersistent(const StringView& path)
 	{
@@ -1683,14 +1809,14 @@ namespace nCine
 			}
 		}
 #elif defined(DEATH_TARGET_APPLE)
-		// Not delegating into homeDirectory() as the (admittedly rare) error message would have a confusing source
+		// Not delegating into GetHomeDirectory() as the (admittedly rare) error message would have a confusing source
 		const char* home = ::getenv("HOME");
 		if (home == nullptr) {
 			return;
 		}
 
 		_savePath = JoinPath({ home, "Library/Application Support"_s, applicationName });
-#elif defined(__unix__) || defined(DEATH_TARGET_EMSCRIPTEN)
+#elif defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_EMSCRIPTEN)
 		// XDG-compliant Unix (not using DEATH_TARGET_UNIX, because that is a superset), Emscripten
 		const char* config = ::getenv("XDG_CONFIG_HOME");
 		if (config != nullptr && config[0] != '\0') {
@@ -1698,7 +1824,7 @@ namespace nCine
 			return;
 		}
 
-		// Not delegating into homeDirectory() as the (admittedly rare) error message would have a confusing source
+		// Not delegating into GetHomeDirectory() as the (admittedly rare) error message would have a confusing source
 		const char* home = ::getenv("HOME");
 		if (home == nullptr) {
 			return;

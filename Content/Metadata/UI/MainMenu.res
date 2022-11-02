@@ -5,7 +5,7 @@
 
 	"Animations": {
 		"MenuCarrot": {
-			"Path": "Pickup/carrot_invincibility.aura",
+			"Path": "UI/logo.aura",
 			"FrameRate": 7
 		},
 		"MenuLine": {

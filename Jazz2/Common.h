@@ -3,7 +3,7 @@
 #define ENABLE_LOG
 
 #if !defined(NCINE_VERSION)
-#	define NCINE_VERSION "1.0.0"
+#	define NCINE_VERSION "1.1.0"
 #endif
 
 #if !defined(_MSC_VER) && defined(__has_include)

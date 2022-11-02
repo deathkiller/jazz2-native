@@ -322,7 +322,7 @@ void GameEventHandler::onInit()
 		if (!root->IsVerified()) {
 			return false;
 		}
-
+		
 		thread.Join();
 		root->GoToMainMenu(endOfStream);
 		return true;
@@ -542,7 +542,7 @@ RecreateCache:
 	// "Source" directory must be case in-sensitive
 	String animsPath = fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "Anims.j2a"_s));
 	if (!fs::IsReadableFile(animsPath)) {
-		LOGE("Cannot open \"./Source/Anims.j2a\" file! Ensure that Jazz Jackrabbit 2 files are present in \"Source\" directory.");
+		LOGE_X("Cannot open \".%sSource%sAnims.j2a\" file! Ensure that Jazz Jackrabbit 2 files are present in \"%s\" directory.", fs::PathSeparator, fs::PathSeparator, resolver.GetSourcePath().data());
 		_flags = Flags::IsVerified;
 		return;
 	}

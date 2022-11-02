@@ -3,7 +3,7 @@
 #include "../Application.h"
 
 #ifdef GetCurrentTime
-#undef GetCurrentTime
+#	undef GetCurrentTime
 #endif
 #include <winrt/base.h>
 #include <winrt/Windows.UI.Xaml.Controls.h>
@@ -21,8 +21,6 @@ namespace nCine
 	/// Handler class for nCine applications on UWP
 	class UwpApplication : public Application, public winrtWUX::ApplicationT<UwpApplication>
 	{
-		friend class AngleGfxDevice;
-
 	public:
 		/// Entry point method to be called in the `main()` function
 		static int start(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)());
@@ -34,6 +32,10 @@ namespace nCine
 
 		void OnActivated(const winrtWAA::IActivatedEventArgs& args);
 		void OnLaunched(winrtWAA::LaunchActivatedEventArgs const& args);
+
+		static winrtWUC::CoreDispatcher GetDispatcher() {
+			return _dispatcher;
+		}
 
 	private:
 		static winrtWUC::CoreDispatcher _dispatcher;
