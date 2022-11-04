@@ -3,7 +3,6 @@
 #include "MainMenu.h"
 #include "../../PreferencesCache.h"
 #include "../../../nCine/Base/Algorithms.h"
-
 #include "../../../nCine/Base/FrameTimer.h"
 
 namespace Jazz2::UI::Menu

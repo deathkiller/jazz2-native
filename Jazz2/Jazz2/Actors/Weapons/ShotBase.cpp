@@ -13,7 +13,6 @@ namespace Jazz2::Actors::Weapons
 {
 	ShotBase::ShotBase()
 		:
-		_owner(nullptr),
 		_timeLeft(0),
 		_upgrades(0),
 		_strength(0),

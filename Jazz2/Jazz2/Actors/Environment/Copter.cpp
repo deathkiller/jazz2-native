@@ -7,13 +7,13 @@ namespace Jazz2::Actors::Environment
 	Copter::Copter()
 		:
 		_phase(0.0f),
-		_state(StateFree)
+		_state(State::Free)
 	{
 	}
 
 	Task<bool> Copter::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_state = (details.Params[0] != 0 ? StateMounted : StateFree);
+		_state = (details.Params[0] != 0 ? State::Mounted : State::Free);
 
 		SetState(ActorState::ApplyGravitation, false);
 
@@ -28,28 +28,33 @@ namespace Jazz2::Actors::Environment
 
 	void Copter::OnUpdate(float timeMult)
 	{
-		if (_state == StateFree) {
-			_phase += timeMult * 0.05f;
-			MoveInstantly(_originPos + Vector2f(0.0f, sinf(_phase) * 4.0f), MoveType::Absolute);
-			OnUpdateHitbox();
-		} else if (_state == StateUnmounted) {
-			ActorBase::OnUpdate(timeMult);
+		switch (_state) {
+			case State::Free: {
+				_phase += timeMult * 0.05f;
+				MoveInstantly(_originPos + Vector2f(0.0f, sinf(_phase) * 4.0f), MoveType::Absolute);
+				OnUpdateHitbox();
+				break;
+			}
+			case State::Unmounted: {
+				ActorBase::OnUpdate(timeMult);
 
-			_speed.Y = _levelHandler->Gravity * -0.5f;
-			_renderer.setAlphaF(_renderer.alpha() - 0.004f * timeMult);
-			_phase -= timeMult;
-			if (_phase <= 0.0f) {
-				DecreaseHealth(INT32_MAX);
+				_speed.Y = _levelHandler->Gravity * -0.5f;
+				_renderer.setAlphaF(_renderer.alpha() - 0.004f * timeMult);
+				_phase -= timeMult;
+				if (_phase <= 0.0f) {
+					DecreaseHealth(INT32_MAX);
+				}
+				break;
 			}
 		}
 	}
 
 	bool Copter::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (_state != StateMounted) {
+		if (_state == State::Free || _state == State::Unmounted) {
 			if (auto player = dynamic_cast<Player*>(other.get())) {
-				if (player->SetModifier(Player::Modifier::LizardCopter)) {
-					DecreaseHealth(INT32_MAX);
+				if (player->SetModifier(Player::Modifier::LizardCopter, shared_from_this())) {
+					_state = State::Mounted;
 					return true;
 				}
 			}
@@ -60,8 +65,8 @@ namespace Jazz2::Actors::Environment
 
 	void Copter::Unmount(float timeLeft)
 	{
-		if (_state == StateMounted) {
-			_state = StateUnmounted;
+		if (_state == State::Mounted) {
+			_state = State::Unmounted;
 			_phase = timeLeft;
 
 			SetState(ActorState::ApplyGravitation, true);

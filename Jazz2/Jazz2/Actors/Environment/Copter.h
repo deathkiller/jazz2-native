@@ -23,12 +23,14 @@ namespace Jazz2::Actors::Environment
 		void OnUpdate(float timeMult) override;
 
 	private:
-		static constexpr int StateFree = 0;
-		static constexpr int StateMounted = 1;
-		static constexpr int StateUnmounted = 2;
+		enum class State {
+			Free,
+			Unmounted,
+			Mounted
+		};
 
 		Vector2f _originPos;
 		float _phase;
-		int _state;
+		State _state;
 	};
 }

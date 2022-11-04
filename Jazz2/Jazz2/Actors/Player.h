@@ -92,7 +92,7 @@ namespace Jazz2::Actors
 		PlayerCarryOver PrepareLevelCarryOver();
 
 		void WarpToPosition(Vector2f pos, bool fast);
-		bool SetModifier(Modifier modifier);
+		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor = nullptr);
 		bool TakeDamage(int amount, float pushForce);
 		void SetInvulnerability(float time, bool withCircleEffect);
 
@@ -195,6 +195,7 @@ namespace Jazz2::Actors
 		float _inTubeTime;
 		float _dizzyTime;
 		std::shared_ptr<Environment::Bird> _spawnedBird;
+		std::shared_ptr<ActorBase> _activeModifierDecor;
 
 		float _weaponCooldown;
 		WeaponType _currentWeapon;

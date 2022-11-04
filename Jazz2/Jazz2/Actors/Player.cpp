@@ -418,6 +418,8 @@ namespace Jazz2::Actors
 				_copterFramesLeft -= timeMult;
 				if (_copterFramesLeft <= 0.0f) {
 					SetModifier(Modifier::None);
+				} else if (_activeModifierDecor != nullptr) {
+					_activeModifierDecor->MoveInstantly(_pos, MoveType::Absolute | MoveType::Force);
 				}
 			}
 		}
@@ -2680,10 +2682,15 @@ namespace Jazz2::Actors
 		}
 	}
 
-	bool Player::SetModifier(Modifier modifier)
+	bool Player::SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor)
 	{
 		if (_activeModifier == modifier) {
 			return false;
+		}
+
+		if (_activeModifierDecor != nullptr) {
+			_activeModifierDecor->DecreaseHealth(INT32_MAX);
+			_activeModifierDecor = nullptr;
 		}
 
 		switch (modifier) {
@@ -2732,25 +2739,14 @@ namespace Jazz2::Actors
 				_internalForceY = 0.0f;
 
 				_activeModifier = Modifier::LizardCopter;
+				_activeModifierDecor = decor;
 
 				_copterFramesLeft = 3.0f * FrameTimer::FramesPerSecond;
-
-				// TODO: Add copter decoration
-				/*CopterDecor copter = new CopterDecor();
-				copter.OnActivated(new ActorActivationDetails {
-					LevelHandler = levelHandler
-				});
-				copter.Parent = this;*/
 				break;
 			}
 
 			default: {
 				_activeModifier = Modifier::None;
-
-				/*CopterDecor copterDecor = GetFirstChild<CopterDecor>();
-				if (copterDecor != null) {
-					copterDecor.DecreaseHealth(int.MaxValue);
-				}*/
 
 				SetState(ActorState::CanJump | ActorState::ApplyGravitation, true);
 
@@ -2789,6 +2785,9 @@ namespace Jazz2::Actors
 			_spawnedBird->FlyAway();
 			_spawnedBird = nullptr;
 		}
+		if (_activeModifier == Modifier::Copter || _activeModifier == Modifier::LizardCopter) {
+			SetModifier(Modifier::None);
+		}
 
 		if (_health > 0) {
 			_externalForce.X = pushForce;
@@ -2798,8 +2797,6 @@ namespace Jazz2::Actors
 
 				SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects, true);
 				SetAnimation(AnimState::Idle);
-			} else {
-				_speed.Y = -1.0f;
 			}
 
 			SetPlayerTransition(AnimState::Hurt, false, true, SpecialMoveType::None, [this]() {
