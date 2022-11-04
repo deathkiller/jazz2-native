@@ -15,6 +15,7 @@ namespace Jazz2::UI::Menu
 	MainMenu::MainMenu(IRootController* root, bool afterIntro)
 		:
 		_root(root),
+		_activeCanvas(ActiveCanvas::Background),
 		_transitionWhite(afterIntro ? 1.0f : 0.0f),
 		_logoTransition(0.0f),
 		_texturedBackgroundPass(this),
@@ -26,7 +27,9 @@ namespace Jazz2::UI::Menu
 		theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection"_s);
 
 		_texturedBackgroundLayer.Visible = false;
-		_canvas = std::make_unique<MenuCanvas>(this);
+		_canvasBackground = std::make_unique<MenuBackgroundCanvas>(this);
+		_canvasClipped = std::make_unique<MenuClippedCanvas>(this);
+		_canvasOverlay = std::make_unique<MenuOverlayCanvas>(this);
 
 		auto& resolver = ContentResolver::Current();
 		resolver.ApplyDefaultPalette();
@@ -66,7 +69,9 @@ namespace Jazz2::UI::Menu
 
 	MainMenu::~MainMenu()
 	{
-		_canvas->setParent(nullptr);
+		_canvasBackground->setParent(nullptr);
+		_canvasClipped->setParent(nullptr);
+		_canvasOverlay->setParent(nullptr);
 	}
 
 	void MainMenu::OnBeginFrame()
@@ -129,10 +134,18 @@ namespace Jazz2::UI::Menu
 
 		_upscalePass.Initialize(w, h, width, height);
 
+		if (!_sections.empty()) {
+			auto& lastSection = _sections.back();
+			Recti clipRectangle = lastSection->GetClipRectangle(Vector2i(w, h));
+			_upscalePass.SetClipRectangle(clipRectangle);
+		}
+
 		// Viewports must be registered in reverse order
 		_upscalePass.Register();
 
-		_canvas->setParent(_upscalePass.GetNode());
+		_canvasBackground->setParent(_upscalePass.GetNode());
+		_canvasClipped->setParent(_upscalePass.GetClippedNode());
+		_canvasOverlay->setParent(_upscalePass.GetOverlayNode());
 
 		_texturedBackgroundPass.Initialize();
 	}
@@ -153,16 +166,17 @@ namespace Jazz2::UI::Menu
 			_touchButtonsTimer = 1200.0f;
 
 			auto& lastSection = _sections.back();
-			lastSection->OnTouchEvent(event, _canvas->ViewSize);
+			lastSection->OnTouchEvent(event, _canvasBackground->ViewSize);
 		}
 	}
 
-	bool MainMenu::MenuCanvas::OnDraw(RenderQueue& renderQueue)
+	bool MainMenu::MenuBackgroundCanvas::OnDraw(RenderQueue& renderQueue)
 	{
 		Canvas::OnDraw(renderQueue);
 
 		ViewSize = _owner->_upscalePass.GetViewSize();
 
+		_owner->_activeCanvas = ActiveCanvas::Background;
 		_owner->RenderTexturedBackground(renderQueue);
 
 		Vector2i center = ViewSize / 2;
@@ -224,6 +238,40 @@ namespace Jazz2::UI::Menu
 			lastSection->OnDraw(this);
 		}
 
+		return true;
+	}
+
+	bool MainMenu::MenuClippedCanvas::OnDraw(RenderQueue& renderQueue)
+	{
+		if (_owner->_sections.empty()) {
+			return false;
+		}
+
+		Canvas::OnDraw(renderQueue);
+
+		ViewSize = _owner->_upscalePass.GetViewSize();
+
+		_owner->_activeCanvas = ActiveCanvas::Clipped;
+
+		auto& lastSection = _owner->_sections.back();
+		lastSection->OnDrawClipped(this);
+
+		return true;
+	}
+
+	bool MainMenu::MenuOverlayCanvas::OnDraw(RenderQueue& renderQueue)
+	{
+		Canvas::OnDraw(renderQueue);
+
+		ViewSize = _owner->_upscalePass.GetViewSize();
+
+		_owner->_activeCanvas = ActiveCanvas::Overlay;
+
+		if (!_owner->_sections.empty()) {
+			auto& lastSection = _owner->_sections.back();
+			lastSection->OnDrawOverlay(this);
+		}
+
 		if (_owner->_transitionWhite > 0.0f) {
 			DrawSolid(Vector2f::Zero, 950, Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y)), Colorf(1.0f, 1.0f, 1.0f, _owner->_transitionWhite));
 		}
@@ -240,6 +288,11 @@ namespace Jazz2::UI::Menu
 
 		auto& currentSection = _sections.emplace_back(std::move(section));
 		currentSection->OnShow(this);
+
+		if (_canvasBackground->ViewSize != Vector2i::Zero) {
+			Recti clipRectangle = currentSection->GetClipRectangle(_canvasBackground->ViewSize);
+			_upscalePass.SetClipRectangle(clipRectangle);
+		}
 	}
 
 	void MainMenu::LeaveSection()
@@ -253,6 +306,11 @@ namespace Jazz2::UI::Menu
 		if (!_sections.empty()) {
 			auto& lastSection = _sections.back();
 			lastSection->OnShow(this);
+
+			if (_canvasBackground->ViewSize != Vector2i::Zero) {
+				Recti clipRectangle = lastSection->GetClipRectangle(_canvasBackground->ViewSize);
+				_upscalePass.SetClipRectangle(clipRectangle);
+			}
 		}
 	}
 
@@ -284,12 +342,13 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (frame < 0) {
-			frame = it->second.FrameOffset + ((int)(_canvas->AnimTime * it->second.FrameCount / it->second.AnimDuration) % it->second.FrameCount);
+			frame = it->second.FrameOffset + ((int)(_canvasBackground->AnimTime * it->second.FrameCount / it->second.AnimDuration) % it->second.FrameCount);
 		}
 
+		Canvas* currentCanvas = GetActiveCanvas();
 		GenericGraphicResource* base = it->second.Base;
 		Vector2f size = Vector2f(base->FrameDimensions.X * scaleX, base->FrameDimensions.Y * scaleY);
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - _canvas->ViewSize.X * 0.5f, _canvas->ViewSize.Y * 0.5f - y), size);
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - currentCanvas->ViewSize.X * 0.5f, currentCanvas->ViewSize.Y * 0.5f - y), size);
 
 		Vector2i texSize = base->TextureDiffuse->size();
 		int col = frame % base->FrameConfiguration.X;
@@ -303,8 +362,8 @@ namespace Jazz2::UI::Menu
 
 		texCoords.W += texCoords.Z;
 		texCoords.Z *= -1;
-
-		_canvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending);
+		
+		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending);
 	}
 
 	void MainMenu::DrawElement(const StringView& name, float x, float y, uint16_t z, Alignment align, const Colorf& color, const Vector2f& size, const Vector4f& texCoords)
@@ -314,16 +373,19 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+		Canvas* currentCanvas = GetActiveCanvas();
 		GenericGraphicResource* base = it->second.Base;
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - _canvas->ViewSize.X * 0.5f, _canvas->ViewSize.Y * 0.5f - y), size);
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - currentCanvas->ViewSize.X * 0.5f, currentCanvas->ViewSize.Y * 0.5f - y), size);
 
-		_canvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false);
+		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false);
 	}
 
 	void MainMenu::DrawSolid(float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool additiveBlending)
 	{
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - _canvas->ViewSize.X * 0.5f, _canvas->ViewSize.Y * 0.5f - y), size);
-		_canvas->DrawSolid(adjustedPos, z, size, color, additiveBlending);
+		Canvas* currentCanvas = GetActiveCanvas();
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - currentCanvas->ViewSize.X * 0.5f, currentCanvas->ViewSize.Y * 0.5f - y), size);
+
+		currentCanvas->DrawSolid(adjustedPos, z, size, color, additiveBlending);
 	}
 
 	void MainMenu::DrawStringShadow(const StringView& text, int& charOffset, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scale,
@@ -337,10 +399,11 @@ namespace Jazz2::UI::Menu
 			speed -= speed * 0.6f * transitionText;
 		}
 
+		Canvas* currentCanvas = GetActiveCanvas();
 		int charOffsetShadow = charOffset;
-		_smallFont->DrawString(_canvas.get(), text, charOffsetShadow, x, y + 2.8f * scale, FontShadowLayer,
+		_smallFont->DrawString(currentCanvas, text, charOffsetShadow, x, y + 2.8f * scale, FontShadowLayer,
 			align, Colorf(0.0f, 0.0f, 0.0f, 0.29f), scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
-		_smallFont->DrawString(_canvas.get(), text, charOffset, x, y, z,
+		_smallFont->DrawString(currentCanvas, text, charOffset, x, y, z,
 			align, color, scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
 	}
 
@@ -516,14 +579,15 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+		Vector2i viewSize = _canvasBackground->ViewSize;
 		auto command = &_texturedBackgroundPass._outputRenderCommand;
 
 		auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
-		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(static_cast<float>(_canvas->ViewSize.X), static_cast<float>(_canvas->ViewSize.Y));
+		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
-		command->material().uniform("uViewSize")->setFloatValue(static_cast<float>(_canvas->ViewSize.X), static_cast<float>(_canvas->ViewSize.Y));
+		command->material().uniform("uViewSize")->setFloatValue(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
 		command->material().uniform("uShift")->setFloatVector(_texturedBackgroundPos.Data());
 		command->material().uniform("uHorizonColor")->setFloatVector(_backgroundColor.Data());
 		command->material().uniform("uParallaxStarsEnabled")->setFloatValue(0.0f);

@@ -38,6 +38,7 @@ namespace Jazz2::UI::Menu
 		virtual void ApplyPreferencesChanges(ChangedPreferencesType type) = 0;
 		virtual bool ActionHit(PlayerActions action) = 0;
 
+		virtual Vector2i GetViewSize() = 0;
 		virtual void DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align,
 			const Colorf& color, float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false) = 0;
 		virtual void DrawElement(const StringView& name, float x, float y, uint16_t z, Alignment align,

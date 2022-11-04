@@ -128,9 +128,8 @@ namespace Jazz2::UI
 
 	void UpscaleRenderPass::Register()
 	{
-		if (_antialiasing._view != nullptr) {
-			Viewport::chain().push_back(_antialiasing._view.get());
-		}
+		_antialiasing.Register();
+
 		Viewport::chain().push_back(_view.get());
 	}
 
@@ -158,6 +157,13 @@ namespace Jazz2::UI
 		return true;
 	}
 
+	void UpscaleRenderPass::AntialiasingSubpass::Register()
+	{
+		if (_view != nullptr) {
+			Viewport::chain().push_back(_view.get());
+		}
+	}
+
 	bool UpscaleRenderPass::AntialiasingSubpass::OnDraw(RenderQueue& renderQueue)
 	{
 		auto size = _target->size();
@@ -171,5 +177,50 @@ namespace Jazz2::UI
 		renderQueue.addCommand(&_renderCommand);
 
 		return true;
+	}
+
+	void UpscaleRenderPassWithClipping::Initialize(int width, int height, int targetWidth, int targetHeight)
+	{
+		if (_clippedView != nullptr) {
+			_clippedView->removeAllTextures();
+		}
+		if (_overlayView != nullptr) {
+			_overlayView->removeAllTextures();
+		}
+
+		UpscaleRenderPass::Initialize(width, height, targetWidth, targetHeight);
+
+		if (_clippedView == nullptr) {
+			_clippedNode = std::make_unique<SceneNode>();
+			_clippedNode->setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
+
+			_clippedView = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);
+			_clippedView->setRootNode(_clippedNode.get());
+			_clippedView->setCamera(_camera.get());
+			_clippedView->setClearMode(Viewport::ClearMode::NEVER);
+		} else {
+			_clippedView->setTexture(_target.get());
+		}
+
+		if (_overlayView == nullptr) {
+			_overlayNode = std::make_unique<SceneNode>();
+			_overlayNode->setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
+
+			_overlayView = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);
+			_overlayView->setRootNode(_overlayNode.get());
+			_overlayView->setCamera(_camera.get());
+			_overlayView->setClearMode(Viewport::ClearMode::NEVER);
+		} else {
+			_overlayView->setTexture(_target.get());
+		}
+	}
+
+	void UpscaleRenderPassWithClipping::Register()
+	{
+		_antialiasing.Register();
+
+		Viewport::chain().push_back(_overlayView.get());
+		Viewport::chain().push_back(_clippedView.get());
+		Viewport::chain().push_back(_view.get());
 	}
 }

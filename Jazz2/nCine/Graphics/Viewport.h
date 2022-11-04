@@ -122,20 +122,8 @@ namespace nCine
 			return viewportRect_;
 		}
 		/// Sets the OpenGL viewport rectangle through a `Recti` object
-		inline void setViewportRect(Recti viewportRect) {
+		inline void setViewportRect(const Recti& viewportRect) {
 			viewportRect_ = viewportRect;
-		}
-		/// Sets the OpenGL viewport rectangle with four integers
-		inline void setViewportRect(int x, int y, int width, int height) {
-			viewportRect_.Set(x, y, width, height);
-		}
-		/// Resizes the OpenGL viewport rectangle through a `Vector2i` object
-		inline void setViewportRect(const Vector2i& size) {
-			viewportRect_.Set(0, 0, size.X, size.Y);
-		}
-		/// Resizes the OpenGL viewport rectangle with two integers
-		inline void setViewportRect(int width, int height) {
-			viewportRect_.Set(0, 0, width, height);
 		}
 
 		/// Returns the OpenGL scissor test rectangle
@@ -143,20 +131,8 @@ namespace nCine
 			return scissorRect_;
 		}
 		/// Sets the OpenGL scissor test rectangle through a `Recti` object
-		inline void setScissorRect(Recti scissorRect) {
+		inline void setScissorRect(const Recti& scissorRect) {
 			scissorRect_ = scissorRect;
-		}
-		/// Sets the OpenGL scissor test rectangle with four integers
-		inline void setScissorRect(int x, int y, int width, int height) {
-			scissorRect_.Set(x, y, width, height);
-		}
-		/// Resizes the OpenGL scissor test rectangle through a `Vector2i` object
-		inline void setScissorRect(const Vector2i& size) {
-			scissorRect_.Set(0, 0, size.X, size.Y);
-		}
-		/// Resizes the OpenGL scissor test rectangle with two integers
-		inline void setScissorRect(int width, int height) {
-			scissorRect_.Set(0, 0, width, height);
 		}
 
 		/// Returns the rectangle for screen culling

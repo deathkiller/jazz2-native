@@ -416,7 +416,7 @@ namespace nCine
 		// This allows for sub-viewports that only change the camera and the OpenGL viewport
 		if (nextViewport && nextViewport->type_ == Type::NO_TEXTURE) {
 			const bool viewportRectNonZeroArea = (nextViewport->viewportRect_.W > 0 && nextViewport->viewportRect_.H > 0);
-			if (viewportRectNonZeroArea == false)
+			if (!viewportRectNonZeroArea)
 				nextViewport->viewportRect_ = viewportRect_;
 			nextViewport->clearMode_ = ClearMode::NEVER;
 

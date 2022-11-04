@@ -4,6 +4,8 @@
 #include "../../PreferencesCache.h"
 #include "../../../nCine/Base/Algorithms.h"
 
+#include "../../../nCine/Base/FrameTimer.h"
+
 namespace Jazz2::UI::Menu
 {
 	EpisodeSelectSection::EpisodeSelectSection()
@@ -13,7 +15,9 @@ namespace Jazz2::UI::Menu
 		_expandedAnimation(0.0f),
 		_expanded(false),
 		_transitionTime(0.0f),
-		_shouldStart(false)
+		_shouldStart(false),
+		_y(0.0f),
+		_height(0.0f)
 	{
 		auto& resolver = ContentResolver::Current();
 
@@ -43,6 +47,11 @@ namespace Jazz2::UI::Menu
 		});
 	}
 
+	Recti EpisodeSelectSection::GetClipRectangle(const Vector2i& viewSize)
+	{
+		return Recti(0, TopLine - 1.0f, viewSize.X, viewSize.Y - TopLine - BottomLine + 2.0f);
+	}
+
 	void EpisodeSelectSection::OnShow(IMenuContainer* root)
 	{
 		MenuSection::OnShow(root);
@@ -69,11 +78,13 @@ namespace Jazz2::UI::Menu
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_expanded = false;
 						_expandedAnimation = 0.0f;
+						EnsureVisibleSelected();
 					}
 				} else if (_root->ActionHit(PlayerActions::Right)) {
 					if ((_items[_selectedIndex].Flags & ItemFlags::CanContinue) == ItemFlags::CanContinue) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_expanded = true;
+						EnsureVisibleSelected();
 					}
 				} else if (_items.size() > 1) {
 					if (_root->ActionHit(PlayerActions::Menu)) {
@@ -92,6 +103,7 @@ namespace Jazz2::UI::Menu
 						} else {
 							_selectedIndex = _items.size() - 1;
 						}
+						EnsureVisibleSelected();
 					} else if (_root->ActionHit(PlayerActions::Down)) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_animation = 0.0f;
@@ -104,8 +116,11 @@ namespace Jazz2::UI::Menu
 						} else {
 							_selectedIndex = 0;
 						}
+						EnsureVisibleSelected();
 					}
 				}
+
+				_touchTime += timeMult;
 			}
 		} else {
 			_transitionTime -= 0.025f * timeMult;
@@ -118,23 +133,42 @@ namespace Jazz2::UI::Menu
 	void EpisodeSelectSection::OnDraw(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
-		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
+		float centerX = viewSize.X * 0.5f;
+		float bottomLine = viewSize.Y - BottomLine;
+		_root->DrawElement("MenuDim"_s, centerX, (TopLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
+			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - TopLine + 2.0f), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
+		_root->DrawElement("MenuLine"_s, 0, centerX, TopLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement("MenuLine"_s, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		constexpr float topLine = 131.0f;
-		float bottomLine = viewSize.Y - 42.0f;
-		_root->DrawElement("MenuDim"_s, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
-			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement("MenuLine"_s, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement("MenuLine"_s, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-
-		center.Y = topLine + (bottomLine - topLine) * 0.7f / _items.size();
 		int charOffset = 0;
-
-		_root->DrawStringShadow("Play Episodes"_s, charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow("Play Episodes"_s, charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+	}
 
+	void EpisodeSelectSection::OnDrawClipped(Canvas* canvas)
+	{
+		if (_items.empty()) {
+			_scrollable = false;
+			return;
+		}
+
+		Vector2i viewSize = canvas->ViewSize;
+		float bottomLine = viewSize.Y - BottomLine;
+		float availableHeight = (bottomLine - TopLine);
+		float spacing = availableHeight * 0.95f / _items.size();
+		if (spacing <= 30.0f) {
+			spacing = 30.0f;
+			_y = (availableHeight - _height < 0.0f ? std::clamp(_y, availableHeight - _height, 0.0f) : 0.0f);
+			_scrollable = true;
+		} else {
+			_y = 0.0;
+			_scrollable = false;
+		}
+
+		Vector2f center = Vector2f(viewSize.X * 0.5f, TopLine + ItemHeight * 0.5f + _y);
 		float expandedAnimation2 = std::min(_expandedAnimation * 6.0f, 1.0f);
 		float expandedAnimation3 = (expandedAnimation2 * expandedAnimation2 * (3.0f - 2.0f * expandedAnimation2));
+		int charOffset = 0;
 
 		for (int i = 0; i < _items.size(); i++) {
 			_items[i].TouchY = center.Y;
@@ -199,10 +233,17 @@ namespace Jazz2::UI::Menu
 					((_items[i].Flags & ItemFlags::CheatsUsed) == ItemFlags::CheatsUsed ? Colorf::Black : Colorf::White), size, size);
 			}
 
-			center.Y += (bottomLine - topLine) * 0.94f / _items.size();
+			center.Y += spacing;
 		}
 
+		_height = center.Y - (TopLine + _y);
+	}
+
+	void EpisodeSelectSection::OnDrawOverlay(Canvas* canvas)
+	{
 		if (_shouldStart) {
+			Vector2i viewSize = canvas->ViewSize;
+
 			auto command = canvas->RentRenderCommand();
 			if (command->material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::Transition))) {
 				command->material().reserveUniformsDataMemory();
@@ -213,34 +254,63 @@ namespace Jazz2::UI::Menu
 
 			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 			instanceBlock->uniform(Material::TexRectUniformName)->setFloatVector(Vector4f(1.0f, 0.0f, 1.0f, 0.0f).Data());
-			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(Vector2f(static_cast<float>(canvas->ViewSize.X), static_cast<float>(canvas->ViewSize.Y)).Data());
+			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(Vector2f(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y)).Data());
 			instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(0.0f, 0.0f, 0.0f, _transitionTime).Data());
 
 			command->setTransformation(Matrix4x4f::Identity);
-			command->setLayer(999);
 
 			canvas->DrawRenderCommand(command);
 		}
 	}
 
-	void EpisodeSelectSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
+	void EpisodeSelectSection::OnTouchEvent(const TouchEvent& event, const Vector2i& viewSize)
 	{
-		if (!_shouldStart && event.type == TouchEventType::Down) {
-			int pointerIndex = event.findPointerIndex(event.actionIndex);
-			if (pointerIndex != -1) {
-				float x = event.pointers[pointerIndex].x;
-				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+		if (_shouldStart) {
+			return;
+		}
 
-				if (y < 80.0f) {
-					_root->PlaySfx("MenuSelect"_s, 0.5f);
-					_root->LeaveSection();
+		switch (event.type) {
+			case TouchEventType::Down: {
+				int pointerIndex = event.findPointerIndex(event.actionIndex);
+				if (pointerIndex != -1) {
+					float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+					if (y < 80.0f) {
+						_root->PlaySfx("MenuSelect"_s, 0.5f);
+						_root->LeaveSection();
+						return;
+					}
+
+					_touchStart = Vector2f(event.pointers[pointerIndex].x * (float)viewSize.X, event.pointers[pointerIndex].y * (float)viewSize.Y);
+					_touchLast = _touchStart;
+					_touchTime = 0.0f;
+				}
+				break;
+			}
+			case TouchEventType::Move: {
+				if (_touchStart != Vector2f::Zero) {
+					int pointerIndex = event.findPointerIndex(event.actionIndex);
+					if (pointerIndex != -1) {
+						Vector2f touchMove = Vector2f(event.pointers[pointerIndex].x * (float)viewSize.X, event.pointers[pointerIndex].y * (float)viewSize.Y);
+						if (_scrollable) {
+							_y += touchMove.Y - _touchLast.Y;
+						}
+						_touchLast = touchMove;
+					}
+				}
+				break;
+			}
+			case TouchEventType::Up: {
+				bool alreadyMoved = (_touchStart == Vector2f::Zero || (_touchStart - _touchLast).Length() > 10.0f || _touchTime > FrameTimer::FramesPerSecond);
+				_touchStart = Vector2f::Zero;
+				if (alreadyMoved) {
 					return;
 				}
 
+				float halfW = viewSize.X * 0.5f;
 				for (int i = 0; i < _items.size(); i++) {
-					if (std::abs(x - 0.5f) < 0.3f && std::abs(y - _items[i].TouchY) < 22.0f) {
+					if (std::abs(_touchLast.X - halfW) < 150.0f && std::abs(_touchLast.Y - _items[i].TouchY) < 22.0f) {
 						if (_selectedIndex == i) {
-							bool onExpand = (x > (0.5f + 0.2f) && (_items[i].Flags & ItemFlags::CanContinue) == ItemFlags::CanContinue);
+							bool onExpand = (_touchLast.X > halfW + 100.0f && (_items[i].Flags & ItemFlags::CanContinue) == ItemFlags::CanContinue);
 							if (onExpand) {
 								if (_expanded) {
 									ExecuteSelected();
@@ -263,10 +333,12 @@ namespace Jazz2::UI::Menu
 							_selectedIndex = i;
 							_expanded = false;
 							_expandedAnimation = 0.0f;
+							EnsureVisibleSelected();
 						}
 						break;
 					}
 				}
+				break;
 			}
 		}
 	}
@@ -293,6 +365,20 @@ namespace Jazz2::UI::Menu
 			} else {
 				_root->SwitchToSectionPtr(std::make_unique<StartGameOptionsSection>(selectedItem.Description.Name, selectedItem.Description.FirstLevel, selectedItem.Description.PreviousEpisode));
 			}
+		}
+	}
+
+	void EpisodeSelectSection::EnsureVisibleSelected()
+	{
+		if (!_scrollable) {
+			return;
+		}
+
+		float bottomLine = _root->GetViewSize().Y - BottomLine;
+		if (_items[_selectedIndex].TouchY < TopLine + ItemHeight * 0.5f) {
+			_y += (TopLine + ItemHeight * 0.5f - _items[_selectedIndex].TouchY);
+		} else if (_items[_selectedIndex].TouchY > bottomLine - ItemHeight * 0.5f) {
+			_y += (bottomLine - ItemHeight * 0.5f - _items[_selectedIndex].TouchY);
 		}
 	}
 
