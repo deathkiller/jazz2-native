@@ -32,6 +32,10 @@ namespace Jazz2::UI::Menu
 		void ApplyPreferencesChanges(ChangedPreferencesType type) override;
 		bool ActionHit(PlayerActions action) override;
 
+		Vector2i GetViewSize() override {
+			return _canvas->ViewSize;
+		}
+
 		void DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color,
 			float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false) override;
 		void DrawElement(const StringView& name, float x, float y, uint16_t z, Alignment align, const Colorf& color,

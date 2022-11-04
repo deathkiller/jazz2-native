@@ -21,8 +21,8 @@ namespace Jazz2::UI
 			setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
 		}
 
-		void Initialize(int width, int height, int targetWidth, int targetHeight);
-		void Register();
+		virtual void Initialize(int width, int height, int targetWidth, int targetHeight);
+		virtual void Register();
 
 		bool OnDraw(RenderQueue& renderQueue) override;
 
@@ -34,7 +34,7 @@ namespace Jazz2::UI
 			return _view->size();
 		}
 
-	private:
+	protected:
 		class AntialiasingSubpass : public SceneNode
 		{
 			friend class UpscaleRenderPass;
@@ -44,6 +44,8 @@ namespace Jazz2::UI
 			{
 				setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
 			}
+
+			void Register();
 
 			bool OnDraw(RenderQueue& renderQueue) override;
 
@@ -55,15 +57,46 @@ namespace Jazz2::UI
 			Vector2f _targetSize;
 		};
 
-		std::unique_ptr<SceneNode> _node;
-		std::unique_ptr<Texture> _target;
 		std::unique_ptr<Viewport> _view;
 		std::unique_ptr<Camera> _camera;
+		std::unique_ptr<Texture> _target;
+		Vector2f _targetSize;
 		AntialiasingSubpass _antialiasing;
+
+	private:
+		std::unique_ptr<SceneNode> _node;
 #if defined(ALLOW_RESCALE_SHADERS)
 		Shader* _resizeShader;
 #endif
 		RenderCommand _renderCommand;
-		Vector2f _targetSize;
+	};
+
+	class UpscaleRenderPassWithClipping : public UpscaleRenderPass
+	{
+	public:
+		UpscaleRenderPassWithClipping() : UpscaleRenderPass()
+		{
+		}
+
+		void Initialize(int width, int height, int targetWidth, int targetHeight) override;
+		void Register() override;
+
+		SceneNode* GetClippedNode() const {
+			return _clippedNode.get();
+		}
+
+		SceneNode* GetOverlayNode() const {
+			return _overlayNode.get();
+		}
+
+		void SetClipRectangle(const Recti& scissorRect) {
+			_clippedView->setScissorRect(scissorRect);
+		}
+
+	private:
+		std::unique_ptr<Viewport> _clippedView;
+		std::unique_ptr<Viewport> _overlayView;
+		std::unique_ptr<SceneNode> _clippedNode;
+		std::unique_ptr<SceneNode> _overlayNode;
 	};
 }

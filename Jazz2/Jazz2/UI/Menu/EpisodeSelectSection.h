@@ -9,10 +9,14 @@ namespace Jazz2::UI::Menu
 	public:
 		EpisodeSelectSection();
 
+		Recti GetClipRectangle(const Vector2i& viewSize) override;
+
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
-		void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) override;
+		void OnDrawClipped(Canvas* canvas) override;
+		void OnDrawOverlay(Canvas* canvas) override;
+		void OnTouchEvent(const TouchEvent& event, const Vector2i& viewSize) override;
 
 	private:
 		enum class ItemFlags {
@@ -32,6 +36,10 @@ namespace Jazz2::UI::Menu
 			float TouchY;
 		};
 
+		static constexpr float ItemHeight = 40.0f;
+		static constexpr float TopLine = 131.0f;
+		static constexpr float BottomLine = 42.0f;
+
 		SmallVector<ItemData> _items;
 		int _selectedIndex;
 		float _animation;
@@ -39,8 +47,15 @@ namespace Jazz2::UI::Menu
 		bool _expanded;
 		float _transitionTime;
 		bool _shouldStart;
+		float _y;
+		float _height;
+		Vector2f _touchStart;
+		Vector2f _touchLast;
+		float _touchTime;
+		bool _scrollable;
 
 		void ExecuteSelected();
+		void EnsureVisibleSelected();
 		void OnAfterTransition();
 		void AddEpisode(const StringView& episodeFile);
 	};

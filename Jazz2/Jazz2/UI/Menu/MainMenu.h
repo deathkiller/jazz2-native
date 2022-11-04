@@ -48,6 +48,10 @@ namespace Jazz2::UI::Menu
 		void ApplyPreferencesChanges(ChangedPreferencesType type) override;
 		bool ActionHit(PlayerActions action) override;
 
+		Vector2i GetViewSize() override {
+			return _canvasBackground->ViewSize;
+		}
+
 		void DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color,
 			float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false) override;
 		void DrawElement(const StringView& name, float x, float y, uint16_t z, Alignment align, const Colorf& color,
@@ -61,13 +65,38 @@ namespace Jazz2::UI::Menu
 	private:
 		IRootController* _root;
 
-		class MenuCanvas : public Canvas
+		enum class ActiveCanvas {
+			Background,
+			Clipped,
+			Overlay
+		};
+
+		class MenuBackgroundCanvas : public Canvas
 		{
 		public:
-			MenuCanvas(MainMenu* owner)
-				: _owner(owner)
-			{
-			}
+			MenuBackgroundCanvas(MainMenu* owner) : _owner(owner) { }
+
+			bool OnDraw(RenderQueue& renderQueue) override;
+
+		private:
+			MainMenu* _owner;
+		};
+
+		class MenuClippedCanvas : public Canvas
+		{
+		public:
+			MenuClippedCanvas(MainMenu* owner) : _owner(owner) { }
+
+			bool OnDraw(RenderQueue& renderQueue) override;
+
+		private:
+			MainMenu* _owner;
+		};
+
+		class MenuOverlayCanvas : public Canvas
+		{
+		public:
+			MenuOverlayCanvas(MainMenu* owner) : _owner(owner) { }
 
 			bool OnDraw(RenderQueue& renderQueue) override;
 
@@ -80,8 +109,7 @@ namespace Jazz2::UI::Menu
 			friend class MainMenu;
 
 		public:
-			TexturedBackgroundPass(MainMenu* owner)
-				: _owner(owner), _alreadyRendered(false)
+			TexturedBackgroundPass(MainMenu* owner) : _owner(owner), _alreadyRendered(false)
 			{
 				setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
 			}
@@ -101,7 +129,7 @@ namespace Jazz2::UI::Menu
 		};
 
 		TexturedBackgroundPass _texturedBackgroundPass;
-		UI::UpscaleRenderPass _upscalePass;
+		UI::UpscaleRenderPassWithClipping _upscalePass;
 
 		std::unique_ptr<TileSet> _tileSet;
 		TileMapLayer _texturedBackgroundLayer;
@@ -109,7 +137,10 @@ namespace Jazz2::UI::Menu
 		float _texturedBackgroundPhase;
 		Vector3f _backgroundColor;
 
-		std::unique_ptr<MenuCanvas> _canvas;
+		std::unique_ptr<MenuBackgroundCanvas> _canvasBackground;
+		std::unique_ptr<MenuClippedCanvas> _canvasClipped;
+		std::unique_ptr<MenuOverlayCanvas> _canvasOverlay;
+		ActiveCanvas _activeCanvas;
 		HashMap<String, GraphicResource>* _graphics;
 		Font* _smallFont;
 		Font* _mediumFont;
@@ -128,5 +159,15 @@ namespace Jazz2::UI::Menu
 		void UpdatePressedActions();
 		void PrepareTexturedBackground();
 		void RenderTexturedBackground(RenderQueue& renderQueue);
+
+		inline Canvas* GetActiveCanvas()
+		{
+			switch (_activeCanvas) {
+				default:
+				case ActiveCanvas::Background: return _canvasBackground.get();
+				case ActiveCanvas::Clipped: return _canvasClipped.get();
+				case ActiveCanvas::Overlay: return _canvasOverlay.get();
+			}
+		}
 	};
 }
