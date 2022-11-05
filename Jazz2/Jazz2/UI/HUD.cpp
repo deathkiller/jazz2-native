@@ -137,8 +137,11 @@ namespace Jazz2::UI
 					if (_weaponWheelAnim <= 0.0f) {
 						_weaponWheelAnim = 0.0f;
 						_levelHandler->_playerFrozenEnabled = false;
-						// TODO: Weapon wheel
-						//players[0]->_renderer.Initialize(Actors::ActorRendererType::Default);
+
+						Actors::Player* player = players[0];
+						if (player->_weaponWheelState == Actors::Player::WeaponWheelState::Visible) {
+							player->_weaponWheelState = Actors::Player::WeaponWheelState::Closing;
+						}
 					}
 				}
 			}
@@ -623,7 +626,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	void HUD::DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY)
+	void HUD::DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, float angle)
 	{
 		auto it = _graphics->find(String::nullTerminatedView(name));
 		if (it == _graphics->end()) {
@@ -651,7 +654,7 @@ namespace Jazz2::UI
 		texCoords.W += texCoords.Z;
 		texCoords.Z *= -1;
 
-		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color);
+		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending, angle);
 	}
 
 	void HUD::DrawElementClipped(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY)
@@ -767,8 +770,10 @@ namespace Jazz2::UI
 			_levelHandler->_playerFrozenEnabled = true;
 			_levelHandler->_playerFrozenMovement = _levelHandler->_playerRequiredMovement;
 		}
-		// TODO: Weapon wheel
-		//player->_renderer.Initialize(Actors::ActorRendererType::Outline);
+
+		if (player->_weaponWheelState == Actors::Player::WeaponWheelState::Hidden && player->_sugarRushLeft <= 0.0f) {
+			player->_weaponWheelState = Actors::Player::WeaponWheelState::Opening;
+		}
 
 		Vector2f center = Vector2f(ViewSize.X * 0.5f, ViewSize.Y * 0.5f);
 		float angleStep = fTwoPi / _weaponWheelCount;
@@ -788,7 +793,7 @@ namespace Jazz2::UI
 
 		float requestedAngle;
 		int requestedIndex;
-		if (h == 0 && v == 0) {
+		if (h == 0.0f && v == 0.0f) {
 			requestedAngle = NAN;
 			requestedIndex = -1;
 		} else {
@@ -809,6 +814,12 @@ namespace Jazz2::UI
 		float easing = Menu::IMenuContainer::EaseOutCubic(alpha);
 		float distance = 20 + (70 * easing);
 		float distance2 = 10 + (50 * easing);
+		float distance3 = distance2 * 2.0f;
+
+		float alphaInner = std::min(Vector2f(h, v).Length() * easing * 1.5f - 0.6f, 1.0f);
+		if (alphaInner > 0.0f) {
+			DrawElement("WeaponWheelInner"_s, -1, center.X, center.Y, MainLayer + 5, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alphaInner), easing, easing, true, -requestedAngle);
+		}
 
 		float angle = -fPiOver2;
 		for (int i = 0, j = 0; i < _countof(player->_weaponAmmo); i++) {
@@ -818,26 +829,35 @@ namespace Jazz2::UI
 
 				Vector2f pos = Vector2f(center.X + x, center.Y + y);
 				StringView weapon = GetCurrentWeapon(player, (WeaponType)i, pos);
+				Colorf color2;
+				float scale;
 				bool isSelected = (j == requestedIndex);
 				if (isSelected) {
 					_lastWeaponWheelIndex = i;
+					color2 = Colorf(1.0f, 0.8f, 0.5f, alpha);
+					scale = 1.0f;
+				} else {
+					color2 = Colorf(1.0f, 1.0f, 1.0f, alpha * 0.7f);
+					scale = 0.9f;
 				}
 
 				DrawElement("WeaponWheelDim"_s, -1, pos.X, pos.Y, ShadowLayer - 10, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, alpha * 0.6f), 5.0f, 5.0f);
-				DrawElement(weapon, -1, pos.X, pos.Y, MainLayer + 10, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, isSelected ? alpha : alpha * 0.7f));
+				DrawElement(weapon, -1, pos.X, pos.Y, MainLayer + 10, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, isSelected ? alpha : alpha * 0.7f), scale, scale);
 
 				float angle2 = fTwoPi - angle;
 				float angleFrom = angle2 - angleStep * 0.4f;
 				float angleTo = angle2 + angleStep * 0.4f;
 
 				Colorf color1 = Colorf(0.0f, 0.0f, 0.0f, alpha * 0.3f);
-				DrawWeaponWheelSegment(center.X - distance2 - 1, center.Y - distance2 - 1, distance2 * 2, distance2 * 2, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
-				DrawWeaponWheelSegment(center.X - distance2 - 1, center.Y - distance2 + 1, distance2 * 2, distance2 * 2, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
-				DrawWeaponWheelSegment(center.X - distance2 + 1, center.Y - distance2 - 1, distance2 * 2, distance2 * 2, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
-				DrawWeaponWheelSegment(center.X - distance2 + 1, center.Y - distance2 + 1, distance2 * 2, distance2 * 2, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
+				DrawWeaponWheelSegment(center.X - distance2 - 1, center.Y - distance2 - 1, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
+				DrawWeaponWheelSegment(center.X - distance2 - 1, center.Y - distance2 + 1, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
+				DrawWeaponWheelSegment(center.X - distance2 + 1, center.Y - distance2 - 1, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
+				DrawWeaponWheelSegment(center.X - distance2 + 1, center.Y - distance2 + 1, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
 
-				Colorf color2 = (isSelected ? Colorf(1.0f, 0.8f, 0.5f, alpha) : Colorf(1.0f, 1.0f, 1.0f, alpha * 0.7f));
-				DrawWeaponWheelSegment(center.X - distance2, center.Y - distance2, distance2 * 2, distance2 * 2, MainLayer, angleFrom, angleTo, lineTexture, color2);
+				DrawWeaponWheelSegment(center.X - distance2, center.Y - distance2, distance3, distance3, MainLayer, angleFrom, angleTo, lineTexture, color2);
+				if (isSelected) {
+					DrawWeaponWheelSegment(center.X - distance2 - 1.0f, center.Y - distance2 - 1.0f, distance3 + 2.0f, distance3 + 2.0f, MainLayer + 1, angleFrom + fRadAngle1, angleTo - fRadAngle1, lineTexture, Colorf(1.0f, 0.8f, 0.5f, alpha * 0.3f));
+				}
 
 				angle += angleStep;
 				j++;

@@ -15,6 +15,7 @@
 #		ifdef WITH_AUDIO
 #			pragma comment(lib, "../Libs/x64/OpenAL32.lib")
 #		endif
+#       pragma comment(lib, "../Libs/x64/libdeflate.lib")
 #	elif defined(_M_IX86)
 #		ifdef WITH_GLEW
 #			pragma comment(lib, "../Libs/x86/glew32.lib")
@@ -28,6 +29,7 @@
 #		ifdef WITH_AUDIO
 #			pragma comment(lib, "../Libs/x86/OpenAL32.lib")
 #		endif
+#       pragma comment(lib, "../Libs/x86/libdeflate.lib")
 #	else
 #		error Unsupported architecture
 #	endif

@@ -400,25 +400,27 @@ namespace nCine
 		joyConnectionEvent_.joyId = joyId;
 
 		if (event == GLFW_CONNECTED) {
+#if defined(ENABLE_LOG)
 			int numButtons = -1;
 			int numAxes = -1;
 			int numHats = -1;
 			glfwGetJoystickButtons(joy, &numButtons);
-#ifdef DEATH_TARGET_EMSCRIPTEN
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
 			numHats = 0;
 			const char* guid = "default";
-#elif GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 3
+#	elif GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 3
 			glfwGetJoystickHats(joy, &numHats);
 			const char* guid = glfwGetJoystickGUID(joy);
-#else
+#	else
 			numHats = 0;
 			const char* guid = nullptr;
-#endif
+#	endif
 			glfwGetJoystickAxes(joy, &numAxes);
-			updateJoystickStates();
-
 			LOGI_X("Joystick %d \"%s\" (%s) has been connected - %d axes, %d buttons, %d hats",
 			       joyId, glfwGetJoystickName(joy), guid, numAxes, numButtons, numHats);
+#endif
+			updateJoystickStates();
+			
 			if (inputEventHandler_ != nullptr) {
 				joyMapping_.onJoyConnected(joyConnectionEvent_);
 				inputEventHandler_->onJoyConnected(joyConnectionEvent_);

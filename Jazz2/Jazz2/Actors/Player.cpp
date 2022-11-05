@@ -66,7 +66,8 @@ namespace Jazz2::Actors
 		_lastPoleTime(0.0f),
 		_inTubeTime(0.0f),
 		_dizzyTime(0.0f),
-		_weaponAllowed(true)
+		_weaponAllowed(true),
+		_weaponWheelState(WeaponWheelState::Hidden)
 	{
 	}
 
@@ -410,6 +411,18 @@ namespace Jazz2::Actors
 			} else {
 				_renderer.Initialize(ActorRendererType::Default);
 			}
+		}
+
+		// Weapon Wheel Transitions
+		switch (_weaponWheelState) {
+			case WeaponWheelState::Opening:
+				_renderer.Initialize(ActorRendererType::Outline);
+				_weaponWheelState = WeaponWheelState::Visible;
+				break;
+			case WeaponWheelState::Closing:
+				_renderer.Initialize(ActorRendererType::Default);
+				_weaponWheelState = WeaponWheelState::Hidden;
+				break;
 		}
 
 		// Copter
@@ -2935,6 +2948,7 @@ namespace Jazz2::Actors
 			if (_sugarRushLeft <= 0.0f) {
 				_sugarRushLeft = 1300.0f;
 				_renderer.Initialize(ActorRendererType::PartialWhiteMask);
+				_weaponWheelState = WeaponWheelState::Hidden;
 				_levelHandler->ActivateSugarRush();
 			}
 		}

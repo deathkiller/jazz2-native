@@ -37,7 +37,7 @@ namespace Jazz2::UI
 		_currentRenderQueue->addCommand(command);
 	}
 
-	void Canvas::DrawTexture(const Texture& texture, const Vector2f& pos, uint16_t z, const Vector2f& size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending)
+	void Canvas::DrawTexture(const Texture& texture, const Vector2f& pos, uint16_t z, const Vector2f& size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending, float angle)
 	{
 		auto command = RentRenderCommand();
 		if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
@@ -63,7 +63,7 @@ namespace Jazz2::UI
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(size.Data());
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(color.Data());
 
-		command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
+		command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f).RotateZ(angle));
 		command->setLayer(z);
 		command->material().setTexture(texture);
 

@@ -129,6 +129,13 @@ namespace Jazz2::Actors
 			Ready
 		};
 
+		enum class WeaponWheelState {
+			Hidden,
+			Opening,
+			Visible,
+			Closing
+		};
+
 		static constexpr float MaxDashingSpeed = 9.0f;
 		static constexpr float MaxRunningSpeed = 4.0f;
 		static constexpr float MaxVineSpeed = 2.0f;
@@ -203,6 +210,7 @@ namespace Jazz2::Actors
 		uint16_t _weaponAmmo[(int)WeaponType::Count];
 		uint8_t _weaponUpgrades[(int)WeaponType::Count];
 		std::shared_ptr<AudioBufferPlayer> _weaponSound;
+		WeaponWheelState _weaponWheelState;
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		bool OnTileDeactivated() override;

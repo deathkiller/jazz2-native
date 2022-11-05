@@ -1,16 +1,6 @@
 ﻿#define _WINSOCKAPI_	// To prevent include "winsock.h"
 #include "Common.h"
 
-#if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
-#   if defined(_M_X64)
-#       pragma comment(lib, "../Libs/x64/libdeflate.lib")
-#   elif defined(_M_IX86)
-#       pragma comment(lib, "../Libs/x86/libdeflate.lib")
-#   else
-#       error Unsupported architecture
-#   endif
-#endif
-
 #if defined(DEATH_TARGET_ANDROID)
 #	include "nCine/Android/AndroidApplication.h"
 #elif defined(DEATH_TARGET_WINDOWS_RT)

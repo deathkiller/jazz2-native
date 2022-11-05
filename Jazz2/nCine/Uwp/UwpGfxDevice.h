@@ -32,13 +32,13 @@ namespace nCine
 {
 	class UwpApplication;
 
-	class AngleGfxDevice : public IGfxDevice
+	class UwpGfxDevice : public IGfxDevice
 	{
 		friend class UwpApplication;
 
 	public:
-		AngleGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const winrtWUXC::SwapChainPanel& withVisual);
-		~AngleGfxDevice();
+		UwpGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const winrtWUXC::SwapChainPanel& withVisual);
+		~UwpGfxDevice();
 
 		void update() override;
 
