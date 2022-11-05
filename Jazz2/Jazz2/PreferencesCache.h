@@ -92,6 +92,7 @@ namespace Jazz2
 		static Vector2f TouchLeftPadding;
 		static Vector2f TouchRightPadding;
 		static uint8_t Language[4];
+		static bool BypassCache;
 
 		// Sounds
 		static float MasterVolume;

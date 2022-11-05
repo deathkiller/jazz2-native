@@ -257,7 +257,7 @@ elseif(APPLE)
 		# If the engine has been built statically the application needs to find the frameworks
 		file(RELATIVE_PATH RELPATH_TO_LIB ${CMAKE_INSTALL_PREFIX}/ ${CMAKE_INSTALL_PREFIX}/${FRAMEWORKS_INSTALL_DESTINATION})
 	endif()
-	set_target_properties(${CPACK_EXECUTABLE_NAME} PROPERTIES INSTALL_RPATH "@executable_path/${RELPATH_TO_LIB}")
+	set_target_properties(ncine PROPERTIES INSTALL_RPATH "@executable_path/${RELPATH_TO_LIB}")
 
 	if(EXISTS ${NCINE_CONFIG_H})
 		if(IS_DIRECTORY ${FRAMEWORKS_DIR}/glew.framework AND NCINE_WITH_GLEW)

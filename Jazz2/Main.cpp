@@ -495,6 +495,12 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 void GameEventHandler::RefreshCache()
 {
+	if (PreferencesCache::BypassCache) {
+		LOGI("Cache is bypassed by command-line parameter");
+		_flags = Flags::IsVerified | Flags::IsPlayable;
+		return;
+	}
+
 	auto& resolver = ContentResolver::Current();
 
 	// Check cache state
@@ -520,6 +526,9 @@ void GameEventHandler::RefreshCache()
 		}
 
 		String animsPath = fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "Anims.j2a"_s));
+		if (!fs::IsReadableFile(animsPath)) {
+			animsPath = fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "AnimsSw.j2a"_s));
+		}
 		int64_t animsCached = s->ReadValue<int64_t>();
 		int64_t animsModified = fs::LastModificationTime(animsPath).Ticks;
 		if (animsModified != 0 && animsCached != animsModified) {
@@ -542,9 +551,12 @@ RecreateCache:
 	// "Source" directory must be case in-sensitive
 	String animsPath = fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "Anims.j2a"_s));
 	if (!fs::IsReadableFile(animsPath)) {
-		LOGE_X("Cannot open \".%sSource%sAnims.j2a\" file! Ensure that Jazz Jackrabbit 2 files are present in \"%s\" directory.", fs::PathSeparator, fs::PathSeparator, resolver.GetSourcePath().data());
-		_flags = Flags::IsVerified;
-		return;
+		animsPath = fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "AnimsSw.j2a"_s));
+		if (!fs::IsReadableFile(animsPath)) {
+			LOGE_X("Cannot open \".%sSource%sAnims.j2a\" file! Ensure that Jazz Jackrabbit 2 files are present in \"%s\" directory.", fs::PathSeparator, fs::PathSeparator, resolver.GetSourcePath().data());
+			_flags = Flags::IsVerified;
+			return;
+		}
 	}
 
 	String animationsPath = fs::JoinPath(resolver.GetCachePath(), "Animations"_s);
@@ -696,6 +708,7 @@ void GameEventHandler::RefreshCacheLevels()
 
 	String episodesPath = fs::JoinPath(resolver.GetCachePath(), "Episodes"_s);
 	fs::RemoveDirectoryRecursive(episodesPath);
+	fs::CreateDirectories(episodesPath);
 
 	HashMap<String, bool> usedTilesets;
 
