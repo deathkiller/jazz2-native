@@ -69,7 +69,11 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (!_shouldStart) {
-			if (!_items.empty()) {
+			if (_root->ActionHit(PlayerActions::Menu)) {
+				_root->PlaySfx("MenuSelect"_s, 0.5f);
+				_root->LeaveSection();
+				return;
+			} else if (!_items.empty()) {
 				if (_root->ActionHit(PlayerActions::Fire)) {
 					ExecuteSelected();
 				} else if (_root->ActionHit(PlayerActions::Left)) {
@@ -86,11 +90,7 @@ namespace Jazz2::UI::Menu
 						EnsureVisibleSelected();
 					}
 				} else if (_items.size() > 1) {
-					if (_root->ActionHit(PlayerActions::Menu)) {
-						_root->PlaySfx("MenuSelect"_s, 0.5f);
-						_root->LeaveSection();
-						return;
-					} else if (_root->ActionHit(PlayerActions::Up)) {
+					if (_root->ActionHit(PlayerActions::Up)) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_animation = 0.0f;
 

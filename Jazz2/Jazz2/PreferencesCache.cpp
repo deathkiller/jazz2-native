@@ -34,6 +34,7 @@ namespace Jazz2
 	Vector2f PreferencesCache::TouchLeftPadding;
 	Vector2f PreferencesCache::TouchRightPadding;
 	uint8_t PreferencesCache::Language[4] { };
+	bool PreferencesCache::BypassCache = false;
 	float PreferencesCache::MasterVolume = 0.8f;
 	float PreferencesCache::SfxVolume = 0.8f;
 	float PreferencesCache::MusicVolume = 0.4f;
@@ -215,7 +216,9 @@ namespace Jazz2
 		// Override some settings by command-line arguments
 		for (int i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
-			if (arg == "/cheats"_s) {
+			if (arg == "/bypass-cache"_s) {
+				BypassCache = true;
+			} else if (arg == "/cheats"_s) {
 				AllowCheats = true;
 			} else if (arg == "/cheats-unlock"_s) {
 				AllowCheatsUnlock = true;
