@@ -1,6 +1,6 @@
 #include "UwpApplication.h"
-#include "AngleGfxDevice.h"
-#include "XinputInputManager.h"
+#include "UwpGfxDevice.h"
+#include "UwpInputManager.h"
 #include "../IAppEventHandler.h"
 #include "../Input/IInputManager.h"
 #include "../IO/FileSystem.h"
@@ -128,8 +128,14 @@ namespace nCine
 
 		auto window = winrtWUX::Window::Current();
 
-		window.SizeChanged([](const auto&, winrtWUC::WindowSizeChangedEventArgs args) {
-			auto& gfxDevice = dynamic_cast<AngleGfxDevice&>(theApplication().gfxDevice());
+		window.Closed([](const auto&, winrtWUC::CoreWindowEventArgs const& args) {
+			// TODO: This is probably not called
+			_instance->shouldQuit_ = true;
+		});
+
+		window.SizeChanged([](const auto&, winrtWUC::WindowSizeChangedEventArgs const& args) {
+			auto& gfxDevice = dynamic_cast<UwpGfxDevice&>(_instance->gfxDevice());
+			gfxDevice.isFullscreen_ = winrtWUV::ApplicationView::GetForCurrentView().IsFullScreenMode();
 			gfxDevice._sizeChanged = 10;
 		});
 
@@ -139,7 +145,7 @@ namespace nCine
 
 		window.Content(_panel);
 
-		winrtWUV::ApplicationView::TerminateAppOnFinalViewClose(true);
+		winrtWUV::ApplicationView::TerminateAppOnFinalViewClose(false);
 		//auto windowTitleW = Death::Utf8::ToUtf16(appCfg_.windowTitle);
 		//winrtWUV::ApplicationView::GetForCurrentView().Title(winrt::hstring(windowTitleW.data(), windowTitleW.size()));
 
@@ -176,11 +182,11 @@ namespace nCine
 		const IGfxDevice::WindowMode windowMode(appCfg_.resolution.X, appCfg_.resolution.Y, appCfg_.fullscreen, appCfg_.resizable, appCfg_.windowScaling);
 
 		// Graphics device should always be created before the input manager!
-		gfxDevice_ = std::make_unique<AngleGfxDevice>(windowMode, glContextInfo, displayMode, _panel);
-		inputManager_ = std::make_unique<XinputInputManager>();
+		gfxDevice_ = std::make_unique<UwpGfxDevice>(windowMode, glContextInfo, displayMode, _panel);
+		inputManager_ = std::make_unique<UwpInputManager>();
 
 		displayInfo.DpiChanged([](const auto&, const auto& args) {
-			auto& gfxDevice = dynamic_cast<AngleGfxDevice&>(theApplication().gfxDevice());
+			auto& gfxDevice = dynamic_cast<UwpGfxDevice&>(_instance->gfxDevice());
 			gfxDevice.updateMonitors();
 		});
 
@@ -199,16 +205,19 @@ namespace nCine
 
 	void UwpApplication::run()
 	{
-		auto gfx = dynamic_cast<AngleGfxDevice*>(gfxDevice_.get());
+		auto gfx = dynamic_cast<UwpGfxDevice*>(gfxDevice_.get());
 		gfx->MakeCurrent();
 
 		initCommon();
 
 		while (!shouldQuit_) {
+			UwpInputManager::updateJoystickStates();
 			step();
 		}
 
 		shutdownCommon();
+
+		Exit();
 	}
 
 }

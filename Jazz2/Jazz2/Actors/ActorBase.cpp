@@ -9,7 +9,7 @@
 #include "Weapons/ToasterShot.h"
 
 #if !defined(WITH_COROUTINES)
-#	pragma message("<coroutine> support was not found, building without asynchronous loading support")
+#	pragma message("WITH_COROUTINES is not defined, building without asynchronous loading support")
 #endif
 
 #include "../../nCine/Primitives/Matrix4x4.h"
@@ -1225,7 +1225,7 @@ namespace Jazz2::Actors
 			if (type == ActorRendererType::Outline) {
 				if (texture_) {
 					Vector2i texSize = texture_->size();
-					setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, 1.0f));
+					setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, 0.8f));
 				}
 			} else {
 				setColor(Colorf::White);
@@ -1275,7 +1275,7 @@ namespace Jazz2::Actors
 		if (_rendererType == ActorRendererType::Outline) {
 			if (newTexture) {
 				Vector2i texSize = newTexture->size();
-				setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, 1.0f));
+				setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, 0.8f));
 			}
 		}
 	}

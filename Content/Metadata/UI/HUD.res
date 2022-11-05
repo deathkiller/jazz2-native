@@ -118,6 +118,9 @@
 		"WeaponWheel": {
 			"Path": "UI/weapon_wheel.aura"
 		},
+		"WeaponWheelInner": {
+			"Path": "UI/weapon_wheel_inner.aura"
+		},
 		"WeaponWheelDim": {
 			"Path": "UI/dim.aura"
 		},

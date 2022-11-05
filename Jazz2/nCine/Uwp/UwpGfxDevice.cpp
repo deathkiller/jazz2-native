@@ -1,4 +1,4 @@
-#include "AngleGfxDevice.h"
+#include "UwpGfxDevice.h"
 #include "UwpApplication.h"
 
 #include <angle_windowsstore.h>
@@ -12,7 +12,7 @@
 
 namespace nCine
 {
-	AngleGfxDevice::AngleGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const winrtWUXC::SwapChainPanel& withVisual)
+	UwpGfxDevice::UwpGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const winrtWUXC::SwapChainPanel& withVisual)
 		: IGfxDevice(windowMode, glContextInfo, displayMode), _renderSurface { EGL_NO_SURFACE }, _hostVisual(withVisual), _sizeChanged(2)
 	{
 		initWindowScaling(windowMode);
@@ -20,13 +20,13 @@ namespace nCine
 		CreateRenderSurface();
 	}
 
-	AngleGfxDevice::~AngleGfxDevice()
+	UwpGfxDevice::~UwpGfxDevice()
 	{
 		DestroyRenderSurface();
 		Cleanup();
 	}
 
-	void AngleGfxDevice::Initialize()
+	void UwpGfxDevice::Initialize()
 	{
 		const EGLint configAttributes[] = { EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8, EGL_DEPTH_SIZE, 8, EGL_STENCIL_SIZE, 8, EGL_NONE };
 
@@ -119,7 +119,7 @@ namespace nCine
 		}
 	}
 
-	void AngleGfxDevice::Cleanup()
+	void UwpGfxDevice::Cleanup()
 	{
 		if (_eglDisplay != EGL_NO_DISPLAY && _eglContext != EGL_NO_CONTEXT) {
 			eglDestroyContext(_eglDisplay, _eglContext);
@@ -132,7 +132,7 @@ namespace nCine
 		}
 	}
 
-	void AngleGfxDevice::CreateRenderSurface()
+	void UwpGfxDevice::CreateRenderSurface()
 	{
 		if (_renderSurface != EGL_NO_SURFACE) {
 			return;
@@ -153,7 +153,7 @@ namespace nCine
 		}
 	}
 
-	void AngleGfxDevice::DestroyRenderSurface()
+	void UwpGfxDevice::DestroyRenderSurface()
 	{
 		if (_renderSurface != EGL_NO_SURFACE) {
 			eglDestroySurface(_eglDisplay, _renderSurface);
@@ -161,14 +161,14 @@ namespace nCine
 		}
 	}
 
-	void AngleGfxDevice::MakeCurrent()
+	void UwpGfxDevice::MakeCurrent()
 	{
 		if (eglMakeCurrent(_eglDisplay, _renderSurface, _renderSurface, _eglContext) == EGL_FALSE) {
 			throw winrt::hresult_error(E_FAIL, L"Failed to make EGLSurface current");
 		}
 	}
 
-	void AngleGfxDevice::update()
+	void UwpGfxDevice::update()
 	{
 		eglSwapBuffers(_eglDisplay, _renderSurface);
 
@@ -190,34 +190,36 @@ namespace nCine
 		}
 	}
 
-	void AngleGfxDevice::setResolution(bool fullscreen, int width, int height)
+	void UwpGfxDevice::setResolution(bool fullscreen, int width, int height)
 	{
-		if (fullscreen) {
-			winrtWUV::ApplicationView::GetForCurrentView().TryEnterFullScreenMode();
-		} else {
-			winrtWUV::ApplicationView::GetForCurrentView().ExitFullScreenMode();
+		UwpApplication::GetDispatcher().RunIdleAsync([fullscreen, width, height](auto args) {
+			if (fullscreen) {
+				winrtWUV::ApplicationView::GetForCurrentView().TryEnterFullScreenMode();
+			} else {
+				winrtWUV::ApplicationView::GetForCurrentView().ExitFullScreenMode();
 
-			if (width > 0 && height > 0) {
-				float dpi = winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView().LogicalDpi();
-				winrtWF::Size desiredSize = winrtWF::Size((width * DefaultDPI / dpi), (height * DefaultDPI / dpi));
-				winrtWUV::ApplicationView::GetForCurrentView().TryResizeView(desiredSize);
+				if (width > 0 && height > 0) {
+					float dpi = winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView().LogicalDpi();
+					winrtWF::Size desiredSize = winrtWF::Size((width * DefaultDPI / dpi), (height * DefaultDPI / dpi));
+					winrtWUV::ApplicationView::GetForCurrentView().TryResizeView(desiredSize);
+				}
 			}
-		}
+		});
 
 		isFullscreen_ = fullscreen;
-		_sizeChanged = 2;
+		_sizeChanged = 10;
 	}
 
-	void AngleGfxDevice::setWindowSize(int width, int height)
+	void UwpGfxDevice::setWindowSize(int width, int height)
 	{
 		// This method is usually called from main thread, but it's required on UI thread
 		UwpApplication::GetDispatcher().RunIdleAsync([width, height](auto args) {
-			winrtWF::Size desiredSize = winrtWF::Size(width, height);
+			winrtWF::Size desiredSize = winrtWF::Size(static_cast<float>(width), static_cast<float>(height));
 			winrtWUV::ApplicationView::GetForCurrentView().TryResizeView(desiredSize);
 		});
 	}
 
-	void AngleGfxDevice::setWindowTitle(const StringView& windowTitle)
+	void UwpGfxDevice::setWindowTitle(const StringView& windowTitle)
 	{
 		// TODO: Disabled for now for Windows RT, because it appends application name
 		// This method is usually called from main thread, but it's required on UI thread
@@ -227,7 +229,7 @@ namespace nCine
 		//});
 	}
 
-	void AngleGfxDevice::updateMonitors()
+	void UwpGfxDevice::updateMonitors()
 	{
 		auto displayInfo = winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView();
 

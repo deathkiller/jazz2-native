@@ -1,13 +1,15 @@
 #pragma once
 
-#if defined(_WIN32)
+#include <CommonInternal.h>
+
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+#	define SDL_JOYSTICK_EMSCRIPTEN (1)
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+#	define SDL_JOYSTICK_XINPUT (1)
+#elif defined(DEATH_TARGET_WINDOWS)
 #	define SDL_JOYSTICK_XINPUT (1)
 #	define SDL_JOYSTICK_WGI (1)
 #	define SDL_JOYSTICK_DINPUT (1)
-#endif
-
-#if defined(__EMSCRIPTEN__)
-#	define SDL_JOYSTICK_EMSCRIPTEN (1)
 #endif
 
 static const char* ControllerMappings[] = {

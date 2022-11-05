@@ -114,7 +114,7 @@ namespace Jazz2::UI
 		void DrawCoins(int& charOffset);
 		void DrawGems(int& charOffset);
 
-		void DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX = 1.0f, float scaleY = 1.0f);
+		void DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, float angle = 0.0f);
 		void DrawElementClipped(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY);
 		StringView GetCurrentWeapon(Actors::Player* player, WeaponType weapon, Vector2f& offset);
 

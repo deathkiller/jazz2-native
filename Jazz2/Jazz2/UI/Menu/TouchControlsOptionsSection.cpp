@@ -93,7 +93,7 @@ namespace Jazz2::UI::Menu
 					int pointerIndex = event.findPointerIndex(event.actionIndex);
 					if (pointerIndex != -1) {
 						Vector2f newPos = Vector2f(event.pointers[pointerIndex].x, event.pointers[pointerIndex].y);
-						Vector2f diff = (newPos - _lastPos) * Vector2f(viewSize.X, viewSize.Y);
+						Vector2f diff = (newPos - _lastPos) * Vector2f(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
 						_lastPos = newPos;
 
 						switch (_selectedZone) {

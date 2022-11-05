@@ -23,7 +23,7 @@
 #endif
 
 #if defined(WITH_ANGLE)
-#	define INFO3 ", Angle"
+#	define INFO3 ", ANGLE"
 #else
 #	define INFO3 ""
 #endif

@@ -532,14 +532,14 @@ if(ANDROID)
 elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/nCine/Uwp/UwpApplication.h
-		${NCINE_SOURCE_DIR}/nCine/Uwp/AngleGfxDevice.h
-		${NCINE_SOURCE_DIR}/nCine/Uwp/XinputInputManager.h
+		${NCINE_SOURCE_DIR}/nCine/Uwp/UwpGfxDevice.h
+		${NCINE_SOURCE_DIR}/nCine/Uwp/UwpInputManager.h
 	)
 	
 	list(APPEND SOURCES
 		${NCINE_SOURCE_DIR}/nCine/Uwp/UwpApplication.cpp
-		${NCINE_SOURCE_DIR}/nCine/Uwp/AngleGfxDevice.cpp
-		${NCINE_SOURCE_DIR}/nCine/Uwp/XinputInputManager.cpp
+		${NCINE_SOURCE_DIR}/nCine/Uwp/UwpGfxDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Uwp/UwpInputManager.cpp
 	)
 	
 	set(UWP_ASSETS

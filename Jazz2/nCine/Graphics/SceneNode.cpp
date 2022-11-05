@@ -371,7 +371,7 @@ namespace nCine
 			dirtyBits_.set(DirtyBitPositions::AabbBit);
 		}
 
-		if (dirtyBits_.test(DirtyBitPositions::TransformationBit) == false)
+		if (!dirtyBits_.test(DirtyBitPositions::TransformationBit))
 			return;
 
 		// Calculating world and local matrices
