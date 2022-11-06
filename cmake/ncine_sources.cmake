@@ -1,9 +1,9 @@
 set(SOURCES
-	${NCINE_ROOT}/Shared/Environment.cpp
-	${NCINE_ROOT}/Shared/Utf8.cpp
-	${NCINE_ROOT}/Shared/Containers/SmallVector.cpp
-	${NCINE_ROOT}/Shared/Containers/String.cpp
-	${NCINE_ROOT}/Shared/Containers/StringView.cpp
+	${NCINE_SOURCE_DIR}/Shared/Environment.cpp
+	${NCINE_SOURCE_DIR}/Shared/Utf8.cpp
+	${NCINE_SOURCE_DIR}/Shared/Containers/SmallVector.cpp
+	${NCINE_SOURCE_DIR}/Shared/Containers/String.cpp
+	${NCINE_SOURCE_DIR}/Shared/Containers/StringView.cpp
 )
 
 list(APPEND SOURCES

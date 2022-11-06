@@ -358,6 +358,15 @@ elseif(MSVC)
 				INTERFACE_LINK_LIBRARIES Vorbis::Vorbis)
 			set(VORBIS_FOUND 1)
 		endif()
+		
+		if(EXISTS ${MSVC_LIBDIR}/libopenmpt.lib AND EXISTS ${MSVC_BINDIR}/libopenmpt.dll)
+			add_library(libopenmpt::libopenmpt SHARED IMPORTED)
+			set_target_properties(libopenmpt::libopenmpt PROPERTIES
+				IMPORTED_IMPLIB ${MSVC_LIBDIR}/libopenmpt.lib
+				IMPORTED_LOCATION ${MSVC_BINDIR}/libopenmpt.dll
+				INTERFACE_INCLUDE_DIRECTORIES "${NCINE_SOURCE_DIR}/../Libs/libopenmpt/")
+			set(OPENMPT_FOUND 1)
+		endif()
 	endif()
 
 	if(NCINE_WITH_LUA AND EXISTS ${MSVC_LIBDIR}/lua54.lib AND EXISTS ${MSVC_BINDIR}/lua54.dll)

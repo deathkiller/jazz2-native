@@ -44,26 +44,26 @@ if(GLFW_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "GLFW")
 	target_link_libraries(ncine PRIVATE GLFW::GLFW)
 
 	list(APPEND HEADERS
-		${NCINE_SOURCE_DIR}/nCine/Input/GlfwInputManager.h
-		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GlfwGfxDevice.h
+		${NCINE_SOURCE_DIR}/nCine/Backends/GlfwInputManager.h
+		${NCINE_SOURCE_DIR}/nCine/Backends/GlfwGfxDevice.h
 	)
 	list(APPEND SOURCES
-		${NCINE_SOURCE_DIR}/nCine/Input/GlfwInputManager.cpp
-		${NCINE_SOURCE_DIR}/nCine/Input/GlfwKeys.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GlfwGfxDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/GlfwInputManager.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/GlfwKeys.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/GlfwGfxDevice.cpp
 	)
 elseif(SDL2_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "SDL2")
 	target_compile_definitions(ncine PRIVATE "WITH_SDL")
 	target_link_libraries(ncine PRIVATE SDL2::SDL2)
 
 	list(APPEND HEADERS
-		${NCINE_SOURCE_DIR}/nCine/Input/SdlInputManager.h
-		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/SdlGfxDevice.h
+		${NCINE_SOURCE_DIR}/nCine/Backends/SdlInputManager.h
+		${NCINE_SOURCE_DIR}/nCine/Backends/SdlGfxDevice.h
 	)
 	list(APPEND SOURCES
-		${NCINE_SOURCE_DIR}/nCine/Input/SdlInputManager.cpp
-		${NCINE_SOURCE_DIR}/nCine/Input/SdlKeys.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/SdlGfxDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/SdlInputManager.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/SdlKeys.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/SdlGfxDevice.cpp
 	)
 elseif(Qt5_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "QT5")
 	target_compile_definitions(ncine PRIVATE "WITH_QT5")
@@ -76,20 +76,20 @@ elseif(Qt5_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "QT5")
 	qt5_wrap_cpp(MOC_SOURCES ${NCINE_SOURCE_DIR}/nCine/Qt5Widget.h)
 
 	list(APPEND HEADERS
-		${NCINE_SOURCE_DIR}/nCine/Qt5Widget.h
-		${NCINE_SOURCE_DIR}/nCine/Input/Qt5InputManager.h
-		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/Qt5GfxDevice.h
+		${NCINE_SOURCE_DIR}/nCine/Backends/Qt5Widget.h
+		${NCINE_SOURCE_DIR}/nCine/Backends/Qt5InputManager.h
+		${NCINE_SOURCE_DIR}/nCine/Backends/Qt5GfxDevice.h
 	)
 	list(APPEND SOURCES
-		${NCINE_SOURCE_DIR}/nCine/Qt5Widget.cpp
-		${NCINE_SOURCE_DIR}/nCine/Input/Qt5InputManager.cpp
-		${NCINE_SOURCE_DIR}/nCine/Input/Qt5Keys.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/Qt5GfxDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/Qt5Widget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/Qt5InputManager.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/Qt5Keys.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/Qt5GfxDevice.cpp
 		${MOC_SOURCES}
 	)
 
 	list(REMOVE_ITEM SOURCES ${NCINE_SOURCE_DIR}/nCine/Input/JoyMapping.cpp)
-	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Input/Qt5JoyMapping.cpp)
+	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/Qt5JoyMapping.cpp)
 endif()
 
 if(OPENAL_FOUND)
@@ -507,39 +507,37 @@ endif()
 
 if(NCINE_BUILD_ANDROID)
 	list(APPEND HEADERS
-		${NCINE_SOURCE_DIR}/nCine/Android/AndroidApplication.h
+		${NCINE_SOURCE_DIR}/nCine/Backends/Android/AndroidApplication.h
 		${NCINE_SOURCE_DIR}/nCine/IO/AssetFile.h
 	)
 endif()
 
 if(ANDROID)
 	list(APPEND HEADERS
-		${NCINE_SOURCE_DIR}/nCine/Android/AndroidInputManager.h
-		${NCINE_SOURCE_DIR}/nCine/Android/AndroidJniHelper.h
-		${NCINE_SOURCE_DIR}/nCine/Android/EglGfxDevice.h
+		${NCINE_SOURCE_DIR}/nCine/Backends/Android/AndroidInputManager.h
+		${NCINE_SOURCE_DIR}/nCine/Backends/Android/AndroidJniHelper.h
+		${NCINE_SOURCE_DIR}/nCine/Backends/Android/EglGfxDevice.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.h
 	)
-
 	list(APPEND SOURCES
-		${NCINE_SOURCE_DIR}/nCine/Android/AndroidApplication.cpp
-		${NCINE_SOURCE_DIR}/nCine/Android/AndroidInputManager.cpp
-		${NCINE_SOURCE_DIR}/nCine/Android/AndroidJniHelper.cpp
-		${NCINE_SOURCE_DIR}/nCine/Android/AndroidKeys.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/Android/AndroidApplication.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/Android/AndroidInputManager.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/Android/AndroidJniHelper.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/Android/AndroidKeys.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/Android/EglGfxDevice.cpp
 		${NCINE_SOURCE_DIR}/nCine/IO/AssetFile.cpp
-		${NCINE_SOURCE_DIR}/nCine/Android/EglGfxDevice.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.cpp
 	)
 elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 	list(APPEND HEADERS
-		${NCINE_SOURCE_DIR}/nCine/Uwp/UwpApplication.h
-		${NCINE_SOURCE_DIR}/nCine/Uwp/UwpGfxDevice.h
-		${NCINE_SOURCE_DIR}/nCine/Uwp/UwpInputManager.h
+		${NCINE_SOURCE_DIR}/nCine/Backends/Uwp/UwpApplication.h
+		${NCINE_SOURCE_DIR}/nCine/Backends/Uwp/UwpGfxDevice.h
+		${NCINE_SOURCE_DIR}/nCine/Backends/Uwp/UwpInputManager.h
 	)
-	
 	list(APPEND SOURCES
-		${NCINE_SOURCE_DIR}/nCine/Uwp/UwpApplication.cpp
-		${NCINE_SOURCE_DIR}/nCine/Uwp/UwpGfxDevice.cpp
-		${NCINE_SOURCE_DIR}/nCine/Uwp/UwpInputManager.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/Uwp/UwpApplication.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/Uwp/UwpGfxDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Backends/Uwp/UwpInputManager.cpp
 	)
 	
 	set(UWP_ASSETS
@@ -602,6 +600,10 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 
 		if(NCINE_WITH_VORBIS AND VORBIS_FOUND)
 			list(APPEND UWP_DEPENDENCIES ${MSVC_BINDIR}/libogg.dll ${MSVC_BINDIR}/libvorbis.dll ${MSVC_BINDIR}/libvorbisfile.dll)
+		endif()
+		
+		if(OPENMPT_FOUND)
+			list(APPEND UWP_DEPENDENCIES ${MSVC_BINDIR}/libopenmpt.dll ${MSVC_BINDIR}/openmpt-mpg123.dll ${MSVC_BINDIR}/openmpt-ogg.dll ${MSVC_BINDIR}/openmpt-vorbis.dll ${MSVC_BINDIR}/openmpt-zlib.dll)
 		endif()
 	endif()
 

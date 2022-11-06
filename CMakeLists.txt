@@ -11,7 +11,7 @@ if (ARM_SUBSTRING_FOUND GREATER -1 OR AARCH64_SUBSTRING_FOUND GREATER -1)
 endif()
 
 set(NCINE_ROOT ${CMAKE_SOURCE_DIR})
-set(NCINE_SOURCE_DIR "${NCINE_ROOT}/Jazz2/")
+set(NCINE_SOURCE_DIR "${NCINE_ROOT}/Sources/")
 set(NCINE_REVERSE_DNS "jazz2.resurrection")
 set(NCINE_APP_NAME "Jazz² Resurrection")
 set(NCINE_APP_DESCRIPTION "Open-source reimplementation of Jazz Jackrabbit 2")
@@ -71,8 +71,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 foreach(FILE ${HEADERS} ${SOURCES}) 
 	get_filename_component(PARENT_DIR "${FILE}" DIRECTORY)
-	string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/Jazz2" "" GROUP "${PARENT_DIR}")
-	string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}" "" GROUP "${GROUP}")
+	string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/Sources" "" GROUP "${PARENT_DIR}")
 	string(REPLACE "/" "\\" GROUP "${GROUP}")
 
 	# Group into "Source Files" and "Header Files"
@@ -101,7 +100,7 @@ if(NCINE_WITH_TRACY)
 		PUBLIC $<BUILD_INTERFACE:${TRACY_INCLUDE_ONLY_DIR}/tracy>
 		PUBLIC $<INSTALL_INTERFACE:include/tracy>)
 endif()
-target_include_directories(ncine PRIVATE ${NCINE_ROOT}/Shared)
+target_include_directories(ncine PRIVATE ${NCINE_SOURCE_DIR}/Shared)
 if(NOT NCINE_DYNAMIC_LIBRARY)
 	target_include_directories(ncine
 		INTERFACE $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include/ncine>)

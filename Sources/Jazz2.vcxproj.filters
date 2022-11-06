@@ -1,0 +1,2061 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files\Icons">
+      <UniqueIdentifier>{66aba08b-58e3-46ab-b8fc-d41aed34380c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine">
+      <UniqueIdentifier>{3cffbbe9-dfa3-4952-9d63-803931646ca8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine">
+      <UniqueIdentifier>{7609aa2a-09c4-45c3-97b4-07fa31c68172}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\Graphics">
+      <UniqueIdentifier>{19840dcc-d21f-4e95-9c2a-109404387642}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\Input">
+      <UniqueIdentifier>{d0ce4523-b7b4-45ed-9184-c39300bbef9b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\Graphics\GL">
+      <UniqueIdentifier>{1b08075b-21c1-4f64-a742-4ecbe22879fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\Audio">
+      <UniqueIdentifier>{1251ca81-4f8c-41dd-b37d-03cd22b356c8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\Base">
+      <UniqueIdentifier>{d2beec57-7003-42d7-b22f-b563df9d803c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\Threading">
+      <UniqueIdentifier>{7015d501-0fbc-49f0-be08-b8d6099fd9a9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\Primitives">
+      <UniqueIdentifier>{4b5dd7f9-75e1-41de-8421-50358d03dfe9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2">
+      <UniqueIdentifier>{a959c99b-4745-4a20-8185-280a49bac222}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2">
+      <UniqueIdentifier>{89144cf1-d95c-46b1-9196-16537338f431}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Actors">
+      <UniqueIdentifier>{15fe9e4f-88e7-4418-bd1e-185e04df0ff6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Actors">
+      <UniqueIdentifier>{f9dcdbac-3727-4080-8c43-3d70cbf7c09e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Events">
+      <UniqueIdentifier>{8f3b583f-dafa-476b-a09b-8f8bf916fd9f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Events">
+      <UniqueIdentifier>{14cf239c-a04a-45e5-9b98-73de29aff458}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Tiles">
+      <UniqueIdentifier>{5f2adbaa-a641-44b8-8b21-fb52eb85eddc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Tiles">
+      <UniqueIdentifier>{a9240185-7aca-468b-87ea-256d73bf2a24}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\IO">
+      <UniqueIdentifier>{feaaf225-0942-42ed-8f21-5708ce4e0720}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Actors\Environment">
+      <UniqueIdentifier>{14077be7-3ef9-4d98-a3a1-bf9f6e6ace47}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Actors\Environment">
+      <UniqueIdentifier>{23fadb05-bb1f-486a-8b67-41bf625ac6e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Collisions">
+      <UniqueIdentifier>{aecd7014-0204-4625-b064-09c13d53de12}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Collisions">
+      <UniqueIdentifier>{975de453-6bd0-4316-8406-ea0286fa86a0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Actors\Enemies">
+      <UniqueIdentifier>{2eb75e32-c50f-468c-920c-784a0845fe83}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Actors\Collectibles">
+      <UniqueIdentifier>{519c39a5-6f2f-4c30-9b2c-2e1ce566a1d2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Actors\Collectibles">
+      <UniqueIdentifier>{3dd90479-fc1e-496b-8981-a22af66f242f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Actors\Enemies">
+      <UniqueIdentifier>{08f2605c-9261-4ad2-bb0e-e762c9234663}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Actors\Weapons">
+      <UniqueIdentifier>{fc925b25-6fe6-4878-b90c-381875ebafce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Actors\Weapons">
+      <UniqueIdentifier>{24b4b922-2cbb-4ed8-bbf0-a13a9a21e4e7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Actors\Solid">
+      <UniqueIdentifier>{542d7d67-d898-43c8-b9c0-e8c01b1c4619}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Actors\Solid">
+      <UniqueIdentifier>{dc902cfb-8e5b-4ac1-a585-7ae3b6b74b5c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\Audio">
+      <UniqueIdentifier>{2617eb82-0e20-47d7-9288-35f78e88f537}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\Base">
+      <UniqueIdentifier>{5a47b260-7c5c-4464-a7ac-e9a6fbe91a23}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\Graphics">
+      <UniqueIdentifier>{91ccf582-924e-4b60-813c-738218e484f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\Input">
+      <UniqueIdentifier>{9f55d519-1d20-4371-8846-4414bdb959cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\IO">
+      <UniqueIdentifier>{7b8ea11d-1a7c-415b-b266-2cce5ac3a140}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\Primitives">
+      <UniqueIdentifier>{dfcbe8c2-0d95-4ba7-b5b7-60a9b2cc028c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\Graphics\GL">
+      <UniqueIdentifier>{bcee5bd1-18ac-41d1-823a-18478dcf8523}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\Threading">
+      <UniqueIdentifier>{195cb373-35dc-405c-a3c6-8c10516ecb04}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shared">
+      <UniqueIdentifier>{4b80debe-5716-4bd0-a661-34670989abdf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Shared">
+      <UniqueIdentifier>{89332f4f-8dd1-479e-a4cd-803ca0686e13}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Compatibility">
+      <UniqueIdentifier>{646e268b-5901-4372-936f-88d60fc4c19f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Compatibility">
+      <UniqueIdentifier>{d48c8ef6-f2aa-4271-8969-2390b111249d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shared\Containers">
+      <UniqueIdentifier>{6f48b4c9-dc8c-43cd-af13-0236fcd9130d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Shared\Containers">
+      <UniqueIdentifier>{9e5b0b19-ff74-4133-9a57-6a38648c2280}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\Base\ParallelHashMap">
+      <UniqueIdentifier>{f14c807a-cda1-4d6b-8b0b-7b7b74a9f565}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Actors\Lighting">
+      <UniqueIdentifier>{4d146257-6633-4254-9029-55f805e74db6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Actors\Lighting">
+      <UniqueIdentifier>{57513633-b81a-446d-af22-8e3f73cf39f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\UI">
+      <UniqueIdentifier>{eb7c0048-96a1-4540-9063-690a14a526cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\UI">
+      <UniqueIdentifier>{ba8465dc-da58-4362-b4fe-1c831c184563}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\UI\Menu">
+      <UniqueIdentifier>{5de8bce6-a2aa-4513-886c-4bdcb532a14e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\UI\Menu">
+      <UniqueIdentifier>{a65d3a71-4070-4f0b-84d8-d8be78337c28}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Scripting">
+      <UniqueIdentifier>{633274d8-a360-48ab-9529-d01e4b9cd4ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Scripting">
+      <UniqueIdentifier>{28b29c21-7d11-474a-bbf2-a494645dd07e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Actors\Enemies\Bosses">
+      <UniqueIdentifier>{672eb0e5-0833-4fa0-b5be-661143817a60}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Actors\Enemies\Bosses">
+      <UniqueIdentifier>{21785585-fbef-4c0c-b464-f205ee8076fd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\Backends">
+      <UniqueIdentifier>{416ca28f-5529-413b-b6b9-1f5c7cdf2b0d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\Backends">
+      <UniqueIdentifier>{90e78042-998d-48ca-acc9-5bab601629ce}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Resources.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\IGfxCapabilities.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\IGfxDevice.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\DisplayMode.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\Camera.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\ParticleAffectors.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\ParticleInitializer.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\ParticleSystem.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\Particle.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\Material.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RenderBuffersManager.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RenderCommand.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RenderCommandPool.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RenderQueue.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RenderResources.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RenderStatistics.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RenderVaoPool.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RenderBatcher.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\TextureLoaderPvr.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\TextureLoaderRaw.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\TextureLoaderWebP.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\TextureFormat.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\TextureLoaderDds.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\TextureLoaderKtx.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\TextureLoaderPkm.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\TextureLoaderPng.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\ScreenViewport.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\ITextureLoader.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\Geometry.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\TextureSaverPng.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\TextureSaverWebP.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\Viewport.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\BaseSprite.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\DrawableNode.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\ITextureSaver.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\MeshSprite.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RectAnimation.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\SceneNode.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\Sprite.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\Texture.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Input\JoyMappingDb.h">
+      <Filter>Header Files\nCine\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Input\IInputEventHandler.h">
+      <Filter>Header Files\nCine\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Input\IInputManager.h">
+      <Filter>Header Files\nCine\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Input\InputEvents.h">
+      <Filter>Header Files\nCine\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Input\Keys.h">
+      <Filter>Header Files\nCine\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\AnimatedSprite.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLDepthTest.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLFramebuffer.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLHashMap.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLRenderbuffer.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLScissorTest.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLShader.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLShaderProgram.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLShaderUniformBlocks.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLShaderUniforms.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLTexture.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLUniform.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLUniformBlock.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLUniformBlockCache.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLUniformCache.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLVertexArrayObject.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLVertexFormat.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLViewport.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLAttribute.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLBlending.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLBufferObject.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLClearColor.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLCullFace.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GL\GLDebug.h">
+      <Filter>Header Files\nCine\Graphics\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Input\JoyMapping.h">
+      <Filter>Header Files\nCine\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\IAudioLoader.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\IAudioReader.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\ALAudioDevice.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\AudioLoaderOgg.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\AudioLoaderWav.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\AudioReaderOgg.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\AudioReaderWav.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\Clock.h">
+      <Filter>Header Files\nCine\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\Object.h">
+      <Filter>Header Files\nCine\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\Random.h">
+      <Filter>Header Files\nCine\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RenderDocCapture.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\IAudioDevice.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\IAudioPlayer.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\AudioBufferPlayer.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\AudioStream.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\AudioStreamPlayer.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\AudioBuffer.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Threading\ThreadSync.h">
+      <Filter>Header Files\nCine\Threading</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Threading\Thread.h">
+      <Filter>Header Files\nCine\Threading</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Threading\ThreadPool.h">
+      <Filter>Header Files\nCine\Threading</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Threading\IThreadPool.h">
+      <Filter>Header Files\nCine\Threading</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Threading\IThreadCommand.h">
+      <Filter>Header Files\nCine\Threading</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\GfxCapabilities.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\BitSet.h">
+      <Filter>Header Files\nCine\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\HashFunctions.h">
+      <Filter>Header Files\nCine\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\ReverseIterator.h">
+      <Filter>Header Files\nCine\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\StaticHashMap.h">
+      <Filter>Header Files\nCine\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\Iterator.h">
+      <Filter>Header Files\nCine\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\Algorithms.h">
+      <Filter>Header Files\nCine\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\StaticHashMapIterator.h">
+      <Filter>Header Files\nCine\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\HashMap.h">
+      <Filter>Header Files\nCine\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\TextureLoaderQoi.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Primitives\Vector3.h">
+      <Filter>Header Files\nCine\Primitives</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Primitives\Vector4.h">
+      <Filter>Header Files\nCine\Primitives</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Primitives\Rect.h">
+      <Filter>Header Files\nCine\Primitives</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Primitives\Vector2.h">
+      <Filter>Header Files\nCine\Primitives</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\Timer.h">
+      <Filter>Header Files\nCine\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\TimeStamp.h">
+      <Filter>Header Files\nCine\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\FrameTimer.h">
+      <Filter>Header Files\nCine\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Primitives\Matrix4x4.h">
+      <Filter>Header Files\nCine\Primitives</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Primitives\Color.h">
+      <Filter>Header Files\nCine\Primitives</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Primitives\Colorf.h">
+      <Filter>Header Files\nCine\Primitives</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\ContentResolver.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\AnimState.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\EventType.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Player.h">
+      <Filter>Header Files\Jazz2\Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Events\EventSpawner.h">
+      <Filter>Header Files\Jazz2\Events</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\ILevelHandler.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\LevelHandler.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Events\EventMap.h">
+      <Filter>Header Files\Jazz2\Events</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\IStateHandler.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\LevelInitialization.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Primitives\AABB.h">
+      <Filter>Header Files\nCine\Primitives</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Tiles\TileMap.h">
+      <Filter>Header Files\Jazz2\Tiles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Tiles\TileSet.h">
+      <Filter>Header Files\Jazz2\Tiles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\SolidObjectBase.h">
+      <Filter>Header Files\Jazz2\Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\BitArray.h">
+      <Filter>Header Files\nCine\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\IO\StandardFile.h">
+      <Filter>Header Files\nCine\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\IO\AssetFile.h">
+      <Filter>Header Files\nCine\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\IO\EmscriptenLocalFile.h">
+      <Filter>Header Files\nCine\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\IO\FileSystem.h">
+      <Filter>Header Files\nCine\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\IO\IFileStream.h">
+      <Filter>Header Files\nCine\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\IO\MemoryFile.h">
+      <Filter>Header Files\nCine\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\Spring.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Collisions\DynamicTree.h">
+      <Filter>Header Files\Jazz2\Collisions</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Collisions\DynamicTreeBroadPhase.h">
+      <Filter>Header Files\Jazz2\Collisions</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\PlayerCorpse.h">
+      <Filter>Header Files\Jazz2\Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\Checkpoint.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\CollectibleBase.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\CoinCollectible.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Turtle.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\EnemyBase.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bat.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\FoodCollectible.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\AmmoCollectible.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\BonusWarp.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\BlasterShot.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\ShotBase.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Utf8.h">
+      <Filter>Header Files\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\AppConfiguration.h">
+      <Filter>Header Files\nCine</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Application.h">
+      <Filter>Header Files\nCine</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\ArrayIndexer.h">
+      <Filter>Header Files\nCine</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\CommonConstants.h">
+      <Filter>Header Files\nCine</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\CommonHeaders.h">
+      <Filter>Header Files\nCine</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\IAppEventHandler.h">
+      <Filter>Header Files\nCine</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\IIndexer.h">
+      <Filter>Header Files\nCine</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\PCApplication.h">
+      <Filter>Header Files\nCine</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\ServiceLocator.h">
+      <Filter>Header Files\nCine</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Common.h">
+      <Filter>Header Files\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Compatibility\JJ2Version.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Compatibility\JJ2Tileset.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Compatibility\AnimSetMapping.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Compatibility\EventConverter.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Compatibility\JJ2Anims.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Compatibility\JJ2Block.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Compatibility\JJ2DefaultPalette.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Compatibility\JJ2Episode.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Compatibility\JJ2Event.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Compatibility\JJ2Level.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Compatibility\JJ2Strings.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Compatibility\JJ2Text.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\Task.h">
+      <Filter>Header Files\nCine\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\TurtleShell.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\BouncerShot.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\Shader.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\ShaderState.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\LightEmitter.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\SuckerFloat.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Sucker.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\LabRat.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\Bridge.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\TriggerCrate.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\AudioReaderMpt.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\AudioLoaderMpt.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\EndOfLevel.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\Moth.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\IRootController.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\GemCollectible.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\OneUpCollectible.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\CrateContainer.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\GenericContainer.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\GrowableArray.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\Pair.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\Reference.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\SmallVector.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\String.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringView.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\Array.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\ArrayView.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\SteamNote.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\Eva.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_bits.h">
+      <Filter>Header Files\nCine\Base\ParallelHashMap</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_config.h">
+      <Filter>Header Files\nCine\Base\ParallelHashMap</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_fwd_decl.h">
+      <Filter>Header Files\nCine\Base\ParallelHashMap</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_utils.h">
+      <Filter>Header Files\nCine\Base\ParallelHashMap</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap.h">
+      <Filter>Header Files\nCine\Base\ParallelHashMap</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_base.h">
+      <Filter>Header Files\nCine\Base\ParallelHashMap</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\Bomb.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\AmbientSound.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Explosion.h">
+      <Filter>Header Files\Jazz2\Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Dragonfly.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\ToasterShot.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\MadderHatter.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Witch.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Lighting\StaticRadialLight.h">
+      <Filter>Header Files\Jazz2\Actors\Lighting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Lighting\PulsatingRadialLight.h">
+      <Filter>Header Files\Jazz2\Actors\Lighting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Lighting\FlickerLight.h">
+      <Filter>Header Files\Jazz2\Actors\Lighting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\Pole.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Caterpillar.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\FreezerShot.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bee.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\tracy.h">
+      <Filter>Header Files\nCine</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\tracy_opengl.h">
+      <Filter>Header Files\nCine</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\CommonInternal.h">
+      <Filter>Header Files\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Primitives\Quaternion.h">
+      <Filter>Header Files\nCine\Primitives</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Environment.h">
+      <Filter>Header Files\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\HUD.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Canvas.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Font.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Alignment.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\RgbLights.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\BarrelContainer.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\GemCrate.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\AmmoBarrel.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\AmmoCrate.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\GemBarrel.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\FastFireCollectible.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\PowerUpWeaponMonitor.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\PowerUpMorphMonitor.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\GemGiant.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\PushableBox.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\ContentResolver.Shaders.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\MainMenu.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\UpscaleRenderPass.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\MenuSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\BeginSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\IMenuContainer.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\StartGameOptionsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\PlayerActions.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\AboutSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\InGameMenu.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Compatibility\JJ2Anims.Palettes.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\ControlScheme.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\ControlsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\TurtleTough.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Lizard.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\BirdCage.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\AirboardGenerator.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\PauseSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\ActorBase.h">
+      <Filter>Header Files\Jazz2\Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\PreferencesCache.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\OptionsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\WeatherType.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\TNT.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\PowerUpShieldMonitor.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\SeekerShot.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\RFShot.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Cinematics.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\Thunderbolt.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\EpisodeSelectSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\SoundsOptionsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\RescaleModeSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\GraphicsOptionsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\GameplayOptionsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\GameplayEnhancementsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\IO\CompressionUtils.h">
+      <Filter>Header Files\nCine\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\IO\GrowableMemoryFile.h">
+      <Filter>Header Files\nCine\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\ImportSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\LevelScripts.h">
+      <Filter>Header Files\Jazz2\Scripting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\RegisterString.h">
+      <Filter>Header Files\Jazz2\Scripting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Doggy.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Crab.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Demon.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Fencer.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\FatChick.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Helmut.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\TurtleTube.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Raven.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\ControlsOptionsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\RemapControlsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\TouchControlsOptionsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\PepperShot.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\ElectroShot.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\MovingPlatform.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\SpikeBall.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\PinballBumper.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Solid\PinballPaddle.h">
+      <Filter>Header Files\Jazz2\Actors\Solid</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\AmbientBubbles.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\GemRing.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Dragon.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\ScriptActorWrapper.h">
+      <Filter>Header Files\Jazz2\Scripting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\RegisterArray.h">
+      <Filter>Header Files\Jazz2\Scripting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\CarrotInvincibleCollectible.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Collectibles\Stopwatch.h">
+      <Filter>Header Files\Jazz2\Actors\Collectibles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\Bird.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\ScriptPlayerWrapper.h">
+      <Filter>Header Files\Jazz2\Scripting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\RegisterRef.h">
+      <Filter>Header Files\Jazz2\Scripting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\FindAngelScript.h">
+      <Filter>Header Files\Jazz2\Scripting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Sparks.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Fish.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Monkey.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Rapier.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Skeleton.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\LizardFloat.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\Copter.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\TurtleBoss.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Bilsy.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\BossBase.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Bubba.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Queen.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\DevanRemote.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Robot.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Uterus.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Devan.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\RefreshCacheSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\RollingRock.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Bolly.h">
+      <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\HttpRequest.h">
+      <Filter>Header Files\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Backends\GlfwInputManager.h">
+      <Filter>Header Files\nCine\Backends</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Backends\SdlInputManager.h">
+      <Filter>Header Files\nCine\Backends</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Backends\SdlGfxDevice.h">
+      <Filter>Header Files\nCine\Backends</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Backends\Qt5GfxDevice.h">
+      <Filter>Header Files\nCine\Backends</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Backends\Qt5InputManager.h">
+      <Filter>Header Files\nCine\Backends</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Backends\Qt5Widget.h">
+      <Filter>Header Files\nCine\Backends</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Backends\GlfwGfxDevice.h">
+      <Filter>Header Files\nCine\Backends</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\ServiceLocator.cpp">
+      <Filter>Source Files\nCine</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\AppConfiguration.cpp">
+      <Filter>Source Files\nCine</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Application.cpp">
+      <Filter>Source Files\nCine</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\ArrayIndexer.cpp">
+      <Filter>Source Files\nCine</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\PCApplication.cpp">
+      <Filter>Source Files\nCine</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\ContentResolver.cpp">
+      <Filter>Source Files\Jazz2</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Player.cpp">
+      <Filter>Source Files\Jazz2\Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Events\EventSpawner.cpp">
+      <Filter>Source Files\Jazz2\Events</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\LevelHandler.cpp">
+      <Filter>Source Files\Jazz2</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Events\EventMap.cpp">
+      <Filter>Source Files\Jazz2\Events</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Tiles\TileMap.cpp">
+      <Filter>Source Files\Jazz2\Tiles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Tiles\TileSet.cpp">
+      <Filter>Source Files\Jazz2\Tiles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\SolidObjectBase.cpp">
+      <Filter>Source Files\Jazz2\Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\Spring.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Collisions\DynamicTree.cpp">
+      <Filter>Source Files\Jazz2\Collisions</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Collisions\DynamicTreeBroadPhase.cpp">
+      <Filter>Source Files\Jazz2\Collisions</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\PlayerCorpse.cpp">
+      <Filter>Source Files\Jazz2\Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\Checkpoint.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Turtle.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\EnemyBase.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\CollectibleBase.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\CoinCollectible.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bat.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\FoodCollectible.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\AmmoCollectible.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\BonusWarp.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\ShotBase.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\BlasterShot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Audio\ALAudioDevice.cpp">
+      <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Audio\AudioBuffer.cpp">
+      <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Audio\AudioBufferPlayer.cpp">
+      <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Audio\AudioLoaderOgg.cpp">
+      <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Audio\AudioLoaderWav.cpp">
+      <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Audio\AudioReaderOgg.cpp">
+      <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Audio\AudioReaderWav.cpp">
+      <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Audio\AudioStream.cpp">
+      <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Audio\AudioStreamPlayer.cpp">
+      <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\AnimatedSprite.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\BaseSprite.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\Camera.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\DrawableNode.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Base\FrameTimer.cpp">
+      <Filter>Source Files\nCine\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Base\BitArray.cpp">
+      <Filter>Source Files\nCine\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Base\Clock.cpp">
+      <Filter>Source Files\nCine\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Primitives\Color.cpp">
+      <Filter>Source Files\nCine\Primitives</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Primitives\Colorf.cpp">
+      <Filter>Source Files\nCine\Primitives</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\IO\AssetFile.cpp">
+      <Filter>Source Files\nCine\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\IO\EmscriptenLocalFile.cpp">
+      <Filter>Source Files\nCine\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\IO\FileSystem.cpp">
+      <Filter>Source Files\nCine\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\Geometry.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GfxCapabilities.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLAttribute.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLBlending.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLBufferObject.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLCullFace.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLClearColor.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLDepthTest.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLDebug.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLFramebuffer.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLRenderbuffer.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLScissorTest.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLShader.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLShaderProgram.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLShaderUniformBlocks.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLShaderUniforms.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLTexture.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLUniform.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLUniformBlock.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLUniformBlockCache.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLUniformCache.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLVertexArrayObject.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLVertexFormat.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\GL\GLViewport.cpp">
+      <Filter>Source Files\nCine\Graphics\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Audio\IAudioLoader.cpp">
+      <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Audio\IAudioPlayer.cpp">
+      <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\IO\IFileStream.cpp">
+      <Filter>Source Files\nCine\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\IGfxDevice.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Input\IInputManager.cpp">
+      <Filter>Source Files\nCine\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\ITextureLoader.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\ITextureSaver.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\Material.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\MeshSprite.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\ParticleAffectors.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\ParticleInitializer.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\ParticleSystem.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\Particle.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RectAnimation.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RenderBatcher.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RenderBuffersManager.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RenderCommand.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RenderCommandPool.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RenderDocCapture.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RenderQueue.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RenderResources.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RenderStatistics.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RenderVaoPool.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\SceneNode.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\ScreenViewport.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\Sprite.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\TextureFormat.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\TextureLoaderDds.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\TextureLoaderKtx.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\TextureLoaderPkm.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\TextureLoaderPng.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\TextureLoaderPvr.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\TextureLoaderQoi.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\TextureLoaderRaw.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\TextureLoaderWebP.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\TextureSaverPng.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\TextureSaverWebP.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Base\Timer.cpp">
+      <Filter>Source Files\nCine\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Base\TimeStamp.cpp">
+      <Filter>Source Files\nCine\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Base\Random.cpp">
+      <Filter>Source Files\nCine\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Base\Object.cpp">
+      <Filter>Source Files\nCine\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Threading\WindowsThreadSync.cpp">
+      <Filter>Source Files\nCine\Threading</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Threading\WindowsThread.cpp">
+      <Filter>Source Files\nCine\Threading</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Threading\PosixThreadSync.cpp">
+      <Filter>Source Files\nCine\Threading</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Threading\PosixThread.cpp">
+      <Filter>Source Files\nCine\Threading</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\Viewport.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\Texture.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Input\JoyMapping.cpp">
+      <Filter>Source Files\nCine\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\IO\MemoryFile.cpp">
+      <Filter>Source Files\nCine\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Threading\ThreadPool.cpp">
+      <Filter>Source Files\nCine\Threading</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\IO\StandardFile.cpp">
+      <Filter>Source Files\nCine\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\Utf8.cpp">
+      <Filter>Source Files\Shared</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Compatibility\JJ2Episode.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Compatibility\JJ2Level.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Compatibility\JJ2Strings.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Compatibility\JJ2Text.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Compatibility\JJ2Tileset.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Compatibility\AnimSetMapping.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Compatibility\EventConverter.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Compatibility\JJ2Anims.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Compatibility\JJ2Block.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\TurtleShell.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\BouncerShot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\Shader.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Base\HashFunctions.cpp">
+      <Filter>Source Files\nCine\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\ShaderState.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Sucker.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\SuckerFloat.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\LabRat.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\Bridge.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\TriggerCrate.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Audio\AudioReaderMpt.cpp">
+      <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Audio\AudioLoaderMpt.cpp">
+      <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\EndOfLevel.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\Moth.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\GemCollectible.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\OneUpCollectible.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\GenericContainer.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\CrateContainer.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\Containers\StringView.cpp">
+      <Filter>Source Files\Shared\Containers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\Containers\SmallVector.cpp">
+      <Filter>Source Files\Shared\Containers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\Containers\String.cpp">
+      <Filter>Source Files\Shared\Containers</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\SteamNote.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\Eva.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\Bomb.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\AmbientSound.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Explosion.cpp">
+      <Filter>Source Files\Jazz2\Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Dragonfly.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\ToasterShot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\MadderHatter.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Witch.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Lighting\StaticRadialLight.cpp">
+      <Filter>Source Files\Jazz2\Actors\Lighting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Lighting\PulsatingRadialLight.cpp">
+      <Filter>Source Files\Jazz2\Actors\Lighting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Lighting\FlickerLight.cpp">
+      <Filter>Source Files\Jazz2\Actors\Lighting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\Pole.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Caterpillar.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\FreezerShot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bee.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\Environment.cpp">
+      <Filter>Source Files\Shared</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\HUD.cpp">
+      <Filter>Source Files\Jazz2\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Canvas.cpp">
+      <Filter>Source Files\Jazz2\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Font.cpp">
+      <Filter>Source Files\Jazz2\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\RgbLights.cpp">
+      <Filter>Source Files\Jazz2\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\BarrelContainer.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\GemCrate.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\AmmoBarrel.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\AmmoCrate.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\GemBarrel.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\FastFireCollectible.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\PowerUpWeaponMonitor.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\PowerUpMorphMonitor.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\GemGiant.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\PushableBox.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\MainMenu.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\UpscaleRenderPass.cpp">
+      <Filter>Source Files\Jazz2\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\BeginSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\StartGameOptionsSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\AboutSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\InGameMenu.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\ControlScheme.cpp">
+      <Filter>Source Files\Jazz2\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\TurtleTough.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Lizard.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\AirboardGenerator.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\BirdCage.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\PauseSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\ActorBase.cpp">
+      <Filter>Source Files\Jazz2\Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\PreferencesCache.cpp">
+      <Filter>Source Files\Jazz2</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\OptionsSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\TNT.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\PowerUpShieldMonitor.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\SeekerShot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\RFShot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Cinematics.cpp">
+      <Filter>Source Files\Jazz2\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\Thunderbolt.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\EpisodeSelectSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\SoundsOptionsSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\RescaleModeSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\GraphicsOptionsSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\GameplayOptionsSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\GameplayEnhancementsSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\IO\CompressionUtils.cpp">
+      <Filter>Source Files\nCine\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\IO\GrowableMemoryFile.cpp">
+      <Filter>Source Files\nCine\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\ImportSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\LevelScripts.cpp">
+      <Filter>Source Files\Jazz2\Scripting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\RegisterString.cpp">
+      <Filter>Source Files\Jazz2\Scripting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Doggy.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Crab.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Demon.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Fencer.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\FatChick.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Helmut.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\TurtleTube.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Raven.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\RemapControlsSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\ControlsOptionsSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\TouchControlsOptionsSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\ElectroShot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\PepperShot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\MovingPlatform.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\SpikeBall.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\PinballBumper.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Solid\PinballPaddle.cpp">
+      <Filter>Source Files\Jazz2\Actors\Solid</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\AmbientBubbles.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\GemRing.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Dragon.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\ScriptActorWrapper.cpp">
+      <Filter>Source Files\Jazz2\Scripting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\RegisterArray.cpp">
+      <Filter>Source Files\Jazz2\Scripting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\CarrotInvincibleCollectible.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Collectibles\Stopwatch.cpp">
+      <Filter>Source Files\Jazz2\Actors\Collectibles</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\Bird.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Base\Algorithms.cpp">
+      <Filter>Source Files\nCine\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\ScriptPlayerWrapper.cpp">
+      <Filter>Source Files\Jazz2\Scripting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\RegisterRef.cpp">
+      <Filter>Source Files\Jazz2\Scripting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Monkey.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Rapier.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Skeleton.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Sparks.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Fish.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\LizardFloat.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\Copter.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Bilsy.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\BossBase.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Bubba.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Queen.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\TurtleBoss.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Uterus.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\DevanRemote.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Robot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Devan.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\RefreshCacheSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\RollingRock.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Enemies\Bosses\Bolly.cpp">
+      <Filter>Source Files\Jazz2\Actors\Enemies\Bosses</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Backends\Qt5GfxDevice.cpp">
+      <Filter>Source Files\nCine\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Backends\Qt5InputManager.cpp">
+      <Filter>Source Files\nCine\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Backends\Qt5JoyMapping.cpp">
+      <Filter>Source Files\nCine\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Backends\Qt5Keys.cpp">
+      <Filter>Source Files\nCine\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Backends\Qt5Widget.cpp">
+      <Filter>Source Files\nCine\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Backends\SdlGfxDevice.cpp">
+      <Filter>Source Files\nCine\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Backends\SdlInputManager.cpp">
+      <Filter>Source Files\nCine\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Backends\SdlKeys.cpp">
+      <Filter>Source Files\nCine\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Backends\GlfwGfxDevice.cpp">
+      <Filter>Source Files\nCine\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Backends\GlfwInputManager.cpp">
+      <Filter>Source Files\nCine\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Backends\GlfwKeys.cpp">
+      <Filter>Source Files\nCine\Backends</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resources.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="App.manifest">
+      <Filter>Resource Files</Filter>
+    </Manifest>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Icons\Main.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </Image>
+  </ItemGroup>
+</Project>
