@@ -20,7 +20,7 @@ target_link_libraries(ncine_main PRIVATE ncine)
 
 include(ncine_compiler_options)
 
-set(NCINE_SOURCE_DIR "${NCINE_ROOT}/Jazz2/")
+set(NCINE_SOURCE_DIR "${NCINE_ROOT}/Sources/")
 
 include(ncine_headers)
 include(ncine_sources)
@@ -32,8 +32,8 @@ string(REPLACE " " ";" ANDROID_GENERATED_FLAGS "${ANDROID_GENERATED_FLAGS}")
 
 target_sources(ncine PRIVATE ${SOURCES} ${HEADERS} ${SHADER_FILES} ${GENERATED_SOURCES})
 
-target_include_directories(ncine PRIVATE ${NCINE_ROOT}/Shared)
-target_include_directories(ncine_main PRIVATE ${NCINE_SOURCE_DIR} ${NCINE_ROOT}/Shared)
+target_include_directories(ncine PRIVATE ${NCINE_SOURCE_DIR}/Shared)
+target_include_directories(ncine_main PRIVATE ${NCINE_SOURCE_DIR} ${NCINE_SOURCE_DIR}/Shared)
 if(IS_DIRECTORY ${GENERATED_INCLUDE_DIR})
 	target_include_directories(ncine PRIVATE ${GENERATED_INCLUDE_DIR})
 	# Internal sources can access a generated header with or without the parent directory

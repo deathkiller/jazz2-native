@@ -93,7 +93,7 @@ cd ..
 rm -rf nCine-libraries-artifacts
 ```
 * Build the solution with **CMake**
-  * Run `./BuildLinuxGcc.sh` to build with GCC compiler
+  * Run `./BuildLinuxGcc.sh` (GLFW) or `./BuildLinuxGccSdl.sh` (SDL2) to build with GCC compiler
   * Run `./BuildLinuxClang.sh` to build with Clang compiler
 
 ### Web (Emscripten)

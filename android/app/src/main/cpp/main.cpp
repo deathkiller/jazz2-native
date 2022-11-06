@@ -1,5 +1,5 @@
 #include <android_native_app_glue.h>
-#include <nCine/Android/AndroidApplication.h>
+#include <nCine/Backends/Android/AndroidApplication.h>
 
 #include <memory>
 

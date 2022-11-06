@@ -1,17 +1,17 @@
 set(HEADERS
-	${NCINE_ROOT}/Shared/Common.h
-	${NCINE_ROOT}/Shared/CommonInternal.h
-	${NCINE_ROOT}/Shared/Environment.h
-	${NCINE_ROOT}/Shared/HttpRequest.h
-	${NCINE_ROOT}/Shared/Utf8.h
-	${NCINE_ROOT}/Shared/Containers/Array.h
-	${NCINE_ROOT}/Shared/Containers/ArrayView.h
-	${NCINE_ROOT}/Shared/Containers/GrowableArray.h
-	${NCINE_ROOT}/Shared/Containers/Pair.h
-	${NCINE_ROOT}/Shared/Containers/Reference.h
-	${NCINE_ROOT}/Shared/Containers/SmallVector.h
-	${NCINE_ROOT}/Shared/Containers/String.h
-	${NCINE_ROOT}/Shared/Containers/StringView.h
+	${NCINE_SOURCE_DIR}/Shared/Common.h
+	${NCINE_SOURCE_DIR}/Shared/CommonInternal.h
+	${NCINE_SOURCE_DIR}/Shared/Environment.h
+	${NCINE_SOURCE_DIR}/Shared/HttpRequest.h
+	${NCINE_SOURCE_DIR}/Shared/Utf8.h
+	${NCINE_SOURCE_DIR}/Shared/Containers/Array.h
+	${NCINE_SOURCE_DIR}/Shared/Containers/ArrayView.h
+	${NCINE_SOURCE_DIR}/Shared/Containers/GrowableArray.h
+	${NCINE_SOURCE_DIR}/Shared/Containers/Pair.h
+	${NCINE_SOURCE_DIR}/Shared/Containers/Reference.h
+	${NCINE_SOURCE_DIR}/Shared/Containers/SmallVector.h
+	${NCINE_SOURCE_DIR}/Shared/Containers/String.h
+	${NCINE_SOURCE_DIR}/Shared/Containers/StringView.h
 )
 
 list(APPEND HEADERS
