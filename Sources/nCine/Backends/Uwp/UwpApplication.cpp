@@ -126,7 +126,7 @@ namespace nCine
 		appEventHandler_->onPreInit(modifiableAppCfg);
 		LOGI("IAppEventHandler::onPreInit() invoked");
 
-		auto window = winrtWUX::Window::Current();
+		winrtWUX::Window window = winrtWUX::Window::Current();
 
 		window.Closed([](const auto&, winrtWUC::CoreWindowEventArgs const& args) {
 			// TODO: This is probably not called
@@ -183,7 +183,7 @@ namespace nCine
 
 		// Graphics device should always be created before the input manager!
 		gfxDevice_ = std::make_unique<UwpGfxDevice>(windowMode, glContextInfo, displayMode, _panel);
-		inputManager_ = std::make_unique<UwpInputManager>();
+		inputManager_ = std::make_unique<UwpInputManager>(window);
 
 		displayInfo.DpiChanged([](const auto&, const auto& args) {
 			auto& gfxDevice = dynamic_cast<UwpGfxDevice&>(_instance->gfxDevice());
