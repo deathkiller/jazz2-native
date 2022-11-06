@@ -8,8 +8,12 @@
 using namespace Death::Containers;
 
 #include <winrt/Windows.Gaming.Input.h>
+#include <winrt/Windows.System.h>
+#include <winrt/Windows.UI.Xaml.h>
 
 namespace winrtWGI = winrt::Windows::Gaming::Input;
+namespace winrtWS = winrt::Windows::System;
+namespace winrtWUX = winrt::Windows::UI::Xaml;
 
 namespace nCine
 {
@@ -40,10 +44,19 @@ namespace nCine
 
 	class UwpKeyboardState : public KeyboardState
 	{
+		friend class UwpInputManager;
+
 	public:
-		inline bool isKeyDown(KeySym key) const override {
-			return false;
+		UwpKeyboardState() {
+			std::memset(_pressedKeys, 0, sizeof(_pressedKeys));
 		}
+
+		inline bool isKeyDown(KeySym key) const override {
+			return (key >= (KeySym)0 && key < KeySym::COUNT ? _pressedKeys[(int)key] : false);
+		}
+
+	private:
+		bool _pressedKeys[(int)KeySym::COUNT];
 	};
 
 	class UwpJoystickState : public JoystickState
@@ -67,7 +80,7 @@ namespace nCine
 	class UwpInputManager : public IInputManager
 	{
 	public:
-		UwpInputManager();
+		UwpInputManager(winrtWUX::Window window);
 		~UwpInputManager() override;
 
 		/// Updates joystick state structures and simulates events
@@ -147,6 +160,7 @@ namespace nCine
 
 		static UwpMouseState mouseState_;
 		static UwpKeyboardState keyboardState_;
+		static KeyboardEvent keyboardEvent_;
 		static UwpJoystickState nullJoystickState_;
 		static JoyButtonEvent joyButtonEvent_;
 		static JoyHatEvent joyHatEvent_;
@@ -156,5 +170,7 @@ namespace nCine
 
 		static UwpGamepadInfo _gamepads[MaxNumJoysticks];
 		static Mutex _gamepadsSync;
+
+		static KeySym keySymValueToEnum(winrtWS::VirtualKey virtualKey);
 	};
 }
