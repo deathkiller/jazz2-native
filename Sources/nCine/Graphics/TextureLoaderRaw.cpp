@@ -1,6 +1,7 @@
 #include "TextureLoaderRaw.h"
 
-namespace nCine {
+namespace nCine
+{
 
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR

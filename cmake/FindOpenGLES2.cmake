@@ -42,6 +42,7 @@ else()
 			/opt/vc/include
 			/usr/X11R6/include
 			/usr/include
+			${EXTERNAL_INCLUDES_DIR}
 	)
 
 	find_library(OPENGLES2_LIBRARY
@@ -53,6 +54,7 @@ else()
 			/usr/lib/aarch64-linux-gnu
 			/usr/lib/arm-linux-gnueabihf
 			/usr/lib
+			${NCINE_LIBS}/Linux/${CMAKE_SYSTEM_PROCESSOR}/
 	)
 
 	find_library(OPENGLES1_gl_LIBRARY
@@ -64,6 +66,7 @@ else()
 			/usr/lib/aarch64-linux-gnu
 			/usr/lib/arm-linux-gnueabihf
 			/usr/lib
+			${NCINE_LIBS}/Linux/${CMAKE_SYSTEM_PROCESSOR}/
 	)
 
 	if(NOT BUILD_ANDROID)
@@ -73,6 +76,7 @@ else()
 				/opt/vc/include
 				/usr/X11R6/include
 				/usr/include
+				${EXTERNAL_INCLUDES_DIR}
 		)
 
 		find_library(EGL_LIBRARY
@@ -85,6 +89,7 @@ else()
 				/usr/lib/aarch64-linux-gnu
 				/usr/lib/arm-linux-gnueabihf
 				/usr/lib
+				${NCINE_LIBS}/Linux/${CMAKE_SYSTEM_PROCESSOR}/
 		)
 
 		# On Unix OpenGL usually requires X11.

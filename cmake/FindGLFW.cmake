@@ -20,10 +20,11 @@
 # Allow the user to select to link to a shared library or to a static library.
 
 #Search for the include file...
-FIND_PATH(GLFW_INCLUDE_DIR GLFW/glfw3.h DOC "Path to GLFW include directory."
+find_path(GLFW_INCLUDE_DIR NAMES glfw3.h DOC "Path to GLFW include directory"
   HINTS
   $ENV{GLFW_ROOT}
-  PATH_SUFFIX include #For finding the include file under the root of the glfw expanded archive, typically on Windows.
+  PATH_SUFFIXES
+  include # For finding the include file under the root of the glfw expanded archive, typically on Windows.
   PATHS
   /usr/include/
   /usr/local/include/
@@ -31,10 +32,11 @@ FIND_PATH(GLFW_INCLUDE_DIR GLFW/glfw3.h DOC "Path to GLFW include directory."
   /usr/include/GLFW
   /usr/local/include/GLFW
   ${GLFW_ROOT_DIR}/include/ # added by ptr
+  ${EXTERNAL_INCLUDES_DIR}/GL/
 )
-MARK_AS_ADVANCED(GLFW_INCLUDE_DIR)
+mark_as_advanced(GLFW_INCLUDE_DIR)
 
-FIND_LIBRARY(GLFW_LIBRARY DOC "Absolute path to GLFW library."
+find_library(GLFW_LIBRARY DOC "Absolute path to GLFW library"
   NAMES glfw glfw3 glfw3.lib
   HINTS
   $ENV{GLFW_ROOT}
@@ -43,19 +45,20 @@ FIND_LIBRARY(GLFW_LIBRARY DOC "Absolute path to GLFW library."
   /usr/local/lib
   /usr/lib
   ${GLFW_ROOT_DIR}/lib-msvc100/release # added by ptr
+  ${NCINE_LIBS}/Linux/${CMAKE_SYSTEM_PROCESSOR}/
 )
-MARK_AS_ADVANCED(GLFW_LIBRARY)
+mark_as_advanced(GLFW_LIBRARY)
 
 # handle the QUIETLY and REQUIRED arguments and set WEBFOUND_FOUND to TRUE if
 # all listed variables are TRUE
-INCLUDE(${CMAKE_ROOT}/Modules/FindPackageHandleStandardArgs.cmake)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(GLFW DEFAULT_MSG GLFW_LIBRARY GLFW_INCLUDE_DIR)
+include(${CMAKE_ROOT}/Modules/FindPackageHandleStandardArgs.cmake)
+find_package_handle_standard_args(GLFW DEFAULT_MSG GLFW_LIBRARY GLFW_INCLUDE_DIR)
 
 # On Mac OS X GLFW depends on the Cocoa framework
 if(APPLE)
-	SET(GLFW_LIBRARY "-framework Cocoa -framework IOKit" ${GLFW_LIBRARY})
+	set(GLFW_LIBRARY "-framework Cocoa -framework IOKit" ${GLFW_LIBRARY})
 endif()
 
-SET(GLFW_LIBRARIES ${GLFW_LIBRARY})
-SET(GLFW_INCLUDE_DIRS ${GLFW_INCLUDE_DIR})
+set(GLFW_LIBRARIES ${GLFW_LIBRARY})
+set(GLFW_INCLUDE_DIRS ${GLFW_INCLUDE_DIR})
 

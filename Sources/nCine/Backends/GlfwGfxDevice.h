@@ -3,22 +3,22 @@
 #if defined(WITH_GLFW)
 
 #if defined(_MSC_VER) && defined(__has_include)
-#	if __has_include("../../../Libs/GL/glew.h")
+#	if __has_include("../../../Libs/Includes/GL/glew.h")
 #		define __HAS_LOCAL_GLEW
 #	endif
 #endif
 #ifdef __HAS_LOCAL_GLEW
 #	ifdef WITH_GLEW
 #		define GLEW_NO_GLU
-#		include "../../../Libs/GL/glew.h"
+#		include "../../../Libs/Includes/GL/glew.h"
 #	endif
-#	include "../../../Libs/GL/glfw3.h"
+#	include "../../../Libs/Includes/GL/glfw3.h"
 #else
 #	ifdef WITH_GLEW
 #		define GLEW_NO_GLU
 #		include <GL/glew.h>
 #	endif
-#	include <GLFW/glfw3.h>
+#	include <glfw3.h>
 #endif
 
 #include "../Primitives/Vector2.h"

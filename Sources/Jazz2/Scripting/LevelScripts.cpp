@@ -16,15 +16,15 @@
 #if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #   if defined(_M_X64)
 #		if defined(_DEBUG)
-#			pragma comment(lib, "../Libs/x64/angelscriptd.lib")
+#			pragma comment(lib, "../Libs/Windows/x64/angelscriptd.lib")
 #		else
-#			pragma comment(lib, "../Libs/x64/angelscript.lib")
+#			pragma comment(lib, "../Libs/Windows/x64/angelscript.lib")
 #		endif
 #   elif defined(_M_IX86)
 #		if defined(_DEBUG)
-#			pragma comment(lib, "../Libs/x86/angelscriptd.lib")
+#			pragma comment(lib, "../Libs/Windows/x86/angelscriptd.lib")
 #		else
-#			pragma comment(lib, "../Libs/x86/angelscript.lib")
+#			pragma comment(lib, "../Libs/Windows/x86/angelscript.lib")
 #		endif
 #   else
 #       error Unsupported architecture

@@ -7,13 +7,15 @@
 //#ifdef WITH_PNG
 #include "TextureLoaderPng.h"
 //#endif
-#ifdef WITH_WEBP
+#if defined(WITH_WEBP)
 #	include "TextureLoaderWebP.h"
 #endif
-#ifdef WITH_OPENGLES
+#if defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)
 #	include "TextureLoaderPkm.h"
 #endif
-#include "TextureLoaderQoi.h"
+#if defined(WITH_QOI)
+#	include "TextureLoaderQoi.h"
+#endif
 
 #include "../IO/FileSystem.h"
 
@@ -104,14 +106,16 @@ namespace nCine
 			return std::make_unique<TextureLoaderWebP>(std::move(fileHandle));
 		}
 	#endif*/
-	#ifdef DEATH_TARGET_ANDROID
+#if defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)
 		if (extension == "pkm"_s) {
 			return std::make_unique<TextureLoaderPkm>(std::move(fileHandle));
 		}
-	#endif
+#endif
+#if defined(WITH_QOI)
 		if (extension == "qoi"_s) {
 			return std::make_unique<TextureLoaderQoi>(std::move(fileHandle));
 		}
+#endif
 
 		LOGF_X("Extension unknown: \"%s\"", extension.data());
 		fileHandle.reset(nullptr);
@@ -126,10 +130,11 @@ namespace nCine
 	void ITextureLoader::loadPixels(GLenum internalFormat, GLenum type)
 	{
 		LOGI_X("Loading \"%s\"", fileHandle_->GetFilename());
-		if (type) // overriding pixel type
+		if (type) { // overriding pixel type
 			texFormat_ = TextureFormat(internalFormat, type);
-		else
+		} else {
 			texFormat_ = TextureFormat(internalFormat);
+		}
 
 		// If the file has not been already opened by a header reader method
 		if (!fileHandle_->IsOpened()) {

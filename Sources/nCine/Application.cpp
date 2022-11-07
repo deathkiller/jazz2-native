@@ -4,32 +4,32 @@
 #	pragma comment(lib, "opengl32.lib")
 #	if defined(_M_X64)
 #		ifdef WITH_GLEW
-#			pragma comment(lib, "../Libs/x64/glew32.lib")
+#			pragma comment(lib, "../Libs/Windows/x64/glew32.lib")
 #		endif
 #		ifdef WITH_GLFW
-#			pragma comment(lib, "../Libs/x64/glfw3dll.lib")
+#			pragma comment(lib, "../Libs/Windows/x64/glfw3dll.lib")
 #		endif
 #		ifdef WITH_SDL
-#			pragma comment(lib, "../Libs/x64/SDL2.lib")
+#			pragma comment(lib, "../Libs/Windows/x64/SDL2.lib")
 #		endif
 #		ifdef WITH_AUDIO
-#			pragma comment(lib, "../Libs/x64/OpenAL32.lib")
+#			pragma comment(lib, "../Libs/Windows/x64/OpenAL32.lib")
 #		endif
-#       pragma comment(lib, "../Libs/x64/libdeflate.lib")
+#       pragma comment(lib, "../Libs/Windows/x64/libdeflate.lib")
 #	elif defined(_M_IX86)
 #		ifdef WITH_GLEW
-#			pragma comment(lib, "../Libs/x86/glew32.lib")
+#			pragma comment(lib, "../Libs/Windows/x86/glew32.lib")
 #		endif
 #		ifdef WITH_GLFW
-#			pragma comment(lib, "../Libs/x86/glfw3dll.lib")
+#			pragma comment(lib, "../Libs/Windows/x86/glfw3dll.lib")
 #		endif
 #		ifdef WITH_SDL
-#			pragma comment(lib, "../Libs/x86/SDL2.lib")
+#			pragma comment(lib, "../Libs/Windows/x86/SDL2.lib")
 #		endif
 #		ifdef WITH_AUDIO
-#			pragma comment(lib, "../Libs/x86/OpenAL32.lib")
+#			pragma comment(lib, "../Libs/Windows/x86/OpenAL32.lib")
 #		endif
-#       pragma comment(lib, "../Libs/x86/libdeflate.lib")
+#       pragma comment(lib, "../Libs/Windows/x86/libdeflate.lib")
 #	else
 #		error Unsupported architecture
 #	endif

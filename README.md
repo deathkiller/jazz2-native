@@ -70,42 +70,28 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 
 ## Building the application
 ### Windows
-* Install build dependencies
+* Download [build dependencies](https://github.com/deathkiller/jazz2-libraries) to `‹Repository›\Libs\`
 * Open the solution in [Microsoft Visual Studio 2019](https://www.visualstudio.com/) (or newer) and build it
   * CMake is **not** recommended for Windows build, but it should work too
 
 ### Linux
-* Install build dependencies
-```bash
-# Install OpenGL library
-sudo apt-get install -y libgl1-mesa-dev
-
-# Download nCine dependencies
-cd ..
-git clone https://github.com/nCine/nCine-libraries-artifacts.git
-cd nCine-libraries-artifacts
-
-# Replace "libraries-linux-gcc" with "libraries-linux-clang" if Clang compiler is used
-git checkout libraries-linux-gcc
-LIBRARIES_FILE=$(ls -t | head -n 1) && tar xpzf $LIBRARIES_FILE
-mv nCine-external ..
-cd ..
-rm -rf nCine-libraries-artifacts
-```
+* Build dependencies will be downloaded automatically by **CMake**
+  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `‹Repository›/Libs/`
 * Build the solution with **CMake**
-  * Run `./BuildLinuxGcc.sh` (GLFW) or `./BuildLinuxGcc_Sdl.sh` (SDL2) to build with GCC compiler
+  * Run `./BuildLinuxGcc.sh` (GLFW) or `./BuildLinuxGcc_SDL2.sh` (SDL2) to build with GCC compiler
   * Run `./BuildLinuxClang.sh` to build with Clang compiler
 
 ### Web (Emscripten)
-* Install build dependencies
+* Install Emscripten SDK (preferably to `../emsdk/`)
 ```bash
-# Install Emscripten SDK
 cd ..
 git clone https://github.com/emscripten-core/emsdk.git
 cd emsdk
 ./emsdk install latest
 ./emsdk activate latest
 ```
+* Build dependencies will be downloaded automatically by **CMake**
+  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `‹Repository›/Libs/`
 * Put required game files to `./Content/` directory – the files must be provided in advance
 * Build the solution with **CMake**
   * Run `./BuildEmscripten.sh` to build with Emscripten
@@ -114,30 +100,17 @@ cd emsdk
 * Install Android SDK (preferably to `../android-sdk/`)
 * Install Android NDK (preferably to `../android-ndk/`)
 * Install Gradle (preferably to `../gradle/`)
-* Install build dependencies
-```bash
-# Install OpenGL library
-sudo apt-get install -y libgl1-mesa-dev
-
-# Download nCine dependencies
-cd ..
-git clone https://github.com/nCine/nCine-libraries-artifacts.git
-cd nCine-libraries-artifacts
-
-git checkout android-libraries-armeabi-v7a
-LIBRARIES_FILE=$(ls -t | head -n 1) && tar xpzf $LIBRARIES_FILE
-git checkout android-libraries-arm64-v8a
-LIBRARIES_FILE=$(ls -t | head -n 1) && tar xpzf $LIBRARIES_FILE
-git checkout android-libraries-x86_64
-LIBRARIES_FILE=$(ls -t | head -n 1) && tar xpzf $LIBRARIES_FILE
-mv nCine-android-external ..
-cd ..
-rm -rf nCine-libraries-artifacts
-```
+* Build dependencies will be downloaded automatically by **CMake**
+  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `‹Repository›/Libs/`
 * Build the solution with **CMake**
   * Run `./BuildAndroid.sh` or `./BuildAndroid_x86-64` to build **APK** for Android
   * Run `./BuildAndroidSign.sh` to sign built **APKs**
     * Keystore file `Keystore.jks` must exist in repository root
+
+### Universal Windows Platform (Windows RT)
+* Build dependencies will be downloaded automatically by **CMake**
+  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `‹Repository›/Libs/`
+* Run `./BuildUwp.sh` to create [Microsoft Visual Studio 2019](https://www.visualstudio.com/) (or newer) solution
 
 
 ## License
