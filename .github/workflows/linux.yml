@@ -33,7 +33,7 @@ jobs:
           CXX: clang++
           Backend: SDL2
 
-    runs-on: 'ubuntu-latest'
+    runs-on: 'ubuntu-20.04'
 
     steps:
     - name: 'Checkout Code'

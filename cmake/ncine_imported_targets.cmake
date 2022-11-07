@@ -1,5 +1,5 @@
 if(NCINE_DOWNLOAD_DEPENDENCIES)
-	set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/refs/tags/1.1.0.tar.gz")
+	set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/refs/tags/1.1.1.tar.gz")
 	message(STATUS "Downloading dependencies from \"${NCINE_LIBS_URL}\"...")
 
 	include(FetchContent)
