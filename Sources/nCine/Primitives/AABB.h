@@ -61,6 +61,7 @@ namespace nCine
 
 		/// Eqality operator
 		bool operator==(const AABB& aabb) const;
+		bool operator!=(const AABB& aabb) const;
 
 		AABB& operator+=(const Vector2<S>& v);
 		AABB& operator-=(const Vector2<S>& v);
@@ -139,6 +140,13 @@ namespace nCine
 	{
 		return (L == aabb.L && T == aabb.T &&
 				R == aabb.R && B == aabb.B);
+	}
+
+	template <class S>
+	inline bool AABB<S>::operator!=(const AABB& aabb) const
+	{
+		return (L != aabb.L || T != aabb.T ||
+				R != aabb.R || B != aabb.B);
 	}
 
 	template <class S>

@@ -99,6 +99,7 @@ namespace nCine
 
 		/// Equality operator
 		bool operator==(const Color& color) const;
+		bool operator!=(const Color& color) const;
 
 		Color& operator+=(const Color& v);
 		Color& operator-=(const Color& v);

@@ -32,6 +32,7 @@ namespace nCine
 		const T& operator[](unsigned int index) const;
 
 		bool operator==(const Vector2& v) const;
+		bool operator!=(const Vector2& v) const;
 		Vector2 operator-() const;
 
 		Vector2& operator+=(const Vector2& v);
@@ -122,6 +123,12 @@ namespace nCine
 	inline bool Vector2<T>::operator==(const Vector2& v) const
 	{
 		return (X == v.X && Y == v.Y);
+	}
+
+	template <class T>
+	inline bool Vector2<T>::operator!=(const Vector2& v) const
+	{
+		return (X != v.X || Y != v.Y);
 	}
 
 	template <class T>

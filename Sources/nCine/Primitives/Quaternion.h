@@ -10,16 +10,16 @@ namespace nCine
 	class Quaternion
 	{
 	public:
-		T x, y, z, w;
+		T X, Y, Z, W;
 
 		Quaternion()
-			: x(0), y(0), z(0), w(1) {}
+			: X(0), Y(0), Z(0), W(1) {}
 		Quaternion(T xx, T yy, T zz, T ww)
-			: x(xx), y(yy), z(zz), w(ww) {}
+			: X(xx), Y(yy), Z(zz), W(ww) {}
 		explicit Quaternion(const Vector4<T>& v)
-			: x(v.x), y(v.y), z(v.z), w(v.w) {}
+			: X(v.X), Y(v.Y), Z(v.Z), W(v.W) {}
 		Quaternion(const Quaternion& other)
-			: x(other.x), y(other.y), z(other.z), w(other.w) {}
+			: X(other.X), Y(other.Y), Z(other.Z), W(other.W) {}
 		Quaternion& operator=(const Quaternion& other);
 
 		void set(T xx, T yy, T zz, T ww);
@@ -31,6 +31,7 @@ namespace nCine
 		const T& operator[](unsigned int index) const;
 
 		bool operator==(const Quaternion& q) const;
+		bool operator!=(const Quaternion& q) const;
 		Quaternion operator-() const;
 
 		Quaternion& operator+=(const Quaternion& q);
@@ -72,10 +73,10 @@ namespace nCine
 	template <class T>
 	inline Quaternion<T>& Quaternion<T>::operator=(const Quaternion<T>& other)
 	{
-		x = other.x;
-		y = other.y;
-		z = other.z;
-		w = other.w;
+		X = other.X;
+		Y = other.Y;
+		Z = other.Z;
+		W = other.W;
 
 		return *this;
 	}
@@ -83,57 +84,63 @@ namespace nCine
 	template <class T>
 	inline void Quaternion<T>::set(T xx, T yy, T zz, T ww)
 	{
-		x = xx;
-		y = yy;
-		z = zz;
-		w = ww;
+		X = xx;
+		Y = yy;
+		Z = zz;
+		W = ww;
 	}
 
 	template <class T>
 	inline T* Quaternion<T>::data()
 	{
-		return &x;
+		return &X;
 	}
 
 	template <class T>
 	inline const T* Quaternion<T>::data() const
 	{
-		return &x;
+		return &X;
 	}
 
 	template <class T>
 	inline T& Quaternion<T>::operator[](unsigned int index)
 	{
 		ASSERT(index < 4);
-		return (&x)[index];
+		return (&X)[index];
 	}
 
 	template <class T>
 	inline const T& Quaternion<T>::operator[](unsigned int index) const
 	{
 		ASSERT(index < 4);
-		return (&x)[index];
+		return (&X)[index];
 	}
 
 	template <class T>
 	inline bool Quaternion<T>::operator==(const Quaternion& q) const
 	{
-		return (x == q.x && y == q.y && z == q.z && w == q.w);
+		return (X == q.X && Y == q.Y && Z == q.Z && W == q.W);
+	}
+
+	template <class T>
+	inline bool Quaternion<T>::operator!=(const Quaternion& q) const
+	{
+		return (X != q.X || Y != q.Y || Z != q.Z || W != q.W);
 	}
 
 	template <class T>
 	inline Quaternion<T> Quaternion<T>::operator-() const
 	{
-		return Quaternion(-x, -y, -z, w);
+		return Quaternion(-X, -Y, -Z, W);
 	}
 
 	template <class T>
 	inline Quaternion<T>& Quaternion<T>::operator+=(const Quaternion& q)
 	{
-		x += q.x;
-		y += q.y;
-		z += q.z;
-		w += q.w;
+		X += q.X;
+		Y += q.Y;
+		Z += q.Z;
+		W += q.W;
 
 		return *this;
 	}
@@ -141,10 +148,10 @@ namespace nCine
 	template <class T>
 	inline Quaternion<T>& Quaternion<T>::operator-=(const Quaternion& q)
 	{
-		x -= q.x;
-		y -= q.y;
-		z -= q.z;
-		w -= q.w;
+		X -= q.X;
+		Y -= q.Y;
+		Z -= q.Z;
+		W -= q.W;
 
 		return *this;
 	}
@@ -154,10 +161,10 @@ namespace nCine
 	{
 		const Quaternion<T> q0 = *this;
 
-		x = q0.w * q.x + q0.x * q.w + q0.y * q.z - q0.z * q.y;
-		y = q0.w * q.y + q0.y * q.w + q0.z * q.x - q0.x * q.z;
-		z = q0.w * q.z + q0.z * q.w + q0.x * q.y - q0.y * q.x;
-		w = q0.w * q.w - q0.x * q.x - q0.y * q.y - q0.z * q.z;
+		X = q0.W * q.X + q0.X * q.W + q0.Y * q.Z - q0.Z * q.Y;
+		Y = q0.W * q.Y + q0.Y * q.W + q0.Z * q.X - q0.X * q.Z;
+		Z = q0.W * q.Z + q0.Z * q.W + q0.X * q.Y - q0.Y * q.X;
+		W = q0.W * q.W - q0.X * q.X - q0.Y * q.Y - q0.Z * q.Z;
 
 		return *this;
 	}
@@ -165,10 +172,10 @@ namespace nCine
 	template <class T>
 	inline Quaternion<T>& Quaternion<T>::operator*=(T s)
 	{
-		x *= s;
-		y *= s;
-		z *= s;
-		w *= s;
+		X *= s;
+		Y *= s;
+		Z *= s;
+		W *= s;
 
 		return *this;
 	}
@@ -176,10 +183,10 @@ namespace nCine
 	template <class T>
 	inline Quaternion<T>& Quaternion<T>::operator/=(T s)
 	{
-		x /= s;
-		y /= s;
-		z /= s;
-		w /= s;
+		X /= s;
+		Y /= s;
+		Z /= s;
+		W /= s;
 
 		return *this;
 	}
@@ -187,65 +194,65 @@ namespace nCine
 	template <class T>
 	inline Quaternion<T> Quaternion<T>::operator+(const Quaternion& q) const
 	{
-		return Quaternion(x + q.x,
-						  y + q.y,
-						  z + q.z,
-						  w + q.w);
+		return Quaternion(X + q.X,
+						  Y + q.Y,
+						  Z + q.Z,
+						  W + q.W);
 	}
 
 	template <class T>
 	inline Quaternion<T> Quaternion<T>::operator-(const Quaternion& q) const
 	{
-		return Quaternion(x - q.x,
-						  y - q.y,
-						  z - q.z,
-						  w - q.w);
+		return Quaternion(X - q.X,
+						  Y - q.Y,
+						  Z - q.Z,
+						  W - q.W);
 	}
 
 	template <class T>
 	inline Quaternion<T> Quaternion<T>::operator*(const Quaternion& q) const
 	{
-		return Quaternion(w * q.x + x * q.w + y * q.z - z * q.y,
-						  w * q.y + y * q.w + z * q.x - x * q.z,
-						  w * q.z + z * q.w + x * q.y - y * q.x,
-						  w * q.w - x * q.x - y * q.y - z * q.z);
+		return Quaternion(W * q.X + X * q.W + Y * q.Z - Z * q.Y,
+						  W * q.Y + Y * q.W + Z * q.X - X * q.Z,
+						  W * q.Z + Z * q.W + X * q.Y - Y * q.X,
+						  W * q.W - X * q.X - Y * q.Y - Z * q.Z);
 	}
 
 	template <class T>
 	inline Quaternion<T> Quaternion<T>::operator*(T s) const
 	{
-		return Quaternion(x * s,
-						  y * s,
-						  z * s,
-						  w * s);
+		return Quaternion(X * s,
+						  Y * s,
+						  Z * s,
+						  W * s);
 	}
 
 	template <class T>
 	inline Quaternion<T> Quaternion<T>::operator/(T s) const
 	{
-		return Quaternion(x / s,
-						  y / s,
-						  z / s,
-						  w / s);
+		return Quaternion(X / s,
+						  Y / s,
+						  Z / s,
+						  W / s);
 	}
 
 	template <class T>
 	inline T Quaternion<T>::magnitude() const
 	{
-		return sqrt(x * x + y * y + z * z + w * w);
+		return sqrt(X * X + Y * Y + Z * Z + W * W);
 	}
 
 	template <class T>
 	inline T Quaternion<T>::sqrMagnitude() const
 	{
-		return x * x + y * y + z * z + w * w;
+		return X * X + Y * Y + Z * Z + W * W;
 	}
 
 	template <class T>
 	inline Quaternion<T> Quaternion<T>::normalized() const
 	{
 		const T mag = magnitude();
-		return Quaternion(x / mag, y / mag, z / mag, w / mag);
+		return Quaternion(X / mag, Y / mag, Z / mag, W / mag);
 	}
 
 	template <class T>
@@ -253,10 +260,10 @@ namespace nCine
 	{
 		const T mag = magnitude();
 
-		x /= mag;
-		y /= mag;
-		z /= mag;
-		w /= mag;
+		X /= mag;
+		Y /= mag;
+		Z /= mag;
+		W /= mag;
 
 		return *this;
 	}
@@ -264,15 +271,15 @@ namespace nCine
 	template <class T>
 	inline Quaternion<T> Quaternion<T>::conjugated() const
 	{
-		return Quaternion(-x, -y, -z, w);
+		return Quaternion(-X, -Y, -Z, W);
 	}
 
 	template <class T>
 	inline Quaternion<T>& Quaternion<T>::conjugate()
 	{
-		x = -x;
-		y = -y;
-		z = -z;
+		X = -X;
+		Y = -Y;
+		Z = -Z;
 
 		return *this;
 	}
@@ -280,20 +287,20 @@ namespace nCine
 	template <class T>
 	inline Matrix4x4<T> Quaternion<T>::toMatrix4x4() const
 	{
-		const T x2 = x * 2;
-		const T y2 = y * 2;
-		const T z2 = z * 2;
+		const T x2 = X * 2;
+		const T y2 = Y * 2;
+		const T z2 = Z * 2;
 
-		const T xx = x * x2;
-		const T xy = x * y2;
-		const T xz = x * z2;
-		const T yy = y * y2;
-		const T yz = y * z2;
-		const T zz = z * z2;
+		const T xx = X * x2;
+		const T xy = X * y2;
+		const T xz = X * z2;
+		const T yy = Y * y2;
+		const T yz = Y * z2;
+		const T zz = Z * z2;
 
-		const T xw = w * x2;
-		const T yw = w * y2;
-		const T zw = w * z2;
+		const T xw = W * x2;
+		const T yw = W * y2;
+		const T zw = W * z2;
 
 		return Matrix4x4<T>(Vector4<T>(1 - (yy + zz), xy + zw, xz - yw, 0),
 							Vector4<T>(xy - zw, 1 - (xx + zz), yz + xw, 0),
@@ -316,7 +323,7 @@ namespace nCine
 	template <class T>
 	inline Quaternion<T> Quaternion<T>::fromAxisAngle(const Vector3<T>& axis, T degrees)
 	{
-		return fromAxisAngle(axis.x, axis.y, axis.z, degrees);
+		return fromAxisAngle(axis.X, axis.Y, axis.Z, degrees);
 	}
 
 	template <class T>
