@@ -14,14 +14,16 @@ jobs:
       matrix:
         include:
         - BuildType: Release
+          DisplayName: arm
           Architectures: arm64-v8a;armeabi-v7a
           UniversalApk: ON
-          CreatedApk: app-universal-release-unsigned.apk
+          GradleApk: app-universal-release-unsigned.apk
 
         - BuildType: Release
+          DisplayName: x86-64
           Architectures: x86_64
           UniversalApk: OFF
-          CreatedApk: app-x86_64-release-unsigned.apk
+          GradleApk: app-x86_64-release-unsigned.apk
 
     runs-on: 'ubuntu-latest'
 
@@ -36,7 +38,7 @@ jobs:
 
     - name: 'Configure CMake'
       run: |
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_BUILD_ANDROID=ON -D NCINE_ASSEMBLE_APK=ON -D NCINE_UNIVERSAL_APK=${{ matrix.UniversalApk }} -D NCINE_NDK_ARCHITECTURES=${{ matrix.Architectures }}
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_BUILD_ANDROID=ON -D NCINE_ASSEMBLE_APK=ON -D NCINE_UNIVERSAL_APK=${{ matrix.UniversalApk }} -D NCINE_NDK_ARCHITECTURES="${{ matrix.Architectures }}"
 
     - name: 'Build'
       run: |
@@ -48,12 +50,12 @@ jobs:
     - name: 'Create Package'
       run: |
         mkdir ./_package/
-        cp -f ./_build/android/app/build/outputs/apk/release/${{ matrix.CreatedApk }} ./_package/jazz2.apk
+        cp -f ./_build/android/app/build/outputs/apk/release/${{ matrix.GradleApk }} ./_package/jazz2.apk
         cp -f -r ./Content/ ./_package/Content/
         
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3
       with:
-        name: Jazz²_android_${{ matrix.Architectures }}
+        name: Jazz²_android_${{ matrix.DisplayName }}
         path: ./_package/
         
