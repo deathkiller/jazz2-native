@@ -152,7 +152,7 @@ if(OPENAL_FOUND)
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderMpt.cpp
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderMpt.cpp)
 	endif()
-else()
+elseif(NOT NCINE_BUILD_ANDROID)
 	message(STATUS "Cannot find OpenAL library")
 endif()
 

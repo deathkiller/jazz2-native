@@ -2,22 +2,22 @@
 
 #if defined(WITH_SDL)
 
+#include "../Input/IInputManager.h"
+
+#include <Containers/SmallVector.h>
+
 #if defined(_MSC_VER) && defined(__has_include)
-#	if __has_include("../../Libs/SDL2/SDL.h")
+#	if __has_include("../../Libs/Includes/SDL2/SDL.h")
 #		define __HAS_LOCAL_SDL
 #	endif
 #endif
 #ifdef __HAS_LOCAL_SDL
-#	include "../../Libs/SDL2/SDL_events.h"
-#	include "../../Libs/SDL2/SDL_mouse.h"
+#	include "../../Libs/Includes/SDL2/SDL_events.h"
+#	include "../../Libs/Includes/SDL2/SDL_mouse.h"
 #else
 #	include <SDL_events.h>
 #	include <SDL_mouse.h>
 #endif
-
-#include "../Input/IInputManager.h"
-
-#include <Containers/SmallVector.h>
 
 using namespace Death::Containers;
 

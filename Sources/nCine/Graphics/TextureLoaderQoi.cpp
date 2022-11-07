@@ -1,15 +1,17 @@
 #include "TextureLoaderQoi.h"
 
+#if defined(WITH_QOI)
+
 #define QOI_IMPLEMENTATION
 #define QOI_DECODE_ONLY
 #define QOI_NO_STDIO
 #if defined(__has_include)
-#	if __has_include("../../../Libs/Qoi.h")
+#	if __has_include("../../../Libs/Includes/qoi.h")
 #		define __HAS_LOCAL_QOI
 #	endif
 #endif
 #ifdef __HAS_LOCAL_QOI
-#	include "../../../Libs/Qoi.h"
+#	include "../../../Libs/Includes/qoi.h"
 #else
 #	include <qoi.h>
 #endif
@@ -50,3 +52,5 @@ namespace nCine
 		hasLoaded_ = true;
 	}
 }
+
+#endif

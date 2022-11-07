@@ -1,0 +1,70 @@
+name: 'Linux'
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [ opened, synchronize ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+          CC: gcc
+          CXX: g++
+          Backend: GLFW
+
+        - BuildType: Release
+          CC: clang
+          CXX: clang++
+          Backend: GLFW
+          
+        - BuildType: Release
+          CC: gcc
+          CXX: g++
+          Backend: SDL2
+
+        - BuildType: Release
+          CC: clang
+          CXX: clang++
+          Backend: SDL2
+
+    runs-on: 'ubuntu-latest'
+
+    steps:
+    - name: 'Checkout Code'
+      uses: actions/checkout@v2
+
+    - name: 'Create Build Environment'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgl1-mesa-dev
+
+    - name: 'Configure CMake'
+      run: |
+        export CC=${{ matrix.CC }}
+        export CXX=${{ matrix.CXX }}
+
+        export CMAKE_ARGS="-B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }}"
+        cmake $CMAKE_ARGS
+
+    - name: 'Build'
+      run: |
+        make -j $(nproc) -C ./_build/
+
+    - name: 'Create Package'
+      run: |
+        mkdir ./_package/
+        cp -f ./_build/jazz2 ./_package/jazz2
+        cp -f -r ./Content/ ./_package/Content/
+        
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v3
+      with:
+        name: Jazz2_linux_${{ github.CC }}_${{ github.Backend }}
+        path: ./_package/
+        

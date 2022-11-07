@@ -1,5 +1,7 @@
 #include "TextureLoaderPkm.h"
 
+#if defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)
+
 #include <cstring>
 
 namespace nCine
@@ -42,3 +44,5 @@ namespace nCine
 	}
 
 }
+
+#endif

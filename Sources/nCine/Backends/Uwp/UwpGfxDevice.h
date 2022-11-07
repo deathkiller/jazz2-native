@@ -52,7 +52,7 @@ namespace nCine
 		void setWindowIcon(const StringView& iconFilename) override { }
 
 		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override {
-			return { };
+			return _currentViewMode;
 		};
 
 	protected:
@@ -73,5 +73,6 @@ namespace nCine
 		EGLContext _eglContext;
 		EGLConfig  _eglConfig;
 		int _sizeChanged;
+		VideoMode _currentViewMode;
 	};
 }

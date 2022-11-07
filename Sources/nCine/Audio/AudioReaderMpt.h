@@ -8,12 +8,12 @@
 #include "../IO/IFileStream.h"
 
 #if defined(_MSC_VER) && defined(__has_include)
-#	if __has_include("../../../Libs/libopenmpt/libopenmpt.h")
+#	if __has_include("../../../Libs/Includes/libopenmpt/libopenmpt.h")
 #		define __HAS_LOCAL_LIBOPENMPT
 #	endif
 #endif
 #ifdef __HAS_LOCAL_LIBOPENMPT
-#	include "../../../Libs/libopenmpt/libopenmpt.h"
+#	include "../../../Libs/Includes/libopenmpt/libopenmpt.h"
 #else
 #	include <libopenmpt.h>
 #endif

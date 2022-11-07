@@ -1,9 +1,27 @@
+if(NCINE_DOWNLOAD_DEPENDENCIES)
+	set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/refs/tags/1.1.0.tar.gz")
+	message(STATUS "Downloading dependencies from \"${NCINE_LIBS_URL}\"...")
+
+	include(FetchContent)
+	FetchContent_Declare(
+		ncine_libraries
+		URL ${NCINE_LIBS_URL}
+	)
+	FetchContent_MakeAvailable(ncine_libraries)
+
+	set(NCINE_LIBS ${ncine_libraries_SOURCE_DIR})
+elseif(NOT NCINE_LIBS)
+	set(NCINE_LIBS ${NCINE_ROOT}/Libs/)
+endif()
+
+set(EXTERNAL_INCLUDES_DIR "${NCINE_LIBS}/Includes/" CACHE PATH "Set the path to external header files")
+
 if(EMSCRIPTEN)
-	set(EXTERNAL_EMSCRIPTEN_DIR "${CMAKE_SOURCE_DIR}/Libs/Emscripten/" CACHE PATH "Set the path to the Emscripten libraries directory")
+	set(EXTERNAL_EMSCRIPTEN_DIR "${NCINE_LIBS}/Emscripten/" CACHE PATH "Set the path to the Emscripten libraries directory")
 	if(NOT IS_DIRECTORY ${EXTERNAL_EMSCRIPTEN_DIR})
-		message(STATUS "nCine external Emscripten libraries directory not found at: ${EXTERNAL_EMSCRIPTEN_DIR}")
+		message(STATUS "Emscripten libraries directory not found at: ${EXTERNAL_EMSCRIPTEN_DIR}")
 	else()
-		message(STATUS "nCine external Emscripten libraries directory: ${EXTERNAL_EMSCRIPTEN_DIR}")
+		message(STATUS "Emscripten libraries directory: ${EXTERNAL_EMSCRIPTEN_DIR}")
 	endif()
 
 	if(NCINE_WITH_THREADS)
@@ -43,8 +61,8 @@ if(EMSCRIPTEN)
 	if(NCINE_WITH_WEBP)
 		add_library(WebP::WebP STATIC IMPORTED)
 		set_target_properties(WebP::WebP PROPERTIES
-			IMPORTED_LOCATION ${EXTERNAL_EMSCRIPTEN_DIR}/lib/libwebp.a
-			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_EMSCRIPTEN_DIR}/include")
+			IMPORTED_LOCATION ${EXTERNAL_EMSCRIPTEN_DIR}/libwebp.a
+			INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR})
 		set(WEBP_FOUND 1)
 	endif()
 
@@ -62,11 +80,11 @@ if(EMSCRIPTEN)
 			set(VORBIS_FOUND 1)
 		endif()
 		
-		if(EXISTS ${EXTERNAL_EMSCRIPTEN_DIR}/libopenmpt/bin/libopenmpt.a)
+		if(EXISTS ${EXTERNAL_EMSCRIPTEN_DIR}/libopenmpt.a)
 			add_library(libopenmpt::libopenmpt STATIC IMPORTED)
 			set_target_properties(libopenmpt::libopenmpt PROPERTIES
-				IMPORTED_LOCATION ${EXTERNAL_EMSCRIPTEN_DIR}/libopenmpt/bin/libopenmpt.a
-				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_EMSCRIPTEN_DIR}/libopenmpt/libopenmpt/")
+				IMPORTED_LOCATION ${EXTERNAL_EMSCRIPTEN_DIR}/libopenmpt.a
+				INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR}/libopenmpt/)
 			set(OPENMPT_FOUND 1)
 		endif()
 	endif()
@@ -74,8 +92,8 @@ if(EMSCRIPTEN)
 	if(NCINE_WITH_LUA)
 		add_library(Lua::Lua STATIC IMPORTED)
 		set_target_properties(Lua::Lua PROPERTIES
-			IMPORTED_LOCATION ${EXTERNAL_EMSCRIPTEN_DIR}/lib/liblua.a
-			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_EMSCRIPTEN_DIR}/include")
+			IMPORTED_LOCATION ${EXTERNAL_EMSCRIPTEN_DIR}/liblua.a
+			INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR})
 		set(LUA_FOUND 1)
 	endif()
 	
@@ -92,11 +110,11 @@ if(NCINE_WITH_THREADS)
 	find_package(Threads)
 endif()
 if(MSVC)
-	set(EXTERNAL_MSVC_DIR "${CMAKE_SOURCE_DIR}/Libs/" CACHE PATH "Set the path to the MSVC libraries directory")
+	set(EXTERNAL_MSVC_DIR "${NCINE_LIBS}/Windows/" CACHE PATH "Set the path to the MSVC libraries directory")
 	if(NOT IS_DIRECTORY ${EXTERNAL_MSVC_DIR})
-		message(STATUS "nCine external MSVC libraries directory not found at: ${EXTERNAL_MSVC_DIR}")
+		message(STATUS "MSVC libraries directory not found at: ${EXTERNAL_MSVC_DIR}")
 	else()
-		message(STATUS "nCine external MSVC libraries directory: ${EXTERNAL_MSVC_DIR}")
+		message(STATUS "MSVC libraries directory: ${EXTERNAL_MSVC_DIR}")
 	endif()
 
 	set(MSVC_ARCH_SUFFIX "x86")
@@ -106,15 +124,15 @@ if(MSVC)
 
 	set(MSVC_LIBDIR "${EXTERNAL_MSVC_DIR}/${MSVC_ARCH_SUFFIX}/")
 	set(MSVC_BINDIR "${EXTERNAL_MSVC_DIR}/${MSVC_ARCH_SUFFIX}/Bin/")
-elseif(NOT ANDROID) # GCC and LLVM
+elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	if(APPLE)
 		set(CMAKE_FRAMEWORK_PATH "${PARENT_SOURCE_DIR}/nCine-external")
 		set(CMAKE_MACOSX_RPATH ON)
 
 		if(NOT IS_DIRECTORY ${CMAKE_FRAMEWORK_PATH})
-			message(FATAL_ERROR "nCine external OS X frameworks directory not found at: ${CMAKE_FRAMEWORK_PATH}")
+			message(FATAL_ERROR "OS X frameworks directory not found at: ${CMAKE_FRAMEWORK_PATH}")
 		else()
-			message(STATUS "nCine external OS X frameworks directory: ${CMAKE_FRAMEWORK_PATH}")
+			message(STATUS "OS X frameworks directory: ${CMAKE_FRAMEWORK_PATH}")
 		endif()
 	endif()
 
@@ -184,57 +202,57 @@ if(ANDROID)
 	#	set(PNG_FOUND 1)
 	#endif()
 
-	if(NCINE_WITH_WEBP AND EXISTS ${EXTERNAL_ANDROID_DIR}/webp/${ANDROID_ABI}/libwebp.a)
+	if(NCINE_WITH_WEBP AND EXISTS ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libwebp.a)
 		add_library(WebP::WebP STATIC IMPORTED)
 		set_target_properties(WebP::WebP PROPERTIES
-			IMPORTED_LOCATION ${EXTERNAL_ANDROID_DIR}/webp/${ANDROID_ABI}/libwebp.a
-			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_ANDROID_DIR}/webp/include")
+			IMPORTED_LOCATION ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libwebp.a
+			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}/webp/")
 		set(WEBP_FOUND 1)
 	endif()
 
-	if(NCINE_WITH_AUDIO AND EXISTS ${EXTERNAL_ANDROID_DIR}/openal/${ANDROID_ABI}/libopenal.so)
+	if(NCINE_WITH_AUDIO AND EXISTS ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libopenal.so)
 		add_library(OpenAL::AL SHARED IMPORTED)
 		set_target_properties(OpenAL::AL PROPERTIES
-			IMPORTED_LOCATION ${EXTERNAL_ANDROID_DIR}/openal/${ANDROID_ABI}/libopenal.so
-			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_ANDROID_DIR}/openal/include")
+			IMPORTED_LOCATION ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libopenal.so
+			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}/AL/")
 		set(OPENAL_FOUND 1)
 
 		if(NCINE_WITH_VORBIS AND
-		   EXISTS ${EXTERNAL_ANDROID_DIR}/vorbis/${ANDROID_ABI}/libvorbisfile.a AND
-		   EXISTS ${EXTERNAL_ANDROID_DIR}/vorbis/${ANDROID_ABI}/libvorbis.a AND
-		   EXISTS ${EXTERNAL_ANDROID_DIR}/ogg/${ANDROID_ABI}/libogg.a)
+		   EXISTS ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libvorbisfile.a AND
+		   EXISTS ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libvorbis.a AND
+		   EXISTS ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libogg.a)
 			add_library(Ogg::Ogg STATIC IMPORTED)
 			set_target_properties(Ogg::Ogg PROPERTIES
-				IMPORTED_LOCATION ${EXTERNAL_ANDROID_DIR}/ogg/${ANDROID_ABI}/libogg.a
-				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_ANDROID_DIR}/ogg/include")
+				IMPORTED_LOCATION ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libogg.a
+				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}/ogg/")
 
 			add_library(Vorbis::Vorbis STATIC IMPORTED)
 			set_target_properties(Vorbis::Vorbis PROPERTIES
-				IMPORTED_LOCATION ${EXTERNAL_ANDROID_DIR}/vorbis/${ANDROID_ABI}/libvorbis.a
-				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_ANDROID_DIR}/vorbis/include"
+				IMPORTED_LOCATION ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libvorbis.a
+				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}/vorbis/"
 				INTERFACE_LINK_LIBRARIES Ogg::Ogg)
 
 			add_library(Vorbis::Vorbisfile STATIC IMPORTED)
 			set_target_properties(Vorbis::Vorbisfile PROPERTIES
-				IMPORTED_LOCATION ${EXTERNAL_ANDROID_DIR}/vorbis/${ANDROID_ABI}/libvorbisfile.a
+				IMPORTED_LOCATION ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libvorbisfile.a
 				INTERFACE_LINK_LIBRARIES Vorbis::Vorbis)
 			set(VORBIS_FOUND 1)
 		endif()
 		
-		if(EXISTS ${EXTERNAL_ANDROID_DIR}/libopenmpt/${ANDROID_ABI}/libopenmpt.a)
+		if(EXISTS ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libopenmpt.a)
 			add_library(libopenmpt::libopenmpt STATIC IMPORTED)
 			set_target_properties(libopenmpt::libopenmpt PROPERTIES
-				IMPORTED_LOCATION ${EXTERNAL_ANDROID_DIR}/libopenmpt/${ANDROID_ABI}/libopenmpt.a
-				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_ANDROID_DIR}/libopenmpt/")
+				IMPORTED_LOCATION ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libopenmpt.a
+				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}/libopenmpt/")
 			set(OPENMPT_FOUND 1)
 		endif()
 	endif()
 
-	if(NCINE_WITH_LUA AND EXISTS ${EXTERNAL_ANDROID_DIR}/lua/${ANDROID_ABI}/liblua.a)
+	if(NCINE_WITH_LUA AND EXISTS ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/liblua.a)
 		add_library(Lua::Lua STATIC IMPORTED)
 		set_target_properties(Lua::Lua PROPERTIES
-			IMPORTED_LOCATION ${EXTERNAL_ANDROID_DIR}/lua/${ANDROID_ABI}/liblua.a
-			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_ANDROID_DIR}/lua/include")
+			IMPORTED_LOCATION ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/liblua.a
+			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}/lua/")
 		set(LUA_FOUND 1)
 	endif()
 elseif(MSVC)
@@ -246,13 +264,13 @@ elseif(MSVC)
 		set_target_properties(EGL::EGL PROPERTIES
 			IMPORTED_IMPLIB ${MSVC_LIBDIR}/libEGL.lib
 			IMPORTED_LOCATION ${MSVC_BINDIR}/libEGL.dll
-			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_MSVC_DIR}")
+			INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR})
 
 		add_library(OpenGLES2::GLES2 SHARED IMPORTED)
 		set_target_properties(OpenGLES2::GLES2 PROPERTIES
 			IMPORTED_IMPLIB ${MSVC_LIBDIR}/libGLESv2.lib
 			IMPORTED_LOCATION ${MSVC_BINDIR}/libGLESv2.dll
-			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_MSVC_DIR}")
+			INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR})
 		set(ANGLE_FOUND 1)
 	else()
 		if(EXISTS ${MSVC_LIBDIR}/glew32.lib AND EXISTS ${MSVC_BINDIR}/glew32.dll)
@@ -260,7 +278,7 @@ elseif(MSVC)
 			set_target_properties(GLEW::GLEW PROPERTIES
 				IMPORTED_IMPLIB ${MSVC_LIBDIR}/glew32.lib
 				IMPORTED_LOCATION ${MSVC_BINDIR}/glew32.dll
-				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_MSVC_DIR}")
+				INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR})
 			set(GLEW_FOUND 1)
 		endif()
 
@@ -276,7 +294,7 @@ elseif(MSVC)
 		set(OPENGL_FOUND 1)
 	endif()
 
-	if(NOT (WINDOWS_PHONE OR WINDOWS_STORE))
+	if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
 		if(NCINE_PREFERRED_BACKEND STREQUAL "GLFW" AND
 			EXISTS ${MSVC_LIBDIR}/glfw3dll.lib AND EXISTS ${MSVC_BINDIR}/glfw3.dll)
 			add_library(GLFW::GLFW SHARED IMPORTED)
@@ -284,18 +302,17 @@ elseif(MSVC)
 				IMPORTED_IMPLIB ${MSVC_LIBDIR}/glfw3dll.lib
 				IMPORTED_LOCATION ${MSVC_BINDIR}/glfw3.dll
 				INTERFACE_COMPILE_DEFINITIONS "GLFW_NO_GLU"
-				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_MSVC_DIR}")
+				INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR})
 			set(GLFW_FOUND 1)
 		endif()
 
 		if(NCINE_PREFERRED_BACKEND STREQUAL "SDL2" AND
-			EXISTS ${MSVC_LIBDIR}/SDL2.lib AND EXISTS ${MSVC_LIBDIR}/SDL2main.lib AND
-			EXISTS ${MSVC_BINDIR}/SDL2.dll)
+			EXISTS ${MSVC_LIBDIR}/SDL2.lib AND EXISTS ${MSVC_LIBDIR}/SDL2main.lib AND EXISTS ${MSVC_BINDIR}/SDL2.dll)
 			add_library(SDL2::SDL2 SHARED IMPORTED)
 			set_target_properties(SDL2::SDL2 PROPERTIES
 				IMPORTED_IMPLIB ${MSVC_LIBDIR}/SDL2.lib
 				IMPORTED_LOCATION ${MSVC_BINDIR}/SDL2.dll
-				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_MSVC_DIR}/SDL2"
+				INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR}/SDL2/
 				INTERFACE_LINK_LIBRARIES ${MSVC_LIBDIR}/SDL2main.lib)
 			set(SDL2_FOUND 1)
 		endif()
@@ -313,7 +330,7 @@ elseif(MSVC)
 	#		IMPORTED_LINK_INTERFACE_LANGUAGES "C"
 	#		IMPORTED_IMPLIB ${MSVC_LIBDIR}/libpng16.lib
 	#		IMPORTED_LOCATION ${MSVC_BINDIR}/libpng16.dll
-	#		INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_MSVC_DIR}"
+	#		INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR}
 	#		INTERFACE_LINK_LIBRARIES ZLIB::ZLIB)
 	#	set(PNG_FOUND 1)
 	#endif()
@@ -324,7 +341,7 @@ elseif(MSVC)
 		set_target_properties(WebP::WebP PROPERTIES
 			IMPORTED_IMPLIB ${MSVC_LIBDIR}/libwebp_dll.lib
 			IMPORTED_LOCATION ${MSVC_BINDIR}/libwebp.dll
-			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_MSVC_DIR}")
+			INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR})
 		set(WEBP_FOUND 1)
 	endif()
 
@@ -333,7 +350,7 @@ elseif(MSVC)
 		set_target_properties(OpenAL::AL PROPERTIES
 			IMPORTED_IMPLIB ${MSVC_LIBDIR}/OpenAL32.lib
 			IMPORTED_LOCATION ${MSVC_BINDIR}/OpenAL32.dll
-			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_MSVC_DIR}")
+			INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR}/AL/)
 		set(OPENAL_FOUND 1)
 
 		if(NCINE_WITH_VORBIS AND
@@ -354,7 +371,7 @@ elseif(MSVC)
 			set_target_properties(Vorbis::Vorbisfile PROPERTIES
 				IMPORTED_IMPLIB ${MSVC_LIBDIR}/libvorbisfile.lib
 				IMPORTED_LOCATION ${MSVC_BINDIR}/libvorbisfile.dll
-				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_MSVC_DIR}"
+				INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR}
 				INTERFACE_LINK_LIBRARIES Vorbis::Vorbis)
 			set(VORBIS_FOUND 1)
 		endif()
@@ -364,7 +381,7 @@ elseif(MSVC)
 			set_target_properties(libopenmpt::libopenmpt PROPERTIES
 				IMPORTED_IMPLIB ${MSVC_LIBDIR}/libopenmpt.lib
 				IMPORTED_LOCATION ${MSVC_BINDIR}/libopenmpt.dll
-				INTERFACE_INCLUDE_DIRECTORIES "${NCINE_SOURCE_DIR}/../Libs/libopenmpt/")
+				INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR}/libopenmpt/)
 			set(OPENMPT_FOUND 1)
 		endif()
 	endif()
@@ -374,7 +391,7 @@ elseif(MSVC)
 		set_target_properties(Lua::Lua PROPERTIES
 			IMPORTED_IMPLIB ${MSVC_LIBDIR}/lua54.lib
 			IMPORTED_LOCATION ${MSVC_BINDIR}/lua54.dll
-			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_MSVC_DIR}")
+			INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR})
 		set(LUA_FOUND 1)
 	endif()
 	
@@ -383,7 +400,7 @@ elseif(MSVC)
 		set_target_properties(libdeflate::libdeflate PROPERTIES
 			IMPORTED_IMPLIB ${MSVC_LIBDIR}/libdeflate.lib
 			IMPORTED_LOCATION ${MSVC_BINDIR}/libdeflate.dll
-			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_MSVC_DIR}")
+			INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR})
 		set(LIBDEFLATE_FOUND 1)
 	elseif(EXISTS ${MSVC_LIBDIR}/zlib.lib AND EXISTS ${MSVC_BINDIR}/zlib.dll)
 		add_library(ZLIB::ZLIB SHARED IMPORTED)
@@ -468,7 +485,7 @@ elseif(MINGW OR MSYS)
 			IMPORTED_LOCATION ${LUA_DLL_LIBRARY}
 			INTERFACE_INCLUDE_DIRECTORIES ${LUA_INCLUDE_DIR})
 	endif()
-else() # GCC and LLVM
+else(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	function(split_extra_libraries PREFIX LIBRARIES)
 		foreach(LIBRARY ${LIBRARIES})
 			string(REGEX MATCH "^-l" FOUND_LINKER_ARG ${LIBRARY})
@@ -541,13 +558,13 @@ else() # GCC and LLVM
 		endif()
 		
 		set(OPENMPT_FOUND 1)
-		find_library(OPENMPT_LIBRARY libopenmpt.so PATHS /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64)
+		find_library(OPENMPT_LIBRARY libopenmpt.so PATHS /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 ${NCINE_LIBS}/Linux/${CMAKE_SYSTEM_PROCESSOR}/)
 		if(EXISTS ${OPENMPT_LIBRARY})
 			message(STATUS "Found libopenmpt: ${OPENMPT_LIBRARY}")
 			add_library(libopenmpt::libopenmpt SHARED IMPORTED)
 			set_target_properties(libopenmpt::libopenmpt PROPERTIES
 				IMPORTED_LOCATION "${OPENMPT_LIBRARY}"
-				INTERFACE_INCLUDE_DIRECTORIES "${NCINE_SOURCE_DIR}/../Libs/libopenmpt/")
+				INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR}/libopenmpt/)
 		else()
 			set(OPENMPT_DYNAMIC_LINK 1)
 			message(STATUS "Cannot find libopenmpt, using dynamic linking instead")

@@ -4,9 +4,9 @@
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD) && !defined(WITH_OPENMPT_DYNAMIC)
 #   if defined(_M_X64)
-#       pragma comment(lib, "../Libs/x64/libopenmpt.lib")
+#       pragma comment(lib, "../Libs/Windows/x64/libopenmpt.lib")
 #   elif defined(_M_IX86)
-#       pragma comment(lib, "../Libs/x86/libopenmpt.lib")
+#       pragma comment(lib, "../Libs/Windows/x86/libopenmpt.lib")
 #   else
 #       error Unsupported architecture
 #   endif

@@ -1,5 +1,9 @@
 #pragma once
 
+#include "../../Common.h"
+
+#if defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)
+
 #include "ITextureLoader.h"
 
 #include <cstdint>
@@ -28,5 +32,6 @@ namespace nCine
 			uint16_t height;
 		};
 	};
-
 }
+
+#endif

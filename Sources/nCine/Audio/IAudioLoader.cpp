@@ -1,9 +1,11 @@
 #include "IAudioLoader.h"
 #include "AudioLoaderWav.h"
-#ifdef WITH_VORBIS
-#include "AudioLoaderOgg.h"
+#if defined(WITH_VORBIS)
+#	include "AudioLoaderOgg.h"
 #endif
-#include "AudioLoaderMpt.h"
+#if defined(WITH_OPENMPT)
+#	include "AudioLoaderMpt.h"
+#endif
 #include "../IO/FileSystem.h"
 
 namespace nCine
@@ -46,12 +48,12 @@ namespace nCine
 		if (extension == "wav"_s) {
 			return std::make_unique<AudioLoaderWav>(std::move(fileHandle));
 		}
-#ifdef WITH_VORBIS
+#if defined(WITH_VORBIS)
 		if (fs::HasExtension(filename, "ogg"_s)) {
 			return std::make_unique<AudioLoaderOgg>(std::move(fileHandle));
 		}
 #endif
-#ifdef WITH_OPENMPT
+#if defined(WITH_OPENMPT)
 		if (extension == "j2b"_s || extension == "it"_s || extension == "s3m"_s || extension == "xm"_s || extension == "mo3"_s) {
 			return std::make_unique<AudioLoaderMpt>(std::move(fileHandle));
 		}
