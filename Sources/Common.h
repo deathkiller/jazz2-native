@@ -17,6 +17,8 @@
 #   include <Common.h>
 #endif
 
+#include <stdlib.h>
+
 // Logging
 #if defined(ENABLE_LOG)
 
