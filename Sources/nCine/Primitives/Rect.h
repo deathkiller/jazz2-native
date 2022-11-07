@@ -88,6 +88,7 @@ namespace nCine
 
 		/// Eqality operator
 		bool operator==(const Rect& rect) const;
+		bool operator!=(const Rect& rect) const;
 	};
 
 	using Rectf = Rect<float>;
@@ -297,4 +298,10 @@ namespace nCine
 				W == rect.W && H == rect.H);
 	}
 
+	template <class T>
+	inline bool Rect<T>::operator!=(const Rect& rect) const
+	{
+		return (X != rect.X || Y != rect.Y ||
+				W != rect.W || H != rect.H);
+	}
 }

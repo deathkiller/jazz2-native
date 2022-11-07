@@ -33,7 +33,7 @@ jobs:
           CXX: clang++
           Backend: SDL2
 
-    runs-on: 'ubuntu-20.04'
+    runs-on: 'ubuntu-latest'
 
     steps:
     - name: 'Checkout Code'
@@ -41,8 +41,8 @@ jobs:
 
     - name: 'Create Build Environment'
       run: |
-        sudo apt-get update
-        sudo apt-get install -y libgl1-mesa-dev
+        sudo apt-get update -y
+        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev
 
     - name: 'Configure CMake'
       run: |
