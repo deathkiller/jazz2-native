@@ -31,8 +31,8 @@ namespace nCine
 		}
 		/// Four channels constructor
 		constexpr Color(unsigned int red, unsigned int green, unsigned int blue, unsigned int alpha)
+			: red_(red), green_(green), blue_(blue), alpha_(alpha)
 		{
-			Set(red, green, blue, alpha);
 		}
 		/// Three channels constructor from a hexadecimal code
 		explicit Color(unsigned int hex);

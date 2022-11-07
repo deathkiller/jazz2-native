@@ -33,8 +33,8 @@ namespace nCine
 		}
 		/// Four channels constructor
 		constexpr Colorf(float red, float green, float blue, float alpha)
+			: red_(red), green_(green), blue_(blue), alpha_(std::clamp(alpha, 0.0f, 1.0f))
 		{
-			Set(red, green, blue, alpha);
 		}
 		/// Four channels constructor from an array
 		explicit Colorf(const float channels[NumChannels]);
