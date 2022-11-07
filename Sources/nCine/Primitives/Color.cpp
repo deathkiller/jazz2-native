@@ -109,6 +109,12 @@ namespace nCine {
 				blue_ == color.blue_ && alpha_ == color.alpha_);
 	}
 
+	bool Color::operator!=(const Color& color) const
+	{
+		return (red_ != color.red_ || green_ != color.green_ ||
+				blue_ != color.blue_ || alpha_ != color.alpha_);
+	}
+
 	Color& Color::operator+=(const Color& color)
 	{
 		for (unsigned int i = 0; i < NumChannels; i++) {

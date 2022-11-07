@@ -86,6 +86,7 @@ namespace nCine
 
 		/// Equality operator
 		bool operator==(const Colorf& color) const;
+		bool operator!=(const Colorf& color) const;
 
 		Colorf& operator+=(const Colorf& v);
 		Colorf& operator-=(const Colorf& v);
