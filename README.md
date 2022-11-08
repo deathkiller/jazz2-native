@@ -70,14 +70,15 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 
 ## Building the application
 ### Windows
-* Download [build dependencies](https://github.com/deathkiller/jazz2-libraries) to `‹Repository›\Libs\`
+* Download [build dependencies](https://github.com/deathkiller/jazz2-libraries) to `.\Libs\`
 * Open the solution in [Microsoft Visual Studio 2019](https://www.visualstudio.com/) (or newer) and build it
-  * CMake is **not** recommended for Windows build, but it should work too
+  * CMake is **not** recommended for Windows build
 
 ### Linux
-* Build dependencies will be downloaded automatically by **CMake**
-  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `‹Repository›/Libs/`
-* Build the solution with **CMake**
+* Build dependencies will be downloaded automatically by *CMake*
+  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
+  * In case of build errors, install following packages (or equivalent for your distribution):<br>`libgl1-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libopenmpt-dev zlib1g-dev`
+* Build the solution with *CMake*
   * Run `./BuildLinuxGcc.sh` (GLFW) or `./BuildLinuxGcc_SDL2.sh` (SDL2) to build with GCC compiler
   * Run `./BuildLinuxClang.sh` to build with Clang compiler
 
@@ -90,27 +91,27 @@ cd emsdk
 ./emsdk install latest
 ./emsdk activate latest
 ```
-* Build dependencies will be downloaded automatically by **CMake**
-  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `‹Repository›/Libs/`
+* Build dependencies will be downloaded automatically by *CMake*
+  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
 * Put required game files to `./Content/` directory – the files must be provided in advance
-* Build the solution with **CMake**
-  * Run `./BuildEmscripten.sh` to build with Emscripten
+* Build the solution with *CMake*
+  * Run `./BuildEmscripten.sh` to build with Emscripten toolchain
 
 ### Android
 * Install Android SDK (preferably to `../android-sdk/`)
 * Install Android NDK (preferably to `../android-ndk/`)
 * Install Gradle (preferably to `../gradle/`)
-* Build dependencies will be downloaded automatically by **CMake**
-  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `‹Repository›/Libs/`
-* Build the solution with **CMake**
-  * Run `./BuildAndroid.sh` or `./BuildAndroid_x86-64` to build **APK** for Android
-  * Run `./BuildAndroidSign.sh` to sign built **APKs**
+* Build dependencies will be downloaded automatically by *CMake*
+  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
+* Build the solution with *CMake*
+  * Run `./BuildAndroid.sh` or `./BuildAndroid_x86-64.sh` to build *APK* for Android
+  * Run `./BuildAndroidSign.sh` to sign built *APKs*
     * Keystore file `Keystore.jks` must exist in repository root
 
 ### Universal Windows Platform (Windows RT)
-* Build dependencies will be downloaded automatically by **CMake**
-  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `‹Repository›/Libs/`
-* Run `.\BuildUwp.sh` to create [Microsoft Visual Studio 2019](https://www.visualstudio.com/) (or newer) solution
+* Build dependencies will be downloaded automatically by *CMake*
+  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
+* Run `.\BuildUwp.bat` to create [Microsoft Visual Studio 2019](https://www.visualstudio.com/) (or newer) solution
 
 
 ## License

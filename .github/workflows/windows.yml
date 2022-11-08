@@ -1,0 +1,55 @@
+name: 'Windows'
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [ opened, synchronize ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+          Target: x86
+          Platform: Win32
+
+        - BuildType: Release
+          Target: x64
+          Platform: x64
+
+    runs-on: 'windows-latest'
+
+    steps:
+    - name: 'Checkout Code'
+      uses: actions/checkout@v3
+
+    - name: 'Setup MSBuild'
+      uses: microsoft/setup-msbuild@v1.1
+
+    - name: 'Download Build Dependencies'
+      run: |
+        mkdir Libs
+        cd Libs
+        git clone https://github.com/deathkiller/jazz2-libraries.git .
+        git checkout
+        
+    - name: 'Build'
+      run: |
+        msbuild ".\Jazz2.csproj" -t:Rebuild -p:Configuration=${{ matrix.BuildType }} -p:Platform=${{ matrix.Platform }} -p:OutDir=".\_build\" -verbosity:diag
+
+    - name: 'Create Package'
+      run: |
+        mkdir _package
+        Move-Item -Path ".\_build\Jazz2.exe" -Destination ".\_package\Jazz2.exe"
+        Move-Item -Path ".\Content\" -Destination ".\_package\Content\"
+        
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v3
+      with:
+        name: Jazz²_windows_${{ matrix.Target }}
+        path: ./_package/
+        
