@@ -33,13 +33,15 @@ jobs:
     - name: 'Download Build Dependencies'
       run: |
         mkdir Libs
+        dir
         cd Libs
         git clone https://github.com/deathkiller/jazz2-libraries.git .
         git checkout
+        dir
         
     - name: 'Build'
       run: |
-        msbuild ".\Jazz2.csproj" -t:Rebuild -p:Configuration=${{ matrix.BuildType }} -p:Platform=${{ matrix.Platform }} -p:OutDir=".\_build\" -verbosity:diag
+        msbuild ".\Jazz2.sln" -t:Rebuild -p:Configuration=${{ matrix.BuildType }} -p:Platform=${{ matrix.Platform }} -p:OutDir=".\_build\" -verbosity:diag
 
     - name: 'Create Package'
       run: |
