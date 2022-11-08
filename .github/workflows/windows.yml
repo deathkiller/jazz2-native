@@ -35,7 +35,8 @@ jobs:
         git clone https://github.com/deathkiller/jazz2-libraries.git .
         git checkout
         
-        Invoke-WebRequest -uri "https://github.com/Chuyu-Team/VC-LTL5/releases/download/v5.0.5/VC-LTL-5.0.5-Binary.7z" -Method "GET" -Outfile "VC-LTL-Binary.7z"
+        #Invoke-WebRequest -uri "https://github.com/Chuyu-Team/VC-LTL5/releases/download/v5.0.5/VC-LTL-5.0.5-Binary.7z" -Method "GET" -Outfile "VC-LTL-Binary.7z"
+        Invoke-WebRequest -uri "https://github.com/Chuyu-Team/VC-LTL/releases/download/v4.1.3/VC-LTL-4.1.3-Binary-VS2019.7z" -Method "GET" -Outfile "VC-LTL-Binary.7z"
         7z x ".\VC-LTL-Binary.7z" -o"VC-LTL"
         
     - name: 'Build'
