@@ -576,10 +576,22 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 	list(APPEND GENERATED_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/Package.appxmanifest)
 	
 	# Include dependencies in UWP package
+	set(EXTERNAL_MSVC_WINRT_DIR "${NCINE_LIBS}/Universal Windows Platform/" CACHE PATH "Set the path to the MSVC (WinRT) libraries directory")
+	if(NOT IS_DIRECTORY ${EXTERNAL_MSVC_WINRT_DIR})
+		message(STATUS "MSVC (WinRT) libraries directory not found at: ${EXTERNAL_MSVC_WINRT_DIR}")
+	else()
+		message(STATUS "MSVC (WinRT) libraries directory: ${EXTERNAL_MSVC_WINRT_DIR}")
+	endif()
+	
+	set(MSVC_WINRT_BINDIR "${EXTERNAL_MSVC_WINRT_DIR}/${MSVC_ARCH_SUFFIX}/Bin/")
+	
 	# `zlib1.dll` is required by `libGLESv2.dll`, so rename `zlib.dll` to `zlib1.dll` and include it too for now
 	configure_file(${MSVC_BINDIR}/zlib.dll ${CMAKE_BINARY_DIR}/Generated/zlib1.dll COPYONLY)
 
 	set(UWP_DEPENDENCIES
+		${MSVC_WINRT_BINDIR}/msvcp140.dll
+		${MSVC_WINRT_BINDIR}/vcruntime140.dll
+		${MSVC_WINRT_BINDIR}/vcruntime140_1.dll
 		${MSVC_BINDIR}/libEGL.dll
 		${MSVC_BINDIR}/libGLESv2.dll
 		${CMAKE_BINARY_DIR}/Generated/zlib1.dll
