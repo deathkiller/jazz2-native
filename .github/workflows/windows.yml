@@ -37,11 +37,10 @@ jobs:
         
         Invoke-WebRequest -uri "https://github.com/Chuyu-Team/VC-LTL5/releases/download/v5.0.5/VC-LTL-5.0.5-Binary.7z" -Method "GET" -Outfile "VC-LTL-Binary.7z"
         7z x ".\VC-LTL-Binary.7z" -o"VC-LTL"
-        .\VC-LTL\Install.cmd /I
         
     - name: 'Build'
       run: |
-        msbuild ".\Jazz2.sln" -t:Rebuild -p:Configuration=${{ matrix.BuildType }} -p:Platform=${{ matrix.Platform }} -p:OutDir=".\_build\" -verbosity:diag
+        msbuild ".\Jazz2.sln" -t:Rebuild -p:Configuration=${{ matrix.BuildType }} -p:Platform=${{ matrix.Platform }} -p:VC_LTL_Root=".\Libs\VC-LTL\" -p:OutDir=".\_build\" -verbosity:diag
 
     - name: 'Create Package'
       run: |
