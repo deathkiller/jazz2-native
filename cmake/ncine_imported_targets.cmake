@@ -1,15 +1,20 @@
 if(NCINE_DOWNLOAD_DEPENDENCIES)
-	set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/refs/tags/1.1.1.tar.gz")
-	message(STATUS "Downloading dependencies from \"${NCINE_LIBS_URL}\"...")
+	if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.14.0")
+		set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/refs/tags/1.1.1.tar.gz")
+		message(STATUS "Downloading dependencies from \"${NCINE_LIBS_URL}\"...")
 
-	include(FetchContent)
-	FetchContent_Declare(
-		ncine_libraries
-		URL ${NCINE_LIBS_URL}
-	)
-	FetchContent_MakeAvailable(ncine_libraries)
+		include(FetchContent)
+		FetchContent_Declare(
+			ncine_libraries
+			URL ${NCINE_LIBS_URL}
+		)
+		FetchContent_MakeAvailable(ncine_libraries)
 
-	set(NCINE_LIBS ${ncine_libraries_SOURCE_DIR})
+		set(NCINE_LIBS ${ncine_libraries_SOURCE_DIR})
+	else()
+		message(STATUS "Cannot download dependencies, CMake 3.14.0 or newer is required, please download dependencies manually to `Libs` directory")
+		set(NCINE_LIBS ${NCINE_ROOT}/Libs/)
+	endif()
 elseif(NOT NCINE_LIBS)
 	set(NCINE_LIBS ${NCINE_ROOT}/Libs/)
 endif()
