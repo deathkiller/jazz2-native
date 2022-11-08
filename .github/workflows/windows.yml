@@ -41,7 +41,7 @@ jobs:
         
     - name: 'Build'
       run: |
-        msbuild ".\Jazz2.sln" -t:Rebuild -p:Configuration=${{ matrix.BuildType }} -p:Platform=${{ matrix.Platform }} -p:VC_LTL_Root=".\Libs\VC-LTL\" -p:OutDir=".\_build\" -verbosity:diag
+        msbuild ".\Jazz2.sln" -t:Rebuild -p:Configuration=${{ matrix.BuildType }} -p:Platform=${{ matrix.Platform }} -p:VC_LTL_Root=".\Libs\VC-LTL\" -p:OutDir="..\_build\"
 
     - name: 'Create Package'
       run: |

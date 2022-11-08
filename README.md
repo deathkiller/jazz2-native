@@ -110,7 +110,7 @@ cd emsdk
 
 ### Universal Windows Platform (Windows RT)
 * Build dependencies will be downloaded automatically by *CMake*
-  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
+  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `.\Libs\`
 * Run `.\BuildUwp.bat` to create [Microsoft Visual Studio 2019](https://www.visualstudio.com/) (or newer) solution
 
 
