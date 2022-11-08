@@ -16,7 +16,7 @@ jobs:
         - BuildType: Release
           Platform: x64
 
-    runs-on: 'windows-2019'
+    runs-on: 'windows-latest'
 
     steps:
     - name: 'Checkout Code'
