@@ -39,7 +39,7 @@ jobs:
         $certPath = Join-Path -Path $currentDirectory -ChildPath "_cert.pfx"
         [IO.File]::WriteAllBytes("$certPath", $certBytes)
         
-        cmake -G "Visual Studio 16 2019" -A ${{ matrix.Platform }} -B ".\_build\" -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION="10.0" -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.Platform }} -DNCINE_UWP_CERTIFICATE_PATH="$certPath" -DNCINE_UWP_CERTIFICATE_PASSWORD="${{ secrets.UWP_CERTIFICATE_PASSWORD }}"
+        cmake -A ${{ matrix.Platform }} -B ".\_build\" -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION="10.0" -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.Platform }} -DNCINE_UWP_CERTIFICATE_PATH="$certPath" -DNCINE_UWP_CERTIFICATE_PASSWORD="${{ secrets.UWP_CERTIFICATE_PASSWORD }}"
         
         cd .\_build\
         msbuild ".\Jazz2.sln" -p:Configuration=${{ matrix.BuildType }} -p:Platform=${{ matrix.Platform }} -p:UapAppxPackageBuildMode="Sideload" -p:AppxBundlePlatforms="${{ matrix.Platform }}" -p:AppxPackageDir=".\_out\"
