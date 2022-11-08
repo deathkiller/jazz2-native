@@ -39,13 +39,6 @@
 #	include <unistd.h>
 #endif
 
-#if defined(DEATH_TARGET_WINDOWS_RT)
-#	include <winrt/Windows.Foundation.h>
-#	include <winrt/Windows.Networking.Sockets.h>
-#	include <winrt/Windows.Storage.Streams.h>
-#	include <Utf8.h>
-#endif
-
 namespace Death::Http
 {
 	enum class InternetProtocol : std::uint8_t {
@@ -153,7 +146,7 @@ namespace Death::Http
 		Containers::SmallVector<std::uint8_t, 0> body;
 	};
 
-#if (defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(_WIN32) || defined(__CYGWIN__)
 	class WinSock final
 	{
 	public:
@@ -199,7 +192,7 @@ namespace Death::Http
 
 	inline int GetLastError() noexcept
 	{
-#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
+#if defined(_WIN32) || defined(__CYGWIN__)
 		return WSAGetLastError();
 #else
 		return errno;
@@ -214,9 +207,7 @@ namespace Death::Http
 	class Socket final
 	{
 	public:
-#if defined(DEATH_TARGET_WINDOWS_RT)
-		using Type = winrt::Windows::Networking::Sockets::StreamSocket;
-#elif defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
 		using Type = SOCKET;
 		static constexpr Type invalid = INVALID_SOCKET;
 #else
@@ -224,25 +215,21 @@ namespace Death::Http
 		static constexpr Type invalid = -1;
 #endif
 
-		explicit Socket(const InternetProtocol internetProtocol)
+		explicit Socket(const InternetProtocol internetProtocol) :
+			endpoint { socket(GetAddressFamily(internetProtocol), SOCK_STREAM, IPPROTO_TCP) }
 		{
-#if defined(DEATH_TARGET_WINDOWS_RT)
-			isConnected = false;
-			addressFamily = GetAddressFamily(internetProtocol);
-#else
-			endpoint = socket(GetAddressFamily(internetProtocol), SOCK_STREAM, IPPROTO_TCP);
 			if (endpoint == invalid) {
 				return;
 			}
 
-#	if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
 			ULONG mode = 1;
 			if (ioctlsocket(endpoint, FIONBIO, &mode) != 0) {
 				Close();
 				endpoint = invalid;
 				return;
 			}
-#	else
+#else
 			const auto flags = fcntl(endpoint, F_GETFL);
 			if (flags == -1) {
 				Close();
@@ -255,53 +242,25 @@ namespace Death::Http
 				endpoint = invalid;
 				return;
 			}
+#endif
 
-#		if defined(DEATH_TARGET_APPLE)
+#if defined(DEATH_TARGET_APPLE)
 			const int value = 1;
 			if (setsockopt(endpoint, SOL_SOCKET, SO_NOSIGPIPE, &value, sizeof(value)) == -1) {
 				Close();
 				endpoint = invalid;
 				return;
 			}
-#		endif
-#	endif
 #endif
 		}
 
 		~Socket()
 		{
-#if defined(DEATH_TARGET_WINDOWS_RT)
-			if (isConnected) Close();
-#else
 			if (endpoint != invalid) Close();
-#endif
 		}
 
-#if defined(DEATH_TARGET_WINDOWS_RT)
-		Socket(Socket&& other) noexcept : endpoint { other.endpoint }, isConnected { other.isConnected }
-		{
-			other.endpoint = nullptr;
-			std::swap(reader, other.reader);
-			std::swap(writer, other.writer);
-			other.isConnected = false;
-		}
-
-		Socket& operator=(Socket&& other) noexcept
-		{
-			if (&other == this) return *this;
-			if (isConnected) Close();
-			endpoint = std::move(other.endpoint);
-			reader = std::move(other.reader);
-			writer = std::move(other.writer);
-			isConnected = other.isConnected;
-			other.endpoint = nullptr;
-			other.reader = nullptr;
-			other.writer = nullptr;
-			other.isConnected = false;
-			return *this;
-		}
-#else
-		Socket(Socket&& other) noexcept : endpoint { other.endpoint }
+		Socket(Socket&& other) noexcept :
+			endpoint { other.endpoint }
 		{
 			other.endpoint = invalid;
 		}
@@ -314,28 +273,14 @@ namespace Death::Http
 			other.endpoint = invalid;
 			return *this;
 		}
-#endif
 
 		bool Connect(const struct sockaddr* address, const socklen_t addressSize, const std::int64_t timeout)
 		{
-#if defined(DEATH_TARGET_WINDOWS_RT)
-			//gethostbyaddr(name, strlen(name), AF_INET);
-			auto addressIn = reinterpret_cast<sockaddr_in*>(const_cast<sockaddr*>(address));
-			char addressChars[128];
-			inet_ntop(addressFamily, addressIn, addressChars, sizeof(addressChars));
-			auto addressCharsWide = Utf8::ToUtf16(addressChars);
-			auto port = ntohs(addressIn->sin_port);
-
-			endpoint.ConnectAsync(winrt::Windows::Networking::HostName(winrt::hstring(addressCharsWide.data(), addressCharsWide.size())), winrt::to_hstring(port)).get();
-			reader = winrt::make_agile<winrt::Windows::Storage::Streams::DataReader>(endpoint.InputStream());
-			writer = winrt::make_agile<winrt::Windows::Storage::Streams::DataWriter>(endpoint.OutputStream());
-			isConnected = true;
-#else
 			if (endpoint == invalid) {
 				return false;
 			}
 
-#	if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
 			auto result = ::connect(endpoint, address, addressSize);
 			while (result == -1 && WSAGetLastError() == WSAEINTR) {
 				result = ::connect(endpoint, address, addressSize);
@@ -356,7 +301,7 @@ namespace Death::Http
 
 				return false;
 			}
-#	else
+#else
 			auto result = ::connect(endpoint, address, addressSize);
 			while (result == -1 && errno == EINTR) {
 				result = ::connect(endpoint, address, addressSize);
@@ -374,65 +319,54 @@ namespace Death::Http
 					
 				return false;
 			}
-#	endif
 #endif
 			return true;
 		}
 
 		std::size_t Send(const void* buffer, const std::size_t length, const std::int64_t timeout)
 		{
-#if defined(DEATH_TARGET_WINDOWS_RT)
-			// TODO: Timeout
-			writer.get().WriteBytes(winrt::array_view<const uint8_t>((uint8_t*)buffer, (uint8_t*)buffer + length));
-			auto result = writer.get().StoreAsync().get();
-#else
 			if (!Select(SelectType::Write, timeout)) {
 				return 0;
 			}
-#	if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
 			auto result = ::send(endpoint, reinterpret_cast<const char*>(buffer), static_cast<int>(length), 0);
 			while (result == -1 && WSAGetLastError() == WSAEINTR) {
 				result = ::send(endpoint, reinterpret_cast<const char*>(buffer), static_cast<int>(length), 0);
 			}
-#	else
+#else
 			auto result = ::send(endpoint, reinterpret_cast<const char*>(buffer), length, noSignal);
 			while (result == -1 && errno == EINTR) {
 				result = ::send(endpoint, reinterpret_cast<const char*>(buffer), length, noSignal);
 			}
-#	endif
 #endif
 			return static_cast<std::size_t>(result);
 		}
 
 		std::size_t Recv(void* buffer, const std::size_t length, const std::int64_t timeout)
 		{
-#if defined(DEATH_TARGET_WINDOWS_RT)
-			// TODO: Timeout
-			auto result = reader.get().LoadAsync(length).get();
-			if (result > 0) {
-				reader.get().ReadBytes(winrt::array_view<uint8_t>((uint8_t*)buffer, (uint8_t*)buffer + result));
-			}
-#else
 			if (!Select(SelectType::Read, timeout)) {
 				return 0;
 			}
-#	if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
 			auto result = ::recv(endpoint, reinterpret_cast<char*>(buffer), static_cast<int>(length), 0);
 			while (result == -1 && WSAGetLastError() == WSAEINTR) {
 				result = ::recv(endpoint, reinterpret_cast<char*>(buffer), static_cast<int>(length), 0);
 			}
-#	else
+#else
 			auto result = ::recv(endpoint, reinterpret_cast<char*>(buffer), length, noSignal);
 			while (result == -1 && errno == EINTR) {
 				result = ::recv(endpoint, reinterpret_cast<char*>(buffer), length, noSignal);
 			}
-#	endif
 #endif
 			return static_cast<std::size_t>(result);
 		}
 
+		bool IsValid() const
+		{
+			return (endpoint != invalid);
+		}
+
 	private:
-#if !defined(DEATH_TARGET_WINDOWS_RT)
 		enum class SelectType {
 			Read,
 			Write
@@ -444,7 +378,7 @@ namespace Death::Http
 			FD_ZERO(&descriptorSet);
 			FD_SET(endpoint, &descriptorSet);
 
-#	if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
 			TIMEVAL selectTimeout {
 				static_cast<LONG>(timeout / 1000),
 				static_cast<LONG>((timeout % 1000) * 1000)
@@ -469,7 +403,7 @@ namespace Death::Http
 				// Request timed out
 				return false;
 			}
-#	else
+#else
 			timeval selectTimeout {
 				static_cast<time_t>(timeout / 1000),
 				static_cast<suseconds_t>((timeout % 1000) * 1000)
@@ -494,22 +428,13 @@ namespace Death::Http
 				// Request timed out
 				return false;
 			}
-#	endif
+#endif
 			return true;
 		}
-#endif
 
 		void Close() noexcept
 		{
-#if defined(DEATH_TARGET_WINDOWS_RT)
-			reader.get().DetachStream();
-			reader = nullptr;
-			writer.get().DetachStream();
-			writer = nullptr;
-			endpoint.Close();
-			endpoint = nullptr;
-			isConnected = false;
-#elif defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
 			closesocket(endpoint);
 #else
 			::close(endpoint);
@@ -522,15 +447,7 @@ namespace Death::Http
 		static constexpr int noSignal = 0;
 #endif
 
-#if defined(DEATH_TARGET_WINDOWS_RT)
-		Type endpoint;
-		winrt::agile_ref<winrt::Windows::Storage::Streams::DataReader> reader;
-		winrt::agile_ref<winrt::Windows::Storage::Streams::DataWriter> writer;
-		int addressFamily;
-		bool isConnected;
-#else
 		Type endpoint = invalid;
-#endif
 	};
 
 	// RFC 7230, 3.2.3. WhiteSpace
@@ -1026,6 +943,7 @@ namespace Death::Http
 			hints.ai_socktype = SOCK_STREAM;
 
 			const char* port = (uri.port.empty() ? "80" : uri.port.data());
+
 			addrinfo* info;
 			if (getaddrinfo(uri.host.data(), port, &hints, &info) != 0) {
 				return { Status::ServiceUnavailable };
@@ -1178,7 +1096,7 @@ namespace Death::Http
 		}
 
 	private:
-#if (defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
 		WinSock winSock;
 #endif
 		InternetProtocol internetProtocol;

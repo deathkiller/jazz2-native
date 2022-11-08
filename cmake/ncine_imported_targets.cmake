@@ -1,11 +1,12 @@
 if(NCINE_DOWNLOAD_DEPENDENCIES)
 	if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.14.0")
-		set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/refs/tags/1.1.1.tar.gz")
+		set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/1.1.2.tar.gz")
 		message(STATUS "Downloading dependencies from \"${NCINE_LIBS_URL}\"...")
 
 		include(FetchContent)
 		FetchContent_Declare(
 			ncine_libraries
+			DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 			URL ${NCINE_LIBS_URL}
 		)
 		FetchContent_MakeAvailable(ncine_libraries)

@@ -1,0 +1,62 @@
+name: 'Universal Windows Platform'
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [ opened, synchronize ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+          Platform: x64
+
+    runs-on: 'windows-latest'
+
+    steps:
+    - name: 'Checkout Code'
+      uses: actions/checkout@v3
+
+    - name: 'Setup MSBuild'
+      uses: microsoft/setup-msbuild@v1.1
+
+    - name: 'Download Build Dependencies'
+      run: |
+        mkdir Libs
+        cd Libs
+        git clone https://github.com/deathkiller/jazz2-libraries.git .
+        git checkout
+        
+    - name: 'Build'
+      run: |
+        $currentDirectory = Get-Location
+        $certBytes = [System.Convert]::FromBase64String("${{ secrets.UWP_CERTIFICATE_FILE }}")
+        $certPath = Join-Path -Path $currentDirectory -ChildPath "_cert.pfx"
+        [IO.File]::WriteAllBytes("$certPath", $certBytes)
+        
+        cmake -G "Visual Studio 16 2019" -A ${{ matrix.Platform }} -B ".\_build\" -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION="10.0" -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.Platform }} -DNCINE_UWP_CERTIFICATE_PATH="$certPath" -DNCINE_UWP_CERTIFICATE_PASSWORD="${{ secrets.UWP_CERTIFICATE_PASSWORD }}"
+        
+        cd .\_build\
+        msbuild ".\Jazz2.sln" -p:Configuration=${{ matrix.BuildType }} -p:Platform=${{ matrix.Platform }} -p:UapAppxPackageBuildMode="Sideload" -p:AppxBundlePlatforms="${{ matrix.Platform }}" -p:AppxPackageDir=".\_out\"
+
+    - name: 'Create Package'
+      run: |
+        cd .\_build\_out\
+        $cerPath = (Get-ChildItem -Path .\*\*.cer)[0]
+        $msixbundlePath = (Get-ChildItem -Path .\*\*.msixbundle)[0]
+        cd ..\..\
+        mkdir _package
+        Move-Item -Path "$cerPath" -Destination ".\_package\Jazz2.msixbundle"
+        Move-Item -Path "$msixbundlePath" -Destination ".\_package\Jazz2.cer"
+        
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v3
+      with:
+        name: Jazz²_uwp_${{ matrix.Platform }}
+        path: ./_package/
+        
