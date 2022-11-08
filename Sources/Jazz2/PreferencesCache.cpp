@@ -14,13 +14,21 @@ namespace Jazz2
 {
 	UnlockableEpisodes PreferencesCache::UnlockedEpisodes = UnlockableEpisodes::None;
 	RescaleMode PreferencesCache::ActiveRescaleMode = RescaleMode::None;
+#if defined(DEATH_TARGET_WINDOWS_RT)
+	bool PreferencesCache::EnableFullscreen = true;
+#else
 	bool PreferencesCache::EnableFullscreen = false;
+#endif
 	bool PreferencesCache::EnableVsync = true;
 	bool PreferencesCache::ShowPerformanceMetrics = false;
 	bool PreferencesCache::EnableReforged = true;
 	bool PreferencesCache::EnableLedgeClimb = true;
 	bool PreferencesCache::EnableWeaponWheel = true;
+#if defined(DEATH_TARGET_WINDOWS_RT)
+	bool PreferencesCache::EnableRgbLights = false;
+#else
 	bool PreferencesCache::EnableRgbLights = true;
+#endif
 	bool PreferencesCache::AllowUnsignedScripts = true;
 #if defined(DEATH_TARGET_ANDROID)
 	bool PreferencesCache::UseNativeBackButton = true;
