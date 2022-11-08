@@ -24,6 +24,7 @@ if(WIN32)
 		target_compile_options(ncine PRIVATE /Zc:twoPhase-)
 		target_link_libraries(ncine PRIVATE WindowsApp.lib rpcrt4.lib onecoreuap.lib)
 
+		set_target_properties(ncine PROPERTIES VS_WINDOWS_TARGET_PLATFORM_MIN_VERSION "10.0.17134.0")
 		set_target_properties(ncine PROPERTIES VS_GLOBAL_MinimalCoreWin "true")
 		set_target_properties(ncine PROPERTIES VS_GLOBAL_AppxBundle "Always")
 		set_target_properties(ncine PROPERTIES VS_GLOBAL_AppxBundlePlatforms "x64")
