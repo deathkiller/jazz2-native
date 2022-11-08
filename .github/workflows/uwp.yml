@@ -16,7 +16,7 @@ jobs:
         - BuildType: Release
           Platform: x64
 
-    runs-on: 'windows-latest'
+    runs-on: 'windows-2019'
 
     steps:
     - name: 'Checkout Code'
@@ -51,8 +51,8 @@ jobs:
         $msixbundlePath = (Get-ChildItem -Path .\*\*.msixbundle)[0]
         cd ..\..\
         mkdir _package
-        Move-Item -Path "$cerPath" -Destination ".\_package\Jazz2.msixbundle"
-        Move-Item -Path "$msixbundlePath" -Destination ".\_package\Jazz2.cer"
+        Move-Item -Path "$cerPath" -Destination ".\_package\Jazz2.cer"
+        Move-Item -Path "$msixbundlePath" -Destination ".\_package\Jazz2.msixbundle"
         
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3
