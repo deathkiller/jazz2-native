@@ -33,10 +33,10 @@ jobs:
     - name: 'Configure CMake'
       run: |
         case "${{ matrix.DisplayName }}" in
-          arm ) architecture = "arm64-v8a;armeabi-v7a"
-                universalApk = "ON" ;;
-          x86-64 ) architecture = "x86_64"
-                   universalApk = "OFF" ;;
+          arm ) architecture="arm64-v8a;armeabi-v7a"
+                universalApk="ON" ;;
+          x86-64 ) architecture="x86_64"
+                   universalApk="OFF" ;;
           * ) exit 1 ;;
         esac
         
@@ -52,8 +52,8 @@ jobs:
     - name: 'Create Package'
       run: |
         case "${{ matrix.DisplayName }}" in
-          arm ) filename = "app-universal-release-unsigned.apk" ;;
-          x86-64 ) filename = "app-x86_64-release-unsigned.apk" ;;
+          arm ) filename="app-universal-release-unsigned.apk" ;;
+          x86-64 ) filename="app-x86_64-release-unsigned.apk" ;;
           * ) exit 1 ;;
         esac
       
