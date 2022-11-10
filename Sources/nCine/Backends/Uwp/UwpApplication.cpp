@@ -114,7 +114,7 @@ namespace nCine
 
 		// If we have a phone contract, hide the status bar
 		if (winrtWF::Metadata::ApiInformation::IsApiContractPresent(L"Windows.Phone.PhoneContract", 1, 0)) {
-			auto statusBar = winrt::Windows::UI::ViewManagement::StatusBar::GetForCurrentView();
+			auto statusBar = winrtWUV::StatusBar::GetForCurrentView();
 			auto task = statusBar.HideAsync();
 		}
 
@@ -149,14 +149,14 @@ namespace nCine
 		//auto windowTitleW = Death::Utf8::ToUtf16(appCfg_.windowTitle);
 		//winrtWUV::ApplicationView::GetForCurrentView().Title(winrt::hstring(windowTitleW.data(), windowTitleW.size()));
 
-		winrt::Windows::ApplicationModel::Core::CoreApplication::GetCurrentView().TitleBar().ExtendViewIntoTitleBar(true);
+		winrtWAC::CoreApplication::GetCurrentView().TitleBar().ExtendViewIntoTitleBar(true);
 		auto titleBar = winrtWUV::ApplicationView::GetForCurrentView().TitleBar();
-		titleBar.ButtonBackgroundColor(winrt::Windows::UI::Color { 0, 0, 0, 0 });
-		titleBar.ButtonForegroundColor(winrt::Windows::UI::Color { 255, 255, 255, 255 });
-		titleBar.ButtonHoverBackgroundColor(winrt::Windows::UI::Color { 80, 0, 0, 0 });
-		titleBar.ButtonHoverForegroundColor(winrt::Windows::UI::Color { 255, 255, 255, 255 });
-		titleBar.ButtonInactiveBackgroundColor(winrt::Windows::UI::Color { 0, 0, 0, 0 });
-		titleBar.ButtonInactiveForegroundColor(winrt::Windows::UI::Color { 160, 255, 255, 255 });
+		titleBar.ButtonBackgroundColor(winrtWU::Color { 0, 0, 0, 0 });
+		titleBar.ButtonForegroundColor(winrtWU::Color { 255, 255, 255, 255 });
+		titleBar.ButtonHoverBackgroundColor(winrtWU::Color { 80, 0, 0, 0 });
+		titleBar.ButtonHoverForegroundColor(winrtWU::Color { 255, 255, 255, 255 });
+		titleBar.ButtonInactiveBackgroundColor(winrtWU::Color { 0, 0, 0, 0 });
+		titleBar.ButtonInactiveForegroundColor(winrtWU::Color { 160, 255, 255, 255 });
 
 		auto displayInfo = winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView();
 
