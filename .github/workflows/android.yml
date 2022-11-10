@@ -60,7 +60,7 @@ jobs:
         echo '${{ secrets.ANDROID_KEYSTORE_FILE }}' | base64 --decode > ./_keystore.jks
         mkdir ./_package/
         $ANDROID_HOME/build-tools/29.0.3/zipalign -p 4 "./_build/android/app/build/outputs/apk/release/$filename" "./_package/jazz2.apk"
-        $ANDROID_HOME/build-tools/29.0.3/apksigner sign --ks-key-alias Main --ks "./_keystore.jks" --ks-pass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" --key-pass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" "./_package/jazz2.apk"
+        $ANDROID_HOME/build-tools/29.0.3/apksigner sign --ks-key-alias Main --ks "./_keystore.jks" --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" --key-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" "./_package/jazz2.apk"
         cp -f -r ./Content/ ./_package/Content/
         
     - name: 'Upload Package'

@@ -342,7 +342,7 @@ namespace nCine
 			return S_OK;
 		}
 
-		uint64_t now = Death::QueryUnbiasedInterruptTimeAsMs();
+		uint64_t now = Death::Environment::QueryUnbiasedInterruptTimeAsMs();
 		String newDeviceId = Death::Utf8::FromUtf16(pwstrDefaultDeviceId);
 		if (now - lastDeviceChangeTime_ > DeviceChangeLimitMs || newDeviceId != lastDeviceId_) {
 			lastDeviceChangeTime_ = now;
