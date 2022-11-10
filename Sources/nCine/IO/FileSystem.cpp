@@ -698,7 +698,7 @@ namespace nCine
 
 		wcsncpy_s(buffer, _countof(buffer), drive, _countof(drive));
 		wcsncat_s(buffer, _countof(buffer), dir, _countof(dir));
-		const unsigned long pathLength = wcsnlen(buffer, MaxPathLength);
+		size_t pathLength = wcsnlen(buffer, (size_t)MaxPathLength);
 		// If the path only contains the drive letter the trailing separator is retained
 		if (pathLength > 0 && (buffer[pathLength - 1] == L'/' || buffer[pathLength - 1] == L'\\') &&
 			(pathLength < 3 || (pathLength == 3 && buffer[1] != L':') || pathLength > 3)) {
@@ -1681,7 +1681,7 @@ namespace nCine
 		}
 		Array<wchar_t> nullTerminatedPath = Utf8::ToUtf16(path);
 		UwpApplication::GetDispatcher().RunIdleAsync([nullTerminatedPath = std::move(nullTerminatedPath)](auto args) {
-			winrt::Windows::System::Launcher::LaunchFolderPathAsync(winrt::hstring(nullTerminatedPath.data(), nullTerminatedPath.size() - 1));
+			winrt::Windows::System::Launcher::LaunchFolderPathAsync(winrt::hstring(nullTerminatedPath.data(), (winrt::hstring::size_type)(nullTerminatedPath.size() - 1)));
 		});
 		return true;
 #elif defined(DEATH_TARGET_WINDOWS)
