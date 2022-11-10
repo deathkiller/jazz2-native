@@ -67,6 +67,14 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 
 `‹Storage›` *is usually internal storage on your device. The game requires device with **Android 5.0** (or newer) and **OpenGL ES 3.0** support. Cache is recreated during intro cinematics on the first startup, so it can't be skipped.*
 
+### Xbox (Universal Windows Platform)
+* Download the game
+* Install `Jazz2.cer` certificate (the application is self-signed)
+* Install `Jazz2.msixbundle` package
+* Run the newly installed application
+* Copy original *Jazz Jackrabbit 2* directory to destination shown in the main menu
+* Run the application again
+
 
 ## Building the application
 ### Windows
@@ -108,7 +116,7 @@ cd emsdk
   * Run `./BuildAndroidSign.sh` to sign built *APKs*
     * Keystore file `Keystore.jks` must exist in repository root
 
-### Universal Windows Platform (Windows RT)
+### Xbox (Universal Windows Platform)
 * Build dependencies will be downloaded automatically by *CMake*
   * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `.\Libs\`
 * Run `.\BuildUwp.bat` to create [Microsoft Visual Studio 2019](https://www.visualstudio.com/) (or newer) solution
