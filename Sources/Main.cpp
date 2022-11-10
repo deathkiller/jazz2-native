@@ -797,20 +797,26 @@ void GameEventHandler::CheckUpdates()
 	}
 	std::memcpy(DeviceDesc + DeviceDescLength, "|Unix|", sizeof("|Unix|") - 1);
 	DeviceDescLength += sizeof("|Unix|") - 1;
-#elif defined(DEATH_TARGET_WINDOWS_RT)
-	char DeviceDesc[64]; DWORD DeviceDescLength = _countof(DeviceDesc);
-	if (!::GetComputerNameA(DeviceDesc, &DeviceDescLength)) {
-		DeviceDescLength = 0;
-	}
-	std::memcpy(DeviceDesc + DeviceDescLength, "|Windows RT|", sizeof("|Windows RT|") - 1);
-	DeviceDescLength += sizeof("|Windows RT|") - 1;
 #elif defined(DEATH_TARGET_WINDOWS)
-	auto osVersion = Death::WindowsVersion;
+	auto osVersion = Environment::WindowsVersion;
 	char DeviceDesc[64]; DWORD DeviceDescLength = _countof(DeviceDesc);
 	if (!::GetComputerNameA(DeviceDesc, &DeviceDescLength)) {
 		DeviceDescLength = 0;
 	}
+	
+#if defined(DEATH_TARGET_WINDOWS_RT)
+	const char* deviceType;
+	switch (Environment::CurrentDeviceType) {
+		case DeviceType::Desktop: deviceType = "Desktop"; break;
+		case DeviceType::Mobile: deviceType = "Mobile"; break;
+		case DeviceType::Iot: deviceType = "Iot"; break;
+		case DeviceType::Xbox: deviceType = "Xbox"; break;
+		default: deviceType = "Unknown"; break;
+	}
+	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, _countof(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i (%s)|", (int)((osVersion >> 48) & 0xffffu), (int)((osVersion >> 32) & 0xffffu), (int)(osVersion & 0xffffffffu), deviceType);
+#else
 	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, _countof(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i|", (int)((osVersion >> 48) & 0xffffu), (int)((osVersion >> 32) & 0xffffu), (int)(osVersion & 0xffffffffu));
+#endif
 #else
 	constexpr char DeviceDesc[] = "||"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
 #endif

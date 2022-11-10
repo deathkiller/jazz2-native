@@ -9,7 +9,9 @@
 #include <winrt/Windows.UI.Xaml.Controls.h>
 
 namespace winrtWAA = winrt::Windows::ApplicationModel::Activation;
+namespace winrtWAC = winrt::Windows::ApplicationModel::Core;
 namespace winrtWF = winrt::Windows::Foundation;
+namespace winrtWU = winrt::Windows::UI;
 namespace winrtWUX = winrt::Windows::UI::Xaml;
 namespace winrtWUXC = winrt::Windows::UI::Xaml::Controls;
 namespace winrtWUC = winrt::Windows::UI::Core;
