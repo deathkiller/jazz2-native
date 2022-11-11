@@ -52,7 +52,7 @@ namespace Jazz2
 		virtual float GetAmbientLight() const = 0;
 		virtual void SetAmbientLight(float value) = 0;
 
-		virtual void AddActor(const std::shared_ptr<Actors::ActorBase>& actor) = 0;
+		virtual void AddActor(std::shared_ptr<Actors::ActorBase> actor) = 0;
 
 		virtual std::shared_ptr<AudioBufferPlayer> PlaySfx(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain = 1.0f, float pitch = 1.0f) = 0;
 		virtual std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) = 0;

@@ -1,6 +1,5 @@
 ﻿#include "Uterus.h"
 #include "../../../ILevelHandler.h"
-#include "../Crab.h"
 #include "../../Player.h"
 #include "../../Explosion.h"
 #include "../../Weapons/ShotBase.h"
@@ -84,23 +83,27 @@ namespace Jazz2::Actors::Bosses
 
 	bool Uterus::OnPlayerDied()
 	{
-		_renderer.setDrawEnabled(false);
-		_state = StateWaiting;
-
-		for (int i = 0; i < _countof(_shields); i++) {
-			if (_shields[i] != nullptr) {
-				_shields[i]->DecreaseHealth(INT32_MAX);
-				_shields[i] = nullptr;
-			}
+		for (int i = 0; i < _spawnedCrabs.size(); i++) {
+			auto& crab = _spawnedCrabs[i];
+			crab->DecreaseHealth(INT32_MAX);
 		}
+		_spawnedCrabs.clear();
 
-		return true;
+		return BossBase::OnPlayerDied();
 	}
 
 	void Uterus::OnUpdate(float timeMult)
 	{
 		OnUpdateHitbox();
 		HandleBlinking(timeMult);
+
+		// Remove dead Crabs from the list
+		for (int i = 0; i < _spawnedCrabs.size(); i++) {
+			if (_spawnedCrabs[i]->GetHealth() <= 0) {
+				_spawnedCrabs.erase(&_spawnedCrabs[i]);
+				i--;
+			}
+		}
 
 		switch (_state) {
 			case StateOpen: {
@@ -121,7 +124,7 @@ namespace Jazz2::Actors::Bosses
 					float force = Random().NextFloat(-15.0f, 15.0f);
 
 					// TODO: Implement Crab spawn animation
-					std::shared_ptr<Enemies::Crab> crab = std::make_shared<Enemies::Crab>();
+					auto& crab = _spawnedCrabs.emplace_back(std::make_shared<Enemies::Crab>());
 					crab->OnActivated({
 						.LevelHandler = _levelHandler,
 						.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 4)
@@ -167,12 +170,16 @@ namespace Jazz2::Actors::Bosses
 			if (_hasShield) {
 				int shieldCount = 0;
 				for (int i = 0; i < _countof(_shields); i++) {
-					if (_shields[i] != nullptr && _shields[i]->GetHealth() > 0) {
-						if (_shields[i]->FallTime <= 0.0f) {
-							_shields[i]->MoveInstantly(pos + Vector2f(cosf(_anglePhase + _shields[i]->Phase) * 50.0f, sinf(_anglePhase + _shields[i]->Phase) * 50.0f), MoveType::Absolute | MoveType::Force);
-							_shields[i]->Recover(_anglePhase + _shields[i]->Phase);
+					if (_shields[i] != nullptr) {
+						if (_shields[i]->GetHealth() > 0) {
+							if (_shields[i]->FallTime <= 0.0f) {
+								_shields[i]->MoveInstantly(pos + Vector2f(cosf(_anglePhase + _shields[i]->Phase) * 50.0f, sinf(_anglePhase + _shields[i]->Phase) * 50.0f), MoveType::Absolute | MoveType::Force);
+								_shields[i]->Recover(_anglePhase + _shields[i]->Phase);
+							}
+							shieldCount++;
+						} else {
+							_shields[i] = nullptr;
 						}
-						shieldCount++;
 					}
 				}
 
@@ -222,13 +229,13 @@ namespace Jazz2::Actors::Bosses
 		if (found) {
 			targetPos.Y -= 100.0f;
 
-			Vector2f diff = (targetPos - _lastPos).Normalized();
-			// TODO: There is something strange (speedX == speedY == 0)...
-			Vector2f speed = (Vector2f(_speed.X, _speed.Y) + diff * 0.4f).Normalized();
-
-			float mult = (_hasShield ? 0.8f : 2.0f);
-			_lastPos.X += speed.X * mult;
-			_lastPos.Y += speed.Y * mult;
+			Vector2f diff = (targetPos - _lastPos);
+			if (diff.Length() > 40) {
+				Vector2f speed = (Vector2f(_speed.X, _speed.Y) + diff.Normalized() * 0.4f).Normalized();
+				float mult = (_hasShield ? 0.8f : 2.0f);
+				_lastPos.X += speed.X * mult;
+				_lastPos.Y += speed.Y * mult;
+			}
 		}
 	}
 
@@ -274,6 +281,16 @@ namespace Jazz2::Actors::Bosses
 		}
 
 		return EnemyBase::OnHandleCollision(other);
+	}
+
+	bool Uterus::ShieldPart::OnPerish(ActorBase* collider)
+	{
+		CreateDeathDebris(collider);
+		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
+
+		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 2), Explosion::Type::Tiny);
+
+		return EnemyBase::OnPerish(collider);
 	}
 
 	void Uterus::ShieldPart::Recover(float phase)

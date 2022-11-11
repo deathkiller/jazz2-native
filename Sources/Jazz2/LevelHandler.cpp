@@ -607,7 +607,7 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::AddActor(const std::shared_ptr<Actors::ActorBase>& actor)
+	void LevelHandler::AddActor(std::shared_ptr<Actors::ActorBase> actor)
 	{
 		actor->SetParent(_rootNode.get());
 
@@ -1027,7 +1027,7 @@ namespace Jazz2
 
 				if (cursor.first == delimiter) {
 					if (delimiterCount == index - 1) {
-						start = idx + 1;
+start = idx + 1;
 					} else if (delimiterCount == index) {
 						text = StringView(text.data() + start, idx - start);
 						break;
@@ -1059,7 +1059,7 @@ namespace Jazz2
 			isGamepad = (_pressedActions & (1ull << (16 + (int)action))) != 0;
 			return true;
 		}
-		
+
 		if (includeGamepads) {
 			switch (action) {
 				case PlayerActions::Left: if (_playerRequiredMovement.X < -0.8f && !_playerFrozenEnabled) { isGamepad = true; return true; } break;
@@ -1125,28 +1125,29 @@ namespace Jazz2
 
 	void LevelHandler::ResolveCollisions(float timeMult)
 	{
-		auto actor = _actors.begin();
-		while (actor != _actors.end()) {
-			if ((*actor)->GetState(Actors::ActorState::IsDestroyed)) {
-				if ((*actor)->CollisionProxyID != Collisions::NullNode) {
-					_collisions.DestroyProxy((*actor)->CollisionProxyID);
-					(*actor)->CollisionProxyID = Collisions::NullNode;
+		auto it = _actors.begin();
+		while (it != _actors.end()) {
+			Actors::ActorBase* actor = it->get();
+			if (actor->GetState(Actors::ActorState::IsDestroyed)) {
+				if (actor->CollisionProxyID != Collisions::NullNode) {
+					_collisions.DestroyProxy(actor->CollisionProxyID);
+					actor->CollisionProxyID = Collisions::NullNode;
 				}
 
-				actor = _actors.erase(actor);
+				it = _actors.erase(it);
 				continue;
 			}
 			
-			if ((*actor)->GetState(Actors::ActorState::IsDirty)) {
-				if ((*actor)->CollisionProxyID == Collisions::NullNode) {
+			if (actor->GetState(Actors::ActorState::IsDirty)) {
+				if (actor->CollisionProxyID == Collisions::NullNode) {
 					continue;
 				}
 
-				(*actor)->UpdateAABB();
-				_collisions.MoveProxy((*actor)->CollisionProxyID, (*actor)->AABB, (*actor)->_speed * timeMult);
-				(*actor)->SetState(Actors::ActorState::IsDirty, false);
+				actor->UpdateAABB();
+				_collisions.MoveProxy(actor->CollisionProxyID, actor->AABB, actor->_speed * timeMult);
+				actor->SetState(Actors::ActorState::IsDirty, false);
 			}
-			++actor;
+			++it;
 		}
 
 		struct UpdatePairsHelper {

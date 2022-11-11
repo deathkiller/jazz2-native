@@ -994,7 +994,7 @@ namespace Jazz2::Actors
 					//speedX = force.X;
 					_speed.X = (1.0f + std::abs(force.X)) * sign;
 					_externalForce.X = force.X * 0.6f;
-					_springCooldown = 3.0f;
+					_springCooldown = 20.0f;
 					SetState(ActorState::CanJump, false);
 
 					_wasActivelyPushing = false;
@@ -1020,7 +1020,7 @@ namespace Jazz2::Actors
 					} else {
 						_externalForce.Y = force.Y * 0.14f;
 					}
-					_springCooldown = 3.0f;
+					_springCooldown = 20.0f;
 					SetState(ActorState::CanJump, false);
 
 					if (!spring->KeepSpeedX) {
