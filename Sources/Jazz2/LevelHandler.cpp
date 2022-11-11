@@ -1057,16 +1057,21 @@ namespace Jazz2
 
 				if (cursor.first == delimiter) {
 					if (delimiterCount == index - 1) {
-start = idx + 1;
+						start = idx + 1;
 					} else if (delimiterCount == index) {
-						text = StringView(text.data() + start, idx - start);
-						break;
+						return StringView(text.data() + start, idx - start);
 					}
 					delimiterCount++;
 				}
 
 				idx = cursor.second;
 			} while (idx < textSize);
+
+			if (delimiterCount == index) {
+				return StringView(text.data() + start, text.size() - start);
+			} else {
+				return { };
+			}
 		}
 
 		return text;

@@ -412,7 +412,7 @@ namespace Death::Containers
 			std::memcpy(_large.data + currentSize, other._data, otherSize);
 
 			if (oldDeleter) oldDeleter(oldData, currentSize);
-			else delete[] _large.data;
+			else delete[] oldData;
 		}
 
 		return *this;

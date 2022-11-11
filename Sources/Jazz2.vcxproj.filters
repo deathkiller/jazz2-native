@@ -1203,6 +1203,9 @@
     <ClInclude Include="nCine\Backends\GlfwGfxDevice.h">
       <Filter>Header Files\nCine\Backends</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\CustomLevelSelectSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2041,6 +2044,9 @@
     </ClCompile>
     <ClCompile Include="nCine\Backends\GlfwKeys.cpp">
       <Filter>Source Files\nCine\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\CustomLevelSelectSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

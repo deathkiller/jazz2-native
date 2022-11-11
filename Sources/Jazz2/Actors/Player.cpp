@@ -1752,7 +1752,7 @@ namespace Jazz2::Actors
 							exitType |= ExitType::FastTransition;
 						}
 						String nextLevel;
-						if (p[4] != 0) {
+						if (p[2] != 0 && p[3] != 0) {
 							nextLevel = _levelHandler->GetLevelText(p[2], p[3], '|');
 						}
 						_levelHandler->BeginLevelChange(exitType, nextLevel);

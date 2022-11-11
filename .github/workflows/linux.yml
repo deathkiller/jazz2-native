@@ -64,6 +64,6 @@ jobs:
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3
       with:
-        name: Jazz²_linux_${{ matrix.CC }}_${{ matrix.Backend }}
+        name: Jazz2_Linux_${{ matrix.CC }}_${{ matrix.Backend }}
         path: ./_package/
         

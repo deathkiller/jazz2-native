@@ -30,6 +30,7 @@ namespace Jazz2::UI::Menu
 		void LeaveSection() override;
 		void ChangeLevel(Jazz2::LevelInitialization&& levelInit) override;
 		void ApplyPreferencesChanges(ChangedPreferencesType type) override;
+		bool ActionPressed(PlayerActions action) override;
 		bool ActionHit(PlayerActions action) override;
 
 		Vector2i GetViewSize() override {

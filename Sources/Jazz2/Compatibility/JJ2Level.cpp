@@ -352,6 +352,34 @@ namespace Jazz2::Compatibility
 		so->WriteValue<uint64_t>(0x2095A59FF0BFBBEF);
 		so->WriteValue<uint8_t>(ContentResolver::LevelFile);
 
+		// Preprocess events first, so they can change some level properties
+		for (int y = 0; y < _layers[3].Height; y++) {
+			for (int x = 0; x < _layers[3].Width; x++) {
+				auto& tileEvent = _events[x + y * _layers[3].Width];
+
+				JJ2Event eventType;
+				if (tileEvent.EventType == JJ2Event::MODIFIER_GENERATOR) {
+					// Generators are converted differently
+					uint8_t eventParams[8];
+					EventConverter::ConvertParamInt(tileEvent.TileParams, {
+						{ JJ2ParamUInt, 8 },	// Event
+						{ JJ2ParamUInt, 8 },	// Delay
+						{ JJ2ParamBool, 1 }		// Initial Delay
+					}, eventParams);
+
+					eventType = (JJ2Event)eventParams[0];
+					tileEvent.GeneratorDelay = eventParams[1];
+					tileEvent.GeneratorFlags = (uint8_t)eventParams[2];
+				} else {
+					eventType = tileEvent.EventType;
+					tileEvent.GeneratorDelay = -1;
+					tileEvent.GeneratorFlags = 0;
+				}
+
+				tileEvent.Converted = eventConverter.TryConvert(this, eventType, tileEvent.TileParams);
+			}
+		}
+
 		// Flags
 		uint16_t flags = 0;
 		if (_hasPit) {
@@ -426,15 +454,44 @@ namespace Jazz2::Compatibility
 		// Text Event Strings
 		co.WriteValue<uint8_t>(TextEventStringsCount);
 		for (int i = 0; i < TextEventStringsCount; i++) {
-			size_t textLength = _textEventStrings[i].size();
-			for (int j = 0; j < textLength; j++) {
-				if (_textEventStrings[i][j] == '@') {
-					_textEventStrings[i][j] = '\n';
+			String& text = _textEventStrings[i];
+			size_t textLength = text.size();
+
+			bool isLevelToken = false;
+			for (uint8_t textId : _levelTokenTextIds) {
+				if (i == textId) {
+					isLevelToken = true;
+					break;
 				}
 			}
 
-			co.WriteValue<uint16_t>((uint8_t)textLength);
-			co.Write(_textEventStrings[i].data(), textLength);
+			if (isLevelToken) {
+				String adjustedText = ""_s;
+				auto levelTokens = text.split('|');
+				for (int j = 0; j < levelTokens.size(); j++) {
+					if (j != 0) {
+						adjustedText += "|"_s;
+					}
+					lowercaseInPlace(levelTokens[j]);
+					LevelToken token = levelTokenConversion(levelTokens[j]);
+					if (!token.Episode.empty()) {
+						adjustedText += token.Episode + "/"_s;
+					}
+					adjustedText += token.Level;
+				}
+
+				co.WriteValue<uint16_t>((uint16_t)adjustedText.size());
+				co.Write(adjustedText.data(), adjustedText.size());
+			} else {
+				for (int j = 0; j < textLength; j++) {
+					if (text[j] == '@') {
+						text[j] = '\n';
+					}
+				}
+
+				co.WriteValue<uint16_t>((uint16_t)textLength);
+				co.Write(text.data(), textLength);
+			}
 		}
 
 		// TODO: Additional Tilesets
@@ -596,8 +653,11 @@ namespace Jazz2::Compatibility
 			for (int x = 0; x < _layers[3].Width; x++) {
 				auto& tileEvent = _events[x + y * _layers[3].Width];
 
+				// TODO: Flag 0x08 not used
 				int flags = 0;
-				if (tileEvent.Illuminate) flags |= 0x04; // Illuminated
+				if (tileEvent.Illuminate) {
+					flags |= 0x04; // Illuminated
+				}
 				if (tileEvent.Difficulty != 2 /*Hard*/) {
 					flags |= 0x10; // Difficulty: Easy
 				}
@@ -611,44 +671,12 @@ namespace Jazz2::Compatibility
 					flags |= 0x80; // Multiplayer Only
 				}
 
-				// TODO: Flag 0x08 not used
-
-				JJ2Event eventType;
-				int generatorDelay;
-				uint8_t generatorFlags;
-				if (tileEvent.EventType == JJ2Event::MODIFIER_GENERATOR) {
-					// Generators are converted differently
-					uint8_t eventParams[8];
-					EventConverter::ConvertParamInt(tileEvent.TileParams, {
-						{ JJ2ParamUInt, 8 },	// Event
-						{ JJ2ParamUInt, 8 },	// Delay
-						{ JJ2ParamBool, 1 }		// Initial Delay
-					}, eventParams);
-
-					eventType = (JJ2Event)eventParams[0];
-					generatorDelay = eventParams[1];
-					generatorFlags = (uint8_t)eventParams[2];
-				} else {
-					eventType = tileEvent.EventType;
-					generatorDelay = -1;
-					generatorFlags = 0;
-				}
-
-				ConversionResult converted = eventConverter.TryConvert(this, eventType, tileEvent.TileParams);
-
-				// If the event is unsupported or can't be converted, add it to warning list
-				if (eventType != JJ2Event::EMPTY && converted.Type == EventType::Empty) {
-					//int count;
-					//_unsupportedEvents.TryGetValue(eventType, out count);
-					//_unsupportedEvents[eventType] = (count + 1);
-				}
-
-				co.WriteValue<uint16_t>((uint16_t)converted.Type);
+				co.WriteValue<uint16_t>((uint16_t)tileEvent.Converted.Type);
 
 				bool allZeroes = true;
-				if (converted.Type != EventType::Empty) {
-					for (int i = 0; i < _countof(converted.Params); i++) {
-						if (converted.Params[i] != 0) {
+				if (tileEvent.Converted.Type != EventType::Empty) {
+					for (int i = 0; i < _countof(tileEvent.Converted.Params); i++) {
+						if (tileEvent.Converted.Params[i] != 0) {
 							allZeroes = false;
 							break;
 						}
@@ -656,23 +684,23 @@ namespace Jazz2::Compatibility
 				}
 
 				if (allZeroes) {
-					if (generatorDelay == -1) {
+					if (tileEvent.GeneratorDelay == -1) {
 						co.WriteValue<uint8_t>(flags | 0x01 /*NoParams*/);
 					} else {
 						co.WriteValue<uint8_t>(flags | 0x01 /*NoParams*/ | 0x02 /*Generator*/);
-						co.WriteValue<uint8_t>(generatorFlags);
-						co.WriteValue<uint8_t>(generatorDelay);
+						co.WriteValue<uint8_t>(tileEvent.GeneratorFlags);
+						co.WriteValue<uint8_t>(tileEvent.GeneratorDelay);
 					}
 				} else {
-					if (generatorDelay == -1) {
+					if (tileEvent.GeneratorDelay == -1) {
 						co.WriteValue<uint8_t>(flags);
 					} else {
 						co.WriteValue<uint8_t>(flags | 0x02 /*Generator*/);
-						co.WriteValue<uint8_t>(generatorFlags);
-						co.WriteValue<uint8_t>(generatorDelay);
+						co.WriteValue<uint8_t>(tileEvent.GeneratorFlags);
+						co.WriteValue<uint8_t>(tileEvent.GeneratorDelay);
 					}
 
-					co.Write(converted.Params, sizeof(converted.Params));
+					co.Write(tileEvent.Converted.Params, sizeof(tileEvent.Converted.Params));
 				}
 			}
 		}
@@ -685,6 +713,11 @@ namespace Jazz2::Compatibility
 		so->WriteValue<int32_t>(compressedSize);
 		so->WriteValue<int32_t>(co.GetSize());
 		so->Write(compressedBuffer.get(), compressedSize);
+	}
+
+	void JJ2Level::AddLevelTokenTextID(uint8_t textId)
+	{
+		_levelTokenTextIds.push_back(textId);
 	}
 
 	void JJ2Level::WriteLevelName(GrowableMemoryFile& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion)

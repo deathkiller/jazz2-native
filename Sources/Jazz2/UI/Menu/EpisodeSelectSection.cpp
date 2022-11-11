@@ -41,7 +41,7 @@ namespace Jazz2::UI::Menu
 			AddEpisode(item);
 		}
 
-		quicksort(_items.begin(), _items.end(), [](const EpisodeSelectSection::ItemData& a, const EpisodeSelectSection::ItemData& b) -> bool {
+		quicksort(_items.begin(), _items.end(), [](const ItemData& a, const ItemData& b) -> bool {
 			return (a.Description.Position < b.Description.Position);
 		});
 	}
@@ -146,12 +146,16 @@ namespace Jazz2::UI::Menu
 
 	void EpisodeSelectSection::OnDrawClipped(Canvas* canvas)
 	{
+		Vector2i viewSize = canvas->ViewSize;
+		int charOffset = 0;
+
 		if (_items.empty()) {
 			_scrollable = false;
+			_root->DrawStringShadow("No episode found!"_s, charOffset, viewSize.X * 0.5f, viewSize.Y * 0.55f, IMenuContainer::FontLayer,
+				Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.8f, 0.88f);
 			return;
 		}
 
-		Vector2i viewSize = canvas->ViewSize;
 		float bottomLine = viewSize.Y - BottomLine;
 		float availableHeight = (bottomLine - TopLine);
 		float spacing = availableHeight * 0.95f / _items.size();
@@ -167,69 +171,70 @@ namespace Jazz2::UI::Menu
 		Vector2f center = Vector2f(viewSize.X * 0.5f, TopLine + ItemHeight * 0.5f + _y);
 		float expandedAnimation2 = std::min(_expandedAnimation * 6.0f, 1.0f);
 		float expandedAnimation3 = (expandedAnimation2 * expandedAnimation2 * (3.0f - 2.0f * expandedAnimation2));
-		int charOffset = 0;
 
 		for (int i = 0; i < _items.size(); i++) {
 			_items[i].TouchY = center.Y;
 
-			if (_selectedIndex == i) {
-				float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+			if (center.Y > TopLine - ItemHeight && center.Y < bottomLine + ItemHeight) {
+				if (_selectedIndex == i) {
+					float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
-				if ((_items[i].Flags & ItemFlags::IsAvailable) == ItemFlags::IsAvailable || PreferencesCache::AllowCheatsUnlock) {
-					_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (_items[i].Description.DisplayName.size() + 3) * 0.5f * size, 4.0f * size, true);
+					if ((_items[i].Flags & ItemFlags::IsAvailable) == ItemFlags::IsAvailable || PreferencesCache::AllowCheatsUnlock) {
+						_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (_items[i].Description.DisplayName.size() + 3) * 0.5f * size, 4.0f * size, true);
 
-					Colorf nameColor = Font::RandomColor;
-					nameColor.SetAlpha(0.5f - expandedAnimation3 * 0.15f);
-					_root->DrawStringShadow(_items[i].Description.DisplayName, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
-						Alignment::Center, nameColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+						Colorf nameColor = Font::RandomColor;
+						nameColor.SetAlpha(0.5f - expandedAnimation3 * 0.15f);
+						_root->DrawStringShadow(_items[i].Description.DisplayName, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
+							Alignment::Center, nameColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
-					if ((_items[i].Flags & ItemFlags::CanContinue) == ItemFlags::CanContinue) {
-						float expandX = center.X + (_items[i].Description.DisplayName.size() + 3) * 2.8f * size + 40.0f;
-						float moveX = expandedAnimation3 * -12.0f;
-						_root->DrawStringShadow(">"_s, charOffset, expandX + moveX, center.Y, IMenuContainer::FontLayer + 20,
-							Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, 1.1f, 0.4f, 0.4f);
+						if ((_items[i].Flags & ItemFlags::CanContinue) == ItemFlags::CanContinue) {
+							float expandX = center.X + (_items[i].Description.DisplayName.size() + 3) * 2.8f * size + 40.0f;
+							float moveX = expandedAnimation3 * -12.0f;
+							_root->DrawStringShadow(">"_s, charOffset, expandX + moveX, center.Y, IMenuContainer::FontLayer + 20,
+								Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, 1.1f, 0.4f, 0.4f);
 
-						if (_expanded) {
-							float expandedAnimation4 = IMenuContainer::EaseOutElastic(_expandedAnimation) * 0.8f;
+							if (_expanded) {
+								float expandedAnimation4 = IMenuContainer::EaseOutElastic(_expandedAnimation) * 0.8f;
 
-							_root->DrawStringShadow("Restart episode"_s, charOffset, expandX + 40.0f, center.Y, IMenuContainer::FontLayer + 22,
-								Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f * std::min(1.0f, 0.4f + expandedAnimation3)), expandedAnimation4, 0.4f, 0.6f, 0.6f, 0.6f, 0.8f);
+								_root->DrawStringShadow("Restart episode"_s, charOffset, expandX + 40.0f, center.Y, IMenuContainer::FontLayer + 22,
+									Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f * std::min(1.0f, 0.4f + expandedAnimation3)), expandedAnimation4, 0.4f, 0.6f, 0.6f, 0.6f, 0.8f);
+							}
+						}
+					} else {
+						int prevEpisodeIndex = -1;
+						if (!_items[i].Description.PreviousEpisode.empty()) {
+							for (int j = 0; j < _items.size(); j++) {
+								if (i != j && _items[i].Description.PreviousEpisode == _items[j].Description.Name) {
+									prevEpisodeIndex = j;
+									break;
+								}
+							}
+						}
+
+						_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (_items[i].Description.DisplayName.size() + 3) * 0.5f * size, 4.0f * size, true);
+
+						_root->DrawStringShadow(_items[i].Description.DisplayName, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
+							Alignment::Center, Font::TransparentRandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+
+						if (prevEpisodeIndex != -1) {
+							_root->DrawStringShadow("You must complete \"" + _items[prevEpisodeIndex].Description.DisplayName + "\" first!"_s, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 20,
+								Alignment::Center, Colorf(0.66f, 0.42f, 0.32f, std::min(0.5f, 0.2f + 2.0f * _animation)), 0.7f * size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+						} else {
+							_root->DrawStringShadow("Episode is locked!"_s, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 20,
+								Alignment::Center, Colorf(0.66f, 0.42f, 0.32f, std::min(0.5f, 0.2f + 2.0f * _animation)), 0.7f * size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 						}
 					}
 				} else {
-					int prevEpisodeIndex = -1;
-					if (!_items[i].Description.PreviousEpisode.empty()) {
-						for (int j = 0; j < _items.size(); j++) {
-							if (i != j && _items[i].Description.PreviousEpisode == _items[j].Description.Name) {
-								prevEpisodeIndex = j;
-								break;
-							}
-						}
-					}
-
-					_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (_items[i].Description.DisplayName.size() + 3) * 0.5f * size, 4.0f * size, true);
-
-					_root->DrawStringShadow(_items[i].Description.DisplayName, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
-						Alignment::Center, Font::TransparentRandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
-
-					if (prevEpisodeIndex != -1) {
-						_root->DrawStringShadow("You must complete \"" + _items[prevEpisodeIndex].Description.DisplayName + "\" first!"_s, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 20,
-							Alignment::Center, Colorf(0.66f, 0.42f, 0.32f, std::min(0.5f, 0.2f + 2.0f * _animation)), 0.7f * size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
-					} else {
-						_root->DrawStringShadow("Episode is locked!"_s, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 20,
-							Alignment::Center, Colorf(0.66f, 0.42f, 0.32f, std::min(0.5f, 0.2f + 2.0f * _animation)), 0.7f * size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
-					}
+					_root->DrawStringShadow(_items[i].Description.DisplayName, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
+						Alignment::Center, Font::DefaultColor, 0.9f);
 				}
-			} else {
-				_root->DrawStringShadow(_items[i].Description.DisplayName, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
-					Alignment::Center, Font::DefaultColor, 0.9f);
-			}
 
-			if ((_items[i].Flags & (ItemFlags::IsCompleted | ItemFlags::IsAvailable)) == (ItemFlags::IsCompleted | ItemFlags::IsAvailable)) {
-				float size = (_selectedIndex == i ? 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f : 0.7f);
-				float expandX = center.X - (_items[i].Description.DisplayName.size() + 3) * 4.0f * (_selectedIndex == i ? size : 1.1f) + 10.0f;
-				_root->DrawElement("EpisodeComplete"_s, 0, expandX, center.Y - 2.0f, IMenuContainer::MainLayer + (_selectedIndex == i ? 20 : 10), Alignment::Right,
-					((_items[i].Flags & ItemFlags::CheatsUsed) == ItemFlags::CheatsUsed ? Colorf::Black : Colorf::White), size, size);
+				if ((_items[i].Flags & (ItemFlags::IsCompleted | ItemFlags::IsAvailable)) == (ItemFlags::IsCompleted | ItemFlags::IsAvailable)) {
+					float size = (_selectedIndex == i ? 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f : 0.7f);
+					float expandX = center.X - (_items[i].Description.DisplayName.size() + 3) * 4.0f * (_selectedIndex == i ? size : 1.1f) + 10.0f;
+					_root->DrawElement("EpisodeComplete"_s, 0, expandX, center.Y - 2.0f, IMenuContainer::MainLayer + (_selectedIndex == i ? 20 : 10), Alignment::Right,
+						((_items[i].Flags & ItemFlags::CheatsUsed) == ItemFlags::CheatsUsed ? Colorf::Black : Colorf::White), size, size);
+				}
 			}
 
 			center.Y += spacing;

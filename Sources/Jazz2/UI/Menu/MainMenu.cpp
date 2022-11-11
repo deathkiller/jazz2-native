@@ -423,6 +423,11 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+	bool MainMenu::ActionPressed(PlayerActions action)
+	{
+		return ((_pressedActions & (1 << (int)action)) == (1 << (int)action));
+	}
+
 	bool MainMenu::ActionHit(PlayerActions action)
 	{
 		return ((_pressedActions & ((1 << (int)action) | (1 << (16 + (int)action)))) == (1 << (int)action));

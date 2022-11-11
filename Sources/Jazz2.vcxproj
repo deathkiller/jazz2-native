@@ -341,6 +341,7 @@
     <ClInclude Include="Jazz2\UI\Menu\BeginSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\ControlsOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\ControlsSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\CustomLevelSelectSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\EpisodeSelectSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\GameplayEnhancementsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\GameplayOptionsSection.h" />
@@ -661,6 +662,7 @@
     <ClCompile Include="Jazz2\UI\Menu\AboutSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\BeginSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\ControlsOptionsSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\CustomLevelSelectSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\EpisodeSelectSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\GameplayEnhancementsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\GameplayOptionsSection.cpp" />

@@ -52,6 +52,6 @@ jobs:
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3
       with:
-        name: Jazz²_windows_${{ matrix.Platform }}
+        name: Jazz2_Windows_${{ matrix.Platform }}
         path: ./_package/
         
