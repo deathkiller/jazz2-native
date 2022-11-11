@@ -53,8 +53,9 @@ jobs:
         $certBytes = [System.Convert]::FromBase64String("${{ secrets.WINDOWS_CERTIFICATE_UTILS }}")
         $certPath = Join-Path -Path $currentDirectory -ChildPath "_certUtils.7z"
         [IO.File]::WriteAllBytes("$certPath", $certBytes)
-        7z x "$certPath" -o"_certUtils"
+        7z x "$certPath" -o"_certUtils" -p"${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}"
         
+        .\_certUtils\CertificateUtils.exe /import /user
         .\_certUtils\CertificateUtils.exe /sign ".\_package\Jazz2.exe"
         
     - name: 'Upload Package'
