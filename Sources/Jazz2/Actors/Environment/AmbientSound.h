@@ -17,12 +17,10 @@ namespace Jazz2::Actors::Environment
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
-		void OnUpdate(float timeMult) override;
 
 	private:
 		std::shared_ptr<AudioBufferPlayer> _sound;
 		uint8_t _sfx;
 		float _gain;
-		float _delay;
 	};
 }

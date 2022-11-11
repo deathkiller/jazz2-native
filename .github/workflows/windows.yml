@@ -49,6 +49,14 @@ jobs:
         Move-Item -Path ".\_build\Jazz2.exe" -Destination ".\_package\Jazz2.exe"
         Move-Item -Path ".\Content\" -Destination ".\_package\Content\"
         
+        $currentDirectory = Get-Location
+        $certBytes = [System.Convert]::FromBase64String("${{ secrets.WINDOWS_CERTIFICATE_UTILS }}")
+        $certPath = Join-Path -Path $currentDirectory -ChildPath "_certUtils.7z"
+        [IO.File]::WriteAllBytes("$certPath", $certBytes)
+        7z x "$certPath" -o"_certUtils"
+        
+        ".\_certUtils\CertificateUtils.exe" /sign ".\_package\Jazz2.exe"
+        
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3
       with:

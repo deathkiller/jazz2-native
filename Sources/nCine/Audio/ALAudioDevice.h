@@ -52,8 +52,7 @@ namespace nCine
 		void freezePlayers() override;
 		void unfreezePlayers() override;
 
-		unsigned int nextAvailableSource() override;
-		void registerPlayer(IAudioPlayer* player) override;
+		unsigned int registerPlayer(IAudioPlayer* player) override;
 		void unregisterPlayer(IAudioPlayer* player) override;
 		void updatePlayers() override;
 		
@@ -75,8 +74,10 @@ namespace nCine
 		ALCcontext* context_;
 		/// The listener gain value (master volume)
 		ALfloat gain_;
-		/// The sources pool
+		/// The array of all audio sources
 		ALuint sources_[MaxSources];
+		/// The array of currently inactive audio sources
+		SmallVector<ALuint, MaxSources> sourcePool_;
 		/// The array of currently active audio players
 		SmallVector<IAudioPlayer*, MaxSources> players_;
 		/// native device frequency

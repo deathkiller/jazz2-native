@@ -53,10 +53,8 @@ namespace nCine
 		/// Resumes every player previoulsy "frozen" to a playing state
 		virtual void unfreezePlayers() = 0;
 
-		/// Returns the next available source index available for playing
-		virtual unsigned int nextAvailableSource() = 0;
 		/// Registers a new stream player for buffer update
-		virtual void registerPlayer(IAudioPlayer* player) = 0;
+		virtual unsigned int registerPlayer(IAudioPlayer* player) = 0;
 		/// Unregisters a stream player
 		virtual void unregisterPlayer(IAudioPlayer* player) = 0;
 		/// Updates players state (and buffer queue in the case of stream players)
@@ -100,10 +98,7 @@ namespace nCine
 		void freezePlayers() override { }
 		void unfreezePlayers() override { }
 
-		unsigned int nextAvailableSource() override {
-			return UnavailableSource;
-		}
-		void registerPlayer(IAudioPlayer* player) override { }
+		unsigned int registerPlayer(IAudioPlayer* player) override { return UnavailableSource; }
 		void unregisterPlayer(IAudioPlayer* player) override { }
 		void updatePlayers() override {}
 		void updateListener(const Vector3f& position, const Vector3f& velocity) override { }

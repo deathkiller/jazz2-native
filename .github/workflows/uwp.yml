@@ -32,7 +32,7 @@ jobs:
         git clone https://github.com/deathkiller/jazz2-libraries.git .
         git checkout
         
-    - name: 'Build'
+    - name: 'Configure CMake'
       run: |
         $currentDirectory = Get-Location
         $certBytes = [System.Convert]::FromBase64String("${{ secrets.UWP_CERTIFICATE_FILE }}")
@@ -40,7 +40,9 @@ jobs:
         [IO.File]::WriteAllBytes("$certPath", $certBytes)
         
         cmake -A ${{ matrix.Platform }} -B ".\_build\" -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION="10.0" -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.Platform }} -DNCINE_UWP_CERTIFICATE_PATH="$certPath" -DNCINE_UWP_CERTIFICATE_PASSWORD="${{ secrets.UWP_CERTIFICATE_PASSWORD }}"
-        
+
+    - name: 'Build'
+      run: |
         cd .\_build\
         msbuild ".\Jazz2.sln" -p:Configuration=${{ matrix.BuildType }} -p:Platform=${{ matrix.Platform }} -p:UapAppxPackageBuildMode="Sideload" -p:AppxBundlePlatforms="${{ matrix.Platform }}" -p:AppxPackageDir=".\_out\"
 

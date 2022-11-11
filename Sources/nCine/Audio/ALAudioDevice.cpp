@@ -8,6 +8,8 @@
 #	include <Utf8.h>
 #endif
 
+using namespace Death;
+
 namespace nCine
 {
 	///////////////////////////////////////////////////////////
@@ -15,7 +17,7 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	ALAudioDevice::ALAudioDevice()
-		: device_(nullptr), context_(nullptr), gain_(1.0f), deviceName_(nullptr), nativeFreq_(44100)
+		: device_(nullptr), context_(nullptr), gain_(1.0f), sources_ { }, deviceName_(nullptr), nativeFreq_(44100)
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		, alcReopenDeviceSOFT_(nullptr), pEnumerator_(nullptr), lastDeviceChangeTime_(0), shouldRecreate_(false)
 #endif
@@ -50,6 +52,10 @@ namespace nCine
 		const ALenum error = alGetError();
 		if (error != AL_NO_ERROR) {
 			LOGE_X("alGenSources failed: 0x%x", error);
+		}
+
+		for (int i = MaxSources - 1; i >= 0; i--) {
+			sourcePool_.push_back(sources_[i]);
 		}
 
 		alDistanceModel(AL_LINEAR_DISTANCE_CLAMPED);
@@ -99,9 +105,9 @@ namespace nCine
 
 	const IAudioPlayer* ALAudioDevice::player(unsigned int index) const
 	{
-		if (index < players_.size())
+		if (index < players_.size()) {
 			return players_[index];
-
+		}
 		return nullptr;
 	}
 
@@ -164,31 +170,30 @@ namespace nCine
 		}
 	}
 
-	unsigned int ALAudioDevice::nextAvailableSource()
+	unsigned int ALAudioDevice::registerPlayer(IAudioPlayer* player)
 	{
-		ALint sourceState;
-
-		for (ALuint sourceId : sources_) {
-			alGetSourcei(sourceId, AL_SOURCE_STATE, &sourceState);
-			if (sourceState != AL_PLAYING && sourceState != AL_PAUSED)
-				return sourceId;
+		if (sourcePool_.empty()) {
+			return UnavailableSource;
 		}
 
-		return UnavailableSource;
-	}
-
-	void ALAudioDevice::registerPlayer(IAudioPlayer* player)
-	{
-		ASSERT(player);
-		ASSERT(players_.size() < MaxSources);
+		ALuint sourceId = sourcePool_.pop_back_val();
 
 		if (players_.size() < MaxSources) {
 			players_.push_back(player);
 		}
+
+		return sourceId;
 	}
 
 	void ALAudioDevice::unregisterPlayer(IAudioPlayer* player)
 	{
+		if (player->sourceId_ == UnavailableSource) {
+			return;
+		}
+
+		sourcePool_.push_back(player->sourceId_);
+		player->sourceId_ = UnavailableSource;
+
 		auto it = players_.begin();
 		while (it != players_.end()) {
 			if (*it == player) {
@@ -342,8 +347,8 @@ namespace nCine
 			return S_OK;
 		}
 
-		uint64_t now = Death::Environment::QueryUnbiasedInterruptTimeAsMs();
-		String newDeviceId = Death::Utf8::FromUtf16(pwstrDefaultDeviceId);
+		uint64_t now = Environment::QueryUnbiasedInterruptTimeAsMs();
+		String newDeviceId = Utf8::FromUtf16(pwstrDefaultDeviceId);
 		if (now - lastDeviceChangeTime_ > DeviceChangeLimitMs || newDeviceId != lastDeviceId_) {
 			lastDeviceChangeTime_ = now;
 			lastDeviceId_ = std::move(newDeviceId);
