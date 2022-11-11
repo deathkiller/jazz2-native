@@ -49,18 +49,6 @@ jobs:
         Move-Item -Path ".\_build\Jazz2.exe" -Destination ".\_package\Jazz2.exe"
         Move-Item -Path ".\Content\" -Destination ".\_package\Content\"
         
-        $currentDirectory = Get-Location
-        $certBytes = [System.Convert]::FromBase64String("${{ secrets.WINDOWS_CERTIFICATE_UTILS }}")
-        $certPath = Join-Path -Path $currentDirectory -ChildPath "_certUtils.7z"
-        [IO.File]::WriteAllBytes("$certPath", $certBytes)
-        7z x "$certPath" -o"_certUtils" -p"${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}"
-        
-        echo "Signing executable file..."
-        #.\_certUtils\CertificateUtils.exe /import /user
-        Import-PfxCertificate -FilePath ".\_certUtils\Certificates\Root.pfx" -CertStoreLocation Cert:\CurrentUser\Root -Password (ConvertTo-SecureString -String "${{ secrets.WINDOWS_CERTIFICATE_PASSWORD_2 }}" -Force -AsPlainText)
-        #Import-PfxCertificate -FilePath ".\_certUtils\Certificates\Development.pfx" -CertStoreLocation Cert:\CurrentUser\My -Password (ConvertTo-SecureString -String "${{ secrets.WINDOWS_CERTIFICATE_PASSWORD_2 }}" -Force -AsPlainText)
-        .\_certUtils\CertificateUtils.exe /sign ".\_package\Jazz2.exe"
-        
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3
       with:
