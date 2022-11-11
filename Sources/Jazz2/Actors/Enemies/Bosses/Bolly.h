@@ -15,7 +15,6 @@ namespace Jazz2::Actors::Bosses
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		bool OnActivatedBoss() override;
-		bool OnPlayerDied() override;
 		void OnUpdate(float timeMult) override;
 		bool OnPerish(ActorBase* collider) override;
 

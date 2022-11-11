@@ -101,7 +101,7 @@ namespace Jazz2
 		void OnKeyReleased(const KeyboardEvent& event) override;
 		void OnTouchEvent(const TouchEvent& event) override;
 
-		void AddActor(const std::shared_ptr<Actors::ActorBase>& actor) override;
+		void AddActor(std::shared_ptr<Actors::ActorBase> actor) override;
 
 		std::shared_ptr<AudioBufferPlayer> PlaySfx(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain = 1.0f, float pitch = 1.0f) override;
 		std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;

@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "BossBase.h"
+#include "../Crab.h"
 
 namespace Jazz2::Actors::Bosses
 {
@@ -42,12 +43,14 @@ namespace Jazz2::Actors::Bosses
 			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 			void OnUpdate(float timeMult) override;
 			void OnUpdateHitbox() override;
+			bool OnPerish(ActorBase* collider) override;
 		};
 
 		int _state;
 		float _stateTime;
 		uint8_t _endText;
 		std::shared_ptr<ShieldPart> _shields[ShieldPartCount];
+		SmallVector<std::shared_ptr<Enemies::Crab>, 0> _spawnedCrabs;
 		Vector2f _originPos, _lastPos;
 		float _spawnCrabTime;
 		float _anglePhase;

@@ -91,7 +91,7 @@ namespace Jazz2::Actors::Weapons
 			auto tiles = _levelHandler->TileMap();
 			if (tiles != nullptr) {
 				AABBf aabb = AABBf(_pos.X - 34, _pos.Y - 34, _pos.X + 34, _pos.Y + 34);
-				TileCollisionParams params = { TileDestructType::Weapon, false, WeaponType::TNT, 8 };
+				TileCollisionParams params = { TileDestructType::Weapon | TileDestructType::IgnoreSolidTiles, false, WeaponType::TNT, 8 };
 				tiles->IsTileEmpty(aabb, params);
 				if (params.TilesDestroyed > 0) {
 					if (auto player = dynamic_cast<Player*>(_owner.get())) {

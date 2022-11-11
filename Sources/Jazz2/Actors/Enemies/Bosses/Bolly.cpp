@@ -99,12 +99,6 @@ namespace Jazz2::Actors::Bosses
 		return true;
 	}
 
-	bool Bolly::OnPlayerDied()
-	{
-		DecreaseHealth(INT32_MAX);
-		return true;
-	}
-
 	void Bolly::OnUpdate(float timeMult)
 	{
 		HandleBlinking(timeMult);

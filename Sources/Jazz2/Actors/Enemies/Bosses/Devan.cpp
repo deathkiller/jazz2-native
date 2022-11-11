@@ -58,14 +58,6 @@ namespace Jazz2::Actors::Bosses
 		return true;
 	}
 
-	bool Devan::OnPlayerDied()
-	{
-		SetState(ActorState::CollideWithOtherActors, false);
-		_renderer.setDrawEnabled(false);
-
-		return true;
-	}
-
 	void Devan::OnUpdate(float timeMult)
 	{
 		if (_isDemon) {
