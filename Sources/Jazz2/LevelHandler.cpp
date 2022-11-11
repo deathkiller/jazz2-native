@@ -317,8 +317,6 @@ namespace Jazz2
 						}
 					}
 #endif
-
-					constexpr int ActivateTileRange = 26;
 					tx1 -= ActivateTileRange;
 					ty1 -= ActivateTileRange;
 					tx2 += ActivateTileRange;
@@ -969,6 +967,38 @@ namespace Jazz2
 		WarpCameraToTarget(_players[0]->shared_from_this());
 
 		if (_difficulty != GameDifficulty::Multiplayer) {
+			// Despawn all objects that are not in inner range (not outer ranger that is usually used for deactivation)
+			// to avoid duplication of objects that are spawned near player spawn
+			if (!_players.empty()) {
+				auto& pos = _players[0]->GetPos();
+				int tx1 = (int)pos.X / Tiles::TileSet::DefaultTileSize;
+				int ty1 = (int)pos.Y / Tiles::TileSet::DefaultTileSize;
+				int tx2 = tx1;
+				int ty2 = ty1;
+
+				tx1 -= ActivateTileRange;
+				ty1 -= ActivateTileRange;
+				tx2 += ActivateTileRange;
+				ty2 += ActivateTileRange;
+
+				for (auto& actor : _actors) {
+					if ((actor->_state & (Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator)) != Actors::ActorState::None) {
+						Vector2i originTile = actor->_originTile;
+						if (originTile.X < tx1 || originTile.Y < ty1 || originTile.X > tx2 || originTile.Y > ty2) {
+							if (actor->OnTileDeactivated()) {
+								if ((actor->_state & Actors::ActorState::IsFromGenerator) == Actors::ActorState::IsFromGenerator) {
+									_eventMap->ResetGenerator(originTile.X, originTile.Y);
+								}
+
+								_eventMap->Deactivate(originTile.X, originTile.Y);
+
+								actor->_state |= Actors::ActorState::IsDestroyed;
+							}
+						}
+					}
+				}
+			}
+
 			_eventMap->RollbackToCheckpoint();
 		}
 	}

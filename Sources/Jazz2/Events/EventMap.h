@@ -71,5 +71,6 @@ namespace Jazz2::Events
 		SmallVector<GeneratorInfo, 0> _generators;
 		SmallVector<SpawnPoint, 0> _spawnPoints;
 		SmallVector<WarpTarget, 0> _warpTargets;
+		bool _checkpointCreated;
 	};
 }

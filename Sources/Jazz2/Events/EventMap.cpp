@@ -10,7 +10,8 @@ namespace Jazz2::Events
 	EventMap::EventMap(ILevelHandler* levelHandler, Vector2i layoutSize)
 		:
 		_levelHandler(levelHandler),
-		_layoutSize(layoutSize)
+		_layoutSize(layoutSize),
+		_checkpointCreated(false)
 	{
 	}
 
@@ -182,6 +183,12 @@ namespace Jazz2::Events
 					}
 				}
 			}
+		}
+
+		if (!_checkpointCreated) {
+			// Create checkpoint after first call to ActivateEvents() to avoid duplication of objects that are spawned near player spawn
+			std::memcpy(_eventLayoutForRollback.data(), _eventLayout.data(), _eventLayout.size() * sizeof(EventTile));
+			_checkpointCreated = true;
 		}
 	}
 
@@ -389,8 +396,6 @@ namespace Jazz2::Events
 				}
 			}
 		}
-
-		std::memcpy(_eventLayoutForRollback.data(), _eventLayout.data(), _eventLayout.size() * sizeof(EventTile));
 	}
 
 	void EventMap::AddWarpTarget(uint16_t id, int x, int y)
