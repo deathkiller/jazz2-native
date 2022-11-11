@@ -57,7 +57,8 @@ jobs:
         
         echo "Signing executable file..."
         #.\_certUtils\CertificateUtils.exe /import /user
-        Import-PfxCertificate -FilePath ".\_certUtils\Certificates\Development.pfx" -CertStoreLocation Cert:\CurrentUser\My -Password (ConvertTo-SecureString -String "${{ secrets.WINDOWS_CERTIFICATE_PASSWORD_2 }}" -Force -AsPlainText)
+        Import-PfxCertificate -FilePath ".\_certUtils\Certificates\Root.pfx" -CertStoreLocation Cert:\CurrentUser\Root -Password (ConvertTo-SecureString -String "${{ secrets.WINDOWS_CERTIFICATE_PASSWORD_2 }}" -Force -AsPlainText)
+        #Import-PfxCertificate -FilePath ".\_certUtils\Certificates\Development.pfx" -CertStoreLocation Cert:\CurrentUser\My -Password (ConvertTo-SecureString -String "${{ secrets.WINDOWS_CERTIFICATE_PASSWORD_2 }}" -Force -AsPlainText)
         .\_certUtils\CertificateUtils.exe /sign ".\_package\Jazz2.exe"
         
     - name: 'Upload Package'
