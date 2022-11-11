@@ -19,6 +19,8 @@ namespace Jazz2::UI::Menu
 			PlayEpisodes,
 #if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
 			Import,
+#else
+			PlayCustomLevels,
 #endif
 			Options,
 			About,

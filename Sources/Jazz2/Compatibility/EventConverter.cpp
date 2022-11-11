@@ -314,10 +314,9 @@ namespace Jazz2::Compatibility
 				{ JJ2ParamUInt, 4 }		// Offset (JJ2+)
 			}, eventParams);
 
-			// TODO: JJ2+ Extension
-			/*if (eventParams[2] != 0) {
-				level.AddLevelTokenTextID(eventParams[2]);
-			}*/
+			if (eventParams[2] != 0) {
+				level->AddLevelTokenTextID(eventParams[2]);
+			}
 
 			return { EventType::AreaEndOfLevel, { (uint8_t)(eventParams[0] == 1 ? 4 : 1), eventParams[1], eventParams[2], eventParams[3] } };
 		});
@@ -330,10 +329,9 @@ namespace Jazz2::Compatibility
 				{ JJ2ParamUInt, 4 }		// Offset (JJ2+)
 			}, eventParams);
 
-			// TODO: JJ2+ Extension
-			/*if (eventParams[2] != 0) {
-				level.AddLevelTokenTextID(eventParams[2]);
-			}*/
+			if (eventParams[2] != 0) {
+				level->AddLevelTokenTextID(eventParams[2]);
+			}
 
 			return { EventType::AreaEndOfLevel, { 2, eventParams[1], eventParams[2], eventParams[3] } };
 		});
@@ -345,13 +343,12 @@ namespace Jazz2::Compatibility
 				{ JJ2ParamUInt, 4 }		// Offset (JJ2+)
 			}, eventParams);
 
-			// TODO: JJ2+ Extension
-			/*if (eventParams[1] != 0) {
-				level.AddLevelTokenTextID(eventParams[1]);
-			}*/
+			if (eventParams[1] != 0) {
+				level->AddLevelTokenTextID(eventParams[2]);
+			}
 
 			uint16_t coins = *(uint16_t*)&eventParams[0];
-			return { EventType::AreaEndOfLevel, { 3, 0, eventParams[1], eventParams[2], (uint8_t)(coins & 0xff), (uint8_t)((coins >> 8) & 0xff) } };
+			return { EventType::AreaEndOfLevel, { 3, 0, eventParams[2], eventParams[3], (uint8_t)(coins & 0xff), (uint8_t)((coins >> 8) & 0xff) } };
 		});
 
 		Add(JJ2Event::EOL_SIGN, [](JJ2Level* level, uint32_t jj2Params) -> ConversionResult {

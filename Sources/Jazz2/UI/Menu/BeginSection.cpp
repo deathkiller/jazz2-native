@@ -1,4 +1,5 @@
 ﻿#include "BeginSection.h"
+#include "CustomLevelSelectSection.h"
 #include "EpisodeSelectSection.h"
 #include "StartGameOptionsSection.h"
 #include "OptionsSection.h"
@@ -28,6 +29,7 @@ namespace Jazz2::UI::Menu
 #	endif
 #else
 		_items[(int)Item::PlayEpisodes].Name = "Play Episodes"_s;
+		_items[(int)Item::PlayCustomLevels].Name = "Play Custom Levels"_s;
 #endif
 		_items[(int)Item::Options].Name = "Options"_s;
 		_items[(int)Item::About].Name = "About"_s;
@@ -223,6 +225,13 @@ namespace Jazz2::UI::Menu
 			case (int)Item::Import:
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				_root->SwitchToSection<ImportSection>();
+				break;
+#else
+			case (int)Item::PlayCustomLevels:
+				if (_isVerified) {
+					_root->PlaySfx("MenuSelect"_s, 0.6f);
+					_root->SwitchToSection<CustomLevelSelectSection>();
+				}
 				break;
 #endif
 			case (int)Item::Options:

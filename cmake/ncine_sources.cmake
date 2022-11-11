@@ -232,6 +232,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/AboutSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/BeginSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ControlsOptionsSection.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CustomLevelSelectSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/EpisodeSelectSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GameplayOptionsSection.cpp

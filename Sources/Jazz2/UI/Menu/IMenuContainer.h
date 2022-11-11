@@ -36,6 +36,7 @@ namespace Jazz2::UI::Menu
 		virtual void LeaveSection() = 0;
 		virtual void ChangeLevel(Jazz2::LevelInitialization&& levelInit) = 0;
 		virtual void ApplyPreferencesChanges(ChangedPreferencesType type) = 0;
+		virtual bool ActionPressed(PlayerActions action) = 0;
 		virtual bool ActionHit(PlayerActions action) = 0;
 
 		virtual Vector2i GetViewSize() = 0;

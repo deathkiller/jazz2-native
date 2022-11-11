@@ -279,6 +279,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/AboutSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/BeginSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ControlsOptionsSection.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CustomLevelSelectSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/EpisodeSelectSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GameplayEnhancementsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GameplayOptionsSection.h
