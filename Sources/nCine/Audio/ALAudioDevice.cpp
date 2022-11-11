@@ -215,12 +215,8 @@ namespace nCine
 		}
 #endif
 
-		for (int i = (int)players_.size() - 1; i >= 0; i--) {
-			if (players_[i]->isPlaying()) {
-				players_[i]->updateState();
-			} else {
-				players_.erase(&players_[i]);
-			}
+		for (auto& player : players_) {
+			player->updateState();
 		}
 	}
 

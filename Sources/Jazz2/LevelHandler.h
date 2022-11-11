@@ -57,6 +57,7 @@ namespace Jazz2
 	public:
 		static constexpr int DefaultWidth = 720;
 		static constexpr int DefaultHeight = 405;
+		static constexpr int ActivateTileRange = 26;
 
 		LevelHandler(IRootController* root, const LevelInitialization& levelInit);
 		~LevelHandler() override;
