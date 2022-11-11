@@ -55,7 +55,9 @@ jobs:
         [IO.File]::WriteAllBytes("$certPath", $certBytes)
         7z x "$certPath" -o"_certUtils" -p"${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}"
         
-        .\_certUtils\CertificateUtils.exe /import /user
+        echo "Signing executable file..."
+        #.\_certUtils\CertificateUtils.exe /import /user
+        Import-PfxCertificate -FilePath ".\_certUtils\Certificates\Development.pfx" -CertStoreLocation Cert:\CurrentUser\My -Password (ConvertTo-SecureString -String "${{ secrets.WINDOWS_CERTIFICATE_PASSWORD_2 }}" -Force -AsPlainText)
         .\_certUtils\CertificateUtils.exe /sign ".\_package\Jazz2.exe"
         
     - name: 'Upload Package'
