@@ -15,19 +15,19 @@ jobs:
         include:
         - BuildType: Release
           Backend: GLFW
-          SharewareDemo: OFF
+          Mode: Standard
           
         - BuildType: Release
           Backend: GLFW
-          SharewareDemo: ON
+          Mode: SharewareDemo
           
         - BuildType: Release
           Backend: SDL2
-          SharewareDemo: OFF
+          Mode: Standard
           
         - BuildType: Release
           Backend: SDL2
-          SharewareDemo: ON
+          Mode: SharewareDemo
 
     runs-on: 'ubuntu-latest'
 
@@ -49,12 +49,18 @@ jobs:
 
     - name: 'Configure CMake'
       run: |
+        case "${{ matrix.Mode }}" in
+          Standard ) sharewareDemo="OFF" ;;
+          SharewareDemo ) sharewareDemo="ON" ;;
+          * ) exit 1 ;;
+        esac
+        
         export OS=emscripten
         export CC=emcc
         
         source ../emsdk/emsdk_env.sh
         
-        emcmake cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D SHAREWARE_DEMO_ONLY=${{ matrix.SharewareDemo }}
+        emcmake cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D SHAREWARE_DEMO_ONLY=$sharewareDemo
 
     - name: 'Build'
       run: |
