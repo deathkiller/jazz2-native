@@ -14,8 +14,17 @@ jobs:
       matrix:
         include:
         - BuildType: Release
+          Backend: GLFW
+          SharewareDemo: OFF
+          
+        - BuildType: Release
+          Backend: GLFW
+          SharewareDemo: ON
+          
+        - BuildType: Release
           Backend: SDL2
           SharewareDemo: OFF
+          
         - BuildType: Release
           Backend: SDL2
           SharewareDemo: ON

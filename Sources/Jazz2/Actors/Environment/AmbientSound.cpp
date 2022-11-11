@@ -5,8 +5,6 @@
 namespace Jazz2::Actors::Environment
 {
 	AmbientSound::AmbientSound()
-		:
-		_delay(30.0f)
 	{
 	}
 
@@ -31,26 +29,17 @@ namespace Jazz2::Actors::Environment
 
 		async_await RequestMetadataAsync("Common/AmbientSound"_s);
 		
-		async_return true;
-	}
-
-	void AmbientSound::OnUpdate(float timeMult)
-	{
-		// TODO: Delay was added to avoid weird issues in "02_castle1n"
-		if (_delay > 0.0f) {
-			_delay -= timeMult;
-			if (_delay <= 0.0f) {
-				switch (_sfx) {
-					case 0: _sound = PlaySfx("AmbientWind"_s, _gain); break;
-					case 1: _sound = PlaySfx("AmbientFire"_s, _gain); break;
-					case 2: _sound = PlaySfx("AmbientScienceNoise"_s, _gain); break;
-				}
-
-				// TODO: Fade-in
-				if (_sound != nullptr) {
-					_sound->setLooping(true);
-				}
-			}
+		switch (_sfx) {
+			case 0: _sound = PlaySfx("AmbientWind"_s, _gain); break;
+			case 1: _sound = PlaySfx("AmbientFire"_s, _gain); break;
+			case 2: _sound = PlaySfx("AmbientScienceNoise"_s, _gain); break;
 		}
+
+		// TODO: Fade-in
+		if (_sound != nullptr) {
+			_sound->setLooping(true);
+		}
+
+		async_return true;
 	}
 }

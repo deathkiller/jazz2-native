@@ -27,13 +27,7 @@ namespace nCine
 
 	AudioStreamPlayer::~AudioStreamPlayer()
 	{
-		if (state_ != PlayerState::Stopped) {
-			audioStream_.stop(sourceId_);
-		}
-
-		// Force unregister to allow to destroy this player immediately
-		IAudioDevice& device = theServiceLocator().audioDevice();
-		device.unregisterPlayer(this);
+		stop();
 	}
 
 	///////////////////////////////////////////////////////////
@@ -42,46 +36,33 @@ namespace nCine
 
 	bool AudioStreamPlayer::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
-		if (state_ != PlayerState::Stopped)
+		if (state_ != PlayerState::Stopped) {
 			audioStream_.stop(sourceId_);
+		}
 
-		const bool hasLoaded = audioStream_.loadFromMemory(bufferPtr, bufferSize);
-		if (hasLoaded == false)
-			return false;
-
-		//setName(bufferName);
-		return true;
+		return audioStream_.loadFromMemory(bufferPtr, bufferSize);
 	}
 
 	bool AudioStreamPlayer::loadFromFile(const char* filename)
 	{
-		if (state_ != PlayerState::Stopped)
+		if (state_ != PlayerState::Stopped) {
 			audioStream_.stop(sourceId_);
+		}
 
-		const bool hasLoaded = audioStream_.loadFromFile(filename);
-		if (hasLoaded == false)
-			return false;
-
-		//setName(filename);
-		return true;
+		return audioStream_.loadFromFile(filename);
 	}
 
 	void AudioStreamPlayer::play()
 	{
 		IAudioDevice& device = theServiceLocator().audioDevice();
-		const bool canRegisterPlayer = (device.numPlayers() < device.maxNumPlayers());
 
 		switch (state_) {
 			case PlayerState::Initial:
-			case PlayerState::Stopped:
-			{
-				if (!canRegisterPlayer)
-					break;
-
-				const unsigned int source = device.nextAvailableSource();
+			case PlayerState::Stopped: {
+				const unsigned int source = device.registerPlayer(this);
 				if (source == IAudioDevice::UnavailableSource) {
 					LOGW("No more available audio sources for playing");
-					return;
+					break;
 				}
 				sourceId_ = source;
 
@@ -100,23 +81,13 @@ namespace nCine
 
 				alSourcePlay(sourceId_);
 				state_ = PlayerState::Playing;
-
-				device.registerPlayer(this);
 				break;
 			}
-			case PlayerState::Playing:
-				break;
-			case PlayerState::Paused:
-			{
-				if (!canRegisterPlayer)
-					break;
-
+			case PlayerState::Paused: {
 				updateFilters();
 
 				alSourcePlay(sourceId_);
 				state_ = PlayerState::Playing;
-
-				device.registerPlayer(this);
 				break;
 			}
 		}
@@ -125,29 +96,19 @@ namespace nCine
 	void AudioStreamPlayer::pause()
 	{
 		switch (state_) {
-			case PlayerState::Initial:
-			case PlayerState::Stopped:
-				break;
-			case PlayerState::Playing:
-			{
+			case PlayerState::Playing: {
 				alSourcePause(sourceId_);
 				state_ = PlayerState::Paused;
 				break;
 			}
-			case PlayerState::Paused:
-				break;
 		}
 	}
 
 	void AudioStreamPlayer::stop()
 	{
 		switch (state_) {
-			case PlayerState::Initial:
-			case PlayerState::Stopped:
-				break;
 			case PlayerState::Playing:
-			case PlayerState::Paused:
-			{
+			case PlayerState::Paused: {
 				// Stop the source then unqueue every buffer
 				audioStream_.stop(sourceId_);
 				// Detach the buffer from source
@@ -157,11 +118,13 @@ namespace nCine
 					alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
 				}
 #endif
-				sourceId_ = 0;
 				state_ = PlayerState::Stopped;
 				break;
 			}
 		}
+
+		IAudioDevice& device = theServiceLocator().audioDevice();
+		device.unregisterPlayer(this);
 	}
 
 	void AudioStreamPlayer::setLooping(bool isLooping)
@@ -183,8 +146,10 @@ namespace nCine
 					alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
 				}
 #endif
-				sourceId_ = 0;
 				state_ = PlayerState::Stopped;
+
+				IAudioDevice& device = theServiceLocator().audioDevice();
+				device.unregisterPlayer(this);
 			}
 		}
 	}

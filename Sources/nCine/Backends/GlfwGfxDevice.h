@@ -2,6 +2,10 @@
 
 #if defined(WITH_GLFW)
 
+#include "../Primitives/Vector2.h"
+#include "../Graphics/IGfxDevice.h"
+#include "../Graphics/DisplayMode.h"
+
 #if defined(_MSC_VER) && defined(__has_include)
 #	if __has_include("../../../Libs/Includes/GL/glew.h")
 #		define __HAS_LOCAL_GLEW
@@ -18,12 +22,12 @@
 #		define GLEW_NO_GLU
 #		include <GL/glew.h>
 #	endif
-#	include <glfw3.h>
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+#		include <GLFW/glfw3.h>
+#	else
+#		include <glfw3.h>
+#	endif
 #endif
-
-#include "../Primitives/Vector2.h"
-#include "../Graphics/IGfxDevice.h"
-#include "../Graphics/DisplayMode.h"
 
 namespace nCine
 {
