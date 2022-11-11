@@ -48,8 +48,8 @@ jobs:
       run: |
         export CC=${{ matrix.CC }}
         export CXX=${{ matrix.CXX }}
-
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }}
+        
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_GIT_VERSION=ON
 
     - name: 'Build'
       run: |

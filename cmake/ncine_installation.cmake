@@ -20,7 +20,7 @@ set(CPACK_PACKAGE_DESCRIPTION ${NCINE_APP_DESCRIPTION})
 #set(CPACK_PACKAGE_HOMEPAGE_URL ${NCINE_HOMEPAGE})
 set(CPACK_PACKAGE_VERSION ${NCINE_VERSION})
 
-string(REGEX MATCHALL "[0-9]+" _versionComponents "${NCINE_VERSION}")
+string(REPLACE "." ";" _versionComponents ${NCINE_VERSION})
 list(LENGTH _versionComponents _versionComponentsLength)
 if (${_versionComponentsLength} GREATER 0)
 	list(GET _versionComponents 0 CPACK_PACKAGE_VERSION_MAJOR)
