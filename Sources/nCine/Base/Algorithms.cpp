@@ -211,4 +211,42 @@ namespace nCine
 			buffer[n] = '\0';
 		}
 	}
+
+	uint64_t parseVersion(const Containers::StringView& version)
+	{
+		Containers::ArrayView<Containers::StringView> parts = version.split('.');
+		size_t partsCount = parts.size();
+		if (partsCount == 0) {
+			return 0;
+		}
+
+		uint64_t major = 0, minor = 0, patch = 0;
+		size_t partSize;
+		char stringBuffer[32];
+
+		partSize = std::min(parts[0].size(), sizeof(stringBuffer) - 1);
+		std::memcpy(stringBuffer, parts[0].data(), partSize);
+		stringBuffer[partSize] = '\0';
+		major = strtol(stringBuffer, nullptr, 10);
+
+		if (partsCount >= 2 && !parts[1].empty()) {
+			partSize = std::min(parts[1].size(), sizeof(stringBuffer) - 1);
+			std::memcpy(stringBuffer, parts[1].data(), partSize);
+			stringBuffer[partSize] = '\0';
+			minor = strtol(stringBuffer, nullptr, 10);
+		}
+		if (partsCount >= 3 && !parts[2].empty()) {
+			if (parts[2][0] == 'r') {
+				// GIT Revision - always the latest
+				patch = 0x0FFFFFFFull;
+			} else {
+				partSize = std::min(parts[2].size(), sizeof(stringBuffer) - 1);
+				std::memcpy(stringBuffer, parts[2].data(), partSize);
+				stringBuffer[partSize] = '\0';
+				patch = strtol(stringBuffer, nullptr, 10);
+			}
+		}
+
+		return (patch & 0xFFFFFFFFull) | ((minor & 0xFFFFull) << 32) | ((major & 0xFFFFull) << 48);
+	}
 }

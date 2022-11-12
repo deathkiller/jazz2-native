@@ -144,8 +144,8 @@ if(EMSCRIPTEN)
 endif()
 
 if(MSVC)
-	# Build with Multiple Processes
-	target_compile_options(ncine PRIVATE /MP)
+	# Build with Multiple Processes and force UTF-8
+	target_compile_options(ncine PRIVATE /MP /utf-8)
 	# Always use the non debug version of the runtime library
 	target_compile_options(ncine PUBLIC $<IF:$<BOOL:${VC_LTL_FOUND}>,/MT,/MD>)
 	# Disabling exceptions
