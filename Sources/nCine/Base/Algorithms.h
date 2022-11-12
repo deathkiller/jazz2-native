@@ -369,4 +369,6 @@ namespace nCine
 	void u64tos(uint64_t value, char* buffer);
 	void i64tos(int64_t value, char* buffer);
 	void ftos(double value, char* buffer, int bufferSize);
+
+	uint64_t parseVersion(const Containers::StringView& version);
 }

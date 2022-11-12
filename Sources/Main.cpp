@@ -244,7 +244,7 @@ private:
 	std::unique_ptr<Jazz2::IStateHandler> _currentHandler;
 	PendingState _pendingState;
 	std::unique_ptr<LevelInitialization> _pendingLevelChange;
-	char _newestVersion[8];
+	char _newestVersion[20];
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	void RefreshCache();
@@ -829,8 +829,12 @@ void GameEventHandler::CheckUpdates()
 	Http::Request req(url, Http::InternetProtocol::V4);
 	Http::Response resp = req.Send("GET"_s, std::chrono::seconds(10));
 	if (resp.status.code == Http::Status::Ok && !resp.body.empty() && resp.body.size() < sizeof(_newestVersion) - 1) {
-		std::memcpy(_newestVersion, resp.body.data(), resp.body.size());
-		_newestVersion[resp.body.size()] = '\0';
+		uint64_t currentVersion = parseVersion(NCINE_VERSION);
+		uint64_t latestVersion = parseVersion(reinterpret_cast<char*>(resp.body.data()));
+		if (currentVersion < latestVersion) {
+			std::memcpy(_newestVersion, resp.body.data(), resp.body.size());
+			_newestVersion[resp.body.size()] = '\0';
+		}
 	}
 #endif
 }
