@@ -1,6 +1,7 @@
 #include "Algorithms.h"
 
 #include <stdarg.h>
+#include <cstring>
 
 #if defined(DEATH_TARGET_MSVC)
 #	include <intrin.h>

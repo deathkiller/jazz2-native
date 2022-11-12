@@ -18,13 +18,13 @@ jobs:
           Mode: Standard
           
         - BuildType: Release
-          Backend: GLFW
-          Mode: SharewareDemo
-          
-        - BuildType: Release
           Backend: SDL2
           Mode: Standard
           
+        - BuildType: Release
+          Backend: GLFW
+          Mode: SharewareDemo
+
         - BuildType: Release
           Backend: SDL2
           Mode: SharewareDemo

@@ -19,25 +19,25 @@ jobs:
           Backend: GLFW
 
         - BuildType: Release
+          Platform: x86
+          ArchExts: SSE
+          Backend: SDL2
+          
+        - BuildType: Release
           Platform: x64
           ArchExts: SSE2
           Backend: GLFW
+          
+        - BuildType: Release
+          Platform: x64
+          ArchExts: SSE2
+          Backend: SDL2
           
         - BuildType: Release
           Platform: x64
           ArchExts: AVX2
           Backend: GLFW
 
-        - BuildType: Release
-          Platform: x86
-          ArchExts: SSE
-          Backend: SDL2
-
-        - BuildType: Release
-          Platform: x64
-          ArchExts: SSE2
-          Backend: SDL2
-          
         - BuildType: Release
           Platform: x64
           ArchExts: AVX2
