@@ -124,72 +124,75 @@ if(NCINE_EMBED_SHADERS)
 	set(SHADER_FILES "")
 endif()
 
-#if(WIN32 AND EXISTS ${NCINE_SOURCE_DIR}/Icons/Main.ico)
-#	message(STATUS "Writing a resource file for executables icon")
-#
-#	set(RESOURCE_RC_FILE "${GENERATED_SOURCE_DIR}/resource.rc")
-#	file(WRITE ${RESOURCE_RC_FILE} "GLFW_ICON ICON \"Main.ico\"")
-#	file(COPY ${NCINE_SOURCE_DIR}/Icons/Main.ico DESTINATION ${GENERATED_INCLUDE_DIR})
-#endif()
-
-#if(WIN32 AND NCINE_DYNAMIC_LIBRARY)
-#	message(STATUS "Writing a version info resource file")
-
-#	set(FILEVERSION_THIRD_WORD ${NCINE_VERSION_PATCH})
-#	if(DEFINED GIT_REV_COUNT)
-#		set(FILEVERSION_THIRD_WORD ${GIT_REV_COUNT})
-#	endif()
-#	get_target_property(NCINE_DEBUG_POSTFIX ncine DEBUG_POSTFIX)
-
-#	set(VERSION_RC_FILE "${GENERATED_SOURCE_DIR}/version.rc")
-#	file(WRITE ${VERSION_RC_FILE}
-#"#include \"winresrc.h\"\n\
-#\n\
-#LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US\n\
-#\n\
-#VS_VERSION_INFO VERSIONINFO\n\
-# FILEVERSION ${NCINE_VERSION_MAJOR},${NCINE_VERSION_MINOR},${FILEVERSION_THIRD_WORD},0\n\
-# PRODUCTVERSION ${NCINE_VERSION_MAJOR},${NCINE_VERSION_MINOR},${FILEVERSION_THIRD_WORD},0\n\
-# FILEFLAGSMASK VS_FFI_FILEFLAGSMASK\n\
-#ifdef NCINE_DEBUG\n\
-# FILEFLAGS VS_FF_DEBUG\n\
-#else\n\
-# FILEFLAGS 0x0L\n\
-#endif\n\
-# FILEOS VOS_NT_WINDOWS32\n\
-# FILETYPE VFT_DLL\n\
-# FILESUBTYPE VFT2_UNKNOWN\n\
-#BEGIN\n\
-#    BLOCK \"StringFileInfo\"\n\
-#    BEGIN\n\
-#        BLOCK \"040904b0\"\n\
-#        BEGIN\n\
-#            VALUE \"CompanyName\", \"\\0\"\n\
-#            VALUE \"FileDescription\", \"nCine\\0\"\n\
-#            VALUE \"FileVersion\", \"${NCINE_VERSION_MAJOR},${NCINE_VERSION_MINOR},${FILEVERSION_THIRD_WORD},0\\0\"\n\
-#            VALUE \"InternalName\", \"nCine\\0\"\n\
-#            VALUE \"LegalCopyright\", \"Copyright ©2011-2022 Angelo Theodorou\\0\"\n\
-#ifdef NCINE_DEBUG\n\
-#            VALUE \"OriginalFilename\", \"${CMAKE_SHARED_LIBRARY_PREFIX}ncine${NCINE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX}\\0\"\n\
-#else\n\
-#            VALUE \"OriginalFilename\", \"${CMAKE_SHARED_LIBRARY_PREFIX}ncine${CMAKE_SHARED_LIBRARY_SUFFIX}\\0\"\n\
-#endif\n\
-#            VALUE \"ProductName\", \"nCine\\0\"\n\
-#            VALUE \"ProductVersion\", \"${NCINE_VERSION} (${GIT_BRANCH_NAME})\\0\"\n\
-#        END\n\
-#    END\n\
-#    BLOCK \"VarFileInfo\"\n\
-#    BEGIN\n\
-#        VALUE \"Translation\", 0x409, 1200\n\
-#    END\n\
-#END")
-#	list(APPEND GENERATED_SOURCES ${VERSION_RC_FILE})
-#endif()
-
 if(WIN32)
-	list(APPEND GENERATED_SOURCES
-		${NCINE_SOURCE_DIR}/Resources.rc
-		${NCINE_SOURCE_DIR}/App.manifest)
+	if(EXISTS ${NCINE_SOURCE_DIR}/Icons/Main.ico)
+		message(STATUS "Writing a resource file for executables icon")
+
+		set(RESOURCE_RC_FILE "${GENERATED_SOURCE_DIR}/resource.rc")
+		file(WRITE ${RESOURCE_RC_FILE} "GLFW_ICON ICON \"Main.ico\"")
+		file(COPY ${NCINE_SOURCE_DIR}/Icons/Main.ico DESTINATION ${GENERATED_INCLUDE_DIR})
+		list(APPEND GENERATED_SOURCES ${RESOURCE_RC_FILE})
+	endif()
+
+	message(STATUS "Writing a version info resource file")
+	set(PACKAGE_VERSION_PATCH ${NCINE_VERSION_PATCH})
+	if(NCINE_VERSION_FROM_GIT AND GIT_NO_TAG)
+		set(PACKAGE_VERSION_PATCH "0")
+	endif()
+	set(PACKAGE_VERSION_REV "0")
+	if(DEFINED GIT_REV_COUNT)
+		set(PACKAGE_VERSION_REV ${GIT_REV_COUNT})
+	endif()
+
+	set(PACKAGE_EXECUTABLE_NAME "Jazz2")
+	get_target_property(NCINE_DEBUG_POSTFIX ncine DEBUG_POSTFIX)
+	string(TIMESTAMP PACKAGE_VERSION_YEAR "%Y")
+
+	set(VERSION_RC_FILE "${GENERATED_SOURCE_DIR}/version.rc")
+	file(WRITE ${VERSION_RC_FILE}
+"#include \"winresrc.h\"\n\
+\n\
+LANGUAGE LANG_NEUTRAL, SUBLANG_DEFAULT\n\
+\n\
+VS_VERSION_INFO VERSIONINFO\n\
+ FILEVERSION ${NCINE_VERSION_MAJOR},${NCINE_VERSION_MINOR},${PACKAGE_VERSION_PATCH},${PACKAGE_VERSION_REV}\n\
+ PRODUCTVERSION ${NCINE_VERSION_MAJOR},${NCINE_VERSION_MINOR},${PACKAGE_VERSION_PATCH},${PACKAGE_VERSION_REV}\n\
+ FILEFLAGSMASK VS_FFI_FILEFLAGSMASK\n\
+#ifdef NCINE_DEBUG\n\
+ FILEFLAGS VS_FF_DEBUG\n\
+#else\n\
+ FILEFLAGS 0x0L\n\
+#endif\n\
+ FILEOS VOS_NT_WINDOWS32\n\
+ FILETYPE VFT_APP\n\
+ FILESUBTYPE VFT2_UNKNOWN\n\
+BEGIN\n\
+	BLOCK \"StringFileInfo\"\n\
+	BEGIN\n\
+		BLOCK \"040904b0\"\n\
+		BEGIN\n\
+			VALUE \"CompanyName\", \"${NCINE_APP_VENDOR}\\0\"\n\
+			VALUE \"FileDescription\", \"${NCINE_APP_DESCRIPTION}\\0\"\n\
+			VALUE \"FileVersion\", \"${NCINE_VERSION_MAJOR}.${NCINE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}.${PACKAGE_VERSION_REV}\\0\"\n\
+			VALUE \"InternalName\", \"${PACKAGE_EXECUTABLE_NAME}\\0\"\n\
+			VALUE \"LegalCopyright\", \"© 2016-${PACKAGE_VERSION_YEAR} ${NCINE_APP_VENDOR}\\0\"\n\
+#ifdef NCINE_DEBUG\n\
+			VALUE \"OriginalFilename\", \"${PACKAGE_EXECUTABLE_NAME}${NCINE_DEBUG_POSTFIX}.exe\\0\"\n\
+#else\n\
+			VALUE \"OriginalFilename\", \"${PACKAGE_EXECUTABLE_NAME}.exe\\0\"\n\
+#endif\n\
+			VALUE \"ProductName\", \"${NCINE_APP_NAME}\\0\"\n\
+			VALUE \"ProductVersion\", \"${NCINE_VERSION}\\0\"\n\
+		END\n\
+	END\n\
+	BLOCK \"VarFileInfo\"\n\
+	BEGIN\n\
+		VALUE \"Translation\", 0x0, 1200\n\
+	END\n\
+END")
+	list(APPEND GENERATED_SOURCES ${VERSION_RC_FILE})
+
+	list(APPEND GENERATED_SOURCES ${NCINE_SOURCE_DIR}/App.manifest)
 endif()
 
 # Generate Nuklear implementation file
