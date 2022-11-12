@@ -1,0 +1,59 @@
+name: 'Windows (SLN)'
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [ opened, synchronize ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+          Platform: x86
+
+        - BuildType: Release
+          Platform: x64
+
+    runs-on: 'windows-latest'
+
+    steps:
+    - name: 'Checkout Code'
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        
+    - name: 'Setup MSBuild'
+      uses: microsoft/setup-msbuild@v1.1
+
+    - name: 'Download Build Dependencies'
+      run: |
+        mkdir Libs
+        cd Libs
+        git clone https://github.com/deathkiller/jazz2-libraries.git .
+        git checkout
+        
+        #Invoke-WebRequest -uri "https://github.com/Chuyu-Team/VC-LTL5/releases/download/v5.0.5/VC-LTL-5.0.5-Binary.7z" -Method "GET" -Outfile "VC-LTL-Binary.7z"
+        Invoke-WebRequest -uri "https://github.com/Chuyu-Team/VC-LTL/releases/download/v4.1.3/VC-LTL-4.1.3-Binary-VS2019.7z" -Method "GET" -Outfile "VC-LTL-Binary.7z"
+        7z x ".\VC-LTL-Binary.7z" -o"VC-LTL"
+        
+    - name: 'Build'
+      run: |
+        msbuild ".\Jazz2.sln" -t:Rebuild -p:Configuration=${{ matrix.BuildType }} -p:Platform=${{ matrix.Platform }} -p:VC_LTL_Root=".\Libs\VC-LTL\" -p:OutDir="..\_build\"
+
+    - name: 'Create Package'
+      run: |
+        mkdir _package
+        Move-Item -Path ".\_build\Jazz2.exe" -Destination ".\_package\Jazz2.exe"
+        Move-Item -Path ".\Content\" -Destination ".\_package\Content\"
+        
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v3
+      with:
+        name: Jazz2_Windows_${{ matrix.Platform }}_Default
+        path: ./_package/
+        

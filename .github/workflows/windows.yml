@@ -15,9 +15,33 @@ jobs:
         include:
         - BuildType: Release
           Platform: x86
+          ArchExts: SSE
+          Backend: GLFW
 
         - BuildType: Release
           Platform: x64
+          ArchExts: SSE2
+          Backend: GLFW
+          
+        - BuildType: Release
+          Platform: x64
+          ArchExts: AVX2
+          Backend: GLFW
+
+        - BuildType: Release
+          Platform: x86
+          ArchExts: SSE
+          Backend: SDL2
+
+        - BuildType: Release
+          Platform: x64
+          ArchExts: SSE2
+          Backend: SDL2
+          
+        - BuildType: Release
+          Platform: x64
+          ArchExts: AVX2
+          Backend: SDL2
 
     runs-on: 'windows-latest'
 
@@ -41,19 +65,34 @@ jobs:
         Invoke-WebRequest -uri "https://github.com/Chuyu-Team/VC-LTL/releases/download/v4.1.3/VC-LTL-4.1.3-Binary-VS2019.7z" -Method "GET" -Outfile "VC-LTL-Binary.7z"
         7z x ".\VC-LTL-Binary.7z" -o"VC-LTL"
         
+    - name: 'Configure CMake'
+      run: |
+        switch('${{ matrix.Platform }}') {
+          'x86' { $arch = 'Win32' } 
+          'x64' { $arch = 'x64' } 
+        }
+
+        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS=${{ matrix.ArchExts }} -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_VERSION_FROM_GIT=ON
+
     - name: 'Build'
       run: |
-        msbuild ".\Jazz2.sln" -t:Rebuild -p:Configuration=${{ matrix.BuildType }} -p:Platform=${{ matrix.Platform }} -p:VC_LTL_Root=".\Libs\VC-LTL\" -p:OutDir="..\_build\"
+        switch('${{ matrix.Platform }}') {
+          'x86' { $arch = 'Win32' } 
+          'x64' { $arch = 'x64' } 
+        }
+
+        cd .\_build\
+        msbuild ".\Jazz2.sln" -p:Configuration=${{ matrix.BuildType }} -p:Platform=$arch -p:OutDir=".\_out\"
 
     - name: 'Create Package'
       run: |
         mkdir _package
-        Move-Item -Path ".\_build\Jazz2.exe" -Destination ".\_package\Jazz2.exe"
+        Move-Item -Path ".\_build\_out\Jazz2.exe" -Destination ".\_package\Jazz2.exe"
         Move-Item -Path ".\Content\" -Destination ".\_package\Content\"
         
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3
       with:
-        name: Jazz2_Windows_${{ matrix.Platform }}
+        name: Jazz2_Windows_${{ matrix.Platform }}_${{ matrix.ArchExts }}_${{ matrix.Backend }}
         path: ./_package/
         
