@@ -6,7 +6,7 @@
 #include "../Application.h"
 
 #ifdef __HAS_LOCAL_SDL
-#	include "../../../Libs/SDL2/SDL.h"
+#	include "../../Libs/Includes/SDL2/SDL.h"
 #else
 #	include <SDL.h>
 #endif
@@ -230,7 +230,7 @@ namespace nCine
 			case SDL_FINGERMOTION:
 			case SDL_FINGERUP:
 				touchEvent_.count = SDL_GetNumTouchFingers(event.tfinger.touchId);
-				touchEvent_.actionIndex = event.tfinger.fingerId;
+				touchEvent_.actionIndex = (int)event.tfinger.fingerId;
 
 				switch (event.type) {
 					case SDL_FINGERDOWN: touchEvent_.type = (touchEvent_.count == 1 ? TouchEventType::Down : TouchEventType::PointerDown); break;
