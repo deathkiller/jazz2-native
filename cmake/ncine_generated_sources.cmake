@@ -1,84 +1,7 @@
 # Has to be included after ncine_get_version.cmake
 
 set(GENERATED_SOURCE_DIR "${CMAKE_BINARY_DIR}/Generated")
-#set(GENERATED_INCLUDE_DIR "${GENERATED_SOURCE_DIR}/include/ncine")
 set(GENERATED_INCLUDE_DIR "${GENERATED_SOURCE_DIR}")
-
-#if(NOT NCINE_DYNAMIC_LIBRARY)
-#	foreach(PRIVATE_HEADER ${PRIVATE_HEADERS})
-#		file(COPY ${PRIVATE_HEADER} DESTINATION ${GENERATED_INCLUDE_DIR})
-#	endforeach()
-#endif()
-
-# Version strings
-#if(GIT_EXECUTABLE)
-#	message(STATUS "Exporting git version information to C strings")
-#endif()
-
-#set(VERSION_H_FILE "${GENERATED_INCLUDE_DIR}/Version.h")
-#set(VERSION_CPP_FILE "${GENERATED_SOURCE_DIR}/Version.cpp")
-#if(EXISTS ${VERSION_H_FILE})
-#	file(REMOVE ${VERSION_H_FILE})
-#endif()
-#if(EXISTS ${VERSION_CPP_FILE})
-#	file(REMOVE ${VERSION_CPP_FILE})
-#endif()
-
-#set(VERSION_STRUCT_NAME "VersionStrings")
-#set(VERSION_STRING_NAME "Version")
-#set(REVCOUNT_STRING_NAME "GitRevCount")
-#set(SHORTHASH_STRING_NAME "GitShortHash")
-#set(LASTCOMMITDATE_STRING_NAME "GitLastCommitDate")
-#set(BRANCH_STRING_NAME "GitBranch")
-#set(TAG_STRING_NAME "GitTag")
-#set(COMPILATION_DATE_STRING_NAME "CompilationDate")
-#set(COMPILATION_TIME_STRING_NAME "CompilationTime")
-
-#get_filename_component(VERSION_H_FILENAME ${VERSION_H_FILE} NAME)
-#file(APPEND ${VERSION_H_FILE} "#ifndef NCINE_VERSION\n")
-#file(APPEND ${VERSION_H_FILE} "#define NCINE_VERSION\n\n")
-#file(APPEND ${VERSION_H_FILE} "#include \"common_defines.h\"\n\n")
-#file(APPEND ${VERSION_H_FILE} "namespace ncine {\n\n")
-#file(APPEND ${VERSION_H_FILE} "struct DLL_PUBLIC ${VERSION_STRUCT_NAME}\n{\n")
-#file(APPEND ${VERSION_CPP_FILE} "#include \"${VERSION_H_FILENAME}\"\n\n")
-#file(APPEND ${VERSION_CPP_FILE} "namespace ncine {\n\n")
-
-#if(GIT_EXECUTABLE)
-#	target_compile_definitions(ncine PRIVATE "WITH_GIT_VERSION")
-#	list(APPEND ANDROID_GENERATED_FLAGS WITH_GIT_VERSION)
-
-#	file(APPEND ${VERSION_H_FILE} "\tstatic char const * const ${VERSION_STRING_NAME};\n")
-#	file(APPEND ${VERSION_CPP_FILE} "char const * const ${VERSION_STRUCT_NAME}::${VERSION_STRING_NAME} = \"${NCINE_VERSION}\";\n")
-#	file(APPEND ${VERSION_H_FILE} "\tstatic char const * const ${REVCOUNT_STRING_NAME};\n")
-#	file(APPEND ${VERSION_CPP_FILE} "char const * const ${VERSION_STRUCT_NAME}::${REVCOUNT_STRING_NAME} = \"${GIT_REV_COUNT}\";\n")
-#	file(APPEND ${VERSION_H_FILE} "\tstatic char const * const ${SHORTHASH_STRING_NAME};\n")
-#	file(APPEND ${VERSION_CPP_FILE} "char const * const ${VERSION_STRUCT_NAME}::${SHORTHASH_STRING_NAME} = \"${GIT_SHORT_HASH}\";\n")
-#	file(APPEND ${VERSION_H_FILE} "\tstatic char const * const ${LASTCOMMITDATE_STRING_NAME};\n")
-#	file(APPEND ${VERSION_CPP_FILE} "char const * const ${VERSION_STRUCT_NAME}::${LASTCOMMITDATE_STRING_NAME} = \"${GIT_LAST_COMMIT_DATE}\";\n")
-#	file(APPEND ${VERSION_H_FILE} "\tstatic char const * const ${BRANCH_STRING_NAME};\n")
-#	file(APPEND ${VERSION_CPP_FILE} "char const * const ${VERSION_STRUCT_NAME}::${BRANCH_STRING_NAME} = \"${GIT_BRANCH_NAME}\";\n")
-#	file(APPEND ${VERSION_H_FILE} "\tstatic char const * const ${TAG_STRING_NAME};\n")
-#	if(NOT GIT_NO_TAG)
-#		file(APPEND ${VERSION_CPP_FILE} "char const * const ${VERSION_STRUCT_NAME}::${TAG_STRING_NAME} = \"${GIT_TAG_NAME}\";\n")
-#	else()
-#		file(APPEND ${VERSION_CPP_FILE} "char const * const ${VERSION_STRUCT_NAME}::${TAG_STRING_NAME} = \"\";\n")
-#	endif()
-#endif()
-#file(APPEND ${VERSION_H_FILE} "\tstatic char const * const ${COMPILATION_DATE_STRING_NAME};\n")
-#file(APPEND ${VERSION_CPP_FILE} "char const * const ${VERSION_STRUCT_NAME}::${COMPILATION_DATE_STRING_NAME} = __DATE__;\n")
-#file(APPEND ${VERSION_H_FILE} "\tstatic char const * const ${COMPILATION_TIME_STRING_NAME};\n")
-#file(APPEND ${VERSION_CPP_FILE} "char const * const ${VERSION_STRUCT_NAME}::${COMPILATION_TIME_STRING_NAME} = __TIME__;\n")
-
-#file(APPEND ${VERSION_H_FILE} "};\n\n}\n\n")
-#file(APPEND ${VERSION_H_FILE} "#endif")
-#file(APPEND ${VERSION_CPP_FILE} "\n}\n")
-
-#list(APPEND HEADERS ${VERSION_H_FILE})
-#list(APPEND GENERATED_SOURCES ${VERSION_CPP_FILE})
-
-# Copy the header required by `version.h` to the generated include directory
-# for compiling external projects using an nCine build directory
-#file(COPY ${CMAKE_SOURCE_DIR}/include/ncine/common_defines.h DESTINATION ${GENERATED_INCLUDE_DIR})
 
 # Shader strings
 file(GLOB SHADER_FILES "${NCINE_SOURCE_DIR}/nCine/Shaders/*.glsl")
@@ -146,50 +69,13 @@ if(WIN32)
 
 	set(PACKAGE_EXECUTABLE_NAME "Jazz2")
 	get_target_property(NCINE_DEBUG_POSTFIX ncine DEBUG_POSTFIX)
+	if(NOT NCINE_DEBUG_POSTFIX)
+		set(NCINE_DEBUG_POSTFIX "d")
+	endif()
 	string(TIMESTAMP PACKAGE_VERSION_YEAR "%Y")
 
 	set(VERSION_RC_FILE "${GENERATED_SOURCE_DIR}/version.rc")
-	file(WRITE ${VERSION_RC_FILE}
-"#include \"winresrc.h\"\n\
-\n\
-LANGUAGE LANG_NEUTRAL, SUBLANG_DEFAULT\n\
-\n\
-VS_VERSION_INFO VERSIONINFO\n\
- FILEVERSION ${NCINE_VERSION_MAJOR},${NCINE_VERSION_MINOR},${PACKAGE_VERSION_PATCH},${PACKAGE_VERSION_REV}\n\
- PRODUCTVERSION ${NCINE_VERSION_MAJOR},${NCINE_VERSION_MINOR},${PACKAGE_VERSION_PATCH},${PACKAGE_VERSION_REV}\n\
- FILEFLAGSMASK VS_FFI_FILEFLAGSMASK\n\
-#ifdef NCINE_DEBUG\n\
- FILEFLAGS VS_FF_DEBUG\n\
-#else\n\
- FILEFLAGS 0x0L\n\
-#endif\n\
- FILEOS VOS_NT_WINDOWS32\n\
- FILETYPE VFT_APP\n\
- FILESUBTYPE VFT2_UNKNOWN\n\
-BEGIN\n\
-	BLOCK \"StringFileInfo\"\n\
-	BEGIN\n\
-		BLOCK \"040904b0\"\n\
-		BEGIN\n\
-			VALUE \"CompanyName\", \"${NCINE_APP_VENDOR}\\0\"\n\
-			VALUE \"FileDescription\", \"${NCINE_APP_DESCRIPTION}\\0\"\n\
-			VALUE \"FileVersion\", \"${NCINE_VERSION_MAJOR}.${NCINE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}.${PACKAGE_VERSION_REV}\\0\"\n\
-			VALUE \"InternalName\", \"${PACKAGE_EXECUTABLE_NAME}\\0\"\n\
-			VALUE \"LegalCopyright\", \"© 2016-${PACKAGE_VERSION_YEAR} ${NCINE_APP_VENDOR}\\0\"\n\
-#ifdef NCINE_DEBUG\n\
-			VALUE \"OriginalFilename\", \"${PACKAGE_EXECUTABLE_NAME}${NCINE_DEBUG_POSTFIX}.exe\\0\"\n\
-#else\n\
-			VALUE \"OriginalFilename\", \"${PACKAGE_EXECUTABLE_NAME}.exe\\0\"\n\
-#endif\n\
-			VALUE \"ProductName\", \"${NCINE_APP_NAME}\\0\"\n\
-			VALUE \"ProductVersion\", \"${NCINE_VERSION}\\0\"\n\
-		END\n\
-	END\n\
-	BLOCK \"VarFileInfo\"\n\
-	BEGIN\n\
-		VALUE \"Translation\", 0x0, 1200\n\
-	END\n\
-END")
+	configure_file("${NCINE_SOURCE_DIR}/Resources.rc.in" ${VERSION_RC_FILE} @ONLY)
 	list(APPEND GENERATED_SOURCES ${VERSION_RC_FILE})
 
 	list(APPEND GENERATED_SOURCES ${NCINE_SOURCE_DIR}/App.manifest)

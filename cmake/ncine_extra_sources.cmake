@@ -562,7 +562,7 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 	set(PACKAGE_VERSION "${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}.0")
 	set(PACKAGE_GUID "a7153bb5-7dc8-4985-9f9c-3853f96034c9")
 	set(PACKAGE_EXECUTABLE_NAME "ncine")
-	configure_file(Package.appxmanifest.in ${CMAKE_CURRENT_BINARY_DIR}/Package.appxmanifest @ONLY)
+	configure_file(${NCINE_SOURCE_DIR}/Package.appxmanifest.in ${CMAKE_CURRENT_BINARY_DIR}/Package.appxmanifest @ONLY)
 	list(APPEND GENERATED_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/Package.appxmanifest)
 	
 	# Include dependencies in UWP package
