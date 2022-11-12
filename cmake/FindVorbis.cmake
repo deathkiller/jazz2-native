@@ -6,8 +6,8 @@
 #  VORBIS_FOUND       - True if vorbis found.
 
 if(VORBIS_INCLUDE_DIR)
-    # Already in cache, be silent
-    set(VORBIS_FIND_QUIETLY TRUE)
+	# Already in cache, be silent
+	set(VORBIS_FIND_QUIETLY TRUE)
 endif(VORBIS_INCLUDE_DIR)
 
 find_path(VORBIS_INCLUDE_DIR vorbis/vorbisfile.h)
