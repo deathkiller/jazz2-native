@@ -157,7 +157,7 @@ namespace Jazz2::Collisions
 		int32_t ComputeHeight(int32_t nodeId) const;
 
 		void ValidateStructure(int32_t index) const;
-		void ValidateMetrics(int32_t index) const;
+		//void ValidateMetrics(int32_t index) const;
 
 		int32_t m_root;
 

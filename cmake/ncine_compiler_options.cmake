@@ -274,9 +274,12 @@ else() # GCC and LLVM
 			target_link_options(ncine PRIVATE -Wl,-undefined,error)
 		endif()
 
-		# Extra optimizations in release
 		if(NOT EMSCRIPTEN)
+			# Extra optimizations in release
 			target_compile_options(ncine PRIVATE $<$<CONFIG:Release>:-Ofast>)
+		else()
+			# Suppress some warnings in Emscripten
+			target_compile_options(ncine PRIVATE -Wno-deprecated-builtins)
 		endif()
 
 		# Enabling ThinLTO of Clang 4

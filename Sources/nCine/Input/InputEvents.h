@@ -195,6 +195,8 @@ namespace nCine
 	class JoystickState
 	{
 	public:
+		virtual ~JoystickState() { }
+
 		/// Returns 'true' if the specified button is pressed
 		virtual bool isButtonPressed(int buttonId) const = 0;
 		/// Returns the state of the specified hat
