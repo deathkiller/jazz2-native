@@ -445,7 +445,7 @@ namespace nCine
 	{
 		jobject modeObject = static_cast<jobject>(AndroidJniHelper::jniEnv->CallObjectMethod(javaObject_, midGetMode_));
 		AndroidJniClass_DisplayMode mode(modeObject);
-		return std::move(mode);
+		return mode;
 	}
 
 	int AndroidJniClass_Display::getName(char* destination, int maxStringSize) const
@@ -565,7 +565,7 @@ namespace nCine
 	{
 		jobject displayObject = static_cast<jobject>(AndroidJniHelper::jniEnv->CallObjectMethod(displayManagerObject_, midGetDisplay_, displayId));
 		AndroidJniClass_Display display(displayObject);
-		return std::move(display);
+		return display;
 	}
 
 	int AndroidJniWrap_DisplayManager::getNumDisplays()

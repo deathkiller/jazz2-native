@@ -411,9 +411,8 @@ namespace nCine
 			joyConnectionEvent_.joyId = deviceIndex;
 			sdlJoysticks_[deviceIndex] = SDL_JoystickOpen(deviceIndex);
 
-			SDL_Joystick* joy = sdlJoysticks_[deviceIndex];
-
 #if defined(ENABLE_LOG) && !defined(DEATH_TARGET_EMSCRIPTEN)
+			SDL_Joystick* joy = sdlJoysticks_[deviceIndex];
 			const SDL_JoystickGUID joystickGuid = SDL_JoystickGetGUID(joy);
 			SDL_JoystickGetGUIDString(joystickGuid, joyGuidString_, 33);
 			LOGI_X("Joystick %d \"%s\" (%s) has been connected - %d hats, %d axes, %d buttons, %d balls",

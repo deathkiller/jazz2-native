@@ -278,9 +278,9 @@ namespace Jazz2::UI
 			}
 		}
 
-		ButtonName jb; int ji1, ji2;
-		jb = ControlScheme::Gamepad(0, PlayerActions::Jump, ji1);
-		jb = ControlScheme::Gamepad(0, PlayerActions::Fire, ji2);
+		/*ButtonName jb;*/ int ji1, ji2;
+		/*jb =*/ ControlScheme::Gamepad(0, PlayerActions::Jump, ji1);
+		/*jb =*/ ControlScheme::Gamepad(0, PlayerActions::Fire, ji2);
 		if (ji1 == ji2) ji2 = -1;
 
 		if ((ji1 >= 0 && ji1 < jc && (joyStates[ji1]->isButtonPressed(ButtonName::A) || joyStates[ji1]->isButtonPressed(ButtonName::B) || joyStates[ji1]->isButtonPressed(ButtonName::X) || joyStates[ji1]->isButtonPressed(ButtonName::START))) ||

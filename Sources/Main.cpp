@@ -102,7 +102,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 
 	va_list args;
 	va_start(args, fmt);
-	unsigned int length = vsnprintf(logEntry, MaxEntryLength, fmt, args);
+	/*unsigned int length =*/ vsnprintf(logEntry, MaxEntryLength, fmt, args);
 	va_end(args);
 
 	__android_log_write(priority, "jazz2", logEntry);
