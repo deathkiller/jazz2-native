@@ -28,14 +28,14 @@ namespace nCine
 	std::unique_ptr<IAudioLoader> IAudioLoader::createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
 		LOGI_X("Loading from memory: 0x%lx, %lu bytes", bufferPtr, bufferSize);
-		return createLoader(std::move(fs::CreateFromMemory(bufferPtr, bufferSize)), { });
+		return createLoader(fs::CreateFromMemory(bufferPtr, bufferSize), { });
 	}
 
 	std::unique_ptr<IAudioLoader> IAudioLoader::createFromFile(const StringView& filename)
 	{
 		LOGI_X("Loading from file \"%s\"", filename.data());
 		// Creating a handle from IFile static method to detect assets file
-		return createLoader(std::move(fs::Open(filename, FileAccessMode::Read)), filename);
+		return createLoader(fs::Open(filename, FileAccessMode::Read), filename);
 	}
 
 	///////////////////////////////////////////////////////////

@@ -24,7 +24,7 @@ namespace Jazz2::Compatibility
 		uint32_t magic = headerBlock.ReadUInt32();
 		ASSERT_MSG(magic == 0x4C56454C /*LEVL*/, "Invalid magic string");
 
-		uint32_t passwordHash = headerBlock.ReadUInt32();
+		/*uint32_t passwordHash =*/ headerBlock.ReadUInt32();
 
 		Name = headerBlock.ReadString(32, true);
 
@@ -41,7 +41,7 @@ namespace Jazz2::Compatibility
 		// Get the CRC; would check here if it matches if we knew what variant it is AND what it applies to
 		// Test file across all CRC32 variants + Adler had no matches to the value obtained from the file
 		// so either the variant is something else or the CRC is not applied to the whole file but on a part
-		int recordedCRC = headerBlock.ReadInt32();
+		/*int recordedCRC =*/ headerBlock.ReadInt32();
 
 		// Read the lengths, uncompress the blocks and bail if any block could not be uncompressed
 		// This could look better without all the copy-paste, but meh.
@@ -89,7 +89,7 @@ namespace Jazz2::Compatibility
 		_isMpLevel = block.ReadBool();
 
 		// This should be the same as size of block in the start?
-		int headerSize = block.ReadInt32();
+		/*int headerSize =*/ block.ReadInt32();
 
 		String secondLevelName = block.ReadString(32, true);
 		ASSERT_MSG(!strictParser || Name == secondLevelName, "Level name mismatch");
@@ -329,19 +329,18 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		bool warpsTransmuteCoins = block.ReadBool(); // TODO
-		bool delayGeneratedCrateOrigins = block.ReadBool(); // TODO
-		int32_t echo = block.ReadInt32(); // TODO
+		// TODO: Implement JJ2+ properties
+		/*bool warpsTransmuteCoins = block.ReadBool();
+		bool delayGeneratedCrateOrigins = block.ReadBool();
+		int32_t echo = block.ReadInt32();
 		_darknessColor = block.ReadUInt32();
-		float waterChangeSpeed = block.ReadFloat(); // TODO
-		uint8_t waterInteraction = block.ReadByte(); // TODO
-		int32_t waterLayer = block.ReadInt32(); // TODO
-		uint8_t waterLighting = block.ReadByte(); // TODO
-		float waterLevel = block.ReadFloat(); // TODO
-		uint32_t waterGradient1 = block.ReadUInt32(); // TODO
-		uint32_t waterGradient2 = block.ReadUInt32(); // TODO
-
-		// TODO
+		float waterChangeSpeed = block.ReadFloat();
+		uint8_t waterInteraction = block.ReadByte();
+		int32_t waterLayer = block.ReadInt32();
+		uint8_t waterLighting = block.ReadByte();
+		float waterLevel = block.ReadFloat();
+		uint32_t waterGradient1 = block.ReadUInt32();
+		uint32_t waterGradient2 = block.ReadUInt32();*/
 	}
 
 	void JJ2Level::Convert(const String& targetPath, const EventConverter& eventConverter, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion)

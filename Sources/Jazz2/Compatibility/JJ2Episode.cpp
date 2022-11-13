@@ -25,8 +25,8 @@ namespace Jazz2::Compatibility
 		// Header (208 bytes)
 		int32_t headerSize = s->ReadValue<int32_t>();
 		Position = s->ReadValue<int32_t>();
-		uint32_t flags = s->ReadValue<uint32_t>();	// 0x01 = Not Shareware
-		uint32_t unknown1 = s->ReadValue<uint32_t>();
+		/*uint32_t flags =*/ s->ReadValue<uint32_t>();	// 0x01 = Not Shareware
+		/*uint32_t unknown1 =*/ s->ReadValue<uint32_t>();
 
 		char tmpBuffer[64];
 
@@ -66,15 +66,15 @@ namespace Jazz2::Compatibility
 		lowercaseInPlace(FirstLevel);
 
 		// TODO: Episode images are not supported yet
-		int32_t width = s->ReadValue<int32_t>();
-		int32_t height = s->ReadValue<int32_t>();
-		int32_t unknown2 = s->ReadValue<int32_t>();
-		int32_t unknown3 = s->ReadValue<int32_t>();
+		/*int32_t width =*/ s->ReadValue<int32_t>();
+		/*int32_t height =*/ s->ReadValue<int32_t>();
+		/*int32_t unknown2 =*/ s->ReadValue<int32_t>();
+		/*int32_t unknown3 =*/ s->ReadValue<int32_t>();
 
-		int32_t titleWidth = s->ReadValue<int32_t>();
-		int32_t titleHeight = s->ReadValue<int32_t>();
-		int32_t unknown4 = s->ReadValue<int32_t>();
-		int32_t unknown5 = s->ReadValue<int32_t>();
+		/*int32_t titleWidth =*/ s->ReadValue<int32_t>();
+		/*int32_t titleHeight =*/ s->ReadValue<int32_t>();
+		/*int32_t unknown4 =*/ s->ReadValue<int32_t>();
+		/*int32_t unknown5 =*/ s->ReadValue<int32_t>();
 
 		// TODO
 		/*{

@@ -175,10 +175,11 @@ namespace Jazz2::Actors
 		public:
 			ActorRenderer(ActorBase* owner)
 				:
-				BaseSprite(nullptr, nullptr, 0.0f, 0.0f), _owner(owner), _rendererType((ActorRendererType)-1), AnimPaused(false),
+				BaseSprite(nullptr, nullptr, 0.0f, 0.0f), AnimPaused(false),
 				FrameConfiguration(), FrameDimensions(), LoopMode(AnimationLoopMode::Loop),
 				FirstFrame(0), FrameCount(0), AnimDuration(0.0f), AnimTime(0.0f),
-				CurrentFrame(0), NextFrame(0), CurrentFrameFade(0.0f), Hotspot()
+				CurrentFrame(0), NextFrame(0), CurrentFrameFade(0.0f), Hotspot(),
+				_owner(owner), _rendererType((ActorRendererType)-1)
 			{
 				type_ = ObjectType::SPRITE;
 				Initialize(ActorRendererType::Default);
