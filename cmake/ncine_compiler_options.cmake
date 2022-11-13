@@ -268,7 +268,7 @@ else() # GCC and LLVM
 	elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
 		target_compile_options(ncine PRIVATE -fcolor-diagnostics)
 		#target_compile_options(ncine PRIVATE -Wall -pedantic -Wextra -Wno-old-style-cast -Wno-gnu-zero-variadic-macro-arguments -Wno-unused-parameter -Wno-variadic-macros -Wno-c++11-long-long -Wno-missing-braces)
-		target_compile_options(ncine PRIVATE -Wall -Wno-old-style-cast -Wno-gnu-zero-variadic-macro-arguments -Wno-unused-parameter -Wno-variadic-macros -Wno-c++11-long-long -Wno-missing-braces -Wno-multichar -Wno-switch -Wno-unknown-pragmas -Wno-reorder-ctor)
+		target_compile_options(ncine PRIVATE -Wall -Wno-old-style-cast -Wno-gnu-zero-variadic-macro-arguments -Wno-unused-parameter -Wno-variadic-macros -Wno-c++11-long-long -Wno-missing-braces -Wno-multichar -Wno-switch -Wno-unknown-pragmas -Wno-reorder-ctor -Wno-braced-scalar-init)
 
 		if(NCINE_DYNAMIC_LIBRARY)
 			target_link_options(ncine PRIVATE -Wl,-undefined,error)

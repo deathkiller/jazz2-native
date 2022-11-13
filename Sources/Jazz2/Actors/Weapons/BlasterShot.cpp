@@ -116,7 +116,6 @@ namespace Jazz2::Actors::Weapons
 	void BlasterShot::OnHitWall(float timeMult)
 	{
 		auto events = _levelHandler->EventMap();
-		bool handled = false;
 		if (events != nullptr) {
 			uint8_t* eventParams;
 			switch (events->GetEventByPosition(_pos.X + _speed.X, _pos.Y + _speed.Y, &eventParams)) {

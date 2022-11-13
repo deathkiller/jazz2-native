@@ -295,8 +295,6 @@ namespace Jazz2::Actors::Bosses
 		}
 
 		if (found) {
-			Vector2f diff = (foundPos - _lastPos);
-
 			_targetPos = foundPos;
 			_targetPos.Y -= 70.0f;
 

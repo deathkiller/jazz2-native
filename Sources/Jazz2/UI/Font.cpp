@@ -34,8 +34,8 @@ namespace Jazz2::UI
 			int h = texLoader->height();
 			auto pixels = (uint32_t*)texLoader->pixels();
 
-			uint8_t flags = s->ReadValue<uint8_t>();
-			uint16_t width = s->ReadValue<uint16_t>();
+			/*uint8_t flags =*/ s->ReadValue<uint8_t>();
+			/*uint16_t width =*/ s->ReadValue<uint16_t>();
 			uint16_t height = s->ReadValue<uint16_t>();
 			uint8_t cols = s->ReadValue<uint8_t>();
 			int rows = h / height;

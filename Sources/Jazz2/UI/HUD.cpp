@@ -163,7 +163,6 @@ namespace Jazz2::UI
 		Rectf view = Rectf(0.0f, 0.0f, static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y));
 		Rectf adjustedView = view;
 		if (_touchButtonsTimer > 0.0f) {
-			float width = adjustedView.W;
 			adjustedView.X = 140.0f + PreferencesCache::TouchLeftPadding.X;
 			adjustedView.W = adjustedView.W - adjustedView.X - (195.0f + PreferencesCache::TouchRightPadding.X);
 		}

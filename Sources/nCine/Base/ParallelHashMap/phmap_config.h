@@ -323,8 +323,7 @@
 #endif
 
 //#ifdef __has_include
-//    #if __has_include(<string_view>) && __cplusplus >= 201703L && \
-//        (!defined(_MSC_VER) || _MSC_VER >= 1920)
+//    #if __has_include(<string_view>) && __cplusplus >= 201703L && (!defined(_MSC_VER) || _MSC_VER >= 1920)
 //        #define PHMAP_HAVE_STD_STRING_VIEW 1
 //    #endif
 //#endif

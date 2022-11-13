@@ -33,7 +33,7 @@ namespace Jazz2::Compatibility
 		// Get the CRC; would check here if it matches if we knew what variant it is AND what it applies to
 		// Test file across all CRC32 variants + Adler had no matches to the value obtained from the file
 		// so either the variant is something else or the CRC is not applied to the whole file but on a part
-		int recordedCRC = headerBlock.ReadInt32();
+		/*int recordedCRC =*/ headerBlock.ReadInt32();
 
 		// Read the lengths, uncompress the blocks and bail if any block could not be uncompressed
 		// This could look better without all the copy-paste, but meh.
@@ -161,7 +161,6 @@ namespace Jazz2::Compatibility
 
 		int width = TilesPerRow * BlockSize;
 		int height = ((_tileCount - 1) / TilesPerRow + 1) * BlockSize;
-		int maxTiles = GetMaxSupportedTiles();
 
 		auto so = fs::Open(targetPath, FileAccessMode::Write);
 		ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");

@@ -1504,8 +1504,6 @@ namespace Jazz2
 			actor->OnEmitLights(_emittedLightsCache);
 		}
 
-		auto viewSize = _owner->_viewTexture->size();
-		auto viewPos = _owner->_cameraPos;
 		for (auto& light : _emittedLightsCache) {
 			auto command = RentRenderCommand();
 			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
