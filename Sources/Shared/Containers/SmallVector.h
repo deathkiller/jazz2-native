@@ -51,12 +51,24 @@ namespace Death::Containers
 		/// This is a helper for \a grow() that's out of line to reduce code
 		/// duplication.  This function will report a fatal error if it can't grow at
 		/// least to \p MinSize.
-		void* mallocForGrow(size_t MinSize, size_t TSize, size_t& NewCapacity);
+		void* mallocForGrow(void* FirstEl, size_t MinSize, size_t TSize, size_t& NewCapacity);
 
 		/// This is an implementation of the grow() method which only works
 		/// on POD-like data types and is out of line to reduce code duplication.
 		/// This function will report a fatal error if it cannot increase capacity.
 		void grow_pod(void* FirstEl, size_t MinSize, size_t TSize);
+
+		/// If vector was first created with capacity 0, getFirstEl() points to the
+		/// memory right after, an area unallocated. If a subsequent allocation,
+		/// that grows the vector, happens to return the same pointer as getFirstEl(),
+		/// get a new allocation, otherwise isSmall() will falsely return that no
+		/// allocation was done (true) and the memory will not be freed in the
+		/// destructor. If a VSize is given (vector size), also copy that many
+		/// elements to the new allocation - used if realloca fails to increase
+		/// space, and happens to allocate precisely at BeginX.
+		/// This is unlikely to be called often, but resolves a memory leak when the
+		/// situation does occur.
+		void* replaceAllocation(void* NewElts, size_t TSize, size_t NewCapacity, size_t VSize = 0);
 
 	public:
 		size_t size() const {
@@ -101,6 +113,7 @@ namespace Death::Containers
 		: public SmallVectorBase<SmallVectorSizeType<T>> {
 		using Base = SmallVectorBase<SmallVectorSizeType<T>>;
 
+	protected:
 		/// Find the address of the first element.  For this pointer math to be valid
 		/// with small-size of 0 for T with lots of alignment, it's important that
 		/// SmallVectorStorage is properly-aligned even for small-size of 0.
@@ -111,7 +124,6 @@ namespace Death::Containers
 		}
 		// Space after 'FirstEl' is clobbered, do not add any instance vars after it.
 
-	protected:
 		SmallVectorTemplateCommon(size_t Size) : Base(getFirstEl(), Size) {}
 
 		void grow_pod(size_t MinSize, size_t TSize) {
@@ -352,8 +364,7 @@ namespace Death::Containers
 			/// constructing elements as needed.
 			template<typename It1, typename It2>
 			static void uninitialized_move(It1 I, It1 E, It2 Dest) {
-				std::uninitialized_copy(std::make_move_iterator(I),
-										std::make_move_iterator(E), Dest);
+				std::uninitialized_move(I, E, Dest);
 			}
 
 			/// Copy the range [I, E) onto the uninitialized memory starting with "Dest",
@@ -370,11 +381,7 @@ namespace Death::Containers
 
 			/// Create a new allocation big enough for \p MinSize and pass back its size
 			/// in \p NewCapacity. This is the first section of \a grow().
-			T* mallocForGrow(size_t MinSize, size_t& NewCapacity) {
-				return static_cast<T*>(
-					SmallVectorBase<SmallVectorSizeType<T>>::mallocForGrow(
-						MinSize, sizeof(T), NewCapacity));
-			}
+			T* mallocForGrow(size_t MinSize, size_t& NewCapacity);
 
 			/// Move existing elements over to the new allocation \p NewElts, the middle
 			/// section of \a grow().
@@ -452,6 +459,14 @@ namespace Death::Containers
 		takeAllocationForGrow(NewElts, NewCapacity);
 	}
 
+	template <typename T, bool TriviallyCopyable>
+	T* SmallVectorTemplateBase<T, TriviallyCopyable>::mallocForGrow(
+		size_t MinSize, size_t& NewCapacity) {
+		return static_cast<T*>(
+			SmallVectorBase<SmallVectorSizeType<T>>::mallocForGrow(
+				this->getFirstEl(), MinSize, sizeof(T), NewCapacity));
+	}
+
 	// Define this out-of-line to dissuade the C++ compiler from inlining it.
 	template <typename T, bool TriviallyCopyable>
 	void SmallVectorTemplateBase<T, TriviallyCopyable>::moveElementsForGrow(
@@ -472,7 +487,7 @@ namespace Death::Containers
 			free(this->begin());
 
 		this->BeginX = NewElts;
-		#pragma warning(suppress: 4267)
+#pragma warning(suppress: 4267)
 		this->Capacity = NewCapacity;
 	}
 
@@ -491,8 +506,7 @@ namespace Death::Containers
 
 		/// Either const T& or T, depending on whether it's cheap enough to take
 		/// parameters by value.
-		using ValueParamT =
-			typename std::conditional<TakesParamByValue, T, const T&>::type;
+		using ValueParamT = std::conditional_t<TakesParamByValue, T, const T&>;
 
 		SmallVectorTemplateBase(size_t Size) : SmallVectorTemplateCommon<T>(Size) {}
 
@@ -520,8 +534,7 @@ namespace Death::Containers
 		template <typename T1, typename T2>
 		static void uninitialized_copy(
 			T1* I, T1* E, T2* Dest,
-			std::enable_if_t<std::is_same<typename std::remove_const<T1>::type,
-										  T2>::value>* = nullptr) {
+			std::enable_if_t<std::is_same<std::remove_const_t<T1>, T2>::value> * = nullptr) {
 			// Use memcpy for PODs iterated by pointers (which includes SmallVector
 			// iterators): std::uninitialized_copy optimizes to memmove, but we can
 			// use memcpy here. Note that I and E are iterators and thus might be
@@ -1320,8 +1333,7 @@ namespace Death::Containers
 
 	template <typename RangeType>
 	using ValueTypeFromRangeType =
-		typename std::remove_const<typename std::remove_reference<
-		decltype(*std::begin(std::declval<RangeType&>()))>::type>::type;
+		std::remove_const_t<std::remove_reference_t<decltype(*std::begin(std::declval<RangeType &>()))>>;
 
 	/// Given a range of type R, iterate the entire range and return a
 	/// SmallVector with elements of the vector.  This is useful, for example,

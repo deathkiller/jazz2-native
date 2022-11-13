@@ -830,7 +830,7 @@ void GameEventHandler::CheckUpdates()
 	Http::Response resp = req.Send("GET"_s, std::chrono::seconds(10));
 	if (resp.status.code == Http::Status::Ok && !resp.body.empty() && resp.body.size() < sizeof(_newestVersion) - 1) {
 		uint64_t currentVersion = parseVersion(NCINE_VERSION);
-		uint64_t latestVersion = parseVersion(reinterpret_cast<char*>(resp.body.data()));
+		uint64_t latestVersion = parseVersion(StringView(reinterpret_cast<char*>(resp.body.data()), resp.body.size()));
 		if (currentVersion < latestVersion) {
 			std::memcpy(_newestVersion, resp.body.data(), resp.body.size());
 			_newestVersion[resp.body.size()] = '\0';

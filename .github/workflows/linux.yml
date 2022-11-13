@@ -1,9 +1,7 @@
 name: 'Linux'
 
 on:
-  push:
-    branches:
-      - master
+  push
   pull_request:
     types: [ opened, synchronize ]
 
