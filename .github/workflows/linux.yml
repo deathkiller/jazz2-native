@@ -3,7 +3,7 @@ name: 'Linux'
 on:
   push:
     branches:
-      - *
+      - '*'
   pull_request:
     types: [ opened, synchronize ]
 
