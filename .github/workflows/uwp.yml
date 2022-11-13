@@ -1,7 +1,9 @@
 name: 'Universal Windows Platform'
 
 on:
-  push
+  push:
+    branches:
+      - *
   pull_request:
     types: [ opened, synchronize ]
 
