@@ -10,8 +10,8 @@ endif()
 target_compile_definitions(ncine PUBLIC "CMAKE_BUILD")
 target_compile_definitions(ncine PUBLIC "$<$<CONFIG:Debug>:NCINE_DEBUG>")
 
-# Override output executable name and force Unicode mode on Windows
 if(WIN32)
+	# Enable Win32 executable and force Unicode mode on Windows
 	set_target_properties(ncine PROPERTIES WIN32_EXECUTABLE TRUE)
 	target_compile_definitions(ncine PRIVATE "_UNICODE" "UNICODE")
 	
@@ -48,6 +48,7 @@ if(WIN32)
 			endif()
 		endif()
 	else()
+		# Override output executable name
 		set_target_properties(ncine PROPERTIES OUTPUT_NAME "Jazz2")
 		
 		# Try to use VC-LTL library
@@ -65,14 +66,13 @@ if(WIN32)
 		if(IS_DIRECTORY ${VC_LTL_Root})
 			message(STATUS "Found VC-LTL: ${VC_LTL_Root}")
 			target_compile_definitions(ncine PRIVATE "_DISABLE_DEPRECATE_LTL_MESSAGE")
-			#set(DisableAdvancedSupport "true")
-			#include("${VC_LTL_Root}/config/config.cmake")
 			set_target_properties(ncine PROPERTIES VS_GLOBAL_VC_LTL_Root ${VC_LTL_Root})
-			set_target_properties(ncine PROPERTIES VS_USER_PROPS "${NCINE_ROOT}/VC-LTL helper for Visual Studio.props")
+			set_target_properties(ncine PROPERTIES VS_PROJECT_IMPORT "${NCINE_ROOT}/VC-LTL helper for Visual Studio.props")
 			set(VC_LTL_FOUND 1)
 		endif()
 	endif()
 else()
+	# Override output executable name
 	set_target_properties(ncine PROPERTIES OUTPUT_NAME "jazz2")
 endif()
 
@@ -238,7 +238,8 @@ else() # GCC and LLVM
 
 	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 		target_compile_options(ncine PRIVATE -fdiagnostics-color=auto)
-		target_compile_options(ncine PRIVATE -Wall -pedantic -Wextra -Wno-old-style-cast -Wno-long-long -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-variadic-macros -Wcast-align)
+		#target_compile_options(ncine PRIVATE -Wall -pedantic -Wextra -Wno-old-style-cast -Wno-long-long -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-variadic-macros -Wcast-align)
+		target_compile_options(ncine PRIVATE -Wno-old-style-cast -Wno-long-long -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-variadic-macros -Wcast-align)
 
 		if(NCINE_DYNAMIC_LIBRARY)
 			target_link_options(ncine PRIVATE -Wl,--no-undefined)
@@ -266,7 +267,8 @@ else() # GCC and LLVM
 		endif()
 	elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
 		target_compile_options(ncine PRIVATE -fcolor-diagnostics)
-		target_compile_options(ncine PRIVATE -Wall -pedantic -Wextra -Wno-old-style-cast -Wno-gnu-zero-variadic-macro-arguments -Wno-unused-parameter -Wno-variadic-macros -Wno-c++11-long-long -Wno-missing-braces)
+		#target_compile_options(ncine PRIVATE -Wall -pedantic -Wextra -Wno-old-style-cast -Wno-gnu-zero-variadic-macro-arguments -Wno-unused-parameter -Wno-variadic-macros -Wno-c++11-long-long -Wno-missing-braces)
+		target_compile_options(ncine PRIVATE -Wno-old-style-cast -Wno-gnu-zero-variadic-macro-arguments -Wno-unused-parameter -Wno-variadic-macros -Wno-c++11-long-long -Wno-missing-braces)
 
 		if(NCINE_DYNAMIC_LIBRARY)
 			target_link_options(ncine PRIVATE -Wl,-undefined,error)
