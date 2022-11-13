@@ -14,7 +14,7 @@ namespace Jazz2::Actors::Environment
 			PreloadMetadataAsync("Enemy/LizardFloat"_s);
 		}
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other);
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 		void Unmount(float timeLeft);
 

@@ -45,7 +45,7 @@ namespace Death::Containers
 
 	/// Report that MinSize doesn't fit into this vector's size type. Throws
 	/// std::length_error or calls report_fatal_error.
-	[[noreturn]] static void report_size_overflow(size_t MinSize, size_t MaxSize);
+	static void report_size_overflow(size_t MinSize, size_t MaxSize);
 	static void report_size_overflow(size_t MinSize, size_t MaxSize) {
 		//std::string Reason = "SmallVector unable to grow. Requested capacity (" +
 		//	std::to_string(MinSize) +
@@ -60,7 +60,7 @@ namespace Death::Containers
 
 	/// Report that this vector is already at maximum capacity. Throws
 	/// std::length_error or calls report_fatal_error.
-	[[noreturn]] static void report_at_maximum_capacity(size_t MaxSize);
+	static void report_at_maximum_capacity(size_t MaxSize);
 	static void report_at_maximum_capacity(size_t MaxSize) {
 		//std::string Reason =
 		//	"SmallVector capacity unable to grow. Already at maximum size " +

@@ -10,7 +10,7 @@ namespace Jazz2::Actors::Bosses
 		Queen();
 		~Queen();
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other);
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 		static void Preload(const ActorActivationDetails& details);
 

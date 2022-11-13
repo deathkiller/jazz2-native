@@ -16,7 +16,7 @@ namespace Jazz2::Actors::Solid
 
 		Pole();
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other);
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 		FallDirection GetFallDirection() const {
 			return _fall;

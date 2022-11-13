@@ -35,7 +35,7 @@ namespace Jazz2::Actors::Bosses
 			float Phase;
 			float FallTime;
 
-			bool OnHandleCollision(std::shared_ptr<ActorBase> other);
+			bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 			void Recover(float phase);
 

@@ -86,7 +86,7 @@ namespace Jazz2::UI::Menu
 						if (_selectedIndex > 0) {
 							_selectedIndex--;
 						} else {
-							_selectedIndex = _items.size() - 1;
+							_selectedIndex = (int)(_items.size() - 1);
 						}
 						EnsureVisibleSelected();
 						_pressedCount = std::min(_pressedCount + 4, 19);
