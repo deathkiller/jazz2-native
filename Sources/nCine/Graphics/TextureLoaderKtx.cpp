@@ -44,9 +44,9 @@ namespace nCine
 				checkPassed = false;
 		}
 
-		//RETURNF_ASSERT_MSG(checkPassed, "Not a KTX file");
+		RETURNF_ASSERT_MSG(checkPassed, "Not a KTX file");
 		// Checking for the header identifier
-		//RETURNF_ASSERT_MSG(header.endianess != 0x01020304, "File endianess doesn't match machine one");
+		RETURNF_ASSERT_MSG(header.endianess != 0x01020304, "File endianess doesn't match machine one");
 
 		// Accounting for key-value data and `UInt32 imageSize` from first MIP level
 		headerSize_ = 64 + IFileStream::int32FromLE(header.bytesOfKeyValueData) + 4;

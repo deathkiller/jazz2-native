@@ -654,7 +654,7 @@ namespace Jazz2
 		uint64_t signature1 = s->ReadValue<uint64_t>();
 		uint16_t signature2 = s->ReadValue<uint16_t>();
 		uint8_t version = s->ReadValue<uint8_t>();
-		uint8_t flags = s->ReadValue<uint8_t>();
+		/*uint8_t flags =*/ s->ReadValue<uint8_t>();
 		ASSERT_MSG(signature1 == 0xB8EF8498E2BFBBEF && signature2 == 0x208F && version == 2, "Invalid file");
 
 		// TODO: Use single channel instead
@@ -761,7 +761,7 @@ namespace Jazz2
 		RETURNF_ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && fileType == LevelFile, "File has invalid signature");
 
 		// TODO: Level flags
-		uint16_t flags = s->ReadValue<uint16_t>();
+		/*uint16_t flags =*/ s->ReadValue<uint16_t>();
 
 		// Read compressed data
 		int32_t compressedSize = s->ReadValue<int32_t>();
@@ -889,7 +889,7 @@ namespace Jazz2
 		Episode episode;
 		episode.Name = fs::GetFileNameWithoutExtension(path);
 
-		uint16_t flags = s->ReadValue<uint16_t>();
+		/*uint16_t flags =*/ s->ReadValue<uint16_t>();
 
 		uint8_t nameLength = s->ReadValue<uint8_t>();
 		episode.DisplayName = String(NoInit, nameLength);

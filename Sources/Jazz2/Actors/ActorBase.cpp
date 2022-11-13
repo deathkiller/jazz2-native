@@ -1019,7 +1019,7 @@ namespace Jazz2::Actors
 			Vector2i size = res->Base->FrameDimensions;
 
 			if (std::abs(_renderer.rotation()) > 0.1f) {
-				Matrix4x4f transform = Matrix4x4f::Translation((float)-res->Base->Hotspot.X, (float)-res->Base->Hotspot.Y, 0.0f);
+				Matrix4x4f transform = Matrix4x4f::Translation((float)-hotspot.X, (float)-hotspot.Y, 0.0f);
 				if (GetState(ActorState::IsFacingLeft)) {
 					transform = Matrix4x4f::Scaling(-1.0f, 1.0f, 1.0f) * transform;
 				}
@@ -1040,8 +1040,8 @@ namespace Jazz2::Actors
 				AABB.R = maxX;
 				AABB.B = maxY;
 			} else {
-				AABB.L = (IsFacingLeft() ? (_pos.X + res->Base->Hotspot.X - size.X) : (_pos.X - res->Base->Hotspot.X));
-				AABB.T = _pos.Y - res->Base->Hotspot.Y;
+				AABB.L = (IsFacingLeft() ? (_pos.X + hotspot.X - size.X) : (_pos.X - hotspot.X));
+				AABB.T = _pos.Y - hotspot.Y;
 				AABB.R = AABB.L + size.X;
 				AABB.B = AABB.T + size.Y;
 			}

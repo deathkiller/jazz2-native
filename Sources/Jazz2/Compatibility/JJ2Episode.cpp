@@ -23,7 +23,7 @@ namespace Jazz2::Compatibility
 		// begins; stored as a 4-byte-long integer starting at byte 0x8)
 
 		// Header (208 bytes)
-		int32_t headerSize = s->ReadValue<int32_t>();
+		/*int32_t headerSize =*/ s->ReadValue<int32_t>();
 		Position = s->ReadValue<int32_t>();
 		/*uint32_t flags =*/ s->ReadValue<uint32_t>();	// 0x01 = Not Shareware
 		/*uint32_t unknown1 =*/ s->ReadValue<uint32_t>();

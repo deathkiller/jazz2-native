@@ -273,11 +273,9 @@ namespace Jazz2::Actors::Bosses
 			Vector2f diff = (targetPos - _pos).Normalized();
 
 			std::shared_ptr<Rocket> rocket = std::make_shared<Rocket>();
-			uint8_t turretParams[1] = { 2 };
 			rocket->OnActivated({
 				.LevelHandler = _levelHandler,
-				.Pos = Vector3i((int)_pos.X + (IsFacingLeft() ? 10 : -10), (int)_pos.Y + 10, _renderer.layer() + 4),
-				.Params = turretParams
+				.Pos = Vector3i((int)_pos.X + (IsFacingLeft() ? 10 : -10), (int)_pos.Y + 10, _renderer.layer() + 4)
 			});
 			rocket->_renderer.setRotation(atan2f(diff.Y, diff.X));
 			_levelHandler->AddActor(rocket);
@@ -326,8 +324,6 @@ namespace Jazz2::Actors::Bosses
 
 	Task<bool> Bolly::Rocket::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		uint8_t partType = details.Params[0];
-
 		SetState(ActorState::IsInvulnerable, true);
 		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
 		CanCollideWithAmmo = false;

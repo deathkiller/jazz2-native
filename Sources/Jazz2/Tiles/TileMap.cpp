@@ -181,8 +181,6 @@ namespace Jazz2::Tiles
 		int hy1 = (int)aabb.T;
 		int hy2 = std::min((int)std::ceil(aabb.B), limitBottomPx - 1);
 
-		const int SmallHitboxHeight = 8;
-
 		int hx1t = hx1 / TileSet::DefaultTileSize;
 		int hx2t = hx2 / TileSet::DefaultTileSize;
 		int hy1t = hy1 / TileSet::DefaultTileSize;
@@ -673,8 +671,8 @@ namespace Jazz2::Tiles
 			animTile.FrameDuration = s.ReadValue<uint16_t>() / 16.0f;
 			animTile.Delay = s.ReadValue<uint16_t>();
 
-			//animTile.DelayJitter = s->ReadValue<uint16_t>();
-			uint16_t delayJitter = s.ReadValue<uint16_t>();
+			// TODO: delayJitter
+			/*uint16_t delayJitter =*/ s.ReadValue<uint16_t>();
 
 			animTile.PingPong = s.ReadValue<uint8_t>();
 			animTile.PingPongDelay = s.ReadValue<uint16_t>();
@@ -682,7 +680,7 @@ namespace Jazz2::Tiles
 			for (int j = 0; j < frameCount; j++) {
 				auto& frame = animTile.Tiles.emplace_back();
 				// TODO: flags
-				uint8_t flag = s.ReadValue<uint8_t>();
+				/*uint8_t flag =*/ s.ReadValue<uint8_t>();
 				frame.TileID = s.ReadValue<uint16_t>();
 			}
 		}

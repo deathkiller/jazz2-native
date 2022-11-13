@@ -81,7 +81,7 @@ namespace nCine
 	int32_t CompressionUtils::GetMaxDeflatedSize(int32_t uncompressedSize)
 	{
 		constexpr int32_t MinBlockSize = 5000;
-		int32_t max_blocks = std::max((uncompressedSize + uncompressedSize - 1) / uncompressedSize, 1);
+		int32_t max_blocks = std::max((uncompressedSize + MinBlockSize - 1) / MinBlockSize, 1);
 		return uncompressedSize + 5 * max_blocks + 1 + 8;
 	}
 

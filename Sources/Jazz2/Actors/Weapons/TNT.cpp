@@ -31,7 +31,6 @@ namespace Jazz2::Actors::Weapons
 
 		async_await RequestMetadataAsync("Weapon/TNT"_s);
 
-		AnimState state = AnimState::Idle;
 		SetAnimation(AnimState::Idle);
 
 		async_return true;

@@ -266,7 +266,7 @@ namespace Jazz2::UI::Menu
 		RETURN_ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::LevelFile, "File has invalid signature");
 
 		// TODO: Level flags
-		uint16_t flags = s->ReadValue<uint16_t>();
+		/*uint16_t flags =*/ s->ReadValue<uint16_t>();
 
 		// Read compressed data
 		int32_t compressedSize = s->ReadValue<int32_t>();

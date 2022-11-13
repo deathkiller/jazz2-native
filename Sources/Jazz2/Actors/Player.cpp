@@ -235,9 +235,6 @@ namespace Jazz2::Actors
 						if (it != _metadata->Graphics.end()) {
 							Vector2i texSize = it->second.Base->TextureDiffuse->size();
 							Vector2i size = it->second.Base->FrameDimensions;
-							Vector2i frameConf = it->second.Base->FrameConfiguration;
-							int frame = it->second.FrameOffset + Random().Next(0, it->second.FrameCount);
-							float speedX = Random().FastFloat(-4.0f, 4.0f);
 
 							Tiles::TileMap::DestructibleDebris debris = { };
 							debris.Pos = _pos;
@@ -1217,8 +1214,6 @@ namespace Jazz2::Actors
 		if (!_controllable) {
 			return;
 		}
-
-		float posX = _pos.X;
 
 		AnimState oldState = _currentAnimationState;
 		AnimState newState;
