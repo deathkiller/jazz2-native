@@ -83,7 +83,7 @@ namespace nCine
 			Vector2f scale;
 
 			/// The number of video modes in the array
-			unsigned int numVideoModes;
+			int numVideoModes;
 			/// The array of video modes supported by the monitor
 			VideoMode videoModes[MaxVideoModes];
 		};

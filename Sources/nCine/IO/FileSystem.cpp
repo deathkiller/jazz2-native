@@ -858,8 +858,11 @@ namespace nCine
 		::GetCurrentDirectory(MaxPathLength, buffer);
 		return Utf8::FromUtf16(buffer);
 #else
-		::getcwd(buffer, MaxPathLength);
-		return buffer;
+		if (::getcwd(buffer, MaxPathLength) != nullptr) {
+			return buffer;
+		} else {
+			return { };
+		}
 #endif
 	}
 

@@ -33,7 +33,7 @@ namespace Jazz2::Actors::Bosses
 		protected:
 			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 			void OnUpdateHitbox() override;
-			void OnEmitLights(SmallVectorImpl<LightEmitter>& lights);
+			void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 			bool OnPerish(ActorBase* collider) override;
 			void OnHitFloor(float timeMult) override;
 			void OnHitWall(float timeMult) override;
@@ -45,7 +45,7 @@ namespace Jazz2::Actors::Bosses
 		protected:
 			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 			void OnUpdateHitbox() override;
-			void OnEmitLights(SmallVectorImpl<LightEmitter>& lights);
+			void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 			bool OnPerish(ActorBase* collider) override;
 			void OnHitFloor(float timeMult) override;
 			void OnHitWall(float timeMult) override;

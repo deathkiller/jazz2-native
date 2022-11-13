@@ -197,7 +197,7 @@ namespace Jazz2::UI::Menu
 
 		char stringBuffer[16];
 		constexpr float topLine = 131.0f;
-		float bottomLine = viewSize.Y - 42;
+		float bottomLine = viewSize.Y - 42.0f;
 		_root->DrawElement("MenuDim"_s, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
 			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
 		_root->DrawElement("MenuLine"_s, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);

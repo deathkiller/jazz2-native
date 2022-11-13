@@ -14,7 +14,7 @@ namespace Jazz2::Actors::Lighting
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
-		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights);
+		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 
 	private:
 		struct LightPart {

@@ -63,7 +63,7 @@ namespace nCine
 				const IGfxDevice::VideoMode& mode = monitors_[fsMonitorIndex_].videoModes[fsModeIndex_];
 				width = mode.width;
 				height = mode.height;
-				refreshRate = mode.refreshRate;
+				refreshRate = (int)mode.refreshRate;
 			}
 
 			glfwSetWindowMonitor(windowHandle_, monitor, 0, 0, width, height, refreshRate);

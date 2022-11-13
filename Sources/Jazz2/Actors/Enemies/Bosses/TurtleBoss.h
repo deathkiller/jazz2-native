@@ -12,7 +12,7 @@ namespace Jazz2::Actors::Bosses
 
 		static void Preload(const ActorActivationDetails& details);
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other);
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

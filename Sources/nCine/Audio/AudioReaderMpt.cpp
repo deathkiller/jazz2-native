@@ -83,7 +83,7 @@ namespace nCine
 			(int16_t*)buffer
 		);
 #else
-		int count = openmpt_module_read_interleaved_stereo(
+		size_t count = openmpt_module_read_interleaved_stereo(
 			_module, _frequency,
 			bufferSize / (2 * sizeof(int16_t)), // Buffer size per channel
 			(int16_t*)buffer
@@ -163,7 +163,7 @@ namespace nCine
 		}
 
 		AudioReaderMpt* _this = reinterpret_cast<AudioReaderMpt*>(stream);
-		_this->_fileHandle->Seek(offset, origin);
+		_this->_fileHandle->Seek((int32_t)offset, origin);
 		return 0;
 	}
 
