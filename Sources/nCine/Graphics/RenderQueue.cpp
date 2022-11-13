@@ -137,7 +137,9 @@ namespace nCine
 		SmallVectorImpl<RenderCommand*>* opaques = batchingEnabled ? &opaqueBatchedQueue_ : &opaqueQueue_;
 		SmallVectorImpl<RenderCommand*>* transparents = batchingEnabled ? &transparentBatchedQueue_ : &transparentQueue_;
 
+#if NCINE_DEBUG
 		unsigned int commandIndex = 0;
+#endif
 		// Rendering opaque nodes front to back
 		for (RenderCommand* opaqueRenderCommand : *opaques) {
 			TracyGpuZone("Opaque");
@@ -158,8 +160,9 @@ namespace nCine
 								   commandIndex, commandTypeString(*opaqueRenderCommand), layer, visitOrder, opaqueRenderCommand->materialSortKey());
 			}
 			GLDebug::ScopedGroup scoped(debugString);
-#endif
 			commandIndex++;
+#endif
+
 
 			RenderStatistics::gatherStatistics(*opaqueRenderCommand);
 			opaqueRenderCommand->commitCameraTransformation();
@@ -188,8 +191,8 @@ namespace nCine
 								   commandIndex, commandTypeString(*transparentRenderCommand), layer, visitOrder, transparentRenderCommand->materialSortKey());
 			}
 			GLDebug::ScopedGroup scoped(debugString);
-#endif
 			commandIndex++;
+#endif
 
 			RenderStatistics::gatherStatistics(*transparentRenderCommand);
 			GLBlending::setBlendFunc(transparentRenderCommand->material().srcBlendingFactor(), transparentRenderCommand->material().destBlendingFactor());
