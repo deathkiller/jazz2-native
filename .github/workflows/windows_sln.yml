@@ -1,7 +1,9 @@
 name: 'Windows (SLN)'
 
 on:
-  push
+  push:
+    branches:
+      - *
   pull_request:
     types: [ opened, synchronize ]
 
