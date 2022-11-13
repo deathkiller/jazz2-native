@@ -97,7 +97,7 @@ namespace nCine
 			};
 
 			static const int MaxNumAxes = 16;
-			static const int MaxNumButtons = 16;
+			static const int MaxNumButtons = 17;
 			static const int MaxHatButtons = 4; // The four directions
 
 			Axis axes[MaxNumAxes];
