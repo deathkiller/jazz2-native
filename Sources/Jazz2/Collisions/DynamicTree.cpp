@@ -567,7 +567,7 @@ namespace Jazz2::Collisions
 		ValidateStructure(child2);
 	}
 
-	void DynamicTree::ValidateMetrics(int32_t index) const
+	/*void DynamicTree::ValidateMetrics(int32_t index) const
 	{
 		if (index == NullNode) {
 			return;
@@ -590,8 +590,7 @@ namespace Jazz2::Collisions
 
 		int32_t height1 = m_nodes[child1].height;
 		int32_t height2 = m_nodes[child2].height;
-		int32_t height;
-		height = 1 + std::max(height1, height2);
+		int32_t height = 1 + std::max(height1, height2);
 		//b2Assert(node->height == height);
 
 		//AABBf aabb = AABBf::Combine(m_nodes[child1].aabb, m_nodes[child2].aabb);
@@ -600,13 +599,13 @@ namespace Jazz2::Collisions
 
 		ValidateMetrics(child1);
 		ValidateMetrics(child2);
-	}
+	}*/
 
 	void DynamicTree::Validate() const
 	{
 #if defined(b2DEBUG)
 		ValidateStructure(m_root);
-		ValidateMetrics(m_root);
+		//ValidateMetrics(m_root);
 
 		int32_t freeCount = 0;
 		int32_t freeIndex = m_freeList;
@@ -617,7 +616,6 @@ namespace Jazz2::Collisions
 		}
 
 		//b2Assert(GetHeight() == ComputeHeight());
-
 		//b2Assert(m_nodeCount + freeCount == m_nodeCapacity);
 #endif
 	}

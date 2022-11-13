@@ -111,7 +111,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 	constexpr char Bold[] = "\033[1m";
 	constexpr char Faint[] = "\033[2m";
 	//constexpr char Black[] = "\033[30m";
-	constexpr char BrightRed[] = "\033[91m";
+	//constexpr char BrightRed[] = "\033[91m";
 	//constexpr char BrightGreen[] = "\033[92m";
 	//constexpr char BrightYellow[] = "\033[93m";
 	//constexpr char BrightRedBg[] = "\033[101m";
