@@ -330,7 +330,7 @@ namespace nCine
 				mapping.desc = mappings_[index].desc;
 
 				const uint8_t* g = joyGuid.data;
-				LOGI_X("Joystick mapping found for \"%s\" with GUID \"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\" also known as \"%s\" (%d)", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], mappings_[index].name, event.joyId);
+				LOGI_X("Joystick mapping found for \"%s\" with GUID \"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\" also known as \"%s\" (%d)", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], g[16], mappings_[index].name, event.joyId);
 			}
 		}
 
