@@ -35,8 +35,8 @@
 // ---------------------------------------------------------------------------
 
 #define PHMAP_VERSION_MAJOR 1
-#define PHMAP_VERSION_MINOR 0
-#define PHMAP_VERSION_PATCH 0
+#define PHMAP_VERSION_MINOR 3
+#define PHMAP_VERSION_PATCH 8
 
 // Included for the __GLIBC__ macro (or similar macros on other systems).
 #include <limits.h>
@@ -318,13 +318,13 @@
     #endif
 #endif
 
-//#ifdef PHMAP_HAVE_STD_STRING_VIEW
-//    #error "PHMAP_HAVE_STD_STRING_VIEW cannot be directly set."
-//#endif
+#ifdef PHMAP_HAVE_STD_STRING_VIEW
+    #error "PHMAP_HAVE_STD_STRING_VIEW cannot be directly set."
+#endif
 
 //#ifdef __has_include
 //    #if __has_include(<string_view>) && __cplusplus >= 201703L && \
-//        (!defined(_MSC_VER) || _MSC_VER >= 1920) // vs2019
+//        (!defined(_MSC_VER) || _MSC_VER >= 1920)
 //        #define PHMAP_HAVE_STD_STRING_VIEW 1
 //    #endif
 //#endif

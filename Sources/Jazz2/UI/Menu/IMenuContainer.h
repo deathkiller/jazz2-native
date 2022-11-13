@@ -26,6 +26,8 @@ namespace Jazz2::UI::Menu
 		static constexpr uint16_t FontLayer = 700;
 		static constexpr uint16_t FontShadowLayer = 620;
 
+		virtual ~IMenuContainer() { }
+
 		template<typename T>
 		void SwitchToSection()
 		{

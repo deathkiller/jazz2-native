@@ -32,8 +32,8 @@ namespace Jazz2::Compatibility
 		uint32_t magicUnknown = s->ReadValue<uint32_t>();
 		ASSERT(magicUnknown == 0x18080200);
 
-		uint32_t fileLen = s->ReadValue<uint32_t>();
-		uint32_t crc = s->ReadValue<uint32_t>();
+		/*uint32_t fileLen =*/ s->ReadValue<uint32_t>();
+		/*uint32_t crc =*/ s->ReadValue<uint32_t>();
 		int32_t setCnt = s->ReadValue<int32_t>();
 		SmallVector<uint32_t, 0> setAddresses(setCnt);
 
@@ -56,8 +56,8 @@ namespace Jazz2::Compatibility
 			uint32_t magicANIM = s->ReadValue<uint32_t>();
 			uint8_t animCount = s->ReadValue<uint8_t>();
 			uint8_t sndCount = s->ReadValue<uint8_t>();
-			uint16_t frameCount = s->ReadValue<uint16_t>();
-			uint32_t cumulativeSndIndex = s->ReadValue<uint32_t>();
+			/*uint16_t frameCount =*/ s->ReadValue<uint16_t>();
+			/*uint32_t cumulativeSndIndex =*/ s->ReadValue<uint32_t>();
 			int32_t infoBlockLenC = s->ReadValue<int32_t>();
 			int32_t infoBlockLenU = s->ReadValue<int32_t>();
 			int32_t frameDataBlockLenC = s->ReadValue<int32_t>();
@@ -93,9 +93,9 @@ namespace Jazz2::Compatibility
 						throw new InvalidDataException("Set has frames but no anims");
 					}*/
 
-					short lastColdspotX = 0, lastColdspotY = 0;
-					short lastHotspotX = 0, lastHotspotY = 0;
-					short lastGunspotX = 0, lastGunspotY = 0;
+					//int16_t lastColdspotX = 0, lastColdspotY = 0;
+					//int16_t lastHotspotX = 0, lastHotspotY = 0;
+					//int16_t lastGunspotX = 0, lastGunspotY = 0;
 
 					for (uint16_t j = 0; j < anim.FrameCount; j++) {
 						AnimFrameSection& frame = anim.Frames[j];
@@ -129,16 +129,16 @@ namespace Jazz2::Compatibility
 							anim.AdjustedSizeY
 						);
 
-						lastColdspotX = frame.ColdspotX; lastColdspotY = frame.ColdspotY;
-						lastHotspotX = frame.HotspotX; lastHotspotY = frame.HotspotY;
-						lastGunspotX = frame.GunspotX; lastGunspotY = frame.GunspotY;
+						//lastColdspotX = frame.ColdspotX; lastColdspotY = frame.ColdspotY;
+						//lastHotspotX = frame.HotspotX; lastHotspotY = frame.HotspotY;
+						//lastGunspotX = frame.GunspotX; lastGunspotY = frame.GunspotY;
 
 						int32_t dpos = (frame.ImageAddr + 4);
 
 						imageDataBlock.SeekTo(dpos - 4);
 						uint16_t width2 = imageDataBlock.ReadUInt16();
 						imageDataBlock.SeekTo(dpos - 2);
-						uint16_t height2 = imageDataBlock.ReadUInt16();
+						/*uint16_t height2 =*/ imageDataBlock.ReadUInt16();
 
 						frame.DrawTransparent = (width2 & 0x8000) > 0;
 
@@ -213,7 +213,7 @@ namespace Jazz2::Compatibility
 				bool isASFF = (format == 0x46465341);
 
 				uint32_t magicSAMP = sampleDataBlock.ReadUInt32();
-				uint32_t sampSize = sampleDataBlock.ReadUInt32();
+				/*uint32_t sampSize =*/ sampleDataBlock.ReadUInt32();
 				ASSERT_MSG(magicRIFF == 0x46464952 && magicSAMP == 0x504D4153, "Sample has invalid header");
 
 				// Padding/unknown data #1
@@ -237,7 +237,7 @@ namespace Jazz2::Compatibility
 				// Unknown. s0s0 1.20: 00 80, 1.24: 80 00
 				sampleDataBlock.DiscardBytes(2);
 
-				uint32_t payloadSize = sampleDataBlock.ReadUInt32();
+				/*uint32_t payloadSize =*/ sampleDataBlock.ReadUInt32();
 				// Padding #2, all zeroes in both
 				sampleDataBlock.DiscardBytes(8);
 

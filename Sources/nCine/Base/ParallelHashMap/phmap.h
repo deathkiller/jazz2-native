@@ -120,9 +120,9 @@
 #include "phmap_utils.h"
 #include "phmap_base.h"
 
-//#if PHMAP_HAVE_STD_STRING_VIEW
-//    #include <string_view>
-//#endif
+#if PHMAP_HAVE_STD_STRING_VIEW
+    #include <string_view>
+#endif
 
 namespace phmap {
 
@@ -1450,7 +1450,7 @@ public:
     template <class... Args, typename std::enable_if<
                                  !IsDecomposable<Args...>::value, int>::type = 0>
     std::pair<iterator, bool> emplace(Args&&... args) {
-        typename std::aligned_storage<sizeof(slot_type), alignof(slot_type)>::type
+        typename phmap::aligned_storage<sizeof(slot_type), alignof(slot_type)>::type
             raw;
         slot_type* slot = reinterpret_cast<slot_type*>(&raw);
 
@@ -1461,7 +1461,7 @@ public:
 
     template <class... Args, typename std::enable_if<!IsDecomposable<Args...>::value, int>::type = 0>
     std::pair<iterator, bool> emplace_with_hash(size_t hashval, Args&&... args) {
-        typename std::aligned_storage<sizeof(slot_type), alignof(slot_type)>::type raw;
+        typename phmap::aligned_storage<sizeof(slot_type), alignof(slot_type)>::type raw;
         slot_type* slot = reinterpret_cast<slot_type*>(&raw);
 
         PolicyTraits::construct(&alloc_ref(), slot, std::forward<Args>(args)...);
@@ -2053,7 +2053,7 @@ private:
         //       mark target as FULL
         //       repeat procedure for current slot with moved from element (target)
         ConvertDeletedToEmptyAndFullToDeleted(ctrl_, capacity_);
-        typename std::aligned_storage<sizeof(slot_type), alignof(slot_type)>::type
+        typename phmap::aligned_storage<sizeof(slot_type), alignof(slot_type)>::type
             raw;
         slot_type* slot = reinterpret_cast<slot_type*>(&raw);
         for (size_t i = 0; i != capacity_; ++i) {
@@ -2217,10 +2217,13 @@ protected:
     void emplace_at(size_t i, Args&&... args) {
         PolicyTraits::construct(&alloc_ref(), slots_ + i,
                                 std::forward<Args>(args)...);
-
+        
+#ifdef PHMAP_CHECK_CONSTRUCTED_VALUE
+        // this check can be costly, so do it only when requested
         assert(PolicyTraits::apply(FindElement{*this}, *iterator_at(i)) ==
                iterator_at(i) &&
                "constructed value does not match the lookup key");
+#endif
     }
 
     iterator iterator_at(size_t i) { return {ctrl_ + i, slots_ + i}; }
@@ -3084,7 +3087,7 @@ public:
     template <class... Args, typename std::enable_if<
                                  !IsDecomposable<Args...>::value, int>::type = 0>
     std::pair<iterator, bool> emplace_with_hash(size_t hashval, Args&&... args) {
-        typename std::aligned_storage<sizeof(slot_type), alignof(slot_type)>::type raw;
+        typename phmap::aligned_storage<sizeof(slot_type), alignof(slot_type)>::type raw;
         slot_type* slot = reinterpret_cast<slot_type*>(&raw);
 
         PolicyTraits::construct(&alloc_ref(), slot, std::forward<Args>(args)...);
@@ -3157,7 +3160,7 @@ public:
     template <class... Args, typename std::enable_if<
                                  !IsDecomposable<Args...>::value, int>::type = 0>
     std::pair<iterator, bool> emplace(Args&&... args) {
-        typename std::aligned_storage<sizeof(slot_type), alignof(slot_type)>::type raw;
+        typename phmap::aligned_storage<sizeof(slot_type), alignof(slot_type)>::type raw;
         slot_type* slot = reinterpret_cast<slot_type*>(&raw);
         size_t hashval  = this->hash(PolicyTraits::key(slot));
 
@@ -3372,6 +3375,11 @@ public:
         fCallback(set);
     }
 
+    // unsafe, for internal use only
+    Inner& get_inner(size_t idx) {
+        return  sets_[idx];
+    }
+
     // Extension API: support for heterogeneous keys.
     //
     //   std::unordered_set<std::string> s;
@@ -3473,15 +3481,20 @@ public:
         return it == end() ? node_type() : extract(const_iterator{it});
     }
 
-    void swap(parallel_hash_set& that) noexcept(
-        IsNoThrowSwappable<EmbeddedSet>() &&
-        (!AllocTraits::propagate_on_container_swap::value ||
-         IsNoThrowSwappable<allocator_type>())) {
+    template<class Mtx2_>
+    void swap(parallel_hash_set<N, RefSet, Mtx2_, Policy, Hash, Eq, Alloc>& that)
+        noexcept(IsNoThrowSwappable<EmbeddedSet>() &&
+                 (!AllocTraits::propagate_on_container_swap::value ||
+                  IsNoThrowSwappable<allocator_type>()))
+    {
         using std::swap;
+        using Lockable2 = phmap::LockableImpl<Mtx2_>;
+         
         for (size_t i=0; i<num_tables; ++i)
         {
-            typename Lockable::UniqueLocks l(sets_[i], that.sets_[i]);
-            swap(sets_[i].set_, that.sets_[i].set_);
+            typename Lockable::UniqueLock l(sets_[i]);
+            typename Lockable2::UniqueLock l2(that.get_inner(i));
+            swap(sets_[i].set_, that.get_inner(i).set_);
         }
     }
 
@@ -3620,8 +3633,11 @@ public:
         return !(a == b);
     }
 
+    template<class Mtx2_>
     friend void swap(parallel_hash_set& a,
-                     parallel_hash_set& b) noexcept(noexcept(a.swap(b))) {
+                     parallel_hash_set<N, RefSet, Mtx2_, Policy, Hash, Eq, Alloc>& b)
+        noexcept(noexcept(a.swap(b)))
+    {
         a.swap(b);
     }
 
@@ -3700,14 +3716,16 @@ private:
 
     // TODO(alkis): Optimize this assuming *this and that don't overlap.
     // --------------------------------------------------------------------
-    parallel_hash_set& move_assign(parallel_hash_set&& that, std::true_type) {
-        parallel_hash_set tmp(std::move(that));
+    template<class Mtx2_>
+    parallel_hash_set& move_assign(parallel_hash_set<N, RefSet, Mtx2_, Policy, Hash, Eq, Alloc>&& that, std::true_type) {
+        parallel_hash_set<N, RefSet, Mtx2_, Policy, Hash, Eq, Alloc> tmp(std::move(that));
         swap(tmp);
         return *this;
     }
 
-    parallel_hash_set& move_assign(parallel_hash_set&& that, std::false_type) {
-        parallel_hash_set tmp(std::move(that), alloc_ref());
+    template<class Mtx2_>
+    parallel_hash_set& move_assign(parallel_hash_set<N, RefSet, Mtx2_, Policy, Hash, Eq, Alloc>&& that, std::false_type) {
+        parallel_hash_set<N, RefSet, Mtx2_, Policy, Hash, Eq, Alloc> tmp(std::move(that), alloc_ref());
         swap(tmp);
         return *this;
     }
@@ -4353,7 +4371,7 @@ public:
 //  hash_default
 // --------------------------------------------------------------------------
 
-/*#if PHMAP_HAVE_STD_STRING_VIEW
+#if PHMAP_HAVE_STD_STRING_VIEW
 
 // Supports heterogeneous lookup for basic_string<T>-like elements.
 template<class CharT> 
@@ -4400,7 +4418,7 @@ struct HashEq<std::wstring> : StringHashEqT<wchar_t> {};
 template <>
 struct HashEq<std::wstring_view> : StringHashEqT<wchar_t> {};
 
-#endif*/
+#endif
 
 // Supports heterogeneous lookup for pointers and smart pointers.
 // -------------------------------------------------------------
@@ -4411,7 +4429,9 @@ struct HashEq<T*>
         using is_transparent = void;
         template <class U>
         size_t operator()(const U& ptr) const {
-            return phmap::Hash<const T*>{}(HashEq::ToPtr(ptr));
+            // we want phmap::Hash<T*> and not phmap::Hash<const T*>
+            // so "struct std::hash<T*> " override works
+            return phmap::Hash<T*>{}((T*)(uintptr_t)HashEq::ToPtr(ptr));
         }
     };
 

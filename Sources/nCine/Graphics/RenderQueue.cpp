@@ -69,6 +69,7 @@ namespace nCine
 				: a->idSortKey() < b->idSortKey();
 		}
 
+#if NCINE_DEBUG
 		const char* commandTypeString(const RenderCommand& command)
 		{
 			switch (command.type()) {
@@ -77,15 +78,16 @@ namespace nCine
 				case RenderCommand::CommandTypes::MESH_SPRITE: return "mesh sprite";
 				case RenderCommand::CommandTypes::PARTICLE: return "particle";
 				case RenderCommand::CommandTypes::TEXT: return "text";
-#ifdef WITH_IMGUI
+#	ifdef WITH_IMGUI
 				case RenderCommand::CommandTypes::IMGUI: return "imgui";
-#endif
-#ifdef WITH_NUKLEAR
+#	endif
+#	ifdef WITH_NUKLEAR
 				case RenderCommand::CommandTypes::NUKLEAR: return "nuklear";
-#endif
+#	endif
 				default: return "unknown";
 			}
 		}
+#endif
 
 	}
 
@@ -139,12 +141,12 @@ namespace nCine
 		// Rendering opaque nodes front to back
 		for (RenderCommand* opaqueRenderCommand : *opaques) {
 			TracyGpuZone("Opaque");
+#if NCINE_DEBUG
 			const int numInstances = opaqueRenderCommand->numInstances();
 			const int batchSize = opaqueRenderCommand->batchSize();
 			const uint16_t layer = opaqueRenderCommand->layer();
 			const uint16_t visitOrder = opaqueRenderCommand->visitOrder();
 
-#if NCINE_DEBUG
 			if (numInstances > 0) {
 				formatString(debugString, sizeof(debugString), "Opaque %u (%d %s on layer %u, visit order %u, sort key %llx)",
 								   commandIndex, numInstances, commandTypeString(*opaqueRenderCommand), layer, visitOrder, opaqueRenderCommand->materialSortKey());
@@ -169,12 +171,12 @@ namespace nCine
 		// Rendering transparent nodes back to front
 		for (RenderCommand* transparentRenderCommand : *transparents) {
 			TracyGpuZone("Transparent");
+#if NCINE_DEBUG
 			const int numInstances = transparentRenderCommand->numInstances();
 			const int batchSize = transparentRenderCommand->batchSize();
 			const uint16_t layer = transparentRenderCommand->layer();
 			const uint16_t visitOrder = transparentRenderCommand->visitOrder();
 
-#if NCINE_DEBUG
 			if (numInstances > 0) {
 				formatString(debugString, sizeof(debugString), "Transparent %u (%d %s on layer %u, visit order %u, sort key %llx)",
 								   commandIndex, numInstances, commandTypeString(*transparentRenderCommand), layer, visitOrder, transparentRenderCommand->materialSortKey());
