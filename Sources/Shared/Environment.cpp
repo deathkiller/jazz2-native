@@ -104,7 +104,7 @@ namespace Death::Environment
 					versionStart++;
 				}
 				char* versionEnd = line + read - 1;
-				if (versionEnd[0] == '\0' || versionEnd[0] == '\r' || versionEnd[0] == '\n' || versionEnd[0] == '"') {
+				while (versionStart <= versionEnd && (versionEnd[0] == '\0' || versionEnd[0] == '\r' || versionEnd[0] == '\n' || versionEnd[0] == '"')) {
 					versionEnd--;
 				}
 
@@ -127,7 +127,9 @@ namespace Death::Environment
 				if (versionShortEnd != nullptr) {
 					versionEnd = versionShortEnd;
 				}
-				result = Containers::String(versionStart, versionEnd - versionStart + 1);
+				if (versionStart < versionEnd) {
+					result = Containers::String(versionStart, versionEnd - versionStart + 1);
+				}
 				break;
 			}
 		}

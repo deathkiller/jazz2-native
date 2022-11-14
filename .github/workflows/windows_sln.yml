@@ -49,6 +49,7 @@ jobs:
       run: |
         mkdir _package
         Move-Item -Path ".\_build\Jazz2.exe" -Destination ".\_package\Jazz2.exe"
+        Move-Item -Path ".\_build\Jazz2.pdb" -Destination ".\_package\Jazz2.pdb"
         Move-Item -Path ".\Content\" -Destination ".\_package\Content\"
         
     - name: 'Upload Package'
