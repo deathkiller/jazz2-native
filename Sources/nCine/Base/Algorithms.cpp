@@ -213,9 +213,9 @@ namespace nCine
 		}
 	}
 
-	uint64_t parseVersion(const Containers::StringView& version)
+	uint64_t parseVersion(const Containers::StringView version)
 	{
-		Containers::ArrayView<Containers::StringView> parts = version.split('.');
+		auto parts = version.split('.');
 		size_t partsCount = parts.size();
 		if (partsCount == 0) {
 			return 0;

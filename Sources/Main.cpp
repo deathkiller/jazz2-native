@@ -3,6 +3,7 @@
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "nCine/Backends/Android/AndroidApplication.h"
+#	include "nCine/Backends/Android/AndroidJniHelper.h"
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 #	include "nCine/Backends/Uwp/UwpApplication.h"
 #else
@@ -777,7 +778,10 @@ void GameEventHandler::CheckUpdates()
 {
 #if !NCINE_DEBUG
 #if defined(DEATH_TARGET_ANDROID)
-	constexpr char DeviceDesc[] = "|Android|"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
+	auto sdkVersion = AndroidJniHelper::sdkVersion();
+	auto androidId = AndroidJniWrap_Secure::androidId();
+	char DeviceDesc[64];
+	int DeviceDescLength = formatString(DeviceDesc, _countof(DeviceDesc), "%s|Android %i|", androidId.data(), sdkVersion);
 #elif defined(DEATH_TARGET_APPLE)
 	char DeviceDesc[64]; int DeviceDescLength;
 	if (::gethostname(DeviceDesc, _countof(DeviceDesc) - (sizeof("|macOS|") - 1)) == 0) {
@@ -789,13 +793,13 @@ void GameEventHandler::CheckUpdates()
 	DeviceDescLength += sizeof("|macOS|") - 1;
 #elif defined(DEATH_TARGET_UNIX)
 	char DeviceDesc[64]; int DeviceDescLength;
-	if (::gethostname(DeviceDesc, _countof(DeviceDesc) - (sizeof("|Unix|") - 1)) == 0) {
+	if (::gethostname(DeviceDesc, _countof(DeviceDesc)) == 0) {
 		DeviceDescLength = strlen(DeviceDesc);
 	} else {
 		DeviceDescLength = 0;
 	}
-	std::memcpy(DeviceDesc + DeviceDescLength, "|Unix|", sizeof("|Unix|") - 1);
-	DeviceDescLength += sizeof("|Unix|") - 1;
+	String unixVersion = Environment::GetUnixVersion();
+	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, _countof(DeviceDesc) - DeviceDescLength, "|%s|", unixVersion.empty() ? "Unix" : unixVersion.data());
 #elif defined(DEATH_TARGET_WINDOWS)
 	auto osVersion = Environment::WindowsVersion;
 	char DeviceDesc[64]; DWORD DeviceDescLength = _countof(DeviceDesc);

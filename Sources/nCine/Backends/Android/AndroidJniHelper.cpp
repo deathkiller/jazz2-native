@@ -53,6 +53,8 @@ namespace nCine
 	jmethodID AndroidJniWrap_DisplayManager::midGetDisplay_ = nullptr;
 	jmethodID AndroidJniWrap_DisplayManager::midGetDisplays_ = nullptr;
 
+	String AndroidJniWrap_Secure::androidId_;
+
 	///////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
@@ -85,6 +87,7 @@ namespace nCine
 				AndroidJniWrap_Activity::init(state);
 				AndroidJniWrap_InputMethodManager::init(state);
 				AndroidJniWrap_DisplayManager::init(state);
+				AndroidJniWrap_Secure::init(state);
 
 				// Cache the value of SDK version to avoid going through JNI in the future
 				sdkVersion_ = AndroidJniClass_Version::sdkInt();
@@ -163,9 +166,9 @@ namespace nCine
 			mid = AndroidJniHelper::jniEnv->GetStaticMethodID(javaClass, name, signature);
 			if (mid == nullptr)
 				LOGE_X("Cannot get static method \"%s()\" with signature \"%s\"", name, signature);
-		} else
+		} else {
 			LOGE("Cannot get static methods before finding the Java class");
-
+		}
 		return mid;
 	}
 
@@ -176,11 +179,12 @@ namespace nCine
 		ASSERT(name != nullptr && signature != nullptr);
 		if (javaClass != nullptr) {
 			mid = AndroidJniHelper::jniEnv->GetMethodID(javaClass, name, signature);
-			if (mid == nullptr)
+			if (mid == nullptr) {
 				LOGE_X("Cannot get method \"%s()\" with signature \"%s\"", name, signature);
-		} else
+			}
+		} else {
 			LOGE("Cannot get methods before finding the Java class");
-
+		}
 		return mid;
 	}
 
@@ -191,11 +195,12 @@ namespace nCine
 		ASSERT(name != nullptr && signature != nullptr);
 		if (javaClass != nullptr) {
 			fid = AndroidJniHelper::jniEnv->GetStaticFieldID(javaClass, name, signature);
-			if (fid == nullptr)
+			if (fid == nullptr) {
 				LOGE_X("Cannot get static field \"%s\" with signature \"%s\"", name, signature);
-		} else
+			}
+		} else {
 			LOGE("Cannot get static fields before finding the Java class");
-
+		}
 		return fid;
 	}
 
@@ -241,8 +246,9 @@ namespace nCine
 		const jint length = AndroidJniHelper::jniEnv->GetArrayLength(arrDeviceIds);
 
 		jint* intsDeviceIds = AndroidJniHelper::jniEnv->GetIntArrayElements(arrDeviceIds, nullptr);
-		for (int i = 0; i < length && i < maxSize; i++)
+		for (int i = 0; i < length && i < maxSize; i++) {
 			destination[i] = int(intsDeviceIds[i]);
+		}
 		AndroidJniHelper::jniEnv->ReleaseIntArrayElements(arrDeviceIds, intsDeviceIds, 0);
 		AndroidJniHelper::jniEnv->DeleteLocalRef(arrDeviceIds);
 
@@ -260,9 +266,9 @@ namespace nCine
 			destination[maxStringSize - 1] = '\0';
 			AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strDeviceName, deviceName);
 			AndroidJniHelper::jniEnv->DeleteLocalRef(strDeviceName);
-		} else
+		} else {
 			strncpy(destination, static_cast<const char*>("Unknown"), maxStringSize);
-
+		}
 		return (int(length) < maxStringSize) ? int(length) : maxStringSize;
 	}
 
@@ -280,16 +286,15 @@ namespace nCine
 		} else if (maxStringSize > 0) {
 			destination[0] = '\0';
 		}
-
 		return (int(length) < maxStringSize) ? int(length) : maxStringSize;
 	}
 
 	int AndroidJniClass_InputDevice::getProductId() const
 	{
 		// Early-out if SDK version requirements are not met
-		if (AndroidJniHelper::sdkVersion() < 19)
+		if (AndroidJniHelper::sdkVersion() < 19) {
 			return 0;
-
+		}
 		const jint productId = AndroidJniHelper::jniEnv->CallIntMethod(javaObject_, midGetProductId_);
 		return int(productId);
 	}
@@ -297,9 +302,9 @@ namespace nCine
 	int AndroidJniClass_InputDevice::getVendorId() const
 	{
 		// Early-out if SDK version requirements are not met
-		if (AndroidJniHelper::sdkVersion() < 19)
+		if (AndroidJniHelper::sdkVersion() < 19) {
 			return 0;
-
+		}
 		const jint vendorID = AndroidJniHelper::jniEnv->CallIntMethod(javaObject_, midGetVendorId_);
 		return int(vendorID);
 	}
@@ -319,22 +324,24 @@ namespace nCine
 	void AndroidJniClass_InputDevice::hasKeys(const int* buttons, const int length, bool* bools) const
 	{
 		// Early-out if SDK version requirements are not met
-		if (AndroidJniHelper::sdkVersion() < 19)
+		if (AndroidJniHelper::sdkVersion() < 19) {
 			return;
-
+		}
 		jintArray arrButtons = AndroidJniHelper::jniEnv->NewIntArray(length);
 
 		jint* intsButtons = AndroidJniHelper::jniEnv->GetIntArrayElements(arrButtons, nullptr);
-		for (int i = 0; i < length; i++)
+		for (int i = 0; i < length; i++) {
 			intsButtons[i] = buttons[i];
+		}
 		AndroidJniHelper::jniEnv->ReleaseIntArrayElements(arrButtons, intsButtons, 0);
 
 		jbooleanArray arrBooleans = static_cast<jbooleanArray>(AndroidJniHelper::jniEnv->CallObjectMethod(javaObject_, midHasKeys_, arrButtons));
 		AndroidJniHelper::jniEnv->DeleteLocalRef(arrButtons);
 
 		jboolean* booleans = AndroidJniHelper::jniEnv->GetBooleanArrayElements(arrBooleans, nullptr);
-		for (int i = 0; i < length; i++)
+		for (int i = 0; i < length; i++) {
 			bools[i] = bool(booleans[i]);
+		}
 		AndroidJniHelper::jniEnv->ReleaseBooleanArrayElements(arrBooleans, booleans, 0);
 		AndroidJniHelper::jniEnv->DeleteLocalRef(arrBooleans);
 	}
@@ -380,10 +387,11 @@ namespace nCine
 
 	int AndroidJniClass_KeyEvent::getUnicodeChar(int metaState) const
 	{
-		if (metaState != 0)
+		if (metaState != 0) {
 			return AndroidJniHelper::jniEnv->CallIntMethod(javaObject_, midGetUnicodeCharMetaState_, metaState);
-		else
+		} else {
 			return AndroidJniHelper::jniEnv->CallIntMethod(javaObject_, midGetUnicodeChar_);
+		}
 	}
 
 	bool AndroidJniClass_KeyEvent::isPrintingKey() const
@@ -404,9 +412,9 @@ namespace nCine
 	int AndroidJniClass_DisplayMode::getPhysicalHeight() const
 	{
 		// Early-out if SDK version requirements are not met
-		if (AndroidJniHelper::sdkVersion() < 23)
+		if (AndroidJniHelper::sdkVersion() < 23) {
 			return 0;
-
+		}
 		const jint physicalHeight = AndroidJniHelper::jniEnv->CallIntMethod(javaObject_, midGetPhysicalHeight_);
 		return int(physicalHeight);
 	}
@@ -414,9 +422,9 @@ namespace nCine
 	int AndroidJniClass_DisplayMode::getPhysicalWidth() const
 	{
 		// Early-out if SDK version requirements are not met
-		if (AndroidJniHelper::sdkVersion() < 23)
+		if (AndroidJniHelper::sdkVersion() < 23) {
 			return 0;
-
+		}
 		const jint physicalWidth = AndroidJniHelper::jniEnv->CallIntMethod(javaObject_, midGetPhysicalWidth_);
 		return int(physicalWidth);
 	}
@@ -424,9 +432,9 @@ namespace nCine
 	float AndroidJniClass_DisplayMode::getRefreshRate() const
 	{
 		// Early-out if SDK version requirements are not met
-		if (AndroidJniHelper::sdkVersion() < 23)
+		if (AndroidJniHelper::sdkVersion() < 23) {
 			return 0;
-
+		}
 		const jfloat refreshRate = AndroidJniHelper::jniEnv->CallFloatMethod(javaObject_, midGetRefreshRate_);
 		return float(refreshRate);
 	}
@@ -459,9 +467,9 @@ namespace nCine
 			destination[maxStringSize - 1] = '\0';
 			AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strDisplayName, displayName);
 			AndroidJniHelper::jniEnv->DeleteLocalRef(strDisplayName);
-		} else
+		} else {
 			strncpy(destination, static_cast<const char*>("Unknown"), maxStringSize);
-
+		}
 		return (int(length) < maxStringSize) ? int(length) : maxStringSize;
 	}
 
@@ -495,8 +503,9 @@ namespace nCine
 	void AndroidJniWrap_Activity::finishAndRemoveTask()
 	{
 		// Check if SDK version requirements are met
-		if (AndroidJniHelper::sdkVersion() >= 21)
+		if (AndroidJniHelper::sdkVersion() >= 21) {
 			AndroidJniHelper::jniEnv->CallVoidMethod(activityObject_, midFinishAndRemoveTask_);
+		}
 	}
 
 	// ------------------- AndroidJniWrap_InputMethodManager -------------------
@@ -523,8 +532,9 @@ namespace nCine
 
 	void AndroidJniWrap_InputMethodManager::shutdown()
 	{
-		if (inputMethodManagerObject_)
+		if (inputMethodManagerObject_) {
 			AndroidJniHelper::jniEnv->DeleteGlobalRef(inputMethodManagerObject_);
+		}
 	}
 
 	void AndroidJniWrap_InputMethodManager::toggleSoftInput()
@@ -557,8 +567,9 @@ namespace nCine
 
 	void AndroidJniWrap_DisplayManager::shutdown()
 	{
-		if (displayManagerObject_)
+		if (displayManagerObject_) {
 			AndroidJniHelper::jniEnv->DeleteGlobalRef(displayManagerObject_);
+		}
 	}
 
 	AndroidJniClass_Display AndroidJniWrap_DisplayManager::getDisplay(int displayId)
@@ -592,5 +603,41 @@ namespace nCine
 
 		return int(length);
 	}
+	
+	// --------------------- AndroidJniWrap_Secure ---------------------
 
+	void AndroidJniWrap_Secure::init(struct android_app* state)
+	{
+		jclass contextClass = AndroidJniClass::findClass("android/content/Context");
+		jclass settingsSecureClass = AndroidJniClass::findClass("android/provider/Settings$Secure");
+		if (contextClass == nullptr || settingsSecureClass == nullptr) {
+			return;
+		}
+
+		jmethodID midGetContentResolver = AndroidJniClass::getMethodID(contextClass, "getContentResolver", "()Landroid/content/ContentResolver;");
+		jmethodID midGetString = AndroidJniClass::getStaticMethodID(settingsSecureClass, "getString", "(Landroid/content/ContentResolver;Ljava/lang/String;)Ljava/lang/String;");
+		jfieldID fidAndroidId = AndroidJniClass::getStaticFieldID(settingsSecureClass, "ANDROID_ID", "Ljava/lang/String;");
+		if (midGetContentResolver == nullptr || midGetString == nullptr || fidAndroidId == nullptr) {
+			return;
+		}
+
+		jstring sAndroidId = static_cast<jstring>(AndroidJniHelper::jniEnv->GetStaticObjectField(settingsSecureClass, fidAndroidId));
+		jobject contentResolverObject = AndroidJniHelper::jniEnv->CallObjectMethod(state->activity->clazz, midGetContentResolver);
+		if (sAndroidId == nullptr || contentResolverObject == nullptr) {
+			return;
+		}
+
+		jstring strAndroidId = static_cast<jstring>(AndroidJniHelper::jniEnv->CallStaticObjectMethod(settingsSecureClass, midGetString, contentResolverObject, sAndroidId));
+		AndroidJniHelper::jniEnv->DeleteLocalRef(contentResolverObject);
+		if (strAndroidId == nullptr) {
+			return;
+		}
+		
+		const jsize length = AndroidJniHelper::jniEnv->GetStringUTFLength(strAndroidId);
+		const char* androidId = AndroidJniHelper::jniEnv->GetStringUTFChars(strAndroidId, 0);
+		androidId_ = String(NoInit, length);
+		memcpy(androidId_.data(), androidId, length);
+		AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strAndroidId, androidId);
+		AndroidJniHelper::jniEnv->DeleteLocalRef(strAndroidId);
+	}
 }
