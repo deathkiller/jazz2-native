@@ -152,10 +152,13 @@ if(MSVC)
 	target_compile_definitions(ncine PRIVATE "_HAS_EXCEPTIONS=0")
 	target_compile_options(ncine PRIVATE /EHsc)
 	# Extra optimizations in release
-	target_compile_options(ncine PRIVATE $<$<CONFIG:Release>:/fp:fast /O2 /Oi /Qpar /GL /Gy>)
+	target_compile_options(ncine PRIVATE $<$<CONFIG:Release>:/fp:fast /O2 /Oi /Qpar /Gy>)
+	# Include PDB debug information in release
+	target_compile_options(ncine PRIVATE $<$<CONFIG:Release>:/Zi>)
+	target_link_options(ncine PRIVATE $<$<CONFIG:Release>:/DEBUG:FULL>)
 	# Turn off SAFESEH because of OpenAL on x86 and also UAC
 	target_link_options(ncine PRIVATE /SAFESEH:NO /MANIFESTUAC:NO)
-	target_link_options(ncine PRIVATE $<$<CONFIG:Release>:/OPT:REF /OPT:NOICF /LTCG>)
+	target_link_options(ncine PRIVATE $<$<CONFIG:Release>:/OPT:REF /OPT:NOICF>)
 	# Specifies the architecture for code generation (IA32, SSE, SSE2, AVX, AVX2, AVX512)
 	if(NCINE_ARCH_EXTENSIONS)
 		message(STATUS "Specified architecture extensions for code generation: ${NCINE_ARCH_EXTENSIONS}")
