@@ -4,6 +4,10 @@
 #include <android/api-level.h>
 #include <android_native_app_glue.h>
 
+#include <Containers/String.h>
+
+using namespace Death::Containers;
+
 namespace nCine
 {
 	/// The class for setting up JNI and initialize requests classes
@@ -245,4 +249,17 @@ namespace nCine
 		static jmethodID midGetDisplays_;
 	};
 
+	/// A class to handle JNI requests to `android.provider.Settings.Secure`
+	class AndroidJniWrap_Secure
+	{
+	public:
+		static void init(struct android_app* state);
+
+		inline static String androidId() {
+			return androidId_;
+		}
+
+	private:
+		static String androidId_;
+	};
 }

@@ -2,6 +2,10 @@
 
 #include "Common.h"
 
+#if defined(DEATH_TARGET_UNIX)
+#	include "Containers/String.h"
+#endif
+
 namespace Death
 {
 #if defined(DEATH_TARGET_WINDOWS_RT)
@@ -49,5 +53,7 @@ namespace Death::Environment
 	{
 		return QueryUnbiasedInterruptTime() / 10000LL;
 	}
+#elif defined(DEATH_TARGET_UNIX)
+	Containers::String GetUnixVersion();
 #endif
 }

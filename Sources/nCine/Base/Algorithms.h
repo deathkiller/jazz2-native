@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include <Containers/String.h>
 #include <Containers/StringView.h>
 
 using namespace Death;
@@ -370,5 +371,5 @@ namespace nCine
 	void i64tos(int64_t value, char* buffer);
 	void ftos(double value, char* buffer, int bufferSize);
 
-	uint64_t parseVersion(const Containers::StringView& version);
+	uint64_t parseVersion(const Containers::StringView version);
 }

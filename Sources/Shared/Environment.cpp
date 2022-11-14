@@ -9,6 +9,9 @@ namespace winrtWSP = winrt::Windows::System::Profile;
 #
 #	include <psapi.h>
 #	include <strsafe.h>
+#elif defined(DEATH_TARGET_UNIX)
+#	include <stdio.h>
+#	include <string.h>
 #endif
 
 namespace Death::Environment
@@ -80,6 +83,61 @@ namespace Death::Environment
 		}
 
 		return false;
+	}
+#elif defined(DEATH_TARGET_UNIX)
+	Containers::String GetUnixVersion()
+	{
+		FILE* fp = ::fopen("/etc/os-release", "r");
+		if (fp == nullptr) {
+			return { };
+		}
+
+		Containers::String result;
+
+		char* line = nullptr;
+		size_t length = 0;
+		ssize_t read;
+		while ((read = ::getline(&line, &length, fp)) != -1) {
+			if (strncmp(line, "PRETTY_NAME=", sizeof("PRETTY_NAME=") - 1) == 0) {
+				char* versionStart = line + sizeof("PRETTY_NAME=") - 1;
+				if (versionStart[0] == '"') {
+					versionStart++;
+				}
+				char* versionEnd = line + read - 1;
+				if (versionEnd[0] == '\0' || versionEnd[0] == '\r' || versionEnd[0] == '\n' || versionEnd[0] == '"') {
+					versionEnd--;
+				}
+
+				char* versionShortEnd = versionEnd;
+				while (true) {
+					if (versionStart >= versionShortEnd) {
+						versionShortEnd = nullptr;
+						break;
+					}
+					if (versionShortEnd[0] == '(') {
+						versionShortEnd--;
+						while (versionStart < versionShortEnd && versionShortEnd[0] == ' ') {
+							versionShortEnd--;
+						}
+						break;
+					}
+					versionShortEnd--;
+				}
+
+				if (versionShortEnd != nullptr) {
+					versionEnd = versionShortEnd;
+				}
+				result = Containers::String(versionStart, versionEnd - versionStart + 1);
+				break;
+			}
+		}
+
+		if (line != nullptr) {
+			::free(line);
+		}
+		::fclose(fp);
+
+		return result;
 	}
 #endif
 }
