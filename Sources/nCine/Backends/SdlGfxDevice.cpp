@@ -13,7 +13,7 @@
 #	include "../../../Libs/GL/glew.h"
 #else
 #	define GLEW_NO_GLU
-#	include <GL/glew.h>
+#	include "../../../Libs/Includes/GL/glew.h"
 #endif
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
