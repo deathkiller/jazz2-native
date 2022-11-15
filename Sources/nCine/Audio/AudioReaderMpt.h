@@ -15,7 +15,7 @@
 #ifdef __HAS_LOCAL_LIBOPENMPT
 #	include "../../../Libs/Includes/libopenmpt/libopenmpt.h"
 #else
-#	include <libopenmpt.h>
+#	include "../../../Libs/Includes/libopenmpt/libopenmpt.h"
 #endif
 
 #include <memory>
