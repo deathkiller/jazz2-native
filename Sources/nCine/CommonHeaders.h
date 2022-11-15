@@ -15,7 +15,7 @@
 #		ifdef __HAS_LOCAL_OPENGL
 #			include "../../Libs/Includes/GL/glew.h"
 #		else
-#			include <GL/glew.h>
+#			include "../../Libs/Includes/GL/glew.h"
 #		endif
 #	elif defined(DEATH_TARGET_APPLE)
 #		define GL_SILENCE_DEPRECATION
