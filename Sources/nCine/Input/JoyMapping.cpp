@@ -406,8 +406,12 @@ namespace nCine
 				mapping.desc.axes[i].max = 1.0f;
 			}
 			
-			for (int i = 0; i < _countof(mapping.desc.buttons); i++) {
+			constexpr int AndroidButtonCount = (int)ButtonName::MISC1;
+			for (int i = 0; i < AndroidButtonCount; i++) {
 				mapping.desc.buttons[i] = (ButtonName)i;
+			}
+			for (int i = AndroidButtonCount; i < _countof(mapping.desc.buttons); i++) {
+				mapping.desc.buttons[i] = ButtonName::UNKNOWN;
 			}
 
 			for (int i = 0; i < _countof(AndroidDpadButtonNameMapping); i++) {

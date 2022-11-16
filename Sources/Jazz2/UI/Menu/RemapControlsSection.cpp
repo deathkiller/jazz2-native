@@ -124,6 +124,7 @@ namespace Jazz2::UI::Menu
 			_waitForInput = true;
 
 			RefreshPreviousState();
+			return;
 		} else if (_root->ActionHit(PlayerActions::ChangeWeapon)) {
 			if (_selectedIndex == (int)PlayerActions::Menu && _selectedColumn == 0) {
 				return;
@@ -152,6 +153,7 @@ namespace Jazz2::UI::Menu
 					}
 					break;
 			}
+			return;
 		}
 
 		if (_root->ActionHit(PlayerActions::Up)) {
