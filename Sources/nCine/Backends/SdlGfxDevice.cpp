@@ -4,13 +4,13 @@
 #include "../Graphics/ITextureLoader.h"
 
 #if defined(_MSC_VER) && defined(__has_include)
-#	if __has_include("../../../Libs/GL/glew.h")
+#	if __has_include("../../../Libs/Includes/GL/glew.h")
 #		define __HAS_LOCAL_GLEW
 #	endif
 #endif
 #ifdef __HAS_LOCAL_GLEW
 #	define GLEW_NO_GLU
-#	include "../../../Libs/GL/glew.h"
+#	include "../../../Libs/Includes/GL/glew.h"
 #else
 #	define GLEW_NO_GLU
 #	include <GL/glew.h>

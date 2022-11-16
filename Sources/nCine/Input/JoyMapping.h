@@ -96,11 +96,13 @@ namespace nCine
 				float max;
 			};
 
-			static const int MaxNumAxes = 16;
-			static const int MaxNumButtons = 16;
+			static const int MaxNumAxes = 10;
+			static const int MaxNumButtons = 34;
 			static const int MaxHatButtons = 4; // The four directions
 
 			Axis axes[MaxNumAxes];
+			/// Button axes (buttons mapped as axes, like when analog triggers are missing)
+			AxisName buttonAxes[MaxNumAxes];
 			ButtonName buttons[MaxNumButtons];
 			ButtonName hats[MaxHatButtons];
 
@@ -122,8 +124,8 @@ namespace nCine
 			MappingDescription desc;
 		};
 
-		static const char* AxesStrings[JoyMappedState::NumAxes];
-		static const char* ButtonsStrings[JoyMappedState::NumButtons];
+		static const char* AxesStrings[];
+		static const char* ButtonsStrings[];
 
 		static const int MaxNumJoysticks = 4;
 		SmallVector<MappedJoystick, 0> mappings_;

@@ -25,10 +25,10 @@ namespace nCine
 	{
 	public:
 		JoystickGuid();
-		JoystickGuid(JoystickGuidType type) {
+		inline JoystickGuid(JoystickGuidType type) {
 			fromType(type);
 		}
-		JoystickGuid(const StringView& string) {
+		inline JoystickGuid(const StringView& string) {
 			fromString(string);
 		}
 		void fromType(JoystickGuidType type);

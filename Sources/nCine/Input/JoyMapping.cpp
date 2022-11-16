@@ -56,7 +56,7 @@ namespace nCine
 
 	const unsigned int JoyMapping::MaxNameLength;
 
-	const char* JoyMapping::AxesStrings[JoyMappedState::NumAxes] = {
+	const char* JoyMapping::AxesStrings[] = {
 		"leftx",
 		"lefty",
 		"rightx",
@@ -65,7 +65,7 @@ namespace nCine
 		"righttrigger"
 	};
 
-	const char* JoyMapping::ButtonsStrings[JoyMappedState::NumButtons] = {
+	const char* JoyMapping::ButtonsStrings[] = {
 		"a",
 		"b",
 		"x",
@@ -80,7 +80,12 @@ namespace nCine
 		"dpup",
 		"dpdown",
 		"dpleft",
-		"dpright"
+		"dpright",
+		"misc1",
+		"paddle1",
+		"paddle2",
+		"paddle3",
+		"paddle4"
 	};
 
 	JoyMappedStateImpl JoyMapping::nullMappedJoyState_;
@@ -96,6 +101,8 @@ namespace nCine
 	{
 		for (unsigned int i = 0; i < MaxNumAxes; i++)
 			axes[i].name = AxisName::UNKNOWN;
+		for (unsigned int i = 0; i < MaxNumAxes; i++)
+			buttonAxes[i] = AxisName::UNKNOWN;
 		for (unsigned int i = 0; i < MaxNumButtons; i++)
 			buttons[i] = ButtonName::UNKNOWN;
 		for (unsigned int i = 0; i < MaxHatButtons; i++)
@@ -118,9 +125,9 @@ namespace nCine
 
 		// Add mappings from the database, without searching for duplicates
 		const char** mappingStrings = ControllerMappings;
-		MappedJoystick mapping;
 		while (*mappingStrings) {
 			numStrings++;
+			MappedJoystick mapping;
 			const bool parsed = parseMappingFromString(*mappingStrings, mapping);
 			if (parsed) {
 				mappings_.push_back(mapping);
@@ -151,8 +158,9 @@ namespace nCine
 		if (parsed) {
 			int index = findMappingByGuid(newMapping.guid);
 			// if GUID is not found then mapping has to be added, not replaced
-			if (index < 0)
+			if (index < 0) {
 				index = mappings_.size();
+			}
 			mappings_[index] = newMapping;
 		}
 		checkConnectedJoystics();
@@ -235,6 +243,17 @@ namespace nCine
 				const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
 				mappedJoyStates_[event.joyId].buttons_[buttonId] = true;
 				inputEventHandler_->onJoyMappedButtonPressed(mappedButtonEvent_);
+			} else {
+				// Check if the button is mapped as an axis
+				const AxisName axisName = mapping.desc.buttonAxes[event.buttonId];
+				if (axisName != AxisName::UNKNOWN) {
+					mappedAxisEvent_.joyId = event.joyId;
+					mappedAxisEvent_.axisName = axisName;
+					mappedAxisEvent_.value = 1.0f;
+
+					mappedJoyStates_[event.joyId].axesValues_[static_cast<int>(axisName)] = mappedAxisEvent_.value;
+					inputEventHandler_->onJoyMappedAxisMoved(mappedAxisEvent_);
+				}
 			}
 		}
 	}
@@ -253,6 +272,17 @@ namespace nCine
 				const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
 				mappedJoyStates_[event.joyId].buttons_[buttonId] = false;
 				inputEventHandler_->onJoyMappedButtonReleased(mappedButtonEvent_);
+			} else {
+				// Check if the button is mapped as an axis
+				const AxisName axisName = mapping.desc.buttonAxes[event.buttonId];
+				if (axisName != AxisName::UNKNOWN) {
+					mappedAxisEvent_.joyId = event.joyId;
+					mappedAxisEvent_.axisName = axisName;
+					mappedAxisEvent_.value = 0.0f;
+
+					mappedJoyStates_[event.joyId].axesValues_[static_cast<int>(axisName)] = mappedAxisEvent_.value;
+					inputEventHandler_->onJoyMappedAxisMoved(mappedAxisEvent_);
+				}
 			}
 		}
 	}
@@ -311,6 +341,28 @@ namespace nCine
 				mappedAxisEvent_.value = axis.min + value * (axis.max - axis.min);
 				mappedJoyStates_[event.joyId].axesValues_[static_cast<int>(axis.name)] = mappedAxisEvent_.value;
 				inputEventHandler_->onJoyMappedAxisMoved(mappedAxisEvent_);
+
+				// Map some axes also as button presses
+				ButtonName buttonName;
+				switch (mappedAxisEvent_.axisName) {
+					case AxisName::LTRIGGER: buttonName = ButtonName::LTRIGGER; break;
+					case AxisName::RTRIGGER: buttonName = ButtonName::RTRIGGER; break;
+					default: buttonName = ButtonName::UNKNOWN; break;
+				}
+				if (buttonName != ButtonName::UNKNOWN) {
+					bool isPressed = (mappedAxisEvent_.value > 0.5f);
+					const int buttonId = static_cast<int>(buttonName);
+					if (mappedJoyStates_[event.joyId].buttons_[buttonId] != isPressed) {
+						mappedButtonEvent_.joyId = event.joyId;
+						mappedButtonEvent_.buttonName = buttonName;
+						mappedJoyStates_[event.joyId].buttons_[buttonId] = isPressed;
+						if (isPressed) {
+							inputEventHandler_->onJoyMappedButtonPressed(mappedButtonEvent_);
+						} else {
+							inputEventHandler_->onJoyMappedButtonReleased(mappedButtonEvent_);
+						}
+					}
+				}
 			}
 		}
 	}
@@ -345,7 +397,7 @@ namespace nCine
 
 #if defined(DEATH_TARGET_ANDROID)
 		if (!mapping.isValid) {
-			LOGI_X("Joystick mapping not found for \"%s\" (%d), using system configuration", joyName, event.joyId);
+			LOGI_X("Joystick mapping not found for \"%s\" (%d), using Android default mapping", joyName, event.joyId);
 			mapping.isValid = true;
 
 			for (int i = 0; i < _countof(AndroidAxisNameMapping); i++) {
@@ -419,7 +471,7 @@ namespace nCine
 	JoystickGuid JoyMapping::createJoystickGuid(uint16_t bus, uint16_t vendor, uint16_t product, uint16_t version, const StringView& name, uint8_t driverSignature, uint8_t driverData)
 	{
 		JoystickGuid guid;
-		uint16_t* guid16 = (uint16_t*)guid.data;
+		uint16_t* guid16 = reinterpret_cast<uint16_t*>(guid.data);
 
 		*guid16++ = bus;
 		// TODO: Implement CRC
@@ -612,7 +664,7 @@ namespace nCine
 	{
 		int axisIndex = -1;
 
-		for (unsigned int i = 0; i < JoyMappedState::NumAxes; i++) {
+		for (unsigned int i = 0; i < _countof(AxesStrings); i++) {
 			if (strncmp(start, AxesStrings[i], end - start) == 0) {
 				axisIndex = i;
 				break;
@@ -626,7 +678,7 @@ namespace nCine
 	{
 		int buttonIndex = -1;
 
-		for (unsigned int i = 0; i < JoyMappedState::NumButtons; i++) {
+		for (unsigned int i = 0; i < _countof(ButtonsStrings); i++) {
 			if (strncmp(start, ButtonsStrings[i], end - start) == 0) {
 				buttonIndex = i;
 				break;
