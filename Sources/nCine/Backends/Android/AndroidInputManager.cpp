@@ -778,11 +778,9 @@ namespace nCine
 #endif
 					buttonMask |= ButtonMasks[i];
 					numFoundButtons++;
-				} else
+				} else {
 					joystick.buttonsMapping_[i] = -1;
-
-				if (numFoundButtons >= AndroidJoystickState::MaxButtons)
-					break;
+				}
 			}
 			joystick.numButtons_ = numFoundButtons;
 #if defined(ENABLE_LOG)
