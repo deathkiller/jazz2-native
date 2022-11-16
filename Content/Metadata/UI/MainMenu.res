@@ -75,11 +75,17 @@
 		"GamepadLeftStick": {
 			"Path": "UI/gamepad_ls.aura"
 		},
+		"GamepadLeftTrigger": {
+			"Path": "UI/gamepad_lt.aura"
+		},
 		"GamepadRightShoulder": {
 			"Path": "UI/gamepad_rb.aura"
 		},
 		"GamepadRightStick": {
 			"Path": "UI/gamepad_rs.aura"
+		},
+		"GamepadRightTrigger": {
+			"Path": "UI/gamepad_rt.aura"
 		}
 	},
 

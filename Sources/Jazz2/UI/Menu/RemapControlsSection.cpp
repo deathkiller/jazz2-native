@@ -14,7 +14,8 @@ namespace Jazz2::UI::Menu
 		_animation(0.0f),
 		_isDirty(false),
 		_waitForInput(false),
-		_delay(0.0f)
+		_prevKeyPressed((unsigned int)KeySym::COUNT),
+		_prevJoyPressed(8 * JoyMappedState::NumButtons)
 	{
 	}
 
@@ -40,11 +41,6 @@ namespace Jazz2::UI::Menu
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
 		}
 
-		if (_delay > 0.0f) {
-			_delay -= timeMult;
-			return;
-		}
-
 		if (_waitForInput) {
 			auto& input = theApplication().inputManager();
 			auto& keyState = input.keyboardState();
@@ -59,7 +55,7 @@ namespace Jazz2::UI::Menu
 				case 0: // Keyboard
 				case 1:
 					for (int key = 0; key < (int)KeySym::COUNT; key++) {
-						if (keyState.isKeyDown((KeySym)key) && !KeyToName((KeySym)key).empty()) {
+						if (keyState.isKeyDown((KeySym)key) && !_prevKeyPressed[key] && !KeyToName((KeySym)key).empty()) {
 							auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int)PlayerActions::Count + _selectedIndex];
 
 							if (_selectedColumn == 0) {
@@ -76,7 +72,6 @@ namespace Jazz2::UI::Menu
 
 							_root->PlaySfx("MenuSelect"_s, 0.5f);
 							_waitForInput = false;
-							_delay = 10.0f;
 							RefreshCollisions();
 							break;
 						}
@@ -84,11 +79,11 @@ namespace Jazz2::UI::Menu
 					break;
 
 				case 2: // Gamepad
-					for (int i = 0, jc = 0; i < IInputManager::MaxNumJoysticks && _waitForInput; i++) {
-						if (input.isJoyPresent(i) && input.isJoyMapped(i)) {
+					for (int i = 0, jc = 0; i < IInputManager::MaxNumJoysticks && jc < ControlScheme::MaxConnectedGamepads && _waitForInput; i++) {
+						if (input.isJoyMapped(i)) {
 							auto& joyState = input.joyMappedState(i);
 							for (int j = 0; j < JoyMappedState::NumButtons; j++) {
-								if (joyState.isButtonPressed((ButtonName)j)) {
+								if (joyState.isButtonPressed((ButtonName)j) && !_prevJoyPressed[jc * JoyMappedState::NumButtons + j]) {
 									auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int)PlayerActions::Count + _selectedIndex];
 
 									if (mapping.GamepadIndex != jc || mapping.GamepadButton != (ButtonName)j) {
@@ -99,7 +94,6 @@ namespace Jazz2::UI::Menu
 
 									_root->PlaySfx("MenuSelect"_s, 0.5f);
 									_waitForInput = false;
-									_delay = 10.0f;
 									RefreshCollisions();
 									break;
 								}
@@ -108,6 +102,10 @@ namespace Jazz2::UI::Menu
 						}
 					}
 					break;
+			}
+
+			if (_waitForInput) {
+				RefreshPreviousState();
 			}
 			return;
 		}
@@ -124,7 +122,8 @@ namespace Jazz2::UI::Menu
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 			_waitForInput = true;
-			_delay = 20.0f;
+
+			RefreshPreviousState();
 		} else if (_root->ActionHit(PlayerActions::ChangeWeapon)) {
 			if (_selectedIndex == (int)PlayerActions::Menu && _selectedColumn == 0) {
 				return;
@@ -283,6 +282,8 @@ namespace Jazz2::UI::Menu
 								case ButtonName::RSTICK: buttonName = "GamepadRightStick"_s; break;
 								case ButtonName::LBUMPER: buttonName = "GamepadLeftShoulder"_s; break;
 								case ButtonName::RBUMPER: buttonName = "GamepadRightShoulder"_s; break;
+								case ButtonName::LTRIGGER: buttonName = "GamepadLeftTrigger"_s; break;
+								case ButtonName::RTRIGGER: buttonName = "GamepadRightTrigger"_s; break;
 								case ButtonName::DPAD_UP: buttonName = "GamepadDPadUp"_s; break;
 								case ButtonName::DPAD_DOWN: buttonName = "GamepadDPadDown"_s; break;
 								case ButtonName::DPAD_LEFT: buttonName = "GamepadDPadLeft"_s; break;
@@ -342,6 +343,33 @@ namespace Jazz2::UI::Menu
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_root->LeaveSection();
 				}
+			}
+		}
+	}
+
+	void RemapControlsSection::RefreshPreviousState()
+	{
+		auto& input = theApplication().inputManager();
+		auto& keyState = input.keyboardState();
+
+		_prevKeyPressed.ClearAll();
+		_prevJoyPressed.ClearAll();
+
+		for (int key = 0; key < (int)KeySym::COUNT; key++) {
+			if (keyState.isKeyDown((KeySym)key)) {
+				_prevKeyPressed.Set(key);
+			}
+		}
+
+		for (int i = 0, jc = 0; i < IInputManager::MaxNumJoysticks && jc < ControlScheme::MaxConnectedGamepads && _waitForInput; i++) {
+			if (input.isJoyMapped(i)) {
+				auto& joyState = input.joyMappedState(i);
+				for (int j = 0; j < JoyMappedState::NumButtons; j++) {
+					if (joyState.isButtonPressed((ButtonName)j)) {
+						_prevJoyPressed.Set(jc * JoyMappedState::NumButtons + j);
+					}
+				}
+				jc++;
 			}
 		}
 	}

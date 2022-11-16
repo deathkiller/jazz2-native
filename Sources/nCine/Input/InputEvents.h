@@ -22,7 +22,15 @@ namespace nCine
 		DPAD_UP,
 		DPAD_DOWN,
 		DPAD_LEFT,
-		DPAD_RIGHT
+		DPAD_RIGHT,
+		MISC1,
+		PADDLE1,
+		PADDLE2,
+		PADDLE3,
+		PADDLE4,
+		// Analog axes converted to button presses
+		LTRIGGER,
+		RTRIGGER
 	};
 
 	enum class AxisName : int16_t
@@ -33,7 +41,7 @@ namespace nCine
 		RX,
 		RY,
 		LTRIGGER,
-		RTRIGGER,
+		RTRIGGER
 	};
 
 	/// A structure containing joystick hat values
@@ -256,7 +264,7 @@ namespace nCine
 	{
 	public:
 		/// The number of joystick buttons with a mapping name
-		static const unsigned int NumButtons = 15;
+		static const unsigned int NumButtons = 22;
 		/// The number of joystick axes with a mapping name
 		static const unsigned int NumAxes = 6;
 

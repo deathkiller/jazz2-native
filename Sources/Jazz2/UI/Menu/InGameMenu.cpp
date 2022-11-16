@@ -326,10 +326,10 @@ namespace Jazz2::UI::Menu
 		}
 
 		// Try to get 8 connected joysticks
-		const JoyMappedState* joyStates[8];
+		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		int jc = 0;
 		for (int i = 0; i < IInputManager::MaxNumJoysticks && jc < _countof(joyStates); i++) {
-			if (input.isJoyPresent(i) && input.isJoyMapped(i)) {
+			if (input.isJoyMapped(i)) {
 				joyStates[jc++] = &input.joyMappedState(i);
 			}
 		}

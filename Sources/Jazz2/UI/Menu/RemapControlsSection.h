@@ -3,6 +3,7 @@
 #include "MenuSection.h"
 
 #include "../../../nCine/Input/InputEvents.h"
+#include "../../../nCine/Base/BitArray.h"
 
 namespace Jazz2::UI::Menu
 {
@@ -26,9 +27,11 @@ namespace Jazz2::UI::Menu
 		float _animation;
 		bool _isDirty;
 		bool _waitForInput;
-		float _delay;
+		BitArray _prevKeyPressed;
+		BitArray _prevJoyPressed;
 
 		void Commit();
+		void RefreshPreviousState();
 		void RefreshCollisions();
 		bool HasCollision(KeySym key);
 		bool HasCollision(int gamepadIndex, ButtonName gamepadButton);

@@ -30,6 +30,7 @@ namespace Jazz2::UI
 
 	public:
 		static constexpr int MaxSupportedPlayers = 1;
+		static constexpr int MaxConnectedGamepads = 8;
 
 		static void Reset();
 

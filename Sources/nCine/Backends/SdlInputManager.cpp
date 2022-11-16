@@ -6,7 +6,7 @@
 #include "../Application.h"
 
 #ifdef __HAS_LOCAL_SDL
-#	include "../../Libs/Includes/SDL2/SDL.h"
+#	include "../../../Libs/Includes/SDL2/SDL.h"
 #else
 #	include <SDL.h>
 #endif
