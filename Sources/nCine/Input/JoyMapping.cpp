@@ -406,7 +406,7 @@ namespace nCine
 				mapping.desc.axes[i].max = 1.0f;
 			}
 			
-			constexpr int AndroidButtonCount = (int)ButtonName::MISC1;
+			constexpr int AndroidButtonCount = (int)ButtonName::/*MISC1*/COUNT;
 			for (int i = 0; i < AndroidButtonCount; i++) {
 				mapping.desc.buttons[i] = (ButtonName)i;
 			}
