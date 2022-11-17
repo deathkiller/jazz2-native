@@ -23,14 +23,14 @@ namespace nCine
 		DPAD_DOWN,
 		DPAD_LEFT,
 		DPAD_RIGHT,
-		/*MISC1,
+		MISC1,
 		PADDLE1,
 		PADDLE2,
 		PADDLE3,
 		PADDLE4,
 		// Analog axes converted to button presses
 		LTRIGGER,
-		RTRIGGER,*/
+		RTRIGGER,
 
 		COUNT
 	};
