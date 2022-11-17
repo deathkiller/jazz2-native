@@ -81,11 +81,11 @@ namespace nCine
 		"dpdown",
 		"dpleft",
 		"dpright",
-		"misc1",
+		/*"misc1",
 		"paddle1",
 		"paddle2",
 		"paddle3",
-		"paddle4"
+		"paddle4"*/
 	};
 
 	JoyMappedStateImpl JoyMapping::nullMappedJoyState_;
@@ -343,7 +343,7 @@ namespace nCine
 				inputEventHandler_->onJoyMappedAxisMoved(mappedAxisEvent_);
 
 				// Map some axes also as button presses
-				ButtonName buttonName;
+				/*ButtonName buttonName;
 				switch (mappedAxisEvent_.axisName) {
 					case AxisName::LTRIGGER: buttonName = ButtonName::LTRIGGER; break;
 					case AxisName::RTRIGGER: buttonName = ButtonName::RTRIGGER; break;
@@ -362,7 +362,7 @@ namespace nCine
 							inputEventHandler_->onJoyMappedButtonReleased(mappedButtonEvent_);
 						}
 					}
-				}
+				}*/
 			}
 		}
 	}
@@ -447,7 +447,7 @@ namespace nCine
 
 	bool JoyMapping::isJoyMapped(int joyId) const
 	{
-		return (joyId >= 0 && joyId < MaxNumJoysticks&& assignedMappings_[joyId].isValid);
+		return (joyId >= 0 && joyId < MaxNumJoysticks && assignedMappings_[joyId].isValid);
 	}
 
 	const JoyMappedStateImpl& JoyMapping::joyMappedState(int joyId) const

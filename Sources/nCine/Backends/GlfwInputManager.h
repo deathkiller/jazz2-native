@@ -175,7 +175,7 @@ namespace nCine
 		private:
 			static const unsigned int MaxNumButtons = 16;
 			static const unsigned int MaxNumHats = 4;
-			static const unsigned int MaxNumAxes = 8;
+			static const unsigned int MaxNumAxes = 10;
 			/// Minimum difference between two axis readings in order to trigger an event
 			static const float AxisEventTolerance;
 
