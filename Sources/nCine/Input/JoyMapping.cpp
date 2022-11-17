@@ -81,11 +81,11 @@ namespace nCine
 		"dpdown",
 		"dpleft",
 		"dpright",
-		/*"misc1",
+		"misc1",
 		"paddle1",
 		"paddle2",
 		"paddle3",
-		"paddle4"*/
+		"paddle4"
 	};
 
 	JoyMappedStateImpl JoyMapping::nullMappedJoyState_;
@@ -124,10 +124,11 @@ namespace nCine
 		unsigned int numStrings = 0;
 
 		// Add mappings from the database, without searching for duplicates
+		// TODO: This declaration cannot be in inner loop, because it breaks Android input for some reason
+		MappedJoystick mapping;
 		const char** mappingStrings = ControllerMappings;
 		while (*mappingStrings) {
 			numStrings++;
-			MappedJoystick mapping;
 			const bool parsed = parseMappingFromString(*mappingStrings, mapping);
 			if (parsed) {
 				mappings_.push_back(mapping);
@@ -343,7 +344,7 @@ namespace nCine
 				inputEventHandler_->onJoyMappedAxisMoved(mappedAxisEvent_);
 
 				// Map some axes also as button presses
-				/*ButtonName buttonName;
+				ButtonName buttonName;
 				switch (mappedAxisEvent_.axisName) {
 					case AxisName::LTRIGGER: buttonName = ButtonName::LTRIGGER; break;
 					case AxisName::RTRIGGER: buttonName = ButtonName::RTRIGGER; break;
@@ -362,7 +363,7 @@ namespace nCine
 							inputEventHandler_->onJoyMappedButtonReleased(mappedButtonEvent_);
 						}
 					}
-				}*/
+				}
 			}
 		}
 	}
@@ -406,7 +407,7 @@ namespace nCine
 				mapping.desc.axes[i].max = 1.0f;
 			}
 			
-			constexpr int AndroidButtonCount = (int)ButtonName::/*MISC1*/COUNT;
+			constexpr int AndroidButtonCount = (int)ButtonName::MISC1;
 			for (int i = 0; i < AndroidButtonCount; i++) {
 				mapping.desc.buttons[i] = (ButtonName)i;
 			}

@@ -284,8 +284,8 @@ namespace Jazz2::UI::Menu
 								case ButtonName::RSTICK: buttonName = "GamepadRightStick"_s; break;
 								case ButtonName::LBUMPER: buttonName = "GamepadLeftShoulder"_s; break;
 								case ButtonName::RBUMPER: buttonName = "GamepadRightShoulder"_s; break;
-								//case ButtonName::LTRIGGER: buttonName = "GamepadLeftTrigger"_s; break;
-								//case ButtonName::RTRIGGER: buttonName = "GamepadRightTrigger"_s; break;
+								case ButtonName::LTRIGGER: buttonName = "GamepadLeftTrigger"_s; break;
+								case ButtonName::RTRIGGER: buttonName = "GamepadRightTrigger"_s; break;
 								case ButtonName::DPAD_UP: buttonName = "GamepadDPadUp"_s; break;
 								case ButtonName::DPAD_DOWN: buttonName = "GamepadDPadDown"_s; break;
 								case ButtonName::DPAD_LEFT: buttonName = "GamepadDPadLeft"_s; break;
