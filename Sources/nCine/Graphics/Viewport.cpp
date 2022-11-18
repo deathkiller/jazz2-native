@@ -21,7 +21,7 @@
 
 namespace nCine
 {
-#if NCINE_DEBUG
+#if defined(NCINE_DEBUG)
 	namespace
 	{
 		/// The string used to output OpenGL debug group information
@@ -376,7 +376,7 @@ namespace nCine
 			nextViewport->draw(nextIndex + 1);
 
 		ZoneScoped;
-#if NCINE_DEBUG
+#if defined(NCINE_DEBUG)
 		// TODO: GLDebug
 		/*if (type_ == Type::SCREEN)
 			formatString(debugString, sizeof(debugString), "Draw screen viewport (0x%lx)", uintptr_t(this));

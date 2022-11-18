@@ -9,6 +9,10 @@ endif()
 
 target_compile_definitions(ncine PUBLIC "CMAKE_BUILD")
 target_compile_definitions(ncine PUBLIC "$<$<CONFIG:Debug>:NCINE_DEBUG>")
+if(NCINE_LOG AND NOT ANDROID)
+	target_compile_definitions(ncine PUBLIC "NCINE_LOG")
+	message(STATUS "Logging is enabled")
+endif()
 
 if(WIN32)
 	# Enable Win32 executable and force Unicode mode on Windows

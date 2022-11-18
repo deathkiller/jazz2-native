@@ -64,7 +64,7 @@ namespace nCine
 	{
 		ThreadStruct* threadStruct = static_cast<ThreadStruct*>(arg);
 
-		LOGD_X("Worker thread %u is starting", Thread::Self());
+		LOGV_X("Worker thread %u is starting", Thread::Self());
 
 		while (true) {
 			threadStruct->queueMutex->Lock();
@@ -81,11 +81,11 @@ namespace nCine
 			threadStruct->queue->pop_front();
 			threadStruct->queueMutex->Unlock();
 
-			LOGD_X("Worker thread %u is executing its command", Thread::Self());
+			LOGV_X("Worker thread %u is executing its command", Thread::Self());
 			threadCommand->Execute();
 		}
 
-		LOGD_X("Worker thread %u is exiting", Thread::Self());
+		LOGV_X("Worker thread %u is exiting", Thread::Self());
 	}
 
 }

@@ -30,7 +30,7 @@ namespace nCine
 
 	void GLShaderUniformBlocks::bind()
 	{
-#if NCINE_DEBUG
+#if defined(NCINE_DEBUG)
 		static const int offsetAlignment = theServiceLocator().gfxCapabilities().value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 #endif
 		if (uboParams_.object) {
@@ -40,7 +40,7 @@ namespace nCine
 			for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
 				uniformBlockCache.setBlockBinding(uniformBlockCache.index());
 				const GLintptr offset = static_cast<GLintptr>(uboParams_.offset) + moreOffset;
-#if NCINE_DEBUG
+#if defined(NCINE_DEBUG)
 				ASSERT(offset % offsetAlignment == 0);
 #endif
 				uboParams_.object->bindBufferRange(uniformBlockCache.bindingIndex(), offset, uniformBlockCache.usedSize());

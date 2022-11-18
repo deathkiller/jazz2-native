@@ -1,7 +1,6 @@
 ﻿#pragma once
 
-#define ENABLE_LOG
-
+// Set default version if not provided by CMake
 #if !defined(NCINE_VERSION)
 #	define NCINE_VERSION "1.1.0"
 #endif
@@ -20,17 +19,15 @@
 #include <stdlib.h>
 
 // Logging
-#if defined(ENABLE_LOG)
+#if defined(NCINE_LOG)
 
 enum class LogLevel {
 	Unknown,
 	Verbose,
-	Debug,
 	Info,
-	Warn,
+	Warning,
 	Error,
-	Fatal,
-	Off
+	Fatal
 };
 
 void __WriteLog(LogLevel level, const char* fmt, ...);
@@ -43,29 +40,33 @@ void __WriteLog(LogLevel level, const char* fmt, ...);
 #		define FUNCTION __func__
 #	endif
 #
-#	define LOGV_X(fmt, ...) __WriteLog(LogLevel::Verbose, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
-#	define LOGD_X(fmt, ...) __WriteLog(LogLevel::Debug, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
+#	if defined(NCINE_DEBUG)
+#		define LOGV_X(fmt, ...) __WriteLog(LogLevel::Verbose, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
+#	else
+#		define LOGV_X(fmt, ...) do { } while (false)
+#	endif
 #	define LOGI_X(fmt, ...) __WriteLog(LogLevel::Info, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
-#	define LOGW_X(fmt, ...) __WriteLog(LogLevel::Warn, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
+#	define LOGW_X(fmt, ...) __WriteLog(LogLevel::Warning, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
 #	define LOGE_X(fmt, ...) __WriteLog(LogLevel::Error, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
 #	define LOGF_X(fmt, ...) __WriteLog(LogLevel::Fatal, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
 #
-#	define LOGV(fmt) __WriteLog(LogLevel::Verbose, static_cast<const char *>("%s -> " fmt), FUNCTION)
-#	define LOGD(fmt) __WriteLog(LogLevel::Debug, static_cast<const char *>("%s -> " fmt), FUNCTION)
+#	if defined(NCINE_DEBUG)
+#		define LOGV(fmt) __WriteLog(LogLevel::Verbose, static_cast<const char *>("%s -> " fmt), FUNCTION)
+#	else
+#		define LOGV(fmt) do { } while (false)
+#	endif
 #	define LOGI(fmt) __WriteLog(LogLevel::Info, static_cast<const char *>("%s -> " fmt), FUNCTION)
-#	define LOGW(fmt) __WriteLog(LogLevel::Warn, static_cast<const char *>("%s -> " fmt), FUNCTION)
+#	define LOGW(fmt) __WriteLog(LogLevel::Warning, static_cast<const char *>("%s -> " fmt), FUNCTION)
 #	define LOGE(fmt) __WriteLog(LogLevel::Error, static_cast<const char *>("%s -> " fmt), FUNCTION)
 #	define LOGF(fmt) __WriteLog(LogLevel::Fatal, static_cast<const char *>("%s -> " fmt), FUNCTION)
 #else
 #	define LOGV_X(fmt, ...) do { } while (false)
-#	define LOGD_X(fmt, ...) do { } while (false)
 #	define LOGI_X(fmt, ...) do { } while (false)
 #	define LOGW_X(fmt, ...) do { } while (false)
 #	define LOGE_X(fmt, ...) do { } while (false)
 #	define LOGF_X(fmt, ...) do { } while (false)
 #
 #	define LOGV(fmt) do { } while (false)
-#	define LOGD(fmt) do { } while (false)
 #	define LOGI(fmt) do { } while (false)
 #	define LOGW(fmt) do { } while (false)
 #	define LOGE(fmt) do { } while (false)
@@ -90,7 +91,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...);
 #define RETURNF_MSG_X(fmt, ...) do { LOGE_X(fmt, ##__VA_ARGS__); return false; } while (false)
 #define RETURNF_MSG(fmt) do { LOGE(fmt); return false; } while (false)
 
-#if defined(ENABLE_LOG)
+#if defined(NCINE_LOG)
 #	ifdef _MSC_VER
 #		define BREAK() __debugbreak()
 #	else
@@ -160,7 +161,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...);
 	} while (false)
 
 // Non-fatal assert macros
-#if defined(ENABLE_LOG)
+#if defined(NCINE_LOG)
 #	define ASSERT_MSG_X(x, fmt, ...) \
 		do \
 		{ \

@@ -400,7 +400,7 @@ namespace nCine
 		joyConnectionEvent_.joyId = joyId;
 
 		if (event == GLFW_CONNECTED) {
-#if defined(ENABLE_LOG)
+#if defined(NCINE_LOG)
 			int numButtons = -1;
 			int numAxes = -1;
 			int numHats = -1;

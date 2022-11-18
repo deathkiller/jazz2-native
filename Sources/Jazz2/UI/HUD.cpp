@@ -63,7 +63,7 @@ namespace Jazz2::UI
 
 	HUD::~HUD()
 	{
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		if (PreferencesCache::EnableRgbLights) {
 			RgbLights::Current().Clear();
 		}
@@ -1051,7 +1051,7 @@ namespace Jazz2::UI
 
 	void HUD::UpdateRgbLights(float timeMult, Actors::Player* player)
 	{
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		if (!PreferencesCache::EnableRgbLights) {
 			_rgbHealthLast = 0.0f;
 			return;

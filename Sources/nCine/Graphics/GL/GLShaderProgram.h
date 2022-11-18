@@ -121,7 +121,7 @@ namespace nCine
 		/// Max number of discoverable uniforms
 		static constexpr unsigned int MaxNumUniforms = 32;
 
-#if defined(ENABLE_LOG)
+#if defined(NCINE_LOG)
 		static constexpr unsigned int MaxInfoLogLength = 512;
 		static char infoLogString_[MaxInfoLogLength];
 #endif

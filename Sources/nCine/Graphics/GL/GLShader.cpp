@@ -19,7 +19,7 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS
 	///////////////////////////////////////////////////////////
-#if defined(ENABLE_LOG)
+#if defined(NCINE_LOG)
 	char GLShader::infoLogString_[MaxInfoLogLength];
 #endif
 
@@ -122,7 +122,7 @@ namespace nCine
 		GLint status = 0;
 		glGetShaderiv(glHandle_, GL_COMPILE_STATUS, &status);
 		if (status == GL_FALSE) {
-#if defined(ENABLE_LOG)
+#if defined(NCINE_LOG)
 			if (logOnErrors) {
 				GLint length = 0;
 				glGetShaderiv(glHandle_, GL_INFO_LOG_LENGTH, &length);

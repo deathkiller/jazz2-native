@@ -3,6 +3,7 @@
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/Application.h"
+#include "../../../nCine/Base/FrameTimer.h"
 
 namespace Jazz2::UI::Menu
 {
@@ -14,6 +15,7 @@ namespace Jazz2::UI::Menu
 		_animation(0.0f),
 		_isDirty(false),
 		_waitForInput(false),
+		_timeout(0.0f),
 		_prevKeyPressed((unsigned int)KeySym::COUNT),
 		_prevJoyPressed(8 * JoyMappedState::NumButtons)
 	{
@@ -45,7 +47,8 @@ namespace Jazz2::UI::Menu
 			auto& input = theApplication().inputManager();
 			auto& keyState = input.keyboardState();
 
-			if (keyState.isKeyDown(KeySym::ESCAPE)) {
+			_timeout -= timeMult;
+			if (keyState.isKeyDown(KeySym::ESCAPE) || _timeout <= 0.0f) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_waitForInput = false;
 				return;
@@ -121,6 +124,7 @@ namespace Jazz2::UI::Menu
 
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
+			_timeout = 30.0f * FrameTimer::FramesPerSecond;
 			_waitForInput = true;
 
 			RefreshPreviousState();
@@ -240,7 +244,8 @@ namespace Jazz2::UI::Menu
 
 			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int)PlayerActions::Count + i];
 
-			_root->DrawStringShadow(name, charOffset, center.X * 0.3f, topItem, IMenuContainer::FontLayer, Alignment::Left, Font::DefaultColor, 0.8f);
+			_root->DrawStringShadow(name, charOffset, center.X * 0.3f, topItem, IMenuContainer::FontLayer, Alignment::Left,
+				_selectedIndex == i && _waitForInput ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor, 0.8f);
 
 			for (int j = 0; j < PossibleButtons; j++) {
 				StringView value;

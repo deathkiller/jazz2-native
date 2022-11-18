@@ -46,7 +46,6 @@ extern "C"
 #include "Base/Random.h"
 #include "IAppEventHandler.h"
 #include "IO/FileSystem.h"
-#include "IO/IFileStream.h"
 #include "ArrayIndexer.h"
 #include "Graphics/GfxCapabilities.h"
 #include "Graphics/RenderResources.h"
@@ -76,6 +75,161 @@ extern "C"
 
 #ifdef WITH_RENDERDOC
 #	include "Graphics/RenderDocCapture.h"
+#endif
+
+#if defined(NCINE_LOG)
+
+#if defined(DEATH_TARGET_WINDOWS)
+#	include <Utf8.h>
+#elif defined(DEATH_TARGET_ANDROID)
+#	include <stdarg.h>
+#	include <android/log.h>
+extern std::unique_ptr<nCine::IFileStream> __logFile;
+#else
+#	include <cstdarg>
+#endif
+
+void __WriteLog(LogLevel level, const char* fmt, ...)
+{
+	constexpr int MaxEntryLength = 4 * 1024;
+	char logEntry[MaxEntryLength];
+
+#if defined(DEATH_TARGET_WINDOWS)
+	logEntry[0] = '[';
+	switch (level) {
+		case LogLevel::Fatal:	logEntry[1] = 'F'; break;
+		case LogLevel::Error:	logEntry[1] = 'E'; break;
+		case LogLevel::Warning:	logEntry[1] = 'W'; break;
+		case LogLevel::Info:	logEntry[1] = 'I'; break;
+		default:				logEntry[1] = 'D'; break;
+	}
+	logEntry[2] = ']';
+	logEntry[3] = ' ';
+
+	va_list args;
+	va_start(args, fmt);
+	unsigned int length = vsnprintf(logEntry + 4, MaxEntryLength - 4, fmt, args) + 4;
+	va_end(args);
+
+	if (length >= MaxEntryLength - 2) {
+		length = MaxEntryLength - 2;
+	}
+
+	logEntry[length++] = '\n';
+	logEntry[length] = '\0';
+
+	::OutputDebugString(Death::Utf8::ToUtf16(logEntry));
+#elif defined(DEATH_TARGET_ANDROID)
+	android_LogPriority priority;
+
+	// clang-format off
+	switch (level) {
+		case LogLevel::Fatal:	priority = ANDROID_LOG_FATAL; break;
+		case LogLevel::Error:	priority = ANDROID_LOG_ERROR; break;
+		case LogLevel::Warning:	priority = ANDROID_LOG_WARN; break;
+		case LogLevel::Info:	priority = ANDROID_LOG_INFO; break;
+		default:				priority = ANDROID_LOG_DEBUG; break;
+	}
+	// clang-format on
+
+	va_list args;
+	va_start(args, fmt);
+	/*unsigned int length =*/ vsnprintf(logEntry, MaxEntryLength, fmt, args);
+	va_end(args);
+
+	__android_log_write(priority, "jazz2", logEntry);
+
+	if (__logFile != nullptr) {
+		const char* levelIdentifier;
+		switch (level) {
+			case LogLevel::Fatal:	levelIdentifier = "F"; break;
+			case LogLevel::Error:	levelIdentifier = "E"; break;
+			case LogLevel::Warning:	levelIdentifier = "W"; break;
+			case LogLevel::Info:	levelIdentifier = "I"; break;
+			default:				levelIdentifier = "D"; break;
+		}
+
+		fprintf(__logFile->Ptr(), "[%s] %s\n", levelIdentifier, logEntry);
+		fflush(__logFile->Ptr());
+	}
+#else
+	constexpr char Reset[] = "\033[0m";
+	constexpr char Bold[] = "\033[1m";
+	constexpr char Faint[] = "\033[2m";
+	constexpr char Red[] = "\033[31m";
+	constexpr char BrightRed[] = "\033[91m";
+
+	char logEntryWithColors[MaxEntryLength];
+	logEntryWithColors[0] = '\0';
+	logEntryWithColors[MaxEntryLength - 1] = '\0';
+
+	va_list args;
+	va_start(args, fmt);
+	unsigned int length = vsnprintf(logEntry, MaxEntryLength, fmt, args);
+	va_end(args);
+
+	// Colorize the output
+	unsigned int length2 = snprintf(logEntryWithColors, MaxEntryLength - 1, "%s", Faint);
+	if (level == LogLevel::Error || level == LogLevel::Fatal) {
+		length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Red);
+	}
+
+	unsigned int logMsgFuncLength = 0;
+	while (logEntry[logMsgFuncLength] != '\0' && (logMsgFuncLength == 0 || !(logEntry[logMsgFuncLength - 1] == '-' && logEntry[logMsgFuncLength] == '>'))) {
+		logMsgFuncLength++;
+	}
+	logMsgFuncLength++; // Skip '>' character
+
+	strncpy(logEntryWithColors + length2, logEntry, std::min(logMsgFuncLength, MaxEntryLength - length2 - 1));
+	length2 += logMsgFuncLength;
+
+	if (level != LogLevel::Verbose) {
+		length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Reset);
+	}
+	if (level == LogLevel::Error || level == LogLevel::Fatal) {
+		length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", BrightRed);
+	}
+	if (level == LogLevel::Warning || level == LogLevel::Fatal) {
+		length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Bold);
+	}
+
+	strncpy(logEntryWithColors + length2, logEntry + logMsgFuncLength, std::min(length - logMsgFuncLength, MaxEntryLength - length2 - 1));
+	length2 += length - logMsgFuncLength;
+
+	if (level == LogLevel::Verbose || level == LogLevel::Warning || level == LogLevel::Error || level == LogLevel::Fatal) {
+		length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Reset);
+	}
+
+	if (length2 >= MaxEntryLength - 2) {
+		length2 = MaxEntryLength - 2;
+	}
+
+	logEntryWithColors[length2++] = '\n';
+	logEntryWithColors[length2] = '\0';
+
+	if (level == LogLevel::Error || level == LogLevel::Fatal) {
+		fputs(logEntryWithColors, stderr);
+	} else {
+		fputs(logEntryWithColors, stdout);
+	}
+#endif
+
+#if defined(WITH_TRACY)
+	uint32_t color;
+	// clang-format off
+	switch (level) {
+		case LogLevel::Fatal:	color = 0xec3e40; break;
+		case LogLevel::Error:	color = 0xff9b2b; break;
+		case LogLevel::Warning:	color = 0xf5d800; break;
+		case LogLevel::Info:	color = 0x01a46d; break;
+		default:				color = 0x377fc7; break;
+	}
+	// clang-format on
+
+	TracyMessageC(logEntry, length, color);
+#endif
+}
+
 #endif
 
 namespace nCine
@@ -136,14 +290,7 @@ namespace nCine
 		ZoneScoped;
 		profileStartTime_ = TimeStamp::now();
 
-		//char appInfoString[128];
-		//#ifdef WITH_GIT_VERSION
-		//	formatString(appInfoString, sizeof(appInfoString), "nCine %s (%s) compiled on %s at %s", VersionStrings::Version, VersionStrings::GitBranch,
-		//	                     VersionStrings::CompilationDate, VersionStrings::CompilationTime);
-		//#else
-		//	formatString(appInfoString, sizeof(appInfoString), "nCine compiled on %s at %s", VersionStrings::CompilationDate, VersionStrings::CompilationTime);
-		//#endif
-		//	LOGI_X("%s", appInfoString);
+		LOGI("Jazz² Resurrection v" NCINE_VERSION " initializing...");
 #ifdef WITH_TRACY
 		TracyAppInfo("nCine", 5);
 		LOGI("Tracy integration is enabled");

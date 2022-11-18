@@ -49,7 +49,7 @@ namespace nCine
 		void setObjectLabel(const char* label);
 
 	private:
-#if defined(ENABLE_LOG)
+#if defined(NCINE_LOG)
 		static constexpr unsigned int MaxInfoLogLength = 512;
 		static char infoLogString_[MaxInfoLogLength];
 #endif

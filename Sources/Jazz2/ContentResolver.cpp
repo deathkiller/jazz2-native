@@ -3,7 +3,7 @@
 #include "Compatibility/JJ2Anims.Palettes.h"
 #include "LevelHandler.h"
 #include "Tiles/TileSet.h"
-#if NCINE_DEBUG
+#if defined(NCINE_DEBUG)
 #	include "Compatibility/JJ2Anims.h"
 #endif
 
@@ -447,7 +447,7 @@ namespace Jazz2
 				graphics->Gunspot = Vector2i(InvalidValue, InvalidValue);
 			}
 
-#if NCINE_DEBUG
+#if defined(NCINE_DEBUG)
 			MigrateGraphics(path);
 #endif
 
@@ -1068,7 +1068,7 @@ namespace Jazz2
 		}
 	}
 
-#if NCINE_DEBUG
+#if defined(NCINE_DEBUG)
 	void ContentResolver::MigrateGraphics(const StringView& path)
 	{
 		String auraPath = fs::JoinPath({ GetContentPath(), "Animations"_s, path.exceptSuffix(4) + ".aura"_s });
