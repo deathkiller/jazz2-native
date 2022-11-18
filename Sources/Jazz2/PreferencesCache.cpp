@@ -24,10 +24,10 @@ namespace Jazz2
 	bool PreferencesCache::EnableReforged = true;
 	bool PreferencesCache::EnableLedgeClimb = true;
 	bool PreferencesCache::EnableWeaponWheel = true;
-#if defined(DEATH_TARGET_WINDOWS_RT)
-	bool PreferencesCache::EnableRgbLights = false;
-#else
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_WINDOWS_RT)
 	bool PreferencesCache::EnableRgbLights = true;
+#else
+	bool PreferencesCache::EnableRgbLights = false;
 #endif
 	bool PreferencesCache::AllowUnsignedScripts = true;
 #if defined(DEATH_TARGET_ANDROID)

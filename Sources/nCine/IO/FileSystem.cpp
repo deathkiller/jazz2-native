@@ -68,7 +68,7 @@ namespace nCine
 		{
 			ASSERT(path);
 			if (::lstat(path, &sb) == -1) {
-				//LOGD_X("lstat error: %s \"%s\"", strerror(errno), path);
+				//LOGV_X("lstat error: %s \"%s\"", strerror(errno), path);
 				return false;
 			}
 			return true;

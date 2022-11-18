@@ -1,3 +1,4 @@
+option(NCINE_LOG "Enable logging" ON)
 option(NCINE_DOWNLOAD_DEPENDENCIES "Download all build dependencies" ON)
 option(NCINE_LINKTIME_OPTIMIZATION "Compile the engine with link time optimization when in release" OFF)
 option(NCINE_AUTOVECTORIZATION_REPORT "Enable report generation from compiler auto-vectorization" OFF)
@@ -41,6 +42,7 @@ option(NCINE_WITH_VORBIS "Enable Ogg Vorbis audio file loading" OFF)
 #if(NCINE_WITH_LUA)
 #	option(NCINE_WITH_SCRIPTING_API "Enable Lua scripting API" OFF)
 #endif()
+option(NCINE_WITH_ANGELSCRIPT "Enable AngelScript scripting support" OFF)
 
 #option(NCINE_WITH_ALLOCATORS "Enable the custom memory allocators" OFF)
 #option(NCINE_WITH_IMGUI "Enable the integration with Dear ImGui" OFF)

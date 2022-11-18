@@ -12,7 +12,7 @@
 
 namespace nCine
 {
-#if NCINE_DEBUG
+#if defined(NCINE_DEBUG)
 	namespace
 	{
 		/// The string used to output OpenGL debug group information
@@ -69,7 +69,7 @@ namespace nCine
 				: a->idSortKey() < b->idSortKey();
 		}
 
-#if NCINE_DEBUG
+#if defined(NCINE_DEBUG)
 		const char* commandTypeString(const RenderCommand& command)
 		{
 			switch (command.type()) {
@@ -112,7 +112,7 @@ namespace nCine
 		// Avoid GPU stalls by uploading to VBOs, IBOs and UBOs before drawing
 		if (!opaques->empty()) {
 			ZoneScopedN("Commit opaques");
-#if NCINE_DEBUG
+#if defined(NCINE_DEBUG)
 			formatString(debugString, sizeof(debugString), "Commit %u opaque command(s) for viewport 0x%lx", (uint32_t)opaques->size(), uintptr_t(RenderResources::currentViewport()));
 			GLDebug::ScopedGroup scoped(debugString);
 #endif
@@ -122,7 +122,7 @@ namespace nCine
 
 		if (!transparents->empty()) {
 			ZoneScopedN("Commit transparents");
-#if NCINE_DEBUG
+#if defined(NCINE_DEBUG)
 			formatString(debugString, sizeof(debugString), "Commit %u transparent command(s) for viewport 0x%lx", (uint32_t)transparents->size(), uintptr_t(RenderResources::currentViewport()));
 			GLDebug::ScopedGroup scoped(debugString);
 #endif
@@ -137,13 +137,13 @@ namespace nCine
 		SmallVectorImpl<RenderCommand*>* opaques = batchingEnabled ? &opaqueBatchedQueue_ : &opaqueQueue_;
 		SmallVectorImpl<RenderCommand*>* transparents = batchingEnabled ? &transparentBatchedQueue_ : &transparentQueue_;
 
-#if NCINE_DEBUG
+#if defined(NCINE_DEBUG)
 		unsigned int commandIndex = 0;
 #endif
 		// Rendering opaque nodes front to back
 		for (RenderCommand* opaqueRenderCommand : *opaques) {
 			TracyGpuZone("Opaque");
-#if NCINE_DEBUG
+#if defined(NCINE_DEBUG)
 			const int numInstances = opaqueRenderCommand->numInstances();
 			const int batchSize = opaqueRenderCommand->batchSize();
 			const uint16_t layer = opaqueRenderCommand->layer();
@@ -174,7 +174,7 @@ namespace nCine
 		// Rendering transparent nodes back to front
 		for (RenderCommand* transparentRenderCommand : *transparents) {
 			TracyGpuZone("Transparent");
-#if NCINE_DEBUG
+#if defined(NCINE_DEBUG)
 			const int numInstances = transparentRenderCommand->numInstances();
 			const int batchSize = transparentRenderCommand->batchSize();
 			const uint16_t layer = transparentRenderCommand->layer();

@@ -8,14 +8,14 @@
 
 #include <string>
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// STATIC DEFINITIONS
 	///////////////////////////////////////////////////////////
 
 	GLuint GLShaderProgram::boundProgram_ = 0;
-#if defined(ENABLE_LOG)
+#if defined(NCINE_LOG)
 	char GLShaderProgram::infoLogString_[MaxInfoLogLength];
 #endif
 
@@ -285,7 +285,7 @@ namespace nCine {
 		GLint status;
 		glGetProgramiv(glHandle_, GL_LINK_STATUS, &status);
 		if (status == GL_FALSE) {
-#if defined(ENABLE_LOG)
+#if defined(NCINE_LOG)
 			if (shouldLogOnErrors_) {
 				GLint length = 0;
 				glGetProgramiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
@@ -359,7 +359,7 @@ namespace nCine {
 				GLUniform& uniform = uniforms_.emplace_back(glHandle_, indices[i]);
 				uniformsSize_ += uniform.memorySize();
 
-				LOGD_X("Shader %u - uniform %d : \"%s\"", glHandle_, uniform.location(), uniform.name());
+				LOGV_X("Shader %u - uniform %d : \"%s\"", glHandle_, uniform.location(), uniform.name());
 			}
 		}
 		GL_LOG_ERRORS();
@@ -375,7 +375,7 @@ namespace nCine {
 			GLUniformBlock& uniformBlock = uniformBlocks_.emplace_back(glHandle_, i, discover);
 			uniformBlocksSize_ += uniformBlock.size();
 
-			LOGD_X("Shader %u - uniform block %u : \"%s\"", glHandle_, uniformBlock.index(), uniformBlock.name());
+			LOGV_X("Shader %u - uniform block %u : \"%s\"", glHandle_, uniformBlock.index(), uniformBlock.name());
 		}
 		GL_LOG_ERRORS();
 	}
@@ -389,7 +389,7 @@ namespace nCine {
 		for (int i = 0; i < count; i++) {
 			GLAttribute& attribute = attributes_.emplace_back(glHandle_, i);
 
-			LOGD_X("Shader %u - attribute %d : \"%s\"", glHandle_, attribute.location(), attribute.name());
+			LOGV_X("Shader %u - attribute %d : \"%s\"", glHandle_, attribute.location(), attribute.name());
 		}
 		GL_LOG_ERRORS();
 	}

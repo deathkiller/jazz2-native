@@ -5,6 +5,7 @@
 
 #include <memory>
 
+#include <Containers/String.h>
 #include <Containers/StringView.h>
 
 using namespace Death::Containers;

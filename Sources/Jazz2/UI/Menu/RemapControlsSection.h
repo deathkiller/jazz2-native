@@ -27,6 +27,7 @@ namespace Jazz2::UI::Menu
 		float _animation;
 		bool _isDirty;
 		bool _waitForInput;
+		float _timeout;
 		BitArray _prevKeyPressed;
 		BitArray _prevJoyPressed;
 

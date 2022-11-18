@@ -18,6 +18,8 @@
 #	include <emscripten/emscripten.h>
 #endif
 
+#include "tracy.h"
+
 namespace nCine
 {
 	Application& theApplication()
@@ -75,8 +77,15 @@ namespace nCine
 
 	void PCApplication::init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
 	{
+		ZoneScoped;
 		profileStartTime_ = TimeStamp::now();
 		wasSuspended_ = shouldSuspend();
+
+#if defined(DEATH_TARGET_UNIX)
+		setvbuf(stdout, nullptr, _IONBF, 0);
+		setvbuf(stderr, nullptr, _IONBF, 0);
+#endif
+
 		appEventHandler_ = createAppEventHandler();
 
 		// Only `onPreInit()` can modify the application configuration

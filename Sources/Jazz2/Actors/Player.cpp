@@ -141,7 +141,7 @@ namespace Jazz2::Actors
 
 	void Player::OnUpdate(float timeMult)
 	{
-#if NCINE_DEBUG
+#if defined(NCINE_DEBUG)
 		if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::ChangeWeapon)) {
 			float moveDistance = (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Run) ? 400.0f : 100.0f);
 			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::Left)) {

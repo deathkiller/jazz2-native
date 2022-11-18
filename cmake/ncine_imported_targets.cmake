@@ -95,12 +95,20 @@ if(EMSCRIPTEN)
 		endif()
 	endif()
 
-	if(NCINE_WITH_LUA)
+	if(NCINE_WITH_LUA AND EXISTS ${EXTERNAL_EMSCRIPTEN_DIR}/liblua.a)
 		add_library(Lua::Lua STATIC IMPORTED)
 		set_target_properties(Lua::Lua PROPERTIES
 			IMPORTED_LOCATION ${EXTERNAL_EMSCRIPTEN_DIR}/liblua.a
 			INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR})
 		set(LUA_FOUND 1)
+	endif()
+	
+	if(NCINE_WITH_ANGELSCRIPT AND EXISTS ${EXTERNAL_EMSCRIPTEN_DIR}/angelscript.a)
+		add_library(AngelScript::AngelScript STATIC IMPORTED)
+		set_target_properties(AngelScript::AngelScript PROPERTIES
+			IMPORTED_LOCATION ${EXTERNAL_EMSCRIPTEN_DIR}/angelscript.a
+			INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR})
+		set(ANGELSCRIPT_FOUND 1)
 	endif()
 	
 	add_library(ZLIB::ZLIB INTERFACE IMPORTED)
@@ -261,6 +269,14 @@ if(ANDROID)
 			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}/lua/")
 		set(LUA_FOUND 1)
 	endif()
+	
+	if(NCINE_WITH_ANGELSCRIPT AND EXISTS ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/angelscript.a)
+		add_library(AngelScript::AngelScript STATIC IMPORTED)
+		set_target_properties(AngelScript::AngelScript PROPERTIES
+			IMPORTED_LOCATION ${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/angelscript.a
+			INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR})
+		set(ANGELSCRIPT_FOUND 1)
+	endif()
 elseif(MSVC)
 	if(NCINE_WITH_ANGLE AND
 	   EXISTS ${MSVC_LIBDIR}/libEGL.lib AND EXISTS ${MSVC_BINDIR}/libEGL.dll AND
@@ -399,6 +415,14 @@ elseif(MSVC)
 			IMPORTED_LOCATION ${MSVC_BINDIR}/lua54.dll
 			INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR})
 		set(LUA_FOUND 1)
+	endif()
+	
+	if(NCINE_WITH_ANGELSCRIPT AND EXISTS ${MSVC_LIBDIR}/angelscript.lib)
+		add_library(AngelScript::AngelScript STATIC IMPORTED)
+		set_target_properties(AngelScript::AngelScript PROPERTIES
+			IMPORTED_LOCATION ${MSVC_LIBDIR}/angelscript.lib
+			INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR})
+		set(ANGELSCRIPT_FOUND 1)
 	endif()
 	
 	if(EXISTS ${MSVC_LIBDIR}/libdeflate.lib AND EXISTS ${MSVC_BINDIR}/libdeflate.dll)
@@ -569,7 +593,7 @@ else(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			message(STATUS "Found libopenmpt: ${OPENMPT_LIBRARY}")
 			add_library(libopenmpt::libopenmpt SHARED IMPORTED)
 			set_target_properties(libopenmpt::libopenmpt PROPERTIES
-				IMPORTED_LOCATION "${OPENMPT_LIBRARY}"
+				IMPORTED_LOCATION ${OPENMPT_LIBRARY}
 				INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR}/libopenmpt/)
 		else()
 			set(OPENMPT_DYNAMIC_LINK 1)
@@ -582,6 +606,17 @@ else(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		set_target_properties(Lua::Lua PROPERTIES
 			IMPORTED_LOCATION ${LUA_LIBRARY}
 			INTERFACE_INCLUDE_DIRECTORIES ${LUA_INCLUDE_DIR})
+	endif()
+	
+	if(NCINE_WITH_ANGELSCRIPT)
+		find_library(ANGELSCRIPT_LIBRARY libangelscript.so PATHS /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 ${NCINE_LIBS}/Linux/${CMAKE_SYSTEM_PROCESSOR}/)
+		if(EXISTS ${ANGELSCRIPT_LIBRARY})
+			add_library(AngelScript::AngelScript SHARED IMPORTED)
+			set_target_properties(AngelScript::AngelScript PROPERTIES
+				IMPORTED_LOCATION ${ANGELSCRIPT_LIBRARY}
+				INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR})
+			set(ANGELSCRIPT_FOUND 1)
+		endif()
 	endif()
 
 	# Always use Zlib on Unix

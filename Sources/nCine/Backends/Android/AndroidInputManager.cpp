@@ -758,7 +758,7 @@ namespace nCine
 			};
 
 			int buttonMask = 0;
-#if defined(ENABLE_LOG)
+#if defined(NCINE_LOG)
 			std::memset(deviceInfoString, 0, MaxStringLength);
 #endif
 			for (int i = 0; i < maxButtons; i++) {
@@ -773,7 +773,7 @@ namespace nCine
 
 				if (hasKey) {
 					joystick.buttonsMapping_[i] = (int)ButtonNames[i];
-#if defined(ENABLE_LOG)
+#if defined(NCINE_LOG)
 					sprintf(&deviceInfoString[strlen(deviceInfoString)], "%d:%d ", (int)ButtonNames[i], keyCode);
 #endif
 					buttonMask |= ButtonMasks[i];
@@ -783,7 +783,7 @@ namespace nCine
 				}
 			}
 			joystick.numButtons_ = numFoundButtons;
-#if defined(ENABLE_LOG)
+#if defined(NCINE_LOG)
 			LOGV_X("Device (%d, %d) - Buttons %s", deviceId, joyId, deviceInfoString);
 #endif
 
@@ -815,7 +815,7 @@ namespace nCine
 				}
 			}
 
-#if defined(ENABLE_LOG)
+#if defined(NCINE_LOG)
 			std::memset(deviceInfoString, 0, MaxStringLength);
 #endif
 			joystick.hasHatAxes_ = true;
@@ -827,7 +827,7 @@ namespace nCine
 
 				if (!motionRange.isNull()) {
 					joystick.axesMapping_[numAxes] = axis;
-#if defined(ENABLE_LOG)
+#if defined(NCINE_LOG)
 					sprintf(&deviceInfoString[strlen(deviceInfoString)], "%d:%d ", numAxes, axis);
 #endif
 					numAxes++;
@@ -838,7 +838,7 @@ namespace nCine
 					}
 				}
 			}
-#if defined(ENABLE_LOG)
+#if defined(NCINE_LOG)
 			LOGV_X("Device (%d, %d) - Axes %s", deviceId, joyId, deviceInfoString);
 #endif
 			joystick.numAxes_ = numAxes;

@@ -198,7 +198,7 @@ namespace Jazz2
 
 		_levelTexts = std::move(levelTexts);
 
-#if defined(WITH_ANGELSCRIPT) || defined(ENABLE_LOG)
+#if defined(WITH_ANGELSCRIPT) || defined(NCINE_LOG)
 		// TODO: Allow script signing
 		if (PreferencesCache::AllowUnsignedScripts) {
 			const StringView foundDot = fullPath.findLastOr('.', fullPath.end());
@@ -223,7 +223,7 @@ namespace Jazz2
 		if (PlayerActionHit(0, PlayerActions::Menu) && _pauseMenu == nullptr && _nextLevelType == ExitType::None) {
 			PauseGame();
 		}
-#if NCINE_DEBUG
+#if defined(NCINE_DEBUG)
 		if (PlayerActionPressed(0, PlayerActions::ChangeWeapon) && PlayerActionHit(0, PlayerActions::Jump)) {
 			_cheatsUsed = true;
 			BeginLevelChange(ExitType::Warp | ExitType::FastTransition, nullptr);
