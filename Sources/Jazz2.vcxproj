@@ -356,6 +356,7 @@
     <ClInclude Include="Jazz2\UI\Menu\RefreshCacheSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RemapControlsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RescaleModeSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\SimpleMessageSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\SoundsOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\StartGameOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\TouchControlsOptionsSection.h" />
@@ -675,6 +676,7 @@
     <ClCompile Include="Jazz2\UI\Menu\RefreshCacheSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\RemapControlsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\RescaleModeSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\SimpleMessageSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\SoundsOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\StartGameOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\TouchControlsOptionsSection.cpp" />

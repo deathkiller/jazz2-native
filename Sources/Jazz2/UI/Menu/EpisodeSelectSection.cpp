@@ -361,13 +361,13 @@ namespace Jazz2::UI::Menu
 					_expandedAnimation = 0.0f;
 					_expanded = false;
 
-					_root->SwitchToSectionPtr(std::make_unique<StartGameOptionsSection>(selectedItem.Description.Name, selectedItem.Description.FirstLevel, selectedItem.Description.PreviousEpisode));
+					_root->SwitchToSection<StartGameOptionsSection>(selectedItem.Description.Name, selectedItem.Description.FirstLevel, selectedItem.Description.PreviousEpisode);
 				} else {
 					_shouldStart = true;
 					_transitionTime = 1.0f;
 				}
 			} else {
-				_root->SwitchToSectionPtr(std::make_unique<StartGameOptionsSection>(selectedItem.Description.Name, selectedItem.Description.FirstLevel, selectedItem.Description.PreviousEpisode));
+				_root->SwitchToSection<StartGameOptionsSection>(selectedItem.Description.Name, selectedItem.Description.FirstLevel, selectedItem.Description.PreviousEpisode);
 			}
 		}
 	}

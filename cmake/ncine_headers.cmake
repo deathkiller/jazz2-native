@@ -293,6 +293,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RefreshCacheSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RemapControlsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RescaleModeSection.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/SimpleMessageSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/SoundsOptionsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/StartGameOptionsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/TouchControlsOptionsSection.h

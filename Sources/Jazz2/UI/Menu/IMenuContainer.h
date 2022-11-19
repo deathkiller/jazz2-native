@@ -28,13 +28,13 @@ namespace Jazz2::UI::Menu
 
 		virtual ~IMenuContainer() { }
 
-		template<typename T>
-		void SwitchToSection()
+		template<typename T, typename... Params>
+		void SwitchToSection(Params&&... args)
 		{
-			SwitchToSectionPtr(std::make_unique<T>());
+			SwitchToSectionDirect(std::make_unique<T>(std::forward<Params>(args)...));
 		}
 
-		virtual void SwitchToSectionPtr(std::unique_ptr<MenuSection> section) = 0;
+		virtual void SwitchToSectionDirect(std::unique_ptr<MenuSection> section) = 0;
 		virtual void LeaveSection() = 0;
 		virtual void ChangeLevel(Jazz2::LevelInitialization&& levelInit) = 0;
 		virtual void ApplyPreferencesChanges(ChangedPreferencesType type) = 0;

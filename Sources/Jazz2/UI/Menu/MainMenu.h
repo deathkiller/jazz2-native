@@ -42,7 +42,7 @@ namespace Jazz2::UI::Menu
 		void OnKeyReleased(const KeyboardEvent& event) override;
 		void OnTouchEvent(const nCine::TouchEvent& event) override;
 
-		void SwitchToSectionPtr(std::unique_ptr<MenuSection> section) override;
+		void SwitchToSectionDirect(std::unique_ptr<MenuSection> section) override;
 		void LeaveSection() override;
 		void ChangeLevel(Jazz2::LevelInitialization&& levelInit) override;
 		void ApplyPreferencesChanges(ChangedPreferencesType type) override;

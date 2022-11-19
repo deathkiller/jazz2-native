@@ -148,7 +148,7 @@ namespace Jazz2::UI::Menu
 		return true;
 	}
 
-	void InGameMenu::SwitchToSectionPtr(std::unique_ptr<MenuSection> section)
+	void InGameMenu::SwitchToSectionDirect(std::unique_ptr<MenuSection> section)
 	{
 		if (!_sections.empty()) {
 			auto& lastSection = _sections.back();

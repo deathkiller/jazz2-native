@@ -239,7 +239,7 @@ namespace Jazz2::UI::Menu
 	{
 		auto& selectedItem = _items[_selectedIndex];
 		_root->PlaySfx("MenuSelect"_s, 0.6f);
-		_root->SwitchToSectionPtr(std::make_unique<StartGameOptionsSection>("unknown"_s, selectedItem.LevelName, nullptr));
+		_root->SwitchToSection<StartGameOptionsSection>("unknown"_s, selectedItem.LevelName, nullptr);
 	}
 
 	void CustomLevelSelectSection::EnsureVisibleSelected()
