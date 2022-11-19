@@ -1,11 +1,10 @@
-#ifdef __ANDROID__
-
 #include "AssetFile.h"
-#include "../../Common.h"
 
-#include <sys/stat.h> // for open()
-#include <fcntl.h> // for open()
-#include <unistd.h> // for close()
+#if defined(DEATH_TARGET_ANDROID)
+
+#include <sys/stat.h>	// for open()
+#include <fcntl.h>		// for open()
+#include <unistd.h>		// for close()
 
 namespace nCine
 {
@@ -28,8 +27,9 @@ namespace nCine
 
 	AssetFile::~AssetFile()
 	{
-		if (shouldCloseOnDestruction_)
+		if (shouldCloseOnDestruction_) {
 			Close();
+		}
 	}
 
 	///////////////////////////////////////////////////////////
@@ -45,7 +45,6 @@ namespace nCine
 			// Opening with a file descriptor
 			if ((mode & FileAccessMode::FileDescriptor) == FileAccessMode::FileDescriptor) {
 				OpenFD(mode);
-				// Opening as an asset only
 			} else {
 				OpenAsset(mode);
 			}
@@ -57,9 +56,9 @@ namespace nCine
 	{
 		if (fileDescriptor_ >= 0) {
 			const int retValue = ::close(fileDescriptor_);
-			if (retValue < 0)
+			if (retValue < 0) {
 				LOGW_X("Cannot close the file \"%s\"", filename_.data());
-			else {
+			} else {
 				LOGI_X("File \"%s\" closed", filename_.data());
 				fileDescriptor_ = -1;
 			}
@@ -87,9 +86,9 @@ namespace nCine
 					break;
 			}
 			seekValue -= startOffset_;
-		} else if (asset_)
+		} else if (asset_) {
 			seekValue = AAsset_seek(asset_, offset, (int)origin);
-
+		}
 		return seekValue;
 	}
 
@@ -97,11 +96,11 @@ namespace nCine
 	{
 		int32_t tellValue = -1;
 
-		if (fileDescriptor_ >= 0)
+		if (fileDescriptor_ >= 0) {
 			tellValue = lseek(fileDescriptor_, 0L, SEEK_CUR) - startOffset_;
-		else if (asset_)
+		} else if (asset_) {
 			tellValue = AAsset_seek(asset_, 0L, SEEK_CUR);
-
+		}
 		return tellValue;
 	}
 
@@ -113,51 +112,48 @@ namespace nCine
 
 		if (fileDescriptor_ >= 0) {
 			int32_t bytesToRead = bytes;
-
 			const int32_t seekValue = lseek(fileDescriptor_, 0L, SEEK_CUR);
 
-			if (seekValue >= startOffset_ + fileSize_)
+			if (seekValue >= startOffset_ + fileSize_) {
 				bytesToRead = 0; // simulating EOF
-			else if (seekValue + static_cast<int32_t>(bytes) > startOffset_ + fileSize_)
+			} else if (seekValue + static_cast<int32_t>(bytes) > startOffset_ + fileSize_) {
 				bytesToRead = (startOffset_ + fileSize_) - seekValue;
-
+			}
 			bytesRead = ::read(fileDescriptor_, buffer, bytesToRead);
-		} else if (asset_)
+		} else if (asset_) {
 			bytesRead = AAsset_read(asset_, buffer, bytes);
-
+		}
 		return bytesRead;
 	}
 
 	bool AssetFile::IsOpened() const
 	{
-		if (fileDescriptor_ >= 0 || asset_ != nullptr)
-			return true;
-		else
-			return false;
+		return (fileDescriptor_ >= 0 || asset_ != nullptr);
 	}
 
-	const char* AssetFile::assetPath(const char* path)
+	const char* AssetFile::TryGetAssetPath(const char* path)
 	{
 		ASSERT(path);
 		if (strncmp(path, Prefix, strlen(Prefix)) == 0) {
 			// Skip leading path separator character
-			return (path[7] == '/') ? path + 8 : path + 7;
+			return (path[7] == '/' ? path + 8 : path + 7);
 		}
 		return nullptr;
 	}
 
-	bool AssetFile::tryOpen(const char* path)
+	bool AssetFile::TryOpen(const char* path)
 	{
 		ASSERT(path);
-		return (tryOpenFile(path) || tryOpenDirectory(path));
+		return (TryOpenFile(path) || TryOpenDirectory(path));
 	}
 
-	bool AssetFile::tryOpenFile(const char* path)
+	bool AssetFile::TryOpenFile(const char* path)
 	{
 		ASSERT(path);
-		const char* strippedPath = assetPath(path);
-		if (strippedPath == nullptr)
+		const char* strippedPath = TryGetAssetPath(path);
+		if (strippedPath == nullptr) {
 			return false;
+		}
 
 		AAsset* asset = AAssetManager_open(assetManager_, strippedPath, AASSET_MODE_UNKNOWN);
 		if (asset) {
@@ -168,12 +164,13 @@ namespace nCine
 		return false;
 	}
 
-	bool AssetFile::tryOpenDirectory(const char* path)
+	bool AssetFile::TryOpenDirectory(const char* path)
 	{
 		ASSERT(path);
-		const char* strippedPath = assetPath(path);
-		if (strippedPath == nullptr)
+		const char* strippedPath = TryGetAssetPath(path);
+		if (strippedPath == nullptr) {
 			return false;
+		}
 
 		AAsset* asset = AAssetManager_open(assetManager_, strippedPath, AASSET_MODE_UNKNOWN);
 		if (asset) {
@@ -190,14 +187,15 @@ namespace nCine
 		return false;
 	}
 
-	off_t AssetFile::length(const char* path)
+	off_t AssetFile::GetLength(const char* path)
 	{
 		ASSERT(path);
 
 		off_t assetLength = 0;
-		const char* strippedPath = assetPath(path);
-		if (strippedPath == nullptr)
+		const char* strippedPath = TryGetAssetPath(path);
+		if (strippedPath == nullptr) {
 			return assetLength;
+		}
 
 		AAsset* asset = AAssetManager_open(assetManager_, strippedPath, AASSET_MODE_UNKNOWN);
 		if (asset) {
@@ -208,25 +206,25 @@ namespace nCine
 		return assetLength;
 	}
 
-	AAssetDir* AssetFile::openDir(const char* dirName)
+	AAssetDir* AssetFile::OpenDir(const char* dirName)
 	{
 		ASSERT(dirName);
 		return AAssetManager_openDir(assetManager_, dirName);
 	}
 
-	void AssetFile::closeDir(AAssetDir* assetDir)
+	void AssetFile::CloseDir(AAssetDir* assetDir)
 	{
 		ASSERT(assetDir);
 		AAssetDir_close(assetDir);
 	}
 
-	void AssetFile::rewindDir(AAssetDir* assetDir)
+	void AssetFile::RewindDir(AAssetDir* assetDir)
 	{
 		ASSERT(assetDir);
 		AAssetDir_rewind(assetDir);
 	}
 
-	const char* AssetFile::nextFileName(AAssetDir* assetDir)
+	const char* AssetFile::GetNextFileName(AAssetDir* assetDir)
 	{
 		ASSERT(assetDir);
 		return AAssetDir_getNextFileName(assetDir);
@@ -285,7 +283,6 @@ namespace nCine
 			LOGE_X("Cannot open the file \"%s\", wrong open mode", filename_.data());
 		}
 	}
-
 }
 
 #endif

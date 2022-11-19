@@ -17,8 +17,8 @@ namespace nCine
 		/// Processes an Android application command
 		static void processCommand(struct android_app* state, int32_t cmd);
 
-		/// Wrapper around `AndroidJniHelper::sdkVersion()`
-		unsigned int sdkVersion() const;
+		/// Wrapper around `AndroidJniHelper::SdkVersion()`
+		unsigned int SdkVersion() const;
 		/// Wrapper around `AndroidInputManager::enableAccelerometer()`
 		void enableAccelerometer(bool enabled);
 

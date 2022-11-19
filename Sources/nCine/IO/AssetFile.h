@@ -1,14 +1,16 @@
 #pragma once
 
-#ifdef __ANDROID__
+#include <Common.h>
+
+#if defined(DEATH_TARGET_ANDROID)
 
 #include "IFileStream.h"
+
 #include <android_native_app_glue.h> // for android_app
 #include <android/asset_manager.h>
 
 namespace nCine
 {
-
 	/// The class dealing with Android asset files
 	class AssetFile : public IFileStream
 	{
@@ -34,26 +36,26 @@ namespace nCine
 		bool IsOpened() const override;
 
 		/// Sets the global pointer to the AAssetManager
-		static void initAssetManager(struct android_app* state) {
+		static void InitializeAssetManager(struct android_app* state) {
 			assetManager_ = state->activity->assetManager;
 		}
 
 		/// Returns the path of an Android asset without the prefix
-		static const char* assetPath(const char* path);
+		static const char* TryGetAssetPath(const char* path);
 
 		/// Checks if an asset path exists as a file or as a directory and can be opened
-		static bool tryOpen(const char* path);
+		static bool TryOpen(const char* path);
 		/// Checks if an asset path exists and can be opened as a file
-		static bool tryOpenFile(const char* path);
+		static bool TryOpenFile(const char* path);
 		/// Checks if an asset path exists and can be opened as a directory
-		static bool tryOpenDirectory(const char* path);
+		static bool TryOpenDirectory(const char* path);
 		/// Returns the total size of the asset data
-		static off_t length(const char* path);
+		static off_t GetLength(const char* path);
 
-		static AAssetDir* openDir(const char* dirName);
-		static void closeDir(AAssetDir* assetDir);
-		static void rewindDir(AAssetDir* assetDir);
-		static const char* nextFileName(AAssetDir* assetDir);
+		static AAssetDir* OpenDir(const char* dirName);
+		static void CloseDir(AAssetDir* assetDir);
+		static void RewindDir(AAssetDir* assetDir);
+		static const char* GetNextFileName(AAssetDir* assetDir);
 
 	private:
 		static AAssetManager* assetManager_;
@@ -65,7 +67,6 @@ namespace nCine
 		/// Opens the file with `AAssetManager_open()` only
 		void OpenAsset(FileAccessMode mode);
 	};
-
 }
 
 #endif

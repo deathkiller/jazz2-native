@@ -382,13 +382,13 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		const char* assetPath = AssetFile::assetPath(nullTerminatedPath.data());
+		const char* assetPath = AssetFile::TryGetAssetPath(nullTerminatedPath.data());
 		if (assetPath) {
 			// It probably supports only files
 			if ((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles) {
 				return false;
 			}
-			_assetDir = AssetFile::openDir(assetPath);
+			_assetDir = AssetFile::OpenDir(assetPath);
 			return (_assetDir != nullptr);
 		} else
 #endif
@@ -423,7 +423,7 @@ namespace nCine
 #else
 #if defined(DEATH_TARGET_ANDROID)
 		if (_assetDir != nullptr) {
-			AssetFile::closeDir(_assetDir);
+			AssetFile::CloseDir(_assetDir);
 			_assetDir = nullptr;
 		} else
 #endif
@@ -463,7 +463,7 @@ namespace nCine
 #if defined(DEATH_TARGET_ANDROID)
 		// It does not return directory names
 		if (_assetDir != nullptr) {
-			return AssetFile::nextFileName(_assetDir);
+			return AssetFile::GetNextFileName(_assetDir);
 		}
 #endif
 		if (_dirStream == nullptr) {
@@ -940,8 +940,8 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
-			return AssetFile::tryOpenDirectory(nullTerminatedPath.data());
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
+			return AssetFile::TryOpenDirectory(nullTerminatedPath.data());
 		}
 #endif
 
@@ -963,8 +963,8 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
-			return AssetFile::tryOpenFile(nullTerminatedPath.data());
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
+			return AssetFile::TryOpenFile(nullTerminatedPath.data());
 		}
 #endif
 
@@ -986,8 +986,8 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
-			return AssetFile::tryOpen(nullTerminatedPath.data());
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
+			return AssetFile::TryOpen(nullTerminatedPath.data());
 		}
 #endif
 
@@ -1007,8 +1007,8 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
-			return AssetFile::tryOpen(nullTerminatedPath.data());
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
+			return AssetFile::TryOpen(nullTerminatedPath.data());
 		}
 #endif
 
@@ -1030,7 +1030,7 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
 #endif
@@ -1063,8 +1063,8 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
-			return AssetFile::tryOpenDirectory(nullTerminatedPath.data());
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
+			return AssetFile::TryOpenDirectory(nullTerminatedPath.data());
 		}
 #endif
 
@@ -1082,8 +1082,8 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
-			return AssetFile::tryOpenFile(nullTerminatedPath.data());
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
+			return AssetFile::TryOpenFile(nullTerminatedPath.data());
 		}
 #endif
 
@@ -1105,7 +1105,7 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
 #endif
@@ -1128,7 +1128,7 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
 #endif
@@ -1161,7 +1161,7 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
 #endif
@@ -1258,7 +1258,7 @@ namespace nCine
 
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
 #endif
@@ -1329,7 +1329,7 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
 #endif
@@ -1348,7 +1348,7 @@ namespace nCine
 		auto nullTerminatedOldPath = String::nullTerminatedView(oldPath);
 		auto nullTerminatedNewPath = String::nullTerminatedView(newPath);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedOldPath.data())) {
+		if (AssetFile::TryGetAssetPath(nullTerminatedOldPath.data())) {
 			return false;
 		}
 #endif
@@ -1371,7 +1371,7 @@ namespace nCine
 		auto nullTerminatedOldPath = String::nullTerminatedView(oldPath);
 		auto nullTerminatedNewPath = String::nullTerminatedView(newPath);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedOldPath.data())) {
+		if (AssetFile::TryGetAssetPath(nullTerminatedOldPath.data())) {
 			return false;
 		}
 #endif
@@ -1453,8 +1453,8 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
-			return static_cast<int64_t>(AssetFile::length(nullTerminatedPath.data()));
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
+			return static_cast<int64_t>(AssetFile::GetLength(nullTerminatedPath.data()));
 		}
 #endif
 
@@ -1487,7 +1487,7 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return date;
 		}
 #endif
@@ -1522,7 +1522,7 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return date;
 		}
 #endif
@@ -1553,10 +1553,10 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
-			if (AssetFile::tryOpenDirectory(nullTerminatedPath.data())) {
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
+			if (AssetFile::TryOpenDirectory(nullTerminatedPath.data())) {
 				return (Permission::Read | Permission::Execute);
-			} else if (AssetFile::tryOpenFile(nullTerminatedPath.data())) {
+			} else if (AssetFile::TryOpenFile(nullTerminatedPath.data())) {
 				return Permission::Read;
 			}
 		}
@@ -1593,7 +1593,7 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
 #endif
@@ -1626,7 +1626,7 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
 #endif
@@ -1659,7 +1659,7 @@ namespace nCine
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #if defined(DEATH_TARGET_ANDROID)
-		if (AssetFile::assetPath(nullTerminatedPath.data())) {
+		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
 #endif
@@ -1756,7 +1756,7 @@ namespace nCine
 	{
 		std::unique_ptr<IFileStream> stream;
 #if defined(DEATH_TARGET_ANDROID)
-		const char* assetFilename = AssetFile::assetPath(String::nullTerminatedView(path).data());
+		const char* assetFilename = AssetFile::TryGetAssetPath(String::nullTerminatedView(path).data());
 		if (assetFilename) {
 			stream = std::make_unique<AssetFile>(assetFilename);
 		} else

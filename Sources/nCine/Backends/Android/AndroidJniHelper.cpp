@@ -61,7 +61,7 @@ namespace nCine
 
 	// ------------------- AndroidJniHelper -------------------
 
-	void AndroidJniHelper::attachJVM(struct android_app* state)
+	void AndroidJniHelper::AttachJVM(struct android_app* state)
 	{
 		javaVM_ = state->activity->vm;
 
@@ -83,7 +83,7 @@ namespace nCine
 			if (jniEnv == nullptr)
 				LOGE("JNIEnv pointer is null");
 			else {
-				initClasses();
+				InitializeClasses();
 				AndroidJniWrap_Activity::init(state);
 				AndroidJniWrap_InputMethodManager::init(state);
 				AndroidJniWrap_DisplayManager::init(state);
@@ -96,7 +96,7 @@ namespace nCine
 		}
 	}
 
-	void AndroidJniHelper::detachJVM()
+	void AndroidJniHelper::DetachJVM()
 	{
 		if (javaVM_) {
 			AndroidJniWrap_DisplayManager::shutdown();
@@ -109,7 +109,7 @@ namespace nCine
 		}
 	}
 
-	void AndroidJniHelper::initClasses()
+	void AndroidJniHelper::InitializeClasses()
 	{
 		AndroidJniClass_Version::init();
 		AndroidJniClass_InputDevice::init();
@@ -292,7 +292,7 @@ namespace nCine
 	int AndroidJniClass_InputDevice::getProductId() const
 	{
 		// Early-out if SDK version requirements are not met
-		if (AndroidJniHelper::sdkVersion() < 19) {
+		if (AndroidJniHelper::SdkVersion() < 19) {
 			return 0;
 		}
 		const jint productId = AndroidJniHelper::jniEnv->CallIntMethod(javaObject_, midGetProductId_);
@@ -302,7 +302,7 @@ namespace nCine
 	int AndroidJniClass_InputDevice::getVendorId() const
 	{
 		// Early-out if SDK version requirements are not met
-		if (AndroidJniHelper::sdkVersion() < 19) {
+		if (AndroidJniHelper::SdkVersion() < 19) {
 			return 0;
 		}
 		const jint vendorID = AndroidJniHelper::jniEnv->CallIntMethod(javaObject_, midGetVendorId_);
@@ -324,7 +324,7 @@ namespace nCine
 	void AndroidJniClass_InputDevice::hasKeys(const int* buttons, const int length, bool* bools) const
 	{
 		// Early-out if SDK version requirements are not met
-		if (AndroidJniHelper::sdkVersion() < 19) {
+		if (AndroidJniHelper::SdkVersion() < 19) {
 			return;
 		}
 		jintArray arrButtons = AndroidJniHelper::jniEnv->NewIntArray(length);
@@ -412,7 +412,7 @@ namespace nCine
 	int AndroidJniClass_DisplayMode::getPhysicalHeight() const
 	{
 		// Early-out if SDK version requirements are not met
-		if (AndroidJniHelper::sdkVersion() < 23) {
+		if (AndroidJniHelper::SdkVersion() < 23) {
 			return 0;
 		}
 		const jint physicalHeight = AndroidJniHelper::jniEnv->CallIntMethod(javaObject_, midGetPhysicalHeight_);
@@ -422,7 +422,7 @@ namespace nCine
 	int AndroidJniClass_DisplayMode::getPhysicalWidth() const
 	{
 		// Early-out if SDK version requirements are not met
-		if (AndroidJniHelper::sdkVersion() < 23) {
+		if (AndroidJniHelper::SdkVersion() < 23) {
 			return 0;
 		}
 		const jint physicalWidth = AndroidJniHelper::jniEnv->CallIntMethod(javaObject_, midGetPhysicalWidth_);
@@ -432,7 +432,7 @@ namespace nCine
 	float AndroidJniClass_DisplayMode::getRefreshRate() const
 	{
 		// Early-out if SDK version requirements are not met
-		if (AndroidJniHelper::sdkVersion() < 23) {
+		if (AndroidJniHelper::SdkVersion() < 23) {
 			return 0;
 		}
 		const jfloat refreshRate = AndroidJniHelper::jniEnv->CallFloatMethod(javaObject_, midGetRefreshRate_);
@@ -503,7 +503,7 @@ namespace nCine
 	void AndroidJniWrap_Activity::finishAndRemoveTask()
 	{
 		// Check if SDK version requirements are met
-		if (AndroidJniHelper::sdkVersion() >= 21) {
+		if (AndroidJniHelper::SdkVersion() >= 21) {
 			AndroidJniHelper::jniEnv->CallVoidMethod(activityObject_, midFinishAndRemoveTask_);
 		}
 	}

@@ -14,7 +14,7 @@ namespace nCine
 	class AndroidJniHelper
 	{
 	public:
-		inline static unsigned int sdkVersion() { return sdkVersion_; }
+		inline static unsigned int SdkVersion() { return sdkVersion_; }
 
 		static JNIEnv *jniEnv;
 
@@ -23,10 +23,10 @@ namespace nCine
 		static unsigned int sdkVersion_;
 
 		/// Attaches the Java virtual machine to make use of JNI
-		static void attachJVM(struct android_app* state);
+		static void AttachJVM(struct android_app* state);
 		/// Detaches the Java virtual machine
-		static void detachJVM();
-		static void initClasses();
+		static void DetachJVM();
+		static void InitializeClasses();
 
 		/// Static class, no constructor
 		AndroidJniHelper();
@@ -57,7 +57,7 @@ namespace nCine
 		/// Deleted assignment operator
 		AndroidJniClass& operator=(const AndroidJniClass&) = delete;
 
-		inline bool isNull() const {
+		inline bool IsNull() const {
 			return javaObject_ == nullptr;
 		}
 
@@ -255,7 +255,7 @@ namespace nCine
 	public:
 		static void init(struct android_app* state);
 
-		inline static String androidId() {
+		inline static String AndroidId() {
 			return androidId_;
 		}
 
