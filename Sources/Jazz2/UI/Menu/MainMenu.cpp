@@ -279,7 +279,7 @@ namespace Jazz2::UI::Menu
 		return true;
 	}
 
-	void MainMenu::SwitchToSectionPtr(std::unique_ptr<MenuSection> section)
+	void MainMenu::SwitchToSectionDirect(std::unique_ptr<MenuSection> section)
 	{
 		if (!_sections.empty()) {
 			auto& lastSection = _sections.back();

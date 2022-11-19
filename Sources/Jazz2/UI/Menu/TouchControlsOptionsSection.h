@@ -21,7 +21,6 @@ namespace Jazz2::UI::Menu
 			Right
 		};
 
-		float _animation;
 		bool _isDirty;
 		SelectedZone _selectedZone;
 		Vector2f _lastPos;

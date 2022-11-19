@@ -62,6 +62,10 @@ namespace Jazz2
 		LevelHandler(IRootController* root, const LevelInitialization& levelInit);
 		~LevelHandler() override;
 
+		bool IsLoaded() const {
+			return (_tileMap != nullptr && _eventMap != nullptr);
+		}
+
 		Events::EventSpawner* EventSpawner() override {
 			return &_eventSpawner;
 		}

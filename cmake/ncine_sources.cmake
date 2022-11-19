@@ -245,6 +245,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RefreshCacheSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RemapControlsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RescaleModeSection.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/SimpleMessageSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/SoundsOptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/StartGameOptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp

@@ -25,6 +25,7 @@
 #include "Jazz2/UI/Cinematics.h"
 #include "Jazz2/UI/ControlScheme.h"
 #include "Jazz2/UI/Menu/MainMenu.h"
+#include "Jazz2/UI/Menu/SimpleMessageSection.h"
 
 #include "Jazz2/Compatibility/JJ2Anims.h"
 #include "Jazz2/Compatibility/JJ2Episode.h"
@@ -260,6 +261,17 @@ void GameEventHandler::onFrameStart()
 #endif
 					_currentHandler = std::make_unique<LevelHandler>(this, *_pendingLevelChange.get());
 				}
+
+				if (auto levelHandler = dynamic_cast<LevelHandler*>(_currentHandler.get())) {
+					if (!levelHandler->IsLoaded()) {
+						// If level cannot be loaded, go back to main menu
+						_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
+						if (auto mainMenu = dynamic_cast<Menu::MainMenu*>(_currentHandler.get())) {
+							mainMenu->SwitchToSection<Menu::SimpleMessageSection>(Menu::SimpleMessageSection::Message::CannotLoadLevel);
+						}
+					}
+				}
+
 				_pendingLevelChange = nullptr;
 				break;
 		}
@@ -657,7 +669,7 @@ void GameEventHandler::CheckUpdates()
 	}
 	String unixVersion = Environment::GetUnixVersion();
 	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, _countof(DeviceDesc) - DeviceDescLength, "|%s||4", unixVersion.empty() ? "Unix" : unixVersion.data());
-#elif defined(DEATH_TARGET_WINDOWS)
+#elif defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_WINDOWS_RT)
 	auto osVersion = Environment::WindowsVersion;
 	char DeviceDesc[64]; DWORD DeviceDescLength = _countof(DeviceDesc);
 	if (!::GetComputerNameA(DeviceDesc, &DeviceDescLength)) {

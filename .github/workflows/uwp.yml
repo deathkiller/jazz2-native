@@ -57,7 +57,6 @@ jobs:
         mkdir _package
         Move-Item -Path "$cerPath" -Destination ".\_package\Jazz2.cer"
         Move-Item -Path "$msixbundlePath" -Destination ".\_package\Jazz2.msixbundle"
-        Move-Item -Path ".\Content\" -Destination ".\_package\Content\"
         
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3

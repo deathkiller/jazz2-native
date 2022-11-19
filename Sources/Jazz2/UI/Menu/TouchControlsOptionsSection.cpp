@@ -7,7 +7,6 @@ namespace Jazz2::UI::Menu
 {
 	TouchControlsOptionsSection::TouchControlsOptionsSection()
 		:
-		_animation(0.0f),
 		_isDirty(false),
 		_selectedZone(SelectedZone::None),
 		_lastPointerId(-1)
@@ -24,10 +23,6 @@ namespace Jazz2::UI::Menu
 
 	void TouchControlsOptionsSection::OnUpdate(float timeMult)
 	{
-		if (_animation < 1.0f) {
-			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
-		}
-
 		if (_root->ActionHit(PlayerActions::Menu)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_root->LeaveSection();

@@ -1206,6 +1206,9 @@
     <ClInclude Include="Jazz2\UI\Menu\CustomLevelSelectSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\SimpleMessageSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2046,6 +2049,9 @@
       <Filter>Source Files\nCine\Backends</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\CustomLevelSelectSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\SimpleMessageSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
   </ItemGroup>
