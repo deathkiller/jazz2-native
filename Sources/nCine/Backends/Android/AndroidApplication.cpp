@@ -176,12 +176,12 @@ namespace nCine
 		}
 	}
 
-	unsigned int AndroidApplication::sdkVersion() const
+	unsigned int AndroidApplication::SdkVersion() const
 	{
 		unsigned int sdkVersion = 0;
 
 		if (isInitialized_)
-			sdkVersion = AndroidJniHelper::sdkVersion();
+			sdkVersion = AndroidJniHelper::SdkVersion();
 
 		return sdkVersion;
 	}
@@ -233,8 +233,8 @@ namespace nCine
 		}
 #endif
 
-		AndroidJniHelper::attachJVM(state_);
-		AssetFile::initAssetManager(state_);
+		AndroidJniHelper::AttachJVM(state_);
+		AssetFile::InitializeAssetManager(state_);
 
 		appEventHandler_ = createAppEventHandler_();
 		// Only `onPreInit()` can modify the application configuration
@@ -270,7 +270,7 @@ namespace nCine
 
 	void AndroidApplication::shutdown()
 	{
-		AndroidJniHelper::detachJVM();
+		AndroidJniHelper::DetachJVM();
 		Application::shutdownCommon();
 		isInitialized_ = false;
 	}

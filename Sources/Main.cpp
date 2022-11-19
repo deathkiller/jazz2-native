@@ -647,8 +647,8 @@ void GameEventHandler::CheckUpdates()
 {
 #if !defined(NCINE_DEBUG)
 #if defined(DEATH_TARGET_ANDROID)
-	auto sdkVersion = AndroidJniHelper::sdkVersion();
-	auto androidId = AndroidJniWrap_Secure::androidId();
+	auto sdkVersion = AndroidJniHelper::SdkVersion();
+	auto androidId = AndroidJniWrap_Secure::AndroidId();
 	char DeviceDesc[64];
 	int DeviceDescLength = formatString(DeviceDesc, _countof(DeviceDesc), "%s|Android %i||2", androidId.data(), sdkVersion);
 #elif defined(DEATH_TARGET_APPLE)
@@ -668,7 +668,8 @@ void GameEventHandler::CheckUpdates()
 		DeviceDescLength = 0;
 	}
 	String unixVersion = Environment::GetUnixVersion();
-	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, _countof(DeviceDesc) - DeviceDescLength, "|%s||4", unixVersion.empty() ? "Unix" : unixVersion.data());
+	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, _countof(DeviceDesc) - DeviceDescLength, "|%s||4",
+		unixVersion.empty() ? "Unix" : unixVersion.data());
 #elif defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_WINDOWS_RT)
 	auto osVersion = Environment::WindowsVersion;
 	char DeviceDesc[64]; DWORD DeviceDescLength = _countof(DeviceDesc);
@@ -685,9 +686,14 @@ void GameEventHandler::CheckUpdates()
 		case DeviceType::Xbox: deviceType = "Xbox"; break;
 		default: deviceType = "Unknown"; break;
 	}
-	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, _countof(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i (%s)||7", (int)((osVersion >> 48) & 0xffffu), (int)((osVersion >> 32) & 0xffffu), (int)(osVersion & 0xffffffffu), deviceType);
+	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, _countof(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i (%s)||7",
+		(int)((osVersion >> 48) & 0xffffu), (int)((osVersion >> 32) & 0xffffu), (int)(osVersion & 0xffffffffu), deviceType);
 #else
-	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, _countof(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i||3", (int)((osVersion >> 48) & 0xffffu), (int)((osVersion >> 32) & 0xffffu), (int)(osVersion & 0xffffffffu));
+	HMODULE hNtdll = ::GetModuleHandle(L"ntdll.dll");
+	bool isWine = (hNtdll != nullptr && ::GetProcAddress(hNtdll, "wine_get_host_version") != nullptr);
+	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, _countof(DeviceDesc) - DeviceDescLength,
+		isWine ? "|Windows %i.%i.%i (Wine)||3" : "|Windows %i.%i.%i||3",
+		(int)((osVersion >> 48) & 0xffffu), (int)((osVersion >> 32) & 0xffffu), (int)(osVersion & 0xffffffffu));
 #endif
 #else
 	constexpr char DeviceDesc[] = "|||"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
