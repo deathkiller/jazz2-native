@@ -253,6 +253,8 @@ namespace Jazz2
 		StringView GetContentPath() const {
 #if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 			return _contentPath;
+#elif defined(DEATH_TARGET_ANDROID)
+			return "asset::"_s;
 #else
 			return "Content/"_s;
 #endif
