@@ -60,12 +60,11 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 
 ### Android
 * Download the game
-* Copy `Content` directory to `‹Storage›/Android/data/jazz2.resurrection/files/Content/`
 * Copy original *Jazz Jackrabbit 2* directory to `‹Storage›/Android/data/jazz2.resurrection/files/Source/`
 * Install `Jazz2.apk` or `Jazz2_x86-64.apk` on the device
 * Run the newly installed application
 
-`‹Storage›` *is usually internal storage on your device. The game requires device with **Android 5.0** (or newer) and **OpenGL ES 3.0** support. Cache is recreated during intro cinematics on the first startup, so it can't be skipped.*
+`‹Storage›` *is usually internal storage on your device.* `Content` *directory is included directly in APK file. The game requires device with **Android 5.0** (or newer) and **OpenGL ES 3.0** support. Cache is recreated during intro cinematics on the first startup.*
 
 ### Xbox (Universal Windows Platform)
 * Download the game
@@ -78,15 +77,16 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 
 ## Building the application
 ### Windows
-* Download [build dependencies](https://github.com/deathkiller/jazz2-libraries) to `.\Libs\`
-* Open the solution in [Microsoft Visual Studio 2019](https://www.visualstudio.com/) (or newer) and build it
-  * CMake is **not** recommended for Windows build
+* Build dependencies will be downloaded automatically by *CMake*
+  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `.\Libs\`
+* Build the project with *CMake*
+  * Alternatively, download [build dependencies](https://github.com/deathkiller/jazz2-libraries) to `.\Libs\`, open the solution in [Microsoft Visual Studio 2019](https://www.visualstudio.com/) (or newer) and build it
 
 ### Linux
 * Build dependencies will be downloaded automatically by *CMake*
   * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
   * In case of build errors, install following packages (or equivalent for your distribution):<br>`libgl1-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libopenmpt-dev zlib1g-dev`
-* Build the solution with *CMake*
+* Build the project with *CMake*
   * Run `./BuildLinuxGcc.sh` (GLFW) or `./BuildLinuxGcc_SDL2.sh` (SDL2) to build with GCC compiler
   * Run `./BuildLinuxClang.sh` to build with Clang compiler
 
@@ -102,7 +102,7 @@ cd emsdk
 * Build dependencies will be downloaded automatically by *CMake*
   * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
 * Put required game files to `./Content/` directory – the files must be provided in advance
-* Build the solution with *CMake*
+* Build the project with *CMake*
   * Run `./BuildEmscripten.sh` to build with Emscripten toolchain
 
 ### Android
@@ -111,7 +111,7 @@ cd emsdk
 * Install Gradle (preferably to `../gradle/`)
 * Build dependencies will be downloaded automatically by *CMake*
   * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
-* Build the solution with *CMake*
+* Build the project with *CMake*
   * Run `./BuildAndroid.sh` or `./BuildAndroid_x86-64.sh` to build *APK* for Android
   * Run `./BuildAndroidSign.sh` to sign built *APKs*
     * Keystore file `Keystore.jks` must exist in repository root

@@ -176,20 +176,21 @@ if(NCINE_BUILD_ANDROID)
 	configure_file(${STRINGS_XML_IN} ${STRINGS_XML} @ONLY)
 
 	# Copying data to assets directory to stop requiring the external storage permission
-	file(GLOB FONT_TEXTURE_ASSETS_KTX "${NCINE_DATA_DIR}/android/fonts/*.ktx")
-	file(GLOB FONT_TEXTURE_ASSETS_WEBP "${NCINE_DATA_DIR}/android/fonts/*.webp")
-	file(GLOB FONT_FNT_ASSETS "${NCINE_DATA_DIR}/fonts/*.fnt")
-	file(GLOB SCRIPT_ASSETS "${NCINE_DATA_DIR}/scripts/*.lua")
-	file(GLOB SOUND_ASSETS "${NCINE_DATA_DIR}/sounds/*")
-	file(GLOB_RECURSE TEXTURE_ASSETS_KTX "${NCINE_DATA_DIR}/android/textures/*.ktx")
-	file(GLOB_RECURSE TEXTURE_ASSETS_WEBP "${NCINE_DATA_DIR}/android/textures/*.webp")
-	set(ANDROID_ASSETS ${FONT_TEXTURE_ASSETS_KTX} ${FONT_TEXTURE_ASSETS_WEBP} ${FONT_FNT_ASSETS}
-		${SCRIPT_ASSETS} ${SOUND_ASSETS} ${TEXTURE_ASSETS_KTX} ${TEXTURE_ASSETS_WEBP})
+	#file(GLOB FONT_TEXTURE_ASSETS_KTX "${NCINE_DATA_DIR}/android/fonts/*.ktx")
+	#file(GLOB FONT_TEXTURE_ASSETS_WEBP "${NCINE_DATA_DIR}/android/fonts/*.webp")
+	#file(GLOB FONT_FNT_ASSETS "${NCINE_DATA_DIR}/fonts/*.fnt")
+	#file(GLOB SCRIPT_ASSETS "${NCINE_DATA_DIR}/scripts/*.lua")
+	#file(GLOB SOUND_ASSETS "${NCINE_DATA_DIR}/sounds/*")
+	#file(GLOB_RECURSE TEXTURE_ASSETS_KTX "${NCINE_DATA_DIR}/android/textures/*.ktx")
+	#file(GLOB_RECURSE TEXTURE_ASSETS_WEBP "${NCINE_DATA_DIR}/android/textures/*.webp")
+	#set(ANDROID_ASSETS ${FONT_TEXTURE_ASSETS_KTX} ${FONT_TEXTURE_ASSETS_WEBP} ${FONT_FNT_ASSETS}
+	#	${SCRIPT_ASSETS} ${SOUND_ASSETS} ${TEXTURE_ASSETS_KTX} ${TEXTURE_ASSETS_WEBP})
+	file(GLOB_RECURSE ANDROID_ASSETS "${NCINE_DATA_DIR}/*")
 	foreach(ASSET ${ANDROID_ASSETS})
 		# Preserving directory structure
 		file(RELATIVE_PATH ASSET_RELPATH ${NCINE_DATA_DIR} ${ASSET})
 		# Remove the specific Android directory from the path of some assets
-		string(REGEX REPLACE "^android\/" "" ASSET_RELPATH ${ASSET_RELPATH})
+		string(REGEX REPLACE "^[Aa]ndroid\/" "" ASSET_RELPATH ${ASSET_RELPATH})
 		get_filename_component(ASSET_RELPATH ${ASSET_RELPATH} DIRECTORY)
 		file(COPY ${ASSET} DESTINATION android/app/src/main/assets/${ASSET_RELPATH})
 	endforeach()
