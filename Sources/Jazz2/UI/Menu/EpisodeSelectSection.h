@@ -23,9 +23,10 @@ namespace Jazz2::UI::Menu
 			None = 0x00,
 
 			IsAvailable = 0x01,
-			IsCompleted = 0x02,
-			CanContinue = 0x04,
-			CheatsUsed = 0x08
+			IsMissing = 0x02,
+			IsCompleted = 0x04,
+			CanContinue = 0x08,
+			CheatsUsed = 0x10,
 		};
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(ItemFlags);

@@ -745,6 +745,13 @@ namespace Jazz2
 		return std::make_unique<Tiles::TileSet>(std::move(textureDiffuse), std::move(mask), std::move(captionTile));
 	}
 
+	bool ContentResolver::LevelExists(const StringView& episodeName, const StringView& levelName)
+	{
+		// Try "Content" directory first, then "Cache" directory
+		return (fs::IsReadableFile(fs::JoinPath({ GetContentPath(), "Episodes"_s, episodeName, levelName + ".j2l"_s })) ||
+			fs::IsReadableFile(fs::JoinPath({ GetCachePath(), "Episodes"_s, episodeName, levelName + ".j2l"_s })));
+	}
+
 	bool ContentResolver::LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty)
 	{
 		// Try "Content" directory first, then "Cache" directory

@@ -176,7 +176,14 @@ namespace Jazz2::UI::Menu
 			_items[i].TouchY = center.Y;
 
 			if (center.Y > TopLine - ItemHeight && center.Y < bottomLine + ItemHeight) {
-				if (_selectedIndex == i) {
+				if ((_items[i].Flags & ItemFlags::IsMissing) == ItemFlags::IsMissing) {
+					if (_selectedIndex == i) {
+						_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (_items[i].Description.DisplayName.size() + 3) * 0.5f, 4.0f, true);
+					}
+
+					_root->DrawStringShadow(_items[i].Description.DisplayName, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
+						Alignment::Center, Colorf(0.51f, 0.51f, 0.51f, 0.35f), 0.9f);
+				} else if (_selectedIndex == i) {
 					float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
 					if ((_items[i].Flags & ItemFlags::IsAvailable) == ItemFlags::IsAvailable || PreferencesCache::AllowCheatsUnlock) {
@@ -350,6 +357,10 @@ namespace Jazz2::UI::Menu
 	void EpisodeSelectSection::ExecuteSelected()
 	{
 		auto& selectedItem = _items[_selectedIndex];
+		if ((selectedItem.Flags & ItemFlags::IsMissing) == ItemFlags::IsMissing) {
+			return;
+		}
+
 		if ((selectedItem.Flags & ItemFlags::IsAvailable) == ItemFlags::IsAvailable || PreferencesCache::AllowCheatsUnlock) {
 			_root->PlaySfx("MenuSelect"_s, 0.6f);
 
@@ -414,7 +425,8 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		std::optional<Episode> description = ContentResolver::Current().GetEpisodeByPath(episodeFile);
+		auto& resolver = ContentResolver::Current();
+		std::optional<Episode> description = resolver.GetEpisodeByPath(episodeFile);
 		if (description.has_value()) {
 #if defined(SHAREWARE_DEMO_ONLY)
 			// Check if specified episode is unlocked, used only if compiled with SHAREWARE_DEMO_ONLY
@@ -429,27 +441,32 @@ namespace Jazz2::UI::Menu
 			auto& episode = _items.emplace_back();
 			episode.Description = std::move(description.value());
 
-			if (!episode.Description.PreviousEpisode.empty()) {
-				auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(episode.Description.PreviousEpisode);
-				if (previousEpisodeEnd != nullptr && (previousEpisodeEnd->Flags & EpisodeContinuationFlags::IsCompleted) == EpisodeContinuationFlags::IsCompleted) {
+			if (!resolver.LevelExists(episode.Description.Name, episode.Description.FirstLevel)) {
+				// Cannot find the first level of episode
+				episode.Flags |= ItemFlags::IsMissing;
+			} else {
+				if (!episode.Description.PreviousEpisode.empty()) {
+					auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(episode.Description.PreviousEpisode);
+					if (previousEpisodeEnd != nullptr && (previousEpisodeEnd->Flags & EpisodeContinuationFlags::IsCompleted) == EpisodeContinuationFlags::IsCompleted) {
+						episode.Flags |= ItemFlags::IsAvailable;
+					}
+				} else {
 					episode.Flags |= ItemFlags::IsAvailable;
 				}
-			} else {
-				episode.Flags |= ItemFlags::IsAvailable;
-			}
-			
-			if ((episode.Flags & ItemFlags::IsAvailable) == ItemFlags::IsAvailable) {
-				auto currentEpisodeEnd = PreferencesCache::GetEpisodeEnd(episode.Description.Name);
-				if (currentEpisodeEnd != nullptr && (currentEpisodeEnd->Flags & EpisodeContinuationFlags::IsCompleted) == EpisodeContinuationFlags::IsCompleted) {
-					episode.Flags |= ItemFlags::IsCompleted;
-					if ((currentEpisodeEnd->Flags & EpisodeContinuationFlags::CheatsUsed) == EpisodeContinuationFlags::CheatsUsed) {
-						episode.Flags |= ItemFlags::CheatsUsed;
-					}
-				}
 
-				auto episodeContinue = PreferencesCache::GetEpisodeContinue(episode.Description.Name);
-				if (episodeContinue != nullptr) {
-					episode.Flags |= ItemFlags::CanContinue;
+				if ((episode.Flags & ItemFlags::IsAvailable) == ItemFlags::IsAvailable) {
+					auto currentEpisodeEnd = PreferencesCache::GetEpisodeEnd(episode.Description.Name);
+					if (currentEpisodeEnd != nullptr && (currentEpisodeEnd->Flags & EpisodeContinuationFlags::IsCompleted) == EpisodeContinuationFlags::IsCompleted) {
+						episode.Flags |= ItemFlags::IsCompleted;
+						if ((currentEpisodeEnd->Flags & EpisodeContinuationFlags::CheatsUsed) == EpisodeContinuationFlags::CheatsUsed) {
+							episode.Flags |= ItemFlags::CheatsUsed;
+						}
+					}
+
+					auto episodeContinue = PreferencesCache::GetEpisodeContinue(episode.Description.Name);
+					if (episodeContinue != nullptr) {
+						episode.Flags |= ItemFlags::CanContinue;
+					}
 				}
 			}
 		}
