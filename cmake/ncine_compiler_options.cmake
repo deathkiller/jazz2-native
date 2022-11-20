@@ -11,7 +11,7 @@ target_compile_definitions(ncine PUBLIC "CMAKE_BUILD")
 target_compile_definitions(ncine PUBLIC "$<$<CONFIG:Debug>:NCINE_DEBUG>")
 if(NCINE_LOG)
 	target_compile_definitions(ncine PUBLIC "NCINE_LOG")
-	message(STATUS "Logging is enabled")
+	message(STATUS "Runtime logging is enabled")
 endif()
 
 if(WIN32)

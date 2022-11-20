@@ -235,6 +235,7 @@ namespace Jazz2
 		GenericGraphicResource* RequestGraphics(const StringView& path, uint16_t paletteOffset);
 
 		std::unique_ptr<Tiles::TileSet> RequestTileSet(const StringView& path, uint16_t captionTileId, bool applyPalette);
+		bool LevelExists(const StringView& episodeName, const StringView& levelName);
 		bool LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty);
 		void ApplyDefaultPalette();
 
