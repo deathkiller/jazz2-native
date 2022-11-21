@@ -1,4 +1,4 @@
-option(NCINE_LOG "Enable logging" ON)
+option(NCINE_LOG "Enable runtime logging" ON)
 option(NCINE_DOWNLOAD_DEPENDENCIES "Download all build dependencies" ON)
 option(NCINE_LINKTIME_OPTIMIZATION "Compile the engine with link time optimization when in release" OFF)
 option(NCINE_AUTOVECTORIZATION_REPORT "Enable report generation from compiler auto-vectorization" OFF)

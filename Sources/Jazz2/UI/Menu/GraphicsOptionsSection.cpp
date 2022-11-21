@@ -4,6 +4,8 @@
 #include "../../LevelHandler.h"
 #include "../../../nCine/Application.h"
 
+#include <Environment.h>
+
 namespace Jazz2::UI::Menu
 {
 	GraphicsOptionsSection::GraphicsOptionsSection()
@@ -157,12 +159,19 @@ namespace Jazz2::UI::Menu
 
 	void GraphicsOptionsSection::ExecuteSelected()
 	{
-		_root->PlaySfx("MenuSelect"_s, 0.6f);
-
 		switch (_selectedIndex) {
-			case (int)Item::RescaleMode: _root->SwitchToSection<RescaleModeSection>(); break;
+			case (int)Item::RescaleMode:
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				_root->SwitchToSection<RescaleModeSection>();
+				break;
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
 			case (int)Item::Fullscreen:
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+				// Xbox is always fullscreen
+				if (Environment::CurrentDeviceType == DeviceType::Xbox) {
+					return;
+				}
+#	endif
 				PreferencesCache::EnableFullscreen = !PreferencesCache::EnableFullscreen;
 				if (PreferencesCache::EnableFullscreen) {
 					theApplication().gfxDevice().setResolution(true);
@@ -173,6 +182,7 @@ namespace Jazz2::UI::Menu
 				}
 				_isDirty = true;
 				_animation = 0.0f;
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				break;
 #endif
 			case (int)Item::Antialiasing: {
@@ -184,12 +194,14 @@ namespace Jazz2::UI::Menu
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 				_isDirty = true;
 				_animation = 0.0f;
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				break;
 			}
 			case (int)Item::ShowPerformanceMetrics:
 				PreferencesCache::ShowPerformanceMetrics = !PreferencesCache::ShowPerformanceMetrics;
 				_isDirty = true;
 				_animation = 0.0f;
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				break;
 		}
 	}
