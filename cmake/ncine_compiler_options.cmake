@@ -12,6 +12,8 @@ target_compile_definitions(ncine PUBLIC "$<$<CONFIG:Debug>:NCINE_DEBUG>")
 if(NCINE_LOG)
 	target_compile_definitions(ncine PUBLIC "NCINE_LOG")
 	message(STATUS "Runtime logging is enabled")
+else()
+	message(STATUS "Runtime logging is disabled")
 endif()
 
 if(WIN32)

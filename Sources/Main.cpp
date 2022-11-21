@@ -195,6 +195,8 @@ void GameEventHandler::onInit()
 	Viewport::chain().clear();
 	Vector2i res = theApplication().resolutionInt();
 	_currentHandler->OnInitializeViewport(res.X, res.Y);
+
+	LOGI_X("Rendering resolution: %ix%i", res.X, res.Y);
 }
 
 void GameEventHandler::onFrameStart()
@@ -307,6 +309,8 @@ void GameEventHandler::onResizeWindow(int width, int height)
 	}
 
 	PreferencesCache::EnableFullscreen = theApplication().gfxDevice().isFullscreen();
+
+	LOGI_X("Rendering resolution: %ix%i", width, height);
 }
 
 void GameEventHandler::onKeyPressed(const KeyboardEvent& event)
