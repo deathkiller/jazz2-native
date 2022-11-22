@@ -61,19 +61,19 @@ extern "C"
 #include "tracy.h"
 #include "tracy_opengl.h"
 
-#ifdef WITH_AUDIO
+#if defined(WITH_AUDIO)
 #	include "Audio/ALAudioDevice.h"
 #endif
 
-#ifdef WITH_THREADS
+#if defined(WITH_THREADS)
 #	include "Threading/ThreadPool.h"
 #endif
 
-#ifdef WITH_LUA
+#if defined(WITH_LUA)
 #	include "LuaStatistics.h"
 #endif
 
-#ifdef WITH_RENDERDOC
+#if defined(WITH_RENDERDOC)
 #	include "Graphics/RenderDocCapture.h"
 #endif
 
@@ -291,19 +291,24 @@ namespace nCine
 		profileStartTime_ = TimeStamp::now();
 
 		LOGI("Jazz² Resurrection v" NCINE_VERSION " initializing...");
-#ifdef WITH_TRACY
+#if defined(WITH_TRACY)
 		TracyAppInfo("nCine", 5);
 		LOGI("Tracy integration is enabled");
 #endif
 
 		renderingSettings_.windowScaling = appCfg_.windowScaling;
 
+#if defined(NCINE_WORKAROUND_DISABLE_BATCHING)
+		LOGW("Force disable batching for rendering (NCINE_WORKAROUND_DISABLE_BATCHING)");
+		renderingSettings_.batchingEnabled = false;
+#endif
+
 		theServiceLocator().registerIndexer(std::make_unique<ArrayIndexer>());
-#ifdef WITH_AUDIO
+#if defined(WITH_AUDIO)
 		if (appCfg_.withAudio)
 			theServiceLocator().registerAudioDevice(std::make_unique<ALAudioDevice>());
 #endif
-#ifdef WITH_THREADS
+#if defined(WITH_THREADS)
 		if (appCfg_.withThreads)
 			theServiceLocator().registerThreadPool(std::make_unique<ThreadPool>());
 #endif
@@ -312,7 +317,7 @@ namespace nCine
 
 		LOGI_X("Data path: \"%s\"", fs::GetDataPath().data());
 
-#ifdef WITH_RENDERDOC
+#if defined(WITH_RENDERDOC)
 		RenderDocCapture::init();
 #endif
 
@@ -359,7 +364,7 @@ namespace nCine
 
 		frameTimer_->addFrame();
 
-#ifdef WITH_LUA
+#if defined(WITH_LUA)
 		LuaStatistics::update();
 #endif
 
@@ -439,7 +444,7 @@ namespace nCine
 		LOGI("IAppEventHandler::onShutdown() invoked");
 		appEventHandler_.reset(nullptr);
 
-#ifdef WITH_RENDERDOC
+#if defined(WITH_RENDERDOC)
 		RenderDocCapture::removeHooks();
 #endif
 
