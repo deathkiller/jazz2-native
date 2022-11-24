@@ -39,7 +39,7 @@ namespace nCine
 
 	void RenderBatcher::createBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue)
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE)
+#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE) || defined(NCINE_WORKAROUND_DISABLE_BATCHING)
 		const unsigned int fixedBatchSize = theApplication().appConfiguration().fixedBatchSize;
 		const unsigned int minBatchSize = (fixedBatchSize > 0) ? fixedBatchSize : theApplication().renderingSettings().minBatchSize;
 		const unsigned int maxBatchSize = (fixedBatchSize > 0) ? fixedBatchSize : theApplication().renderingSettings().maxBatchSize;

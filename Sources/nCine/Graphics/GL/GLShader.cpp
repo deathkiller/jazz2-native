@@ -45,7 +45,7 @@ namespace nCine
 			patchLines.append("#define WITH_ANGLE\n");
 #endif
 
-#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE)
+#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE) || defined(NCINE_WORKAROUND_DISABLE_BATCHING)
 			// ANGLE does not seem capable of handling large arrays that are not entirely filled.
 			// A small array size will also make shader compilation a lot faster.
 			if (theApplication().appConfiguration().fixedBatchSize > 0) {
