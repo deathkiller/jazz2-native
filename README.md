@@ -51,8 +51,8 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 `‹Game›` *is path to Jazz² Resurrection. Cache is recreated during intro cinematics on the first startup, so it can't be skipped.*
 
 <sup>Alternatively, you can use package for your Linux distribution:</sup><br>
-[![ArchLinux](https://img.shields.io/badge/Arch%20Linux-grey?logo=archlinux)](https://aur.archlinux.org/packages/jazz2-git)
-[![OpenSUSE](https://img.shields.io/badge/OpenSUSE-grey?logo=opensuse)](https://software.opensuse.org/download.html?project=home%3Amnhauke%3Agames&package=jazz2)
+[![ArchLinux](https://img.shields.io/badge/Arch%20Linux-grey?logo=archlinux&logoColor=ffffff)](https://aur.archlinux.org/packages/jazz2-git)
+[![OpenSUSE](https://img.shields.io/obs/home:mnhauke:games/jazz2/openSUSE_Tumbleweed/x86_64?label=OpenSUSE&logo=opensuse&logoColor=ffffff)](https://build.opensuse.org/package/show/home:mnhauke:games/jazz2)
 
 ### Web (Emscripten)
 * Go to http://deat.tk/jazz2/wasm/
