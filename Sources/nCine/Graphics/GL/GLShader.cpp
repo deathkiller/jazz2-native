@@ -5,7 +5,7 @@
 
 #include <string>
 
-#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE)
+#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE) || defined(NCINE_WORKAROUND_DISABLE_BATCHING)
 #	include "../../Application.h"
 #endif
 
