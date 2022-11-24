@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  Build:
     strategy:
       fail-fast: false
       matrix:
