@@ -7,43 +7,43 @@
 #endif
 
 #if ((defined(__ANDROID__) && __ANDROID_API__ >= 21) || (!defined(__ANDROID__) && defined(WITH_OPENGLES))) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__) && (GL_ES_VERSION_3_0 && !GL_ES_VERSION_3_2)
-#define glPushDebugGroup glPushDebugGroupKHR
-#define glPopDebugGroup glPopDebugGroupKHR
-#define glDebugMessageInsert glDebugMessageInsertKHR
-#define glObjectLabel glObjectLabelKHR
-#define glGetObjectLabel glGetObjectLabelKHR
-#define GL_MAX_LABEL_LENGTH GL_MAX_LABEL_LENGTH_KHR
+#	define glPushDebugGroup glPushDebugGroupKHR
+#	define glPopDebugGroup glPopDebugGroupKHR
+#	define glDebugMessageInsert glDebugMessageInsertKHR
+#	define glObjectLabel glObjectLabelKHR
+#	define glGetObjectLabel glGetObjectLabelKHR
+#	define GL_MAX_LABEL_LENGTH GL_MAX_LABEL_LENGTH_KHR
 
-#define glDebugMessageCallback glDebugMessageCallbackKHR
-#define GLDEBUGPROC GLDEBUGPROCKHR
-#define GL_DEBUG_OUTPUT_SYNCHRONOUS GL_DEBUG_OUTPUT_SYNCHRONOUS_KHR
+#	define glDebugMessageCallback glDebugMessageCallbackKHR
+#	define GLDEBUGPROC GLDEBUGPROCKHR
+#	define GL_DEBUG_OUTPUT_SYNCHRONOUS GL_DEBUG_OUTPUT_SYNCHRONOUS_KHR
 
-#define GL_DEBUG_SOURCE_API GL_DEBUG_SOURCE_API_KHR
-#define GL_DEBUG_SOURCE_WINDOW_SYSTEM GL_DEBUG_SOURCE_WINDOW_SYSTEM_KHR
-#define GL_DEBUG_SOURCE_SHADER_COMPILER GL_DEBUG_SOURCE_SHADER_COMPILER_KHR
-#define GL_DEBUG_SOURCE_THIRD_PARTY GL_DEBUG_SOURCE_THIRD_PARTY_KHR
-#define GL_DEBUG_SOURCE_APPLICATION GL_DEBUG_SOURCE_APPLICATION_KHR
-#define GL_DEBUG_SOURCE_OTHER GL_DEBUG_SOURCE_OTHER_KHR
+#	define GL_DEBUG_SOURCE_API GL_DEBUG_SOURCE_API_KHR
+#	define GL_DEBUG_SOURCE_WINDOW_SYSTEM GL_DEBUG_SOURCE_WINDOW_SYSTEM_KHR
+#	define GL_DEBUG_SOURCE_SHADER_COMPILER GL_DEBUG_SOURCE_SHADER_COMPILER_KHR
+#	define GL_DEBUG_SOURCE_THIRD_PARTY GL_DEBUG_SOURCE_THIRD_PARTY_KHR
+#	define GL_DEBUG_SOURCE_APPLICATION GL_DEBUG_SOURCE_APPLICATION_KHR
+#	define GL_DEBUG_SOURCE_OTHER GL_DEBUG_SOURCE_OTHER_KHR
 
-#define GL_DEBUG_TYPE_ERROR GL_DEBUG_TYPE_ERROR_KHR
-#define GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_KHR
-#define GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_KHR
-#define GL_DEBUG_TYPE_PORTABILITY GL_DEBUG_TYPE_PORTABILITY_KHR
-#define GL_DEBUG_TYPE_PERFORMANCE GL_DEBUG_TYPE_PERFORMANCE_KHR
-#define GL_DEBUG_TYPE_MARKER GL_DEBUG_TYPE_MARKER_KHR
-#define GL_DEBUG_TYPE_PUSH_GROUP GL_DEBUG_TYPE_PUSH_GROUP_KHR
-#define GL_DEBUG_TYPE_POP_GROUP GL_DEBUG_TYPE_POP_GROUP_KHR
-#define GL_DEBUG_TYPE_OTHER GL_DEBUG_TYPE_OTHER_KHR
+#	define GL_DEBUG_TYPE_ERROR GL_DEBUG_TYPE_ERROR_KHR
+#	define GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_KHR
+#	define GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_KHR
+#	define GL_DEBUG_TYPE_PORTABILITY GL_DEBUG_TYPE_PORTABILITY_KHR
+#	define GL_DEBUG_TYPE_PERFORMANCE GL_DEBUG_TYPE_PERFORMANCE_KHR
+#	define GL_DEBUG_TYPE_MARKER GL_DEBUG_TYPE_MARKER_KHR
+#	define GL_DEBUG_TYPE_PUSH_GROUP GL_DEBUG_TYPE_PUSH_GROUP_KHR
+#	define GL_DEBUG_TYPE_POP_GROUP GL_DEBUG_TYPE_POP_GROUP_KHR
+#	define GL_DEBUG_TYPE_OTHER GL_DEBUG_TYPE_OTHER_KHR
 
-#define GL_DEBUG_SEVERITY_NOTIFICATION GL_DEBUG_SEVERITY_NOTIFICATION_KHR
-#define GL_DEBUG_SEVERITY_LOW GL_DEBUG_SEVERITY_LOW_KHR
-#define GL_DEBUG_SEVERITY_MEDIUM GL_DEBUG_SEVERITY_MEDIUM_KHR
-#define GL_DEBUG_SEVERITY_HIGH GL_DEBUG_SEVERITY_HIGH_KHR
+#	define GL_DEBUG_SEVERITY_NOTIFICATION GL_DEBUG_SEVERITY_NOTIFICATION_KHR
+#	define GL_DEBUG_SEVERITY_LOW GL_DEBUG_SEVERITY_LOW_KHR
+#	define GL_DEBUG_SEVERITY_MEDIUM GL_DEBUG_SEVERITY_MEDIUM_KHR
+#	define GL_DEBUG_SEVERITY_HIGH GL_DEBUG_SEVERITY_HIGH_KHR
 #endif
 
 namespace nCine
 {
-#if (!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21)
+#if defined(NCINE_DEBUG) && ((!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21))
 	namespace
 	{
 		constexpr char emptyString[1] = { '\0' };
@@ -64,7 +64,7 @@ namespace nCine
 
 	void GLDebug::init(const IGfxCapabilities& gfxCaps)
 	{
-#if (!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21)
+#if defined(NCINE_DEBUG) && ((!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21))
 		debugAvailable_ = gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::KHR_DEBUG) &&
 			theApplication().gfxDevice().glContextInfo().debugContext;
 
@@ -78,7 +78,7 @@ namespace nCine
 
 	void GLDebug::pushGroup(const char* message)
 	{
-#if (!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21)
+#if defined(NCINE_DEBUG) && ((!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21))
 		if (debugAvailable_) {
 			glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, debugGroupId_++, -1, message ? message : emptyString);
 		}
@@ -87,7 +87,7 @@ namespace nCine
 
 	void GLDebug::popGroup()
 	{
-#if (!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21)
+#if defined(NCINE_DEBUG) && ((!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21))
 		if (debugAvailable_) {
 			glPopDebugGroup();
 		}
@@ -96,7 +96,7 @@ namespace nCine
 
 	void GLDebug::messageInsert(const char* message)
 	{
-#if (!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21)
+#if defined(NCINE_DEBUG) && ((!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21))
 		if (debugAvailable_) {
 			glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_MARKER, debugGroupId_++, GL_DEBUG_SEVERITY_NOTIFICATION, -1, message ? message : emptyString);
 		}
@@ -105,7 +105,7 @@ namespace nCine
 
 	void GLDebug::objectLabel(LabelTypes identifier, GLuint name, const char* label)
 	{
-#if (!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21)
+#if defined(NCINE_DEBUG) && ((!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21))
 		if (debugAvailable_) {
 			glObjectLabel(static_cast<GLenum>(identifier), name, -1, label ? label : emptyString);
 		}
@@ -114,7 +114,7 @@ namespace nCine
 
 	void GLDebug::objectLabel(LabelTypes identifier, GLuint name, GLsizei length, const char* label)
 	{
-#if (!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21)
+#if defined(NCINE_DEBUG) && ((!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21))
 		if (debugAvailable_) {
 			glObjectLabel(static_cast<GLenum>(identifier), name, label ? length : 0, label ? label : emptyString);
 		}
@@ -123,7 +123,7 @@ namespace nCine
 
 	void GLDebug::getObjectLabel(LabelTypes identifier, GLuint name, GLsizei bufSize, GLsizei* length, char* label)
 	{
-#if (!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21)
+#if defined(NCINE_DEBUG) && ((!defined(__ANDROID__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21))
 		if (debugAvailable_) {
 			glGetObjectLabel(static_cast<GLenum>(identifier), name, bufSize, length, label);
 		}
@@ -134,7 +134,7 @@ namespace nCine
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-#if ((defined(__ANDROID__) && __ANDROID_API__ >= 21) || (!defined(__ANDROID__) && defined(WITH_OPENGLES))) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__) && GL_ES_VERSION_3_0
+#if defined(NCINE_DEBUG) && ((defined(__ANDROID__) && __ANDROID_API__ >= 21) || (!defined(__ANDROID__) && defined(WITH_OPENGLES))) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__) && GL_ES_VERSION_3_0
 
 	/// Callback for `glDebugMessageCallback()`
 	void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const char* message, const void* userParam)
@@ -179,10 +179,9 @@ namespace nCine
 
 	void GLDebug::enableDebugOutput()
 	{
-#if ((defined(__ANDROID__) && __ANDROID_API__ >= 21) || (!defined(__ANDROID__) && defined(WITH_OPENGLES))) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__) && GL_ES_VERSION_3_0
+#if defined(NCINE_DEBUG) && ((defined(__ANDROID__) && __ANDROID_API__ >= 21) || (!defined(__ANDROID__) && defined(WITH_OPENGLES))) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__) && GL_ES_VERSION_3_0
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 		glDebugMessageCallback(static_cast<GLDEBUGPROC>(debugCallback), nullptr);
-
 		LOGI("OpenGL debug callback set");
 #endif
 	}

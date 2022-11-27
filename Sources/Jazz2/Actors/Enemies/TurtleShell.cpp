@@ -42,7 +42,10 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(1);
 		_scoreValue = 100;
 
-		SetState(ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjects | ActorState::CollideWithSolidObjectsBelow | ActorState::SkipPerPixelCollisions, true);
+		SetState(ActorState::CollideWithTilesetReduced | ActorState::SkipPerPixelCollisions, true);
+		if (_levelHandler->IsReforged()) {
+			SetState(ActorState::CollideWithSolidObjects | ActorState::CollideWithSolidObjectsBelow, true);
+		}
 
 		_speed.X = *(float*)&details.Params[0];
 		_externalForce.Y = *(float*)&details.Params[4];

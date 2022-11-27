@@ -88,10 +88,10 @@ namespace Jazz2::Compatibility
 				case JJ2ParamUInt: {
 					uint32_t value = (paramInt & ((1 << param.second()) - 1));
 					if (param.second() > 8) {
-						*(uint16_t*)&eventParams[i] = *(uint16_t*)&value;
+						*(uint16_t*)&eventParams[i] = (uint16_t)value;
 						i += 2;
 					} else {
-						eventParams[i++] = *(uint8_t*)&value;
+						eventParams[i++] = (uint8_t)value;
 					}
 					paramInt = paramInt >> param.second();
 					break;
@@ -105,10 +105,10 @@ namespace Jazz2::Compatibility
 						value = (uint32_t)(-highestBitValue + (value - highestBitValue));
 					}
 					if (param.second() > 8) {
-						*(uint16_t*)&eventParams[i] = *(uint16_t*)&value;
+						*(uint16_t*)&eventParams[i] = (uint16_t)value;
 						i += 2;
 					} else {
-						eventParams[i++] = *(uint8_t*)&value;
+						eventParams[i++] = (uint8_t)value;
 					}
 					paramInt = paramInt >> param.second();
 					break;
