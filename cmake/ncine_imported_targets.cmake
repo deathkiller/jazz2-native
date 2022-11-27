@@ -138,6 +138,18 @@ if(MSVC)
 
 	set(MSVC_LIBDIR "${EXTERNAL_MSVC_DIR}/${MSVC_ARCH_SUFFIX}/")
 	set(MSVC_BINDIR "${EXTERNAL_MSVC_DIR}/${MSVC_ARCH_SUFFIX}/Bin/")
+	
+	if(WINDOWS_PHONE OR WINDOWS_STORE)
+		set(EXTERNAL_MSVC_WINRT_DIR "${NCINE_LIBS}/Universal Windows Platform/" CACHE PATH "Set the path to the MSVC (WinRT) libraries directory")
+		if(NOT IS_DIRECTORY ${EXTERNAL_MSVC_WINRT_DIR})
+			message(STATUS "MSVC (WinRT) libraries directory not found at: ${EXTERNAL_MSVC_WINRT_DIR}")
+		else()
+			message(STATUS "MSVC (WinRT) libraries directory: ${EXTERNAL_MSVC_WINRT_DIR}")
+		endif()
+	
+		set(MSVC_WINRT_LIBDIR "${EXTERNAL_MSVC_WINRT_DIR}/${MSVC_ARCH_SUFFIX}/")
+		set(MSVC_WINRT_BINDIR "${EXTERNAL_MSVC_WINRT_DIR}/${MSVC_ARCH_SUFFIX}/Bin/")
+	endif()
 elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	if(APPLE)
 		set(CMAKE_FRAMEWORK_PATH "${PARENT_SOURCE_DIR}/nCine-external")

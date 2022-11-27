@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"	xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest">
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest">
   <Identity Name="@PACKAGE_GUID@" Publisher="CN=@NCINE_APP_VENDOR@" Version="@PACKAGE_VERSION@" />
   <mp:PhoneIdentity PhoneProductId="@PACKAGE_GUID@" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
   <Properties>
@@ -14,7 +14,7 @@
     <Resource Language="x-generate" />
   </Resources>
   <Applications>
-    <Application Id="App" Executable="@PACKAGE_EXECUTABLE_NAME@.exe" EntryPoint="@PACKAGE_EXECUTABLE_NAME@.App">
+    <Application Id="App" Executable="@NCINE_APP@.exe" EntryPoint="@NCINE_APP@.App">
       <uap:VisualElements
         DisplayName="@NCINE_APP_NAME@"
         Description="@NCINE_APP_DESCRIPTION@"

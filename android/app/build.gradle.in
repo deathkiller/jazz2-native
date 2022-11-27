@@ -47,7 +47,7 @@ android {
 		}
 	}
 
-	final def cmakeBuildDir = new File(project.buildDir, "ncine")
+	final def cmakeBuildDir = new File(project.buildDir, "@NCINE_APP@")
 	final def architectures = ['@GRADLE_NDK_ARCHITECTURES@']
 	final def libcppIsShared = @GRADLE_LIBCPP_SHARED@
 	def androidPlatform = @GRADLE_MINSDK_VERSION@

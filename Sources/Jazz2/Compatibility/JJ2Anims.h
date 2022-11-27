@@ -21,7 +21,7 @@ namespace Jazz2::Compatibility
 	public:
 		static constexpr uint16_t CacheVersion = 1;
 
-		static void Convert(const StringView& path, const StringView& targetPath, bool isPlus);
+		static bool Convert(const StringView& path, const StringView& targetPath, bool isPlus);
 
 		static void WriteImageToFileInternal(std::unique_ptr<IFileStream>& so, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount);
 

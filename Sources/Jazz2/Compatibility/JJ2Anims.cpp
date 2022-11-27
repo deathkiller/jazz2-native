@@ -7,7 +7,7 @@
 
 namespace Jazz2::Compatibility
 {
-	void JJ2Anims::Convert(const StringView& path, const StringView& targetPath, bool isPlus)
+	bool JJ2Anims::Convert(const StringView& path, const StringView& targetPath, bool isPlus)
 	{
 		JJ2Version version;
 		SmallVector<AnimSection, 0> anims;
@@ -15,9 +15,6 @@ namespace Jazz2::Compatibility
 
 		auto s = fs::Open(path, FileAccessMode::Read);
 		ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
-
-		//Log.Write(LogType.Info, "Reading compressed stream...");
-		//Log.PushIndent();
 
 		bool seemsLikeCC = false;
 
@@ -73,7 +70,7 @@ namespace Jazz2::Compatibility
 			JJ2Block sampleDataBlock(s, sampleDataBlockLenC, sampleDataBlockLenU);
 
 			if (magicANIM != 0x4D494E41) {
-				//Log.Write(LogType.Warning, "Header for set " + i + " is incorrect (bad magic value)! Skipping the subfile.");
+				LOGV_X("Header for set %i is incorrect (bad magic value), skipping", i);
 				continue;
 			}
 
@@ -267,37 +264,41 @@ namespace Jazz2::Compatibility
 		if (headerLen == 464) {
 			if (isStreamComplete) {
 				version = JJ2Version::BaseGame;
-				LOGI("Detected Jazz Jackrabbit 2 (v1.20/1.23).");
+				LOGI("Detected Jazz Jackrabbit 2 (v1.20/1.23)");
 			} else {
 				version = JJ2Version::BaseGame | JJ2Version::SharewareDemo;
-				LOGI("Detected Jazz Jackrabbit 2 (v1.20/1.23): Shareware Demo.");
+				LOGI("Detected Jazz Jackrabbit 2 (v1.20/1.23): Shareware Demo");
 			}
 		} else if (headerLen == 500) {
 			if (!isStreamComplete) {
 				version = JJ2Version::TSF | JJ2Version::SharewareDemo;
-				// This version is not supported (yet)
-				LOGE("Detected Jazz Jackrabbit 2: The Secret Files Demo.");
-				return;
+				// TODO: This version is not supported (yet)
+				LOGE("Detected Jazz Jackrabbit 2: The Secret Files Demo - This version is not supported!");
+				return false;
 			} else if (seemsLikeCC) {
 				version = JJ2Version::CC;
-				LOGI("Detected Jazz Jackrabbit 2: Christmas Chronicles.");
+				LOGI("Detected Jazz Jackrabbit 2: Christmas Chronicles");
 			} else {
 				version = JJ2Version::TSF;
-				LOGI("Detected Jazz Jackrabbit 2: The Secret Files.");
+				LOGI("Detected Jazz Jackrabbit 2: The Secret Files");
 			}
 		} else if (headerLen == 476) {
 			version = JJ2Version::HH;
-			LOGI("Detected Jazz Jackrabbit 2: Holiday Hare '98.");
+			LOGI("Detected Jazz Jackrabbit 2: Holiday Hare '98");
 		} else if (headerLen == 64) {
 			version = JJ2Version::PlusExtension;
-			LOGI("Detected Jazz Jackrabbit 2 Plus extension.");
+			if (!isPlus) {
+				LOGE("Detected Jazz Jackrabbit 2 Plus extension - This version is not supported!");
+				return false;
+			}
 		} else {
 			version = JJ2Version::Unknown;
-			LOGE_X("Could not determine the version. Header size: %u bytes", headerLen);
+			LOGE_X("Could not determine the version, header size: %u bytes", headerLen);
 		}
 
 		ImportAnimations(targetPath, version, anims);
 		ImportAudioSamples(targetPath, version, samples);
+		return true;
 	}
 
 	void JJ2Anims::ImportAnimations(const StringView& targetPath, JJ2Version version, SmallVectorImpl<AnimSection>& anims)

@@ -1,5 +1,5 @@
 if(NCINE_VERSION_FROM_GIT)
-	if(EXISTS ${GIT_EXECUTABLE})
+	if(GIT_EXECUTABLE AND EXISTS ${GIT_EXECUTABLE})
 		message(STATUS "Specified custom GIT path: ${GIT_EXECUTABLE}")
 		set(GIT_FOUND 1)
 	else()

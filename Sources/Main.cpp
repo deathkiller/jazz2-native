@@ -416,7 +416,7 @@ RecreateCache:
 	if (!fs::IsReadableFile(animsPath)) {
 		animsPath = fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "AnimsSw.j2a"_s));
 		if (!fs::IsReadableFile(animsPath)) {
-			LOGE_X("Cannot open \".%sSource%sAnims.j2a\" file! Ensure that Jazz Jackrabbit 2 files are present in \"%s\" directory.", fs::PathSeparator, fs::PathSeparator, resolver.GetSourcePath().data());
+			LOGE_X("Cannot open \".%sSource%sAnims.j2a\" file! Make sure Jazz Jackrabbit 2 files are present in \"%s\" directory.", fs::PathSeparator, fs::PathSeparator, resolver.GetSourcePath().data());
 			_flags = Flags::IsVerified;
 			return;
 		}
@@ -424,7 +424,11 @@ RecreateCache:
 
 	String animationsPath = fs::JoinPath(resolver.GetCachePath(), "Animations"_s);
 	fs::RemoveDirectoryRecursive(animationsPath);
-	Compatibility::JJ2Anims::Convert(animsPath, animationsPath, false);
+	if (!Compatibility::JJ2Anims::Convert(animsPath, animationsPath, false)) {
+		LOGE_X("Provided Jazz Jackrabbit 2 version is not supported. Make sure supported Jazz Jackrabbit 2 version is present in \"%s\" directory.", resolver.GetSourcePath().data());
+		_flags = Flags::IsVerified;
+		return;
+	}
 
 	RefreshCacheLevels();
 
