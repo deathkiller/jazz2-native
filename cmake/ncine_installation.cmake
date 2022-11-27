@@ -8,11 +8,11 @@ else()
 	set(SHADERS_INSTALL_DESTINATION share/${NCINE_APP_NAME}/Content/Shaders)
 endif()
 
-#get_target_property(CPACK_EXECUTABLE_NAME ncine OUTPUT_NAME)
-if(WIN32)
+#get_target_property(CPACK_EXECUTABLE_NAME ${NCINE_APP} OUTPUT_NAME)
+if(WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
 	set(CPACK_EXECUTABLE_NAME "Jazz2")
 else()
-	set(CPACK_EXECUTABLE_NAME "jazz2")
+	set(CPACK_EXECUTABLE_NAME ${NCINE_APP})
 endif()
 
 set(CPACK_PACKAGE_VENDOR ${NCINE_APP_VENDOR})
@@ -149,7 +149,7 @@ endif()
 
 include(CPack)
 
-install(TARGETS ncine RUNTIME DESTINATION ".")
+install(TARGETS ${NCINE_APP} RUNTIME DESTINATION ".")
 install(FILES README.md DESTINATION ${README_INSTALL_DESTINATION})
 if((MSVC OR APPLE) AND EXISTS "${CMAKE_SOURCE_DIR}/LICENSE")
 	install(FILES LICENSE DESTINATION . RENAME LICENSE.txt)
@@ -247,7 +247,7 @@ elseif(APPLE)
 		# If the engine has been built statically the application needs to find the frameworks
 		file(RELATIVE_PATH RELPATH_TO_LIB ${CMAKE_INSTALL_PREFIX}/ ${CMAKE_INSTALL_PREFIX}/${FRAMEWORKS_INSTALL_DESTINATION})
 	endif()
-	set_target_properties(ncine PROPERTIES INSTALL_RPATH "@executable_path/${RELPATH_TO_LIB}")
+	set_target_properties(${NCINE_APP} PROPERTIES INSTALL_RPATH "@executable_path/${RELPATH_TO_LIB}")
 
 	if(EXISTS ${NCINE_CONFIG_H})
 		if(IS_DIRECTORY ${FRAMEWORKS_DIR}/glew.framework AND NCINE_WITH_GLEW)

@@ -4,20 +4,22 @@ project(Jazz2)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 get_filename_component(PARENT_SOURCE_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
 
+# Project metadata
+set(NCINE_ROOT ${CMAKE_SOURCE_DIR})
+set(NCINE_SOURCE_DIR "${NCINE_ROOT}/Sources/")
+set(NCINE_APP "jazz2")
+set(NCINE_APP_NAME "Jazz² Resurrection")
+set(NCINE_APP_DESCRIPTION "Open-source reimplementation of Jazz Jackrabbit 2")
+set(NCINE_APP_VENDOR "Dan R.")
+set(NCINE_REVERSE_DNS "jazz2.resurrection")
+set(NCINE_VERSION "1.2.0")
+
 message(STATUS "Compiling for architecture: ${CMAKE_GENERATOR_PLATFORM} (${CMAKE_SYSTEM_PROCESSOR})")
 string(FIND ${CMAKE_SYSTEM_PROCESSOR} "arm" ARM_SUBSTRING_FOUND)
 string(FIND ${CMAKE_SYSTEM_PROCESSOR} "aarch64" AARCH64_SUBSTRING_FOUND)
 if (ARM_SUBSTRING_FOUND GREATER -1 OR AARCH64_SUBSTRING_FOUND GREATER -1)
 	set(NCINE_ARM_PROCESSOR TRUE)
 endif()
-
-set(NCINE_ROOT ${CMAKE_SOURCE_DIR})
-set(NCINE_SOURCE_DIR "${NCINE_ROOT}/Sources/")
-set(NCINE_REVERSE_DNS "jazz2.resurrection")
-set(NCINE_APP_NAME "Jazz² Resurrection")
-set(NCINE_APP_DESCRIPTION "Open-source reimplementation of Jazz Jackrabbit 2")
-set(NCINE_APP_VENDOR "Dan R.")
-set(NCINE_VERSION "1.2.0")
 
 include(ncine_options)
 
@@ -32,14 +34,12 @@ include(ncine_imported_targets)
 include(ncine_tracy)
 
 if(NCINE_BUILD_ANDROID)
-	add_library(ncine STATIC)
+	add_library(${NCINE_APP} STATIC)
 else()
-	add_executable(ncine)
+	add_executable(${NCINE_APP})
 	if(WINDOWS_PHONE OR WINDOWS_STORE)
 		message(STATUS "Compiling for Windows RT")
-	endif()
-	
-	if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
+	else()
 		# Falling back to either GLFW or SDL2 if the other one is not available
 		if(NOT GLFW_FOUND AND NOT SDL2_FOUND AND NOT Qt5_FOUND)
 			message(FATAL_ERROR "No backend between SDL2, GLFW, and QT5 has been found")
@@ -89,23 +89,19 @@ foreach(SOURCE_FILE ${GENERATED_SOURCES})
 endforeach()
 
 if(OPENGL_FOUND)
-	target_link_libraries(ncine PRIVATE OpenGL::GL)
+	target_link_libraries(${NCINE_APP} PRIVATE OpenGL::GL)
 endif()
-target_sources(ncine PRIVATE ${SOURCES} ${HEADERS} ${SHADER_FILES} ${GENERATED_SOURCES})
+target_sources(${NCINE_APP} PRIVATE ${SOURCES} ${HEADERS} ${SHADER_FILES} ${GENERATED_SOURCES})
 
 if(NCINE_WITH_TRACY)
-	target_include_directories(ncine
+	target_include_directories(${NCINE_APP}
 		PUBLIC $<BUILD_INTERFACE:${TRACY_INCLUDE_ONLY_DIR}/tracy>
 		PUBLIC $<INSTALL_INTERFACE:include/tracy>)
 endif()
-target_include_directories(ncine PRIVATE ${NCINE_SOURCE_DIR}/Shared)
-if(NOT NCINE_DYNAMIC_LIBRARY)
-	target_include_directories(ncine
-		INTERFACE $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include/ncine>)
-endif()
+target_include_directories(${NCINE_APP} PRIVATE ${NCINE_SOURCE_DIR}/Shared)
 if(IS_DIRECTORY ${GENERATED_INCLUDE_DIR})
 	get_filename_component(PARENT_GENERATED_INCLUDE_DIR ${GENERATED_INCLUDE_DIR} DIRECTORY)
-	target_include_directories(ncine
+	target_include_directories(${NCINE_APP}
 		INTERFACE $<BUILD_INTERFACE:${PARENT_GENERATED_INCLUDE_DIR}>
 		# Internal sources can access a generated header with or without the parent directory
 		PRIVATE $<BUILD_INTERFACE:${PARENT_GENERATED_INCLUDE_DIR}>

@@ -8,7 +8,7 @@ elseif(APPLE)
 #	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Threading/StdAtomic.cpp)
 else()
 #	if(ATOMIC_FOUND)
-#		target_link_libraries(ncine PRIVATE Atomic::Atomic)
+#		target_link_libraries(${NCINE_APP} PRIVATE Atomic::Atomic)
 #	endif()
 #	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Threading/GccAtomic.cpp)
 endif()
@@ -19,12 +19,12 @@ if(EMSCRIPTEN)
 endif()
 
 if(ANGLE_FOUND OR OPENGLES2_FOUND)
-	target_compile_definitions(ncine PRIVATE "WITH_OPENGLES")
-	target_link_libraries(ncine PRIVATE EGL::EGL OpenGLES2::GLES2)
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_OPENGLES")
+	target_link_libraries(${NCINE_APP} PRIVATE EGL::EGL OpenGLES2::GLES2)
 
 	if(ANGLE_FOUND)
 		message(STATUS "ANGLE has been found")
-		target_compile_definitions(ncine PRIVATE "WITH_ANGLE")
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ANGLE")
 	endif()
 
 	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.h)
@@ -35,13 +35,13 @@ if(GLEW_FOUND)
 	if (NOT WIN32)
 		message(STATUS "GLEW has been found")
 	endif()
-	target_compile_definitions(ncine PRIVATE "WITH_GLEW")
-	target_link_libraries(ncine PRIVATE GLEW::GLEW)
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_GLEW")
+	target_link_libraries(${NCINE_APP} PRIVATE GLEW::GLEW)
 endif()
 
 if(GLFW_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "GLFW")
-	target_compile_definitions(ncine PRIVATE "WITH_GLFW")
-	target_link_libraries(ncine PRIVATE GLFW::GLFW)
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_GLFW")
+	target_link_libraries(${NCINE_APP} PRIVATE GLFW::GLFW)
 
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/nCine/Backends/GlfwInputManager.h
@@ -53,8 +53,8 @@ if(GLFW_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "GLFW")
 		${NCINE_SOURCE_DIR}/nCine/Backends/GlfwGfxDevice.cpp
 	)
 elseif(SDL2_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "SDL2")
-	target_compile_definitions(ncine PRIVATE "WITH_SDL")
-	target_link_libraries(ncine PRIVATE SDL2::SDL2)
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_SDL")
+	target_link_libraries(${NCINE_APP} PRIVATE SDL2::SDL2)
 
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/nCine/Backends/SdlInputManager.h
@@ -66,11 +66,11 @@ elseif(SDL2_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "SDL2")
 		${NCINE_SOURCE_DIR}/nCine/Backends/SdlGfxDevice.cpp
 	)
 elseif(Qt5_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "QT5")
-	target_compile_definitions(ncine PRIVATE "WITH_QT5")
-	target_link_libraries(ncine PUBLIC Qt5::Widgets)
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_QT5")
+	target_link_libraries(${NCINE_APP} PUBLIC Qt5::Widgets)
 	if(Qt5Gamepad_FOUND)
-		target_compile_definitions(ncine PRIVATE "WITH_QT5GAMEPAD")
-		target_link_libraries(ncine PRIVATE Qt5::Gamepad)
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_QT5GAMEPAD")
+		target_link_libraries(${NCINE_APP} PRIVATE Qt5::Gamepad)
 	endif()
 
 	qt5_wrap_cpp(MOC_SOURCES ${NCINE_SOURCE_DIR}/nCine/Qt5Widget.h)
@@ -93,8 +93,8 @@ elseif(Qt5_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "QT5")
 endif()
 
 if(OPENAL_FOUND)
-	target_compile_definitions(ncine PRIVATE "WITH_AUDIO")
-	target_link_libraries(ncine PRIVATE OpenAL::AL)
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AUDIO")
+	target_link_libraries(${NCINE_APP} PRIVATE OpenAL::AL)
 
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/nCine/Audio/AudioBuffer.h
@@ -122,8 +122,8 @@ if(OPENAL_FOUND)
 	)
 
 	if(VORBIS_FOUND)
-		target_compile_definitions(ncine PRIVATE "WITH_VORBIS")
-		target_link_libraries(ncine PRIVATE Vorbis::Vorbisfile)
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_VORBIS")
+		target_link_libraries(${NCINE_APP} PRIVATE Vorbis::Vorbisfile)
 
 		list(APPEND HEADERS
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderOgg.h
@@ -135,13 +135,13 @@ if(OPENAL_FOUND)
 	endif()
 	
 	if(OPENMPT_FOUND)
-		target_compile_definitions(ncine PRIVATE "WITH_OPENMPT")
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_OPENMPT")
 		if(OPENMPT_DYNAMIC_LINK)
-			target_compile_definitions(ncine PRIVATE "WITH_OPENMPT_DYNAMIC")
-			target_include_directories(ncine PRIVATE "${NCINE_SOURCE_DIR}/../Libs/libopenmpt/")
-			target_link_libraries(ncine PRIVATE ${CMAKE_DL_LIBS})
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_OPENMPT_DYNAMIC")
+			target_include_directories(${NCINE_APP} PRIVATE "${NCINE_SOURCE_DIR}/../Libs/libopenmpt/")
+			target_link_libraries(${NCINE_APP} PRIVATE ${CMAKE_DL_LIBS})
 		else()
-			target_link_libraries(ncine PRIVATE libopenmpt::libopenmpt)
+			target_link_libraries(${NCINE_APP} PRIVATE libopenmpt::libopenmpt)
 		endif()
 		
 		list(APPEND HEADERS
@@ -157,8 +157,8 @@ elseif(NOT NCINE_BUILD_ANDROID)
 endif()
 
 #if(PNG_FOUND)
-#	target_compile_definitions(ncine PRIVATE "WITH_PNG")
-#	target_link_libraries(ncine PRIVATE PNG::PNG)
+#	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_PNG")
+#	target_link_libraries(${NCINE_APP} PRIVATE PNG::PNG)
 
 #	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureSaverPng.h)
 #	list(APPEND PRIVATE_HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPng.h)
@@ -167,8 +167,8 @@ endif()
 #		${NCINE_SOURCE_DIR}/nCine/Graphics/TextureSaverPng.cpp)
 #endif()
 #if(WEBP_FOUND)
-#	target_compile_definitions(ncine PRIVATE "WITH_WEBP")
-#	target_link_libraries(ncine PRIVATE WebP::WebP)
+#	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_WEBP")
+#	target_link_libraries(${NCINE_APP} PRIVATE WebP::WebP)
 
 #	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureSaverWebP.h)
 #	list(APPEND PRIVATE_HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderWebP.h)
@@ -178,8 +178,8 @@ endif()
 #endif()
 
 if(Threads_FOUND)
-	target_compile_definitions(ncine PRIVATE "WITH_THREADS")
-	target_link_libraries(ncine PRIVATE Threads::Threads)
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_THREADS")
+	target_link_libraries(${NCINE_APP} PRIVATE Threads::Threads)
 
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/nCine/Threading/Thread.h
@@ -203,8 +203,8 @@ if(Threads_FOUND)
 endif()
 
 #if(LUA_FOUND)
-#	target_compile_definitions(ncine PRIVATE "WITH_LUA")
-#	target_link_libraries(ncine PRIVATE Lua::Lua)
+#	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_LUA")
+#	target_link_libraries(${NCINE_APP} PRIVATE Lua::Lua)
 
 #	list(APPEND HEADERS
 #		${NCINE_SOURCE_DIR}/nCine/Scripting/LuaTypes.h
@@ -231,7 +231,7 @@ endif()
 #	)
 
 #	if(NCINE_WITH_SCRIPTING_API)
-#		target_compile_definitions(ncine PRIVATE "WITH_SCRIPTING_API")
+#		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_SCRIPTING_API")
 
 #		list(APPEND HEADERS
 #			${NCINE_SOURCE_DIR}/nCine/Scripting/LuaUntrackedUserData.h
@@ -327,7 +327,7 @@ endif()
 #endif()
 
 #if(NCINE_WITH_ALLOCATORS)
-#	target_compile_definitions(ncine PRIVATE "WITH_ALLOCATORS")
+#	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ALLOCATORS")
 #
 #	list(APPEND HEADERS
 #		${NCINE_ROOT}/include/nctl/AllocManager.h
@@ -353,7 +353,7 @@ endif()
 #endif()
 
 #if(NCINE_WITH_IMGUI)
-#	target_compile_definitions(ncine PRIVATE "WITH_IMGUI")
+#	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_IMGUI")
 #
 #	# For external projects compiling using an nCine build directory
 #	set(IMGUI_INCLUDE_ONLY_DIR ${IMGUI_SOURCE_DIR}/include_only)
@@ -402,12 +402,12 @@ endif()
 #	list(APPEND SOURCES ${NCINE_ROOT}/src/graphics/ImGuiDebugOverlay.cpp)
 #
 #	if(MINGW)
-#		target_link_libraries(ncine PRIVATE imm32 dwmapi)
+#		target_link_libraries(${NCINE_APP} PRIVATE imm32 dwmapi)
 #	endif()
 #endif()
 
 #if(NCINE_WITH_NUKLEAR)
-#	target_compile_definitions(ncine PRIVATE "WITH_NUKLEAR")
+#	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_NUKLEAR")
 #
 #	# For external projects compiling using an nCine build directory
 #	set(NUKLEAR_INCLUDE_ONLY_DIR ${NUKLEAR_SOURCE_DIR}/include_only)
@@ -443,17 +443,17 @@ endif()
 #endif()
 
 if(ANGELSCRIPT_FOUND)
-	target_compile_definitions(ncine PRIVATE "WITH_ANGELSCRIPT")
-	target_link_libraries(ncine PRIVATE AngelScript::AngelScript)
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ANGELSCRIPT")
+	target_link_libraries(${NCINE_APP} PRIVATE AngelScript::AngelScript)
 endif()
 
 if(NCINE_WITH_TRACY)
-	target_compile_definitions(ncine PRIVATE "WITH_TRACY")
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_TRACY")
 	if(NOT ANDROID AND NOT APPLE AND NOT EMSCRIPTEN)
-		target_compile_definitions(ncine PRIVATE "WITH_TRACY_OPENGL")
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_TRACY_OPENGL")
 	endif()
-	target_compile_definitions(ncine PUBLIC "TRACY_ENABLE")
-	target_compile_definitions(ncine PRIVATE "TRACY_DELAYED_INIT")
+	target_compile_definitions(${NCINE_APP} PUBLIC "TRACY_ENABLE")
+	target_compile_definitions(${NCINE_APP} PRIVATE "TRACY_DELAYED_INIT")
 
 	# For external projects compiling using an nCine build directory
 	set(TRACY_INCLUDE_ONLY_DIR ${TRACY_SOURCE_DIR}/include_only)
@@ -492,11 +492,11 @@ endif()
 #	endif()
 #
 #	get_filename_component(RENDERDOC_INCLUDE_DIR ${RENDERDOC_API_H} DIRECTORY)
-#	target_include_directories(ncine PRIVATE ${RENDERDOC_INCLUDE_DIR})
+#	target_include_directories(${NCINE_APP} PRIVATE ${RENDERDOC_INCLUDE_DIR})
 #
-#	target_compile_definitions(ncine PRIVATE "WITH_RENDERDOC")
+#	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RENDERDOC")
 #	if(UNIX)
-#		target_link_libraries(ncine PRIVATE dl)
+#		target_link_libraries(${NCINE_APP} PRIVATE dl)
 #	endif()
 #
 #	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/RenderDocCapture.h ${RENDERDOC_API_H})
@@ -504,11 +504,11 @@ endif()
 #endif()
 
 if(LIBDEFLATE_FOUND)
-	target_compile_definitions(ncine PRIVATE "WITH_LIBDEFLATE")
-	target_link_libraries(ncine PRIVATE libdeflate::libdeflate)
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_LIBDEFLATE")
+	target_link_libraries(${NCINE_APP} PRIVATE libdeflate::libdeflate)
 elseif(ZLIB_FOUND)
-	target_compile_definitions(ncine PRIVATE "WITH_ZLIB")
-	target_link_libraries(ncine PRIVATE ZLIB::ZLIB)
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ZLIB")
+	target_link_libraries(${NCINE_APP} PRIVATE ZLIB::ZLIB)
 endif()
 
 if(NCINE_BUILD_ANDROID)
@@ -553,7 +553,7 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 		${NCINE_SOURCE_DIR}/Icons/StoreLogo.png
 	)
 		
-	target_sources(ncine PRIVATE ${UWP_ASSETS})
+	target_sources(${NCINE_APP} PRIVATE ${UWP_ASSETS})
 	set_property(SOURCE ${UWP_ASSETS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
 	set_property(SOURCE ${UWP_ASSETS} PROPERTY VS_DEPLOYMENT_LOCATION "Assets")
 	source_group("Assets" FILES ${UWP_ASSETS})
@@ -567,20 +567,10 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 
 	set(PACKAGE_VERSION "${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}.0")
 	set(PACKAGE_GUID "a7153bb5-7dc8-4985-9f9c-3853f96034c9")
-	set(PACKAGE_EXECUTABLE_NAME "ncine")
 	configure_file(${NCINE_SOURCE_DIR}/Package.appxmanifest.in ${CMAKE_CURRENT_BINARY_DIR}/Package.appxmanifest @ONLY)
 	list(APPEND GENERATED_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/Package.appxmanifest)
 	
 	# Include dependencies in UWP package
-	set(EXTERNAL_MSVC_WINRT_DIR "${NCINE_LIBS}/Universal Windows Platform/" CACHE PATH "Set the path to the MSVC (WinRT) libraries directory")
-	if(NOT IS_DIRECTORY ${EXTERNAL_MSVC_WINRT_DIR})
-		message(STATUS "MSVC (WinRT) libraries directory not found at: ${EXTERNAL_MSVC_WINRT_DIR}")
-	else()
-		message(STATUS "MSVC (WinRT) libraries directory: ${EXTERNAL_MSVC_WINRT_DIR}")
-	endif()
-	
-	set(MSVC_WINRT_BINDIR "${EXTERNAL_MSVC_WINRT_DIR}/${MSVC_ARCH_SUFFIX}/Bin/")
-	
 	# `zlib1.dll` is required by `libGLESv2.dll`, so rename `zlib.dll` to `zlib1.dll` and include it too for now
 	configure_file(${MSVC_BINDIR}/zlib.dll ${CMAKE_BINARY_DIR}/Generated/zlib1.dll COPYONLY)
 
@@ -615,7 +605,7 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 		endif()
 	endif()
 
-	target_sources(ncine PRIVATE ${UWP_DEPENDENCIES})
+	target_sources(${NCINE_APP} PRIVATE ${UWP_DEPENDENCIES})
 	set_property(SOURCE ${UWP_DEPENDENCIES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
 	set_property(SOURCE ${UWP_DEPENDENCIES} PROPERTY VS_DEPLOYMENT_LOCATION ".")
 	source_group("Dependencies" FILES ${UWP_DEPENDENCIES})
@@ -627,7 +617,7 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 		file(RELATIVE_PATH CONTENT_FILE_RELPATH ${NCINE_DATA_DIR} ${CONTENT_FILE})
 		get_filename_component(CONTENT_FILE_RELPATH ${CONTENT_FILE_RELPATH} DIRECTORY)
 		
-		target_sources(ncine PRIVATE ${CONTENT_FILE})
+		target_sources(${NCINE_APP} PRIVATE ${CONTENT_FILE})
 		set_property(SOURCE ${CONTENT_FILE} PROPERTY VS_DEPLOYMENT_CONTENT 1)
 		set_property(SOURCE ${CONTENT_FILE} PROPERTY VS_DEPLOYMENT_LOCATION "Content/${CONTENT_FILE_RELPATH}")
 		source_group("Content/${CONTENT_FILE_RELPATH}" FILES ${CONTENT_FILE})
@@ -640,5 +630,5 @@ endif()
 # Jazz² Resurrection options
 if(SHAREWARE_DEMO_ONLY)
 	message(STATUS "Building the game only with Shareware Demo episode")
-	target_compile_definitions(ncine PUBLIC "SHAREWARE_DEMO_ONLY")
+	target_compile_definitions(${NCINE_APP} PUBLIC "SHAREWARE_DEMO_ONLY")
 endif()
