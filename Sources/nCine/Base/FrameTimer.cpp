@@ -45,9 +45,10 @@ namespace nCine
 		// Log number of frames and FPS every `logInterval_` seconds
 		if (logInterval_ > 0.0f && avgNumFrames_ != 0 && secsSinceLastLogUpdate > logInterval_) {
 			fps_ = static_cast<float>(logNumFrames_) / logInterval_;
+#if defined(NCINE_LOG) && defined(NCINE_DEBUG)
 			const float msPerFrame = (logInterval_ * 1000.0f) / static_cast<float>(logNumFrames_);
 			LOGV_X("%lu frames in %.0f seconds = %f FPS (%.3fms per frame)", logNumFrames_, logInterval_, fps_, msPerFrame);
-
+#endif
 			logNumFrames_ = 0L;
 			lastLogUpdate_ = frameStart_;
 		}
