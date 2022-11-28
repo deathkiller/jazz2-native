@@ -531,49 +531,62 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::PrepareTexturedBackground()
 	{
+		bool isDemo = false;
 		_tileSet = ContentResolver::Current().RequestTileSet("easter99"_s, 0, true);
 		_backgroundColor = Vector3f(0.098f, 0.35f, 1.0f);
+		_parallaxStarsEnabled = false;
 		if (_tileSet == nullptr) {
 			_tileSet = ContentResolver::Current().RequestTileSet("carrot1"_s, 0, true);
 			_backgroundColor = Vector3f(0.007f, 0.18f, 0.4f);
 			if (_tileSet == nullptr) {
-				_backgroundColor = Vector3f::Zero;
-				return;
+				_tileSet = ContentResolver::Current().RequestTileSet("diam2"_s, 0, true);
+				_backgroundColor = Vector3f(0.0f, 0.0f, 0.06f);
+				_parallaxStarsEnabled = true;
+				isDemo = true;
+				if (_tileSet == nullptr) {
+					_backgroundColor = Vector3f::Zero;
+					return;
+				}
 			}
 		}
 
-		auto& resolver = ContentResolver::Current();
-		auto s = fs::Open(fs::JoinPath({ resolver.GetContentPath(), "Animations"_s, "main_menu.layer"_s }), FileAccessMode::Read);
-		if (s->GetSize() < 8) {
-			return;
-		}
+		constexpr int Width = 8;
+		constexpr int Height = 8;
 
-		int32_t width = s->ReadValue<int32_t>();
-		int32_t height = s->ReadValue<int32_t>();
+		constexpr int StartIndex = 360;
+		constexpr int StartIndexDemo = 240;
+		constexpr int AdditionalIndexDemo = 451;
+		constexpr int SplitRowDemo = 6;
 
-		std::unique_ptr<LayerTile[]> layout = std::make_unique<LayerTile[]>(width * height);
+		std::unique_ptr<LayerTile[]> layout = std::make_unique<LayerTile[]>(Width * Height);
 
-		for (int i = 0; i < (width * height); i++) {
-			uint16_t tileType = s->ReadValue<uint16_t>();
-			uint8_t tileFlags = s->ReadValue<uint8_t>();
-			uint8_t tileModifier = (uint8_t)(tileFlags >> 4);
-
-			LayerTile& tile = layout[i];
-			tile.TileID = tileType;
-			tile.Flags = (LayerTileFlags)(tileFlags & 0x0f);
-
-			if (tileModifier == 1 /*Translucent*/) {
-				tile.Alpha = /*127*/140;
-			} else if (tileModifier == 2 /*Invisible*/) {
-				tile.Alpha = 0;
-			} else {
-				tile.Alpha = 255;
+		int n = 0;
+		if (isDemo) {
+			// Shareware Demo tileset is not contiguous for some reason
+			for (int i = StartIndexDemo; i < StartIndexDemo + SplitRowDemo * 10; i += 10) {
+				for (int j = 0; j < 8; j++) {
+					LayerTile& tile = layout[n++];
+					tile.TileID = i + j;
+				}
+			}
+			for (int i = AdditionalIndexDemo; i < AdditionalIndexDemo + (Height - SplitRowDemo) * 10; i += 10) {
+				for (int j = 0; j < 8; j++) {
+					LayerTile& tile = layout[n++];
+					tile.TileID = i + j;
+				}
+			}
+		} else {
+			for (int i = StartIndex; i < StartIndex + Height * 10; i += 10) {
+				for (int j = 0; j < 8; j++) {
+					LayerTile& tile = layout[n++];
+					tile.TileID = i + j;
+				}
 			}
 		}
 
 		TileMapLayer& newLayer = _texturedBackgroundLayer;
 		newLayer.Visible = true;
-		newLayer.LayoutSize = Vector2i(width, height);
+		newLayer.LayoutSize = Vector2i(Width, Height);
 		newLayer.Layout = std::move(layout);
 	}
 
@@ -595,7 +608,7 @@ namespace Jazz2::UI::Menu
 		command->material().uniform("uViewSize")->setFloatValue(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
 		command->material().uniform("uShift")->setFloatVector(_texturedBackgroundPos.Data());
 		command->material().uniform("uHorizonColor")->setFloatVector(_backgroundColor.Data());
-		command->material().uniform("uParallaxStarsEnabled")->setFloatValue(0.0f);
+		command->material().uniform("uParallaxStarsEnabled")->setFloatValue(_parallaxStarsEnabled ? 1.0f : 0.0f);
 
 		command->setTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
 		command->material().setTexture(*target);
@@ -672,15 +685,6 @@ namespace Jazz2::UI::Menu
 				float texBiasX = (tile.TileID % _owner->_tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.X);
 				float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
 				float texBiasY = (tile.TileID / _owner->_tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
-
-				if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
-					texBiasX += texScaleX;
-					texScaleX *= -1;
-				}
-				if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
-					texBiasY += texScaleY;
-					texScaleY *= -1;
-				}
 
 				if ((targetSize.X & 1) == 1) {
 					texBiasX += 0.5f / float(texSize.X);

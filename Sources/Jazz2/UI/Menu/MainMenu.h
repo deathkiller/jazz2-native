@@ -137,6 +137,7 @@ namespace Jazz2::UI::Menu
 		Vector2f _texturedBackgroundPos;
 		float _texturedBackgroundPhase;
 		Vector3f _backgroundColor;
+		bool _parallaxStarsEnabled;
 
 		std::unique_ptr<MenuBackgroundCanvas> _canvasBackground;
 		std::unique_ptr<MenuClippedCanvas> _canvasClipped;
