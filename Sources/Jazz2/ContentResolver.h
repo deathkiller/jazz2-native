@@ -262,7 +262,7 @@ namespace Jazz2
 		}
 
 		StringView GetCachePath() const {
-#if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT) || defined(DEATH_TARGET_ANDROID)
 			return _cachePath;
 #else
 			return "Cache/"_s;
@@ -270,7 +270,7 @@ namespace Jazz2
 		}
 
 		StringView GetSourcePath() const {
-#if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT) || defined(DEATH_TARGET_ANDROID)
 			return _sourcePath;
 #else
 			return "Source/"_s;
@@ -302,6 +302,8 @@ namespace Jazz2
 
 #if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 		String _contentPath;
+#endif
+#if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT) || defined(DEATH_TARGET_ANDROID)
 		String _cachePath;
 		String _sourcePath;
 #endif

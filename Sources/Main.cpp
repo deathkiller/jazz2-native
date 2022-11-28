@@ -131,19 +131,7 @@ void GameEventHandler::onInit()
 
 	auto& resolver = ContentResolver::Current();
 	
-#if defined(DEATH_TARGET_ANDROID)
-	// Set working directory to external storage on Android
-	StringView externalPath = static_cast<AndroidApplication&>(theApplication()).externalDataPath();
-	if (!externalPath.empty()) {
-		if (fs::SetWorkingDirectory(externalPath)) {
-			LOGI_X("External storage path: %s", externalPath.data());
-		} else {
-			LOGE_X("Cannot set external storage path \"%s\"", externalPath.data());
-		}
-	} else {
-		LOGE("Cannot get external storage path");
-	}
-#elif !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
 	theApplication().setAutoSuspension(false);
 
 	if (PreferencesCache::EnableFullscreen) {
@@ -657,8 +645,11 @@ void GameEventHandler::CheckUpdates()
 #if defined(DEATH_TARGET_ANDROID)
 	auto sdkVersion = AndroidJniHelper::SdkVersion();
 	auto androidId = AndroidJniWrap_Secure::AndroidId();
+	auto deviceManufacturer = AndroidJniClass_Version::deviceManufacturer();
+	auto deviceModel = AndroidJniClass_Version::deviceModel();
+	String device = (deviceModel.empty() ? deviceManufacturer : (deviceModel.hasPrefix(deviceManufacturer) ? deviceModel : deviceManufacturer + " "_s + deviceModel));
 	char DeviceDesc[64];
-	int DeviceDescLength = formatString(DeviceDesc, _countof(DeviceDesc), "%s|Android %i||2", androidId.data(), sdkVersion);
+	int DeviceDescLength = formatString(DeviceDesc, _countof(DeviceDesc), "%s|Android %i|%s|2", androidId.data(), sdkVersion, device.data());
 #elif defined(DEATH_TARGET_APPLE)
 	char DeviceDesc[64]; int DeviceDescLength;
 	if (::gethostname(DeviceDesc, _countof(DeviceDesc) - (sizeof("|macOS||5") - 1)) == 0) {

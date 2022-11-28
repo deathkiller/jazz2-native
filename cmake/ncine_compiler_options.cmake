@@ -251,6 +251,7 @@ else() # GCC and LLVM
 		#target_compile_options(${NCINE_APP} PRIVATE -Wall -pedantic -Wextra -Wno-old-style-cast -Wno-long-long -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-variadic-macros -Wcast-align)
 		target_compile_options(${NCINE_APP} PRIVATE -Wall -Wno-old-style-cast -Wno-long-long -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-variadic-macros -Wcast-align -Wno-multichar -Wno-switch -Wno-unknown-pragmas -Wno-reorder)
 
+		target_link_options(${NCINE_APP} PRIVATE -Wno-free-nonheap-object)
 		if(NCINE_DYNAMIC_LIBRARY)
 			target_link_options(${NCINE_APP} PRIVATE -Wl,--no-undefined)
 		endif()
