@@ -4,6 +4,8 @@
 #include <cstring>
 #include <utility>
 
+#include <sys/system_properties.h>
+
 namespace nCine
 {
 	///////////////////////////////////////////////////////////
@@ -14,8 +16,6 @@ namespace nCine
 	JNIEnv* AndroidJniHelper::jniEnv = nullptr;
 	unsigned int AndroidJniHelper::sdkVersion_ = 0;
 
-	jclass AndroidJniClass_Version::javaClass_ = nullptr;
-	jfieldID AndroidJniClass_Version::fidSdkInt_ = nullptr;
 	jclass AndroidJniClass_InputDevice::javaClass_ = nullptr;
 	jmethodID AndroidJniClass_InputDevice::midGetDevice_ = nullptr;
 	jmethodID AndroidJniClass_InputDevice::midGetDeviceIds_ = nullptr;
@@ -65,24 +65,26 @@ namespace nCine
 	{
 		javaVM_ = state->activity->vm;
 
-		if (javaVM_ == nullptr)
+		if (javaVM_ == nullptr) {
 			LOGE("JavaVM pointer is null");
-		else {
+		} else {
 			const int getEnvStatus = javaVM_->GetEnv(reinterpret_cast<void**>(&jniEnv), JNI_VERSION_1_6);
 			if (getEnvStatus == JNI_EDETACHED) {
 				LOGW("GetEnv() cannot attach the JVM");
-				if (javaVM_->AttachCurrentThread(&jniEnv, nullptr) != 0)
+				if (javaVM_->AttachCurrentThread(&jniEnv, nullptr) != 0) {
 					LOGW("AttachCurrentThread() cannot attach the JVM");
-				else
+				} else {
 					LOGI("AttachCurrentThread() successful");
-			} else if (getEnvStatus == JNI_EVERSION)
+				}
+			} else if (getEnvStatus == JNI_EVERSION) {
 				LOGW("GetEnv() with unsupported version");
-			else if (getEnvStatus == JNI_OK)
+			} else if (getEnvStatus == JNI_OK) {
 				LOGI("GetEnv() successful");
-
-			if (jniEnv == nullptr)
+			}
+			
+			if (jniEnv == nullptr) {
 				LOGE("JNIEnv pointer is null");
-			else {
+			} else {
 				InitializeClasses();
 				AndroidJniWrap_Activity::init(state);
 				AndroidJniWrap_InputMethodManager::init(state);
@@ -111,7 +113,6 @@ namespace nCine
 
 	void AndroidJniHelper::InitializeClasses()
 	{
-		AndroidJniClass_Version::init();
 		AndroidJniClass_InputDevice::init();
 		AndroidJniClass_KeyCharacterMap::init();
 		AndroidJniClass_KeyEvent::init();
@@ -125,14 +126,16 @@ namespace nCine
 		: javaObject_(nullptr)
 	{
 		FATAL_ASSERT(AndroidJniHelper::jniEnv != nullptr);
-		if (javaObject)
+		if (javaObject) {
 			javaObject_ = AndroidJniHelper::jniEnv->NewGlobalRef(javaObject);
+		}
 	}
 
 	AndroidJniClass::~AndroidJniClass()
 	{
-		if (javaObject_)
+		if (javaObject_) {
 			AndroidJniHelper::jniEnv->DeleteGlobalRef(javaObject_);
+		}
 	}
 
 	AndroidJniClass::AndroidJniClass(AndroidJniClass&& other)
@@ -151,9 +154,9 @@ namespace nCine
 	{
 		ASSERT(name != nullptr);
 		jclass javaClass = AndroidJniHelper::jniEnv->FindClass(name);
-		if (javaClass == nullptr)
+		if (javaClass == nullptr) {
 			LOGE_X("Cannot find Java class \"%s\"", name);
-
+		}
 		return javaClass;
 	}
 
@@ -164,8 +167,9 @@ namespace nCine
 		ASSERT(name != nullptr && signature != nullptr);
 		if (javaClass != nullptr) {
 			mid = AndroidJniHelper::jniEnv->GetStaticMethodID(javaClass, name, signature);
-			if (mid == nullptr)
+			if (mid == nullptr) {
 				LOGE_X("Cannot get static method \"%s()\" with signature \"%s\"", name, signature);
+			}
 		} else {
 			LOGE("Cannot get static methods before finding the Java class");
 		}
@@ -206,16 +210,34 @@ namespace nCine
 
 	// ------------------- AndroidJniClass_Version -------------------
 
-	void AndroidJniClass_Version::init()
-	{
-		javaClass_ = findClass("android/os/Build$VERSION");
-		fidSdkInt_ = getStaticFieldID(javaClass_, "SDK_INT", "I");
-	}
-
 	int AndroidJniClass_Version::sdkInt()
 	{
-		const jint sdkInt = AndroidJniHelper::jniEnv->GetStaticIntField(javaClass_, fidSdkInt_);
-		return int(sdkInt);
+		char buffer[PROP_VALUE_MAX];
+		int length = __system_property_get("ro.build.version.sdk", buffer);
+		if (length <= 0) {
+			return 0;
+		}
+		return atoi(buffer);
+	}
+	
+	String AndroidJniClass_Version::deviceManufacturer()
+	{
+		char buffer[PROP_VALUE_MAX];
+		int length = __system_property_get("ro.product.manufacturer", buffer);
+		if (length <= 0) {
+			return { };
+		}
+		return String(buffer);
+	}
+	
+	String AndroidJniClass_Version::deviceModel()
+	{
+		char buffer[PROP_VALUE_MAX];
+		int length = __system_property_get("ro.product.model", buffer);
+		if (length <= 0) {
+			return { };
+		}
+		return String(buffer);
 	}
 
 	// ------------------- AndroidJniClass_InputDevice -------------------

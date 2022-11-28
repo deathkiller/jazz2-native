@@ -13,6 +13,10 @@
 #include "../nCine/Graphics/ITextureLoader.h"
 #include "../nCine/Base/Random.h"
 
+#if defined(DEATH_TARGET_ANDROID)
+#	include "../nCine/Backends/Android/AndroidApplication.h"
+#endif
+
 #if defined(DEATH_TARGET_SSE42) || defined(DEATH_TARGET_AVX)
 #	define RAPIDJSON_SSE42
 #elif defined(DEATH_TARGET_SSE2)
@@ -40,7 +44,11 @@ namespace Jazz2
 	{
 		std::memset(_palettes, 0, sizeof(_palettes));
 
-#if defined(DEATH_TARGET_UNIX)
+#if defined(DEATH_TARGET_ANDROID)
+		StringView externalPath = static_cast<AndroidApplication&>(theApplication()).externalDataPath();
+		_cachePath = fs::JoinPath(externalPath, "Cache/"_s);
+		_sourcePath = fs::JoinPath(externalPath, "Source/"_s);
+#elif defined(DEATH_TARGET_UNIX)
 #	if !defined(NCINE_LINUX_PACKAGE)
 #		define NCINE_LINUX_PACKAGE "Jazz² Resurrection"
 #	endif

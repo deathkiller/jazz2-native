@@ -180,16 +180,18 @@ namespace nCine
 	{
 		unsigned int sdkVersion = 0;
 
-		if (isInitialized_)
+		if (isInitialized_) {
 			sdkVersion = AndroidJniHelper::SdkVersion();
+		}
 
 		return sdkVersion;
 	}
 
 	void AndroidApplication::enableAccelerometer(bool enabled)
 	{
-		if (isInitialized_)
+		if (isInitialized_) {
 			AndroidInputManager::enableAccelerometer(enabled);
+		}
 	}
 
 	const char* AndroidApplication::internalDataPath() const
@@ -209,8 +211,9 @@ namespace nCine
 
 	void AndroidApplication::toggleSoftInput()
 	{
-		if (isInitialized_)
+		if (isInitialized_) {
 			AndroidJniWrap_InputMethodManager::toggleSoftInput();
+		}
 	}
 
 	///////////////////////////////////////////////////////////

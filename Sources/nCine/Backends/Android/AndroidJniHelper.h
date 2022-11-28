@@ -73,15 +73,12 @@ namespace nCine
 	};
 
 	/// A class to handle JNI requests to `android.os.Build.VERSION`
-	class AndroidJniClass_Version : public AndroidJniClass
+	class AndroidJniClass_Version
 	{
 	public:
-		static void init();
 		static int sdkInt();
-
-	private:
-		static jclass javaClass_;
-		static jfieldID fidSdkInt_;
+		static String deviceManufacturer();
+		static String deviceModel();
 	};
 
 	/// A class to handle JNI requests to `android.view.InputDevice.MotionRange`
