@@ -177,6 +177,8 @@ namespace nCine
 		/// Called when the application resumes execution
 		void resume();
 
+		bool shouldSuspend();
+
 		/// Sets the focus flag
 		virtual void setFocus(bool hasFocus);
 
@@ -185,8 +187,6 @@ namespace nCine
 		Application(const Application&) = delete;
 		/// Deleted assignment operator
 		Application& operator=(const Application&) = delete;
-
-		bool shouldSuspend();
 
 		friend class PCApplication;
 		friend class AndroidApplication;

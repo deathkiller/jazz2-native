@@ -7,7 +7,6 @@
 #endif
 #include <winrt/base.h>
 #include <winrt/Windows.UI.ViewManagement.h>
-#include <winrt/Windows.UI.Xaml.Controls.h>
 
 #ifndef EGL_EGL_PROTOTYPES
 #	define EGL_EGL_PROTOTYPES 1
@@ -20,10 +19,7 @@
 #include <EGL/eglplatform.h>
 #include <EGL/eglext_angle.h>
 
-namespace winrtWAA = winrt::Windows::ApplicationModel::Activation;
 namespace winrtWF = winrt::Windows::Foundation;
-namespace winrtWUX = winrt::Windows::UI::Xaml;
-namespace winrtWUXC = winrt::Windows::UI::Xaml::Controls;
 namespace winrtWUC = winrt::Windows::UI::Core;
 namespace winrtWUP = winrt::Windows::UI::Popups;
 namespace winrtWUV = winrt::Windows::UI::ViewManagement;
@@ -37,7 +33,7 @@ namespace nCine
 		friend class UwpApplication;
 
 	public:
-		UwpGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const winrtWUXC::SwapChainPanel& withVisual);
+		UwpGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const winrtWUC::CoreWindow& withVisual);
 		~UwpGfxDevice();
 
 		void update() override;
@@ -68,7 +64,7 @@ namespace nCine
 		void MakeCurrent();
 
 		EGLSurface _renderSurface;
-		winrtWUXC::SwapChainPanel _hostVisual;
+		winrtWUC::CoreWindow _hostVisual;
 		EGLDisplay _eglDisplay;
 		EGLContext _eglContext;
 		EGLConfig  _eglConfig;

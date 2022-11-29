@@ -575,16 +575,12 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 	list(APPEND GENERATED_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/Package.appxmanifest)
 	
 	# Include dependencies in UWP package
-	# `zlib1.dll` is required by `libGLESv2.dll`, so rename `zlib.dll` to `zlib1.dll` and include it too for now
-	configure_file(${MSVC_BINDIR}/zlib.dll ${CMAKE_BINARY_DIR}/Generated/zlib1.dll COPYONLY)
-
 	set(UWP_DEPENDENCIES
 		${MSVC_WINRT_BINDIR}/msvcp140.dll
 		${MSVC_WINRT_BINDIR}/vcruntime140.dll
 		${MSVC_WINRT_BINDIR}/vcruntime140_1.dll
-		${MSVC_BINDIR}/libEGL.dll
-		${MSVC_BINDIR}/libGLESv2.dll
-		${CMAKE_BINARY_DIR}/Generated/zlib1.dll
+		${MSVC_WINRT_BINDIR}/libEGL.dll
+		${MSVC_WINRT_BINDIR}/libGLESv2.dll
 	)
 		
 	if(LIBDEFLATE_FOUND)
