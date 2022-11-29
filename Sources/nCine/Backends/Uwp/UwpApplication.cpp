@@ -8,11 +8,10 @@
 
 #include <winrt/Windows.Foundation.Metadata.h>
 #include <winrt/Windows.ApplicationModel.Activation.h>
+#include <winrt/Windows.ApplicationModel.Core.h>
 #include <winrt/Windows.UI.Core.h>
-#include <winrt/Windows.UI.Popups.h>
 #include <winrt/Windows.UI.ViewManagement.h>
 #include <winrt/Windows.Graphics.Display.h>
-#include <winrt/Windows.ApplicationModel.Core.h>
 
 #include <Utf8.h>
 
@@ -27,18 +26,6 @@ namespace nCine
 	{
 		return *_instance;
 	}
-
-	static void RaiseExceptionDialog(const winrtWUC::CoreDispatcher& dispatcher, winrt::hstring const& msg)
-	{
-		dispatcher.RunIdleAsync([msg](auto args) {
-			winrtWUP::MessageDialog dialog(msg);
-			dialog.ShowAsync();
-		});
-	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	int UwpApplication::start(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)())
 	{
@@ -65,48 +52,72 @@ namespace nCine
 
 		_createAppEventHandler = createAppEventHandler;
 
-		winrtWUX::Application::Start([](auto&&) { auto app = winrt::make<UwpApplication>(); });
+		winrtWAC::CoreApplication::Run(winrt::make<UwpApplication>());
 
 		return EXIT_SUCCESS;
 	}
 
-	void UwpApplication::OnActivated(const winrtWAA::IActivatedEventArgs& args)
-	{
-		try {
-			const auto& kind = args.Kind();
-			if (kind == winrtWAA::ActivationKind::Protocol) {
-				auto protocolArgs = args.as<winrtWAA::ProtocolActivatedEventArgs>();
-				init(protocolArgs.Uri());
-			} else if (kind == winrtWAA::ActivationKind::CommandLineLaunch) {
-				auto cmd = args.as<winrtWAA::CommandLineActivatedEventArgs>().Operation().Arguments();
-				init(winrtWF::Uri(cmd));
-			} else {
-				init({ nullptr });
-			}
-		} catch (std::exception const& ex) {
-			LOGE_X("Critical exception: %s", ex.what());
-			RaiseExceptionDialog(_dispatcher, winrt::to_hstring(ex.what()));
-		}
-	}
-
-	void UwpApplication::OnLaunched(winrtWAA::LaunchActivatedEventArgs const& args)
-	{
-		auto arguments = args.Arguments();
-		if (!arguments.empty()) {
-			auto uri = winrtWF::Uri(L"jazz2:" + (std::wstring)arguments);
-			init(uri);
-		} else {
-			init({ nullptr });
-		}
-	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
-
-	void UwpApplication::init(const winrtWF::Uri& uri)
+	void UwpApplication::Initialize(const winrtWAC::CoreApplicationView& applicationView)
 	{
 		_instance = this;
+
+		applicationView.Activated({ this, &UwpApplication::OnActivated });
+
+		winrtWAC::CoreApplication::Suspending({ this, &UwpApplication::OnSuspending });
+		winrtWAC::CoreApplication::Resuming({ this, &UwpApplication::OnResuming });
+		winrtWAC::CoreApplication::EnteredBackground({ this, &UwpApplication::OnEnteredBackground });
+		winrtWAC::CoreApplication::LeavingBackground({ this, &UwpApplication::OnLeavingBackground });
+	}
+	
+	void UwpApplication::SetWindow(const winrtWUC::CoreWindow& window)
+	{
+		window.Closed({ this, &UwpApplication::OnWindowClosed });
+		window.SizeChanged({ this, &UwpApplication::OnWindowSizeChanged });
+
+		winrtWUC::SystemNavigationManager::GetForCurrentView().BackRequested([](const auto&, winrtWUC::BackRequestedEventArgs args) {
+			args.Handled(true);
+		});
+	}
+
+	void UwpApplication::Load(const winrt::hstring& entryPoint)
+	{
+		// Nothing to do
+	}
+
+	void UwpApplication::Run()
+	{
+		auto gfxDevice = dynamic_cast<UwpGfxDevice*>(gfxDevice_.get());
+		gfxDevice->MakeCurrent();
+
+		initCommon();
+
+		while (!shouldQuit_) {
+			_dispatcher.ProcessEvents(winrtWUC::CoreProcessEventsOption::ProcessAllIfPresent);
+
+			if (!shouldSuspend()) {
+				UwpInputManager::updateJoystickStates();
+				step();
+			}
+		}
+	}
+
+	void UwpApplication::Uninitialize()
+	{
+		shutdownCommon();
+	}
+
+	void UwpApplication::OnActivated(const winrtWAC::CoreApplicationView& applicationView, const winrtWAA::IActivatedEventArgs& args)
+	{
+		/*const auto& kind = args.Kind();
+		if (kind == winrtWAA::ActivationKind::Protocol) {
+			auto protocolArgs = args.as<winrtWAA::ProtocolActivatedEventArgs>();
+			init(protocolArgs.Uri());
+		} else if (kind == winrtWAA::ActivationKind::CommandLineLaunch) {
+			auto cmd = args.as<winrtWAA::CommandLineActivatedEventArgs>().Operation().Arguments();
+			init(winrtWF::Uri(cmd));
+		} else {
+			init({ nullptr });
+		}*/
 
 		profileStartTime_ = TimeStamp::now();
 		//wasSuspended_ = shouldSuspend();
@@ -126,26 +137,8 @@ namespace nCine
 		appEventHandler_->onPreInit(modifiableAppCfg);
 		LOGI("IAppEventHandler::onPreInit() invoked");
 
-		winrtWUX::Window window = winrtWUX::Window::Current();
+		winrtWUC::CoreWindow window = winrtWUC::CoreWindow::GetForCurrentThread();
 
-		window.Closed([](const auto&, winrtWUC::CoreWindowEventArgs const& args) {
-			// TODO: This is probably not called
-			_instance->shouldQuit_ = true;
-		});
-
-		window.SizeChanged([](const auto&, winrtWUC::WindowSizeChangedEventArgs const& args) {
-			auto& gfxDevice = dynamic_cast<UwpGfxDevice&>(_instance->gfxDevice());
-			gfxDevice.isFullscreen_ = winrtWUV::ApplicationView::GetForCurrentView().IsFullScreenMode();
-			gfxDevice._sizeChanged = 10;
-		});
-
-		winrtWUC::SystemNavigationManager::GetForCurrentView().BackRequested([](const auto&, winrtWUC::BackRequestedEventArgs args) {
-			args.Handled(true);
-		});
-
-		window.Content(_panel);
-
-		winrtWUV::ApplicationView::TerminateAppOnFinalViewClose(false);
 		//auto windowTitleW = Death::Utf8::ToUtf16(appCfg_.windowTitle);
 		//winrtWUV::ApplicationView::GetForCurrentView().Title(winrt::hstring(windowTitleW.data(), windowTitleW.size()));
 
@@ -182,15 +175,13 @@ namespace nCine
 		const IGfxDevice::WindowMode windowMode(appCfg_.resolution.X, appCfg_.resolution.Y, appCfg_.fullscreen, appCfg_.resizable, appCfg_.windowScaling);
 
 		// Graphics device should always be created before the input manager!
-		gfxDevice_ = std::make_unique<UwpGfxDevice>(windowMode, glContextInfo, displayMode, _panel);
+		gfxDevice_ = std::make_unique<UwpGfxDevice>(windowMode, glContextInfo, displayMode, window);
 		inputManager_ = std::make_unique<UwpInputManager>(window);
 
 		displayInfo.DpiChanged([](const auto&, const auto& args) {
 			auto& gfxDevice = dynamic_cast<UwpGfxDevice&>(_instance->gfxDevice());
 			gfxDevice.updateMonitors();
 		});
-
-		_renderLoopThread = std::thread([this] { this->run(); });
 
 		gfxDevice_->setWindowTitle(appCfg_.windowTitle.data());
 		if (!appCfg_.windowIconFilename.empty()) {
@@ -203,21 +194,53 @@ namespace nCine
 		timings_[Timings::PreInit] = profileStartTime_.secondsSince();
 	}
 
-	void UwpApplication::run()
+	void UwpApplication::OnSuspending(const winrtWF::IInspectable& sender, const winrtWA::SuspendingEventArgs& args)
 	{
-		auto gfx = dynamic_cast<UwpGfxDevice*>(gfxDevice_.get());
-		gfx->MakeCurrent();
-
-		initCommon();
-
-		while (!shouldQuit_) {
-			UwpInputManager::updateJoystickStates();
-			step();
+		if (!_isSuspended) {
+			_isSuspended = true;
+			setSuspended(true);
+			suspend();
 		}
-
-		shutdownCommon();
-
-		Exit();
 	}
 
+	void UwpApplication::OnResuming(const winrtWF::IInspectable& sender, const winrtWF::IInspectable& args)
+	{
+		if (_isSuspended) {
+			_isSuspended = false;
+			setSuspended(false);
+			resume();
+		}
+	}
+
+	void UwpApplication::OnEnteredBackground(const winrtWF::IInspectable& sender, const winrtWA::EnteredBackgroundEventArgs& args)
+	{
+		if (!_isSuspended) {
+			_isSuspended = true;
+			setSuspended(true);
+			suspend();
+		}
+	}
+
+	void UwpApplication::OnLeavingBackground(const winrtWF::IInspectable& sender, const winrtWA::LeavingBackgroundEventArgs& args)
+	{
+		if (_isSuspended) {
+			_isSuspended = false;
+			setSuspended(false);
+			resume();
+		}
+	}
+
+	void UwpApplication::OnWindowClosed(const winrtWF::IInspectable& sender, const winrtWUC::CoreWindowEventArgs& args)
+	{
+		shouldQuit_ = true;
+	}
+
+	void UwpApplication::OnWindowSizeChanged(const winrtWF::IInspectable& sender, winrtWUC::WindowSizeChangedEventArgs const& args)
+	{
+		auto gfxDevice = dynamic_cast<UwpGfxDevice*>(gfxDevice_.get());
+		if (gfxDevice != nullptr) {
+			gfxDevice->isFullscreen_ = winrtWUV::ApplicationView::GetForCurrentView().IsFullScreenMode();
+			gfxDevice->_sizeChanged = 10;
+		}
+	}
 }

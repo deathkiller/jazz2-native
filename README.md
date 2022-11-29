@@ -37,7 +37,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 ## Running the application
 ### Windows
 * Download the game
-* Copy original *Jazz Jackrabbit 2* directory to `‹Game›\Source\`
+* Copy contents of original *Jazz Jackrabbit 2* directory to `‹Game›\Source\`
 * Run `‹Game›\Jazz2.exe`, `‹Game›\Jazz2_avx2.exe` or `‹Game›\Jazz2_sdl2.exe` application
 
 `‹Game›` *is path to Jazz² Resurrection. Cache is recreated during intro cinematics on the first startup, so it can't be skipped.*
@@ -45,7 +45,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 ### Linux
 * Download the game
 * Install dependencies: `sudo apt install libglew2.2 libglfw3 libopenal1 libopenmpt0`
-* Copy original *Jazz Jackrabbit 2* directory to `‹Game›/Source/`
+* Copy contents of original *Jazz Jackrabbit 2* directory to `‹Game›/Source/`
 * Run `‹Game›/jazz2` or `‹Game›/jazz2_sdl2` application
 
 `‹Game›` *is path to Jazz² Resurrection. Cache is recreated during intro cinematics on the first startup, so it can't be skipped.*
@@ -60,18 +60,18 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 
 ### Android
 * Download the game
-* Copy original *Jazz Jackrabbit 2* directory to `‹Storage›/Android/data/jazz2.resurrection/files/Source/`
+* Copy contents of original *Jazz Jackrabbit 2* directory to `‹Storage›/Android/data/jazz2.resurrection/files/Source/`
 * Install `Jazz2.apk` or `Jazz2_x86-64.apk` on the device
 * Run the newly installed application
 
-`‹Storage›` *is usually internal storage on your device.* `Content` *directory is included directly in APK file. The game requires device with **Android 5.0** (or newer) and **OpenGL ES 3.0** support. Cache is recreated during intro cinematics on the first startup.*
+`‹Storage›` *is usually internal storage on your device.* `Content` *directory is included directly in APK file, no action is needed. The game requires device with **Android 5.0** (or newer) and **OpenGL ES 3.0** support. Cache is recreated during intro cinematics on the first startup.*
 
 ### Xbox (Universal Windows Platform)
 * Download the game
 * Install `Jazz2.cer` certificate (the application is self-signed)
 * Install `Jazz2.msixbundle` package
 * Run the newly installed application
-* Copy original *Jazz Jackrabbit 2* directory to destination shown in the main menu
+* Copy contents of original *Jazz Jackrabbit 2* directory to destination shown in the main menu
 * Run the application again
 
 

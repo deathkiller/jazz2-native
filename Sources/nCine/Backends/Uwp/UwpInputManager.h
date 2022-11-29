@@ -9,11 +9,12 @@ using namespace Death::Containers;
 
 #include <winrt/Windows.Gaming.Input.h>
 #include <winrt/Windows.System.h>
-#include <winrt/Windows.UI.Xaml.h>
+#include <winrt/Windows.UI.Core.h>
 
+namespace winrtWF = winrt::Windows::Foundation;
 namespace winrtWGI = winrt::Windows::Gaming::Input;
 namespace winrtWS = winrt::Windows::System;
-namespace winrtWUX = winrt::Windows::UI::Xaml;
+namespace winrtWUC = winrt::Windows::UI::Core;
 
 namespace nCine
 {
@@ -80,7 +81,7 @@ namespace nCine
 	class UwpInputManager : public IInputManager
 	{
 	public:
-		UwpInputManager(winrtWUX::Window window);
+		UwpInputManager(winrtWUC::CoreWindow window);
 		~UwpInputManager() override;
 
 		/// Updates joystick state structures and simulates events
@@ -172,5 +173,8 @@ namespace nCine
 		static Mutex _gamepadsSync;
 
 		static KeySym keySymValueToEnum(winrtWS::VirtualKey virtualKey);
+
+		void OnKeyDown(const winrtWF::IInspectable& sender, const winrtWUC::KeyEventArgs& args);
+		void OnKeyUp(const winrtWF::IInspectable& sender, const winrtWUC::KeyEventArgs& args);
 	};
 }

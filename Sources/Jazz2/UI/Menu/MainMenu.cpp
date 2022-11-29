@@ -537,14 +537,13 @@ namespace Jazz2::UI::Menu
 		_parallaxStarsEnabled = false;
 		if (_tileSet == nullptr) {
 			_tileSet = ContentResolver::Current().RequestTileSet("carrot1"_s, 0, true);
-			_backgroundColor = Vector3f(0.007f, 0.18f, 0.4f);
+			_backgroundColor = Vector3f(0.0f, 0.0f, 0.06f);
+			_parallaxStarsEnabled = true;
 			if (_tileSet == nullptr) {
 				_tileSet = ContentResolver::Current().RequestTileSet("diam2"_s, 0, true);
-				_backgroundColor = Vector3f(0.0f, 0.0f, 0.06f);
-				_parallaxStarsEnabled = true;
 				isDemo = true;
 				if (_tileSet == nullptr) {
-					_backgroundColor = Vector3f::Zero;
+					// No suitable tileset was found
 					return;
 				}
 			}

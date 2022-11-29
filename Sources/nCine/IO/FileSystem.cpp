@@ -1683,9 +1683,9 @@ namespace nCine
 			return false;
 		}
 		Array<wchar_t> nullTerminatedPath = Utf8::ToUtf16(path);
-		UwpApplication::GetDispatcher().RunIdleAsync([nullTerminatedPath = std::move(nullTerminatedPath)](auto args) {
+		//UwpApplication::GetDispatcher().RunIdleAsync([nullTerminatedPath = std::move(nullTerminatedPath)](auto args) {
 			winrt::Windows::System::Launcher::LaunchFolderPathAsync(winrt::hstring(nullTerminatedPath.data(), (winrt::hstring::size_type)(nullTerminatedPath.size() - 1)));
-		});
+		//});
 		return true;
 #elif defined(DEATH_TARGET_WINDOWS)
 		if (!IsDirectory(path)) {

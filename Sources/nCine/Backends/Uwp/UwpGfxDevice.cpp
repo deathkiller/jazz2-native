@@ -12,7 +12,7 @@
 
 namespace nCine
 {
-	UwpGfxDevice::UwpGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const winrtWUXC::SwapChainPanel& withVisual)
+	UwpGfxDevice::UwpGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const /*winrtWUXC::SwapChainPanel*/winrtWUC::CoreWindow& withVisual)
 		: IGfxDevice(windowMode, glContextInfo, displayMode), _renderSurface { EGL_NO_SURFACE }, _hostVisual(withVisual), _sizeChanged(2)
 	{
 		initWindowScaling(windowMode);
@@ -192,7 +192,7 @@ namespace nCine
 
 	void UwpGfxDevice::setResolution(bool fullscreen, int width, int height)
 	{
-		UwpApplication::GetDispatcher().RunIdleAsync([fullscreen, width, height](auto args) {
+		//UwpApplication::GetDispatcher().RunIdleAsync([fullscreen, width, height](auto args) {
 			if (fullscreen) {
 				winrtWUV::ApplicationView::GetForCurrentView().TryEnterFullScreenMode();
 			} else {
@@ -204,7 +204,7 @@ namespace nCine
 					winrtWUV::ApplicationView::GetForCurrentView().TryResizeView(desiredSize);
 				}
 			}
-		});
+		//});
 
 		isFullscreen_ = fullscreen;
 		_sizeChanged = 10;
@@ -213,10 +213,10 @@ namespace nCine
 	void UwpGfxDevice::setWindowSize(int width, int height)
 	{
 		// This method is usually called from main thread, but it's required on UI thread
-		UwpApplication::GetDispatcher().RunIdleAsync([width, height](auto args) {
+		//UwpApplication::GetDispatcher().RunIdleAsync([width, height](auto args) {
 			winrtWF::Size desiredSize = winrtWF::Size(static_cast<float>(width), static_cast<float>(height));
 			winrtWUV::ApplicationView::GetForCurrentView().TryResizeView(desiredSize);
-		});
+		//});
 	}
 
 	void UwpGfxDevice::setWindowTitle(const StringView& windowTitle)

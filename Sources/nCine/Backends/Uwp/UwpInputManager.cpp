@@ -4,7 +4,6 @@
 #include "../../Input/JoyMapping.h"
 
 #include <winrt/Windows.Foundation.Collections.h>
-#include <winrt/Windows.UI.Core.h>
 
 namespace nCine
 {
@@ -24,46 +23,12 @@ namespace nCine
 	UwpInputManager::UwpGamepadInfo UwpInputManager::_gamepads[MaxNumJoysticks];
 	Mutex UwpInputManager::_gamepadsSync;
 
-	UwpInputManager::UwpInputManager(winrtWUX::Window window)
+	UwpInputManager::UwpInputManager(winrtWUC::CoreWindow window)
 	{
 		joyMapping_.init(this);
 
-		auto coreWindow = window.CoreWindow();
-		coreWindow.KeyDown([](const auto&, winrtWUC::KeyEventArgs const& args) {
-			if (inputEventHandler_ != nullptr) {
-				args.Handled(true);
-
-				keyboardEvent_.scancode = args.KeyStatus().ScanCode;
-				keyboardEvent_.sym = keySymValueToEnum(args.VirtualKey());
-				// TODO: Key modifiers
-				keyboardEvent_.mod = /*GlfwKeys::keyModMaskToEnumMask(mods)*/0;
-
-				if (keyboardEvent_.sym < KeySym::COUNT) {
-					keyboardState_._pressedKeys[(int)keyboardEvent_.sym] = true;
-				}
-
-				// TODO: Probably called from UI thread
-				inputEventHandler_->onKeyPressed(keyboardEvent_);
-			}
-		});
-
-		coreWindow.KeyUp([](const auto&, winrtWUC::KeyEventArgs const& args) {
-			if (inputEventHandler_ != nullptr) {
-				args.Handled(true);
-
-				keyboardEvent_.scancode = args.KeyStatus().ScanCode;
-				keyboardEvent_.sym = keySymValueToEnum(args.VirtualKey());
-				// TODO: Key modifiers
-				keyboardEvent_.mod = /*keyModMaskToEnumMask(mods)*/0;
-
-				if (keyboardEvent_.sym < KeySym::COUNT) {
-					keyboardState_._pressedKeys[(int)keyboardEvent_.sym] = false;
-				}
-
-				// TODO: Probably called from UI thread
-				inputEventHandler_->onKeyReleased(keyboardEvent_);
-			}
-		});
+		window.KeyDown({ this, &UwpInputManager::OnKeyDown });
+		window.KeyUp({ this, &UwpInputManager::OnKeyUp });
 
 		winrtWGI::Gamepad::GamepadAdded([](const auto&, winrtWGI::Gamepad gamepad) {
 			_gamepadsSync.Lock();
@@ -142,9 +107,9 @@ namespace nCine
 
 	void UwpInputManager::setCursor(Cursor cursor)
 	{
-		UwpApplication::GetDispatcher().RunIdleAsync([cursor](auto args) {
+		//UwpApplication::GetDispatcher().RunIdleAsync([cursor](auto args) {
 			winrtWUC::CoreWindow::GetForCurrentThread().PointerCursor(cursor == Cursor::Arrow ? winrtWUC::CoreCursor(winrtWUC::CoreCursorType::Arrow, 0) : nullptr);
-		});
+		//});
 	}
 
 	void UwpInputManager::updateJoystickStates()
@@ -163,12 +128,50 @@ namespace nCine
 				joyEventsSimulator_.simulateAxisEvent(i, 1, -(float)reading.LeftThumbstickY);
 				joyEventsSimulator_.simulateAxisEvent(i, 2, (float)reading.RightThumbstickX);
 				joyEventsSimulator_.simulateAxisEvent(i, 3, -(float)reading.RightThumbstickY);
-				joyEventsSimulator_.simulateAxisEvent(i, 4, (float)reading.LeftTrigger);
-				joyEventsSimulator_.simulateAxisEvent(i, 5, (float)reading.RightTrigger);
+				joyEventsSimulator_.simulateAxisEvent(i, 4, ((float)reading.LeftTrigger * 2.0f) - 1.0f);
+				joyEventsSimulator_.simulateAxisEvent(i, 5, ((float)reading.RightTrigger * 2.0f) - 1.0f);
 			}
 		}
 
 		_gamepadsSync.Unlock();
+	}
+
+	void UwpInputManager::OnKeyDown(const winrtWF::IInspectable& sender, const winrtWUC::KeyEventArgs& args)
+	{
+		if (inputEventHandler_ != nullptr) {
+			args.Handled(true);
+
+			keyboardEvent_.scancode = args.KeyStatus().ScanCode;
+			keyboardEvent_.sym = keySymValueToEnum(args.VirtualKey());
+			// TODO: Key modifiers
+			keyboardEvent_.mod = /*GlfwKeys::keyModMaskToEnumMask(mods)*/0;
+
+			if (keyboardEvent_.sym < KeySym::COUNT) {
+				keyboardState_._pressedKeys[(int)keyboardEvent_.sym] = true;
+			}
+
+			// TODO: Probably called from UI thread
+			inputEventHandler_->onKeyPressed(keyboardEvent_);
+		}
+	}
+
+	void UwpInputManager::OnKeyUp(const winrtWF::IInspectable& sender, const winrtWUC::KeyEventArgs& args)
+	{
+		if (inputEventHandler_ != nullptr) {
+			args.Handled(true);
+
+			keyboardEvent_.scancode = args.KeyStatus().ScanCode;
+			keyboardEvent_.sym = keySymValueToEnum(args.VirtualKey());
+			// TODO: Key modifiers
+			keyboardEvent_.mod = /*keyModMaskToEnumMask(mods)*/0;
+
+			if (keyboardEvent_.sym < KeySym::COUNT) {
+				keyboardState_._pressedKeys[(int)keyboardEvent_.sym] = false;
+			}
+
+			// TODO: Probably called from UI thread
+			inputEventHandler_->onKeyReleased(keyboardEvent_);
+		}
 	}
 
 #pragma push_macro("DELETE")
