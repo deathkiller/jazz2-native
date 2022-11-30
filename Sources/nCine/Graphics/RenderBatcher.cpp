@@ -45,9 +45,13 @@ namespace nCine
 
 		unsigned int fixedBatchSize = theApplication().appConfiguration().fixedBatchSize;
 		if (fixedBatchSize > 0) {
+#if defined(WITH_FIXED_BATCH_SIZE) && WITH_FIXED_BATCH_SIZE > 0
+			minBatchSize = fixedBatchSize;
+#else
 			if (minBatchSize > fixedBatchSize) {
 				minBatchSize = fixedBatchSize;
 			}
+#endif
 			maxBatchSize = fixedBatchSize;
 		}
 
