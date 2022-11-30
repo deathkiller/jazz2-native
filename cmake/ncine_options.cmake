@@ -85,7 +85,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	option(NCINE_GCC_HARDENING "Enable memory corruption mitigation methods of GCC" OFF)
 endif()
 
-option(NCINE_WORKAROUND_DISABLE_BATCHING "Force disable batching for rendering (workaround)" OFF)
+#set(NCINE_WITH_FIXED_BATCH_SIZE "0" CACHE PATH "Set custom fixed batch size (unsafe)")
 
 #set(NCINE_STARTUP_TEST "apptest_camera" CACHE STRING "Set the starting test project and default running executable")
 
