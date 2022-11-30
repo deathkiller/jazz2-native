@@ -25,7 +25,7 @@ namespace nCine
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 		fixedBatchSize(32),
 #elif defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE)
-		fixedBatchSize(16),
+		fixedBatchSize(12),
 #else
 		fixedBatchSize(0),
 #endif
