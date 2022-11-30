@@ -20,7 +20,15 @@ namespace nCine
 		frameLimit(0),
 		useBufferMapping(false),
 		deferShaderQueries(true),
-		fixedBatchSize(10),
+#if defined(WITH_FIXED_BATCH_SIZE) && WITH_FIXED_BATCH_SIZE > 0
+		fixedBatchSize(WITH_FIXED_BATCH_SIZE),
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+		fixedBatchSize(32),
+#elif defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE)
+		fixedBatchSize(16),
+#else
+		fixedBatchSize(0),
+#endif
 #if defined(WITH_IMGUI) || defined(WITH_NUKLEAR)
 		vboSize(512 * 1024),
 		iboSize(128 * 1024),

@@ -1,13 +1,10 @@
 #include "GLShader.h"
 #include "GLDebug.h"
+#include "../../Application.h"
 #include "../../IO/FileSystem.h"
 #include "../../../Common.h"
 
 #include <string>
-
-#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE) || defined(NCINE_WORKAROUND_DISABLE_BATCHING)
-#	include "../../Application.h"
-#endif
 
 namespace nCine
 {
@@ -45,17 +42,15 @@ namespace nCine
 			patchLines.append("#define WITH_ANGLE\n");
 #endif
 
-#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE) || defined(NCINE_WORKAROUND_DISABLE_BATCHING)
 			// ANGLE does not seem capable of handling large arrays that are not entirely filled.
 			// A small array size will also make shader compilation a lot faster.
 			if (theApplication().appConfiguration().fixedBatchSize > 0) {
 				patchLines.append("#define WITH_FIXED_BATCH_SIZE\n");
-				//patchLines.formatAppend("#define BATCH_SIZE (%u)\n", theApplication().appConfiguration().fixedBatchSize);
 				patchLines.append("#define BATCH_SIZE (");
 				patchLines.append(std::to_string(theApplication().appConfiguration().fixedBatchSize));
 				patchLines.append(")\n");
 			}
-#endif
+
 			// Exclude patch lines when counting line numbers in info logs
 			patchLines.append("#line 0\n");
 		}

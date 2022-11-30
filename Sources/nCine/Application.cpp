@@ -298,12 +298,6 @@ namespace nCine
 
 		renderingSettings_.windowScaling = appCfg_.windowScaling;
 
-#if defined(NCINE_WORKAROUND_DISABLE_BATCHING)
-		//LOGW("Force disable batching for rendering (NCINE_WORKAROUND_DISABLE_BATCHING)");
-		//renderingSettings_.batchingEnabled = false;
-		LOGW("Force use fixed batch size (NCINE_WORKAROUND_DISABLE_BATCHING)");
-#endif
-
 		theServiceLocator().registerIndexer(std::make_unique<ArrayIndexer>());
 #if defined(WITH_AUDIO)
 		if (appCfg_.withAudio)
