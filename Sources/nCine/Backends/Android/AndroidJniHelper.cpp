@@ -128,6 +128,7 @@ namespace nCine
 		FATAL_ASSERT(AndroidJniHelper::jniEnv != nullptr);
 		if (javaObject) {
 			javaObject_ = AndroidJniHelper::jniEnv->NewGlobalRef(javaObject);
+			AndroidJniHelper::jniEnv_->DeleteLocalRef(javaObject);
 		}
 	}
 
@@ -474,8 +475,7 @@ namespace nCine
 	AndroidJniClass_DisplayMode AndroidJniClass_Display::getMode() const
 	{
 		jobject modeObject = static_cast<jobject>(AndroidJniHelper::jniEnv->CallObjectMethod(javaObject_, midGetMode_));
-		AndroidJniClass_DisplayMode mode(modeObject);
-		return mode;
+		return AndroidJniClass_DisplayMode(modeObject);
 	}
 
 	int AndroidJniClass_Display::getName(char* destination, int maxStringSize) const
