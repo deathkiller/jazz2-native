@@ -128,7 +128,7 @@ namespace nCine
 		FATAL_ASSERT(AndroidJniHelper::jniEnv != nullptr);
 		if (javaObject) {
 			javaObject_ = AndroidJniHelper::jniEnv->NewGlobalRef(javaObject);
-			AndroidJniHelper::jniEnv_->DeleteLocalRef(javaObject);
+			AndroidJniHelper::jniEnv->DeleteLocalRef(javaObject);
 		}
 	}
 
