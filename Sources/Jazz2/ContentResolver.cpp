@@ -15,6 +15,8 @@
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "../nCine/Backends/Android/AndroidApplication.h"
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+#	include <Environment.h>
 #endif
 
 #if defined(DEATH_TARGET_SSE42) || defined(DEATH_TARGET_AVX)
@@ -71,10 +73,30 @@ namespace Jazz2
 			_sourcePath = "Source/"_s;
 		}
 #elif defined(DEATH_TARGET_WINDOWS_RT)
-		// Returns local application data directory on Windows RT
-		const String& appData = fs::GetSavePath("Jazz² Resurrection"_s);
-		_cachePath = fs::JoinPath(appData, "Cache\\"_s);
-		_sourcePath = fs::JoinPath(appData, "Source\\"_s);
+		bool found = false;
+		if (Environment::CurrentDeviceType == DeviceType::Xbox) {
+			// Try to use external drives (D:, E:) on Xbox
+			StringView externalPath = "D:\\Jazz² Resurrection\\"_s;
+			_cachePath = fs::JoinPath(externalPath, "Cache\\"_s);
+			_sourcePath = fs::JoinPath(externalPath, "Source\\"_s);
+			if (fs::IsDirectory(_cachePath) || fs::IsDirectory(_sourcePath)) {
+				found = true;
+			} else {
+				externalPath = "E:\\Jazz² Resurrection\\"_s;
+				_cachePath = fs::JoinPath(externalPath, "Cache\\"_s);
+				_sourcePath = fs::JoinPath(externalPath, "Source\\"_s);
+				if (fs::IsDirectory(_cachePath) || fs::IsDirectory(_sourcePath)) {
+					found = true;
+				}
+			}
+		}
+
+		if (!found) {
+			// Returns local application data directory on Windows RT
+			const String& appData = fs::GetSavePath("Jazz² Resurrection"_s);
+			_cachePath = fs::JoinPath(appData, "Cache\\"_s);
+			_sourcePath = fs::JoinPath(appData, "Source\\"_s);
+		}
 		_contentPath = "Content\\"_s;
 #endif
 	}
