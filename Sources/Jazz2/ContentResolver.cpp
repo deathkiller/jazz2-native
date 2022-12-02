@@ -1042,6 +1042,8 @@ namespace Jazz2
 			Shader::LoadMode::STRING, Shaders::ResizeCrtVs, Shaders::ResizeCrtFs);
 		_precompiledShaders[(int)PrecompiledShader::ResizeMonochrome] = std::make_unique<Shader>("ResizeMonochrome",
 			Shader::LoadMode::STRING, Shaders::ResizeMonochromeVs, Shaders::ResizeMonochromeFs);
+		_precompiledShaders[(int)PrecompiledShader::ResizeScanlines] = std::make_unique<Shader>("ResizeScanlines",
+			Shader::LoadMode::STRING, Shaders::ResizeScanlinesVs, Shaders::ResizeScanlinesFs);
 #endif
 		_precompiledShaders[(int)PrecompiledShader::Antialiasing] = std::make_unique<Shader>("Antialiasing",
 			Shader::LoadMode::STRING, Shaders::AntialiasingVs, Shaders::AntialiasingFs);

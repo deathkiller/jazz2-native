@@ -103,6 +103,7 @@ namespace Jazz2::UI
 			case RescaleMode::_3xBrz: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::Resize3xBrz); break;
 			case RescaleMode::Crt: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeCrt); break;
 			case RescaleMode::Monochrome: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeMonochrome); break;
+			case RescaleMode::Scanlines: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeScanlines); break;
 			default: _resizeShader = nullptr; break;
 		}
 

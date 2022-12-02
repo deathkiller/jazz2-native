@@ -21,6 +21,7 @@ namespace Jazz2::UI::Menu
 			_3xBrz,
 			Crt,
 			Monochrome,
+			Scanlines,
 
 			Count
 		};
