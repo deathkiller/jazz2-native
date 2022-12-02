@@ -2,13 +2,15 @@
 
 #include <cstdlib>			// for exit()
 
-// All but MSVC: Linux, Android and MinGW.
-#if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
+#if defined(DEATH_TARGET_WINDOWS_RT)
+#	include <fcntl.h>
+#	include <io.h>
+#elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
+#	include <io.h>
+#else
 #	include <sys/stat.h>	// for open()
 #	include <fcntl.h>		// for open()
 #	include <unistd.h>		// for close()
-#else
-#	include <io.h>			// for _access()
 #endif
 
 #include <Utf8.h>
@@ -17,10 +19,6 @@ using namespace Death;
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	StandardFile::~StandardFile()
 	{
 		if (shouldCloseOnDestruction_) {
@@ -64,7 +62,7 @@ namespace nCine
 				fileDescriptor_ = -1;
 			}
 #endif
-		} else if (filePointer_) {
+		} else if (filePointer_ != nullptr) {
 			const int retValue = ::fclose(filePointer_);
 			if (retValue == EOF) {
 				LOGW_X("Cannot close the file \"%s\"", filename_.data());
@@ -178,7 +176,42 @@ namespace nCine
 
 	void StandardFile::OpenStream(FileAccessMode mode)
 	{
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		DWORD desireAccess, creationDisposition;
+		int openFlag;
+		const char* modeInternal;
+		switch (mode) {
+			case FileAccessMode::Read:
+				desireAccess = GENERIC_READ;
+				creationDisposition = OPEN_EXISTING;
+				openFlag = _O_RDONLY | _O_BINARY;
+				modeInternal = "rb";
+				break;
+			case FileAccessMode::Write:
+				desireAccess = GENERIC_WRITE;
+				creationDisposition = CREATE_ALWAYS;
+				openFlag = _O_WRONLY | _O_BINARY;
+				modeInternal = "wb";
+				break;
+			case FileAccessMode::Read | FileAccessMode::Write:
+				desireAccess = GENERIC_READ | GENERIC_WRITE;
+				creationDisposition = OPEN_ALWAYS;
+				openFlag = _O_RDWR | _O_BINARY;
+				modeInternal = "r+b";
+				break;
+			default:
+				LOGE_X("Cannot open the file \"%s\", wrong open mode", filename_.data());
+				return;
+		}
+		HANDLE hFile = ::CreateFile2FromAppW(Utf8::ToUtf16(filename_), desireAccess, FILE_SHARE_READ, creationDisposition, nullptr);
+		if (hFile == nullptr || hFile == INVALID_HANDLE_VALUE) {
+			LOGE_X("Cannot open the file \"%s\"", filename_.data());
+			return;
+		}
+		// Automatically transfers ownership of the Win32 file handle to the file descriptor
+		int fd = _open_osfhandle((intptr_t)hFile, openFlag);
+		filePointer_ = _fdopen(fd, modeInternal);
+#elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
 		const wchar_t* modeInternal;
 		switch (mode) {
 			case FileAccessMode::Read: modeInternal = L"rb"; break;

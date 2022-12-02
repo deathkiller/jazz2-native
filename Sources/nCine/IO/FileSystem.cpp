@@ -50,6 +50,7 @@
 #	include "../Backends/Uwp/UwpApplication.h"
 #endif
 
+#include <Environment.h>
 #include <Utf8.h>
 #include <Containers/String.h>
 #include <Containers/GrowableArray.h>
@@ -232,7 +233,11 @@ namespace nCine
 					bufferExtended[bufferOffset + 1] = L'\0';
 
 					WIN32_FIND_DATA data;
-					HANDLE hFindFile = ::FindFirstFile(bufferExtended, &data);
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+					HANDLE hFindFile = ::FindFirstFileExFromAppW(bufferExtended, FindExInfoBasic, &data, FindExSearchNameMatch, nullptr, 0);
+#	else
+					HANDLE hFindFile = ::FindFirstFileEx(bufferExtended, Environment::IsWindows7() ? FindExInfoBasic : FindExInfoStandard, &data, FindExSearchNameMatch, nullptr, 0);
+#	endif
 					if (hFindFile != NULL && hFindFile != INVALID_HANDLE_VALUE) {
 						do {
 							if (data.cFileName[0] == L'.' && (data.cFileName[1] == L'\0' || (data.cFileName[1] == L'.' && data.cFileName[2] == L'\0'))) {
@@ -277,7 +282,11 @@ namespace nCine
 							} else {
 								bufferExtended[bufferOffset + fileNameLength] = L'\0';
 
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+								::DeleteFileFromAppW(bufferExtended);
+#	else
 								::DeleteFile(bufferExtended);
+#	endif
 							}
 						} while (::FindNextFile(hFindFile, &data));
 
@@ -366,7 +375,11 @@ namespace nCine
 				bufferExtended[buffer.size() + 1] = L'\0';
 
 				WIN32_FIND_DATA data;
-				_hFindFile = ::FindFirstFile(bufferExtended, &data);
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+				_hFindFile = ::FindFirstFileExFromAppW(bufferExtended, FindExInfoBasic, &data, FindExSearchNameMatch, nullptr, 0);
+#	else
+				_hFindFile = ::FindFirstFileEx(bufferExtended, Environment::IsWindows7() ? FindExInfoBasic : FindExInfoStandard, &data, FindExSearchNameMatch, nullptr, 0);
+#	endif
 				if (_hFindFile) {
 					if ((data.cFileName[0] == L'.' && (data.cFileName[1] == L'\0' || (data.cFileName[1] == L'.' && data.cFileName[2] == L'\0'))) ||
 						((_options & EnumerationOptions::SkipDirectories) == EnumerationOptions::SkipDirectories && (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) ||
@@ -381,7 +394,7 @@ namespace nCine
 		return (_hFindFile != NULL && _hFindFile != INVALID_HANDLE_VALUE);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		const char* assetPath = AssetFile::TryGetAssetPath(nullTerminatedPath.data());
 		if (assetPath) {
 			// It probably supports only files
@@ -391,7 +404,7 @@ namespace nCine
 			_assetDir = AssetFile::OpenDir(assetPath);
 			return (_assetDir != nullptr);
 		} else
-#endif
+#	endif
 		if (!nullTerminatedPath.empty()) {
 			_dirStream = ::opendir(nullTerminatedPath.data());
 			if (_dirStream != nullptr) {
@@ -421,12 +434,12 @@ namespace nCine
 			_hFindFile = NULL;
 		}
 #else
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (_assetDir != nullptr) {
 			AssetFile::CloseDir(_assetDir);
 			_assetDir = nullptr;
 		} else
-#endif
+#	endif
 		if (_dirStream != nullptr) {
 			::closedir(_dirStream);
 			_dirStream = nullptr;
@@ -460,12 +473,12 @@ namespace nCine
 			return nullptr;
 		}
 #else
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		// It does not return directory names
 		if (_assetDir != nullptr) {
 			return AssetFile::GetNextFileName(_assetDir);
 		}
-#endif
+#	endif
 		if (_dirStream == nullptr) {
 			return nullptr;
 		}
@@ -480,16 +493,16 @@ namespace nCine
 
 			if ((_options & EnumerationOptions::SkipDirectories) == EnumerationOptions::SkipDirectories && entry->d_type == DT_DIR)
 				goto Retry;
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
 			if ((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && entry->d_type == DT_REG)
 				goto Retry;
 			if ((_options & EnumerationOptions::SkipSpecial) == EnumerationOptions::SkipSpecial && entry->d_type != DT_DIR && entry->d_type != DT_REG && entry->d_type != DT_LNK)
 				goto Retry;
-#else
+#	else
 			// Emscripten doesn't set DT_REG for files, so we treat everything that's not a DT_DIR as a file. SkipSpecial has no effect here.
 			if ((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && entry->d_type != DT_DIR)
 				goto Retry;
-#endif
+#	endif
 			size_t charsLeft = sizeof(_path) - (_fileNamePart - _path) - 1;
 			size_t fileLength = strlen(entry->d_name);
 			if (fileLength > charsLeft) {
@@ -594,11 +607,11 @@ namespace nCine
 			return first;
 		}
 
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (first == AssetFile::Prefix) {
 			return first + second;
 		}
-#endif
+#	endif
 
 		if (first[firstSize - 1] == '/' || first[firstSize - 1] == '\\') {
 			// Path has trailing separator
@@ -724,7 +737,6 @@ namespace nCine
 		wchar_t ext[_MAX_EXT];
 
 		_wsplitpath_s(Utf8::ToUtf16(path), nullptr, 0, nullptr, 0, fname, _countof(fname), ext, _countof(ext));
-
 		wcsncpy_s(buffer, _countof(buffer), fname, _countof(fname));
 		wcsncat_s(buffer, _countof(buffer), ext, _countof(ext));
 		return Utf8::FromUtf16(buffer);
@@ -744,7 +756,6 @@ namespace nCine
 		wchar_t fname[_MAX_FNAME];
 
 		_wsplitpath_s(Utf8::ToUtf16(path), nullptr, 0, nullptr, 0, fname, _countof(fname), nullptr, 0);
-
 		return Utf8::FromUtf16(fname);
 #else
 		size_t pathLength = std::min((size_t)MaxPathLength - 1, path.size());
@@ -891,13 +902,13 @@ namespace nCine
 		if (home != nullptr && home[0] != '\0') {
 			return home;
 		} else {
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
 			// `getpwuid()` is not yet implemented on Emscripten
 			const struct passwd* pw = ::getpwuid(getuid());
 			if (pw) {
 				return pw->pw_dir;
 			}
-#endif
+#	endif
 			return { };
 		}
 #endif
@@ -934,16 +945,19 @@ namespace nCine
 	{
 		if (path.empty()) return false;
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
+		return (::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY);
+#elif defined(DEATH_TARGET_WINDOWS)
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return AssetFile::TryOpenDirectory(nullTerminatedPath.data());
 		}
-#endif
+#	endif
 
 		struct stat sb;
 		if (CallStat(nullTerminatedPath.data(), sb)) {
@@ -957,16 +971,19 @@ namespace nCine
 	{
 		if (path.empty()) return false;
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
+		return (::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY);
+#elif defined(DEATH_TARGET_WINDOWS)
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return AssetFile::TryOpenFile(nullTerminatedPath.data());
 		}
-#endif
+#	endif
 
 		struct stat sb;
 		if (CallStat(nullTerminatedPath.data(), sb)) {
@@ -980,16 +997,19 @@ namespace nCine
 	{
 		if (path.empty()) return false;
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
+		return !(!::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) && ::GetLastError() == ERROR_FILE_NOT_FOUND);
+#elif defined(DEATH_TARGET_WINDOWS)
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return !(attrs == INVALID_FILE_ATTRIBUTES && ::GetLastError() == ERROR_FILE_NOT_FOUND);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return AssetFile::TryOpen(nullTerminatedPath.data());
 		}
-#endif
+#	endif
 
 		struct stat sb;
 		return CallStat(nullTerminatedPath.data(), sb);
@@ -1000,17 +1020,19 @@ namespace nCine
 	{
 		if (path.empty()) return false;
 
-#if defined(DEATH_TARGET_WINDOWS)
-		// Assuming that every file that exists is also readable
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
+		return ::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo);
+#elif defined(DEATH_TARGET_WINDOWS)
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
-		return !(attrs == INVALID_FILE_ATTRIBUTES && ::GetLastError() == ERROR_FILE_NOT_FOUND);
+		return (attrs != INVALID_FILE_ATTRIBUTES);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return AssetFile::TryOpen(nullTerminatedPath.data());
 		}
-#endif
+#	endif
 
 		struct stat sb;
 		if (CallStat(nullTerminatedPath.data(), sb)) {
@@ -1024,16 +1046,19 @@ namespace nCine
 	{
 		if (path.empty()) return false;
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
+		return (::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0);
+#elif defined(DEATH_TARGET_WINDOWS)
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_READONLY) == 0);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
-#endif
+#	endif
 
 		struct stat sb;
 		if (CallStat(nullTerminatedPath.data(), sb)) {
@@ -1047,7 +1072,9 @@ namespace nCine
 	{
 		if (path.empty()) return false;
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		return false;
+#elif defined(DEATH_TARGET_WINDOWS)
 		// Assuming that every file that exists is also executable
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		// Assuming that every existing directory is accessible
@@ -1062,11 +1089,11 @@ namespace nCine
 		}
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return AssetFile::TryOpenDirectory(nullTerminatedPath.data());
 		}
-#endif
+#	endif
 
 		return (::access(nullTerminatedPath.data(), X_OK) == 0);
 #endif
@@ -1076,16 +1103,19 @@ namespace nCine
 	{
 		if (path.empty()) return false;
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
+		return (::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY);
+#elif defined(DEATH_TARGET_WINDOWS)
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
-		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == 0);
+		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return AssetFile::TryOpenFile(nullTerminatedPath.data());
 		}
-#endif
+#	endif
 
 		struct stat sb;
 		if (CallStat(nullTerminatedPath.data(), sb)) {
@@ -1099,16 +1129,19 @@ namespace nCine
 	{
 		if (path.empty()) return false;
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
+		return (::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_DIRECTORY)) == 0);
+#elif defined(DEATH_TARGET_WINDOWS)
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
-		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_READONLY) == 0 && (attrs & FILE_ATTRIBUTE_DIRECTORY) == 0);
+		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_DIRECTORY)) == 0);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
-#endif
+#	endif
 
 		struct stat sb;
 		if (CallStat(nullTerminatedPath.data(), sb)) {
@@ -1122,16 +1155,19 @@ namespace nCine
 	{
 		if (path.empty()) return false;
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
+		return (::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN);
+#elif defined(DEATH_TARGET_WINDOWS)
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
-#endif
+#	endif
 
 		size_t pathLength = std::min((size_t)MaxPathLength - 1, path.size());
 		strncpy(buffer, path.data(), pathLength);
@@ -1145,26 +1181,45 @@ namespace nCine
 	{
 		if (path.empty()) return false;
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		Array<wchar_t> nullTerminatedPath = Utf8::ToUtf16(path);
+		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
+		if (!::GetFileAttributesExFromAppW(nullTerminatedPath, GetFileExInfoStandard, &lpFileInfo)) {
+			return true;
+		}
+
+		if (hidden && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) != FILE_ATTRIBUTE_HIDDEN) {
+			// Adding the hidden flag
+			lpFileInfo.dwFileAttributes |= FILE_ATTRIBUTE_HIDDEN;
+			return ::SetFileAttributes(nullTerminatedPath, lpFileInfo.dwFileAttributes);
+		} else if (!hidden && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN) {
+			// Removing the hidden flag
+			lpFileInfo.dwFileAttributes &= ~FILE_ATTRIBUTE_HIDDEN;
+			return ::SetFileAttributes(nullTerminatedPath, lpFileInfo.dwFileAttributes);
+		}
+#elif defined(DEATH_TARGET_WINDOWS)
 		Array<wchar_t> nullTerminatedPath = Utf8::ToUtf16(path);
 		DWORD attrs = ::GetFileAttributes(nullTerminatedPath);
+		if (attrs == INVALID_FILE_ATTRIBUTES) {
+			return false;
+		}
 
-		if (hidden && (attrs & FILE_ATTRIBUTE_HIDDEN) == 0) {
+		if (hidden && (attrs & FILE_ATTRIBUTE_HIDDEN) != FILE_ATTRIBUTE_HIDDEN) {
 			// Adding the hidden flag
 			attrs |= FILE_ATTRIBUTE_HIDDEN;
 			return ::SetFileAttributes(nullTerminatedPath, attrs);
-		} else if (!hidden && (attrs & FILE_ATTRIBUTE_HIDDEN)) {
+		} else if (!hidden && (attrs & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN) {
 			// Removing the hidden flag
 			attrs &= ~FILE_ATTRIBUTE_HIDDEN;
 			return ::SetFileAttributes(nullTerminatedPath, attrs);
 		}
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
-#endif
+#	endif
 
 		size_t pathLength = std::min((size_t)MaxPathLength - 1, path.size());
 		strncpy(buffer, nullTerminatedPath.data(), pathLength);
@@ -1192,10 +1247,17 @@ namespace nCine
 #if defined(DEATH_TARGET_WINDOWS)
 		Array<wchar_t> fullPath = Utf8::ToUtf16(path);
 		// Don't use IsDirectory() to avoid calling Utf8::ToUtf16() twice
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
+		if (::GetFileAttributesExFromAppW(fullPath, GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
+			return true;
+		}
+#	else
 		const DWORD attrs = ::GetFileAttributes(fullPath);
 		if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
 			return true;
 		}
+#	endif
 
 		int fullPathSize = (int)fullPath.size();
 		int startIdx = 0;
@@ -1257,11 +1319,11 @@ namespace nCine
 		}
 
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
-#endif
+#	endif
 
 		String fullPath = String { nullTerminatedPath };
 		bool slashWasLast = true;
@@ -1302,7 +1364,16 @@ namespace nCine
 	{
 		if (path.empty()) return false;
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
+		if (!::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) || (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY) {
+			return false;
+		}
+
+		// Do not recursively delete through reparse points
+		Array<wchar_t> absPath = Utf8::ToUtf16(GetAbsolutePath(path));
+		return DeleteDirectoryInternal(absPath, (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != FILE_ATTRIBUTE_REPARSE_POINT, 0);
+#elif defined(DEATH_TARGET_WINDOWS)
 		const DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		if (attrs == INVALID_FILE_ATTRIBUTES || (attrs & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY) {
 			return false;
@@ -1320,19 +1391,17 @@ namespace nCine
 	{
 		if (path.empty()) return false;
 
-#if defined(DEATH_TARGET_WINDOWS)
-#	if defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_WINDOWS_RT)
 		return ::DeleteFileFromAppW(Utf8::ToUtf16(path));
-#	else
+#elif defined(DEATH_TARGET_WINDOWS)
 		return ::DeleteFile(Utf8::ToUtf16(path));
-#	endif
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
-#endif
+#	endif
 
 		return (::unlink(nullTerminatedPath.data()) == 0);
 #endif
@@ -1347,11 +1416,11 @@ namespace nCine
 #else
 		auto nullTerminatedOldPath = String::nullTerminatedView(oldPath);
 		auto nullTerminatedNewPath = String::nullTerminatedView(newPath);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedOldPath.data())) {
 			return false;
 		}
-#endif
+#	endif
 
 		return (::rename(nullTerminatedOldPath.data(), nullTerminatedNewPath.data()) == 0);
 #endif
@@ -1361,20 +1430,18 @@ namespace nCine
 	{
 		if (oldPath.empty() || newPath.empty()) return false;
 
-#if defined(DEATH_TARGET_WINDOWS)
-#	if defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_WINDOWS_RT)
 		return ::CopyFileFromAppW(Utf8::ToUtf16(oldPath), Utf8::ToUtf16(newPath), overwrite ? TRUE : FALSE);
-#	else
+#elif defined(DEATH_TARGET_WINDOWS)
 		return ::CopyFile(Utf8::ToUtf16(oldPath), Utf8::ToUtf16(newPath), overwrite ? TRUE : FALSE);
-#	endif
 #elif defined(__linux__)
 		auto nullTerminatedOldPath = String::nullTerminatedView(oldPath);
 		auto nullTerminatedNewPath = String::nullTerminatedView(newPath);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedOldPath.data())) {
 			return false;
 		}
-#endif
+#	endif
 		if (!overwrite && Exists(newPath)) {
 			return false;
 		}
@@ -1419,11 +1486,11 @@ namespace nCine
 			return false;
 		}
 
-#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L
+#	if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L
 		// As noted in https://eklitzke.org/efficient-file-copying-on-linux, might make the file reading faster.
 		// Didn't make any difference in the 100 MB benchmark on my ultra-fast SSD, though.
 		::posix_fadvise(source, 0, 0, POSIX_FADV_SEQUENTIAL);
-#endif
+#	endif
 
 		while ((size = ::read(source, buffer, BufferSize)) > 0) {
 			::write(dest, buffer, size);
@@ -1452,11 +1519,11 @@ namespace nCine
 		return (status != 0 ? static_cast<int64_t>(fileSize.QuadPart) : -1);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return static_cast<int64_t>(AssetFile::GetLength(nullTerminatedPath.data()));
 		}
-#endif
+#	endif
 
 		struct stat sb;
 		if (!CallStat(nullTerminatedPath.data(), sb)) {
@@ -1486,11 +1553,11 @@ namespace nCine
 		::CloseHandle(hFile);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return date;
 		}
-#endif
+#	endif
 
 		struct stat sb;
 		if (CallStat(nullTerminatedPath.data(), sb)) {
@@ -1521,11 +1588,11 @@ namespace nCine
 		::CloseHandle(hFile);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return date;
 		}
-#endif
+#	endif
 
 		struct stat sb;
 		if (CallStat(nullTerminatedPath.data(), sb)) {
@@ -1552,7 +1619,7 @@ namespace nCine
 		return mode;
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			if (AssetFile::TryOpenDirectory(nullTerminatedPath.data())) {
 				return (Permission::Read | Permission::Execute);
@@ -1560,7 +1627,7 @@ namespace nCine
 				return Permission::Read;
 			}
 		}
-#endif
+#	endif
 
 		struct stat sb;
 		if (!CallStat(nullTerminatedPath.data(), sb)) {
@@ -1577,7 +1644,6 @@ namespace nCine
 #if defined(DEATH_TARGET_WINDOWS)
 		DWORD attrs = ::GetFileAttributes(Utf8::ToUtf16(path));
 		if (attrs != INVALID_FILE_ATTRIBUTES) {
-
 			if ((mode & Permission::Write) == Permission::Write && (attrs & FILE_ATTRIBUTE_READONLY)) {
 				// Adding the write permission
 				attrs &= ~FILE_ATTRIBUTE_READONLY;
@@ -1592,11 +1658,11 @@ namespace nCine
 		return false;
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
-#endif
+#	endif
 
 		struct stat sb;
 		if (!CallStat(nullTerminatedPath.data(), sb)) {
@@ -1625,11 +1691,11 @@ namespace nCine
 		return false;
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
-#endif
+#	endif
 
 		struct stat sb;
 		if (!CallStat(nullTerminatedPath.data(), sb)) {
@@ -1658,11 +1724,11 @@ namespace nCine
 		return false;
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (AssetFile::TryGetAssetPath(nullTerminatedPath.data())) {
 			return false;
 		}
-#endif
+#	endif
 
 		struct stat sb;
 		if (!CallStat(nullTerminatedPath.data(), sb)) {

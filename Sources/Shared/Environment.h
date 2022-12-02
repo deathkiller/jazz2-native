@@ -28,6 +28,10 @@ namespace Death::Environment
 		return WindowsVersion >= 0x06000000000000; // 6.0.0
 	}
 
+	inline bool IsWindows7() {
+		return WindowsVersion >= 0x06000100000000; // 6.1.0
+	}
+
 	inline bool IsWindows10() {
 		return WindowsVersion >= 0x0a0000000047ba; // 10.0.18362
 	}
