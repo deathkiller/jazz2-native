@@ -204,6 +204,7 @@ namespace Jazz2
 		Resize3xBrz,
 		ResizeCrt,
 		ResizeMonochrome,
+		ResizeScanlines,
 #endif
 		Antialiasing,
 		Transition,

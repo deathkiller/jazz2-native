@@ -17,6 +17,7 @@ namespace Jazz2
 		_3xBrz,
 		Crt,
 		Monochrome,
+		Scanlines,
 
 		TypeMask = 0x0f,
 		UseAntialiasing = 0x80
