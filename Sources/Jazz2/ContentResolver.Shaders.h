@@ -1425,7 +1425,7 @@ layout (std140) uniform InstanceBlock
 
 out vec2 vPixelCoords;
 out vec2 vTexCoords;
-out vec2 vTexSize;
+out vec2 vOutputSize;
 
 void main() {
 	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
@@ -1433,9 +1433,9 @@ void main() {
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
-	vPixelCoords = aTexCoords * texRect.xy;
+	vPixelCoords = aTexCoords * spriteSize.xy;
 	vTexCoords = aTexCoords;
-	vTexSize = texRect.xy;
+	vOutputSize = spriteSize.xy;
 }
 )";
 
@@ -1448,7 +1448,7 @@ uniform sampler2D uTexture;
 
 in vec2 vPixelCoords;
 in vec2 vTexCoords;
-in vec2 vTexSize;
+in vec2 vOutputSize;
 out vec4 fragColor;
 
 vec3 toYiq(vec3 value) {
@@ -1469,13 +1469,13 @@ vec3 fromYiq(vec3 value) {
 
 void main() {
 	float y = vPixelCoords.y;
-	vec2 uv0 = vec2(vTexCoords.x, y / vTexSize.y);
+	vec2 uv0 = vec2(vTexCoords.x, y / vOutputSize.y);
 	vec3 t0 = texture(uTexture, uv0).rgb;
 	float ymod = mod(vPixelCoords.y, 3.0);
 	if (ymod > 2.0) {
-		vec2 uv1 = vec2(vTexCoords.x, (y + 1.0) / vTexSize.y);
+		vec2 uv1 = vec2(vTexCoords.x, (y + 1.0) / vOutputSize.y);
 		vec3 t1 = texture(uTexture, uv1).rgb;
-		fragColor.rgb = (t0 + t1) * 0.5 * 0.7;
+		fragColor.rgb = (t0 + t1) * 0.5 * 0.5;
 	} else {
 		t0 = toYiq(t0);
 		t0.r *= 1.1;

@@ -11,9 +11,9 @@ namespace Jazz2::UI::Menu
 		_items[(int)Item::None].Name = "None / Pixel-perfect"_s;
 		_items[(int)Item::HQ2x].Name = "HQ2x"_s;
 		_items[(int)Item::_3xBrz].Name = "3xBRZ"_s;
-		_items[(int)Item::Scanlines].Name = "Scanlines"_s;
 		_items[(int)Item::Crt].Name = "CRT"_s;
 		_items[(int)Item::Monochrome].Name = "Monochrome"_s;
+		_items[(int)Item::Scanlines].Name = "Scanlines"_s;
 	}
 
 	void RescaleModeSection::OnShow(IMenuContainer* root)
