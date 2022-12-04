@@ -75,18 +75,25 @@ namespace Jazz2
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 		bool found = false;
 		if (Environment::CurrentDeviceType == DeviceType::Xbox) {
-			// Try to use external drives (D:, E:) on Xbox
-			StringView externalPath = "D:\\Jazz² Resurrection\\"_s;
-			_cachePath = fs::JoinPath(externalPath, "Cache\\"_s);
+			// Try to use external drives (D:, E:, F:) on Xbox
+			StringView externalPath = "D:\\Games\\Jazz² Resurrection\\"_s;
 			_sourcePath = fs::JoinPath(externalPath, "Source\\"_s);
-			if (fs::IsDirectory(_cachePath) || fs::IsDirectory(_sourcePath)) {
+			if (fs::IsDirectory(_sourcePath)) {
+				_cachePath = fs::JoinPath(externalPath, "Cache\\"_s);
 				found = true;
 			} else {
-				externalPath = "E:\\Jazz² Resurrection\\"_s;
-				_cachePath = fs::JoinPath(externalPath, "Cache\\"_s);
+				externalPath = "E:\\Games\\Jazz² Resurrection\\"_s;
 				_sourcePath = fs::JoinPath(externalPath, "Source\\"_s);
-				if (fs::IsDirectory(_cachePath) || fs::IsDirectory(_sourcePath)) {
+				if (fs::IsDirectory(_sourcePath)) {
+					_cachePath = fs::JoinPath(externalPath, "Cache\\"_s);
 					found = true;
+				} else {
+					externalPath = "F:\\Games\\Jazz² Resurrection\\"_s;
+					_sourcePath = fs::JoinPath(externalPath, "Source\\"_s);
+					if (fs::IsDirectory(_sourcePath)) {
+						_cachePath = fs::JoinPath(externalPath, "Cache\\"_s);
+						found = true;
+					}
 				}
 			}
 		}

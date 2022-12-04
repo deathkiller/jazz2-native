@@ -86,9 +86,13 @@ namespace nCine
 	{
 	public:
 		explicit AndroidJniClass_MotionRange(jobject javaObject);
+		float getMax() const;
+		float getMin() const;
 
 	private:
 		static jclass javaClass_;
+		static jmethodID midGetMax_;
+		static jmethodID midGetMin_;
 	};
 
 	/// A class to handle JNI requests to `android.view.InputDevice`

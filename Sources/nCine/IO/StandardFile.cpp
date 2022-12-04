@@ -81,7 +81,7 @@ namespace nCine
 #if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 			seekValue = ::lseek(fileDescriptor_, offset, (int)origin);
 #endif
-		} else if (filePointer_) {
+		} else if (filePointer_ != nullptr) {
 			seekValue = ::fseek(filePointer_, offset, (int)origin);
 		}
 		return seekValue;
@@ -95,7 +95,7 @@ namespace nCine
 #if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 			tellValue = ::lseek(fileDescriptor_, 0L, SEEK_CUR);
 #endif
-		} else if (filePointer_) {
+		} else if (filePointer_ != nullptr) {
 			tellValue = ::ftell(filePointer_);
 		}
 		return tellValue;
@@ -111,7 +111,7 @@ namespace nCine
 #if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 			bytesRead = ::read(fileDescriptor_, buffer, bytes);
 #endif
-		} else if (filePointer_) {
+		} else if (filePointer_ != nullptr) {
 			bytesRead = static_cast<uint32_t>(::fread(buffer, 1, bytes, filePointer_));
 		}
 		return bytesRead;
@@ -127,7 +127,7 @@ namespace nCine
 #if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 			bytesWritten = ::write(fileDescriptor_, buffer, bytes);
 #endif
-		} else if (filePointer_) {
+		} else if (filePointer_ != nullptr) {
 			bytesWritten = static_cast<uint32_t>(::fwrite(buffer, 1, bytes, filePointer_));
 		}
 		return bytesWritten;

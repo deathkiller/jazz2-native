@@ -1416,7 +1416,7 @@ namespace Jazz2
 		if (ji1 == ji2 && ji2 == ji3 && ji3 == ji4 && ji1 >= 0 && ji1 < jc) {
 			_playerRequiredMovement.X = joyStates[ji1]->axisValue(AxisName::LX);
 			_playerRequiredMovement.Y = joyStates[ji1]->axisValue(AxisName::LY);
-			input.deadZoneNormalize(_playerRequiredMovement, 0.05f);
+			input.deadZoneNormalize(_playerRequiredMovement, 0.1f);
 		} else {
 			_playerRequiredMovement.X = 0.0f;
 			_playerRequiredMovement.Y = 0.0f;

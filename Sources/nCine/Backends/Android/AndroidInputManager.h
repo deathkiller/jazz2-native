@@ -118,6 +118,8 @@ namespace nCine
 		short int axesMapping_[MaxAxes];
 		bool buttons_[MaxButtons];
 		float axesValues_[MaxAxes];
+		float axesMinValues_[MaxAxes];
+		float axesMaxValues_[MaxAxes];
 		unsigned char hatState_; // no more than one hat is supported
 
 		friend class AndroidInputManager;
