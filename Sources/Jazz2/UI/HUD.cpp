@@ -33,6 +33,7 @@ namespace Jazz2::UI
 		_rgbAmbientLight(0.0f),
 		_rgbHealthLast(0.0f),
 		_weaponWheelAnim(0.0f),
+		_weaponWheelShown(false),
 		_lastWeaponWheelIndex(-1),
 		_rgbLightsTime(0.0f),
 		_transitionState(TransitionState::None),
@@ -870,6 +871,7 @@ namespace Jazz2::UI
 
 		if (!PreferencesCache::EnableWeaponWheel || player == nullptr || !player->_controllable || !player->_controllableExternal || player->_playerType == PlayerType::Frog) {
 			if (_weaponWheelAnim > 0.0f) {
+				_weaponWheelShown = false;
 				_lastWeaponWheelIndex = -1;
 			}
 			return false;
@@ -878,16 +880,22 @@ namespace Jazz2::UI
 		bool isGamepad;
 		if (!_levelHandler->PlayerActionPressed(player->_playerIndex, PlayerActions::ChangeWeapon, true, isGamepad) || !isGamepad) {
 			if (_weaponWheelAnim > 0.0f) {
-				if (_lastWeaponWheelIndex != -1) {
+				if (_weaponWheelAnim < WeaponWheelAnimDuration * 0.5f) {
+					// Switch to the next weapon on short press
+					if (_weaponWheelShown) {
+						player->SwitchToNextWeapon();
+					}
+				} else if (_lastWeaponWheelIndex != -1) {
 					player->SwitchToWeaponByIndex((uint32_t)_lastWeaponWheelIndex);
-					_lastWeaponWheelIndex = -1;
 				}
-
+				_weaponWheelShown = false;
+				_lastWeaponWheelIndex = -1;
 				weaponCount = GetWeaponCount(player);
 			}
 			return false;
 		}
 
+		_weaponWheelShown = true;
 		weaponCount = GetWeaponCount(player);
 		return (weaponCount > 0);
 	}

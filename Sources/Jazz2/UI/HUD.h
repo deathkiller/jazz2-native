@@ -98,6 +98,7 @@ namespace Jazz2::UI
 
 		int _weaponWheelCount;
 		float _weaponWheelAnim;
+		bool _weaponWheelShown;
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _weaponWheelRenderCommands;
 		int  _weaponWheelRenderCommandsCount;
 		std::unique_ptr<Vertex[]> _weaponWheelVertices;
