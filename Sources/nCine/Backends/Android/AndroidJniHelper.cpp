@@ -29,6 +29,8 @@ namespace nCine
 	jclass AndroidJniClass_KeyCharacterMap::javaClass_ = nullptr;
 	jmethodID AndroidJniClass_KeyCharacterMap::midDeviceHasKey_ = nullptr;
 	jclass AndroidJniClass_MotionRange::javaClass_ = nullptr;
+	jmethodID AndroidJniClass_MotionRange::midGetMax_ = nullptr;
+	jmethodID AndroidJniClass_MotionRange::midGetMin_ = nullptr;
 	jclass AndroidJniClass_KeyEvent::javaClass_ = nullptr;
 	jmethodID AndroidJniClass_KeyEvent::midConstructor_ = nullptr;
 	jmethodID AndroidJniClass_KeyEvent::midGetUnicodeCharMetaState_ = nullptr;
@@ -389,6 +391,20 @@ namespace nCine
 		: AndroidJniClass(javaObject)
 	{
 		javaClass_ = findClass("android/view/InputDevice$MotionRange");
+		midGetMax_ = getMethodID(javaClass_, "getMax", "()F");
+		midGetMin_ = getMethodID(javaClass_, "getMin", "()F");
+	}
+	
+	float AndroidJniClass_MotionRange::getMax() const
+	{
+		const jfloat maxValue = AndroidJniHelper::jniEnv->CallFloatMethod(javaObject_, midGetMax_);
+		return float(maxValue);
+	}
+
+	float AndroidJniClass_MotionRange::getMin() const
+	{
+		const jfloat minValue = AndroidJniHelper::jniEnv->CallFloatMethod(javaObject_, midGetMin_);
+		return float(minValue);
 	}
 
 	// ------------------- AndroidJniClass_KeyEvent -------------------

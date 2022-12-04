@@ -39,20 +39,15 @@ namespace nCine
 
 	void RenderBatcher::createBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue)
 	{
-		auto& renderingSettings = theApplication().renderingSettings();
-		unsigned int minBatchSize = renderingSettings.minBatchSize;
-		unsigned int maxBatchSize = renderingSettings.maxBatchSize;
-
+		unsigned int minBatchSize, maxBatchSize;
 		unsigned int fixedBatchSize = theApplication().appConfiguration().fixedBatchSize;
 		if (fixedBatchSize > 0) {
-#if defined(WITH_FIXED_BATCH_SIZE) && WITH_FIXED_BATCH_SIZE > 0
 			minBatchSize = fixedBatchSize;
-#else
-			if (minBatchSize > fixedBatchSize) {
-				minBatchSize = fixedBatchSize;
-			}
-#endif
 			maxBatchSize = fixedBatchSize;
+		} else {
+			auto& renderingSettings = theApplication().renderingSettings();
+			minBatchSize = renderingSettings.minBatchSize;
+			maxBatchSize = renderingSettings.maxBatchSize;
 		}
 
 		ASSERT(minBatchSize > 1);
