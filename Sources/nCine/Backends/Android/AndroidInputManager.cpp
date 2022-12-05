@@ -726,7 +726,7 @@ namespace nCine
 			// InputDevice.getName()
 			inputDevice.getName(joyState.name_, AndroidJoystickState::MaxNameLength);
 			if (StringView(joyState.name_) == "uinput-fpc"_s) {
-				// Fingerprint Sensor is sometimes recognized as joystick, disable it
+				// Fingerprint Sensor is sometimes incorrectly recognized as joystick, disable it
 				joyState.guid_ = JoystickGuidType::Unknown;
 				joyState.numButtons_ = 0;
 				joyState.numHats_ = 0;
