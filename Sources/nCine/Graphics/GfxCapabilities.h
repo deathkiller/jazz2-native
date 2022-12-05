@@ -14,8 +14,8 @@ namespace nCine
 		inline const GlInfoStrings& glInfoStrings() const override {
 			return glInfoStrings_;
 		}
-		int value(GLIntValues::Enum valueName) const override;
-		bool hasExtension(GLExtensions::Enum extensionName) const override;
+		int value(GLIntValues valueName) const override;
+		bool hasExtension(GLExtensions extensionName) const override;
 
 	private:
 		int glMajorVersion_;
@@ -26,17 +26,17 @@ namespace nCine
 		GlInfoStrings glInfoStrings_;
 
 		/// Array of OpenGL integer values
-		int glIntValues_[IGfxCapabilities::GLIntValues::COUNT];
+		int glIntValues_[(int)IGfxCapabilities::GLIntValues::Count];
 		/// Array of OpenGL extension availability flags
-		bool glExtensions_[IGfxCapabilities::GLExtensions::COUNT];
+		bool glExtensions_[(int)IGfxCapabilities::GLExtensions::Count];
 
 		/// Queries the device about its runtime graphics capabilities
 		void init();
 
 		/// Logs OpenGL device info
-		void logGLInfo();
+		void logGLInfo() const;
 		/// Logs OpenGL extensions
-		void logGLExtensions();
+		void logGLExtensions() const;
 		/// Logs OpenGL device capabilites
 		void logGLCaps() const;
 

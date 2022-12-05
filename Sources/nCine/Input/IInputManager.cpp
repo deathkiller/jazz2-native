@@ -125,12 +125,13 @@ namespace nCine
 
 	void IInputManager::setCursor(Cursor cursor)
 	{
-#ifdef WITH_IMGUI
+#if defined(WITH_IMGUI)
 		ImGuiIO& io = ImGui::GetIO();
-		if (cursor != Cursor::Arrow)
+		if (cursor != Cursor::Arrow) {
 			io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
-		else
+		} else {
 			io.ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;
+		}
 #endif
 	}
 
