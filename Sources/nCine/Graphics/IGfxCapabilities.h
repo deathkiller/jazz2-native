@@ -17,10 +17,10 @@ namespace nCine
 		/// OpenGL information strings
 		struct GlInfoStrings
 		{
-			const unsigned char* vendor = nullptr;
-			const unsigned char* renderer = nullptr;
-			const unsigned char* glVersion = nullptr;
-			const unsigned char* glslVersion = nullptr;
+			const char* vendor = nullptr;
+			const char* renderer = nullptr;
+			const char* glVersion = nullptr;
+			const char* glslVersion = nullptr;
 		};
 
 		/// OpenGL queryable runtime integer values

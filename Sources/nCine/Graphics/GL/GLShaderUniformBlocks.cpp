@@ -61,16 +61,18 @@ namespace nCine
 		shaderProgram_->deferredQueries();
 		uniformBlockCaches_.clear();
 
-		if (shaderProgram->status() == GLShaderProgram::Status::LINKED_WITH_INTROSPECTION)
+		if (shaderProgram->status() == GLShaderProgram::Status::LINKED_WITH_INTROSPECTION) {
 			importUniformBlocks(includeOnly, exclude);
+		}
 	}
 
 	void GLShaderUniformBlocks::setUniformsDataPointer(GLubyte* dataPointer)
 	{
 		ASSERT(dataPointer);
 
-		if (shaderProgram_->status() != GLShaderProgram::Status::LINKED_WITH_INTROSPECTION)
+		if (shaderProgram_->status() != GLShaderProgram::Status::LINKED_WITH_INTROSPECTION) {
 			return;
+		}
 
 		dataPointer_ = dataPointer;
 		int offset = 0;

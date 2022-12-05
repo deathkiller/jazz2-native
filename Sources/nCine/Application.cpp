@@ -298,19 +298,22 @@ namespace nCine
 
 		renderingSettings_.windowScaling = appCfg_.windowScaling;
 
+		//LOGI_X("Data path: \"%s\"", fs::GetDataPath().data());
+
 		theServiceLocator().registerIndexer(std::make_unique<ArrayIndexer>());
 #if defined(WITH_AUDIO)
-		if (appCfg_.withAudio)
+		if (appCfg_.withAudio) {
 			theServiceLocator().registerAudioDevice(std::make_unique<ALAudioDevice>());
+		}
 #endif
 #if defined(WITH_THREADS)
-		if (appCfg_.withThreads)
+		if (appCfg_.withThreads) {
 			theServiceLocator().registerThreadPool(std::make_unique<ThreadPool>());
+		}
 #endif
 		theServiceLocator().registerGfxCapabilities(std::make_unique<GfxCapabilities>());
-		GLDebug::init(theServiceLocator().gfxCapabilities());
-
-		LOGI_X("Data path: \"%s\"", fs::GetDataPath().data());
+		const auto& gfxCapabilities = theServiceLocator().gfxCapabilities();
+		GLDebug::init(gfxCapabilities);
 
 #if defined(WITH_RENDERDOC)
 		RenderDocCapture::init();

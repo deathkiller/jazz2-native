@@ -421,7 +421,7 @@ namespace Jazz2::Compatibility
 
 		// Default Music
 		lowercaseInPlace(Music);
-		if (Music.findOr('.', Music.end()) == Music.end()) {
+		if (Music.find('.') == nullptr) {
 			String music = Music + ".j2b"_s;
 			co.WriteValue<uint8_t>((uint8_t)music.size());
 			co.Write(music.data(), music.size());

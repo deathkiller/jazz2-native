@@ -136,7 +136,7 @@ namespace Jazz2::Compatibility
 
 		Add(JJ2Event::SAVE_POINT, [](JJ2Level* level, uint32_t jj2Params) -> ConversionResult {
 			// Green xmas-themed checkpoints for some levels
-			bool isXmas = level->Tileset.findOr("xmas"_s, level->Tileset.end()) != level->Tileset.end();
+			bool isXmas = (level->Tileset.find("xmas"_s) != nullptr);
 			uint8_t theme = (isXmas ? 1 : 0);
 			return { EventType::Checkpoint, { theme } };
 		});

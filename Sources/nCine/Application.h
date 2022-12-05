@@ -150,7 +150,7 @@ namespace nCine
 		bool autoSuspension_;
 		bool hasFocus_;
 		bool shouldQuit_;
-		const AppConfiguration appCfg_;
+		AppConfiguration appCfg_;
 		RenderingSettings renderingSettings_;
 		float timings_[Timings::Count];
 

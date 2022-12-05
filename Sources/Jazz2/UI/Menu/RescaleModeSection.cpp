@@ -138,6 +138,10 @@ namespace Jazz2::UI::Menu
 
 		if ((PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask) != newMode) {
 			PreferencesCache::ActiveRescaleMode = newMode | (PreferencesCache::ActiveRescaleMode & ~RescaleMode::TypeMask);
+			if (newMode == RescaleMode::Scanlines) {
+				// Turn off Antialiasing when using Scanlines
+				PreferencesCache::ActiveRescaleMode &= ~RescaleMode::UseAntialiasing;
+			}
 			PreferencesCache::Save();
 			_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 		}
