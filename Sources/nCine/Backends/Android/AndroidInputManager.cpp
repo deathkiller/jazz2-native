@@ -38,7 +38,6 @@ namespace nCine
 	JoyHatEvent AndroidInputManager::joyHatEvent_;
 	JoyAxisEvent AndroidInputManager::joyAxisEvent_;
 	JoyConnectionEvent AndroidInputManager::joyConnectionEvent_;
-	const float AndroidInputManager::JoyCheckRate = 0.25f;
 	Timer AndroidInputManager::joyCheckTimer_;
 	const int AndroidJoystickState::AxesToMap[AndroidJoystickState::NumAxesToMap] = {
 		AMOTION_EVENT_AXIS_X, AMOTION_EVENT_AXIS_Y,
@@ -320,10 +319,8 @@ namespace nCine
 		const int deviceId = AInputEvent_getDeviceId(event);
 		const int joyId = findJoyId(deviceId);
 
-		// If the index is valid then the structure can be updated
-		if (joyId > -1) {
-			joystickStates_[joyId].deviceId_ = deviceId;
-
+		// If the index is valid and device is not blacklisted then the structure can be updated
+		if (joyId > -1 && joystickStates_[joyId].guid_.isValid()) {
 			if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY) {
 				const int keyCode = AKeyEvent_getKeyCode(event);
 				int buttonIndex = -1;
@@ -362,23 +359,16 @@ namespace nCine
 					unsigned char hatValue = 0;
 
 					switch (keyCode) {
-						case AKEYCODE_DPAD_UP:
-							hatValue = HatState::UP;
-							break;
-						case AKEYCODE_DPAD_DOWN:
-							hatValue = HatState::DOWN;
-							break;
-						case AKEYCODE_DPAD_LEFT:
-							hatValue = HatState::LEFT;
-							break;
-						case AKEYCODE_DPAD_RIGHT:
-							hatValue = HatState::RIGHT;
-							break;
+						case AKEYCODE_DPAD_UP: hatValue = HatState::UP; break;
+						case AKEYCODE_DPAD_DOWN: hatValue = HatState::DOWN; break;
+						case AKEYCODE_DPAD_LEFT: hatValue = HatState::LEFT; break;
+						case AKEYCODE_DPAD_RIGHT: hatValue = HatState::RIGHT; break;
 					}
-					if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_DOWN)
+					if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_DOWN) {
 						hatState |= hatValue;
-					else
+					} else {
 						hatState &= ~hatValue;
+					}
 
 					if (joystickStates_[joyId].hatState_ != hatState) {
 						joystickStates_[joyId].hatState_ = hatState;
@@ -405,15 +395,17 @@ namespace nCine
 						joyHatEvent_.hatId = 0; // No more than one hat is supported
 
 						if (axis == AMOTION_EVENT_AXIS_HAT_X) {
-							if (axisValue > HatThresholdValue)
+							if (axisValue > HatThresholdValue) {
 								hatState |= HatState::RIGHT;
-							else if (axisValue < -HatThresholdValue)
+							} else if (axisValue < -HatThresholdValue) {
 								hatState |= HatState::LEFT;
+							}
 						} else {
-							if (axisValue > HatThresholdValue)
+							if (axisValue > HatThresholdValue) {
 								hatState |= HatState::DOWN;
-							else if (axisValue < -HatThresholdValue)
+							} else if (axisValue < -HatThresholdValue) {
 								hatState |= HatState::UP;
+							}
 						}
 					} else if (axisValue > AxisThresholdValue || axisValue < -AxisThresholdValue) {
 						joyAxisEvent_.axisId = i;
@@ -455,13 +447,15 @@ namespace nCine
 		const unsigned int keySym = static_cast<unsigned int>(keyboardEvent_.sym);
 		switch (AKeyEvent_getAction(event)) {
 			case AKEY_EVENT_ACTION_DOWN:
-				if (keyboardEvent_.sym != KeySym::UNKNOWN)
+				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
 					keyboardState_.keys_[keySym] = 1;
+				}
 				inputEventHandler_->onKeyPressed(keyboardEvent_);
 				break;
 			case AKEY_EVENT_ACTION_UP:
-				if (keyboardEvent_.sym != KeySym::UNKNOWN)
+				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
 					keyboardState_.keys_[keySym] = 0;
+				}
 				inputEventHandler_->onKeyReleased(keyboardEvent_);
 				break;
 			case AKEY_EVENT_ACTION_MULTIPLE:
@@ -534,10 +528,12 @@ namespace nCine
 		// Mask out back and forward buttons in the detected state
 		// as those are simulated as right and middle buttons
 		int maskOutButtons = 0;
-		if (simulatedMouseButtonState_ & AMOTION_EVENT_BUTTON_SECONDARY)
+		if (simulatedMouseButtonState_ & AMOTION_EVENT_BUTTON_SECONDARY) {
 			maskOutButtons |= AMOTION_EVENT_BUTTON_BACK;
-		if (simulatedMouseButtonState_ & AMOTION_EVENT_BUTTON_TERTIARY)
+		}
+		if (simulatedMouseButtonState_ & AMOTION_EVENT_BUTTON_TERTIARY) {
 			maskOutButtons |= AMOTION_EVENT_BUTTON_FORWARD;
+		}
 
 		switch (action) {
 			case AMOTION_EVENT_ACTION_DOWN:
@@ -566,8 +562,9 @@ namespace nCine
 
 		scrollEvent_.x = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_HSCROLL, 0);
 		scrollEvent_.y = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_VSCROLL, 0);
-		if (fabsf(scrollEvent_.x) > 0.0f || fabsf(scrollEvent_.y) > 0.0f)
+		if (fabsf(scrollEvent_.x) > 0.0f || fabsf(scrollEvent_.y) > 0.0f) {
 			inputEventHandler_->onScrollInput(scrollEvent_);
+		}
 
 		return true;
 	}
@@ -576,7 +573,7 @@ namespace nCine
 	{
 		const int keyCode = AKeyEvent_getKeyCode(event);
 		if (keyCode == AKEYCODE_BACK || keyCode == AKEYCODE_FORWARD) {
-			const int simulatedButton = (keyCode == AKEYCODE_BACK) ? AMOTION_EVENT_BUTTON_SECONDARY : AMOTION_EVENT_BUTTON_TERTIARY;
+			const int simulatedButton = (keyCode == AKEYCODE_BACK ? AMOTION_EVENT_BUTTON_SECONDARY : AMOTION_EVENT_BUTTON_TERTIARY);
 			static int oldAction = AKEY_EVENT_ACTION_UP;
 			const int action = AKeyEvent_getAction(event);
 
@@ -618,10 +615,9 @@ namespace nCine
 
 	void AndroidInputManager::updateJoystickConnections()
 	{
-		if (joyCheckTimer_.interval() >= JoyCheckRate) {
+		if (joyCheckTimer_.interval() >= JoyCheckRateSecs) {
 			checkDisconnectedJoysticks();
 			checkConnectedJoysticks();
-
 			joyCheckTimer_.start();
 		}
 	}
@@ -630,11 +626,11 @@ namespace nCine
 	{
 		for (unsigned int i = 0; i < MaxNumJoysticks; i++) {
 			const int deviceId = joystickStates_[i].deviceId_;
-			if (deviceId > -1 && isDeviceConnected(deviceId) == false) {
+			if (deviceId > -1 && !isDeviceConnected(deviceId)) {
 				LOGI_X("Joystick %d (device %d) \"%s\" has been disconnected", i, deviceId, joystickStates_[i].name_);
 				joystickStates_[i].deviceId_ = -1;
 
-				if (inputEventHandler_ != nullptr) {
+				if (inputEventHandler_ != nullptr && joystickStates_[i].guid_.isValid()) {
 					joyConnectionEvent_.joyId = i;
 					inputEventHandler_->onJoyDisconnected(joyConnectionEvent_);
 					joyMapping_.onJoyDisconnected(joyConnectionEvent_);
@@ -681,12 +677,11 @@ namespace nCine
 		int joyId = -1;
 
 		for (unsigned int i = 0; i < MaxNumJoysticks; i++) {
-			// Keeping track of the first unused joystick id, in
-			// case this is the first event from a new joystick
-			if (joystickStates_[i].deviceId_ < 0 && joyId == -1)
+			// Keeping track of the first unused joystick id, in case this is the first event from a new joystick
+			if (joystickStates_[i].deviceId_ < 0 && joyId == -1) {
 				joyId = i;
-			// If the joystick is already known then the loop ends
-			else if (joystickStates_[i].deviceId_ == deviceId) {
+			} else if (joystickStates_[i].deviceId_ == deviceId) {
+				// If the joystick is already known then the loop ends
 				joyId = i;
 				break;
 			}
@@ -701,7 +696,7 @@ namespace nCine
 			
 			joystickStates_[joyId].deviceId_ = deviceId;
 
-			if (inputEventHandler_ != nullptr) {
+			if (inputEventHandler_ != nullptr && joystickStates_[joyId].guid_.isValid()) {
 				joyConnectionEvent_.joyId = joyId;
 				joyMapping_.onJoyConnected(joyConnectionEvent_);
 				inputEventHandler_->onJoyConnected(joyConnectionEvent_);
@@ -719,7 +714,7 @@ namespace nCine
 
 	void AndroidInputManager::deviceInfo(int deviceId, int joyId)
 	{
-		const int MaxStringLength = 256;
+		constexpr int MaxStringLength = 256;
 		char deviceInfoString[MaxStringLength];
 
 		AndroidJniClass_InputDevice inputDevice = AndroidJniClass_InputDevice::getDevice(deviceId);
@@ -728,6 +723,14 @@ namespace nCine
 
 			// InputDevice.getName()
 			inputDevice.getName(joyState.name_, AndroidJoystickState::MaxNameLength);
+			if (StringView(joyState.name_) == "uinput-fpc"_s) {
+				// Fingerprint Sensor is sometimes recognized as joystick, disable it
+				joyState.guid_ = JoystickGuidType::Unknown;
+				joyState.numButtons_ = 0;
+				joyState.numHats_ = 0;
+				joyState.numAxes_ = 0;
+				return;
+			}
 
 			const int vendorId = inputDevice.getVendorId();
 			const int productId = inputDevice.getProductId();

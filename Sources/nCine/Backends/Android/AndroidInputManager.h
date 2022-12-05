@@ -190,7 +190,7 @@ namespace nCine
 		static JoyAxisEvent joyAxisEvent_;
 		static JoyConnectionEvent joyConnectionEvent_;
 		/// Update rate of `updateJoystickConnections()` in seconds
-		static const float JoyCheckRate;
+		static constexpr float JoyCheckRateSecs = 2.0f;
 		static Timer joyCheckTimer_;
 
 		/// Processes a gamepad event

@@ -1,10 +1,11 @@
 #include "JoyMapping.h"
 #include "IInputManager.h"
-#include <cstring> // for memcpy()
-#include <cstdlib> // for strtoul()
 #include "IInputEventHandler.h"
 #include "../IO/FileSystem.h"
 #include "../Primitives/Vector2.h"
+
+#include <cstring> // for memcpy()
+#include <cstdlib> // for strtoul()
 
 #include <Containers/SmallVector.h>
 
@@ -99,14 +100,18 @@ namespace nCine
 
 	JoyMapping::MappingDescription::MappingDescription()
 	{
-		for (unsigned int i = 0; i < MaxNumAxes; i++)
+		for (unsigned int i = 0; i < MaxNumAxes; i++) {
 			axes[i].name = AxisName::UNKNOWN;
-		for (unsigned int i = 0; i < MaxNumAxes; i++)
+		}
+		for (unsigned int i = 0; i < MaxNumAxes; i++) {
 			buttonAxes[i] = AxisName::UNKNOWN;
-		for (unsigned int i = 0; i < MaxNumButtons; i++)
+		}
+		for (unsigned int i = 0; i < MaxNumButtons; i++) {
 			buttons[i] = ButtonName::UNKNOWN;
-		for (unsigned int i = 0; i < MaxHatButtons; i++)
+		}
+		for (unsigned int i = 0; i < MaxHatButtons; i++) {
 			hats[i] = ButtonName::UNKNOWN;
+		}
 	}
 
 	JoyMapping::MappedJoystick::MappedJoystick()
@@ -145,14 +150,14 @@ namespace nCine
 
 	void JoyMapping::init(const IInputManager* inputManager)
 	{
-		ASSERT(inputManager);
+		ASSERT(inputManager != nullptr);
 		inputManager_ = inputManager;
 		checkConnectedJoystics();
 	}
 
 	bool JoyMapping::addMappingFromString(const char* mappingString)
 	{
-		ASSERT(mappingString);
+		ASSERT(mappingString != nullptr);
 
 		MappedJoystick newMapping;
 		const bool parsed = parseMappingFromString(mappingString, newMapping);
@@ -171,7 +176,7 @@ namespace nCine
 
 	void JoyMapping::addMappingsFromStrings(const char** mappingStrings)
 	{
-		ASSERT(mappingStrings);
+		ASSERT(mappingStrings != nullptr);
 
 		while (*mappingStrings) {
 			MappedJoystick newMapping;
@@ -179,8 +184,9 @@ namespace nCine
 			if (parsed) {
 				int index = findMappingByGuid(newMapping.guid);
 				// if GUID is not found then mapping has to be added, not replaced
-				if (index < 0)
+				if (index < 0) {
 					index = mappings_.size();
+				}
 				mappings_[index] = newMapping;
 			}
 			mappingStrings++;
@@ -232,8 +238,9 @@ namespace nCine
 
 	void JoyMapping::onJoyButtonPressed(const JoyButtonEvent& event)
 	{
-		if (inputEventHandler_ == nullptr)
+		if (inputEventHandler_ == nullptr) {
 			return;
+		}
 
 		const auto& mapping = assignedMappings_[event.joyId];
 		const bool mappingIsValid = (mapping.isValid && event.buttonId >= 0 && event.buttonId < static_cast<int>(MappingDescription::MaxNumButtons));
@@ -261,8 +268,9 @@ namespace nCine
 
 	void JoyMapping::onJoyButtonReleased(const JoyButtonEvent& event)
 	{
-		if (inputEventHandler_ == nullptr)
+		if (inputEventHandler_ == nullptr) {
 			return;
+		}
 
 		const auto& mapping = assignedMappings_[event.joyId];
 		const bool mappingIsValid = (mapping.isValid && event.buttonId >= 0 && event.buttonId < static_cast<int>(MappingDescription::MaxNumButtons));
@@ -290,8 +298,9 @@ namespace nCine
 
 	void JoyMapping::onJoyHatMoved(const JoyHatEvent& event)
 	{
-		if (inputEventHandler_ == nullptr)
+		if (inputEventHandler_ == nullptr) {
 			return;
+		}
 
 		const auto& mapping = assignedMappings_[event.joyId];
 		// Only the first gamepad hat is mapped
@@ -327,8 +336,9 @@ namespace nCine
 
 	void JoyMapping::onJoyAxisMoved(const JoyAxisEvent& event)
 	{
-		if (inputEventHandler_ == nullptr)
+		if (inputEventHandler_ == nullptr) {
 			return;
+		}
 
 		const auto& mapping = assignedMappings_[event.joyId];
 		const bool mappingIsValid = (mapping.isValid && event.axisId >= 0 && event.axisId < static_cast<int>(MappingDescription::MaxNumAxes));
@@ -734,8 +744,9 @@ namespace nCine
 	{
 		int buttonMapping = -1;
 
-		if (end - start <= 3 && start[0] == 'b')
+		if (end - start <= 3 && start[0] == 'b') {
 			buttonMapping = atoi(&start[1]);
+		}
 
 		return buttonMapping;
 	}
@@ -749,8 +760,9 @@ namespace nCine
 			parsedHatMapping = atoi(&start[3]);
 
 		// `h0.0` is not considered a valid mapping
-		if (parsedHatMapping > 0)
+		if (parsedHatMapping > 0) {
 			hatMapping = hatStateToIndex(parsedHatMapping);
+		}
 
 		return hatMapping;
 	}
@@ -782,5 +794,4 @@ namespace nCine
 		}
 		(*end)++;
 	}
-
 }
