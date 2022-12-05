@@ -61,7 +61,7 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	Texture::Texture()
-		: Object(ObjectType::TEXTURE), glTexture_(std::make_unique<GLTexture>(GL_TEXTURE_2D)),
+		: Object(ObjectType::Texture), glTexture_(std::make_unique<GLTexture>(GL_TEXTURE_2D)),
 		width_(0), height_(0), mipMapLevels_(0), isCompressed_(false), format_(Format::Unknown), dataSize_(0),
 		minFiltering_(SamplerFilter::Nearest), magFiltering_(SamplerFilter::Nearest), wrapMode_(SamplerWrapping::ClampToEdge)
 	{

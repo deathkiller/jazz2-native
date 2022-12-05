@@ -12,12 +12,12 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	AudioBufferPlayer::AudioBufferPlayer()
-		: IAudioPlayer(ObjectType::AUDIOBUFFER_PLAYER), audioBuffer_(nullptr)
+		: IAudioPlayer(ObjectType::AudioBufferPlayer), audioBuffer_(nullptr)
 	{
 	}
 
 	AudioBufferPlayer::AudioBufferPlayer(AudioBuffer* audioBuffer)
-		: IAudioPlayer(ObjectType::AUDIOBUFFER_PLAYER), audioBuffer_(audioBuffer)
+		: IAudioPlayer(ObjectType::AudioBufferPlayer), audioBuffer_(audioBuffer)
 	{
 	}
 
@@ -32,38 +32,38 @@ namespace nCine
 
 	unsigned int AudioBufferPlayer::bufferId() const
 	{
-		const unsigned int bufferId = (audioBuffer_ ? audioBuffer_->bufferId() : 0U);
+		const unsigned int bufferId = (audioBuffer_ != nullptr ? audioBuffer_->bufferId() : 0U);
 		return (state_ != PlayerState::Initial && state_ != PlayerState::Stopped ? bufferId : 0U);
 	}
 
 	int AudioBufferPlayer::bytesPerSample() const
 	{
-		return (audioBuffer_ ? audioBuffer_->bytesPerSample() : 0);
+		return (audioBuffer_ != nullptr ? audioBuffer_->bytesPerSample() : 0);
 	}
 
 	int AudioBufferPlayer::numChannels() const
 	{
-		return (audioBuffer_ ? audioBuffer_->numChannels() : 0);
+		return (audioBuffer_ != nullptr ? audioBuffer_->numChannels() : 0);
 	}
 
 	int AudioBufferPlayer::frequency() const
 	{
-		return (audioBuffer_ ? audioBuffer_->frequency() : 0);
+		return (audioBuffer_ != nullptr ? audioBuffer_->frequency() : 0);
 	}
 
 	unsigned long int AudioBufferPlayer::numSamples() const
 	{
-		return (audioBuffer_ ? audioBuffer_->numSamples() : 0UL);
+		return (audioBuffer_ != nullptr ? audioBuffer_->numSamples() : 0UL);
 	}
 
 	float AudioBufferPlayer::duration() const
 	{
-		return (audioBuffer_ ? audioBuffer_->duration() : 0.0f);
+		return (audioBuffer_ != nullptr ? audioBuffer_->duration() : 0.0f);
 	}
 
 	unsigned long int AudioBufferPlayer::bufferSize() const
 	{
-		return (audioBuffer_ ? audioBuffer_->bufferSize() : 0UL);
+		return (audioBuffer_ != nullptr ? audioBuffer_->bufferSize() : 0UL);
 	}
 
 	void AudioBufferPlayer::setAudioBuffer(AudioBuffer* audioBuffer)

@@ -11,13 +11,13 @@ namespace nCine
 		ALenum alFormat(int bytesPerSample, int numChannels)
 		{
 			ALenum format = AL_FORMAT_MONO8;
-			if (bytesPerSample == 1 && numChannels == 2)
+			if (bytesPerSample == 1 && numChannels == 2) {
 				format = AL_FORMAT_STEREO8;
-			else if (bytesPerSample == 2 && numChannels == 1)
+			} else if (bytesPerSample == 2 && numChannels == 1) {
 				format = AL_FORMAT_MONO16;
-			else if (bytesPerSample == 2 && numChannels == 2)
+			} else if (bytesPerSample == 2 && numChannels == 2) {
 				format = AL_FORMAT_STEREO16;
-
+			}
 			return format;
 		}
 
@@ -28,7 +28,7 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	AudioBuffer::AudioBuffer()
-		: Object(ObjectType::AUDIOBUFFER), bufferId_(0),
+		: Object(ObjectType::AudioBuffer), bufferId_(0),
 		bytesPerSample_(0), numChannels_(0), frequency_(0), numSamples_(0), duration_(0.0f)
 	{
 		alGetError();
@@ -116,33 +116,30 @@ namespace nCine
 	bool AudioBuffer::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromMemory(bufferPtr, bufferSize);
-		if (audioLoader->hasLoaded() == false)
+		if (!audioLoader->hasLoaded()) {
 			return false;
+		}
 
 		const bool samplesHaveLoaded = load(*audioLoader.get());
-		if (samplesHaveLoaded == false)
-			return false;
-
-		return true;
+		return samplesHaveLoaded;
 	}
 
 	bool AudioBuffer::loadFromFile(const StringView& filename)
 	{
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromFile(filename);
-		if (audioLoader->hasLoaded() == false)
+		if (!audioLoader->hasLoaded()) {
 			return false;
+		}
 
 		const bool samplesHaveLoaded = load(*audioLoader.get());
-		if (samplesHaveLoaded == false)
-			return false;
-
-		return true;
+		return samplesHaveLoaded;
 	}
 
 	bool AudioBuffer::loadFromSamples(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
-		if (bytesPerSample_ == 0 || numChannels_ == 0 || frequency_ == 0)
+		if (bytesPerSample_ == 0 || numChannels_ == 0 || frequency_ == 0) {
 			return false;
+		}
 
 		if (bufferSize % (bytesPerSample_ * numChannels_) != 0) {
 			LOGW("Buffer size is incompatible with format");
@@ -186,5 +183,4 @@ namespace nCine
 
 		return loadFromSamples(buffer.get(), bufferSize);
 	}
-
 }

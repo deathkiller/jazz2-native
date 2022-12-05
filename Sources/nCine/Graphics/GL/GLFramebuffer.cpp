@@ -143,7 +143,7 @@ namespace nCine {
 
 	void GLFramebuffer::setObjectLabel(const char* label)
 	{
-		GLDebug::objectLabel(GLDebug::LabelTypes::FRAMEBUFFER, glHandle_, label);
+		GLDebug::objectLabel(GLDebug::LabelTypes::FrameBuffer, glHandle_, label);
 	}
 
 	///////////////////////////////////////////////////////////

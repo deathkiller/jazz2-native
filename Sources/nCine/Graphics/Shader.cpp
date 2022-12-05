@@ -20,14 +20,14 @@ namespace nCine
 		GLShaderProgram::Introspection shaderToShaderProgramIntrospection(Shader::Introspection introspection)
 		{
 			switch (introspection) {
-				case Shader::Introspection::ENABLED:
-					return GLShaderProgram::Introspection::ENABLED;
-				case Shader::Introspection::NO_UNIFORMS_IN_BLOCKS:
-					return GLShaderProgram::Introspection::NO_UNIFORMS_IN_BLOCKS;
-				case Shader::Introspection::DISABLED:
-					return GLShaderProgram::Introspection::DISABLED;
+				default:
+				case Shader::Introspection::Enabled:
+					return GLShaderProgram::Introspection::Enabled;
+				case Shader::Introspection::NoUniformsInBlocks:
+					return GLShaderProgram::Introspection::NoUniformsInBlocks;
+				case Shader::Introspection::Disabled:
+					return GLShaderProgram::Introspection::Disabled;
 			}
-			return GLShaderProgram::Introspection::ENABLED;
 		}
 
 		bool isBatchedVertex(Shader::DefaultVertex vertex)
@@ -50,15 +50,15 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	Shader::Shader()
-		: Object(ObjectType::SHADER),
-		glShaderProgram_(std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::IMMEDIATE))
+		: Object(ObjectType::Shader),
+		glShaderProgram_(std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate))
 	{
 	}
 
 	Shader::Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, const char* vertex, const char* fragment)
 		: Shader()
 	{
-		const bool hasLoaded = (loadMode == LoadMode::STRING)
+		const bool hasLoaded = (loadMode == LoadMode::String)
 			? loadFromMemory(shaderName, introspection, vertex, fragment)
 			: loadFromFile(shaderName, introspection, vertex, fragment);
 
@@ -70,7 +70,7 @@ namespace nCine
 	Shader::Shader(const char* shaderName, LoadMode loadMode, const char* vertex, const char* fragment)
 		: Shader()
 	{
-		const bool hasLoaded = (loadMode == LoadMode::STRING)
+		const bool hasLoaded = (loadMode == LoadMode::String)
 			? loadFromMemory(shaderName, vertex, fragment)
 			: loadFromFile(shaderName, vertex, fragment);
 
@@ -87,7 +87,7 @@ namespace nCine
 	Shader::Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, DefaultVertex vertex, const char* fragment)
 		: Shader()
 	{
-		const bool hasLoaded = (loadMode == LoadMode::STRING)
+		const bool hasLoaded = (loadMode == LoadMode::String)
 			? loadFromMemory(shaderName, introspection, vertex, fragment)
 			: loadFromFile(shaderName, introspection, vertex, fragment);
 
@@ -99,7 +99,7 @@ namespace nCine
 	Shader::Shader(const char* shaderName, LoadMode loadMode, DefaultVertex vertex, const char* fragment)
 		: Shader()
 	{
-		const bool hasLoaded = (loadMode == LoadMode::STRING)
+		const bool hasLoaded = (loadMode == LoadMode::String)
 			? loadFromMemory(shaderName, vertex, fragment)
 			: loadFromFile(shaderName, vertex, fragment);
 
@@ -116,7 +116,7 @@ namespace nCine
 	Shader::Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, const char* vertex, DefaultFragment fragment)
 		: Shader()
 	{
-		const bool hasLoaded = (loadMode == LoadMode::STRING)
+		const bool hasLoaded = (loadMode == LoadMode::String)
 			? loadFromMemory(shaderName, introspection, vertex, fragment)
 			: loadFromFile(shaderName, introspection, vertex, fragment);
 
@@ -128,7 +128,7 @@ namespace nCine
 	Shader::Shader(const char* shaderName, LoadMode loadMode, const char* vertex, DefaultFragment fragment)
 		: Shader()
 	{
-		const bool hasLoaded = (loadMode == LoadMode::STRING)
+		const bool hasLoaded = (loadMode == LoadMode::String)
 			? loadFromMemory(shaderName, vertex, fragment)
 			: loadFromFile(shaderName, vertex, fragment);
 
@@ -171,7 +171,7 @@ namespace nCine
 
 	bool Shader::loadFromMemory(const char* shaderName, const char* vertex, const char* fragment)
 	{
-		return loadFromMemory(shaderName, Introspection::ENABLED, vertex, fragment);
+		return loadFromMemory(shaderName, Introspection::Enabled, vertex, fragment);
 	}
 
 	bool Shader::loadFromMemory(const char* vertex, const char* fragment)
@@ -199,7 +199,7 @@ namespace nCine
 
 	bool Shader::loadFromMemory(const char* shaderName, DefaultVertex vertex, const char* fragment)
 	{
-		const Introspection introspection = isBatchedVertex(vertex) ? Introspection::NO_UNIFORMS_IN_BLOCKS : Introspection::ENABLED;
+		const Introspection introspection = (isBatchedVertex(vertex) ? Introspection::NoUniformsInBlocks : Introspection::Enabled);
 		return loadFromMemory(shaderName, introspection, vertex, fragment);
 	}
 
@@ -228,7 +228,7 @@ namespace nCine
 
 	bool Shader::loadFromMemory(const char* shaderName, const char* vertex, DefaultFragment fragment)
 	{
-		return loadFromMemory(shaderName, Introspection::ENABLED, vertex, fragment);
+		return loadFromMemory(shaderName, Introspection::Enabled, vertex, fragment);
 	}
 
 	bool Shader::loadFromMemory(const char* vertex, DefaultFragment fragment)
@@ -256,7 +256,7 @@ namespace nCine
 
 	bool Shader::loadFromFile(const char* shaderName, const char* vertex, const char* fragment)
 	{
-		return loadFromFile(shaderName, Introspection::ENABLED, vertex, fragment);
+		return loadFromFile(shaderName, Introspection::Enabled, vertex, fragment);
 	}
 
 	bool Shader::loadFromFile(const char* vertex, const char* fragment)
@@ -284,7 +284,7 @@ namespace nCine
 
 	bool Shader::loadFromFile(const char* shaderName, DefaultVertex vertex, const char* fragment)
 	{
-		const Introspection introspection = isBatchedVertex(vertex) ? Introspection::NO_UNIFORMS_IN_BLOCKS : Introspection::ENABLED;
+		const Introspection introspection = (isBatchedVertex(vertex) ? Introspection::NoUniformsInBlocks : Introspection::Enabled);
 		return loadFromFile(shaderName, introspection, vertex, fragment);
 	}
 
@@ -313,7 +313,7 @@ namespace nCine
 
 	bool Shader::loadFromFile(const char* shaderName, const char* vertex, DefaultFragment fragment)
 	{
-		return loadFromFile(shaderName, Introspection::ENABLED, vertex, fragment);
+		return loadFromFile(shaderName, Introspection::Enabled, vertex, fragment);
 	}
 
 	bool Shader::loadFromFile(const char* vertex, DefaultFragment fragment)

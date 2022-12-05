@@ -6,13 +6,8 @@
 #include "../../Common.h"
 #include "../tracy.h"
 
-namespace nCine {
-
-	//namespace {
-	//	/// The string used to output OpenGL debug group information
-	//	static char debugString[64];
-	//}
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -21,16 +16,16 @@ namespace nCine {
 	{
 		buffers_.reserve(4);
 
-		BufferSpecifications& vboSpecs = specs_[(int)BufferTypes::ARRAY];
-		vboSpecs.type = BufferTypes::ARRAY;
+		BufferSpecifications& vboSpecs = specs_[(int)BufferTypes::Array];
+		vboSpecs.type = BufferTypes::Array;
 		vboSpecs.target = GL_ARRAY_BUFFER;
 		vboSpecs.mapFlags = useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0;
 		vboSpecs.usageFlags = GL_STREAM_DRAW;
 		vboSpecs.maxSize = vboMaxSize;
 		vboSpecs.alignment = sizeof(GLfloat);
 
-		BufferSpecifications& iboSpecs = specs_[(int)BufferTypes::ELEMENT_ARRAY];
-		iboSpecs.type = BufferTypes::ELEMENT_ARRAY;
+		BufferSpecifications& iboSpecs = specs_[(int)BufferTypes::ElementArray];
+		iboSpecs.type = BufferTypes::ElementArray;
 		iboSpecs.target = GL_ELEMENT_ARRAY_BUFFER;
 		iboSpecs.mapFlags = useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0;
 		iboSpecs.usageFlags = GL_STREAM_DRAW;
@@ -44,8 +39,8 @@ namespace nCine {
 		// Clamping the value as some drivers report a maximum size similar to SSBO one
 		const int uboMaxSize = maxUniformBlockSize <= 64 * 1024 ? maxUniformBlockSize : 64 * 1024;
 
-		BufferSpecifications& uboSpecs = specs_[(int)BufferTypes::UNIFORM];
-		uboSpecs.type = BufferTypes::UNIFORM;
+		BufferSpecifications& uboSpecs = specs_[(int)BufferTypes::Uniform];
+		uboSpecs.type = BufferTypes::Uniform;
 		uboSpecs.target = GL_UNIFORM_BUFFER;
 		uboSpecs.mapFlags = useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0;
 		uboSpecs.usageFlags = GL_STREAM_DRAW;
@@ -53,28 +48,26 @@ namespace nCine {
 		uboSpecs.alignment = static_cast<unsigned int>(offsetAlignment);
 
 		// Create the first buffer for each type right away
-		for (unsigned int i = 0; i < (int)BufferTypes::COUNT; i++)
+		for (unsigned int i = 0; i < (int)BufferTypes::Count; i++) {
 			createBuffer(specs_[i]);
+		}
 	}
 
 	///////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	namespace {
-
+	namespace
+	{
 		const char* bufferTypeToString(RenderBuffersManager::BufferTypes type)
 		{
 			switch (type) {
-				case RenderBuffersManager::BufferTypes::ARRAY: return "Array";
-				case RenderBuffersManager::BufferTypes::ELEMENT_ARRAY: return "Element Array";
-				case RenderBuffersManager::BufferTypes::UNIFORM: return "Uniform";
-				case RenderBuffersManager::BufferTypes::COUNT: return "";
+				case RenderBuffersManager::BufferTypes::Array: return "Array";
+				case RenderBuffersManager::BufferTypes::ElementArray: return "Element Array";
+				case RenderBuffersManager::BufferTypes::Uniform: return "Uniform";
+				default: return "";
 			}
-
-			return "";
 		}
-
 	}
 
 	RenderBuffersManager::Parameters RenderBuffersManager::acquireMemory(BufferTypes type, unsigned long bytes, unsigned int alignment)
@@ -83,8 +76,9 @@ namespace nCine {
 						   bytes, bufferTypeToString(type), specs_[(int)type].maxSize);
 
 		// Accepting a custom alignment only if it is a multiple of the specification one
-		if (alignment % specs_[(int)type].alignment != 0)
+		if (alignment % specs_[(int)type].alignment != 0) {
 			alignment = specs_[(int)type].alignment;
+		}
 
 		Parameters params;
 
@@ -132,11 +126,13 @@ namespace nCine {
 			buffer.freeSpace = buffer.size;
 
 			if (specs_[(int)buffer.type].mapFlags == 0) {
-				if (usedSize > 0)
+				if (usedSize > 0) {
 					buffer.object->bufferSubData(0, usedSize, buffer.hostBuffer.get());
+				}
 			} else {
-				if (usedSize > 0)
+				if (usedSize > 0) {
 					buffer.object->flushMappedBufferRange(0, usedSize);
+				}
 				buffer.object->unmap();
 			}
 
@@ -156,9 +152,9 @@ namespace nCine {
 			if (specs_[(int)buffer.type].mapFlags == 0) {
 				buffer.object->bufferData(buffer.size, nullptr, specs_[(int)buffer.type].usageFlags);
 				buffer.mapBase = buffer.hostBuffer.get();
-			} else
+			} else {
 				buffer.mapBase = static_cast<GLubyte*>(buffer.object->mapBufferRange(0, buffer.size, specs_[(int)buffer.type].mapFlags));
-
+			}
 			FATAL_ASSERT(buffer.mapBase != nullptr);
 		}
 	}
@@ -175,13 +171,13 @@ namespace nCine {
 
 		switch (managedBuffer.type) {
 			default:
-			case BufferTypes::ARRAY:
+			case BufferTypes::Array:
 				managedBuffer.object->setObjectLabel("Vertex_ManagedBuffer");
 				break;
-			case BufferTypes::ELEMENT_ARRAY:
+			case BufferTypes::ElementArray:
 				managedBuffer.object->setObjectLabel("Index_ManagedBuffer");
 				break;
-			case BufferTypes::UNIFORM:
+			case BufferTypes::Uniform:
 				managedBuffer.object->setObjectLabel("Uniform_ManagedBuffer");
 				break;
 		}
@@ -189,13 +185,14 @@ namespace nCine {
 		if (specs.mapFlags == 0) {
 			managedBuffer.hostBuffer = std::make_unique<GLubyte[]>(specs.maxSize);
 			managedBuffer.mapBase = managedBuffer.hostBuffer.get();
-		} else
+		} else {
 			managedBuffer.mapBase = static_cast<GLubyte*>(managedBuffer.object->mapBufferRange(0, managedBuffer.size, specs.mapFlags));
+		}
 
 		FATAL_ASSERT(managedBuffer.mapBase != nullptr);
 
+		// TODO: GLDebug
 		//debugString.format("Create %s buffer 0x%lx", bufferTypeToString(specs.type), uintptr_t(buffers_.back().object.get()));
 		//GLDebug::messageInsert(debugString.data());
 	}
-
 }

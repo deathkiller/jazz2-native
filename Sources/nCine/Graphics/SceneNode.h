@@ -23,9 +23,9 @@ namespace nCine
 	public:
 		enum class VisitOrderState
 		{
-			ENABLED,
-			DISABLED,
-			SAME_AS_PARENT
+			Disabled,
+			Enabled,
+			SameAsParent
 		};
 
 		/// The minimum amount of rotation to trigger a sine and cosine calculation
@@ -53,7 +53,7 @@ namespace nCine
 		}
 
 		inline static ObjectType sType() {
-			return ObjectType::SCENENODE;
+			return ObjectType::SceneNode;
 		}
 
 		/// Returns the parent as a constant node, if there is any

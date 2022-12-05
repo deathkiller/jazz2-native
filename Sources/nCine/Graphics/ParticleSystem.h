@@ -88,7 +88,7 @@ namespace nCine
 		void OnUpdate(float timeMult) override;
 
 		inline static ObjectType sType() {
-			return ObjectType::PARTICLE_SYSTEM;
+			return ObjectType::ParticleSystem;
 		}
 
 	protected:

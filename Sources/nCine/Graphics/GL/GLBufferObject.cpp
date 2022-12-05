@@ -165,7 +165,7 @@ namespace nCine
 
 	void GLBufferObject::setObjectLabel(const char* label)
 	{
-		GLDebug::objectLabel(GLDebug::LabelTypes::BUFFER, glHandle_, label);
+		GLDebug::objectLabel(GLDebug::LabelTypes::Buffer, glHandle_, label);
 	}
 
 	///////////////////////////////////////////////////////////

@@ -20,7 +20,7 @@ namespace nCine
 	}
 
 	RenderCommand::RenderCommand()
-		: RenderCommand(CommandTypes::UNSPECIFIED)
+		: RenderCommand(CommandTypes::Unspecified)
 	{
 	}
 
@@ -39,21 +39,24 @@ namespace nCine
 	{
 		ZoneScoped;
 
-		if (geometry_.numVertices_ == 0 && geometry_.numIndices_ == 0)
+		if (geometry_.numVertices_ == 0 && geometry_.numIndices_ == 0) {
 			return;
+		}
 
 		material_.bind();
 		material_.commitUniforms();
 
 		GLScissorTest::State scissorTestState = GLScissorTest::state();
-		if (scissorRect_.W > 0 && scissorRect_.H > 0)
+		if (scissorRect_.W > 0 && scissorRect_.H > 0) {
 			GLScissorTest::enable(scissorRect_);
+		}
 
 		unsigned int offset = 0;
 #if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 		// Simulating missing `glDrawElementsBaseVertex()` on OpenGL ES 3.0
-		if (geometry_.numIndices_ > 0)
+		if (geometry_.numIndices_ > 0) {
 			offset = geometry_.vboParams().offset + (geometry_.firstVertex_ * geometry_.numElementsPerVertex_ * sizeof(GLfloat));
+		}
 #endif
 		material_.defineVertexFormat(geometry_.vboParams().object, geometry_.iboParams().object, offset);
 		geometry_.bind();
@@ -75,15 +78,16 @@ namespace nCine
 
 	void RenderCommand::commitNodeTransformation()
 	{
-		if (transformationCommitted_)
+		if (transformationCommitted_) {
 			return;
+		}
 
 		ZoneScoped;
 
 		const Camera::ProjectionValues cameraValues = RenderResources::currentCamera()->projectionValues();
 		modelMatrix_[3][2] = calculateDepth(layer_, cameraValues.near, cameraValues.far);
 
-		if (material_.shaderProgram_ && material_.shaderProgram_->status() == GLShaderProgram::Status::LINKED_WITH_INTROSPECTION) {
+		if (material_.shaderProgram_ && material_.shaderProgram_->status() == GLShaderProgram::Status::LinkedWithIntrospection) {
 			GLUniformBlockCache* instanceBlock = material_.uniformBlock(Material::InstanceBlockName);
 			GLUniformCache* matrixUniform = instanceBlock
 				? instanceBlock->uniform(Material::ModelMatrixUniformName)
@@ -113,8 +117,9 @@ namespace nCine
 
 				RenderResources::insertCameraUniformData(material_.shaderProgram_, std::move(newCameraUniformData));
 			}
-		} else
+		} else {
 			cameraUniformData->shaderUniforms.commitUniforms();
+		}
 	}
 
 	void RenderCommand::commitAll()
@@ -135,8 +140,6 @@ namespace nCine
 	float RenderCommand::calculateDepth(uint16_t layer, float near, float far)
 	{
 		// The layer translates to depth, from near to far
-		const float depth = near + LayerStep + (far - near - LayerStep) * layer * LayerStep;
-		return depth;
+		return near + LayerStep + (far - near - LayerStep) * layer * LayerStep;
 	}
-
 }

@@ -11,17 +11,17 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	AudioStreamPlayer::AudioStreamPlayer()
-		: IAudioPlayer(ObjectType::AUDIOSTREAM_PLAYER), audioStream_()
+		: IAudioPlayer(ObjectType::AudioStreamPlayer), audioStream_()
 	{
 	}
 
 	AudioStreamPlayer::AudioStreamPlayer(const unsigned char* bufferPtr, unsigned long int bufferSize)
-		: IAudioPlayer(ObjectType::AUDIOSTREAM_PLAYER), audioStream_(bufferPtr, bufferSize)
+		: IAudioPlayer(ObjectType::AudioStreamPlayer), audioStream_(bufferPtr, bufferSize)
 	{
 	}
 
 	AudioStreamPlayer::AudioStreamPlayer(const StringView& filename)
-		: IAudioPlayer(ObjectType::AUDIOSTREAM_PLAYER), audioStream_(filename)
+		: IAudioPlayer(ObjectType::AudioStreamPlayer), audioStream_(filename)
 	{
 	}
 
@@ -153,5 +153,4 @@ namespace nCine
 			}
 		}
 	}
-
 }

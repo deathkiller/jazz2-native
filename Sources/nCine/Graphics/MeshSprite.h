@@ -144,7 +144,7 @@ namespace nCine
 		unsigned short* emplaceIndices(unsigned int numIndices);
 
 		inline static ObjectType sType() {
-			return ObjectType::MESH_SPRITE;
+			return ObjectType::MeshSprite;
 		}
 
 	protected:

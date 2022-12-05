@@ -25,7 +25,7 @@ namespace nCine
 	AnimatedSprite::AnimatedSprite(SceneNode* parent, Texture* texture, float xx, float yy)
 		: Sprite(parent, texture, xx, yy), anims_(4), currentAnimIndex_(0)
 	{
-		type_ = ObjectType::ANIMATED_SPRITE;
+		type_ = ObjectType::AnimatedSprite;
 	}
 
 	AnimatedSprite::AnimatedSprite(SceneNode* parent, Texture* texture, const Vector2f& position)
@@ -50,26 +50,29 @@ namespace nCine
 	bool AnimatedSprite::isPaused() const
 	{
 		bool isPaused = true;
-		if (anims_.empty() == false)
+		if (!anims_.empty()) {
 			isPaused = anims_[currentAnimIndex_].isPaused();
+		}
 		return isPaused;
 	}
 
 	void AnimatedSprite::setPaused(bool isPaused)
 	{
-		if (anims_.empty() == false)
+		if (!anims_.empty()) {
 			anims_[currentAnimIndex_].setPaused(isPaused);
+		}
 	}
 
 	void AnimatedSprite::OnUpdate(float timeMult)
 	{
-		if (anims_.empty() == false) {
+		if (!anims_.empty()) {
 			const unsigned int previousFrame = anims_[currentAnimIndex_].frame();
 			anims_[currentAnimIndex_].updateFrame(timeMult);
 
 			// Updating sprite texture rectangle only on change
-			if (previousFrame != anims_[currentAnimIndex_].frame())
+			if (previousFrame != anims_[currentAnimIndex_].frame()) {
 				setTexRect(anims_[currentAnimIndex_].rect());
+			}
 		}
 
 		Sprite::OnUpdate(timeMult);
@@ -96,7 +99,7 @@ namespace nCine
 
 	void AnimatedSprite::setAnimationIndex(unsigned int animIndex)
 	{
-		if (anims_.empty() == false) {
+		if (!anims_.empty()) {
 			ASSERT(animIndex < anims_.size());
 			currentAnimIndex_ = animIndex;
 			setTexRect(anims_[currentAnimIndex_].rect());
@@ -106,30 +109,33 @@ namespace nCine
 	RectAnimation* AnimatedSprite::currentAnimation()
 	{
 		RectAnimation* currentAnim = nullptr;
-		if (anims_.empty() == false)
+		if (!anims_.empty()) {
 			currentAnim = &anims_[currentAnimIndex_];
+		}
 		return currentAnim;
 	}
 
 	const RectAnimation* AnimatedSprite::currentAnimation() const
 	{
 		const RectAnimation* currentAnim = nullptr;
-		if (anims_.empty() == false)
+		if (!anims_.empty()) {
 			currentAnim = &anims_[currentAnimIndex_];
+		}
 		return currentAnim;
 	}
 
 	unsigned int AnimatedSprite::frame() const
 	{
 		unsigned int frame = 0;
-		if (anims_.empty() == false)
+		if (!anims_.empty()) {
 			frame = anims_[currentAnimIndex_].frame();
+		}
 		return frame;
 	}
 
 	void AnimatedSprite::setFrame(unsigned int frameNum)
 	{
-		if (anims_.empty() == false) {
+		if (!anims_.empty()) {
 			anims_[currentAnimIndex_].setFrame(frameNum);
 			setTexRect(anims_[currentAnimIndex_].rect());
 		}
@@ -142,8 +148,7 @@ namespace nCine
 	AnimatedSprite::AnimatedSprite(const AnimatedSprite& other)
 		: Sprite(other), anims_(other.anims_), currentAnimIndex_(other.currentAnimIndex_)
 	{
-		type_ = ObjectType::ANIMATED_SPRITE;
+		type_ = ObjectType::AnimatedSprite;
 		setFrame(other.frame());
 	}
-
 }

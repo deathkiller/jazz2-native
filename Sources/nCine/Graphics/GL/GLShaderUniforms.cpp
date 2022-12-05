@@ -34,22 +34,24 @@ namespace nCine
 
 	void GLShaderUniforms::setProgram(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
 	{
-		ASSERT(shaderProgram);
+		ASSERT(shaderProgram != nullptr);
 
 		shaderProgram_ = shaderProgram;
 		shaderProgram_->deferredQueries();
 		uniformCaches_.clear();
 
-		if (shaderProgram_->status() == GLShaderProgram::Status::LINKED_WITH_INTROSPECTION)
+		if (shaderProgram_->status() == GLShaderProgram::Status::LinkedWithIntrospection) {
 			importUniforms(includeOnly, exclude);
+		}
 	}
 
 	void GLShaderUniforms::setUniformsDataPointer(GLubyte* dataPointer)
 	{
-		ASSERT(dataPointer);
+		ASSERT(dataPointer != nullptr);
 
-		if (shaderProgram_->status() != GLShaderProgram::Status::LINKED_WITH_INTROSPECTION)
+		if (shaderProgram_->status() != GLShaderProgram::Status::LinkedWithIntrospection) {
 			return;
+		}
 
 		unsigned int offset = 0;
 		for (GLUniformCache& uniformCache : uniformCaches_) {
@@ -60,8 +62,9 @@ namespace nCine
 
 	void GLShaderUniforms::setDirty(bool isDirty)
 	{
-		if (shaderProgram_->status() != GLShaderProgram::Status::LINKED_WITH_INTROSPECTION)
+		if (shaderProgram_->status() != GLShaderProgram::Status::LinkedWithIntrospection) {
 			return;
+		}
 
 		for (auto& uniform : uniformCaches_) {
 			uniform.setDirty(isDirty);
@@ -70,10 +73,10 @@ namespace nCine
 
 	GLUniformCache* GLShaderUniforms::uniform(const char* name)
 	{
-		ASSERT(name);
+		ASSERT(name != nullptr);
 		GLUniformCache* uniformCache = nullptr;
 
-		if (shaderProgram_) {
+		if (shaderProgram_ != nullptr) {
 			uniformCache = uniformCaches_.find(String::nullTerminatedView(name));
 		} else {
 			LOGE_X("Cannot find uniform \"%s\", no shader program associated", name);
@@ -83,8 +86,8 @@ namespace nCine
 
 	void GLShaderUniforms::commitUniforms()
 	{
-		if (shaderProgram_) {
-			if (shaderProgram_->status() == GLShaderProgram::Status::LINKED_WITH_INTROSPECTION) {
+		if (shaderProgram_ != nullptr) {
+			if (shaderProgram_->status() == GLShaderProgram::Status::LinkedWithIntrospection) {
 				shaderProgram_->use();
 				for (auto& uniform : uniformCaches_) {
 					uniform.commitValue();
@@ -142,5 +145,4 @@ namespace nCine
 			LOGW_X("More imported uniform blocks (%d) than hashmap buckets (%d)", importedCount, UniformCachesHashSize);
 		}
 	}
-
 }

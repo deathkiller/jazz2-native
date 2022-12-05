@@ -1070,10 +1070,10 @@ namespace Jazz2::Tiles
 			_camera->setOrthoProjection(0, width, 0, height);
 			_camera->setView(0, 0, 0, 1);
 			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
-			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);
+			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_view->setRootNode(this);
 			_view->setCamera(_camera.get());
-			_view->setClearMode(Viewport::ClearMode::NEVER);
+			_view->setClearMode(Viewport::ClearMode::Never);
 			_target->setMagFiltering(SamplerFilter::Linear);
 			_target->setWrap(SamplerWrapping::Repeat);
 

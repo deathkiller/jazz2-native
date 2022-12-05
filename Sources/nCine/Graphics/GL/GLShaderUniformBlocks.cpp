@@ -61,7 +61,7 @@ namespace nCine
 		shaderProgram_->deferredQueries();
 		uniformBlockCaches_.clear();
 
-		if (shaderProgram->status() == GLShaderProgram::Status::LINKED_WITH_INTROSPECTION) {
+		if (shaderProgram->status() == GLShaderProgram::Status::LinkedWithIntrospection) {
 			importUniformBlocks(includeOnly, exclude);
 		}
 	}
@@ -70,7 +70,7 @@ namespace nCine
 	{
 		ASSERT(dataPointer);
 
-		if (shaderProgram_->status() != GLShaderProgram::Status::LINKED_WITH_INTROSPECTION) {
+		if (shaderProgram_->status() != GLShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
@@ -87,7 +87,7 @@ namespace nCine
 		ASSERT(name);
 		GLUniformBlockCache* uniformBlockCache = nullptr;
 
-		if (shaderProgram_) {
+		if (shaderProgram_ != nullptr) {
 			uniformBlockCache = uniformBlockCaches_.find(String::nullTerminatedView(name));
 		} else {
 			LOGE_X("Cannot find uniform block \"%s\", no shader program associated", name);
@@ -97,29 +97,31 @@ namespace nCine
 
 	void GLShaderUniformBlocks::commitUniformBlocks()
 	{
-		if (shaderProgram_) {
-			if (shaderProgram_->status() == GLShaderProgram::Status::LINKED_WITH_INTROSPECTION) {
+		if (shaderProgram_ != nullptr) {
+			if (shaderProgram_->status() == GLShaderProgram::Status::LinkedWithIntrospection) {
 				int totalUsedSize = 0;
 				bool hasMemoryGaps = false;
 				for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
 					// There is a gap if at least one block cache (not in last position) uses less memory than its size
-					if (uniformBlockCache.dataPointer() != dataPointer_ + totalUsedSize)
+					if (uniformBlockCache.dataPointer() != dataPointer_ + totalUsedSize) {
 						hasMemoryGaps = true;
+					}
 					totalUsedSize += uniformBlockCache.usedSize();
 				}
 
 				if (totalUsedSize > 0) {
-					const RenderBuffersManager::BufferTypes bufferType = RenderBuffersManager::BufferTypes::UNIFORM;
+					const RenderBuffersManager::BufferTypes bufferType = RenderBuffersManager::BufferTypes::Uniform;
 					uboParams_ = RenderResources::buffersManager().acquireMemory(bufferType, totalUsedSize);
-					if (uboParams_.mapBase) {
+					if (uboParams_.mapBase != nullptr) {
 						if (hasMemoryGaps) {
 							int offset = 0;
 							for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
-								memcpy(uboParams_.mapBase + uboParams_.offset + offset, uniformBlockCache.dataPointer(), uniformBlockCache.usedSize());
+								std::memcpy(uboParams_.mapBase + uboParams_.offset + offset, uniformBlockCache.dataPointer(), uniformBlockCache.usedSize());
 								offset += uniformBlockCache.usedSize();
 							}
-						} else
-							memcpy(uboParams_.mapBase + uboParams_.offset, dataPointer_, totalUsedSize);
+						} else {
+							std::memcpy(uboParams_.mapBase + uboParams_.offset, dataPointer_, totalUsedSize);
+						}
 					}
 				}
 			}
@@ -174,5 +176,4 @@ namespace nCine
 			LOGW_X("More imported uniform blocks (%d) than hashmap buckets (%d)", importedCount, UniformBlockCachesHashSize);
 		}
 	}
-
 }

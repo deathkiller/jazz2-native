@@ -8,20 +8,20 @@ namespace nCine
 	public:
 		/// Object types
 		enum class ObjectType {
-			BASE = 0,
-			TEXTURE,
-			SHADER,
-			SCENENODE,
-			SPRITE,
-			MESH_SPRITE,
-			ANIMATED_SPRITE,
-			PARTICLE,
-			PARTICLE_SYSTEM,
-			//FONT,
-			//TEXTNODE,
-			AUDIOBUFFER,
-			AUDIOBUFFER_PLAYER,
-			AUDIOSTREAM_PLAYER
+			Base = 0,
+			Texture,
+			Shader,
+			SceneNode,
+			Sprite,
+			MeshSprite,
+			AnimatedSprite,
+			Particle,
+			ParticleSystem,
+			//Font,
+			//TextNode,
+			AudioBuffer,
+			AudioBufferPlayer,
+			AudioStreamPlayer
 		};
 
 		/// Constructs an object with a specified type and adds it to the index
@@ -45,7 +45,7 @@ namespace nCine
 		}
 		/// Static method to return class type
 		inline static ObjectType sType() {
-			return ObjectType::BASE;
+			return ObjectType::Base;
 		}
 
 		/// Returns a casted pointer to the object with the specified id, if any exists

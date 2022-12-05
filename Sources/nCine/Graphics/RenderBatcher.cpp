@@ -223,8 +223,8 @@ namespace nCine
 			}
 		}
 
-		const unsigned long maxVertexDataSize = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ARRAY).maxSize;
-		const unsigned long maxIndexDataSize = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ELEMENT_ARRAY).maxSize;
+		const unsigned long maxVertexDataSize = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::Array).maxSize;
+		const unsigned long maxIndexDataSize = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ElementArray).maxSize;
 		// Sum the amount of VBO and IBO memory required by the batch
 		it = start;
 		const bool refShaderHasAttributes = (refShader->numAttributes() > 0);

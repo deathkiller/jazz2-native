@@ -62,14 +62,13 @@ namespace nCine
 	void Sprite::init()
 	{
 		ZoneScoped;
-		/*if (texture_ && texture_->name() != nullptr)
-		{
+		/*if (texture_ != nullptr && texture_->name() != nullptr){
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(texture_->name(), nctl::strnlen(texture_->name(), Object::MaxNameLength));
 		}*/
 
-		type_ = ObjectType::SPRITE;
-		renderCommand_.setType(RenderCommand::CommandTypes::SPRITE);
+		type_ = ObjectType::Sprite;
+		renderCommand_.setType(RenderCommand::CommandTypes::Sprite);
 
 		Material::ShaderProgramType shaderProgramType;
 		if (texture_) {
@@ -82,7 +81,7 @@ namespace nCine
 		shaderHasChanged();
 		renderCommand_.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-		if (texture_) {
+		if (texture_ != nullptr) {
 			setTexRect(Recti(0, 0, texture_->width(), texture_->height()));
 		}
 	}
@@ -91,7 +90,7 @@ namespace nCine
 	{
 		if (renderCommand_.material().shaderProgramType() != Material::ShaderProgramType::CUSTOM) {
 			Material::ShaderProgramType shaderProgramType;
-			if (newTexture) {
+			if (newTexture != nullptr) {
 				//shaderProgramType = (newTexture->numChannels() >= 3 ? Material::ShaderProgramType::SPRITE : Material::ShaderProgramType::SPRITE_GRAY);
 				shaderProgramType = Material::ShaderProgramType::SPRITE;
 			} else {
@@ -103,17 +102,16 @@ namespace nCine
 			}
 		}
 
-		if (texture_ && newTexture && texture_ != newTexture) {
+		if (texture_ != nullptr && newTexture != nullptr && texture_ != newTexture) {
 			Recti texRect = texRect_;
 			texRect.X = (int)((texRect.X / float(texture_->width())) * float(newTexture->width()));
 			texRect.Y = (int)((texRect.Y / float(texture_->height())) * float(newTexture->width()));
 			texRect.W = (int)((texRect.W / float(texture_->width())) * float(newTexture->width()));
 			texRect.H = (int)((texRect.H / float(texture_->height())) * float(newTexture->width()));
 			setTexRect(texRect); // it also sets width_ and height_
-		} else if (texture_ == nullptr && newTexture) {
+		} else if (texture_ == nullptr && newTexture != nullptr) {
 			// Assigning a texture when there wasn't any
 			setTexRect(Recti(0, 0, newTexture->width(), newTexture->height()));
 		}
 	}
-
 }

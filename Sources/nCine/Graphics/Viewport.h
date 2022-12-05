@@ -27,35 +27,35 @@ namespace nCine
 		enum class Type
 		{
 			/// The viewport renders in one or more textures
-			WITH_TEXTURE,
+			WithTexture,
 			/// The viewport has no texture of its own, it uses the one from the previous viewport
-			NO_TEXTURE,
+			NoTexture,
 			/// The viewport is the screen
-			SCREEN
+			Screen
 		};
 
 		/// The clear mode for a viewport with a texture or for the screen
 		enum class ClearMode
 		{
 			/// The viewport is cleared every time it is drawn
-			EVERY_DRAW,
+			EveryDraw,
 			/// The viewport is cleared once per frame (default behavior)
-			EVERY_FRAME,
+			EveryFrame,
 			/// The viewport is cleared only once, at this frame
-			THIS_FRAME_ONLY,
+			ThisFrameOnly,
 			/// The viewport is cleared only once, at next frame
-			NEXT_FRAME_ONLY,
+			NextFrameOnly,
 			/// The viewport is never cleared
-			NEVER
+			Never
 		};
 
 		/// The depth and stencil format for a viewport with a texture or for the screen
 		enum class DepthStencilFormat
 		{
-			NONE,
-			DEPTH16,
-			DEPTH24,
-			DEPTH24_STENCIL8
+			None,
+			Depth16,
+			Depth24,
+			Depth24_Stencil8
 		};
 
 		/// Creates a new viewport with the specified name and texture, plus a depth and stencil renderbuffer
@@ -266,5 +266,4 @@ namespace nCine
 		friend class Application;
 		friend class ScreenViewport;
 	};
-
 }

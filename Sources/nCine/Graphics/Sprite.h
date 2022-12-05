@@ -34,7 +34,7 @@ namespace nCine
 		}
 
 		inline static ObjectType sType() {
-			return ObjectType::SPRITE;
+			return ObjectType::Sprite;
 		}
 
 	protected:

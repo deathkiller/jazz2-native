@@ -2,8 +2,6 @@
 
 #include "RenderCommand.h"
 
-#include <string>
-
 namespace nCine
 {
 	/// A class to gather statistics about the rendering subsystem
@@ -177,12 +175,9 @@ namespace nCine
 		}
 
 	private:
-		/// The string used to output OpenGL debug group information
-		static std::string debugString_;
-
 		static Commands allCommands_;
-		static Commands typedCommands_[(int)RenderCommand::CommandTypes::COUNT];
-		static Buffers typedBuffers_[(int)RenderBuffersManager::BufferTypes::COUNT];
+		static Commands typedCommands_[(int)RenderCommand::CommandTypes::Count];
+		static Buffers typedBuffers_[(int)RenderBuffersManager::BufferTypes::Count];
 		static Textures textures_;
 		static CustomBuffers customVbos_;
 		static CustomBuffers customIbos_;

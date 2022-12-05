@@ -17,16 +17,16 @@ namespace nCine
 	public:
 		enum class Status
 		{
-			NOT_COMPILED,
-			COMPILATION_FAILED,
-			COMPILED,
-			COMPILED_WITH_DEFERRED_CHECKS
+			NotCompiled,
+			CompilationFailed,
+			Compiled,
+			CompiledWithDeferredChecks
 		};
 
 		enum class ErrorChecking
 		{
-			IMMEDIATE,
-			DEFERRED
+			Immediate,
+			Deferred
 		};
 
 		explicit GLShader(GLenum type);

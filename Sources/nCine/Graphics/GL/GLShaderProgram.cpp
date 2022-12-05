@@ -24,13 +24,13 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	GLShaderProgram::GLShaderProgram()
-		: GLShaderProgram(QueryPhase::IMMEDIATE)
+		: GLShaderProgram(QueryPhase::Immediate)
 	{
 	}
 
 	GLShaderProgram::GLShaderProgram(QueryPhase queryPhase)
 		: glHandle_(0),
-		status_(Status::NOT_LINKED), queryPhase_(queryPhase), shouldLogOnErrors_(true),
+		status_(Status::NotLinked), queryPhase_(queryPhase), shouldLogOnErrors_(true),
 		uniformsSize_(0), uniformBlocksSize_(0)
 	{
 		glHandle_ = glCreateProgram();
@@ -47,17 +47,18 @@ namespace nCine
 		const bool hasCompiledVS = attachShader(GL_VERTEX_SHADER, vertexFile);
 		const bool hasCompiledFS = attachShader(GL_FRAGMENT_SHADER, fragmentFile);
 
-		if (hasCompiledVS && hasCompiledFS)
+		if (hasCompiledVS && hasCompiledFS) {
 			link(introspection);
+		}
 	}
 
 	GLShaderProgram::GLShaderProgram(const StringView& vertexFile, const StringView& fragmentFile, Introspection introspection)
-		: GLShaderProgram(vertexFile, fragmentFile, introspection, QueryPhase::IMMEDIATE)
+		: GLShaderProgram(vertexFile, fragmentFile, introspection, QueryPhase::Immediate)
 	{
 	}
 
 	GLShaderProgram::GLShaderProgram(const StringView& vertexFile, const StringView& fragmentFile)
-		: GLShaderProgram(vertexFile, fragmentFile, Introspection::ENABLED, QueryPhase::IMMEDIATE)
+		: GLShaderProgram(vertexFile, fragmentFile, Introspection::Enabled, QueryPhase::Immediate)
 	{
 	}
 
@@ -78,9 +79,9 @@ namespace nCine
 
 	bool GLShaderProgram::isLinked() const
 	{
-		return (status_ == Status::LINKED ||
-				status_ == Status::LINKED_WITH_DEFERRED_QUERIES ||
-				status_ == Status::LINKED_WITH_INTROSPECTION);
+		return (status_ == Status::Linked ||
+				status_ == Status::LinkedWithDeferredQueries ||
+				status_ == Status::LinkedWithIntrospection);
 	}
 
 	unsigned int GLShaderProgram::retrieveInfoLogLength() const
@@ -108,16 +109,16 @@ namespace nCine
 		std::unique_ptr<GLShader> shader = std::make_unique<GLShader>(type, filename);
 		glAttachShader(glHandle_, shader->glHandle());
 
-		const GLShader::ErrorChecking errorChecking = (queryPhase_ == GLShaderProgram::QueryPhase::IMMEDIATE)
-			? GLShader::ErrorChecking::IMMEDIATE
-			: GLShader::ErrorChecking::DEFERRED;
+		const GLShader::ErrorChecking errorChecking = (queryPhase_ == GLShaderProgram::QueryPhase::Immediate)
+			? GLShader::ErrorChecking::Immediate
+			: GLShader::ErrorChecking::Deferred;
 		const bool hasCompiled = shader->compile(errorChecking, shouldLogOnErrors_);
 
 		if (hasCompiled) {
-			GLDebug::objectLabel(GLDebug::LabelTypes::SHADER, shader->glHandle(), filename.data());
+			GLDebug::objectLabel(GLDebug::LabelTypes::Shader, shader->glHandle(), filename.data());
 			attachedShaders_.push_back(std::move(shader));
 		} else {
-			status_ = Status::COMPILATION_FAILED;
+			status_ = Status::CompilationFailed;
 		}
 		return hasCompiled;
 	}
@@ -128,15 +129,15 @@ namespace nCine
 		shader->loadFromString(string);
 		glAttachShader(glHandle_, shader->glHandle());
 
-		const GLShader::ErrorChecking errorChecking = (queryPhase_ == GLShaderProgram::QueryPhase::IMMEDIATE)
-			? GLShader::ErrorChecking::IMMEDIATE
-			: GLShader::ErrorChecking::DEFERRED;
+		const GLShader::ErrorChecking errorChecking = (queryPhase_ == GLShaderProgram::QueryPhase::Immediate)
+			? GLShader::ErrorChecking::Immediate
+			: GLShader::ErrorChecking::Deferred;
 		const bool hasCompiled = shader->compile(errorChecking, shouldLogOnErrors_);
 
 		if (hasCompiled) {
 			attachedShaders_.push_back(std::move(shader));
 		} else {
-			status_ = Status::COMPILATION_FAILED;
+			status_ = Status::CompilationFailed;
 		}
 		return hasCompiled;
 	}
@@ -146,7 +147,7 @@ namespace nCine
 		introspection_ = introspection;
 		glLinkProgram(glHandle_);
 
-		if (queryPhase_ == QueryPhase::IMMEDIATE) {
+		if (queryPhase_ == QueryPhase::Immediate) {
 			const bool linkCheck = checkLinking();
 			if (!linkCheck) {
 				return false;
@@ -162,7 +163,7 @@ namespace nCine
 			performIntrospection();
 			return linkCheck;
 		} else {
-			status_ = GLShaderProgram::Status::LINKED_WITH_DEFERRED_QUERIES;
+			status_ = GLShaderProgram::Status::LinkedWithDeferredQueries;
 			return true;
 		}
 	}
@@ -214,7 +215,7 @@ namespace nCine
 
 	void GLShaderProgram::reset()
 	{
-		if (status_ != Status::NOT_LINKED && status_ != Status::COMPILATION_FAILED) {
+		if (status_ != Status::NotLinked && status_ != Status::CompilationFailed) {
 			uniforms_.clear();
 			uniformBlocks_.clear();
 			attributes_.clear();
@@ -239,12 +240,12 @@ namespace nCine
 			glHandle_ = glCreateProgram();
 		}
 
-		status_ = Status::NOT_LINKED;
+		status_ = Status::NotLinked;
 	}
 
 	void GLShaderProgram::setObjectLabel(const char* label)
 	{
-		GLDebug::objectLabel(GLDebug::LabelTypes::PROGRAM, glHandle_, label);
+		GLDebug::objectLabel(GLDebug::LabelTypes::Program, glHandle_, label);
 	}
 
 	///////////////////////////////////////////////////////////
@@ -253,11 +254,12 @@ namespace nCine
 
 	bool GLShaderProgram::deferredQueries()
 	{
-		if (status_ == GLShaderProgram::Status::LINKED_WITH_DEFERRED_QUERIES) {
+		if (status_ == GLShaderProgram::Status::LinkedWithDeferredQueries) {
 			for (std::unique_ptr<GLShader>& attachedShader : attachedShaders_) {
 				const bool compileCheck = attachedShader->checkCompilation(shouldLogOnErrors_);
-				if (compileCheck == false)
+				if (!compileCheck) {
 					return false;
+				}
 			}
 
 			const bool linkCheck = checkLinking();
@@ -279,7 +281,7 @@ namespace nCine
 
 	bool GLShaderProgram::checkLinking()
 	{
-		if (status_ == Status::LINKED || status_ == Status::LINKED_WITH_INTROSPECTION)
+		if (status_ == Status::Linked || status_ == Status::LinkedWithIntrospection)
 			return true;
 
 		GLint status;
@@ -296,18 +298,18 @@ namespace nCine
 			}
 #endif
 
-			status_ = Status::LINKING_FAILED;
+			status_ = Status::LinkingFailed;
 			return false;
 		}
 
-		status_ = Status::LINKED;
+		status_ = Status::Linked;
 		return true;
 	}
 
 	void GLShaderProgram::performIntrospection()
 	{
-		if (introspection_ != Introspection::DISABLED && status_ != Status::LINKED_WITH_INTROSPECTION) {
-			const GLUniformBlock::DiscoverUniforms discover = (introspection_ == Introspection::NO_UNIFORMS_IN_BLOCKS)
+		if (introspection_ != Introspection::Disabled && status_ != Status::LinkedWithIntrospection) {
+			const GLUniformBlock::DiscoverUniforms discover = (introspection_ == Introspection::NoUniformsInBlocks)
 				? GLUniformBlock::DiscoverUniforms::DISABLED
 				: GLUniformBlock::DiscoverUniforms::ENABLED;
 
@@ -315,7 +317,7 @@ namespace nCine
 			discoverUniformBlocks(discover);
 			discoverAttributes();
 			initVertexFormat();
-			status_ = Status::LINKED_WITH_INTROSPECTION;
+			status_ = Status::LinkedWithIntrospection;
 		}
 	}
 

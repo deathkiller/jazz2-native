@@ -11,8 +11,8 @@ namespace nCine {
 		: Sprite(parent, texture), life_(0.0f), startingLife(0.0f),
 		startingRotation(0.0f), inLocalSpace_(false)
 	{
-		type_ = ObjectType::PARTICLE;
-		renderCommand_.setType(RenderCommand::CommandTypes::PARTICLE);
+		type_ = ObjectType::Particle;
+		renderCommand_.setType(RenderCommand::CommandTypes::Particle);
 		setEnabled(false);
 	}
 
@@ -24,8 +24,8 @@ namespace nCine {
 		: Sprite(other), life_(other.life_), startingLife(other.startingLife),
 		startingRotation(other.startingRotation), inLocalSpace_(other.inLocalSpace_)
 	{
-		type_ = ObjectType::PARTICLE;
-		renderCommand_.setType(RenderCommand::CommandTypes::PARTICLE);
+		type_ = ObjectType::Particle;
+		renderCommand_.setType(RenderCommand::CommandTypes::Particle);
 	}
 
 	///////////////////////////////////////////////////////////

@@ -66,7 +66,7 @@ namespace nCine
 		void updateState() override;
 
 		inline static ObjectType sType() {
-			return ObjectType::AUDIOSTREAM_PLAYER;
+			return ObjectType::AudioStreamPlayer;
 		}
 
 	private:

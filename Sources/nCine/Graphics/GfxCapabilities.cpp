@@ -123,6 +123,7 @@ namespace nCine
 #if defined(NCINE_LOG)
 		logGLInfo();
 		logGLCaps();
+		//logGLExtensions();
 #endif
 	}
 

@@ -10,8 +10,8 @@
 #include "GL/GLDebug.h"
 #include "Camera.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
@@ -25,12 +25,12 @@ namespace nCine {
 
 		const DisplayMode displayMode = theApplication().gfxDevice().displayMode();
 		if (displayMode.depthBits() == 16) {
-			depthStencilFormat_ = DepthStencilFormat::DEPTH16;
+			depthStencilFormat_ = DepthStencilFormat::Depth16;
 		} else if (displayMode.depthBits() == 24) {
-			depthStencilFormat_ = (displayMode.stencilBits() == 8 ? DepthStencilFormat::DEPTH24_STENCIL8 : DepthStencilFormat::DEPTH24);
+			depthStencilFormat_ = (displayMode.stencilBits() == 8 ? DepthStencilFormat::Depth24_Stencil8 : DepthStencilFormat::Depth24);
 		}
 		rootNode_ = &theApplication().rootNode();
-		type_ = Type::SCREEN;
+		type_ = Type::Screen;
 	}
 
 	///////////////////////////////////////////////////////////
@@ -39,8 +39,9 @@ namespace nCine {
 
 	void ScreenViewport::resize(int width, int height)
 	{
-		if (width == width_ && height == height_)
+		if (width == width_ && height == height_) {
 			return;
+		}
 
 		viewportRect_.Set(0, 0, width, height);
 
@@ -60,8 +61,9 @@ namespace nCine {
 	void ScreenViewport::update()
 	{
 		for (int i = (int)chain_.size() - 1; i >= 0; i--) {
-			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::UpdatedBit))
+			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::UpdatedBit)) {
 				chain_[i]->update();
+			}
 		}
 		Viewport::update();
 	}
@@ -69,8 +71,9 @@ namespace nCine {
 	void ScreenViewport::visit()
 	{
 		for (int i = (int)chain_.size() - 1; i >= 0; i--) {
-			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::VisitedBit))
+			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::VisitedBit)) {
 				chain_[i]->visit();
+			}
 		}
 		Viewport::visit();
 	}
@@ -81,8 +84,9 @@ namespace nCine {
 		RenderStatistics::reset();
 
 		for (int i = (int)chain_.size() - 1; i >= 0; i--) {
-			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::CommittedBit))
+			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::CommittedBit)) {
 				chain_[i]->sortAndCommitQueue();
+			}
 		}
 		Viewport::sortAndCommitQueue();
 
@@ -108,5 +112,4 @@ namespace nCine {
 		RenderResources::renderCommandPool().reset();
 		GLDebug::reset();
 	}
-
 }
