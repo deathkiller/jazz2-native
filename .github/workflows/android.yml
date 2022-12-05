@@ -80,7 +80,7 @@ jobs:
   # Testing builds with workarounds
   Workarounds:
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
         - BuildType: Release
