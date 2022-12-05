@@ -16,6 +16,15 @@ jobs:
         include:
         - BuildType: Release
           Platform: x64
+          ArchExts:
+          
+        - BuildType: Release
+          Platform: x64
+          ArchExts: AVX
+          
+        - BuildType: Release
+          Platform: x64
+          ArchExts: AVX2
 
     runs-on: 'windows-latest'
 
@@ -37,17 +46,27 @@ jobs:
         
     - name: 'Configure CMake'
       run: |
+        switch('${{ matrix.Platform }}') {
+          'x86' { $arch = 'Win32' } 
+          'x64' { $arch = 'x64' } 
+        }
+        
         $currentDirectory = Get-Location
         $certBytes = [System.Convert]::FromBase64String("${{ secrets.UWP_CERTIFICATE_FILE }}")
         $certPath = Join-Path -Path $currentDirectory -ChildPath "_cert.pfx"
         [IO.File]::WriteAllBytes("$certPath", $certBytes)
         
-        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION="10.0" -A ${{ matrix.Platform }} -D CMAKE_SYSTEM_PROCESSOR=${{ matrix.Platform }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_UWP_CERTIFICATE_PATH="$certPath" -D NCINE_UWP_CERTIFICATE_PASSWORD="${{ secrets.UWP_CERTIFICATE_PASSWORD }}" -D NCINE_LOG=OFF
+        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION="10.0" -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS="${{ matrix.ArchExts }}" -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_UWP_CERTIFICATE_PATH="$certPath" -D NCINE_UWP_CERTIFICATE_PASSWORD="${{ secrets.UWP_CERTIFICATE_PASSWORD }}" -D NCINE_LOG=OFF
 
     - name: 'Build'
       run: |
+        switch('${{ matrix.Platform }}') {
+          'x86' { $arch = 'Win32' } 
+          'x64' { $arch = 'x64' } 
+        }
+        
         cd .\_build\
-        msbuild ".\Jazz2.sln" -p:Configuration=${{ matrix.BuildType }} -p:Platform=${{ matrix.Platform }} -p:UapAppxPackageBuildMode="Sideload" -p:AppxBundlePlatforms="${{ matrix.Platform }}" -p:AppxPackageDir=".\_out\"
+        msbuild ".\Jazz2.sln" -p:Configuration=${{ matrix.BuildType }} -p:Platform=$arch -p:UapAppxPackageBuildMode="Sideload" -p:AppxBundlePlatforms="${{ matrix.Platform }}" -p:AppxPackageDir=".\_out\"
 
     - name: 'Create Package'
       run: |
@@ -59,9 +78,12 @@ jobs:
         Move-Item -Path "$cerPath" -Destination ".\_package\Jazz2.cer"
         Move-Item -Path "$msixbundlePath" -Destination ".\_package\Jazz2.msixbundle"
         
+        if ('${{ matrix.ArchExts }}') { $artifactPath = 'Jazz2_UWP_${{ matrix.Platform }}_${{ matrix.ArchExts }}' } else { $artifactPath = 'Jazz2_UWP_${{ matrix.Platform }}' }
+        Add-Content -Path $env:GITHUB_ENV -Value "artifactPath=$artifactPath"
+        
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3
       with:
-        name: Jazz2_UWP_${{ matrix.Platform }}
+        name: ${{ env.artifactPath }}
         path: ./_package/
         

@@ -83,7 +83,7 @@ namespace nCine
 		void setFrame(unsigned int frameNum);
 
 		inline static ObjectType sType() {
-			return ObjectType::ANIMATED_SPRITE;
+			return ObjectType::AnimatedSprite;
 		}
 
 	protected:

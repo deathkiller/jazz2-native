@@ -6,19 +6,19 @@ namespace nCine
 	{
 		// clang-format off
 		switch (type) {
-			case Object::ObjectType::BASE:					return "Base";
-			case Object::ObjectType::TEXTURE:				return "Texture";
-			case Object::ObjectType::SHADER:				return "Shader";
-			case Object::ObjectType::SCENENODE:				return "SceneNode";
-			case Object::ObjectType::SPRITE:				return "Sprite";
-			case Object::ObjectType::MESH_SPRITE:			return "MeshSprite";
-			case Object::ObjectType::ANIMATED_SPRITE:		return "AnimatedSprite";
-			case Object::ObjectType::PARTICLE_SYSTEM:		return "ParticleSystem";
-			//case Object::ObjectType::FONT:					return "Font";
-			//case Object::ObjectType::TEXTNODE:				return "TextNode";
-			case Object::ObjectType::AUDIOBUFFER:			return "AudioBuffer";
-			case Object::ObjectType::AUDIOBUFFER_PLAYER:	return "AudioBufferPlayer";
-			case Object::ObjectType::AUDIOSTREAM_PLAYER:	return "AudioStreamPlayer";
+			case Object::ObjectType::Base:					return "Base";
+			case Object::ObjectType::Texture:				return "Texture";
+			case Object::ObjectType::Shader:				return "Shader";
+			case Object::ObjectType::SceneNode:				return "SceneNode";
+			case Object::ObjectType::Sprite:				return "Sprite";
+			case Object::ObjectType::MeshSprite:			return "MeshSprite";
+			case Object::ObjectType::AnimatedSprite:		return "AnimatedSprite";
+			case Object::ObjectType::ParticleSystem:		return "ParticleSystem";
+			//case Object::ObjectType::Font:				return "Font";
+			//case Object::ObjectType::TextNode:			return "TextNode";
+			case Object::ObjectType::AudioBuffer:			return "AudioBuffer";
+			case Object::ObjectType::AudioBufferPlayer:		return "AudioBufferPlayer";
+			case Object::ObjectType::AudioStreamPlayer:		return "AudioStreamPlayer";
 			default:										return "Unknown";
 		}
 		// clang-format on
@@ -53,8 +53,9 @@ namespace nCine
 
 	unsigned int ArrayIndexer::addObject(Object* object)
 	{
-		if (object == nullptr)
+		if (object == nullptr) {
 			return 0;
+		}
 
 		numObjects_++;
 
@@ -79,9 +80,9 @@ namespace nCine
 	{
 		Object* objPtr = nullptr;
 
-		if (id < pointers_.size())
+		if (id < pointers_.size()) {
 			objPtr = pointers_[id];
-
+		}
 		return objPtr;
 	}
 
@@ -93,5 +94,4 @@ namespace nCine
 		}
 		return false;
 	}
-
 }

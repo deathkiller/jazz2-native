@@ -12,7 +12,7 @@ namespace Jazz2::UI
 		_renderCommandsCount(0),
 		_currentRenderQueue(nullptr)
 	{
-		setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
+		setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 	}
 
 	void Canvas::OnUpdate(float timeMult)

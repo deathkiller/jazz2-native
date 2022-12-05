@@ -11,10 +11,10 @@ namespace nCine
 
 	/*! \param parent The parent can be `nullptr` */
 	SceneNode::SceneNode(SceneNode* parent, float x, float y)
-		: Object(ObjectType::SCENENODE),
+		: Object(ObjectType::SceneNode),
 		updateEnabled_(true), drawEnabled_(true), parent_(nullptr),
 		childOrderIndex_(0), withVisitOrder_(true),
-		visitOrderState_(VisitOrderState::SAME_AS_PARENT), visitOrderIndex_(0),
+		visitOrderState_(VisitOrderState::SameAsParent), visitOrderIndex_(0),
 		position_(x, y), anchorPoint_(0.0f, 0.0f), scaleFactor_(1.0f, 1.0f), rotation_(0.0f),
 		color_(Colorf::White), layer_(0), absPosition_(0.0f, 0.0f), absScaleFactor_(1.0f, 1.0f),
 		absRotation_(0.0f), absColor_(Colorf::White), absLayer_(0),
@@ -65,8 +65,9 @@ namespace nCine
 		dirtyBits_(other.dirtyBits_), lastFrameUpdated_(other.lastFrameUpdated_)
 	{
 		swapChildPointer(this, &other);
-		for (SceneNode* child : children_)
+		for (SceneNode* child : children_) {
 			child->parent_ = this;
+		}
 	}
 
 	SceneNode& SceneNode::operator=(SceneNode&& other)
@@ -89,9 +90,9 @@ namespace nCine
 		lastFrameUpdated_ = other.lastFrameUpdated_;
 
 		swapChildPointer(this, &other);
-		for (SceneNode* child : children_)
+		for (SceneNode* child : children_) {
 			child->parent_ = this;
-
+		}
 		return *this;
 	}
 
@@ -103,12 +104,14 @@ namespace nCine
 	bool SceneNode::setParent(SceneNode* parentNode)
 	{
 		// Can't set yourself or your parent as parent
-		if (parentNode == this || parentNode == parent_)
+		if (parentNode == this || parentNode == parent_) {
 			return false;
+		}
 
-		if (parent_)
+		if (parent_ != nullptr) {
 			parent_->removeChildNode(this);
-		if (parentNode) {
+		}
+		if (parentNode != nullptr) {
 			parentNode->children_.push_back(this);
 			childOrderIndex_ = (unsigned int)parentNode->children_.size() - 1;
 		}
@@ -124,12 +127,13 @@ namespace nCine
 	bool SceneNode::addChildNode(SceneNode* childNode)
 	{
 		// Can't add yourself or one of your children as a child
-		if (childNode == this || (childNode != nullptr && childNode->parent_ == this))
+		if (childNode == this || (childNode != nullptr && childNode->parent_ == this)) {
 			return false;
+		}
 
-		if (childNode->parent_)
+		if (childNode->parent_ != nullptr) {
 			childNode->parent_->removeChildNode(childNode);
-
+		}
 		children_.push_back(childNode);
 		childNode->childOrderIndex_ = (unsigned int)children_.size() - 1;
 		childNode->parent_ = this;
@@ -141,11 +145,11 @@ namespace nCine
 	bool SceneNode::removeChildNode(SceneNode* childNode)
 	{
 		// Can't remove yourself or a `nullptr` from your children
-		if (childNode == this || childNode == nullptr)
+		if (childNode == this || childNode == nullptr) {
 			return false;
+		}
 
 		bool hasBeenRemoved = false;
-
 		if (!children_.empty() && // avoid checking if this node has no children
 			childNode->parent_ == this) // avoid checking if the child doesn't belong to this node
 		{
@@ -164,8 +168,9 @@ namespace nCine
 	bool SceneNode::removeChildNodeAt(unsigned int index)
 	{
 		// Can't remove at an index past the number of children
-		if (children_.empty() || index > children_.size() - 1)
+		if (children_.empty() || index > children_.size() - 1) {
 			return false;
+		}
 
 		children_[index]->parent_ = nullptr;
 		dirtyBits_.set(DirtyBitPositions::TransformationBit);
@@ -181,8 +186,9 @@ namespace nCine
 	/*! \return True if there were at least one node to remove */
 	bool SceneNode::removeAllChildrenNodes()
 	{
-		if (children_.empty())
+		if (children_.empty()) {
 			return false;
+		}
 
 		for (unsigned int i = 0; i < children_.size(); i++) {
 			children_[i]->parent_ = nullptr;
@@ -198,8 +204,9 @@ namespace nCine
 	bool SceneNode::unlinkChildNode(SceneNode* childNode)
 	{
 		// Can't unlink yourself or a `nullptr` from your children
-		if (childNode == this || childNode == nullptr)
+		if (childNode == this || childNode == nullptr) {
 			return false;
+		}
 
 		bool hasBeenUnlinked = false;
 
@@ -209,9 +216,9 @@ namespace nCine
 			removeChildNode(childNode);
 
 			// Nephews reparenting
-			for (SceneNode* child : childNode->children_)
+			for (SceneNode* child : childNode->children_) {
 				addChildNode(child);
-
+			}
 			hasBeenUnlinked = true;
 		}
 
@@ -222,7 +229,7 @@ namespace nCine
 	unsigned int SceneNode::childOrderIndex() const
 	{
 		unsigned int index = 0;
-		if (parent_) {
+		if (parent_ != nullptr) {
 			ASSERT(parent_->children_[childOrderIndex_] == this);
 			index = childOrderIndex_;
 		}
@@ -248,8 +255,9 @@ namespace nCine
 	/*!	\return True if the node has been brought one position forward */
 	bool SceneNode::swapNodeForward()
 	{
-		if (parent_ == nullptr)
+		if (parent_ == nullptr) {
 			return false;
+		}
 
 		return parent_->swapChildrenNodes(childOrderIndex_, childOrderIndex_ + 1);
 	}
@@ -257,8 +265,9 @@ namespace nCine
 	/*!	\return True if the node has been brought one position back */
 	bool SceneNode::swapNodeBack()
 	{
-		if (parent_ == nullptr || childOrderIndex_ == 0)
+		if (parent_ == nullptr || childOrderIndex_ == 0) {
 			return false;
+		}
 
 		return parent_->swapChildrenNodes(childOrderIndex_, childOrderIndex_ - 1);
 	}
@@ -275,7 +284,7 @@ namespace nCine
 			}
 
 			// A non drawable scenenode does not have the `updateRenderCommand()` method to reset the flags
-			if (type_ == ObjectType::SCENENODE) {
+			if (type_ == ObjectType::SceneNode) {
 				dirtyBits_.reset(DirtyBitPositions::TransformationBit);
 				dirtyBits_.reset(DirtyBitPositions::ColorBit);
 			}
@@ -291,17 +300,18 @@ namespace nCine
 		if (drawEnabled_) {
 			// Increment the index without knowing if the node is going to be rendered or not.
 			// It avoids both a one frame delay when the value changes and calling `DrawableNode::setVisitOrder()` from this function.
-			visitOrderIndex_ = (type_ != ObjectType::PARTICLE) ? visitOrderIndex + 1 : visitOrderIndex;
+			visitOrderIndex_ = (type_ != ObjectType::Particle) ? visitOrderIndex + 1 : visitOrderIndex;
 			const bool rendered = OnDraw(renderQueue);
 
 			visitOrderIndex_ = visitOrderIndex;
 			// Visit order index only incremented for rendered nodes
 			// Particles get their index incremented only once by their parent particle system
-			const bool incrementIndex = (rendered && type_ != ObjectType::PARTICLE) || type_ == ObjectType::PARTICLE_SYSTEM;
+			const bool incrementIndex = ((rendered && type_ != ObjectType::Particle) || type_ == ObjectType::ParticleSystem);
 			visitOrderIndex_ = incrementIndex ? visitOrderIndex++ : visitOrderIndex;
 
-			for (SceneNode* child : children_)
+			for (SceneNode* child : children_) {
 				child->OnVisit(renderQueue, visitOrderIndex);
+			}
 		}
 	}
 
@@ -328,7 +338,7 @@ namespace nCine
 		ASSERT(first->parent_ == second->parent_);
 
 		SceneNode* parent = first->parent_;
-		if (parent) {
+		if (parent != nullptr) {
 			for (unsigned int i = 0; i < parent->children_.size(); i++) {
 				if (parent->children_[i] == second) {
 					parent->children_[i] = this;
@@ -344,36 +354,34 @@ namespace nCine
 	{
 		ZoneScoped;
 
-		if (parent_ && layer_ == 0)
+		if (parent_ != nullptr && layer_ == 0) {
 			absLayer_ = parent_->absLayer_;
-		else
+		} else {
 			absLayer_ = layer_;
+		}
 
-		if (visitOrderState_ == VisitOrderState::ENABLED)
-			withVisitOrder_ = true;
-		else if (visitOrderState_ == VisitOrderState::DISABLED)
-			withVisitOrder_ = false;
-		else if (visitOrderState_ == VisitOrderState::SAME_AS_PARENT) {
-			// The default for nodes without a parent (like the root one) is `ENABLED`
-			withVisitOrder_ = (parent_ != nullptr) ? parent_->withVisitOrder_ : true;
+		switch (visitOrderState_) {
+			case VisitOrderState::Enabled: withVisitOrder_ = true; break;
+			case VisitOrderState::SameAsParent: withVisitOrder_ = (parent_ == nullptr || parent_->withVisitOrder_); break;
+			default: withVisitOrder_ = false; break;
 		}
 
 		const bool parentHasDirtyColor = parent_ && parent_->dirtyBits_.test(DirtyBitPositions::ColorBit);
-		if (parentHasDirtyColor)
+		if (parentHasDirtyColor) {
 			dirtyBits_.set(DirtyBitPositions::ColorBit);
-
-		if (dirtyBits_.test(DirtyBitPositions::ColorBit))
+		}
+		if (dirtyBits_.test(DirtyBitPositions::ColorBit)) {
 			absColor_ = parent_ ? color_ * parent_->absColor_ : color_;
-
+		}
 		const bool parentHasDirtyTransformation = parent_ && parent_->dirtyBits_.test(DirtyBitPositions::TransformationBit);
 		if (parentHasDirtyTransformation) {
 			dirtyBits_.set(DirtyBitPositions::TransformationBit);
 			dirtyBits_.set(DirtyBitPositions::AabbBit);
 		}
 
-		if (!dirtyBits_.test(DirtyBitPositions::TransformationBit))
+		if (!dirtyBits_.test(DirtyBitPositions::TransformationBit)) {
 			return;
-
+		}
 		// Calculating world and local matrices
 		localMatrix_ = Matrix4x4f::Translation(position_.X, position_.Y, 0.0f);
 		localMatrix_.RotateZ(rotation_);
@@ -383,16 +391,15 @@ namespace nCine
 		absScaleFactor_ = scaleFactor_;
 		absRotation_ = rotation_;
 
-		if (parent_) {
+		if (parent_ != nullptr) {
 			worldMatrix_ = parent_->worldMatrix_ * localMatrix_;
 
 			absScaleFactor_ *= parent_->absScaleFactor_;
 			absRotation_ += parent_->absRotation_;
-		} else
+		} else {
 			worldMatrix_ = localMatrix_;
-
+		}
 		absPosition_.X = worldMatrix_[3][0];
 		absPosition_.Y = worldMatrix_[3][1];
 	}
-
 }

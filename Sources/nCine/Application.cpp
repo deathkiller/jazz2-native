@@ -15,7 +15,7 @@
 #		ifdef WITH_AUDIO
 #			pragma comment(lib, "../Libs/Windows/x64/OpenAL32.lib")
 #		endif
-#       pragma comment(lib, "../Libs/Windows/x64/libdeflate.lib")
+#		pragma comment(lib, "../Libs/Windows/x64/libdeflate.lib")
 #	elif defined(_M_IX86)
 #		ifdef WITH_GLEW
 #			pragma comment(lib, "../Libs/Windows/x86/glew32.lib")
@@ -29,7 +29,7 @@
 #		ifdef WITH_AUDIO
 #			pragma comment(lib, "../Libs/Windows/x86/OpenAL32.lib")
 #		endif
-#       pragma comment(lib, "../Libs/Windows/x86/libdeflate.lib")
+#		pragma comment(lib, "../Libs/Windows/x86/libdeflate.lib")
 #	else
 #		error Unsupported architecture
 #	endif
@@ -315,6 +315,21 @@ namespace nCine
 		const auto& gfxCapabilities = theServiceLocator().gfxCapabilities();
 		GLDebug::init(gfxCapabilities);
 
+#if defined(DEATH_TARGET_ANDROID) && !(defined(WITH_FIXED_BATCH_SIZE) && WITH_FIXED_BATCH_SIZE > 0)
+		const StringView vendor = gfxCapabilities.glInfoStrings().vendor;
+		const StringView renderer = gfxCapabilities.glInfoStrings().renderer;
+		// Some GPUs doesn't work with dynamic batch size, so disable it for now
+		if (vendor == "Imagination Technologies"_s && renderer == "PowerVR Rogue GE8300"_s) {
+			const StringView vendorPrefix = vendor.findOr(' ', vendor.end());
+			if (renderer.hasPrefix(vendor.prefix(vendorPrefix.begin()))) {
+				LOGW_X("Detected %s: Using fixed batch size", renderer.data());
+			} else {
+				LOGW_X("Detected %s %s: Using fixed batch size", vendor.data(), renderer.data());
+			}
+			appCfg_.fixedBatchSize = 10;
+		}
+#endif
+
 #if defined(WITH_RENDERDOC)
 		RenderDocCapture::init();
 #endif
@@ -474,7 +489,7 @@ namespace nCine
 	void Application::suspend()
 	{
 		frameTimer_->suspend();
-		if (appEventHandler_) {
+		if (appEventHandler_ != nullptr) {
 			appEventHandler_->onSuspend();
 		}
 		LOGI("IAppEventHandler::onSuspend() invoked");
@@ -482,7 +497,7 @@ namespace nCine
 
 	void Application::resume()
 	{
-		if (appEventHandler_) {
+		if (appEventHandler_ != nullptr) {
 			appEventHandler_->onResume();
 		}
 		const TimeStamp suspensionDuration = frameTimer_->resume();

@@ -181,7 +181,7 @@ namespace Jazz2::Actors
 				CurrentFrame(0), NextFrame(0), CurrentFrameFade(0.0f), Hotspot(),
 				_owner(owner), _rendererType((ActorRendererType)-1)
 			{
-				type_ = ObjectType::SPRITE;
+				type_ = ObjectType::Sprite;
 				Initialize(ActorRendererType::Default);
 			}
 

@@ -63,7 +63,7 @@ namespace Jazz2
 		_noiseTexture = resolver.GetNoiseTexture();
 
 		_rootNode = std::make_unique<SceneNode>();
-		_rootNode->setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
+		_rootNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
 		if (!ContentResolver::Current().LoadLevel(this, _episodeName + "/"_s + _levelFileName, _difficulty)) {
 			LOGE("Cannot load specified level");
@@ -509,7 +509,7 @@ namespace Jazz2
 
 		if (notInitialized) {
 			_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
-			_view = std::make_unique<Viewport>(_viewTexture.get(), Viewport::DepthStencilFormat::NONE);
+			_view = std::make_unique<Viewport>(_viewTexture.get(), Viewport::DepthStencilFormat::None);
 
 			_camera = std::make_unique<Camera>();
 			InitializeCamera();
@@ -540,7 +540,7 @@ namespace Jazz2
 
 		if (notInitialized) {
 			_lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, w, h);
-			_lightingView = std::make_unique<Viewport>(_lightingBuffer.get(), Viewport::DepthStencilFormat::NONE);
+			_lightingView = std::make_unique<Viewport>(_lightingBuffer.get(), Viewport::DepthStencilFormat::None);
 			_lightingView->setRootNode(_lightingRenderer.get());
 			_lightingView->setCamera(_camera.get());
 		} else {
@@ -1556,10 +1556,10 @@ namespace Jazz2
 
 		if (notInitialized) {
 			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
-			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);
+			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_view->setRootNode(this);
 			_view->setCamera(_camera.get());
-			_view->setClearMode(Viewport::ClearMode::NEVER);
+			_view->setClearMode(Viewport::ClearMode::Never);
 		} else {
 			_view->removeAllTextures();
 			_target->init(nullptr, Texture::Format::RGB8, width, height);

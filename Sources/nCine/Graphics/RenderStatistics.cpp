@@ -7,10 +7,9 @@ namespace nCine
 	// STATIC DEFINITIONS
 	///////////////////////////////////////////////////////////
 
-	std::string RenderStatistics::debugString_;
 	RenderStatistics::Commands RenderStatistics::allCommands_;
-	RenderStatistics::Commands RenderStatistics::typedCommands_[(int)RenderCommand::CommandTypes::COUNT];
-	RenderStatistics::Buffers RenderStatistics::typedBuffers_[(int)RenderBuffersManager::BufferTypes::COUNT];
+	RenderStatistics::Commands RenderStatistics::typedCommands_[(int)RenderCommand::CommandTypes::Count];
+	RenderStatistics::Buffers RenderStatistics::typedBuffers_[(int)RenderBuffersManager::BufferTypes::Count];
 	RenderStatistics::Textures RenderStatistics::textures_;
 	RenderStatistics::CustomBuffers RenderStatistics::customVbos_;
 	RenderStatistics::CustomBuffers RenderStatistics::customIbos_;
@@ -28,12 +27,14 @@ namespace nCine
 		TracyPlot("Vertices", static_cast<int64_t>(allCommands_.vertices));
 		TracyPlot("Render Commands", static_cast<int64_t>(allCommands_.commands));
 
-		for (unsigned int i = 0; i < (unsigned int)RenderCommand::CommandTypes::COUNT; i++)
+		for (unsigned int i = 0; i < (unsigned int)RenderCommand::CommandTypes::Count; i++) {
 			typedCommands_[i].reset();
+		}
 		allCommands_.reset();
 
-		for (unsigned int i = 0; i < (unsigned int)RenderBuffersManager::BufferTypes::COUNT; i++)
+		for (unsigned int i = 0; i < (unsigned int)RenderBuffersManager::BufferTypes::Count; i++) {
 			typedBuffers_[i].reset();
+		}
 
 		// Ping pong index for last and current frame
 		index_ = (index_ + 1) % 2;
@@ -48,14 +49,16 @@ namespace nCine
 		const GLsizei numVertices = command.geometry().numVertices();
 		const unsigned int numIndices = command.geometry().numIndices();
 
-		if (numVertices == 0 && numIndices == 0)
+		if (numVertices == 0 && numIndices == 0) {
 			return;
+		}
 
 		unsigned int verticesToCount = 0;
-		if (numIndices > 0)
+		if (numIndices > 0) {
 			verticesToCount = (command.numInstances() > 0) ? numIndices * command.numInstances() : numIndices;
-		else
+		} else {
 			verticesToCount = (command.numInstances() > 0) ? numVertices * command.numInstances() : numVertices;
+		}
 
 		const unsigned int typeIndex = (unsigned int)command.type();
 		typedCommands_[typeIndex].vertices += verticesToCount;
@@ -78,5 +81,4 @@ namespace nCine
 		typedBuffers_[typeIndex].size += buffer.size;
 		typedBuffers_[typeIndex].usedSpace += buffer.size - buffer.freeSpace;
 	}
-
 }

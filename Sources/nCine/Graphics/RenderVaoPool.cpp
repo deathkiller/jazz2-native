@@ -40,9 +40,9 @@ namespace nCine
 				const bool bindChanged = binding.object->bind();
 				const GLuint iboHandle = vertexFormat.ibo() ? vertexFormat.ibo()->glHandle() : 0;
 				if (bindChanged) {
-					if (GLDebug::isAvailable())
+					if (GLDebug::isAvailable()) {
 						insertGLDebugMessage(binding);
-
+					}
 					// Binding a VAO changes the current bound element array buffer
 					GLBufferObject::setBoundHandle(GL_ELEMENT_ARRAY_BUFFER, iboHandle);
 				} else {
@@ -55,7 +55,7 @@ namespace nCine
 			}
 		}
 
-		if (vaoFound == false) {
+		if (!vaoFound) {
 			unsigned int index = 0;
 			if (vaoPool_.size() < vaoPool_.capacity()) {
 				auto& item = vaoPool_.emplace_back();
@@ -88,7 +88,7 @@ namespace nCine
 			}
 
 			const bool bindChanged = vaoPool_[index].object->bind();
-			ASSERT(bindChanged == true || vaoPool_.size() == 1);
+			ASSERT(bindChanged || vaoPool_.size() == 1);
 			// Binding a VAO changes the current bound element array buffer
 			const GLuint oldIboHandle = vaoPool_[index].format.ibo() ? vaoPool_[index].format.ibo()->glHandle() : 0;
 			GLBufferObject::setBoundHandle(GL_ELEMENT_ARRAY_BUFFER, oldIboHandle);
@@ -129,5 +129,4 @@ namespace nCine
 		GLDebug::messageInsert(debugString);
 #endif
 	}
-
 }

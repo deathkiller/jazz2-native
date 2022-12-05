@@ -45,13 +45,13 @@ namespace Jazz2::UI
 
 		if (_view == nullptr) {
 			_node = std::make_unique<SceneNode>();
-			_node->setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
+			_node->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
 			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
-			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);
+			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_view->setRootNode(_node.get());
 			_view->setCamera(_camera.get());
-			_view->setClearMode(Viewport::ClearMode::NEVER);
+			_view->setClearMode(Viewport::ClearMode::Never);
 		} else {
 			_view->removeAllTextures();
 			_target->init(nullptr, Texture::Format::RGB8, width, height);
@@ -67,10 +67,10 @@ namespace Jazz2::UI
 			_antialiasing._camera->setOrthoProjection(_targetSize.X * (-0.5f), _targetSize.X * (+0.5f), _targetSize.Y * (-0.5f), _targetSize.Y * (+0.5f));
 			_antialiasing._camera->setView(0, 0, 0, 1);
 
-			_antialiasing._view = std::make_unique<Viewport>(_antialiasing._target.get(), Viewport::DepthStencilFormat::NONE);
+			_antialiasing._view = std::make_unique<Viewport>(_antialiasing._target.get(), Viewport::DepthStencilFormat::None);
 			_antialiasing._view->setRootNode(this);
 			_antialiasing._view->setCamera(_antialiasing._camera.get());
-			_antialiasing._view->setClearMode(Viewport::ClearMode::NEVER);
+			_antialiasing._view->setClearMode(Viewport::ClearMode::Never);
 
 			SceneNode& rootNode = theApplication().rootNode();
 			_antialiasing.setParent(&rootNode);
@@ -192,24 +192,24 @@ namespace Jazz2::UI
 
 		if (_clippedView == nullptr) {
 			_clippedNode = std::make_unique<SceneNode>();
-			_clippedNode->setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
+			_clippedNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
-			_clippedView = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);
+			_clippedView = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_clippedView->setRootNode(_clippedNode.get());
 			_clippedView->setCamera(_camera.get());
-			_clippedView->setClearMode(Viewport::ClearMode::NEVER);
+			_clippedView->setClearMode(Viewport::ClearMode::Never);
 		} else {
 			_clippedView->setTexture(_target.get());
 		}
 
 		if (_overlayView == nullptr) {
 			_overlayNode = std::make_unique<SceneNode>();
-			_overlayNode->setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
+			_overlayNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
-			_overlayView = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::NONE);
+			_overlayView = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_overlayView->setRootNode(_overlayNode.get());
 			_overlayView->setCamera(_camera.get());
-			_overlayView->setClearMode(Viewport::ClearMode::NEVER);
+			_overlayView->setClearMode(Viewport::ClearMode::Never);
 		} else {
 			_overlayView->setTexture(_target.get());
 		}

@@ -164,7 +164,7 @@ namespace nCine
 		void* guiTexId() const;
 
 		inline static ObjectType sType() {
-			return ObjectType::TEXTURE;
+			return ObjectType::Texture;
 		}
 
 	private:

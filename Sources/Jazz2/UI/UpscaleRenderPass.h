@@ -18,7 +18,7 @@ namespace Jazz2::UI
 			:
 			_resizeShader(nullptr)
 		{
-			setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
+			setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 		}
 
 		virtual void Initialize(int width, int height, int targetWidth, int targetHeight);
@@ -42,7 +42,7 @@ namespace Jazz2::UI
 		public:
 			AntialiasingSubpass()
 			{
-				setVisitOrderState(SceneNode::VisitOrderState::DISABLED);
+				setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 			}
 
 			void Register();

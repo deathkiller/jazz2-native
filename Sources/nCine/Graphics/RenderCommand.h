@@ -17,19 +17,13 @@ namespace nCine
 		/*! Its sole purpose is to allow separated profiling counters in the `RenderStatistics` class. */
 		enum class CommandTypes
 		{
-			UNSPECIFIED = 0,
-			SPRITE,
-			MESH_SPRITE,
-			PARTICLE,
-			TEXT,
-#ifdef WITH_IMGUI
-			IMGUI,
-#endif
-#ifdef WITH_NUKLEAR
-			NUKLEAR,
-#endif
+			Unspecified = 0,
+			Sprite,
+			MeshSprite,
+			Particle,
+			Text,
 
-			COUNT
+			Count
 		};
 
 		explicit RenderCommand(CommandTypes profilingType);

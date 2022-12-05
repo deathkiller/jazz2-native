@@ -23,25 +23,25 @@ namespace nCine
 	public:
 		enum class Introspection
 		{
-			ENABLED,
-			NO_UNIFORMS_IN_BLOCKS,
-			DISABLED
+			Enabled,
+			NoUniformsInBlocks,
+			Disabled
 		};
 
 		enum class Status
 		{
-			NOT_LINKED,
-			COMPILATION_FAILED,
-			LINKING_FAILED,
-			LINKED,
-			LINKED_WITH_DEFERRED_QUERIES,
-			LINKED_WITH_INTROSPECTION
+			NotLinked,
+			CompilationFailed,
+			LinkingFailed,
+			Linked,
+			LinkedWithDeferredQueries,
+			LinkedWithIntrospection
 		};
 
 		enum class QueryPhase
 		{
-			IMMEDIATE,
-			DEFERRED
+			Immediate,
+			Deferred
 		};
 
 		GLShaderProgram();

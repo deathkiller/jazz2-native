@@ -55,7 +55,7 @@ namespace nCine
 	/*! \note If used directly, it requires a custom shader that understands the specified data format */
 	void MeshSprite::copyVertices(unsigned int numVertices, unsigned int bytesPerVertex, const void* vertexData)
 	{
-		const unsigned int floatsPerVertex = bytesPerVertex / sizeof(float);
+		const unsigned int floatsPerVertex = (bytesPerVertex / sizeof(float));
 		vertices_.resize(numVertices * floatsPerVertex);
 		memcpy(vertices_.data(), vertexData, numVertices * bytesPerVertex);
 		bytesPerVertex_ = bytesPerVertex;
@@ -94,7 +94,7 @@ namespace nCine
 	/*! \note If used directly, it requires a custom shader that understands the specified data format. */
 	void MeshSprite::setVertices(unsigned int numVertices, unsigned int bytesPerVertex, const void* vertexData)
 	{
-		const unsigned int floatsPerVertex = bytesPerVertex / sizeof(float);
+		const unsigned int floatsPerVertex = (bytesPerVertex / sizeof(float));
 		vertices_.clear();
 		bytesPerVertex_ = bytesPerVertex;
 
@@ -129,11 +129,12 @@ namespace nCine
 
 	float* MeshSprite::emplaceVertices(unsigned int numElements, unsigned int bytesPerVertex)
 	{
-		if (numElements == 0 || bytesPerVertex == 0)
+		if (numElements == 0 || bytesPerVertex == 0) {
 			return nullptr;
+		}
 
 		const unsigned int floatsPerVertex = bytesPerVertex / sizeof(float);
-		const unsigned int numVertices = numElements / floatsPerVertex;
+		const unsigned int numVertices = (numElements / floatsPerVertex);
 		vertices_.clear();
 		vertices_.resize(numElements);
 		bytesPerVertex_ = bytesPerVertex;
@@ -149,7 +150,7 @@ namespace nCine
 
 	float* MeshSprite::emplaceVertices(unsigned int numElements)
 	{
-		const unsigned int bytesPerVertex = texture_ ? sizeof(Vertex) : sizeof(VertexNoTexture);
+		const unsigned int bytesPerVertex = (texture_ != nullptr ? sizeof(Vertex) : sizeof(VertexNoTexture));
 		return emplaceVertices(numElements, bytesPerVertex);
 	}
 
@@ -157,24 +158,25 @@ namespace nCine
 	{
 		FATAL_ASSERT(numVertices >= 3);
 
-		const unsigned int numFloats = texture_ ? VertexFloats : VertexNoTextureFloats;
+		const unsigned int numFloats = (texture_ != nullptr ? VertexFloats : VertexNoTextureFloats);
 		vertices_.resize(numVertices * numFloats);
-		bytesPerVertex_ = texture_ ? sizeof(Vertex) : sizeof(VertexNoTexture);
+		bytesPerVertex_ = (texture_ != nullptr ? sizeof(Vertex) : sizeof(VertexNoTexture));
 		Vector2f min(0.0f, 0.0f);
 
 		if (cutMode == TextureCutMode::CROP) {
 			min = points[0];
 			Vector2f max(min);
 			for (unsigned int i = 1; i < numVertices; i++) {
-				if (points[i].X > max.X)
+				if (points[i].X > max.X) {
 					max.X = points[i].X;
-				else if (points[i].X < min.X)
+				} else if (points[i].X < min.X) {
 					min.X = points[i].X;
-
-				if (points[i].Y > max.Y)
+				}
+				if (points[i].Y > max.Y) {
 					max.Y = points[i].Y;
-				else if (points[i].Y < min.Y)
+				} else if (points[i].Y < min.Y) {
 					min.Y = points[i].Y;
+				}
 			}
 
 			width_ = max.X - min.X;
@@ -188,7 +190,7 @@ namespace nCine
 		const float halfHeight = height_ * 0.5f;
 
 		for (unsigned int i = 0; i < numVertices; i++) {
-			if (texture_) {
+			if (texture_ != nullptr) {
 				Vertex& v = reinterpret_cast<Vertex&>(vertices_[i * VertexFloats]);
 				v.x = (points[i].X - min.X - halfWidth) / width_; // from -0.5 to 0.5
 				v.y = (points[i].Y - min.Y - halfHeight) / height_; // from -0.5 to 0.5
@@ -219,7 +221,7 @@ namespace nCine
 	void MeshSprite::copyIndices(unsigned int numIndices, const unsigned short* indices)
 	{
 		indices_.reserve(numIndices);
-		memcpy(indices_.data(), indices, numIndices * sizeof(unsigned short));
+		std::memcpy(indices_.data(), indices, numIndices * sizeof(unsigned short));
 
 		indexDataPointer_ = indices_.data();
 		numIndices_ = numIndices;
@@ -249,8 +251,9 @@ namespace nCine
 
 	unsigned short* MeshSprite::emplaceIndices(unsigned int numIndices)
 	{
-		if (numIndices == 0)
+		if (numIndices == 0) {
 			return nullptr;
+		}
 
 		indices_.clear();
 		indices_.resize(numIndices);
@@ -282,24 +285,16 @@ namespace nCine
 
 	void MeshSprite::init()
 	{
-
-		/*if (texture_ && texture_->name() != nullptr)
-		{
+		// TODO
+		/*if (texture_ != nullptr && texture_->name() != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(texture_->name(), nctl::strnlen(texture_->name(), Object::MaxNameLength));
 		}*/
 
-		type_ = ObjectType::MESH_SPRITE;
-		renderCommand_.setType(RenderCommand::CommandTypes::MESH_SPRITE);
+		type_ = ObjectType::MeshSprite;
+		renderCommand_.setType(RenderCommand::CommandTypes::MeshSprite);
 
-		const Material::ShaderProgramType shaderProgramType = [](Texture* texture) {
-			if (texture) {
-				//return (texture->numChannels() >= 3) ? Material::ShaderProgramType::MESH_SPRITE : Material::ShaderProgramType::MESH_SPRITE_GRAY;
-				return Material::ShaderProgramType::MESH_SPRITE;
-			} else {
-				return Material::ShaderProgramType::MESH_SPRITE_NO_TEXTURE;
-			}
-		}(texture_);
+		const Material::ShaderProgramType shaderProgramType = (texture_ != nullptr ? Material::ShaderProgramType::MESH_SPRITE : Material::ShaderProgramType::MESH_SPRITE_NO_TEXTURE);
 		renderCommand_.material().setShaderProgramType(shaderProgramType);
 
 		shaderHasChanged();
@@ -307,8 +302,9 @@ namespace nCine
 		renderCommand_.geometry().setNumElementsPerVertex(texture_ ? VertexFloats : VertexNoTextureFloats);
 		renderCommand_.geometry().setHostVertexPointer(vertexDataPointer_);
 
-		if (texture_)
+		if (texture_ != nullptr) {
 			setTexRect(Recti(0, 0, texture_->width(), texture_->height()));
+		}
 	}
 
 	void MeshSprite::shaderHasChanged()
@@ -320,32 +316,24 @@ namespace nCine
 	void MeshSprite::textureHasChanged(Texture* newTexture)
 	{
 		if (renderCommand_.material().shaderProgramType() != Material::ShaderProgramType::CUSTOM) {
-			const Material::ShaderProgramType shaderProgramType = [](Texture* texture) {
-				if (texture) {
-					//return (texture->numChannels() >= 3) ? Material::ShaderProgramType::MESH_SPRITE : Material::ShaderProgramType::MESH_SPRITE_GRAY;
-					return Material::ShaderProgramType::MESH_SPRITE;
-				} else {
-					return Material::ShaderProgramType::MESH_SPRITE_NO_TEXTURE;
-				}
-			}(newTexture);
+			const Material::ShaderProgramType shaderProgramType = (newTexture != nullptr ? Material::ShaderProgramType::MESH_SPRITE : Material::ShaderProgramType::MESH_SPRITE_NO_TEXTURE);
 			const bool hasChanged = renderCommand_.material().setShaderProgramType(shaderProgramType);
-			if (hasChanged)
+			if (hasChanged) {
 				shaderHasChanged();
-
+			}
 			renderCommand_.geometry().setNumElementsPerVertex(newTexture ? VertexFloats : VertexNoTextureFloats);
 		}
 
-		if (texture_ && newTexture && texture_ != newTexture) {
+		if (texture_ != nullptr && newTexture != nullptr && texture_ != newTexture) {
 			Recti texRect = texRect_;
 			texRect.X = (texRect.X / float(texture_->width())) * float(newTexture->width());
 			texRect.Y = (texRect.Y / float(texture_->height())) * float(newTexture->width());
 			texRect.W = (texRect.W / float(texture_->width())) * float(newTexture->width());
 			texRect.H = (texRect.H / float(texture_->height())) * float(newTexture->width());
 			setTexRect(texRect); // it also sets width_ and height_
-		} else if (texture_ == nullptr && newTexture) {
+		} else if (texture_ == nullptr && newTexture != nullptr) {
 			// Assigning a texture when there wasn't any
 			setTexRect(Recti(0, 0, newTexture->width(), newTexture->height()));
 		}
 	}
-
 }

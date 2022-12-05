@@ -57,7 +57,7 @@ namespace nCine
 
 	void GLVertexArrayObject::setObjectLabel(const char* label)
 	{
-		GLDebug::objectLabel(GLDebug::LabelTypes::VERTEX_ARRAY, glHandle_, label);
+		GLDebug::objectLabel(GLDebug::LabelTypes::VertexArray, glHandle_, label);
 	}
 
 }

@@ -1,8 +1,8 @@
-#include <cstring> // for memcpy()
-
 #include "Geometry.h"
 #include "RenderResources.h"
 #include "RenderStatistics.h"
+
+#include <cstring> // for memcpy()
 
 namespace nCine
 {
@@ -22,11 +22,12 @@ namespace nCine
 
 	Geometry::~Geometry()
 	{
-		if (vbo_)
+		if (vbo_ != nullptr) {
 			RenderStatistics::removeCustomVbo(vbo_->size());
-
-		if (ibo_)
+		}
+		if (ibo_ != nullptr) {
 			RenderStatistics::removeCustomIbo(ibo_->size());
+		}
 	}
 
 	///////////////////////////////////////////////////////////
@@ -59,12 +60,13 @@ namespace nCine
 		ASSERT(vbo_ == nullptr);
 		hasDirtyVertices_ = true;
 
-		if (sharedVboParams_)
+		if (sharedVboParams_ != nullptr) {
 			vboParams_ = *sharedVboParams_;
-		else {
-			const RenderBuffersManager::BufferTypes bufferType = RenderBuffersManager::BufferTypes::ARRAY;
-			if (vboParams_.mapBase == nullptr)
+		} else {
+			const RenderBuffersManager::BufferTypes bufferType = RenderBuffersManager::BufferTypes::Array;
+			if (vboParams_.mapBase == nullptr) {
 				vboParams_ = RenderResources::buffersManager().acquireMemory(bufferType, numFloats * sizeof(GLfloat), numFloatsAlignment * sizeof(GLfloat));
+			}
 		}
 
 		return reinterpret_cast<GLfloat*>(vboParams_.mapBase + vboParams_.offset);
@@ -73,11 +75,11 @@ namespace nCine
 	/*! This method can only be used when mapping of OpenGL buffers is available */
 	GLfloat* Geometry::acquireVertexPointer()
 	{
-		ASSERT(vbo_);
+		ASSERT(vbo_ != nullptr);
 		hasDirtyVertices_ = true;
 
 		if (vboParams_.mapBase == nullptr) {
-			const GLenum mapFlags = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ARRAY).mapFlags;
+			const GLenum mapFlags = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::Array).mapFlags;
 			FATAL_ASSERT_MSG(mapFlags, "Mapping of OpenGL buffers is not available");
 			vboParams_.mapBase = static_cast<GLubyte*>(vbo_->mapBufferRange(0, vbo_->size(), mapFlags));
 		}
@@ -88,7 +90,7 @@ namespace nCine
 	void Geometry::releaseVertexPointer()
 	{
 		// Don't flush and unmap if the VBO is not custom
-		if (vbo_ && vboParams_.mapBase != nullptr) {
+		if (vbo_ != nullptr && vboParams_.mapBase != nullptr) {
 			vboParams_.object->flushMappedBufferRange(vboParams_.offset, vboParams_.size);
 			vboParams_.object->unmap();
 		}
@@ -103,9 +105,9 @@ namespace nCine
 
 	void Geometry::shareVbo(const Geometry* geometry)
 	{
-		if (geometry == nullptr)
+		if (geometry == nullptr) {
 			sharedVboParams_ = nullptr;
-		else if (geometry != this) {
+		} else if (geometry != this) {
 			vbo_.reset(nullptr);
 			sharedVboParams_ = &geometry->vboParams_;
 		}
@@ -130,12 +132,13 @@ namespace nCine
 		ASSERT(ibo_ == nullptr);
 		hasDirtyIndices_ = true;
 
-		if (sharedIboParams_)
+		if (sharedIboParams_ != nullptr) {
 			iboParams_ = *sharedIboParams_;
-		else {
-			const RenderBuffersManager::BufferTypes bufferType = RenderBuffersManager::BufferTypes::ELEMENT_ARRAY;
-			if (iboParams_.mapBase == nullptr)
+		} else {
+			const RenderBuffersManager::BufferTypes bufferType = RenderBuffersManager::BufferTypes::ElementArray;
+			if (iboParams_.mapBase == nullptr) {
 				iboParams_ = RenderResources::buffersManager().acquireMemory(bufferType, numIndices * sizeof(GLushort));
+			}
 		}
 
 		return reinterpret_cast<GLushort*>(iboParams_.mapBase + iboParams_.offset);
@@ -144,11 +147,11 @@ namespace nCine
 	/*! This method can only be used when mapping of OpenGL buffers is available */
 	GLushort* Geometry::acquireIndexPointer()
 	{
-		ASSERT(ibo_);
+		ASSERT(ibo_ != nullptr);
 		hasDirtyIndices_ = true;
 
 		if (iboParams_.mapBase == nullptr) {
-			const GLenum mapFlags = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ELEMENT_ARRAY).mapFlags;
+			const GLenum mapFlags = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ElementArray).mapFlags;
 			FATAL_ASSERT_MSG(mapFlags, "Mapping of OpenGL buffers is not available");
 			iboParams_.mapBase = static_cast<GLubyte*>(ibo_->mapBufferRange(0, ibo_->size(), mapFlags));
 		}
@@ -159,7 +162,7 @@ namespace nCine
 	void Geometry::releaseIndexPointer()
 	{
 		// Don't flush and unmap if the IBO is not custom
-		if (ibo_ && iboParams_.mapBase != nullptr) {
+		if (ibo_ != nullptr && iboParams_.mapBase != nullptr) {
 			iboParams_.object->flushMappedBufferRange(iboParams_.offset, iboParams_.size);
 			iboParams_.object->unmap();
 		}
@@ -174,9 +177,9 @@ namespace nCine
 
 	void Geometry::shareIbo(const Geometry* geometry)
 	{
-		if (geometry == nullptr)
+		if (geometry == nullptr) {
 			sharedIboParams_ = nullptr;
-		else if (geometry != this) {
+		} else if (geometry != this) {
 			ibo_.reset(nullptr);
 			sharedIboParams_ = &geometry->iboParams_;
 		}
@@ -188,8 +191,9 @@ namespace nCine
 
 	void Geometry::bind()
 	{
-		if (vboParams_.object)
+		if (vboParams_.object != nullptr) {
 			vboParams_.object->bind();
+		}
 	}
 
 	void Geometry::draw(GLsizei numInstances)
@@ -197,38 +201,41 @@ namespace nCine
 		const GLint vboOffset = static_cast<GLint>(vboParams().offset / numElementsPerVertex_ / sizeof(GLfloat)) + firstVertex_;
 
 		void* iboOffsetPtr = nullptr;
-		if (numIndices_ > 0)
+		if (numIndices_ > 0) {
 			iboOffsetPtr = reinterpret_cast<void*>(iboParams().offset + firstIndex_ * sizeof(GLushort));
+		}
 
 		if (numInstances == 0) {
-			if (numIndices_ > 0)
+			if (numIndices_ > 0) {
 #if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 				glDrawElements(primitiveType_, numIndices_, GL_UNSIGNED_SHORT, iboOffsetPtr);
 #else
 				glDrawElementsBaseVertex(primitiveType_, numIndices_, GL_UNSIGNED_SHORT, iboOffsetPtr, vboOffset);
 #endif
-			else
+			} else {
 				glDrawArrays(primitiveType_, vboOffset, numVertices_);
+			}
 		} else if (numInstances > 0) {
-			if (numIndices_ > 0)
+			if (numIndices_ > 0) {
 #if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 				glDrawElementsInstanced(primitiveType_, numIndices_, GL_UNSIGNED_SHORT, iboOffsetPtr, numInstances);
 #else
 				glDrawElementsInstancedBaseVertex(primitiveType_, numIndices_, GL_UNSIGNED_SHORT, iboOffsetPtr, numInstances, vboOffset);
 #endif
-			else
+			} else {
 				glDrawArraysInstanced(primitiveType_, vboOffset, numVertices_, numInstances);
+			}
 		}
 	}
 
 	void Geometry::commitVertices()
 	{
-		if (hostVertexPointer_ && hasDirtyVertices_) {
+		if (hostVertexPointer_ != nullptr && hasDirtyVertices_) {
 			// Checking if the common VBO is allowed to use mapping and do the same for the custom one
-			const GLenum mapFlags = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ARRAY).mapFlags;
+			const GLenum mapFlags = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::Array).mapFlags;
 			const unsigned int numFloats = numVertices_ * numElementsPerVertex_;
 
-			if (mapFlags == 0 && vbo_) {
+			if (mapFlags == 0 && vbo_ != nullptr) {
 				// Using buffer orphaning + `glBufferSubData()` when having a custom VBO with no mapping available
 				vbo_->bufferData(vboParams_.size, nullptr, vboUsageFlags_);
 				vbo_->bufferSubData(vboParams_.offset, vboParams_.size, hostVertexPointer_);
@@ -239,18 +246,19 @@ namespace nCine
 			}
 
 			// The dirty flag is only useful with a custom VBO. If the render command uses the common one, it must always copy vertices.
-			if (vbo_)
+			if (vbo_ != nullptr) {
 				hasDirtyVertices_ = false;
+			}
 		}
 	}
 
 	void Geometry::commitIndices()
 	{
-		if (hostIndexPointer_ && hasDirtyIndices_) {
+		if (hostIndexPointer_ != nullptr && hasDirtyIndices_) {
 			// Checking if the common IBO is allowed to use mapping and do the same for the custom one
-			const GLenum mapFlags = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ELEMENT_ARRAY).mapFlags;
+			const GLenum mapFlags = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ElementArray).mapFlags;
 
-			if (mapFlags == 0 && ibo_) {
+			if (mapFlags == 0 && ibo_ != nullptr) {
 				// Using buffer orphaning + `glBufferSubData()` when having a custom IBO with no mapping available
 				ibo_->bufferData(iboParams_.size, nullptr, iboUsageFlags_);
 				ibo_->bufferSubData(iboParams_.offset, iboParams_.size, hostIndexPointer_);
@@ -261,9 +269,9 @@ namespace nCine
 			}
 
 			// The dirty flag is only useful with a custom IBO. If the render command uses the common one, it must always copy indices.
-			if (ibo_)
+			if (ibo_ != nullptr) {
 				hasDirtyIndices_ = false;
+			}
 		}
 	}
-
 }

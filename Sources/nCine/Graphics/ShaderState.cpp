@@ -13,11 +13,12 @@ namespace nCine
 			GLUniformCache* uniform = nullptr;
 			if (blockName != nullptr && blockName[0] != '\0') {
 				GLUniformBlockCache* uniformBlock = material.uniformBlock(blockName);
-				if (uniformBlock)
+				if (uniformBlock != nullptr) {
 					uniform = uniformBlock->uniform(name);
-			} else
+				}
+			} else {
 				uniform = material.uniform(name);
-
+			}
 			return uniform;
 		}
 
@@ -67,8 +68,9 @@ namespace nCine
 			}
 			node_ = node;
 
-			if (shader_ != nullptr)
+			if (shader_ != nullptr) {
 				setShader(shader_);
+			}
 
 			nodeHasChanged = true;
 		}
@@ -116,8 +118,9 @@ namespace nCine
 	/*! \note Contrary to uniforms, there is no need to set the texture again when you reset a shader or when you set a new one */
 	bool ShaderState::setTexture(unsigned int unit, const Texture* texture)
 	{
-		if (node_ == nullptr)
+		if (node_ == nullptr) {
 			return false;
+		}
 
 		Material& material = node_->renderCommand_.material();
 		const bool result = texture ? material.setTexture(unit, *texture) : material.setTexture(unit, nullptr);
@@ -127,65 +130,75 @@ namespace nCine
 
 	bool ShaderState::setUniformInt(const char* blockName, const char* name, const int* vector)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr || vector == nullptr)
+		if (node_ == nullptr || shader_ == nullptr || name == nullptr || vector == nullptr) {
 			return false;
+		}
 
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
-		if (uniform)
+		if (uniform != nullptr) {
 			result = uniform->setIntVector(vector);
+		}
 
 		return result;
 	}
 
 	bool ShaderState::setUniformInt(const char* blockName, const char* name, int value0)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr)
+		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
 			return false;
+		}
 
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
-		if (uniform)
+		if (uniform != nullptr) {
 			result = uniform->setIntValue(value0);
+		}
 
 		return result;
 	}
 
 	bool ShaderState::setUniformInt(const char* blockName, const char* name, int value0, int value1)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr)
+		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
 			return false;
+		}
 
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
-		if (uniform)
+		if (uniform != nullptr) {
 			result = uniform->setIntValue(value0, value1);
+		}
 
 		return result;
 	}
 
 	bool ShaderState::setUniformInt(const char* blockName, const char* name, int value0, int value1, int value2)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr)
+		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
 			return false;
+		}
 
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
-		if (uniform)
+		if (uniform != nullptr) {
 			result = uniform->setIntValue(value0, value1, value2);
+		}
 
 		return result;
 	}
 
 	bool ShaderState::setUniformInt(const char* blockName, const char* name, int value0, int value1, int value2, int value3)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr)
+		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
 			return false;
+		}
 
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
-		if (uniform)
+		if (uniform != nullptr) {
 			result = uniform->setIntValue(value0, value1, value2, value3);
+		}
 
 		return result;
 	}
@@ -207,65 +220,75 @@ namespace nCine
 
 	bool ShaderState::setUniformFloat(const char* blockName, const char* name, const float* vector)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr || vector == nullptr)
+		if (node_ == nullptr || shader_ == nullptr || name == nullptr || vector == nullptr) {
 			return false;
+		}
 
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
-		if (uniform)
+		if (uniform != nullptr) {
 			result = uniform->setFloatVector(vector);
+		}
 
 		return result;
 	}
 
 	bool ShaderState::setUniformFloat(const char* blockName, const char* name, float value0)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr)
+		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
 			return false;
+		}
 
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
-		if (uniform)
+		if (uniform != nullptr) {
 			result = uniform->setFloatValue(value0);
+		}
 
 		return result;
 	}
 
 	bool ShaderState::setUniformFloat(const char* blockName, const char* name, float value0, float value1)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr)
+		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
 			return false;
+		}
 
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
-		if (uniform)
+		if (uniform != nullptr) {
 			result = uniform->setFloatValue(value0, value1);
+		}
 
 		return result;
 	}
 
 	bool ShaderState::setUniformFloat(const char* blockName, const char* name, float value0, float value1, float value2)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr)
+		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
 			return false;
+		}
 
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
-		if (uniform)
+		if (uniform != nullptr) {
 			result = uniform->setFloatValue(value0, value1, value2);
+		}
 
 		return result;
 	}
 
 	bool ShaderState::setUniformFloat(const char* blockName, const char* name, float value0, float value1, float value2, float value3)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr)
+		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
 			return false;
+		}
 
 		bool result = false;
 		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
-		if (uniform)
+		if (uniform != nullptr) {
 			result = uniform->setFloatValue(value0, value1, value2, value3);
+		}
 
 		return result;
 	}
@@ -292,26 +315,30 @@ namespace nCine
 
 	unsigned int ShaderState::uniformBlockSize(const char* blockName)
 	{
-		if (node_ == nullptr || shader_ == nullptr || blockName == nullptr)
+		if (node_ == nullptr || shader_ == nullptr || blockName == nullptr) {
 			return 0;
+		}
 
 		unsigned int size = 0;
 		GLUniformBlockCache* uniformBlock = node_->renderCommand_.material().uniformBlock(blockName);
-		if (uniformBlock)
+		if (uniformBlock != nullptr) {
 			size = static_cast<unsigned int>(uniformBlock->size());
+		}
 
 		return size;
 	}
 
 	bool ShaderState::copyToUniformBlock(const char* blockName, unsigned int destIndex, unsigned char* src, unsigned int numBytes)
 	{
-		if (node_ == nullptr || shader_ == nullptr || blockName == nullptr)
+		if (node_ == nullptr || shader_ == nullptr || blockName == nullptr) {
 			return false;
+		}
 
 		bool result = false;
 		GLUniformBlockCache* uniformBlock = node_->renderCommand_.material().uniformBlock(blockName);
-		if (uniformBlock)
+		if (uniformBlock != nullptr) {
 			result = uniformBlock->copyData(destIndex, src, numBytes);
+		}
 
 		return result;
 	}
@@ -323,13 +350,15 @@ namespace nCine
 
 	bool ShaderState::copyToUniformBlock(const char* blockName, unsigned char* src)
 	{
-		if (node_ == nullptr || shader_ == nullptr || blockName == nullptr)
+		if (node_ == nullptr || shader_ == nullptr || blockName == nullptr) {
 			return false;
+		}
 
 		bool result = false;
 		GLUniformBlockCache* uniformBlock = node_->renderCommand_.material().uniformBlock(blockName);
-		if (uniformBlock)
+		if (uniformBlock != nullptr) {
 			result = uniformBlock->copyData(src);
+		}
 
 		return result;
 	}

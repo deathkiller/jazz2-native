@@ -16,11 +16,11 @@ namespace nCine
 	public:
 		enum class BufferTypes
 		{
-			ARRAY = 0,
-			ELEMENT_ARRAY,
-			UNIFORM,
+			Array = 0,
+			ElementArray,
+			Uniform,
 
-			COUNT
+			Count
 		};
 
 		struct BufferSpecifications
@@ -58,12 +58,12 @@ namespace nCine
 		Parameters acquireMemory(BufferTypes type, unsigned long bytes, unsigned int alignment);
 
 	private:
-		BufferSpecifications specs_[(int)BufferTypes::COUNT];
+		BufferSpecifications specs_[(int)BufferTypes::Count];
 
 		struct ManagedBuffer
 		{
 			ManagedBuffer()
-				: type(BufferTypes::ARRAY), size(0), freeSpace(0), object(nullptr), mapBase(nullptr), hostBuffer(nullptr) {}
+				: type(BufferTypes::Array), size(0), freeSpace(0), object(nullptr), mapBase(nullptr), hostBuffer(nullptr) {}
 
 			BufferTypes type;
 			std::unique_ptr<GLBufferObject> object;

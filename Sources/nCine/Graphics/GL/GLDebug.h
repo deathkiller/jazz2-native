@@ -20,40 +20,40 @@ namespace nCine
 	public:
 		enum class LabelTypes
 		{
-#if !defined(__APPLE__)
-			TRANSFORM_FEEDBACK = GL_TRANSFORM_FEEDBACK,
-			TEXTURE = GL_TEXTURE,
-			RENDERBUFFER = GL_RENDERBUFFER,
-			FRAMEBUFFER = GL_FRAMEBUFFER,
-#if ((defined(__ANDROID__) && __ANDROID_API__ >= 21) || (!defined(__ANDROID__) && defined(WITH_OPENGLES))) && GL_ES_VERSION_3_0
-			BUFFER = GL_BUFFER_KHR,
-			SHADER = GL_SHADER_KHR,
-			PROGRAM = GL_PROGRAM_KHR,
-			VERTEX_ARRAY = GL_VERTEX_ARRAY_KHR,
-			QUERY = GL_QUERY_KHR,
-			PROGRAM_PIPELINE = GL_PROGRAM_PIPELINE_KHR,
-			SAMPLER = GL_SAMPLER_KHR
+#if !defined(DEATH_TARGET_APPLE)
+			TransformFeedback = GL_TRANSFORM_FEEDBACK,
+			Texture = GL_TEXTURE,
+			RenderBuffer = GL_RENDERBUFFER,
+			FrameBuffer = GL_FRAMEBUFFER,
+#	if ((defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21) || (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES))) && GL_ES_VERSION_3_0
+			Buffer = GL_BUFFER_KHR,
+			Shader = GL_SHADER_KHR,
+			Program = GL_PROGRAM_KHR,
+			VertexArray = GL_VERTEX_ARRAY_KHR,
+			Query = GL_QUERY_KHR,
+			ProgramPipeline = GL_PROGRAM_PIPELINE_KHR,
+			Sampler = GL_SAMPLER_KHR
+#	else
+			Buffer = GL_BUFFER,
+			Shader = GL_SHADER,
+			Program = GL_PROGRAM,
+			VertexArray = GL_VERTEX_ARRAY,
+			Query = GL_QUERY,
+			ProgramPipeline = GL_PROGRAM_PIPELINE,
+			Sampler = GL_SAMPLER
+#	endif
 #else
-			BUFFER = GL_BUFFER,
-			SHADER = GL_SHADER,
-			PROGRAM = GL_PROGRAM,
-			VERTEX_ARRAY = GL_VERTEX_ARRAY,
-			QUERY = GL_QUERY,
-			PROGRAM_PIPELINE = GL_PROGRAM_PIPELINE,
-			SAMPLER = GL_SAMPLER
-#endif
-#else
-			BUFFER,
-			SHADER,
-			PROGRAM,
-			VERTEX_ARRAY,
-			QUERY,
-			PROGRAM_PIPELINE,
-			TRANSFORM_FEEDBACK,
-			SAMPLER,
-			TEXTURE,
-			RENDERBUFFER,
-			FRAMEBUFFER
+			Buffer,
+			Shader,
+			Program,
+			VertexArray,
+			Query,
+			ProgramPipeline,
+			TransformFeedback,
+			Sampler,
+			Texture,
+			RenderBuffer,
+			FrameBuffer
 #endif
 		};
 

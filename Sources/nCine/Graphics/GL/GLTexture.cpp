@@ -124,7 +124,7 @@ namespace nCine
 
 	void GLTexture::setObjectLabel(const char* label)
 	{
-		GLDebug::objectLabel(GLDebug::LabelTypes::TEXTURE, glHandle_, label);
+		GLDebug::objectLabel(GLDebug::LabelTypes::Texture, glHandle_, label);
 	}
 
 	///////////////////////////////////////////////////////////

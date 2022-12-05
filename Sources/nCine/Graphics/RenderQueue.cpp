@@ -73,22 +73,15 @@ namespace nCine
 		const char* commandTypeString(const RenderCommand& command)
 		{
 			switch (command.type()) {
-				case RenderCommand::CommandTypes::UNSPECIFIED: return "unspecified";
-				case RenderCommand::CommandTypes::SPRITE: return "sprite";
-				case RenderCommand::CommandTypes::MESH_SPRITE: return "mesh sprite";
-				case RenderCommand::CommandTypes::PARTICLE: return "particle";
-				case RenderCommand::CommandTypes::TEXT: return "text";
-#	ifdef WITH_IMGUI
-				case RenderCommand::CommandTypes::IMGUI: return "imgui";
-#	endif
-#	ifdef WITH_NUKLEAR
-				case RenderCommand::CommandTypes::NUKLEAR: return "nuklear";
-#	endif
+				case RenderCommand::CommandTypes::Unspecified: return "unspecified";
+				case RenderCommand::CommandTypes::Sprite: return "sprite";
+				case RenderCommand::CommandTypes::MeshSprite: return "mesh sprite";
+				case RenderCommand::CommandTypes::Particle: return "particle";
+				case RenderCommand::CommandTypes::Text: return "text";
 				default: return "unknown";
 			}
 		}
 #endif
-
 	}
 
 	void RenderQueue::sortAndCommit()
@@ -116,8 +109,9 @@ namespace nCine
 			formatString(debugString, sizeof(debugString), "Commit %u opaque command(s) for viewport 0x%lx", (uint32_t)opaques->size(), uintptr_t(RenderResources::currentViewport()));
 			GLDebug::ScopedGroup scoped(debugString);
 #endif
-			for (RenderCommand* opaqueRenderCommand : *opaques)
+			for (RenderCommand* opaqueRenderCommand : *opaques) {
 				opaqueRenderCommand->commitAll();
+			}
 		}
 
 		if (!transparents->empty()) {
@@ -126,8 +120,9 @@ namespace nCine
 			formatString(debugString, sizeof(debugString), "Commit %u transparent command(s) for viewport 0x%lx", (uint32_t)transparents->size(), uintptr_t(RenderResources::currentViewport()));
 			GLDebug::ScopedGroup scoped(debugString);
 #endif
-			for (RenderCommand* transparentRenderCommand : *transparents)
+			for (RenderCommand* transparentRenderCommand : *transparents) {
 				transparentRenderCommand->commitAll();
+			}
 		}
 	}
 
@@ -162,7 +157,6 @@ namespace nCine
 			GLDebug::ScopedGroup scoped(debugString);
 			commandIndex++;
 #endif
-
 
 			RenderStatistics::gatherStatistics(*opaqueRenderCommand);
 			opaqueRenderCommand->commitCameraTransformation();
@@ -216,5 +210,4 @@ namespace nCine
 
 		RenderResources::renderBatcher().reset();
 	}
-
 }

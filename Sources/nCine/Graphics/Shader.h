@@ -14,14 +14,14 @@ namespace nCine
 	{
 	public:
 		enum class LoadMode {
-			STRING,
-			FILE
+			String,
+			File
 		};
 
 		enum class Introspection {
-			ENABLED,
-			NO_UNIFORMS_IN_BLOCKS,
-			DISABLED
+			Enabled,
+			NoUniformsInBlocks,
+			Disabled
 		};
 
 		enum class DefaultVertex {
@@ -107,7 +107,7 @@ namespace nCine
 		void registerBatchedShader(Shader& batchedShader);
 
 		inline static ObjectType sType() {
-			return ObjectType::SHADER;
+			return ObjectType::Shader;
 		}
 
 	private:

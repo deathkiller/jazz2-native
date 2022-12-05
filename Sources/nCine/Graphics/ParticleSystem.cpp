@@ -25,13 +25,12 @@ namespace nCine
 		affectors_(4), inLocalSpace_(false)
 	{
 
-		/*if (texture && texture->name() != nullptr)
-		{
+		/*if (texture && texture->name() != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(texture->name(), strnlen(texture->name(), Object::MaxNameLength));
 		}*/
 
-		type_ = ObjectType::PARTICLE_SYSTEM;
+		type_ = ObjectType::ParticleSystem;
 
 		children_.reserve(poolSize_);
 		for (unsigned int i = 0; i < poolSize_; i++) {
@@ -74,9 +73,9 @@ namespace nCine
 
 	void ParticleSystem::emitParticles(const ParticleInitializer& init)
 	{
-		if (updateEnabled_ == false)
+		if (!updateEnabled_) {
 			return;
-
+		}
 
 		const unsigned int amount = static_cast<unsigned int>(Random().Next(init.rndAmount.X, init.rndAmount.Y));
 #ifdef WITH_TRACY
@@ -89,8 +88,9 @@ namespace nCine
 
 		for (unsigned int i = 0; i < amount; i++) {
 			// No more unused particles in the pool
-			if (poolTop_ < 0)
+			if (poolTop_ < 0) {
 				break;
+			}
 
 			const float life = Random().NextFloat(init.rndLife.X, init.rndLife.Y);
 			position.X = Random().NextFloat(init.rndPositionX.X, init.rndPositionX.Y);
@@ -102,13 +102,16 @@ namespace nCine
 			if (init.emitterRotation) {
 				// Particles are rotated towards the emission vector
 				rotation = (atan2f(velocity.X, velocity.X) - atan2f(1.0f, 0.0f)) * 180.0f / fPi;
-				if (rotation < 0.0f)
+				if (rotation < 0.0f) {
 					rotation += 360.0f;
-			} else
+				}
+			} else {
 				rotation = Random().NextFloat(init.rndRotation.X, init.rndRotation.Y);
+			}
 
-			if (inLocalSpace_ == false)
+			if (!inLocalSpace_) {
 				position += absPosition();
+			}
 
 			// Acquiring a particle from the pool
 			particlePool_[poolTop_]->init(life, position, velocity, rotation, inLocalSpace_);
@@ -135,63 +138,72 @@ namespace nCine
 
 	void ParticleSystem::setTexture(Texture* texture)
 	{
-		for (auto& particle : particleArray_)
+		for (auto& particle : particleArray_) {
 			particle->setTexture(texture);
+		}
 	}
 
 	void ParticleSystem::setTexRect(const Recti& rect)
 	{
-		for (auto& particle : particleArray_)
+		for (auto& particle : particleArray_) {
 			particle->setTexRect(rect);
+		}
 	}
 
 	void ParticleSystem::setAnchorPoint(float xx, float yy)
 	{
-		for (auto& particle : particleArray_)
+		for (auto& particle : particleArray_) {
 			particle->setAnchorPoint(xx, yy);
+		}
 	}
 
 	void ParticleSystem::setAnchorPoint(const Vector2f& point)
 	{
-		for (auto& particle : particleArray_)
+		for (auto& particle : particleArray_) {
 			particle->setAnchorPoint(point);
+		}
 	}
 
 	void ParticleSystem::setFlippedX(bool flippedX)
 	{
-		for (auto& particle : particleArray_)
+		for (auto& particle : particleArray_) {
 			particle->setFlippedX(flippedX);
+		}
 	}
 
 	void ParticleSystem::setFlippedY(bool flippedY)
 	{
-		for (auto& particle : particleArray_)
+		for (auto& particle : particleArray_) {
 			particle->setFlippedY(flippedY);
+		}
 	}
 
 	void ParticleSystem::setBlendingPreset(DrawableNode::BlendingPreset blendingPreset)
 	{
-		for (auto& particle : particleArray_)
+		for (auto& particle : particleArray_) {
 			particle->setBlendingPreset(blendingPreset);
+		}
 	}
 
 	void ParticleSystem::setBlendingFactors(DrawableNode::BlendingFactor srcBlendingFactor, DrawableNode::BlendingFactor destBlendingFactor)
 	{
-		for (auto& particle : particleArray_)
+		for (auto& particle : particleArray_) {
 			particle->setBlendingFactors(srcBlendingFactor, destBlendingFactor);
+		}
 	}
 
 	void ParticleSystem::setLayer(uint16_t layer)
 	{
-		for (auto& particle : particleArray_)
+		for (auto& particle : particleArray_) {
 			particle->setLayer(layer);
+		}
 	}
 
 	void ParticleSystem::OnUpdate(float timeMult)
 	{
-		if (updateEnabled_ == false)
+		if (!updateEnabled_) {
 			return;
-
+		}
 
 		// Overridden `update()` method should call `transform()` like `SceneNode::update()` does
 		SceneNode::transform();
@@ -203,13 +215,14 @@ namespace nCine
 			if (particle->isAlive()) {
 				// Calculating the normalized age only once per particle
 				const float normalizedAge = 1.0f - particle->life_ / particle->startingLife;
-				for (auto& affector : affectors_)
+				for (auto& affector : affectors_) {
 					affector->affect(particle, normalizedAge);
+				}
 
 				particle->OnUpdate(timeMult);
 
 				// Releasing the particle if it has just died
-				if (particle->isAlive() == false) {
+				if (!particle->isAlive()) {
 					poolTop_++;
 					particlePool_[poolTop_] = particle;
 					removeChildNodeAt(i);
@@ -241,7 +254,7 @@ namespace nCine
 		affectors_(4), inLocalSpace_(other.inLocalSpace_)
 	{
 
-		type_ = ObjectType::PARTICLE_SYSTEM;
+		type_ = ObjectType::ParticleSystem;
 
 		for (unsigned int i = 0; i < other.affectors_.size(); i++) {
 			const ParticleAffector& affector = *other.affectors_[i];
@@ -281,5 +294,4 @@ namespace nCine
 			}
 		}
 	}
-
 }

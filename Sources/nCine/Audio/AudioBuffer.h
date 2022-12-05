@@ -78,7 +78,7 @@ namespace nCine
 		}
 
 		inline static ObjectType sType() {
-			return ObjectType::AUDIOBUFFER;
+			return ObjectType::AudioBuffer;
 		}
 
 	private:
