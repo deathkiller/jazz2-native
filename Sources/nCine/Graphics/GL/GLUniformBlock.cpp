@@ -46,7 +46,7 @@ namespace nCine
 			glGetActiveUniformsiv(program, uniformCount, uniformIndices, GL_UNIFORM_TYPE, uniformTypes);
 			glGetActiveUniformsiv(program, uniformCount, uniformIndices, GL_UNIFORM_SIZE, uniformSizes);
 			glGetActiveUniformsiv(program, uniformCount, uniformIndices, GL_UNIFORM_OFFSET, uniformOffsets);
-#ifndef DEATH_TARGET_EMSCRIPTEN
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 			glGetActiveUniformsiv(program, uniformCount, uniformIndices, GL_UNIFORM_NAME_LENGTH, uniformNameLengths);
 #endif
 
@@ -58,7 +58,7 @@ namespace nCine
 				blockUniform.size_ = uniformSizes[i];
 				blockUniform.offset_ = uniformOffsets[i];
 
-#ifndef DEATH_TARGET_EMSCRIPTEN
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 				ASSERT_MSG_X(uniformNameLengths[i] <= GLUniform::MaxNameLength, "Uniform %d name length is %d, which is more than %d", i, uniformNameLengths[i], GLUniform::MaxNameLength);
 #endif
 
@@ -101,5 +101,4 @@ namespace nCine
 			bindingIndex_ = static_cast<GLint>(blockBinding);
 		}
 	}
-
 }

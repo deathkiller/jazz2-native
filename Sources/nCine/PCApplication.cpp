@@ -89,10 +89,9 @@ namespace nCine
 		appEventHandler_ = createAppEventHandler();
 
 		// Only `onPreInit()` can modify the application configuration
-		AppConfiguration& modifiableAppCfg = const_cast<AppConfiguration&>(appCfg_);
-		modifiableAppCfg.argc_ = argc;
-		modifiableAppCfg.argv_ = argv;
-		appEventHandler_->onPreInit(modifiableAppCfg);
+		appCfg_.argc_ = argc;
+		appCfg_.argv_ = argv;
+		appEventHandler_->onPreInit(appCfg_);
 		LOGI("IAppEventHandler::onPreInit() invoked");
 
 		// Graphics device should always be created before the input manager!

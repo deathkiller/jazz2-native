@@ -588,7 +588,7 @@ void GameEventHandler::RefreshCacheLevels()
 		} else if (extension == "j2l"_s) {
 			// Level
 			String levelName = fs::GetFileName(item);
-			if (levelName.findOr("-MLLE-Data-"_s, levelName.end()) != levelName.end()) {
+			if (levelName.find("-MLLE-Data-"_s) != nullptr) {
 				LOGI_X("Level \"%s\" skipped (MLLE extra layers).", item);
 			} else {
 				Compatibility::JJ2Level level;

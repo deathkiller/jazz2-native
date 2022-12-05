@@ -13,7 +13,7 @@ layout (std140) uniform InstancesBlock
 #ifdef WITH_FIXED_BATCH_SIZE
 	Instance[BATCH_SIZE] instances;
 #else
-	Instance[682] instances;
+	Instance[500] instances;
 #endif
 } block;
 
