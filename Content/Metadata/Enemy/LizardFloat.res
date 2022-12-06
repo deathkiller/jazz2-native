@@ -28,5 +28,14 @@
 		"Bomb": {
 			"Path": "Lizard/bomb.aura"
 		}
+	},
+	
+	"Sounds": {
+		"Copter": {
+			"Paths": [ "Object/copter.wav" ]
+		},
+		"CopterPre": {
+			"Paths": [ "Common/copter_pre.wav" ]
+		}
 	}
 }

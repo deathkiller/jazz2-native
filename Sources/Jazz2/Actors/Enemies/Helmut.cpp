@@ -11,7 +11,8 @@ namespace Jazz2::Actors::Enemies
 		:
 		_idling(false),
 		_stateTime(0.0f),
-		_stuck(false)
+		_stuck(false),
+		_turnCooldown(0.0f)
 	{
 	}
 
@@ -49,7 +50,7 @@ namespace Jazz2::Actors::Enemies
 				_idling = false;
 				SetFacingLeft(!IsFacingLeft());
 				SetAnimation(AnimState::Walk);
-				_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
+				_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
 
 				_stateTime = Random().NextFloat(280.0f, 360.0f);
 			}
@@ -64,10 +65,18 @@ namespace Jazz2::Actors::Enemies
 				if (!CanMoveToPosition(_speed.X * 4.0f, 0.0f)) {
 					if (_stuck) {
 						MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative | MoveType::Force);
-					} else {
+					} else if (_turnCooldown <= 0.0f) {
 						SetFacingLeft(!IsFacingLeft());
-						_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
+						_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
+						_turnCooldown = 90.0f;
 						_stuck = true;
+					} else {
+						_speed.X = 0;
+						_idling = true;
+						SetAnimation(AnimState::Idle);
+
+						_stateTime = Random().NextFloat(90.0f, 190.0f) - _turnCooldown;
+						_turnCooldown = 0.0f;
 					}
 				} else {
 					_stuck = false;
@@ -76,6 +85,7 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		_stateTime -= timeMult;
+		_turnCooldown -= timeMult;
 	}
 
 	void Helmut::OnUpdateHitbox()

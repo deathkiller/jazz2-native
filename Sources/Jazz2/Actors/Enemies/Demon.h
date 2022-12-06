@@ -21,5 +21,6 @@ namespace Jazz2::Actors::Enemies
 		float _attackTime;
 		bool _attacking;
 		bool _stuck;
+		float _turnCooldown;
 	};
 }

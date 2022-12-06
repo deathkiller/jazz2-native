@@ -35,7 +35,7 @@ namespace nCine
 
 		// Smooth out time multiplier using last 2 frames to prevent microstuttering
 		float timeMultPrev = timeMult_;
-		timeMult_ = (timeMultPrev_ + timeMult_ + (std::min(frameInterval_, SecondsPerFrame * 2) / SecondsPerFrame)) / 3;
+		timeMult_ = (timeMultPrev_ + timeMultPrev_ + timeMult_ + (std::min(frameInterval_, SecondsPerFrame * 2) / SecondsPerFrame)) * 0.25f;
 		timeMultPrev_ = timeMultPrev;
 
 		// Update the FPS average calculation every `avgInterval_` seconds

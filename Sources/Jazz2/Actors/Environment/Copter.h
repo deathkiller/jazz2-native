@@ -8,6 +8,7 @@ namespace Jazz2::Actors::Environment
 	{
 	public:
 		Copter();
+		~Copter();
 
 		static void Preload(const ActorActivationDetails& details)
 		{
@@ -32,5 +33,6 @@ namespace Jazz2::Actors::Environment
 		Vector2f _originPos;
 		float _phase;
 		State _state;
+		std::shared_ptr<AudioBufferPlayer> _noise;
 	};
 }

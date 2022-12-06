@@ -14,7 +14,8 @@ namespace Jazz2::Actors::Enemies
 		_idling(false),
 		_canIdle(false),
 		_stateTime(0.0f),
-		_attackTime(0.0f)
+		_attackTime(0.0f),
+		_turnCooldown(0.0f)
 	{
 	}
 
@@ -59,6 +60,7 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		_stateTime -= timeMult;
+		_turnCooldown -= timeMult;
 	}
 
 	void LabRat::OnUpdateHitbox()
@@ -97,9 +99,20 @@ namespace Jazz2::Actors::Enemies
 	void LabRat::Walking(float timeMult)
 	{
 		if (!_isAttacking) {
-			if (GetState(ActorState::CanJump) && !CanMoveToPosition(_speed.X * 4, 0)) {
-				SetFacingLeft(!IsFacingLeft());
-				_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
+			if (GetState(ActorState::CanJump) && !CanMoveToPosition(_speed.X * 4.0f, 0.0f)) {
+				if (_turnCooldown <= 0.0f) {
+					SetFacingLeft(!IsFacingLeft());
+					_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
+					_turnCooldown = 120.0f;
+				} else {
+					_speed.X = 0;
+					_idling = true;
+					SetAnimation(AnimState::Idle);
+					_canIdle = false;
+
+					_stateTime = Random().NextFloat(260.0f, 320.0f) - _turnCooldown;
+					_turnCooldown = 0.0f;
+				}
 			}
 
 			if (_canAttack) {
@@ -141,12 +154,12 @@ namespace Jazz2::Actors::Enemies
 					SetAnimation(AnimState::Idle);
 					_canIdle = false;
 
-					_stateTime = Random().NextFloat(260, 320);
+					_stateTime = Random().NextFloat(260.0f, 320.0f);
 				}
 			} else {
 				if (_stateTime <= 0.0f) {
 					_canIdle = true;
-					_stateTime = Random().NextFloat(60, 120);
+					_stateTime = Random().NextFloat(60.0f, 120.0f);
 				}
 			}
 		} else {
@@ -161,7 +174,7 @@ namespace Jazz2::Actors::Enemies
 				_isAttacking = false;
 				_canAttack = false;
 
-				_attackTime = 180;
+				_attackTime = 180.0f;
 			});
 
 		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * 2.0f;

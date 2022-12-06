@@ -23,5 +23,6 @@ namespace Jazz2::Actors::Enemies
 		bool _idling;
 		float _stateTime;
 		bool _stuck;
+		float _turnCooldown;
 	};
 }

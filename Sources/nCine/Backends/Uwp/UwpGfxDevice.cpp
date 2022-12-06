@@ -41,7 +41,6 @@ namespace nCine
 			EGL_DIRECT_COMPOSITION_ANGLE, EGL_TRUE,
 
 			// EGL_ANGLE_DISPLAY_ALLOW_RENDER_TO_BACK_BUFFER is an optimization that can have large performance benefits on mobile devices.
-			// Its syntax is subject to change, though. Please update your Visual Studio templates if you experience compilation issues with it.
 			EGL_EXPERIMENTAL_PRESENT_PATH_ANGLE, EGL_EXPERIMENTAL_PRESENT_PATH_FAST_ANGLE,
 
 			// EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE is an option that enables ANGLE to automatically call
@@ -111,8 +110,6 @@ namespace nCine
 		}
 
 		EGLint numConfigs = 0;
-		// PFNEGLCHOOSECONFIGPROC chooseConfig = reinterpret_cast<PFNEGLCHOOSECONFIGPROC>(eglGetProcAddress("glEGLImageTargetTexture2DOES"));
-		// if (chooseConfig(_eglDisplay, configAttributes, &_eglConfig, 1, &numConfigs) == EGL_FALSE || numConfigs == 0)
 		if (eglChooseConfig(_eglDisplay, configAttributes, &_eglConfig, 1, &numConfigs) == EGL_FALSE || numConfigs == 0) {
 			LOGE("Failed to choose first EGLConfig");
 		}

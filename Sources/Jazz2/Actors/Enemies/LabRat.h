@@ -26,6 +26,7 @@ namespace Jazz2::Actors::Enemies
 		bool _canIdle;
 		float _stateTime;
 		float _attackTime;
+		float _turnCooldown;
 
 		void Idle(float timeMult);
 		void Walking(float timeMult);
