@@ -15,6 +15,8 @@
 
 #include <Utf8.h>
 
+using namespace Death;
+
 namespace nCine
 {
 	static UwpApplication* _instance;
@@ -139,7 +141,7 @@ namespace nCine
 
 		winrtWUC::CoreWindow window = winrtWUC::CoreWindow::GetForCurrentThread();
 
-		//auto windowTitleW = Death::Utf8::ToUtf16(appCfg_.windowTitle);
+		//auto windowTitleW = Utf8::ToUtf16(appCfg_.windowTitle);
 		//winrtWUV::ApplicationView::GetForCurrentView().Title(winrt::hstring(windowTitleW.data(), windowTitleW.size()));
 
 		winrtWAC::CoreApplication::GetCurrentView().TitleBar().ExtendViewIntoTitleBar(true);

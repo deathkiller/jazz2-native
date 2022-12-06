@@ -209,7 +209,7 @@ namespace nCine
 			return;
 		}
 		// Automatically transfers ownership of the Win32 file handle to the file descriptor
-		int fd = _open_osfhandle((intptr_t)hFile, openFlag);
+		int fd = _open_osfhandle(reinterpret_cast<intptr_t>(hFile), openFlag);
 		filePointer_ = _fdopen(fd, modeInternal);
 #elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
 		const wchar_t* modeInternal;

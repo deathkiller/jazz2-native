@@ -22,8 +22,10 @@ namespace nCine
 		deferShaderQueries(true),
 #if defined(WITH_FIXED_BATCH_SIZE) && WITH_FIXED_BATCH_SIZE > 0
 		fixedBatchSize(WITH_FIXED_BATCH_SIZE),
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+		fixedBatchSize(24),
 #elif defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE)
-		fixedBatchSize(12),
+		fixedBatchSize(10),
 #else
 		fixedBatchSize(0),
 #endif

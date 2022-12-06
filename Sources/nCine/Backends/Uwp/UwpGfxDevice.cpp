@@ -64,7 +64,7 @@ namespace nCine
 
 		// eglGetPlatformDisplayEXT is an alternative to eglGetDisplay. It allows us to pass in display attributes, used to configure D3D11.
 		PFNEGLGETPLATFORMDISPLAYEXTPROC eglGetPlatformDisplayEXT = reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(eglGetProcAddress("eglGetPlatformDisplayEXT"));
-		if (!eglGetPlatformDisplayEXT) {
+		if (eglGetPlatformDisplayEXT == nullptr) {
 			throw winrt::hresult_error(E_FAIL, L"Failed to get function eglGetPlatformDisplayEXT");
 		}
 
@@ -125,7 +125,6 @@ namespace nCine
 			eglDestroyContext(_eglDisplay, _eglContext);
 			_eglContext = EGL_NO_CONTEXT;
 		}
-
 		if (_eglDisplay != EGL_NO_DISPLAY) {
 			eglTerminate(_eglDisplay);
 			_eglDisplay = EGL_NO_DISPLAY;
