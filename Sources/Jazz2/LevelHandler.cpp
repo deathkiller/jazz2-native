@@ -1559,7 +1559,7 @@ namespace Jazz2
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_view->setRootNode(this);
 			_view->setCamera(_camera.get());
-			_view->setClearMode(Viewport::ClearMode::Never);
+			//_view->setClearMode(Viewport::ClearMode::Never);
 		} else {
 			_view->removeAllTextures();
 			_target->init(nullptr, Texture::Format::RGB8, width, height);

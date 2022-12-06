@@ -41,7 +41,9 @@ namespace nCine
 		}
 
 		/// Returns a factor that represents how long the last frame took relative to the desired frame time
-		float timeMult() const;
+		inline float timeMult() const {
+			return timeMult_;
+		}
 
 	private:
 		/// Number of seconds between two log events (user defined)
@@ -70,6 +72,10 @@ namespace nCine
 
 		/// Average FPS calulated during the specified interval
 		float fps_;
+
+		/// Factor that represents how long the last frame took relative to the desired frame time
+		float timeMult_;
+		float timeMultPrev_;
 	};
 
 }
