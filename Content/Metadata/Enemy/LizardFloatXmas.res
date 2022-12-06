@@ -29,5 +29,14 @@
 			"Path": "Lizard/xmas_bomb.aura",
 			"FrameRate": 8
 		}
+	},
+	
+	"Sounds": {
+		"Copter": {
+			"Paths": [ "Object/copter.wav" ]
+		},
+		"CopterPre": {
+			"Paths": [ "Common/copter_pre.wav" ]
+		}
 	}
 }

@@ -11,6 +11,14 @@ namespace Jazz2::Actors::Environment
 	{
 	}
 
+	Copter::~Copter()
+	{
+		if (_noise != nullptr) {
+			_noise->stop();
+			_noise = nullptr;
+		}
+	}
+
 	Task<bool> Copter::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		_state = (details.Params[0] != 0 ? State::Mounted : State::Free);
@@ -47,6 +55,10 @@ namespace Jazz2::Actors::Environment
 				break;
 			}
 		}
+
+		if (_noise != nullptr) {
+			_noise->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+		}
 	}
 
 	bool Copter::OnHandleCollision(std::shared_ptr<ActorBase> other)
@@ -55,6 +67,12 @@ namespace Jazz2::Actors::Environment
 			if (auto player = dynamic_cast<Player*>(other.get())) {
 				if (player->SetModifier(Player::Modifier::LizardCopter, shared_from_this())) {
 					_state = State::Mounted;
+
+					PlaySfx("CopterPre"_s);
+					_noise = PlaySfx("Copter"_s, 0.8f, 0.8f);
+					if (_noise != nullptr) {
+						_noise->setLooping(true);
+					}
 					return true;
 				}
 			}
@@ -68,6 +86,11 @@ namespace Jazz2::Actors::Environment
 		if (_state == State::Mounted) {
 			_state = State::Unmounted;
 			_phase = timeLeft;
+
+			if (_noise != nullptr) {
+				_noise->stop();
+				_noise = nullptr;
+			}
 
 			SetState(ActorState::ApplyGravitation, true);
 		}

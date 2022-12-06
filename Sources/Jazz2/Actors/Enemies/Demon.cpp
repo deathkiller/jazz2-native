@@ -12,7 +12,8 @@ namespace Jazz2::Actors::Enemies
 		:
 		_attackTime(80.0f),
 		_attacking(false),
-		_stuck(false)
+		_stuck(false),
+		_turnCooldown(0.0f)
 	{
 	}
 
@@ -49,20 +50,30 @@ namespace Jazz2::Actors::Enemies
 			if (_attacking) {
 				if (_attackTime <= 0.0f) {
 					_attacking = false;
-					_attackTime = Random().NextFloat(60, 90);
+					_attackTime = Random().NextFloat(60.0f, 90.0f);
 
 					_speed.X = 0.0f;
 
 					SetAnimation(AnimState::Idle);
 					SetTransition((AnimState)1073741826, false);
 				} else if (GetState(ActorState::CanJump)) {
-					if (!CanMoveToPosition(_speed.X * 4, 0)) {
+					if (!CanMoveToPosition(_speed.X * 4.0f, 0.0f)) {
 						if (_stuck) {
 							MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative | MoveType::Force);
-						} else {
+						} else if (_turnCooldown <= 0.0f) {
 							SetFacingLeft(!IsFacingLeft());
 							_speed.X = (IsFacingLeft() ? -1.8f : 1.8f);
+							_turnCooldown = 90.0f;
 							_stuck = true;
+						} else {
+							_attacking = false;
+							_attackTime = 90.0f - _turnCooldown;
+							_turnCooldown = 0.0f;
+
+							_speed.X = 0.0f;
+
+							SetAnimation(AnimState::Idle);
+							SetTransition((AnimState)1073741826, false);
 						}
 					} else {
 						_stuck = false;
@@ -91,6 +102,8 @@ namespace Jazz2::Actors::Enemies
 				}
 			}
 		}
+
+		_turnCooldown -= timeMult;
 	}
 
 	void Demon::OnUpdateHitbox()

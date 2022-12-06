@@ -771,7 +771,7 @@ namespace Jazz2::UI
 			_levelHandler->_playerFrozenMovement = _levelHandler->_playerRequiredMovement;
 		}
 
-		if (player->_weaponWheelState == Actors::Player::WeaponWheelState::Hidden && player->_sugarRushLeft <= 0.0f) {
+		if (player->_weaponWheelState == Actors::Player::WeaponWheelState::Hidden && player->_sugarRushLeft <= 0.0f && _weaponWheelAnim >= WeaponWheelAnimDuration * 0.3f) {
 			player->_weaponWheelState = Actors::Player::WeaponWheelState::Opening;
 		}
 
