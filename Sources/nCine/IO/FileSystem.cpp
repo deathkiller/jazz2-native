@@ -1262,10 +1262,16 @@ namespace nCine
 		int fullPathSize = (int)fullPath.size();
 		int startIdx = 0;
 		if (fullPathSize >= 2) {
-			if (fullPath[1] == ':') {
+			if (fullPath[0] == L'\\' && fullPath[1] == L'\\') {
+				// Skip the first part of UNC paths ("\\.\", "\\?\" or "\\hostname\")
 				startIdx = 3;
-			} else if (fullPath[0] == '\\' && fullPath[1] == '\\') {
-				startIdx = 4;
+				while (fullPath[startIdx] != L'\\' && fullPath[startIdx] != L'\0') {
+					startIdx++;
+				}
+				startIdx++;
+			}
+			if (fullPath[startIdx + 1] == L':') {
+				startIdx += 3;
 			}
 		}
 		if (startIdx == 0 && (fullPath[0] == L'/' || fullPath[0] == L'\\')) {
@@ -1280,14 +1286,15 @@ namespace nCine
 
 			if (fullPath[i] == L'/' || fullPath[i] == L'\\') {
 				fullPath[i] = L'\0';
-				const DWORD attrs = ::GetFileAttributes(fullPath);
-				if (attrs == INVALID_FILE_ATTRIBUTES) {
 #	if defined(DEATH_TARGET_WINDOWS_RT)
+				if (!::GetFileAttributesExFromAppW(fullPath, GetFileExInfoStandard, &lpFileInfo)) {
 					if (!::CreateDirectoryFromAppW(fullPath, NULL)) {
 #	else
+				const DWORD attrs = ::GetFileAttributes(fullPath);
+				if (attrs == INVALID_FILE_ATTRIBUTES) {
 					if (!::CreateDirectory(fullPath, NULL)) {
 #	endif
-						DWORD err = GetLastError();
+						DWORD err = ::GetLastError();
 						if (err != ERROR_ALREADY_EXISTS) {
 							return false;
 						}
@@ -1306,7 +1313,7 @@ namespace nCine
 #	else
 			if (!::CreateDirectory(fullPath, NULL)) {
 #	endif
-				DWORD err = GetLastError();
+				DWORD err = ::GetLastError();
 				if (err != ERROR_ALREADY_EXISTS) {
 					return false;
 				}
