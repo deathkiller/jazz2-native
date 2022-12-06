@@ -631,7 +631,7 @@ namespace Jazz2::UI::Menu
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_view->setRootNode(this);
 			_view->setCamera(_camera.get());
-			_view->setClearMode(Viewport::ClearMode::Never);
+			//_view->setClearMode(Viewport::ClearMode::Never);
 			_target->setMagFiltering(SamplerFilter::Linear);
 			_target->setWrap(SamplerWrapping::Repeat);
 

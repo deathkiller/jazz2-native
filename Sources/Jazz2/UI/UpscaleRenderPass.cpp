@@ -70,7 +70,7 @@ namespace Jazz2::UI
 			_antialiasing._view = std::make_unique<Viewport>(_antialiasing._target.get(), Viewport::DepthStencilFormat::None);
 			_antialiasing._view->setRootNode(this);
 			_antialiasing._view->setCamera(_antialiasing._camera.get());
-			_antialiasing._view->setClearMode(Viewport::ClearMode::Never);
+			//_antialiasing._view->setClearMode(Viewport::ClearMode::Never);
 
 			SceneNode& rootNode = theApplication().rootNode();
 			_antialiasing.setParent(&rootNode);
