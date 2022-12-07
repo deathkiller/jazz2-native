@@ -35,6 +35,13 @@ namespace nCine
 	SdlGfxDevice::SdlGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
 		: IGfxDevice(windowMode, glContextInfo, displayMode)
 	{
+#if defined(WITH_SDL) && defined(DEATH_TARGET_WINDOWS) && defined(SDL_HINT_WINDOWS_DPI_SCALING)
+		// Scaling is handled automatically by SDL (since v2.26.0)
+		if (windowMode.hasWindowScaling) {
+			SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
+		}
+#endif
+
 		initGraphics();
 		initWindowScaling(windowMode);
 		initDevice(windowMode.isResizable);
@@ -179,7 +186,7 @@ namespace nCine
 	{
 		updateMonitors();
 
-		// setting OpenGL attributes
+		// Setting OpenGL attributes
 		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, displayMode_.redBits());
 		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, displayMode_.greenBits());
 		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, displayMode_.blueBits());
@@ -199,10 +206,12 @@ namespace nCine
 															 ? SDL_GL_CONTEXT_PROFILE_CORE
 															 : SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 #endif
-		if (glContextInfo_.forwardCompatible == false)
+		if (!glContextInfo_.forwardCompatible) {
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
-		if (glContextInfo_.debugContext)
+		}
+		if (glContextInfo_.debugContext) {
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+		}
 
 		Uint32 flags = SDL_WINDOW_OPENGL;
 #if !defined(DEATH_TARGET_EMSCRIPTEN)

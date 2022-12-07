@@ -106,7 +106,7 @@ namespace nCine
 		/// Returns the drawable screen height as an integer number
 		inline int heightInt() const { return gfxDevice_->drawableHeight(); }
 		/// Returns the drawable screen resolution as a `Vector2i` object
-		inline Vector2i resolutionInt() const { return gfxDevice_->resolution(); }
+		inline Vector2i resolutionInt() const { return gfxDevice_->drawableResolution(); }
 
 		/// Resizes the screen viewport, if exists
 		void resizeScreenViewport(int width, int height);

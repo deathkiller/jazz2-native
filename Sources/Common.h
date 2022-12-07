@@ -1,6 +1,12 @@
 ﻿#pragma once
 
-// Set default version if not provided by CMake
+// Set default name and version if not provided by CMake
+#if !defined(NCINE_APP)
+#	define NCINE_APP "jazz2"
+#endif
+#if !defined(NCINE_APP_NAME)
+#	define NCINE_APP_NAME "Jazz² Resurrection"
+#endif
 #if !defined(NCINE_VERSION)
 #	define NCINE_VERSION "1.3.0"
 #endif

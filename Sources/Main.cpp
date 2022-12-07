@@ -117,7 +117,7 @@ void GameEventHandler::onPreInit(AppConfiguration& config)
 {
 	PreferencesCache::Initialize(config);
 
-	config.windowTitle = "Jazz² Resurrection"_s;
+	config.windowTitle = NCINE_APP_NAME;
 	config.withVSync = PreferencesCache::EnableVsync;
 	config.resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
 }
