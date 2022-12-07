@@ -181,7 +181,7 @@ void GameEventHandler::onInit()
 #endif
 
 	Viewport::chain().clear();
-	Vector2i res = theApplication().resolutionInt();
+	Vector2i res = theApplication().resolution();
 	_currentHandler->OnInitializeViewport(res.X, res.Y);
 
 	LOGI_X("Rendering resolution: %ix%i", res.X, res.Y);
@@ -268,7 +268,7 @@ void GameEventHandler::onFrameStart()
 		_pendingState = PendingState::None;
 
 		Viewport::chain().clear();
-		Vector2i res = theApplication().resolutionInt();
+		Vector2i res = theApplication().resolution();
 		_currentHandler->OnInitializeViewport(res.X, res.Y);
 	}
 

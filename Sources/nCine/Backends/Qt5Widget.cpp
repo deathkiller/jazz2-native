@@ -39,7 +39,7 @@ namespace nCine
 		rect.setHeight(application_.appConfiguration().resolution.y);
 		setGeometry(rect);
 
-		if (application_.appCfg_.isResizable == false) {
+		if (!application_.appCfg_.isResizable) {
 			setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 			setMinimumSize(width, height);
 			setMaximumSize(width, height);
@@ -68,10 +68,11 @@ namespace nCine
 	{
 		Qt5InputManager* inputManager = static_cast<Qt5InputManager*>(&application_.inputManager());
 
-		if (event->type() == QEvent::FocusIn)
+		if (event->type() == QEvent::FocusIn) {
 			application_.setFocus(true);
-		else if (event->type() == QEvent::FocusOut)
+		} else if (event->type() == QEvent::FocusOut) {
 			application_.setFocus(false);
+		}
 
 		switch (event->type()) {
 			case QEvent::FocusIn:
@@ -86,31 +87,32 @@ namespace nCine
 			case QEvent::TouchEnd:
 			case QEvent::Wheel:
 				if (inputManager) {
-					if (inputManager->handler())
+					if (inputManager->handler()) {
 						makeCurrent();
+					}
 					const bool result = inputManager->event(event);
-					if (inputManager->handler())
+					if (inputManager->handler()) {
 						doneCurrent();
+					}
 					return result;
 				}
 				return false;
-			case QEvent::Resize:
-			{
+			case QEvent::Resize: {
 				makeCurrent();
 				const QSize size = static_cast<QResizeEvent*>(event)->size();
 				application_.resizeScreenViewport(size.width(), size.height());
 				doneCurrent();
 				return QWidget::event(event);
 			}
-			case QEvent::Close:
-			{
+			case QEvent::Close: {
 				const bool shouldQuit = inputManager ? inputManager->shouldQuitOnRequest() : true;
 				if (shouldQuit) {
 					makeCurrent();
 					shutdown();
 					doneCurrent();
-				} else
+				} else {
 					static_cast<QCloseEvent*>(event)->ignore();
+				}
 				return true;
 			}
 			default:
@@ -122,7 +124,7 @@ namespace nCine
 	{
 		Qt5GfxDevice& gfxDevice = static_cast<Qt5GfxDevice&>(*application_.gfxDevice_);
 
-#ifdef WITH_GLEW
+#if defined(WITH_GLEW)
 		gfxDevice.initGlew();
 #endif
 		application_.initCommon();
@@ -142,9 +144,9 @@ namespace nCine
 	void Qt5Widget::paintGL()
 	{
 		if (isInitialized_) {
-			if (application_.shouldQuit() == false)
+			if (!application_.shouldQuit()) {
 				application_.run();
-			else {
+			} else {
 				shutdown();
 				QCoreApplication::quit();
 			}
@@ -156,18 +158,20 @@ namespace nCine
 		if (application_.appConfiguration().isResizable == true)
 			return QSize(-1, -1);
 
-		if (isInitialized_)
-			return QSize(application_.widthInt(), application_.heightInt());
-		else
+		if (isInitialized_) {
+			return QSize(application_.width(), application_.height());
+		} else {
 			return QSize(application_.appCfg_.resolution.x, application_.appCfg_.resolution.y);
+		}
 	}
 
 	QSize Qt5Widget::sizeHint() const
 	{
-		if (isInitialized_)
-			return QSize(application_.widthInt(), application_.heightInt());
-		else
+		if (isInitialized_) {
+			return QSize(application_.width(), application_.height());
+		} else {
 			return QSize(application_.appCfg_.resolution.x, application_.appCfg_.resolution.y);
+		}
 	}
 
 	///////////////////////////////////////////////////////////
@@ -176,8 +180,9 @@ namespace nCine
 
 	void Qt5Widget::autoUpdate()
 	{
-		if (shouldUpdate_)
+		if (shouldUpdate_) {
 			update();
+		}
 	}
 
 	void Qt5Widget::shutdown()
@@ -189,7 +194,6 @@ namespace nCine
 		}
 		disconnect(SIGNAL(frameSwapped()));
 	}
-
 }
 
 #endif

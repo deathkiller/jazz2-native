@@ -625,6 +625,51 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 else()
 	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/PCApplication.h)
 	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/PCApplication.cpp)
+	
+	if(WIN32 AND NCINE_COPY_DEPENDENCIES)
+		set(WIN32_DEPENDENCIES "")
+
+		if(NCINE_WITH_ANGLE AND ANGLE_FOUND)
+			list(APPEND WIN32_DEPENDENCIES ${MSVC_BINDIR}/libEGL.dll ${MSVC_BINDIR}/libGLESv2.dll)
+		elseif(GLEW_FOUND)
+			list(APPEND WIN32_DEPENDENCIES ${MSVC_BINDIR}/glew32.dll)
+		endif()
+		
+		if(NCINE_PREFERRED_BACKEND STREQUAL "GLFW" AND GLFW_FOUND)
+			list(APPEND WIN32_DEPENDENCIES ${MSVC_BINDIR}/glfw3.dll)
+		endif()
+		if(NCINE_PREFERRED_BACKEND STREQUAL "SDL2" AND SDL2_FOUND)
+			list(APPEND WIN32_DEPENDENCIES ${MSVC_BINDIR}/SDL2.dll)
+		endif()
+		
+		if(LIBDEFLATE_FOUND)
+			list(APPEND WIN32_DEPENDENCIES ${MSVC_BINDIR}/libdeflate.dll)
+		elseif(ZLIB_FOUND)
+			list(APPEND WIN32_DEPENDENCIES ${MSVC_BINDIR}/zlib.dll)
+		endif()
+
+		if(NCINE_WITH_WEBP AND WEBP_FOUND)
+			list(APPEND WIN32_DEPENDENCIES ${MSVC_BINDIR}/libwebp.dll)
+		endif()
+
+		if(NCINE_WITH_AUDIO AND OPENAL_FOUND)
+			list(APPEND WIN32_DEPENDENCIES ${MSVC_BINDIR}/OpenAL32.dll)
+
+			if(NCINE_WITH_VORBIS AND VORBIS_FOUND)
+				list(APPEND WIN32_DEPENDENCIES ${MSVC_BINDIR}/libogg.dll ${MSVC_BINDIR}/libvorbis.dll ${MSVC_BINDIR}/libvorbisfile.dll)
+			endif()
+		
+			if(OPENMPT_FOUND)
+				list(APPEND WIN32_DEPENDENCIES ${MSVC_BINDIR}/libopenmpt.dll ${MSVC_BINDIR}/openmpt-mpg123.dll ${MSVC_BINDIR}/openmpt-ogg.dll ${MSVC_BINDIR}/openmpt-vorbis.dll ${MSVC_BINDIR}/openmpt-zlib.dll)
+			endif()
+		endif()
+		
+		foreach(DEPENDENCY ${WIN32_DEPENDENCIES})
+			add_custom_command(TARGET ${NCINE_APP} POST_BUILD
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DEPENDENCY} $<TARGET_FILE_DIR:${NCINE_APP}>
+				VERBATIM)
+		endforeach()
+	endif()
 endif()
 
 # Jazz² Resurrection options

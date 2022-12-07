@@ -19,8 +19,8 @@ namespace nCine
 	ScreenViewport::ScreenViewport()
 		: Viewport()
 	{
-		width_ = theApplication().widthInt();
-		height_ = theApplication().heightInt();
+		width_ = theApplication().width();
+		height_ = theApplication().height();
 		viewportRect_.Set(0, 0, width_, height_);
 
 		const DisplayMode displayMode = theApplication().gfxDevice().displayMode();

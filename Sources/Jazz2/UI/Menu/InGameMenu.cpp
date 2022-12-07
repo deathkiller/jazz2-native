@@ -182,7 +182,7 @@ namespace Jazz2::UI::Menu
 	{
 		if ((type & ChangedPreferencesType::Graphics) == ChangedPreferencesType::Graphics) {
 			Viewport::chain().clear();
-			Vector2i res = theApplication().resolutionInt();
+			Vector2i res = theApplication().resolution();
 			_root->OnInitializeViewport(res.X, res.Y);
 		}
 

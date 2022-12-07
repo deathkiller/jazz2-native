@@ -363,7 +363,7 @@ namespace nCine
 			return;
 
 		mouseState_.x = static_cast<int>(x);
-		mouseState_.y = theApplication().heightInt() - static_cast<int>(y);
+		mouseState_.y = theApplication().height() - static_cast<int>(y);
 		inputEventHandler_->onMouseMoved(mouseState_);
 	}
 
@@ -375,7 +375,7 @@ namespace nCine
 		double xCursor, yCursor;
 		glfwGetCursorPos(window, &xCursor, &yCursor);
 		mouseEvent_.x = static_cast<int>(xCursor);
-		mouseEvent_.y = theApplication().heightInt() - static_cast<int>(yCursor);
+		mouseEvent_.y = theApplication().height() - static_cast<int>(yCursor);
 		mouseEvent_.button_ = button;
 
 		if (action == GLFW_PRESS)
