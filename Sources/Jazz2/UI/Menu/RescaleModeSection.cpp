@@ -11,9 +11,10 @@ namespace Jazz2::UI::Menu
 		_items[(int)Item::None].Name = "None / Pixel-perfect"_s;
 		_items[(int)Item::HQ2x].Name = "HQ2x"_s;
 		_items[(int)Item::_3xBrz].Name = "3xBRZ"_s;
-		_items[(int)Item::Crt].Name = "CRT"_s;
+		_items[(int)Item::CrtScanlines].Name = "CRT Scanlines"_s;
+		_items[(int)Item::CrtShadowMask].Name = "CRT Shadow Mask"_s;
+		_items[(int)Item::CrtApertureGrille].Name = "CRT Aperture Grille"_s;
 		_items[(int)Item::Monochrome].Name = "Monochrome"_s;
-		_items[(int)Item::Scanlines].Name = "Scanlines"_s;
 	}
 
 	void RescaleModeSection::OnShow(IMenuContainer* root)
@@ -131,15 +132,16 @@ namespace Jazz2::UI::Menu
 			case (int)Item::None: newMode = RescaleMode::None; break;
 			case (int)Item::HQ2x: newMode = RescaleMode::HQ2x; break;
 			case (int)Item::_3xBrz: newMode = RescaleMode::_3xBrz; break;
-			case (int)Item::Crt: newMode = RescaleMode::Crt; break;
+			case (int)Item::CrtScanlines: newMode = RescaleMode::CrtScanlines; break;
+			case (int)Item::CrtShadowMask: newMode = RescaleMode::CrtShadowMask; break;
+			case (int)Item::CrtApertureGrille: newMode = RescaleMode::CrtApertureGrille; break;
 			case (int)Item::Monochrome: newMode = RescaleMode::Monochrome; break;
-			case (int)Item::Scanlines: newMode = RescaleMode::Scanlines; break;
 		}
 
 		if ((PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask) != newMode) {
 			PreferencesCache::ActiveRescaleMode = newMode | (PreferencesCache::ActiveRescaleMode & ~RescaleMode::TypeMask);
-			if (newMode == RescaleMode::Scanlines) {
-				// Turn off Antialiasing when using Scanlines
+			if (newMode == RescaleMode::CrtScanlines || newMode == RescaleMode::CrtShadowMask || newMode == RescaleMode::CrtApertureGrille) {
+				// Turn off Antialiasing when using CRT modes
 				PreferencesCache::ActiveRescaleMode &= ~RescaleMode::UseAntialiasing;
 			}
 			PreferencesCache::Save();

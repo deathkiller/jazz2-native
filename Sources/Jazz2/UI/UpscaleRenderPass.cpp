@@ -101,9 +101,10 @@ namespace Jazz2::UI
 		switch (PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask) {
 			case RescaleMode::HQ2x: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeHQ2x); break;
 			case RescaleMode::_3xBrz: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::Resize3xBrz); break;
-			case RescaleMode::Crt: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeCrt); break;
+			case RescaleMode::CrtScanlines: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeCrtScanlines); break;
+			case RescaleMode::CrtShadowMask: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeCrtShadowMask); break;
+			case RescaleMode::CrtApertureGrille: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeCrtApertureGrille); break;
 			case RescaleMode::Monochrome: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeMonochrome); break;
-			case RescaleMode::Scanlines: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeScanlines); break;
 			default: _resizeShader = nullptr; break;
 		}
 

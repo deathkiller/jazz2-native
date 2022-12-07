@@ -1045,12 +1045,14 @@ namespace Jazz2
 			Shader::LoadMode::String, Shaders::ResizeHQ2xVs, Shaders::ResizeHQ2xFs);
 		_precompiledShaders[(int)PrecompiledShader::Resize3xBrz] = std::make_unique<Shader>("Resize3xBrz",
 			Shader::LoadMode::String, Shaders::Resize3xBrzVs, Shaders::Resize3xBrzFs);
-		_precompiledShaders[(int)PrecompiledShader::ResizeCrt] = std::make_unique<Shader>("ResizeCrt",
-			Shader::LoadMode::String, Shaders::ResizeCrtVs, Shaders::ResizeCrtFs);
+		_precompiledShaders[(int)PrecompiledShader::ResizeCrtScanlines] = std::make_unique<Shader>("ResizeCrtScanlines",
+			Shader::LoadMode::String, Shaders::ResizeCrtScanlinesVs, Shaders::ResizeCrtScanlinesFs);
+		_precompiledShaders[(int)PrecompiledShader::ResizeCrtShadowMask] = std::make_unique<Shader>("ResizeCrtShadowMask",
+			Shader::LoadMode::String, Shaders::ResizeCrtVs, Shaders::ResizeCrtShadowMaskFs);
+		_precompiledShaders[(int)PrecompiledShader::ResizeCrtApertureGrille] = std::make_unique<Shader>("ResizeCrtApertureGrille",
+			Shader::LoadMode::String, Shaders::ResizeCrtVs, Shaders::ResizeCrtApertureGrilleFs);
 		_precompiledShaders[(int)PrecompiledShader::ResizeMonochrome] = std::make_unique<Shader>("ResizeMonochrome",
 			Shader::LoadMode::String, Shaders::ResizeMonochromeVs, Shaders::ResizeMonochromeFs);
-		_precompiledShaders[(int)PrecompiledShader::ResizeScanlines] = std::make_unique<Shader>("ResizeScanlines",
-			Shader::LoadMode::String, Shaders::ResizeScanlinesVs, Shaders::ResizeScanlinesFs);
 #endif
 		_precompiledShaders[(int)PrecompiledShader::Antialiasing] = std::make_unique<Shader>("Antialiasing",
 			Shader::LoadMode::String, Shaders::AntialiasingVs, Shaders::AntialiasingFs);

@@ -202,7 +202,9 @@ namespace Jazz2
 #if defined(ALLOW_RESCALE_SHADERS)
 		ResizeHQ2x,
 		Resize3xBrz,
-		ResizeCrt,
+		ResizeCrtScanlines,
+		ResizeCrtShadowMask,
+		ResizeCrtApertureGrille,
 		ResizeMonochrome,
 		ResizeScanlines,
 #endif

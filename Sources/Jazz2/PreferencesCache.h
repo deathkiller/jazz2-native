@@ -15,9 +15,10 @@ namespace Jazz2
 		None,
 		HQ2x,
 		_3xBrz,
-		Crt,
+		CrtScanlines,
+		CrtShadowMask,
+		CrtApertureGrille,
 		Monochrome,
-		Scanlines,
 
 		TypeMask = 0x0f,
 		UseAntialiasing = 0x80

@@ -5,8 +5,8 @@
 #include "../Input/JoyMapping.h"
 #include "../Application.h"
 
-#include <cstring> // for memset() and memcpy()
-#include <cmath> // for fabsf()
+#include <cstring>	// for memset() and memcpy()
+#include <cmath>	// for fabsf()
 
 #ifdef WITH_IMGUI
 #	include "ImGuiGlfwInput.h"
@@ -104,34 +104,23 @@ namespace nCine
 
 	bool GlfwJoystickState::isButtonPressed(int buttonId) const
 	{
-		bool isPressed = false;
-		if (buttonId >= 0 && buttonId < numButtons_)
-			isPressed = (buttons_[buttonId] != GLFW_RELEASE);
-		return isPressed;
+		return (buttonId >= 0 && buttonId < numButtons_ && buttons_[buttonId] != GLFW_RELEASE);
 	}
 
 	unsigned char GlfwJoystickState::hatState(int hatId) const
 	{
-		unsigned char hatState = HatState::CENTERED;
-		if (hatId >= 0 && hatId < numHats_)
-			hatState = hats_[hatId];
-		return hatState;
+		return (hatId >= 0 && hatId < numHats_ ? hats_[hatId] : HatState::CENTERED);
 	}
 
 	short int GlfwJoystickState::axisValue(int axisId) const
 	{
 		// If the joystick is not present the returned value is zero
-		const short int axisValue = static_cast<short int>(axisNormValue(axisId) * IInputManager::MaxAxisValue);
-
-		return axisValue;
+		return static_cast<short int>(axisNormValue(axisId) * IInputManager::MaxAxisValue);
 	}
 
 	float GlfwJoystickState::axisNormValue(int axisId) const
 	{
-		float axisValue = 0.0f;
-		if (axisId >= 0 && axisId < numAxes_)
-			axisValue = axesValues_[axisId];
-		return axisValue;
+		return (axisId >= 0 && axisId < numAxes_ ? axesValues_[axisId] : 0.0f);
 	}
 
 	bool GlfwInputManager::hasFocus()
@@ -139,8 +128,9 @@ namespace nCine
 		const bool glfwFocused = (glfwGetWindowAttrib(GlfwGfxDevice::windowHandle(), GLFW_FOCUSED) != 0);
 
 		// A focus event has occurred (either gain or loss)
-		if (windowHasFocus_ != glfwFocused)
+		if (windowHasFocus_ != glfwFocused) {
 			windowHasFocus_ = glfwFocused;
+		}
 
 		return windowHasFocus_;
 	}
@@ -174,10 +164,7 @@ namespace nCine
 
 	const char* GlfwInputManager::joyName(int joyId) const
 	{
-		if (isJoyPresent(joyId))
-			return glfwGetJoystickName(joyId);
-		else
-			return nullptr;
+		return (isJoyPresent(joyId) ? glfwGetJoystickName(joyId) : nullptr);
 	}
 
 	const JoystickGuid GlfwInputManager::joyGuid(int joyId) const
@@ -205,43 +192,37 @@ namespace nCine
 	int GlfwInputManager::joyNumButtons(int joyId) const
 	{
 		int numButtons = -1;
-
-		if (isJoyPresent(joyId))
+		if (isJoyPresent(joyId)) {
 			glfwGetJoystickButtons(GLFW_JOYSTICK_1 + joyId, &numButtons);
-
+		}
 		return numButtons;
 	}
 
 	int GlfwInputManager::joyNumHats(int joyId) const
 	{
 		int numHats = -1;
-
-		if (isJoyPresent(joyId))
+		if (isJoyPresent(joyId)) {
 #if GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 3
 			glfwGetJoystickHats(GLFW_JOYSTICK_1 + joyId, &numHats);
 #else
 			numHats = 0;
 #endif
-
+		}
 		return numHats;
 	}
 
 	int GlfwInputManager::joyNumAxes(int joyId) const
 	{
 		int numAxes = -1;
-
-		if (isJoyPresent(joyId))
+		if (isJoyPresent(joyId)) {
 			glfwGetJoystickAxes(GLFW_JOYSTICK_1 + joyId, &numAxes);
-
+		}
 		return numAxes;
 	}
 
 	const JoystickState& GlfwInputManager::joystickState(int joyId) const
 	{
-		if (isJoyPresent(joyId))
-			return joystickStates_[joyId];
-		else
-			return nullJoystickState_;
+		return (isJoyPresent(joyId) ? joystickStates_[joyId] : nullJoystickState_);
 	}
 
 	void GlfwInputManager::setCursor(Cursor cursor)
@@ -333,23 +314,26 @@ namespace nCine
 
 	void GlfwInputManager::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 	{
-		if (inputEventHandler_ == nullptr)
+		if (inputEventHandler_ == nullptr) {
 			return;
+		}
 
 		keyboardEvent_.scancode = scancode;
 		keyboardEvent_.sym = GlfwKeys::keySymValueToEnum(key);
 		keyboardEvent_.mod = GlfwKeys::keyModMaskToEnumMask(mods);
 
-		if (action == GLFW_PRESS)
+		if (action == GLFW_PRESS) {
 			inputEventHandler_->onKeyPressed(keyboardEvent_);
-		else if (action == GLFW_RELEASE)
+		} else if (action == GLFW_RELEASE) {
 			inputEventHandler_->onKeyReleased(keyboardEvent_);
+		}
 	}
 
 	void GlfwInputManager::charCallback(GLFWwindow* window, unsigned int c)
 	{
-		if (inputEventHandler_ == nullptr)
+		if (inputEventHandler_ == nullptr) {
 			return;
+		}
 
 		// TODO: text input
 		// Current GLFW version does not return an UTF-8 string (https://github.com/glfw/glfw/issues/837)
@@ -359,8 +343,9 @@ namespace nCine
 
 	void GlfwInputManager::cursorPosCallback(GLFWwindow* window, double x, double y)
 	{
-		if (inputEventHandler_ == nullptr)
+		if (inputEventHandler_ == nullptr) {
 			return;
+		}
 
 		mouseState_.x = static_cast<int>(x);
 		mouseState_.y = theApplication().height() - static_cast<int>(y);
@@ -369,8 +354,9 @@ namespace nCine
 
 	void GlfwInputManager::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 	{
-		if (inputEventHandler_ == nullptr)
+		if (inputEventHandler_ == nullptr) {
 			return;
+		}
 
 		double xCursor, yCursor;
 		glfwGetCursorPos(window, &xCursor, &yCursor);
@@ -378,16 +364,18 @@ namespace nCine
 		mouseEvent_.y = theApplication().height() - static_cast<int>(yCursor);
 		mouseEvent_.button_ = button;
 
-		if (action == GLFW_PRESS)
+		if (action == GLFW_PRESS) {
 			inputEventHandler_->onMouseButtonPressed(mouseEvent_);
-		else if (action == GLFW_RELEASE)
+		} else if (action == GLFW_RELEASE) {
 			inputEventHandler_->onMouseButtonReleased(mouseEvent_);
+		}
 	}
 
 	void GlfwInputManager::scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 	{
-		if (inputEventHandler_ == nullptr)
+		if (inputEventHandler_ == nullptr) {
 			return;
+		}
 
 		scrollEvent_.x = static_cast<float>(xoffset);
 		scrollEvent_.y = static_cast<float>(yoffset);
@@ -479,14 +467,14 @@ namespace nCine
 
 	GlfwInputManager::JoystickEventsSimulator::JoystickEventsSimulator()
 	{
-		memset(buttonsState_, 0, sizeof(unsigned char) * MaxNumButtons * MaxNumJoysticks);
-		memset(axesValuesState_, 0, sizeof(float) * MaxNumAxes * MaxNumJoysticks);
+		std::memset(buttonsState_, 0, sizeof(unsigned char) * MaxNumButtons * MaxNumJoysticks);
+		std::memset(axesValuesState_, 0, sizeof(float) * MaxNumAxes * MaxNumJoysticks);
 	}
 
 	void GlfwInputManager::JoystickEventsSimulator::resetJoystickState(int joyId)
 	{
-		memset(buttonsState_[joyId], 0, sizeof(unsigned char) * MaxNumButtons);
-		memset(axesValuesState_[joyId], 0, sizeof(float) * MaxNumAxes);
+		std::memset(buttonsState_[joyId], 0, sizeof(unsigned char) * MaxNumButtons);
+		std::memset(axesValuesState_[joyId], 0, sizeof(float) * MaxNumAxes);
 	}
 
 	void GlfwInputManager::JoystickEventsSimulator::simulateButtonsEvents(int joyId, int numButtons, const unsigned char* buttons)
@@ -505,8 +493,9 @@ namespace nCine
 			}
 		}
 
-		if (numButtons > 0)
-			memcpy(buttonsState_[joyId], buttons, sizeof(unsigned char) * numButtons);
+		if (numButtons > 0) {
+			std::memcpy(buttonsState_[joyId], buttons, sizeof(unsigned char) * numButtons);
+		}
 	}
 
 	void GlfwInputManager::JoystickEventsSimulator::simulateHatsEvents(int joyId, int numHats, const unsigned char* hats)
@@ -522,8 +511,9 @@ namespace nCine
 			}
 		}
 
-		if (numHats > 0)
-			memcpy(hatsState_[joyId], hats, sizeof(unsigned char) * numHats);
+		if (numHats > 0) {
+			std::memcpy(hatsState_[joyId], hats, sizeof(unsigned char) * numHats);
+		}
 	}
 
 	void GlfwInputManager::JoystickEventsSimulator::simulateAxesEvents(int joyId, int numAxes, const float* axesValues)
@@ -539,8 +529,9 @@ namespace nCine
 			}
 		}
 
-		if (numAxes > 0)
-			memcpy(axesValuesState_[joyId], axesValues, sizeof(float) * numAxes);
+		if (numAxes > 0) {
+			std::memcpy(axesValuesState_[joyId], axesValues, sizeof(float) * numAxes);
+		}
 	}
 }
 

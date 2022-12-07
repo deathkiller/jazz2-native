@@ -306,6 +306,12 @@ void GameEventHandler::onKeyPressed(const KeyboardEvent& event)
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
 	// Allow Alt+Enter to switch fullscreen
 	if (event.sym == KeySym::RETURN && (event.mod & KeyMod::MASK) == KeyMod::LALT) {
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+		// Xbox is always fullscreen
+		if (Environment::CurrentDeviceType == DeviceType::Xbox) {
+			return;
+		}
+#	endif
 		PreferencesCache::EnableFullscreen = !PreferencesCache::EnableFullscreen;
 		if (PreferencesCache::EnableFullscreen) {
 			theApplication().gfxDevice().setResolution(true);

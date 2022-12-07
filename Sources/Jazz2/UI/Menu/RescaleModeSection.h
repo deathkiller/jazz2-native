@@ -19,9 +19,10 @@ namespace Jazz2::UI::Menu
 			None,
 			HQ2x,
 			_3xBrz,
-			Crt,
+			CrtScanlines,
+			CrtShadowMask,
+			CrtApertureGrille,
 			Monochrome,
-			Scanlines,
 
 			Count
 		};
