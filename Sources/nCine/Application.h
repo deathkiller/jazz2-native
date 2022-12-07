@@ -94,19 +94,12 @@ namespace nCine
 		/// Returns a factor that represents how long the last frame took relative to the desired frame time
 		float timeMult() const;
 
-		/// Returns the drawable screen width as a float number
-		inline float width() const { return static_cast<float>(gfxDevice_->drawableWidth()); }
-		/// Returns the drawable screen height as a float number
-		inline float height() const { return static_cast<float>(gfxDevice_->drawableHeight()); }
-		/// Returns the drawable screen resolution as a `Vector2f` object
-		inline Vector2f resolution() const { return Vector2f(width(), height()); }
-
 		/// Returns the drawable screen width as an integer number
-		inline int widthInt() const { return gfxDevice_->drawableWidth(); }
+		inline int width() const { return gfxDevice_->drawableWidth(); }
 		/// Returns the drawable screen height as an integer number
-		inline int heightInt() const { return gfxDevice_->drawableHeight(); }
+		inline int height() const { return gfxDevice_->drawableHeight(); }
 		/// Returns the drawable screen resolution as a `Vector2i` object
-		inline Vector2i resolutionInt() const { return gfxDevice_->drawableResolution(); }
+		inline Vector2i resolution() const { return gfxDevice_->drawableResolution(); }
 
 		/// Resizes the screen viewport, if exists
 		void resizeScreenViewport(int width, int height);

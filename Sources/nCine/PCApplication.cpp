@@ -67,8 +67,8 @@ static bool CreateLogConsole(const StringView& title)
 		HWND hWnd = ::GetConsoleWindow();
 		if (hWnd != nullptr) {
 			HINSTANCE inst = ((HINSTANCE)&__ImageBase);
-			HICON hIcon = (HICON)::LoadImage(inst, L"LOG_ICON", IMAGE_ICON, 32, 32, LR_DEFAULTSIZE);
-			HICON hIconSmall = (HICON)::LoadImage(inst, L"LOG_ICON", IMAGE_ICON, 16, 16, LR_DEFAULTSIZE);
+			HICON hIcon = (HICON)::LoadImage(inst, L"LOG_ICON", IMAGE_ICON, ::GetSystemMetrics(SM_CXICON), ::GetSystemMetrics(SM_CYICON), LR_DEFAULTSIZE);
+			HICON hIconSmall = (HICON)::LoadImage(inst, L"LOG_ICON", IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTSIZE);
 			::SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIconSmall);
 			::SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 		}

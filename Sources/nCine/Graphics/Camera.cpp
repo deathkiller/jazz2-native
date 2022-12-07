@@ -13,8 +13,8 @@ namespace nCine {
 		view_(Matrix4x4f::Identity),
 		updateFrameProjectionMatrix_(0), updateFrameViewMatrix_(0)
 	{
-		const float width = theApplication().width();
-		const float height = theApplication().height();
+		int width = theApplication().width();
+		int height = theApplication().height();
 
 		projectionValues_.left = width * (-0.5f);
 		projectionValues_.right = width * (+0.5f);

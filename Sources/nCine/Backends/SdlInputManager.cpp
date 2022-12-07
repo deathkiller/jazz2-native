@@ -193,13 +193,13 @@ namespace nCine
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
 				mouseEvent_.x = event.button.x;
-				mouseEvent_.y = theApplication().heightInt() - event.button.y;
+				mouseEvent_.y = theApplication().height() - event.button.y;
 				mouseEvent_.button_ = event.button.button;
 				break;
 			case SDL_MOUSEMOTION:
 				if (cursor_ != Cursor::HiddenLocked) {
 					mouseState_.x = event.motion.x;
-					mouseState_.y = theApplication().heightInt() - event.motion.y;
+					mouseState_.y = theApplication().height() - event.motion.y;
 				} else {
 					mouseState_.x += event.motion.xrel;
 					mouseState_.y -= event.motion.yrel;
