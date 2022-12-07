@@ -174,7 +174,7 @@ namespace nCine
 
 		static KeySym keySymValueToEnum(winrtWS::VirtualKey virtualKey);
 
-		void OnKeyDown(const winrtWF::IInspectable& sender, const winrtWUC::KeyEventArgs& args);
-		void OnKeyUp(const winrtWF::IInspectable& sender, const winrtWUC::KeyEventArgs& args);
+		void OnKey(const winrtWUC::CoreWindow& sender, const winrtWUC::KeyEventArgs& args);
+		void OnAcceleratorKeyActivated(const winrtWUC::CoreDispatcher& sender, const winrtWUC::AcceleratorKeyEventArgs& args);
 	};
 }

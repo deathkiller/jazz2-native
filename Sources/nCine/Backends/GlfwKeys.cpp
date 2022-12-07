@@ -139,10 +139,10 @@ namespace nCine
 		int result = 0;
 
 		if (keymod != 0) {
-			result |= (keymod & GLFW_MOD_SHIFT) ? KeyMod::SHIFT : 0;
-			result |= (keymod & GLFW_MOD_CONTROL) ? KeyMod::CTRL : 0;
-			result |= (keymod & GLFW_MOD_ALT) ? KeyMod::ALT : 0;
-			result |= (keymod & GLFW_MOD_SUPER) ? KeyMod::SUPER : 0;
+			result |= ((keymod & GLFW_MOD_SHIFT) != 0 ? KeyMod::LSHIFT : 0);
+			result |= ((keymod & GLFW_MOD_CONTROL) != 0 ? KeyMod::LCTRL : 0);
+			result |= ((keymod & GLFW_MOD_ALT) != 0 ? KeyMod::LALT : 0);
+			result |= ((keymod & GLFW_MOD_SUPER) != 0 ? KeyMod::LSUPER : 0);
 		}
 
 		return result;

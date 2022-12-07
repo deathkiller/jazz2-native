@@ -27,8 +27,9 @@ namespace nCine
 	{
 		joyMapping_.init(this);
 
-		window.KeyDown({ this, &UwpInputManager::OnKeyDown });
-		window.KeyUp({ this, &UwpInputManager::OnKeyUp });
+		window.KeyDown({ this, &UwpInputManager::OnKey });
+		window.KeyUp({ this, &UwpInputManager::OnKey });
+		window.Dispatcher().AcceleratorKeyActivated({ this, &UwpInputManager::OnAcceleratorKeyActivated });
 
 		winrtWGI::Gamepad::GamepadAdded([](const auto&, winrtWGI::Gamepad gamepad) {
 			_gamepadsSync.Lock();
@@ -136,41 +137,96 @@ namespace nCine
 		_gamepadsSync.Unlock();
 	}
 
-	void UwpInputManager::OnKeyDown(const winrtWF::IInspectable& sender, const winrtWUC::KeyEventArgs& args)
+	void UwpInputManager::OnKey(const winrtWUC::CoreWindow& sender, const winrtWUC::KeyEventArgs& args)
 	{
 		if (inputEventHandler_ != nullptr) {
 			args.Handled(true);
 
 			keyboardEvent_.scancode = args.KeyStatus().ScanCode;
 			keyboardEvent_.sym = keySymValueToEnum(args.VirtualKey());
-			// TODO: Key modifiers
-			keyboardEvent_.mod = /*GlfwKeys::keyModMaskToEnumMask(mods)*/0;
 
+			int mod = 0;
+			if ((sender.GetKeyState(winrtWS::VirtualKey::Shift) & winrtWUC::CoreVirtualKeyStates::Locked) == winrtWUC::CoreVirtualKeyStates::Locked)
+				mod |= KeyMod::LSHIFT;
+			if ((sender.GetKeyState(winrtWS::VirtualKey::Control) & winrtWUC::CoreVirtualKeyStates::Locked) == winrtWUC::CoreVirtualKeyStates::Locked)
+				mod |= KeyMod::LCTRL;
+			if ((sender.GetKeyState(winrtWS::VirtualKey::Menu) & winrtWUC::CoreVirtualKeyStates::Locked) == winrtWUC::CoreVirtualKeyStates::Locked)
+				mod |= KeyMod::LALT;
+			if ((sender.GetKeyState(winrtWS::VirtualKey::LeftWindows) & winrtWUC::CoreVirtualKeyStates::Locked) == winrtWUC::CoreVirtualKeyStates::Locked ||
+				(sender.GetKeyState(winrtWS::VirtualKey::RightWindows) & winrtWUC::CoreVirtualKeyStates::Locked) == winrtWUC::CoreVirtualKeyStates::Locked)
+				mod |= KeyMod::LSUPER;
+			if ((sender.GetKeyState(winrtWS::VirtualKey::CapitalLock) & winrtWUC::CoreVirtualKeyStates::Locked) == winrtWUC::CoreVirtualKeyStates::Locked)
+				mod |= KeyMod::CAPS;
+			if ((sender.GetKeyState(winrtWS::VirtualKey::NumberKeyLock) & winrtWUC::CoreVirtualKeyStates::Locked) == winrtWUC::CoreVirtualKeyStates::Locked)
+				mod |= KeyMod::NUM;
+			if ((sender.GetKeyState(winrtWS::VirtualKey::Scroll) & winrtWUC::CoreVirtualKeyStates::Locked) == winrtWUC::CoreVirtualKeyStates::Locked)
+				mod |= KeyMod::MODE;
+			keyboardEvent_.mod = mod;
+
+			bool isPressed = !args.KeyStatus().IsKeyReleased;
+			bool wasPressed;
 			if (keyboardEvent_.sym < KeySym::COUNT) {
-				keyboardState_._pressedKeys[(int)keyboardEvent_.sym] = true;
+				wasPressed = keyboardState_._pressedKeys[(int)keyboardEvent_.sym];
+				keyboardState_._pressedKeys[(int)keyboardEvent_.sym] = isPressed;
+			} else {
+				wasPressed = false;
 			}
 
-			// TODO: Probably called from UI thread
-			inputEventHandler_->onKeyPressed(keyboardEvent_);
+			if (isPressed != wasPressed) {
+				if (isPressed) {
+					inputEventHandler_->onKeyPressed(keyboardEvent_);
+				} else {
+					inputEventHandler_->onKeyReleased(keyboardEvent_);
+				}
+			}
 		}
 	}
 
-	void UwpInputManager::OnKeyUp(const winrtWF::IInspectable& sender, const winrtWUC::KeyEventArgs& args)
+	void UwpInputManager::OnAcceleratorKeyActivated(const winrtWUC::CoreDispatcher& sender, const winrtWUC::AcceleratorKeyEventArgs& args)
 	{
+		// AcceleratorKeyActivated event is required to handle Alt keys, 
+		// Also this callback has higher priority than OnKeyDown/Up, OnKeyDown/Up were never called after this one
 		if (inputEventHandler_ != nullptr) {
 			args.Handled(true);
 
 			keyboardEvent_.scancode = args.KeyStatus().ScanCode;
 			keyboardEvent_.sym = keySymValueToEnum(args.VirtualKey());
-			// TODO: Key modifiers
-			keyboardEvent_.mod = /*keyModMaskToEnumMask(mods)*/0;
 
+			auto coreWindow = winrtWUC::CoreWindow::GetForCurrentThread();
+			int mod = 0;
+			if ((coreWindow.GetKeyState(winrtWS::VirtualKey::Shift) & winrtWUC::CoreVirtualKeyStates::Down) == winrtWUC::CoreVirtualKeyStates::Down)
+				mod |= KeyMod::LSHIFT;
+			if ((coreWindow.GetKeyState(winrtWS::VirtualKey::Control) & winrtWUC::CoreVirtualKeyStates::Down) == winrtWUC::CoreVirtualKeyStates::Down)
+				mod |= KeyMod::LCTRL;
+			if ((coreWindow.GetKeyState(winrtWS::VirtualKey::Menu) & winrtWUC::CoreVirtualKeyStates::Down) == winrtWUC::CoreVirtualKeyStates::Down)
+				mod |= KeyMod::LALT;
+			if ((coreWindow.GetKeyState(winrtWS::VirtualKey::LeftWindows) & winrtWUC::CoreVirtualKeyStates::Down) == winrtWUC::CoreVirtualKeyStates::Down ||
+				(coreWindow.GetKeyState(winrtWS::VirtualKey::RightWindows) & winrtWUC::CoreVirtualKeyStates::Down) == winrtWUC::CoreVirtualKeyStates::Down)
+				mod |= KeyMod::LSUPER;
+			if ((coreWindow.GetKeyState(winrtWS::VirtualKey::CapitalLock) & winrtWUC::CoreVirtualKeyStates::Locked) == winrtWUC::CoreVirtualKeyStates::Locked)
+				mod |= KeyMod::CAPS;
+			if ((coreWindow.GetKeyState(winrtWS::VirtualKey::NumberKeyLock) & winrtWUC::CoreVirtualKeyStates::Locked) == winrtWUC::CoreVirtualKeyStates::Locked)
+				mod |= KeyMod::NUM;
+			if ((coreWindow.GetKeyState(winrtWS::VirtualKey::Scroll) & winrtWUC::CoreVirtualKeyStates::Locked) == winrtWUC::CoreVirtualKeyStates::Locked)
+				mod |= KeyMod::MODE;
+			keyboardEvent_.mod = mod;
+
+			bool isPressed = (args.EventType() == winrtWUC::CoreAcceleratorKeyEventType::KeyDown || args.EventType() == winrtWUC::CoreAcceleratorKeyEventType::SystemKeyDown);
+			bool wasPressed;
 			if (keyboardEvent_.sym < KeySym::COUNT) {
-				keyboardState_._pressedKeys[(int)keyboardEvent_.sym] = false;
+				wasPressed = keyboardState_._pressedKeys[(int)keyboardEvent_.sym];
+				keyboardState_._pressedKeys[(int)keyboardEvent_.sym] = isPressed;
+			} else {
+				wasPressed = false;
 			}
 
-			// TODO: Probably called from UI thread
-			inputEventHandler_->onKeyReleased(keyboardEvent_);
+			if (isPressed != wasPressed) {
+				if (isPressed) {
+					inputEventHandler_->onKeyPressed(keyboardEvent_);
+				} else {
+					inputEventHandler_->onKeyReleased(keyboardEvent_);
+				}
+			}
 		}
 	}
 
@@ -289,6 +345,7 @@ namespace nCine
 			case winrtWS::VirtualKey::RightControl:		return KeySym::RCTRL;
 			case winrtWS::VirtualKey::LeftControl:		return KeySym::LCTRL;
 			case winrtWS::VirtualKey::RightMenu:		return KeySym::RALT;
+			case winrtWS::VirtualKey::Menu:
 			case winrtWS::VirtualKey::LeftMenu:			return KeySym::LALT;
 			case winrtWS::VirtualKey::RightWindows:		return KeySym::RSUPER;
 			case winrtWS::VirtualKey::LeftWindows:		return KeySym::LSUPER;
