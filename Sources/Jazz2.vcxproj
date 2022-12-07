@@ -834,6 +834,7 @@
     <Manifest Include="App.manifest" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="Icons\Log.ico" />
     <Image Include="Icons\Main.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -39,5 +39,4 @@ namespace nCine
 		/// Deleted assignment operator
 		ArrayIndexer& operator=(const ArrayIndexer&) = delete;
 	};
-
 }

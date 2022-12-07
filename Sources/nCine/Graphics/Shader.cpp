@@ -62,7 +62,7 @@ namespace nCine
 			? loadFromMemory(shaderName, introspection, vertex, fragment)
 			: loadFromFile(shaderName, introspection, vertex, fragment);
 
-		if (hasLoaded == false) {
+		if (!hasLoaded) {
 			LOGE_X("Shader \"%s\" cannot be loaded", shaderName);
 		}
 	}
@@ -74,7 +74,7 @@ namespace nCine
 			? loadFromMemory(shaderName, vertex, fragment)
 			: loadFromFile(shaderName, vertex, fragment);
 
-		if (hasLoaded == false) {
+		if (!hasLoaded) {
 			LOGE_X("Shader \"%s\" cannot be loaded", shaderName);
 		}
 	}
@@ -91,7 +91,7 @@ namespace nCine
 			? loadFromMemory(shaderName, introspection, vertex, fragment)
 			: loadFromFile(shaderName, introspection, vertex, fragment);
 
-		if (hasLoaded == false) {
+		if (!hasLoaded) {
 			LOGE_X("Shader \"%s\" cannot be loaded", shaderName);
 		}
 	}
@@ -103,7 +103,7 @@ namespace nCine
 			? loadFromMemory(shaderName, vertex, fragment)
 			: loadFromFile(shaderName, vertex, fragment);
 
-		if (hasLoaded == false) {
+		if (!hasLoaded) {
 			LOGE_X("Shader \"%s\" cannot be loaded", shaderName);
 		}
 	}
@@ -120,7 +120,7 @@ namespace nCine
 			? loadFromMemory(shaderName, introspection, vertex, fragment)
 			: loadFromFile(shaderName, introspection, vertex, fragment);
 
-		if (hasLoaded == false) {
+		if (!hasLoaded) {
 			LOGE_X("Shader \"%s\" cannot be loaded", shaderName);
 		}
 	}
@@ -132,7 +132,7 @@ namespace nCine
 			? loadFromMemory(shaderName, vertex, fragment)
 			: loadFromFile(shaderName, vertex, fragment);
 
-		if (hasLoaded == false) {
+		if (!hasLoaded) {
 			LOGE_X("Shader \"%s\" cannot be loaded", shaderName);
 		}
 	}
@@ -154,7 +154,7 @@ namespace nCine
 	bool Shader::loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment)
 	{
 		ZoneScoped;
-		if (shaderName) {
+		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, strlen(shaderName));
 		}
@@ -182,7 +182,7 @@ namespace nCine
 	bool Shader::loadFromMemory(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment)
 	{
 		ZoneScoped;
-		if (shaderName) {
+		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, strlen(shaderName));
 		}
@@ -211,7 +211,7 @@ namespace nCine
 	bool Shader::loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment)
 	{
 		ZoneScoped;
-		if (shaderName) {
+		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, strlen(shaderName));
 		}
@@ -239,7 +239,7 @@ namespace nCine
 	bool Shader::loadFromFile(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment)
 	{
 		ZoneScoped;
-		if (shaderName) {
+		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, strlen(shaderName));
 		}
@@ -267,7 +267,7 @@ namespace nCine
 	bool Shader::loadFromFile(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment)
 	{
 		ZoneScoped;
-		if (shaderName) {
+		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, strlen(shaderName));
 		}
@@ -296,7 +296,7 @@ namespace nCine
 	bool Shader::loadFromFile(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment)
 	{
 		ZoneScoped;
-		if (shaderName) {
+		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, strlen(shaderName));
 		}
@@ -372,7 +372,7 @@ namespace nCine
 	bool Shader::loadDefaultShader(DefaultVertex vertex)
 	{
 		const char* vertexShader = nullptr;
-#ifndef WITH_EMBEDDED_SHADERS
+#if !defined(WITH_EMBEDDED_SHADERS)
 		switch (vertex) {
 			case DefaultVertex::SPRITE:
 				vertexShader = "sprite_vs.glsl";
@@ -448,7 +448,7 @@ namespace nCine
 	bool Shader::loadDefaultShader(DefaultFragment fragment)
 	{
 		const char* fragmentShader = nullptr;
-#ifndef WITH_EMBEDDED_SHADERS
+#if !defined(WITH_EMBEDDED_SHADERS)
 		switch (fragment) {
 			case DefaultFragment::SPRITE:
 				fragmentShader = "sprite_fs.glsl";
@@ -490,5 +490,4 @@ namespace nCine
 #endif
 		return hasCompiled;
 	}
-
 }

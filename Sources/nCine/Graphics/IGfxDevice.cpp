@@ -164,7 +164,9 @@ namespace nCine
 		updateMonitors();
 		const float factor = windowScalingFactor();
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(WITH_SDL) && defined(DEATH_TARGET_WINDOWS)
+		// Scaling is handled automatically by SDL (since v2.26.0)
+#elif !defined(DEATH_TARGET_EMSCRIPTEN)
 		if (windowMode.hasWindowScaling) {
 #	if defined(WITH_QT5)
 			setWindowSize(width_ * factor, height_ * factor);
@@ -196,9 +198,11 @@ namespace nCine
 		const float currentScalingFactor = windowMonitor.scale.X;
 		const bool scalingFactorChanged = (currentScalingFactor != previousScalingFactor_);
 
-#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(WITH_SDL) && defined(DEATH_TARGET_WINDOWS)
+		// Scaling is handled automatically by SDL (since v2.26.0)
+#elif !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_WINDOWS_RT)
 		// It's resized automatically on Apple and Windows RT
-		if (!isFullscreen_ && scalingFactorChanged && windowScaling) {
+		if (windowScaling && !isFullscreen_ && scalingFactorChanged) {
 			const float ratio = currentScalingFactor / previousScalingFactor_;
 			setWindowSize(width_ * ratio, height_ * ratio);
 		}

@@ -88,5 +88,4 @@ namespace nCine
 		registeredGfxCapabilities_.reset(nullptr);
 		gfxCapabilities_ = &nullGfxCapabilities_;
 	}
-
 }

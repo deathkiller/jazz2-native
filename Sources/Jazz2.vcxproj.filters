@@ -2069,5 +2069,8 @@
     <Image Include="Icons\Main.ico">
       <Filter>Resource Files\Icons</Filter>
     </Image>
+    <Image Include="Icons\Log.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </Image>
   </ItemGroup>
 </Project>

@@ -159,9 +159,9 @@ namespace Jazz2
 	void LevelHandler::OnLevelLoaded(const StringView& fullPath, const StringView& name, const StringView& nextLevel, const StringView& secretLevel, std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap, const StringView& musicPath, const Vector4f& ambientColor, WeatherType weatherType, uint8_t weatherIntensity, SmallVectorImpl<String>& levelTexts)
 	{
 		if (!name.empty()) {
-			theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection - "_s + name);
+			theApplication().gfxDevice().setWindowTitle(StringView(NCINE_APP_NAME " - ") + name);
 		} else {
-			theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection"_s);
+			theApplication().gfxDevice().setWindowTitle(NCINE_APP_NAME);
 		}
 
 		_defaultNextLevel = nextLevel;
@@ -300,23 +300,6 @@ namespace Jazz2
 					int tx2 = tx1;
 					int ty2 = ty1;
 
-#if ENABLE_SPLITSCREEN
-					for (int i = 1; i < players.Count; i++) {
-						Vector3 pos2 = players[i].Transform.Pos;
-						int tx = (int)pos2.X / Tiles::TileSet::DefaultTileSize;
-						int ty = (int)pos2.Y / Tiles::TileSet::DefaultTileSize;
-						if (tx1 > tx) {
-							tx1 = tx;
-						} else if (tx2 < tx) {
-							tx2 = tx;
-						}
-						if (ty1 > ty) {
-							ty1 = ty;
-						} else if (ty2 < ty) {
-							ty2 = ty;
-						}
-					}
-#endif
 					tx1 -= ActivateTileRange;
 					ty1 -= ActivateTileRange;
 					tx2 += ActivateTileRange;

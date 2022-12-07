@@ -125,6 +125,16 @@ namespace nCine
 		for (unsigned int i = 0; i < MaxNumJoysticks; i++) {
 			assignedMappings_[i].isValid = false;
 		}
+	}
+
+	///////////////////////////////////////////////////////////
+	// PUBLIC FUNCTIONS
+	///////////////////////////////////////////////////////////
+
+	void JoyMapping::init(const IInputManager* inputManager)
+	{
+		ASSERT(inputManager != nullptr);
+		inputManager_ = inputManager;
 
 		unsigned int numStrings = 0;
 
@@ -142,16 +152,7 @@ namespace nCine
 		}
 
 		LOGI_X("Parsed %u strings for %u mappings", numStrings, mappings_.size());
-	}
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
-	void JoyMapping::init(const IInputManager* inputManager)
-	{
-		ASSERT(inputManager != nullptr);
-		inputManager_ = inputManager;
 		checkConnectedJoystics();
 	}
 
@@ -437,8 +438,8 @@ namespace nCine
 
 		if (!mapping.isValid) {
 			const StringView joyNameView = joyName;
-			// Razer Keyboards are incorrectly recognized as joystick in some cases, don't assign XInput mapping to them
-			bool isBlacklisted = (joyNameView.contains("Razer "_s) && joyNameView.contains("Keyboard"_s));
+			// Razer Keyboards and Mice on Linux are incorrectly recognized as joystick in some cases, don't assign XInput mapping to them
+			bool isBlacklisted = (joyNameView.contains("Razer "_s) && (joyNameView.contains("Keyboard"_s) || joyNameView.contains("DeathAdder"_s)));
 			if (!isBlacklisted) {
 				const int index = findMappingByGuid(JoystickGuidType::Xinput);
 				if (index != -1) {
