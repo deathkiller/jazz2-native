@@ -483,15 +483,17 @@ namespace nCine
 	{
 		const int action = AMotionEvent_getAction(event);
 		
-		Vector2f res = theApplication().resolution();
+		Vector2i res = theApplication().resolution();
+		float w = static_cast<float>(res.X);
+		float h = static_cast<float>(res.Y);
 
 		touchEvent_.count = AMotionEvent_getPointerCount(event);
 		touchEvent_.actionIndex = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
 		for (unsigned int i = 0; i < touchEvent_.count && i < TouchEvent::MaxPointers; i++) {
 			TouchEvent::Pointer& pointer = touchEvent_.pointers[i];
 			pointer.id = AMotionEvent_getPointerId(event, i);
-			pointer.x = AMotionEvent_getX(event, i) / res.X;
-			pointer.y = AMotionEvent_getY(event, i) / res.Y;
+			pointer.x = AMotionEvent_getX(event, i) / w;
+			pointer.y = AMotionEvent_getY(event, i) / h;
 			pointer.pressure = AMotionEvent_getPressure(event, i);
 		}
 
