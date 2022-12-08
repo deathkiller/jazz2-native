@@ -57,7 +57,14 @@ namespace Jazz2::Actors::Environment
 		}
 
 		if (_noise != nullptr) {
-			_noise->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+			float newGain = _noise->gain() - (_noiseDec * timeMult);
+			if (newGain <= 0.0f) {
+				_noise->stop();
+				_noise = nullptr;
+			} else {
+				_noise->setGain(newGain);
+				_noise->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+			}
 		}
 	}
 
@@ -67,12 +74,9 @@ namespace Jazz2::Actors::Environment
 			if (auto player = dynamic_cast<Player*>(other.get())) {
 				if (player->SetModifier(Player::Modifier::LizardCopter, shared_from_this())) {
 					_state = State::Mounted;
+					_renderer.setAlphaF(1.0f);
 
 					PlaySfx("CopterPre"_s);
-					_noise = PlaySfx("Copter"_s, 0.8f, 0.8f);
-					if (_noise != nullptr) {
-						_noise->setLooping(true);
-					}
 					return true;
 				}
 			}
@@ -87,9 +91,10 @@ namespace Jazz2::Actors::Environment
 			_state = State::Unmounted;
 			_phase = timeLeft;
 
+			_noise = PlaySfx("Copter"_s, 0.8f, 0.8f);
 			if (_noise != nullptr) {
-				_noise->stop();
-				_noise = nullptr;
+				_noise->setLooping(true);
+				_noiseDec = _noise->gain() * 0.005f;
 			}
 
 			SetState(ActorState::ApplyGravitation, true);
