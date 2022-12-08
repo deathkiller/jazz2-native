@@ -104,7 +104,8 @@ namespace Jazz2::Actors
 		Default,
 		Outline,
 		WhiteMask,
-		PartialWhiteMask
+		PartialWhiteMask,
+		FrozenMask
 	};
 
 	class ActorBase : public std::enable_shared_from_this<ActorBase>
@@ -264,6 +265,7 @@ namespace Jazz2::Actors
 
 		void TryStandardMovement(float timeMult, TileCollisionParams& params);
 		void UpdateHitbox(int w, int h);
+		void UpdateFrozenState(float timeMult);
 		void HandleFrozenStateChange(ActorBase* shot);
 
 		void CreateParticleDebris();

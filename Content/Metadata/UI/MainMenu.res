@@ -8,6 +8,9 @@
 			"Path": "UI/logo.aura",
 			"FrameRate": 7
 		},
+		"Snow": {
+			"Path": "Common/snow.aura"
+		},
 		"MenuLine": {
 			"Path": "UI/line.aura"
 		},

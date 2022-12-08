@@ -897,14 +897,19 @@ namespace Jazz2::Tiles
 
 	void TileMap::UpdateDebris(float timeMult)
 	{
-		for (int i = (int)_debrisList.size() - 1; i >= 0; i--) {
+		int size = (int)_debrisList.size();
+		for (int i = 0; i < size; i++) {
 			DestructibleDebris& debris = _debrisList[i];
 
-			debris.Time -= timeMult;
 			if (debris.Scale <= 0.0f || debris.Alpha <= 0.0f) {
-				_debrisList.erase(_debrisList.begin() + i);
+				std::swap(debris, _debrisList[size - 1]);
+				_debrisList.pop_back();
+				i--;
+				size--;
 				continue;
 			}
+
+			debris.Time -= timeMult;
 			if (debris.Time <= 0.0f) {
 				debris.AlphaSpeed = -std::min(0.02f, debris.Alpha);
 			}
@@ -1040,8 +1045,9 @@ namespace Jazz2::Tiles
 		command->material().uniform("uViewSize")->setFloatValue(viewSize.X, viewSize.Y);
 		command->material().uniform("uCameraPos")->setFloatVector(viewCenter.Data());
 		command->material().uniform("uShift")->setFloatValue(x, y);
-		command->material().uniform("uHorizonColor")->setFloatValue(layer.Description.BackgroundColor.X, layer.Description.BackgroundColor.Y, layer.Description.BackgroundColor.Z);
-		command->material().uniform("uParallaxStarsEnabled")->setFloatValue(layer.Description.ParallaxStarsEnabled ? 1.0f : 0.0f);
+		command->material().uniform("uHorizonColor")->setFloatValue(
+			layer.Description.BackgroundColor.X, layer.Description.BackgroundColor.Y, layer.Description.BackgroundColor.Z,
+			layer.Description.ParallaxStarsEnabled ? 1.0f : 0.0f);
 
 		command->setTransformation(Matrix4x4f::Translation(viewCenter.X, viewCenter.Y, 0.0f));
 		command->setLayer(layer.Description.Depth);

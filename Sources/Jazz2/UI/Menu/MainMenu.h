@@ -66,6 +66,14 @@ namespace Jazz2::UI::Menu
 	private:
 		IRootController* _root;
 
+		enum class Preset {
+			None,
+			Default,
+			Carrotus,
+			SharewareDemo,
+			Xmas
+		};
+
 		enum class ActiveCanvas {
 			Background,
 			Clipped,
@@ -136,8 +144,7 @@ namespace Jazz2::UI::Menu
 		TileMapLayer _texturedBackgroundLayer;
 		Vector2f _texturedBackgroundPos;
 		float _texturedBackgroundPhase;
-		Vector3f _backgroundColor;
-		bool _parallaxStarsEnabled;
+		Preset _preset;
 
 		std::unique_ptr<MenuBackgroundCanvas> _canvasBackground;
 		std::unique_ptr<MenuClippedCanvas> _canvasClipped;
@@ -152,6 +159,7 @@ namespace Jazz2::UI::Menu
 		std::unique_ptr<AudioStreamPlayer> _music;
 		HashMap<String, SoundResource>* _sounds;
 		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
+		SmallVector<Tiles::TileMap::DestructibleDebris, 0> _debrisList;
 
 		SmallVector<std::unique_ptr<MenuSection>, 8> _sections;
 		BitArray _pressedKeys;
@@ -159,7 +167,10 @@ namespace Jazz2::UI::Menu
 		float _touchButtonsTimer;
 
 		void UpdatePressedActions();
+		void UpdateDebris(float timeMult);
+		void DrawDebris(RenderQueue& renderQueue);
 		void PrepareTexturedBackground();
+		bool TryLoadBackgroundPreset(Preset preset);
 		void RenderTexturedBackground(RenderQueue& renderQueue);
 
 		inline Canvas* GetActiveCanvas()

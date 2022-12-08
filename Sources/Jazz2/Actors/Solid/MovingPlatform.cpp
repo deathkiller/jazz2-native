@@ -51,7 +51,7 @@ namespace Jazz2::Actors::Solid
 		_lastPos = _originPos;
 
 		IsOneWay = true;
-		SetState(ActorState::CollideWithTileset | ActorState::IsSolidObject | ActorState::ApplyGravitation, false);
+		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::IsSolidObject | ActorState::ApplyGravitation, false);
 
 		switch (_type) {
 			default:
@@ -85,10 +85,6 @@ namespace Jazz2::Actors::Solid
 
 	void MovingPlatform::OnUpdate(float timeMult)
 	{
-		if (_frozenTimeLeft > 0.0f) {
-			return;
-		}
-
 		_lastPos = _pos;
 		_phase -= _speed * timeMult;
 		if (_speed > 0.0f) {

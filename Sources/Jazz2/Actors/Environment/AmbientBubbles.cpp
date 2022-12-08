@@ -24,7 +24,7 @@ namespace Jazz2::Actors::Environment
 		_speed = details.Params[0];
 
 		SetState(ActorState::ForceDisableCollisions, true);
-		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
+		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		async_await RequestMetadataAsync("Common/AmbientBubbles"_s);
 

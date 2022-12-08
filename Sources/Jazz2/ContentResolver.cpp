@@ -1033,12 +1033,21 @@ namespace Jazz2
 
 		_precompiledShaders[(int)PrecompiledShader::WhiteMask] = std::make_unique<Shader>("WhiteMask",
 			Shader::LoadMode::String, Shader::DefaultVertex::SPRITE, Shaders::WhiteMaskFs);
-		_precompiledShaders[(int)PrecompiledShader::PartialWhiteMask] = std::make_unique<Shader>("PartialWhiteMask",
-			Shader::LoadMode::String, Shader::DefaultVertex::SPRITE, Shaders::PartialWhiteMaskFs);
 		_precompiledShaders[(int)PrecompiledShader::BatchedWhiteMask] = std::make_unique<Shader>("BatchedWhiteMask",
 			Shader::LoadMode::String, Shader::Introspection::NoUniformsInBlocks, Shader::DefaultVertex::BATCHED_SPRITES, Shaders::WhiteMaskFs);
 		_precompiledShaders[(int)PrecompiledShader::WhiteMask]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedWhiteMask]);
-		_precompiledShaders[(int)PrecompiledShader::PartialWhiteMask]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedWhiteMask]);
+
+		_precompiledShaders[(int)PrecompiledShader::PartialWhiteMask] = std::make_unique<Shader>("PartialWhiteMask",
+			Shader::LoadMode::String, Shader::DefaultVertex::SPRITE, Shaders::PartialWhiteMaskFs);
+		_precompiledShaders[(int)PrecompiledShader::BatchedPartialWhiteMask] = std::make_unique<Shader>("BatchedPartialWhiteMask",
+			Shader::LoadMode::String, Shader::Introspection::NoUniformsInBlocks, Shader::DefaultVertex::BATCHED_SPRITES, Shaders::PartialWhiteMaskFs);
+		_precompiledShaders[(int)PrecompiledShader::PartialWhiteMask]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedPartialWhiteMask]);
+
+		_precompiledShaders[(int)PrecompiledShader::FrozenMask] = std::make_unique<Shader>("FrozenMask",
+			Shader::LoadMode::String, Shader::DefaultVertex::SPRITE, Shaders::FrozenMaskFs);
+		_precompiledShaders[(int)PrecompiledShader::BatchedFrozenMask] = std::make_unique<Shader>("BatchedFrozenMask",
+			Shader::LoadMode::String, Shader::Introspection::NoUniformsInBlocks, Shader::DefaultVertex::BATCHED_SPRITES, Shaders::FrozenMaskFs);
+		_precompiledShaders[(int)PrecompiledShader::FrozenMask]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedFrozenMask]);
 
 #if defined(ALLOW_RESCALE_SHADERS)
 		_precompiledShaders[(int)PrecompiledShader::ResizeHQ2x] = std::make_unique<Shader>("ResizeHQ2x",

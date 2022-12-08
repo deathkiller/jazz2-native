@@ -407,9 +407,8 @@ uniform sampler2D uTexture;
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
-uniform vec3 uHorizonColor;
+uniform vec4 uHorizonColor;
 uniform vec2 uShift;
-uniform float uParallaxStarsEnabled;
 
 in vec2 vTexCoords;
 out vec4 fragColor;
@@ -470,8 +469,8 @@ void main() {
 	vec4 texColor = texture(uTexture, texturePos);
 	float horizonOpacity = clamp(pow(distance, 1.8) - 0.4, 0.0, 1.0);
 	
-	vec4 horizonColorWithStars = vec4(uHorizonColor, 1.0);
-	if (uParallaxStarsEnabled > 0.0) {
+	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
+	if (uHorizonColor.w > 0.0) {
 		vec2 samplePosition = (vTexCoords * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00012;
 		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
 		
@@ -494,9 +493,8 @@ uniform sampler2D uTexture; // Normal
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
 
-uniform vec3 uHorizonColor;
+uniform vec4 uHorizonColor;
 uniform vec2 uShift;
-uniform float uParallaxStarsEnabled;
 
 in vec2 vTexCoords;
 out vec4 fragColor;
@@ -564,8 +562,8 @@ void main() {
 	vec4 texColor = texture(uTexture, texturePos);
 	float horizonOpacity = 1.0 - clamp(pow(distance, 1.4) - 0.3, 0.0, 1.0);
 	
-	vec4 horizonColorWithStars = vec4(uHorizonColor, 1.0);
-	if (uParallaxStarsEnabled > 0.0) {
+	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
+	if (uHorizonColor.w > 0.0) {
 		vec2 samplePosition = (vTexCoords * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00012;
 		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
 		
@@ -665,6 +663,47 @@ void main() {
 	vec4 tex = texture(uTexture, vTexCoords);
 	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 2.5f, 1.0f);
 	fragColor = vec4(color, color, color, tex.a) * vColor;
+}
+)";
+
+	constexpr char FrozenMaskFs[] = R"(
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform sampler2D uTexture;
+
+in vec2 vTexCoords;
+in vec4 vColor;
+out vec4 fragColor;
+
+float aastep(float threshold, float value) {
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value); 
+}
+
+void main() {
+	vec2 size = vColor.xy * 2.0;
+
+	vec4 tex = texture(uTexture, vTexCoords);
+	vec4 tex1 = texture(uTexture, vTexCoords + vec2(-size.x, 0));
+	vec4 tex2 = texture(uTexture, vTexCoords + vec2(0, size.y));
+	vec4 tex3 = texture(uTexture, vTexCoords + vec2(size.x, 0));
+	vec4 tex4 = texture(uTexture, vTexCoords + vec2(0, -size.y));
+
+	float outline = tex1.a;
+	outline += tex2.a;
+	outline += tex3.a;
+	outline += tex4.a;
+	outline += texture(uTexture, vTexCoords + vec2(-size.x, size.y)).a;
+	outline += texture(uTexture, vTexCoords + vec2(size.x, size.y)).a;
+	outline += texture(uTexture, vTexCoords + vec2(-size.x, -size.y)).a;
+	outline += texture(uTexture, vTexCoords + vec2(size.x, -size.y)).a;
+	outline = aastep(1.0, outline);
+
+	vec4 color = (tex + tex + tex1 + tex2 + tex3 + tex4) / 6.0;
+	float grey = min((0.299 * color.r + 0.587 * color.g + 0.114 * color.b) * 2.6f, 1.0f);
+	fragColor = vec4(0.2 * grey, 0.2 + grey * 0.65, 0.6 + 0.2 * grey, outline);
 }
 )";
 

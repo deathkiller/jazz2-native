@@ -39,9 +39,9 @@ namespace Jazz2::Actors::Enemies
 	{
 		OnUpdateHitbox();
 		HandleBlinking(timeMult);
+		UpdateFrozenState(timeMult);
 
 		if (_frozenTimeLeft > 0.0f) {
-			_frozenTimeLeft -= timeMult;
 			return;
 		}
 

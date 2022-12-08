@@ -113,18 +113,18 @@ namespace nCine
 			return currentMode;
 		}
 
-		FileSystem::FileDate NativeTimeToFileDate(const time_t* timer)
+		FileSystem::FileDate NativeTimeToFileDate(const time_t* t)
 		{
 			FileSystem::FileDate date = { };
 
-			struct tm* local = localtime(timer);
+			struct tm* local = localtime(t);
 			date.Year = local->tm_year + 1900;
 			date.Month = local->tm_mon + 1;
 			date.Day = local->tm_mday;
 			date.Hour = local->tm_hour;
 			date.Minute = local->tm_min;
 			date.Second = local->tm_sec;
-			date.Ticks = *(int64_t*)timer;
+			date.Ticks = static_cast<int64_t>(*t);
 
 			return date;
 		}

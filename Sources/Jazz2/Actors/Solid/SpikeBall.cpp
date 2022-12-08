@@ -29,7 +29,7 @@ namespace Jazz2::Actors::Solid
 		_originLayer = _renderer.layer() - 12;
 
 		SetState(ActorState::IsInvulnerable, true);
-		SetState(ActorState::CollideWithTileset | ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
+		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::ApplyGravitation, false);
 
 		async_await RequestMetadataAsync("MovingPlatform/SpikeBall"_s);
 		SetAnimation("Platform"_s);

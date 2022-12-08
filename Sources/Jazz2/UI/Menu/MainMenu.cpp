@@ -32,7 +32,9 @@ namespace Jazz2::UI::Menu
 		_canvasOverlay = std::make_unique<MenuOverlayCanvas>(this);
 
 		auto& resolver = ContentResolver::Current();
-		resolver.ApplyDefaultPalette();
+
+		// It will also replace palette for subsequent `RequestMetadata()`
+		PrepareTexturedBackground();
 
 		Metadata* metadata = resolver.RequestMetadata("UI/MainMenu"_s);
 		if (metadata != nullptr) {
@@ -58,8 +60,6 @@ namespace Jazz2::UI::Menu
 		}
 #endif
 
-		PrepareTexturedBackground();
-
 		// Mark Fire and Menu button as already pressed to avoid some issues
 		_pressedActions = (1 << (int)PlayerActions::Fire) | (1 << ((int)PlayerActions::Fire + 16)) |
 			(1 << (int)PlayerActions::Menu) | (1 << ((int)PlayerActions::Menu + 16));
@@ -79,6 +79,7 @@ namespace Jazz2::UI::Menu
 		float timeMult = theApplication().timeMult();
 
 		UpdatePressedActions();
+		UpdateDebris(timeMult);
 
 		// Destroy stopped players
 		for (int i = (int)_playingSounds.size() - 1; i >= 0; i--) {
@@ -271,6 +272,8 @@ namespace Jazz2::UI::Menu
 			auto& lastSection = _owner->_sections.back();
 			lastSection->OnDrawOverlay(this);
 		}
+
+		_owner->DrawDebris(renderQueue);
 
 		if (_owner->_transitionWhite > 0.0f) {
 			DrawSolid(Vector2f::Zero, 950, Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y)), Colorf(1.0f, 1.0f, 1.0f, _owner->_transitionWhite));
@@ -529,30 +532,147 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void MainMenu::PrepareTexturedBackground()
+	void MainMenu::UpdateDebris(float timeMult)
 	{
-		bool isDemo = false;
-		_tileSet = ContentResolver::Current().RequestTileSet("easter99"_s, 0, true);
-		_backgroundColor = Vector3f(0.098f, 0.35f, 1.0f);
-		_parallaxStarsEnabled = false;
-		if (_tileSet == nullptr) {
-			_tileSet = ContentResolver::Current().RequestTileSet("carrot1"_s, 0, true);
-			_backgroundColor = Vector3f(0.0f, 0.0f, 0.06f);
-			_parallaxStarsEnabled = true;
-			if (_tileSet == nullptr) {
-				_tileSet = ContentResolver::Current().RequestTileSet("diam2"_s, 0, true);
-				isDemo = true;
-				if (_tileSet == nullptr) {
-					// No suitable tileset was found
-					return;
+		if (_preset == Preset::Xmas) {
+			int weatherIntensity = Random().Fast(0, (int)(3 * timeMult) + 1);
+			for (int i = 0; i < weatherIntensity; i++) {
+				Vector2i viewSize = _canvasOverlay->ViewSize;
+				Vector2f debrisPos = Vector2f(Random().FastFloat(viewSize.X * -0.8f, viewSize.X * 0.8f),
+					Random().NextFloat(viewSize.Y * 0.5f, viewSize.Y * 1.0f));
+
+				auto it = _graphics->find(String::nullTerminatedView("Snow"_s));
+				if (it != _graphics->end()) {
+					auto& resBase = it->second.Base;
+					Vector2i texSize = resBase->TextureDiffuse->size();
+					float scale = Random().FastFloat(0.4f, 1.1f);
+					float speedX = Random().FastFloat(-1.6f, -1.2f) * scale;
+					float speedY = Random().FastFloat(3.0f, 4.0f) * scale;
+					float accel = Random().FastFloat(-0.008f, 0.008f) * scale;
+
+					TileMap::DestructibleDebris debris = { };
+					debris.Pos = debrisPos;
+					debris.Depth = MainLayer - 100 + 200 * scale;
+					debris.Size = Vector2f(resBase->FrameDimensions.X, resBase->FrameDimensions.Y);
+					debris.Speed = Vector2f(speedX, -speedY);
+					debris.Acceleration = Vector2f(accel, std::abs(accel));
+
+					debris.Scale = scale;
+					debris.ScaleSpeed = 0.0f;
+					debris.Angle = Random().FastFloat(0.0f, fTwoPi);
+					debris.AngleSpeed = speedX * 0.02f,
+						debris.Alpha = 1.0f;
+					debris.AlphaSpeed = 0.0f;
+
+					debris.Time = 160.0f;
+
+					int curAnimFrame = it->second.FrameOffset + Random().Next(0, it->second.FrameCount);
+					int col = curAnimFrame % resBase->FrameConfiguration.X;
+					int row = curAnimFrame / resBase->FrameConfiguration.X;
+					debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
+					debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
+					debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
+					debris.TexBiasY = (float(resBase->FrameDimensions.Y * row) / float(texSize.Y));
+
+					debris.DiffuseTexture = resBase->TextureDiffuse.get();
+
+					_debrisList.push_back(debris);
 				}
 			}
+		}
+
+		int size = (int)_debrisList.size();
+		for (int i = 0; i < size; i++) {
+			Tiles::TileMap::DestructibleDebris& debris = _debrisList[i];
+
+			if (debris.Scale <= 0.0f || debris.Alpha <= 0.0f) {
+				std::swap(debris, _debrisList[size - 1]);
+				_debrisList.pop_back();
+				i--;
+				size--;
+				continue;
+			}
+
+			debris.Time -= timeMult;
+			if (debris.Time <= 0.0f) {
+				debris.AlphaSpeed = -std::min(0.02f, debris.Alpha);
+			}
+
+			debris.Pos.X += debris.Speed.X * timeMult + 0.5f * debris.Acceleration.X * timeMult * timeMult;
+			debris.Pos.Y += debris.Speed.Y * timeMult + 0.5f * debris.Acceleration.Y * timeMult * timeMult;
+
+			if (debris.Acceleration.X != 0.0f) {
+				debris.Speed.X = std::min(debris.Speed.X + debris.Acceleration.X * timeMult, 10.0f);
+			}
+			if (debris.Acceleration.Y != 0.0f) {
+				debris.Speed.Y = std::min(debris.Speed.Y + debris.Acceleration.Y * timeMult, 10.0f);
+			}
+
+			debris.Scale += debris.ScaleSpeed * timeMult;
+			debris.Angle += debris.AngleSpeed * timeMult;
+			debris.Alpha += debris.AlphaSpeed * timeMult;
+		}
+	}
+
+	void MainMenu::DrawDebris(RenderQueue& renderQueue)
+	{
+		for (auto& debris : _debrisList) {
+			auto command = _canvasOverlay->RentRenderCommand();
+			if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
+				command->material().reserveUniformsDataMemory();
+				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				// Required to reset render command properly
+				command->setTransformation(command->transformation());
+
+				GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+				if (textureUniform && textureUniform->intValue(0) != 0) {
+					textureUniform->setIntValue(0); // GL_TEXTURE0
+				}
+			}
+
+			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+			instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);
+			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(debris.Size.X, debris.Size.Y);
+			instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, debris.Alpha).Data());
+
+			Matrix4x4f worldMatrix = Matrix4x4f::Translation(debris.Pos.X, debris.Pos.Y, 0.0f);
+			worldMatrix.RotateZ(debris.Angle);
+			worldMatrix.Scale(debris.Scale, debris.Scale, 1.0f);
+			command->setTransformation(worldMatrix);
+			command->setLayer(debris.Depth);
+			command->material().setTexture(*debris.DiffuseTexture);
+
+			renderQueue.addCommand(command);
+		}
+	}
+
+	void MainMenu::PrepareTexturedBackground()
+	{
+		time_t t = time(nullptr);
+#if defined(DEATH_TARGET_WINDOWS)
+		struct tm local; localtime_s(&local, &t);
+		int month = local.tm_mon;
+#else
+		struct tm* local = localtime(&t);
+		int month = local->tm_mon;
+#endif
+		bool hasXmas = ((month == 11 || month == 0) && TryLoadBackgroundPreset(Preset::Xmas));
+		if (!hasXmas &&
+			!TryLoadBackgroundPreset(Preset::Default) &&
+			!TryLoadBackgroundPreset(Preset::Carrotus) &&
+			!TryLoadBackgroundPreset(Preset::SharewareDemo)) {
+			// Cannot load any available preset
+			TryLoadBackgroundPreset(Preset::None);
+			return;
 		}
 
 		constexpr int Width = 8;
 		constexpr int Height = 8;
 
-		constexpr int StartIndex = 360;
+		constexpr int StartIndexDefault = 360;
+		constexpr int StartIndexXmas = 420;
 		constexpr int StartIndexDemo = 240;
 		constexpr int AdditionalIndexDemo = 451;
 		constexpr int SplitRowDemo = 6;
@@ -560,7 +680,7 @@ namespace Jazz2::UI::Menu
 		std::unique_ptr<LayerTile[]> layout = std::make_unique<LayerTile[]>(Width * Height);
 
 		int n = 0;
-		if (isDemo) {
+		if (_preset == Preset::SharewareDemo) {
 			// Shareware Demo tileset is not contiguous for some reason
 			for (int i = StartIndexDemo; i < StartIndexDemo + SplitRowDemo * 10; i += 10) {
 				for (int j = 0; j < 8; j++) {
@@ -575,7 +695,8 @@ namespace Jazz2::UI::Menu
 				}
 			}
 		} else {
-			for (int i = StartIndex; i < StartIndex + Height * 10; i += 10) {
+			int startIndex = (_preset == Preset::Xmas ? StartIndexXmas : StartIndexDefault);
+			for (int i = startIndex; i < startIndex + Height * 10; i += 10) {
 				for (int j = 0; j < 8; j++) {
 					LayerTile& tile = layout[n++];
 					tile.TileID = i + j;
@@ -589,11 +710,37 @@ namespace Jazz2::UI::Menu
 		newLayer.Layout = std::move(layout);
 	}
 
+	bool MainMenu::TryLoadBackgroundPreset(Preset preset)
+	{
+		auto& resolver = ContentResolver::Current();
+
+		switch (preset) {
+			case Preset::Default: _tileSet = resolver.RequestTileSet("easter99"_s, 0, true); break;
+			case Preset::Carrotus: _tileSet = resolver.RequestTileSet("carrot1"_s, 0, true); break;
+			case Preset::SharewareDemo: _tileSet = resolver.RequestTileSet("diam2"_s, 0, true); break;
+			case Preset::Xmas: _tileSet = resolver.RequestTileSet("xmas2"_s, 0, true); break;
+			default: _tileSet = nullptr; resolver.ApplyDefaultPalette(); _preset = Preset::None; return true;
+		}
+
+		if (_tileSet == nullptr) {
+			return false;
+		}
+
+		_preset = preset;
+		return true;
+	}
+
 	void MainMenu::RenderTexturedBackground(RenderQueue& renderQueue)
 	{
 		auto target = _texturedBackgroundPass._target.get();
 		if (target == nullptr) {
 			return;
+		}
+
+		Vector4f horizonColor;
+		switch (_preset) {
+			case Preset::Default: horizonColor = Vector4f(0.098f, 0.35f, 1.0f, 0.0f); break;
+			default: horizonColor = Vector4f(0.0f, 0.0f, 0.06f, 1.0f); break;
 		}
 
 		Vector2i viewSize = _canvasBackground->ViewSize;
@@ -606,8 +753,7 @@ namespace Jazz2::UI::Menu
 
 		command->material().uniform("uViewSize")->setFloatValue(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
 		command->material().uniform("uShift")->setFloatVector(_texturedBackgroundPos.Data());
-		command->material().uniform("uHorizonColor")->setFloatVector(_backgroundColor.Data());
-		command->material().uniform("uParallaxStarsEnabled")->setFloatValue(_parallaxStarsEnabled ? 1.0f : 0.0f);
+		command->material().uniform("uHorizonColor")->setFloatVector(horizonColor.Data());
 
 		command->setTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
 		command->material().setTexture(*target);

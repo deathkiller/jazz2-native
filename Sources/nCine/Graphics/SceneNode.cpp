@@ -44,11 +44,13 @@ namespace nCine
 	SceneNode::~SceneNode()
 	{
 		if (shouldDeleteChildrenOnDestruction_) {
-			for (SceneNode* child : children_)
+			for (SceneNode* child : children_) {
 				delete child;
+			}
 		} else {
-			for (SceneNode* child : children_)
+			for (SceneNode* child : children_) {
 				child->parent_ = nullptr;
+			}
 		}
 
 		setParent(nullptr);
@@ -150,8 +152,8 @@ namespace nCine
 		}
 
 		bool hasBeenRemoved = false;
-		if (!children_.empty() && // avoid checking if this node has no children
-			childNode->parent_ == this) // avoid checking if the child doesn't belong to this node
+		if (!children_.empty() &&			// Avoid checking if this node has no children
+			childNode->parent_ == this)		// Avoid checking if the child doesn't belong to this node
 		{
 			for (unsigned int i = 0; i < children_.size(); i++) {
 				if (children_[i] == childNode) {
@@ -210,8 +212,8 @@ namespace nCine
 
 		bool hasBeenUnlinked = false;
 
-		if (!children_.empty() && // avoid checking if this node has no children
-			childNode->parent_ == this) // avoid checking if the child doesn't belong to this node
+		if (!children_.empty() &&			// Avoid checking if this node has no children
+			childNode->parent_ == this)		// Avoid checking if the child doesn't belong to this node
 		{
 			removeChildNode(childNode);
 
@@ -283,7 +285,7 @@ namespace nCine
 				children_[i]->OnUpdate(timeMult);
 			}
 
-			// A non drawable scenenode does not have the `updateRenderCommand()` method to reset the flags
+			// A non-drawable scenenode does not have the `updateRenderCommand()` method to reset the flags
 			if (type_ == ObjectType::SceneNode) {
 				dirtyBits_.reset(DirtyBitPositions::TransformationBit);
 				dirtyBits_.reset(DirtyBitPositions::ColorBit);
@@ -366,12 +368,12 @@ namespace nCine
 			default: withVisitOrder_ = false; break;
 		}
 
-		const bool parentHasDirtyColor = parent_ && parent_->dirtyBits_.test(DirtyBitPositions::ColorBit);
+		const bool parentHasDirtyColor = (parent_ != nullptr && parent_->dirtyBits_.test(DirtyBitPositions::ColorBit));
 		if (parentHasDirtyColor) {
 			dirtyBits_.set(DirtyBitPositions::ColorBit);
 		}
 		if (dirtyBits_.test(DirtyBitPositions::ColorBit)) {
-			absColor_ = parent_ ? color_ * parent_->absColor_ : color_;
+			absColor_ = (parent_ != nullptr ? color_ * parent_->absColor_ : color_);
 		}
 		const bool parentHasDirtyTransformation = parent_ && parent_->dirtyBits_.test(DirtyBitPositions::TransformationBit);
 		if (parentHasDirtyTransformation) {

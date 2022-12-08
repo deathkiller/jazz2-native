@@ -55,7 +55,8 @@ namespace Jazz2
 		_pressedKeys((uint32_t)KeySym::COUNT),
 		_pressedActions(0),
 		_overrideActions(0),
-		_playerFrozenEnabled(false)
+		_playerFrozenEnabled(false),
+		_lastPressedNumericKey(-1)
 	{
 		auto& resolver = ContentResolver::Current();
 		resolver.BeginLoading();
@@ -1359,11 +1360,19 @@ namespace Jazz2
 
 		// Use numeric key to switch weapons for the first player
 		if (!_players.empty()) {
+			bool found = false;
 			for (uint32_t i = 0; i < 9; i++) {
 				if (_pressedKeys[(uint32_t)KeySym::N1 + i]) {
-					_players[0]->SwitchToWeaponByIndex(i);
+					if (_lastPressedNumericKey != i) {
+						_lastPressedNumericKey = i;
+						_players[0]->SwitchToWeaponByIndex(i);
+					}
+					found = true;
 					break;
 				}
+			}
+			if (!found) {
+				_lastPressedNumericKey = -1;
 			}
 		}
 
