@@ -7,7 +7,7 @@
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 #	include "nCine/Backends/Uwp/UwpApplication.h"
 #else
-#	include "nCine/PCApplication.h"
+#	include "nCine/MainApplication.h"
 #	if defined(DEATH_TARGET_UNIX)
 #		include <unistd.h>
 #	endif
@@ -814,14 +814,14 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdSh
 #elif defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
-	return PCApplication::start([]() -> std::unique_ptr<IAppEventHandler> {
+	return MainApplication::start([]() -> std::unique_ptr<IAppEventHandler> {
 		return std::make_unique<GameEventHandler>();
 	}, __argc, __wargv);
 }
 #else
 int main(int argc, char** argv)
 {
-	return PCApplication::start([]() -> std::unique_ptr<IAppEventHandler> {
+	return MainApplication::start([]() -> std::unique_ptr<IAppEventHandler> {
 		return std::make_unique<GameEventHandler>();
 	}, argc, argv);
 }

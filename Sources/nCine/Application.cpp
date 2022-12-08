@@ -382,9 +382,8 @@ namespace nCine
 	{
 		TracyGpuContext;
 		ZoneScoped;
-#if defined(NCINE_PROFILING)
+		// This timestamp is needed to initialize random number generator
 		profileStartTime_ = TimeStamp::now();
-#endif
 
 		LOGI(NCINE_APP_NAME " v" NCINE_VERSION " initializing...");
 #if defined(WITH_TRACY)

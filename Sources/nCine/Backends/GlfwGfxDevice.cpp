@@ -296,10 +296,12 @@ namespace nCine
 		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, glContextInfo_.forwardCompatible ? GLFW_TRUE : GLFW_FALSE);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, glContextInfo_.coreProfile ? GLFW_OPENGL_CORE_PROFILE : GLFW_OPENGL_COMPAT_PROFILE);
 #endif
+#if defined(GLFW_SCALE_TO_MONITOR)
 		// Scaling is handled automatically by GLFW
 		if (enableWindowScaling) {
 			glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
 		}
+#endif
 
 		windowHandle_ = glfwCreateWindow(width_, height_, "", monitor, nullptr);
 		FATAL_ASSERT_MSG(windowHandle_, "glfwCreateWindow() failed");

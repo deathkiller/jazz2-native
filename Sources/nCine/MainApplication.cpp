@@ -1,4 +1,4 @@
-#include "PCApplication.h"
+#include "MainApplication.h"
 #include "IAppEventHandler.h"
 #include "IO/FileSystem.h"
 #include "../Common.h"
@@ -124,7 +124,7 @@ namespace nCine
 {
 	Application& theApplication()
 	{
-		static PCApplication instance;
+		static MainApplication instance;
 		return instance;
 	}
 
@@ -132,7 +132,7 @@ namespace nCine
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	int PCApplication::start(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
+	int MainApplication::start(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
 	{
 		if (createAppEventHandler == nullptr) {
 			return EXIT_FAILURE;
@@ -155,7 +155,7 @@ namespace nCine
 		}
 #endif
 
-		PCApplication& app = static_cast<PCApplication&>(theApplication());
+		MainApplication& app = static_cast<MainApplication&>(theApplication());
 		app.init(createAppEventHandler, argc, argv);
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -163,7 +163,7 @@ namespace nCine
 			app.run();
 		}
 #else
-		emscripten_set_main_loop(PCApplication::emscriptenStep, 0, 1);
+		emscripten_set_main_loop(MainApplication::emscriptenStep, 0, 1);
 		emscripten_set_main_loop_timing(EM_TIMING_RAF, 1);
 #endif
 		app.shutdownCommon();
@@ -181,7 +181,7 @@ namespace nCine
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void PCApplication::init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
+	void MainApplication::init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
 	{
 		ZoneScoped;
 #if defined(NCINE_PROFILING)
@@ -250,7 +250,7 @@ namespace nCine
 #endif
 	}
 
-	void PCApplication::run()
+	void MainApplication::run()
 	{
 #if !defined(WITH_QT5)
 		processEvents();
@@ -274,7 +274,7 @@ namespace nCine
 	}
 
 #if defined(WITH_SDL)
-	void PCApplication::processEvents()
+	void MainApplication::processEvents()
 	{
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
@@ -320,7 +320,7 @@ namespace nCine
 		}
 	}
 #elif defined(WITH_GLFW)
-	void PCApplication::processEvents()
+	void MainApplication::processEvents()
 	{
 		// GLFW does not seem to correctly handle Emscripten focus and blur events
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -337,9 +337,9 @@ namespace nCine
 #endif
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-	void PCApplication::emscriptenStep()
+	void MainApplication::emscriptenStep()
 	{
-		reinterpret_cast<PCApplication&>(theApplication()).run();
+		reinterpret_cast<MainApplication&>(theApplication()).run();
 	}
 #endif
 }

@@ -148,7 +148,7 @@ namespace nCine
 	{
 		bool shouldQuit = true;
 		if (inputEventHandler_ != nullptr) {
-			shouldQuit = inputEventHandler_->onQuitRequest();
+			shouldQuit = inputEventHandler_->OnQuitRequest();
 		}
 		return shouldQuit;
 	}
@@ -271,7 +271,7 @@ namespace nCine
 				inputEventHandler_->OnMouseMove(mouseState_);
 				break;
 			case SDL_MOUSEWHEEL:
-				inputEventHandler_->OnScrollInput(scrollEvent_);
+				inputEventHandler_->OnMouseWheel(scrollEvent_);
 				break;
 			case SDL_JOYBUTTONDOWN:
 				joyMapping_.onJoyButtonPressed(joyButtonEvent_);

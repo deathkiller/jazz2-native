@@ -182,7 +182,7 @@ namespace nCine
 		/// Deleted assignment operator
 		Application& operator=(const Application&) = delete;
 
-		friend class PCApplication;
+		friend class MainApplication;
 		friend class AndroidApplication;
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		friend class IGfxDevice;

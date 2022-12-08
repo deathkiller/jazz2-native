@@ -11,7 +11,7 @@
 
 namespace nCine
 {
-	class PCApplication;
+	class MainApplication;
 	class IAppEventHandler;
 }
 
@@ -54,7 +54,7 @@ namespace nCine
 		void autoUpdate();
 
 	private:
-		PCApplication& application_;
+		MainApplication& application_;
 		std::unique_ptr<IAppEventHandler>(*createAppEventHandler_)();
 		bool isInitialized_;
 		bool shouldUpdate_;

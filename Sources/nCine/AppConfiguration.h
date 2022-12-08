@@ -129,7 +129,7 @@ namespace nCine
 		int argc_;
 		NativeArgument* argv_;
 
-		friend class PCApplication;
+		friend class MainApplication;
 	};
 
 }
