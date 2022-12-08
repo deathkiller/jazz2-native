@@ -2,7 +2,7 @@
 
 #include "Qt5Widget.h"
 #include "Qt5InputManager.h"
-#include "../PCApplication.h"
+#include "../MainApplication.h"
 
 #if defined(WITH_GLEW)
 #	include "Qt5GfxDevice.h"
@@ -19,7 +19,7 @@ namespace nCine
 
 	Qt5Widget::Qt5Widget(QWidget* parent, std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, char** argv)
 		: QOpenGLWidget(parent),
-		application_(static_cast<PCApplication&>(theApplication())),
+		application_(static_cast<MainApplication&>(theApplication())),
 		createAppEventHandler_(createAppEventHandler),
 		isInitialized_(false), shouldUpdate_(true)
 	{

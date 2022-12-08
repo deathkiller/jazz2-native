@@ -8,7 +8,7 @@
 #	include "Scripting/LevelScripts.h"
 #endif
 
-#include "../nCine/PCApplication.h"
+#include "../nCine/MainApplication.h"
 #include "../nCine/IAppEventHandler.h"
 #include "../nCine/ServiceLocator.h"
 #include "../nCine/Input/IInputEventHandler.h"

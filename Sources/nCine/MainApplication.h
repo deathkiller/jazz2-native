@@ -9,7 +9,7 @@ namespace nCine
 #endif
 
 	/// Handler class for nCine applications on PC
-	class PCApplication : public Application
+	class MainApplication : public Application
 	{
 	public:
 		/// Entry point method to be called in the `main()` function
@@ -35,7 +35,7 @@ namespace nCine
 #endif
 
 		/// Private constructor
-		PCApplication()
+		MainApplication()
 			:
 			Application(),
 #if defined(WITH_QT5)
@@ -46,11 +46,11 @@ namespace nCine
 		}
 
 		/// Private destructor
-		~PCApplication() = default;
+		~MainApplication() = default;
 		/// Deleted copy constructor
-		PCApplication(const PCApplication&) = delete;
+		MainApplication(const MainApplication&) = delete;
 		/// Deleted assignment operator
-		PCApplication& operator=(const PCApplication&) = delete;
+		MainApplication& operator=(const MainApplication&) = delete;
 
 		friend Application& theApplication();
 #if defined(WITH_QT5)

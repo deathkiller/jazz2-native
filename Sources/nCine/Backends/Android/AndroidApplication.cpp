@@ -241,7 +241,7 @@ namespace nCine
 
 		appEventHandler_ = createAppEventHandler_();
 		// Only `OnPreInit()` can modify the application configuration
-		appEventHandler_->onPreInit(appCfg_);
+		appEventHandler_->OnPreInit(appCfg_);
 		LOGI("IAppEventHandler::OnPreInit() invoked");
 	}
 

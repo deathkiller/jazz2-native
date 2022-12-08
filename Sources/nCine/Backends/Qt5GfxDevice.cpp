@@ -9,7 +9,7 @@
 #include "../Graphics/GL/GLTexture.h"
 #include "../Graphics/GL/GLFramebuffer.h"
 #include "Qt5GfxDevice.h"
-#include "../PCApplication.h"
+#include "../MainApplication.h"
 #include "Qt5Widget.h"
 
 #include <QWindow>

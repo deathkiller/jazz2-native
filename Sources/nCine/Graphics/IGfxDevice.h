@@ -226,7 +226,7 @@ namespace nCine
 
 		friend class Application;
 #if defined(WITH_SDL)
-		friend class PCApplication;
+		friend class MainApplication;
 #endif
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)

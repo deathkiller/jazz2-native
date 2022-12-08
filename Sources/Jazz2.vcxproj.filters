@@ -660,7 +660,7 @@
     <ClInclude Include="nCine\IIndexer.h">
       <Filter>Header Files\nCine</Filter>
     </ClInclude>
-    <ClInclude Include="nCine\PCApplication.h">
+    <ClInclude Include="nCine\MainApplication.h">
       <Filter>Header Files\nCine</Filter>
     </ClInclude>
     <ClInclude Include="nCine\ServiceLocator.h">
@@ -1226,7 +1226,7 @@
     <ClCompile Include="nCine\ArrayIndexer.cpp">
       <Filter>Source Files\nCine</Filter>
     </ClCompile>
-    <ClCompile Include="nCine\PCApplication.cpp">
+    <ClCompile Include="nCine\MainApplication.cpp">
       <Filter>Source Files\nCine</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\ContentResolver.cpp">

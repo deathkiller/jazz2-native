@@ -495,7 +495,7 @@
     <ClInclude Include="nCine\IO\IFileStream.h" />
     <ClInclude Include="nCine\IO\MemoryFile.h" />
     <ClInclude Include="nCine\IO\StandardFile.h" />
-    <ClInclude Include="nCine\PCApplication.h" />
+    <ClInclude Include="nCine\MainApplication.h" />
     <ClInclude Include="nCine\Primitives\AABB.h" />
     <ClInclude Include="nCine\Primitives\Color.h" />
     <ClInclude Include="nCine\Primitives\Colorf.h" />
@@ -792,7 +792,7 @@
     <ClCompile Include="nCine\IO\IFileStream.cpp" />
     <ClCompile Include="nCine\IO\MemoryFile.cpp" />
     <ClCompile Include="nCine\IO\StandardFile.cpp" />
-    <ClCompile Include="nCine\PCApplication.cpp" />
+    <ClCompile Include="nCine\MainApplication.cpp" />
     <ClCompile Include="nCine\Primitives\Color.cpp" />
     <ClCompile Include="nCine\Primitives\Colorf.cpp" />
     <ClCompile Include="nCine\Backends\Qt5Widget.cpp" />

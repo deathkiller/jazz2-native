@@ -5,7 +5,7 @@
 #include "Qt5Widget.h"
 #include "../Input/IInputEventHandler.h"
 #include "../Input/JoyMapping.h"
-#include "../PCApplication.h"
+#include "../MainApplication.h"
 
 #include <qevent.h>
 #include <QWidget>
