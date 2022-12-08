@@ -11,6 +11,4 @@ namespace nCine
 		/// Executes the command on a worker thread
 		virtual void Execute() = 0;
 	};
-
 }
-

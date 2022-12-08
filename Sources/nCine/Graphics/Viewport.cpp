@@ -455,7 +455,7 @@ namespace nCine
 		}
 
 		if (type_ == Type::WithTexture && depthStencilFormat_ != DepthStencilFormat::None &&
-			theApplication().appConfiguration().withGlDebugContext == false) {
+			!theApplication().appConfiguration().withGlDebugContext) {
 			const GLenum invalidAttachment = depthStencilFormatToGLAttachment(depthStencilFormat_);
 			fbo_->invalidate(1, &invalidAttachment);
 		}

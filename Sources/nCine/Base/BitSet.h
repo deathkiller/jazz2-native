@@ -251,5 +251,4 @@ namespace nCine
 	{
 		bits_ ^= (T(1) << pos);
 	}
-
 }

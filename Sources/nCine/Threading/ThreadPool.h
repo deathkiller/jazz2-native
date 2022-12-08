@@ -49,6 +49,4 @@ namespace nCine
 		/// Deleted assignment operator
 		ThreadPool& operator=(const ThreadPool&) = delete;
 	};
-
 }
-

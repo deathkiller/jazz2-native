@@ -38,5 +38,4 @@ namespace nCine
 		/// Accumulated time ticks over multiple start and stop
 		uint64_t accumulatedTime_;
 	};
-
 }

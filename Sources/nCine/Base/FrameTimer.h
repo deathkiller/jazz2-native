@@ -77,5 +77,4 @@ namespace nCine
 		float timeMult_;
 		float timeMultPrev_;
 	};
-
 }

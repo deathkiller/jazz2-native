@@ -104,7 +104,7 @@ namespace nCine
 		RWLock& operator=(const RWLock&) = delete;
 	};
 
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE)
+#	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE)
 
 	/// Barrier class (threads synchronization)
 	class Barrier
@@ -128,7 +128,7 @@ namespace nCine
 		Barrier& operator=(const Barrier&) = delete;
 	};
 
-#endif
+#	endif
 #endif
 
 }

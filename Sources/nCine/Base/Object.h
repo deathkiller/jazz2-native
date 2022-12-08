@@ -65,5 +65,4 @@ namespace nCine
 		 /// Deleted assignment operator
 		Object& operator=(const Object&) = delete;
 	};
-
 }

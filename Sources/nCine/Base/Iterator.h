@@ -222,5 +222,4 @@ namespace nCine
 	{
 		return c.rend();
 	}
-
 }

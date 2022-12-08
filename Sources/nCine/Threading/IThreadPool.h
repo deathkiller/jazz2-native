@@ -16,7 +16,7 @@ namespace nCine
 		virtual void EnqueueCommand(std::unique_ptr<IThreadCommand> threadCommand) = 0;
 	};
 
-	inline IThreadPool::~IThreadPool() {}
+	inline IThreadPool::~IThreadPool() { }
 
 	/// A fake thread pool which doesn't create any thread
 	class NullThreadPool : public IThreadPool
@@ -24,5 +24,4 @@ namespace nCine
 	public:
 		void EnqueueCommand(std::unique_ptr<IThreadCommand> threadCommand) override { }
 	};
-
 }
