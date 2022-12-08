@@ -196,8 +196,11 @@ namespace Jazz2
 		Outline,
 		BatchedOutline,
 		WhiteMask,
-		PartialWhiteMask,
 		BatchedWhiteMask,
+		PartialWhiteMask,
+		BatchedPartialWhiteMask,
+		FrozenMask,
+		BatchedFrozenMask,
 
 #if defined(ALLOW_RESCALE_SHADERS)
 		ResizeHQ2x,

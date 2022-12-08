@@ -25,6 +25,7 @@ namespace Jazz2::Actors::Weapons
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 		bool OnPerish(ActorBase* collider) override;
 		void OnHitWall(float timeMult) override;
+		void OnRicochet() override;
 
 	private:
 		Vector2f _gunspotPos;

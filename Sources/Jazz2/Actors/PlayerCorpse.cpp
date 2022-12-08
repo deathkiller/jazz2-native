@@ -13,7 +13,7 @@ namespace Jazz2::Actors
 		SetFacingLeft(details.Params[1] != 0);
 
 		SetState(ActorState::ForceDisableCollisions, true);
-		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
+		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		switch (playerType) {
 			default:

@@ -110,15 +110,7 @@ namespace Jazz2::Actors
 		TileCollisionParams params = { TileDestructType::None, _speed.Y >= 0.0f };
 		TryStandardMovement(timeMult, params);
 		OnUpdateHitbox();
-
-		if (_renderer.AnimPaused) {
-			if (_frozenTimeLeft <= 0.0f) {
-				_renderer.AnimPaused = false;
-				// TODO: Frozen effect
-			} else {
-				_frozenTimeLeft -= timeMult;
-			}
-		}
+		UpdateFrozenState(timeMult);
 	}
 
 	void ActorBase::OnUpdateHitbox()
@@ -211,7 +203,9 @@ namespace Jazz2::Actors
 		float effectiveSpeedX, effectiveSpeedY;
 		if (_frozenTimeLeft > 0.0f) {
 			effectiveSpeedX = std::clamp(_externalForce.X * timeMult, -16.0f, 16.0f);
-			effectiveSpeedY = std::clamp(((currentGravity * 2) + _internalForceY) * timeMult, -16.0f, 16.0f);
+			effectiveSpeedY = ((_state & ActorState::ApplyGravitation) == ActorState::ApplyGravitation
+				? (_speed.Y + 0.5f * accelY)
+				: std::clamp(((currentGravity * 2.0f) + _internalForceY) * timeMult, -16.0f, 16.0f));
 		} else {
 			effectiveSpeedX = _speed.X + _externalForce.X * timeMult;
 			effectiveSpeedY = _speed.Y + 0.5f * accelY;
@@ -1116,14 +1110,27 @@ namespace Jazz2::Actors
 		return i;
 	}
 
+	void ActorBase::UpdateFrozenState(float timeMult)
+	{
+		if (_renderer.AnimPaused) {
+			if (_frozenTimeLeft <= 0.0f) {
+				_renderer.AnimPaused = false;
+				_renderer.Initialize(ActorRendererType::Default);
+			} else {
+				// Cannot be directly in `ActorBase::HandleFrozenStateChange()` due to bug in `BaseSprite::updateRenderCommand()`,
+				// it would be called before `BaseSprite::updateRenderCommand()` but after `SceneNode::transform()`
+				_renderer.Initialize(ActorRendererType::FrozenMask);
+				_frozenTimeLeft -= timeMult;
+			}
+		}
+	}
+
 	void ActorBase::HandleFrozenStateChange(ActorBase* shot)
 	{
 		if (auto freezerShot = dynamic_cast<Actors::Weapons::FreezerShot*>(shot)) {
 			if (dynamic_cast<ActorBase*>(freezerShot->GetOwner()) != this) {
 				_frozenTimeLeft = freezerShot->FrozenDuration();
-
 				_renderer.AnimPaused = true;
-				// TODO: Frozen effect
 			}
 		} else if(auto toasterShot = dynamic_cast<Actors::Weapons::ToasterShot*>(shot)) {
 			_frozenTimeLeft = 0.0f;
@@ -1216,14 +1223,15 @@ namespace Jazz2::Actors
 			case ActorRendererType::Outline: shaderChanged = renderCommand_.material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::Outline)); break;
 			case ActorRendererType::WhiteMask: shaderChanged = renderCommand_.material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::WhiteMask)); break;
 			case ActorRendererType::PartialWhiteMask: shaderChanged = renderCommand_.material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::PartialWhiteMask)); break;
+			case ActorRendererType::FrozenMask: shaderChanged = renderCommand_.material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::FrozenMask)); break;
 			default: shaderChanged = renderCommand_.material().setShaderProgramType(Material::ShaderProgramType::SPRITE); break;
 		}
 		if (shaderChanged) {
 			shaderHasChanged();
 			renderCommand_.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-			if (type == ActorRendererType::Outline) {
-				if (texture_) {
+			if (type == ActorRendererType::Outline || type == ActorRendererType::FrozenMask) {
+				if (texture_ != nullptr) {
 					Vector2i texSize = texture_->size();
 					setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, 0.8f));
 				}
@@ -1272,8 +1280,8 @@ namespace Jazz2::Actors
 
 	void ActorBase::ActorRenderer::textureHasChanged(Texture* newTexture)
 	{
-		if (_rendererType == ActorRendererType::Outline) {
-			if (newTexture) {
+		if (_rendererType == ActorRendererType::Outline || _rendererType == ActorRendererType::FrozenMask) {
+			if (newTexture != nullptr) {
 				Vector2i texSize = newTexture->size();
 				setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, 0.8f));
 			}
@@ -1341,7 +1349,7 @@ namespace Jazz2::Actors
 		if (frame < min) {
 			return max + ((frame - min) % max);
 		} else {
-			return min + frame % (max - min);
+			return min + (frame % (max - min));
 		}
 	}
 }

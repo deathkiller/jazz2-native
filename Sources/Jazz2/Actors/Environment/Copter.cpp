@@ -23,7 +23,7 @@ namespace Jazz2::Actors::Environment
 	{
 		_state = (details.Params[0] != 0 ? State::Mounted : State::Free);
 
-		SetState(ActorState::ApplyGravitation, false);
+		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
 
 		async_await RequestMetadataAsync("Enemy/LizardFloat"_s);
 

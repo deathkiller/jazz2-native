@@ -296,6 +296,7 @@ namespace Jazz2
 		Vector2f _playerRequiredMovement;
 		Vector2f _playerFrozenMovement;
 		bool _playerFrozenEnabled;
+		int32_t _lastPressedNumericKey;
 
 		void OnLevelLoaded(const StringView& fullPath, const StringView& name, const StringView& nextLevel, const StringView& secretLevel,
 			std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap,

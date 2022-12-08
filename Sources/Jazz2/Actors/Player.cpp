@@ -195,14 +195,7 @@ namespace Jazz2::Actors
 			}
 
 			OnUpdateHitbox();
-
-			if (_renderer.AnimPaused) {
-				if (_frozenTimeLeft <= 0.0f) {
-					_renderer.AnimPaused = false;
-				} else {
-					_frozenTimeLeft -= timeMult;
-				}
-			}
+			UpdateFrozenState(timeMult);
 		}
 
 		//FollowCarryingPlatform();

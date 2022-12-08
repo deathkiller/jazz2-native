@@ -36,6 +36,12 @@ namespace Jazz2::Actors::Environment
 
 	void RollingRock::OnUpdate(float timeMult)
 	{
+		UpdateFrozenState(timeMult);
+
+		if (_frozenTimeLeft > 0.0f) {
+			return;
+		}
+
 		// Movement
 		if (GetState(ActorState::ApplyGravitation)) {
 			float currentGravity = _levelHandler->Gravity;

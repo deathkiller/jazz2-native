@@ -25,7 +25,7 @@ namespace Jazz2::Actors::Environment
 		_gain = 0.2f * (details.Params[1] / 255.0f);
 
 		SetState(ActorState::ForceDisableCollisions, true);
-		SetState(ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
+		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		async_await RequestMetadataAsync("Common/AmbientSound"_s);
 		

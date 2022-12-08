@@ -225,7 +225,10 @@ namespace Jazz2::UI::Menu
 
 		    center.Y += 70.0f;
 		}
+	}
 
+	void StartGameOptionsSection::OnDrawOverlay(Canvas* canvas)
+	{
 		if (_shouldStart) {
 			auto command = canvas->RentRenderCommand();
 			if (command->material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::Transition))) {

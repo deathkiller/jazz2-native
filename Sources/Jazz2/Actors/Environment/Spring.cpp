@@ -1,6 +1,7 @@
 ﻿#include "Spring.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
+#include "../Weapons/ToasterShot.h"
 
 namespace Jazz2::Actors::Environment
 {
@@ -12,7 +13,7 @@ namespace Jazz2::Actors::Environment
 
 	Vector2f Spring::Activate()
 	{
-		if (_cooldown > 0.0f || _frozenTimeLeft > 0.0f) {
+		if (_state == State::Frozen || _cooldown > 0.0f || _frozenTimeLeft > 0.0f) {
 			return Vector2f::Zero;
 		}
 
@@ -41,8 +42,8 @@ namespace Jazz2::Actors::Environment
 		_orientation = details.Params[1];
 		KeepSpeedX = (details.Params[2] != 0);
 		KeepSpeedY = (details.Params[3] != 0);
-		//delay = details.Params[4];
-		//frozen = (details.Params[5] != 0);
+		//_delay = details.Params[4];
+		_state = (details.Params[5] != 0 ? State::Frozen : State::Default);
 
 		SetState(ActorState::SkipPerPixelCollisions, true);
 
@@ -119,6 +120,11 @@ namespace Jazz2::Actors::Environment
 			}
 		}
 
+		if (_state == State::Frozen) {
+			_renderer.Initialize(ActorRendererType::FrozenMask);
+			SetState(ActorState::CanBeFrozen, false);
+		}
+
 		async_return true;
 	}
 
@@ -128,6 +134,12 @@ namespace Jazz2::Actors::Environment
 
 		if (_cooldown > 0.0f) {
 			_cooldown -= timeMult;
+		}
+		if (_state == State::Heated) {
+			// Cannot be directly in `Spring::OnHandleCollision()` due to bug in `BaseSprite::updateRenderCommand()`,
+			// it would be called before `BaseSprite::updateRenderCommand()` but after `SceneNode::transform()`
+			_renderer.Initialize(ActorRendererType::Default);
+			_state == State::Default;
 		}
 	}
 
@@ -146,5 +158,17 @@ namespace Jazz2::Actors::Environment
 				AABBInner = AABBf(_pos.X - 10, _pos.Y, _pos.X + 10, _pos.Y + 8);
 				break;
 		}
+	}
+
+	bool Spring::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	{
+		if (_state == State::Frozen) {
+			if (auto toasterShot = dynamic_cast<Weapons::ToasterShot*>(other.get())) {
+				_state = State::Heated;
+				SetState(ActorState::CanBeFrozen, true);
+			}
+		}
+
+		return ActorBase::OnHandleCollision(other);
 	}
 }

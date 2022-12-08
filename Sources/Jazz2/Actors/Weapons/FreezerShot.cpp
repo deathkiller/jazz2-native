@@ -121,4 +121,11 @@ namespace Jazz2::Actors::Weapons
 
 		PlaySfx("WallPoof"_s);
 	}
+
+	void FreezerShot::OnRicochet()
+	{
+		DecreaseHealth(INT32_MAX);
+
+		PlaySfx("WallPoof"_s);
+	}
 }

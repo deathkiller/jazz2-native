@@ -87,15 +87,7 @@ namespace Jazz2::Actors::Enemies
 		TileCollisionParams params = { TileDestructType::Weapon | TileDestructType::Special, _speed.Y >= 0.0f, WeaponType::Blaster, 1 };
 		TryStandardMovement(timeMult, params);
 		OnUpdateHitbox();
-
-		if (_renderer.AnimPaused) {
-			if (_frozenTimeLeft <= 0.0f) {
-				_renderer.AnimPaused = false;
-				// TODO: Frozen effect
-			} else {
-				_frozenTimeLeft -= timeMult;
-			}
-		}
+		UpdateFrozenState(timeMult);
 
 		HandleBlinking(timeMult);
 

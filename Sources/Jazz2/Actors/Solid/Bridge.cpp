@@ -53,7 +53,7 @@ namespace Jazz2::Actors::Solid
 		_pos.Y -= 6.0f;
 
 		SetState(ActorState::SkipPerPixelCollisions, true);
-		SetState(ActorState::CollideWithTileset | ActorState::ApplyGravitation, false);
+		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::ApplyGravitation, false);
 
 		switch (_bridgeType) {
 			default:

@@ -113,7 +113,7 @@ namespace nCine {
 		renderCommand_.material().reserveUniformsDataMemory();
 		instanceBlock_ = renderCommand_.material().uniformBlock(Material::InstanceBlockName);
 		GLUniformCache* textureUniform = renderCommand_.material().uniform(Material::TextureUniformName);
-		if (textureUniform && textureUniform->intValue(0) != 0) {
+		if (textureUniform != nullptr && textureUniform->intValue(0) != 0) {
 			textureUniform->setIntValue(0); // GL_TEXTURE0
 		}
 
@@ -133,23 +133,25 @@ namespace nCine {
 		}
 		if (dirtyBits_.test(DirtyBitPositions::ColorBit)) {
 			GLUniformCache* colorUniform = instanceBlock_->uniform(Material::ColorUniformName);
-			if (colorUniform)
+			if (colorUniform != nullptr) {
 				colorUniform->setFloatVector(absColor().Data());
+			}
 			dirtyBits_.reset(DirtyBitPositions::ColorBit);
 		}
 		if (dirtyBits_.test(DirtyBitPositions::SizeBit)) {
 			GLUniformCache* spriteSizeUniform = instanceBlock_->uniform(Material::SpriteSizeUniformName);
-			if (spriteSizeUniform)
+			if (spriteSizeUniform != nullptr) {
 				spriteSizeUniform->setFloatValue(width_, height_);
+			}
 			dirtyBits_.reset(DirtyBitPositions::SizeBit);
 		}
 
 		if (dirtyBits_.test(DirtyBitPositions::TextureBit)) {
-			if (texture_) {
+			if (texture_ != nullptr) {
 				renderCommand_.material().setTexture(*texture_);
 
 				GLUniformCache* texRectUniform = instanceBlock_->uniform(Material::TexRectUniformName);
-				if (texRectUniform) {
+				if (texRectUniform != nullptr) {
 					const Vector2i texSize = texture_->size();
 					const float texScaleX = texRect_.W / float(texSize.X);
 					const float texBiasX = texRect_.X / float(texSize.X);

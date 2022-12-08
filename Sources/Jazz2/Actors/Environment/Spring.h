@@ -11,6 +11,8 @@ namespace Jazz2::Actors::Environment
 
 		bool KeepSpeedX, KeepSpeedY;
 
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+
 		static void Preload(const ActorActivationDetails& details)
 		{
 			PreloadMetadataAsync("Object/Spring"_s);
@@ -24,11 +26,17 @@ namespace Jazz2::Actors::Environment
 		void OnUpdateHitbox() override;
 
 	private:
+		enum class State {
+			Default,
+			Frozen,
+			Heated
+		};
+
 		uint8_t _type;
 		uint8_t _orientation;
 		float _strength;
-		//uint16_t delay;
-		//bool frozen;
+		//uint16_t _delay;
+		State _state;
 		float _cooldown;
 	};
 }

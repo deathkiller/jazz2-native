@@ -18,7 +18,7 @@ namespace Jazz2::Actors::Lighting
 		_phase = 0.6;
 
 		SetState(ActorState::ForceDisableCollisions, true);
-		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
+		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		for (int i = 0; i < LightPartCount; i++) {
 			float radius = Random().FastFloat(_radiusFar * 0.5f, _radiusFar * 0.8f);
