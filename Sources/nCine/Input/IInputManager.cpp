@@ -92,7 +92,7 @@ namespace nCine
 		joyMapping_.setHandler(inputEventHandler);
 	}
 
-	/*! \note Joystick will stay mapped in the`onJoyConnected()` and `onJoyDisconnected()` callbacks */
+	/*! \note Joystick will stay mapped in the`OnJoyConnected()` and `OnJoyDisconnected()` callbacks */
 	bool IInputManager::isJoyMapped(int joyId) const
 	{
 		return joyMapping_.isJoyMapped(joyId);

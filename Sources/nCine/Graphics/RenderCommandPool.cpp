@@ -50,9 +50,11 @@ namespace nCine
 			}
 		}
 
+#if defined(NCINE_PROFILING)
 		if (retrievedCommand) {
 			RenderStatistics::addCommandPoolRetrieval();
 		}
+#endif
 		return retrievedCommand;
 	}
 
@@ -71,8 +73,9 @@ namespace nCine
 
 	void RenderCommandPool::reset()
 	{
+#if defined(NCINE_PROFILING)
 		RenderStatistics::gatherCommandPoolStatistics((unsigned int)usedCommandsPool_.size(), (unsigned int)freeCommandsPool_.size());
-
+#endif
 		for (std::unique_ptr<RenderCommand>& command : usedCommandsPool_) {
 			freeCommandsPool_.push_back(std::move(command));
 		}

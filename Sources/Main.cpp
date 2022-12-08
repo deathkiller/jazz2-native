@@ -57,16 +57,16 @@ public:
 	static constexpr int DefaultWidth = 720;
 	static constexpr int DefaultHeight = 405;
 
-	void onPreInit(AppConfiguration& config) override;
-	void onInit() override;
-	void onFrameStart() override;
-	void onPostUpdate() override;
-	void onShutdown() override;
-	void onResizeWindow(int width, int height) override;
+	void OnPreInit(AppConfiguration& config) override;
+	void OnInit() override;
+	void OnFrameStart() override;
+	void OnPostUpdate() override;
+	void OnShutdown() override;
+	void OnResizeWindow(int width, int height) override;
 
-	void onKeyPressed(const KeyboardEvent& event) override;
-	void onKeyReleased(const KeyboardEvent& event) override;
-	void onTouchEvent(const TouchEvent& event) override;
+	void OnKeyPressed(const KeyboardEvent& event) override;
+	void OnKeyReleased(const KeyboardEvent& event) override;
+	void OnTouchEvent(const TouchEvent& event) override;
 
 	void GoToMainMenu(bool afterIntro) override;
 	void ChangeLevel(LevelInitialization&& levelInit) override;
@@ -113,7 +113,7 @@ private:
 	static void SaveEpisodeContinue(const std::unique_ptr<LevelInitialization>& pendingLevelChange);
 };
 
-void GameEventHandler::onPreInit(AppConfiguration& config)
+void GameEventHandler::OnPreInit(AppConfiguration& config)
 {
 	PreferencesCache::Initialize(config);
 
@@ -122,7 +122,7 @@ void GameEventHandler::onPreInit(AppConfiguration& config)
 	config.resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
 }
 
-void GameEventHandler::onInit()
+void GameEventHandler::OnInit()
 {
 	_flags = Flags::None;
 	_pendingState = PendingState::None;
@@ -187,7 +187,7 @@ void GameEventHandler::onInit()
 	LOGI_X("Rendering resolution: %ix%i", res.X, res.Y);
 }
 
-void GameEventHandler::onFrameStart()
+void GameEventHandler::OnFrameStart()
 {
 	if (_pendingState != PendingState::None) {
 		switch (_pendingState) {
@@ -275,19 +275,19 @@ void GameEventHandler::onFrameStart()
 	_currentHandler->OnBeginFrame();
 }
 
-void GameEventHandler::onPostUpdate()
+void GameEventHandler::OnPostUpdate()
 {
 	_currentHandler->OnEndFrame();
 }
 
-void GameEventHandler::onShutdown()
+void GameEventHandler::OnShutdown()
 {
 	_currentHandler = nullptr;
 
 	ContentResolver::Current().Release();
 }
 
-void GameEventHandler::onResizeWindow(int width, int height)
+void GameEventHandler::OnResizeWindow(int width, int height)
 {
 	// Resolution was changed, all viewports have to be recreated
 	Viewport::chain().clear();
@@ -301,7 +301,7 @@ void GameEventHandler::onResizeWindow(int width, int height)
 	LOGI_X("Rendering resolution: %ix%i", width, height);
 }
 
-void GameEventHandler::onKeyPressed(const KeyboardEvent& event)
+void GameEventHandler::OnKeyPressed(const KeyboardEvent& event)
 {
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
 	// Allow Alt+Enter to switch fullscreen
@@ -327,12 +327,12 @@ void GameEventHandler::onKeyPressed(const KeyboardEvent& event)
 	_currentHandler->OnKeyPressed(event);
 }
 
-void GameEventHandler::onKeyReleased(const KeyboardEvent& event)
+void GameEventHandler::OnKeyReleased(const KeyboardEvent& event)
 {
 	_currentHandler->OnKeyReleased(event);
 }
 
-void GameEventHandler::onTouchEvent(const TouchEvent& event)
+void GameEventHandler::OnTouchEvent(const TouchEvent& event)
 {
 	_currentHandler->OnTouchEvent(event);
 }

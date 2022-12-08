@@ -242,7 +242,7 @@ namespace nCine
 		inline const Matrix4x4f& worldMatrix() const {
 			return worldMatrix_;
 		}
-		/// Sets the node world matrix (only useful when called inside `onPostUpdate()`)
+		/// Sets the node world matrix (only useful when called inside `OnPostUpdate()`)
 		void setWorldMatrix(const Matrix4x4f& worldMatrix);
 
 		/// Gets the node local matrix

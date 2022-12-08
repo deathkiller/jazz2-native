@@ -80,8 +80,10 @@ namespace nCine
 
 	void ScreenViewport::sortAndCommitQueue()
 	{
+#if defined(NCINE_PROFILING)
 		// Reset all rendering statistics
 		RenderStatistics::reset();
+#endif
 
 		for (int i = (int)chain_.size() - 1; i >= 0; i--) {
 			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::CommittedBit)) {

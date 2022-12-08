@@ -240,10 +240,9 @@ namespace nCine
 		AssetFile::InitializeAssetManager(state_);
 
 		appEventHandler_ = createAppEventHandler_();
-		// Only `onPreInit()` can modify the application configuration
-		AppConfiguration& modifiableAppCfg = const_cast<AppConfiguration&>(appCfg_);
-		appEventHandler_->onPreInit(modifiableAppCfg);
-		LOGI("IAppEventHandler::onPreInit() invoked");
+		// Only `OnPreInit()` can modify the application configuration
+		appEventHandler_->onPreInit(appCfg_);
+		LOGI("IAppEventHandler::OnPreInit() invoked");
 	}
 
 	void AndroidApplication::init()
@@ -264,7 +263,9 @@ namespace nCine
 		}
 		inputManager_ = std::make_unique<AndroidInputManager>(state_);
 
-		timings_[Timings::PreInit] = profileStartTime_.secondsSince();
+#if defined(NCINE_PROFILING)
+		timings_[(int)Timings::PreInit] = profileStartTime_.secondsSince();
+#endif
 
 		Application::initCommon();
 

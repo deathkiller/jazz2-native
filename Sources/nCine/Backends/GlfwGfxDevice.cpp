@@ -23,8 +23,8 @@ namespace nCine
 		: IGfxDevice(windowMode, glContextInfo, displayMode)
 	{
 		initGraphics();
-		initWindowScaling(windowMode);
-		initDevice(windowMode.isResizable);
+		updateMonitors();
+		initDevice(windowMode.isResizable, windowMode.hasWindowScaling);
 	}
 
 	GlfwGfxDevice::~GlfwGfxDevice()
@@ -251,7 +251,7 @@ namespace nCine
 		FATAL_ASSERT_MSG(glfwInit() == GL_TRUE, "glfwInit() failed");
 	}
 
-	void GlfwGfxDevice::initDevice(bool isResizable)
+	void GlfwGfxDevice::initDevice(bool isResizable, bool enableWindowScaling)
 	{
 		GLFWmonitor* monitor = nullptr;
 		if (isFullscreen_) {
@@ -296,6 +296,10 @@ namespace nCine
 		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, glContextInfo_.forwardCompatible ? GLFW_TRUE : GLFW_FALSE);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, glContextInfo_.coreProfile ? GLFW_OPENGL_CORE_PROFILE : GLFW_OPENGL_COMPAT_PROFILE);
 #endif
+		// Scaling is handled automatically by GLFW
+		if (enableWindowScaling) {
+			glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
+		}
 
 		windowHandle_ = glfwCreateWindow(width_, height_, "", monitor, nullptr);
 		FATAL_ASSERT_MSG(windowHandle_, "glfwCreateWindow() failed");
@@ -405,7 +409,6 @@ namespace nCine
 	{
 		LOGE_X("GLFW error %d: \"%s\"", error, description);
 	}
-
 }
 
 #endif

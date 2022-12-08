@@ -93,7 +93,7 @@ namespace nCine
 		/// Initilizes the video subsystem (GLFW)
 		void initGraphics();
 		/// Initilizes the OpenGL graphic context
-		void initDevice(bool isResizable);
+		void initDevice(bool isResizable, bool enableWindowScaling);
 
 		void updateMonitorScaling(unsigned int monitorIndex);
 

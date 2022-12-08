@@ -73,7 +73,7 @@ namespace nCine
 
 	IGfxDevice::IGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
 		: drawableWidth_(windowMode.width), drawableHeight_(windowMode.height), width_(windowMode.width), height_(windowMode.height),
-		  glContextInfo_(glContextInfo), isFullscreen_(windowMode.isFullscreen), displayMode_(displayMode), numMonitors_(0), previousScalingFactor_(1.0f)
+		  glContextInfo_(glContextInfo), isFullscreen_(windowMode.isFullscreen), displayMode_(displayMode), numMonitors_(0)
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		double cssWidth = 0.0;
@@ -159,27 +159,6 @@ namespace nCine
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void IGfxDevice::initWindowScaling(const WindowMode& windowMode)
-	{
-		updateMonitors();
-		const float factor = windowScalingFactor();
-
-#if defined(WITH_SDL) && defined(DEATH_TARGET_WINDOWS)
-		// Scaling is handled automatically by SDL (since v2.26.0)
-#elif !defined(DEATH_TARGET_EMSCRIPTEN)
-		if (windowMode.hasWindowScaling) {
-#	if defined(WITH_QT5)
-			setWindowSize(width_ * factor, height_ * factor);
-#	else
-			width_ *= factor;
-			height_ *= factor;
-#	endif
-		}
-#endif
-
-		previousScalingFactor_ = factor;
-	}
-
 	void IGfxDevice::initGLViewport()
 	{
 		GLViewport::initRect(0, 0, drawableWidth_, drawableHeight_);
@@ -190,25 +169,5 @@ namespace nCine
 		glDisable(GL_DITHER);
 		GLBlending::setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		GLDepthTest::enable();
-	}
-
-	bool IGfxDevice::updateScaling(bool windowScaling)
-	{
-		const Monitor& windowMonitor = monitor();
-		const float currentScalingFactor = windowMonitor.scale.X;
-		const bool scalingFactorChanged = (currentScalingFactor != previousScalingFactor_);
-
-#if defined(WITH_SDL) && defined(DEATH_TARGET_WINDOWS)
-		// Scaling is handled automatically by SDL (since v2.26.0)
-#elif !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_WINDOWS_RT)
-		// It's resized automatically on Apple and Windows RT
-		if (windowScaling && !isFullscreen_ && scalingFactorChanged) {
-			const float ratio = currentScalingFactor / previousScalingFactor_;
-			setWindowSize(width_ * ratio, height_ * ratio);
-		}
-#endif
-
-		previousScalingFactor_ = currentScalingFactor;
-		return scalingFactorChanged;
 	}
 }

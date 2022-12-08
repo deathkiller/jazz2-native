@@ -158,7 +158,9 @@ namespace nCine
 			commandIndex++;
 #endif
 
+#if defined(NCINE_PROFILING)
 			RenderStatistics::gatherStatistics(*opaqueRenderCommand);
+#endif
 			opaqueRenderCommand->commitCameraTransformation();
 			opaqueRenderCommand->issue();
 		}
@@ -188,7 +190,9 @@ namespace nCine
 			commandIndex++;
 #endif
 
+#if defined(NCINE_PROFILING)
 			RenderStatistics::gatherStatistics(*transparentRenderCommand);
+#endif
 			GLBlending::setBlendFunc(transparentRenderCommand->material().srcBlendingFactor(), transparentRenderCommand->material().destBlendingFactor());
 			transparentRenderCommand->commitCameraTransformation();
 			transparentRenderCommand->issue();

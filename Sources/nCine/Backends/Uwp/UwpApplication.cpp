@@ -121,7 +121,9 @@ namespace nCine
 			init({ nullptr });
 		}*/
 
+#if defined(NCINE_PROFILING)
 		profileStartTime_ = TimeStamp::now();
+#endif
 		//wasSuspended_ = shouldSuspend();
 		appEventHandler_ = _createAppEventHandler();
 
@@ -131,13 +133,12 @@ namespace nCine
 			auto task = statusBar.HideAsync();
 		}
 
-		// Only `onPreInit()` can modify the application configuration
-		AppConfiguration& modifiableAppCfg = const_cast<AppConfiguration&>(appCfg_);
+		// Only `OnPreInit()` can modify the application configuration
 		// TODO: Parse arguments from Uri
-		//modifiableAppCfg.argc_ = argc;
-		//modifiableAppCfg.argv_ = argv;
-		appEventHandler_->onPreInit(modifiableAppCfg);
-		LOGI("IAppEventHandler::onPreInit() invoked");
+		//appCfg_.argc_ = argc;
+		//appCfg_.argv_ = argv;
+		appEventHandler_->OnPreInit(appCfg_);
+		LOGI("IAppEventHandler::OnPreInit() invoked");
 
 		winrtWUC::CoreWindow window = winrtWUC::CoreWindow::GetForCurrentThread();
 
@@ -159,9 +160,8 @@ namespace nCine
 			winrtWUV::ApplicationView::PreferredLaunchWindowingMode(winrtWUV::ApplicationViewWindowingMode::FullScreen);
 			window.Activate();
 		} else if (appCfg_.resolution.X > 0 && appCfg_.resolution.Y > 0) {
-			float dpi = displayInfo.LogicalDpi();
 			winrtWUV::ApplicationView::PreferredLaunchWindowingMode(winrtWUV::ApplicationViewWindowingMode::PreferredLaunchViewSize);
-			winrtWF::Size desiredSize = winrtWF::Size((appCfg_.resolution.X * IGfxDevice::DefaultDPI / dpi), (appCfg_.resolution.Y * IGfxDevice::DefaultDPI / dpi));
+			winrtWF::Size desiredSize = winrtWF::Size(appCfg_.resolution.X, appCfg_.resolution.Y);
 			winrtWUV::ApplicationView::PreferredLaunchViewSize(desiredSize);
 			window.Activate();
 			winrtWUV::ApplicationView::GetForCurrentView().TryResizeView(desiredSize);
@@ -193,7 +193,9 @@ namespace nCine
 			}
 		}
 
-		timings_[Timings::PreInit] = profileStartTime_.secondsSince();
+#if defined(NCINE_PROFILING)
+		timings_[(int)Timings::PreInit] = profileStartTime_.secondsSince();
+#endif
 	}
 
 	void UwpApplication::OnSuspending(const winrtWF::IInspectable& sender, const winrtWA::SuspendingEventArgs& args)

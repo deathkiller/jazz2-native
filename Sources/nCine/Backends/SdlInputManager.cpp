@@ -147,10 +147,9 @@ namespace nCine
 	bool SdlInputManager::shouldQuitOnRequest()
 	{
 		bool shouldQuit = true;
-
-		if (inputEventHandler_)
+		if (inputEventHandler_ != nullptr) {
 			shouldQuit = inputEventHandler_->onQuitRequest();
-
+		}
 		return shouldQuit;
 	}
 
@@ -254,46 +253,46 @@ namespace nCine
 		// Calling the event handler method
 		switch (event.type) {
 			case SDL_KEYDOWN:
-				inputEventHandler_->onKeyPressed(keyboardEvent_);
+				inputEventHandler_->OnKeyPressed(keyboardEvent_);
 				break;
 			case SDL_KEYUP:
-				inputEventHandler_->onKeyReleased(keyboardEvent_);
+				inputEventHandler_->OnKeyReleased(keyboardEvent_);
 				break;
 			case SDL_TEXTINPUT:
-				inputEventHandler_->onTextInput(textInputEvent_);
+				inputEventHandler_->OnTextInput(textInputEvent_);
 				break;
 			case SDL_MOUSEBUTTONDOWN:
-				inputEventHandler_->onMouseButtonPressed(mouseEvent_);
+				inputEventHandler_->OnMouseDown(mouseEvent_);
 				break;
 			case SDL_MOUSEBUTTONUP:
-				inputEventHandler_->onMouseButtonReleased(mouseEvent_);
+				inputEventHandler_->OnMouseUp(mouseEvent_);
 				break;
 			case SDL_MOUSEMOTION:
-				inputEventHandler_->onMouseMoved(mouseState_);
+				inputEventHandler_->OnMouseMove(mouseState_);
 				break;
 			case SDL_MOUSEWHEEL:
-				inputEventHandler_->onScrollInput(scrollEvent_);
+				inputEventHandler_->OnScrollInput(scrollEvent_);
 				break;
 			case SDL_JOYBUTTONDOWN:
 				joyMapping_.onJoyButtonPressed(joyButtonEvent_);
-				inputEventHandler_->onJoyButtonPressed(joyButtonEvent_);
+				inputEventHandler_->OnJoyButtonPressed(joyButtonEvent_);
 				break;
 			case SDL_JOYBUTTONUP:
 				joyMapping_.onJoyButtonReleased(joyButtonEvent_);
-				inputEventHandler_->onJoyButtonReleased(joyButtonEvent_);
+				inputEventHandler_->OnJoyButtonReleased(joyButtonEvent_);
 				break;
 			case SDL_JOYAXISMOTION:
 				joyMapping_.onJoyAxisMoved(joyAxisEvent_);
-				inputEventHandler_->onJoyAxisMoved(joyAxisEvent_);
+				inputEventHandler_->OnJoyAxisMoved(joyAxisEvent_);
 				break;
 			case SDL_JOYHATMOTION:
 				joyMapping_.onJoyHatMoved(joyHatEvent_);
-				inputEventHandler_->onJoyHatMoved(joyHatEvent_);
+				inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
 				break;
 			case SDL_FINGERDOWN:
 			case SDL_FINGERMOTION:
 			case SDL_FINGERUP:
-				inputEventHandler_->onTouchEvent(touchEvent_);
+				inputEventHandler_->OnTouchEvent(touchEvent_);
 				break;
 			default:
 				break;
@@ -419,7 +418,7 @@ namespace nCine
 				   deviceIndex, SDL_JoystickName(joy), joyGuidString_, SDL_JoystickNumHats(joy), SDL_JoystickNumAxes(joy), SDL_JoystickNumButtons(joy), SDL_JoystickNumBalls(joy));
 #endif
 			joyMapping_.onJoyConnected(joyConnectionEvent_);
-			inputEventHandler_->onJoyConnected(joyConnectionEvent_);
+			inputEventHandler_->OnJoyConnected(joyConnectionEvent_);
 		} else if (event.type == SDL_JOYDEVICEREMOVED) {
 			const int deviceIndex = joyInstanceIdToDeviceIndex(event.jdevice.which);
 			if (deviceIndex == -1)
@@ -435,7 +434,7 @@ namespace nCine
 			sdlJoysticks_[MaxNumJoysticks - 1] = nullptr;
 
 			LOGI_X("Joystick %d has been disconnected", deviceIndex);
-			inputEventHandler_->onJoyDisconnected(joyConnectionEvent_);
+			inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
 			joyMapping_.onJoyDisconnected(joyConnectionEvent_);
 		}
 	}

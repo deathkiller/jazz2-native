@@ -260,8 +260,8 @@ namespace nCine
 	void GlfwInputManager::windowCloseCallback(GLFWwindow* window)
 	{
 		bool shouldQuit = true;
-		if (inputEventHandler_) {
-			shouldQuit = inputEventHandler_->onQuitRequest();
+		if (inputEventHandler_ != nullptr) {
+			shouldQuit = inputEventHandler_->OnQuitRequest();
 		}
 
 		if (shouldQuit) {
@@ -323,9 +323,9 @@ namespace nCine
 		keyboardEvent_.mod = GlfwKeys::keyModMaskToEnumMask(mods);
 
 		if (action == GLFW_PRESS) {
-			inputEventHandler_->onKeyPressed(keyboardEvent_);
+			inputEventHandler_->OnKeyPressed(keyboardEvent_);
 		} else if (action == GLFW_RELEASE) {
-			inputEventHandler_->onKeyReleased(keyboardEvent_);
+			inputEventHandler_->OnKeyReleased(keyboardEvent_);
 		}
 	}
 
@@ -338,7 +338,7 @@ namespace nCine
 		// TODO: text input
 		// Current GLFW version does not return an UTF-8 string (https://github.com/glfw/glfw/issues/837)
 		//nctl::Utf8::codePointToUtf8(c, textInputEvent_.text, nullptr);
-		//inputEventHandler_->onTextInput(textInputEvent_);
+		//inputEventHandler_->OnTextInput(textInputEvent_);
 	}
 
 	void GlfwInputManager::cursorPosCallback(GLFWwindow* window, double x, double y)
@@ -349,7 +349,7 @@ namespace nCine
 
 		mouseState_.x = static_cast<int>(x);
 		mouseState_.y = theApplication().height() - static_cast<int>(y);
-		inputEventHandler_->onMouseMoved(mouseState_);
+		inputEventHandler_->OnMouseMove(mouseState_);
 	}
 
 	void GlfwInputManager::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
@@ -365,9 +365,9 @@ namespace nCine
 		mouseEvent_.button_ = button;
 
 		if (action == GLFW_PRESS) {
-			inputEventHandler_->onMouseButtonPressed(mouseEvent_);
+			inputEventHandler_->OnMouseDown(mouseEvent_);
 		} else if (action == GLFW_RELEASE) {
-			inputEventHandler_->onMouseButtonReleased(mouseEvent_);
+			inputEventHandler_->OnMouseUp(mouseEvent_);
 		}
 	}
 
@@ -379,7 +379,7 @@ namespace nCine
 
 		scrollEvent_.x = static_cast<float>(xoffset);
 		scrollEvent_.y = static_cast<float>(yoffset);
-		inputEventHandler_->onScrollInput(scrollEvent_);
+		inputEventHandler_->OnMouseWheel(scrollEvent_);
 	}
 
 	void GlfwInputManager::joystickCallback(int joy, int event)
@@ -411,13 +411,13 @@ namespace nCine
 			
 			if (inputEventHandler_ != nullptr) {
 				joyMapping_.onJoyConnected(joyConnectionEvent_);
-				inputEventHandler_->onJoyConnected(joyConnectionEvent_);
+				inputEventHandler_->OnJoyConnected(joyConnectionEvent_);
 			}
 		} else if (event == GLFW_DISCONNECTED) {
 			joyEventsSimulator_.resetJoystickState(joyId);
 			LOGI_X("Joystick %d has been disconnected", joyId);
 			if (inputEventHandler_ != nullptr) {
-				inputEventHandler_->onJoyDisconnected(joyConnectionEvent_);
+				inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
 				joyMapping_.onJoyDisconnected(joyConnectionEvent_);
 			}
 		}
@@ -458,7 +458,7 @@ namespace nCine
 			}
 
 			touchEvent.actionIndex = pointer.id;
-			inputManager->inputEventHandler_->onTouchEvent(touchEvent);
+			inputManager->inputEventHandler_->OnTouchEvent(touchEvent);
 		}
 
 		return 1;
@@ -485,10 +485,10 @@ namespace nCine
 				joyButtonEvent_.buttonId = buttonId;
 				if (joystickStates_[joyId].buttons_[buttonId] == GLFW_PRESS) {
 					joyMapping_.onJoyButtonPressed(joyButtonEvent_);
-					inputEventHandler_->onJoyButtonPressed(joyButtonEvent_);
+					inputEventHandler_->OnJoyButtonPressed(joyButtonEvent_);
 				} else if (joystickStates_[joyId].buttons_[buttonId] == GLFW_RELEASE) {
 					joyMapping_.onJoyButtonReleased(joyButtonEvent_);
-					inputEventHandler_->onJoyButtonReleased(joyButtonEvent_);
+					inputEventHandler_->OnJoyButtonReleased(joyButtonEvent_);
 				}
 			}
 		}
@@ -507,7 +507,7 @@ namespace nCine
 				joyHatEvent_.hatState = hats[hatId];
 
 				joyMapping_.onJoyHatMoved(joyHatEvent_);
-				inputEventHandler_->onJoyHatMoved(joyHatEvent_);
+				inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
 			}
 		}
 
@@ -525,7 +525,7 @@ namespace nCine
 				joyAxisEvent_.value = static_cast<short int>(axesValues[axisId] * MaxAxisValue);
 				joyAxisEvent_.normValue = axesValues[axisId];
 				joyMapping_.onJoyAxisMoved(joyAxisEvent_);
-				inputEventHandler_->onJoyAxisMoved(joyAxisEvent_);
+				inputEventHandler_->OnJoyAxisMoved(joyAxisEvent_);
 			}
 		}
 

@@ -1,7 +1,9 @@
 #include "RenderVaoPool.h"
-#include "GL/GLVertexArrayObject.h"
 #include "RenderStatistics.h"
+#include "GL/GLBufferObject.h"
+#include "GL/GLVertexArrayObject.h"
 #include "GL/GLDebug.h"
+#include "../Base/Algorithms.h"
 #include "../../Common.h"
 
 namespace nCine
@@ -50,7 +52,9 @@ namespace nCine
 					GLBufferObject::bindHandle(GL_ELEMENT_ARRAY_BUFFER, iboHandle);
 				}
 				binding.lastBindTime = TimeStamp::now();
+#if defined(NCINE_PROFILING)
 				RenderStatistics::addVaoPoolBinding();
+#endif
 				break;
 			}
 		}
@@ -84,7 +88,9 @@ namespace nCine
 				formatString(debugString, sizeof(debugString), "Reuse and define VAO 0x%lx (%u)", uintptr_t(vaoPool_[index].object.get()), index);
 				GLDebug::messageInsert(debugString);
 #endif
+#if defined(NCINE_PROFILING)
 				RenderStatistics::addVaoPoolReuse();
+#endif
 			}
 
 			const bool bindChanged = vaoPool_[index].object->bind();
@@ -95,10 +101,14 @@ namespace nCine
 			vaoPool_[index].format = vertexFormat;
 			vaoPool_[index].format.define();
 			vaoPool_[index].lastBindTime = TimeStamp::now();
+#if defined(NCINE_PROFILING)
 			RenderStatistics::addVaoPoolBinding();
+#endif
 		}
 
+#if defined(NCINE_PROFILING)
 		RenderStatistics::gatherVaoPoolStatistics((unsigned int)vaoPool_.size(), (unsigned int)vaoPool_.capacity());
+#endif
 	}
 
 	///////////////////////////////////////////////////////////

@@ -209,12 +209,6 @@ namespace nCine
 		/// Used as a cache to avoid searching the current video mode in a monitor's array
 		mutable VideoMode currentVideoMode_;
 
-		/// The window scaling factor from last frame
-		float previousScalingFactor_;
-
-		/// Scales the window size by the display factor before creating it for the first time
-		void initWindowScaling(const WindowMode& windowMode);
-
 		/// Inits the OpenGL viewport based on the drawable resolution
 		void initGLViewport();
 
@@ -229,9 +223,6 @@ namespace nCine
 
 		/// Updates the screen swapping back and front buffers
 		virtual void update() = 0;
-
-		/// Updates the window size based on the monitor´s scaling factor
-		bool updateScaling(bool windowScaling);
 
 		friend class Application;
 #if defined(WITH_SDL)
