@@ -136,5 +136,4 @@ namespace nCine
 		static void* WrapperFunction(void* arg);
 #endif
 	};
-
 }

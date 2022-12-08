@@ -345,7 +345,7 @@ namespace nCine
 							break;
 						case AKEY_EVENT_ACTION_UP:
 							joystickStates_[joyId].buttons_[buttonIndex] = false;
-							joyMapping_.OnJoyButtonReleased(joyButtonEvent_);
+							joyMapping_.onJoyButtonReleased(joyButtonEvent_);
 							inputEventHandler_->OnJoyButtonReleased(joyButtonEvent_);
 							break;
 						case AKEY_EVENT_ACTION_MULTIPLE:

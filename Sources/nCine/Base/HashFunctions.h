@@ -334,5 +334,4 @@ namespace nCine
 	private:
 		static const uint32_t Seed = 0x811C9DC5;
 	};
-
 }

@@ -183,7 +183,9 @@ namespace nCine
 		Application& operator=(const Application&) = delete;
 
 		friend class MainApplication;
+#if defined(DEATH_TARGET_ANDROID)
 		friend class AndroidApplication;
+#endif
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		friend class IGfxDevice;
 #endif

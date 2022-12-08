@@ -23,13 +23,6 @@ namespace nCine
 		AppConfiguration();
 
 		// User configurable compile-time variables
-
-		/// The path for the application to load data from
-		//std::string logFile;
-		/// The logging level for messages printed on the console
-		//ILogger::LogLevel consoleLogLevel;
-		/// The logging level for messages written in the log file
-		//ILogger::LogLevel fileLogLevel;
 		/// The interval for frame timer accumulation average and log
 		float frameTimerLogInterval;
 
@@ -68,8 +61,6 @@ namespace nCine
 		/// The initial size for the pool of render commands
 		unsigned int renderCommandPoolSize;
 
-		/// The flag is `true` if the debug overlay is enabled
-		bool withDebugOverlay;
 		/// The flag is `true` if the audio subsystem is enabled
 		bool withAudio;
 		/// The flag is `true` if the threading subsystem is enabled
@@ -102,10 +93,6 @@ namespace nCine
 		inline unsigned int glMinorVersion() const {
 			return glMinorVersion_;
 		}
-		/// \returns The update time in seconds for the profile text nodes
-		inline float profileTextUpdateTime() const {
-			return profileTextUpdateTime_;
-		}
 
 		/// \returns The number of arguments passed on the command-line
 		inline int argc() const {
@@ -124,12 +111,10 @@ namespace nCine
 		const bool glForwardCompatible_;
 		const unsigned int glMajorVersion_;
 		const unsigned int glMinorVersion_;
-		const float profileTextUpdateTime_;
 
 		int argc_;
 		NativeArgument* argv_;
 
 		friend class MainApplication;
 	};
-
 }
