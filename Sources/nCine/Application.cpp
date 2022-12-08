@@ -434,7 +434,7 @@ namespace nCine
 		FrameMark;
 		TracyGpuCollect;
 
-		frameTimer_ = std::make_unique<FrameTimer>(appCfg_.frameTimerLogInterval, appCfg_.profileTextUpdateTime());
+		frameTimer_ = std::make_unique<FrameTimer>(appCfg_.frameTimerLogInterval, 0.2f);
 
 		if (appCfg_.withScenegraph) {
 			gfxDevice_->setupGL();
