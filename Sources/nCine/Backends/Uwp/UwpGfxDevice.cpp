@@ -15,7 +15,7 @@ namespace nCine
 	UwpGfxDevice::UwpGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const /*winrtWUXC::SwapChainPanel*/winrtWUC::CoreWindow& withVisual)
 		: IGfxDevice(windowMode, glContextInfo, displayMode), _renderSurface { EGL_NO_SURFACE }, _hostVisual(withVisual), _sizeChanged(2)
 	{
-		initWindowScaling(windowMode);
+		updateMonitors();
 		Initialize();
 		CreateRenderSurface();
 	}

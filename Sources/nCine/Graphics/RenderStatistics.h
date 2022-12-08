@@ -1,5 +1,7 @@
 #pragma once
 
+#if defined(NCINE_PROFILING)
+
 #include "RenderCommand.h"
 
 namespace nCine
@@ -252,3 +254,5 @@ namespace nCine
 		friend class RenderCommandPool;
 	};
 }
+
+#endif

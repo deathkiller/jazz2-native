@@ -120,7 +120,9 @@ namespace nCine
 		GLDebug::ScopedGroup scoped("RenderBuffersManager::flushUnmap()");
 
 		for (ManagedBuffer& buffer : buffers_) {
+#if defined(NCINE_PROFILING)
 			RenderStatistics::gatherStatistics(buffer);
+#endif
 			const unsigned long usedSize = buffer.size - buffer.freeSpace;
 			FATAL_ASSERT(usedSize <= specs_[(int)buffer.type].maxSize);
 			buffer.freeSpace = buffer.size;

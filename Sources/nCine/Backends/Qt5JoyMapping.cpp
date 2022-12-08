@@ -155,7 +155,7 @@ namespace nCine
 			if (mappedButtonEvent_.buttonName != ButtonName::UNKNOWN) {
 				const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
 				mappedJoyStates_[event.joyId].buttons_[buttonId] = true;
-				inputEventHandler_->onJoyMappedButtonPressed(mappedButtonEvent_);
+				inputEventHandler_->OnJoyMappedButtonPressed(mappedButtonEvent_);
 			}
 		}
 	}
@@ -173,7 +173,7 @@ namespace nCine
 			if (mappedButtonEvent_.buttonName != ButtonName::UNKNOWN) {
 				const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
 				mappedJoyStates_[event.joyId].buttons_[buttonId] = false;
-				inputEventHandler_->onJoyMappedButtonReleased(mappedButtonEvent_);
+				inputEventHandler_->OnJoyMappedButtonReleased(mappedButtonEvent_);
 			}
 		}
 	}
@@ -203,10 +203,10 @@ namespace nCine
 						const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
 						if (newHatState & hatValue) {
 							mappedJoyStates_[event.joyId].buttons_[buttonId] = true;
-							inputEventHandler_->onJoyMappedButtonPressed(mappedButtonEvent_);
+							inputEventHandler_->OnJoyMappedButtonPressed(mappedButtonEvent_);
 						} else {
 							mappedJoyStates_[event.joyId].buttons_[buttonId] = false;
-							inputEventHandler_->onJoyMappedButtonReleased(mappedButtonEvent_);
+							inputEventHandler_->OnJoyMappedButtonReleased(mappedButtonEvent_);
 						}
 					}
 				}
@@ -231,7 +231,7 @@ namespace nCine
 				const float value = (event.normValue + 1.0f) * 0.5f;
 				mappedAxisEvent_.value = axis.min + value * (axis.max - axis.min);
 				mappedJoyStates_[event.joyId].axesValues_[static_cast<int>(axis.name)] = mappedAxisEvent_.value;
-				inputEventHandler_->onJoyMappedAxisMoved(mappedAxisEvent_);
+				inputEventHandler_->OnJoyMappedAxisMoved(mappedAxisEvent_);
 			}
 		}
 	}

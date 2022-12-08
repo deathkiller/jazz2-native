@@ -40,23 +40,20 @@ namespace nCine
 			unsigned int maxBatchSize;
 		};
 
-		struct Timings
+		enum class Timings
 		{
-			enum
-			{
-				PreInit,
-				InitCommon,
-				AppInit,
-				FrameStart,
-				UpdateVisitDraw,
-				Update,
-				PostUpdate,
-				Visit,
-				Draw,
-				FrameEnd,
+			PreInit,
+			InitCommon,
+			AppInit,
+			FrameStart,
+			UpdateVisitDraw,
+			Update,
+			PostUpdate,
+			Visit,
+			Draw,
+			FrameEnd,
 
-				Count
-			};
+			Count
 		};
 
 		/// Returns the configuration used to initialize the application
@@ -67,10 +64,12 @@ namespace nCine
 		inline RenderingSettings& renderingSettings() {
 			return renderingSettings_;
 		}
+#if defined(NCINE_PROFILING)
 		/// Returns all timings
 		inline const float* timings() const {
 			return timings_;
 		}
+#endif
 
 		/// Returns the graphics device instance
 		inline IGfxDevice& gfxDevice() {
@@ -145,7 +144,9 @@ namespace nCine
 		bool shouldQuit_;
 		AppConfiguration appCfg_;
 		RenderingSettings renderingSettings_;
-		float timings_[Timings::Count];
+#if defined(NCINE_PROFILING)
+		float timings_[(int)Timings::Count];
+#endif
 
 		TimeStamp profileStartTime_;
 		std::unique_ptr<FrameTimer> frameTimer_;

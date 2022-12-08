@@ -22,12 +22,14 @@ namespace nCine
 
 	Geometry::~Geometry()
 	{
+#if defined(NCINE_PROFILING)
 		if (vbo_ != nullptr) {
 			RenderStatistics::removeCustomVbo(vbo_->size());
 		}
 		if (ibo_ != nullptr) {
 			RenderStatistics::removeCustomIbo(ibo_->size());
 		}
+#endif
 	}
 
 	///////////////////////////////////////////////////////////
@@ -52,7 +54,9 @@ namespace nCine
 		vboParams_.offset = 0;
 		vboParams_.mapBase = nullptr;
 
+#if defined(NCINE_PROFILING)
 		RenderStatistics::addCustomVbo(vbo_->size());
+#endif
 	}
 
 	GLfloat* Geometry::acquireVertexPointer(unsigned int numFloats, unsigned int numFloatsAlignment)
@@ -124,7 +128,9 @@ namespace nCine
 		iboParams_.offset = 0;
 		iboParams_.mapBase = nullptr;
 
+#if defined(NCINE_PROFILING)
 		RenderStatistics::addCustomIbo(ibo_->size());
+#endif
 	}
 
 	GLushort* Geometry::acquireIndexPointer(unsigned int numIndices)

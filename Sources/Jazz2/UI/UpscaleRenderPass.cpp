@@ -27,6 +27,7 @@ namespace Jazz2::UI
 				}
 				_antialiasing._target->setMinFiltering(SamplerFilter::Linear);
 				_antialiasing._target->setMagFiltering(SamplerFilter::Linear);
+				_antialiasing._target->setWrap(SamplerWrapping::ClampToEdge);
 
 				_antialiasing._targetSize = _targetSize;
 				_targetSize = Vector2f((float)requiredWidth, (float)requiredHeight);
@@ -59,6 +60,7 @@ namespace Jazz2::UI
 		}
 		_target->setMinFiltering(SamplerFilter::Nearest);
 		_target->setMagFiltering(SamplerFilter::Nearest);
+		_target->setWrap(SamplerWrapping::ClampToEdge);
 
 		if (_antialiasing._target != nullptr) {
 			if (_antialiasing._camera == nullptr) {

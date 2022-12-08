@@ -124,7 +124,9 @@ namespace nCine
 			updateRenderCommand();
 			renderQueue.addCommand(&renderCommand_);
 		} else {
+#if defined(NCINE_PROFILING)
 			RenderStatistics::addCulledNode();
+#endif
 			return false;
 		}
 

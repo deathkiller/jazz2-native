@@ -15,27 +15,25 @@ namespace nCine
 		/// Called once before initialization to setup the application
 		/*! \warning At this stage it is only safe to modify the `config` object.
 		 *  No other engine API calls should be made. */
-		virtual void onPreInit(AppConfiguration& config) { }
+		virtual void OnPreInit(AppConfiguration& config) { }
 		/// Called once on application initialization
-		virtual void onInit() { }
+		virtual void OnInit() { }
 		/// Called at the start of each frame
-		virtual void onFrameStart() { }
+		virtual void OnFrameStart() { }
 		/// Called every time the scenegraph has been traversed and all nodes have been transformed
-		virtual void onPostUpdate() { }
+		virtual void OnPostUpdate() { }
 		/// Called every time a viewport is going to be drawn
-		virtual void onDrawViewport(Viewport& viewport) { }
+		virtual void OnDrawViewport(Viewport& viewport) { }
 		/// Called at the end of each frame, just before swapping buffers
-		virtual void onFrameEnd() { }
+		virtual void OnFrameEnd() { }
 		/// Called every time the window is resized (by the system or the user)
-		virtual void onResizeWindow(int width, int height) { }
-		/// Called every time the window scaling factor changes
-		virtual void onChangeScalingFactor(float factor) { }
+		virtual void OnResizeWindow(int width, int height) { }
 		/// Called once on application shutdown
-		virtual void onShutdown() { }
+		virtual void OnShutdown() { }
 		/// Called every time the application needs to be suspended
-		virtual void onSuspend() { }
+		virtual void OnSuspend() { }
 		/// Called every time the application resumes from suspension
-		virtual void onResume() { }
+		virtual void OnResume() { }
 	};
 
 	inline IAppEventHandler::~IAppEventHandler() { }

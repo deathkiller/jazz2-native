@@ -171,7 +171,7 @@ namespace nCine
 					joystickStates_[i].gamepad_->isConnected() == false) {
 					joystickStates_[i].gamepad_->setDeviceId(-1);
 					joyConnectionEvent_.joyId = i;
-					inputEventHandler_->onJoyDisconnected(joyConnectionEvent_);
+					inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
 					joyMapping_.onJoyDisconnected(joyConnectionEvent_);
 				}
 			}
@@ -185,7 +185,7 @@ namespace nCine
 			if (inputEventHandler_ && oldDeviceId != deviceId) {
 				joystickStates_[index].gamepad_->setDeviceId(deviceId);
 				joyConnectionEvent_.joyId = index;
-				joyMapping_.onJoyConnected(joyConnectionEvent_);
+				joyMapping_.OnJoyConnected(joyConnectionEvent_);
 				inputEventHandler_->onJoyConnected(joyConnectionEvent_);
 			}
 
@@ -208,10 +208,10 @@ namespace nCine
 						joyButtonEvent_.buttonId = buttonId;
 						if (newButtonState) {
 							joyMapping_.onJoyButtonPressed(joyButtonEvent_);
-							inputEventHandler_->onJoyButtonPressed(joyButtonEvent_);
+							inputEventHandler_->OnJoyButtonPressed(joyButtonEvent_);
 						} else {
 							joyMapping_.onJoyButtonReleased(joyButtonEvent_);
-							inputEventHandler_->onJoyButtonReleased(joyButtonEvent_);
+							inputEventHandler_->OnJoyButtonReleased(joyButtonEvent_);
 						}
 					}
 				}
@@ -225,7 +225,7 @@ namespace nCine
 					joyHatEvent_.hatId = 0;
 					joyHatEvent_.hatState = newHatState;
 					joyMapping_.onJoyHatMoved(joyHatEvent_);
-					inputEventHandler_->onJoyHatMoved(joyHatEvent_);
+					inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
 				}
 			}
 
@@ -239,7 +239,7 @@ namespace nCine
 						joyAxisEvent_.value = static_cast<short int>(newAxisValue * MaxAxisValue);
 						joyAxisEvent_.normValue = newAxisValue;
 						joyMapping_.onJoyAxisMoved(joyAxisEvent_);
-						inputEventHandler_->onJoyAxisMoved(joyAxisEvent_);
+						inputEventHandler_->OnJoyAxisMoved(joyAxisEvent_);
 					}
 				}
 			}
@@ -250,10 +250,9 @@ namespace nCine
 	bool Qt5InputManager::shouldQuitOnRequest()
 	{
 		bool shouldQuit = true;
-
-		if (inputEventHandler_)
-			shouldQuit = inputEventHandler_->onQuitRequest();
-
+		if (inputEventHandler_ != nullptr) {
+			shouldQuit = inputEventHandler_->OnQuitRequest();
+		}
 		return shouldQuit;
 	}
 
@@ -302,11 +301,11 @@ namespace nCine
 				const unsigned int keySym = static_cast<unsigned int>(keyboardEvent_.sym);
 				keyboardState_.keys_[keySym] = 1;
 			}
-			inputEventHandler_->onKeyPressed(keyboardEvent_);
+			inputEventHandler_->OnKeyPressed(keyboardEvent_);
 
 			if (event->text().length() > 0) {
 				nctl::strncpy(textInputEvent_.text, event->text().toUtf8().constData(), 4);
-				inputEventHandler_->onTextInput(textInputEvent_);
+				inputEventHandler_->OnTextInput(textInputEvent_);
 			}
 		}
 	}
@@ -321,7 +320,7 @@ namespace nCine
 				const unsigned int keySym = static_cast<unsigned int>(keyboardEvent_.sym);
 				keyboardState_.keys_[keySym] = 0;
 			}
-			inputEventHandler_->onKeyReleased(keyboardEvent_);
+			inputEventHandler_->OnKeyReleased(keyboardEvent_);
 		}
 	}
 
@@ -332,7 +331,7 @@ namespace nCine
 			mouseEvent_.y = theApplication().heightInt() - event->y();
 			mouseEvent_.button_ = event->button();
 			mouseState_.buttons_ = event->buttons();
-			inputEventHandler_->onMouseButtonPressed(mouseEvent_);
+			inputEventHandler_->OnMouseDown(mouseEvent_);
 		}
 	}
 
@@ -343,7 +342,7 @@ namespace nCine
 			mouseEvent_.y = theApplication().heightInt() - event->y();
 			mouseEvent_.button_ = event->button();
 			mouseState_.buttons_ = event->buttons();
-			inputEventHandler_->onMouseButtonReleased(mouseEvent_);
+			inputEventHandler_->OnMouseUp(mouseEvent_);
 		}
 	}
 
@@ -353,7 +352,7 @@ namespace nCine
 			mouseState_.x = event->x();
 			mouseState_.y = theApplication().heightInt() - event->y();
 			mouseState_.buttons_ = event->buttons();
-			inputEventHandler_->onMouseMoved(mouseState_);
+			inputEventHandler_->OnMouseMove(mouseState_);
 		}
 	}
 
@@ -392,7 +391,7 @@ namespace nCine
 		if (inputEventHandler_) {
 			scrollEvent_.x = event->angleDelta().x() / 60.0f;
 			scrollEvent_.y = event->angleDelta().y() / 60.0f;
-			inputEventHandler_->onScrollInput(scrollEvent_);
+			inputEventHandler_->OnScrollInput(scrollEvent_);
 		}
 	}
 

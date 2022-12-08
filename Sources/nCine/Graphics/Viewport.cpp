@@ -278,7 +278,7 @@ namespace nCine
 
 		const bool scissorRectNonZeroArea = (scissorRect_.W > 0 && scissorRect_.H > 0);
 		if (scissorRectNonZeroArea) {
-			Rectf scissorRectFloat(scissorRect_.X, scissorRect_.Y, scissorRect_.W, scissorRect_.H);
+			Rectf scissorRectFloat(static_cast<float>(scissorRect_.X), static_cast<float>(scissorRect_.Y), static_cast<float>(scissorRect_.W), static_cast<float>(scissorRect_.H));
 
 			const bool viewportRectNonZeroArea = (viewportRect_.W > 0 && viewportRect_.H > 0);
 			if (viewportRectNonZeroArea) {
@@ -394,9 +394,9 @@ namespace nCine
 
 		RenderResources::setCurrentViewport(this);
 		{
-			ZoneScopedN("onDrawViewport");
-			theApplication().appEventHandler_->onDrawViewport(*this);
-			//LOGV_X("IAppEventHandler::onDrawViewport() invoked with viewport 0x%lx", uintptr_t(this));
+			ZoneScopedN("OnDrawViewport");
+			theApplication().appEventHandler_->OnDrawViewport(*this);
+			//LOGV_X("IAppEventHandler::OnDrawViewport() invoked with viewport 0x%lx", uintptr_t(this));
 		}
 
 		if (type_ == Type::WithTexture) {

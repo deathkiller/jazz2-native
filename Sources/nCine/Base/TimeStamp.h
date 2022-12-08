@@ -77,5 +77,4 @@ namespace nCine
 		explicit TimeStamp(uint64_t counter)
 			: counter_(counter) {}
 	};
-
 }

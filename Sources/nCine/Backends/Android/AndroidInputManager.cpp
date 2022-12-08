@@ -218,7 +218,7 @@ namespace nCine
 				accelerometerEvent_.x = event.acceleration.x;
 				accelerometerEvent_.y = event.acceleration.y;
 				accelerometerEvent_.z = event.acceleration.z;
-				inputEventHandler_->onAcceleration(accelerometerEvent_);
+				inputEventHandler_->OnAcceleration(accelerometerEvent_);
 			}
 		}
 	}
@@ -341,12 +341,12 @@ namespace nCine
 						case AKEY_EVENT_ACTION_DOWN:
 							joystickStates_[joyId].buttons_[buttonIndex] = true;
 							joyMapping_.onJoyButtonPressed(joyButtonEvent_);
-							inputEventHandler_->onJoyButtonPressed(joyButtonEvent_);
+							inputEventHandler_->OnJoyButtonPressed(joyButtonEvent_);
 							break;
 						case AKEY_EVENT_ACTION_UP:
 							joystickStates_[joyId].buttons_[buttonIndex] = false;
-							joyMapping_.onJoyButtonReleased(joyButtonEvent_);
-							inputEventHandler_->onJoyButtonReleased(joyButtonEvent_);
+							joyMapping_.OnJoyButtonReleased(joyButtonEvent_);
+							inputEventHandler_->OnJoyButtonReleased(joyButtonEvent_);
 							break;
 						case AKEY_EVENT_ACTION_MULTIPLE:
 							break;
@@ -377,7 +377,7 @@ namespace nCine
 						joyHatEvent_.hatState = joystickStates_[joyId].hatState_;
 
 						joyMapping_.onJoyHatMoved(joyHatEvent_);
-						inputEventHandler_->onJoyHatMoved(joyHatEvent_);
+						inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
 					}
 				}
 			} else if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
@@ -414,7 +414,7 @@ namespace nCine
 						joyAxisEvent_.value = axisValue * MaxAxisValue;
 						joyAxisEvent_.normValue = axisValue;
 						joyMapping_.onJoyAxisMoved(joyAxisEvent_);
-						inputEventHandler_->onJoyAxisMoved(joyAxisEvent_);
+						inputEventHandler_->OnJoyAxisMoved(joyAxisEvent_);
 					}
 				}
 
@@ -423,7 +423,7 @@ namespace nCine
 					joyHatEvent_.hatState = joystickStates_[joyId].hatState_;
 
 					joyMapping_.onJoyHatMoved(joyHatEvent_);
-					inputEventHandler_->onJoyHatMoved(joyHatEvent_);
+					inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
 				}
 			}
 		} else {
@@ -452,16 +452,16 @@ namespace nCine
 				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
 					keyboardState_.keys_[keySym] = 1;
 				}
-				inputEventHandler_->onKeyPressed(keyboardEvent_);
+				inputEventHandler_->OnKeyPressed(keyboardEvent_);
 				break;
 			case AKEY_EVENT_ACTION_UP:
 				if (keyboardEvent_.sym != KeySym::UNKNOWN) {
 					keyboardState_.keys_[keySym] = 0;
 				}
-				inputEventHandler_->onKeyReleased(keyboardEvent_);
+				inputEventHandler_->OnKeyReleased(keyboardEvent_);
 				break;
 			case AKEY_EVENT_ACTION_MULTIPLE:
-				inputEventHandler_->onKeyPressed(keyboardEvent_);
+				inputEventHandler_->OnKeyPressed(keyboardEvent_);
 				break;
 		}
 
@@ -472,7 +472,7 @@ namespace nCine
 			if (keyEvent.isPrintingKey()) {
 				const int unicodeKey = keyEvent.getUnicodeChar(AKeyEvent_getMetaState(event));
 				nctl::Utf8::codePointToUtf8(unicodeKey, textInputEvent_.text, nullptr);
-				inputEventHandler_->onTextInput(textInputEvent_);
+				inputEventHandler_->OnTextInput(textInputEvent_);
 			}
 		}*/
 
@@ -515,7 +515,7 @@ namespace nCine
 				break;
 		}
 
-		inputEventHandler_->onTouchEvent(touchEvent_);
+		inputEventHandler_->OnTouchEvent(touchEvent_);
 		return true;
 	}
 
@@ -547,7 +547,7 @@ namespace nCine
 
 				mouseEvent_.button_ = mouseState_.buttonState_ ^ buttonState; // pressed button mask
 				mouseState_.buttonState_ = buttonState;
-				inputEventHandler_->onMouseButtonPressed(mouseEvent_);
+				inputEventHandler_->OnMouseDown(mouseEvent_);
 				break;
 			case AMOTION_EVENT_ACTION_UP:
 				buttonState = AMotionEvent_getButtonState(event);
@@ -556,18 +556,18 @@ namespace nCine
 
 				mouseEvent_.button_ = mouseState_.buttonState_ ^ buttonState; // released button mask
 				mouseState_.buttonState_ = buttonState;
-				inputEventHandler_->onMouseButtonReleased(mouseEvent_);
+				inputEventHandler_->OnMouseUp(mouseEvent_);
 				break;
 			case AMOTION_EVENT_ACTION_MOVE:
 			case AMOTION_EVENT_ACTION_HOVER_MOVE:
-				inputEventHandler_->onMouseMoved(mouseState_);
+				inputEventHandler_->OnMouseMove(mouseState_);
 				break;
 		}
 
 		scrollEvent_.x = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_HSCROLL, 0);
 		scrollEvent_.y = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_VSCROLL, 0);
 		if (fabsf(scrollEvent_.x) > 0.0f || fabsf(scrollEvent_.y) > 0.0f) {
-			inputEventHandler_->onScrollInput(scrollEvent_);
+			inputEventHandler_->OnMouseWheel(scrollEvent_);
 		}
 
 		return true;
@@ -587,13 +587,13 @@ namespace nCine
 				simulatedMouseButtonState_ |= simulatedButton;
 				mouseEvent_.button_ = simulatedButton;
 				mouseState_.buttonState_ |= simulatedButton;
-				inputEventHandler_->onMouseButtonPressed(mouseEvent_);
+				inputEventHandler_->OnMouseDown(mouseEvent_);
 			} else if (action == AKEY_EVENT_ACTION_UP && oldAction == AKEY_EVENT_ACTION_DOWN) {
 				oldAction = action;
 				simulatedMouseButtonState_ &= ~simulatedButton;
 				mouseEvent_.button_ = simulatedButton;
 				mouseState_.buttonState_ &= ~simulatedButton;
-				inputEventHandler_->onMouseButtonReleased(mouseEvent_);
+				inputEventHandler_->OnMouseUp(mouseEvent_);
 			}
 		}
 
@@ -636,7 +636,7 @@ namespace nCine
 
 				if (inputEventHandler_ != nullptr && joystickStates_[i].guid_.isValid()) {
 					joyConnectionEvent_.joyId = i;
-					inputEventHandler_->onJoyDisconnected(joyConnectionEvent_);
+					inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
 					joyMapping_.onJoyDisconnected(joyConnectionEvent_);
 				}
 			}
@@ -703,7 +703,7 @@ namespace nCine
 			if (inputEventHandler_ != nullptr && joystickStates_[joyId].guid_.isValid()) {
 				joyConnectionEvent_.joyId = joyId;
 				joyMapping_.onJoyConnected(joyConnectionEvent_);
-				inputEventHandler_->onJoyConnected(joyConnectionEvent_);
+				inputEventHandler_->OnJoyConnected(joyConnectionEvent_);
 			}
 		}
 

@@ -1569,11 +1569,11 @@ namespace Jazz2
 
 	bool LevelHandler::BlurRenderPass::OnDraw(RenderQueue& renderQueue)
 	{
-		auto size = _target->size();
+		Vector2i size = _target->size();
 
 		auto instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
 		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, -1.0f, 1.0f);
-		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(size.X, size.Y);
+		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(static_cast<float>(size.X), static_cast<float>(size.Y));
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 
 		_renderCommand.material().uniform("uPixelOffset")->setFloatValue(1.0f / size.X, 1.0f / size.Y);
@@ -1589,7 +1589,7 @@ namespace Jazz2
 
 	void LevelHandler::CombineRenderer::Initialize(int width, int height)
 	{
-		_size = Vector2f(width, height);
+		_size = Vector2f(static_cast<float>(width), static_cast<float>(height));
 
 		_renderCommand.material().setShader(_owner->_combineShader);
 		_renderCommand.material().reserveUniformsDataMemory();

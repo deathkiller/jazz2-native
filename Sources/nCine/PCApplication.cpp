@@ -184,7 +184,9 @@ namespace nCine
 	void PCApplication::init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
 	{
 		ZoneScoped;
+#if defined(NCINE_PROFILING)
 		profileStartTime_ = TimeStamp::now();
+#endif
 		wasSuspended_ = shouldSuspend();
 
 #if defined(NCINE_LOG)
@@ -208,11 +210,11 @@ namespace nCine
 
 		appEventHandler_ = createAppEventHandler();
 
-		// Only `onPreInit()` can modify the application configuration
+		// Only `OnPreInit()` can modify the application configuration
 		appCfg_.argc_ = argc;
 		appCfg_.argv_ = argv;
-		appEventHandler_->onPreInit(appCfg_);
-		LOGI("IAppEventHandler::onPreInit() invoked");
+		appEventHandler_->OnPreInit(appCfg_);
+		LOGI("IAppEventHandler::OnPreInit() invoked");
 
 		// Graphics device should always be created before the input manager!
 		IGfxDevice::GLContextInfo glContextInfo(appCfg_);
@@ -239,9 +241,10 @@ namespace nCine
 			}
 		}
 
-		timings_[Timings::PreInit] = profileStartTime_.secondsSince();
-
-#ifndef WITH_QT5
+#if defined(NCINE_PROFILING)
+		timings_[(int)Timings::PreInit] = profileStartTime_.secondsSince();
+#endif
+#if !defined(WITH_QT5)
 		// Common initialization on Qt5 is performed later, when OpenGL can be used
 		initCommon();
 #endif
@@ -339,5 +342,4 @@ namespace nCine
 		reinterpret_cast<PCApplication&>(theApplication()).run();
 	}
 #endif
-
 }

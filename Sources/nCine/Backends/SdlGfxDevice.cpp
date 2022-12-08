@@ -35,15 +35,8 @@ namespace nCine
 	SdlGfxDevice::SdlGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
 		: IGfxDevice(windowMode, glContextInfo, displayMode)
 	{
-#if defined(WITH_SDL) && defined(DEATH_TARGET_WINDOWS) && defined(SDL_HINT_WINDOWS_DPI_SCALING)
-		// Scaling is handled automatically by SDL (since v2.26.0)
-		if (windowMode.hasWindowScaling) {
-			SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
-		}
-#endif
-
-		initGraphics();
-		initWindowScaling(windowMode);
+		initGraphics(windowMode.hasWindowScaling);
+		updateMonitors();
 		initDevice(windowMode.isResizable);
 	}
 
@@ -176,8 +169,14 @@ namespace nCine
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	void SdlGfxDevice::initGraphics()
+	void SdlGfxDevice::initGraphics(bool enableWindowScaling)
 	{
+#if defined(SDL_HINT_WINDOWS_DPI_SCALING)
+		// Scaling is handled automatically by SDL (since v2.26.0)
+		if (enableWindowScaling) {
+			SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
+		}
+#endif
 		const int err = SDL_Init(SDL_INIT_VIDEO);
 		FATAL_ASSERT_MSG_X(!err, "SDL_Init(SDL_INIT_VIDEO) failed: %s", SDL_GetError());
 	}

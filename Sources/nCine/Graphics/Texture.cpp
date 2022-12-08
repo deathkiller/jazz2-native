@@ -113,9 +113,12 @@ namespace nCine
 
 	Texture::~Texture()
 	{
+#if defined(NCINE_PROFILING)
 		// Don't remove data from statistics if this is a moved out object
-		if (dataSize_ > 0 && glTexture_)
+		if (dataSize_ > 0 && glTexture_ != nullptr) {
 			RenderStatistics::removeTexture(dataSize_);
+		}
+#endif
 	}
 
 	Texture::Texture(Texture&&) = default;
@@ -136,14 +139,18 @@ namespace nCine
 
 		TextureLoaderRaw texLoader(width, height, mipMapCount, ncFormatToInternal(format));
 
-		if (dataSize_ > 0)
+#if defined(NCINE_PROFILING)
+		if (dataSize_ > 0) {
 			RenderStatistics::removeTexture(dataSize_);
-
+		}
+#endif
 		glTexture_->bind();
 		glTexture_->setObjectLabel(name);
 		initialize(texLoader);
 
+#if defined(NCINE_PROFILING)
 		RenderStatistics::addTexture(dataSize_);
+#endif
 	}
 
 	void Texture::init(const char* name, Format format, int mipMapCount, Vector2i size)
@@ -171,14 +178,18 @@ namespace nCine
 		if (texLoader->hasLoaded() == false)
 			return false;
 
-		if (dataSize_ > 0)
+#if defined(NCINE_PROFILING)
+		if (dataSize_ > 0) {
 			RenderStatistics::removeTexture(dataSize_);
-
+		}
+#endif
 		glTexture_->bind();
 		initialize(*texLoader);
 		load(*texLoader);
 
+#if defined(NCINE_PROFILING)
 		RenderStatistics::addTexture(dataSize_);
+#endif
 		return true;
 	}
 
@@ -187,18 +198,23 @@ namespace nCine
 		ZoneScoped;
 
 		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(filename);
-		if (!texLoader->hasLoaded())
+		if (!texLoader->hasLoaded()) {
 			return false;
+		}
 
-		if (dataSize_ > 0)
+#if defined(NCINE_PROFILING)
+		if (dataSize_ > 0) {
 			RenderStatistics::removeTexture(dataSize_);
-
+		}
+#endif
 		glTexture_->bind();
 		glTexture_->setObjectLabel(filename.data());
 		initialize(*texLoader);
 		load(*texLoader);
 
+#if defined(NCINE_PROFILING)
 		RenderStatistics::addTexture(dataSize_);
+#endif
 		return true;
 	}
 

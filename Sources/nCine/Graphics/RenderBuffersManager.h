@@ -80,7 +80,9 @@ namespace nCine
 		void createBuffer(const BufferSpecifications& specs);
 
 		friend class ScreenViewport;
+#if defined(NCINE_PROFILING)
 		friend class RenderStatistics;
+#endif
 	};
 
 }

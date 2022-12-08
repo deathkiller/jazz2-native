@@ -73,7 +73,7 @@ namespace nCine {
 		SdlGfxDevice& operator=(const SdlGfxDevice&) = delete;
 
 		/// Initilizes the video subsystem (SDL)
-		void initGraphics();
+		void initGraphics(bool enableWindowScaling);
 		/// Initilizes the OpenGL graphic context
 		void initDevice(bool isResizable);
 

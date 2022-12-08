@@ -60,7 +60,7 @@ namespace nCine
 
 				if (inputEventHandler_ != nullptr) {
 					joyMapping_.onJoyConnected(joyConnectionEvent_);
-					inputEventHandler_->onJoyConnected(joyConnectionEvent_);
+					inputEventHandler_->OnJoyConnected(joyConnectionEvent_);
 				}
 			}
 
@@ -78,7 +78,7 @@ namespace nCine
 					joyEventsSimulator_.resetJoystickState(i);
 
 					if (inputEventHandler_ != nullptr) {
-						inputEventHandler_->onJoyDisconnected(joyConnectionEvent_);
+						inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
 						joyMapping_.onJoyDisconnected(joyConnectionEvent_);
 					}
 					break;
@@ -144,6 +144,9 @@ namespace nCine
 
 			keyboardEvent_.scancode = args.KeyStatus().ScanCode;
 			keyboardEvent_.sym = keySymValueToEnum(args.VirtualKey());
+			if (keyboardEvent_.sym >= KeySym::COUNT) {
+				return;
+			}
 
 			int mod = 0;
 			if ((sender.GetKeyState(winrtWS::VirtualKey::Shift) & winrtWUC::CoreVirtualKeyStates::Locked) == winrtWUC::CoreVirtualKeyStates::Locked)
@@ -164,19 +167,12 @@ namespace nCine
 			keyboardEvent_.mod = mod;
 
 			bool isPressed = !args.KeyStatus().IsKeyReleased;
-			bool wasPressed;
-			if (keyboardEvent_.sym < KeySym::COUNT) {
-				wasPressed = keyboardState_._pressedKeys[(int)keyboardEvent_.sym];
+			if (isPressed != keyboardState_._pressedKeys[(int)keyboardEvent_.sym]) {
 				keyboardState_._pressedKeys[(int)keyboardEvent_.sym] = isPressed;
-			} else {
-				wasPressed = false;
-			}
-
-			if (isPressed != wasPressed) {
 				if (isPressed) {
-					inputEventHandler_->onKeyPressed(keyboardEvent_);
+					inputEventHandler_->OnKeyPressed(keyboardEvent_);
 				} else {
-					inputEventHandler_->onKeyReleased(keyboardEvent_);
+					inputEventHandler_->OnKeyReleased(keyboardEvent_);
 				}
 			}
 		}
@@ -191,6 +187,9 @@ namespace nCine
 
 			keyboardEvent_.scancode = args.KeyStatus().ScanCode;
 			keyboardEvent_.sym = keySymValueToEnum(args.VirtualKey());
+			if (keyboardEvent_.sym >= KeySym::COUNT) {
+				return;
+			}
 
 			auto coreWindow = winrtWUC::CoreWindow::GetForCurrentThread();
 			int mod = 0;
@@ -212,19 +211,12 @@ namespace nCine
 			keyboardEvent_.mod = mod;
 
 			bool isPressed = (args.EventType() == winrtWUC::CoreAcceleratorKeyEventType::KeyDown || args.EventType() == winrtWUC::CoreAcceleratorKeyEventType::SystemKeyDown);
-			bool wasPressed;
-			if (keyboardEvent_.sym < KeySym::COUNT) {
-				wasPressed = keyboardState_._pressedKeys[(int)keyboardEvent_.sym];
+			if (isPressed != keyboardState_._pressedKeys[(int)keyboardEvent_.sym]) {
 				keyboardState_._pressedKeys[(int)keyboardEvent_.sym] = isPressed;
-			} else {
-				wasPressed = false;
-			}
-
-			if (isPressed != wasPressed) {
 				if (isPressed) {
-					inputEventHandler_->onKeyPressed(keyboardEvent_);
+					inputEventHandler_->OnKeyPressed(keyboardEvent_);
 				} else {
-					inputEventHandler_->onKeyReleased(keyboardEvent_);
+					inputEventHandler_->OnKeyReleased(keyboardEvent_);
 				}
 			}
 		}
@@ -396,10 +388,10 @@ namespace nCine
 				joyButtonEvent_.buttonId = i;
 				if (isPressed) {
 					joyMapping_.onJoyButtonPressed(joyButtonEvent_);
-					inputEventHandler_->onJoyButtonPressed(joyButtonEvent_);
+					inputEventHandler_->OnJoyButtonPressed(joyButtonEvent_);
 				} else {
 					joyMapping_.onJoyButtonReleased(joyButtonEvent_);
-					inputEventHandler_->onJoyButtonReleased(joyButtonEvent_);
+					inputEventHandler_->OnJoyButtonReleased(joyButtonEvent_);
 				}
 			}
 
@@ -428,7 +420,7 @@ namespace nCine
 			joyHatEvent_.hatState = hatState;
 
 			joyMapping_.onJoyHatMoved(joyHatEvent_);
-			inputEventHandler_->onJoyHatMoved(joyHatEvent_);
+			inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
 		}
 
 		hatsState_[joyId][0] = hatState;
@@ -442,7 +434,7 @@ namespace nCine
 			joyAxisEvent_.value = static_cast<short int>(value * MaxAxisValue);
 			joyAxisEvent_.normValue = value;
 			joyMapping_.onJoyAxisMoved(joyAxisEvent_);
-			inputEventHandler_->onJoyAxisMoved(joyAxisEvent_);
+			inputEventHandler_->OnJoyAxisMoved(joyAxisEvent_);
 		}
 
 		axesValuesState_[joyId][axisId] = value;

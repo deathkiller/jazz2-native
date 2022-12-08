@@ -369,7 +369,7 @@ namespace nCine
 			bool sizeChanged = (width != screenViewport_->width_ || height != screenViewport_->height_);
 			screenViewport_->resize(width, height);
 			if (sizeChanged && width > 0 && height > 0) {
-				appEventHandler_->onResizeWindow(width, height);
+				appEventHandler_->OnResizeWindow(width, height);
 			}
 		}
 	}
@@ -382,7 +382,9 @@ namespace nCine
 	{
 		TracyGpuContext;
 		ZoneScoped;
+#if defined(NCINE_PROFILING)
 		profileStartTime_ = TimeStamp::now();
+#endif
 
 		LOGI(NCINE_APP_NAME " v" NCINE_VERSION " initializing...");
 #if defined(WITH_TRACY)
@@ -449,15 +451,19 @@ namespace nCine
 		Random().Initialize(static_cast<uint64_t>(TimeStamp::now().ticks()), static_cast<uint64_t>(profileStartTime_.ticks()));
 
 		LOGI("Application initialized");
-
-		timings_[Timings::InitCommon] = profileStartTime_.secondsSince();
-
+#if defined(NCINE_PROFILING)
+		timings_[(int)Timings::InitCommon] = profileStartTime_.secondsSince();
+#endif
 		{
 			ZoneScopedN("onInit");
+#if defined(NCINE_PROFILING)
 			profileStartTime_ = TimeStamp::now();
-			appEventHandler_->onInit();
-			timings_[Timings::AppInit] = profileStartTime_.secondsSince();
-			LOGI("IAppEventHandler::onInit() invoked");
+#endif
+			appEventHandler_->OnInit();
+#if defined(NCINE_PROFILING)
+			timings_[(int)Timings::AppInit] = profileStartTime_.secondsSince();
+#endif
+			LOGI("IAppEventHandler::OnInit() invoked");
 		}
 
 		// Swapping frame now for a cleaner API trace capture when debugging
@@ -468,56 +474,68 @@ namespace nCine
 
 	void Application::step()
 	{
-
 		frameTimer_->addFrame();
 
 #if defined(WITH_LUA)
 		LuaStatistics::update();
 #endif
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
-		const bool scalingChanged = gfxDevice_->updateScaling(renderingSettings_.windowScaling);
-		if (scalingChanged) {
-			appEventHandler_->onChangeScalingFactor(gfxDevice_->windowScalingFactor());
-		}
-#endif
-
 		{
-			ZoneScopedN("onFrameStart");
+			ZoneScopedN("OnFrameStart");
+#if defined(NCINE_PROFILING)
 			profileStartTime_ = TimeStamp::now();
-			appEventHandler_->onFrameStart();
-			timings_[Timings::FrameStart] = profileStartTime_.secondsSince();
+#endif
+			appEventHandler_->OnFrameStart();
+#if defined(NCINE_PROFILING)
+			timings_[(int)Timings::FrameStart] = profileStartTime_.secondsSince();
+#endif
 		}
 
 		if (appCfg_.withScenegraph) {
 			ZoneScopedN("SceneGraph");
 			{
 				ZoneScopedN("Update");
+#if defined(NCINE_PROFILING)
 				profileStartTime_ = TimeStamp::now();
+#endif
 				screenViewport_->update();
-				timings_[Timings::Update] = profileStartTime_.secondsSince();
+#if defined(NCINE_PROFILING)
+				timings_[(int)Timings::Update] = profileStartTime_.secondsSince();
+#endif
 			}
 
 			{
-				ZoneScopedN("onPostUpdate");
+				ZoneScopedN("OnPostUpdate");
+#if defined(NCINE_PROFILING)
 				profileStartTime_ = TimeStamp::now();
-				appEventHandler_->onPostUpdate();
-				timings_[Timings::PostUpdate] = profileStartTime_.secondsSince();
+#endif
+				appEventHandler_->OnPostUpdate();
+#if defined(NCINE_PROFILING)
+				timings_[(int)Timings::PostUpdate] = profileStartTime_.secondsSince();
+#endif
 			}
 
 			{
 				ZoneScopedN("Visit");
+#if defined(NCINE_PROFILING)
 				profileStartTime_ = TimeStamp::now();
+#endif
 				screenViewport_->visit();
-				timings_[Timings::Visit] = profileStartTime_.secondsSince();
+#if defined(NCINE_PROFILING)
+				timings_[(int)Timings::Visit] = profileStartTime_.secondsSince();
+#endif
 			}
 
 			{
 				ZoneScopedN("Draw");
+#if defined(NCINE_PROFILING)
 				profileStartTime_ = TimeStamp::now();
+#endif
 				screenViewport_->sortAndCommitQueue();
 				screenViewport_->draw();
-				timings_[Timings::Draw] = profileStartTime_.secondsSince();
+#if defined(NCINE_PROFILING)
+				timings_[(int)Timings::Draw] = profileStartTime_.secondsSince();
+#endif
 			}
 		}
 
@@ -526,10 +544,14 @@ namespace nCine
 		}
 
 		{
-			ZoneScopedN("onFrameEnd");
+			ZoneScopedN("OnFrameEnd");
+#if defined(NCINE_PROFILING)
 			profileStartTime_ = TimeStamp::now();
-			appEventHandler_->onFrameEnd();
-			timings_[Timings::FrameEnd] = profileStartTime_.secondsSince();
+#endif
+			appEventHandler_->OnFrameEnd();
+#if defined(NCINE_PROFILING)
+			timings_[(int)Timings::FrameEnd] = profileStartTime_.secondsSince();
+#endif
 		}
 
 		gfxDevice_->update();
@@ -547,8 +569,8 @@ namespace nCine
 	void Application::shutdownCommon()
 	{
 		ZoneScoped;
-		appEventHandler_->onShutdown();
-		LOGI("IAppEventHandler::onShutdown() invoked");
+		appEventHandler_->OnShutdown();
+		LOGI("IAppEventHandler::OnShutdown() invoked");
 		appEventHandler_.reset(nullptr);
 
 #if defined(WITH_RENDERDOC)
@@ -584,20 +606,22 @@ namespace nCine
 	{
 		frameTimer_->suspend();
 		if (appEventHandler_ != nullptr) {
-			appEventHandler_->onSuspend();
+			appEventHandler_->OnSuspend();
 		}
-		LOGI("IAppEventHandler::onSuspend() invoked");
+		LOGI("IAppEventHandler::OnSuspend() invoked");
 	}
 
 	void Application::resume()
 	{
 		if (appEventHandler_ != nullptr) {
-			appEventHandler_->onResume();
+			appEventHandler_->OnResume();
 		}
 		const TimeStamp suspensionDuration = frameTimer_->resume();
 		LOGV_X("Suspended for %.3f seconds", suspensionDuration.seconds());
+#if defined(NCINE_PROFILING)
 		profileStartTime_ += suspensionDuration;
-		LOGI("IAppEventHandler::onResume() invoked");
+#endif
+		LOGI("IAppEventHandler::OnResume() invoked");
 	}
 
 	///////////////////////////////////////////////////////////

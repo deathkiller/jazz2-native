@@ -1,4 +1,6 @@
-﻿#include "RenderStatistics.h"
+﻿#if defined(NCINE_PROFILING)
+
+#include "RenderStatistics.h"
 #include "../tracy.h"
 
 namespace nCine
@@ -82,3 +84,5 @@ namespace nCine
 		typedBuffers_[typeIndex].usedSpace += buffer.size - buffer.freeSpace;
 	}
 }
+
+#endif
