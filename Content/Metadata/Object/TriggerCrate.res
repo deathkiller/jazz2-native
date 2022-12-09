@@ -5,13 +5,13 @@
 
 	"Animations": {
 		"Crate": {
-			"Path": "Object/TriggerCrate.aura"
+			"Path": "Object/trigger_crate.aura"
 		}
 	},
 
 	"Sounds": {
 		"Break": {
-			"Paths": [ "Object/PowerupBreak.wav" ]
+			"Paths": [ "Object/powerup_break.wav" ]
 		}
 	}
 }

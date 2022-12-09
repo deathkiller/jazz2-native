@@ -5,7 +5,7 @@
 
 	"Animations": {
 		"Piece": {
-			"Path": "Bridge/Vine.aura",
+			"Path": "Bridge/vine.aura",
 			"FrameRate": 0
 		}
 	}

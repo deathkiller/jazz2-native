@@ -80,6 +80,7 @@ namespace Jazz2::Actors::Solid
 				if (_bouncesLeft > 0) {
 					if (_bouncesLeft == BouncesMax) {
 						_angleVelLast = _angleVel;
+						PlaySfx("FallEnd"_s, 0.8f);
 					}
 
 					_bouncesLeft--;
@@ -100,6 +101,7 @@ namespace Jazz2::Actors::Solid
 				if (_bouncesLeft > 0) {
 					if (_bouncesLeft == BouncesMax) {
 						_angleVelLast = _angleVel;
+						PlaySfx("FallEnd"_s, 0.8f);
 					}
 
 					_bouncesLeft--;
@@ -151,6 +153,7 @@ namespace Jazz2::Actors::Solid
 
 		_fall = dir;
 		SetState(ActorState::IsInvulnerable | ActorState::IsSolidObject, true);
+		PlaySfx("FallStart"_s, 0.6f);
 	}
 
 	bool Pole::IsPositionBlocked()

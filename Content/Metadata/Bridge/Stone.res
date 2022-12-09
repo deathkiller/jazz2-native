@@ -5,7 +5,7 @@
 
 	"Animations": {
 		"Piece": {
-			"Path": "Bridge/Stone.aura",
+			"Path": "Bridge/stone.aura",
 			"FrameRate": 0
 		}
 	}

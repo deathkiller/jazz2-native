@@ -185,7 +185,7 @@
 			"States": [ 1073741833 ]
 		},
 		"ButtstompStart": {
-			"Path": "Lori/Spring.aura",
+			"Path": "Lori/spring.aura",
 			"States": [ 1073741834 ]
 		},
 		"ButtstompEnd": {
@@ -235,7 +235,7 @@
 			"States": [ 1073741848 ]
 		},
 		"Spring": {
-			"Path": "Lori/Spring.aura",
+			"Path": "Lori/spring.aura",
 			"States": [ 262144, 262145, 262146, 262147 ]
 		},
 		"Push": {
@@ -407,7 +407,7 @@
 
 		},
 		"BonusWarpNotEnoughCoins": {
-			"Paths": [ "Object/BonusNotEnoughCoins.wav" ]
+			"Paths": [ "Object/bonus_not_enough_coins.wav" ]
 		}
 	}
 }

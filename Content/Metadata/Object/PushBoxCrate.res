@@ -3,7 +3,7 @@
 
 	"Animations": {
 		"PushBox": {
-			"Path": "Object/PushBoxCrate.aura"
+			"Path": "Object/pushbox_crate.aura"
 		}
 	}
 }

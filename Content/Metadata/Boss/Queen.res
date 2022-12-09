@@ -60,7 +60,7 @@
 			"Paths": [ "Queen/scream.wav" ]
 		},
 		"Spring": {
-			"Paths": [ "Queen/Spring.wav" ]
+			"Paths": [ "Queen/spring.wav" ]
 		},
 		"Stomp": {
 			"Paths": [ "Common/gunsm1.wav" ]

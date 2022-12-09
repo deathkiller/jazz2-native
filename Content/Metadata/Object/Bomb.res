@@ -3,7 +3,7 @@
 
 	"Animations": {
 		"Bomb": {
-			"Path": "Common/Bomb.aura"
+			"Path": "Common/bomb.aura"
 		}
 	}
 }

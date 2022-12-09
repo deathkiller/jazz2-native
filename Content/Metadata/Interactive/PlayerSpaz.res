@@ -186,7 +186,7 @@
 			"States": [ 1073741833 ]
 		},
 		"ButtstompStart": {
-			"Path": "Spaz/Spring.aura",
+			"Path": "Spaz/spring.aura",
 			"States": [ 1073741834 ]
 		},
 		"ButtstompEnd": {
@@ -233,7 +233,7 @@
 			"States": [ 1073741848 ]
 		},
 		"Spring": {
-			"Path": "Spaz/Spring.aura",
+			"Path": "Spaz/spring.aura",
 			"States": [ 262144, 262145, 262146, 262147 ]
 		},
 		"Push": {
@@ -416,7 +416,7 @@
 			"Paths": [ "Spaz/sidekick_1.wav", "Spaz/sidekick_2.wav" ]
 		},
 		"BonusWarpNotEnoughCoins": {
-			"Paths": [ "Object/BonusNotEnoughCoins.wav" ]
+			"Paths": [ "Object/bonus_not_enough_coins.wav" ]
 		}
 	}
 }

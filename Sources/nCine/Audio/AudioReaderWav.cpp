@@ -1,7 +1,8 @@
-#include <cstring>
-#include "../IO/IFileStream.h"
 #include "AudioReaderWav.h"
 #include "AudioLoaderWav.h"
+#include "../IO/IFileStream.h"
+
+#include <cstring>
 
 namespace nCine
 {
@@ -43,5 +44,4 @@ namespace nCine
 		}
 		fileHandle_->Seek(AudioLoaderWav::HeaderSize, SeekOrigin::Begin);
 	}
-
 }

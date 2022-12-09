@@ -3,14 +3,14 @@
 
 	"Animations": {
 		"GemGiant": {
-			"Path": "Object/GemSuper.aura",
+			"Path": "Object/gem_giant.aura",
 			"PaletteOffset": 128
 		}
 	},
 
 	"Sounds": {
 		"Break": {
-			"Paths": [ "Object/GemSuperBreak.wav" ]
+			"Paths": [ "Object/gem_giant_break.wav" ]
 		}
 	}
 }

@@ -5,27 +5,27 @@
 
 	"Animations": {
 		"BonusGeneric": {
-			"Path": "Object/BonusActive.aura",
+			"Path": "Object/bonus_active.aura",
 			"FrameRate": 7,
 			"States": [ 0 ]
 		},
 		"Bonus10": {
-			"Path": "Object/Bonus10.aura",
+			"Path": "Object/bonus10.aura",
 			"FrameRate": 7,
 			"States": [ 0 ]
 		},
 		"Bonus20": {
-			"Path": "Object/Bonus20.aura",
+			"Path": "Object/bonus20.aura",
 			"FrameRate": 7,
 			"States": [ 0 ]
 		},
 		"Bonus50": {
-			"Path": "Object/Bonus50.aura",
+			"Path": "Object/bonus50.aura",
 			"FrameRate": 7,
 			"States": [ 0 ]
 		},
 		"Bonus100": {
-			"Path": "Object/Bonus100.aura",
+			"Path": "Object/bonus100.aura",
 			"FrameRate": 7,
 			"States": [ 0 ]
 		}

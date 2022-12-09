@@ -3,7 +3,7 @@
 
 	"Animations": {
 		"FrozenBlock": {
-			"Path": "Common/IceBlock.aura"
+			"Path": "Common/ice_block.aura"
 		}
 	}
 }
