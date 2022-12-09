@@ -480,12 +480,19 @@ namespace Jazz2::Compatibility
 			// by the read header data. It is not clear if they actually are or if the header data is just
 			// read incorrectly, though - one would think the data would need to be reshaped between 24 and 8
 			// but it works just fine as is.
-			int multiplier = (sample.Multiplier / 4) % 2 + 1;
+			int bytesPerSample = (sample.Multiplier / 4) % 2 + 1;
+			int dataOffset = 0;
+			if (sample.Data[0] == 0x00 && sample.Data[1] == 0x00 && sample.Data[2] == 0x00 && sample.Data[3] == 0x00 &&
+				(sample.Data[4] != 0x00 || sample.Data[5] != 0x00 || sample.Data[6] != 0x00 || sample.Data[7] != 0x00) &&
+				(sample.Data[7] == 0x00 || sample.Data[8] == 0x00)) {
+				// Trim first 8 samples (bytes) to prevent popping
+				dataOffset = 8;
+			}
 
 			// Create PCM wave file
 			// Main header
 			so->Write("RIFF", 4);
-			so->WriteValue<uint32_t>(36 + sample.DataSize); // File size
+			so->WriteValue<uint32_t>(36 + sample.DataSize - dataOffset); // File size
 			so->Write("WAVE", 4);
 
 			// Format header
@@ -494,14 +501,14 @@ namespace Jazz2::Compatibility
 			so->WriteValue<uint16_t>(1); // Format = PCM
 			so->WriteValue<uint16_t>(1); // Channels
 			so->WriteValue<uint32_t>(sample.SampleRate); // Sample rate
-			so->WriteValue<uint32_t>(sample.SampleRate * multiplier); // Bytes per second
-			so->WriteValue<uint32_t>(multiplier * 0x00080001);
+			so->WriteValue<uint32_t>(sample.SampleRate * bytesPerSample); // Bytes per second
+			so->WriteValue<uint32_t>(bytesPerSample * 0x00080001);
 
 			// Payload
 			so->Write("data", 4);
-			so->WriteValue<uint32_t>(sample.DataSize); // Payload size
-			for (uint32_t k = 0; k < sample.DataSize; k++) {
-				so->WriteValue<uint8_t>((multiplier << 7) ^ sample.Data[k]);
+			so->WriteValue<uint32_t>(sample.DataSize - dataOffset); // Payload size
+			for (uint32_t k = dataOffset; k < sample.DataSize; k++) {
+				so->WriteValue<uint8_t>((bytesPerSample << 7) ^ sample.Data[k]);
 			}
 		}
 	}

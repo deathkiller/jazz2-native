@@ -5,15 +5,15 @@
 
 	"Animations": {
 		"Walk": {
-			"Path": "Skeleton/Walk.aura",
+			"Path": "Skeleton/walk.aura",
 			"FrameRate": 3,
 			"States": [ 1 ]
 		},
 		"Bone": {
-			"Path": "Skeleton/Bone.aura"
+			"Path": "Skeleton/bone.aura"
 		},
 		"Skull": {
-			"Path": "Skeleton/Skull.aura"
+			"Path": "Skeleton/skull.aura"
 		}
 	}
 }

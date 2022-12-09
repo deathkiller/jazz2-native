@@ -29,7 +29,7 @@
 
 	"Sounds": {
 		"Break": {
-			"Paths": [ "Object/PowerupBreak.wav" ]
+			"Paths": [ "Object/powerup_break.wav" ]
 		}
 	}
 }

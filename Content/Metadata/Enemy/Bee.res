@@ -5,7 +5,7 @@
 
 	"Animations": {
 		"Idle": {
-			"Path": "Bee/Bee.aura",
+			"Path": "Bee/bee.aura",
 			"FrameRate": 30,
 			"States": [ 0 ]
 		},

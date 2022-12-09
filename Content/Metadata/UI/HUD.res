@@ -101,7 +101,7 @@
 		},
 
 		"PickupGem": {
-			"Path": "Pickup/Gem.aura",
+			"Path": "Pickup/gem.aura",
 			"PaletteOffset": 128
 		},
 		"PickupCoin": {

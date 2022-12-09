@@ -26,7 +26,7 @@
 
 	"Sounds": {
 		"TransitionActivate": {
-			"Paths": [ "Object/SavepointOpen.wav" ]
+			"Paths": [ "Object/checkpoint_open.wav" ]
 		}
 	}
 }

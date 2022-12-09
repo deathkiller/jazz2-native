@@ -5,14 +5,14 @@
 
 	"Animations": {
 		"SteamNote": {
-			"Path": "Common/SteamNote.aura",
+			"Path": "Common/steam_note.aura",
 			"FrameRate": 4
 		}
 	},
 
 	"Sounds": {
 		"Appear": {
-			"Paths": [ "Common/SteamNote.wav" ]
+			"Paths": [ "Common/steam_note.wav" ]
 		}
 	}
 }

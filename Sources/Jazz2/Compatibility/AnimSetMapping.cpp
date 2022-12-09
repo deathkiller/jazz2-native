@@ -52,7 +52,7 @@ namespace Jazz2::Compatibility
 
 			// set 0 (all)
 			m.Add("Unknown"_s, "flame_blue"_s);
-			m.Add("Common"_s, "Bomb"_s);
+			m.Add("Common"_s, "bomb"_s);
 			m.Add("Common"_s, "smoke_poof"_s);
 			m.Add("Common"_s, "explosion_rf"_s);
 			m.Add("Common"_s, "explosion_small"_s);
@@ -190,9 +190,9 @@ namespace Jazz2::Compatibility
 				m.NextSet();
 				m.Add("Bee"_s, "swarm_2"_s);
 				m.NextSet();
-				m.Add("Object"_s, "PushBoxCrate"_s);
+				m.Add("Object"_s, "pushbox_crate"_s);
 				m.NextSet();
-				m.Add("Object"_s, "PushBoxRock"_s);
+				m.Add("Object"_s, "pushbox_rock"_s);
 				m.NextSet();
 
 				//m.Add("Unknown"_s, "diamondus_tileset_tree"_s);
@@ -230,25 +230,26 @@ namespace Jazz2::Compatibility
 
 			if (isFull) {
 				m.NextSet();
-				m.Add("Unimplemented"_s, "BonusBirdy"_s);
+				//m.Add("Unimplemented"_s, "bonus_birdy"_s);	// Unused
+				m.DiscardItems(1);
 				m.NextSet(); // set 10 (all)
 				m.Add("Platform"_s, "ball"_s);
 				m.Add("Platform"_s, "ball_chain"_s);
 				m.NextSet();
-				m.Add("Object"_s, "BonusActive"_s);
-				m.Add("Object"_s, "BonusInactive"_s);
+				m.Add("Object"_s, "bonus_active"_s);
+				m.Add("Object"_s, "bonus_inactive"_s);	// Unused
 			}
 
 			m.NextSet();
 			m.Add("UI"_s, "boss_health_bar"_s, JJ2DefaultPalette::Sprite, true);
 			m.NextSet();
-			m.Add("Bridge"_s, "Rope"_s);
-			m.Add("Bridge"_s, "Stone"_s);
-			m.Add("Bridge"_s, "Vine"_s);
-			m.Add("Bridge"_s, "StoneRed"_s);
-			m.Add("Bridge"_s, "Log"_s);
-			m.Add("Bridge"_s, "Gem"_s);
-			m.Add("Bridge"_s, "Lab"_s);
+			m.Add("Bridge"_s, "rope"_s);
+			m.Add("Bridge"_s, "stone"_s);
+			m.Add("Bridge"_s, "vine"_s);
+			m.Add("Bridge"_s, "stone_red"_s);
+			m.Add("Bridge"_s, "log"_s);
+			m.Add("Bridge"_s, "gem"_s);
+			m.Add("Bridge"_s, "lab"_s);
 			m.NextSet();
 			m.Add("Bubba"_s, "spew_fireball"_s);
 			m.Add("Bubba"_s, "corpse"_s);
@@ -260,14 +261,14 @@ namespace Jazz2::Compatibility
 			m.Add("Bubba"_s, "tornado_start"_s);
 			m.Add("Bubba"_s, "tornado_end"_s);
 			m.NextSet();
-			m.Add("Bee"_s, "Bee"_s);
+			m.Add("Bee"_s, "bee"_s);
 			m.Add("Bee"_s, "bee_turn"_s);
 
 			if (isFull) {
 				m.NextSet();
 				m.Add("Unimplemented"_s, "butterfly"_s);
 				m.NextSet();
-				m.Add("Pole"_s, "Carrotus"_s);
+				m.Add("Pole"_s, "carrotus"_s);
 				m.NextSet();
 				m.Add("Cheshire"_s, "platform_appear"_s);
 				m.Add("Cheshire"_s, "platform_vanish"_s);
@@ -338,7 +339,7 @@ namespace Jazz2::Compatibility
 
 			m.NextSet();
 			m.DiscardItems(4); // Green rectangles
-			m.Add("Common"_s, "IceBlock"_s);
+			m.Add("Common"_s, "ice_block"_s);
 
 			if (isFull) {
 				m.NextSet();
@@ -378,7 +379,7 @@ namespace Jazz2::Compatibility
 			}
 
 			m.NextSet();
-			m.Add("Pole"_s, "Diamondus"_s);
+			m.Add("Pole"_s, "diamondus"_s);
 
 			if (isFull) {
 				m.NextSet();
@@ -386,8 +387,9 @@ namespace Jazz2::Compatibility
 				m.Add("Doggy"_s, "walk"_s);
 
 				m.NextSet(); // set 30 (all)
-				m.Add("Unimplemented"_s, "door"_s);
-				m.Add("Unimplemented"_s, "door_enter_jazz_spaz"_s);
+				//m.Add("Unimplemented"_s, "door"_s);	// Unused
+				//m.Add("Unimplemented"_s, "door_enter_jazz_spaz"_s);	// Unused
+				m.DiscardItems(2);
 			}
 
 			m.NextSet();
@@ -404,10 +406,10 @@ namespace Jazz2::Compatibility
 			}
 
 			m.NextSet(4);
-			m.Add("Eva"_s, "Blink"_s);
-			m.Add("Eva"_s, "Idle"_s);
-			m.Add("Eva"_s, "KissStart"_s);
-			m.Add("Eva"_s, "KissEnd"_s);
+			m.Add("Eva"_s, "blink"_s);
+			m.Add("Eva"_s, "idle"_s);
+			m.Add("Eva"_s, "kiss_start"_s);
+			m.Add("Eva"_s, "kiss_end"_s);
 
 			m.NextSet();
 			m.Add("UI"_s, "icon_birdy"_s);
@@ -553,13 +555,14 @@ namespace Jazz2::Compatibility
 			m.Add("Jazz"_s, "lift_jump_light"_s);
 			m.Add("Jazz"_s, "lift_jump_heavy"_s);
 			m.Add("Jazz"_s, "lookup_start"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_run_diag_upright"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_run_ver_up"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_run_diag_upleft_reverse"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_run_reverse"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_run_diag_downleft_reverse"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_run_ver_down"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_run_diag_downright"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_run_diag_upright"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_run_ver_up"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_run_diag_upleft_reverse"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_run_reverse"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_run_diag_downleft_reverse"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_run_ver_down"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_run_diag_downright"_s);
+			m.DiscardItems(7, JJ2Version::BaseGame | JJ2Version::HH);
 			m.Add("Jazz"_s, "dizzy_walk"_s);
 			m.Add("Jazz"_s, "push"_s);
 			m.Add("Jazz"_s, "shoot_start"_s);
@@ -580,7 +583,7 @@ namespace Jazz2::Compatibility
 			m.Add("Jazz"_s, "dash_stop"_s);
 			m.Add("Jazz"_s, "walk_stop"_s);
 			m.Add("Jazz"_s, "run_stop"_s);
-			m.Add("Jazz"_s, "Spring"_s);
+			m.Add("Jazz"_s, "spring"_s);
 			m.Add("Jazz"_s, "idle"_s);
 			m.Add("Jazz"_s, "uppercut"_s);
 			m.Add("Jazz"_s, "uppercut_end"_s);
@@ -611,24 +614,26 @@ namespace Jazz2::Compatibility
 			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_lookup_start_2"_s);
 
 			m.NextSet();
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Unimplemented"_s, "bonus_jazz_idle_flavor_2"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Unimplemented"_s, "bonus_jazz_jump_2"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Unimplemented"_s, "bonus_jazz_dash_2"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Unimplemented"_s, "bonus_jazz_rotate_2"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Unimplemented"_s, "bonus_jazz_ball_2"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Unimplemented"_s, "bonus_jazz_run_2"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Unimplemented"_s, "bonus_jazz_idle_2"_s);
-			m.Add("Unimplemented"_s, "bonus_jazz_idle_flavor"_s);
-			m.Add("Unimplemented"_s, "bonus_jazz_jump"_s);
-			m.Add("Unimplemented"_s, "bonus_jazz_ball"_s);
-			m.Add("Unimplemented"_s, "bonus_jazz_run"_s);
-			m.Add("Unimplemented"_s, "bonus_jazz_dash"_s);
-			m.Add("Unimplemented"_s, "bonus_jazz_rotate"_s);
-			m.Add("Unimplemented"_s, "bonus_jazz_idle"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Unimplemented"_s, "bonus_jazz_idle_flavor_2"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Unimplemented"_s, "bonus_jazz_jump_2"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Unimplemented"_s, "bonus_jazz_dash_2"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Unimplemented"_s, "bonus_jazz_rotate_2"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Unimplemented"_s, "bonus_jazz_ball_2"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Unimplemented"_s, "bonus_jazz_run_2"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Unimplemented"_s, "bonus_jazz_idle_2"_s);
+			m.DiscardItems(7, JJ2Version::BaseGame | JJ2Version::HH);
+			//m.Add("Unimplemented"_s, "bonus_jazz_idle_flavor"_s);
+			//m.Add("Unimplemented"_s, "bonus_jazz_jump"_s);
+			//m.Add("Unimplemented"_s, "bonus_jazz_ball"_s);
+			//m.Add("Unimplemented"_s, "bonus_jazz_run"_s);
+			//m.Add("Unimplemented"_s, "bonus_jazz_dash"_s);
+			//m.Add("Unimplemented"_s, "bonus_jazz_rotate"_s);
+			//m.Add("Unimplemented"_s, "bonus_jazz_idle"_s);
+			m.DiscardItems(7);
 
 			if (isFull) {
 				m.NextSet(2);
-				m.Add("Pole"_s, "Jungle"_s);
+				m.Add("Pole"_s, "jungle"_s);
 			}
 
 			m.NextSet();
@@ -704,7 +709,7 @@ namespace Jazz2::Compatibility
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "dash_stop"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "walk_stop"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "run_stop"_s);
-			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "Spring"_s);
+			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "spring"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "idle"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "uppercut_placeholder_1"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "uppercut_placeholder_2"_s);
@@ -737,13 +742,13 @@ namespace Jazz2::Compatibility
 			m.Add("UI"_s, "character_art_difficulty_jazz"_s, JJ2DefaultPalette::Menu, true);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "UI"_s, "character_art_difficulty_lori"_s, JJ2DefaultPalette::Menu, true);
 			m.Add("UI"_s, "character_art_difficulty_spaz"_s, JJ2DefaultPalette::Menu, true);
-			m.Add("Unimplemented"_s, "key"_s, JJ2DefaultPalette::Menu, true);
+			//m.Add("Unimplemented"_s, "key"_s, JJ2DefaultPalette::Menu, true);
+			m.DiscardItems(1);
 
 			//m.Add("UI"_s, "loading_bar"_s, JJ2DefaultPalette.Menu, skipNormalMap: true);
 			m.DiscardItems(1);
-
-			m.Add("UI"_s, "multiplayer_mode"_s, JJ2DefaultPalette::Menu, true);
-
+			//m.Add("UI"_s, "multiplayer_mode"_s, JJ2DefaultPalette::Menu, true);
+			m.DiscardItems(1);
 			//m.Add("UI"_s, "character_name_jazz"_s, JJ2DefaultPalette.Menu, skipNormalMap: true);
 			m.DiscardItems(1);
 			//m.Add(JJ2Version::TSF | JJ2Version::CC, "UI"_s, "character_name_lori"_s, JJ2DefaultPalette.Menu, skipNormalMap: true);
@@ -768,19 +773,19 @@ namespace Jazz2::Compatibility
 
 			if (isFull) {
 				m.NextSet(2);
-				m.Add("Monkey"_s, "Banana"_s);
-				m.Add("Monkey"_s, "BananaSplat"_s);
-				m.Add("Monkey"_s, "Jump"_s);
-				m.Add("Monkey"_s, "WalkStart"_s);
-				m.Add("Monkey"_s, "WalkEnd"_s);
-				m.Add("Monkey"_s, "Attack"_s);
-				m.Add("Monkey"_s, "Walk"_s);
+				m.Add("Monkey"_s, "banana"_s);
+				m.Add("Monkey"_s, "banana_splat"_s);
+				m.Add("Monkey"_s, "jump"_s);
+				m.Add("Monkey"_s, "walk_start"_s);
+				m.Add("Monkey"_s, "walk_end"_s);
+				m.Add("Monkey"_s, "attack"_s);
+				m.Add("Monkey"_s, "walk"_s);
 
 				m.NextSet();
-				m.Add("Moth"_s, "Green"_s);
-				m.Add("Moth"_s, "Gray"_s);
-				m.Add("Moth"_s, "Purple"_s);
-				m.Add("Moth"_s, "Pink"_s);
+				m.Add("Moth"_s, "green"_s);
+				m.Add("Moth"_s, "gray"_s);
+				m.Add("Moth"_s, "purple"_s);
+				m.Add("Moth"_s, "pink"_s);
 			} else {
 				m.NextSet();
 			}
@@ -808,21 +813,21 @@ namespace Jazz2::Compatibility
 			m.Add("Pickup"_s, "food_chocolate"_s);
 			m.Add("Pickup"_s, "food_cola"_s);
 			m.Add("Pickup"_s, "carrot"_s);
-			m.Add("Pickup"_s, "Gem"_s, JJ2DefaultPalette::Sprite, false, true);
+			m.Add("Pickup"_s, "gem"_s, JJ2DefaultPalette::Sprite, false, true);
 			m.Add("Pickup"_s, "food_cucumber"_s);
 			m.Add("Pickup"_s, "food_cupcake"_s);
 			m.Add("Pickup"_s, "food_donut"_s);
 			m.Add("Pickup"_s, "food_eggplant"_s);
 			m.Add("Unknown"_s, "green_blast_thing"_s);
-			m.Add("Object"_s, "ExitSign"_s);
+			m.Add("Object"_s, "exit_sign"_s);
 			m.Add("Pickup"_s, "fast_fire_jazz"_s);
 			m.Add("Pickup"_s, "fast_fire_spaz"_s);
 			m.Add("Object"_s, "powerup_shield_fire"_s);
 			m.Add("Pickup"_s, "food_fries"_s);
 			m.Add("Pickup"_s, "fast_feet"_s);
-			m.Add("Object"_s, "GemSuper"_s, JJ2DefaultPalette::Sprite, false, true);
+			m.Add("Object"_s, "gem_giant"_s, JJ2DefaultPalette::Sprite, false, true);
 
-			//m.Add("Pickup"_s, "Gem2"_s, keepIndexed: true);
+			//m.Add("Pickup"_s, "gem2"_s, keepIndexed: true);
 			m.DiscardItems(1);
 
 			m.Add("Pickup"_s, "airboard"_s);
@@ -841,7 +846,7 @@ namespace Jazz2::Compatibility
 			m.Add("Pickup"_s, "food_lettuce"_s);
 			m.Add("Pickup"_s, "food_lime"_s);
 			m.Add("Object"_s, "powerup_shield_lightning"_s);
-			m.Add("Object"_s, "TriggerCrate"_s);
+			m.Add("Object"_s, "trigger_crate"_s);
 			m.Add("Pickup"_s, "food_milk"_s);
 			m.Add("Object"_s, "crate_ammo_bouncer"_s);
 			m.Add("Object"_s, "crate_ammo_freezer"_s);
@@ -887,13 +892,13 @@ namespace Jazz2::Compatibility
 
 			if (isFull) {
 				m.NextSet();
-				m.Add("Pinball"_s, "Bumper500"_s);
-				m.Add("Pinball"_s, "Bumper500Hit"_s);
-				m.Add("Pinball"_s, "BumperCarrot"_s);
-				m.Add("Pinball"_s, "BumperCarrotHit"_s);
+				m.Add("Pinball"_s, "bumper_500"_s);
+				m.Add("Pinball"_s, "bumper_500_hit"_s);
+				m.Add("Pinball"_s, "bumper_carrot"_s);
+				m.Add("Pinball"_s, "bumper_carrot_hit"_s);
 
-				m.Add("Pinball"_s, "PaddleLeft"_s, JJ2DefaultPalette::Sprite, false, 1);
-				//m.Add("Pinball"_s, "PaddleRight"_s, JJ2DefaultPalette.ByIndex);
+				m.Add("Pinball"_s, "paddle_left"_s, JJ2DefaultPalette::Sprite, false, 1);
+				//m.Add("Pinball"_s, "paddle_right"_s, JJ2DefaultPalette.ByIndex);
 				m.DiscardItems(1);
 
 				m.NextSet();
@@ -901,7 +906,7 @@ namespace Jazz2::Compatibility
 				m.Add("Platform"_s, "lab_chain"_s);
 
 				m.NextSet();
-				m.Add("Pole"_s, "Psych"_s);
+				m.Add("Pole"_s, "psych"_s);
 
 				m.NextSet();
 				m.Add("Queen"_s, "scream"_s);
@@ -921,9 +926,9 @@ namespace Jazz2::Compatibility
 				m.Add("Rapier"_s, "attack_end"_s);
 
 				m.NextSet();
-				m.Add("Raven"_s, "Attack"_s);
-				m.Add("Raven"_s, "Idle"_s);
-				m.Add("Raven"_s, "Turn"_s);
+				m.Add("Raven"_s, "attack"_s);
+				m.Add("Raven"_s, "idle"_s);
+				m.Add("Raven"_s, "turn"_s);
 
 				m.NextSet();
 				m.Add("Robot"_s, "spike_ball"_s);
@@ -955,15 +960,15 @@ namespace Jazz2::Compatibility
 				m.Add("TurtleRocket"_s, "upright_to_downright"_s);
 
 				m.NextSet(3);
-				m.Add("Skeleton"_s, "Bone"_s);
-				m.Add("Skeleton"_s, "Skull"_s);
-				m.Add("Skeleton"_s, "Walk"_s);
+				m.Add("Skeleton"_s, "bone"_s);
+				m.Add("Skeleton"_s, "skull"_s);
+				m.Add("Skeleton"_s, "walk"_s);
 			} else {
 				m.NextSet();
 			}
 
 			m.NextSet();
-			m.Add("Pole"_s, "DiamondusTree"_s);
+			m.Add("Pole"_s, "diamondus_tree"_s);
 
 			if (isFull) {
 				m.NextSet();
@@ -1035,13 +1040,14 @@ namespace Jazz2::Compatibility
 			m.Add("Spaz"_s, "lift_jump_light"_s);
 			m.Add("Spaz"_s, "lift_jump_heavy"_s);
 			m.Add("Spaz"_s, "lookup_start"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "unused_run_diag_upright"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "unused_run_ver_up"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "unused_run_diag_upleft_reverse"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "unused_run_reverse"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "unused_run_diag_downleft_reverse"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "unused_run_ver_down"_s);
-			m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "unused_run_diag_downright"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "unused_run_diag_upright"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "unused_run_ver_up"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "unused_run_diag_upleft_reverse"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "unused_run_reverse"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "unused_run_diag_downleft_reverse"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "unused_run_ver_down"_s);
+			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "unused_run_diag_downright"_s);
+			m.DiscardItems(7, JJ2Version::BaseGame | JJ2Version::HH);
 			m.Add("Spaz"_s, "dizzy_walk"_s);
 			m.Add("Spaz"_s, "push"_s);
 			m.Add("Spaz"_s, "shoot_start"_s);
@@ -1062,7 +1068,7 @@ namespace Jazz2::Compatibility
 			m.Add("Spaz"_s, "dash_stop"_s);
 			m.Add("Spaz"_s, "walk_stop"_s);
 			m.Add("Spaz"_s, "run_stop"_s);
-			m.Add("Spaz"_s, "Spring"_s);
+			m.Add("Spaz"_s, "spring"_s);
 			m.Add("Spaz"_s, "idle"_s);
 			m.Add("Spaz"_s, "sidekick"_s);
 			m.Add("Spaz"_s, "sidekick_end"_s);
@@ -1099,13 +1105,14 @@ namespace Jazz2::Compatibility
 
 			if (isFull) {
 				m.NextSet();
-				m.Add("Unimplemented"_s, "bonus_spaz_idle_flavor"_s);
-				m.Add("Unimplemented"_s, "bonus_spaz_jump"_s);
-				m.Add("Unimplemented"_s, "bonus_spaz_ball"_s);
-				m.Add("Unimplemented"_s, "bonus_spaz_run"_s);
-				m.Add("Unimplemented"_s, "bonus_spaz_dash"_s);
-				m.Add("Unimplemented"_s, "bonus_spaz_rotate"_s);
-				m.Add("Unimplemented"_s, "bonus_spaz_idle"_s);
+				//m.Add("Unimplemented"_s, "bonus_spaz_idle_flavor"_s);
+				//m.Add("Unimplemented"_s, "bonus_spaz_jump"_s);
+				//m.Add("Unimplemented"_s, "bonus_spaz_ball"_s);
+				//m.Add("Unimplemented"_s, "bonus_spaz_run"_s);
+				//m.Add("Unimplemented"_s, "bonus_spaz_dash"_s);
+				//m.Add("Unimplemented"_s, "bonus_spaz_rotate"_s);
+				//m.Add("Unimplemented"_s, "bonus_spaz_idle"_s);
+				m.DiscardItems(7);
 
 				m.NextSet(2);
 				m.Add("Object"_s, "3d_spike"_s);
@@ -1135,7 +1142,7 @@ namespace Jazz2::Compatibility
 			m.Add("Spring"_s, "spring_red_hor"_s);
 
 			m.NextSet();
-			m.Add("Common"_s, "SteamNote"_s);
+			m.Add("Common"_s, "steam_note"_s);
 
 			if (isFull) {
 				m.NextSet();
@@ -1153,7 +1160,7 @@ namespace Jazz2::Compatibility
 
 			if (isFull) {
 				m.NextSet(); // set 100 (1.24) / set 96 (1.23)
-				m.Add("TurtleTube"_s, "Idle"_s);
+				m.Add("TurtleTube"_s, "idle"_s);
 
 				m.NextSet();
 				m.Add("TurtleBoss"_s, "attack_start"_s);
@@ -1164,7 +1171,7 @@ namespace Jazz2::Compatibility
 				m.Add("TurtleBoss"_s, "walk"_s);
 
 				m.NextSet();
-				m.Add("TurtleTough"_s, "Walk"_s);
+				m.Add("TurtleTough"_s, "walk"_s);
 			}
 
 			m.NextSet();
@@ -1204,17 +1211,17 @@ namespace Jazz2::Compatibility
 
 				m.Add("Object"_s, "vine"_s);
 				m.NextSet();
-				m.Add("Object"_s, "Bonus10"_s);
+				m.Add("Object"_s, "bonus10"_s);
 				m.NextSet();
-				m.Add("Object"_s, "Bonus100"_s);
+				m.Add("Object"_s, "bonus100"_s);
 			}
 
 			m.NextSet();
-			m.Add("Object"_s, "Bonus20"_s);
+			m.Add("Object"_s, "bonus20"_s);
 
 			if (isFull) {
 				m.NextSet(); // set 110 (1.24) / set 106 (1.23)
-				m.Add("Object"_s, "Bonus50"_s);
+				m.Add("Object"_s, "bonus50"_s);
 			}
 
 			m.NextSet(2);
@@ -1392,8 +1399,8 @@ namespace Jazz2::Compatibility
 			m.Add("Common"_s, "swish_11"_s);
 			m.Add("Common"_s, "swish_12"_s);
 			m.Add("Common"_s, "swish_13"_s);
-			m.Add("Object"_s, "GemSuperBreak"_s);
-			m.Add("Object"_s, "PowerupBreak"_s);
+			m.Add("Object"_s, "gem_giant_break"_s);
+			m.Add("Object"_s, "powerup_break"_s);
 			m.Add("Common"_s, "gunsm1"_s);
 			m.Add("Pickup"_s, "1up"_s);
 			m.Add("Unknown"_s, "common_head"_s);
@@ -1424,7 +1431,7 @@ namespace Jazz2::Compatibility
 			m.Add("Common"_s, "loadspaz"_s);
 			m.Add("Common"_s, "metalhit"_s);
 			m.Add("Unimplemented"_s, "powerup_jazz1_style"_s);
-			m.Add("Object"_s, "BonusNotEnoughCoins"_s);
+			m.Add("Object"_s, "bonus_not_enough_coins"_s);
 			m.Add("Pickup"_s, "gem"_s);
 			m.Add("Pickup"_s, "ammo"_s);
 			m.Add("Common"_s, "pistol1"_s);
@@ -1669,8 +1676,8 @@ namespace Jazz2::Compatibility
 
 			if (isFull) {
 				m.NextSet();
-				m.Add("Monkey"_s, "BananaSplat"_s);
-				m.Add("Monkey"_s, "BananaThrow"_s);
+				m.Add("Monkey"_s, "banana_splat"_s);
+				m.Add("Monkey"_s, "banana_throw"_s);
 				m.NextSet();
 				m.Add("Moth"_s, "flap"_s);
 			}
@@ -1719,19 +1726,19 @@ namespace Jazz2::Compatibility
 			//m.Add("Cinematic"_s, "project2_unused_tong"_s);
 			m.DiscardItems(24);
 			m.NextSet();
-			m.Add("Object"_s, "SavepointOpen"_s);
+			m.Add("Object"_s, "checkpoint_open"_s);
 			m.Add("Object"_s, "copter"_s);
 			m.Add("Unknown"_s, "unknown_pickup_stretch1a"_s);
 
 			if (isFull) {
 				m.NextSet();
-				m.Add("Pinball"_s, "BumperHit"_s);
-				m.Add("Pinball"_s, "Flipper1"_s);
-				m.Add("Pinball"_s, "Flipper2"_s);
-				m.Add("Pinball"_s, "Flipper3"_s);
-				m.Add("Pinball"_s, "Flipper4"_s);
+				m.Add("Pinball"_s, "bumper_hit"_s);
+				m.Add("Pinball"_s, "paddle_hit_1"_s);
+				m.Add("Pinball"_s, "paddle_hit_2"_s);
+				m.Add("Pinball"_s, "paddle_hit_3"_s);
+				m.Add("Pinball"_s, "paddle_hit_4"_s);
 				m.NextSet(3);
-				m.Add("Queen"_s, "Spring"_s);
+				m.Add("Queen"_s, "spring"_s);
 				m.Add("Queen"_s, "scream"_s);
 				m.NextSet();
 				m.Add("Rapier"_s, "die"_s);
@@ -1781,7 +1788,8 @@ namespace Jazz2::Compatibility
 			m.NextSet(); // set 81 (1.24) / set 77 (1.23)
 
 			if (isFull) {
-				m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Unknown"_s, "sugar_rush_heartbeat"_s);
+				//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Unknown"_s, "sugar_rush_heartbeat"_s);
+				m.DiscardItems(1, JJ2Version::BaseGame | JJ2Version::HH);
 			}
 
 			m.Add("Common"_s, "sugar_rush"_s);
@@ -1799,9 +1807,10 @@ namespace Jazz2::Compatibility
 			}
 
 			m.NextSet();
-			m.Add("Pole"_s, "TreeFall1"_s);
-			m.Add("Pole"_s, "TreeFall2"_s);
-			m.Add("Pole"_s, "TreeFall3"_s);
+			m.Add("Pole"_s, "fall_start"_s);
+			m.Add("Pole"_s, "fall_end"_s);
+			//m.Add("Pole"_s, "fall_3"_s);
+			m.DiscardItems(1);
 
 			if (isFull) {
 				m.NextSet(2);
@@ -1840,9 +1849,9 @@ namespace Jazz2::Compatibility
 
 			m.NextSet();
 			m.Add("Spring"_s, "spring_ver_down"_s);
-			m.Add("Spring"_s, "Spring"_s);
+			m.Add("Spring"_s, "spring"_s);
 			m.NextSet();
-			m.Add("Common"_s, "SteamNote"_s);
+			m.Add("Common"_s, "steam_note"_s);
 
 			if (isFull) {
 				m.NextSet();

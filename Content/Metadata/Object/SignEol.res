@@ -3,7 +3,7 @@
 
 	"Animations": {
 		"SignEol": {
-			"Path": "Object/ExitSign.aura"
+			"Path": "Object/exit_sign.aura"
 		}
 	}
 }

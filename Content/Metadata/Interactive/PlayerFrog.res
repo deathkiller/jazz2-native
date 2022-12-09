@@ -134,7 +134,7 @@
 		},
 		
 		"BonusWarpNotEnoughCoins": {
-			"Paths": [ "Object/BonusNotEnoughCoins.wav" ]
+			"Paths": [ "Object/bonus_not_enough_coins.wav" ]
 		}
 	}
 }

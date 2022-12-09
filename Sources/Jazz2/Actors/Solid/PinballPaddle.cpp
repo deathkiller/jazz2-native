@@ -44,6 +44,7 @@ namespace Jazz2::Actors::Solid
 						_cooldown = 10.0f;
 
 						SetTransition(AnimState::TransitionActivate, false);
+						PlaySfx("Hit"_s, 0.6f, 0.4f);
 
 						float mult = (playerPos.X - _pos.X) / _currentAnimation->Base->FrameDimensions.X;
 						if (IsFacingLeft()) {

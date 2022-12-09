@@ -3,26 +3,26 @@
 
 	"Animations": {
 		"500": {
-			"Path": "Pinball/Bumper500.aura",
+			"Path": "Pinball/bumper_500.aura",
 			"States": [ 0 ]
 		},
 		"500Hit": {
-			"Path": "Pinball/Bumper500Hit.aura",
+			"Path": "Pinball/bumper_500_hit.aura",
 			"States": [ 512 ]
 		},
 		"Carrot": {
-			"Path": "Pinball/BumperCarrot.aura",
+			"Path": "Pinball/bumper_carrot.aura",
 			"States": [ 1 ]
 		},
 		"CarrotHit": {
-			"Path": "Pinball/BumperCarrotHit.aura",
+			"Path": "Pinball/bumper_carrot_hit.aura",
 			"States": [ 513 ]
 		}
 	},
 
 	"Sounds": {
 		"Hit": {
-			"Paths": [ "Pinball/BumperHit.wav" ]
+			"Paths": [ "Pinball/bumper_hit.wav" ]
 		}
 	}
 }
