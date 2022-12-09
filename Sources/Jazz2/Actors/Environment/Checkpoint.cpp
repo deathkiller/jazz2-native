@@ -45,6 +45,19 @@ namespace Jazz2::Actors::Environment
 
 		SetAnimation(_activated ? "Opened"_s : "Closed"_s);
 
+		if (GetState(ActorState::ApplyGravitation)) {
+			OnUpdateHitbox();
+
+			// Apply instant gravitation
+			int i = 10;
+			while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative)) {
+				// Nothing to do...
+			}
+			while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 1.0f), MoveType::Relative)) {
+				// Nothing to do...
+			}
+		}
+
 		async_return true;
 	}
 

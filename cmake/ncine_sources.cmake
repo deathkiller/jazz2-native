@@ -164,6 +164,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Copter.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/EndOfLevel.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Eva.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/IceBlock.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Moth.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/RollingRock.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Spring.cpp
