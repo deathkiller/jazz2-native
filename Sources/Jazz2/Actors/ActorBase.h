@@ -179,7 +179,7 @@ namespace Jazz2::Actors
 				BaseSprite(nullptr, nullptr, 0.0f, 0.0f), AnimPaused(false),
 				FrameConfiguration(), FrameDimensions(), LoopMode(AnimationLoopMode::Loop),
 				FirstFrame(0), FrameCount(0), AnimDuration(0.0f), AnimTime(0.0f),
-				CurrentFrame(0), NextFrame(0), CurrentFrameFade(0.0f), Hotspot(),
+				CurrentFrame(0), CurrentFrameFade(0.0f), Hotspot(),
 				_owner(owner), _rendererType((ActorRendererType)-1), _rendererTransition(0.0f)
 			{
 				type_ = ObjectType::Sprite;
@@ -195,7 +195,7 @@ namespace Jazz2::Actors
 			int FrameCount;
 			float AnimDuration;
 			float AnimTime;
-			int CurrentFrame, NextFrame;
+			int CurrentFrame;
 			float CurrentFrameFade;
 			Vector2i Hotspot;
 

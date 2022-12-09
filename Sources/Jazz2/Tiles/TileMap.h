@@ -88,7 +88,7 @@ namespace Jazz2::Tiles
 			None = 0x00,
 			Disappear = 0x01,
 			Bounce = 0x02,
-			AdditivaBlending = 0x04
+			AdditiveBlending = 0x04
 		};
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(DebrisFlags);

@@ -1,5 +1,7 @@
 ﻿#include "FreezerShot.h"
+#include "../../ILevelHandler.h"
 #include "../../LevelInitialization.h"
+#include "../../Tiles/TileMap.h"
 #include "../Player.h"
 #include "../Explosion.h"
 #include "../Solid/TriggerCrate.h"
@@ -12,7 +14,8 @@ namespace Jazz2::Actors::Weapons
 {
 	FreezerShot::FreezerShot()
 		:
-		_fired(false)
+		_fired(false),
+		_particlesTime(1.0f)
 	{
 	}
 
@@ -33,6 +36,9 @@ namespace Jazz2::Actors::Weapons
 			_timeLeft = 38;
 			state |= (AnimState)1;
 			PlaySfx("FireUpgraded"_s);
+
+			// TODO: Add better upgraded effect
+			_renderer.setScale(1.2f);
 		} else {
 			_timeLeft = 44;
 			PlaySfx("Fire"_s);
@@ -84,6 +90,43 @@ namespace Jazz2::Actors::Weapons
 			_fired = true;
 			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
 			_renderer.setDrawEnabled(true);
+		}
+
+		_particlesTime -= timeMult;
+		if (_particlesTime <= 0.0f) {
+			_particlesTime += 1.0f;
+
+			auto tileMap = _levelHandler->TileMap();
+			auto resBase = _currentAnimation->Base;
+			if (tileMap != nullptr && _pos.Y < _levelHandler->WaterLevel() && resBase->TextureDiffuse != nullptr) {
+				Vector2i texSize = resBase->TextureDiffuse->size();
+				float dx = Random().FastFloat(-8.0f, 8.0f);
+				float dy = Random().FastFloat(-3.0f, 3.0f);
+
+				constexpr float currentSize = 1.0f;
+				int currentFrame = _renderer.CurrentFrame;
+
+				Tiles::TileMap::DestructibleDebris debris = { };
+				debris.Pos = Vector2f(_pos.X + dx, _pos.Y + dy);
+				debris.Depth = _renderer.layer();
+				debris.Size = Vector2f(currentSize, currentSize);
+				debris.Acceleration = Vector2f(0.0f, _levelHandler->Gravity);
+
+				debris.Scale = 1.2f,
+					debris.Alpha = 1.0f;
+
+				debris.Time = 300.0f;
+
+				debris.TexScaleX = (currentSize / float(texSize.X));
+				debris.TexBiasX = (((float)(_renderer.CurrentFrame % resBase->FrameConfiguration.X) / resBase->FrameConfiguration.X) + (((resBase->FrameDimensions.X * 0.5f) + dx) / float(texSize.X)));
+				debris.TexScaleY = (currentSize / float(texSize.Y));
+				debris.TexBiasY = (((float)(_renderer.CurrentFrame / resBase->FrameConfiguration.X) / resBase->FrameConfiguration.Y) + (((resBase->FrameDimensions.Y * 0.5f) + dy) / float(texSize.Y)));
+
+				debris.DiffuseTexture = resBase->TextureDiffuse.get();
+				debris.Flags = Tiles::TileMap::DebrisFlags::Disappear;
+
+				tileMap->CreateDebris(debris);
+			}
 		}
 	}
 
