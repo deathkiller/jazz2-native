@@ -78,7 +78,7 @@ namespace Jazz2::Actors::Enemies
 			}
 		}
 
-		if (_currentTransitionState == AnimState::Idle && _frozenTimeLeft <= 0) {
+		if (_currentTransitionState == AnimState::Idle && _frozenTimeLeft <= 0.0f) {
 			if (_cycleTimer < 0.0f) {
 				_cycle++;
 				if (_cycle == 12) {

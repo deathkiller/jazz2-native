@@ -1147,7 +1147,7 @@ namespace Jazz2::Actors
 				freezerShot->DecreaseHealth(INT32_MAX);
 			}
 		} else if(auto toasterShot = dynamic_cast<Actors::Weapons::ToasterShot*>(shot)) {
-			_frozenTimeLeft = 0.0f;
+			_frozenTimeLeft = std::min(1.0f, _frozenTimeLeft);
 		}
 	}
 
