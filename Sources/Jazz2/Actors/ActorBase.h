@@ -180,7 +180,7 @@ namespace Jazz2::Actors
 				FrameConfiguration(), FrameDimensions(), LoopMode(AnimationLoopMode::Loop),
 				FirstFrame(0), FrameCount(0), AnimDuration(0.0f), AnimTime(0.0f),
 				CurrentFrame(0), NextFrame(0), CurrentFrameFade(0.0f), Hotspot(),
-				_owner(owner), _rendererType((ActorRendererType)-1)
+				_owner(owner), _rendererType((ActorRendererType)-1), _rendererTransition(0.0f)
 			{
 				type_ = ObjectType::Sprite;
 				Initialize(ActorRendererType::Default);
@@ -212,6 +212,7 @@ namespace Jazz2::Actors
 		private:
 			ActorBase* _owner;
 			ActorRendererType _rendererType;
+			float _rendererTransition;
 
 			void UpdateVisibleFrames();
 			static int NormalizeFrame(int frame, int min, int max);
