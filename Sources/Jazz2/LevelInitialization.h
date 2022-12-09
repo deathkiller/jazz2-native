@@ -28,6 +28,7 @@ namespace Jazz2
 		Boss,
 
 		TypeMask = 0x0f,
+		Frozen = 0x40,
 		FastTransition = 0x80
 	};
 

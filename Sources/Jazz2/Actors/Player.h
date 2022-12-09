@@ -162,6 +162,7 @@ namespace Jazz2::Actors
 		bool _controllable;
 		bool _controllableExternal;
 		float _controllableTimeout;
+		ExitType _lastExitType;
 
 		bool _wasUpPressed, _wasDownPressed, _wasJumpPressed, _wasFirePressed;
 

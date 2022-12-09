@@ -275,6 +275,7 @@ namespace Jazz2::Actors
 		std::shared_ptr<AudioBufferPlayer> PlaySfx(const StringView& identifier, float gain = 1.0f, float pitch = 1.0f);
 		void SetAnimation(const StringView& identifier);
 		bool SetAnimation(AnimState state);
+		bool SetTransition(const StringView& identifier, bool cancellable, const std::function<void()>& callback = []() { });
 		bool SetTransition(AnimState state, bool cancellable, const std::function<void()>& callback = []() { });
 		void CancelTransition();
 		void ForceCancelTransition();

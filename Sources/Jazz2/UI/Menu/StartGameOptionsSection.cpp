@@ -316,17 +316,12 @@ namespace Jazz2::UI::Menu
 
 	void StartGameOptionsSection::OnAfterTransition()
 	{
-#if !defined(SHAREWARE_DEMO_ONLY)
 		bool playTutorial = (!PreferencesCache::TutorialCompleted && _episodeName == "prince"_s && _levelName == "01_castle1"_s);
-#else
-		bool playTutorial = false;
-#endif
 
 		PlayerType players[] = { (PlayerType)((int)PlayerType::Jazz + _selectedPlayerType) };
 		LevelInitialization levelInit(_episodeName, (playTutorial ? "trainer"_s : StringView(_levelName)), (GameDifficulty)((int)GameDifficulty::Easy + _selectedDifficulty),
 			PreferencesCache::EnableReforged, false, players, _countof(players));
 
-#if !defined(SHAREWARE_DEMO_ONLY)
 		if (!_previousEpisodeName.empty()) {
 			auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(_previousEpisodeName);
 			if (previousEpisodeEnd != nullptr) {
@@ -348,7 +343,10 @@ namespace Jazz2::UI::Menu
 				levelInit.CheatsUsed = true;
 			}
 		}
-#endif
+
+		if (PreferencesCache::EnableReforged && _levelName == "01_xmas1"_s) {
+			levelInit.LastExitType = ExitType::Warp | ExitType::Frozen;
+		}
 
 		if (PreferencesCache::AllowCheatsWeapons) {
 			levelInit.CheatsUsed = true;

@@ -7,6 +7,7 @@
 #include "../Weapons/ToasterShot.h"
 #include "../Weapons/Thunderbolt.h"
 #include "../Weapons/TNT.h"
+#include "../Explosion.h"
 #include "../Player.h"
 #include "../Solid/Pole.h"
 #include "../Solid/PushableBox.h"
@@ -334,6 +335,15 @@ namespace Jazz2::Actors::Enemies
 					tilemap->CreateDebris(debris);
 				}
 			}
+			return;
+		}
+
+		if (_frozenTimeLeft > 0.0f) {
+			for (int i = 0; i < 20; i++) {
+				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+			}
+
+			_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 			return;
 		}
 

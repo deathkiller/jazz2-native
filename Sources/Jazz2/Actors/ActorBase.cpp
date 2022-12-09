@@ -4,6 +4,7 @@
 #include "../Tiles/TileMap.h"
 #include "../Collisions/DynamicTreeBroadPhase.h"
 
+#include "Explosion.h"
 #include "Player.h"
 #include "Weapons/FreezerShot.h"
 #include "Weapons/ToasterShot.h"
@@ -449,11 +450,6 @@ namespace Jazz2::Actors
 		_currentAnimationState = AnimState::Idle;
 
 		RefreshAnimation();
-
-#if SERVER
-		_currentAnimationKey = &identifier;
-		_levelHandler->BroadcastAnimationChanged(this, _currentAnimationKey);
-#endif
 	}
 
 	bool ActorBase::SetAnimation(AnimState state)
@@ -495,10 +491,36 @@ namespace Jazz2::Actors
 
 		RefreshAnimation();
 
-#if SERVER
-		_currentAnimationKey = candidates[index].Identifier;
-		_levelHandler.BroadcastAnimationChanged(this, _currentAnimationKey);
-#endif
+		return true;
+	}
+
+	bool ActorBase::SetTransition(const StringView& identifier, bool cancellable, const std::function<void()>& callback)
+	{
+		if (_metadata == nullptr) {
+			return false;
+		}
+
+		auto it = _metadata->Graphics.find(String::nullTerminatedView(identifier));
+		if (it == _metadata->Graphics.end()) {
+			if (callback != nullptr) {
+				callback();
+			}
+			return false;
+		}
+
+		if (_currentTransitionCallback != nullptr) {
+			auto oldCallback = _currentTransitionCallback;
+			_currentTransitionCallback = nullptr;
+			oldCallback();
+		}
+
+		_currentTransition = &it->second;
+		_currentTransitionState = AnimState::TransitionByName;
+		_currentTransitionCancellable = cancellable;
+		_currentTransitionCallback = callback;
+
+		RefreshAnimation();
+
 		return true;
 	}
 
@@ -510,7 +532,6 @@ namespace Jazz2::Actors
 			if (callback != nullptr) {
 				callback();
 			}
-			//LOGE_X("No transition found for state 0x%08x", state);
 			return false;
 		}
 
@@ -520,18 +541,14 @@ namespace Jazz2::Actors
 			oldCallback();
 		}
 
-		_currentTransitionCallback = callback;
-
 		int index = (count > 1 ? nCine::Random().Next(0, count) : 0);
 		_currentTransition = candidates[index].Resource;
 		_currentTransitionState = state;
 		_currentTransitionCancellable = cancellable;
+		_currentTransitionCallback = callback;
 
 		RefreshAnimation();
 
-#if SERVER
-		_levelHandler->BroadcastAnimationChanged(this, candidates[index].Identifier);
-#endif
 		return true;
 	}
 
@@ -547,10 +564,6 @@ namespace Jazz2::Actors
 			_currentTransitionState = AnimState::Idle;
 
 			RefreshAnimation();
-
-#if SERVER
-			_levelHandler->BroadcastAnimationChanged(this, _currentAnimationKey);
-#endif
 		}
 	}
 
@@ -565,10 +578,6 @@ namespace Jazz2::Actors
 		_currentTransitionState = AnimState::Idle;
 
 		RefreshAnimation();
-
-#if SERVER
-		_levelHandler->BroadcastAnimationChanged(this, _currentAnimationKey);
-#endif
 	}
 
 	void ActorBase::OnAnimationStarted()
@@ -582,10 +591,6 @@ namespace Jazz2::Actors
 			_currentTransitionState = AnimState::Idle;
 
 			RefreshAnimation();
-
-#if SERVER
-			_levelHandler->BroadcastAnimationChanged(this, _currentAnimationKey);
-#endif
 
 			if (_currentTransitionCallback != nullptr) {
 				auto oldCallback = _currentTransitionCallback;
@@ -1116,6 +1121,14 @@ namespace Jazz2::Actors
 			if (_frozenTimeLeft <= 0.0f) {
 				_renderer.AnimPaused = false;
 				_renderer.Initialize(ActorRendererType::Default);
+
+				for (int i = 0; i < 10; i++) {
+					Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+				}
+
+				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite);
+
+				_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 			} else {
 				// Cannot be directly in `ActorBase::HandleFrozenStateChange()` due to bug in `BaseSprite::updateRenderCommand()`,
 				// it would be called before `BaseSprite::updateRenderCommand()` but after `SceneNode::transform()`

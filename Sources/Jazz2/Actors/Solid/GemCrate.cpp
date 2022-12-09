@@ -74,6 +74,7 @@ namespace Jazz2::Actors::Solid
 		CreateSpriteDebris("CrateShrapnel1"_s, 3);
 		CreateSpriteDebris("CrateShrapnel2"_s, 2);
 
+		_frozenTimeLeft = 0.0f;
 		SetTransition(AnimState::TransitionDeath, false, [this, collider]() {
 			GenericContainer::OnPerish(collider);
 		});

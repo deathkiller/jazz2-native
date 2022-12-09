@@ -26,6 +26,9 @@
 		"WaterSplash": {
 			"Paths": [ "Common/water_splash.wav" ]
 		},
+		"IceBreak": {
+			"Paths": [ "Common/ice_break.wav" ]
+		},
 		"SugarRush": {
 			"Paths": [ "Common/sugar_rush.wav" ]
 		}

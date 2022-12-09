@@ -37,6 +37,7 @@ namespace Jazz2::Actors
 		_controllable(true),
 		_controllableExternal(true),
 		_controllableTimeout(0.0f),
+		_lastExitType(ExitType::None),
 		_wasUpPressed(false), _wasDownPressed(false), _wasJumpPressed(false), _wasFirePressed(false),
 		_currentSpecialMove(SpecialMoveType::None),
 		_isAttachedToPole(false),
@@ -163,6 +164,35 @@ namespace Jazz2::Actors
 		}
 #endif
 
+		// Delayed spawning
+		if (_lastExitType != ExitType::None) {
+			_controllableTimeout -= timeMult;
+			if (_controllableTimeout > 0.0f) {
+				return;
+			}
+
+			bool isFrozen = ((_lastExitType & ExitType::Frozen) == ExitType::Frozen);
+			_isFreefall = (isFrozen || CanFreefall());
+			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this, isFrozen]() {
+				SetState(ActorState::ApplyGravitation, true);
+				if (isFrozen) {
+					SetAnimation(AnimState::Freefall);
+					_renderer.AnimPaused = true;
+					_controllable = false;
+					_controllableTimeout = 100.0f;
+					_frozenTimeLeft = 100.0f;
+				} else {
+					SetState(ActorState::IsInvulnerable, false);
+					_controllable = true;
+				}
+			});
+
+			_renderer.setDrawEnabled(true);
+			PlayPlayerSfx("WarpOut"_s);
+
+			_lastExitType = ExitType::None;
+		}
+
 		// Process level bounds
 		Vector2f lastPos = _pos;
 		Recti levelBounds = _levelHandler->LevelBounds();
@@ -199,7 +229,27 @@ namespace Jazz2::Actors
 			}
 
 			OnUpdateHitbox();
-			UpdateFrozenState(timeMult);
+
+			//UpdateFrozenState(timeMult);
+			if (_renderer.AnimPaused) {
+				if (_frozenTimeLeft <= 0.0f) {
+					_renderer.AnimPaused = false;
+					_renderer.Initialize(ActorRendererType::Default);
+
+					for (int i = 0; i < 10; i++) {
+						Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+					}
+					
+					Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite);
+
+					_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
+				} else {
+					// Cannot be directly in `ActorBase::HandleFrozenStateChange()` due to bug in `BaseSprite::updateRenderCommand()`,
+					// it would be called before `BaseSprite::updateRenderCommand()` but after `SceneNode::transform()`
+					_renderer.Initialize(ActorRendererType::FrozenMask);
+					_frozenTimeLeft -= timeMult;
+				}
+			}
 		}
 
 		//FollowCarryingPlatform();
@@ -1292,7 +1342,22 @@ namespace Jazz2::Actors
 				_idleTime = 0.0f;
 
 				if (_currentTransitionState == AnimState::Idle) {
-					SetPlayerTransition(AnimState::TransitionIdleBored, true, false, SpecialMoveType::None);
+					constexpr StringView IdleBored[] = {
+						"IdleBored1"_s, "IdleBored2"_s, "IdleBored3"_s, "IdleBored4"_s, "IdleBored5"_s
+					};
+					int maxIdx;
+					switch (_playerType) {
+						case PlayerType::Jazz: maxIdx = 5; break;
+						case PlayerType::Spaz: maxIdx = 4; break;
+						case PlayerType::Lori: maxIdx = 3; break;
+						default: maxIdx = 0; break;
+					}
+					if (maxIdx > 0) {
+						int selectedIdx = Random().Fast(0, maxIdx);
+						if (SetTransition(IdleBored[selectedIdx], true)) {
+							PlaySfx(IdleBored[selectedIdx]);
+						}
+					}
 				}
 			} else {
 				_idleTime += timeMult;
@@ -2483,20 +2548,18 @@ namespace Jazz2::Actors
 
 		ExitType exitTypeMasked = (exitType & ExitType::TypeMask);
 		if (exitTypeMasked == ExitType::Warp || exitTypeMasked == ExitType::Bonus || exitTypeMasked == ExitType::Boss) {
-			PlayPlayerSfx("WarpOut"_s);
-
+			// Use delayed spawning
 			SetState(ActorState::ApplyGravitation, false);
-
-			_isFreefall = CanFreefall();
-			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this]() {
-				SetState(ActorState::IsInvulnerable, false);
-				SetState(ActorState::ApplyGravitation, true);
-				_controllable = true;
-			});
-
-			//attachedHud?.BeginFadeIn(false);
-		} else {
-			//attachedHud?.BeginFadeIn(true);
+			_renderer.setDrawEnabled(false);
+			_lastExitType = exitType;
+			_controllable = false;
+			_controllableTimeout = ((exitType & ExitType::FastTransition) == ExitType::FastTransition ? 5.0f : 55.0f);
+		} else if ((exitType & ExitType::Frozen) == ExitType::Frozen) {
+			// Use instant spawning
+			_renderer.AnimPaused = true;
+			_controllable = false;
+			_controllableTimeout = 100.0f;
+			_frozenTimeLeft = 100.0f;
 		}
 
 		// Preload all weapons
