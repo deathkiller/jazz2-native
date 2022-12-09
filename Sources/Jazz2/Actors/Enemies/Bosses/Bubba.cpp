@@ -155,7 +155,7 @@ namespace Jazz2::Actors::Bosses
 		_externalForce.X = 0.0f;
 		_externalForce.Y = 0.0f;
 		_internalForceY = 0.0f;
-		_frozenTimeLeft = 0.0f;
+		_frozenTimeLeft = std::min(1.0f, _frozenTimeLeft);
 
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithTilesetReduced | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 

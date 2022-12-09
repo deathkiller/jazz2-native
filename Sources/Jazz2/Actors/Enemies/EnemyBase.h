@@ -15,7 +15,7 @@ namespace Jazz2::Actors::Enemies
 
 		bool CanHurtPlayer()
 		{
-			return _canHurtPlayer && _frozenTimeLeft <= 0.0f;
+			return (_canHurtPlayer && _frozenTimeLeft <= 0.0f);
 		}
 
 	protected:
