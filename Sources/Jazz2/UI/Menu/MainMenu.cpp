@@ -32,6 +32,7 @@ namespace Jazz2::UI::Menu
 		_canvasOverlay = std::make_unique<MenuOverlayCanvas>(this);
 
 		auto& resolver = ContentResolver::Current();
+		resolver.BeginLoading();
 
 		// It will also replace palette for subsequent `RequestMetadata()`
 		PrepareTexturedBackground();
@@ -59,6 +60,7 @@ namespace Jazz2::UI::Menu
 			_music->play();
 		}
 #endif
+		resolver.EndLoading();
 
 		// Mark Fire and Menu button as already pressed to avoid some issues
 		_pressedActions = (1 << (int)PlayerActions::Fire) | (1 << ((int)PlayerActions::Fire + 16)) |

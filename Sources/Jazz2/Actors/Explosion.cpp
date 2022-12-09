@@ -76,6 +76,22 @@ namespace Jazz2::Actors
 				_lightRadiusFar = 50.0f;
 				break;
 			}
+			case Type::IceShrapnel: {
+				constexpr StringView IceShrapnels[] = {
+					"IceShrapnel1"_s, "IceShrapnel2"_s, "IceShrapnel3"_s, "IceShrapnel4"_s
+				};
+				SetAnimation(IceShrapnels[Random().Fast(0, _countof(IceShrapnels))]);
+
+				SetState(ActorState::CollideWithTileset | ActorState::ApplyGravitation, true);
+				SetState(ActorState::ForceDisableCollisions, false);
+
+				_renderer.Initialize(ActorRendererType::FrozenMask);
+				_renderer.setAlphaF(1.0f);
+				_speed = Vector2f(Random().FastFloat(0.5f, 2.0f) * (Random().NextBool() ? -1.0f : 1.0f), Random().FastFloat(-4.0f, -1.0f));
+				_elasticity = 0.2f;
+				SetFacingLeft(_speed.X < 0.0f);
+				break;
+			}
 
 			case Type::Generator: {
 				SetAnimation("Generator"_s);
@@ -106,6 +122,18 @@ namespace Jazz2::Actors
 				_lightIntensity -= timeMult * 0.02f;
 				break;
 			}
+			case Type::IceShrapnel: {
+				ActorBase::OnUpdate(timeMult);
+
+				float newAlpha = _renderer.alpha() - (0.014f * timeMult);
+				if (newAlpha > 0.0f) {
+					_renderer.setAlphaF(newAlpha);
+					_renderer.setScale(std::min(newAlpha * 2.0f, 1.0f));
+				} else {
+					DecreaseHealth(INT32_MAX);
+				}
+				break;
+			}
 		}
 	}
 
@@ -131,6 +159,8 @@ namespace Jazz2::Actors
 
 	void Explosion::OnAnimationFinished()
 	{
-		DecreaseHealth(INT32_MAX);
+		if (_type != Type::IceShrapnel) {
+			DecreaseHealth(INT32_MAX);
+		}
 	}
 }

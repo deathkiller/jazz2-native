@@ -293,34 +293,29 @@
 		
 		"IdleBored1": {
 			"Path": "Jazz/idle_flavor_1.aura",
-			"FrameRate": 2,
-			"States": [ 1073741849 ]
+			"FrameRate": 2
 		},
 		"IdleBored2": {
 			"Path": "Jazz/idle_flavor_2.aura",
-			"FrameRate": 1,
-			"States": [ 1073741849 ]
+			"FrameRate": 1
 		},
 		"IdleBored3": {
 			"Path": "Jazz/idle_flavor_3.aura",
-			"FrameRate": 2,
-			"States": [ 1073741849 ]
+			"FrameRate": 2
 		},
 		"IdleBored4": {
 			"Path": "Jazz/idle_flavor_4.aura",
-			"FrameRate": 3,
-			"States": [ 1073741849 ]
+			"FrameRate": 3
 		},
 		"IdleBored5": {
 			"Path": "Jazz/idle_flavor_5.aura",
-			"FrameRate": 3,
-			"States": [ 1073741849 ]
+			"FrameRate": 3
 		},
 		
 		"TransformFromFrog": {
 			"Path": "Jazz/transform_frog_end.aura",
-			"States": [ 1073741888 ],
-			"FrameRate": 3
+			"FrameRate": 3,
+			"States": [ 1073741888 ]
 		},
 		
 		"Corpse": {
@@ -416,6 +411,12 @@
 		},
 		"Ledge": {
 			"Paths": [ "Jazz/ledge.wav" ]
+		},
+		"IdleBored3": {
+			"Paths": [ "Jazz/idle_flavor_3.wav" ]
+		},
+		"IdleBored4": {
+			"Paths": [ "Jazz/idle_flavor_4.wav" ]
 		},
 		"BonusWarpNotEnoughCoins": {
 			"Paths": [ "Object/bonus_not_enough_coins.wav" ]

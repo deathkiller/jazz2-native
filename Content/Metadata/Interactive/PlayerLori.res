@@ -289,24 +289,21 @@
 		
 		"IdleBored1": {
 			"Path": "Lori/idle_flavor_2.aura",
-			"FrameRate": 1,
-			"States": [ 1073741849 ]
+			"FrameRate": 1
 		},
 		"IdleBored2": {
 			"Path": "Lori/idle_flavor_3.aura",
-			"FrameRate": 3,
-			"States": [ 1073741849 ]
+			"FrameRate": 3
 		},
 		"IdleBored3": {
 			"Path": "Lori/idle_flavor_4.aura",
-			"FrameRate": 2,
-			"States": [ 1073741849 ]
+			"FrameRate": 2
 		},
 		
 		"TransformFromFrog": {
 			"Path": "Lori/transform_frog_end.aura",
-			"States": [ 1073741888 ],
-			"FrameRate": 3
+			"FrameRate": 3,
+			"States": [ 1073741888 ]
 		},
 		
 		"Corpse": {

@@ -290,29 +290,25 @@
 		
 		"IdleBored1": {
 			"Path": "Spaz/idle_flavor_2.aura",
-			"FrameRate": 2,
-			"States": [ 1073741849 ]
+			"FrameRate": 2
 		},
 		"IdleBored2": {
 			"Path": "Spaz/idle_flavor_3.aura",
-			"FrameRate": 1,
-			"States": [ 1073741849 ]
+			"FrameRate": 1
 		},
 		"IdleBored3": {
 			"Path": "Spaz/idle_flavor_4.aura",
-			"FrameRate": 3,
-			"States": [ 1073741849 ]
+			"FrameRate": 3
 		},
 		"IdleBored4": {
 			"Path": "Spaz/idle_flavor_5.aura",
-			"FrameRate": 3,
-			"States": [ 1073741849 ]
+			"FrameRate": 3
 		},
 
 		"TransformFromFrog": {
 			"Path": "Spaz/transform_frog_end.aura",
-			"States": [ 1073741888 ],
-			"FrameRate": 3
+			"FrameRate": 3,
+			"States": [ 1073741888 ]
 		},
 		
 		"Corpse": {
@@ -408,6 +404,9 @@
 		},
 		"Ledge": {
 			"Paths": [ "Spaz/ledge.wav" ]
+		},
+		"IdleBored1": {
+			"Paths": [ "Spaz/idle_flavor_2.wav" ]
 		},
 		"DoubleJump": {
 			"Paths": [ "Common/char_double_jump.wav" ]

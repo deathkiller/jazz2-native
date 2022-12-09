@@ -1408,7 +1408,7 @@ namespace Jazz2::Compatibility
 			m.Add("Common"_s, "hibell"_s);
 			m.Add("Common"_s, "holyflut"_s);
 			m.Add("UI"_s, "weapon_change"_s);
-			m.Add("Common"_s, "IceBreak"_s);
+			m.Add("Common"_s, "ice_break"_s);
 			m.Add("Object"_s, "shell_noise_1"_s);
 			m.Add("Object"_s, "shell_noise_2"_s);
 			m.Add("Object"_s, "shell_noise_3"_s);

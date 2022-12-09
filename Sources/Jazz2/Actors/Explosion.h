@@ -25,6 +25,8 @@ namespace Jazz2::Actors
 			Pepper = 11,
 			RF = 12,
 
+			IceShrapnel = 13,
+
 			Generator = 20,
 		};
 
