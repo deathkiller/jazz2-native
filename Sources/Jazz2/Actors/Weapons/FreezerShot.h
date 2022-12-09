@@ -30,5 +30,6 @@ namespace Jazz2::Actors::Weapons
 	private:
 		Vector2f _gunspotPos;
 		bool _fired;
+		float _particlesTime;
 	};
 }

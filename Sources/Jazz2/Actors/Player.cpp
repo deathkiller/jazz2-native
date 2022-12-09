@@ -253,7 +253,7 @@ namespace Jazz2::Actors
 							debris.TexBiasY = 0.0f;
 
 							debris.DiffuseTexture = it->second.Base->TextureDiffuse.get();
-							debris.Flags = Tiles::TileMap::DebrisFlags::AdditivaBlending;
+							debris.Flags = Tiles::TileMap::DebrisFlags::AdditiveBlending;
 
 							tilemap->CreateDebris(debris);
 						}

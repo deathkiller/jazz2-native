@@ -975,7 +975,7 @@ namespace Jazz2::Tiles
 		for (auto& debris : _debrisList) {
 			auto command = RentRenderCommand();
 
-			if ((debris.Flags & DebrisFlags::AdditivaBlending) == DebrisFlags::AdditivaBlending) {
+			if ((debris.Flags & DebrisFlags::AdditiveBlending) == DebrisFlags::AdditiveBlending) {
 				command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);
 			} else {
 				command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

@@ -1333,7 +1333,6 @@ namespace Jazz2::Actors
 	{
 		// Calculate visible frames
 		CurrentFrame = 0;
-		NextFrame = 0;
 		CurrentFrameFade = 0.0f;
 		if (FrameCount > 0 && AnimDuration > 0) {
 			// Calculate currently visible frame
@@ -1349,14 +1348,8 @@ namespace Jazz2::Actors
 
 			// Calculate second frame and fade value
 			CurrentFrameFade = frameTemp - (int)frameTemp;
-			if (LoopMode == AnimationLoopMode::Loop) {
-				NextFrame = NormalizeFrame(CurrentFrame + 1, 0, FrameCount);
-			} else {
-				NextFrame = CurrentFrame + 1;
-			}
 		}
 		CurrentFrame = FirstFrame + std::clamp(CurrentFrame, 0, FrameCount - 1);
-		NextFrame = FirstFrame + std::clamp(NextFrame, 0, FrameCount - 1);
 
 		// Set current animation frame rectangle
 		int col = CurrentFrame % FrameConfiguration.X;
