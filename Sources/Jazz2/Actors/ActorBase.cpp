@@ -1131,6 +1131,7 @@ namespace Jazz2::Actors
 			if (dynamic_cast<ActorBase*>(freezerShot->GetOwner()) != this) {
 				_frozenTimeLeft = freezerShot->FrozenDuration();
 				_renderer.AnimPaused = true;
+				freezerShot->DecreaseHealth(INT32_MAX);
 			}
 		} else if(auto toasterShot = dynamic_cast<Actors::Weapons::ToasterShot*>(shot)) {
 			_frozenTimeLeft = 0.0f;
@@ -1231,9 +1232,10 @@ namespace Jazz2::Actors
 			renderCommand_.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
 			if (type == ActorRendererType::Outline || type == ActorRendererType::FrozenMask) {
+				_rendererTransition = 0.0f;
 				if (texture_ != nullptr) {
 					Vector2i texSize = texture_->size();
-					setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, 0.8f));
+					setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
 				}
 			} else {
 				setColor(Colorf::White);
@@ -1266,6 +1268,27 @@ namespace Jazz2::Actors
 			UpdateVisibleFrames();
 		}
 
+		switch (_rendererType) {
+			case ActorRendererType::Outline:
+				if (_rendererTransition < 0.8f) {
+					_rendererTransition = std::min(_rendererTransition + timeMult * 0.06f, 0.8f);
+					if (texture_ != nullptr) {
+						Vector2i texSize = texture_->size();
+						setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
+					}
+				}
+				break;
+			case ActorRendererType::FrozenMask:
+				if (_rendererTransition < 1.0f) {
+					_rendererTransition = std::min(_rendererTransition + timeMult * 0.14f, 1.0f);
+					if (texture_ != nullptr) {
+						Vector2i texSize = texture_->size();
+						setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
+					}
+				}
+				break;
+		}
+
 		BaseSprite::OnUpdate(timeMult);
 	}
 
@@ -1283,7 +1306,7 @@ namespace Jazz2::Actors
 		if (_rendererType == ActorRendererType::Outline || _rendererType == ActorRendererType::FrozenMask) {
 			if (newTexture != nullptr) {
 				Vector2i texSize = newTexture->size();
-				setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, 0.8f));
+				setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
 			}
 		}
 	}

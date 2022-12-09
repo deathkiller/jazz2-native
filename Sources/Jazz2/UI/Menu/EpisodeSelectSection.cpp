@@ -269,6 +269,7 @@ namespace Jazz2::UI::Menu
 			instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(0.0f, 0.0f, 0.0f, _transitionTime).Data());
 
 			command->setTransformation(Matrix4x4f::Identity);
+			command->setLayer(999);
 
 			canvas->DrawRenderCommand(command);
 		}

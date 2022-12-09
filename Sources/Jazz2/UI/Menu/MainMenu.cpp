@@ -658,7 +658,7 @@ namespace Jazz2::UI::Menu
 		struct tm* local = localtime(&t);
 		int month = local->tm_mon;
 #endif
-		bool hasXmas = ((month == 11 || month == 0) && TryLoadBackgroundPreset(Preset::Xmas));
+		bool hasXmas = (PreferencesCache::EnableReforged && (month == 11 || month == 0) && TryLoadBackgroundPreset(Preset::Xmas));
 		if (!hasXmas &&
 			!TryLoadBackgroundPreset(Preset::Default) &&
 			!TryLoadBackgroundPreset(Preset::Carrotus) &&
