@@ -46,9 +46,12 @@ namespace Jazz2::Actors::Environment
 	{
 		ActorBase::OnUpdate(timeMult);
 
-		if (_timeLeft > 0.0f) {
-			_timeLeft -= timeMult;
-		} else {
+		if (_frozenTimeLeft > 0.0f) {
+			return;
+		}
+
+		_timeLeft -= timeMult;
+		if (_timeLeft <= 0.0f) {
 			DecreaseHealth(INT32_MAX);
 		}
 	}

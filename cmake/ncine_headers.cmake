@@ -214,6 +214,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Copter.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/EndOfLevel.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Eva.h
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/IceBlock.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Moth.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/RollingRock.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Spring.h

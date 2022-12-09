@@ -1209,6 +1209,9 @@
     <ClInclude Include="Jazz2\UI\Menu\SimpleMessageSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Environment\IceBlock.h">
+      <Filter>Header Files\Jazz2\Actors\Environment</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2053,6 +2056,9 @@
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\SimpleMessageSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Environment\IceBlock.cpp">
+      <Filter>Source Files\Jazz2\Actors\Environment</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

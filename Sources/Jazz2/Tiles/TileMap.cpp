@@ -1,6 +1,7 @@
 ﻿#include "TileMap.h"
 
 #include "../LevelHandler.h"
+#include "../Actors/Environment/IceBlock.h"
 
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/IO/IFileStream.h"
@@ -195,14 +196,12 @@ namespace Jazz2::Tiles
 
 				if (tile.DestructType == TileDestructType::Weapon && (params.DestructType & TileDestructType::Weapon) == TileDestructType::Weapon) {
 					if (params.UsedWeaponType == WeaponType::Freezer && tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2)) {
-						// TODO: Frozen block
-						/*FrozenBlock frozen = new FrozenBlock();
-						frozen.OnActivated(new ActorActivationDetails {
-							LevelHandler = _levelHandler,
-							Pos = new Vector3(32 * tx + 16 - 1, 32 * ty + 16 - 1, ILevelHandler::MainPlaneZ)
+						std::shared_ptr<Actors::Environment::IceBlock> iceBlock = std::make_shared<Actors::Environment::IceBlock>();
+						iceBlock->OnActivated({
+							.LevelHandler = _levelHandler,
+							.Pos = Vector3i(32 * x + 16 - 1, 32 * y + 16 - 2, ILevelHandler::MainPlaneZ)
 						});
-						levelHandler.AddActor(frozen);*/
-						//params.TilesDestroyed++;
+						_levelHandler->AddActor(iceBlock);
 						return false;
 					} else {
 						if (tile.ExtraParam == 0 || tile.ExtraParam == ((uint8_t)params.UsedWeaponType + 1)) {

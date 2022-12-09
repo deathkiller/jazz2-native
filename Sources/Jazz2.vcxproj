@@ -272,6 +272,7 @@
     <ClInclude Include="Jazz2\Actors\Environment\Copter.h" />
     <ClInclude Include="Jazz2\Actors\Environment\EndOfLevel.h" />
     <ClInclude Include="Jazz2\Actors\Environment\Eva.h" />
+    <ClInclude Include="Jazz2\Actors\Environment\IceBlock.h" />
     <ClInclude Include="Jazz2\Actors\Environment\Moth.h" />
     <ClInclude Include="Jazz2\Actors\Environment\RollingRock.h" />
     <ClInclude Include="Jazz2\Actors\Environment\SteamNote.h" />
@@ -605,6 +606,7 @@
     <ClCompile Include="Jazz2\Actors\Environment\Copter.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\EndOfLevel.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\Eva.cpp" />
+    <ClCompile Include="Jazz2\Actors\Environment\IceBlock.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\Moth.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\RollingRock.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\SteamNote.cpp" />

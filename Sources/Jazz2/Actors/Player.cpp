@@ -77,6 +77,10 @@ namespace Jazz2::Actors
 			_spawnedBird->FlyAway();
 			_spawnedBird = nullptr;
 		}
+		if (_copterSound != nullptr) {
+			_copterSound->stop();
+			_copterSound = nullptr;
+		}
 		if (_weaponSound != nullptr) {
 			_weaponSound->stop();
 			_weaponSound = nullptr;
@@ -1915,6 +1919,15 @@ namespace Jazz2::Actors
 
 	void Player::OnPerishInner()
 	{
+		if (_copterSound != nullptr) {
+			_copterSound->stop();
+			_copterSound = nullptr;
+		}
+		if (_weaponSound != nullptr) {
+			_weaponSound->stop();
+			_weaponSound = nullptr;
+		}
+
 		SetPlayerTransition(AnimState::TransitionDeath, false, true, SpecialMoveType::None, [this]() {
 			if (_lives > 1 || _levelHandler->Difficulty() == GameDifficulty::Multiplayer) {
 				if (_lives > 1) {

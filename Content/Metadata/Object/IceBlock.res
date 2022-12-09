@@ -2,7 +2,7 @@
 	"Target": "Jazz² Resurrection",
 
 	"Animations": {
-		"FrozenBlock": {
+		"IceBlock": {
 			"Path": "Common/ice_block.aura"
 		}
 	}
