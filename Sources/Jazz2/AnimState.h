@@ -91,7 +91,7 @@ namespace Jazz2
 		TransitionAttack = 0x4F000001,
 		TransitionAttackEnd = 0x4F000002,
 
-		TransitionByName = 0xFFFFFF00,
+		TransitionByName = -2,
 
 		Uninitialized = -1,
 	};
