@@ -1117,8 +1117,13 @@ namespace Jazz2::Actors
 
 	void ActorBase::UpdateFrozenState(float timeMult)
 	{
-		if (_renderer.AnimPaused) {
-			if (_frozenTimeLeft <= 0.0f) {
+		if (_frozenTimeLeft > 0.0f) {
+			_frozenTimeLeft -= timeMult;
+			if (_frozenTimeLeft > 0.0f) {
+				// Cannot be directly in `ActorBase::HandleFrozenStateChange()` due to bug in `BaseSprite::updateRenderCommand()`,
+				// it would be called before `BaseSprite::updateRenderCommand()` but after `SceneNode::transform()`
+				_renderer.Initialize(ActorRendererType::FrozenMask);
+			} else {
 				_renderer.AnimPaused = false;
 				_renderer.Initialize(ActorRendererType::Default);
 
@@ -1129,11 +1134,6 @@ namespace Jazz2::Actors
 				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite);
 
 				_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
-			} else {
-				// Cannot be directly in `ActorBase::HandleFrozenStateChange()` due to bug in `BaseSprite::updateRenderCommand()`,
-				// it would be called before `BaseSprite::updateRenderCommand()` but after `SceneNode::transform()`
-				_renderer.Initialize(ActorRendererType::FrozenMask);
-				_frozenTimeLeft -= timeMult;
 			}
 		}
 	}
