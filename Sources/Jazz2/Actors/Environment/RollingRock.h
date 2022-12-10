@@ -18,20 +18,16 @@ namespace Jazz2::Actors::Environment
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
 		void OnUpdateHitbox() override;
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 		void OnTriggeredEvent(EventType eventType, uint8_t* eventParams) override;
 
 	private:
-		enum class SpeedUpDirection {
-			None,
-			Left,
-			Right
-		};
-
 		uint8_t _id;
 		float _triggerSpeedX, _triggerSpeedY;
 		float _delayLeft;
 		bool _triggered;
-		SpeedUpDirection _speedUpDirection;
-		float _speedUpDirectionCooldown, _soundCooldown;
+		float  _soundCooldown;
+
+		bool IsPositionEmpty(float x, float y);
 	};
 }
