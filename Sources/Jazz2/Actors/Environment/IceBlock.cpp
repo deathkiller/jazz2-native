@@ -21,7 +21,7 @@ namespace Jazz2::Actors::Environment
 
 	Task<bool> IceBlock::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		SetState(ActorState::CanBeFrozen, false);
+		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
 
 		async_await RequestMetadataAsync("Object/IceBlock"_s);
 		SetAnimation("IceBlock"_s);
@@ -42,5 +42,21 @@ namespace Jazz2::Actors::Environment
 				DecreaseHealth(INT32_MAX);
 			}
 		}
+	}
+
+	bool IceBlock::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	{
+		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
+			if (shotBase->GetStrength() > 0) {
+				DecreaseHealth(shotBase->GetStrength(), shotBase);
+				shotBase->DecreaseHealth(1);
+				return true;
+			}
+		} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {
+			DecreaseHealth(INT32_MAX, tnt);
+			return true;
+		}
+
+		return SolidObjectBase::OnHandleCollision(other);
 	}
 }

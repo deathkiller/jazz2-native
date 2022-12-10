@@ -251,8 +251,6 @@ namespace Jazz2
 				EnableRgbLights = false;
 			} else if (arg == "/no-rescale"_s) {
 				ActiveRescaleMode = RescaleMode::None;
-			} else if (arg == "/fps"_s) {
-				ShowPerformanceMetrics = true;
 			} else if (arg == "/mute"_s) {
 				MasterVolume = 0.0f;
 			}
