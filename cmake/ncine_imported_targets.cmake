@@ -188,6 +188,7 @@ elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		if(NCINE_WITH_VORBIS)
 			find_package(Vorbis)
 		endif()
+		find_package(libopenmpt)
 	endif()
 	if(NCINE_WITH_LUA)
 		# Older CMake versions do not support Lua 5.4 if not required explicitly
@@ -600,14 +601,7 @@ else(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		endif()
 		
 		set(OPENMPT_FOUND 1)
-		find_library(OPENMPT_LIBRARY libopenmpt.so PATHS /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 ${NCINE_LIBS}/Linux/${CMAKE_SYSTEM_PROCESSOR}/)
-		if(EXISTS ${OPENMPT_LIBRARY})
-			message(STATUS "Found libopenmpt: ${OPENMPT_LIBRARY}")
-			add_library(libopenmpt::libopenmpt SHARED IMPORTED)
-			set_target_properties(libopenmpt::libopenmpt PROPERTIES
-				IMPORTED_LOCATION ${OPENMPT_LIBRARY}
-				INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR}/libopenmpt/)
-		else()
+		if(NOT EXISTS ${LIBOPENMPT_LIBRARY})
 			set(OPENMPT_DYNAMIC_LINK 1)
 			message(STATUS "Cannot find libopenmpt, using dynamic linking instead")
 		endif()
