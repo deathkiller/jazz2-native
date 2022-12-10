@@ -1,11 +1,17 @@
-find_path(LIBOPENMPT_INCLUDE_DIR NAMES libopenmpt.h DOC "Path to libopenmpt include directory"
-  PATH_SUFFIXES libopenmpt
-  PATHS /usr/include/ /usr/local/include/ ${EXTERNAL_INCLUDES_DIR}
+find_path(LIBOPENMPT_INCLUDE_DIR DOC "Path to libopenmpt include directory"
+  NAMES libopenmpt.h
+  PATHS
+  /usr/include/
+  /usr/local/include/
+  /usr/include/libopenmpt/
+  /usr/local/include/libopenmpt/
+  ${EXTERNAL_INCLUDES_DIR}/libopenmpt/
 )
 mark_as_advanced(LIBOPENMPT_INCLUDE_DIR)
 
 find_library(LIBOPENMPT_LIBRARY DOC "Path to libopenmpt library"
-  NAMES libopenmpt
+  NAMES libopenmpt openmpt
+  NAMES_PER_DIR
   PATH_SUFFIXES lib64 lib libx32 lib/x64 x86_64-w64-mingw32/lib
   PATHS /sw /opt/local /opt/csw /opt ${NCINE_LIBS}/Linux/${CMAKE_SYSTEM_PROCESSOR}/
 )
