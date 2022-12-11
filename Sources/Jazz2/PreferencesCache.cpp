@@ -89,6 +89,19 @@ namespace Jazz2
 		// If config path is not overriden and portable config doesn't exist, use common path for current user
 		if (!overrideConfigPath && !fs::IsReadableFile(_configPath)) {
 			_configPath = fs::JoinPath(fs::GetSavePath("Jazz² Resurrection"_s), "Jazz2.config"_s);
+
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+			auto& resolver = ContentResolver::Current();
+			auto localConfigPath = fs::JoinPath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
+			if (_configPath != localConfigPath) {
+				auto configFileWritable = fs::Open(localConfigPath, FileAccessMode::Read | FileAccessMode::Write);
+				if (configFileWritable->IsOpened()) {
+					configFileWritable->Close();
+					// Save config file next to `Source` directory (e.g., on external drive) if possible
+					_configPath = localConfigPath;
+				}
+			}
+#	endif
 		}
 #endif
 

@@ -82,10 +82,11 @@ namespace Jazz2::Actors
 				};
 				SetAnimation(IceShrapnels[Random().Fast(0, _countof(IceShrapnels))]);
 
-				SetState(ActorState::CollideWithTileset | ActorState::ApplyGravitation, true);
+				SetState(ActorState::CollideWithTileset | ActorState::ApplyGravitation | ActorState::SkipPerPixelCollisions, true);
 				SetState(ActorState::ForceDisableCollisions, false);
 
 				_renderer.Initialize(ActorRendererType::FrozenMask);
+				_renderer.CurrentFrame = _renderer.FirstFrame + Random().Fast(0, _renderer.FrameCount);
 				_renderer.setAlphaF(1.0f);
 				_speed = Vector2f(Random().FastFloat(0.5f, 2.0f) * (Random().NextBool() ? -1.0f : 1.0f), Random().FastFloat(-4.0f, -1.0f));
 				_elasticity = 0.2f;
@@ -135,6 +136,11 @@ namespace Jazz2::Actors
 				break;
 			}
 		}
+	}
+
+	void Explosion::OnUpdateHitbox()
+	{
+		UpdateHitbox(4, 4);
 	}
 
 	void Explosion::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)

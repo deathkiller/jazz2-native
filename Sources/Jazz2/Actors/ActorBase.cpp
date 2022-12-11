@@ -1346,10 +1346,9 @@ namespace Jazz2::Actors
 	{
 		// Calculate visible frames
 		CurrentFrame = 0;
-		CurrentFrameFade = 0.0f;
-		if (FrameCount > 0 && AnimDuration > 0) {
+		if (FrameCount > 0 && AnimDuration > 0.0f) {
 			// Calculate currently visible frame
-			float frameTemp = FrameCount * AnimTime / AnimDuration;
+			float frameTemp = (FrameCount * AnimTime) / AnimDuration;
 			CurrentFrame = (int)frameTemp;
 
 			// Normalize current frame when exceeding anim duration
@@ -1358,9 +1357,6 @@ namespace Jazz2::Actors
 			} else {
 				CurrentFrame = NormalizeFrame(CurrentFrame, 0, FrameCount);
 			}
-
-			// Calculate second frame and fade value
-			CurrentFrameFade = frameTemp - (int)frameTemp;
 		}
 		CurrentFrame = FirstFrame + std::clamp(CurrentFrame, 0, FrameCount - 1);
 
