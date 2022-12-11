@@ -24,8 +24,7 @@ namespace Jazz2::Actors::Bosses
 	{
 		for (int i = 0; i < _countof(_shields); i++) {
 			if (_shields[i] != nullptr) {
-				_shields[i]->DecreaseHealth(INT32_MAX);
-				_shields[i] = nullptr;
+				_shields[i]->SetState(ActorState::IsDestroyed, true);
 			}
 		}
 	}
@@ -81,29 +80,10 @@ namespace Jazz2::Actors::Bosses
 		return true;
 	}
 
-	bool Uterus::OnPlayerDied()
-	{
-		for (int i = 0; i < _spawnedCrabs.size(); i++) {
-			auto& crab = _spawnedCrabs[i];
-			crab->DecreaseHealth(INT32_MAX);
-		}
-		_spawnedCrabs.clear();
-
-		return BossBase::OnPlayerDied();
-	}
-
 	void Uterus::OnUpdate(float timeMult)
 	{
 		OnUpdateHitbox();
 		HandleBlinking(timeMult);
-
-		// Remove dead Crabs from the list
-		for (int i = 0; i < _spawnedCrabs.size(); i++) {
-			if (_spawnedCrabs[i]->GetHealth() <= 0) {
-				_spawnedCrabs.erase(&_spawnedCrabs[i]);
-				i--;
-			}
-		}
 
 		switch (_state) {
 			case StateOpen: {
@@ -124,7 +104,7 @@ namespace Jazz2::Actors::Bosses
 					float force = Random().NextFloat(-15.0f, 15.0f);
 
 					// TODO: Implement Crab spawn animation
-					auto& crab = _spawnedCrabs.emplace_back(std::make_shared<Enemies::Crab>());
+					std::shared_ptr<Enemies::Crab> crab = std::make_shared<Enemies::Crab>();
 					crab->OnActivated({
 						.LevelHandler = _levelHandler,
 						.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 4)
@@ -241,7 +221,7 @@ namespace Jazz2::Actors::Bosses
 
 	Task<bool> Uterus::ShieldPart::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		SetState(ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects | ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
+		SetState(ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects | ActorState::ApplyGravitation, false);
 		CanCollideWithAmmo = false;
 
 		_elasticity = 0.3f;
@@ -256,6 +236,8 @@ namespace Jazz2::Actors::Bosses
 
 	void Uterus::ShieldPart::OnUpdate(float timeMult)
 	{
+		UpdateFrozenState(timeMult);
+
 		if (FallTime > 0.0f) {
 			EnemyBase::OnUpdate(timeMult);
 			FallTime -= timeMult;
@@ -277,6 +259,10 @@ namespace Jazz2::Actors::Bosses
 			FallTime = 400.0f;
 
 			SetState(ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects | ActorState::ApplyGravitation, true);
+
+			if (GetState(ActorState::CanBeFrozen)) {
+				HandleFrozenStateChange(other.get());
+			}
 			return true;
 		}
 

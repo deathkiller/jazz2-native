@@ -230,12 +230,12 @@ namespace Jazz2::Actors
 		float _elasticity;
 		float _friction;
 		float _unstuckCooldown;
-
 		float _frozenTimeLeft;
 		int _maxHealth;
 		int _health;
 
 		Vector2i _originTile;
+		float _spawnFrames;
 		Metadata* _metadata;
 		ActorRenderer _renderer;
 		GraphicResource* _currentAnimation;

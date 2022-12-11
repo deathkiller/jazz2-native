@@ -43,6 +43,7 @@ namespace Jazz2
 		_nextLevelType(ExitType::None),
 		_nextLevelTime(0.0f),
 		_elapsedFrames(0.0f),
+		_checkpointFrames(0.0f),
 		_shakeDuration(0.0f),
 		_waterLevel(FLT_MAX),
 		_ambientLightTarget(1.0f),
@@ -932,6 +933,8 @@ namespace Jazz2
 
 	void LevelHandler::SetCheckpoint(Vector2f pos)
 	{
+		_checkpointFrames = ElapsedFrames();
+
 		for (auto& player : _players) {
 			player->SetCheckpoint(pos, _ambientLightTarget);
 		}
@@ -943,47 +946,32 @@ namespace Jazz2
 
 	void LevelHandler::RollbackToCheckpoint()
 	{
-		if (_players.empty()) {
-			return;
+		// Reset the camera
+		LimitCameraView(0, 0);
+
+		if (!_players.empty()) {
+			WarpCameraToTarget(_players[0]->shared_from_this());
 		}
 
-		LimitCameraView(0, 0);
-		WarpCameraToTarget(_players[0]->shared_from_this());
-
 		if (_difficulty != GameDifficulty::Multiplayer) {
-			// Despawn all objects that are not in inner range (not outer ranger that is usually used for deactivation)
-			// to avoid duplication of objects that are spawned near player spawn
-			if (!_players.empty()) {
-				auto& pos = _players[0]->GetPos();
-				int tx1 = (int)pos.X / Tiles::TileSet::DefaultTileSize;
-				int ty1 = (int)pos.Y / Tiles::TileSet::DefaultTileSize;
-				int tx2 = tx1;
-				int ty2 = ty1;
-
-				tx1 -= ActivateTileRange;
-				ty1 -= ActivateTileRange;
-				tx2 += ActivateTileRange;
-				ty2 += ActivateTileRange;
-
-				for (auto& actor : _actors) {
+			for (auto& actor : _actors) {
+				// Despawn all actors that were created after the last checkpoint
+				if (actor->_spawnFrames > _checkpointFrames) {
 					if ((actor->_state & (Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator)) != Actors::ActorState::None) {
 						Vector2i originTile = actor->_originTile;
-						if (originTile.X < tx1 || originTile.Y < ty1 || originTile.X > tx2 || originTile.Y > ty2) {
-							if (actor->OnTileDeactivated()) {
-								if ((actor->_state & Actors::ActorState::IsFromGenerator) == Actors::ActorState::IsFromGenerator) {
-									_eventMap->ResetGenerator(originTile.X, originTile.Y);
-								}
-
-								_eventMap->Deactivate(originTile.X, originTile.Y);
-
-								actor->_state |= Actors::ActorState::IsDestroyed;
-							}
+						if ((actor->_state & Actors::ActorState::IsFromGenerator) == Actors::ActorState::IsFromGenerator) {
+							_eventMap->ResetGenerator(originTile.X, originTile.Y);
 						}
+
+						_eventMap->Deactivate(originTile.X, originTile.Y);
 					}
+
+					actor->_state |= Actors::ActorState::IsDestroyed;
 				}
 			}
 
 			_eventMap->RollbackToCheckpoint();
+			_elapsedFrames = _checkpointFrames;
 		}
 	}
 

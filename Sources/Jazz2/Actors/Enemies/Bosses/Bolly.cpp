@@ -25,17 +25,14 @@ namespace Jazz2::Actors::Bosses
 	Bolly::~Bolly()
 	{
 		if (_bottom != nullptr) {
-			_bottom->DecreaseHealth(INT32_MAX);
-			_bottom = nullptr;
+			_bottom->SetState(ActorState::IsDestroyed, true);
 		}
 		/*if (_turret != nullptr) {
-			_turret->DecreaseHealth(INT32_MAX);
-			_turret = nullptr;
+			_turret->SetState(ActorState::IsDestroyed, true);
 		}*/
 		for (int i = 0; i < _countof(_chain); i++) {
 			if (_chain[i] != nullptr) {
-				_chain[i]->DecreaseHealth(INT32_MAX);
-				_chain[i] = nullptr;
+				_chain[i]->SetState(ActorState::IsDestroyed, true);
 			}
 		}
 	}

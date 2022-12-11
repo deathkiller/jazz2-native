@@ -32,6 +32,7 @@ namespace Jazz2::Actors
 		_frozenTimeLeft(0.0f),
 		_maxHealth(1),
 		_health(1),
+		_spawnFrames(0.0f),
 		_metadata(nullptr),
 		_renderer(this),
 		_currentAnimation(nullptr),
@@ -80,6 +81,7 @@ namespace Jazz2::Actors
 		_levelHandler = details.LevelHandler;
 		_pos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
 		_originTile = Vector2i((int)details.Pos.X / 32, (int)details.Pos.Y / 32);
+		_spawnFrames = _levelHandler->ElapsedFrames();
 
 		uint16_t layer = (uint16_t)details.Pos.Z;
 		_renderer.setLayer(layer);

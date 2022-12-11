@@ -84,13 +84,13 @@ namespace Jazz2
 
 		TransitionFromFrog = 0x40000040,
 
-
-		// Aliases for object states overlapping player states
+		// Aliases for common object states overlapping player states
 		Activated = 0x00000020,
 		TransitionActivate = 0x4F000000,
 		TransitionAttack = 0x4F000001,
 		TransitionAttackEnd = 0x4F000002,
 
+		// Alias for setting transition by name instead by AnimState
 		TransitionByName = -2,
 
 		Uninitialized = -1,
