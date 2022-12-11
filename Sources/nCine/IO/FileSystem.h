@@ -127,17 +127,17 @@ namespace nCine
 		static String JoinPathAbsolute(const StringView& first, const StringView& second);
 
 		/// Returns the path up to, but not including, the final separator
-		static String GetDirectoryName(const StringView& path);
+		static StringView GetDirectoryName(const StringView& path);
 		/// Returns the path component after the final separator
-		static String GetFileName(const StringView& path);
+		static StringView GetFileName(const StringView& path);
 		/// Returns the path component after the final separator without extension
-		static String GetFileNameWithoutExtension(const StringView& path);
+		static StringView GetFileNameWithoutExtension(const StringView& path);
+		/// Returns the extension as lower-case string without dot or empty string if it is not found
+		static String GetExtension(const StringView& path);
+
 		/// Returns an absolute path from a relative one
 		/** Also resolves dot references to current and parent directory and double separators */
 		static String GetAbsolutePath(const StringView& path);
-
-		/// Returns the extension as lower-case string without dot or empty string if it is not found
-		static String GetExtension(const StringView& path);
 
 		/// Returns the path of executable
 		static String GetExecutablePath();

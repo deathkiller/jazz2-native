@@ -37,6 +37,7 @@ namespace Jazz2::Actors
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
+		void OnUpdateHitbox() override;
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 		void OnAnimationFinished() override;
 

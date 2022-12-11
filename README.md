@@ -1,4 +1,3 @@
-
 <div align="center">
     <a href="https://github.com/deathkiller/jazz2-native"><img src="https://raw.githubusercontent.com/deathkiller/jazz2/master/Docs/Logo.gif" alt="Jazz² Resurrection" title="Jazz² Resurrection"></a>
 </div>
@@ -52,7 +51,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 
 <sup>Alternatively, you can use package for your Linux distribution:</sup><br>
 [![ArchLinux](https://img.shields.io/badge/Arch%20Linux-grey?logo=archlinux&logoColor=ffffff)](https://aur.archlinux.org/packages/jazz2-git)
-[![OpenSUSE](https://img.shields.io/obs/home:mnhauke:games/jazz2/openSUSE_Tumbleweed/x86_64?label=OpenSUSE&logo=opensuse&logoColor=ffffff)](https://build.opensuse.org/package/show/home:mnhauke:games/jazz2)
+[![OpenSUSE](https://img.shields.io/obs/games/jazz2/openSUSE_Tumbleweed/x86_64?label=OpenSUSE&logo=opensuse&logoColor=ffffff)](https://build.opensuse.org/package/show/games/jazz2)
 
 ### Web (Emscripten)
 * Go to http://deat.tk/jazz2/wasm/

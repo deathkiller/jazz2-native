@@ -62,143 +62,66 @@ namespace nCine
 {
 	namespace
 	{
-		char buffer[FileSystem::MaxPathLength];
+		static char buffer[FileSystem::MaxPathLength];
 
-#if !defined(DEATH_TARGET_WINDOWS)
-		bool CallStat(const char* path, struct stat& sb)
+		static size_t GetPathRootLength(const StringView& path)
 		{
-			ASSERT(path);
-			if (::lstat(path, &sb) == -1) {
-				//LOGV_X("lstat error: %s \"%s\"", strerror(errno), path);
-				return false;
-			}
-			return true;
-		}
+			if (path.empty()) return 0;
 
-		FileSystem::Permission NativeModeToEnum(unsigned int nativeMode)
-		{
-			FileSystem::Permission mode = FileSystem::Permission::None;
+#if defined(DEATH_TARGET_WINDOWS)
+			constexpr StringView ExtendedPathPrefix = "\\\\?\\"_s;
+			constexpr StringView UncExtendedPathPrefix = "\\\\?\\UNC\\"_s;
 
-			if (nativeMode & S_IRUSR)
-				mode |= FileSystem::Permission::Read;
-			if (nativeMode & S_IWUSR)
-				mode |= FileSystem::Permission::Write;
-			if (nativeMode & S_IXUSR)
-				mode |= FileSystem::Permission::Execute;
+			size_t i = 0;
+			size_t pathLength = path.size();
+			size_t volumeSeparatorLength = 2;  // Length to the colon "C:"
+			size_t uncRootLength = 2;          // Length to the start of the server name "\\"
 
-			return mode;
-		}
-
-		unsigned int AddPermissionsToCurrent(unsigned int currentMode, FileSystem::Permission mode)
-		{
-			if ((mode & FileSystem::Permission::Read) == FileSystem::Permission::Read)
-				currentMode |= S_IRUSR;
-			if ((mode & FileSystem::Permission::Write) == FileSystem::Permission::Write)
-				currentMode |= S_IWUSR;
-			if ((mode & FileSystem::Permission::Execute) == FileSystem::Permission::Execute)
-				currentMode |= S_IXUSR;
-
-			return currentMode;
-		}
-
-		unsigned int RemovePermissionsFromCurrent(unsigned int currentMode, FileSystem::Permission mode)
-		{
-			if ((mode & FileSystem::Permission::Read) == FileSystem::Permission::Read)
-				currentMode &= ~S_IRUSR;
-			if ((mode & FileSystem::Permission::Write) == FileSystem::Permission::Write)
-				currentMode &= ~S_IWUSR;
-			if ((mode & FileSystem::Permission::Execute) == FileSystem::Permission::Execute)
-				currentMode &= ~S_IXUSR;
-
-			return currentMode;
-		}
-
-		FileSystem::FileDate NativeTimeToFileDate(const time_t* t)
-		{
-			FileSystem::FileDate date = { };
-
-			struct tm* local = localtime(t);
-			date.Year = local->tm_year + 1900;
-			date.Month = local->tm_mon + 1;
-			date.Day = local->tm_mday;
-			date.Hour = local->tm_hour;
-			date.Minute = local->tm_min;
-			date.Second = local->tm_sec;
-			date.Ticks = static_cast<int64_t>(*t);
-
-			return date;
-		}
-
-		int DeleteDirectoryInternalCallback(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
-		{
-			return ::remove(fpath);
-		}
-
-		bool DeleteDirectoryInternal(const StringView& path)
-		{
-			return ::nftw(String::nullTerminatedView(path).data(), DeleteDirectoryInternalCallback, 64, FTW_DEPTH | FTW_PHYS) == 0;
-		}
-
-#	if defined(DEATH_TARGET_UNIX)
-		bool RedirectFileDescriptorToNull(int fd)
-		{
-			if (fd == -1) {
-				return false;
-			}
-
-			int tempfd;
-			do {
-				tempfd = ::open("/dev/null", O_RDWR | O_NOCTTY);
-			} while (tempfd == -1 && errno == EINTR);
-			if (tempfd == -1) {
-				return false;
-			}
-
-			if (tempfd != fd) {
-				if (::dup2(tempfd, fd) == -1) {
-					::close(tempfd);
-					return false;
-				}
-				if (::close(tempfd) == -1) {
-					return false;
+			bool extendedSyntax = path.hasPrefix(ExtendedPathPrefix);
+			bool extendedUncSyntax = path.hasPrefix(UncExtendedPathPrefix);
+			if (extendedSyntax) {
+				// Shift the position we look for the root from to account for the extended prefix
+				if (extendedUncSyntax) {
+					// "\\" -> "\\?\UNC\"
+					uncRootLength = UncExtendedPathPrefix.size();
+				} else {
+					// "C:" -> "\\?\C:"
+					volumeSeparatorLength += ExtendedPathPrefix.size();
 				}
 			}
 
-			return true;
-		}
-
-		void TryCloseAllFileDescriptors()
-		{
-			DIR* dir = ::opendir("/proc/self/fd/");
-			if (dir == nullptr) {
-				const long fd_max = ::sysconf(_SC_OPEN_MAX);
-				long fd;
-				for (fd = 0; fd <= fd_max; fd++) {
-					::close(fd);
-				}
-				return;
-			}
-
-			int dfd = ::dirfd(dir);
-			struct dirent* ent;
-			while ((ent = ::readdir(dir))) {
-				if (ent->d_name[0] >= '0' && ent->d_name[0] <= '9') {
-					const char* p = &ent->d_name[1];
-					int fd = ent->d_name[0] - '0';
-					while (*p >= '0' && *p <= '9') {
-						fd = (10 * fd) + *(p++) - '0';
+			if ((!extendedSyntax || extendedUncSyntax) && (path[0] == '/' || path[0] == '\\')) {
+				// UNC or simple rooted path (e.g., "\foo", NOT "\\?\C:\foo")
+				i = 1;
+				if (extendedUncSyntax || (pathLength > 1 && (path[1] == '/' || path[1] == '\\'))) {
+					// UNC ("\\?\UNC\" or "\\"), scan past the next two directory separators at most (e.g., "\\?\UNC\Server\Share" or "\\Server\Share\")
+					i = uncRootLength;
+					int n = 2;	// Maximum separators to skip
+					while (i < pathLength && ((path[i] != '/' && path[i] != '\\') || --n > 0)) {
+						i++;
 					}
-					if (*p || fd == dfd) {
-						continue;
+					// Keep the last path separator as part of root prefix
+					if (i < pathLength && (path[i] == '/' || path[i] == '\\')) {
+						i++;
 					}
-					::close(fd);
+				}
+			} else if (pathLength >= volumeSeparatorLength && path[volumeSeparatorLength - 1] == ':') {
+				// Path is at least longer than where we expect a colon and has a colon ("\\?\A:", "A:")
+				// If the colon is followed by a directory separator, move past it
+				i = volumeSeparatorLength;
+				if (pathLength >= volumeSeparatorLength + 1 && (path[volumeSeparatorLength] == '/' || path[volumeSeparatorLength] == '\\')) {
+					i++;
 				}
 			}
-			::closedir(dir);
-		}
-#	endif
+
+			return i;
 #else
-		FileSystem::FileDate NativeTimeToFileDate(const SYSTEMTIME* sysTime, int64_t ticks)
+			return (path[0] == '/' || path[0] == '\\' ? 1 : 0);
+#endif
+		}
+
+#if defined(DEATH_TARGET_WINDOWS)
+		static FileSystem::FileDate NativeTimeToFileDate(const SYSTEMTIME* sysTime, int64_t ticks)
 		{
 			FileSystem::FileDate date = { };
 
@@ -213,7 +136,7 @@ namespace nCine
 			return date;
 		}
 
-		bool DeleteDirectoryInternal(const ArrayView<wchar_t>& path, bool recursive, int depth)
+		static bool DeleteDirectoryInternal(const ArrayView<wchar_t>& path, bool recursive, int depth)
 		{
 			if (recursive) {
 				if (path.size() + 3 <= fs::MaxPathLength) {
@@ -301,6 +224,139 @@ namespace nCine
 			return ::RemoveDirectory(path);
 #	endif
 		}
+#else
+		static bool CallStat(const char* path, struct stat& sb)
+		{
+			ASSERT(path);
+			if (::lstat(path, &sb) == -1) {
+				//LOGV_X("lstat error: %s \"%s\"", strerror(errno), path);
+				return false;
+			}
+			return true;
+		}
+
+		static FileSystem::Permission NativeModeToEnum(unsigned int nativeMode)
+		{
+			FileSystem::Permission mode = FileSystem::Permission::None;
+
+			if (nativeMode & S_IRUSR)
+				mode |= FileSystem::Permission::Read;
+			if (nativeMode & S_IWUSR)
+				mode |= FileSystem::Permission::Write;
+			if (nativeMode & S_IXUSR)
+				mode |= FileSystem::Permission::Execute;
+
+			return mode;
+		}
+
+		static unsigned int AddPermissionsToCurrent(unsigned int currentMode, FileSystem::Permission mode)
+		{
+			if ((mode & FileSystem::Permission::Read) == FileSystem::Permission::Read)
+				currentMode |= S_IRUSR;
+			if ((mode & FileSystem::Permission::Write) == FileSystem::Permission::Write)
+				currentMode |= S_IWUSR;
+			if ((mode & FileSystem::Permission::Execute) == FileSystem::Permission::Execute)
+				currentMode |= S_IXUSR;
+
+			return currentMode;
+		}
+
+		static unsigned int RemovePermissionsFromCurrent(unsigned int currentMode, FileSystem::Permission mode)
+		{
+			if ((mode & FileSystem::Permission::Read) == FileSystem::Permission::Read)
+				currentMode &= ~S_IRUSR;
+			if ((mode & FileSystem::Permission::Write) == FileSystem::Permission::Write)
+				currentMode &= ~S_IWUSR;
+			if ((mode & FileSystem::Permission::Execute) == FileSystem::Permission::Execute)
+				currentMode &= ~S_IXUSR;
+
+			return currentMode;
+		}
+
+		static FileSystem::FileDate NativeTimeToFileDate(const time_t* t)
+		{
+			FileSystem::FileDate date = { };
+
+			struct tm* local = localtime(t);
+			date.Year = local->tm_year + 1900;
+			date.Month = local->tm_mon + 1;
+			date.Day = local->tm_mday;
+			date.Hour = local->tm_hour;
+			date.Minute = local->tm_min;
+			date.Second = local->tm_sec;
+			date.Ticks = static_cast<int64_t>(*t);
+
+			return date;
+		}
+
+		static int DeleteDirectoryInternalCallback(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
+		{
+			return ::remove(fpath);
+		}
+
+		static bool DeleteDirectoryInternal(const StringView& path)
+		{
+			return ::nftw(String::nullTerminatedView(path).data(), DeleteDirectoryInternalCallback, 64, FTW_DEPTH | FTW_PHYS) == 0;
+		}
+
+#	if defined(DEATH_TARGET_UNIX)
+		static bool RedirectFileDescriptorToNull(int fd)
+		{
+			if (fd == -1) {
+				return false;
+			}
+
+			int tempfd;
+			do {
+				tempfd = ::open("/dev/null", O_RDWR | O_NOCTTY);
+			} while (tempfd == -1 && errno == EINTR);
+			if (tempfd == -1) {
+				return false;
+			}
+
+			if (tempfd != fd) {
+				if (::dup2(tempfd, fd) == -1) {
+					::close(tempfd);
+					return false;
+				}
+				if (::close(tempfd) == -1) {
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		static void TryCloseAllFileDescriptors()
+		{
+			DIR* dir = ::opendir("/proc/self/fd/");
+			if (dir == nullptr) {
+				const long fd_max = ::sysconf(_SC_OPEN_MAX);
+				long fd;
+				for (fd = 0; fd <= fd_max; fd++) {
+					::close(fd);
+				}
+				return;
+			}
+
+			int dfd = ::dirfd(dir);
+			struct dirent* ent;
+			while ((ent = ::readdir(dir))) {
+				if (ent->d_name[0] >= '0' && ent->d_name[0] <= '9') {
+					const char* p = &ent->d_name[1];
+					int fd = ent->d_name[0] - '0';
+					while (*p >= '0' && *p <= '9') {
+						fd = (10 * fd) + *(p++) - '0';
+					}
+					if (*p || fd == dfd) {
+						continue;
+					}
+					::close(fd);
+				}
+			}
+			::closedir(dir);
+		}
+#	endif
 #endif
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
@@ -698,81 +754,84 @@ namespace nCine
 #endif
 	}
 
-	String FileSystem::GetDirectoryName(const StringView& path)
+	StringView FileSystem::GetDirectoryName(const StringView& path)
 	{
 		if (path.empty()) return { };
 
-#if defined(DEATH_TARGET_WINDOWS)
-		wchar_t buffer[MaxPathLength];
-		wchar_t drive[_MAX_DRIVE];
-		wchar_t dir[_MAX_DIR];
-
-		_wsplitpath_s(Utf8::ToUtf16(path), drive, _countof(drive), dir, _countof(dir), nullptr, 0, nullptr, 0);
-
-		wcsncpy_s(buffer, _countof(buffer), drive, _countof(drive));
-		wcsncat_s(buffer, _countof(buffer), dir, _countof(dir));
-		size_t pathLength = wcsnlen(buffer, (size_t)MaxPathLength);
-		// If the path only contains the drive letter the trailing separator is retained
-		if (pathLength > 0 && (buffer[pathLength - 1] == L'/' || buffer[pathLength - 1] == L'\\') &&
-			(pathLength < 3 || (pathLength == 3 && buffer[1] != L':') || pathLength > 3)) {
-			buffer[pathLength - 1] = L'\0';
+		size_t pathRootLength = GetPathRootLength(path);
+		size_t i = path.size();
+		// Strip any trailing path separators
+		while (i > pathRootLength && (path[i - 1] == '/' || path[i - 1] == '\\')) {
+			i--;
 		}
+		if (i <= pathRootLength) return { };
+		// Try to get the last path separator
+		while (i > pathRootLength && path[--i] != '/' && path[i] != '\\');
+		// Return nothing if only filename was specified as relative path
+		if (pathRootLength == 0 && i == 0) return { };
 
-		return Utf8::FromUtf16(buffer);
-#else
-		size_t pathLength = std::min((size_t)MaxPathLength - 1, path.size());
-		strncpy(buffer, path.data(), pathLength);
-		buffer[pathLength] = '\0';
-		return ::dirname(buffer);
-#endif
+		return path.slice(0, i);
 	}
 
-	String FileSystem::GetFileName(const StringView& path)
+	StringView FileSystem::GetFileName(const StringView& path)
 	{
 		if (path.empty()) return { };
 
-#if defined(DEATH_TARGET_WINDOWS)
-		wchar_t buffer[MaxPathLength];
-		wchar_t fname[_MAX_FNAME];
-		wchar_t ext[_MAX_EXT];
+		size_t pathRootLength = GetPathRootLength(path);
+		size_t pathLength = path.size();
+		// Strip any trailing path separators
+		while (pathLength > pathRootLength && (path[pathLength - 1] == '/' || path[pathLength - 1] == '\\')) {
+			pathLength--;
+		}
+		if (pathLength <= pathRootLength) return { };
+		size_t i = pathLength;
+		// Try to get the last path separator
+		while (i > pathRootLength && path[--i] != '/' && path[i] != '\\');
 
-		_wsplitpath_s(Utf8::ToUtf16(path), nullptr, 0, nullptr, 0, fname, _countof(fname), ext, _countof(ext));
-		wcsncpy_s(buffer, _countof(buffer), fname, _countof(fname));
-		wcsncat_s(buffer, _countof(buffer), ext, _countof(ext));
-		return Utf8::FromUtf16(buffer);
-#else
-		size_t pathLength = std::min((size_t)MaxPathLength - 1, path.size());
-		strncpy(buffer, path.data(), pathLength);
-		buffer[pathLength] = '\0';
-		return ::basename(buffer);
-#endif
+		if (path[i] == '/' || path[i] == '\\') {
+			i++;
+		}
+		return path.slice(i, pathLength);
 	}
 
-	String FileSystem::GetFileNameWithoutExtension(const StringView& path)
+	StringView FileSystem::GetFileNameWithoutExtension(const StringView& path)
 	{
-		if (path.empty()) return { };
+		StringView fileName = GetFileName(path);
+		if (fileName.empty()) return { };
 
-#if defined(DEATH_TARGET_WINDOWS)
-		wchar_t fname[_MAX_FNAME];
+		const StringView foundDot = fileName.findLastOr('.', fileName.end());
+		if (foundDot.begin() == fileName.end()) return fileName;
 
-		_wsplitpath_s(Utf8::ToUtf16(path), nullptr, 0, nullptr, 0, fname, _countof(fname), nullptr, 0);
-		return Utf8::FromUtf16(fname);
-#else
-		size_t pathLength = std::min((size_t)MaxPathLength - 1, path.size());
-		strncpy(buffer, path.data(), pathLength);
-		buffer[pathLength] = '\0';
-		char* result = ::basename(buffer);
-		if (result == nullptr) {
-			return { };
+		bool initialDots = true;
+		for (char c : fileName.prefix(foundDot.begin())) {
+			if (c != '.') {
+				initialDots = false;
+				break; 
+			}
 		}
+		if (initialDots) return fileName;
+		return fileName.prefix(foundDot.begin());
+	}
 
-		char* lastDot = strrchr(result, '.');
-		if (result < lastDot) {
-			*lastDot = '\0';
+	String FileSystem::GetExtension(const StringView& path)
+	{
+		StringView fileName = GetFileName(path);
+		if (fileName.empty()) return { };
+
+		const StringView foundDot = fileName.findLastOr('.', fileName.end());
+		if (foundDot.begin() == fileName.end()) return { };
+
+		bool initialDots = true;
+		for (char c : fileName.prefix(foundDot.begin())) {
+			if (c != '.') {
+				initialDots = false;
+				break;
+			}
 		}
-
+		if (initialDots) return { };
+		String result = fileName.suffix(foundDot.begin() + 1);
+		lowercaseInPlace(result);
 		return result;
-#endif
 	}
 
 	String FileSystem::GetAbsolutePath(const StringView& path)
@@ -793,27 +852,6 @@ namespace nCine
 		}
 		return buffer;
 #endif
-	}
-
-	String FileSystem::GetExtension(const StringView& path)
-	{
-		if (path.empty()) return { };
-
-		const StringView filename = path.suffix(path.findLastAnyOr("/\\"_s, path.begin()).end());
-		const StringView foundDot = filename.findLastOr('.', filename.end());
-		if (foundDot == path.end()) return { };
-
-		bool initialDots = true;
-		for (char c : filename.prefix(foundDot.begin())) {
-			if (c != '.') {
-				initialDots = false;
-				break;
-			}
-		}
-
-		String result = (initialDots ? path.suffix(filename.end()) : path.suffix(foundDot.begin() + 1));
-		lowercaseInPlace(result);
-		return result;
 	}
 
 	String FileSystem::GetExecutablePath()
@@ -1494,8 +1532,7 @@ namespace nCine
 		}
 
 #	if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L
-		// As noted in https://eklitzke.org/efficient-file-copying-on-linux, might make the file reading faster.
-		// Didn't make any difference in the 100 MB benchmark on my ultra-fast SSD, though.
+		// As noted in https://eklitzke.org/efficient-file-copying-on-linux, might make the file reading faster
 		::posix_fadvise(source, 0, 0, POSIX_FADV_SEQUENTIAL);
 #	endif
 
