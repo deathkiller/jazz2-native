@@ -270,6 +270,7 @@ namespace Jazz2
 		Collisions::DynamicTreeBroadPhase _collisions;
 
 		float _elapsedFrames;
+		float _checkpointFrames;
 		Rectf _viewBounds;
 		Rectf _viewBoundsTarget;
 		Vector2f _cameraPos;
