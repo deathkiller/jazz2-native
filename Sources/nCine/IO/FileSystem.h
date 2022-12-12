@@ -134,6 +134,15 @@ namespace nCine
 		static StringView GetFileNameWithoutExtension(const StringView& path);
 		/// Returns the extension as lower-case string without dot or empty string if it is not found
 		static String GetExtension(const StringView& path);
+		/// Converts path to native separators
+#if defined(DEATH_TARGET_WINDOWS)
+		static String ToNativeSeparators(String path);
+#else
+		static const StringView& ToNativeSeparators(const StringView& path)
+		{
+			return path;
+		}
+#endif
 
 		/// Returns an absolute path from a relative one
 		/** Also resolves dot references to current and parent directory and double separators */

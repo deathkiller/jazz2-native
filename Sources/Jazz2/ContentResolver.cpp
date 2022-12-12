@@ -176,7 +176,8 @@ namespace Jazz2
 
 	Metadata* ContentResolver::RequestMetadata(const StringView& path)
 	{
-		auto it = _cachedMetadata.find(String::nullTerminatedView(path));
+		auto pathNormalized = fs::ToNativeSeparators(path);
+		auto it = _cachedMetadata.find(String::nullTerminatedView(pathNormalized));
 		if (it != _cachedMetadata.end()) {
 			// Already loaded - Mark as referenced
 			it->second->Flags |= MetadataFlags::Referenced;
@@ -189,7 +190,7 @@ namespace Jazz2
 		}
 
 		// Try to load it
-		auto s = fs::Open(fs::JoinPath({ GetContentPath(), "Metadata"_s, path + ".res"_s }), FileAccessMode::Read);
+		auto s = fs::Open(fs::JoinPath({ GetContentPath(), "Metadata"_s, pathNormalized + ".res"_s }), FileAccessMode::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit
@@ -225,13 +226,13 @@ namespace Jazz2
 
 					const auto& key = it2->name.GetString();
 					const auto& item = it2->value;
-					const auto& pathItem = item.FindMember("Path");
-					if (key[0] == '\0' || pathItem == item.MemberEnd() || !pathItem->value.IsString()) {
+					const auto& assetPathItem = item.FindMember("Path");
+					if (key[0] == '\0' || assetPathItem == item.MemberEnd() || !assetPathItem->value.IsString()) {
 						continue;
 					}
 
-					const auto& path = pathItem->value.GetString();
-					if (path == nullptr || path[0] == '\0') {
+					const auto& assetPath = assetPathItem->value.GetString();
+					if (assetPath == nullptr || assetPath[0] == '\0') {
 						continue;
 					}
 
@@ -258,7 +259,7 @@ namespace Jazz2
 						paletteOffset = (uint16_t)paletteOffsetItem->value.GetInt();
 					}
 
-					graphics.Base = RequestGraphics(path, paletteOffset);
+					graphics.Base = RequestGraphics(assetPath, paletteOffset);
 					if (graphics.Base == nullptr) {
 						continue;
 					}
@@ -330,15 +331,16 @@ namespace Jazz2
 					SoundResource sound;
 
 					for (uint32_t i = 0; i < pathsItem->value.Size(); i++) {
-						const auto& pathItem = pathsItem->value[i];
-						const auto& path = pathItem.GetString();
-						if (path[0] == '\0') {
+						const auto& assetPathItem = pathsItem->value[i];
+						const auto& assetPath = assetPathItem.GetString();
+						if (assetPath == nullptr || assetPath[0] == '\0') {
 							continue;
 						}
 
-						String fullPath = fs::JoinPath({ GetContentPath(), "Animations"_s, path });
+						auto assetPathNormalized = fs::ToNativeSeparators(assetPath);
+						String fullPath = fs::JoinPath({ GetContentPath(), "Animations"_s, assetPathNormalized });
 						if (!fs::IsReadableFile(fullPath)) {
-							fullPath = fs::JoinPath({ GetCachePath(), "Animations"_s, path });
+							fullPath = fs::JoinPath({ GetCachePath(), "Animations"_s, assetPathNormalized });
 							if (!fs::IsReadableFile(fullPath)) {
 								continue;
 							}
@@ -353,7 +355,7 @@ namespace Jazz2
 			}
 		}
 
-		return _cachedMetadata.emplace(path, std::move(metadata)).first->second.get();
+		return _cachedMetadata.emplace(pathNormalized, std::move(metadata)).first->second.get();
 	}
 
 	GenericGraphicResource* ContentResolver::RequestGraphics(const StringView& path, uint16_t paletteOffset)
@@ -361,18 +363,19 @@ namespace Jazz2
 		// First resources are requested, reset _isLoading flag, because palette should be already applied
 		_isLoading = false;
 
-		auto it = _cachedGraphics.find(Pair(String::nullTerminatedView(path), paletteOffset));
+		auto pathNormalized = fs::ToNativeSeparators(path);
+		auto it = _cachedGraphics.find(Pair(String::nullTerminatedView(pathNormalized), paletteOffset));
 		if (it != _cachedGraphics.end()) {
 			// Already loaded - Mark as referenced
 			it->second->Flags |= GenericGraphicResourceFlags::Referenced;
 			return it->second.get();
 		}
 
-		if (fs::GetExtension(path) == "aura"_s) {
-			return RequestGraphicsAura(path, paletteOffset);
+		if (fs::GetExtension(pathNormalized) == "aura"_s) {
+			return RequestGraphicsAura(pathNormalized, paletteOffset);
 		}
 
-		auto s = fs::Open(fs::JoinPath({ GetContentPath(), "Animations"_s, path + ".res"_s }), FileAccessMode::Read);
+		auto s = fs::Open(fs::JoinPath({ GetContentPath(), "Animations"_s, pathNormalized + ".res"_s }), FileAccessMode::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit, also if not found try to use cache
@@ -393,7 +396,7 @@ namespace Jazz2
 		std::unique_ptr<GenericGraphicResource> graphics = std::make_unique<GenericGraphicResource>();
 		graphics->Flags |= GenericGraphicResourceFlags::Referenced;
 
-		String fullPath = fs::JoinPath({ GetContentPath(), "Animations"_s, path });
+		String fullPath = fs::JoinPath({ GetContentPath(), "Animations"_s, pathNormalized });
 		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
 		if (texLoader->hasLoaded()) {
 			auto texFormat = texLoader->texFormat().internalFormat();
@@ -485,10 +488,10 @@ namespace Jazz2
 			}
 
 #if defined(NCINE_DEBUG)
-			MigrateGraphics(path);
+			MigrateGraphics(pathNormalized);
 #endif
 
-			return _cachedGraphics.emplace(Pair(String(path), paletteOffset), std::move(graphics)).first->second.get();
+			return _cachedGraphics.emplace(Pair(pathNormalized, paletteOffset), std::move(graphics)).first->second.get();
 		}
 
 		return nullptr;
@@ -785,16 +788,17 @@ namespace Jazz2
 	bool ContentResolver::LevelExists(const StringView& episodeName, const StringView& levelName)
 	{
 		// Try "Content" directory first, then "Cache" directory
-		return (fs::IsReadableFile(fs::JoinPath({ GetContentPath(), "Episodes"_s, episodeName, levelName + ".j2l"_s })) ||
+		return (fs::IsReadableFile(fs::JoinPath({ GetContentPath(), "Episodes"_s, episodeName, levelName + ".j2l"_s })) || 
 			fs::IsReadableFile(fs::JoinPath({ GetCachePath(), "Episodes"_s, episodeName, levelName + ".j2l"_s })));
 	}
 
 	bool ContentResolver::LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty)
 	{
 		// Try "Content" directory first, then "Cache" directory
-		String fullPath = fs::JoinPath({ GetContentPath(), "Episodes"_s, path + ".j2l"_s });
+		auto pathNormalized = fs::ToNativeSeparators(path);
+		String fullPath = fs::JoinPath({ GetContentPath(), "Episodes"_s, pathNormalized + ".j2l"_s });
 		if (!fs::IsReadableFile(fullPath)) {
-			fullPath = fs::JoinPath({ GetCachePath(), "Episodes"_s, path + ".j2l"_s });
+			fullPath = fs::JoinPath({ GetCachePath(), "Episodes"_s, pathNormalized + ".j2l"_s });
 		}
 
 		auto s = fs::Open(fullPath, FileAccessMode::Read);
