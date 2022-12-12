@@ -374,7 +374,7 @@ namespace nCine
 					for (int i = 0; i < joyState.numAxes_; i++) {
 						const int axis = joyState.axesMapping_[i];
 						const float axisRawValue = AMotionEvent_getAxisValue(event, axis, 0);
-						const float axisValue = -1.0f + 2.0f * (axisRawValue - joyState.axesMinValues_[axisId]) / joyState.axesRangeValues_[axisId];
+						const float axisValue = -1.0f + 2.0f * (axisRawValue - joyState.axesMinValues_[i]) / joyState.axesRangeValues_[i];
 						joyState.axesValues_[i] = axisValue;
 
 						constexpr float HatThresholdValue = 0.99f;
