@@ -29,8 +29,8 @@ namespace nCine
 	jclass AndroidJniClass_KeyCharacterMap::javaClass_ = nullptr;
 	jmethodID AndroidJniClass_KeyCharacterMap::midDeviceHasKey_ = nullptr;
 	jclass AndroidJniClass_MotionRange::javaClass_ = nullptr;
-	jmethodID AndroidJniClass_MotionRange::midGetMax_ = nullptr;
 	jmethodID AndroidJniClass_MotionRange::midGetMin_ = nullptr;
+	jmethodID AndroidJniClass_MotionRange::midGetRange_ = nullptr;
 	jclass AndroidJniClass_KeyEvent::javaClass_ = nullptr;
 	jmethodID AndroidJniClass_KeyEvent::midConstructor_ = nullptr;
 	jmethodID AndroidJniClass_KeyEvent::midGetUnicodeCharMetaState_ = nullptr;
