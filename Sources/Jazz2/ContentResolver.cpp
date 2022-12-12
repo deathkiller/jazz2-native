@@ -491,7 +491,7 @@ namespace Jazz2
 			MigrateGraphics(pathNormalized);
 #endif
 
-			return _cachedGraphics.emplace(Pair(pathNormalized, paletteOffset), std::move(graphics)).first->second.get();
+			return _cachedGraphics.emplace(Pair(String(pathNormalized), paletteOffset), std::move(graphics)).first->second.get();
 		}
 
 		return nullptr;
