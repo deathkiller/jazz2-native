@@ -58,8 +58,8 @@ namespace nCine
 
 		void flashWindow() const override;
 
-		int primaryMonitorIndex() const override;
-		int windowMonitorIndex() const override;
+		unsigned int primaryMonitorIndex() const override;
+		unsigned int windowMonitorIndex() const override;
 
 		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override;
 		bool setVideoMode(unsigned int modeIndex) override;

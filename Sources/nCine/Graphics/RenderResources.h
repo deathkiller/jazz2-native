@@ -104,10 +104,11 @@ namespace nCine
 		static std::unique_ptr<RenderCommandPool> renderCommandPool_;
 		static std::unique_ptr<RenderBatcher> renderBatcher_;
 
-		static std::unique_ptr<GLShaderProgram> defaultShaderPrograms_[16];
+		static constexpr unsigned int DefaultShaderProgramsCount = static_cast<unsigned int>(Material::ShaderProgramType::CUSTOM);
+		static std::unique_ptr<GLShaderProgram> defaultShaderPrograms_[DefaultShaderProgramsCount];
 		static HashMap<const GLShaderProgram*, GLShaderProgram*> batchedShaders_;
 
-		static constexpr int UniformsBufferSize = 128; // two 4x4 float matrices
+		static constexpr unsigned int UniformsBufferSize = 128; // two 4x4 float matrices
 		static unsigned char cameraUniformsBuffer_[UniformsBufferSize];
 		static HashMap<GLShaderProgram*, CameraUniformData> cameraUniformDataMap_;
 

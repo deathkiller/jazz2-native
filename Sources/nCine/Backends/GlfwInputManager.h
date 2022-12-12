@@ -202,11 +202,11 @@ namespace nCine
 		static JoyConnectionEvent joyConnectionEvent_;
 		static JoystickEventsSimulator joyEventsSimulator_;
 
-		/// The window width before a scaling change on the window monitor
+		/// The window width before a window content scale event
 		static int preScalingWidth_;
-		/// The window width before a scaling change on the window monitor
+		/// The window height before a window content scale event
 		static int preScalingHeight_;
-		/// The last frame a window size callback function was called
+		/// The last frame a window size callback was called
 		static unsigned long int lastFrameWindowSizeChanged_;
 
 		static void monitorCallback(GLFWmonitor* monitor, int event);

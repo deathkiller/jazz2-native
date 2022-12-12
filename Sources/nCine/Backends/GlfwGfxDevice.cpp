@@ -66,12 +66,19 @@ namespace nCine
 				refreshRate = (int)mode.refreshRate;
 			}
 
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+			// On Emscripten, requesting full screen on GLFW is done by changing the window size to the screen size
+			EmscriptenFullscreenChangeEvent fsce;
+			emscripten_get_fullscreen_status(&fsce);
+			glfwSetWindowSize(windowHandle_, fsce.screenWidth, fsce.screenHeight);
+#else
 			glfwSetWindowMonitor(windowHandle_, monitor, 0, 0, width, height, refreshRate);
 
-#if defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_WINDOWS)
 			// Swap internal must be set again after glfwSetWindowMonitor, otherwise V-Sync is turned off
 			const int interval = (displayMode_.hasVSync() ? 1 : 0);
 			glfwSwapInterval(interval);
+#	endif
 #endif
 		} else {
 			if (width == 0 || height == 0) {
@@ -82,11 +89,17 @@ namespace nCine
 				height_ = height;
 			}
 
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+			if (wasFullscreen) {
+				emscripten_exit_fullscreen();
+			}
+#else
 			glfwSetWindowMonitor(windowHandle_, nullptr, 0, 0, width_, height_, GLFW_DONT_CARE);
 			if (wasFullscreen) {
 				glfwSetWindowPos(windowHandle_, monitors_[fsMonitorIndex_].position.X + (currentMode->width - width_) / 2,
 					monitors_[fsMonitorIndex_].position.Y + (currentMode->height - height_) / 2);
 			}
+#endif
 		}
 
 		glfwGetWindowSize(windowHandle_, &width_, &height_);
@@ -129,14 +142,14 @@ namespace nCine
 		int height = height_;
 		glfwGetWindowSize(windowHandle_, &width_, &height_);
 
-		glfwSetWindowSizeCallback(GlfwGfxDevice::windowHandle(), nullptr);
-		glfwSetFramebufferSizeCallback(GlfwGfxDevice::windowHandle(), nullptr);
+		glfwSetWindowSizeCallback(windowHandle_, nullptr);
+		glfwSetFramebufferSizeCallback(windowHandle_, nullptr);
 
 		glfwSetWindowPos(windowHandle_, x, y);
 		glfwSetWindowSize(windowHandle_, width, height);
 
-		glfwSetWindowSizeCallback(GlfwGfxDevice::windowHandle(), GlfwInputManager::windowSizeCallback);
-		glfwSetFramebufferSizeCallback(GlfwGfxDevice::windowHandle(), GlfwInputManager::framebufferSizeCallback);
+		glfwSetWindowSizeCallback(windowHandle_, GlfwInputManager::windowSizeCallback);
+		glfwSetFramebufferSizeCallback(windowHandle_, GlfwInputManager::framebufferSizeCallback);
 	}
 
 	void GlfwGfxDevice::setWindowSize(int width, int height)
@@ -160,15 +173,15 @@ namespace nCine
 #endif
 	}
 
-	int GlfwGfxDevice::primaryMonitorIndex() const
+	unsigned int GlfwGfxDevice::primaryMonitorIndex() const
 	{
 		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 
-		const int index = retrieveMonitorIndex(monitor);
-		return index;
+		const int retrievedIndex = retrieveMonitorIndex(monitor);
+		return (retrievedIndex >= 0 ? static_cast<unsigned int>(retrievedIndex) : 0);
 	}
 
-	int GlfwGfxDevice::windowMonitorIndex() const
+	unsigned int GlfwGfxDevice::windowMonitorIndex() const
 	{
 		if (numMonitors_ == 1 || windowHandle_ == nullptr) {
 			return 0;
@@ -183,12 +196,12 @@ namespace nCine
 			glfwGetWindowPos(windowHandle_, &position.X, &position.Y);
 			Vector2i size(0, 0);
 			glfwGetWindowSize(windowHandle_, &size.X, &size.Y);
-			const Vector2i center = position + size / 2;
+			const Vector2i windowCenter = position + size / 2;
 
 			for (unsigned int i = 0; i < numMonitors_; i++) {
 				const VideoMode& videoMode = currentVideoMode(i);
 				const Recti surface(monitors_[i].position, Vector2i(videoMode.width, videoMode.height));
-				if (surface.Contains(center)) {
+				if (surface.Contains(windowCenter)) {
 					monitor = monitorPointers_[i];
 					break;
 				}
@@ -196,13 +209,13 @@ namespace nCine
 		}
 
 		const int index = retrieveMonitorIndex(monitor);
-		return index;
+		return (index < 0 ? 0 : static_cast<unsigned int>(index));
 	}
 
 	const IGfxDevice::VideoMode& GlfwGfxDevice::currentVideoMode(unsigned int monitorIndex) const
 	{
 		// Fallback if the index is not valid
-		GLFWmonitor* monitor = glfwGetWindowMonitor(windowHandle_);
+		GLFWmonitor* monitor = (windowHandle_ != nullptr ? glfwGetWindowMonitor(windowHandle_) : nullptr);
 		if (monitor == nullptr)
 			monitor = glfwGetPrimaryMonitor();
 
@@ -264,7 +277,7 @@ namespace nCine
 			}
 			lastWindowWidth_ = width_ * 3 / 4;
 			lastWindowHeight_ = height_ * 3 / 4;
-		} else if (width_ == 0 || height_ == 0) {
+		} else if (width_ <= 0 || height_ <= 0) {
 			const GLFWvidmode* vidMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 			width_ = vidMode->width;
 			height_ = vidMode->height;
@@ -296,7 +309,7 @@ namespace nCine
 		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, glContextInfo_.forwardCompatible ? GLFW_TRUE : GLFW_FALSE);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, glContextInfo_.coreProfile ? GLFW_OPENGL_CORE_PROFILE : GLFW_OPENGL_COMPAT_PROFILE);
 #endif
-#if defined(GLFW_SCALE_TO_MONITOR)
+#if defined(GLFW_SCALE_TO_MONITOR) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		// Scaling is handled automatically by GLFW
 		if (enableWindowScaling) {
 			glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);

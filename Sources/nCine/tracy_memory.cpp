@@ -1,5 +1,5 @@
 #ifdef WITH_TRACY
-#include "Tracy.hpp"
+#include "tracy/Tracy.hpp"
 
 #ifndef OVERRIDE_NEW
 void *operator new(std::size_t count)

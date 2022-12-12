@@ -121,19 +121,6 @@ namespace nCine
 		return numMonitors_;
 	}
 
-	/*! \note This is usually the monitor where elements like the task bar or global menu bar are located. */
-	int IGfxDevice::primaryMonitorIndex() const
-	{
-		const int index = (numMonitors_ > 0) ? 0 : -1;
-		return index;
-	}
-
-	int IGfxDevice::windowMonitorIndex() const
-	{
-		const int index = (numMonitors_ > 0 ? 0 : -1);
-		return index;
-	}
-
 	const IGfxDevice::Monitor& IGfxDevice::monitor(unsigned int index) const
 	{
 		ASSERT(index < numMonitors_);

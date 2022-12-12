@@ -150,6 +150,8 @@ if(MSVC)
 		set(MSVC_WINRT_LIBDIR "${EXTERNAL_MSVC_WINRT_DIR}/${MSVC_ARCH_SUFFIX}/")
 		set(MSVC_WINRT_BINDIR "${EXTERNAL_MSVC_WINRT_DIR}/${MSVC_ARCH_SUFFIX}/Bin/")
 	endif()
+	
+	find_package(OpenGL REQUIRED)
 elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	if(APPLE)
 		set(CMAKE_FRAMEWORK_PATH "${PARENT_SOURCE_DIR}/nCine-external")
@@ -316,17 +318,6 @@ elseif(MSVC)
 				INTERFACE_INCLUDE_DIRECTORIES ${EXTERNAL_INCLUDES_DIR})
 			set(GLEW_FOUND 1)
 		endif()
-
-		add_library(OpenGL::GL SHARED IMPORTED)
-		if(EXISTS ${MSVC_LIBDIR}/opengl32.lib)
-			set_target_properties(OpenGL::GL PROPERTIES
-				IMPORTED_IMPLIB ${MSVC_LIBDIR}/opengl32.lib)
-		else()
-			set_target_properties(OpenGL::GL PROPERTIES
-				IMPORTED_IMPLIB opengl32.lib
-				IMPORTED_LOCATION opengl32.dll)
-		endif()
-		set(OPENGL_FOUND 1)
 	endif()
 
 	if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)

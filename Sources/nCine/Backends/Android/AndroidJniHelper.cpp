@@ -391,20 +391,20 @@ namespace nCine
 		: AndroidJniClass(javaObject)
 	{
 		javaClass_ = findClass("android/view/InputDevice$MotionRange");
-		midGetMax_ = getMethodID(javaClass_, "getMax", "()F");
 		midGetMin_ = getMethodID(javaClass_, "getMin", "()F");
-	}
-	
-	float AndroidJniClass_MotionRange::getMax() const
-	{
-		const jfloat maxValue = AndroidJniHelper::jniEnv->CallFloatMethod(javaObject_, midGetMax_);
-		return float(maxValue);
+		midGetRange_ = getMethodID(javaClass_, "getRange", "()F");
 	}
 
 	float AndroidJniClass_MotionRange::getMin() const
 	{
 		const jfloat minValue = AndroidJniHelper::jniEnv->CallFloatMethod(javaObject_, midGetMin_);
 		return float(minValue);
+	}
+		
+	float AndroidJniClass_MotionRange::getRange() const
+	{
+		const jfloat rangeValue = AndroidJniHelper::jniEnv->CallFloatMethod(javaObject_, midGetRange_);
+		return float(rangeValue);
 	}
 
 	// ------------------- AndroidJniClass_KeyEvent -------------------
@@ -520,7 +520,7 @@ namespace nCine
 			jobject modeObject = AndroidJniHelper::jniEnv->GetObjectArrayElement(arrModes, i);
 			AndroidJniClass_DisplayMode mode(modeObject);
 			destination[i] = std::move(mode);
-			AndroidJniHelper::jniEnv->DeleteLocalRef(modeObject);
+			// The AndroidJniClass constructor deleted the local reference to `modeObject`
 		}
 		AndroidJniHelper::jniEnv->DeleteLocalRef(arrModes);
 
@@ -632,10 +632,10 @@ namespace nCine
 		const jint length = AndroidJniHelper::jniEnv->GetArrayLength(arrDisplays);
 
 		for (int i = 0; i < length && i < maxSize; i++) {
-			jobject objDisplay = AndroidJniHelper::jniEnv->GetObjectArrayElement(arrDisplays, i);
-			AndroidJniClass_Display display(objDisplay);
+			jobject displayObject = AndroidJniHelper::jniEnv->GetObjectArrayElement(arrDisplays, i);
+			AndroidJniClass_Display display(displayObject);
 			destination[i] = std::move(display);
-			AndroidJniHelper::jniEnv->DeleteLocalRef(objDisplay);
+			// The AndroidJniClass constructor deleted the local reference to `displayObject`
 		}
 		AndroidJniHelper::jniEnv->DeleteLocalRef(arrDisplays);
 
