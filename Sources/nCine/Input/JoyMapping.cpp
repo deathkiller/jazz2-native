@@ -633,8 +633,15 @@ namespace nCine
 					MappingDescription::Axis axis;
 					axis.name = static_cast<AxisName>(axisIndex);
 					const int axisMapping = parseAxisMapping(subMid + 1, subEnd, axis);
-					if (axisMapping != -1 && axisMapping < MappingDescription::MaxNumAxes)
+					if (axisMapping != -1 && axisMapping < MappingDescription::MaxNumAxes) {
 						map.desc.axes[axisMapping] = axis;
+					} else {
+						// The same parsing method for buttons will be used for button axes
+						const int buttonAxisMapping = parseButtonMapping(subMid + 1, subEnd);
+						if (buttonAxisMapping != -1 && buttonAxisMapping < MappingDescription::MaxNumAxes) {
+							map.desc.buttonAxes[buttonAxisMapping] = static_cast<AxisName>(axisIndex);
+						}
+					}
 				} else {
 					const int buttonIndex = parseButtonName(subStart, subMid);
 					if (buttonIndex != -1) {

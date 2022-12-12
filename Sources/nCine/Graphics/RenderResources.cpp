@@ -1,4 +1,3 @@
-#include <cstddef> // for `offsetof()`
 #include "RenderResources.h"
 #include "RenderBuffersManager.h"
 #include "RenderVaoPool.h"
@@ -8,10 +7,12 @@
 #include "../Application.h"
 #include "../../Common.h"
 
+#include <cstddef>	// for `offsetof()`
+
 #ifdef WITH_EMBEDDED_SHADERS
 #	include "shader_strings.h"
 #else
-#	include "../IO/FileSystem.h" // for GetDataPath()
+#	include "../IO/FileSystem.h"	// for GetDataPath()
 #endif
 
 namespace nCine
@@ -25,7 +26,7 @@ namespace nCine
 	std::unique_ptr<RenderCommandPool> RenderResources::renderCommandPool_;
 	std::unique_ptr<RenderBatcher> RenderResources::renderBatcher_;
 
-	std::unique_ptr<GLShaderProgram> RenderResources::defaultShaderPrograms_[16];
+	std::unique_ptr<GLShaderProgram> RenderResources::defaultShaderPrograms_[DefaultShaderProgramsCount];
 	HashMap<const GLShaderProgram*, GLShaderProgram*> RenderResources::batchedShaders_(32);
 
 	unsigned char RenderResources::cameraUniformsBuffer_[UniformsBufferSize];
@@ -41,20 +42,16 @@ namespace nCine
 
 	GLShaderProgram* RenderResources::shaderProgram(Material::ShaderProgramType shaderProgramType)
 	{
-		if (shaderProgramType != Material::ShaderProgramType::CUSTOM)
-			return defaultShaderPrograms_[static_cast<int>(shaderProgramType)].get();
-		else
-			return nullptr;
+		return (shaderProgramType != Material::ShaderProgramType::CUSTOM ? defaultShaderPrograms_[static_cast<int>(shaderProgramType)].get() : nullptr);
 	}
 
 	GLShaderProgram* RenderResources::batchedShader(const GLShaderProgram* shader)
 	{
 		GLShaderProgram* batchedShader = nullptr;
-
 		auto it = batchedShaders_.find(shader);
-		if (it != batchedShaders_.end())
+		if (it != batchedShaders_.end()) {
 			batchedShader = it->second;
-
+		}
 		return batchedShader;
 	}
 
@@ -92,10 +89,9 @@ namespace nCine
 	bool RenderResources::removeCameraUniformData(GLShaderProgram* shaderProgram)
 	{
 		bool hasRemoved = false;
-
-		if (!cameraUniformDataMap_.empty())
+		if (!cameraUniformDataMap_.empty()) {
 			hasRemoved = cameraUniformDataMap_.erase(shaderProgram);
-
+		}
 		return hasRemoved;
 	}
 
@@ -108,29 +104,33 @@ namespace nCine
 
 			// The stride check avoid overwriting VBO parameters for custom mesh shaders attributes
 			if (positionAttribute != nullptr && texCoordsAttribute != nullptr && meshIndexAttribute != nullptr) {
-				if (positionAttribute->stride() == 0)
+				if (positionAttribute->stride() == 0) {
 					positionAttribute->setVboParameters(sizeof(VertexFormatPos2Tex2Index), reinterpret_cast<void*>(offsetof(VertexFormatPos2Tex2Index, position)));
-
-				if (texCoordsAttribute->stride() == 0)
+				}
+				if (texCoordsAttribute->stride() == 0) {
 					texCoordsAttribute->setVboParameters(sizeof(VertexFormatPos2Tex2Index), reinterpret_cast<void*>(offsetof(VertexFormatPos2Tex2Index, texcoords)));
-
-				if (meshIndexAttribute->stride() == 0)
+				}
+				if (meshIndexAttribute->stride() == 0) {
 					meshIndexAttribute->setVboParameters(sizeof(VertexFormatPos2Tex2Index), reinterpret_cast<void*>(offsetof(VertexFormatPos2Tex2Index, drawindex)));
+				}
 			} else if (positionAttribute != nullptr && texCoordsAttribute == nullptr && meshIndexAttribute != nullptr) {
-				if (positionAttribute->stride() == 0)
+				if (positionAttribute->stride() == 0) {
 					positionAttribute->setVboParameters(sizeof(VertexFormatPos2Index), reinterpret_cast<void*>(offsetof(VertexFormatPos2Index, position)));
-
-				if (meshIndexAttribute->stride() == 0)
+				}
+				if (meshIndexAttribute->stride() == 0) {
 					meshIndexAttribute->setVboParameters(sizeof(VertexFormatPos2Index), reinterpret_cast<void*>(offsetof(VertexFormatPos2Index, drawindex)));
+				}
 			} else if (positionAttribute != nullptr && texCoordsAttribute != nullptr && meshIndexAttribute == nullptr) {
-				if (positionAttribute->stride() == 0)
+				if (positionAttribute->stride() == 0) {
 					positionAttribute->setVboParameters(sizeof(VertexFormatPos2Tex2), reinterpret_cast<void*>(offsetof(VertexFormatPos2Tex2, position)));
-
-				if (texCoordsAttribute->stride() == 0)
+				}
+				if (texCoordsAttribute->stride() == 0) {
 					texCoordsAttribute->setVboParameters(sizeof(VertexFormatPos2Tex2), reinterpret_cast<void*>(offsetof(VertexFormatPos2Tex2, texcoords)));
+				}
 			} else if (positionAttribute != nullptr && texCoordsAttribute == nullptr && meshIndexAttribute == nullptr) {
-				if (positionAttribute->stride() == 0)
+				if (positionAttribute->stride() == 0) {
 					positionAttribute->setVboParameters(sizeof(VertexFormatPos2), reinterpret_cast<void*>(offsetof(VertexFormatPos2, position)));
+				}
 			}
 		}
 	}
@@ -139,8 +139,8 @@ namespace nCine
 	// PRIVATE FUNCTIONS
 	///////////////////////////////////////////////////////////
 
-	namespace {
-
+	namespace
+	{
 		struct ShaderLoad
 		{
 			std::unique_ptr<GLShaderProgram>& shaderProgram;
@@ -149,15 +149,11 @@ namespace nCine
 			GLShaderProgram::Introspection introspection;
 			const char* objectLabel;
 		};
-
 	}
 
 	void RenderResources::setCurrentCamera(Camera* camera)
 	{
-		if (camera != nullptr)
-			currentCamera_ = camera;
-		else
-			currentCamera_ = defaultCamera_.get();
+		currentCamera_ = (camera != nullptr ? camera : defaultCamera_.get());
 	}
 
 	void RenderResources::updateCameraUniforms()
@@ -172,10 +168,12 @@ namespace nCine
 				i->second.shaderUniforms.setDirty(true);
 				cameraUniformData.camera = currentCamera_;
 			} else {
-				if (cameraUniformData.updateFrameProjectionMatrix < currentCamera_->updateFrameProjectionMatrix())
+				if (cameraUniformData.updateFrameProjectionMatrix < currentCamera_->updateFrameProjectionMatrix()) {
 					i->second.shaderUniforms.uniform(Material::ProjectionMatrixUniformName)->setDirty(true);
-				if (cameraUniformData.updateFrameViewMatrix < currentCamera_->updateFrameViewMatrix())
+				}
+				if (cameraUniformData.updateFrameViewMatrix < currentCamera_->updateFrameViewMatrix()) {
 					i->second.shaderUniforms.uniform(Material::ViewMatrixUniformName)->setDirty(true);
+				}
 			}
 
 			cameraUniformData.updateFrameProjectionMatrix = currentCamera_->updateFrameProjectionMatrix();
@@ -307,5 +305,4 @@ namespace nCine
 		//batchedShaders_.emplace(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::TEXTNODE_ALPHA)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_TEXTNODES_ALPHA)].get());
 		//batchedShaders_.emplace(defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::TEXTNODE_RED)].get(), defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_TEXTNODES_RED)].get());
 	}
-
 }

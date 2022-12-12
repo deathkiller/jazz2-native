@@ -167,9 +167,9 @@ namespace nCine
 		/// Returns the number of connected monitors
 		unsigned int numMonitors() const;
 		/// Returns the array index of the primary monitor
-		virtual int primaryMonitorIndex() const;
+		inline virtual unsigned int primaryMonitorIndex() const { return 0; }
 		/// Returns the array index of the monitor associated with the window
-		virtual int windowMonitorIndex() const;
+		inline virtual unsigned int windowMonitorIndex() const { return 0; }
 		/// Returns the specified monitor
 		const Monitor &monitor(unsigned int index) const;
 		/// Returns the monitor that hosts the window

@@ -62,8 +62,15 @@ namespace nCine
 	{
 		isFullscreen_ = fullscreen;
 
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		SDL_SetWindowFullscreen(windowHandle_, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+		if (width > 0 && height > 0) {
+			width_ = width;
+			height_ = height;
+		}
+#else
 		if (fullscreen) {
-			if (width == 0 || height == 0) {
+			if (width <= 0 || height <= 0) {
 				SDL_SetWindowFullscreen(windowHandle_, SDL_WINDOW_FULLSCREEN_DESKTOP);
 			} else {
 				width_ = width;
@@ -73,12 +80,13 @@ namespace nCine
 			}
 		} else {
 			SDL_SetWindowFullscreen(windowHandle_, 0);
-			if (width != 0 && height != 0) {
+			if (width > 0 && height > 0) {
 				width_ = width;
 				height_ = height;
 				SDL_SetWindowSize(windowHandle_, width, height);
 			}
 		}
+#endif
 
 		SDL_GetWindowSize(windowHandle_, &width_, &height_);
 		SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
@@ -133,9 +141,10 @@ namespace nCine
 #endif
 	}
 
-	int SdlGfxDevice::windowMonitorIndex() const
+	unsigned int SdlGfxDevice::windowMonitorIndex() const
 	{
-		return (windowHandle_ ? SDL_GetWindowDisplayIndex(windowHandle_) : 0);
+		const int retrievedIndex = (windowHandle_ != nullptr ? SDL_GetWindowDisplayIndex(windowHandle_) : 0);
+		return (retrievedIndex >= 0 ? static_cast<unsigned int>(retrievedIndex) : 0);
 	}
 
 	const IGfxDevice::VideoMode& SdlGfxDevice::currentVideoMode(unsigned int monitorIndex) const
@@ -172,7 +181,7 @@ namespace nCine
 	void SdlGfxDevice::initGraphics(bool enableWindowScaling)
 	{
 #if defined(SDL_HINT_WINDOWS_DPI_SCALING)
-		// Scaling is handled automatically by SDL (since v2.26.0)
+		// Scaling is handled automatically by SDL (since v2.24.0)
 		if (enableWindowScaling) {
 			SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
 		}
@@ -216,7 +225,7 @@ namespace nCine
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		flags |= SDL_WINDOW_ALLOW_HIGHDPI;
 #endif
-		if (width_ == 0 || height_ == 0) {
+		if (width_ <= 0 || height_ <= 0) {
 			flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 			isFullscreen_ = true;
 		} else if (isFullscreen_) {
@@ -232,7 +241,7 @@ namespace nCine
 		SDL_SetWindowResizable(windowHandle_, isResizable ? SDL_TRUE : SDL_FALSE);
 
 		// resolution should be set to current screen size
-		if (width_ == 0 || height_ == 0) {
+		if (width_ <= 0 || height_ <= 0) {
 			SDL_GetWindowSize(windowHandle_, &width_, &height_);
 		}
 
@@ -242,7 +251,7 @@ namespace nCine
 		const int interval = displayMode_.hasVSync() ? 1 : 0;
 		SDL_GL_SetSwapInterval(interval);
 
-#ifdef WITH_GLEW
+#if defined(WITH_GLEW)
 		const GLenum err = glewInit();
 		FATAL_ASSERT_MSG_X(err == GLEW_OK, "GLEW error: %s", glewGetErrorString(err));
 

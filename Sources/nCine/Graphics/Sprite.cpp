@@ -90,16 +90,19 @@ namespace nCine
 			}
 		}
 
-		if (texture_ != nullptr && newTexture != nullptr && texture_ != newTexture) {
-			Recti texRect = texRect_;
-			texRect.X = (int)((texRect.X / float(texture_->width())) * float(newTexture->width()));
-			texRect.Y = (int)((texRect.Y / float(texture_->height())) * float(newTexture->width()));
-			texRect.W = (int)((texRect.W / float(texture_->width())) * float(newTexture->width()));
-			texRect.H = (int)((texRect.H / float(texture_->height())) * float(newTexture->width()));
-			setTexRect(texRect); // it also sets width_ and height_
-		} else if (texture_ == nullptr && newTexture != nullptr) {
-			// Assigning a texture when there wasn't any
-			setTexRect(Recti(0, 0, newTexture->width(), newTexture->height()));
+		if (newTexture != nullptr) {
+			if (texture_ != nullptr && texture_ != newTexture) {
+				// Trying to keep the old texture rectangle aspect ratio
+				Recti texRect = texRect_;
+				texRect.X = (int)((texRect.X / float(texture_->width())) * float(newTexture->width()));
+				texRect.Y = (int)((texRect.Y / float(texture_->height())) * float(newTexture->width()));
+				texRect.W = (int)((texRect.W / float(texture_->width())) * float(newTexture->width()));
+				texRect.H = (int)((texRect.H / float(texture_->height())) * float(newTexture->width()));
+				setTexRect(texRect); // it also sets width_ and height_
+			} else {
+				// Assigning a new texture where there wasn't any or reassigning the same texture (that might have changed size)
+				setTexRect(Recti(0, 0, newTexture->width(), newTexture->height()));
+			}
 		}
 	}
 }
