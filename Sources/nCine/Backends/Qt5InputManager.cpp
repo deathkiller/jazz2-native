@@ -120,20 +120,7 @@ namespace nCine
 		return state;
 	}
 
-	short int Qt5JoystickState::axisValue(int axisId) const
-	{
-		switch (axisId) {
-			case 0: return static_cast<short int>(gamepad_->axisLeftX() * IInputManager::MaxAxisValue);
-			case 1: return static_cast<short int>(gamepad_->axisLeftY() * IInputManager::MaxAxisValue);
-			case 2: return static_cast<short int>(gamepad_->axisRightX() * IInputManager::MaxAxisValue);
-			case 3: return static_cast<short int>(gamepad_->axisRightY() * IInputManager::MaxAxisValue);
-			case 4: return static_cast<short int>((2.0 * gamepad_->buttonL2() - 1.0) * IInputManager::MaxAxisValue);
-			case 5: return static_cast<short int>((2.0 * gamepad_->buttonR2() - 1.0) * IInputManager::MaxAxisValue);
-			default: return 0U;
-		}
-	}
-
-	float Qt5JoystickState::axisNormValue(int axisId) const
+	float Qt5JoystickState::axisValue(int axisId) const
 	{
 		switch (axisId) {
 			case 0: return static_cast<float>(gamepad_->axisLeftX());
@@ -230,14 +217,13 @@ namespace nCine
 			}
 
 			for (int axisId = 0; axisId < Qt5JoystickState::NumAxes; axisId++) {
-				const float newAxisValue = state.axisNormValue(axisId);
+				const float newAxisValue = state.axisValue(axisId);
 				if (fabsf(state.axesValuesState_[axisId] - newAxisValue) > Qt5JoystickState::AxisEventTolerance) {
 					state.axesValuesState_[axisId] = newAxisValue;
 					if (inputEventHandler_) {
 						joyAxisEvent_.joyId = joyId;
 						joyAxisEvent_.axisId = axisId;
-						joyAxisEvent_.value = static_cast<short int>(newAxisValue * MaxAxisValue);
-						joyAxisEvent_.normValue = newAxisValue;
+						joyAxisEvent_.value = newAxisValue;
 						joyMapping_.onJoyAxisMoved(joyAxisEvent_);
 						inputEventHandler_->OnJoyAxisMoved(joyAxisEvent_);
 					}

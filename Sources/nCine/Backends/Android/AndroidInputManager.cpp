@@ -152,28 +152,22 @@ namespace nCine
 	bool AndroidJoystickState::isButtonPressed(int buttonId) const
 	{
 		bool isPressed = false;
-		if (buttonId >= 0 && buttonId < numButtons_)
+		if (buttonId >= 0 && buttonId < numButtons_) {
 			isPressed = buttons_[buttonId];
+		}
 		return isPressed;
 	}
 
 	unsigned char AndroidJoystickState::hatState(int hatId) const
 	{
 		unsigned char hatState = HatState::CENTERED;
-		if (hatId >= 0 && hatId < numHats_)
+		if (hatId >= 0 && hatId < numHats_) {
 			hatState = hatState_;
+		}
 		return hatState;
 	}
 
-	short int AndroidJoystickState::axisValue(int axisId) const
-	{
-		// If the joystick is not present the returned value is zero
-		const short int axisValue = static_cast<short int>(axisNormValue(axisId) * IInputManager::MaxAxisValue);
-
-		return axisValue;
-	}
-
-	float AndroidJoystickState::axisNormValue(int axisId) const
+	float AndroidJoystickState::axisValue(int axisId) const
 	{
 		float axisValue = 0.0f;
 		if (axisId >= 0 && axisId < numAxes_) {
@@ -196,18 +190,19 @@ namespace nCine
 	/*! This method is called by `enableAccelerometer()` and when the application loses focus */
 	void AndroidInputManager::disableAccelerometerSensor()
 	{
-		if (accelerometerEnabled_ && accelerometerSensor_ != nullptr)
+		if (accelerometerEnabled_ && accelerometerSensor_ != nullptr) {
 			ASensorEventQueue_disableSensor(sensorEventQueue_, accelerometerSensor_);
+		}
 	}
 
 	/*! Activates the sensor and raises the flag needed for application focus handling */
 	void AndroidInputManager::enableAccelerometer(bool enabled)
 	{
-		if (enabled)
+		if (enabled) {
 			enableAccelerometerSensor();
-		else
+		} else {
 			disableAccelerometerSensor();
-
+		}
 		accelerometerEnabled_ = enabled;
 	}
 
@@ -390,8 +385,7 @@ namespace nCine
 					const float axisValue = AMotionEvent_getAxisValue(event, axis, 0);
 					joystickStates_[joyId].axesValues_[i] = axisValue;
 
-					const float AxisThresholdValue = 0.01f;
-					const float HatThresholdValue = 0.99f;
+					constexpr float HatThresholdValue = 0.99f;
 
 					if (axis == AMOTION_EVENT_AXIS_HAT_X || axis == AMOTION_EVENT_AXIS_HAT_Y) {
 						joyHatEvent_.joyId = joyId;
@@ -410,10 +404,9 @@ namespace nCine
 								hatState |= HatState::UP;
 							}
 						}
-					} else if (axisValue > AxisThresholdValue || axisValue < -AxisThresholdValue) {
+					} else {
 						joyAxisEvent_.axisId = i;
-						joyAxisEvent_.value = axisValue * MaxAxisValue;
-						joyAxisEvent_.normValue = axisValue;
+						joyAxisEvent_.value = axisValue;
 						joyMapping_.onJoyAxisMoved(joyAxisEvent_);
 						inputEventHandler_->OnJoyAxisMoved(joyAxisEvent_);
 					}

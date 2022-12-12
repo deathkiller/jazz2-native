@@ -228,7 +228,7 @@ namespace nCine
 			mappedAxisEvent_.joyId = event.joyId;
 			mappedAxisEvent_.axisName = axis.name;
 			if (mappedAxisEvent_.axisName != AxisName::UNKNOWN) {
-				const float value = (event.normValue + 1.0f) * 0.5f;
+				const float value = (event.value + 1.0f) * 0.5f;
 				mappedAxisEvent_.value = axis.min + value * (axis.max - axis.min);
 				mappedJoyStates_[event.joyId].axesValues_[static_cast<int>(axis.name)] = mappedAxisEvent_.value;
 				inputEventHandler_->OnJoyMappedAxisMoved(mappedAxisEvent_);
