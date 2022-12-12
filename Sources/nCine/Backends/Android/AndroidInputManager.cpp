@@ -841,11 +841,6 @@ namespace nCine
 					const float rangeValue = motionRange.getRange();
 					
 					joyState.axesMapping_[numAxes] = axis;
-					joyState.axesMinValues_[numAxes] = minValue;
-					joyState.axesMaxValues_[numAxes] = maxValue;
-#if defined(NCINE_LOG)
-					sprintf(&deviceInfoString[strlen(deviceInfoString)], " %d:%d (%.2f to %.2f)", numAxes, axis, minValue, minValue + rangeValue);
-#endif
 					// Avoid a division by zero by only assigning valid range values
 					if (rangeValue != 0.0f) {
 						joyState.axesMinValues_[numAxes] = minValue;
@@ -854,6 +849,9 @@ namespace nCine
 						joyState.axesMinValues_[numAxes] = -1.0f;
 						joyState.axesRangeValues_[numAxes] = 2.0f;
 					}
+#if defined(NCINE_LOG)
+					sprintf(&deviceInfoString[strlen(deviceInfoString)], " %d:%d (%.2f to %.2f)", numAxes, axis, minValue, minValue + rangeValue);
+#endif
 					numAxes++;
 				} else {
 					if ((axis == AMOTION_EVENT_AXIS_HAT_X || axis == AMOTION_EVENT_AXIS_HAT_Y) && joyState.hasHatAxes_) {
