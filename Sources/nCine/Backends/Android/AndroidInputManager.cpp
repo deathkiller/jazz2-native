@@ -151,30 +151,17 @@ namespace nCine
 
 	bool AndroidJoystickState::isButtonPressed(int buttonId) const
 	{
-		bool isPressed = false;
-		if (buttonId >= 0 && buttonId < numButtons_) {
-			isPressed = buttons_[buttonId];
-		}
-		return isPressed;
+		return (buttonId >= 0 && buttonId < numButtons_ && buttons_[buttonId]);
 	}
 
 	unsigned char AndroidJoystickState::hatState(int hatId) const
 	{
-		unsigned char hatState = HatState::CENTERED;
-		if (hatId >= 0 && hatId < numHats_) {
-			hatState = hatState_;
-		}
-		return hatState;
+		return (hatId >= 0 && hatId < numHats_ ? hatState_ : HatState::CENTERED);
 	}
 
 	float AndroidJoystickState::axisValue(int axisId) const
 	{
-		float axisValue = 0.0f;
-		if (axisId >= 0 && axisId < numAxes_) {
-			// Remapping the axes range from min..max to -1.0f..1.0f
-			axisValue = -1.0f + 2.0f * (axesValues_[axisId] - axesMinValues_[axisId]) / axesRangeValues_[axisId];
-		}
-		return axisValue;
+		return (axisId >= 0 && axisId < numAxes_ ? axesValues_[axisId] : 0.0f);
 	}
 
 	/*! This method is called by `enableAccelerometer()` and when the application gains focus */
@@ -319,105 +306,111 @@ namespace nCine
 
 		// If the index is valid and device is not blacklisted then the structure can be updated
 		if (joyId > -1 && joystickStates_[joyId].guid_.isValid()) {
-			if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY) {
-				const int keyCode = AKeyEvent_getKeyCode(event);
-				int buttonIndex = -1;
-				if (keyCode >= AKEYCODE_BUTTON_A && keyCode < AKEYCODE_ESCAPE) {
-					buttonIndex = joystickStates_[joyId].buttonsMapping_[keyCode - AKEYCODE_BUTTON_A];
-				} else if (keyCode == AKEYCODE_BACK) {
-					// Back button is always the last one
-					const unsigned int lastIndex = AndroidJoystickState::MaxButtons - 1;
-					buttonIndex = joystickStates_[joyId].buttonsMapping_[lastIndex];
-				}
-
-				if (buttonIndex != -1) {
-					joyButtonEvent_.joyId = joyId;
-					joyButtonEvent_.buttonId = buttonIndex;
-					switch (AKeyEvent_getAction(event)) {
-						case AKEY_EVENT_ACTION_DOWN:
-							joystickStates_[joyId].buttons_[buttonIndex] = true;
-							joyMapping_.onJoyButtonPressed(joyButtonEvent_);
-							inputEventHandler_->OnJoyButtonPressed(joyButtonEvent_);
-							break;
-						case AKEY_EVENT_ACTION_UP:
-							joystickStates_[joyId].buttons_[buttonIndex] = false;
-							joyMapping_.onJoyButtonReleased(joyButtonEvent_);
-							inputEventHandler_->OnJoyButtonReleased(joyButtonEvent_);
-							break;
-						case AKEY_EVENT_ACTION_MULTIPLE:
-							break;
-					}
-				}
-
-				if (keyCode >= AKEYCODE_DPAD_UP && keyCode < AKEYCODE_DPAD_CENTER) {
-					joyHatEvent_.joyId = joyId;
-					joyHatEvent_.hatId = 0; // No more than one hat is supported
-
-					unsigned char hatState = joystickStates_[joyId].hatState_;
-					unsigned char hatValue = 0;
-
-					switch (keyCode) {
-						case AKEYCODE_DPAD_UP: hatValue = HatState::UP; break;
-						case AKEYCODE_DPAD_DOWN: hatValue = HatState::DOWN; break;
-						case AKEYCODE_DPAD_LEFT: hatValue = HatState::LEFT; break;
-						case AKEYCODE_DPAD_RIGHT: hatValue = HatState::RIGHT; break;
-					}
-					if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_DOWN) {
-						hatState |= hatValue;
-					} else {
-						hatState &= ~hatValue;
+			switch (AInputEvent_getType(event)) {
+				case AINPUT_EVENT_TYPE_KEY: {
+					const int keyCode = AKeyEvent_getKeyCode(event);
+					int buttonIndex = -1;
+					if (keyCode >= AKEYCODE_BUTTON_A && keyCode < AKEYCODE_ESCAPE) {
+						buttonIndex = joystickStates_[joyId].buttonsMapping_[keyCode - AKEYCODE_BUTTON_A];
+					} else if (keyCode == AKEYCODE_BACK) {
+						// Back button is always the last one
+						const unsigned int lastIndex = AndroidJoystickState::MaxButtons - 1;
+						buttonIndex = joystickStates_[joyId].buttonsMapping_[lastIndex];
 					}
 
-					if (joystickStates_[joyId].hatState_ != hatState) {
-						joystickStates_[joyId].hatState_ = hatState;
-						joyHatEvent_.hatState = joystickStates_[joyId].hatState_;
-
-						joyMapping_.onJoyHatMoved(joyHatEvent_);
-						inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
+					if (buttonIndex != -1) {
+						joyButtonEvent_.joyId = joyId;
+						joyButtonEvent_.buttonId = buttonIndex;
+						switch (AKeyEvent_getAction(event)) {
+							case AKEY_EVENT_ACTION_DOWN:
+								joystickStates_[joyId].buttons_[buttonIndex] = true;
+								joyMapping_.onJoyButtonPressed(joyButtonEvent_);
+								inputEventHandler_->OnJoyButtonPressed(joyButtonEvent_);
+								break;
+							case AKEY_EVENT_ACTION_UP:
+								joystickStates_[joyId].buttons_[buttonIndex] = false;
+								joyMapping_.onJoyButtonReleased(joyButtonEvent_);
+								inputEventHandler_->OnJoyButtonReleased(joyButtonEvent_);
+								break;
+							case AKEY_EVENT_ACTION_MULTIPLE:
+								break;
+						}
 					}
-				}
-			} else if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
-				joyAxisEvent_.joyId = joyId;
 
-				unsigned char hatState = 0;
-				for (int i = 0; i < joystickStates_[joyId].numAxes_; i++) {
-					const int axis = joystickStates_[joyId].axesMapping_[i];
-					const float axisValue = AMotionEvent_getAxisValue(event, axis, 0);
-					joystickStates_[joyId].axesValues_[i] = axisValue;
-
-					constexpr float HatThresholdValue = 0.99f;
-
-					if (axis == AMOTION_EVENT_AXIS_HAT_X || axis == AMOTION_EVENT_AXIS_HAT_Y) {
+					if (keyCode >= AKEYCODE_DPAD_UP && keyCode < AKEYCODE_DPAD_CENTER) {
 						joyHatEvent_.joyId = joyId;
 						joyHatEvent_.hatId = 0; // No more than one hat is supported
 
-						if (axis == AMOTION_EVENT_AXIS_HAT_X) {
-							if (axisValue > HatThresholdValue) {
-								hatState |= HatState::RIGHT;
-							} else if (axisValue < -HatThresholdValue) {
-								hatState |= HatState::LEFT;
+						unsigned char hatState = joystickStates_[joyId].hatState_;
+						unsigned char hatValue = 0;
+
+						switch (keyCode) {
+							case AKEYCODE_DPAD_UP: hatValue = HatState::UP; break;
+							case AKEYCODE_DPAD_DOWN: hatValue = HatState::DOWN; break;
+							case AKEYCODE_DPAD_LEFT: hatValue = HatState::LEFT; break;
+							case AKEYCODE_DPAD_RIGHT: hatValue = HatState::RIGHT; break;
+						}
+						if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_DOWN) {
+							hatState |= hatValue;
+						} else {
+							hatState &= ~hatValue;
+						}
+
+						if (joystickStates_[joyId].hatState_ != hatState) {
+							joystickStates_[joyId].hatState_ = hatState;
+							joyHatEvent_.hatState = joystickStates_[joyId].hatState_;
+
+							joyMapping_.onJoyHatMoved(joyHatEvent_);
+							inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
+						}
+					}
+					break;
+				}
+				case AINPUT_EVENT_TYPE_MOTION: {
+					joyAxisEvent_.joyId = joyId;
+
+					auto& joyState = joystickStates_[joyId];
+					unsigned char hatState = 0;
+					for (int i = 0; i < joyState.numAxes_; i++) {
+						const int axis = joyState.axesMapping_[i];
+						const float axisRawValue = AMotionEvent_getAxisValue(event, axis, 0);
+						const float axisValue = -1.0f + 2.0f * (axisRawValue - joyState.axesMinValues_[axisId]) / joyState.axesRangeValues_[axisId];
+						joyState.axesValues_[i] = axisValue;
+
+						constexpr float HatThresholdValue = 0.99f;
+
+						if (axis == AMOTION_EVENT_AXIS_HAT_X || axis == AMOTION_EVENT_AXIS_HAT_Y) {
+							joyHatEvent_.joyId = joyId;
+							joyHatEvent_.hatId = 0; // No more than one hat is supported
+
+							if (axis == AMOTION_EVENT_AXIS_HAT_X) {
+								if (axisValue > HatThresholdValue) {
+									hatState |= HatState::RIGHT;
+								} else if (axisValue < -HatThresholdValue) {
+									hatState |= HatState::LEFT;
+								}
+							} else {
+								if (axisValue > HatThresholdValue) {
+									hatState |= HatState::DOWN;
+								} else if (axisValue < -HatThresholdValue) {
+									hatState |= HatState::UP;
+								}
 							}
 						} else {
-							if (axisValue > HatThresholdValue) {
-								hatState |= HatState::DOWN;
-							} else if (axisValue < -HatThresholdValue) {
-								hatState |= HatState::UP;
-							}
+							joyAxisEvent_.axisId = i;
+							joyAxisEvent_.value = axisValue;
+							joyMapping_.onJoyAxisMoved(joyAxisEvent_);
+							inputEventHandler_->OnJoyAxisMoved(joyAxisEvent_);
 						}
-					} else {
-						joyAxisEvent_.axisId = i;
-						joyAxisEvent_.value = axisValue;
-						joyMapping_.onJoyAxisMoved(joyAxisEvent_);
-						inputEventHandler_->OnJoyAxisMoved(joyAxisEvent_);
 					}
-				}
 
-				if (joystickStates_[joyId].hatState_ != hatState) {
-					joystickStates_[joyId].hatState_ = hatState;
-					joyHatEvent_.hatState = joystickStates_[joyId].hatState_;
-
-					joyMapping_.onJoyHatMoved(joyHatEvent_);
-					inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
+					if (joyState.hatState_ != hatState) {
+						joyState.hatState_ = hatState;
+						joyHatEvent_.hatState = joyState.hatState_;
+						joyMapping_.onJoyHatMoved(joyHatEvent_);
+						inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
+					}
+					break;
 				}
 			}
 		} else {
