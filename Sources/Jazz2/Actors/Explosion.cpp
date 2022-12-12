@@ -140,7 +140,7 @@ namespace Jazz2::Actors
 
 	void Explosion::OnUpdateHitbox()
 	{
-		UpdateHitbox(4, 4);
+		UpdateHitbox(2, 2);
 	}
 
 	void Explosion::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
