@@ -23,22 +23,27 @@ namespace nCine
 	public:
 		inline bool isLeftButtonDown() const override
 		{
+			// TODO
 			return false;
 		}
 		inline bool isMiddleButtonDown() const override
 		{
+			// TODO
 			return false;
 		}
 		inline bool isRightButtonDown() const override
 		{
+			// TODO
 			return false;
 		}
 		inline bool isFourthButtonDown() const override
 		{
+			// TODO
 			return false;
 		}
 		inline bool isFifthButtonDown() const override
 		{
+			// TODO
 			return false;
 		}
 	};
@@ -64,15 +69,15 @@ namespace nCine
 	{
 	public:
 		bool isButtonPressed(int buttonId) const override {
+			// TODO
 			return false;
 		}
 		unsigned char hatState(int hatId) const override {
+			// TODO
 			return 0;
 		}
-		short int axisValue(int axisId) const override {
-			return 0;
-		}
-		float axisNormValue(int axisId) const override {
+		float axisValue(int axisId) const override {
+			// TODO
 			return 0.0f;
 		}
 	};

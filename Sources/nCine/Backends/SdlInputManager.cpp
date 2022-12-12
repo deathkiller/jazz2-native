@@ -113,44 +113,24 @@ namespace nCine
 
 	bool SdlJoystickState::isButtonPressed(int buttonId) const
 	{
-		bool isPressed = false;
-		if (sdlJoystick_ != nullptr)
-			isPressed = SDL_JoystickGetButton(sdlJoystick_, buttonId) != 0;
-		return isPressed;
+		return (sdlJoystick_ != nullptr && SDL_JoystickGetButton(sdlJoystick_, buttonId) != 0);
 	}
 
 	unsigned char SdlJoystickState::hatState(int hatId) const
 	{
-		unsigned char hatState = 0;
-		if (sdlJoystick_ != nullptr)
-			hatState = SDL_JoystickGetHat(sdlJoystick_, hatId);
-
-		return hatState;
+		return (sdlJoystick_ != nullptr ? SDL_JoystickGetHat(sdlJoystick_, hatId) : 0);
 	}
 
-	short int SdlJoystickState::axisValue(int axisId) const
-	{
-		short int axisValue = 0;
-		if (sdlJoystick_ != nullptr)
-			axisValue = SDL_JoystickGetAxis(sdlJoystick_, axisId);
-		return axisValue;
-	}
-
-	float SdlJoystickState::axisNormValue(int axisId) const
+	float SdlJoystickState::axisValue(int axisId) const
 	{
 		// If the joystick is not present the returned value is zero
-		const float value = axisValue(axisId) / float(IInputManager::MaxAxisValue);
-
-		return value;
+		short int rawValue = (sdlJoystick_ != nullptr ? SDL_JoystickGetAxis(sdlJoystick_, axisId) : 0);
+		return rawValue / float(MaxAxisValue);
 	}
 
 	bool SdlInputManager::shouldQuitOnRequest()
 	{
-		bool shouldQuit = true;
-		if (inputEventHandler_ != nullptr) {
-			shouldQuit = inputEventHandler_->OnQuitRequest();
-		}
-		return shouldQuit;
+		return (inputEventHandler_ != nullptr && inputEventHandler_->OnQuitRequest());
 	}
 
 	void SdlInputManager::parseEvent(const SDL_Event& event)
@@ -163,9 +143,9 @@ namespace nCine
 		NuklearSdlInput::processEvent(&event);
 #endif
 
-		if (inputEventHandler_ == nullptr)
+		if (inputEventHandler_ == nullptr) {
 			return;
-
+		}
 		if (event.type == SDL_JOYDEVICEADDED || event.type == SDL_JOYDEVICEREMOVED) {
 			handleJoyDeviceEvent(event);
 			return;
@@ -217,8 +197,7 @@ namespace nCine
 			case SDL_JOYAXISMOTION:
 				joyAxisEvent_.joyId = joyInstanceIdToDeviceIndex(event.jaxis.which);
 				joyAxisEvent_.axisId = event.jaxis.axis;
-				joyAxisEvent_.value = event.jaxis.value;
-				joyAxisEvent_.normValue = joyAxisEvent_.value / float(MaxAxisValue);
+				joyAxisEvent_.value = event.jaxis.value / float(SdlJoystickState::MaxAxisValue);
 				break;
 			case SDL_JOYHATMOTION:
 				joyHatEvent_.joyId = joyInstanceIdToDeviceIndex(event.jhat.which);

@@ -211,10 +211,8 @@ namespace nCine
 		virtual bool isButtonPressed(int buttonId) const = 0;
 		/// Returns the state of the specified hat
 		virtual unsigned char hatState(int hatId) const = 0;
-		/// Returns a value between -32768 and 32767 for a joystick axis
-		virtual int16_t axisValue(int axisId) const = 0;
 		/// Returns a normalized value between -1.0 and 1.0 for a joystick axis
-		virtual float axisNormValue(int axisId) const = 0;
+		virtual float axisValue(int axisId) const = 0;
 	};
 
 	/// Information about a joystick button event
@@ -247,10 +245,8 @@ namespace nCine
 		int joyId;
 		/// Axis id
 		int axisId;
-		/// Axis value between -32768 and 32767
-		int16_t value;
 		/// Axis value normalized between -1.0f and 1.0f
-		float normValue;
+		float value;
 	};
 
 	/// Information about a joystick connection event

@@ -56,7 +56,6 @@ namespace nCine
 		};
 
 		static const int MaxNumJoysticks;
-		static const short int MaxAxisValue = 32767;
 
 		// From `XInput.h` in DirectX SDK
 		static constexpr float LeftStickDeadZone = 7849 / 32767.0f;

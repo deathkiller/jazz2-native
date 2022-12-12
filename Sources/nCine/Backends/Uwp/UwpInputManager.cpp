@@ -431,8 +431,7 @@ namespace nCine
 		if (inputEventHandler_ != nullptr && std::abs(axesValuesState_[joyId][axisId] - value) > AxisEventTolerance) {
 			joyAxisEvent_.joyId = joyId;
 			joyAxisEvent_.axisId = axisId;
-			joyAxisEvent_.value = static_cast<short int>(value * MaxAxisValue);
-			joyAxisEvent_.normValue = value;
+			joyAxisEvent_.value = value;
 			joyMapping_.onJoyAxisMoved(joyAxisEvent_);
 			inputEventHandler_->OnJoyAxisMoved(joyAxisEvent_);
 		}

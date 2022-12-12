@@ -128,8 +128,7 @@ namespace nCine
 
 		bool isButtonPressed(int buttonId) const override;
 		unsigned char hatState(int hatId) const override;
-		short int axisValue(int axisId) const override;
-		float axisNormValue(int axisId) const override;
+		float axisValue(int axisId) const override;
 
 	private:
 		static const unsigned int MaxNameLength = 256;
@@ -158,10 +157,7 @@ namespace nCine
 		inline unsigned char hatState(int hatId) const override {
 			return HatState::CENTERED;
 		}
-		inline short int axisValue(int axisId) const override {
-			return 0U;
-		}
-		inline float axisNormValue(int axisId) const override {
+		inline float axisValue(int axisId) const override {
 			return 0.0f;
 		}
 

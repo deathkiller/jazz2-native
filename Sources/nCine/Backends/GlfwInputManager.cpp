@@ -112,13 +112,7 @@ namespace nCine
 		return (hatId >= 0 && hatId < numHats_ ? hats_[hatId] : HatState::CENTERED);
 	}
 
-	short int GlfwJoystickState::axisValue(int axisId) const
-	{
-		// If the joystick is not present the returned value is zero
-		return static_cast<short int>(axisNormValue(axisId) * IInputManager::MaxAxisValue);
-	}
-
-	float GlfwJoystickState::axisNormValue(int axisId) const
+	float GlfwJoystickState::axisValue(int axisId) const
 	{
 		return (axisId >= 0 && axisId < numAxes_ ? axesValues_[axisId] : 0.0f);
 	}
@@ -522,8 +516,7 @@ namespace nCine
 			if (inputEventHandler_ != nullptr && fabsf(axesValuesState_[joyId][axisId] - axesValues[axisId]) > AxisEventTolerance) {
 				joyAxisEvent_.joyId = joyId;
 				joyAxisEvent_.axisId = axisId;
-				joyAxisEvent_.value = static_cast<short int>(axesValues[axisId] * MaxAxisValue);
-				joyAxisEvent_.normValue = axesValues[axisId];
+				joyAxisEvent_.value = axesValues[axisId];
 				joyMapping_.onJoyAxisMoved(joyAxisEvent_);
 				inputEventHandler_->OnJoyAxisMoved(joyAxisEvent_);
 			}
