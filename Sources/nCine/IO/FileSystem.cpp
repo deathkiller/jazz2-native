@@ -834,6 +834,22 @@ namespace nCine
 		return result;
 	}
 
+#if defined(DEATH_TARGET_WINDOWS)
+	String FileSystem::ToNativeSeparators(String path)
+	{
+		// Take ownership first if not already (e.g., directly from `String::nullTerminatedView()`)
+		if (!path.isSmall() && path.deleter()) {
+			path = String { path };
+		}
+		for (char& c : path) {
+			if (c == '/') {
+				c = '\\';
+			}
+		}
+		return path;
+	}
+#endif
+
 	String FileSystem::GetAbsolutePath(const StringView& path)
 	{
 		if (path.empty()) return { };

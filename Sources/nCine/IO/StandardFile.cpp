@@ -203,9 +203,11 @@ namespace nCine
 				LOGE_X("Cannot open the file \"%s\", wrong open mode", filename_.data());
 				return;
 		}
+
 		HANDLE hFile = ::CreateFile2FromAppW(Utf8::ToUtf16(filename_), desireAccess, FILE_SHARE_READ, creationDisposition, nullptr);
 		if (hFile == nullptr || hFile == INVALID_HANDLE_VALUE) {
-			LOGE_X("Cannot open the file \"%s\"", filename_.data());
+			DWORD error = ::GetLastError();
+			LOGE_X("Cannot open the file \"%s\" - failed with error 0x%08X", filename_.data(), error);
 			return;
 		}
 		// Automatically transfers ownership of the Win32 file handle to the file descriptor

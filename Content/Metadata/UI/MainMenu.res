@@ -38,6 +38,9 @@
 		"Uac": {
 			"Path": "UI/uac.aura"
 		},
+		"Storage": {
+			"Path": "UI/storage.aura"
+		},
 
 		"GamepadA": {
 			"Path": "UI/gamepad_a.aura"

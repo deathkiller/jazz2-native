@@ -262,6 +262,8 @@ namespace Jazz2
 			return _contentPath;
 #elif defined(DEATH_TARGET_ANDROID)
 			return "asset::"_s;
+#elif defined(DEATH_TARGET_WINDOWS)
+			return "Content\\"_s;
 #else
 			return "Content/"_s;
 #endif
@@ -270,6 +272,8 @@ namespace Jazz2
 		StringView GetCachePath() const {
 #if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT) || defined(DEATH_TARGET_ANDROID)
 			return _cachePath;
+#elif defined(DEATH_TARGET_WINDOWS)
+			return "Cache\\"_s;
 #else
 			return "Cache/"_s;
 #endif
@@ -278,6 +282,8 @@ namespace Jazz2
 		StringView GetSourcePath() const {
 #if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT) || defined(DEATH_TARGET_ANDROID)
 			return _sourcePath;
+#elif defined(DEATH_TARGET_WINDOWS)
+			return "Source\\"_s;
 #else
 			return "Source/"_s;
 #endif

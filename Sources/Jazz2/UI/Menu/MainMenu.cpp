@@ -236,6 +236,16 @@ namespace Jazz2::UI::Menu
 		_owner->DrawStringShadow("© 2016-2022  Dan R."_s, charOffset, bottomLeft.X, bottomLeft.Y, IMenuContainer::FontLayer,
 			Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		// Show active external drive indicator on Xbox
+		StringView sourcePath = ContentResolver::Current().GetSourcePath();
+		if (!sourcePath.empty() && sourcePath.hasPrefix("\\\\?\\"_s) && sourcePath.exceptPrefix(5).hasPrefix(":\\Games\\Jazz² Resurrection\\"_s)) {
+			_owner->DrawElement("Storage"_s, -1, bottomLeft.X + 146.0f, bottomLeft.Y - 3.0f, IMenuContainer::FontLayer, Alignment::BottomRight, Colorf(1.0f, 1.0f, 1.0f, std::max(_owner->_logoTransition - 0.6f, 0.0f) * 2.5f));
+			_owner->DrawStringShadow(sourcePath.slice(4, 7), charOffset, bottomLeft.X + 150.0f, bottomLeft.Y, IMenuContainer::FontLayer,
+				Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+		}
+#endif
+
 		if (!_owner->_sections.empty()) {
 			auto& lastSection = _owner->_sections.back();
 			lastSection->OnDraw(this);
