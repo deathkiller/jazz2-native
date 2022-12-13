@@ -152,14 +152,15 @@ void GameEventHandler::OnInit()
 
 	resolver.CompileShaders();
 
-	if (PreferencesCache::EnableDiscordIntegration) {
-		DiscordRpcClient::Current().Connect("591586859960762378"_s);
-	}
-
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	// If threading support is enabled, refresh cache during intro cinematics and don't allow skip until it's completed
 	Thread thread([](void* arg) {
 		auto handler = reinterpret_cast<GameEventHandler*>(arg);
+#	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+		if (PreferencesCache::EnableDiscordIntegration) {
+			DiscordRpcClient::Current().Connect("591586859960762378"_s);
+		}
+#	endif
 		handler->RefreshCache();
 		handler->CheckUpdates();
 	}, this);
@@ -175,6 +176,12 @@ void GameEventHandler::OnInit()
 	});
 #else
 	// Building without threading support is not recommended, so it can look ugly
+#	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+	if (PreferencesCache::EnableDiscordIntegration) {
+		DiscordRpcClient::Current().Connect("591586859960762378"_s);
+	}
+#	endif
+
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 	// All required files are already included in Emscripten version, so nothing is verified
 	_flags = Flags::IsVerified | Flags::IsPlayable;
