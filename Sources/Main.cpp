@@ -33,6 +33,10 @@
 #include "Jazz2/Compatibility/JJ2Tileset.h"
 #include "Jazz2/Compatibility/EventConverter.h"
 
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#	include "Jazz2/UI/DiscordRpcClient.h"
+#endif
+
 #if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
 #	include <cstdlib> // for `__argc` and `__argv`
 #endif
@@ -111,6 +115,7 @@ private:
 #endif
 	static void SaveEpisodeEnd(const std::unique_ptr<LevelInitialization>& pendingLevelChange);
 	static void SaveEpisodeContinue(const std::unique_ptr<LevelInitialization>& pendingLevelChange);
+	static void UpdateRichPresence(const std::unique_ptr<LevelInitialization>& levelInit);
 };
 
 void GameEventHandler::OnPreInit(AppConfiguration& config)
@@ -146,6 +151,10 @@ void GameEventHandler::OnInit()
 #endif
 
 	resolver.CompileShaders();
+
+	if (PreferencesCache::EnableDiscordIntegration) {
+		DiscordRpcClient::Current().Connect("591586859960762378"_s);
+	}
 
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	// If threading support is enabled, refresh cache during intro cinematics and don't allow skip until it's completed
@@ -193,14 +202,17 @@ void GameEventHandler::OnFrameStart()
 		switch (_pendingState) {
 			case PendingState::MainMenu:
 				_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
+				UpdateRichPresence(nullptr);
 				break;
 			case PendingState::MainMenuAfterIntro:
 				_currentHandler = std::make_unique<Menu::MainMenu>(this, true);
+				UpdateRichPresence(nullptr);
 				break;
 			case PendingState::LevelChange:
 				if (_pendingLevelChange->LevelName.empty()) {
 					// Next level not specified, so show main menu
 					_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
+					UpdateRichPresence(nullptr);
 				} else if (_pendingLevelChange->LevelName == ":end"_s) {
 					// End of episode
 					SaveEpisodeEnd(_pendingLevelChange);
@@ -218,8 +230,10 @@ void GameEventHandler::OnFrameStart()
 					}
 
 					if (_pendingLevelChange->LevelName != ":end"_s) {
+						UpdateRichPresence(_pendingLevelChange);
 						_currentHandler = std::make_unique<LevelHandler>(this, *_pendingLevelChange.get());
 					} else {
+						UpdateRichPresence(nullptr);
 						_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
 					}
 				} else if (_pendingLevelChange->LevelName == ":credits"_s) {
@@ -234,6 +248,7 @@ void GameEventHandler::OnFrameStart()
 					});
 				} else {
 					SaveEpisodeContinue(_pendingLevelChange);
+					UpdateRichPresence(_pendingLevelChange);
 
 #if defined(SHAREWARE_DEMO_ONLY)
 					// Check if specified episode is unlocked, used only if compiled with SHAREWARE_DEMO_ONLY
@@ -258,6 +273,7 @@ void GameEventHandler::OnFrameStart()
 						_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
 						if (auto mainMenu = dynamic_cast<Menu::MainMenu*>(_currentHandler.get())) {
 							mainMenu->SwitchToSection<Menu::SimpleMessageSection>(Menu::SimpleMessageSection::Message::CannotLoadLevel);
+							UpdateRichPresence(nullptr);
 						}
 					}
 				}
@@ -797,6 +813,90 @@ void GameEventHandler::SaveEpisodeContinue(const std::unique_ptr<LevelInitializa
 		PreferencesCache::TutorialCompleted = true;
 		PreferencesCache::Save();
 	}
+}
+
+void GameEventHandler::UpdateRichPresence(const std::unique_ptr<LevelInitialization>& levelInit)
+{
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+	if (!PreferencesCache::EnableDiscordIntegration || !DiscordRpcClient::Current().IsSupported()) {
+		return;
+	}
+
+	DiscordRpcClient::RichPresence richPresence;
+	if (levelInit == nullptr) {
+		richPresence.State = "Resting in main menu"_s;
+		richPresence.LargeImage = "main-transparent"_s;
+	} else {
+		if (levelInit->EpisodeName == "prince"_s) {
+			if (levelInit->LevelName == "01_castle1"_s || levelInit->LevelName == "02_castle1n"_s) {
+				richPresence.LargeImage = "level-prince-01"_s;
+			} else if (levelInit->LevelName == "03_carrot1"_s || levelInit->LevelName == "04_carrot1n"_s) {
+				richPresence.LargeImage = "level-prince-02"_s;
+			} else if (levelInit->LevelName == "05_labrat1"_s || levelInit->LevelName == "06_labrat2"_s || levelInit->LevelName == "bonus_labrat3"_s) {
+				richPresence.LargeImage = "level-prince-03"_s;
+			}
+		} else if (levelInit->EpisodeName == "rescue"_s) {
+			if (levelInit->LevelName == "01_colon1"_s || levelInit->LevelName == "02_colon2"_s) {
+				richPresence.LargeImage = "level-rescue-01"_s;
+			} else if (levelInit->LevelName == "03_psych1"_s || levelInit->LevelName == "04_psych2"_s || levelInit->LevelName == "bonus_psych3"_s) {
+				richPresence.LargeImage = "level-rescue-02"_s;
+			} else if (levelInit->LevelName == "05_beach"_s || levelInit->LevelName == "06_beach2"_s) {
+				richPresence.LargeImage = "level-rescue-03"_s;
+			}
+		} else if (levelInit->EpisodeName == "flash"_s) {
+			if (levelInit->LevelName == "01_diam1"_s || levelInit->LevelName == "02_diam3"_s) {
+				richPresence.LargeImage = "level-flash-01"_s;
+			} else if (levelInit->LevelName == "03_tube1"_s || levelInit->LevelName == "04_tube2"_s || levelInit->LevelName == "bonus_tube3"_s) {
+				richPresence.LargeImage = "level-flash-02"_s;
+			} else if (levelInit->LevelName == "05_medivo1"_s || levelInit->LevelName == "06_medivo2"_s || levelInit->LevelName == "bonus_garglair"_s) {
+				richPresence.LargeImage = "level-flash-03"_s;
+			}
+		} else if (levelInit->EpisodeName == "monk"_s) {
+			if (levelInit->LevelName == "01_jung1"_s || levelInit->LevelName == "02_jung2"_s) {
+				richPresence.LargeImage = "level-monk-01"_s;
+			} else if (levelInit->LevelName == "03_hell"_s || levelInit->LevelName == "04_hell2"_s) {
+				richPresence.LargeImage = "level-monk-02"_s;
+			} else if (levelInit->LevelName == "05_damn"_s || levelInit->LevelName == "06_damn2"_s) {
+				richPresence.LargeImage = "level-monk-03"_s;
+			}
+		} else if (levelInit->EpisodeName == "secretf"_s) {
+			if (levelInit->LevelName == "01_easter1"_s || levelInit->LevelName == "02_easter2"_s || levelInit->LevelName == "03_easter3"_s) {
+				richPresence.LargeImage = "level-secretf-01"_s;
+			} else if (levelInit->LevelName == "04_haunted1"_s || levelInit->LevelName == "05_haunted2"_s || levelInit->LevelName == "06_haunted3"_s) {
+				richPresence.LargeImage = "level-secretf-02"_s;
+			} else if (levelInit->LevelName == "07_town1"_s || levelInit->LevelName == "08_town2"_s || levelInit->LevelName == "09_town3"_s) {
+				richPresence.LargeImage = "level-secretf-03"_s;
+			}
+		} else if (levelInit->EpisodeName == "xmas98"_s || levelInit->EpisodeName == "xmas99"_s) {
+			richPresence.LargeImage = "level-xmas"_s;
+		} else if (levelInit->EpisodeName == "share"_s) {
+			richPresence.LargeImage = "level-share"_s;
+		}
+
+		if (richPresence.LargeImage.empty()) {
+			richPresence.Details = "Playing as "_s;
+			richPresence.LargeImage = "main-transparent"_s;
+
+			switch (levelInit->PlayerCarryOvers[0].Type) {
+				default:
+				case PlayerType::Jazz: richPresence.SmallImage = "playing-jazz"_s; break;
+				case PlayerType::Spaz: richPresence.SmallImage = "playing-spaz"_s; break;
+				case PlayerType::Lori: richPresence.SmallImage = "playing-lori"_s; break;
+			}
+		} else {
+			richPresence.Details = "Playing episode as "_s;
+		}
+
+		switch (levelInit->PlayerCarryOvers[0].Type) {
+			default:
+			case PlayerType::Jazz: richPresence.Details += "Jazz"_s; break;
+			case PlayerType::Spaz: richPresence.Details += "Spaz"_s; break;
+			case PlayerType::Lori: richPresence.Details += "Lori"_s; break;
+		}
+	}
+
+	DiscordRpcClient::Current().SetRichPresence(richPresence);
+#endif
 }
 
 #if defined(DEATH_TARGET_ANDROID)

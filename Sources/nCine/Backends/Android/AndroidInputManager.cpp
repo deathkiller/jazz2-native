@@ -161,6 +161,7 @@ namespace nCine
 
 	float AndroidJoystickState::axisValue(int axisId) const
 	{
+		// The value has already been remapped from min..max to -1.0f..1.0f
 		return (axisId >= 0 && axisId < numAxes_ ? axesValues_[axisId] : 0.0f);
 	}
 

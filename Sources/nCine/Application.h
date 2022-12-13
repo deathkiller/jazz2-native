@@ -23,17 +23,14 @@ namespace nCine
 		struct RenderingSettings
 		{
 			RenderingSettings()
-				: windowScaling(true), batchingEnabled(true), batchingWithIndices(false), cullingEnabled(true),
-				  minBatchSize(4), maxBatchSize(500) {}
+				: batchingEnabled(true), batchingWithIndices(false), cullingEnabled(true), minBatchSize(4), maxBatchSize(500) { }
 
-			/// True if automatic window size scaling is enabled
-			bool windowScaling;
-			/// True if node culling is enabled
-			bool cullingEnabled;
 			/// True if batching is enabled
 			bool batchingEnabled;
 			/// True if using indices for vertex batching
 			bool batchingWithIndices;
+			/// True if node culling is enabled
+			bool cullingEnabled;
 			/// Minimum size for a batch to be collected
 			unsigned int minBatchSize;
 			/// Maximum size for a batch before a forced split
