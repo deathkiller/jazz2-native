@@ -37,6 +37,7 @@ namespace Jazz2
 #else
 	bool PreferencesCache::UseNativeBackButton = false;
 #endif
+	bool PreferencesCache::EnableDiscordIntegration = false;
 	bool PreferencesCache::TutorialCompleted = false;
 	bool PreferencesCache::AllowCheats = false;
 	bool PreferencesCache::AllowCheatsUnlock = false;
@@ -144,6 +145,9 @@ namespace Jazz2
 						AllowUnsignedScripts = ((boolOptions & BoolOptions::AllowUnsignedScripts) == BoolOptions::AllowUnsignedScripts);
 #if defined(DEATH_TARGET_ANDROID)
 						UseNativeBackButton = ((boolOptions & BoolOptions::UseNativeBackButton) == BoolOptions::UseNativeBackButton);
+#endif
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+						EnableDiscordIntegration = ((boolOptions & BoolOptions::EnableDiscordIntegration) == BoolOptions::EnableDiscordIntegration);
 #endif
 						TutorialCompleted = ((boolOptions & BoolOptions::TutorialCompleted) == BoolOptions::TutorialCompleted);
 
@@ -294,6 +298,7 @@ namespace Jazz2
 		if (EnableRgbLights) boolOptions |= BoolOptions::EnableRgbLights;
 		if (AllowUnsignedScripts) boolOptions |= BoolOptions::AllowUnsignedScripts;
 		if (UseNativeBackButton) boolOptions |= BoolOptions::UseNativeBackButton;
+		if (EnableDiscordIntegration) boolOptions |= BoolOptions::EnableDiscordIntegration;
 		if (TutorialCompleted) boolOptions |= BoolOptions::TutorialCompleted;
 		if (Language[0] != '\0') boolOptions |= BoolOptions::SetLanguage;
 		co.WriteValue<uint64_t>((uint64_t)boolOptions);

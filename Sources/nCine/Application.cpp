@@ -391,8 +391,6 @@ namespace nCine
 		LOGW("Tracy integration is enabled");
 #endif
 
-		renderingSettings_.windowScaling = appCfg_.windowScaling;
-
 		//LOGI_X("Data path: \"%s\"", fs::GetDataPath().data());
 
 		theServiceLocator().registerIndexer(std::make_unique<ArrayIndexer>());

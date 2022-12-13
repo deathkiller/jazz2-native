@@ -336,6 +336,7 @@
     <ClInclude Include="Jazz2\UI\Canvas.h" />
     <ClInclude Include="Jazz2\UI\Cinematics.h" />
     <ClInclude Include="Jazz2\UI\ControlScheme.h" />
+    <ClInclude Include="Jazz2\UI\DiscordRpcClient.h" />
     <ClInclude Include="Jazz2\UI\Font.h" />
     <ClInclude Include="Jazz2\UI\HUD.h" />
     <ClInclude Include="Jazz2\UI\Menu\AboutSection.h" />
@@ -660,6 +661,7 @@
     <ClCompile Include="Jazz2\UI\Canvas.cpp" />
     <ClCompile Include="Jazz2\UI\Cinematics.cpp" />
     <ClCompile Include="Jazz2\UI\ControlScheme.cpp" />
+    <ClCompile Include="Jazz2\UI\DiscordRpcClient.cpp" />
     <ClCompile Include="Jazz2\UI\Font.cpp" />
     <ClCompile Include="Jazz2\UI\HUD.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\AboutSection.cpp" />

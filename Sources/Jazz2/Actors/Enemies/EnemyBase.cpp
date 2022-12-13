@@ -361,6 +361,10 @@ namespace Jazz2::Actors::Enemies
 
 	void EnemyBase::StartBlinking()
 	{
+		if (_frozenTimeLeft > 0.0f) {
+			return;
+		}
+
 		if (_blinkingTimeout <= 0.0f) {
 			_renderer.Initialize(ActorRendererType::WhiteMask);
 		}

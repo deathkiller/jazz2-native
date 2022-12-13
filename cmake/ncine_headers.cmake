@@ -273,6 +273,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Canvas.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Cinematics.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/ControlScheme.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/DiscordRpcClient.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Font.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/HUD.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/RgbLights.h

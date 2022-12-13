@@ -116,6 +116,7 @@ namespace nCine
 		short int buttonsMapping_[MaxButtons];
 		short int axesMapping_[MaxAxes];
 		bool buttons_[MaxButtons];
+		/// Normalized value in the -1..1 range
 		float axesValues_[MaxAxes];
 		/// Minimum value for every available axis (used for -1..1 range remapping)
 		float axesMinValues_[MaxAxes];

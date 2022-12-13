@@ -87,6 +87,7 @@ namespace Jazz2
 		static bool EnableRgbLights;
 		static bool AllowUnsignedScripts;
 		static bool UseNativeBackButton;
+		static bool EnableDiscordIntegration;
 		static bool TutorialCompleted;
 		static bool AllowCheats;
 		static bool AllowCheatsUnlock;
@@ -121,6 +122,7 @@ namespace Jazz2
 			EnableRgbLights = 0x800,
 			AllowUnsignedScripts = 0x1000,
 			UseNativeBackButton = 0x2000,
+			EnableDiscordIntegration = 0x4000,
 
 			TutorialCompleted = 0x10000,
 			SetLanguage = 0x20000

@@ -18,6 +18,9 @@ namespace Jazz2::UI::Menu
 	private:
 		enum class Item {
 			Enhancements,
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+			EnableDiscordIntegration,
+#endif
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_WINDOWS_RT)
 			EnableRgbLights,
 #endif
