@@ -333,7 +333,7 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	Application::Application()
-		: isSuspended_(false), autoSuspension_(true), hasFocus_(true), shouldQuit_(false)
+		: isSuspended_(false), autoSuspension_(false), hasFocus_(true), shouldQuit_(false)
 	{
 	}
 

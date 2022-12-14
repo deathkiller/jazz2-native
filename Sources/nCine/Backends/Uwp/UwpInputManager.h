@@ -92,38 +92,31 @@ namespace nCine
 		/// Updates joystick state structures and simulates events
 		static void updateJoystickStates();
 
-		const MouseState& mouseState() const override {
-			return mouseState_;
-		}
-		inline const KeyboardState& keyboardState() const override {
-			return keyboardState_;
-		}
+		const MouseState& mouseState() const override { return mouseState_; }
+		inline const KeyboardState& keyboardState() const override { return keyboardState_; }
 
-		bool isJoyPresent(int joyId) const override {
+		bool isJoyPresent(int joyId) const override
+		{
 			return (joyId < MaxNumJoysticks && _gamepads[joyId].Connected);
 		}
-		const char* joyName(int joyId) const override {
-			return "Windows.Gaming.Input";
-		}
-		const JoystickGuid joyGuid(int joyId) const override {
-			return JoystickGuidType::Xinput;
-		}
-		int joyNumButtons(int joyId) const override {
-			return MaxNumButtons;
-		}
-		int joyNumHats(int joyId) const override {
-			return MaxNumHats;
-		}
-		int joyNumAxes(int joyId) const override {
-			return MaxNumAxes;
-		}
-		const JoystickState& joystickState(int joyId) const override {
+		
+		const char* joyName(int joyId) const override { return "Windows.Gaming.Input"; }
+		const JoystickGuid joyGuid(int joyId) const override { return JoystickGuidType::Xinput; }
+		int joyNumButtons(int joyId) const override { return MaxNumButtons; }
+		int joyNumHats(int joyId) const override { return MaxNumHats; }
+		int joyNumAxes(int joyId) const override { return MaxNumAxes; }
+		
+		const JoystickState& joystickState(int joyId) const override
+		{
 			if (isJoyPresent(joyId)) {
 				return _gamepads[joyId].State;
 			} else {
 				return nullJoystickState_;
 			}
 		}
+		
+		bool joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs) override;
+		bool joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) override;
 
 		void setCursor(Cursor cursor) override;
 

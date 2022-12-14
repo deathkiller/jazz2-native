@@ -90,6 +90,10 @@ namespace nCine
 		virtual int joyNumAxes(int joyId) const = 0;
 		/// Returns the state of the joystick
 		virtual const JoystickState& joystickState(int joyId) const = 0;
+		/// Starts a main rumble effect with specified duration
+		virtual bool joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs) = 0;
+		/// Starts a rumble effect on triggers with specified duration
+		virtual bool joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) = 0;
 
 		/// Returns `true` if the joystick has a valid mapping configuration
 		bool isJoyMapped(int joyId) const;

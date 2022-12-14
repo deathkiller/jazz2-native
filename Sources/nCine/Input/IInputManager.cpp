@@ -1,7 +1,7 @@
 #include "IInputManager.h"
 #include "JoyMapping.h"
 
-#ifdef WITH_IMGUI
+#if defined(WITH_IMGUI)
 #	include "imgui.h"
 #endif
 

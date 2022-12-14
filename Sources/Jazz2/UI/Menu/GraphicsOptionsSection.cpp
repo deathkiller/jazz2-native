@@ -112,7 +112,10 @@ namespace Jazz2::UI::Menu
 				bool enabled;
 				switch (i) {
 					default:
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
+#if defined(DEATH_TARGET_WINDOWS_RT)
+					// Xbox is always fullscreen
+					case (int)Item::Fullscreen: enabled = PreferencesCache::EnableFullscreen || Environment::CurrentDeviceType == DeviceType::Xbox; break;
+#elif !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
 					case (int)Item::Fullscreen: enabled = PreferencesCache::EnableFullscreen; break;
 #endif
 					case (int)Item::Antialiasing: enabled = (PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing; break;

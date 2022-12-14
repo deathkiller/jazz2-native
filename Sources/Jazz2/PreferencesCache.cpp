@@ -16,11 +16,7 @@ namespace Jazz2
 {
 	UnlockableEpisodes PreferencesCache::UnlockedEpisodes = UnlockableEpisodes::None;
 	RescaleMode PreferencesCache::ActiveRescaleMode = RescaleMode::None;
-#if defined(DEATH_TARGET_WINDOWS_RT)
-	bool PreferencesCache::EnableFullscreen = true;
-#else
 	bool PreferencesCache::EnableFullscreen = false;
-#endif
 	bool PreferencesCache::EnableVsync = true;
 	bool PreferencesCache::ShowPerformanceMetrics = false;
 	bool PreferencesCache::EnableReforged = true;
@@ -129,12 +125,7 @@ namespace Jazz2
 
 						BoolOptions boolOptions = (BoolOptions)uc.ReadValue<uint64_t>();
 
-#if defined(DEATH_TARGET_WINDOWS_RT)
-						// Xbox is always fullscreen
-						if (Environment::CurrentDeviceType != DeviceType::Xbox) {
-							EnableFullscreen = ((boolOptions & BoolOptions::EnableFullscreen) == BoolOptions::EnableFullscreen);
-						}
-#elif !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
 						EnableFullscreen = ((boolOptions & BoolOptions::EnableFullscreen) == BoolOptions::EnableFullscreen);
 #endif
 						ShowPerformanceMetrics = ((boolOptions & BoolOptions::ShowPerformanceMetrics) == BoolOptions::ShowPerformanceMetrics);
