@@ -136,10 +136,15 @@ void GameEventHandler::OnInit()
 
 	auto& resolver = ContentResolver::Current();
 	
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
-	theApplication().setAutoSuspension(false);
-
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_IOS)
+	theApplication().setAutoSuspension(true);
+#else
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+	// Xbox is always fullscreen
+	if (PreferencesCache::EnableFullscreen || Environment::CurrentDeviceType == DeviceType::Xbox) {
+#	else
 	if (PreferencesCache::EnableFullscreen) {
+#	endif
 		theApplication().gfxDevice().setResolution(true);
 		theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
 	}

@@ -350,6 +350,28 @@ namespace nCine
 		return joystickStates_[joyId];
 	}
 
+	bool SdlInputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs)
+	{
+		if (!isJoyPresent(joyId))
+			return false;
+
+		return SDL_JoystickRumble(sdlJoysticks_[joyId],
+			(uint16_t)(std::clamp(lowFrequency, 0.0f, 1.0f) * UINT16_MAX),
+			(uint16_t)(std::clamp(highFrequency, 0.0f, 1.0f) * UINT16_MAX),
+			durationMs) == 0;
+	}
+
+	bool SdlInputManager::joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs)
+	{
+		if (!isJoyPresent(joyId))
+			return false;
+
+		return SDL_JoystickRumbleTriggers(sdlJoysticks_[joyId],
+			(uint16_t)(std::clamp(left, 0.0f, 1.0f) * UINT16_MAX),
+			(uint16_t)(std::clamp(right, 0.0f, 1.0f) * UINT16_MAX),
+			durationMs) == 0;
+	}
+
 	void SdlInputManager::setCursor(Cursor cursor)
 	{
 		if (cursor != cursor_) {

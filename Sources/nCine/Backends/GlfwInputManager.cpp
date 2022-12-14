@@ -219,6 +219,18 @@ namespace nCine
 		return (isJoyPresent(joyId) ? joystickStates_[joyId] : nullJoystickState_);
 	}
 
+	bool GlfwInputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs)
+	{
+		// TODO
+		return false;
+	}
+
+	bool GlfwInputManager::joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs)
+	{
+		// TODO
+		return false;
+	}
+
 	void GlfwInputManager::setCursor(Cursor cursor)
 	{
 		if (cursor != cursor_) {

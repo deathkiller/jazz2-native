@@ -156,6 +156,8 @@ namespace nCine
 		int joyNumHats(int joyId) const override;
 		int joyNumAxes(int joyId) const override;
 		const JoystickState& joystickState(int joyId) const override;
+		bool joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs) override;
+		bool joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) override;
 
 		void setCursor(Cursor cursor) override;
 

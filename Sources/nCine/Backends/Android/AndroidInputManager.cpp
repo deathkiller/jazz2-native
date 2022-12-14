@@ -295,6 +295,18 @@ namespace nCine
 			return nullJoystickState_;
 		}
 	}
+	
+	bool AndroidInputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs)
+	{
+		// TODO
+		return false;
+	}
+
+	bool AndroidInputManager::joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs)
+	{
+		// TODO
+		return false;
+	}
 
 	///////////////////////////////////////////////////////////
 	// PRIVATE FUNCTIONS

@@ -105,6 +105,18 @@ namespace nCine
 	{
 
 	}
+	
+	bool UwpInputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs)
+	{
+		// TODO
+		return false;
+	}
+
+	bool UwpInputManager::joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs)
+	{
+		// TODO
+		return false;
+	}
 
 	void UwpInputManager::setCursor(Cursor cursor)
 	{
