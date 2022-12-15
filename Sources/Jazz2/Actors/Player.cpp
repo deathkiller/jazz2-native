@@ -112,9 +112,12 @@ namespace Jazz2::Actors
 		SetAnimation(AnimState::Fall);
 
 		std::memset(_weaponAmmo, 0, sizeof(_weaponAmmo));
+		std::memset(_weaponAmmoCheckpoint, 0, sizeof(_weaponAmmoCheckpoint));
 		std::memset(_weaponUpgrades, 0, sizeof(_weaponUpgrades));
+		std::memset(_weaponUpgradesCheckpoint, 0, sizeof(_weaponUpgradesCheckpoint));
 
 		_weaponAmmo[(int)WeaponType::Blaster] = UINT16_MAX;
+		_weaponAmmoCheckpoint[(int)WeaponType::Blaster] = UINT16_MAX;
 
 		SetState(ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjects | ActorState::IsSolidObject, true);
 
@@ -2051,6 +2054,9 @@ namespace Jazz2::Actors
 					_coins = _coinsCheckpoint;
 					_gems = _gemsCheckpoint;
 
+					std::memcpy(_weaponAmmo, _weaponAmmoCheckpoint, sizeof(_weaponAmmo));
+					std::memcpy(_weaponUpgrades, _weaponUpgradesCheckpoint, sizeof(_weaponUpgrades));
+
 					_levelHandler->RollbackToCheckpoint();
 
 				} else {
@@ -2540,9 +2546,12 @@ namespace Jazz2::Actors
 		_currentWeapon = carryOver.CurrentWeapon;
 
 		std::memcpy(_weaponAmmo, carryOver.Ammo, sizeof(_weaponAmmo));
+		std::memcpy(_weaponAmmoCheckpoint, carryOver.Ammo, sizeof(_weaponAmmoCheckpoint));
 		std::memcpy(_weaponUpgrades, carryOver.WeaponUpgrades, sizeof(_weaponUpgrades));
+		std::memcpy(_weaponUpgradesCheckpoint, carryOver.WeaponUpgrades, sizeof(_weaponUpgradesCheckpoint));
 
 		_weaponAmmo[(int)WeaponType::Blaster] = UINT16_MAX;
+		_weaponAmmoCheckpoint[(int)WeaponType::Blaster] = UINT16_MAX;
 
 		ExitType exitTypeMasked = (exitType & ExitType::TypeMask);
 		if (exitTypeMasked == ExitType::Warp || exitTypeMasked == ExitType::Bonus || exitTypeMasked == ExitType::Boss) {
@@ -3225,6 +3234,9 @@ namespace Jazz2::Actors
 		
 		_coinsCheckpoint = _coins;
 		_gemsCheckpoint = _gems;
+
+		std::memcpy(_weaponAmmoCheckpoint, _weaponAmmo, sizeof(_weaponAmmo));
+		std::memcpy(_weaponUpgradesCheckpoint, _weaponUpgrades, sizeof(_weaponUpgrades));
 	}
 
 	void Player::SetCarryingObject(ActorBase* actor, bool resetSpeed, SuspendType suspendType)

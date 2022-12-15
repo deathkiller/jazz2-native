@@ -683,7 +683,7 @@ float aastep(float threshold, float value) {
 }
 
 void main() {
-	vec2 size = vColor.xy * 2.0;
+	vec2 size = vColor.xy * vColor.a * 2.0;
 
 	vec4 tex = texture(uTexture, vTexCoords);
 	vec4 tex1 = texture(uTexture, vTexCoords + vec2(-size.x, 0));

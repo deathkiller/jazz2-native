@@ -210,7 +210,9 @@ namespace Jazz2::Actors
 		WeaponType _currentWeapon;
 		bool _weaponAllowed;
 		uint16_t _weaponAmmo[(int)WeaponType::Count];
+		uint16_t _weaponAmmoCheckpoint[(int)WeaponType::Count];
 		uint8_t _weaponUpgrades[(int)WeaponType::Count];
+		uint8_t _weaponUpgradesCheckpoint[(int)WeaponType::Count];
 		std::shared_ptr<AudioBufferPlayer> _weaponSound;
 		WeaponWheelState _weaponWheelState;
 

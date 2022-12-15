@@ -65,8 +65,8 @@ if(WIN32)
 		
 		# Try to use VC-LTL library
 		if(NOT VC_LTL_Root)
-			if(EXISTS ${NCINE_ROOT}/Libs/VC-LTL/_msvcrt.h)
-				set(VC_LTL_Root ${NCINE_ROOT}/Libs/VC-LTL)
+			if(EXISTS "${NCINE_ROOT}/Libs/VC-LTL/_msvcrt.h")
+				set(VC_LTL_Root "${NCINE_ROOT}/Libs/VC-LTL")
 			endif()
 		endif()
 		if(NOT VC_LTL_Root)
