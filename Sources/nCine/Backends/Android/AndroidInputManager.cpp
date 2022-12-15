@@ -42,9 +42,10 @@ namespace nCine
 	JoyConnectionEvent AndroidInputManager::joyConnectionEvent_;
 	Timer AndroidInputManager::joyCheckTimer_;
 	const int AndroidJoystickState::AxesToMap[AndroidJoystickState::NumAxesToMap] = {
-		AMOTION_EVENT_AXIS_X, AMOTION_EVENT_AXIS_Y,
-		AMOTION_EVENT_AXIS_Z, AMOTION_EVENT_AXIS_RZ,
+		AMOTION_EVENT_AXIS_X, AMOTION_EVENT_AXIS_Y, AMOTION_EVENT_AXIS_Z,
+		AMOTION_EVENT_AXIS_RX, AMOTION_EVENT_AXIS_RY, AMOTION_EVENT_AXIS_RZ,
 		AMOTION_EVENT_AXIS_LTRIGGER, AMOTION_EVENT_AXIS_RTRIGGER,
+		AMOTION_EVENT_AXIS_BRAKE, AMOTION_EVENT_AXIS_GAS,
 		AMOTION_EVENT_AXIS_HAT_X, AMOTION_EVENT_AXIS_HAT_Y
 	};
 
@@ -53,7 +54,7 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	AndroidJoystickState::AndroidJoystickState()
-		: deviceId_(-1), numButtons_(0), numAxes_(0),
+		: deviceId_(-1), numButtons_(0), numAxes_(0), numAxesMapped_(0),
 		hasDPad_(false), hasHatAxes_(false), hatState_(HatState::CENTERED)
 	{
 		name_[0] = '\0';
@@ -162,7 +163,7 @@ namespace nCine
 	float AndroidJoystickState::axisValue(int axisId) const
 	{
 		// The value has already been remapped from min..max to -1.0f..1.0f
-		return (axisId >= 0 && axisId < numAxes_ ? axesValues_[axisId] : 0.0f);
+		return (axisId >= 0 && axisId < numAxesMapped_ ? axesValues_[axisId] : 0.0f);
 	}
 
 	/*! This method is called by `enableAccelerometer()` and when the application gains focus */
@@ -284,7 +285,7 @@ namespace nCine
 
 	int AndroidInputManager::joyNumAxes(int joyId) const
 	{
-		return (isJoyPresent(joyId) ? joystickStates_[joyId].numAxes_ : -1);
+		return (isJoyPresent(joyId) ? joystickStates_[joyId].numAxesMapped_ : -1);
 	}
 
 	const JoystickState& AndroidInputManager::joystickState(int joyId) const
@@ -388,14 +389,12 @@ namespace nCine
 						const int axis = joyState.axesMapping_[i];
 						const float axisRawValue = AMotionEvent_getAxisValue(event, axis, 0);
 						const float axisValue = -1.0f + 2.0f * (axisRawValue - joyState.axesMinValues_[i]) / joyState.axesRangeValues_[i];
-						joyState.axesValues_[i] = axisValue;
-
-						constexpr float HatThresholdValue = 0.99f;
 
 						if (axis == AMOTION_EVENT_AXIS_HAT_X || axis == AMOTION_EVENT_AXIS_HAT_Y) {
 							joyHatEvent_.joyId = joyId;
 							joyHatEvent_.hatId = 0; // No more than one hat is supported
 
+							constexpr float HatThresholdValue = 0.99f;
 							if (axis == AMOTION_EVENT_AXIS_HAT_X) {
 								if (axisValue > HatThresholdValue) {
 									hatState |= HatState::RIGHT;
@@ -410,6 +409,8 @@ namespace nCine
 								}
 							}
 						} else {
+							joyState.axesValues_[i] = axisValue;
+							
 							joyAxisEvent_.axisId = i;
 							joyAxisEvent_.value = axisValue;
 							joyMapping_.onJoyAxisMoved(joyAxisEvent_);
@@ -831,6 +832,7 @@ namespace nCine
 			joyState.hasHatAxes_ = true;
 			// InputDevice.getMotionRange()
 			int numAxes = 0;
+			int numAxesMapped = 0;
 			for (int i = 0; i < AndroidJoystickState::NumAxesToMap; i++) {
 				const int axis = AndroidJoystickState::AxesToMap[i];
 				AndroidJniClass_MotionRange motionRange = inputDevice.getMotionRange(axis);
@@ -839,18 +841,23 @@ namespace nCine
 					const float minValue = motionRange.getMin();
 					const float rangeValue = motionRange.getRange();
 					
-					joyState.axesMapping_[numAxes] = axis;
-					// Avoid a division by zero by only assigning valid range values
-					if (rangeValue != 0.0f) {
-						joyState.axesMinValues_[numAxes] = minValue;
-						joyState.axesRangeValues_[numAxes] = rangeValue;
-					} else {
-						joyState.axesMinValues_[numAxes] = -1.0f;
-						joyState.axesRangeValues_[numAxes] = 2.0f;
+					if (numAxes < AndroidJoystickState::MaxAxes) {
+						joyState.axesMapping_[numAxes] = axis;
+						// Avoid a division by zero by only assigning valid range values
+						if (rangeValue != 0.0f) {
+							joyState.axesMinValues_[numAxes] = minValue;
+							joyState.axesRangeValues_[numAxes] = rangeValue;
+						} else {
+							joyState.axesMinValues_[numAxes] = -1.0f;
+							joyState.axesRangeValues_[numAxes] = 2.0f;
+						}
 					}
 #if defined(NCINE_LOG)
 					sprintf(&deviceInfoString[strlen(deviceInfoString)], " %d:%d (%.2f to %.2f)", numAxes, axis, minValue, minValue + rangeValue);
 #endif
+					if (axis != AMOTION_EVENT_AXIS_HAT_X && axis != AMOTION_EVENT_AXIS_HAT_Y) {
+						numAxesMapped++;
+					}
 					numAxes++;
 				} else {
 					if ((axis == AMOTION_EVENT_AXIS_HAT_X || axis == AMOTION_EVENT_AXIS_HAT_Y) && joyState.hasHatAxes_) {
@@ -863,6 +870,7 @@ namespace nCine
 			LOGI_X("Device (%d, %d) - Axes%s", deviceId, joyId, deviceInfoString);
 #endif
 			joyState.numAxes_ = numAxes;
+			joyState.numAxesMapped_ = numAxesMapped;
 
 			joyState.numHats_ = 0;
 			if (joyState.hasDPad_ || joyState.hasHatAxes_) {

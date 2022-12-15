@@ -101,7 +101,7 @@ namespace nCine
 		/// All AKEYCODE_BUTTON_* plus AKEYCODE_BACK
 		static constexpr int MaxButtons = AKEYCODE_ESCAPE - AKEYCODE_BUTTON_A + 1;
 		static constexpr int MaxAxes = 10;
-		static constexpr int NumAxesToMap = 8;
+		static constexpr int NumAxesToMap = 12;
 		static const int AxesToMap[NumAxesToMap];
 
 		int deviceId_;
@@ -111,6 +111,7 @@ namespace nCine
 		int numButtons_;
 		int numHats_;
 		int numAxes_;
+		int numAxesMapped_;
 		bool hasDPad_;
 		bool hasHatAxes_;
 		short int buttonsMapping_[MaxButtons];
