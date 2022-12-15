@@ -1263,21 +1263,22 @@ namespace Jazz2::Actors
 		_owner->OnUpdate(timeMult);
 
 		if (IsAnimationRunning()) {
-			// Advance animation timer
-			if (LoopMode == AnimationLoopMode::Loop) {
-				AnimTime += timeMult * FrameTimer::SecondsPerFrame;
-				if (AnimTime > AnimDuration) {
-					int n = (int)(AnimTime / AnimDuration);
-					AnimTime -= AnimDuration * n;
-					_owner->OnAnimationFinished();
-				}
-			} else if (LoopMode == AnimationLoopMode::Once) {
-				float newAnimTime = AnimTime + timeMult * FrameTimer::SecondsPerFrame;
-				if (AnimTime > AnimDuration) {
-					_owner->OnAnimationFinished();
-				} else {
+			switch (LoopMode) {
+				case AnimationLoopMode::Loop:
+					AnimTime += timeMult * FrameTimer::SecondsPerFrame;
+					if (AnimTime > AnimDuration) {
+						int n = (int)(AnimTime / AnimDuration);
+						AnimTime -= AnimDuration * n;
+						_owner->OnAnimationFinished();
+					}
+					break;
+				case AnimationLoopMode::Once:
+					float newAnimTime = AnimTime + timeMult * FrameTimer::SecondsPerFrame;
+					if (AnimTime > AnimDuration) {
+						_owner->OnAnimationFinished();
+					}
 					AnimTime = newAnimTime;
-				}
+					break;
 			}
 
 			UpdateVisibleFrames();

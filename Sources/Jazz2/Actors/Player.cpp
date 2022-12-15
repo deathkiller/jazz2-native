@@ -252,7 +252,6 @@ namespace Jazz2::Actors
 			}
 		}
 
-		//FollowCarryingPlatform();
 		UpdateAnimation(timeMult);
 		CheckSuspendState(timeMult);
 		CheckEndOfSpecialMoves(timeMult);
@@ -800,9 +799,8 @@ namespace Jazz2::Actors
 				} else {
 					if (_suspendType != SuspendType::None) {
 						if (_suspendType == SuspendType::SwingingVine) {
-							_suspendType = SuspendType::None;
-							//_currentVine = nullptr;
-							SetState(ActorState::ApplyGravitation, true);
+							SetCarryingObject(nullptr);
+							_springCooldown = 30.0f;
 						} else {
 							MoveInstantly(Vector2(0.0f, -4.0f), MoveType::Relative | MoveType::Force);
 						}
@@ -3229,7 +3227,7 @@ namespace Jazz2::Actors
 		_gemsCheckpoint = _gems;
 	}
 
-	void Player::SetCarryingObject(ActorBase* actor, bool resetSpeed)
+	void Player::SetCarryingObject(ActorBase* actor, bool resetSpeed, SuspendType suspendType)
 	{
 		_carryingObject = actor;
 
@@ -3238,6 +3236,15 @@ namespace Jazz2::Actors
 			_speed.Y = 0.0f;
 			_externalForce.Y = 0.0f;
 			_internalForceY = 0.0f;
+		}
+
+		if (suspendType == SuspendType::SwingingVine) {
+			_suspendType = suspendType;
+			SetState(ActorState::ApplyGravitation, false);
+		} else if (_suspendType == SuspendType::SwingingVine) {
+			_suspendType = SuspendType::None;
+			SetState(ActorState::ApplyGravitation, true);
+			_renderer.setRotation(0.0f);
 		}
 	}
 }

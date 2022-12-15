@@ -67,6 +67,7 @@
 #include "../Actors/Environment/RollingRock.h"
 #include "../Actors/Environment/Spring.h"
 #include "../Actors/Environment/SteamNote.h"
+#include "../Actors/Environment/SwingingVine.h"
 
 #include "../Actors/Lighting/FlickerLight.h"
 #include "../Actors/Lighting/PulsatingRadialLight.h"
@@ -136,6 +137,10 @@ namespace Jazz2::Events
 		RegisterSpawnable<Environment::Bomb>(EventType::Bomb);
 		RegisterSpawnable<Solid::PinballBumper>(EventType::PinballBumper);
 		RegisterSpawnable<Solid::PinballPaddle>(EventType::PinballPaddle);
+		RegisterSpawnable<Environment::AirboardGenerator>(EventType::AirboardGenerator);
+		RegisterSpawnable<Environment::Copter>(EventType::Copter);
+		RegisterSpawnable<Environment::RollingRock>(EventType::RollingRock);
+		RegisterSpawnable<Environment::SwingingVine>(EventType::SwingingVine);
 
 		// Enemies
 		RegisterSpawnable<Enemies::Turtle>(EventType::EnemyTurtle);
@@ -201,16 +206,9 @@ namespace Jazz2::Events
 		RegisterSpawnable<Solid::GemBarrel>(EventType::BarrelGem);
 
 		RegisterSpawnable<Solid::PowerUpMorphMonitor>(EventType::PowerUpMorph);
-		RegisterSpawnable<Environment::BirdCage>(EventType::BirdCage);
-
-		RegisterSpawnable<Environment::AirboardGenerator>(EventType::AirboardGenerator);
-		RegisterSpawnable<Environment::Copter>(EventType::Copter);
-
-		RegisterSpawnable<Environment::RollingRock>(EventType::RollingRock);
-		//RegisterSpawnable(EventType::SwingingVine, SwingingVine.Create, SwingingVine.Preload);
-
 		RegisterSpawnable<Solid::PowerUpShieldMonitor>(EventType::PowerUpShield);
 		RegisterSpawnable<Solid::PowerUpWeaponMonitor>(EventType::PowerUpWeapon);
+		RegisterSpawnable<Environment::BirdCage>(EventType::BirdCage);
 	}
 
 	void EventSpawner::RegisterSpawnable(EventType type, CreateDelegate create, PreloadDelegate preload)
