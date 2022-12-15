@@ -398,18 +398,8 @@ namespace nCine
 			}
 		}
 
-		if (!mapping.isValid) {
-			const int index = findMappingByName(joyName);
-			if (index != -1) {
-				mapping.isValid = true;
-				mapping.desc = mappings_[index].desc;
-
-				const uint8_t* g = joyGuid.data;
-				LOGI_X("Joystick mapping found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d)", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
-			}
-		}
-
 #if defined(DEATH_TARGET_ANDROID)
+		// Never search by name on Android, it can lead to wrong mapping
 		if (!mapping.isValid) {
 			const uint8_t* g = joyGuid.data;
 			LOGI_X("Joystick mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), using Android default mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
@@ -434,12 +424,26 @@ namespace nCine
 				mapping.desc.hats[i] = AndroidDpadButtonNameMapping[i];
 			}
 		}
-#endif
+#elif !defined(DEATH_TARGET_EMSCRIPTEN)
+		if (!mapping.isValid) {
+			const int index = findMappingByName(joyName);
+			if (index != -1) {
+				mapping.isValid = true;
+				mapping.desc = mappings_[index].desc;
+
+				const uint8_t* g = joyGuid.data;
+				LOGI_X("Joystick mapping found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d)", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
+			}
+		}
 
 		if (!mapping.isValid) {
-			const StringView joyNameView = joyName;
+#	if defined(DEATH_TARGET_UNIX)
 			// Razer Keyboards and Mice on Linux are incorrectly recognized as joystick in some cases, don't assign XInput mapping to them
+			const StringView joyNameView = joyName;
 			bool isBlacklisted = (joyNameView.contains("Razer "_s) && (joyNameView.contains("Keyboard"_s) || joyNameView.contains("DeathAdder"_s)));
+#	else
+			bool isBlacklisted = false;
+#	endif
 			if (!isBlacklisted) {
 				const int index = findMappingByGuid(JoystickGuidType::Xinput);
 				if (index != -1) {
@@ -451,6 +455,7 @@ namespace nCine
 				}
 			}
 		}
+#endif
 
 		return mapping.isValid;
 	}
