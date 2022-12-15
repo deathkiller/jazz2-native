@@ -276,6 +276,7 @@
     <ClInclude Include="Jazz2\Actors\Environment\Moth.h" />
     <ClInclude Include="Jazz2\Actors\Environment\RollingRock.h" />
     <ClInclude Include="Jazz2\Actors\Environment\SteamNote.h" />
+    <ClInclude Include="Jazz2\Actors\Environment\SwingingVine.h" />
     <ClInclude Include="Jazz2\Actors\Explosion.h" />
     <ClInclude Include="Jazz2\Actors\Lighting\FlickerLight.h" />
     <ClInclude Include="Jazz2\Actors\Lighting\PulsatingRadialLight.h" />
@@ -611,6 +612,7 @@
     <ClCompile Include="Jazz2\Actors\Environment\Moth.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\RollingRock.cpp" />
     <ClCompile Include="Jazz2\Actors\Environment\SteamNote.cpp" />
+    <ClCompile Include="Jazz2\Actors\Environment\SwingingVine.cpp" />
     <ClCompile Include="Jazz2\Actors\Explosion.cpp" />
     <ClCompile Include="Jazz2\Actors\Lighting\FlickerLight.cpp" />
     <ClCompile Include="Jazz2\Actors\Lighting\PulsatingRadialLight.cpp" />

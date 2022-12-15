@@ -58,11 +58,13 @@
 		},
 		"Freefall": {
 			"Path": "Devan/freefall.aura",
+			"FrameRate": 30,
 			"States": [ 65536 ]
 		},
 
 		"DisorientedStart": {
 			"Path": "Devan/disoriented_start.aura",
+			"FrameRate": 30,
 			"States": [ 666 ]
 		},
 		"Disoriented": {
@@ -91,7 +93,7 @@
 		},
 		"DemonTransformEnd": {
 			"Path": "Devan/demon_transform_end.aura",
-			"FrameRate": 2,
+			"FrameRate": 4,
 			"States": [ 671 ]
 		},
 		"DemonTurn": {

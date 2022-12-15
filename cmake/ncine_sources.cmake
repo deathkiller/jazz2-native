@@ -169,6 +169,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/RollingRock.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Spring.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/SteamNote.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/SwingingVine.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Explosion.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Lighting/FlickerLight.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Lighting/PulsatingRadialLight.cpp

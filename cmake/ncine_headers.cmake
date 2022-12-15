@@ -219,6 +219,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/RollingRock.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/Spring.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/SteamNote.h
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Environment/SwingingVine.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Explosion.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Lighting/FlickerLight.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Lighting/PulsatingRadialLight.h

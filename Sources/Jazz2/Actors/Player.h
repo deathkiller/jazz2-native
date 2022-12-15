@@ -20,6 +20,7 @@ namespace Jazz2::Actors
 	namespace Environment
 	{
 		class Bird;
+		class SwingingVine;
 	}
 
 	namespace Solid
@@ -39,6 +40,7 @@ namespace Jazz2::Actors
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::ScriptPlayerWrapper;
 #endif
+		friend class Environment::SwingingVine;
 		friend class Solid::PinballBumper;
 		friend class Solid::PinballPaddle;
 		friend class Weapons::Thunderbolt;
@@ -115,7 +117,7 @@ namespace Jazz2::Actors
 		ActorBase* GetCarryingObject() const {
 			return _carryingObject;
 		}
-		void SetCarryingObject(ActorBase* actor, bool resetSpeed = false);
+		void SetCarryingObject(ActorBase* actor, bool resetSpeed = false, SuspendType suspendType = SuspendType::None);
 
 		void SwitchToWeaponByIndex(uint32_t weaponIndex);
 		void GetFirePointAndAngle(Vector3i& initialPos, Vector2f& gunspotPos, float& angle);
@@ -176,7 +178,6 @@ namespace Jazz2::Actors
 		Modifier _activeModifier;
 		bool _inIdleTransition, _inLedgeTransition;
 		ActorBase* _carryingObject;
-		//SwingingVine* _currentVine;
 		bool _canDoubleJump;
 		float _springCooldown;
 		std::shared_ptr<AudioBufferPlayer> _copterSound;
