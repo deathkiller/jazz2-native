@@ -68,23 +68,43 @@ namespace nCine
 	class UwpJoystickState : public JoystickState
 	{
 	public:
-		bool isButtonPressed(int buttonId) const override {
-			// TODO
-			return false;
-		}
-		unsigned char hatState(int hatId) const override {
-			// TODO
-			return 0;
-		}
-		float axisValue(int axisId) const override {
-			// TODO
-			return 0.0f;
-		}
+		static constexpr unsigned int MaxNumButtons = 11;
+		static constexpr unsigned int MaxNumHats = 1;
+		static constexpr unsigned int MaxNumAxes = 6;
+
+		UwpJoystickState();
+
+		bool isButtonPressed(int buttonId) const override;
+		unsigned char hatState(int hatId) const override;
+		float axisValue(int axisId) const override;
+
+		void resetJoystickState(int joyId);
+		void simulateButtonsEvents(winrtWGI::GamepadButtons buttons);
+		void simulateHatsEvents(winrtWGI::GamepadButtons buttons);
+		void simulateAxisEvent(int axisId, float value);
+
+	private:
+		/// Minimum difference between two axis readings in order to trigger an event
+		static constexpr float AxisEventTolerance = 0.001f;
+
+		static JoyButtonEvent joyButtonEvent_;
+		static JoyHatEvent joyHatEvent_;
+		static JoyAxisEvent joyAxisEvent_;
+
+		int joyId_;
+		/// Old state used to simulate joystick buttons events
+		bool buttonsState_[MaxNumButtons];
+		/// Old state used to simulate joystick hats events
+		unsigned char hatsState_[MaxNumHats];
+		/// Old state used to simulate joystick axes events
+		float axesValuesState_[MaxNumAxes];
 	};
 
 	/// The class for parsing and dispatching UWP input events
 	class UwpInputManager : public IInputManager
 	{
+		friend class UwpJoystickState;
+
 	public:
 		UwpInputManager(winrtWUC::CoreWindow window);
 		~UwpInputManager() override;
@@ -102,9 +122,9 @@ namespace nCine
 		
 		const char* joyName(int joyId) const override { return "Windows.Gaming.Input"; }
 		const JoystickGuid joyGuid(int joyId) const override { return JoystickGuidType::Xinput; }
-		int joyNumButtons(int joyId) const override { return MaxNumButtons; }
-		int joyNumHats(int joyId) const override { return MaxNumHats; }
-		int joyNumAxes(int joyId) const override { return MaxNumAxes; }
+		int joyNumButtons(int joyId) const override { return UwpJoystickState::MaxNumButtons; }
+		int joyNumHats(int joyId) const override { return UwpJoystickState::MaxNumHats; }
+		int joyNumAxes(int joyId) const override { return UwpJoystickState::MaxNumAxes; }
 		
 		const JoystickState& joystickState(int joyId) const override
 		{
@@ -123,56 +143,37 @@ namespace nCine
 	private:
 		static const int MaxNumJoysticks = 8;
 
-		static const unsigned int MaxNumButtons = 11;
-		static const unsigned int MaxNumHats = 1;
-		static const unsigned int MaxNumAxes = 6;
-
 		struct UwpGamepadInfo
 		{
-			UwpGamepadInfo() : Gamepad(nullptr), Connected(false) { }
+			UwpGamepadInfo() : Gamepad(nullptr), Connected(false),
+				RumbleLowFrequency(0.0f), RumbleHighFrequency(0.0f), RumbleLeftTrigger(0.0f), RumbleRightTrigger(0.0f),
+				RumbleExpiration(0), RumbleTriggersExpiration(0) { }
 
 			winrtWGI::Gamepad Gamepad;
 			UwpJoystickState State;
 			bool Connected;
-		};
-
-		class JoystickEventsSimulator
-		{
-		public:
-			JoystickEventsSimulator();
-			void resetJoystickState(int joyId);
-			void simulateButtonsEvents(int joyId, winrtWGI::GamepadButtons buttons);
-			void simulateHatsEvents(int joyId, winrtWGI::GamepadButtons buttons);
-			void simulateAxisEvent(int joyId, int axisId, float value);
-
-		private:
-			/// Minimum difference between two axis readings in order to trigger an event
-			static const float AxisEventTolerance;
-
-			/// Old state used to simulate joystick buttons events
-			bool buttonsState_[MaxNumJoysticks][MaxNumButtons];
-			/// Old state used to simulate joystick hats events
-			unsigned char hatsState_[MaxNumJoysticks][MaxNumHats];
-			/// Old state used to simulate joystick axes events
-			float axesValuesState_[MaxNumJoysticks][MaxNumAxes];
+			float RumbleLowFrequency;
+			float RumbleHighFrequency;
+			float RumbleLeftTrigger;
+			float RumbleRightTrigger;
+			uint64_t RumbleExpiration;
+			uint64_t RumbleTriggersExpiration;
 		};
 
 		static UwpMouseState mouseState_;
 		static UwpKeyboardState keyboardState_;
 		static KeyboardEvent keyboardEvent_;
 		static UwpJoystickState nullJoystickState_;
-		static JoyButtonEvent joyButtonEvent_;
-		static JoyHatEvent joyHatEvent_;
-		static JoyAxisEvent joyAxisEvent_;
 		static JoyConnectionEvent joyConnectionEvent_;
-		static JoystickEventsSimulator joyEventsSimulator_;
 
 		static UwpGamepadInfo _gamepads[MaxNumJoysticks];
-		static Mutex _gamepadsSync;
+		static ReadWriteLock _gamepadsSync;
 
 		static KeySym keySymValueToEnum(winrtWS::VirtualKey virtualKey);
 
 		void OnKey(const winrtWUC::CoreWindow& sender, const winrtWUC::KeyEventArgs& args);
 		void OnAcceleratorKeyActivated(const winrtWUC::CoreDispatcher& sender, const winrtWUC::AcceleratorKeyEventArgs& args);
+		void OnGamepadAdded(const winrtWF::IInspectable& sender, const winrtWGI::Gamepad& gamepad);
+		void OnGamepadRemoved(const winrtWF::IInspectable& sender, const winrtWGI::Gamepad& gamepad);
 	};
 }

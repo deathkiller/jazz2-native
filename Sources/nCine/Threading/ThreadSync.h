@@ -70,41 +70,70 @@ namespace nCine
 		CondVariable& operator=(const CondVariable&) = delete;
 	};
 
-#if !defined(DEATH_TARGET_WINDOWS)
-
 	/// Read/write lock class (threads synchronization)
-	class RWLock
+	class ReadWriteLock
 	{
 	public:
-		RWLock();
-		~RWLock();
+		ReadWriteLock();
+		~ReadWriteLock();
 
 		inline void EnterReadLock() {
+#if defined(DEATH_TARGET_WINDOWS)
+			::AcquireSRWLockShared(&rwlock_);
+#else
 			pthread_rwlock_rdlock(&rwlock_);
+#endif
 		}
 		inline void EnterWriteLock() {
+#if defined(DEATH_TARGET_WINDOWS)
+			::AcquireSRWLockExclusive(&rwlock_);
+#else
 			pthread_rwlock_wrlock(&rwlock_);
+#endif
 		}
 		inline int TryEnterReadLock() {
+#if defined(DEATH_TARGET_WINDOWS)
+			return ::TryAcquireSRWLockShared(&rwlock_);
+#else
 			return pthread_rwlock_tryrdlock(&rwlock_);
+#endif
 		}
 		inline int TryEnterWriteLock() {
+#if defined(DEATH_TARGET_WINDOWS)
+			return ::TryAcquireSRWLockExclusive(&rwlock_);
+#else
 			return pthread_rwlock_trywrlock(&rwlock_);
+#endif
 		}
-		inline void Exit() {
+		inline void ExitReadLock() {
+#if defined(DEATH_TARGET_WINDOWS)
+			::ReleaseSRWLockShared(&rwlock_);
+#else
 			pthread_rwlock_unlock(&rwlock_);
+#endif
+		}
+		inline void ExitWriteLock() {
+#if defined(DEATH_TARGET_WINDOWS)
+			::ReleaseSRWLockExclusive(&rwlock_);
+#else
+			pthread_rwlock_unlock(&rwlock_);
+#endif
 		}
 
 	private:
+#if defined(DEATH_TARGET_WINDOWS)
+		SRWLOCK rwlock_;
+#else
 		pthread_rwlock_t rwlock_;
+#endif
 
 		/// Deleted copy constructor
-		RWLock(const RWLock&) = delete;
+		ReadWriteLock(const ReadWriteLock&) = delete;
 		/// Deleted assignment operator
-		RWLock& operator=(const RWLock&) = delete;
+		ReadWriteLock& operator=(const ReadWriteLock&) = delete;
 	};
 
-#	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_WINDOWS)
 
 	/// Barrier class (threads synchronization)
 	class Barrier
@@ -128,7 +157,6 @@ namespace nCine
 		Barrier& operator=(const Barrier&) = delete;
 	};
 
-#	endif
 #endif
 
 }

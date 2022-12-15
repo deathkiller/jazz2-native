@@ -3,6 +3,7 @@
 #include "ThreadSync.h"
 
 #if !defined(DEATH_TARGET_WINDOWS)
+
 namespace nCine
 {
 	///////////////////////////////////////////////////////////
@@ -80,19 +81,19 @@ namespace nCine
 	}
 
 	///////////////////////////////////////////////////////////
-	// RWLock CLASS
+	// ReadWriteLock CLASS
 	///////////////////////////////////////////////////////////
 
 	///////////////////////////////////////////////////////////
 	// CONSTRUCTORS and DESTRUCTOR
 	///////////////////////////////////////////////////////////
 
-	RWLock::RWLock()
+	ReadWriteLock::ReadWriteLock()
 	{
 		pthread_rwlock_init(&rwlock_, nullptr);
 	}
 
-	RWLock::~RWLock()
+	ReadWriteLock::~ReadWriteLock()
 	{
 		pthread_rwlock_destroy(&rwlock_);
 	}
@@ -120,6 +121,7 @@ namespace nCine
 #endif
 
 }
+
 #endif
 
 #endif

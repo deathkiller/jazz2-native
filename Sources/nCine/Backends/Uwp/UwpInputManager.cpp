@@ -5,6 +5,10 @@
 
 #include <winrt/Windows.Foundation.Collections.h>
 
+#include <Environment.h>
+
+using namespace Death;
+
 namespace nCine
 {
 	const int IInputManager::MaxNumJoysticks = 8;
@@ -13,82 +17,30 @@ namespace nCine
 	UwpKeyboardState UwpInputManager::keyboardState_;
 	KeyboardEvent UwpInputManager::keyboardEvent_;
 	UwpJoystickState UwpInputManager::nullJoystickState_;
-	JoyButtonEvent UwpInputManager::joyButtonEvent_;
-	JoyHatEvent UwpInputManager::joyHatEvent_;
-	JoyAxisEvent UwpInputManager::joyAxisEvent_;
+	JoyButtonEvent UwpJoystickState::joyButtonEvent_;
+	JoyHatEvent UwpJoystickState::joyHatEvent_;
+	JoyAxisEvent UwpJoystickState::joyAxisEvent_;
 	JoyConnectionEvent UwpInputManager::joyConnectionEvent_;
-	const float UwpInputManager::JoystickEventsSimulator::AxisEventTolerance = 0.001f;
-	UwpInputManager::JoystickEventsSimulator UwpInputManager::joyEventsSimulator_;
 
 	UwpInputManager::UwpGamepadInfo UwpInputManager::_gamepads[MaxNumJoysticks];
-	Mutex UwpInputManager::_gamepadsSync;
+	ReadWriteLock UwpInputManager::_gamepadsSync;
 
 	UwpInputManager::UwpInputManager(winrtWUC::CoreWindow window)
 	{
 		joyMapping_.init(this);
 
+		for (int i = 0; i < MaxNumJoysticks; i++) {
+			_gamepads[i].State.resetJoystickState(i);
+		}
+
 		window.KeyDown({ this, &UwpInputManager::OnKey });
 		window.KeyUp({ this, &UwpInputManager::OnKey });
 		window.Dispatcher().AcceleratorKeyActivated({ this, &UwpInputManager::OnAcceleratorKeyActivated });
 
-		winrtWGI::Gamepad::GamepadAdded([](const auto&, winrtWGI::Gamepad gamepad) {
-			_gamepadsSync.Lock();
+		winrtWGI::Gamepad::GamepadAdded({ this, &UwpInputManager::OnGamepadAdded });
+		winrtWGI::Gamepad::GamepadRemoved({ this, &UwpInputManager::OnGamepadRemoved });
 
-			bool found = false;
-			int firstFreeId = -1;
-			for (int i = 0; i < _countof(_gamepads); i++) {
-				auto& info = _gamepads[i];
-				if (info.Connected) {
-					if (!found && info.Gamepad == gamepad) {
-						found = true;
-					}
-				} else {
-					if (firstFreeId == -1) {
-						firstFreeId = i;
-					}
-				}
-			}
-
-			if (!found) {
-				auto& info = _gamepads[firstFreeId];
-				info.Gamepad = gamepad;
-				info.Connected = true;
-
-				joyConnectionEvent_.joyId = firstFreeId;
-
-				updateJoystickStates();
-
-				if (inputEventHandler_ != nullptr) {
-					joyMapping_.onJoyConnected(joyConnectionEvent_);
-					inputEventHandler_->OnJoyConnected(joyConnectionEvent_);
-				}
-			}
-
-			_gamepadsSync.Unlock();
-		});
-
-		winrtWGI::Gamepad::GamepadRemoved([](const auto&, winrtWGI::Gamepad gamepad) {
-			_gamepadsSync.Lock();
-
-			for (int i = 0; i < _countof(_gamepads); i++) {
-				auto& info = _gamepads[i];
-				if (info.Connected && info.Gamepad == gamepad) {
-					info.Connected = false;
-
-					joyEventsSimulator_.resetJoystickState(i);
-
-					if (inputEventHandler_ != nullptr) {
-						inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
-						joyMapping_.onJoyDisconnected(joyConnectionEvent_);
-					}
-					break;
-				}
-			}
-
-			_gamepadsSync.Unlock();
-		});
-
-		_gamepadsSync.Lock();
+		_gamepadsSync.EnterWriteLock();
 
 		auto gamepads = winrtWGI::Gamepad::Gamepads();
 		auto gamepadsSize = std::min((int)gamepads.Size(), MaxNumJoysticks);
@@ -98,24 +50,88 @@ namespace nCine
 			info.Connected = true;
 		}
 
-		_gamepadsSync.Unlock();
+		_gamepadsSync.ExitWriteLock();
 	}
 
 	UwpInputManager::~UwpInputManager()
 	{
-
+		for (int i = 0; i < MaxNumJoysticks; i++) {
+			auto& info = _gamepads[i];
+			if (info.Connected && (info.RumbleExpiration > 0 || info.RumbleTriggersExpiration > 0)) {
+				auto vibration = info.Gamepad.Vibration();
+				vibration.LeftMotor = 0.0f;
+				vibration.RightMotor = 0.0f;
+				vibration.RightTrigger = 0.0f;
+				vibration.RightTrigger = 0.0f;
+				info.Gamepad.Vibration(vibration);
+			}
+		}
 	}
 	
 	bool UwpInputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs)
 	{
-		// TODO
-		return false;
+		bool result = false;
+
+		_gamepadsSync.EnterWriteLock();
+
+		if (joyId < MaxNumJoysticks && _gamepads[joyId].Connected) {
+			auto& info = _gamepads[joyId];
+			if (info.RumbleLowFrequency != lowFrequency || info.RumbleHighFrequency != highFrequency) {
+				info.RumbleLowFrequency = lowFrequency;
+				info.RumbleHighFrequency = highFrequency;
+
+				auto vibration = info.Gamepad.Vibration();
+				vibration.LeftMotor = lowFrequency;
+				vibration.RightMotor = highFrequency;
+				info.Gamepad.Vibration(vibration);
+			}
+			if (lowFrequency > 0.0f || highFrequency > 0.0f) {
+				if (durationMs <= 0) {
+					durationMs = 1;
+				}
+				info.RumbleExpiration = Environment::QueryUnbiasedInterruptTime() + (durationMs * 10000LL);
+			} else {
+				info.RumbleExpiration = 0;
+			}
+			result = true;
+		}
+
+		_gamepadsSync.ExitWriteLock();
+
+		return result;
 	}
 
 	bool UwpInputManager::joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs)
 	{
-		// TODO
-		return false;
+		bool result = false;
+
+		_gamepadsSync.EnterWriteLock();
+
+		if (joyId < MaxNumJoysticks && _gamepads[joyId].Connected) {
+			auto& info = _gamepads[joyId];
+			if (info.RumbleLeftTrigger != left || info.RumbleRightTrigger != right) {
+				info.RumbleLeftTrigger = left;
+				info.RumbleRightTrigger = right;
+
+				auto vibration = info.Gamepad.Vibration();
+				vibration.LeftTrigger = left;
+				vibration.RightTrigger = right;
+				info.Gamepad.Vibration(vibration);
+			}
+			if (left > 0.0f || right > 0.0f) {
+				if (durationMs <= 0) {
+					durationMs = 1;
+				}
+				info.RumbleTriggersExpiration = Environment::QueryUnbiasedInterruptTime() + (durationMs * 10000LL);
+			} else {
+				info.RumbleTriggersExpiration = 0;
+			}
+			result = true;
+		}
+
+		_gamepadsSync.ExitWriteLock();
+
+		return result;
 	}
 
 	void UwpInputManager::setCursor(Cursor cursor)
@@ -127,26 +143,52 @@ namespace nCine
 
 	void UwpInputManager::updateJoystickStates()
 	{
-		_gamepadsSync.Lock();
+		_gamepadsSync.EnterReadLock();
 
 		for (int i = 0; i < MaxNumJoysticks; i++) {
 			auto& info = _gamepads[i];
 			if (info.Connected) {
 				winrtWGI::GamepadReading reading = info.Gamepad.GetCurrentReading();
 
-				joyEventsSimulator_.simulateButtonsEvents(i, reading.Buttons);
-				joyEventsSimulator_.simulateHatsEvents(i, reading.Buttons);
+				info.State.simulateButtonsEvents(reading.Buttons);
+				info.State.simulateHatsEvents(reading.Buttons);
 
-				joyEventsSimulator_.simulateAxisEvent(i, 0, (float)reading.LeftThumbstickX);
-				joyEventsSimulator_.simulateAxisEvent(i, 1, -(float)reading.LeftThumbstickY);
-				joyEventsSimulator_.simulateAxisEvent(i, 2, (float)reading.RightThumbstickX);
-				joyEventsSimulator_.simulateAxisEvent(i, 3, -(float)reading.RightThumbstickY);
-				joyEventsSimulator_.simulateAxisEvent(i, 4, ((float)reading.LeftTrigger * 2.0f) - 1.0f);
-				joyEventsSimulator_.simulateAxisEvent(i, 5, ((float)reading.RightTrigger * 2.0f) - 1.0f);
+				info.State.simulateAxisEvent(0, (float)reading.LeftThumbstickX);
+				info.State.simulateAxisEvent(1, -(float)reading.LeftThumbstickY);
+				info.State.simulateAxisEvent(2, (float)reading.RightThumbstickX);
+				info.State.simulateAxisEvent(3, -(float)reading.RightThumbstickY);
+				info.State.simulateAxisEvent(4, ((float)reading.LeftTrigger * 2.0f) - 1.0f);
+				info.State.simulateAxisEvent(5, ((float)reading.RightTrigger * 2.0f) - 1.0f);
+
+				if (info.RumbleExpiration > 0 || info.RumbleTriggersExpiration > 0) {
+					uint64_t now = Environment::QueryUnbiasedInterruptTime();
+					if (now >= info.RumbleExpiration || now >= info.RumbleTriggersExpiration) {
+						auto vibration = info.Gamepad.Vibration();
+
+						if (info.RumbleExpiration > 0 && now >= info.RumbleExpiration) {
+							info.RumbleLowFrequency = 0.0f;
+							info.RumbleHighFrequency = 0.0f;
+							info.RumbleExpiration = 0;
+
+							vibration.LeftMotor = 0.0f;
+							vibration.RightMotor = 0.0f;
+						}
+						if (info.RumbleTriggersExpiration > 0 && now >= info.RumbleTriggersExpiration) {
+							info.RumbleLeftTrigger = 0.0f;
+							info.RumbleRightTrigger = 0.0f;
+							info.RumbleTriggersExpiration = 0;
+
+							vibration.LeftTrigger = 0.0f;
+							vibration.RightTrigger = 0.0f;
+						}
+
+						info.Gamepad.Vibration(vibration);
+					}
+				}
 			}
 		}
 
-		_gamepadsSync.Unlock();
+		_gamepadsSync.ExitReadLock();
 	}
 
 	void UwpInputManager::OnKey(const winrtWUC::CoreWindow& sender, const winrtWUC::KeyEventArgs& args)
@@ -232,6 +274,67 @@ namespace nCine
 				}
 			}
 		}
+	}
+
+	void UwpInputManager::OnGamepadAdded(const winrtWF::IInspectable& sender, const winrtWGI::Gamepad& gamepad)
+	{
+		_gamepadsSync.EnterWriteLock();
+
+		bool found = false;
+		int firstFreeId = -1;
+		for (int i = 0; i < MaxNumJoysticks; i++) {
+			auto& info = _gamepads[i];
+			if (info.Connected) {
+				if (!found && info.Gamepad == gamepad) {
+					found = true;
+				}
+			} else {
+				if (firstFreeId == -1) {
+					firstFreeId = i;
+				}
+			}
+		}
+
+		if (!found) {
+			auto& info = _gamepads[firstFreeId];
+			info.Gamepad = gamepad;
+			info.Connected = true;
+
+			joyConnectionEvent_.joyId = firstFreeId;
+
+			if (inputEventHandler_ != nullptr) {
+				joyMapping_.onJoyConnected(joyConnectionEvent_);
+				inputEventHandler_->OnJoyConnected(joyConnectionEvent_);
+			}
+		}
+
+		_gamepadsSync.ExitWriteLock();
+
+		if (!found) {
+			updateJoystickStates();
+		}
+	}
+
+	void UwpInputManager::OnGamepadRemoved(const winrtWF::IInspectable& sender, const winrtWGI::Gamepad& gamepad)
+	{
+		_gamepadsSync.EnterWriteLock();
+
+		for (int i = 0; i < MaxNumJoysticks; i++) {
+			auto& info = _gamepads[i];
+			if (info.Connected && info.Gamepad == gamepad) {
+				info.Connected = false;
+
+				_gamepads[i].State.resetJoystickState(i);
+
+				if (inputEventHandler_ != nullptr) {
+					inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
+					joyMapping_.onJoyDisconnected(joyConnectionEvent_);
+				}
+				break;
+			}
+		}
+
+		_gamepadsSync.ExitWriteLock();
 	}
 
 #pragma push_macro("DELETE")
@@ -367,19 +470,34 @@ namespace nCine
 
 #pragma pop_macro("DELETE")
 
-	UwpInputManager::JoystickEventsSimulator::JoystickEventsSimulator()
+	UwpJoystickState::UwpJoystickState() : joyId_(-1)
 	{
-		std::memset(buttonsState_, 0, sizeof(bool) * MaxNumButtons * MaxNumJoysticks);
-		std::memset(axesValuesState_, 0, sizeof(float) * MaxNumAxes * MaxNumJoysticks);
 	}
 
-	void UwpInputManager::JoystickEventsSimulator::resetJoystickState(int joyId)
+	bool UwpJoystickState::isButtonPressed(int buttonId) const
 	{
-		std::memset(buttonsState_[joyId], 0, sizeof(bool) * MaxNumButtons);
-		std::memset(axesValuesState_[joyId], 0, sizeof(float) * MaxNumAxes);
+		return (buttonId >= 0 && buttonId < MaxNumButtons && buttonsState_[buttonId]);
 	}
 
-	void UwpInputManager::JoystickEventsSimulator::simulateButtonsEvents(int joyId, winrtWGI::GamepadButtons buttons)
+	unsigned char UwpJoystickState::hatState(int hatId) const
+	{
+		return (hatId >= 0 && hatId < MaxNumHats ? hatsState_[hatId] : HatState::CENTERED);
+	}
+
+	float UwpJoystickState::axisValue(int axisId) const
+	{
+		return (axisId >= 0 && axisId < MaxNumAxes ? axesValuesState_[axisId] : 0.0f);
+	}
+
+	void UwpJoystickState::resetJoystickState(int joyId)
+	{
+		joyId_ = joyId;
+		std::memset(buttonsState_, 0, sizeof(buttonsState_));
+		std::memset(hatsState_, 0, sizeof(hatsState_));
+		std::memset(axesValuesState_, 0, sizeof(axesValuesState_));
+	}
+
+	void UwpJoystickState::simulateButtonsEvents(winrtWGI::GamepadButtons buttons)
 	{
 		constexpr winrtWGI::GamepadButtons Mapping[MaxNumButtons] = {
 			winrtWGI::GamepadButtons::A, winrtWGI::GamepadButtons::B, winrtWGI::GamepadButtons::X, winrtWGI::GamepadButtons::Y,
@@ -395,23 +513,23 @@ namespace nCine
 			}
 
 			bool isPressed = (buttons & Mapping[i]) != winrtWGI::GamepadButtons::None;
-			if (inputEventHandler_ != nullptr && isPressed != buttonsState_[joyId][i]) {
-				joyButtonEvent_.joyId = joyId;
+			if (UwpInputManager::inputEventHandler_ != nullptr && isPressed != buttonsState_[i]) {
+				joyButtonEvent_.joyId = joyId_;
 				joyButtonEvent_.buttonId = i;
 				if (isPressed) {
-					joyMapping_.onJoyButtonPressed(joyButtonEvent_);
-					inputEventHandler_->OnJoyButtonPressed(joyButtonEvent_);
+					UwpInputManager::joyMapping_.onJoyButtonPressed(joyButtonEvent_);
+					UwpInputManager::inputEventHandler_->OnJoyButtonPressed(joyButtonEvent_);
 				} else {
-					joyMapping_.onJoyButtonReleased(joyButtonEvent_);
-					inputEventHandler_->OnJoyButtonReleased(joyButtonEvent_);
+					UwpInputManager::joyMapping_.onJoyButtonReleased(joyButtonEvent_);
+					UwpInputManager::inputEventHandler_->OnJoyButtonReleased(joyButtonEvent_);
 				}
 			}
 
-			buttonsState_[joyId][i] = isPressed;
+			buttonsState_[i] = isPressed;
 		}
 	}
 
-	void UwpInputManager::JoystickEventsSimulator::simulateHatsEvents(int joyId, winrtWGI::GamepadButtons buttons)
+	void UwpJoystickState::simulateHatsEvents(winrtWGI::GamepadButtons buttons)
 	{
 		constexpr winrtWGI::GamepadButtons Mapping[4] = {
 			winrtWGI::GamepadButtons::DPadUp, winrtWGI::GamepadButtons::DPadRight,
@@ -426,28 +544,28 @@ namespace nCine
 			}
 		}
 
-		if (inputEventHandler_ != nullptr && hatsState_[joyId][0] != hatState) {
-			joyHatEvent_.joyId = joyId;
+		if (UwpInputManager::inputEventHandler_ != nullptr && hatsState_[0] != hatState) {
+			joyHatEvent_.joyId = joyId_;
 			joyHatEvent_.hatId = 0;
 			joyHatEvent_.hatState = hatState;
 
-			joyMapping_.onJoyHatMoved(joyHatEvent_);
-			inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
+			UwpInputManager::joyMapping_.onJoyHatMoved(joyHatEvent_);
+			UwpInputManager::inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
 		}
 
-		hatsState_[joyId][0] = hatState;
+		hatsState_[0] = hatState;
 	}
 
-	void UwpInputManager::JoystickEventsSimulator::simulateAxisEvent(int joyId, int axisId, float value)
+	void UwpJoystickState::simulateAxisEvent(int axisId, float value)
 	{
-		if (inputEventHandler_ != nullptr && std::abs(axesValuesState_[joyId][axisId] - value) > AxisEventTolerance) {
-			joyAxisEvent_.joyId = joyId;
+		if (UwpInputManager::inputEventHandler_ != nullptr && std::abs(axesValuesState_[axisId] - value) > AxisEventTolerance) {
+			joyAxisEvent_.joyId = joyId_;
 			joyAxisEvent_.axisId = axisId;
 			joyAxisEvent_.value = value;
-			joyMapping_.onJoyAxisMoved(joyAxisEvent_);
-			inputEventHandler_->OnJoyAxisMoved(joyAxisEvent_);
+			UwpInputManager::joyMapping_.onJoyAxisMoved(joyAxisEvent_);
+			UwpInputManager::inputEventHandler_->OnJoyAxisMoved(joyAxisEvent_);
 		}
 
-		axesValuesState_[joyId][axisId] = value;
+		axesValuesState_[axisId] = value;
 	}
 }
