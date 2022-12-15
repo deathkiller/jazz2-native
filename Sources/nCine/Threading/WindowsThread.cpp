@@ -3,6 +3,7 @@
 #include "Thread.h"
 
 #if defined(DEATH_TARGET_WINDOWS)
+
 #include "../../Common.h"
 
 #include <utility>
@@ -214,8 +215,8 @@ namespace nCine
 
 		return 0;
 	}
-
 }
+
 #endif
 
 #endif

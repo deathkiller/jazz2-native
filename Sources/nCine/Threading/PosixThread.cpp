@@ -3,6 +3,7 @@
 #include "Thread.h"
 
 #if !defined(DEATH_TARGET_WINDOWS)
+
 #include "../../Common.h"
 
 #include <unistd.h> // for sysconf()
@@ -270,8 +271,8 @@ namespace nCine
 
 		return nullptr;
 	}
-
 }
+
 #endif
 
 #endif
