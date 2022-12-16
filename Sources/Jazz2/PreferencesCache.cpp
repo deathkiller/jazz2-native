@@ -137,9 +137,7 @@ namespace Jazz2
 #if defined(DEATH_TARGET_ANDROID)
 						UseNativeBackButton = ((boolOptions & BoolOptions::UseNativeBackButton) == BoolOptions::UseNativeBackButton);
 #endif
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 						EnableDiscordIntegration = ((boolOptions & BoolOptions::EnableDiscordIntegration) == BoolOptions::EnableDiscordIntegration);
-#endif
 						TutorialCompleted = ((boolOptions & BoolOptions::TutorialCompleted) == BoolOptions::TutorialCompleted);
 
 						if ((boolOptions & BoolOptions::SetLanguage) == BoolOptions::SetLanguage) {

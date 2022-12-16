@@ -2,7 +2,7 @@
 
 #include "../../Common.h"
 
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 
 #include "../../nCine/Threading/Thread.h"
 
@@ -51,13 +51,17 @@ namespace Jazz2::UI
 			Pong
 		};
 
+#if defined(DEATH_TARGET_WINDOWS)
 		HANDLE _hPipe;
 		HANDLE _hEventRead;
 		HANDLE _hEventWrite;
+		String _pendingFrame;
+#else
+		int _sockFd;
+#endif
 		Thread _thread;
 		int _nonce;
 		String _clientId;
-		String _pendingFrame;
 
 		bool WriteFrame(Opcodes opcode, const char* buffer, uint32_t bufferSize);
 

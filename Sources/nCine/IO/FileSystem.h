@@ -11,9 +11,7 @@
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;
 
-#ifdef DEATH_TARGET_WINDOWS
-typedef void* HANDLE;
-#else
+#if !defined(DEATH_TARGET_WINDOWS)
 #	include <climits> // for `PATH_MAX`
 #	if defined(DEATH_TARGET_APPLE)
 #		include <dirent.h>

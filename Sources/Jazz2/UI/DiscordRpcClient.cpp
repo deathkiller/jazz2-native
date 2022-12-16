@@ -1,8 +1,16 @@
 ﻿#include "DiscordRpcClient.h"
 
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 
 #include "../../nCine/Base/Algorithms.h"
+
+#if defined(DEATH_TARGET_UNIX)
+#	include <unistd.h>
+#	include <sys/socket.h>
+#	include <sys/un.h>
+#endif
+
+using namespace Death::Containers::Literals;
 
 namespace Jazz2::UI
 {
@@ -14,9 +22,13 @@ namespace Jazz2::UI
 
 	DiscordRpcClient::DiscordRpcClient()
 		:
+#if defined(DEATH_TARGET_WINDOWS)
 		_hPipe(NULL),
 		_hEventRead(NULL),
 		_hEventWrite(NULL),
+#else
+		_sockFd(-1),
+#endif
 		_nonce(0)
 	{
 	}
@@ -28,11 +40,13 @@ namespace Jazz2::UI
 
 	bool DiscordRpcClient::Connect(const StringView& clientId)
 	{
-		if (_hPipe != NULL) {
-			return true;
-		}
 		if (clientId.empty()) {
 			return false;
+		}
+
+#if defined(DEATH_TARGET_WINDOWS)
+		if (_hPipe != NULL) {
+			return true;
 		}
 
 		wchar_t pipeName[32];
@@ -56,12 +70,68 @@ namespace Jazz2::UI
 		_hEventRead = ::CreateEvent(NULL, FALSE, TRUE, NULL);
 		_hEventWrite = ::CreateEvent(NULL, FALSE, FALSE, NULL);
 		_thread.Run(DiscordRpcClient::OnBackgroundThread, this);
+#else
+		if (_sockFd >= 0) {
+			return true;
+		}
 
+		constexpr StringView RpcPaths[] = {
+			"%s/discord-ipc-%i"_s,
+			"%s/app/com.discordapp.Discord/discord-ipc-%i"_s,
+			"%s/snap.discord-canary/discord-ipc-%i"_s,
+			"%s/snap.discord/discord-ipc-%i"_s
+		};
+
+		_sockFd = ::socket(AF_UNIX, SOCK_STREAM, 0);
+		if (_sockFd < 0) {
+			LOGE("Failed to create socket");
+			return false;
+		}
+
+		struct sockaddr_un addr;
+		addr.sun_family = AF_UNIX;
+
+		StringView tempPath = ::getenv("XDG_RUNTIME_DIR");
+		if (tempPath.empty()) {
+			tempPath = ::getenv("TMPDIR");
+			if (tempPath.empty()) {
+				tempPath = ::getenv("TMP");
+				if (tempPath.empty()) {
+					tempPath = ::getenv("TEMP");
+					if (tempPath.empty()) {
+						tempPath = "/tmp"_s;
+					}
+				}
+			}
+		}
+
+		bool isConnected = false;
+		for (int j = 0; j < _countof(RpcPaths); j++) {
+			for (int i = 0; i < 10; i++) {
+				formatString(addr.sun_path, sizeof(addr.sun_path), RpcPaths[j].data(), tempPath.data(), i);
+				if (::connect(_sockFd, (struct sockaddr*)&addr, sizeof(addr)) >= 0) {
+					isConnected = true;
+					break;
+				}
+			}
+		}
+
+		if (!isConnected) {
+			::close(_sockFd);
+			_sockFd = -1;
+			return false;
+		}
+
+		_clientId = clientId;
+		_nonce = 0;
+		_thread.Run(DiscordRpcClient::OnBackgroundThread, this);
+#endif
 		return true;
 	}
 
 	void DiscordRpcClient::Disconnect()
 	{
+#if defined(DEATH_TARGET_WINDOWS)
 		HANDLE pipe = (HANDLE)InterlockedExchangePointer(&_hPipe, NULL);
 		if (pipe != NULL) {
 			::CancelIoEx(pipe, NULL);
@@ -76,21 +146,40 @@ namespace Jazz2::UI
 			::CloseHandle(_hEventWrite);
 			_hEventWrite = NULL;
 		}
+#else
+		int sockFd = _sockFd;
+		if (sockFd >= 0) {
+			_sockFd = -1;
+			_thread.Abort();
+			::close(sockFd);
+		}
+#endif
 	}
 
 	bool DiscordRpcClient::IsSupported() const
 	{
+#if defined(DEATH_TARGET_WINDOWS)
 		return (_hPipe != nullptr);
+#else
+		return (_sockFd >= 0);
+#endif
 	}
 
 	bool DiscordRpcClient::SetRichPresence(const RichPresence& richPresence)
 	{
-		if (!_pendingFrame.empty()) {
+#if defined(DEATH_TARGET_WINDOWS)
+		if (!_pendingFrame.empty() || !IsSupported()) {
 			return false;
 		}
 
 		DWORD processId = ::GetCurrentProcessId();
+#else
+		if (!IsSupported()) {
+			return false;
+		}
 
+		pid_t processId = ::getpid();
+#endif
 		char buffer[1024];
 		int bufferOffset = formatString(buffer, sizeof(buffer), "{\"cmd\":\"SET_ACTIVITY\",\"nonce\":%i,\"args\":{\"pid\":%i,\"activity\":{", ++_nonce, processId);
 
@@ -135,8 +224,13 @@ namespace Jazz2::UI
 
 		bufferOffset += formatString(buffer + bufferOffset, sizeof(buffer) - bufferOffset, "}}}}");
 		
+#if defined(DEATH_TARGET_WINDOWS)
 		_pendingFrame = String(buffer, bufferOffset);
 		::SetEvent(_hEventWrite);
+#else
+		WriteFrame(Opcodes::Frame, buffer, bufferOffset);
+#endif
+		return true;
 	}
 
 	bool DiscordRpcClient::WriteFrame(Opcodes opcode, const char* buffer, uint32_t bufferSize)
@@ -145,8 +239,24 @@ namespace Jazz2::UI
 		*(uint32_t*)&frameHeader[0] = (uint32_t)opcode;
 		*(uint32_t*)&frameHeader[4] = bufferSize;
 
+#if defined(DEATH_TARGET_WINDOWS)
 		DWORD bytesWritten = 0;
 		return ::WriteFile(_hPipe, frameHeader, sizeof(frameHeader), &bytesWritten, NULL) && ::WriteFile(_hPipe, buffer, bufferSize, &bytesWritten, NULL);
+#else
+		if (::write(_sockFd, frameHeader, sizeof(frameHeader)) < 0) {
+			return false;
+		}
+
+		int bytesTotal = 0;
+		while (bytesTotal < bufferSize) {
+			int bytesWritten = ::write(_sockFd, buffer + bytesTotal, bufferSize - bytesTotal);
+			if (bytesWritten < 0) {
+				return false;
+			}
+			bytesTotal += bytesWritten;
+		}
+		return true;
+#endif
 	}
 
 	void DiscordRpcClient::OnBackgroundThread(void* args)
@@ -158,6 +268,7 @@ namespace Jazz2::UI
 		int bufferSize = formatString(buffer, sizeof(buffer), "{\"v\":1,\"client_id\":\"%s\"}", client->_clientId.data());
 		client->WriteFrame(Opcodes::Handshake, buffer, bufferSize);
 
+#if defined(DEATH_TARGET_WINDOWS)
 		DWORD bytesRead = 0;
 		OVERLAPPED ov = { };
 		ov.hEvent = client->_hEventRead;
@@ -225,6 +336,46 @@ namespace Jazz2::UI
 				}
 			}	
 		}
+#else
+		while (client->_sockFd >= 0) {
+			int bytesRead = ::read(client->_sockFd, buffer, sizeof(buffer));
+			if (bytesRead <= 0) {
+				LOGE_X("Failed to read from socket: %i", bytesRead);
+				int sockFd = client->_sockFd;
+				if (sockFd >= 0) {
+					client->_sockFd = -1;
+					::close(sockFd);
+				}
+				break;
+			}
+
+			Opcodes opcode = (Opcodes)*(uint32_t*)&buffer[0];
+			uint32_t frameSize = *(uint32_t*)&buffer[4];
+			if (frameSize >= sizeof(buffer)) {
+				continue;
+			}
+
+			switch (opcode) {
+				case Opcodes::Handshake:
+				case Opcodes::Close: {
+					int sockFd = client->_sockFd;
+					if (sockFd >= 0) {
+						client->_sockFd = -1;
+						::close(sockFd);
+					}
+					return;
+				}
+				case Opcodes::Ping: {
+					client->WriteFrame(Opcodes::Pong, &buffer[8], frameSize);
+					break;
+				}
+			}
+
+			//if (bytesRead > frameSize + 8) {
+			//	LOGW_X("Partial read (%i bytes left)", bytesRead - (frameSize + 8));
+			//}
+		}
+#endif
 	}
 }
 

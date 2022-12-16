@@ -4,7 +4,7 @@
 #include "../RgbLights.h"
 #include "../../PreferencesCache.h"
 
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 #	include "../DiscordRpcClient.h"
 #endif
 
@@ -17,7 +17,7 @@ namespace Jazz2::UI::Menu
 		_isDirty(false)
 	{
 		_items[(int)Item::Enhancements].Name = "Enhancements"_s;
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 		_items[(int)Item::EnableDiscordIntegration].Name = "Discord Integration"_s;
 #endif
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_WINDOWS_RT)
@@ -132,7 +132,7 @@ namespace Jazz2::UI::Menu
 			if (i >= 1 && i <= lastBoolOption) {
 				bool enabled;
 				switch (i) {
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 					case (int)Item::EnableDiscordIntegration: enabled = PreferencesCache::EnableDiscordIntegration; break;
 #endif
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_WINDOWS_RT)
@@ -199,7 +199,7 @@ namespace Jazz2::UI::Menu
 
 		switch (_selectedIndex) {
 			case (int)Item::Enhancements: _root->SwitchToSection<GameplayEnhancementsSection>(); break;
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 			case (int)Item::EnableDiscordIntegration:
 				PreferencesCache::EnableDiscordIntegration = !PreferencesCache::EnableDiscordIntegration;
 				if (!PreferencesCache::EnableDiscordIntegration) {

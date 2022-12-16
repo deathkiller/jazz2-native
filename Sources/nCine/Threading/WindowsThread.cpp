@@ -12,12 +12,12 @@ namespace nCine
 {
 	namespace
 	{
-#if !defined PTW32_VERSION && !defined __WINPTHREADS_VERSION
+#if !defined(PTW32_VERSION) && !defined(__WINPTHREADS_VERSION)
 		const unsigned int MaxThreadNameLength = 256;
 
 		void SetThreadName(HANDLE handle, const char* name)
 		{
-			if (handle == 0) return;
+			if (handle == NULL) return;
 
 #	if defined(NTDDI_WIN10_RS2) && NTDDI_VERSION >= NTDDI_WIN10_RS2
 			wchar_t buffer[MaxThreadNameLength];
@@ -83,12 +83,12 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	Thread::Thread()
-		: handle_(0)
+		: handle_(NULL)
 	{
 	}
 
 	Thread::Thread(ThreadFunctionPtr startFunction, void* arg)
-		: handle_(0)
+		: handle_(NULL)
 	{
 		Run(startFunction, arg);
 	}
@@ -110,7 +110,7 @@ namespace nCine
 
 	void Thread::Run(ThreadFunctionPtr startFunction, void* arg)
 	{
-		if (handle_ == 0) {
+		if (handle_ == NULL) {
 			threadInfo_.startFunction = startFunction;
 			threadInfo_.threadArg = arg;
 			handle_ = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0, WrapperFunction, &threadInfo_, 0, nullptr));
@@ -123,7 +123,7 @@ namespace nCine
 	void* Thread::Join()
 	{
 		::WaitForSingleObject(handle_, INFINITE);
-		handle_ = 0;
+		handle_ = NULL;
 		return nullptr;
 	}
 
@@ -143,7 +143,7 @@ namespace nCine
 
 	int Thread::GetPriority() const
 	{
-		return (handle_ != 0 ? GetThreadPriority(handle_) : 0);
+		return (handle_ != NULL ? ::GetThreadPriority(handle_) : 0);
 	}
 
 	void Thread::SetPriority(int priority)
@@ -166,7 +166,7 @@ namespace nCine
 
 	void Thread::YieldExecution()
 	{
-		Sleep(0);
+		::Sleep(0);
 	}
 
 	void Thread::Abort()
@@ -175,18 +175,15 @@ namespace nCine
 		// TerminateThread() is not supported on WinRT
 		::TerminateThread(handle_, 0);
 #endif
-		handle_ = 0;
+		handle_ = NULL;
 	}
 
 	ThreadAffinityMask Thread::GetAffinityMask() const
 	{
 		ThreadAffinityMask affinityMask;
 
-		if (handle_ != 0) {
-			// A neutral value for the temporary mask
-			DWORD_PTR allCpus = ~(allCpus & 0);
-
-			affinityMask.affinityMask_ = ::SetThreadAffinityMask(handle_, allCpus);
+		if (handle_ != NULL) {
+			affinityMask.affinityMask_ = ::SetThreadAffinityMask(handle_, ~0);
 			::SetThreadAffinityMask(handle_, affinityMask.affinityMask_);
 		} else {
 			LOGW("Cannot get the affinity for a thread that has not been created yet");
@@ -197,7 +194,7 @@ namespace nCine
 
 	void Thread::SetAffinityMask(ThreadAffinityMask affinityMask)
 	{
-		if (handle_ != 0)
+		if (handle_ != NULL)
 			::SetThreadAffinityMask(handle_, affinityMask.affinityMask_);
 		else {
 			LOGW("Cannot set the affinity mask for a not yet created thread");
