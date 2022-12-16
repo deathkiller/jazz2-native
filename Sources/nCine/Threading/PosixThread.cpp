@@ -123,8 +123,11 @@ namespace nCine
 	void* Thread::Join()
 	{
 		void* pRetVal = nullptr;
-		pthread_join(tid_, &pRetVal);
-		tid_ = 0;
+		if (tid_ != 0) {
+			if (pthread_join(tid_, &pRetVal) == 0) {
+				tid_ = 0;
+			}
+		}
 		return pRetVal;
 	}
 
@@ -216,8 +219,9 @@ namespace nCine
 #if !defined(DEATH_TARGET_ANDROID)
 	void Thread::Abort()
 	{
-		pthread_cancel(tid_);
-		tid_ = 0;
+		if (pthread_cancel(tid_) == 0) {
+			tid_ = 0;
+		}
 	}
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)

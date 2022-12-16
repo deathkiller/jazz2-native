@@ -33,7 +33,7 @@
 #include "Jazz2/Compatibility/JJ2Tileset.h"
 #include "Jazz2/Compatibility/EventConverter.h"
 
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 #	include "Jazz2/UI/DiscordRpcClient.h"
 #endif
 
@@ -161,7 +161,7 @@ void GameEventHandler::OnInit()
 	// If threading support is enabled, refresh cache during intro cinematics and don't allow skip until it's completed
 	Thread thread([](void* arg) {
 		auto handler = reinterpret_cast<GameEventHandler*>(arg);
-#	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#	if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 		if (PreferencesCache::EnableDiscordIntegration) {
 			DiscordRpcClient::Current().Connect("591586859960762378"_s);
 		}
@@ -181,7 +181,7 @@ void GameEventHandler::OnInit()
 	});
 #else
 	// Building without threading support is not recommended, so it can look ugly
-#	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#	if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 	if (PreferencesCache::EnableDiscordIntegration) {
 		DiscordRpcClient::Current().Connect("591586859960762378"_s);
 	}
@@ -829,7 +829,7 @@ void GameEventHandler::SaveEpisodeContinue(const std::unique_ptr<LevelInitializa
 
 void GameEventHandler::UpdateRichPresence(const std::unique_ptr<LevelInitialization>& levelInit)
 {
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 	if (!PreferencesCache::EnableDiscordIntegration || !DiscordRpcClient::Current().IsSupported()) {
 		return;
 	}
