@@ -62,7 +62,7 @@ if(NCINE_VERSION_FROM_GIT)
 		)
 	
 		if(GIT_FAIL)
-			message(STATUS "GIT failed, cannot get current game version (${GIT_REV_COUNT})")
+			message(STATUS "GIT failed, cannot get current game version (${GIT_FAIL})")
 			set(GIT_NO_VERSION TRUE)
 		else()
 			if(GIT_NO_TAG)
