@@ -41,7 +41,7 @@ jobs:
       with:
         arch: ${{ matrix.Platform }}
         distro: ${{ matrix.Distro }}
-        
+        githubToken: ${{ github.token }}
         dockerRunArgs: --volume "${PWD}:/_current"
         
         install: |
