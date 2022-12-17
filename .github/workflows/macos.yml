@@ -39,8 +39,6 @@ jobs:
 
     - name: 'Configure CMake'
       run: |
-        export CC=appleclang
-        
         cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }}
 
     - name: 'Build'

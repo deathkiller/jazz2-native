@@ -61,8 +61,8 @@ jobs:
         install: |
           case "${{ matrix.Distro }}" in
             ubuntu*|jessie|stretch|buster|bullseye)
-              sudo apt-get update -y
-              sudo apt-get install -y cmake curl git g++ libgles2-mesa-dev libopenmpt-dev
+              apt-get update -y
+              apt-get install -y cmake curl git g++ libgles2-mesa-dev libopenmpt-dev
               ;;
           esac
         
