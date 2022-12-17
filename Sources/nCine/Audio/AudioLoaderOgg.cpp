@@ -39,7 +39,7 @@
 //AudioLoaderOgg::AudioLoaderOgg(std::unique_ptr<IFile> fileHandle)
 //    : IAudioLoader(std::move(fileHandle))
 //{
-//	LOGI_X("Loading \"%s\"", fileHandle_->filename());
+//	LOGV_X("Loading \"%s\"", fileHandle_->filename());
 //
 //	// File is closed by `ov_clear()`
 //	fileHandle_->setCloseOnDestruction(false);

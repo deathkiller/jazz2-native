@@ -23,7 +23,6 @@ namespace nCine
 	{
 		return std::make_unique<AudioReaderMpt>(std::move(fileHandle_), frequency_);
 	}
-
 }
 
 #endif
