@@ -2,10 +2,6 @@
 
 #if defined(WITH_SDL)
 
-#include "../Primitives/Vector2.h"
-#include "../Graphics/IGfxDevice.h"
-#include "../Graphics/DisplayMode.h"
-
 #if defined(_MSC_VER) && defined(__has_include)
 #	if __has_include("../../../Libs/Includes/SDL2/SDL.h")
 #		define __HAS_LOCAL_SDL
@@ -17,8 +13,12 @@
 #	include <SDL.h>
 #endif
 
-namespace nCine {
+#include "../Primitives/Vector2.h"
+#include "../Graphics/IGfxDevice.h"
+#include "../Graphics/DisplayMode.h"
 
+namespace nCine
+{
 	/// The SDL based graphics device
 	class SdlGfxDevice : public IGfxDevice
 	{
