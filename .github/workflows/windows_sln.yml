@@ -1,4 +1,4 @@
-name: 'Windows (SLN)'
+name: 'Windows (Fallback)'
 
 on:
   push:

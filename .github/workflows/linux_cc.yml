@@ -15,32 +15,18 @@ jobs:
       matrix:
         include:
         - BuildType: Release
-          Arch: aarch64
+          Platform: aarch64
+          Backend: GLFW
           Distro: ubuntu_latest
           CC: gcc
           CXX: g++
-          Backend: GLFW
-
-        - BuildType: Release
-          Arch: aarch64
-          Distro: ubuntu_latest
-          CC: clang
-          CXX: clang++
-          Backend: GLFW
           
         - BuildType: Release
-          Arch: aarch64
+          Platform: aarch64
+          Backend: SDL2
           Distro: ubuntu_latest
           CC: gcc
           CXX: g++
-          Backend: SDL2
-
-        - BuildType: Release
-          Arch: aarch64
-          Distro: ubuntu_latest
-          CC: clang
-          CXX: clang++
-          Backend: SDL2
 
     runs-on: 'ubuntu-latest'
 
@@ -53,7 +39,7 @@ jobs:
     - name: 'Configure CMake and Build'
       uses: uraimo/run-on-arch-action@v2
       with:
-        arch: ${{ matrix.Arch }}
+        arch: ${{ matrix.Platform }}
         distro: ${{ matrix.Distro }}
         
         dockerRunArgs: --volume "${PWD}:/_current"
@@ -83,6 +69,6 @@ jobs:
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3
       with:
-        name: Jazz2_Linux_${{ matrix.Arch }}_${{ matrix.CC }}_${{ matrix.Backend }}
+        name: Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}
         path: ./_package/
         
