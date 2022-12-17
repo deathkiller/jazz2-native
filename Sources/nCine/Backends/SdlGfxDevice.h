@@ -2,20 +2,20 @@
 
 #if defined(WITH_SDL)
 
+#include "../Primitives/Vector2.h"
+#include "../Graphics/IGfxDevice.h"
+#include "../Graphics/DisplayMode.h"
+
 #if defined(_MSC_VER) && defined(__has_include)
 #	if __has_include("../../../Libs/Includes/SDL2/SDL.h")
 #		define __HAS_LOCAL_SDL
 #	endif
 #endif
-#ifdef __HAS_LOCAL_SDL
+#if defined(__HAS_LOCAL_SDL)
 #	include "../../../Libs/Includes/SDL2/SDL.h"
 #else
 #	include <SDL.h>
 #endif
-
-#include "../Primitives/Vector2.h"
-#include "../Graphics/IGfxDevice.h"
-#include "../Graphics/DisplayMode.h"
 
 namespace nCine
 {

@@ -8,11 +8,11 @@
 #include <cstring>	// for memset() and memcpy()
 #include <cmath>	// for fabsf()
 
-#ifdef WITH_IMGUI
+#if defined(WITH_IMGUI)
 #	include "ImGuiGlfwInput.h"
 #endif
 
-#ifdef WITH_NUKLEAR
+#if defined(WITH_NUKLEAR)
 #	include "NuklearGlfwInput.h"
 #endif
 

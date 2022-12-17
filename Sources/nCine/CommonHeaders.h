@@ -12,7 +12,7 @@
 #				define __HAS_LOCAL_OPENGL
 #			endif
 #		endif
-#		ifdef __HAS_LOCAL_OPENGL
+#		if defined(__HAS_LOCAL_OPENGL)
 #			include "../../Libs/Includes/GL/glew.h"
 #		else
 #			include <GL/glew.h>
@@ -27,7 +27,7 @@
 #				define __HAS_LOCAL_OPENGL
 #			endif
 #		endif
-#		ifdef __HAS_LOCAL_OPENGL
+#		if defined(__HAS_LOCAL_OPENGL)
 #			include "../../Libs/Includes/GL/glew.h"
 #		else
 #			define GL_GLEXT_PROTOTYPES
@@ -49,7 +49,7 @@
 #				define __HAS_LOCAL_OPENAL
 #			endif
 #		endif
-#		ifdef __HAS_LOCAL_OPENAL
+#		if defined(__HAS_LOCAL_OPENAL)
 #			include "../../Libs/Includes/AL/al.h"
 #			include "../../Libs/Includes/AL/alext.h"
 #		else
@@ -73,7 +73,7 @@
 #				define __HAS_LOCAL_OPENALC
 #			endif
 #		endif
-#		ifdef __HAS_LOCAL_OPENALC
+#		if defined(__HAS_LOCAL_OPENALC)
 #			include "../../Libs/Includes/AL/alc.h"
 #			include "../../Libs/Includes/AL/al.h"
 #			include "../../Libs/Includes/AL/alext.h"
