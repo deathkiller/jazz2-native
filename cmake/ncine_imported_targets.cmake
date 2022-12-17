@@ -158,9 +158,9 @@ elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		set(CMAKE_MACOSX_RPATH ON)
 
 		if(NOT IS_DIRECTORY ${CMAKE_FRAMEWORK_PATH})
-			message(FATAL_ERROR "OS X frameworks directory not found at: ${CMAKE_FRAMEWORK_PATH}")
+			message(FATAL_ERROR "MacOS Frameworks directory not found at: ${CMAKE_FRAMEWORK_PATH}")
 		else()
-			message(STATUS "OS X frameworks directory: ${CMAKE_FRAMEWORK_PATH}")
+			message(STATUS "MacOS Frameworks directory: ${CMAKE_FRAMEWORK_PATH}")
 		endif()
 	endif()
 
