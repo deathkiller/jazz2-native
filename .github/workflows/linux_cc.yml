@@ -50,7 +50,7 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: 'Configure CMake and Build on ${{ matrix.Arch }} (${{ matrix.Distro }})'
+    - name: 'Configure CMake and Build'
       uses: uraimo/run-on-arch-action@v2
       with:
         arch: ${{ matrix.Arch }}
@@ -62,7 +62,7 @@ jobs:
           case "${{ matrix.Distro }}" in
             ubuntu*|jessie|stretch|buster|bullseye)
               apt-get update -y
-              apt-get install -y cmake curl git g++ libgles2-mesa-dev libopenmpt-dev
+              apt-get install -y cmake curl git g++ libgles2-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libopenmpt-dev
               ;;
           esac
         
@@ -71,7 +71,7 @@ jobs:
           export CXX=${{ matrix.CXX }}
           
           cd /_current/
-          cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }}
+          cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_DOWNLOAD_DEPENDENCIES=OFF
           make -j $(nproc) -C ./_build/
 
     - name: 'Create Package'

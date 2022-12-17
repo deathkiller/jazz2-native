@@ -190,7 +190,9 @@ elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		if(NCINE_WITH_VORBIS)
 			find_package(Vorbis)
 		endif()
-		find_package(libopenmpt)
+		if(NOT APPLE)
+			find_package(libopenmpt)
+		endif()
 	endif()
 	if(NCINE_WITH_LUA)
 		# Older CMake versions do not support Lua 5.4 if not required explicitly
@@ -591,10 +593,12 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 				INTERFACE_LINK_LIBRARIES "${VORBIS_LIBRARY};${OGG_LIBRARY}")
 		endif()
 		
-		set(OPENMPT_FOUND 1)
-		if(NOT EXISTS ${LIBOPENMPT_LIBRARY})
-			set(OPENMPT_DYNAMIC_LINK 1)
-			message(STATUS "Cannot find libopenmpt, using dynamic linking instead")
+		if(NOT APPLE)
+			set(OPENMPT_FOUND 1)
+			if(NOT EXISTS ${LIBOPENMPT_LIBRARY})
+				set(OPENMPT_DYNAMIC_LINK 1)
+				message(STATUS "Cannot find libopenmpt, using dynamic linking instead")
+			endif()
 		endif()
 	endif()
 
