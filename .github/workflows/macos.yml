@@ -1,0 +1,60 @@
+name: 'MacOS'
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    types: [ opened, synchronize ]
+  workflow_dispatch:
+
+jobs:
+  Build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+          Backend: GLFW
+
+        - BuildType: Release
+          Backend: SDL2
+
+    runs-on: 'macos-latest'
+
+    steps:
+    - name: 'Checkout Code'
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: 'Download Build Dependencies'
+      run: |
+        cd ..
+        git clone https://github.com/nCine/nCine-libraries-artifacts.git
+        cd nCine-libraries-artifacts
+        git checkout libraries-darwin-appleclang
+        LIBRARIES_FILE=$(ls -t | head -n 1) && tar xpzf $LIBRARIES_FILE
+        mv nCine-external ..
+
+    - name: 'Configure CMake'
+      run: |
+        export CC=appleclang
+        
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }}
+
+    - name: 'Build'
+      run: |
+        make -j $(nproc) -C ./_build/
+
+    - name: 'Create Package'
+      run: |
+        make package -C ./_build/
+        cp ./_build/*.dmg ./_package/
+        
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v3
+      with:
+        name: Jazz2_MacOS_${{ matrix.CC }}_${{ matrix.Backend }}
+        path: ./_package/
+        

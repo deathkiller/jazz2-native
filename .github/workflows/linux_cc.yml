@@ -1,0 +1,88 @@
+name: 'Linux (Cross-compile)'
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    types: [ opened, synchronize ]
+  workflow_dispatch:
+
+jobs:
+  Build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+          Arch: aarch64
+          Distro: ubuntu_latest
+          CC: gcc
+          CXX: g++
+          Backend: GLFW
+
+        - BuildType: Release
+          Arch: aarch64
+          Distro: ubuntu_latest
+          CC: clang
+          CXX: clang++
+          Backend: GLFW
+          
+        - BuildType: Release
+          Arch: aarch64
+          Distro: ubuntu_latest
+          CC: gcc
+          CXX: g++
+          Backend: SDL2
+
+        - BuildType: Release
+          Arch: aarch64
+          Distro: ubuntu_latest
+          CC: clang
+          CXX: clang++
+          Backend: SDL2
+
+    runs-on: 'ubuntu-latest'
+
+    steps:
+    - name: 'Checkout Code'
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: 'Configure CMake and Build on ${{ matrix.Arch }} (${{ matrix.Distro }})'
+      uses: uraimo/run-on-arch-action@v2
+      with:
+        arch: ${{ matrix.Arch }}
+        distro: ${{ matrix.Distro }}
+        
+        dockerRunArgs: --volume "${PWD}:/_current"
+        
+        install: |
+          case "${{ matrix.Distro }}" in
+            ubuntu*|jessie|stretch|buster|bullseye)
+              sudo apt-get update -y
+              sudo apt-get install -y cmake curl git g++ libgles2-mesa-dev libopenmpt-dev
+              ;;
+          esac
+        
+        run: |
+          export CC=${{ matrix.CC }}
+          export CXX=${{ matrix.CXX }}
+          
+          cd /_current/
+          cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }}
+          make -j $(nproc) -C ./_build/
+
+    - name: 'Create Package'
+      run: |
+        mkdir ./_package/
+        cp -f ./_build/jazz2 ./_package/jazz2
+        cp -f -r ./Content/ ./_package/Content/
+        
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v3
+      with:
+        name: Jazz2_Linux_${{ matrix.Arch }}_${{ matrix.CC }}_${{ matrix.Backend }}
+        path: ./_package/
+        
