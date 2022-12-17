@@ -16,11 +16,11 @@ jobs:
         include:
         - BuildType: Release
           Backend: GLFW
-          Mode: Standard
+          Mode:
           
         - BuildType: Release
           Backend: SDL2
-          Mode: Standard
+          Mode:
           
         - BuildType: Release
           Backend: GLFW
@@ -53,9 +53,8 @@ jobs:
     - name: 'Configure CMake'
       run: |
         case "${{ matrix.Mode }}" in
-          Standard ) sharewareDemo="OFF" ;;
           SharewareDemo ) sharewareDemo="ON" ;;
-          * ) exit 1 ;;
+          * ) sharewareDemo="OFF" ;;
         esac
         
         export OS=emscripten

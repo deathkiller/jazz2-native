@@ -15,10 +15,10 @@ jobs:
       matrix:
         include:
         - BuildType: Release
-          DisplayName: ARM
+          Platform: ARM
 
         - BuildType: Release
-          DisplayName: x86-64
+          Platform: x64
 
     runs-on: 'ubuntu-latest'
 
@@ -35,10 +35,10 @@ jobs:
 
     - name: 'Configure CMake'
       run: |
-        case "${{ matrix.DisplayName }}" in
+        case "${{ matrix.Platform }}" in
           ARM ) architecture="arm64-v8a;armeabi-v7a"
                 universalApk="ON" ;;
-          x86-64 ) architecture="x86_64"
+          x64 ) architecture="x86_64"
                    universalApk="OFF" ;;
           * ) exit 1 ;;
         esac
@@ -60,9 +60,9 @@ jobs:
           * ) buildDir="release"
               fileSuffix="release-unsigned" ;;
         esac
-        case "${{ matrix.DisplayName }}" in
+        case "${{ matrix.Platform }}" in
           ARM ) filename="app-universal-$fileSuffix.apk" ;;
-          x86-64 ) filename="app-x86_64-$fileSuffix.apk" ;;
+          x64 ) filename="app-x86_64-$fileSuffix.apk" ;;
           * ) exit 1 ;;
         esac
         
@@ -74,7 +74,7 @@ jobs:
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3
       with:
-        name: Jazz2_Android_${{ matrix.DisplayName }}
+        name: Jazz2_Android_${{ matrix.Platform }}
         path: ./_package/
 
   # Testing builds with workarounds
@@ -84,11 +84,11 @@ jobs:
       matrix:
         include:
         - BuildType: Release
-          DisplayName: ARM
+          Platform: ARM
           WorkaroundSwitch: WITH_FIXED_BATCH_SIZE
 
         - BuildType: Release
-          DisplayName: x86-64
+          Platform: x64
           WorkaroundSwitch: WITH_FIXED_BATCH_SIZE
 
     runs-on: 'ubuntu-latest'
@@ -106,10 +106,10 @@ jobs:
 
     - name: 'Configure CMake'
       run: |
-        case "${{ matrix.DisplayName }}" in
+        case "${{ matrix.Platform }}" in
           ARM ) architecture="arm64-v8a;armeabi-v7a"
                 universalApk="ON" ;;
-          x86-64 ) architecture="x86_64"
+          x64 ) architecture="x86_64"
                    universalApk="OFF" ;;
           * ) exit 1 ;;
         esac
@@ -131,9 +131,9 @@ jobs:
           * ) buildDir="release"
               fileSuffix="release-unsigned" ;;
         esac
-        case "${{ matrix.DisplayName }}" in
+        case "${{ matrix.Platform }}" in
           ARM ) filename="app-universal-$fileSuffix.apk" ;;
-          x86-64 ) filename="app-x86_64-$fileSuffix.apk" ;;
+          x64 ) filename="app-x86_64-$fileSuffix.apk" ;;
           * ) exit 1 ;;
         esac
         
@@ -145,5 +145,5 @@ jobs:
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3
       with:
-        name: Jazz2_Android_DEBUG_${{ matrix.DisplayName }}
+        name: Jazz2_Android_DEBUG_${{ matrix.Platform }}
         path: ./_package/
