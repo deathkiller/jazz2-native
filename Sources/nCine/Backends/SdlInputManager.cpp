@@ -5,7 +5,7 @@
 #include "../Input/JoyMapping.h"
 #include "../Application.h"
 
-#ifdef __HAS_LOCAL_SDL
+#if defined(__HAS_LOCAL_SDL)
 #	include "../../../Libs/Includes/SDL2/SDL.h"
 #else
 #	include <SDL.h>
@@ -13,12 +13,12 @@
 
 #include <cstring>
 
-#ifdef WITH_IMGUI
+#if defined(WITH_IMGUI)
 #	include "SdlGfxDevice.h"
 #	include "ImGuiSdlInput.h"
 #endif
 
-#ifdef WITH_NUKLEAR
+#if defined(WITH_NUKLEAR)
 #	include "SdlGfxDevice.h"
 #	include "NuklearSdlInput.h"
 #endif

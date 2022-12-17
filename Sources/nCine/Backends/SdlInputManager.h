@@ -11,7 +11,7 @@
 #		define __HAS_LOCAL_SDL
 #	endif
 #endif
-#ifdef __HAS_LOCAL_SDL
+#if defined(__HAS_LOCAL_SDL)
 #	include "../../../Libs/Includes/SDL2/SDL_events.h"
 #	include "../../../Libs/Includes/SDL2/SDL_mouse.h"
 #else

@@ -48,11 +48,12 @@ jobs:
     - name: 'Create Package'
       run: |
         make package -C ./_build/
+        mkdir ./_package/
         cp ./_build/*.dmg ./_package/
         
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3
       with:
-        name: Jazz2_MacOS_${{ matrix.CC }}_${{ matrix.Backend }}
+        name: Jazz2_MacOS_${{ matrix.Backend }}
         path: ./_package/
         

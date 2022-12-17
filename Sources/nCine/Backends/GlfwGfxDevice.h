@@ -2,19 +2,21 @@
 
 #if defined(WITH_GLFW)
 
+#include "../../Common.h"
+
 #if defined(_MSC_VER) && defined(__has_include)
 #	if __has_include("../../../Libs/Includes/GL/glew.h")
 #		define __HAS_LOCAL_GLEW
 #	endif
 #endif
-#ifdef __HAS_LOCAL_GLEW
-#	ifdef WITH_GLEW
+#if defined(__HAS_LOCAL_GLEW)
+#	if defined(WITH_GLEW)
 #		define GLEW_NO_GLU
 #		include "../../../Libs/Includes/GL/glew.h"
 #	endif
 #	include "../../../Libs/Includes/GL/glfw3.h"
 #else
-#	ifdef WITH_GLEW
+#	if defined(WITH_GLEW)
 #		define GLEW_NO_GLU
 #		include <GL/glew.h>
 #	endif
