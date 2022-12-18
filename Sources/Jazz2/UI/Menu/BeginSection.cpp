@@ -215,6 +215,7 @@ namespace Jazz2::UI::Menu
 						// If `Source` directory doesn't exist, GetAbsolutePath() will fail
 						sourcePath = resolver.GetSourcePath();
 					}
+					fs::CreateDirectories(sourcePath);
 					if (fs::LaunchDirectoryAsync(sourcePath)) {
 						_root->PlaySfx("MenuSelect"_s, 0.6f);
 					}
