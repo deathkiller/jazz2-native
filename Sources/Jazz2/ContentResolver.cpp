@@ -50,6 +50,11 @@ namespace Jazz2
 		StringView externalPath = static_cast<AndroidApplication&>(theApplication()).externalDataPath();
 		_cachePath = fs::JoinPath(externalPath, "Cache/"_s);
 		_sourcePath = fs::JoinPath(externalPath, "Source/"_s);
+#elif defined(DEATH_TARGET_APPLE)
+		// Returns local application data directory on Apple
+		const String& appData = fs::GetSavePath("Jazz² Resurrection"_s);
+		_cachePath = fs::JoinPath(appData, "Cache/"_s);
+		_sourcePath = fs::JoinPath(appData, "Source/"_s);
 #elif defined(DEATH_TARGET_UNIX)
 #	if !defined(NCINE_LINUX_PACKAGE)
 #		define NCINE_LINUX_PACKAGE "Jazz² Resurrection"

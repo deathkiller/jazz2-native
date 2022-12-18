@@ -62,7 +62,7 @@ namespace Jazz2::UI::Menu
 					// If `Source` directory doesn't exist, GetAbsolutePath() will fail
 					_sourcePath = resolver.GetSourcePath();
 				}
-#	if defined(DEATH_TARGET_UNIX)
+#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 				String homeDirectory = fs::GetHomeDirectory();
 				if (!homeDirectory.empty()) {
 					StringView pathSeparator = fs::PathSeparator;
