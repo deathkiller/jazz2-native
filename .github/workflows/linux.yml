@@ -60,10 +60,11 @@ jobs:
 
     - name: 'Build'
       run: |
-        make package -j $(nproc) -C ./_build/
+        make -j $(nproc) -C ./_build/
 
     - name: 'Create Package'
       run: |
+        make package -C ./_build/
         mkdir ./_package/
         cp -f ./_build/jazz2 ./_package/jazz2
         cp -f ./_build/*.deb ./_package/jazz2.deb

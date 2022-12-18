@@ -42,6 +42,12 @@ if(EMSCRIPTEN)
 		set(Threads_FOUND 1)
 	endif()
 
+	add_library(ZLIB::ZLIB INTERFACE IMPORTED)
+	set_target_properties(ZLIB::ZLIB PROPERTIES
+		INTERFACE_COMPILE_OPTIONS "SHELL:-sUSE_ZLIB=1"
+		INTERFACE_LINK_OPTIONS "SHELL:-sUSE_ZLIB=1")
+	set(ZLIB_FOUND 1)
+
 	add_library(OpenGL::GL INTERFACE IMPORTED)
 	set_target_properties(OpenGL::GL PROPERTIES
 		INTERFACE_LINK_OPTIONS "SHELL:-s USE_WEBGL2=1 -s FULL_ES3=1 -s FULL_ES2=1")
@@ -114,12 +120,6 @@ if(EMSCRIPTEN)
 			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}")
 		set(ANGELSCRIPT_FOUND 1)
 	endif()
-	
-	add_library(ZLIB::ZLIB INTERFACE IMPORTED)
-	set_target_properties(ZLIB::ZLIB PROPERTIES
-		INTERFACE_COMPILE_OPTIONS "SHELL:-sUSE_ZLIB=1"
-		INTERFACE_LINK_OPTIONS "SHELL:-sUSE_ZLIB=1")
-	set(ZLIB_FOUND 1)
 
 	return()
 endif()
@@ -168,12 +168,11 @@ elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		endif()
 	endif()
 
+	find_package(ZLIB)
 	if(WIN32)
 		find_package(GLEW REQUIRED)
-	else()
-		if(NCINE_WITH_GLEW)
-			find_package(GLEW)
-		endif()
+	elseif(NCINE_WITH_GLEW)
+		find_package(GLEW)
 	endif()
 	find_package(OpenGL REQUIRED)
 	if(NCINE_ARM_PROCESSOR)
@@ -222,7 +221,6 @@ if(ANDROID)
 	add_library(ZLIB::ZLIB STATIC IMPORTED)
 	set_target_properties(ZLIB::ZLIB PROPERTIES
 		IMPORTED_LOCATION "${ZLIB_LIBRARY}")
-			
 	set(ZLIB_FOUND 1)
 	
 	#if(NCINE_WITH_PNG AND EXISTS "${EXTERNAL_ANDROID_DIR}/png/${ANDROID_ABI}/libpng16.a")
@@ -297,6 +295,21 @@ if(ANDROID)
 		set(ANGELSCRIPT_FOUND 1)
 	endif()
 elseif(MSVC)
+	if(EXISTS "${MSVC_LIBDIR}/libdeflate.lib" AND EXISTS "${MSVC_BINDIR}/libdeflate.dll")
+		add_library(libdeflate::libdeflate SHARED IMPORTED)
+		set_target_properties(libdeflate::libdeflate PROPERTIES
+			IMPORTED_IMPLIB "${MSVC_LIBDIR}/libdeflate.lib"
+			IMPORTED_LOCATION "${MSVC_BINDIR}/libdeflate.dll"
+			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}")
+		set(LIBDEFLATE_FOUND 1)
+	elseif(EXISTS "${MSVC_LIBDIR}/zlib.lib" AND EXISTS "${MSVC_BINDIR}/zlib.dll")
+		add_library(ZLIB::ZLIB SHARED IMPORTED)
+		set_target_properties(ZLIB::ZLIB PROPERTIES
+			IMPORTED_IMPLIB "${MSVC_LIBDIR}/zlib.lib"
+			IMPORTED_LOCATION "${MSVC_BINDIR}/zlib.dll")
+		set(ZLIB_FOUND 1)
+	endif()
+
 	if(NCINE_WITH_ANGLE AND
 	   EXISTS "${MSVC_LIBDIR}/libEGL.lib" AND EXISTS "${MSVC_BINDIR}/libEGL.dll" AND
 	   EXISTS "${MSVC_LIBDIR}/libGLESv2.lib" AND EXISTS "${MSVC_BINDIR}/libGLESv2.dll")
@@ -431,21 +444,6 @@ elseif(MSVC)
 			IMPORTED_LOCATION "${MSVC_LIBDIR}/angelscript.lib"
 			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}")
 		set(ANGELSCRIPT_FOUND 1)
-	endif()
-	
-	if(EXISTS "${MSVC_LIBDIR}/libdeflate.lib" AND EXISTS "${MSVC_BINDIR}/libdeflate.dll")
-		add_library(libdeflate::libdeflate SHARED IMPORTED)
-		set_target_properties(libdeflate::libdeflate PROPERTIES
-			IMPORTED_IMPLIB "${MSVC_LIBDIR}/libdeflate.lib"
-			IMPORTED_LOCATION "${MSVC_BINDIR}/libdeflate.dll"
-			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}")
-		set(LIBDEFLATE_FOUND 1)
-	elseif(EXISTS "${MSVC_LIBDIR}/zlib.lib" AND EXISTS "${MSVC_BINDIR}/zlib.dll")
-		add_library(ZLIB::ZLIB SHARED IMPORTED)
-		set_target_properties(ZLIB::ZLIB PROPERTIES
-			IMPORTED_IMPLIB "${MSVC_LIBDIR}/zlib.lib"
-			IMPORTED_LOCATION "${MSVC_BINDIR}/zlib.dll")
-		set(ZLIB_FOUND 1)
 	endif()
 elseif(MINGW OR MSYS)
 	function(set_msys_dll PREFIX DLL_NAME)
@@ -620,10 +618,6 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		endif()
 	endif()
 
-	# Always use Zlib on Unix
-	find_package(ZLIB)
-	set(ZLIB_FOUND 1)
-
 	if(APPLE)
 		function(split_extra_frameworks PREFIX LIBRARIES)
 			foreach(LIBRARY ${LIBRARIES})
@@ -637,6 +631,11 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			set(${PREFIX}_FRAMEWORK_LINKS ${FRAMEWORK_LINKS} PARENT_SCOPE)
 			set(${PREFIX}_FRAMEWORK_DIR ${FRAMEWORK_DIR} PARENT_SCOPE)
 		endfunction()
+
+		set_target_properties(ZLIB::ZLIB PROPERTIES
+			IMPORTED_LOCATION "${ZLIB_LIBRARY_RELEASE}/zlib"
+			IMPORTED_LOCATION_RELEASE "${ZLIB_LIBRARY_RELEASE}/zlib"
+			IMPORTED_LOCATION_DEBUG "${ZLIB_LIBRARY_RELEASE}/zlib")
 
 		if(GLEW_FOUND)
 			get_target_property(GLEW_LIBRARY_RELEASE GLEW::GLEW IMPORTED_LOCATION_RELEASE)
@@ -659,11 +658,6 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 				IMPORTED_LOCATION "${SDL2_FRAMEWORK_DIR}/sdl2"
 				INTERFACE_LINK_LIBRARIES "${SDL2_FRAMEWORK_LINKS}")
 		endif()
-
-		set_target_properties(ZLIB::ZLIB PROPERTIES
-			IMPORTED_LOCATION "${ZLIB_LIBRARY_RELEASE}/zlib"
-			IMPORTED_LOCATION_RELEASE "${ZLIB_LIBRARY_RELEASE}/zlib"
-			IMPORTED_LOCATION_DEBUG "${ZLIB_LIBRARY_RELEASE}/zlib")
 
 		#if(PNG_FOUND)
 		#	get_target_property(PNG_LIBRARY_RELEASE PNG::PNG IMPORTED_LOCATION_RELEASE)

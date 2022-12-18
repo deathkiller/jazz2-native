@@ -44,33 +44,44 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 ### Linux
 * Download the game
 * Install dependencies: `sudo apt install libglew2.2 libglfw3 libopenal1 libopenmpt0`
+  * Alternatively, install provided `.deb` or `.rpm` package and dependencies should be installed automatically
 * Copy contents of original *Jazz Jackrabbit 2* directory to `‹Game›/Source/`
+  * If packages are used, the files must be copied to `~/.local/share/Jazz² Resurrection/Source/` instead
 * Run `‹Game›/jazz2` or `‹Game›/jazz2_sdl2` application
+  * If packages are used, the game should be visible in application list
 
 `‹Game›` *is path to Jazz² Resurrection. Cache is recreated during intro cinematics on the first startup, so it can't be skipped.*
 
-<sup>Alternatively, you can use package for your Linux distribution:</sup><br>
+<sup>Alternatively, you can use package repository for your Linux distribution:</sup><br>
 [![ArchLinux](https://img.shields.io/badge/Arch%20Linux-grey?logo=archlinux&logoColor=ffffff)](https://aur.archlinux.org/packages/jazz2-git)
 [![OpenSUSE](https://img.shields.io/obs/games/jazz2/openSUSE_Tumbleweed/x86_64?label=OpenSUSE&logo=opensuse&logoColor=ffffff)](https://build.opensuse.org/package/show/games/jazz2)
 
-### Web (Emscripten)
-* Go to http://deat.tk/jazz2/wasm/
-* Import episodes from original *Jazz Jackrabbit 2* directory to unlock additional content
+### macOS
+* Download the game and install provided `.dmg` application bundle
+* Copy contents of original *Jazz Jackrabbit 2* directory to `~/Library/Application Support/Jazz² Resurrection/Source/`
+* Run the newly installed application
+
+*Cache is recreated during intro cinematics on the first startup, so it can't be skipped.*
 
 ### Android
 * Download the game
+* Install `Jazz2.apk` or `Jazz2_x64.apk` on the device
 * Copy contents of original *Jazz Jackrabbit 2* directory to `‹Storage›/Android/data/jazz2.resurrection/files/Source/`
-* Install `Jazz2.apk` or `Jazz2_x86-64.apk` on the device
 * Run the newly installed application
 
 `‹Storage›` *is usually internal storage on your device.* `Content` *directory is included directly in APK file, no action is needed. The game requires device with **Android 5.0** (or newer) and **OpenGL ES 3.0** support. Cache is recreated during intro cinematics on the first startup.*
 
+### Web (Emscripten)
+* Go to http://deat.tk/jazz2/wasm/
+* Import episodes from original *Jazz Jackrabbit 2* directory in main menu to unlock additional content
+
 ### Xbox (Universal Windows Platform)
 * Download the game
-* Install `Jazz2.cer` certificate (the application is self-signed)
+* Install `Jazz2.cer` certificate if needed (the application is self-signed)
 * Install `Jazz2.msixbundle` package
 * Run the newly installed application
 * Copy contents of original *Jazz Jackrabbit 2* directory to destination shown in the main menu
+  * Alternatively, copy the files to `\Games\Jazz² Resurrection\Source\` on an external drive to preserve settings across installations, the application must be set to `Game` type, `exFAT` is recommended or correct read/write permissions must be assigned
 * Run the application again
 
 
@@ -86,8 +97,19 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
   * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
   * In case of build errors, install following packages (or equivalent for your distribution):<br>`libgl1-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libopenmpt-dev zlib1g-dev`
 * Build the project with *CMake*
-  * Run `./BuildLinuxGcc.sh` (GLFW) or `./BuildLinuxGcc_SDL2.sh` (SDL2) to build with GCC compiler
-  * Run `./BuildLinuxClang.sh` to build with Clang compiler
+
+### macOS
+* Build dependencies will be downloaded automatically by *CMake*
+  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries/tree/macos) manually to `./Libs/`
+* Build the project with *CMake*
+
+### Android
+* Install Android SDK (preferably to `../android-sdk/`)
+* Install Android NDK (preferably to `../android-ndk/`)
+* Install Gradle (preferably to `../gradle/`)
+* Build dependencies will be downloaded automatically by *CMake*
+  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
+* Build the project with *CMake*
 
 ### Web (Emscripten)
 * Install Emscripten SDK (preferably to `../emsdk/`)
@@ -100,25 +122,13 @@ cd emsdk
 ```
 * Build dependencies will be downloaded automatically by *CMake*
   * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
-* Put required game files to `./Content/` directory – the files must be provided in advance
-* Build the project with *CMake*
-  * Run `./BuildEmscripten.sh` to build with Emscripten toolchain
-
-### Android
-* Install Android SDK (preferably to `../android-sdk/`)
-* Install Android NDK (preferably to `../android-ndk/`)
-* Install Gradle (preferably to `../gradle/`)
-* Build dependencies will be downloaded automatically by *CMake*
-  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
-* Build the project with *CMake*
-  * Run `./BuildAndroid.sh` or `./BuildAndroid_x86-64.sh` to build *APK* for Android
-  * Run `./BuildAndroidSign.sh` to sign built *APKs*
-    * Keystore file `Keystore.jks` must exist in repository root
+* Copy required game files to `./Content/` directory – the files must be provided in advance
+* Build the project with *CMake* and Emscripten toolchain
 
 ### Xbox (Universal Windows Platform)
 * Build dependencies will be downloaded automatically by *CMake*
   * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `.\Libs\`
-* Run `.\BuildUwp.bat` to create [Microsoft Visual Studio 2019](https://www.visualstudio.com/) (or newer) solution
+* Run *CMake* to create [Microsoft Visual Studio 2019](https://www.visualstudio.com/) (or newer) solution
 
 
 ## License
