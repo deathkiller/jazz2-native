@@ -49,23 +49,25 @@ jobs:
     - name: 'Create Build Environment'
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libopenmpt-dev
+        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libopenmpt-dev rpm
 
     - name: 'Configure CMake'
       run: |
         export CC=${{ matrix.CC }}
         export CXX=${{ matrix.CXX }}
         
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }}
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_ASSEMBLE_DEB=ON -D NCINE_ASSEMBLE_RPM=ON
 
     - name: 'Build'
       run: |
-        make -j $(nproc) -C ./_build/
+        make package -j $(nproc) -C ./_build/
 
     - name: 'Create Package'
       run: |
         mkdir ./_package/
         cp -f ./_build/jazz2 ./_package/jazz2
+        cp -f ./_build/*.deb ./_package/jazz2.deb
+        cp -f ./_build/*.rpm ./_package/jazz2.rpm
         cp -f -r ./Content/ ./_package/Content/
         
         case "${{ matrix.CC }}" in
