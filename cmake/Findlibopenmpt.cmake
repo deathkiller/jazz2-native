@@ -34,7 +34,7 @@ if(NOT TARGET libopenmpt::libopenmpt)
 			IMPORTED_LOCATION ${LIBOPENMPT_LIBRARY}
 			INTERFACE_INCLUDE_DIRECTORIES ${LIBOPENMPT_INCLUDE_DIR})
 	elseif(NCINE_DOWNLOAD_DEPENDENCIES)
-		# Build `libopenmpt` from source
+		# Try to build `libopenmpt` from source
 		set(LIBOPENMPT_URL "https://github.com/OpenMPT/openmpt/archive/libopenmpt-0.6.6.tar.gz")
 		message(STATUS "Downloading dependencies from \"${LIBOPENMPT_URL}\"...")
 		
@@ -52,7 +52,48 @@ if(NOT TARGET libopenmpt::libopenmpt)
 		set(LIBOPENMPT_INCLUDE_DIR "${libopenmpt_git_SOURCE_DIR}/libopenmpt/")
 		set_target_properties(libopenmpt_src PROPERTIES
 			INTERFACE_INCLUDE_DIRECTORIES ${LIBOPENMPT_INCLUDE_DIR})
-		target_compile_definitions(libopenmpt_src PRIVATE "LIBOPENMPT_BUILD")
+		target_compile_definitions(libopenmpt_src PRIVATE "LIBOPENMPT_BUILD" "MPT_WITH_ZLIB")
+		
+		if(MSVC)
+			# Build with Multiple Processes and force UTF-8
+			target_compile_options(libopenmpt_src PRIVATE /MP /utf-8)
+			# Extra optimizations in release
+			target_compile_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:/fp:fast /O2 /Oi /Qpar /Gy>)
+			target_link_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:/OPT:REF /OPT:NOICF>)
+			# Specifies the architecture for code generation (IA32, SSE, SSE2, AVX, AVX2, AVX512)
+			if(NCINE_ARCH_EXTENSIONS)
+				target_compile_options(libopenmpt_src PRIVATE /arch:${NCINE_ARCH_EXTENSIONS})
+			endif()
+			# Enabling Whole Program Optimization
+			if(NCINE_LINKTIME_OPTIMIZATION)
+				target_compile_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:/GL>)
+				target_link_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:/LTCG>)
+			endif()
+		else()
+			target_compile_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:-ffast-math>)
+			
+			if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+				if(NCINE_LINKTIME_OPTIMIZATION AND NOT (MINGW OR MSYS OR ANDROID))
+					target_compile_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:-flto=auto>)
+					target_link_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:-flto=auto>)
+				endif()
+			elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+				if(NOT EMSCRIPTEN)
+					# Extra optimizations in release
+					target_compile_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:-Ofast>)
+				endif()
+				# Enabling ThinLTO of Clang 4
+				if(NCINE_LINKTIME_OPTIMIZATION)
+					if(EMSCRIPTEN)
+						target_compile_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:-flto>)
+						target_link_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:-flto>)
+					elseif(NOT (MINGW OR MSYS OR ANDROID))
+						target_compile_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:-flto=thin>)
+						target_link_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:-flto=thin>)
+					endif()
+				endif()
+			endif()
+		endif()
 		
 		set(LIBOPENMPT_SOURCES)
 		file(GLOB_RECURSE _files "${libopenmpt_git_SOURCE_DIR}/common/*.cpp")
@@ -67,7 +108,7 @@ if(NOT TARGET libopenmpt::libopenmpt)
 		list(APPEND LIBOPENMPT_SOURCES "${libopenmpt_git_SOURCE_DIR}/libopenmpt/libopenmpt_ext_impl.cpp")
 		target_sources(libopenmpt_src PRIVATE ${LIBOPENMPT_SOURCES})
 		target_include_directories(libopenmpt_src PRIVATE "${libopenmpt_git_SOURCE_DIR}" "${libopenmpt_git_SOURCE_DIR}/common" "${libopenmpt_git_SOURCE_DIR}/src")
-		file(WRITE "${libopenmpt_git_SOURCE_DIR}/common/svn_version.h" "")
+		file(WRITE "${libopenmpt_git_SOURCE_DIR}/common/svn_version.h" "#pragma once\n#define OPENMPT_VERSION_REVISION 0")
 
 		add_library(libopenmpt::libopenmpt ALIAS libopenmpt_src)
 		set(LIBOPENMPT_STATIC TRUE)

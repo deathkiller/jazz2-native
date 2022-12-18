@@ -20,7 +20,7 @@
 	<key>CFBundleExecutable</key>
 	<string>@CPACK_BUNDLE_NAME@</string>
 	<key>CFBundleIconFile</key>
-	<string>@CPACK_EXECUTABLE_NAME@.icns</string>
+	<string>@CPACK_BUNDLE_NAME@.icns</string>
 	<key>CFBundleIdentifier</key>
 	<string>@NCINE_REVERSE_DNS@</string>
 	<key>CFBundleInfoDictionaryVersion</key>
