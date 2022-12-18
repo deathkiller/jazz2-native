@@ -30,16 +30,17 @@ jobs:
 
     - name: 'Download Build Dependencies'
       run: |
-        cd ..
+        mkdir ./_deps/
+        cd ./_deps/
         git clone https://github.com/nCine/nCine-libraries-artifacts.git
         cd nCine-libraries-artifacts
         git checkout libraries-darwin-appleclang
         LIBRARIES_FILE=$(ls -t | head -n 1) && tar xpzf $LIBRARIES_FILE
-        mv nCine-external ..
+        mv nCine-external ../../Libs/
 
     - name: 'Configure CMake'
       run: |
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_DOWNLOAD_DEPENDENCIES=OFF
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }}
 
     - name: 'Build'
       run: |
