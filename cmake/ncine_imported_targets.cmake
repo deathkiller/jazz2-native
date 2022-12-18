@@ -1,5 +1,8 @@
 if(NCINE_DOWNLOAD_DEPENDENCIES)
-	if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.14.0")
+	if(APPLE)
+		message(STATUS "Cannot download dependencies on macOS")
+		set(NCINE_LIBS "${NCINE_ROOT}/Libs/")
+	elseif(CMAKE_VERSION VERSION_GREATER_EQUAL "3.14.0")
 		set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/1.3.1.tar.gz")
 		message(STATUS "Downloading dependencies from \"${NCINE_LIBS_URL}\"...")
 
@@ -154,7 +157,7 @@ if(MSVC)
 	find_package(OpenGL REQUIRED)
 elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	if(APPLE)
-		set(CMAKE_FRAMEWORK_PATH "${PARENT_SOURCE_DIR}/nCine-external")
+		set(CMAKE_FRAMEWORK_PATH ${NCINE_LIBS})
 		set(CMAKE_MACOSX_RPATH ON)
 
 		if(NOT IS_DIRECTORY ${CMAKE_FRAMEWORK_PATH})
@@ -190,9 +193,7 @@ elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		if(NCINE_WITH_VORBIS)
 			find_package(Vorbis)
 		endif()
-		if(NOT APPLE)
-			find_package(libopenmpt)
-		endif()
+		find_package(libopenmpt)
 	endif()
 	if(NCINE_WITH_LUA)
 		# Older CMake versions do not support Lua 5.4 if not required explicitly
@@ -593,12 +594,10 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 				INTERFACE_LINK_LIBRARIES "${VORBIS_LIBRARY};${OGG_LIBRARY}")
 		endif()
 		
-		if(NOT APPLE)
-			set(OPENMPT_FOUND 1)
-			if(NOT EXISTS ${LIBOPENMPT_LIBRARY})
-				set(OPENMPT_DYNAMIC_LINK 1)
-				message(STATUS "Cannot find libopenmpt, using dynamic linking instead")
-			endif()
+		set(OPENMPT_FOUND 1)
+		if(NOT LIBOPENMPT_STATIC AND NOT EXISTS ${LIBOPENMPT_LIBRARY})
+			set(OPENMPT_DYNAMIC_LINK 1)
+			message(STATUS "Cannot find libopenmpt, using dynamic linking instead")
 		endif()
 	endif()
 
