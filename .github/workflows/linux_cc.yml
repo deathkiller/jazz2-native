@@ -69,8 +69,6 @@ jobs:
       run: |
         mkdir ./_package/
         cp -f ./_build/jazz2 ./_package/jazz2
-        cp -f ./_build/*.deb ./_package/jazz2.deb
-        cp -f ./_build/*.rpm ./_package/jazz2.rpm
         cp -f -r ./Content/ ./_package/Content/
         
     - name: 'Upload Package'

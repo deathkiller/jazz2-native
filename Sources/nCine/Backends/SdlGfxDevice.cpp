@@ -137,7 +137,7 @@ namespace nCine
 
 	void SdlGfxDevice::flashWindow() const
 	{
-#if SDL_MAJOR_VERSION >= 2 && SDL_PATCHLEVEL >= 16 && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if SDL_VERSION_ATLEAST(2, 0, 16) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		SDL_FlashWindow(windowHandle_, SDL_FLASH_UNTIL_FOCUSED);
 #endif
 	}
@@ -181,7 +181,7 @@ namespace nCine
 
 	void SdlGfxDevice::initGraphics(bool enableWindowScaling)
 	{
-#if defined(SDL_HINT_WINDOWS_DPI_SCALING)
+#if SDL_VERSION_ATLEAST(2, 24, 0) && defined(SDL_HINT_WINDOWS_DPI_SCALING)
 		// Scaling is handled automatically by SDL (since v2.24.0)
 		if (enableWindowScaling) {
 			SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
@@ -256,7 +256,7 @@ namespace nCine
 		const GLenum err = glewInit();
 		FATAL_ASSERT_MSG_X(err == GLEW_OK, "GLEW error: %s", glewGetErrorString(err));
 
-		glContextInfo_.debugContext = glContextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output");
+		glContextInfo_.debugContext = (glContextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output"));
 #endif
 	}
 

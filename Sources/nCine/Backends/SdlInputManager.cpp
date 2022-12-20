@@ -79,22 +79,22 @@ namespace nCine
 
 		joyMapping_.init(this);
 
-#ifdef WITH_IMGUI
+#if defined(WITH_IMGUI)
 		ImGuiSdlInput::init(SdlGfxDevice::windowHandle());
 #endif
 
-#ifdef WITH_NUKLEAR
+#if defined(WITH_NUKLEAR)
 		NuklearSdlInput::init(SdlGfxDevice::windowHandle());
 #endif
 	}
 
 	SdlInputManager::~SdlInputManager()
 	{
-#ifdef WITH_NUKLEAR
+#if defined(WITH_NUKLEAR)
 		NuklearSdlInput::shutdown();
 #endif
 
-#ifdef WITH_IMGUI
+#if defined(WITH_IMGUI)
 		ImGuiSdlInput::shutdown();
 #endif
 
@@ -135,11 +135,11 @@ namespace nCine
 
 	void SdlInputManager::parseEvent(const SDL_Event& event)
 	{
-#ifdef WITH_IMGUI
+#if defined(WITH_IMGUI)
 		ImGuiSdlInput::processEvent(&event);
 #endif
 
-#ifdef WITH_NUKLEAR
+#if defined(WITH_NUKLEAR)
 		NuklearSdlInput::processEvent(&event);
 #endif
 
@@ -363,6 +363,7 @@ namespace nCine
 
 	bool SdlInputManager::joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs)
 	{
+#if SDL_VERSION_ATLEAST(2, 0, 14)
 		if (!isJoyPresent(joyId))
 			return false;
 
@@ -370,6 +371,9 @@ namespace nCine
 			(uint16_t)(std::clamp(left, 0.0f, 1.0f) * UINT16_MAX),
 			(uint16_t)(std::clamp(right, 0.0f, 1.0f) * UINT16_MAX),
 			durationMs) == 0;
+#else
+		return false;
+#endif
 	}
 
 	void SdlInputManager::setCursor(Cursor cursor)
