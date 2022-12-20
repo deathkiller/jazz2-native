@@ -59,10 +59,10 @@ jobs:
           
           git config --global --add safe.directory '*'
           cd /_current/
-          cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_ASSEMBLE_DEB=ON -D NCINE_ASSEMBLE_RPM=ON -D NCINE_DOWNLOAD_DEPENDENCIES=OFF
+          cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_DOWNLOAD_DEPENDENCIES=OFF
           echo "::endgroup::"
           echo "::group::Build"
-          make package -j $(nproc) -C ./_build/
+          make -j $(nproc) -C ./_build/
           echo "::endgroup::"
 
     - name: 'Create Package'
