@@ -17,16 +17,14 @@ jobs:
         - BuildType: Release
           Platform: aarch64
           Backend: GLFW
-          #Distro: ubuntu_latest
-          Distro: ubuntu20.04
+          Distro: ubuntu_latest
           CC: gcc
           CXX: g++
           
         - BuildType: Release
           Platform: aarch64
           Backend: SDL2
-          #Distro: ubuntu_latest
-          Distro: ubuntu20.04
+          Distro: ubuntu_latest
           CC: gcc
           CXX: g++
 
