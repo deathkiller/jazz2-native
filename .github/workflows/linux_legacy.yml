@@ -1,4 +1,4 @@
-name: 'Linux'
+name: 'Linux (Legacy)'
 
 on:
   push:
@@ -22,23 +22,11 @@ jobs:
 
         - BuildType: Release
           Platform: x64
-          Backend: GLFW
-          CC: clang
-          CXX: clang++
-          
-        - BuildType: Release
-          Platform: x64
           Backend: SDL2
           CC: gcc
           CXX: g++
 
-        - BuildType: Release
-          Platform: x64
-          Backend: SDL2
-          CC: clang
-          CXX: clang++
-
-    runs-on: 'ubuntu-latest'
+    runs-on: 'ubuntu-20.04'
 
     steps:
     - name: 'Checkout Code'
@@ -49,14 +37,14 @@ jobs:
     - name: 'Create Build Environment'
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libopenmpt-dev rpm
+        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libopenmpt-dev rpm
 
     - name: 'Configure CMake'
       run: |
         export CC=${{ matrix.CC }}
         export CXX=${{ matrix.CXX }}
         
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_ASSEMBLE_DEB=ON -D NCINE_ASSEMBLE_RPM=ON
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_ASSEMBLE_DEB=ON -D NCINE_ASSEMBLE_RPM=ON -D NCINE_DOWNLOAD_DEPENDENCIES=OFF -D GLEW_USE_STATIC_LIBS=ON
 
     - name: 'Build'
       run: |
@@ -72,9 +60,9 @@ jobs:
         cp -f -r ./Content/ ./_package/Content/
         
         case "${{ matrix.CC }}" in
-          gcc ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}" ;;
-          clang ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}_Clang" ;;
-          * ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}_${{ matrix.CC }}" ;;
+          gcc ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}_Legacy" ;;
+          clang ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}_LegacyClang" ;;
+          * ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}_Legacy${{ matrix.CC }}" ;;
         esac
         echo "artifactPath=$artifactPath" >> $GITHUB_ENV
         
