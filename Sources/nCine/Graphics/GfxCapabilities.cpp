@@ -100,12 +100,12 @@ namespace nCine
 		glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &glIntValues_[(int)GLIntValues::MAX_COLOR_ATTACHMENTS]);
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-		const char* extensionNames[(int)GLExtensions::Count] = {
+		const char* ExtensionNames[(int)GLExtensions::Count] = {
 			"GL_KHR_debug", "GL_ARB_texture_storage", "GL_EXT_texture_compression_s3tc", "GL_OES_compressed_ETC1_RGB8_texture",
 			"GL_AMD_compressed_ATC_texture", "GL_IMG_texture_compression_pvrtc", "GL_KHR_texture_compression_astc_ldr"
 		};
 #else
-		const char* extensionNames[(int)GLExtensions::Count] = {
+		const char* ExtensionNames[(int)GLExtensions::Count] = {
 			"GL_KHR_debug", "GL_ARB_texture_storage", "WEBGL_compressed_texture_s3tc", "WEBGL_compressed_texture_etc1",
 			"WEBGL_compressed_texture_atc", "WEBGL_compressed_texture_pvrtc", "WEBGL_compressed_texture_astc"
 		};
@@ -115,7 +115,7 @@ namespace nCine
 			glExtensions_[i] = false;
 		}
 
-		checkGLExtensions(extensionNames, glExtensions_, (int)GLExtensions::Count);
+		checkGLExtensions(ExtensionNames, glExtensions_, (int)GLExtensions::Count);
 
 #if defined(NCINE_LOG)
 		logGLInfo();

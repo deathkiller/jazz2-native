@@ -3,30 +3,30 @@
 #if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #	pragma comment(lib, "opengl32.lib")
 #	if defined(_M_X64)
-#		ifdef WITH_GLEW
+#		if defined(WITH_GLEW)
 #			pragma comment(lib, "../Libs/Windows/x64/glew32.lib")
 #		endif
-#		ifdef WITH_GLFW
+#		if defined(WITH_GLFW)
 #			pragma comment(lib, "../Libs/Windows/x64/glfw3dll.lib")
 #		endif
-#		ifdef WITH_SDL
+#		if defined(WITH_SDL)
 #			pragma comment(lib, "../Libs/Windows/x64/SDL2.lib")
 #		endif
-#		ifdef WITH_AUDIO
+#		if defined(WITH_AUDIO)
 #			pragma comment(lib, "../Libs/Windows/x64/OpenAL32.lib")
 #		endif
 #		pragma comment(lib, "../Libs/Windows/x64/libdeflate.lib")
 #	elif defined(_M_IX86)
-#		ifdef WITH_GLEW
+#		if defined(WITH_GLEW)
 #			pragma comment(lib, "../Libs/Windows/x86/glew32.lib")
 #		endif
-#		ifdef WITH_GLFW
+#		if defined(WITH_GLFW)
 #			pragma comment(lib, "../Libs/Windows/x86/glfw3dll.lib")
 #		endif
-#		ifdef WITH_SDL
+#		if defined(WITH_SDL)
 #			pragma comment(lib, "../Libs/Windows/x86/SDL2.lib")
 #		endif
-#		ifdef WITH_AUDIO
+#		if defined(WITH_AUDIO)
 #			pragma comment(lib, "../Libs/Windows/x86/OpenAL32.lib")
 #		endif
 #		pragma comment(lib, "../Libs/Windows/x86/libdeflate.lib")
