@@ -28,7 +28,7 @@ namespace Jazz2::UI::Menu
 		_items[(int)Item::Import].Name = _("Import Episodes");
 #	endif
 #else
-		_items[(int)Item::PlayEpisodes].Name = _("Play Episodes");
+		_items[(int)Item::PlayEpisodes].Name = _("Play Story");
 		_items[(int)Item::PlayCustomLevels].Name = _("Play Custom Levels");
 #endif
 		_items[(int)Item::Options].Name = _("Options");
@@ -46,7 +46,7 @@ namespace Jazz2::UI::Menu
 
 #if defined(SHAREWARE_DEMO_ONLY)
 		if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None) {
-			_items[(int)Item::PlayEpisodes].Name = _("Play Episodes");
+			_items[(int)Item::PlayEpisodes].Name = _("Play Story");
 		} else {
 			_items[(int)Item::PlayEpisodes].Name = _("Play Shareware Demo");
 		}

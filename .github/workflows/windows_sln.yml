@@ -44,6 +44,8 @@ jobs:
         
     - name: 'Build'
       run: |
+        rm -force ".\Content\Translations\*.po"
+        
         msbuild ".\Jazz2.sln" -t:Rebuild -p:Configuration=${{ matrix.BuildType }} -p:Platform=${{ matrix.Platform }} -p:VC_LTL_Root=".\Libs\VC-LTL\" -p:OutDir="..\_build\"
 
     - name: 'Create Package'
