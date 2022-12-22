@@ -2,6 +2,8 @@
 
 #include "IO/FileSystem.h"
 
+#include <stdarg.h>
+
 namespace nCine
 {
 	static constexpr I18n::LanguageInfo SupportedLanguages[] = {
@@ -660,5 +662,52 @@ namespace nCine
 
 		*pluralExp = new CompareNotEqualsToken(new VariableToken(), new ValueToken(1));
 		*pluralCount = 2;
+	}
+
+	String _f(const char* text, ...)
+	{
+		uint32_t resultLength;
+		const char* translated = I18n::Current().LookupTranslation(text, &resultLength);
+		const char* format = (translated != nullptr ? translated : text);
+
+		va_list args;
+		va_start(args, text);
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
+		const int totalChars = _vscprintf(format, args);
+		String result(NoInit, totalChars);
+		vsnprintf_s(result.data(), totalChars + 1, totalChars, format, args);
+#else
+		const int totalChars = ::vsnprintf(nullptr, 0, format, args);
+		String result(NoInit, totalChars);
+		::vsnprintf(result.data(), totalChars, format, args);
+#endif
+		va_end(args);
+		return result;
+	}
+
+	String _fn(const char* singular, const char* plural, int n, ...)
+	{
+		uint32_t resultLength;
+		const char* translated = I18n::Current().LookupTranslation(singular, &resultLength);
+		const char* format;
+		if (translated != nullptr) {
+			format = I18n::Current().LookupPlural(n, translated, resultLength);
+		} else {
+			format = (n == 1 ? singular : plural);
+		}
+
+		va_list args;
+		va_start(args, n);
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
+		const int totalChars = _vscprintf(format, args);
+		String result(NoInit, totalChars);
+		vsnprintf_s(result.data(), totalChars + 1, totalChars, format, args);
+#else
+		const int totalChars = ::vsnprintf(nullptr, 0, format, args);
+		String result(NoInit, totalChars);
+		::vsnprintf(result.data(), totalChars, format, args);
+#endif
+		va_end(args);
+		return result;
 	}
 }
