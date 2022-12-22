@@ -123,7 +123,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement("MenuLine"_s, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int charOffset = 0;
-		_root->DrawStringShadow(_("Play Episodes"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Play Story"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 	}
 
@@ -349,6 +349,7 @@ namespace Jazz2::UI::Menu
 
 			auto& episode = _items.emplace_back();
 			episode.Item.Description = std::move(description.value());
+			episode.Item.Flags = EpisodeDataFlags::None;
 
 			if (!resolver.LevelExists(episode.Item.Description.Name, episode.Item.Description.FirstLevel)) {
 				// Cannot find the first level of episode

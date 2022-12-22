@@ -1,5 +1,4 @@
 ﻿#include "RescaleModeSection.h"
-#include "../../PreferencesCache.h"
 
 namespace Jazz2::UI::Menu
 {

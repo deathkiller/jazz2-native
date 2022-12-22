@@ -62,6 +62,8 @@ jobs:
         
         source ../emsdk/emsdk_env.sh
         
+        rm -f ./Content/Translations/*.po
+        
         emcmake cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D SHAREWARE_DEMO_ONLY=$sharewareDemo
 
     - name: 'Build'

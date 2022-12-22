@@ -16,7 +16,6 @@ namespace Jazz2::UI::Menu
 
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
-		void OnDraw(Canvas* canvas) override;
 		void OnDrawClipped(Canvas* canvas) override;
 		void OnTouchEvent(const TouchEvent& event, const Vector2i& viewSize) override;
 
@@ -135,22 +134,6 @@ namespace Jazz2::UI::Menu
 	}
 
 	template<class TItem>
-	void ScrollableMenuSection<TItem>::OnDraw(Canvas* canvas)
-	{
-		Vector2i viewSize = canvas->ViewSize;
-		float centerX = viewSize.X * 0.5f;
-		float bottomLine = viewSize.Y - BottomLine;
-		_root->DrawElement("MenuDim"_s, centerX, (TopLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
-			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - TopLine + 2.0f), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement("MenuLine"_s, 0, centerX, TopLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement("MenuLine"_s, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-
-		int charOffset = 0;
-		_root->DrawStringShadow(_("Play Episodes"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
-			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
-	}
-
-	template<class TItem>
 	void ScrollableMenuSection<TItem>::OnDrawClipped(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
@@ -186,7 +169,7 @@ namespace Jazz2::UI::Menu
 			_y = std::clamp(_y, availableHeight - _height, 0);
 			_scrollable = true;
 		} else {
-			_y = (availableHeight - _height) / 2;
+			_y = (availableHeight - _height + ItemHeight / 2) / 2;
 			_scrollable = false;
 		}
 
