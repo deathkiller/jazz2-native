@@ -139,7 +139,7 @@ namespace Jazz2::Actors::Environment
 			// Cannot be directly in `Spring::OnHandleCollision()` due to bug in `BaseSprite::updateRenderCommand()`,
 			// it would be called before `BaseSprite::updateRenderCommand()` but after `SceneNode::transform()`
 			_renderer.Initialize(ActorRendererType::Default);
-			_state == State::Default;
+			_state = State::Default;
 		}
 	}
 

@@ -186,7 +186,7 @@ namespace Jazz2::UI::Menu
 			_y = std::clamp(_y, availableHeight - _height, 0);
 			_scrollable = true;
 		} else {
-			_y = 0.0f;
+			_y = (availableHeight - _height) / 2;
 			_scrollable = false;
 		}
 
