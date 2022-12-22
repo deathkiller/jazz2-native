@@ -321,14 +321,14 @@ namespace Death::Containers
 	template<class T> BasicStringView<T> BasicStringView<T>::exceptPrefix(const StringView prefix) const {
 		// Stripping a hardcoded prefix is unlikely to be called in a tight loop -- and the main purpose of this API is this
 		// check -- so it shouldn't be a debug assert
-		DEATH_ASSERT(hasPrefix(prefix), "Containers::StringView::exceptPrefix(): string doesn't begin with" << prefix, {});
+		DEATH_ASSERT(hasPrefix(prefix), "Containers::StringView::exceptPrefix(): string doesn't begin with specified prefix");
 		return exceptPrefix(prefix.size());
 	}
 
 	template<class T> BasicStringView<T> BasicStringView<T>::exceptSuffix(const StringView suffix) const {
 		// Stripping a hardcoded suffix is unlikely to be called in a tight loop -- and the main purpose of this API is this
 		// check -- so it shouldn't be a debug assert
-		DEATH_ASSERT(hasSuffix(suffix), "Containers::StringView::exceptSuffix(): string doesn't end with" << suffix, {});
+		DEATH_ASSERT(hasSuffix(suffix), "Containers::StringView::exceptSuffix(): string doesn't end with specified suffix");
 		return exceptSuffix(suffix.size());
 	}
 

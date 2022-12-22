@@ -30,6 +30,7 @@
 #include "Jazz2/Compatibility/JJ2Anims.h"
 #include "Jazz2/Compatibility/JJ2Episode.h"
 #include "Jazz2/Compatibility/JJ2Level.h"
+#include "Jazz2/Compatibility/JJ2Strings.h"
 #include "Jazz2/Compatibility/JJ2Tileset.h"
 #include "Jazz2/Compatibility/EventConverter.h"
 
@@ -166,6 +167,15 @@ void GameEventHandler::OnInit()
 			DiscordRpcClient::Current().Connect("591586859960762378"_s);
 		}
 #	endif
+
+		if (PreferencesCache::Language[0] != '\0') {
+			auto& resolver = ContentResolver::Current();
+			auto& i18n = I18n::Current();
+			if (!i18n.LoadMoFile(fs::JoinPath({ resolver.GetContentPath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }))) {
+				i18n.LoadMoFile(fs::JoinPath({ resolver.GetCachePath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }));
+			}
+		}
+
 		handler->RefreshCache();
 		handler->CheckUpdates();
 	}, this);
@@ -186,6 +196,14 @@ void GameEventHandler::OnInit()
 		DiscordRpcClient::Current().Connect("591586859960762378"_s);
 	}
 #	endif
+
+	if (PreferencesCache::Language[0] != '\0') {
+		auto& resolver = ContentResolver::Current();
+		auto& i18n = I18n::Current();
+		if (!i18n.LoadMoFile(fs::JoinPath({ resolver.GetContentPath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }))) {
+			i18n.LoadMoFile(fs::JoinPath({ resolver.GetCachePath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }));
+		}
+	}
 
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 	// All required files are already included in Emscripten version, so nothing is verified
@@ -269,7 +287,7 @@ void GameEventHandler::OnFrameStart()
 						(_pendingLevelChange->EpisodeName == "rescue"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::JazzInTime) == UnlockableEpisodes::None) ||
 						(_pendingLevelChange->EpisodeName == "flash"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::Flashback) == UnlockableEpisodes::None) ||
 						(_pendingLevelChange->EpisodeName == "monk"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::FunkyMonkeys) == UnlockableEpisodes::None) ||
-						((_pendingLevelChange->EpisodeName == "xmas98"_s || _pendingLevelChange->EpisodeName == "xmas99"_s) && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::HolidayHare98) == UnlockableEpisodes::None) ||
+						((_pendingLevelChange->EpisodeName == "xmas98"_s || _pendingLevelChange->EpisodeName == "xmas99"_s) && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::ChristmasChronicles) == UnlockableEpisodes::None) ||
 						(_pendingLevelChange->EpisodeName == "secretf"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::TheSecretFiles) == UnlockableEpisodes::None);
 
 					if (isEpisodeLocked) {
@@ -476,7 +494,6 @@ void GameEventHandler::RefreshCacheLevels()
 	Compatibility::EventConverter eventConverter;
 
 	bool hasChristmasChronicles = fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "xmas99.j2e"_s)));
-	String xmasEpisodeToken = (hasChristmasChronicles ? "xmas99"_s : "xmas98"_s);
 	const HashMap<String, Pair<String, String>> knownLevels = {
 		{ "trainer"_s, { "prince"_s, { } } },
 		{ "castle1"_s, { "prince"_s, "01"_s } },
@@ -515,9 +532,9 @@ void GameEventHandler::RefreshCacheLevels()
 		{ "share2"_s, { "share"_s, "02"_s } },
 		{ "share3"_s, { "share"_s, "03"_s } },
 
-		{ "xmas1"_s, { xmasEpisodeToken, "01"_s } },
-		{ "xmas2"_s, { xmasEpisodeToken, "02"_s } },
-		{ "xmas3"_s, { xmasEpisodeToken, "03"_s } },
+		{ "xmas1"_s, { "xmas99"_s, "01"_s } },
+		{ "xmas2"_s, { "xmas99"_s, "02"_s } },
+		{ "xmas3"_s, { "xmas99"_s, "03"_s } },
 
 		{ "easter1"_s, { "secretf"_s, "01"_s } },
 		{ "easter2"_s, { "secretf"_s, "02"_s } },
@@ -534,7 +551,7 @@ void GameEventHandler::RefreshCacheLevels()
 		{ "ending"_s, { { }, ":credits"_s } }
 	};
 
-	auto LevelTokenConversion = [&knownLevels](MutableStringView& levelToken) -> Compatibility::JJ2Level::LevelToken {
+	auto LevelTokenConversion = [&knownLevels](const StringView& levelToken) -> Compatibility::JJ2Level::LevelToken {
 		auto it = knownLevels.find(levelToken);
 		if (it != knownLevels.end()) {
 			if (it->second.second().empty()) {
@@ -559,25 +576,8 @@ void GameEventHandler::RefreshCacheLevels()
 		} else if (episode->Name == "hh18"_s && episode->DisplayName == "Holiday Hare 18"_s) {
 			return "Holiday Hare '18"_s;
 		} else {
-			// Strip formatting - @ is new line, # is random color
-			int nameLength = 0;
-			for (auto& c : episode->DisplayName) {
-				if (c != '#') {
-					nameLength++;
-				}
-			}
-
-			String name(NoInit, nameLength);
-			int i = 0;
-			for (auto& c : episode->DisplayName) {
-				if (c == '@') {
-					name[i++] = ' ';
-				} else if (c != '#') {
-					name[i++] = c;
-				}
-			}
-
-			return name;
+			// Strip formatting
+			return Compatibility::JJ2Strings::RecodeString(episode->DisplayName, true);
 		}
 	};
 
@@ -617,7 +617,7 @@ void GameEventHandler::RefreshCacheLevels()
 				continue;
 			}
 
-			String fullPath = fs::JoinPath(episodesPath, episode.Name + ".j2e"_s);
+			String fullPath = fs::JoinPath(episodesPath, (episode.Name == "xmas98"_s ? "xmas99"_s : StringView(episode.Name)) + ".j2e"_s);
 			episode.Convert(fullPath, LevelTokenConversion, EpisodeNameConversion, EpisodePrevNext);
 		} else if (extension == "j2l"_s) {
 			// Level
@@ -655,6 +655,17 @@ void GameEventHandler::RefreshCacheLevels()
 				}
 			}
 		}
+#if defined(NCINE_DEBUG)
+		/*else if (extension == "j2s"_s) {
+			// Episode
+			Compatibility::JJ2Strings strings;
+			strings.Open(item);
+
+			String fullPath = fs::JoinPath({ resolver.GetCachePath(), "Translations"_s, strings.Name + ".h"_s });
+			fs::CreateDirectories(fs::GetDirectoryName(fullPath));
+			strings.Convert(fullPath, LevelTokenConversion);
+		}*/
+#endif
 	}
 
 	// Convert only used tilesets
@@ -687,7 +698,7 @@ void GameEventHandler::CheckUpdates()
 #elif defined(DEATH_TARGET_APPLE)
 	char DeviceDesc[64]; int DeviceDescLength;
 	if (::gethostname(DeviceDesc, _countof(DeviceDesc) - (sizeof("|macOS||5") - 1)) == 0) {
-		DeviceDescLength = strlen(DeviceDesc);
+		DeviceDescLength = std::strlen(DeviceDesc);
 	} else {
 		DeviceDescLength = 0;
 	}
@@ -696,7 +707,7 @@ void GameEventHandler::CheckUpdates()
 #elif defined(DEATH_TARGET_UNIX)
 	char DeviceDesc[64]; int DeviceDescLength;
 	if (::gethostname(DeviceDesc, _countof(DeviceDesc)) == 0) {
-		DeviceDescLength = strlen(DeviceDesc);
+		DeviceDescLength = std::strlen(DeviceDesc);
 	} else {
 		DeviceDescLength = 0;
 	}

@@ -1,5 +1,4 @@
 ﻿#include "JJ2Episode.h"
-#include "JJ2Level.h"
 #include "../ContentResolver.h"
 
 #include "../../nCine/Base/Algorithms.h"
@@ -97,7 +96,7 @@ namespace Jazz2::Compatibility
 		//}
 	}
 
-	void JJ2Episode::Convert(const String& targetPath, std::function<JJ2Level::LevelToken(MutableStringView&)> levelTokenConversion, std::function<String(JJ2Episode*)> episodeNameConversion, std::function<Pair<String, String>(JJ2Episode*)> episodePrevNext)
+	void JJ2Episode::Convert(const String& targetPath, std::function<JJ2Level::LevelToken(const StringView&)> levelTokenConversion, std::function<String(JJ2Episode*)> episodeNameConversion, std::function<Pair<String, String>(JJ2Episode*)> episodePrevNext)
 	{
 		auto so = fs::Open(targetPath, FileAccessMode::Write);
 		ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");

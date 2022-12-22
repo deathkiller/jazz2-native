@@ -12,7 +12,7 @@ namespace nCine
 	{
 		Pvr3Header header;
 
-		RETURN_ASSERT_MSG_X(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->GetFilename());
+		RETURN_ASSERT_MSG_X(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->GetFileName().data());
 		const bool headerRead = readHeader(header);
 		RETURN_ASSERT_MSG(headerRead, "PVR header cannot be read");
 		const bool formatParsed = parseFormat(header);

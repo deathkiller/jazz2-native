@@ -15,13 +15,13 @@ namespace nCine
 		constexpr uint8_t PngTypeColor = 2;
 
 		// Lightweight PNG reader using libdeflate
-		RETURN_ASSERT_MSG_X(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->GetFilename());
+		RETURN_ASSERT_MSG_X(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->GetFileName().data());
 
 		// Check header signature
 		uint8_t internalBuffer[sizeof(PngSignature)];
 		fileHandle_->Read(internalBuffer, sizeof(PngSignature));
 		if (std::memcmp(internalBuffer, PngSignature, sizeof(PngSignature)) != 0) {
-			RETURN_MSG_X("PNG signature check of file \"%s\" failed", fileHandle_->GetFilename());
+			RETURN_MSG_X("PNG signature check of file \"%s\" failed", fileHandle_->GetFileName().data());
 		}
 
 		// Load image
@@ -37,14 +37,14 @@ namespace nCine
 
 			if (!headerParsed && type != 'IHDR') {
 				// Header does not appear first
-				RETURN_MSG_X("PNG file \"%s\" is corrupted", fileHandle_->GetFilename());
+				RETURN_MSG_X("PNG file \"%s\" is corrupted", fileHandle_->GetFileName().data());
 			}
 
 			int blockEndPosition = (int)fileHandle_->GetPosition() + length;
 
 			switch (type) {
 				case 'IHDR': {
-					RETURN_ASSERT_MSG_X(!headerParsed, "PNG file \"%s\" is corrupted", fileHandle_->GetFilename());
+					RETURN_ASSERT_MSG_X(!headerParsed, "PNG file \"%s\" is corrupted", fileHandle_->GetFileName().data());
 
 					width_ = ReadInt32BigEndian(fileHandle_);
 					height_ = ReadInt32BigEndian(fileHandle_);
@@ -75,11 +75,11 @@ namespace nCine
 
 					if (compression != 0) {
 						// Compression method is not supported
-						RETURN_MSG_X("PNG file \"%s\" is not supported", fileHandle_->GetFilename());
+						RETURN_MSG_X("PNG file \"%s\" is not supported", fileHandle_->GetFileName().data());
 					}
 					if (interlace != 0) {
 						// Interlacing is not supported
-						RETURN_MSG_X("PNG file \"%s\" is not supported", fileHandle_->GetFilename());
+						RETURN_MSG_X("PNG file \"%s\" is not supported", fileHandle_->GetFileName().data());
 					}
 
 					headerParsed = true;
@@ -101,7 +101,7 @@ namespace nCine
 					int compressedSize = data.size() - 2;
 					int decompressedSize = dataLength;
 					auto result = CompressionUtils::Inflate(data.data() + 2, compressedSize, buffer.get(), decompressedSize);
-					RETURN_ASSERT_MSG_X(result == DecompressionResult::Success, "PNG file \"%s\" cannot be decompressed (%i)", fileHandle_->GetFilename(), result);
+					RETURN_ASSERT_MSG_X(result == DecompressionResult::Success, "PNG file \"%s\" cannot be decompressed (%i)", fileHandle_->GetFileName().data(), result);
 
 					int o = 0;
 					int pxStride = (isPaletted ? 1 : (is24Bit ? 3 : 4));
@@ -152,14 +152,14 @@ namespace nCine
 
 			if (fileHandle_->GetPosition() != blockEndPosition) {
 				// Block has incorrect length
-				RETURN_MSG_X("PNG file \"%s\" is corrupted", fileHandle_->GetFilename());
+				RETURN_MSG_X("PNG file \"%s\" is corrupted", fileHandle_->GetFileName().data());
 			}
 
 			// Skip CRC
 			fileHandle_->Seek(4, SeekOrigin::Current);
 		}
 
-		RETURN_MSG_X("PNG file \"%s\" is corrupted", fileHandle_->GetFilename());
+		RETURN_MSG_X("PNG file \"%s\" is corrupted", fileHandle_->GetFileName().data());
 	}
 
 	int TextureLoaderPng::ReadInt32BigEndian(const std::unique_ptr<IFileStream>& s)

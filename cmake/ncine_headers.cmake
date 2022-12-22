@@ -20,13 +20,14 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/ArrayIndexer.h
 	${NCINE_SOURCE_DIR}/nCine/CommonConstants.h
 	${NCINE_SOURCE_DIR}/nCine/CommonHeaders.h
+	${NCINE_SOURCE_DIR}/nCine/I18n.h
 	${NCINE_SOURCE_DIR}/nCine/IAppEventHandler.h
 	${NCINE_SOURCE_DIR}/nCine/IIndexer.h
 	${NCINE_SOURCE_DIR}/nCine/ServiceLocator.h
 	${NCINE_SOURCE_DIR}/nCine/Audio/IAudioDevice.h
-	#${NCINE_SOURCE_DIR}/nCine/Audio/IAudioLoader.h
-	#${NCINE_SOURCE_DIR}/nCine/Audio/IAudioPlayer.h
-	#${NCINE_SOURCE_DIR}/nCine/Audio/IAudioReader.h
+	${NCINE_SOURCE_DIR}/nCine/Audio/IAudioLoader.h
+	${NCINE_SOURCE_DIR}/nCine/Audio/IAudioPlayer.h
+	${NCINE_SOURCE_DIR}/nCine/Audio/IAudioReader.h
 	${NCINE_SOURCE_DIR}/nCine/Base/Algorithms.h
 	${NCINE_SOURCE_DIR}/nCine/Base/BitArray.h
 	${NCINE_SOURCE_DIR}/nCine/Base/BitSet.h
@@ -264,7 +265,6 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Event.h
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Level.h
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Strings.h
-	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Text.h
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Tileset.h
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Version.h
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventMap.h
@@ -290,12 +290,14 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/IMenuContainer.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ImportSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/InGameMenu.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/LanguageSelectSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MainMenu.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/OptionsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PauseSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RefreshCacheSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RemapControlsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RescaleModeSection.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ScrollableMenuSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/SimpleMessageSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/SoundsOptionsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/StartGameOptionsSection.h

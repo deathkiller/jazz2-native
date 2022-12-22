@@ -176,6 +176,9 @@ namespace nCine
 	{
 		GLint numExtensions;
 		glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
+		if (numExtensions <= 0) {
+			return;
+		}
 
 		for (GLuint i = 0; i < static_cast<GLuint>(numExtensions); i++) {
 			const char* extension = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i));

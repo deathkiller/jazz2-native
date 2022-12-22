@@ -702,9 +702,6 @@
     <ClInclude Include="Jazz2\Compatibility\JJ2Strings.h">
       <Filter>Header Files\Jazz2\Compatibility</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Compatibility\JJ2Text.h">
-      <Filter>Header Files\Jazz2\Compatibility</Filter>
-    </ClInclude>
     <ClInclude Include="nCine\Base\Task.h">
       <Filter>Header Files\nCine\Base</Filter>
     </ClInclude>
@@ -1218,6 +1215,15 @@
     <ClInclude Include="Jazz2\Actors\Environment\SwingingVine.h">
       <Filter>Header Files\Jazz2\Actors\Environment</Filter>
     </ClInclude>
+    <ClInclude Include="nCine\I18n.h">
+      <Filter>Header Files\nCine</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\LanguageSelectSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\ScrollableMenuSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1605,9 +1611,6 @@
       <Filter>Source Files\Jazz2\Compatibility</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Compatibility\JJ2Strings.cpp">
-      <Filter>Source Files\Jazz2\Compatibility</Filter>
-    </ClCompile>
-    <ClCompile Include="Jazz2\Compatibility\JJ2Text.cpp">
       <Filter>Source Files\Jazz2\Compatibility</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Compatibility\JJ2Tileset.cpp">
@@ -2071,6 +2074,12 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Environment\SwingingVine.cpp">
       <Filter>Source Files\Jazz2\Actors\Environment</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\I18n.cpp">
+      <Filter>Source Files\nCine</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\LanguageSelectSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

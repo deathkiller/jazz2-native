@@ -12,9 +12,9 @@ namespace Jazz2::UI::Menu
 		_isDirty(false),
 		_isInGame(false)
 	{
-		_items[(int)Item::Reforged].Name = "Reforged Mode"_s;
-		_items[(int)Item::LedgeClimb].Name = "Ledge Climbing"_s;
-		_items[(int)Item::WeaponWheel].Name = "Weapon Wheel"_s;
+		_items[(int)Item::Reforged].Name = _("Reforged Mode");
+		_items[(int)Item::LedgeClimb].Name = _("Ledge Climbing");
+		_items[(int)Item::WeaponWheel].Name = _("Weapon Wheel");
 	}
 
 	GameplayEnhancementsSection::~GameplayEnhancementsSection()
@@ -83,10 +83,10 @@ namespace Jazz2::UI::Menu
 		center.Y = topLine + (bottomLine - topLine) * 0.35f / (int)Item::Count;
 		int charOffset = 0;
 
-		_root->DrawStringShadow("Enhancements"_s, charOffset, center.X, 131.0f - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Enhancements"), charOffset, center.X, 131.0f - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
-		_root->DrawStringShadow("You can enable enhancements that were added to this remake."_s, charOffset, center.X, topLine - 21.0f - 4.0f, IMenuContainer::FontLayer - 2,
+		_root->DrawStringShadow(_("You can enable enhancements that were added to this remake."), charOffset, center.X, topLine - 21.0f - 4.0f, IMenuContainer::FontLayer - 2,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.2f + 0.3f * _transition), 0.76f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		for (int i = 0; i < (int)Item::Count; i++) {
@@ -117,7 +117,7 @@ namespace Jazz2::UI::Menu
 				case (int)Item::WeaponWheel: enabled = PreferencesCache::EnableWeaponWheel; break;
 			}
 
-			_root->DrawStringShadow(enabled ? "Enabled"_s : "Disabled"_s, charOffset, center.X, center.Y + 22.0f, IMenuContainer::FontLayer - 10,
+			_root->DrawStringShadow(enabled ? _("Enabled") : _("Disabled"), charOffset, center.X, center.Y + 22.0f, IMenuContainer::FontLayer - 10,
 				Alignment::Center, (_selectedIndex == i ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
 
 			center.Y += (bottomLine - topLine) * 0.9f / (int)Item::Count;

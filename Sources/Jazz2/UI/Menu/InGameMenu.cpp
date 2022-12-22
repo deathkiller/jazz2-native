@@ -194,6 +194,11 @@ namespace Jazz2::UI::Menu
 				_root->_sugarRushMusic->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
 			}
 		}
+
+		if ((type & ChangedPreferencesType::Language) == ChangedPreferencesType::Language) {
+			_sections.clear();
+			SwitchToSection<PauseSection>();
+		}
 	}
 
 	void InGameMenu::DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending)

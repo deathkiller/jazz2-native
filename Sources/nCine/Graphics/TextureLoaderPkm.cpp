@@ -13,7 +13,7 @@ namespace nCine
 	TextureLoaderPkm::TextureLoaderPkm(std::unique_ptr<IFileStream> fileHandle)
 		: ITextureLoader(std::move(fileHandle))
 	{
-		RETURN_ASSERT_MSG_X(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->GetFilename());
+		RETURN_ASSERT_MSG_X(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->GetFileName().data());
 
 		PkmHeader header;
 		// PKM header is 16 bytes long

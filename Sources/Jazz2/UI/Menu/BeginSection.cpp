@@ -25,16 +25,16 @@ namespace Jazz2::UI::Menu
 	{
 #if defined(SHAREWARE_DEMO_ONLY)
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
-		_items[(int)Item::Import].Name = "Import Episodes"_s;
+		_items[(int)Item::Import].Name = _("Import Episodes");
 #	endif
 #else
-		_items[(int)Item::PlayEpisodes].Name = "Play Episodes"_s;
-		_items[(int)Item::PlayCustomLevels].Name = "Play Custom Levels"_s;
+		_items[(int)Item::PlayEpisodes].Name = _("Play Episodes");
+		_items[(int)Item::PlayCustomLevels].Name = _("Play Custom Levels");
 #endif
-		_items[(int)Item::Options].Name = "Options"_s;
-		_items[(int)Item::About].Name = "About"_s;
+		_items[(int)Item::Options].Name = _("Options");
+		_items[(int)Item::About].Name = _("About");
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
-		_items[(int)Item::Quit].Name = "Quit"_s;
+		_items[(int)Item::Quit].Name = _("Quit");
 #endif
 	}
 
@@ -46,9 +46,9 @@ namespace Jazz2::UI::Menu
 
 #if defined(SHAREWARE_DEMO_ONLY)
 		if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None) {
-			_items[(int)Item::PlayEpisodes].Name = "Play Episodes"_s;
+			_items[(int)Item::PlayEpisodes].Name = _("Play Episodes");
 		} else {
-			_items[(int)Item::PlayEpisodes].Name = "Play Shareware Demo"_s;
+			_items[(int)Item::PlayEpisodes].Name = _("Play Shareware Demo");
 		}
 #endif
 
@@ -126,9 +126,9 @@ namespace Jazz2::UI::Menu
 				_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y * 0.96f - 8.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.12f), 26.0f, 12.0f, true);
 			}
 
-			_root->DrawStringShadow("\f[c:0x704a4a]This game requires original \f[c:0x9e7056]Jazz Jackrabbit 2\f[c:0x704a4a] files!"_s, charOffset, center.X, center.Y * 0.96f - 10.0f, IMenuContainer::FontLayer,
+			_root->DrawStringShadow(_("\f[c:0x704a4a]This game requires original \f[c:0x9e7056]Jazz Jackrabbit 2\f[c:0x704a4a] files!"), charOffset, center.X, center.Y * 0.96f - 10.0f, IMenuContainer::FontLayer,
 				Alignment::Bottom, Font::DefaultColor, 1.0f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
-			_root->DrawStringShadow("Make sure Jazz Jackrabbit 2 files are present in following path:"_s, charOffset, center.X, center.Y * 0.96f, IMenuContainer::FontLayer,
+			_root->DrawStringShadow(_("Make sure Jazz Jackrabbit 2 files are present in following path:"), charOffset, center.X, center.Y * 0.96f, IMenuContainer::FontLayer,
 				Alignment::Center, Colorf(0.44f, 0.29f, 0.29f, 0.5f), 0.8f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
 			_root->DrawStringShadow(_sourcePath.data(), charOffset, center.X, center.Y * 0.96f + 10.0f, IMenuContainer::FontLayer,
 				Alignment::Top, Colorf(0.44f, 0.44f, 0.44f, 0.5f), 0.8f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);

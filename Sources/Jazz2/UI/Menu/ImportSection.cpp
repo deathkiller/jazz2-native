@@ -64,30 +64,30 @@ namespace Jazz2::UI::Menu
 		center.Y = topLine + (bottomLine - topLine) * 0.4f;
 		int charOffset = 0;
 
-		_root->DrawStringShadow("Import Episodes"_s, charOffset, center.X, topLine - 21.0f - 34.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(__("Import Episodes"_s), charOffset, center.X, topLine - 21.0f - 34.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
-		_root->DrawStringShadow("Select files of your original game to unlock additional episodes"_s, charOffset, center.X, topLine - 21.0f - 4.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(__("Select files of your original game to unlock additional episodes"_s), charOffset, center.X, topLine - 21.0f - 4.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.76f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		switch (_state) {
 			case State::Loading:
 				if (_fileCount > 0) {
-					_root->DrawStringShadow("Processing of selected files..."_s, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
+					_root->DrawStringShadow(__("Processing of selected files..."_s), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 						Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				} else {
-					_root->DrawStringShadow("Waiting for files..."_s, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
+					_root->DrawStringShadow(__("Waiting for files..."_s), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 						Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				}
 				break;
 
 			case State::NothingSelected:
-				_root->DrawStringShadow("No files were selected!"_s, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
+				_root->DrawStringShadow(__("No files were selected!"_s), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 					Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				break;
 
 			case State::NothingImported:
-				_root->DrawStringShadow("No new episodes were imported!"_s, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
+				_root->DrawStringShadow(__("No new episodes were imported!"_s), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 					Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				break;
 		}
@@ -148,7 +148,7 @@ namespace Jazz2::UI::Menu
 		constexpr StringView JazzInTimeLevels[] = { "Victorian Secret"_s, "Colonial Chaos"_s, "Purple Haze Maze"_s, "Funky Grooveathon"_s, "Beach Bunny Bingo"_s, "Marinated Rabbit"_s };
 		constexpr StringView FlashbackLevels[] = { "A Diamondus Forever"_s, "Fourteen Carrot"_s, "Electric Boogaloo"_s, "Voltage Village"_s, "Medieval Kineval"_s, "Hare Scare"_s };
 		constexpr StringView FunkyMonkeysLevels[] = { "Thriller Gorilla"_s, "Jungle Jump"_s, "A Cold Day In Heck"_s, "Rabbit Roast"_s, "Burnin Biscuits"_s, "Bad Pitt"_s };
-		constexpr StringView HolidayHare98Levels[] = { "Snow Bunnies"_s, "Dashing thru the snow.."_s, "Tinsel Town"_s };
+		constexpr StringView ChristmasChroniclesLevels[] = { "Snow Bunnies"_s, "Dashing thru the snow.."_s, "Tinsel Town"_s };
 		constexpr StringView TheSecretFilesLevels[] = { "Easter Bunny"_s, "Spring Chickens"_s, "Scrambled Eggs"_s, "Ghostly Antics"_s, "Skeletons Turf"_s, "Graveyard Shift"_s, "Turtle Town"_s, "Suburbia Commando"_s, "Urban Brawl"_s };
 
 		UnlockableEpisodes unlockedEpisodes = PreferencesCache::UnlockedEpisodes;
@@ -156,7 +156,7 @@ namespace Jazz2::UI::Menu
 		if (HasAllLevels(JazzInTimeLevels, _countof(JazzInTimeLevels))) unlockedEpisodes |= UnlockableEpisodes::JazzInTime;
 		if (HasAllLevels(FlashbackLevels, _countof(FlashbackLevels))) unlockedEpisodes |= UnlockableEpisodes::Flashback;
 		if (HasAllLevels(FunkyMonkeysLevels, _countof(FunkyMonkeysLevels))) unlockedEpisodes |= UnlockableEpisodes::FunkyMonkeys;
-		if (HasAllLevels(HolidayHare98Levels, _countof(HolidayHare98Levels))) unlockedEpisodes |= UnlockableEpisodes::HolidayHare98;
+		if (HasAllLevels(ChristmasChroniclesLevels, _countof(ChristmasChroniclesLevels))) unlockedEpisodes |= UnlockableEpisodes::ChristmasChronicles;
 		if (HasAllLevels(TheSecretFilesLevels, _countof(TheSecretFilesLevels))) unlockedEpisodes |= UnlockableEpisodes::TheSecretFiles;
 
 		if (PreferencesCache::UnlockedEpisodes != unlockedEpisodes) {

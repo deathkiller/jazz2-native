@@ -127,7 +127,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement("MenuLine"_s, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int charOffset = 0;
-		_root->DrawStringShadow("Play Custom Level"_s, charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Play Custom Levels"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 	}
 
@@ -137,7 +137,7 @@ namespace Jazz2::UI::Menu
 		int charOffset = 0;
 
 		if (_items.empty()) {
-			_root->DrawStringShadow("No custom level found!"_s, charOffset, viewSize.X * 0.5f, viewSize.Y * 0.55f, IMenuContainer::FontLayer,
+			_root->DrawStringShadow(_("No custom level found!"), charOffset, viewSize.X * 0.5f, viewSize.Y * 0.55f, IMenuContainer::FontLayer,
 				Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.8f, 0.88f);
 			return;
 		}
@@ -153,7 +153,7 @@ namespace Jazz2::UI::Menu
 		float column2 = viewSize.X * 0.52f;
 
 		for (int i = 0; i < _items.size(); i++) {
-			_items[i].TouchY = center.Y;
+			_items[i].Y = center.Y;
 
 			if (center.Y > TopLine - ItemHeight && center.Y < bottomLine + ItemHeight) {
 				if (_selectedIndex == i) {
@@ -177,6 +177,12 @@ namespace Jazz2::UI::Menu
 		}
 
 		_height = center.Y - (TopLine + _y);
+
+		if (_items[0].Y < TopLine + ItemHeight / 2) {
+			_root->DrawElement("MenuGlow"_s, 0, center.X, TopLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
+		} else if (_items[_items.size() - 1].Y > bottomLine - ItemHeight / 2) {
+			_root->DrawElement("MenuGlow"_s, 0, center.X, bottomLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
+		}
 	}
 
 	void CustomLevelSelectSection::OnTouchEvent(const TouchEvent& event, const Vector2i& viewSize)
@@ -218,7 +224,7 @@ namespace Jazz2::UI::Menu
 
 				float halfW = viewSize.X * 0.5f;
 				for (int i = 0; i < _items.size(); i++) {
-					if (std::abs(_touchLast.X - halfW) < 150.0f && std::abs(_touchLast.Y - _items[i].TouchY) < 22.0f) {
+					if (std::abs(_touchLast.X - halfW) < 150.0f && std::abs(_touchLast.Y - _items[i].Y) < 22.0f) {
 						if (_selectedIndex == i) {
 							ExecuteSelected();
 						} else {
@@ -245,10 +251,10 @@ namespace Jazz2::UI::Menu
 	void CustomLevelSelectSection::EnsureVisibleSelected()
 	{
 		float bottomLine = _root->GetViewSize().Y - BottomLine;
-		if (_items[_selectedIndex].TouchY < TopLine + ItemHeight * 0.5f) {
-			_y += (TopLine + ItemHeight * 0.5f - _items[_selectedIndex].TouchY);
-		} else if (_items[_selectedIndex].TouchY > bottomLine - ItemHeight * 0.5f) {
-			_y += (bottomLine - ItemHeight * 0.5f - _items[_selectedIndex].TouchY);
+		if (_items[_selectedIndex].Y < TopLine + ItemHeight * 0.5f) {
+			_y += (TopLine + ItemHeight * 0.5f - _items[_selectedIndex].Y);
+		} else if (_items[_selectedIndex].Y > bottomLine - ItemHeight * 0.5f) {
+			_y += (bottomLine - ItemHeight * 0.5f - _items[_selectedIndex].Y);
 		}
 	}
 

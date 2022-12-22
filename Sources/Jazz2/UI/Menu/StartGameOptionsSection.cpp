@@ -20,9 +20,9 @@ namespace Jazz2::UI::Menu
 		_transitionTime(0.0f),
 		_shouldStart(false)
 	{
-		_items[(int)Item::Character].Name = "Character"_s;
-		_items[(int)Item::Difficulty].Name = "Difficulty"_s;
-		_items[(int)Item::Start].Name = "Start"_s;
+		_items[(int)Item::Character].Name = _("Character");
+		_items[(int)Item::Difficulty].Name = _("Difficulty");
+		_items[(int)Item::Start].Name = _("Start");
 	}
 
 	void StartGameOptionsSection::OnShow(IMenuContainer* root)
@@ -199,7 +199,7 @@ namespace Jazz2::UI::Menu
 
 				_items[i].TouchY = center.Y + 28.0f;
 		    } else if (i == 1) {
-				constexpr const StringView difficultyTypes[] = { "Easy"_s, "Medium"_s, "Hard"_s };
+				const StringView difficultyTypes[] = { _("Easy"), _("Medium"), _("Hard") };
 
 		        for (int j = 0; j < _countof(difficultyTypes); j++) {
 		            if (_selectedDifficulty == j) {

@@ -67,7 +67,7 @@ namespace Jazz2
 		_rootNode = std::make_unique<SceneNode>();
 		_rootNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
-		if (!ContentResolver::Current().LoadLevel(this, _episodeName + "/"_s + _levelFileName, _difficulty)) {
+		if (!ContentResolver::Current().LoadLevel(this, "/"_s.joinWithoutEmptyParts({ _episodeName, _levelFileName }), _difficulty)) {
 			LOGE("Cannot load specified level");
 			return;
 		}
@@ -1044,6 +1044,8 @@ namespace Jazz2
 			} else {
 				return { };
 			}
+		} else {
+			return _x("/"_s.joinWithoutEmptyParts({ _episodeName, _levelFileName }), text.data());
 		}
 
 		return text;

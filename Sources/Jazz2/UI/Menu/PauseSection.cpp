@@ -9,9 +9,9 @@ namespace Jazz2::UI::Menu
 		_selectedIndex(0),
 		_animation(0.0f)
 	{
-		_items[(int)Item::Resume].Name = "Resume"_s;
-		_items[(int)Item::Options].Name = "Options"_s;
-		_items[(int)Item::Exit].Name = "Save & Exit"_s;
+		_items[(int)Item::Resume].Name = _("Resume");
+		_items[(int)Item::Options].Name = _("Options");
+		_items[(int)Item::Exit].Name = _("Save & Exit");
 	}
 
 	void PauseSection::OnShow(IMenuContainer* root)

@@ -4,6 +4,8 @@
 #include "../../PlayerActions.h"
 #include "../Alignment.h"
 
+#include "../../../nCine/I18n.h"
+
 namespace Jazz2::UI::Menu
 {
 	class MenuSection;
@@ -12,7 +14,8 @@ namespace Jazz2::UI::Menu
 		None = 0x00,
 		Audio = 0x01,
 		Graphics = 0x02,
-		Gameplay = 0x04
+		Gameplay = 0x04,
+		Language = 0x08
 	};
 
 	DEFINE_ENUM_OPERATORS(ChangedPreferencesType);

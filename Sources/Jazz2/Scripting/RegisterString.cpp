@@ -451,7 +451,7 @@ namespace Jazz2::Scripting
 #else
 		sprintf(&buf[0], fmt.c_str(), width, value);
 #endif
-		buf.resize(strlen(&buf[0]));
+		buf.resize(std::strlen(&buf[0]));
 
 		return buf;
 	}
@@ -492,7 +492,7 @@ namespace Jazz2::Scripting
 #else
 		sprintf(&buf[0], fmt.c_str(), width, value);
 #endif
-		buf.resize(strlen(&buf[0]));
+		buf.resize(std::strlen(&buf[0]));
 
 		return buf;
 	}
@@ -527,7 +527,7 @@ namespace Jazz2::Scripting
 #else
 		sprintf(&buf[0], fmt.c_str(), width, precision, value);
 #endif
-		buf.resize(strlen(&buf[0]));
+		buf.resize(std::strlen(&buf[0]));
 
 		return buf;
 	}*/

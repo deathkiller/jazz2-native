@@ -21,7 +21,7 @@ namespace nCine
 	TextureLoaderQoi::TextureLoaderQoi(std::unique_ptr<IFileStream> fileHandle)
 		: ITextureLoader(std::move(fileHandle))
 	{
-		RETURN_ASSERT_MSG_X(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->GetFilename());
+		RETURN_ASSERT_MSG_X(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->GetFileName().data());
 
 		auto fileSize = fileHandle_->GetSize();
 		if (fileSize < QOI_HEADER_SIZE || fileSize > 64 * 1024 * 1024) {

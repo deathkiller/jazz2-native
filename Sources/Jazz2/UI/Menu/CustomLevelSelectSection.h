@@ -21,7 +21,7 @@ namespace Jazz2::UI::Menu
 		struct ItemData {
 			String LevelName;
 			String DisplayName;
-			float TouchY;
+			float Y;
 		};
 
 		static constexpr float ItemHeight = 20.0f;

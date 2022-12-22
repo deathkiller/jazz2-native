@@ -40,7 +40,7 @@ namespace Jazz2
 	bool PreferencesCache::AllowCheatsWeapons = false;
 	Vector2f PreferencesCache::TouchLeftPadding;
 	Vector2f PreferencesCache::TouchRightPadding;
-	uint8_t PreferencesCache::Language[4] { };
+	char PreferencesCache::Language[6] { };
 	bool PreferencesCache::BypassCache = false;
 	float PreferencesCache::MasterVolume = 0.8f;
 	float PreferencesCache::SfxVolume = 0.8f;

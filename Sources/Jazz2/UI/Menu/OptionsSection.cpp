@@ -11,10 +11,10 @@ namespace Jazz2::UI::Menu
 		_selectedIndex(0),
 		_animation(0.0f)
 	{
-		_items[(int)Item::Gameplay].Name = "Gameplay"_s;
-		_items[(int)Item::Graphics].Name = "Graphics"_s;
-		_items[(int)Item::Sounds].Name = "Sounds"_s;
-		_items[(int)Item::Controls].Name = "Controls"_s;
+		_items[(int)Item::Gameplay].Name = _("Gameplay");
+		_items[(int)Item::Graphics].Name = _("Graphics");
+		_items[(int)Item::Sounds].Name = _("Sounds");
+		_items[(int)Item::Controls].Name = _("Controls");
 	}
 
 	void OptionsSection::OnShow(IMenuContainer* root)
@@ -70,7 +70,7 @@ namespace Jazz2::UI::Menu
 		center.Y = topLine + (bottomLine - topLine) * 0.7f / (int)Item::Count;
 		int charOffset = 0;
 
-		_root->DrawStringShadow("Options"_s, charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Options"), charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		for (int i = 0; i < (int)Item::Count; i++) {

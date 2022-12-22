@@ -196,12 +196,33 @@ namespace Jazz2::Tiles
 
 				if (tile.DestructType == TileDestructType::Weapon && (params.DestructType & TileDestructType::Weapon) == TileDestructType::Weapon) {
 					if (params.UsedWeaponType == WeaponType::Freezer && tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2)) {
-						std::shared_ptr<Actors::Environment::IceBlock> iceBlock = std::make_shared<Actors::Environment::IceBlock>();
-						iceBlock->OnActivated({
-							.LevelHandler = _levelHandler,
-							.Pos = Vector3i(32 * x + 16 - 1, 32 * y + 16 - 2, ILevelHandler::MainPlaneZ)
+						int tx = x * TileSet::DefaultTileSize + TileSet::DefaultTileSize / 2;
+						int ty = y * TileSet::DefaultTileSize + TileSet::DefaultTileSize / 2;
+
+						bool iceBlockFound = false;
+						_levelHandler->FindCollisionActorsByAABB(nullptr, AABBf(tx - 1.0f, ty - 1.0f, tx + 1.0f, ty + 1.0f), [&iceBlockFound](Actors::ActorBase* actor) -> bool {
+							if ((actor->GetState() & Actors::ActorState::IsDestroyed) != Actors::ActorState::None) {
+								return true;
+							}
+
+							Actors::Environment::IceBlock* iceBlock = dynamic_cast<Actors::Environment::IceBlock*>(actor);
+							if (iceBlock != nullptr) {
+								iceBlock->ResetTimeLeft();
+								iceBlockFound = true;
+								return false;
+							}
+
+							return true;
 						});
-						_levelHandler->AddActor(iceBlock);
+
+						if (!iceBlockFound) {
+							std::shared_ptr<Actors::Environment::IceBlock> iceBlock = std::make_shared<Actors::Environment::IceBlock>();
+							iceBlock->OnActivated({
+								.LevelHandler = _levelHandler,
+								.Pos = Vector3i(tx - 1, ty - 2, ILevelHandler::MainPlaneZ)
+							});
+							_levelHandler->AddActor(iceBlock);
+						}
 						return false;
 					} else {
 						if (tile.ExtraParam == 0 || tile.ExtraParam == ((uint8_t)params.UsedWeaponType + 1)) {
