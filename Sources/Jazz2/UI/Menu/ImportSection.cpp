@@ -64,30 +64,30 @@ namespace Jazz2::UI::Menu
 		center.Y = topLine + (bottomLine - topLine) * 0.4f;
 		int charOffset = 0;
 
-		_root->DrawStringShadow(__("Import Episodes"_s), charOffset, center.X, topLine - 21.0f - 34.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Import Episodes"_s), charOffset, center.X, topLine - 21.0f - 34.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
-		_root->DrawStringShadow(__("Select files of your original game to unlock additional episodes"_s), charOffset, center.X, topLine - 21.0f - 4.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Select files of your original game to unlock additional episodes"_s), charOffset, center.X, topLine - 21.0f - 4.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.76f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		switch (_state) {
 			case State::Loading:
 				if (_fileCount > 0) {
-					_root->DrawStringShadow(__("Processing of selected files..."_s), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
+					_root->DrawStringShadow(_("Processing of selected files..."_s), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 						Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				} else {
-					_root->DrawStringShadow(__("Waiting for files..."_s), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
+					_root->DrawStringShadow(_("Waiting for files..."_s), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 						Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				}
 				break;
 
 			case State::NothingSelected:
-				_root->DrawStringShadow(__("No files were selected!"_s), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
+				_root->DrawStringShadow(_("No files were selected!"_s), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 					Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				break;
 
 			case State::NothingImported:
-				_root->DrawStringShadow(__("No new episodes were imported!"_s), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
+				_root->DrawStringShadow(_("No new episodes were imported!"_s), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 					Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				break;
 		}
@@ -98,9 +98,7 @@ namespace Jazz2::UI::Menu
 		if (event.type == TouchEventType::Down) {
 			int pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
-				float x = event.pointers[pointerIndex].x;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
-
 				if (y < 80.0f) {
 					if (_state != State::Loading) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
