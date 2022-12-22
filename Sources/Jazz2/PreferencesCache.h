@@ -33,7 +33,7 @@ namespace Jazz2
 		JazzInTime = 0x02,
 		Flashback = 0x04,
 		FunkyMonkeys = 0x08,
-		HolidayHare98 = 0x10,
+		ChristmasChronicles = 0x10,
 		TheSecretFiles = 0x20,
 	};
 
@@ -94,7 +94,7 @@ namespace Jazz2
 		static bool AllowCheatsWeapons;
 		static Vector2f TouchLeftPadding;
 		static Vector2f TouchRightPadding;
-		static uint8_t Language[4];
+		static char Language[6];
 		static bool BypassCache;
 
 		// Sounds

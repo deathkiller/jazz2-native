@@ -256,7 +256,7 @@ namespace Jazz2::UI
 										unsigned long colorValue = strtoul(colorBuffer, &end, 16);
 										if (colorBuffer != end) {
 											color = Color(colorValue);
-											color.SetAlpha(0.5f * alpha * color.A());
+											color.SetAlpha(0.5f * alpha);
 											if (colorizeShader == nullptr) {
 												colorizeShader = ContentResolver::Current().GetShader(PrecompiledShader::Colorize);
 											}

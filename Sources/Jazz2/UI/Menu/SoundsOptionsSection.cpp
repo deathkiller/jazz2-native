@@ -9,9 +9,9 @@ namespace Jazz2::UI::Menu
 		_animation(0.0f),
 		_isDirty(false)
 	{
-		_items[(int)Item::MasterVolume].Name = "Master"_s;
-		_items[(int)Item::SfxVolume].Name = "SFX"_s;
-		_items[(int)Item::MusicVolume].Name = "Music"_s;
+		_items[(int)Item::MasterVolume].Name = _("Master");
+		_items[(int)Item::SfxVolume].Name = _("SFX");
+		_items[(int)Item::MusicVolume].Name = _("Music");
 	}
 
 	SoundsOptionsSection::~SoundsOptionsSection()
@@ -89,7 +89,7 @@ namespace Jazz2::UI::Menu
 		center.Y = topLine + (bottomLine - topLine) * 0.35f / (int)Item::Count;
 		int charOffset = 0;
 
-		_root->DrawStringShadow("Sounds"_s, charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Sounds"), charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		char stringBuffer[34];

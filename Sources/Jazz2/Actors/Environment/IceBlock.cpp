@@ -1,10 +1,11 @@
 ﻿#include "IceBlock.h"
 #include "../../ILevelHandler.h"
-#include "../../Events/EventMap.h"
+#include "../../Tiles/TileMap.h"
 #include "../Explosion.h"
-#include "../Player.h"
 #include "../Weapons/ShotBase.h"
 #include "../Weapons/TNT.h"
+
+#include "../../../nCine/Base/Random.h"
 
 namespace Jazz2::Actors::Environment
 {
@@ -21,42 +22,61 @@ namespace Jazz2::Actors::Environment
 
 	Task<bool> IceBlock::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
+		SetState(ActorState::SkipPerPixelCollisions, true);
+		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::ApplyGravitation, false);
 
 		async_await RequestMetadataAsync("Object/IceBlock"_s);
 		SetAnimation("IceBlock"_s);
+
+		_renderer.Initialize(ActorRendererType::FrozenMask);
 
 		async_return true;
 	}
 
 	void IceBlock::OnUpdate(float timeMult)
 	{
-		SolidObjectBase::OnUpdate(timeMult);
+		ActorBase::OnUpdate(timeMult);
+
+		auto tileMap = _levelHandler->TileMap();
+		if (tileMap != nullptr) {
+			if (tileMap->IsTileEmpty(_originTile.X, _originTile.Y)) {
+				DecreaseHealth(INT32_MAX);
+				return;
+			}
+		}
 
 		_timeLeft -= timeMult;
 		if (_timeLeft <= 0.0f) {
-			float newAlpha = _renderer.alpha() - (0.02f * timeMult);
-			if (newAlpha > 0.0f) {
-				_renderer.setAlphaF(newAlpha);
-			} else {
-				DecreaseHealth(INT32_MAX);
+			DecreaseHealth(INT32_MAX);
+
+			if (tileMap != nullptr) {
+				if (tileMap->IsTileEmpty(_originTile.X - 1, _originTile.Y)) {
+					for (int i = 0; i < 5; i++) {
+						Explosion::Create(_levelHandler, Vector3i((int)_pos.X - 24, (int)_pos.Y - 16 + Random().Fast(0, 32), _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+					}
+				}
+				if (tileMap->IsTileEmpty(_originTile.X + 1, _originTile.Y)) {
+					for (int i = 0; i < 5; i++) {
+						Explosion::Create(_levelHandler, Vector3i((int)_pos.X + 24, (int)_pos.Y - 16 + Random().Fast(0, 32), _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+					}
+				}
+				if (tileMap->IsTileEmpty(_originTile.X, _originTile.Y + 1)) {
+					for (int i = 0; i < 5; i++) {
+						Explosion::Create(_levelHandler, Vector3i((int)_pos.X - 16 + Random().Fast(0, 32), (int)_pos.Y + 24, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+					}
+				}
 			}
+
+			Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite);
+
+			_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 		}
 	}
 
-	bool IceBlock::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	void IceBlock::ResetTimeLeft()
 	{
-		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
-			if (shotBase->GetStrength() > 0) {
-				DecreaseHealth(shotBase->GetStrength(), shotBase);
-				shotBase->DecreaseHealth(1);
-				return true;
-			}
-		} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {
-			DecreaseHealth(INT32_MAX, tnt);
-			return true;
+		if (_timeLeft > 0.0f) {
+			_timeLeft = 200.0f;
 		}
-
-		return SolidObjectBase::OnHandleCollision(other);
 	}
 }

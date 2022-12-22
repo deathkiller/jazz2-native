@@ -41,10 +41,10 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement("MenuLine"_s, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int charOffset = 0;
-		_root->DrawStringShadow("Touch Controls"_s, charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Touch Controls"), charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
-		_root->DrawStringShadow("You can adjust position of the touch zones by drag and drop."_s, charOffset, center.X, topLine + 40.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("You can adjust position of the touch zones by drag and drop."), charOffset, center.X, topLine + 40.0f, IMenuContainer::FontLayer,
 			Alignment::Top, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 
 		float leftSize = HUD::DpadSize * LevelHandler::DefaultWidth * 0.45f;

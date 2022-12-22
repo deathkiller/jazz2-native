@@ -1,42 +1,38 @@
 ﻿#pragma once
 
-#include "MenuSection.h"
+#include "ScrollableMenuSection.h"
 
 namespace Jazz2::UI::Menu
 {
-	class GraphicsOptionsSection : public MenuSection
+	enum class GraphicsOptionsItemType {
+		RescaleMode,
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
+		Fullscreen,
+#endif
+		Antialiasing,
+		ShowPerformanceMetrics,
+	};
+
+	struct GraphicsOptionsItem {
+		GraphicsOptionsItemType Type;
+		StringView DisplayName;
+		bool HasBooleanValue;
+	};
+
+	class GraphicsOptionsSection : public ScrollableMenuSection<GraphicsOptionsItem>
 	{
 	public:
 		GraphicsOptionsSection();
 		~GraphicsOptionsSection();
 
-		void OnShow(IMenuContainer* root) override;
-		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
-		void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) override;
 
 	private:
-		enum class Item {
-			RescaleMode,
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
-			Fullscreen,
-#endif
-			Antialiasing,
-			ShowPerformanceMetrics,
-
-			Count
-		};
-
-		struct ItemData {
-			String Name;
-			float TouchY;
-		};
-
-		ItemData _items[(int)Item::Count];
-		int _selectedIndex;
-		float _animation;
 		bool _isDirty;
 
-		void ExecuteSelected();
+		void OnHandleInput() override;
+		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
+		void OnDrawItem(Canvas* canvas, ListViewItem& item, int& charOffset, bool isSelected) override;
+		void OnExecuteSelected() override;
 	};
 }

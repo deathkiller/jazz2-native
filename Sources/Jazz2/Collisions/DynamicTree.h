@@ -211,7 +211,7 @@ namespace Jazz2::Collisions
 			if (node->aabb.Overlaps(aabb)) {
 				if (node->IsLeaf()) {
 					bool proceed = callback->OnCollisionQuery(nodeId);
-					if (proceed == false) {
+					if (!proceed) {
 						return;
 					}
 				} else {

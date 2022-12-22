@@ -28,12 +28,12 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement("MenuLine"_s, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int charOffset = 0;
-		_root->DrawStringShadow("Error"_s, charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Error"), charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		switch (_message) {
 			case Message::CannotLoadLevel:
-				_root->DrawStringShadow("\f[c:0x704a4a]Cannot load specified level!\f[c]\n\nMake sure all necessary files\nare accessible and try it again."_s, charOffset, center.X, topLine + 40.0f, IMenuContainer::FontLayer,
+				_root->DrawStringShadow(_("\f[c:0x704a4a]Cannot load specified level!\f[c]\n\nMake sure all necessary files\nare accessible and try it again."), charOffset, center.X, topLine + 40.0f, IMenuContainer::FontLayer,
 					Alignment::Top, Font::DefaultColor, 0.9f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 				break;
 		}

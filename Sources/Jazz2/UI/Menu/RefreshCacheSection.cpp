@@ -62,13 +62,13 @@ namespace Jazz2::UI::Menu
 		center.Y = topLine + (bottomLine - topLine) * 0.4f;
 		int charOffset = 0;
 
-		_root->DrawStringShadow("Refresh Cache"_s, charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Refresh Cache"), charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
-		_root->DrawStringShadow("Processing of files in \f[c:0x9e7056]\"Source\"\f[c] directory..."_s, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Processing of files in \f[c:0x9e7056]\"Source\"\f[c] directory..."), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 			Alignment::Center, Font::DefaultColor, 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
-		_root->DrawStringShadow("Newly added levels and episodes will be available soon."_s, charOffset, center.X, center.Y + 24.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Newly added levels and episodes will be available soon."), charOffset, center.X, center.Y + 24.0f, IMenuContainer::FontLayer,
 			Alignment::Top, Font::DefaultColor, 0.8f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 	}
 

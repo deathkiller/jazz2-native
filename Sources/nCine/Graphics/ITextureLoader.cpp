@@ -129,7 +129,7 @@ namespace nCine
 
 	void ITextureLoader::loadPixels(GLenum internalFormat, GLenum type)
 	{
-		LOGI_X("Loading \"%s\"", fileHandle_->GetFilename());
+		LOGV_X("Loading \"%s\"", fileHandle_->GetFileName().data());
 		if (type) { // overriding pixel type
 			texFormat_ = TextureFormat(internalFormat, type);
 		} else {

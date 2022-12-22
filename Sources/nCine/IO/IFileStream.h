@@ -75,8 +75,8 @@ namespace nCine
 		virtual bool IsOpened() const;
 
 		/// Returns file name with path
-		const char* GetFilename() const {
-			return filename_.data();
+		StringView GetFileName() const {
+			return filename_;
 		}
 
 		/// Returns file descriptor

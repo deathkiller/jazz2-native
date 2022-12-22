@@ -9,17 +9,20 @@
 namespace Jazz2::UI::Menu
 {
 	GraphicsOptionsSection::GraphicsOptionsSection()
-		:
-		_selectedIndex(0),
-		_animation(0.0f),
-		_isDirty(false)
+		: _isDirty(false)
 	{
-		_items[(int)Item::RescaleMode].Name = "Rescale Mode"_s;
+		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::RescaleMode, _("Rescale Mode") });
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
-		_items[(int)Item::Fullscreen].Name = "Fullscreen"_s;
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+		// Xbox is always fullscreen
+		if (Environment::CurrentDeviceType != DeviceType::Xbox)
+#	endif
+		{
+			_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::Fullscreen, _("Fullscreen"), true });
+		}
 #endif
-		_items[(int)Item::Antialiasing].Name = "Antialiasing"_s;
-		_items[(int)Item::ShowPerformanceMetrics].Name = "Performance Metrics"_s;
+		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::Antialiasing, _("Antialiasing"), true });
+		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::ShowPerformanceMetrics, _("Performance Metrics"), true });
 	}
 
 	GraphicsOptionsSection::~GraphicsOptionsSection()
@@ -30,145 +33,83 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void GraphicsOptionsSection::OnShow(IMenuContainer* root)
+	void GraphicsOptionsSection::OnHandleInput()
 	{
-		MenuSection::OnShow(root);
-
-		_animation = 0.0f;
-	}
-
-	void GraphicsOptionsSection::OnUpdate(float timeMult)
-	{
-		if (_animation < 1.0f) {
-			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
-		}
-
-		if (_root->ActionHit(PlayerActions::Fire) || (_selectedIndex >= 1 && (_root->ActionHit(PlayerActions::Left) || _root->ActionHit(PlayerActions::Right)))) {
-			ExecuteSelected();
-		} else if (_root->ActionHit(PlayerActions::Menu)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_root->LeaveSection();
-			return;
-		} else if (_root->ActionHit(PlayerActions::Up)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_animation = 0.0f;
-			if (_selectedIndex > 0) {
-				_selectedIndex--;
-			} else {
-				_selectedIndex = (int)Item::Count - 1;
-			}
-		} else if (_root->ActionHit(PlayerActions::Down)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_animation = 0.0f;
-			if (_selectedIndex < (int)Item::Count - 1) {
-				_selectedIndex++;
-			} else {
-				_selectedIndex = 0;
-			}
+		if (!_items.empty() && _items[_selectedIndex].Item.HasBooleanValue && (_root->ActionHit(PlayerActions::Left) || _root->ActionHit(PlayerActions::Right))) {
+			OnExecuteSelected();
+		} else {
+			ScrollableMenuSection::OnHandleInput();
 		}
 	}
 
 	void GraphicsOptionsSection::OnDraw(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
-		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
+		float centerX = viewSize.X * 0.5f;
+		float bottomLine = viewSize.Y - BottomLine;
+		_root->DrawElement("MenuDim"_s, centerX, (TopLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
+			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - TopLine + 2.0f), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
+		_root->DrawElement("MenuLine"_s, 0, centerX, TopLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement("MenuLine"_s, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		constexpr float topLine = 131.0f;
-		float bottomLine = viewSize.Y - 42.0f;
-		_root->DrawElement("MenuDim"_s, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
-			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement("MenuLine"_s, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement("MenuLine"_s, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-
-		center.Y = topLine + (bottomLine - topLine) * 0.5f / (int)Item::Count;
 		int charOffset = 0;
-
-		_root->DrawStringShadow("Graphics"_s, charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Graphics"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+	}
 
-		for (int i = 0; i < (int)Item::Count; i++) {
-			_items[i].TouchY = center.Y;
+	void GraphicsOptionsSection::OnLayoutItem(Canvas* canvas, ListViewItem& item)
+	{
+		item.Height = (item.Item.HasBooleanValue ? 52 : ItemHeight);
+	}
 
-			if (_selectedIndex == i) {
-				float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+	void GraphicsOptionsSection::OnDrawItem(Canvas* canvas, ListViewItem& item, int& charOffset, bool isSelected)
+	{
+		float centerX = canvas->ViewSize.X * 0.5f;
 
-				_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (_items[i].Name.size() + 3) * 0.5f * size, 4.0f * size, true);
+		if (isSelected) {
+			float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
-				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
-					Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+			_root->DrawElement("MenuGlow"_s, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (item.Item.DisplayName.size() + 3) * 0.5f * size, 4.0f * size, true);
 
-				if (i >= 1) {
-					_root->DrawStringShadow("<"_s, charOffset, center.X - 60.0f - 30.0f * size, center.Y + 22.0f, IMenuContainer::FontLayer + 20,
-						Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);
-					_root->DrawStringShadow(">"_s, charOffset, center.X + 70.0f + 30.0f * size, center.Y + 22.0f, IMenuContainer::FontLayer + 20,
-						Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, 1.1f, 0.4f, 0.4f);
-				}
-			} else {
-				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
-					Alignment::Center, Font::DefaultColor, 0.9f);
+			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
+				Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+
+			if (item.Item.HasBooleanValue) {
+				_root->DrawStringShadow("<"_s, charOffset, centerX - 60.0f - 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
+					Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);
+				_root->DrawStringShadow(">"_s, charOffset, centerX + 70.0f + 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
+					Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, 1.1f, 0.4f, 0.4f);
 			}
+		} else {
+			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer,
+				Alignment::Center, Font::DefaultColor, 0.9f);
+		}
 
-			if (i >= 1) {
-				bool enabled;
-				switch (i) {
-					default:
-#if defined(DEATH_TARGET_WINDOWS_RT)
-					// Xbox is always fullscreen
-					case (int)Item::Fullscreen: enabled = PreferencesCache::EnableFullscreen || Environment::CurrentDeviceType == DeviceType::Xbox; break;
-#elif !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
-					case (int)Item::Fullscreen: enabled = PreferencesCache::EnableFullscreen; break;
+		if (item.Item.HasBooleanValue) {
+			bool enabled;
+			switch (item.Item.Type) {
+				default:
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
+				case GraphicsOptionsItemType::Fullscreen: enabled = PreferencesCache::EnableFullscreen; break;
 #endif
-					case (int)Item::Antialiasing: enabled = (PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing; break;
-					case (int)Item::ShowPerformanceMetrics: enabled = PreferencesCache::ShowPerformanceMetrics; break;
-				}
-
-				_root->DrawStringShadow(enabled ? "Enabled"_s : "Disabled"_s, charOffset, center.X, center.Y + 22.0f, IMenuContainer::FontLayer - 10,
-					Alignment::Center, (_selectedIndex == i ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
+				case GraphicsOptionsItemType::Antialiasing: enabled = (PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing; break;
+				case GraphicsOptionsItemType::ShowPerformanceMetrics: enabled = PreferencesCache::ShowPerformanceMetrics; break;
 			}
 
-			center.Y += (bottomLine - topLine) * (i >= 1 ? 0.95f : 0.7f) / (int)Item::Count;
+			_root->DrawStringShadow(enabled ? _("Enabled") : _("Disabled"), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
+				Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
 		}
 	}
 
-	void GraphicsOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
+	void GraphicsOptionsSection::OnExecuteSelected()
 	{
-		if (event.type == TouchEventType::Down) {
-			int pointerIndex = event.findPointerIndex(event.actionIndex);
-			if (pointerIndex != -1) {
-				float x = event.pointers[pointerIndex].x;
-				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
-
-				if (y < 80.0f) {
-					_root->PlaySfx("MenuSelect"_s, 0.5f);
-					_root->LeaveSection();
-					return;
-				}
-
-				for (int i = 0; i < (int)Item::Count; i++) {
-					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 22.0f) {
-						if (_selectedIndex == i) {
-							ExecuteSelected();
-						} else {
-							_root->PlaySfx("MenuSelect"_s, 0.5f);
-							_animation = 0.0f;
-							_selectedIndex = i;
-						}
-						break;
-					}
-				}
-			}
-		}
-	}
-
-	void GraphicsOptionsSection::ExecuteSelected()
-	{
-		switch (_selectedIndex) {
-			case (int)Item::RescaleMode:
+		switch (_items[_selectedIndex].Item.Type) {
+			case GraphicsOptionsItemType::RescaleMode:
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				_root->SwitchToSection<RescaleModeSection>();
 				break;
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
-			case (int)Item::Fullscreen:
+			case GraphicsOptionsItemType::Fullscreen:
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 				// Xbox is always fullscreen
 				if (Environment::CurrentDeviceType == DeviceType::Xbox) {
@@ -188,7 +129,7 @@ namespace Jazz2::UI::Menu
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				break;
 #endif
-			case (int)Item::Antialiasing: {
+			case GraphicsOptionsItemType::Antialiasing: {
 				RescaleMode newMode = (PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask);
 				if ((PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) != RescaleMode::UseAntialiasing) {
 					newMode |= RescaleMode::UseAntialiasing;
@@ -200,7 +141,7 @@ namespace Jazz2::UI::Menu
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				break;
 			}
-			case (int)Item::ShowPerformanceMetrics:
+			case GraphicsOptionsItemType::ShowPerformanceMetrics:
 				PreferencesCache::ShowPerformanceMetrics = !PreferencesCache::ShowPerformanceMetrics;
 				_isDirty = true;
 				_animation = 0.0f;

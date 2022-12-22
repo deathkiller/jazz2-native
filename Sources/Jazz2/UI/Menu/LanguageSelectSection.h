@@ -1,24 +1,25 @@
 ﻿#pragma once
 
 #include "ScrollableMenuSection.h"
-#include "../../PreferencesCache.h"
 
 namespace Jazz2::UI::Menu
 {
-	struct RescaleModeItem {
-		RescaleMode Mode;
-		StringView DisplayName;
+	struct LanguageData {
+		String FileName;
+		String DisplayName;
 	};
 
-	class RescaleModeSection : public ScrollableMenuSection<RescaleModeItem>
+	class LanguageSelectSection : public ScrollableMenuSection<LanguageData>
 	{
 	public:
-		RescaleModeSection();
+		LanguageSelectSection();
 
 		void OnDraw(Canvas* canvas) override;
 
 	private:
 		void OnExecuteSelected() override;
 		void OnDrawItem(Canvas* canvas, ListViewItem& item, int& charOffset, bool isSelected) override;
+
+		void AddLanguage(const StringView& languageFile);
 	};
 }

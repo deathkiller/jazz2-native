@@ -11,10 +11,10 @@ namespace Jazz2::UI::Menu
 		_animation(0.0f),
 		_isDirty(false)
 	{
-		_items[(int)Item::RemapControls].Name = "Remap Controls"_s;
-		_items[(int)Item::TouchControls].Name = "Touch Controls"_s;
+		_items[(int)Item::RemapControls].Name = _("Remap Controls");
+		_items[(int)Item::TouchControls].Name = _("Touch Controls");
 #if defined(DEATH_TARGET_ANDROID)
-		_items[(int)Item::UseNativeBackButton].Name = "Native Back Button"_s;
+		_items[(int)Item::UseNativeBackButton].Name = _("Native Back Button");
 #endif
 	}
 
@@ -113,7 +113,7 @@ namespace Jazz2::UI::Menu
 					default: enabled = false; break;
 				}
 
-				_root->DrawStringShadow(enabled ? "Enabled"_s : "Disabled"_s, charOffset, center.X, center.Y + 22.0f, IMenuContainer::FontLayer - 10,
+				_root->DrawStringShadow(enabled ? _("Enabled") : _("Disabled"), charOffset, center.X, center.Y + 22.0f, IMenuContainer::FontLayer - 10,
 					Alignment::Center, (_selectedIndex == i ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
 			}
 

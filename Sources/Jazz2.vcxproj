@@ -318,7 +318,6 @@
     <ClInclude Include="Jazz2\Compatibility\JJ2Event.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Level.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Strings.h" />
-    <ClInclude Include="Jazz2\Compatibility\JJ2Text.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Tileset.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Version.h" />
     <ClInclude Include="Jazz2\ContentResolver.Shaders.h" />
@@ -352,6 +351,7 @@
     <ClInclude Include="Jazz2\UI\Menu\IMenuContainer.h" />
     <ClInclude Include="Jazz2\UI\Menu\ImportSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\InGameMenu.h" />
+    <ClInclude Include="Jazz2\UI\Menu\LanguageSelectSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\MainMenu.h" />
     <ClInclude Include="Jazz2\UI\Menu\MenuSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\OptionsSection.h" />
@@ -359,6 +359,7 @@
     <ClInclude Include="Jazz2\UI\Menu\RefreshCacheSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RemapControlsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RescaleModeSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\ScrollableMenuSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\SimpleMessageSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\SoundsOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\StartGameOptionsSection.h" />
@@ -479,6 +480,7 @@
     <ClInclude Include="nCine\Graphics\TextureSaverPng.h" />
     <ClInclude Include="nCine\Graphics\TextureSaverWebP.h" />
     <ClInclude Include="nCine\Graphics\Viewport.h" />
+    <ClInclude Include="nCine\I18n.h" />
     <ClInclude Include="nCine\IAppEventHandler.h" />
     <ClInclude Include="nCine\IIndexer.h" />
     <ClInclude Include="nCine\Backends\GlfwInputManager.h" />
@@ -651,7 +653,6 @@
     <ClCompile Include="Jazz2\Compatibility\JJ2Episode.cpp" />
     <ClCompile Include="Jazz2\Compatibility\JJ2Level.cpp" />
     <ClCompile Include="Jazz2\Compatibility\JJ2Strings.cpp" />
-    <ClCompile Include="Jazz2\Compatibility\JJ2Text.cpp" />
     <ClCompile Include="Jazz2\Compatibility\JJ2Tileset.cpp" />
     <ClCompile Include="Jazz2\PreferencesCache.cpp" />
     <ClCompile Include="Jazz2\Scripting\LevelScripts.cpp" />
@@ -676,6 +677,7 @@
     <ClCompile Include="Jazz2\UI\Menu\GraphicsOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\ImportSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\InGameMenu.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\LanguageSelectSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\MainMenu.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\OptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\PauseSection.cpp" />
@@ -783,6 +785,7 @@
     <ClCompile Include="nCine\Graphics\Viewport.cpp" />
     <ClCompile Include="nCine\Backends\GlfwInputManager.cpp" />
     <ClCompile Include="nCine\Backends\GlfwKeys.cpp" />
+    <ClCompile Include="nCine\I18n.cpp" />
     <ClCompile Include="nCine\Input\IInputManager.cpp" />
     <ClCompile Include="nCine\Input\JoyMapping.cpp" />
     <ClCompile Include="nCine\Backends\Qt5InputManager.cpp" />

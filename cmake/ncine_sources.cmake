@@ -10,6 +10,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/AppConfiguration.cpp
 	${NCINE_SOURCE_DIR}/nCine/Application.cpp
 	${NCINE_SOURCE_DIR}/nCine/ArrayIndexer.cpp
+	${NCINE_SOURCE_DIR}/nCine/I18n.cpp
 	${NCINE_SOURCE_DIR}/nCine/ServiceLocator.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/Algorithms.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/BitArray.cpp
@@ -212,7 +213,6 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Episode.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Level.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Strings.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Text.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Tileset.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventMap.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventSpawner.cpp
@@ -242,6 +242,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GraphicsOptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ImportSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/InGameMenu.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/LanguageSelectSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MainMenu.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/OptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PauseSection.cpp

@@ -209,14 +209,14 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement("MenuLine"_s, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int charOffset = 0;
-		_root->DrawStringShadow("Remap Controls"_s, charOffset, center.X * 0.3f, 110.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Remap Controls"), charOffset, center.X * 0.3f, 110.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Colorf(0.5f, 0.5f, 0.5f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.8f, 0.88f);
 
-		_root->DrawStringShadow("Key 1"_s, charOffset, center.X * (0.9f + 0 * 0.34f), 110.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_f("Key %i", 1), charOffset, center.X * (0.9f + 0 * 0.34f), 110.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
-		_root->DrawStringShadow("Key 2"_s, charOffset, center.X * (0.9f + 1 * 0.34f), 110.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_f("Key %i", 2), charOffset, center.X * (0.9f + 1 * 0.34f), 110.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
-		_root->DrawStringShadow("Gamepad"_s, charOffset, center.X * (0.9f + 2 * 0.34f), 110.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Gamepad"), charOffset, center.X * (0.9f + 2 * 0.34f), 110.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 
 		int n = (int)PlayerActions::Count;
@@ -231,15 +231,15 @@ namespace Jazz2::UI::Menu
 		for (int i = 0; i < n; i++) {
 			StringView name;
 			switch ((PlayerActions)i) {
-				case PlayerActions::Up: name = "Up"_s; break;
-				case PlayerActions::Down: name = "Down"_s; break;
-				case PlayerActions::Left: name = "Left"_s; break;
-				case PlayerActions::Right: name = "Right"_s; break;
-				case PlayerActions::Fire: name = "Fire"_s; break;
-				case PlayerActions::Jump: name = "Jump"_s; break;
-				case PlayerActions::Run: name = "Run"_s; break;
-				case PlayerActions::ChangeWeapon: name = "Change Weapon"_s; break;
-				case PlayerActions::Menu: name = "Back"_s; break;
+				case PlayerActions::Up: name = _("Up"); break;
+				case PlayerActions::Down: name = _("Down"); break;
+				case PlayerActions::Left: name = _("Left"); break;
+				case PlayerActions::Right: name = _("Right"); break;
+				case PlayerActions::Fire: name = _("Fire"); break;
+				case PlayerActions::Jump: name = _("Jump"); break;
+				case PlayerActions::Run: name = _("Run"); break;
+				case PlayerActions::ChangeWeapon: name = _("Change Weapon"); break;
+				case PlayerActions::Menu: name = _("Back"); break;
 			}
 
 			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int)PlayerActions::Count + i];

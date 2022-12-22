@@ -1,4 +1,5 @@
 ﻿#include "JJ2Level.h"
+#include "JJ2Strings.h"
 #include "EventConverter.h"
 #include "../ContentResolver.h"
 
@@ -343,7 +344,7 @@ namespace Jazz2::Compatibility
 		uint32_t waterGradient2 = block.ReadUInt32();*/
 	}
 
-	void JJ2Level::Convert(const String& targetPath, const EventConverter& eventConverter, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion)
+	void JJ2Level::Convert(const String& targetPath, const EventConverter& eventConverter, const std::function<LevelToken(const StringView&)>& levelTokenConversion)
 	{
 		auto so = fs::Open(targetPath, FileAccessMode::Write);
 		ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
@@ -400,8 +401,9 @@ namespace Jazz2::Compatibility
 
 		GrowableMemoryFile co(1024 * 1024);
 
-		co.WriteValue<uint8_t>((uint8_t)Name.size());
-		co.Write(Name.data(), Name.size());
+		String formattedName = JJ2Strings::RecodeString(Name, true);
+		co.WriteValue<uint8_t>((uint8_t)formattedName.size());
+		co.Write(formattedName.data(), formattedName.size());
 
 		lowercaseInPlace(NextLevel);
 		lowercaseInPlace(SecretLevel);
@@ -454,7 +456,6 @@ namespace Jazz2::Compatibility
 		co.WriteValue<uint8_t>(TextEventStringsCount);
 		for (int i = 0; i < TextEventStringsCount; i++) {
 			String& text = _textEventStrings[i];
-			size_t textLength = text.size();
 
 			bool isLevelToken = false;
 			for (uint8_t textId : _levelTokenTextIds) {
@@ -482,14 +483,9 @@ namespace Jazz2::Compatibility
 				co.WriteValue<uint16_t>((uint16_t)adjustedText.size());
 				co.Write(adjustedText.data(), adjustedText.size());
 			} else {
-				for (int j = 0; j < textLength; j++) {
-					if (text[j] == '@') {
-						text[j] = '\n';
-					}
-				}
-
-				co.WriteValue<uint16_t>((uint16_t)textLength);
-				co.Write(text.data(), textLength);
+				String formattedText = JJ2Strings::RecodeString(text);
+				co.WriteValue<uint16_t>((uint16_t)formattedText.size());
+				co.Write(formattedText.data(), formattedText.size());
 			}
 		}
 
@@ -712,6 +708,56 @@ namespace Jazz2::Compatibility
 		so->WriteValue<int32_t>(compressedSize);
 		so->WriteValue<int32_t>(co.GetSize());
 		so->Write(compressedBuffer.get(), compressedSize);
+
+#if defined(NCINE_DEBUG)
+		/*auto episodeName = fs::GetFileName(fs::GetDirectoryName(targetPath));
+		if (episodeName != "unknown"_s) {
+			int lastStringIdx = -1;
+			for (int i = TextEventStringsCount - 1; i >= 0; i--) {
+				String& text = _textEventStrings[i];
+				if (!text.empty()) {
+					lastStringIdx = i;
+					break;
+				}
+			}
+
+			if (lastStringIdx >= 0) {
+				auto so = fs::Open(targetPath + ".h"_s, FileAccessMode::Write);
+				ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
+
+				for (int i = 0; i <= lastStringIdx; i++) {
+					String& text = _textEventStrings[i];
+
+					bool isLevelToken = false;
+					for (uint8_t textId : _levelTokenTextIds) {
+						if (i == textId) {
+							isLevelToken = true;
+							break;
+						}
+					}
+
+					String formattedText = JJ2Strings::RecodeString(text, false, true);
+					if (isLevelToken || formattedText.empty()) {
+						so->Write("// [Empty text]\n", sizeof("// [Empty text]\n") - 1);
+						continue;
+					}
+
+					String levelFullName = episodeName + "/"_s + fs::GetFileNameWithoutExtension(targetPath);
+					so->Write("_x(\"", sizeof("__(\"") - 1);
+					so->Write(levelFullName.data(), levelFullName.size());
+					so->Write("\", \"", sizeof("\", \"") - 1);
+					so->Write(formattedText.data(), formattedText.size());
+					so->Write("\"); // ", sizeof("\"); // ") - 1);
+
+					char buffer[32];
+					u32tos((uint32_t)i, buffer);
+					so->Write(buffer, std::strlen(buffer));
+
+					so->Write("\n", sizeof("\n") - 1);
+				}
+			}
+		}*/
+#endif
 	}
 
 	void JJ2Level::AddLevelTokenTextID(uint8_t textId)
