@@ -171,8 +171,8 @@ void GameEventHandler::OnInit()
 		if (PreferencesCache::Language[0] != '\0') {
 			auto& resolver = ContentResolver::Current();
 			auto& i18n = I18n::Current();
-			if (!i18n.LoadMoFile(fs::JoinPath({ resolver.GetContentPath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }))) {
-				i18n.LoadMoFile(fs::JoinPath({ resolver.GetCachePath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }));
+			if (!i18n.LoadFromFile(fs::JoinPath({ resolver.GetContentPath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }))) {
+				i18n.LoadFromFile(fs::JoinPath({ resolver.GetCachePath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }));
 			}
 		}
 
@@ -200,8 +200,8 @@ void GameEventHandler::OnInit()
 	if (PreferencesCache::Language[0] != '\0') {
 		auto& resolver = ContentResolver::Current();
 		auto& i18n = I18n::Current();
-		if (!i18n.LoadMoFile(fs::JoinPath({ resolver.GetContentPath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }))) {
-			i18n.LoadMoFile(fs::JoinPath({ resolver.GetCachePath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }));
+		if (!i18n.LoadFromFile(fs::JoinPath({ resolver.GetContentPath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }))) {
+			i18n.LoadFromFile(fs::JoinPath({ resolver.GetCachePath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }));
 		}
 	}
 
