@@ -188,11 +188,10 @@ namespace Jazz2::UI::Menu
 
 		if (_items[0].Y < TopLine + ItemHeight / 2) {
 			_root->DrawElement("MenuGlow"_s, 0, center.X, TopLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
-		} else {
-			int itemHeight = _items[_items.size() - 1].Height - ItemHeight * 4 / 5 + ItemHeight / 2;
-			if (_items[_items.size() - 1].Y > bottomLine - itemHeight) {
-				_root->DrawElement("MenuGlow"_s, 0, center.X, bottomLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
-			}
+		}
+		int itemHeight = _items[_items.size() - 1].Height - ItemHeight * 4 / 5 + ItemHeight / 2;
+		if (_items[_items.size() - 1].Y > bottomLine - itemHeight) {
+			_root->DrawElement("MenuGlow"_s, 0, center.X, bottomLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
 		}
 	}
 
@@ -230,7 +229,7 @@ namespace Jazz2::UI::Menu
 				break;
 			}
 			case TouchEventType::Up: {
-				bool alreadyMoved = (_touchStart == Vector2i::Zero || (_touchStart - _touchLast).Length() > 10 || _touchTime > FrameTimer::FramesPerSecond);
+				bool alreadyMoved = (_touchStart == Vector2i::Zero || (_touchStart - _touchLast).SqrLength() > 100 || _touchTime > FrameTimer::FramesPerSecond);
 				_touchStart = Vector2i::Zero;
 				if (alreadyMoved) {
 					return;

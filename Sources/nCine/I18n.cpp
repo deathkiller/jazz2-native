@@ -483,7 +483,7 @@ namespace nCine
 	}
 
 	I18n::I18n()
-		: _stringCount(0), _origTable(nullptr), _transTable(nullptr), _hashSize(0), _hashTable(nullptr), _pluralExp(nullptr), _pluralCount(0)
+		: _fileSize(0), _stringCount(0), _origTable(nullptr), _transTable(nullptr), _hashSize(0), _hashTable(nullptr), _pluralExp(nullptr), _pluralCount(0)
 	{
 	}
 
@@ -498,6 +498,7 @@ namespace nCine
 	void I18n::Unload()
 	{
 		_file = nullptr;
+		_fileSize = 0;
 		_stringCount = 0;
 		_origTable = nullptr;
 		_transTable = nullptr;
@@ -510,22 +511,31 @@ namespace nCine
 		}
 	}
 
-	bool I18n::LoadMoFile(const StringView& path)
+	bool I18n::LoadFromFile(const StringView& path)
 	{
-		return LoadMoFile(fs::Open(path, FileAccessMode::Read));
+		return LoadFromFile(fs::Open(path, FileAccessMode::Read));
 	}
 
-	bool I18n::LoadMoFile(const std::unique_ptr<IFileStream>& fileHandle)
+	bool I18n::LoadFromFile(const std::unique_ptr<IFileStream>& fileHandle)
 	{
-		RETURNF_ASSERT_MSG(fileHandle->GetSize() > 32 && fileHandle->GetSize() < 16 * 1024 * 1024, "Cannot open specified file");
+		uint32_t fileSize = fileHandle->GetSize();
+		RETURNF_ASSERT_MSG(fileSize > 32 && fileSize < 16 * 1024 * 1024, "Cannot open specified file");
 
-		_file = std::make_unique<char[]>(fileHandle->GetSize());
-		fileHandle->Read(_file.get(), fileHandle->GetSize());
-		
+		_file = std::make_unique<char[]>(fileSize + 1);
+		fileHandle->Read(_file.get(), fileSize);
+		_file[fileSize] = '\0';
+		_fileSize = fileSize;
+
 		constexpr uint32_t SignatureLE = 0x950412de;
 		constexpr uint32_t SignatureBE = 0xde120495;
 		MoFileHeader* data = (MoFileHeader*)_file.get();
-		RETURNF_ASSERT_MSG((data->Signature == SignatureLE || data->Signature == SignatureBE) && data->StringCount > 0, "Invalid \".mo\" file");
+		if (!(data->Signature == SignatureLE || data->Signature == SignatureBE) || data->StringCount <= 0 ||
+			data->OrigTableOffset + data->StringCount > fileSize || data->TransTableOffset + data->StringCount > fileSize ||
+			data->HashTableOffset + data->HashTableSize > fileSize) {
+			LOGE("Invalid \".mo\" file");
+			Unload();
+			return false;
+		}
 
 		_stringCount = data->StringCount;
 		_origTable = (const StringDesc*)((char*)data + data->OrigTableOffset);
@@ -573,6 +583,9 @@ namespace nCine
 				// Compare `msgid` with the original string at index `nstr`. We compare the lengths with `>=`, not `==`,
 				// because plural entries are represented by strings with an embedded NULL.
 				if (nstr < _stringCount && _origTable[nstr].Length >= len && (std::strcmp(msgid, _file.get() + _origTable[nstr].Offset) == 0)) {
+					if (_transTable[nstr].Offset >= _fileSize) {
+						return nullptr;
+					}
 					*resultLength = _transTable[nstr].Length;
 					return (char*)(_file.get() + _transTable[nstr].Offset);
 				}
@@ -588,15 +601,21 @@ namespace nCine
 			size_t bottom = 0;
 			size_t top = _stringCount;
 			while (bottom < top) {
-				size_t nstr = (bottom + top) / 2;
-				int cmp_val = std::strcmp(msgid, (_file.get() + _origTable[nstr].Offset));
-				if (cmp_val < 0) {
-					top = nstr;
-				} else if (cmp_val > 0) {
-					bottom = nstr + 1;
+				size_t idx = (bottom + top) / 2;
+				if (_origTable[idx].Offset >= _fileSize) {
+					return nullptr;
+				}
+				int cmpVal = std::strcmp(msgid, (_file.get() + _origTable[idx].Offset));
+				if (cmpVal < 0) {
+					top = idx;
+				} else if (cmpVal > 0) {
+					bottom = idx + 1;
 				} else {
-					*resultLength = _transTable[nstr].Length;
-					return (char*)(_file.get() + _transTable[nstr].Offset);
+					if (_transTable[idx].Offset >= _fileSize) {
+						return nullptr;
+					}
+					*resultLength = _transTable[idx].Length;
+					return (char*)(_file.get() + _transTable[idx].Offset);
 				}
 			}
 		}
@@ -622,11 +641,19 @@ namespace nCine
 	StringView I18n::GetLanguageName(const StringView& langId)
 	{
 		auto suffix = langId.findAny("-_"_s);
-		auto adjustedLangId = (suffix != nullptr ? langId.prefix(suffix.data() - langId.data()) : langId);
+		size_t langLength = (suffix != nullptr ? suffix.data() - langId.data() : langId.size());
 
-		for (auto& language : SupportedLanguages) {
-			if (StringView(language.Identifier) == adjustedLangId) {
-				return language.Name;
+		size_t bottom = 0;
+		size_t top = _countof(SupportedLanguages);
+		while (bottom < top) {
+			size_t index = (bottom + top) / 2;
+			int cmpVal = std::strncmp(langId.data(), SupportedLanguages[index].Identifier, langLength);
+			if (cmpVal < 0) {
+				top = index;
+			} else if (cmpVal > 0) {
+				bottom = index + 1;
+			} else {
+				return SupportedLanguages[index].Name;
 			}
 		}
 

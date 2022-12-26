@@ -50,8 +50,8 @@ namespace nCine
 		~I18n();
 
 		void Unload();
-		bool LoadMoFile(const StringView& path);
-		bool LoadMoFile(const std::unique_ptr<IFileStream>& fileHandle);
+		bool LoadFromFile(const StringView& path);
+		bool LoadFromFile(const std::unique_ptr<IFileStream>& fileHandle);
 
 		const char* LookupTranslation(const char* msgid, uint32_t* resultLength);
 		const char* LookupPlural(int n, const char* translation, uint32_t translationLength);
@@ -92,6 +92,7 @@ namespace nCine
 		};
 
 		std::unique_ptr<char[]> _file;
+		uint32_t _fileSize;
 		uint32_t _stringCount;
 		const StringDesc* _origTable;
 		const StringDesc* _transTable;

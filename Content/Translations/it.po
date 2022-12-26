@@ -1,15 +1,15 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2022-12-26 19:02+0100\n"
-"PO-Revision-Date: 2022-12-26 19:10+0100\n"
+"POT-Creation-Date: 2022-12-26 18:53+0100\n"
+"PO-Revision-Date: \n"
 "Last-Translator: \n"
-"Language-Team: Dan R.\n"
-"Language: cs\n"
+"Language-Team: \n"
+"Language: it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n>=2 && n<=4 ? 1 : 2);\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Poedit 3.2.2\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
@@ -23,7 +23,7 @@ msgid ""
 "Spaz ate the dopefish."
 msgstr ""
 "\n"
-"Spaz sežral dopefish."
+"Spaz ha mangiato il Dopefish."
 
 #: .fake/Translations/flash/01_diam1.j2l.h:2
 msgctxt "flash/01_diam1"
@@ -32,7 +32,7 @@ msgid ""
 "Find the gopher."
 msgstr ""
 "\n"
-"Najděte sysla."
+"Trova il Geomio."
 
 #: .fake/Translations/flash/01_diam1.j2l.h:3
 msgctxt "flash/01_diam1"
@@ -41,7 +41,7 @@ msgid ""
 "Dragons live in burbank."
 msgstr ""
 "\n"
-"Draci žijí v Burbanku."
+"I draghi vivono in Burbank."
 
 #: .fake/Translations/flash/01_diam1.j2l.h:4
 msgctxt "flash/01_diam1"
@@ -51,8 +51,8 @@ msgid ""
 "Hoo Hah!"
 msgstr ""
 "\n"
-"Mark nosí dopisy. \n"
-"Hoo Hah!"
+"Mark porta i calzoncini. \n"
+"Ooh, Aah!"
 
 #: .fake/Translations/flash/01_diam1.j2l.h:5
 msgctxt "flash/01_diam1"
@@ -62,8 +62,8 @@ msgid ""
 "Always has!"
 msgstr ""
 "\n"
-"Nick miluje lesklé.\n"
-"Vždycky to tak bylo!"
+"A Nick piace tutto quello che brilla. \n"
+"E' sempre stato cosi!"
 
 #: .fake/Translations/flash/02_diam3.j2l.h:1
 msgctxt "flash/02_diam3"
@@ -72,7 +72,7 @@ msgid ""
 "Send Tim new socks."
 msgstr ""
 "\n"
-"Pošlete Timovi nové ponožky."
+"Manda a Tim dei nuovi calzini."
 
 #: .fake/Translations/flash/02_diam3.j2l.h:2
 msgctxt "flash/02_diam3"
@@ -81,7 +81,7 @@ msgid ""
 "Send Nigel a green card."
 msgstr ""
 "\n"
-"Pošlete Nigelovi zelenou kartu."
+"Manda a Nigel una carta verde per l'entrata."
 
 #: .fake/Translations/flash/02_diam3.j2l.h:3
 msgctxt "flash/02_diam3"
@@ -90,7 +90,7 @@ msgid ""
 "Beware of chainsaw schmalz."
 msgstr ""
 "\n"
-"Pozor na řetězovou pilu Schmalz."
+"Stai attento agli Schmalz con la sega elettrica."
 
 #: .fake/Translations/flash/02_diam3.j2l.h:4
 msgctxt "flash/02_diam3"
@@ -99,7 +99,7 @@ msgid ""
 "Dont give mark a burrito."
 msgstr ""
 "\n"
-"Nedávejte Markovi burrito."
+"Non dare a Mark un burrito."
 
 #: .fake/Translations/flash/05_medivo1.j2l.h:1
 msgctxt "flash/05_medivo1"
@@ -108,7 +108,7 @@ msgid ""
 "Beware of falling enemies."
 msgstr ""
 "\n"
-"Pozor na padající nepřátele."
+"Stai attento ai nemici che cadono."
 
 #: .fake/Translations/flash/05_medivo1.j2l.h:2
 msgctxt "flash/05_medivo1"
@@ -117,7 +117,7 @@ msgid ""
 "Craig is still a doofus!"
 msgstr ""
 "\n"
-"Craig je stále hlupák!"
+"Craig è sempre un imbecille!"
 
 #: .fake/Translations/flash/05_medivo1.j2l.h:3
 msgctxt "flash/05_medivo1"
@@ -125,8 +125,6 @@ msgid ""
 "\n"
 "Secret Level Time!!!"
 msgstr ""
-"\n"
-"Čas na tajnou úroveň!!!"
 
 #: .fake/Translations/flash/bonus_garglair.j2l.h:1
 msgctxt "flash/bonus_garglair"
@@ -135,9 +133,6 @@ msgid ""
 "Buttstomp A Silver Crate\n"
 "To Clear Your Path"
 msgstr ""
-"\n"
-"Rozšlápněte stříbrnou bednu\n"
-"a uvolněte si cestu"
 
 #: .fake/Translations/flash/bonus_garglair.j2l.h:2
 msgctxt "flash/bonus_garglair"
@@ -145,8 +140,6 @@ msgid ""
 "\n"
 "Crates can also make platforms appear..."
 msgstr ""
-"\n"
-"Díky bednám se také mohou objevit plošiny..."
 
 #: .fake/Translations/flash/bonus_garglair.j2l.h:3
 msgctxt "flash/bonus_garglair"
@@ -154,8 +147,6 @@ msgid ""
 "\n"
 "Melt the Spring..."
 msgstr ""
-"\n"
-"Roztavte pružinu..."
 
 #: .fake/Translations/flash/bonus_garglair.j2l.h:4
 msgctxt "flash/bonus_garglair"
@@ -163,8 +154,6 @@ msgid ""
 "\n"
 "Leh is a Camper"
 msgstr ""
-"\n"
-"Leh je táborník"
 
 #: .fake/Translations/monk/01_jung1.j2l.h:1
 msgctxt "monk/01_jung1"
@@ -174,8 +163,8 @@ msgid ""
 "give you a headache."
 msgstr ""
 "\n"
-"Padající balvany mohou\n"
-"způsobit bolest hlavy."
+"I massi che cadono possono \n"
+"darti il mal di testa."
 
 #: .fake/Translations/monk/01_jung1.j2l.h:2
 msgctxt "monk/01_jung1"
@@ -185,8 +174,8 @@ msgid ""
 "well against bugs."
 msgstr ""
 "\n"
-"Proti broukům dobře\n"
-"funguje plamenomet."
+"Una lancia fiamme funziona \n"
+"bene contro gli insetti."
 
 #: .fake/Translations/monk/03_hell.j2l.h:1
 msgctxt "monk/03_hell"
@@ -195,7 +184,7 @@ msgid ""
 "Long live the ice level."
 msgstr ""
 "\n"
-"Ať žije ledová úroveň."
+"Viva l'era del ghiaccio."
 
 #: .fake/Translations/monk/03_hell.j2l.h:2
 msgctxt "monk/03_hell"
@@ -204,7 +193,7 @@ msgid ""
 "Goodnight, bubba!"
 msgstr ""
 "\n"
-"Dobrou noc, Bubbo!"
+"Buonanotte, bubba!"
 
 #: .fake/Translations/monk/06_damn2.j2l.h:2
 msgctxt "monk/06_damn2"
@@ -213,9 +202,6 @@ msgid ""
 "What the heck? Aaaah! No!  \n"
 "This is NOT over!"
 msgstr ""
-"\n"
-"Co to sakra je? Aaaah! Ne!\n"
-"Tohle NENÍ konec!"
 
 #: .fake/Translations/prince/01_castle1.j2l.h:1
 msgctxt "prince/01_castle1"
@@ -225,8 +211,8 @@ msgid ""
 " you can go even faster."
 msgstr ""
 "\n"
-"Tyče vás roztočí tak,\n"
-"že poběžíte ještě rychleji."
+"Un palo ti fa girare in modo da\n"
+"farti andare anche piů veloce."
 
 #: .fake/Translations/prince/01_castle1.j2l.h:2
 msgctxt "prince/01_castle1"
@@ -235,7 +221,7 @@ msgid ""
 "You found a secret area."
 msgstr ""
 "\n"
-"Našli jste tajnou oblast."
+"Hai trovato una zona segreta."
 
 #: .fake/Translations/prince/01_castle1.j2l.h:3
 msgctxt "prince/01_castle1"
@@ -244,7 +230,7 @@ msgid ""
 "Secret Treasure Room."
 msgstr ""
 "\n"
-"Tajná místnost s pokladem."
+"La stanza del tesoro segreta."
 
 #: .fake/Translations/prince/01_castle1.j2l.h:4
 msgctxt "prince/01_castle1"
@@ -253,7 +239,7 @@ msgid ""
 "Nothing to see here."
 msgstr ""
 "\n"
-"Tady není nic k vidění."
+"Qui con c'è niente da vedere."
 
 #: .fake/Translations/prince/01_castle1.j2l.h:5
 msgctxt "prince/01_castle1"
@@ -263,8 +249,8 @@ msgid ""
 "bonus warp devices."
 msgstr ""
 "\n"
-"Sbírejte mince a aktivujte\n"
-"bonusová teleportační zařízení."
+"Raccogli le monete per attivare\n"
+"i tunnel di teletrasporto."
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:1
 msgctxt "prince/02_castle1n"
@@ -273,7 +259,7 @@ msgid ""
 "Cheese is green on tuesday."
 msgstr ""
 "\n"
-"V úterý je sýr zelený."
+"Il formaggio è verde il martedi."
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:2
 msgctxt "prince/02_castle1n"
@@ -282,7 +268,7 @@ msgid ""
 "Craig is king doofus."
 msgstr ""
 "\n"
-"Craig je král pitomec."
+"Craig è il re degli imbecilli."
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:3
 msgctxt "prince/02_castle1n"
@@ -292,8 +278,8 @@ msgid ""
 "shoot her off her ledge."
 msgstr ""
 "\n"
-"Chcete-li porazit královnu,\n"
-"sestřelte ji z římsy."
+"Per ottenere la vittoria sulla regina\n"
+"tira per farla cadere dalla balaustra."
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:4
 msgctxt "prince/02_castle1n"
@@ -303,8 +289,8 @@ msgid ""
 "Now go get Devan Shell!"
 msgstr ""
 "\n"
-"Dobrá práce!\n"
-"Teď rychle pro Devanův krunýř!"
+"Congratulazioni!\n"
+"Ora puoi uscire dal castello!"
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:5
 msgctxt "prince/02_castle1n"
@@ -314,8 +300,8 @@ msgid ""
 "blocks, press down and jump!"
 msgstr ""
 "\n"
-"Pro proražení těchto bloků\n"
-"stiskněte tlačítko dolů a skok!"
+"Per invertire questi\n"
+" blocchi, premi su Giù e salta!"
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:6
 msgctxt "prince/02_castle1n"
@@ -325,8 +311,8 @@ msgid ""
 "these blocks to break them!"
 msgstr ""
 "\n"
-"Stisknete-li tlačítko dolů a skočíte\n"
-"pod těmito bloky, dojde k rozbití!"
+"Premi su Giù e salta sotto\n"
+"questi blocchi per romperli!"
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:7
 msgctxt "prince/02_castle1n"
@@ -336,8 +322,8 @@ msgid ""
 "to open key blocks!"
 msgstr ""
 "\n"
-"Rozšlápněte kovovou krabici\n"
-"pro otevření zamčených bloků!"
+"Spingiti\n"
+"la scatola di metallo per aprire i blocchi con chiave!"
 
 #: .fake/Translations/prince/03_carrot1.j2l.h:1
 msgctxt "prince/03_carrot1"
@@ -346,7 +332,7 @@ msgid ""
 "Stomp your booty to exit."
 msgstr ""
 "\n"
-"Pro odchod si dupněte na zadek."
+"Per uscire dŕ un bel calcio."
 
 #: .fake/Translations/prince/03_carrot1.j2l.h:2
 msgctxt "prince/03_carrot1"
@@ -355,7 +341,8 @@ msgid ""
 "This spring is frozen."
 msgstr ""
 "\n"
-"Tato pružina je zamrzlá."
+"Per sciogliere il ghiaccio puoi\n"
+" usare un lancia fiamma."
 
 #: .fake/Translations/prince/04_carrot1n.j2l.h:1
 msgctxt "prince/04_carrot1n"
@@ -364,7 +351,7 @@ msgid ""
 "Super dooper secret."
 msgstr ""
 "\n"
-"Super tajná místnost."
+"Segreto super extra."
 
 #: .fake/Translations/prince/04_carrot1n.j2l.h:2
 msgctxt "prince/04_carrot1n"
@@ -374,8 +361,8 @@ msgid ""
 "special ammo for a short time."
 msgstr ""
 "\n"
-"Štíty vám na krátkou dobu poskytnou\n"
-"neomezenou speciální munici."
+"Per un breve periodo uno scudo\n"
+"ti offrirŕ munizioni speciali senza fine."
 
 #: .fake/Translations/prince/04_carrot1n.j2l.h:4
 msgctxt "prince/04_carrot1n"
@@ -385,8 +372,8 @@ msgid ""
 "the life of a shield."
 msgstr ""
 "\n"
-"Stopky přidají trochu času\n"
-"navíc do štítu."
+"Un cronometro prolunga\n"
+"la durata di uno scudo."
 
 #: .fake/Translations/prince/04_carrot1n.j2l.h:5
 msgctxt "prince/04_carrot1n"
@@ -395,7 +382,7 @@ msgid ""
 "This schwartzenguard is toast!"
 msgstr ""
 "\n"
-"Tenhle Schwartzenguard je v háji!"
+"Ormai questa guardia è spappolata!"
 
 #: .fake/Translations/prince/06_labrat2.j2l.h:1
 msgctxt "prince/06_labrat2"
@@ -407,8 +394,8 @@ msgid ""
 msgstr ""
 "\n"
 "\n"
-"Nemůžeš mě porazit, Jazzi!\n"
-"Připrav se na mého superbota!"
+"Non puoi vincere!\n"
+"Preparati a combattere il mio Super-Robot!"
 
 #: .fake/Translations/prince/06_labrat2.j2l.h:2
 msgctxt "prince/06_labrat2"
@@ -419,7 +406,7 @@ msgid ""
 msgstr ""
 "\n"
 "\n"
-"Sakra! Mizím odsud!"
+"Ahio, Ahio! Me ne vado!"
 
 #: .fake/Translations/prince/06_labrat2.j2l.h:3
 msgctxt "prince/06_labrat2"
@@ -428,9 +415,6 @@ msgid ""
 "These blocks are speed blocks.\n"
 "Run into them at full speed!"
 msgstr ""
-"\n"
-"Tyto bloky jsou rychlostní bloky.\n"
-"Rozběhněte se do nich plnou rychlostí!"
 
 #: .fake/Translations/prince/trainer.j2l.h:1
 msgctxt "prince/trainer"
@@ -440,8 +424,8 @@ msgid ""
 " This is a training level."
 msgstr ""
 "\n"
-"Vítejte ve hře Jazz Jackrabbit 2. \n"
-"Toto je tréninková úroveň."
+"Benvenuto a Jazz Jackrabbit 2.\n"
+" Questo livello è solo per addestramento."
 
 #: .fake/Translations/prince/trainer.j2l.h:2
 msgctxt "prince/trainer"
@@ -451,8 +435,8 @@ msgid ""
 "points and surprises."
 msgstr ""
 "\n"
-"Sbírejte dobroty pro\n"
-"body a překvapení."
+"Raccogli la roba per\n"
+"punti e sorprese."
 
 #: .fake/Translations/prince/trainer.j2l.h:3
 msgctxt "prince/trainer"
@@ -462,8 +446,8 @@ msgid ""
 "again to do a special move."
 msgstr ""
 "\n"
-"Po skoku znovu stiskněte skok\n"
-"pro provedení speciálního pohybu."
+"Dopo aver saltato, premi\n"
+"di nuovo Salta per fare una mossa speciale."
 
 #: .fake/Translations/prince/trainer.j2l.h:4
 msgctxt "prince/trainer"
@@ -472,7 +456,7 @@ msgid ""
 "Some walls can be shot."
 msgstr ""
 "\n"
-"Některé stěny lze rozstřílet."
+"Puoi tirare su alcune muri."
 
 #: .fake/Translations/prince/trainer.j2l.h:5
 msgctxt "prince/trainer"
@@ -482,8 +466,8 @@ msgid ""
 "to stomp with your butt."
 msgstr ""
 "\n"
-"Když jste ve vzduchu, stiskněte tlačítko dolů\n"
-"pro proražení bloků směrem dolu."
+"Quando sei in aria, premi\n"
+"Giù per fracassare con il sedere."
 
 #: .fake/Translations/prince/trainer.j2l.h:6
 msgctxt "prince/trainer"
@@ -493,8 +477,8 @@ msgid ""
 " Check the walls."
 msgstr ""
 "\n"
-"Ve hře je mnoho tajemství.\n"
-"Zkontrolujte stěny."
+"Jazz 2 è pieno di segreti.\n"
+"Controlla i muri."
 
 #: .fake/Translations/prince/trainer.j2l.h:7
 msgctxt "prince/trainer"
@@ -504,8 +488,8 @@ msgid ""
 "look for secrets."
 msgstr ""
 "\n"
-"Dobrá práce. Nezapomeňte\n"
-"hledat tajemství."
+"Ben fatto. Ricordati di\n"
+"cercare i segreti."
 
 #: .fake/Translations/prince/trainer.j2l.h:8
 msgctxt "prince/trainer"
@@ -515,8 +499,8 @@ msgid ""
 "an extra life."
 msgstr ""
 "\n"
-"Sbírejte drahokamy\n"
-"pro životy navíc."
+"Raccogli le gemme\n"
+" per guadagnare un'altra vita."
 
 #: .fake/Translations/prince/trainer.j2l.h:9
 msgctxt "prince/trainer"
@@ -526,8 +510,8 @@ msgid ""
 "as one gem."
 msgstr ""
 "\n"
-"Červený drahokam\n"
-"se počítá jako jeden."
+"Le gemme rosse contano\n"
+" per una."
 
 #: .fake/Translations/prince/trainer.j2l.h:10
 msgctxt "prince/trainer"
@@ -537,8 +521,8 @@ msgid ""
 "as five gems."
 msgstr ""
 "\n"
-"Zelený drahokam\n"
-"se počítá jako pět."
+"Le gemme verdi contano\n"
+"per cinque."
 
 #: .fake/Translations/prince/trainer.j2l.h:11
 msgctxt "prince/trainer"
@@ -548,8 +532,8 @@ msgid ""
 "as ten gems."
 msgstr ""
 "\n"
-"Modrý drahokam\n"
-"se počítá jako deset."
+"Le gemme blu contano\n"
+"per dieci."
 
 #: .fake/Translations/prince/trainer.j2l.h:12
 msgctxt "prince/trainer"
@@ -558,7 +542,7 @@ msgid ""
 "Carrots give you health."
 msgstr ""
 "\n"
-"Mrkev vám dodá zdraví."
+"Le carote fanno bene alla salute."
 
 #: .fake/Translations/prince/trainer.j2l.h:13
 msgctxt "prince/trainer"
@@ -568,8 +552,8 @@ msgid ""
 "spot if you lose a life."
 msgstr ""
 "\n"
-"Kontrolní body vám uloží pozici,\n"
-"pokud ztratíte život."
+"I punti di controllo ti salvano\n"
+"la posizione se perdi una vita."
 
 #: .fake/Translations/prince/trainer.j2l.h:14
 msgctxt "prince/trainer"
@@ -579,8 +563,8 @@ msgid ""
 "unlock bonus rooms."
 msgstr ""
 "\n"
-"Sbíráním mincí odemknete\n"
-"bonusové místnosti."
+"Raccogli monete per\n"
+"aprire le stanze dei bonus."
 
 #: .fake/Translations/prince/trainer.j2l.h:15
 msgctxt "prince/trainer"
@@ -590,8 +574,8 @@ msgid ""
 "It hurts."
 msgstr ""
 "\n"
-"Pozor na ostré věci.\n"
-"Bolí to."
+"Stai attento agli oggetti appuntiti.\n"
+"Fanno male."
 
 #: .fake/Translations/prince/trainer.j2l.h:16
 msgctxt "prince/trainer"
@@ -601,8 +585,8 @@ msgid ""
 " Good luck and have fun."
 msgstr ""
 "\n"
-"Nyní jste připraveni hrát.\n"
-"Hodně štěstí a zábavy."
+"Ora sei pronto per giocare.\n"
+" Buona fortuna e divertiti."
 
 #: .fake/Translations/rescue/01_colon1.j2l.h:1
 msgctxt "rescue/01_colon1"
@@ -610,8 +594,6 @@ msgid ""
 "\n"
 "Buttstomp the manhole cover!"
 msgstr ""
-"\n"
-"Prorazte poklop kanálu!"
 
 #: .fake/Translations/rescue/03_psych1.j2l.h:1
 msgctxt "rescue/03_psych1"
@@ -621,8 +603,8 @@ msgid ""
 "make you dizzy."
 msgstr ""
 "\n"
-"Z kouřových mraků se\n"
-"vám bude točit hlava."
+"Gli anelli di fumo\n"
+" ti daranno le vertigini."
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:1
 msgctxt "secretf/01_easter1"
@@ -632,8 +614,8 @@ msgid ""
 "so go up and around!"
 msgstr ""
 "\n"
-"Tohle nejde prorazit,\n"
-"je to potřeba obejít!"
+"Non puoi dare una pedata nel sedere\n"
+"pertanto fai un giro!"
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:2
 msgctxt "secretf/01_easter1"
@@ -643,8 +625,8 @@ msgid ""
 "with itchy trigger fingers."
 msgstr ""
 "\n"
-"Žádné odměny pro ty,\n"
-"které svědí prsty na spoušti."
+"Niente ricompensa per quelli\n"
+"con l'indice tremante."
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:3
 msgctxt "secretf/01_easter1"
@@ -653,7 +635,7 @@ msgid ""
 "Todays Forcast: Strong Winds!"
 msgstr ""
 "\n"
-"Dnešní předpověď: Silný vítr!"
+"Le previsioni di oggi: venti forti!"
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:4
 msgctxt "secretf/01_easter1"
@@ -663,8 +645,8 @@ msgid ""
 "to clear your path."
 msgstr ""
 "\n"
-"Najděte bednu\n"
-"pro uvolnění cesty."
+"Trova la cassa\n"
+"per farti strada."
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:5
 msgctxt "secretf/01_easter1"
@@ -675,7 +657,7 @@ msgid ""
 "The Secret Files!"
 msgstr ""
 "\n"
-"Vítejte v\n"
+"Siete i benvenuti a\n"
 "Jazz Jackrabbit 2:\n"
 "The Secret Files!"
 
@@ -689,10 +671,10 @@ msgid ""
 "to stand on."
 msgstr ""
 "\n"
-"Pouze Spaz se může dostat\n"
-"do místnosti vlevo nahoře.\n"
-"Možná bude potřebovat něco,\n"
-"na čem by mohl stát."
+"Solo Spaz puň arrivare alla\n"
+"stanza in alto a sinistra.\n"
+"Forse ha bisogno di qualcosa\n"
+"per appoggiare i piedi."
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:7
 msgctxt "secretf/01_easter1"
@@ -702,8 +684,8 @@ msgid ""
 "You've veen warned. :)"
 msgstr ""
 "\n"
-"Neporážejte Nigela v kulečníku.\n"
-"Byli jste varováni. :)"
+"Non battere Nigel al biliardino.\n"
+"Sei stato avvertito…"
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:16
 msgctxt "secretf/01_easter1"
@@ -711,8 +693,8 @@ msgid ""
 "Eating too many chocolate\n"
 "eggs can make you sick :p"
 msgstr ""
-"Když sníte příliš mnoho čokoládových\n"
-"vajíček, může vám být špatně :p"
+"Se mangi troppe uova di cioccolato\n"
+"ti puň venirti la nausea :p"
 
 #: .fake/Translations/secretf/02_easter2.j2l.h:1
 msgctxt "secretf/02_easter2"
@@ -721,7 +703,7 @@ msgid ""
 "Sloping Tunnel Entrance"
 msgstr ""
 "\n"
-"Šikmý vjezd do tunelu"
+"Ingresso del tunnel in discesa"
 
 #: .fake/Translations/secretf/02_easter2.j2l.h:2
 msgctxt "secretf/02_easter2"
@@ -731,8 +713,8 @@ msgid ""
 "find the access warp."
 msgstr ""
 "\n"
-"Chcete-li se dostat do horních tunelů,\n"
-"najděte přístupový teleport."
+"Per accedere ai tunnel in sù\n"
+"trova l'arco d'entrata."
 
 #: .fake/Translations/secretf/02_easter2.j2l.h:3
 msgctxt "secretf/02_easter2"
@@ -742,8 +724,8 @@ msgid ""
 "One route leads to battle."
 msgstr ""
 "\n"
-"Jedna cesta vede k bohatství.\n"
-"Druhá cesta vede do boje."
+"Un percorso porta alla ricchezza.\n"
+"Un percorso porta alla battaglia."
 
 #: .fake/Translations/secretf/03_easter3.j2l.h:1
 msgctxt "secretf/03_easter3"
@@ -753,8 +735,8 @@ msgid ""
 "can get to the goodies!"
 msgstr ""
 "\n"
-"K dobrotám se dostane jen ten,\n"
-"kdo zvládne dvojitý skok!"
+"Solo quelli che possono fare il salto doppio\n"
+"possono arrivare alle cose belle!"
 
 #: .fake/Translations/secretf/03_easter3.j2l.h:2
 msgctxt "secretf/03_easter3"
@@ -764,8 +746,8 @@ msgid ""
 "your climbing blocks appear"
 msgstr ""
 "\n"
-"Najděte bednu, aby se\n"
-"objevily lezecké bloky"
+"Trova la cassa per far\n"
+"comparire i tuoi blocchi per arrampicarti"
 
 #: .fake/Translations/secretf/03_easter3.j2l.h:3
 msgctxt "secretf/03_easter3"
@@ -775,8 +757,8 @@ msgid ""
 "free's some enemies :)"
 msgstr ""
 "\n"
-"Rozšlápnutím této bedny také\n"
-"osvobodíte nějaké nepřátele :)"
+"Distruggendo questa cassa si liberano\n"
+"anche alcuni nemici :)"
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:1
 msgctxt "secretf/04_haunted1"
@@ -785,7 +767,7 @@ msgid ""
 "Enter the house with caution....."
 msgstr ""
 "\n"
-"Dbejte zvýšené opatrnosti....."
+"Entra in casa con prudenza....."
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:3
 msgctxt "secretf/04_haunted1"
@@ -794,7 +776,8 @@ msgid ""
 "Silver Crates can't be broken underwater..."
 msgstr ""
 "\n"
-"Stříbrné bedny nelze rozbít pod vodou..."
+"Non si possono rompere\n"
+"le casse d'argento sott'acqua..."
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:4
 msgctxt "secretf/04_haunted1"
@@ -803,7 +786,8 @@ msgid ""
 "Water Level control crate above."
 msgstr ""
 "\n"
-"Bedna pro regulaci hladiny vody umístěná výše."
+"Cassa per il controllo del\n"
+"livello dell'acqua in sù."
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:5
 msgctxt "secretf/04_haunted1"
@@ -812,7 +796,8 @@ msgid ""
 "Stomping crates can be good and bad..."
 msgstr ""
 "\n"
-"Rozbíjení beden může být dobré i špatné..."
+"Le casse massacranti possono\n"
+"essere buone e cattive..."
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:7
 msgctxt "secretf/04_haunted1"
@@ -821,7 +806,7 @@ msgid ""
 "But you need a way to get up there..."
 msgstr ""
 "\n"
-"Ale potřebuješ se tam nějak dostat..."
+"Ma devi trovare un modo per arrivare lassů..."
 
 #: .fake/Translations/secretf/06_haunted3.j2l.h:16
 msgctxt "secretf/06_haunted3"
@@ -830,9 +815,6 @@ msgid ""
 "Michelle,\n"
 "I will love you always and forever :)"
 msgstr ""
-"\n"
-"Michelle,\n"
-"Budu tě milovat vždy a navždy :)"
 
 #: .fake/Translations/secretf/07_town1.j2l.h:1
 msgctxt "secretf/07_town1"
@@ -841,7 +823,7 @@ msgid ""
 "Take to the roof tops!"
 msgstr ""
 "\n"
-"Vydejte se na střechy!"
+"Vai in cima ai tetti!"
 
 #: .fake/Translations/secretf/07_town1.j2l.h:2
 msgctxt "secretf/07_town1"
@@ -851,8 +833,8 @@ msgid ""
 "those who stomp..."
 msgstr ""
 "\n"
-"Nebe nad vámi odmění ty,\n"
-"kteří si dupnou..."
+"I cieli lassů ricompenseranno\n"
+"quelli che massacrano..."
 
 #: .fake/Translations/secretf/07_town1.j2l.h:3
 msgctxt "secretf/07_town1"
@@ -862,8 +844,8 @@ msgid ""
 "right as you possibly can..."
 msgstr ""
 "\n"
-"Skočte co nejdále k doprava,\n"
-"jak jen to půjde..."
+"Salta a destra\n"
+"fin dove puoi..."
 
 #: .fake/Translations/secretf/07_town1.j2l.h:4
 msgctxt "secretf/07_town1"
@@ -872,7 +854,7 @@ msgid ""
 "Didn't make the jump huh? :)"
 msgstr ""
 "\n"
-"Nezvládli jste skočit, co? :)"
+"Non hai fatto il salto, vero? :)"
 
 #: .fake/Translations/secretf/07_town1.j2l.h:5
 msgctxt "secretf/07_town1"
@@ -881,7 +863,7 @@ msgid ""
 "Well Done!"
 msgstr ""
 "\n"
-"Dobrá práce!"
+"Ben fatto!"
 
 #: .fake/Translations/secretf/07_town1.j2l.h:6
 msgctxt "secretf/07_town1"
@@ -892,10 +874,10 @@ msgid ""
 "For Spaz, Press Jump Twice!"
 msgstr ""
 "\n"
-"Použijte své speciální pohyby,\n"
-"abyste se dostali do klimatizace!\n"
-"S Jazzem stiskněte dolů a skok.\n"
-"Se Spazem stiskněte dvakrát skok!"
+"Usa i tuoi movimenti speciali\n"
+"per alzare i tubi dell'aria!\n"
+" Per Jazz, premi Accuccia e Salta.\n"
+" Per Spaz, premi due volte Jump!"
 
 #: .fake/Translations/secretf/08_town2.j2l.h:1
 msgctxt "secretf/08_town2"
@@ -904,7 +886,7 @@ msgid ""
 "Find the crate and the gems are yours!"
 msgstr ""
 "\n"
-"Najděte bednu a drahokamy jsou vaše!"
+"Trova la cassa e i gioielli sono tuoi!"
 
 #: .fake/Translations/secretf/08_town2.j2l.h:2
 msgctxt "secretf/08_town2"
@@ -913,7 +895,7 @@ msgid ""
 "Springs Don't Work When Frozen..."
 msgstr ""
 "\n"
-"Pružiny při zamrznutí nefungují..."
+"Le sorgenti sono secche quando sono gelate..."
 
 #: .fake/Translations/secretf/08_town2.j2l.h:3
 msgctxt "secretf/08_town2"
@@ -922,7 +904,7 @@ msgid ""
 "Collecting 20 coins is more rewarding..."
 msgstr ""
 "\n"
-"Sebrání 20 mincí se vyplatí..."
+"È più remunerativo raccogliere 20 monete..."
 
 #: .fake/Translations/secretf/09_town3.j2l.h:1
 msgctxt "secretf/09_town3"
@@ -931,7 +913,7 @@ msgid ""
 "Find the crate to clear the blocks...."
 msgstr ""
 "\n"
-"Najděte bednu pro uvolnění cesty...."
+"Trova la cassa per fare piazza pulita dei blocchi...."
 
 #: .fake/Translations/secretf/09_town3.j2l.h:2
 msgctxt "secretf/09_town3"
@@ -941,8 +923,8 @@ msgid ""
 "be very dangerous."
 msgstr ""
 "\n"
-"POZOR! Hejna krkavců mohou\n"
-"být velmi nebezpečná."
+"ATTENTI! Stormi di corvi possono\n"
+"essere molto pericolosi."
 
 #: .fake/Translations/secretf/09_town3.j2l.h:3
 msgctxt "secretf/09_town3"
@@ -952,8 +934,8 @@ msgid ""
 "look to the tallest building."
 msgstr ""
 "\n"
-"Chcete-li bloky odstranit,\n"
-"podívejte se na nejvyšší budovu."
+"Per rimuovere i blocchi\n"
+"guarda all'edificio più alto."
 
 #: .fake/Translations/secretf/09_town3.j2l.h:4
 msgctxt "secretf/09_town3"
@@ -962,7 +944,7 @@ msgid ""
 "Choose a cover and stomp away!"
 msgstr ""
 "\n"
-"Vyberte si kryt a vyrazte!"
+"Scegli un riparo e frantumalo!"
 
 #: .fake/Translations/secretf/09_town3.j2l.h:5
 msgctxt "secretf/09_town3"
@@ -971,7 +953,7 @@ msgid ""
 "Hi GeoBunny :)"
 msgstr ""
 "\n"
-"Ahoj, GeoBunny :)"
+"Hi GeoBunny :)"
 
 #: .fake/Translations/secretf/09_town3.j2l.h:6
 msgctxt "secretf/09_town3"
@@ -982,9 +964,9 @@ msgid ""
 "password: BUNNYLOVER\n"
 msgstr ""
 "\n"
-"Prosím navštivte\n"
-"www.project2.com\n"
-"a zadejte heslo: BUNNYLOVER\n"
+"Goto www.project2.com\n"
+"use\n"
+"password: BUNNYLOVER\n"
 
 #: .fake/Translations/share/01_share1.j2l.h:1
 msgctxt "share/01_share1"
@@ -993,7 +975,7 @@ msgid ""
 "Shoot these blocks!"
 msgstr ""
 "\n"
-"Střelte do těchto bloků!"
+"Tira su questi blocchi!"
 
 #: .fake/Translations/share/01_share1.j2l.h:2
 msgctxt "share/01_share1"
@@ -1003,8 +985,8 @@ msgid ""
 "to stomp with your butt."
 msgstr ""
 "\n"
-"Když jste ve vzduchu, stiskněte tlačítko dolů\n"
-"pro proražení bloků směrem dolu."
+"Quando sei in aria, premi\n"
+" Giù per fracassare con il sedere."
 
 #: .fake/Translations/share/01_share1.j2l.h:3
 msgctxt "share/01_share1"
@@ -1014,8 +996,8 @@ msgid ""
 "the secret metal crate."
 msgstr ""
 "\n"
-"Chcete-li projít touto oblastí,\n"
-"rozšlápněte tajnou kovovou bednu."
+"Per passare questa zona\n"
+" rompi la cassetta segreta di metallo."
 
 #: .fake/Translations/share/01_share1.j2l.h:4
 msgctxt "share/01_share1"
@@ -1025,8 +1007,8 @@ msgid ""
 "through this secret warp!"
 msgstr ""
 "\n"
-"Pro průchod touto tajnou bránou\n"
-"potřebujete dvacet mincí!"
+"Hai bisogno di venti monete\n"
+" per passare attraverso questo tunnel di teletrasporto!"
 
 #: .fake/Translations/share/01_share1.j2l.h:5
 msgctxt "share/01_share1"
@@ -1036,8 +1018,8 @@ msgid ""
 "warps that appear later."
 msgstr ""
 "\n"
-"Mince umožní přístup k teleportům,\n"
-"které se objeví později."
+"Le monete ti fanno entrare\n"
+"nei tunnel che appaiono dopo."
 
 #: .fake/Translations/share/01_share1.j2l.h:6
 msgctxt "share/01_share1"
@@ -1047,8 +1029,8 @@ msgid ""
 "you might find a surprise!"
 msgstr ""
 "\n"
-"Dupněte na správné místo\n"
-"a možná vás čeká překvapení!"
+"Spingi al punto giusto e\n"
+"troverai una sorpresa!"
 
 #: .fake/Translations/share/01_share1.j2l.h:7
 msgctxt "share/01_share1"
@@ -1058,8 +1040,8 @@ msgid ""
 "bombs or baddies!"
 msgstr ""
 "\n"
-"Některé bedny obsahují\n"
-"bomby nebo záškodníky!"
+"Alcune cassette contengono\n"
+"bombe o nemici!"
 
 #: .fake/Translations/share/02_share2.j2l.h:1
 msgctxt "share/02_share2"
@@ -1069,8 +1051,8 @@ msgid ""
 "through this secret warp!"
 msgstr ""
 "\n"
-"Pro průchod touto tajnou bránou\n"
-"potřebujete dvacet mincí!"
+"Hai bisogno di venti monete\n"
+"per passare attraverso il tunnel di teletrasporto!"
 
 #: .fake/Translations/share/02_share2.j2l.h:2
 msgctxt "share/02_share2"
@@ -1080,8 +1062,8 @@ msgid ""
 "against nasty bugs."
 msgstr ""
 "\n"
-"Proti nepříjemnému hmyzu\n"
-"dobře funguje plamenomet."
+"Una lancia fiamme è utile\n"
+"contro gli insetti."
 
 #: .fake/Translations/share/02_share2.j2l.h:3
 msgctxt "share/02_share2"
@@ -1091,8 +1073,8 @@ msgid ""
 "you very dizzy!"
 msgstr ""
 "\n"
-"Z kouřových mraků se\n"
-"vám bude točit hlava!"
+"Gli anelli di fumo ti\n"
+" daranno le vertigini!"
 
 #: .fake/Translations/share/03_share3.j2l.h:1
 msgctxt "share/03_share3"
@@ -1102,8 +1084,8 @@ msgid ""
 "turn you into a frog."
 msgstr ""
 "\n"
-"Pozor na čarodějnici!\n"
-"Může vás proměnit v žábu."
+"Stai attento alla strega! Ti\n"
+"può far diventare un ranocchio."
 
 #: .fake/Translations/share/03_share3.j2l.h:2
 msgctxt "share/03_share3"
@@ -1113,8 +1095,8 @@ msgid ""
 "Eva Earlong can help!"
 msgstr ""
 "\n"
-"Pokud jste se proměnili v žábu,\n"
-"Eva Earlong vám pomůže!"
+"Se sei diventato un ranocchio\n"
+"Eva Earlong può aiutarti!"
 
 #: .fake/Translations/share/03_share3.j2l.h:3
 msgctxt "share/03_share3"
@@ -1125,10 +1107,6 @@ msgid ""
 "Now check out the order info\n"
 "for M O R E!"
 msgstr ""
-"\n"
-"Zvládli jste to! Toto je konec\n"
-"sharewarové verze. Podívejte\n"
-"na informace o plné verzi!"
 
 #: .fake/Translations/xmas99/01_xmas1.j2l.h:1
 msgctxt "xmas99/01_xmas1"
@@ -1136,8 +1114,6 @@ msgid ""
 "\n"
 "Watch out for the spikes below!"
 msgstr ""
-"\n"
-"Pozor na hroty dole!"
 
 #: .fake/Translations/xmas99/01_xmas1.j2l.h:2
 msgctxt "xmas99/01_xmas1"
@@ -1147,9 +1123,6 @@ msgid ""
 "some of the weakspots\n"
 "in the pathways!"
 msgstr ""
-"\n"
-"Některá slabá místa\n"
-"na cestách můžete prošlápnout!"
 
 #: .fake/Translations/xmas99/01_xmas1.j2l.h:3
 msgctxt "xmas99/01_xmas1"
@@ -1159,9 +1132,6 @@ msgid ""
 "be broken with a\n"
 "certain weapon."
 msgstr ""
-"\n"
-"Některé bloky lze rozbít\n"
-"pouze určitou zbraní."
 
 #: .fake/Translations/xmas99/01_xmas1.j2l.h:4
 msgctxt "xmas99/01_xmas1"
@@ -1169,8 +1139,6 @@ msgid ""
 "\n"
 "Welcome to Christmas Chronicles!"
 msgstr ""
-"\n"
-"Vítejte ve vánočních letopisech!"
 
 #: .fake/Translations/xmas99/01_xmas1.j2l.h:5
 msgctxt "xmas99/01_xmas1"
@@ -1181,11 +1149,6 @@ msgid ""
 "Orange Games and\n"
 "Project 2 Interactive!"
 msgstr ""
-"\n"
-"Zdraví vás\n"
-"Epic MegaGames,\n"
-"Orange Games\n"
-"a Project 2 Interactive!"
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:1
 msgctxt "xmas99/02_xmas2"
@@ -1194,9 +1157,6 @@ msgid ""
 "You can stand on top\n"
 "of some of the trees!"
 msgstr ""
-"\n"
-"Na některých stromech\n"
-"můžete i stát!"
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:2
 msgctxt "xmas99/02_xmas2"
@@ -1206,9 +1166,6 @@ msgid ""
 "some of the weakspots\n"
 "in the pathways!"
 msgstr ""
-"\n"
-"Některá slabá místa\n"
-"na cestách můžete prošlápnout!"
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:3
 msgctxt "xmas99/02_xmas2"
@@ -1217,9 +1174,6 @@ msgid ""
 "Punching the blocks above you\n"
 "can be rewarding."
 msgstr ""
-"\n"
-"Údery do bloků nad vámi\n"
-"mohou být přínosné."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:6
 msgctxt "xmas99/02_xmas2"
@@ -1227,8 +1181,6 @@ msgid ""
 "\n"
 "Gem Trail Entry Crate."
 msgstr ""
-"\n"
-"Vstupní bedna stezky drahokamů."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:7
 msgctxt "xmas99/02_xmas2"
@@ -1238,10 +1190,6 @@ msgid ""
 "Climb the treetops to find\n"
 "and stomp the Entry Crate."
 msgstr ""
-"\n"
-"Vstup na stezku drahokamů.\n"
-"Vyšplhej do korun stromů,\n"
-"najdi a rozdupej vstupní bednu."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:14
 msgctxt "xmas99/02_xmas2"
@@ -1252,11 +1200,6 @@ msgid ""
 "\n"
 "- Poopy"
 msgstr ""
-"\n"
-"\n"
-"Ahoj, prasátko!\n"
-"\n"
-"- Hovínko"
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:15
 msgctxt "xmas99/02_xmas2"
@@ -1268,12 +1211,6 @@ msgid ""
 "I dedicate this project to you.\n"
 "I love you so much."
 msgstr ""
-"\n"
-"\n"
-"Michelle:\n"
-"Změnil jsi můj život v mnoha ohledech.\n"
-"Tento projekt ti věnuji.\n"
-"Mám tě moc ráda."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:16
 msgctxt "xmas99/02_xmas2"
@@ -1285,12 +1222,6 @@ msgid ""
 "But my words always lead to the same ending\n"
 "I love you, I love you."
 msgstr ""
-"\n"
-"\n"
-"Kassi Nicole:\n"
-"Milion věcí, které ti toužím říct\n"
-"Ale má slova vždy vedou ke stejnému konci.\n"
-"Miluji tě, miluji tě."
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:1
 msgctxt "xmas99/03_xmas3"
@@ -1298,8 +1229,6 @@ msgid ""
 "\n"
 "Please use your TNT wisely."
 msgstr ""
-"\n"
-"Používejte prosím TNT moudře."
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:2
 msgctxt "xmas99/03_xmas3"
@@ -1307,8 +1236,6 @@ msgid ""
 "\n"
 "Don't lose your grip!"
 msgstr ""
-"\n"
-"Neztrácejte kontrolu!"
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:3
 msgctxt "xmas99/03_xmas3"
@@ -1317,9 +1244,6 @@ msgid ""
 "Welcome to Burrowsville\n"
 "Please drive carefully."
 msgstr ""
-"\n"
-"Vítejte v Burrowsville\n"
-"Jezděte prosím opatrně."
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:4
 msgctxt "xmas99/03_xmas3"
@@ -1328,9 +1252,6 @@ msgid ""
 "That bridge doesnt\n"
 "look too safe..."
 msgstr ""
-"\n"
-"Ten most nevypadá\n"
-"příliš bezpečně..."
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:5
 msgctxt "xmas99/03_xmas3"
@@ -1339,9 +1260,6 @@ msgid ""
 "Robert and Craig:\n"
 "Springs RULE! :)"
 msgstr ""
-"\n"
-"Robert a Craig:\n"
-"Pružiny kralují! :)"
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:6
 msgctxt "xmas99/03_xmas3"
@@ -1350,9 +1268,6 @@ msgid ""
 "Now leaving Burrowsville\n"
 "Please visit again."
 msgstr ""
-"\n"
-"Nyní opouštíte Burrowsville\n"
-"Děkujeme za návštěvu."
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:7
 msgctxt "xmas99/03_xmas3"
@@ -1362,10 +1277,6 @@ msgid ""
 "Please visit\n"
 "www.project2.com"
 msgstr ""
-"\n"
-"Heslo: xmasbunny\n"
-"Prosím navštivte\n"
-"www.project2.com"
 
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:125
 msgid ""
@@ -1378,83 +1289,73 @@ msgid ""
 "For more information, visit the official website: \f[c:0x707070]http://deat."
 "tk/jazz2/\f[c]"
 msgstr ""
-"Jazz² Resurrection je reimplementace hry \f[c:0x9e7056]Jazz Jackrabbit "
-"2\f[c] z roku 1998. Umožňuje\n"
-"hrát úrovně z různých verzí původní hry (Shareware Demo, Holiday Hare '98,\n"
-"The Secret Files a Christmas Chronicles). Dále také obsahuje některé nové "
-"funkce.\n"
-"Pro více informací můžete navštívit oficiální webové stránky: "
-"\f[c:0x707070]http://deat.tk/jazz2/\f[c]"
 
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:129
 msgid "Created By"
-msgstr "Vytvořil"
+msgstr "Creato da"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:28
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:67
 msgid "Import Episodes"
-msgstr "Importovat epizody"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:31
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:49
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:126
 msgid "Play Story"
-msgstr "Hrát příběh"
+msgstr "Storia"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:32
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:130
 msgid "Play Custom Levels"
-msgstr "Hrát vlastní úrovně"
+msgstr "Gioco Personalizzato"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:34
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:73
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:13
 msgid "Options"
-msgstr "Nastavení"
+msgstr "Impostazioni"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:35
 msgid "About"
-msgstr "O aplikaci"
+msgstr "Informazioni"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:37
 msgid "Quit"
-msgstr "Ukončit"
+msgstr "Esci"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:51
 msgid "Play Shareware Demo"
-msgstr "Hrát Shareware Demo"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:129
 msgid ""
 "\f[c:0x704a4a]This game requires original \f[c:0x9e7056]Jazz Jackrabbit "
 "2\f[c:0x704a4a] files!"
 msgstr ""
-"\f[c:0x704a4a]Tato hra vyžaduje originální soubory \f[c:0x9e7056]Jazz "
-"Jackrabbit 2\f[c:0x704a4a]!"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:131
 msgid "Make sure Jazz Jackrabbit 2 files are present in following path:"
 msgstr ""
-"Ujistěte se, že soubory Jazz Jackrabbit 2 jsou přístupné v následující cestě:"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:14
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:212
 msgid "Remap Controls"
-msgstr "Přenastavit ovládání"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:15
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:44
 msgid "Touch Controls"
-msgstr "Dotykové ovládací prvky"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:17
 msgid "Native Back Button"
-msgstr "Nativní tlačítko Zpět"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:82
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:17
 msgid "Controls"
-msgstr "Ovládání"
+msgstr "Controlli"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:116
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
@@ -1462,151 +1363,151 @@ msgstr "Ovládání"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:117
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:99
 msgid "Enabled"
-msgstr "Povoleno"
+msgstr "Attivo"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:116
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:117
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:99
 msgid "Disabled"
-msgstr "Zakázáno"
+msgstr "Disattivato"
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:140
 msgid "No custom level found!"
-msgstr "Nebyly nalezeny žádné vlastní úrovně!"
+msgstr "Nessun livello personalizzato trovato!"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:134
 msgid "No episode found!"
-msgstr "Nebyly nalezeny žádné epizody!"
+msgstr "Nessun episodio trovato!"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:172
 msgid "Restart episode"
-msgstr "Smazat postup"
+msgstr "Ricomincia Episodio"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:193
 #, c-format
 msgid "You must complete \"%s\" first!"
-msgstr "Nejprve musíte dokončit \"%s\"!"
+msgstr "Devi prima completare \"%s\"!"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:196
 msgid "Episode is locked!"
-msgstr "Epizoda je zamčena!"
+msgstr "Episodio bloccato!"
 
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:15
 msgid "Reforged Mode"
-msgstr "Reforged Mode"
+msgstr "Modalità Reforged"
 
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:16
 msgid "Ledge Climbing"
-msgstr "Povolit šplhání"
+msgstr "Scala sporgenza"
 
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:17
 msgid "Weapon Wheel"
-msgstr "Kolečko zbraní"
+msgstr "Ruota delle Armi"
 
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:86
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:17
 msgid "Enhancements"
-msgstr "Vylepšení"
+msgstr "Miglioramenti"
 
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:89
 msgid "You can enable enhancements that were added to this remake."
-msgstr "Zde můžete zapnout jednotlivá vylepšení přidaná do hry."
+msgstr "Per abilitare i miglioramenti aggiunti da questo remake."
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:18
 #: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:48
 msgid "Language"
-msgstr "Jazyk"
+msgstr "Lingua"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:20
 msgid "Discord Integration"
-msgstr "Integrace Discordu"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:23
 msgid "Razer Chroma™"
-msgstr "Razer Chroma™"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:26
 msgid "Scripting"
-msgstr "Skripty"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:29
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:65
 msgid "Refresh Cache"
-msgstr "Obnovit cache"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:14
 msgid "Gameplay"
-msgstr "Hra"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:14
 msgid "Rescale Mode"
-msgstr "Režim škálování"
+msgstr "Modalità ridimensionata"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:21
 msgid "Fullscreen"
-msgstr "Celá obrazovka"
+msgstr "Schermo pieno"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:24
 msgid "Antialiasing"
-msgstr "Antialiasing"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:25
 msgid "Performance Metrics"
-msgstr "Metrika výkonu"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:56
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:15
 msgid "Graphics"
-msgstr "Grafika"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:70
 msgid "Select files of your original game to unlock additional episodes"
-msgstr "Vyberte soubory vaší původní hry pro odemknutí dalších epizod"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:76
 msgid "Processing of selected files..."
-msgstr "Zpracování vybraných souborů..."
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:79
 msgid "Waiting for files..."
-msgstr "Čekání na soubory..."
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:85
 msgid "No files were selected!"
-msgstr "Nebyly vybrány žádné soubory!"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:90
 msgid "No new episodes were imported!"
-msgstr "Nebyly importovány žádné nové epizody!"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:16
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:92
 msgid "Sounds"
-msgstr "Zvuky"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:12
 msgid "Resume"
-msgstr "Pokračovat"
+msgstr "Riprendi"
 
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:14
 msgid "Save & Exit"
-msgstr "Uložit & Ukončit"
+msgstr "Salva e esci"
 
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:68
 msgid "Processing of files in \f[c:0x9e7056]\"Source\"\f[c] directory..."
-msgstr "Zpracování souborů v adresáři \f[c:0x9e7056]\"Source\"\f[c]..."
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:71
 msgid "Newly added levels and episodes will be available soon."
-msgstr "Nově přidané úrovně a epizody budou brzy k dispozici."
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:215
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:217
 #, c-format
 msgid "Key %i"
-msgstr "Klávesa %i"
+msgstr "Tasto %i"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:219
 msgid "Gamepad"
@@ -1614,55 +1515,55 @@ msgstr "Gamepad"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:234
 msgid "Up"
-msgstr "Nahoru"
+msgstr "Su"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:235
 msgid "Down"
-msgstr "Dolů"
+msgstr "Giù"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:236
 msgid "Left"
-msgstr "Doleva"
+msgstr "Sinistra"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:237
 msgid "Right"
-msgstr "Doprava"
+msgstr "Destra"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:238
 msgid "Fire"
-msgstr "Střelba"
+msgstr "Fuoco"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:239
 msgid "Jump"
-msgstr "Skok"
+msgstr "Salta"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:240
 msgid "Run"
-msgstr "Běh"
+msgstr "Corri"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:241
 msgid "Change Weapon"
-msgstr "Změnit zbraň"
+msgstr "Cambia arma"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:242
 msgid "Back"
-msgstr "Zpět"
+msgstr "Indietro"
 
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:16
 msgid "None / Pixel-perfect"
-msgstr "Žádný / Pixel-perfect"
+msgstr "Pixel-perfetto"
 
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
 msgid "Monochrome"
-msgstr "Monochrome"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:38
 msgid "Select Rescale Mode"
-msgstr "Vybrat režim škálování"
+msgstr "Seleziona la modalità di ridimensionamento"
 
 #: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:31
 msgid "Error"
-msgstr "Chyba"
+msgstr "Errore"
 
 #: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:36
 msgid ""
@@ -1671,47 +1572,43 @@ msgid ""
 "Make sure all necessary files\n"
 "are accessible and try it again."
 msgstr ""
-"\f[c:0x704a4a]Nelze načíst zadanou úroveň!\f[c]\n"
-"\n"
-"Ujistěte se, že všechny potřebné soubory\n"
-"jsou přístupné, a zkuste to znovu."
 
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:12
 msgid "Master Volume"
-msgstr "Hlavní hlasitost"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:13
 msgid "SFX Volume"
-msgstr "Hlasitost zvukových efektů"
+msgstr "Volume SFX"
 
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:14
 msgid "Music Volume"
-msgstr "Hlasitost hudby"
+msgstr "Volume musica"
 
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:23
 msgid "Character"
-msgstr "Postava"
+msgstr "Personaggio"
 
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:24
 msgid "Difficulty"
-msgstr "Obtížnost"
+msgstr "Difficoltà"
 
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:25
 msgid "Start"
-msgstr "Spustit hru"
+msgstr "Iniza Partita"
 
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:202
 msgid "Easy"
-msgstr "Lehká"
+msgstr "Facile"
 
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:202
 msgid "Medium"
-msgstr "Střední"
+msgstr "Medio"
 
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:202
 msgid "Hard"
-msgstr "Těžká"
+msgstr "Difficile"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:47
 msgid "You can adjust position of the touch zones by drag and drop."
-msgstr "Pozice zón dotyku můžete upravit přetažením."
+msgstr ""

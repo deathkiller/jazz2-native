@@ -180,7 +180,8 @@ namespace Jazz2::UI::Menu
 
 		if (_items[0].Y < TopLine + ItemHeight / 2) {
 			_root->DrawElement("MenuGlow"_s, 0, center.X, TopLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
-		} else if (_items[_items.size() - 1].Y > bottomLine - ItemHeight / 2) {
+		}
+		if (_items[_items.size() - 1].Y > bottomLine - ItemHeight / 2) {
 			_root->DrawElement("MenuGlow"_s, 0, center.X, bottomLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
 		}
 	}

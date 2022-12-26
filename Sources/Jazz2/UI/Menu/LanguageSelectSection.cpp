@@ -79,7 +79,7 @@ namespace Jazz2::UI::Menu
 		bool success = false;
 		auto& selectedItem = _items[_selectedIndex];
 		if (!selectedItem.Item.FileName.empty()) {
-			if (I18n::Current().LoadMoFile(selectedItem.Item.FileName)) {
+			if (I18n::Current().LoadFromFile(selectedItem.Item.FileName)) {
 				auto language = fs::GetFileNameWithoutExtension(selectedItem.Item.FileName);
 				std::memcpy(PreferencesCache::Language, language.data(), language.size());
 				std::memset(PreferencesCache::Language + language.size(), 0, sizeof(PreferencesCache::Language) - language.size());
