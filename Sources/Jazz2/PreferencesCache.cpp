@@ -227,6 +227,8 @@ namespace Jazz2
 					}
 				}
 			} else {
+				TryLoadPreferredLanguage();
+
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 				// Create "Source" directory on the first launch
 				auto& resolver = ContentResolver::Current();
@@ -394,5 +396,39 @@ namespace Jazz2
 	void PreferencesCache::RemoveEpisodeContinue(const StringView& episodeName)
 	{
 		_episodeContinue.erase(String::nullTerminatedView(episodeName));
+	}
+
+	void PreferencesCache::TryLoadPreferredLanguage()
+	{
+		auto& i18n = I18n::Current();
+		auto& resolver = ContentResolver::Current();
+
+		Array<String> languages = I18n::GetPreferredLanguages();
+		for (String language : languages) {
+			if (!language.empty() && language.size() < sizeof(PreferencesCache::Language)) {
+				if (language == "en"_s) {
+					break;
+				}
+				if (i18n.LoadFromFile(fs::JoinPath({ resolver.GetContentPath(), "Translations"_s, language + ".mo"_s })) ||
+					i18n.LoadFromFile(fs::JoinPath({ resolver.GetCachePath(), "Translations"_s, language + ".mo"_s }))) {
+					std::memcpy(PreferencesCache::Language, language.data(), language.size());
+					std::memset(PreferencesCache::Language + language.size(), 0, sizeof(PreferencesCache::Language) - language.size());
+					break;
+				}
+			}
+
+			StringView baseLanguage = I18n::TryRemoveLanguageSpecifiers(language);
+			if (baseLanguage != language && !baseLanguage.empty() && baseLanguage.size() < sizeof(PreferencesCache::Language)) {
+				if (baseLanguage == "en"_s) {
+					break;
+				}
+				if (i18n.LoadFromFile(fs::JoinPath({ resolver.GetContentPath(), "Translations"_s, baseLanguage + ".mo"_s })) ||
+					i18n.LoadFromFile(fs::JoinPath({ resolver.GetCachePath(), "Translations"_s, baseLanguage + ".mo"_s }))) {
+					std::memcpy(PreferencesCache::Language, baseLanguage.data(), baseLanguage.size());
+					std::memset(PreferencesCache::Language + baseLanguage.size(), 0, sizeof(PreferencesCache::Language) - baseLanguage.size());
+					break;
+				}
+			}
+		}
 	}
 }

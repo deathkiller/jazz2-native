@@ -4,32 +4,45 @@
 
 #include <stdarg.h>
 
+#if defined(DEATH_TARGET_APPLE)
+#	include <CoreFoundation/CFPreferences.h>
+#	include <CoreFoundation/CFPropertyList.h>
+#	include <CoreFoundation/CFArray.h>
+#	include <CoreFoundation/CFString.h>
+#endif
+
+#include <Environment.h>
+#include <Utf8.h>
+#include <Containers/GrowableArray.h>
+
+using namespace Death;
+
 namespace nCine
 {
 	static constexpr I18n::LanguageInfo SupportedLanguages[] = {
 		{ "af", "Afrikaans" },
 		{ "bg", "Bulgarian" },
-		{ "hr", "Croatian" },
 		{ "cs", "Czech" },
 		{ "da", "Danish" },
-		{ "nl", "Dutch" },
+		{ "de", "German" },
 		{ "en", "English" },
+		{ "es", "Spanish" },
 		{ "et", "Estonian" },
 		{ "fi", "Finnish" },
 		{ "fr", "French" },
-		{ "de", "German" },
+		{ "hr", "Croatian" },
 		{ "hu", "Hungarian" },
 		{ "it", "Italian" },
 		{ "lv", "Latvian" },
 		{ "mo", "Moldavian" },
+		{ "nl", "Dutch" },
 		{ "no", "Norwegian" },
 		{ "pl", "Polish" },
 		{ "pt", "Portuguese" },
 		{ "ro", "Romanian" },
-		{ "sr", "Serbian" },
 		{ "sk", "Slovak" },
 		{ "sl", "Slovenian" },
-		{ "es", "Spanish" },
+		{ "sr", "Serbian" },
 		{ "sv", "Swedish" },
 		{ "tr", "Turkish" },
 	};
@@ -519,7 +532,9 @@ namespace nCine
 	bool I18n::LoadFromFile(const std::unique_ptr<IFileStream>& fileHandle)
 	{
 		uint32_t fileSize = fileHandle->GetSize();
-		RETURNF_ASSERT_MSG(fileSize > 32 && fileSize < 16 * 1024 * 1024, "Cannot open specified file");
+		if (fileSize < 32 || fileSize > 16 * 1024 * 1024) {
+			return false;
+		}
 
 		_file = std::make_unique<char[]>(fileSize + 1);
 		fileHandle->Read(_file.get(), fileSize);
@@ -546,6 +561,7 @@ namespace nCine
 		uint32_t entryLength;
 		const char* nullEntry = LookupTranslation("", &entryLength);
 		ExtractPluralExpression(nullEntry, &_pluralExp, &_pluralCount);
+
 		return true;
 	}
 
@@ -638,16 +654,86 @@ namespace nCine
 		return p;
 	}
 
+	Array<String> I18n::GetPreferredLanguages()
+	{
+		Array<String> preferred;
+
+#if defined(DEATH_TARGET_APPLE)
+		CFTypeRef preferences = CFPreferencesCopyAppValue(CFSTR("AppleLanguages"), kCFPreferencesCurrentApplication);
+		if (preferences != nullptr && CFGetTypeID(preferences) == CFArrayGetTypeID()) {
+			CFArrayRef prefArray = (CFArrayRef)preferences;
+			int n = CFArrayGetCount(prefArray);
+			char buffer[256];
+			size_t size = 0;
+
+			for (int i = 0; i < n; i++) {
+				CFTypeRef element = CFArrayGetValueAtIndex(prefArray, i);
+				if (element != nullptr && CFGetTypeID(element) == CFStringGetTypeID() && CFStringGetCString((CFStringRef)element, buffer, sizeof(buffer), kCFStringEncodingASCII)) {
+					arrayAppend(preferred, String(buffer));
+				} else {
+					break;
+				}
+			}
+		}
+#elif defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX)
+		char* langRaw = ::getenv("LANG");
+		if (langRaw == nullptr) {
+			langRaw = ::getenv("LC_ALL");
+			if (langRaw == nullptr) {
+				langRaw = ::getenv("LC_MESSAGES");
+			}
+		}
+		if (langRaw != nullptr) {
+			String langId = langRaw;
+			StringView suffix = langId.findAny(".@"_s);
+			if (suffix != nullptr) {
+				langId = langId.prefix(suffix.begin());
+			}
+			for (char& c : langId) {
+				if (c == '_') c = '-';
+			}
+			arrayAppend(preferred, langId);
+		}
+#elif defined(DEATH_TARGET_WINDOWS)
+		if (Environment::IsWindows10) {
+			// Get list of all preferred UI languages on Windows 10
+			ULONG numberOfLanguages = 0;
+			ULONG bufferSize = 0;
+			if (::GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &numberOfLanguages, nullptr, &bufferSize)) {
+				Array<wchar_t> languages(NoInit, bufferSize);
+				if (::GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &numberOfLanguages, languages.data(), &bufferSize)) {
+					wchar_t* buffer = languages.data();
+					for (ULONG k = 0; k < numberOfLanguages; ++k) {
+						arrayAppend(preferred, Utf8::FromUtf16(buffer));
+
+						while (*buffer != L'\0') {
+							buffer++;
+						}
+						buffer++;
+					}
+				}
+			}
+		} else {
+			// Use the default user locale for Windows 8 and below
+			wchar_t buffer[LOCALE_NAME_MAX_LENGTH];
+			if (::GetUserDefaultLocaleName(buffer, LOCALE_NAME_MAX_LENGTH)) {
+				arrayAppend(preferred, Utf8::FromUtf16(buffer));
+			}
+		}
+#endif
+
+		return preferred;
+	}
+
 	StringView I18n::GetLanguageName(const StringView& langId)
 	{
-		auto suffix = langId.findAny("-_"_s);
-		size_t langLength = (suffix != nullptr ? suffix.data() - langId.data() : langId.size());
+		StringView baseLanguage = TryRemoveLanguageSpecifiers(langId);
 
 		size_t bottom = 0;
 		size_t top = _countof(SupportedLanguages);
 		while (bottom < top) {
 			size_t index = (bottom + top) / 2;
-			int cmpVal = std::strncmp(langId.data(), SupportedLanguages[index].Identifier, langLength);
+			int cmpVal = std::strncmp(langId.data(), SupportedLanguages[index].Identifier, baseLanguage.size());
 			if (cmpVal < 0) {
 				top = index;
 			} else if (cmpVal > 0) {
@@ -658,6 +744,12 @@ namespace nCine
 		}
 
 		return { };
+	}
+
+	StringView I18n::TryRemoveLanguageSpecifiers(const StringView& langId)
+	{
+		StringView suffix = langId.findAny("-_.@"_s);
+		return (suffix != nullptr ? langId.prefix(suffix.begin()) : langId);
 	}
 
 	void I18n::ExtractPluralExpression(const char* nullEntry, const ExpressionToken** pluralExp, uint32_t* pluralCount)

@@ -108,8 +108,10 @@ namespace Jazz2::Actors::Enemies
 		CreateDeathDebris(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
-		CreateSpriteDebris("Cup"_s, 1);
-		CreateSpriteDebris("Hat"_s, 1);
+		if (_frozenTimeLeft <= 0.0f) {
+			CreateSpriteDebris("Cup"_s, 1);
+			CreateSpriteDebris("Hat"_s, 1);
+		}
 
 		TryGenerateRandomDrop();
 
