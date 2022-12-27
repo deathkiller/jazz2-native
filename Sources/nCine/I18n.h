@@ -5,6 +5,7 @@
 
 #include <optional>
 
+#include <Containers/Array.h>
 #include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
@@ -57,7 +58,9 @@ namespace nCine
 		const char* LookupPlural(int n, const char* translation, uint32_t translationLength);
 
 		static I18n& Current();
+		static Array<String> GetPreferredLanguages();
 		static StringView GetLanguageName(const StringView& langId);
+		static StringView TryRemoveLanguageSpecifiers(const StringView& langId);
 
 	private:
 		/// Deleted copy constructor

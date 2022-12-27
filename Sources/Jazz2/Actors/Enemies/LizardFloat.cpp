@@ -163,7 +163,14 @@ namespace Jazz2::Actors::Enemies
 			_copter = nullptr;
 		}
 
+		bool shouldDestroy = (_frozenTimeLeft > 0.0f);
 		if (auto player = dynamic_cast<Player*>(collider)) {
+			if (player->GetSpecialMove() != Player::SpecialMoveType::None) {
+				shouldDestroy = true;
+			}
+		}
+
+		if (shouldDestroy) {
 			CreateDeathDebris(collider);
 			_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 

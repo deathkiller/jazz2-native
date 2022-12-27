@@ -51,7 +51,7 @@ namespace Jazz2::Actors::Enemies
 
 	bool SuckerFloat::OnPerish(ActorBase* collider)
 	{
-		bool shouldDestroy = _renderer.AnimPaused;
+		bool shouldDestroy = (_frozenTimeLeft > 0.0f);
 		if (auto player = dynamic_cast<Player*>(collider)) {
 			if (player->GetSpecialMove() != Player::SpecialMoveType::None) {
 				shouldDestroy = true;

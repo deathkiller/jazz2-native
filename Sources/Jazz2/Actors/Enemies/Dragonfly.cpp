@@ -49,6 +49,9 @@ namespace Jazz2::Actors::Enemies
 		EnemyBase::OnUpdate(timeMult);
 
 		if (_frozenTimeLeft > 0.0f) {
+			if (_noise != nullptr) {
+				_noise->pause();
+			}
 			return;
 		}
 
@@ -132,6 +135,9 @@ namespace Jazz2::Actors::Enemies
 			}
 
 			_attackCooldown -= timeMult;
+		}
+		if (_noise != nullptr) {
+			_noise->play();
 		}
 	}
 

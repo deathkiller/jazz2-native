@@ -142,5 +142,7 @@ namespace Jazz2
 		static String _configPath;
 		static HashMap<String, EpisodeContinuationState> _episodeEnd;
 		static HashMap<String, EpisodeContinuationStateWithLevel> _episodeContinue;
+
+		static void TryLoadPreferredLanguage();
 	};
 }

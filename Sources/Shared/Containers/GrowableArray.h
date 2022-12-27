@@ -301,7 +301,7 @@ namespace Death::Containers
 		@ref capacity(), @ref base() and @ref deleter() following the documented
 		semantics.
 	*/
-	template<class T> using ArrayAllocator = typename std::conditional<std::is_trivially_copyable<T>::value , ArrayMallocAllocator<T>, ArrayNewAllocator<T>>::type;
+	template<class T> using ArrayAllocator = typename std::conditional<std::is_trivially_copyable<T>::value, ArrayMallocAllocator<T>, ArrayNewAllocator<T>>::type;
 
 	/**
 		@brief Reinterpret-cast a growable array
@@ -434,11 +434,11 @@ namespace Death::Containers
 		return arrayAppend<T, Allocator<T>>(array, values);
 	}
 
-	template<class T, class Allocator = ArrayAllocator<T>> inline ArrayView<T>  arrayAppend(Array<T>& array, std::initializer_list<T> values) {
+	template<class T, class Allocator = ArrayAllocator<T>> inline ArrayView<T> arrayAppend(Array<T>& array, std::initializer_list<T> values) {
 		return arrayAppend<T, Allocator>(array, arrayView(values));
 	}
 
-	template<template<class> class Allocator, class T> inline ArrayView<T>  arrayAppend(Array<T>& array, std::initializer_list<T> values) {
+	template<template<class> class Allocator, class T> inline ArrayView<T> arrayAppend(Array<T>& array, std::initializer_list<T> values) {
 		return arrayAppend<T, Allocator<T>>(array, values);
 	}
 
@@ -730,8 +730,8 @@ namespace Death::Containers
 		arrayResize<T, ArrayAllocator<T>, Args...>(array, DirectInit, size, std::forward<Args>(args)...);
 	}
 
-	namespace Implementation {
-
+	namespace Implementation
+	{
 		template<class T, class Allocator> T* arrayGrowBy(Array<T>& array, const std::size_t count) {
 			// Direct access & caching to speed up debug builds
 			auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
@@ -804,8 +804,8 @@ namespace Death::Containers
 		return { it, count };
 	}
 
-	namespace Implementation {
-
+	namespace Implementation
+	{
 		template<class T> inline void arrayShiftForward(T* const src, T* const dst, const std::size_t count, typename std::enable_if<
 			std::is_trivially_copyable<T>::value
 		>::type* = nullptr) {
@@ -932,8 +932,8 @@ namespace Death::Containers
 		return { it, count };
 	}
 
-	namespace Implementation {
-
+	namespace Implementation
+	{
 		template<class T> inline void arrayShiftBackward(T* const src, T* const dst, const std::size_t moveCount, std::size_t, typename std::enable_if<
 			std::is_trivially_copyable<T>::value
 		>::type* = nullptr) {

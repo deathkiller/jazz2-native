@@ -109,7 +109,7 @@ namespace Jazz2::Actors::Enemies
 	bool Turtle::OnPerish(ActorBase* collider)
 	{
 		// Animation should be paused only if enemy is frozen
-		bool shouldDestroy = _renderer.AnimPaused;
+		bool shouldDestroy = (_frozenTimeLeft > 0.0f);
 		if (auto player = dynamic_cast<Player*>(collider)) {
 			if (player->GetSpecialMove() != Player::SpecialMoveType::None) {
 				shouldDestroy = true;

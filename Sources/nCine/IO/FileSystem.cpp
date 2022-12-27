@@ -873,7 +873,7 @@ namespace nCine
 	String FileSystem::GetExecutablePath()
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-		return String { "/"_s };
+		return "/"_s;
 #elif defined(DEATH_TARGET_APPLE)
 		// Get path size (need to set it to 0 to avoid filling nullptr with random data and crashing)
 		uint32_t size = 0;
@@ -917,7 +917,7 @@ namespace nCine
 	String FileSystem::GetWorkingDirectory()
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-		return String { "/"_s };
+		return "/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 		wchar_t buffer[MaxPathLength];
 		::GetCurrentDirectory(MaxPathLength, buffer);

@@ -52,6 +52,9 @@ namespace Jazz2::Actors::Enemies
 		UpdateFrozenState(timeMult);
 
 		if (_frozenTimeLeft > 0.0f) {
+			if (_noise != nullptr) {
+				_noise->pause();
+			}
 			return;
 		}
 
@@ -73,6 +76,9 @@ namespace Jazz2::Actors::Enemies
 
 				AttackNearestPlayer();
 			}
+		}
+		if (_noise != nullptr) {
+			_noise->play();
 		}
 
 		_anglePhase += timeMult * 0.05f;

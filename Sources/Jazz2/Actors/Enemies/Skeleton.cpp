@@ -78,8 +78,10 @@ namespace Jazz2::Actors::Enemies
 		CreateParticleDebris();
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
-		CreateSpriteDebris("Skull"_s, 1);
-		CreateSpriteDebris("Bone"_s, Random().Next(9, 12));
+		if (_frozenTimeLeft <= 0.0f) {
+			CreateSpriteDebris("Skull"_s, 1);
+			CreateSpriteDebris("Bone"_s, Random().Next(9, 12));
+		}
 
 		TryGenerateRandomDrop();
 
