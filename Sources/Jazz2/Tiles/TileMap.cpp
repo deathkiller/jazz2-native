@@ -195,7 +195,16 @@ namespace Jazz2::Tiles
 				LayerTile& tile = sprLayerLayout[y * layoutSize.X + x];
 
 				if (tile.DestructType == TileDestructType::Weapon && (params.DestructType & TileDestructType::Weapon) == TileDestructType::Weapon) {
-					if (params.UsedWeaponType == WeaponType::Freezer && tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2)) {
+					if ((tile.TileParams & (1 << (uint16_t)params.UsedWeaponType)) != 0) {
+						if (AdvanceDestructibleTileAnimation(tile, x, y, params.WeaponStrength, "SceneryDestruct"_s)) {
+							params.TilesDestroyed++;
+							if (params.WeaponStrength <= 0) {
+								return false;
+							} else {
+								goto RecheckTile;
+							}
+						}
+					} else if (params.UsedWeaponType == WeaponType::Freezer && tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2)) {
 						int tx = x * TileSet::DefaultTileSize + TileSet::DefaultTileSize / 2;
 						int ty = y * TileSet::DefaultTileSize + TileSet::DefaultTileSize / 2;
 
@@ -224,17 +233,6 @@ namespace Jazz2::Tiles
 							_levelHandler->AddActor(iceBlock);
 						}
 						return false;
-					} else {
-						if (tile.ExtraParam == 0 || tile.ExtraParam == ((uint8_t)params.UsedWeaponType + 1)) {
-							if (AdvanceDestructibleTileAnimation(tile, x, y, params.WeaponStrength, "SceneryDestruct"_s)) {
-								params.TilesDestroyed++;
-								if (params.WeaponStrength <= 0) {
-									return false;
-								} else {
-									goto RecheckTile;
-								}
-							}
-						}
 					}
 				} else if (tile.DestructType == TileDestructType::Special && (params.DestructType & TileDestructType::Special) == TileDestructType::Special) {
 					int amount = 1;
@@ -244,7 +242,7 @@ namespace Jazz2::Tiles
 					}
 				} else if (tile.DestructType == TileDestructType::Speed && (params.DestructType & TileDestructType::Speed) == TileDestructType::Speed) {
 					int amount = 1;
-					if (tile.ExtraParam + 4 <= params.Speed && AdvanceDestructibleTileAnimation(tile, x, y, amount, "SceneryDestruct"_s)) {
+					if (tile.TileParams <= params.Speed && AdvanceDestructibleTileAnimation(tile, x, y, amount, "SceneryDestruct"_s)) {
 						params.TilesDestroyed++;
 						goto RecheckTile;
 					}
@@ -396,17 +394,17 @@ namespace Jazz2::Tiles
 		for (int i = 0; i < _activeCollapsingTiles.size(); i++) {
 			Vector2i tilePos = _activeCollapsingTiles[i];
 			auto& tile = _layers[_sprLayerIndex].Layout[tilePos.X + tilePos.Y * layoutSize.X];
-			if (tile.ExtraParam == 0) {
+			if (tile.TileParams == 0) {
 				int amount = 1;
 				if (!AdvanceDestructibleTileAnimation(tile, tilePos.X, tilePos.Y, amount, "SceneryCollapse"_s)) {
 					tile.DestructType = TileDestructType::None;
 					_activeCollapsingTiles.erase(_activeCollapsingTiles.begin() + i);
 					i--;
 				} else {
-					tile.ExtraParam = 4;
+					tile.TileParams = 4;
 				}
 			} else {
-				tile.ExtraParam--;
+				tile.TileParams--;
 			}
 		}
 	}
@@ -721,7 +719,7 @@ namespace Jazz2::Tiles
 				tile.HasSuspendType = SuspendType::Hook;
 				break;
 			case EventType::SceneryDestruct:
-				SetTileDestructibleEventParams(tile, TileDestructType::Weapon, tileParams[0]);
+				SetTileDestructibleEventParams(tile, TileDestructType::Weapon, tileParams[0] | (tileParams[1] << 8));
 				break;
 			case EventType::SceneryDestructButtstomp:
 				SetTileDestructibleEventParams(tile, TileDestructType::Special, tileParams[0]);
@@ -733,13 +731,13 @@ namespace Jazz2::Tiles
 				SetTileDestructibleEventParams(tile, TileDestructType::Speed, tileParams[0]);
 				break;
 			case EventType::SceneryCollapse:
-				// ToDo: FPS (tileParams[1]) not used
+				// TODO: Framerate (tileParams[1]) not used
 				SetTileDestructibleEventParams(tile, TileDestructType::Collapse, tileParams[0]);
 				break;
 		}
 	}
 
-	void TileMap::SetTileDestructibleEventParams(LayerTile& tile, TileDestructType type, uint8_t extraParam)
+	void TileMap::SetTileDestructibleEventParams(LayerTile& tile, TileDestructType type, uint16_t tileParams)
 	{
 		if ((tile.Flags & LayerTileFlags::Animated) != LayerTileFlags::Animated) {
 			return;
@@ -749,8 +747,8 @@ namespace Jazz2::Tiles
 		tile.Flags &= ~LayerTileFlags::Animated;
 		tile.DestructAnimation = tile.TileID;
 		tile.TileID = _animatedTiles[tile.DestructAnimation].Tiles[0].TileID;
+		tile.TileParams = tileParams;
 		tile.DestructFrameIndex = 0;
-		tile.ExtraParam = extraParam;
 	}
 
 	void TileMap::CreateDebris(const DestructibleDebris& debris)
@@ -1036,7 +1034,7 @@ namespace Jazz2::Tiles
 		int n = layoutSize.X * layoutSize.Y;
 		for (int i = 0; i < n; i++) {
 			LayerTile& tile = _layers[_sprLayerIndex].Layout[i];
-			if (tile.DestructType == TileDestructType::Trigger && tile.ExtraParam == triggerId) {
+			if (tile.DestructType == TileDestructType::Trigger && tile.TileParams == triggerId) {
 				if (_animatedTiles[tile.DestructAnimation].Tiles.size() > 1) {
 					tile.DestructFrameIndex = (newState ? 1 : 0);
 					tile.TileID = _animatedTiles[tile.DestructAnimation].Tiles[tile.DestructFrameIndex].TileID;

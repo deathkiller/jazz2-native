@@ -21,16 +21,16 @@ namespace Jazz2::Actors::Environment
 
 		SetTransition(_currentAnimationState | (AnimState)0x200, false);
 		switch (_orientation) {
-			case 0: // Bottom
+			case Orientation::Bottom:
 				PlaySfx("Vertical"_s);
 				return Vector2f(0, -_strength);
-			case 2: // Top
+			case Orientation::Top:
 				PlaySfx("VerticalReversed"_s);
 				return Vector2f(0, _strength);
-			case 1: // Right
-			case 3: // Left
+			case Orientation::Right:
+			case Orientation::Left:
 				PlaySfx("Horizontal"_s);
-				return Vector2f(_strength * (_orientation == 1 ? 1 : -1), 0);
+				return Vector2f(_strength * (_orientation == Orientation::Right ? 1 : -1), 0);
 			default:
 				return Vector2f::Zero;
 		}
@@ -39,7 +39,7 @@ namespace Jazz2::Actors::Environment
 	Task<bool> Spring::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		_type = details.Params[0];
-		_orientation = details.Params[1];
+		_orientation = (Orientation)details.Params[1];
 		KeepSpeedX = (details.Params[2] != 0);
 		KeepSpeedY = (details.Params[3] != 0);
 		//_delay = details.Params[4];
@@ -51,30 +51,30 @@ namespace Jazz2::Actors::Environment
 
 		Vector2f tileCorner = Vector2f((int)(_pos.X / Tiles::TileSet::DefaultTileSize) * Tiles::TileSet::DefaultTileSize,
 			(int)(_pos.Y / Tiles::TileSet::DefaultTileSize) * Tiles::TileSet::DefaultTileSize);
-		if (_orientation > 3) {
+		if (_orientation > Orientation::Left) {
 			// JJ2 horizontal springs held no data about which way they were facing.
-			// For compatibility, the level converter sets their orientation to 5, which is interpreted here.
-			AABBf aabb = AABBf(_pos.X + 6, _pos.Y - 2, _pos.X + 22, _pos.Y + 2);
+			// For compatibility, correct orientation is evaluated during runtime.
+			AABBf aabb = AABBf(_pos.X + 6.0f, _pos.Y - 2.0f, _pos.X + 22.0f, _pos.Y);
 			TileCollisionParams params = { TileDestructType::None, true };
-			_orientation = (uint16_t)(_levelHandler->TileMap()->IsTileEmpty(aabb, params) != (_orientation == 5) ? 1 : 3);
+			_orientation = (_levelHandler->TileMap()->IsTileEmpty(aabb, params) != (_orientation == (Orientation)5) ? Orientation::Right : Orientation::Left);
 		}
 
 		int orientationBit = 0;
 		switch (_orientation) {
-			case 0: // Bottom
+			case Orientation::Bottom:
 				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 8), MoveType::Absolute | MoveType::Force);
 				break;
-			case 1: // Right
+			case Orientation::Right:
 				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 16), MoveType::Absolute | MoveType::Force);
 				orientationBit = 1;
 				SetState(ActorState::ApplyGravitation, false);
 				break;
-			case 2: // Top
+			case Orientation::Top:
 				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 8), MoveType::Absolute | MoveType::Force);
 				orientationBit = 2;
 				SetState(ActorState::ApplyGravitation, false);
 				break;
-			case 3: // Left
+			case Orientation::Left:
 				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 16), MoveType::Absolute | MoveType::Force);
 				orientationBit = 1;
 				SetState(ActorState::ApplyGravitation, false);
@@ -85,7 +85,7 @@ namespace Jazz2::Actors::Environment
 		// Red starts at 1 in "Object/Spring"
 		SetAnimation((AnimState)(((_type + 1) << 10) | (orientationBit << 12)));
 
-		if ((_orientation % 2) == 1) {
+		if (_orientation == Orientation::Right || _orientation == Orientation::Left) {
 			// Horizontal springs all seem to have the same strength.
 			// This constant strength gives about the correct amount of horizontal push.
 			_strength = 9.5f;
@@ -146,15 +146,15 @@ namespace Jazz2::Actors::Environment
 	void Spring::OnUpdateHitbox()
 	{
 		switch (_orientation) {
-			case 1: // Right
+			case Orientation::Right:
 				AABBInner = AABBf(_pos.X - 8, _pos.Y - 10, _pos.X, _pos.Y + 10);
 				break;
-			case 3: // Left
+			case Orientation::Left:
 				AABBInner = AABBf(_pos.X, _pos.Y - 10, _pos.X + 8, _pos.Y + 10);
 				break;
 			default:
-			case 0: // Bottom
-			case 2: // Top
+			case Orientation::Bottom:
+			case Orientation::Top:
 				AABBInner = AABBf(_pos.X - 10, _pos.Y, _pos.X + 10, _pos.Y + 8);
 				break;
 		}

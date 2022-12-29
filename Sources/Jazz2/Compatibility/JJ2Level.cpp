@@ -27,7 +27,7 @@ namespace Jazz2::Compatibility
 
 		/*uint32_t passwordHash =*/ headerBlock.ReadUInt32();
 
-		Name = headerBlock.ReadString(32, true);
+		DisplayName = headerBlock.ReadString(32, true);
 
 		uint16_t version = headerBlock.ReadUInt16();
 		_version = (version <= 514 ? JJ2Version::BaseGame : JJ2Version::TSF);
@@ -93,7 +93,7 @@ namespace Jazz2::Compatibility
 		/*int headerSize =*/ block.ReadInt32();
 
 		String secondLevelName = block.ReadString(32, true);
-		ASSERT_MSG(!strictParser || Name == secondLevelName, "Level name mismatch");
+		ASSERT_MSG(!strictParser || DisplayName == secondLevelName, "Level name mismatch");
 
 		Tileset = block.ReadString(32, true);
 		BonusLevel = block.ReadString(32, true);
@@ -401,7 +401,7 @@ namespace Jazz2::Compatibility
 
 		GrowableMemoryFile co(1024 * 1024);
 
-		String formattedName = JJ2Strings::RecodeString(Name, true);
+		String formattedName = JJ2Strings::RecodeString(DisplayName, true);
 		co.WriteValue<uint8_t>((uint8_t)formattedName.size());
 		co.Write(formattedName.data(), formattedName.size());
 

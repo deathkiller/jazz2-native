@@ -32,8 +32,15 @@ namespace Jazz2::Actors::Environment
 			Heated
 		};
 
+		enum class Orientation : uint8_t {
+			Bottom,
+			Right,
+			Top,
+			Left
+		};
+
 		uint8_t _type;
-		uint8_t _orientation;
+		Orientation _orientation;
 		float _strength;
 		//uint16_t _delay;
 		State _state;
