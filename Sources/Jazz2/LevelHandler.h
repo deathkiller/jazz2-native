@@ -236,7 +236,7 @@ namespace Jazz2
 		BlurRenderPass _blurPass1;
 		BlurRenderPass _blurPass3;
 		BlurRenderPass _blurPass4;
-		UI::UpscaleRenderPass _upscalePass;
+		UI::UpscaleRenderPassWithClipping _upscalePass;
 
 		std::unique_ptr<SceneNode> _rootNode;
 		std::unique_ptr<Viewport> _view;

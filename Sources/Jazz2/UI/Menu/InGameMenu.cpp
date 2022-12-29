@@ -19,8 +19,13 @@ namespace Jazz2::UI::Menu
 		_pressedActions(0),
 		_touchButtonsTimer(0.0f)
 	{
-		_canvas = std::make_unique<MenuCanvas>(this);
-		_canvas->setParent(root->_upscalePass.GetNode());
+		_canvasBackground = std::make_unique<MenuBackgroundCanvas>(this);
+		_canvasClipped = std::make_unique<MenuClippedCanvas>(this);
+		_canvasOverlay = std::make_unique<MenuOverlayCanvas>(this);
+
+		_canvasBackground->setParent(root->_upscalePass.GetNode());
+		_canvasClipped->setParent(root->_upscalePass.GetClippedNode());
+		_canvasOverlay->setParent(root->_upscalePass.GetOverlayNode());
 
 		auto& resolver = ContentResolver::Current();
 
@@ -43,10 +48,12 @@ namespace Jazz2::UI::Menu
 
 	InGameMenu::~InGameMenu()
 	{
-		_canvas->setParent(nullptr);
+		_canvasBackground->setParent(nullptr);
+		_canvasClipped->setParent(nullptr);
+		_canvasOverlay->setParent(nullptr);
 	}
 
-	void InGameMenu::MenuCanvas::OnUpdate(float timeMult)
+	void InGameMenu::MenuBackgroundCanvas::OnUpdate(float timeMult)
 	{
 		Canvas::OnUpdate(timeMult);
 
@@ -77,15 +84,26 @@ namespace Jazz2::UI::Menu
 			_touchButtonsTimer = 1200.0f;
 
 			auto& lastSection = _sections.back();
-			lastSection->OnTouchEvent(event, _canvas->ViewSize);
+			lastSection->OnTouchEvent(event, _canvasBackground->ViewSize);
 		}
 	}
 
-	bool InGameMenu::MenuCanvas::OnDraw(RenderQueue& renderQueue)
+	void InGameMenu::OnInitializeViewport(int width, int height)
+	{
+		if (!_sections.empty()) {
+			auto& lastSection = _sections.back();
+			Recti clipRectangle = lastSection->GetClipRectangle(Vector2i(width, height));
+			_root->_upscalePass.SetClipRectangle(clipRectangle);
+		}
+	}
+
+	bool InGameMenu::MenuBackgroundCanvas::OnDraw(RenderQueue& renderQueue)
 	{
 		Canvas::OnDraw(renderQueue);
 
 		ViewSize = _owner->_root->_upscalePass.GetViewSize();
+
+		_owner->_activeCanvas = ActiveCanvas::Background;
 
 		Vector2i center = ViewSize / 2;
 
@@ -148,6 +166,40 @@ namespace Jazz2::UI::Menu
 		return true;
 	}
 
+	bool InGameMenu::MenuClippedCanvas::OnDraw(RenderQueue& renderQueue)
+	{
+		if (_owner->_sections.empty()) {
+			return false;
+		}
+
+		Canvas::OnDraw(renderQueue);
+
+		ViewSize = _owner->_root->_upscalePass.GetViewSize();
+
+		_owner->_activeCanvas = ActiveCanvas::Clipped;
+
+		auto& lastSection = _owner->_sections.back();
+		lastSection->OnDrawClipped(this);
+
+		return true;
+	}
+
+	bool InGameMenu::MenuOverlayCanvas::OnDraw(RenderQueue& renderQueue)
+	{
+		Canvas::OnDraw(renderQueue);
+
+		ViewSize = _owner->_root->_upscalePass.GetViewSize();
+
+		_owner->_activeCanvas = ActiveCanvas::Overlay;
+
+		if (!_owner->_sections.empty()) {
+			auto& lastSection = _owner->_sections.back();
+			lastSection->OnDrawOverlay(this);
+		}
+
+		return true;
+	}
+
 	void InGameMenu::SwitchToSectionDirect(std::unique_ptr<MenuSection> section)
 	{
 		if (!_sections.empty()) {
@@ -157,6 +209,11 @@ namespace Jazz2::UI::Menu
 
 		auto& currentSection = _sections.emplace_back(std::move(section));
 		currentSection->OnShow(this);
+
+		if (_canvasBackground->ViewSize != Vector2i::Zero) {
+			Recti clipRectangle = currentSection->GetClipRectangle(_canvasBackground->ViewSize);
+			_root->_upscalePass.SetClipRectangle(clipRectangle);
+		}
 	}
 
 	void InGameMenu::LeaveSection()
@@ -170,6 +227,11 @@ namespace Jazz2::UI::Menu
 		if (!_sections.empty()) {
 			auto& lastSection = _sections.back();
 			lastSection->OnShow(this);
+
+			if (_canvasBackground->ViewSize != Vector2i::Zero) {
+				Recti clipRectangle = lastSection->GetClipRectangle(_canvasBackground->ViewSize);
+				_root->_upscalePass.SetClipRectangle(clipRectangle);
+			}
 		}
 	}
 
@@ -209,12 +271,13 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (frame < 0) {
-			frame = it->second.FrameOffset + ((int)(_canvas->AnimTime * it->second.FrameCount / it->second.AnimDuration) % it->second.FrameCount);
+			frame = it->second.FrameOffset + ((int)(_canvasBackground->AnimTime * it->second.FrameCount / it->second.AnimDuration) % it->second.FrameCount);
 		}
 
+		Canvas* currentCanvas = GetActiveCanvas();
 		GenericGraphicResource* base = it->second.Base;
 		Vector2f size = Vector2f(base->FrameDimensions.X * scaleX, base->FrameDimensions.Y * scaleY);
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - _canvas->ViewSize.X * 0.5f, _canvas->ViewSize.Y * 0.5f - y), size);
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - currentCanvas->ViewSize.X * 0.5f, currentCanvas->ViewSize.Y * 0.5f - y), size);
 
 		Vector2i texSize = base->TextureDiffuse->size();
 		int col = frame % base->FrameConfiguration.X;
@@ -229,7 +292,7 @@ namespace Jazz2::UI::Menu
 		texCoords.W += texCoords.Z;
 		texCoords.Z *= -1;
 
-		_canvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending);
+		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending);
 	}
 
 	void InGameMenu::DrawElement(const StringView& name, float x, float y, uint16_t z, Alignment align, const Colorf& color, const Vector2f& size, const Vector4f& texCoords)
@@ -239,25 +302,29 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+		Canvas* currentCanvas = GetActiveCanvas();
 		GenericGraphicResource* base = it->second.Base;
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - _canvas->ViewSize.X * 0.5f, _canvas->ViewSize.Y * 0.5f - y), size);
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - currentCanvas->ViewSize.X * 0.5f, currentCanvas->ViewSize.Y * 0.5f - y), size);
 
-		_canvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false);
+		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false);
 	}
 
 	void InGameMenu::DrawSolid(float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool additiveBlending)
 	{
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - _canvas->ViewSize.X * 0.5f, _canvas->ViewSize.Y * 0.5f - y), size);
-		_canvas->DrawSolid(adjustedPos, z, size, color, additiveBlending);
+		Canvas* currentCanvas = GetActiveCanvas();
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - currentCanvas->ViewSize.X * 0.5f, currentCanvas->ViewSize.Y * 0.5f - y), size);
+
+		currentCanvas->DrawSolid(adjustedPos, z, size, color, additiveBlending);
 	}
 
 	void InGameMenu::DrawStringShadow(const StringView& text, int& charOffset, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scale,
 		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
+		Canvas* currentCanvas = GetActiveCanvas();
 		int charOffsetShadow = charOffset;
-		_smallFont->DrawString(_canvas.get(), text, charOffsetShadow, x, y + 2.8f * scale, FontShadowLayer,
-			align, Colorf(0.0f, 0.0f, 0.0f, (color == Font::DefaultColor ? 0.29f : 0.29f * 2.0f * color.A())), scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
-		_smallFont->DrawString(_canvas.get(), text, charOffset, x, y, z,
+		_smallFont->DrawString(currentCanvas, text, charOffsetShadow, x, y + 2.8f * scale, FontShadowLayer,
+			align, Colorf(0.0f, 0.0f, 0.0f, 0.29f), scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
+		_smallFont->DrawString(currentCanvas, text, charOffset, x, y, z,
 			align, color, scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
 	}
 
@@ -325,7 +392,7 @@ namespace Jazz2::UI::Menu
 		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Menu)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Menu)] || (PreferencesCache::UseNativeBackButton && pressedKeys[(uint32_t)KeySym::BACK])) {
 			_pressedActions |= (1 << (int)PlayerActions::Menu);
 		}
-		// Use SwitchWeapon action as Delete key
+		// Use ChangeWeapon action as Delete key
 		if (pressedKeys[(uint32_t)KeySym::DELETE]) {
 			_pressedActions |= (1 << (int)PlayerActions::ChangeWeapon);
 		}

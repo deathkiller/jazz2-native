@@ -479,7 +479,7 @@ namespace Jazz2::UI::Menu
 		if (_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Menu)] || (PreferencesCache::UseNativeBackButton && _pressedKeys[(uint32_t)KeySym::BACK])) {
 			_pressedActions |= (1 << (int)PlayerActions::Menu);
 		}
-		// Use SwitchWeapon action as Delete key
+		// Use ChangeWeapon action as Delete key
 		if (_pressedKeys[(uint32_t)KeySym::DELETE]) {
 			_pressedActions |= (1 << (int)PlayerActions::ChangeWeapon);
 		}
