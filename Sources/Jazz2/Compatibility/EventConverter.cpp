@@ -65,7 +65,7 @@ namespace Jazz2::Compatibility
 
 			ConversionResult result;
 			result.Type = ev;
-			memcpy(result.Params, eventParams, sizeof(result.Params));
+			std::memcpy(result.Params, eventParams, sizeof(result.Params));
 
 			return result;
 		};
@@ -151,12 +151,25 @@ namespace Jazz2::Compatibility
 			}, eventParams);
 
 			if (eventParams[2] > 0) {
-				return { EventType::SceneryDestructSpeed, { eventParams[2] } };
+				return { EventType::SceneryDestructSpeed, { (uint8_t)(eventParams[2] + 4) } };
 			} else {
-				return { EventType::SceneryDestruct, { eventParams[3] } };
+				uint16_t weaponMask;
+				if (eventParams[3] == 0) {
+					// Allow all weapons except Freezer
+					weaponMask = UINT16_MAX & ~(1 << (uint16_t)WeaponType::Freezer);
+				} else {
+					weaponMask = (1 << ((uint16_t)eventParams[3] - 1));
+
+					// Fixed TNT blocks in `xmas3.j2l` (https://github.com/deathkiller/jazz2/issues/117)
+					if (eventParams[3] == 9 && level->LevelName == "xmas3"_s) {
+						weaponMask |= (1 << (uint16_t)WeaponType::TNT);
+					}
+				}
+
+				return { EventType::SceneryDestruct, { (uint8_t)(weaponMask & 0xff), (uint8_t)((weaponMask >> 8) & 0xff) } };
 			}
 		});
-		Add(JJ2Event::SCENERY_DESTR_BOMB, ConstantParamList(EventType::SceneryDestruct, { (uint8_t)(1 + (int)WeaponType::TNT) }));
+		Add(JJ2Event::SCENERY_DESTR_BOMB, ConstantParamList(EventType::SceneryDestruct, { (uint8_t)(1 << (int)WeaponType::TNT), 0 }));
 		Add(JJ2Event::SCENERY_BUTTSTOMP, NoParamList(EventType::SceneryDestructButtstomp));
 		Add(JJ2Event::SCENERY_COLLAPSE, [](JJ2Level* level, uint32_t jj2Params) -> ConversionResult {
 			uint8_t eventParams[16];
@@ -613,7 +626,6 @@ namespace Jazz2::Compatibility
 		Add(JJ2Event::SPRING_RED_HOR, GetSpringConverter(0 /*Red*/, true, false));
 		Add(JJ2Event::SPRING_GREEN_HOR, GetSpringConverter(1 /*Green*/, true, false));
 		Add(JJ2Event::SPRING_BLUE_HOR, GetSpringConverter(2 /*Blue*/, true, false));
-		// ToDo: Implement fronzen springs
 		Add(JJ2Event::SPRING_GREEN_FROZEN, GetSpringConverter(1 /*Green*/, false, true));
 
 		Add(JJ2Event::BRIDGE, [](JJ2Level* level, uint32_t jj2Params) -> ConversionResult {

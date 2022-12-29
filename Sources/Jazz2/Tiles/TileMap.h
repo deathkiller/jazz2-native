@@ -30,7 +30,7 @@ namespace Jazz2::Tiles
 		bool ParallaxStarsEnabled;
 	};
 
-	enum class LayerTileFlags {
+	enum class LayerTileFlags : uint8_t {
 		None = 0x00,
 
 		FlipX = 0x01,
@@ -44,8 +44,8 @@ namespace Jazz2::Tiles
 
 	struct LayerTile {
 		int32_t TileID;
+		uint16_t TileParams;
 		LayerTileFlags Flags;
-		uint8_t ExtraParam;
 		uint8_t Alpha;
 		SuspendType HasSuspendType;
 		TileDestructType DestructType;
@@ -202,7 +202,7 @@ namespace Jazz2::Tiles
 
 		bool AdvanceDestructibleTileAnimation(LayerTile& tile, int tx, int ty, int& amount, const StringView& soundName);
 		void AdvanceCollapsingTileTimers(float timeMult);
-		void SetTileDestructibleEventParams(LayerTile& tile, TileDestructType type, uint8_t extraParam);
+		void SetTileDestructibleEventParams(LayerTile& tile, TileDestructType type, uint16_t tileParams);
 
 		void UpdateDebris(float timeMult);
 		void DrawDebris(RenderQueue& renderQueue);

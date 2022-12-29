@@ -156,9 +156,9 @@ namespace Jazz2::Actors::Environment
 
 				switch (_type) {
 					case 0: { // Chuck (red)
-						//SetState(ActorState::CollideWithTileset, true);
-						//TileCollisionParams params = { TileDestructType::None, true };
-						//if (_levelHandler->IsPositionEmpty(this, AABBInner, params)) {
+						SetState(ActorState::CollideWithTileset, true);
+						TileCollisionParams params = { TileDestructType::None, true };
+						if (_levelHandler->IsPositionEmpty(this, AABBf(_pos.X - 2.0f, _pos.Y - 2.0f, _pos.X + 2.0f, _pos.Y + 2.0f), params)) {
 							uint8_t shotParams[1] = { 0 };
 							std::shared_ptr<ActorBase> sharedOwner = _owner->shared_from_this();
 
@@ -182,8 +182,8 @@ namespace Jazz2::Actors::Environment
 
 							PlaySfx("Fire"_s, 0.5f);
 							_fireCooldown = 48.0f;
-						//}
-						//SetState(ActorState::CollideWithTileset, false);
+						}
+						SetState(ActorState::CollideWithTileset, false);
 						break;
 					}
 

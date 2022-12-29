@@ -40,7 +40,7 @@ namespace Jazz2::Compatibility
 		static constexpr int TextEventStringsCount = 16;
 
 		String LevelName;
-		String Name;
+		String DisplayName;
 		String Tileset;
 		String Music;
 		String NextLevel;
