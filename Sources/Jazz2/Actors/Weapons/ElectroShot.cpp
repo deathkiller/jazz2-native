@@ -27,7 +27,7 @@ namespace Jazz2::Actors::Weapons
 		_timeLeft = 55;
 
 		SetState(ActorState::SkipPerPixelCollisions, true);
-		SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset, false);
+		SetState(ActorState::ApplyGravitation, false);
 
 		async_await RequestMetadataAsync("Weapon/Electro"_s);
 		SetAnimation(AnimState::Idle);
@@ -59,7 +59,7 @@ namespace Jazz2::Actors::Weapons
 	void ElectroShot::OnUpdate(float timeMult)
 	{
 		int n = (timeMult > 0.9f ? 2 : 1);
-		TileCollisionParams params = { TileDestructType::Weapon, false, WeaponType::Electro, _strength };
+		TileCollisionParams params = { TileDestructType::Weapon | TileDestructType::IgnoreSolidTiles, false, WeaponType::Electro, _strength };
 		for (int i = 0; i < n && params.WeaponStrength > 0; i++) {
 			TryMovement(timeMult / n, params);
 		}

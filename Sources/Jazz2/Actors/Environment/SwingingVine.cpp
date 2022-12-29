@@ -61,11 +61,10 @@ namespace Jazz2::Actors::Environment
 	{
 		ActorBase::OnUpdate(timeMult);
 
-		float distance = 0;
 		for (int i = 0; i < ChunkCount; i++) {
 			_angle = sinf(_phase - i * (0.64f / ChunkCount)) * 1.2f + fPiOver2;
 
-			distance = ChunkSize * powf(i, 0.95f);
+			float distance = ChunkSize * powf(i, 0.95f);
 			_chunkPos[i].X = _pos.X + cosf(_angle) * distance;
 			_chunkPos[i].Y = _pos.Y + sinf(_angle) * distance;
 		}

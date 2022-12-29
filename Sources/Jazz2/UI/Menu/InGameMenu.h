@@ -25,6 +25,7 @@ namespace Jazz2::UI::Menu
 		~InGameMenu();
 
 		void OnTouchEvent(const nCine::TouchEvent& event);
+		void OnInitializeViewport(int width, int height);
 
 		void SwitchToSectionDirect(std::unique_ptr<MenuSection> section) override;
 		void LeaveSection() override;
@@ -34,7 +35,7 @@ namespace Jazz2::UI::Menu
 		bool ActionHit(PlayerActions action) override;
 
 		Vector2i GetViewSize() override {
-			return _canvas->ViewSize;
+			return _canvasBackground->ViewSize;
 		}
 
 		void DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color,
@@ -53,13 +54,16 @@ namespace Jazz2::UI::Menu
 	private:
 		LevelHandler* _root;
 
-		class MenuCanvas : public Canvas
+		enum class ActiveCanvas {
+			Background,
+			Clipped,
+			Overlay
+		};
+
+		class MenuBackgroundCanvas : public Canvas
 		{
 		public:
-			MenuCanvas(InGameMenu* owner)
-				: _owner(owner)
-			{
-			}
+			MenuBackgroundCanvas(InGameMenu* owner) : _owner(owner) { }
 
 			void OnUpdate(float timeMult) override;
 			bool OnDraw(RenderQueue& renderQueue) override;
@@ -68,7 +72,32 @@ namespace Jazz2::UI::Menu
 			InGameMenu* _owner;
 		};
 
-		std::unique_ptr<MenuCanvas> _canvas;
+		class MenuClippedCanvas : public Canvas
+		{
+		public:
+			MenuClippedCanvas(InGameMenu* owner) : _owner(owner) { }
+
+			bool OnDraw(RenderQueue& renderQueue) override;
+
+		private:
+			InGameMenu* _owner;
+		};
+
+		class MenuOverlayCanvas : public Canvas
+		{
+		public:
+			MenuOverlayCanvas(InGameMenu* owner) : _owner(owner) { }
+
+			bool OnDraw(RenderQueue& renderQueue) override;
+
+		private:
+			InGameMenu* _owner;
+		};
+
+		std::unique_ptr<MenuBackgroundCanvas> _canvasBackground;
+		std::unique_ptr<MenuClippedCanvas> _canvasClipped;
+		std::unique_ptr<MenuOverlayCanvas> _canvasOverlay;
+		ActiveCanvas _activeCanvas;
 		HashMap<String, GraphicResource>* _graphics;
 		Font* _smallFont;
 		Font* _mediumFont;
@@ -81,5 +110,15 @@ namespace Jazz2::UI::Menu
 		float _touchButtonsTimer;
 
 		void UpdatePressedActions();
+
+		inline Canvas* GetActiveCanvas()
+		{
+			switch (_activeCanvas) {
+				default:
+				case ActiveCanvas::Background: return _canvasBackground.get();
+				case ActiveCanvas::Clipped: return _canvasClipped.get();
+				case ActiveCanvas::Overlay: return _canvasOverlay.get();
+			}
+		}
 	};
 }

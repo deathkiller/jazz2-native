@@ -569,6 +569,10 @@ namespace Jazz2
 		if (_tileMap != nullptr) {
 			_tileMap->OnInitializeViewport();
 		}
+
+		if (_pauseMenu != nullptr) {
+			_pauseMenu->OnInitializeViewport(w, h);
+		}
 	}
 
 	void LevelHandler::OnKeyPressed(const KeyboardEvent& event)

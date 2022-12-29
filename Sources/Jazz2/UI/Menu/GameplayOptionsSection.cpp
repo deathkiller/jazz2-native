@@ -64,7 +64,7 @@ namespace Jazz2::UI::Menu
 
 	void GameplayOptionsSection::OnLayoutItem(Canvas* canvas, ListViewItem& item)
 	{
-		item.Height = (item.Item.HasBooleanValue ? 52 : ItemHeight * 4 / 5);
+		item.Height = (item.Item.HasBooleanValue ? 52 : ItemHeight);
 	}
 
 	void GameplayOptionsSection::OnDrawItem(Canvas* canvas, ListViewItem& item, int& charOffset, bool isSelected)

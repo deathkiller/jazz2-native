@@ -473,13 +473,15 @@ namespace nCine
 
 	GlfwInputManager::JoystickEventsSimulator::JoystickEventsSimulator()
 	{
-		std::memset(buttonsState_, 0, sizeof(unsigned char) * MaxNumButtons * MaxNumJoysticks);
-		std::memset(axesValuesState_, 0, sizeof(float) * MaxNumAxes * MaxNumJoysticks);
+		std::memset(buttonsState_, 0, sizeof(buttonsState_));
+		std::memset(hatsState_, 0, sizeof(hatsState_));
+		std::memset(axesValuesState_, 0, sizeof(axesValuesState_));
 	}
 
 	void GlfwInputManager::JoystickEventsSimulator::resetJoystickState(int joyId)
 	{
 		std::memset(buttonsState_[joyId], 0, sizeof(unsigned char) * MaxNumButtons);
+		std::memset(hatsState_[joyId], 0, sizeof(unsigned char) * MaxNumHats);
 		std::memset(axesValuesState_[joyId], 0, sizeof(float) * MaxNumAxes);
 	}
 
