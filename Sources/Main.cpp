@@ -66,8 +66,10 @@ public:
 	void OnInit() override;
 	void OnFrameStart() override;
 	void OnPostUpdate() override;
-	void OnShutdown() override;
 	void OnResizeWindow(int width, int height) override;
+	void OnShutdown() override;
+	void OnSuspend() override;
+	void OnResume() override;
 
 	void OnKeyPressed(const KeyboardEvent& event) override;
 	void OnKeyReleased(const KeyboardEvent& event) override;
@@ -76,12 +78,8 @@ public:
 	void GoToMainMenu(bool afterIntro) override;
 	void ChangeLevel(LevelInitialization&& levelInit) override;
 
-	bool IsVerified() const override {
-		return ((_flags & Flags::IsVerified) == Flags::IsVerified);
-	}
-
-	bool IsPlayable() const override {
-		return ((_flags & Flags::IsPlayable) == Flags::IsPlayable);
+	Flags GetFlags() const override {
+		return _flags;
 	}
 
 	const char* GetNewestVersion() const override {
@@ -95,15 +93,6 @@ public:
 #endif
 
 private:
-	enum class Flags {
-		None = 0x00,
-
-		IsVerified = 0x01,
-		IsPlayable = 0x02
-	};
-
-	DEFINE_PRIVATE_ENUM_OPERATORS(Flags);
-
 	Flags _flags;
 	std::unique_ptr<Jazz2::IStateHandler> _currentHandler;
 	PendingState _pendingState;
@@ -139,6 +128,10 @@ void GameEventHandler::OnInit()
 	
 #if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_IOS)
 	theApplication().setAutoSuspension(true);
+
+	if (AndroidJniWrap_Activity::hasExternalStoragePermission()) {
+		_flags |= Flags::HasExternalStoragePermission;
+	}
 #else
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 	// Xbox is always fullscreen
@@ -181,7 +174,7 @@ void GameEventHandler::OnInit()
 	}, this);
 
 	_currentHandler = std::make_unique<Cinematics>(this, "intro"_s, [thread](IRootController* root, bool endOfStream) mutable {
-		if (!root->IsVerified()) {
+		if ((root->GetFlags() & Jazz2::IRootController::Flags::IsVerified) != Jazz2::IRootController::Flags::IsVerified) {
 			return false;
 		}
 		
@@ -207,7 +200,7 @@ void GameEventHandler::OnInit()
 
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 	// All required files are already included in Emscripten version, so nothing is verified
-	_flags = Flags::IsVerified | Flags::IsPlayable;
+	_flags |= Flags::IsVerified | Flags::IsPlayable;
 #	else
 	RefreshCache();
 	CheckUpdates();
@@ -326,13 +319,6 @@ void GameEventHandler::OnPostUpdate()
 	_currentHandler->OnEndFrame();
 }
 
-void GameEventHandler::OnShutdown()
-{
-	_currentHandler = nullptr;
-
-	ContentResolver::Current().Release();
-}
-
 void GameEventHandler::OnResizeWindow(int width, int height)
 {
 	// Resolution was changed, all viewports have to be recreated
@@ -345,6 +331,29 @@ void GameEventHandler::OnResizeWindow(int width, int height)
 	PreferencesCache::EnableFullscreen = theApplication().gfxDevice().isFullscreen();
 
 	LOGI_X("Rendering resolution: %ix%i", width, height);
+}
+
+void GameEventHandler::OnShutdown()
+{
+	_currentHandler = nullptr;
+
+	ContentResolver::Current().Release();
+}
+
+void GameEventHandler::OnSuspend()
+{
+	// TODO: Save current game state on suspend
+}
+
+void GameEventHandler::OnResume()
+{
+#if defined(DEATH_TARGET_ANDROID)
+	if (AndroidJniWrap_Activity::hasExternalStoragePermission()) {
+		_flags |= Flags::HasExternalStoragePermissionOnResume;
+	} else {
+		_flags &= ~Flags::HasExternalStoragePermissionOnResume;
+	}
+#endif
 }
 
 void GameEventHandler::OnKeyPressed(const KeyboardEvent& event)
@@ -400,7 +409,7 @@ void GameEventHandler::RefreshCache()
 {
 	if (PreferencesCache::BypassCache) {
 		LOGI("Cache is bypassed by command-line parameter");
-		_flags = Flags::IsVerified | Flags::IsPlayable;
+		_flags |= Flags::IsVerified | Flags::IsPlayable;
 		return;
 	}
 
@@ -424,7 +433,7 @@ void GameEventHandler::RefreshCache()
 		if ((flags & 0x01) == 0x01) {
 			// Don't overwrite cache
 			LOGI("Cache is protected");
-			_flags = Flags::IsVerified | Flags::IsPlayable;
+			_flags |= Flags::IsVerified | Flags::IsPlayable;
 			return;
 		}
 
@@ -446,7 +455,7 @@ void GameEventHandler::RefreshCache()
 
 		// Cache is up-to-date
 		LOGI("Cache is already up-to-date");
-		_flags = Flags::IsVerified | Flags::IsPlayable;
+		_flags |= Flags::IsVerified | Flags::IsPlayable;
 		return;
 	}
 
@@ -457,7 +466,7 @@ RecreateCache:
 		animsPath = fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "AnimsSw.j2a"_s));
 		if (!fs::IsReadableFile(animsPath)) {
 			LOGE_X("Cannot open \".%sSource%sAnims.j2a\" file! Make sure Jazz Jackrabbit 2 files are present in \"%s\" directory.", fs::PathSeparator, fs::PathSeparator, resolver.GetSourcePath().data());
-			_flags = Flags::IsVerified;
+			_flags |= Flags::IsVerified;
 			return;
 		}
 	}
@@ -466,7 +475,7 @@ RecreateCache:
 	fs::RemoveDirectoryRecursive(animationsPath);
 	if (!Compatibility::JJ2Anims::Convert(animsPath, animationsPath, false)) {
 		LOGE_X("Provided Jazz Jackrabbit 2 version is not supported. Make sure supported Jazz Jackrabbit 2 version is present in \"%s\" directory.", resolver.GetSourcePath().data());
-		_flags = Flags::IsVerified;
+		_flags |= Flags::IsVerified;
 		return;
 	}
 
@@ -484,7 +493,7 @@ RecreateCache:
 	so->WriteValue<uint16_t>((uint16_t)EventType::Count);
 
 	LOGI("Cache was recreated");
-	_flags = Flags::IsVerified | Flags::IsPlayable;
+	_flags |= Flags::IsVerified | Flags::IsPlayable;
 }
 
 void GameEventHandler::RefreshCacheLevels()

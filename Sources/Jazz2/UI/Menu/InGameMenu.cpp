@@ -317,6 +317,11 @@ namespace Jazz2::UI::Menu
 		currentCanvas->DrawSolid(adjustedPos, z, size, color, additiveBlending);
 	}
 
+	Vector2f InGameMenu::MeasureString(const StringView& text, float scale, float charSpacing, float lineSpacing)
+	{
+		return _smallFont->MeasureString(text, scale, charSpacing, lineSpacing);
+	}
+
 	void InGameMenu::DrawStringShadow(const StringView& text, int& charOffset, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scale,
 		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{

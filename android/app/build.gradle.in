@@ -19,6 +19,7 @@ android {
 		release {
 			minifyEnabled true
 			shrinkResources true
+			proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-project.pro'
 			
 			if (@GRADLE_UNIVERSAL_APK@) {
 				ndk {

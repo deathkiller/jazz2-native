@@ -1,0 +1,7 @@
+-keep,allowobfuscation @interface @NCINE_REVERSE_DNS@.Keep
+
+# Do not strip any method/class that is annotated with @Keep
+-keep @@NCINE_REVERSE_DNS@.Keep class *
+-keepclassmembers class * {
+    @@NCINE_REVERSE_DNS@.Keep *;
+}

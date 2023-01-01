@@ -1,9 +1,15 @@
 package @NCINE_REVERSE_DNS@;
 
 import android.app.NativeActivity;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.hardware.display.DisplayManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.Settings;
 import android.view.View;
+import @NCINE_REVERSE_DNS@.Keep;
 
 public class LoadLibrariesTV extends NativeActivity implements DisplayManager.DisplayListener {
 
@@ -28,10 +34,58 @@ public class LoadLibrariesTV extends NativeActivity implements DisplayManager.Di
 	public void onDisplayRemoved(int displayId) {
 	}
 
+	@Keep
+	public String getPreferredLanguage() {
+		try {
+			java.util.Locale currentLocale;
+			if (android.os.Build.VERSION.SDK_INT < 24) {
+				currentLocale = getResources().getConfiguration().locale;
+			} else {
+				currentLocale = getResources().getConfiguration().getLocales().get(0);
+			}
+			return currentLocale.getLanguage() + "-" + currentLocale.getCountry();
+		} catch (Exception ignored) {
+			return null;
+		}
+	}
+
+	@Keep
+	public boolean hasExternalStoragePermission() {
+		if (android.os.Build.VERSION.SDK_INT < 30) {
+			return false;
+		}
+		
+		try {
+			return Environment.isExternalStorageManager();
+		} catch (Exception ignored) {
+			return false;
+		}
+	}
+
+	@Keep
+	public void requestExternalStoragePermission() {
+		if (android.os.Build.VERSION.SDK_INT < 30) {
+			return;
+		}
+	
+		try {
+			Uri uri = Uri.parse("package:" + BuildConfig.APPLICATION_ID);
+			Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, uri);
+			startActivity(intent);
+		} catch (Exception ignored) {
+			try {
+				Intent intent = new Intent();
+				intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+				startActivity(intent);
+			} catch (Exception ignored2) {
+			}
+		}
+	}
+	
 	static {
 		@JAVA_SYSTEM_LOADLIBRARY_OPENAL@
 		@JAVA_SYSTEM_LOADLIBRARY_NCINE@
-		// It needs to be explicitly loaded for jnicall_functions to work (despite `android.app.lib_name`)
+		// It needs to be explicitly loaded for `jnicall_functions` to work (despite `android.app.lib_name`)
 		try {
 			System.loadLibrary("game");
 		} catch (UnsatisfiedLinkError e) {

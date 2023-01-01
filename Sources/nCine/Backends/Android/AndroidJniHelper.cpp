@@ -1,5 +1,7 @@
 #include "AndroidJniHelper.h"
+#include "AndroidApplication.h"
 #include "../../../Common.h"
+#include "../../Base/Timer.h"
 
 #include <cstring>
 #include <utility>
@@ -47,6 +49,9 @@ namespace nCine
 
 	jobject AndroidJniWrap_Activity::activityObject_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midFinishAndRemoveTask_ = nullptr;
+	jmethodID AndroidJniWrap_Activity::midGetPreferredLanguage_ = nullptr;
+	jmethodID AndroidJniWrap_Activity::midHasExternalStoragePermission_ = nullptr;
+	jmethodID AndroidJniWrap_Activity::midRequestExternalStoragePermission_ = nullptr;
 
 	jobject AndroidJniWrap_InputMethodManager::inputMethodManagerObject_ = nullptr;
 	jmethodID AndroidJniWrap_InputMethodManager::midToggleSoftInput_ = nullptr;
@@ -536,6 +541,9 @@ namespace nCine
 		jclass nativeActivityClass = AndroidJniHelper::jniEnv->GetObjectClass(activityObject_);
 
 		midFinishAndRemoveTask_ = AndroidJniClass::getMethodID(nativeActivityClass, "finishAndRemoveTask", "()V");
+		midGetPreferredLanguage_ = AndroidJniClass::getMethodID(nativeActivityClass, "getPreferredLanguage", "()Ljava/lang/String;");
+		midHasExternalStoragePermission_ = AndroidJniClass::getMethodID(nativeActivityClass, "hasExternalStoragePermission", "()Z");
+		midRequestExternalStoragePermission_ = AndroidJniClass::getMethodID(nativeActivityClass, "requestExternalStoragePermission", "()V");
 	}
 
 	void AndroidJniWrap_Activity::finishAndRemoveTask()
@@ -546,6 +554,39 @@ namespace nCine
 		}
 	}
 
+	String AndroidJniWrap_Activity::getPreferredLanguage()
+	{
+		jstring strLanguage = static_cast<jstring>(AndroidJniHelper::jniEnv->CallObjectMethod(activityObject_, midGetPreferredLanguage_));
+		if (strLanguage == nullptr) {
+			return { };
+		}
+
+		const jsize length = AndroidJniHelper::jniEnv->GetStringUTFLength(strLanguage);
+		const char* language = AndroidJniHelper::jniEnv->GetStringUTFChars(strLanguage, 0);
+		String result = String(NoInit, length);
+		std::memcpy(result.data(), language, length);
+		AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strLanguage, language);
+		AndroidJniHelper::jniEnv->DeleteLocalRef(strLanguage);
+		return result;
+	}
+
+	bool AndroidJniWrap_Activity::hasExternalStoragePermission()
+	{
+		if (AndroidJniHelper::SdkVersion() >= 30) {
+			const jboolean result = AndroidJniHelper::jniEnv->CallBooleanMethod(activityObject_, midHasExternalStoragePermission_);
+			return (result == JNI_TRUE);
+		} else {
+			return false;
+		}
+	}
+
+	void AndroidJniWrap_Activity::requestExternalStoragePermission()
+	{
+		if (AndroidJniHelper::SdkVersion() >= 30) {
+			AndroidJniHelper::jniEnv->CallVoidMethod(activityObject_, midRequestExternalStoragePermission_);
+		}
+	}
+	
 	// ------------------- AndroidJniWrap_InputMethodManager -------------------
 
 	void AndroidJniWrap_InputMethodManager::init(struct android_app* state)
@@ -598,6 +639,7 @@ namespace nCine
 		jmethodID midGetSystemService = AndroidJniClass::getMethodID(nativeActivityClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
 		jobject displayManagerObject = AndroidJniHelper::jniEnv->CallObjectMethod(nativeActivityObject, midGetSystemService, displayServiceObject);
 		displayManagerObject_ = AndroidJniHelper::jniEnv->NewGlobalRef(displayManagerObject);
+		AndroidJniHelper::jniEnv->DeleteLocalRef(displayManagerObject);
 
 		midGetDisplay_ = AndroidJniClass::getMethodID(displayManagerClass, "getDisplay", "(I)Landroid/view/Display;");
 		midGetDisplays_ = AndroidJniClass::getMethodID(displayManagerClass, "getDisplays", "()[Landroid/view/Display;");
@@ -674,7 +716,7 @@ namespace nCine
 		const jsize length = AndroidJniHelper::jniEnv->GetStringUTFLength(strAndroidId);
 		const char* androidId = AndroidJniHelper::jniEnv->GetStringUTFChars(strAndroidId, 0);
 		androidId_ = String(NoInit, length);
-		memcpy(androidId_.data(), androidId, length);
+		std::memcpy(androidId_.data(), androidId, length);
 		AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strAndroidId, androidId);
 		AndroidJniHelper::jniEnv->DeleteLocalRef(strAndroidId);
 	}

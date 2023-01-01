@@ -1,10 +1,12 @@
 #include "I18n.h"
-
+#include "Base/Algorithms.h"
 #include "IO/FileSystem.h"
 
 #include <stdarg.h>
 
-#if defined(DEATH_TARGET_APPLE)
+#if defined(DEATH_TARGET_ANDROID)
+#	include "Backends/Android/AndroidJniHelper.h"
+#elif defined(DEATH_TARGET_APPLE)
 #	include <CoreFoundation/CFPreferences.h>
 #	include <CoreFoundation/CFPropertyList.h>
 #	include <CoreFoundation/CFArray.h>
@@ -658,7 +660,13 @@ namespace nCine
 	{
 		Array<String> preferred;
 
-#if defined(DEATH_TARGET_APPLE)
+#if defined(DEATH_TARGET_ANDROID)
+		String langId = AndroidJniWrap_Activity::getPreferredLanguage();
+		if (!langId.empty()) {
+			lowercaseInPlace(langId);
+			arrayAppend(preferred, std::move(langId));
+		}
+#elif defined(DEATH_TARGET_APPLE)
 		CFTypeRef preferences = CFPreferencesCopyAppValue(CFSTR("AppleLanguages"), kCFPreferencesCurrentApplication);
 		if (preferences != nullptr && CFGetTypeID(preferences) == CFArrayGetTypeID()) {
 			CFArrayRef prefArray = (CFArrayRef)preferences;
@@ -669,7 +677,9 @@ namespace nCine
 			for (int i = 0; i < n; i++) {
 				CFTypeRef element = CFArrayGetValueAtIndex(prefArray, i);
 				if (element != nullptr && CFGetTypeID(element) == CFStringGetTypeID() && CFStringGetCString((CFStringRef)element, buffer, sizeof(buffer), kCFStringEncodingASCII)) {
-					arrayAppend(preferred, String(buffer));
+					String langId = String(buffer);
+					lowercaseInPlace(langId);
+					arrayAppend(preferred, std::move(langId));
 				} else {
 					break;
 				}
@@ -692,7 +702,8 @@ namespace nCine
 			for (char& c : langId) {
 				if (c == '_') c = '-';
 			}
-			arrayAppend(preferred, langId);
+			lowercaseInPlace(langId);
+			arrayAppend(preferred, std::move(langId));
 		}
 #elif defined(DEATH_TARGET_WINDOWS)
 		if (Environment::IsWindows10) {
@@ -704,7 +715,9 @@ namespace nCine
 				if (::GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &numberOfLanguages, languages.data(), &bufferSize)) {
 					wchar_t* buffer = languages.data();
 					for (ULONG k = 0; k < numberOfLanguages; ++k) {
-						arrayAppend(preferred, Utf8::FromUtf16(buffer));
+						String langId = Utf8::FromUtf16(buffer);
+						lowercaseInPlace(langId);
+						arrayAppend(preferred, std::move(langId));
 
 						while (*buffer != L'\0') {
 							buffer++;
@@ -717,7 +730,9 @@ namespace nCine
 			// Use the default user locale for Windows 8 and below
 			wchar_t buffer[LOCALE_NAME_MAX_LENGTH];
 			if (::GetUserDefaultLocaleName(buffer, LOCALE_NAME_MAX_LENGTH)) {
-				arrayAppend(preferred, Utf8::FromUtf16(buffer));
+				String langId = Utf8::FromUtf16(buffer);
+				lowercaseInPlace(langId);
+				arrayAppend(preferred, std::move(langId));
 			}
 		}
 #endif

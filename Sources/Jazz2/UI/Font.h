@@ -19,6 +19,7 @@ namespace Jazz2::UI
 
 		Font(const StringView& path, const uint32_t* palette);
 
+		Vector2f MeasureString(const StringView& text, float scale = 1.0f, float charSpacing = 1.0f, float lineSpacing = 1.0f);
 		void DrawString(Canvas* canvas, const StringView& text, int& charOffset, float x, float y, uint16_t z, Alignment align, Colorf color, float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f, float speed = 0.4f, float charSpacing = 1.0f, float lineSpacing = 1.0f);
 
 	private:

@@ -153,9 +153,10 @@ namespace nCine
 				break;
 			case APP_CMD_RESUME:
 				LOGW("APP_CMD_RESUME event received");
-				if (isPaused)
+				if (isPaused) {
 					theAndroidApplication().resume();
-				isPaused = false;
+					isPaused = false;
+				}
 				break;
 			case APP_CMD_SAVE_STATE:
 				LOGW("APP_CMD_SAVE_STATE event received (not handled)");
@@ -173,24 +174,6 @@ namespace nCine
 				LOGI("APP_CMD_DESTROY event received");
 				theApplication().quit();
 				break;
-		}
-	}
-
-	unsigned int AndroidApplication::SdkVersion() const
-	{
-		unsigned int sdkVersion = 0;
-
-		if (isInitialized_) {
-			sdkVersion = AndroidJniHelper::SdkVersion();
-		}
-
-		return sdkVersion;
-	}
-
-	void AndroidApplication::enableAccelerometer(bool enabled)
-	{
-		if (isInitialized_) {
-			AndroidInputManager::enableAccelerometer(enabled);
 		}
 	}
 

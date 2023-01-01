@@ -139,7 +139,10 @@ if(NCINE_BUILD_ANDROID)
 	set(LOAD_LIBRARIES_TV_JAVA_IN ${CMAKE_SOURCE_DIR}/android/app/src/main/java/io/github/ncine/LoadLibrariesTV.java.in)
 	set(LOAD_LIBRARIES_TV_JAVA ${CMAKE_BINARY_DIR}/android/app/src/main/java/io/github/ncine/LoadLibrariesTV.java)
 	configure_file(${LOAD_LIBRARIES_TV_JAVA_IN} ${LOAD_LIBRARIES_TV_JAVA} @ONLY)
-
+	set(KEEP_JAVA_IN ${CMAKE_SOURCE_DIR}/android/app/src/main/java/io/github/ncine/Keep.java.in)
+	set(KEEP_JAVA ${CMAKE_BINARY_DIR}/android/app/src/main/java/io/github/ncine/Keep.java)
+	configure_file(${KEEP_JAVA_IN} ${KEEP_JAVA} @ONLY)
+	
 	string(REPLACE "." "_" JNICALL_PACKAGE ${NCINE_REVERSE_DNS})
 	string(TOLOWER ${JNICALL_PACKAGE} JNICALL_PACKAGE)
 	set(JNICALL_FUNCTIONS_CPP_IN ${CMAKE_SOURCE_DIR}/android/app/src/main/cpp/jnicall_functions.cpp.in)
@@ -159,14 +162,18 @@ if(NCINE_BUILD_ANDROID)
 		set(GRADLE_JNILIBS_DIRS "'${EXTERNAL_ANDROID_DIR}'")
 	endif()
 	configure_file(${APP_BUILD_GRADLE_IN} ${APP_BUILD_GRADLE} @ONLY)
-
+	set(APP_PROGUARD_IN ${CMAKE_SOURCE_DIR}/android/app/proguard-project.pro.in)
+	set(APP_PROGUARD ${CMAKE_BINARY_DIR}/android/app/proguard-project.pro)
+	configure_file(${APP_PROGUARD_IN} ${APP_PROGUARD} @ONLY)
+	
 	set(GRADLE_JNILIBS_DIRS "'src/main/cpp/ncine'")
 	if(NCINE_WITH_AUDIO)
 		set(GRADLE_JNILIBS_DIRS "${GRADLE_JNILIBS_DIRS}, 'src/main/cpp/openal'")
 	endif()
 
 	set(MANIFEST_PERMISSIONS "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\" android:maxSdkVersion=\"28\" />\n"
-		"\t<uses-permission android:name=\"android.permission.INTERNET\" />")
+		"\t<uses-permission android:name=\"android.permission.INTERNET\" />\n"
+		"\t<uses-permission android:name=\"android.permission.MANAGE_EXTERNAL_STORAGE\" />")
 	if(NCINE_WITH_TRACY)
 		string(CONCAT MANIFEST_PERMISSIONS "${MANIFEST_PERMISSIONS}\n"
 			"\t<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\" />")

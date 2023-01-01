@@ -48,7 +48,7 @@ namespace nCine
 		/// Checks if the desired pixel format is supported
 		static bool isModeSupported(struct android_app* state, const GLContextInfo& glContextInfo, const DisplayMode& mode);
 		
-#ifdef __ANDROID__
+#if defined(DEATH_TARGET_ANDROID)
 		/// Used only for the JNI native function
 		static void updateMonitorsFromJni();
 #endif
