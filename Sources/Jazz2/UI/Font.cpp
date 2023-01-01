@@ -9,6 +9,8 @@
 
 #include <Utf8.h>
 
+using namespace Death;
+
 namespace Jazz2::UI
 {
 	Font::Font(const StringView& path, const uint32_t* palette)
@@ -73,7 +75,7 @@ namespace Jazz2::UI
 				s->Read(c + 1, remainingBytes);
 				uint8_t charWidth = s->ReadValue<uint8_t>();
 
-				std::pair<char32_t, std::size_t> cursor = Death::Utf8::NextChar(c, 0);
+				std::pair<char32_t, std::size_t> cursor = Utf8::NextChar(c, 0);
 				_unicodeChars[cursor.first] = Rectf(
 					(float)(i % cols) / cols,
 					(float)(i / cols) / rows,
@@ -97,51 +99,42 @@ namespace Jazz2::UI
 		}
 	}
 
-	void Font::DrawString(Canvas* canvas, const StringView& text, int& charOffset, float x, float y, uint16_t z, Alignment align, Colorf color, float scale, float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
+	Vector2f Font::MeasureString(const StringView& text, float scale, float charSpacing, float lineSpacing)
 	{
-		size_t textSize = text.size();
-		if (textSize == 0 || _charHeight <= 0) {
-			return;
+		size_t textLength = text.size();
+		if (textLength == 0 || _charHeight <= 0) {
+			return Vector2f::Zero;
 		}
 
-		// TODO: Revise this
-		float phase = canvas->AnimTime * speed * 16.0f;
-
-		// Maximum number of lines - center and right alignment starts to glitch if text has more lines, but it should be enough in most cases
-		constexpr int MaxLines = 16;
-
-		// Preprocessing
 		float totalWidth = 0.0f, lastWidth = 0.0f, totalHeight = 0.0f;
-		float lineWidths[MaxLines];
 		float charSpacingPre = charSpacing;
 		float scalePre = scale;
 
 		int idx = 0;
 		int line = 0;
 		do {
-			std::pair<char32_t, std::size_t> cursor = Death::Utf8::NextChar(text, idx);
+			std::pair<char32_t, std::size_t> cursor = Utf8::NextChar(text, idx);
 
 			if (cursor.first == '\n') {
 				// New line
 				if (totalWidth < lastWidth) {
 					totalWidth = lastWidth;
 				}
-				lineWidths[line & (MaxLines - 1)] = lastWidth;
 				line++;
 				lastWidth = 0.0f;
 				totalHeight += (_charHeight * scale * lineSpacing);
 			} else if (cursor.first == '\f') {
 				// Formatting
-				cursor = Death::Utf8::NextChar(text, cursor.second);
+				cursor = Utf8::NextChar(text, cursor.second);
 				if (cursor.first == '[') {
 					idx = cursor.second;
 					do {
-						cursor = Death::Utf8::NextChar(text, idx);
+						cursor = Utf8::NextChar(text, idx);
 						if (cursor.first == ']') {
 							break;
 						}
 						idx = cursor.second;
-					} while (idx < textSize);
+					} while (idx < textLength);
 				}
 			} else {
 				Rectf uvRect;
@@ -162,7 +155,82 @@ namespace Jazz2::UI
 			}
 
 			idx = cursor.second;
-		} while (idx < textSize);
+		} while (idx < textLength);
+
+		if (totalWidth < lastWidth) {
+			totalWidth = lastWidth;
+		}
+		totalHeight += (_charHeight * scale * lineSpacing);
+
+		return Vector2f(ceilf(totalWidth), ceilf(totalHeight));
+	}
+
+	void Font::DrawString(Canvas* canvas, const StringView& text, int& charOffset, float x, float y, uint16_t z, Alignment align, Colorf color, float scale, float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
+	{
+		size_t textLength = text.size();
+		if (textLength == 0 || _charHeight <= 0) {
+			return;
+		}
+
+		// TODO: Revise this
+		float phase = canvas->AnimTime * speed * 16.0f;
+
+		// Maximum number of lines - center and right alignment starts to glitch if text has more lines, but it should be enough in most cases
+		constexpr int MaxLines = 16;
+
+		// Preprocessing
+		float totalWidth = 0.0f, lastWidth = 0.0f, totalHeight = 0.0f;
+		float lineWidths[MaxLines];
+		float charSpacingPre = charSpacing;
+		float scalePre = scale;
+
+		int idx = 0;
+		int line = 0;
+		do {
+			std::pair<char32_t, std::size_t> cursor = Utf8::NextChar(text, idx);
+
+			if (cursor.first == '\n') {
+				// New line
+				if (totalWidth < lastWidth) {
+					totalWidth = lastWidth;
+				}
+				lineWidths[line & (MaxLines - 1)] = lastWidth;
+				line++;
+				lastWidth = 0.0f;
+				totalHeight += (_charHeight * scale * lineSpacing);
+			} else if (cursor.first == '\f') {
+				// Formatting
+				cursor = Utf8::NextChar(text, cursor.second);
+				if (cursor.first == '[') {
+					idx = cursor.second;
+					do {
+						cursor = Utf8::NextChar(text, idx);
+						if (cursor.first == ']') {
+							break;
+						}
+						idx = cursor.second;
+					} while (idx < textLength);
+				}
+			} else {
+				Rectf uvRect;
+				if (cursor.first < 128) {
+					uvRect = _asciiChars[cursor.first];
+				} else {
+					auto it = _unicodeChars.find(cursor.first);
+					if (it != _unicodeChars.end()) {
+						uvRect = it->second;
+					} else {
+						uvRect = Rectf();
+					}
+				}
+
+				if (uvRect.W > 0 && uvRect.H > 0) {
+					lastWidth += (uvRect.W + _baseSpacing) * charSpacingPre * scalePre;
+				}
+			}
+
+			idx = cursor.second;
+		} while (idx < textLength);
 
 		if (totalWidth < lastWidth) {
 			totalWidth = lastWidth;
@@ -208,7 +276,7 @@ namespace Jazz2::UI
 		idx = 0;
 		line = 0;
 		do {
-			std::pair<char32_t, std::size_t> cursor = Death::Utf8::NextChar(text, idx);
+			std::pair<char32_t, std::size_t> cursor = Utf8::NextChar(text, idx);
 
 			if (cursor.first == '\n') {
 				// New line
@@ -221,26 +289,26 @@ namespace Jazz2::UI
 				originPos.Y -= (_charHeight * scale * lineSpacing);
 			} else if (cursor.first == '\f') {
 				// Formatting
-				cursor = Death::Utf8::NextChar(text, cursor.second);
+				cursor = Utf8::NextChar(text, cursor.second);
 				if (cursor.first == '[') {
 					idx = cursor.second;
-					cursor = Death::Utf8::NextChar(text, idx);
+					cursor = Utf8::NextChar(text, idx);
 					if (cursor.first == 'c') {
 						idx = cursor.second;
-						cursor = Death::Utf8::NextChar(text, idx);
+						cursor = Utf8::NextChar(text, idx);
 						if (cursor.first == ':') {
 							// Set custom color
 							idx = cursor.second;
-							cursor = Death::Utf8::NextChar(text, idx);
+							cursor = Utf8::NextChar(text, idx);
 							if (cursor.first == '0') {
 								idx = cursor.second;
-								cursor = Death::Utf8::NextChar(text, idx);
+								cursor = Utf8::NextChar(text, idx);
 								if (cursor.first == 'x') {
 									idx = cursor.second;
 									int colorIdx = 0;
 									char colorBuffer[9];
 									do {
-										cursor = Death::Utf8::NextChar(text, idx);
+										cursor = Utf8::NextChar(text, idx);
 										if (cursor.first == ']') {
 											break;
 										}
@@ -248,7 +316,7 @@ namespace Jazz2::UI
 											colorBuffer[colorIdx++] = (char)cursor.first;
 										}
 										idx = cursor.second;
-									} while (idx < textSize);
+									} while (idx < textLength);
 
 									if (colorIdx > 0 && !useRandomColor && !isShadow) {
 										colorBuffer[colorIdx] = '\0';
@@ -353,7 +421,7 @@ namespace Jazz2::UI
 			}
 
 			idx = cursor.second;
-		} while (idx < textSize);
+		} while (idx < textLength);
 		charOffset++;
 	}
 }

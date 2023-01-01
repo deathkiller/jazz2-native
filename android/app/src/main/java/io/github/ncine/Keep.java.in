@@ -1,0 +1,4 @@
+package @NCINE_REVERSE_DNS@;
+
+public @interface Keep {
+}

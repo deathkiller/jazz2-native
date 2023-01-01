@@ -17,11 +17,6 @@ namespace nCine
 		/// Processes an Android application command
 		static void processCommand(struct android_app* state, int32_t cmd);
 
-		/// Wrapper around `AndroidJniHelper::SdkVersion()`
-		unsigned int SdkVersion() const;
-		/// Wrapper around `AndroidInputManager::enableAccelerometer()`
-		void enableAccelerometer(bool enabled);
-
 		/// Returns true if the application has already called `init()`
 		inline bool isInitialized() const {
 			return isInitialized_;

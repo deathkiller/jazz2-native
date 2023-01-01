@@ -32,13 +32,14 @@ namespace Jazz2::UI::Menu
 
 		struct ItemData {
 			String Name;
-			float TouchY;
+			float Y;
 		};
+
+		static constexpr float DisabledItem = -1024.0f;
 
 		ItemData _items[(int)Item::Count];
 		int _selectedIndex;
 		float _animation;
-		bool _isVerified;
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		String _sourcePath;
 #endif

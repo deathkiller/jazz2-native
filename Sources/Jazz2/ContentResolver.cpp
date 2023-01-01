@@ -15,6 +15,7 @@
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "../nCine/Backends/Android/AndroidApplication.h"
+#	include "../nCine/Backends/Android/AndroidJniHelper.h"
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 #	include <Environment.h>
 #endif
@@ -47,9 +48,41 @@ namespace Jazz2
 		std::memset(_palettes, 0, sizeof(_palettes));
 
 #if defined(DEATH_TARGET_ANDROID)
-		StringView externalPath = static_cast<AndroidApplication&>(theApplication()).externalDataPath();
-		_cachePath = fs::JoinPath(externalPath, "Cache/"_s);
-		_sourcePath = fs::JoinPath(externalPath, "Source/"_s);
+		// If `MANAGE_EXTERNAL_STORAGE` permission is granted, try to use also alternative paths
+		if (AndroidJniWrap_Activity::hasExternalStoragePermission()) {
+			String externalStorage = fs::GetExternalStorage();
+			String externalPath = fs::JoinPath(externalStorage, "Games/Jazz² Resurrection/"_s);
+			_sourcePath = fs::JoinPath(externalPath, "Source/"_s);
+			if (!fs::IsDirectory(_sourcePath)) {
+				externalPath = fs::JoinPath(externalStorage, "Games/Jazz2 Resurrection/"_s);
+				_sourcePath = fs::JoinPath(externalPath, "Source/"_s);
+				if (!fs::IsDirectory(_sourcePath)) {
+					externalPath = fs::JoinPath(externalStorage, "Download/Jazz² Resurrection/"_s);
+					_sourcePath = fs::JoinPath(externalPath, "Source/"_s);
+					if (!fs::IsDirectory(_sourcePath)) {
+						externalPath = fs::JoinPath(externalStorage, "Download/Jazz2 Resurrection/"_s);
+						_sourcePath = fs::JoinPath(externalPath, "Source/"_s);
+						if (!fs::IsDirectory(_sourcePath)) {
+							auto& app = static_cast<AndroidApplication&>(theApplication());
+							StringView dataPath = app.externalDataPath();
+							_sourcePath = fs::JoinPath(dataPath, "Source/"_s);
+							if (fs::IsDirectory(_sourcePath)) {
+								externalPath = dataPath;
+							} else {
+								externalPath = fs::JoinPath(externalStorage, "Games/Jazz² Resurrection/"_s);
+								_sourcePath = fs::JoinPath(externalPath, "Source/"_s);
+							}
+						}
+					}
+				}
+			}
+			_cachePath = fs::JoinPath(externalPath, "Cache/"_s);
+		} else {
+			auto& app = static_cast<AndroidApplication&>(theApplication());
+			StringView dataPath = app.externalDataPath();
+			_cachePath = fs::JoinPath(dataPath, "Cache/"_s);
+			_sourcePath = fs::JoinPath(dataPath, "Source/"_s);
+		}
 #elif defined(DEATH_TARGET_APPLE)
 		// Returns local application data directory on Apple
 		const String& appData = fs::GetSavePath("Jazz² Resurrection"_s);
@@ -84,22 +117,22 @@ namespace Jazz2
 			StringView externalPath = "\\\\?\\D:\\Games\\Jazz² Resurrection\\"_s;
 			_sourcePath = fs::JoinPath(externalPath, "Source\\"_s);
 			if (fs::IsDirectory(_sourcePath)) {
-				_cachePath = fs::JoinPath(externalPath, "Cache\\"_s);
 				found = true;
 			} else {
 				externalPath = "\\\\?\\E:\\Games\\Jazz² Resurrection\\"_s;
 				_sourcePath = fs::JoinPath(externalPath, "Source\\"_s);
 				if (fs::IsDirectory(_sourcePath)) {
-					_cachePath = fs::JoinPath(externalPath, "Cache\\"_s);
 					found = true;
 				} else {
 					externalPath = "\\\\?\\F:\\Games\\Jazz² Resurrection\\"_s;
 					_sourcePath = fs::JoinPath(externalPath, "Source\\"_s);
 					if (fs::IsDirectory(_sourcePath)) {
-						_cachePath = fs::JoinPath(externalPath, "Cache\\"_s);
 						found = true;
 					}
 				}
+			}
+			if (found) {
+				_cachePath = fs::JoinPath(externalPath, "Cache\\"_s);
 			}
 		}
 

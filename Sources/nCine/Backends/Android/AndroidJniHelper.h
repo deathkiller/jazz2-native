@@ -210,10 +210,16 @@ namespace nCine
 	public:
 		static void init(struct android_app* state);
 		static void finishAndRemoveTask();
+		static String getPreferredLanguage();
+		static bool hasExternalStoragePermission();
+		static void requestExternalStoragePermission();
 
 	private:
 		static jobject activityObject_;
 		static jmethodID midFinishAndRemoveTask_;
+		static jmethodID midGetPreferredLanguage_;
+		static jmethodID midHasExternalStoragePermission_;
+		static jmethodID midRequestExternalStoragePermission_;
 	};
 
 	/// A class to handle JNI requests to `android.view.inputmethod.InputMethodManager`

@@ -9,7 +9,7 @@
 #	include <android/native_window.h>
 #endif
 
-#ifdef __ANDROID__
+#if defined(DEATH_TARGET_ANDROID)
 #include <jni.h>
 
 extern "C"
@@ -17,7 +17,7 @@ extern "C"
 	namespace nc = nCine;
 
 	/// Called by `jnicall_functions.cpp`
-	void updateMonitors(JNIEnv* env, jclass clazz)
+	void nativeUpdateMonitors(JNIEnv* env, jclass clazz)
 	{
 		nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
 		if (androidApp.isInitialized()) {
@@ -94,7 +94,7 @@ namespace nCine
 		const unsigned int numVideoModes = monitors_[monitorIndex].numVideoModes;
 		ASSERT(modeIndex < numVideoModes);
 
-#if defined(__ANDROID__) && __ANDROID_API__ >= 30
+#if defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 30
 		if (modeIndex < monitors_[monitorIndex].numVideoModes)
 		{
 			const float refreshRate = monitors_[monitorIndex].videoModes[modeIndex].refreshRate;
@@ -164,7 +164,7 @@ namespace nCine
 		eglChooseConfig(display, attribs, &config, 1, &numConfigs);
 		eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
 
-#ifdef __ANDROID__
+#if defined(DEATH_TARGET_ANDROID)
 		ANativeWindow_setBuffersGeometry(state->window, 0, 0, format);
 #endif
 
@@ -180,7 +180,7 @@ namespace nCine
 		return modeIsSupported;
 	}
 
-#ifdef __ANDROID__
+#if defined(DEATH_TARGET_ANDROID)
 	void EglGfxDevice::updateMonitorsFromJni()
 	{
 		EglGfxDevice& gfxDevice = static_cast<EglGfxDevice&>(theApplication().gfxDevice());
@@ -219,7 +219,7 @@ namespace nCine
 			EGL_NONE
 		};
 
-#if !defined(__ANDROID__) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21)
+#if !defined(DEATH_TARGET_ANDROID) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21)
 		if (glContextInfo_.forwardCompatible || glContextInfo_.debugContext) {
 			attribList[4] = EGL_CONTEXT_FLAGS_KHR;
 			EGLint contextFlagsMask = 0;
@@ -237,7 +237,7 @@ namespace nCine
 		eglChooseConfig(display_, attribs, &config_, 1, &numConfigs);
 		eglGetConfigAttrib(display_, config_, EGL_NATIVE_VISUAL_ID, &format);
 
-#ifdef __ANDROID__
+#if defined(DEATH_TARGET_ANDROID)
 		ANativeWindow_setBuffersGeometry(state_->window, 0, 0, format);
 #endif
 
@@ -248,7 +248,7 @@ namespace nCine
 		bindContext();
 		querySurfaceSize();
 
-#ifndef __ANDROID__
+#if !defined(DEATH_TARGET_ANDROID)
 		const EGLint swapInterval = mode_.hasVSync() ? 1 : 0;
 		eglSwapInterval(display_, swapInterval);
 #endif
