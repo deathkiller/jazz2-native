@@ -1,41 +1,37 @@
 ﻿#pragma once
 
-#include "MenuSection.h"
+#include "ScrollableMenuSection.h"
 
 namespace Jazz2::UI::Menu
 {
-	class ControlsOptionsSection : public MenuSection
+	enum class ControlsOptionsItemType {
+		RemapControls,
+		TouchControls,
+#if defined(DEATH_TARGET_ANDROID)
+		UseNativeBackButton,
+#endif
+	};
+
+	struct ControlsOptionsItem {
+		ControlsOptionsItemType Type;
+		StringView DisplayName;
+		bool HasBooleanValue;
+	};
+
+	class ControlsOptionsSection : public ScrollableMenuSection<ControlsOptionsItem>
 	{
 	public:
 		ControlsOptionsSection();
 		~ControlsOptionsSection();
 
-		void OnShow(IMenuContainer* root) override;
-		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
-		void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) override;
 
 	private:
-		enum class Item {
-			RemapControls,
-			TouchControls,
-#if defined(DEATH_TARGET_ANDROID)
-			UseNativeBackButton,
-#endif
-
-			Count
-		};
-
-		struct ItemData {
-			String Name;
-			float TouchY;
-		};
-
-		ItemData _items[(int)Item::Count];
-		int _selectedIndex;
-		float _animation;
 		bool _isDirty;
 
-		void ExecuteSelected();
+		void OnHandleInput() override;
+		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
+		void OnDrawItem(Canvas* canvas, ListViewItem& item, int& charOffset, bool isSelected) override;
+		void OnExecuteSelected() override;
 	};
 }

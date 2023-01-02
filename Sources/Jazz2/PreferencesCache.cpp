@@ -87,14 +87,21 @@ namespace Jazz2
 		if (!overrideConfigPath && !fs::IsReadableFile(_configPath)) {
 			_configPath = fs::JoinPath(fs::GetSavePath("Jazz² Resurrection"_s), "Jazz2.config"_s);
 
-#	if defined(DEATH_TARGET_WINDOWS_RT)
+#	if defined(DEATH_TARGET_ANDROID)
+			// Save config file to external path if possible
+			auto& resolver = ContentResolver::Current();
+			auto externalConfigPath = fs::JoinPath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
+			if (!fs::IsReadableFile(_configPath) || fs::IsReadableFile(externalConfigPath)) {
+				_configPath = externalConfigPath;
+			}
+#	elif defined(DEATH_TARGET_WINDOWS_RT)
+			// Save config file next to `Source` directory (e.g., on external drive) if possible
 			auto& resolver = ContentResolver::Current();
 			auto localConfigPath = fs::JoinPath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 			if (_configPath != localConfigPath) {
 				auto configFileWritable = fs::Open(localConfigPath, FileAccessMode::Read | FileAccessMode::Write);
 				if (configFileWritable->IsOpened()) {
 					configFileWritable->Close();
-					// Save config file next to `Source` directory (e.g., on external drive) if possible
 					_configPath = localConfigPath;
 				}
 			}
