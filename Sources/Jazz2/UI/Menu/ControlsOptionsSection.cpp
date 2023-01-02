@@ -80,7 +80,7 @@ namespace Jazz2::UI::Menu
 			bool enabled;
 			switch (item.Item.Type) {
 #if defined(DEATH_TARGET_ANDROID)
-				case Item::UseNativeBackButton: enabled = PreferencesCache::UseNativeBackButton; break;
+				case ControlsOptionsItemType::UseNativeBackButton: enabled = PreferencesCache::UseNativeBackButton; break;
 #endif
 				default: enabled = false; break;
 			}
