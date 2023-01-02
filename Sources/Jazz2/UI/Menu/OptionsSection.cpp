@@ -7,130 +7,59 @@
 namespace Jazz2::UI::Menu
 {
 	OptionsSection::OptionsSection()
-		:
-		_selectedIndex(0),
-		_animation(0.0f)
 	{
-		_items[(int)Item::Gameplay].Name = _("Gameplay");
-		_items[(int)Item::Graphics].Name = _("Graphics");
-		_items[(int)Item::Sounds].Name = _("Sounds");
-		_items[(int)Item::Controls].Name = _("Controls");
-	}
-
-	void OptionsSection::OnShow(IMenuContainer* root)
-	{
-		MenuSection::OnShow(root);
-
-		_animation = 0.0f;
-	}
-
-	void OptionsSection::OnUpdate(float timeMult)
-	{
-		if (_animation < 1.0f) {
-			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
-		}
-
-		if (_root->ActionHit(PlayerActions::Fire)) {
-			ExecuteSelected();
-		} else if (_root->ActionHit(PlayerActions::Menu)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_root->LeaveSection();
-			return;
-		} else if (_root->ActionHit(PlayerActions::Up)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_animation = 0.0f;
-			if (_selectedIndex > 0) {
-				_selectedIndex--;
-			} else {
-				_selectedIndex = (int)Item::Count - 1;
-			}
-		} else if (_root->ActionHit(PlayerActions::Down)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_animation = 0.0f;
-			if (_selectedIndex < (int)Item::Count - 1) {
-				_selectedIndex++;
-			} else {
-				_selectedIndex = 0;
-			}
-		}
+		_items.emplace_back(OptionsItem { OptionsItemType::Gameplay, _("Gameplay") });
+		_items.emplace_back(OptionsItem { OptionsItemType::Graphics, _("Graphics") });
+		_items.emplace_back(OptionsItem { OptionsItemType::Sounds, _("Sounds") });
+		_items.emplace_back(OptionsItem { OptionsItemType::Controls, _("Controls") });
 	}
 
 	void OptionsSection::OnDraw(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
-		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
+		float centerX = viewSize.X * 0.5f;
+		float bottomLine = viewSize.Y - BottomLine;
+		_root->DrawElement("MenuDim"_s, centerX, (TopLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
+			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - TopLine + 2.0f), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
+		_root->DrawElement("MenuLine"_s, 0, centerX, TopLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement("MenuLine"_s, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		constexpr float topLine = 131.0f;
-		float bottomLine = viewSize.Y - 42.0f;
-		_root->DrawElement("MenuDim"_s, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
-			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement("MenuLine"_s, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement("MenuLine"_s, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-
-		center.Y = topLine + (bottomLine - topLine) * 0.7f / (int)Item::Count;
 		int charOffset = 0;
-
-		_root->DrawStringShadow(_("Options"), charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Options"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
-
-		for (int i = 0; i < (int)Item::Count; i++) {
-			_items[i].TouchY = center.Y;
-
-			if (_selectedIndex == i) {
-				float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
-
-				_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (_items[i].Name.size() + 3) * 0.5f * size, 4.0f * size, true);
-
-				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
-					Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
-			} else {
-				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
-					Alignment::Center, Font::DefaultColor, 0.9f);
-			}
-
-			center.Y += (bottomLine - topLine) * 0.9f / (int)Item::Count;
-		}
 	}
 
-	void OptionsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
+	void OptionsSection::OnLayoutItem(Canvas* canvas, ListViewItem& item)
 	{
-		if (event.type == TouchEventType::Down) {
-			int pointerIndex = event.findPointerIndex(event.actionIndex);
-			if (pointerIndex != -1) {
-				float x = event.pointers[pointerIndex].x;
-				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+		item.Height = ItemHeight * 8 / 7;
+	}
 
-				if (y < 80.0f) {
-					_root->PlaySfx("MenuSelect"_s, 0.5f);
-					_root->LeaveSection();
-					return;
-				}
+	void OptionsSection::OnDrawItem(Canvas* canvas, ListViewItem& item, int& charOffset, bool isSelected)
+	{
+		float centerX = canvas->ViewSize.X * 0.5f;
 
-				for (int i = 0; i < (int)Item::Count; i++) {
-					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 22.0f) {
-						if (_selectedIndex == i) {
-							ExecuteSelected();
-						} else {
-							_root->PlaySfx("MenuSelect"_s, 0.5f);
-							_animation = 0.0f;
-							_selectedIndex = i;
-						}
-						break;
-					}
-				}
-			}
+		if (isSelected) {
+			float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+
+			_root->DrawElement("MenuGlow"_s, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (item.Item.DisplayName.size() + 3) * 0.5f * size, 4.0f * size, true);
+
+			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
+				Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+		} else {
+			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer,
+				Alignment::Center, Font::DefaultColor, 0.9f);
 		}
 	}
 
-	void OptionsSection::ExecuteSelected()
+	void OptionsSection::OnExecuteSelected()
 	{
 		_root->PlaySfx("MenuSelect"_s, 0.6f);
 
-		switch (_selectedIndex) {
-			case (int)Item::Gameplay: _root->SwitchToSection<GameplayOptionsSection>(); break;
-			case (int)Item::Graphics: _root->SwitchToSection<GraphicsOptionsSection>(); break;
-			case (int)Item::Sounds: _root->SwitchToSection<SoundsOptionsSection>(); break;
-			case (int)Item::Controls: _root->SwitchToSection<ControlsOptionsSection>(); break;
+		switch (_items[_selectedIndex].Item.Type) {
+			case OptionsItemType::Gameplay: _root->SwitchToSection<GameplayOptionsSection>(); break;
+			case OptionsItemType::Graphics: _root->SwitchToSection<GraphicsOptionsSection>(); break;
+			case OptionsItemType::Sounds: _root->SwitchToSection<SoundsOptionsSection>(); break;
+			case OptionsItemType::Controls: _root->SwitchToSection<ControlsOptionsSection>(); break;
 		}
 	}
 }
