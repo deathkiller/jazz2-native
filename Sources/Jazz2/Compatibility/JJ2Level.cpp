@@ -445,8 +445,8 @@ namespace Jazz2::Compatibility
 				block.DiscardBytes(layerNameLength);
 
 				layer.Visible = !block.ReadBool();
-				byte spriteMode = block.ReadByte();
-				byte spriteParam = block.ReadByte();
+				uint8_t spriteMode = block.ReadByte();
+				uint8_t spriteParam = block.ReadByte();
 				int rotationAngle = block.ReadInt32();
 				int rotationRadiusMult = block.ReadInt32();
 
