@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "../SolidObjectBase.h"
-#include "../../LevelInitialization.h"
+#include "../../ShieldType.h"
 
 namespace Jazz2::Actors::Solid
 {

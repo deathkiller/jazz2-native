@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "../ActorBase.h"
+#include "../../ExitType.h"
 
 namespace Jazz2::Actors::Environment
 {

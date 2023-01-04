@@ -1,7 +1,7 @@
 ﻿#pragma once
 
-#include "LevelInitialization.h"
 #include "../Common.h"
+#include "WeaponType.h"
 #include "../nCine/AppConfiguration.h"
 #include "../nCine/Base/HashMap.h"
 
@@ -58,8 +58,8 @@ namespace Jazz2
 		uint8_t Unused1;
 		int32_t Score;
 		uint16_t Unused2;
-		uint16_t Ammo[PlayerCarryOver::WeaponCount];
-		uint8_t WeaponUpgrades[PlayerCarryOver::WeaponCount];
+		uint16_t Ammo[(int)WeaponType::Count];
+		uint8_t WeaponUpgrades[(int)WeaponType::Count];
 	};
 
 	struct EpisodeContinuationStateWithLevel {

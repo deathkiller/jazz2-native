@@ -157,7 +157,7 @@ namespace Jazz2::UI::Menu
 				OnLayoutItem(canvas, item);
 				_height += item.Height;
 			}
-			_height -= 6;
+			_height -= ItemHeight / 2;
 
 			if (availableHeight - _height < 0) {
 				_scrollable = true;

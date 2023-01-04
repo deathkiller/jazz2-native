@@ -4,16 +4,16 @@
 
 namespace Jazz2
 {
-    enum class WeatherType : uint8_t {
-        None,
+	enum class WeatherType : uint8_t {
+		None,
 
-        Snow,
-        Flowers,
-        Rain,
-        Leaf,
+		Snow,
+		Flowers,
+		Rain,
+		Leaf,
 
-        OutdoorsOnly = 0x80
-    };
+		OutdoorsOnly = 0x80
+	};
 
-    DEFINE_ENUM_OPERATORS(WeatherType);
+	DEFINE_ENUM_OPERATORS(WeatherType);
 }

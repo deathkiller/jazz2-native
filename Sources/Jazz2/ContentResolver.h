@@ -2,7 +2,8 @@
 
 #include "../Common.h"
 #include "AnimState.h"
-#include "LevelInitialization.h"
+#include "GameDifficulty.h"
+#include "WeaponType.h"
 #include "UI/Font.h"
 
 #include "../nCine/Audio/AudioBuffer.h"

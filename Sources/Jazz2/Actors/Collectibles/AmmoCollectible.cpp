@@ -1,5 +1,5 @@
 ﻿#include "AmmoCollectible.h"
-#include "../../LevelInitialization.h"
+#include "../../WeaponType.h"
 #include "../Player.h"
 
 namespace Jazz2::Actors::Collectibles

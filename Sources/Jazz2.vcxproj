@@ -321,9 +321,13 @@
     <ClInclude Include="Jazz2\Compatibility\JJ2Tileset.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Version.h" />
     <ClInclude Include="Jazz2\ContentResolver.Shaders.h" />
+    <ClInclude Include="Jazz2\ExitType.h" />
+    <ClInclude Include="Jazz2\GameDifficulty.h" />
     <ClInclude Include="Jazz2\IRootController.h" />
     <ClInclude Include="Jazz2\LightEmitter.h" />
+    <ClInclude Include="Jazz2\PitType.h" />
     <ClInclude Include="Jazz2\PlayerActions.h" />
+    <ClInclude Include="Jazz2\PlayerType.h" />
     <ClInclude Include="Jazz2\PreferencesCache.h" />
     <ClInclude Include="Jazz2\Scripting\FindAngelScript.h" />
     <ClInclude Include="Jazz2\Scripting\LevelScripts.h" />
@@ -332,6 +336,7 @@
     <ClInclude Include="Jazz2\Scripting\RegisterString.h" />
     <ClInclude Include="Jazz2\Scripting\ScriptActorWrapper.h" />
     <ClInclude Include="Jazz2\Scripting\ScriptPlayerWrapper.h" />
+    <ClInclude Include="Jazz2\ShieldType.h" />
     <ClInclude Include="Jazz2\UI\Alignment.h" />
     <ClInclude Include="Jazz2\UI\Canvas.h" />
     <ClInclude Include="Jazz2\UI\Cinematics.h" />
@@ -366,6 +371,7 @@
     <ClInclude Include="Jazz2\UI\Menu\TouchControlsOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\RgbLights.h" />
     <ClInclude Include="Jazz2\UI\UpscaleRenderPass.h" />
+    <ClInclude Include="Jazz2\WeaponType.h" />
     <ClInclude Include="Jazz2\WeatherType.h" />
     <ClInclude Include="nCine\AppConfiguration.h" />
     <ClInclude Include="nCine\Application.h" />

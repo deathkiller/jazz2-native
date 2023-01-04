@@ -1,5 +1,5 @@
 ﻿#include "PlayerCorpse.h"
-#include "../LevelInitialization.h"
+#include "../PlayerType.h"
 
 namespace Jazz2::Actors
 {

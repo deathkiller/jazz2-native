@@ -1,5 +1,4 @@
 ﻿#include "Doggy.h"
-#include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "../Weapons/ShotBase.h"

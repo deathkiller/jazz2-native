@@ -6,10 +6,10 @@
 
 namespace Jazz2::Compatibility
 {
-	void JJ2Episode::Open(const StringView& path)
+	bool JJ2Episode::Open(const StringView& path)
 	{
 		auto s = fs::Open(path, FileAccessMode::Read);
-		ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
+		RETURNF_ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
 
 		Name = fs::GetFileNameWithoutExtension(path);
 		lowercaseInPlace(Name);
@@ -94,6 +94,8 @@ namespace Jazz2::Compatibility
 		//    JJ2Block titleDarkBlock = new JJ2Block(s, titleDarkPackedSize, titleDarkUnpackedSize);
 		//    episode.titleDark = ConvertIndicesToRgbaBitmap(titleWidth, titleHeight, titleDarkBlock, true);
 		//}
+
+		return true;
 	}
 
 	void JJ2Episode::Convert(const String& targetPath, std::function<JJ2Level::LevelToken(const StringView&)> levelTokenConversion, std::function<String(JJ2Episode*)> episodeNameConversion, std::function<Pair<String, String>(JJ2Episode*)> episodePrevNext)

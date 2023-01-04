@@ -1124,7 +1124,7 @@ namespace Jazz2::Actors
 
 	void Player::OnHitFloor(float timeMult)
 	{
-		if (_levelHandler->EventMap()->IsHurting(_pos.X, _pos.Y + 24)) {
+		if (_levelHandler->TileMap()->IsTileHurting(_pos.X, _pos.Y + 24)) {
 			TakeDamage(1, _speed.X * 0.25f);
 		} else if (!_inWater && _activeModifier == Modifier::None) {
 			if (!GetState(ActorState::CanJump)) {
@@ -1150,7 +1150,7 @@ namespace Jazz2::Actors
 
 	void Player::OnHitCeiling(float timeMult)
 	{
-		if (_levelHandler->EventMap()->IsHurting(_pos.X, _pos.Y - 4.0f)) {
+		if (_levelHandler->TileMap()->IsTileHurting(_pos.X, _pos.Y - 4.0f)) {
 			TakeDamage(1, _speed.X * 0.25f);
 		}
 	}
@@ -1162,10 +1162,9 @@ namespace Jazz2::Actors
 		_pushFramesLeft = 2.0f;
 		_keepRunningTime = 0.0f;
 
-		if (_levelHandler->EventMap()->IsHurting(_pos.X + (_speed.X > 0.0f ? 1.0f : -1.0f) * 16.0f, _pos.Y)) {
+		if (_levelHandler->TileMap()->IsTileHurting(_pos.X + (_speed.X > 0.0f ? 1.0f : -1.0f) * 16.0f, _pos.Y)) {
 			TakeDamage(1, _speed.X * 0.25f);
 		} else {
-
 			if (PreferencesCache::EnableLedgeClimb && _isActivelyPushing && _suspendType == SuspendType::None && _activeModifier == Modifier::None && !GetState(ActorState::CanJump) &&
 				!_inWater && _currentSpecialMove == SpecialMoveType::None && _currentTransitionState != AnimState::TransitionUppercutEnd &&
 				_speed.Y >= -1.0f && _externalForce.Y >= 0.0f && _copterFramesLeft <= 0.0f && _keepRunningTime <= 0.0f) {

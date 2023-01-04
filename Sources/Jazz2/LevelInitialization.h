@@ -1,5 +1,10 @@
 ﻿#pragma once
 
+#include "ExitType.h"
+#include "GameDifficulty.h"
+#include "PlayerType.h"
+#include "WeaponType.h"
+
 #include <cstring>
 
 #include <Containers/String.h>
@@ -8,67 +13,6 @@ using namespace Death::Containers;
 
 namespace Jazz2
 {
-	enum class GameDifficulty : uint8_t {
-		Default,
-
-		Easy,
-		Normal,
-		Hard,
-
-		Multiplayer
-	};
-
-	enum class ExitType : uint8_t {
-		None,
-
-		Normal,
-		Warp,
-		Bonus,
-		Special,
-		Boss,
-
-		TypeMask = 0x0f,
-		Frozen = 0x40,
-		FastTransition = 0x80
-	};
-
-	DEFINE_ENUM_OPERATORS(ExitType);
-
-	enum class WeaponType : uint8_t {
-		Blaster = 0,
-		Bouncer,
-		Freezer,
-		Seeker,
-		RF,
-		Toaster,
-		TNT,
-		Pepper,
-		Electro,
-
-		Thunderbolt,
-
-		Count,
-		Unknown = UINT8_MAX
-	};
-
-	enum class ShieldType : uint8_t {
-		None,
-
-		Fire,
-		Water,
-		Lightning,
-		Laser
-	};
-
-	enum class PlayerType : uint8_t {
-		None,
-
-		Jazz,
-		Spaz,
-		Lori,
-		Frog
-	};
-
 	struct PlayerCarryOver {
 		static constexpr int WeaponCount = (int)WeaponType::Count;
 

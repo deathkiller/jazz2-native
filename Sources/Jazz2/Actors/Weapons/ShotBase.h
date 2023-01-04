@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "../ActorBase.h"
-#include "../../LevelInitialization.h"
+#include "../../WeaponType.h"
 
 #include "../../../nCine/Base/TimeStamp.h"
 

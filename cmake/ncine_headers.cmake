@@ -139,14 +139,20 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/ContentResolver.h
 	${NCINE_SOURCE_DIR}/Jazz2/ContentResolver.Shaders.h
 	${NCINE_SOURCE_DIR}/Jazz2/EventType.h
+	${NCINE_SOURCE_DIR}/Jazz2/ExitType.h
+	${NCINE_SOURCE_DIR}/Jazz2/GameDifficulty.h
 	${NCINE_SOURCE_DIR}/Jazz2/ILevelHandler.h
 	${NCINE_SOURCE_DIR}/Jazz2/IRootController.h
 	${NCINE_SOURCE_DIR}/Jazz2/IStateHandler.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelHandler.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelInitialization.h
 	${NCINE_SOURCE_DIR}/Jazz2/LightEmitter.h
+	${NCINE_SOURCE_DIR}/Jazz2/PitType.h
 	${NCINE_SOURCE_DIR}/Jazz2/PlayerActions.h
+	${NCINE_SOURCE_DIR}/Jazz2/PlayerType.h
 	${NCINE_SOURCE_DIR}/Jazz2/PreferencesCache.h
+	${NCINE_SOURCE_DIR}/Jazz2/ShieldType.h
+	${NCINE_SOURCE_DIR}/Jazz2/WeaponType.h
 	${NCINE_SOURCE_DIR}/Jazz2/WeatherType.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/ActorBase.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Player.h

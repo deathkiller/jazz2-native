@@ -820,7 +820,7 @@ namespace Jazz2
 			captionTile = nullptr;
 		}
 
-		return std::make_unique<Tiles::TileSet>(std::move(textureDiffuse), std::move(mask), std::move(captionTile));
+		return std::make_unique<Tiles::TileSet>(std::move(textureDiffuse), std::move(mask), maskSize * 8, std::move(captionTile));
 	}
 
 	bool ContentResolver::LevelExists(const StringView& episodeName, const StringView& levelName)
@@ -846,8 +846,7 @@ namespace Jazz2
 		uint8_t fileType = s->ReadValue<uint8_t>();
 		RETURNF_ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && fileType == LevelFile, "File has invalid signature");
 
-		// TODO: Level flags
-		/*uint16_t flags =*/ s->ReadValue<uint16_t>();
+		uint16_t flags = s->ReadValue<uint16_t>();
 
 		// Read compressed data
 		int32_t compressedSize = s->ReadValue<int32_t>();
@@ -895,6 +894,7 @@ namespace Jazz2
 
 		WeatherType defaultWeatherType = (WeatherType)uc.ReadValue<uint8_t>();
 		uint8_t defaultWeatherIntensity = uc.ReadValue<uint8_t>();
+		uint16_t waterLevel = uc.ReadValue<uint16_t>();
 
 		uint16_t captionTileId = uc.ReadValue<uint16_t>();
 
@@ -908,7 +908,14 @@ namespace Jazz2
 			uc.Read(text.data(), textLength);
 		}
 
-		std::unique_ptr<Tiles::TileMap> tileMap = std::make_unique<Tiles::TileMap>(levelHandler, defaultTileset, captionTileId);
+		PitType pitType;
+		if ((flags & 0x01) == 0x01) {
+			pitType = ((flags & 0x02) == 0x02 ? PitType::InstantDeathPit : PitType::FallForever);
+		} else {
+			pitType = PitType::StandOnPlatform;
+		}
+
+		std::unique_ptr<Tiles::TileMap> tileMap = std::make_unique<Tiles::TileMap>(levelHandler, defaultTileset, captionTileId, pitType);
 
 		// Animated Tiles
 		tileMap->ReadAnimatedTiles(uc);
@@ -920,12 +927,12 @@ namespace Jazz2
 		}
 
 		// Events
-		std::unique_ptr<Events::EventMap> eventMap = std::make_unique<Events::EventMap>(levelHandler, tileMap->Size());
+		std::unique_ptr<Events::EventMap> eventMap = std::make_unique<Events::EventMap>(levelHandler, tileMap->Size(), pitType);
 		eventMap->ReadEvents(uc, tileMap, difficulty);
 
 		// TODO: Bonus level
 		levelHandler->OnLevelLoaded(fullPath, name, nextLevel, secretLevel, tileMap, eventMap, defaultMusic, ambientColor,
-			defaultWeatherType, defaultWeatherIntensity, levelTexts);
+			defaultWeatherType, defaultWeatherIntensity, waterLevel, levelTexts);
 
 		return true;
 	}
