@@ -1,6 +1,5 @@
 ﻿#include "PepperShot.h"
 #include "../../ILevelHandler.h"
-#include "../../LevelInitialization.h"
 #include "../../Events/EventMap.h"
 #include "../Explosion.h"
 

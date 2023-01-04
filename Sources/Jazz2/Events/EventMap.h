@@ -1,7 +1,8 @@
 ﻿#pragma once
 
 #include "EventSpawner.h"
-#include "../LevelInitialization.h"
+#include "../GameDifficulty.h"
+#include "../PitType.h"
 
 #include "../../nCine/IO/IFileStream.h"
 
@@ -10,7 +11,7 @@ namespace Jazz2::Events
 	class EventMap
 	{
 	public:
-		EventMap(ILevelHandler* levelHandler, Vector2i layoutSize);
+		EventMap(ILevelHandler* levelHandler, Vector2i layoutSize, PitType pitType);
 
 		Vector2f GetSpawnPosition(PlayerType type);
 		void CreateCheckpointForRollback();
@@ -27,7 +28,6 @@ namespace Jazz2::Events
 		EventType GetEventByPosition(float x, float y, uint8_t** eventParams);
 		EventType GetEventByPosition(int x, int y, uint8_t** eventParams);
 		bool HasEventByPosition(int x, int y);
-		bool IsHurting(float x, float y);
 		int GetWarpByPosition(float x, float y);
 		Vector2f GetWarpTarget(uint32_t id);
 
@@ -66,6 +66,7 @@ namespace Jazz2::Events
 
 		ILevelHandler* _levelHandler;
 		Vector2i _layoutSize;
+		PitType _pitType;
 		SmallVector<EventTile, 0> _eventLayout;
 		SmallVector<EventTile, 0> _eventLayoutForRollback;
 		SmallVector<GeneratorInfo, 0> _generators;

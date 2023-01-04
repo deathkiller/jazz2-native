@@ -621,46 +621,45 @@ void GameEventHandler::RefreshCacheLevels()
 		if (extension == "j2e"_s || extension == "j2pe"_s) {
 			// Episode
 			Compatibility::JJ2Episode episode;
-			episode.Open(item);
-			if (episode.Name == "home"_s || (hasChristmasChronicles && episode.Name == "xmas98"_s)) {
-				continue;
-			}
+			if (episode.Open(item)) {
+				if (episode.Name == "home"_s || (hasChristmasChronicles && episode.Name == "xmas98"_s)) {
+					continue;
+				}
 
-			String fullPath = fs::JoinPath(episodesPath, (episode.Name == "xmas98"_s ? "xmas99"_s : StringView(episode.Name)) + ".j2e"_s);
-			episode.Convert(fullPath, LevelTokenConversion, EpisodeNameConversion, EpisodePrevNext);
+				String fullPath = fs::JoinPath(episodesPath, (episode.Name == "xmas98"_s ? "xmas99"_s : StringView(episode.Name)) + ".j2e"_s);
+				episode.Convert(fullPath, LevelTokenConversion, EpisodeNameConversion, EpisodePrevNext);
+			}
 		} else if (extension == "j2l"_s) {
 			// Level
 			String levelName = fs::GetFileName(item);
-			if (levelName.find("-MLLE-Data-"_s) != nullptr) {
-				LOGI_X("Level \"%s\" skipped (MLLE extra layers).", item);
-			} else {
+			if (levelName.find("-MLLE-Data-"_s) == nullptr) {
 				Compatibility::JJ2Level level;
-				level.Open(item, false);
-
-				String fullPath;
-				auto it = knownLevels.find(level.LevelName);
-				if (it != knownLevels.end()) {
-					if (it->second.second().empty()) {
-						fullPath = fs::JoinPath({ episodesPath, it->second.first(), level.LevelName + ".j2l"_s });
+				if (level.Open(item, false)) {
+					String fullPath;
+					auto it = knownLevels.find(level.LevelName);
+					if (it != knownLevels.end()) {
+						if (it->second.second().empty()) {
+							fullPath = fs::JoinPath({ episodesPath, it->second.first(), level.LevelName + ".j2l"_s });
+						} else {
+							fullPath = fs::JoinPath({ episodesPath, it->second.first(), it->second.second() + "_"_s + level.LevelName + ".j2l"_s });
+						}
 					} else {
-						fullPath = fs::JoinPath({ episodesPath, it->second.first(), it->second.second() + "_"_s + level.LevelName + ".j2l"_s });
+						fullPath = fs::JoinPath({ episodesPath, "unknown"_s, level.LevelName + ".j2l"_s });
 					}
-				} else {
-					fullPath = fs::JoinPath({ episodesPath, "unknown"_s, level.LevelName + ".j2l"_s });
-				}
 
-				fs::CreateDirectories(fs::GetDirectoryName(fullPath));
-				level.Convert(fullPath, eventConverter, LevelTokenConversion);
+					fs::CreateDirectories(fs::GetDirectoryName(fullPath));
+					level.Convert(fullPath, eventConverter, LevelTokenConversion);
 
-				usedTilesets.emplace(level.Tileset, true);
+					usedTilesets.emplace(level.Tileset, true);
 
-				// Also copy level script file if exists
-				StringView foundDot = item.findLastOr('.', item.end());
-				String scriptPath = item.prefix(foundDot.begin()) + ".j2as"_s;
-				auto adjustedPath = fs::FindPathCaseInsensitive(scriptPath);
-				if (fs::IsReadableFile(adjustedPath)) {
-					foundDot = fullPath.findLastOr('.', fullPath.end());
-					fs::Copy(adjustedPath, fullPath.prefix(foundDot.begin()) + ".j2as"_s);
+					// Also copy level script file if exists
+					StringView foundDot = item.findLastOr('.', item.end());
+					String scriptPath = item.prefix(foundDot.begin()) + ".j2as"_s;
+					auto adjustedPath = fs::FindPathCaseInsensitive(scriptPath);
+					if (fs::IsReadableFile(adjustedPath)) {
+						foundDot = fullPath.findLastOr('.', fullPath.end());
+						fs::Copy(adjustedPath, fullPath.prefix(foundDot.begin()) + ".j2as"_s);
+					}
 				}
 			}
 		}
@@ -687,8 +686,9 @@ void GameEventHandler::RefreshCacheLevels()
 		auto adjustedPath = fs::FindPathCaseInsensitive(tilesetPath);
 		if (fs::IsReadableFile(adjustedPath)) {
 			Compatibility::JJ2Tileset tileset;
-			tileset.Open(adjustedPath, false);
-			tileset.Convert(fs::JoinPath({ tilesetsPath, pair.first + ".j2t"_s }));
+			if (tileset.Open(adjustedPath, false)) {
+				tileset.Convert(fs::JoinPath({ tilesetsPath, pair.first + ".j2t"_s }));
+			}
 		}
 	}
 }

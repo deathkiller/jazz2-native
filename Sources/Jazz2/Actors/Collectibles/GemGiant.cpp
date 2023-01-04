@@ -1,5 +1,4 @@
 ﻿#include "GemGiant.h"
-#include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../../Events/EventSpawner.h"
 #include "../Player.h"

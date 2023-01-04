@@ -1,5 +1,4 @@
 ﻿#include "EnemyBase.h"
-#include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../../Events/EventMap.h"
 #include "../../Tiles/TileMap.h"

@@ -25,6 +25,7 @@
 #include "Actors/Enemies/Bosses/BossBase.h"
 
 #include <float.h>
+
 #include <Utf8.h>
 
 using namespace nCine;
@@ -158,7 +159,7 @@ namespace Jazz2
 		_ambientLightTarget = value;
 	}
 
-	void LevelHandler::OnLevelLoaded(const StringView& fullPath, const StringView& name, const StringView& nextLevel, const StringView& secretLevel, std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap, const StringView& musicPath, const Vector4f& ambientColor, WeatherType weatherType, uint8_t weatherIntensity, SmallVectorImpl<String>& levelTexts)
+	void LevelHandler::OnLevelLoaded(const StringView& fullPath, const StringView& name, const StringView& nextLevel, const StringView& secretLevel, std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap, const StringView& musicPath, const Vector4f& ambientColor, WeatherType weatherType, uint8_t weatherIntensity, uint16_t waterLevel, SmallVectorImpl<String>& levelTexts)
 	{
 		if (!name.empty()) {
 			theApplication().gfxDevice().setWindowTitle(StringView(NCINE_APP_NAME " - ") + name);
@@ -184,6 +185,7 @@ namespace Jazz2
 
 		_weatherType = weatherType;
 		_weatherIntensity = weatherIntensity;
+		_waterLevel = waterLevel;
 
 #if defined(WITH_OPENMPT)
 		if (!musicPath.empty()) {

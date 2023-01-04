@@ -3,7 +3,6 @@
 #include "ILevelHandler.h"
 #include "IStateHandler.h"
 #include "IRootController.h"
-#include "LevelInitialization.h"
 #include "WeatherType.h"
 #include "Events/EventMap.h"
 #include "Events/EventSpawner.h"
@@ -301,7 +300,7 @@ namespace Jazz2
 
 		void OnLevelLoaded(const StringView& fullPath, const StringView& name, const StringView& nextLevel, const StringView& secretLevel,
 			std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap,
-			const StringView& musicPath, const Vector4f& ambientColor, WeatherType weatherType, uint8_t weatherIntensity, SmallVectorImpl<String>& levelTexts);
+			const StringView& musicPath, const Vector4f& ambientColor, WeatherType weatherType, uint8_t weatherIntensity, uint16_t waterLevel, SmallVectorImpl<String>& levelTexts);
 
 		void ResolveCollisions(float timeMult);
 		void InitializeCamera();

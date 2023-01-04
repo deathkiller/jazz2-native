@@ -7,11 +7,12 @@
 
 namespace Jazz2::Events
 {
-	EventMap::EventMap(ILevelHandler* levelHandler, Vector2i layoutSize)
+	EventMap::EventMap(ILevelHandler* levelHandler, Vector2i layoutSize, PitType pitType)
 		:
 		_levelHandler(levelHandler),
 		_layoutSize(layoutSize),
-		_checkpointCreated(false)
+		_checkpointCreated(false),
+		_pitType(pitType)
 	{
 	}
 
@@ -216,7 +217,7 @@ namespace Jazz2::Events
 	EventType EventMap::GetEventByPosition(int x, int y, uint8_t** eventParams)
 	{
 		if (y > _layoutSize.Y) {
-			return EventType::ModifierDeath;
+			return (_pitType == PitType::InstantDeathPit ? EventType::ModifierDeath : EventType::Empty);
 		}
 
 		if (HasEventByPosition(x, y)) {
@@ -229,20 +230,6 @@ namespace Jazz2::Events
 	bool EventMap::HasEventByPosition(int x, int y)
 	{
 		return (x >= 0 && y >= 0 && y < _layoutSize.Y && x < _layoutSize.X && _eventLayout[x + y * _layoutSize.X].Event != EventType::Empty);
-	}
-
-	bool EventMap::IsHurting(float x, float y)
-	{
-		// TODO: Implement all JJ2+ parameters (directional hurt events)
-		int tx = (int)x / Tiles::TileSet::DefaultTileSize;
-		int ty = (int)y / Tiles::TileSet::DefaultTileSize;
-
-		uint8_t* eventParams;
-		if (GetEventByPosition(tx, ty, &eventParams) != EventType::ModifierHurt) {
-			return false;
-		}
-
-		return !_levelHandler->TileMap()->IsTileEmpty(tx, ty);
 	}
 
 	int EventMap::GetWarpByPosition(float x, float y)

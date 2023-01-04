@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "../SolidObjectBase.h"
+#include "../../PlayerType.h"
 
 namespace Jazz2::Actors::Solid
 {

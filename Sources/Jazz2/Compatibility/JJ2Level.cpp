@@ -2,6 +2,7 @@
 #include "JJ2Strings.h"
 #include "EventConverter.h"
 #include "../ContentResolver.h"
+#include "../Tiles/TileMap.h"
 
 #include "../../nCine/Base/Algorithms.h"
 #include "../../nCine/IO/CompressionUtils.h"
@@ -9,10 +10,10 @@
 
 namespace Jazz2::Compatibility
 {
-	void JJ2Level::Open(const StringView& path, bool strictParser)
+	bool JJ2Level::Open(const StringView& path, bool strictParser)
 	{
 		auto s = fs::Open(path, FileAccessMode::Read);
-		ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
+		RETURNF_ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
 
 		// Skip copyright notice
 		s->Seek(180, SeekOrigin::Current);
@@ -23,7 +24,7 @@ namespace Jazz2::Compatibility
 		JJ2Block headerBlock(s, 262 - 180);
 
 		uint32_t magic = headerBlock.ReadUInt32();
-		ASSERT_MSG(magic == 0x4C56454C /*LEVL*/, "Invalid magic string");
+		RETURNF_ASSERT_MSG(magic == 0x4C56454C /*LEVL*/, "Invalid magic string");
 
 		/*uint32_t passwordHash =*/ headerBlock.ReadUInt32();
 
@@ -35,9 +36,10 @@ namespace Jazz2::Compatibility
 		_darknessColor = 0;
 		_weatherType = WeatherType::None;
 		_weatherIntensity = 0;
+		_waterLevel = 32767;
 
 		int recordedSize = headerBlock.ReadInt32();
-		ASSERT_MSG(!strictParser || s->GetSize() == recordedSize, "Unexpected file size");
+		RETURNF_ASSERT_MSG(!strictParser || s->GetSize() == recordedSize, "Unexpected file size");
 
 		// Get the CRC; would check here if it matches if we knew what variant it is AND what it applies to
 		// Test file across all CRC32 variants + Adler had no matches to the value obtained from the file
@@ -72,8 +74,10 @@ namespace Jazz2::Compatibility
 			int mlleBlockUnpackedSize = s->ReadValue<int>();
 
 			JJ2Block mlleBlock(s, mlleBlockPackedSize, mlleBlockUnpackedSize);
-			LoadMlleData(mlleBlock, mlleVersion, strictParser);
+			LoadMlleData(mlleBlock, mlleVersion, path, strictParser);
 		}
+
+		return true;
 	}
 
 	void JJ2Level::LoadMetadata(JJ2Block& block, bool strictParser)
@@ -162,70 +166,73 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadLayerMetadata(JJ2Block& block, bool strictParser)
 	{
-		_layers = std::make_unique<LayerSection[]>(JJ2LayerCount);
+		_layers.resize_for_overwrite(JJ2LayerCount);
 
-		for (int i = 0; i < JJ2LayerCount; ++i) {
+		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Flags = block.ReadUInt32();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; ++i) {
+		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Type = block.ReadByte();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; ++i) {
+		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Used = block.ReadBool();
+			_layers[i].Visible = true;
 		}
 
-		for (int i = 0; i < JJ2LayerCount; ++i) {
+		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Width = block.ReadInt32();
 		}
 
 		// This is related to how data is presented in the file; the above is a WYSIWYG version, solely shown on the UI
-		for (int i = 0; i < JJ2LayerCount; ++i) {
+		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].InternalWidth = block.ReadInt32();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; ++i) {
+		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Height = block.ReadInt32();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; ++i) {
+		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Depth = block.ReadInt32();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; ++i) {
+		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].DetailLevel = block.ReadByte();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; ++i) {
-			_layers[i].WaveX = block.ReadFloatEncoded();
+		for (int i = 0; i < JJ2LayerCount; i++) {
+			_layers[i].OffsetX = block.ReadFloatEncoded();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; ++i) {
-			_layers[i].WaveY = block.ReadFloatEncoded();
+		for (int i = 0; i < JJ2LayerCount; i++) {
+			_layers[i].OffsetY = block.ReadFloatEncoded();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; ++i) {
+		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].SpeedX = block.ReadFloatEncoded();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; ++i) {
+		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].SpeedY = block.ReadFloatEncoded();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; ++i) {
+		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].AutoSpeedX = block.ReadFloatEncoded();
+			_layers[i].SpeedModelX = LayerSectionSpeedModel::Normal;
 		}
 
-		for (int i = 0; i < JJ2LayerCount; ++i) {
+		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].AutoSpeedY = block.ReadFloatEncoded();
+			_layers[i].SpeedModelY = LayerSectionSpeedModel::Normal;
 		}
 
-		for (int i = 0; i < JJ2LayerCount; ++i) {
+		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].TexturedBackgroundType = block.ReadByte();
 		}
 
-		for (int i = 0; i < JJ2LayerCount; ++i) {
+		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].TexturedParams1 = block.ReadByte();
 			_layers[i].TexturedParams2 = block.ReadByte();
 			_layers[i].TexturedParams3 = block.ReadByte();
@@ -255,8 +262,15 @@ namespace Jazz2::Compatibility
 		}
 
 		auto& lastTileEvent = _events[(width * height) - 1];
-		if (lastTileEvent.EventType == JJ2Event::MCE) {
+		if (lastTileEvent.EventType == JJ2Event::MODIFIER_ONE_WAY) {
+			_hasPit = false;
+			_hasPitInstantDeath = false;
+		} else if (lastTileEvent.EventType == JJ2Event::MCE) {
 			_hasPit = true;
+			_hasPitInstantDeath = true;
+		} else {
+			_hasPit = true;
+			_hasPitInstantDeath = false;
 		}
 
 		for (int i = 0; i < width * height; i++) {
@@ -310,9 +324,9 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Level::LoadMlleData(JJ2Block& block, uint32_t version, bool strictParser)
+	void JJ2Level::LoadMlleData(JJ2Block& block, uint32_t version, const StringView& path, bool strictParser)
 	{
-		if (version != 0x104) {
+		if (version > 0x106) {
 			LOGW_X("Unsupported version of MLLE stream found in level \"%s\"", LevelName.data());
 			return;
 		}
@@ -320,6 +334,7 @@ namespace Jazz2::Compatibility
 		bool isSnowing = block.ReadBool();
 		bool isSnowingOutdoorsOnly = block.ReadBool();
 		uint8_t snowIntensity = block.ReadByte();
+		// Weather particles type (Snow, Flower, Rain, Leaf)
 		uint8_t snowType = block.ReadByte();
 
 		if (isSnowing) {
@@ -330,18 +345,157 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		// TODO: Implement JJ2+ properties
-		/*bool warpsTransmuteCoins = block.ReadBool();
+		// TODO: Convert remaining coins to gems when warp is used
+		bool warpsTransmuteCoins = block.ReadBool();
+		// TODO: Objects spawned from Generators will derive their parameters from tile they first appear at (e.g., after gravitation)
 		bool delayGeneratedCrateOrigins = block.ReadBool();
 		int32_t echo = block.ReadInt32();
-		_darknessColor = block.ReadUInt32();
+		uint32_t darknessColorBgra = block.ReadUInt32();
+		_darknessColor = ((darknessColorBgra >> 16) & 0xff) | (darknessColorBgra & 0x0000ff00) | ((darknessColorBgra << 16) & 0x00ff0000);
+		// TODO: Water level change speed
 		float waterChangeSpeed = block.ReadFloat();
+		// TODO: How player should react to being underwater (PositionBased, Swim, LowGravity)
 		uint8_t waterInteraction = block.ReadByte();
 		int32_t waterLayer = block.ReadInt32();
+		// TODO: How water and ambient lighting should interact in the level (None, Global, Lagunicus)
 		uint8_t waterLighting = block.ReadByte();
-		float waterLevel = block.ReadFloat();
-		uint32_t waterGradient1 = block.ReadUInt32();
-		uint32_t waterGradient2 = block.ReadUInt32();*/
+		_waterLevel = block.ReadFloat();
+		uint32_t waterGradientStart = block.ReadUInt32();
+		uint32_t waterGradientStop = block.ReadUInt32();
+
+		if (block.ReadBool()) {
+			// TODO: Level palette
+			block.DiscardBytes(256 * 3);
+
+			if (version >= 0x106) {
+				bool reapplyPaletteOnDeath = block.ReadBool();
+			}
+		}
+
+		// TODO: Additional palettes
+		if (version >= 0x106) {
+			uint8_t extraPaletteCount = block.ReadByte();
+			while (extraPaletteCount-- != 0) {
+				int32_t nameLength = block.ReadUint7bitEncoded();
+				block.DiscardBytes(nameLength);
+				block.DiscardBytes(256 * 3);
+			}
+		}
+
+		// TODO: Recolorable sprites
+		int32_t recolorableSpriteListSize = (version >= 0x105 ? 20 : 11);
+		for (int32_t i = 0; i < recolorableSpriteListSize; ++i) {
+			// NOTE: Recolorable sprite list was expanded in MLLE-Include-1.5
+			if (block.ReadBool()) {
+				block.DiscardBytes(256);
+			}
+		}
+
+		// TODO: Extra tilesets
+		int32_t extraTilesetCount = block.ReadByte();
+		for (int32_t i = 0; i < extraTilesetCount; i++) {
+			int tilesetNameLength = block.ReadUint7bitEncoded();
+			block.DiscardBytes(tilesetNameLength);
+
+			//offset = block.ReadUInt16();
+			//count = block.ReadUInt16();
+			block.DiscardBytes(4);
+
+			// TODO: Custom tileset palette
+			bool tilesetHasColors = block.ReadBool();
+			if (tilesetHasColors) {
+				block.DiscardBytes(256);
+			}
+		}
+
+		// Additional layers
+		if (version >= 0x102) {
+			int32_t layerCount = block.ReadInt32();
+
+			for (int32_t i = 8; i < layerCount; i += 8) {
+				char numberBuffer[16];
+				i32tos(i / 8, numberBuffer);
+
+				StringView foundDot = path.findLastOr('.', path.end());
+				String extraLayersPath = path.prefix(foundDot.begin()) + "-MLLE-Data-"_s + numberBuffer + ".j2l"_s;
+
+				JJ2Level extraLayersFile;
+				if (extraLayersFile.Open(extraLayersPath, strictParser)) {
+					for (int j = 0; j < 8 && (i + j) < layerCount; j++) {
+						_layers.emplace_back(std::move(extraLayersFile._layers[j]));
+					}
+				}
+			}
+
+			SmallVector<int32_t, JJ2LayerCount * 2> layerOrder(layerCount);
+			int nextExtraLayerIdx = JJ2LayerCount;
+			for (int i = 0; i < layerCount; i++) {
+				int8_t id = (int8_t)block.ReadByte();
+				int32_t idx;
+				if (id >= 0) {
+					idx = id;
+				} else {
+					idx = nextExtraLayerIdx++;
+				}
+				auto& layer = _layers[idx];
+				layerOrder[idx] = i;
+
+				int layerNameLength = block.ReadUint7bitEncoded();
+				//String layerName = block.ReadString(layerNameLength, false);
+				block.DiscardBytes(layerNameLength);
+
+				layer.Visible = !block.ReadBool();
+				byte spriteMode = block.ReadByte();
+				byte spriteParam = block.ReadByte();
+				int rotationAngle = block.ReadInt32();
+				int rotationRadiusMult = block.ReadInt32();
+
+				if (version >= 0x106) {
+					layer.SpeedModelX = (LayerSectionSpeedModel)block.ReadByte();
+					layer.SpeedModelY = (LayerSectionSpeedModel)block.ReadByte();
+					// TODO: Texture surface effect (Untextured, Legacy, Fullscreen, InnerWindow, InnerLayer)
+					//layer.TextureSurface = block.ReadByte();
+					//layer.Fade = block.ReadByte();
+					//layer.FadeX = block.ReadFloat();
+					//layer.FadeY = block.ReadFloat();
+					//layer.InnerSpeedX = block.ReadFloat();
+					//layer.InnerSpeedY = block.ReadFloat();
+					//layer.InnerAutoSpeedX = block.ReadFloat();
+					//layer.InnerAutoSpeedY = block.ReadFloat();
+					block.DiscardBytes(26);
+
+					int8_t texture = (int8_t)block.ReadByte();
+					if (texture < 0) {
+						//layer.TextureImage = block.ReadBytes(256 * 256);
+						block.DiscardBytes(256 * 256);
+
+					}
+				} /*else if (id < 0) {
+					layer.XSpeedModel = 0;
+					layer.YSpeedModel = 0;
+				}*/
+			}
+
+			// Sprite layer has zero depth
+			int zeroDepthIdx = layerOrder[3];
+
+			// Adjust depth of all layers
+			for (size_t i = 0; i < _layers.size(); i++) {
+				int newIdx = layerOrder[i];
+
+				auto& layer = _layers[i];
+				layer.Depth = (newIdx - zeroDepthIdx) * 100;
+				if (layer.Depth < -200) {
+					layer.Depth = -200 - (200 - layer.Depth) / 20;
+				} else if (layer.Depth > 300) {
+					layer.Depth = 300 + (layer.Depth - 300) / 20;
+				}
+			}
+
+			// TODO: Edited tiles were added in MLLE-Include-1.3
+			// TODO: Weapons were added in MLLE-Include-1.5(w)
+			// TODO: Off-grid objects were added in MLLE-Include-1.6
+		}
 	}
 
 	void JJ2Level::Convert(const String& targetPath, const EventConverter& eventConverter, const std::function<LevelToken(const StringView&)>& levelTokenConversion)
@@ -385,7 +539,7 @@ namespace Jazz2::Compatibility
 		if (_hasPit) {
 			flags |= 0x01;
 		}
-		if (_verticalMPSplitscreen) {
+		if (_hasPitInstantDeath) {
 			flags |= 0x02;
 		}
 		if (_isMpLevel) {
@@ -396,6 +550,9 @@ namespace Jazz2::Compatibility
 			if (_hasCTF) {
 				flags |= 0x40;
 			}
+		}
+		if (_verticalMPSplitscreen) {
+			flags |= 0x80;
 		}
 		so->WriteValue<uint16_t>(flags);
 
@@ -439,6 +596,7 @@ namespace Jazz2::Compatibility
 
 		co.WriteValue<uint8_t>((uint8_t)_weatherType);
 		co.WriteValue<uint8_t>(_weatherIntensity);
+		co.WriteValue<uint16_t>(_waterLevel);
 
 		// Find caption tile
 		uint16_t maxTiles = (uint16_t)GetMaxSupportedTiles();
@@ -540,38 +698,84 @@ namespace Jazz2::Compatibility
 
 		// Layers
 		int layerCount = 0;
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (int i = 0; i < _layers.size(); i++) {
 			if (_layers[i].Used) {
 				layerCount++;
 			}
 		}
 
 		co.WriteValue<uint8_t>(layerCount);
-		for (int i = 0; i < JJ2LayerCount; i++) {
+		for (int i = 0; i < _layers.size(); i++) {
 			auto& layer = _layers[i];
 			if (layer.Used) {
 				bool isSky = (i == 7);
 				bool isSprite = (i == 3);
 				co.WriteValue<uint8_t>(isSprite ? 2 : (isSky ? 1 : 0));	// Layer type
-				co.WriteValue<uint8_t>(layer.Flags & 0xff);				// Layer flags
+
+				uint16_t flags = (uint16_t)(layer.Flags & (0x01 | 0x02 | 0x04)); // RepeatX, RepeatY, UseInherentOffset are mapped 1:1
+				if (layer.Visible) {
+					flags |= 0x08;
+				}
+				if ((layer.Flags & 0x08) == 0x08) {	// HasTexturedBackground
+					flags |= 0x100;
+				}
+				if ((layer.Flags & 0x10) == 0x10) {	// ParallaxStarsEnabled
+					flags |= 0x200;
+				}
+				co.WriteValue<uint16_t>(flags);	// Layer flags
 
 				co.WriteValue<int32_t>(layer.Width);
 				co.WriteValue<int32_t>(layer.Height);
 
 				if (!isSprite) {
+					Tiles::LayerSpeedModel speedModelX, speedModelY;
+					switch (layer.SpeedModelX) {
+						case LayerSectionSpeedModel::Legacy: speedModelX = Tiles::LayerSpeedModel::AlwaysOnTop; break;
+						case LayerSectionSpeedModel::FitLevel: speedModelX = Tiles::LayerSpeedModel::FitLevel; break;
+						case LayerSectionSpeedModel::SpeedMultipliers: speedModelX = Tiles::LayerSpeedModel::SpeedMultipliers; break;
+						default: speedModelX = Tiles::LayerSpeedModel::Default; break;
+					}
+					switch (layer.SpeedModelY) {
+						case LayerSectionSpeedModel::Legacy: speedModelY = Tiles::LayerSpeedModel::AlwaysOnTop; break;
+						case LayerSectionSpeedModel::FitLevel: speedModelY = Tiles::LayerSpeedModel::FitLevel; break;
+						case LayerSectionSpeedModel::SpeedMultipliers: speedModelY = Tiles::LayerSpeedModel::SpeedMultipliers; break;
+						default: speedModelY = Tiles::LayerSpeedModel::Default; break;
+					}
+					uint8_t combinedSpeedModel = ((int)speedModelX & 0x0f) | (((int)speedModelY & 0x0f) << 4);
+					co.WriteValue<uint8_t>(combinedSpeedModel);
+
 					bool hasTexturedBackground = ((layer.Flags & 0x08) == 0x08);
-					if (isSky && !hasTexturedBackground) {
+					if (isSky && !hasTexturedBackground && layer.SpeedModelX <= LayerSectionSpeedModel::Legacy && layer.SpeedModelY <= LayerSectionSpeedModel::Legacy) {
 						co.WriteValue<float>(180.0f);
 						co.WriteValue<float>(-300.0f);
 					} else {
-						co.WriteValue<float>(0.0f);
-						co.WriteValue<float>(0.0f);
+						co.WriteValue<float>(layer.OffsetX);
+						co.WriteValue<float>(layer.OffsetY);
 					}
 
-					co.WriteValue<float>(layer.SpeedX);
-					co.WriteValue<float>(layer.SpeedY);
-					co.WriteValue<float>(layer.AutoSpeedX);
-					co.WriteValue<float>(layer.AutoSpeedY);
+					float speedX = layer.SpeedX;
+					float speedY = layer.SpeedY;
+					float autoSpeedX = layer.AutoSpeedX;
+					float autoSpeedY = layer.AutoSpeedY;
+					if (layer.SpeedModelX == LayerSectionSpeedModel::FitLevel ||
+						(layer.SpeedModelX <= LayerSectionSpeedModel::Legacy && !hasTexturedBackground && std::abs(autoSpeedX) > 0.0f)) {
+						speedX = 0.0f;
+					}
+					if (layer.SpeedModelY == LayerSectionSpeedModel::FitLevel ||
+						(layer.SpeedModelY <= LayerSectionSpeedModel::Legacy && !hasTexturedBackground && std::abs(autoSpeedY) > 0.0f)) {
+						speedY = 0.0f;
+					}
+					if (layer.SpeedModelX == LayerSectionSpeedModel::FitLevel) {
+						autoSpeedX = 0.0f;
+					}
+					if (layer.SpeedModelY == LayerSectionSpeedModel::FitLevel) {
+						autoSpeedY = 0.0f;
+					}
+
+					co.WriteValue<float>(speedX);
+					co.WriteValue<float>(speedY);
+					co.WriteValue<float>(autoSpeedX);
+					co.WriteValue<float>(autoSpeedY);
 					co.WriteValue<int16_t>((int16_t)layer.Depth);
 
 					if (isSky && hasTexturedBackground) {

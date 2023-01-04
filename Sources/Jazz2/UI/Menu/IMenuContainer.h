@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "../../ContentResolver.h"
+#include "../../LevelInitialization.h"
 #include "../../PlayerActions.h"
 #include "../Alignment.h"
 

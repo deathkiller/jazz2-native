@@ -1,5 +1,4 @@
 ﻿#include "CollectibleBase.h"
-#include "../../LevelInitialization.h"
 #include "../Player.h"
 #include "../Explosion.h"
 #include "../Weapons/ShotBase.h"

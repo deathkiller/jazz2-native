@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include "CollectibleBase.h"
-#include "../../LevelInitialization.h"
 
 namespace Jazz2::Actors::Collectibles
 {

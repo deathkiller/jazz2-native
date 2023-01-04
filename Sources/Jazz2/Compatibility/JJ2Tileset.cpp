@@ -6,10 +6,10 @@
 
 namespace Jazz2::Compatibility
 {
-	void JJ2Tileset::Open(const StringView& path, bool strictParser)
+	bool JJ2Tileset::Open(const StringView& path, bool strictParser)
 	{
 		auto s = fs::Open(path, FileAccessMode::Read);
-		ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
+		RETURNF_ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
 
 		// Skip copyright notice
 		s->Seek(180, SeekOrigin::Current);
@@ -17,10 +17,10 @@ namespace Jazz2::Compatibility
 		JJ2Block headerBlock(s, 262 - 180);
 
 		uint32_t magic = headerBlock.ReadUInt32();
-		ASSERT_MSG(magic == 0x454C4954 /*TILE*/, "Invalid magic string");
+		RETURNF_ASSERT_MSG(magic == 0x454C4954 /*TILE*/, "Invalid magic string");
 
 		uint32_t signature = headerBlock.ReadUInt32();
-		ASSERT_MSG(signature == 0xAFBEADDE, "Invalid signature");
+		RETURNF_ASSERT_MSG(signature == 0xAFBEADDE, "Invalid signature");
 
 		_name = headerBlock.ReadString(32, true);
 
@@ -28,7 +28,7 @@ namespace Jazz2::Compatibility
 		_version = (versionNum <= 512 ? JJ2Version::BaseGame : JJ2Version::TSF);
 
 		int recordedSize = headerBlock.ReadInt32();
-		ASSERT_MSG(!strictParser || s->GetSize() == recordedSize, "Unexpected file size");
+		RETURNF_ASSERT_MSG(!strictParser || s->GetSize() == recordedSize, "Unexpected file size");
 
 		// Get the CRC; would check here if it matches if we knew what variant it is AND what it applies to
 		// Test file across all CRC32 variants + Adler had no matches to the value obtained from the file
@@ -54,6 +54,8 @@ namespace Jazz2::Compatibility
 		LoadMetadata(infoBlock);
 		LoadImageData(imageBlock, alphaBlock);
 		LoadMaskData(maskBlock);
+
+		return true;
 	}
 
 	void JJ2Tileset::LoadMetadata(JJ2Block& block)
@@ -178,7 +180,23 @@ namespace Jazz2::Compatibility
 		GrowableMemoryFile co(1024 * 1024);
 
 		// Palette
-		co.Write(_palette, sizeof(_palette));
+		uint32_t palette[_countof(_palette)];
+		std::memcpy(palette, _palette, sizeof(_palette));
+
+		bool hasAlphaChannel = false;
+		for (int i = 1; i < _countof(palette); i++) {
+			if ((palette[i] & 0xff000000) != 0) {
+				hasAlphaChannel = true;
+				break;
+			}
+		}
+		if (!hasAlphaChannel) {
+			for (int i = 1; i < _countof(palette); i++) {
+				palette[i] |= 0xff000000;
+			}
+		}
+
+		co.Write(palette, sizeof(palette));
 
 		// Mask
 		co.WriteValue<uint32_t>(_tileCount * sizeof(_tiles[0].Mask));

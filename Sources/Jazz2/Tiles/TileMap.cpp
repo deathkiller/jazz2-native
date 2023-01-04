@@ -9,11 +9,11 @@
 
 namespace Jazz2::Tiles
 {
-	TileMap::TileMap(LevelHandler* levelHandler, const StringView& tileSetPath, uint16_t captionTileId)
+	TileMap::TileMap(LevelHandler* levelHandler, const StringView& tileSetPath, uint16_t captionTileId, PitType pitType)
 		:
 		_levelHandler(levelHandler),
 		_sprLayerIndex(-1),
-		_hasPit(false),
+		_pitType(pitType),
 		_renderCommandsCount(0),
 		_collapsingTimer(0.0f),
 		_triggerState(TriggerCount),
@@ -87,7 +87,7 @@ namespace Jazz2::Tiles
 
 		// Update layer scrolling
 		for (auto& layer : _layers) {
-			if (std::abs(layer.Description.AutoSpeedX) > 0) {
+			if (layer.Description.SpeedModelX != LayerSpeedModel::SpeedMultipliers && std::abs(layer.Description.AutoSpeedX) > 0) {
 				layer.Description.OffsetX += layer.Description.AutoSpeedX * timeMult;
 				if (layer.Description.RepeatX) {
 					if (layer.Description.AutoSpeedX > 0) {
@@ -101,7 +101,7 @@ namespace Jazz2::Tiles
 					}
 				}
 			}
-			if (std::abs(layer.Description.AutoSpeedY) > 0) {
+			if (layer.Description.SpeedModelY != LayerSpeedModel::SpeedMultipliers && std::abs(layer.Description.AutoSpeedY) > 0) {
 				layer.Description.OffsetY += layer.Description.AutoSpeedY * timeMult;
 				if (layer.Description.RepeatY) {
 					if (layer.Description.AutoSpeedY > 0) {
@@ -136,23 +136,21 @@ namespace Jazz2::Tiles
 		return true;
 	}
 
-	bool TileMap::IsTileEmpty(int x, int y)
+	bool TileMap::IsTileEmpty(int tx, int ty)
 	{
-		// TODO: Is this function used correctly?
-		// Consider out-of-level coordinates as solid walls
-		if (x < 0 || y < 0 || _sprLayerIndex == -1) {
+		if (tx < 0 || ty < 0 || _sprLayerIndex == -1) {
 			return false;
 		}
 
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
-		if (x >= layoutSize.X) {
+		if (tx >= layoutSize.X) {
 			return false;
 		}
-		if (y >= layoutSize.Y) {
-			return _hasPit;
+		if (ty >= layoutSize.Y) {
+			return (_pitType != PitType::StandOnPlatform);
 		}
 
-		LayerTile& tile = _layers[_sprLayerIndex].Layout[y * layoutSize.X + x];
+		LayerTile& tile = _layers[_sprLayerIndex].Layout[ty * layoutSize.X + tx];
 		int tileId = ResolveTileID(tile);
 		return _tileSet->IsTileMaskEmpty(tileId);
 	}
@@ -173,7 +171,7 @@ namespace Jazz2::Tiles
 			return false;
 		}
 		if (aabb.B >= limitBottomPx) {
-			return _hasPit;
+			return (_pitType != PitType::StandOnPlatform);
 		}
 
 		// Check all covered tiles for collisions; if all are empty, no need to do pixel collision checking
@@ -305,6 +303,29 @@ namespace Jazz2::Tiles
 		return true;
 	}
 
+	bool TileMap::IsTileHurting(float x, float y)
+	{
+		// TODO: Implement all JJ2+ parameters (directional hurt events)
+		int tx = (int)x / TileSet::DefaultTileSize;
+		int ty = (int)y / TileSet::DefaultTileSize;
+
+		if (tx < 0 || ty < 0 || _sprLayerIndex == -1) {
+			return false;
+		}
+
+		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+		if (tx >= layoutSize.X || ty >= layoutSize.Y) {
+			return false;
+		}
+
+		LayerTile& tile = _layers[_sprLayerIndex].Layout[ty * layoutSize.X + tx];
+		if ((tile.Flags & LayerTileFlags::Hurt) != LayerTileFlags::Hurt) {
+			return false;
+		}
+		int tileId = ResolveTileID(tile);
+		return _tileSet->IsTileMaskEmpty(tileId);
+	}
+
 	SuspendType TileMap::GetTileSuspendState(float x, float y)
 	{
 		constexpr int Tolerance = 4;
@@ -313,16 +334,16 @@ namespace Jazz2::Tiles
 			return SuspendType::None;
 		}
 
-		int ax = (int)x / TileSet::DefaultTileSize;
-		int ay = (int)y / TileSet::DefaultTileSize;
+		int tx = (int)x / TileSet::DefaultTileSize;
+		int ty = (int)y / TileSet::DefaultTileSize;
 
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
-		if (ax >= layoutSize.X || ay >= layoutSize.Y) {
+		if (tx >= layoutSize.X || ty >= layoutSize.Y) {
 			return SuspendType::None;
 		}
 
 		TileMapLayer& layer = _layers[_sprLayerIndex];
-		LayerTile& tile = layer.Layout[ax + ay * layer.LayoutSize.X];
+		LayerTile& tile = layer.Layout[tx + ty * layer.LayoutSize.X];
 		if (tile.HasSuspendType == SuspendType::None) {
 			return SuspendType::None;
 		}
@@ -426,20 +447,75 @@ namespace Jazz2::Tiles
 		float loY = layer.Description.OffsetY - (layer.Description.UseInherentOffset ? (viewSize.Y - 200) / 2 : 0) + 1;
 
 		// Find out coordinates for a tile from outside the boundaries from topleft corner of the screen 
-		float x1 = viewCenter.X - 70 - (viewSize.X * 0.5f);
-		float y1 = viewCenter.Y - 70 - (viewSize.Y * 0.5f);
+		float x1 = viewCenter.X - HardcodedOffset - (viewSize.X * 0.5f);
+		float y1 = viewCenter.Y - HardcodedOffset - (viewSize.Y * 0.5f);
 
-		if (layer.Description.UseBackgroundStyle != BackgroundStyle::Plain && tileCount.Y == 8 && tileCount.X == 8) {
+		if (layer.Description.UseBackgroundStyle > BackgroundStyle::Plain && layer.Description.UseBackgroundStyle <= BackgroundStyle::Circle && tileCount.Y == 8 && tileCount.X == 8) {
 			constexpr float PerspectiveSpeedX = 0.4f;
 			constexpr float PerspectiveSpeedY = 0.16f;
 			RenderTexturedBackground(renderQueue, layer, x1 * PerspectiveSpeedX + loX, y1 * PerspectiveSpeedY + loY);
 		} else {
-			// Figure out the floating point offset from the calculated coordinates and the actual tile corner coordinates
-			float xt = TranslateCoordinate(x1, layer.Description.SpeedX, loX, false, viewSize.Y, viewSize.X);
-			float yt = TranslateCoordinate(y1, layer.Description.SpeedY, loY, true, viewSize.Y, viewSize.X);
+			float xt, yt;
+			switch (layer.Description.SpeedModelX) {
+				case LayerSpeedModel::AlwaysOnTop:
+					xt = -HardcodedOffset;
+					break;
+				case LayerSpeedModel::FitLevel: {
+					float progress = GetRelativeViewPos(viewCenter.X, viewSize.X, _layers[_sprLayerIndex].LayoutSize.X);
+					xt = std::clamp(progress, 0.0f, 1.0f)
+						* ((layer.LayoutSize.X * TileSet::DefaultTileSize) - viewSize.X + HardcodedOffset)
+						+ loX;
+					break;
+				}
+				case LayerSpeedModel::SpeedMultipliers: {
+					float progress = GetRelativeViewPos(viewCenter.X, viewSize.X, _layers[_sprLayerIndex].LayoutSize.X);
+					progress = (layer.Description.SpeedX < layer.Description.AutoSpeedX
+						? std::clamp(progress, layer.Description.SpeedX, layer.Description.AutoSpeedX)
+						: (layer.Description.SpeedX + layer.Description.AutoSpeedX) * 0.5f);
+					xt = progress
+						* ((layer.LayoutSize.X * TileSet::DefaultTileSize) - HardcodedOffset)
+						+ loX;
+					break;
+				}
+				default:
+					xt = TranslateCoordinate(x1, layer.Description.SpeedX, loX, viewSize.X, false);
+					break;
+			}
+			switch (layer.Description.SpeedModelY) {
+				case LayerSpeedModel::AlwaysOnTop:
+					yt = -HardcodedOffset;
+					break;
+				case LayerSpeedModel::FitLevel: {
+					float progress = GetRelativeViewPos(viewCenter.Y, viewSize.Y, _layers[_sprLayerIndex].LayoutSize.Y);
+					yt = std::clamp(progress, 0.0f, 1.0f)
+						* ((layer.LayoutSize.Y * TileSet::DefaultTileSize) - viewSize.Y + HardcodedOffset)
+						+ loY;
+					break;
+				}
+				case LayerSpeedModel::SpeedMultipliers: {
+					float progress = GetRelativeViewPos(viewCenter.Y, viewSize.Y, _layers[_sprLayerIndex].LayoutSize.Y);
+					progress = (layer.Description.SpeedY < layer.Description.AutoSpeedY
+						? std::clamp(progress, layer.Description.SpeedY, layer.Description.AutoSpeedY)
+						: (layer.Description.SpeedY + layer.Description.AutoSpeedY) * 0.5f);
+					yt = progress
+						* ((layer.LayoutSize.Y * TileSet::DefaultTileSize) - HardcodedOffset)
+						+ loY;
+					break;
+				}
+				default:
+					// TODO: Some levels looks better with these adjustments
+					/*if (speedY < 1.0f) {
+						speedY = powf(speedY, 1.06f);
+					} else if (speedY > 1.0f) {
+						speedY = powf(speedY, 0.996f);
+					}*/
 
-			float remX = fmod(xt, (float)TileSet::DefaultTileSize);
-			float remY = fmod(yt, (float)TileSet::DefaultTileSize);
+					yt = TranslateCoordinate(y1, layer.Description.SpeedY, loY, viewSize.Y, true);
+					break;
+			}
+
+			float remX = fmodf(xt, (float)TileSet::DefaultTileSize);
+			float remY = fmodf(yt, (float)TileSet::DefaultTileSize);
 
 			// Calculate the index (on the layer map) of the first tile that needs to be drawn to the position determined earlier
 			int tileX, tileY, tileAbsX, tileAbsY;
@@ -476,8 +552,8 @@ namespace Jazz2::Tiles
 			int tileYs = tileY;
 
 			// Calculate the last coordinates we want to draw to
-			float x3 = x1 + 100 + viewSize.X;
-			float y3 = y1 + 100 + viewSize.Y;
+			float x3 = x1 + (TileSet::DefaultTileSize * 2) + viewSize.X;
+			float y3 = y1 + (TileSet::DefaultTileSize * 2) + viewSize.Y;
 
 			int tile_xo = -1;
 			for (float x2 = x1; x2 < x3; x2 += TileSet::DefaultTileSize) {
@@ -561,7 +637,7 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	float TileMap::TranslateCoordinate(float coordinate, float speed, float offset, bool isY, int viewHeight, int viewWidth)
+	float TileMap::TranslateCoordinate(float coordinate, float speed, float offset, int viewSize, bool isY)
 	{
 		// Coordinate: the "vanilla" coordinate of the tile on the layer if the layer was fixed to the sprite layer with same
 		// speed and no other options. Think of its position in JCS.
@@ -569,9 +645,15 @@ namespace Jazz2::Tiles
 		// less than 1 for backgrounds that move slower, more than 1 for foregrounds that move faster
 		// Offset: any difference to starting coordinates caused by an inherent automatic speed a layer has
 
-		// Literal 70 is the same as in DrawLayer, it's the offscreen offset of the first tile to draw.
+		// `HardcodedOffsetY` (literal 70) is the same as in `DrawLayer`, it's the offscreen offset of the first tile to draw.
 		// Don't touch unless absolutely necessary.
-		return (coordinate * speed + offset + (70 + (isY ? (viewHeight - 200) : (viewWidth - 320)) / 2) * (speed - 1));
+		int alignment = ((isY ? (viewSize - 200) : (viewSize - 320)) / 2) + HardcodedOffset;
+		return (coordinate * speed + offset + alignment * (speed - 1.0f));
+	}
+
+	float TileMap::GetRelativeViewPos(float viewCenter, float viewSize, int layoutSize)
+	{
+		return (viewCenter - (viewSize * 0.5f)) / (layoutSize * TileSet::DefaultTileSize);
 	}
 
 	RenderCommand* TileMap::RentRenderCommand()
@@ -598,8 +680,8 @@ namespace Jazz2::Tiles
 	void TileMap::ReadLayerConfiguration(IFileStream& s)
 	{
 		LayerType layerType = (LayerType)s.ReadValue<uint8_t>();
-		uint8_t layerFlags = s.ReadValue<uint8_t>();
-		bool hasTexturedBackground = (layerType == LayerType::Sky && (layerFlags & 0x08) == 0x08);
+		uint16_t layerFlags = s.ReadValue<uint16_t>();
+		bool hasTexturedBackground = (layerType == LayerType::Sky && (layerFlags & 0x100) == 0x100);
 
 		if (layerType == LayerType::Sprite) {
 			_sprLayerIndex = (int)_layers.size();
@@ -612,9 +694,13 @@ namespace Jazz2::Tiles
 		int32_t width = s.ReadValue<int32_t>();
 		int32_t height = s.ReadValue<int32_t>();
 		newLayer.LayoutSize = Vector2i(width, height);
-		newLayer.Visible = true;
+		newLayer.Visible = ((layerFlags & 0x08) == 0x08);
 
 		if (layerType != LayerType::Sprite) {
+			uint8_t combinedSpeedModels = s.ReadValue<uint8_t>();
+			newLayer.Description.SpeedModelX = (LayerSpeedModel)(combinedSpeedModels & 0x0f);
+			newLayer.Description.SpeedModelY = (LayerSpeedModel)((combinedSpeedModels >> 4) & 0x0f);
+
 			newLayer.Description.OffsetX = s.ReadValue<float>();
 			newLayer.Description.OffsetY = s.ReadValue<float>();
 			newLayer.Description.SpeedX = s.ReadValue<float>();
@@ -633,7 +719,7 @@ namespace Jazz2::Tiles
 				uint8_t param2 = s.ReadValue<uint8_t>();
 				uint8_t param3 = s.ReadValue<uint8_t>();
 				newLayer.Description.BackgroundColor = Vector3f(param1 / 255.0f, param2 / 255.0f, param3 / 255.0f);
-				newLayer.Description.ParallaxStarsEnabled = ((layerFlags & 0x10) == 0x10);
+				newLayer.Description.ParallaxStarsEnabled = ((layerFlags & 0x200) == 0x200);
 			}
 		} else {
 			newLayer.Description.OffsetX = 0.0f;
@@ -646,6 +732,8 @@ namespace Jazz2::Tiles
 			newLayer.Description.RepeatY = false;
 			newLayer.Description.Depth = (uint16_t)(ILevelHandler::MainPlaneZ - 50);
 			newLayer.Description.UseInherentOffset = false;
+			newLayer.Description.SpeedModelX = LayerSpeedModel::Default;
+			newLayer.Description.SpeedModelY = LayerSpeedModel::Default;
 		}
 
 		newLayer.Layout = std::make_unique<LayerTile[]>(width * height);
@@ -662,7 +750,7 @@ namespace Jazz2::Tiles
 			tile.Flags = (LayerTileFlags)(tileFlags & 0x0f);
 
 			if (tileModifier == 1 /*Translucent*/) {
-				tile.Alpha = /*127*/140;
+				tile.Alpha = 172;
 			} else if (tileModifier == 2 /*Invisible*/) {
 				tile.Alpha = 0;
 			} else {
@@ -717,6 +805,9 @@ namespace Jazz2::Tiles
 				break;
 			case EventType::ModifierHook:
 				tile.HasSuspendType = SuspendType::Hook;
+				break;
+			case EventType::ModifierHurt:
+				tile.Flags = LayerTileFlags::Hurt;
 				break;
 			case EventType::SceneryDestruct:
 				SetTileDestructibleEventParams(tile, TileDestructType::Weapon, tileParams[0] | (tileParams[1] << 8));

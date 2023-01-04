@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "../ILevelHandler.h"
+#include "../PitType.h"
 #include "TileSet.h"
 
 #include "../../nCine/IO/IFileStream.h"
@@ -12,18 +13,26 @@ namespace Jazz2
 
 namespace Jazz2::Tiles
 {
+	enum class LayerSpeedModel {
+		Default,
+		AlwaysOnTop,
+		FitLevel,
+		SpeedMultipliers
+	};
+
 	struct LayerDescription {
 		uint16_t Depth;
 		float SpeedX;
 		float SpeedY;
 		float AutoSpeedX;
 		float AutoSpeedY;
-		bool RepeatX;
-		bool RepeatY;
-
 		float OffsetX;
 		float OffsetY;
+		bool RepeatX;
+		bool RepeatY;
 		bool UseInherentOffset;
+		LayerSpeedModel SpeedModelX;
+		LayerSpeedModel SpeedModelY;
 
 		BackgroundStyle UseBackgroundStyle;
 		Vector3f BackgroundColor;
@@ -37,7 +46,8 @@ namespace Jazz2::Tiles
 		FlipY = 0x02,
 		Animated = 0x04,
 
-		OneWay = 0x10
+		OneWay = 0x10,
+		Hurt = 0x20
 	};
 
 	DEFINE_ENUM_OPERATORS(LayerTileFlags);
@@ -83,6 +93,7 @@ namespace Jazz2::Tiles
 	public:
 		static constexpr int TriggerCount = 32;
 		static constexpr int AnimatedTileMask = 0x80000000;
+		static constexpr int HardcodedOffset = 70;
 
 		enum class DebrisFlags {
 			None = 0x00,
@@ -122,7 +133,7 @@ namespace Jazz2::Tiles
 			DebrisFlags Flags;
 		};
 
-		TileMap(LevelHandler* levelHandler, const StringView& tileSetPath, uint16_t captionTileId);
+		TileMap(LevelHandler* levelHandler, const StringView& tileSetPath, uint16_t captionTileId, PitType pitType);
 
 		Vector2i Size();
 		Vector2i LevelBounds();
@@ -130,8 +141,9 @@ namespace Jazz2::Tiles
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
 
-		bool IsTileEmpty(int x, int y);
+		bool IsTileEmpty(int tx, int ty);
 		bool IsTileEmpty(const AABBf& aabb, TileCollisionParams& params);
+		bool IsTileHurting(float x, float y);
 		SuspendType GetTileSuspendState(float x, float y);
 
 		void ReadLayerConfiguration(IFileStream& s);
@@ -180,7 +192,7 @@ namespace Jazz2::Tiles
 
 		LevelHandler* _levelHandler;
 		int _sprLayerIndex;
-		bool _hasPit;
+		PitType _pitType;
 
 		std::unique_ptr<TileSet> _tileSet;
 		SmallVector<TileMapLayer, 0> _layers;
@@ -197,7 +209,8 @@ namespace Jazz2::Tiles
 		TexturedBackgroundPass _texturedBackgroundPass;
 
 		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer);
-		static float TranslateCoordinate(float coordinate, float speed, float offset, bool isY, int viewHeight, int viewWidth);
+		static float TranslateCoordinate(float coordinate, float speed, float offset, int viewSize, bool isY);
+		static float GetRelativeViewPos(float viewCenter, float viewSize, int layoutSize);
 		RenderCommand* RentRenderCommand();
 
 		bool AdvanceDestructibleTileAnimation(LayerTile& tile, int tx, int ty, int& amount, const StringView& soundName);

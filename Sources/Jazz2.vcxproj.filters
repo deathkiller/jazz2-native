@@ -1224,6 +1224,24 @@
     <ClInclude Include="Jazz2\UI\Menu\ScrollableMenuSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\ShieldType.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\WeaponType.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\ExitType.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\GameDifficulty.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\PitType.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\PlayerType.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

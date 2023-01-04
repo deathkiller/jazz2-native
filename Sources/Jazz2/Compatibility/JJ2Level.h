@@ -11,6 +11,7 @@
 
 #include <functional>
 
+#include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
 
@@ -49,9 +50,9 @@ namespace Jazz2::Compatibility
 
 		uint8_t LightingMin, LightingStart;
 
-		JJ2Level() : _version(JJ2Version::Unknown), _verticalMPSplitscreen(false), _isMpLevel(false), _hasPit(false), _hasCTF(false), _hasLaps(false), _animCount(0) { }
+		JJ2Level() : _version(JJ2Version::Unknown), _animCount(0), _verticalMPSplitscreen(false), _isMpLevel(false), _hasPit(false), _hasPitInstantDeath(false), _hasCTF(false), _hasLaps(false) { }
 
-		void Open(const StringView& path, bool strictParser);
+		bool Open(const StringView& path, bool strictParser);
 
 		void Convert(const String& targetPath, const EventConverter& eventConverter, const std::function<LevelToken(const StringView&)>& levelTokenConversion = nullptr);
 		void AddLevelTokenTextID(uint8_t textId);
@@ -67,22 +68,33 @@ namespace Jazz2::Compatibility
 		}
 
 	private:
-		struct LayerSection
-		{
-			uint32_t Flags;				// TODO: All except Parallax Stars supported
+		enum class LayerSectionSpeedModel {
+			Normal,
+			Legacy,
+			BothSpeeds,
+			FromStart,
+			FitLevel,
+			SpeedMultipliers
+		};
+
+		struct LayerSection {
+			uint32_t Flags;
 			uint8_t Type;				// Ignored
 			bool Used;
+			bool Visible;
 			int32_t Width;
 			int32_t InternalWidth;
 			int32_t Height;
 			int32_t Depth;
 			uint8_t DetailLevel;		// Ignored
-			float WaveX;				// TODO: Not supported
-			float WaveY;				// TODO: Not supported
+			float OffsetX;
+			float OffsetY;
 			float SpeedX;
 			float SpeedY;
 			float AutoSpeedX;
 			float AutoSpeedY;
+			LayerSectionSpeedModel SpeedModelX;
+			LayerSectionSpeedModel SpeedModelY;
 			uint8_t TexturedBackgroundType;
 			uint8_t TexturedParams1;
 			uint8_t TexturedParams2;
@@ -90,8 +102,7 @@ namespace Jazz2::Compatibility
 			std::unique_ptr<uint16_t[]> Tiles;
 		};
 
-		struct TileEventSection
-		{
+		struct TileEventSection {
 			JJ2Event EventType;
 			uint8_t Difficulty;
 			bool Illuminate;
@@ -102,15 +113,13 @@ namespace Jazz2::Compatibility
 			ConversionResult Converted;
 		};
 
-		struct TilePropertiesSection
-		{
+		struct TilePropertiesSection {
 			TileEventSection Event;
 			bool Flipped;
 			uint8_t Type;				// Partially supported (Translucent: supported, Caption: ignored)
 		};
 
-		struct AnimatedTileSection
-		{
+		struct AnimatedTileSection {
 			uint16_t Delay;
 			uint16_t DelayJitter;
 			uint16_t ReverseDelay;
@@ -124,14 +133,15 @@ namespace Jazz2::Compatibility
 
 		uint16_t _animCount;
 		bool _verticalMPSplitscreen, _isMpLevel;
-		bool _hasPit, _hasCTF, _hasLaps;
+		bool _hasPit, _hasPitInstantDeath, _hasCTF, _hasLaps;
 		uint32_t _darknessColor;
 		WeatherType _weatherType;
 		uint8_t _weatherIntensity;
+		uint16_t _waterLevel;
 
 		String _textEventStrings[TextEventStringsCount];
 
-		std::unique_ptr<LayerSection[]> _layers;
+		SmallVector<LayerSection, JJ2LayerCount> _layers;
 		std::unique_ptr<TilePropertiesSection[]> _staticTiles;
 		std::unique_ptr<AnimatedTileSection[]> _animatedTiles;
 		std::unique_ptr<TileEventSection[]> _events;
@@ -143,7 +153,7 @@ namespace Jazz2::Compatibility
 		void LoadLayerMetadata(JJ2Block& block, bool strictParser);
 		void LoadEvents(JJ2Block& block, bool strictParser);
 		void LoadLayers(JJ2Block& dictBlock, int dictLength, JJ2Block& layoutBlock, bool strictParser);
-		void LoadMlleData(JJ2Block& block, uint32_t version, bool strictParser);
+		void LoadMlleData(JJ2Block& block, uint32_t version, const StringView& path, bool strictParser);
 
 		static void WriteLevelName(GrowableMemoryFile& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion = nullptr);
 		static bool StringHasSuffixIgnoreCase(const StringView& value, const StringView& suffix);

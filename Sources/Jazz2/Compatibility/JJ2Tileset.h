@@ -20,7 +20,7 @@ namespace Jazz2::Compatibility
 
         JJ2Tileset() : _version(JJ2Version::Unknown), _tileCount(0) { }
 
-        void Open(const StringView& path, bool strictParser);
+        bool Open(const StringView& path, bool strictParser);
 
         void Convert(const String& targetPath) const;
 

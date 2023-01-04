@@ -1,5 +1,4 @@
 ﻿#include "Pole.h"
-#include "../../LevelInitialization.h"
 #include "../../ILevelHandler.h"
 #include "../Weapons/ShotBase.h"
 #include "../Weapons/FreezerShot.h"

@@ -2,7 +2,7 @@
 
 namespace Jazz2::Tiles
 {
-	TileSet::TileSet(std::unique_ptr<Texture> textureDiffuse, std::unique_ptr<uint8_t[]> mask, std::unique_ptr<Color[]> captionTile)
+	TileSet::TileSet(std::unique_ptr<Texture> textureDiffuse, std::unique_ptr<uint8_t[]> mask, uint32_t maskSize, std::unique_ptr<Color[]> captionTile)
 		:
 		TextureDiffuse(std::move(textureDiffuse)),
 		_mask(std::move(mask)),
@@ -22,6 +22,7 @@ namespace Jazz2::Tiles
 		_isTileFilled.SetSize(TileCount);
 
 		//_defaultLayerTiles.reserve(_tileCount);
+		uint32_t maskMaxTiles = maskSize / (DefaultTileSize * DefaultTileSize);
 
 		int k = 0;
 		for (int i = 0; i < th; i++) {
@@ -32,18 +33,18 @@ namespace Jazz2::Tiles
 				//bool tileFilled = true;
 
 				//auto pixelOffset = &pixels[(i * Tiles::TileSet::DefaultTileSize * w) + (j * Tiles::TileSet::DefaultTileSize)];
-				auto maskOffset = &_mask[k * DefaultTileSize * DefaultTileSize];
-				for (int x = 0; x < DefaultTileSize * DefaultTileSize; x++) {
-					bool masked = (maskOffset[x] > 0);
-					maskEmpty &= !masked;
-					maskFilled &= masked;
+				if (k < maskMaxTiles) {
+					auto maskOffset = &_mask[k * DefaultTileSize * DefaultTileSize];
+					for (int x = 0; x < DefaultTileSize * DefaultTileSize; x++) {
+						bool masked = (maskOffset[x] > 0);
+						maskEmpty &= !masked;
+						maskFilled &= masked;
 
-					//ColorRgba pxTex = texture[j * DefaultTileSize + x, i * DefaultTileSize + y];
-					//masked = (pxTex.A > 20);
-					//tileFilled &= masked;
+						//ColorRgba pxTex = texture[j * DefaultTileSize + x, i * DefaultTileSize + y];
+						//masked = (pxTex.A > 20);
+						//tileFilled &= masked;
+					}
 				}
-
-				//masks.Add(tileMask);
 
 				int idx = (j + tw * i);
 				if (maskEmpty) {
@@ -68,5 +69,4 @@ namespace Jazz2::Tiles
 			}
 		}
 	}
-
 }
