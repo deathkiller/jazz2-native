@@ -21,13 +21,13 @@ namespace Jazz2::Tiles
 		_texturedBackgroundPass(this)
 	{
 		auto& tileSetPart = _tileSets.emplace_back();
-		tileSetPart.TileSet = ContentResolver::Current().RequestTileSet(tileSetPath, captionTileId, applyPalette);
-		tileSetPart.TileOffset = 0;
-		tileSetPart.TileCount = tileSetPart.TileSet->TileCount;
+		tileSetPart.Data = ContentResolver::Current().RequestTileSet(tileSetPath, captionTileId, applyPalette);
+		tileSetPart.Offset = 0;
+		tileSetPart.Count = tileSetPart.Data->TileCount;
 
 		_renderCommands.reserve(128);
 
-		if (tileSetPart.TileSet == nullptr) {
+		if (tileSetPart.Data == nullptr) {
 			LOGE_X("Cannot load main tileset \"%s\"", tileSetPath.data());
 		}
 	}
@@ -693,11 +693,11 @@ namespace Jazz2::Tiles
 	void TileMap::AddTileSet(const StringView& tileSetPath, uint16_t offset, uint16_t count)
 	{
 		auto& tileSetPart = _tileSets.emplace_back();
-		tileSetPart.TileSet = ContentResolver::Current().RequestTileSet(tileSetPath, 0, false);
-		tileSetPart.TileOffset = offset;
-		tileSetPart.TileCount = count;
+		tileSetPart.Data = ContentResolver::Current().RequestTileSet(tileSetPath, 0, false);
+		tileSetPart.Offset = offset;
+		tileSetPart.Count = count;
 
-		if (tileSetPart.TileSet == nullptr) {
+		if (tileSetPart.Data == nullptr) {
 			LOGE_X("Cannot load extra tileset \"%s\"", tileSetPath.data());
 		}
 	}
@@ -1216,12 +1216,12 @@ namespace Jazz2::Tiles
 	TileSet* TileMap::ResolveTileSet(int& tileId)
 	{
 		for (auto& tileSetPart : _tileSets) {
-			if (tileId < tileSetPart.TileCount) {
-				tileId += tileSetPart.TileOffset;
-				return tileSetPart.TileSet.get();
+			if (tileId < tileSetPart.Count) {
+				tileId += tileSetPart.Offset;
+				return tileSetPart.Data.get();
 			}
 
-			tileId -= tileSetPart.TileCount;
+			tileId -= tileSetPart.Count;
 		}
 
 		return nullptr;
