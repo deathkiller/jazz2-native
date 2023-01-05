@@ -68,7 +68,7 @@ void main() {
 precision mediump float;
 #endif
 
-uniform sampler2D uTexture; // Normal
+uniform sampler2D uTexture;
 
 in vec4 vTexCoords;
 in vec4 vColor;
@@ -488,7 +488,7 @@ void main() {
 precision highp float;
 #endif
 
-uniform sampler2D uTexture; // Normal
+uniform sampler2D uTexture;
 
 uniform vec2 uViewSize;
 uniform vec2 uCameraPos;
@@ -576,12 +576,12 @@ void main() {
 }
 )";
 
-	constexpr char ColorizeFs[] = R"(
+	constexpr char ColorizedFs[] = R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
 
-uniform sampler2D uTexture; // Normal
+uniform sampler2D uTexture;
 
 in vec2 vTexCoords;
 in vec4 vColor;
@@ -596,12 +596,30 @@ void main() {
 }
 )";
 
+	constexpr char TintedFs[] = R"(
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform sampler2D uTexture;
+
+in vec2 vTexCoords;
+in vec4 vColor;
+out vec4 fragColor;
+
+void main() {
+	vec4 original = texture(uTexture, vTexCoords);
+	vec3 tinted = mix(original.rgb, vColor.rgb, 0.45);
+	fragColor = vec4(tinted.r, tinted.g, tinted.b, original.a * vColor.a);
+}
+)";
+
 	constexpr char OutlineFs[] = R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
 
-uniform sampler2D uTexture; // Normal
+uniform sampler2D uTexture;
 
 in vec2 vTexCoords;
 in vec4 vColor;

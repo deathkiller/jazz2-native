@@ -802,22 +802,22 @@ namespace Jazz2
 		textureDiffuse->setMagFiltering(SamplerFilter::Nearest);
 
 		// Caption Tile
-		std::unique_ptr<Color[]> captionTile;
+		std::unique_ptr<Color[]> captionTile = nullptr;
 		if (captionTileId > 0) {
 			int tw = (width / TileSet::DefaultTileSize);
 			int tx = (captionTileId % tw) * TileSet::DefaultTileSize;
 			int ty = (captionTileId / tw) * TileSet::DefaultTileSize;
-			captionTile = std::make_unique<Color[]>(TileSet::DefaultTileSize * TileSet::DefaultTileSize / 3);
-			for (int y = 0; y < TileSet::DefaultTileSize / 3; y++) {
-				for (int x = 0; x < TileSet::DefaultTileSize; x++) {
-					Color c1 = Color(pixels[((ty + y * 3) * width) + tx + x]);
-					Color c2 = Color(pixels[((ty + y * 3 + 1) * width) + tx + x]);
-					Color c3 = Color(pixels[((ty + y * 3 + 2) * width) + tx + x]);
-					captionTile[y * TileSet::DefaultTileSize + x] = Color((c1.B() + c2.B() + c3.B()) / 3, (c1.G() + c2.G() + c3.G()) / 3, (c1.R() + c2.R() + c3.R()) / 3);
+			if (tx + TileSet::DefaultTileSize <= width && ty + TileSet::DefaultTileSize <= height) {
+				captionTile = std::make_unique<Color[]>(TileSet::DefaultTileSize * TileSet::DefaultTileSize / 3);
+				for (int y = 0; y < TileSet::DefaultTileSize / 3; y++) {
+					for (int x = 0; x < TileSet::DefaultTileSize; x++) {
+						Color c1 = Color(pixels[((ty + y * 3) * width) + tx + x]);
+						Color c2 = Color(pixels[((ty + y * 3 + 1) * width) + tx + x]);
+						Color c3 = Color(pixels[((ty + y * 3 + 2) * width) + tx + x]);
+						captionTile[y * TileSet::DefaultTileSize + x] = Color((c1.B() + c2.B() + c3.B()) / 3, (c1.G() + c2.G() + c3.G()) / 3, (c1.R() + c2.R() + c3.R()) / 3);
+					}
 				}
 			}
-		} else {
-			captionTile = nullptr;
 		}
 
 		return std::make_unique<Tiles::TileSet>(std::move(textureDiffuse), std::move(mask), maskSize * 8, std::move(captionTile));
@@ -898,6 +898,49 @@ namespace Jazz2
 
 		uint16_t captionTileId = uc.ReadValue<uint16_t>();
 
+		PitType pitType;
+		if ((flags & 0x01) == 0x01) {
+			pitType = ((flags & 0x02) == 0x02 ? PitType::InstantDeathPit : PitType::FallForever);
+		} else {
+			pitType = PitType::StandOnPlatform;
+		}
+
+		bool hasCustomPalette = ((flags & 0x04) == 0x04);
+		if (hasCustomPalette) {
+			uint32_t newPalette[ColorsPerPalette];
+			uc.Read(newPalette, ColorsPerPalette * sizeof(uint32_t));
+
+			if (std::memcmp(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t)) != 0) {
+				// Palettes differs, drop all cached resources, so it will be reloaded with new palette
+				if (_isLoading) {
+					_cachedMetadata.clear();
+					_cachedGraphics.clear();
+
+					for (int i = 0; i < (int)FontType::Count; i++) {
+						_fonts[i] = nullptr;
+					}
+				}
+
+				std::memcpy(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t));
+				RecreateGemPalettes();
+			}
+		}
+
+		std::unique_ptr<Tiles::TileMap> tileMap = std::make_unique<Tiles::TileMap>(levelHandler, defaultTileset, captionTileId, pitType, !hasCustomPalette);
+
+		// Extra Tilesets
+		uint8_t extraTilesetCount = uc.ReadValue<uint8_t>();
+		for (int i = 0; i < extraTilesetCount; i++) {
+			nameSize = uc.ReadValue<uint8_t>();
+			String extraTileset = String(NoInit, nameSize);
+			uc.Read(extraTileset.data(), nameSize);
+
+			uint16_t offset = uc.ReadValue<uint16_t>();
+			uint16_t count = uc.ReadValue<uint16_t>();
+
+			tileMap->AddTileSet(extraTileset, offset, count);
+		}
+
 		// Text Event Strings
 		uint8_t textEventStringsCount = uc.ReadValue<uint8_t>();
 		SmallVector<String, 0> levelTexts;
@@ -907,15 +950,6 @@ namespace Jazz2
 			String& text = levelTexts.emplace_back(NoInit, textLength);
 			uc.Read(text.data(), textLength);
 		}
-
-		PitType pitType;
-		if ((flags & 0x01) == 0x01) {
-			pitType = ((flags & 0x02) == 0x02 ? PitType::InstantDeathPit : PitType::FallForever);
-		} else {
-			pitType = PitType::StandOnPlatform;
-		}
-
-		std::unique_ptr<Tiles::TileMap> tileMap = std::make_unique<Tiles::TileMap>(levelHandler, defaultTileset, captionTileId, pitType);
 
 		// Animated Tiles
 		tileMap->ReadAnimatedTiles(uc);
@@ -1068,11 +1102,17 @@ namespace Jazz2
 		_precompiledShaders[(int)PrecompiledShader::TexturedBackgroundCircle] = std::make_unique<Shader>("TexturedBackground",
 			Shader::LoadMode::String, Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundCircleFs);
 
-		_precompiledShaders[(int)PrecompiledShader::Colorize] = std::make_unique<Shader>("Colorize",
-			Shader::LoadMode::String, Shader::DefaultVertex::SPRITE, Shaders::ColorizeFs);
-		_precompiledShaders[(int)PrecompiledShader::BatchedColorize] = std::make_unique<Shader>("BatchedColorize",
-			Shader::LoadMode::String, Shader::Introspection::NoUniformsInBlocks, Shader::DefaultVertex::BATCHED_SPRITES, Shaders::ColorizeFs);
-		_precompiledShaders[(int)PrecompiledShader::Colorize]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedColorize]);
+		_precompiledShaders[(int)PrecompiledShader::Colorized] = std::make_unique<Shader>("Colorize",
+			Shader::LoadMode::String, Shader::DefaultVertex::SPRITE, Shaders::ColorizedFs);
+		_precompiledShaders[(int)PrecompiledShader::BatchedColorized] = std::make_unique<Shader>("BatchedColorized",
+			Shader::LoadMode::String, Shader::Introspection::NoUniformsInBlocks, Shader::DefaultVertex::BATCHED_SPRITES, Shaders::ColorizedFs);
+		_precompiledShaders[(int)PrecompiledShader::Colorized]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedColorized]);
+
+		_precompiledShaders[(int)PrecompiledShader::Tinted] = std::make_unique<Shader>("Tinted",
+			Shader::LoadMode::String, Shader::DefaultVertex::SPRITE, Shaders::TintedFs);
+		_precompiledShaders[(int)PrecompiledShader::BatchedTinted] = std::make_unique<Shader>("BatchedTinted",
+			Shader::LoadMode::String, Shader::Introspection::NoUniformsInBlocks, Shader::DefaultVertex::BATCHED_SPRITES, Shaders::TintedFs);
+		_precompiledShaders[(int)PrecompiledShader::Tinted]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedTinted]);
 
 		_precompiledShaders[(int)PrecompiledShader::Outline] = std::make_unique<Shader>("Outline",
 			Shader::LoadMode::String, Shader::DefaultVertex::SPRITE, Shaders::OutlineFs);

@@ -76,7 +76,7 @@ namespace Jazz2::UI::Menu
 				ExecuteSelected();
 			} else if (_items.size() > 1) {
 				if (_root->ActionPressed(PlayerActions::Up)) {
-					if (_animation >= 1.0f - (_pressedCount * 0.15f) || _root->ActionHit(PlayerActions::Up)) {
+					if (_animation >= 1.0f - (_pressedCount * 0.096f) || _root->ActionHit(PlayerActions::Up)) {
 						if (_noiseCooldown <= 0.0f) {
 							_noiseCooldown = 10.0f;
 							_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -89,10 +89,10 @@ namespace Jazz2::UI::Menu
 							_selectedIndex = (int)(_items.size() - 1);
 						}
 						EnsureVisibleSelected();
-						_pressedCount = std::min(_pressedCount + 4, 18);
+						_pressedCount = std::min(_pressedCount + 6, 10);
 					}
 				} else if (_root->ActionPressed(PlayerActions::Down)) {
-					if (_animation >= 1.0f - (_pressedCount * 0.15f) || _root->ActionHit(PlayerActions::Down)) {
+					if (_animation >= 1.0f - (_pressedCount * 0.096f) || _root->ActionHit(PlayerActions::Down)) {
 						if (_noiseCooldown <= 0.0f) {
 							_noiseCooldown = 10.0f;
 							_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -105,7 +105,7 @@ namespace Jazz2::UI::Menu
 							_selectedIndex = 0;
 						}
 						EnsureVisibleSelected();
-						_pressedCount = std::min(_pressedCount + 4, 18);
+						_pressedCount = std::min(_pressedCount + 6, 10);
 					}
 				} else {
 					_pressedCount = 0;

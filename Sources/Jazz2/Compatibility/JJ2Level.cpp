@@ -236,6 +236,9 @@ namespace Jazz2::Compatibility
 			_layers[i].TexturedParams1 = block.ReadByte();
 			_layers[i].TexturedParams2 = block.ReadByte();
 			_layers[i].TexturedParams3 = block.ReadByte();
+
+			_layers[i].SpriteMode = 0;
+			_layers[i].SpriteParam = 0;
 		}
 	}
 
@@ -327,7 +330,7 @@ namespace Jazz2::Compatibility
 	void JJ2Level::LoadMlleData(JJ2Block& block, uint32_t version, const StringView& path, bool strictParser)
 	{
 		if (version > 0x106) {
-			LOGW_X("Unsupported version of MLLE stream found in level \"%s\"", LevelName.data());
+			LOGW_X("MLLE stream version 0x%x in level \"%s\" is not supported", version, LevelName.data());
 			return;
 		}
 
@@ -363,11 +366,13 @@ namespace Jazz2::Compatibility
 		uint32_t waterGradientStart = block.ReadUInt32();
 		uint32_t waterGradientStop = block.ReadUInt32();
 
-		if (block.ReadBool()) {
-			// TODO: Level palette
-			block.DiscardBytes(256 * 3);
+		// Level palette
+		_useLevelPalette = block.ReadBool();
+		if (_useLevelPalette) {
+			block.ReadRawBytes(_levelPalette, sizeof(_levelPalette));
 
 			if (version >= 0x106) {
+				// TODO: Reapply palette on death
 				bool reapplyPaletteOnDeath = block.ReadBool();
 			}
 		}
@@ -391,15 +396,16 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		// TODO: Extra tilesets
+		// Extra tilesets
 		int32_t extraTilesetCount = block.ReadByte();
 		for (int32_t i = 0; i < extraTilesetCount; i++) {
-			int tilesetNameLength = block.ReadUint7bitEncoded();
-			block.DiscardBytes(tilesetNameLength);
+			auto& tileset = ExtraTilesets.emplace_back();
 
-			//offset = block.ReadUInt16();
-			//count = block.ReadUInt16();
-			block.DiscardBytes(4);
+			int tilesetNameLength = block.ReadUint7bitEncoded();
+			tileset.Name = block.ReadString(tilesetNameLength, false);
+
+			tileset.Offset = block.ReadUInt16();
+			tileset.Count = block.ReadUInt16();
 
 			// TODO: Custom tileset palette
 			bool tilesetHasColors = block.ReadBool();
@@ -445,8 +451,8 @@ namespace Jazz2::Compatibility
 				block.DiscardBytes(layerNameLength);
 
 				layer.Visible = !block.ReadBool();
-				uint8_t spriteMode = block.ReadByte();
-				uint8_t spriteParam = block.ReadByte();
+				layer.SpriteMode = block.ReadByte();
+				layer.SpriteParam = block.ReadByte();
 				int rotationAngle = block.ReadInt32();
 				int rotationRadiusMult = block.ReadInt32();
 
@@ -470,10 +476,7 @@ namespace Jazz2::Compatibility
 						block.DiscardBytes(256 * 256);
 
 					}
-				} /*else if (id < 0) {
-					layer.XSpeedModel = 0;
-					layer.YSpeedModel = 0;
-				}*/
+				}
 			}
 
 			// Sprite layer has zero depth
@@ -541,6 +544,9 @@ namespace Jazz2::Compatibility
 		}
 		if (_hasPitInstantDeath) {
 			flags |= 0x02;
+		}
+		if (_useLevelPalette) {
+			flags |= 0x04;
 		}
 		if (_isMpLevel) {
 			flags |= 0x10;
@@ -610,6 +616,30 @@ namespace Jazz2::Compatibility
 		}
 		co.WriteValue<uint16_t>(captionTileId);
 
+		// Custom palette
+		if (_useLevelPalette) {
+			for (int i = 0; i < sizeof(_levelPalette); i += 3) {
+				// Expand JJ2+ RGB palette to RGBA
+				uint32_t color = (uint32_t)_levelPalette[i] | ((uint32_t)_levelPalette[i + 1] << 8) | ((uint32_t)_levelPalette[i + 2] << 16) | 0xff000000;
+				co.WriteValue<uint32_t>(color);
+			}
+		}
+
+		// Extra Tilesets
+		co.WriteValue<uint8_t>((uint8_t)ExtraTilesets.size());
+		for (auto& tileset : ExtraTilesets) {
+			lowercaseInPlace(tileset.Name);
+			if (StringHasSuffixIgnoreCase(tileset.Name, ".j2t"_s)) {
+				tileset.Name = tileset.Name.exceptSuffix(4);
+			}
+
+			co.WriteValue<uint8_t>((uint8_t)tileset.Name.size());
+			co.Write(tileset.Name.data(), tileset.Name.size());
+
+			co.WriteValue<uint16_t>(tileset.Offset);
+			co.WriteValue<uint16_t>(tileset.Count);
+		}
+
 		// Text Event Strings
 		co.WriteValue<uint8_t>(TextEventStringsCount);
 		for (int i = 0; i < TextEventStringsCount; i++) {
@@ -646,8 +676,6 @@ namespace Jazz2::Compatibility
 				co.Write(formattedText.data(), formattedText.size());
 			}
 		}
-
-		// TODO: Additional Tilesets
 
 		uint16_t lastTilesetTileIndex = (uint16_t)(maxTiles - _animCount);
 
@@ -716,12 +744,6 @@ namespace Jazz2::Compatibility
 				if (layer.Visible) {
 					flags |= 0x08;
 				}
-				if ((layer.Flags & 0x08) == 0x08) {	// HasTexturedBackground
-					flags |= 0x100;
-				}
-				if ((layer.Flags & 0x10) == 0x10) {	// ParallaxStarsEnabled
-					flags |= 0x200;
-				}
 				co.WriteValue<uint16_t>(flags);	// Layer flags
 
 				co.WriteValue<int32_t>(layer.Width);
@@ -779,10 +801,23 @@ namespace Jazz2::Compatibility
 					co.WriteValue<int16_t>((int16_t)layer.Depth);
 
 					if (isSky && hasTexturedBackground) {
-						co.WriteValue<uint8_t>(layer.TexturedBackgroundType + 1);
+						co.WriteValue<uint8_t>(layer.TexturedBackgroundType + (uint8_t)Tiles::LayerRendererType::Sky);
 						co.WriteValue<uint8_t>(layer.TexturedParams1);
 						co.WriteValue<uint8_t>(layer.TexturedParams2);
 						co.WriteValue<uint8_t>(layer.TexturedParams3);
+						co.WriteValue<uint8_t>((layer.Flags & 0x10) == 0x10 ? 255 : 0);	// ParallaxStarsEnabled
+					} else if (layer.SpriteMode == 2) {
+						co.WriteValue<uint8_t>((uint8_t)Tiles::LayerRendererType::Tinted);
+						co.WriteValue<uint8_t>(layer.SpriteParam);
+						co.WriteValue<uint8_t>(0);
+						co.WriteValue<uint8_t>(0);
+						co.WriteValue<uint8_t>(255);
+					} else {
+						co.WriteValue<uint8_t>((uint8_t)Tiles::LayerRendererType::Default);
+						co.WriteValue<uint8_t>(255);
+						co.WriteValue<uint8_t>(255);
+						co.WriteValue<uint8_t>(255);
+						co.WriteValue<uint8_t>(255);
 					}
 				}
 

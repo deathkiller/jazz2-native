@@ -220,7 +220,7 @@ namespace Jazz2::Events
 			return (_pitType == PitType::InstantDeathPit ? EventType::ModifierDeath : EventType::Empty);
 		}
 
-		if (HasEventByPosition(x, y)) {
+		if (x >= 0 && y >= 0 && y < _layoutSize.Y && x < _layoutSize.X) {
 			*eventParams = _eventLayout[x + y * _layoutSize.X].EventParams;
 			return _eventLayout[x + y * _layoutSize.X].Event;
 		}

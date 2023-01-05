@@ -122,18 +122,6 @@ namespace Jazz2
 		}
 	};
 
-	enum class LayerType {
-		Other,
-		Sky,
-		Sprite
-	};
-
-	enum class BackgroundStyle {
-		Plain,
-		Sky,
-		Circle
-	};
-
 	enum class TileDestructType {
 		None = 0x00,
 
@@ -192,8 +180,10 @@ namespace Jazz2
 		TexturedBackground,
 		TexturedBackgroundCircle,
 
-		Colorize,
-		BatchedColorize,
+		Colorized,
+		BatchedColorized,
+		Tinted,
+		BatchedTinted,
 		Outline,
 		BatchedOutline,
 		WhiteMask,

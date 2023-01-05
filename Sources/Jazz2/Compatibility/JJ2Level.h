@@ -43,6 +43,7 @@ namespace Jazz2::Compatibility
 		String LevelName;
 		String DisplayName;
 		String Tileset;
+		SmallVector<ExtraTilesetEntry, 0> ExtraTilesets;
 		String Music;
 		String NextLevel;
 		String BonusLevel;
@@ -50,7 +51,7 @@ namespace Jazz2::Compatibility
 
 		uint8_t LightingMin, LightingStart;
 
-		JJ2Level() : _version(JJ2Version::Unknown), _animCount(0), _verticalMPSplitscreen(false), _isMpLevel(false), _hasPit(false), _hasPitInstantDeath(false), _hasCTF(false), _hasLaps(false) { }
+		JJ2Level() : _version(JJ2Version::Unknown), _animCount(0), _verticalMPSplitscreen(false), _isMpLevel(false), _hasPit(false), _hasPitInstantDeath(false), _hasCTF(false), _hasLaps(false), _useLevelPalette(false) { }
 
 		bool Open(const StringView& path, bool strictParser);
 
@@ -99,6 +100,8 @@ namespace Jazz2::Compatibility
 			uint8_t TexturedParams1;
 			uint8_t TexturedParams2;
 			uint8_t TexturedParams3;
+			uint8_t SpriteMode;
+			uint8_t SpriteParam;
 			std::unique_ptr<uint16_t[]> Tiles;
 		};
 
@@ -116,7 +119,7 @@ namespace Jazz2::Compatibility
 		struct TilePropertiesSection {
 			TileEventSection Event;
 			bool Flipped;
-			uint8_t Type;				// Partially supported (Translucent: supported, Caption: ignored)
+			uint8_t Type;
 		};
 
 		struct AnimatedTileSection {
@@ -140,6 +143,8 @@ namespace Jazz2::Compatibility
 		uint16_t _waterLevel;
 
 		String _textEventStrings[TextEventStringsCount];
+		uint8_t _levelPalette[256 * 3];
+		bool _useLevelPalette;
 
 		SmallVector<LayerSection, JJ2LayerCount> _layers;
 		std::unique_ptr<TilePropertiesSection[]> _staticTiles;
