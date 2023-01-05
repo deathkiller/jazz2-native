@@ -160,7 +160,7 @@ namespace Jazz2::Tiles
 
 		Color* GetCaptionTile() const
 		{
-			return _tileSets[0].TileSet->GetCaptionTile();
+			return _tileSets[0].Data->GetCaptionTile();
 		}
 
 		void CreateDebris(const DestructibleDebris& debris);
@@ -181,9 +181,9 @@ namespace Jazz2::Tiles
 		};
 
 		struct TileSetPart {
-			std::unique_ptr<TileSet> TileSet;
-			int32_t TileOffset;
-			int32_t TileCount;
+			std::unique_ptr<TileSet> Data;
+			int32_t Offset;
+			int32_t Count;
 		};
 
 		class TexturedBackgroundPass : public SceneNode
