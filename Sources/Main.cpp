@@ -555,7 +555,45 @@ void GameEventHandler::RefreshCacheLevels()
 		{ "town2"_s, { "secretf"_s, "08"_s } },
 		{ "town3"_s, { "secretf"_s, "09"_s } },
 
+		// Holiday Hare '17
+		{ "hh17_level00"_s, { "hh17"_s, { } } },
+		{ "hh17_level01"_s, { "hh17"_s, { } } },
+		{ "hh17_level01_save"_s, { "hh17"_s, { } } },
+		{ "hh17_level02"_s, { "hh17"_s, { } } },
+		{ "hh17_level02_save"_s, { "hh17"_s, { } } },
+		{ "hh17_level03"_s, { "hh17"_s, { } } },
+		{ "hh17_level03_save"_s, { "hh17"_s, { } } },
+		{ "hh17_level04"_s, { "hh17"_s, { } } },
+		{ "hh17_level04_save"_s, { "hh17"_s, { } } },
+		{ "hh17_level05"_s, { "hh17"_s, { } } },
+		{ "hh17_level05_save"_s, { "hh17"_s, { } } },
+		{ "hh17_level06"_s, { "hh17"_s, { } } },
+		{ "hh17_level06_save"_s, { "hh17"_s, { } } },
+		{ "hh17_level07"_s, { "hh17"_s, { } } },
+		{ "hh17_level07_save"_s, { "hh17"_s, { } } },
+		{ "hh17_ending"_s, { "hh17"_s, { } } },
+		{ "hh17_guardian"_s, { "hh17"_s, { } } },
+
+		// Holiday Hare '18
+		{ "hh18_level01"_s, { "hh18"_s, { } } },
+		{ "hh18_level02"_s, { "hh18"_s, { } } },
+		{ "hh18_level03"_s, { "hh18"_s, { } } },
+		{ "hh18_level04"_s, { "hh18"_s, { } } },
+		{ "hh18_level05"_s, { "hh18"_s, { } } },
+		{ "hh18_level06"_s, { "hh18"_s, { } } },
+		{ "hh18_level07"_s, { "hh18"_s, { } } },
+		{ "hh18_save01"_s, { "hh18"_s, { } } },
+		{ "hh18_save02"_s, { "hh18"_s, { } } },
+		{ "hh18_save03"_s, { "hh18"_s, { } } },
+		{ "hh18_save04"_s, { "hh18"_s, { } } },
+		{ "hh18_save05"_s, { "hh18"_s, { } } },
+		{ "hh18_save06"_s, { "hh18"_s, { } } },
+		{ "hh18_save07"_s, { "hh18"_s, { } } },
+		{ "hh18_ending"_s, { "hh18"_s, { } } },
+		{ "hh18_guardian"_s, { "hh18"_s, { } } },
+
 		// Special names
+		{ "end"_s, { { }, ":end"_s } },
 		{ "endepis"_s, { { }, ":end"_s } },
 		{ "ending"_s, { { }, ":credits"_s } }
 	};
@@ -651,6 +689,9 @@ void GameEventHandler::RefreshCacheLevels()
 					level.Convert(fullPath, eventConverter, LevelTokenConversion);
 
 					usedTilesets.emplace(level.Tileset, true);
+					for (auto& extraTileset : level.ExtraTilesets) {
+						usedTilesets.emplace(extraTileset.Name, true);
+					}
 
 					// Also copy level script file if exists
 					StringView foundDot = item.findLastOr('.', item.end());

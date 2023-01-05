@@ -20,6 +20,14 @@ namespace Jazz2::Tiles
 		SpeedMultipliers
 	};
 
+	enum class LayerRendererType {
+		Default,
+		Tinted,
+
+		Sky,
+		Circle
+	};
+
 	struct LayerDescription {
 		uint16_t Depth;
 		float SpeedX;
@@ -34,9 +42,8 @@ namespace Jazz2::Tiles
 		LayerSpeedModel SpeedModelX;
 		LayerSpeedModel SpeedModelY;
 
-		BackgroundStyle UseBackgroundStyle;
-		Vector3f BackgroundColor;
-		bool ParallaxStarsEnabled;
+		LayerRendererType RendererType;
+		Vector4f Color;
 	};
 
 	enum class LayerTileFlags : uint8_t {
@@ -133,7 +140,7 @@ namespace Jazz2::Tiles
 			DebrisFlags Flags;
 		};
 
-		TileMap(LevelHandler* levelHandler, const StringView& tileSetPath, uint16_t captionTileId, PitType pitType);
+		TileMap(LevelHandler* levelHandler, const StringView& tileSetPath, uint16_t captionTileId, PitType pitType, bool applyPalette);
 
 		Vector2i Size();
 		Vector2i LevelBounds();
@@ -146,13 +153,14 @@ namespace Jazz2::Tiles
 		bool IsTileHurting(float x, float y);
 		SuspendType GetTileSuspendState(float x, float y);
 
+		void AddTileSet(const StringView& tileSetPath, uint16_t offset, uint16_t count);
 		void ReadLayerConfiguration(IFileStream& s);
 		void ReadAnimatedTiles(IFileStream& s);
 		void SetTileEventFlags(int x, int y, EventType tileEvent, uint8_t* tileParams);
 
 		Color* GetCaptionTile() const
 		{
-			return _tileSet->GetCaptionTile();
+			return _tileSets[0].TileSet->GetCaptionTile();
 		}
 
 		void CreateDebris(const DestructibleDebris& debris);
@@ -166,6 +174,18 @@ namespace Jazz2::Tiles
 		void OnInitializeViewport();
 
 	private:
+		enum class LayerType {
+			Other,
+			Sky,
+			Sprite
+		};
+
+		struct TileSetPart {
+			std::unique_ptr<TileSet> TileSet;
+			int32_t TileOffset;
+			int32_t TileCount;
+		};
+
 		class TexturedBackgroundPass : public SceneNode
 		{
 			friend class TileMap;
@@ -194,7 +214,7 @@ namespace Jazz2::Tiles
 		int _sprLayerIndex;
 		PitType _pitType;
 
-		std::unique_ptr<TileSet> _tileSet;
+		SmallVector<TileSetPart, 2> _tileSets;
 		SmallVector<TileMapLayer, 0> _layers;
 		SmallVector<AnimatedTile, 0> _animatedTiles;
 		SmallVector<Vector2i, 0> _activeCollapsingTiles;
@@ -210,8 +230,7 @@ namespace Jazz2::Tiles
 
 		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer);
 		static float TranslateCoordinate(float coordinate, float speed, float offset, int viewSize, bool isY);
-		static float GetRelativeViewPos(float viewCenter, float viewSize, int layoutSize);
-		RenderCommand* RentRenderCommand();
+		RenderCommand* RentRenderCommand(LayerRendererType type);
 
 		bool AdvanceDestructibleTileAnimation(LayerTile& tile, int tx, int ty, int& amount, const StringView& soundName);
 		void AdvanceCollapsingTileTimers(float timeMult);
@@ -222,11 +241,17 @@ namespace Jazz2::Tiles
 
 		void RenderTexturedBackground(RenderQueue& renderQueue, TileMapLayer& layer, float x, float y);
 
+		TileSet* ResolveTileSet(int& tileId);
+
 		inline int ResolveTileID(LayerTile& tile)
 		{
 			int tileId = tile.TileID;
 			if ((tile.Flags & LayerTileFlags::Animated) == LayerTileFlags::Animated) {
-				tileId = _animatedTiles[tileId].Tiles[_animatedTiles[tileId].CurrentTileIdx].TileID;
+				if (tileId >= _animatedTiles.size()) {
+					return 0;
+				}
+				auto& animTile = _animatedTiles[tileId];
+				tileId = animTile.Tiles[animTile.CurrentTileIdx].TileID;
 			}
 			return tileId;
 		}

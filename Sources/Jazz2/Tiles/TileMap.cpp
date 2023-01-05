@@ -9,7 +9,7 @@
 
 namespace Jazz2::Tiles
 {
-	TileMap::TileMap(LevelHandler* levelHandler, const StringView& tileSetPath, uint16_t captionTileId, PitType pitType)
+	TileMap::TileMap(LevelHandler* levelHandler, const StringView& tileSetPath, uint16_t captionTileId, PitType pitType, bool applyPalette)
 		:
 		_levelHandler(levelHandler),
 		_sprLayerIndex(-1),
@@ -20,11 +20,15 @@ namespace Jazz2::Tiles
 		_texturedBackgroundLayer(-1),
 		_texturedBackgroundPass(this)
 	{
-		_tileSet = ContentResolver::Current().RequestTileSet(tileSetPath, captionTileId, true);
+		auto& tileSetPart = _tileSets.emplace_back();
+		tileSetPart.TileSet = ContentResolver::Current().RequestTileSet(tileSetPath, captionTileId, applyPalette);
+		tileSetPart.TileOffset = 0;
+		tileSetPart.TileCount = tileSetPart.TileSet->TileCount;
+
 		_renderCommands.reserve(128);
 
-		if (_tileSet == nullptr) {
-			LOGE_X("Cannot load tileset \"%s\"", tileSetPath.data());
+		if (tileSetPart.TileSet == nullptr) {
+			LOGE_X("Cannot load main tileset \"%s\"", tileSetPath.data());
 		}
 	}
 
@@ -138,12 +142,12 @@ namespace Jazz2::Tiles
 
 	bool TileMap::IsTileEmpty(int tx, int ty)
 	{
-		if (tx < 0 || ty < 0 || _sprLayerIndex == -1) {
-			return false;
+		if (ty < 0 || _sprLayerIndex == -1) {
+			return true;
 		}
 
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
-		if (tx >= layoutSize.X) {
+		if (tx < 0 || tx >= layoutSize.X) {
 			return false;
 		}
 		if (ty >= layoutSize.Y) {
@@ -152,13 +156,14 @@ namespace Jazz2::Tiles
 
 		LayerTile& tile = _layers[_sprLayerIndex].Layout[ty * layoutSize.X + tx];
 		int tileId = ResolveTileID(tile);
-		return _tileSet->IsTileMaskEmpty(tileId);
+		TileSet* tileSet = ResolveTileSet(tileId);
+		return (tileSet == nullptr || tileSet->IsTileMaskEmpty(tileId));
 	}
 
 	bool TileMap::IsTileEmpty(const AABBf& aabb, TileCollisionParams& params)
 	{
-		if (_sprLayerIndex == -1) {
-			return false;
+		if (aabb.B < 0 || _sprLayerIndex == -1) {
+			return true;
 		}
 
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
@@ -167,7 +172,7 @@ namespace Jazz2::Tiles
 		int limitBottomPx = layoutSize.Y * TileSet::DefaultTileSize;
 
 		// Consider out-of-level coordinates as solid walls
-		if (aabb.L < 0 || aabb.T < 0 || aabb.R >= limitRightPx) {
+		if (aabb.L < 0 || aabb.R >= limitRightPx) {
 			return false;
 		}
 		if (aabb.B >= limitBottomPx) {
@@ -175,9 +180,9 @@ namespace Jazz2::Tiles
 		}
 
 		// Check all covered tiles for collisions; if all are empty, no need to do pixel collision checking
-		int hx1 = (int)aabb.L;
+		int hx1 = std::max((int)aabb.L, 0);
 		int hx2 = std::min((int)std::ceil(aabb.R), limitRightPx - 1);
-		int hy1 = (int)aabb.T;
+		int hy1 = std::max((int)aabb.T, 0);
 		int hy2 = std::min((int)std::ceil(aabb.B), limitBottomPx - 1);
 
 		int hx1t = hx1 / TileSet::DefaultTileSize;
@@ -262,7 +267,8 @@ namespace Jazz2::Tiles
 				if ((params.DestructType & TileDestructType::IgnoreSolidTiles) != TileDestructType::IgnoreSolidTiles &&
 					tile.HasSuspendType == SuspendType::None && ((tile.Flags & LayerTileFlags::OneWay) != LayerTileFlags::OneWay || params.Downwards)) {
 					int tileId = ResolveTileID(tile);
-					if (_tileSet->IsTileMaskEmpty(tileId)) {
+					TileSet* tileSet = ResolveTileSet(tileId);
+					if (tileSet == nullptr || tileSet->IsTileMaskEmpty(tileId)) {
 						continue;
 					}
 
@@ -288,7 +294,7 @@ namespace Jazz2::Tiles
 					top *= TileSet::DefaultTileSize;
 					bottom *= TileSet::DefaultTileSize;
 
-					uint8_t* mask = _tileSet->GetTileMask(tileId);
+					uint8_t* mask = tileSet->GetTileMask(tileId);
 					for (int ry = top; ry <= bottom; ry += TileSet::DefaultTileSize) {
 						for (int rx = left; rx <= right; rx++) {
 							if (mask[ry | rx]) {
@@ -322,8 +328,11 @@ namespace Jazz2::Tiles
 		if ((tile.Flags & LayerTileFlags::Hurt) != LayerTileFlags::Hurt) {
 			return false;
 		}
-		int tileId = ResolveTileID(tile);
-		return _tileSet->IsTileMaskEmpty(tileId);
+		// TODO: Some tiles have Hurt event with empty mask
+		//int tileId = ResolveTileID(tile);
+		//TileSet* tileSet = ResolveTileSet(tileId);
+		//return (tileSet == nullptr || tileSet->IsTileMaskEmpty(tileId));
+		return true;
 	}
 
 	SuspendType TileMap::GetTileSuspendState(float x, float y)
@@ -349,7 +358,12 @@ namespace Jazz2::Tiles
 		}
 
 		int tileId = ResolveTileID(tile);
-		uint8_t* mask = _tileSet->GetTileMask(tileId);
+		TileSet* tileSet = ResolveTileSet(tileId);
+		if (tileSet == nullptr) {
+			return SuspendType::None;
+		}
+
+		uint8_t* mask = tileSet->GetTileMask(tileId);
 
 		int rx = (int)x & 31;
 		int ry = (int)y & 31;
@@ -450,7 +464,7 @@ namespace Jazz2::Tiles
 		float x1 = viewCenter.X - HardcodedOffset - (viewSize.X * 0.5f);
 		float y1 = viewCenter.Y - HardcodedOffset - (viewSize.Y * 0.5f);
 
-		if (layer.Description.UseBackgroundStyle > BackgroundStyle::Plain && layer.Description.UseBackgroundStyle <= BackgroundStyle::Circle && tileCount.Y == 8 && tileCount.X == 8) {
+		if (layer.Description.RendererType >= LayerRendererType::Sky && layer.Description.RendererType <= LayerRendererType::Circle && tileCount.Y == 8 && tileCount.X == 8) {
 			constexpr float PerspectiveSpeedX = 0.4f;
 			constexpr float PerspectiveSpeedY = 0.16f;
 			RenderTexturedBackground(renderQueue, layer, x1 * PerspectiveSpeedX + loX, y1 * PerspectiveSpeedY + loY);
@@ -461,14 +475,14 @@ namespace Jazz2::Tiles
 					xt = -HardcodedOffset;
 					break;
 				case LayerSpeedModel::FitLevel: {
-					float progress = GetRelativeViewPos(viewCenter.X, viewSize.X, _layers[_sprLayerIndex].LayoutSize.X);
+					float progress = (float)viewCenter.X / (_layers[_sprLayerIndex].LayoutSize.X * TileSet::DefaultTileSize);
 					xt = std::clamp(progress, 0.0f, 1.0f)
 						* ((layer.LayoutSize.X * TileSet::DefaultTileSize) - viewSize.X + HardcodedOffset)
 						+ loX;
 					break;
 				}
 				case LayerSpeedModel::SpeedMultipliers: {
-					float progress = GetRelativeViewPos(viewCenter.X, viewSize.X, _layers[_sprLayerIndex].LayoutSize.X);
+					float progress = (float)viewCenter.X / (_layers[_sprLayerIndex].LayoutSize.X * TileSet::DefaultTileSize);
 					progress = (layer.Description.SpeedX < layer.Description.AutoSpeedX
 						? std::clamp(progress, layer.Description.SpeedX, layer.Description.AutoSpeedX)
 						: (layer.Description.SpeedX + layer.Description.AutoSpeedX) * 0.5f);
@@ -486,14 +500,14 @@ namespace Jazz2::Tiles
 					yt = -HardcodedOffset;
 					break;
 				case LayerSpeedModel::FitLevel: {
-					float progress = GetRelativeViewPos(viewCenter.Y, viewSize.Y, _layers[_sprLayerIndex].LayoutSize.Y);
+					float progress = (float)viewCenter.Y / (_layers[_sprLayerIndex].LayoutSize.Y * TileSet::DefaultTileSize);
 					yt = std::clamp(progress, 0.0f, 1.0f)
 						* ((layer.LayoutSize.Y * TileSet::DefaultTileSize) - viewSize.Y + HardcodedOffset)
 						+ loY;
 					break;
 				}
 				case LayerSpeedModel::SpeedMultipliers: {
-					float progress = GetRelativeViewPos(viewCenter.Y, viewSize.Y, _layers[_sprLayerIndex].LayoutSize.Y);
+					float progress = (float)viewCenter.Y / (_layers[_sprLayerIndex].LayoutSize.Y * TileSet::DefaultTileSize);
 					progress = (layer.Description.SpeedY < layer.Description.AutoSpeedY
 						? std::clamp(progress, layer.Description.SpeedY, layer.Description.AutoSpeedY)
 						: (layer.Description.SpeedY + layer.Description.AutoSpeedY) * 0.5f);
@@ -580,30 +594,23 @@ namespace Jazz2::Tiles
 						}
 					}
 
-					int tileId;
-					if ((tile.Flags & LayerTileFlags::Animated) == LayerTileFlags::Animated) {
-						if (tile.TileID < _animatedTiles.size()) {
-							tileId = _animatedTiles[tile.TileID].Tiles[_animatedTiles[tile.TileID].CurrentTileIdx].TileID;
-						} else {
-							continue;
-						}
-					} else {
-						tileId = tile.TileID;
-					}
-
-					// Tile #0 is always empty
+					int tileId = ResolveTileID(tile);
 					if (tileId == 0 || tile.Alpha == 0) {
 						continue;
 					}
+					TileSet* tileSet = ResolveTileSet(tileId);
+					if (tileSet == nullptr) {
+						continue;
+					}
 
-					auto command = RentRenderCommand();
+					auto command = RentRenderCommand(layer.Description.RendererType);
 					command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-					Vector2i texSize = _tileSet->TextureDiffuse->size();
+					Vector2i texSize = tileSet->TextureDiffuse->size();
 					float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
-					float texBiasX = (tileId % _tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.X);
+					float texBiasX = (tileId % tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.X);
 					float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
-					float texBiasY = (tileId / _tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
+					float texBiasY = (tileId / tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
 
 					// ToDo: Flip normal map somehow
 					if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
@@ -625,11 +632,14 @@ namespace Jazz2::Tiles
 					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 					instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
-					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, tile.Alpha / 255.0f).Data());
+
+					Vector4f color = layer.Description.Color;
+					color.W *= tile.Alpha / 255.0f;
+					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(color.Data());
 
 					command->setTransformation(Matrix4x4f::Translation(std::floor(x2 + (TileSet::DefaultTileSize / 2)), std::floor(y2 + (TileSet::DefaultTileSize / 2)), 0.0f));
 					command->setLayer(layer.Description.Depth);
-					command->material().setTexture(*_tileSet->TextureDiffuse);
+					command->material().setTexture(*tileSet->TextureDiffuse);
 
 					renderQueue.addCommand(command);
 				}
@@ -651,21 +661,23 @@ namespace Jazz2::Tiles
 		return (coordinate * speed + offset + alignment * (speed - 1.0f));
 	}
 
-	float TileMap::GetRelativeViewPos(float viewCenter, float viewSize, int layoutSize)
+	RenderCommand* TileMap::RentRenderCommand(LayerRendererType type)
 	{
-		return (viewCenter - (viewSize * 0.5f)) / (layoutSize * TileSet::DefaultTileSize);
-	}
-
-	RenderCommand* TileMap::RentRenderCommand()
-	{
+		RenderCommand* command;
 		if (_renderCommandsCount < _renderCommands.size()) {
-			RenderCommand* command = _renderCommands[_renderCommandsCount].get();
+			command = _renderCommands[_renderCommandsCount].get();
 			_renderCommandsCount++;
-			return command;
 		} else {
-			std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
-			command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
+			command = _renderCommands.emplace_back(std::make_unique<RenderCommand>()).get();
 			command->material().setBlendingEnabled(true);
+		}
+
+		bool shaderChanged;
+		switch (type) {
+			case LayerRendererType::Tinted: shaderChanged = command->material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::Tinted)); break;
+			default: shaderChanged = command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE); break;
+		}
+		if (shaderChanged) {
 			command->material().reserveUniformsDataMemory();
 			command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -673,7 +685,20 @@ namespace Jazz2::Tiles
 			if (textureUniform && textureUniform->intValue(0) != 0) {
 				textureUniform->setIntValue(0); // GL_TEXTURE0
 			}
-			return command.get();
+		}
+
+		return command;
+	}
+
+	void TileMap::AddTileSet(const StringView& tileSetPath, uint16_t offset, uint16_t count)
+	{
+		auto& tileSetPart = _tileSets.emplace_back();
+		tileSetPart.TileSet = ContentResolver::Current().RequestTileSet(tileSetPath, 0, false);
+		tileSetPart.TileOffset = offset;
+		tileSetPart.TileCount = count;
+
+		if (tileSetPart.TileSet == nullptr) {
+			LOGE_X("Cannot load extra tileset \"%s\"", tileSetPath.data());
 		}
 	}
 
@@ -681,12 +706,9 @@ namespace Jazz2::Tiles
 	{
 		LayerType layerType = (LayerType)s.ReadValue<uint8_t>();
 		uint16_t layerFlags = s.ReadValue<uint16_t>();
-		bool hasTexturedBackground = (layerType == LayerType::Sky && (layerFlags & 0x100) == 0x100);
 
 		if (layerType == LayerType::Sprite) {
 			_sprLayerIndex = (int)_layers.size();
-		} else if (hasTexturedBackground) {
-			_texturedBackgroundLayer = (int)_layers.size();
 		}
 
 		TileMapLayer& newLayer = _layers.emplace_back();
@@ -713,13 +735,23 @@ namespace Jazz2::Tiles
 			newLayer.Description.Depth = (uint16_t)(ILevelHandler::MainPlaneZ - depth);
 			newLayer.Description.UseInherentOffset = ((layerFlags & 0x04) == 0x04);
 
-			if (hasTexturedBackground) {
-				newLayer.Description.UseBackgroundStyle = (BackgroundStyle)s.ReadValue<uint8_t>();
-				uint8_t param1 = s.ReadValue<uint8_t>();
-				uint8_t param2 = s.ReadValue<uint8_t>();
-				uint8_t param3 = s.ReadValue<uint8_t>();
-				newLayer.Description.BackgroundColor = Vector3f(param1 / 255.0f, param2 / 255.0f, param3 / 255.0f);
-				newLayer.Description.ParallaxStarsEnabled = ((layerFlags & 0x200) == 0x200);
+			newLayer.Description.RendererType = (LayerRendererType)s.ReadValue<uint8_t>();
+			uint8_t r = s.ReadValue<uint8_t>();
+			uint8_t g = s.ReadValue<uint8_t>();
+			uint8_t b = s.ReadValue<uint8_t>();
+			uint8_t a = s.ReadValue<uint8_t>();
+
+			if (newLayer.Description.RendererType == LayerRendererType::Tinted) {
+				// TODO: Tinted color is precomputed from palette here
+				const uint32_t* palettes = ContentResolver::Current().GetPalettes();
+				uint32_t color = palettes[r];
+				newLayer.Description.Color = Vector4f((color & 0x000000ff) / 255.0f, ((color >> 8) & 0x000000ff) / 255.0f, ((color >> 16) & 0x000000ff) / 255.0f, a * ((color >> 24) & 0x000000ff) / (255.0f * 255.0f));
+			} else {
+				newLayer.Description.Color = Vector4f(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
+
+				if (newLayer.Description.RendererType >= LayerRendererType::Sky) {
+					_texturedBackgroundLayer = (int)_layers.size() - 1;
+				}
 			}
 		} else {
 			newLayer.Description.OffsetX = 0.0f;
@@ -734,6 +766,9 @@ namespace Jazz2::Tiles
 			newLayer.Description.UseInherentOffset = false;
 			newLayer.Description.SpeedModelX = LayerSpeedModel::Default;
 			newLayer.Description.SpeedModelY = LayerSpeedModel::Default;
+
+			newLayer.Description.RendererType = LayerRendererType::Default;
+			newLayer.Description.Color = Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
 		}
 
 		newLayer.Layout = std::make_unique<LayerTile[]>(width * height);
@@ -750,7 +785,7 @@ namespace Jazz2::Tiles
 			tile.Flags = (LayerTileFlags)(tileFlags & 0x0f);
 
 			if (tileModifier == 1 /*Translucent*/) {
-				tile.Alpha = 172;
+				tile.Alpha = 192;
 			} else if (tileModifier == 2 /*Invisible*/) {
 				tile.Alpha = 0;
 			} else {
@@ -853,14 +888,17 @@ namespace Jazz2::Tiles
 			}
 
 			int tileId = ResolveTileID(spriteLayer.Layout[x + y * spriteLayer.LayoutSize.X]);
-			if (_tileSet->IsTileFilled(tileId)) {
-				return;
-			}
-
-			if (_sprLayerIndex + 1 < _layers.size() && _layers[_sprLayerIndex + 1].Description.SpeedX == 1.0f && _layers[_sprLayerIndex + 1].Description.SpeedY == 1.0f) {
-				tileId = ResolveTileID(_layers[_sprLayerIndex + 1].Layout[x + y * spriteLayer.LayoutSize.X]);
-				if (_tileSet->IsTileFilled(tileId)) {
+			TileSet* tileSet = ResolveTileSet(tileId);
+			if (tileSet != nullptr) {
+				if (tileSet->IsTileFilled(tileId)) {
 					return;
+				}
+
+				if (_sprLayerIndex + 1 < _layers.size() && _layers[_sprLayerIndex + 1].Description.SpeedX == 1.0f && _layers[_sprLayerIndex + 1].Description.SpeedY == 1.0f) {
+					tileId = ResolveTileID(_layers[_sprLayerIndex + 1].Layout[x + y * spriteLayer.LayoutSize.X]);
+					if (tileSet->IsTileFilled(tileId)) {
+						return;
+					}
 				}
 			}
 		}
@@ -878,13 +916,18 @@ namespace Jazz2::Tiles
 			return;
 		}
 
+		TileSet* tileSet = ResolveTileSet(tileId);
+		if (tileSet == nullptr) {
+			return;
+		}
+
 		uint16_t z = _layers[_sprLayerIndex].Description.Depth + 80;
 
-		Vector2i texSize = _tileSet->TextureDiffuse->size();
+		Vector2i texSize = tileSet->TextureDiffuse->size();
 		float texScaleX = float(QuarterSize) / float(texSize.X);
-		float texBiasX = ((tileId % _tileSet->TilesPerRow) * TileSet::DefaultTileSize) / float(texSize.X);
+		float texBiasX = ((tileId % tileSet->TilesPerRow) * TileSet::DefaultTileSize) / float(texSize.X);
 		float texScaleY = float(QuarterSize) / float(texSize.Y);
-		float texBiasY = ((tileId / _tileSet->TilesPerRow) * TileSet::DefaultTileSize) / float(texSize.Y);
+		float texBiasY = ((tileId / tileSet->TilesPerRow) * TileSet::DefaultTileSize) / float(texSize.Y);
 
 		// TODO: Implement flip here
 		/*if (isFlippedX) {
@@ -919,7 +962,7 @@ namespace Jazz2::Tiles
 			debris.TexScaleY = texScaleY;
 			debris.TexBiasY = texBiasY + ((i / 2) * QuarterSize / float(texSize.Y));
 
-			debris.DiffuseTexture = _tileSet->TextureDiffuse.get();
+			debris.DiffuseTexture = tileSet->TextureDiffuse.get();
 			debris.Flags = DebrisFlags::None;
 		}
 	}
@@ -1083,7 +1126,7 @@ namespace Jazz2::Tiles
 	void TileMap::DrawDebris(RenderQueue& renderQueue)
 	{
 		for (auto& debris : _debrisList) {
-			auto command = RentRenderCommand();
+			auto command = RentRenderCommand(LayerRendererType::Default);
 
 			if ((debris.Flags & DebrisFlags::AdditiveBlending) == DebrisFlags::AdditiveBlending) {
 				command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);
@@ -1154,9 +1197,7 @@ namespace Jazz2::Tiles
 		command->material().uniform("uViewSize")->setFloatValue(viewSize.X, viewSize.Y);
 		command->material().uniform("uCameraPos")->setFloatVector(viewCenter.Data());
 		command->material().uniform("uShift")->setFloatValue(x, y);
-		command->material().uniform("uHorizonColor")->setFloatValue(
-			layer.Description.BackgroundColor.X, layer.Description.BackgroundColor.Y, layer.Description.BackgroundColor.Z,
-			layer.Description.ParallaxStarsEnabled ? 1.0f : 0.0f);
+		command->material().uniform("uHorizonColor")->setFloatVector(layer.Description.Color.Data());
 
 		command->setTransformation(Matrix4x4f::Translation(viewCenter.X, viewCenter.Y, 0.0f));
 		command->setLayer(layer.Description.Depth);
@@ -1170,6 +1211,20 @@ namespace Jazz2::Tiles
 		if (_texturedBackgroundLayer != -1) {
 			_texturedBackgroundPass.Initialize();
 		}
+	}
+
+	TileSet* TileMap::ResolveTileSet(int& tileId)
+	{
+		for (auto& tileSetPart : _tileSets) {
+			if (tileId < tileSetPart.TileCount) {
+				tileId += tileSetPart.TileOffset;
+				return tileSetPart.TileSet.get();
+			}
+
+			tileId -= tileSetPart.TileCount;
+		}
+
+		return nullptr;
 	}
 
 	void TileMap::TexturedBackgroundPass::Initialize()
@@ -1208,7 +1263,7 @@ namespace Jazz2::Tiles
 			}
 
 			// Prepare output render command
-			_outputRenderCommand.material().setShader(ContentResolver::Current().GetShader(_owner->_layers[_owner->_texturedBackgroundLayer].Description.UseBackgroundStyle == BackgroundStyle::Circle
+			_outputRenderCommand.material().setShader(ContentResolver::Current().GetShader(_owner->_layers[_owner->_texturedBackgroundLayer].Description.RendererType == LayerRendererType::Circle
 				? PrecompiledShader::TexturedBackgroundCircle
 				: PrecompiledShader::TexturedBackground));
 			_outputRenderCommand.material().reserveUniformsDataMemory();
@@ -1236,25 +1291,22 @@ namespace Jazz2::Tiles
 			for (int x = 0; x < layoutSize.X; x++) {
 				LayerTile& tile = layer.Layout[x + y * layer.LayoutSize.X];
 
-				int tileId;
-				if ((tile.Flags & LayerTileFlags::Animated) == LayerTileFlags::Animated) {
-					isAnimated = true;
-					if (tile.TileID < _owner->_animatedTiles.size()) {
-						tileId = _owner->_animatedTiles[tile.TileID].Tiles[_owner->_animatedTiles[tile.TileID].CurrentTileIdx].TileID;
-					} else {
-						continue;
-					}
-				} else {
-					tileId = tile.TileID;
+				int tileId = _owner->ResolveTileID(tile);
+				if (tileId == 0) {
+					continue;
+				}
+				TileSet* tileSet = _owner->ResolveTileSet(tileId);
+				if (tileSet == nullptr) {
+					continue;
 				}
 
 				auto command = _renderCommands[renderCommandIndex++].get();
 
-				Vector2i texSize = _owner->_tileSet->TextureDiffuse->size();
+				Vector2i texSize = tileSet->TextureDiffuse->size();
 				float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
-				float texBiasX = (tileId % _owner->_tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.X);
+				float texBiasX = (tileId % tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.X);
 				float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
-				float texBiasY = (tileId / _owner->_tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
+				float texBiasY = (tileId / tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
 
 				// TODO: Flip normal map somehow
 				if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
@@ -1279,7 +1331,7 @@ namespace Jazz2::Tiles
 				instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 
 				command->setTransformation(Matrix4x4f::Translation(x * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2), y * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2), 0.0f));
-				command->material().setTexture(*_owner->_tileSet->TextureDiffuse);
+				command->material().setTexture(*tileSet->TextureDiffuse);
 
 				renderQueue.addCommand(command);
 			}

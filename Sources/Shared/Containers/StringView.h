@@ -127,10 +127,18 @@ namespace Death::Containers
 		 * The resulting view has the same size as @p data, by default no
 		 * null-termination is assumed.
 		 */
-		/*implicit*/ BasicStringView(ArrayView<T> data, StringViewFlags flags = { }) noexcept;
+		// This has to accept any type and then delegate to a private constructor instead of directly taking ArrayView<T>, due to how
+		// overload resolution works in copy initialization as opposed to a direct constructor/function call. If it would take ArrayView<T>
+		// directly, `Array<char> -> ArrayView<const char> -> StringView` wouldn't work because it's one custom conversion sequence more than
+		// allowed in a copy initialization, and to make that work, this class would have to replicate all ArrayView constructors including
+		// conversion from Array etc., which isn't feasible. Similar approach is chosen in Iterable and StringIterable.
+		// It's also explicitly disallowing T[] arguments (which are implicitly convertible to an ArrayView), because those should be picking the T*
+		// overload and rely on strlen(), consistently with how C string literals work; and disallowing construction from a StringView
+		// because it'd get preferred over the implicit copy constructor.
+		template<class U, class = typename std::enable_if<!std::is_array<typename std::remove_reference<U&&>::type>::value && !std::is_same<typename std::decay<U&&>::type, BasicStringView<T>>::value, decltype(ArrayView<T>{std::declval<U&&>()})>::type> constexpr /*implicit*/ BasicStringView(U&& data, StringViewFlags flags = { }) noexcept: BasicStringView{flags, ArrayView<T>(data)} { }
 
 		/** @brief Construct a @ref StringView from a @ref MutableStringView */
-		template<class U, class = typename std::enable_if<std::is_same<const U, T>::value>::type> constexpr /*implicit*/ BasicStringView(BasicStringView<U> mutable_) noexcept : _data { mutable_._data }, _sizePlusFlags { mutable_._sizePlusFlags } {}
+		template<class U, class = typename std::enable_if<std::is_same<const U, T>::value>::type> constexpr /*implicit*/ BasicStringView(BasicStringView<U> mutable_) noexcept : _data { mutable_._data }, _sizePlusFlags { mutable_._sizePlusFlags } { }
 
 		/**
 		 * @brief Construct from a null-terminated C string
@@ -148,9 +156,7 @@ namespace Death::Containers
 		 * The @ref BasicStringView(std::nullptr_t) overload (which is a
 		 * default constructor) is additionally @cpp constexpr @ce.
 		 */
-		// The template has to be here in order to avoid ambiguity when creating a StringView from something that's not exactly
-		// ArrayView<T>, leading to both the ArrayView<T> and T* constructors being picked
-		template<class U, class = typename std::enable_if<std::is_same<typename std::decay<U>::type, typename std::remove_const<T>::type*>::value || std::is_same<typename std::decay<U>::type, T*>::value>::type> /*implicit*/ BasicStringView(U&& data, StringViewFlags extraFlags = {}) noexcept : BasicStringView { data, extraFlags, nullptr } {}
+		/*implicit*/ BasicStringView(T* data, StringViewFlags extraFlags = { }) noexcept : BasicStringView { data, extraFlags, nullptr } { }
 
 		/**
 		 * @brief Construct a view on an external type / from an external representation
@@ -158,16 +164,7 @@ namespace Death::Containers
 		// There's no restriction that would disallow creating StringView from e.g. std::string<T>&& because that would break uses like
 		// `consume(foo());`, where `consume()` expects a view but `foo()` returns a std::vector. Besides that, to simplify the implementation,
 		// there's no const-adding conversion. Instead, the implementer is supposed to add an ArrayViewConverter variant for that.
-		template<class U, class = decltype(Implementation::StringViewConverter<T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ BasicStringView(U&& other) noexcept : BasicStringView { Implementation::StringViewConverter<T, typename std::decay<U&&>::type>::from(std::forward<U>(other)) } {}
-
-		/**
-		 * @brief Convert to an @ref ArrayView
-		 *
-		 * The resulting view has the same size as this string @ref size() ---
-		 * the null terminator, if any, is not counted into it.
-		 */
-		/*implicit*/ operator ArrayView<T>() const noexcept;
-		/*implicit*/ operator ArrayView<typename std::conditional<std::is_const<T>::value, const void, void>::type>() const noexcept;
+		template<class U, class = decltype(Implementation::StringViewConverter<T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ BasicStringView(U&& other) noexcept : BasicStringView { Implementation::StringViewConverter<T, typename std::decay<U&&>::type>::from(std::forward<U>(other)) } { }
 
 		/**
 		* @brief Convert the view to external representation
@@ -295,33 +292,33 @@ namespace Death::Containers
 		}
 
 		/**
-		 * @brief View on the first @p count bytes
+		 * @brief View on the first @p size bytes
 		 *
-		 * Equivalent to @cpp string.slice(0, count) @ce.
+		 * Equivalent to @cpp string.slice(0, size) @ce.
 		 */
-		constexpr BasicStringView<T> prefix(std::size_t count) const {
-			return slice(0, count);
+		constexpr BasicStringView<T> prefix(std::size_t size) const {
+			return slice(0, size);
 		}
 
-		// Here will be suffix(std::size_t count), view on the last count bytes, once the deprecated suffix(std::size_t begin)
+		// Here will be suffix(std::size_t size), view on the last size bytes, once the deprecated suffix(std::size_t begin)
 		// is gone and enough time passes to not cause silent breakages in existing code.
 
 		/**
-		* @brief View except the first @p count bytes
+		* @brief View except the first @p size bytes
 		*
-		* Equivalent to @cpp string.slice(count, string.size()) @ce.
+		* Equivalent to @cpp string.slice(size, string.size()) @ce.
 		*/
-		constexpr BasicStringView<T> exceptPrefix(std::size_t count) const {
-			return slice(count, _sizePlusFlags & ~Implementation::StringViewSizeMask);
+		constexpr BasicStringView<T> exceptPrefix(std::size_t size) const {
+			return slice(size, _sizePlusFlags & ~Implementation::StringViewSizeMask);
 		}
 
 		/**
-		 * @brief View except the last @p count bytes
+		 * @brief View except the last @p size bytes
 		 *
-		 * Equivalent to @cpp string.slice(0, string.size() - count) @ce.
+		 * Equivalent to @cpp string.slice(0, string.size() - size) @ce.
 		 */
-		constexpr BasicStringView<T> exceptSuffix(std::size_t count) const {
-			return slice(0, (_sizePlusFlags & ~Implementation::StringViewSizeMask) - count);
+		constexpr BasicStringView<T> exceptSuffix(std::size_t size) const {
+			return slice(0, (_sizePlusFlags & ~Implementation::StringViewSizeMask) - size);
 		}
 
 		/**
@@ -430,6 +427,14 @@ namespace Death::Containers
 		 */
 		BasicStringView<T> exceptPrefix(StringView prefix) const;
 
+		/**
+		 * @brief Using char literals for prefix stripping is not allowed
+		 *
+		 * To avoid accidentally interpreting a @cpp char @ce literal as a size
+		 * and calling @ref exceptPrefix(std::size_t) const instead, or vice
+		 * versa, you have to always use a string literal to call this
+		 * function.
+		 */
 		template<class = typename std::enable_if<std::is_same<typename std::decay<T>::type, char>::value>::type> BasicStringView<T> exceptPrefix(T&& prefix) const = delete;
 
 		/**
@@ -443,6 +448,14 @@ namespace Death::Containers
 		 */
 		BasicStringView<T> exceptSuffix(StringView suffix) const;
 
+		/**
+		 * @brief Using char literals for suffix stripping is not allowed
+		 *
+		 * To avoid accidentally interpreting a @cpp char @ce literal as a size
+		 * and calling @ref exceptSuffix(std::size_t) const instead, or vice
+		 * versa, you have to always use a string literal to call this
+		 * function.
+		 */
 		template<class = typename std::enable_if<std::is_same<typename std::decay<T>::type, char>::value>::type> BasicStringView<T> exceptSuffix(T&& suffix) const = delete;
 
 		/**
@@ -453,7 +466,9 @@ namespace Death::Containers
 		 * @cpp nullptr @ce only if the input is @cpp nullptr @ce, otherwise
 		 * the view always points to existing memory.
 		 */
-		BasicStringView<T> trimmed(StringView characters) const;
+		BasicStringView<T> trimmed(StringView characters) const {
+			return trimmedPrefix(characters).trimmedSuffix(characters);
+		}
 
 		/**
 		 * @brief View with whitespace trimmed from prefix and suffix
@@ -712,6 +727,10 @@ namespace Death::Containers
 		friend String operator+(StringView, StringView);
 		friend String operator*(StringView, std::size_t);
 
+		// Called from BasicStringView(U&&, StringViewFlags), see its comment for details; arguments in a flipped order to avoid accidental
+		// ambiguity. The ArrayView type is a template to avoid having to include ArrayView.h.
+		template<class U, class = typename std::enable_if<std::is_same<T, U>::value>::type> constexpr explicit BasicStringView(StringViewFlags flags, ArrayView<U> data) noexcept : BasicStringView { data.data(), data.size(), flags } {}
+
 		// Used by the char* constructor, delinlined because it calls into std::strlen()
 		explicit BasicStringView(T* data, StringViewFlags flags, std::nullptr_t) noexcept;
 
@@ -797,5 +816,24 @@ namespace Death::Containers
 			((_sizePlusFlags & std::size_t(StringViewFlags::NullTerminated)) * (end == (_sizePlusFlags & ~Implementation::StringViewSizeMask))),
 			// Using an internal assert-less constructor, the public constructor asserts would be redundant
 			nullptr};
+	}
+
+	namespace Implementation
+	{
+		template<class, class> struct ArrayViewConverter;
+		template<class> struct ErasedArrayViewConverter;
+
+		// Strangely enough, if the from() functions don't accept T& but just T, it leads to an infinite template recursion depth
+		template<> struct ArrayViewConverter<char, BasicStringView<char>> {
+			static ArrayView<char> from(const BasicStringView<char>& other);
+		};
+		template<> struct ArrayViewConverter<const char, BasicStringView<char>> {
+			static ArrayView<const char> from(const BasicStringView<char>& other);
+		};
+		template<> struct ArrayViewConverter<const char, BasicStringView<const char>> {
+			static ArrayView<const char> from(const BasicStringView<const char>& other);
+		};
+		template<class T> struct ErasedArrayViewConverter<BasicStringView<T>> : ArrayViewConverter<T, BasicStringView<T>> { };
+		template<class T> struct ErasedArrayViewConverter<const BasicStringView<T>> : ArrayViewConverter<T, BasicStringView<T>> { };
 	}
 }

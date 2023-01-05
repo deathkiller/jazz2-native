@@ -153,7 +153,7 @@ namespace Jazz2::Compatibility
 		}
 
 		if (length > 0) {
-			memcpy(dst, _buffer.get() + _offset, length);
+			std::memcpy(dst, _buffer.get() + _offset, length);
 		}
 
 		if (endOfStream) {
