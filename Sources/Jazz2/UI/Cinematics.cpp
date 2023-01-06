@@ -309,15 +309,25 @@ namespace Jazz2::UI
 		}
 
 		Vector2i viewSize = _owner->_upscalePass.GetViewSize();
-
 		float ratioTarget = (float)viewSize.Y / viewSize.X;
 		float ratioSource = (float)_owner->_height / _owner->_width;
-		// Try to adjust ratio a bit, otherwise show black bars
-		float ratio = std::clamp(ratioTarget, ratioSource - 0.16f, ratioSource);
+
+		Vector2f frameSize;
+		if (PreferencesCache::KeepAspectRatioInCinematics) {
+			if (ratioTarget < ratioSource) {
+				frameSize = Vector2f(viewSize.Y / ratioSource, viewSize.Y);
+			} else {
+				frameSize = Vector2f(viewSize.X, viewSize.X * ratioSource);
+			}
+		} else {
+			// Try to adjust ratio a bit, otherwise show black bars or zoom it in
+			float ratio = std::clamp(ratioTarget, ratioSource - 0.16f, ratioSource);
+			frameSize = Vector2f(viewSize.X, viewSize.X * ratio);
+		}
 
 		auto instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
 		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, -1.0f, 1.0f);
-		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(viewSize.X, viewSize.X * ratio);
+		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(frameSize.Data());
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 
 		_renderCommand.setTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
