@@ -79,6 +79,7 @@ namespace Jazz2
 		static bool EnableFullscreen;
 		static bool EnableVsync;
 		static bool ShowPerformanceMetrics;
+		static bool KeepAspectRatioInCinematics;
 
 		// Gameplay
 		static bool EnableReforged;
@@ -115,6 +116,7 @@ namespace Jazz2
 
 			EnableFullscreen = 0x01,
 			ShowPerformanceMetrics = 0x02,
+			KeepAspectRatioInCinematics = 0x04,
 
 			EnableReforged = 0x100,
 			EnableLedgeClimb = 0x200,

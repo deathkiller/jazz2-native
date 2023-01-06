@@ -23,6 +23,7 @@ namespace Jazz2::UI::Menu
 #endif
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::Antialiasing, _("Antialiasing"), true });
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::ShowPerformanceMetrics, _("Performance Metrics"), true });
+		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::KeepAspectRatioInCinematics, _("Keep Aspect Ratio In Cinematics"), true });
 	}
 
 	GraphicsOptionsSection::~GraphicsOptionsSection()
@@ -93,6 +94,7 @@ namespace Jazz2::UI::Menu
 #endif
 				case GraphicsOptionsItemType::Antialiasing: enabled = (PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing; break;
 				case GraphicsOptionsItemType::ShowPerformanceMetrics: enabled = PreferencesCache::ShowPerformanceMetrics; break;
+				case GraphicsOptionsItemType::KeepAspectRatioInCinematics: enabled = PreferencesCache::KeepAspectRatioInCinematics; break;
 				default: enabled = false; break;
 			}
 
@@ -143,6 +145,12 @@ namespace Jazz2::UI::Menu
 			}
 			case GraphicsOptionsItemType::ShowPerformanceMetrics:
 				PreferencesCache::ShowPerformanceMetrics = !PreferencesCache::ShowPerformanceMetrics;
+				_isDirty = true;
+				_animation = 0.0f;
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				break;
+			case GraphicsOptionsItemType::KeepAspectRatioInCinematics:
+				PreferencesCache::KeepAspectRatioInCinematics = !PreferencesCache::KeepAspectRatioInCinematics;
 				_isDirty = true;
 				_animation = 0.0f;
 				_root->PlaySfx("MenuSelect"_s, 0.6f);

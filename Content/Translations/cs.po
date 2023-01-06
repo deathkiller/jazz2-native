@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-01-02 00:08+0100\n"
-"PO-Revision-Date: 2023-01-02 00:09+0100\n"
+"POT-Creation-Date: 2023-01-06 12:18+0100\n"
+"PO-Revision-Date: 2023-01-06 12:19+0100\n"
 "Last-Translator: \n"
 "Language-Team: Dan R.\n"
 "Language: cs\n"
@@ -1407,7 +1407,7 @@ msgid "Play Custom Levels"
 msgstr "Hrát vlastní úrovně"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:38
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:73
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:28
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:13
 msgid "Options"
 msgstr "Nastavení"
@@ -1453,37 +1453,37 @@ msgstr ""
 msgid "Allow access to external storage"
 msgstr "Povolit přístup k externímu uložišti"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:14
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:12
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:212
 msgid "Remap Controls"
 msgstr "Přenastavit ovládání"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:15
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:13
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:44
 msgid "Touch Controls"
 msgstr "Dotykové ovládací prvky"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:17
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:15
 msgid "Native Back Button"
 msgstr "Nativní tlačítko Zpět"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:82
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:17
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:47
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:14
 msgid "Controls"
 msgstr "Ovládání"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:110
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:117
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:99
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:101
 msgid "Enabled"
 msgstr "Povoleno"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:117
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:99
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:101
 msgid "Disabled"
 msgstr "Zakázáno"
 
@@ -1552,7 +1552,7 @@ msgid "Refresh Cache"
 msgstr "Obnovit cache"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:14
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:11
 msgid "Gameplay"
 msgstr "Hra"
 
@@ -1572,8 +1572,12 @@ msgstr "Antialiasing"
 msgid "Performance Metrics"
 msgstr "Metrika výkonu"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:56
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:15
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:26
+msgid "Keep Aspect Ratio In Cinematics"
+msgstr "Zachovat poměr stran u filmů"
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:57
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:12
 msgid "Graphics"
 msgstr "Grafika"
 
@@ -1597,7 +1601,7 @@ msgstr "Nebyly vybrány žádné soubory!"
 msgid "No new episodes were imported!"
 msgstr "Nebyly importovány žádné nové epizody!"
 
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:16
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:13
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:92
 msgid "Sounds"
 msgstr "Zvuky"
