@@ -1,17 +1,7 @@
 ﻿#if defined(WITH_ANGELSCRIPT)
 
 #include "LevelScripts.h"
-#include "RegisterArray.h"
-#include "RegisterRef.h"
-#include "RegisterString.h"
-#include "ScriptActorWrapper.h"
-#include "ScriptPlayerWrapper.h"
-
 #include "../LevelHandler.h"
-#include "../PreferencesCache.h"
-#include "../Actors/ActorBase.h"
-
-#include "../../nCine/Base/Random.h"
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #   if defined(_M_X64)
@@ -31,44 +21,15 @@
 #   endif
 #endif
 
-#if !defined(DEATH_TARGET_ANDROID) && !defined(_WIN32_WCE) && !defined(__psp2__)
-#	include <locale.h>		// setlocale()
-#endif
-
-// Without namespace for shorter log messages
-static void asScript(String& msg)
-{
-	LOGI_X("%s", msg.data());
-}
-
-static float asFractionf(float v)
-{
-	float intPart;
-	return modff(v, &intPart);
-}
-
-static int asRandom()
-{
-	return Random().Next();
-}
-
-static int asRandom(int max)
-{
-	return Random().Fast(0, max);
-}
-
-static float asRandom(float min, float max)
-{
-	return Random().FastFloat(min, max);
-}
-
 namespace Jazz2::Scripting
 {
 	LevelScripts::LevelScripts(LevelHandler* levelHandler, const StringView& scriptPath)
 		:
 		_levelHandler(levelHandler),
 		_module(nullptr),
-		_onLevelUpdate(nullptr)
+		_scriptContextType(ScriptContextType::Unknown),
+		_onLevelUpdate(nullptr),
+		_onLevelUpdateLastFrame(-1)
 	{
 		_engine = asCreateScriptEngine();
 		_engine->SetUserData(this, EngineToOwner);
@@ -79,105 +40,8 @@ namespace Jazz2::Scripting
 
 		_module = _engine->GetModule("Main", asGM_ALWAYS_CREATE); RETURN_ASSERT(_module != nullptr);
 
-		// Built-in types
-		RegisterArray(_engine);
-		RegisterRef(_engine);
-		RegisterString(_engine);
-
-		// Math functions
-		r = _engine->RegisterGlobalFunction("float cos(float)", asFUNCTIONPR(cosf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("float sin(float)", asFUNCTIONPR(sinf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("float tan(float)", asFUNCTIONPR(tanf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-
-		r = _engine->RegisterGlobalFunction("float acos(float)", asFUNCTIONPR(acosf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("float asin(float)", asFUNCTIONPR(asinf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("float atan(float)", asFUNCTIONPR(atanf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("float atan2(float, float)", asFUNCTIONPR(atan2f, (float, float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-
-		r = _engine->RegisterGlobalFunction("float cosh(float)", asFUNCTIONPR(coshf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("float sinh(float)", asFUNCTIONPR(sinhf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("float tanh(float)", asFUNCTIONPR(tanhf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-
-		r = _engine->RegisterGlobalFunction("float log(float)", asFUNCTIONPR(logf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("float log10(float)", asFUNCTIONPR(log10f, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-
-		r = _engine->RegisterGlobalFunction("float pow(float, float)", asFUNCTIONPR(powf, (float, float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("float sqrt(float)", asFUNCTIONPR(sqrtf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-
-		r = _engine->RegisterGlobalFunction("float ceil(float)", asFUNCTIONPR(ceilf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("float abs(float)", asFUNCTIONPR(fabsf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("float floor(float)", asFUNCTIONPR(floorf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("float fraction(float)", asFUNCTIONPR(asFractionf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-
-		r = _engine->RegisterGlobalFunction("int Random()", asFUNCTIONPR(asRandom, (), int), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("int Random(int)", asFUNCTIONPR(asRandom, (int), int), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("float Random(float, float)", asFUNCTIONPR(asRandom, (float, float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-
-		// Game-specific functions
-		r = _engine->RegisterGlobalFunction("void Print(const string &in)", asFUNCTION(asScript), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-
-		r = _engine->RegisterGlobalFunction("uint8 get_Difficulty() property", asFUNCTION(asGetDifficulty), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("bool get_IsReforged() property", asFUNCTION(asIsReforged), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("int get_LevelWidth() property", asFUNCTION(asGetLevelWidth), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("int get_LevelHeight() property", asFUNCTION(asGetLevelHeight), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("float get_ElapsedFrames() property", asFUNCTION(asGetElapsedFrames), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("float get_AmbientLight() property", asFUNCTION(asGetAmbientLight), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("void set_AmbientLight(float) property", asFUNCTION(asSetAmbientLight), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("float get_WaterLevel() property", asFUNCTION(asGetWaterLevel), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("void set_WaterLevel(float) property", asFUNCTION(asSetWaterLevel), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-
-		r = _engine->RegisterGlobalFunction("void PreloadMetadata(const string &in)", asFUNCTION(asPreloadMetadata), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("void RegisterSpawnable(int, const string &in)", asFUNCTION(asRegisterSpawnable), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("void Spawn(int, int, int)", asFUNCTION(asSpawnEvent), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("void Spawn(int, int, int, const array<uint8> &in)", asFUNCTION(asSpawnEventParams), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("void Spawn(const string &in, int, int)", asFUNCTION(asSpawnType), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("void Spawn(const string &in, int, int, const array<uint8> &in)", asFUNCTION(asSpawnTypeParams), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-
-		r = _engine->RegisterGlobalFunction("void ChangeLevel(int, const string &in = string())", asFUNCTION(asChangeLevel), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("void MusicPlay(const string &in)", asFUNCTION(asMusicPlay), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("void ShowLevelText(const string &in)", asFUNCTION(asShowLevelText), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = _engine->RegisterGlobalFunction("void SetWeather(uint8, uint8)", asFUNCTION(asSetWeather), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-
-		// Game-specific definitions
-		constexpr char AsDefinitionsLibrary[] = R"(
-enum ExitType {
-	None,
-
-	Normal,
-	Warp,
-	Bonus,
-	Special,
-	Boss,
-
-	FastTransition = 0x80
-}
-
-enum GameDifficulty {
-	Default,
-	Easy,
-	Normal,
-	Hard
-}
-
-enum WeatherType {
-	None,
-
-	Snow,
-	Flowers,
-	Rain,
-	Leaf,
-
-	OutdoorsOnly = 0x80
-};
-)";
-		r = _module->AddScriptSection("__Definitions", AsDefinitionsLibrary, _countof(AsDefinitionsLibrary) - 1, 0); RETURN_ASSERT(r >= 0);
-
-		// Game-specific classes
-		ScriptActorWrapper::RegisterFactory(_engine, _module);
-		ScriptPlayerWrapper::RegisterFactory(_engine);
-
 		// Try to load the script
-		HashMap<String, bool> definedSymbols = {
+		HashMap<String, bool> DefinedSymbols = {
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 			{ "TARGET_EMSCRIPTEN"_s, true },
 #elif defined(DEATH_TARGET_ANDROID)
@@ -189,14 +53,25 @@ enum WeatherType {
 #	endif
 #elif defined(DEATH_TARGET_WINDOWS)
 			{ "TARGET_WINDOWS"_s, true },
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+			{ "TARGET_WINDOWS_RT"_s, true },
+#	endif
 #elif defined(DEATH_TARGET_UNIX)
 			{ "TARGET_UNIX"_s, true },
 #endif
+
 #if defined(DEATH_TARGET_BIG_ENDIAN)
 			{ "TARGET_BIG_ENDIAN"_s, true },
 #endif
+
+#if defined(WITH_OPENGLES)
+			{ "WITH_OPENGLES"_s, true },
+#endif
 #if defined(WITH_AUDIO)
 			{ "WITH_AUDIO"_s, true },
+#endif
+#if defined(WITH_VORBIS)
+			{ "WITH_VORBIS"_s, true },
 #endif
 #if defined(WITH_OPENMPT)
 			{ "WITH_OPENMPT"_s, true },
@@ -206,18 +81,32 @@ enum WeatherType {
 #endif
 			{ "Resurrection"_s, true }
 		};
-		if (!AddScriptFromFile(scriptPath, definedSymbols)) {
+
+		_scriptContextType = AddScriptFromFile(scriptPath, DefinedSymbols);
+		if (_scriptContextType == ScriptContextType::Unknown) {
 			LOGE("Cannot compile the script. Please correct the code and try again.");
 			return;
 		}
 
+		RegisterBuiltInFunctions(_engine);
+		switch (_scriptContextType) {
+			case ScriptContextType::Legacy:
+				LOGV("Compiled script with \"Legacy\" context");
+				RegisterLegacyFunctions(_engine);
+				break;
+			case ScriptContextType::Standard:
+				LOGV("Compiled script with \"Standard\" context");
+				RegisterStandardFunctions(_engine, _module);
+				break;
+		}
+
 		r = _module->Build(); RETURN_ASSERT_MSG(r >= 0, "Cannot compile the script. Please correct the code and try again.");
 
-		asIScriptFunction* func = _module->GetFunctionByDecl("void OnLevelLoad()");
-		if (func != nullptr) {
+		asIScriptFunction* onLevelLoad = _module->GetFunctionByDecl("void onLevelLoad()");
+		if (onLevelLoad != nullptr) {
 			asIScriptContext* ctx = _engine->RequestContext();
 
-			ctx->Prepare(func);
+			ctx->Prepare(onLevelLoad);
 			r = ctx->Execute();
 			if (r == asEXECUTION_EXCEPTION) {
 				LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
@@ -226,7 +115,14 @@ enum WeatherType {
 			_engine->ReturnContext(ctx);
 		}
 
-		_onLevelUpdate = _module->GetFunctionByDecl("void OnLevelUpdate(float)");
+		switch (_scriptContextType) {
+			case ScriptContextType::Legacy:
+				_onLevelUpdate = _module->GetFunctionByDecl("void onMain()");
+				break;
+			case ScriptContextType::Standard:
+				_onLevelUpdate = _module->GetFunctionByDecl("void onLevelUpdate(float)");
+				break;
+		}
 	}
 
 	LevelScripts::~LevelScripts()
@@ -241,17 +137,18 @@ enum WeatherType {
 		}
 	}
 
-	bool LevelScripts::AddScriptFromFile(const StringView& path, const HashMap<String, bool>& definedSymbols)
+	ScriptContextType LevelScripts::AddScriptFromFile(const StringView& path, const HashMap<String, bool>& definedSymbols)
 	{
 		auto s = fs::Open(path, FileAccessMode::Read);
 		if (s->GetSize() <= 0) {
-			return false;
+			return ScriptContextType::Unknown;
 		}
 
 		String scriptContent(NoInit, s->GetSize());
 		s->Read(scriptContent.data(), s->GetSize());
 		s->Close();
 
+		ScriptContextType contextType = ScriptContextType::Legacy;
 		SmallVector<String, 4> includes;
 		int scriptSize = (int)scriptContent.size();
 
@@ -343,7 +240,7 @@ enum WeatherType {
 
 						if (t == asTC_VALUE && len > 2 && (scriptContent[pos] == '"' || scriptContent[pos] == '\'')) {
 							// Get the include file
-							String includePath = MakePath(StringView(&scriptContent[pos + 1], len - 2), path);
+							String includePath = ConstructPath(StringView(&scriptContent[pos + 1], len - 2), path);
 							if (!includePath.empty()) {
 								includes.push_back(includePath);
 							}
@@ -361,7 +258,7 @@ enum WeatherType {
 						pos += len;
 						for (; pos < scriptSize && scriptContent[pos] != '\n'; pos++);
 
-						ProcessPragma(scriptContent.slice(start + 7, (scriptContent[pos - 1] == '\r' ? pos - 1 : pos)));
+						ProcessPragma(scriptContent.slice(start + 7, pos).trimmed(), contextType);
 
 						// Overwrite the pragma directive with space characters to avoid compiler error
 						for (int i = start; i < pos; i++) {
@@ -398,13 +295,13 @@ enum WeatherType {
 		if (includes.size() > 0) {
 			// Load the included scripts
 			for (auto& include : includes) {
-				if (!AddScriptFromFile(include, definedSymbols)) {
-					return false;
+				if (AddScriptFromFile(include, definedSymbols) == ScriptContextType::Unknown) {
+					return ScriptContextType::Unknown;
 				}
 			}
 		}
 
-		return true;
+		return contextType;
 	}
 
 	int LevelScripts::ExcludeCode(String& scriptContent, int pos)
@@ -492,12 +389,15 @@ enum WeatherType {
 		return pos;
 	}
 
-	void LevelScripts::ProcessPragma(const StringView& content)
+	void LevelScripts::ProcessPragma(const StringView& content, ScriptContextType& contextType)
 	{
-		// TODO
+		// #pragma target Jazz² Resurrection - Changes script context type to Standard
+		if (content == "target Jazz² Resurrection"_s || content == "target Jazz2 Resurrection"_s) {
+			contextType = ScriptContextType::Standard;
+		}
 	}
 
-	String LevelScripts::MakePath(const StringView& path, const StringView& relativeToFile)
+	String LevelScripts::ConstructPath(const StringView& path, const StringView& relativeToFile)
 	{
 		if (path.empty() || path.size() > fs::MaxPathLength) return { };
 
@@ -665,339 +565,6 @@ enum WeatherType {
 			case asMSGTYPE_WARNING: LOGW_X("%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
 			default: LOGI_X("%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
 		}
-	}
-
-	Actors::ActorBase* LevelScripts::CreateActorInstance(const StringView& typeName)
-	{
-		auto nullTerminatedTypeName = String::nullTerminatedView(typeName);
-
-		// Create an instance of the ActorBase script class that inherits from the ScriptActorWrapper C++ class
-		asITypeInfo* typeInfo = _module->GetTypeInfoByName(nullTerminatedTypeName.data());
-		if (typeInfo == nullptr) {
-			return nullptr;
-		}
-
-		asIScriptObject* obj = reinterpret_cast<asIScriptObject*>(_engine->CreateScriptObject(typeInfo));
-
-		// Get the pointer to the C++ side of the ActorBase class
-		ScriptActorWrapper* obj2 = *reinterpret_cast<ScriptActorWrapper**>(obj->GetAddressOfProperty(0));
-
-		// Increase the reference count to the C++ object, as this is what will be used to control the life time of the object from the application side 
-		obj2->AddRef();
-
-		// Release the reference to the script side
-		obj->Release();
-
-		return obj2;
-	}
-
-	const SmallVectorImpl<Actors::Player*>& LevelScripts::GetPlayers() const
-	{
-		return _levelHandler->_players;
-	}
-
-	void LevelScripts::OnLevelBegin()
-	{
-		asIScriptFunction* func = _module->GetFunctionByDecl("void OnLevelBegin()");
-		if (func == nullptr) {
-			return;
-		}
-			
-		asIScriptContext* ctx = _engine->RequestContext();
-
-		ctx->Prepare(func);
-		int r = ctx->Execute();
-		if (r == asEXECUTION_EXCEPTION) {
-			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
-		}
-
-		_engine->ReturnContext(ctx);
-	}
-
-	void LevelScripts::OnLevelUpdate(float timeMult)
-	{
-		if (_onLevelUpdate == nullptr) {
-			return;
-		}
-
-		asIScriptContext* ctx = _engine->RequestContext();
-
-		ctx->Prepare(_onLevelUpdate);
-		ctx->SetArgFloat(0, timeMult);
-		int r = ctx->Execute();
-		if (r == asEXECUTION_EXCEPTION) {
-			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
-			// Don't call the method again if an exception occurs
-			_onLevelUpdate = nullptr;
-		}
-
-		_engine->ReturnContext(ctx);
-	}
-
-	void LevelScripts::OnLevelCallback(Actors::ActorBase* initiator, uint8_t* eventParams)
-	{
-		char funcName[64];
-		asIScriptFunction* func;
-
-		// If known player is the initiator, try to call specific variant of the function
-		if (auto player = dynamic_cast<Actors::Player*>(initiator)) {
-			formatString(funcName, sizeof(funcName), "void OnFunction%i(Player@, uint8)", eventParams[0]);
-			func = _module->GetFunctionByDecl(funcName);
-			if (func != nullptr) {
-				asIScriptContext* ctx = _engine->RequestContext();
-
-				void* mem = asAllocMem(sizeof(ScriptPlayerWrapper));
-				ScriptPlayerWrapper* playerWrapper = new(mem) ScriptPlayerWrapper(this, player);
-
-				ctx->Prepare(func);
-				ctx->SetArgObject(0, playerWrapper);
-				ctx->SetArgByte(1, eventParams[1]);
-				int r = ctx->Execute();
-				if (r == asEXECUTION_EXCEPTION) {
-					LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
-				}
-
-				_engine->ReturnContext(ctx);
-
-				playerWrapper->Release();
-				return;
-			}
-		}
-
-		// Try to call parameter-less variant
-		formatString(funcName, sizeof(funcName), "void OnFunction%i()", eventParams[0]);
-		func = _module->GetFunctionByDecl(funcName);
-		if (func != nullptr) {
-			asIScriptContext* ctx = _engine->RequestContext();
-
-			ctx->Prepare(func);
-			int r = ctx->Execute();
-			if (r == asEXECUTION_EXCEPTION) {
-				LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
-			}
-
-			_engine->ReturnContext(ctx);
-			return;
-		}
-
-		LOGW_X("Callback function \"%s\" was not found in the script. Please correct the code and try again.", funcName);
-	}
-
-	uint8_t LevelScripts::asGetDifficulty()
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		return (uint8_t)_this->_levelHandler->_difficulty;
-	}
-
-	bool LevelScripts::asIsReforged()
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		return (uint8_t)_this->_levelHandler->_isReforged;
-	}
-
-	int LevelScripts::asGetLevelWidth()
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		return _this->_levelHandler->_tileMap->LevelBounds().X;
-	}
-
-	int LevelScripts::asGetLevelHeight()
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		return _this->_levelHandler->_tileMap->LevelBounds().Y;
-	}
-
-	float LevelScripts::asGetElapsedFrames()
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		return _this->_levelHandler->_elapsedFrames;
-	}
-
-	float LevelScripts::asGetAmbientLight()
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		return _this->_levelHandler->_ambientLightTarget;
-	}
-
-	void LevelScripts::asSetAmbientLight(float value)
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		_this->_levelHandler->_ambientLightTarget = value;
-	}
-
-	float LevelScripts::asGetWaterLevel()
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		return _this->_levelHandler->_waterLevel;
-	}
-
-	void LevelScripts::asSetWaterLevel(float value)
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		_this->_levelHandler->_waterLevel = value;
-	}
-
-	void LevelScripts::asPreloadMetadata(const String& path)
-	{
-		ContentResolver::Current().PreloadMetadataAsync(path);
-	}
-
-	void LevelScripts::asRegisterSpawnable(int eventType, const String& typeName)
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-
-		asITypeInfo* typeInfo = _this->_module->GetTypeInfoByName(typeName.data());
-		if (typeInfo == nullptr) {
-			return;
-		}
-
-		bool added = _this->_eventTypeToTypeInfo.emplace(eventType, typeInfo).second;
-		if (added) {
-			_this->_levelHandler->EventSpawner()->RegisterSpawnable((EventType)eventType, asRegisterSpawnableCallback);
-		}
-	}
-
-	std::shared_ptr<Actors::ActorBase> LevelScripts::asRegisterSpawnableCallback(const Actors::ActorActivationDetails& details)
-	{
-		if (auto levelHandler = dynamic_cast<LevelHandler*>(details.LevelHandler)) {
-			auto _this = levelHandler->_scripts.get();
-			// Spawn() function with custom event cannot be used in OnLevelLoad(), because _scripts is not assigned yet
-			if (_this != nullptr) {
-				auto it = _this->_eventTypeToTypeInfo.find((int)details.Type);
-				if (it != _this->_eventTypeToTypeInfo.end()) {
-					asIScriptObject* obj = reinterpret_cast<asIScriptObject*>(_this->_engine->CreateScriptObject(it->second));
-					ScriptActorWrapper* obj2 = *reinterpret_cast<ScriptActorWrapper**>(obj->GetAddressOfProperty(0));
-					obj2->AddRef();
-					obj->Release();
-					obj2->OnActivated(details);
-					return std::shared_ptr<Actors::ActorBase>(obj2);
-				}
-			}
-		}
-		return nullptr;
-	}
-
-	void LevelScripts::asSpawnEvent(int eventType, int x, int y)
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-
-		uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] { };
-		auto actor = _this->_levelHandler->EventSpawner()->SpawnEvent((EventType)eventType, spawnParams, Actors::ActorState::None, Vector3i(x, y, ILevelHandler::MainPlaneZ));
-		if (actor != nullptr) {
-			_this->_levelHandler->AddActor(actor);
-		}
-	}
-
-	void LevelScripts::asSpawnEventParams(int eventType, int x, int y, const CScriptArray& eventParams)
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-
-		uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] { };
-		int size = eventParams.GetSize();
-		std::memcpy(spawnParams, eventParams.At(0), size);
-
-		auto actor = _this->_levelHandler->EventSpawner()->SpawnEvent((EventType)eventType, spawnParams, Actors::ActorState::None, Vector3i(x, y, ILevelHandler::MainPlaneZ));
-		if (actor != nullptr) {
-			_this->_levelHandler->AddActor(actor);
-		}
-	}
-
-	void LevelScripts::asSpawnType(const String& typeName, int x, int y)
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-
-		auto actor = _this->CreateActorInstance(typeName);
-		if (actor == nullptr) {
-			return;
-		}
-
-		uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] { };
-		actor->OnActivated({
-			.LevelHandler = _this->_levelHandler,
-			.Pos = Vector3i(x, y, ILevelHandler::MainPlaneZ),
-			.Params = spawnParams
-		});
-		_this->_levelHandler->AddActor(std::shared_ptr<Actors::ActorBase>(actor));
-	}
-
-	void LevelScripts::asSpawnTypeParams(const String& typeName, int x, int y, const CScriptArray& eventParams)
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-
-		auto actor = _this->CreateActorInstance(typeName);
-		if (actor == nullptr) {
-			return;
-		}
-
-		uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] { };
-		int size = eventParams.GetSize();
-		std::memcpy(spawnParams, eventParams.At(0), size);
-
-		actor->OnActivated({
-			.LevelHandler = _this->_levelHandler,
-			.Pos = Vector3i(x, y, ILevelHandler::MainPlaneZ),
-			.Params = spawnParams
-		});
-		_this->_levelHandler->AddActor(std::shared_ptr<Actors::ActorBase>(actor));
-	}
-
-	void LevelScripts::asChangeLevel(int exitType, const String& path)
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		_this->_levelHandler->BeginLevelChange((ExitType)exitType, path);
-	}
-
-	void LevelScripts::asMusicPlay(const String& path)
-	{
-#if defined(WITH_OPENMPT)
-		if (path.empty()) {
-			return;
-		}
-
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		auto _levelHandler = _this->_levelHandler;
-
-		if (_levelHandler->_musicPath != path) {
-			_levelHandler->_music = ContentResolver::Current().GetMusic(path);
-			if (_levelHandler->_music != nullptr) {
-				_levelHandler->_musicPath = path;
-				_levelHandler->_music->setLooping(true);
-				_levelHandler->_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
-				_levelHandler->_music->setSourceRelative(true);
-				_levelHandler->_music->play();
-			}
-		}
-#endif
-	}
-
-	void LevelScripts::asShowLevelText(const String& text)
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		_this->_levelHandler->ShowLevelText(text);
-	}
-
-	void LevelScripts::asSetWeather(uint8_t weatherType, uint8_t intensity)
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		_this->_levelHandler->SetWeather((WeatherType)weatherType, intensity);
 	}
 }
 

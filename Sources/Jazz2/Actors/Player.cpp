@@ -2669,15 +2669,17 @@ namespace Jazz2::Actors
 		float tx = x * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2;
 		float ty = y * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2;
 
-		auto events = _levelHandler->EventMap();
-		uint8_t* p;
-		if (horizontal) {
-			if (events->GetEventByPosition(x, (_pos.Y < ty ? y - 1 : y + 1), &p) == EventType::ModifierHPole) {
-				ty = _pos.Y;
-			}
-		} else {
-			if (events->GetEventByPosition((_pos.X < tx ? x - 1 : x + 1), y, &p) == EventType::ModifierVPole) {
-				tx = _pos.X;
+		if (_levelHandler->IsReforged()) {
+			auto events = _levelHandler->EventMap();
+			uint8_t* p;
+			if (horizontal) {
+				if (events->GetEventByPosition(x, (_pos.Y < ty ? y - 1 : y + 1), &p) == EventType::ModifierHPole) {
+					ty = _pos.Y;
+				}
+			} else {
+				if (events->GetEventByPosition((_pos.X < tx ? x - 1 : x + 1), y, &p) == EventType::ModifierVPole) {
+					tx = _pos.X;
+				}
 			}
 		}
 
