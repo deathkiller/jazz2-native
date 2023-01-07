@@ -696,7 +696,7 @@ namespace Jazz2::Scripting
 
 		// The string length can be accessed through methods or through virtual property
 #if AS_USE_ACCESSORS != 1
-		r = engine->RegisterObjectMethod("string", "uint size() const", asFUNCTION(StringSize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "uint length() const", asFUNCTION(StringSize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 #endif
 		//r = engine->RegisterObjectMethod("string", "void resize(uint)", asFUNCTION(StringResize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 #if AS_USE_STLNAMES != 1 && AS_USE_ACCESSORS == 1

@@ -131,7 +131,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawStringShadow("Dan R."_s, charOffset, pos.X + 25.0f, pos.Y + 30.0f + 20.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 1.0f, 0.4f, 0.75f, 0.75f, 0.6f, 0.9f);
 
-		_root->DrawStringShadow("&  Contributors: \f[c:0x707070]Bioxxdevil\f[c], \f[c:0x707070]roox\f[c], \f[c:0x707070]tunip3\f[c]"_s, charOffset, pos.X + 25.0f + 70.0f, pos.Y + 30.0f + 20.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow("&  Contributors: \f[c:0xd0705d]JJ2+ Team\f[c], \f[c:0x707070]Bioxxdevil\f[c], \f[c:0x707070]roox\f[c], \f[c:0x707070]tunip3\f[c]"_s, charOffset, pos.X + 25.0f + 70.0f, pos.Y + 30.0f + 20.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.7f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f);
 
 		_root->DrawStringShadow(ADDITIONAL_INFO, charOffset, viewSize.X * 0.5f, pos.Y + 34.0f + pos.Y * 0.34f, IMenuContainer::FontLayer,

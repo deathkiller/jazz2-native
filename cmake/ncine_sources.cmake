@@ -217,6 +217,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventMap.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventSpawner.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScripts.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScripts.Declarations.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterRef.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterString.cpp
