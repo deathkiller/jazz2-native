@@ -15,8 +15,7 @@ namespace Jazz2::UI
 {
 	Font::Font(const StringView& path, const uint32_t* palette)
 		:
-		_baseSpacing(0),
-		_charHeight(0)
+		_baseSpacing(0)
 	{
 		auto s = fs::Open(path + ".font"_s, FileAccessMode::Read);
 		auto fileSize = s->GetSize();
@@ -37,7 +36,7 @@ namespace Jazz2::UI
 			auto pixels = (uint32_t*)texLoader->pixels();
 
 			/*uint8_t flags =*/ s->ReadValue<uint8_t>();
-			/*uint16_t width =*/ s->ReadValue<uint16_t>();
+			uint16_t width = s->ReadValue<uint16_t>();
 			uint16_t height = s->ReadValue<uint16_t>();
 			uint8_t cols = s->ReadValue<uint8_t>();
 			int rows = h / height;
@@ -84,7 +83,7 @@ namespace Jazz2::UI
 				);
 			}
 
-			_charHeight = height;
+			_charSize = Vector2i(width, height);
 			_baseSpacing = spacing;
 
 			for (int i = 0; i < w * h; i++) {
@@ -102,7 +101,7 @@ namespace Jazz2::UI
 	Vector2f Font::MeasureString(const StringView& text, float scale, float charSpacing, float lineSpacing)
 	{
 		size_t textLength = text.size();
-		if (textLength == 0 || _charHeight <= 0) {
+		if (textLength == 0 || _charSize.Y <= 0) {
 			return Vector2f::Zero;
 		}
 
@@ -122,7 +121,7 @@ namespace Jazz2::UI
 				}
 				line++;
 				lastWidth = 0.0f;
-				totalHeight += (_charHeight * scale * lineSpacing);
+				totalHeight += (_charSize.Y * scale * lineSpacing);
 			} else if (cursor.first == '\f') {
 				// Formatting
 				cursor = Utf8::NextChar(text, cursor.second);
@@ -160,7 +159,7 @@ namespace Jazz2::UI
 		if (totalWidth < lastWidth) {
 			totalWidth = lastWidth;
 		}
-		totalHeight += (_charHeight * scale * lineSpacing);
+		totalHeight += (_charSize.Y * scale * lineSpacing);
 
 		return Vector2f(ceilf(totalWidth), ceilf(totalHeight));
 	}
@@ -168,7 +167,7 @@ namespace Jazz2::UI
 	void Font::DrawString(Canvas* canvas, const StringView& text, int& charOffset, float x, float y, uint16_t z, Alignment align, Colorf color, float scale, float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
 		size_t textLength = text.size();
-		if (textLength == 0 || _charHeight <= 0) {
+		if (textLength == 0 || _charSize.Y <= 0) {
 			return;
 		}
 
@@ -197,7 +196,7 @@ namespace Jazz2::UI
 				lineWidths[line & (MaxLines - 1)] = lastWidth;
 				line++;
 				lastWidth = 0.0f;
-				totalHeight += (_charHeight * scale * lineSpacing);
+				totalHeight += (_charSize.Y * scale * lineSpacing);
 			} else if (cursor.first == '\f') {
 				// Formatting
 				cursor = Utf8::NextChar(text, cursor.second);
@@ -236,7 +235,7 @@ namespace Jazz2::UI
 			totalWidth = lastWidth;
 		}
 		lineWidths[line & (MaxLines - 1)] = lastWidth;
-		totalHeight += (_charHeight * scale * lineSpacing);
+		totalHeight += (_charSize.Y * scale * lineSpacing);
 
 		// Rendering
 		Vector2f originPos = Vector2f(x - canvas->ViewSize.X * 0.5f, canvas->ViewSize.Y * 0.5f - y);
@@ -286,7 +285,7 @@ namespace Jazz2::UI
 					case Alignment::Center: originPos.X += (totalWidth - lineWidths[line & (MaxLines - 1)]) * 0.5f; break;
 					case Alignment::Right: originPos.X += (totalWidth - lineWidths[line & (MaxLines - 1)]); break;
 				}
-				originPos.Y -= (_charHeight * scale * lineSpacing);
+				originPos.Y -= (_charSize.Y * scale * lineSpacing);
 			} else if (cursor.first == '\f') {
 				// Formatting
 				cursor = Utf8::NextChar(text, cursor.second);
@@ -305,25 +304,25 @@ namespace Jazz2::UI
 								cursor = Utf8::NextChar(text, idx);
 								if (cursor.first == 'x') {
 									idx = cursor.second;
-									int colorIdx = 0;
-									char colorBuffer[9];
+									int paramLength = 0;
+									char param[9];
 									do {
 										cursor = Utf8::NextChar(text, idx);
 										if (cursor.first == ']') {
 											break;
 										}
-										if (colorIdx < _countof(colorBuffer) - 1) {
-											colorBuffer[colorIdx++] = (char)cursor.first;
+										if (paramLength < _countof(param) - 1) {
+											param[paramLength++] = (char)cursor.first;
 										}
 										idx = cursor.second;
 									} while (idx < textLength);
 
-									if (colorIdx > 0 && !useRandomColor && !isShadow) {
-										colorBuffer[colorIdx] = '\0';
-										char* end = colorBuffer + colorIdx;
-										unsigned long colorValue = strtoul(colorBuffer, &end, 16);
-										if (colorBuffer != end) {
-											color = Color(colorValue);
+									if (paramLength > 0 && !useRandomColor && !isShadow) {
+										param[paramLength] = '\0';
+										char* end = &param[paramLength];
+										unsigned long paramValue = strtoul(param, &end, 16);
+										if (param != end) {
+											color = Color(paramValue);
 											color.SetAlpha(0.5f * alpha);
 											if (colorizeShader == nullptr) {
 												colorizeShader = ContentResolver::Current().GetShader(PrecompiledShader::Colorized);
@@ -338,6 +337,36 @@ namespace Jazz2::UI
 								color = Colorf(1.0f, 1.0f, 1.0f, alpha);
 								colorizeShader = nullptr;
 							}
+						}
+					} else if (cursor.first == 'w') {
+						idx = cursor.second;
+						cursor = Utf8::NextChar(text, idx);
+						if (cursor.first == ':') {
+							idx = cursor.second;
+							int paramLength = 0;
+							char param[9];
+							do {
+								cursor = Utf8::NextChar(text, idx);
+								if (cursor.first == ']') {
+									break;
+								}
+								if (paramLength < _countof(param) - 1) {
+									param[paramLength++] = (char)cursor.first;
+								}
+								idx = cursor.second;
+							} while (idx < textLength);
+
+							if (paramLength > 0 && !useRandomColor && !isShadow) {
+								param[paramLength] = '\0';
+								char* end = &param[paramLength];
+								unsigned long paramValue = strtoul(param, &end, 10);
+								if (param != end) {
+									charSpacing = paramValue * 0.01f;
+								}
+							}
+						} else if (cursor.first == ']') {
+							// Reset char spacing
+							charSpacing = charSpacingPre;
 						}
 					}
 				}
@@ -376,7 +405,7 @@ namespace Jazz2::UI
 					pos.Y = std::round(pos.Y - uvRect.H * scale * 0.5f);
 
 					Vector4f texCoords = Vector4f(
-						uvRect.W / float(texSize.X),
+						_charSize.X / float(texSize.X),
 						uvRect.X,
 						uvRect.H / float(texSize.Y),
 						uvRect.Y
@@ -405,11 +434,11 @@ namespace Jazz2::UI
 
 					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 					instanceBlock->uniform(Material::TexRectUniformName)->setFloatVector(texCoords.Data());
-					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(uvRect.W * scale, uvRect.H * scale);
+					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(_charSize.X * scale, uvRect.H * scale);
 					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(color.Data());
 
 					// TODO: It looks better with the "0.5f" offset
-					command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y + 0.5f, 0.0f));
+					command->setTransformation(Matrix4x4f::Translation(pos.X - (uvRect.W - _charSize.X) * 0.5f * scale, pos.Y + 0.5f, 0.0f));
 					command->setLayer(z - (charOffset & 1));
 					command->material().setTexture(*_texture.get());
 
