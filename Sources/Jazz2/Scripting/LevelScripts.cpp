@@ -32,6 +32,12 @@ namespace Jazz2::Scripting
 		_onLevelUpdateLastFrame(-1)
 	{
 		_engine = asCreateScriptEngine();
+		_engine->SetEngineProperty(asEP_PROPERTY_ACCESSOR_MODE, 2);
+#if defined(NCINE_DEBUG)
+		_engine->SetEngineProperty(asEP_COMPILER_WARNINGS, true);
+#else
+		_engine->SetEngineProperty(asEP_BUILD_WITHOUT_LINE_CUES, true);
+#endif
 		_engine->SetUserData(this, EngineToOwner);
 		_engine->SetContextCallbacks(RequestContextCallback, ReturnContextCallback, this);
 
@@ -240,9 +246,16 @@ namespace Jazz2::Scripting
 
 						if (t == asTC_VALUE && len > 2 && (scriptContent[pos] == '"' || scriptContent[pos] == '\'')) {
 							// Get the include file
-							String includePath = ConstructPath(StringView(&scriptContent[pos + 1], len - 2), path);
-							if (!includePath.empty()) {
-								includes.push_back(includePath);
+							StringView filename = StringView(&scriptContent[pos + 1], len - 2);
+							// Skip MLLE files, because it's handled natively
+							if (!(filename.hasPrefix("MLLE-Include-"_s) && filename.hasSuffix(".asc"_s))) {
+								// TODO: Allow multiple search paths
+								/*String includePath = ConstructPath(filename, path);
+								if (!includePath.empty()) {
+									includes.push_back(includePath);
+								}*/
+								auto sourcePath = ContentResolver::Current().GetSourcePath();
+								includes.push_back(fs::JoinPath(sourcePath, filename));
 							}
 							pos += len;
 

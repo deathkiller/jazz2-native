@@ -24,14 +24,14 @@ static constexpr uint16_t Windows1250_Utf8[256] = {
 	0x0111, 0x0144, 0x0148, 0x00f3, 0x00f4, 0x0151, 0x00f6, 0x00f7, 0x0159, 0x016f, 0x00fa, 0x0171, 0x00fc, 0x00fd, 0x0163, 0x02d9
 };
 
-// TODO: default colors
 static constexpr uint32_t DefaultFontColors[] = {
-	0x111111,
-	0x222222,
-	0x333333,
-	0x444444,
-	0x555555,
-	0x666666
+	0x707485,
+	0x409062,
+	0x629040,
+	0x804040,
+	0x6270d0,
+	0xc07050,
+	0xa05c6a
 };
 
 namespace Jazz2::Compatibility
@@ -174,8 +174,10 @@ namespace Jazz2::Compatibility
 		}
 
 		char buffer[1024];
-		int colorIndex = -1;
+		int colorIndex = 0;
+		bool colorRandom = false;
 		bool colorEmitted = true;
+		bool colorFrozen = true;
 		size_t length = text.size();
 		size_t j = 0;
 		for (size_t i = 0; i < length && j < sizeof(buffer) - 16; i++) {
@@ -193,33 +195,51 @@ namespace Jazz2::Compatibility
 				} else {
 					buffer[j++] = ' ';
 				}
-			} else if (current == '\xA7' && std::isdigit(text[i + 1])) {
+			} else if (current == '\xA7' && (std::isdigit(text[i + 1]) || text[i + 1] == '/')) {
 				// Char spacing (§)
 				i++;
 				if (!plain) {
-					uint32_t spacing = current - '0';
-					uint32_t converted = 100 - (spacing * 10);
-
 					if (escaped) {
 						buffer[j++] = '\\';
 						buffer[j++] = 'f';
 					} else {
 						buffer[j++] = '\f';
 					}
-					j += formatString(&buffer[j], 16, "[w:%i]", converted);
+
+					if (text[i] == '/') {
+						buffer[j++] = '[';
+						buffer[j++] = 'w';
+						buffer[j++] = ']';
+					} else {
+						uint32_t spacing = text[i] - '0';
+						uint32_t converted = 100 - (spacing * 10);
+						j += formatString(&buffer[j], 16, "[w:%i]", converted);
+						if (colorRandom && !colorFrozen) {
+							colorIndex++;
+						}
+					}
 				}
 			} else if (current == '#') {
-				// TODO: Random color
-				//colorIndex = -1;
-				//colorEmitted = false;
-				//randomColor ^= true;
-			} else if (current == '~') {
-				// TODO: Freeze the active color
-				//randomColor = false;
-			} else if (current == '|') {
-				// Custom color
-				colorIndex++;
+				// Turn on colorization
+				colorRandom = true;
 				colorEmitted = false;
+				colorFrozen = false;
+			} else if (current == '~' && colorRandom) {
+				// Freeze active color
+				if (!colorFrozen) {
+					colorFrozen = true;
+				} else {
+					colorRandom = false;
+					colorEmitted = false;
+					colorFrozen = false;
+					colorIndex = 0;
+				}
+			} else if (current == '|' && colorRandom) {
+				// Skip one color
+				if (!colorFrozen) {
+					colorIndex++;
+					colorEmitted = false;
+				}
 			} else {
 				if (!plain && !colorEmitted) {
 					colorEmitted = true;
@@ -229,7 +249,14 @@ namespace Jazz2::Compatibility
 					} else {
 						buffer[j++] = '\f';
 					}
-					j += formatString(&buffer[j], 16, "[c:0x%08x]", DefaultFontColors[colorIndex % _countof(DefaultFontColors)]);
+					int colorIndex2 = colorIndex % (_countof(DefaultFontColors) + 1);
+					if (colorIndex2 == 0) {
+						buffer[j++] = '[';
+						buffer[j++] = 'c';
+						buffer[j++] = ']';
+					} else {
+						j += formatString(&buffer[j], 16, "[c:0x%08x]", DefaultFontColors[colorIndex2 - 1]);
+					}
 				}
 
 				const uint16_t c = Windows1250_Utf8[(uint8_t)current];
@@ -244,10 +271,10 @@ namespace Jazz2::Compatibility
 					buffer[j++] = 0x80 | (c & 0x3f);
 				}
 
-				/*if (randomColor && colorIndex > -1) {
-					colorIndex = -1;
+				if (colorRandom && !colorFrozen && c != ' ' && text[i + 1] != '~') {
+					colorIndex++;
 					colorEmitted = false;
-				}*/
+				}
 			}
 		}
 

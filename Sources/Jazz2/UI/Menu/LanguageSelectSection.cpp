@@ -119,6 +119,6 @@ namespace Jazz2::UI::Menu
 
 		auto& episode = _items.emplace_back();
 		episode.Item.FileName = languageFile;
-		episode.Item.DisplayName = I18n::GetLanguageName(language) + "  \f[c:0x707070]| " + language;
+		episode.Item.DisplayName = I18n::GetLanguageName(language) + " \f[c:0x707070]· " + language;
 	}
 }

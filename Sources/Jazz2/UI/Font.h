@@ -37,7 +37,8 @@ namespace Jazz2::UI
 
 		Rectf _asciiChars[128];
 		HashMap<uint32_t, Rectf> _unicodeChars;
-		int _baseSpacing, _charHeight;
+		Vector2i _charSize;
+		int _baseSpacing;
 		std::unique_ptr<Texture> _texture;
 	};
 }

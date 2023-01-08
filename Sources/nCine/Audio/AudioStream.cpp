@@ -41,7 +41,7 @@ namespace nCine
 	{
 		const bool hasLoaded = loadFromFile(filename);
 		if (!hasLoaded) {
-			LOGE_X("Audio file \"%s\" cannot be loaded", filename);
+			LOGE_X("Audio file \"%s\" cannot be loaded", filename.data());
 		}
 	}
 
@@ -216,5 +216,4 @@ namespace nCine
 		audioReader_ = audioLoader.createReader();
 		audioReader_->setLooping(isLooping_);
 	}
-
 }
