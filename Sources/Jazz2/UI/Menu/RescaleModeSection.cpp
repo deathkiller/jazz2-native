@@ -46,15 +46,7 @@ namespace Jazz2::UI::Menu
 		if (isSelected) {
 			float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
-			size_t realNameLength;
-			StringView realNameEnd = item.Item.DisplayName.find('\f');
-			if (realNameEnd != nullptr) {
-				realNameLength = realNameEnd.data() - item.Item.DisplayName.data() + 4;
-			} else {
-				realNameLength = item.Item.DisplayName.size();
-			}
-
-			_root->DrawElement("MenuGlow"_s, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (realNameLength + 3) * 0.5f * size, 4.0f * size, true);
+			_root->DrawElement("MenuGlow"_s, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (item.Item.DisplayName.size() + 3) * 0.5f * size, 4.0f * size, true);
 
 			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
 				Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);

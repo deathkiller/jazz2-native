@@ -50,7 +50,7 @@ namespace Death::Containers
 		 * better to explicitly use either the @ref Pair(ValueInitT) or the
 		 * @ref Pair(NoInitT) variant instead.
 		 */
-#ifndef DEATH_MSVC2015_COMPATIBILITY
+#if !defined(DEATH_MSVC2015_COMPATIBILITY)
 		// Not constexpr for this joke of a compiler because I don't explicitly initialize _first and _second, which wouldn't be a default initialization if I did that.
 		constexpr
 #endif
@@ -86,7 +86,7 @@ namespace Death::Containers
 		 * Alias to @ref Pair(ValueInitT).
 		 */
 		constexpr /*implicit*/ Pair() noexcept(std::is_nothrow_constructible<F>::value && std::is_nothrow_constructible<S>::value) :
-#ifdef DEATH_MSVC2015_COMPATIBILITY
+#if defined(DEATH_MSVC2015_COMPATIBILITY)
 			// Otherwise it complains that _first and _second isn't initialized in a constexpr context. Does it not see the delegation?! OTOH
 			// MSVC doesn't seem to be affected by the emplaceConstructorExplicitInCopyInitialization() bug in GCC and Clang, so I can use {} here I think.
 			_first {}, _second {}

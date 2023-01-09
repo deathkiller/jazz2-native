@@ -1,7 +1,7 @@
 ﻿#if defined(WITH_ANGELSCRIPT)
 
 #include "ScriptPlayerWrapper.h"
-#include "LevelScripts.h"
+#include "LevelScriptLoader.h"
 #include "RegisterArray.h"
 #include "../ILevelHandler.h"
 
@@ -11,7 +11,7 @@ using namespace Jazz2::Actors;
 
 namespace Jazz2::Scripting
 {
-	ScriptPlayerWrapper::ScriptPlayerWrapper(LevelScripts* levelScripts, int playerIndex)
+	ScriptPlayerWrapper::ScriptPlayerWrapper(LevelScriptLoader* levelScripts, int playerIndex)
 		:
 		_levelScripts(levelScripts),
 		_refCount(1)
@@ -20,7 +20,7 @@ namespace Jazz2::Scripting
 		_player = (playerIndex < players.size() ? players[playerIndex] : nullptr);
 	}
 
-	ScriptPlayerWrapper::ScriptPlayerWrapper(LevelScripts* levelScripts, Player* player)
+	ScriptPlayerWrapper::ScriptPlayerWrapper(LevelScriptLoader* levelScripts, Player* player)
 		:
 		_levelScripts(levelScripts),
 		_refCount(1),
@@ -75,7 +75,7 @@ namespace Jazz2::Scripting
 	ScriptPlayerWrapper* ScriptPlayerWrapper::Factory(int playerIndex)
 	{
 		auto ctx = asGetActiveContext();
-		auto owner = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(LevelScripts::EngineToOwner));
+		auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
 
 		void* mem = asAllocMem(sizeof(ScriptPlayerWrapper));
 		return new(mem) ScriptPlayerWrapper(owner, playerIndex);

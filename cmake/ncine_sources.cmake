@@ -1,5 +1,6 @@
 set(SOURCES
 	${NCINE_SOURCE_DIR}/Shared/Environment.cpp
+	${NCINE_SOURCE_DIR}/Shared/Cpu.cpp
 	${NCINE_SOURCE_DIR}/Shared/Utf8.cpp
 	${NCINE_SOURCE_DIR}/Shared/Containers/SmallVector.cpp
 	${NCINE_SOURCE_DIR}/Shared/Containers/String.cpp
@@ -216,12 +217,12 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Tileset.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventMap.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventSpawner.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScripts.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScripts.Declarations.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScriptLoader.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterRef.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterString.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/ScriptActorWrapper.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/ScriptLoader.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/ScriptPlayerWrapper.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileMap.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileSet.cpp

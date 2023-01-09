@@ -2,7 +2,7 @@
 
 #include "ScriptActorWrapper.h"
 #include "ScriptPlayerWrapper.h"
-#include "LevelScripts.h"
+#include "LevelScriptLoader.h"
 #include "RegisterArray.h"
 #include "RegisterRef.h"
 #include "../ILevelHandler.h"
@@ -24,7 +24,7 @@ using namespace Jazz2::Actors;
 
 namespace Jazz2::Scripting
 {
-	ScriptActorWrapper::ScriptActorWrapper(LevelScripts* levelScripts, asIScriptObject* obj)
+	ScriptActorWrapper::ScriptActorWrapper(LevelScriptLoader* levelScripts, asIScriptObject* obj)
 		:
 		_levelScripts(levelScripts),
 		_obj(obj),
@@ -179,7 +179,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 	ScriptActorWrapper* ScriptActorWrapper::Factory(int actorType)
 	{
 		auto ctx = asGetActiveContext();
-		auto owner = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(LevelScripts::EngineToOwner));
+		auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
 
 		// Get the function that is calling the factory, so we can be certain it is the our internal script class
 		asIScriptFunction* func = ctx->GetFunction(0);
@@ -607,7 +607,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		SetAnimation((AnimState)state);
 	}
 
-	ScriptCollectibleWrapper::ScriptCollectibleWrapper(LevelScripts* levelScripts, asIScriptObject* obj)
+	ScriptCollectibleWrapper::ScriptCollectibleWrapper(LevelScriptLoader* levelScripts, asIScriptObject* obj)
 		:
 		ScriptActorWrapper(levelScripts, obj),
 		_untouched(true),

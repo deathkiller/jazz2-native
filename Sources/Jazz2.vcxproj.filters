@@ -1026,7 +1026,7 @@
     <ClInclude Include="Jazz2\UI\Menu\ImportSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Scripting\LevelScripts.h">
+    <ClInclude Include="Jazz2\Scripting\LevelScriptLoader.h">
       <Filter>Header Files\Jazz2\Scripting</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Scripting\RegisterString.h">
@@ -1241,6 +1241,27 @@
     </ClInclude>
     <ClInclude Include="Jazz2\PlayerType.h">
       <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Cpu.h">
+      <Filter>Header Files\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IntrinsicsSsse3.h">
+      <Filter>Header Files\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IntrinsicsAvx.h">
+      <Filter>Header Files\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IntrinsicsSse2.h">
+      <Filter>Header Files\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IntrinsicsSse3.h">
+      <Filter>Header Files\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IntrinsicsSse4.h">
+      <Filter>Header Files\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\ScriptLoader.h">
+      <Filter>Header Files\Jazz2\Scripting</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1895,7 +1916,7 @@
     <ClCompile Include="Jazz2\UI\Menu\ImportSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Scripting\LevelScripts.cpp">
+    <ClCompile Include="Jazz2\Scripting\LevelScriptLoader.cpp">
       <Filter>Source Files\Jazz2\Scripting</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Scripting\RegisterString.cpp">
@@ -2099,7 +2120,10 @@
     <ClCompile Include="Jazz2\UI\Menu\LanguageSelectSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Scripting\LevelScripts.Declarations.cpp">
+    <ClCompile Include="$(ExtensionLibraryPath)\Cpu.cpp">
+      <Filter>Source Files\Shared</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\ScriptLoader.cpp">
       <Filter>Source Files\Jazz2\Scripting</Filter>
     </ClCompile>
   </ItemGroup>

@@ -18,10 +18,10 @@
 #if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
 #	pragma push_macro("WIN32_LEAN_AND_MEAN")
 #	pragma push_macro("NOMINMAX")
-#	ifndef WIN32_LEAN_AND_MEAN
+#	if !defined(WIN32_LEAN_AND_MEAN)
 #		define WIN32_LEAN_AND_MEAN
 #	endif
-#	ifndef NOMINMAX
+#	if !defined(NOMINMAX)
 #		define NOMINMAX
 #	endif
 #	include <ws2tcpip.h>

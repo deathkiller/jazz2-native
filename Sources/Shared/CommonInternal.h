@@ -54,8 +54,8 @@
 #endif
 
 // C++ standard
-#ifdef _MSC_VER
-#	ifdef _MSVC_LANG
+#if defined(_MSC_VER)
+#	if defined(_MSVC_LANG)
 #		define DEATH_CXX_STANDARD _MSVC_LANG
 #	else
 #		define DEATH_CXX_STANDARD 201103L
@@ -65,7 +65,7 @@
 #endif
 
 #include <ciso646>
-#ifdef _LIBCPP_VERSION
+#if defined(_LIBCPP_VERSION)
 #	define DEATH_TARGET_LIBCXX
 #elif defined(_CPPLIB_VER)
 #	define DEATH_TARGET_DINKUMWARE
@@ -75,7 +75,7 @@
 #elif defined(__has_include)
 #	if __has_include(<bits/c++config.h>)
 #		include <bits/c++config.h>
-#		ifdef __GLIBCXX__
+#		if defined(__GLIBCXX__)
 #			define DEATH_TARGET_LIBSTDCXX
 #		endif
 #	endif
@@ -87,11 +87,11 @@
 // Otherwise no idea.
 #endif
 
-#ifdef __GNUC__
+#if defined(__GNUC__)
 #	define DEATH_TARGET_GCC
 #endif
 
-#ifdef __clang__
+#if defined(__clang__)
 #	define DEATH_TARGET_CLANG
 #endif
 
@@ -103,7 +103,7 @@
 #	define DEATH_TARGET_APPLE_CLANG
 #endif
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
 #	define DEATH_TARGET_MSVC
 #	if _MSC_VER <= 1900
 #		define DEATH_MSVC2015_COMPATIBILITY
@@ -113,7 +113,7 @@
 #	endif
 #endif
 
-#ifdef __MINGW32__
+#if defined(__MINGW32__)
 #	define DEATH_TARGET_MINGW
 #endif
 
@@ -122,7 +122,7 @@
 // switching endianness at runtime (and worse, have per-page endianness). So let's pretend we never saw this article:
 // https://en.wikipedia.org/wiki/Endianness#Bi-endianness
 // For extra safety this gets runtime-tested in TargetTest, so when porting to a new platform, make sure you run that test.
-#ifdef __BYTE_ORDER__
+#if defined(__BYTE_ORDER__)
 #	if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 #		define DEATH_TARGET_BIG_ENDIAN
 #	elif __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
@@ -137,23 +137,23 @@
 #endif
 
 // Compile-time CPU feature detection
-#ifdef DEATH_TARGET_X86
+#if defined(DEATH_TARGET_X86)
 
 // SSE on GCC: https://stackoverflow.com/a/28939692
-#ifdef DEATH_TARGET_GCC
-#	ifdef __SSE2__
+#if defined(DEATH_TARGET_GCC)
+#	if defined(__SSE2__)
 #		define DEATH_TARGET_SSE2
 #	endif
-#	ifdef __SSE3__
+#	if defined(__SSE3__)
 #		define DEATH_TARGET_SSE3
 #	endif
-#	ifdef __SSSE3__
+#	if defined(__SSSE3__)
 #		define DEATH_TARGET_SSSE3
 #	endif
-#	ifdef __SSE4_1__
+#	if defined(__SSE4_1__)
 #		define DEATH_TARGET_SSE41
 #	endif
-#	ifdef __SSE4_2__
+#	if defined(__SSE4_2__)
 #		define DEATH_TARGET_SSE42
 #	endif
 
@@ -164,7 +164,7 @@
 #		define DEATH_TARGET_SSE2
 #	endif
 // On MSVC there's no way to detect SSE3 and newer, these are only implied by AVX as far as I can tell
-#	ifdef __AVX__
+#	if defined(__AVX__)
 #		define DEATH_TARGET_SSE3
 #		define DEATH_TARGET_SSSE3
 #		define DEATH_TARGET_SSE41
@@ -174,26 +174,26 @@
 
 // Both GCC and MSVC have the same macros for AVX, AVX2 and AVX512F
 #if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_MSVC)
-#	ifdef __AVX__
+#	if defined(__AVX__)
 #		define DEATH_TARGET_AVX
 #	endif
-#	ifdef __AVX2__
+#	if defined(__AVX2__)
 #		define DEATH_TARGET_AVX2
 #	endif
-#	ifdef __AVX512F__
+#	if defined(__AVX512F__)
 #		define DEATH_TARGET_AVX512F
 #	endif
 #endif
 
 // POPCNT, LZCNT and BMI1 on GCC, queried wth `gcc -mpopcnt -dM -E - | grep POPCNT`, and equivalent for others.
-#ifdef DEATH_TARGET_GCC
-#	ifdef __POPCNT__
+#if defined(DEATH_TARGET_GCC)
+#	if defined(__POPCNT__)
 #		define DEATH_TARGET_POPCNT
 #	endif
-#	ifdef __LZCNT__
+#	if defined(__LZCNT__)
 #		define DEATH_TARGET_LZCNT
 #	endif
-#	ifdef __BMI__
+#	if defined(__BMI__)
 #		define DEATH_TARGET_BMI1
 #	endif
 
@@ -206,12 +206,12 @@
 // For extra robustness on clang-cl check the macros explicitly -- as with other AVX+ intrinsics, these are only included
 // if the corresponding macro is defined as well. Failing to do so would mean the DEATH_ENABLE_AVX_{POPCNT,LZCNT,BMI1} macros
 // are defined always, incorrectly implying presence of these intrinsics.
-#	ifdef __AVX__
+#	if defined(__AVX__)
 #		if !defined(DEATH_TARGET_CLANG_CL) || defined(__POPCNT__)
 #			define DEATH_TARGET_POPCNT
 #		endif
 #	endif
-#	ifdef __AVX2__
+#	if defined(__AVX2__)
 #		if !defined(DEATH_TARGET_CLANG_CL) || defined(__LZCNT__)
 #			define DEATH_TARGET_LZCNT
 #		endif
@@ -225,11 +225,11 @@
 // no mention of F16C but https://walbourn.github.io/directxmath-f16c-and-fma/ says it's like that so I'll believe that.
 // However, comments below https://stackoverflow.com/a/50829580 say there is a Via processor with AVX2 but no FMA, so then
 // the __AVX2__ check isn't really bulletproof. Use runtime detection where possible, please.
-#ifdef DEATH_TARGET_GCC
-#	ifdef __F16C__
+#if defined(DEATH_TARGET_GCC)
+#	if defined(__F16C__)
 #		define DEATH_TARGET_AVX_F16C
 #	endif
-#	ifdef __FMA__
+#	if defined(__FMA__)
 #		define DEATH_TARGET_AVX_FMA
 #	endif
 #elif defined(DEATH_TARGET_MSVC) && defined(__AVX2__)
@@ -252,7 +252,7 @@
 // use a standard header, they also expose the standard macro name, even though not listed among their predefined macros?
 // Needs testing, though.
 #elif defined(DEATH_TARGET_ARM)
-#	ifdef __ARM_NEON
+#	if defined(__ARM_NEON)
 #		define DEATH_TARGET_NEON
 // NEON FMA is available only if __ARM_FEATURE_FMA is defined and some bits of __ARM_NEON_FP as well
 // (ARM C Language Extensions 1.1, §6.5.5: https://developer.arm.com/documentation/ihi0053/b/). On AAArch64 NEON is
@@ -263,7 +263,7 @@
 #		endif
 // There's no linkable documentation for anything and the PDF is stupid. But, given the FP16 instructions implemented
 // in GCC and Clang are guarded by this macro, it should be alright: https://gcc.gnu.org/legacy-ml/gcc-patches/2016-06/msg00460.html
-#		ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+#		if defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)
 #			define DEATH_TARGET_NEON_FP16
 #		endif
 #	endif
@@ -295,21 +295,40 @@
 // Kill switch for when presence of a sanitizer is detected and DEATH_CPU_USE_IFUNC is enabled. Unfortunately in our case the
 // __attribute__((no_sanitize_address)) workaround as described on https://github.com/google/sanitizers/issues/342 doesn't
 // work / can't be used because it would mean marking basically everything including the actual implementation that's being dispatched to.
-#ifdef DEATH_CPU_USE_IFUNC
-#	ifdef __has_feature
+#if defined(DEATH_CPU_USE_IFUNC)
+#	if defined(__has_feature)
 #		if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer) || __has_feature(memory_sanitizer) || __has_feature(undefined_behavior_sanitizer)
 #			define _DEATH_SANITIZER_IFUNC_DETECTED
 #		endif
 #	elif defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)
 #		define _DEATH_SANITIZER_IFUNC_DETECTED
 #	endif
-#	ifdef _DEATH_SANITIZER_IFUNC_DETECTED
+#	if defined(_DEATH_SANITIZER_IFUNC_DETECTED)
 #		 error The library was built with DEATH_CPU_USE_IFUNC, which is incompatible with sanitizers. Rebuild without this option or disable sanitizers.
 #	endif
 #endif
 
+#if defined(DEATH_TARGET_GCC)
+#	define DEATH_ALWAYS_INLINE __attribute__((always_inline)) inline
+#elif defined(DEATH_TARGET_MSVC)
+#	define DEATH_ALWAYS_INLINE __forceinline
+#else
+#	define DEATH_ALWAYS_INLINE inline
+#endif
+
+#if defined(DEATH_TARGET_GCC)
+#	define DEATH_NEVER_INLINE __attribute__((noinline))
+#elif defined(DEATH_TARGET_MSVC)
+#	define DEATH_NEVER_INLINE __declspec(noinline)
+#else
+#	define DEATH_NEVER_INLINE
+#endif
+
+#define DEATH_PASSTHROUGH(...) __VA_ARGS__
+#define DEATH_NOOP(...)
+
 // Assertions
-#ifndef DEATH_ASSERT
+#if !defined(DEATH_ASSERT)
 #	if defined(NDEBUG)
 #		define DEATH_ASSERT(condition, message, returnValue) do { } while(false)
 #	else
@@ -317,7 +336,7 @@
 #	endif
 #endif
 
-#ifndef DEATH_CONSTEXPR_ASSERT
+#if !defined(DEATH_CONSTEXPR_ASSERT)
 #	if defined(NDEBUG)
 #		define DEATH_CONSTEXPR_ASSERT(condition, message) static_cast<void>(0)
 #	else
@@ -328,7 +347,26 @@
 #	endif
 #endif
 
-#ifndef DEATH_ASSERT_UNREACHABLE
+#if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 10
+#	define DEATH_UNUSED [[maybe_unused]]
+#elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG_CL)
+#	define DEATH_UNUSED __attribute__((__unused__))
+#elif defined(DEATH_TARGET_MSVC)
+#	define DEATH_UNUSED __pragma(warning(suppress:4100))
+#else
+#	define DEATH_UNUSED
+#endif
+
+#if (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926 && DEATH_CXX_STANDARD >= 201703) || (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 7)
+#	define DEATH_FALLTHROUGH [[fallthrough]];
+#elif defined(DEATH_TARGET_CLANG)
+// Clang unfortunately warns that [[fallthrough]] is a C++17 extension, so we use this instead of attempting to suppress the warning
+#	define DEATH_FALLTHROUGH [[clang::fallthrough]];
+#else
+#	define DEATH_FALLTHROUGH
+#endif
+
+#if !defined(DEATH_ASSERT_UNREACHABLE)
 #	if defined(DEATH_TARGET_GCC)
 #		define DEATH_ASSERT_UNREACHABLE() __builtin_unreachable()
 #	elif defined(DEATH_TARGET_MSVC)

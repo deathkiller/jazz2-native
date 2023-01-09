@@ -570,8 +570,6 @@ namespace Death::Containers
 		StaticArray<3, MutableStringView> partition(char separator);
 		StaticArray<3, StringView> partition(char separator) const;
 
-		/** @todo change this to return a Triple? it's a smaller header */
-
 		/**
 		 * @brief Join strings with this view as the delimiter
 		 *
@@ -888,7 +886,7 @@ namespace Death::Containers
 		   The above approach is consistent with StringView, which is the
 		   preferrable solution after all. */
 		struct Small {
-#ifdef DEATH_TARGET_BIG_ENDIAN
+#if defined(DEATH_TARGET_BIG_ENDIAN)
 			unsigned char size;
 			char data[Implementation::SmallStringSize];
 #else
@@ -897,7 +895,7 @@ namespace Death::Containers
 #endif
 		};
 		struct Large {
-#ifdef DEATH_TARGET_BIG_ENDIAN
+#if defined(DEATH_TARGET_BIG_ENDIAN)
 			std::size_t size;
 			char* data;
 			void(*deleter)(char*, std::size_t);

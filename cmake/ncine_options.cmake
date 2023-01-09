@@ -1,3 +1,4 @@
+# nCine options
 option(NCINE_LOG "Enable runtime logging" ON)
 option(NCINE_DOWNLOAD_DEPENDENCIES "Download all build dependencies" ON)
 option(NCINE_LINKTIME_OPTIMIZATION "Compile the game with link time optimization when in release" OFF)
@@ -20,21 +21,22 @@ else()
 
 	if(NCINE_BUILD_ANDROID)
 		set(NCINE_NDK_ARCHITECTURES "arm64-v8a" CACHE STRING "Set NDK target architectures")
-		option(NCINE_ASSEMBLE_APK "Assemble Android APK with Gradle" OFF)
+		option(NCINE_ASSEMBLE_APK "Assemble Android APK with Gradle" ON)
 		option(NCINE_UNIVERSAL_APK "Configure Gradle build script to assemble an universal APK for all ABIs" OFF)
 		set(NDK_DIR "" CACHE PATH "Set path to Android NDK")
 	elseif(MSVC)
 		set(NCINE_ARCH_EXTENSIONS "" CACHE STRING "Specifies architecture for code generation (IA32, SSE, SSE2, AVX, AVX2, AVX512)")
 		if(WINDOWS_PHONE OR WINDOWS_STORE)
-			option(NCINE_WITH_ANGLE "Enable Google ANGLE libraries support" ON)
 			set(NCINE_UWP_CERTIFICATE_THUMBPRINT "" CACHE STRING "Code-signing certificate thumbprint (Windows RT only)")
 			set(NCINE_UWP_CERTIFICATE_PATH "" CACHE STRING "Code-signing certificate path (Windows RT only)")
 			set(NCINE_UWP_CERTIFICATE_PASSWORD "" CACHE STRING "Code-signing certificate password (Windows RT only)")
+			set(_NCINE_WITH_ANGLE_DEFAULT ON)
 		else()
-			option(NCINE_WITH_ANGLE "Enable Google ANGLE libraries support" OFF)
 			option(NCINE_INSTALL_SYSLIBS "Install required MSVC system libraries with CMake" OFF)
 			option(NCINE_COPY_DEPENDENCIES "Copy all build dependencies to target directory" OFF)
+			set(_NCINE_WITH_ANGLE_DEFAULT OFF)
 		endif()
+		option(NCINE_WITH_ANGLE "Enable Google ANGLE libraries support" ${_NCINE_WITH_ANGLE_DEFAULT})
 	elseif(UNIX AND NOT APPLE AND NOT ANDROID)
 		option(NCINE_ASSEMBLE_DEB "Assemble DEB package of the game" OFF)
 		option(NCINE_ASSEMBLE_RPM "Assemble RPM package of the game" OFF)
@@ -82,6 +84,65 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 endif()
 
 #set(NCINE_WITH_FIXED_BATCH_SIZE "0" CACHE PATH "Set custom fixed batch size (unsafe)")
+
+# Shared library options
+# Check if we can use IFUNC for CPU dispatch. Linux with glibc and Android with API 18+ has it,
+# but e.g. Alpine Linux with musl doesn't, and on Android with API < 30 we don't get AT_HWCAP passed
+# into the resolver and can't call getauxval() ourselves because it's too early at that point,
+# which makes it pretty useless. Plus it also needs a certain binutils version and a capable compiler,
+# so it's easiest to just verify the whole thing. The feature is supported on ELF platforms only,
+# so general Linux/BSD but not Apple.
+if(UNIX AND NOT APPLE)
+	include(CheckCXXSourceCompiles)
+	check_cxx_source_compiles("\
+int fooImplementation() { return 42; }
+#if defined(__ANDROID_API__) && __ANDROID_API__ < 30
+#error need Android API 30+ to have AT_HWCAP passed into the resolver
+#endif
+extern \"C\" int(*fooDispatcher())() {
+	return fooImplementation;
+}
+int foo() __attribute__((ifunc(\"fooDispatcher\")));
+int main() { return foo() - 42; }\
+		" _DEATH_CPU_CAN_USE_IFUNC)
+	if(_DEATH_CPU_CAN_USE_IFUNC)
+		set(_DEATH_CPU_USE_IFUNC_DEFAULT ON)
+		# On GCC 4.8, if --coverage or -fprofile-arcs is enabled, the ifunc dispatchers cause a segfault.
+		# On Ubuntu 20.04 at least. Not the case with GCC 5 there, not the case with GCC 4.8 on Arch.
+		# Can't find any upstream bug report or commit that would be related to this.
+		if(NCINE_CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.9")
+			if(NOT DEFINED DEATH_CPU_USE_IFUNC)
+				message(WARNING "Disabling DEATH_CPU_USE_IFUNC by default as it may crash when used together with --coverage on GCC 4.8.")
+			endif()
+			set(_DEATH_CPU_USE_IFUNC_DEFAULT OFF)
+		endif()
+
+		# If sanitizers are enabled, call into the dispatch function crashes. Upstream bugreport
+		# https://github.com/google/sanitizers/issues/342 suggests using __attribute__((no_sanitize_address)),
+		# but that doesn't work / can't be used because it would mean marking basically everything including
+		# the actual implementation that's being dispatched to.
+		if(NCINE_ADDRESS_SANITIZER OR NCINE_UNDEFINED_SANITIZER)
+			if(NOT DEFINED DEATH_CPU_USE_IFUNC)
+				message(WARNING "Disabling DEATH_CPU_USE_IFUNC by default as it crashes when used together with sanitizers. See https://github.com/google/sanitizers/issues/342 for more information.")
+			endif()
+			set(_DEATH_CPU_USE_IFUNC_DEFAULT OFF)
+		endif()
+	else()
+		set(_DEATH_CPU_USE_IFUNC_DEFAULT OFF)
+	endif()
+else()
+	set(_DEATH_CPU_CAN_USE_IFUNC OFF)
+	set(_DEATH_CPU_USE_IFUNC_DEFAULT OFF)
+endif()
+if(_DEATH_CPU_CAN_USE_IFUNC)
+	option(DEATH_CPU_USE_IFUNC "Allow using GNU IFUNC for runtime CPU dispatch" ${_DEATH_CPU_USE_IFUNC_DEFAULT})
+else()
+	set(DEATH_CPU_USE_IFUNC OFF)
+endif()
+
+# Runtime CPU dispatch. Because going through a function pointer may have negative perf consequences,
+# enable it by default only on platforms that have IFUNC, and thus can avoid the function pointer indirection.
+option(DEATH_CPU_USE_RUNTIME_DISPATCH "Build with runtime dispatch for CPU-dependent functionality" ${_DEATH_CPU_CAN_USE_IFUNC})
 
 # Jazz² Resurrection options
 option(SHAREWARE_DEMO_ONLY "Show only Shareware Demo episode" OFF)
