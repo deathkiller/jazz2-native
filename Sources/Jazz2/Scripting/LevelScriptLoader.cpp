@@ -1,6 +1,6 @@
 ﻿#if defined(WITH_ANGELSCRIPT)
 
-#include "LevelScripts.h"
+#include "LevelScriptLoader.h"
 #include "RegisterArray.h"
 #include "RegisterRef.h"
 #include "RegisterString.h"
@@ -13,19 +13,18 @@
 
 #include "../../nCine/Base/Random.h"
 
-// TODO: No-op implementations for Legacy declarations
 namespace Jazz2::Scripting
 {
-	void NoOp(const char* sourceName) {
+	static void Unimplemented(const char* sourceName) {
 		LOGE_X("%s", sourceName);
 	}
 
 #ifdef __GNUC__
-#	define noop() NoOp(__PRETTY_FUNCTION__)
+#	define noop() Unimplemented(__PRETTY_FUNCTION__)
 #elif _MSC_VER
-#	define noop() NoOp(__FUNCTION__)
+#	define noop() Unimplemented(__FUNCTION__)
 #else
-#	define noop() NoOp(__func__))
+#	define noop() Unimplemented(__func__)
 #endif
 
 	enum airjump {
@@ -578,7 +577,7 @@ namespace Jazz2::Scripting
 		mJAZZ_TELEPORTSTAND,
 		mJAZZ_VPOLE
 	};
-	
+
 	enum spriteType {
 		spriteType_NORMAL,
 		spriteType_TRANSLUCENT,
@@ -1188,7 +1187,7 @@ namespace Jazz2::Scripting
 		tbgModeREFLECTION
 	};
 
-	
+
 	struct TtextAppearance {
 		enum align_ {
 			align_DEFAULT,
@@ -1218,27 +1217,57 @@ namespace Jazz2::Scripting
 		ch_ tilde;
 		align_ align;
 
-		static TtextAppearance constructor() { noop(); return { }; }
-		static TtextAppearance constructorMode(uint32_t mode) { noop(); return { }; }
+		static TtextAppearance constructor() {
+			noop(); return { };
+		}
+		static TtextAppearance constructorMode(uint32_t mode) {
+			noop(); return { };
+		}
 
-		TtextAppearance& operator=(uint32_t other) { noop(); return *this; }
+		TtextAppearance& operator=(uint32_t other) {
+			noop(); return *this;
+		}
 	};
 
 	struct TgameCanvas {
 
-		void DrawPixel(int32_t xPixel, int32_t yPixel, uint8_t color, uint32_t mode, uint8_t param) { noop(); }
-		void DrawRectangle(int32_t xPixel, int32_t yPixel, int32_t width, int32_t height, uint8_t color, uint32_t mode, uint8_t param) { noop(); }
-		void DrawSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, int8_t direction, uint32_t mode, uint8_t param) { noop(); }
-		void DrawCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, int8_t direction, uint32_t mode, uint8_t param) { noop(); }
-		void DrawResizedSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, float xScale, float yScale, uint32_t mode, uint8_t param) { noop(); }
-		void DrawResizedCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, float xScale, float yScale, uint32_t mode, uint8_t param) { noop(); }
-		void DrawTransformedSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, int32_t angle, float xScale, float yScale, uint32_t mode, uint8_t param) { noop(); }
-		void DrawTransformedCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, int32_t angle, float xScale, float yScale, uint32_t mode, uint8_t param) { noop(); }
-		void DrawSwingingVine(int32_t xPixel, int32_t yPixel, uint32_t sprite, int32_t length, int32_t curvature, uint32_t mode, uint8_t param) { noop(); }
+		void DrawPixel(int32_t xPixel, int32_t yPixel, uint8_t color, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawRectangle(int32_t xPixel, int32_t yPixel, int32_t width, int32_t height, uint8_t color, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, int8_t direction, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, int8_t direction, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawResizedSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, float xScale, float yScale, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawResizedCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, float xScale, float yScale, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawTransformedSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, int32_t angle, float xScale, float yScale, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawTransformedCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, int32_t angle, float xScale, float yScale, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawSwingingVine(int32_t xPixel, int32_t yPixel, uint32_t sprite, int32_t length, int32_t curvature, uint32_t mode, uint8_t param) {
+			noop();
+		}
 
-		void ExternalDrawTile(int32_t xPixel, int32_t yPixel, uint16_t tile, uint32_t tileQuadrant) { noop(); }
-		void DrawTextBasicSize(int32_t xPixel, int32_t yPixel, const String& text, uint32_t size, uint32_t mode, uint8_t param) { noop(); }
-		void DrawTextExtSize(int32_t xPixel, int32_t yPixel, const String& text, uint32_t size, const TtextAppearance& appearance, uint8_t param1, uint32_t mode, uint8_t param) { noop(); }
+		void ExternalDrawTile(int32_t xPixel, int32_t yPixel, uint16_t tile, uint32_t tileQuadrant) {
+			noop();
+		}
+		void DrawTextBasicSize(int32_t xPixel, int32_t yPixel, const String& text, uint32_t size, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawTextExtSize(int32_t xPixel, int32_t yPixel, const String& text, uint32_t size, const TtextAppearance& appearance, uint8_t param1, uint32_t mode, uint8_t param) {
+			noop();
+		}
 
 	};
 
@@ -1247,12 +1276,22 @@ namespace Jazz2::Scripting
 		uint8_t green;
 		uint8_t blue;
 
-		static TpaletteEntry constructor() { noop(); return { }; }
-		static TpaletteEntry constructorRGB(uint8_t red, uint8_t green, uint8_t blue) { noop(); return { red, green, blue }; }
+		static TpaletteEntry constructor() {
+			noop(); return { };
+		}
+		static TpaletteEntry constructorRGB(uint8_t red, uint8_t green, uint8_t blue) {
+			noop(); return { red, green, blue };
+		}
 
-		uint8_t getHue() { noop(); return 0; }
-		uint8_t getSat() { noop(); return 0; }
-		uint8_t getLight() { noop(); return 0; }
+		uint8_t getHue() {
+			noop(); return 0;
+		}
+		uint8_t getSat() {
+			noop(); return 0;
+		}
+		uint8_t getLight() {
+			noop(); return 0;
+		}
 
 		void swizzle(uint32_t redc, uint32_t greenc, uint32_t bluec) {
 			noop();
@@ -1274,10 +1313,16 @@ namespace Jazz2::Scripting
 				case 1: blue = g; break;
 			}
 		}
-		void setHSL(int hue, uint8_t sat, uint8_t light) { noop(); }
+		void setHSL(int hue, uint8_t sat, uint8_t light) {
+			noop();
+		}
 
-		TpaletteEntry& operator=(const TpaletteEntry& other) { noop(); *this = other; return *this; }
-		bool operator==(const TpaletteEntry& other) { noop(); return (red == other.red && green == other.green && blue == other.blue); }
+		TpaletteEntry& operator=(const TpaletteEntry& other) {
+			noop(); *this = other; return *this;
+		}
+		bool operator==(const TpaletteEntry& other) {
+			noop(); return (red == other.red && green == other.green && blue == other.blue);
+		}
 	};
 
 	// TODO
@@ -1288,8 +1333,12 @@ namespace Jazz2::Scripting
 	class Tplayer
 	{
 	public:
-		Tplayer() { noop(); }
-		~Tplayer() { noop(); }
+		Tplayer() {
+			noop();
+		}
+		~Tplayer() {
+			noop();
+		}
 
 		// Assignment operator
 		Tplayer& operator=(const Tplayer& o)
@@ -1302,7 +1351,9 @@ namespace Jazz2::Scripting
 		int32_t score;
 		int32_t lastScoreDisplay;
 
-		int32_t setScore(int32_t value) { noop(); return 0; }
+		int32_t setScore(int32_t value) {
+			noop(); return 0;
+		}
 
 		float xPos;
 		float yPos;
@@ -1311,10 +1362,18 @@ namespace Jazz2::Scripting
 		float xOrg;
 		float yOrg;
 
-		int32_t get_xSpeed() { noop(); return 0; }
-		int32_t set_xSpeed() { noop(); return 0; }
-		int32_t get_ySpeed() { noop(); return 0; }
-		int32_t set_ySpeed() { noop(); return 0; }
+		int32_t get_xSpeed() {
+			noop(); return 0;
+		}
+		int32_t set_xSpeed() {
+			noop(); return 0;
+		}
+		int32_t get_ySpeed() {
+			noop(); return 0;
+		}
+		int32_t set_ySpeed() {
+			noop(); return 0;
+		}
 
 		float jumpSpeed;
 
@@ -1334,32 +1393,82 @@ namespace Jazz2::Scripting
 		bool run;
 		int32_t specialJump;
 
-		bool get_playerKeyLeftPressed() { noop(); return false; }
-		bool get_playerKeyRightPressed() { noop(); return false; }
-		bool get_playerKeyUpPressed() { noop(); return false; }
-		bool get_playerKeyDownPressed() { noop(); return false; }
-		bool get_playerKeyFirePressed() { noop(); return false; }
-		bool get_playerKeySelectPressed() { noop(); return false; }
-		bool get_playerKeyJumpPressed() { noop(); return false; }
-		bool get_playerKeyRunPressed() { noop(); return false; }
-		void set_playerKeyLeftPressed(bool value) { noop(); }
-		void set_playerKeyRightPressed(bool value) { noop(); }
-		void set_playerKeyUpPressed(bool value) { noop(); }
-		void set_playerKeyDownPressed(bool value) { noop(); }
-		void set_playerKeyFirePressed(bool value) { noop(); }
-		void set_playerKeySelectPressed(bool value) { noop(); }
-		void set_playerKeyJumpPressed(bool value) { noop(); }
-		void set_playerKeyRunPressed(bool value) { noop(); }
+		bool get_playerKeyLeftPressed() {
+			noop(); return false;
+		}
+		bool get_playerKeyRightPressed() {
+			noop(); return false;
+		}
+		bool get_playerKeyUpPressed() {
+			noop(); return false;
+		}
+		bool get_playerKeyDownPressed() {
+			noop(); return false;
+		}
+		bool get_playerKeyFirePressed() {
+			noop(); return false;
+		}
+		bool get_playerKeySelectPressed() {
+			noop(); return false;
+		}
+		bool get_playerKeyJumpPressed() {
+			noop(); return false;
+		}
+		bool get_playerKeyRunPressed() {
+			noop(); return false;
+		}
+		void set_playerKeyLeftPressed(bool value) {
+			noop();
+		}
+		void set_playerKeyRightPressed(bool value) {
+			noop();
+		}
+		void set_playerKeyUpPressed(bool value) {
+			noop();
+		}
+		void set_playerKeyDownPressed(bool value) {
+			noop();
+		}
+		void set_playerKeyFirePressed(bool value) {
+			noop();
+		}
+		void set_playerKeySelectPressed(bool value) {
+			noop();
+		}
+		void set_playerKeyJumpPressed(bool value) {
+			noop();
+		}
+		void set_playerKeyRunPressed(bool value) {
+			noop();
+		}
 
-		bool activateBoss(bool activate) { noop(); return false; }
-		bool limitXScroll(uint16_t left, uint16_t width) { noop(); return false; }
-		void cameraFreezeFF(float xPixel, float yPixel, bool centered, bool instant) { noop(); }
-		void cameraFreezeBF(bool xUnfreeze, float yPixel, bool centered, bool instant) { noop(); }
-		void cameraFreezeFB(float xPixel, bool yUnfreeze,  bool centered, bool instant){ noop(); }
-		void cameraFreezeBB(bool xUnfreeze, bool yUnfreeze, bool centered, bool instant) { noop(); }
-		void cameraUnfreeze(bool instant) { noop(); }
-		void showTextStr(const String& text, uint32_t size) { noop(); }
-		void showTextHstr(uint32_t textID, uint32_t offset, uint32_t size) { noop(); }
+		bool activateBoss(bool activate) {
+			noop(); return false;
+		}
+		bool limitXScroll(uint16_t left, uint16_t width) {
+			noop(); return false;
+		}
+		void cameraFreezeFF(float xPixel, float yPixel, bool centered, bool instant) {
+			noop();
+		}
+		void cameraFreezeBF(bool xUnfreeze, float yPixel, bool centered, bool instant) {
+			noop();
+		}
+		void cameraFreezeFB(float xPixel, bool yUnfreeze, bool centered, bool instant) {
+			noop();
+		}
+		void cameraFreezeBB(bool xUnfreeze, bool yUnfreeze, bool centered, bool instant) {
+			noop();
+		}
+		void cameraUnfreeze(bool instant) {
+			noop();
+		}
+		void showTextStr(const String& text, uint32_t size) {
+			noop();
+		}
+		void showTextHstr(uint32_t textID, uint32_t offset, uint32_t size) {
+			noop();
+		}
 	};
 
 	enum waterInteraction_ {
@@ -1391,50 +1500,79 @@ namespace Jazz2::Scripting
 	constexpr int FLAG_VFLIPPED_TILE = 0x2000;
 	constexpr int FLAG_ANIMATED_TILE = 0x4000;
 
-	float get_sinTable(uint32_t angle) { noop(); return 0.0f; };
-	float get_cosTable(uint32_t angle) { noop(); return 0.0f; };
-	uint32_t RandWord32() { noop(); return 0; }
-	uint64_t unixTimeSec() { noop(); return 0; }
-	uint64_t unixTimeMs() { noop(); return 0; }
+	bool mlleSetup() {
+		noop(); return true;
+	}
 
-	//int32_t gameTicks = 0;
-	int32_t LevelScripts::jjGameTicks()
-	{
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		//return (int32_t)_this->_levelHandler->_elapsedFrames;
-		return _this->_onLevelUpdateLastFrame;
+	float get_sinTable(uint32_t angle) {
+		noop(); return 0.0f;
+	};
+	float get_cosTable(uint32_t angle) {
+		noop(); return 0.0f;
+	};
+	uint32_t RandWord32() {
+		noop(); return 0;
+	}
+	uint64_t unixTimeSec() {
+		noop(); return 0;
+	}
+	uint64_t unixTimeMs() {
+		noop(); return 0;
 	}
 
 	uint32_t gameTicksSpentWhileActive = 0;
 	int32_t renderFrame = 0;
 
-	int32_t GetFPS() { noop(); return 0; }
+	int32_t GetFPS() {
+		noop(); return 0;
+	}
 
 	bool versionTSF = true;
 
-	bool isAdmin() { noop(); return false; }
+	bool isAdmin() {
+		noop(); return false;
+	}
 
 	bool isServer = false;
 
-	int32_t GetDifficulty() { noop(); return 0; }
-	int32_t SetDifficulty(int32_t value) { noop(); return 0; }
+	int32_t GetDifficulty() {
+		noop(); return 0;
+	}
+	int32_t SetDifficulty(int32_t value) {
+		noop(); return 0;
+	}
 
 	int32_t DifficultyForNextLevel = 0;
 	int32_t DifficultyAtLevelStart = 0;
 
-	String getLevelFileName() { noop(); return ""; }
-	String getCurrLevelName() { noop(); return ""; }
-	void setCurrLevelName(const String& in) { noop(); }
-	String getCurrMusic() { noop(); return ""; }
-	String getCurrTileset() { noop(); return ""; }
+	String getLevelFileName() {
+		noop(); return "";
+	}
+	String getCurrLevelName() {
+		noop(); return "";
+	}
+	void setCurrLevelName(const String& in) {
+		noop();
+	}
+	String getCurrMusic() {
+		noop(); return "";
+	}
+	String getCurrTileset() {
+		noop(); return "";
+	}
 
 	uint32_t numberOfTiles = 0;
 
-	String getHelpString(uint32_t index) { noop(); return ""; }
-	void setHelpString(uint32_t index, const String& in) { noop(); }
+	String getHelpString(uint32_t index) {
+		noop(); return "";
+	}
+	void setHelpString(uint32_t index, const String& in) {
+		noop();
+	}
 
-	int32_t get_gameState() { noop(); return 0; }
+	int32_t get_gameState() {
+		noop(); return 0;
+	}
 
 	int32_t gameMode = 0;
 	int32_t customMode = 0;
@@ -1445,17 +1583,27 @@ namespace Jazz2::Scripting
 
 	// TODO
 
-	void LevelScripts::jjAlert(const String& text, bool sendToAll, uint32_t size)
+	void LevelScriptLoader::jjAlert(const String& text, bool sendToAll, uint32_t size)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		_this->_levelHandler->ShowLevelText(text);
 	}
-	void jjPrint(const String& text, bool timestamp) { LOGW_X("%s", text.data()); }
-	void jjDebug(const String& text, bool timestamp) { LOGV_X("%s", text.data()); }
-	void jjChat(const String& text, bool teamchat) { LOGW_X("%s", text.data()); }
-	void jjConsole(const String& text, bool sendToAll) { LOGW_X("%s", text.data()); }
-	void jjSpy(const String& text) { LOGV_X("%s", text.data()); }
+	void jjPrint(const String& text, bool timestamp) {
+		LOGW_X("%s", text.data());
+	}
+	void jjDebug(const String& text, bool timestamp) {
+		LOGV_X("%s", text.data());
+	}
+	void jjChat(const String& text, bool teamchat) {
+		LOGW_X("%s", text.data());
+	}
+	void jjConsole(const String& text, bool sendToAll) {
+		LOGW_X("%s", text.data());
+	}
+	void jjSpy(const String& text) {
+		LOGV_X("%s", text.data());
+	}
 
 	// TODO
 
@@ -1467,48 +1615,114 @@ namespace Jazz2::Scripting
 	int32_t realVideoH = 0;
 	int32_t subVideoW = 0;
 	int32_t subVideoH = 0;
-	int32_t getBorderWidth() { noop(); return 0; }
-	int32_t getBorderHeight() { noop(); return 0; }
-	bool getSplitscreenType() { noop(); return false; }
-	bool setSplitscreenType() { noop(); return false; }
+	int32_t getBorderWidth() {
+		noop(); return 0;
+	}
+	int32_t getBorderHeight() {
+		noop(); return 0;
+	}
+	bool getSplitscreenType() {
+		noop(); return false;
+	}
+	bool setSplitscreenType() {
+		noop(); return false;
+	}
 
 	// TODO
 
 	int32_t maxScore = 0;
 
-	int32_t get_teamScore(int32_t color) { noop(); return 0; }
-	int32_t GetMaxHealth() { noop(); return 0; }
-	int32_t GetStartHealth() { noop(); return 0; }
+	int32_t get_teamScore(int32_t color) {
+		noop(); return 0;
+	}
+	int32_t GetMaxHealth() {
+		noop(); return 0;
+	}
+	int32_t GetStartHealth() {
+		noop(); return 0;
+	}
 
 	// TODO
 
-	float get_layerXOffset(uint8_t id) { noop(); return 0; }
-	float set_layerXOffset(uint8_t id, float value) { noop(); return 0; }
-	float get_layerYOffset(uint8_t id) { noop(); return 0; }
-	float set_layerYOffset(uint8_t id, float value) { noop(); return 0; }
-	int get_layerWidth(uint8_t id) { noop(); return 0; }
-	int get_layerRealWidth(uint8_t id) { noop(); return 0; }
-	int get_layerRoundedWidth(uint8_t id) { noop(); return 0; }
-	int get_layerHeight(uint8_t id) { noop(); return 0; }
-	float get_layerXSpeed(uint8_t id) { noop(); return 0; }
-	float set_layerXSpeed(uint8_t id, float value) { noop(); return 0; }
-	float get_layerYSpeed(uint8_t id) { noop(); return 0; }
-	float set_layerYSpeed(uint8_t id, float value) { noop(); return 0; }
-	float get_layerXAutoSpeed(uint8_t id) { noop(); return 0; }
-	float set_layerXAutoSpeed(uint8_t id, float value) { noop(); return 0; }
-	float get_layerYAutoSpeed(uint8_t id) { noop(); return 0; }
-	float set_layerYAutoSpeed(uint8_t id, float value) { noop(); return 0; }
-	bool get_layerHasTiles(uint8_t id) { noop(); return false; }
-	bool set_layerHasTiles(uint8_t id, bool value) { noop(); return false; }
-	bool get_layerTileHeight(uint8_t id) { noop(); return false; }
-	bool set_layerTileHeight(uint8_t id, bool value) { noop(); return false; }
-	bool get_layerTileWidth(uint8_t id) { noop(); return false; }
-	bool set_layerTileWidth(uint8_t id, bool value) { noop(); return false; }
-	bool get_layerLimitVisibleRegion(uint8_t id) { noop(); return false; }
-	bool set_layerLimitVisibleRegion(uint8_t id, bool value) { noop(); return false; }
+	float get_layerXOffset(uint8_t id) {
+		noop(); return 0;
+	}
+	float set_layerXOffset(uint8_t id, float value) {
+		noop(); return 0;
+	}
+	float get_layerYOffset(uint8_t id) {
+		noop(); return 0;
+	}
+	float set_layerYOffset(uint8_t id, float value) {
+		noop(); return 0;
+	}
+	int get_layerWidth(uint8_t id) {
+		noop(); return 0;
+	}
+	int get_layerRealWidth(uint8_t id) {
+		noop(); return 0;
+	}
+	int get_layerRoundedWidth(uint8_t id) {
+		noop(); return 0;
+	}
+	int get_layerHeight(uint8_t id) {
+		noop(); return 0;
+	}
+	float get_layerXSpeed(uint8_t id) {
+		noop(); return 0;
+	}
+	float set_layerXSpeed(uint8_t id, float value) {
+		noop(); return 0;
+	}
+	float get_layerYSpeed(uint8_t id) {
+		noop(); return 0;
+	}
+	float set_layerYSpeed(uint8_t id, float value) {
+		noop(); return 0;
+	}
+	float get_layerXAutoSpeed(uint8_t id) {
+		noop(); return 0;
+	}
+	float set_layerXAutoSpeed(uint8_t id, float value) {
+		noop(); return 0;
+	}
+	float get_layerYAutoSpeed(uint8_t id) {
+		noop(); return 0;
+	}
+	float set_layerYAutoSpeed(uint8_t id, float value) {
+		noop(); return 0;
+	}
+	bool get_layerHasTiles(uint8_t id) {
+		noop(); return false;
+	}
+	bool set_layerHasTiles(uint8_t id, bool value) {
+		noop(); return false;
+	}
+	bool get_layerTileHeight(uint8_t id) {
+		noop(); return false;
+	}
+	bool set_layerTileHeight(uint8_t id, bool value) {
+		noop(); return false;
+	}
+	bool get_layerTileWidth(uint8_t id) {
+		noop(); return false;
+	}
+	bool set_layerTileWidth(uint8_t id, bool value) {
+		noop(); return false;
+	}
+	bool get_layerLimitVisibleRegion(uint8_t id) {
+		noop(); return false;
+	}
+	bool set_layerLimitVisibleRegion(uint8_t id, bool value) {
+		noop(); return false;
+	}
 
-	void setLayerXSpeedSeamlessly(uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed) { noop(); }
-	void setLayerYSpeedSeamlessly(uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed) { noop(); }
+	void setLayerXSpeedSeamlessly(uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed) {
+		noop();
+	}
+	void setLayerYSpeedSeamlessly(uint8_t id, float newspeed, bool newSpeedIsAnAutoSpeed) {
+		noop();
+	}
 
 	// TODO
 
@@ -1517,33 +1731,69 @@ namespace Jazz2::Scripting
 	uint8_t snowingIntensity = 0;
 	int32_t snowingType = 0;
 
-	bool getTrigger(uint8_t id) { noop(); return false; }
-	bool setTrigger(uint8_t id, bool value) { noop(); return false; }
-	bool switchTrigger(uint8_t id) { noop(); return false; }
+	bool getTrigger(uint8_t id) {
+		noop(); return false;
+	}
+	bool setTrigger(uint8_t id, bool value) {
+		noop(); return false;
+	}
+	bool switchTrigger(uint8_t id) {
+		noop(); return false;
+	}
 
-	bool isNumberedASFunctionEnabled(uint8_t id) { noop(); return false; }
-	bool setNumberedASFunctionEnabled(uint8_t id, bool value) { noop(); return false; }
-	void reenableAllNumberedASFunctions() { noop(); }
+	bool isNumberedASFunctionEnabled(uint8_t id) {
+		noop(); return false;
+	}
+	bool setNumberedASFunctionEnabled(uint8_t id, bool value) {
+		noop(); return false;
+	}
+	void reenableAllNumberedASFunctions() {
+		noop();
+	}
 
 	int32_t waterLightMode = 0;
 	int32_t waterInteraction = 0;
 
-	float getWaterLevel() { noop(); return 0; }
-	float getWaterLevel2() { noop(); return 0; }
-	float setWaterLevel(float value, bool instant) { noop(); return 0; }
-	float get_waterChangeSpeed() { noop(); return 0; }
-	float set_waterChangeSpeed(float value) { noop(); return 0; }
-	int32_t get_waterLayer() { noop(); return 0; }
-	int32_t set_waterLayer(int32_t value) { noop(); return 0; }
-	void setWaterGradient(uint8_t red1, uint8_t green1, uint8_t blue1, uint8_t red2, uint8_t green2, uint8_t blue2) { noop(); }
+	float getWaterLevel() {
+		noop(); return 0;
+	}
+	float getWaterLevel2() {
+		noop(); return 0;
+	}
+	float setWaterLevel(float value, bool instant) {
+		noop(); return 0;
+	}
+	float get_waterChangeSpeed() {
+		noop(); return 0;
+	}
+	float set_waterChangeSpeed(float value) {
+		noop(); return 0;
+	}
+	int32_t get_waterLayer() {
+		noop(); return 0;
+	}
+	int32_t set_waterLayer(int32_t value) {
+		noop(); return 0;
+	}
+	void setWaterGradient(uint8_t red1, uint8_t green1, uint8_t blue1, uint8_t red2, uint8_t green2, uint8_t blue2) {
+		noop();
+	}
 	// TODO: void setWaterGradientFromColors(jjPALCOLOR color1, jjPALCOLOR color2)
-	void setWaterGradientToTBG() { noop(); }
-	void resetWaterGradient() { noop(); }
+	void setWaterGradientToTBG() {
+		noop();
+	}
+	void resetWaterGradient() {
+		noop();
+	}
 
-	void triggerRock(uint8_t id) { noop(); }
+	void triggerRock(uint8_t id) {
+		noop();
+	}
 
-	void cycleTo(const String& filename, bool warp, bool fast) { noop(); }
-	void LevelScripts::jjNxt(bool warp, bool fast)
+	void cycleTo(const String& filename, bool warp, bool fast) {
+		noop();
+	}
+	void LevelScriptLoader::jjNxt(bool warp, bool fast)
 	{
 		ExitType exitType = (warp ? ExitType::Warp : ExitType::Normal);
 		if (fast) {
@@ -1551,29 +1801,57 @@ namespace Jazz2::Scripting
 		}
 
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		_this->_levelHandler->BeginLevelChange(exitType, { });
 	}
 
-	bool getEnabledTeam(uint8_t team) { noop(); return false; }
+	bool getEnabledTeam(uint8_t team) {
+		noop(); return false;
+	}
 
 	uint8_t ChatKey = 0;
 
-	bool getKeyDown(uint8_t key) { noop(); return false; }
-	int32_t getCursorX() { noop(); return 0; }
-	int32_t getCursorY() { noop(); return 0; }
+	bool getKeyDown(uint8_t key) {
+		noop(); return false;
+	}
+	int32_t getCursorX() {
+		noop(); return 0;
+	}
+	int32_t getCursorY() {
+		noop(); return 0;
+	}
 
-	bool LoadNewMusicFile(const String& filename, bool forceReload, bool temporary) { noop(); return false; }
-	void MusicStop() { noop(); }
-	void MusicPlay() { noop(); }
-	void ModMusicPause() { noop(); }
-	void ModMusicResume() { noop(); }
+	bool LoadNewMusicFile(const String& filename, bool forceReload, bool temporary) {
+		noop(); return false;
+	}
+	void MusicStop() {
+		noop();
+	}
+	void MusicPlay() {
+		noop();
+	}
+	void ModMusicPause() {
+		noop();
+	}
+	void ModMusicResume() {
+		noop();
+	}
 
-	void playSample(float xPixel, float yPixel, int32_t sample, int32_t volume, int32_t frequency) { noop(); }
-	int32_t playLoopedSample(float xPixel, float yPixel, int32_t sample, int32_t volume, int32_t frequency) { noop(); return 0; }
-	void playPrioritySample(int32_t sample) { noop(); }
-	bool isSampleLoaded(int32_t sample) { noop(); return false; }
-	bool loadSample(int32_t sample, const String& filename) { noop(); return false; }
+	void playSample(float xPixel, float yPixel, int32_t sample, int32_t volume, int32_t frequency) {
+		noop();
+	}
+	int32_t playLoopedSample(float xPixel, float yPixel, int32_t sample, int32_t volume, int32_t frequency) {
+		noop(); return 0;
+	}
+	void playPrioritySample(int32_t sample) {
+		noop();
+	}
+	bool isSampleLoaded(int32_t sample) {
+		noop(); return false;
+	}
+	bool loadSample(int32_t sample, const String& filename) {
+		noop(); return false;
+	}
 
 	bool soundEnabled = false;
 	bool soundFXActive = false;
@@ -1585,55 +1863,181 @@ namespace Jazz2::Scripting
 	bool warpsTransmuteCoins = false;
 	bool delayGeneratedCrateOrigins = false;
 
-	bool getUseLayer8Speeds() { noop(); return false; }
-	bool setUseLayer8Speeds(bool value) { noop(); return false; }
+	bool getUseLayer8Speeds() {
+		noop(); return false;
+	}
+	bool setUseLayer8Speeds(bool value) {
+		noop(); return false;
+	}
 
 	bool g_levelHasFood = false;
 
 	// TODO
 
-	int32_t GetEvent(uint16_t tx, uint16_t ty) { noop(); return 0; }
-	int32_t GetEventParamWrapper(uint16_t tx, uint16_t ty, int32_t offset, int32_t length) { noop(); return 0; }
-	void SetEventByte(uint16_t tx, uint16_t ty, uint8_t newEventId) { noop(); }
-	void SetEventParam(uint16_t tx, uint16_t ty, int8_t offset, int8_t length, int32_t newValue) { noop(); }
-	int8_t GetTileType(uint16_t tile) { noop(); return 0; }
-	int8_t SetTileType(uint16_t tile, uint16_t value) { noop(); return 0; }
+	int32_t GetEvent(uint16_t tx, uint16_t ty) {
+		noop(); return 0;
+	}
+	int32_t GetEventParamWrapper(uint16_t tx, uint16_t ty, int32_t offset, int32_t length) {
+		noop(); return 0;
+	}
+	void SetEventByte(uint16_t tx, uint16_t ty, uint8_t newEventId) {
+		noop();
+	}
+	void SetEventParam(uint16_t tx, uint16_t ty, int8_t offset, int8_t length, int32_t newValue) {
+		noop();
+	}
+	int8_t GetTileType(uint16_t tile) {
+		noop(); return 0;
+	}
+	int8_t SetTileType(uint16_t tile, uint16_t value) {
+		noop(); return 0;
+	}
 
 	int32_t enforceAmbientLighting = 0;
 
 	// TODO
-}
 
-// Without namespace for shorter log messages
-static void asScript(String& msg)
-{
-	LOGI_X("%s", msg.data());
-}
+	// Without namespace for shorter log messages
+	static void asScript(String& msg)
+	{
+		LOGI_X("%s", msg.data());
+	}
 
-static float asFractionf(float v)
-{
-	float intPart;
-	return modff(v, &intPart);
-}
+	static float asFractionf(float v)
+	{
+		float intPart;
+		return modff(v, &intPart);
+	}
 
-static int asRandom()
-{
-	return Random().Next();
-}
+	static int asRandom()
+	{
+		return Random().Next();
+	}
 
-static int asRandom(int max)
-{
-	return Random().Fast(0, max);
-}
+	static int asRandom(int max)
+	{
+		return Random().Fast(0, max);
+	}
 
-static float asRandom(float min, float max)
-{
-	return Random().FastFloat(min, max);
-}
+	static float asRandom(float min, float max)
+	{
+		return Random().FastFloat(min, max);
+	}
 
-namespace Jazz2::Scripting
-{
-	void LevelScripts::OnLevelBegin()
+	LevelScriptLoader::LevelScriptLoader(LevelHandler* levelHandler, const StringView& scriptPath)
+		:
+		_levelHandler(levelHandler),
+		_onLevelUpdate(nullptr),
+		_onLevelUpdateLastFrame(-1)
+	{
+		// Try to load the script
+		HashMap<String, bool> DefinedSymbols = {
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+			{ "TARGET_EMSCRIPTEN"_s, true },
+#elif defined(DEATH_TARGET_ANDROID)
+			{ "TARGET_ANDROID"_s, true },
+#elif defined(DEATH_TARGET_APPLE)
+			{ "TARGET_APPLE"_s, true },
+#	if defined(DEATH_TARGET_IOS)
+			{ "TARGET_IOS"_s, true },
+#	endif
+#elif defined(DEATH_TARGET_WINDOWS)
+			{ "TARGET_WINDOWS"_s, true },
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+			{ "TARGET_WINDOWS_RT"_s, true },
+#	endif
+#elif defined(DEATH_TARGET_UNIX)
+			{ "TARGET_UNIX"_s, true },
+#endif
+
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+			{ "TARGET_BIG_ENDIAN"_s, true },
+#endif
+
+#if defined(WITH_OPENGLES)
+			{ "WITH_OPENGLES"_s, true },
+#endif
+#if defined(WITH_AUDIO)
+			{ "WITH_AUDIO"_s, true },
+#endif
+#if defined(WITH_VORBIS)
+			{ "WITH_VORBIS"_s, true },
+#endif
+#if defined(WITH_OPENMPT)
+			{ "WITH_OPENMPT"_s, true },
+#endif
+#if defined(WITH_THREADS)
+			{ "WITH_THREADS"_s, true },
+#endif
+			{ "Resurrection"_s, true }
+		};
+
+		_scriptContextType = AddScriptFromFile(scriptPath, DefinedSymbols);
+		if (_scriptContextType == ScriptContextType::Unknown) {
+			LOGE("Cannot compile the script. Please correct the code and try again.");
+			return;
+		}
+
+		RegisterBuiltInFunctions(_engine);
+		switch (_scriptContextType) {
+			case ScriptContextType::Legacy:
+				LOGV("Compiled script with \"Legacy\" context");
+				RegisterLegacyFunctions(_engine);
+				break;
+			case ScriptContextType::Standard:
+				LOGV("Compiled script with \"Standard\" context");
+				RegisterStandardFunctions(_engine, _module);
+				break;
+		}
+
+		int r = Build(); RETURN_ASSERT_MSG(r >= 0, "Cannot compile the script. Please correct the code and try again.");
+
+		asIScriptFunction* onLevelLoad = _module->GetFunctionByDecl("void onLevelLoad()");
+		if (onLevelLoad != nullptr) {
+			asIScriptContext* ctx = _engine->RequestContext();
+
+			ctx->Prepare(onLevelLoad);
+			r = ctx->Execute();
+			if (r == asEXECUTION_EXCEPTION) {
+				LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			}
+
+			_engine->ReturnContext(ctx);
+		}
+
+		switch (_scriptContextType) {
+			case ScriptContextType::Legacy:
+				_onLevelUpdate = _module->GetFunctionByDecl("void onMain()");
+				break;
+			case ScriptContextType::Standard:
+				_onLevelUpdate = _module->GetFunctionByDecl("void onLevelUpdate(float)");
+				break;
+		}
+	}
+
+	String LevelScriptLoader::OnProcessInclude(const StringView& includePath, const StringView& scriptPath)
+	{
+		// Skip MLLE files, because it's handled natively
+		if (includePath.hasPrefix("MLLE-Include-"_s) && includePath.hasSuffix(".asc"_s)) {
+			return { };
+		}
+
+		// TODO: Allow multiple search paths
+		//return ConstructPath(includePath, path);
+
+		auto sourcePath = ContentResolver::Current().GetSourcePath();
+		return fs::JoinPath(sourcePath, includePath);
+	}
+
+	void LevelScriptLoader::OnProcessPragma(const StringView& content, ScriptContextType& contextType)
+	{
+		// #pragma target Jazz² Resurrection - Changes script context type to Standard
+		if (content == "target Jazz² Resurrection"_s || content == "target Jazz2 Resurrection"_s) {
+			contextType = ScriptContextType::Standard;
+		}
+	}
+
+	void LevelScriptLoader::OnLevelBegin()
 	{
 		asIScriptFunction* func = _module->GetFunctionByDecl("void OnLevelBegin()");
 		if (func == nullptr) {
@@ -1651,7 +2055,7 @@ namespace Jazz2::Scripting
 		_engine->ReturnContext(ctx);
 	}
 
-	void LevelScripts::OnLevelUpdate(float timeMult)
+	void LevelScriptLoader::OnLevelUpdate(float timeMult)
 	{
 		switch (_scriptContextType) {
 			case ScriptContextType::Legacy: {
@@ -1701,7 +2105,7 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	void LevelScripts::OnLevelCallback(Actors::ActorBase* initiator, uint8_t* eventParams)
+	void LevelScriptLoader::OnLevelCallback(Actors::ActorBase* initiator, uint8_t* eventParams)
 	{
 		char funcName[64];
 		asIScriptFunction* func;
@@ -1750,7 +2154,7 @@ namespace Jazz2::Scripting
 		LOGW_X("Callback function \"%s\" was not found in the script. Please correct the code and try again.", funcName);
 	}
 
-	void LevelScripts::RegisterBuiltInFunctions(asIScriptEngine* engine)
+	void LevelScriptLoader::RegisterBuiltInFunctions(asIScriptEngine* engine)
 	{
 		RegisterArray(engine);
 		RegisterRef(engine);
@@ -1783,9 +2187,14 @@ namespace Jazz2::Scripting
 		r = engine->RegisterGlobalFunction("float fraction(float)", asFUNCTIONPR(asFractionf, (float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 	}
 
-	void LevelScripts::RegisterLegacyFunctions(asIScriptEngine* engine)
+	void LevelScriptLoader::RegisterLegacyFunctions(asIScriptEngine* engine)
 	{
-		// All declaration were provided by JJ2+ team
+		// Create fake MLLE namespace, because "MLLE-Include-xxx.asc" includes are blocked
+		engine->SetDefaultNamespace("MLLE");
+		engine->RegisterGlobalFunction("bool Setup()", asFUNCTION(mlleSetup), asCALL_CDECL);
+
+		// JJ2+ Declarations (provided by JJ2+ team)
+		engine->SetDefaultNamespace("");
 		engine->RegisterGlobalFunction("float jjSin(uint angle)", asFUNCTION(get_sinTable), asCALL_CDECL);
 		engine->RegisterGlobalFunction("float jjCos(uint angle)", asFUNCTION(get_cosTable), asCALL_CDECL);
 		engine->RegisterGlobalFunction("uint jjRandom()", asFUNCTION(RandWord32), asCALL_CDECL);
@@ -1802,9 +2211,7 @@ namespace Jazz2::Scripting
 		//engine->RegisterGlobalFunction("bool jjRegexSearch(const string &in text, const string &in expression, array<string> &out results, bool ignoreCase = false)", asFUNCTION(regexSearchWithResults), asCALL_CDECL);
 		//engine->RegisterGlobalFunction("string jjRegexReplace(const string &in text, const string &in expression, const string &in replacement, bool ignoreCase= false)", asFUNCTION(regexReplace), asCALL_CDECL);
 
-		// TODO
-		//engine->RegisterGlobalProperty("const int jjGameTicks", &gameTicks);
-		engine->RegisterGlobalFunction("int get_jjGameTicks()", asFUNCTION(jjGameTicks), asCALL_CDECL);
+		engine->RegisterGlobalProperty("const int jjGameTicks", &_onLevelUpdateLastFrame);
 		engine->RegisterGlobalProperty("const uint jjActiveGameTicks", &gameTicksSpentWhileActive);
 		engine->RegisterGlobalProperty("const int jjRenderFrame", &renderFrame);
 		engine->RegisterGlobalFunction("int get_jjFPS()", asFUNCTION(GetFPS), asCALL_CDECL);
@@ -2106,7 +2513,7 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("void jjChat(const ::string &in text, bool teamchat = false)", asFUNCTION(jjChat), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void jjConsole(const ::string &in text, bool sendToAll = false)", asFUNCTION(jjConsole), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void jjSpy(const ::string &in text)", asFUNCTION(jjSpy), asCALL_CDECL);
-		
+
 		// TODO
 		/*engine->RegisterObjectMethod("jjPLAYER", "TIMER::State get_timerState() const", asFUNCTION(get_playerTimerState), asCALL_CDECL_OBJLAST);
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_timerPersists() const", asFUNCTION(get_playerTimerEffectPersists), asCALL_CDECL_OBJLAST);
@@ -4332,13 +4739,13 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Anim", "VPOLE", mJAZZ_VPOLE);
 	}
 
-	void LevelScripts::RegisterStandardFunctions(asIScriptEngine* engine, asIScriptModule* module)
+	void LevelScriptLoader::RegisterStandardFunctions(asIScriptEngine* engine, asIScriptModule* module)
 	{
 		int r;
 		r = engine->RegisterGlobalFunction("int Random()", asFUNCTIONPR(asRandom, (), int), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterGlobalFunction("int Random(int)", asFUNCTIONPR(asRandom, (int), int), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterGlobalFunction("float Random(float, float)", asFUNCTIONPR(asRandom, (float, float), float), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		
+
 		r = engine->RegisterGlobalFunction("void Print(const string &in)", asFUNCTION(asScript), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
 		r = engine->RegisterGlobalFunction("uint8 get_Difficulty()", asFUNCTION(asGetDifficulty), asCALL_CDECL); RETURN_ASSERT(r >= 0);
@@ -4368,7 +4775,7 @@ namespace Jazz2::Scripting
 		ScriptPlayerWrapper::RegisterFactory(engine);
 	}
 
-	Actors::ActorBase* LevelScripts::CreateActorInstance(const StringView& typeName)
+	Actors::ActorBase* LevelScriptLoader::CreateActorInstance(const StringView& typeName)
 	{
 		auto nullTerminatedTypeName = String::nullTerminatedView(typeName);
 
@@ -4392,83 +4799,83 @@ namespace Jazz2::Scripting
 		return obj2;
 	}
 
-	const SmallVectorImpl<Actors::Player*>& LevelScripts::GetPlayers() const
+	const SmallVectorImpl<Actors::Player*>& LevelScriptLoader::GetPlayers() const
 	{
 		return _levelHandler->_players;
 	}
 
-	uint8_t LevelScripts::asGetDifficulty()
+	uint8_t LevelScriptLoader::asGetDifficulty()
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		return (uint8_t)_this->_levelHandler->_difficulty;
 	}
 
-	bool LevelScripts::asIsReforged()
+	bool LevelScriptLoader::asIsReforged()
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		return (uint8_t)_this->_levelHandler->_isReforged;
 	}
 
-	int LevelScripts::asGetLevelWidth()
+	int LevelScriptLoader::asGetLevelWidth()
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		return _this->_levelHandler->_tileMap->LevelBounds().X;
 	}
 
-	int LevelScripts::asGetLevelHeight()
+	int LevelScriptLoader::asGetLevelHeight()
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		return _this->_levelHandler->_tileMap->LevelBounds().Y;
 	}
 
-	float LevelScripts::asGetElapsedFrames()
+	float LevelScriptLoader::asGetElapsedFrames()
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		return _this->_levelHandler->_elapsedFrames;
 	}
 
-	float LevelScripts::asGetAmbientLight()
+	float LevelScriptLoader::asGetAmbientLight()
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		return _this->_levelHandler->_ambientLightTarget;
 	}
 
-	void LevelScripts::asSetAmbientLight(float value)
+	void LevelScriptLoader::asSetAmbientLight(float value)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		_this->_levelHandler->_ambientLightTarget = value;
 	}
 
-	float LevelScripts::asGetWaterLevel()
+	float LevelScriptLoader::asGetWaterLevel()
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		return _this->_levelHandler->_waterLevel;
 	}
 
-	void LevelScripts::asSetWaterLevel(float value)
+	void LevelScriptLoader::asSetWaterLevel(float value)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		_this->_levelHandler->_waterLevel = value;
 	}
 
-	void LevelScripts::asPreloadMetadata(const String& path)
+	void LevelScriptLoader::asPreloadMetadata(const String& path)
 	{
 		ContentResolver::Current().PreloadMetadataAsync(path);
 	}
 
-	void LevelScripts::asRegisterSpawnable(int eventType, const String& typeName)
+	void LevelScriptLoader::asRegisterSpawnable(int eventType, const String& typeName)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 
 		asITypeInfo* typeInfo = _this->_module->GetTypeInfoByName(typeName.data());
 		if (typeInfo == nullptr) {
@@ -4481,7 +4888,7 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	std::shared_ptr<Actors::ActorBase> LevelScripts::asRegisterSpawnableCallback(const Actors::ActorActivationDetails& details)
+	std::shared_ptr<Actors::ActorBase> LevelScriptLoader::asRegisterSpawnableCallback(const Actors::ActorActivationDetails& details)
 	{
 		if (auto levelHandler = dynamic_cast<LevelHandler*>(details.LevelHandler)) {
 			auto _this = levelHandler->_scripts.get();
@@ -4501,10 +4908,10 @@ namespace Jazz2::Scripting
 		return nullptr;
 	}
 
-	void LevelScripts::asSpawnEvent(int eventType, int x, int y)
+	void LevelScriptLoader::asSpawnEvent(int eventType, int x, int y)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 
 		uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] { };
 		auto actor = _this->_levelHandler->EventSpawner()->SpawnEvent((EventType)eventType, spawnParams, Actors::ActorState::None, Vector3i(x, y, ILevelHandler::MainPlaneZ));
@@ -4513,10 +4920,10 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	void LevelScripts::asSpawnEventParams(int eventType, int x, int y, const CScriptArray& eventParams)
+	void LevelScriptLoader::asSpawnEventParams(int eventType, int x, int y, const CScriptArray& eventParams)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 
 		uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] { };
 		int size = eventParams.GetSize();
@@ -4528,10 +4935,10 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	void LevelScripts::asSpawnType(const String& typeName, int x, int y)
+	void LevelScriptLoader::asSpawnType(const String& typeName, int x, int y)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 
 		auto actor = _this->CreateActorInstance(typeName);
 		if (actor == nullptr) {
@@ -4547,10 +4954,10 @@ namespace Jazz2::Scripting
 		_this->_levelHandler->AddActor(std::shared_ptr<Actors::ActorBase>(actor));
 	}
 
-	void LevelScripts::asSpawnTypeParams(const String& typeName, int x, int y, const CScriptArray& eventParams)
+	void LevelScriptLoader::asSpawnTypeParams(const String& typeName, int x, int y, const CScriptArray& eventParams)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 
 		auto actor = _this->CreateActorInstance(typeName);
 		if (actor == nullptr) {
@@ -4569,14 +4976,14 @@ namespace Jazz2::Scripting
 		_this->_levelHandler->AddActor(std::shared_ptr<Actors::ActorBase>(actor));
 	}
 
-	void LevelScripts::asChangeLevel(int exitType, const String& path)
+	void LevelScriptLoader::asChangeLevel(int exitType, const String& path)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		_this->_levelHandler->BeginLevelChange((ExitType)exitType, path);
 	}
 
-	void LevelScripts::asMusicPlay(const String& path)
+	void LevelScriptLoader::asMusicPlay(const String& path)
 	{
 #if defined(WITH_OPENMPT)
 		if (path.empty()) {
@@ -4584,7 +4991,7 @@ namespace Jazz2::Scripting
 		}
 
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		auto _levelHandler = _this->_levelHandler;
 
 		if (_levelHandler->_musicPath != path) {
@@ -4600,17 +5007,17 @@ namespace Jazz2::Scripting
 #endif
 	}
 
-	void LevelScripts::asShowLevelText(const String& text)
+	void LevelScriptLoader::asShowLevelText(const String& text)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		_this->_levelHandler->ShowLevelText(text);
 	}
 
-	void LevelScripts::asSetWeather(uint8_t weatherType, uint8_t intensity)
+	void LevelScriptLoader::asSetWeather(uint8_t weatherType, uint8_t intensity)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScripts*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		_this->_levelHandler->SetWeather((WeatherType)weatherType, intensity);
 	}
 }

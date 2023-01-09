@@ -110,7 +110,8 @@ namespace Jazz2::UI::Menu
 				_root->DrawStringShadow(_("Enabled"), charOffset, centerX + 12.0f, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
 					Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
 
-				_root->DrawElement("Uac"_s, 0, centerX - 28.0f, item.Y + 22.0f - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Center, Colorf::White, 1.0f, 1.0f);
+				Vector2f textSize = _root->MeasureString(_("Enabled"), 0.8f);
+				_root->DrawElement("Uac"_s, 0, ceil(centerX - textSize.X * 0.5f - 6.0f), item.Y + 22.0f - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Center, Colorf::White);
 			} else
 #endif
 			{

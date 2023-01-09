@@ -177,7 +177,7 @@ namespace Death::Containers
 			return Implementation::ArrayViewConverter<const T, U>::to(*this);
 		}
 
-#ifndef DEATH_MSVC2019_COMPATIBILITY
+#if !defined(DEATH_MSVC2019_COMPATIBILITY)
 		explicit operator bool() const {
 			return _data;
 		}

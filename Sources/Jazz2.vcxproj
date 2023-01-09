@@ -204,6 +204,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="$(ExtensionLibraryPath)\Common.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Cpu.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IntrinsicsAvx.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IntrinsicsSse2.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IntrinsicsSse3.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IntrinsicsSse4.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IntrinsicsSsse3.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Utf8.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Array.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\ArrayView.h" />
@@ -330,11 +336,12 @@
     <ClInclude Include="Jazz2\PlayerType.h" />
     <ClInclude Include="Jazz2\PreferencesCache.h" />
     <ClInclude Include="Jazz2\Scripting\FindAngelScript.h" />
-    <ClInclude Include="Jazz2\Scripting\LevelScripts.h" />
+    <ClInclude Include="Jazz2\Scripting\LevelScriptLoader.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterArray.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterRef.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterString.h" />
     <ClInclude Include="Jazz2\Scripting\ScriptActorWrapper.h" />
+    <ClInclude Include="Jazz2\Scripting\ScriptLoader.h" />
     <ClInclude Include="Jazz2\Scripting\ScriptPlayerWrapper.h" />
     <ClInclude Include="Jazz2\ShieldType.h" />
     <ClInclude Include="Jazz2\UI\Alignment.h" />
@@ -556,6 +563,7 @@
     <ClInclude Include="Resources.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="$(ExtensionLibraryPath)\Cpu.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Utf8.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\SmallVector.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\String.cpp" />
@@ -661,12 +669,12 @@
     <ClCompile Include="Jazz2\Compatibility\JJ2Strings.cpp" />
     <ClCompile Include="Jazz2\Compatibility\JJ2Tileset.cpp" />
     <ClCompile Include="Jazz2\PreferencesCache.cpp" />
-    <ClCompile Include="Jazz2\Scripting\LevelScripts.cpp" />
-    <ClCompile Include="Jazz2\Scripting\LevelScripts.Declarations.cpp" />
+    <ClCompile Include="Jazz2\Scripting\LevelScriptLoader.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterArray.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterRef.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterString.cpp" />
     <ClCompile Include="Jazz2\Scripting\ScriptActorWrapper.cpp" />
+    <ClCompile Include="Jazz2\Scripting\ScriptLoader.cpp" />
     <ClCompile Include="Jazz2\Scripting\ScriptPlayerWrapper.cpp" />
     <ClCompile Include="Jazz2\UI\Canvas.cpp" />
     <ClCompile Include="Jazz2\UI\Cinematics.cpp" />

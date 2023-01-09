@@ -5,7 +5,7 @@
 #include "../Common.h"
 
 #if defined(WITH_ANGELSCRIPT)
-#	include "Scripting/LevelScripts.h"
+#	include "Scripting/LevelScriptLoader.h"
 #endif
 
 #include "../nCine/MainApplication.h"
@@ -209,9 +209,9 @@ namespace Jazz2
 			String scriptPath = (foundDot == fullPath.end() ? StringView(fullPath) : fullPath.prefix(foundDot.begin())) + ".j2as"_s;
 			if (fs::IsReadableFile(scriptPath)) {
 #	if defined(WITH_ANGELSCRIPT)
-				_scripts = std::make_unique<Scripting::LevelScripts>(this, scriptPath);
+				_scripts = std::make_unique<Scripting::LevelScriptLoader>(this, scriptPath);
 #	else
-				LOGW_X("Level requires scripting, but scripting support is disabled in this version");
+				LOGW_X("Level requires scripting, but scripting support is disabled in this build");
 #	endif
 			}
 		}

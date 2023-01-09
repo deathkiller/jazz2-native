@@ -30,7 +30,7 @@ namespace Jazz2
 #if defined(WITH_ANGELSCRIPT)
 	namespace Scripting
 	{
-		class LevelScripts;
+		class LevelScriptLoader;
 	}
 #endif
 
@@ -48,7 +48,7 @@ namespace Jazz2
 	{
 		friend class ContentResolver;
 #if defined(WITH_ANGELSCRIPT)
-		friend class Scripting::LevelScripts;
+		friend class Scripting::LevelScriptLoader;
 #endif
 		friend class UI::HUD;
 		friend class UI::Menu::InGameMenu;
@@ -244,7 +244,7 @@ namespace Jazz2
 		std::unique_ptr<Texture> _noiseTexture;
 
 #if defined(WITH_ANGELSCRIPT)
-		std::unique_ptr<Scripting::LevelScripts> _scripts;
+		std::unique_ptr<Scripting::LevelScriptLoader> _scripts;
 #endif
 		SmallVector<std::shared_ptr<Actors::ActorBase>, 0> _actors;
 		SmallVector<Actors::Player*, LevelInitialization::MaxPlayerCount> _players;

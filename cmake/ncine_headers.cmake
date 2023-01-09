@@ -2,6 +2,12 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Common.h
 	${NCINE_SOURCE_DIR}/Shared/CommonInternal.h
 	${NCINE_SOURCE_DIR}/Shared/Environment.h
+	${NCINE_SOURCE_DIR}/Shared/Cpu.h
+	${NCINE_SOURCE_DIR}/Shared/IntrinsicsAvx.h
+	${NCINE_SOURCE_DIR}/Shared/IntrinsicsSse2.h
+	${NCINE_SOURCE_DIR}/Shared/IntrinsicsSse3.h
+	${NCINE_SOURCE_DIR}/Shared/IntrinsicsSse4.h
+	${NCINE_SOURCE_DIR}/Shared/IntrinsicsSsse3.h
 	${NCINE_SOURCE_DIR}/Shared/HttpRequest.h
 	${NCINE_SOURCE_DIR}/Shared/Utf8.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/Array.h
@@ -275,6 +281,14 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Version.h
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventMap.h
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventSpawner.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/FindAngelScript.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScriptLoader.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterRef.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterString.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/ScriptActorWrapper.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/ScriptLoader.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/ScriptPlayerWrapper.h
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileMap.h
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileSet.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Canvas.h

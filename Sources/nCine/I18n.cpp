@@ -23,6 +23,7 @@ namespace nCine
 {
 	static constexpr I18n::LanguageInfo SupportedLanguages[] = {
 		{ "af", "Afrikaans" },
+		{ "be", "Belarusian" },
 		{ "bg", "Bulgarian" },
 		{ "cs", "Czech" },
 		{ "da", "Danish" },
@@ -35,6 +36,7 @@ namespace nCine
 		{ "hr", "Croatian" },
 		{ "hu", "Hungarian" },
 		{ "it", "Italian" },
+		{ "lt", "Lithuanian" },
 		{ "lv", "Latvian" },
 		{ "mo", "Moldavian" },
 		{ "nl", "Dutch" },
@@ -42,11 +44,13 @@ namespace nCine
 		{ "pl", "Polish" },
 		{ "pt", "Portuguese" },
 		{ "ro", "Romanian" },
+		{ "ru", "Russian" },
 		{ "sk", "Slovak" },
 		{ "sl", "Slovenian" },
 		{ "sr", "Serbian" },
 		{ "sv", "Swedish" },
 		{ "tr", "Turkish" },
+		{ "uk", "Ukrainian" }
 	};
 
 	struct ValueToken : public I18n::ExpressionToken

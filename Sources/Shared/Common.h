@@ -18,22 +18,22 @@
 #endif
 
 // Undefine "far" and "near" keywords, not used anymore
-#ifdef far
+#if defined(far)
 #	undef far
-#	ifdef FAR
+#	if defined(FAR)
 #		undef FAR
 #		define FAR
 #	endif
 #endif
-#ifdef near
+#if defined(near)
 #	undef near
-#	ifdef NEAR
+#	if defined(NEAR)
 #		undef NEAR
 #		define NEAR
 #	endif
 #endif
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 
 namespace Death
 {
@@ -67,7 +67,7 @@ namespace Death
 	};
 }
 
-#ifndef _ENUM_FLAG_CONSTEXPR
+#if !defined(_ENUM_FLAG_CONSTEXPR)
 #	define _ENUM_FLAG_CONSTEXPR constexpr
 #endif
 
@@ -91,6 +91,27 @@ friend inline _ENUM_FLAG_CONSTEXPR ENUMTYPE operator ^ (ENUMTYPE a, ENUMTYPE b) 
 friend inline ENUMTYPE &operator ^= (ENUMTYPE &a, ENUMTYPE b) throw() { return (ENUMTYPE &)(((Death::EnumSizedInteger<ENUMTYPE>::Type &)a) ^= ((Death::EnumSizedInteger<ENUMTYPE>::Type)b)); }
 
 #else
-#	define DEFINE_ENUM_OPERATORS(ENUMTYPE) // NOP, C allows these operators.
+#	define DEFINE_ENUM_OPERATORS(ENUMTYPE) // C allows these operators
 #	define DEFINE_PRIVATE_ENUM_OPERATORS(ENUMTYPE)
+#endif
+
+// Compile-time and runtime CPU instruction set dispatch
+#if defined(DEATH_CPU_USE_RUNTIME_DISPATCH) && !defined(DEATH_CPU_USE_IFUNC)
+#	define DEATH_CPU_DISPATCHER_DECLARATION(name) decltype(name) name ## Implementation(Cpu::Features);
+#	define DEATH_CPU_DISPATCHER(...) _DEATH_CPU_DISPATCHER(__VA_ARGS__)
+#	define DEATH_CPU_DISPATCHED_DECLARATION(name) (*name)
+#	define DEATH_CPU_DISPATCHED(dispatcher, ...) DEATH_CPU_DISPATCHED_POINTER(dispatcher, __VA_ARGS__) DEATH_NOOP
+#	define DEATH_CPU_MAYBE_UNUSED
+#else
+#	define DEATH_CPU_DISPATCHER_DECLARATION(name)
+#	define DEATH_CPU_DISPATCHED_DECLARATION(name) (name)
+#	if defined(DEATH_CPU_USE_RUNTIME_DISPATCH) && defined(DEATH_CPU_USE_IFUNC)
+#		define DEATH_CPU_DISPATCHER(...) namespace { _DEATH_CPU_DISPATCHER(__VA_ARGS__) }
+#		define DEATH_CPU_DISPATCHED(dispatcher, ...) DEATH_CPU_DISPATCHED_IFUNC(dispatcher, __VA_ARGS__) DEATH_NOOP
+#		define DEATH_CPU_MAYBE_UNUSED
+#	else
+#		define DEATH_CPU_DISPATCHER(...)
+#		define DEATH_CPU_DISPATCHED(dispatcher, ...) __VA_ARGS__ DEATH_PASSTHROUGH
+#		define DEATH_CPU_MAYBE_UNUSED DEATH_UNUSED
+#	endif
 #endif

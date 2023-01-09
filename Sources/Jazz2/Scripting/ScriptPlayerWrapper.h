@@ -17,13 +17,13 @@ namespace Jazz2::Actors
 
 namespace Jazz2::Scripting
 {
-	class LevelScripts;
+	class LevelScriptLoader;
 
 	class ScriptPlayerWrapper
 	{
 	public:
-		ScriptPlayerWrapper(LevelScripts* levelScripts, int playerIndex);
-		ScriptPlayerWrapper(LevelScripts* levelScripts, Actors::Player* player);
+		ScriptPlayerWrapper(LevelScriptLoader* levelScripts, int playerIndex);
+		ScriptPlayerWrapper(LevelScriptLoader* levelScripts, Actors::Player* player);
 		~ScriptPlayerWrapper();
 
 		static void RegisterFactory(asIScriptEngine* engine);
@@ -41,7 +41,7 @@ namespace Jazz2::Scripting
 		}
 
 	protected:
-		LevelScripts* _levelScripts;
+		LevelScriptLoader* _levelScripts;
 		Actors::Player* _player;
 
 		bool asIsInGame() const;

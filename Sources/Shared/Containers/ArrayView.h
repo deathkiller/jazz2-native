@@ -73,7 +73,7 @@ namespace Death::Containers
 			return Implementation::ArrayViewConverter<T, U>::to(*this);
 		}
 
-#ifndef DEATH_MSVC2019_COMPATIBILITY
+#if !defined(DEATH_MSVC2019_COMPATIBILITY)
 		constexpr explicit operator bool() const {
 			return _data;
 		}
@@ -179,7 +179,7 @@ namespace Death::Containers
 
 		template<class T, class = decltype(Implementation::ErasedArrayViewConverter<typename std::decay<T&&>::type>::from(std::declval<T&&>()))> constexpr /*implicit*/ ArrayView(T&& other) noexcept : ArrayView { Implementation::ErasedArrayViewConverter<typename std::decay<T&&>::type>::from(other) } {}
 
-#ifndef DEATH_MSVC2019_COMPATIBILITY
+#if !defined(DEATH_MSVC2019_COMPATIBILITY)
 		constexpr explicit operator bool() const {
 			return _data;
 		}
@@ -229,7 +229,7 @@ namespace Death::Containers
 
 		template<class T, class = decltype(Implementation::ErasedArrayViewConverter<const T>::from(std::declval<const T&>()))> constexpr /*implicit*/ ArrayView(const T& other) noexcept : ArrayView { Implementation::ErasedArrayViewConverter<const T>::from(other) } {}
 
-#ifndef DEATH_MSVC2019_COMPATIBILITY
+#if !defined(DEATH_MSVC2019_COMPATIBILITY)
 		constexpr explicit operator bool() const {
 			return _data;
 		}
@@ -350,7 +350,7 @@ namespace Death::Containers
 			return Implementation::StaticArrayViewConverter<size_, T, U>::to(*this);
 		}
 
-#ifndef DEATH_MSVC2019_COMPATIBILITY
+#if !defined(DEATH_MSVC2019_COMPATIBILITY)
 		constexpr explicit operator bool() const {
 			return _data;
 		}

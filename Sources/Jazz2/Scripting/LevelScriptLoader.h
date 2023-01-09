@@ -2,38 +2,15 @@
 
 #if defined(WITH_ANGELSCRIPT)
 
-#include "FindAngelScript.h"
+#include "ScriptLoader.h"
 #include "../ILevelHandler.h"
 
 namespace Jazz2::Scripting
 {
-	class CScriptArray;
-
-	enum class ScriptContextType {
-		Unknown,
-		Legacy,
-		Standard
-	};
-
-	class LevelScripts
+	class LevelScriptLoader : public ScriptLoader
 	{
 	public:
-		static constexpr asPWORD EngineToOwner = 0;
-
-		LevelScripts(LevelHandler* levelHandler, const StringView& scriptPath);
-		~LevelScripts();
-
-		asIScriptEngine* GetEngine() const {
-			return _engine;
-		}
-
-		asIScriptModule* GetMainModule() const {
-			return _module;
-		}
-
-		ScriptContextType GetContextType() const {
-			return _scriptContextType;
-		}
+		LevelScriptLoader(LevelHandler* levelHandler, const StringView& scriptPath);
 
 		const SmallVectorImpl<Actors::Player*>& GetPlayers() const;
 
@@ -41,33 +18,21 @@ namespace Jazz2::Scripting
 		void OnLevelUpdate(float timeMult);
 		void OnLevelCallback(Actors::ActorBase* initiator, uint8_t* eventParams);
 
+	protected:
+		String OnProcessInclude(const StringView& includePath, const StringView& scriptPath) override;
+		void OnProcessPragma(const StringView& content, ScriptContextType& contextType) override;
+
 	private:
 		LevelHandler* _levelHandler;
-		asIScriptEngine* _engine;
-		asIScriptModule* _module;
-		SmallVector<asIScriptContext*, 4> _contextPool;
-		ScriptContextType _scriptContextType;
-
 		asIScriptFunction* _onLevelUpdate;
 		int32_t _onLevelUpdateLastFrame;
-
 		HashMap<int, asITypeInfo*> _eventTypeToTypeInfo;
 
-		ScriptContextType AddScriptFromFile(const StringView& path, const HashMap<String, bool>& definedSymbols);
-		int ExcludeCode(String& scriptContent, int pos);
-		int SkipStatement(String& scriptContent, int pos);
-		void ProcessPragma(const StringView& content, ScriptContextType& contextType);
-		static String ConstructPath(const StringView& path, const StringView& relativeToFile);
-
-		static asIScriptContext* RequestContextCallback(asIScriptEngine* engine, void* param);
-		static void ReturnContextCallback(asIScriptEngine* engine, asIScriptContext* ctx, void* param);
-
-		void Message(const asSMessageInfo& msg);
 		Actors::ActorBase* CreateActorInstance(const StringView& typeName);
 
 		static void RegisterBuiltInFunctions(asIScriptEngine* engine);
-		static void RegisterLegacyFunctions(asIScriptEngine* engine);
-		static void RegisterStandardFunctions(asIScriptEngine* engine, asIScriptModule* module);
+		void RegisterLegacyFunctions(asIScriptEngine* engine);
+		void RegisterStandardFunctions(asIScriptEngine* engine, asIScriptModule* module);
 
 		static uint8_t asGetDifficulty();
 		static bool asIsReforged();

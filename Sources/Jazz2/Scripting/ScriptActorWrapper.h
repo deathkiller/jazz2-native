@@ -18,12 +18,12 @@ namespace Jazz2::Actors
 
 namespace Jazz2::Scripting
 {
-	class LevelScripts;
+	class LevelScriptLoader;
 
 	class ScriptActorWrapper : public Actors::ActorBase
 	{
 	public:
-		ScriptActorWrapper(LevelScripts* levelScripts, asIScriptObject* obj);
+		ScriptActorWrapper(LevelScriptLoader* levelScripts, asIScriptObject* obj);
 		~ScriptActorWrapper();
 
 		static void RegisterFactory(asIScriptEngine* engine, asIScriptModule* module);
@@ -43,7 +43,7 @@ namespace Jazz2::Scripting
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 	protected:
-		LevelScripts* _levelScripts;
+		LevelScriptLoader* _levelScripts;
 		asIScriptObject* _obj;
 		asILockableSharedBool* _isDead;
 
@@ -99,7 +99,7 @@ namespace Jazz2::Scripting
 	class ScriptCollectibleWrapper : public ScriptActorWrapper
 	{
 	public:
-		ScriptCollectibleWrapper(LevelScripts* levelScripts, asIScriptObject* obj);
+		ScriptCollectibleWrapper(LevelScriptLoader* levelScripts, asIScriptObject* obj);
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
