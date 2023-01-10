@@ -52,8 +52,10 @@ jobs:
         sudo apt-get install -y cmake curl g++ clang libgl1-mesa-dev libopenmpt-dev rpm
 
     - name: 'Configure Clang Compiler'
-      uses: egor-tensin/setup-clang@v1
       if: ${{ matrix.CC }} == 'clang'
+      uses: egor-tensin/setup-clang@v1
+      with:
+        version: 15
         
     - name: 'Configure CMake'
       run: |
