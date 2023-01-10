@@ -375,3 +375,7 @@
 #		define DEATH_ASSERT_UNREACHABLE() std::abort()
 #	endif
 #endif
+
+namespace Death::Cpu {
+	class Features;
+}
