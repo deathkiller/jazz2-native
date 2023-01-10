@@ -24,7 +24,7 @@
 
 #include <type_traits>
 
-#include "CommonInternal.h"
+#include "Common.h"
 
 // Because can't use inline assembly when targeting 64bit on MSVC, and because <intrin.h> and <immintrin.h> is just
 // too damn heavy to be included in a header. Declarations copied verbatim. Clang-cl doesn't like this (undefined
