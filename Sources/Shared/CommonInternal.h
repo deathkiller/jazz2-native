@@ -308,45 +308,21 @@
 #	endif
 #endif
 
-#if defined(DEATH_TARGET_GCC)
-#	define DEATH_ALWAYS_INLINE __attribute__((always_inline)) inline
+// Internal macro implementation
+#define _DEATH_HELPER_PASTE2(a, b) a ## b
+#define _DEATH_HELPER_PASTE(a, b) _DEATH_HELPER_PASTE2(a, b)
+#define _DEATH_HELPER_STR(x) #x
+
+/** @brief Deprecation mark */
+#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+#	define DEATH_DEPRECATED(message) __attribute((deprecated(message)))
 #elif defined(DEATH_TARGET_MSVC)
-#	define DEATH_ALWAYS_INLINE __forceinline
+#	define DEATH_DEPRECATED(message) __declspec(deprecated(message))
 #else
-#	define DEATH_ALWAYS_INLINE inline
+#	define DEATH_DEPRECATED(message)
 #endif
 
-#if defined(DEATH_TARGET_GCC)
-#	define DEATH_NEVER_INLINE __attribute__((noinline))
-#elif defined(DEATH_TARGET_MSVC)
-#	define DEATH_NEVER_INLINE __declspec(noinline)
-#else
-#	define DEATH_NEVER_INLINE
-#endif
-
-#define DEATH_PASSTHROUGH(...) __VA_ARGS__
-#define DEATH_NOOP(...)
-
-// Assertions
-#if !defined(DEATH_ASSERT)
-#	if defined(NDEBUG)
-#		define DEATH_ASSERT(condition, message, returnValue) do { } while(false)
-#	else
-#		define DEATH_ASSERT(condition, message, returnValue) assert(condition)
-#	endif
-#endif
-
-#if !defined(DEATH_CONSTEXPR_ASSERT)
-#	if defined(NDEBUG)
-#		define DEATH_CONSTEXPR_ASSERT(condition, message) static_cast<void>(0)
-#	else
-#		define DEATH_CONSTEXPR_ASSERT(condition, message)					\
-			static_cast<void>((condition) ? 0 : ([&]() {					\
-				assert(!#condition);										\
-			}(), 0))
-#	endif
-#endif
-
+/** @brief Unused variable mark */
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 10
 #	define DEATH_UNUSED [[maybe_unused]]
 #elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG_CL)
@@ -357,6 +333,7 @@
 #	define DEATH_UNUSED
 #endif
 
+/** @brief Switch case fall-through */
 #if (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926 && DEATH_CXX_STANDARD >= 201703) || (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 7)
 #	define DEATH_FALLTHROUGH [[fallthrough]];
 #elif defined(DEATH_TARGET_CLANG)
@@ -366,16 +343,79 @@
 #	define DEATH_FALLTHROUGH
 #endif
 
-#if !defined(DEATH_ASSERT_UNREACHABLE)
-#	if defined(DEATH_TARGET_GCC)
-#		define DEATH_ASSERT_UNREACHABLE() __builtin_unreachable()
-#	elif defined(DEATH_TARGET_MSVC)
-#		define DEATH_ASSERT_UNREACHABLE() __assume(0)
+/** @brief Thread-local annotation */
+#if defined(__has_feature)
+#	if !__has_feature(cxx_thread_local) /* Apple Clang 7.3 says false here */
+#		define DEATH_THREAD_LOCAL __thread
+#	endif
+#endif
+#if !defined(DEATH_THREAD_LOCAL) /* Assume it's supported otherwise */
+#	define DEATH_THREAD_LOCAL thread_local
+#endif
+
+/** @brief C++14 constexpr annotation */
+#if DEATH_CXX_STANDARD >= 201402 && !defined(DEATH_MSVC2015_COMPATIBILITY)
+#	define DEATH_CONSTEXPR14 constexpr
+#else
+#	define DEATH_CONSTEXPR14
+#endif
+
+/** @brief Always inline a function */
+#if defined(DEATH_TARGET_GCC)
+#	define DEATH_ALWAYS_INLINE __attribute__((always_inline)) inline
+#elif defined(DEATH_TARGET_MSVC)
+#	define DEATH_ALWAYS_INLINE __forceinline
+#else
+#	define DEATH_ALWAYS_INLINE inline
+#endif
+
+/** @brief Never inline a function */
+#if defined(DEATH_TARGET_GCC)
+#	define DEATH_NEVER_INLINE __attribute__((noinline))
+#elif defined(DEATH_TARGET_MSVC)
+#	define DEATH_NEVER_INLINE __declspec(noinline)
+#else
+#	define DEATH_NEVER_INLINE
+#endif
+
+/** @brief Passthrough */
+#define DEATH_PASSTHROUGH(...) __VA_ARGS__
+/** @brief No-op */
+#define DEATH_NOOP(...)
+
+// Assertions
+/** @brief Assertion macro */
+#if !defined(DEATH_ASSERT)
+#	if defined(DEATH_NO_ASSERT) || defined(NDEBUG)
+#		define DEATH_ASSERT(condition, message, returnValue) do {} while(false)
 #	else
-#		define DEATH_ASSERT_UNREACHABLE() std::abort()
+#		define DEATH_ASSERT(condition, message, returnValue) assert(condition)
 #	endif
 #endif
 
-namespace Death::Cpu {
-	class Features;
-}
+/** @brief Constexpr assertion macro */
+#if !defined(DEATH_CONSTEXPR_ASSERT)
+#	if defined(DEATH_NO_ASSERT) || defined(NDEBUG)
+#		define DEATH_CONSTEXPR_ASSERT(condition, message) static_cast<void>(0)
+#	else
+#		define DEATH_CONSTEXPR_ASSERT(condition, message)					\
+			static_cast<void>((condition) ? 0 : ([&]() {					\
+				assert(!#condition);										\
+			}(), 0))
+#	endif
+#endif
+
+/** @brief Assert that the code is unreachable */
+#if !defined(DEATH_ASSERT_UNREACHABLE)
+#	if defined(DEATH_NO_ASSERT) || defined(NDEBUG)
+#		if defined(DEATH_TARGET_GCC)
+#			define DEATH_ASSERT_UNREACHABLE() __builtin_unreachable()
+#		elif defined(DEATH_TARGET_MSVC)
+#			define DEATH_ASSERT_UNREACHABLE() __assume(0)
+#		else
+#			define DEATH_ASSERT_UNREACHABLE() std::abort()
+#		endif
+#	else
+#		define DEATH_ASSERT_UNREACHABLE() assert(!"Unreachable code")
+#	endif
+#endif
