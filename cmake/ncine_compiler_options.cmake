@@ -12,11 +12,9 @@ target_compile_definitions(${NCINE_APP} PUBLIC "$<$<CONFIG:Debug>:NCINE_DEBUG>")
 
 if(DEATH_CPU_USE_RUNTIME_DISPATCH)
 	target_compile_definitions(${NCINE_APP} PUBLIC "DEATH_CPU_USE_RUNTIME_DISPATCH")
-	message(STATUS "DEATH_CPU_USE_RUNTIME_DISPATCH is enabled")
 endif()
 if(DEATH_CPU_USE_IFUNC)
 	target_compile_definitions(${NCINE_APP} PUBLIC "DEATH_CPU_USE_IFUNC")
-	message(STATUS "DEATH_CPU_USE_IFUNC is enabled")
 endif()
 
 if(NCINE_LOG)

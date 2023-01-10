@@ -12,7 +12,7 @@
 #if (defined(DEATH_ENABLE_SSE2) || defined(DEATH_ENABLE_AVX)) && defined(DEATH_ENABLE_BMI1)
 #	include "../IntrinsicsAvx.h"
 #endif
-#if defined(DEATH_ENABLE_NEON)
+#if defined(DEATH_ENABLE_NEON) && !defined(DEATH_TARGET_32BIT)
 #	include <arm_neon.h>
 #endif
 #if defined(DEATH_ENABLE_SIMD128)
@@ -346,7 +346,8 @@ namespace Death::Containers
 			}
 #endif
 
-#if defined(DEATH_ENABLE_NEON)
+#if defined(DEATH_ENABLE_NEON) && !defined(DEATH_TARGET_32BIT)
+			// `vshrn_n_u16` and `vaddvq_u8` is missing in `armeabi-v7a` on Android, so enable it only on ARM64
 			// AArch64 doesn't differentiate between aligned and unaligned loads. ARM32 does, but it's not exposed in the intrinsics,
 			// only in compiler-specific ways. Since 32-bit ARM is increasingly rare, not bothering at all.
 			// https://stackoverflow.com/a/53245244

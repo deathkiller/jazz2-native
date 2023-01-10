@@ -2855,9 +2855,9 @@ namespace Death::Cpu
 #	else
 			// On ARM64 NEON and NEON FMA is implicit. For extra security make use of the DEATH_TARGET_ defines (which should be always there).
 			out |=
-#	if defined(DEATH_TARGET_NEON)
+#		if defined(DEATH_TARGET_NEON)
 				TypeTraits<NeonT>::Index |
-#	endif
+#		endif
 #		if defined(DEATH_TARGET_NEON_FMA)
 				TypeTraits<NeonFmaT>::Index |
 #		endif

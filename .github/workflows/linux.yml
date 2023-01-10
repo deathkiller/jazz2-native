@@ -49,8 +49,12 @@ jobs:
     - name: 'Create Build Environment'
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libopenmpt-dev rpm
+        sudo apt-get install -y cmake curl g++ clang libgl1-mesa-dev libopenmpt-dev rpm
 
+    - name: 'Configure Clang Compiler'
+      uses: egor-tensin/setup-clang@v1
+      if: ${{ matrix.CC }} == 'clang'
+        
     - name: 'Configure CMake'
       run: |
         export CC=${{ matrix.CC }}
