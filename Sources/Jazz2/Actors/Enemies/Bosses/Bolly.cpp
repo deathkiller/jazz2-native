@@ -194,7 +194,7 @@ namespace Jazz2::Actors::Bosses
 		CreateDeathDebris(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
-		StringView text = _levelHandler->GetLevelText(_endText, -1, '|');
+		StringView text = _levelHandler->GetLevelText(_endText);
 		_levelHandler->ShowLevelText(text);
 
 		return BossBase::OnPerish(collider);
@@ -272,7 +272,7 @@ namespace Jazz2::Actors::Bosses
 			std::shared_ptr<Rocket> rocket = std::make_shared<Rocket>();
 			rocket->OnActivated({
 				.LevelHandler = _levelHandler,
-				.Pos = Vector3i((int)_pos.X + (IsFacingLeft() ? 10 : -10), (int)_pos.Y + 10, _renderer.layer() + 4)
+				.Pos = Vector3i((int)_pos.X + (IsFacingLeft() ? 10 : -10), (int)_pos.Y + 10, _renderer.layer() - 4)
 			});
 			rocket->_renderer.setRotation(atan2f(diff.Y, diff.X));
 			_levelHandler->AddActor(rocket);

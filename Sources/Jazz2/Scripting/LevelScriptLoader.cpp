@@ -10,6 +10,7 @@
 #include "../LevelHandler.h"
 #include "../PreferencesCache.h"
 #include "../Actors/ActorBase.h"
+#include "../Actors/Player.h"
 
 #include "../../nCine/Base/Random.h"
 
@@ -1188,7 +1189,7 @@ namespace Jazz2::Scripting
 	};
 
 
-	struct TtextAppearance {
+	struct jjTEXTAPPEARANCE {
 		enum align_ {
 			align_DEFAULT,
 			align_LEFT,
@@ -1217,14 +1218,14 @@ namespace Jazz2::Scripting
 		ch_ tilde;
 		align_ align;
 
-		static TtextAppearance constructor() {
+		static jjTEXTAPPEARANCE constructor() {
 			noop(); return { };
 		}
-		static TtextAppearance constructorMode(uint32_t mode) {
+		static jjTEXTAPPEARANCE constructorMode(uint32_t mode) {
 			noop(); return { };
 		}
 
-		TtextAppearance& operator=(uint32_t other) {
+		jjTEXTAPPEARANCE& operator=(uint32_t other) {
 			noop(); return *this;
 		}
 	};
@@ -1265,7 +1266,7 @@ namespace Jazz2::Scripting
 		void DrawTextBasicSize(int32_t xPixel, int32_t yPixel, const String& text, uint32_t size, uint32_t mode, uint8_t param) {
 			noop();
 		}
-		void DrawTextExtSize(int32_t xPixel, int32_t yPixel, const String& text, uint32_t size, const TtextAppearance& appearance, uint8_t param1, uint32_t mode, uint8_t param) {
+		void DrawTextExtSize(int32_t xPixel, int32_t yPixel, const String& text, uint32_t size, const jjTEXTAPPEARANCE& appearance, uint8_t param1, uint32_t mode, uint8_t param) {
 			noop();
 		}
 
@@ -1330,18 +1331,104 @@ namespace Jazz2::Scripting
 
 	};*/
 
-	class Tplayer
+	class jjOBJ
 	{
 	public:
-		Tplayer() {
+		jjOBJ() : _refCount(1) {
 			noop();
 		}
-		~Tplayer() {
+		~jjOBJ() {
 			noop();
 		}
 
+		void AddRef()
+		{
+			_refCount++;
+		}
+
+		void Release()
+		{
+			if (--_refCount == 0) {
+				this->~jjOBJ();
+				asFreeMem(this);
+			}
+		}
+
+		bool get_isActive() const {
+			noop();
+			return false;
+		}
+		uint32_t get_lightType() const {
+			noop();
+			return 0;
+		}
+		uint32_t set_lightType(uint32_t value) const {
+			noop();
+			return 0;
+		}
+
+		jjOBJ* objectHit(jjOBJ* target, uint32_t playerHandling) {
+			noop();
+			return nullptr;
+		}
+
+	private:
+		int _refCount;
+	};
+
+	jjOBJ* get_jjObjects(int index)
+	{
+		noop();
+		auto ctx = asGetActiveContext();
+		auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+
+		void* mem = asAllocMem(sizeof(jjOBJ));
+		return new(mem) jjOBJ();
+	}
+
+	jjOBJ* get_jjObjectPresets(int8_t id)
+	{
+		noop();
+		auto ctx = asGetActiveContext();
+		auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+
+		void* mem = asAllocMem(sizeof(jjOBJ));
+		return new(mem) jjOBJ();
+	}
+
+	int jjObjectCount = 0;
+	int jjObjectMax = 0;
+
+	class jjPLAYER
+	{
+	public:
+		jjPLAYER(LevelScriptLoader* levelScripts, int playerIndex) : _levelScripts(levelScripts), _refCount(1) {
+			noop();
+			auto& players = levelScripts->GetPlayers();
+			_player = (playerIndex < players.size() ? players[playerIndex] : nullptr);
+		}
+		jjPLAYER(LevelScriptLoader* levelScripts, Actors::Player* player) : _levelScripts(levelScripts), _refCount(1), _player(player) {
+			noop();
+		}
+		~jjPLAYER() {
+			noop();
+		}
+
+		void AddRef()
+		{
+			_refCount++;
+		}
+
+		void Release()
+		{
+			if (--_refCount == 0) {
+				this->~jjPLAYER();
+				asFreeMem(this);
+			}
+		}
+
 		// Assignment operator
-		Tplayer& operator=(const Tplayer& o)
+		jjPLAYER& operator=(const jjPLAYER& o)
 		{
 			// Copy only the content, not the script proxy class
 			//_value = o._value;
@@ -1469,6 +1556,36 @@ namespace Jazz2::Scripting
 		void showTextHstr(uint32_t textID, uint32_t offset, uint32_t size) {
 			noop();
 		}
+
+		bool doesCollide(const jjOBJ* object, bool always) const {
+			noop();
+			return false;
+		}
+		int getObjectHitForce(const jjOBJ& target) const {
+			noop();
+			return 0;
+		}
+		bool objectHit(jjOBJ& target, int force, uint32_t playerHandling) {
+			noop();
+			return false;
+		}
+		void blast(int32_t maxDistance, bool blastObjects) {
+			noop();
+		}
+		bool isEnemy(const jjPLAYER* victim) const {
+			noop();
+			return false;
+		}
+
+		uint32_t charCurr;
+		uint16_t curAnim;
+		uint32_t curFrame;
+		uint8_t frameID;
+
+	private:
+		int _refCount;
+		LevelScriptLoader* _levelScripts;
+		Actors::Player* _player;
 	};
 
 	enum waterInteraction_ {
@@ -1725,6 +1842,58 @@ namespace Jazz2::Scripting
 	}
 
 	// TODO
+
+	void jjDrawPixel(float xPixel, float yPixel, uint8_t color, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+		noop();
+	}
+
+	void jjDrawRectangle(float xPixel, float yPixel, int32_t width, int32_t height, uint8_t color, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+		noop();
+	}
+
+	void jjDrawSprite(float xPixel, float yPixel, int32_t setID, uint8_t animation, uint8_t frame, int8_t direction, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+		noop();
+	}
+
+	void jjDrawSpriteFromCurFrame(float xPixel, float yPixel, uint32_t sprite, int8_t direction, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+		noop();
+	}
+
+	void jjDrawResizedSprite(float xPixel, float yPixel, int32_t setID, uint8_t animation, uint8_t frame, float xScale, float yScale, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+		noop();
+	}
+
+	void jjDrawResizedSpriteFromCurFrame(float xPixel, float yPixel, uint32_t sprite, float xScale, float yScale, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+		noop();
+	}
+
+	void jjDrawRotatedSprite(float xPixel, float yPixel, int32_t setID, uint8_t animation, uint8_t frame, int32_t angle, float xScale, float yScale, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+		noop();
+	}
+
+	void jjDrawRotatedSpriteFromCurFrame(float xPixel, float yPixel, uint32_t sprite, int32_t angle, float xScale, float yScale, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+		noop();
+	}
+
+	void jjDrawSwingingVineSpriteFromCurFrame(float xPixel, float yPixel, uint32_t sprite, int32_t length, int32_t curvature, spriteType mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+		noop();
+	}
+
+	void jjDrawTile(float xPixel, float yPixel, uint16_t tile, uint32_t tileQuadrant, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+		noop();
+	}
+
+	void jjDrawString(float xPixel, float yPixel, const String& text, uint32_t size, uint32_t mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+		noop();
+	}
+
+	void jjDrawStringEx(float xPixel, float yPixel, const String& text, uint32_t size, const jjTEXTAPPEARANCE& appearance, uint8_t param1, spriteType spriteMode, uint8_t param2, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+		noop();
+	}
+
+	int32_t jjGetStringWidth(const String& text, uint32_t size, const jjTEXTAPPEARANCE& style) {
+		noop(); return 0;
+	}
 
 	bool snowing = false;
 	bool snowingOutdoors = false;
@@ -2117,8 +2286,8 @@ namespace Jazz2::Scripting
 			if (func != nullptr) {
 				asIScriptContext* ctx = _engine->RequestContext();
 
-				void* mem = asAllocMem(sizeof(ScriptPlayerWrapper));
-				ScriptPlayerWrapper* playerWrapper = new(mem) ScriptPlayerWrapper(this, player);
+				void* mem = asAllocMem(sizeof(jjPLAYER));
+				jjPLAYER* playerWrapper = new(mem) jjPLAYER(this, player);
 
 				ctx->Prepare(func);
 				ctx->SetArgObject(0, playerWrapper);
@@ -2271,13 +2440,15 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalProperty("const GAME::Connection jjGameConnection", &partyMode);
 
 		// TODO
-		engine->RegisterObjectType("jjPLAYER", sizeof(Tplayer), asOBJ_REF | asOBJ_NOCOUNT);
+		engine->RegisterObjectType("jjPLAYER", sizeof(jjPLAYER), asOBJ_REF /*| asOBJ_NOCOUNT*/);
+		engine->RegisterObjectBehaviour("jjPLAYER", asBEHAVE_ADDREF, "void f()", asMETHOD(jjPLAYER, AddRef), asCALL_THISCALL);
+		engine->RegisterObjectBehaviour("jjPLAYER", asBEHAVE_RELEASE, "void f()", asMETHOD(jjPLAYER, Release), asCALL_THISCALL);
 		engine->RegisterGlobalProperty("const int jjPlayerCount", &numPlayers);
 		engine->RegisterGlobalProperty("const int jjLocalPlayerCount", &localPlayers);
 		//setASplayer(0);
 		/*engine->RegisterGlobalProperty("jjPLAYER @jjP", &ASplayer);
 		engine->RegisterGlobalProperty("jjPLAYER @p", &ASplayer); // Deprecated
-		engine->RegisterGlobalFunction("jjPLAYER@ get_jjPlayers(uint8)", asFUNCTION(getPlayer), asCALL_CDECL);
+		engine->RegisterGlobalFunction("jjPLAYER@ get_jjPlayers(uint8)", asFUNCTION(gejjPLAYER), asCALL_CDECL);
 		engine->RegisterGlobalFunction("jjPLAYER@ get_jjLocalPlayers(uint8)", asFUNCTION(getLocalPlayer), asCALL_CDECL);*/
 
 		engine->SetDefaultNamespace("WEAPON");
@@ -2328,69 +2499,69 @@ namespace Jazz2::Scripting
 		engine->SetDefaultNamespace("");
 
 		// TODO
-		engine->RegisterObjectProperty("jjPLAYER", "int score", asOFFSET(Tplayer, score));
-		engine->RegisterObjectProperty("jjPLAYER", "int scoreDisplayed", asOFFSET(Tplayer, lastScoreDisplay));
-		engine->RegisterObjectMethod("jjPLAYER", "int setScore(int score)", asMETHOD(Tplayer, setScore), asCALL_THISCALL);
-		engine->RegisterObjectProperty("jjPLAYER", "float xPos", asOFFSET(Tplayer, xPos));
-		engine->RegisterObjectProperty("jjPLAYER", "float yPos", asOFFSET(Tplayer, yPos));
-		engine->RegisterObjectProperty("jjPLAYER", "float xAcc", asOFFSET(Tplayer, xAcc));
-		engine->RegisterObjectProperty("jjPLAYER", "float yAcc", asOFFSET(Tplayer, yAcc));
-		engine->RegisterObjectProperty("jjPLAYER", "float xOrg", asOFFSET(Tplayer, xOrg));
-		engine->RegisterObjectProperty("jjPLAYER", "float yOrg", asOFFSET(Tplayer, yOrg));
-		engine->RegisterObjectMethod("jjPLAYER", "float get_xSpeed() const", asMETHOD(Tplayer, get_xSpeed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "float set_xSpeed(float)", asMETHOD(Tplayer, set_xSpeed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "float get_ySpeed() const", asMETHOD(Tplayer, get_ySpeed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "float set_ySpeed(float)", asMETHOD(Tplayer, set_ySpeed), asCALL_THISCALL);
-		engine->RegisterObjectProperty("jjPLAYER", "float jumpStrength", asOFFSET(Tplayer, jumpSpeed));
-		/*engine->RegisterObjectProperty("jjPLAYER", "int8 frozen", asOFFSET(Tplayer, freeze));
+		engine->RegisterObjectProperty("jjPLAYER", "int score", asOFFSET(jjPLAYER, score));
+		engine->RegisterObjectProperty("jjPLAYER", "int scoreDisplayed", asOFFSET(jjPLAYER, lastScoreDisplay));
+		engine->RegisterObjectMethod("jjPLAYER", "int setScore(int score)", asMETHOD(jjPLAYER, setScore), asCALL_THISCALL);
+		engine->RegisterObjectProperty("jjPLAYER", "float xPos", asOFFSET(jjPLAYER, xPos));
+		engine->RegisterObjectProperty("jjPLAYER", "float yPos", asOFFSET(jjPLAYER, yPos));
+		engine->RegisterObjectProperty("jjPLAYER", "float xAcc", asOFFSET(jjPLAYER, xAcc));
+		engine->RegisterObjectProperty("jjPLAYER", "float yAcc", asOFFSET(jjPLAYER, yAcc));
+		engine->RegisterObjectProperty("jjPLAYER", "float xOrg", asOFFSET(jjPLAYER, xOrg));
+		engine->RegisterObjectProperty("jjPLAYER", "float yOrg", asOFFSET(jjPLAYER, yOrg));
+		engine->RegisterObjectMethod("jjPLAYER", "float get_xSpeed() const", asMETHOD(jjPLAYER, get_xSpeed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "float set_xSpeed(float)", asMETHOD(jjPLAYER, set_xSpeed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "float get_ySpeed() const", asMETHOD(jjPLAYER, get_ySpeed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "float set_ySpeed(float)", asMETHOD(jjPLAYER, set_ySpeed), asCALL_THISCALL);
+		engine->RegisterObjectProperty("jjPLAYER", "float jumpStrength", asOFFSET(jjPLAYER, jumpSpeed));
+		/*engine->RegisterObjectProperty("jjPLAYER", "int8 frozen", asOFFSET(jjPLAYER, freeze));
 		engine->RegisterObjectMethod("jjPLAYER", "void freeze(bool frozen = true)", asFUNCTION(freezePlayer), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjPLAYER", "int get_currTile() const", asFUNCTION(get_currTile), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjPLAYER", "bool startSugarRush(int time = 1400)", asFUNCTION(giveSugarRush), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjPLAYER", "int8 get_health() const", asFUNCTION(get_health), asCALL_CDECL_OBJLAST);
 		engine->RegisterObjectMethod("jjPLAYER", "int8 set_health(int8)", asFUNCTION(set_health), asCALL_CDECL_OBJLAST);
-		engine->RegisterObjectProperty("jjPLAYER", "const int warpID", asOFFSET(Tplayer, warpArea));
-		engine->RegisterObjectProperty("jjPLAYER", "int fastfire", asOFFSET(Tplayer, fireSpeed));
+		engine->RegisterObjectProperty("jjPLAYER", "const int warpID", asOFFSET(jjPLAYER, warpArea));
+		engine->RegisterObjectProperty("jjPLAYER", "int fastfire", asOFFSET(jjPLAYER, fireSpeed));
 		engine->RegisterObjectMethod("jjPLAYER", "uint8 get_currWeapon() const", asFUNCTION(getCurrWeapon), asCALL_CDECL_OBJLAST);
 		engine->RegisterObjectMethod("jjPLAYER", "uint8 set_currWeapon(uint8)", asFUNCTION(setCurrWeapon), asCALL_CDECL_OBJLAST);
-		engine->RegisterObjectProperty("jjPLAYER", "int lives", asOFFSET(Tplayer, extraLives));
-		engine->RegisterObjectProperty("jjPLAYER", "int invincibility", asOFFSET(Tplayer, invincibility));
-		engine->RegisterObjectProperty("jjPLAYER", "int blink", asOFFSET(Tplayer, flicker));
+		engine->RegisterObjectProperty("jjPLAYER", "int lives", asOFFSET(jjPLAYER, extraLives));
+		engine->RegisterObjectProperty("jjPLAYER", "int invincibility", asOFFSET(jjPLAYER, invincibility));
+		engine->RegisterObjectProperty("jjPLAYER", "int blink", asOFFSET(jjPLAYER, flicker));
 		engine->RegisterObjectMethod("jjPLAYER", "int extendInvincibility(int duration)", asFUNCTION(addToInvincibilityDuration), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectProperty("jjPLAYER", "int food", asOFFSET(Tplayer, food));
-		engine->RegisterObjectProperty("jjPLAYER", "int coins", asOFFSET(Tplayer, coins));
+		engine->RegisterObjectProperty("jjPLAYER", "int food", asOFFSET(jjPLAYER, food));
+		engine->RegisterObjectProperty("jjPLAYER", "int coins", asOFFSET(jjPLAYER, coins));
 		engine->RegisterObjectMethod("jjPLAYER", "bool testForCoins(int numberOfCoins)", asFUNCTION(testForCoins), asCALL_CDECL_OBJLAST);
 		engine->RegisterObjectMethod("jjPLAYER", "int get_gems(GEM::Color) const", asFUNCTION(get_gems), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjPLAYER", "int set_gems(GEM::Color, int)", asFUNCTION(set_gems), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjPLAYER", "bool testForGems(int numberOfGems, GEM::Color type)", asFUNCTION(testForGems), asCALL_CDECL_OBJFIRST);*/
-		engine->RegisterObjectProperty("jjPLAYER", "int shieldType", asOFFSET(Tplayer, shieldType));
-		engine->RegisterObjectProperty("jjPLAYER", "int shieldTime", asOFFSET(Tplayer, shieldTime));
-		engine->RegisterObjectProperty("jjPLAYER", "int ballTime", asOFFSET(Tplayer, rolling));
-		engine->RegisterObjectProperty("jjPLAYER", "int boss", asOFFSET(Tplayer, bossNumber));
-		engine->RegisterObjectProperty("jjPLAYER", "bool bossActivated", asOFFSET(Tplayer, bossActive));
-		engine->RegisterObjectProperty("jjPLAYER", "int8 direction", asOFFSET(Tplayer, direction));
-		engine->RegisterObjectProperty("jjPLAYER", "int platform", asOFFSET(Tplayer, platform));
-		engine->RegisterObjectProperty("jjPLAYER", "const int flag", asOFFSET(Tplayer, flag));
-		engine->RegisterObjectProperty("jjPLAYER", "const int clientID", asOFFSET(Tplayer, clientID));
-		engine->RegisterObjectProperty("jjPLAYER", "const int8 playerID", asOFFSET(Tplayer, playerID));
-		engine->RegisterObjectProperty("jjPLAYER", "const int localPlayerID", asOFFSET(Tplayer, localPlayerID));
-		engine->RegisterObjectProperty("jjPLAYER", "const bool teamRed", asOFFSET(Tplayer, team));
-		engine->RegisterObjectProperty("jjPLAYER", "bool running", asOFFSET(Tplayer, run));
-		engine->RegisterObjectProperty("jjPLAYER", "bool alreadyDoubleJumped", asOFFSET(Tplayer, specialJump)); // Deprecated
-		engine->RegisterObjectProperty("jjPLAYER", "int doubleJumpCount", asOFFSET(Tplayer, specialJump));
+		engine->RegisterObjectProperty("jjPLAYER", "int shieldType", asOFFSET(jjPLAYER, shieldType));
+		engine->RegisterObjectProperty("jjPLAYER", "int shieldTime", asOFFSET(jjPLAYER, shieldTime));
+		engine->RegisterObjectProperty("jjPLAYER", "int ballTime", asOFFSET(jjPLAYER, rolling));
+		engine->RegisterObjectProperty("jjPLAYER", "int boss", asOFFSET(jjPLAYER, bossNumber));
+		engine->RegisterObjectProperty("jjPLAYER", "bool bossActivated", asOFFSET(jjPLAYER, bossActive));
+		engine->RegisterObjectProperty("jjPLAYER", "int8 direction", asOFFSET(jjPLAYER, direction));
+		engine->RegisterObjectProperty("jjPLAYER", "int platform", asOFFSET(jjPLAYER, platform));
+		engine->RegisterObjectProperty("jjPLAYER", "const int flag", asOFFSET(jjPLAYER, flag));
+		engine->RegisterObjectProperty("jjPLAYER", "const int clientID", asOFFSET(jjPLAYER, clientID));
+		engine->RegisterObjectProperty("jjPLAYER", "const int8 playerID", asOFFSET(jjPLAYER, playerID));
+		engine->RegisterObjectProperty("jjPLAYER", "const int localPlayerID", asOFFSET(jjPLAYER, localPlayerID));
+		engine->RegisterObjectProperty("jjPLAYER", "const bool teamRed", asOFFSET(jjPLAYER, team));
+		engine->RegisterObjectProperty("jjPLAYER", "bool running", asOFFSET(jjPLAYER, run));
+		engine->RegisterObjectProperty("jjPLAYER", "bool alreadyDoubleJumped", asOFFSET(jjPLAYER, specialJump)); // Deprecated
+		engine->RegisterObjectProperty("jjPLAYER", "int doubleJumpCount", asOFFSET(jjPLAYER, specialJump));
 		// TODO
 		/*engine->RegisterObjectMethod("jjPLAYER", "int get_stoned() const", asFUNCTION(get_stoned), asCALL_CDECL_OBJLAST);
 		engine->RegisterObjectMethod("jjPLAYER", "int set_stoned(int)", asFUNCTION(set_stoned), asCALL_CDECL_OBJLAST);
-		engine->RegisterObjectProperty("jjPLAYER", "int buttstomp", asOFFSET(Tplayer, downAttack));
-		engine->RegisterObjectProperty("jjPLAYER", "int helicopter", asOFFSET(Tplayer, helicopter));
-		engine->RegisterObjectProperty("jjPLAYER", "int helicopterElapsed", asOFFSET(Tplayer, helicopterTotal));
-		engine->RegisterObjectProperty("jjPLAYER", "int specialMove", asOFFSET(Tplayer, specialMove));
-		engine->RegisterObjectProperty("jjPLAYER", "int idle", asOFFSET(Tplayer, idleTime));
-		engine->RegisterObjectMethod("jjPLAYER", "void suckerTube(int xSpeed, int ySpeed, bool center, bool noclip = false, bool trigSample = false)", asMETHOD(Tplayer, suckerTube), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void poleSpin(float xSpeed, float ySpeed, uint delay = 70)", asMETHOD(Tplayer, externalPole), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void spring(float xSpeed, float ySpeed, bool keepZeroSpeeds, bool sample)", asMETHOD(Tplayer, externalSpring), asCALL_THISCALL);
+		engine->RegisterObjectProperty("jjPLAYER", "int buttstomp", asOFFSET(jjPLAYER, downAttack));
+		engine->RegisterObjectProperty("jjPLAYER", "int helicopter", asOFFSET(jjPLAYER, helicopter));
+		engine->RegisterObjectProperty("jjPLAYER", "int helicopterElapsed", asOFFSET(jjPLAYER, helicopterTotal));
+		engine->RegisterObjectProperty("jjPLAYER", "int specialMove", asOFFSET(jjPLAYER, specialMove));
+		engine->RegisterObjectProperty("jjPLAYER", "int idle", asOFFSET(jjPLAYER, idleTime));
+		engine->RegisterObjectMethod("jjPLAYER", "void suckerTube(int xSpeed, int ySpeed, bool center, bool noclip = false, bool trigSample = false)", asMETHOD(jjPLAYER, suckerTube), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void poleSpin(float xSpeed, float ySpeed, uint delay = 70)", asMETHOD(jjPLAYER, externalPole), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void spring(float xSpeed, float ySpeed, bool keepZeroSpeeds, bool sample)", asMETHOD(jjPLAYER, externalSpring), asCALL_THISCALL);
 
-		engine->RegisterObjectProperty("jjPLAYER", "const bool isLocal", asOFFSET(Tplayer, controls));
-		engine->RegisterObjectProperty("jjPLAYER", "const bool isActive", asOFFSET(Tplayer, state));
+		engine->RegisterObjectProperty("jjPLAYER", "const bool isLocal", asOFFSET(jjPLAYER, controls));
+		engine->RegisterObjectProperty("jjPLAYER", "const bool isActive", asOFFSET(jjPLAYER, state));
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_isConnecting() const", asFUNCTION(get_isConnecting), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_isIdle() const", asFUNCTION(get_isIdle), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_isOut() const", asFUNCTION(get_isOut), asCALL_CDECL_OBJFIRST);
@@ -2419,22 +2590,22 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "uint8 set_lighting(uint8)", asFUNCTION(set_lighting), asCALL_CDECL_OBJLAST);
 		engine->RegisterObjectMethod("jjPLAYER", "uint8 resetLight()", asFUNCTION(reset_lighting), asCALL_CDECL_OBJLAST);*/
 
-		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyLeft() const", asMETHOD(Tplayer, get_playerKeyLeftPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyRight() const", asMETHOD(Tplayer, get_playerKeyRightPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyUp() const", asMETHOD(Tplayer, get_playerKeyUpPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyDown() const", asMETHOD(Tplayer, get_playerKeyDownPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyFire() const", asMETHOD(Tplayer, get_playerKeyFirePressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool get_keySelect() const", asMETHOD(Tplayer, get_playerKeySelectPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyJump() const", asMETHOD(Tplayer, get_playerKeyJumpPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyRun() const", asMETHOD(Tplayer, get_playerKeyRunPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyLeft(bool)", asMETHOD(Tplayer, set_playerKeyLeftPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyRight(bool)", asMETHOD(Tplayer, set_playerKeyRightPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyUp(bool)", asMETHOD(Tplayer, set_playerKeyUpPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyDown(bool)", asMETHOD(Tplayer, set_playerKeyDownPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyFire(bool)", asMETHOD(Tplayer, set_playerKeyFirePressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool set_keySelect(bool)", asMETHOD(Tplayer, set_playerKeySelectPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyJump(bool)", asMETHOD(Tplayer, set_playerKeyJumpPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyRun(bool)", asMETHOD(Tplayer, set_playerKeyRunPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyLeft() const", asMETHOD(jjPLAYER, get_playerKeyLeftPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyRight() const", asMETHOD(jjPLAYER, get_playerKeyRightPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyUp() const", asMETHOD(jjPLAYER, get_playerKeyUpPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyDown() const", asMETHOD(jjPLAYER, get_playerKeyDownPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyFire() const", asMETHOD(jjPLAYER, get_playerKeyFirePressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool get_keySelect() const", asMETHOD(jjPLAYER, get_playerKeySelectPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyJump() const", asMETHOD(jjPLAYER, get_playerKeyJumpPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyRun() const", asMETHOD(jjPLAYER, get_playerKeyRunPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyLeft(bool)", asMETHOD(jjPLAYER, set_playerKeyLeftPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyRight(bool)", asMETHOD(jjPLAYER, set_playerKeyRightPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyUp(bool)", asMETHOD(jjPLAYER, set_playerKeyUpPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyDown(bool)", asMETHOD(jjPLAYER, set_playerKeyDownPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyFire(bool)", asMETHOD(jjPLAYER, set_playerKeyFirePressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_keySelect(bool)", asMETHOD(jjPLAYER, set_playerKeySelectPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyJump(bool)", asMETHOD(jjPLAYER, set_playerKeyJumpPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyRun(bool)", asMETHOD(jjPLAYER, set_playerKeyRunPressed), asCALL_THISCALL);
 
 		/*engine->RegisterObjectMethod("jjPLAYER", "bool get_powerup(uint8) const", asFUNCTION(getPowerup), asCALL_CDECL_OBJLAST);
 		engine->RegisterObjectMethod("jjPLAYER", "bool set_powerup(uint8, bool)", asFUNCTION(setPowerup), asCALL_CDECL_OBJLAST);
@@ -2461,7 +2632,7 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "CHAR::Char morphTo(CHAR::Char charNew, bool morphEffect = true)", asFUNCTION(morphTo), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjPLAYER", "CHAR::Char revertMorph(bool morphEffect = true)", asFUNCTION(revertMorph), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjPLAYER", "CHAR::Char get_charCurr() const", asFUNCTION(getCharCurr), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectProperty("jjPLAYER", "CHAR::Char charOrig", asOFFSET(Tplayer, charOrig));*/
+		engine->RegisterObjectProperty("jjPLAYER", "CHAR::Char charOrig", asOFFSET(jjPLAYER, charOrig));*/
 
 		engine->SetDefaultNamespace("TEAM");
 		engine->RegisterEnum("Color");
@@ -2481,7 +2652,7 @@ namespace Jazz2::Scripting
 		engine->SetDefaultNamespace("");
 
 		// TODO
-		/*engine->RegisterObjectProperty("jjPLAYER", "const TEAM::Color team", asOFFSET(Tplayer, team));
+		/*engine->RegisterObjectProperty("jjPLAYER", "const TEAM::Color team", asOFFSET(jjPLAYER, team));
 
 		engine->RegisterObjectMethod("jjPLAYER", "void kill()", asFUNCTION(killLocalPlayer), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjPLAYER", "bool hurt(int8 damage = 1, bool forceHurt = false, jjPLAYER@ attacker = null)", asFUNCTION(HitPlayerVariableDamage), asCALL_CDECL_OBJFIRST);
@@ -2530,15 +2701,15 @@ namespace Jazz2::Scripting
 		engine->RegisterFuncdef("void jjVOIDFUNCPLAYER(jjPLAYER@)");
 		engine->RegisterObjectMethod("jjPLAYER", "void timerFunction(jjVOIDFUNCPLAYER@ function)", asFUNCTION(setPlayerTimerFunctionPointer), asCALL_CDECL_OBJLAST);*/
 
-		engine->RegisterObjectMethod("jjPLAYER", "bool activateBoss(bool activate = true)", asMETHOD(Tplayer, activateBoss), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool limitXScroll(uint16 left, uint16 width)", asMETHOD(Tplayer, limitXScroll), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void cameraFreeze(float xPixel, float yPixel, bool centered, bool instant)", asMETHOD(Tplayer, cameraFreezeFF), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void cameraFreeze(bool xUnfreeze, float yPixel, bool centered, bool instant)", asMETHOD(Tplayer, cameraFreezeBF), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void cameraFreeze(float xPixel, bool yUnfreeze, bool centered, bool instant)", asMETHOD(Tplayer, cameraFreezeFB), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void cameraFreeze(bool xUnfreeze, bool yUnfreeze, bool centered, bool instant)", asMETHOD(Tplayer, cameraFreezeBB), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void cameraUnfreeze(bool instant = true)", asMETHOD(Tplayer, cameraUnfreeze), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void showText(string &in text, STRING::Size size = STRING::SMALL)", asMETHOD(Tplayer, showTextStr), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void showText(uint textID, uint offset, STRING::Size size = STRING::SMALL)", asMETHOD(Tplayer, showTextHstr), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool activateBoss(bool activate = true)", asMETHOD(jjPLAYER, activateBoss), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool limitXScroll(uint16 left, uint16 width)", asMETHOD(jjPLAYER, limitXScroll), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void cameraFreeze(float xPixel, float yPixel, bool centered, bool instant)", asMETHOD(jjPLAYER, cameraFreezeFF), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void cameraFreeze(bool xUnfreeze, float yPixel, bool centered, bool instant)", asMETHOD(jjPLAYER, cameraFreezeBF), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void cameraFreeze(float xPixel, bool yUnfreeze, bool centered, bool instant)", asMETHOD(jjPLAYER, cameraFreezeFB), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void cameraFreeze(bool xUnfreeze, bool yUnfreeze, bool centered, bool instant)", asMETHOD(jjPLAYER, cameraFreezeBB), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void cameraUnfreeze(bool instant = true)", asMETHOD(jjPLAYER, cameraUnfreeze), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void showText(string &in text, STRING::Size size = STRING::SMALL)", asMETHOD(jjPLAYER, showTextStr), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void showText(uint textID, uint offset, STRING::Size size = STRING::SMALL)", asMETHOD(jjPLAYER, showTextHstr), asCALL_THISCALL);
 
 		/*engine->SetDefaultNamespace("FLIGHT");
 		engine->RegisterEnum("Mode");
@@ -2561,10 +2732,10 @@ namespace Jazz2::Scripting
 		/*engine->RegisterObjectMethod("jjPLAYER", "int fireBullet(uint8 gun = 0, bool depleteAmmo = true, bool requireAmmo = true, DIRECTION::Dir direction = DIRECTION::CURRENT)", asFUNCTION(fireBulletDirection), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjPLAYER", "int fireBullet(uint8 gun, bool depleteAmmo, bool requireAmmo, float angle)", asFUNCTION(fireBulletAngle), asCALL_CDECL_OBJFIRST);
 
-		engine->RegisterObjectProperty("jjPLAYER", "const int subscreenX", asOFFSET(Tplayer, xOrgWin));
-		engine->RegisterObjectProperty("jjPLAYER", "const int subscreenY", asOFFSET(Tplayer, yOrgWin));
-		engine->RegisterObjectMethod("jjPLAYER", "float get_cameraX() const", AS_OBJ_FLOAT_GETTER(Tplayer, viewStartX), asCALL_CDECL_OBJLAST);
-		engine->RegisterObjectMethod("jjPLAYER", "float get_cameraY() const", AS_OBJ_FLOAT_GETTER(Tplayer, viewStartY), asCALL_CDECL_OBJLAST);
+		engine->RegisterObjectProperty("jjPLAYER", "const int subscreenX", asOFFSET(jjPLAYER, xOrgWin));
+		engine->RegisterObjectProperty("jjPLAYER", "const int subscreenY", asOFFSET(jjPLAYER, yOrgWin));
+		engine->RegisterObjectMethod("jjPLAYER", "float get_cameraX() const", AS_OBJ_FLOAT_GETTER(jjPLAYER, viewStartX), asCALL_CDECL_OBJLAST);
+		engine->RegisterObjectMethod("jjPLAYER", "float get_cameraY() const", AS_OBJ_FLOAT_GETTER(jjPLAYER, viewStartY), asCALL_CDECL_OBJLAST);
 
 		engine->RegisterObjectMethod("jjPLAYER", "int get_deaths() const", asFUNCTION(get_deaths), asCALL_CDECL_OBJLAST);
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_isJailed() const", asFUNCTION(get_isJailed), asCALL_CDECL_OBJLAST);
@@ -2762,34 +2933,34 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("array<uint8>@ jjSpriteModeGetIndexMapping(uint8 index)", asFUNCTION(getSpriteModeIndexMapping), asCALL_CDECL);
 		engine->RegisterGlobalFunction("jjPAL@ jjSpriteModeGetColorMapping(uint8 index)", asFUNCTION(getSpriteModeColorMapping), asCALL_CDECL);*/
 
-		engine->RegisterObjectType("jjTEXTAPPEARANCE", sizeof(TtextAppearance), asOBJ_VALUE | asOBJ_POD);
-		engine->RegisterObjectBehaviour("jjTEXTAPPEARANCE", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(TtextAppearance::constructor), asCALL_CDECL_OBJLAST);
-		engine->RegisterObjectBehaviour("jjTEXTAPPEARANCE", asBEHAVE_CONSTRUCT, "void f(STRING::Mode mode)", asFUNCTION(TtextAppearance::constructorMode), asCALL_CDECL_OBJLAST);
-		engine->RegisterObjectMethod("jjTEXTAPPEARANCE", "jjTEXTAPPEARANCE& opAssign(STRING::Mode)", asMETHODPR(TtextAppearance, operator=, (uint32_t), TtextAppearance&), asCALL_THISCALL);
-		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "int xAmp", asOFFSET(TtextAppearance, xAmp));
-		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "int yAmp", asOFFSET(TtextAppearance, yAmp));
-		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "int spacing", asOFFSET(TtextAppearance, spacing));
-		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "bool monospace", asOFFSET(TtextAppearance, monospace));
-		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "bool skipInitialHash", asOFFSET(TtextAppearance, skipInitialHash));
+		engine->RegisterObjectType("jjTEXTAPPEARANCE", sizeof(jjTEXTAPPEARANCE), asOBJ_VALUE | asOBJ_POD);
+		engine->RegisterObjectBehaviour("jjTEXTAPPEARANCE", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(jjTEXTAPPEARANCE::constructor), asCALL_CDECL_OBJLAST);
+		engine->RegisterObjectBehaviour("jjTEXTAPPEARANCE", asBEHAVE_CONSTRUCT, "void f(STRING::Mode mode)", asFUNCTION(jjTEXTAPPEARANCE::constructorMode), asCALL_CDECL_OBJLAST);
+		engine->RegisterObjectMethod("jjTEXTAPPEARANCE", "jjTEXTAPPEARANCE& opAssign(STRING::Mode)", asMETHODPR(jjTEXTAPPEARANCE, operator=, (uint32_t), jjTEXTAPPEARANCE&), asCALL_THISCALL);
+		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "int xAmp", asOFFSET(jjTEXTAPPEARANCE, xAmp));
+		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "int yAmp", asOFFSET(jjTEXTAPPEARANCE, yAmp));
+		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "int spacing", asOFFSET(jjTEXTAPPEARANCE, spacing));
+		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "bool monospace", asOFFSET(jjTEXTAPPEARANCE, monospace));
+		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "bool skipInitialHash", asOFFSET(jjTEXTAPPEARANCE, skipInitialHash));
 		engine->SetDefaultNamespace("STRING");
 		engine->RegisterEnum("SignTreatment");
-		engine->RegisterEnumValue("SignTreatment", "HIDESIGN", TtextAppearance::ch_HIDE);
-		engine->RegisterEnumValue("SignTreatment", "DISPLAYSIGN", TtextAppearance::ch_DISPLAY);
-		engine->RegisterEnumValue("SignTreatment", "SPECIALSIGN", TtextAppearance::ch_SPECIAL);
+		engine->RegisterEnumValue("SignTreatment", "HIDESIGN", jjTEXTAPPEARANCE::ch_HIDE);
+		engine->RegisterEnumValue("SignTreatment", "DISPLAYSIGN", jjTEXTAPPEARANCE::ch_DISPLAY);
+		engine->RegisterEnumValue("SignTreatment", "SPECIALSIGN", jjTEXTAPPEARANCE::ch_SPECIAL);
 		engine->RegisterEnum("Alignment");
-		engine->RegisterEnumValue("Alignment", "DEFAULT", TtextAppearance::align_DEFAULT);
-		engine->RegisterEnumValue("Alignment", "LEFT", TtextAppearance::align_LEFT);
-		engine->RegisterEnumValue("Alignment", "CENTER", TtextAppearance::align_CENTER);
-		engine->RegisterEnumValue("Alignment", "RIGHT", TtextAppearance::align_RIGHT);
+		engine->RegisterEnumValue("Alignment", "DEFAULT", jjTEXTAPPEARANCE::align_DEFAULT);
+		engine->RegisterEnumValue("Alignment", "LEFT", jjTEXTAPPEARANCE::align_LEFT);
+		engine->RegisterEnumValue("Alignment", "CENTER", jjTEXTAPPEARANCE::align_CENTER);
+		engine->RegisterEnumValue("Alignment", "RIGHT", jjTEXTAPPEARANCE::align_RIGHT);
 		engine->SetDefaultNamespace("");
-		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::SignTreatment at", asOFFSET(TtextAppearance, at));
-		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::SignTreatment caret", asOFFSET(TtextAppearance, caret));
-		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::SignTreatment hash", asOFFSET(TtextAppearance, hash));
-		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::SignTreatment newline", asOFFSET(TtextAppearance, newline));
-		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::SignTreatment pipe", asOFFSET(TtextAppearance, pipe));
-		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::SignTreatment section", asOFFSET(TtextAppearance, section));
-		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::SignTreatment tilde", asOFFSET(TtextAppearance, tilde));
-		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::Alignment align", asOFFSET(TtextAppearance, align));
+		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::SignTreatment at", asOFFSET(jjTEXTAPPEARANCE, at));
+		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::SignTreatment caret", asOFFSET(jjTEXTAPPEARANCE, caret));
+		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::SignTreatment hash", asOFFSET(jjTEXTAPPEARANCE, hash));
+		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::SignTreatment newline", asOFFSET(jjTEXTAPPEARANCE, newline));
+		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::SignTreatment pipe", asOFFSET(jjTEXTAPPEARANCE, pipe));
+		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::SignTreatment section", asOFFSET(jjTEXTAPPEARANCE, section));
+		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::SignTreatment tilde", asOFFSET(jjTEXTAPPEARANCE, tilde));
+		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::Alignment align", asOFFSET(jjTEXTAPPEARANCE, align));
 
 		engine->RegisterObjectType("jjCANVAS", sizeof(TgameCanvas), asOBJ_REF | asOBJ_NOCOUNT);
 		engine->RegisterObjectMethod("jjCANVAS", "void drawPixel(int xPixel, int yPixel, uint8 color, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(TgameCanvas, DrawPixel), asCALL_THISCALL);
@@ -2806,21 +2977,20 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjCANVAS", "void drawString(int xPixel, int yPixel, const ::string &in text, STRING::Size size = STRING::SMALL, STRING::Mode mode = STRING::NORMAL, uint8 param = 0)", asMETHOD(TgameCanvas, DrawTextBasicSize), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjCANVAS", "void drawString(int xPixel, int yPixel, const ::string &in text, STRING::Size size, const jjTEXTAPPEARANCE &in appearance, uint8 param1 = 0, SPRITE::Mode spriteMode = SPRITE::PALSHIFT, uint8 param2 = 0)", asMETHOD(TgameCanvas, DrawTextExtSize), asCALL_THISCALL);
 
-		// TODO
-		/*engine->RegisterGlobalFunction("void jjDrawPixel(float xPixel, float yPixel, uint8 color, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(externalAddPixel), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjDrawRectangle(float xPixel, float yPixel, int width, int height, uint8 color, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(externalAddRectangle), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjDrawSprite(float xPixel, float yPixel, int setID, uint8 animation, uint8 frame, int8 direction = 0, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(externalAddSprite), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjDrawSpriteFromCurFrame(float xPixel, float yPixel, uint sprite, int8 direction = 0, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(externalAddCurFrameSprite), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjDrawResizedSprite(float xPixel, float yPixel, int setID, uint8 animation, uint8 frame, float xScale, float yScale, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(externalAddResizedSprite), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjDrawResizedSpriteFromCurFrame(float xPixel, float yPixel, uint sprite, float xScale, float yScale, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(externalAddResizedCurFrameSprite), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjDrawRotatedSprite(float xPixel, float yPixel, int setID, uint8 animation, uint8 frame, int angle, float xScale = 1, float yScale = 1, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(externalAddTransformedSprite), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjDrawRotatedSpriteFromCurFrame(float xPixel, float yPixel, uint sprite, int angle, float xScale = 1, float yScale = 1, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(externalAddTransformedCurFrameSprite), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjDrawPixel(float xPixel, float yPixel, uint8 color, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawPixel), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjDrawRectangle(float xPixel, float yPixel, int width, int height, uint8 color, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawRectangle), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjDrawSprite(float xPixel, float yPixel, int setID, uint8 animation, uint8 frame, int8 direction = 0, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawSprite), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjDrawSpriteFromCurFrame(float xPixel, float yPixel, uint sprite, int8 direction = 0, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawSpriteFromCurFrame), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjDrawResizedSprite(float xPixel, float yPixel, int setID, uint8 animation, uint8 frame, float xScale, float yScale, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawResizedSprite), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjDrawResizedSpriteFromCurFrame(float xPixel, float yPixel, uint sprite, float xScale, float yScale, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawResizedSpriteFromCurFrame), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjDrawRotatedSprite(float xPixel, float yPixel, int setID, uint8 animation, uint8 frame, int angle, float xScale = 1, float yScale = 1, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawRotatedSprite), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjDrawRotatedSpriteFromCurFrame(float xPixel, float yPixel, uint sprite, int angle, float xScale = 1, float yScale = 1, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawRotatedSpriteFromCurFrame), asCALL_CDECL);
 
-		engine->RegisterGlobalFunction("void jjDrawSwingingVineSpriteFromCurFrame(float xPixel, float yPixel, uint sprite, int length, int curvature, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(externalAddSwingingVineSprite), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjDrawTile(float xPixel, float yPixel, uint16 tile, TILE::Quadrant tileQuadrant = TILE::ALLQUADRANTS, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(externalAddTileSprite), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjDrawString(float xPixel, float yPixel, const ::string &in text, STRING::Size size = STRING::SMALL, STRING::Mode mode = STRING::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(externalAddTextSpriteSize), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjDrawString(float xPixel, float yPixel, const ::string &in text, STRING::Size size, const jjTEXTAPPEARANCE &in appearance, uint8 param1 = 0, SPRITE::Mode spriteMode = SPRITE::PALSHIFT, uint8 param2 = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(externalAddTextSpriteExtSize), asCALL_CDECL);
-		engine->RegisterGlobalFunction("int jjGetStringWidth(const ::string &in text, STRING::Size size, const jjTEXTAPPEARANCE &in style)", asFUNCTION(externalGetTextWidthSize), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjDrawSwingingVineSpriteFromCurFrame(float xPixel, float yPixel, uint sprite, int length, int curvature, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawSwingingVineSpriteFromCurFrame), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjDrawTile(float xPixel, float yPixel, uint16 tile, TILE::Quadrant tileQuadrant = TILE::ALLQUADRANTS, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawTile), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjDrawString(float xPixel, float yPixel, const ::string &in text, STRING::Size size = STRING::SMALL, STRING::Mode mode = STRING::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawString), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjDrawString(float xPixel, float yPixel, const ::string &in text, STRING::Size size, const jjTEXTAPPEARANCE &in appearance, uint8 param1 = 0, SPRITE::Mode spriteMode = SPRITE::PALSHIFT, uint8 param2 = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawStringEx), asCALL_CDECL);
+		engine->RegisterGlobalFunction("int jjGetStringWidth(const ::string &in text, STRING::Size size, const jjTEXTAPPEARANCE &in style)", asFUNCTION(jjGetStringWidth), asCALL_CDECL);
 
 		engine->SetDefaultNamespace("TEXTURE");
 		engine->RegisterEnum("Texture");
@@ -3075,30 +3245,32 @@ namespace Jazz2::Scripting
 		engine->SetDefaultNamespace("");
 
 		// TODO
-		/*engine->RegisterObjectType("jjOBJ", sizeof(Omonster), asOBJ_REF | asOBJ_NOCOUNT);
-		engine->RegisterGlobalFunction("jjOBJ @get_jjObjects(int)", asFUNCTION(getObject), asCALL_CDECL);
-		engine->RegisterGlobalFunction("jjOBJ @get_jjObjectPresets(uint8)", asFUNCTION(getLoadObject), asCALL_CDECL);
-		engine->RegisterGlobalProperty("const int jjObjectCount", numObjects);
-		engine->RegisterGlobalProperty("const int jjObjectMax", maxObjects);
-		engine->RegisterObjectMethod("jjOBJ", "bool get_isActive() const", asFUNCTION(isActive), asCALL_CDECL_OBJLAST);
+		engine->RegisterObjectType("jjOBJ", sizeof(jjOBJ), asOBJ_REF /*| asOBJ_NOCOUNT*/);
+		engine->RegisterObjectBehaviour("jjOBJ", asBEHAVE_ADDREF, "void f()", asMETHOD(jjOBJ, AddRef), asCALL_THISCALL);
+		engine->RegisterObjectBehaviour("jjOBJ", asBEHAVE_RELEASE, "void f()", asMETHOD(jjOBJ, Release), asCALL_THISCALL);
+		engine->RegisterGlobalFunction("jjOBJ @get_jjObjects(int)", asFUNCTION(get_jjObjects), asCALL_CDECL);
+		engine->RegisterGlobalFunction("jjOBJ @get_jjObjectPresets(uint8)", asFUNCTION(get_jjObjectPresets), asCALL_CDECL);
+		engine->RegisterGlobalProperty("const int jjObjectCount", &jjObjectCount);
+		engine->RegisterGlobalProperty("const int jjObjectMax", &jjObjectMax);
+		engine->RegisterObjectMethod("jjOBJ", "bool get_isActive() const", asMETHOD(jjOBJ, get_isActive), asCALL_THISCALL);
 
-		engine->RegisterObjectMethod("jjPLAYER", "LIGHT::Type get_lightType() const", asFUNCTION(getLightType), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectMethod("jjPLAYER", "LIGHT::Type set_lightType(LIGHT::Type)", asFUNCTION(setLightType), asCALL_CDECL_OBJFIRST);
+		engine->RegisterObjectMethod("jjPLAYER", "LIGHT::Type get_lightType() const", asMETHOD(jjOBJ, get_lightType), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "LIGHT::Type set_lightType(LIGHT::Type)", asMETHOD(jjOBJ, set_lightType), asCALL_THISCALL);
 
-		engine->RegisterObjectMethod("jjPLAYER", "bool doesCollide(const jjOBJ@ object, bool always = false) const", asFUNCTION(doesCollidePlayer), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectMethod("jjPLAYER", "int getObjectHitForce(const jjOBJ@ target = null) const", asFUNCTION(getDownAttack), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectMethod("jjPLAYER", "bool objectHit(jjOBJ@ target, int force, HANDLING::Player playerHandling)", asFUNCTION(playerHitObject), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectMethod("jjOBJ", "void objectHit(jjOBJ@ target, HANDLING::Player playerHandling)", asFUNCTION(CheckBulletAgainstObject), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectMethod("jjOBJ", "void blast(int maxDistance, bool blastObjects)", asFUNCTION(jjOBJDoBlastBase), asCALL_CDECL_OBJFIRST);
+		engine->RegisterObjectMethod("jjPLAYER", "bool doesCollide(const jjOBJ@ object, bool always = false) const", asMETHOD(jjPLAYER, doesCollide), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int getObjectHitForce(const jjOBJ@ target = null) const", asMETHOD(jjPLAYER, getObjectHitForce), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool objectHit(jjOBJ@ target, int force, HANDLING::Player playerHandling)", asMETHOD(jjPLAYER, objectHit), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjOBJ", "void objectHit(jjOBJ@ target, HANDLING::Player playerHandling)", asMETHOD(jjPLAYER, objectHit), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjOBJ", "void blast(int maxDistance, bool blastObjects)", asMETHOD(jjPLAYER, blast), asCALL_THISCALL);
 
-		engine->RegisterObjectMethod("jjPLAYER", "bool isEnemy(const jjPLAYER &in victim) const", asFUNCTION(playerIsEnemyOfPlayer), asCALL_CDECL_OBJFIRST);
+		engine->RegisterObjectMethod("jjPLAYER", "bool isEnemy(const jjPLAYER &in victim) const", asMETHOD(jjPLAYER, isEnemy), asCALL_THISCALL);
 
-		engine->RegisterObjectProperty("jjPLAYER", "const ANIM::Set setID", asOFFSET(Tplayer, charCurr));
-		engine->RegisterObjectProperty("jjPLAYER", "const uint16 curAnim", asOFFSET(Tplayer, curAnim));
-		engine->RegisterObjectProperty("jjPLAYER", "const uint curFrame", asOFFSET(Tplayer, curFrame));
-		engine->RegisterObjectProperty("jjPLAYER", "const uint8 frameID", asOFFSET(Tplayer, frameID));
+		engine->RegisterObjectProperty("jjPLAYER", "const ANIM::Set setID", asOFFSET(jjPLAYER, charCurr));
+		engine->RegisterObjectProperty("jjPLAYER", "const uint16 curAnim", asOFFSET(jjPLAYER, curAnim));
+		engine->RegisterObjectProperty("jjPLAYER", "const uint curFrame", asOFFSET(jjPLAYER, curFrame));
+		engine->RegisterObjectProperty("jjPLAYER", "const uint8 frameID", asOFFSET(jjPLAYER, frameID));
 
-		engine->RegisterFuncdef("void jjVOIDFUNCOBJ(jjOBJ@)");
+		/*engine->RegisterFuncdef("void jjVOIDFUNCOBJ(jjOBJ@)");
 		engine->RegisterObjectType("jjBEHAVIOR", sizeof(AiProcPtr), asOBJ_VALUE | asOBJ_APP_CLASS_CDA);
 		engine->RegisterObjectBehaviour("jjBEHAVIOR", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(behaviorDefaultConstructor), asCALL_CDECL_OBJLAST);
 		engine->RegisterObjectBehaviour("jjBEHAVIOR", asBEHAVE_CONSTRUCT, "void f(const BEHAVIOR::Behavior &in behavior)", asFUNCTION(behaviorCopyConstructor), asCALL_CDECL_OBJLAST);

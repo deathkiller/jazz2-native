@@ -28,7 +28,7 @@
 #if defined(__i386) || defined(__x86_64) || defined(_M_IX86) || defined(_M_X64)
 #	define DEATH_TARGET_X86
 
-// First two is GCC/Clang for 32/64 bit, second two is MSVC 32/64bit. MSVC doesn't have AArch64 support in the compiler yet,
+// First two is GCC/Clang for 32/64 bit, second two is MSVC 32/64bit. MSVC doesn't have ARM64 support in the compiler yet,
 // though there are some signs of it in headers (http://stackoverflow.com/a/37251625/6108877).
 #elif defined(__arm__) || defined(__aarch64__) || defined(_M_ARM) || defined(_M_ARM64)
 #	define DEATH_TARGET_ARM
@@ -255,7 +255,7 @@
 #	if defined(__ARM_NEON)
 #		define DEATH_TARGET_NEON
 // NEON FMA is available only if __ARM_FEATURE_FMA is defined and some bits of __ARM_NEON_FP as well
-// (ARM C Language Extensions 1.1, §6.5.5: https://developer.arm.com/documentation/ihi0053/b/). On AAArch64 NEON is
+// (ARM C Language Extensions 1.1, §6.5.5: https://developer.arm.com/documentation/ihi0053/b/). On ARM64 NEON is
 // implicitly supported and __ARM_NEON_FP might not be defined (Android Clang defines it but GCC 9 on Ubuntu ARM64 not),
 // so check for __aarch64__ as well.
 #		if defined(__ARM_FEATURE_FMA) && (__ARM_NEON_FP || defined(__aarch64__))

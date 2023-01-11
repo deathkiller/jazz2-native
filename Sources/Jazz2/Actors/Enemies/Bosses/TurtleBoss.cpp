@@ -161,7 +161,7 @@ namespace Jazz2::Actors::Bosses
 		CreateParticleDebris();
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
-		StringView text = _levelHandler->GetLevelText(_endText, -1, '|');
+		StringView text = _levelHandler->GetLevelText(_endText);
 		_levelHandler->ShowLevelText(text);
 
 		return BossBase::OnPerish(collider);
