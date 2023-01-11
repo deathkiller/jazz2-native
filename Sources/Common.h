@@ -101,10 +101,12 @@ void __WriteLog(LogLevel level, const char* fmt, ...);
 #	ifdef _MSC_VER
 #		define BREAK() __debugbreak()
 #	else
-#		ifndef __has_builtin
-#			define __has_builtin(x) 0
+#		if defined(__has_builtin)
+#			if __has_builtin(__builtin_trap)
+#				define __HAS_BUILTIN_TRAP
+#			endif
 #		endif
-#		if __has_builtin(__builtin_trap)
+#		if defined(__HAS_BUILTIN_TRAP)
 #			define BREAK() __builtin_trap()
 #		else
 #			define BREAK() ::abort()

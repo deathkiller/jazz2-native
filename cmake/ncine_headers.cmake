@@ -1,6 +1,7 @@
 set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Common.h
-	${NCINE_SOURCE_DIR}/Shared/CommonInternal.h
+	${NCINE_SOURCE_DIR}/Shared/CommonBase.h
+	${NCINE_SOURCE_DIR}/Shared/CommonWindows.h
 	${NCINE_SOURCE_DIR}/Shared/Environment.h
 	${NCINE_SOURCE_DIR}/Shared/Cpu.h
 	${NCINE_SOURCE_DIR}/Shared/IntrinsicsAvx.h

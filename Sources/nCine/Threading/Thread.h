@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Common.h>
+#include <CommonWindows.h>
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <process.h>

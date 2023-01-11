@@ -6,6 +6,7 @@
 
 #include "../../nCine/Threading/Thread.h"
 
+#include <CommonWindows.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
 

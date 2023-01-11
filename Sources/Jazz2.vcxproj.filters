@@ -861,9 +861,6 @@
     <ClInclude Include="nCine\tracy_opengl.h">
       <Filter>Header Files\nCine</Filter>
     </ClInclude>
-    <ClInclude Include="$(ExtensionLibraryPath)\CommonInternal.h">
-      <Filter>Header Files\Shared</Filter>
-    </ClInclude>
     <ClInclude Include="nCine\Primitives\Quaternion.h">
       <Filter>Header Files\nCine\Primitives</Filter>
     </ClInclude>
@@ -1262,6 +1259,15 @@
     </ClInclude>
     <ClInclude Include="Jazz2\Scripting\ScriptLoader.h">
       <Filter>Header Files\Jazz2\Scripting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\RegisterDictionary.h">
+      <Filter>Header Files\Jazz2\Scripting</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\CommonWindows.h">
+      <Filter>Header Files\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\CommonBase.h">
+      <Filter>Header Files\Shared</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2124,6 +2130,9 @@
       <Filter>Source Files\Shared</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Scripting\ScriptLoader.cpp">
+      <Filter>Source Files\Jazz2\Scripting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\RegisterDictionary.cpp">
       <Filter>Source Files\Jazz2\Scripting</Filter>
     </ClCompile>
   </ItemGroup>
