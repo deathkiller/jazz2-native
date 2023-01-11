@@ -46,7 +46,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool DevanRemote::OnActivatedBoss()
 	{
-		StringView text = _levelHandler->GetLevelText(_introText, -1, '|');
+		StringView text = _levelHandler->GetLevelText(_introText);
 		_levelHandler->ShowLevelText(text);
 
 		auto& actors = _levelHandler->GetActors();

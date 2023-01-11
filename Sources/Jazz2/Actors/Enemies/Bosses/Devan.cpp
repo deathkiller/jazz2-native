@@ -231,7 +231,7 @@ namespace Jazz2::Actors::Bosses
 			return false;
 		}
 
-		StringView text = _levelHandler->GetLevelText(_endText, -1, '|');
+		StringView text = _levelHandler->GetLevelText(_endText);
 		_levelHandler->ShowLevelText(text);
 
 		_isDead = true;

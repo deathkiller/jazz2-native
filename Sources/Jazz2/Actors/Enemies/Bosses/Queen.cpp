@@ -74,7 +74,7 @@ namespace Jazz2::Actors::Bosses
 
 	void Queen::OnUpdate(float timeMult)
 	{
-		TileCollisionParams params = { TileDestructType::Weapon | TileDestructType::Speed, _speed.Y >= 0.0f, WeaponType::Unknown, 1 };
+		TileCollisionParams params = { TileDestructType::Weapon | TileDestructType::Speed, _speed.Y >= 0.0f, WeaponType::Blaster, 1 };
 		TryStandardMovement(timeMult, params);
 		OnUpdateHitbox();
 		if (params.TilesDestroyed > 0) {
@@ -249,11 +249,13 @@ namespace Jazz2::Actors::Bosses
 				SetAnimation(AnimState::Fall);
 				PlaySfx("Spring"_s);
 
-				StringView text = _levelHandler->GetLevelText(_endText, -1, '|');
-				_levelHandler->ShowLevelText(text);
+				if (_state != StateDead) {
+					StringView text = _levelHandler->GetLevelText(_endText);
+					_levelHandler->ShowLevelText(text);
 
-				_state = StateDead;
-				_stateTime = 50.0f;
+					_state = StateDead;
+					_stateTime = 50.0f;
+				}
 			}
 		}
 
