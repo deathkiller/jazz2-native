@@ -1,5 +1,7 @@
 #include "StandardFile.h"
 
+#include <CommonWindows.h>
+
 #include <cstdlib>			// for exit()
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
