@@ -142,7 +142,7 @@ namespace Jazz2::Tiles
 
 	bool TileMap::IsTileEmpty(int tx, int ty)
 	{
-		if (ty < 0 || _sprLayerIndex == -1) {
+		if (_sprLayerIndex == -1) {
 			return true;
 		}
 
@@ -153,6 +153,9 @@ namespace Jazz2::Tiles
 		if (ty >= layoutSize.Y) {
 			return (_pitType != PitType::StandOnPlatform);
 		}
+		if (ty < 0) {
+			ty = 0;
+		}
 
 		LayerTile& tile = _layers[_sprLayerIndex].Layout[ty * layoutSize.X + tx];
 		int tileId = ResolveTileID(tile);
@@ -162,7 +165,7 @@ namespace Jazz2::Tiles
 
 	bool TileMap::IsTileEmpty(const AABBf& aabb, TileCollisionParams& params)
 	{
-		if (aabb.B < 0 || _sprLayerIndex == -1) {
+		if (_sprLayerIndex == -1) {
 			return true;
 		}
 
@@ -184,6 +187,11 @@ namespace Jazz2::Tiles
 		int hx2 = std::min((int)std::ceil(aabb.R), limitRightPx - 1);
 		int hy1 = std::max((int)aabb.T, 0);
 		int hy2 = std::min((int)std::ceil(aabb.B), limitBottomPx - 1);
+
+		if (hy2 <= 0) {
+			hy1 = 0;
+			hy2 = 1;
+		}
 
 		int hx1t = hx1 / TileSet::DefaultTileSize;
 		int hx2t = hx2 / TileSet::DefaultTileSize;

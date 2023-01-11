@@ -1,5 +1,5 @@
 #include "Utf8.h"
-#include "Common.h"
+#include "CommonWindows.h"
 
 namespace Death::Utf8
 {

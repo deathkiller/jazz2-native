@@ -20,6 +20,7 @@ namespace Jazz2::Scripting
 
 	enum class ScriptContextType {
 		Unknown,
+		AlreadyIncluded,
 		Legacy,
 		Standard
 	};
@@ -91,6 +92,7 @@ namespace Jazz2::Scripting
 
 		SmallVector<asIScriptContext*, 4> _contextPool;
 
+		HashMap<String, bool> _includedFiles;
 		SmallVector<RawMetadataDeclaration, 0> _foundDeclarations;
 		HashMap<int, Array<String>> _typeMetadataMap;
 		HashMap<int, Array<String>> _funcMetadataMap;

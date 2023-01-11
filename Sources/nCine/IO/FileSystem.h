@@ -5,6 +5,7 @@
 
 #include <memory>
 
+#include <CommonWindows.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
 

@@ -22,13 +22,12 @@
 
 #pragma once
 
+#include "../CommonBase.h"
+
 #include <cstddef>
 #include <initializer_list>
 #include <type_traits>
 #include <utility>
-
-
-#include "../CommonInternal.h"
 
 namespace Death::Containers
 {

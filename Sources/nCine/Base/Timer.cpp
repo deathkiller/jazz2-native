@@ -1,7 +1,7 @@
 #include "Timer.h"
 #include "Clock.h"
 
-#include <Common.h>
+#include <CommonWindows.h>
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <synchapi.h>

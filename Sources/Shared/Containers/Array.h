@@ -27,7 +27,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "../CommonInternal.h"
+#include "../CommonBase.h"
 #include "ArrayView.h"
 
 namespace Death::Containers

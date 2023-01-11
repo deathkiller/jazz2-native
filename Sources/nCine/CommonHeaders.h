@@ -1,4 +1,4 @@
-#include <CommonInternal.h>
+#include <CommonBase.h>
 
 #if defined(NCINE_INCLUDE_OPENGL)
 #	if defined(WITH_OPENGLES)

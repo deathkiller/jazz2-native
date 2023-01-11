@@ -9,6 +9,8 @@
 #	include <emscripten/websocket.h>
 #endif
 
+#include <CommonWindows.h>
+
 using namespace nCine;
 
 #define AURA_REFRESH_INTERVAL 40		// 40 ms

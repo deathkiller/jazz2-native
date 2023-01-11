@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CommonInternal.h"
+#include "CommonBase.h"
 #include "Containers/Array.h"
 #include "Containers/String.h"
 

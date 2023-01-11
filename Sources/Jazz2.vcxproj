@@ -219,7 +219,6 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\SmallVector.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\String.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringView.h" />
-    <ClInclude Include="$(ExtensionLibraryPath)\CommonInternal.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Environment.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\HttpRequest.h" />
     <ClInclude Include="Common.h" />
@@ -338,6 +337,7 @@
     <ClInclude Include="Jazz2\Scripting\FindAngelScript.h" />
     <ClInclude Include="Jazz2\Scripting\LevelScriptLoader.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterArray.h" />
+    <ClInclude Include="Jazz2\Scripting\RegisterDictionary.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterRef.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterString.h" />
     <ClInclude Include="Jazz2\Scripting\ScriptActorWrapper.h" />
@@ -561,6 +561,8 @@
     <ClInclude Include="nCine\tracy.h" />
     <ClInclude Include="nCine\tracy_opengl.h" />
     <ClInclude Include="Resources.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\CommonBase.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\CommonWindows.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(ExtensionLibraryPath)\Cpu.cpp" />
@@ -671,6 +673,7 @@
     <ClCompile Include="Jazz2\PreferencesCache.cpp" />
     <ClCompile Include="Jazz2\Scripting\LevelScriptLoader.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterArray.cpp" />
+    <ClCompile Include="Jazz2\Scripting\RegisterDictionary.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterRef.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterString.cpp" />
     <ClCompile Include="Jazz2\Scripting\ScriptActorWrapper.cpp" />

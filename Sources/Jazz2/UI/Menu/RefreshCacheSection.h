@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include <CommonInternal.h>
+#include <CommonBase.h>
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 

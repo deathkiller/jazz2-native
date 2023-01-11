@@ -59,7 +59,19 @@ namespace Jazz2::Scripting
 
 	ScriptContextType ScriptLoader::AddScriptFromFile(const StringView& path, const HashMap<String, bool>& definedSymbols)
 	{
-		auto s = fs::Open(path, FileAccessMode::Read);
+		String absolutePath = fs::GetAbsolutePath(path);
+		if (absolutePath.empty()) {
+			return ScriptContextType::Unknown;
+		}
+
+		// Include each file only once
+		auto it = _includedFiles.find(absolutePath);
+		if (it != _includedFiles.end()) {
+			return ScriptContextType::AlreadyIncluded;
+		}
+		_includedFiles.emplace(absolutePath, true);
+
+		auto s = fs::Open(absolutePath, FileAccessMode::Read);
 		if (s->GetSize() <= 0) {
 			return ScriptContextType::Unknown;
 		}
@@ -250,9 +262,16 @@ namespace Jazz2::Scripting
 						}
 
 						if (t == asTC_VALUE && len > 2 && (scriptContent[pos] == '"' || scriptContent[pos] == '\'')) {
-							String filename = OnProcessInclude(StringView(&scriptContent[pos + 1], len - 2), path);
-							if (!filename.empty()) {
-								includes.push_back(filename);
+							StringView filename = StringView(&scriptContent[pos + 1], len - 2);
+							StringView invalidChar = filename.findAny("\n\r\t");
+							if (invalidChar != nullptr) {
+								String str = "Invalid file name for #include; it contains a line-break or tab: \""_s + filename.prefix(invalidChar.begin()) + "\""_s;
+								_engine->WriteMessage(path.data(), 0, 0, asMSGTYPE_ERROR, str.data());
+							} else {
+								String filenameProcessed = OnProcessInclude(filename, absolutePath);
+								if (!filenameProcessed.empty()) {
+									includes.push_back(filenameProcessed);
+								}
 							}
 							pos += len;
 
@@ -467,6 +486,8 @@ namespace Jazz2::Scripting
 
 		// _foundDeclarations is not needed anymore
 		_foundDeclarations.clear();
+
+		return 0;
 	}
 
 	int ScriptLoader::ExcludeCode(String& scriptContent, int pos)
@@ -921,9 +942,9 @@ namespace Jazz2::Scripting
 	void ScriptLoader::Message(const asSMessageInfo& msg)
 	{
 		switch (msg.type) {
-			case asMSGTYPE_ERROR: LOGE_X("%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
-			case asMSGTYPE_WARNING: LOGW_X("%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
-			default: LOGI_X("%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
+			case asMSGTYPE_ERROR: __WriteLog(LogLevel::Error, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
+			case asMSGTYPE_WARNING: __WriteLog(LogLevel::Warning, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
+			default: __WriteLog(LogLevel::Info, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
 		}
 	}
 }

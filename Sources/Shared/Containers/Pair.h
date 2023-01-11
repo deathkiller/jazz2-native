@@ -22,10 +22,10 @@
 
 #pragma once
 
-#include <type_traits>
-
-#include "../CommonInternal.h"
+#include "../CommonBase.h"
 #include "Array.h"
+
+#include <type_traits>
 
 namespace Death::Containers
 {
