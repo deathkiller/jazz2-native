@@ -2,12 +2,13 @@
 
 #include "CommonBase.h"
 
-// Always include fixed width integer types (int8_t, int16_t, int32_t, int64_t, ...)
+// Always define fixed width integer types (int8_t, int16_t, int32_t, int64_t, ...)
+#include <cstddef>
 #include <cstdint>
 
 #if !defined(_countof)
 #	if defined(__cplusplus)
-		namespace Death::Implementation { template<typename T, size_t N> char(*_ArrayCountOfHelper(T(&)[N]))[N]; }
+		namespace Death::Implementation { template<typename T, std::size_t N> char(*_ArrayCountOfHelper(T(&)[N]))[N]; }
 #		define _countof(a) (sizeof(*Death::Implementation::_ArrayCountOfHelper(a)))
 #	else
 #		define _countof(a) (sizeof(a) / sizeof(a[0]))
