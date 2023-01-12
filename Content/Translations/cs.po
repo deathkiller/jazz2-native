@@ -1,10 +1,10 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-01-06 12:18+0100\n"
-"PO-Revision-Date: 2023-01-06 12:19+0100\n"
+"POT-Creation-Date: 2023-01-12 23:10+0100\n"
+"PO-Revision-Date: 2023-01-13 00:51+0100\n"
 "Last-Translator: \n"
-"Language-Team: Dan R.\n"
+"Language-Team: Překlad to češtiny: Dan R. (http://deat.tk/jazz2/)\n"
 "Language: cs\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -1367,7 +1367,7 @@ msgstr ""
 "Prosím navštivte\n"
 "www.project2.com"
 
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:125
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:119
 msgid ""
 "Reimplementation of the game \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] released "
 "in 1998. Supports various\n"
@@ -1386,9 +1386,20 @@ msgstr ""
 "Pro více informací můžete navštívit oficiální webové stránky: "
 "\f[c:0x707070]http://deat.tk/jazz2/\f[c]"
 
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:129
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:123
 msgid "Created By"
 msgstr "Vytvořil"
+
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:135
+#, c-format
+msgid ""
+"This project uses modified \f[c:0x9e7056]nCine\f[c] game engine and "
+"following libraries:\n"
+"%s"
+msgstr ""
+"Tento projekt využívá upravený herní engine \f[c:0x9e7056]nCine\f[c] a tyto "
+"knihovny:\n"
+"%s"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:32
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:67
@@ -1475,14 +1486,15 @@ msgstr "Ovládání"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:110
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:117
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:113
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:101
 msgid "Enabled"
 msgstr "Povoleno"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:117
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:101
 msgid "Disabled"
 msgstr "Zakázáno"
@@ -1496,15 +1508,16 @@ msgid "No episode found!"
 msgstr "Nebyly nalezeny žádné epizody!"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:172
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:173
 msgid "Restart episode"
 msgstr "Smazat postup"
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:193
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:194
 #, c-format
 msgid "You must complete \"%s\" first!"
 msgstr "Nejprve musíte dokončit \"%s\"!"
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:196
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:197
 msgid "Episode is locked!"
 msgstr "Epizoda je zamčena!"
 
@@ -1671,6 +1684,18 @@ msgstr "Zpět"
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:16
 msgid "None / Pixel-perfect"
 msgstr "Žádný / Pixel-perfect"
+
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:19
+msgid "CRT Scanlines"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:20
+msgid "CRT Shadow Mask"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:21
+msgid "CRT Aperture Grille"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
 msgid "Monochrome"

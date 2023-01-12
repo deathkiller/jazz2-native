@@ -7,7 +7,7 @@ namespace Jazz2::UI::Menu
 {
 	LanguageSelectSection::LanguageSelectSection()
 	{
-		auto& resolver = ContentResolver::Current();
+		auto& resolver = ContentResolver::Get();
 
 		auto& defaultLanguage = _items.emplace_back();
 		defaultLanguage.Item.DisplayName = "English"_s;
@@ -79,14 +79,14 @@ namespace Jazz2::UI::Menu
 		bool success = false;
 		auto& selectedItem = _items[_selectedIndex];
 		if (!selectedItem.Item.FileName.empty()) {
-			if (I18n::Current().LoadFromFile(selectedItem.Item.FileName)) {
+			if (I18n::Get().LoadFromFile(selectedItem.Item.FileName)) {
 				auto language = fs::GetFileNameWithoutExtension(selectedItem.Item.FileName);
 				std::memcpy(PreferencesCache::Language, language.data(), language.size());
 				std::memset(PreferencesCache::Language + language.size(), 0, sizeof(PreferencesCache::Language) - language.size());
 				success = true;
 			}
 		} else {
-			I18n::Current().Unload();
+			I18n::Get().Unload();
 			std::memset(PreferencesCache::Language, 0, sizeof(PreferencesCache::Language));
 			success = true;
 		}

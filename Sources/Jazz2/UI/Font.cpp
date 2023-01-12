@@ -53,7 +53,7 @@ namespace Jazz2::UI
 					(float)(i % cols) / cols,
 					(float)(i / cols) / rows,
 					widths[i],
-					height
+					height - 1
 				);
 			}
 
@@ -79,7 +79,7 @@ namespace Jazz2::UI
 					(float)(i % cols) / cols,
 					(float)(i / cols) / rows,
 					charWidth,
-					height
+					height - 1
 				);
 			}
 
@@ -266,7 +266,7 @@ namespace Jazz2::UI
 			alpha = color.A();
 			color = Colorf(1.0f, 1.0f, 1.0f, alpha);
 		} else {
-			colorizeShader = ContentResolver::Current().GetShader(PrecompiledShader::Colorized);
+			colorizeShader = ContentResolver::Get().GetShader(PrecompiledShader::Colorized);
 			useRandomColor = (color.R() == RandomColor.R() && color.G() == RandomColor.G() && color.B() == RandomColor.B());
 			isShadow = (color.R() == 0.0f && color.G() == 0.0f && color.B() == 0.0f);
 			alpha = std::min(color.A() * 2.0f, 1.0f);
@@ -325,7 +325,7 @@ namespace Jazz2::UI
 											color = Color(paramValue);
 											color.SetAlpha(0.5f * alpha);
 											if (colorizeShader == nullptr) {
-												colorizeShader = ContentResolver::Current().GetShader(PrecompiledShader::Colorized);
+												colorizeShader = ContentResolver::Get().GetShader(PrecompiledShader::Colorized);
 											}
 										}
 									}

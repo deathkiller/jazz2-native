@@ -31,7 +31,7 @@ static constexpr uint8_t KeyLayout[] = {
 
 namespace Jazz2::UI
 {
-	RgbLights& RgbLights::Current()
+	RgbLights& RgbLights::Get()
 	{
 		static RgbLights current;
 		return current;

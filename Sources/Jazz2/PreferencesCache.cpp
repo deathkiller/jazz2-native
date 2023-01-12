@@ -90,14 +90,14 @@ namespace Jazz2
 
 #	if defined(DEATH_TARGET_ANDROID)
 			// Save config file to external path if possible
-			auto& resolver = ContentResolver::Current();
+			auto& resolver = ContentResolver::Get();
 			auto externalConfigPath = fs::JoinPath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 			if (!fs::IsReadableFile(_configPath) || fs::IsReadableFile(externalConfigPath)) {
 				_configPath = externalConfigPath;
 			}
 #	elif defined(DEATH_TARGET_WINDOWS_RT)
 			// Save config file next to `Source` directory (e.g., on external drive) if possible
-			auto& resolver = ContentResolver::Current();
+			auto& resolver = ContentResolver::Get();
 			auto localConfigPath = fs::JoinPath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 			if (_configPath != localConfigPath) {
 				auto configFileWritable = fs::Open(localConfigPath, FileAccessMode::Read | FileAccessMode::Write);
@@ -240,7 +240,7 @@ namespace Jazz2
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 				// Create "Source" directory on the first launch
-				auto& resolver = ContentResolver::Current();
+				auto& resolver = ContentResolver::Get();
 				fs::CreateDirectories(resolver.GetSourcePath());
 #endif
 			}
@@ -410,8 +410,8 @@ namespace Jazz2
 
 	void PreferencesCache::TryLoadPreferredLanguage()
 	{
-		auto& i18n = I18n::Current();
-		auto& resolver = ContentResolver::Current();
+		auto& i18n = I18n::Get();
+		auto& resolver = ContentResolver::Get();
 
 		Array<String> languages = I18n::GetPreferredLanguages();
 		for (String language : languages) {

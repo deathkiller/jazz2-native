@@ -124,7 +124,7 @@ void GameEventHandler::OnInit()
 
 	std::memset(_newestVersion, 0, sizeof(_newestVersion));
 
-	auto& resolver = ContentResolver::Current();
+	auto& resolver = ContentResolver::Get();
 	
 #if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_IOS)
 	theApplication().setAutoSuspension(true);
@@ -157,13 +157,13 @@ void GameEventHandler::OnInit()
 		auto handler = reinterpret_cast<GameEventHandler*>(arg);
 #	if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 		if (PreferencesCache::EnableDiscordIntegration) {
-			DiscordRpcClient::Current().Connect("591586859960762378"_s);
+			DiscordRpcClient::Get().Connect("591586859960762378"_s);
 		}
 #	endif
 
 		if (PreferencesCache::Language[0] != '\0') {
-			auto& resolver = ContentResolver::Current();
-			auto& i18n = I18n::Current();
+			auto& resolver = ContentResolver::Get();
+			auto& i18n = I18n::Get();
 			if (!i18n.LoadFromFile(fs::JoinPath({ resolver.GetContentPath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }))) {
 				i18n.LoadFromFile(fs::JoinPath({ resolver.GetCachePath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }));
 			}
@@ -186,13 +186,13 @@ void GameEventHandler::OnInit()
 	// Building without threading support is not recommended, so it can look ugly
 #	if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 	if (PreferencesCache::EnableDiscordIntegration) {
-		DiscordRpcClient::Current().Connect("591586859960762378"_s);
+		DiscordRpcClient::Get().Connect("591586859960762378"_s);
 	}
 #	endif
 
 	if (PreferencesCache::Language[0] != '\0') {
-		auto& resolver = ContentResolver::Current();
-		auto& i18n = I18n::Current();
+		auto& resolver = ContentResolver::Get();
+		auto& i18n = I18n::Get();
 		if (!i18n.LoadFromFile(fs::JoinPath({ resolver.GetContentPath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }))) {
 			i18n.LoadFromFile(fs::JoinPath({ resolver.GetCachePath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }));
 		}
@@ -242,10 +242,10 @@ void GameEventHandler::OnFrameStart()
 
 					PreferencesCache::RemoveEpisodeContinue(_pendingLevelChange->LastEpisodeName);
 
-					std::optional<Episode> lastEpisode = ContentResolver::Current().GetEpisode(_pendingLevelChange->LastEpisodeName);
+					std::optional<Episode> lastEpisode = ContentResolver::Get().GetEpisode(_pendingLevelChange->LastEpisodeName);
 					if (lastEpisode.has_value()) {
 						// Redirect to next episode
-						std::optional<Episode> nextEpisode = ContentResolver::Current().GetEpisode(lastEpisode->NextEpisode);
+						std::optional<Episode> nextEpisode = ContentResolver::Get().GetEpisode(lastEpisode->NextEpisode);
 						if (nextEpisode.has_value()) {
 							_pendingLevelChange->EpisodeName = lastEpisode->NextEpisode;
 							_pendingLevelChange->LevelName = nextEpisode->FirstLevel;
@@ -337,7 +337,7 @@ void GameEventHandler::OnShutdown()
 {
 	_currentHandler = nullptr;
 
-	ContentResolver::Current().Release();
+	ContentResolver::Get().Release();
 }
 
 void GameEventHandler::OnSuspend()
@@ -413,7 +413,7 @@ void GameEventHandler::RefreshCache()
 		return;
 	}
 
-	auto& resolver = ContentResolver::Current();
+	auto& resolver = ContentResolver::Get();
 
 	// Check cache state
 	{
@@ -498,7 +498,7 @@ RecreateCache:
 
 void GameEventHandler::RefreshCacheLevels()
 {
-	auto& resolver = ContentResolver::Current();
+	auto& resolver = ContentResolver::Get();
 
 	Compatibility::EventConverter eventConverter;
 
@@ -852,7 +852,7 @@ void GameEventHandler::SaveEpisodeContinue(const std::unique_ptr<LevelInitializa
 		return;
 	}
 
-	std::optional<Episode> currentEpisode = ContentResolver::Current().GetEpisode(pendingLevelChange->EpisodeName);
+	std::optional<Episode> currentEpisode = ContentResolver::Get().GetEpisode(pendingLevelChange->EpisodeName);
 	if (!currentEpisode.has_value() || currentEpisode->FirstLevel == pendingLevelChange->LevelName) {
 		return;
 	}
@@ -891,7 +891,7 @@ void GameEventHandler::SaveEpisodeContinue(const std::unique_ptr<LevelInitializa
 void GameEventHandler::UpdateRichPresence(const std::unique_ptr<LevelInitialization>& levelInit)
 {
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
-	if (!PreferencesCache::EnableDiscordIntegration || !DiscordRpcClient::Current().IsSupported()) {
+	if (!PreferencesCache::EnableDiscordIntegration || !DiscordRpcClient::Get().IsSupported()) {
 		return;
 	}
 
@@ -968,7 +968,7 @@ void GameEventHandler::UpdateRichPresence(const std::unique_ptr<LevelInitializat
 		}
 	}
 
-	DiscordRpcClient::Current().SetRichPresence(richPresence);
+	DiscordRpcClient::Get().SetRichPresence(richPresence);
 #endif
 }
 

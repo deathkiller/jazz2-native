@@ -280,7 +280,7 @@ namespace Jazz2
 #endif
 		}
 
-		static ContentResolver& Current();
+		static ContentResolver& Get();
 
 	private:
 		ContentResolver();

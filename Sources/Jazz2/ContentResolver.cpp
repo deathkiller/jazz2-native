@@ -33,7 +33,7 @@ using namespace rapidjson;
 
 namespace Jazz2
 {
-	ContentResolver& ContentResolver::Current()
+	ContentResolver& ContentResolver::Get()
 	{
 		static ContentResolver current;
 		return current;

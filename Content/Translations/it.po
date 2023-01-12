@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-01-06 12:19+0100\n"
+"POT-Creation-Date: 2023-01-12 23:11+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -1278,7 +1278,7 @@ msgid ""
 "www.project2.com"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:125
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:119
 msgid ""
 "Reimplementation of the game \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] released "
 "in 1998. Supports various\n"
@@ -1290,9 +1290,17 @@ msgid ""
 "tk/jazz2/\f[c]"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:129
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:123
 msgid "Created By"
 msgstr "Creato da"
+
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:135
+#, c-format
+msgid ""
+"This project uses modified \f[c:0x9e7056]nCine\f[c] game engine and "
+"following libraries:\n"
+"%s"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:32
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:67
@@ -1374,14 +1382,15 @@ msgstr "Controlli"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:110
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:117
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:113
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:101
 msgid "Enabled"
 msgstr "Attivo"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:117
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:101
 msgid "Disabled"
 msgstr "Disattivato"
@@ -1395,15 +1404,16 @@ msgid "No episode found!"
 msgstr "Nessun episodio trovato!"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:172
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:173
 msgid "Restart episode"
 msgstr "Ricomincia Episodio"
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:193
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:194
 #, c-format
 msgid "You must complete \"%s\" first!"
 msgstr "Devi prima completare \"%s\"!"
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:196
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:197
 msgid "Episode is locked!"
 msgstr "Episodio bloccato!"
 
@@ -1570,6 +1580,18 @@ msgstr "Indietro"
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:16
 msgid "None / Pixel-perfect"
 msgstr "Pixel-perfetto"
+
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:19
+msgid "CRT Scanlines"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:20
+msgid "CRT Shadow Mask"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:21
+msgid "CRT Aperture Grille"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
 msgid "Monochrome"

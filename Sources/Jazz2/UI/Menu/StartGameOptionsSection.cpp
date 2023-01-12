@@ -231,7 +231,7 @@ namespace Jazz2::UI::Menu
 	{
 		if (_shouldStart) {
 			auto command = canvas->RentRenderCommand();
-			if (command->material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::Transition))) {
+			if (command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
 				command->material().reserveUniformsDataMemory();
 				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 			}

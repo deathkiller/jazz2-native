@@ -60,7 +60,7 @@ namespace Jazz2::UI::Menu
 		if (auto mainMenu = dynamic_cast<MainMenu*>(_root)) {
 			IRootController::Flags flags = mainMenu->_root->GetFlags();
 			if ((flags & IRootController::Flags::IsPlayable) != IRootController::Flags::IsPlayable) {
-				auto& resolver = ContentResolver::Current();
+				auto& resolver = ContentResolver::Get();
 				_sourcePath = fs::GetAbsolutePath(resolver.GetSourcePath());
 				if (_sourcePath.empty()) {
 					// If `Source` directory doesn't exist, GetAbsolutePath() will fail
@@ -277,7 +277,7 @@ namespace Jazz2::UI::Menu
 					AndroidJniWrap_Activity::requestExternalStoragePermission();
 #	else
 					// `_sourcePath` contains adjusted path for display purposes
-					auto& resolver = ContentResolver::Current();
+					auto& resolver = ContentResolver::Get();
 					String sourcePath = fs::GetAbsolutePath(resolver.GetSourcePath());
 					if (sourcePath.empty()) {
 						// If `Source` directory doesn't exist, GetAbsolutePath() will fail

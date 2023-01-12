@@ -22,35 +22,35 @@ using namespace Death;
 namespace nCine
 {
 	static constexpr I18n::LanguageInfo SupportedLanguages[] = {
-		{ "af", "Afrikaans" },
-		{ "be", "Belarusian" },
-		{ "bg", "Bulgarian" },
-		{ "cs", "Czech" },
-		{ "da", "Danish" },
-		{ "de", "German" },
-		{ "en", "English" },
-		{ "es", "Spanish" },
-		{ "et", "Estonian" },
-		{ "fi", "Finnish" },
-		{ "fr", "French" },
-		{ "hr", "Croatian" },
-		{ "hu", "Hungarian" },
-		{ "it", "Italian" },
-		{ "lt", "Lithuanian" },
-		{ "lv", "Latvian" },
-		{ "mo", "Moldavian" },
-		{ "nl", "Dutch" },
-		{ "no", "Norwegian" },
-		{ "pl", "Polish" },
-		{ "pt", "Portuguese" },
-		{ "ro", "Romanian" },
-		{ "ru", "Russian" },
-		{ "sk", "Slovak" },
-		{ "sl", "Slovenian" },
-		{ "sr", "Serbian" },
-		{ "sv", "Swedish" },
-		{ "tr", "Turkish" },
-		{ "uk", "Ukrainian" }
+		{ "af", "Afrikaans"_s },
+		{ "be", "БЕЛАРУСКАЯ"_s },
+		{ "bg", "БЪЛГАРСКИ"_s },
+		{ "cs", "Čeština"_s },
+		{ "da", "Dansk"_s },
+		{ "de", "Deutsch"_s },
+		{ "en", "English"_s },
+		{ "es", "Español"_s },
+		{ "et", "Eesti"_s },
+		{ "fi", "Suomi"_s },
+		{ "fr", "Français"_s },
+		{ "hr", "Hrvatski"_s },
+		{ "hu", "Magyar"_s },
+		{ "it", "Italiano"_s },
+		{ "lt", "Lietuvių"_s },
+		{ "lv", "Latviešu"_s },
+		{ "mo", "ЛИМБА МОЛДОВЕНЯСКЭ"_s },
+		{ "nl", "Nederlands"_s },
+		{ "no", "Norsk"_s },
+		{ "pl", "Polski"_s },
+		{ "pt", "Português"_s },
+		{ "ro", "Română"_s },
+		{ "ru", "РУССКИЙ"_s },
+		{ "sk", "Slovenčina"_s },
+		{ "sl", "Slovenščina"_s },
+		{ "sr", "Srpski"_s },
+		{ "sv", "Svenska"_s },
+		{ "tr", "Türkçe"_s },
+		{ "uk", "УКРАЇНСЬКА"_s }
 	};
 
 	struct ValueToken : public I18n::ExpressionToken
@@ -495,7 +495,7 @@ namespace nCine
 		return result;
 	}
 
-	I18n& I18n::Current()
+	I18n& I18n::Get()
 	{
 		static I18n current;
 		return current;
@@ -660,6 +660,23 @@ namespace nCine
 		return p;
 	}
 
+	StringView I18n::GetTranslationDescription()
+	{
+		uint32_t entryLength;
+		const char* nullEntry = LookupTranslation("", &entryLength);
+		if (nullEntry != nullptr) {
+			StringView translationInfo = StringView(nullEntry, entryLength);
+			StringView languageTeamBegin = translationInfo.find("Language-Team:"_s);
+			if (languageTeamBegin != nullptr) {
+				languageTeamBegin = translationInfo.suffix(languageTeamBegin.end());
+				StringView languageTeamEnd = languageTeamBegin.findOr('\n', translationInfo.end());
+				return translationInfo.slice(languageTeamBegin.begin(), languageTeamEnd.begin()).trimmed();
+			}
+		}
+
+		return { };
+	}
+
 	Array<String> I18n::GetPreferredLanguages()
 	{
 		Array<String> preferred;
@@ -805,7 +822,7 @@ namespace nCine
 	String _f(const char* text, ...)
 	{
 		uint32_t resultLength;
-		const char* translated = I18n::Current().LookupTranslation(text, &resultLength);
+		const char* translated = I18n::Get().LookupTranslation(text, &resultLength);
 		const char* format = (translated != nullptr ? translated : text);
 
 		va_list args;
@@ -826,10 +843,10 @@ namespace nCine
 	String _fn(const char* singular, const char* plural, int n, ...)
 	{
 		uint32_t resultLength;
-		const char* translated = I18n::Current().LookupTranslation(singular, &resultLength);
+		const char* translated = I18n::Get().LookupTranslation(singular, &resultLength);
 		const char* format;
 		if (translated != nullptr) {
-			format = I18n::Current().LookupPlural(n, translated, resultLength);
+			format = I18n::Get().LookupPlural(n, translated, resultLength);
 		} else {
 			format = (n == 1 ? singular : plural);
 		}

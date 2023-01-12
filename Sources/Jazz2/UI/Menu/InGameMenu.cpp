@@ -27,7 +27,7 @@ namespace Jazz2::UI::Menu
 		_canvasClipped->setParent(root->_upscalePass.GetClippedNode());
 		_canvasOverlay->setParent(root->_upscalePass.GetOverlayNode());
 
-		auto& resolver = ContentResolver::Current();
+		auto& resolver = ContentResolver::Get();
 
 		Metadata* metadata = resolver.RequestMetadata("UI/MainMenu"_s);
 		if (metadata != nullptr) {

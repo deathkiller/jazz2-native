@@ -284,12 +284,12 @@ namespace Jazz2::Actors
 
 		static void PreloadMetadataAsync(const StringView& path)
 		{
-			ContentResolver::Current().PreloadMetadataAsync(path);
+			ContentResolver::Get().PreloadMetadataAsync(path);
 		}
 
 		void RequestMetadata(const StringView& path)
 		{
-			_metadata = ContentResolver::Current().RequestMetadata(path);
+			_metadata = ContentResolver::Get().RequestMetadata(path);
 		}
 
 #if defined(WITH_COROUTINES)
@@ -304,7 +304,7 @@ namespace Jazz2::Actors
 				}
 				void await_suspend(std::coroutine_handle<> handle) {
 					// TODO: implement async
-					auto metadata = ContentResolver::Current().RequestMetadata(path);
+					auto metadata = ContentResolver::Get().RequestMetadata(path);
 					actor->_metadata = metadata;
 					handle();
 				}
@@ -315,7 +315,7 @@ namespace Jazz2::Actors
 #else
 		void RequestMetadataAsync(const StringView& path)
 		{
-			auto metadata = ContentResolver::Current().RequestMetadata(path);
+			auto metadata = ContentResolver::Get().RequestMetadata(path);
 			_metadata = metadata;
 		}
 #endif

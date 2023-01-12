@@ -1,98 +1,92 @@
 ﻿#include "AboutSection.h"
 
-#if defined(_DEBUG)
-#	define INFO_BUILD_TYPE "\f[c:0x996a6a]debug\f[c]"
-#else
-#	define INFO_BUILD_TYPE "release"
-#endif
-
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-#	define INFO1 "WebGL"
+#	define _i1 "WebGL"
 #elif defined(DEATH_TARGET_WINDOWS_RT)
-#	define INFO1 "UWP"
+#	define _i1 "UWP"
 #elif defined(WITH_OPENGLES)
-#	define INFO1 "OpenGL ES"
+#	define _i1 "OpenGL ES"
 #else
-#	define INFO1 "OpenGL"
+#	define _i1 "OpenGL"
 #endif
 
 #if defined(WITH_GLEW)
-#	define INFO2 ", GLEW"
+#	define _i2 ", GLEW"
 #else
-#	define INFO2 ""
+#	define _i2 ""
 #endif
 
 #if defined(WITH_ANGLE)
-#	define INFO3 ", ANGLE"
+#	define _i3 ", ANGLE"
 #else
-#	define INFO3 ""
+#	define _i3 ""
 #endif
 
 #if defined(WITH_GLFW)
-#	define INFO4 ", GLFW"
+#	define _i4 ", GLFW"
 #else
-#	define INFO4 ""
+#	define _i4 ""
 #endif
 
 #if defined(WITH_QT5)
-#	define INFO5 ", Qt"
+#	define _i5 ", Qt"
 #else
-#	define INFO5 ""
+#	define _i5 ""
 #endif
 
 #if defined(WITH_SDL)
-#	define INFO6 ", SDL"
+#	define _i6 ", SDL"
 #else
-#	define INFO6 ""
+#	define _i6 ""
 #endif
 
 #if defined(WITH_AUDIO)
 #	if defined(DEATH_TARGET_ANDROID)
-#		define INFO7 ", OpenSL ES, OpenAL"
+#		define _i7 ", OpenSL ES, OpenAL"
 #	else
-#		define INFO7 ", OpenAL"
+#		define _i7 ", OpenAL"
 #	endif
 #else
-#	define INFO7 ""
+#	define _i7 ""
 #endif
 
 #if defined(WITH_VORBIS)
-#	define INFO8 ", Vorbis"
+#	define _i8 ", Vorbis"
 #else
-#	define INFO8 ""
+#	define _i8 ""
 #endif
 
 #if defined(WITH_OPENMPT)
-#	define INFO9 ", libopenmpt"
+#	define _i9 ", libopenmpt"
 #else
-#	define INFO9 ""
+#	define _i9 ""
 #endif
 
 #if defined(WITH_WEBP)
-#	define INFO10 ", libwebp"
+#	define _i10 ", libwebp"
 #else
-#	define INFO10 ""
+#	define _i10 ""
 #endif
 
 #if defined(WITH_ZLIB)
-#	define INFO11 ", zlib"
+#	define _i11 ", zlib"
 #else
-#	define INFO11 ", libdeflate"
+#	define _i11 ", libdeflate"
 #endif
 
 #if defined(WITH_ANGELSCRIPT)
-#	define INFO12 ", AngelScript"
+#	define _i12 ", AngelScript"
 #else
-#	define INFO12 ""
+#	define _i12 ""
 #endif
 
 #if defined(WITH_TRACY)
-#	define INFO13 "\n\nTracy integration is enabled!"
+#	define _i13 "\n\nTracy integration is enabled!"
 #else
-#	define INFO13 ""
+#	define _i13 ""
 #endif
 
-#define ADDITIONAL_INFO "This project uses modified \f[c:0x9e7056]nCine\f[c] game engine.\n\nThis " INFO_BUILD_TYPE " build uses these additional libraries:\n" INFO1 INFO2 INFO3 INFO4 INFO5 INFO6 INFO7 INFO8 INFO9 INFO10 INFO11 INFO12 INFO13
+#define ADDITIONAL_INFO _i1 _i2 _i3 _i4 _i5 _i6 _i7 _i8 _i9 _i10 _i11 _i12 _i13
 
 namespace Jazz2::UI::Menu
 {
@@ -115,7 +109,7 @@ namespace Jazz2::UI::Menu
 		Vector2f pos = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
 		pos.Y = std::round(std::max(150.0f, pos.Y * 0.86f));
 
-		_root->DrawElement("MenuDim"_s, pos.X, pos.Y + 70.0f - 2.0f, IMenuContainer::BackgroundLayer,
+		_root->DrawElement("MenuDim"_s, pos.X, pos.Y + 24.0f - 2.0f, IMenuContainer::BackgroundLayer,
 			Alignment::Top, Colorf::Black, Vector2f(680.0f, 200.0f), Vector4f(1.0f, 0.0f, 0.7f, 0.0f));
 
 		pos.X = std::round(pos.X * 0.35f);
@@ -126,18 +120,22 @@ namespace Jazz2::UI::Menu
 			charOffset, viewSize.X * 0.5f, pos.Y - 22.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Font::DefaultColor, 0.7f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 
-		_root->DrawStringShadow(_("Created By"), charOffset, pos.X, pos.Y + 30.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Created By"), charOffset, pos.X, pos.Y + 42.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.85f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f);
-		_root->DrawStringShadow("Dan R."_s, charOffset, pos.X + 25.0f, pos.Y + 30.0f + 20.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow("Dan R."_s, charOffset, pos.X + 25.0f, pos.Y + 45.0f + 20.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 1.0f, 0.4f, 0.75f, 0.75f, 0.6f, 0.9f);
 
-		_root->DrawStringShadow("&  Contributors: \f[c:0xd0705d]JJ2+ Team\f[c], \f[c:0x707070]Bioxxdevil\f[c], \f[c:0x707070]roox\f[c], \f[c:0x707070]tunip3\f[c]"_s, charOffset, pos.X + 25.0f + 70.0f, pos.Y + 30.0f + 20.0f, IMenuContainer::FontLayer,
-			Alignment::Left, Font::DefaultColor, 0.7f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f);
+		_root->DrawStringShadow("&  Contributors: \f[c:0xd0705d]JJ2+ Team\f[c], \f[c:0x707070]Bioxxdevil\f[c], \f[c:0x707070]roox\f[c], \f[c:0x707070]tunip3\f[c]"_s, charOffset, pos.X + 22.0f + 70.0f, pos.Y + 45.0f + 20.0f, IMenuContainer::FontLayer,
+			Alignment::Left, Font::DefaultColor, 0.8f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f);
 
-		_root->DrawStringShadow(ADDITIONAL_INFO, charOffset, viewSize.X * 0.5f, pos.Y + 34.0f + pos.Y * 0.34f, IMenuContainer::FontLayer,
-			Alignment::Top, Font::DefaultColor, 0.8f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
+		_root->DrawStringShadow(I18n::Get().GetTranslationDescription(),
+			charOffset, pos.X + 25.0f, pos.Y + 45.0f + 44.0f, IMenuContainer::FontLayer,
+			Alignment::Left, Font::DefaultColor, 0.74f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 
-		_root->DrawElement("MenuLine"_s, 0, viewSize.X * 0.5f, pos.Y + 70.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawStringShadow(_f("This project uses modified \f[c:0x9e7056]nCine\f[c] game engine and following libraries:\n%s", ADDITIONAL_INFO), charOffset, viewSize.X * 0.5f, pos.Y + 54.0f + pos.Y * 0.4f, IMenuContainer::FontLayer,
+			Alignment::Top, Font::DefaultColor, 0.76f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
+
+		_root->DrawElement("MenuLine"_s, 0, viewSize.X * 0.5f, pos.Y + 24.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		pos.Y = viewSize.Y - 100.0f;
 	}

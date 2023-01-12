@@ -790,7 +790,7 @@ namespace Jazz2::Scripting
 			const char* src = &path[1];
 			const char* srcLast = src;
 
-			auto contentPath = ContentResolver::Current().GetContentPath();
+			auto contentPath = ContentResolver::Get().GetContentPath();
 			std::memcpy(result, contentPath.data(), contentPath.size());
 			char* dst = result + contentPath.size();
 			if (*(dst - 1) == '/' || *(dst - 1) == '\\') {
