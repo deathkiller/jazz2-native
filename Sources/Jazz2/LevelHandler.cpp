@@ -60,7 +60,7 @@ namespace Jazz2
 		_playerFrozenEnabled(false),
 		_lastPressedNumericKey(-1)
 	{
-		auto& resolver = ContentResolver::Current();
+		auto& resolver = ContentResolver::Get();
 		resolver.BeginLoading();
 
 		_noiseTexture = resolver.GetNoiseTexture();
@@ -68,7 +68,7 @@ namespace Jazz2
 		_rootNode = std::make_unique<SceneNode>();
 		_rootNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
-		if (!ContentResolver::Current().LoadLevel(this, "/"_s.joinWithoutEmptyParts({ _episodeName, _levelFileName }), _difficulty)) {
+		if (!ContentResolver::Get().LoadLevel(this, "/"_s.joinWithoutEmptyParts({ _episodeName, _levelFileName }), _difficulty)) {
 			LOGE("Cannot load specified level");
 			return;
 		}
@@ -189,7 +189,7 @@ namespace Jazz2
 
 #if defined(WITH_OPENMPT)
 		if (!musicPath.empty()) {
-			_music = ContentResolver::Current().GetMusic(musicPath);
+			_music = ContentResolver::Get().GetMusic(musicPath);
 			if (_music != nullptr) {
 				_musicPath = musicPath;
 				_music->setLooping(true);
@@ -514,7 +514,7 @@ namespace Jazz2
 		_camera->setOrthoProjection(w * (-0.5f), w * (+0.5f), h * (-0.5f), h * (+0.5f));
 
 		if (_lightingRenderer == nullptr) {
-			auto& resolver = ContentResolver::Current();
+			auto& resolver = ContentResolver::Get();
 			_lightingShader = resolver.GetShader(PrecompiledShader::Lighting);
 			_blurShader = resolver.GetShader(PrecompiledShader::Blur);
 			_downsampleShader = resolver.GetShader(PrecompiledShader::Downsample);
@@ -830,7 +830,7 @@ namespace Jazz2
 
 						size_t musicPathLength = strnlen((const char*)eventParams, 16);
 						StringView musicPath((const char*)eventParams, musicPathLength);
-						_music = ContentResolver::Current().GetMusic(musicPath);
+						_music = ContentResolver::Get().GetMusic(musicPath);
 						if (_music != nullptr) {
 							_music->setLooping(true);
 							_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
@@ -921,7 +921,7 @@ namespace Jazz2
 
 				// Load default music again
 				if (!_musicPath.empty()) {
-					_music = ContentResolver::Current().GetMusic(_musicPath);
+					_music = ContentResolver::Get().GetMusic(_musicPath);
 					if (_music != nullptr) {
 						_music->setLooping(true);
 						_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);

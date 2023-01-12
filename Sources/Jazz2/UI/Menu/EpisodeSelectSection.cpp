@@ -13,7 +13,7 @@ namespace Jazz2::UI::Menu
 		_expanded(false),
 		_shouldStart(false)
 	{
-		auto& resolver = ContentResolver::Current();
+		auto& resolver = ContentResolver::Get();
 
 		// Search both "Content/Episodes/" and "Cache/Episodes/"
 		fs::Directory dir(fs::JoinPath(resolver.GetContentPath(), "Episodes"_s), fs::EnumerationOptions::SkipDirectories);
@@ -169,7 +169,8 @@ namespace Jazz2::UI::Menu
 					if (_expanded) {
 						float expandedAnimation4 = IMenuContainer::EaseOutElastic(_expandedAnimation) * 0.8f;
 
-						_root->DrawStringShadow(_("Restart episode"), charOffset, expandX + 40.0f, item.Y, IMenuContainer::FontLayer + 22,
+						Vector2f textSize = _root->MeasureString(_("Restart episode"), 0.8f, 0.8f);
+						_root->DrawStringShadow(_("Restart episode"), charOffset, expandX + textSize.X * 0.5f - 2.0f, item.Y, IMenuContainer::FontLayer + 22,
 							Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f * std::min(1.0f, 0.4f + expandedAnimation3)), expandedAnimation4, 0.4f, 0.6f, 0.6f, 0.6f, 0.8f);
 					}
 				}
@@ -216,7 +217,7 @@ namespace Jazz2::UI::Menu
 			Vector2i viewSize = canvas->ViewSize;
 
 			auto command = canvas->RentRenderCommand();
-			if (command->material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::Transition))) {
+			if (command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
 				command->material().reserveUniformsDataMemory();
 				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 			}
@@ -334,7 +335,7 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		auto& resolver = ContentResolver::Current();
+		auto& resolver = ContentResolver::Get();
 		std::optional<Episode> description = resolver.GetEpisodeByPath(episodeFile);
 		if (description.has_value()) {
 #if defined(SHAREWARE_DEMO_ONLY)

@@ -16,9 +16,9 @@ namespace Jazz2::UI::Menu
 				case RescaleMode::None: item.Item.DisplayName = _("None / Pixel-perfect"); break;
 				case RescaleMode::HQ2x: item.Item.DisplayName = "HQ2x"_s; break;
 				case RescaleMode::_3xBrz: item.Item.DisplayName = "3xBRZ"_s; break;
-				case RescaleMode::CrtScanlines: item.Item.DisplayName = "CRT Scanlines"_s; break;
-				case RescaleMode::CrtShadowMask: item.Item.DisplayName = "CRT Shadow Mask"_s; break;
-				case RescaleMode::CrtApertureGrille: item.Item.DisplayName = "CRT Aperture Grille"_s; break;
+				case RescaleMode::CrtScanlines: item.Item.DisplayName = _("CRT Scanlines"); break;
+				case RescaleMode::CrtShadowMask: item.Item.DisplayName = _("CRT Shadow Mask"); break;
+				case RescaleMode::CrtApertureGrille: item.Item.DisplayName = _("CRT Aperture Grille"); break;
 				case RescaleMode::Monochrome: item.Item.DisplayName = _("Monochrome"); break;
 			}
 		}

@@ -31,7 +31,7 @@ namespace Jazz2::UI::Menu
 		_canvasClipped = std::make_unique<MenuClippedCanvas>(this);
 		_canvasOverlay = std::make_unique<MenuOverlayCanvas>(this);
 
-		auto& resolver = ContentResolver::Current();
+		auto& resolver = ContentResolver::Get();
 		resolver.BeginLoading();
 
 		// It will also replace palette for subsequent `RequestMetadata()`
@@ -238,7 +238,7 @@ namespace Jazz2::UI::Menu
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
 		// Show active external drive indicator on Xbox
-		StringView sourcePath = ContentResolver::Current().GetSourcePath();
+		StringView sourcePath = ContentResolver::Get().GetSourcePath();
 		if (!sourcePath.empty() && sourcePath.hasPrefix("\\\\?\\"_s) && sourcePath.exceptPrefix(5).hasPrefix(":\\Games\\Jazz² Resurrection\\"_s)) {
 			_owner->DrawElement("Storage"_s, -1, bottomLeft.X + 146.0f, bottomLeft.Y - 3.0f, IMenuContainer::FontLayer, Alignment::BottomRight, Colorf(1.0f, 1.0f, 1.0f, std::max(_owner->_logoTransition - 0.6f, 0.0f) * 2.5f));
 			_owner->DrawStringShadow(sourcePath.slice(4, 7), charOffset, bottomLeft.X + 150.0f, bottomLeft.Y, IMenuContainer::FontLayer,
@@ -734,7 +734,7 @@ namespace Jazz2::UI::Menu
 
 	bool MainMenu::TryLoadBackgroundPreset(Preset preset)
 	{
-		auto& resolver = ContentResolver::Current();
+		auto& resolver = ContentResolver::Get();
 
 		switch (preset) {
 			case Preset::Default: _tileSet = resolver.RequestTileSet("easter99"_s, 0, true); break;
@@ -819,7 +819,7 @@ namespace Jazz2::UI::Menu
 			}
 
 			// Prepare output render command
-			_outputRenderCommand.material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::TexturedBackground));
+			_outputRenderCommand.material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::TexturedBackground));
 			_outputRenderCommand.material().reserveUniformsDataMemory();
 			_outputRenderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 

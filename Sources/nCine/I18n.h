@@ -44,7 +44,7 @@ namespace nCine
 		struct LanguageInfo
 		{
 			const char* Identifier;
-			const char* Name;
+			const StringView Name;
 		};
 
 		I18n();
@@ -57,7 +57,9 @@ namespace nCine
 		const char* LookupTranslation(const char* msgid, uint32_t* resultLength);
 		const char* LookupPlural(int n, const char* translation, uint32_t translationLength);
 
-		static I18n& Current();
+		StringView GetTranslationDescription();
+
+		static I18n& Get();
 		static Array<String> GetPreferredLanguages();
 		static StringView GetLanguageName(const StringView& langId);
 		static StringView TryRemoveLanguageSpecifiers(const StringView& langId);
@@ -110,23 +112,23 @@ namespace nCine
 	inline StringView _(const char* text)
 	{
 		uint32_t resultLength;
-		const char* result = I18n::Current().LookupTranslation(text, &resultLength);
+		const char* result = I18n::Get().LookupTranslation(text, &resultLength);
 		return StringView(result != nullptr ? result : text);
 	}
 	
 	inline StringView _x(const StringView& context, const char* text)
 	{
 		uint32_t resultLength;
-		const char* result = I18n::Current().LookupTranslation(String(&I18n::ContextSeparator, 1).join({ context, StringView(text) }).data(), &resultLength);
+		const char* result = I18n::Get().LookupTranslation(String(&I18n::ContextSeparator, 1).join({ context, StringView(text) }).data(), &resultLength);
 		return (result != nullptr ? result : text);
 	}
 
 	inline StringView _n(const char* singular, const char* plural, int n)
 	{
 		uint32_t resultLength;
-		const char* result = I18n::Current().LookupTranslation(singular, &resultLength);
+		const char* result = I18n::Get().LookupTranslation(singular, &resultLength);
 		if (result != nullptr) {
-			return I18n::Current().LookupPlural(n, result, resultLength);
+			return I18n::Get().LookupPlural(n, result, resultLength);
 		}
 		return (n == 1 ? singular : plural);
 	}
@@ -134,9 +136,9 @@ namespace nCine
 	inline StringView _nx(const StringView& context, const char* singular, const char* plural, int n)
 	{
 		uint32_t resultLength;
-		const char* result = I18n::Current().LookupTranslation(String(&I18n::ContextSeparator, 1).join({ context, StringView(singular) }).data(), &resultLength);
+		const char* result = I18n::Get().LookupTranslation(String(&I18n::ContextSeparator, 1).join({ context, StringView(singular) }).data(), &resultLength);
 		if (result != nullptr) {
-			return I18n::Current().LookupPlural(n, result, resultLength);
+			return I18n::Get().LookupPlural(n, result, resultLength);
 		}
 		return (n == 1 ? singular : plural);
 	}

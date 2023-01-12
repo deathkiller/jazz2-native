@@ -1,15 +1,17 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-01-12 23:11+0100\n"
+"POT-Creation-Date: 2023-01-12 23:09+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
-"Language-Team: \n"
-"Language: tr\n"
+"Language-Team: ПЕРЕВОД НА РУССКИЙ ЯЗЫК: MAN-biker (manbiker@mail.ru) "
+"2023.01.12\n"
+"Language: ru_RU\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<12 || n%100>14) ? 1 : 2);\n"
 "X-Generator: Poedit 3.2.2\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
@@ -22,6 +24,8 @@ msgid ""
 "\n"
 "Spaz ate the dopefish."
 msgstr ""
+"\n"
+"СПЭЗ СОЖРАЛ ДОПФИША."
 
 #: .fake/Translations/flash/01_diam1.j2l.h:2
 msgctxt "flash/01_diam1"
@@ -29,6 +33,8 @@ msgid ""
 "\n"
 "Find the gopher."
 msgstr ""
+"\n"
+"НАЙДИ СУСЛИКА."
 
 #: .fake/Translations/flash/01_diam1.j2l.h:3
 msgctxt "flash/01_diam1"
@@ -36,6 +42,8 @@ msgid ""
 "\n"
 "Dragons live in burbank."
 msgstr ""
+"\n"
+"ДРАКОНЫ ЖИВУТ В БУРБАНКЕ."
 
 #: .fake/Translations/flash/01_diam1.j2l.h:4
 msgctxt "flash/01_diam1"
@@ -44,6 +52,9 @@ msgid ""
 "Mark wears briefs. \n"
 "Hoo Hah!"
 msgstr ""
+"\n"
+"МАРК НОСИТ ТРУСЫ.\n"
+"ХА-ХА!"
 
 #: .fake/Translations/flash/01_diam1.j2l.h:5
 msgctxt "flash/01_diam1"
@@ -52,6 +63,8 @@ msgid ""
 "Nick loves shiny. \n"
 "Always has!"
 msgstr ""
+"\n"
+"НИК ПО ПРЕЖНЕМУ ЛЮБИТ БЛЕСТЯШКИ!"
 
 #: .fake/Translations/flash/02_diam3.j2l.h:1
 msgctxt "flash/02_diam3"
@@ -59,6 +72,8 @@ msgid ""
 "\n"
 "Send Tim new socks."
 msgstr ""
+"\n"
+"ОТПРАВЬТЕ ТИМУ НОВЫЕ НОСКИ."
 
 #: .fake/Translations/flash/02_diam3.j2l.h:2
 msgctxt "flash/02_diam3"
@@ -66,6 +81,8 @@ msgid ""
 "\n"
 "Send Nigel a green card."
 msgstr ""
+"\n"
+"ОТПРАВЬТЕ НАЙДЖЕЛУ ГРИН-КАРТУ."
 
 #: .fake/Translations/flash/02_diam3.j2l.h:3
 msgctxt "flash/02_diam3"
@@ -73,6 +90,8 @@ msgid ""
 "\n"
 "Beware of chainsaw schmalz."
 msgstr ""
+"\n"
+"ОСТЕРЕГАЙТЕСЬ БЕНЗОПИЛЫ ШМАЛЬЦ!"
 
 #: .fake/Translations/flash/02_diam3.j2l.h:4
 msgctxt "flash/02_diam3"
@@ -80,6 +99,8 @@ msgid ""
 "\n"
 "Dont give mark a burrito."
 msgstr ""
+"\n"
+"МАРКУ БУРРИТО НЕ ДАВАТЬ!"
 
 #: .fake/Translations/flash/05_medivo1.j2l.h:1
 msgctxt "flash/05_medivo1"
@@ -87,6 +108,8 @@ msgid ""
 "\n"
 "Beware of falling enemies."
 msgstr ""
+"\n"
+"ОСТЕРЕГАЙТЕСЬ ПАДАЮЩИХ ВРАГОВ."
 
 #: .fake/Translations/flash/05_medivo1.j2l.h:2
 msgctxt "flash/05_medivo1"
@@ -94,6 +117,9 @@ msgid ""
 "\n"
 "Craig is still a doofus!"
 msgstr ""
+"\n"
+"КРЕЙГ КАК БЫЛ ДУРАЧКОМ,\n"
+"ТАК ИМ И ОСТАЛСЯ!"
 
 #: .fake/Translations/flash/05_medivo1.j2l.h:3
 msgctxt "flash/05_medivo1"
@@ -101,6 +127,8 @@ msgid ""
 "\n"
 "Secret Level Time!!!"
 msgstr ""
+"\n"
+"НАСТАЛО ВРЕМЯ СЕКРЕТНОГО УРОВНЯ!!!"
 
 #: .fake/Translations/flash/bonus_garglair.j2l.h:1
 msgctxt "flash/bonus_garglair"
@@ -109,6 +137,9 @@ msgid ""
 "Buttstomp A Silver Crate\n"
 "To Clear Your Path"
 msgstr ""
+"\n"
+"ОБРУШТЕСЬ НА СЕРЕБРЯНЫЙ ЯЩИК,\n"
+"ЧТОБЫ ОЧИСТИТЬ СЕБЕ ПУТЬ."
 
 #: .fake/Translations/flash/bonus_garglair.j2l.h:2
 msgctxt "flash/bonus_garglair"
@@ -116,6 +147,8 @@ msgid ""
 "\n"
 "Crates can also make platforms appear..."
 msgstr ""
+"\n"
+"ЯЩИКИ ТОЖЕ МОГУТ СКРЫВАТЬ ПЛАТФОРМЫ."
 
 #: .fake/Translations/flash/bonus_garglair.j2l.h:3
 msgctxt "flash/bonus_garglair"
@@ -123,6 +156,8 @@ msgid ""
 "\n"
 "Melt the Spring..."
 msgstr ""
+"\n"
+"РАЗМРОЗЬ ПРУЖИНУ..."
 
 #: .fake/Translations/flash/bonus_garglair.j2l.h:4
 msgctxt "flash/bonus_garglair"
@@ -130,6 +165,8 @@ msgid ""
 "\n"
 "Leh is a Camper"
 msgstr ""
+"\n"
+"А ЛЕХ - КЕМПЕР"
 
 #: .fake/Translations/monk/01_jung1.j2l.h:1
 msgctxt "monk/01_jung1"
@@ -138,6 +175,9 @@ msgid ""
 "Falling boulders can \n"
 "give you a headache."
 msgstr ""
+"\n"
+"ПАДАЮЩИЕ КАМНИ МОГУТ\n"
+"СОЗДАТЬ ВАМ ГОЛОВНЯКА."
 
 #: .fake/Translations/monk/01_jung1.j2l.h:2
 msgctxt "monk/01_jung1"
@@ -146,6 +186,9 @@ msgid ""
 "A Flamethrower works\n"
 "well against bugs."
 msgstr ""
+"\n"
+"ОГНЕМЁТ ОТЛИЧНО\n"
+"СПРАВЛЯЕТСЯ С ЖУКАМИ."
 
 #: .fake/Translations/monk/03_hell.j2l.h:1
 msgctxt "monk/03_hell"
@@ -153,6 +196,8 @@ msgid ""
 "\n"
 "Long live the ice level."
 msgstr ""
+"\n"
+"ДА ЗДРАВСТВУЕТ ЛЕДЯНОЙ УРОВЕНЬ!"
 
 #: .fake/Translations/monk/03_hell.j2l.h:2
 msgctxt "monk/03_hell"
@@ -160,6 +205,8 @@ msgid ""
 "\n"
 "Goodnight, bubba!"
 msgstr ""
+"\n"
+"СПОКОЙНОЙ НОЧИ, БУБА!"
 
 #: .fake/Translations/monk/06_damn2.j2l.h:2
 msgctxt "monk/06_damn2"
@@ -168,6 +215,9 @@ msgid ""
 "What the heck? Aaaah! No!  \n"
 "This is NOT over!"
 msgstr ""
+"\n"
+"ЧО ЗА НАФИГ? АААА! НЕТ!\n"
+"ЭТО ЕЩЁ НЕ КОНЕЦ?!"
 
 #: .fake/Translations/prince/01_castle1.j2l.h:1
 msgctxt "prince/01_castle1"
@@ -176,6 +226,9 @@ msgid ""
 "Poles spin you around so\n"
 " you can go even faster."
 msgstr ""
+"\n"
+"ПОПАДАЯ НА ШЕСТЫ, ВЫ РАСКРУЧИВАЕТЕСЬ,\n"
+"ЧТО ПРИДАЁТ ВАМ УСКОРЕНИЕ."
 
 #: .fake/Translations/prince/01_castle1.j2l.h:2
 msgctxt "prince/01_castle1"
@@ -183,6 +236,8 @@ msgid ""
 "\n"
 "You found a secret area."
 msgstr ""
+"\n"
+"ВЫ НАШЛИ СЕКРЕТНУЮ ОБЛАСТЬ."
 
 #: .fake/Translations/prince/01_castle1.j2l.h:3
 msgctxt "prince/01_castle1"
@@ -190,6 +245,8 @@ msgid ""
 "\n"
 "Secret Treasure Room."
 msgstr ""
+"\n"
+"ПОТАЙНАЯ СОКРОВИЩНИЦА."
 
 #: .fake/Translations/prince/01_castle1.j2l.h:4
 msgctxt "prince/01_castle1"
@@ -197,6 +254,8 @@ msgid ""
 "\n"
 "Nothing to see here."
 msgstr ""
+"\n"
+"ЗДЕСЬ НИЧЕГО НЕТ."
 
 #: .fake/Translations/prince/01_castle1.j2l.h:5
 msgctxt "prince/01_castle1"
@@ -205,6 +264,9 @@ msgid ""
 "Collect coins to activate \n"
 "bonus warp devices."
 msgstr ""
+"\n"
+"СОБИРАЙТЕ МОНЕТКИ ДЛЯ\n"
+"АКТИВАЦИИ ТЕЛЕПОРТОВ."
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:1
 msgctxt "prince/02_castle1n"
@@ -212,6 +274,8 @@ msgid ""
 "\n"
 "Cheese is green on tuesday."
 msgstr ""
+"\n"
+"ВО ВТОРНИК СЫР ЗЕЛЕНЫЙ."
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:2
 msgctxt "prince/02_castle1n"
@@ -219,6 +283,8 @@ msgid ""
 "\n"
 "Craig is king doofus."
 msgstr ""
+"\n"
+"КРЕЙГ - КОРОЛЬ ДУРАКОВ."
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:3
 msgctxt "prince/02_castle1n"
@@ -227,6 +293,9 @@ msgid ""
 "To beat the queen \n"
 "shoot her off her ledge."
 msgstr ""
+"\n"
+"ДЛЯ ПОБЕДЫ НАД КОРОЛЕВОЙ\n"
+"СБЕЙ ЕЁ ВЫСТРЕЛАМИ С УСТУПА."
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:4
 msgctxt "prince/02_castle1n"
@@ -235,6 +304,9 @@ msgid ""
 "Good job! \n"
 "Now go get Devan Shell!"
 msgstr ""
+"\n"
+"ОТЛИЧНАЯ РАБОТА!\n"
+"А ТЕПЕРЬ ОТПРАВЛЯЙТЕСЬ ЗА ДЕВАН ШЕЛЛОМ!"
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:5
 msgctxt "prince/02_castle1n"
@@ -243,6 +315,9 @@ msgid ""
 "To kick through these\n"
 "blocks, press down and jump!"
 msgstr ""
+"\n"
+"ЧТОБЫ РАЗБИТЬ ЭТИ БЛОКИ,\n"
+"НАЖМИТЕ ВНИЗ И ПРЫЖОК!"
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:6
 msgctxt "prince/02_castle1n"
@@ -251,6 +326,9 @@ msgid ""
 "Press down and jump beneath \n"
 "these blocks to break them!"
 msgstr ""
+"\n"
+"НАЖМИТЕ ВНИЗ И ПРЫЖОК,\n"
+"ЧТОБЫ РАЗБИТЬ ЭТИ БЛОКИ!"
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:7
 msgctxt "prince/02_castle1n"
@@ -259,6 +337,9 @@ msgid ""
 "Buttstomp the metal box \n"
 "to open key blocks!"
 msgstr ""
+"\n"
+"ОБРУШЬТЕСЬ НА ЯЩИК, ЧТОБЫ СЛОМАТЬ ЕГО.\n"
+"ЭТО ОТКРОЕТ БЛОКИ С ЗАМОЧНОЙ СКВАЖИНОЙ!"
 
 #: .fake/Translations/prince/03_carrot1.j2l.h:1
 msgctxt "prince/03_carrot1"
@@ -266,6 +347,8 @@ msgid ""
 "\n"
 "Stomp your booty to exit."
 msgstr ""
+"\n"
+"ДЛЯ ВЫХОДА РАСТОПЧИ СВОЮ ДОБЫЧУ."
 
 #: .fake/Translations/prince/03_carrot1.j2l.h:2
 msgctxt "prince/03_carrot1"
@@ -273,6 +356,8 @@ msgid ""
 "\n"
 "This spring is frozen."
 msgstr ""
+"\n"
+"ЭТА ПРУЖИНА ЗАМОРОЖЕНА."
 
 #: .fake/Translations/prince/04_carrot1n.j2l.h:1
 msgctxt "prince/04_carrot1n"
@@ -280,6 +365,8 @@ msgid ""
 "\n"
 "Super dooper secret."
 msgstr ""
+"\n"
+"СУПЕР-ПУПЕР СЕКРЕТ."
 
 #: .fake/Translations/prince/04_carrot1n.j2l.h:2
 msgctxt "prince/04_carrot1n"
@@ -288,6 +375,9 @@ msgid ""
 "Shields will give you unlimited \n"
 "special ammo for a short time."
 msgstr ""
+"\n"
+"ЩИТЫ НА НЕКОТОРОЕ ВРЕМЯ ДАДУТ ВАМ\n"
+"НЕОГРАНИЧЕННОЕ КОЛИЧЕСТВО ОСОБЫХ БОЕПРИПАСОВ."
 
 #: .fake/Translations/prince/04_carrot1n.j2l.h:4
 msgctxt "prince/04_carrot1n"
@@ -296,6 +386,9 @@ msgid ""
 "Stopwatches will add time to\n"
 "the life of a shield."
 msgstr ""
+"\n"
+"ЧАСЫ ПРОДЛЯТ ВРЕМЯ\n"
+"ДЕЙСТВИЯ ЩИТА."
 
 #: .fake/Translations/prince/04_carrot1n.j2l.h:5
 msgctxt "prince/04_carrot1n"
@@ -303,6 +396,8 @@ msgid ""
 "\n"
 "This schwartzenguard is toast!"
 msgstr ""
+"\n"
+"ЭТОТ ШВАРЦЕНГАРД ПОДЖАРЕН!"
 
 #: .fake/Translations/prince/06_labrat2.j2l.h:1
 msgctxt "prince/06_labrat2"
@@ -312,6 +407,10 @@ msgid ""
 "You cannot defeat me, Jazz!\n"
 "Prepare to face my superbot!"
 msgstr ""
+"\n"
+"\n"
+"ТЫ НЕ ПОБЕДИШЬ МЕНЯ, ДЖАЗ!\n"
+"ГОТОВЬСЯ К ВСТРЕЧЕ С МОИМ СУПЕРБОТОМ!"
 
 #: .fake/Translations/prince/06_labrat2.j2l.h:2
 msgctxt "prince/06_labrat2"
@@ -320,6 +419,9 @@ msgid ""
 "\n"
 "Ack! I'm outta here!"
 msgstr ""
+"\n"
+"\n"
+"БЛИН! Я СВАЛИВАЮ!"
 
 #: .fake/Translations/prince/06_labrat2.j2l.h:3
 msgctxt "prince/06_labrat2"
@@ -328,6 +430,9 @@ msgid ""
 "These blocks are speed blocks.\n"
 "Run into them at full speed!"
 msgstr ""
+"\n"
+"ЭТО БЛОКИ УСКОРЕНИЯ.\n"
+"БЕГИТЕ К НИМ НА ПОЛНОЙ СКОРОСТИ!"
 
 #: .fake/Translations/prince/trainer.j2l.h:1
 msgctxt "prince/trainer"
@@ -336,6 +441,9 @@ msgid ""
 "Welcome to Jazz Jackrabbit 2. \n"
 " This is a training level."
 msgstr ""
+"\n"
+"ДОБРО ПОЖАЛОВАТЬ В Jazz Jackrabbit 2.\n"
+"ЭТО ТРЕНИРОВОЧНЫЙ УРОВЕНЬ."
 
 #: .fake/Translations/prince/trainer.j2l.h:2
 msgctxt "prince/trainer"
@@ -344,6 +452,9 @@ msgid ""
 "Collect goodies for\n"
 "points and surprises."
 msgstr ""
+"\n"
+"СОБИРАЙТЕ НИШТЯКИ ДЛЯ\n"
+"НАКОПЛЕНИЯ ОЧКОВ И СЮРПРИЗОВ."
 
 #: .fake/Translations/prince/trainer.j2l.h:3
 msgctxt "prince/trainer"
@@ -352,6 +463,9 @@ msgid ""
 "After jumping, press jump\n"
 "again to do a special move."
 msgstr ""
+"\n"
+"ПОСЛЕ ПРЫЖКА НАЖМИТЕ ПРЫЖОК\n"
+"СНОВА, ЧТОБЫ СДЕЛАТЬ ОСОБОЕ ДВИЖЕНИЕ."
 
 #: .fake/Translations/prince/trainer.j2l.h:4
 msgctxt "prince/trainer"
@@ -359,6 +473,8 @@ msgid ""
 "\n"
 "Some walls can be shot."
 msgstr ""
+"\n"
+"НЕКОТОРЫЕ СТЕНЫ МОЖНО РАЗРУШИТЬ ВЫСТРЕЛАМИ."
 
 #: .fake/Translations/prince/trainer.j2l.h:5
 msgctxt "prince/trainer"
@@ -367,6 +483,9 @@ msgid ""
 "When in the air, press down\n"
 "to stomp with your butt."
 msgstr ""
+"\n"
+"НАХОДЯСЬ В ВОЗДУХЕ, НАЖМИТЕ ВНИЗ,\n"
+"ЧТОБЫ ОБРУШИТЬСЯ."
 
 #: .fake/Translations/prince/trainer.j2l.h:6
 msgctxt "prince/trainer"
@@ -375,6 +494,9 @@ msgid ""
 "Secrets abound in Jazz 2. \n"
 " Check the walls."
 msgstr ""
+"\n"
+"В ИГРЕ ПОЛНО СЕКРЕТОВ.\n"
+"ПРОВЕРЯЙТЕ СТЕНЫ."
 
 #: .fake/Translations/prince/trainer.j2l.h:7
 msgctxt "prince/trainer"
@@ -383,6 +505,9 @@ msgid ""
 "Good job. Remember to\n"
 "look for secrets."
 msgstr ""
+"\n"
+"ОТЛИЧНАЯ РАБОТА.\n"
+"НЕ ЗАБЫВАЙТЕ ИСКАТЬ СЕКРЕТЫ."
 
 #: .fake/Translations/prince/trainer.j2l.h:8
 msgctxt "prince/trainer"
@@ -391,6 +516,9 @@ msgid ""
 "Collect gems for \n"
 "an extra life."
 msgstr ""
+"\n"
+"СОБИРАЙТЕ САМОЦВЕТЫ ДЛЯ\n"
+"ПОЛУЧЕНИЯ ДОПОЛНИТЕЛЬНЫХ ЖИЗНЕЙ."
 
 #: .fake/Translations/prince/trainer.j2l.h:9
 msgctxt "prince/trainer"
@@ -399,6 +527,9 @@ msgid ""
 "Red Gems count\n"
 "as one gem."
 msgstr ""
+"\n"
+"КРАСНЫЕ САМОЦВЕТЫ\n"
+"СЧИТАЮТСЯ ЗА 1."
 
 #: .fake/Translations/prince/trainer.j2l.h:10
 msgctxt "prince/trainer"
@@ -407,6 +538,9 @@ msgid ""
 "Green gems count\n"
 "as five gems."
 msgstr ""
+"\n"
+"ЗЕЛЁНЫЕ САМОЦВЕТЫ\n"
+"СЧИТАЮТСЯ ЗА 5."
 
 #: .fake/Translations/prince/trainer.j2l.h:11
 msgctxt "prince/trainer"
@@ -415,6 +549,9 @@ msgid ""
 "Blue gems count\n"
 "as ten gems."
 msgstr ""
+"\n"
+"СИНИЕ САМОЦВЕТЫ\n"
+"СЧИТАЮТСЯ ЗА 10."
 
 #: .fake/Translations/prince/trainer.j2l.h:12
 msgctxt "prince/trainer"
@@ -422,6 +559,8 @@ msgid ""
 "\n"
 "Carrots give you health."
 msgstr ""
+"\n"
+"МОРКОВКИ ВОСПОЛНЯЮТ ЗДОРОВЬЕ."
 
 #: .fake/Translations/prince/trainer.j2l.h:13
 msgctxt "prince/trainer"
@@ -430,6 +569,9 @@ msgid ""
 "Checkpoints save your\n"
 "spot if you lose a life."
 msgstr ""
+"\n"
+"ВЫ ОКАЖЕТЕСЬ НА МЕСТЕ СОХРАНЕНИЯ,\n"
+"ЕСЛИ ПОТЕРЯЕТЕ ЖИЗНЬ."
 
 #: .fake/Translations/prince/trainer.j2l.h:14
 msgctxt "prince/trainer"
@@ -438,6 +580,9 @@ msgid ""
 "Collect coins to\n"
 "unlock bonus rooms."
 msgstr ""
+"\n"
+"СОБИРАЙТЕ МОНЕТКИ, ЧТОБЫ\n"
+"РАЗБЛОКИРОВАТЬ БОНУСНЫЕ КОМНАТЫ."
 
 #: .fake/Translations/prince/trainer.j2l.h:15
 msgctxt "prince/trainer"
@@ -446,6 +591,9 @@ msgid ""
 "Beware of sharp stuff.\n"
 "It hurts."
 msgstr ""
+"\n"
+"ОСТЕРЕГАЙТЕСЬ ОСТРЫХ ПРЕДМЕТОВ,\n"
+"ОНИ РАНЯТ."
 
 #: .fake/Translations/prince/trainer.j2l.h:16
 msgctxt "prince/trainer"
@@ -454,6 +602,9 @@ msgid ""
 "Now youre ready to play.\n"
 " Good luck and have fun."
 msgstr ""
+"\n"
+"ТЕПЕРЬ ВЫ ГОТОВЫ.\n"
+"ПРИЯТНОЙ ИГРЫ."
 
 #: .fake/Translations/rescue/01_colon1.j2l.h:1
 msgctxt "rescue/01_colon1"
@@ -461,6 +612,8 @@ msgid ""
 "\n"
 "Buttstomp the manhole cover!"
 msgstr ""
+"\n"
+"ОБРУШЬТЕСЬ НА КРЫШКУ ЛЮКА!"
 
 #: .fake/Translations/rescue/03_psych1.j2l.h:1
 msgctxt "rescue/03_psych1"
@@ -469,6 +622,9 @@ msgid ""
 "Smoke rings will \n"
 "make you dizzy."
 msgstr ""
+"\n"
+"КОЛЬЦА ДЫМА\n"
+"ВЫЗЫВАЮТ ГОЛОВОКРУЖЕНИЕ."
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:1
 msgctxt "secretf/01_easter1"
@@ -477,6 +633,9 @@ msgid ""
 "You can't buttstomp\n"
 "so go up and around!"
 msgstr ""
+"\n"
+"ВЫ НЕ В СОССТОЯНИИ ТУТ ОБРУШИТЬСЯ\n"
+"ТАК ЧТО ОБХОДИТЕ ЧЕРЕЗ ВЕРХ!"
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:2
 msgctxt "secretf/01_easter1"
@@ -485,6 +644,9 @@ msgid ""
 "No rewards to those\n"
 "with itchy trigger fingers."
 msgstr ""
+"\n"
+"НИКАКИХ НАГРАД ТЕМ, У КОГО ДРОЖАТ\n"
+"ПАЛЬЦЫ НА СПУСКОВОМ КРЮЧКЕ."
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:3
 msgctxt "secretf/01_easter1"
@@ -492,6 +654,9 @@ msgid ""
 "\n"
 "Todays Forcast: Strong Winds!"
 msgstr ""
+"\n"
+"ПО ПРОГНОЗУ,\n"
+"СЕГОДНЯ СИЛЬНЫЙ ВЕТЕР!"
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:4
 msgctxt "secretf/01_easter1"
@@ -500,6 +665,9 @@ msgid ""
 "Find the crate\n"
 "to clear your path."
 msgstr ""
+"\n"
+"НАЙДИТЕ ЯЩИК, ЧТОБЫ\n"
+"ОЧИСТИТЬ СЕБЕ ПУТЬ."
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:5
 msgctxt "secretf/01_easter1"
@@ -509,6 +677,10 @@ msgid ""
 "Jazz Jackrabbit 2:\n"
 "The Secret Files!"
 msgstr ""
+"\n"
+"ДОБРО ПОЖАЛОВАТЬ В\n"
+"Jazz Jackrabbit 2:\n"
+"СЕКРЕТНЫЕ МАТЕРИАЛЫ!"
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:6
 msgctxt "secretf/01_easter1"
@@ -519,6 +691,11 @@ msgid ""
 "He may need something\n"
 "to stand on."
 msgstr ""
+"\n"
+"ТОЛЬКО СПАЗ МОЖЕТ ДОБРАТЬСЯ ДО\n"
+"ВЕРХНЕЙ КОМНАТЫ СЛЕВА.\n"
+"ЕМУ МОЖЕТ ПОНАДОБИТЬСЯ\n"
+"НА ЧТО МОЖНО ВСТАТЬ ПОВЫШЕ."
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:7
 msgctxt "secretf/01_easter1"
@@ -527,6 +704,9 @@ msgid ""
 "Don't beat Nigel at pool.\n"
 "You've veen warned. :)"
 msgstr ""
+"\n"
+"НЕ ОБЫГРЫВАЙТЕ НАЙДЖЕЛА В БИЛЬЯРД.\n"
+"МЫ ВАС ПРЕДУПРЕДИЛИ. :)"
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:16
 msgctxt "secretf/01_easter1"
@@ -534,6 +714,8 @@ msgid ""
 "Eating too many chocolate\n"
 "eggs can make you sick :p"
 msgstr ""
+"ЕСЛИ ЕСТЬ СЛИШКОМ МНОГО ШОКОЛАДНЫХ\n"
+"ЯИЦ, ТО МОЖНО И ЗАБОЛЕТЬ :p"
 
 #: .fake/Translations/secretf/02_easter2.j2l.h:1
 msgctxt "secretf/02_easter2"
@@ -541,6 +723,8 @@ msgid ""
 "\n"
 "Sloping Tunnel Entrance"
 msgstr ""
+"\n"
+"ВХОД В ПОЛОГИЙ ТУННЕЛЬ"
 
 #: .fake/Translations/secretf/02_easter2.j2l.h:2
 msgctxt "secretf/02_easter2"
@@ -549,6 +733,9 @@ msgid ""
 "To access the tunnels above\n"
 "find the access warp."
 msgstr ""
+"\n"
+"ДЛЯ ДОСТУП К ТУННЕЛЯМ ВЫШЕ\n"
+"НАЙДИТЕ ТОЧКУ ТЕЛЕПОРТА."
 
 #: .fake/Translations/secretf/02_easter2.j2l.h:3
 msgctxt "secretf/02_easter2"
@@ -557,6 +744,9 @@ msgid ""
 "One route leads to riches.\n"
 "One route leads to battle."
 msgstr ""
+"\n"
+"ОДИН ПУТЬ ВЕДЕТ К БОГАТСТВУ.\n"
+"ДРУГОЙ ПУТЬ ВЕДЕТ К БИТВЕ."
 
 #: .fake/Translations/secretf/03_easter3.j2l.h:1
 msgctxt "secretf/03_easter3"
@@ -565,6 +755,9 @@ msgid ""
 "Only those who can double-jump\n"
 "can get to the goodies!"
 msgstr ""
+"\n"
+"ТОЛЬКО ТОТ, КТО МОЖЕТ СДЕЛАТЬ ДВОЙНОЙ ПРЫЖОК\n"
+"СМОЖЕТ ДОБРАТЬСЯ ДО ВКУСНЯШЕК!"
 
 #: .fake/Translations/secretf/03_easter3.j2l.h:2
 msgctxt "secretf/03_easter3"
@@ -573,6 +766,9 @@ msgid ""
 "Find the crate to make\n"
 "your climbing blocks appear"
 msgstr ""
+"\n"
+"НАЙДИТЕ ЯЩИК, ЧТОБЫ ПОЯВИЛИСЬ\n"
+"БЛОКИ ДЛЯ ЛАЗАНИЯ"
 
 #: .fake/Translations/secretf/03_easter3.j2l.h:3
 msgctxt "secretf/03_easter3"
@@ -581,6 +777,9 @@ msgid ""
 "Stomping this crate also\n"
 "free's some enemies :)"
 msgstr ""
+"\n"
+"РАЗРУШЕНИЕ ЭТОГО ЯЩИКА ПРИВЕДЁТ\n"
+"К ОСВОБОЖДЕНИЮ НЕКОТОРЫХ ВРАГОВ :)"
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:1
 msgctxt "secretf/04_haunted1"
@@ -588,6 +787,8 @@ msgid ""
 "\n"
 "Enter the house with caution....."
 msgstr ""
+"\n"
+"ВХОДИТЕ В ДОМ ОСТОРОЖНО..."
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:3
 msgctxt "secretf/04_haunted1"
@@ -595,6 +796,8 @@ msgid ""
 "\n"
 "Silver Crates can't be broken underwater..."
 msgstr ""
+"\n"
+"СЕРЕБРЯНЫЕ ЯЩИКИ НЕЛЬЗЯ РАЗБИТЬ ПОД ВОДОЙ..."
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:4
 msgctxt "secretf/04_haunted1"
@@ -602,6 +805,9 @@ msgid ""
 "\n"
 "Water Level control crate above."
 msgstr ""
+"\n"
+"ЯЩИК УПРАВЛЕНИЯ УРОВНЕМ ВОДЫ\n"
+"НАХОДИТСЯ ВЫШЕ."
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:5
 msgctxt "secretf/04_haunted1"
@@ -609,6 +815,9 @@ msgid ""
 "\n"
 "Stomping crates can be good and bad..."
 msgstr ""
+"\n"
+"РАЗРУШЕНИЕ ЯЩИКОВ МОЖЕТ БЫТЬ\n"
+"КАК ПОЛЕЗНО, ТАК И НАВРЕДИТЬ..."
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:7
 msgctxt "secretf/04_haunted1"
@@ -616,6 +825,8 @@ msgid ""
 "\n"
 "But you need a way to get up there..."
 msgstr ""
+"\n"
+"НО ТЕБЕ НУЖНО НАЙТИ СПОСОБ ПОДНЯТЬСЯ ТУДА..."
 
 #: .fake/Translations/secretf/06_haunted3.j2l.h:16
 msgctxt "secretf/06_haunted3"
@@ -624,6 +835,9 @@ msgid ""
 "Michelle,\n"
 "I will love you always and forever :)"
 msgstr ""
+"\n"
+"МИШЕЛЬ,\n"
+"Я БУДУ ЛЮБИТЬ ТЕБЯ ВЕЧНО :)"
 
 #: .fake/Translations/secretf/07_town1.j2l.h:1
 msgctxt "secretf/07_town1"
@@ -631,6 +845,8 @@ msgid ""
 "\n"
 "Take to the roof tops!"
 msgstr ""
+"\n"
+"ЗАБЕРИТЕСЬ НА САМЫЙ ВЕРХ КРЫШИ!"
 
 #: .fake/Translations/secretf/07_town1.j2l.h:2
 msgctxt "secretf/07_town1"
@@ -639,6 +855,9 @@ msgid ""
 "The skies above will reward\n"
 "those who stomp..."
 msgstr ""
+"\n"
+"НЕБЕСА ВЫШЕ ВОЗНАГРАДЯТ ТЕХ,\n"
+"КТО ОБРУШИТСЯ ВНИЗ..."
 
 #: .fake/Translations/secretf/07_town1.j2l.h:3
 msgctxt "secretf/07_town1"
@@ -647,6 +866,8 @@ msgid ""
 "Jump as far over to the\n"
 "right as you possibly can..."
 msgstr ""
+"\n"
+"ПРЫГНИТЕ КАК МОЖНО ДАЛЬШЕ ВПРАВО..."
 
 #: .fake/Translations/secretf/07_town1.j2l.h:4
 msgctxt "secretf/07_town1"
@@ -654,6 +875,8 @@ msgid ""
 "\n"
 "Didn't make the jump huh? :)"
 msgstr ""
+"\n"
+"ЧТО, НЕ СМОГ ПРЫГНУТЬ? :)"
 
 #: .fake/Translations/secretf/07_town1.j2l.h:5
 msgctxt "secretf/07_town1"
@@ -661,6 +884,8 @@ msgid ""
 "\n"
 "Well Done!"
 msgstr ""
+"\n"
+"ОТЛИЧНАЯ РАБОТА!"
 
 #: .fake/Translations/secretf/07_town1.j2l.h:6
 msgctxt "secretf/07_town1"
@@ -670,6 +895,10 @@ msgid ""
 "For Jazz, press Crouch and Jump.\n"
 "For Spaz, Press Jump Twice!"
 msgstr ""
+"\n"
+"ИСПОЛЬЗУЙТЕ СВОИ СПЕЦИАЛЬНЫЕ ПРИЕМЫ!\n"
+"ДЛЯ ДЖАЗА НАЖМИТЕ «ВНИЗ И ПРЫЖОК».\n"
+"ДЛЯ СПЭЗА ДВАЖДЫ НАЖМИТЕ «ПРЫЖОК»!"
 
 #: .fake/Translations/secretf/08_town2.j2l.h:1
 msgctxt "secretf/08_town2"
@@ -677,6 +906,8 @@ msgid ""
 "\n"
 "Find the crate and the gems are yours!"
 msgstr ""
+"\n"
+"НАЙДИТЕ ЯЩИК И САМОЦВЕТЫ ВАШИ!"
 
 #: .fake/Translations/secretf/08_town2.j2l.h:2
 msgctxt "secretf/08_town2"
@@ -684,6 +915,8 @@ msgid ""
 "\n"
 "Springs Don't Work When Frozen..."
 msgstr ""
+"\n"
+"ЗАМЁРЗШИЕ ПРУЖИНЫ ПЕРЕСТАЮТ ФУНКЦИОНИРОВАТЬ..."
 
 #: .fake/Translations/secretf/08_town2.j2l.h:3
 msgctxt "secretf/08_town2"
@@ -691,6 +924,8 @@ msgid ""
 "\n"
 "Collecting 20 coins is more rewarding..."
 msgstr ""
+"\n"
+"СОБРАТЬ 20 МОНЕТ НАМНОГО ВЫГОДНЕЕ..."
 
 #: .fake/Translations/secretf/09_town3.j2l.h:1
 msgctxt "secretf/09_town3"
@@ -698,6 +933,8 @@ msgid ""
 "\n"
 "Find the crate to clear the blocks...."
 msgstr ""
+"\n"
+"НАЙДИТЕ ЯЩИК ЧТОБЫ РАСЧИСТИТЬ ПУТЬ ОТ БЛОКОВ..."
 
 #: .fake/Translations/secretf/09_town3.j2l.h:2
 msgctxt "secretf/09_town3"
@@ -706,6 +943,9 @@ msgid ""
 "BEWARE! Flocks of Ravens can\n"
 "be very dangerous."
 msgstr ""
+"\n"
+"ОСТЕРЕГАЙТЕСЬ ВОРОНЬИХ СТАЙ,\n"
+"ОНИ МОГУТ БЫТЬ ОЧЕНЬ ОПАСНЫМИ."
 
 #: .fake/Translations/secretf/09_town3.j2l.h:3
 msgctxt "secretf/09_town3"
@@ -714,6 +954,9 @@ msgid ""
 "The remove the blocks\n"
 "look to the tallest building."
 msgstr ""
+"\n"
+"ЧТОБЫ РАСЧИСТИТЬ БЛОКИ\n"
+"ВЗГЛЯНИТЕ НА САМОЕ ВЫСОКОЕ СТРОЕНИЕ."
 
 #: .fake/Translations/secretf/09_town3.j2l.h:4
 msgctxt "secretf/09_town3"
@@ -721,6 +964,8 @@ msgid ""
 "\n"
 "Choose a cover and stomp away!"
 msgstr ""
+"\n"
+"ВЫБИРАЙ УКРЫТИЕ И ТОПАЙ ПРОЧЬ!"
 
 #: .fake/Translations/secretf/09_town3.j2l.h:5
 msgctxt "secretf/09_town3"
@@ -728,6 +973,8 @@ msgid ""
 "\n"
 "Hi GeoBunny :)"
 msgstr ""
+"\n"
+"ПРИВЕТ ГЕОКРОЛИК :)"
 
 #: .fake/Translations/secretf/09_town3.j2l.h:6
 msgctxt "secretf/09_town3"
@@ -737,6 +984,10 @@ msgid ""
 "use\n"
 "password: BUNNYLOVER\n"
 msgstr ""
+"\n"
+"ОТПРАВЛЯЙТЕСЬ  НА САЙТ www.project2.com\n"
+"И ИСПОЛЬЗУЙТЕ\n"
+"ПАРОЛЬ: «BUNNYLOVER»\n"
 
 #: .fake/Translations/share/01_share1.j2l.h:1
 msgctxt "share/01_share1"
@@ -744,6 +995,8 @@ msgid ""
 "\n"
 "Shoot these blocks!"
 msgstr ""
+"\n"
+"СТРЕЛЯЙТЕ В ЭТИ БЛОКИ!"
 
 #: .fake/Translations/share/01_share1.j2l.h:2
 msgctxt "share/01_share1"
@@ -752,6 +1005,9 @@ msgid ""
 "When in the air, press down\n"
 "to stomp with your butt."
 msgstr ""
+"\n"
+"НАХОДЯСЬ В ВОЗДУХЕ, НАЖМИТЕ ВНИЗ,\n"
+"ЧТОБЫ ОБРУШИТЬСЯ."
 
 #: .fake/Translations/share/01_share1.j2l.h:3
 msgctxt "share/01_share1"
@@ -760,6 +1016,9 @@ msgid ""
 "To pass this area, stomp\n"
 "the secret metal crate."
 msgstr ""
+"\n"
+"ЧТОБЫ ПРОЙТИ ЭТУ ОБЛАСТЬ,\n"
+"ОБРУШТЕСЬ СВЕРХУ НА СЕКРЕТНЫЙ ЯЩИК."
 
 #: .fake/Translations/share/01_share1.j2l.h:4
 msgctxt "share/01_share1"
@@ -768,6 +1027,9 @@ msgid ""
 "You need twenty coins to pass \n"
 "through this secret warp!"
 msgstr ""
+"\n"
+"ВАМ НУЖНО 20 МОНЕТ, ЧТОБЫ ПРОЙТИ\n"
+"ЧЕРЕЗ ЭТОТ СЕКРЕТНЫЙ ПОРТАЛ!"
 
 #: .fake/Translations/share/01_share1.j2l.h:5
 msgctxt "share/01_share1"
@@ -776,6 +1038,9 @@ msgid ""
 "Coins give you access to \n"
 "warps that appear later."
 msgstr ""
+"\n"
+"МОНЕТЫ ДАЮТ ВАМ ДОСТУП К ПОРТАЛАМ,\n"
+"КОТОРЫЕ ПОЯВЛЯЮТСЯ ПОЗЖЕ."
 
 #: .fake/Translations/share/01_share1.j2l.h:6
 msgctxt "share/01_share1"
@@ -784,6 +1049,9 @@ msgid ""
 "Stomp in the right place and\n"
 "you might find a surprise!"
 msgstr ""
+"\n"
+"ОБРУШИВШИСЬ СВЕРХУ В НУЖНОМ МЕСТЕ,\n"
+"ВЫ МОЖЕТЕ ОБНАРУЖИТЬ СЮРПРИЗ!"
 
 #: .fake/Translations/share/01_share1.j2l.h:7
 msgctxt "share/01_share1"
@@ -792,6 +1060,9 @@ msgid ""
 "Some crates contain\n"
 "bombs or baddies!"
 msgstr ""
+"\n"
+"НЕКОТОРЫЕ ЯЩИКИ СОДЕРЖАТ\n"
+"БОМБЫ ИЛИ ВРАГОВ!"
 
 #: .fake/Translations/share/02_share2.j2l.h:1
 msgctxt "share/02_share2"
@@ -800,6 +1071,9 @@ msgid ""
 "You need twenty coins to pass \n"
 "through this secret warp!"
 msgstr ""
+"\n"
+"ВАМ НУЖНО 20 МОНЕТ, ЧТОБЫ ПРОЙТИ\n"
+"ЧЕРЕЗ ЭТОТ СЕКРЕТНЫЙ ПОРТАЛ!"
 
 #: .fake/Translations/share/02_share2.j2l.h:2
 msgctxt "share/02_share2"
@@ -808,6 +1082,9 @@ msgid ""
 "A flamethrower works well \n"
 "against nasty bugs."
 msgstr ""
+"\n"
+"ОГНЁМЕТ ОЧЕНЬ ЭФФЕКТИВЕН\n"
+"ПРОТИВ ЭТИХ МЕРЗКИХ ЖУКОВ."
 
 #: .fake/Translations/share/02_share2.j2l.h:3
 msgctxt "share/02_share2"
@@ -816,6 +1093,9 @@ msgid ""
 "Smoke rings will make\n"
 "you very dizzy!"
 msgstr ""
+"\n"
+"КОЛЬЦА ДЫМА\n"
+"ВЫЗЫВАЮТ ГОЛОВОКРУЖЕНИЕ!"
 
 #: .fake/Translations/share/03_share3.j2l.h:1
 msgctxt "share/03_share3"
@@ -824,6 +1104,9 @@ msgid ""
 "Beware the witch! She can\n"
 "turn you into a frog."
 msgstr ""
+"\n"
+"ОСТОРЕГАЙСЯ ВЕДЬМЫ!\n"
+"ОНА МОЖЕТ ПРЕВРАТИТЬ ТЕБЯ В ЛЯГУШКУ."
 
 #: .fake/Translations/share/03_share3.j2l.h:2
 msgctxt "share/03_share3"
@@ -832,6 +1115,9 @@ msgid ""
 "If you are turned into a frog\n"
 "Eva Earlong can help!"
 msgstr ""
+"\n"
+"ЕСЛИ ВЫ ПРЕВРАТИЛИСЬ В ЛЯГУШКУ,\n"
+"ЕВА ДЛИННОУХ СМОЖЕТ ПОМОЧЬ!"
 
 #: .fake/Translations/share/03_share3.j2l.h:3
 msgctxt "share/03_share3"
@@ -842,6 +1128,11 @@ msgid ""
 "Now check out the order info\n"
 "for M O R E!"
 msgstr ""
+"\n"
+"ВЫ СМОГЛИ ПРОЙТИ\n"
+"ДЕМО-ВЕРСИЮ ИГРЫ!\n"
+"А ТЕПЕРЬ ОЗНАКОМЬТЕСЬ С ИНФОРМАЦИЕЙ,\n"
+"КАК ПРИОБРЕСТИ ПОЛНУЮ ВЕРСИЮ!"
 
 #: .fake/Translations/xmas99/01_xmas1.j2l.h:1
 msgctxt "xmas99/01_xmas1"
@@ -849,6 +1140,8 @@ msgid ""
 "\n"
 "Watch out for the spikes below!"
 msgstr ""
+"\n"
+"ОСТЕРЕГАЙТЕСЬ ШИПОВ ВНИЗУ!"
 
 #: .fake/Translations/xmas99/01_xmas1.j2l.h:2
 msgctxt "xmas99/01_xmas1"
@@ -858,6 +1151,10 @@ msgid ""
 "some of the weakspots\n"
 "in the pathways!"
 msgstr ""
+"\n"
+"ВЫ МОЖЕТЕ ЛОМАТЬ\n"
+"НЕКОТОРЫЕ ПРЕПЯТСТВИЯ,\n"
+"ОБРУШИВАЯСЬ НА НИХ СВЕРХУ!"
 
 #: .fake/Translations/xmas99/01_xmas1.j2l.h:3
 msgctxt "xmas99/01_xmas1"
@@ -867,6 +1164,10 @@ msgid ""
 "be broken with a\n"
 "certain weapon."
 msgstr ""
+"\n"
+"НЕКОТОРЫЕ БЛОКИ МОГУТ\n"
+"БЫТЬ РАЗРУШЕНЫ ТОЛЬКО\n"
+"ОПРЕДЕЛЕННЫМ ТИПОМ ОРУЖИЯ."
 
 #: .fake/Translations/xmas99/01_xmas1.j2l.h:4
 msgctxt "xmas99/01_xmas1"
@@ -874,6 +1175,9 @@ msgid ""
 "\n"
 "Welcome to Christmas Chronicles!"
 msgstr ""
+"\n"
+"ДОБРО ПОЖАЛОВАТЬ В\n"
+"«РОЖДЕСТВЕНСКИЕ ХРОНИКИ»!"
 
 #: .fake/Translations/xmas99/01_xmas1.j2l.h:5
 msgctxt "xmas99/01_xmas1"
@@ -884,6 +1188,11 @@ msgid ""
 "Orange Games and\n"
 "Project 2 Interactive!"
 msgstr ""
+"\n"
+"СЕЗОННЫЕ ПОЗДРАВЛЕНИЯ ОТ\n"
+"Epic MegaGames\n"
+"Orange Games И\n"
+"Project 2 Interactive!"
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:1
 msgctxt "xmas99/02_xmas2"
@@ -892,6 +1201,9 @@ msgid ""
 "You can stand on top\n"
 "of some of the trees!"
 msgstr ""
+"\n"
+"ВЫ МОЖЕТЕ СТОЯТЬ НА\n"
+"МАКУШКАХ НЕКОТОРЫХ ДЕРЕВЬЕВ!"
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:2
 msgctxt "xmas99/02_xmas2"
@@ -901,6 +1213,10 @@ msgid ""
 "some of the weakspots\n"
 "in the pathways!"
 msgstr ""
+"\n"
+"ВЫ МОЖЕТЕ ЛОМАТЬ\n"
+"НЕКОТОРЫЕ ПРЕПЯТСТВИЯ,\n"
+"ОБРУШИВАЯСЬ НА НИХ СВЕРХУ."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:3
 msgctxt "xmas99/02_xmas2"
@@ -909,6 +1225,9 @@ msgid ""
 "Punching the blocks above you\n"
 "can be rewarding."
 msgstr ""
+"\n"
+"ВЫ МОЖЕТЕ ПОЛУЧИТЬ НАГРАДУ,\n"
+"РАЗРУШИВ БЛОКИ ВЫШЕ,"
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:6
 msgctxt "xmas99/02_xmas2"
@@ -916,6 +1235,9 @@ msgid ""
 "\n"
 "Gem Trail Entry Crate."
 msgstr ""
+"\n"
+"ЯЩИК, СКРЫВАЮЩИЙ ПРОХОД\n"
+"К ТРОПЕ САМОЦВЕТОВ."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:7
 msgctxt "xmas99/02_xmas2"
@@ -925,6 +1247,10 @@ msgid ""
 "Climb the treetops to find\n"
 "and stomp the Entry Crate."
 msgstr ""
+"\n"
+"ВХОД НА ТРОПУ САМОЦВЕТОВ.\n"
+"ЗАБЕРИТЕСЬ НА МАКУШКИ ДЕРЕВЬЕВ,\n"
+"ЧТОБЫ НАЙТИ ЯЩИК, ОТКРЫВАЮЩИЙ ВХОД."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:14
 msgctxt "xmas99/02_xmas2"
@@ -935,6 +1261,10 @@ msgid ""
 "\n"
 "- Poopy"
 msgstr ""
+"\n"
+"ПРИВЕТ, ПИГГИ!\n"
+"\n"
+"- ПУПИ"
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:15
 msgctxt "xmas99/02_xmas2"
@@ -946,6 +1276,12 @@ msgid ""
 "I dedicate this project to you.\n"
 "I love you so much."
 msgstr ""
+"\n"
+"\n"
+"МИШЕЛЬ,\n"
+"ТЫ ИЗМЕНИЛА МОЮ ЖИЗНЬ ВО ВСЕХ ОТНОШЕНИЯХ,\n"
+"ПОЭТОМУ ДАННЫЙ ПРОЕКТ Я ПОСВЯЩАЮ ТЕБЕ.\n"
+"Я ТАК СИЛЬНО ТЕБЯ ЛЮБЛЮ!"
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:16
 msgctxt "xmas99/02_xmas2"
@@ -957,6 +1293,12 @@ msgid ""
 "But my words always lead to the same ending\n"
 "I love you, I love you."
 msgstr ""
+"\n"
+"\n"
+"КАССИ НИКОЛЬ:\n"
+"МНЕ ТАК МНОГО ХОЧЕТСЯ ТЕБЕ СКАЗАТЬ.\n"
+"НО ВСЕ СЛОВА СВОДЯТСЯ К ОДНОМУ:\n"
+"Я ЛЮБЛЮ ТЕБЯ, Я ТАК ТЕБЯ ЛЮБЛЮ!"
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:1
 msgctxt "xmas99/03_xmas3"
@@ -964,6 +1306,8 @@ msgid ""
 "\n"
 "Please use your TNT wisely."
 msgstr ""
+"\n"
+"ИСПОЛЬЗУЙТЕ ДИНАМИТ С УМОМ, ПОЖАЛУЙСТА."
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:2
 msgctxt "xmas99/03_xmas3"
@@ -971,6 +1315,8 @@ msgid ""
 "\n"
 "Don't lose your grip!"
 msgstr ""
+"\n"
+"НЕ ТЕРЯЙТЕ ХВАТКУ!"
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:3
 msgctxt "xmas99/03_xmas3"
@@ -979,6 +1325,9 @@ msgid ""
 "Welcome to Burrowsville\n"
 "Please drive carefully."
 msgstr ""
+"\n"
+"ДОБРО ПОЖАЛОВАТЬ В БЕРРОУСВИЛЛ\n"
+"ПОЖАЛУЙСТА, СОБЛЮДАЙТЕ ПДД."
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:4
 msgctxt "xmas99/03_xmas3"
@@ -987,6 +1336,9 @@ msgid ""
 "That bridge doesnt\n"
 "look too safe..."
 msgstr ""
+"\n"
+"ЭТОТ МОСТ НЕ ВЫГЛЯДИТ\n"
+"БЕЗОПАСНЫМ..."
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:5
 msgctxt "xmas99/03_xmas3"
@@ -995,6 +1347,9 @@ msgid ""
 "Robert and Craig:\n"
 "Springs RULE! :)"
 msgstr ""
+"\n"
+"РОБЕРТ И КРЕЙГ:\n"
+"ПРУЖИНЫ РУЛЯТ! :)"
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:6
 msgctxt "xmas99/03_xmas3"
@@ -1003,6 +1358,9 @@ msgid ""
 "Now leaving Burrowsville\n"
 "Please visit again."
 msgstr ""
+"\n"
+"ПОКИДАЕМ БЕРРОУСВИЛЛ\n"
+"ПРИХОДИТЕ СНОВА."
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:7
 msgctxt "xmas99/03_xmas3"
@@ -1012,6 +1370,10 @@ msgid ""
 "Please visit\n"
 "www.project2.com"
 msgstr ""
+"\n"
+"ПАРОЛЬ: xmasbunny\n"
+"ПОСЕТИТЕ САЙТ\n"
+"www.project2.com"
 
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:119
 msgid ""
@@ -1024,10 +1386,16 @@ msgid ""
 "For more information, visit the official website: \f[c:0x707070]http://deat."
 "tk/jazz2/\f[c]"
 msgstr ""
+"ПЕРЕИЗДАНИЕ ИГРЫ \f[c:0x9e7056]Jazz Jackrabbit 2\f[c], ВЫПУЩЕННОЙ В 1998. "
+"ПОДДЕРЖИВАЮТСЯ\n"
+"РАЗЛИЧНЫЕ ВЕРСИИ ИГРЫ (Shareware Demo, Holiday Hare '98, The Secret Files,\n"
+"Christmas Chronicles). ТАКЖЕ ЧАСТИЧНО ПОДДЕРЖИВАЕТЮТСЯ РАСШИРЕНИЯ JJ2+.\n"
+"ПОЛНАЯ ИНФОРМАЦИЯ ЕСТЬ НА ОФИЦИАЛЬНОМ САЙТЕ: \f[c:0x707070]http://deat.tk/"
+"jazz2/\f[c]"
 
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:123
 msgid "Created By"
-msgstr "Yapımcı"
+msgstr "СОЗДАТЕЛИ"
 
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:135
 #, c-format
@@ -1040,79 +1408,85 @@ msgstr ""
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:32
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:67
 msgid "Import Episodes"
-msgstr ""
+msgstr "ИМПОРТ ЭПИЗОДОВ"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:35
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:53
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:126
 msgid "Play Story"
-msgstr "Tek Oyunculu"
+msgstr "ИГРАТЬ [ОСНОВНАЯ ИГРА]"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:36
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:130
 msgid "Play Custom Levels"
-msgstr "Özel Oyun Modu"
+msgstr "ИГРАТЬ [ДОП. УРОВНИ]"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:38
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:28
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:13
 msgid "Options"
-msgstr "Ayarlar"
+msgstr "НАСТРОЙКИ"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:39
 msgid "About"
-msgstr "Hakkında"
+msgstr "ОБ ИГРЕ"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:41
 msgid "Quit"
-msgstr "Çıkış"
+msgstr "ВЫХОД"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:55
 msgid "Play Shareware Demo"
-msgstr ""
+msgstr "ИГРАТЬ В ДЕМО-ВЕРСИЮ"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:150
 msgid "Access to external storage has been granted!"
-msgstr ""
+msgstr "ПРЕДОСТАВЛЕН ДОСТУП К ВНЕШНЕМУ ХРАНИЛИЩУ!"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:152
 msgid ""
 "\f[c:0x337233]Restart the game to read \f[c:0x9e7056]Jazz Jackrabbit "
 "2\f[c:0x337233] files correctly."
 msgstr ""
+"\f[c:0x337233]ПЕРЕЗАПУСТИТЕ ИГРУ \f[c:0x9e7056]Jazz Jackrabbit "
+"2\f[c:0x337233] ДЛЯ КОРРЕКТНОГО СЧИТЫВАНИЯ ФАЙЛОВ."
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:157
 msgid ""
 "\f[c:0x704a4a]This game requires original \f[c:0x9e7056]Jazz Jackrabbit "
 "2\f[c:0x704a4a] files!"
 msgstr ""
+"\f[c:0x704a4a]ИГРА ТРЕБУЕТ ФАЙЛЫ ОРИГИНАЛЬНОЙ ИГРЫ \f[c:0x9e7056]Jazz "
+"Jackrabbit 2\f[c:0x704a4a]!"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:159
 msgid "Make sure Jazz Jackrabbit 2 files are present in following path:"
 msgstr ""
+"УБЕДИТЕСЬ, ЧТО ФАЙЛЫ ОРИГИНАЛЬНОЙ КОПИИ ИГРЫ Jazz Jackrabbit 2 НАХОДЯТСЯ ПО "
+"СЛЕДУЮЩЕМУ ПУТИ:"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:166
 msgid "Allow access to external storage"
-msgstr ""
+msgstr "ДАТЬ ДОСТУП К ВНЕШНЕМУ ХРАНИЛИЩУ"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:12
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:212
 msgid "Remap Controls"
-msgstr ""
+msgstr "НАСТРОЙКИ УПРАВЛЕНИЯ"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:13
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:44
 msgid "Touch Controls"
-msgstr ""
+msgstr "СЕНСОРНОЕ УПРАВЛЕНИЕ"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:15
 msgid "Native Back Button"
-msgstr ""
+msgstr "ОРИГИНАЛЬНАЯ КНОПКА «НАЗАД»"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:47
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:14
 msgid "Controls"
-msgstr "Kontroller"
+msgstr "УПРАВЛЕНИЕ"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
@@ -1121,200 +1495,200 @@ msgstr "Kontroller"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:101
 msgid "Enabled"
-msgstr "Etkili"
+msgstr "ВКЛЮЧЕНО"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:101
 msgid "Disabled"
-msgstr "Etkisiz"
+msgstr "ВЫКЛЮЧЕНО"
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:140
 msgid "No custom level found!"
-msgstr "Özel bölüm bulunamadı!"
+msgstr "ДОП. УРОВНИ НЕ НАЙДЕНЫ!"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:134
 msgid "No episode found!"
-msgstr "Hiçbir bölüm bulunamadı!"
+msgstr "НЕ НАЙДЕНО НИ ОДНОГО ЭПИЗОДА!"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:172
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:173
 msgid "Restart episode"
-msgstr "Bölümü Tekrarla"
+msgstr "ПЕРЕЗАПУСК ЭПИЗОДА"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:194
 #, c-format
 msgid "You must complete \"%s\" first!"
-msgstr "Önce \"%s\" bölümünü bitirmelisiniz!"
+msgstr "СНАЧАЛА ПРОЙДИТЕ \"%s\"!"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:197
 msgid "Episode is locked!"
-msgstr "Bu bölüm kilitli!"
+msgstr "ЭПИЗОД ЗАБЛОКИРОВАН!"
 
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:15
 msgid "Reforged Mode"
-msgstr ""
+msgstr "ОБНОВЛЁННЫЙ РЕЖИМ"
 
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:16
 msgid "Ledge Climbing"
-msgstr ""
+msgstr "ХВАТАНИЕ ЗА УСТУПЫ"
 
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:17
 msgid "Weapon Wheel"
-msgstr ""
+msgstr "КОЛЕСО ВЫБОРА ОРУЖИЯ"
 
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:86
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:17
 msgid "Enhancements"
-msgstr ""
+msgstr "УЛУЧШЕНИЯ"
 
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:89
 msgid "You can enable enhancements that were added to this remake."
-msgstr ""
+msgstr "ВЫ МОЖЕТЕ ВКЛЮЧИТЬ УЛУЧШЕНИЯ, КОТОРЫЕ МЫ ДОБАВИЛИ В ЭТО ПЕРЕИЗДАНИЕ."
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:18
 #: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:48
 msgid "Language"
-msgstr "Dil"
+msgstr "ЯЗЫК"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:20
 msgid "Discord Integration"
-msgstr ""
+msgstr "ИНТЕГРАЦИЯ С Discord"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:23
 msgid "Razer Chroma™"
-msgstr ""
+msgstr "Razer Chroma™"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:26
 msgid "Scripting"
-msgstr ""
+msgstr "СКРИПТЫ"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:29
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:65
 msgid "Refresh Cache"
-msgstr ""
+msgstr "ОБНОВИТЬ КЕШ"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:11
 msgid "Gameplay"
-msgstr ""
+msgstr "ОСНОВНЫЕ"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:14
 msgid "Rescale Mode"
-msgstr "Ekrana Sıkıştır"
+msgstr "ТИП  ШЕЙДЕРА"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:21
 msgid "Fullscreen"
-msgstr "Tam ekran"
+msgstr "ПОЛНОЭКРАННЫЙ РЕЖИМ"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:24
 msgid "Antialiasing"
-msgstr ""
+msgstr "СГЛАЖИВАНИЕ"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:25
 msgid "Performance Metrics"
-msgstr ""
+msgstr "ОТОБРАЖЕНИЕ СЧЁТЧИКА КАДРОВ"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:26
 msgid "Keep Aspect Ratio In Cinematics"
-msgstr ""
+msgstr "СОХРАНЯТЬ ПРОПОРЦИИ ВИДЕОРОЛИКОВ"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:57
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:12
 msgid "Graphics"
-msgstr ""
+msgstr "ГРАФИКА"
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:70
 msgid "Select files of your original game to unlock additional episodes"
-msgstr ""
+msgstr "ВЫБЕРИТЕ ФАЙЛЫ ОРИГИНАЛЬНОЙ ИГРЫ ДЛЯ РАЗБЛОКИРОВКИ ЭПИЗОДОВ"
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:76
 msgid "Processing of selected files..."
-msgstr ""
+msgstr "ОБРАБОТКА ВЫБРАННЫХ ФАЙЛОВ..."
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:79
 msgid "Waiting for files..."
-msgstr ""
+msgstr "ОЖИДАНИЕ ФАЙЛОВ..."
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:85
 msgid "No files were selected!"
-msgstr ""
+msgstr "ФАЙЛЫ НЕ БЫЛИ ВЫБРАНЫ!"
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:90
 msgid "No new episodes were imported!"
-msgstr ""
+msgstr "НЕ БЫЛО ДОБАВЛЕНО НОВЫХ ЭПИЗОДОВ!"
 
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:13
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:92
 msgid "Sounds"
-msgstr ""
+msgstr "ЗВУК"
 
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:12
 msgid "Resume"
-msgstr "Devam Et"
+msgstr "ПРОДОЛЖИТЬ"
 
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:14
 msgid "Save & Exit"
-msgstr "Kaydet & Çık"
+msgstr "СОХРАНЕНИЕ И ВЫХОД"
 
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:68
 msgid "Processing of files in \f[c:0x9e7056]\"Source\"\f[c] directory..."
-msgstr ""
+msgstr "ОБРАБОТКА ФАЙЛОВ В ПАПКЕ \f[c:0x9e7056]\"Source\"\f[c]..."
 
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:71
 msgid "Newly added levels and episodes will be available soon."
-msgstr ""
+msgstr "ДОБАВЛЕННЫЕ УРОВНИ И ЭПИЗОДЫ СКОРО БУДУТ ДОСТУПНЫ."
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:215
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:217
 #, c-format
 msgid "Key %i"
-msgstr "Tuş %i"
+msgstr "КЛАВ.%i"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:219
 msgid "Gamepad"
-msgstr "Oyun Kolu"
+msgstr "ГЕЙМПАД"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:234
 msgid "Up"
-msgstr "Yukarı"
+msgstr "ВВЕРХ"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:235
 msgid "Down"
-msgstr "Aşağı"
+msgstr "ВНИЗ"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:236
 msgid "Left"
-msgstr "Sol"
+msgstr "ВЛЕВО"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:237
 msgid "Right"
-msgstr "Sağ"
+msgstr "ВПРАВО"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:238
 msgid "Fire"
-msgstr "Ateş"
+msgstr "ОГОНЬ"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:239
 msgid "Jump"
-msgstr "Zıpla"
+msgstr "ПРЫЖОК"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:240
 msgid "Run"
-msgstr "Koşma"
+msgstr "БЕГ"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:241
 msgid "Change Weapon"
-msgstr "Silah Değiştir"
+msgstr "СМЕНА ОРУЖИЯ"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:242
 msgid "Back"
-msgstr "Geri"
+msgstr "НАЗАД"
 
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:16
 msgid "None / Pixel-perfect"
-msgstr "Tam tamına"
+msgstr "НЕТ / ПИКСЕЛЬ В ПИКСЕЛЬ"
 
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:19
 msgid "CRT Scanlines"
@@ -1330,15 +1704,15 @@ msgstr ""
 
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
 msgid "Monochrome"
-msgstr ""
+msgstr "МОНОХРОМНОЕ"
 
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:38
 msgid "Select Rescale Mode"
-msgstr "Sıkıştırma Modunu Seçin"
+msgstr "ВЫБОР ШЕЙДЕРНОГО ЭФФЕКТА"
 
 #: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:31
 msgid "Error"
-msgstr "Hata"
+msgstr "ОШИБКА"
 
 #: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:36
 msgid ""
@@ -1347,43 +1721,47 @@ msgid ""
 "Make sure all necessary files\n"
 "are accessible and try it again."
 msgstr ""
+"\f[c:0x704a4a]НЕ МОГУ ЗАГРУЗИТЬ ВЫБРАННЫЙ УРОВЕНЬ!\f[c]\n"
+"\n"
+"УБЕДИТЕСЬ, ЧТО ВСЕ НЕОБХОДИМЫЕ ФАЙЛЫ\n"
+"ДОСТУПНЫ И ПОПРОБУЙТЕ СНОВА."
 
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:12
 msgid "Master Volume"
-msgstr ""
+msgstr "ОБЩАЯ ГРОМКОСТЬ"
 
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:13
 msgid "SFX Volume"
-msgstr "Ses Efekt Seviyesi"
+msgstr "ГРОМКОСТЬ ЭФФЕКТОВ"
 
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:14
 msgid "Music Volume"
-msgstr "Müzik Ses Seviyesi"
+msgstr "ГРОМКОСТЬ МУЗЫКИ"
 
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:23
 msgid "Character"
-msgstr "Karakter"
+msgstr "ПЕРСОНАЖ"
 
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:24
 msgid "Difficulty"
-msgstr "Zorluk"
+msgstr "СЛОЖНОСТЬ"
 
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:25
 msgid "Start"
-msgstr "Oyuna Başla"
+msgstr "СТАРТ"
 
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:202
 msgid "Easy"
-msgstr "Kolay"
+msgstr "ЛЕГКО"
 
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:202
 msgid "Medium"
-msgstr "Orta"
+msgstr "СРЕДНЕ"
 
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:202
 msgid "Hard"
-msgstr "Zor"
+msgstr "СЛОЖНО"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:47
 msgid "You can adjust position of the touch zones by drag and drop."
-msgstr ""
+msgstr "ПЕРЕТАСКИВАЯ ЗОНЫ КАСАНИЯ, ВЫ МОЖЕТЕ НАСТРОИТЬ ИХ ПОЛОЖЕНИЕ."

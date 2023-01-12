@@ -39,7 +39,7 @@ namespace Jazz2::UI
 		_transitionState(TransitionState::None),
 		_transitionTime(0.0f)
 	{
-		auto& resolver = ContentResolver::Current();
+		auto& resolver = ContentResolver::Get();
 
 		Metadata* metadata = resolver.RequestMetadata("UI/HUD"_s);
 		if (metadata != nullptr) {
@@ -66,7 +66,7 @@ namespace Jazz2::UI
 	{
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		if (PreferencesCache::EnableRgbLights) {
-			RgbLights::Current().Clear();
+			RgbLights::Get().Clear();
 		}
 #endif
 	}
@@ -335,7 +335,7 @@ namespace Jazz2::UI
 
 		if (_transitionState == TransitionState::FadeIn || _transitionState == TransitionState::FadeOut) {
 			auto command = RentRenderCommand();
-			if (command->material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::Transition))) {
+			if (command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
 				command->material().reserveUniformsDataMemory();
 				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 			}
@@ -1065,7 +1065,7 @@ namespace Jazz2::UI
 			return;
 		}
 
-		RgbLights& rgbLights = RgbLights::Current();
+		RgbLights& rgbLights = RgbLights::Get();
 		if (!rgbLights.IsSupported()) {
 			return;
 		}

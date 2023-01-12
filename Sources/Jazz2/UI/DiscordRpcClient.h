@@ -36,7 +36,7 @@ namespace Jazz2::UI
 		bool IsSupported() const;
 		bool SetRichPresence(const RichPresence& richPresence);
 
-		static DiscordRpcClient& Current();
+		static DiscordRpcClient& Get();
 
 	private:
 		/// Deleted copy constructor

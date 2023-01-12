@@ -28,7 +28,7 @@ namespace Jazz2::UI
 
 		_canvas = std::make_unique<CinematicsCanvas>(this);
 
-		auto& resolver = ContentResolver::Current();
+		auto& resolver = ContentResolver::Get();
 
 		// Try to load cinematics file
 		if (!LoadFromFile(path)) {
@@ -131,7 +131,7 @@ namespace Jazz2::UI
 	bool Cinematics::LoadFromFile(const String& path)
 	{
 		// Try "Content" directory first, then "Source" directory
-		auto& resolver = ContentResolver::Current();
+		auto& resolver = ContentResolver::Get();
 		String fullPath = fs::JoinPath({ resolver.GetContentPath(), "Cinematics"_s, path + ".j2v" });
 		if (!fs::IsReadableFile(fullPath)) {
 			fullPath = fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), path + ".j2v"));

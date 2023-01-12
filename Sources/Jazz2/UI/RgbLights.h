@@ -90,7 +90,7 @@ namespace Jazz2::UI
 		void Update(Color colors[ColorsSize]);
 		void Clear();
 
-		static RgbLights& Current();
+		static RgbLights& Get();
 
 	private:
 		/// Deleted copy constructor

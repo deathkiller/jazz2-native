@@ -132,7 +132,7 @@ namespace Jazz2::UI::Menu
 			case GameplayOptionsItemType::EnableDiscordIntegration:
 				PreferencesCache::EnableDiscordIntegration = !PreferencesCache::EnableDiscordIntegration;
 				if (!PreferencesCache::EnableDiscordIntegration) {
-					DiscordRpcClient::Current().Disconnect();
+					DiscordRpcClient::Get().Disconnect();
 				}
 				_isDirty = true;
 				_animation = 0.0f;
@@ -142,7 +142,7 @@ namespace Jazz2::UI::Menu
 			case GameplayOptionsItemType::EnableRgbLights:
 				PreferencesCache::EnableRgbLights = !PreferencesCache::EnableRgbLights;
 				if (!PreferencesCache::EnableRgbLights) {
-					RgbLights::Current().Clear();
+					RgbLights::Get().Clear();
 				}
 				_isDirty = true;
 				_animation = 0.0f;

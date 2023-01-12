@@ -14,7 +14,7 @@ using namespace Death::Containers::Literals;
 
 namespace Jazz2::UI
 {
-	DiscordRpcClient& DiscordRpcClient::Current()
+	DiscordRpcClient& DiscordRpcClient::Get()
 	{
 		static DiscordRpcClient current;
 		return current;

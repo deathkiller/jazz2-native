@@ -21,7 +21,7 @@ namespace Jazz2::Tiles
 		_texturedBackgroundPass(this)
 	{
 		auto& tileSetPart = _tileSets.emplace_back();
-		tileSetPart.Data = ContentResolver::Current().RequestTileSet(tileSetPath, captionTileId, applyPalette);
+		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, captionTileId, applyPalette);
 		tileSetPart.Offset = 0;
 		tileSetPart.Count = tileSetPart.Data->TileCount;
 
@@ -682,7 +682,7 @@ namespace Jazz2::Tiles
 
 		bool shaderChanged;
 		switch (type) {
-			case LayerRendererType::Tinted: shaderChanged = command->material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::Tinted)); break;
+			case LayerRendererType::Tinted: shaderChanged = command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::Tinted)); break;
 			default: shaderChanged = command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE); break;
 		}
 		if (shaderChanged) {
@@ -701,7 +701,7 @@ namespace Jazz2::Tiles
 	void TileMap::AddTileSet(const StringView& tileSetPath, uint16_t offset, uint16_t count)
 	{
 		auto& tileSetPart = _tileSets.emplace_back();
-		tileSetPart.Data = ContentResolver::Current().RequestTileSet(tileSetPath, 0, false);
+		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, 0, false);
 		tileSetPart.Offset = offset;
 		tileSetPart.Count = count;
 
@@ -751,7 +751,7 @@ namespace Jazz2::Tiles
 
 			if (newLayer.Description.RendererType == LayerRendererType::Tinted) {
 				// TODO: Tinted color is precomputed from palette here
-				const uint32_t* palettes = ContentResolver::Current().GetPalettes();
+				const uint32_t* palettes = ContentResolver::Get().GetPalettes();
 				uint32_t color = palettes[r];
 				newLayer.Description.Color = Vector4f((color & 0x000000ff) / 255.0f, ((color >> 8) & 0x000000ff) / 255.0f, ((color >> 16) & 0x000000ff) / 255.0f, a * ((color >> 24) & 0x000000ff) / (255.0f * 255.0f));
 			} else {
@@ -1271,7 +1271,7 @@ namespace Jazz2::Tiles
 			}
 
 			// Prepare output render command
-			_outputRenderCommand.material().setShader(ContentResolver::Current().GetShader(_owner->_layers[_owner->_texturedBackgroundLayer].Description.RendererType == LayerRendererType::Circle
+			_outputRenderCommand.material().setShader(ContentResolver::Get().GetShader(_owner->_layers[_owner->_texturedBackgroundLayer].Description.RendererType == LayerRendererType::Circle
 				? PrecompiledShader::TexturedBackgroundCircle
 				: PrecompiledShader::TexturedBackground));
 			_outputRenderCommand.material().reserveUniformsDataMemory();

@@ -18,7 +18,7 @@ namespace Jazz2::UI::Menu
 		_pressedCount(0),
 		_noiseCooldown(0.0f)
 	{
-		auto& resolver = ContentResolver::Current();
+		auto& resolver = ContentResolver::Get();
 
 		// Search both "Content/Episodes/" and "Cache/Episodes/"
 		fs::Directory dir(fs::JoinPath({ resolver.GetContentPath(), "Episodes"_s, "unknown"_s }), fs::EnumerationOptions::SkipDirectories);

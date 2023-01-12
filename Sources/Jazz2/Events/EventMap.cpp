@@ -102,7 +102,7 @@ namespace Jazz2::Events
 		auto eventSpawner = _levelHandler->EventSpawner();
 
 		// TODO
-		//ContentResolver::Current().SuspendAsync();
+		//ContentResolver::Get().SuspendAsync();
 
 		// Preload all events
 		for (auto& tile : _eventLayout) {
@@ -118,7 +118,7 @@ namespace Jazz2::Events
 		}
 
 		// Don't wait for finalization of resources, it will be done in a few next frames
-		//ContentResolver::Current().ResumeAsync();
+		//ContentResolver::Get().ResumeAsync();
 	}
 
 	void EventMap::ProcessGenerators(float timeMult)

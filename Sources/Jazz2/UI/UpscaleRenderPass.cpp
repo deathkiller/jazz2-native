@@ -78,7 +78,7 @@ namespace Jazz2::UI
 			_antialiasing.setParent(&rootNode);
 			setParent(nullptr);
 
-			if (_antialiasing._renderCommand.material().setShader(ContentResolver::Current().GetShader(PrecompiledShader::Antialiasing))) {
+			if (_antialiasing._renderCommand.material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::Antialiasing))) {
 				_antialiasing._renderCommand.material().reserveUniformsDataMemory();
 				_antialiasing._renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 				// Required to reset render command properly
@@ -101,12 +101,12 @@ namespace Jazz2::UI
 		// Prepare render command
 #if defined(ALLOW_RESCALE_SHADERS)
 		switch (PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask) {
-			case RescaleMode::HQ2x: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeHQ2x); break;
-			case RescaleMode::_3xBrz: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::Resize3xBrz); break;
-			case RescaleMode::CrtScanlines: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeCrtScanlines); break;
-			case RescaleMode::CrtShadowMask: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeCrtShadowMask); break;
-			case RescaleMode::CrtApertureGrille: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeCrtApertureGrille); break;
-			case RescaleMode::Monochrome: _resizeShader = ContentResolver::Current().GetShader(PrecompiledShader::ResizeMonochrome); break;
+			case RescaleMode::HQ2x: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeHQ2x); break;
+			case RescaleMode::_3xBrz: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::Resize3xBrz); break;
+			case RescaleMode::CrtScanlines: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeCrtScanlines); break;
+			case RescaleMode::CrtShadowMask: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeCrtShadowMask); break;
+			case RescaleMode::CrtApertureGrille: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeCrtApertureGrille); break;
+			case RescaleMode::Monochrome: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeMonochrome); break;
 			default: _resizeShader = nullptr; break;
 		}
 
