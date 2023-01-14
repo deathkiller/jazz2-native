@@ -8,7 +8,7 @@
 #	define NCINE_APP_NAME "Jazz² Resurrection"
 #endif
 #if !defined(NCINE_VERSION)
-#	define NCINE_VERSION "1.4.0"
+#	define NCINE_VERSION "1.5.0"
 #endif
 
 #if !defined(_MSC_VER) && defined(__has_include)

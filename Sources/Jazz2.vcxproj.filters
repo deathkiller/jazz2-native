@@ -187,6 +187,12 @@
     <Filter Include="Header Files\nCine\Backends">
       <UniqueIdentifier>{90e78042-998d-48ca-acc9-5bab601629ce}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\simdjson">
+      <UniqueIdentifier>{aeef36d0-2a9b-4589-a088-c8658a26b7aa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\simdjson">
+      <UniqueIdentifier>{621d85ca-60da-49b4-837b-679843d39ca2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1269,6 +1275,12 @@
     <ClInclude Include="$(ExtensionLibraryPath)\CommonBase.h">
       <Filter>Header Files\Shared</Filter>
     </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringStlView.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="simdjson\simdjson.h">
+      <Filter>Header Files\simdjson</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2134,6 +2146,9 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Scripting\RegisterDictionary.cpp">
       <Filter>Source Files\Jazz2\Scripting</Filter>
+    </ClCompile>
+    <ClCompile Include="simdjson\simdjson.cpp">
+      <Filter>Source Files\simdjson</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

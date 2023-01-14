@@ -404,8 +404,13 @@ namespace Jazz2::UI
 					pos.X = std::round(pos.X + uvRect.W * scale * 0.5f);
 					pos.Y = std::round(pos.Y - uvRect.H * scale * 0.5f);
 
+					int charWidth = _charSize.X;
+					if (charWidth > uvRect.H) {
+						charWidth--;
+					}
+
 					Vector4f texCoords = Vector4f(
-						_charSize.X / float(texSize.X),
+						charWidth / float(texSize.X),
 						uvRect.X,
 						uvRect.H / float(texSize.Y),
 						uvRect.Y
@@ -434,11 +439,11 @@ namespace Jazz2::UI
 
 					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 					instanceBlock->uniform(Material::TexRectUniformName)->setFloatVector(texCoords.Data());
-					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(_charSize.X * scale, uvRect.H * scale);
+					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(charWidth * scale, uvRect.H * scale);
 					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(color.Data());
 
 					// TODO: It looks better with the "0.5f" offset
-					command->setTransformation(Matrix4x4f::Translation(pos.X - (uvRect.W - _charSize.X) * 0.5f * scale, pos.Y + 0.5f, 0.0f));
+					command->setTransformation(Matrix4x4f::Translation(pos.X - (uvRect.W - charWidth) * 0.5f * scale, pos.Y + 0.5f, 0.0f));
 					command->setLayer(z - (charOffset & 1));
 					command->material().setTexture(*_texture.get());
 

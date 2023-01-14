@@ -62,7 +62,7 @@ namespace Jazz2
 		Vector2i FrameDimensions;
 		Vector2i FrameConfiguration;
 		float AnimDuration;
-		int FrameCount;
+		int32_t FrameCount;
 		Vector2i Hotspot;
 		Vector2i Coldspot;
 		Vector2i Gunspot;
@@ -77,8 +77,8 @@ namespace Jazz2
 		SmallVector<AnimState, 4> State;
 		//std::unique_ptr<Material> Material;
 		float AnimDuration;
-		int FrameCount;
-		int FrameOffset;
+		int32_t FrameCount;
+		int32_t FrameOffset;
 		AnimationLoopMode LoopMode;
 
 		bool HasState(AnimState state)
@@ -117,7 +117,7 @@ namespace Jazz2
 		Vector2i BoundingBox;
 
 		Metadata()
-			: Flags(MetadataFlags::None), BoundingBox()
+			: Flags(MetadataFlags::None)
 		{
 		}
 	};
@@ -140,9 +140,9 @@ namespace Jazz2
 		TileDestructType DestructType;
 		bool Downwards;
 		WeaponType UsedWeaponType;
-		int WeaponStrength;
+		int32_t WeaponStrength;
 		float Speed;
-		/*out*/ int TilesDestroyed;
+		/*out*/ int32_t TilesDestroyed;
 	};
 
 	enum class SuspendType {
@@ -216,9 +216,9 @@ namespace Jazz2
 		static constexpr uint8_t CacheIndexFile = 3;
 		static constexpr uint8_t ConfigFile = 4;
 
-		static constexpr int PaletteCount = 256;
-		static constexpr int ColorsPerPalette = 256;
-		static constexpr int InvalidValue = INT_MAX;
+		static constexpr int32_t PaletteCount = 256;
+		static constexpr int32_t ColorsPerPalette = 256;
+		static constexpr int32_t InvalidValue = INT_MAX;
 
 		~ContentResolver();
 		
