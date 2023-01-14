@@ -20,16 +20,29 @@
 #	include <Environment.h>
 #endif
 
-#if defined(DEATH_TARGET_SSE42) || defined(DEATH_TARGET_AVX)
-#	define RAPIDJSON_SSE42
-#elif defined(DEATH_TARGET_SSE2)
-#	define RAPIDJSON_SSE2
-#elif defined(DEATH_TARGET_NEON)
-#	define RAPIDJSON_NEON
-#endif
-#include "../RapidJson/document.h"
+#include <Containers/StringStlView.h>
 
-using namespace rapidjson;
+#define SIMDJSON_EXCEPTIONS 0
+#include "../simdjson/simdjson.h"
+
+using namespace simdjson;
+
+template<typename T>
+static Vector2i GetVector2iFromJson(simdjson_result<T> value, Vector2i defaultValue = Vector2i::Zero)
+{
+	ondemand::array itemArray;
+	ondemand::array_iterator itemIterator;
+	if (value.get(itemArray) == SUCCESS && itemArray.begin().get(itemIterator) == SUCCESS) {
+		int64_t x, y;
+		bool xf = (*itemIterator).get(x) == SUCCESS;
+		++itemIterator;
+		bool yf = (*itemIterator).get(y) == SUCCESS;
+		if (xf && yf) {
+			return Vector2i((int32_t)x, (int32_t)y);
+		}
+	}
+	return defaultValue;
+}
 
 namespace Jazz2
 {
@@ -114,25 +127,25 @@ namespace Jazz2
 		bool found = false;
 		if (Environment::CurrentDeviceType == DeviceType::Xbox) {
 			// Try to use external drives (D:, E:, F:) on Xbox, "\\?\" path prefix is required on Xbox
-			StringView externalPath = "\\\\?\\D:\\Games\\Jazz² Resurrection\\"_s;
-			_sourcePath = fs::JoinPath(externalPath, "Source\\"_s);
-			if (fs::IsDirectory(_sourcePath)) {
-				found = true;
-			} else {
-				externalPath = "\\\\?\\E:\\Games\\Jazz² Resurrection\\"_s;
-				_sourcePath = fs::JoinPath(externalPath, "Source\\"_s);
+			String PathTemplate1 = "\\\\?\\X:\\Games\\Jazz² Resurrection\\"_s;
+			String PathTemplate2 = "\\\\?\\X:\\Games\\Jazz2 Resurrection\\"_s;
+
+			for (char letter = 'D'; letter <= 'F'; letter++) {
+				PathTemplate1[4] = letter;
+				_sourcePath = fs::JoinPath(PathTemplate1, "Source\\"_s);
 				if (fs::IsDirectory(_sourcePath)) {
+					_cachePath = fs::JoinPath(PathTemplate1, "Cache\\"_s);
 					found = true;
-				} else {
-					externalPath = "\\\\?\\F:\\Games\\Jazz² Resurrection\\"_s;
-					_sourcePath = fs::JoinPath(externalPath, "Source\\"_s);
-					if (fs::IsDirectory(_sourcePath)) {
-						found = true;
-					}
+					break;
 				}
-			}
-			if (found) {
-				_cachePath = fs::JoinPath(externalPath, "Cache\\"_s);
+
+				PathTemplate2[4] = letter;
+				_sourcePath = fs::JoinPath(PathTemplate2, "Source\\"_s);
+				if (fs::IsDirectory(_sourcePath)) {
+					_cachePath = fs::JoinPath(PathTemplate2, "Cache\\"_s);
+					found = true;
+					break;
+				}
 			}
 		}
 
@@ -235,42 +248,29 @@ namespace Jazz2
 			return nullptr;
 		}
 
-		auto buffer = std::make_unique<char[]>(fileSize + 1);
+		auto buffer = std::make_unique<char[]>(fileSize + simdjson::SIMDJSON_PADDING);
 		s->Read(buffer.get(), fileSize);
 		buffer[fileSize] = '\0';
 
 		std::unique_ptr<Metadata> metadata = std::make_unique<Metadata>();
 		metadata->Flags |= MetadataFlags::Referenced;
 
-		Document document;
-		if (!document.ParseInsitu(buffer.get()).HasParseError() && document.IsObject()) {
-			const auto& boundingBoxItem = document.FindMember("BoundingBox");
-			if (boundingBoxItem != document.MemberEnd() && boundingBoxItem->value.IsArray() && boundingBoxItem->value.Size() >= 2) {
-				metadata->BoundingBox = Vector2i(boundingBoxItem->value[0].GetInt(), boundingBoxItem->value[1].GetInt());
-			} else {
-				metadata->BoundingBox = Vector2i(InvalidValue, InvalidValue);
-			}
+		ondemand::parser parser;
+		ondemand::document doc;
+		if (parser.iterate(buffer.get(), fileSize, fileSize + simdjson::SIMDJSON_PADDING).get(doc) == SUCCESS) {
+			metadata->BoundingBox = GetVector2iFromJson(doc["BoundingBox"], Vector2i(InvalidValue, InvalidValue));
 
-			const auto& animations_ = document.FindMember("Animations");
-			if (animations_ != document.MemberEnd() && animations_->value.IsObject()) {
-				auto& animations = animations_->value;
+			ondemand::object animations;
+			if (doc["Animations"].get(animations) == SUCCESS) {
+				size_t count = 0;
+				animations.count_fields().get(count);
+				metadata->Graphics.reserve(count);
 
-				metadata->Graphics.reserve(animations.MemberCount());
-
-				for (auto it2 = animations.MemberBegin(); it2 != animations.MemberEnd(); ++it2) {
-					if (!it2->name.IsString() || !it2->value.IsObject()) {
-						continue;
-					}
-
-					const auto& key = it2->name.GetString();
-					const auto& item = it2->value;
-					const auto& assetPathItem = item.FindMember("Path");
-					if (key[0] == '\0' || assetPathItem == item.MemberEnd() || !assetPathItem->value.IsString()) {
-						continue;
-					}
-
-					const auto& assetPath = assetPathItem->value.GetString();
-					if (assetPath == nullptr || assetPath[0] == '\0') {
+				for (auto it : animations) {
+					std::string_view key, assetPath;
+					ondemand::object value;
+					if (it.unescaped_key().get(key) != SUCCESS || it.value().get(value) != SUCCESS || key.empty() ||
+						value["Path"].get(assetPath) != SUCCESS || assetPath.empty()) {
 						continue;
 					}
 
@@ -279,9 +279,8 @@ namespace Jazz2
 
 					//bool keepIndexed = false;
 
-					const auto& flagsItem = item.FindMember("Flags");
-					if (flagsItem != item.MemberEnd() && flagsItem->value.IsInt()) {
-						int flags = flagsItem->value.GetInt();
+					uint64_t flags;
+					if (value["Flags"].get(flags) == SUCCESS) {
 						if ((flags & 0x01) == 0x01) {
 							graphics.LoopMode = AnimationLoopMode::Once;
 						}
@@ -290,51 +289,46 @@ namespace Jazz2
 						//}
 					}
 
-					uint16_t paletteOffset = 0;
 					// TODO: Implement true indexed sprites
-					const auto& paletteOffsetItem = item.FindMember("PaletteOffset");
-					if (paletteOffsetItem != item.MemberEnd() && paletteOffsetItem->value.IsInt()) {
-						paletteOffset = (uint16_t)paletteOffsetItem->value.GetInt();
+					uint64_t paletteOffset;
+					if (value["PaletteOffset"].get(paletteOffset) != SUCCESS) {
+						paletteOffset = 0;
 					}
 
-					graphics.Base = RequestGraphics(assetPath, paletteOffset);
+					graphics.Base = RequestGraphics(assetPath, (uint16_t)paletteOffset);
 					if (graphics.Base == nullptr) {
 						continue;
 					}
 
-					const auto& frameOffsetItem = item.FindMember("FrameOffset");
-					if (frameOffsetItem != item.MemberEnd() && frameOffsetItem->value.IsInt()) {
-						graphics.FrameOffset = frameOffsetItem->value.GetInt();
-					} else {
-						graphics.FrameOffset = 0;
+					int64_t frameOffset;
+					if (value["FrameOffset"].get(frameOffset) != SUCCESS) {
+						frameOffset = 0;
 					}
+					graphics.FrameOffset = (int32_t)frameOffset;
 
 					graphics.AnimDuration = graphics.Base->AnimDuration;
 					graphics.FrameCount = graphics.Base->FrameCount;
 
-					const auto& frameCountItem = item.FindMember("FrameCount");
-					if (frameCountItem != item.MemberEnd() && frameCountItem->value.IsInt()) {
-						graphics.FrameCount = frameCountItem->value.GetInt();
+					int64_t frameCount;
+					if (value["FrameCount"].get(frameCount) == SUCCESS) {
+						graphics.FrameCount = (int32_t)frameCount;
 					} else {
 						graphics.FrameCount -= graphics.FrameOffset;
 					}
 
 					// TODO: Use AnimDuration instead
-					const auto& frameRateItem = item.FindMember("FrameRate");
-					if (frameRateItem != item.MemberEnd() && frameRateItem->value.IsInt()) {
-						int frameRate = frameRateItem->value.GetInt();
-						graphics.AnimDuration = (frameRate <= 0 ? -1.0f : (1.0f / frameRate) * 5.0f);
+					double frameRate;
+					if (value["FrameRate"].get(frameRate) == SUCCESS) {
+						graphics.AnimDuration = (frameRate <= 0 ? -1.0f : (1.0f / (float)frameRate) * 5.0f);
 					}
 
-					const auto& statesItem = item.FindMember("States");
-					if (statesItem != item.MemberEnd() && statesItem->value.IsArray()) {
-						for (SizeType i = 0; i < statesItem->value.Size(); i++) {
-							const auto& state = statesItem->value[i];
-							if (!state.IsInt()) {
-								continue;
+					ondemand::array states;
+					if (value["States"].get(states) == SUCCESS) {
+						for (auto stateItem : states) {
+							int64_t state;
+							if (stateItem.get(state) == SUCCESS) {
+								graphics.State.push_back((AnimState)state);
 							}
-
-							graphics.State.push_back((AnimState)state.GetInt());
 						}
 					}
 
@@ -348,42 +342,37 @@ namespace Jazz2
 				}
 			}
 
-			const auto& sounds_ = document.FindMember("Sounds");
-			if (sounds_ != document.MemberEnd() && sounds_->value.IsObject()) {
-				auto& sounds = sounds_->value;
+			ondemand::object sounds;
+			if (doc["Sounds"].get(sounds) == SUCCESS) {
+				size_t count = 0;
+				sounds.count_fields().get(count);
+				metadata->Sounds.reserve(count);
 
-				metadata->Sounds.reserve(sounds.MemberCount());
-
-				for (auto it2 = sounds.MemberBegin(); it2 != sounds.MemberEnd(); ++it2) {
-					if (!it2->name.IsString() || !it2->value.IsObject()) {
-						continue;
-					}
-
-					const auto& key = it2->name.GetString();
-					const auto& item = it2->value;
-					const auto& pathsItem = item.FindMember("Paths");
-					if (key[0] == '\0' || pathsItem == item.MemberEnd() || !pathsItem->value.IsArray() || pathsItem->value.Empty()) {
+				for (auto it : sounds) {
+					std::string_view key;
+					ondemand::object value;
+					ondemand::array assetPaths;
+					bool isEmpty;
+					if (it.unescaped_key().get(key) != SUCCESS || it.value().get(value) != SUCCESS || key.empty() ||
+						value["Paths"].get(assetPaths) != SUCCESS || assetPaths.is_empty().get(isEmpty) != SUCCESS || isEmpty) {
 						continue;
 					}
 
 					SoundResource sound;
 
-					for (uint32_t i = 0; i < pathsItem->value.Size(); i++) {
-						const auto& assetPathItem = pathsItem->value[i];
-						const auto& assetPath = assetPathItem.GetString();
-						if (assetPath == nullptr || assetPath[0] == '\0') {
-							continue;
-						}
-
-						auto assetPathNormalized = fs::ToNativeSeparators(assetPath);
-						String fullPath = fs::JoinPath({ GetContentPath(), "Animations"_s, assetPathNormalized });
-						if (!fs::IsReadableFile(fullPath)) {
-							fullPath = fs::JoinPath({ GetCachePath(), "Animations"_s, assetPathNormalized });
+					for (auto assetPathItem : assetPaths) {
+						std::string_view assetPath;
+						if (assetPathItem.get(assetPath) == SUCCESS && !assetPath.empty()) {
+							auto assetPathNormalized = fs::ToNativeSeparators(assetPath);
+							String fullPath = fs::JoinPath({ GetContentPath(), "Animations"_s, assetPathNormalized });
 							if (!fs::IsReadableFile(fullPath)) {
-								continue;
+								fullPath = fs::JoinPath({ GetCachePath(), "Animations"_s, assetPathNormalized });
+								if (!fs::IsReadableFile(fullPath)) {
+									continue;
+								}
 							}
+							sound.Buffers.emplace_back(std::make_unique<AudioBuffer>(fullPath));
 						}
-						sound.Buffers.emplace_back(std::make_unique<AudioBuffer>(fullPath));
 					}
 
 					if (!sound.Buffers.empty()) {
@@ -420,116 +409,96 @@ namespace Jazz2
 			return nullptr;
 		}
 
-		auto buffer = std::make_unique<char[]>(fileSize + 1);
+		auto buffer = std::make_unique<char[]>(fileSize + simdjson::SIMDJSON_PADDING);
 		s->Read(buffer.get(), fileSize);
 		s->Close();
 		buffer[fileSize] = '\0';
 
-		Document document;
-		if (document.ParseInsitu(buffer.get()).HasParseError() || !document.IsObject()) {
-			return nullptr;
-		}
+		ondemand::parser parser;
+		ondemand::document doc;
+		if (parser.iterate(buffer.get(), fileSize, fileSize + simdjson::SIMDJSON_PADDING).get(doc) == SUCCESS) {
+			// Try to load it
+			std::unique_ptr<GenericGraphicResource> graphics = std::make_unique<GenericGraphicResource>();
+			graphics->Flags |= GenericGraphicResourceFlags::Referenced;
 
-		// Try to load it
-		std::unique_ptr<GenericGraphicResource> graphics = std::make_unique<GenericGraphicResource>();
-		graphics->Flags |= GenericGraphicResourceFlags::Referenced;
+			String fullPath = fs::JoinPath({ GetContentPath(), "Animations"_s, pathNormalized });
+			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
+			if (texLoader->hasLoaded()) {
+				auto texFormat = texLoader->texFormat().internalFormat();
+				if (texFormat != GL_RGBA8 && texFormat != GL_RGB8) {
+					return nullptr;
+				}
 
-		String fullPath = fs::JoinPath({ GetContentPath(), "Animations"_s, pathNormalized });
-		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
-		if (texLoader->hasLoaded()) {
-			auto texFormat = texLoader->texFormat().internalFormat();
-			if (texFormat != GL_RGBA8 && texFormat != GL_RGB8) {
-				return nullptr;
-			}
+				int w = texLoader->width();
+				int h = texLoader->height();
+				auto pixels = (uint32_t*)texLoader->pixels();
+				const uint32_t* palette = _palettes + paletteOffset;
+				bool linearSampling = false;
+				bool needsMask = true;
 
-			int w = texLoader->width();
-			int h = texLoader->height();
-			auto pixels = (uint32_t*)texLoader->pixels();
-			const uint32_t* palette = _palettes + paletteOffset;
-			bool linearSampling = false;
-			bool needsMask = true;
-
-			const auto& flagsItem = document.FindMember("Flags");
-			if (flagsItem != document.MemberEnd() && flagsItem->value.IsInt()) {
-				int flags = flagsItem->value.GetInt();
-				// Palette already applied, keep as is
-				if ((flags & 0x01) != 0x01) {
-					palette = nullptr;
-					// TODO: Apply linear sampling only to these images
-					if ((flags & 0x02) == 0x02) {
-						linearSampling = true;
+				uint64_t flags;
+				if (doc["Flags"].get(flags) == SUCCESS) {
+					// Palette already applied, keep as is
+					if ((flags & 0x01) != 0x01) {
+						palette = nullptr;
+						// TODO: Apply linear sampling only to these images
+						if ((flags & 0x02) == 0x02) {
+							linearSampling = true;
+						}
+					}
+					if ((flags & 0x08) == 0x08) {
+						needsMask = false;
 					}
 				}
-				if ((flags & 0x08) == 0x08) {
-					needsMask = false;
-				}
-			}
 
-			if (needsMask) {
-				graphics->Mask = std::make_unique<uint8_t[]>(w * h);
+				if (needsMask) {
+					graphics->Mask = std::make_unique<uint8_t[]>(w * h);
 
-				for (int i = 0; i < w * h; i++) {
-					// Save original alpha value for collision checking
-					graphics->Mask[i] = ((pixels[i] >> 24) & 0xff);
-					if (palette != nullptr) {
+					for (int i = 0; i < w * h; i++) {
+						// Save original alpha value for collision checking
+						graphics->Mask[i] = ((pixels[i] >> 24) & 0xff);
+						if (palette != nullptr) {
+							uint32_t color = palette[pixels[i] & 0xff];
+							pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
+						}
+					}
+				} else if (palette != nullptr) {
+					for (int i = 0; i < w * h; i++) {
 						uint32_t color = palette[pixels[i] & 0xff];
 						pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
 					}
 				}
-			} else if (palette != nullptr) {
-				for (int i = 0; i < w * h; i++) {
-					uint32_t color = palette[pixels[i] & 0xff];
-					pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
+
+				graphics->TextureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, w, h);
+				graphics->TextureDiffuse->loadFromTexels((unsigned char*)pixels, 0, 0, w, h);
+				graphics->TextureDiffuse->setMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
+				graphics->TextureDiffuse->setMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
+
+				// TODO: Use FrameDuration instead
+				double animDuration;
+				if (doc["Duration"].get(animDuration) != SUCCESS) {
+					animDuration = 0.0;
 				}
-			}
+				graphics->AnimDuration = (float)animDuration;
 
-			graphics->TextureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, w, h);
-			graphics->TextureDiffuse->loadFromTexels((unsigned char*)pixels, 0, 0, w, h);
-			graphics->TextureDiffuse->setMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
-			graphics->TextureDiffuse->setMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
+				int64_t frameCount;
+				if (doc["FrameCount"].get(frameCount) != SUCCESS) {
+					frameCount = 0;
+				}
+				graphics->FrameCount = (int32_t)frameCount;
 
-			const auto& frameDimensions = document["FrameSize"].GetArray();
-			const auto& frameConfiguration = document["FrameConfiguration"].GetArray();
-			const auto& frameCount = document["FrameCount"].GetInt();
-
-			// TODO: Use FrameDuration instead
-			const auto& durationItem = document.FindMember("Duration");
-			if (durationItem != document.MemberEnd() && durationItem->value.IsNumber()) {
-				graphics->AnimDuration = durationItem->value.GetFloat();
-			} else {
-				graphics->AnimDuration = 0.0f;
-			}
-
-			graphics->FrameDimensions = Vector2i(frameDimensions[0].GetInt(), frameDimensions[1].GetInt());
-			graphics->FrameConfiguration = Vector2i(frameConfiguration[0].GetInt(), frameConfiguration[1].GetInt());
-			graphics->FrameCount = frameCount;
-
-			const auto& hotspotItem = document.FindMember("Hotspot");
-			if (hotspotItem != document.MemberEnd() && hotspotItem->value.IsArray() && hotspotItem->value.Size() >= 2) {
-				graphics->Hotspot = Vector2i(hotspotItem->value[0].GetInt(), hotspotItem->value[1].GetInt());
-			} else {
-				graphics->Hotspot = Vector2i();
-			}
-
-			const auto& coldspotItem = document.FindMember("Coldspot");
-			if (coldspotItem != document.MemberEnd() && coldspotItem->value.IsArray() && coldspotItem->value.Size() >= 2) {
-				graphics->Coldspot = Vector2i(coldspotItem->value[0].GetInt(), coldspotItem->value[1].GetInt());
-			} else {
-				graphics->Coldspot = Vector2i(InvalidValue, InvalidValue);
-			}
-
-			const auto& gunspotItem = document.FindMember("Gunspot");
-			if (gunspotItem != document.MemberEnd() && gunspotItem->value.IsArray() && gunspotItem->value.Size() >= 2) {
-				graphics->Gunspot = Vector2i(gunspotItem->value[0].GetInt(), gunspotItem->value[1].GetInt());
-			} else {
-				graphics->Gunspot = Vector2i(InvalidValue, InvalidValue);
-			}
+				graphics->FrameDimensions = GetVector2iFromJson(doc["FrameSize"]);
+				graphics->FrameConfiguration = GetVector2iFromJson(doc["FrameConfiguration"]);
+				
+				graphics->Hotspot = GetVector2iFromJson(doc["Hotspot"]);
+				graphics->Coldspot = GetVector2iFromJson(doc["Coldspot"], Vector2i(InvalidValue, InvalidValue));
+				graphics->Gunspot = GetVector2iFromJson(doc["Gunspot"], Vector2i(InvalidValue, InvalidValue));
 
 #if defined(NCINE_DEBUG)
-			MigrateGraphics(pathNormalized);
+				MigrateGraphics(pathNormalized);
 #endif
-
-			return _cachedGraphics.emplace(Pair(String(pathNormalized), paletteOffset), std::move(graphics)).first->second.get();
+				return _cachedGraphics.emplace(Pair(String(pathNormalized), paletteOffset), std::move(graphics)).first->second.get();
+			}
 		}
 
 		return nullptr;
@@ -1229,124 +1198,107 @@ namespace Jazz2
 			return;
 		}
 
-		auto buffer = std::make_unique<char[]>(fileSize + 1);
+
+		auto buffer = std::make_unique<char[]>(fileSize + simdjson::SIMDJSON_PADDING);
 		s->Read(buffer.get(), fileSize);
 		s->Close();
 		buffer[fileSize] = '\0';
 
-		Document document;
-		if (document.ParseInsitu(buffer.get()).HasParseError() || !document.IsObject()) {
-			return;
-		}
-
-		String fullPath = fs::JoinPath({ GetContentPath(), "Animations"_s, path });
-		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
-		if (texLoader->hasLoaded()) {
-			auto texFormat = texLoader->texFormat().internalFormat();
-			if (texFormat != GL_RGBA8 && texFormat != GL_RGB8) {
-				return;
-			}
-
-			int w = texLoader->width();
-			int h = texLoader->height();
-			auto pixels = (uint32_t*)texLoader->pixels();
-			const uint32_t* palette = _palettes;
-			bool needsMask = true;
-
-			const auto& flagsItem = document.FindMember("Flags");
-			if (flagsItem != document.MemberEnd() && flagsItem->value.IsInt()) {
-				int flags = flagsItem->value.GetInt();
-				// Palette already applied, keep as is
-				if ((flags & 0x01) != 0x01) {
-					palette = nullptr;
+		ondemand::parser parser;
+		ondemand::document doc;
+		if (parser.iterate(buffer.get(), fileSize, fileSize + simdjson::SIMDJSON_PADDING).get(doc) == SUCCESS) {
+			String fullPath = fs::JoinPath({ GetContentPath(), "Animations"_s, path });
+			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
+			if (texLoader->hasLoaded()) {
+				auto texFormat = texLoader->texFormat().internalFormat();
+				if (texFormat != GL_RGBA8 && texFormat != GL_RGB8) {
+					return;
 				}
-				if ((flags & 0x08) == 0x08) {
-					needsMask = false;
+
+				int w = texLoader->width();
+				int h = texLoader->height();
+				auto pixels = (uint32_t*)texLoader->pixels();
+				const uint32_t* palette = _palettes;
+				bool needsMask = true;
+
+				uint64_t originalFlags;
+				if (doc["Flags"].get(originalFlags) == SUCCESS) {
+					// Palette already applied, keep as is
+					if ((originalFlags & 0x01) != 0x01) {
+						palette = nullptr;
+					}
+					if ((originalFlags & 0x08) == 0x08) {
+						needsMask = false;
+					}
 				}
+
+				// TODO: Use FrameDuration instead
+				double animDuration;
+				if (doc["Duration"].get(animDuration) != SUCCESS) {
+					animDuration = 0.0;
+				}
+
+				uint64_t frameCount;
+				if (doc["FrameCount"].get(frameCount) != SUCCESS) {
+					frameCount = 0;
+				}
+
+				Vector2i frameDimensions = GetVector2iFromJson(doc["FrameSize"]);
+				Vector2i frameConfiguration = GetVector2iFromJson(doc["FrameConfiguration"]);
+
+				Vector2i hotspot = GetVector2iFromJson(doc["Hotspot"]);
+				Vector2i coldspot = GetVector2iFromJson(doc["Coldspot"], Vector2i(InvalidValue, InvalidValue));
+				Vector2i gunspot = GetVector2iFromJson(doc["Gunspot"], Vector2i(InvalidValue, InvalidValue));
+
+				// Write to .aura file
+				auto so = fs::Open(auraPath, FileAccessMode::Write);
+				ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
+
+				uint8_t flags = 0x80;
+				if (palette == nullptr) {
+					flags |= 0x01;
+				}
+				if (!needsMask) {
+					flags |= 0x02;
+				}
+
+				so->WriteValue<uint64_t>(0xB8EF8498E2BFBBEF);
+				so->WriteValue<uint32_t>(0x0002208F | (flags << 24)); // Version 2 is reserved for sprites (or bigger images)
+
+				so->WriteValue<uint8_t>(4);
+				so->WriteValue<uint32_t>((uint32_t)frameDimensions.X);
+				so->WriteValue<uint32_t>((uint32_t)frameDimensions.Y);
+
+				// Include Sprite extension
+				so->WriteValue<uint8_t>((uint8_t)frameConfiguration.X);
+				so->WriteValue<uint8_t>((uint8_t)frameConfiguration.Y);
+				so->WriteValue<uint16_t>((uint16_t)frameCount);
+				so->WriteValue<uint16_t>((uint16_t)(animDuration <= 0.0 ? 0 : 256 * animDuration));
+
+				if (hotspot.X != InvalidValue || hotspot.Y != InvalidValue) {
+					so->WriteValue<uint16_t>((uint16_t)hotspot.X);
+					so->WriteValue<uint16_t>((uint16_t)hotspot.Y);
+				} else {
+					so->WriteValue<uint16_t>(UINT16_MAX);
+					so->WriteValue<uint16_t>(UINT16_MAX);
+				}
+				if (coldspot.X != InvalidValue || coldspot.Y != InvalidValue) {
+					so->WriteValue<uint16_t>((uint16_t)coldspot.X);
+					so->WriteValue<uint16_t>((uint16_t)coldspot.Y);
+				} else {
+					so->WriteValue<uint16_t>(UINT16_MAX);
+					so->WriteValue<uint16_t>(UINT16_MAX);
+				}
+				if (gunspot.X != InvalidValue || gunspot.Y != InvalidValue) {
+					so->WriteValue<uint16_t>((uint16_t)gunspot.X);
+					so->WriteValue<uint16_t>((uint16_t)gunspot.Y);
+				} else {
+					so->WriteValue<uint16_t>(UINT16_MAX);
+					so->WriteValue<uint16_t>(UINT16_MAX);
+				}
+
+				Compatibility::JJ2Anims::WriteImageToFileInternal(so, texLoader->pixels(), w, h, 4);
 			}
-
-			const auto& frameDimensions = document["FrameSize"].GetArray();
-			const auto& frameConfiguration = document["FrameConfiguration"].GetArray();
-			const auto& frameCount = document["FrameCount"].GetInt();
-
-			float animDuration;
-			const auto& durationItem = document.FindMember("Duration");
-			if (durationItem != document.MemberEnd() && durationItem->value.IsNumber()) {
-				animDuration = durationItem->value.GetFloat();
-			} else {
-				animDuration = 0.0f;
-			}
-
-			Vector2i hotspot, coldspot, gunspot;
-			const auto& hotspotItem = document.FindMember("Hotspot");
-			if (hotspotItem != document.MemberEnd() && hotspotItem->value.IsArray() && hotspotItem->value.Size() >= 2) {
-				hotspot = Vector2i(hotspotItem->value[0].GetInt(), hotspotItem->value[1].GetInt());
-			} else {
-				hotspot = Vector2i();
-			}
-
-			const auto& coldspotItem = document.FindMember("Coldspot");
-			if (coldspotItem != document.MemberEnd() && coldspotItem->value.IsArray() && coldspotItem->value.Size() >= 2) {
-				coldspot = Vector2i(coldspotItem->value[0].GetInt(), coldspotItem->value[1].GetInt());
-			} else {
-				coldspot = Vector2i(InvalidValue, InvalidValue);
-			}
-
-			const auto& gunspotItem = document.FindMember("Gunspot");
-			if (gunspotItem != document.MemberEnd() && gunspotItem->value.IsArray() && gunspotItem->value.Size() >= 2) {
-				gunspot = Vector2i(gunspotItem->value[0].GetInt(), gunspotItem->value[1].GetInt());
-			} else {
-				gunspot = Vector2i(InvalidValue, InvalidValue);
-			}
-
-			// Write to .aura file
-			auto so = fs::Open(auraPath, FileAccessMode::Write);
-			ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
-
-			uint8_t flags = 0x80;
-			if (palette == nullptr) {
-				flags |= 0x01;
-			}
-			if (!needsMask) {
-				flags |= 0x02;
-			}
-
-			so->WriteValue<uint64_t>(0xB8EF8498E2BFBBEF);
-			so->WriteValue<uint32_t>(0x0002208F | (flags << 24)); // Version 2 is reserved for sprites (or bigger images)
-
-			so->WriteValue<uint8_t>(4);
-			so->WriteValue<uint32_t>((uint32_t)frameDimensions[0].GetInt());
-			so->WriteValue<uint32_t>((uint32_t)frameDimensions[1].GetInt());
-
-			// Include Sprite extension
-			so->WriteValue<uint8_t>((uint8_t)frameConfiguration[0].GetInt());
-			so->WriteValue<uint8_t>((uint8_t)frameConfiguration[1].GetInt());
-			so->WriteValue<uint16_t>(frameCount);
-			so->WriteValue<uint16_t>((uint16_t)(animDuration <= 0.0f ? 0 : 256 * animDuration));
-
-			if (hotspot.X != InvalidValue || hotspot.Y != InvalidValue) {
-				so->WriteValue<uint16_t>((uint16_t)hotspot.X);
-				so->WriteValue<uint16_t>((uint16_t)hotspot.Y);
-			} else {
-				so->WriteValue<uint16_t>(UINT16_MAX);
-				so->WriteValue<uint16_t>(UINT16_MAX);
-			}
-			if (coldspot.X != InvalidValue || coldspot.Y != InvalidValue) {
-				so->WriteValue<uint16_t>((uint16_t)coldspot.X);
-				so->WriteValue<uint16_t>((uint16_t)coldspot.Y);
-			} else {
-				so->WriteValue<uint16_t>(UINT16_MAX);
-				so->WriteValue<uint16_t>(UINT16_MAX);
-			}
-			if (gunspot.X != InvalidValue || gunspot.Y != InvalidValue) {
-				so->WriteValue<uint16_t>((uint16_t)gunspot.X);
-				so->WriteValue<uint16_t>((uint16_t)gunspot.Y);
-			} else {
-				so->WriteValue<uint16_t>(UINT16_MAX);
-				so->WriteValue<uint16_t>(UINT16_MAX);
-			}
-
-			Compatibility::JJ2Anims::WriteImageToFileInternal(so, texLoader->pixels(), w, h, 4);
 		}
 	}
 #endif

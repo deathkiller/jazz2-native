@@ -230,8 +230,17 @@ namespace Jazz2::UI::Menu
 				float x = event.pointers[pointerIndex].x;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 
+				bool isPlayable = true;
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+				if (auto mainMenu = dynamic_cast<MainMenu*>(_root)) {
+					IRootController::Flags flags = mainMenu->_root->GetFlags();
+					isPlayable = ((flags & IRootController::Flags::IsPlayable) == IRootController::Flags::IsPlayable);
+				}
+#endif
+
 				for (int i = 0; i < (int)Item::Count; i++) {
-					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].Y) < 22.0f) {
+					float itemHeight = (!isPlayable && i == 0 ? 40.0f : 22.0f);
+					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].Y) < itemHeight) {
 						if (_selectedIndex == i) {
 							ExecuteSelected();
 						} else {

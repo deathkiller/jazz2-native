@@ -18,7 +18,14 @@
 namespace Jazz2::Scripting
 {
 	static void Unimplemented(const char* sourceName) {
-		LOGE_X("%s", sourceName);
+		auto ctx = asGetActiveContext();
+		if (ctx != nullptr) {
+			const char* sectionName;
+			int lineNumber = ctx->GetLineNumber(0, nullptr, &sectionName);
+			LOGW_X("%s (called from \"%s:%i\")", sourceName, sectionName, lineNumber);
+		} else {
+			LOGW_X("%s", sourceName);
+		}
 	}
 
 #ifdef __GNUC__
@@ -205,6 +212,8 @@ namespace Jazz2::Scripting
 	};
 
 	enum object {
+		aUNKNOWN,
+
 		aPLAYERBULLET1,
 		aPLAYERBULLET2,
 		aPLAYERBULLET3,
@@ -480,7 +489,9 @@ namespace Jazz2::Scripting
 		aTEXT,
 		aWATERLEVEL,
 		aMORPHFROG,
-		aWATERBLOCK
+		aWATERBLOCK,
+
+		aCOUNT
 	};
 
 	enum particle {
@@ -1231,47 +1242,6 @@ namespace Jazz2::Scripting
 		}
 	};
 
-	struct TgameCanvas {
-
-		void DrawPixel(int32_t xPixel, int32_t yPixel, uint8_t color, uint32_t mode, uint8_t param) {
-			noop();
-		}
-		void DrawRectangle(int32_t xPixel, int32_t yPixel, int32_t width, int32_t height, uint8_t color, uint32_t mode, uint8_t param) {
-			noop();
-		}
-		void DrawSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, int8_t direction, uint32_t mode, uint8_t param) {
-			noop();
-		}
-		void DrawCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, int8_t direction, uint32_t mode, uint8_t param) {
-			noop();
-		}
-		void DrawResizedSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, float xScale, float yScale, uint32_t mode, uint8_t param) {
-			noop();
-		}
-		void DrawResizedCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, float xScale, float yScale, uint32_t mode, uint8_t param) {
-			noop();
-		}
-		void DrawTransformedSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, int32_t angle, float xScale, float yScale, uint32_t mode, uint8_t param) {
-			noop();
-		}
-		void DrawTransformedCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, int32_t angle, float xScale, float yScale, uint32_t mode, uint8_t param) {
-			noop();
-		}
-		void DrawSwingingVine(int32_t xPixel, int32_t yPixel, uint32_t sprite, int32_t length, int32_t curvature, uint32_t mode, uint8_t param) {
-			noop();
-		}
-
-		void ExternalDrawTile(int32_t xPixel, int32_t yPixel, uint16_t tile, uint32_t tileQuadrant) {
-			noop();
-		}
-		void DrawTextBasicSize(int32_t xPixel, int32_t yPixel, const String& text, uint32_t size, uint32_t mode, uint8_t param) {
-			noop();
-		}
-		void DrawTextExtSize(int32_t xPixel, int32_t yPixel, const String& text, uint32_t size, const jjTEXTAPPEARANCE& appearance, uint8_t param1, uint32_t mode, uint8_t param) {
-			noop();
-		}
-	};
-
 	struct jjPALCOLOR {
 		uint8_t red;
 		uint8_t green;
@@ -1607,12 +1577,53 @@ namespace Jazz2::Scripting
 			noop();
 			return new(self) jjBEHAVIOR();
 		}
-		static jjBEHAVIOR* CreateCopy(jjBEHAVIOR* other, jjBEHAVIOR* self) {
+		static jjBEHAVIOR* CreateFromBehavior(uint32_t behavior, jjBEHAVIOR* self) {
 			noop();
 			return new(self) jjBEHAVIOR();
 		}
 		static void Destroy(jjBEHAVIOR* self) {
 			noop();
+		}
+
+		jjBEHAVIOR& operator=(const jjBEHAVIOR& other) {
+			noop();
+			return *this;
+		}
+		jjBEHAVIOR& operator=(uint32_t other) {
+			noop();
+			return *this;
+		}
+		jjBEHAVIOR& operator=(asIScriptFunction* other) {
+			noop();
+			return *this;
+		}
+		jjBEHAVIOR& operator=(asIScriptObject* other) {
+			noop();
+			return *this;
+		}
+		bool operator==(const jjBEHAVIOR& other) const {
+			noop();
+			return false;
+		}
+		bool operator==(uint32_t other) const {
+			noop();
+			return false;
+		}
+		bool operator==(const asIScriptFunction* other) const {
+			noop();
+			return false;
+		}
+		operator uint32_t() {
+			noop();
+			return 0;
+		}
+		operator asIScriptFunction* () {
+			noop();
+			return nullptr;
+		}
+		operator asIScriptObject* () {
+			noop();
+			return nullptr;
 		}
 	};
 
@@ -1661,6 +1672,19 @@ namespace Jazz2::Scripting
 		int16_t width;
 		int16_t height;
 
+		bool get_transparent() const {
+			noop();
+			return false;
+		}
+		bool set_transparent(bool value) const {
+			noop();
+			return false;
+		}
+		bool doesCollide(int32_t xPos, int32_t yPos, int32_t direction, const jjANIMFRAME* frame2, int32_t xPos2, int32_t yPos2, int32_t direction2, bool always) const {
+			noop();
+			return false;
+		}
+
 	private:
 		int _refCount;
 	};
@@ -1696,9 +1720,23 @@ namespace Jazz2::Scripting
 			return *this;
 		}
 
+		bool save(const String& filename, const jjPAL& palette) const {
+			noop();
+			return false;
+		}
+		bool load(const String& filename, int32_t hotSpotX, int32_t hotSpotY, int32_t coldSpotYOffset, int32_t firstFrameToOverwrite) {
+			noop();
+			return false;
+		}
+
 		static jjANIMATION* get_jjAnimations(uint32_t index) {
 			noop();
-			return nullptr;
+
+			auto ctx = asGetActiveContext();
+			auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+
+			void* mem = asAllocMem(sizeof(jjANIMATION));
+			return new(mem) jjANIMATION(index);
 		}
 
 		uint16_t frameCount;
@@ -1748,7 +1786,12 @@ namespace Jazz2::Scripting
 
 		static jjANIMSET* get_jjAnimSets(uint32_t index) {
 			noop();
-			return nullptr;
+
+			auto ctx = asGetActiveContext();
+			auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+
+			void* mem = asAllocMem(sizeof(jjANIMSET));
+			return new(mem) jjANIMSET(index);
 		}
 
 		uint32_t convertAnimSetToUint() {
@@ -1756,9 +1799,80 @@ namespace Jazz2::Scripting
 			return _index;
 		}
 
+		jjANIMSET* load(uint32_t fileSetID, const String& filename, int32_t firstAnimToOverwrite, int32_t firstFrameToOverwrite) {
+			noop();
+			return this;
+		}
+		jjANIMSET* allocate(const CScriptArray& frameCounts) {
+			noop();
+			return this;
+		}
+
 	private:
 		int _refCount;
 		uint32_t _index;
+	};
+
+	struct jjCANVAS {
+
+		void DrawPixel(int32_t xPixel, int32_t yPixel, uint8_t color, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawRectangle(int32_t xPixel, int32_t yPixel, int32_t width, int32_t height, uint8_t color, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, int8_t direction, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, int8_t direction, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawResizedSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, float xScale, float yScale, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawResizedCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, float xScale, float yScale, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawTransformedSprite(int32_t xPixel, int32_t yPixel, int32_t setID, uint8_t animation, uint8_t frame, int32_t angle, float xScale, float yScale, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawTransformedCurFrameSprite(int32_t xPixel, int32_t yPixel, uint32_t sprite, int32_t angle, float xScale, float yScale, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawSwingingVine(int32_t xPixel, int32_t yPixel, uint32_t sprite, int32_t length, int32_t curvature, uint32_t mode, uint8_t param) {
+			noop();
+		}
+
+		void ExternalDrawTile(int32_t xPixel, int32_t yPixel, uint16_t tile, uint32_t tileQuadrant) {
+			noop();
+		}
+		void DrawTextBasicSize(int32_t xPixel, int32_t yPixel, const String& text, uint32_t size, uint32_t mode, uint8_t param) {
+			noop();
+		}
+		void DrawTextExtSize(int32_t xPixel, int32_t yPixel, const String& text, uint32_t size, const jjTEXTAPPEARANCE& appearance, uint8_t param1, uint32_t mode, uint8_t param) {
+			noop();
+		}
+
+		void drawString(int32_t xPixel, int32_t yPixel, const String& text, const jjANIMATION& animation, uint32_t mode, uint8_t param) {
+			noop();
+		}
+
+		void drawStringEx(int32_t xPixel, int32_t yPixel, const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& appearance, uint8_t param1, uint32_t spriteMode, uint8_t param2) {
+			noop();
+		}
+
+		static void jjDrawString(float xPixel, float yPixel, const String& text, const jjANIMATION& animation, uint32_t mode, uint8_t param, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+			noop();
+		}
+
+		static void jjDrawStringEx(float xPixel, float yPixel, const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& appearance, uint8_t param1, uint32_t spriteMode, uint8_t param2, int8_t layerZ, uint8_t layerXY, int8_t playerID) {
+			noop();
+		}
+
+		static int jjGetStringWidth(const String& text, const jjANIMATION& animation, const jjTEXTAPPEARANCE& style) {
+			noop();
+			return 0;
+		}
 	};
 
 	class jjOBJ;
@@ -1829,6 +1943,13 @@ namespace Jazz2::Scripting
 		static int32_t jjAddObjectEx(uint8_t eventID, float xPixel, float yPixel, uint16_t creatorID, uint32_t creatorType, jjVOIDFUNCOBJ behavior) {
 			noop();
 			return 0;
+		}
+
+		static void jjDeleteObject(int32_t objectID) {
+			noop();
+		}
+		static void jjKillObject(int32_t objectID) {
+			noop();
 		}
 
 		float xOrg;
@@ -2499,6 +2620,72 @@ namespace Jazz2::Scripting
 			return 0;
 		}
 
+		int32_t fireBulletDirection(uint8_t gun, bool depleteAmmo, bool requireAmmo, uint32_t direction) {
+			noop();
+			return 0;
+		}
+		int32_t fireBulletAngle(uint8_t gun, bool depleteAmmo, bool requireAmmo, float angle) {
+			noop();
+			return 0;
+		}
+
+		int32_t subscreenX;
+		int32_t subscreenY;
+
+		float get_cameraX() const {
+			noop();
+			return 0.0f;
+		}
+		float get_cameraY() const {
+			noop();
+			return 0.0f;
+		}
+		int32_t get_deaths() const {
+			noop();
+			return 0;
+		}
+
+		bool get_isJailed() const {
+			noop();
+			return false;
+		}
+		bool get_isZombie() const {
+			noop();
+			return false;
+		}
+		int32_t get_lrsLives() const {
+			noop();
+			return 0;
+		}
+		int32_t get_roasts() const {
+			noop();
+			return 0;
+		}
+		int32_t get_laps() const {
+			noop();
+			return 0;
+		}
+		int32_t get_lapTimeCurrent() const {
+			noop();
+			return 0;
+		}
+		int32_t get_lapTimes(uint32_t index) const {
+			noop();
+			return 0;
+		}
+		int32_t get_lapTimeBest() const {
+			noop();
+			return 0;
+		}
+		bool get_isAdmin() const {
+			noop();
+			return false;
+		}
+		bool hasPrivilege(const String& privilege, uint32_t moduleID) const {
+			noop();
+			return false;
+		}
+
 		bool doesCollide(const jjOBJ* object, bool always) const {
 			noop();
 			return false;
@@ -2860,6 +3047,36 @@ namespace Jazz2::Scripting
 			return 0;
 		}
 
+		int32_t rotationAngle;
+		int32_t rotationRadiusMultiplier;
+		bool tileHeight;
+		bool tileWidth;
+		bool limitVisibleRegion;
+		bool hasTileMap;
+		bool hasTiles;
+
+		static CScriptArray* jjLayerOrderGet() {
+			noop();
+			auto ctx = asGetActiveContext();
+
+			auto engine = ctx->GetEngine();
+			return CScriptArray::Create(engine->GetTypeInfoByDecl("array<jjLAYER@>"), 16);
+		}
+		static bool jjLayerOrderSet(const CScriptArray& order) {
+			noop();
+			return false;
+		}
+		static CScriptArray* jjLayersFromLevel(const String& filename, const CScriptArray& layerIDs, int32_t tileIDAdjustmentFactor) {
+			noop();
+			auto ctx = asGetActiveContext();
+			auto engine = ctx->GetEngine();
+			return CScriptArray::Create(engine->GetTypeInfoByDecl("array<jjLAYER@>"), 16);
+		}
+		static bool jjTilesFromTileset(const String& filename, uint32_t firstTileID, uint32_t tileCount, const CScriptArray* paletteColorMapping) {
+			noop();
+			return false;
+		}
+
 	private:
 		int _refCount;
 	};
@@ -2927,6 +3144,8 @@ namespace Jazz2::Scripting
 	}
 
 	bool isServer = false;
+
+	bool jjDeactivatingBecauseOfDeath = false;
 
 	int32_t GetDifficulty() {
 		noop(); return 0;
@@ -3339,6 +3558,59 @@ namespace Jazz2::Scripting
 
 	// TODO
 
+	uint16_t jjGetStaticTile(uint16_t tileID) {
+		noop();
+		return 0;
+	}
+	uint16_t jjTileGet(uint8_t layer, int32_t xTile, int32_t yTile) {
+		noop();
+		return 0;
+	}
+	uint16_t jjTileSet(uint8_t layer, int32_t xTile, int32_t yTile, uint16_t newTile) {
+		noop();
+		return 0;
+	}
+	void jjGenerateSettableTileArea(uint8_t layer, int32_t xTile, int32_t yTile, int32_t width, int32_t height) {
+		noop();
+	}
+
+	// TODO
+	
+	bool jjMaskedPixel(int32_t xPixel, int32_t yPixel) {
+		noop();
+		return false;
+	}
+	bool jjMaskedPixelLayer(int32_t xPixel, int32_t yPixel, uint8_t layer) {
+		noop();
+		return false;
+	}
+	bool jjMaskedHLine(int32_t xPixel, int32_t lineLength, int32_t yPixel) {
+		noop();
+		return false;
+	}
+	bool jjMaskedHLineLayer(int32_t xPixel, int32_t lineLength, int32_t yPixel, uint8_t layer) {
+		noop();
+		return false;
+	}
+	bool jjMaskedVLine(int32_t xPixel, int32_t yPixel, int32_t lineLength) {
+		noop();
+		return false;
+	}
+	bool jjMaskedVLineLayer(int32_t xPixel, int32_t yPixel, int32_t lineLength, uint8_t layer) {
+		noop();
+		return false;
+	}
+	bool jjMaskedTopVLine(int32_t xPixel, int32_t yPixel, int32_t lineLength) {
+		noop();
+		return false;
+	}
+	bool jjMaskedTopVLineLayer(int32_t xPixel, int32_t yPixel, int32_t lineLength, uint8_t layer) {
+		noop();
+		return false;
+	}
+
+	// TODO
+
 	void jjSetModPosition(int32_t order, int32_t row, bool reset) {
 		noop();
 	}
@@ -3366,6 +3638,11 @@ namespace Jazz2::Scripting
 	}
 	void jjSetModSpeed(uint8_t speed) {
 		noop();
+	}
+
+	uint32_t getCustomSetID(uint8_t index) {
+		noop();
+		return 0;
 	}
 
 	// Without namespace for shorter log messages
@@ -3470,7 +3747,7 @@ namespace Jazz2::Scripting
 			ctx->Prepare(onLevelLoad);
 			r = ctx->Execute();
 			if (r == asEXECUTION_EXCEPTION) {
-				LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+				OnException(ctx);
 			}
 
 			_engine->ReturnContext(ctx);
@@ -3520,7 +3797,7 @@ namespace Jazz2::Scripting
 		ctx->Prepare(func);
 		int r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			OnException(ctx);
 		}
 
 		_engine->ReturnContext(ctx);
@@ -3540,13 +3817,14 @@ namespace Jazz2::Scripting
 				// Legacy context requires fixed frame count per second
 				asIScriptContext* ctx = _engine->RequestContext();
 
-				int32_t currentFrame = (int32_t)_levelHandler->_elapsedFrames;
+				// It should update at 70 FPS instead of 60 FPS
+				int32_t currentFrame = (int32_t)(_levelHandler->_elapsedFrames * (70.0f / 60.0f));
 				while (_onLevelUpdateLastFrame <= currentFrame) {
 					if (_onLevelUpdate != nullptr) {
 						ctx->Prepare(_onLevelUpdate);
 						int r = ctx->Execute();
 						if (r == asEXECUTION_EXCEPTION) {
-							LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+							OnException(ctx);
 							// Don't call the method again if an exception occurs
 							_onLevelUpdate = nullptr;
 						}
@@ -3561,7 +3839,7 @@ namespace Jazz2::Scripting
 
 							int r = ctx->Execute();
 							if (r == asEXECUTION_EXCEPTION) {
-								LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+								OnException(ctx);
 								// Don't call the method again if an exception occurs
 								//_onLevelUpdate = nullptr;
 							}
@@ -3722,10 +4000,6 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::RegisterLegacyFunctions(asIScriptEngine* engine)
 	{
-		// Create fake MLLE namespace, because "MLLE-Include-xxx.asc" includes are blocked
-		engine->SetDefaultNamespace("MLLE");
-		engine->RegisterGlobalFunction("bool Setup()", asFUNCTION(mlleSetup), asCALL_CDECL);
-
 		// JJ2+ Declarations (provided by JJ2+ team)
 		engine->SetDefaultNamespace("");
 		engine->RegisterGlobalFunction("float jjSin(uint angle)", asFUNCTION(get_sinTable), asCALL_CDECL);
@@ -4086,27 +4360,26 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Dir", "CURRENT", dirCURRENT);
 		engine->SetDefaultNamespace("");
 
-		// TODO
-		/*engine->RegisterObjectMethod("jjPLAYER", "int fireBullet(uint8 gun = 0, bool depleteAmmo = true, bool requireAmmo = true, DIRECTION::Dir direction = DIRECTION::CURRENT)", asFUNCTION(fireBulletDirection), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectMethod("jjPLAYER", "int fireBullet(uint8 gun, bool depleteAmmo, bool requireAmmo, float angle)", asFUNCTION(fireBulletAngle), asCALL_CDECL_OBJFIRST);
+		engine->RegisterObjectMethod("jjPLAYER", "int fireBullet(uint8 gun = 0, bool depleteAmmo = true, bool requireAmmo = true, DIRECTION::Dir direction = DIRECTION::CURRENT)", asMETHOD(jjPLAYER, fireBulletDirection), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int fireBullet(uint8 gun, bool depleteAmmo, bool requireAmmo, float angle)", asMETHOD(jjPLAYER, fireBulletAngle), asCALL_THISCALL);
 
-		engine->RegisterObjectProperty("jjPLAYER", "const int subscreenX", asOFFSET(jjPLAYER, xOrgWin));
-		engine->RegisterObjectProperty("jjPLAYER", "const int subscreenY", asOFFSET(jjPLAYER, yOrgWin));
-		engine->RegisterObjectMethod("jjPLAYER", "float get_cameraX() const", AS_OBJ_FLOAT_GETTER(jjPLAYER, viewStartX), asCALL_CDECL_OBJLAST);
-		engine->RegisterObjectMethod("jjPLAYER", "float get_cameraY() const", AS_OBJ_FLOAT_GETTER(jjPLAYER, viewStartY), asCALL_CDECL_OBJLAST);
+		engine->RegisterObjectProperty("jjPLAYER", "const int subscreenX", asOFFSET(jjPLAYER, subscreenX));
+		engine->RegisterObjectProperty("jjPLAYER", "const int subscreenY", asOFFSET(jjPLAYER, subscreenY));
+		engine->RegisterObjectMethod("jjPLAYER", "float get_cameraX() const", asMETHOD(jjPLAYER, get_cameraX), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "float get_cameraY() const", asMETHOD(jjPLAYER, get_cameraY), asCALL_THISCALL);
 
-		engine->RegisterObjectMethod("jjPLAYER", "int get_deaths() const", asFUNCTION(get_deaths), asCALL_CDECL_OBJLAST);
-		engine->RegisterObjectMethod("jjPLAYER", "bool get_isJailed() const", asFUNCTION(get_isJailed), asCALL_CDECL_OBJLAST);
-		engine->RegisterObjectMethod("jjPLAYER", "bool get_isZombie() const", asFUNCTION(get_isZombie), asCALL_CDECL_OBJLAST);
-		engine->RegisterObjectMethod("jjPLAYER", "int get_lrsLives() const", asFUNCTION(get_lrsLives), asCALL_CDECL_OBJLAST);
-		engine->RegisterObjectMethod("jjPLAYER", "int get_roasts() const", asFUNCTION(get_roasts), asCALL_CDECL_OBJLAST);
-		engine->RegisterObjectMethod("jjPLAYER", "int get_laps() const", asFUNCTION(get_laps), asCALL_CDECL_OBJLAST);
-		engine->RegisterObjectMethod("jjPLAYER", "int get_lapTimeCurrent() const", asFUNCTION(get_lapTime), asCALL_CDECL_OBJLAST);
-		engine->RegisterObjectMethod("jjPLAYER", "int get_lapTimes(uint) const", asFUNCTION(get_lapTimes), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectMethod("jjPLAYER", "int get_lapTimeBest() const", asFUNCTION(get_lapTimeBest), asCALL_CDECL_OBJLAST);
+		engine->RegisterObjectMethod("jjPLAYER", "int get_deaths() const", asMETHOD(jjPLAYER, get_deaths), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool get_isJailed() const", asMETHOD(jjPLAYER, get_isJailed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool get_isZombie() const", asMETHOD(jjPLAYER, get_isZombie), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int get_lrsLives() const", asMETHOD(jjPLAYER, get_lrsLives), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int get_roasts() const", asMETHOD(jjPLAYER, get_roasts), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int get_laps() const", asMETHOD(jjPLAYER, get_laps), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int get_lapTimeCurrent() const", asMETHOD(jjPLAYER, get_lapTimeCurrent), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int get_lapTimes(uint) const", asMETHOD(jjPLAYER, get_lapTimes), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "int get_lapTimeBest() const", asMETHOD(jjPLAYER, get_lapTimeBest), asCALL_THISCALL);
 
-		engine->RegisterObjectMethod("jjPLAYER", "bool get_isAdmin() const", asFUNCTION(get_isAdmin), asCALL_CDECL_OBJLAST);
-		engine->RegisterObjectMethod("jjPLAYER", "bool hasPrivilege(const string &in privilege, uint moduleID = ::jjScriptModuleID) const", asFUNCTION(playerHasPrivilege), asCALL_CDECL_OBJLAST);*/
+		engine->RegisterObjectMethod("jjPLAYER", "bool get_isAdmin() const", asMETHOD(jjPLAYER, get_isAdmin), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "bool hasPrivilege(const string &in privilege, uint moduleID = ::jjScriptModuleID) const", asMETHOD(jjPLAYER, hasPrivilege), asCALL_THISCALL);
 
 		engine->RegisterGlobalProperty("const bool jjLowDetail", &parLowDetail);
 		engine->RegisterGlobalProperty("const int jjColorDepth", &colorDepth);
@@ -4321,20 +4594,20 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::SignTreatment tilde", asOFFSET(jjTEXTAPPEARANCE, tilde));
 		engine->RegisterObjectProperty("jjTEXTAPPEARANCE", "STRING::Alignment align", asOFFSET(jjTEXTAPPEARANCE, align));
 
-		engine->RegisterObjectType("jjCANVAS", sizeof(TgameCanvas), asOBJ_REF | asOBJ_NOCOUNT);
-		engine->RegisterObjectMethod("jjCANVAS", "void drawPixel(int xPixel, int yPixel, uint8 color, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(TgameCanvas, DrawPixel), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjCANVAS", "void drawRectangle(int xPixel, int yPixel, int width, int height, uint8 color, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(TgameCanvas, DrawRectangle), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjCANVAS", "void drawSprite(int xPixel, int yPixel, int setID, uint8 animation, uint8 frame, int8 direction = 0, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(TgameCanvas, DrawSprite), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjCANVAS", "void drawSpriteFromCurFrame(int xPixel, int yPixel, uint sprite, int8 direction = 0, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(TgameCanvas, DrawCurFrameSprite), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjCANVAS", "void drawResizedSprite(int xPixel, int yPixel, int setID, uint8 animation, uint8 frame, float xScale, float yScale, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(TgameCanvas, DrawResizedSprite), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjCANVAS", "void drawResizedSpriteFromCurFrame(int xPixel, int yPixel, uint sprite, float xScale, float yScale, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(TgameCanvas, DrawResizedCurFrameSprite), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjCANVAS", "void drawRotatedSprite(int xPixel, int yPixel, int setID, uint8 animation, uint8 frame, int angle, float xScale = 1, float yScale = 1, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(TgameCanvas, DrawTransformedSprite), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjCANVAS", "void drawRotatedSpriteFromCurFrame(int xPixel, int yPixel, uint sprite, int angle, float xScale = 1, float yScale = 1, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(TgameCanvas, DrawTransformedCurFrameSprite), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjCANVAS", "void drawSwingingVineSpriteFromCurFrame(int xPixel, int yPixel, uint sprite, int length, int curvature, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(TgameCanvas, DrawSwingingVine), asCALL_THISCALL);
+		engine->RegisterObjectType("jjCANVAS", sizeof(jjCANVAS), asOBJ_REF | asOBJ_NOCOUNT);
+		engine->RegisterObjectMethod("jjCANVAS", "void drawPixel(int xPixel, int yPixel, uint8 color, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(jjCANVAS, DrawPixel), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjCANVAS", "void drawRectangle(int xPixel, int yPixel, int width, int height, uint8 color, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(jjCANVAS, DrawRectangle), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjCANVAS", "void drawSprite(int xPixel, int yPixel, int setID, uint8 animation, uint8 frame, int8 direction = 0, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(jjCANVAS, DrawSprite), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjCANVAS", "void drawSpriteFromCurFrame(int xPixel, int yPixel, uint sprite, int8 direction = 0, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(jjCANVAS, DrawCurFrameSprite), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjCANVAS", "void drawResizedSprite(int xPixel, int yPixel, int setID, uint8 animation, uint8 frame, float xScale, float yScale, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(jjCANVAS, DrawResizedSprite), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjCANVAS", "void drawResizedSpriteFromCurFrame(int xPixel, int yPixel, uint sprite, float xScale, float yScale, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(jjCANVAS, DrawResizedCurFrameSprite), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjCANVAS", "void drawRotatedSprite(int xPixel, int yPixel, int setID, uint8 animation, uint8 frame, int angle, float xScale = 1, float yScale = 1, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(jjCANVAS, DrawTransformedSprite), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjCANVAS", "void drawRotatedSpriteFromCurFrame(int xPixel, int yPixel, uint sprite, int angle, float xScale = 1, float yScale = 1, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(jjCANVAS, DrawTransformedCurFrameSprite), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjCANVAS", "void drawSwingingVineSpriteFromCurFrame(int xPixel, int yPixel, uint sprite, int length, int curvature, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0)", asMETHOD(jjCANVAS, DrawSwingingVine), asCALL_THISCALL);
 
-		engine->RegisterObjectMethod("jjCANVAS", "void drawTile(int xPixel, int yPixel, uint16 tile, TILE::Quadrant tileQuadrant = TILE::ALLQUADRANTS)", asMETHOD(TgameCanvas, ExternalDrawTile), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjCANVAS", "void drawString(int xPixel, int yPixel, const ::string &in text, STRING::Size size = STRING::SMALL, STRING::Mode mode = STRING::NORMAL, uint8 param = 0)", asMETHOD(TgameCanvas, DrawTextBasicSize), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjCANVAS", "void drawString(int xPixel, int yPixel, const ::string &in text, STRING::Size size, const jjTEXTAPPEARANCE &in appearance, uint8 param1 = 0, SPRITE::Mode spriteMode = SPRITE::PALSHIFT, uint8 param2 = 0)", asMETHOD(TgameCanvas, DrawTextExtSize), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjCANVAS", "void drawTile(int xPixel, int yPixel, uint16 tile, TILE::Quadrant tileQuadrant = TILE::ALLQUADRANTS)", asMETHOD(jjCANVAS, ExternalDrawTile), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjCANVAS", "void drawString(int xPixel, int yPixel, const ::string &in text, STRING::Size size = STRING::SMALL, STRING::Mode mode = STRING::NORMAL, uint8 param = 0)", asMETHOD(jjCANVAS, DrawTextBasicSize), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjCANVAS", "void drawString(int xPixel, int yPixel, const ::string &in text, STRING::Size size, const jjTEXTAPPEARANCE &in appearance, uint8 param1 = 0, SPRITE::Mode spriteMode = SPRITE::PALSHIFT, uint8 param2 = 0)", asMETHOD(jjCANVAS, DrawTextExtSize), asCALL_THISCALL);
 
 		engine->RegisterGlobalFunction("void jjDrawPixel(float xPixel, float yPixel, uint8 color, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawPixel), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void jjDrawRectangle(float xPixel, float yPixel, int width, int height, uint8 color, SPRITE::Mode mode = SPRITE::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjDrawRectangle), asCALL_CDECL);
@@ -4382,20 +4655,20 @@ namespace Jazz2::Scripting
 		engine->SetDefaultNamespace("");
 
 		// TODO
-		/*engine->RegisterGlobalFunction("void jjSetDarknessColor(jjPALCOLOR color = jjPALCOLOR())", asFUNCTION(setDarknessColors), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjSetFadeColors(uint8 red, uint8 green, uint8 blue)", asFUNCTION(setFadeColors), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjSetFadeColors(uint8 paletteColorID = 207)", asFUNCTION(setFadeColorsToTBG), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjSetFadeColors(jjPALCOLOR color)", asFUNCTION(BackgroundLayerFunction<void(jjPALCOLOR)>::invoke<&jjLAYER::SetFadeColor>), asCALL_CDECL);
-		engine->RegisterGlobalFunction("jjPALCOLOR jjGetFadeColors()", asFUNCTION(BackgroundLayerFunction<jjPALCOLOR()>::invoke<&jjLAYER::GetFadeColor>), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjUpdateTexturedBG()", asFUNCTION(BackgroundLayerFunction<void()>::invoke<&jjLAYER::GetTextureFromTiles>), asCALL_CDECL); //deprecated
-		engine->RegisterGlobalFunction("TEXTURE::Texture set_jjTexturedBGTexture(TEXTURE::Texture)", asFUNCTION(BackgroundLayerFunction<unsigned(unsigned)>::invoke<&jjLAYER::SetTexture>), asCALL_CDECL);
-		engine->RegisterGlobalFunction("TEXTURE::Texture get_jjTexturedBGTexture()", asFUNCTION(BackgroundLayerFunction<unsigned()>::invoke<&jjLAYER::GetTexture>), asCALL_CDECL);
-		engine->RegisterGlobalFunction("TEXTURE::Style set_jjTexturedBGStyle(TEXTURE::Style)", asFUNCTION(BackgroundLayerFunction<unsigned(unsigned)>::invoke<&jjLAYER::SetTextureMode>), asCALL_CDECL);
-		engine->RegisterGlobalFunction("TEXTURE::Style get_jjTexturedBGStyle()", asFUNCTION(BackgroundLayerFunction<unsigned()>::invoke<&jjLAYER::GetTextureMode>), asCALL_CDECL);
-		engine->RegisterGlobalFunction("bool set_jjTexturedBGUsed(bool)", asFUNCTION(BackgroundLayerFunction<unsigned(unsigned)>::invoke<&jjLAYER::SetTextureSurface>), asCALL_CDECL);
-		engine->RegisterGlobalFunction("bool get_jjTexturedBGUsed()", asFUNCTION(BackgroundLayerFunction<unsigned()>::invoke<&jjLAYER::GetTextureSurface>), asCALL_CDECL);
-		engine->RegisterGlobalFunction("bool set_jjTexturedBGStars(bool)", asFUNCTION(BackgroundLayerFunction<bool(bool)>::invoke<&jjLAYER::SetStars>), asCALL_CDECL);
-		engine->RegisterGlobalFunction("bool get_jjTexturedBGStars()", asFUNCTION(BackgroundLayerFunction<bool()>::invoke<&jjLAYER::GetStars>), asCALL_CDECL);
+		/*engine->RegisterGlobalFunction("void jjSetDarknessColor(jjPALCOLOR color = jjPALCOLOR())", asFUNCTION(jjSetDarknessColor), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjSetFadeColors(uint8 red, uint8 green, uint8 blue)", asFUNCTION(jjSetFadeColors), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjSetFadeColors(uint8 paletteColorID = 207)", asFUNCTION(jjSetFadeColorsFromPalette), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjSetFadeColors(jjPALCOLOR color)", asFUNCTION(jjSetFadeColorsFromPalcolor), asCALL_CDECL);
+		engine->RegisterGlobalFunction("jjPALCOLOR jjGetFadeColors()", asFUNCTION(jjGetFadeColors), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjUpdateTexturedBG()", asFUNCTION(jjUpdateTexturedBG), asCALL_CDECL); // Deprecated
+		engine->RegisterGlobalFunction("TEXTURE::Texture get_jjTexturedBGTexture()", asFUNCTION(get_jjTexturedBGTexture), asCALL_CDECL);
+		engine->RegisterGlobalFunction("TEXTURE::Texture set_jjTexturedBGTexture(TEXTURE::Texture)", asFUNCTION(set_jjTexturedBGTexture), asCALL_CDECL);
+		engine->RegisterGlobalFunction("TEXTURE::Style get_jjTexturedBGStyle()", asFUNCTION(get_jjTexturedBGStyle), asCALL_CDECL);
+		engine->RegisterGlobalFunction("TEXTURE::Style set_jjTexturedBGStyle(TEXTURE::Style)", asFUNCTION(set_jjTexturedBGStyle), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool get_jjTexturedBGUsed()", asFUNCTION(get_jjTexturedBGUsed), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool set_jjTexturedBGUsed(bool)", asFUNCTION(set_jjTexturedBGUsed), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool get_jjTexturedBGStars()", asFUNCTION(get_jjTexturedBGStars), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool set_jjTexturedBGStars(bool)", asFUNCTION(set_jjTexturedBGStars), asCALL_CDECL);
 		engine->RegisterGlobalProperty("float jjTexturedBGFadePositionX", &(BackgroundLayer.WARPHORIZON.FadePosition[0]));
 		engine->RegisterGlobalProperty("float jjTexturedBGFadePositionY", &(BackgroundLayer.WARPHORIZON.FadePosition[1]));*/
 
@@ -4568,6 +4841,7 @@ namespace Jazz2::Scripting
 		engine->RegisterEnum("State");
 		engine->SetDefaultNamespace("BEHAVIOR");
 		engine->RegisterEnum("Behavior");
+
 		engine->SetDefaultNamespace("LIGHT");
 		engine->RegisterEnum("Type");
 		engine->RegisterEnumValue("Type", "NONE", 0);
@@ -4632,22 +4906,22 @@ namespace Jazz2::Scripting
 		engine->RegisterFuncdef("void jjVOIDFUNCOBJ(jjOBJ@)");
 		engine->RegisterObjectType("jjBEHAVIOR", sizeof(jjBEHAVIOR), asOBJ_VALUE | asOBJ_APP_CLASS_CDA);
 		engine->RegisterObjectBehaviour("jjBEHAVIOR", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(jjBEHAVIOR::Create), asCALL_CDECL_OBJLAST);
-		engine->RegisterObjectBehaviour("jjBEHAVIOR", asBEHAVE_CONSTRUCT, "void f(const BEHAVIOR::Behavior &in behavior)", asFUNCTION(jjBEHAVIOR::CreateCopy), asCALL_CDECL_OBJLAST);
+		engine->RegisterObjectBehaviour("jjBEHAVIOR", asBEHAVE_CONSTRUCT, "void f(const BEHAVIOR::Behavior &in behavior)", asFUNCTION(jjBEHAVIOR::CreateFromBehavior), asCALL_CDECL_OBJLAST);
 		engine->RegisterObjectBehaviour("jjBEHAVIOR", asBEHAVE_DESTRUCT, "void f()", asFUNCTION(jjBEHAVIOR::Destroy), asCALL_CDECL_OBJLAST);
 
 		engine->RegisterInterface("jjBEHAVIORINTERFACE");
 		engine->RegisterInterfaceMethod("jjBEHAVIORINTERFACE", "void onBehave(jjOBJ@ obj)");
 
-		/*engine->RegisterObjectMethod("jjBEHAVIOR", "jjBEHAVIOR& opAssign(const jjBEHAVIOR &in)", asMETHODPR(jjBEHAVIOR, operator=, (const jjBEHAVIOR&), jjBEHAVIOR&), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjBEHAVIOR", "jjBEHAVIOR& opAssign(BEHAVIOR::Behavior)", asMETHODPR(jjBEHAVIOR, operator=, (jjBEHAVIOR), jjBEHAVIOR&), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjBEHAVIOR", "jjBEHAVIOR& opAssign(const jjBEHAVIOR &in)", asMETHODPR(jjBEHAVIOR, operator=, (const jjBEHAVIOR&), jjBEHAVIOR&), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjBEHAVIOR", "jjBEHAVIOR& opAssign(BEHAVIOR::Behavior)", asMETHODPR(jjBEHAVIOR, operator=, (uint32_t), jjBEHAVIOR&), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjBEHAVIOR", "jjBEHAVIOR& opAssign(jjVOIDFUNCOBJ@)", asMETHODPR(jjBEHAVIOR, operator=, (asIScriptFunction*), jjBEHAVIOR&), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjBEHAVIOR", "jjBEHAVIOR& opAssign(jjBEHAVIORINTERFACE@)", asMETHODPR(jjBEHAVIOR, operator=, (asIScriptObject*), jjBEHAVIOR&), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjBEHAVIOR", "bool opEquals(const jjBEHAVIOR &in) const", asMETHODPR(jjBEHAVIOR, operator==, (const jjBEHAVIOR&) const, bool), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjBEHAVIOR", "bool opEquals(BEHAVIOR::Behavior) const", asMETHODPR(jjBEHAVIOR, operator==, (jjBEHAVIOR) const, bool), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjBEHAVIOR", "bool opEquals(BEHAVIOR::Behavior) const", asMETHODPR(jjBEHAVIOR, operator==, (uint32_t) const, bool), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjBEHAVIOR", "bool opEquals(const jjVOIDFUNCOBJ@) const", asMETHODPR(jjBEHAVIOR, operator==, (const asIScriptFunction*) const, bool), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjBEHAVIOR", "BEHAVIOR::Behavior opConv() const", asMETHOD(jjBEHAVIOR, operator jjBEHAVIOR), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjBEHAVIOR", "BEHAVIOR::Behavior opConv() const", asMETHOD(jjBEHAVIOR, operator uint32_t), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjBEHAVIOR", "jjVOIDFUNCOBJ@ opCast() const", asMETHOD(jjBEHAVIOR, operator asIScriptFunction*), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjBEHAVIOR", "jjBEHAVIORINTERFACE@ opCast() const", asMETHOD(jjBEHAVIOR, operator asIScriptObject*), asCALL_THISCALL);*/
+		engine->RegisterObjectMethod("jjBEHAVIOR", "jjBEHAVIORINTERFACE@ opCast() const", asMETHOD(jjBEHAVIOR, operator asIScriptObject*), asCALL_THISCALL);
 
 		engine->RegisterObjectProperty("jjOBJ", "jjBEHAVIOR behavior", asOFFSET(jjOBJ, behavior));
 
@@ -4718,10 +4992,9 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectProperty("jjOBJ", "uint8 counterEnd", asOFFSET(jjOBJ, counterEnd));
 		engine->RegisterObjectProperty("jjOBJ", "const int16 objectID", asOFFSET(jjOBJ, objectID));
 
-		// TODO
-		/*engine->RegisterGlobalFunction("void jjDeleteObject(int objectID)", asFUNCTION(MyDeleteObject), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjKillObject(int objectID)", asFUNCTION(KillObject), asCALL_CDECL);
-		engine->RegisterGlobalProperty("const bool jjDeactivatingBecauseOfDeath", &GeneralGlobals->reInitializingObjects);*/
+		engine->RegisterGlobalFunction("void jjDeleteObject(int objectID)", asFUNCTION(jjOBJ::jjDeleteObject), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjKillObject(int objectID)", asFUNCTION(jjOBJ::jjKillObject), asCALL_CDECL);
+		engine->RegisterGlobalProperty("const bool jjDeactivatingBecauseOfDeath", &jjDeactivatingBecauseOfDeath);
 
 		engine->RegisterObjectMethod("jjOBJ", "int draw()", asMETHOD(jjOBJ, draw), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjOBJ", "int beSolid(bool shouldCheckForStompingLocalPlayers = false)", asMETHOD(jjOBJ, beSolid), asCALL_THISCALL);
@@ -4934,10 +5207,9 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectProperty("jjANIMFRAME", "const uint16 width", asOFFSET(jjANIMFRAME, width));
 		engine->RegisterObjectProperty("jjANIMFRAME", "const uint16 height", asOFFSET(jjANIMFRAME, height));
 		engine->RegisterObjectMethod("jjANIMFRAME", "jjANIMFRAME& opAssign(const jjANIMFRAME &in)", asMETHOD(jjANIMFRAME, operator=), asCALL_THISCALL);
-		// TODO
-		/*engine->RegisterObjectMethod("jjANIMFRAME", "bool get_transparent() const", asMETHOD(jjANIMFRAME, getImageTransparency), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjANIMFRAME", "bool set_transparent(bool)", asMETHOD(jjANIMFRAME, setImageTransparency), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjANIMFRAME", "bool doesCollide(int xPos, int yPos, int direction, const jjANIMFRAME@ frame2, int xPos2, int yPos2, int direction2, bool always = false) const", asFUNCTION(doesCollideBase), asCALL_CDECL_OBJFIRST);*/
+		engine->RegisterObjectMethod("jjANIMFRAME", "bool get_transparent() const", asMETHOD(jjANIMFRAME, get_transparent), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjANIMFRAME", "bool set_transparent(bool)", asMETHOD(jjANIMFRAME, set_transparent), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjANIMFRAME", "bool doesCollide(int xPos, int yPos, int direction, const jjANIMFRAME@ frame2, int xPos2, int yPos2, int direction2, bool always = false) const", asMETHOD(jjANIMFRAME, doesCollide), asCALL_THISCALL);
 		engine->RegisterObjectType("jjANIMATION", sizeof(jjANIMATION), asOBJ_REF /*| asOBJ_NOCOUNT*/);
 		engine->RegisterObjectBehaviour("jjANIMATION", asBEHAVE_ADDREF, "void f()", asMETHOD(jjANIMATION, AddRef), asCALL_THISCALL);
 		engine->RegisterObjectBehaviour("jjANIMATION", asBEHAVE_RELEASE, "void f()", asMETHOD(jjANIMATION, Release), asCALL_THISCALL);
@@ -4948,9 +5220,8 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjANIMATION", "uint set_firstFrame(uint)", asMETHOD(jjANIMATION, set_firstFrame), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjANIMATION", "uint opImplConv() const", asMETHOD(jjANIMATION, getAnimFirstFrame), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjANIMATION", "jjANIMATION& opAssign(const jjANIMATION &in)", asMETHOD(jjANIMATION, operator=), asCALL_THISCALL);
-		// TODO
-		/*engine->RegisterObjectMethod("jjANIMATION", "bool save(const ::string &in filename, const jjPAL &in palette = jjPalette) const", asFUNCTION(exportAnimationToGif), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectMethod("jjANIMATION", "bool load(const ::string &in filename, int hotSpotX, int hotSpotY, int coldSpotYOffset = 0, int firstFrameToOverwrite = -1)", asFUNCTION(importAnimationFromGif), asCALL_CDECL_OBJFIRST);*/
+		engine->RegisterObjectMethod("jjANIMATION", "bool save(const ::string &in filename, const jjPAL &in palette = jjPalette) const", asMETHOD(jjANIMATION, save), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjANIMATION", "bool load(const ::string &in filename, int hotSpotX, int hotSpotY, int coldSpotYOffset = 0, int firstFrameToOverwrite = -1)", asMETHOD(jjANIMATION, load), asCALL_THISCALL);
 
 		engine->RegisterObjectType("jjANIMSET", sizeof(jjANIMSET), asOBJ_REF /*| asOBJ_NOCOUNT*/);
 		engine->RegisterObjectBehaviour("jjANIMSET", asBEHAVE_ADDREF, "void f()", asMETHOD(jjANIMSET, AddRef), asCALL_THISCALL);
@@ -4958,14 +5229,14 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("jjANIMSET @get_jjAnimSets(uint)", asFUNCTION(jjANIMSET::get_jjAnimSets), asCALL_CDECL);
 		engine->RegisterObjectProperty("jjANIMSET", "uint firstAnim", 0);
 		engine->RegisterObjectMethod("jjANIMSET", "uint opImplConv() const", asMETHOD(jjANIMSET, convertAnimSetToUint), asCALL_THISCALL);
-		/*engine->RegisterObjectMethod("jjANIMSET", "jjANIMSET @load(uint fileSetID = 2048, const string &in filename = '', int firstAnimToOverwrite = -1, int firstFrameToOverwrite = -1)", asFUNCTION(loadAnimSet), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectMethod("jjANIMSET", "jjANIMSET @allocate(const array<uint> &in frameCounts)", asFUNCTION(loadEmptyAnimSet), asCALL_CDECL_OBJFIRST);
+		engine->RegisterObjectMethod("jjANIMSET", "jjANIMSET @load(uint fileSetID = 2048, const string &in filename = '', int firstAnimToOverwrite = -1, int firstFrameToOverwrite = -1)", asMETHOD(jjANIMSET, load), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjANIMSET", "jjANIMSET @allocate(const array<uint> &in frameCounts)", asMETHOD(jjANIMSET, allocate), asCALL_THISCALL);
 
-		engine->RegisterObjectMethod("jjCANVAS", "void drawString(int xPixel, int yPixel, const ::string &in text, const jjANIMATION &in animation, STRING::Mode mode = STRING::NORMAL, uint8 param = 0)", asMETHOD(TgameCanvas, DrawTextBasic), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjCANVAS", "void drawString(int xPixel, int yPixel, const ::string &in text, const jjANIMATION &in animation, const jjTEXTAPPEARANCE &in appearance, uint8 param1 = 0, SPRITE::Mode spriteMode = SPRITE::PALSHIFT, uint8 param2 = 0)", asMETHOD(TgameCanvas, DrawTextExt), asCALL_THISCALL);
-		engine->RegisterGlobalFunction("void jjDrawString(float xPixel, float yPixel, const ::string &in text, const jjANIMATION &in animation, STRING::Mode mode = STRING::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(externalAddTextSprite), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjDrawString(float xPixel, float yPixel, const ::string &in text, const jjANIMATION &in animation, const jjTEXTAPPEARANCE &in appearance, uint8 param1 = 0, SPRITE::Mode spriteMode = SPRITE::PALSHIFT, uint8 param2 = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(externalAddTextSpriteExt), asCALL_CDECL);
-		engine->RegisterGlobalFunction("int jjGetStringWidth(const ::string &in text, const jjANIMATION &in animation, const jjTEXTAPPEARANCE &in style)", asFUNCTION(externalGetTextWidth), asCALL_CDECL);*/
+		engine->RegisterObjectMethod("jjCANVAS", "void drawString(int xPixel, int yPixel, const ::string &in text, const jjANIMATION &in animation, STRING::Mode mode = STRING::NORMAL, uint8 param = 0)", asMETHOD(jjCANVAS, drawString), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjCANVAS", "void drawString(int xPixel, int yPixel, const ::string &in text, const jjANIMATION &in animation, const jjTEXTAPPEARANCE &in appearance, uint8 param1 = 0, SPRITE::Mode spriteMode = SPRITE::PALSHIFT, uint8 param2 = 0)", asMETHOD(jjCANVAS, drawStringEx), asCALL_THISCALL);
+		engine->RegisterGlobalFunction("void jjDrawString(float xPixel, float yPixel, const ::string &in text, const jjANIMATION &in animation, STRING::Mode mode = STRING::NORMAL, uint8 param = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjCANVAS::jjDrawString), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjDrawString(float xPixel, float yPixel, const ::string &in text, const jjANIMATION &in animation, const jjTEXTAPPEARANCE &in appearance, uint8 param1 = 0, SPRITE::Mode spriteMode = SPRITE::PALSHIFT, uint8 param2 = 0, int8 layerZ = 4, uint8 layerXY = 4, int8 playerID = -1)", asFUNCTION(jjCANVAS::jjDrawStringEx), asCALL_CDECL);
+		engine->RegisterGlobalFunction("int jjGetStringWidth(const ::string &in text, const jjANIMATION &in animation, const jjTEXTAPPEARANCE &in style)", asFUNCTION(jjCANVAS::jjGetStringWidth), asCALL_CDECL);
 
 		engine->RegisterObjectType("jjLAYER", sizeof(jjLAYER), asOBJ_REF);
 
@@ -5112,21 +5383,22 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjLAYER", "TEXTURE::Style get_textureStyle() const", asMETHOD(jjLAYER, GetTextureMode), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjLAYER", "void set_textureStyle(TEXTURE::Style)", asMETHOD(jjLAYER, SetTextureMode), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjLAYER", "TEXTURE::Texture get_texture() const", asMETHOD(jjLAYER, GetTexture), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjLAYER", "void set_texture(TEXTURE::Texture)", asMETHOD(jjLAYER, SetTexture), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjLAYER", "void set_texture(TEXTURE::Texture)", asMETHOD(jjLAYER, SetTexture), asCALL_THISCALL);*/
 
-		engine->RegisterObjectProperty("jjLAYER", "int rotationAngle", asOFFSET(jjLAYER, RotationAngle));
-		engine->RegisterObjectProperty("jjLAYER", "int rotationRadiusMultiplier", asOFFSET(jjLAYER, RotationRadiusMultiplier));
-		engine->RegisterObjectProperty("jjLAYER", "bool tileHeight", asOFFSET(jjLAYER, IsHeightTiled));
-		engine->RegisterObjectProperty("jjLAYER", "bool tileWidth", asOFFSET(jjLAYER, IsWidthTiled));
-		engine->RegisterObjectProperty("jjLAYER", "bool limitVisibleRegion", asOFFSET(jjLAYER, LimitVisibleRegion));
-		engine->RegisterObjectProperty("jjLAYER", "const bool hasTileMap", asOFFSET(jjLAYER, IsUsable));
-		engine->RegisterObjectProperty("jjLAYER", "bool hasTiles", asOFFSET(jjLAYER, IsUsed));
-		engine->RegisterGlobalFunction("array<jjLAYER@>@ jjLayerOrderGet()", asFUNCTION(getLayerOrderExternal), asCALL_CDECL);
-		engine->RegisterGlobalFunction("bool jjLayerOrderSet(const array<jjLAYER@> &in order)", asFUNCTION(setLayerOrderExternal), asCALL_CDECL);
-		engine->RegisterGlobalFunction("array<jjLAYER@>@ jjLayersFromLevel(const string &in filename, const array<uint> &in layerIDs, int tileIDAdjustmentFactor = 0)", asFUNCTION(layersFromLevel), asCALL_CDECL);
-		engine->RegisterGlobalFunction("bool jjTilesFromTileset(const string &in filename, uint firstTileID, uint tileCount, const array<uint8>@ paletteColorMapping = null)", asFUNCTION(tilesFromTileset), asCALL_CDECL);
+		engine->RegisterObjectProperty("jjLAYER", "int rotationAngle", asOFFSET(jjLAYER, rotationAngle));
+		engine->RegisterObjectProperty("jjLAYER", "int rotationRadiusMultiplier", asOFFSET(jjLAYER, rotationRadiusMultiplier));
+		engine->RegisterObjectProperty("jjLAYER", "bool tileHeight", asOFFSET(jjLAYER, tileHeight));
+		engine->RegisterObjectProperty("jjLAYER", "bool tileWidth", asOFFSET(jjLAYER, tileWidth));
+		engine->RegisterObjectProperty("jjLAYER", "bool limitVisibleRegion", asOFFSET(jjLAYER, limitVisibleRegion));
+		engine->RegisterObjectProperty("jjLAYER", "const bool hasTileMap", asOFFSET(jjLAYER, hasTileMap));
+		engine->RegisterObjectProperty("jjLAYER", "bool hasTiles", asOFFSET(jjLAYER, hasTiles));
+		engine->RegisterGlobalFunction("array<jjLAYER@>@ jjLayerOrderGet()", asFUNCTION(jjLAYER::jjLayerOrderGet), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool jjLayerOrderSet(const array<jjLAYER@> &in order)", asFUNCTION(jjLAYER::jjLayerOrderSet), asCALL_CDECL);
+		engine->RegisterGlobalFunction("array<jjLAYER@>@ jjLayersFromLevel(const string &in filename, const array<uint> &in layerIDs, int tileIDAdjustmentFactor = 0)", asFUNCTION(jjLAYER::jjLayersFromLevel), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool jjTilesFromTileset(const string &in filename, uint firstTileID, uint tileCount, const array<uint8>@ paletteColorMapping = null)", asFUNCTION(jjLAYER::jjTilesFromTileset), asCALL_CDECL);
 
-		engine->SetDefaultNamespace("LAYERSPEEDMODEL");
+		// TODO
+		/*engine->SetDefaultNamespace("LAYERSPEEDMODEL");
 		engine->RegisterEnum("LayerSpeedModel");
 		engine->RegisterEnumValue("LayerSpeedModel", "NORMAL", (int)jjLAYER::SpeedMode::Normal);
 		engine->RegisterEnumValue("LayerSpeedModel", "LAYER8", (int)jjLAYER::SpeedMode::Layer8);
@@ -5159,30 +5431,30 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjTILE", "uint16 get_tileID() const", asMETHOD(jjTILE, getTileID), asCALL_THISCALL);
 
 		engine->RegisterGlobalFunction("const jjTILE@ get_jjTiles(uint16)", asFUNCTION(jjTILE::getTile), asCALL_CDECL);
-		engine->RegisterGlobalFunction("jjTILE@ get_jjAnimatedTiles(uint16)", asFUNCTION(jjTILE::getAnimatedTile), asCALL_CDECL);
+		engine->RegisterGlobalFunction("jjTILE@ get_jjAnimatedTiles(uint16)", asFUNCTION(jjTILE::getAnimatedTile), asCALL_CDECL);*/
 
-		engine->RegisterGlobalFunction("uint16 jjGetStaticTile(uint16 tileID)", asFUNCTION(getStaticTile), asCALL_CDECL);
-		engine->RegisterGlobalFunction("uint16 jjTileGet(uint8 layer, int xTile, int yTile)", asFUNCTION(getTileAt), asCALL_CDECL);
-		engine->RegisterGlobalFunction("uint16 jjTileSet(uint8 layer, int xTile, int yTile, uint16 newTile)", asFUNCTION(setTileAt), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjGenerateSettableTileArea(uint8 layer, int xTile, int yTile, int width, int height)", asFUNCTION(generateSettableTileArea), asCALL_CDECL);
-		engine->RegisterObjectMethod("jjLAYER", "uint16 tileGet(int xTile, int yTile) const", asFUNCTION(getTileAtInLayer), asCALL_CDECL_OBJFIRST);
+		engine->RegisterGlobalFunction("uint16 jjGetStaticTile(uint16 tileID)", asFUNCTION(jjGetStaticTile), asCALL_CDECL);
+		engine->RegisterGlobalFunction("uint16 jjTileGet(uint8 layer, int xTile, int yTile)", asFUNCTION(jjTileGet), asCALL_CDECL);
+		engine->RegisterGlobalFunction("uint16 jjTileSet(uint8 layer, int xTile, int yTile, uint16 newTile)", asFUNCTION(jjTileSet), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjGenerateSettableTileArea(uint8 layer, int xTile, int yTile, int width, int height)", asFUNCTION(jjGenerateSettableTileArea), asCALL_CDECL);
+		/*engine->RegisterObjectMethod("jjLAYER", "uint16 tileGet(int xTile, int yTile) const", asFUNCTION(getTileAtInLayer), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYER", "uint16 tileSet(int xTile, int yTile, uint16 newTile)", asFUNCTION(setTileAtInLayer), asCALL_CDECL_OBJFIRST);
 		engine->RegisterObjectMethod("jjLAYER", "void generateSettableTileArea(int xTile, int yTile, int width, int height)", asFUNCTION(generateSettableTileAreaInLayer), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectMethod("jjLAYER", "void generateSettableTileArea()", asFUNCTION(generateSettableLayer), asCALL_CDECL_OBJFIRST);
+		engine->RegisterObjectMethod("jjLAYER", "void generateSettableTileArea()", asFUNCTION(generateSettableLayer), asCALL_CDECL_OBJFIRST);*/
 
-		engine->RegisterGlobalFunction("bool jjMaskedPixel(int xPixel,int yPixel)", asFUNCTION(checkPixel), asCALL_CDECL);
-		engine->RegisterGlobalFunction("bool jjMaskedPixel(int xPixel,int yPixel,uint8 layer)", asFUNCTION(checkPixelLayer), asCALL_CDECL);
-		engine->RegisterObjectMethod("jjLAYER", "bool maskedPixel(int xPixel,int yPixel) const", asMETHOD(jjLAYER, CheckPixel), asCALL_THISCALL);
-		engine->RegisterGlobalFunction("bool jjMaskedHLine(int xPixel,int lineLength,int yPixel)", asFUNCTION(MyCheckHLine), asCALL_CDECL);
-		engine->RegisterGlobalFunction("bool jjMaskedHLine(int xPixel,int lineLength,int yPixel,uint8 layer)", asFUNCTION(checkHLineLayer), asCALL_CDECL);
-		engine->RegisterObjectMethod("jjLAYER", "bool maskedHLine(int xPixel,int lineLength,int yPixel) const", asMETHOD(jjLAYER, CheckHLine), asCALL_THISCALL);
-		engine->RegisterGlobalFunction("bool jjMaskedVLine(int xPixel,int yPixel,int lineLength)", asFUNCTION(BoolCheckVLine), asCALL_CDECL);
-		engine->RegisterGlobalFunction("bool jjMaskedVLine(int xPixel,int yPixel,int lineLength,uint8 layer)", asFUNCTION(boolCheckVLineLayer), asCALL_CDECL);
-		engine->RegisterObjectMethod("jjLAYER", "bool maskedVLine(int xPixel,int yPixel,int lineLength) const", asMETHOD(jjLAYER, CheckVLineBool), asCALL_THISCALL);
-		engine->RegisterGlobalFunction("int jjMaskedTopVLine(int xPixel,int yPixel,int lineLength)", asFUNCTION(MyCheckVLine), asCALL_CDECL);
-		engine->RegisterGlobalFunction("int jjMaskedTopVLine(int xPixel,int yPixel,int lineLength,uint8 layer)", asFUNCTION(checkVLineLayer), asCALL_CDECL);
-		engine->RegisterObjectMethod("jjLAYER", "int maskedTopVLine(int xPixel,int yPixel,int lineLength) const", asMETHOD(jjLAYER, CheckVLine), asCALL_THISCALL);
-		engine->RegisterGlobalProperty("uint8 jjEventAtLastMaskedPixel", tileAttr);*/
+		engine->RegisterGlobalFunction("bool jjMaskedPixel(int xPixel, int yPixel)", asFUNCTION(jjMaskedPixel), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool jjMaskedPixel(int xPixel, int yPixel, uint8 layer)", asFUNCTION(jjMaskedPixelLayer), asCALL_CDECL);
+		//engine->RegisterObjectMethod("jjLAYER", "bool maskedPixel(int xPixel, int yPixel) const", asMETHOD(jjLAYER, CheckPixel), asCALL_THISCALL);
+		engine->RegisterGlobalFunction("bool jjMaskedHLine(int xPixel, int lineLength, int yPixel)", asFUNCTION(jjMaskedHLine), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool jjMaskedHLine(int xPixel, int lineLength, int yPixel, uint8 layer)", asFUNCTION(jjMaskedHLineLayer), asCALL_CDECL);
+		//engine->RegisterObjectMethod("jjLAYER", "bool maskedHLine(int xPixel, int lineLength, int yPixel) const", asMETHOD(jjLAYER, CheckHLine), asCALL_THISCALL);
+		engine->RegisterGlobalFunction("bool jjMaskedVLine(int xPixel, int yPixel, int lineLength)", asFUNCTION(jjMaskedVLine), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool jjMaskedVLine(int xPixel, int yPixel, int lineLength,uint8 layer)", asFUNCTION(jjMaskedVLineLayer), asCALL_CDECL);
+		//engine->RegisterObjectMethod("jjLAYER", "bool maskedVLine(int xPixel, int yPixel, int lineLength) const", asMETHOD(jjLAYER, CheckVLineBool), asCALL_THISCALL);
+		engine->RegisterGlobalFunction("int jjMaskedTopVLine(int xPixel, int yPixel, int lineLength)", asFUNCTION(jjMaskedTopVLine), asCALL_CDECL);
+		engine->RegisterGlobalFunction("int jjMaskedTopVLine(int xPixel, int yPixel, int lineLength,uint8 layer)", asFUNCTION(jjMaskedTopVLineLayer), asCALL_CDECL);
+		//engine->RegisterObjectMethod("jjLAYER", "int maskedTopVLine(int xPixel,int yPixel, int lineLength) const", asMETHOD(jjLAYER, CheckVLine), asCALL_THISCALL);
+		//engine->RegisterGlobalProperty("uint8 jjEventAtLastMaskedPixel", tileAttr);
 
 		engine->RegisterGlobalFunction("void jjSetModPosition(int order, int row, bool reset)", asFUNCTION(jjSetModPosition), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void jjSlideModChannelVolume(int channel, float volume, int milliseconds)", asFUNCTION(jjSlideModChannelVolume), asCALL_CDECL);
@@ -6078,6 +6350,286 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Object", "CAT", aZCAT);
 		engine->RegisterEnumValue("Object", "PACMANGHOST", aZGHOST);
 
+		engine->SetDefaultNamespace("BEHAVIOR");
+		engine->RegisterEnumValue("Behavior", "DEFAULT", -1);
+		engine->RegisterEnumValue("Behavior", "INACTIVE", aUNKNOWN);
+		engine->RegisterEnumValue("Behavior", "BLASTERBULLET", aPLAYERBULLET1);
+		engine->RegisterEnumValue("Behavior", "BOUNCERBULLET", aPLAYERBULLET2);
+		engine->RegisterEnumValue("Behavior", "ICEBULLET", aPLAYERBULLET3);
+		engine->RegisterEnumValue("Behavior", "SEEKERBULLET", aPLAYERBULLET4);
+		engine->RegisterEnumValue("Behavior", "RFBULLET", aPLAYERBULLET5);
+		engine->RegisterEnumValue("Behavior", "TOASTERBULLET", aPLAYERBULLET6);
+		engine->RegisterEnumValue("Behavior", "FIREBALLBULLET", aPLAYERBULLET8);
+		engine->RegisterEnumValue("Behavior", "ELECTROBULLET", aPLAYERBULLET9);
+		engine->RegisterEnumValue("Behavior", "BLASTERBULLETPU", aPLAYERBULLETP1);
+		engine->RegisterEnumValue("Behavior", "BOUNCERBULLETPU", aPLAYERBULLETP2);
+		engine->RegisterEnumValue("Behavior", "ICEBULLETPU", aPLAYERBULLETP3);
+		engine->RegisterEnumValue("Behavior", "SEEKERBULLETPU", aPLAYERBULLETP4);
+		engine->RegisterEnumValue("Behavior", "RFBULLETPU", aPLAYERBULLETP5);
+		engine->RegisterEnumValue("Behavior", "TOASTERBULLETPU", aPLAYERBULLETP6);
+		engine->RegisterEnumValue("Behavior", "FIREBALLBULLETPU", aPLAYERBULLETP8);
+		engine->RegisterEnumValue("Behavior", "ELECTROBULLETPU", aPLAYERBULLETP9);
+		engine->RegisterEnumValue("Behavior", "FIRESHIELDBULLET", aPLAYERBULLETC1);
+		engine->RegisterEnumValue("Behavior", "WATERSHIELDBULLET", aPLAYERBULLETC2);
+		engine->RegisterEnumValue("Behavior", "BUBBLESHIELDBULLET", aPLAYERBULLETC2); // Private/deprecated
+		engine->RegisterEnumValue("Behavior", "LIGHTNINGSHIELDBULLET", aPLAYERBULLETC3);
+		engine->RegisterEnumValue("Behavior", "PLASMASHIELDBULLET", aPLAYERBULLETC3); // Private/deprecated
+		engine->RegisterEnumValue("Behavior", "BULLET", aBULLET);
+		engine->RegisterEnumValue("Behavior", "SMOKERING", aCATSMOKE);
+		engine->RegisterEnumValue("Behavior", "SHARD", aSHARD);
+		engine->RegisterEnumValue("Behavior", "EXPLOSION", aEXPLOSION);
+		engine->RegisterEnumValue("Behavior", "BOUNCEONCE", aBOUNCEONCE);
+		engine->RegisterEnumValue("Behavior", "FLICKERGEM", aREDGEMTEMP);
+		engine->RegisterEnumValue("Behavior", "LASER", aPLAYERLASER);
+		engine->RegisterEnumValue("Behavior", "UTERUSSPIKEBALL", aUTERUSEL);
+		engine->RegisterEnumValue("Behavior", "BIRD", aBIRD);
+		engine->RegisterEnumValue("Behavior", "BUBBLE", aBUBBLE);
+		engine->RegisterEnumValue("Behavior", "ICEAMMO3", aGUN3AMMO3);
+		engine->RegisterEnumValue("Behavior", "BOUNCERAMMO3", aGUN2AMMO3);
+		engine->RegisterEnumValue("Behavior", "SEEKERAMMO3", aGUN4AMMO3);
+		engine->RegisterEnumValue("Behavior", "RFAMMO3", aGUN5AMMO3);
+		engine->RegisterEnumValue("Behavior", "TOASTERAMMO3", aGUN6AMMO3);
+		engine->RegisterEnumValue("Behavior", "TNTAMMO3", aGUN7AMMO3);
+		engine->RegisterEnumValue("Behavior", "GUN8AMMO3", aGUN8AMMO3);
+		engine->RegisterEnumValue("Behavior", "GUN9AMMO3", aGUN9AMMO3);
+		engine->RegisterEnumValue("Behavior", "TURTLESHELL", aTURTLESHELL);
+		engine->RegisterEnumValue("Behavior", "SWINGINGVINE", aSWINGVINE);
+		engine->RegisterEnumValue("Behavior", "BOMB", aBOMB);
+		engine->RegisterEnumValue("Behavior", "SILVERCOIN", aSILVERCOIN);
+		engine->RegisterEnumValue("Behavior", "GOLDCOIN", aGOLDCOIN);
+		engine->RegisterEnumValue("Behavior", "GUNCRATE", aGUNCRATE);
+		engine->RegisterEnumValue("Behavior", "CARROTCRATE", aCARROTCRATE);
+		engine->RegisterEnumValue("Behavior", "ONEUPCRATE", a1UPCRATE);
+		engine->RegisterEnumValue("Behavior", "GEMBARREL", aGEMBARREL);
+		engine->RegisterEnumValue("Behavior", "CARROTBARREL", aCARROTBARREL);
+		engine->RegisterEnumValue("Behavior", "ONEUPBARREL", a1UPBARREL);
+		engine->RegisterEnumValue("Behavior", "BOMBCRATE", aBOMBCRATE);
+		engine->RegisterEnumValue("Behavior", "ICEAMMO15", aGUN3AMMO15);
+		engine->RegisterEnumValue("Behavior", "BOUNCERAMMO15", aGUN2AMMO15);
+		engine->RegisterEnumValue("Behavior", "SEEKERAMMO15", aGUN4AMMO15);
+		engine->RegisterEnumValue("Behavior", "RFAMMO15", aGUN5AMMO15);
+		engine->RegisterEnumValue("Behavior", "TOASTERAMMO15", aGUN6AMMO15);
+		engine->RegisterEnumValue("Behavior", "TNT", aTNT);
+		engine->RegisterEnumValue("Behavior", "AIRBOARDGENERATOR", aAIRBOARDGENERATOR);
+		engine->RegisterEnumValue("Behavior", "FROZENSPRING", aFROZENGREENSPRING);
+		engine->RegisterEnumValue("Behavior", "FASTFIRE", aGUNFASTFIRE);
+		engine->RegisterEnumValue("Behavior", "SPRINGCRATE", aSPRINGCRATE);
+		engine->RegisterEnumValue("Behavior", "REDGEM", aREDGEM);
+		engine->RegisterEnumValue("Behavior", "GREENGEM", aGREENGEM);
+		engine->RegisterEnumValue("Behavior", "BLUEGEM", aBLUEGEM);
+		engine->RegisterEnumValue("Behavior", "PURPLEGEM", aPURPLEGEM);
+		engine->RegisterEnumValue("Behavior", "SUPERGEM", aSUPERREDGEM);
+		engine->RegisterEnumValue("Behavior", "BIRDCAGE", aBIRDCAGE);
+		engine->RegisterEnumValue("Behavior", "GUNBARREL", aGUNBARREL);
+		engine->RegisterEnumValue("Behavior", "GEMCRATE", aGEMCRATE);
+		engine->RegisterEnumValue("Behavior", "MORPH", aMORPHMONITOR);
+		engine->RegisterEnumValue("Behavior", "CARROT", aENERGYUP);
+		engine->RegisterEnumValue("Behavior", "FULLENERGY", aFULLENERGY);
+		engine->RegisterEnumValue("Behavior", "FIRESHIELD", aFIRESHIELD);
+		engine->RegisterEnumValue("Behavior", "WATERSHIELD", aWATERSHIELD);
+		engine->RegisterEnumValue("Behavior", "BUBBLESHIELD", aWATERSHIELD); // Private/deprecated
+		engine->RegisterEnumValue("Behavior", "LIGHTNINGSHIELD", aLIGHTSHIELD);
+		engine->RegisterEnumValue("Behavior", "PLASMASHIELD", aLIGHTSHIELD); // Private/deprecated
+		engine->RegisterEnumValue("Behavior", "FASTFEET", aFASTFEET);
+		engine->RegisterEnumValue("Behavior", "ONEUP", aEXTRALIFE);
+		engine->RegisterEnumValue("Behavior", "EXTRALIFE", aEXTRALIFE); // Private/deprecated
+		engine->RegisterEnumValue("Behavior", "EXTRALIVE", aEXTRALIFE); // Private/deprecated
+		engine->RegisterEnumValue("Behavior", "EOLPOST", aENDOFLEVELPOST);
+		engine->RegisterEnumValue("Behavior", "SAVEPOST", aSAVEPOST);
+		engine->RegisterEnumValue("Behavior", "CHECKPOINT", aSAVEPOST); // Private/deprecated
+		engine->RegisterEnumValue("Behavior", "BONUSPOST", aBONUSLEVELPOST);
+		engine->RegisterEnumValue("Behavior", "REDSPRING", aREDSPRING);
+		engine->RegisterEnumValue("Behavior", "GREENSPRING", aGREENSPRING);
+		engine->RegisterEnumValue("Behavior", "BLUESPRING", aBLUESPRING);
+		engine->RegisterEnumValue("Behavior", "INVINCIBILITY", aINVINCIBILITY);
+		engine->RegisterEnumValue("Behavior", "EXTRATIME", aEXTRATIME);
+		engine->RegisterEnumValue("Behavior", "FREEZER", aFREEZER);
+		engine->RegisterEnumValue("Behavior", "FREEZEENEMIES", aFREEZER); // Private/deprecated
+		engine->RegisterEnumValue("Behavior", "HORREDSPRING", aHREDSPRING);
+		engine->RegisterEnumValue("Behavior", "HORGREENSPRING", aHGREENSPRING);
+		engine->RegisterEnumValue("Behavior", "HORBLUESPRING", aHBLUESPRING);
+		engine->RegisterEnumValue("Behavior", "BIRDMORPH", aBIRDMORPHMONITOR);
+		engine->RegisterEnumValue("Behavior", "TRIGGERCRATE", aTRIGGERCRATE);
+		engine->RegisterEnumValue("Behavior", "FLYCARROT", aFLYCARROT);
+		engine->RegisterEnumValue("Behavior", "RECTREDGEM", aRECTREDGEM);
+		engine->RegisterEnumValue("Behavior", "RECTGREENGEM", aRECTGREENGEM);
+		engine->RegisterEnumValue("Behavior", "RECTBLUEGEM", aRECTBLUEGEM);
+		engine->RegisterEnumValue("Behavior", "TUFTURT", aTUFTURT);
+		engine->RegisterEnumValue("Behavior", "TUFBOSS", aTUFBOSS);
+		engine->RegisterEnumValue("Behavior", "LABRAT", aLABRAT);
+		engine->RegisterEnumValue("Behavior", "DRAGON", aDRAGON);
+		engine->RegisterEnumValue("Behavior", "LIZARD", aLIZARD);
+		engine->RegisterEnumValue("Behavior", "BEE", aBUMBEE);
+		engine->RegisterEnumValue("Behavior", "BUMBEE", aBUMBEE); // Private/deprecated
+		engine->RegisterEnumValue("Behavior", "RAPIER", aRAPIER);
+		engine->RegisterEnumValue("Behavior", "SPARK", aSPARK);
+		engine->RegisterEnumValue("Behavior", "BAT", aBAT);
+		engine->RegisterEnumValue("Behavior", "SUCKER", aSUCKER);
+		engine->RegisterEnumValue("Behavior", "CATERPILLAR", aCATERPILLAR);
+		engine->RegisterEnumValue("Behavior", "CHESHIRE1", aCHESHIRE1);
+		engine->RegisterEnumValue("Behavior", "CHESHIRE2", aCHESHIRE2);
+		engine->RegisterEnumValue("Behavior", "HATTER", aHATTER);
+		engine->RegisterEnumValue("Behavior", "BILSY", aBILSYBOSS);
+		engine->RegisterEnumValue("Behavior", "SKELETON", aSKELETON);
+		engine->RegisterEnumValue("Behavior", "DOGGYDOGG", aDOGGYDOGG);
+		engine->RegisterEnumValue("Behavior", "NORMTURTLE", aNORMTURTLE);
+		engine->RegisterEnumValue("Behavior", "HELMUT", aHELMUT);
+		engine->RegisterEnumValue("Behavior", "DEMON", aDEMON);
+		engine->RegisterEnumValue("Behavior", "DRAGONFLY", aDRAGONFLY);
+		engine->RegisterEnumValue("Behavior", "MONKEY", aMONKEY);
+		engine->RegisterEnumValue("Behavior", "FATCHICK", aFATCHK);
+		engine->RegisterEnumValue("Behavior", "FENCER", aFENCER);
+		engine->RegisterEnumValue("Behavior", "FISH", aFISH);
+		engine->RegisterEnumValue("Behavior", "MOTH", aMOTH);
+		engine->RegisterEnumValue("Behavior", "STEAM", aSTEAM);
+		engine->RegisterEnumValue("Behavior", "ROTATINGROCK", aROCK);
+		engine->RegisterEnumValue("Behavior", "BLASTERPOWERUP", aGUN1POWER);
+		engine->RegisterEnumValue("Behavior", "BOUNCERPOWERUP", aGUN2POWER);
+		engine->RegisterEnumValue("Behavior", "ICEPOWERUP", aGUN3POWER);
+		engine->RegisterEnumValue("Behavior", "SEEKERPOWERUP", aGUN4POWER);
+		engine->RegisterEnumValue("Behavior", "RFPOWERUP", aGUN5POWER);
+		engine->RegisterEnumValue("Behavior", "TOASTERPOWERUP", aGUN6POWER);
+		engine->RegisterEnumValue("Behavior", "LEFTPADDLE", aPINLEFTPADDLE);
+		engine->RegisterEnumValue("Behavior", "RIGHTPADDLE", aPINRIGHTPADDLE);
+		engine->RegisterEnumValue("Behavior", "FIVEHUNDREDBUMP", aPIN500BUMP);
+		engine->RegisterEnumValue("Behavior", "CARROTBUMP", aPINCARROTBUMP);
+		engine->RegisterEnumValue("Behavior", "APPLE", aAPPLE);
+		engine->RegisterEnumValue("Behavior", "BANANA", aBANANA);
+		engine->RegisterEnumValue("Behavior", "CHERRY", aCHERRY);
+		engine->RegisterEnumValue("Behavior", "ORANGE", aORANGE);
+		engine->RegisterEnumValue("Behavior", "PEAR", aPEAR);
+		engine->RegisterEnumValue("Behavior", "PRETZEL", aPRETZEL);
+		engine->RegisterEnumValue("Behavior", "STRAWBERRY", aSTRAWBERRY);
+		engine->RegisterEnumValue("Behavior", "STEADYLIGHT", aSTEADYLIGHT);
+		engine->RegisterEnumValue("Behavior", "PULZELIGHT", aPULZELIGHT);
+		engine->RegisterEnumValue("Behavior", "PULSELIGHT", aPULZELIGHT); // Private/deprecated
+		engine->RegisterEnumValue("Behavior", "FLICKERLIGHT", aFLICKERLIGHT);
+		engine->RegisterEnumValue("Behavior", "QUEEN", aQUEENBOSS);
+		engine->RegisterEnumValue("Behavior", "FLOATSUCKER", aFLOATSUCKER);
+		engine->RegisterEnumValue("Behavior", "BRIDGE", aBRIDGE);
+		engine->RegisterEnumValue("Behavior", "LEMON", aLEMON);
+		engine->RegisterEnumValue("Behavior", "LIME", aLIME);
+		engine->RegisterEnumValue("Behavior", "THING", aTHING);
+		engine->RegisterEnumValue("Behavior", "WATERMELON", aWMELON);
+		engine->RegisterEnumValue("Behavior", "PEACH", aPEACH);
+		engine->RegisterEnumValue("Behavior", "GRAPES", aGRAPES);
+		engine->RegisterEnumValue("Behavior", "LETTUCE", aLETTUCE);
+		engine->RegisterEnumValue("Behavior", "EGGPLANT", aEGGPLANT);
+		engine->RegisterEnumValue("Behavior", "CUCUMB", aCUCUMB);
+		engine->RegisterEnumValue("Behavior", "CUCUMBER", aCUCUMB); // Private/deprecated
+		engine->RegisterEnumValue("Behavior", "COKE", aCOKE);
+		engine->RegisterEnumValue("Behavior", "SOFTDRINK", aCOKE); // Private/deprecated
+		engine->RegisterEnumValue("Behavior", "PEPSI", aPEPSI);
+		engine->RegisterEnumValue("Behavior", "SODAPOP", aCOKE); // Private/deprecated
+		engine->RegisterEnumValue("Behavior", "MILK", aMILK);
+		engine->RegisterEnumValue("Behavior", "PIE", aPIE);
+		engine->RegisterEnumValue("Behavior", "CAKE", aCAKE);
+		engine->RegisterEnumValue("Behavior", "DONUT", aDONUT);
+		engine->RegisterEnumValue("Behavior", "CUPCAKE", aCUPCAKE);
+		engine->RegisterEnumValue("Behavior", "CHIPS", aCHIPS);
+		engine->RegisterEnumValue("Behavior", "CANDY", aCANDY1);
+		engine->RegisterEnumValue("Behavior", "CHOCBAR", aCHOCBAR);
+		engine->RegisterEnumValue("Behavior", "aCHOCOLATEBAR", aCHOCBAR); // Private/deprecated
+		engine->RegisterEnumValue("Behavior", "ICECREAM", aICECREAM);
+		engine->RegisterEnumValue("Behavior", "BURGER", aBURGER);
+		engine->RegisterEnumValue("Behavior", "PIZZA", aPIZZA);
+		engine->RegisterEnumValue("Behavior", "FRIES", aFRIES);
+		engine->RegisterEnumValue("Behavior", "CHICKENLEG", aCHICKLEG);
+		engine->RegisterEnumValue("Behavior", "SANDWICH", aSANDWICH);
+		engine->RegisterEnumValue("Behavior", "TACO", aTACOBELL);
+		engine->RegisterEnumValue("Behavior", "WEENIE", aWEENIE);
+		engine->RegisterEnumValue("Behavior", "HAM", aHAM);
+		engine->RegisterEnumValue("Behavior", "CHEESE", aCHEESE);
+		engine->RegisterEnumValue("Behavior", "FLOATLIZARD", aFLOATLIZARD);
+		engine->RegisterEnumValue("Behavior", "STANDMONKEY", aSTANDMONKEY);
+		engine->RegisterEnumValue("Behavior", "DESTRUCTSCENERY", aDESTRUCTSCENERY);
+		engine->RegisterEnumValue("Behavior", "DESTRUCTSCENERYBOMB", aDESTRUCTSCENERYBOMB);
+		engine->RegisterEnumValue("Behavior", "TNTDESTRUCTSCENERY", aDESTRUCTSCENERYBOMB); // Private/deprecated
+		engine->RegisterEnumValue("Behavior", "COLLAPSESCENERY", aCOLLAPSESCENERY);
+		engine->RegisterEnumValue("Behavior", "STOMPSCENERY", aSTOMPSCENERY);
+		engine->RegisterEnumValue("Behavior", "GEMSTOMP", aGEMSTOMP);
+		engine->RegisterEnumValue("Behavior", "RAVEN", aRAVEN);
+		engine->RegisterEnumValue("Behavior", "TUBETURTLE", aTUBETURTLE);
+		engine->RegisterEnumValue("Behavior", "GEMRING", aGEMRING);
+		engine->RegisterEnumValue("Behavior", "SMALLTREE", aROTSMALLTREE);
+		engine->RegisterEnumValue("Behavior", "AMBIENTSOUND", aAMBIENTSOUND);
+		engine->RegisterEnumValue("Behavior", "UTERUS", aUTERUS);
+		engine->RegisterEnumValue("Behavior", "CRAB", aCRAB);
+		engine->RegisterEnumValue("Behavior", "WITCH", aWITCH);
+		engine->RegisterEnumValue("Behavior", "ROCKETTURTLE", aROCKTURT);
+		engine->RegisterEnumValue("Behavior", "BUBBA", aBUBBA);
+		engine->RegisterEnumValue("Behavior", "DEVILDEVAN", aDEVILDEVAN);
+		engine->RegisterEnumValue("Behavior", "DEVANROBOT", aDEVANROBOT);
+		engine->RegisterEnumValue("Behavior", "ROBOT", aROBOT);
+		engine->RegisterEnumValue("Behavior", "CARROTUSPOLE", aCARROTUSPOLE);
+		engine->RegisterEnumValue("Behavior", "PSYCHPOLE", aPSYCHPOLE);
+		engine->RegisterEnumValue("Behavior", "DIAMONDUSPOLE", aDIAMONDUSPOLE);
+		engine->RegisterEnumValue("Behavior", "FRUITPLATFORM", aFRUITPLATFORM);
+		engine->RegisterEnumValue("Behavior", "BOLLPLATFORM", aBOLLPLATFORM);
+		engine->RegisterEnumValue("Behavior", "GRASSPLATFORM", aGRASSPLATFORM);
+		engine->RegisterEnumValue("Behavior", "PINKPLATFORM", aPINKPLATFORM);
+		engine->RegisterEnumValue("Behavior", "SONICPLATFORM", aSONICPLATFORM);
+		engine->RegisterEnumValue("Behavior", "SPIKEPLATFORM", aSPIKEPLATFORM);
+		engine->RegisterEnumValue("Behavior", "SPIKEBOLL", aSPIKEBOLL);
+		engine->RegisterEnumValue("Behavior", "GENERATOR", aGENERATOR);
+		engine->RegisterEnumValue("Behavior", "EVA", aEVA);
+		engine->RegisterEnumValue("Behavior", "BUBBLER", aBUBBLER);
+		engine->RegisterEnumValue("Behavior", "TNTPOWERUP", aTNTPOWER);
+		engine->RegisterEnumValue("Behavior", "GUN8POWERUP", aGUN8POWER);
+		engine->RegisterEnumValue("Behavior", "GUN9POWERUP", aGUN9POWER);
+		engine->RegisterEnumValue("Behavior", "SPIKEBOLL3D", aSPIKEBOLL3D);
+		engine->RegisterEnumValue("Behavior", "SPRINGCORD", aSPRINGCORD);
+		engine->RegisterEnumValue("Behavior", "BEES", aBEES);
+		engine->RegisterEnumValue("Behavior", "COPTER", aCOPTER);
+		engine->RegisterEnumValue("Behavior", "LASERSHIELD", aLASERSHIELD);
+		engine->RegisterEnumValue("Behavior", "STOPWATCH", aSTOPWATCH);
+		engine->RegisterEnumValue("Behavior", "JUNGLEPOLE", aJUNGLEPOLE);
+		engine->RegisterEnumValue("Behavior", "WARP", areaWARP);
+		engine->RegisterEnumValue("Behavior", "BIGROCK", aBIGROCK);
+		engine->RegisterEnumValue("Behavior", "BIGBOX", aBIGBOX);
+		engine->RegisterEnumValue("Behavior", "TRIGGERSCENERY", aTRIGGERSCENERY);
+		engine->RegisterEnumValue("Behavior", "BOLLY", aSONICBOSS);
+		engine->RegisterEnumValue("Behavior", "BUTTERFLY", aBUTTERFLY);
+		engine->RegisterEnumValue("Behavior", "BEEBOY", aBEEBOY);
+		engine->RegisterEnumValue("Behavior", "SNOW", aSNOW);
+		engine->RegisterEnumValue("Behavior", "TWEEDLEBOSS", aTWEEDLEBOSS);
+		engine->RegisterEnumValue("Behavior", "AIRBOARD", aAIRBOARD);
+		engine->RegisterEnumValue("Behavior", "CTFBASE", aFLAG);
+		engine->RegisterEnumValue("Behavior", "XMASNORMTURTLE", aXNORMTURTLE);
+		engine->RegisterEnumValue("Behavior", "XMASLIZARD", aXLIZARD);
+		engine->RegisterEnumValue("Behavior", "XMASFLOATLIZARD", aXFLOATLIZARD);
+		engine->RegisterEnumValue("Behavior", "XMASBILSY", aXBILSYBOSS);
+		engine->RegisterEnumValue("Behavior", "CAT", aZCAT);
+		engine->RegisterEnumValue("Behavior", "PACMANGHOST", aZGHOST);
+
+		engine->RegisterEnumValue("Behavior", "WALKINGENEMY", aCOUNT + 1);
+		engine->RegisterEnumValue("Behavior", "ROCKETTURTLEPLUS", aCOUNT + 2);
+		engine->RegisterEnumValue("Behavior", "BOLLYTOP", aCOUNT + 3);
+		engine->RegisterEnumValue("Behavior", "BOLLYBOTTOM", aCOUNT + 4);
+		engine->RegisterEnumValue("Behavior", "PLATFORM", aCOUNT + 5);
+		engine->RegisterEnumValue("Behavior", "SPRING", aCOUNT + 6);
+		engine->RegisterEnumValue("Behavior", "AMMO15", aCOUNT + 7);
+		engine->RegisterEnumValue("Behavior", "MONITOR", aCOUNT + 8);
+		engine->RegisterEnumValue("Behavior", "CRATE", aCOUNT + 9);
+		engine->RegisterEnumValue("Behavior", "PICKUP", aCOUNT + 10);
+		engine->RegisterEnumValue("Behavior", "DIAMONDSAREFOREVER", aCOUNT + 11);
+		engine->RegisterEnumValue("Behavior", "FLAG", aCOUNT + 12);
+		engine->RegisterEnumValue("Behavior", "MONKEYBULLET", aCOUNT + 13);
+		engine->RegisterEnumValue("Behavior", "BILSYBULLET", aCOUNT + 14);
+		engine->RegisterEnumValue("Behavior", "BOLLYBULLET", aCOUNT + 15);
+		engine->RegisterEnumValue("Behavior", "BOLLYSPIKEBALL", aCOUNT + 16);
+		engine->RegisterEnumValue("Behavior", "WITCHBULLET", aCOUNT + 17);
+		engine->RegisterEnumValue("Behavior", "TUFBOSSBULLET", aCOUNT + 18);
+		engine->RegisterEnumValue("Behavior", "ROBOTSHARD", aCOUNT + 19);
+		engine->RegisterEnumValue("Behavior", "BONE", aCOUNT + 20);
+		engine->RegisterEnumValue("Behavior", "EXPLOSION2", aCOUNT + 21);
+		engine->RegisterEnumValue("Behavior", "BURNING", aCOUNT + 22);
+		engine->RegisterEnumValue("Behavior", "AIRBOARDFALL", aCOUNT + 23);
+		engine->RegisterEnumValue("Behavior", "BIRDFEATHER", aCOUNT + 24);
+		engine->RegisterEnumValue("Behavior", "UFO", aCOUNT + 25);
+		engine->RegisterEnumValue("Behavior", "CORPSE", aCOUNT + 26);
+		engine->RegisterEnumValue("Behavior", "BIGOBJECT", aCOUNT + 27);
+
 		engine->SetDefaultNamespace("ANIM");
 		engine->RegisterEnumValue("Set", "AMMO", mAMMO);
 		engine->RegisterEnumValue("Set", "BAT", mBAT);
@@ -6202,7 +6754,7 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Set", "PLUS_RETICLES", mZZRETICLES);
 		engine->RegisterEnumValue("Set", "PLUS_SCENERY", mZZSCENERY);
 		engine->RegisterEnumValue("Set", "PLUS_WARP", mZZWARP);
-		//engine->RegisterGlobalFunction("Set get_CUSTOM(uint8)", asFUNCTION(getCustomSetID), asCALL_CDECL);
+		engine->RegisterGlobalFunction("Set get_CUSTOM(uint8)", asFUNCTION(getCustomSetID), asCALL_CDECL);
 
 		engine->SetDefaultNamespace("RABBIT");
 		engine->RegisterEnum("Anim");
@@ -6284,6 +6836,11 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Anim", "TELEPORTFALLTELEPORT", mJAZZ_TELEPORTFALLTELEPORT);
 		engine->RegisterEnumValue("Anim", "TELEPORTSTAND", mJAZZ_TELEPORTSTAND);
 		engine->RegisterEnumValue("Anim", "VPOLE", mJAZZ_VPOLE);
+
+		// Create fake MLLE namespace, because "MLLE-Include-xxx.asc" includes are blocked
+		engine->SetDefaultNamespace("MLLE");
+		engine->RegisterGlobalFunction("bool Setup()", asFUNCTION(mlleSetup), asCALL_CDECL);
+		engine->RegisterGlobalProperty("const jjPAL Palette", &jjBackupPalette);
 	}
 
 	void LevelScriptLoader::RegisterStandardFunctions(asIScriptEngine* engine, asIScriptModule* module)
@@ -6320,6 +6877,13 @@ namespace Jazz2::Scripting
 		// Game-specific classes
 		ScriptActorWrapper::RegisterFactory(engine, module);
 		ScriptPlayerWrapper::RegisterFactory(engine);
+	}
+
+	void LevelScriptLoader::OnException(asIScriptContext* ctx)
+	{
+		int column; const char* sectionName;
+		int lineNumber = ctx->GetExceptionLineNumber(&column, &sectionName);
+		__WriteLog(LogLevel::Error, "%s (%i, %i): An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", sectionName, lineNumber, column, ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 	}
 
 	Actors::ActorBase* LevelScriptLoader::CreateActorInstance(const StringView& typeName)

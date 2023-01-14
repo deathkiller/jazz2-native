@@ -34,6 +34,8 @@ namespace Jazz2::Scripting
 		void RegisterLegacyFunctions(asIScriptEngine* engine);
 		void RegisterStandardFunctions(asIScriptEngine* engine, asIScriptModule* module);
 
+		void OnException(asIScriptContext* ctx);
+
 		static uint8_t asGetDifficulty();
 		static bool asIsReforged();
 		static int asGetLevelWidth();

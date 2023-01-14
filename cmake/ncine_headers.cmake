@@ -18,6 +18,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Containers/Reference.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/SmallVector.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/String.h
+	${NCINE_SOURCE_DIR}/Shared/Containers/StringStlView.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringView.h
 )
 
@@ -138,6 +139,10 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Vector4.h
 	${NCINE_SOURCE_DIR}/nCine/Threading/IThreadCommand.h
 	${NCINE_SOURCE_DIR}/nCine/Threading/IThreadPool.h
+)
+
+list(APPEND HEADERS
+	${NCINE_SOURCE_DIR}/simdjson/simdjson.h
 )
 
 list(APPEND HEADERS

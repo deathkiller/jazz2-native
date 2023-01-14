@@ -95,6 +95,10 @@ list(APPEND SOURCES
 )
 
 list(APPEND SOURCES
+	${NCINE_SOURCE_DIR}/simdjson/simdjson.cpp
+)
+
+list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Main.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/ContentResolver.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/LevelHandler.cpp

@@ -413,25 +413,25 @@ namespace Jazz2::Scripting
 	{
 		// We don't register the method directly because the argument types change between 32bit and 64bit platforms
 		str.resize(l);
-	}
+	}*/
 
 	// string formatInt(int64 val, const string &in options, uint width)
 	static String formatInt(asINT64 value, const String& options, asUINT width)
 	{
-		bool leftJustify = options.find("l") != string::npos;
-		bool padWithZero = options.find("0") != string::npos;
-		bool alwaysSign = options.find("+") != string::npos;
-		bool spaceOnSign = options.find(" ") != string::npos;
-		bool hexSmall = options.find("h") != string::npos;
-		bool hexLarge = options.find("H") != string::npos;
+		bool leftJustify = options.find("l") != nullptr;
+		bool padWithZero = options.find("0") != nullptr;
+		bool alwaysSign = options.find("+") != nullptr;
+		bool spaceOnSign = options.find(" ") != nullptr;
+		bool hexSmall = options.find("h") != nullptr;
+		bool hexLarge = options.find("H") != nullptr;
 
-		string fmt = "%";
+		String fmt = "%";
 		if (leftJustify) fmt += "-";
 		if (alwaysSign) fmt += "+";
 		if (spaceOnSign) fmt += " ";
 		if (padWithZero) fmt += "0";
 
-#if defined(_WIN32)
+#if defined(DEATH_TARGET_WINDOWS)
 		fmt += "*I64";
 #elif defined(_LP64)
 		fmt += "*l";
@@ -443,36 +443,33 @@ namespace Jazz2::Scripting
 		else if (hexLarge) fmt += "X";
 		else fmt += "d";
 
-		string buf;
-		buf.resize(width + 30);
+		char buffer[64];
 #if _MSC_VER >= 1400 && !defined(__S3E__)
 		// MSVC 8.0 / 2005 or newer
-		sprintf_s(&buf[0], buf.size(), fmt.c_str(), width, value);
+		sprintf_s(buffer, sizeof(buffer), fmt.data(), width, value);
 #else
-		sprintf(&buf[0], fmt.c_str(), width, value);
+		sprintf(buffer, fmt.data(), width, value);
 #endif
-		buf.resize(std::strlen(&buf[0]));
-
-		return buf;
+		return buffer;
 	}
 
 	// string formatUInt(uint64 val, const string &in options, uint width)
 	static String formatUInt(asQWORD value, const String& options, asUINT width)
 	{
-		bool leftJustify = options.find("l") != string::npos;
-		bool padWithZero = options.find("0") != string::npos;
-		bool alwaysSign = options.find("+") != string::npos;
-		bool spaceOnSign = options.find(" ") != string::npos;
-		bool hexSmall = options.find("h") != string::npos;
-		bool hexLarge = options.find("H") != string::npos;
+		bool leftJustify = options.find('l') != nullptr;
+		bool padWithZero = options.find('0') != nullptr;
+		bool alwaysSign = options.find('+') != nullptr;
+		bool spaceOnSign = options.find(' ') != nullptr;
+		bool hexSmall = options.find('h') != nullptr;
+		bool hexLarge = options.find('H') != nullptr;
 
-		string fmt = "%";
+		String fmt = "%";
 		if (leftJustify) fmt += "-";
 		if (alwaysSign) fmt += "+";
 		if (spaceOnSign) fmt += " ";
 		if (padWithZero) fmt += "0";
 
-#if defined(_WIN32)
+#if defined(DEATH_TARGET_WINDOWS)
 		fmt += "*I64";
 #elif defined(_LP64)
 		fmt += "*l";
@@ -484,30 +481,27 @@ namespace Jazz2::Scripting
 		else if (hexLarge) fmt += "X";
 		else fmt += "u";
 
-		string buf;
-		buf.resize(width + 30);
+		char buffer[64];
 #if _MSC_VER >= 1400 && !defined(__S3E__)
 		// MSVC 8.0 / 2005 or newer
-		sprintf_s(&buf[0], buf.size(), fmt.c_str(), width, value);
+		sprintf_s(buffer, sizeof(buffer), fmt.data(), width, value);
 #else
-		sprintf(&buf[0], fmt.c_str(), width, value);
+		sprintf(buffer, fmt.data(), width, value);
 #endif
-		buf.resize(std::strlen(&buf[0]));
-
-		return buf;
+		return buffer;
 	}
 
 	// string formatFloat(double val, const string &in options, uint width, uint precision)
 	static String formatFloat(double value, const String& options, asUINT width, asUINT precision)
 	{
-		bool leftJustify = options.find("l") != string::npos;
-		bool padWithZero = options.find("0") != string::npos;
-		bool alwaysSign = options.find("+") != string::npos;
-		bool spaceOnSign = options.find(" ") != string::npos;
-		bool expSmall = options.find("e") != string::npos;
-		bool expLarge = options.find("E") != string::npos;
+		bool leftJustify = options.find("l") != nullptr;
+		bool padWithZero = options.find("0") != nullptr;
+		bool alwaysSign = options.find("+") != nullptr;
+		bool spaceOnSign = options.find(" ") != nullptr;
+		bool expSmall = options.find("e") != nullptr;
+		bool expLarge = options.find("E") != nullptr;
 
-		string fmt = "%";
+		String fmt = "%";
 		if (leftJustify) fmt += "-";
 		if (alwaysSign) fmt += "+";
 		if (spaceOnSign) fmt += " ";
@@ -519,18 +513,15 @@ namespace Jazz2::Scripting
 		else if (expLarge) fmt += "E";
 		else fmt += "f";
 
-		string buf;
-		buf.resize(width + precision + 50);
+		char buffer[64];
 #if _MSC_VER >= 1400 && !defined(__S3E__)
 		// MSVC 8.0 / 2005 or newer
-		sprintf_s(&buf[0], buf.size(), fmt.c_str(), width, precision, value);
+		sprintf_s(buffer, sizeof(buffer), fmt.data(), width, precision, value);
 #else
-		sprintf(&buf[0], fmt.c_str(), width, precision, value);
+		sprintf(buffer, fmt.data(), width, precision, value);
 #endif
-		buf.resize(std::strlen(&buf[0]));
-
-		return buf;
-	}*/
+		return buffer;
+	}
 
 	// int64 parseInt(const string &in val, uint base = 10, uint &out byteCount = 0)
 	static asINT64 parseInt(const String& val, asUINT base, asUINT* byteCount)
@@ -701,7 +692,7 @@ namespace Jazz2::Scripting
 		//r = engine->RegisterObjectMethod("string", "void resize(uint)", asFUNCTION(StringResize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 #if AS_USE_STLNAMES != 1 && AS_USE_ACCESSORS == 1
 		// Don't register these if STL names is used, as they conflict with the method size()
-		//r = engine->RegisterObjectMethod("string", "uint get_length() const property", asFUNCTION(StringSize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("string", "uint get_length() const property", asFUNCTION(StringSize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 		//r = engine->RegisterObjectMethod("string", "void set_length(uint) property", asFUNCTION(StringResize), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 #endif
 		// Need to use a wrapper on Mac OS X 10.7/XCode 4.3 and CLang/LLVM, otherwise the linker fails
@@ -750,9 +741,9 @@ namespace Jazz2::Scripting
 		//r = engine->RegisterObjectMethod("string", "void insert(uint pos, const string &in other)", asFUNCTION(StringInsert), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 		//r = engine->RegisterObjectMethod("string", "void erase(uint pos, int count = -1)", asFUNCTION(StringErase), asCALL_CDECL_OBJLAST); RETURN_ASSERT(r >= 0);
 
-		/*r = engine->RegisterGlobalFunction("string formatInt(int64 val, const string &in options = \"\", uint width = 0)", asFUNCTION(formatInt), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		r = engine->RegisterGlobalFunction("string formatInt(int64 val, const string &in options = \"\", uint width = 0)", asFUNCTION(formatInt), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterGlobalFunction("string formatUInt(uint64 val, const string &in options = \"\", uint width = 0)", asFUNCTION(formatUInt), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterGlobalFunction("string formatFloat(double val, const string &in options = \"\", uint width = 0, uint precision = 0)", asFUNCTION(formatFloat), asCALL_CDECL); RETURN_ASSERT(r >= 0);*/
+		r = engine->RegisterGlobalFunction("string formatFloat(double val, const string &in options = \"\", uint width = 0, uint precision = 0)", asFUNCTION(formatFloat), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterGlobalFunction("int64 parseInt(const string &in, uint base = 10, uint &out byteCount = 0)", asFUNCTION(parseInt), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterGlobalFunction("uint64 parseUInt(const string &in, uint base = 10, uint &out byteCount = 0)", asFUNCTION(parseUInt), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterGlobalFunction("double parseFloat(const string &in, uint &out byteCount = 0)", asFUNCTION(parseFloat), asCALL_CDECL); RETURN_ASSERT(r >= 0);
