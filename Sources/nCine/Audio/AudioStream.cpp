@@ -8,10 +8,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	/*! Private constructor called only by `AudioStreamPlayer`. */
 	AudioStream::AudioStream()
 		: nextAvailableBufferIndex_(0),
@@ -56,10 +52,6 @@ namespace nCine
 	AudioStream::AudioStream(AudioStream&&) = default;
 
 	AudioStream& AudioStream::operator=(AudioStream&&) = default;
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	unsigned long int AudioStream::numStreamSamples() const
 	{
@@ -165,10 +157,6 @@ namespace nCine
 			audioReader_->setLooping(isLooping_);
 		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool AudioStream::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{

@@ -60,7 +60,7 @@ jobs:
           git config --global --add safe.directory '*'
           cd /_current/
           rm -f ./Content/Translations/*.po
-          cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_LINKTIME_OPTIMIZATION=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_DOWNLOAD_DEPENDENCIES=OFF
+          cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_DOWNLOAD_DEPENDENCIES=OFF
           echo "::endgroup::"
           echo "::group::Build"
           make -j $(nproc) -C ./_build/

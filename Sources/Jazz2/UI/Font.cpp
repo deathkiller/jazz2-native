@@ -405,7 +405,7 @@ namespace Jazz2::UI
 					pos.Y = std::round(pos.Y - uvRect.H * scale * 0.5f);
 
 					int charWidth = _charSize.X;
-					if (charWidth > uvRect.H) {
+					if (charWidth > uvRect.W) {
 						charWidth--;
 					}
 

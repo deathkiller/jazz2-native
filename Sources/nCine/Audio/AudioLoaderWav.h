@@ -36,5 +36,4 @@ namespace nCine
 	public:
 		static const unsigned int HeaderSize = sizeof(WavHeader);
 	};
-
 }

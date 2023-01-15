@@ -90,5 +90,4 @@ namespace nCine
 			return nullptr;
 		}
 	};
-
 }

@@ -145,5 +145,4 @@ namespace nCine
 
 		friend class ALAudioDevice;
 	};
-
 }

@@ -6,10 +6,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	TextureLoaderPkm::TextureLoaderPkm(std::unique_ptr<IFileStream> fileHandle)
 		: ITextureLoader(std::move(fileHandle))
 	{
@@ -42,7 +38,6 @@ namespace nCine
 		loadPixels(GL_ETC1_RGB8_OES);
 		hasLoaded_ = true;
 	}
-
 }
 
 #endif

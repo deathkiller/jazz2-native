@@ -10,20 +10,12 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	IAudioLoader::IAudioLoader(std::unique_ptr<IFileStream> fileHandle)
 		: hasLoaded_(false), fileHandle_(std::move(fileHandle)), bytesPerSample_(0),
 		numChannels_(0), frequency_(0), numSamples_(0L), duration_(0.0f)
 	{
 		// Warning: Cannot call a virtual `init()` here, in the base constructor
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	std::unique_ptr<IAudioLoader> IAudioLoader::createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
@@ -38,10 +30,6 @@ namespace nCine
 		return createLoader(fs::Open(filename, FileAccessMode::Read), filename);
 	}
 
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	std::unique_ptr<IAudioLoader> IAudioLoader::createLoader(std::unique_ptr<IFileStream> fileHandle, const StringView& filename)
 	{
 		auto extension = fs::GetExtension(filename);
@@ -49,7 +37,7 @@ namespace nCine
 			return std::make_unique<AudioLoaderWav>(std::move(fileHandle));
 		}
 #if defined(WITH_VORBIS)
-		if (fs::HasExtension(filename, "ogg"_s)) {
+		if (extension == "ogg"_s) {
 			return std::make_unique<AudioLoaderOgg>(std::move(fileHandle));
 		}
 #endif
@@ -63,5 +51,4 @@ namespace nCine
 		fileHandle.reset(nullptr);
 		return std::make_unique<InvalidAudioLoader>(std::move(fileHandle));
 	}
-
 }

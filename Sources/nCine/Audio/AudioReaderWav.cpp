@@ -6,19 +6,11 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	AudioReaderWav::AudioReaderWav(std::unique_ptr<IFileStream> fileHandle)
 		: fileHandle_(std::move(fileHandle))
 	{
 		ASSERT(fileHandle_->IsOpened());
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	unsigned long int AudioReaderWav::read(void* buffer, unsigned long int bufferSize) const
 	{

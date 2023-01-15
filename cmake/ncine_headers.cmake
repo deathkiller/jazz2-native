@@ -137,6 +137,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Vector2.h
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Vector3.h
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Vector4.h
+	${NCINE_SOURCE_DIR}/nCine/Threading/Atomic.h
 	${NCINE_SOURCE_DIR}/nCine/Threading/IThreadCommand.h
 	${NCINE_SOURCE_DIR}/nCine/Threading/IThreadPool.h
 )

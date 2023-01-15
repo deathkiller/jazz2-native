@@ -5,12 +5,8 @@
 #include "IAudioDevice.h"
 #include "../Primitives/Vector3.h"
 
-namespace nCine {
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
+namespace nCine
+{
 	IAudioPlayer::IAudioPlayer(ObjectType type)
 		: Object(type), sourceId_(IAudioDevice::UnavailableSource),
 		state_(PlayerState::Stopped), isLooping_(false), isSourceRelative_(false),
@@ -28,10 +24,6 @@ namespace nCine {
 		}
 #endif
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	int IAudioPlayer::sampleOffset() const
 	{

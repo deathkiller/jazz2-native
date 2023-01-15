@@ -17,6 +17,8 @@ get_filename_component(PARENT_SOURCE_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
 
 if(NOT CMAKE_GENERATOR_PLATFORM OR "${CMAKE_GENERATOR_PLATFORM}" STREQUAL "${CMAKE_SYSTEM_PROCESSOR}")
 	message(STATUS "Compiling for architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+elseif(EMSCRIPTEN)
+	message(STATUS "Compiling for architecture: WASM (${CMAKE_SYSTEM_PROCESSOR})")
 else()
 	message(STATUS "Compiling for architecture: ${CMAKE_GENERATOR_PLATFORM} (${CMAKE_SYSTEM_PROCESSOR})")
 endif()

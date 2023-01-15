@@ -15,7 +15,6 @@ namespace nCine
 
 		std::unique_ptr<IAudioReader> createReader() override;
 	};
-
 }
 
 #endif

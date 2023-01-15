@@ -23,10 +23,6 @@ namespace nCine
 
 	}
 
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	AudioBuffer::AudioBuffer()
 		: Object(ObjectType::AudioBuffer), bufferId_(0),
 		bytesPerSample_(0), numChannels_(0), frequency_(0), numSamples_(0), duration_(0.0f)
@@ -83,10 +79,6 @@ namespace nCine
 		other.bufferId_ = 0;
 		return *this;
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void AudioBuffer::init(Format format, int frequency)
 	{
@@ -158,10 +150,6 @@ namespace nCine
 
 		return (error == AL_NO_ERROR);
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool AudioBuffer::load(IAudioLoader& audioLoader)
 	{

@@ -29,6 +29,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STRE
 		}")
 
 	# Attempt to compile the two atomic tests
+	set(CMAKE_REQUIRED_QUIET ON)
 	check_cxx_source_compiles("${ATOMIC32_TEST_CODE}" atomic32_test)
 	check_cxx_source_compiles("${ATOMIC64_TEST_CODE}" atomic64_test)
 

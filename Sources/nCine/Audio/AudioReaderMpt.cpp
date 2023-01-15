@@ -3,13 +3,13 @@
 #if defined(WITH_OPENMPT)
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD) && !defined(WITH_OPENMPT_DYNAMIC)
-#   if defined(_M_X64)
-#       pragma comment(lib, "../Libs/Windows/x64/libopenmpt.lib")
-#   elif defined(_M_IX86)
-#       pragma comment(lib, "../Libs/Windows/x86/libopenmpt.lib")
-#   else
-#       error Unsupported architecture
-#   endif
+#	if defined(_M_X64)
+#		pragma comment(lib, "../Libs/Windows/x64/libopenmpt.lib")
+#	elif defined(_M_IX86)
+#		pragma comment(lib, "../Libs/Windows/x86/libopenmpt.lib")
+#	else
+#		error Unsupported architecture
+#	endif
 #endif
 
 #include "../IO/IFileStream.h"
@@ -65,10 +65,6 @@ namespace nCine
 			_module = nullptr;
 		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	unsigned long int AudioReaderMpt::read(void* buffer, unsigned long int bufferSize) const
 	{
