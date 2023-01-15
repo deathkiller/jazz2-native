@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-01-15 12:14+0100\n"
+"POT-Creation-Date: 2023-01-12 23:11+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Hexaae <hexaae@gmail.com>\n"
 "Language-Team: Traduzione Italiana: Hexaae\n"
@@ -395,7 +395,7 @@ msgid ""
 "This schwartzenguard is toast!"
 msgstr ""
 "\n"
-"Ormai questo guardianen è cotto!"
+"Guardianen cotto!"
 
 #: .fake/Translations/prince/06_labrat2.j2l.h:1
 msgctxt "prince/06_labrat2"
@@ -942,7 +942,7 @@ msgid ""
 "be very dangerous."
 msgstr ""
 "\n"
-"ATTENTI! Stormi di corvi possono\n"
+"ATTENTO! Gli stormi di corvi possono\n"
 "essere molto pericolosi."
 
 #: .fake/Translations/secretf/09_town3.j2l.h:3
@@ -1005,7 +1005,7 @@ msgid ""
 msgstr ""
 "\n"
 "Mentre sei in aria, premi\n"
-"Giù per schiacciare col didietro."
+"Giù per una schiacciata col didietro."
 
 #: .fake/Translations/share/01_share1.j2l.h:3
 msgctxt "share/01_share1"
@@ -1636,7 +1636,8 @@ msgstr "Salva e esci"
 
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:68
 msgid "Processing of files in \f[c:0x9e7056]\"Source\"\f[c] directory..."
-msgstr "Elaborazione dei file nella directory \f[c:0x9e7056]\"Source\"\f[c]..."
+msgstr ""
+"Elaborazione dei file nella directory \f[c:0x9e7056]\"Source\"\f[c]..."
 
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:71
 msgid "Newly added levels and episodes will be available soon."
