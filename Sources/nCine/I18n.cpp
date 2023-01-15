@@ -834,7 +834,7 @@ namespace nCine
 #else
 		const int totalChars = ::vsnprintf(nullptr, 0, format, args);
 		String result(NoInit, totalChars);
-		::vsnprintf(result.data(), totalChars, format, args);
+		::vsnprintf(result.data(), totalChars + 1, format, args);
 #endif
 		va_end(args);
 		return result;
@@ -860,7 +860,7 @@ namespace nCine
 #else
 		const int totalChars = ::vsnprintf(nullptr, 0, format, args);
 		String result(NoInit, totalChars);
-		::vsnprintf(result.data(), totalChars, format, args);
+		::vsnprintf(result.data(), totalChars + 1, format, args);
 #endif
 		va_end(args);
 		return result;

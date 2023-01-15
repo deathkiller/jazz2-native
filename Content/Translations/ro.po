@@ -1634,7 +1634,7 @@ msgstr "Salvează și Ieși"
 
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:68
 msgid "Processing of files in \f[c:0x9e7056]\"Source\"\f[c] directory..."
-msgstr "Procesarea fișierelor \f[c:0x9e7056]\"Sursa\"\f[c] din directorul..."
+msgstr "Procesarea fișierelor \f[c:0x9e7056]\"Source\"\f[c] din directorul..."
 
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:71
 msgid "Newly added levels and episodes will be available soon."

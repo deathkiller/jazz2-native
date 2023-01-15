@@ -262,9 +262,10 @@ namespace Jazz2
 
 			ondemand::object animations;
 			if (doc["Animations"].get(animations) == SUCCESS) {
-				size_t count = 0;
-				animations.count_fields().get(count);
-				metadata->Graphics.reserve(count);
+				size_t count;
+				if (animations.count_fields().get(count) == SUCCESS) {
+					metadata->Graphics.reserve(count);
+				}
 
 				for (auto it : animations) {
 					std::string_view key, assetPath;
@@ -344,9 +345,10 @@ namespace Jazz2
 
 			ondemand::object sounds;
 			if (doc["Sounds"].get(sounds) == SUCCESS) {
-				size_t count = 0;
-				sounds.count_fields().get(count);
-				metadata->Sounds.reserve(count);
+				size_t count;
+				if (sounds.count_fields().get(count) == SUCCESS) {
+					metadata->Sounds.reserve(count);
+				}
 
 				for (auto it : sounds) {
 					std::string_view key;
