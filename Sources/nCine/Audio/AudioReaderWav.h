@@ -27,5 +27,4 @@ namespace nCine
 		/// Deleted assignment operator
 		AudioReaderWav& operator=(const AudioReaderWav&) = delete;
 	};
-
 }

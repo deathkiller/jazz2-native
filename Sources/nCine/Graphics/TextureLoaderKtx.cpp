@@ -2,17 +2,9 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	uint8_t TextureLoaderKtx::fileIdentifier_[] = {
 		0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
 	}; // "«KTX 11»\r\n\x1A\n"};
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
 
 	TextureLoaderKtx::TextureLoaderKtx(std::unique_ptr<IFileStream> fileHandle)
 		: ITextureLoader(std::move(fileHandle))
@@ -28,10 +20,6 @@ namespace nCine
 		hasLoaded_ = true;
 	}
 
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	bool TextureLoaderKtx::readHeader(KtxHeader& header)
 	{
 		bool checkPassed = true;
@@ -40,8 +28,9 @@ namespace nCine
 		fileHandle_->Read(&header, 64);
 
 		for (int i = 0; i < KtxIdentifierLength; i++) {
-			if (header.identifier[i] != fileIdentifier_[i])
+			if (header.identifier[i] != fileIdentifier_[i]) {
 				checkPassed = false;
+			}
 		}
 
 		RETURNF_ASSERT_MSG(checkPassed, "Not a KTX file");
@@ -72,8 +61,9 @@ namespace nCine
 
 			// HACK: accounting for `UInt32 imageSize` on top of each MIP level
 			// Excluding the first one, already taken into account in header size
-			for (int i = 1; i < mipMapCount_; i++)
+			for (int i = 1; i < mipMapCount_; i++) {
 				mipDataOffsets_[i] += 4 * i;
+			}
 			dataSizesSum += 4 * mipMapCount_;
 
 			if (dataSizesSum != dataSize_) {

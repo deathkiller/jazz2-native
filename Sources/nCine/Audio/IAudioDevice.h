@@ -104,5 +104,4 @@ namespace nCine
 		void updateListener(const Vector3f& position, const Vector3f& velocity) override { }
 		int nativeFrequency() override { return 0; }
 	};
-
 }

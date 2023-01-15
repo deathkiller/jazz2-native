@@ -128,5 +128,4 @@ namespace nCine
 
 		friend class AudioStreamPlayer;
 	};
-
 }

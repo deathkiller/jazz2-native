@@ -5,10 +5,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	AudioLoaderWav::AudioLoaderWav(std::unique_ptr<IFileStream> fileHandle)
 		: IAudioLoader(std::move(fileHandle))
 	{
@@ -41,13 +37,8 @@ namespace nCine
 		hasLoaded_ = true;
 	}
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	std::unique_ptr<IAudioReader> AudioLoaderWav::createReader()
 	{
 		return std::make_unique<AudioReaderWav>(std::move(fileHandle_));
 	}
-
 }

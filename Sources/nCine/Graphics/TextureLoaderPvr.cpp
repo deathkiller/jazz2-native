@@ -3,10 +3,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	TextureLoaderPvr::TextureLoaderPvr(std::unique_ptr<IFileStream> fileHandle)
 		: ITextureLoader(std::move(fileHandle))
 	{
@@ -21,10 +17,6 @@ namespace nCine
 		hasLoaded_ = true;
 	}
 
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	bool TextureLoaderPvr::readHeader(Pvr3Header& header)
 	{
 		// PVR3 header is 52 bytes long
@@ -38,9 +30,9 @@ namespace nCine
 		height_ = IFileStream::int32FromLE(header.height);
 		mipMapCount_ = header.numMipmaps;
 
-		if (mipMapCount_ == 0)
+		if (mipMapCount_ == 0) {
 			mipMapCount_ = 1;
-
+		}
 		return true;
 	}
 
@@ -151,9 +143,8 @@ namespace nCine
 			}
 
 			loadPixels(internalFormat);
-		}
-		// Texture contains uncompressed data
-		else {
+		} else {
+			// Texture contains uncompressed data
 			GLenum type = GL_UNSIGNED_BYTE;
 
 			LOGI_X("Uncompressed format: %c%c%c%c (%u, %u, %u, %u)",
@@ -217,5 +208,4 @@ namespace nCine
 
 		return true;
 	}
-
 }

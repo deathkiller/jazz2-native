@@ -31,5 +31,4 @@ namespace nCine
 		}
 		inline void rewind() const override { };
 	};
-
 }

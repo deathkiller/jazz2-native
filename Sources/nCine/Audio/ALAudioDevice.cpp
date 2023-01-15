@@ -12,10 +12,6 @@ using namespace Death;
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	ALAudioDevice::ALAudioDevice()
 		: device_(nullptr), context_(nullptr), gain_(1.0f), sources_ { }, deviceName_(nullptr), nativeFreq_(44100)
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
@@ -92,10 +88,6 @@ namespace nCine
 		ALCboolean result = alcCloseDevice(device_);
 		FATAL_ASSERT_MSG_X(result, "alcCloseDevice failed: %d", alGetError());
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void ALAudioDevice::setGain(ALfloat gain)
 	{

@@ -796,7 +796,7 @@ namespace nCine
 		// Return nothing if only filename was specified as relative path
 		if (pathRootLength == 0 && i == 0) {
 #if defined(DEATH_TARGET_ANDROID)
-			if (path.hasPrefix(AssetFile::Prefix)) {
+			if (path != AssetFile::Prefix && path.hasPrefix(AssetFile::Prefix)) {
 				return AssetFile::Prefix;
 			}
 #endif

@@ -128,14 +128,14 @@ namespace nCine
 
 						if (is24Bit) {
 							for (int i = 0; i < srcStride; i++) {
-								memcpy(&pixels_[y * dstStride + 4 * i], &bufferRow[3 * i], 3);
+								std::memcpy(&pixels_[y * dstStride + 4 * i], &bufferRow[3 * i], 3);
 								pixels_[y * dstStride + 4 * i + 3] = 255;
 							}
 						} else {
-							memcpy(&pixels_[y * dstStride], bufferRow, srcStride);
+							std::memcpy(&pixels_[y * dstStride], bufferRow, srcStride);
 						}
 
-						memcpy(bufferPrev.get(), bufferRow, srcStride);
+						std::memcpy(bufferPrev.get(), bufferRow, srcStride);
 					}
 
 					mipMapCount_ = 1;

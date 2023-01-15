@@ -10,7 +10,7 @@
 #		define __HAS_LOCAL_QOI
 #	endif
 #endif
-#ifdef __HAS_LOCAL_QOI
+#if defined(__HAS_LOCAL_QOI)
 #	include "../../../Libs/Includes/qoi.h"
 #else
 #	include <qoi.h>

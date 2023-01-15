@@ -194,6 +194,9 @@ if(MSVC)
 
 	# Suppress linker warning about templates
 	target_compile_options(${NCINE_APP} PUBLIC "/wd4251")
+	# Suppress warnings about "conversion from '<bigger int type>' to '<smaller int type>'",
+	# "conversion from 'size_t' to '<smaller int type>', possible loss of data"
+	target_compile_options(${NCINE_APP} PUBLIC "/wd4244" "/wd4267")
 
 	# Disabling incremental linking and manifest generation
 	target_link_options(${NCINE_APP} PRIVATE $<$<CONFIG:Debug>:/MANIFEST:NO /INCREMENTAL:NO>)

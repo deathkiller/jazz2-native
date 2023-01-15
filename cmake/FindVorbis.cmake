@@ -10,11 +10,43 @@ if(VORBIS_INCLUDE_DIR)
 	set(VORBIS_FIND_QUIETLY TRUE)
 endif(VORBIS_INCLUDE_DIR)
 
-find_path(VORBIS_INCLUDE_DIR vorbis/vorbisfile.h)
+find_path(VORBIS_INCLUDE_DIR vorbis/vorbisfile.h
+	PATHS
+	~/Library/Frameworks
+	/Library/Frameworks
+	/usr/local/include/SDL2
+	/usr/include/SDL2
+	/sw # Fink
+	/opt/local # DarwinPorts
+	/opt/csw # Blastwave
+	/opt
+	${EXTERNAL_INCLUDES_DIR}/SDL2/
+)
 
-find_library(OGG_LIBRARY NAMES ogg)
-find_library(VORBIS_LIBRARY NAMES vorbis)
-find_library(VORBISFILE_LIBRARY NAMES vorbisfile)
+find_library(OGG_LIBRARY NAMES ogg
+	PATHS
+	/sw
+	/opt/local
+	/opt/csw
+	/opt
+	${NCINE_LIBS}/Linux/${CMAKE_SYSTEM_PROCESSOR}/
+)
+find_library(VORBIS_LIBRARY NAMES vorbis
+	PATHS
+	/sw
+	/opt/local
+	/opt/csw
+	/opt
+	${NCINE_LIBS}/Linux/${CMAKE_SYSTEM_PROCESSOR}/
+)
+find_library(VORBISFILE_LIBRARY NAMES vorbisfile
+	PATHS
+	/sw
+	/opt/local
+	/opt/csw
+	/opt
+	${NCINE_LIBS}/Linux/${CMAKE_SYSTEM_PROCESSOR}/
+)
 
 # Handle the QUIETLY and REQUIRED arguments and set VORBIS_FOUND to TRUE if
 # all listed variables are TRUE.
@@ -23,9 +55,9 @@ find_package_handle_standard_args(Vorbis DEFAULT_MSG
 	VORBIS_INCLUDE_DIR OGG_LIBRARY VORBIS_LIBRARY VORBISFILE_LIBRARY)
 
 if(VORBIS_FOUND)
-  set(VORBIS_LIBRARIES ${VORBISFILE_LIBRARY} ${VORBIS_LIBRARY} ${OGG_LIBRARY})
+	set(VORBIS_LIBRARIES ${VORBISFILE_LIBRARY} ${VORBIS_LIBRARY} ${OGG_LIBRARY})
 else(VORBIS_FOUND)
-  set(VORBIS_LIBRARIES)
+	set(VORBIS_LIBRARIES)
 endif(VORBIS_FOUND)
 
 mark_as_advanced(VORBIS_INCLUDE_DIR)

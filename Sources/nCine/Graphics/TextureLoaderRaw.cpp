@@ -2,11 +2,6 @@
 
 namespace nCine
 {
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	TextureLoaderRaw::TextureLoaderRaw(int width, int height, int mipMapCount, GLenum internalFormat)
 		: ITextureLoader()
 	{
@@ -24,5 +19,4 @@ namespace nCine
 
 		hasLoaded_ = true;
 	}
-
 }

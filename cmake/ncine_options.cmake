@@ -1,7 +1,12 @@
+include(CMakeDependentOption)
+if(POLICY CMP0127)
+	cmake_policy(SET CMP0127 NEW)
+endif()
+
 # nCine options
 option(NCINE_LOG "Enable runtime logging" ON)
 option(NCINE_DOWNLOAD_DEPENDENCIES "Download all build dependencies" ON)
-option(NCINE_LINKTIME_OPTIMIZATION "Compile the game with link time optimization when in release" OFF)
+option(NCINE_LINKTIME_OPTIMIZATION "Compile the game with link time optimization when in release" ON)
 option(NCINE_AUTOVECTORIZATION_REPORT "Enable report generation from compiler auto-vectorization" OFF)
 #option(NCINE_DYNAMIC_LIBRARY "Compile the engine as a dynamic library" ON)
 option(NCINE_EMBED_SHADERS "Export shader files to C strings to be included in engine sources" ON)
@@ -46,9 +51,10 @@ endif()
 if((WIN32 OR NOT NCINE_ARM_PROCESSOR) AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID)
 	option(NCINE_WITH_GLEW "Use GLEW library" ON)
 endif()
-option(NCINE_WITH_WEBP "Enable WebP image file loading" OFF)
+option(NCINE_WITH_WEBP "Enable WebP image file support" OFF)
 option(NCINE_WITH_AUDIO "Enable OpenAL support and thus sound" ON)
-option(NCINE_WITH_VORBIS "Enable Ogg Vorbis audio file loading" OFF)
+option(NCINE_WITH_VORBIS "Enable Ogg Vorbis audio file support" ON)
+option(NCINE_WITH_OPENMPT "Enable module (libopenmpt) audio file support" ON)
 #option(NCINE_WITH_LUA "Enable Lua scripting integration" OFF)
 #if(NCINE_WITH_LUA)
 #	option(NCINE_WITH_SCRIPTING_API "Enable Lua scripting API" OFF)
@@ -94,6 +100,7 @@ endif()
 # so general Linux/BSD but not Apple.
 if(UNIX AND NOT APPLE)
 	include(CheckCXXSourceCompiles)
+	set(CMAKE_REQUIRED_QUIET ON)
 	check_cxx_source_compiles("\
 int fooImplementation() { return 42; }
 #if defined(__ANDROID_API__) && __ANDROID_API__ < 30
@@ -134,11 +141,7 @@ else()
 	set(_DEATH_CPU_CAN_USE_IFUNC OFF)
 	set(_DEATH_CPU_USE_IFUNC_DEFAULT OFF)
 endif()
-if(_DEATH_CPU_CAN_USE_IFUNC)
-	option(DEATH_CPU_USE_IFUNC "Allow using GNU IFUNC for runtime CPU dispatch" ${_DEATH_CPU_USE_IFUNC_DEFAULT})
-else()
-	set(DEATH_CPU_USE_IFUNC OFF)
-endif()
+cmake_dependent_option(DEATH_CPU_USE_IFUNC "Allow using GNU IFUNC for runtime CPU dispatch" ${_DEATH_CPU_USE_IFUNC_DEFAULT} "_DEATH_CPU_CAN_USE_IFUNC" OFF)
 
 # Runtime CPU dispatch. Because going through a function pointer may have negative perf consequences,
 # enable it by default only on platforms that have IFUNC, and thus can avoid the function pointer indirection.

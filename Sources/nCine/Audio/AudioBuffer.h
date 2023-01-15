@@ -105,5 +105,4 @@ namespace nCine
 		/// Deleted assignment operator
 		AudioBuffer& operator=(const AudioBuffer&) = delete;
 	};
-
 }

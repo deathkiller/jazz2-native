@@ -77,5 +77,4 @@ namespace nCine
 		/// Deleted assignment operator
 		AudioStreamPlayer& operator=(const AudioStreamPlayer&) = delete;
 	};
-
 }

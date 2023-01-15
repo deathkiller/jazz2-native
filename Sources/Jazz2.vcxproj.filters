@@ -1281,6 +1281,9 @@
     <ClInclude Include="simdjson\simdjson.h">
       <Filter>Header Files\simdjson</Filter>
     </ClInclude>
+    <ClInclude Include="nCine\Threading\Atomic.h">
+      <Filter>Header Files\nCine\Threading</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2149,6 +2152,9 @@
     </ClCompile>
     <ClCompile Include="simdjson\simdjson.cpp">
       <Filter>Source Files\simdjson</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Threading\WindowsAtomic.cpp">
+      <Filter>Source Files\nCine\Threading</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

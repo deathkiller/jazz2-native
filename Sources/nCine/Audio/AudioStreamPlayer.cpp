@@ -6,10 +6,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	AudioStreamPlayer::AudioStreamPlayer()
 		: IAudioPlayer(ObjectType::AudioStreamPlayer), audioStream_()
 	{
@@ -29,10 +25,6 @@ namespace nCine
 	{
 		stop();
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool AudioStreamPlayer::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{

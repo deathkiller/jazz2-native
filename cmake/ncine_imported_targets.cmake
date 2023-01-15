@@ -96,7 +96,7 @@ if(EMSCRIPTEN)
 			set(VORBIS_FOUND 1)
 		endif()
 		
-		if(EXISTS "${EXTERNAL_EMSCRIPTEN_DIR}/libopenmpt.a")
+		if(NCINE_WITH_OPENMPT AND EXISTS "${EXTERNAL_EMSCRIPTEN_DIR}/libopenmpt.a")
 			add_library(libopenmpt::libopenmpt STATIC IMPORTED)
 			set_target_properties(libopenmpt::libopenmpt PROPERTIES
 				IMPORTED_LOCATION "${EXTERNAL_EMSCRIPTEN_DIR}/libopenmpt.a"
@@ -191,7 +191,9 @@ elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		if(NCINE_WITH_VORBIS)
 			find_package(Vorbis)
 		endif()
-		find_package(libopenmpt)
+		if(NCINE_WITH_OPENMPT)
+			find_package(libopenmpt)
+		endif()
 	endif()
 	if(NCINE_WITH_LUA)
 		# Older CMake versions do not support Lua 5.4 if not required explicitly
@@ -268,7 +270,7 @@ if(ANDROID)
 			set(VORBIS_FOUND 1)
 		endif()
 		
-		if(EXISTS "${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libopenmpt.a")
+		if(NCINE_WITH_OPENMPT AND EXISTS "${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libopenmpt.a")
 			add_library(libopenmpt::libopenmpt STATIC IMPORTED)
 			set_target_properties(libopenmpt::libopenmpt PROPERTIES
 				IMPORTED_LOCATION "${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libopenmpt.a"
@@ -417,7 +419,7 @@ elseif(MSVC)
 			set(VORBIS_FOUND 1)
 		endif()
 		
-		if(EXISTS "${MSVC_LIBDIR}/libopenmpt.lib" AND EXISTS "${MSVC_BINDIR}/libopenmpt.dll")
+		if(NCINE_WITH_OPENMPT AND EXISTS "${MSVC_LIBDIR}/libopenmpt.lib" AND EXISTS "${MSVC_BINDIR}/libopenmpt.dll")
 			add_library(libopenmpt::libopenmpt SHARED IMPORTED)
 			set_target_properties(libopenmpt::libopenmpt PROPERTIES
 				IMPORTED_IMPLIB "${MSVC_LIBDIR}/libopenmpt.lib"
@@ -591,10 +593,12 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 				INTERFACE_LINK_LIBRARIES "${VORBIS_LIBRARY};${OGG_LIBRARY}")
 		endif()
 		
-		set(OPENMPT_FOUND 1)
-		if(NOT TARGET libopenmpt::libopenmpt)
-			set(OPENMPT_DYNAMIC_LINK 1)
-			message(STATUS "Cannot find libopenmpt, using dynamic linking instead")
+		if(NCINE_WITH_OPENMPT)
+			set(OPENMPT_FOUND 1)
+			if(NOT TARGET libopenmpt::libopenmpt)
+				set(OPENMPT_DYNAMIC_LINK 1)
+				message(STATUS "Cannot find libopenmpt, using dynamic linking instead")
+			endif()
 		endif()
 	endif()
 

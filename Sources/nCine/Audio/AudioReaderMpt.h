@@ -12,7 +12,7 @@
 #		define __HAS_LOCAL_LIBOPENMPT
 #	endif
 #endif
-#ifdef __HAS_LOCAL_LIBOPENMPT
+#if defined(__HAS_LOCAL_LIBOPENMPT)
 #	include "../../../Libs/Includes/libopenmpt/libopenmpt.h"
 #else
 #	include <libopenmpt.h>
