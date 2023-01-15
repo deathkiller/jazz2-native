@@ -239,7 +239,7 @@ namespace Jazz2::UI::Menu
 #endif
 
 				for (int i = 0; i < (int)Item::Count; i++) {
-					float itemHeight = (!isPlayable && i == 0 ? 40.0f : 22.0f);
+					float itemHeight = (!isPlayable && i == 0 ? 60.0f : 22.0f);
 					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].Y) < itemHeight) {
 						if (_selectedIndex == i) {
 							ExecuteSelected();

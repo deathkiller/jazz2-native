@@ -409,15 +409,16 @@ namespace nCine
 			// Prepare full path to found files
 			{
 				String absPath = GetAbsolutePath(path);
-				std::memcpy(_path, absPath.data(), absPath.size());
-				if (_path[absPath.size() - 1] == '/' || _path[absPath.size() - 1] == '\\') {
-					_path[absPath.size() - 1] = '\\';
-					_path[absPath.size()] = '\0';
-					_fileNamePart = _path + absPath.size();
+				size_t pathLength = absPath.size();
+				std::memcpy(_path, absPath.data(), pathLength);
+				if (_path[pathLength - 1] == '/' || _path[pathLength - 1] == '\\') {
+					_path[pathLength - 1] = '\\';
+					_path[pathLength] = '\0';
+					_fileNamePart = _path + pathLength;
 				} else {
-					_path[absPath.size()] = '\\';
-					_path[absPath.size() + 1] = '\0';
-					_fileNamePart = _path + absPath.size() + 1;
+					_path[pathLength] = '\\';
+					_path[pathLength + 1] = '\0';
+					_fileNamePart = _path + pathLength + 1;
 				}
 			}
 
@@ -452,28 +453,42 @@ namespace nCine
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
 		const char* assetPath = AssetFile::TryGetAssetPath(nullTerminatedPath.data());
-		if (assetPath) {
+		if (assetPath != nullptr) {
 			// It probably supports only files
 			if ((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles) {
 				return false;
 			}
 			_assetDir = AssetFile::OpenDir(assetPath);
-			return (_assetDir != nullptr);
+			if (_assetDir != nullptr) {
+				size_t pathLength = path.size();
+				std::memcpy(_path, path.data(), pathLength);
+				if (_path[pathLength - 1] == '/' || _path[pathLength - 1] == '\\') {
+					_path[pathLength - 1] = '/';
+					_path[pathLength] = '\0';
+					_fileNamePart = _path + pathLength;
+				} else {
+					_path[pathLength] = '/';
+					_path[pathLength + 1] = '\0';
+					_fileNamePart = _path + pathLength + 1;
+				}
+				return true;
+			}
 		} else
 #	endif
 		if (!nullTerminatedPath.empty()) {
 			_dirStream = ::opendir(nullTerminatedPath.data());
 			if (_dirStream != nullptr) {
 				String absPath = GetAbsolutePath(path);
-				std::memcpy(_path, absPath.data(), absPath.size());
-				if (_path[absPath.size() - 1] == '/' || _path[absPath.size() - 1] == '\\') {
-					_path[absPath.size() - 1] = '/';
-					_path[absPath.size()] = '\0';
-					_fileNamePart = _path + absPath.size();
+				size_t pathLength = absPath.size();
+				std::memcpy(_path, absPath.data(), pathLength);
+				if (_path[pathLength - 1] == '/' || _path[pathLength - 1] == '\\') {
+					_path[pathLength - 1] = '/';
+					_path[pathLength] = '\0';
+					_fileNamePart = _path + pathLength;
 				} else {
-					_path[absPath.size()] = '/';
-					_path[absPath.size() + 1] = '\0';
-					_fileNamePart = _path + absPath.size() + 1;
+					_path[pathLength] = '/';
+					_path[pathLength + 1] = '\0';
+					_fileNamePart = _path + pathLength + 1;
 				}
 				return true;
 			}
@@ -532,7 +547,12 @@ namespace nCine
 #	if defined(DEATH_TARGET_ANDROID)
 		// It does not return directory names
 		if (_assetDir != nullptr) {
-			return AssetFile::GetNextFileName(_assetDir);
+			const char* assetName = AssetFile::GetNextFileName(_assetDir);
+			if (assetName == nullptr) {
+				return nullptr;
+			}
+			strcpy(_fileNamePart, assetName);
+			return _path;
 		}
 #	endif
 		if (_dirStream == nullptr) {
@@ -746,6 +766,12 @@ namespace nCine
 		}
 		return Utf8::FromUtf16(buffer);
 #else
+#	if defined(DEATH_TARGET_ANDROID)
+		if (returnedPath.hasPrefix(AssetFile::Prefix)) {
+			return returnedPath;
+		}
+#	endif
+
 		const char* resolvedPath = ::realpath(returnedPath.data(), buffer);
 		if (resolvedPath == nullptr) {
 			buffer[0] = '\0';
@@ -768,7 +794,14 @@ namespace nCine
 		// Try to get the last path separator
 		while (i > pathRootLength && path[--i] != '/' && path[i] != '\\');
 		// Return nothing if only filename was specified as relative path
-		if (pathRootLength == 0 && i == 0) return { };
+		if (pathRootLength == 0 && i == 0) {
+#if defined(DEATH_TARGET_ANDROID)
+			if (path.hasPrefix(AssetFile::Prefix)) {
+				return AssetFile::Prefix;
+			}
+#endif
+			return { };
+		}
 
 		return path.slice(0, i);
 	}
@@ -862,6 +895,12 @@ namespace nCine
 		}
 		return Utf8::FromUtf16(buffer);
 #else
+#	if defined(DEATH_TARGET_ANDROID)
+		if (path.hasPrefix(AssetFile::Prefix)) {
+			return path;
+		}
+#	endif
+
 		const char* resolvedPath = ::realpath(String::nullTerminatedView(path).data(), buffer);
 		if (resolvedPath == nullptr) {
 			return { };
