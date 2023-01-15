@@ -25,11 +25,11 @@ namespace nCine
 #if defined(WITH_OPENMPT_DYNAMIC)
 	void* AudioReaderMpt::_openmptLib = nullptr;
 	bool AudioReaderMpt::_openmptLibInitialized = false;
-	AudioReaderMpt::openmpt_module_create2_t AudioReaderMpt::_openmpt_module_create2 = nullptr;
-	AudioReaderMpt::openmpt_module_destroy_t AudioReaderMpt::_openmpt_module_destroy = nullptr;
-	AudioReaderMpt::openmpt_module_read_interleaved_stereo_t AudioReaderMpt::_openmpt_module_read_interleaved_stereo = nullptr;
-	AudioReaderMpt::openmpt_module_set_position_seconds_t AudioReaderMpt::_openmpt_module_set_position_seconds = nullptr;
-	AudioReaderMpt::openmpt_module_set_repeat_count_t AudioReaderMpt::_openmpt_module_set_repeat_count = nullptr;
+	AudioReaderMpt::openmpt_module_create2_t* AudioReaderMpt::_openmpt_module_create2 = nullptr;
+	AudioReaderMpt::openmpt_module_destroy_t* AudioReaderMpt::_openmpt_module_destroy = nullptr;
+	AudioReaderMpt::openmpt_module_read_interleaved_stereo_t* AudioReaderMpt::_openmpt_module_read_interleaved_stereo = nullptr;
+	AudioReaderMpt::openmpt_module_set_position_seconds_t* AudioReaderMpt::_openmpt_module_set_position_seconds = nullptr;
+	AudioReaderMpt::openmpt_module_set_repeat_count_t* AudioReaderMpt::_openmpt_module_set_repeat_count = nullptr;
 #endif
 
 	AudioReaderMpt::AudioReaderMpt(std::unique_ptr<IFileStream> fileHandle, int frequency)
@@ -125,11 +125,11 @@ namespace nCine
 			return false;
 		}
 
-		_openmpt_module_create2 = (openmpt_module_create2_t)::dlsym(_openmptLib, "openmpt_module_create2");
-		_openmpt_module_destroy = (openmpt_module_destroy_t)::dlsym(_openmptLib, "openmpt_module_destroy");
-		_openmpt_module_read_interleaved_stereo = (openmpt_module_read_interleaved_stereo_t)::dlsym(_openmptLib, "openmpt_module_read_interleaved_stereo");
-		_openmpt_module_set_position_seconds = (openmpt_module_set_position_seconds_t)::dlsym(_openmptLib, "openmpt_module_set_position_seconds");
-		_openmpt_module_set_repeat_count = (openmpt_module_set_repeat_count_t)::dlsym(_openmptLib, "openmpt_module_set_repeat_count");
+		_openmpt_module_create2 = (openmpt_module_create2_t*)::dlsym(_openmptLib, "openmpt_module_create2");
+		_openmpt_module_destroy = (openmpt_module_destroy_t*)::dlsym(_openmptLib, "openmpt_module_destroy");
+		_openmpt_module_read_interleaved_stereo = (openmpt_module_read_interleaved_stereo_t*)::dlsym(_openmptLib, "openmpt_module_read_interleaved_stereo");
+		_openmpt_module_set_position_seconds = (openmpt_module_set_position_seconds_t*)::dlsym(_openmptLib, "openmpt_module_set_position_seconds");
+		_openmpt_module_set_repeat_count = (openmpt_module_set_repeat_count_t*)::dlsym(_openmptLib, "openmpt_module_set_repeat_count");
 
 		if (_openmpt_module_create2 == nullptr || _openmpt_module_destroy == nullptr || _openmpt_module_read_interleaved_stereo == nullptr ||
 			_openmpt_module_set_position_seconds == nullptr || _openmpt_module_set_repeat_count == nullptr) {

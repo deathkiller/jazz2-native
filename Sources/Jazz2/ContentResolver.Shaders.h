@@ -75,7 +75,7 @@ in vec4 vColor;
 out vec4 fragColor;
 
 float lightBlend(float t) {
-	return t * t;
+	return t * t * t;
 }
 
 void main() {
@@ -228,7 +228,7 @@ void main() {
 	blur = vec4(gray, gray, gray, blur.a);
 
 	fragColor = mix(mix(
-		main * (1.0 + light.g),
+		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
 		blur,
 		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
 	), uAmbientColor, vec4(1.0 - light.r));
@@ -389,7 +389,7 @@ void main() {
 	}
 
 	fragColor = mix(mix(
-		main * (1.0 + light.g),
+		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
 		blur,
 		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
 	), uAmbientColor, vec4(darknessStrength));

@@ -396,27 +396,32 @@ elseif(MSVC)
 			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}/AL/")
 		set(OPENAL_FOUND 1)
 
-		if(NCINE_WITH_VORBIS AND
-			EXISTS "${MSVC_LIBDIR}/libogg.lib" AND EXISTS "${MSVC_LIBDIR}/libvorbis.lib" AND EXISTS "${MSVC_LIBDIR}/libvorbisfile.lib" AND
-			EXISTS "${MSVC_BINDIR}/libogg.dll" AND EXISTS "${MSVC_BINDIR}/libvorbis.dll" AND EXISTS "${MSVC_BINDIR}/libvorbisfile.dll")
-			add_library(Ogg::Ogg SHARED IMPORTED)
-			set_target_properties(Ogg::Ogg PROPERTIES
-				IMPORTED_IMPLIB "${MSVC_LIBDIR}/libogg.lib"
-				IMPORTED_LOCATION "${MSVC_BINDIR}/libogg.dll")
+		if(NCINE_WITH_VORBIS)
+			if(NCINE_WITH_OPENMPT AND EXISTS "${MSVC_BINDIR}/openmpt-ogg.dll" AND EXISTS "${MSVC_BINDIR}/openmpt-vorbis.dll")
+				# If NCINE_WITH_OPENMPT is also enabled on Windows, shared library can be used instead of the dedicated one
+				set(VORBIS_FOUND 1)
+				set(VORBIS_DYNAMIC_LINK 1)
+			elseif(EXISTS "${MSVC_LIBDIR}/libogg.lib" AND EXISTS "${MSVC_LIBDIR}/libvorbis.lib" AND EXISTS "${MSVC_LIBDIR}/libvorbisfile.lib" AND
+				EXISTS "${MSVC_BINDIR}/libogg.dll" AND EXISTS "${MSVC_BINDIR}/libvorbis.dll" AND EXISTS "${MSVC_BINDIR}/libvorbisfile.dll")
+				add_library(Ogg::Ogg SHARED IMPORTED)
+				set_target_properties(Ogg::Ogg PROPERTIES
+					IMPORTED_IMPLIB "${MSVC_LIBDIR}/libogg.lib"
+					IMPORTED_LOCATION "${MSVC_BINDIR}/libogg.dll")
 
-			add_library(Vorbis::Vorbis SHARED IMPORTED)
-			set_target_properties(Vorbis::Vorbis PROPERTIES
-				IMPORTED_IMPLIB "${MSVC_LIBDIR}/libvorbis.lib"
-				IMPORTED_LOCATION "${MSVC_BINDIR}/libvorbis.dll"
-				INTERFACE_LINK_LIBRARIES Ogg::Ogg)
+				add_library(Vorbis::Vorbis SHARED IMPORTED)
+				set_target_properties(Vorbis::Vorbis PROPERTIES
+					IMPORTED_IMPLIB "${MSVC_LIBDIR}/libvorbis.lib"
+					IMPORTED_LOCATION "${MSVC_BINDIR}/libvorbis.dll"
+					INTERFACE_LINK_LIBRARIES Ogg::Ogg)
 
-			add_library(Vorbis::Vorbisfile SHARED IMPORTED)
-			set_target_properties(Vorbis::Vorbisfile PROPERTIES
-				IMPORTED_IMPLIB "${MSVC_LIBDIR}/libvorbisfile.lib"
-				IMPORTED_LOCATION "${MSVC_BINDIR}/libvorbisfile.dll"
-				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}"
-				INTERFACE_LINK_LIBRARIES Vorbis::Vorbis)
-			set(VORBIS_FOUND 1)
+				add_library(Vorbis::Vorbisfile SHARED IMPORTED)
+				set_target_properties(Vorbis::Vorbisfile PROPERTIES
+					IMPORTED_IMPLIB "${MSVC_LIBDIR}/libvorbisfile.lib"
+					IMPORTED_LOCATION "${MSVC_BINDIR}/libvorbisfile.dll"
+					INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}"
+					INTERFACE_LINK_LIBRARIES Vorbis::Vorbis)
+				set(VORBIS_FOUND 1)
+			endif()
 		endif()
 		
 		if(NCINE_WITH_OPENMPT AND EXISTS "${MSVC_LIBDIR}/libopenmpt.lib" AND EXISTS "${MSVC_BINDIR}/libopenmpt.dll")

@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-01-12 23:10+0100\n"
-"PO-Revision-Date: 2023-01-15 15:03+0100\n"
+"POT-Creation-Date: 2023-01-16 00:31+0100\n"
+"PO-Revision-Date: 2023-01-16 00:31+0100\n"
 "Last-Translator: \n"
 "Language-Team: Překlad do češtiny: Dan R. (http://deat.tk/jazz2/)\n"
 "Language: cs\n"
@@ -1488,14 +1488,14 @@ msgstr "Ovládání"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:110
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:113
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:101
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:103
 msgid "Enabled"
 msgstr "Povoleno"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:101
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:103
 msgid "Disabled"
 msgstr "Zakázáno"
 
@@ -1589,7 +1589,11 @@ msgstr "Metrika výkonu"
 msgid "Keep Aspect Ratio In Cinematics"
 msgstr "Zachovat poměr stran u filmů"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:57
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:27
+msgid "Show Player Trails"
+msgstr "Zobrazit stopy hráčů"
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:58
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:12
 msgid "Graphics"
 msgstr "Grafika"

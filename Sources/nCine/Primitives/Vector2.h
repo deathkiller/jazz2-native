@@ -13,15 +13,18 @@ namespace nCine
 	public:
 		T X, Y;
 
-		Vector2()
+		Vector2() noexcept
 			: X(0), Y(0) {}
-		explicit Vector2(T s)
+		explicit Vector2(T s) noexcept
 			: X(s), Y(s) {}
-		Vector2(T xx, T yy)
+		Vector2(T xx, T yy) noexcept
 			: X(xx), Y(yy) {}
-		Vector2(const Vector2& other)
+		Vector2(const Vector2& other) noexcept
 			: X(other.X), Y(other.Y) {}
-		Vector2& operator=(const Vector2& other);
+		Vector2(Vector2&& other) noexcept
+			: X(other.X), Y(other.Y) {}
+		Vector2& operator=(const Vector2& other) noexcept;
+		Vector2& operator=(Vector2&& other) noexcept;
 
 		void Set(T xx, T yy);
 
@@ -78,7 +81,16 @@ namespace nCine
 	using Vector2i = Vector2<int>;
 
 	template <class T>
-	inline Vector2<T>& Vector2<T>::operator=(const Vector2<T>& other)
+	inline Vector2<T>& Vector2<T>::operator=(const Vector2<T>& other) noexcept
+	{
+		X = other.X;
+		Y = other.Y;
+
+		return *this;
+	}
+
+	template <class T>
+	inline Vector2<T>& Vector2<T>::operator=(Vector2<T>&& other) noexcept
 	{
 		X = other.X;
 		Y = other.Y;
