@@ -41,7 +41,7 @@ namespace nCine
 		LOGV_X("Loading \"%s\"", fileHandle_->GetFileName().data());
 
 #if defined(DEATH_TARGET_ANDROID)
-		if (fileHandle_->FileType() == IFileStream::FileType::Asset) {
+		if (fileHandle_->GetType() == IFileStream::FileType::Asset) {
 			fileHandle_->Open(FileAccessMode::Read | FileAccessMode::FileDescriptor);
 		} else
 #endif
