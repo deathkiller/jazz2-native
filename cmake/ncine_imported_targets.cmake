@@ -3,7 +3,7 @@ if(NCINE_DOWNLOAD_DEPENDENCIES)
 		if(APPLE)
 			set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/raw/1.3.1-macos/jazz2-libraries-macos.tar.gz")
 		else()
-			set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/1.4.2.tar.gz")
+			set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/1.5.1.tar.gz")
 		endif()
 		message(STATUS "Downloading dependencies from \"${NCINE_LIBS_URL}\"...")
 
