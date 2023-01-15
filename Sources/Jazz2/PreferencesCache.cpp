@@ -20,6 +20,7 @@ namespace Jazz2
 	bool PreferencesCache::EnableVsync = true;
 	bool PreferencesCache::ShowPerformanceMetrics = false;
 	bool PreferencesCache::KeepAspectRatioInCinematics = false;
+	bool PreferencesCache::ShowPlayerTrails = true;
 	bool PreferencesCache::EnableReforged = true;
 	bool PreferencesCache::EnableLedgeClimb = true;
 	bool PreferencesCache::EnableWeaponWheel = true;
@@ -138,6 +139,7 @@ namespace Jazz2
 #endif
 						ShowPerformanceMetrics = ((boolOptions & BoolOptions::ShowPerformanceMetrics) == BoolOptions::ShowPerformanceMetrics);
 						KeepAspectRatioInCinematics = ((boolOptions & BoolOptions::KeepAspectRatioInCinematics) == BoolOptions::KeepAspectRatioInCinematics);
+						ShowPlayerTrails = ((boolOptions & BoolOptions::ShowPlayerTrails) == BoolOptions::ShowPlayerTrails);
 						EnableReforged = ((boolOptions & BoolOptions::EnableReforged) == BoolOptions::EnableReforged);
 						EnableLedgeClimb = ((boolOptions & BoolOptions::EnableLedgeClimb) == BoolOptions::EnableLedgeClimb);
 						EnableWeaponWheel = ((boolOptions & BoolOptions::EnableWeaponWheel) == BoolOptions::EnableWeaponWheel);
@@ -293,6 +295,7 @@ namespace Jazz2
 		if (EnableFullscreen) boolOptions |= BoolOptions::EnableFullscreen;
 		if (ShowPerformanceMetrics) boolOptions |= BoolOptions::ShowPerformanceMetrics;
 		if (KeepAspectRatioInCinematics) boolOptions |= BoolOptions::KeepAspectRatioInCinematics;
+		if (ShowPlayerTrails) boolOptions |= BoolOptions::ShowPlayerTrails;
 		if (EnableReforged) boolOptions |= BoolOptions::EnableReforged;
 		if (EnableLedgeClimb) boolOptions |= BoolOptions::EnableLedgeClimb;
 		if (EnableWeaponWheel) boolOptions |= BoolOptions::EnableWeaponWheel;

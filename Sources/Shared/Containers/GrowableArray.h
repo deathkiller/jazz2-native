@@ -75,7 +75,6 @@ namespace Death::Containers
 					alignof(T) : Implementation::DefaultAllocationAlignment)
 			};
 		};
-
 	}
 
 	 /**
@@ -608,7 +607,6 @@ namespace Death::Containers
 			const std::size_t candidate = (grown - Implementation::AllocatorTraits<T>::Offset) / sizeof(T);
 			return desiredCapacity > candidate ? desiredCapacity : candidate;
 		}
-
 	}
 
 	template<class T> void ArrayNewAllocator<T>::reallocate(T*& array, const std::size_t prevSize, const std::size_t newCapacity) {
@@ -688,7 +686,7 @@ namespace Death::Containers
 				arrayGuts.size < size ? arrayGuts.size : size);
 			array = Array<T> { newArray, size, Allocator::deleter };
 
-			// ... or the desired size is larger than the capacity. In that case make use of the reallocate() function that might be able to grow in-place.
+		// ... or the desired size is larger than the capacity. In that case make use of the reallocate() function that might be able to grow in-place.
 		} else if (Allocator::capacity(array) < size) {
 			Allocator::reallocate(arrayGuts.data,
 				// Move the min of the two sizes -- if we shrink, move only what will fit in the new array; if we extend,
@@ -696,8 +694,8 @@ namespace Death::Containers
 				arrayGuts.size < size ? arrayGuts.size : size, size);
 			arrayGuts.size = size;
 
-			// Otherwise call a destructor on the extra elements. If we get here, we have our growable deleter and didn't
-			// need to reallocate (which would make this unnecessary).
+		// Otherwise call a destructor on the extra elements. If we get here, we have our growable deleter and didn't
+		// need to reallocate (which would make this unnecessary).
 		} else {
 			Implementation::arrayDestruct<T>(arrayGuts.data + size, arrayGuts.data + arrayGuts.size);
 			// This is a NoInit resize, so not constructing the new elements, only updating the size
@@ -751,7 +749,7 @@ namespace Death::Containers
 				arrayMoveConstruct<T>(arrayGuts.data, newArray, arrayGuts.size);
 				array = Array<T> { newArray, arrayGuts.size, Allocator::deleter };
 
-				// Otherwise, if there's no space anymore, reallocate, which might be able to grow in-place
+			// Otherwise, if there's no space anymore, reallocate, which might be able to grow in-place
 			} else {
 				capacity = Allocator::capacity(arrayGuts.data);
 				if (arrayGuts.size + count > capacity) {
@@ -869,8 +867,8 @@ namespace Death::Containers
 				arrayMoveConstruct<T>(arrayGuts.data + index, newArray + index + count, arrayGuts.size - index);
 				array = Array<T> { newArray, arrayGuts.size, Allocator::deleter };
 
-				// Otherwise, if there's no space anymore, reallocate. which might be able to grow in-place.
-				// However we still need to shift the part after index forward.
+			// Otherwise, if there's no space anymore, reallocate. which might be able to grow in-place.
+			// However we still need to shift the part after index forward.
 			} else {
 				capacity = Allocator::capacity(arrayGuts.data);
 				if (arrayGuts.size + count > capacity) {
@@ -977,7 +975,7 @@ namespace Death::Containers
 			Implementation::arrayMoveConstruct<T>(arrayGuts.data + index + count, newArray + index, arrayGuts.size - index - count);
 			array = Array<T> { newArray, arrayGuts.size - count, Allocator::deleter };
 
-			// Otherwise shift the elements after index backward
+		// Otherwise shift the elements after index backward
 		} else {
 			Implementation::arrayShiftBackward(arrayGuts.data + index + count, arrayGuts.data + index, arrayGuts.size - index - count, count);
 			arrayGuts.size -= count;
@@ -1001,7 +999,7 @@ namespace Death::Containers
 			Implementation::arrayMoveConstruct<T>(arrayGuts.data + index + count, newArray + index, arrayGuts.size - index - count);
 			array = Array<T> { newArray, arrayGuts.size - count, Allocator::deleter };
 
-			// Otherwise move the last count elements over the ones at index, or less if there's not that many after the removed range
+		// Otherwise move the last count elements over the ones at index, or less if there's not that many after the removed range
 		} else {
 			const std::size_t moveCount = std::min(count, arrayGuts.size - count - index);
 			Implementation::arrayShiftBackward(arrayGuts.data + arrayGuts.size - moveCount, arrayGuts.data + index, moveCount, count);
@@ -1024,7 +1022,7 @@ namespace Death::Containers
 			Implementation::arrayMoveConstruct<T>(arrayGuts.data, newArray, arrayGuts.size - count);
 			array = Array<T> { newArray, arrayGuts.size - count, Allocator::deleter };
 
-			// Otherwise call the destructor on the excessive elements and update the size
+		// Otherwise call the destructor on the excessive elements and update the size
 		} else {
 			Implementation::arrayDestruct<T>(arrayGuts.data + arrayGuts.size - count, arrayGuts.data + arrayGuts.size);
 			arrayGuts.size -= count;

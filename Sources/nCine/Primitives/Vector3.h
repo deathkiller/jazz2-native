@@ -14,15 +14,18 @@ namespace nCine
 	public:
 		T X, Y, Z;
 
-		Vector3()
+		Vector3() noexcept
 			: X(0), Y(0), Z(0) {}
-		explicit Vector3(T s)
+		explicit Vector3(T s) noexcept
 			: X(s), Y(s), Z(s) {}
-		Vector3(T xx, T yy, T zz)
+		Vector3(T xx, T yy, T zz) noexcept
 			: X(xx), Y(yy), Z(zz) {}
-		Vector3(const Vector3& other)
+		Vector3(const Vector3& other) noexcept
 			: X(other.X), Y(other.Y), Z(other.Z) {}
-		Vector3& operator=(const Vector3& other);
+		Vector3(Vector3&& other) noexcept
+			: X(other.X), Y(other.Y), Z(other.Z) {}
+		Vector3& operator=(const Vector3& other) noexcept;
+		Vector3& operator=(Vector3&& other) noexcept;
 
 		void Set(T xx, T yy, T zz);
 
@@ -85,7 +88,17 @@ namespace nCine
 	using Vector3i = Vector3<int>;
 
 	template <class T>
-	inline Vector3<T>& Vector3<T>::operator=(const Vector3<T>& other)
+	inline Vector3<T>& Vector3<T>::operator=(const Vector3<T>& other) noexcept
+	{
+		X = other.X;
+		Y = other.Y;
+		Z = other.Z;
+
+		return *this;
+	}
+
+	template <class T>
+	inline Vector3<T>& Vector3<T>::operator=(Vector3<T>&& other) noexcept
 	{
 		X = other.X;
 		Y = other.Y;

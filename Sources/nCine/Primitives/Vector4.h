@@ -15,15 +15,18 @@ namespace nCine
 	public:
 		T X, Y, Z, W;
 
-		Vector4()
+		Vector4() noexcept
 			: X(0), Y(0), Z(0), W(0) {}
-		explicit Vector4(T s)
+		explicit Vector4(T s) noexcept
 			: X(s), Y(s), Z(s), W(s) {}
-		Vector4(T xx, T yy, T zz, T ww)
+		Vector4(T xx, T yy, T zz, T ww) noexcept
 			: X(xx), Y(yy), Z(zz), W(ww) {}
-		Vector4(const Vector4& other)
+		Vector4(const Vector4& other) noexcept
 			: X(other.X), Y(other.Y), Z(other.Z), W(other.W) {}
-		Vector4& operator=(const Vector4& other);
+		Vector4(Vector4&& other) noexcept
+			: X(other.X), Y(other.Y), Z(other.Z), W(other.W) {}
+		Vector4& operator=(const Vector4& other) noexcept;
+		Vector4& operator=(Vector4&& other) noexcept;
 
 		void Set(T xx, T yy, T zz, T ww);
 
@@ -87,7 +90,18 @@ namespace nCine
 	using Vector4i = Vector4<int>;
 
 	template <class T>
-	inline Vector4<T>& Vector4<T>::operator=(const Vector4<T>& other)
+	inline Vector4<T>& Vector4<T>::operator=(const Vector4<T>& other) noexcept
+	{
+		X = other.X;
+		Y = other.Y;
+		Z = other.Z;
+		W = other.W;
+
+		return *this;
+	}
+
+	template <class T>
+	inline Vector4<T>& Vector4<T>::operator=(Vector4<T>&& other) noexcept
 	{
 		X = other.X;
 		Y = other.Y;

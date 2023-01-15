@@ -26,6 +26,8 @@
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Base/FrameTimer.h"
 
+#include <Containers/GrowableArray.h>
+
 namespace Jazz2::Actors
 {
 	Player::Player()
@@ -127,6 +129,7 @@ namespace Jazz2::Actors
 
 		_checkpointPos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
 		_checkpointLight = _levelHandler->GetAmbientLight();
+		_trailLastPos = _checkpointPos;
 
 		async_return true;
 	}
@@ -489,6 +492,41 @@ namespace Jazz2::Actors
 			} else {
 				_copterSound->stop();
 				_copterSound = nullptr;
+			}
+		}
+
+		// Trail
+		if (PreferencesCache::ShowPlayerTrails) {
+			for (int i = 0; i < _trail.size(); i++) {
+				auto& part = _trail[i];
+				part.Intensity -= timeMult * 0.02f;
+				part.Brightness -= timeMult * 0.04f;
+				part.RadiusFar -= timeMult * 0.4f;
+				if (part.RadiusFar <= 0.0f) {
+					arrayRemoveUnordered(_trail, i);
+					i--;
+				}
+			}
+
+			if (_keepRunningTime > 0.0f || _speed.SqrLength() > (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Run) ? 36.0f : 100.0f)) {
+				constexpr float TrailDivision = 12.0f;
+				Vector2f trailDelta = (_pos - _trailLastPos);
+				int trailDistance = (int)(trailDelta.Length() / TrailDivision);
+				if (trailDistance > 0) {
+					trailDelta.Normalize();
+					while (trailDistance-- > 0) {
+						_trailLastPos += trailDelta * TrailDivision;
+
+						auto& light = arrayAppend(_trail, InPlaceInit);
+						light.Pos = _trailLastPos;
+						light.Intensity = 0.5f;
+						light.Brightness = 1.0f;
+						light.RadiusNear = 0.0f;
+						light.RadiusFar = 28.0f;
+					}
+				}
+			} else {
+				_trailLastPos = _pos;
 			}
 		}
 
@@ -917,6 +955,10 @@ namespace Jazz2::Actors
 		} else {
 			light.RadiusNear = 40.0f;
 			light.RadiusFar = 110.0f;
+		}
+
+		for (int i = 0; i < _trail.size(); i++) {
+			lights.emplace_back(_trail[i]);
 		}
 	}
 
@@ -1984,6 +2026,7 @@ namespace Jazz2::Actors
 
 	void Player::OnPerishInner()
 	{
+		_trailLastPos = _pos;
 		if (_copterSound != nullptr) {
 			_copterSound->stop();
 			_copterSound = nullptr;
@@ -2596,6 +2639,7 @@ namespace Jazz2::Actors
 		if (fast) {
 			bool alsoWarpCamera = (_pos - pos).Length() > 250.0f;
 			MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
+			_trailLastPos = _pos;
 
 			if (alsoWarpCamera) {
 				_levelHandler->WarpCameraToTarget(shared_from_this());
@@ -2624,6 +2668,7 @@ namespace Jazz2::Actors
 			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpInFreefall : AnimState::TransitionWarpIn, false, true, SpecialMoveType::None, [this, pos]() {
 				Vector2f posOld = _pos;
 				MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
+				_trailLastPos = _pos;
 				PlayPlayerSfx("WarpOut"_s);
 
 				if (Vector2f(posOld.X - pos.X, posOld.Y - pos.Y).Length() > 250) {

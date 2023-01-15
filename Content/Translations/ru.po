@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-01-12 23:09+0100\n"
+"POT-Creation-Date: 2023-01-16 00:31+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: ПЕРЕВОД НА РУССКИЙ ЯЗЫК: MAN-biker (manbiker@mail.ru) "
@@ -1493,14 +1493,14 @@ msgstr "УПРАВЛЕНИЕ"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:110
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:113
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:101
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:103
 msgid "Enabled"
 msgstr "ВКЛЮЧЕНО"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:101
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:103
 msgid "Disabled"
 msgstr "ВЫКЛЮЧЕНО"
 
@@ -1594,7 +1594,11 @@ msgstr "ОТОБРАЖЕНИЕ СЧЁТЧИКА КАДРОВ"
 msgid "Keep Aspect Ratio In Cinematics"
 msgstr "СОХРАНЯТЬ ПРОПОРЦИИ ВИДЕОРОЛИКОВ"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:57
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:27
+msgid "Show Player Trails"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:58
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:12
 msgid "Graphics"
 msgstr "ГРАФИКА"

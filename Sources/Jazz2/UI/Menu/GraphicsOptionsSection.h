@@ -11,7 +11,8 @@ namespace Jazz2::UI::Menu
 #endif
 		Antialiasing,
 		ShowPerformanceMetrics,
-		KeepAspectRatioInCinematics
+		KeepAspectRatioInCinematics,
+		ShowPlayerTrails
 	};
 
 	struct GraphicsOptionsItem {
