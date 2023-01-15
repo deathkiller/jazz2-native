@@ -144,9 +144,19 @@ namespace nCine
 			case MemoryModel::RELAXED:
 				return InterlockedExchangeAddNoFence64(reinterpret_cast<volatile LONG64*>(&value_), value);
 			case MemoryModel::ACQUIRE:
+#if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_32BIT)
+				FATAL_MSG("Incompatible memory model");
+				return 0;
+#else
 				return InterlockedExchangeAddAcquire64(reinterpret_cast<volatile LONG64*>(&value_), value);
+#endif
 			case MemoryModel::RELEASE:
+#if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_32BIT)
+				FATAL_MSG("Incompatible memory model");
+				return 0;
+#else
 				return InterlockedExchangeAddRelease64(reinterpret_cast<volatile LONG64*>(&value_), value);
+#endif
 			case MemoryModel::SEQ_CST:
 			default:
 				return InterlockedExchangeAdd64(reinterpret_cast<volatile LONG64*>(&value_), value);
@@ -159,9 +169,19 @@ namespace nCine
 			case MemoryModel::RELAXED:
 				return InterlockedExchangeAddNoFence64(reinterpret_cast<volatile LONG64*>(&value_), -value);
 			case MemoryModel::ACQUIRE:
+#if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_32BIT)
+				FATAL_MSG("Incompatible memory model");
+				return 0;
+#else
 				return InterlockedExchangeAddAcquire64(reinterpret_cast<volatile LONG64*>(&value_), -value);
+#endif
 			case MemoryModel::RELEASE:
+#if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_32BIT)
+				FATAL_MSG("Incompatible memory model");
+				return 0;
+#else
 				return InterlockedExchangeAddRelease64(reinterpret_cast<volatile LONG64*>(&value_), -value);
+#endif
 			case MemoryModel::SEQ_CST:
 			default:
 				return InterlockedExchangeAdd64(reinterpret_cast<volatile LONG64*>(&value_), -value);
