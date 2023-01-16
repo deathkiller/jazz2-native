@@ -15,6 +15,7 @@ namespace Jazz2::Scripting
 		const SmallVectorImpl<Actors::Player*>& GetPlayers() const;
 
 		void OnLevelBegin();
+		void OnLevelReload();
 		void OnLevelUpdate(float timeMult);
 		void OnLevelCallback(Actors::ActorBase* initiator, uint8_t* eventParams);
 
@@ -55,7 +56,6 @@ namespace Jazz2::Scripting
 		static void asSpawnTypeParams(const String& typeName, int x, int y, const CScriptArray& eventParams);
 
 		static void asChangeLevel(int exitType, const String& path);
-		static void asMusicPlay(const String& path);
 		static void asShowLevelText(const String& text);
 		static void asSetWeather(uint8_t weatherType, uint8_t intensity);
 
@@ -63,7 +63,17 @@ namespace Jazz2::Scripting
 
 		static void jjAlert(const String& text, bool sendToAll, uint32_t size);
 
+		static bool get_jjTriggers(uint8_t id);
+		static bool set_jjTriggers(uint8_t id, bool value);
+		static bool jjSwitchTrigger(uint8_t id);
+
 		static void jjNxt(bool warp, bool fast);
+		static bool jjMusicLoad(const String& filename, bool forceReload, bool temporary);
+		static void jjMusicStop();
+		static void jjMusicPlay();
+		static void jjMusicPause();
+		static void jjMusicResume();
+
 	};
 }
 

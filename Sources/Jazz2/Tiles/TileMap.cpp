@@ -698,10 +698,10 @@ namespace Jazz2::Tiles
 		return command;
 	}
 
-	void TileMap::AddTileSet(const StringView& tileSetPath, uint16_t offset, uint16_t count)
+	void TileMap::AddTileSet(const StringView& tileSetPath, uint16_t offset, uint16_t count, const uint8_t* paletteRemapping)
 	{
 		auto& tileSetPart = _tileSets.emplace_back();
-		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, 0, false);
+		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, 0, false, paletteRemapping);
 		tileSetPart.Offset = offset;
 		tileSetPart.Count = count;
 
@@ -850,7 +850,7 @@ namespace Jazz2::Tiles
 				tile.HasSuspendType = SuspendType::Hook;
 				break;
 			case EventType::ModifierHurt:
-				tile.Flags = LayerTileFlags::Hurt;
+				tile.Flags |= LayerTileFlags::Hurt;
 				break;
 			case EventType::SceneryDestruct:
 				SetTileDestructibleEventParams(tile, TileDestructType::Weapon, tileParams[0] | (tileParams[1] << 8));

@@ -87,7 +87,7 @@ namespace Jazz2::Actors::Collectibles
 			light.Intensity = current.Intensity * 0.7f;
 			light.Brightness = current.Intensity;
 			light.RadiusNear = 0.0f;
-			light.RadiusFar = current.Intensity * 80.0f;
+			light.RadiusFar = current.Intensity * 86.0f;
 		}
 	}
 

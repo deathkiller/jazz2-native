@@ -153,7 +153,7 @@ namespace Jazz2::Tiles
 		bool IsTileHurting(float x, float y);
 		SuspendType GetTileSuspendState(float x, float y);
 
-		void AddTileSet(const StringView& tileSetPath, uint16_t offset, uint16_t count);
+		void AddTileSet(const StringView& tileSetPath, uint16_t offset, uint16_t count, const uint8_t* paletteRemapping = nullptr);
 		void ReadLayerConfiguration(IFileStream& s);
 		void ReadAnimatedTiles(IFileStream& s);
 		void SetTileEventFlags(int x, int y, EventType tileEvent, uint8_t* tileParams);

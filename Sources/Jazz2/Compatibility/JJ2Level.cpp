@@ -406,11 +406,9 @@ namespace Jazz2::Compatibility
 
 			tileset.Offset = block.ReadUInt16();
 			tileset.Count = block.ReadUInt16();
-
-			// TODO: Custom tileset palette
-			bool tilesetHasColors = block.ReadBool();
-			if (tilesetHasColors) {
-				block.DiscardBytes(256);
+			tileset.HasPaletteRemapping = block.ReadBool();
+			if (tileset.HasPaletteRemapping) {
+				block.ReadRawBytes(tileset.PaletteRemapping, sizeof(tileset.PaletteRemapping));
 			}
 		}
 
@@ -628,6 +626,12 @@ namespace Jazz2::Compatibility
 		// Extra Tilesets
 		co.WriteValue<uint8_t>((uint8_t)ExtraTilesets.size());
 		for (auto& tileset : ExtraTilesets) {
+			uint8_t tilesetFlags = 0;
+			if (tileset.HasPaletteRemapping) {
+				tilesetFlags |= 0x01;
+			}
+			co.WriteValue<uint8_t>(tilesetFlags);
+
 			lowercaseInPlace(tileset.Name);
 			if (StringHasSuffixIgnoreCase(tileset.Name, ".j2t"_s)) {
 				tileset.Name = tileset.Name.exceptSuffix(4);
@@ -638,6 +642,10 @@ namespace Jazz2::Compatibility
 
 			co.WriteValue<uint16_t>(tileset.Offset);
 			co.WriteValue<uint16_t>(tileset.Count);
+
+			if (tileset.HasPaletteRemapping) {
+				co.Write(tileset.PaletteRemapping, sizeof(tileset.PaletteRemapping));
+			}
 		}
 
 		// Text Event Strings

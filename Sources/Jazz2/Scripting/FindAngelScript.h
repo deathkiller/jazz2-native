@@ -13,6 +13,4 @@
 #	include <angelscript.h>
 #endif
 
-#define AS_USE_ACCESSORS 1
-
 #endif
