@@ -12,6 +12,8 @@
 #	include <locale.h>		// setlocale()
 #endif
 
+#define AS_USE_ACCESSORS 1
+
 #include <Containers/String.h>
 
 using namespace Death::Containers;

@@ -84,7 +84,7 @@ void main() {
 	float intensity = vColor.r;
 	float brightness = vColor.g;
 
-	float dist = distance(vec2(0.0, 0.0), vec2(vColor.z, vColor.w));
+	float dist = length(vColor.zw);
 	if (dist > 1.0) {
 		fragColor = vec4(0.0, 0.0, 0.0, 1.0);
 		return;
@@ -211,7 +211,7 @@ vec2 hash2D(in vec2 p) {
 }
 
 vec2 noiseTexCoords(vec2 position) {
-	vec2 seed = position + fract(uTime);
+	vec2 seed = position + fract(uTime * 0.01);
 	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, vec2(0.0), vec2(1.0));
 }
 
@@ -270,7 +270,7 @@ vec2 hash2D(in vec2 p) {
 }
 
 vec2 noiseTexCoords(vec2 position) {
-	vec2 seed = position + fract(uTime);
+	vec2 seed = position + fract(uTime * 0.01);
 	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, vec2(0.0), vec2(1.0));
 }
 

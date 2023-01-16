@@ -687,7 +687,7 @@ namespace Jazz2
 		}
 	}
 
-	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(const StringView& path, uint16_t captionTileId, bool applyPalette)
+	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(const StringView& path, uint16_t captionTileId, bool applyPalette, const uint8_t* paletteRemapping)
 	{
 		// Try "Content" directory first, then "Cache" directory
 		String fullPath = fs::JoinPath({ GetContentPath(), "Tilesets"_s, path + ".j2t"_s });
@@ -762,9 +762,16 @@ namespace Jazz2
 		std::unique_ptr<uint32_t[]> pixels = std::make_unique<uint32_t[]>(width * height);
 		ReadImageFromFile(s, (uint8_t*)pixels.get(), width, height, channelCount);
 
-		for (uint32_t i = 0; i < width * height; i++) {
-			uint32_t color = _palettes[pixels[i] & 0xff];
-			pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
+		if (paletteRemapping != nullptr) {
+			for (uint32_t i = 0; i < width * height; i++) {
+				uint32_t color = _palettes[paletteRemapping[pixels[i] & 0xff]];
+				pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
+			}
+		} else {
+			for (uint32_t i = 0; i < width * height; i++) {
+				uint32_t color = _palettes[pixels[i] & 0xff];
+				pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
+			}
 		}
 
 		std::unique_ptr<Texture> textureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, width, height);
@@ -902,6 +909,8 @@ namespace Jazz2
 		// Extra Tilesets
 		uint8_t extraTilesetCount = uc.ReadValue<uint8_t>();
 		for (int i = 0; i < extraTilesetCount; i++) {
+			uint8_t tilesetFlags = uc.ReadValue<uint8_t>();
+
 			nameSize = uc.ReadValue<uint8_t>();
 			String extraTileset = String(NoInit, nameSize);
 			uc.Read(extraTileset.data(), nameSize);
@@ -909,7 +918,13 @@ namespace Jazz2
 			uint16_t offset = uc.ReadValue<uint16_t>();
 			uint16_t count = uc.ReadValue<uint16_t>();
 
-			tileMap->AddTileSet(extraTileset, offset, count);
+			uint8_t paletteRemapping[ColorsPerPalette];
+			bool hasPaletteRemapping = ((tilesetFlags & 0x01) == 0x01);
+			if (hasPaletteRemapping) {
+				uc.Read(paletteRemapping, sizeof(paletteRemapping));
+			}
+
+			tileMap->AddTileSet(extraTileset, offset, count, hasPaletteRemapping ? paletteRemapping : nullptr);
 		}
 
 		// Text Event Strings

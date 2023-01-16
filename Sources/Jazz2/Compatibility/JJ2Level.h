@@ -35,6 +35,8 @@ namespace Jazz2::Compatibility
 			String Name;
 			uint16_t Offset;
 			uint16_t Count;
+			bool HasPaletteRemapping;
+			uint8_t PaletteRemapping[256];
 		};
 
 		static constexpr int JJ2LayerCount = 8;

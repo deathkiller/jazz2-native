@@ -1221,14 +1221,14 @@ namespace Jazz2::Scripting
 		bool monospace;
 		bool skipInitialHash;
 
-		ch_ at;
-		ch_ caret;
-		ch_ hash;
-		ch_ newline;
-		ch_ pipe;
-		ch_ section;
-		ch_ tilde;
-		align_ align;
+		ch_ at = ch_HIDE;
+		ch_ caret = ch_HIDE;
+		ch_ hash = ch_HIDE;
+		ch_ newline = ch_HIDE;
+		ch_ pipe = ch_HIDE;
+		ch_ section = ch_HIDE;
+		ch_ tilde = ch_HIDE;
+		align_ align = align_DEFAULT;
 
 		static jjTEXTAPPEARANCE constructor() {
 			noop(); return { };
@@ -1289,7 +1289,12 @@ namespace Jazz2::Scripting
 		}
 
 		jjPALCOLOR& operator=(const jjPALCOLOR& other) {
-			noop(); *this = other; return *this;
+			noop();
+			
+			red = other.red;
+			green = other.green;
+			blue = other.blue;
+			return *this;
 		}
 		bool operator==(const jjPALCOLOR& other) {
 			noop(); return (red == other.red && green == other.green && blue == other.blue);
@@ -1660,17 +1665,22 @@ namespace Jazz2::Scripting
 
 		static jjANIMFRAME* get_jjAnimFrames(uint32_t index) {
 			noop();
-			return nullptr;
+
+			auto ctx = asGetActiveContext();
+			auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+
+			void* mem = asAllocMem(sizeof(jjANIMFRAME));
+			return new(mem) jjANIMFRAME();
 		}
 
-		int16_t hotSpotX;
-		int16_t hotSpotY;
-		int16_t coldSpotX;
-		int16_t coldSpotY;
-		int16_t gunSpotX;
-		int16_t gunSpotY;
-		int16_t width;
-		int16_t height;
+		int16_t hotSpotX = 0;
+		int16_t hotSpotY = 0;
+		int16_t coldSpotX = 0;
+		int16_t coldSpotY = 0;
+		int16_t gunSpotX = 0;
+		int16_t gunSpotY = 0;
+		int16_t width = 0;
+		int16_t height = 0;
 
 		bool get_transparent() const {
 			noop();
@@ -1739,8 +1749,8 @@ namespace Jazz2::Scripting
 			return new(mem) jjANIMATION(index);
 		}
 
-		uint16_t frameCount;
-		int16_t fps;
+		uint16_t frameCount = 0;
+		int16_t fps = 0;
 
 		uint32_t get_firstFrame() const {
 			noop();
@@ -1952,23 +1962,23 @@ namespace Jazz2::Scripting
 			noop();
 		}
 
-		float xOrg;
-		float yOrg;
-		float xPos;
-		float yPos;
-		float xSpeed;
-		float ySpeed;
-		float xAcc;
-		float yAcc;
-		int32_t counter;
-		uint32_t curFrame;
+		float xOrg = 0;
+		float yOrg = 0;
+		float xPos = 0;
+		float yPos = 0;
+		float xSpeed = 0;
+		float ySpeed = 0;
+		float xAcc = 0;
+		float yAcc = 0;
+		int32_t counter = 0;
+		uint32_t curFrame = 0;
 
 		uint32_t determineCurFrame(bool change) {
 			noop(); return 0;
 		}
 
-		int32_t age;
-		int32_t creator;
+		int32_t age = 0;
+		int32_t creator = 0;
 
 		uint16_t get_creatorID() const {
 			noop(); return 0;
@@ -1983,17 +1993,17 @@ namespace Jazz2::Scripting
 			noop(); return 0;
 		}
 
-		int16_t curAnim;
+		int16_t curAnim = 0;
 
 		int16_t determineCurAnim(uint8_t setID, uint8_t animation, bool change) {
 			noop(); return 0;
 		}
 
-		uint16_t killAnim;
-		uint8_t freeze;
-		uint8_t lightType;
-		int8_t frameID;
-		int8_t noHit;
+		uint16_t killAnim = 0;
+		uint8_t freeze = 0;
+		uint8_t lightType = 0;
+		int8_t frameID = 0;
+		int8_t noHit = 0;
 
 		uint32_t get_bulletHandling() {
 			noop(); return 0;
@@ -2020,9 +2030,9 @@ namespace Jazz2::Scripting
 			noop(); return 0;
 		}
 
-		int8_t energy;
-		int8_t light;
-		uint8_t objType;
+		int8_t energy = 0;
+		int8_t light = 0;
+		uint8_t objType = 0;
 
 		uint32_t get_playerHandling() {
 			noop(); return false;
@@ -2055,14 +2065,14 @@ namespace Jazz2::Scripting
 			noop(); return false;
 		}
 
-		int8_t state;
-		uint16_t points;
-		uint8_t eventID;
-		int8_t direction;
-		uint8_t justHit;
-		int8_t oldState;
-		int32_t animSpeed;
-		int32_t special;
+		int8_t state = 0;
+		uint16_t points = 0;
+		uint8_t eventID = 0;
+		int8_t direction = 0;
+		uint8_t justHit = 0;
+		int8_t oldState = 0;
+		int32_t animSpeed = 0;
+		int32_t special = 0;
 
 		int32_t get_var(uint8_t x) {
 			noop(); return 0;
@@ -2071,9 +2081,9 @@ namespace Jazz2::Scripting
 			noop(); return 0;
 		}
 
-		uint8_t doesHurt;
-		uint8_t counterEnd;
-		int16_t objectID;
+		uint8_t doesHurt = 0;
+		uint8_t counterEnd = 0;
+		int16_t objectID = 0;
 
 		int32_t draw() {
 			noop();
@@ -2629,8 +2639,8 @@ namespace Jazz2::Scripting
 			return 0;
 		}
 
-		int32_t subscreenX;
-		int32_t subscreenY;
+		int32_t subscreenX = 0;
+		int32_t subscreenY = 0;
 
 		float get_cameraX() const {
 			noop();
@@ -2870,8 +2880,8 @@ namespace Jazz2::Scripting
 			return 0;
 		}
 
-		uint32_t width;
-		uint32_t height;
+		uint32_t width = 0;
+		uint32_t height = 0;
 
 		bool saveToTile(uint16_t tileID, bool hFlip) const {
 			noop();
@@ -3000,20 +3010,20 @@ namespace Jazz2::Scripting
 			return nullptr;
 		}
 
-		int32_t width;
-		int32_t widthReal;
-		int32_t widthRounded;
-		int32_t height;
-		float xSpeed;
-		float ySpeed;
-		float xAutoSpeed;
-		float yAutoSpeed;
-		float xOffset;
-		float yOffset;
-		float xInnerSpeed;
-		float yInnerSpeed;
-		float xInnerAutoSpeed;
-		float yInnerAutoSpeed;
+		int32_t width = 0;
+		int32_t widthReal = 0;
+		int32_t widthRounded = 0;
+		int32_t height = 0;
+		float xSpeed = 0;
+		float ySpeed = 0;
+		float xAutoSpeed = 0;
+		float yAutoSpeed = 0;
+		float xOffset = 0;
+		float yOffset = 0;
+		float xInnerSpeed = 0;
+		float yInnerSpeed = 0;
+		float xInnerAutoSpeed = 0;
+		float yInnerAutoSpeed = 0;
 
 		uint32_t get_spriteMode() const {
 			noop();
@@ -3047,13 +3057,13 @@ namespace Jazz2::Scripting
 			return 0;
 		}
 
-		int32_t rotationAngle;
-		int32_t rotationRadiusMultiplier;
-		bool tileHeight;
-		bool tileWidth;
-		bool limitVisibleRegion;
-		bool hasTileMap;
-		bool hasTiles;
+		int32_t rotationAngle = 0;
+		int32_t rotationRadiusMultiplier = 0;
+		bool tileHeight = false;
+		bool tileWidth = false;
+		bool limitVisibleRegion = false;
+		bool hasTileMap = false;
+		bool hasTiles = false;
 
 		static CScriptArray* jjLayerOrderGet() {
 			noop();
@@ -3392,14 +3402,31 @@ namespace Jazz2::Scripting
 	uint8_t snowingIntensity = 0;
 	int32_t snowingType = 0;
 
-	bool getTrigger(uint8_t id) {
-		noop(); return false;
+	bool LevelScriptLoader::get_jjTriggers(uint8_t id) {
+		//noop();
+		
+		auto ctx = asGetActiveContext();
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->TileMap();
+		return tileMap->GetTrigger(id);
 	}
-	bool setTrigger(uint8_t id, bool value) {
-		noop(); return false;
+	bool LevelScriptLoader::set_jjTriggers(uint8_t id, bool value) {
+		//noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->TileMap();
+		tileMap->SetTrigger(id, value);
+		return value;
 	}
-	bool switchTrigger(uint8_t id) {
-		noop(); return false;
+	bool LevelScriptLoader::jjSwitchTrigger(uint8_t id) {
+		//noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto tileMap = _this->_levelHandler->TileMap();
+		tileMap->SetTrigger(id, !tileMap->GetTrigger(id));
+		return tileMap->GetTrigger(id);
 	}
 
 	bool isNumberedASFunctionEnabled(uint8_t id) {
@@ -3482,20 +3509,50 @@ namespace Jazz2::Scripting
 		noop(); return 0;
 	}
 
-	bool LoadNewMusicFile(const String& filename, bool forceReload, bool temporary) {
-		noop(); return false;
-	}
-	void MusicStop() {
+	bool LevelScriptLoader::jjMusicLoad(const String& filename, bool forceReload, bool temporary) {
 		noop();
+		
+		auto ctx = asGetActiveContext();
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		_this->_levelHandler->BeginPlayMusic(filename, !temporary, forceReload);
+		
+		return false;
 	}
-	void MusicPlay() {
+	void LevelScriptLoader::jjMusicStop() {
 		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		if (_this->_levelHandler->_music != nullptr) {
+			_this->_levelHandler->_music->stop();
+		}
 	}
-	void ModMusicPause() {
+	void LevelScriptLoader::jjMusicPlay() {
 		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		if (_this->_levelHandler->_music != nullptr) {
+			_this->_levelHandler->_music->play();
+		}
 	}
-	void ModMusicResume() {
+	void LevelScriptLoader::jjMusicPause() {
 		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		if (_this->_levelHandler->_music != nullptr) {
+			_this->_levelHandler->_music->stop();
+		}
+	}
+	void LevelScriptLoader::jjMusicResume() {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		if (_this->_levelHandler->_music != nullptr && _this->_levelHandler->_music->state() == IAudioPlayer::PlayerState::Paused) {
+			_this->_levelHandler->_music->play();
+		}
 	}
 
 	void playSample(float xPixel, float yPixel, int32_t sample, int32_t volume, int32_t frequency) {
@@ -3788,6 +3845,24 @@ namespace Jazz2::Scripting
 	void LevelScriptLoader::OnLevelBegin()
 	{
 		asIScriptFunction* func = _module->GetFunctionByDecl("void onLevelBegin()");
+		if (func == nullptr) {
+			return;
+		}
+
+		asIScriptContext* ctx = _engine->RequestContext();
+
+		ctx->Prepare(func);
+		int r = ctx->Execute();
+		if (r == asEXECUTION_EXCEPTION) {
+			OnException(ctx);
+		}
+
+		_engine->ReturnContext(ctx);
+	}
+
+	void LevelScriptLoader::OnLevelReload()
+	{
+		asIScriptFunction* func = _module->GetFunctionByDecl("void onLevelReload()");
 		if (func == nullptr) {
 			return;
 		}
@@ -4684,9 +4759,9 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalProperty("uint8 jjSnowingIntensity", &snowingIntensity);
 		engine->RegisterGlobalProperty("SNOWING::Type jjSnowingType", &snowingType);
 
-		engine->RegisterGlobalFunction("bool get_jjTriggers(uint8)", asFUNCTION(getTrigger), asCALL_CDECL);
-		engine->RegisterGlobalFunction("bool set_jjTriggers(uint8, bool)", asFUNCTION(setTrigger), asCALL_CDECL);
-		engine->RegisterGlobalFunction("bool jjSwitchTrigger(uint8 id)", asFUNCTION(switchTrigger), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool get_jjTriggers(uint8)", asFUNCTION(get_jjTriggers), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool set_jjTriggers(uint8, bool)", asFUNCTION(set_jjTriggers), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool jjSwitchTrigger(uint8 id)", asFUNCTION(jjSwitchTrigger), asCALL_CDECL);
 
 		engine->RegisterGlobalFunction("bool get_jjEnabledASFunctions(uint8)", asFUNCTION(isNumberedASFunctionEnabled), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool set_jjEnabledASFunctions(uint8, bool)", asFUNCTION(setNumberedASFunctionEnabled), asCALL_CDECL);
@@ -4730,11 +4805,11 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("int get_jjMouseX()", asFUNCTION(getCursorX), asCALL_CDECL);
 		engine->RegisterGlobalFunction("int get_jjMouseY()", asFUNCTION(getCursorY), asCALL_CDECL);
 
-		engine->RegisterGlobalFunction("bool jjMusicLoad(string &in filename, bool forceReload = false, bool temporary = false)", asFUNCTION(LoadNewMusicFile), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjMusicStop()", asFUNCTION(MusicStop), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjMusicPlay()", asFUNCTION(MusicPlay), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjMusicPause()", asFUNCTION(ModMusicPause), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void jjMusicResume()", asFUNCTION(ModMusicResume), asCALL_CDECL);
+		engine->RegisterGlobalFunction("bool jjMusicLoad(string &in filename, bool forceReload = false, bool temporary = false)", asFUNCTION(jjMusicLoad), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjMusicStop()", asFUNCTION(jjMusicStop), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjMusicPlay()", asFUNCTION(jjMusicPlay), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjMusicPause()", asFUNCTION(jjMusicPause), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void jjMusicResume()", asFUNCTION(jjMusicResume), asCALL_CDECL);
 
 		engine->SetDefaultNamespace("SOUND");
 		engine->RegisterEnum("Sample");
@@ -6870,7 +6945,7 @@ namespace Jazz2::Scripting
 		r = engine->RegisterGlobalFunction("void Spawn(const string &in, int, int, const array<uint8> &in)", asFUNCTION(asSpawnTypeParams), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
 		r = engine->RegisterGlobalFunction("void ChangeLevel(int, const string &in = string())", asFUNCTION(asChangeLevel), asCALL_CDECL); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterGlobalFunction("void MusicPlay(const string &in)", asFUNCTION(asMusicPlay), asCALL_CDECL); RETURN_ASSERT(r >= 0);
+		//r = engine->RegisterGlobalFunction("void MusicPlay(const string &in)", asFUNCTION(asMusicPlay), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterGlobalFunction("void ShowLevelText(const string &in)", asFUNCTION(asShowLevelText), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterGlobalFunction("void SetWeather(uint8, uint8)", asFUNCTION(asSetWeather), asCALL_CDECL); RETURN_ASSERT(r >= 0);
 
@@ -7092,30 +7167,6 @@ namespace Jazz2::Scripting
 		auto ctx = asGetActiveContext();
 		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		_this->_levelHandler->BeginLevelChange((ExitType)exitType, path);
-	}
-
-	void LevelScriptLoader::asMusicPlay(const String& path)
-	{
-#if defined(WITH_OPENMPT)
-		if (path.empty()) {
-			return;
-		}
-
-		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		auto _levelHandler = _this->_levelHandler;
-
-		if (_levelHandler->_musicPath != path) {
-			_levelHandler->_music = ContentResolver::Get().GetMusic(path);
-			if (_levelHandler->_music != nullptr) {
-				_levelHandler->_musicPath = path;
-				_levelHandler->_music->setLooping(true);
-				_levelHandler->_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
-				_levelHandler->_music->setSourceRelative(true);
-				_levelHandler->_music->play();
-			}
-		}
-#endif
 	}
 
 	void LevelScriptLoader::asShowLevelText(const String& text)

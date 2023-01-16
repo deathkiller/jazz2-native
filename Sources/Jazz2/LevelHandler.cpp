@@ -187,11 +187,12 @@ namespace Jazz2
 		_weatherIntensity = weatherIntensity;
 		_waterLevel = waterLevel;
 
-#if defined(WITH_OPENMPT)
+#if defined(WITH_AUDIO)
 		if (!musicPath.empty()) {
 			_music = ContentResolver::Get().GetMusic(musicPath);
 			if (_music != nullptr) {
-				_musicPath = musicPath;
+				_musicCurrentPath = musicPath;
+				_musicDefaultPath = _musicCurrentPath;
 				_music->setLooping(true);
 				_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
 				_music->setSourceRelative(true);
@@ -233,7 +234,7 @@ namespace Jazz2
 			BeginLevelChange(ExitType::Warp | ExitType::FastTransition, nullptr);
 		}
 #endif
-
+#if defined(WITH_AUDIO)
 		// Destroy stopped players and resume music after Sugar Rush
 		if (_sugarRushMusic != nullptr && _sugarRushMusic->state() == IAudioPlayer::PlayerState::Stopped) {
 			_sugarRushMusic = nullptr;
@@ -249,6 +250,7 @@ namespace Jazz2
 				break;
 			}
 		}
+#endif
 
 		if (_pauseMenu == nullptr) {
 			if (_nextLevelType != ExitType::None) {
@@ -820,24 +822,9 @@ namespace Jazz2
 					}
 
 					if (_activeBoss->OnActivatedBoss()) {
-						if (_sugarRushMusic != nullptr) {
-							_sugarRushMusic->stop();
-						}
-#if defined(WITH_OPENMPT)
-						if (_music != nullptr) {
-							_music->stop();
-						}
-
 						size_t musicPathLength = strnlen((const char*)eventParams, 16);
 						StringView musicPath((const char*)eventParams, musicPathLength);
-						_music = ContentResolver::Get().GetMusic(musicPath);
-						if (_music != nullptr) {
-							_music->setLooping(true);
-							_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
-							_music->setSourceRelative(true);
-							_music->play();
-						}
-#endif
+						BeginPlayMusic(musicPath);
 					}
 				}
 				break;
@@ -885,11 +872,11 @@ namespace Jazz2
 				_hud->BeginFadeOut(_nextLevelTime - 40.0f);
 			}
 
+#if defined(WITH_AUDIO)
 			if (_sugarRushMusic != nullptr) {
 				_sugarRushMusic->stop();
 				_sugarRushMusic = nullptr;
 			}
-#if defined(WITH_OPENMPT)
 			if (_music != nullptr) {
 				_music->stop();
 				_music = nullptr;
@@ -913,23 +900,6 @@ namespace Jazz2
 		if (_activeBoss != nullptr) {
 			if (_activeBoss->OnPlayerDied()) {
 				_activeBoss = nullptr;
-
-#if defined(WITH_OPENMPT)
-				if (_music != nullptr) {
-					_music->stop();
-				}
-
-				// Load default music again
-				if (!_musicPath.empty()) {
-					_music = ContentResolver::Get().GetMusic(_musicPath);
-					if (_music != nullptr) {
-						_music->setLooping(true);
-						_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
-						_music->setSourceRelative(true);
-						_music->play();
-					}
-				}
-#endif
 			}
 		}
 
@@ -979,10 +949,19 @@ namespace Jazz2
 			_eventMap->RollbackToCheckpoint();
 			_elapsedFrames = _checkpointFrames;
 		}
+
+		BeginPlayMusic(_musicDefaultPath);
+
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts != nullptr) {
+			_scripts->OnLevelReload();
+		}
+#endif
 	}
 
 	void LevelHandler::ActivateSugarRush()
 	{
+#if defined(WITH_AUDIO)
 		if (_sugarRushMusic != nullptr) {
 			return;
 		}
@@ -1000,6 +979,7 @@ namespace Jazz2
 				_music->pause();
 			}
 		}
+#endif
 	}
 
 	void LevelHandler::ShowLevelText(const StringView& text)
@@ -1320,6 +1300,52 @@ namespace Jazz2
 		_weatherIntensity = intensity;
 	}
 
+	bool LevelHandler::BeginPlayMusic(const StringView& path, bool setDefault, bool forceReload)
+	{
+		bool result = false;
+
+#if defined(WITH_AUDIO)
+		if (_sugarRushMusic != nullptr) {
+			_sugarRushMusic->stop();
+		}
+
+		if (!forceReload && _musicCurrentPath == path) {
+			// Music is already playing or is paused
+			if (_music != nullptr) {
+				_music->play();
+			}
+			if (setDefault) {
+				_musicDefaultPath = path;
+			}
+			return false;
+		}
+
+		if (_music != nullptr) {
+			_music->stop();
+		}
+
+		if (!path.empty()) {
+			_music = ContentResolver::Get().GetMusic(path);
+			if (_music != nullptr) {
+				_music->setLooping(true);
+				_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+				_music->setSourceRelative(true);
+				_music->play();
+				result = true;
+			}
+		} else {
+			_music = nullptr;
+		}
+
+		_musicCurrentPath = path;
+		if (setDefault) {
+			_musicDefaultPath = path;
+		}
+#endif
+
+		return false;
+	}
+
 	void LevelHandler::UpdatePressedActions()
 	{
 		auto& input = theApplication().inputManager();
@@ -1442,6 +1468,7 @@ namespace Jazz2
 		// Prevent updating of all level objects
 		_rootNode->setUpdateEnabled(false);
 
+#if defined(WITH_AUDIO)
 		// Use low-pass filter on music and pause all SFX
 		if (_music != nullptr) {
 			_music->setLowPass(0.1f);
@@ -1455,6 +1482,7 @@ namespace Jazz2
 		if (_sugarRushMusic != nullptr && _music != nullptr) {
 			_music->play();
 		}
+#endif
 	}
 
 	void LevelHandler::ResumeGame()
@@ -1464,6 +1492,7 @@ namespace Jazz2
 		// Hide in-game pause menu
 		_pauseMenu = nullptr;
 
+#if defined(WITH_AUDIO)
 		// If Sugar Rush music was playing, resume it and pause normal music again
 		if (_sugarRushMusic != nullptr && _music != nullptr) {
 			_music->pause();
@@ -1477,6 +1506,7 @@ namespace Jazz2
 		if (_music != nullptr) {
 			_music->setLowPass(1.0f);
 		}
+#endif
 
 		// Mark Menu button as already pressed to avoid some issues
 		_pressedActions |= (1ull << (int)PlayerActions::Menu) | (1ull << (32 + (int)PlayerActions::Menu));

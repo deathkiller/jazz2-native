@@ -499,7 +499,7 @@ namespace Jazz2::Actors
 		if (PreferencesCache::ShowPlayerTrails) {
 			for (int i = 0; i < _trail.size(); i++) {
 				auto& part = _trail[i];
-				part.Intensity -= timeMult * 0.02f;
+				part.Intensity -= timeMult * 0.03f;
 				part.Brightness -= timeMult * 0.04f;
 				part.RadiusFar -= timeMult * 0.4f;
 				if (part.RadiusFar <= 0.0f) {
@@ -2090,8 +2090,6 @@ namespace Jazz2::Actors
 					// Return to the last save point
 					MoveInstantly(_checkpointPos, MoveType::Absolute | MoveType::Force);
 					_levelHandler->SetAmbientLight(_checkpointLight);
-					_levelHandler->LimitCameraView(0, 0);
-					_levelHandler->WarpCameraToTarget(shared_from_this());
 
 					_coins = _coinsCheckpoint;
 					_gems = _gemsCheckpoint;

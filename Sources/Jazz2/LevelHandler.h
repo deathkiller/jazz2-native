@@ -129,6 +129,7 @@ namespace Jazz2
 		void LimitCameraView(float left, float width) override;
 		void ShakeCameraView(float duration) override;
 		void SetWeather(WeatherType type, uint8_t intensity) override;
+		bool BeginPlayMusic(const StringView& path, bool setDefault = false, bool forceReload = false);
 
 		bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads = true) override;
 		bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
@@ -254,7 +255,7 @@ namespace Jazz2
 		String _defaultNextLevel;
 		String _defaultSecretLevel;
 		GameDifficulty _difficulty;
-		String _musicPath;
+		String _musicDefaultPath, _musicCurrentPath;
 		Recti _levelBounds;
 		bool _isReforged, _cheatsUsed;
 		SmallVector<String, 0> _levelTexts;

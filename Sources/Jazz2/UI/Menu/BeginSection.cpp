@@ -147,9 +147,9 @@ namespace Jazz2::UI::Menu
 
 #	if defined(DEATH_TARGET_ANDROID)
 				if ((flags & (IRootController::Flags::HasExternalStoragePermission | IRootController::Flags::HasExternalStoragePermissionOnResume)) == IRootController::Flags::HasExternalStoragePermissionOnResume) {
-					_root->DrawStringShadow(_("Access to external storage has been granted!"), charOffset, center.X, center.Y * 0.96f - 10.0f, IMenuContainer::FontLayer,
+					_root->DrawStringShadow(_("Access to external storage has been granted!"), charOffset, center.X, center.Y * 0.96f, IMenuContainer::FontLayer,
 						Alignment::Bottom, Colorf(0.2f, 0.45f, 0.2f, 0.5f), 1.0f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
-					_root->DrawStringShadow(_("\f[c:0x337233]Restart the game to read \f[c:0x9e7056]Jazz Jackrabbit 2\f[c:0x337233] files correctly."), charOffset, center.X, center.Y * 0.96f, IMenuContainer::FontLayer,
+					_root->DrawStringShadow(_("\f[c:0x337233]Restart the game to read \f[c:0x9e7056]Jazz Jackrabbit 2\f[c:0x337233] files correctly."), charOffset, center.X, center.Y * 0.96f + 10.0f, IMenuContainer::FontLayer,
 						Alignment::Center, Font::DefaultColor, 0.8f, 0.7f, 0.4f, 0.4f, 0.4f, 0.8f, 1.2f);
 				} else
 #	endif
@@ -166,17 +166,17 @@ namespace Jazz2::UI::Menu
 						auto grantPermissionText = _("Allow access to external storage");
 						if (_selectedIndex == 0) {
 							float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
-							_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y * 0.96f + 48.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (grantPermissionText.size() + 3) * 0.5f * size, 4.0f * size, true);
+							_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y * 0.96f + 48.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (grantPermissionText.size() + 1) * 0.5f * size, 4.0f * size, true);
 							_root->DrawStringShadow(grantPermissionText, charOffset, center.X + 12.0f, center.Y * 0.96f + 48.0f, IMenuContainer::FontLayer,
-								Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+								Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.8f);
 
-							Vector2f grantPermissionSize = _root->MeasureString(grantPermissionText, size, 0.9f);
+							Vector2f grantPermissionSize = _root->MeasureString(grantPermissionText, size, 0.8f);
 							_root->DrawElement("Uac"_s, 0, ceil(center.X - grantPermissionSize.X * 0.5f - 6.0f), center.Y * 0.96f + 48.0f + round(sinf(canvas->AnimTime * 4.6f * fPi)), IMenuContainer::MainLayer + 10, Alignment::Center, Colorf::White, 1.0f, 1.0f);
 						} else {
 							_root->DrawStringShadow(grantPermissionText, charOffset, center.X + 12.0f, center.Y * 0.96f + 48.0f, IMenuContainer::FontLayer,
-								Alignment::Center, Font::DefaultColor, 0.9f);
+								Alignment::Center, Font::DefaultColor, 0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.84f);
 
-							Vector2f grantPermissionSize = _root->MeasureString(grantPermissionText, 0.9f);
+							Vector2f grantPermissionSize = _root->MeasureString(grantPermissionText, 0.9f, 0.84f);
 							_root->DrawElement("Uac"_s, 0, ceil(center.X - grantPermissionSize.X * 0.5f - 6.0f), center.Y * 0.96f + 48.0f, IMenuContainer::MainLayer + 10, Alignment::Center, Colorf::White, 1.0f, 1.0f);
 						}
 						hideSecondItem = true;
