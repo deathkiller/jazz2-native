@@ -117,7 +117,7 @@
 		},
 		"Copter": {
 			"Path": "Lori/copter.aura",
-			"FrameRate": 2,
+			"FrameRate": 3,
 			"States": [ 8192, 8193, 8194, 8195 ]
 		},
 		"CopterShoot": {

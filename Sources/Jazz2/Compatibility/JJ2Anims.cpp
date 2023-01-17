@@ -26,15 +26,15 @@ namespace Jazz2::Compatibility
 
 		uint32_t headerLen = s->ReadValue<uint32_t>();
 
-		uint32_t magicUnknown = s->ReadValue<uint32_t>();
+		uint32_t magicUnknown = s->ReadValue<uint32_t>();	// Probably `uint16_t version` and `uint16_t unknown`
 		ASSERT(magicUnknown == 0x18080200);
 
 		/*uint32_t fileLen =*/ s->ReadValue<uint32_t>();
 		/*uint32_t crc =*/ s->ReadValue<uint32_t>();
-		int32_t setCnt = s->ReadValue<int32_t>();
-		SmallVector<uint32_t, 0> setAddresses(setCnt);
+		int32_t setCount = s->ReadValue<int32_t>();
+		SmallVector<uint32_t, 0> setAddresses(setCount);
 
-		for (int32_t i = 0; i < setCnt; i++) {
+		for (int32_t i = 0; i < setCount; i++) {
 			setAddresses[i] = s->ReadValue<uint32_t>();
 		}
 
@@ -43,10 +43,10 @@ namespace Jazz2::Compatibility
 		// Read content
 		bool isStreamComplete = true;
 
-		for (int32_t i = 0; i < setCnt; i++) {
+		for (int32_t i = 0; i < setCount; i++) {
 			if (s->GetPosition() >= s->GetSize()) {
 				isStreamComplete = false;
-				LOGW_X("Stream should contain %i sets, but found %i sets instead!", setCnt, i);
+				LOGW_X("Stream should contain %i sets, but found %i sets instead!", setCount, i);
 				break;
 			}
 

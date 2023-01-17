@@ -17,7 +17,11 @@ namespace Jazz2::Actors::Environment
 			return Vector2f::Zero;
 		}
 
-		_cooldown = 6.0f;
+		if (_delay > 0) {
+			LOGE_X("DELAY: %i", _delay);
+		}
+
+		_cooldown = (_delay > 0 ? _delay : 6.0f);
 
 		SetTransition(_currentAnimationState | (AnimState)0x200, false);
 		switch (_orientation) {
@@ -42,7 +46,7 @@ namespace Jazz2::Actors::Environment
 		_orientation = (Orientation)details.Params[1];
 		KeepSpeedX = (details.Params[2] != 0);
 		KeepSpeedY = (details.Params[3] != 0);
-		//_delay = details.Params[4];
+		_delay = details.Params[4];
 		_state = (details.Params[5] != 0 ? State::Frozen : State::Default);
 
 		SetState(ActorState::SkipPerPixelCollisions, true);

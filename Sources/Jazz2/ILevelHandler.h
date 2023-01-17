@@ -32,9 +32,7 @@ namespace Jazz2
 		static constexpr int SpritePlaneZ = MainPlaneZ + 10;
 		static constexpr int PlayerZ = MainPlaneZ + 20;
 
-		static constexpr float DefaultGravity = 0.3f;
-
-		ILevelHandler() : Gravity(DefaultGravity) { }
+		ILevelHandler() { }
 
 		virtual Events::EventSpawner* EventSpawner() = 0;
 		virtual Events::EventMap* EventMap() = 0;

@@ -3550,7 +3550,7 @@ namespace Jazz2::Scripting
 
 		auto ctx = asGetActiveContext();
 		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		if (_this->_levelHandler->_music != nullptr && _this->_levelHandler->_music->state() == IAudioPlayer::PlayerState::Paused) {
+		if (_this->_levelHandler->_music != nullptr && _this->_levelHandler->_music->isPaused()) {
 			_this->_levelHandler->_music->play();
 		}
 	}

@@ -36,6 +36,7 @@ namespace Jazz2::Actors::Environment
 		_type = details.Params[0];
 		_activated = (details.Params[1] != 0);
 
+		SetState(ActorState::TriggersTNT, true);
 		SetState(ActorState::CollideWithSolidObjects | ActorState::IsSolidObject, !_activated);
 
 		switch (_type) {

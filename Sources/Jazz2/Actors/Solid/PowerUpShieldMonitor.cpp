@@ -18,9 +18,10 @@ namespace Jazz2::Actors::Solid
 
 	Task<bool> PowerUpShieldMonitor::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		Movable = true;
-
 		_shieldType = (ShieldType)details.Params[0];
+
+		SetState(ActorState::TriggersTNT, true);
+		Movable = true;
 
 		async_await RequestMetadataAsync("Object/PowerUpMonitorShield"_s);
 

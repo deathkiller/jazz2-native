@@ -60,6 +60,14 @@ namespace Jazz2
 		_playerFrozenEnabled(false),
 		_lastPressedNumericKey(-1)
 	{
+		constexpr float DefaultGravity = 0.3f;
+
+		if (_isReforged) {
+			Gravity = DefaultGravity;
+		} else {
+			Gravity = DefaultGravity * 0.8f;
+		}
+
 		auto& resolver = ContentResolver::Get();
 		resolver.BeginLoading();
 
@@ -236,7 +244,7 @@ namespace Jazz2
 #endif
 #if defined(WITH_AUDIO)
 		// Destroy stopped players and resume music after Sugar Rush
-		if (_sugarRushMusic != nullptr && _sugarRushMusic->state() == IAudioPlayer::PlayerState::Stopped) {
+		if (_sugarRushMusic != nullptr && _sugarRushMusic->isStopped()) {
 			_sugarRushMusic = nullptr;
 			if (_music != nullptr) {
 				_music->play();
@@ -244,7 +252,7 @@ namespace Jazz2
 		}
 
 		for (int i = (int)_playingSounds.size() - 1; i >= 0; i--) {
-			if (_playingSounds[i]->state() == IAudioPlayer::PlayerState::Stopped) {
+			if (_playingSounds[i]->isStopped()) {
 				_playingSounds.erase(&_playingSounds[i]);
 			} else {
 				break;
@@ -1474,7 +1482,7 @@ namespace Jazz2
 			_music->setLowPass(0.1f);
 		}
 		for (auto& sound : _playingSounds) {
-			if (sound->state() == IAudioPlayer::PlayerState::Playing) {
+			if (sound->isPlaying()) {
 				sound->pause();
 			}
 		}
@@ -1499,7 +1507,7 @@ namespace Jazz2
 		}
 		// Resume all SFX
 		for (auto& sound : _playingSounds) {
-			if (sound->state() == IAudioPlayer::PlayerState::Paused) {
+			if (sound->isPaused()) {
 				sound->play();
 			}
 		}

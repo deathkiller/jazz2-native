@@ -26,6 +26,7 @@ namespace Jazz2::Actors::Solid
 			_newState = (details.Params[1] != 0 ? TriggerCrateState::On : TriggerCrateState::Off);
 		}
 
+		SetState(ActorState::TriggersTNT, true);
 		Movable = true;
 
 		async_await RequestMetadataAsync("Object/TriggerCrate"_s);

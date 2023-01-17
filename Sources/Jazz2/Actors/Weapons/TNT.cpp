@@ -12,6 +12,8 @@
 #include "../Environment/BirdCage.h"
 #include "../Solid/Pole.h"
 
+#include "../../../nCine/Base/Random.h"
+
 namespace Jazz2::Actors::Weapons
 {
 	TNT::TNT()
@@ -25,8 +27,10 @@ namespace Jazz2::Actors::Weapons
 	Task<bool> TNT::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		_timeLeft = 200.0f;
+		_preexplosionTime = (int)_timeLeft / 16;
 
-		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
+		SetState(ActorState::CollideWithTileset | ActorState::ApplyGravitation, false);
+
 
 		async_await RequestMetadataAsync("Weapon/TNT"_s);
 
@@ -52,33 +56,38 @@ namespace Jazz2::Actors::Weapons
 		if (_timeLeft > 0.0f) {
 			_timeLeft -= timeMult;
 
-			if (_timeLeft > 40.0f) {
-				_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 50.0f, [this](ActorBase* actor) {
-					if (!actor->IsInvulnerable()) {
-						if (dynamic_cast<Enemies::EnemyBase*>(actor) != nullptr ||
-							dynamic_cast<Solid::GenericContainer*>(actor) != nullptr ||
-							dynamic_cast<Solid::PowerUpMorphMonitor*>(actor) != nullptr ||
-							dynamic_cast<Solid::PowerUpShieldMonitor*>(actor) != nullptr ||
-							dynamic_cast<Solid::PowerUpWeaponMonitor*>(actor) != nullptr ||
-							dynamic_cast<Solid::TriggerCrate*>(actor) != nullptr ||
-							dynamic_cast<Solid::Pole*>(actor) != nullptr ||
-							dynamic_cast<Environment::BirdCage*>(actor) != nullptr) {
-							_timeLeft = 40.0f;
-							return false;
-						}
+			if (_timeLeft > 35.0f) {
+				_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 64.0f, [this](ActorBase* actor) {
+					if (actor->GetState(ActorState::TriggersTNT)) {
+						_timeLeft = 35.0f;
+						return false;
 					}
 					return true;
 				});
+			} else if(_timeLeft < 30.0f) {
+				int fraction = (int)_timeLeft / 16;
+				if (_preexplosionTime != fraction) {
+					_preexplosionTime = fraction;
+
+					_renderer.setScale(5.0f);
+					if (_noise == nullptr) {
+						_noise = PlaySfx(Random().NextBool() ? "Bell1"_s : "Bell2"_s);
+					} else if (!_noise->isPlaying()) {
+						_noise->play();
+					}
+				}
+				_renderer.setScale(_renderer.scale() - timeMult * 0.36f);
 			}
 		} else if (!_isExploded) {
 			_isExploded = true;
 			_lightIntensity = 0.8f;
 
-			// TODO: Sound + Animation
+			SetState(ActorState::TriggersTNT, true);
 			SetTransition(AnimState::TransitionActivate, false, [this]() {
 				DecreaseHealth(INT32_MAX);
 			});
 
+			_renderer.setScale(1.0f);
 			PlaySfx("Explosion"_s);
 
 			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 50.0f, [this](ActorBase* actor) {
@@ -99,7 +108,7 @@ namespace Jazz2::Actors::Weapons
 			}
 		} else {
 			_lightIntensity -= timeMult * 0.02f;
-			_renderer.setScale(_renderer.scale() + timeMult * 0.02f);
+			_renderer.setScale(_renderer.scale() + timeMult * 0.01f);
 		}
 	}
 
@@ -118,8 +127,8 @@ namespace Jazz2::Actors::Weapons
 	bool TNT::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (auto tnt = dynamic_cast<TNT*>(other.get())) {
-			if (_timeLeft > 40.0f) {
-				_timeLeft = 40.0f;
+			if (_timeLeft > 35.0f) {
+				_timeLeft = 35.0f;
 			}
 		}
 

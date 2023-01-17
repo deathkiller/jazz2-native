@@ -112,7 +112,7 @@
 		},
 		"Copter": {
 			"Path": "Jazz/copter.aura",
-			"FrameRate": 6,
+			"FrameRate": 8,
 			"States": [ 8192, 8193, 8194, 8195 ]
 		},
 		"CopterShoot": {

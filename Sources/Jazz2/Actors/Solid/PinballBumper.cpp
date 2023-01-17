@@ -49,6 +49,9 @@ namespace Jazz2::Actors::Solid
 
 					constexpr float forceMult = 24.0f;
 					Vector2f force = (player->GetPos() - _pos).Normalize() * forceMult;
+					if (!_levelHandler->IsReforged()) {
+						force.Y *= 0.7f;
+					}
 					player->_speed.X += force.X * 0.4f;
 					player->_speed.Y += force.Y * 0.4f;
 					player->_externalForce.X += force.X * 0.04f;

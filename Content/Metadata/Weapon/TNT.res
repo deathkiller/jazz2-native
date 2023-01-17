@@ -15,6 +15,12 @@
 	"Sounds": {
 		"Explosion": {
 			"Paths": [ "Weapon/tnt_explosion.wav" ]
+		},
+		"Bell1": {
+			"Paths": [ "Common/powerup_shield_damage_1.wav" ]
+		},
+		"Bell2": {
+			"Paths": [ "Common/powerup_shield_damage_2.wav" ]
 		}
 	}
 }

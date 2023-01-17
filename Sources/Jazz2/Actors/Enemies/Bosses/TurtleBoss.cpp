@@ -144,10 +144,19 @@ namespace Jazz2::Actors::Bosses
 
 	bool TurtleBoss::OnPerish(ActorBase* collider)
 	{
+		float shellSpeedY;
+		if (_pos.Y > _levelHandler->WaterLevel()) {
+			shellSpeedY = -0.65f;
+		} else if (_levelHandler->IsReforged()) {
+			shellSpeedY = -1.1f;
+		} else {
+			shellSpeedY = -0.98f;
+		}
+
 		std::shared_ptr<Enemies::TurtleShell> shell = std::make_shared<Enemies::TurtleShell>();
 		uint8_t shellParams[9];
 		*(float*)&shellParams[0] = _speed.X * 1.1f;
-		*(float*)&shellParams[4] = 1.1f;
+		*(float*)&shellParams[4] = shellSpeedY;
 		shellParams[8] = 2;
 		shell->OnActivated({
 			.LevelHandler = _levelHandler,

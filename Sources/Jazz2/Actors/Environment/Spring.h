@@ -42,7 +42,7 @@ namespace Jazz2::Actors::Environment
 		uint8_t _type;
 		Orientation _orientation;
 		float _strength;
-		//uint16_t _delay;
+		uint8_t _delay;
 		State _state;
 		float _cooldown;
 	};

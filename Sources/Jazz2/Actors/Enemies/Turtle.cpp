@@ -128,10 +128,19 @@ namespace Jazz2::Actors::Enemies
 
 			TryGenerateRandomDrop();
 		} else {
+			float shellSpeedY;
+			if (_pos.Y > _levelHandler->WaterLevel()) {
+				shellSpeedY = -0.65f;
+			} else if (_levelHandler->IsReforged()) {
+				shellSpeedY = -1.1f;
+			} else {
+				shellSpeedY = -0.98f;
+			}
+
 			std::shared_ptr<TurtleShell> shell = std::make_shared<TurtleShell>();
 			uint8_t shellParams[9];
 			*(float*)&shellParams[0] = _speed.X * 1.1f;
-			*(float*)&shellParams[4] = (_pos.Y < _levelHandler->WaterLevel() ? -1.1f : -0.65f);
+			*(float*)&shellParams[4] = shellSpeedY;
 			shellParams[8] = _theme;
 			shell->OnActivated({
 				.LevelHandler = _levelHandler,
