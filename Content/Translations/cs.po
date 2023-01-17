@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-01-16 00:31+0100\n"
-"PO-Revision-Date: 2023-01-16 00:31+0100\n"
+"POT-Creation-Date: 2023-01-17 18:47+0100\n"
+"PO-Revision-Date: 2023-01-17 18:48+0100\n"
 "Last-Translator: \n"
 "Language-Team: Překlad do češtiny: Dan R. (http://deat.tk/jazz2/)\n"
 "Language: cs\n"
@@ -1488,14 +1488,14 @@ msgstr "Ovládání"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:110
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:113
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:103
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:106
 msgid "Enabled"
 msgstr "Povoleno"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:103
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:106
 msgid "Disabled"
 msgstr "Zakázáno"
 
@@ -1582,21 +1582,33 @@ msgid "Antialiasing"
 msgstr "Antialiasing"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:25
-msgid "Performance Metrics"
-msgstr "Metrika výkonu"
+msgid "Graphics Quality"
+msgstr "Kvalita grafiky"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:26
-msgid "Keep Aspect Ratio In Cinematics"
-msgstr "Zachovat poměr stran u filmů"
-
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:27
 msgid "Show Player Trails"
 msgstr "Zobrazit stopy hráčů"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:58
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:27
+msgid "Keep Aspect Ratio In Cinematics"
+msgstr "Zachovat poměr stran u filmů"
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:28
+msgid "Performance Metrics"
+msgstr "Metrika výkonu"
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:59
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:12
 msgid "Graphics"
 msgstr "Grafika"
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:102
+msgid "Low"
+msgstr "Nízká"
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:102
+msgid "High"
+msgstr "Vysoká"
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:70
 msgid "Select files of your original game to unlock additional episodes"

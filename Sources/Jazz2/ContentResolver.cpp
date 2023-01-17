@@ -1082,6 +1082,8 @@ namespace Jazz2
 			Shader::LoadMode::String, Shaders::CombineVs, Shaders::CombineFs);
 		_precompiledShaders[(int)PrecompiledShader::CombineWithWater] = std::make_unique<Shader>("CombineWithWater",
 			Shader::LoadMode::String, Shaders::CombineVs, Shaders::CombineWithWaterFs);
+		_precompiledShaders[(int)PrecompiledShader::CombineWithWaterLow] = std::make_unique<Shader>("CombineWithWaterLow",
+			Shader::LoadMode::String, Shaders::CombineVs, Shaders::CombineWithWaterLowFs);
 
 		_precompiledShaders[(int)PrecompiledShader::TexturedBackground] = std::make_unique<Shader>("TexturedBackground",
 			Shader::LoadMode::String, Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundFs);

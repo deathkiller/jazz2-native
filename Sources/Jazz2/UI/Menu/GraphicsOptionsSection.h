@@ -12,7 +12,8 @@ namespace Jazz2::UI::Menu
 		Antialiasing,
 		ShowPerformanceMetrics,
 		KeepAspectRatioInCinematics,
-		ShowPlayerTrails
+		ShowPlayerTrails,
+		LowGraphicsQuality
 	};
 
 	struct GraphicsOptionsItem {

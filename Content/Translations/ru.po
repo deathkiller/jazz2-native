@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-01-16 00:31+0100\n"
+"POT-Creation-Date: 2023-01-17 18:50+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: ПЕРЕВОД НА РУССКИЙ ЯЗЫК: MAN-biker (manbiker@mail.ru) "
@@ -1493,14 +1493,14 @@ msgstr "УПРАВЛЕНИЕ"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:110
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:113
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:103
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:106
 msgid "Enabled"
 msgstr "ВКЛЮЧЕНО"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:103
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:106
 msgid "Disabled"
 msgstr "ВЫКЛЮЧЕНО"
 
@@ -1587,21 +1587,33 @@ msgid "Antialiasing"
 msgstr "СГЛАЖИВАНИЕ"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:25
-msgid "Performance Metrics"
-msgstr "ОТОБРАЖЕНИЕ СЧЁТЧИКА КАДРОВ"
+msgid "Graphics Quality"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:26
-msgid "Keep Aspect Ratio In Cinematics"
-msgstr "СОХРАНЯТЬ ПРОПОРЦИИ ВИДЕОРОЛИКОВ"
-
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:27
 msgid "Show Player Trails"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:58
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:27
+msgid "Keep Aspect Ratio In Cinematics"
+msgstr "СОХРАНЯТЬ ПРОПОРЦИИ ВИДЕОРОЛИКОВ"
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:28
+msgid "Performance Metrics"
+msgstr "ОТОБРАЖЕНИЕ СЧЁТЧИКА КАДРОВ"
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:59
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:12
 msgid "Graphics"
 msgstr "ГРАФИКА"
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:102
+msgid "Low"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:102
+msgid "High"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:70
 msgid "Select files of your original game to unlock additional episodes"

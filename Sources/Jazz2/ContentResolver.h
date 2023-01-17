@@ -176,6 +176,7 @@ namespace Jazz2
 		Downsample,
 		Combine,
 		CombineWithWater,
+		CombineWithWaterLow,
 
 		TexturedBackground,
 		TexturedBackgroundCircle,

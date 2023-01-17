@@ -520,20 +520,24 @@ namespace Jazz2
 		}
 
 		_viewTexture->setMagFiltering(SamplerFilter::Nearest);
+		_viewTexture->setWrap(SamplerWrapping::ClampToEdge);
 
 		_camera->setOrthoProjection(w * (-0.5f), w * (+0.5f), h * (-0.5f), h * (+0.5f));
 
-		if (_lightingRenderer == nullptr) {
-			auto& resolver = ContentResolver::Get();
+		auto& resolver = ContentResolver::Get();
+
+		if (_lightingRenderer == nullptr) {			
 			_lightingShader = resolver.GetShader(PrecompiledShader::Lighting);
 			_blurShader = resolver.GetShader(PrecompiledShader::Blur);
 			_downsampleShader = resolver.GetShader(PrecompiledShader::Downsample);
 			_combineShader = resolver.GetShader(PrecompiledShader::Combine);
-			_combineWithWaterShader = resolver.GetShader(PrecompiledShader::CombineWithWater);
 
 			_lightingRenderer = std::make_unique<LightingRenderer>(this);
-
 		}
+
+		_combineWithWaterShader = resolver.GetShader(PreferencesCache::LowGraphicsQuality
+			? PrecompiledShader::CombineWithWaterLow
+			: PrecompiledShader::CombineWithWater);
 
 		if (notInitialized) {
 			_lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, w, h);
@@ -547,6 +551,7 @@ namespace Jazz2
 		}
 
 		_lightingBuffer->setMagFiltering(SamplerFilter::Nearest);
+		_lightingBuffer->setWrap(SamplerWrapping::ClampToEdge);
 
 		_downsamplePass.Initialize(_viewTexture.get(), w / 2, h / 2, Vector2f::Zero);
 		_blurPass1.Initialize(_downsamplePass.GetTarget(), w / 2, h / 2, Vector2f(1.0f, 0.0f));
@@ -1634,50 +1639,56 @@ namespace Jazz2
 	{
 		_size = Vector2f(static_cast<float>(width), static_cast<float>(height));
 
-		_renderCommand.material().setShader(_owner->_combineShader);
-		_renderCommand.material().reserveUniformsDataMemory();
-		_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+		if (_renderCommand.material().setShader(_owner->_combineShader)) {
+			_renderCommand.material().reserveUniformsDataMemory();
+			_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			// Required to reset render command properly
+			_renderCommand.setTransformation(_renderCommand.transformation());
 
-		GLUniformCache* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
-		if (textureUniform && textureUniform->intValue(0) != 0) {
-			textureUniform->setIntValue(0); // GL_TEXTURE0
-		}
-		GLUniformCache* lightTexUniform = _renderCommand.material().uniform("uTextureLighting");
-		if (lightTexUniform && lightTexUniform->intValue(0) != 1) {
-			lightTexUniform->setIntValue(1); // GL_TEXTURE1
-		}
-		GLUniformCache* blurHalfTexUniform = _renderCommand.material().uniform("uTextureBlurHalf");
-		if (blurHalfTexUniform && blurHalfTexUniform->intValue(0) != 2) {
-			blurHalfTexUniform->setIntValue(2); // GL_TEXTURE2
-		}
-		GLUniformCache* blurQuarterTexUniform = _renderCommand.material().uniform("uTextureBlurQuarter");
-		if (blurQuarterTexUniform && blurQuarterTexUniform->intValue(0) != 3) {
-			blurQuarterTexUniform->setIntValue(3); // GL_TEXTURE3
+			GLUniformCache* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
+			if (textureUniform && textureUniform->intValue(0) != 0) {
+				textureUniform->setIntValue(0); // GL_TEXTURE0
+			}
+			GLUniformCache* lightTexUniform = _renderCommand.material().uniform("uTextureLighting");
+			if (lightTexUniform && lightTexUniform->intValue(0) != 1) {
+				lightTexUniform->setIntValue(1); // GL_TEXTURE1
+			}
+			GLUniformCache* blurHalfTexUniform = _renderCommand.material().uniform("uTextureBlurHalf");
+			if (blurHalfTexUniform && blurHalfTexUniform->intValue(0) != 2) {
+				blurHalfTexUniform->setIntValue(2); // GL_TEXTURE2
+			}
+			GLUniformCache* blurQuarterTexUniform = _renderCommand.material().uniform("uTextureBlurQuarter");
+			if (blurQuarterTexUniform && blurQuarterTexUniform->intValue(0) != 3) {
+				blurQuarterTexUniform->setIntValue(3); // GL_TEXTURE3
+			}
 		}
 
-		_renderCommandWithWater.material().setShader(_owner->_combineWithWaterShader);
-		_renderCommandWithWater.material().reserveUniformsDataMemory();
-		_renderCommandWithWater.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+		if (_renderCommandWithWater.material().setShader(_owner->_combineWithWaterShader)) {
+			_renderCommandWithWater.material().reserveUniformsDataMemory();
+			_renderCommandWithWater.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			// Required to reset render command properly
+			_renderCommandWithWater.setTransformation(_renderCommandWithWater.transformation());
 
-		textureUniform = _renderCommandWithWater.material().uniform(Material::TextureUniformName);
-		if (textureUniform && textureUniform->intValue(0) != 0) {
-			textureUniform->setIntValue(0); // GL_TEXTURE0
-		}
-		lightTexUniform = _renderCommandWithWater.material().uniform("uTextureLighting");
-		if (lightTexUniform && lightTexUniform->intValue(0) != 1) {
-			lightTexUniform->setIntValue(1); // GL_TEXTURE1
-		}
-		blurHalfTexUniform = _renderCommandWithWater.material().uniform("uTextureBlurHalf");
-		if (blurHalfTexUniform && blurHalfTexUniform->intValue(0) != 2) {
-			blurHalfTexUniform->setIntValue(2); // GL_TEXTURE2
-		}
-		blurQuarterTexUniform = _renderCommandWithWater.material().uniform("uTextureBlurQuarter");
-		if (blurQuarterTexUniform && blurQuarterTexUniform->intValue(0) != 3) {
-			blurQuarterTexUniform->setIntValue(3); // GL_TEXTURE3
-		}
-		GLUniformCache* displacementTexUniform = _renderCommandWithWater.material().uniform("uTextureDisplacement");
-		if (displacementTexUniform && displacementTexUniform->intValue(0) != 4) {
-			displacementTexUniform->setIntValue(4); // GL_TEXTURE4
+			GLUniformCache* textureUniform = _renderCommandWithWater.material().uniform(Material::TextureUniformName);
+			if (textureUniform && textureUniform->intValue(0) != 0) {
+				textureUniform->setIntValue(0); // GL_TEXTURE0
+			}
+			GLUniformCache* lightTexUniform = _renderCommandWithWater.material().uniform("uTextureLighting");
+			if (lightTexUniform && lightTexUniform->intValue(0) != 1) {
+				lightTexUniform->setIntValue(1); // GL_TEXTURE1
+			}
+			GLUniformCache* blurHalfTexUniform = _renderCommandWithWater.material().uniform("uTextureBlurHalf");
+			if (blurHalfTexUniform && blurHalfTexUniform->intValue(0) != 2) {
+				blurHalfTexUniform->setIntValue(2); // GL_TEXTURE2
+			}
+			GLUniformCache* blurQuarterTexUniform = _renderCommandWithWater.material().uniform("uTextureBlurQuarter");
+			if (blurQuarterTexUniform && blurQuarterTexUniform->intValue(0) != 3) {
+				blurQuarterTexUniform->setIntValue(3); // GL_TEXTURE3
+			}
+			GLUniformCache* displacementTexUniform = _renderCommandWithWater.material().uniform("uTextureDisplacement");
+			if (displacementTexUniform && displacementTexUniform->intValue(0) != 4) {
+				displacementTexUniform->setIntValue(4); // GL_TEXTURE4
+			}
 		}
 	}
 
@@ -1691,7 +1702,7 @@ namespace Jazz2
 		command.material().setTexture(1, *_owner->_lightingBuffer);
 		command.material().setTexture(2, *_owner->_blurPass2.GetTarget());
 		command.material().setTexture(3, *_owner->_blurPass4.GetTarget());
-		if (viewHasWater) {
+		if (viewHasWater && !PreferencesCache::LowGraphicsQuality) {
 			command.material().setTexture(4, *_owner->_noiseTexture);
 		}
 
