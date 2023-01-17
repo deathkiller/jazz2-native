@@ -22,9 +22,10 @@ namespace Jazz2::UI::Menu
 		}
 #endif
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::Antialiasing, _("Antialiasing"), true });
-		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::ShowPerformanceMetrics, _("Performance Metrics"), true });
-		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::KeepAspectRatioInCinematics, _("Keep Aspect Ratio In Cinematics"), true });
+		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::LowGraphicsQuality, _("Graphics Quality"), true });
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::ShowPlayerTrails, _("Show Player Trails"), true });
+		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::KeepAspectRatioInCinematics, _("Keep Aspect Ratio In Cinematics"), true });
+		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::ShowPerformanceMetrics, _("Performance Metrics"), true });
 	}
 
 	GraphicsOptionsSection::~GraphicsOptionsSection()
@@ -88,6 +89,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (item.Item.HasBooleanValue) {
+			StringView customText;
 			bool enabled;
 			switch (item.Item.Type) {
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
@@ -97,10 +99,11 @@ namespace Jazz2::UI::Menu
 				case GraphicsOptionsItemType::ShowPerformanceMetrics: enabled = PreferencesCache::ShowPerformanceMetrics; break;
 				case GraphicsOptionsItemType::KeepAspectRatioInCinematics: enabled = PreferencesCache::KeepAspectRatioInCinematics; break;
 				case GraphicsOptionsItemType::ShowPlayerTrails: enabled = PreferencesCache::ShowPlayerTrails; break;
+				case GraphicsOptionsItemType::LowGraphicsQuality: enabled = PreferencesCache::LowGraphicsQuality; customText = (enabled ? _("Low") : _("High")); break;
 				default: enabled = false; break;
 			}
 
-			_root->DrawStringShadow(enabled ? _("Enabled") : _("Disabled"), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
+			_root->DrawStringShadow(!customText.empty() ? customText : (enabled ? _("Enabled") : _("Disabled")), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
 				Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
 		}
 	}
@@ -159,6 +162,13 @@ namespace Jazz2::UI::Menu
 				break;
 			case GraphicsOptionsItemType::ShowPlayerTrails:
 				PreferencesCache::ShowPlayerTrails = !PreferencesCache::ShowPlayerTrails;
+				_isDirty = true;
+				_animation = 0.0f;
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				break;
+			case GraphicsOptionsItemType::LowGraphicsQuality:
+				PreferencesCache::LowGraphicsQuality = !PreferencesCache::LowGraphicsQuality;
+				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 				_isDirty = true;
 				_animation = 0.0f;
 				_root->PlaySfx("MenuSelect"_s, 0.6f);

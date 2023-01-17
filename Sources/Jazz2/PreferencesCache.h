@@ -81,6 +81,7 @@ namespace Jazz2
 		static bool ShowPerformanceMetrics;
 		static bool KeepAspectRatioInCinematics;
 		static bool ShowPlayerTrails;
+		static bool LowGraphicsQuality;
 
 		// Gameplay
 		static bool EnableReforged;
@@ -119,6 +120,7 @@ namespace Jazz2
 			ShowPerformanceMetrics = 0x02,
 			KeepAspectRatioInCinematics = 0x04,
 			ShowPlayerTrails = 0x08,
+			LowGraphicsQuality = 0x10,
 
 			EnableReforged = 0x100,
 			EnableLedgeClimb = 0x200,
