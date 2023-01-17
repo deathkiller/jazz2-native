@@ -761,7 +761,7 @@ namespace Jazz2::Actors
 											SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Uppercut);
 										});
 									} else {
-										if (!GetState(ActorState::CanJump) && (!_levelHandler->IsReforged() || (_speed.Y > 0.01f && (_currentAnimationState & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle))) {
+										if (_speed.Y > 0.01f && !GetState(ActorState::CanJump) && (_currentAnimationState & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
 											SetState(ActorState::ApplyGravitation, false);
 											_speed.Y = 1.5f;
 											if ((_currentAnimationState & AnimState::Copter) != AnimState::Copter) {
@@ -796,7 +796,7 @@ namespace Jazz2::Actors
 											_canDoubleJump = false;
 											_isFreefall = false;
 
-											_internalForceY = -1.15f;
+											_internalForceY = (_levelHandler->IsReforged() ? -1.15f : -0.9f);
 											_speed.Y = -0.6f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
 											_speed.X *= 0.4f;
 
@@ -817,7 +817,7 @@ namespace Jazz2::Actors
 											SetState(ActorState::ApplyGravitation, false);
 										});
 									} else {
-										if (!GetState(ActorState::CanJump) && (!_levelHandler->IsReforged() || (_speed.Y > 0.01f && (_currentAnimationState & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle))) {
+										if (_speed.Y > 0.01f && !GetState(ActorState::CanJump) && (_currentAnimationState & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
 											SetState(ActorState::ApplyGravitation, false);
 											_speed.Y = 1.5f;
 											if ((_currentAnimationState & AnimState::Copter) != AnimState::Copter) {

@@ -17,10 +17,6 @@ namespace Jazz2::Actors::Environment
 			return Vector2f::Zero;
 		}
 
-		if (_delay > 0) {
-			LOGE_X("DELAY: %i", _delay);
-		}
-
 		_cooldown = (_delay > 0 ? _delay : 6.0f);
 
 		SetTransition(_currentAnimationState | (AnimState)0x200, false);
