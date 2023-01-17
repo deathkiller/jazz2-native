@@ -25,5 +25,7 @@ namespace Jazz2::Actors::Weapons
 		float _timeLeft;
 		float _lightIntensity;
 		bool _isExploded;
+		int _preexplosionTime;
+		std::shared_ptr<AudioBufferPlayer> _noise;
 	};
 }

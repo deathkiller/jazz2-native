@@ -53,7 +53,7 @@ namespace Jazz2::Actors::Solid
 
 						float force = 1.9f * mult;
 						player->_speed.X = 0.0f;
-						player->_speed.Y = -1.0f;
+						player->_speed.Y = (_levelHandler->IsReforged() ? -1.0f : -0.7f);
 						player->_externalForce.Y -= force;
 
 						player->_controllable = true;

@@ -11,17 +11,31 @@ namespace Jazz2::Actors::Environment
 
 	Task<bool> SteamNote::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		// It's incorrectly positioned one tile up in "share2.j2l"
+		
 		_pos.X -= 10.0f;
 
-		SetState(ActorState::ForceDisableCollisions, true);
-		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
+		SetState(ActorState::SkipPerPixelCollisions, true);
+		SetState(ActorState::CanBeFrozen | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		async_await RequestMetadataAsync("Object/SteamNote"_s);
 
 		SetAnimation("SteamNote"_s);
 
 		PlaySfx("Appear"_s, 0.4f);
+
+		// It's incorrectly positioned one tile up in "share2.j2l", so move it to correct position
+		OnUpdateHitbox();
+		bool moved = false;
+		int i = 10;
+		while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative)) {
+			moved = true;
+		}
+		while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 1.0f), MoveType::Relative)) {
+			moved = true;
+		}
+		if (moved) {
+			MoveInstantly(Vector2f(0.0f, 18.0f), MoveType::Relative | MoveType::Force);
+		}
 
 		async_return true;
 	}

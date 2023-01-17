@@ -25,6 +25,7 @@ namespace Jazz2::Actors::Enemies
 		_lastHitDir(LastHitDirection::None),
 		_blinkingTimeout(0.0f)
 	{
+		SetState(ActorState::TriggersTNT, true);
 	}
 
 	void EnemyBase::OnUpdate(float timeMult)

@@ -20,9 +20,10 @@ namespace Jazz2::Actors::Solid
 
 	Task<bool> PowerUpWeaponMonitor::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		Movable = true;
-
 		_weaponType = (WeaponType)details.Params[0];
+
+		SetState(ActorState::TriggersTNT, true);
+		Movable = true;
 
 		async_await RequestMetadataAsync("Object/PowerUpMonitor"_s);
 

@@ -52,6 +52,7 @@ namespace Jazz2::Actors
 		CanJump = 0x0400,
 		CanBeFrozen = 0x0800,
 		IsFacingLeft = 0x1000,
+		TriggersTNT = 0x2000,
 
 		// Collision flags
 	

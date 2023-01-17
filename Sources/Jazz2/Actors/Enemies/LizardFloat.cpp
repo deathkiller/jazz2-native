@@ -6,6 +6,7 @@
 #include "../Environment/Bomb.h"
 #include "../Environment/Copter.h"
 #include "../Player.h"
+#include "../Weapons/TNT.h"
 
 #include "../../../nCine/Base/Random.h"
 #include "../../../nCine/Base/FrameTimer.h"
@@ -167,6 +168,8 @@ namespace Jazz2::Actors::Enemies
 			if (player->GetSpecialMove() != Player::SpecialMoveType::None) {
 				shouldDestroy = true;
 			}
+		} else if (auto tnt = dynamic_cast<Weapons::TNT*>(collider)) {
+			shouldDestroy = true;
 		}
 
 		if (shouldDestroy) {
