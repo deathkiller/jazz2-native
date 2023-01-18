@@ -4,9 +4,7 @@
 #include "TextureLoaderDds.h"
 #include "TextureLoaderPvr.h"
 #include "TextureLoaderKtx.h"
-//#ifdef WITH_PNG
 #include "TextureLoaderPng.h"
-//#endif
 #if defined(WITH_WEBP)
 #	include "TextureLoaderWebP.h"
 #endif
@@ -21,10 +19,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	ITextureLoader::ITextureLoader()
 		: hasLoaded_(false), width_(0), height_(0),
 		headerSize_(0), dataSize_(0), mipMapCount_(1)
@@ -37,19 +31,14 @@ namespace nCine
 	{
 	}
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	long ITextureLoader::dataSize(unsigned int mipMapLevel) const
 	{
 		long int dataSize = 0;
-
-		if (mipMapCount_ > 1 && int(mipMapLevel) < mipMapCount_)
+		if (mipMapCount_ > 1 && int(mipMapLevel) < mipMapCount_) {
 			dataSize = mipDataSizes_[mipMapLevel];
-		else if (mipMapLevel == 0)
+		} else if (mipMapLevel == 0) {
 			dataSize = dataSize_;
-
+		}
 		return dataSize;
 	}
 
@@ -80,10 +69,6 @@ namespace nCine
 		return createLoader(fs::Open(filename, FileAccessMode::Read), filename);
 	}
 
-	///////////////////////////////////////////////////////////
-	// PROTECTED FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	std::unique_ptr<ITextureLoader> ITextureLoader::createLoader(std::unique_ptr<IFileStream> fileHandle, const StringView& filename)
 	{
 		auto extension = fs::GetExtension(filename);
@@ -96,11 +81,9 @@ namespace nCine
 		if (extension == "ktx"_s) {
 			return std::make_unique<TextureLoaderKtx>(std::move(fileHandle));
 		}
-	//#ifdef WITH_PNG
 		if (extension == "png"_s) {
 			return std::make_unique<TextureLoaderPng>(std::move(fileHandle));
 		}
-	//#endif
 	/*#ifdef WITH_WEBP
 		if (extension == "webp"_s) {
 			return std::make_unique<TextureLoaderWebP>(std::move(fileHandle));
@@ -117,7 +100,7 @@ namespace nCine
 		}
 #endif
 
-		LOGF_X("Extension unknown: \"%s\"", extension.data());
+		LOGF_X("Unknown extension: %s", extension.data());
 		fileHandle.reset(nullptr);
 		return std::make_unique<InvalidTextureLoader>(std::move(fileHandle));
 	}
@@ -147,5 +130,4 @@ namespace nCine
 		pixels_ = std::make_unique<unsigned char[]>(dataSize_);
 		fileHandle_->Read(pixels_.get(), dataSize_);
 	}
-
 }

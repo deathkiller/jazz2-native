@@ -446,7 +446,7 @@ namespace Jazz2::Scripting
 		else fmt += "d";
 
 		char buffer[64];
-#if _MSC_VER >= 1400 && !defined(__S3E__)
+#if defined(DEATH_TARGET_MSVC)
 		// MSVC 8.0 / 2005 or newer
 		sprintf_s(buffer, sizeof(buffer), fmt.data(), width, value);
 #else
@@ -484,7 +484,7 @@ namespace Jazz2::Scripting
 		else fmt += "u";
 
 		char buffer[64];
-#if _MSC_VER >= 1400 && !defined(__S3E__)
+#if defined(DEATH_TARGET_MSVC)
 		// MSVC 8.0 / 2005 or newer
 		sprintf_s(buffer, sizeof(buffer), fmt.data(), width, value);
 #else
@@ -516,7 +516,7 @@ namespace Jazz2::Scripting
 		else fmt += "f";
 
 		char buffer[64];
-#if _MSC_VER >= 1400 && !defined(__S3E__)
+#if defined(DEATH_TARGET_MSVC)
 		// MSVC 8.0 / 2005 or newer
 		sprintf_s(buffer, sizeof(buffer), fmt.data(), width, precision, value);
 #else

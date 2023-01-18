@@ -1,12 +1,8 @@
 #include "Particle.h"
 #include "RenderCommand.h"
 
-namespace nCine {
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
+namespace nCine
+{
 	Particle::Particle(SceneNode* parent, Texture* texture)
 		: Sprite(parent, texture), life_(0.0f), startingLife(0.0f),
 		startingRotation(0.0f), inLocalSpace_(false)
@@ -16,10 +12,6 @@ namespace nCine {
 		setEnabled(false);
 	}
 
-	///////////////////////////////////////////////////////////
-	// PROTECTED FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	Particle::Particle(const Particle& other)
 		: Sprite(other), life_(other.life_), startingLife(other.startingLife),
 		startingRotation(other.startingRotation), inLocalSpace_(other.inLocalSpace_)
@@ -27,10 +19,6 @@ namespace nCine {
 		type_ = ObjectType::Particle;
 		renderCommand_.setType(RenderCommand::CommandTypes::Particle);
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void Particle::init(float life, Vector2f pos, Vector2f vel, float rot, bool inLocalSpace)
 	{
@@ -59,7 +47,7 @@ namespace nCine {
 	{
 		SceneNode::transform();
 
-		if (inLocalSpace_ == false) {
+		if (!inLocalSpace_) {
 			worldMatrix_ = localMatrix_;
 
 			// Always independent movement
@@ -68,5 +56,4 @@ namespace nCine {
 			absPosition_ = position_;
 		}
 	}
-
 }

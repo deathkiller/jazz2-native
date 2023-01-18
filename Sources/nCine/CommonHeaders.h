@@ -7,7 +7,7 @@
 #		include <GLES2/gl2ext.h>
 #	elif defined(WITH_GLEW)
 #		define GLEW_NO_GLU
-#		if defined(_MSC_VER) && defined(__has_include)
+#		if !defined(CMAKE_BUILD) && defined(__has_include)
 #			if __has_include("../../Libs/Includes/GL/glew.h")
 #				define __HAS_LOCAL_OPENGL
 #			endif
@@ -22,7 +22,7 @@
 #		include <OpenGL/gl3.h>
 #		include <OpenGL/gl3ext.h>
 #	else
-#		if defined(_MSC_VER) && defined(__has_include)
+#		if !defined(CMAKE_BUILD) && defined(__has_include)
 #			if __has_include("../../Libs/Includes/GL/glew.h")
 #				define __HAS_LOCAL_OPENGL
 #			endif
@@ -44,7 +44,7 @@
 #	elif defined(DEATH_TARGET_EMSCRIPTEN)
 #		include <AL/al.h>
 #	else
-#		if defined(_MSC_VER) && defined(__has_include)
+#		if !defined(CMAKE_BUILD) && defined(__has_include)
 #			if __has_include("../../Libs/Includes/AL/al.h")
 #				define __HAS_LOCAL_OPENAL
 #			endif
@@ -68,7 +68,7 @@
 #		include <AL/alc.h>
 #		include <AL/al.h>
 #	else
-#		if defined(_MSC_VER) && defined(__has_include)
+#		if !defined(CMAKE_BUILD) && defined(__has_include)
 #			if __has_include("../../Libs/Includes/AL/al.h")
 #				define __HAS_LOCAL_OPENALC
 #			endif

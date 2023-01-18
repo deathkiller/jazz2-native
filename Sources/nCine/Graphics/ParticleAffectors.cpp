@@ -4,25 +4,17 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	void ParticleAffector::affect(Particle* particle)
 	{
 		const float normalizedAge = 1.0f - particle->life_ / particle->startingLife;
 		affect(particle, normalizedAge);
 	}
 
-	///////////////////////////////////////////////////////////
-	// COLOR AFFECTOR
-	///////////////////////////////////////////////////////////
-
 	void ColorAffector::addColorStep(float age, const Colorf& color)
 	{
-		if (colorSteps_.empty() || age > colorSteps_[colorSteps_.size() - 1].age)
+		if (colorSteps_.empty() || age > colorSteps_[colorSteps_.size() - 1].age) {
 			colorSteps_.push_back(ColorStep(age, color));
-		else {
+		} else {
 			LOGW("Out of order step not added");
 		}
 	}
@@ -32,8 +24,9 @@ namespace nCine
 		ASSERT(particle);
 
 		// Zero steps in the affector
-		if (colorSteps_.empty())
+		if (colorSteps_.empty()) {
 			return;
+		}
 
 		if (normalizedAge <= colorSteps_[0].age) {
 			particle->setColor(colorSteps_[0].color);
@@ -45,8 +38,9 @@ namespace nCine
 
 		unsigned int index = 0;
 		for (index = 0; index < colorSteps_.size() - 1; index++) {
-			if (colorSteps_[index].age > normalizedAge)
+			if (colorSteps_[index].age > normalizedAge) {
 				break;
+			}
 		}
 
 		FATAL_ASSERT(index > 0);
@@ -63,15 +57,11 @@ namespace nCine
 		particle->setColor(color);
 	}
 
-	///////////////////////////////////////////////////////////
-	// SIZE AFFECTOR
-	///////////////////////////////////////////////////////////
-
 	void SizeAffector::addSizeStep(float age, float scaleX, float scaleY)
 	{
-		if (sizeSteps_.empty() || age > sizeSteps_[sizeSteps_.size() - 1].age)
+		if (sizeSteps_.empty() || age > sizeSteps_[sizeSteps_.size() - 1].age) {
 			sizeSteps_.push_back(SizeStep(age, scaleX, scaleY));
-		else {
+		} else {
 			LOGW("Out of order step not added");
 		}
 	}
@@ -97,8 +87,9 @@ namespace nCine
 
 		unsigned int index = 0;
 		for (index = 0; index < sizeSteps_.size() - 1; index++) {
-			if (sizeSteps_[index].age > normalizedAge)
+			if (sizeSteps_[index].age > normalizedAge) {
 				break;
+			}
 		}
 
 		FATAL_ASSERT(index > 0);
@@ -111,15 +102,11 @@ namespace nCine
 		particle->setScale(baseScale_ * newScale);
 	}
 
-	///////////////////////////////////////////////////////////
-	// ROTATION AFFECTOR
-	///////////////////////////////////////////////////////////
-
 	void RotationAffector::addRotationStep(float age, float angle)
 	{
-		if (rotationSteps_.empty() || age > rotationSteps_[rotationSteps_.size() - 1].age)
+		if (rotationSteps_.empty() || age > rotationSteps_[rotationSteps_.size() - 1].age) {
 			rotationSteps_.push_back(RotationStep(age, angle));
-		else {
+		} else {
 			LOGW("Out of order step not added");
 		}
 	}
@@ -129,8 +116,9 @@ namespace nCine
 		ASSERT(particle);
 
 		// Zero steps in the affector
-		if (rotationSteps_.empty())
+		if (rotationSteps_.empty()) {
 			return;
+		}
 
 		if (normalizedAge <= rotationSteps_[0].age) {
 			particle->setRotation(particle->startingRotation + rotationSteps_[0].angle);
@@ -142,8 +130,9 @@ namespace nCine
 
 		unsigned int index = 0;
 		for (index = 0; index < rotationSteps_.size() - 1; index++) {
-			if (rotationSteps_[index].age > normalizedAge)
+			if (rotationSteps_[index].age > normalizedAge) {
 				break;
+			}
 		}
 
 		FATAL_ASSERT(index > 0);
@@ -156,15 +145,11 @@ namespace nCine
 		particle->setRotation(particle->startingRotation + newAngle);
 	}
 
-	///////////////////////////////////////////////////////////
-	// POSITION AFFECTOR
-	///////////////////////////////////////////////////////////
-
 	void PositionAffector::addPositionStep(float age, float posX, float posY)
 	{
-		if (positionSteps_.empty() || age > positionSteps_[positionSteps_.size() - 1].age)
+		if (positionSteps_.empty() || age > positionSteps_[positionSteps_.size() - 1].age) {
 			positionSteps_.push_back(PositionStep(age, posX, posY));
-		else {
+		} else {
 			LOGW("Out of order step not added");
 		}
 	}
@@ -174,8 +159,9 @@ namespace nCine
 		ASSERT(particle);
 
 		// Zero steps in the affector
-		if (positionSteps_.empty())
+		if (positionSteps_.empty()) {
 			return;
+		}
 
 		if (normalizedAge <= positionSteps_[0].age) {
 			particle->move(positionSteps_[0].position);
@@ -187,8 +173,9 @@ namespace nCine
 
 		unsigned int index = 0;
 		for (index = 0; index < positionSteps_.size() - 1; index++) {
-			if (positionSteps_[index].age > normalizedAge)
+			if (positionSteps_[index].age > normalizedAge) {
 				break;
+			}
 		}
 
 		FATAL_ASSERT(index > 0);
@@ -201,15 +188,11 @@ namespace nCine
 		particle->move(newPosition);
 	}
 
-	///////////////////////////////////////////////////////////
-	// VELOCITY AFFECTOR
-	///////////////////////////////////////////////////////////
-
 	void VelocityAffector::addVelocityStep(float age, float velX, float velY)
 	{
-		if (velocitySteps_.empty() || age > velocitySteps_[velocitySteps_.size() - 1].age)
+		if (velocitySteps_.empty() || age > velocitySteps_[velocitySteps_.size() - 1].age) {
 			velocitySteps_.push_back(VelocityStep(age, velX, velY));
-		else {
+		} else {
 			LOGW("Out of order step not added");
 		}
 	}
@@ -219,8 +202,9 @@ namespace nCine
 		ASSERT(particle);
 
 		// Zero steps in the affector
-		if (velocitySteps_.empty())
+		if (velocitySteps_.empty()) {
 			return;
+		}
 
 		if (normalizedAge <= velocitySteps_[0].age) {
 			particle->velocity_ += velocitySteps_[0].velocity;
@@ -232,8 +216,9 @@ namespace nCine
 
 		unsigned int index = 0;
 		for (index = 0; index < velocitySteps_.size() - 1; index++) {
-			if (velocitySteps_[index].age > normalizedAge)
+			if (velocitySteps_[index].age > normalizedAge) {
 				break;
+			}
 		}
 
 		FATAL_ASSERT(index > 0);
@@ -245,5 +230,4 @@ namespace nCine
 
 		particle->velocity_ += newVelocity;
 	}
-
 }

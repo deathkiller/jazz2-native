@@ -9,10 +9,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	ParticleSystem::ParticleSystem(SceneNode* parent, unsigned int count, Texture* texture)
 		: ParticleSystem(parent, count, texture, Recti(0, 0, texture->width(), texture->height()))
 	{
@@ -24,7 +20,6 @@ namespace nCine
 		particleArray_(poolSize_),
 		affectors_(4), inLocalSpace_(false)
 	{
-
 		/*if (texture && texture->name() != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(texture->name(), strnlen(texture->name(), Object::MaxNameLength));
@@ -59,10 +54,6 @@ namespace nCine
 
 	ParticleSystem& ParticleSystem::operator=(ParticleSystem&&) = default;
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	void ParticleSystem::clearAffectors()
 	{
 		for (auto& affector : affectors_) {
@@ -78,7 +69,7 @@ namespace nCine
 		}
 
 		const unsigned int amount = static_cast<unsigned int>(Random().Next(init.rndAmount.X, init.rndAmount.Y));
-#ifdef WITH_TRACY
+#if defined(WITH_TRACY)
 		// TODO: Tracy
 		//tracyInfoString.format("Count: %d", amount);
 		//ZoneText(tracyInfoString.data(), tracyInfoString.length());
@@ -236,16 +227,12 @@ namespace nCine
 
 		lastFrameUpdated_ = theApplication().numFrames();
 
-#ifdef WITH_TRACY
+#if defined(WITH_TRACY)
 		// TODO: Tracy
 		//tracyInfoString.format("Alive: %d", numAliveParticles());
 		//ZoneText(tracyInfoString.data(), tracyInfoString.length());
 #endif
 	}
-
-	///////////////////////////////////////////////////////////
-	// PROTECTED FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	ParticleSystem::ParticleSystem(const ParticleSystem& other)
 		: SceneNode(other), poolSize_(other.poolSize_), poolTop_(other.poolSize_ - 1),
@@ -281,8 +268,7 @@ namespace nCine
 		if (poolSize_ > 0) {
 			const Particle& otherParticle = *other.particlePool_.front();
 			// TODO: Tracy
-			/*if (otherParticle.texture() && otherParticle.texture()->name() != nullptr)
-			{
+			/*if (otherParticle.texture() && otherParticle.texture()->name() != nullptr) {
 				// When Tracy is disabled the statement body is empty and braces are needed
 				ZoneText(otherParticle.texture()->name(), strnlen(otherParticle.texture()->name(), Object::MaxNameLength));
 			}*/

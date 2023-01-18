@@ -2,7 +2,7 @@
 
 #if defined(WITH_ANGELSCRIPT)
 
-#if defined(_MSC_VER) && defined(__has_include)
+#if !defined(CMAKE_BUILD) && defined(__has_include)
 #	if __has_include("../../../Libs/Includes/angelscript.h")
 #		define __HAS_LOCAL_ANGELSCRIPT
 #	endif

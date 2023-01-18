@@ -121,6 +121,8 @@ namespace Jazz2
 
 #if defined(WITH_ANGELSCRIPT)
 		if (_scripts != nullptr) {
+			_scripts->OnLevelLoad();
+			// TODO: Call this when all objects are created (first checkpoint)
 			_scripts->OnLevelBegin();
 		}
 #endif
@@ -841,9 +843,11 @@ namespace Jazz2
 					}
 
 					if (_activeBoss->OnActivatedBoss()) {
-						size_t musicPathLength = strnlen((const char*)eventParams, 16);
-						StringView musicPath((const char*)eventParams, musicPathLength);
-						BeginPlayMusic(musicPath);
+						if (eventParams != nullptr) {
+							size_t musicPathLength = strnlen((const char*)eventParams, 16);
+							StringView musicPath((const char*)eventParams, musicPathLength);
+							BeginPlayMusic(musicPath);
+						}
 					}
 				}
 				break;
@@ -1016,9 +1020,9 @@ namespace Jazz2
 		_hud->ShowGems(count);
 	}
 
-	StringView LevelHandler::GetLevelText(int textId, int index, uint32_t delimiter)
+	StringView LevelHandler::GetLevelText(uint32_t textId, int index, uint32_t delimiter)
 	{
-		if (textId < 0 || textId >= _levelTexts.size()) {
+		if (textId >= _levelTexts.size()) {
 			return { };
 		}
 
@@ -1054,6 +1058,19 @@ namespace Jazz2
 		}
 
 		return text;
+	}
+
+	void LevelHandler::OverrideLevelText(uint32_t textId, const StringView& value)
+	{
+		if (textId >= _levelTexts.size()) {
+			if (value.empty()) {
+				return;
+			}
+
+			_levelTexts.resize(textId + 1);
+		}
+
+		_levelTexts[textId] = value;
 	}
 
 	bool LevelHandler::PlayerActionPressed(int index, PlayerActions action, bool includeGamepads)

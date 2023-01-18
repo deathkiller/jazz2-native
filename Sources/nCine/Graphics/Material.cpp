@@ -9,10 +9,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	Material::Material()
 		: Material(nullptr, nullptr)
 	{
@@ -22,17 +18,15 @@ namespace nCine
 		: isBlendingEnabled_(false), srcBlendingFactor_(GL_SRC_ALPHA), destBlendingFactor_(GL_ONE_MINUS_SRC_ALPHA),
 		shaderProgramType_(ShaderProgramType::CUSTOM), shaderProgram_(program), uniformsHostBufferSize_(0)
 	{
-		for (unsigned int i = 0; i < GLTexture::MaxTextureUnits; i++)
+		for (unsigned int i = 0; i < GLTexture::MaxTextureUnits; i++) {
 			textures_[i] = nullptr;
+		}
 		textures_[0] = texture;
 
-		if (program)
+		if (program != nullptr) {
 			setShaderProgram(program);
+		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void Material::setBlendingFactors(GLenum srcBlendingFactor, GLenum destBlendingFactor)
 	{
@@ -43,8 +37,9 @@ namespace nCine
 	bool Material::setShaderProgramType(ShaderProgramType shaderProgramType)
 	{
 		GLShaderProgram* shaderProgram = RenderResources::shaderProgram(shaderProgramType);
-		if (shaderProgram == nullptr || shaderProgram == shaderProgram_)
+		if (shaderProgram == nullptr || shaderProgram == shaderProgram_) {
 			return false;
+		}
 
 		setShaderProgram(shaderProgram);
 
@@ -111,8 +106,9 @@ namespace nCine
 	const GLTexture* Material::texture(unsigned int unit) const
 	{
 		const GLTexture* texture = nullptr;
-		if (unit < GLTexture::MaxTextureUnits)
+		if (unit < GLTexture::MaxTextureUnits) {
 			texture = textures_[unit];
+		}
 		return texture;
 	}
 
@@ -130,10 +126,6 @@ namespace nCine
 	{
 		return setTexture(unit, texture.glTexture_.get());
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void Material::bind()
 	{
@@ -204,5 +196,4 @@ namespace nCine
 
 		return fasthash32(reinterpret_cast<const void*>(&hashData), sizeof(SortHashData), Seed);
 	}
-
 }

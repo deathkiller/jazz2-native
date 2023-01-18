@@ -75,6 +75,7 @@ namespace Jazz2::Actors::Enemies
 
 				_speed.X = 0;
 				_speed.Y = 0;
+				_noiseCooldown = 0.0f;
 
 				SetAnimation(AnimState::Walk);
 
@@ -92,6 +93,7 @@ namespace Jazz2::Actors::Enemies
 					MoveInstantly(_originPos, MoveType::Absolute | MoveType::Force);
 					_speed.X = 0;
 					_speed.Y = 0;
+					_noiseCooldown = 210.0f;
 					SetAnimation(AnimState::Idle);
 					SetTransition((AnimState)1073741826, false);
 				} else {
@@ -100,6 +102,13 @@ namespace Jazz2::Actors::Enemies
 					_speed.Y = direction.Y * DefaultSpeed;
 
 					SetFacingLeft(_speed.X < 0.0f);
+				}
+			} else {
+				if (_noiseCooldown > 0.0f) {
+					_noiseCooldown -= timeMult;
+				} else {
+					_noiseCooldown = 210.0f;
+					SetTransition((AnimState)1073741827, true);
 				}
 			}
 		}

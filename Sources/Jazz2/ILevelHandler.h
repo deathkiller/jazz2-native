@@ -77,7 +77,8 @@ namespace Jazz2
 		virtual void ShowLevelText(const StringView& text) = 0;
 		virtual void ShowCoins(int count) = 0;
 		virtual void ShowGems(int count) = 0;
-		virtual StringView GetLevelText(int textId, int index = -1, uint32_t delimiter = 0) = 0;
+		virtual StringView GetLevelText(uint32_t textId, int index = -1, uint32_t delimiter = 0) = 0;
+		virtual void OverrideLevelText(uint32_t textId, const StringView& value) = 0;
 		virtual void LimitCameraView(float left, float width) = 0;
 		virtual void ShakeCameraView(float duration) = 0;
 		virtual void SetWeather(WeatherType type, uint8_t intensity) = 0;

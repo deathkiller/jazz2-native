@@ -6,10 +6,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	Geometry::Geometry()
 		: primitiveType_(GL_TRIANGLES), firstVertex_(0), numVertices_(0),
 		numElementsPerVertex_(2), firstIndex_(0), numIndices_(0),
@@ -31,10 +27,6 @@ namespace nCine
 		}
 #endif
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void Geometry::setDrawParameters(GLenum primitiveType, GLint firstVertex, GLsizei numVertices)
 	{
@@ -190,10 +182,6 @@ namespace nCine
 			sharedIboParams_ = &geometry->iboParams_;
 		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void Geometry::bind()
 	{

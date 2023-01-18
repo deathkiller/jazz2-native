@@ -42,12 +42,12 @@ namespace nCine
 		}
 #endif
 #if defined(WITH_OPENMPT)
-		if (extension == "j2b"_s || extension == "it"_s || extension == "s3m"_s || extension == "xm"_s || extension == "mo3"_s) {
+		if (extension == "it"_s || extension == "j2b"_s || extension == "mo3"_s || extension == "mod"_s || extension == "s3m"_s || extension == "xm"_s) {
 			return std::make_unique<AudioLoaderMpt>(std::move(fileHandle));
 		}
 #endif
 
-		LOGF_X("Extension unknown: \"%s\"", extension.data());
+		LOGF_X("Unknown extension: %s", extension.data());
 		fileHandle.reset(nullptr);
 		return std::make_unique<InvalidAudioLoader>(std::move(fileHandle));
 	}
