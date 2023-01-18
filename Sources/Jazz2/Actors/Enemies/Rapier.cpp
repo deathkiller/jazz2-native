@@ -153,7 +153,7 @@ namespace Jazz2::Actors::Enemies
 		auto& players = _levelHandler->GetPlayers();
 		for (auto player : players) {
 			Vector2f newPos = player->GetPos();
-			if ((_lastPos - newPos).Length() < (_lastPos - foundPos).Length()) {
+			if ((_lastPos - newPos).SqrLength() < (_lastPos - foundPos).SqrLength()) {
 				foundPos = newPos;
 				found = true;
 			}

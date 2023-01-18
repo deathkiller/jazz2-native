@@ -217,7 +217,7 @@ namespace Jazz2::Actors
 		effectiveSpeedY *= timeMult;
 
 		if (std::abs(effectiveSpeedX) > 0.0f || std::abs(effectiveSpeedY) > 0.0f) {
-			if (GetState(ActorState::CanJump)) {
+			if (GetState(ActorState::CanJump | ActorState::ApplyGravitation)) {
 				// All ground-bound movement is handled here. In the basic case, the actor
 				// moves horizontally, but it can also logically move up or down if it is
 				// moving across a slope. In here, angles between about 45 degrees down

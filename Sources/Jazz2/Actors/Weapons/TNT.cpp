@@ -127,7 +127,7 @@ namespace Jazz2::Actors::Weapons
 	bool TNT::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (auto tnt = dynamic_cast<TNT*>(other.get())) {
-			if (_timeLeft > 35.0f) {
+			if (tnt->_isExploded && _timeLeft > 35.0f) {
 				_timeLeft = 35.0f;
 			}
 		}

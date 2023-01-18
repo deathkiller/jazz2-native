@@ -115,6 +115,10 @@ namespace Jazz2::Actors::Bosses
 
 						_state = StateFalling;
 
+						if (_tornadoNoise != nullptr) {
+							_tornadoNoise->stop();
+							_tornadoNoise = nullptr;
+						}
 						SetAnimation((AnimState)1073741833);
 					});
 				}
@@ -206,7 +210,7 @@ namespace Jazz2::Actors::Bosses
 		auto& players = _levelHandler->GetPlayers();
 		for (auto& player : players) {
 			Vector2f newPos = player->GetPos();
-			if ((_pos - newPos).Length() < (_pos - targetPos).Length()) {
+			if ((_pos - newPos).SqrLength() < (_pos - targetPos).SqrLength()) {
 				targetPos = newPos;
 				found = true;
 			}
@@ -218,10 +222,9 @@ namespace Jazz2::Actors::Bosses
 
 			SetState(ActorState::CollideWithTilesetReduced | ActorState::ApplyGravitation, false);
 
-			MoveInstantly(Vector2f(0, -1), MoveType::Relative);
-
 			Vector2f diff = (targetPos - _pos);
 
+			_tornadoNoise = PlaySfx("Tornado"_s);
 			SetTransition((AnimState)1073741830, false, [this, diff]() {
 				_speed.X = (diff.X / _stateTime);
 				_speed.Y = (diff.Y / _stateTime);

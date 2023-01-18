@@ -232,7 +232,7 @@ namespace Jazz2::Actors::Bosses
 		auto& players = _levelHandler->GetPlayers();
 		for (auto& player : players) {
 			Vector2f newPos = player->GetPos();
-			if ((_pos - newPos).Length() < (_pos - targetPos).Length()) {
+			if ((_pos - newPos).SqrLength() < (_pos - targetPos).SqrLength()) {
 				targetPos = newPos;
 				found = true;
 			}
@@ -260,7 +260,7 @@ namespace Jazz2::Actors::Bosses
 		auto& players = _levelHandler->GetPlayers();
 		for (auto& player : players) {
 			Vector2f newPos = player->GetPos();
-			if ((_pos - newPos).Length() < (_pos - targetPos).Length()) {
+			if ((_pos - newPos).SqrLength() < (_pos - targetPos).SqrLength()) {
 				targetPos = newPos;
 				found = true;
 			}

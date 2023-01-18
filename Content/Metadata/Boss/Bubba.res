@@ -86,6 +86,9 @@
 		},
 		"Sneeze": {
 			"Paths": [ "Bubba/sneeze.wav" ]
+		},
+		"Tornado": {
+			"Paths": [ "Bubba/tornado.wav" ]
 		}
 	}
 }
