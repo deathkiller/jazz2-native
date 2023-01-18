@@ -664,7 +664,7 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::WarpCameraToTarget(const std::shared_ptr<Actors::ActorBase>& actor)
+	void LevelHandler::WarpCameraToTarget(const std::shared_ptr<Actors::ActorBase>& actor, bool fast)
 	{
 		// TODO: Allow multiple cameras
 		if (_players[0] != actor.get()) {
@@ -672,12 +672,18 @@ namespace Jazz2
 		}
 
 		Vector2f focusPos = actor->_pos;
-
-		_cameraPos.X = focusPos.X;
-		_cameraPos.Y = focusPos.Y;
-		_cameraLastPos = _cameraPos;
-		_cameraDistanceFactor.X = 0.0f;
-		_cameraDistanceFactor.Y = 0.0f;
+		if (!fast) {
+			_cameraPos.X = focusPos.X;
+			_cameraPos.Y = focusPos.Y;
+			_cameraLastPos = _cameraPos;
+			_cameraDistanceFactor.X = 0.0f;
+			_cameraDistanceFactor.Y = 0.0f;
+		} else {
+			Vector2f diff = _cameraLastPos - _cameraPos;
+			_cameraPos.X = focusPos.X;
+			_cameraPos.Y = focusPos.Y;
+			_cameraLastPos = _cameraPos + diff;
+		}
 	}
 
 	bool LevelHandler::IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, TileCollisionParams& params, Actors::ActorBase** collider)
@@ -1274,7 +1280,7 @@ namespace Jazz2
 	{
 		_levelBounds.X = left;
 		if (width > 0.0f) {
-			_levelBounds.W = left;
+			_levelBounds.W = width;
 		} else {
 			_levelBounds.W = _tileMap->LevelBounds().X - left;
 		}

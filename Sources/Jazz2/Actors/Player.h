@@ -96,7 +96,7 @@ namespace Jazz2::Actors
 
 		void WarpToPosition(Vector2f pos, bool fast);
 		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor = nullptr);
-		bool TakeDamage(int amount, float pushForce);
+		bool TakeDamage(int amount, float pushForce = 0.0f);
 		void SetInvulnerability(float time, bool withCircleEffect);
 
 		void AddScore(uint32_t amount);

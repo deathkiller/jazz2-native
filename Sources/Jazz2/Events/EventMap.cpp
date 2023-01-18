@@ -264,7 +264,7 @@ namespace Jazz2::Events
 			selectedTarget--;
 		}
 
-		return Vector2f(-1, -1);
+		return Vector2f(-1.0f, -1.0f);
 	}
 
 	void EventMap::ReadEvents(IFileStream& s, const std::unique_ptr<Tiles::TileMap>& tileMap, GameDifficulty difficulty)
@@ -389,7 +389,7 @@ namespace Jazz2::Events
 	{
 		WarpTarget& target = _warpTargets.emplace_back();
 		target.Id = id;
-		target.Pos = Vector2f(x * Tiles::TileSet::DefaultTileSize, y * Tiles::TileSet::DefaultTileSize + 12);
+		target.Pos = Vector2f(x * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2, y * Tiles::TileSet::DefaultTileSize + 12 + Tiles::TileSet::DefaultTileSize / 2);
 	}
 
 	void EventMap::AddSpawnPosition(uint8_t typeMask, int x, int y)

@@ -755,7 +755,7 @@ namespace Jazz2::Actors
 										_controllable = false;
 										SetAnimation(AnimState::Uppercut);
 										SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Uppercut, [this]() {
-											_externalForce.Y = -1.4f;
+											_externalForce.Y = (_levelHandler->IsReforged() ? -1.4f : -1.2f);
 											_speed.Y = -2.0f;
 											SetState(ActorState::CanJump, false);
 											SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Uppercut);
@@ -1077,7 +1077,7 @@ namespace Jazz2::Actors
 					_shieldTime = std::max(1.0f, _shieldTime - 5.0f * FrameTimer::FramesPerSecond);
 				}*/
 			} else if (enemy->CanHurtPlayer()) {
-				TakeDamage(1, 4 * (_pos.X > enemy->GetPos().X ? 1 : -1));
+				TakeDamage(1, 4 * (_pos.X > enemy->GetPos().X ? 1.0f : -1.0f));
 			}
 		} else if (auto spring = dynamic_cast<Environment::Spring*>(other.get())) {
 			// Collide only with hitbox
@@ -2651,13 +2651,12 @@ namespace Jazz2::Actors
 	void Player::WarpToPosition(Vector2f pos, bool fast)
 	{
 		if (fast) {
-			bool alsoWarpCamera = (_pos - pos).Length() > 250.0f;
+			bool hideTrail = (_pos - pos).Length() > 250.0f;
 			MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
-			_trailLastPos = _pos;
-
-			if (alsoWarpCamera) {
-				_levelHandler->WarpCameraToTarget(shared_from_this());
+			if (hideTrail) {
+				_trailLastPos = _pos;
 			}
+			_levelHandler->WarpCameraToTarget(shared_from_this(), true);
 		} else {
 			EndDamagingMove();
 			SetState(ActorState::IsInvulnerable, true);

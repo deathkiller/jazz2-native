@@ -12,6 +12,7 @@
 #include "../PreferencesCache.h"
 #include "../Actors/ActorBase.h"
 #include "../Actors/Player.h"
+#include "../Compatibility/JJ2Strings.h"
 
 #include "../../nCine/Base/Random.h"
 
@@ -170,7 +171,9 @@ namespace Jazz2::Scripting
 		mZZREPLACEMENTS,
 		mZZRETICLES,
 		mZZSCENERY,
-		mZZWARP
+		mZZWARP,
+
+		mCOUNT
 	};
 
 	enum dir {
@@ -2178,12 +2181,12 @@ namespace Jazz2::Scripting
 	class jjPLAYER
 	{
 	public:
-		jjPLAYER(LevelScriptLoader* levelScripts, int playerIndex) : _levelScripts(levelScripts), _refCount(1) {
+		jjPLAYER(LevelScriptLoader* levelScripts, int playerIndex) : _levelScriptLoader(levelScripts), _refCount(1) {
 			noop();
 			auto& players = levelScripts->GetPlayers();
 			_player = (playerIndex < players.size() ? players[playerIndex] : nullptr);
 		}
-		jjPLAYER(LevelScriptLoader* levelScripts, Actors::Player* player) : _levelScripts(levelScripts), _refCount(1), _player(player) {
+		jjPLAYER(LevelScriptLoader* levelScripts, Actors::Player* player) : _levelScriptLoader(levelScripts), _refCount(1), _player(player) {
 			noop();
 		}
 		~jjPLAYER() {
@@ -2509,14 +2512,26 @@ namespace Jazz2::Scripting
 
 		bool offsetPosition(int32_t xPixels, int32_t yPixels) {
 			noop();
-			return false;
+			
+			Vector2f pos = _player->GetPos();
+			_player->WarpToPosition(Vector2f(pos.X + xPixels, pos.Y + yPixels), true);
+			return true;
 		}
 		bool warpToTile(int32_t xTile, int32_t yTile, bool fast) {
 			noop();
-			return false;
+
+			_player->WarpToPosition(Vector2f(xTile * TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2, yTile * TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2), fast);
+			return true;
 		}
 		bool warpToID(uint8_t warpID, bool fast) {
 			noop();
+
+			auto events = _levelScriptLoader->_levelHandler->EventMap();
+			Vector2f c = events->GetWarpTarget(warpID);
+			if (c.X >= 0.0f && c.Y >= 0.0f) {
+				_player->WarpToPosition(c, fast);
+				return true;
+			}
 			return false;
 		}
 
@@ -2544,6 +2559,9 @@ namespace Jazz2::Scripting
 		}
 		bool hurt(int8_t damage, bool forceHurt, jjPLAYER* attacker) {
 			noop();
+
+			// TODO: forceHurt and return value
+			_player->TakeDamage(damage);
 			return false;
 		}
 
@@ -2597,7 +2615,10 @@ namespace Jazz2::Scripting
 			noop(); return false;
 		}
 		bool limitXScroll(uint16_t left, uint16_t width) {
-			noop(); return false;
+			noop();
+				
+			_levelScriptLoader->_levelHandler->LimitCameraView(left * Tiles::TileSet::DefaultTileSize, width * Tiles::TileSet::DefaultTileSize);
+			return true;
 		}
 		void cameraFreezeFF(float xPixel, float yPixel, bool centered, bool instant) {
 			noop();
@@ -2614,11 +2635,20 @@ namespace Jazz2::Scripting
 		void cameraUnfreeze(bool instant) {
 			noop();
 		}
-		void showTextStr(const String& text, uint32_t size) {
+		void showText(const String& text, uint32_t size) {
 			noop();
+
+			// TODO: size
+			// Input string must be recoded in Legacy context
+			auto recodedText = Compatibility::JJ2Strings::RecodeString(text);
+			_levelScriptLoader->_levelHandler->ShowLevelText(recodedText);
 		}
-		void showTextHstr(uint32_t textID, uint32_t offset, uint32_t size) {
+		void showTextByID(uint32_t textID, uint32_t offset, uint32_t size) {
 			noop();
+
+			// TODO: size
+			auto text = _levelScriptLoader->_levelHandler->GetLevelText(textID, offset, '|');
+			_levelScriptLoader->_levelHandler->ShowLevelText(text);
 		}
 
 		uint32_t get_fly() const {
@@ -2720,7 +2750,7 @@ namespace Jazz2::Scripting
 
 	private:
 		int _refCount;
-		LevelScriptLoader* _levelScripts;
+		LevelScriptLoader* _levelScriptLoader;
 		Actors::Player* _player;
 	};
 
@@ -3699,7 +3729,7 @@ namespace Jazz2::Scripting
 
 	uint32_t getCustomSetID(uint8_t index) {
 		noop();
-		return 0;
+		return mCOUNT + index;
 	}
 
 	// Without namespace for shorter log messages
@@ -4415,8 +4445,8 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "void cameraFreeze(float xPixel, bool yUnfreeze, bool centered, bool instant)", asMETHOD(jjPLAYER, cameraFreezeFB), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "void cameraFreeze(bool xUnfreeze, bool yUnfreeze, bool centered, bool instant)", asMETHOD(jjPLAYER, cameraFreezeBB), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "void cameraUnfreeze(bool instant = true)", asMETHOD(jjPLAYER, cameraUnfreeze), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void showText(string &in text, STRING::Size size = STRING::SMALL)", asMETHOD(jjPLAYER, showTextStr), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "void showText(uint textID, uint offset, STRING::Size size = STRING::SMALL)", asMETHOD(jjPLAYER, showTextHstr), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void showText(string &in text, STRING::Size size = STRING::SMALL)", asMETHOD(jjPLAYER, showText), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void showText(uint textID, uint offset, STRING::Size size = STRING::SMALL)", asMETHOD(jjPLAYER, showTextByID), asCALL_THISCALL);
 
 		engine->SetDefaultNamespace("FLIGHT");
 		engine->RegisterEnum("Mode");
