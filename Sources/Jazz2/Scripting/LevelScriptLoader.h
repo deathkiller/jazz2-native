@@ -7,8 +7,12 @@
 
 namespace Jazz2::Scripting
 {
+	class jjPLAYER;
+
 	class LevelScriptLoader : public ScriptLoader
 	{
+		friend class jjPLAYER;
+
 	public:
 		LevelScriptLoader(LevelHandler* levelHandler, const StringView& scriptPath);
 
