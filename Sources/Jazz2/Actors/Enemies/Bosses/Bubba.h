@@ -45,6 +45,7 @@ namespace Jazz2::Actors::Bosses
 		int _state;
 		float _stateTime;
 		uint8_t _endText;
+		std::shared_ptr<AudioBufferPlayer> _tornadoNoise;
 
 		void FollowNearestPlayer();
 		void TornadoToNearestPlayer();
