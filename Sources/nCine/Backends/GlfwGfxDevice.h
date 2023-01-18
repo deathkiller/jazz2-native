@@ -4,7 +4,7 @@
 
 #include "../../Common.h"
 
-#if defined(_MSC_VER) && defined(__has_include)
+#if !defined(CMAKE_BUILD) && defined(__has_include)
 #	if __has_include("../../../Libs/Includes/GL/glew.h")
 #		define __HAS_LOCAL_GLEW
 #	endif

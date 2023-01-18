@@ -29,9 +29,9 @@ namespace Jazz2::Scripting
 		}
 	}
 
-#ifdef __GNUC__
+#if defined(DEATH_TARGET_GCC)
 #	define noop() Unimplemented(__PRETTY_FUNCTION__)
-#elif _MSC_VER
+#elif defined(DEATH_TARGET_MSVC)
 #	define noop() Unimplemented(__FUNCTION__)
 #else
 #	define noop() Unimplemented(__func__)
@@ -1918,7 +1918,7 @@ namespace Jazz2::Scripting
 
 		bool get_isActive() const {
 			noop();
-			return false;
+			return true;
 		}
 		uint32_t get_lightType() const {
 			noop();
@@ -2229,13 +2229,15 @@ namespace Jazz2::Scripting
 		float yOrg = 0.0f;
 
 		int32_t get_xSpeed() {
-			noop(); return 0;
+			noop();
+			return (int32_t)_player->GetSpeed().X;
 		}
 		int32_t set_xSpeed() {
 			noop(); return 0;
 		}
 		int32_t get_ySpeed() {
-			noop(); return 0;
+			noop();
+			return (int32_t)_player->GetSpeed().Y;
 		}
 		int32_t set_ySpeed() {
 			noop(); return 0;
@@ -2257,11 +2259,12 @@ namespace Jazz2::Scripting
 		}
 		int8_t get_health() const {
 			noop();
-			return 0;
+			return (int8_t)_player->GetHealth();
 		}
 		int8_t set_health(int8_t value) {
 			noop();
-			return 0;
+			_player->SetHealth(value);
+			return value;
 		}
 
 		int32_t warpID = 0;
@@ -2367,7 +2370,7 @@ namespace Jazz2::Scripting
 		}
 		bool get_isInGame() const {
 			noop();
-			return false;
+			return true;
 		}
 
 		String get_name() const {
@@ -2433,11 +2436,12 @@ namespace Jazz2::Scripting
 		}
 		uint8_t get_lighting() const {
 			noop();
-			return 0;
+			return (uint8_t)(_levelScriptLoader->_levelHandler->GetAmbientLight() * 64.0f);
 		}
 		uint8_t set_lighting(uint8_t value) {
 			noop();
-			return 0;
+			_levelScriptLoader->_levelHandler->SetAmbientLight(value / 64.0f);
+			return value;
 		}
 		uint8_t resetLight() {
 			noop();
@@ -2541,21 +2545,27 @@ namespace Jazz2::Scripting
 		}
 		uint32_t morphTo(uint32_t charNew, bool morphEffect) {
 			noop();
-			return 0;
+			// TODO: morphEffect
+			_player->MorphTo((PlayerType)charNew);
+			return (uint32_t)_player->GetPlayerType();
 		}
 		uint32_t revertMorph(bool morphEffect) {
 			noop();
-			return 0;
+			// TODO: morphEffect
+			_player->MorphRevert();
+			return (uint32_t)_player->GetPlayerType();
 		}
 		uint32_t get_charCurr() const {
 			noop();
-			return 0;
+			return (uint32_t)_player->GetPlayerType();
 		}
 
 		uint32_t charOrig = 0;
 
 		void kill() {
 			noop();
+
+			_player->DecreaseHealth(INT32_MAX);
 		}
 		bool hurt(int8_t damage, bool forceHurt, jjPLAYER* attacker) {
 			noop();
@@ -2612,7 +2622,11 @@ namespace Jazz2::Scripting
 		}
 
 		bool activateBoss(bool activate) {
-			noop(); return false;
+			noop();
+			
+			// TODO: activate
+			_levelScriptLoader->_levelHandler->BroadcastTriggeredEvent(_player, EventType::AreaActivateBoss, nullptr);
+			return true;
 		}
 		bool limitXScroll(uint16_t left, uint16_t width) {
 			noop();
@@ -2825,7 +2839,7 @@ namespace Jazz2::Scripting
 			auto ctx = asGetActiveContext();
 			auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
 
-			void* mem = asAllocMem(sizeof(ScriptPlayerWrapper));
+			void* mem = asAllocMem(sizeof(jjPIXELMAP));
 			return new(mem) jjPIXELMAP();
 		}
 		static jjPIXELMAP* CreateFromSize(uint32_t width, uint32_t height) {
@@ -2834,7 +2848,7 @@ namespace Jazz2::Scripting
 			auto ctx = asGetActiveContext();
 			auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
 
-			void* mem = asAllocMem(sizeof(ScriptPlayerWrapper));
+			void* mem = asAllocMem(sizeof(jjPIXELMAP));
 			return new(mem) jjPIXELMAP();
 		}
 		static jjPIXELMAP* CreateFromFrame(const jjANIMFRAME* animFrame) {
@@ -2843,7 +2857,7 @@ namespace Jazz2::Scripting
 			auto ctx = asGetActiveContext();
 			auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
 
-			void* mem = asAllocMem(sizeof(ScriptPlayerWrapper));
+			void* mem = asAllocMem(sizeof(jjPIXELMAP));
 			return new(mem) jjPIXELMAP();
 		}
 		static jjPIXELMAP* CreateFromLayer(uint32_t left, uint32_t top, uint32_t width, uint32_t height, uint32_t layer) {
@@ -2852,7 +2866,7 @@ namespace Jazz2::Scripting
 			auto ctx = asGetActiveContext();
 			auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
 
-			void* mem = asAllocMem(sizeof(ScriptPlayerWrapper));
+			void* mem = asAllocMem(sizeof(jjPIXELMAP));
 			return new(mem) jjPIXELMAP();
 		}
 		static jjPIXELMAP* CreateFromLayerObject(uint32_t left, uint32_t top, uint32_t width, uint32_t height, const jjLAYER* layer) {
@@ -2861,7 +2875,7 @@ namespace Jazz2::Scripting
 			auto ctx = asGetActiveContext();
 			auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
 
-			void* mem = asAllocMem(sizeof(ScriptPlayerWrapper));
+			void* mem = asAllocMem(sizeof(jjPIXELMAP));
 			return new(mem) jjPIXELMAP();
 		}
 		static jjPIXELMAP* CreateFromTexture(uint32_t animFrame) {
@@ -2870,7 +2884,7 @@ namespace Jazz2::Scripting
 			auto ctx = asGetActiveContext();
 			auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
 
-			void* mem = asAllocMem(sizeof(ScriptPlayerWrapper));
+			void* mem = asAllocMem(sizeof(jjPIXELMAP));
 			return new(mem) jjPIXELMAP();
 		}
 		static jjPIXELMAP* CreateFromFilename(const String& filename, const jjPAL* palette, uint8_t threshold) {
@@ -2879,7 +2893,7 @@ namespace Jazz2::Scripting
 			auto ctx = asGetActiveContext();
 			auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
 
-			void* mem = asAllocMem(sizeof(ScriptPlayerWrapper));
+			void* mem = asAllocMem(sizeof(jjPIXELMAP));
 			return new(mem) jjPIXELMAP();
 		}
 
@@ -2946,7 +2960,7 @@ namespace Jazz2::Scripting
 			auto ctx = asGetActiveContext();
 			auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
 
-			void* mem = asAllocMem(sizeof(ScriptPlayerWrapper));
+			void* mem = asAllocMem(sizeof(jjMASKMAP));
 			return new(mem) jjMASKMAP();
 		}
 		static jjMASKMAP* CreateFromTile(uint16_t tileID) {
@@ -2955,7 +2969,7 @@ namespace Jazz2::Scripting
 			auto ctx = asGetActiveContext();
 			auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
 
-			void* mem = asAllocMem(sizeof(ScriptPlayerWrapper));
+			void* mem = asAllocMem(sizeof(jjMASKMAP));
 			return new(mem) jjMASKMAP();
 		}
 
@@ -3037,7 +3051,12 @@ namespace Jazz2::Scripting
 
 		static jjLAYER* get_jjLayers(int32_t index) {
 			noop();
-			return nullptr;
+
+			auto ctx = asGetActiveContext();
+			auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+
+			void* mem = asAllocMem(sizeof(jjLAYER));
+			return new(mem) jjLAYER();
 		}
 
 		int32_t width = 0;
@@ -3155,13 +3174,16 @@ namespace Jazz2::Scripting
 	}
 
 	float get_sinTable(uint32_t angle) {
-		noop(); return 0.0f;
+		noop();
+		return sinf(angle * fTwoPi / 1024.0f);
 	};
 	float get_cosTable(uint32_t angle) {
-		noop(); return 0.0f;
+		noop();
+		return cosf(angle * fTwoPi / 1024.0f);
 	};
 	uint32_t RandWord32() {
-		noop(); return 0;
+		noop();
+		return Random().Next();
 	}
 	uint64_t unixTimeSec() {
 		noop(); return 0;
@@ -3206,20 +3228,32 @@ namespace Jazz2::Scripting
 	void setCurrLevelName(const String& in) {
 		noop();
 	}
-	String getCurrMusic() {
-		noop(); return "";
+	String LevelScriptLoader::get_jjMusicFileName() {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		return _this->_levelHandler->_musicCurrentPath;
 	}
-	String getCurrTileset() {
+	String get_jjTilesetFileName() {
 		noop(); return "";
 	}
 
 	uint32_t numberOfTiles = 0;
 
-	String getHelpString(uint32_t index) {
-		noop(); return "";
-	}
-	void setHelpString(uint32_t index, const String& in) {
+	String LevelScriptLoader::get_jjHelpStrings(uint32_t index) {
 		noop();
+		
+		auto ctx = asGetActiveContext();
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		return _this->_levelHandler->GetLevelText(index);
+	}
+	void LevelScriptLoader::set_jjHelpStrings(uint32_t index, const String& text) {
+		noop();
+
+		auto ctx = asGetActiveContext();
+		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		_this->_levelHandler->OverrideLevelText(index, text);
 	}
 
 	int32_t get_gameState() {
@@ -3827,19 +3861,6 @@ namespace Jazz2::Scripting
 
 		int r = Build(); RETURN_ASSERT_MSG(r >= 0, "Cannot compile the script. Please correct the code and try again.");
 
-		asIScriptFunction* onLevelLoad = _module->GetFunctionByDecl("void onLevelLoad()");
-		if (onLevelLoad != nullptr) {
-			asIScriptContext* ctx = _engine->RequestContext();
-
-			ctx->Prepare(onLevelLoad);
-			r = ctx->Execute();
-			if (r == asEXECUTION_EXCEPTION) {
-				OnException(ctx);
-			}
-
-			_engine->ReturnContext(ctx);
-		}
-
 		switch (_scriptContextType) {
 			case ScriptContextType::Legacy:
 				_onLevelUpdate = _module->GetFunctionByDecl("void onMain()");
@@ -3870,6 +3891,24 @@ namespace Jazz2::Scripting
 		if (content == "target Jazz² Resurrection"_s || content == "target Jazz2 Resurrection"_s) {
 			contextType = ScriptContextType::Standard;
 		}
+	}
+
+	void LevelScriptLoader::OnLevelLoad()
+	{
+		asIScriptFunction* func = _module->GetFunctionByDecl("void onLevelLoad()");
+		if (func == nullptr) {
+			return;
+		}
+
+		asIScriptContext* ctx = _engine->RequestContext();
+
+		ctx->Prepare(func);
+		int r = ctx->Execute();
+		if (r == asEXECUTION_EXCEPTION) {
+			OnException(ctx);
+		}
+
+		_engine->ReturnContext(ctx);
 	}
 
 	void LevelScriptLoader::OnLevelBegin()
@@ -4138,12 +4177,12 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("string get_jjLevelFileName()", asFUNCTION(getLevelFileName), asCALL_CDECL);
 		engine->RegisterGlobalFunction("string get_jjLevelName()", asFUNCTION(getCurrLevelName), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void set_jjLevelName(const string &in)", asFUNCTION(setCurrLevelName), asCALL_CDECL);
-		engine->RegisterGlobalFunction("string get_jjMusicFileName()", asFUNCTION(getCurrMusic), asCALL_CDECL);
-		engine->RegisterGlobalFunction("string get_jjTilesetFileName()", asFUNCTION(getCurrTileset), asCALL_CDECL);
+		engine->RegisterGlobalFunction("string get_jjMusicFileName()", asFUNCTION(get_jjMusicFileName), asCALL_CDECL);
+		engine->RegisterGlobalFunction("string get_jjTilesetFileName()", asFUNCTION(get_jjTilesetFileName), asCALL_CDECL);
 		engine->RegisterGlobalProperty("const uint jjTileCount", &numberOfTiles);
 
-		engine->RegisterGlobalFunction("string get_jjHelpStrings(uint)", asFUNCTION(getHelpString), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void set_jjHelpStrings(uint, const string &in)", asFUNCTION(setHelpString), asCALL_CDECL);
+		engine->RegisterGlobalFunction("string get_jjHelpStrings(uint)", asFUNCTION(get_jjHelpStrings), asCALL_CDECL);
+		engine->RegisterGlobalFunction("void set_jjHelpStrings(uint, const string &in)", asFUNCTION(set_jjHelpStrings), asCALL_CDECL);
 
 		engine->SetDefaultNamespace("GAME");
 		engine->RegisterEnum("State");

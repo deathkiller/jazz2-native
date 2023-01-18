@@ -4,10 +4,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	void ParticleInitializer::setAmount(int amount)
 	{
 		ASSERT(amount > 0);
@@ -166,5 +162,4 @@ namespace nCine
 		ASSERT(minRot <= maxRot);
 		rndRotation.Set(minRot, maxRot);
 	}
-
 }

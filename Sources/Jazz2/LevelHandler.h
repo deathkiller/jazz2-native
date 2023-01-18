@@ -125,7 +125,8 @@ namespace Jazz2
 		void ShowLevelText(const StringView& text) override;
 		void ShowCoins(int count) override;
 		void ShowGems(int count) override;
-		StringView GetLevelText(int textId, int index = -1, uint32_t delimiter = 0) override;
+		StringView GetLevelText(uint32_t textId, int index = -1, uint32_t delimiter = 0) override;
+		void OverrideLevelText(uint32_t textId, const StringView& value) override;
 		void LimitCameraView(float left, float width) override;
 		void ShakeCameraView(float duration) override;
 		void SetWeather(WeatherType type, uint8_t intensity) override;

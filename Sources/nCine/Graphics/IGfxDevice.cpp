@@ -67,10 +67,6 @@ namespace nCine
 #	endif
 #endif
 
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS AND DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	IGfxDevice::IGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
 		: drawableWidth_(windowMode.width), drawableHeight_(windowMode.height), width_(windowMode.width), height_(windowMode.height),
 		  glContextInfo_(glContextInfo), isFullscreen_(windowMode.isFullscreen), displayMode_(displayMode), numMonitors_(0)
@@ -111,10 +107,6 @@ namespace nCine
 		currentVideoMode_.blueBits = displayMode.blueBits();
 	}
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	/*! \internal Having this method inlined does not seem to work correctly with Qt5 on Linux */
 	unsigned int IGfxDevice::numMonitors() const
 	{
@@ -141,10 +133,6 @@ namespace nCine
 
 		return factor;
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void IGfxDevice::initGLViewport()
 	{

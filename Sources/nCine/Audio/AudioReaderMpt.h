@@ -7,7 +7,7 @@
 #include "IAudioReader.h"
 #include "../IO/IFileStream.h"
 
-#if defined(_MSC_VER) && defined(__has_include)
+#if !defined(CMAKE_BUILD) && defined(__has_include)
 #	if __has_include("../../../Libs/Includes/libopenmpt/libopenmpt.h")
 #		define __HAS_LOCAL_LIBOPENMPT
 #	endif

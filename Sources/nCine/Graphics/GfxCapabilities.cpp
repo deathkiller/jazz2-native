@@ -9,10 +9,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	GfxCapabilities::GfxCapabilities()
 		: glMajorVersion_(0),
 		glMinorVersion_(0),
@@ -27,10 +23,6 @@ namespace nCine
 
 		init();
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	int GfxCapabilities::glVersion(IGfxCapabilities::GLVersion version) const
 	{
@@ -60,22 +52,18 @@ namespace nCine
 		return extensionAvailable;
 	}
 
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	void GfxCapabilities::init()
 	{
 		const char* version = reinterpret_cast<const char*>(glGetString(GL_VERSION));
 
 #if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
-#	if defined(_MSC_VER)
+#	if defined(DEATH_TARGET_MSVC)
 		sscanf_s(version, "OpenGL ES %2d.%2d", &glMajorVersion_, &glMinorVersion_);
 #	else
 		sscanf(version, "OpenGL ES %2d.%2d", &glMajorVersion_, &glMinorVersion_);
 #	endif
 #else
-#	if defined(_MSC_VER)
+#	if defined(DEATH_TARGET_MSVC)
 		sscanf_s(version, "%2d.%2d.%2d", &glMajorVersion_, &glMinorVersion_, &glReleaseVersion_);
 #	else
 		sscanf(version, "%2d.%2d.%2d", &glMajorVersion_, &glMinorVersion_, &glReleaseVersion_);

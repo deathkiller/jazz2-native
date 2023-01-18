@@ -5,7 +5,7 @@
 #if defined(WITH_ZLIB)
 #	include <zlib.h>
 #else
-#	if defined(_MSC_VER) && defined(__has_include)
+#	if !defined(CMAKE_BUILD) && defined(__has_include)
 #		if __has_include("../../../Libs/Includes/libdeflate.h")
 #			define __HAS_LOCAL_LIBDEFLATE
 #		endif

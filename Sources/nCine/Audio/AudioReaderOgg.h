@@ -9,7 +9,7 @@
 
 #define OV_EXCLUDE_STATIC_CALLBACKS
 
-#if defined(_MSC_VER) && defined(__has_include)
+#if !defined(CMAKE_BUILD) && defined(__has_include)
 #	if __has_include("../../../Libs/Includes/ogg/ogg.h")
 #		define __HAS_LOCAL_OGG
 #	endif
@@ -20,7 +20,7 @@
 #	include <ogg/ogg.h>
 #endif
 
-#if defined(_MSC_VER) && defined(__has_include)
+#if !defined(CMAKE_BUILD) && defined(__has_include)
 #	if __has_include("../../../Libs/Includes/vorbis/vorbisfile.h")
 #		define __HAS_LOCAL_VORBIS
 #	endif

@@ -18,6 +18,7 @@ namespace Jazz2::Scripting
 
 		const SmallVectorImpl<Actors::Player*>& GetPlayers() const;
 
+		void OnLevelLoad();
 		void OnLevelBegin();
 		void OnLevelReload();
 		void OnLevelUpdate(float timeMult);
@@ -64,6 +65,11 @@ namespace Jazz2::Scripting
 		static void asSetWeather(uint8_t weatherType, uint8_t intensity);
 
 		static int32_t jjGameTicks();
+
+		static String get_jjMusicFileName();
+
+		static String get_jjHelpStrings(uint32_t index);
+		static void set_jjHelpStrings(uint32_t index, const String& text);
 
 		static void jjAlert(const String& text, bool sendToAll, uint32_t size);
 

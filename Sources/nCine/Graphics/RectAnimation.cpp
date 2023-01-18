@@ -3,10 +3,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	RectAnimation::RectAnimation(float defaultFrameDuration, LoopMode loopMode)
 		: defaultFrameDuration_(defaultFrameDuration), loopMode_(loopMode),
 		rects_(4), frameDurations_(4), currentFrame_(0), elapsedFrameTime_(0.0f),
@@ -14,15 +10,12 @@ namespace nCine
 	{
 	}
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	void RectAnimation::updateFrame(float timeMult)
 	{
 		// No frame calculation if the animation is paused or has only one rect
-		if (isPaused_ == true || rects_.size() < 2)
+		if (isPaused_ || rects_.size() < 2) {
 			return;
+		}
 
 		elapsedFrameTime_ += timeMult;
 		// Determine the next frame rectangle
@@ -35,23 +28,26 @@ namespace nCine
 						goingForward_ = false;
 						currentFrame_--;
 					} else {
-						if (loopMode_ == LoopMode::NoRepeat)
+						if (loopMode_ == LoopMode::NoRepeat) {
 							isPaused_ = true;
-						else
+						} else {
 							currentFrame_ = 0;
+						}
 					}
-				} else
+				} else {
 					currentFrame_++;
+				}
 			} else {
 				if (currentFrame_ == 0) {
-					if (loopMode_ == LoopMode::NoRepeat)
+					if (loopMode_ == LoopMode::NoRepeat) {
 						isPaused_ = true;
-					else {
+					} else {
 						goingForward_ = true;
 						currentFrame_++;
 					}
-				} else
+				} else {
 					currentFrame_--;
+				}
 			}
 		}
 	}
@@ -73,5 +69,4 @@ namespace nCine
 		rects_.push_back(Recti(x, y, w, h));
 		frameDurations_.push_back(frameDuration);
 	}
-
 }

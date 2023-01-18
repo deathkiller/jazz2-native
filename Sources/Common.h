@@ -11,15 +11,16 @@
 #	define NCINE_VERSION "1.5.0"
 #endif
 
-#if !defined(_MSC_VER) && defined(__has_include)
-#   if __has_include("../Shared/Common.h")
-#       define __HAS_LOCAL_COMMON
-#   endif
+// Prefer local version of shared libraries in CMake build
+#if defined(CMAKE_BUILD) && defined(__has_include)
+#	if __has_include("../Shared/Common.h")
+#		define __HAS_LOCAL_COMMON
+#	endif
 #endif
 #ifdef __HAS_LOCAL_COMMON
-#   include "../Shared/Common.h"
+#	include "../Shared/Common.h"
 #else
-#   include <Common.h>
+#	include <Common.h>
 #endif
 
 #include <stdlib.h>
@@ -38,9 +39,9 @@ enum class LogLevel {
 
 void __WriteLog(LogLevel level, const char* fmt, ...);
 
-#	ifdef __GNUC__
+#	if defined(DEATH_TARGET_GCC)
 #		define FUNCTION __PRETTY_FUNCTION__
-#	elif _MSC_VER
+#	elif defined(DEATH_TARGET_MSVC)
 #		define FUNCTION __FUNCTION__
 #	else
 #		define FUNCTION __func__
@@ -98,7 +99,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...);
 #define RETURNF_MSG(fmt) do { LOGE(fmt); return false; } while (false)
 
 #if defined(NCINE_LOG)
-#	ifdef _MSC_VER
+#	if defined(_MSC_VER)
 #		define BREAK() __debugbreak()
 #	else
 #		if defined(__has_builtin)

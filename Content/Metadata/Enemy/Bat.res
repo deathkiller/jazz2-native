@@ -30,6 +30,11 @@
 			"Path": "Bat/roost.aura",
 			"FrameRate": 22,
 			"States": [ 1073741826 ]
+		},
+		"IdleAnim": {
+			"Path": "Bat/takeoff_1.aura",
+			"FrameRate": 6,
+			"States": [ 1073741827 ]
 		}
 	},
 
