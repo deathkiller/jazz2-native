@@ -41,6 +41,7 @@ namespace Jazz2
 		_difficulty(levelInit.Difficulty),
 		_isReforged(levelInit.IsReforged),
 		_cheatsUsed(levelInit.CheatsUsed),
+		_cheatsBufferLength(0),
 		_nextLevelType(ExitType::None),
 		_nextLevelTime(0.0f),
 		_elapsedFrames(0.0f),
@@ -597,6 +598,69 @@ namespace Jazz2
 	void LevelHandler::OnKeyPressed(const KeyboardEvent& event)
 	{
 		_pressedKeys.Set((uint32_t)event.sym);
+
+		// Cheats
+		if (PreferencesCache::AllowCheats && _difficulty != GameDifficulty::Multiplayer && !_players.empty()) {
+			if (event.sym >= KeySym::A && event.sym <= KeySym::Z) {
+				if (event.sym == KeySym::J && _cheatsBufferLength >= 2) {
+					_cheatsBufferLength = 0;
+					_cheatsBuffer[_cheatsBufferLength++] = (char)event.sym;
+				} else if (_cheatsBufferLength < _countof(_cheatsBuffer)) {
+					_cheatsBuffer[_cheatsBufferLength++] = (char)event.sym;
+
+					if (_cheatsBufferLength >= 5 && _cheatsBuffer[0] == (char)KeySym::J && _cheatsBuffer[1] == (char)KeySym::J) {
+						switch (_cheatsBufferLength) {
+							case 5:
+								if (_cheatsBuffer[2] == (char)KeySym::G && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::D) {
+									_cheatsBufferLength = 0;
+									_cheatsUsed = true;
+									_players[0]->SetInvulnerability(36000.0f, true);
+								}
+								break;
+							case 6:
+								if (_cheatsBuffer[2] == (char)KeySym::N && _cheatsBuffer[3] == (char)KeySym::E && _cheatsBuffer[4] == (char)KeySym::X && _cheatsBuffer[5] == (char)KeySym::T) {
+									_cheatsBufferLength = 0;
+									_cheatsUsed = true;
+									BeginLevelChange(ExitType::Warp, { });
+								} else if ((_cheatsBuffer[2] == (char)KeySym::G && _cheatsBuffer[3] == (char)KeySym::U && _cheatsBuffer[4] == (char)KeySym::N && _cheatsBuffer[5] == (char)KeySym::S) ||
+										   (_cheatsBuffer[2] == (char)KeySym::A && _cheatsBuffer[3] == (char)KeySym::M && _cheatsBuffer[4] == (char)KeySym::M && _cheatsBuffer[5] == (char)KeySym::O)) {
+									_cheatsBufferLength = 0;
+									_cheatsUsed = true;
+									for (int i = 0; i < (int)WeaponType::Count; i++) {
+										_players[0]->AddAmmo((WeaponType)i, 99);
+									}
+								} else if (_cheatsBuffer[2] == (char)KeySym::R && _cheatsBuffer[3] == (char)KeySym::U && _cheatsBuffer[4] == (char)KeySym::S && _cheatsBuffer[5] == (char)KeySym::H) {
+									_cheatsBufferLength = 0;
+									_cheatsUsed = true;
+									_players[0]->ActivateSugarRush(1300.0f);
+								} else if (_cheatsBuffer[2] == (char)KeySym::G && _cheatsBuffer[3] == (char)KeySym::E && _cheatsBuffer[4] == (char)KeySym::M && _cheatsBuffer[5] == (char)KeySym::S) {
+									_cheatsBufferLength = 0;
+									_cheatsUsed = true;
+									_players[0]->AddGems(5);
+								} else if (_cheatsBuffer[2] == (char)KeySym::B && _cheatsBuffer[3] == (char)KeySym::I && _cheatsBuffer[4] == (char)KeySym::R && _cheatsBuffer[5] == (char)KeySym::D) {
+									_cheatsBufferLength = 0;
+									_cheatsUsed = true;
+									_players[0]->SpawnBird(0, _players[0]->GetPos());
+								}
+								break;
+							case 7:
+								if (_cheatsBuffer[2] == (char)KeySym::P && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::W && _cheatsBuffer[5] == (char)KeySym::E && _cheatsBuffer[6] == (char)KeySym::R) {
+									_cheatsBufferLength = 0;
+									_cheatsUsed = true;
+									for (int i = 0; i < (int)WeaponType::Count; i++) {
+										_players[0]->AddWeaponUpgrade((WeaponType)i, 0x01);
+									}
+								} else if (_cheatsBuffer[2] == (char)KeySym::C && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::I && _cheatsBuffer[5] == (char)KeySym::N && _cheatsBuffer[6] == (char)KeySym::S) {
+									_cheatsBufferLength = 0;
+									_cheatsUsed = true;
+									_players[0]->AddCoins(5);
+								}
+								break;
+						}
+					}
+				}
+			}
+		}
 	}
 
 	void LevelHandler::OnKeyReleased(const KeyboardEvent& event)

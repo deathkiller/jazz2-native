@@ -317,6 +317,120 @@ namespace Jazz2::Tiles
 		return true;
 	}
 
+	bool TileMap::CanBeDestroyed(const AABBf& aabb, TileCollisionParams& params)
+	{
+		if (_sprLayerIndex == -1) {
+			return true;
+		}
+
+		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+
+		int limitRightPx = layoutSize.X * TileSet::DefaultTileSize;
+		int limitBottomPx = layoutSize.Y * TileSet::DefaultTileSize;
+
+		// Consider out-of-level coordinates as solid walls
+		if (aabb.L < 0 || aabb.R >= limitRightPx) {
+			return false;
+		}
+		if (aabb.B >= limitBottomPx) {
+			return (_pitType != PitType::StandOnPlatform);
+		}
+
+		// Check all covered tiles for collisions; if all are empty, no need to do pixel collision checking
+		int hx1 = std::max((int)aabb.L, 0);
+		int hx2 = std::min((int)std::ceil(aabb.R), limitRightPx - 1);
+		int hy1 = std::max((int)aabb.T, 0);
+		int hy2 = std::min((int)std::ceil(aabb.B), limitBottomPx - 1);
+
+		if (hy2 <= 0) {
+			hy1 = 0;
+			hy2 = 1;
+		}
+
+		int hx1t = hx1 / TileSet::DefaultTileSize;
+		int hx2t = hx2 / TileSet::DefaultTileSize;
+		int hy1t = hy1 / TileSet::DefaultTileSize;
+		int hy2t = hy2 / TileSet::DefaultTileSize;
+
+		auto sprLayerLayout = _layers[_sprLayerIndex].Layout.get();
+
+		for (int y = hy1t; y <= hy2t; y++) {
+			for (int x = hx1t; x <= hx2t; x++) {
+			RecheckTile:
+				LayerTile& tile = sprLayerLayout[y * layoutSize.X + x];
+
+				if (tile.DestructType == TileDestructType::Weapon && (params.DestructType & TileDestructType::Weapon) == TileDestructType::Weapon) {
+					if (tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2) &&
+						((tile.TileParams & (1 << (uint16_t)params.UsedWeaponType)) != 0 || params.UsedWeaponType == WeaponType::Freezer)) {
+						return true;
+					}
+				} else if (tile.DestructType == TileDestructType::Special && (params.DestructType & TileDestructType::Special) == TileDestructType::Special) {
+					if (tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2)) {
+						return true;
+					}
+				} else if (tile.DestructType == TileDestructType::Speed && (params.DestructType & TileDestructType::Speed) == TileDestructType::Speed) {
+					if (tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2) && tile.TileParams <= params.Speed) {
+						return true;
+					}
+				} else if (tile.DestructType == TileDestructType::Collapse && (params.DestructType & TileDestructType::Collapse) == TileDestructType::Collapse) {
+					bool found = false;
+					for (auto& current : _activeCollapsingTiles) {
+						if (current == Vector2i(x, y)) {
+							found = true;
+							break;
+						}
+					}
+
+					if (!found) {
+						return true;
+					}
+				}
+
+				if ((params.DestructType & TileDestructType::IgnoreSolidTiles) != TileDestructType::IgnoreSolidTiles &&
+					tile.HasSuspendType == SuspendType::None && ((tile.Flags & LayerTileFlags::OneWay) != LayerTileFlags::OneWay || params.Downwards)) {
+					int tileId = ResolveTileID(tile);
+					TileSet* tileSet = ResolveTileSet(tileId);
+					if (tileSet == nullptr || tileSet->IsTileMaskEmpty(tileId)) {
+						continue;
+					}
+
+					int tx = x * TileSet::DefaultTileSize;
+					int ty = y * TileSet::DefaultTileSize;
+
+					int left = std::max(hx1 - tx, 0);
+					int right = std::min(hx2 - tx, TileSet::DefaultTileSize - 1);
+					int top = std::max(hy1 - ty, 0);
+					int bottom = std::min(hy2 - ty, TileSet::DefaultTileSize - 1);
+
+					if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
+						int left2 = left;
+						left = (TileSet::DefaultTileSize - 1 - right);
+						right = (TileSet::DefaultTileSize - 1 - left2);
+					}
+					if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
+						int top2 = top;
+						top = (TileSet::DefaultTileSize - 1 - bottom);
+						bottom = (TileSet::DefaultTileSize - 1 - top2);
+					}
+
+					top *= TileSet::DefaultTileSize;
+					bottom *= TileSet::DefaultTileSize;
+
+					uint8_t* mask = tileSet->GetTileMask(tileId);
+					for (int ry = top; ry <= bottom; ry += TileSet::DefaultTileSize) {
+						for (int rx = left; rx <= right; rx++) {
+							if (mask[ry | rx]) {
+								return false;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return false;
+	}
+
 	bool TileMap::IsTileHurting(float x, float y)
 	{
 		// TODO: Implement all JJ2+ parameters (directional hurt events)

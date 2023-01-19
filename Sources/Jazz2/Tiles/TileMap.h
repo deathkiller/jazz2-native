@@ -150,6 +150,7 @@ namespace Jazz2::Tiles
 
 		bool IsTileEmpty(int tx, int ty);
 		bool IsTileEmpty(const AABBf& aabb, TileCollisionParams& params);
+		bool CanBeDestroyed(const AABBf& aabb, TileCollisionParams& params);
 		bool IsTileHurting(float x, float y);
 		SuspendType GetTileSuspendState(float x, float y);
 

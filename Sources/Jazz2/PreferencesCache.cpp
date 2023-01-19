@@ -40,7 +40,6 @@ namespace Jazz2
 	bool PreferencesCache::TutorialCompleted = false;
 	bool PreferencesCache::AllowCheats = false;
 	bool PreferencesCache::AllowCheatsUnlock = false;
-	bool PreferencesCache::AllowCheatsWeapons = false;
 	Vector2f PreferencesCache::TouchLeftPadding;
 	Vector2f PreferencesCache::TouchRightPadding;
 	char PreferencesCache::Language[6] { };
@@ -259,8 +258,6 @@ namespace Jazz2
 				AllowCheats = true;
 			} else if (arg == "/cheats-unlock"_s) {
 				AllowCheatsUnlock = true;
-			} else if (arg == "/cheats-weapons"_s) {
-				AllowCheatsWeapons = true;
 			} else if (arg == "/fullscreen"_s) {
 				EnableFullscreen = true;
 			} else if (arg == "/windowed"_s) {

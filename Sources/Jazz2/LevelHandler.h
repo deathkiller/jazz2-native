@@ -259,6 +259,8 @@ namespace Jazz2
 		String _musicDefaultPath, _musicCurrentPath;
 		Recti _levelBounds;
 		bool _isReforged, _cheatsUsed;
+		char _cheatsBuffer[8];
+		uint32_t _cheatsBufferLength;
 		SmallVector<String, 0> _levelTexts;
 
 		String _nextLevel;
