@@ -8,6 +8,7 @@
 namespace Jazz2::Scripting
 {
 	class ScriptPlayerWrapper;
+	class jjPLAYER;
 }
 #endif
 
@@ -40,6 +41,7 @@ namespace Jazz2::Actors
 		friend class UI::HUD;
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::ScriptPlayerWrapper;
+		friend class Scripting::jjPLAYER;
 #endif
 		friend class Environment::SwingingVine;
 		friend class Solid::PinballBumper;
@@ -105,6 +107,7 @@ namespace Jazz2::Actors
 		void AddCoins(int count);
 		void AddGems(int count);
 		void ConsumeFood(bool isDrinkable);
+		void ActivateSugarRush(float duration);
 		bool AddAmmo(WeaponType weaponType, int16_t count);
 		void AddWeaponUpgrade(WeaponType weaponType, uint8_t upgrade);
 		bool AddFastFire(int count);

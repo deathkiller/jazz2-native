@@ -3075,13 +3075,23 @@ namespace Jazz2::Actors
 		_foodEaten++;
 		if (_foodEaten >= 100) {
 			_foodEaten = _foodEaten % 100;
-			if (_sugarRushLeft <= 0.0f) {
-				_sugarRushLeft = 1300.0f;
-				_renderer.Initialize(ActorRendererType::PartialWhiteMask);
-				_weaponWheelState = WeaponWheelState::Hidden;
-				_levelHandler->ActivateSugarRush();
-			}
+			ActivateSugarRush(1300.0f);
 		}
+	}
+
+	void Player::ActivateSugarRush(float duration)
+	{
+		if (_sugarRushLeft > 0.0f) {
+			_sugarRushLeft = std::max(duration, 1.0f);
+			return;
+		}
+		if (duration <= 0.0f) {
+			return;
+		}
+		_sugarRushLeft = duration;
+		_renderer.Initialize(ActorRendererType::PartialWhiteMask);
+		_weaponWheelState = WeaponWheelState::Hidden;
+		_levelHandler->ActivateSugarRush();
 	}
 
 	bool Player::AddAmmo(WeaponType weaponType, int16_t count)

@@ -36,6 +36,15 @@ namespace Jazz2::Actors::Weapons
 
 		SetAnimation(AnimState::Idle);
 
+		auto tiles = _levelHandler->TileMap();
+		if (tiles != nullptr) {
+			AABBf aabb = AABBf(_pos.X - 34.0f, _pos.Y - 34.0f, _pos.X + 34.0f, _pos.Y + 34.0f);
+			TileCollisionParams params = { TileDestructType::Weapon | TileDestructType::IgnoreSolidTiles, false, WeaponType::TNT, 8 };
+			if (tiles->CanBeDestroyed(aabb, params)) {
+				_timeLeft = 40.0f;
+			}
+		}
+
 		async_return true;
 	}
 
@@ -97,7 +106,7 @@ namespace Jazz2::Actors::Weapons
 
 			auto tiles = _levelHandler->TileMap();
 			if (tiles != nullptr) {
-				AABBf aabb = AABBf(_pos.X - 34, _pos.Y - 34, _pos.X + 34, _pos.Y + 34);
+				AABBf aabb = AABBf(_pos.X - 34.0f, _pos.Y - 34.0f, _pos.X + 34.0f, _pos.Y + 34.0f);
 				TileCollisionParams params = { TileDestructType::Weapon | TileDestructType::IgnoreSolidTiles, false, WeaponType::TNT, 8 };
 				tiles->IsTileEmpty(aabb, params);
 				if (params.TilesDestroyed > 0) {

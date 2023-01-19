@@ -94,7 +94,6 @@ namespace Jazz2
 		static bool TutorialCompleted;
 		static bool AllowCheats;
 		static bool AllowCheatsUnlock;
-		static bool AllowCheatsWeapons;
 		static Vector2f TouchLeftPadding;
 		static Vector2f TouchRightPadding;
 		static char Language[6];

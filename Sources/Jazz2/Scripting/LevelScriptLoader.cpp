@@ -2228,19 +2228,23 @@ namespace Jazz2::Scripting
 		float xOrg = 0.0f;
 		float yOrg = 0.0f;
 
-		int32_t get_xSpeed() {
+		float get_xSpeed() {
 			noop();
-			return (int32_t)_player->GetSpeed().X;
+			return _player->_speed.X;
 		}
-		int32_t set_xSpeed() {
-			noop(); return 0;
-		}
-		int32_t get_ySpeed() {
+		float set_xSpeed(float value) {
 			noop();
-			return (int32_t)_player->GetSpeed().Y;
+			_player->_speed.X = value;
+			return value;
 		}
-		int32_t set_ySpeed() {
-			noop(); return 0;
+		float get_ySpeed() {
+			noop();
+			return _player->_speed.Y;
+		}
+		float set_ySpeed(float value) {
+			noop();
+			_player->_speed.Y = value;
+			return value;
 		}
 
 		float jumpStrength = 0.0f;
@@ -2248,6 +2252,12 @@ namespace Jazz2::Scripting
 
 		void freeze(bool frozen) {
 			noop();
+			if (frozen) {
+				_player->_frozenTimeLeft = 180.0f;
+				_player->_renderer.AnimPaused = true;
+			} else {
+				_player->_frozenTimeLeft = std::min(1.0f, _player->_frozenTimeLeft);
+			}
 		}
 		int32_t get_currTile() {
 			noop();
@@ -2255,11 +2265,13 @@ namespace Jazz2::Scripting
 		}
 		bool startSugarRush(int32_t time) {
 			noop();
-			return false;
+			// TODO: if boss active, return false
+			_player->ActivateSugarRush((float)time * 60.0f / 70.0f);
+			return true;
 		}
 		int8_t get_health() const {
 			noop();
-			return (int8_t)_player->GetHealth();
+			return (int8_t)_player->_health;
 		}
 		int8_t set_health(int8_t value) {
 			noop();
@@ -2272,11 +2284,15 @@ namespace Jazz2::Scripting
 
 		int8_t get_currWeapon() const {
 			noop();
-			return 0;
+			return (int8_t)_player->_currentWeapon;
 		}
 		int8_t set_currWeapon(int8_t value) {
 			noop();
-			return 0;
+			if (value < 0 || value >= (int8_t)WeaponType::Count) {
+				return (int8_t)_player->_currentWeapon;
+			}
+			_player->_currentWeapon = (WeaponType)value;
+			return value;
 		}
 
 		int32_t lives = 1;
@@ -2291,9 +2307,13 @@ namespace Jazz2::Scripting
 		int32_t food = 0;
 		int32_t coins = 0;
 
-		int32_t testForCoins(int32_t duration) {
+		bool testForCoins(int32_t numberOfCoins) {
 			noop();
-			return 0;
+			if (numberOfCoins > _player->_coins) {
+				return false;
+			}
+			_player->AddCoins(-numberOfCoins);
+			return true;
 		}
 		int32_t get_gems(uint32_t type) const {
 			noop();
@@ -2303,9 +2323,9 @@ namespace Jazz2::Scripting
 			noop();
 			return 0;
 		}
-		int32_t testForGems(int32_t numberOfGems, uint32_t type) {
+		bool testForGems(int32_t numberOfGems, uint32_t type) {
 			noop();
-			return 0;
+			return false;
 		}
 
 		int32_t shieldType = 0;
@@ -2326,11 +2346,12 @@ namespace Jazz2::Scripting
 
 		int32_t get_stoned() {
 			noop();
-			return 0;
+			return (int32_t)(_player->_dizzyTime * 70.0f / 60.0f);
 		}
 		int32_t set_stoned(int32_t value) {
 			noop();
-			return 0;
+			_player->SetDizzyTime(value * 60.0f / 70.0f);
+			return value;
 		}
 
 		int32_t buttstomp = 0;
@@ -2404,11 +2425,12 @@ namespace Jazz2::Scripting
 
 		bool get_noFire() const {
 			noop();
-			return false;
+			return !_player->_weaponAllowed;
 		}
 		bool set_noFire(bool value) {
 			noop();
-			return false;
+			_player->_weaponAllowed = !value;
+			return value;
 		}
 		bool get_antiGrav() const {
 			noop();
@@ -2420,7 +2442,7 @@ namespace Jazz2::Scripting
 		}
 		bool get_invisibility() const {
 			noop();
-			return false;
+			return _player->GetState(Actors::ActorState::IsInvulnerable);
 		}
 		bool set_invisibility(bool value) {
 			noop();
@@ -2499,19 +2521,33 @@ namespace Jazz2::Scripting
 
 		bool get_powerup(uint8_t index) {
 			noop();
-			return false;
+			if (index < 0 || index >= (int8_t)WeaponType::Count) {
+				return 0;
+			}
+			return (_player->_weaponUpgrades[index] & 0x01) == 0x01;
 		}
 		bool set_powerup(uint8_t index, bool value) {
 			noop();
-			return false;
+			if (index < 0 || index >= (int8_t)WeaponType::Count) {
+				return 0;
+			}
+			_player->_weaponUpgrades[index] = (value ? 0x01 : 0x00);
+			return value;
 		}
 		int32_t get_ammo(uint8_t index) const {
 			noop();
-			return 0;
+			if (index < 0 || index >= (int8_t)WeaponType::Count) {
+				return 0;
+			}
+			return _player->_weaponAmmo[index];
 		}
 		int32_t set_ammo(uint8_t index, int32_t value) {
 			noop();
-			return 0;
+			if (index < 0 || index >= (int8_t)WeaponType::Count) {
+				return 0;
+			}
+			_player->_weaponAmmo[index] = value * 256;
+			return value;
 		}
 
 		bool offsetPosition(int32_t xPixels, int32_t yPixels) {
@@ -2547,24 +2583,23 @@ namespace Jazz2::Scripting
 			noop();
 			// TODO: morphEffect
 			_player->MorphTo((PlayerType)charNew);
-			return (uint32_t)_player->GetPlayerType();
+			return (uint32_t)_player->_playerType;
 		}
 		uint32_t revertMorph(bool morphEffect) {
 			noop();
 			// TODO: morphEffect
 			_player->MorphRevert();
-			return (uint32_t)_player->GetPlayerType();
+			return (uint32_t)_player->_playerType;
 		}
 		uint32_t get_charCurr() const {
 			noop();
-			return (uint32_t)_player->GetPlayerType();
+			return (uint32_t)_player->_playerType;
 		}
 
 		uint32_t charOrig = 0;
 
 		void kill() {
 			noop();
-
 			_player->DecreaseHealth(INT32_MAX);
 		}
 		bool hurt(int8_t damage, bool forceHurt, jjPLAYER* attacker) {

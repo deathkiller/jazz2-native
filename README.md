@@ -43,7 +43,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 
 ### Linux
 * Download the game
-* Install dependencies: `sudo apt install libglew2.2 libglfw3 libsdl2-2.0-0 libopenal1 libopenmpt0`
+* Install dependencies: `sudo apt install libglew2.2 libglfw3 libsdl2-2.0-0 libopenal1 libvorbisfile3 libopenmpt0`
   * Alternatively, install provided `.deb` or `.rpm` package and dependencies should be installed automatically
 * Copy contents of original *Jazz Jackrabbit 2* directory to `‹Game›/Source/`
   * If packages are used, the files must be copied to `~/.local/share/Jazz² Resurrection/Source/` instead
@@ -55,6 +55,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 <sup>Alternatively, you can use package repository for your Linux distribution:</sup><br>
 [![ArchLinux](https://img.shields.io/badge/Arch%20Linux-grey?logo=archlinux&logoColor=ffffff)](https://aur.archlinux.org/packages/jazz2-bin)
 [![OpenSUSE](https://img.shields.io/obs/games/jazz2/openSUSE_Tumbleweed/x86_64?label=OpenSUSE&logo=opensuse&logoColor=ffffff)](https://build.opensuse.org/package/show/games/jazz2)
+[![Ubuntu](https://img.shields.io/badge/Ubuntu-grey?logo=ubuntu&logoColor=ffffff)](https://xtradeb.net/play/jazz2/)
 
 ### macOS
 * Download the game and install provided `.dmg` application bundle
