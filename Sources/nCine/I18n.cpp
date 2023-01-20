@@ -839,7 +839,7 @@ namespace nCine
 		//String result(NoInit, totalChars);
 		//::vsnprintf(result.data(), totalChars + 1, format, args);
 
-		char buffer[1024];
+		char buffer[2048];
 		::vsnprintf(buffer, sizeof(buffer), format, args);
 		va_end(args);
 		return buffer;
@@ -863,12 +863,18 @@ namespace nCine
 		const int totalChars = _vscprintf(format, args);
 		String result(NoInit, totalChars);
 		vsnprintf_s(result.data(), totalChars + 1, totalChars, format, args);
-#else
-		const int totalChars = ::vsnprintf(nullptr, 0, format, args);
-		String result(NoInit, totalChars);
-		::vsnprintf(result.data(), totalChars + 1, format, args);
-#endif
 		va_end(args);
 		return result;
+#else
+		// TODO: Quickfix strange bug on Linux
+		//const int totalChars = ::vsnprintf(nullptr, 0, format, args);
+		//String result(NoInit, totalChars);
+		//::vsnprintf(result.data(), totalChars + 1, format, args);
+
+		char buffer[2048];
+		::vsnprintf(buffer, sizeof(buffer), format, args);
+		va_end(args);
+		return buffer;
+#endif
 	}
 }
