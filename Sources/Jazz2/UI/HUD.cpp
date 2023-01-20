@@ -190,46 +190,67 @@ namespace Jazz2::UI
 				case PlayerType::Frog: playerIcon = "CharacterFrog"_s; break;
 			}
 
-			DrawElement(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1 + 1.6f, ShadowLayer, Alignment::BottomRight, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
-			DrawElement(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1, MainLayer, Alignment::BottomRight, Colorf::White);
+			DrawElement(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1.0f + 1.6f, ShadowLayer, Alignment::BottomRight, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+			DrawElement(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1.0f, MainLayer, Alignment::BottomRight, Colorf::White);
 
-			for (int i = 0; i < player->_health; i++) {
-				stringBuffer[i] = '|';
-			}
-			stringBuffer[player->_health] = '\0';
+			if (_levelHandler->IsReforged()) {
+				for (int i = 0; i < player->_health; i++) {
+					stringBuffer[i] = '|';
+				}
+				stringBuffer[player->_health] = '\0';
 
-			if (player->_lives > 0) {
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 3 - 0.5f, bottom - 17 + 0.5f, FontShadowLayer,
-					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 3 + 0.5f, bottom - 17 - 0.5f, FontShadowLayer,
-					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
-				_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36 - 3, bottom - 17, FontLayer,
-					Alignment::BottomLeft, Font::RandomColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
+				if (player->_lives > 0) {
+					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 3.0f - 0.5f, bottom - 17.0f + 0.5f, FontShadowLayer,
+						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
+					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 3.0f + 0.5f, bottom - 17.0f - 0.5f, FontShadowLayer,
+						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
+					_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 3.0f, bottom - 17.0f, FontLayer,
+						Alignment::BottomLeft, Font::RandomColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
 
-				stringBuffer[0] = 'x';
-				i32tos(player->_lives, stringBuffer + 1);
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 4, bottom - 1 + 1.0f, FontShadowLayer,
-					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
-				_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36 - 4, bottom - 1, FontLayer,
-					Alignment::BottomLeft, Font::DefaultColor);
+					stringBuffer[0] = 'x';
+					i32tos(player->_lives, stringBuffer + 1);
+					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
+						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+					_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
+						Alignment::BottomLeft, Font::DefaultColor);
+				} else {
+					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 3.0f - 0.5f, bottom - 4.0f + 0.5f, FontShadowLayer,
+						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
+					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 3.0f + 0.5f, bottom - 4.0f - 0.5f, FontShadowLayer,
+						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
+					_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 3.0f, bottom - 4.0f, FontLayer,
+						Alignment::BottomLeft, Font::RandomColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
+				}
+
+				// Top left
+				DrawElement("PickupFood"_s, -1, view.X + 3.0f, view.Y + 3.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+				DrawElement("PickupFood"_s, -1, view.X + 3.0f, view.Y + 3.0f, MainLayer, Alignment::TopLeft, Colorf::White);
+
+				snprintf(stringBuffer, _countof(stringBuffer), "%08i", player->_score);
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
+					Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 			} else {
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 3 - 0.5f, bottom - 4 + 0.5f, FontShadowLayer,
-					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36 - 3 + 0.5f, bottom - 4 - 0.5f, FontShadowLayer,
-					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
-				_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36 - 3, bottom - 4, FontLayer,
-					Alignment::BottomLeft, Font::RandomColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
+				for (int i = 0; i < player->_health; i++) {
+					DrawElement("Heart"_s, -1, view.X + view.W - 4.0f - (i * 16.0f), view.Y + 4.0f, MainLayer, Alignment::TopRight, Colorf::White);
+				}
+
+				if (player->_lives > 0) {
+					stringBuffer[0] = 'x';
+					i32tos(player->_lives, stringBuffer + 1);
+					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
+						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+					_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
+						Alignment::BottomLeft, Font::DefaultColor);
+				}
+
+				snprintf(stringBuffer, _countof(stringBuffer), "%08i", player->_score);
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 4.0f, view.Y + 1.0f + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 4.0f, view.Y + 1.0f, FontLayer,
+					Alignment::TopLeft, Font::DefaultColor, 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 			}
-
-			// Top left
-			DrawElement("PickupFood"_s, -1, view.X + 3.0f, view.Y + 3.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
-			DrawElement("PickupFood"_s, -1, view.X + 3.0f, view.Y + 3.0f, MainLayer, Alignment::TopLeft, Colorf::White);
-
-			snprintf(stringBuffer, _countof(stringBuffer), "%08i", player->_score);
-			_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
-				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-			_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
-				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 
 			// Bottom right
 			if (player->_weaponAllowed && playerType != PlayerType::Frog) {

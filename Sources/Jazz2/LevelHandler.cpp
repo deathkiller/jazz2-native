@@ -621,7 +621,7 @@ namespace Jazz2
 								if (_cheatsBuffer[2] == (char)KeySym::N && _cheatsBuffer[3] == (char)KeySym::E && _cheatsBuffer[4] == (char)KeySym::X && _cheatsBuffer[5] == (char)KeySym::T) {
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
-									BeginLevelChange(ExitType::Warp, { });
+									BeginLevelChange(ExitType::Warp | ExitType::FastTransition, nullptr);
 								} else if ((_cheatsBuffer[2] == (char)KeySym::G && _cheatsBuffer[3] == (char)KeySym::U && _cheatsBuffer[4] == (char)KeySym::N && _cheatsBuffer[5] == (char)KeySym::S) ||
 										   (_cheatsBuffer[2] == (char)KeySym::A && _cheatsBuffer[3] == (char)KeySym::M && _cheatsBuffer[4] == (char)KeySym::M && _cheatsBuffer[5] == (char)KeySym::O)) {
 									_cheatsBufferLength = 0;

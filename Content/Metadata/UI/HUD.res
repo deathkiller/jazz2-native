@@ -100,6 +100,9 @@
 			"FrameRate": 2
 		},
 
+		"Heart": {
+			"Path": "UI/heart.aura"
+		},
 		"PickupGem": {
 			"Path": "Pickup/gem.aura",
 			"PaletteOffset": 128
