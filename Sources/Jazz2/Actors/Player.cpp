@@ -2052,6 +2052,24 @@ namespace Jazz2::Actors
 			_weaponSound = nullptr;
 		}
 
+		SetState(ActorState::CanJump, false);
+		_speed.X = 0.0f;
+		_speed.Y = 0.0f;
+		_externalForce.X = 0.0f;
+		_externalForce.Y = 0.0f;
+		_internalForceY = 0.0f;
+		_fireFramesLeft = 0.0f;
+		_copterFramesLeft = 0.0f;
+		_pushFramesLeft = 0.0f;
+		_weaponCooldown = 0.0f;
+		_controllableTimeout = 0.0f;
+		_inShallowWater = -1;
+		_keepRunningTime = 0.0f;
+		_invulnerableTime = 0.0f;
+		_lastPoleTime = 0.0f;
+		_isAttachedToPole = false;
+		SetModifier(Modifier::None);
+
 		SetPlayerTransition(AnimState::TransitionDeath, false, true, SpecialMoveType::None, [this]() {
 			if (_lives > 1 || _levelHandler->Difficulty() == GameDifficulty::Multiplayer) {
 				if (_lives > 1) {
@@ -2061,23 +2079,6 @@ namespace Jazz2::Actors
 				// Remove fast fires
 				_weaponUpgrades[(int)WeaponType::Blaster] = (uint8_t)(_weaponUpgrades[(int)WeaponType::Blaster] & 0x1);
 
-				SetState(ActorState::CanJump, false);
-				_speed.X = 0.0f;
-				_speed.Y = 0.0f;
-				_externalForce.X = 0.0f;
-				_externalForce.Y = 0.0f;
-				_internalForceY = 0.0f;
-				_fireFramesLeft = 0.0f;
-				_copterFramesLeft = 0.0f;
-				_pushFramesLeft = 0.0f;
-				_weaponCooldown = 0.0f;
-				_controllable = true;
-				_controllableTimeout = 0.0f;
-				_inShallowWater = -1;
-				_keepRunningTime = 0.0f;
-				_invulnerableTime = 0.0f;
-				SetModifier(Modifier::None);
-				
 				if (_sugarRushLeft > 0.0f) {
 					_sugarRushLeft = 0.0f;
 					_renderer.Initialize(ActorRendererType::Default);
@@ -2088,7 +2089,7 @@ namespace Jazz2::Actors
 				uint8_t playerParams[2] = { (uint8_t)_playerType, (uint8_t)(IsFacingLeft() ? 1 : 0) };
 				corpse->OnActivated({
 					.LevelHandler = _levelHandler,
-					.Pos = Vector3i(_pos.X, _pos.Y, _renderer.layer() - 10),
+					.Pos = Vector3i(_pos.X, _pos.Y, _renderer.layer() - 40),
 					.Params = playerParams
 				});
 				_levelHandler->AddActor(corpse);
@@ -2102,6 +2103,7 @@ namespace Jazz2::Actors
 					// Player can be respawned immediately
 					SetState(ActorState::IsInvulnerable, false);
 					SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects, true);
+					_controllable = true;
 
 					// Return to the last save point
 					MoveInstantly(_checkpointPos, MoveType::Absolute | MoveType::Force);
@@ -2117,14 +2119,11 @@ namespace Jazz2::Actors
 
 				} else {
 					// Respawn is delayed
-					_controllable = false;
 					_renderer.setDrawEnabled(false);
 
 					// TODO: Turn off collisions
 				}
 			} else {
-				_controllable = false;
-				_invulnerableTime = 0.0f;
 				_renderer.setDrawEnabled(false);
 
 				_levelHandler->HandleGameOver();

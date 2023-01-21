@@ -1019,7 +1019,7 @@ namespace Jazz2
 		if (_difficulty != GameDifficulty::Multiplayer) {
 			for (auto& actor : _actors) {
 				// Despawn all actors that were created after the last checkpoint
-				if (actor->_spawnFrames > _checkpointFrames) {
+				if (actor->_spawnFrames > _checkpointFrames && !actor->GetState(Actors::ActorState::PreserveOnRollback)) {
 					if ((actor->_state & (Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator)) != Actors::ActorState::None) {
 						Vector2i originTile = actor->_originTile;
 						if ((actor->_state & Actors::ActorState::IsFromGenerator) == Actors::ActorState::IsFromGenerator) {

@@ -44,18 +44,24 @@ namespace Jazz2::Actors
 		/// @brief Mask of all instantiation flags that can be used in @ref ActorActivationDetails
 		InstantiationFlags = IsCreatedFromEventMap | IsFromGenerator | Illuminated | Async,
 
-		// This flag is set automatically after call to @ref ActorBase::OnActivatedAsync()
+		/// @brief This flag is set automatically after call to @ref ActorBase::OnActivatedAsync()
 		Initialized = 0x0100,
 
 		// Actor instance flags
+		/// @brief Actor is invulnerable
 		IsInvulnerable = 0x0200,
+		/// @brief Actor is standing on the ground and can jump
 		CanJump = 0x0400,
+		/// @brief Actor can be frozen
 		CanBeFrozen = 0x0800,
+		/// @brief Actor is facing left
 		IsFacingLeft = 0x1000,
+		/// @brief Actor triggers TNT explosion
 		TriggersTNT = 0x2000,
+		/// @brief Actor should be preserved when state is rolled back to checkpoint
+		PreserveOnRollback = 0x4000,
 
 		// Collision flags
-	
 		/// @brief Collide with tiles
 		CollideWithTileset = 0x10000,
 		/// @brief Collide with other non-solid actors, @ref ActorBase::OnHandleCollision() will be called for each collision
