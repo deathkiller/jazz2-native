@@ -73,7 +73,7 @@ namespace Jazz2::Actors::Bosses
 						FollowNearestPlayer(StateRunning1, Random().NextFloat(20, 40));
 					});
 				} else {
-					_speed.Y -= 0.27f * timeMult;
+					_speed.Y -= (_levelHandler->IsReforged() ? 0.27f : 0.21f) * timeMult;
 				}
 				break;
 			}
