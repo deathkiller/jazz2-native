@@ -2391,6 +2391,9 @@ namespace Jazz2::Actors
 
 		// No ammo, switch weapons
 		if (currentAmmo == 0) {
+			// Remove upgrade if no ammo left
+			_weaponUpgrades[(int)weaponType] &= ~0x01;
+
 			SwitchToNextWeapon();
 			PlaySfx("ChangeWeapon"_s);
 			_weaponCooldown = 20.0f;
