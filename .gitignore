@@ -367,3 +367,17 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# CMake
+_deps/
+Generated/
+CMakeFiles/
+cmake_install.cmake
+CMakeCache.txt
+CPackConfig.cmake
+CPackSourceConfig.cmake
+Makefile
+
+# Compiled files
+jazz2
+jazz2.desktop
