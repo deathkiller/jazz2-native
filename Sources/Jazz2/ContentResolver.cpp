@@ -102,11 +102,14 @@ namespace Jazz2
 		_cachePath = fs::JoinPath(appData, "Cache/"_s);
 		_sourcePath = fs::JoinPath(appData, "Source/"_s);
 #elif defined(DEATH_TARGET_UNIX)
-#	if !defined(NCINE_LINUX_PACKAGE)
-#		define NCINE_LINUX_PACKAGE "Jazz² Resurrection"
-#	endif
-
+#	if defined(NCINE_OVERRIDE_CONTENT_PATH)
+		_contentPath = NCINE_OVERRIDE_CONTENT_PATH;
+#	else
+#		if !defined(NCINE_LINUX_PACKAGE)
+#			define NCINE_LINUX_PACKAGE "Jazz² Resurrection"
+#		endif
 		_contentPath = "/usr/share/" NCINE_LINUX_PACKAGE "/Content/";
+#	endif
 		if (fs::IsDirectory(_contentPath)) {
 			// Shared Content exists, try to use standard XDG paths
 			auto localStorage = fs::GetLocalStorage();
