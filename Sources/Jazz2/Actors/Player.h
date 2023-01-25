@@ -111,6 +111,7 @@ namespace Jazz2::Actors
 		bool AddAmmo(WeaponType weaponType, int16_t count);
 		void AddWeaponUpgrade(WeaponType weaponType, uint8_t upgrade);
 		bool AddFastFire(int count);
+		void ZeroFastFire();
 		void MorphTo(PlayerType type);
 		void MorphRevert();
 		bool SetDizzyTime(float time);
