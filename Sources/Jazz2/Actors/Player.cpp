@@ -2958,7 +2958,7 @@ namespace Jazz2::Actors
 		} else {
 			_externalForce.X = 0.0f;
 			_speed.Y = 0.0f;
-
+			ZeroFastFire();
 			PlayPlayerSfx("Die"_s, 1.3f);
 		}
 
@@ -3137,7 +3137,7 @@ namespace Jazz2::Actors
 
 	bool Player::AddFastFire(int count)
 	{
-		const int FastFireLimit = 9;
+		const int FastFireLimit = 17;
 
 		int current = (_weaponUpgrades[(int)WeaponType::Blaster] >> 1);
 		if (current >= FastFireLimit) {
@@ -3151,6 +3151,11 @@ namespace Jazz2::Actors
 		PlaySfx("PickupAmmo"_s);
 
 		return true;
+	}
+
+	void Player::ZeroFastFire()
+	{
+		_weaponUpgrades[(int)WeaponType::Blaster] = 0;
 	}
 
 	void Player::MorphTo(PlayerType type)
