@@ -2905,15 +2905,23 @@ namespace Jazz2::Actors
 
 	bool Player::TakeDamage(int amount, float pushForce)
 	{
-		if (GetState(ActorState::IsInvulnerable) || _levelExiting != LevelExitingState::None) {
+		if (amount <= 0 || GetState(ActorState::IsInvulnerable) || _levelExiting != LevelExitingState::None) {
 			return false;
 		}
 
-		// Cancel active climbing
+		// Cancel active climbing and copter
 		if (_currentTransitionState == AnimState::TransitionLedgeClimb) {
 			ForceCancelTransition();
-
 			MoveInstantly(Vector2f(IsFacingLeft() ? 6.0f : -6.0f, 0.0f), MoveType::Relative | MoveType::Force);
+		} else if (_activeModifier == Modifier::Copter || _activeModifier == Modifier::LizardCopter) {
+			SetModifier(Modifier::None);
+		}
+
+		if (_spawnedBird != nullptr) {
+			_spawnedBird->FlyAway();
+			_spawnedBird = nullptr;
+			// Bird acts as extra life
+			_health++;
 		}
 
 		DecreaseHealth(amount, nullptr);
@@ -2925,14 +2933,6 @@ namespace Jazz2::Actors
 		_pushFramesLeft = 0.0f;
 		SetState(ActorState::CanJump, false);
 		_isAttachedToPole = false;
-
-		if (_spawnedBird != nullptr) {
-			_spawnedBird->FlyAway();
-			_spawnedBird = nullptr;
-		}
-		if (_activeModifier == Modifier::Copter || _activeModifier == Modifier::LizardCopter) {
-			SetModifier(Modifier::None);
-		}
 
 		if (_health > 0) {
 			_externalForce.X = pushForce;
@@ -2962,9 +2962,6 @@ namespace Jazz2::Actors
 			PlayPlayerSfx("Die"_s, 1.3f);
 		}
 
-#if MULTIPLAYER && SERVER
-		((LevelHandler)levelHandler).OnPlayerTakeDamage(this, pushForce);
-#endif
 		return true;
 	}
 
