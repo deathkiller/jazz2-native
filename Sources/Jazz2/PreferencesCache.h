@@ -26,6 +26,12 @@ namespace Jazz2
 
 	DEFINE_ENUM_OPERATORS(RescaleMode);
 
+	enum class WeaponWheelStyle {
+		Disabled,
+		Enabled,
+		EnabledWithAmmoCount
+	};
+
 	enum class UnlockableEpisodes : uint32_t {
 		None = 0x00,
 
@@ -86,7 +92,7 @@ namespace Jazz2
 		// Gameplay
 		static bool EnableReforged;
 		static bool EnableLedgeClimb;
-		static bool EnableWeaponWheel;
+		static WeaponWheelStyle WeaponWheel;
 		static bool EnableRgbLights;
 		static bool AllowUnsignedScripts;
 		static bool UseNativeBackButton;
@@ -128,6 +134,7 @@ namespace Jazz2
 			AllowUnsignedScripts = 0x1000,
 			UseNativeBackButton = 0x2000,
 			EnableDiscordIntegration = 0x4000,
+			ShowWeaponWheelAmmoCount = 0x8000,
 
 			TutorialCompleted = 0x10000,
 			SetLanguage = 0x20000

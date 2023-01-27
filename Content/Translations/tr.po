@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-01-18 10:54+0100\n"
+"POT-Creation-Date: 2023-01-27 16:40+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Türkçe çeviri: Consul\n"
@@ -1481,18 +1481,20 @@ msgid "Controls"
 msgstr "Kontrol Ayarları"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:121
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:110
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:113
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:106
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:105
 msgid "Enabled"
 msgstr "Açık"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:121
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:106
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:105
 msgid "Disabled"
 msgstr "Kapalı"
 
@@ -1538,6 +1540,10 @@ msgstr "Geliştirmeler"
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:89
 msgid "You can enable enhancements that were added to this remake."
 msgstr "Bu versiyona eklenmiş geliştirmeleri aktive edebilirsin."
+
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
+msgid "Enabled With Ammo Count"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:18
 #: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:48
@@ -1698,23 +1704,23 @@ msgstr "Geri"
 msgid "None / Pixel-perfect"
 msgstr "Kapalı / Orijinal"
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:19
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:20
 msgid "CRT Scanlines"
 msgstr "CRT Çizgileri"
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:20
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:21
 msgid "CRT Shadow Mask"
 msgstr "CRT Gölge Maskesi"
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:21
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
 msgid "CRT Aperture Grille"
 msgstr "CRT Açıklık Izgarası"
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:23
 msgid "Monochrome"
 msgstr "Tek Renk"
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:38
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:39
 msgid "Select Rescale Mode"
 msgstr "Ölçeklendirme Modunu Seçin"
 
