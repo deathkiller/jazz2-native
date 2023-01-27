@@ -945,7 +945,7 @@ namespace Jazz2::Actors
 		if (_controllable && _controllableExternal && _playerType != PlayerType::Frog) {
 			bool isGamepad;
 			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::ChangeWeapon, true, isGamepad)) {
-				if (!isGamepad || !PreferencesCache::EnableWeaponWheel) {
+				if (!isGamepad || PreferencesCache::WeaponWheel == WeaponWheelStyle::Disabled) {
 					SwitchToNextWeapon();
 				}
 			}

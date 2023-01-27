@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-01-24 09:22+0100\n"
+"POT-Creation-Date: 2023-01-27 16:39+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Traducere în limba română: 1NSH4N3\n"
@@ -1491,18 +1491,20 @@ msgid "Controls"
 msgstr "Controale"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:121
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:110
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:113
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:106
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:105
 msgid "Enabled"
 msgstr "Activat"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:121
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:106
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:105
 msgid "Disabled"
 msgstr "Dezactivat"
 
@@ -1548,6 +1550,10 @@ msgstr "Îmbunătățiri"
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:89
 msgid "You can enable enhancements that were added to this remake."
 msgstr "Puteți activa îmbunătățirile care au fost adăugate la acestă refacere."
+
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
+msgid "Enabled With Ammo Count"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:18
 #: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:48
@@ -1709,23 +1715,23 @@ msgstr "Înapoi"
 msgid "None / Pixel-perfect"
 msgstr "Nici unul / Pixel-perfect"
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:19
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:20
 msgid "CRT Scanlines"
 msgstr "Linii de scanare CRT"
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:20
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:21
 msgid "CRT Shadow Mask"
 msgstr "Mască si umbre CRT"
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:21
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
 msgid "CRT Aperture Grille"
 msgstr "Grilă de deschidere CRT"
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:23
 msgid "Monochrome"
 msgstr "Monocrom"
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:38
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:39
 msgid "Select Rescale Mode"
 msgstr "Alege Modul de Redimensionare"
 

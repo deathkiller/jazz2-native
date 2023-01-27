@@ -90,7 +90,7 @@ namespace Jazz2::UI::Menu
 
 		if (item.Item.HasBooleanValue) {
 			StringView customText;
-			bool enabled;
+			bool enabled = false;
 			switch (item.Item.Type) {
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
 				case GraphicsOptionsItemType::Fullscreen: enabled = PreferencesCache::EnableFullscreen; break;
@@ -99,8 +99,7 @@ namespace Jazz2::UI::Menu
 				case GraphicsOptionsItemType::ShowPerformanceMetrics: enabled = PreferencesCache::ShowPerformanceMetrics; break;
 				case GraphicsOptionsItemType::KeepAspectRatioInCinematics: enabled = PreferencesCache::KeepAspectRatioInCinematics; break;
 				case GraphicsOptionsItemType::ShowPlayerTrails: enabled = PreferencesCache::ShowPlayerTrails; break;
-				case GraphicsOptionsItemType::LowGraphicsQuality: enabled = PreferencesCache::LowGraphicsQuality; customText = (enabled ? _("Low") : _("High")); break;
-				default: enabled = false; break;
+				case GraphicsOptionsItemType::LowGraphicsQuality: customText = (enabled ? _("Low") : _("High")); break;
 			}
 
 			_root->DrawStringShadow(!customText.empty() ? customText : (enabled ? _("Enabled") : _("Disabled")), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,

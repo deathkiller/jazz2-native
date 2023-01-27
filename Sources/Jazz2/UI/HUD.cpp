@@ -865,6 +865,22 @@ namespace Jazz2::UI
 				DrawElement("WeaponWheelDim"_s, -1, pos.X, pos.Y, ShadowLayer - 10, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, alpha * 0.6f), 5.0f, 5.0f);
 				DrawElement(weapon, -1, pos.X, pos.Y, MainLayer + 10, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, isSelected ? alpha : alpha * 0.7f), scale, scale);
 
+				if (PreferencesCache::WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount) {
+					char stringBuffer[32];
+					StringView ammoCount;
+					if (player->_weaponAmmo[i] == UINT16_MAX) {
+						ammoCount = "x\u221E"_s;
+					} else {
+						stringBuffer[0] = 'x';
+						i32tos(player->_weaponAmmo[i] / 256, stringBuffer + 1);
+						ammoCount = stringBuffer;
+					}
+
+					int charOffset = 0;
+					_smallFont->DrawString(this, ammoCount, charOffset, center.X + cosf(angle) * distance * 1.4f, center.Y + sinf(angle) * distance * 1.4f, FontLayer,
+						Alignment::Center, isSelected ? Colorf(0.62f, 0.44f, 0.34f, 0.5f * alpha) : Colorf(0.45f, 0.45f, 0.45f, 0.48f * alpha), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				}
+
 				float angle2 = fTwoPi - angle;
 				float angleFrom = angle2 - angleStep * 0.4f;
 				float angleTo = angle2 + angleStep * 0.4f;
@@ -890,7 +906,7 @@ namespace Jazz2::UI
 	{
 		weaponCount = 0;
 
-		if (!PreferencesCache::EnableWeaponWheel || player == nullptr || !player->_controllable || !player->_controllableExternal || player->_playerType == PlayerType::Frog) {
+		if (PreferencesCache::WeaponWheel == WeaponWheelStyle::Disabled || player == nullptr || !player->_controllable || !player->_controllableExternal || player->_playerType == PlayerType::Frog) {
 			if (_weaponWheelAnim > 0.0f) {
 				_weaponWheelShown = false;
 				_lastWeaponWheelIndex = -1;

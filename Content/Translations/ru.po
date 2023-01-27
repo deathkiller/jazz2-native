@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-01-17 18:50+0100\n"
+"POT-Creation-Date: 2023-01-27 16:40+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: ПЕРЕВОД НА РУССКИЙ ЯЗЫК: MAN-biker (manbiker@mail.ru) "
@@ -1489,18 +1489,20 @@ msgid "Controls"
 msgstr "УПРАВЛЕНИЕ"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:121
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:110
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:113
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:106
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:105
 msgid "Enabled"
 msgstr "ВКЛЮЧЕНО"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:121
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:106
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:105
 msgid "Disabled"
 msgstr "ВЫКЛЮЧЕНО"
 
@@ -1546,6 +1548,10 @@ msgstr "УЛУЧШЕНИЯ"
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:89
 msgid "You can enable enhancements that were added to this remake."
 msgstr "ВЫ МОЖЕТЕ ВКЛЮЧИТЬ УЛУЧШЕНИЯ, КОТОРЫЕ МЫ ДОБАВИЛИ В ЭТО ПЕРЕИЗДАНИЕ."
+
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
+msgid "Enabled With Ammo Count"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:18
 #: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:48
@@ -1706,23 +1712,23 @@ msgstr "НАЗАД"
 msgid "None / Pixel-perfect"
 msgstr "НЕТ / ПИКСЕЛЬ В ПИКСЕЛЬ"
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:19
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:20
 msgid "CRT Scanlines"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:20
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:21
 msgid "CRT Shadow Mask"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:21
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
 msgid "CRT Aperture Grille"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:23
 msgid "Monochrome"
 msgstr "МОНОХРОМНОЕ"
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:38
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:39
 msgid "Select Rescale Mode"
 msgstr "ВЫБОР ШЕЙДЕРНОГО ЭФФЕКТА"
 

@@ -24,7 +24,7 @@ namespace Jazz2
 	bool PreferencesCache::LowGraphicsQuality = false;
 	bool PreferencesCache::EnableReforged = true;
 	bool PreferencesCache::EnableLedgeClimb = true;
-	bool PreferencesCache::EnableWeaponWheel = true;
+	WeaponWheelStyle PreferencesCache::WeaponWheel = WeaponWheelStyle::Enabled;
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_WINDOWS_RT)
 	bool PreferencesCache::EnableRgbLights = true;
 #else
@@ -143,7 +143,7 @@ namespace Jazz2
 						LowGraphicsQuality = ((boolOptions & BoolOptions::LowGraphicsQuality) == BoolOptions::LowGraphicsQuality);
 						EnableReforged = ((boolOptions & BoolOptions::EnableReforged) == BoolOptions::EnableReforged);
 						EnableLedgeClimb = ((boolOptions & BoolOptions::EnableLedgeClimb) == BoolOptions::EnableLedgeClimb);
-						EnableWeaponWheel = ((boolOptions & BoolOptions::EnableWeaponWheel) == BoolOptions::EnableWeaponWheel);
+						WeaponWheel = ((boolOptions & BoolOptions::EnableWeaponWheel) == BoolOptions::EnableWeaponWheel ? WeaponWheelStyle::Enabled : WeaponWheelStyle::Disabled);
 						EnableRgbLights = ((boolOptions & BoolOptions::EnableRgbLights) == BoolOptions::EnableRgbLights);
 						AllowUnsignedScripts = ((boolOptions & BoolOptions::AllowUnsignedScripts) == BoolOptions::AllowUnsignedScripts);
 #if defined(DEATH_TARGET_ANDROID)
@@ -151,6 +151,10 @@ namespace Jazz2
 #endif
 						EnableDiscordIntegration = ((boolOptions & BoolOptions::EnableDiscordIntegration) == BoolOptions::EnableDiscordIntegration);
 						TutorialCompleted = ((boolOptions & BoolOptions::TutorialCompleted) == BoolOptions::TutorialCompleted);
+
+						if (WeaponWheel != WeaponWheelStyle::Disabled && (boolOptions & BoolOptions::ShowWeaponWheelAmmoCount) == BoolOptions::ShowWeaponWheelAmmoCount) {
+							WeaponWheel = WeaponWheelStyle::EnabledWithAmmoCount;
+						}
 
 						if ((boolOptions & BoolOptions::SetLanguage) == BoolOptions::SetLanguage) {
 							uc.Read(Language, sizeof(Language));
@@ -298,7 +302,8 @@ namespace Jazz2
 		if (LowGraphicsQuality) boolOptions |= BoolOptions::LowGraphicsQuality;
 		if (EnableReforged) boolOptions |= BoolOptions::EnableReforged;
 		if (EnableLedgeClimb) boolOptions |= BoolOptions::EnableLedgeClimb;
-		if (EnableWeaponWheel) boolOptions |= BoolOptions::EnableWeaponWheel;
+		if (WeaponWheel != WeaponWheelStyle::Disabled) boolOptions |= BoolOptions::EnableWeaponWheel;
+		if (WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount) boolOptions |= BoolOptions::ShowWeaponWheelAmmoCount;
 		if (EnableRgbLights) boolOptions |= BoolOptions::EnableRgbLights;
 		if (AllowUnsignedScripts) boolOptions |= BoolOptions::AllowUnsignedScripts;
 		if (UseNativeBackButton) boolOptions |= BoolOptions::UseNativeBackButton;

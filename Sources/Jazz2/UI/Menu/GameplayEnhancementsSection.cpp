@@ -109,15 +109,20 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
-			bool enabled;
+			StringView customText;
+			bool enabled = false;
 			switch (i) {
 				default:
 				case (int)Item::Reforged: enabled = PreferencesCache::EnableReforged; break;
 				case (int)Item::LedgeClimb: enabled = PreferencesCache::EnableLedgeClimb; break;
-				case (int)Item::WeaponWheel: enabled = PreferencesCache::EnableWeaponWheel; break;
+				case (int)Item::WeaponWheel:
+					customText = (PreferencesCache::WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount
+						? _("Enabled With Ammo Count")
+						: (PreferencesCache::WeaponWheel == WeaponWheelStyle::Enabled ? _("Enabled") : _("Disabled")));
+					break;
 			}
 
-			_root->DrawStringShadow(enabled ? _("Enabled") : _("Disabled"), charOffset, center.X, center.Y + 22.0f, IMenuContainer::FontLayer - 10,
+			_root->DrawStringShadow(!customText.empty() ? customText : (enabled ? _("Enabled") : _("Disabled")), charOffset, center.X, center.Y + 22.0f, IMenuContainer::FontLayer - 10,
 				Alignment::Center, (_selectedIndex == i ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
 
 			center.Y += (bottomLine - topLine) * 0.9f / (int)Item::Count;
@@ -165,7 +170,11 @@ namespace Jazz2::UI::Menu
 				break;
 
 			case (int)Item::LedgeClimb: PreferencesCache::EnableLedgeClimb = !PreferencesCache::EnableLedgeClimb; break;
-			case (int)Item::WeaponWheel: PreferencesCache::EnableWeaponWheel = !PreferencesCache::EnableWeaponWheel; break;
+			case (int)Item::WeaponWheel:
+				PreferencesCache::WeaponWheel = (PreferencesCache::WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount
+						? WeaponWheelStyle::Disabled
+						: (PreferencesCache::WeaponWheel == WeaponWheelStyle::Enabled ? WeaponWheelStyle::EnabledWithAmmoCount : WeaponWheelStyle::Enabled));
+				break;
 		}
 
 		_isDirty = true;
