@@ -12,7 +12,7 @@ namespace Jazz2::Actors::Weapons
 {
 	BlasterShot::BlasterShot()
 		:
-		_fired(false)
+		_fired(0)
 	{
 	}
 
@@ -83,8 +83,8 @@ namespace Jazz2::Actors::Weapons
 			PlaySfx("WallPoof"_s);
 		}
 
-		if (!_fired) {
-			_fired = true;
+		_fired++;
+		if (_fired == 2) {
 			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
 			_renderer.setDrawEnabled(true);
 		}
@@ -97,12 +97,14 @@ namespace Jazz2::Actors::Weapons
 
 	void BlasterShot::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
-		auto& light = lights.emplace_back();
-		light.Pos = _pos;
-		light.Intensity = 0.8f;
-		light.Brightness = 0.6f;
-		light.RadiusNear = 5.0f;
-		light.RadiusFar = 20.0f;
+		if (_fired >= 2) {
+			auto& light = lights.emplace_back();
+			light.Pos = _pos;
+			light.Intensity = 0.8f;
+			light.Brightness = 0.6f;
+			light.RadiusNear = 5.0f;
+			light.RadiusFar = 20.0f;
+		}
 	}
 
 	bool BlasterShot::OnPerish(ActorBase* collider)

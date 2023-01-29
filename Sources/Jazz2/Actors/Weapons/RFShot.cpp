@@ -8,7 +8,7 @@ namespace Jazz2::Actors::Weapons
 {
 	RFShot::RFShot()
 		:
-		_fired(false),
+		_fired(0),
 		_smokeTimer(3.0f)
 	{
 	}
@@ -84,8 +84,8 @@ namespace Jazz2::Actors::Weapons
 			_smokeTimer = 6.0f;
 		}
 
-		if (!_fired) {
-			_fired = true;
+		_fired++;
+		if (_fired == 2) {
 			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
 			_renderer.setDrawEnabled(true);
 		}
@@ -93,12 +93,14 @@ namespace Jazz2::Actors::Weapons
 
 	void RFShot::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
-		auto& light = lights.emplace_back();
-		light.Pos = _pos;
-		light.Intensity = 0.8f;
-		light.Brightness = 0.8f;
-		light.RadiusNear = 3.0f;
-		light.RadiusFar = 12.0f;
+		if (_fired >= 2) {
+			auto& light = lights.emplace_back();
+			light.Pos = _pos;
+			light.Intensity = 0.8f;
+			light.Brightness = 0.8f;
+			light.RadiusNear = 3.0f;
+			light.RadiusFar = 12.0f;
+		}
 	}
 
 	bool RFShot::OnPerish(ActorBase* collider)

@@ -9,7 +9,7 @@ namespace Jazz2::Actors::Weapons
 {
 	PepperShot::PepperShot()
 		:
-		_fired(false)
+		_fired(0)
 	{
 	}
 
@@ -76,8 +76,8 @@ namespace Jazz2::Actors::Weapons
 
 		ShotBase::OnUpdate(timeMult);
 
-		if (!_fired) {
-			_fired = true;
+		_fired++;
+		if (_fired == 2) {
 			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
 			_renderer.setDrawEnabled(true);
 		}
@@ -85,7 +85,7 @@ namespace Jazz2::Actors::Weapons
 	
 	void PepperShot::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
-		if ((_upgrades & 0x1) != 0) {
+		if (_fired >= 2 && (_upgrades & 0x1) != 0) {
 			auto& light = lights.emplace_back();
 			light.Pos = _pos;
 			light.Intensity = 1.0f;

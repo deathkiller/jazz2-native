@@ -10,7 +10,6 @@ namespace Death::Containers
 	namespace
 	{
 		enum : std::size_t {
-			SmallSize = 0x80,
 			SmallSizeMask = 0xc0,
 			LargeSizeMask = SmallSizeMask << (sizeof(std::size_t) - 1) * 8
 		};
@@ -18,35 +17,49 @@ namespace Death::Containers
 
 	static_assert(std::size_t(LargeSizeMask) == Implementation::StringViewSizeMask,
 		"reserved bits should be the same in String and StringView");
+	static_assert(std::size_t(LargeSizeMask) == (std::size_t(StringViewFlags::Global) | (std::size_t(Implementation::SmallStringBit) << (sizeof(std::size_t) - 1) * 8)),
+		"small string and global view bits should cover both reserved bits");
 
 	String String::nullTerminatedView(StringView view) {
-		if ((view.flags() & StringViewFlags::NullTerminated) == StringViewFlags::NullTerminated)
-			return String { view.data(), view.size(), [](char*, std::size_t) { } };
+		if ((view.flags() & StringViewFlags::NullTerminated) == StringViewFlags::NullTerminated) {
+			String out { view.data(), view.size(), [](char*, std::size_t) { } };
+			out._large.size |= std::size_t(view.flags() & StringViewFlags::Global);
+			return out;
+		}
 		return String { view };
 	}
 
 	String String::nullTerminatedView(AllocatedInitT, StringView view) {
-		if ((view.flags() & StringViewFlags::NullTerminated) == StringViewFlags::NullTerminated)
-			return String { view.data(), view.size(), [](char*, std::size_t) { } };
+		if ((view.flags() & StringViewFlags::NullTerminated) == StringViewFlags::NullTerminated) {
+			String out { view.data(), view.size(), [](char*, std::size_t) { } };
+			out._large.size |= std::size_t(view.flags() & StringViewFlags::Global);
+			return out;
+		}
 		return String { AllocatedInit, view };
 	}
 
 	String String::nullTerminatedGlobalView(StringView view) {
-		if ((view.flags() & (StringViewFlags::NullTerminated | StringViewFlags::Global)) == (StringViewFlags::NullTerminated | StringViewFlags::Global))
-			return String { view.data(), view.size(), [](char*, std::size_t) { } };
+		if ((view.flags() & (StringViewFlags::NullTerminated | StringViewFlags::Global)) == (StringViewFlags::NullTerminated | StringViewFlags::Global)) {
+			String out { view.data(), view.size(), [](char*, std::size_t) { } };
+			out._large.size |= std::size_t(StringViewFlags::Global);
+			return out;
+		}
 		return String { view };
 	}
 
 	String String::nullTerminatedGlobalView(AllocatedInitT, StringView view) {
-		if ((view.flags() & (StringViewFlags::NullTerminated | StringViewFlags::Global)) == (StringViewFlags::NullTerminated | StringViewFlags::Global))
-			return String { view.data(), view.size(), [](char*, std::size_t) { } };
+		if ((view.flags() & (StringViewFlags::NullTerminated | StringViewFlags::Global)) == (StringViewFlags::NullTerminated | StringViewFlags::Global)) {
+			String out { view.data(), view.size(), [](char*, std::size_t) { } };
+			out._large.size |= std::size_t(StringViewFlags::Global);
+			return out;
+		}
 		return String { AllocatedInit, view };
 	}
 
 	inline void String::construct(NoInitT, const std::size_t size) {
 		if (size < Implementation::SmallStringSize) {
 			_small.data[size] = '\0';
-			_small.size = (unsigned char)(size | SmallSize);
+			_small.size = (unsigned char)(size | Implementation::SmallStringBit);
 		} else {
 			_large.data = new char[size + 1];
 			_large.data[size] = '\0';
@@ -71,13 +84,16 @@ namespace Death::Containers
 
 	inline void String::destruct() {
 		// If not SSO, delete the data
-		if (_small.size & 0x80) return;
-		if (_large.deleter) _large.deleter(_large.data, _large.size);
+		if (_small.size & Implementation::SmallStringBit) return;
+		// Instances created with a custom deleter either don't the Global bit set at all, or have it set but the deleter
+		// is a no-op passed from nullTerminatedView() / nullTerminatedGlobalView(). Thus *technically* it's not needed to clear
+		// the LargeSizeMask (which implies there's also no way to test that it got cleared), but do it for consistency.
+		if (_large.deleter) _large.deleter(_large.data, _large.size & ~LargeSizeMask);
 		else delete[] _large.data;
 	}
 
 	inline Containers::Pair<const char*, std::size_t> String::dataInternal() const {
-		if (_small.size & 0x80)
+		if (_small.size & Implementation::SmallStringBit)
 			return { _small.data, _small.size & ~SmallSizeMask };
 		return { _large.data, _large.size & ~LargeSizeMask };
 	}
@@ -85,7 +101,7 @@ namespace Death::Containers
 	String::String() noexcept {
 		// Create a zero-size small string to fullfil the guarantee of data() being always non-null and null-terminated
 		_small.data[0] = '\0';
-		_small.size = SmallSize;
+		_small.size = Implementation::SmallStringBit;
 	}
 
 	String::String(const StringView view) : String { view._data, view._sizePlusFlags & ~Implementation::StringViewSizeMask } {}
@@ -142,11 +158,10 @@ namespace Death::Containers
 			std::memcpy(_large.data, other._small.data, sizePlusOne);
 			_large.size = other._small.size & ~SmallSizeMask;
 			_large.deleter = nullptr;
-
-			// Otherwise take over the data
 		} else {
+			// Otherwise take over the data
 			_large.data = other._large.data;
-			_large.size = other._large.size;
+			_large.size = other._large.size; // including the potential Global bit
 			_large.deleter = other._large.deleter;
 		}
 
@@ -193,7 +208,7 @@ namespace Death::Containers
 
 		if (size < Implementation::SmallStringSize) {
 			// Everything already zero-init'd in the constructor init list
-			_small.size = (unsigned char)(size | SmallSize);
+			_small.size = (unsigned char)(size | Implementation::SmallStringBit);
 		} else {
 			_large.data = new char[size + 1] {};
 			_large.size = size;
@@ -227,7 +242,7 @@ namespace Death::Containers
 		// Similarly as in operator=(String&&), the following works also in case of SSO, as for small string we would be
 		// doing a copy of _small.data and then also a copy of _small.size *including* the two highest bits
 		_large.data = other._large.data;
-		_large.size = other._large.size;
+		_large.size = other._large.size; // including the potential Global bit
 		_large.deleter = other._large.deleter;
 		other._large.data = nullptr;
 		other._large.size = 0;
@@ -245,7 +260,7 @@ namespace Death::Containers
 	String& String::operator=(String&& other) noexcept {
 		using std::swap;
 		swap(other._large.data, _large.data);
-		swap(other._large.size, _large.size);
+		swap(other._large.size, _large.size); // including the potential Global bit
 		swap(other._large.deleter, _large.deleter);
 		return *this;
 	}
@@ -270,86 +285,102 @@ namespace Death::Containers
 		return { const_cast<char*>(data.first()), data.second() };
 	}
 
-	String::operator Array<char>()&& {
+	String::operator Array<char>() && {
 		Array<char> out;
-		if (_small.size & 0x80) {
+		if (_small.size & Implementation::SmallStringBit) {
 			const std::size_t size = _small.size & ~SmallSizeMask;
 			// Allocate the output including a null terminator at the end, but don't include it in the size
 			out = Array<char> { Array<char>{NoInit, size + 1}.release(), size };
 			out[size] = '\0';
 			std::memcpy(out.data(), _small.data, size);
 		} else {
-			out = Array<char> { _large.data, _large.size, deleter() };
+			out = Array<char> { _large.data, _large.size & ~LargeSizeMask, deleter() };
 		}
 
 		// Same as in release(). Create a zero-size small string to fullfil the guarantee of data() being always non-null
 		// and null-terminated. Since this makes the string switch to SSO, we also clear the deleter this way.
 		_small.data[0] = '\0';
-		_small.size = SmallSize;
+		_small.size = Implementation::SmallStringBit;
 
 		return out;
 	}
 
 	String::operator bool() const {
 		// The data pointer is guaranteed to be non-null, so no need to check it
-		if (_small.size & 0x80) return _small.size & ~SmallSizeMask;
-		return _large.size;
+		if (_small.size & Implementation::SmallStringBit)
+			return _small.size & ~SmallSizeMask;
+		return _large.size & ~LargeSizeMask;
+	}
+
+	StringViewFlags String::viewFlags() const {
+		return StringViewFlags(_large.size & std::size_t(StringViewFlags::Global)) | StringViewFlags::NullTerminated;
 	}
 
 	const char* String::data() const {
-		if (_small.size & 0x80) return _small.data;
+		if (_small.size & Implementation::SmallStringBit)
+			return _small.data;
 		return _large.data;
 	}
 
 	char* String::data() {
-		if (_small.size & 0x80) return _small.data;
+		if (_small.size & Implementation::SmallStringBit)
+			return _small.data;
 		return _large.data;
 	}
 
 	bool String::empty() const {
-		if (_small.size & 0x80) return !(_small.size & ~SmallSizeMask);
-		return !_large.size;
+		if (_small.size & Implementation::SmallStringBit)
+			return !(_small.size & ~SmallSizeMask);
+		return !(_large.size & ~LargeSizeMask);
 	}
 
 	auto String::deleter() const -> Deleter {
 		// Unlikely to be called very often, so a non-debug assert is fine
-		DEATH_ASSERT(!(_small.size & 0x80), "Containers::String::deleter(): cannot call on a SSO instance", {});
+		DEATH_ASSERT(!(_small.size & Implementation::SmallStringBit),
+			"Containers::String::deleter(): cannot call on a SSO instance", {});
 		return _large.deleter;
 	}
 
 	std::size_t String::size() const {
-		if (_small.size & 0x80) return _small.size & ~SmallSizeMask;
-		return _large.size;
+		if (_small.size & Implementation::SmallStringBit)
+			return _small.size & ~SmallSizeMask;
+		return _large.size & ~LargeSizeMask;
 	}
 
 	char* String::begin() {
-		if (_small.size & 0x80) return _small.data;
+		if (_small.size & Implementation::SmallStringBit)
+			return _small.data;
 		return _large.data;
 	}
 
 	const char* String::begin() const {
-		if (_small.size & 0x80) return _small.data;
+		if (_small.size & Implementation::SmallStringBit)
+			return _small.data;
 		return _large.data;
 	}
 
 	const char* String::cbegin() const {
-		if (_small.size & 0x80) return _small.data;
+		if (_small.size & Implementation::SmallStringBit)
+			return _small.data;
 		return _large.data;
 	}
 
 	char* String::end() {
-		if (_small.size & 0x80) return _small.data + (_small.size & ~SmallSizeMask);
-		return _large.data + _large.size;
+		if (_small.size & Implementation::SmallStringBit)
+			return _small.data + (_small.size & ~SmallSizeMask);
+		return _large.data + (_large.size & ~LargeSizeMask);
 	}
 
 	const char* String::end() const {
-		if (_small.size & 0x80) return _small.data + (_small.size & ~SmallSizeMask);
-		return _large.data + _large.size;
+		if (_small.size & Implementation::SmallStringBit)
+			return _small.data + (_small.size & ~SmallSizeMask);
+		return _large.data + (_large.size & ~LargeSizeMask);
 	}
 
 	const char* String::cend() const {
-		if (_small.size & 0x80) return _small.data + (_small.size & ~SmallSizeMask);
-		return _large.data + _large.size;
+		if (_small.size & Implementation::SmallStringBit)
+			return _small.data + (_small.size & ~SmallSizeMask);
+		return _large.data + (_large.size & ~LargeSizeMask);
 	}
 
 	char& String::front() {
@@ -371,12 +402,14 @@ namespace Death::Containers
 	}
 
 	char& String::operator[](std::size_t i) {
-		if (_small.size & 0x80) return _small.data[i];
+		if (_small.size & Implementation::SmallStringBit)
+			return _small.data[i];
 		return _large.data[i];
 	}
 
 	char String::operator[](std::size_t i) const {
-		if (_small.size & 0x80) return _small.data[i];
+		if (_small.size & Implementation::SmallStringBit)
+			return _small.data[i];
 		return _large.data[i];
 	}
 
@@ -393,7 +426,7 @@ namespace Death::Containers
 		if (newSize < Implementation::SmallStringSize) {
 			std::memcpy(_small.data + currentSize, other._data, otherSize);
 			_small.data[newSize] = '\0';
-			_small.size = (unsigned char)(newSize | SmallSize);
+			_small.size = (unsigned char)(newSize | Implementation::SmallStringBit);
 		} else if (isSmall()) {
 			char tmp[Implementation::SmallStringSize];
 			std::memcpy(tmp, _small.data, currentSize);
@@ -730,13 +763,14 @@ namespace Death::Containers
 
 	char* String::release() {
 		// Unlikely to be called very often, so a non-debug assert is fine
-		DEATH_ASSERT(!(_small.size & 0x80), "Containers::String::release(): cannot call on a SSO instance", {});
+		DEATH_ASSERT(!(_small.size & Implementation::SmallStringBit),
+			"Containers::String::release(): cannot call on a SSO instance", {});
 		char* data = _large.data;
 
 		// Create a zero-size small string to fullfil the guarantee of data() being always non-null and null-terminated.
 		// Since this makes the string switch to SSO, we also clear the deleter this way.
 		_small.data[0] = '\0';
-		_small.size = SmallSize;
+		_small.size = Implementation::SmallStringBit;
 		return data;
 	}
 

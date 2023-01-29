@@ -11,7 +11,7 @@ namespace Jazz2::Actors::Weapons
 {
 	ElectroShot::ElectroShot()
 		:
-		_fired(false),
+		_fired(0),
 		_currentStep(0.0f),
 		_particleSpawnTime(0.0f)
 	{
@@ -69,10 +69,10 @@ namespace Jazz2::Actors::Weapons
 
 		ShotBase::OnUpdate(timeMult);
 
-		if (!_fired) {
-			_fired = true;
+		_fired++;
+		if (_fired == 2) {
 			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
-		} else {
+		} else if (_fired > 2) {
 			_particleSpawnTime -= timeMult;
 			if (_particleSpawnTime <= 0.0f) {
 				_particleSpawnTime += 1.0f;
@@ -135,12 +135,14 @@ namespace Jazz2::Actors::Weapons
 
 	void ElectroShot::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
-		auto& light = lights.emplace_back();
-		light.Pos = _pos;
-		light.Intensity = 0.4f + 0.016f * _currentStep;
-		light.Brightness = 0.2f + 0.02f * _currentStep;
-		light.RadiusNear = 0.0f;
-		light.RadiusFar = 12.0f + 0.4f * _currentStep;
+		if (_fired >= 2) {
+			auto& light = lights.emplace_back();
+			light.Pos = _pos;
+			light.Intensity = 0.4f + 0.016f * _currentStep;
+			light.Brightness = 0.2f + 0.02f * _currentStep;
+			light.RadiusNear = 0.0f;
+			light.RadiusFar = 12.0f + 0.4f * _currentStep;
+		}
 	}
 
 	bool ElectroShot::OnHandleCollision(std::shared_ptr<ActorBase> other)

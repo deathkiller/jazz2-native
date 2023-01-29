@@ -25,6 +25,6 @@ namespace Jazz2::Actors::Weapons
 
 	private:
 		Vector2f _gunspotPos;
-		bool _fired;
+		int32_t _fired;
 	};
 }
