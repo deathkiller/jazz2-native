@@ -109,7 +109,10 @@ namespace Death::Containers
 		/**
 		 * @brief Construct from a @ref String
 		 *
-		 * The resulting view has @ref StringViewFlags::NullTerminated set.
+		 * The resulting view has @ref StringViewFlag::NullTerminated set
+		 * always, and @ref StringViewFlag::Global if the string was originally
+		 * created from a global null-terminated view with
+		 * @ref String::nullTerminatedView() or @ref String::nullTerminatedGlobalView().
 		 */
 		/*implicit*/ BasicStringView(String& data) noexcept;
 
@@ -117,7 +120,10 @@ namespace Death::Containers
 		 * @brief Construct from a const @ref String
 		 *
 		 * Enabled only if the view is not mutable. The resulting view has
-		 * @ref StringViewFlags::NullTerminated set.
+		 * @ref StringViewFlag::NullTerminated set always, and
+		 * @ref StringViewFlag::Global if the string was created from a global
+		 * null-terminated view with @ref String::nullTerminatedView() or
+		 * @ref String::nullTerminatedGlobalView().
 		 */
 		template<class U = T, class = typename std::enable_if<std::is_const<U>::value>::type> /*implicit*/ BasicStringView(const String& data) noexcept;
 

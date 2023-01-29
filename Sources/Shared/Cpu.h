@@ -1309,12 +1309,31 @@ namespace Death::Cpu
 	}
 
 	/** @relates Features
+		@brief Equality comparison of two tags
+		Same as @ref Features::operator==(). Needs to be present to avoid ambiguity in C++20.
+	*/
+	template<class T, class U, class = decltype(TypeTraits<T>::Index), class = decltype(TypeTraits<U>::Index)> constexpr bool operator==(T, U) {
+		// Need to cast because operations between different enums are deprecated in C++20.
+		return static_cast<unsigned int>(TypeTraits<T>::Index) == TypeTraits<U>::Index;
+	}
+
+	/** @relates Features
 		@brief Non-equality comparison of a tag and a feature set
 
 		Same as @ref Features::operator!=().
 	*/
 	template<class T, class = decltype(TypeTraits<T>::Index)> constexpr bool operator!=(T a, Features b) {
 		return Features(a) != b;
+	}
+
+	/** @relates Features
+		@brief Non-equality comparison of two tags
+		Same as @ref Features::operator!=(). Needs to be present to avoid ambiguity in
+		C++20.
+	*/
+	template<class T, class U, class = decltype(TypeTraits<T>::Index), class = decltype(TypeTraits<U>::Index)> constexpr bool operator!=(T, U) {
+		// Need to cast because operations between different enums are deprecated in C++20.
+		return static_cast<unsigned int>(TypeTraits<T>::Index) != TypeTraits<U>::Index;
 	}
 
 	/** @relates Features

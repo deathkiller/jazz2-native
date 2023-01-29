@@ -25,9 +25,9 @@ namespace Death::Containers
 		data ? std::strlen(data) : 0,
 		flags | (data ? StringViewFlags::NullTerminated : StringViewFlags::Global) } {}
 
-	template<class T> BasicStringView<T>::BasicStringView(String& string) noexcept : BasicStringView { string.data(), string.size(), StringViewFlags::NullTerminated } {}
+	template<class T> BasicStringView<T>::BasicStringView(String& string) noexcept : BasicStringView { string.data(), string.size(), string.viewFlags() } {}
 
-	template<> template<> BasicStringView<const char>::BasicStringView(const String& string) noexcept : BasicStringView { string.data(), string.size(), StringViewFlags::NullTerminated } {}
+	template<> template<> BasicStringView<const char>::BasicStringView(const String& string) noexcept : BasicStringView { string.data(), string.size(), string.viewFlags() } {}
 
 	template<class T> Array<BasicStringView<T>> BasicStringView<T>::split(const char delimiter) const {
 		Array<BasicStringView<T>> parts;

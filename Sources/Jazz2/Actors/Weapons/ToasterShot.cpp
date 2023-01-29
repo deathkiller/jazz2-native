@@ -8,7 +8,7 @@ namespace Jazz2::Actors::Weapons
 {
 	ToasterShot::ToasterShot()
 		:
-		_fired(false)
+		_fired(0)
 	{
 	}
 
@@ -86,8 +86,8 @@ namespace Jazz2::Actors::Weapons
 			}
 		}
 
-		if (!_fired) {
-			_fired = true;
+		_fired++;
+		if (_fired == 2) {
 			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
 			_renderer.setDrawEnabled(true);
 		}
@@ -102,18 +102,20 @@ namespace Jazz2::Actors::Weapons
 
 	void ToasterShot::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
-		auto& light1 = lights.emplace_back();
-		light1.Pos = _pos;
-		light1.Intensity = 0.85f;
-		light1.Brightness = 0.6f;
-		light1.RadiusNear = 0.0f;
-		light1.RadiusFar = 30.0f;
+		if (_fired >= 2) {
+			auto& light1 = lights.emplace_back();
+			light1.Pos = _pos;
+			light1.Intensity = 0.85f;
+			light1.Brightness = 0.6f;
+			light1.RadiusNear = 0.0f;
+			light1.RadiusFar = 30.0f;
 
-		auto& light2 = lights.emplace_back();
-		light2.Pos = _pos;
-		light2.Intensity = 0.2f;
-		light2.RadiusNear = 0.0f;
-		light2.RadiusFar = 140.0f;
+			auto& light2 = lights.emplace_back();
+			light2.Pos = _pos;
+			light2.Intensity = 0.2f;
+			light2.RadiusNear = 0.0f;
+			light2.RadiusFar = 140.0f;
+		}
 	}
 
 	void ToasterShot::OnRicochet()

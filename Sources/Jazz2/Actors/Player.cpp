@@ -1023,7 +1023,11 @@ namespace Jazz2::Actors
 		// but for falling sprites for some reason somewhere above the hotspot instead.
 		// It is absolutely important that the position of the hitbox stays constant
 		// to the hotspot, though; otherwise getting stuck at walls happens all the time.
-		AABBInner = AABBf(_pos.X - 11.0f, _pos.Y + 8.0f - 18.0f, _pos.X + 11.0f, _pos.Y + 8.0f + 12.0f);
+		if (_levelHandler->IsReforged()) {
+			AABBInner = AABBf(_pos.X - 11.0f, _pos.Y + 8.0f - 18.0f, _pos.X + 11.0f, _pos.Y + 8.0f + 12.0f);
+		} else {
+			AABBInner = AABBf(_pos.X - 10.0f, _pos.Y + 8.0f - 16.0f, _pos.X + 10.0f, _pos.Y + 8.0f + 12.0f);
+		}
 	}
 
 	bool Player::OnHandleCollision(std::shared_ptr<ActorBase> other)
