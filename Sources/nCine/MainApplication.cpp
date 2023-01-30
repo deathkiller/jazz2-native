@@ -120,6 +120,8 @@ static bool EnableVirtualTerminalProcessing()
 
 #elif defined(NCINE_LOG) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
 
+#include <unistd.h>
+
 bool _hasVirtualTerminal;
 
 #endif
@@ -131,10 +133,6 @@ namespace nCine
 		static MainApplication instance;
 		return instance;
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	int MainApplication::start(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
 	{
@@ -180,10 +178,6 @@ namespace nCine
 
 		return EXIT_SUCCESS;
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void MainApplication::init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
 	{
