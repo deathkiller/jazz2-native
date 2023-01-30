@@ -8,7 +8,7 @@
 #	include "nCine/Backends/Uwp/UwpApplication.h"
 #else
 #	include "nCine/MainApplication.h"
-#	if defined(DEATH_TARGET_UNIX)
+#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 #		include <unistd.h>
 #	endif
 #endif
