@@ -34,6 +34,10 @@
 #include "Jazz2/Compatibility/JJ2Tileset.h"
 #include "Jazz2/Compatibility/EventConverter.h"
 
+#if defined(NCINE_LOG) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
+#	include "TermLogo.h"
+#endif
+
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 #	include "Jazz2/UI/DiscordRpcClient.h"
 #endif
@@ -994,6 +998,16 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdSh
 #else
 int main(int argc, char** argv)
 {
+#if defined(NCINE_LOG) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
+	bool hasVirtualTerminal = isatty(fileno(stdout));
+	if (hasVirtualTerminal) {
+		const char* term = ::getenv("TERM");
+		if (term != nullptr && strcmp(term, "xterm-256color") == 0) {
+			fwrite(TermLogo, sizeof(unsigned char), _countof(TermLogo), stdout);
+		}
+	}
+#endif
+
 	return MainApplication::start([]() -> std::unique_ptr<IAppEventHandler> {
 		return std::make_unique<GameEventHandler>();
 	}, argc, argv);

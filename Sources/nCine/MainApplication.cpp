@@ -26,7 +26,7 @@
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
-bool showLogConsole_;
+bool _showLogConsole;
 
 static bool CreateLogConsole(const StringView& title)
 {
@@ -118,6 +118,10 @@ static bool EnableVirtualTerminalProcessing()
 	return true;
 }
 
+#elif defined(NCINE_LOG) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
+
+bool _hasVirtualTerminal;
+
 #endif
 
 namespace nCine
@@ -169,7 +173,7 @@ namespace nCine
 		app.shutdownCommon();
 
 #if defined(NCINE_LOG) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		if (showLogConsole_) {
+		if (_showLogConsole) {
 			DestroyLogConsole();
 		}
 #endif
@@ -190,21 +194,25 @@ namespace nCine
 		wasSuspended_ = shouldSuspend();
 
 #if defined(NCINE_LOG)
-#	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		showLogConsole_ = false;
+#	if defined(DEATH_TARGET_APPLE)
+		_hasVirtualTerminal = isatty(fileno(stdout));
+#	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+		_showLogConsole = false;
 		for (int i = 0; i < argc; i++) {
 			if (wcscmp(argv[i], L"/log") == 0) {
-				showLogConsole_ = true;
+				_showLogConsole = true;
 				break;
 			}
 		}
-		if (showLogConsole_) {
+		if (_showLogConsole) {
 			CreateLogConsole(NCINE_APP_NAME ": Console");
 			EnableVirtualTerminalProcessing();
 		}
 #	elif defined(DEATH_TARGET_UNIX)
 		setvbuf(stdout, nullptr, _IONBF, 0);
 		setvbuf(stderr, nullptr, _IONBF, 0);
+
+		_hasVirtualTerminal = isatty(fileno(stdout));
 #	endif
 #endif
 

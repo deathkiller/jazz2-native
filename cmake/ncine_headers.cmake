@@ -148,6 +148,7 @@ list(APPEND HEADERS
 
 list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Common.h
+	${NCINE_SOURCE_DIR}/TermLogo.h
 	${NCINE_SOURCE_DIR}/Jazz2/AnimState.h
 	${NCINE_SOURCE_DIR}/Jazz2/ContentResolver.h
 	${NCINE_SOURCE_DIR}/Jazz2/ContentResolver.Shaders.h
