@@ -427,7 +427,7 @@ namespace nCine
 		const StringView vendor = gfxCapabilities.glInfoStrings().vendor;
 		const StringView renderer = gfxCapabilities.glInfoStrings().renderer;
 		// Some GPUs doesn't work with dynamic batch size, so disable it for now
-		if (vendor == "Imagination Technologies"_s && renderer == "PowerVR Rogue GE8300"_s) {
+		if (vendor == "Imagination Technologies"_s && (renderer == "PowerVR Rogue GE8300"_s || renderer == "PowerVR Rogue GE8320"_s)) {
 			const StringView vendorPrefix = vendor.findOr(' ', vendor.end());
 			if (renderer.hasPrefix(vendor.prefix(vendorPrefix.begin()))) {
 				LOGW_X("Detected %s: Using fixed batch size", renderer.data());

@@ -49,7 +49,7 @@ namespace nCine
 			libdeflate_decompressor* Instance;
 		};
 
-		static thread_local LibdeflateStaticDecompressor _staticDecompressor;
+		static DEATH_THREAD_LOCAL LibdeflateStaticDecompressor _staticDecompressor;
 #endif
 	};
 }

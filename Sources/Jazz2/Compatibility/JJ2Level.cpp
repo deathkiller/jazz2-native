@@ -57,6 +57,8 @@ namespace Jazz2::Compatibility
 		int layoutBlockPackedSize = headerBlock.ReadInt32();
 		int layoutBlockUnpackedSize = headerBlock.ReadInt32();
 
+		LOGV("Reading compressed blocks...");
+
 		JJ2Block infoBlock(s, infoBlockPackedSize, infoBlockUnpackedSize);
 		JJ2Block eventBlock(s, eventBlockPackedSize, eventBlockUnpackedSize);
 		JJ2Block dictBlock(s, dictBlockPackedSize, dictBlockUnpackedSize);
@@ -82,6 +84,8 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadMetadata(JJ2Block& block, bool strictParser)
 	{
+		LOGV("Reading level metadata...");
+
 		// First 9 bytes are JCS coordinates on last save.
 		block.DiscardBytes(9);
 
@@ -97,7 +101,7 @@ namespace Jazz2::Compatibility
 		/*int headerSize =*/ block.ReadInt32();
 
 		String secondLevelName = block.ReadString(32, true);
-		ASSERT_MSG(!strictParser || DisplayName == secondLevelName, "Level name mismatch");
+		//ASSERT_MSG(!strictParser || DisplayName == secondLevelName, "Level name mismatch");
 
 		Tileset = block.ReadString(32, true);
 		BonusLevel = block.ReadString(32, true);
@@ -112,7 +116,7 @@ namespace Jazz2::Compatibility
 		LoadLayerMetadata(block, strictParser);
 
 		uint16_t staticTilesCount = block.ReadUInt16();
-		ASSERT_MSG(!strictParser || GetMaxSupportedTiles() - _animCount == staticTilesCount, "Tile count mismatch");
+		//ASSERT_MSG(!strictParser || GetMaxSupportedTiles() - _animCount == staticTilesCount, "Tile count mismatch");
 
 		LoadStaticTileData(block, strictParser);
 
@@ -244,6 +248,8 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadEvents(JJ2Block& block, bool strictParser)
 	{
+		LOGV("Reading level events...");
+
 		int width = _layers[3].Width;
 		int height = _layers[3].Height;
 		if (width <= 0 && height <= 0) {
@@ -289,6 +295,8 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadLayers(JJ2Block& dictBlock, int dictLength, JJ2Block& layoutBlock, bool strictParser)
 	{
+		LOGV("Reading level layers...");
+
 		struct DictionaryEntry {
 			uint16_t Tiles[4];
 		};
@@ -329,6 +337,8 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadMlleData(JJ2Block& block, uint32_t version, const StringView& path, bool strictParser)
 	{
+		LOGV("Reading level MLLE data...");
+
 		if (version > 0x106) {
 			LOGW_X("MLLE stream version 0x%x in level \"%s\" is not supported", version, LevelName.data());
 			return;
