@@ -5,7 +5,8 @@
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <fileapi.h>
-#	include <Shlobj.h>
+#	include <shellapi.h>
+#	include <shlobj.h>
 #	include <timezoneapi.h>
 #else
 #	include <cerrno>
