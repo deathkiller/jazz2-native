@@ -4,6 +4,10 @@
 
 #if defined(DEATH_TARGET_WINDOWS)
 
+#if defined(_INC_WINDOWS)
+#	error <windows.h> cannot be included directly, include <CommonWindows.h> instead
+#endif
+
 // Undefine `min`/`max` macros, use `std::min`/`std::max` instead
 #if !defined(NOMINMAX)
 #	define NOMINMAX

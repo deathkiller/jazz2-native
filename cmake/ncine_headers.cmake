@@ -9,7 +9,6 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/IntrinsicsSse3.h
 	${NCINE_SOURCE_DIR}/Shared/IntrinsicsSse4.h
 	${NCINE_SOURCE_DIR}/Shared/IntrinsicsSsse3.h
-	${NCINE_SOURCE_DIR}/Shared/HttpRequest.h
 	${NCINE_SOURCE_DIR}/Shared/Utf8.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/Array.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/ArrayView.h
@@ -20,6 +19,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Containers/String.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringStlView.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringView.h
+	${NCINE_SOURCE_DIR}/Shared/IO/HttpRequest.h
 )
 
 list(APPEND HEADERS

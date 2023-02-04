@@ -78,6 +78,12 @@ namespace Death::Containers
 	*/
 	constexpr AllocatedInitT AllocatedInit { AllocatedInitT::Init{} };
 
+	/**
+		@brief String
+
+		A lightweight non-templated alternative to @ref std::string with support for custom deleters. A non-owning version
+		of this container is a @ref StringView and a @ref MutableStringView, implemented using a generic @ref BasicStringView.
+	*/
 	class String
 	{
 	public:

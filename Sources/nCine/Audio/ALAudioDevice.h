@@ -6,6 +6,7 @@
 #include "IAudioDevice.h"
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#	include <CommonWindows.h>
 #	include <mmdeviceapi.h>
 #	include <audiopolicy.h>
 #endif
