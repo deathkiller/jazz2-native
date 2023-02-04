@@ -2,6 +2,8 @@
 
 #include "../../Graphics/IGfxDevice.h"
 
+#include <CommonWindows.h>
+
 #ifdef GetCurrentTime
 #	undef GetCurrentTime
 #endif

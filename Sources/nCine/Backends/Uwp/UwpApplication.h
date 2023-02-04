@@ -2,6 +2,8 @@
 
 #include "../../Application.h"
 
+#include <CommonWindows.h>
+
 #ifdef GetCurrentTime
 #	undef GetCurrentTime
 #endif
