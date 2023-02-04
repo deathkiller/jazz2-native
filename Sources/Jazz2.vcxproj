@@ -220,7 +220,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\String.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringView.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Environment.h" />
-    <ClInclude Include="$(ExtensionLibraryPath)\HttpRequest.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\HttpRequest.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringStlView.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Jazz2\Actors\ActorBase.h" />

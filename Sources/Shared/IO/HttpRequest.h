@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CommonBase.h"
+#include "../CommonBase.h"
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 
@@ -12,8 +12,8 @@
 #include <string>
 #include <type_traits>
 
-#include "Containers/SmallVector.h"
-#include "Containers/String.h"
+#include "../Containers/SmallVector.h"
+#include "../Containers/String.h"
 
 #if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
 #	pragma push_macro("WIN32_LEAN_AND_MEAN")
@@ -923,7 +923,7 @@ namespace Death::Http
 		Response Send(const Containers::StringView& method = "GET",
 					  const std::chrono::milliseconds timeout = std::chrono::milliseconds { -1 })
 		{
-			SmallVector<HeaderField, 0> headerFields;
+			Containers::SmallVector<HeaderField, 0> headerFields;
 			return Send(method, Containers::ArrayView<uint8_t>(), headerFields, timeout);
 		}
 
@@ -1052,7 +1052,7 @@ namespace Death::Http
 						// RFC 7230, 4.1. Chunked Transfer Coding
 						while (true) {
 							if (expectedChunkSize > 0) {
-								const auto toWrite = (std::min)(expectedChunkSize, responseData.size());
+								const auto toWrite = std::min(expectedChunkSize, responseData.size());
 								response.body.insert(response.body.end(), responseData.begin(), responseData.begin() + static_cast<std::ptrdiff_t>(toWrite));
 								responseData.erase(responseData.begin(), responseData.begin() + static_cast<std::ptrdiff_t>(toWrite));
 								expectedChunkSize -= toWrite;

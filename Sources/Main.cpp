@@ -47,7 +47,7 @@
 #endif
 
 #include <Environment.h>
-#include <HttpRequest.h>
+#include <IO/HttpRequest.h>
 
 using namespace nCine;
 using namespace Jazz2;

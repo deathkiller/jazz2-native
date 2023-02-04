@@ -40,14 +40,20 @@ namespace Death::Containers
 		template<class> struct ErasedArrayViewConverter;
 	}
 
+	/**
+		@brief Array view
+
+		A non-owning wrapper around a sized continuous range of data, similar to a dynamic @ref std::span from C++20.
+		For a variant with compile-time size information see @ref StaticArrayView, for sparse and multi-dimensional views
+		see @ref StridedArrayView, for efficient bit manipulation see @ref BasicBitArrayView "BitArrayView". An owning
+		version of this container is an @ref Array.
+	*/
 	template<class T> class ArrayView
 	{
 	public:
 		typedef T Type;
 
-		constexpr /*implicit*/ ArrayView(std::nullptr_t) noexcept : _data(nullptr), _size(0) {}
-
-		constexpr /*implicit*/ ArrayView() noexcept : _data(nullptr), _size(0) {}
+		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept : _data {}, _size {} {}
 
 		constexpr /*implicit*/ ArrayView(T* data, std::size_t size) noexcept : _data(data), _size(size) {}
 
@@ -151,14 +157,21 @@ namespace Death::Containers
 		std::size_t _size;
 	};
 
+	/**
+		@brief Void array view
+
+		Specialization of @ref ArrayView which is convertible from a compile-time array, @ref Array, @ref ArrayView
+		or @ref StaticArrayView of any non-constant type and also any non-constant type convertible to them. Size
+		for a particular type is recalculated to a size in bytes. This specialization doesn't provide any accessors
+		besides @ref data(), because it has no use for the @cpp void @ce type. Instead, use @ref arrayCast(ArrayView<void>)
+		to first cast the array to a concrete type and then access the particular elements.
+	*/
 	template<> class ArrayView<void>
 	{
 	public:
 		typedef void Type;
 
-		constexpr /*implicit*/ ArrayView(std::nullptr_t) noexcept : _data(nullptr), _size(0) {}
-
-		constexpr /*implicit*/ ArrayView() noexcept : _data(nullptr), _size(0) {}
+		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept : _data {}, _size {} {}
 
 		constexpr /*implicit*/ ArrayView(void* data, std::size_t size) noexcept : _data(data), _size(size) {}
 
@@ -205,14 +218,21 @@ namespace Death::Containers
 		std::size_t _size;
 	};
 
+	/**
+		@brief Constant void array view
+
+		Specialization of @ref ArrayView which is convertible from a compile-time array, @ref Array, @ref ArrayView
+		or @ref StaticArrayView of any type and also any type convertible to them. Size for a particular type is recalculated
+		to a size in bytes. This specialization doesn't provide any accessors besides @ref data(), because it has no use
+		for the @cpp void @ce type. Instead, use @ref arrayCast(ArrayView<const void>) to first cast the array to a concrete
+		type and then access the particular elements.
+	*/
 	template<> class ArrayView<const void>
 	{
 	public:
 		typedef const void Type;
 
-		constexpr /*implicit*/ ArrayView(std::nullptr_t) noexcept : _data(nullptr), _size(0) {}
-
-		constexpr /*implicit*/ ArrayView() noexcept : _data(nullptr), _size(0) {}
+		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept : _data {}, _size {} {}
 
 		constexpr /*implicit*/ ArrayView(const void* data, std::size_t size) noexcept : _data(data), _size(size) {}
 
@@ -319,6 +339,13 @@ namespace Death::Containers
 		template<class> struct ErasedStaticArrayViewConverter;
 	}
 
+	/**
+		@brief Compile-time-sized array view
+
+		Like @ref ArrayView, but with compile-time size information. Similar to a fixed-size @ref std::span from C++2a.
+		Implicitly convertible to an @ref ArrayView, explicitly convertible from it using the slicing APIs. An owning
+		version of this container is a @ref StaticArray.
+	*/
 	template<std::size_t size_, class T> class StaticArrayView
 	{
 	public:
@@ -328,9 +355,7 @@ namespace Death::Containers
 			Size = size_
 		};
 
-		constexpr /*implicit*/ StaticArrayView(std::nullptr_t) noexcept : _data(nullptr) {}
-
-		constexpr /*implicit*/ StaticArrayView() noexcept : _data(nullptr) {}
+		constexpr /*implicit*/ StaticArrayView(std::nullptr_t = nullptr) noexcept : _data {} {}
 
 		template<class U, class = typename std::enable_if<std::is_pointer<U>::value && !std::is_same<U, T(&)[size_]>::value>::type> constexpr explicit StaticArrayView(U data)
 			noexcept : _data(data) {}

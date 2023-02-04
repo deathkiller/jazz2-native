@@ -54,7 +54,7 @@ namespace Death::Utf8
 		// MBtoWC counts the trailing \0 into the size, which we have to cut. It also can't be called with a zero size
 		// for some stupid reason, in that case just set the result size to zero. We can't just `return {}`,
 		// because the output array is guaranteed to be a pointer to a null-terminated string.
-		const size_t lengthNeeded = (size == 0 ? 0 : ::MultiByteToWideChar(CP_UTF8, 0, text, size, nullptr, 0) - (size == -1 ? 1 : 0));
+		const std::size_t lengthNeeded = (size == 0 ? 0 : ::MultiByteToWideChar(CP_UTF8, 0, text, size, nullptr, 0) - (size == -1 ? 1 : 0));
 
 		// Create the array with a sentinel null terminator. If size is zero, this is just a single null terminator.
 		Containers::Array<wchar_t> result { Containers::NoInit, lengthNeeded + 1 };

@@ -132,6 +132,17 @@ namespace Death::Containers
 		}
 	}
 
+	/**
+		@brief Array
+		@tparam T   Element type
+		@tparam D   Deleter type. Defaults to pointer to a @cpp void(T*, std::size_t) @ce function, where first is array pointer and second array size.
+
+		A RAII owning wrapper around a plain C array. A lighter alternative to @ref std::vector that's deliberately
+		move-only to avoid accidental copies of large memory blocks. For a variant with compile-time size information
+		see @ref StaticArray. A non-owning version of this container is an @ref ArrayView.
+
+		The array has a non-changeable size by default and growing functionality is opt-in.
+	*/
 	template<class T, class D> class Array
 	{
 	public:

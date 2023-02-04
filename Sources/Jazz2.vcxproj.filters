@@ -193,6 +193,9 @@
     <Filter Include="Header Files\simdjson">
       <UniqueIdentifier>{621d85ca-60da-49b4-837b-679843d39ca2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Shared\IO">
+      <UniqueIdentifier>{0bf9b192-885e-4de8-a0a3-b8b346fa6b8e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1179,9 +1182,6 @@
     <ClInclude Include="Jazz2\Actors\Enemies\Bosses\Bolly.h">
       <Filter>Header Files\Jazz2\Actors\Enemies\Bosses</Filter>
     </ClInclude>
-    <ClInclude Include="$(ExtensionLibraryPath)\HttpRequest.h">
-      <Filter>Header Files\Shared</Filter>
-    </ClInclude>
     <ClInclude Include="nCine\Backends\GlfwInputManager.h">
       <Filter>Header Files\nCine\Backends</Filter>
     </ClInclude>
@@ -1283,6 +1283,9 @@
     </ClInclude>
     <ClInclude Include="nCine\Threading\Atomic.h">
       <Filter>Header Files\nCine\Threading</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\HttpRequest.h">
+      <Filter>Header Files\Shared\IO</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

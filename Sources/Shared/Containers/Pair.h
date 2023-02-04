@@ -34,6 +34,17 @@ namespace Death::Containers
 		template<class, class, class> struct PairConverter;
 	}
 
+	/**
+		@brief Pair of values
+
+		An alternative to @ref std::pair that is trivially copyable for trivial types, provides move semantics consistent
+		across standard library implementations and guarantees usability in @cpp constexpr @ce contexts even in C++11.
+		On the other hand, to simplify both the implementation and usage semantics, the type doesn't support
+		references --- wrap them in a @ref Reference in order to store them in a @ref Pair. Such type composition allows
+		you to both rebind the reference and update the referenced value and the intent is clear.
+
+		Similarly to other containers and equivalently to @ref std::make_pair(), there's also @ref pair().
+	*/
 	template<class F, class S> class Pair
 	{
 		static_assert(!std::is_lvalue_reference<F>::value && !std::is_lvalue_reference<S>::value, "use a Reference<T> to store a T& in a Pair");

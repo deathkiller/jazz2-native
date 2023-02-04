@@ -66,11 +66,11 @@ namespace Death::Containers
 		};
 	}
 
-
 	/**
-		A lighter alternative to C++17 @ref std::string_view that has also a mutable
-		variant and additional optimizations for reducing unnecessary copies and
-		allocations. An owning version of this container is a @ref String.
+		@brief Base for string views
+
+		A lighter alternative to C++17 @ref std::string_view that has also a mutable variant and additional optimizations
+		for reducing unnecessary copies and allocations. An owning version of this container is a @ref String.
 	*/
 	template<class T> class BasicStringView
 	{
@@ -747,7 +747,16 @@ namespace Death::Containers
 		std::size_t _sizePlusFlags;
 	};
 
+	/**
+		@brief String view
+
+		Immutable, use @ref MutableStringView for mutable access.
+	*/
 	typedef BasicStringView<const char> StringView;
+
+	/**
+		@brief Mutable string view
+	*/
 	typedef BasicStringView<char> MutableStringView;
 
 	bool operator==(StringView a, StringView b);
