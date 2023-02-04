@@ -1,5 +1,4 @@
-﻿#define _WINSOCKAPI_	// To prevent include "winsock.h"
-#include "Common.h"
+﻿#include "Common.h"
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "nCine/Backends/Android/AndroidApplication.h"

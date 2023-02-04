@@ -116,7 +116,7 @@ jobs:
           * ) exit 1 ;;
         esac
         
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_BUILD_ANDROID=ON -D NCINE_UNIVERSAL_APK="$universalApk" -D NCINE_NDK_ARCHITECTURES="$architecture" -D NCINE_WITH_FIXED_BATCH_SIZE=10
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_BUILD_ANDROID=ON -D NCINE_UNIVERSAL_APK="$universalApk" -D NCINE_NDK_ARCHITECTURES="$architecture" -D NCINE_DEBUG=ON -D NCINE_WITH_FIXED_BATCH_SIZE=10
 
     - name: 'Build'
       run: |

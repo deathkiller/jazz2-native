@@ -5,7 +5,7 @@
 namespace nCine
 {
 #if !defined(WITH_ZLIB)
-	thread_local CompressionUtils::LibdeflateStaticDecompressor CompressionUtils::_staticDecompressor;
+	DEATH_THREAD_LOCAL CompressionUtils::LibdeflateStaticDecompressor CompressionUtils::_staticDecompressor;
 #endif
 
 	int32_t CompressionUtils::Deflate(const uint8_t* srcBuffer, int32_t srcSize, uint8_t* destBuffer, int32_t destSize)

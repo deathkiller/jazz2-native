@@ -344,7 +344,7 @@
 #endif
 
 /** @brief Thread-local annotation */
-#if defined(__has_feature)
+#if defined(DEATH_TARGET_APPLE) && defined(__has_feature)
 #	if !__has_feature(cxx_thread_local) /* Apple Clang 7.3 says false here */
 #		define DEATH_THREAD_LOCAL __thread
 #	endif
