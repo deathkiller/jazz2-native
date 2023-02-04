@@ -96,7 +96,7 @@ namespace Death::Environment
 
 		char* line = nullptr;
 		std::size_t length = 0;
-		std::ssize_t read;
+		ssize_t read;
 		while ((read = ::getline(&line, &length, fp)) != -1) {
 			if (strncmp(line, "PRETTY_NAME=", sizeof("PRETTY_NAME=") - 1) == 0) {
 				char* versionStart = line + sizeof("PRETTY_NAME=") - 1;
