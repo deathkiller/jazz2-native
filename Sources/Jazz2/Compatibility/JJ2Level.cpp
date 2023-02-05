@@ -128,6 +128,8 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadStaticTileData(JJ2Block& block, bool strictParser)
 	{
+		LOGV("Reading level static tiles...");
+	
 		int tileCount = GetMaxSupportedTiles();
 		_staticTiles = std::make_unique<TilePropertiesSection[]>(tileCount);
 
@@ -151,6 +153,8 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadAnimatedTiles(JJ2Block& block, bool strictParser)
 	{
+		LOGV("Reading level animated tiles...");
+		
 		_animatedTiles = std::make_unique<AnimatedTileSection[]>(_animCount);
 
 		for (int i = 0; i < _animCount; i++) {
@@ -170,6 +174,8 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadLayerMetadata(JJ2Block& block, bool strictParser)
 	{
+		LOGV("Reading level layer metadata...");
+	
 		_layers.resize_for_overwrite(JJ2LayerCount);
 
 		for (int i = 0; i < JJ2LayerCount; i++) {

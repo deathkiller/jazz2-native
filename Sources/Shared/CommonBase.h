@@ -113,7 +113,9 @@
 #	endif
 #endif
 
-#if defined(__MINGW32__)
+#if defined(__CYGWIN__)
+#	define DEATH_TARGET_CYGWIN
+#elif defined(__MINGW32__)
 #	define DEATH_TARGET_MINGW
 #endif
 
