@@ -15,7 +15,7 @@
 #include "../Containers/SmallVector.h"
 #include "../Containers/String.h"
 
-#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_CYGWIN)
 #	pragma push_macro("WIN32_LEAN_AND_MEAN")
 #	pragma push_macro("NOMINMAX")
 #	if !defined(WIN32_LEAN_AND_MEAN)
@@ -146,7 +146,7 @@ namespace Death::Http
 		Containers::SmallVector<std::uint8_t, 0> body;
 	};
 
-#if defined(_WIN32) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_CYGWIN)
 	class WinSock final
 	{
 	public:
@@ -192,7 +192,7 @@ namespace Death::Http
 
 	inline int GetLastError() noexcept
 	{
-#if defined(_WIN32) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_CYGWIN)
 		return WSAGetLastError();
 #else
 		return errno;
@@ -207,7 +207,7 @@ namespace Death::Http
 	class Socket final
 	{
 	public:
-#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_CYGWIN)
 		using Type = SOCKET;
 		static constexpr Type invalid = INVALID_SOCKET;
 #else
@@ -222,7 +222,7 @@ namespace Death::Http
 				return;
 			}
 
-#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_CYGWIN)
 			ULONG mode = 1;
 			if (ioctlsocket(endpoint, FIONBIO, &mode) != 0) {
 				Close();
@@ -280,7 +280,7 @@ namespace Death::Http
 				return false;
 			}
 
-#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_CYGWIN)
 			auto result = ::connect(endpoint, address, addressSize);
 			while (result == -1 && WSAGetLastError() == WSAEINTR) {
 				result = ::connect(endpoint, address, addressSize);
@@ -328,7 +328,7 @@ namespace Death::Http
 			if (!Select(SelectType::Write, timeout)) {
 				return 0;
 			}
-#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_CYGWIN)
 			auto result = ::send(endpoint, reinterpret_cast<const char*>(buffer), static_cast<int>(length), 0);
 			while (result == -1 && WSAGetLastError() == WSAEINTR) {
 				result = ::send(endpoint, reinterpret_cast<const char*>(buffer), static_cast<int>(length), 0);
@@ -347,7 +347,7 @@ namespace Death::Http
 			if (!Select(SelectType::Read, timeout)) {
 				return 0;
 			}
-#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_CYGWIN)
 			auto result = ::recv(endpoint, reinterpret_cast<char*>(buffer), static_cast<int>(length), 0);
 			while (result == -1 && WSAGetLastError() == WSAEINTR) {
 				result = ::recv(endpoint, reinterpret_cast<char*>(buffer), static_cast<int>(length), 0);
@@ -378,7 +378,7 @@ namespace Death::Http
 			FD_ZERO(&descriptorSet);
 			FD_SET(endpoint, &descriptorSet);
 
-#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_CYGWIN)
 			TIMEVAL selectTimeout {
 				static_cast<LONG>(timeout / 1000),
 				static_cast<LONG>((timeout % 1000) * 1000)
@@ -434,14 +434,14 @@ namespace Death::Http
 
 		void Close() noexcept
 		{
-#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_CYGWIN)
 			closesocket(endpoint);
 #else
 			::close(endpoint);
 #endif
 		}
 
-#if defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_APPLE) && !defined(__CYGWIN__)
+#if defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_CYGWIN)
 		static constexpr int noSignal = MSG_NOSIGNAL;
 #else
 		static constexpr int noSignal = 0;
@@ -1096,7 +1096,7 @@ namespace Death::Http
 		}
 
 	private:
-#if defined(DEATH_TARGET_WINDOWS) || defined(__CYGWIN__)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_CYGWIN)
 		WinSock winSock;
 #endif
 		InternetProtocol internetProtocol;
