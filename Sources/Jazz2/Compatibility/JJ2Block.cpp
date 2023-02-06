@@ -7,9 +7,7 @@
 namespace Jazz2::Compatibility
 {
 	JJ2Block::JJ2Block(const std::unique_ptr<IFileStream>& s, int32_t length, int32_t uncompressedLength)
-		:
-		_length(0),
-		_offset(0)
+		: _length(0), _offset(0)
 	{
 		std::unique_ptr<uint8_t[]> tmpBuffer = std::make_unique<uint8_t[]>(length);
 		s->Read(tmpBuffer.get(), length);
@@ -57,7 +55,7 @@ namespace Jazz2::Compatibility
 
 	int16_t JJ2Block::ReadInt16()
 	{
-		if (_offset + 2 > _length) {
+		if (_offset > _length - 2) {
 			_offset = INT32_MAX;
 			return false;
 		}
@@ -69,7 +67,7 @@ namespace Jazz2::Compatibility
 
 	uint16_t JJ2Block::ReadUInt16()
 	{
-		if (_offset + 2 > _length) {
+		if (_offset > _length - 2) {
 			_offset = INT32_MAX;
 			return false;
 		}
@@ -81,24 +79,30 @@ namespace Jazz2::Compatibility
 
 	int32_t JJ2Block::ReadInt32()
 	{
-		if (_offset + 4 > _length) {
+		LOGV("ReadInt32 01");
+		if (_offset > _length - 4) {
+			LOGV("ReadInt32 02");
 			_offset = INT32_MAX;
 			return false;
 		}
-
-		int32_t result = *(int32_t*)&_buffer[_offset];
+		LOGV("ReadInt32 03");
+		//int32_t result = *(int32_t*)&_buffer[_offset];
+		int32_t result = (int32_t)(_buffer[_offset] | (_buffer[_offset + 1] << 8) | (_buffer[_offset + 2] << 16) | (_buffer[_offset + 3] << 24));
+		LOGV("ReadInt32 04");
 		_offset += 4;
+		LOGV("ReadInt32 05");
 		return result;
 	}
 
 	uint32_t JJ2Block::ReadUInt32()
 	{
-		if (_offset + 4 > _length) {
+		if (_offset > _length - 4) {
 			_offset = INT32_MAX;
 			return false;
 		}
 
-		uint32_t result = *(uint32_t*)&_buffer[_offset];
+		//uint32_t result = *(uint32_t*)&_buffer[_offset];
+		uint32_t result = _buffer[_offset] | (_buffer[_offset + 1] << 8) | (_buffer[_offset + 2] << 16) | (_buffer[_offset + 3] << 24);
 		_offset += 4;
 		return result;
 	}
@@ -128,7 +132,7 @@ namespace Jazz2::Compatibility
 
 	float JJ2Block::ReadFloat()
 	{
-		if (_offset + 4 > _length) {
+		if (_offset > _length - 4) {
 			_offset = INT32_MAX;
 			return false;
 		}
@@ -140,7 +144,7 @@ namespace Jazz2::Compatibility
 
 	float JJ2Block::ReadFloatEncoded()
 	{
-		return (ReadInt32() * 1.0f / 65536.0f);
+		return ((float)ReadInt32() / 65536.0f);
 	}
 
 	void JJ2Block::ReadRawBytes(uint8_t* dst, int32_t length)
