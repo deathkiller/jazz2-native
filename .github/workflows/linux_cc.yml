@@ -31,7 +31,7 @@ jobs:
     runs-on: 'ubuntu-latest'
 
     steps:
-    - name: 'Checkout Code'
+    - name: 'Checkout Repository'
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
@@ -77,4 +77,3 @@ jobs:
       with:
         name: Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}
         path: ./_package/
-        

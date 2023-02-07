@@ -47,7 +47,7 @@ jobs:
     runs-on: 'windows-latest'
 
     steps:
-    - name: 'Checkout Code'
+    - name: 'Checkout Repository'
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
@@ -98,4 +98,3 @@ jobs:
       with:
         name: Jazz2_Windows_${{ matrix.Platform }}_${{ matrix.ArchExts }}_${{ matrix.Backend }}
         path: ./_package/
-        

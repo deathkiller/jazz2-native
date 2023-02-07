@@ -214,9 +214,6 @@ if(MSVC)
 
 	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 		target_compile_options(${NCINE_APP} PRIVATE -Wno-switch -Wno-unknown-pragmas -Wno-reorder-ctor -Wno-braced-scalar-init -Wno-deprecated-builtins)
-
-		# Suppress "warning : ignoring invalid /arch: argument ..."
-		target_link_options(${NCINE_APP} PRIVATE -Wno-unused-command-line-argument)
 	endif()
 else() # GCC and LLVM
 	target_compile_options(${NCINE_APP} PRIVATE -fno-exceptions)

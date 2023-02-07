@@ -112,9 +112,9 @@ namespace nCine
 		explicit AudioStream(const StringView& filename);
 
 		/// Default move constructor
-		AudioStream(AudioStream&&) noexcept;
+		AudioStream(AudioStream&&);
 		/// Default move assignment operator
-		AudioStream& operator=(AudioStream&&) noexcept;
+		AudioStream& operator=(AudioStream&&);
 
 		bool loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		bool loadFromFile(const StringView& filename);
