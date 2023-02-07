@@ -13,16 +13,9 @@
 namespace Jazz2::UI::Menu
 {
 	MainMenu::MainMenu(IRootController* root, bool afterIntro)
-		:
-		_root(root),
-		_activeCanvas(ActiveCanvas::Background),
-		_transitionWhite(afterIntro ? 1.0f : 0.0f),
-		_logoTransition(0.0f),
-		_texturedBackgroundPass(this),
-		_texturedBackgroundPhase(0.0f),
-		_pressedKeys((uint32_t)KeySym::COUNT),
-		_pressedActions(0),
-		_touchButtonsTimer(0.0f)
+		: _root(root), _activeCanvas(ActiveCanvas::Background), _transitionWhite(afterIntro ? 1.0f : 0.0f),
+			_logoTransition(0.0f), _texturedBackgroundPass(this), _texturedBackgroundPhase(0.0f),
+			_pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0), _touchButtonsTimer(0.0f)
 	{
 		theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection"_s);
 

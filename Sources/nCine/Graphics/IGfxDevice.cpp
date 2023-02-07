@@ -69,7 +69,7 @@ namespace nCine
 
 	IGfxDevice::IGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
 		: drawableWidth_(windowMode.width), drawableHeight_(windowMode.height), width_(windowMode.width), height_(windowMode.height),
-		  glContextInfo_(glContextInfo), isFullscreen_(windowMode.isFullscreen), displayMode_(displayMode), numMonitors_(0)
+			glContextInfo_(glContextInfo), isFullscreen_(windowMode.isFullscreen), displayMode_(displayMode), numMonitors_(0)
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		double cssWidth = 0.0;

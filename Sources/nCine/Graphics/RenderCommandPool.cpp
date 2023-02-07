@@ -4,10 +4,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	RenderCommandPool::RenderCommandPool(unsigned int poolSize)
 	{
 		freeCommandsPool_.reserve(poolSize);
@@ -15,10 +11,6 @@ namespace nCine
 	}
 
 	RenderCommandPool::~RenderCommandPool() = default;
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	RenderCommand* RenderCommandPool::add()
 	{

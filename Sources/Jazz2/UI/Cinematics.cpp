@@ -14,15 +14,8 @@
 namespace Jazz2::UI
 {
 	Cinematics::Cinematics(IRootController* root, const String& path, const std::function<bool(IRootController*, bool)>& callback)
-		:
-		_root(root),
-		_callback(callback),
-		_frameDelay(0.0f),
-		_frameProgress(0.0f),
-		_framesLeft(0),
-		_currentOffsets { },
-		_pressedKeys((uint32_t)KeySym::COUNT),
-		_pressedActions(0)
+		: _root(root), _callback(callback), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0),
+			_currentOffsets { }, _pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0)
 	{
 		theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection"_s);
 

@@ -51,10 +51,6 @@ namespace nCine
 		//}
 	}
 
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	const unsigned int JoyMapping::MaxNameLength;
 
 	const char* JoyMapping::AxesStrings[] = {
@@ -94,10 +90,6 @@ namespace nCine
 	JoyMappedButtonEvent JoyMapping::mappedButtonEvent_;
 	JoyMappedAxisEvent JoyMapping::mappedAxisEvent_;
 
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS AND DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	JoyMapping::MappingDescription::MappingDescription()
 	{
 		for (unsigned int i = 0; i < MaxNumAxes; i++) {
@@ -126,10 +118,6 @@ namespace nCine
 			assignedMappings_[i].isValid = false;
 		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void JoyMapping::init(const IInputManager* inputManager)
 	{
@@ -533,10 +521,6 @@ namespace nCine
 		}
 		return guid;
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void JoyMapping::checkConnectedJoystics()
 	{

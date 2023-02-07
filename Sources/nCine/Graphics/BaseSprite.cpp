@@ -2,15 +2,10 @@
 #include "RenderCommand.h"
 #include "../tracy.h"
 
-namespace nCine {
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
+namespace nCine
+{
 	BaseSprite::BaseSprite(SceneNode* parent, Texture* texture, float xx, float yy)
-		: DrawableNode(parent, xx, yy), texture_(texture), texRect_(0, 0, 0, 0),
-		flippedX_(false), flippedY_(false), instanceBlock_(nullptr)
+		: DrawableNode(parent, xx, yy), texture_(texture), texRect_(0, 0, 0, 0), flippedX_(false), flippedY_(false), instanceBlock_(nullptr)
 	{
 		renderCommand_.material().setBlendingEnabled(true);
 	}
@@ -20,17 +15,15 @@ namespace nCine {
 	{
 	}
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	void BaseSprite::setSize(float width, float height)
 	{
 		// Update anchor points when size changes
-		if (anchorPoint_.X != 0.0f)
+		if (anchorPoint_.X != 0.0f) {
 			anchorPoint_.X = (anchorPoint_.X / width_) * width;
-		if (anchorPoint_.Y != 0.0f)
+		}
+		if (anchorPoint_.Y != 0.0f) {
 			anchorPoint_.Y = (anchorPoint_.Y / height_) * height;
+		}
 
 		width_ = width;
 		height_ = height;
@@ -94,19 +87,11 @@ namespace nCine {
 		}
 	}
 
-	///////////////////////////////////////////////////////////
-	// PROTECTED FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	BaseSprite::BaseSprite(const BaseSprite& other)
 		: DrawableNode(other), texture_(other.texture_), texRect_(other.texRect_),
 		flippedX_(other.flippedX_), flippedY_(other.flippedY_), instanceBlock_(nullptr)
 	{
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void BaseSprite::shaderHasChanged()
 	{
@@ -167,5 +152,4 @@ namespace nCine {
 			dirtyBits_.reset(DirtyBitPositions::TextureBit);
 		}
 	}
-
 }

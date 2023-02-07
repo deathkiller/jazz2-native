@@ -2,8 +2,6 @@
 
 #include <Common.h>
 
-#include <cstdint>
-
 namespace nCine
 {
 	/// The class interfacing with the system clock

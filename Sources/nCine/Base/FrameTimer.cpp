@@ -5,22 +5,12 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
-	/*! Constructs a timer which calculates average FPS every `avgInterval`
-	 *  seconds and writes to the log every `logInterval` seconds. */
 	FrameTimer::FrameTimer(float logInterval, float avgInterval)
 		: logInterval_(logInterval), avgInterval_(avgInterval), lastAvgUpdate_(TimeStamp::now()),
 		totNumFrames_(0L), avgNumFrames_(0L), logNumFrames_(0L), fps_(0.0f),
 		timeMult_(1.0f), timeMultPrev_(1.0f)
 	{
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void FrameTimer::addFrame()
 	{

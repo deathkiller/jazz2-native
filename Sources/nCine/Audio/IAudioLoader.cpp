@@ -11,8 +11,7 @@
 namespace nCine
 {
 	IAudioLoader::IAudioLoader(std::unique_ptr<IFileStream> fileHandle)
-		: hasLoaded_(false), fileHandle_(std::move(fileHandle)), bytesPerSample_(0),
-		numChannels_(0), frequency_(0), numSamples_(0L), duration_(0.0f)
+		: hasLoaded_(false), fileHandle_(std::move(fileHandle)), bytesPerSample_(0), numChannels_(0), frequency_(0), numSamples_(0L), duration_(0.0f)
 	{
 		// Warning: Cannot call a virtual `init()` here, in the base constructor
 	}

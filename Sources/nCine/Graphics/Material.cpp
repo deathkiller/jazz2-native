@@ -16,7 +16,7 @@ namespace nCine
 
 	Material::Material(GLShaderProgram* program, GLTexture* texture)
 		: isBlendingEnabled_(false), srcBlendingFactor_(GL_SRC_ALPHA), destBlendingFactor_(GL_ONE_MINUS_SRC_ALPHA),
-		shaderProgramType_(ShaderProgramType::CUSTOM), shaderProgram_(program), uniformsHostBufferSize_(0)
+			shaderProgramType_(ShaderProgramType::CUSTOM), shaderProgram_(program), uniformsHostBufferSize_(0)
 	{
 		for (unsigned int i = 0; i < GLTexture::MaxTextureUnits; i++) {
 			textures_[i] = nullptr;

@@ -4,21 +4,13 @@
 #include "GLDebug.h"
 #include "../../../Common.h"
 
-namespace nCine {
-
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
+namespace nCine
+{
 	unsigned int GLFramebuffer::readBoundBuffer_ = 0;
 	unsigned int GLFramebuffer::drawBoundBuffer_ = 0;
 
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	GLFramebuffer::GLFramebuffer()
-		: glHandle_(0)
+		: glHandle_(0), numDrawBuffers_(0)
 	{
 		glGenFramebuffers(1, &glHandle_);
 		GL_LOG_ERRORS();
@@ -26,18 +18,15 @@ namespace nCine {
 
 	GLFramebuffer::~GLFramebuffer()
 	{
-		if (readBoundBuffer_ == glHandle_)
+		if (readBoundBuffer_ == glHandle_) {
 			unbind(GL_READ_FRAMEBUFFER);
-		if (drawBoundBuffer_ == glHandle_)
+		}
+		if (drawBoundBuffer_ == glHandle_) {
 			unbind(GL_DRAW_FRAMEBUFFER);
-
+		}
 		glDeleteFramebuffers(1, &glHandle_);
 		GL_LOG_ERRORS();
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool GLFramebuffer::bind() const
 	{
@@ -74,12 +63,13 @@ namespace nCine {
 
 	bool GLFramebuffer::attachRenderbuffer(const char* label, GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment)
 	{
-		if (attachedRenderbuffers_.size() >= MaxRenderbuffers - 1)
+		if (attachedRenderbuffers_.size() >= MaxRenderbuffers - 1) {
 			return false;
-
+		}
 		for (unsigned int i = 0; i < attachedRenderbuffers_.size(); i++) {
-			if (attachedRenderbuffers_[i]->attachment() == attachment)
+			if (attachedRenderbuffers_[i]->attachment() == attachment) {
 				return false;
+			}
 		}
 
 		std::unique_ptr<GLRenderbuffer>& buffer = attachedRenderbuffers_.emplace_back(std::make_unique<GLRenderbuffer>(internalFormat, width, height));
@@ -146,16 +136,11 @@ namespace nCine {
 		GLDebug::objectLabel(GLDebug::LabelTypes::FrameBuffer, glHandle_, label);
 	}
 
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	bool GLFramebuffer::bindHandle(GLenum target, GLuint glHandle)
 	{
 		FATAL_ASSERT(target == GL_FRAMEBUFFER || target == GL_READ_FRAMEBUFFER || target == GL_DRAW_FRAMEBUFFER);
 
-		if (target == GL_FRAMEBUFFER &&
-			(readBoundBuffer_ != glHandle || drawBoundBuffer_ != glHandle)) {
+		if (target == GL_FRAMEBUFFER && (readBoundBuffer_ != glHandle || drawBoundBuffer_ != glHandle)) {
 			glBindFramebuffer(target, glHandle);
 			GL_LOG_ERRORS();
 			readBoundBuffer_ = glHandle;
@@ -174,5 +159,4 @@ namespace nCine {
 		}
 		return false;
 	}
-
 }

@@ -130,7 +130,7 @@ namespace Jazz2
 		void LimitCameraView(float left, float width) override;
 		void ShakeCameraView(float duration) override;
 		void SetWeather(WeatherType type, uint8_t intensity) override;
-		bool BeginPlayMusic(const StringView& path, bool setDefault = false, bool forceReload = false);
+		bool BeginPlayMusic(const StringView& path, bool setDefault = false, bool forceReload = false) override;
 
 		bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads = true) override;
 		bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;

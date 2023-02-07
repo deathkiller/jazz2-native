@@ -4,10 +4,7 @@
 namespace Jazz2::UI::Menu
 {
 	SoundsOptionsSection::SoundsOptionsSection()
-		:
-		_selectedIndex(0),
-		_animation(0.0f),
-		_isDirty(false)
+		: _selectedIndex(0), _animation(0.0f), _isDirty(false)
 	{
 		_items[(int)Item::MasterVolume].Name = _("Master Volume");
 		_items[(int)Item::SfxVolume].Name = _("SFX Volume");

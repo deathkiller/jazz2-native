@@ -36,10 +36,6 @@ namespace nCine
 		return instance;
 	}
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	void AndroidApplication::start(struct android_app* state, std::unique_ptr<IAppEventHandler>(*createAppEventHandler)())
 	{
 		ASSERT(state);
@@ -198,10 +194,6 @@ namespace nCine
 			AndroidJniWrap_InputMethodManager::toggleSoftInput();
 		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void AndroidApplication::preInit()
 	{

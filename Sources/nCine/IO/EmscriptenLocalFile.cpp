@@ -136,10 +136,6 @@ namespace nCine
 
 	}
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	void EmscriptenLocalFile::Load(const StringView& fileFilter, bool multiple, FileDataCallbackType fileDataCallback, FileCountCallbackType fileCountCallback, void* userData)
 	{
 		LoadFile(String::nullTerminatedView(fileFilter).data(), multiple, fileDataCallback, fileCountCallback, userData);

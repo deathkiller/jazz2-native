@@ -10,17 +10,13 @@
 #include <qevent.h>
 #include <QWidget>
 
-#ifdef WITH_QT5GAMEPAD
+#if defined(WITH_QT5GAMEPAD)
 #	include <QtGamepad/QGamepadManager>
 #	include <QtGamepad/QGamepad>
 #endif
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	const int IInputManager::MaxNumJoysticks = 4;
 
 	TouchEvent Qt5InputManager::touchEvent_;
@@ -32,7 +28,7 @@ namespace nCine
 	TextInputEvent Qt5InputManager::textInputEvent_;
 	Qt5JoystickState Qt5InputManager::nullJoystickState_;
 
-#ifdef WITH_QT5GAMEPAD
+#if defined(WITH_QT5GAMEPAD)
 	Qt5JoystickState Qt5InputManager::joystickStates_[MaxNumJoysticks];
 	JoyButtonEvent Qt5InputManager::joyButtonEvent_;
 	JoyHatEvent Qt5InputManager::joyHatEvent_;
@@ -41,25 +37,22 @@ namespace nCine
 	const float Qt5JoystickState::AxisEventTolerance = 0.001f;
 #endif
 
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	Qt5InputManager::Qt5InputManager(Qt5Widget& widget)
 		: widget_(widget)
 	{
-#ifdef WITH_QT5GAMEPAD
-		for (int i = 0; i < MaxNumJoysticks; i++)
+#if defined(WITH_QT5GAMEPAD)
+		for (int i = 0; i < MaxNumJoysticks; i++) {
 			joystickStates_[i].gamepad_ = std::make_unique<QGamepad>(-1);
+		}
 #endif
 
 		joyMapping_.init(this);
 
-#ifdef WITH_IMGUI
+#if defined(WITH_IMGUI)
 		ImGuiQt5Input::init(&widget);
 #endif
 
-#ifdef WITH_NUKLEAR
+#if defined(WITH_NUKLEAR)
 		NuklearQt5Input::init(&widget);
 #endif
 	}
@@ -68,18 +61,16 @@ namespace nCine
 	{
 	}
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
-#ifdef WITH_QT5GAMEPAD
+#if defined(WITH_QT5GAMEPAD)
 	Qt5JoystickState::Qt5JoystickState()
 	{
-		for (unsigned int i = 0; i < NumButtons; i++)
+		for (unsigned int i = 0; i < NumButtons; i++) {
 			buttonState_[i] = false;
+		}
 		hatState_ = HatState::CENTERED;
-		for (unsigned int i = 0; i < NumAxes; i++)
+		for (unsigned int i = 0; i < NumAxes; i++) {
 			axesValuesState_[i] = 0.0f;
+		}
 	}
 
 	bool Qt5JoystickState::isButtonPressed(int buttonId) const
@@ -389,18 +380,20 @@ namespace nCine
 
 	const char* Qt5InputManager::joyName(int joyId) const
 	{
-		if (isJoyPresent(joyId))
+		if (isJoyPresent(joyId)) {
 			return joystickStates_[joyId].name_;
-		else
+		} else {
 			return nullptr;
+		}
 	}
 
 	const JoystickState& Qt5InputManager::joystickState(int joyId) const
 	{
-		if (isJoyPresent(joyId))
+		if (isJoyPresent(joyId)) {
 			return joystickStates_[joyId];
-		else
+		} else {
 			return nullJoystickState_;
+		}
 	}
 #endif
 
@@ -427,10 +420,6 @@ namespace nCine
 			cursor_ = cursor;
 		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	//////////////////////////////////////////////////////////
 
 	void Qt5InputManager::updateTouchEvent(const QTouchEvent* event)
 	{

@@ -2,32 +2,6 @@
 
 namespace nCine
 {
-	const char* objectTypeToString(Object::ObjectType type)
-	{
-		// clang-format off
-		switch (type) {
-			case Object::ObjectType::Base:					return "Base";
-			case Object::ObjectType::Texture:				return "Texture";
-			case Object::ObjectType::Shader:				return "Shader";
-			case Object::ObjectType::SceneNode:				return "SceneNode";
-			case Object::ObjectType::Sprite:				return "Sprite";
-			case Object::ObjectType::MeshSprite:			return "MeshSprite";
-			case Object::ObjectType::AnimatedSprite:		return "AnimatedSprite";
-			case Object::ObjectType::ParticleSystem:		return "ParticleSystem";
-			//case Object::ObjectType::Font:				return "Font";
-			//case Object::ObjectType::TextNode:			return "TextNode";
-			case Object::ObjectType::AudioBuffer:			return "AudioBuffer";
-			case Object::ObjectType::AudioBufferPlayer:		return "AudioBufferPlayer";
-			case Object::ObjectType::AudioStreamPlayer:		return "AudioStreamPlayer";
-			default:										return "Unknown";
-		}
-		// clang-format on
-	}
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	ArrayIndexer::ArrayIndexer()
 		: numObjects_(0), nextId_(0)
 	{
@@ -46,10 +20,6 @@ namespace nCine
 			}
 		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	unsigned int ArrayIndexer::addObject(Object* object)
 	{

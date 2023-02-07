@@ -3,19 +3,11 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	GLScissorTest::State GLScissorTest::state_;
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void GLScissorTest::enable(const Recti& rect)
 	{
-		if (state_.enabled == false) {
+		if (!state_.enabled) {
 			glEnable(GL_SCISSOR_TEST);
 			state_.enabled = true;
 		}
@@ -35,7 +27,7 @@ namespace nCine
 
 	void GLScissorTest::enable()
 	{
-		if (state_.enabled == false) {
+		if (!state_.enabled) {
 			FATAL_ASSERT(state_.rect.W >= 0 && state_.rect.H >= 0);
 			glEnable(GL_SCISSOR_TEST);
 			state_.enabled = true;
@@ -44,7 +36,7 @@ namespace nCine
 
 	void GLScissorTest::disable()
 	{
-		if (state_.enabled == true) {
+		if (state_.enabled) {
 			glDisable(GL_SCISSOR_TEST);
 			state_.enabled = false;
 		}
@@ -52,12 +44,11 @@ namespace nCine
 
 	void GLScissorTest::setState(State newState)
 	{
-		if (newState.enabled)
+		if (newState.enabled) {
 			enable(newState.rect);
-		else
+		} else {
 			disable();
-
+		}
 		state_ = newState;
 	}
-
 }

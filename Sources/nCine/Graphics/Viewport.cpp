@@ -15,7 +15,7 @@
 #include "../tracy.h"
 #include "../../Common.h"
 
-#ifdef WITH_QT5
+#if defined(WITH_QT5)
 #	include "Qt5GfxDevice.h"
 #endif
 
@@ -54,27 +54,17 @@ namespace nCine
 		}
 	}
 
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	SmallVector<Viewport*> Viewport::chain_;
 
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	Viewport::Viewport(const char* name, Texture* texture, DepthStencilFormat depthStencilFormat)
-		: type_(Type::NoTexture), width_(0), height_(0),
-		viewportRect_(0, 0, 0, 0), scissorRect_(0, 0, 0, 0),
-		depthStencilFormat_(DepthStencilFormat::None), lastFrameCleared_(0),
-		clearMode_(ClearMode::EveryFrame), clearColor_(Colorf::Black),
-		renderQueue_(std::make_unique<RenderQueue>()),
-		fbo_(nullptr), rootNode_(nullptr), camera_(nullptr),
-		stateBits_(0), numColorAttachments_(0)
+		: type_(Type::NoTexture), width_(0), height_(0), viewportRect_(0, 0, 0, 0), scissorRect_(0, 0, 0, 0),
+			depthStencilFormat_(DepthStencilFormat::None), lastFrameCleared_(0), clearMode_(ClearMode::EveryFrame),
+			clearColor_(Colorf::Black), renderQueue_(std::make_unique<RenderQueue>()), fbo_(nullptr), rootNode_(nullptr),
+			camera_(nullptr), stateBits_(0), numColorAttachments_(0)
 	{
-		for (unsigned int i = 0; i < MaxNumTextures; i++)
+		for (unsigned int i = 0; i < MaxNumTextures; i++) {
 			textures_[i] = nullptr;
+		}
 
 		if (texture != nullptr) {
 			const bool texAdded = setTexture(texture);
@@ -111,10 +101,6 @@ namespace nCine
 	}
 
 	Viewport::~Viewport() = default;
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	/*! \note Adding more textures enables the use of multiple render targets (MRTs) */
 	bool Viewport::setTexture(unsigned int index, Texture* texture)
@@ -258,10 +244,6 @@ namespace nCine
 			fbo_->setObjectLabel(label);
 		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PROTECTED FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void Viewport::calculateCullingRect()
 	{
@@ -475,10 +457,6 @@ namespace nCine
 #endif
 		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void Viewport::updateCulling(SceneNode* node)
 	{

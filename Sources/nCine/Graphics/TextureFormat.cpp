@@ -8,13 +8,8 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	TextureFormat::TextureFormat(GLenum internalFormat)
-		: internalFormat_(internalFormat), format_(-1),
-		type_(-1), isCompressed_(false)
+		: internalFormat_(internalFormat), format_(-1), type_(-1), isCompressed_(false)
 	{
 		findExternalFormat();
 		checkFormatSupport();
@@ -29,10 +24,6 @@ namespace nCine
 		// Overriding the type found by `findExternalFormat()`
 		type_ = type;
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	unsigned int TextureFormat::numChannels() const
 	{
@@ -64,8 +55,9 @@ namespace nCine
 #endif
 		}
 #if !defined(WITH_OPENGLES)
-		else if (format_ == GL_RGB)
+		else if (format_ == GL_RGB) {
 			format_ = GL_BGR;
+		}
 #endif
 	}
 
@@ -109,7 +101,7 @@ namespace nCine
 				bpp = 8;
 				minDataSize = 16;
 				break;
-#ifdef WITH_OPENGLES
+#if defined(WITH_OPENGLES)
 			case GL_ETC1_RGB8_OES:
 			case GL_COMPRESSED_RGB8_ETC2:
 			case GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2:
@@ -155,7 +147,7 @@ namespace nCine
 				bpp = 4;
 				minDataSize = 2 * 2 * ((blockWidth * blockHeight * bpp) / 8);
 				break;
-#if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
+#	if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
 			case GL_COMPRESSED_RGBA_ASTC_4x4_KHR:
 				blockWidth = 4;
 				blockHeight = 4;
@@ -240,7 +232,7 @@ namespace nCine
 				blockSize = 16;
 				minDataSize = 16;
 				break;
-#endif
+#	endif
 #endif
 			default:
 				FATAL_MSG_X("MIP maps not supported for internal format: 0x%x", internalFormat);
@@ -261,8 +253,9 @@ namespace nCine
 				: (levelWidth / blockWidth) * (levelHeight / blockHeight) * ((blockWidth * blockHeight * bpp) / 8);
 
 			// Clamping to the minimum valid size
-			if (mipDataSizes[i] < minDataSize)
+			if (mipDataSizes[i] < minDataSize) {
 				mipDataSizes[i] = minDataSize;
+			}
 
 			levelWidth /= 2;
 			levelHeight /= 2;
@@ -272,30 +265,26 @@ namespace nCine
 		return dataSizesSum;
 	}
 
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	void TextureFormat::findExternalFormat()
 	{
 		bool found = false;
 
-		if (found == false)
+		if (!found)
 			found = integerFormat();
-		if (found == false)
+		if (!found)
 			found = nonIntegerFormat();
-		if (found == false)
+		if (!found)
 			found = floatFormat();
-		if (found == false)
+		if (!found)
 			found = compressedFormat();
-#ifdef WITH_OPENGLES
-		if (found == false)
+#if defined(WITH_OPENGLES)
+		if (!found)
 			found = oesCompressedFormat();
 #endif
 
 		FATAL_ASSERT_MSG_X(found, "Unknown internal format: 0x%x", internalFormat_);
 
-		//LOGI_X("Internal format: 0x%x - type: 0x%x", internalFormat_, type_);
+		LOGD_X("Internal format: 0x%x - type: 0x%x", internalFormat_, type_);
 	}
 
 	bool TextureFormat::integerFormat()
@@ -328,8 +317,9 @@ namespace nCine
 				break;
 		}
 
-		if (found)
+		if (found) {
 			type_ = GL_UNSIGNED_BYTE;
+		}
 
 		return found;
 	}
@@ -380,8 +370,9 @@ namespace nCine
 				break;
 		}
 
-		if (found)
+		if (found) {
 			type_ = GL_FLOAT;
+		}
 
 		return found;
 	}
@@ -412,7 +403,7 @@ namespace nCine
 		return found;
 	}
 
-#ifdef WITH_OPENGLES
+#if defined(WITH_OPENGLES)
 	bool TextureFormat::oesCompressedFormat()
 	{
 		bool found = true;
@@ -424,7 +415,7 @@ namespace nCine
 			case GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG:
 			case GL_COMPRESSED_RGBA8_ETC2_EAC:
 			case GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2:
-#if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
+#	if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
 			case GL_COMPRESSED_RGBA_ASTC_4x4_KHR:
 			case GL_COMPRESSED_RGBA_ASTC_5x4_KHR:
 			case GL_COMPRESSED_RGBA_ASTC_5x5_KHR:
@@ -439,7 +430,7 @@ namespace nCine
 			case GL_COMPRESSED_RGBA_ASTC_10x10_KHR:
 			case GL_COMPRESSED_RGBA_ASTC_12x10_KHR:
 			case GL_COMPRESSED_RGBA_ASTC_12x12_KHR:
-#endif
+#	endif
 				format_ = GL_RGBA;
 				break;
 			case GL_ETC1_RGB8_OES:
@@ -482,7 +473,7 @@ namespace nCine
 				FATAL_ASSERT_MSG(hasS3tc, "GL_EXT_texture_compression_s3tc not available");
 				break;
 			}
-#ifdef WITH_OPENGLES
+#if defined(WITH_OPENGLES)
 			case GL_ETC1_RGB8_OES:
 			{
 				const bool hasEct1 = gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE);
@@ -506,7 +497,7 @@ namespace nCine
 				FATAL_ASSERT_MSG(hasPvr, "GL_IMG_texture_compression_pvrtc not available");
 				break;
 			}
-#if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
+#	if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
 			case GL_COMPRESSED_RGBA_ASTC_4x4_KHR:
 			case GL_COMPRESSED_RGBA_ASTC_5x4_KHR:
 			case GL_COMPRESSED_RGBA_ASTC_5x5_KHR:
@@ -526,7 +517,7 @@ namespace nCine
 				FATAL_ASSERT_MSG(hasAstc, "GL_KHR_texture_compression_astc_ldr not available");
 				break;
 			}
-#endif
+#	endif
 #endif
 		}
 	}

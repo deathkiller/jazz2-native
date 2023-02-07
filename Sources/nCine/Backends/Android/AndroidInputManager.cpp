@@ -13,11 +13,6 @@ using namespace Death::Containers::Literals;
 
 namespace nCine
 {
-
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	const int IInputManager::MaxNumJoysticks = 4;
 
 	ASensorManager* AndroidInputManager::sensorManager_ = nullptr;
@@ -49,13 +44,9 @@ namespace nCine
 		AMOTION_EVENT_AXIS_HAT_X, AMOTION_EVENT_AXIS_HAT_Y
 	};
 
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	AndroidJoystickState::AndroidJoystickState()
 		: deviceId_(-1), numButtons_(0), numAxes_(0), numAxesMapped_(0),
-		hasDPad_(false), hasHatAxes_(false), hatState_(HatState::CENTERED)
+			hasDPad_(false), hasHatAxes_(false), hatState_(HatState::CENTERED)
 	{
 		name_[0] = '\0';
 		for (int i = 0; i < MaxButtons; i++) {
@@ -76,29 +67,23 @@ namespace nCine
 		joyMapping_.init(this);
 		checkConnectedJoysticks();
 
-#ifdef WITH_IMGUI
+#if defined(WITH_IMGUI)
 		ImGuiAndroidInput::init(state->window);
 #endif
-
-#ifdef WITH_NUKLEAR
+#if defined(WITH_NUKLEAR)
 		NuklearAndroidInput::init();
 #endif
 	}
 
 	AndroidInputManager::~AndroidInputManager()
 	{
-#ifdef WITH_NUKLEAR
+#if defined(WITH_NUKLEAR)
 		NuklearAndroidInput::shutdown();
 #endif
-
-#ifdef WITH_IMGUI
+#if defined(WITH_IMGUI)
 		ImGuiAndroidInput::shutdown();
 #endif
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool AndroidMouseState::isLeftButtonDown() const
 	{
@@ -211,16 +196,16 @@ namespace nCine
 	bool AndroidInputManager::parseEvent(const AInputEvent* event)
 	{
 		// Early out if there is no input event handler
-		if (inputEventHandler_ == nullptr)
+		if (inputEventHandler_ == nullptr) {
 			return false;
+		}
 
 		bool isEventHandled = false;
 
-#ifdef WITH_IMGUI
+#if defined(WITH_IMGUI)
 		isEventHandled |= ImGuiAndroidInput::processEvent(event);
 #endif
-
-#ifdef WITH_NUKLEAR
+#if defined(WITH_NUKLEAR)
 		isEventHandled |= NuklearAndroidInput::processEvent(event);
 #endif
 
@@ -308,10 +293,6 @@ namespace nCine
 		// TODO
 		return false;
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool AndroidInputManager::processGamepadEvent(const AInputEvent* event)
 	{

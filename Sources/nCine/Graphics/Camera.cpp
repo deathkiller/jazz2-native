@@ -1,17 +1,10 @@
 #include "Camera.h"
 #include "../Application.h"
 
-namespace nCine {
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
+namespace nCine
+{
 	Camera::Camera()
-		:
-		viewValues_(0.0f, 0.0f, 0.0f, 1.0f),
-		view_(Matrix4x4f::Identity),
-		updateFrameProjectionMatrix_(0), updateFrameViewMatrix_(0)
+		: viewValues_(0.0f, 0.0f, 0.0f, 1.0f), view_(Matrix4x4f::Identity), updateFrameProjectionMatrix_(0), updateFrameViewMatrix_(0)
 	{
 		int width = theApplication().width();
 		int height = theApplication().height();
@@ -25,10 +18,6 @@ namespace nCine {
 										projectionValues_.bottom, projectionValues_.top,
 										projectionValues_.near, projectionValues_.far);
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void Camera::setOrthoProjection(float left, float right, float top, float bottom)
 	{
@@ -69,5 +58,4 @@ namespace nCine {
 	{
 		setView(values.position, values.rotation, values.scale);
 	}
-
 }

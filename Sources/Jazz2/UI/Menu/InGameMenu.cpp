@@ -14,10 +14,7 @@
 namespace Jazz2::UI::Menu
 {
 	InGameMenu::InGameMenu(LevelHandler* root)
-		:
-		_root(root),
-		_pressedActions(0),
-		_touchButtonsTimer(0.0f)
+		: _root(root), _pressedActions(0), _touchButtonsTimer(0.0f)
 	{
 		_canvasBackground = std::make_unique<MenuBackgroundCanvas>(this);
 		_canvasClipped = std::make_unique<MenuClippedCanvas>(this);

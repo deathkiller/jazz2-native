@@ -17,8 +17,6 @@ namespace nCine
 			AnimatedSprite,
 			Particle,
 			ParticleSystem,
-			//Font,
-			//TextNode,
 			AudioBuffer,
 			AudioBufferPlayer,
 			AudioStreamPlayer
@@ -30,7 +28,7 @@ namespace nCine
 		virtual ~Object();
 
 		/// Move constructor
-		Object(Object&& other);
+		Object(Object&& other) noexcept;
 		/// Move assignment operator
 		Object& operator=(Object&& other) noexcept;
 

@@ -3,12 +3,8 @@
 
 #include <algorithm>
 
-namespace nCine {
-
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
+namespace nCine
+{
 	const Color Color::Black(0, 0, 0, 255);
 	const Color Color::White(255, 255, 255, 255);
 	const Color Color::Red(255, 0, 0, 255);
@@ -17,10 +13,6 @@ namespace nCine {
 	const Color Color::Yellow(255, 255, 0, 255);
 	const Color Color::Magenta(255, 0, 255, 255);
 	const Color Color::Cyan(0, 255, 255, 255);
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
 
 	Color::Color(unsigned int hex)
 	{
@@ -41,10 +33,6 @@ namespace nCine {
 		blue_ = static_cast<unsigned char>(color.B() * 255);
 		alpha_ = static_cast<unsigned char>(color.A() * 255);
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	unsigned int Color::Rgba() const
 	{
@@ -79,8 +67,9 @@ namespace nCine {
 		green_ = static_cast<unsigned char>((hex & 0xFF00) >> 8);
 		blue_ = static_cast<unsigned char>(hex & 0xFF);
 
-		if (hex > 0xFFFFFF)
+		if (hex > 0xFFFFFF) {
 			alpha_ = static_cast<unsigned char>((hex & 0xFF000000) >> 24);
+		}
 	}
 
 	void Color::SetVec(const unsigned int channels[NumChannels])
@@ -210,5 +199,4 @@ namespace nCine {
 
 		return result;
 	}
-
 }

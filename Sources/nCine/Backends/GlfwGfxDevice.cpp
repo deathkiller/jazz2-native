@@ -6,18 +6,10 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	GLFWwindow* GlfwGfxDevice::windowHandle_ = nullptr;
 	GLFWmonitor* GlfwGfxDevice::monitorPointers_[MaxMonitors];
 	int GlfwGfxDevice::fsMonitorIndex_ = -1;
 	int GlfwGfxDevice::fsModeIndex_ = -1;
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
 
 	GlfwGfxDevice::GlfwGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
 		: IGfxDevice(windowMode, glContextInfo, displayMode)
@@ -33,10 +25,6 @@ namespace nCine
 		windowHandle_ = nullptr;
 		glfwTerminate();
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void GlfwGfxDevice::setSwapInterval(int interval)
 	{
@@ -250,10 +238,6 @@ namespace nCine
 		}
 		return false;
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void GlfwGfxDevice::initGraphics()
 	{

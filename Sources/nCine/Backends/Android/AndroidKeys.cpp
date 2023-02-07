@@ -238,5 +238,4 @@ namespace nCine
 
 		return result;
 	}
-
 }

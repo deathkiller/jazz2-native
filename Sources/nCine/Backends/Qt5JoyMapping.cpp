@@ -8,10 +8,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	const unsigned int JoyMapping::MaxNameLength;
 
 	const char* JoyMapping::AxesStrings[JoyMappedState::NumAxes] = {
@@ -45,10 +41,6 @@ namespace nCine
 	nctl::StaticArray<JoyMappedStateImpl, JoyMapping::MaxNumJoysticks> JoyMapping::mappedJoyStates_(nctl::StaticArrayMode::EXTEND_SIZE);
 	JoyMappedButtonEvent JoyMapping::mappedButtonEvent_;
 	JoyMappedAxisEvent JoyMapping::mappedAxisEvent_;
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS AND DESTRUCTOR
-	///////////////////////////////////////////////////////////
 
 	JoyMapping::MappedJoystick::MappedJoystick()
 	{
@@ -109,10 +101,6 @@ namespace nCine
 		mappings_[0].hats[2] = ButtonName::DPAD_RIGHT;
 		mappings_[0].hats[3] = ButtonName::DPAD_LEFT;
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void JoyMapping::MappedJoystick::Guid::fromString(const char* string)
 	{
@@ -277,10 +265,6 @@ namespace nCine
 			joyVector = joyVector.normalize() * normalizedLength;
 		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void JoyMapping::checkConnectedJoystics()
 	{

@@ -10,9 +10,8 @@ namespace nCine
 {
 	/*! Private constructor called only by `AudioStreamPlayer`. */
 	AudioStream::AudioStream()
-		: nextAvailableBufferIndex_(0),
-		currentBufferId_(0), bytesPerSample_(0), numChannels_(0), isLooping_(false),
-		frequency_(0), numSamples_(0), duration_(0.0f), buffersIds_(NumBuffers)
+		: nextAvailableBufferIndex_(0), currentBufferId_(0), bytesPerSample_(0), numChannels_(0), isLooping_(false),
+			frequency_(0), numSamples_(0), duration_(0.0f), buffersIds_(NumBuffers)
 	{
 		alGetError();
 		alGenBuffers(NumBuffers, buffersIds_.data());
@@ -49,9 +48,9 @@ namespace nCine
 		}
 	}
 
-	AudioStream::AudioStream(AudioStream&&) = default;
+	AudioStream::AudioStream(AudioStream&&) noexcept = default;
 
-	AudioStream& AudioStream::operator=(AudioStream&&) = default;
+	AudioStream& AudioStream::operator=(AudioStream&&) noexcept = default;
 
 	unsigned long int AudioStream::numStreamSamples() const
 	{
@@ -161,9 +160,9 @@ namespace nCine
 	bool AudioStream::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromMemory(bufferPtr, bufferSize);
-		if (audioLoader->hasLoaded() == false)
+		if (!audioLoader->hasLoaded()) {
 			return false;
-
+		}
 		createReader(*audioLoader);
 		return true;
 	}
@@ -171,9 +170,9 @@ namespace nCine
 	bool AudioStream::loadFromFile(const StringView& filename)
 	{
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromFile(filename);
-		if (audioLoader->hasLoaded() == false)
+		if (!audioLoader->hasLoaded()) {
 			return false;
-
+		}
 		createReader(*audioLoader);
 		return true;
 	}

@@ -9,20 +9,10 @@ namespace nCine
 		return instance;
 	}
 
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS AND DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	ServiceLocator::ServiceLocator()
-		: indexerService_(&nullIndexer_),
-		audioDevice_(&nullAudioDevice_), threadPool_(&nullThreadPool_),
-		gfxCapabilities_(&nullGfxCapabilities_)
+		: indexerService_(&nullIndexer_), audioDevice_(&nullAudioDevice_), threadPool_(&nullThreadPool_), gfxCapabilities_(&nullGfxCapabilities_)
 	{
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void ServiceLocator::registerIndexer(std::unique_ptr<IIndexer> service)
 	{

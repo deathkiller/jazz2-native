@@ -5,9 +5,7 @@
 namespace Jazz2::UI::Menu
 {
 	PauseSection::PauseSection()
-		:
-		_selectedIndex(0),
-		_animation(0.0f)
+		: _selectedIndex(0), _animation(0.0f)
 	{
 		_items[(int)Item::Resume].Name = _("Resume");
 		_items[(int)Item::Options].Name = _("Options");

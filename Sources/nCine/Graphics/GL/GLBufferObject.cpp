@@ -5,17 +5,9 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	GLHashMap<GLBufferObjectMappingFunc::Size, GLBufferObjectMappingFunc> GLBufferObject::boundBuffers_;
 	GLuint GLBufferObject::boundIndexBase_[MaxIndexBufferRange];
 	GLBufferObject::BufferRange GLBufferObject::boundBufferRange_[MaxIndexBufferRange];
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
 
 	GLBufferObject::GLBufferObject(GLenum target)
 		: glHandle_(0), target_(target), size_(0), mapped_(false)
@@ -35,10 +27,6 @@ namespace nCine
 		glDeleteBuffers(1, &glHandle_);
 		GL_LOG_ERRORS();
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool GLBufferObject::bind() const
 	{
@@ -95,9 +83,9 @@ namespace nCine
 		ASSERT(target_ == GL_UNIFORM_BUFFER);
 		ASSERT(index < MaxIndexBufferRange);
 
-		if (index >= MaxIndexBufferRange)
+		if (index >= MaxIndexBufferRange) {
 			glBindBufferBase(target_, index, glHandle_);
-		else if (boundIndexBase_[index] != glHandle_) {
+		} else if (boundIndexBase_[index] != glHandle_) {
 			boundBufferRange_[index].glHandle = -1;
 			boundBufferRange_[index].offset = 0;
 			boundBufferRange_[index].ptrsize = 0;
@@ -112,9 +100,9 @@ namespace nCine
 		ASSERT(target_ == GL_UNIFORM_BUFFER);
 		ASSERT(index < MaxIndexBufferRange);
 
-		if (index >= MaxIndexBufferRange)
+		if (index >= MaxIndexBufferRange) {
 			glBindBufferRange(target_, index, glHandle_, offset, ptrsize);
-		else if (boundBufferRange_[index].glHandle != glHandle_ ||
+		} else if (boundBufferRange_[index].glHandle != glHandle_ ||
 				 boundBufferRange_[index].offset != offset ||
 				 boundBufferRange_[index].ptrsize != ptrsize) {
 			boundIndexBase_[index] = -1;
@@ -168,10 +156,6 @@ namespace nCine
 		GLDebug::objectLabel(GLDebug::LabelTypes::Buffer, glHandle_, label);
 	}
 
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	bool GLBufferObject::bindHandle(GLenum target, GLuint glHandle)
 	{
 		if (boundBuffers_[target] != glHandle) {
@@ -182,5 +166,4 @@ namespace nCine
 		}
 		return false;
 	}
-
 }

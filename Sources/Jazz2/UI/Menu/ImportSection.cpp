@@ -10,11 +10,7 @@
 namespace Jazz2::UI::Menu
 {
 	ImportSection::ImportSection()
-		:
-		_animation(0.0f),
-		_state(State::Waiting),
-		_fileCount(0),
-		_timeout(0)
+		: _animation(0.0f), _state(State::Waiting), _fileCount(0), _timeout(0)
 	{
 	}
 

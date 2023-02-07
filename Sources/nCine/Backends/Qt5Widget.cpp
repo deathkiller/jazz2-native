@@ -13,15 +13,9 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	Qt5Widget::Qt5Widget(QWidget* parent, std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, char** argv)
-		: QOpenGLWidget(parent),
-		application_(static_cast<MainApplication&>(theApplication())),
-		createAppEventHandler_(createAppEventHandler),
-		isInitialized_(false), shouldUpdate_(true)
+		: QOpenGLWidget(parent), application_(static_cast<MainApplication&>(theApplication())),
+			createAppEventHandler_(createAppEventHandler), isInitialized_(false), shouldUpdate_(true)
 	{
 		setFocusPolicy(Qt::StrongFocus);
 		setMouseTracking(true);
@@ -51,18 +45,10 @@ namespace nCine
 		shutdown();
 	}
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	IAppEventHandler& Qt5Widget::appEventHandler()
 	{
 		return *application_.appEventHandler_;
 	}
-
-	///////////////////////////////////////////////////////////
-	// PROTECTED FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool Qt5Widget::event(QEvent* event)
 	{
@@ -155,8 +141,9 @@ namespace nCine
 
 	QSize Qt5Widget::minimumSizeHint() const
 	{
-		if (application_.appConfiguration().isResizable == true)
+		if (application_.appConfiguration().isResizable) {
 			return QSize(-1, -1);
+		}
 
 		if (isInitialized_) {
 			return QSize(application_.width(), application_.height());
@@ -173,10 +160,6 @@ namespace nCine
 			return QSize(application_.appCfg_.resolution.x, application_.appCfg_.resolution.y);
 		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void Qt5Widget::autoUpdate()
 	{

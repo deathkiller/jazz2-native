@@ -6,10 +6,7 @@
 namespace Jazz2::UI::Menu
 {
 	TouchControlsOptionsSection::TouchControlsOptionsSection()
-		:
-		_isDirty(false),
-		_selectedZone(SelectedZone::None),
-		_lastPointerId(-1)
+		: _isDirty(false), _selectedZone(SelectedZone::None), _lastPointerId(-1)
 	{
 	}
 

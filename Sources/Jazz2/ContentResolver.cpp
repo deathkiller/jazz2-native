@@ -53,10 +53,7 @@ namespace Jazz2
 	}
 
 	ContentResolver::ContentResolver()
-		:
-		_isLoading(false),
-		_cachedMetadata(64),
-		_cachedGraphics(128)
+		: _isLoading(false), _cachedMetadata(64), _cachedGraphics(128)
 	{
 		std::memset(_palettes, 0, sizeof(_palettes));
 

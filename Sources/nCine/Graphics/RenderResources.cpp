@@ -9,7 +9,7 @@
 
 #include <cstddef>	// for `offsetof()`
 
-#ifdef WITH_EMBEDDED_SHADERS
+#if defined(WITH_EMBEDDED_SHADERS)
 #	include "shader_strings.h"
 #else
 #	include "../IO/FileSystem.h"	// for GetDataPath()
@@ -17,10 +17,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	std::unique_ptr<RenderBuffersManager> RenderResources::buffersManager_;
 	std::unique_ptr<RenderVaoPool> RenderResources::vaoPool_;
 	std::unique_ptr<RenderCommandPool> RenderResources::renderCommandPool_;
@@ -35,10 +31,6 @@ namespace nCine
 	Camera* RenderResources::currentCamera_ = nullptr;
 	std::unique_ptr<Camera> RenderResources::defaultCamera_;
 	Viewport* RenderResources::currentViewport_ = nullptr;
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	GLShaderProgram* RenderResources::shaderProgram(Material::ShaderProgramType shaderProgramType)
 	{
@@ -135,10 +127,6 @@ namespace nCine
 		}
 	}
 
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	namespace
 	{
 		struct ShaderLoad
@@ -200,7 +188,7 @@ namespace nCine
 		currentCamera_ = defaultCamera_.get();
 
 		ShaderLoad shadersToLoad[] = {
-	#ifndef WITH_EMBEDDED_SHADERS
+#if !defined(WITH_EMBEDDED_SHADERS)
 			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE)], "sprite_vs.glsl", "sprite_fs.glsl", GLShaderProgram::Introspection::Enabled, "Sprite" },
 			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE_GRAY)], "sprite_vs.glsl", "sprite_gray_fs.glsl", GLShaderProgram::Introspection::Enabled, "Sprite_Gray" },
 			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE_NO_TEXTURE)], "sprite_notexture_vs.glsl", "sprite_notexture_fs.glsl", GLShaderProgram::Introspection::Enabled, "Sprite_NoTexture" },
@@ -244,7 +232,7 @@ namespace nCine
 			const ShaderLoad& shaderToLoad = shadersToLoad[i];
 
 			shaderToLoad.shaderProgram = std::make_unique<GLShaderProgram>(queryPhase);
-#ifndef WITH_EMBEDDED_SHADERS
+#if !defined(WITH_EMBEDDED_SHADERS)
 			shaderToLoad.shaderProgram->attachShader(GL_VERTEX_SHADER, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.vertexShader) }).data());
 			shaderToLoad.shaderProgram->attachShader(GL_FRAGMENT_SHADER, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.fragmentShader) }).data());
 #else
@@ -253,7 +241,7 @@ namespace nCine
 #endif
 			shaderToLoad.shaderProgram->setObjectLabel(shaderToLoad.objectLabel);
 			const bool hasLinked = shaderToLoad.shaderProgram->link(shaderToLoad.introspection);
-			FATAL_ASSERT(hasLinked == true);
+			FATAL_ASSERT(hasLinked);
 		}
 
 		registerDefaultBatchedShaders();
@@ -280,8 +268,9 @@ namespace nCine
 
 	void RenderResources::dispose()
 	{
-		for (auto& shaderProgram : defaultShaderPrograms_)
+		for (auto& shaderProgram : defaultShaderPrograms_) {
 			shaderProgram.reset(nullptr);
+		}
 
 		ASSERT(cameraUniformDataMap_.empty());
 

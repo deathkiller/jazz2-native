@@ -3,8 +3,7 @@
 namespace Jazz2::UI::Menu
 {
 	SimpleMessageSection::SimpleMessageSection(Message message)
-		:
-		_message(message)
+		: _message(message)
 	{
 	}
 

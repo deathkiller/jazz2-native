@@ -4,10 +4,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	Object::Object(ObjectType type)
 		: type_(type), id_(0)
 	{
@@ -17,12 +13,13 @@ namespace nCine
 	Object::~Object()
 	{
 		// Don't remove the object id from indexer if this is a moved out object
-		if (id_ > 0)
+		if (id_ > 0) {
 			theServiceLocator().indexer().removeObject(id_);
+		}
 	}
 
-	Object::Object(Object&& other)
-		: type_(other.type_), id_(other.id_)/*, name_(std::move(other.name_))*/
+	Object::Object(Object&& other) noexcept
+		: type_(other.type_), id_(other.id_)
 	{
 		theServiceLocator().indexer().setObject(id_, this);
 		other.id_ = 0;
@@ -33,17 +30,12 @@ namespace nCine
 		type_ = other.type_;
 		theServiceLocator().indexer().removeObject(id_);
 		id_ = other.id_;
-		//name_ = other.name_;
 
 		other.id_ = 0;
 		return *this;
 	}
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
-	template <class T>
+	template<class T>
 	T* Object::fromId(unsigned int id)
 	{
 		const Object* object = theServiceLocator().indexer().object(id);
@@ -60,10 +52,6 @@ namespace nCine
 			return nullptr;
 		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PROTECTED FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	Object::Object(const Object& other)
 		: type_(other.type_), id_(0)

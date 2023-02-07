@@ -211,15 +211,10 @@ if(MSVC)
 	if(NCINE_WITH_TRACY)
 		target_link_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:/DEBUG>)
 	endif()
-	
-	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-		target_compile_options(${NCINE_APP} PRIVATE -fcolor-diagnostics)
-		target_compile_options(${NCINE_APP} PRIVATE -Wall -Wno-old-style-cast -Wno-gnu-zero-variadic-macro-arguments -Wno-unused-parameter -Wno-variadic-macros -Wno-c++11-long-long -Wno-missing-braces -Wno-multichar -Wno-switch -Wno-unknown-pragmas -Wno-reorder-ctor -Wno-braced-scalar-init -Wno-deprecated-builtins)
 
-		if(NCINE_DYNAMIC_LIBRARY)
-			target_link_options(${NCINE_APP} PRIVATE -Wl,-undefined,error)
-		endif()
-		
+	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+		target_compile_options(${NCINE_APP} PRIVATE -Wno-switch -Wno-unknown-pragmas -Wno-reorder-ctor -Wno-braced-scalar-init -Wno-deprecated-builtins)
+
 		# Suppress "warning : ignoring invalid /arch: argument ..."
 		target_link_options(${NCINE_APP} PRIVATE -Wno-unused-command-line-argument)
 	endif()
@@ -308,7 +303,10 @@ else() # GCC and LLVM
 		endif()
 	elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
 		target_compile_options(${NCINE_APP} PRIVATE -fcolor-diagnostics)
-		target_compile_options(${NCINE_APP} PRIVATE -Wall -Wno-old-style-cast -Wno-gnu-zero-variadic-macro-arguments -Wno-unused-parameter -Wno-variadic-macros -Wno-c++11-long-long -Wno-missing-braces -Wno-multichar -Wno-switch -Wno-unknown-pragmas -Wno-reorder-ctor -Wno-braced-scalar-init -Wno-deprecated-builtins)
+		target_compile_options(${NCINE_APP} PRIVATE -Wall -Wno-old-style-cast -Wno-gnu-zero-variadic-macro-arguments -Wno-unused-parameter -Wno-variadic-macros -Wno-c++11-long-long -Wno-missing-braces -Wno-multichar -Wno-switch -Wno-unknown-pragmas -Wno-reorder-ctor -Wno-braced-scalar-init)
+		if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+			target_compile_options(${NCINE_APP} PRIVATE -Wno-deprecated-builtins)
+		endif()
 
 		if(NCINE_DYNAMIC_LIBRARY)
 			target_link_options(${NCINE_APP} PRIVATE -Wl,-undefined,error)

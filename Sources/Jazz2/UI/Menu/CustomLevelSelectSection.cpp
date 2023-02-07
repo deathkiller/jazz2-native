@@ -10,13 +10,7 @@
 namespace Jazz2::UI::Menu
 {
 	CustomLevelSelectSection::CustomLevelSelectSection()
-		:
-		_selectedIndex(0),
-		_animation(0.0f),
-		_y(0.0f),
-		_height(0.0f),
-		_pressedCount(0),
-		_noiseCooldown(0.0f)
+		: _selectedIndex(0), _animation(0.0f), _y(0.0f), _height(0.0f), _pressedCount(0), _noiseCooldown(0.0f)
 	{
 		auto& resolver = ContentResolver::Get();
 

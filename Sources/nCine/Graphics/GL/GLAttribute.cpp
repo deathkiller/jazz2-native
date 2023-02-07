@@ -4,10 +4,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	GLAttribute::GLAttribute()
 		: location_(-1), size_(0), type_(GL_FLOAT)
 	{
@@ -29,10 +25,6 @@ namespace nCine
 		}
 		GL_LOG_ERRORS();
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	GLenum GLAttribute::basicType() const
 	{
@@ -101,5 +93,4 @@ namespace nCine
 	{
 		return (MaxNameLength >= 3 && name_[0] == 'g' && name_[1] == 'l' && name_[2] == '_');
 	}
-
 }

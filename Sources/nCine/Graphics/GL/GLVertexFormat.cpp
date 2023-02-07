@@ -6,24 +6,15 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	GLVertexFormat::Attribute::Attribute()
 		: enabled_(false), vbo_(nullptr), index_(0), size_(-1), type_(GL_FLOAT), stride_(0), pointer_(nullptr), baseOffset_(0)
 	{
 	}
 
 	GLVertexFormat::GLVertexFormat()
-		: ibo_(nullptr),
-		attributes_(MaxAttributes)
+		: ibo_(nullptr), attributes_(MaxAttributes)
 	{
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool GLVertexFormat::Attribute::operator==(const Attribute& other) const
 	{
@@ -59,7 +50,7 @@ namespace nCine
 
 	void GLVertexFormat::Attribute::setVboParameters(GLsizei stride, const GLvoid* pointer)
 	{
-#if !defined(EMSCRIPTEN) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_1))
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_1))
 		static const int MaxVertexAttribStride = theServiceLocator().gfxCapabilities().value(IGfxCapabilities::GLIntValues::MAX_VERTEX_ATTRIB_STRIDE);
 
 		if (stride > MaxVertexAttribStride) {
@@ -93,10 +84,11 @@ namespace nCine
 					case GL_UNSIGNED_SHORT:
 					case GL_INT:
 					case GL_UNSIGNED_INT:
-						if (attributes_[i].normalized_)
+						if (attributes_[i].normalized_) {
 							glVertexAttribPointer(attributes_[i].index_, attributes_[i].size_, attributes_[i].type_, GL_TRUE, attributes_[i].stride_, pointer);
-						else
+						} else {
 							glVertexAttribIPointer(attributes_[i].index_, attributes_[i].size_, attributes_[i].type_, attributes_[i].stride_, pointer);
+						}
 						break;
 					default:
 						glVertexAttribPointer(attributes_[i].index_, attributes_[i].size_, attributes_[i].type_, attributes_[i].normalized_, attributes_[i].stride_, pointer);
@@ -105,14 +97,16 @@ namespace nCine
 			}
 		}
 
-		if (ibo_)
+		if (ibo_) {
 			ibo_->bind();
+		}
 	}
 
 	void GLVertexFormat::reset()
 	{
-		for (unsigned int i = 0; i < MaxAttributes; i++)
+		for (unsigned int i = 0; i < MaxAttributes; i++) {
 			attributes_[i].enabled_ = false;
+		}
 		ibo_ = nullptr;
 	}
 
@@ -137,5 +131,4 @@ namespace nCine
 	{
 		return !operator==(other);
 	}
-
 }

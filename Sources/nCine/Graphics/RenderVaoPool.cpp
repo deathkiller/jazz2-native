@@ -16,10 +16,6 @@ namespace nCine
 	}
 #endif
 
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	RenderVaoPool::RenderVaoPool(unsigned int vaoPoolSize)
 	{
 		vaoPool_.reserve(vaoPoolSize);
@@ -28,10 +24,6 @@ namespace nCine
 		GLVertexFormat format;
 		bindVao(format);
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void RenderVaoPool::bindVao(const GLVertexFormat& vertexFormat)
 	{
@@ -110,10 +102,6 @@ namespace nCine
 		RenderStatistics::gatherVaoPoolStatistics((unsigned int)vaoPool_.size(), (unsigned int)vaoPool_.capacity());
 #endif
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void RenderVaoPool::insertGLDebugMessage(const VaoBinding& binding)
 	{

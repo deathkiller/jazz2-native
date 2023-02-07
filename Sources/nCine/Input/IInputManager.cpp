@@ -9,17 +9,9 @@ using namespace Death::Containers::Literals;
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	IInputEventHandler* IInputManager::inputEventHandler_ = nullptr;
 	IInputManager::Cursor IInputManager::cursor_ = IInputManager::Cursor::Arrow;
 	JoyMapping IInputManager::joyMapping_;
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	JoystickGuid::JoystickGuid()
 	{
@@ -134,5 +126,4 @@ namespace nCine
 		}
 #endif
 	}
-
 }

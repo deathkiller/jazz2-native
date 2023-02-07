@@ -1,15 +1,11 @@
-#include <cstring> // for memcpy()
 #include "GLUniformCache.h"
 #include "GLUniform.h"
 #include "../../../Common.h"
 
+#include <cstring> // for memcpy()
+
 namespace nCine
 {
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	GLUniformCache::GLUniformCache()
 		: uniform_(nullptr), dataPointer_(nullptr), isDirty_(false)
 	{
@@ -21,17 +17,14 @@ namespace nCine
 		ASSERT(uniform);
 	}
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	const GLfloat* GLUniformCache::floatVector() const
 	{
 		ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && checkFloat()));
 		const GLfloat* vec = nullptr;
 
-		if (dataPointer_)
+		if (dataPointer_ != nullptr) {
 			vec = reinterpret_cast<GLfloat*>(dataPointer_);
+		}
 		return vec;
 	}
 
@@ -41,8 +34,9 @@ namespace nCine
 
 		GLfloat value = 0.0f;
 
-		if (dataPointer_)
+		if (dataPointer_ != nullptr) {
 			value = static_cast<GLfloat>(*dataPointer_);
+		}
 		return value;
 	}
 
@@ -51,8 +45,9 @@ namespace nCine
 		ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && checkInt()));
 		const GLint* vec = nullptr;
 
-		if (dataPointer_)
+		if (dataPointer_ != nullptr) {
 			vec = reinterpret_cast<GLint*>(dataPointer_);
+		}
 		return vec;
 	}
 
@@ -61,27 +56,28 @@ namespace nCine
 		ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && checkInt() && uniform_->numComponents() > index));
 		GLint value = 0;
 
-		if (dataPointer_)
+		if (dataPointer_ != nullptr) {
 			value = static_cast<GLint>(*dataPointer_);
+		}
 		return value;
 	}
 
 	bool GLUniformCache::setFloatVector(const GLfloat* vec)
 	{
 		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr || checkFloat() == false)
+		if (uniform_ == nullptr || dataPointer_ == nullptr || !checkFloat()) {
 			return false;
+		}
 
 		isDirty_ = true;
-		memcpy(dataPointer_, vec, sizeof(GLfloat) * uniform_->numComponents());
+		std::memcpy(dataPointer_, vec, sizeof(GLfloat) * uniform_->numComponents());
 		return true;
 	}
 
 	bool GLUniformCache::setFloatValue(GLfloat v0)
 	{
 		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr ||
-			checkFloat() == false || checkComponents(1) == false) {
+		if (uniform_ == nullptr || dataPointer_ == nullptr || !checkFloat() || !checkComponents(1)) {
 			return false;
 		}
 
@@ -94,8 +90,7 @@ namespace nCine
 	bool GLUniformCache::setFloatValue(GLfloat v0, GLfloat v1)
 	{
 		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr ||
-			checkFloat() == false || checkComponents(2) == false) {
+		if (uniform_ == nullptr || dataPointer_ == nullptr || !checkFloat() || !checkComponents(2)) {
 			return false;
 		}
 
@@ -109,8 +104,7 @@ namespace nCine
 	bool GLUniformCache::setFloatValue(GLfloat v0, GLfloat v1, GLfloat v2)
 	{
 		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr ||
-			checkFloat() == false || checkComponents(3) == false) {
+		if (uniform_ == nullptr || dataPointer_ == nullptr || !checkFloat() || !checkComponents(3)) {
 			return false;
 		}
 
@@ -125,8 +119,7 @@ namespace nCine
 	bool GLUniformCache::setFloatValue(GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3)
 	{
 		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr ||
-			checkFloat() == false || checkComponents(4) == false) {
+		if (uniform_ == nullptr || dataPointer_ == nullptr || !checkFloat() || !checkComponents(4)) {
 			return false;
 		}
 
@@ -142,20 +135,19 @@ namespace nCine
 	bool GLUniformCache::setIntVector(const GLint* vec)
 	{
 		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr || checkInt() == false) {
+		if (uniform_ == nullptr || dataPointer_ == nullptr || !checkInt()) {
 			return false;
 		}
 
 		isDirty_ = true;
-		memcpy(dataPointer_, vec, sizeof(GLint) * uniform_->numComponents());
+		std::memcpy(dataPointer_, vec, sizeof(GLint) * uniform_->numComponents());
 		return true;
 	}
 
 	bool GLUniformCache::setIntValue(GLint v0)
 	{
 		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr ||
-			checkInt() == false || checkComponents(1) == false) {
+		if (uniform_ == nullptr || dataPointer_ == nullptr || !checkInt() || !checkComponents(1)) {
 			return false;
 		}
 
@@ -168,8 +160,7 @@ namespace nCine
 	bool GLUniformCache::setIntValue(GLint v0, GLint v1)
 	{
 		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr ||
-			checkInt() == false || checkComponents(2) == false) {
+		if (uniform_ == nullptr || dataPointer_ == nullptr || !checkInt() || !checkComponents(2)) {
 			return false;
 		}
 
@@ -183,8 +174,7 @@ namespace nCine
 	bool GLUniformCache::setIntValue(GLint v0, GLint v1, GLint v2)
 	{
 		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr ||
-			checkInt() == false || checkComponents(3) == false) {
+		if (uniform_ == nullptr || dataPointer_ == nullptr || !checkInt() || !checkComponents(3)) {
 			return false;
 		}
 
@@ -199,8 +189,7 @@ namespace nCine
 	bool GLUniformCache::setIntValue(GLint v0, GLint v1, GLint v2, GLint v3)
 	{
 		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr ||
-			checkInt() == false || checkComponents(4) == false) {
+		if (uniform_ == nullptr || dataPointer_ == nullptr || !checkInt() || !checkComponents(4)) {
 			return false;
 		}
 
@@ -216,8 +205,9 @@ namespace nCine
 	bool GLUniformCache::commitValue()
 	{
 		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr || isDirty_ == false)
+		if (uniform_ == nullptr || dataPointer_ == nullptr || !isDirty_) {
 			return false;
+		}
 
 		// The uniform must not belong to any uniform block
 		ASSERT(uniform_->blockIndex() == -1);
@@ -277,10 +267,6 @@ namespace nCine
 		return true;
 	}
 
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	bool GLUniformCache::checkFloat() const
 	{
 		if (uniform_->basicType() != GL_FLOAT) {
@@ -307,8 +293,9 @@ namespace nCine
 		) {
 			LOGE_X("Uniform \"%s\" is not integer", uniform_->name());
 			return false;
-		} else
+		} else {
 			return true;
+		}
 	}
 
 	bool GLUniformCache::checkComponents(unsigned int requiredComponents) const
@@ -320,5 +307,4 @@ namespace nCine
 			return true;
 		}
 	}
-
 }

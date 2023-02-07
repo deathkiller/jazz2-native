@@ -6,10 +6,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	MeshSprite::MeshSprite()
 		: MeshSprite(nullptr, nullptr, 0.0f, 0.0f)
 	{
@@ -26,9 +22,8 @@ namespace nCine
 	}
 
 	MeshSprite::MeshSprite(SceneNode* parent, Texture* texture, float xx, float yy)
-		: BaseSprite(parent, texture, xx, yy),
-		vertices_(16), vertexDataPointer_(nullptr), bytesPerVertex_(0), numVertices_(0),
-		indices_(16), indexDataPointer_(nullptr), numIndices_(0)
+		: BaseSprite(parent, texture, xx, yy), vertices_(16), vertexDataPointer_(nullptr), bytesPerVertex_(0),
+			numVertices_(0), indices_(16), indexDataPointer_(nullptr), numIndices_(0)
 	{
 		init();
 	}
@@ -47,10 +42,6 @@ namespace nCine
 		: MeshSprite(nullptr, texture, position.X, position.Y)
 	{
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	/*! \note If used directly, it requires a custom shader that understands the specified data format */
 	void MeshSprite::copyVertices(unsigned int numVertices, unsigned int bytesPerVertex, const void* vertexData)
@@ -266,10 +257,6 @@ namespace nCine
 		return indices_.data();
 	}
 
-	///////////////////////////////////////////////////////////
-	// PROTECTED FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	MeshSprite::MeshSprite(const MeshSprite& other)
 		: BaseSprite(other)
 	{
@@ -278,10 +265,6 @@ namespace nCine
 		copyVertices(other.numVertices_, other.bytesPerVertex_, other.vertices_.data());
 		copyIndices(other.numIndices_, other.indices_.data());
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void MeshSprite::init()
 	{

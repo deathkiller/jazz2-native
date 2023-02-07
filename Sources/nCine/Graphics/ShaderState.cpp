@@ -21,12 +21,7 @@ namespace nCine
 			}
 			return uniform;
 		}
-
 	}
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
 
 	ShaderState::ShaderState()
 		: ShaderState(nullptr, nullptr)
@@ -34,8 +29,7 @@ namespace nCine
 	}
 
 	ShaderState::ShaderState(DrawableNode* node, Shader* shader)
-		: node_(nullptr), shader_(nullptr),
-		previousShaderType_(static_cast<int>(Material::ShaderProgramType::CUSTOM))
+		: node_(nullptr), shader_(nullptr), previousShaderType_(static_cast<int>(Material::ShaderProgramType::CUSTOM))
 	{
 		setNode(node);
 		setShader(shader);
@@ -46,10 +40,6 @@ namespace nCine
 		setNode(nullptr);
 		setShader(nullptr);
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool ShaderState::setNode(DrawableNode* node)
 	{
@@ -362,5 +352,4 @@ namespace nCine
 
 		return result;
 	}
-
 }

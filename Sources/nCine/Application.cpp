@@ -327,20 +327,12 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	Application::Application()
 		: isSuspended_(false), autoSuspension_(false), hasFocus_(true), shouldQuit_(false)
 	{
 	}
 
 	Application::~Application() = default;
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	Viewport& Application::screenViewport()
 	{
@@ -373,10 +365,6 @@ namespace nCine
 		}
 	}
 
-	///////////////////////////////////////////////////////////
-	// PROTECTED FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	void Application::initCommon()
 	{
 		TracyGpuContext;
@@ -389,8 +377,6 @@ namespace nCine
 		TracyAppInfo(NCINE_APP, sizeof(NCINE_APP) - 1);
 		LOGW("Tracy integration is enabled");
 #endif
-
-		//LOGI_X("Data path: \"%s\"", fs::GetDataPath().data());
 
 		theServiceLocator().registerIndexer(std::make_unique<ArrayIndexer>());
 #if defined(WITH_AUDIO)
@@ -619,10 +605,6 @@ namespace nCine
 #endif
 		LOGI("IAppEventHandler::OnResume() invoked");
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool Application::shouldSuspend()
 	{

@@ -274,7 +274,6 @@ namespace nCine
 		}
 		// clang-format on
 	}
-
 }
 
 #pragma pop_macro("DELETE")

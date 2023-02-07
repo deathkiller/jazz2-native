@@ -3,10 +3,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	AnimatedSprite::AnimatedSprite()
 		: AnimatedSprite(nullptr, nullptr, 0.0f, 0.0f)
 	{
@@ -42,10 +38,6 @@ namespace nCine
 		: AnimatedSprite(nullptr, texture, position.X, position.Y)
 	{
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool AnimatedSprite::isPaused() const
 	{
@@ -140,10 +132,6 @@ namespace nCine
 			setTexRect(anims_[currentAnimIndex_].rect());
 		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PROTECTED FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	AnimatedSprite::AnimatedSprite(const AnimatedSprite& other)
 		: Sprite(other), anims_(other.anims_), currentAnimIndex_(other.currentAnimIndex_)
