@@ -38,7 +38,7 @@ namespace nCine
 	AudioLoaderOgg::AudioLoaderOgg(std::unique_ptr<IFileStream> fileHandle)
 		: IAudioLoader(std::move(fileHandle))
 	{
-		LOGV_X("Loading \"%s\"", fileHandle_->GetFileName().data());
+		LOGD_X("Loading \"%s\"", fileHandle_->GetFileName().data());
 
 #if defined(DEATH_TARGET_ANDROID)
 		if (fileHandle_->GetType() == IFileStream::FileType::Asset) {
@@ -83,7 +83,7 @@ namespace nCine
 #endif
 
 		RETURN_ASSERT_MSG_X(numChannels_ == 1 || numChannels_ == 2, "Unsupported number of channels: %d", numChannels_);
-		LOGV_X("Duration: %.2fs, channels: %d, frequency: %dHz", duration_, numChannels_, frequency_);
+		LOGD_X("Duration: %.2fs, channels: %d, frequency: %dHz", duration_, numChannels_, frequency_);
 
 		hasLoaded_ = true;
 	}

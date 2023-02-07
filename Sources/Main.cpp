@@ -747,10 +747,10 @@ void GameEventHandler::CheckUpdates()
 	auto deviceModel = AndroidJniClass_Version::deviceModel();
 	String device = (deviceModel.empty() ? deviceManufacturer : (deviceModel.hasPrefix(deviceManufacturer) ? deviceModel : deviceManufacturer + " "_s + deviceModel));
 	char DeviceDesc[64];
-	int DeviceDescLength = formatString(DeviceDesc, _countof(DeviceDesc), "%s|Android %i|%s|2", androidId.data(), sdkVersion, device.data());
+	int DeviceDescLength = formatString(DeviceDesc, countof(DeviceDesc), "%s|Android %i|%s|2", androidId.data(), sdkVersion, device.data());
 #elif defined(DEATH_TARGET_APPLE)
 	char DeviceDesc[64]; int DeviceDescLength;
-	if (::gethostname(DeviceDesc, _countof(DeviceDesc) - (sizeof("|macOS||5") - 1)) == 0) {
+	if (::gethostname(DeviceDesc, countof(DeviceDesc) - (sizeof("|macOS||5") - 1)) == 0) {
 		DeviceDescLength = std::strlen(DeviceDesc);
 	} else {
 		DeviceDescLength = 0;
@@ -759,17 +759,17 @@ void GameEventHandler::CheckUpdates()
 	DeviceDescLength += sizeof("|macOS||5") - 1;
 #elif defined(DEATH_TARGET_UNIX)
 	char DeviceDesc[64]; int DeviceDescLength;
-	if (::gethostname(DeviceDesc, _countof(DeviceDesc)) == 0) {
+	if (::gethostname(DeviceDesc, countof(DeviceDesc)) == 0) {
 		DeviceDescLength = std::strlen(DeviceDesc);
 	} else {
 		DeviceDescLength = 0;
 	}
 	String unixVersion = Environment::GetUnixVersion();
-	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, _countof(DeviceDesc) - DeviceDescLength, "|%s||4",
+	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength, "|%s||4",
 		unixVersion.empty() ? "Unix" : unixVersion.data());
 #elif defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_WINDOWS_RT)
 	auto osVersion = Environment::WindowsVersion;
-	char DeviceDesc[64]; DWORD DeviceDescLength = _countof(DeviceDesc);
+	char DeviceDesc[64]; DWORD DeviceDescLength = countof(DeviceDesc);
 	if (!::GetComputerNameA(DeviceDesc, &DeviceDescLength)) {
 		DeviceDescLength = 0;
 	}
@@ -783,12 +783,12 @@ void GameEventHandler::CheckUpdates()
 		case DeviceType::Xbox: deviceType = "Xbox"; break;
 		default: deviceType = "Unknown"; break;
 	}
-	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, _countof(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i (%s)||7",
+	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i (%s)||7",
 		(int)((osVersion >> 48) & 0xffffu), (int)((osVersion >> 32) & 0xffffu), (int)(osVersion & 0xffffffffu), deviceType);
 #else
 	HMODULE hNtdll = ::GetModuleHandle(L"ntdll.dll");
 	bool isWine = (hNtdll != nullptr && ::GetProcAddress(hNtdll, "wine_get_host_version") != nullptr);
-	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, _countof(DeviceDesc) - DeviceDescLength,
+	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength,
 		isWine ? "|Windows %i.%i.%i (Wine)||3" : "|Windows %i.%i.%i||3",
 		(int)((osVersion >> 48) & 0xffffu), (int)((osVersion >> 32) & 0xffffu), (int)(osVersion & 0xffffffffu));
 #endif
@@ -819,7 +819,7 @@ void GameEventHandler::SaveEpisodeEnd(const std::unique_ptr<LevelInitialization>
 
 	int playerCount = 0;
 	PlayerCarryOver* firstPlayer = nullptr;
-	for (int i = 0; i < _countof(pendingLevelChange->PlayerCarryOvers); i++) {
+	for (int i = 0; i < countof(pendingLevelChange->PlayerCarryOvers); i++) {
 		if (pendingLevelChange->PlayerCarryOvers[i].Type != PlayerType::None) {
 			firstPlayer = &pendingLevelChange->PlayerCarryOvers[i];
 			playerCount++;
@@ -857,7 +857,7 @@ void GameEventHandler::SaveEpisodeContinue(const std::unique_ptr<LevelInitializa
 
 	int playerCount = 0;
 	PlayerCarryOver* firstPlayer = nullptr;
-	for (int i = 0; i < _countof(pendingLevelChange->PlayerCarryOvers); i++) {
+	for (int i = 0; i < countof(pendingLevelChange->PlayerCarryOvers); i++) {
 		if (pendingLevelChange->PlayerCarryOvers[i].Type != PlayerType::None) {
 			firstPlayer = &pendingLevelChange->PlayerCarryOvers[i];
 			playerCount++;
@@ -993,11 +993,11 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdSh
 int main(int argc, char** argv)
 {
 #if defined(NCINE_LOG) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
-	bool hasVirtualTerminal = isatty(fileno(stdout));
+	bool hasVirtualTerminal = isatty(1);
 	if (hasVirtualTerminal) {
 		const char* term = ::getenv("TERM");
 		if (term != nullptr && strcmp(term, "xterm-256color") == 0) {
-			fwrite(TermLogo, sizeof(unsigned char), _countof(TermLogo), stdout);
+			fwrite(TermLogo, sizeof(unsigned char), countof(TermLogo), stdout);
 		}
 	}
 #endif

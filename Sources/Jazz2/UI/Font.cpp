@@ -311,7 +311,7 @@ namespace Jazz2::UI
 										if (cursor.first == ']') {
 											break;
 										}
-										if (paramLength < _countof(param) - 1) {
+										if (paramLength < countof(param) - 1) {
 											param[paramLength++] = (char)cursor.first;
 										}
 										idx = cursor.second;
@@ -350,7 +350,7 @@ namespace Jazz2::UI
 								if (cursor.first == ']') {
 									break;
 								}
-								if (paramLength < _countof(param) - 1) {
+								if (paramLength < countof(param) - 1) {
 									param[paramLength++] = (char)cursor.first;
 								}
 								idx = cursor.second;
@@ -385,7 +385,7 @@ namespace Jazz2::UI
 
 				if (uvRect.W > 0 && uvRect.H > 0) {
 					if (useRandomColor) {
-						const Colorf& newColor = RandomColors[charOffset % _countof(RandomColors)];
+						const Colorf& newColor = RandomColors[charOffset % countof(RandomColors)];
 						color = Colorf(newColor.R(), newColor.G(), newColor.B(), color.A());
 					}
 

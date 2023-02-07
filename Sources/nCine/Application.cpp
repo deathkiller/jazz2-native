@@ -90,114 +90,28 @@ extern std::unique_ptr<nCine::IFileStream> __logFile;
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-extern bool _showLogConsole;
-#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
-extern bool _hasVirtualTerminal;
+extern bool __showLogConsole;
 #endif
+#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
+extern bool __hasVirtualTerminal;
+#endif
+
+inline int __strncpy(char* dest, int destSize, const char* source, int count)
+{
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
+	strncpy_s(dest, destSize, source, count);
+#else
+	::strncpy(dest, source, std::min(destSize, count));
+#endif
+	return count;
+}
 
 void __WriteLog(LogLevel level, const char* fmt, ...)
 {
 	constexpr int MaxEntryLength = 4 * 1024;
 	char logEntry[MaxEntryLength];
 
-#if defined(DEATH_TARGET_WINDOWS)
-#	if defined(NCINE_DEBUG) || defined(DEATH_TARGET_WINDOWS_RT)
-	// Use `OutputDebugString` for debug builds or if console cannot be created (WinRT)
-	logEntry[0] = '[';
-	switch (level) {
-		case LogLevel::Fatal:	logEntry[1] = 'F'; break;
-		case LogLevel::Error:	logEntry[1] = 'E'; break;
-		case LogLevel::Warning:	logEntry[1] = 'W'; break;
-		case LogLevel::Info:	logEntry[1] = 'I'; break;
-		default:				logEntry[1] = 'D'; break;
-	}
-	logEntry[2] = ']';
-	logEntry[3] = ' ';
-
-	va_list args;
-	va_start(args, fmt);
-	unsigned int length = vsnprintf(logEntry + 4, MaxEntryLength - 4, fmt, args) + 4;
-	va_end(args);
-
-	if (length >= MaxEntryLength - 2) {
-		length = MaxEntryLength - 2;
-	}
-
-	logEntry[length++] = '\n';
-	logEntry[length] = '\0';
-
-	::OutputDebugString(Death::Utf8::ToUtf16(logEntry));
-#	else
-	// If `/log` parameter was specified, write log to console window
-	if (_showLogConsole) {
-		constexpr char Reset[] = "\033[0m";
-		constexpr char Bold[] = "\033[1m";
-		constexpr char Faint[] = "\033[90m"; // Use dark color instead of `Faint` on Windows
-		constexpr char Red[] = "\033[31m";
-		constexpr char Yellow[] = "\033[33m";
-		constexpr char BrightRed[] = "\033[91m";
-		constexpr char BrightYellow[] = "\033[93m";
-
-		char logEntryWithColors[MaxEntryLength];
-		logEntryWithColors[0] = '\0';
-		logEntryWithColors[MaxEntryLength - 1] = '\0';
-
-		va_list args;
-		va_start(args, fmt);
-		unsigned int length = vsnprintf(logEntry, MaxEntryLength, fmt, args);
-		va_end(args);
-
-		// Colorize the output
-		unsigned int length2 = snprintf(logEntryWithColors, MaxEntryLength - 1, "%s", Faint);
-		if (level == LogLevel::Error || level == LogLevel::Fatal) {
-			length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Red);
-		} else if (level == LogLevel::Warning) {
-			length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Yellow);
-		}
-
-		unsigned int logMsgFuncLength = 0;
-		while (logEntry[logMsgFuncLength] != '\0' && (logMsgFuncLength == 0 || !(logEntry[logMsgFuncLength - 1] == '-' && logEntry[logMsgFuncLength] == '>'))) {
-			logMsgFuncLength++;
-		}
-		logMsgFuncLength++; // Skip '>' character
-
-		strncpy_s(logEntryWithColors + length2, MaxEntryLength - length2 - 1, logEntry, logMsgFuncLength);
-		length2 += logMsgFuncLength;
-
-		if (level != LogLevel::Verbose) {
-			length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Reset);
-		}
-		if (level == LogLevel::Error || level == LogLevel::Fatal) {
-			length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", BrightRed);
-			if (level == LogLevel::Fatal) {
-				length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Bold);
-			}
-		} else if (level == LogLevel::Warning) {
-			length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", BrightYellow);
-		}
-
-		strncpy_s(logEntryWithColors + length2, MaxEntryLength - length2 - 1, logEntry + logMsgFuncLength, length - logMsgFuncLength);
-		length2 += length - logMsgFuncLength;
-
-		if (level == LogLevel::Verbose || level == LogLevel::Warning || level == LogLevel::Error || level == LogLevel::Fatal) {
-			length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Reset);
-		}
-
-		if (length2 >= MaxEntryLength - 2) {
-			length2 = MaxEntryLength - 2;
-		}
-
-		logEntryWithColors[length2++] = '\n';
-		logEntryWithColors[length2] = '\0';
-
-		if (level == LogLevel::Error || level == LogLevel::Fatal) {
-			fputs(logEntryWithColors, stderr);
-		} else {
-			fputs(logEntryWithColors, stdout);
-		}
-	}
-#	endif
-#elif defined(DEATH_TARGET_ANDROID)
+#if defined(DEATH_TARGET_ANDROID)
 	android_LogPriority priority;
 
 	// clang-format off
@@ -230,14 +144,44 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 		fprintf(__logFile->Ptr(), "[%s] %s\n", levelIdentifier, logEntry);
 		fflush(__logFile->Ptr());
 	}
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+	logEntry[0] = '[';
+	switch (level) {
+		case LogLevel::Fatal:	logEntry[1] = 'F'; break;
+		case LogLevel::Error:	logEntry[1] = 'E'; break;
+		case LogLevel::Warning:	logEntry[1] = 'W'; break;
+		case LogLevel::Info:	logEntry[1] = 'I'; break;
+		default:				logEntry[1] = 'D'; break;
+	}
+	logEntry[2] = ']';
+	logEntry[3] = ' ';
+
+	va_list args;
+	va_start(args, fmt);
+	unsigned int length = vsnprintf(logEntry + 4, MaxEntryLength - 4, fmt, args) + 4;
+	va_end(args);
+
+	if (length >= MaxEntryLength - 2) {
+		length = MaxEntryLength - 2;
+	}
+
+	logEntry[length++] = '\n';
+	logEntry[length] = '\0';
+
+	::OutputDebugString(Death::Utf8::ToUtf16(logEntry));
 #else
 	constexpr char Reset[] = "\033[0m";
 	constexpr char Bold[] = "\033[1m";
 	constexpr char Faint[] = "\033[2m";
 	constexpr char Red[] = "\033[31m";
 	constexpr char Yellow[] = "\033[33m";
+	constexpr char DarkGray[] = "\033[90m";
 	constexpr char BrightRed[] = "\033[91m";
 	constexpr char BrightYellow[] = "\033[93m";
+
+#	if defined(DEATH_TARGET_WINDOWS)
+	if (__showLogConsole) {
+#	endif
 
 	char logEntryWithColors[MaxEntryLength];
 	logEntryWithColors[0] = '\0';
@@ -249,58 +193,67 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 	va_end(args);
 
 	// Colorize the output
-#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
-	bool hasVirtualTerminal = _hasVirtualTerminal;
+#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS)
+	const bool hasVirtualTerminal = __hasVirtualTerminal;
 #	else
 	constexpr bool hasVirtualTerminal = true;
 #	endif
 
-	unsigned int length2 = 0;
-	if (hasVirtualTerminal) {
-		length2 += snprintf(logEntryWithColors, MaxEntryLength - 1, "%s", Faint);
-		if (level == LogLevel::Error || level == LogLevel::Fatal) {
-			length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Red);
-		}
-#	if !defined(DEATH_TARGET_EMSCRIPTEN)
-		else if (level == LogLevel::Warning) {
-			length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Yellow);
-		}
-#	endif
-	}
-
 	unsigned int logMsgFuncLength = 0;
-	while (logEntry[logMsgFuncLength] != '\0' && (logMsgFuncLength == 0 || !(logEntry[logMsgFuncLength - 1] == '-' && logEntry[logMsgFuncLength] == '>'))) {
+	while (true) {
+		if (logEntry[logMsgFuncLength] == '\0') {
+			logMsgFuncLength = -1;
+			break;
+		}
+		if (logMsgFuncLength > 0 && logEntry[logMsgFuncLength - 1] == '-' && logEntry[logMsgFuncLength] == '>') {
+			break;
+		}
 		logMsgFuncLength++;
 	}
 	logMsgFuncLength++; // Skip '>' character
 
-	strncpy(logEntryWithColors + length2, logEntry, std::min(logMsgFuncLength, MaxEntryLength - length2 - 1));
-	length2 += logMsgFuncLength;
+	unsigned int length2 = 0;
+	if (logMsgFuncLength > 0) {
+		if (hasVirtualTerminal) {
+			length2 += __strncpy(logEntryWithColors, MaxEntryLength - 1, Faint, countof(Faint) - 1);
+			if (level == LogLevel::Error || level == LogLevel::Fatal) {
+				length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Red, countof(Red) - 1);
+			}
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+			else if (level == LogLevel::Warning) {
+				length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Yellow, countof(Yellow) - 1);
+			} else {
+				length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, DarkGray, countof(DarkGray) - 1);
+			}
+#	endif
+		}
+
+		length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, logEntry, logMsgFuncLength);
+	}
 
 	if (hasVirtualTerminal) {
-		if (level != LogLevel::Verbose) {
-			length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Reset);
+		if (level != LogLevel::Debug) {
+			length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Reset, countof(Reset) - 1);
 		}
 		if (level == LogLevel::Error || level == LogLevel::Fatal) {
-			length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", BrightRed);
+			length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightRed, countof(BrightRed) - 1);
 			if (level == LogLevel::Fatal) {
-				length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Bold);
+				length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, countof(Bold) - 1);
 			}
 		} else if (level == LogLevel::Warning) {
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
-			length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", BrightYellow);
+			length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightYellow, countof(BrightYellow) - 1);
 #	else
-			length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Bold);
+			length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, countof(Bold) - 1);
 #	endif
 		}
 	}
 
-	strncpy(logEntryWithColors + length2, logEntry + logMsgFuncLength, std::min(length - logMsgFuncLength, MaxEntryLength - length2 - 1));
-	length2 += length - logMsgFuncLength;
+	length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, logEntry + logMsgFuncLength, length - logMsgFuncLength);
 
 	if (hasVirtualTerminal) {
-		if (level == LogLevel::Verbose || level == LogLevel::Warning || level == LogLevel::Error || level == LogLevel::Fatal) {
-			length2 += snprintf(logEntryWithColors + length2, MaxEntryLength - length2 - 1, "%s", Reset);
+		if (level == LogLevel::Debug || level == LogLevel::Warning || level == LogLevel::Error || level == LogLevel::Fatal) {
+			length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Reset, countof(Reset) - 1);
 		}
 	}
 
@@ -316,6 +269,37 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 	} else {
 		fputs(logEntryWithColors, stdout);
 	}
+
+#	if defined(DEATH_TARGET_WINDOWS)
+	} else {
+#		if defined(NCINE_DEBUG)
+		logEntry[0] = '[';
+		switch (level) {
+			case LogLevel::Fatal:	logEntry[1] = 'F'; break;
+			case LogLevel::Error:	logEntry[1] = 'E'; break;
+			case LogLevel::Warning:	logEntry[1] = 'W'; break;
+			case LogLevel::Info:	logEntry[1] = 'I'; break;
+			default:				logEntry[1] = 'D'; break;
+		}
+		logEntry[2] = ']';
+		logEntry[3] = ' ';
+
+		va_list args;
+		va_start(args, fmt);
+		unsigned int length = vsnprintf(logEntry + 4, MaxEntryLength - 4, fmt, args) + 4;
+		va_end(args);
+
+		if (length >= MaxEntryLength - 2) {
+			length = MaxEntryLength - 2;
+		}
+
+		logEntry[length++] = '\n';
+		logEntry[length] = '\0';
+
+		::OutputDebugString(Death::Utf8::ToUtf16(logEntry));
+#		endif
+	}
+#	endif
 #endif
 
 #if defined(WITH_TRACY)
@@ -629,7 +613,7 @@ namespace nCine
 			appEventHandler_->OnResume();
 		}
 		const TimeStamp suspensionDuration = frameTimer_->resume();
-		LOGV_X("Suspended for %.3f seconds", suspensionDuration.seconds());
+		LOGD_X("Suspended for %.3f seconds", suspensionDuration.seconds());
 #if defined(NCINE_PROFILING)
 		profileStartTime_ += suspensionDuration;
 #endif

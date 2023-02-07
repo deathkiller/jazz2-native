@@ -3311,7 +3311,7 @@ namespace Jazz2::Scripting
 		LOGW_X("%s", text.data());
 	}
 	void jjDebug(const String& text, bool timestamp) {
-		LOGV_X("%s", text.data());
+		LOGD_X("%s", text.data());
 	}
 	void jjChat(const String& text, bool teamchat) {
 		LOGW_X("%s", text.data());
@@ -3320,7 +3320,7 @@ namespace Jazz2::Scripting
 		LOGW_X("%s", text.data());
 	}
 	void jjSpy(const String& text) {
-		LOGV_X("%s", text.data());
+		LOGD_X("%s", text.data());
 	}
 
 	// TODO
@@ -3885,11 +3885,11 @@ namespace Jazz2::Scripting
 		RegisterBuiltInFunctions(_engine);
 		switch (_scriptContextType) {
 			case ScriptContextType::Legacy:
-				LOGV("Compiling script with \"Legacy\" context");
+				LOGD("Compiling script with \"Legacy\" context");
 				RegisterLegacyFunctions(_engine);
 				break;
 			case ScriptContextType::Standard:
-				LOGV("Compiling script with \"Standard\" context");
+				LOGD("Compiling script with \"Standard\" context");
 				RegisterStandardFunctions(_engine, _module);
 				break;
 		}

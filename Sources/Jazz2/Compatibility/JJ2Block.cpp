@@ -79,18 +79,13 @@ namespace Jazz2::Compatibility
 
 	int32_t JJ2Block::ReadInt32()
 	{
-		LOGV("ReadInt32 01");
 		if (_offset > _length - 4) {
-			LOGV("ReadInt32 02");
 			_offset = INT32_MAX;
 			return false;
 		}
-		LOGV("ReadInt32 03");
 		//int32_t result = *(int32_t*)&_buffer[_offset];
 		int32_t result = (int32_t)(_buffer[_offset] | (_buffer[_offset + 1] << 8) | (_buffer[_offset + 2] << 16) | (_buffer[_offset + 3] << 24));
-		LOGV("ReadInt32 04");
 		_offset += 4;
-		LOGV("ReadInt32 05");
 		return result;
 	}
 

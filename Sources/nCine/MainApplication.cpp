@@ -22,11 +22,16 @@
 
 #if defined(NCINE_LOG) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 
+#if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
+#	define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
+
 #include <Utf8.h>
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
-bool _showLogConsole;
+bool __showLogConsole;
+bool __hasVirtualTerminal;
 
 static bool CreateLogConsole(const StringView& title)
 {
@@ -111,8 +116,7 @@ static bool EnableVirtualTerminalProcessing()
 	if (!::GetConsoleMode(hOut, &dwMode)) {
 		return false;
 	}
-	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-	if (!::SetConsoleMode(hOut, dwMode)) {
+	if (!::SetConsoleMode(hOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
 		return false;
 	}
 	return true;
@@ -122,7 +126,7 @@ static bool EnableVirtualTerminalProcessing()
 
 #include <unistd.h>
 
-bool _hasVirtualTerminal;
+bool __hasVirtualTerminal;
 
 #endif
 
@@ -143,7 +147,7 @@ namespace nCine
 #if defined(DEATH_TARGET_WINDOWS)
 		// Force set current directory, so everything is loaded correctly, because it's not usually intended
 		wchar_t pBuf[MAX_PATH];
-		DWORD pBufLength = ::GetModuleFileName(nullptr, pBuf, _countof(pBuf));
+		DWORD pBufLength = ::GetModuleFileName(nullptr, pBuf, countof(pBuf));
 		if (pBufLength > 0) {
 			wchar_t* lastSlash = wcsrchr(pBuf, L'\\');
 			if (lastSlash == nullptr) {
@@ -171,7 +175,7 @@ namespace nCine
 		app.shutdownCommon();
 
 #if defined(NCINE_LOG) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		if (_showLogConsole) {
+		if (__showLogConsole) {
 			DestroyLogConsole();
 		}
 #endif
@@ -189,24 +193,27 @@ namespace nCine
 
 #if defined(NCINE_LOG)
 #	if defined(DEATH_TARGET_APPLE)
-		_hasVirtualTerminal = isatty(fileno(stdout));
+		__hasVirtualTerminal = isatty(1);
 #	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		_showLogConsole = false;
+		__showLogConsole = false;
 		for (int i = 0; i < argc; i++) {
 			if (wcscmp(argv[i], L"/log") == 0) {
-				_showLogConsole = true;
+				__showLogConsole = true;
 				break;
 			}
 		}
-		if (_showLogConsole) {
+		if (__showLogConsole) {
 			CreateLogConsole(NCINE_APP_NAME ": Console");
-			EnableVirtualTerminalProcessing();
+			__hasVirtualTerminal = EnableVirtualTerminalProcessing();
+		} else {
+			__hasVirtualTerminal = false;
 		}
 #	elif defined(DEATH_TARGET_UNIX)
 		setvbuf(stdout, nullptr, _IONBF, 0);
 		setvbuf(stderr, nullptr, _IONBF, 0);
 
-		_hasVirtualTerminal = isatty(fileno(stdout));
+		// Xcode's console reports that it is a TTY, but it doesn't support colors, but TERM is not defined
+		__hasVirtualTerminal = isatty(1) && std::getenv("TERM");
 #	endif
 #endif
 

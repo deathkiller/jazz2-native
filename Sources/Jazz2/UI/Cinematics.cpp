@@ -165,12 +165,12 @@ namespace Jazz2::UI
 		_currentFrame = std::make_unique<uint32_t[]>(_width * _height);
 
 		// Read all 4 compressed streams
-		SmallVector<uint8_t, 0> compressedStreams[_countof(_decompressedStreams)];
-		uint32_t currentOffsets[_countof(_decompressedStreams)] { };
+		SmallVector<uint8_t, 0> compressedStreams[countof(_decompressedStreams)];
+		uint32_t currentOffsets[countof(_decompressedStreams)] { };
 		uint32_t totalOffset = s->GetPosition();
 
 		while (totalOffset < s->GetSize()) {
-			for (int i = 0; i < _countof(_decompressedStreams); i++) {
+			for (int i = 0; i < countof(_decompressedStreams); i++) {
 				uint32_t bytesLeft = s->ReadValue<uint32_t>();
 				totalOffset += 4 + bytesLeft;
 
@@ -184,7 +184,7 @@ namespace Jazz2::UI
 			}
 		}
 
-		for (int i = 0; i < _countof(_decompressedStreams); i++) {
+		for (int i = 0; i < countof(_decompressedStreams); i++) {
 			// Stream 3 contains pixel data and is probably compressed with higher ratio
 			_decompressedStreams[i].resize_for_overwrite(currentOffsets[i] * (i == 3 ? 8 : 3));
 
@@ -272,7 +272,7 @@ namespace Jazz2::UI
 		// Try to get 8 connected joysticks
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		int jc = 0;
-		for (int i = 0; i < IInputManager::MaxNumJoysticks && jc < _countof(joyStates); i++) {
+		for (int i = 0; i < IInputManager::MaxNumJoysticks && jc < countof(joyStates); i++) {
 			if (input.isJoyMapped(i)) {
 				joyStates[jc++] = &input.joyMappedState(i);
 			}

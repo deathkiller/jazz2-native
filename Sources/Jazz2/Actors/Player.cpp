@@ -2632,7 +2632,7 @@ namespace Jazz2::Actors
 		}
 
 		// Preload all weapons
-		for (int i = 0; i < _countof(_weaponAmmo); i++) {
+		for (int i = 0; i < countof(_weaponAmmo); i++) {
 			if (_weaponAmmo[i] != 0) {
 				PreloadMetadataAsync("Weapon/"_s + WeaponNames[i]);
 			}

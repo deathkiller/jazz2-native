@@ -180,18 +180,18 @@ namespace Jazz2::Compatibility
 		GrowableMemoryFile co(1024 * 1024);
 
 		// Palette
-		uint32_t palette[_countof(_palette)];
+		uint32_t palette[countof(_palette)];
 		std::memcpy(palette, _palette, sizeof(_palette));
 
 		bool hasAlphaChannel = false;
-		for (int i = 1; i < _countof(palette); i++) {
+		for (int i = 1; i < countof(palette); i++) {
 			if ((palette[i] & 0xff000000) != 0) {
 				hasAlphaChannel = true;
 				break;
 			}
 		}
 		if (!hasAlphaChannel) {
-			for (int i = 1; i < _countof(palette); i++) {
+			for (int i = 1; i < countof(palette); i++) {
 				palette[i] |= 0xff000000;
 			}
 		}

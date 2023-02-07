@@ -2,7 +2,6 @@
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
 #	include <winrt/Windows.System.Profile.h>
-
 namespace winrtWSP = winrt::Windows::System::Profile;
 #elif defined(DEATH_TARGET_WINDOWS)
 #	pragma comment(lib, "psapi")
@@ -11,7 +10,7 @@ namespace winrtWSP = winrt::Windows::System::Profile;
 #	include <strsafe.h>
 #elif defined(DEATH_TARGET_UNIX)
 #	include <stdio.h>
-#	include <string.h>
+#	include <cstring>
 #endif
 
 namespace Death::Environment

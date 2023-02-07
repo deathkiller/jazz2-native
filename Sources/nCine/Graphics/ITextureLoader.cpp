@@ -64,7 +64,7 @@ namespace nCine
 
 	std::unique_ptr<ITextureLoader> ITextureLoader::createFromFile(const StringView& filename)
 	{
-		LOGV_X("Loading from file \"%s\"", filename.data());
+		LOGD_X("Loading from file \"%s\"", filename.data());
 		// Creating a handle from IFile static method to detect assets file
 		return createLoader(fs::Open(filename, FileAccessMode::Read), filename);
 	}
@@ -112,7 +112,7 @@ namespace nCine
 
 	void ITextureLoader::loadPixels(GLenum internalFormat, GLenum type)
 	{
-		LOGV_X("Loading \"%s\"", fileHandle_->GetFileName().data());
+		LOGD_X("Loading \"%s\"", fileHandle_->GetFileName().data());
 		if (type) { // overriding pixel type
 			texFormat_ = TextureFormat(internalFormat, type);
 		} else {

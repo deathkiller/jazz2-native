@@ -766,7 +766,7 @@ namespace nCine
 		StringView baseLanguage = TryRemoveLanguageSpecifiers(langId);
 
 		size_t bottom = 0;
-		size_t top = _countof(SupportedLanguages);
+		size_t top = countof(SupportedLanguages);
 		while (bottom < top) {
 			size_t index = (bottom + top) / 2;
 			int cmpVal = std::strncmp(langId.data(), SupportedLanguages[index].Identifier, baseLanguage.size());

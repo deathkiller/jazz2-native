@@ -801,14 +801,14 @@ namespace nCine
 			joyState.hasDPad_ = true;
 			if (__ANDROID_API__ >= 19 && AndroidJniHelper::SdkVersion() >= 19) {
 				int buttonsToCheck[4];
-				for (int i = 0; i < _countof(buttonsToCheck); i++) {
+				for (int i = 0; i < countof(buttonsToCheck); i++) {
 					buttonsToCheck[i] = AKEYCODE_DPAD_UP + i;
 				}
 
 				// InputDevice.hasKeys()
-				inputDevice.hasKeys(buttonsToCheck, _countof(buttonsToCheck), checkedButtons);
+				inputDevice.hasKeys(buttonsToCheck, countof(buttonsToCheck), checkedButtons);
 
-				for (int i = 0; i < _countof(buttonsToCheck); i++) {
+				for (int i = 0; i < countof(buttonsToCheck); i++) {
 					if (!checkedButtons[i]) {
 						joyState.hasDPad_ = false;
 						LOGI_X("Device (%d, %d) - D-Pad not detected", deviceId, joyId);

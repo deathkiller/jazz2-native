@@ -396,7 +396,7 @@ namespace nCine
 		{
 			ZoneScopedN("OnDrawViewport");
 			theApplication().appEventHandler_->OnDrawViewport(*this);
-			//LOGV_X("IAppEventHandler::OnDrawViewport() invoked with viewport 0x%lx", uintptr_t(this));
+			//LOGD_X("IAppEventHandler::OnDrawViewport() invoked with viewport 0x%lx", uintptr_t(this));
 		}
 
 		if (type_ == Type::WithTexture) {

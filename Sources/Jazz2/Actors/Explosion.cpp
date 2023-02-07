@@ -80,7 +80,7 @@ namespace Jazz2::Actors
 				constexpr StringView IceShrapnels[] = {
 					"IceShrapnel1"_s, "IceShrapnel2"_s, "IceShrapnel3"_s, "IceShrapnel4"_s
 				};
-				SetAnimation(IceShrapnels[Random().Fast(0, _countof(IceShrapnels))]);
+				SetAnimation(IceShrapnels[Random().Fast(0, countof(IceShrapnels))]);
 
 				SetState(ActorState::CollideWithTileset | ActorState::ApplyGravitation | ActorState::SkipPerPixelCollisions, true);
 				SetState(ActorState::ForceDisableCollisions, false);

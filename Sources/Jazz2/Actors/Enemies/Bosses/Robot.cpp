@@ -123,7 +123,7 @@ namespace Jazz2::Actors::Bosses
 		};
 		int n = Random().Next(1, 4);
 		for (int i = 0; i < n; i++) {
-			CreateSpriteDebris(Shrapnels[Random().Fast(0, _countof(Shrapnels))], 1);
+			CreateSpriteDebris(Shrapnels[Random().Fast(0, countof(Shrapnels))], 1);
 		}
 
 		PlaySfx("Shrapnel"_s);
@@ -139,7 +139,7 @@ namespace Jazz2::Actors::Bosses
 			"Shrapnel7"_s, "Shrapnel8"_s, "Shrapnel9"_s
 		};
 		for (int i = 0; i < 8; i++) {
-			CreateSpriteDebris(Shrapnels[Random().Fast(0, _countof(Shrapnels))], 1);
+			CreateSpriteDebris(Shrapnels[Random().Fast(0, countof(Shrapnels))], 1);
 		}
 
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));

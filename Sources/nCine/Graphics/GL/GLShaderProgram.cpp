@@ -361,7 +361,7 @@ namespace nCine
 				GLUniform& uniform = uniforms_.emplace_back(glHandle_, indices[i]);
 				uniformsSize_ += uniform.memorySize();
 
-				LOGV_X("Shader %u - uniform %d : \"%s\"", glHandle_, uniform.location(), uniform.name());
+				LOGD_X("Shader %u - uniform %d : \"%s\"", glHandle_, uniform.location(), uniform.name());
 			}
 		}
 		GL_LOG_ERRORS();
@@ -377,7 +377,7 @@ namespace nCine
 			GLUniformBlock& uniformBlock = uniformBlocks_.emplace_back(glHandle_, i, discover);
 			uniformBlocksSize_ += uniformBlock.size();
 
-			LOGV_X("Shader %u - uniform block %u : \"%s\"", glHandle_, uniformBlock.index(), uniformBlock.name());
+			LOGD_X("Shader %u - uniform block %u : \"%s\"", glHandle_, uniformBlock.index(), uniformBlock.name());
 		}
 		GL_LOG_ERRORS();
 	}
@@ -391,7 +391,7 @@ namespace nCine
 		for (int i = 0; i < count; i++) {
 			GLAttribute& attribute = attributes_.emplace_back(glHandle_, i);
 
-			LOGV_X("Shader %u - attribute %d : \"%s\"", glHandle_, attribute.location(), attribute.name());
+			LOGD_X("Shader %u - attribute %d : \"%s\"", glHandle_, attribute.location(), attribute.name());
 		}
 		GL_LOG_ERRORS();
 	}

@@ -8,7 +8,7 @@ namespace nCine
 	AudioLoaderWav::AudioLoaderWav(std::unique_ptr<IFileStream> fileHandle)
 		: IAudioLoader(std::move(fileHandle))
 	{
-		LOGV_X("Loading \"%s\"", fileHandle_->GetFileName().data());
+		LOGD_X("Loading \"%s\"", fileHandle_->GetFileName().data());
 		RETURN_ASSERT_MSG_X(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->GetFileName().data());
 
 		WavHeader header;
@@ -32,7 +32,7 @@ namespace nCine
 		duration_ = float(numSamples_) / frequency_;
 
 		RETURN_ASSERT_MSG_X(numChannels_ == 1 || numChannels_ == 2, "Unsupported number of channels: %d", numChannels_);
-		LOGV_X("Duration: %.2fs, channels: %d, frequency: %dHz", duration_, numChannels_, frequency_);
+		LOGD_X("Duration: %.2fs, channels: %d, frequency: %dHz", duration_, numChannels_, frequency_);
 
 		hasLoaded_ = true;
 	}

@@ -65,7 +65,7 @@ namespace Jazz2::UI
 		std::unique_ptr<uint32_t[]> _currentFrame;
 		uint32_t _palette[256];
 		SmallVector<uint8_t, 0> _decompressedStreams[4];
-		uint32_t _currentOffsets[_countof(_decompressedStreams)];
+		uint32_t _currentOffsets[countof(_decompressedStreams)];
 
 		BitArray _pressedKeys;
 		uint32_t _pressedActions;

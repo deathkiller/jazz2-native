@@ -106,7 +106,7 @@ namespace Jazz2::UI
 		}
 
 		bool isConnected = false;
-		for (int j = 0; j < _countof(RpcPaths); j++) {
+		for (int j = 0; j < countof(RpcPaths); j++) {
 			for (int i = 0; i < 10; i++) {
 				formatString(addr.sun_path, sizeof(addr.sun_path), RpcPaths[j].data(), tempPath.data(), i);
 				if (::connect(_sockFd, (struct sockaddr*)&addr, sizeof(addr)) >= 0) {
@@ -285,7 +285,7 @@ namespace Jazz2::UI
 
 		HANDLE waitHandles[] = { client->_hEventRead, client->_hEventWrite };
 		while (client->_hPipe != NULL) {
-			DWORD dwEvent = ::WaitForMultipleObjects(_countof(waitHandles), waitHandles, FALSE, INFINITE);
+			DWORD dwEvent = ::WaitForMultipleObjects(countof(waitHandles), waitHandles, FALSE, INFINITE);
 			switch (dwEvent) {
 				case WAIT_OBJECT_0: {
 					if (bytesRead > 0) {

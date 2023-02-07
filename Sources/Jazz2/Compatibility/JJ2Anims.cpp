@@ -70,7 +70,7 @@ namespace Jazz2::Compatibility
 			JJ2Block sampleDataBlock(s, sampleDataBlockLenC, sampleDataBlockLenU);
 
 			if (magicANIM != 0x4D494E41) {
-				LOGV_X("Header for set %i is incorrect (bad magic value), skipping", i);
+				LOGD_X("Header for set %i is incorrect (bad magic value), skipping", i);
 				continue;
 			}
 
