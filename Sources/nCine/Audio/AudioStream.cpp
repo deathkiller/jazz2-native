@@ -48,9 +48,9 @@ namespace nCine
 		}
 	}
 
-	AudioStream::AudioStream(AudioStream&&) noexcept = default;
+	AudioStream::AudioStream(AudioStream&&) = default;
 
-	AudioStream& AudioStream::operator=(AudioStream&&) noexcept = default;
+	AudioStream& AudioStream::operator=(AudioStream&&) = default;
 
 	unsigned long int AudioStream::numStreamSamples() const
 	{
