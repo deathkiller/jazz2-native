@@ -211,6 +211,18 @@ if(MSVC)
 	if(NCINE_WITH_TRACY)
 		target_link_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:/DEBUG>)
 	endif()
+	
+	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+		target_compile_options(${NCINE_APP} PRIVATE -fcolor-diagnostics)
+		target_compile_options(${NCINE_APP} PRIVATE -Wall -Wno-old-style-cast -Wno-gnu-zero-variadic-macro-arguments -Wno-unused-parameter -Wno-variadic-macros -Wno-c++11-long-long -Wno-missing-braces -Wno-multichar -Wno-switch -Wno-unknown-pragmas -Wno-reorder-ctor -Wno-braced-scalar-init -Wno-deprecated-builtins)
+
+		if(NCINE_DYNAMIC_LIBRARY)
+			target_link_options(${NCINE_APP} PRIVATE -Wl,-undefined,error)
+		endif()
+		
+		# Suppress "warning : ignoring invalid /arch: argument ..."
+		arget_link_options(${NCINE_APP} PRIVATE -Wno-unused-command-line-argument)
+	endif()
 else() # GCC and LLVM
 	target_compile_options(${NCINE_APP} PRIVATE -fno-exceptions)
 	target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:-ffast-math>)
@@ -267,7 +279,6 @@ else() # GCC and LLVM
 
 	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 		target_compile_options(${NCINE_APP} PRIVATE -fdiagnostics-color=auto)
-		#target_compile_options(${NCINE_APP} PRIVATE -Wall -pedantic -Wextra -Wno-old-style-cast -Wno-long-long -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-variadic-macros -Wcast-align)
 		target_compile_options(${NCINE_APP} PRIVATE -Wall -Wno-old-style-cast -Wno-long-long -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-variadic-macros -Wcast-align -Wno-multichar -Wno-switch -Wno-unknown-pragmas -Wno-reorder)
 
 		target_link_options(${NCINE_APP} PRIVATE -Wno-free-nonheap-object)
@@ -297,8 +308,7 @@ else() # GCC and LLVM
 		endif()
 	elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
 		target_compile_options(${NCINE_APP} PRIVATE -fcolor-diagnostics)
-		#target_compile_options(${NCINE_APP} PRIVATE -Wall -pedantic -Wextra -Wno-old-style-cast -Wno-gnu-zero-variadic-macro-arguments -Wno-unused-parameter -Wno-variadic-macros -Wno-c++11-long-long -Wno-missing-braces)
-		target_compile_options(${NCINE_APP} PRIVATE -Wall -Wno-old-style-cast -Wno-gnu-zero-variadic-macro-arguments -Wno-unused-parameter -Wno-variadic-macros -Wno-c++11-long-long -Wno-missing-braces -Wno-multichar -Wno-switch -Wno-unknown-pragmas -Wno-reorder-ctor -Wno-braced-scalar-init)
+		target_compile_options(${NCINE_APP} PRIVATE -Wall -Wno-old-style-cast -Wno-gnu-zero-variadic-macro-arguments -Wno-unused-parameter -Wno-variadic-macros -Wno-c++11-long-long -Wno-missing-braces -Wno-multichar -Wno-switch -Wno-unknown-pragmas -Wno-reorder-ctor -Wno-braced-scalar-init -Wno-deprecated-builtins)
 
 		if(NCINE_DYNAMIC_LIBRARY)
 			target_link_options(${NCINE_APP} PRIVATE -Wl,-undefined,error)
@@ -307,9 +317,6 @@ else() # GCC and LLVM
 		if(NOT EMSCRIPTEN)
 			# Extra optimizations in release
 			target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:-Ofast>)
-		else()
-			# Suppress some warnings in Emscripten
-			target_compile_options(${NCINE_APP} PRIVATE -Wno-deprecated-builtins)
 		endif()
 
 		# Enabling ThinLTO of Clang 4
