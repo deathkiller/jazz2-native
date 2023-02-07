@@ -9,20 +9,12 @@
 #	include <unistd.h>
 #endif
 
-namespace nCine {
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
+namespace nCine
+{
 	Timer::Timer()
 		: isRunning_(false), startTime_(clock().now()), accumulatedTime_(0ULL)
 	{
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void Timer::start()
 	{
@@ -43,7 +35,7 @@ namespace nCine {
 
 	float Timer::total() const
 	{
-		return (isRunning_)
+		return isRunning_
 			? static_cast<float>(accumulatedTime_ + clock().counter() - startTime_) / clock().frequency()
 			: static_cast<float>(accumulatedTime_) / clock().frequency();
 	}
@@ -58,5 +50,4 @@ namespace nCine {
 		usleep(microseconds);
 #endif
 	}
-
 }

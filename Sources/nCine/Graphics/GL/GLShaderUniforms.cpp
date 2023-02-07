@@ -7,10 +7,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	GLShaderUniforms::GLShaderUniforms()
 		: shaderProgram_(nullptr)
 	{
@@ -27,10 +23,6 @@ namespace nCine
 	{
 		setProgram(shaderProgram, includeOnly, exclude);
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void GLShaderUniforms::setProgram(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
 	{
@@ -97,10 +89,6 @@ namespace nCine
 			LOGE("No shader program associated");
 		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void GLShaderUniforms::importUniforms(const char* includeOnly, const char* exclude)
 	{

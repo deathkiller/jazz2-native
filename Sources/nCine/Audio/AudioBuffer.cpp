@@ -20,12 +20,10 @@ namespace nCine
 			}
 			return format;
 		}
-
 	}
 
 	AudioBuffer::AudioBuffer()
-		: Object(ObjectType::AudioBuffer), bufferId_(0),
-		bytesPerSample_(0), numChannels_(0), frequency_(0), numSamples_(0), duration_(0.0f)
+		: Object(ObjectType::AudioBuffer), bufferId_(0), bytesPerSample_(0), numChannels_(0), frequency_(0), numSamples_(0), duration_(0.0f)
 	{
 		alGetError();
 		alGenBuffers(1, &bufferId_);
@@ -57,15 +55,14 @@ namespace nCine
 		alDeleteBuffers(1, &bufferId_);
 	}
 
-	AudioBuffer::AudioBuffer(AudioBuffer&& other)
-		: Object(std::move(other)), bufferId_(other.bufferId_),
-		bytesPerSample_(other.bytesPerSample_), numChannels_(other.numChannels_),
-		frequency_(other.frequency_), numSamples_(other.numSamples_), duration_(other.duration_)
+	AudioBuffer::AudioBuffer(AudioBuffer&& other) noexcept
+		: Object(std::move(other)), bufferId_(other.bufferId_), bytesPerSample_(other.bytesPerSample_), numChannels_(other.numChannels_),
+			frequency_(other.frequency_), numSamples_(other.numSamples_), duration_(other.duration_)
 	{
 		other.bufferId_ = 0;
 	}
 
-	AudioBuffer& AudioBuffer::operator=(AudioBuffer&& other)
+	AudioBuffer& AudioBuffer::operator=(AudioBuffer&& other) noexcept
 	{
 		Object::operator=(std::move(other));
 

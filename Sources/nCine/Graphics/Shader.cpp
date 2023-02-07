@@ -45,13 +45,8 @@ namespace nCine
 		}
 	}
 
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	Shader::Shader()
-		: Object(ObjectType::Shader),
-		glShaderProgram_(std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate))
+		: Object(ObjectType::Shader), glShaderProgram_(std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate))
 	{
 	}
 
@@ -146,10 +141,6 @@ namespace nCine
 	{
 		RenderResources::unregisterBatchedShader(glShaderProgram_.get());
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool Shader::loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment)
 	{
@@ -364,10 +355,6 @@ namespace nCine
 	{
 		RenderResources::registerBatchedShader(glShaderProgram_.get(), batchedShader.glShaderProgram_.get());
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool Shader::loadDefaultShader(DefaultVertex vertex)
 	{

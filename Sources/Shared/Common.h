@@ -8,8 +8,8 @@
 
 #if !defined(countof)
 #	if defined(__cplusplus)
-		namespace Death::Implementation { template<typename T, std::size_t N> char(*_ArrayCountOfHelper(T(&)[N]))[N]; }
-#		define countof(a) (sizeof(*Death::Implementation::_ArrayCountOfHelper(a)))
+		namespace Death::Implementation { template<typename T, std::size_t N> char(*__ArrayCountOfHelper(T(&)[N]))[N]; }
+#		define countof(a) (sizeof(*Death::Implementation::__ArrayCountOfHelper(a)))
 #	else
 #		define countof(a) (sizeof(a) / sizeof(a[0]))
 #	endif
@@ -19,31 +19,31 @@
 namespace Death::Implementation
 {
 	// Used as an approximation of std::underlying_type<T>
-	template<int S> struct _EnumTypeForSize;
-	template<> struct _EnumTypeForSize<1> { typedef int8_t Type; };
-	template<> struct _EnumTypeForSize<2> { typedef int16_t Type; };
-	template<> struct _EnumTypeForSize<4> { typedef int32_t Type; };
-	template<> struct _EnumTypeForSize<8> { typedef int64_t Type; };
-	template<class T> struct _EnumSizedInteger { typedef typename _EnumTypeForSize<sizeof(T)>::Type Type; };
+	template<int S> struct __EnumTypeForSize;
+	template<> struct __EnumTypeForSize<1> { typedef int8_t Type; };
+	template<> struct __EnumTypeForSize<2> { typedef int16_t Type; };
+	template<> struct __EnumTypeForSize<4> { typedef int32_t Type; };
+	template<> struct __EnumTypeForSize<8> { typedef int64_t Type; };
+	template<class T> struct __EnumSizedInteger { typedef typename __EnumTypeForSize<sizeof(T)>::Type Type; };
 }
 
 #	define DEFINE_ENUM_OPERATORS(type)	\
-		inline DEATH_CONSTEXPR14 type operator|(type a, type b) { return type(((Death::Implementation::_EnumSizedInteger<type>::Type)a) | ((Death::Implementation::_EnumSizedInteger<type>::Type)b)); }	\
-		inline type& operator|=(type& a, type b) { return (type&)(((Death::Implementation::_EnumSizedInteger<type>::Type&)a) |= ((Death::Implementation::_EnumSizedInteger<type>::Type)b)); }			\
-		inline DEATH_CONSTEXPR14 type operator&(type a, type b) { return type(((Death::Implementation::_EnumSizedInteger<type>::Type)a) & ((Death::Implementation::_EnumSizedInteger<type>::Type)b)); }	\
-		inline type& operator&=(type& a, type b) { return (type&)(((Death::Implementation::_EnumSizedInteger<type>::Type&)a) &= ((Death::Implementation::_EnumSizedInteger<type>::Type)b)); }			\
-		inline DEATH_CONSTEXPR14 type operator~(type a) { return type(~((Death::Implementation::_EnumSizedInteger<type>::Type)a)); }																	\
-		inline DEATH_CONSTEXPR14 type operator^(type a, type b) { return type(((Death::Implementation::_EnumSizedInteger<type>::Type)a) ^ ((Death::Implementation::_EnumSizedInteger<type>::Type)b)); }	\
-		inline type& operator^=(type& a, type b) { return (type&)(((Death::Implementation::_EnumSizedInteger<type>::Type&)a) ^= ((Death::Implementation::_EnumSizedInteger<type>::Type)b)); }
+		inline DEATH_CONSTEXPR14 type operator|(type a, type b) { return type(((Death::Implementation::__EnumSizedInteger<type>::Type)a) | ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }	\
+		inline type& operator|=(type& a, type b) { return (type&)(((Death::Implementation::__EnumSizedInteger<type>::Type&)a) |= ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }				\
+		inline DEATH_CONSTEXPR14 type operator&(type a, type b) { return type(((Death::Implementation::__EnumSizedInteger<type>::Type)a) & ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }	\
+		inline type& operator&=(type& a, type b) { return (type&)(((Death::Implementation::__EnumSizedInteger<type>::Type&)a) &= ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }				\
+		inline DEATH_CONSTEXPR14 type operator~(type a) { return type(~((Death::Implementation::__EnumSizedInteger<type>::Type)a)); }																		\
+		inline DEATH_CONSTEXPR14 type operator^(type a, type b) { return type(((Death::Implementation::__EnumSizedInteger<type>::Type)a) ^ ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }	\
+		inline type& operator^=(type& a, type b) { return (type&)(((Death::Implementation::__EnumSizedInteger<type>::Type&)a) ^= ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }
 
 #	define DEFINE_PRIVATE_ENUM_OPERATORS(type)	\
-		friend inline DEATH_CONSTEXPR14 type operator|(type a, type b) { return type(((Death::Implementation::_EnumSizedInteger<type>::Type)a) | ((Death::Implementation::_EnumSizedInteger<type>::Type)b)); }	\
-		friend inline type& operator|=(type& a, type b) { return (type&)(((Death::Implementation::_EnumSizedInteger<type>::Type&)a) |= ((Death::Implementation::_EnumSizedInteger<type>::Type)b)); }			\
-		friend inline DEATH_CONSTEXPR14 type operator&(type a, type b) { return type(((Death::Implementation::_EnumSizedInteger<type>::Type)a) & ((Death::Implementation::_EnumSizedInteger<type>::Type)b)); }	\
-		friend inline type& operator&=(type& a, type b) { return (type&)(((Death::Implementation::_EnumSizedInteger<type>::Type&)a) &= ((Death::Implementation::_EnumSizedInteger<type>::Type)b)); }			\
-		friend inline DEATH_CONSTEXPR14 type operator~(type a) { return type(~((Death::Implementation::_EnumSizedInteger<type>::Type)a)); }																		\
-		friend inline DEATH_CONSTEXPR14 type operator^(type a, type b) { return type(((Death::Implementation::_EnumSizedInteger<type>::Type)a) ^ ((Death::Implementation::_EnumSizedInteger<type>::Type)b)); }	\
-		friend inline type& operator^=(type& a, type b) { return (type&)(((Death::Implementation::_EnumSizedInteger<type>::Type&)a) ^= ((Death::Implementation::_EnumSizedInteger<type>::Type)b)); }
+		friend inline DEATH_CONSTEXPR14 type operator|(type a, type b) { return type(((Death::Implementation::__EnumSizedInteger<type>::Type)a) | ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }	\
+		friend inline type& operator|=(type& a, type b) { return (type&)(((Death::Implementation::__EnumSizedInteger<type>::Type&)a) |= ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }				\
+		friend inline DEATH_CONSTEXPR14 type operator&(type a, type b) { return type(((Death::Implementation::__EnumSizedInteger<type>::Type)a) & ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }	\
+		friend inline type& operator&=(type& a, type b) { return (type&)(((Death::Implementation::__EnumSizedInteger<type>::Type&)a) &= ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }				\
+		friend inline DEATH_CONSTEXPR14 type operator~(type a) { return type(~((Death::Implementation::__EnumSizedInteger<type>::Type)a)); }																		\
+		friend inline DEATH_CONSTEXPR14 type operator^(type a, type b) { return type(((Death::Implementation::__EnumSizedInteger<type>::Type)a) ^ ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }	\
+		friend inline type& operator^=(type& a, type b) { return (type&)(((Death::Implementation::__EnumSizedInteger<type>::Type&)a) ^= ((Death::Implementation::__EnumSizedInteger<type>::Type)b)); }
 #else
 #	define DEFINE_ENUM_OPERATORS(type)
 #	define DEFINE_PRIVATE_ENUM_OPERATORS(type)

@@ -5,20 +5,9 @@
 namespace Jazz2::UI::Menu
 {
 	StartGameOptionsSection::StartGameOptionsSection(const StringView& episodeName, const StringView& levelName, const StringView& previousEpisodeName)
-		:
-		_episodeName(episodeName),
-		_levelName(levelName),
-		_previousEpisodeName(previousEpisodeName),
-		_selectedIndex(2),
-		_availableCharacters(3),
-		_selectedPlayerType(0),
-		_selectedDifficulty(1),
-		_lastPlayerType(0),
-		_lastDifficulty(0),
-		_imageTransition(1.0f),
-		_animation(0.0f),
-		_transitionTime(0.0f),
-		_shouldStart(false)
+		: _episodeName(episodeName), _levelName(levelName), _previousEpisodeName(previousEpisodeName), _selectedIndex(2),
+			_availableCharacters(3), _selectedPlayerType(0), _selectedDifficulty(1), _lastPlayerType(0), _lastDifficulty(0),
+			_imageTransition(1.0f), _animation(0.0f), _transitionTime(0.0f), _shouldStart(false)
 	{
 		_items[(int)Item::Character].Name = _("Character");
 		_items[(int)Item::Difficulty].Name = _("Difficulty");

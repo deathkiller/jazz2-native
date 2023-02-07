@@ -5,10 +5,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	/*! \param parent The parent can be `nullptr` */
 	SceneNode::SceneNode(SceneNode* parent, float x, float y)
 		: Object(ObjectType::SceneNode),
@@ -56,15 +52,11 @@ namespace nCine
 		setParent(nullptr);
 	}
 
-	SceneNode::SceneNode(SceneNode&& other)
-		: Object(std::move(other)),
-		updateEnabled_(other.updateEnabled_), drawEnabled_(other.drawEnabled_),
-		parent_(other.parent_), children_(std::move(other.children_)),
-		visitOrderState_(other.visitOrderState_),
-		position_(other.position_), anchorPoint_(other.anchorPoint_),
-		scaleFactor_(other.scaleFactor_), rotation_(other.rotation_), color_(other.color_),
-		layer_(other.layer_), shouldDeleteChildrenOnDestruction_(other.shouldDeleteChildrenOnDestruction_),
-		dirtyBits_(other.dirtyBits_), lastFrameUpdated_(other.lastFrameUpdated_)
+	SceneNode::SceneNode(SceneNode&& other) noexcept
+		: Object(std::move(other)), updateEnabled_(other.updateEnabled_), drawEnabled_(other.drawEnabled_), parent_(other.parent_),
+			children_(std::move(other.children_)), visitOrderState_(other.visitOrderState_), position_(other.position_), anchorPoint_(other.anchorPoint_),
+			scaleFactor_(other.scaleFactor_), rotation_(other.rotation_), color_(other.color_), layer_(other.layer_),
+			shouldDeleteChildrenOnDestruction_(other.shouldDeleteChildrenOnDestruction_), dirtyBits_(other.dirtyBits_), lastFrameUpdated_(other.lastFrameUpdated_)
 	{
 		swapChildPointer(this, &other);
 		for (SceneNode* child : children_) {
@@ -72,7 +64,7 @@ namespace nCine
 		}
 	}
 
-	SceneNode& SceneNode::operator=(SceneNode&& other)
+	SceneNode& SceneNode::operator=(SceneNode&& other) noexcept
 	{
 		Object::operator=(std::move(other));
 
@@ -97,10 +89,6 @@ namespace nCine
 		}
 		return *this;
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	/*! \return True if the parent has been set */
 	bool SceneNode::setParent(SceneNode* parentNode)
@@ -317,19 +305,13 @@ namespace nCine
 		}
 	}
 
-	///////////////////////////////////////////////////////////
-	// PROTECTED FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	SceneNode::SceneNode(const SceneNode& other)
-		: Object(other), updateEnabled_(other.updateEnabled_),
-		drawEnabled_(other.drawEnabled_), parent_(nullptr), childOrderIndex_(0),
-		withVisitOrder_(true), visitOrderState_(other.visitOrderState_), visitOrderIndex_(0),
-		position_(other.position_), anchorPoint_(other.anchorPoint_),
-		scaleFactor_(other.scaleFactor_), rotation_(other.rotation_), color_(other.color_),
-		layer_(other.layer_), absPosition_(0.0f, 0.0f), absScaleFactor_(1.0f, 1.0f), absRotation_(0.0f),
-		absColor_(Colorf::White), absLayer_(0), worldMatrix_(Matrix4x4f::Identity), localMatrix_(Matrix4x4f::Identity),
-		shouldDeleteChildrenOnDestruction_(other.shouldDeleteChildrenOnDestruction_), dirtyBits_(0xFF)
+		: Object(other), updateEnabled_(other.updateEnabled_), drawEnabled_(other.drawEnabled_), parent_(nullptr), childOrderIndex_(0),
+			withVisitOrder_(true), visitOrderState_(other.visitOrderState_), visitOrderIndex_(0), position_(other.position_),
+			anchorPoint_(other.anchorPoint_), scaleFactor_(other.scaleFactor_), rotation_(other.rotation_), color_(other.color_),
+			layer_(other.layer_), absPosition_(0.0f, 0.0f), absScaleFactor_(1.0f, 1.0f), absRotation_(0.0f), absColor_(Colorf::White),
+			absLayer_(0), worldMatrix_(Matrix4x4f::Identity), localMatrix_(Matrix4x4f::Identity),
+			shouldDeleteChildrenOnDestruction_(other.shouldDeleteChildrenOnDestruction_), dirtyBits_(0xFF)
 	{
 		setParent(other.parent_);
 	}

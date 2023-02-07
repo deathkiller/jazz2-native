@@ -4,10 +4,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	GrowableMemoryFile::GrowableMemoryFile()
 		: IFileStream(nullptr), _seekOffset(0)
 	{
@@ -19,10 +15,6 @@ namespace nCine
 		ASSERT(initialCapacity > 0);
 		_buffer.reserve(initialCapacity);
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void GrowableMemoryFile::Open(FileAccessMode mode)
 	{

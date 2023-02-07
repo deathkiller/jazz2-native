@@ -22,19 +22,19 @@ namespace nCine
 		fileHandle_->Read(&header, 128);
 
 		// Checking for the header presence
-		if (IFileStream::int32FromLE(header.dwMagic) == 0x20534444) // "DDS "
-		{
-			headerSize_ = 128;
-			width_ = IFileStream::int32FromLE(header.dwWidth);
-			height_ = IFileStream::int32FromLE(header.dwHeight);
-			mipMapCount_ = IFileStream::int32FromLE(header.dwMipMapCount);
-
-			if (mipMapCount_ == 0) {
-				mipMapCount_ = 1;
-			}
-		} else {
-			//RETURNF_MSG("Not a DDS file");
+		if (IFileStream::int32FromLE(header.dwMagic) == 0x20534444) { // "DDS "
+			RETURNF_MSG("Not a DDS file");
 		}
+
+		headerSize_ = 128;
+		width_ = IFileStream::int32FromLE(header.dwWidth);
+		height_ = IFileStream::int32FromLE(header.dwHeight);
+		mipMapCount_ = IFileStream::int32FromLE(header.dwMipMapCount);
+
+		if (mipMapCount_ == 0) {
+			mipMapCount_ = 1;
+		}
+
 		return true;
 	}
 
@@ -62,7 +62,7 @@ namespace nCine
 				case DDS_DXT5:
 					internalFormat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
 					break;
-#ifdef WITH_OPENGLES
+#if defined(WITH_OPENGLES)
 				case DDS_ETC1:
 					internalFormat = GL_ETC1_RGB8_OES;
 					break;
@@ -77,14 +77,13 @@ namespace nCine
 					break;
 #endif
 				default:
-					//RETURNF_MSG_X("Unsupported FourCC compression code: %u", fourCC);
+					RETURNF_MSG_X("Unsupported FourCC compression code: %u", fourCC);
 					break;
 			}
 
 			loadPixels(internalFormat);
-		}
-		// Texture contains uncompressed data
-		else {
+		} else {
+			// Texture contains uncompressed data
 			GLenum type = GL_UNSIGNED_BYTE;
 
 			const uint32_t bitCount = IFileStream::int32FromLE(header.ddspf.dwRGBBitCount);
@@ -119,28 +118,28 @@ namespace nCine
 				}
 #endif
 				else {
-					//RETURNF_MSG("Unsupported DDPF_RGB pixel format");
+					RETURNF_MSG("Unsupported DDPF_RGB pixel format");
 				}
-			
+			} else if (flags & (DDPF_LUMINANCE | DDPF_ALPHAPIXELS)) {
 				// Used in some older DDS files for single channel color uncompressed data
 				// dwRGBBitCount contains the luminance channel bit count; dwRBitMask contains the channel mask
 				// Can be combined with DDPF_ALPHAPIXELS for a two channel DDS file
-			} else if (flags & (DDPF_LUMINANCE | DDPF_ALPHAPIXELS)) {
 				internalFormat = GL_RG8;
 			} else if (flags & DDPF_LUMINANCE) {
 				internalFormat = GL_R8;
+			} else if (flags & DDPF_ALPHA) {
 				// Used in some older DDS files for alpha channel only uncompressed data
 				// dwRGBBitCount contains the alpha channel bitcount; dwABitMask contains valid data
-			} else if (flags & DDPF_ALPHA) {
 				internalFormat = GL_R8;
 			} else {
-				//RETURNF_MSG_X("Unsupported DDS uncompressed pixel format: %u", flags);
+				RETURNF_MSG_X("Unsupported DDS uncompressed pixel format: %u", flags);
 			}
 
 			loadPixels(internalFormat, type);
 
-			if (redMask > blueMask && bitCount > 16)
+			if (redMask > blueMask && bitCount > 16) {
 				texFormat_.bgrFormat();
+			}
 		}
 
 		if (mipMapCount_ > 1) {

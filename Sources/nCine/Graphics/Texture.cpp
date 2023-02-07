@@ -56,14 +56,10 @@ namespace nCine
 		}
 	}
 
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	Texture::Texture()
-		: Object(ObjectType::Texture), glTexture_(std::make_unique<GLTexture>(GL_TEXTURE_2D)),
-		width_(0), height_(0), mipMapLevels_(0), isCompressed_(false), format_(Format::Unknown), dataSize_(0),
-		minFiltering_(SamplerFilter::Nearest), magFiltering_(SamplerFilter::Nearest), wrapMode_(SamplerWrapping::ClampToEdge)
+		: Object(ObjectType::Texture), glTexture_(std::make_unique<GLTexture>(GL_TEXTURE_2D)), width_(0), height_(0),
+			mipMapLevels_(0), isCompressed_(false), format_(Format::Unknown), dataSize_(0), minFiltering_(SamplerFilter::Nearest),
+			magFiltering_(SamplerFilter::Nearest), wrapMode_(SamplerWrapping::ClampToEdge)
 	{
 	}
 
@@ -125,10 +121,6 @@ namespace nCine
 
 	Texture& Texture::operator=(Texture&&) = default;
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	void Texture::init(const char* name, Format format, int mipMapCount, int width, int height)
 	{
 		ZoneScoped;
@@ -175,8 +167,9 @@ namespace nCine
 		ZoneScoped;
 
 		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromMemory(bufferPtr, bufferSize);
-		if (texLoader->hasLoaded() == false)
+		if (!texLoader->hasLoaded()) {
 			return false;
+		}
 
 #if defined(NCINE_PROFILING)
 		if (dataSize_ > 0) {
@@ -357,10 +350,6 @@ namespace nCine
 		return const_cast<void*>(reinterpret_cast<const void*>(glTexture_.get()));
 	}
 
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	void Texture::initialize(const ITextureLoader& texLoader)
 	{
 		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
@@ -461,5 +450,4 @@ namespace nCine
 			levelHeight /= 2;
 		}
 	}
-
 }

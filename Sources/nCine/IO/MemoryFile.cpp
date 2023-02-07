@@ -4,10 +4,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	MemoryFile::MemoryFile(uint8_t* bufferPtr, uint32_t bufferSize)
 		: IFileStream(nullptr), _bufferPtr(bufferPtr), _seekOffset(0), _isWritable(true)
 	{
@@ -29,10 +25,6 @@ namespace nCine
 		// The memory file appears to be already opened as read-only when first created
 		fileDescriptor_ = (bufferSize > 0 ? 0 : -1);
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void MemoryFile::Open(FileAccessMode mode)
 	{
@@ -117,5 +109,4 @@ namespace nCine
 
 		return bytesWritten;
 	}
-
 }

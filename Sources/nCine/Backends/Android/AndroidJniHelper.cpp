@@ -10,10 +10,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	JavaVM* AndroidJniHelper::javaVM_ = nullptr;
 	JNIEnv* AndroidJniHelper::jniEnv = nullptr;
 	unsigned int AndroidJniHelper::sdkVersion_ = 0;
@@ -61,10 +57,6 @@ namespace nCine
 	jmethodID AndroidJniWrap_DisplayManager::midGetDisplays_ = nullptr;
 
 	String AndroidJniWrap_Secure::androidId_;
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	// ------------------- AndroidJniHelper -------------------
 

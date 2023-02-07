@@ -4,10 +4,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	const Colorf Colorf::Black(0.0f, 0.0f, 0.0f, 1.0f);
 	const Colorf Colorf::White(1.0f, 1.0f, 1.0f, 1.0f);
 	const Colorf Colorf::Red(1.0f, 0.0f, 0.0f, 1.0f);
@@ -16,10 +12,6 @@ namespace nCine
 	const Colorf Colorf::Yellow(1.0f, 1.0f, 0.0f, 1.0f);
 	const Colorf Colorf::Magenta(1.0f, 0.0f, 1.0f, 1.0f);
 	const Colorf Colorf::Cyan(0.0f, 1.0f, 1.0f, 1.0f);
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
 
 	Colorf::Colorf(const float channels[NumChannels])
 	{
@@ -34,10 +26,6 @@ namespace nCine
 		blue_ = static_cast<float>(color.B() * inv);
 		alpha_ = static_cast<float>(color.A() * inv);
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void Colorf::Set(float red, float green, float blue)
 	{
@@ -158,5 +146,4 @@ namespace nCine
 
 		return result;
 	}
-
 }

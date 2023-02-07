@@ -78,5 +78,4 @@ namespace nCine
 
 		void convertVideoModeInfo(const AndroidJniClass_DisplayMode& javaDisplayMode, IGfxDevice::VideoMode& videoMode) const;
 	};
-
 }

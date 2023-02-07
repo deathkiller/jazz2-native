@@ -1,16 +1,8 @@
 #include "GLCullFace.h"
 
-namespace nCine {
-
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
+namespace nCine
+{
 	GLCullFace::State GLCullFace::state_;
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void GLCullFace::enable()
 	{
@@ -38,13 +30,13 @@ namespace nCine {
 
 	void GLCullFace::setState(State newState)
 	{
-		if (newState.enabled)
+		if (newState.enabled) {
 			enable();
-		else
+		} else {
 			disable();
+		}
 		setMode(newState.mode);
 
 		state_ = newState;
 	}
-
 }

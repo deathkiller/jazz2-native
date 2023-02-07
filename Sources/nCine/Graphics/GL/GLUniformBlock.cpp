@@ -6,10 +6,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	GLUniformBlock::GLUniformBlock()
 		: program_(0), index_(0), size_(0), alignAmount_(0), bindingIndex_(-1)
 	{
@@ -86,10 +82,6 @@ namespace nCine
 		: GLUniformBlock(program, index, DiscoverUniforms::ENABLED)
 	{
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void GLUniformBlock::setBlockBinding(GLuint blockBinding)
 	{

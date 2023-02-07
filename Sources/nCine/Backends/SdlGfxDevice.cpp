@@ -23,15 +23,7 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	SDL_Window* SdlGfxDevice::windowHandle_ = nullptr;
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
 
 	SdlGfxDevice::SdlGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
 		: IGfxDevice(windowMode, glContextInfo, displayMode)
@@ -49,10 +41,6 @@ namespace nCine
 		windowHandle_ = nullptr;
 		SDL_Quit();
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void SdlGfxDevice::setSwapInterval(int interval)
 	{
@@ -116,7 +104,7 @@ namespace nCine
 
 	void SdlGfxDevice::setWindowSize(int width, int height)
 	{
-		// change resolution only in case it is valid and it really changes
+		// Change resolution only in case it is valid and it really changes
 		if (width == 0 || height == 0 || (width == width_ && height == height_)) {
 			return;
 		}
@@ -174,10 +162,6 @@ namespace nCine
 		}
 		return false;
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void SdlGfxDevice::initGraphics(bool enableWindowScaling)
 	{

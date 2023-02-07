@@ -8,11 +8,7 @@
 namespace Jazz2::Events
 {
 	EventMap::EventMap(ILevelHandler* levelHandler, Vector2i layoutSize, PitType pitType)
-		:
-		_levelHandler(levelHandler),
-		_layoutSize(layoutSize),
-		_checkpointCreated(false),
-		_pitType(pitType)
+		: _levelHandler(levelHandler), _layoutSize(layoutSize), _checkpointCreated(false), _pitType(pitType)
 	{
 	}
 

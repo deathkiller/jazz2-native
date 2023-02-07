@@ -10,9 +10,7 @@
 namespace Jazz2::UI::Menu
 {
 	RefreshCacheSection::RefreshCacheSection()
-		:
-		_animation(0.0f),
-		_done(false)
+		: _animation(0.0f), _done(false)
 	{
 	}
 

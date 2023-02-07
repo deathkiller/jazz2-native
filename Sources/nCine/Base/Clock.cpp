@@ -23,10 +23,6 @@ namespace nCine
 		return instance;
 	}
 
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	Clock::Clock()
 		: frequency_(0UL), baseCount_(0ULL)
 	{
@@ -58,10 +54,6 @@ namespace nCine
 		baseCount_ = counter();
 	}
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	uint64_t Clock::counter() const
 	{
 		uint64_t counter = 0LL;
@@ -92,5 +84,4 @@ namespace nCine
 
 		return counter;
 	}
-
 }

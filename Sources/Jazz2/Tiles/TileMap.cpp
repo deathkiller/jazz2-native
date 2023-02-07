@@ -10,15 +10,8 @@
 namespace Jazz2::Tiles
 {
 	TileMap::TileMap(LevelHandler* levelHandler, const StringView& tileSetPath, uint16_t captionTileId, PitType pitType, bool applyPalette)
-		:
-		_levelHandler(levelHandler),
-		_sprLayerIndex(-1),
-		_pitType(pitType),
-		_renderCommandsCount(0),
-		_collapsingTimer(0.0f),
-		_triggerState(TriggerCount),
-		_texturedBackgroundLayer(-1),
-		_texturedBackgroundPass(this)
+		: _levelHandler(levelHandler), _sprLayerIndex(-1), _pitType(pitType), _renderCommandsCount(0), _collapsingTimer(0.0f),
+			_triggerState(TriggerCount), _texturedBackgroundLayer(-1), _texturedBackgroundPass(this)
 	{
 		auto& tileSetPart = _tileSets.emplace_back();
 		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, captionTileId, applyPalette);

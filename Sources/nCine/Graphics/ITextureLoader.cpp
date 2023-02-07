@@ -20,14 +20,12 @@
 namespace nCine
 {
 	ITextureLoader::ITextureLoader()
-		: hasLoaded_(false), width_(0), height_(0),
-		headerSize_(0), dataSize_(0), mipMapCount_(1)
+		: hasLoaded_(false), width_(0), height_(0), headerSize_(0), dataSize_(0), mipMapCount_(1)
 	{
 	}
 
 	ITextureLoader::ITextureLoader(std::unique_ptr<IFileStream> fileHandle)
-		: hasLoaded_(false), fileHandle_(std::move(fileHandle)),
-		width_(0), height_(0), headerSize_(0), dataSize_(0), mipMapCount_(1)
+		: hasLoaded_(false), fileHandle_(std::move(fileHandle)), width_(0), height_(0), headerSize_(0), dataSize_(0), mipMapCount_(1)
 	{
 	}
 
@@ -47,10 +45,11 @@ namespace nCine
 		const GLubyte* pixels = nullptr;
 
 		if (pixels_ != nullptr) {
-			if (mipMapCount_ > 1 && int(mipMapLevel) < mipMapCount_)
+			if (mipMapCount_ > 1 && int(mipMapLevel) < mipMapCount_) {
 				pixels = pixels_.get() + mipDataOffsets_[mipMapLevel];
-			else if (mipMapLevel == 0)
+			} else if (mipMapLevel == 0) {
 				pixels = pixels_.get();
+			}
 		}
 
 		return pixels;
@@ -84,11 +83,11 @@ namespace nCine
 		if (extension == "png"_s) {
 			return std::make_unique<TextureLoaderPng>(std::move(fileHandle));
 		}
-	/*#ifdef WITH_WEBP
+/*#if defined(WITH_WEBP)
 		if (extension == "webp"_s) {
 			return std::make_unique<TextureLoaderWebP>(std::move(fileHandle));
 		}
-	#endif*/
+#endif*/
 #if defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)
 		if (extension == "pkm"_s) {
 			return std::make_unique<TextureLoaderPkm>(std::move(fileHandle));

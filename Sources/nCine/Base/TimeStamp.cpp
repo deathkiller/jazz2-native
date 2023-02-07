@@ -3,18 +3,10 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	TimeStamp::TimeStamp()
 		: counter_(0)
 	{
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool TimeStamp::operator>(const TimeStamp& other) const
 	{
@@ -134,5 +126,4 @@ namespace nCine
 	{
 		return (static_cast<double>(counter_) / clock().frequency()) * 1000000000.0;
 	}
-
 }

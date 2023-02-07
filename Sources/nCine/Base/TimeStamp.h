@@ -2,8 +2,6 @@
 
 #include "Clock.h"
 
-#include <cstdint>
-
 namespace nCine
 {
 	/// A class representing a point in time or a duration

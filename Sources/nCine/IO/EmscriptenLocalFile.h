@@ -29,7 +29,6 @@ namespace nCine
 		/// Deleted assignment operator
 		EmscriptenLocalFile& operator=(const EmscriptenLocalFile&) = delete;
 	};
-
 }
 
 #endif

@@ -50,17 +50,9 @@ namespace nCine
 	}
 #endif
 
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	bool GLDebug::debugAvailable_ = false;
 	GLuint GLDebug::debugGroupId_ = 0;
 	int GLDebug::maxLabelLength_ = 0;
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void GLDebug::init(const IGfxCapabilities& gfxCaps)
 	{
@@ -130,10 +122,6 @@ namespace nCine
 #endif
 	}
 
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 #if defined(NCINE_DEBUG) && ((defined(__ANDROID__) && __ANDROID_API__ >= 21) || (!defined(__ANDROID__) && defined(WITH_OPENGLES))) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__) && GL_ES_VERSION_3_0
 
 	/// Callback for `glDebugMessageCallback()`
@@ -185,5 +173,4 @@ namespace nCine
 		LOGI("OpenGL debug callback set");
 #endif
 	}
-
 }

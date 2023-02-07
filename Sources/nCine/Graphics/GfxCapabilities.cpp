@@ -10,9 +10,7 @@
 namespace nCine
 {
 	GfxCapabilities::GfxCapabilities()
-		: glMajorVersion_(0),
-		glMinorVersion_(0),
-		glReleaseVersion_(0)
+		: glMajorVersion_(0), glMinorVersion_(0), glReleaseVersion_(0)
 	{
 		for (unsigned int i = 0; i < (int)GLIntValues::Count; i++) {
 			glIntValues_[i] = 0;

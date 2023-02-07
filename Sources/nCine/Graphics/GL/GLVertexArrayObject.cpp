@@ -3,15 +3,7 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	unsigned int GLVertexArrayObject::boundVAO_ = 0;
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS AND DESTRUCTOR
-	///////////////////////////////////////////////////////////
 
 	GLVertexArrayObject::GLVertexArrayObject()
 		: glHandle_(0)
@@ -22,16 +14,13 @@ namespace nCine
 
 	GLVertexArrayObject::~GLVertexArrayObject()
 	{
-		if (boundVAO_ == glHandle_)
+		if (boundVAO_ == glHandle_) {
 			unbind();
+		}
 
 		glDeleteVertexArrays(1, &glHandle_);
 		GL_LOG_ERRORS();
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool GLVertexArrayObject::bind() const
 	{
@@ -59,5 +48,4 @@ namespace nCine
 	{
 		GLDebug::objectLabel(GLDebug::LabelTypes::VertexArray, glHandle_, label);
 	}
-
 }

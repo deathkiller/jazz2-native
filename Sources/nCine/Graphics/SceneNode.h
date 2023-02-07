@@ -43,9 +43,9 @@ namespace nCine
 		~SceneNode() override;
 
 		/// Move constructor
-		SceneNode(SceneNode&& other);
+		SceneNode(SceneNode&& other) noexcept;
 		/// Move assignment operator
-		SceneNode& operator=(SceneNode&& other);
+		SceneNode& operator=(SceneNode&& other) noexcept;
 
 		/// Returns a copy of this object
 		inline SceneNode clone() const {

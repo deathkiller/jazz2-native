@@ -28,10 +28,6 @@ namespace nCine
 		}
 	}
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	void StandardFile::Open(FileAccessMode mode)
 	{
 		// Checking if the file is already opened
@@ -134,10 +130,6 @@ namespace nCine
 		}
 		return bytesWritten;
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 #if !(defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW))
 	void StandardFile::OpenFD(FileAccessMode mode)

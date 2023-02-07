@@ -457,7 +457,6 @@ namespace nCine
 		// clang-format on
 	}
 	*/
-
 }
 
 #endif

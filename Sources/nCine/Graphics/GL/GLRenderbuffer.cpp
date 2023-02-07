@@ -3,15 +3,7 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	GLuint GLRenderbuffer::boundBuffer_ = 0;
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
 
 	GLRenderbuffer::GLRenderbuffer(GLenum internalFormat, GLsizei width, GLsizei height)
 		: glHandle_(0), attachment_(GL_NONE)
@@ -23,16 +15,12 @@ namespace nCine
 
 	GLRenderbuffer::~GLRenderbuffer()
 	{
-		if (boundBuffer_ == glHandle_)
+		if (boundBuffer_ == glHandle_) {
 			unbind();
-
+		}
 		glDeleteRenderbuffers(1, &glHandle_);
 		GL_LOG_ERRORS();
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool GLRenderbuffer::bind() const
 	{
@@ -61,10 +49,6 @@ namespace nCine
 		GLDebug::objectLabel(GLDebug::LabelTypes::RenderBuffer, glHandle_, label);
 	}
 
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	void GLRenderbuffer::storage(GLenum internalFormat, GLsizei width, GLsizei height)
 	{
 		bind();
@@ -72,5 +56,4 @@ namespace nCine
 		unbind();
 		GL_LOG_ERRORS();
 	}
-
 }

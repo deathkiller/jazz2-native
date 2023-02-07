@@ -10,18 +10,10 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	GLuint GLShaderProgram::boundProgram_ = 0;
 #if defined(NCINE_LOG)
 	char GLShaderProgram::infoLogString_[MaxInfoLogLength];
 #endif
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
 
 	GLShaderProgram::GLShaderProgram()
 		: GLShaderProgram(QueryPhase::Immediate)
@@ -29,9 +21,7 @@ namespace nCine
 	}
 
 	GLShaderProgram::GLShaderProgram(QueryPhase queryPhase)
-		: glHandle_(0),
-		status_(Status::NotLinked), queryPhase_(queryPhase), shouldLogOnErrors_(true),
-		uniformsSize_(0), uniformBlocksSize_(0)
+		: glHandle_(0), status_(Status::NotLinked), queryPhase_(queryPhase), shouldLogOnErrors_(true), uniformsSize_(0), uniformBlocksSize_(0)
 	{
 		glHandle_ = glCreateProgram();
 
@@ -72,10 +62,6 @@ namespace nCine
 
 		RenderResources::removeCameraUniformData(this);
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool GLShaderProgram::isLinked() const
 	{
@@ -248,10 +234,6 @@ namespace nCine
 		GLDebug::objectLabel(GLDebug::LabelTypes::Program, glHandle_, label);
 	}
 
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	bool GLShaderProgram::deferredQueries()
 	{
 		if (status_ == GLShaderProgram::Status::LinkedWithDeferredQueries) {
@@ -297,7 +279,6 @@ namespace nCine
 				}
 			}
 #endif
-
 			status_ = Status::LinkingFailed;
 			return false;
 		}

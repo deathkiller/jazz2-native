@@ -22,22 +22,10 @@ static constexpr uint8_t KeyLayout[] = {
 namespace Jazz2::UI
 {
 	HUD::HUD(LevelHandler* levelHandler)
-		:
-		_levelHandler(levelHandler),
-		_graphics(nullptr),
-		_levelTextTime(-1.0f),
-		_coins(0), _gems(0),
-		_coinsTime(-1.0f), _gemsTime(-1.0f),
-		_activeBossTime(0.0f),
-		_touchButtonsTimer(0.0f),
-		_rgbAmbientLight(0.0f),
-		_rgbHealthLast(0.0f),
-		_weaponWheelAnim(0.0f),
-		_weaponWheelShown(false),
-		_lastWeaponWheelIndex(-1),
-		_rgbLightsTime(0.0f),
-		_transitionState(TransitionState::None),
-		_transitionTime(0.0f)
+		: _levelHandler(levelHandler), _graphics(nullptr), _levelTextTime(-1.0f), _coins(0), _gems(0), _coinsTime(-1.0f), _gemsTime(-1.0f),
+			_activeBossTime(0.0f), _touchButtonsTimer(0.0f), _rgbAmbientLight(0.0f), _rgbHealthLast(0.0f), _weaponWheelAnim(0.0f),
+			_weaponWheelShown(false), _lastWeaponWheelIndex(-1), _rgbLightsTime(0.0f), _transitionState(TransitionState::None),
+			_transitionTime(0.0f)
 	{
 		auto& resolver = ContentResolver::Get();
 

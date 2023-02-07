@@ -4,10 +4,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	GLUniform::GLUniform()
 		: index_(0), blockIndex_(-1), location_(-1), size_(0), type_(GL_FLOAT), offset_(0)
 	{
@@ -26,10 +22,6 @@ namespace nCine
 		}
 		GL_LOG_ERRORS();
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	GLenum GLUniform::basicType() const
 	{
@@ -114,5 +106,4 @@ namespace nCine
 	{
 		return (MaxNameLength >= 3 && name_[0] == 'g' && name_[1] == 'l' && name_[2] == '_');
 	}
-
 }

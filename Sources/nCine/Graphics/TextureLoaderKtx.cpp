@@ -73,5 +73,4 @@ namespace nCine
 
 		return true;
 	}
-
 }

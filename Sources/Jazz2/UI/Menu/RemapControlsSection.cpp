@@ -8,16 +8,8 @@
 namespace Jazz2::UI::Menu
 {
 	RemapControlsSection::RemapControlsSection()
-		:
-		_selectedIndex(0),
-		_selectedColumn(0),
-		_currentPlayerIndex(0),
-		_animation(0.0f),
-		_isDirty(false),
-		_waitForInput(false),
-		_timeout(0.0f),
-		_prevKeyPressed((unsigned int)KeySym::COUNT),
-		_prevJoyPressed(8 * JoyMappedState::NumButtons)
+		: _selectedIndex(0), _selectedColumn(0), _currentPlayerIndex(0), _animation(0.0f), _isDirty(false), _waitForInput(false),
+			_timeout(0.0f), _prevKeyPressed((unsigned int)KeySym::COUNT), _prevJoyPressed(8 * JoyMappedState::NumButtons)
 	{
 	}
 

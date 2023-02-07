@@ -14,8 +14,7 @@ using namespace Death;
 namespace Jazz2::UI
 {
 	Font::Font(const StringView& path, const uint32_t* palette)
-		:
-		_baseSpacing(0)
+		: _baseSpacing(0)
 	{
 		auto s = fs::Open(path + ".font"_s, FileAccessMode::Read);
 		auto fileSize = s->GetSize();
@@ -110,7 +109,6 @@ namespace Jazz2::UI
 		float scalePre = scale;
 
 		int idx = 0;
-		int line = 0;
 		do {
 			std::pair<char32_t, std::size_t> cursor = Utf8::NextChar(text, idx);
 
@@ -119,7 +117,6 @@ namespace Jazz2::UI
 				if (totalWidth < lastWidth) {
 					totalWidth = lastWidth;
 				}
-				line++;
 				lastWidth = 0.0f;
 				totalHeight += (_charSize.Y * scale * lineSpacing);
 			} else if (cursor.first == '\f') {

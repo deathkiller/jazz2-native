@@ -33,9 +33,9 @@ namespace nCine
 		~AudioBuffer() override;
 
 		/// Move constructor
-		AudioBuffer(AudioBuffer&& other);
+		AudioBuffer(AudioBuffer&& other) noexcept;
 		/// Move assignment operator
-		AudioBuffer& operator=(AudioBuffer&& other);
+		AudioBuffer& operator=(AudioBuffer&& other) noexcept;
 
 		/// Initializes an empty buffer with the specified format and frequency
 		void init(Format format, int frequency);

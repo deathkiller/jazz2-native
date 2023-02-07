@@ -55,19 +55,11 @@ namespace nCine
 		}
 	}
 
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	const Vector2f DrawableNode::AnchorCenter(0.5f, 0.5f);
 	const Vector2f DrawableNode::AnchorBottomLeft(0.0f, 0.0f);
 	const Vector2f DrawableNode::AnchorTopLeft(0.0f, 1.0f);
 	const Vector2f DrawableNode::AnchorBottomRight(1.0f, 0.0f);
 	const Vector2f DrawableNode::AnchorTopRight(1.0f, 1.0f);
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
 
 	DrawableNode::DrawableNode(SceneNode* parent, float xx, float yy)
 		: SceneNode(parent, xx, yy), width_(0.0f), height_(0.0f),
@@ -97,10 +89,6 @@ namespace nCine
 	//DrawableNode::DrawableNode(DrawableNode&&) = default;
 
 	//DrawableNode& DrawableNode::operator=(DrawableNode&&) = default;
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool DrawableNode::OnDraw(RenderQueue& renderQueue)
 	{
@@ -188,10 +176,6 @@ namespace nCine
 		renderCommand_.material().setBlendingFactors(toGlBlendingFactor(srcBlendingFactor), toGlBlendingFactor(destBlendingFactor));
 	}
 
-	///////////////////////////////////////////////////////////
-	// PROTECTED FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	void DrawableNode::updateAabb()
 	{
 		ZoneScoped;
@@ -231,15 +215,11 @@ namespace nCine
 	}
 
 	DrawableNode::DrawableNode(const DrawableNode& other)
-		: SceneNode(other),
-		width_(other.width_), height_(other.height_),
-		renderCommand_(),
-		lastFrameRendered_(0)
+		: SceneNode(other), width_(other.width_), height_(other.height_), renderCommand_(), lastFrameRendered_(0)
 	{
 		renderCommand_.setIdSortKey(id());
 		setBlendingEnabled(other.isBlendingEnabled());
 		setBlendingFactors(other.srcBlendingFactor(), other.destBlendingFactor());
 		setLayer(other.layer());
 	}
-
 }

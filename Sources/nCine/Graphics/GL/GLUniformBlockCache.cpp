@@ -4,10 +4,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	GLUniformBlockCache::GLUniformBlockCache()
 		: uniformBlock_(nullptr), dataPointer_(nullptr), usedSize_(0)
 	{
@@ -27,47 +23,39 @@ namespace nCine
 		}
 	}
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	GLuint GLUniformBlockCache::index() const
 	{
 		GLuint index = 0;
-
-		if (uniformBlock_)
+		if (uniformBlock_ != nullptr) {
 			index = uniformBlock_->index();
-
+		}
 		return index;
 	}
 
 	GLuint GLUniformBlockCache::bindingIndex() const
 	{
 		GLuint bindingIndex = 0;
-
-		if (uniformBlock_)
+		if (uniformBlock_ != nullptr) {
 			bindingIndex = uniformBlock_->bindingIndex();
-
+		}
 		return bindingIndex;
 	}
 
 	GLint GLUniformBlockCache::size() const
 	{
 		GLint size = 0;
-
-		if (uniformBlock_)
+		if (uniformBlock_ != nullptr) {
 			size = uniformBlock_->size();
-
+		}
 		return size;
 	}
 
 	unsigned char GLUniformBlockCache::alignAmount() const
 	{
 		unsigned char alignAmount = 0;
-
-		if (uniformBlock_)
+		if (uniformBlock_ != nullptr) {
 			alignAmount = uniformBlock_->alignAmount();
-
+		}
 		return alignAmount;
 	}
 
@@ -75,21 +63,23 @@ namespace nCine
 	{
 		dataPointer_ = dataPointer;
 
-		for (GLUniformCache& uniformCache : uniformCaches_)
+		for (GLUniformCache& uniformCache : uniformCaches_) {
 			uniformCache.setDataPointer(dataPointer_ + uniformCache.uniform()->offset());
+		}
 	}
 
 	void GLUniformBlockCache::setUsedSize(GLint usedSize)
 	{
-		if (usedSize >= 0)
+		if (usedSize >= 0) {
 			usedSize_ = usedSize;
+		}
 	}
 
 	bool GLUniformBlockCache::copyData(unsigned int destIndex, const GLubyte* src, unsigned int numBytes)
 	{
-		if (destIndex + numBytes > size() || numBytes == 0 || src == nullptr || dataPointer_ == nullptr)
+		if (destIndex + numBytes > size() || numBytes == 0 || src == nullptr || dataPointer_ == nullptr) {
 			return false;
-
+		}
 		memcpy(&dataPointer_[destIndex], src, numBytes);
 		return true;
 	}
@@ -101,8 +91,8 @@ namespace nCine
 
 	void GLUniformBlockCache::setBlockBinding(GLuint blockBinding)
 	{
-		if (uniformBlock_)
+		if (uniformBlock_) {
 			uniformBlock_->setBlockBinding(blockBinding);
+		}
 	}
-
 }

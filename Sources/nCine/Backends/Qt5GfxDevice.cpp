@@ -18,19 +18,11 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	Qt5GfxDevice::Qt5GfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, Qt5Widget& widget)
 		: IGfxDevice(windowMode, glContextInfo, displayMode), widget_(widget), isResizable_(windowMode.isResizable)
 	{
 		initDevice(windowMode.isFullscreen);
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void Qt5GfxDevice::setSwapInterval(int interval)
 	{
@@ -118,10 +110,11 @@ namespace nCine
 	void Qt5GfxDevice::updateVideoModes()
 	{
 		QScreen* screen = nullptr;
-		if (widget_.window() && widget_.window()->windowHandle())
+		if (widget_.window() && widget_.window()->windowHandle()) {
 			screen = widget_.window()->windowHandle()->screen();
-		else
+		} else {
 			screen = QApplication::primaryScreen();
+		}
 
 		videoModes_.resize_for_overwrite(1);
 		if (screen) {
@@ -158,10 +151,6 @@ namespace nCine
 		GLFramebuffer::bindHandle(GL_DRAW_FRAMEBUFFER, glHandle);
 	}
 
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	void Qt5GfxDevice::initDevice(bool isFullscreen)
 	{
 		QSurfaceFormat format;
@@ -192,7 +181,6 @@ namespace nCine
 
 		updateVideoModes();
 	}
-
 }
 
 #endif

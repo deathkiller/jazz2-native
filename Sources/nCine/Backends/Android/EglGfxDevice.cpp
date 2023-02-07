@@ -34,15 +34,7 @@ extern "C"
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	char EglGfxDevice::monitorNames_[MaxMonitors][MaxMonitorNameLength];
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
 
 	EglGfxDevice::EglGfxDevice(struct android_app* state, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
 		: IGfxDevice(WindowMode(0, 0, true, false, false), glContextInfo, displayMode), state_(state)
@@ -56,11 +48,13 @@ namespace nCine
 		if (display_ != EGL_NO_DISPLAY) {
 			eglMakeCurrent(display_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 
-			if (context_ != EGL_NO_CONTEXT)
+			if (context_ != EGL_NO_CONTEXT) {
 				eglDestroyContext(display_, context_);
+			}
 
-			if (surface_ != EGL_NO_SURFACE)
+			if (surface_ != EGL_NO_SURFACE) {
 				eglDestroySurface(display_, surface_);
+			}
 
 			eglTerminate(display_);
 		}
@@ -70,14 +64,11 @@ namespace nCine
 		surface_ = EGL_NO_SURFACE;
 	}
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	const IGfxDevice::VideoMode &EglGfxDevice::currentVideoMode(unsigned int monitorIndex) const
 	{
-		if (monitorIndex >= numMonitors_)
+		if (monitorIndex >= numMonitors_) {
 			monitorIndex = 0;
+		}
 
 		AndroidJniClass_Display display = AndroidJniWrap_DisplayManager::getDisplay(monitorIndex);
 		AndroidJniClass_DisplayMode mode = display.getMode();
@@ -187,10 +178,6 @@ namespace nCine
 		gfxDevice.updateMonitors();
 	}
 #endif
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void EglGfxDevice::initDevice()
 	{

@@ -25,10 +25,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	const int IInputManager::MaxNumJoysticks = 16;
 
 	SDL_Window* SdlInputManager::windowHandle_ = nullptr;
@@ -49,10 +45,6 @@ namespace nCine
 	JoyConnectionEvent SdlInputManager::joyConnectionEvent_;
 
 	char SdlInputManager::joyGuidString_[33];
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
 
 	SdlInputManager::SdlInputManager()
 	{
@@ -106,10 +98,6 @@ namespace nCine
 			}
 		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool SdlJoystickState::isButtonPressed(int buttonId) const
 	{
@@ -403,10 +391,6 @@ namespace nCine
 			}
 		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	//////////////////////////////////////////////////////////
 
 	void SdlInputManager::handleJoyDeviceEvent(const SDL_Event& event)
 	{

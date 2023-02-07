@@ -5,12 +5,7 @@
 namespace Jazz2::UI::Menu
 {
 	GameplayEnhancementsSection::GameplayEnhancementsSection()
-		:
-		_selectedIndex(0),
-		_animation(0.0f),
-		_transition(0.0f),
-		_isDirty(false),
-		_isInGame(false)
+		: _selectedIndex(0), _animation(0.0f), _transition(0.0f), _isDirty(false), _isInGame(false)
 	{
 		_items[(int)Item::Reforged].Name = _("Reforged Mode");
 		_items[(int)Item::LedgeClimb].Name = _("Ledge Climbing");

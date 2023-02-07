@@ -18,10 +18,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	const int IInputManager::MaxNumJoysticks = GLFW_JOYSTICK_LAST - GLFW_JOYSTICK_1 + 1;
 
 	bool GlfwInputManager::windowHasFocus_ = true;
@@ -44,10 +40,6 @@ namespace nCine
 	int GlfwInputManager::preScalingWidth_ = 0;
 	int GlfwInputManager::preScalingHeight_ = 0;
 	unsigned long int GlfwInputManager::lastFrameWindowSizeChanged_ = 0;
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
 
 	GlfwInputManager::GlfwInputManager()
 	{
@@ -97,10 +89,6 @@ namespace nCine
 		ImGuiGlfwInput::shutdown();
 #endif
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool GlfwJoystickState::isButtonPressed(int buttonId) const
 	{
@@ -252,10 +240,6 @@ namespace nCine
 			cursor_ = cursor;
 		}
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void GlfwInputManager::monitorCallback(GLFWmonitor* monitor, int event)
 	{

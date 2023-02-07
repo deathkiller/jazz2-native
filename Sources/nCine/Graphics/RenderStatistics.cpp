@@ -5,10 +5,6 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	RenderStatistics::Commands RenderStatistics::allCommands_;
 	RenderStatistics::Commands RenderStatistics::typedCommands_[(int)RenderCommand::CommandTypes::Count];
 	RenderStatistics::Buffers RenderStatistics::typedBuffers_[(int)RenderBuffersManager::BufferTypes::Count];
@@ -19,10 +15,6 @@ namespace nCine
 	unsigned int RenderStatistics::culledNodes_[2] = { 0, 0 };
 	RenderStatistics::VaoPool RenderStatistics::vaoPool_;
 	RenderStatistics::CommandPool RenderStatistics::commandPool_;
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void RenderStatistics::reset()
 	{

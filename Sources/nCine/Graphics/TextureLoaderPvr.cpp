@@ -23,7 +23,7 @@ namespace nCine
 		fileHandle_->Read(&header, 52);
 
 		// Checking for the header presence ("PVR"03)
-		//RETURNF_ASSERT_MSG(IFileStream::int32FromLE(header.version) == 0x03525650, "Not a PVR3 file");
+		RETURNF_ASSERT_MSG(IFileStream::int32FromLE(header.version) == 0x03525650, "Not a PVR3 file");
 
 		headerSize_ = 52 + IFileStream::int32FromLE(header.metaDataSize);
 		width_ = IFileStream::int32FromLE(header.width);
@@ -57,7 +57,7 @@ namespace nCine
 				case FMT_DXT5:
 					internalFormat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
 					break;
-#ifdef WITH_OPENGLES
+#if defined(WITH_OPENGLES)
 				case FMT_ETC1:
 					internalFormat = GL_ETC1_RGB8_OES;
 					break;
@@ -92,7 +92,7 @@ namespace nCine
 				case FMT_EAC_RG11:
 					internalFormat = GL_COMPRESSED_RG11_EAC;
 					break;
-#if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
+#	if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
 				case FMT_ASTC_4x4:
 					internalFormat = GL_COMPRESSED_RGBA_ASTC_4x4_KHR;
 					break;
@@ -135,10 +135,10 @@ namespace nCine
 				case FMT_ASTC_12x12:
 					internalFormat = GL_COMPRESSED_RGBA_ASTC_12x12_KHR;
 					break;
-#endif
+#	endif
 #endif
 				default:
-					//RETURNF_MSG_X("Unsupported PVR3 compressed format: 0x%llx", pixelFormat);
+					RETURNF_MSG_X("Unsupported PVR3 compressed format: 0x%llx", pixelFormat);
 					break;
 			}
 
@@ -189,7 +189,7 @@ namespace nCine
 					internalFormat = GL_R8;
 					break;
 				default:
-					//RETURNF_MSG_X("Unsupported PVR3 uncompressed format: 0x%llx", pixelFormat);
+					RETURNF_MSG_X("Unsupported PVR3 uncompressed format: 0x%llx", pixelFormat);
 					break;
 			}
 

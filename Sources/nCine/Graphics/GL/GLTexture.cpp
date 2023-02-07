@@ -4,16 +4,8 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
 	GLHashMap<GLTextureMappingFunc::Size, GLTextureMappingFunc> GLTexture::boundTextures_[MaxTextureUnits];
 	unsigned int GLTexture::boundUnit_ = 0;
-
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS AND DESTRUCTOR
-	///////////////////////////////////////////////////////////
 
 	GLTexture::GLTexture(GLenum target)
 		: glHandle_(0), target_(target), textureUnit_(0)
@@ -24,22 +16,20 @@ namespace nCine
 
 	GLTexture::~GLTexture()
 	{
-		if (boundTextures_[boundUnit_][target_] == glHandle_)
+		if (boundTextures_[boundUnit_][target_] == glHandle_) {
 			unbind();
+		}
 
 		glDeleteTextures(1, &glHandle_);
 		GL_LOG_ERRORS();
 	}
 
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	bool GLTexture::bind(unsigned int textureUnit) const
 	{
 		const bool hasBound = bindHandle(target_, glHandle_, textureUnit);
-		if (hasBound)
+		if (hasBound) {
 			textureUnit_ = textureUnit;
+		}
 		return hasBound;
 	}
 
@@ -126,10 +116,6 @@ namespace nCine
 	{
 		GLDebug::objectLabel(GLDebug::LabelTypes::Texture, glHandle_, label);
 	}
-
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	bool GLTexture::bindHandle(GLenum target, GLuint glHandle, unsigned int textureUnit)
 	{

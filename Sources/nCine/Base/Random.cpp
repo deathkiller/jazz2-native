@@ -24,8 +24,9 @@ namespace nCine
 			const uint32_t threshold = (uint32_t)(-(int32_t)bound) % bound;
 			while (true) {
 				const uint32_t r = random(state, increment);
-				if (r >= threshold)
+				if (r >= threshold) {
 					return r % bound;
+				}
 			}
 		}
 
@@ -37,10 +38,6 @@ namespace nCine
 		return instance;
 	}
 
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	RandomGenerator::RandomGenerator()
 		: RandomGenerator(DefaultInitState, DefaultInitSequence)
 	{
@@ -51,10 +48,6 @@ namespace nCine
 	{
 		Initialize(initState, initSequence);
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void RandomGenerator::Initialize(uint64_t initState, uint64_t initSequence)
 	{
@@ -72,10 +65,11 @@ namespace nCine
 
 	uint32_t RandomGenerator::Next(uint32_t min, uint32_t max)
 	{
-		if (min == max)
+		if (min == max) {
 			return min;
-		else
+		} else {
 			return min + boundRandom(state_, increment_, max - min);
+		}
 	}
 
 	float RandomGenerator::NextFloat()
@@ -95,10 +89,11 @@ namespace nCine
 
 	uint32_t RandomGenerator::Fast(uint32_t min, uint32_t max)
 	{
-		if (min == max)
+		if (min == max) {
 			return min;
-		else
+		} else {
 			return min + random(state_, increment_) % (max - min);
+		}
 	}
 
 	float RandomGenerator::FastFloat()
@@ -110,5 +105,4 @@ namespace nCine
 	{
 		return min + static_cast<float>(random(state_, increment_) / static_cast<float>(UINT32_MAX)) * (max - min);
 	}
-
 }

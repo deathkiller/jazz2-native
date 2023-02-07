@@ -1,16 +1,8 @@
 #include "GLViewport.h"
 
-namespace nCine {
-
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
+namespace nCine
+{
 	GLViewport::State GLViewport::state_;
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void GLViewport::setRect(const Recti& rect)
 	{
@@ -33,10 +25,6 @@ namespace nCine {
 		state_ = newState;
 	}
 
-	///////////////////////////////////////////////////////////
-	// PRIVATE FUNCTIONS
-	///////////////////////////////////////////////////////////
-
 	void GLViewport::initRect(GLint x, GLint y, GLsizei width, GLsizei height)
 	{
 		state_.rect.X = x;
@@ -44,5 +32,4 @@ namespace nCine {
 		state_.rect.W = width;
 		state_.rect.H = height;
 	}
-
 }

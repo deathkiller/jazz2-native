@@ -23,9 +23,7 @@ namespace Jazz2::UI
 	DiscordRpcClient::DiscordRpcClient()
 		:
 #if defined(DEATH_TARGET_WINDOWS)
-		_hPipe(NULL),
-		_hEventRead(NULL),
-		_hEventWrite(NULL),
+		_hPipe(NULL), _hEventRead(NULL), _hEventWrite(NULL),
 #else
 		_sockFd(-1),
 #endif

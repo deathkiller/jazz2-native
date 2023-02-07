@@ -8,10 +8,7 @@
 namespace Jazz2::UI::Menu
 {
 	EpisodeSelectSection::EpisodeSelectSection()
-		:
-		_expandedAnimation(0.0f),
-		_expanded(false),
-		_shouldStart(false)
+		: _expandedAnimation(0.0f), _expanded(false), _shouldStart(false)
 	{
 		auto& resolver = ContentResolver::Get();
 

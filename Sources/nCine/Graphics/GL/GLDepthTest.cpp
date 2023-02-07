@@ -1,16 +1,8 @@
 #include "GLDepthTest.h"
 
-namespace nCine {
-
-	///////////////////////////////////////////////////////////
-	// STATIC DEFINITIONS
-	///////////////////////////////////////////////////////////
-
+namespace nCine
+{
 	GLDepthTest::State GLDepthTest::state_;
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void GLDepthTest::enable()
 	{
@@ -46,17 +38,16 @@ namespace nCine {
 
 	void GLDepthTest::setState(State newState)
 	{
-		if (newState.enabled)
+		if (newState.enabled) {
 			enable();
-		else
+		} else {
 			disable();
-
-		if (newState.depthMaskEnabled)
+		}
+		if (newState.depthMaskEnabled) {
 			enableDepthMask();
-		else
+		} else {
 			disableDepthMask();
-
+		}
 		state_ = newState;
 	}
-
 }

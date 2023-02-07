@@ -6,8 +6,7 @@
 namespace Jazz2::UI::Menu
 {
 	ControlsOptionsSection::ControlsOptionsSection()
-		:
-		_isDirty(false)
+		: _isDirty(false)
 	{
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::RemapControls, _("Remap Controls") });
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::TouchControls, _("Touch Controls") });

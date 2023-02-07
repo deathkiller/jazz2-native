@@ -8,14 +8,9 @@
 
 namespace nCine
 {
-	///////////////////////////////////////////////////////////
-	// CONSTRUCTORS and DESTRUCTOR
-	///////////////////////////////////////////////////////////
-
 	RenderCommand::RenderCommand(CommandTypes profilingType)
-		: materialSortKey_(0), layer_(0),
-		numInstances_(0), batchSize_(0), transformationCommitted_(false),
-		profilingType_(profilingType), modelMatrix_(Matrix4x4f::Identity)
+		: materialSortKey_(0), layer_(0), numInstances_(0), batchSize_(0), transformationCommitted_(false),
+			profilingType_(profilingType), modelMatrix_(Matrix4x4f::Identity)
 	{
 	}
 
@@ -23,10 +18,6 @@ namespace nCine
 		: RenderCommand(CommandTypes::Unspecified)
 	{
 	}
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
 
 	void RenderCommand::calculateMaterialSortKey()
 	{
@@ -125,8 +116,7 @@ namespace nCine
 	void RenderCommand::commitAll()
 	{
 		// Copy the vertices and indices stored in host memory to video memory
-		/* This step is not needed if the command uses a custom VBO or IBO
-		 * or directly writes into the common one */
+		// This step is not needed if the command uses a custom VBO or IBO or directly writes into the common one
 		geometry_.commitVertices();
 		geometry_.commitIndices();
 

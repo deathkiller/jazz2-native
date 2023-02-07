@@ -23,9 +23,7 @@
 namespace Jazz2::UI::Menu
 {
 	BeginSection::BeginSection()
-		:
-		_selectedIndex(0),
-		_animation(0.0f)
+		: _selectedIndex(0), _animation(0.0f)
 	{
 #if defined(SHAREWARE_DEMO_ONLY)
 #	if defined(DEATH_TARGET_EMSCRIPTEN)

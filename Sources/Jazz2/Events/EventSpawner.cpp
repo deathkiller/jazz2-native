@@ -96,8 +96,7 @@ using namespace Jazz2::Actors;
 namespace Jazz2::Events
 {
 	EventSpawner::EventSpawner(ILevelHandler* levelHandler)
-		:
-		_levelHandler(levelHandler)
+		: _levelHandler(levelHandler)
 	{
 		RegisterKnownSpawnables();
 	}
