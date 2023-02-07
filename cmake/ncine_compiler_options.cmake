@@ -221,7 +221,7 @@ if(MSVC)
 		endif()
 		
 		# Suppress "warning : ignoring invalid /arch: argument ..."
-		arget_link_options(${NCINE_APP} PRIVATE -Wno-unused-command-line-argument)
+		target_link_options(${NCINE_APP} PRIVATE -Wno-unused-command-line-argument)
 	endif()
 else() # GCC and LLVM
 	target_compile_options(${NCINE_APP} PRIVATE -fno-exceptions)
