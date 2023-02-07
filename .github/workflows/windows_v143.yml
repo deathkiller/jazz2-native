@@ -1,4 +1,4 @@
-name: 'Windows'
+name: 'Windows (v143)'
 
 on:
   push:
@@ -95,6 +95,6 @@ jobs:
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3
       with:
-        name: Jazz2_Windows_${{ matrix.Platform }}_${{ matrix.ArchExts }}_${{ matrix.Backend }}_VS2022
+        name: Jazz2_Windows_${{ matrix.Platform }}_${{ matrix.ArchExts }}_${{ matrix.Backend }}_v143
         path: ./_package/
         
