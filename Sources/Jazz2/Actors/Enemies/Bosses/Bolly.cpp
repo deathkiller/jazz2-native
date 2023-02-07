@@ -30,7 +30,7 @@ namespace Jazz2::Actors::Bosses
 		/*if (_turret != nullptr) {
 			_turret->SetState(ActorState::IsDestroyed, true);
 		}*/
-		for (int i = 0; i < _countof(_chain); i++) {
+		for (int i = 0; i < countof(_chain); i++) {
 			if (_chain[i] != nullptr) {
 				_chain[i]->SetState(ActorState::IsDestroyed, true);
 			}
@@ -72,7 +72,7 @@ namespace Jazz2::Actors::Bosses
 		});
 		_levelHandler->AddActor(_turret);*/
 
-		for (int i = 0; i < _countof(_chain); i++) {
+		for (int i = 0; i < countof(_chain); i++) {
 			_chain[i] = std::make_shared<BollyPart>();
 			uint8_t chainParams[1] = { (uint8_t)((i % 3) == 2 ? 3 : 4) };
 			_chain[i]->OnActivated({
@@ -165,7 +165,7 @@ namespace Jazz2::Actors::Bosses
 		}*/
 
 		float distance = 30.0f;
-		for (int i = 0; i < _countof(_chain); i++) {
+		for (int i = 0; i < countof(_chain); i++) {
 			float angle = sinf(_chainPhase - i * 0.08f) * 1.2f + fPiOver2;
 
 			Vector2f piecePos = _pos;

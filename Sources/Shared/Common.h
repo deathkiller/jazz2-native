@@ -6,12 +6,12 @@
 #include <cstddef>
 #include <cstdint>
 
-#if !defined(_countof)
+#if !defined(countof)
 #	if defined(__cplusplus)
 		namespace Death::Implementation { template<typename T, std::size_t N> char(*_ArrayCountOfHelper(T(&)[N]))[N]; }
-#		define _countof(a) (sizeof(*Death::Implementation::_ArrayCountOfHelper(a)))
+#		define countof(a) (sizeof(*Death::Implementation::_ArrayCountOfHelper(a)))
 #	else
-#		define _countof(a) (sizeof(a) / sizeof(a[0]))
+#		define countof(a) (sizeof(a) / sizeof(a[0]))
 #	endif
 #endif
 

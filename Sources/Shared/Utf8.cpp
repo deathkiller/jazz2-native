@@ -51,8 +51,8 @@ namespace Death::Utf8
 
 	Containers::Array<wchar_t> ToUtf16(const char* text, int size)
 	{
-		// MBtoWC counts the trailing \0 into the size, which we have to cut. It also can't be called with a zero size
-		// for some stupid reason, in that case just set the result size to zero. We can't just `return {}`,
+		// MBtoWC counts the trailing \0 into the size, which we have to cut. It also can't be called with a zero
+		// size for some stupid reason, in that case just set the result size to zero. We can't just `return {}`,
 		// because the output array is guaranteed to be a pointer to a null-terminated string.
 		const std::size_t lengthNeeded = (size == 0 ? 0 : ::MultiByteToWideChar(CP_UTF8, 0, text, size, nullptr, 0) - (size == -1 ? 1 : 0));
 
@@ -74,8 +74,8 @@ namespace Death::Utf8
 	{
 		if (!size) return { };
 
-		// WCtoMB counts the trailing \0 into the size, which we have to cut. Containers::String takes care of allocating
-		// extra for the null terminator so we don't need to do that explicitly.
+		// WCtoMB counts the trailing \0 into the size, which we have to cut. Containers::String takes
+		// care of allocating extra for the null terminator so we don't need to do that explicitly.
 		Containers::String result { Containers::NoInit, std::size_t(WideCharToMultiByte(CP_UTF8, 0, text, size, nullptr, 0, nullptr, nullptr) - (size == -1 ? 1 : 0)) };
 		WideCharToMultiByte(CP_UTF8, 0, text, size, result.data(), (int)result.size(), nullptr, nullptr);
 		return result;

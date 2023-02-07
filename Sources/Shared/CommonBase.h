@@ -281,19 +281,6 @@
 #	endif
 #endif
 
-// Whether `long double` has the same precision as `double`
-//
-// Defined on platforms where the @cpp long double @ce type has a 64-bit precision instead of 80-bit, thus same as @cpp double @ce.
-// It's the case for @ref DEATH_TARGET_MSVC "MSVC" ([source](https://docs.microsoft.com/en-us/previous-versions/9cx8xs15(v=vs.140))),
-// 32-bit @ref DEATH_TARGET_ANDROID "Android" (no reliable source found, sorry), @ref DEATH_TARGET_EMSCRIPTEN "Emscripten"
-// and @ref DEATH_TARGET_APPLE "Mac" (but not @ref DEATH_TARGET_IOS "iOS") with @ref DEATH_TARGET_ARM "ARM" processors.
-// Emscripten is a bit special because it's @cpp long double @ce is *sometimes* 80-bit, but its precision differs from the 80-bit
-// representation elsewhere, so it's always treated as 64-bit. Note that even though the type size and precision may be the same,
-// these are still two distinct types, similarly to how @cpp int @ce and @cpp signed int @ce behave the same but are treated as different types.
-#if defined(DEATH_TARGET_MSVC) || (defined(DEATH_TARGET_ANDROID) && !__LP64__) || defined(DEATH_TARGET_EMSCRIPTEN) || (defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_IOS) && defined(DEATH_TARGET_ARM))
-#	define DEATH_LONG_DOUBLE_SAME_AS_DOUBLE
-#endif
-
 // Kill switch for when presence of a sanitizer is detected and DEATH_CPU_USE_IFUNC is enabled. Unfortunately in our case the
 // __attribute__((no_sanitize_address)) workaround as described on https://github.com/google/sanitizers/issues/342 doesn't
 // work / can't be used because it would mean marking basically everything including the actual implementation that's being dispatched to.
@@ -308,6 +295,31 @@
 #	if defined(_DEATH_SANITIZER_IFUNC_DETECTED)
 #		 error The library was built with DEATH_CPU_USE_IFUNC, which is incompatible with sanitizers. Rebuild without this option or disable sanitizers.
 #	endif
+#endif
+
+/**
+	@brief Whether `long double` has the same precision as `double`
+
+	Defined on platforms where the @cpp long double @ce type has a 64-bit precision instead of 80-bit, thus same as @cpp double @ce.
+	It's the case for @ref DEATH_TARGET_MSVC "MSVC" ([source](https://docs.microsoft.com/en-us/previous-versions/9cx8xs15(v=vs.140))),
+	32-bit @ref DEATH_TARGET_ANDROID "Android" (no reliable source found, sorry), @ref DEATH_TARGET_EMSCRIPTEN "Emscripten"
+	and @ref DEATH_TARGET_APPLE "Mac" (but not @ref DEATH_TARGET_IOS "iOS") with @ref DEATH_TARGET_ARM "ARM" processors.
+	Emscripten is a bit special because it's @cpp long double @ce is *sometimes* 80-bit, but its precision differs from the 80-bit
+	representation elsewhere, so it's always treated as 64-bit. Note that even though the type size and precision may be the same,
+	these are still two distinct types, similarly to how @cpp int @ce and @cpp signed int @ce behave the same but are treated as different types.
+*/
+#if defined(DEATH_TARGET_MSVC) || (defined(DEATH_TARGET_ANDROID) && !__LP64__) || defined(DEATH_TARGET_EMSCRIPTEN) || (defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_IOS) && defined(DEATH_TARGET_ARM))
+#	define DEATH_LONG_DOUBLE_SAME_AS_DOUBLE
+#endif
+
+/**
+	@brief Whether source location built-ins are supported
+
+	Defined if compiler-specific builtins used to implement the C++20 std::source_location feature are available.
+	Defined on GCC at least since version 4.8, Clang 9+ and MSVC 2019 16.6 and newer; on all three they're present also in the C++11 mode.
+*/
+#if (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG)) || (defined(DEATH_TARGET_CLANG) && ((defined(__apple_build_version__) && __clang_major__ >= 12) || (!defined(__apple_build_version__) && __clang_major__ >= 9))) || (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926)
+#	define DEATH_SOURCE_LOCATION_BUILTINS_SUPPORTED
 #endif
 
 // Internal macro implementation

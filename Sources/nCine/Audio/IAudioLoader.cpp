@@ -25,7 +25,7 @@ namespace nCine
 
 	std::unique_ptr<IAudioLoader> IAudioLoader::createFromFile(const StringView& filename)
 	{
-		LOGV_X("Loading from file \"%s\"", filename.data());
+		LOGD_X("Loading from file \"%s\"", filename.data());
 		// Creating a handle from IFile static method to detect assets file
 		return createLoader(fs::Open(filename, FileAccessMode::Read), filename);
 	}

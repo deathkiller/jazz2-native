@@ -201,7 +201,7 @@ namespace Jazz2::UI::Menu
 		    } else if (i == 1) {
 				const StringView difficultyTypes[] = { _("Easy"), _("Medium"), _("Hard") };
 
-		        for (int j = 0; j < _countof(difficultyTypes); j++) {
+		        for (int j = 0; j < countof(difficultyTypes); j++) {
 		            if (_selectedDifficulty == j) {
 		                _root->DrawElement("MenuGlow"_s, 0, center.X + (j - 1) * 100.0f, center.Y + 28.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (difficultyTypes[j].size() + 3) * 0.4f, 2.2f, true);
 
@@ -320,7 +320,7 @@ namespace Jazz2::UI::Menu
 
 		PlayerType players[] = { (PlayerType)((int)PlayerType::Jazz + _selectedPlayerType) };
 		LevelInitialization levelInit(_episodeName, (playTutorial ? "trainer"_s : StringView(_levelName)), (GameDifficulty)((int)GameDifficulty::Easy + _selectedDifficulty),
-			PreferencesCache::EnableReforged, false, players, _countof(players));
+			PreferencesCache::EnableReforged, false, players, countof(players));
 
 		if (!_previousEpisodeName.empty()) {
 			auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(_previousEpisodeName);

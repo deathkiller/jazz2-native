@@ -83,7 +83,7 @@ namespace Jazz2
 		}
 
 		// Process carry overs
-		for (int i = 0; i < _countof(levelInit.PlayerCarryOvers); i++) {
+		for (int i = 0; i < countof(levelInit.PlayerCarryOvers); i++) {
 			if (levelInit.PlayerCarryOvers[i].Type == PlayerType::None) {
 				continue;
 			}
@@ -605,7 +605,7 @@ namespace Jazz2
 				if (event.sym == KeySym::J && _cheatsBufferLength >= 2) {
 					_cheatsBufferLength = 0;
 					_cheatsBuffer[_cheatsBufferLength++] = (char)event.sym;
-				} else if (_cheatsBufferLength < _countof(_cheatsBuffer)) {
+				} else if (_cheatsBufferLength < countof(_cheatsBuffer)) {
 					_cheatsBuffer[_cheatsBufferLength++] = (char)event.sym;
 
 					if (_cheatsBufferLength >= 5 && _cheatsBuffer[0] == (char)KeySym::J && _cheatsBuffer[1] == (char)KeySym::J) {
@@ -1501,7 +1501,7 @@ namespace Jazz2
 		// Try to get 8 connected joysticks
 		const JoyMappedState* joyStates[UI::ControlScheme::MaxConnectedGamepads];
 		int jc = 0;
-		for (int i = 0; i < IInputManager::MaxNumJoysticks && jc < _countof(joyStates); i++) {
+		for (int i = 0; i < IInputManager::MaxNumJoysticks && jc < countof(joyStates); i++) {
 			if (input.isJoyMapped(i)) {
 				joyStates[jc++] = &input.joyMappedState(i);
 			}

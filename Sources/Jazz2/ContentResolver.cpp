@@ -1154,7 +1154,7 @@ namespace Jazz2
 	{
 		uint32_t texels[64 * 64];
 
-		for (int i = 0; i < _countof(texels); i++) {
+		for (int i = 0; i < countof(texels); i++) {
 			texels[i] = Random().Fast(0, INT32_MAX) | 0xff000000;
 		}
 
@@ -1178,7 +1178,7 @@ namespace Jazz2
 			95, 92, 88, 15, 15
 		};
 
-		constexpr int StopsPerGem = (_countof(PaletteStops) / GemColorCount) - 1;
+		constexpr int StopsPerGem = (countof(PaletteStops) / GemColorCount) - 1;
 
 		// Start to fill palette texture from the second row (right after base palette)
 		int src = 0, dst = ColorsPerPalette;

@@ -30,7 +30,7 @@
 
 enum class LogLevel {
 	Unknown,
-	Verbose,
+	Debug,
 	Info,
 	Warning,
 	Error,
@@ -40,44 +40,44 @@ enum class LogLevel {
 void __WriteLog(LogLevel level, const char* fmt, ...);
 
 #	if defined(DEATH_TARGET_GCC)
-#		define FUNCTION __PRETTY_FUNCTION__
+#		define __LOG_FUNCTION __PRETTY_FUNCTION__
 #	elif defined(DEATH_TARGET_MSVC)
-#		define FUNCTION __FUNCTION__
+#		define __LOG_FUNCTION __FUNCTION__
 #	else
-#		define FUNCTION __func__
+#		define __LOG_FUNCTION __func__
 #	endif
 #
 #	if defined(NCINE_DEBUG)
-#		define LOGV_X(fmt, ...) __WriteLog(LogLevel::Verbose, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
+#		define LOGD(fmt) __WriteLog(LogLevel::Debug, static_cast<const char *>("%s -> " fmt), __LOG_FUNCTION)
 #	else
-#		define LOGV_X(fmt, ...) do { } while (false)
+#		define LOGD(fmt) do { } while (false)
 #	endif
-#	define LOGI_X(fmt, ...) __WriteLog(LogLevel::Info, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
-#	define LOGW_X(fmt, ...) __WriteLog(LogLevel::Warning, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
-#	define LOGE_X(fmt, ...) __WriteLog(LogLevel::Error, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
-#	define LOGF_X(fmt, ...) __WriteLog(LogLevel::Fatal, static_cast<const char *>("%s -> " fmt), FUNCTION, ##__VA_ARGS__)
+#	define LOGI(fmt) __WriteLog(LogLevel::Info, static_cast<const char *>("%s -> " fmt), __LOG_FUNCTION)
+#	define LOGW(fmt) __WriteLog(LogLevel::Warning, static_cast<const char *>("%s -> " fmt), __LOG_FUNCTION)
+#	define LOGE(fmt) __WriteLog(LogLevel::Error, static_cast<const char *>("%s -> " fmt), __LOG_FUNCTION)
+#	define LOGF(fmt) __WriteLog(LogLevel::Fatal, static_cast<const char *>("%s -> " fmt), __LOG_FUNCTION)
 #
 #	if defined(NCINE_DEBUG)
-#		define LOGV(fmt) __WriteLog(LogLevel::Verbose, static_cast<const char *>("%s -> " fmt), FUNCTION)
+#		define LOGD_X(fmt, ...) __WriteLog(LogLevel::Debug, static_cast<const char *>("%s -> " fmt), __LOG_FUNCTION, ##__VA_ARGS__)
 #	else
-#		define LOGV(fmt) do { } while (false)
+#		define LOGD_X(fmt, ...) do { } while (false)
 #	endif
-#	define LOGI(fmt) __WriteLog(LogLevel::Info, static_cast<const char *>("%s -> " fmt), FUNCTION)
-#	define LOGW(fmt) __WriteLog(LogLevel::Warning, static_cast<const char *>("%s -> " fmt), FUNCTION)
-#	define LOGE(fmt) __WriteLog(LogLevel::Error, static_cast<const char *>("%s -> " fmt), FUNCTION)
-#	define LOGF(fmt) __WriteLog(LogLevel::Fatal, static_cast<const char *>("%s -> " fmt), FUNCTION)
+#	define LOGI_X(fmt, ...) __WriteLog(LogLevel::Info, static_cast<const char *>("%s -> " fmt), __LOG_FUNCTION, ##__VA_ARGS__)
+#	define LOGW_X(fmt, ...) __WriteLog(LogLevel::Warning, static_cast<const char *>("%s -> " fmt), __LOG_FUNCTION, ##__VA_ARGS__)
+#	define LOGE_X(fmt, ...) __WriteLog(LogLevel::Error, static_cast<const char *>("%s -> " fmt), __LOG_FUNCTION, ##__VA_ARGS__)
+#	define LOGF_X(fmt, ...) __WriteLog(LogLevel::Fatal, static_cast<const char *>("%s -> " fmt), __LOG_FUNCTION, ##__VA_ARGS__)
 #else
-#	define LOGV_X(fmt, ...) do { } while (false)
-#	define LOGI_X(fmt, ...) do { } while (false)
-#	define LOGW_X(fmt, ...) do { } while (false)
-#	define LOGE_X(fmt, ...) do { } while (false)
-#	define LOGF_X(fmt, ...) do { } while (false)
-#
-#	define LOGV(fmt) do { } while (false)
+#	define LOGD(fmt) do { } while (false)
 #	define LOGI(fmt) do { } while (false)
 #	define LOGW(fmt) do { } while (false)
 #	define LOGE(fmt) do { } while (false)
 #	define LOGF(fmt) do { } while (false)
+#
+#	define LOGD_X(fmt, ...) do { } while (false)
+#	define LOGI_X(fmt, ...) do { } while (false)
+#	define LOGW_X(fmt, ...) do { } while (false)
+#	define LOGE_X(fmt, ...) do { } while (false)
+#	define LOGF_X(fmt, ...) do { } while (false)
 #endif
 
 // Return assert macros

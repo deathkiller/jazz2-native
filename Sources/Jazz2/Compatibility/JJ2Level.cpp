@@ -57,8 +57,6 @@ namespace Jazz2::Compatibility
 		int layoutBlockPackedSize = headerBlock.ReadInt32();
 		int layoutBlockUnpackedSize = headerBlock.ReadInt32();
 
-		LOGV("Reading compressed blocks...");
-
 		JJ2Block infoBlock(s, infoBlockPackedSize, infoBlockUnpackedSize);
 		JJ2Block eventBlock(s, eventBlockPackedSize, eventBlockUnpackedSize);
 		JJ2Block dictBlock(s, dictBlockPackedSize, dictBlockUnpackedSize);
@@ -84,8 +82,6 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadMetadata(JJ2Block& block, bool strictParser)
 	{
-		LOGV("Reading level metadata...");
-
 		// First 9 bytes are JCS coordinates on last save.
 		block.DiscardBytes(9);
 
@@ -128,8 +124,6 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadStaticTileData(JJ2Block& block, bool strictParser)
 	{
-		LOGV("Reading level static tiles...");
-	
 		int tileCount = GetMaxSupportedTiles();
 		_staticTiles = std::make_unique<TilePropertiesSection[]>(tileCount);
 
@@ -153,8 +147,6 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadAnimatedTiles(JJ2Block& block, bool strictParser)
 	{
-		LOGV("Reading level animated tiles...");
-		
 		_animatedTiles = std::make_unique<AnimatedTileSection[]>(_animCount);
 
 		for (int i = 0; i < _animCount; i++) {
@@ -174,105 +166,71 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadLayerMetadata(JJ2Block& block, bool strictParser)
 	{
-		LOGV("Reading level layer metadata...");
-	
 		_layers.resize(JJ2LayerCount);
-
-		LOGV("Reading level layer metadata 02...");
 
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Flags = block.ReadUInt32();
 		}
 
-		LOGV("Reading level layer metadata 03...");
-
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Type = block.ReadByte();
 		}
-
-		LOGV("Reading level layer metadata 04...");
 
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Used = block.ReadBool();
 			_layers[i].Visible = true;
 		}
 
-		LOGV("Reading level layer metadata 05...");
-
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Width = block.ReadInt32();
 		}
-
-		LOGV("Reading level layer metadata 06...");
 
 		// This is related to how data is presented in the file; the above is a WYSIWYG version, solely shown on the UI
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].InternalWidth = block.ReadInt32();
 		}
 
-		LOGV("Reading level layer metadata 07...");
-
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Height = block.ReadInt32();
 		}
-
-		LOGV("Reading level layer metadata 08...");
 
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].Depth = block.ReadInt32();
 		}
 
-		LOGV("Reading level layer metadata 09...");
-
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].DetailLevel = block.ReadByte();
 		}
-
-		LOGV("Reading level layer metadata 10...");
 
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].OffsetX = block.ReadFloatEncoded();
 		}
 
-		LOGV("Reading level layer metadata 11...");
-
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].OffsetY = block.ReadFloatEncoded();
 		}
-
-		LOGV("Reading level layer metadata 12...");
 
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].SpeedX = block.ReadFloatEncoded();
 		}
 
-		LOGV("Reading level layer metadata 13...");
-
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].SpeedY = block.ReadFloatEncoded();
 		}
-
-		LOGV("Reading level layer metadata 14...");
 
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].AutoSpeedX = block.ReadFloatEncoded();
 			_layers[i].SpeedModelX = LayerSectionSpeedModel::Normal;
 		}
 
-		LOGV("Reading level layer metadata 15...");
-
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].AutoSpeedY = block.ReadFloatEncoded();
 			_layers[i].SpeedModelY = LayerSectionSpeedModel::Normal;
 		}
 
-		LOGV("Reading level layer metadata 16...");
-
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].TexturedBackgroundType = block.ReadByte();
 		}
-
-		LOGV("Reading level layer metadata 17...");
 
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].TexturedParams1 = block.ReadByte();
@@ -282,14 +240,10 @@ namespace Jazz2::Compatibility
 			_layers[i].SpriteMode = 0;
 			_layers[i].SpriteParam = 0;
 		}
-
-		LOGV("Reading level layer metadata 18...");
 	}
 
 	void JJ2Level::LoadEvents(JJ2Block& block, bool strictParser)
 	{
-		LOGV("Reading level events...");
-
 		int width = _layers[3].Width;
 		int height = _layers[3].Height;
 		if (width <= 0 && height <= 0) {
@@ -335,8 +289,6 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadLayers(JJ2Block& dictBlock, int dictLength, JJ2Block& layoutBlock, bool strictParser)
 	{
-		LOGV("Reading level layers...");
-
 		struct DictionaryEntry {
 			uint16_t Tiles[4];
 		};
@@ -377,8 +329,6 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadMlleData(JJ2Block& block, uint32_t version, const StringView& path, bool strictParser)
 	{
-		LOGV("Reading level MLLE data...");
-
 		if (version > 0x106) {
 			LOGW_X("MLLE stream version 0x%x in level \"%s\" is not supported", version, LevelName.data());
 			return;
@@ -967,7 +917,7 @@ namespace Jazz2::Compatibility
 
 				bool allZeroes = true;
 				if (tileEvent.Converted.Type != EventType::Empty) {
-					for (int i = 0; i < _countof(tileEvent.Converted.Params); i++) {
+					for (int i = 0; i < countof(tileEvent.Converted.Params); i++) {
 						if (tileEvent.Converted.Params[i] != 0) {
 							allZeroes = false;
 							break;

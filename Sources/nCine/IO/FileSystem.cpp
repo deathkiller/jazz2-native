@@ -230,7 +230,7 @@ namespace nCine
 		{
 			ASSERT(path);
 			if (::lstat(path, &sb) == -1) {
-				//LOGV_X("lstat error: %s \"%s\"", strerror(errno), path);
+				LOGD_X("lstat(\"%s\") failed: %s", path, strerror(errno));
 				return false;
 			}
 			return true;
@@ -761,7 +761,7 @@ namespace nCine
 		String returnedPath = JoinPath(first, second);
 #if defined(DEATH_TARGET_WINDOWS)
 		wchar_t buffer[MaxPathLength];
-		const wchar_t* resolvedPath = _wfullpath(buffer, Utf8::ToUtf16(returnedPath), _countof(buffer));
+		const wchar_t* resolvedPath = _wfullpath(buffer, Utf8::ToUtf16(returnedPath), countof(buffer));
 		if (resolvedPath == nullptr) {
 			return { };
 		}
@@ -890,7 +890,7 @@ namespace nCine
 
 #if defined(DEATH_TARGET_WINDOWS)
 		wchar_t buffer[MaxPathLength];
-		const wchar_t* resolvedPath = _wfullpath(buffer, Utf8::ToUtf16(path), _countof(buffer));
+		const wchar_t* resolvedPath = _wfullpath(buffer, Utf8::ToUtf16(path), countof(buffer));
 		if (resolvedPath == nullptr) {
 			return { };
 		}
@@ -947,7 +947,7 @@ namespace nCine
 #elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		wchar_t path[MaxPathLength];
 		// Returns size *without* the null terminator
-		const size_t size = ::GetModuleFileName(nullptr, path, _countof(path));
+		const size_t size = ::GetModuleFileName(nullptr, path, countof(path));
 		return Utf8::FromUtf16(arrayView(path, size));
 #else
 		return { };

@@ -507,7 +507,7 @@ namespace nCine
 			winrtWGI::GamepadButtons::None /*Guide*/
 		};
 
-		for (int i = 0; i < _countof(Mapping); i++) {
+		for (int i = 0; i < countof(Mapping); i++) {
 			if (Mapping[i] == winrtWGI::GamepadButtons::None) {
 				continue;
 			}
@@ -537,7 +537,7 @@ namespace nCine
 		};
 
 		unsigned char hatState = 0;
-		for (int i = 0; i < _countof(Mapping); i++) {
+		for (int i = 0; i < countof(Mapping); i++) {
 			bool isPressed = (buttons & Mapping[i]) != winrtWGI::GamepadButtons::None;
 			if (isPressed) {
 				hatState |= (1 << i);

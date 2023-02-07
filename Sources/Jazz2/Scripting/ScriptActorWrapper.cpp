@@ -173,7 +173,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		r = engine->RegisterObjectMethod(AsClassNameInternal, "void SetAnimation(const string &in)", asMETHOD(ScriptActorWrapper, asSetAnimation), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod(AsClassNameInternal, "void SetAnimation(int)", asMETHOD(ScriptActorWrapper, asSetAnimationState), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
-		r = module->AddScriptSection("__" AsClassName, AsLibrary, _countof(AsLibrary) - 1, 0); RETURN_ASSERT(r >= 0);
+		r = module->AddScriptSection("__" AsClassName, AsLibrary, countof(AsLibrary) - 1, 0); RETURN_ASSERT(r >= 0);
 	}
 
 	ScriptActorWrapper* ScriptActorWrapper::Factory(int actorType)
