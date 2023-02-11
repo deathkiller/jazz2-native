@@ -50,5 +50,4 @@ namespace nCine
 		uint64_t h = fasthash64(buf, len, seed);
 		return static_cast<uint32_t>(h - (h >> 32));
 	}
-
 }

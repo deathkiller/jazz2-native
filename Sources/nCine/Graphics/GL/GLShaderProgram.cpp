@@ -3,6 +3,9 @@
 #include "GLDebug.h"
 #include "../RenderResources.h"
 #include "../RenderVaoPool.h"
+#include "../BinaryShaderCache.h"
+#include "../IGfxCapabilities.h"
+#include "../../ServiceLocator.h"
 #include "../../Base/StaticHashMapIterator.h"
 #include "../../tracy.h"
 
@@ -10,6 +13,12 @@
 
 namespace nCine
 {
+	namespace
+	{
+		unsigned int bufferSize = 0;
+		std::unique_ptr<uint8_t[]> bufferPtr;
+	}
+
 	GLuint GLShaderProgram::boundProgram_ = 0;
 #if defined(NCINE_LOG)
 	char GLShaderProgram::infoLogString_[MaxInfoLogLength];
@@ -21,7 +30,7 @@ namespace nCine
 	}
 
 	GLShaderProgram::GLShaderProgram(QueryPhase queryPhase)
-		: glHandle_(0), status_(Status::NotLinked), queryPhase_(queryPhase), shouldLogOnErrors_(true), uniformsSize_(0), uniformBlocksSize_(0)
+		: glHandle_(0), hashName_(0), status_(Status::NotLinked), queryPhase_(queryPhase), shouldLogOnErrors_(true), uniformsSize_(0), uniformBlocksSize_(0)
 	{
 		glHandle_ = glCreateProgram();
 
@@ -29,13 +38,17 @@ namespace nCine
 		uniforms_.reserve(UniformsInitialSize);
 		uniformBlocks_.reserve(UniformBlocksInitialSize);
 		attributes_.reserve(AttributesInitialSize);
+		
+		if (RenderResources::binaryShaderCache().isAvailable()) {
+			glProgramParameteri(glHandle_, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE);
+		}
 	}
 
 	GLShaderProgram::GLShaderProgram(const StringView& vertexFile, const StringView& fragmentFile, Introspection introspection, QueryPhase queryPhase)
 		: GLShaderProgram(queryPhase)
 	{
-		const bool hasCompiledVS = attachShader(GL_VERTEX_SHADER, vertexFile);
-		const bool hasCompiledFS = attachShader(GL_FRAGMENT_SHADER, fragmentFile);
+		const bool hasCompiledVS = attachShaderFromFile(GL_VERTEX_SHADER, vertexFile);
+		const bool hasCompiledFS = attachShaderFromFile(GL_FRAGMENT_SHADER, fragmentFile);
 
 		if (hasCompiledVS && hasCompiledFS) {
 			link(introspection);
@@ -90,29 +103,26 @@ namespace nCine
 		}
 	}
 
-	bool GLShaderProgram::attachShader(GLenum type, const StringView& filename)
+	bool GLShaderProgram::attachShaderFromFile(GLenum type, const StringView& filename)
 	{
-		std::unique_ptr<GLShader> shader = std::make_unique<GLShader>(type, filename);
-		glAttachShader(glHandle_, shader->glHandle());
-
-		const GLShader::ErrorChecking errorChecking = (queryPhase_ == GLShaderProgram::QueryPhase::Immediate)
-			? GLShader::ErrorChecking::Immediate
-			: GLShader::ErrorChecking::Deferred;
-		const bool hasCompiled = shader->compile(errorChecking, shouldLogOnErrors_);
-
-		if (hasCompiled) {
-			GLDebug::objectLabel(GLDebug::LabelTypes::Shader, shader->glHandle(), filename.data());
-			attachedShaders_.push_back(std::move(shader));
-		} else {
-			status_ = Status::CompilationFailed;
-		}
-		return hasCompiled;
+		return attachShaderFromStringsAndFile(type, nullptr, filename);
 	}
-
+	
 	bool GLShaderProgram::attachShaderFromString(GLenum type, const char* string)
 	{
+		const char* strings[2] = { string, nullptr };
+		return attachShaderFromStringsAndFile(type, strings, nullptr);
+	}
+	
+	bool GLShaderProgram::attachShaderFromStrings(GLenum type, const char** strings)
+	{
+		return attachShaderFromStringsAndFile(type, strings, nullptr);
+	}
+	
+	bool GLShaderProgram::attachShaderFromStringsAndFile(GLenum type, const char** strings, const StringView& filename)
+	{
 		std::unique_ptr<GLShader> shader = std::make_unique<GLShader>(type);
-		shader->loadFromString(string);
+		shader->loadFromStringsAndFile(strings, filename);
 		glAttachShader(glHandle_, shader->glHandle());
 
 		const GLShader::ErrorChecking errorChecking = (queryPhase_ == GLShaderProgram::QueryPhase::Immediate)
@@ -131,7 +141,49 @@ namespace nCine
 	bool GLShaderProgram::link(Introspection introspection)
 	{
 		introspection_ = introspection;
-		glLinkProgram(glHandle_);
+		
+		hashName_ = 0;
+		for (const auto& shader : attachedShaders_) {
+			hashName_ += shader->sourceHash();
+		}
+		LOGI_X("Shader program %u - hash: 0x%016lx", glHandle_, hashName_);
+
+		bool loaded = false;
+		if (RenderResources::binaryShaderCache().isAvailable()) {
+			const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
+			const int numBinaryFormats = gfxCaps.value(IGfxCapabilities::GLIntValues::NUM_PROGRAM_BINARY_FORMATS);
+
+			for (unsigned int i = 0; i < numBinaryFormats; i++) {
+				const int binFormat = gfxCaps.arrayValue(IGfxCapabilities::GLArrayIntValues::PROGRAM_BINARY_FORMATS, i);
+				const unsigned int binLength = RenderResources::binaryShaderCache().binarySize(binFormat, hashName_);
+				if (binLength > 0) {
+					const void* buffer = RenderResources::binaryShaderCache().loadFromCache(binFormat, hashName_);
+					loaded = loadBinary(binFormat, buffer, binLength);
+					if (!loaded) {
+						LOGW_X("Binary shader failed to link");
+					}
+					break;
+				}
+			}
+		}
+
+		if (!loaded) {
+			glLinkProgram(glHandle_);
+			if (RenderResources::binaryShaderCache().isAvailable()) {
+				const int binLength = binaryLength();
+				if (binLength > 0) {
+					if (bufferSize < binLength) {
+						bufferSize = binLength;
+						bufferPtr = std::make_unique<uint8_t[]>(bufferSize);
+					}
+
+					unsigned int format = 0;
+					saveBinary(binLength, format, bufferPtr.get());
+
+					RenderResources::binaryShaderCache().saveToCache(binLength, bufferPtr.get(), format, hashName_);
+				}
+			}
+		}
 
 		if (queryPhase_ == QueryPhase::Immediate) {
 			const bool linkCheck = checkLinking();
@@ -171,6 +223,49 @@ namespace nCine
 		glGetProgramiv(glHandle_, GL_VALIDATE_STATUS, &status);
 		return (status == GL_TRUE);
 	}
+	
+	bool GLShaderProgram::loadBinary(unsigned int binaryFormat, const void* buffer, int bufferSize)
+	{
+		ASSERT(buffer);
+		ASSERT(bufferSize > 0);
+
+		status_ = Status::NotLinked;
+#if defined(WITH_ANGLE)
+		glProgramBinaryOES(glHandle_, binaryFormat, buffer, bufferSize);
+#else
+		glProgramBinary(glHandle_, binaryFormat, buffer, bufferSize);
+#endif
+		const bool linked = checkLinking();
+
+		return linked;
+	}
+
+	int GLShaderProgram::binaryLength() const
+	{
+		GLint length = 0;
+#if defined(WITH_ANGLE)
+		glGetProgramiv(glHandle_, GL_PROGRAM_BINARY_LENGTH_OES, &length);
+#else
+		glGetProgramiv(glHandle_, GL_PROGRAM_BINARY_LENGTH, &length);
+#endif
+		return length;
+	}
+
+	bool GLShaderProgram::saveBinary(int bufferSize, unsigned int& binaryFormat, void* buffer) const
+	{
+		ASSERT(bufferSize > 0);
+		ASSERT(buffer);
+
+		GLsizei length = 0;
+		if (buffer != nullptr && bufferSize > 0) {
+#if defined(WITH_ANGLE)
+			glGetProgramBinaryOES(glHandle_, bufferSize, &length, &binaryFormat, buffer);
+#else
+			glGetProgramBinary(glHandle_, bufferSize, &length, &binaryFormat, buffer);
+#endif
+		}
+		return (length > 0 && bufferSize >= length);
+	}
 
 	GLVertexFormat::Attribute* GLShaderProgram::attribute(const char* name)
 	{
@@ -179,16 +274,15 @@ namespace nCine
 
 		int location = -1;
 		const bool attributeFound = attributeLocations_.contains(name, location);
-
-		if (attributeFound)
+		if (attributeFound) {
 			vertexAttribute = &vertexFormat_[location];
-
+		}
 		return vertexAttribute;
 	}
 
 	void GLShaderProgram::defineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, unsigned int vboOffset)
 	{
-		if (vbo) {
+		if (vbo != nullptr) {
 			for (int location : attributeLocations_) {
 				vertexFormat_[location].setVbo(vbo);
 				vertexFormat_[location].setBaseOffset(vboOffset);
@@ -224,6 +318,7 @@ namespace nCine
 			RenderResources::unregisterBatchedShader(this);
 
 			glHandle_ = glCreateProgram();
+			hashName_ = 0;
 		}
 
 		status_ = Status::NotLinked;
@@ -342,7 +437,7 @@ namespace nCine
 				GLUniform& uniform = uniforms_.emplace_back(glHandle_, indices[i]);
 				uniformsSize_ += uniform.memorySize();
 
-				LOGD_X("Shader %u - uniform %d : \"%s\"", glHandle_, uniform.location(), uniform.name());
+				LOGD_X("Shader program %u - uniform %d : \"%s\"", glHandle_, uniform.location(), uniform.name());
 			}
 		}
 		GL_LOG_ERRORS();
@@ -358,7 +453,7 @@ namespace nCine
 			GLUniformBlock& uniformBlock = uniformBlocks_.emplace_back(glHandle_, i, discover);
 			uniformBlocksSize_ += uniformBlock.size();
 
-			LOGD_X("Shader %u - uniform block %u : \"%s\"", glHandle_, uniformBlock.index(), uniformBlock.name());
+			LOGD_X("Shader program %u - uniform block %u : \"%s\" (%d bytes with %u align)", glHandle_, uniformBlock.index(), uniformBlock.name(), uniformBlock.size(), uniformBlock.alignAmount());
 		}
 		GL_LOG_ERRORS();
 	}
@@ -372,7 +467,7 @@ namespace nCine
 		for (int i = 0; i < count; i++) {
 			GLAttribute& attribute = attributes_.emplace_back(glHandle_, i);
 
-			LOGD_X("Shader %u - attribute %d : \"%s\"", glHandle_, attribute.location(), attribute.name());
+			LOGD_X("Shader program %u - attribute %d : \"%s\"", glHandle_, attribute.location(), attribute.name());
 		}
 		GL_LOG_ERRORS();
 	}

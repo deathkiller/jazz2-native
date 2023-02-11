@@ -3,6 +3,7 @@
 #define NCINE_INCLUDE_OPENGL
 #include "../CommonHeaders.h"
 
+#include "BinaryShaderCache.h"
 #include "Material.h"
 #include "../Primitives/Matrix4x4.h"
 #include "GL/GLShaderUniforms.h"
@@ -13,6 +14,7 @@
 
 namespace nCine
 {
+	class BinaryShaderCache;
 	class RenderBuffersManager;
 	class RenderVaoPool;
 	class RenderCommandPool;
@@ -63,6 +65,9 @@ namespace nCine
 			unsigned long int updateFrameViewMatrix;
 		};
 
+		static inline BinaryShaderCache& binaryShaderCache() {
+			return *binaryShaderCache_;
+		}
 		static inline RenderBuffersManager& buffersManager() {
 			return *buffersManager_;
 		}
@@ -99,6 +104,7 @@ namespace nCine
 		static void setDefaultAttributesParameters(GLShaderProgram& shaderProgram);
 
 	private:
+		static std::unique_ptr<BinaryShaderCache> binaryShaderCache_;
 		static std::unique_ptr<RenderBuffersManager> buffersManager_;
 		static std::unique_ptr<RenderVaoPool> vaoPool_;
 		static std::unique_ptr<RenderCommandPool> renderCommandPool_;
@@ -120,8 +126,8 @@ namespace nCine
 		static void updateCameraUniforms();
 		static void setCurrentViewport(Viewport* viewport);
 
-		static void create();
 		static void createMinimal();
+		static void create();
 		static void dispose();
 
 		static void registerDefaultBatchedShaders();
@@ -140,5 +146,4 @@ namespace nCine
 		/// The `ScreenViewport` class needs to change the projection of the default camera
 		friend class ScreenViewport;
 	};
-
 }

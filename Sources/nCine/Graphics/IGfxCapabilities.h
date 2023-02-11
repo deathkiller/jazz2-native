@@ -35,6 +35,15 @@ namespace nCine
 			UNIFORM_BUFFER_OFFSET_ALIGNMENT,
 			MAX_VERTEX_ATTRIB_STRIDE,
 			MAX_COLOR_ATTACHMENTS,
+			NUM_PROGRAM_BINARY_FORMATS,
+
+			Count
+		};
+
+		/// OpenGL queryable runtime integer array values
+		enum class GLArrayIntValues
+		{
+			PROGRAM_BINARY_FORMATS = 0,
 
 			Count
 		};
@@ -44,6 +53,7 @@ namespace nCine
 		{
 			KHR_DEBUG = 0,
 			ARB_TEXTURE_STORAGE,
+			ARB_GET_PROGRAM_BINARY,
 			EXT_TEXTURE_COMPRESSION_S3TC,
 			OES_COMPRESSED_ETC1_RGB8_TEXTURE,
 			AMD_COMPRESSED_ATC_TEXTURE,
@@ -61,6 +71,8 @@ namespace nCine
 		virtual const GlInfoStrings& glInfoStrings() const = 0;
 		/// Returns the value of a runtime OpenGL integer value
 		virtual int value(GLIntValues valueName) const = 0;
+		/// Returns the value of a runtime OpenGL integer value from an array
+		virtual int arrayValue(GLArrayIntValues arrayValueName, unsigned int index) const = 0;
 		/// Returns true if the specified OpenGL extension is available
 		virtual bool hasExtension(GLExtensions extensionName) const = 0;
 	};
@@ -76,8 +88,11 @@ namespace nCine
 		}
 		inline const GlInfoStrings& glInfoStrings() const override {
 			return glInfoStrings_;
-		};
+		}
 		inline int value(GLIntValues valueName) const override {
+			return 0;
+		}
+		inline int arrayValue(GLArrayIntValues arrayValueName, unsigned int index) const override {
 			return 0;
 		}
 		inline bool hasExtension(GLExtensions extensionName) const override {

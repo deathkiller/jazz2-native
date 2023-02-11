@@ -430,7 +430,7 @@ namespace nCine
 #	else
 				_hFindFile = ::FindFirstFileEx(bufferExtended, Environment::IsWindows7() ? FindExInfoBasic : FindExInfoStandard, &data, FindExSearchNameMatch, nullptr, 0);
 #	endif
-				if (_hFindFile) {
+				if (_hFindFile != NULL && _hFindFile != INVALID_HANDLE_VALUE) {
 					if ((data.cFileName[0] == L'.' && (data.cFileName[1] == L'\0' || (data.cFileName[1] == L'.' && data.cFileName[2] == L'\0'))) ||
 						((_options & EnumerationOptions::SkipDirectories) == EnumerationOptions::SkipDirectories && (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) ||
 						((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY)) {

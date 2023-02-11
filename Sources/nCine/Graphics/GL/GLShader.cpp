@@ -1,5 +1,7 @@
 #include "GLShader.h"
 #include "GLDebug.h"
+#include "../RenderResources.h"
+#include "../BinaryShaderCache.h"
 #include "../../Application.h"
 #include "../../IO/FileSystem.h"
 #include "../../../Common.h"
@@ -11,6 +13,15 @@ namespace nCine
 	namespace
 	{
 		static std::string patchLines;
+
+		const char* typeToString(GLenum type)
+		{
+			switch (type) {
+				case GL_VERTEX_SHADER: return "Vertex";
+				case GL_FRAGMENT_SHADER: return "Fragment";
+				default: return "Unknown";
+			}
+		}
 	}
 
 #if defined(NCINE_LOG)
@@ -18,7 +29,7 @@ namespace nCine
 #endif
 
 	GLShader::GLShader(GLenum type)
-		: glHandle_(0), status_(Status::NotCompiled)
+		: type_(type), glHandle_(0), sourceHash_(0), status_(Status::NotCompiled)
 	{
 		if (patchLines.empty()) {
 #if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
@@ -38,7 +49,6 @@ namespace nCine
 			// ANGLE does not seem capable of handling large arrays that are not entirely filled.
 			// A small array size will also make shader compilation a lot faster.
 			if (theApplication().appConfiguration().fixedBatchSize > 0) {
-				patchLines.append("#define WITH_FIXED_BATCH_SIZE\n");
 				patchLines.append("#define BATCH_SIZE (");
 				patchLines.append(std::to_string(theApplication().appConfiguration().fixedBatchSize));
 				patchLines.append(")\n");
@@ -62,28 +72,67 @@ namespace nCine
 		glDeleteShader(glHandle_);
 	}
 
-	void GLShader::loadFromString(const char* string)
+	bool GLShader::loadFromString(const char* string)
 	{
-		ASSERT(string);
-
-		const GLchar* source_lines[2] = { patchLines.data(), string };
-		glShaderSource(glHandle_, 2, source_lines, nullptr);
+		const char* strings[2] = { string, nullptr };
+		return loadFromStringsAndFile(strings, { });
+	}
+	
+	bool GLShader::loadFromStringAndFile(const char* string, const StringView& filename)
+	{
+		const char* strings[2] = { string, nullptr };
+		return loadFromStringsAndFile(strings, filename);
 	}
 
-	void GLShader::loadFromFile(const StringView& filename)
+	bool GLShader::loadFromStringsAndFile(const char** strings, const StringView& filename)
 	{
-		std::unique_ptr<IFileStream> fileHandle = fs::Open(filename, FileAccessMode::Read);
-		if (fileHandle->IsOpened()) {
-			const GLint length = static_cast<int>(fileHandle->GetSize());
-			std::string source(length, '\0');
-			fileHandle->Read(source.data(), length);
+		const bool noStrings = (strings == nullptr || strings[0] == nullptr);
+		if (noStrings && filename.empty()) {
+			return false;
+		}
+		
+		SmallVector<const char*, 4> sourceStrings;
+		SmallVector<GLint, 4> sourceLengths;
+		
+		sourceStrings.push_back(patchLines.data());
+		sourceLengths.push_back(static_cast<GLint>(patchLines.length()));
+		
+		if (!noStrings) {
+			for (uint32_t i = 0; strings[i] != nullptr; i++) {
+				sourceStrings.push_back(strings[i]);
+				const unsigned long sourceLength = strnlen(strings[i], MaxShaderSourceLength);
+				sourceLengths.push_back(sourceLength);
+			}
+		}
 
-			const GLchar* source_lines[2] = { patchLines.data(), source.data() };
-			const GLint lengths[2] = { static_cast<GLint>(patchLines.length()), length };
-			glShaderSource(glHandle_, 2, source_lines, lengths);
+		String fileSource;
+		if (!filename.empty()) {
+			std::unique_ptr<IFileStream> fileHandle = fs::Open(filename, FileAccessMode::Read);
+			if (!fileHandle->IsOpened()) {
+				return false;
+			}
+			
+			const GLint fileLength = static_cast<int>(fileHandle->GetSize());
+			fileSource = String(NoInit, fileLength);
+			fileHandle->Read(fileSource.data(), fileLength);
+			
+			sourceStrings.push_back(fileSource.data());
+			sourceLengths.push_back(static_cast<GLint>(fileLength));
 
 			setObjectLabel(filename.data());
 		}
+
+		size_t count = sourceStrings.size();
+		sourceHash_ = RenderResources::binaryShaderCache().hashSources(count, sourceStrings.data(), sourceLengths.data());
+		LOGD_X("%s Shader %u - hash: 0x%016lx", typeToString(type_), glHandle_, sourceHash_);
+		glShaderSource(glHandle_, count, sourceStrings.data(), sourceLengths.data());
+
+		return (count > 1);
+	}
+	
+	bool GLShader::loadFromFile(const StringView& filename)
+	{
+		return loadFromStringsAndFile(nullptr, filename);
 	}
 
 	bool GLShader::compile(ErrorChecking errorChecking, bool logOnErrors)
@@ -115,7 +164,7 @@ namespace nCine
 					glGetShaderInfoLog(glHandle_, MaxInfoLogLength, &length, infoLogString_);
 					// Trim whitespace - driver messages usually contain newline(s) at the end
 					*(MutableStringView(infoLogString_).trimmed().end()) = '\0';
-					LOGW_X("%s", infoLogString_);
+					LOGW_X("%s Shader: %s", typeToString(type_), infoLogString_);
 				}
 			}
 #endif
