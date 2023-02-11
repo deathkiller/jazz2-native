@@ -419,14 +419,15 @@ namespace nCine
 
 		frameTimer_ = std::make_unique<FrameTimer>(appCfg_.frameTimerLogInterval, 0.2f);
 
+		// Create a minimal set of render resources before compiling the first shader
+		RenderResources::createMinimal(); // they are required for rendering even without a scenegraph
+	
 		if (appCfg_.withScenegraph) {
 			gfxDevice_->setupGL();
 			RenderResources::create();
 			rootNode_ = std::make_unique<SceneNode>();
 			screenViewport_ = std::make_unique<ScreenViewport>();
 			screenViewport_->setRootNode(rootNode_.get());
-		} else {
-			RenderResources::createMinimal(); // some resources are still required for rendering
 		}
 
 		// Initialization of the static random generator seeds

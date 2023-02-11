@@ -10,7 +10,7 @@ namespace nCine
 	class GLUniform
 	{
 	public:
-		static constexpr int MaxNameLength = 32;
+		static constexpr int MaxNameLength = 48;
 
 		GLUniform();
 		GLUniform(GLuint program, GLuint index);

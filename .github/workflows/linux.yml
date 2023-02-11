@@ -123,7 +123,7 @@ jobs:
         export CC=gcc
         export CXX=g++
         
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=Debug -D NCINE_WITH_GLEW=OFF
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=Release -D NCINE_WITH_GLEW=OFF
         make -j $(nproc) -C ./_build/
         
     - name: 'Perform CodeQL Analysis'

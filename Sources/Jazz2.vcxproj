@@ -425,6 +425,7 @@
     <ClInclude Include="nCine\CommonHeaders.h" />
     <ClInclude Include="nCine\Graphics\AnimatedSprite.h" />
     <ClInclude Include="nCine\Graphics\BaseSprite.h" />
+    <ClInclude Include="nCine\Graphics\BinaryShaderCache.h" />
     <ClInclude Include="nCine\Graphics\Camera.h" />
     <ClInclude Include="nCine\Graphics\DisplayMode.h" />
     <ClInclude Include="nCine\Graphics\DrawableNode.h" />
@@ -738,6 +739,7 @@
     <ClCompile Include="nCine\Base\TimeStamp.cpp" />
     <ClCompile Include="nCine\Graphics\AnimatedSprite.cpp" />
     <ClCompile Include="nCine\Graphics\BaseSprite.cpp" />
+    <ClCompile Include="nCine\Graphics\BinaryShaderCache.cpp" />
     <ClCompile Include="nCine\Graphics\Camera.cpp" />
     <ClCompile Include="nCine\Graphics\DrawableNode.cpp" />
     <ClCompile Include="nCine\Graphics\Geometry.cpp" />

@@ -15,6 +15,7 @@ namespace nCine
 			return glInfoStrings_;
 		}
 		int value(GLIntValues valueName) const override;
+		int arrayValue(GLArrayIntValues valueName, unsigned int index) const override;
 		bool hasExtension(GLExtensions extensionName) const override;
 
 	private:
@@ -29,6 +30,9 @@ namespace nCine
 		int glIntValues_[(int)IGfxCapabilities::GLIntValues::Count];
 		/// Array of OpenGL extension availability flags
 		bool glExtensions_[(int)IGfxCapabilities::GLExtensions::Count];
+
+		static constexpr int MaxProgramBinaryFormats = 4;
+		int programBinaryFormats_[MaxProgramBinaryFormats];
 
 		/// Queries the device about its runtime graphics capabilities
 		void init();

@@ -256,5 +256,4 @@ namespace nCine
 	};
 
 	using fs = FileSystem;
-
 }

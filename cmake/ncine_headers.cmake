@@ -54,6 +54,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Base/TimeStamp.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/AnimatedSprite.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/BaseSprite.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/BinaryShaderCache.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Camera.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/DisplayMode.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/DrawableNode.h

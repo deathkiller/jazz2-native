@@ -14,7 +14,7 @@ namespace nCine
 	class GLUniformBlock
 	{
 	public:
-		static constexpr int MaxNameLength = 32;
+		static constexpr int MaxNameLength = 48;
 
 		enum class DiscoverUniforms
 		{

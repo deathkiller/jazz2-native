@@ -80,11 +80,20 @@ namespace nCine
 			return uniformBlocksSize_;
 		}
 
-		bool attachShader(GLenum type, const StringView& filename);
+		bool attachShaderFromFile(GLenum type, const StringView& filename);
 		bool attachShaderFromString(GLenum type, const char* string);
+		bool attachShaderFromStrings(GLenum type, const char** strings);
+		bool attachShaderFromStringsAndFile(GLenum type, const char** strings, const StringView& filename);
 		bool link(Introspection introspection);
 		void use();
 		bool validate();
+		
+		/// Loads a shader program from a binary representation
+		bool loadBinary(unsigned int binaryFormat, const void *buffer, int bufferSize);
+		/// Returns the length in bytes of the binary representation of the shader program
+		int binaryLength() const;
+		/// Retrieves the binary representation of the shader program, if it is linked
+		bool saveBinary(int bufferSize, unsigned int &binaryFormat, void *buffer) const;
 
 		inline unsigned int numAttributes() const {
 			return attributeLocations_.size();
@@ -105,6 +114,8 @@ namespace nCine
 		/// Deletes the current OpenGL shader program so that new shaders can be attached
 		void reset();
 
+		/// Returns a unique identification code to retrieve the corresponding compiled binary in the cache
+		inline uint64_t hashName() const { return hashName_; }
 		void setObjectLabel(const char* label);
 
 		/// Returns the automatic log on errors flag
@@ -131,6 +142,7 @@ namespace nCine
 		GLuint glHandle_;
 		static const int AttachedShadersInitialSize = 4;
 		SmallVector<std::unique_ptr<GLShader>, 0> attachedShaders_;
+		uint64_t hashName_;
 		Status status_;
 		Introspection introspection_;
 		QueryPhase queryPhase_;

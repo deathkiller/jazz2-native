@@ -4,10 +4,11 @@
 #include "Shader.h"
 #include "GL/GLShaderProgram.h"
 #include "RenderResources.h"
+#include "BinaryShaderCache.h"
 #include "../tracy.h"
 #include "../../Common.h"
 
-#ifdef WITH_EMBEDDED_SHADERS
+#if defined(WITH_EMBEDDED_SHADERS)
 #	include "shader_strings.h"
 #else
 #	include "../IO/FileSystem.h" // for GetDataPath()
@@ -238,8 +239,8 @@ namespace nCine
 		glShaderProgram_->reset(); // reset before attaching new shaders
 		//setName(shaderName);
 		glShaderProgram_->setObjectLabel(shaderName);
-		glShaderProgram_->attachShader(GL_VERTEX_SHADER, vertex);
-		glShaderProgram_->attachShader(GL_FRAGMENT_SHADER, fragment);
+		glShaderProgram_->attachShaderFromFile(GL_VERTEX_SHADER, vertex);
+		glShaderProgram_->attachShaderFromFile(GL_FRAGMENT_SHADER, fragment);
 		glShaderProgram_->link(shaderToShaderProgramIntrospection(introspection));
 
 		return isLinked();
@@ -267,7 +268,7 @@ namespace nCine
 		//setName(shaderName);
 		glShaderProgram_->setObjectLabel(shaderName);
 		loadDefaultShader(vertex);
-		glShaderProgram_->attachShader(GL_FRAGMENT_SHADER, fragment);
+		glShaderProgram_->attachShaderFromFile(GL_FRAGMENT_SHADER, fragment);
 		glShaderProgram_->link(shaderToShaderProgramIntrospection(introspection));
 
 		return isLinked();
@@ -295,7 +296,7 @@ namespace nCine
 		glShaderProgram_->reset(); // reset before attaching new shaders
 		//setName(shaderName);
 		glShaderProgram_->setObjectLabel(shaderName);
-		glShaderProgram_->attachShader(GL_VERTEX_SHADER, vertex);
+		glShaderProgram_->attachShaderFromFile(GL_VERTEX_SHADER, vertex);
 		loadDefaultShader(fragment);
 		glShaderProgram_->link(shaderToShaderProgramIntrospection(introspection));
 
@@ -392,7 +393,7 @@ namespace nCine
 			//	vertexShader = "batched_textnodes_vs.glsl";
 			//	break;
 		}
-		const bool hasCompiled = glShaderProgram_->attachShader(GL_VERTEX_SHADER, fs::JoinPath({ fs::GetDataPath(), "shaders"_s, vertexShader }));
+		const bool hasCompiled = glShaderProgram_->attachShaderFromFile(GL_VERTEX_SHADER, fs::JoinPath({ fs::GetDataPath(), "shaders"_s, vertexShader }));
 #else
 		// Skipping the initial new line character of the raw string literal
 		switch (vertex) {
@@ -453,7 +454,7 @@ namespace nCine
 			//	fragmentShader = "textnode_red_fs.glsl";
 			//	break;
 		}
-		const bool hasCompiled = glShaderProgram_->attachShader(GL_FRAGMENT_SHADER, fs::JoinPath({ fs::GetDataPath(), "shaders"_s, fragmentShader }));
+		const bool hasCompiled = glShaderProgram_->attachShaderFromFile(GL_FRAGMENT_SHADER, fs::JoinPath({ fs::GetDataPath(), "shaders"_s, fragmentShader }));
 #else
 		// Skipping the initial new line character of the raw string literal
 		switch (fragment) {

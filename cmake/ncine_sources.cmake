@@ -24,6 +24,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Base/TimeStamp.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/AnimatedSprite.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/BaseSprite.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/BinaryShaderCache.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Camera.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/DrawableNode.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Geometry.cpp

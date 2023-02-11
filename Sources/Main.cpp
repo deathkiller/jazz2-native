@@ -118,6 +118,11 @@ void GameEventHandler::OnPreInit(AppConfiguration& config)
 	config.windowTitle = NCINE_APP_NAME;
 	config.withVSync = PreferencesCache::EnableVsync;
 	config.resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+	auto& resolver = ContentResolver::Get();
+	config.shaderCachePath = fs::JoinPath(resolver.GetCachePath(), "Shaders"_s);
+#endif
 }
 
 void GameEventHandler::OnInit()

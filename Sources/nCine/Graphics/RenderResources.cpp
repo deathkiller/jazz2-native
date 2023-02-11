@@ -4,7 +4,9 @@
 #include "RenderCommandPool.h"
 #include "RenderBatcher.h"
 #include "Camera.h"
+#include "IGfxCapabilities.h"
 #include "../Application.h"
+#include "../ServiceLocator.h"
 #include "../../Common.h"
 
 #include <cstddef>	// for `offsetof()`
@@ -17,6 +19,12 @@
 
 namespace nCine
 {
+	namespace
+	{
+		constexpr char BatchSizeFormatString[] = "#define BATCH_SIZE (%d)\n#line 0\n";
+	}
+
+	std::unique_ptr<BinaryShaderCache> RenderResources::binaryShaderCache_;
 	std::unique_ptr<RenderBuffersManager> RenderResources::buffersManager_;
 	std::unique_ptr<RenderVaoPool> RenderResources::vaoPool_;
 	std::unique_ptr<RenderCommandPool> RenderResources::renderCommandPool_;
@@ -175,13 +183,39 @@ namespace nCine
 		currentViewport_ = viewport;
 	}
 
+	void RenderResources::createMinimal()
+	{
+		LOGI("Creating a minimal set of rendering resources...");
+
+		// `createMinimal()` cannot be called after `create()`
+		ASSERT(binaryShaderCache_ == nullptr);
+		ASSERT(buffersManager_ == nullptr);
+		ASSERT(vaoPool_ == nullptr);
+	
+		const AppConfiguration& appCfg = theApplication().appConfiguration();
+		binaryShaderCache_ = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
+		buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.vboSize, appCfg.iboSize);
+		vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
+		
+		LOGI("Minimal rendering resources created");
+	}
+	
 	void RenderResources::create()
 	{
 		LOGI("Creating rendering resources...");
+	
+		// `create()` can be called after `createMinimal()`
 
 		const AppConfiguration& appCfg = theApplication().appConfiguration();
-		buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.vboSize, appCfg.iboSize);
-		vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
+		if (binaryShaderCache_ == nullptr) {
+			binaryShaderCache_ = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
+		}
+		if (buffersManager_ == nullptr) {
+			buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.vboSize, appCfg.iboSize);
+		}
+		if (vaoPool_ == nullptr) {
+			vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
+		}
 		renderCommandPool_ = std::make_unique<RenderCommandPool>(appCfg.vaoPoolSize);
 		renderBatcher_ = std::make_unique<RenderBatcher>();
 		defaultCamera_ = std::make_unique<Camera>();
@@ -226,22 +260,77 @@ namespace nCine
 #endif
 		};
 
-		const GLShaderProgram::QueryPhase queryPhase = (appCfg.deferShaderQueries ? GLShaderProgram::QueryPhase::Deferred : GLShaderProgram::QueryPhase::Immediate);
+		const IGfxCapabilities &gfxCaps = theServiceLocator().gfxCapabilities();
+		// Clamping the value as some drivers report a maximum size similar to SSBO one
+		const int maxUniformBlockSize = std::clamp(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
+
+		char sourceString[48];
+		const char *vertexStrings[3] = { nullptr, nullptr, nullptr };
+
+		const GLShaderProgram::QueryPhase cfgQueryPhase = (appCfg.deferShaderQueries ? GLShaderProgram::QueryPhase::Deferred : GLShaderProgram::QueryPhase::Immediate);
 		const unsigned int numShaderToLoad = (sizeof(shadersToLoad) / sizeof(*shadersToLoad));
 		for (unsigned int i = 0; i < numShaderToLoad; i++) {
 			const ShaderLoad& shaderToLoad = shadersToLoad[i];
 
+			// If the UBO is smaller than 64kb, then batched shaders need to be compiled twice. The first time determines the `BATCH_SIZE` define value.
+			const bool compileTwice = (maxUniformBlockSize < 64 * 1024 && shaderToLoad.introspection == GLShaderProgram::Introspection::NoUniformsInBlocks);
+
+			// The first compilation of a batched shader that needs a double compilation should be queried immediately
+			const GLShaderProgram::QueryPhase queryPhase = compileTwice ? GLShaderProgram::QueryPhase::Immediate : cfgQueryPhase;
 			shaderToLoad.shaderProgram = std::make_unique<GLShaderProgram>(queryPhase);
-#if !defined(WITH_EMBEDDED_SHADERS)
-			shaderToLoad.shaderProgram->attachShader(GL_VERTEX_SHADER, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.vertexShader) }).data());
-			shaderToLoad.shaderProgram->attachShader(GL_FRAGMENT_SHADER, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.fragmentShader) }).data());
+			
+			vertexStrings[0] = nullptr;
+			vertexStrings[1] = nullptr;
+			if (compileTwice) {
+				// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
+				formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, 1);
+				vertexStrings[0] = sourceString;
+			}
+			
+#if defined(WITH_EMBEDDED_SHADERS)
+			// The vertex shader source string can be either the first one or the second one, if the first defines the `BATCH_SIZE`
+			vertexStrings[compileTwice ? 1 : 0] = shaderToLoad.vertexShader;
+
+			const bool vertexCompiled = shaderToLoad.shaderProgram->attachShaderFromStrings(GL_VERTEX_SHADER, vertexStrings);
+			const bool fragmentCompiled = shaderToLoad.shaderProgram->attachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);
 #else
-			shaderToLoad.shaderProgram->attachShaderFromString(GL_VERTEX_SHADER, shaderToLoad.vertexShader);
-			shaderToLoad.shaderProgram->attachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);
+			const bool vertexCompiled = shaderToLoad.shaderProgram->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.vertexShader) }).data());
+			const bool fragmentCompiled = shaderToLoad.shaderProgram->attachShaderFromFile(GL_FRAGMENT_SHADER, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.fragmentShader) }).data());
 #endif
+			ASSERT(vertexCompiled);
+			ASSERT(fragmentCompiled);
+			
 			shaderToLoad.shaderProgram->setObjectLabel(shaderToLoad.objectLabel);
-			const bool hasLinked = shaderToLoad.shaderProgram->link(shaderToLoad.introspection);
+			// The first compilation of a batched shader needs the introspection
+			const bool hasLinked = shaderToLoad.shaderProgram->link(compileTwice ? GLShaderProgram::Introspection::Enabled : shaderToLoad.introspection);
 			FATAL_ASSERT(hasLinked);
+			
+			if (compileTwice) {
+				GLShaderUniformBlocks blocks(shaderToLoad.shaderProgram.get(), Material::InstancesBlockName, nullptr);
+				GLUniformBlockCache* block = blocks.uniformBlock(Material::InstancesBlockName);
+				ASSERT(block != nullptr);
+				if (block != nullptr) {
+					const int size = block->size() - block->alignAmount();
+					const int batchSize = maxUniformBlockSize / size;
+					LOGD_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderToLoad.objectLabel, size, block->alignAmount(), batchSize);
+
+					shaderToLoad.shaderProgram->reset();
+					formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, batchSize);
+
+#if defined(WITH_EMBEDDED_SHADERS)
+					const bool vertexCompiled2 = shaderToLoad.shaderProgram->attachShaderFromStrings(GL_VERTEX_SHADER, vertexStrings);
+					const bool fragmentCompiled2 = shaderToLoad.shaderProgram->attachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);
+#else
+					const bool vertexCompiled2 = shaderToLoad.shaderProgram->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.vertexShader) }).data());
+					const bool fragmentCompiled2 = shaderToLoad.shaderProgram->attachShaderFromFile(GL_FRAGMENT_SHADER, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.fragmentShader) }).data());
+#endif
+					ASSERT(vertexCompiled2);
+					ASSERT(fragmentCompiled2);
+
+					const bool hasLinked2 = shaderToLoad.shaderProgram->link(shaderToLoad.introspection);
+					FATAL_ASSERT(hasLinked2);
+				}
+			}
 		}
 
 		registerDefaultBatchedShaders();
@@ -253,17 +342,6 @@ namespace nCine
 		defaultCamera_->setOrthoProjection(width * (-0.5f), width * (+0.5f), height * (+0.5f), height * (-0.5f));
 
 		LOGI("Rendering resources created");
-	}
-
-	void RenderResources::createMinimal()
-	{
-		LOGI("Creating a minimal set of rendering resources...");
-
-		const AppConfiguration& appCfg = theApplication().appConfiguration();
-		buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.vboSize, appCfg.iboSize);
-		vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
-
-		LOGI("Minimal rendering resources created");
 	}
 
 	void RenderResources::dispose()

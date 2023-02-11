@@ -52,6 +52,10 @@ namespace nCine
 		/*! \note Increasing this value too much might negatively affect batching shaders compilation time.
 		A value of zero restores the default behavior of non fixed size for batches. */
 		unsigned int fixedBatchSize;
+		/// The directory name (not the complete path) for the binary shaders cache
+		/*! \note Even if the path is set the functionality might still not be supported by the OpenGL context */
+		String shaderCachePath;
+
 		/// The maximum size in bytes for each VBO collecting geometry data
 		unsigned long vboSize;
 		/// The maximum size in bytes for each IBO collecting index data
