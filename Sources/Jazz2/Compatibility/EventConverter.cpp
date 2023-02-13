@@ -830,7 +830,7 @@ namespace Jazz2::Compatibility
 		Add(JJ2Event::CRATE_AMMO_TOASTER, GetAmmoCrateConverter(5));
 		Add(JJ2Event::CRATE_CARROT, ConstantParamList(EventType::Crate, { (uint8_t)EventType::Carrot, (uint8_t)((int32_t)EventType::Carrot >> 8), 1 }));
 		Add(JJ2Event::CRATE_SPRING, ConstantParamList(EventType::Crate, { (uint8_t)EventType::Spring, (uint8_t)((int32_t)EventType::Spring >> 8), 1, 1 }));
-		Add(JJ2Event::CRATE_ONEUP, ConstantParamList(EventType::Crate, { (uint8_t)EventType::OneUp, 1 }));
+		Add(JJ2Event::CRATE_ONEUP, ConstantParamList(EventType::Crate, { (uint8_t)EventType::OneUp, (uint8_t)((int32_t)EventType::OneUp >> 8), 1 }));
 		Add(JJ2Event::CRATE_BOMB, [](JJ2Level* level, uint32_t jj2Params) -> ConversionResult {
 			uint8_t eventParams[16];
 			ConvertParamInt(jj2Params, {
