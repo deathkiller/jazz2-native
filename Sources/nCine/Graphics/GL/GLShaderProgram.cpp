@@ -183,7 +183,7 @@ namespace nCine
 		batchSize_ = batchSize;
 		introspection_ = introspection;
 
-#if defined(WITH_ANGLE)
+#if defined(WITH_OPENGLES)
 		glProgramBinaryOES(glHandle_, binaryFormat, buffer, bufferSize);
 #else
 		glProgramBinary(glHandle_, binaryFormat, buffer, bufferSize);
@@ -214,7 +214,7 @@ namespace nCine
 	int GLShaderProgram::binaryLength() const
 	{
 		GLint length = 0;
-#if defined(WITH_ANGLE)
+#if defined(WITH_OPENGLES)
 		glGetProgramiv(glHandle_, GL_PROGRAM_BINARY_LENGTH_OES, &length);
 #else
 		glGetProgramiv(glHandle_, GL_PROGRAM_BINARY_LENGTH, &length);
@@ -229,7 +229,7 @@ namespace nCine
 
 		GLsizei length = 0;
 		if (buffer != nullptr && bufferSize > 0) {
-#if defined(WITH_ANGLE)
+#if defined(WITH_OPENGLES)
 			glGetProgramBinaryOES(glHandle_, bufferSize, &length, &binaryFormat, buffer);
 #else
 			glGetProgramBinary(glHandle_, bufferSize, &length, &binaryFormat, buffer);
