@@ -421,8 +421,8 @@ namespace nCine
 
 	bool Shader::loadDefaultShader(DefaultVertex vertex, int batchSize)
 	{
-		StringView vertexShader;
 #if !defined(WITH_EMBEDDED_SHADERS)
+		StringView vertexShader;
 		switch (vertex) {
 			case DefaultVertex::SPRITE:
 				vertexShader = "sprite_vs.glsl"_s;
@@ -465,6 +465,7 @@ namespace nCine
 			return glShaderProgram_->attachShaderFromFile(GL_VERTEX_SHADER, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, vertexShader }));
 		}
 #else
+		const char* vertexShader = nullptr;
 		// Skipping the initial new line character of the raw string literal
 		switch (vertex) {
 			case DefaultVertex::SPRITE:
@@ -512,8 +513,8 @@ namespace nCine
 
 	bool Shader::loadDefaultShader(DefaultFragment fragment)
 	{
-		StringView fragmentShader;
 #if !defined(WITH_EMBEDDED_SHADERS)
+		StringView fragmentShader;
 		switch (fragment) {
 			case DefaultFragment::SPRITE:
 				fragmentShader = "sprite_fs.glsl"_s;
@@ -533,6 +534,7 @@ namespace nCine
 		}
 		return glShaderProgram_->attachShaderFromFile(GL_FRAGMENT_SHADER, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, fragmentShader }));
 #else
+		const char* fragmentShader = nullptr;
 		// Skipping the initial new line character of the raw string literal
 		switch (fragment) {
 			case DefaultFragment::SPRITE:
