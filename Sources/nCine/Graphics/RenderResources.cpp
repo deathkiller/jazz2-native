@@ -260,28 +260,35 @@ namespace nCine
 #endif
 		};
 
-		const IGfxCapabilities &gfxCaps = theServiceLocator().gfxCapabilities();
+		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
 		// Clamping the value as some drivers report a maximum size similar to SSBO one
 		const int maxUniformBlockSize = std::clamp(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
 
 		char sourceString[48];
 		const char *vertexStrings[3] = { nullptr, nullptr, nullptr };
 
-		const GLShaderProgram::QueryPhase cfgQueryPhase = (appCfg.deferShaderQueries ? GLShaderProgram::QueryPhase::Deferred : GLShaderProgram::QueryPhase::Immediate);
-		const unsigned int numShaderToLoad = (sizeof(shadersToLoad) / sizeof(*shadersToLoad));
-		for (unsigned int i = 0; i < numShaderToLoad; i++) {
+		for (unsigned int i = 0; i < countof(shadersToLoad); i++) {
 			const ShaderLoad& shaderToLoad = shadersToLoad[i];
 
-			// If the UBO is smaller than 64kb, then batched shaders need to be compiled twice. The first time determines the `BATCH_SIZE` define value.
-			const bool compileTwice = (maxUniformBlockSize < 64 * 1024 && shaderToLoad.introspection == GLShaderProgram::Introspection::NoUniformsInBlocks);
+			shaderToLoad.shaderProgram = std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate);
 
-			// The first compilation of a batched shader that needs a double compilation should be queried immediately
-			const GLShaderProgram::QueryPhase queryPhase = compileTwice ? GLShaderProgram::QueryPhase::Immediate : cfgQueryPhase;
-			shaderToLoad.shaderProgram = std::make_unique<GLShaderProgram>(queryPhase);
-			
+			BinaryShaderEntry entry = { DefaultShadersVersion };
+			if (RenderResources::binaryShaderCache().loadFromCache(shaderToLoad.objectLabel, &entry)) {
+				if (shaderToLoad.shaderProgram->loadBinary(entry.BinaryFormat, entry.Buffer, entry.BufferLength, entry.BatchSize, shaderToLoad.introspection)) {
+					// Shader is already compiled
+					continue;
+				}
+			}
+
+			// If the UBO is smaller than 64kb and fixed batch size is disabled, batched shaders need to be compiled twice to determine safe `BATCH_SIZE` define value
+			const bool compileTwice = (maxUniformBlockSize < 64 * 1024 && appCfg.fixedBatchSize <= 0 && shaderToLoad.introspection == GLShaderProgram::Introspection::NoUniformsInBlocks);
+
 			vertexStrings[0] = nullptr;
 			vertexStrings[1] = nullptr;
-			if (compileTwice) {
+			if (appCfg.fixedBatchSize > 0 && shaderToLoad.introspection == GLShaderProgram::Introspection::NoUniformsInBlocks) {
+				formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, appCfg.fixedBatchSize);
+				vertexStrings[0] = sourceString;
+			} else if (compileTwice) {
 				// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
 				formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, 1);
 				vertexStrings[0] = sourceString;
@@ -305,6 +312,8 @@ namespace nCine
 			const bool hasLinked = shaderToLoad.shaderProgram->link(compileTwice ? GLShaderProgram::Introspection::Enabled : shaderToLoad.introspection);
 			FATAL_ASSERT(hasLinked);
 			
+			entry.BatchSize = GLShaderProgram::DefaultBatchSize;
+
 			if (compileTwice) {
 				GLShaderUniformBlocks blocks(shaderToLoad.shaderProgram.get(), Material::InstancesBlockName, nullptr);
 				GLUniformBlockCache* block = blocks.uniformBlock(Material::InstancesBlockName);
@@ -329,8 +338,12 @@ namespace nCine
 
 					const bool hasLinked2 = shaderToLoad.shaderProgram->link(shaderToLoad.introspection);
 					FATAL_ASSERT(hasLinked2);
+
+					entry.BatchSize = batchSize;
 				}
 			}
+
+			RenderResources::binaryShaderCache().saveToCache(shaderToLoad.objectLabel, &entry, shaderToLoad.shaderProgram.get());
 		}
 
 		registerDefaultBatchedShaders();
@@ -338,7 +351,6 @@ namespace nCine
 		// Calculating a default projection matrix for all shader programs
 		int width = theApplication().width();
 		int height = theApplication().height();
-		//defaultCamera_->setOrthoProjection(0.0f, width, 0.0f, height);
 		defaultCamera_->setOrthoProjection(width * (-0.5f), width * (+0.5f), height * (+0.5f), height * (-0.5f));
 
 		LOGI("Rendering resources created");

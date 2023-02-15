@@ -15,7 +15,6 @@ namespace nCine
 		windowScaling(true),
 		frameLimit(0),
 		useBufferMapping(false),
-		deferShaderQueries(true),
 #if defined(WITH_FIXED_BATCH_SIZE) && WITH_FIXED_BATCH_SIZE > 0
 		fixedBatchSize(WITH_FIXED_BATCH_SIZE),
 #elif defined(DEATH_TARGET_WINDOWS_RT)

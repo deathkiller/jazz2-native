@@ -44,6 +44,8 @@ namespace nCine
 			Deferred
 		};
 
+		static constexpr int DefaultBatchSize = -1;
+
 		GLShaderProgram();
 		explicit GLShaderProgram(QueryPhase queryPhase);
 		GLShaderProgram(const StringView& vertexFile, const StringView& fragmentFile, Introspection introspection, QueryPhase queryPhase);
@@ -62,6 +64,12 @@ namespace nCine
 		}
 		inline QueryPhase queryPhase() const {
 			return queryPhase_;
+		}
+		inline int batchSize() const {
+			return batchSize_;
+		}
+		inline void setBatchSize(int value) {
+			batchSize_ = value;
 		}
 
 		bool isLinked() const;
@@ -89,11 +97,11 @@ namespace nCine
 		bool validate();
 		
 		/// Loads a shader program from a binary representation
-		bool loadBinary(unsigned int binaryFormat, const void *buffer, int bufferSize);
+		bool loadBinary(unsigned int binaryFormat, const void* buffer, int bufferSize, int batchSize, Introspection introspection);
 		/// Returns the length in bytes of the binary representation of the shader program
 		int binaryLength() const;
 		/// Retrieves the binary representation of the shader program, if it is linked
-		bool saveBinary(int bufferSize, unsigned int &binaryFormat, void *buffer) const;
+		bool saveBinary(int bufferSize, unsigned int &binaryFormat, void* buffer) const;
 
 		inline unsigned int numAttributes() const {
 			return attributeLocations_.size();
@@ -114,8 +122,6 @@ namespace nCine
 		/// Deletes the current OpenGL shader program so that new shaders can be attached
 		void reset();
 
-		/// Returns a unique identification code to retrieve the corresponding compiled binary in the cache
-		inline uint64_t hashName() const { return hashName_; }
 		void setObjectLabel(const char* label);
 
 		/// Returns the automatic log on errors flag
@@ -132,6 +138,11 @@ namespace nCine
 		/// Max number of discoverable uniforms
 		static constexpr unsigned int MaxNumUniforms = 32;
 
+		static constexpr int AttachedShadersInitialSize = 2;
+		static constexpr int UniformsInitialSize = 8;
+		static constexpr int UniformBlocksInitialSize = 4;
+		static constexpr int AttributesInitialSize = 4;
+
 #if defined(NCINE_LOG)
 		static constexpr unsigned int MaxInfoLogLength = 512;
 		static char infoLogString_[MaxInfoLogLength];
@@ -140,12 +151,12 @@ namespace nCine
 		static GLuint boundProgram_;
 
 		GLuint glHandle_;
-		static const int AttachedShadersInitialSize = 4;
-		SmallVector<std::unique_ptr<GLShader>, 0> attachedShaders_;
-		uint64_t hashName_;
+
+		SmallVector<std::unique_ptr<GLShader>, AttachedShadersInitialSize> attachedShaders_;
 		Status status_;
 		Introspection introspection_;
 		QueryPhase queryPhase_;
+		int batchSize_;
 
 		/// A flag indicating whether the shader program should automatically log errors (the information log)
 		bool shouldLogOnErrors_;
@@ -153,11 +164,8 @@ namespace nCine
 		unsigned int uniformsSize_;
 		unsigned int uniformBlocksSize_;
 
-		static const int UniformsInitialSize = 8;
 		SmallVector<GLUniform, 0> uniforms_;
-		static const int UniformBlocksInitialSize = 4;
 		SmallVector<GLUniformBlock, 0> uniformBlocks_;
-		static const int AttributesInitialSize = 4;
 		SmallVector<GLAttribute, 0> attributes_;
 
 		StaticHashMap<String, int, GLVertexFormat::MaxAttributes> attributeLocations_;
@@ -180,5 +188,4 @@ namespace nCine
 		friend class GLShaderUniforms;
 		friend class GLShaderUniformBlocks;
 	};
-
 }

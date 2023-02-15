@@ -33,9 +33,6 @@ namespace nCine
 		GLShader(GLenum type, const StringView& filename);
 		~GLShader();
 
-		inline GLenum type() const {
-			return type_;
-		}
 		inline GLuint glHandle() const {
 			return glHandle_;
 		}
@@ -57,7 +54,6 @@ namespace nCine
 		bool compile(ErrorChecking errorChecking, bool logOnErrors);
 		bool checkCompilation(bool logOnErrors);
 
-		inline uint64_t sourceHash() const { return sourceHash_; }
 		void setObjectLabel(const char* label);
 
 	private:
@@ -67,9 +63,7 @@ namespace nCine
 		static char infoLogString_[MaxInfoLogLength];
 #endif
 
-		GLenum type_;
 		GLuint glHandle_;
-		uint64_t sourceHash_;
 		Status status_;
 
 		/// Deleted copy constructor
