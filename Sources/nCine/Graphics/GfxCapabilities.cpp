@@ -96,7 +96,7 @@ namespace nCine
 		glGetIntegerv(GL_MAX_VERTEX_ATTRIB_STRIDE, &glIntValues_[(int)GLIntValues::MAX_VERTEX_ATTRIB_STRIDE]);
 #endif
 		glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &glIntValues_[(int)GLIntValues::MAX_COLOR_ATTACHMENTS]);
-#if defined(WITH_ANGLE)
+#if defined(WITH_OPENGLES)
 		glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS_OES, &glIntValues_[(int)GLIntValues::NUM_PROGRAM_BINARY_FORMATS]);
 #else
 		glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS, &glIntValues_[(int)GLIntValues::NUM_PROGRAM_BINARY_FORMATS]);
@@ -107,7 +107,7 @@ namespace nCine
 			"GL_KHR_debug", "GL_ARB_texture_storage", "GL_ARB_get_program_binary", "WEBGL_compressed_texture_s3tc", "WEBGL_compressed_texture_etc1",
 			"WEBGL_compressed_texture_atc", "WEBGL_compressed_texture_pvrtc", "WEBGL_compressed_texture_astc"
 		};
-#elif defined(WITH_ANGLE)
+#elif defined(WITH_OPENGLES)
 		const char* ExtensionNames[(int)GLExtensions::Count] = {
 			"GL_KHR_debug", "GL_ARB_texture_storage", "GL_OES_get_program_binary", "GL_EXT_texture_compression_s3tc", "GL_OES_compressed_ETC1_RGB8_texture",
 			"GL_AMD_compressed_ATC_texture", "GL_IMG_texture_compression_pvrtc", "GL_KHR_texture_compression_astc_ldr"
@@ -126,7 +126,7 @@ namespace nCine
 		checkGLExtensions(ExtensionNames, glExtensions_, (int)GLExtensions::Count);
 
 		ASSERT(glIntValues_[(int)GLIntValues::NUM_PROGRAM_BINARY_FORMATS] <= MaxProgramBinaryFormats);
-#if defined(WITH_ANGLE)
+#if defined(WITH_OPENGLES)
 		glGetIntegerv(GL_PROGRAM_BINARY_FORMATS_OES, programBinaryFormats_);
 #else
 		glGetIntegerv(GL_PROGRAM_BINARY_FORMATS, programBinaryFormats_);
@@ -179,7 +179,7 @@ namespace nCine
 		LOGI("---");
 		LOGI_X("GL_KHR_debug: %d", glExtensions_[(int)GLExtensions::KHR_DEBUG]);
 		LOGI_X("GL_ARB_texture_storage: %d", glExtensions_[(int)GLExtensions::ARB_TEXTURE_STORAGE]);
-#if defined(WITH_ANGLE)
+#if defined(WITH_OPENGLES)
 		LOGI_X("GL_OES_get_program_binary: %d", glExtensions_[(int)GLExtensions::ARB_GET_PROGRAM_BINARY]);
 #else
 		LOGI_X("GL_ARB_get_program_binary: %d", glExtensions_[(int)GLExtensions::ARB_GET_PROGRAM_BINARY]);
