@@ -13,6 +13,7 @@
 #endif
 
 #include "nCine/IAppEventHandler.h"
+#include "nCine/Graphics/RenderResources.h"
 #include "nCine/Input/IInputEventHandler.h"
 #include "nCine/IO/FileSystem.h"
 #include "nCine/Threading/Thread.h"
@@ -499,6 +500,8 @@ RecreateCache:
 	int64_t animsModified = fs::LastModificationTime(animsPath).Ticks;
 	so->WriteValue<int64_t>(animsModified);
 	so->WriteValue<uint16_t>((uint16_t)EventType::Count);
+
+	RenderResources::binaryShaderCache().prune();
 
 	LOGI("Cache was recreated");
 	_flags |= Flags::IsVerified | Flags::IsPlayable;

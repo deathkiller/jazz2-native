@@ -2,6 +2,8 @@
 
 namespace Jazz2::Shaders
 {
+	constexpr uint64_t Version = 1;
+
 	constexpr char LightingVs[] = R"(
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;

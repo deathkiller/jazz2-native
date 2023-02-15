@@ -104,6 +104,8 @@ namespace nCine
 		static void setDefaultAttributesParameters(GLShaderProgram& shaderProgram);
 
 	private:
+		static constexpr uint64_t DefaultShadersVersion = 1ull | (1ull << 63);
+
 		static std::unique_ptr<BinaryShaderCache> binaryShaderCache_;
 		static std::unique_ptr<RenderBuffersManager> buffersManager_;
 		static std::unique_ptr<RenderVaoPool> vaoPool_;

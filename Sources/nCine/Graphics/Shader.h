@@ -1,5 +1,6 @@
 #pragma once
 
+#include "GL/GLShaderProgram.h"
 #include "../Base/Object.h"
 
 #include <memory>
@@ -7,8 +8,6 @@
 
 namespace nCine
 {
-	class GLShaderProgram;
-
 	/// Shader class
 	class Shader : public Object
 	{
@@ -45,43 +44,46 @@ namespace nCine
 			//TEXTNODE_RED,
 		};
 
-		/// Creates an OpenGL shader program name
 		Shader();
 
-		Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, const char* vertex, const char* fragment);
-		Shader(const char* shaderName, LoadMode loadMode, const char* vertex, const char* fragment);
-		Shader(LoadMode loadMode, const char* vertex, const char* fragment);
+		Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, const char* vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		Shader(const char* shaderName, LoadMode loadMode, const char* vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		Shader(LoadMode loadMode, const char* vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
 
-		Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, DefaultVertex vertex, const char* fragment);
-		Shader(const char* shaderName, LoadMode loadMode, DefaultVertex vertex, const char* fragment);
-		Shader(LoadMode loadMode, DefaultVertex vertex, const char* fragment);
-		Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, const char* vertex, DefaultFragment fragment);
-		Shader(const char* shaderName, LoadMode loadMode, const char* vertex, DefaultFragment fragment);
-		Shader(LoadMode loadMode, const char* vertex, DefaultFragment fragment);
+		Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, DefaultVertex vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		Shader(const char* shaderName, LoadMode loadMode, DefaultVertex vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		Shader(LoadMode loadMode, DefaultVertex vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, const char* vertex, DefaultFragment fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		Shader(const char* shaderName, LoadMode loadMode, const char* vertex, DefaultFragment fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		Shader(LoadMode loadMode, const char* vertex, DefaultFragment fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
 
 		~Shader() override;
 
-		bool loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment);
-		bool loadFromMemory(const char* shaderName, const char* vertex, const char* fragment);
-		bool loadFromMemory(const char* vertex, const char* fragment);
+		bool loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		bool loadFromMemory(const char* shaderName, const char* vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		bool loadFromMemory(const char* vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
 
-		bool loadFromMemory(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment);
-		bool loadFromMemory(const char* shaderName, DefaultVertex vertex, const char* fragment);
-		bool loadFromMemory(DefaultVertex vertex, const char* fragment);
-		bool loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment);
-		bool loadFromMemory(const char* shaderName, const char* vertex, DefaultFragment fragment);
-		bool loadFromMemory(const char* vertex, DefaultFragment fragment);
+		bool loadFromMemory(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		bool loadFromMemory(const char* shaderName, DefaultVertex vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		bool loadFromMemory(DefaultVertex vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		bool loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		bool loadFromMemory(const char* shaderName, const char* vertex, DefaultFragment fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		bool loadFromMemory(const char* vertex, DefaultFragment fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
 
-		bool loadFromFile(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment);
-		bool loadFromFile(const char* shaderName, const char* vertex, const char* fragment);
-		bool loadFromFile(const char* vertex, const char* fragment);
+		bool loadFromFile(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		bool loadFromFile(const char* shaderName, const char* vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		bool loadFromFile(const char* vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
 
-		bool loadFromFile(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment);
-		bool loadFromFile(const char* shaderName, DefaultVertex vertex, const char* fragment);
-		bool loadFromFile(DefaultVertex vertex, const char* fragment);
-		bool loadFromFile(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment);
-		bool loadFromFile(const char* shaderName, const char* vertex, DefaultFragment fragment);
-		bool loadFromFile(const char* vertex, DefaultFragment fragment);
+		bool loadFromFile(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		bool loadFromFile(const char* shaderName, DefaultVertex vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		bool loadFromFile(DefaultVertex vertex, const char* fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		bool loadFromFile(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		bool loadFromFile(const char* shaderName, const char* vertex, DefaultFragment fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+		bool loadFromFile(const char* vertex, DefaultFragment fragment, int batchSize = GLShaderProgram::DefaultBatchSize);
+
+		bool loadFromCache(const char* shaderName, uint64_t shaderVersion, Introspection introspection);
+
+		bool saveToCache(const char* shaderName, uint64_t shaderVersion) const;
 
 		/// Sets the VBO stride and pointer for the specified vertex attribute
 		bool setAttribute(const char* name, int stride, unsigned long int pointer);
@@ -106,6 +108,10 @@ namespace nCine
 		/// Registers a shaders to be used for batches of render commands
 		void registerBatchedShader(Shader& batchedShader);
 
+		GLShaderProgram* getHandle() {
+			return glShaderProgram_.get();
+		}
+
 		inline static ObjectType sType() {
 			return ObjectType::Shader;
 		}
@@ -114,7 +120,7 @@ namespace nCine
 		/// The OpenGL shader program
 		std::unique_ptr<GLShaderProgram> glShaderProgram_;
 
-		bool loadDefaultShader(DefaultVertex vertex);
+		bool loadDefaultShader(DefaultVertex vertex, int batchSize);
 		bool loadDefaultShader(DefaultFragment fragment);
 
 		/// Deleted copy constructor
@@ -125,5 +131,4 @@ namespace nCine
 		friend class ShaderState;
 		friend class Material;
 	};
-
 }

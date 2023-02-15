@@ -292,6 +292,10 @@ namespace Jazz2
 
 		GenericGraphicResource* RequestGraphicsAura(const StringView& path, uint16_t paletteOffset);
 		static void ReadImageFromFile(std::unique_ptr<IFileStream>& s, uint8_t* data, int width, int height, int channelCount);
+		
+		std::unique_ptr<Shader> CompileShader(const char* shaderName, Shader::DefaultVertex vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled);
+		std::unique_ptr<Shader> CompileShader(const char* shaderName, const char* vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled);
+		
 		void RecreateGemPalettes();
 #if defined(NCINE_DEBUG)
 		void MigrateGraphics(const StringView& path);

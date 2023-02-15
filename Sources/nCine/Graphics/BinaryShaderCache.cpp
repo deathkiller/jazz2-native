@@ -1,5 +1,6 @@
 #include "BinaryShaderCache.h"
 #include "IGfxCapabilities.h"
+#include "GL/GLShaderProgram.h"
 #include "../ServiceLocator.h"
 #include "../Base/Algorithms.h"
 #include "../IO/FileSystem.h"
@@ -7,15 +8,28 @@
 #include "../Base/HashFunctions.h"
 #include "../../Common.h"
 
-#include <cstdint>
-#include <cstdlib> // for `strtoull()`
-
 namespace nCine
 {
 	namespace
 	{
 		constexpr uint64_t HashSeed = 0x01000193811C9DC5;
-		constexpr char ShaderFilenameFormat[] = "%016llx_%08x_%016llx.bin";
+
+		constexpr uint8_t B64index[256] = {
+			0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+			0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+			0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  62, 63, 63, 62, 63, 52, 53, 54, 55,
+			56, 57, 58, 59, 60, 61, 0,  0,  0,  0,  0,  0,  0,  0,  1,  2,  3,  4,  5,  6,
+			7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 0,
+			0,  0,  0,  63, 0,  26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+			41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51
+		};
+
+		constexpr char B64chars[] = {
+			'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+			'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+			'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+			'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '-'
+		};
 
 		unsigned int bufferSize = 0;
 		std::unique_ptr<uint8_t[]> bufferPtr;
@@ -57,143 +71,138 @@ namespace nCine
 		platformHash_ += fasthash64(platformString, strnlen(platformString, sizeof(platformString)), HashSeed);
 
 		path_ = path;
-		if (!fs::IsDirectory(path_)) {
-			fs::CreateDirectories(path_);
-		} else {
-			collectStatistics();
-		}
+		fs::CreateDirectories(path_);
 
 		bufferSize = 64 * 1024;
 		bufferPtr = std::make_unique<uint8_t[]>(bufferSize);
 
-		const bool dirExists = fs::IsDirectory(path_);
-		isAvailable_ = (isSupported && dirExists);
+		const bool pathExists = fs::IsDirectory(path_);
+		isAvailable_ = (isSupported && pathExists);
 	}
 
-	uint64_t BinaryShaderCache::hashSources(unsigned int count, const char** strings, int* lengths) const
-	{
-		uint64_t hash = 0;
-		for (unsigned int i = 0; i < count; i++) {
-			ASSERT(strings[i] != nullptr);
-			ASSERT(lengths[i] > 0);
-			if (strings[i] != nullptr && lengths[i] > 0) {
-				const unsigned int length = static_cast<unsigned int>(lengths[i]);
-				// Align the length to 64 bits, plus 7 bytes read after that
-				const unsigned int paddedLength = length + 8 - (length % 8) + 7;
-				// Recycling the loading binary buffer for zero-padded shader sources
-				if (bufferSize < paddedLength) {
-					bufferSize = paddedLength;
-					bufferPtr = std::make_unique<uint8_t[]>(bufferSize);
-				}
-
-				for (unsigned int j = 0; j < length; j++) {
-					bufferPtr[j] = strings[i][j];
-				}
-				// Set padding bytes to zero for a deterministic hash
-				for (unsigned int j = length; j < paddedLength; j++) {
-					bufferPtr[j] = '\0';
-				}
-				hash += fasthash64(bufferPtr.get(), length, HashSeed);
-			}
-		}
-
-		return hash;
-	}
-
-	unsigned int BinaryShaderCache::binarySize(uint32_t format, uint64_t hash)
+	String BinaryShaderCache::getCachedShaderPath(const char* shaderName)
 	{
 		if (!isAvailable_) {
-			return 0;
+			return { };
 		}
 
-		char shaderFilename[64];
-		formatString(shaderFilename, sizeof(shaderFilename), ShaderFilenameFormat, platformHash_, format, hash);
-		String shaderPath = fs::JoinPath(path_, shaderFilename);
+		uint8_t inputBuffer[64];
+		char outputBuffer[(sizeof(inputBuffer) * 3) / 2 + 1];
 
-		unsigned int fileSize = 0;
-		if (fs::IsFile(shaderPath)) {
-			fileSize = fs::FileSize(shaderPath);
+		if (shaderName == nullptr) {
+			return { };
 		}
-		return fileSize;
+
+		std::size_t shaderNameLength = strlen(shaderName);
+		if (shaderNameLength == 0 || 8 + shaderNameLength > sizeof(inputBuffer)) {
+			return { };
+		}
+
+		inputBuffer[0] = (platformHash_ & 0xff);
+		inputBuffer[1] = ((platformHash_ >> 8) & 0xff);
+		inputBuffer[2] = ((platformHash_ >> 16) & 0xff);
+		inputBuffer[3] = ((platformHash_ >> 24) & 0xff);
+		inputBuffer[4] = ((platformHash_ >> 32) & 0xff);
+		inputBuffer[5] = ((platformHash_ >> 40) & 0xff);
+		inputBuffer[6] = ((platformHash_ >> 48) & 0xff);
+		inputBuffer[7] = ((platformHash_ >> 56) & 0xff);
+
+		std::memcpy(&inputBuffer[8], shaderName, shaderNameLength);
+
+		std::size_t outputLength = base64Encode(inputBuffer, 8 + shaderNameLength, outputBuffer, sizeof(outputBuffer));
+		if (outputLength == 0) {
+			return { };
+		}
+
+		return fs::JoinPath(path_, StringView(outputBuffer, outputLength));
 	}
 
-	const void* BinaryShaderCache::loadFromCache(uint32_t format, uint64_t hash)
+	bool BinaryShaderCache::loadFromCache(const char* shaderName, BinaryShaderEntry* entry)
 	{
-		if (!isAvailable_) {
-			return 0;
+		String cachePath = getCachedShaderPath(shaderName);
+		if (cachePath.empty()) {
+			return false;
 		}
 
-		char shaderFilename[64];
-		formatString(shaderFilename, sizeof(shaderFilename), ShaderFilenameFormat, platformHash_, format, hash);
-		String shaderPath = fs::JoinPath(path_, shaderFilename);
-
-		bool fileRead = false;
-		if (fs::IsFile(shaderPath)) {
-			std::unique_ptr<IFileStream> fileHandle = fs::Open(shaderPath, FileAccessMode::Read);
-			const long int fileSize = fileHandle->GetSize();
-			if (fileSize > 0 && fileSize < 8 * 1024 * 1024) {
-				if (bufferSize < fileSize) {
-					bufferSize = fileSize;
-					bufferPtr = std::make_unique<uint8_t[]>(bufferSize);
-				}
-
-				fileHandle->Read(bufferPtr.get(), fileSize);
-				fileHandle->Close();
-
-				LOGI_X("Loaded binary shader \"%s\" from cache", shaderFilename);
-				statistics_.LoadedShaders++;
-				fileRead = true;
-			}
+		std::unique_ptr<IFileStream> fileHandle = fs::Open(cachePath, FileAccessMode::Read);
+		const long int fileSize = fileHandle->GetSize();
+		if (fileSize <= 28 || fileSize > 8 * 1024 * 1024) {
+			return false;
 		}
 
-		return (fileRead ? bufferPtr.get() : nullptr);
+		if (bufferSize < fileSize) {
+			bufferSize = fileSize;
+			bufferPtr = std::make_unique<uint8_t[]>(bufferSize);
+		}
+
+		fileHandle->Read(bufferPtr.get(), fileSize);
+		fileHandle->Close();
+
+		uint64_t signature = *(uint64_t*)&bufferPtr[0];
+
+		// Shader version must be the same
+		if (signature != 0x20AA8C9FF0BFBBEF || entry->ShaderVersion != *(uint64_t*)&bufferPtr[8]) {
+			return false;
+		}
+
+		entry->BatchSize = *(int32_t*)&bufferPtr[16];
+		entry->BinaryFormat = *(uint32_t*)&bufferPtr[20];
+		entry->BufferLength = *(int32_t*)&bufferPtr[24];
+		entry->Buffer = &bufferPtr[28];
+
+		return (entry->BufferLength > 0 && entry->BufferLength <= fileSize - 28);
 	}
 
-	bool BinaryShaderCache::saveToCache(int length, const void* buffer, uint32_t format, uint64_t hash)
+	bool BinaryShaderCache::saveToCache(const char* shaderName, const BinaryShaderEntry* entry, const GLShaderProgram* glShaderProgram)
 	{
-		if (!isAvailable_ || length <= 0) {
-			return 0;
+		String cachePath = getCachedShaderPath(shaderName);
+		if (cachePath.empty()) {
+			return false;
 		}
 
-		bool fileWritten = false;
-		char shaderFilename[64];
-		formatString(shaderFilename, sizeof(shaderFilename), ShaderFilenameFormat, platformHash_, format, hash);
-		String shaderPath = fs::JoinPath(path_, shaderFilename);
-		if (!fs::IsFile(shaderPath)) {
-			std::unique_ptr<IFileStream> fileHandle = fs::Open(shaderPath, FileAccessMode::Write);
-			if (fileHandle->IsOpened()) {
-				fileHandle->Write(buffer, length);
-				fileHandle->Close();
-
-				LOGI_X("Saved binary shader \"%s\" to cache", shaderFilename);
-				statistics_.SavedShaders++;
-				statistics_.PlatformFilesCount++;
-				statistics_.PlatformBytesCount += length;
-				statistics_.TotalFilesCount++;
-				statistics_.TotalBytesCount += length;
-				fileWritten = true;
-			}
+		int binaryLength = glShaderProgram->binaryLength();
+		if (binaryLength <= 0) {
+			return false;
 		}
 
-		return fileWritten;
+		if (bufferSize < binaryLength) {
+			bufferSize = binaryLength;
+			bufferPtr = std::make_unique<uint8_t[]>(bufferSize);
+		}
+
+		unsigned int binaryFormat = 0;
+		if (!glShaderProgram->saveBinary(bufferSize, binaryFormat, bufferPtr.get())) {
+			return false;
+		}
+
+		std::unique_ptr<IFileStream> fileHandle = fs::Open(cachePath, FileAccessMode::Write);
+		if (!fileHandle->IsOpened()) {
+			return false;
+		}
+
+		fileHandle->WriteValue<uint64_t>(0x20AA8C9FF0BFBBEF);
+		fileHandle->WriteValue<uint64_t>(entry->ShaderVersion);
+		fileHandle->WriteValue<int32_t>(entry->BatchSize);
+		fileHandle->WriteValue<uint32_t>(binaryFormat);
+		fileHandle->WriteValue<int32_t>(binaryLength);
+		fileHandle->Write(bufferPtr.get(), binaryLength);
+
+		return true;
 	}
 
 	void BinaryShaderCache::prune()
 	{
-		uint64_t platformHash = 0;
+		uint8_t inputBuffer[64];
 
 		fs::Directory dir(path_);
 		while (const StringView shaderPath = dir.GetNext()) {
-			if (parseShaderPath(shaderPath, &platformHash, nullptr, nullptr)) {
-				// Deleting only binary shaders with different platform hashes
-				if (platformHash != platformHash_) {
-					const int64_t fileSize = fs::FileSize(shaderPath);
-					fs::RemoveFile(shaderPath);
+			StringView filename = fs::GetFileNameWithoutExtension(shaderPath);
+			if (base64Decode(filename, inputBuffer, sizeof(inputBuffer)) >= sizeof(uint64_t)) {
+				uint64_t platformHash = (uint64_t)inputBuffer[0] | ((uint64_t)inputBuffer[1] << 8) | ((uint64_t)inputBuffer[2] << 16) | ((uint64_t)inputBuffer[3] << 24) |
+					((uint64_t)inputBuffer[4] << 32) | ((uint64_t)inputBuffer[5] << 40) | ((uint64_t)inputBuffer[6] << 48) | ((uint64_t)inputBuffer[7] << 56);
 
-					ASSERT(statistics_.TotalFilesCount > 0);
-					ASSERT(statistics_.TotalBytesCount >= fileSize);
-					statistics_.TotalFilesCount--;
-					statistics_.TotalBytesCount -= fileSize;
+				if (platformHash != platformHash_) {
+					fs::RemoveFile(shaderPath);
 				}
 			}
 		}
@@ -203,119 +212,76 @@ namespace nCine
 	{
 		fs::Directory dir(path_);
 		while (const StringView shaderPath = dir.GetNext()) {
-			// Deleting all binary shaders
-			if (isShaderPath(shaderPath)) {
-				fs::RemoveFile(shaderPath);
-			}
+			fs::RemoveFile(shaderPath);
 		}
-
-		clearStatistics();
 	}
 
 	/*! \return True if the path is a writable directory */
 	bool BinaryShaderCache::setPath(const StringView& path)
 	{
-		if (fs::IsDirectory(path) && fs::IsWritable(path)) {
-			path_ = path;
-			collectStatistics();
-			return true;
-		}
-		return false;
-	}
-
-	void BinaryShaderCache::collectStatistics()
-	{
-		clearStatistics();
-		uint64_t platformHash = 0;
-
-		fs::Directory dir(path_);
-		while (const StringView shaderPath = dir.GetNext()) {
-			if (parseShaderPath(shaderPath, &platformHash, nullptr, nullptr)) {
-				const int64_t fileSize = fs::FileSize(shaderPath);
-
-				if (platformHash == platformHash_) {
-					statistics_.PlatformFilesCount++;
-					statistics_.PlatformBytesCount += fileSize;
-				}
-				statistics_.TotalFilesCount++;
-				statistics_.TotalBytesCount += fileSize;
-			}
-		}
-		dir.Close();
-	}
-
-	void BinaryShaderCache::clearStatistics()
-	{
-		statistics_.LoadedShaders = 0;
-		statistics_.SavedShaders = 0;
-		statistics_.PlatformFilesCount = 0;
-		statistics_.PlatformBytesCount = 0;
-		statistics_.TotalFilesCount = 0;
-		statistics_.TotalBytesCount = 0;
-	}
-
-	bool BinaryShaderCache::parseShaderPath(const StringView& path, uint64_t* platformHash, uint64_t* format, uint64_t* shaderHash)
-	{
-		String filename = fs::GetFileName(path);
-
-		// The length of a binary shader filename is: 16 + "_" + 8 + "_" + 16 + ".bin"
-		if (filename.size() != 46) {
+		if (!fs::IsDirectory(path) || !fs::IsWritable(path)) {
 			return false;
 		}
 
-		if (fs::GetExtension(filename) != "bin" || filename[16] != '_' || filename[25] != '_') {
-			return false;
-		}
-
-		for (unsigned int i = 0; i < 16; i++) {
-			const char c = filename[i];
-			// Check if the platform component is an hexadecimal number
-			if (!(c >= '0' && c <= '9') && !(c >= 'A' && c <= 'F') && !(c >= 'a' && c <= 'f')) {
-				return false;
-			}
-		}
-
-		for (unsigned int i = 0; i < 8; i++) {
-			const char c = filename[i + 17];
-			// Check if the format component is an hexadecimal number
-			if (!(c >= '0' && c <= '9') && !(c >= 'A' && c <= 'F') && !(c >= 'a' && c <= 'f')) {
-				return false;
-			}
-		}
-
-		for (unsigned int i = 0; i < 16; i++) {
-			const char c = filename[i + 26];
-			// Check if the platform component is an hexadecimal number
-			if (!(c >= '0' && c <= '9') && !(c >= 'A' && c <= 'F') && !(c >= 'a' && c <= 'f')) {
-				return false;
-			}
-		}
-
-		char componentString[17];
-		componentString[16] = '\0';
-
-		if (platformHash != nullptr) {
-			for (unsigned int i = 0; i < 16; i++) {
-				componentString[i] = filename[i];
-			}
-			*platformHash = strtoull(componentString, nullptr, 16);
-		}
-
-		componentString[8] = '\0';
-		if (format != nullptr) {
-			for (unsigned int i = 0; i < 8; i++) {
-				componentString[i] = filename[i + 17];
-			}
-			*format = strtoul(componentString, nullptr, 16);
-		}
-
-		if (shaderHash != nullptr) {
-			for (unsigned int i = 0; i < 16; i++) {
-				componentString[i] = filename[i + 26];
-			}
-			*shaderHash = strtoull(componentString, nullptr, 16);
-		}
-
+		path_ = path;
 		return true;
+	}
+
+	std::size_t BinaryShaderCache::base64Decode(const StringView& src, uint8_t* dst, std::size_t dstLength)
+	{
+		std::size_t srcLength = src.size();;
+		uint8_t* p = (uint8_t*)src.data();
+		bool pad = (srcLength > 0 && (srcLength % 4 || p[srcLength - 1] == '='));
+		const std::size_t L = ((srcLength + 3) / 4 - pad) * 4;
+
+		if (dstLength < L / 4 * 3) {
+			return 0;
+		}
+
+		size_t j = 0;
+		for (std::size_t i = 0; i < L; i += 4) {
+			int32_t n = B64index[p[i]] << 18 | B64index[p[i + 1]] << 12 | B64index[p[i + 2]] << 6 | B64index[p[i + 3]];
+			dst[j++] = n >> 16;
+			dst[j++] = n >> 8 & 0xFF;
+			dst[j++] = n & 0xFF;
+		}
+		if (pad) {
+			int32_t n = B64index[p[L]] << 18 | B64index[p[L + 1]] << 12;
+			dst[j++] = n >> 16;
+
+			if (srcLength > L + 2 && p[L + 2] != '=') {
+				n |= B64index[p[L + 2]] << 6;
+				dst[j++] = (n >> 8 & 0xFF);
+			}
+		}
+		return j;
+	}
+
+	std::size_t BinaryShaderCache::base64Encode(const uint8_t* src, std::size_t srcLength, char* dst, std::size_t dstLength)
+	{
+		std::size_t requiredLength = 4 * ((srcLength + 2) / 3);
+		if (requiredLength > dstLength) {
+			return 0;
+		}
+
+		std::size_t j = 0;
+		for (std::size_t i = 0; i < srcLength;) {
+			uint32_t octet1 = (i < srcLength ? (uint8_t)src[i++] : 0);
+			uint32_t octet2 = (i < srcLength ? (uint8_t)src[i++] : 0);
+			uint32_t octet3 = (i < srcLength ? (uint8_t)src[i++] : 0);
+
+			uint32_t triple = (octet1 << 0x10) + (octet2 << 0x08) + octet3;
+
+			dst[j++] = B64chars[(triple >> (3 * 6)) & 0x3F];
+			dst[j++] = B64chars[(triple >> (2 * 6)) & 0x3F];
+			dst[j++] = B64chars[(triple >> (1 * 6)) & 0x3F];
+			dst[j++] = B64chars[(triple >> (0 * 6)) & 0x3F];
+		}
+
+		if (j < dstLength) {
+			dst[j] = '\0';
+		}
+
+		return j;
 	}
 }
