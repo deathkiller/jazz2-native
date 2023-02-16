@@ -7,6 +7,12 @@
 
 using namespace Death::Containers;
 
+#if defined(DEATH_TARGET_WINDOWS) && defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_32BIT)
+#	define __GLAPIENTRY __stdcall
+#else
+#	define __GLAPIENTRY
+#endif
+
 namespace nCine
 {
 	/// The class that manages the cache of binary OpenGL shader programs
@@ -41,8 +47,8 @@ namespace nCine
 		bool setPath(const StringView& path);
 
 	private:
-		using glGetProgramBinary_t = void(__stdcall*)(GLuint program, GLsizei bufSize, GLsizei* length, GLenum* binaryFormat, void* binary);
-		using glProgramBinary_t = void(__stdcall*)(GLuint program, GLenum binaryFormat, const void* binary, GLsizei length);
+		using glGetProgramBinary_t = void(__GLAPIENTRY*)(GLuint program, GLsizei bufSize, GLsizei* length, GLenum* binaryFormat, void* binary);
+		using glProgramBinary_t = void(__GLAPIENTRY*)(GLuint program, GLenum binaryFormat, const void* binary, GLsizei length);
 
 		/// A flag that indicates if the OpenGL context supports binary shaders and the cache is available
 		bool isAvailable_;
