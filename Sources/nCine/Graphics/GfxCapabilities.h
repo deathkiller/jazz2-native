@@ -47,5 +47,4 @@ namespace nCine
 		/// Checks for OpenGL extensions availability
 		void checkGLExtensions(const char* extensionNames[], bool results[], unsigned int numExtensionsToCheck) const;
 	};
-
 }

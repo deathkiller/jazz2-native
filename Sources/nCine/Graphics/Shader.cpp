@@ -359,20 +359,14 @@ namespace nCine
 			ZoneText(shaderName, strlen(shaderName));
 		}
 
-		BinaryShaderEntry entry = { shaderVersion };
-		if (!RenderResources::binaryShaderCache().loadFromCache(shaderName, &entry)) {
-			return false;
-		}
-
 		glShaderProgram_->reset();
 		glShaderProgram_->setObjectLabel(shaderName);
-		return glShaderProgram_->loadBinary(entry.BinaryFormat, entry.Buffer, entry.BufferLength, entry.BatchSize, shaderToShaderProgramIntrospection(introspection));
+		return RenderResources::binaryShaderCache().loadFromCache(shaderName, shaderVersion, glShaderProgram_.get(), shaderToShaderProgramIntrospection(introspection));
 	}
 
 	bool Shader::saveToCache(const char* shaderName, uint64_t shaderVersion) const
 	{
-		BinaryShaderEntry entry = { shaderVersion, glShaderProgram_->batchSize() };
-		return RenderResources::binaryShaderCache().saveToCache(shaderName, &entry, glShaderProgram_.get());
+		return RenderResources::binaryShaderCache().saveToCache(shaderName, shaderVersion, glShaderProgram_.get());
 	}
 
 	bool Shader::setAttribute(const char* name, int stride, unsigned long int pointer)

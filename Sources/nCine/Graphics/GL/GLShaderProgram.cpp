@@ -23,7 +23,7 @@ namespace nCine
 	}
 
 	GLShaderProgram::GLShaderProgram(QueryPhase queryPhase)
-		: glHandle_(0), status_(Status::NotLinked), queryPhase_(queryPhase), batchSize_(DefaultBatchSize), shouldLogOnErrors_(true), uniformsSize_(0), uniformBlocksSize_(0)
+		: glHandle_(0), status_(Status::NotLinked), introspection_(Introspection::Disabled), queryPhase_(queryPhase), batchSize_(DefaultBatchSize), shouldLogOnErrors_(true), uniformsSize_(0), uniformBlocksSize_(0)
 	{
 		glHandle_ = glCreateProgram();
 
@@ -132,29 +132,8 @@ namespace nCine
 
 	bool GLShaderProgram::link(Introspection introspection)
 	{
-		introspection_ = introspection;
 		glLinkProgram(glHandle_);
-
-		if (queryPhase_ == QueryPhase::Immediate) {
-			status_ = Status::NotLinked;
-			const bool linkCheck = checkLinking();
-			if (!linkCheck) {
-				return false;
-			}
-
-			// After linking, shader objects are not needed anymore
-			for (auto& shader : attachedShaders_) {
-				glDetachShader(glHandle_, shader->glHandle());
-			}
-
-			attachedShaders_.clear();
-
-			performIntrospection();
-			return linkCheck;
-		} else {
-			status_ = GLShaderProgram::Status::LinkedWithDeferredQueries;
-			return true;
-		}
+		return finalizeAfterLinking(introspection);
 	}
 
 	void GLShaderProgram::use()
@@ -174,20 +153,10 @@ namespace nCine
 		glGetProgramiv(glHandle_, GL_VALIDATE_STATUS, &status);
 		return (status == GL_TRUE);
 	}
-	
-	bool GLShaderProgram::loadBinary(unsigned int binaryFormat, const void* buffer, int bufferSize, int batchSize, Introspection introspection)
+
+	bool GLShaderProgram::finalizeAfterLinking(Introspection introspection)
 	{
-		ASSERT(buffer);
-		ASSERT(bufferSize > 0);
-
-		batchSize_ = batchSize;
 		introspection_ = introspection;
-
-#if defined(WITH_OPENGLES)
-		glProgramBinaryOES(glHandle_, binaryFormat, buffer, bufferSize);
-#else
-		glProgramBinary(glHandle_, binaryFormat, buffer, bufferSize);
-#endif
 
 		if (queryPhase_ == QueryPhase::Immediate) {
 			status_ = Status::NotLinked;
@@ -209,33 +178,6 @@ namespace nCine
 			status_ = GLShaderProgram::Status::LinkedWithDeferredQueries;
 			return true;
 		}
-	}
-
-	int GLShaderProgram::binaryLength() const
-	{
-		GLint length = 0;
-#if defined(WITH_OPENGLES)
-		glGetProgramiv(glHandle_, GL_PROGRAM_BINARY_LENGTH_OES, &length);
-#else
-		glGetProgramiv(glHandle_, GL_PROGRAM_BINARY_LENGTH, &length);
-#endif
-		return length;
-	}
-
-	bool GLShaderProgram::saveBinary(int bufferSize, unsigned int& binaryFormat, void* buffer) const
-	{
-		ASSERT(bufferSize > 0);
-		ASSERT(buffer);
-
-		GLsizei length = 0;
-		if (buffer != nullptr && bufferSize > 0) {
-#if defined(WITH_OPENGLES)
-			glGetProgramBinaryOES(glHandle_, bufferSize, &length, &binaryFormat, buffer);
-#else
-			glGetProgramBinary(glHandle_, bufferSize, &length, &binaryFormat, buffer);
-#endif
-		}
-		return (length > 0 && bufferSize >= length);
 	}
 
 	GLVertexFormat::Attribute* GLShaderProgram::attribute(const char* name)

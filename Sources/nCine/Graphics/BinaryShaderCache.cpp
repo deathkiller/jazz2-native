@@ -1,6 +1,5 @@
 #include "BinaryShaderCache.h"
 #include "IGfxCapabilities.h"
-#include "GL/GLShaderProgram.h"
 #include "../ServiceLocator.h"
 #include "../Base/Algorithms.h"
 #include "../IO/FileSystem.h"
@@ -44,10 +43,31 @@ namespace nCine
 		}
 
 		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
+#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+		const bool isSupported = gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::ARB_GET_PROGRAM_BINARY) ||
+								 gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::OES_GET_PROGRAM_BINARY);
+#else
 		const bool isSupported = gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::ARB_GET_PROGRAM_BINARY);
+#endif
 		if (!isSupported) {
-			LOGW_X("GL_ARB_get_program_binary extensions not supported, the binary shader cache is not enabled");
+			LOGW_X("GL_ARB_get_program_binary extensions not supported, binary shader cache is disabled");
 			return;
+		}
+
+#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+		if (gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::OES_GET_PROGRAM_BINARY)) {
+#	if defined(DEATH_TARGET_UNIX)
+			_glGetProgramBinary = (glGetProgramBinary_t*)eglGetProcAddress("glGetProgramBinaryOES");
+			_glProgramBinary = (glProgramBinary_t*)eglGetProcAddress("glProgramBinaryOES");
+#	else
+			_glGetProgramBinary = glGetProgramBinaryOES;
+			_glProgramBinary = glProgramBinaryOES;
+#	endif
+		} else
+#endif
+		{
+			_glGetProgramBinary = glGetProgramBinary;
+			_glProgramBinary = glProgramBinary;
 		}
 
 		const IGfxCapabilities::GlInfoStrings& infoStrings = gfxCaps.glInfoStrings();
@@ -117,7 +137,7 @@ namespace nCine
 		return fs::JoinPath(path_, StringView(outputBuffer, outputLength));
 	}
 
-	bool BinaryShaderCache::loadFromCache(const char* shaderName, BinaryShaderEntry* entry)
+	bool BinaryShaderCache::loadFromCache(const char* shaderName, uint64_t shaderVersion, GLShaderProgram* program, GLShaderProgram::Introspection introspection)
 	{
 		String cachePath = getCachedShaderPath(shaderName);
 		if (cachePath.empty()) {
@@ -139,39 +159,57 @@ namespace nCine
 		fileHandle->Close();
 
 		uint64_t signature = *(uint64_t*)&bufferPtr[0];
+		uint64_t cachedShaderVersion = *(uint64_t*)&bufferPtr[8];
 
 		// Shader version must be the same
-		if (signature != 0x20AA8C9FF0BFBBEF || entry->ShaderVersion != *(uint64_t*)&bufferPtr[8]) {
+		if (signature != 0x20AA8C9FF0BFBBEF || cachedShaderVersion != shaderVersion) {
 			return false;
 		}
 
-		entry->BatchSize = *(int32_t*)&bufferPtr[16];
-		entry->BinaryFormat = *(uint32_t*)&bufferPtr[20];
-		entry->BufferLength = *(int32_t*)&bufferPtr[24];
-		entry->Buffer = &bufferPtr[28];
+		int32_t batchSize = *(int32_t*)&bufferPtr[16];
+		uint32_t binaryFormat = *(uint32_t*)&bufferPtr[20];
+		int32_t bufferLength = *(int32_t*)&bufferPtr[24];
+		void* buffer = &bufferPtr[28];
 
-		return (entry->BufferLength > 0 && entry->BufferLength <= fileSize - 28);
+		if (bufferLength <= 0 || bufferLength > fileSize - 28) {
+			return false;
+		}
+
+		_glProgramBinary(program->glHandle(), binaryFormat, buffer, bufferLength);
+		program->setBatchSize(batchSize);
+		return program->finalizeAfterLinking(introspection);
 	}
 
-	bool BinaryShaderCache::saveToCache(const char* shaderName, const BinaryShaderEntry* entry, const GLShaderProgram* glShaderProgram)
+	bool BinaryShaderCache::saveToCache(const char* shaderName, uint64_t shaderVersion, GLShaderProgram* program)
 	{
 		String cachePath = getCachedShaderPath(shaderName);
 		if (cachePath.empty()) {
 			return false;
 		}
 
-		int binaryLength = glShaderProgram->binaryLength();
-		if (binaryLength <= 0) {
+		GLint length = 0;
+#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+		if (gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::OES_GET_PROGRAM_BINARY)) {
+			glGetProgramiv(program->glHandle(), GL_PROGRAM_BINARY_LENGTH_OES, &length);
+		} else
+#endif
+		{
+			glGetProgramiv(program->glHandle(), GL_PROGRAM_BINARY_LENGTH, &length);
+		}
+
+		if (length <= 0) {
 			return false;
 		}
 
-		if (bufferSize < binaryLength) {
-			bufferSize = binaryLength;
+		if (bufferSize < length) {
+			bufferSize = length;
 			bufferPtr = std::make_unique<uint8_t[]>(bufferSize);
-		}
+		} 
 
+		length = 0;
 		unsigned int binaryFormat = 0;
-		if (!glShaderProgram->saveBinary(bufferSize, binaryFormat, bufferPtr.get())) {
+		_glGetProgramBinary(program->glHandle(), bufferSize, &length, &binaryFormat, bufferPtr.get());
+		if (length <= 0 || length > bufferSize) {
 			return false;
 		}
 
@@ -181,11 +219,11 @@ namespace nCine
 		}
 
 		fileHandle->WriteValue<uint64_t>(0x20AA8C9FF0BFBBEF);
-		fileHandle->WriteValue<uint64_t>(entry->ShaderVersion);
-		fileHandle->WriteValue<int32_t>(entry->BatchSize);
+		fileHandle->WriteValue<uint64_t>(shaderVersion);
+		fileHandle->WriteValue<int32_t>(program->batchSize());
 		fileHandle->WriteValue<uint32_t>(binaryFormat);
-		fileHandle->WriteValue<int32_t>(binaryLength);
-		fileHandle->Write(bufferPtr.get(), binaryLength);
+		fileHandle->WriteValue<int32_t>(length);
+		fileHandle->Write(bufferPtr.get(), length);
 
 		return true;
 	}
