@@ -271,13 +271,9 @@ namespace nCine
 			const ShaderLoad& shaderToLoad = shadersToLoad[i];
 
 			shaderToLoad.shaderProgram = std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate);
-
-			BinaryShaderEntry entry = { DefaultShadersVersion };
-			if (RenderResources::binaryShaderCache().loadFromCache(shaderToLoad.objectLabel, &entry)) {
-				if (shaderToLoad.shaderProgram->loadBinary(entry.BinaryFormat, entry.Buffer, entry.BufferLength, entry.BatchSize, shaderToLoad.introspection)) {
-					// Shader is already compiled
-					continue;
-				}
+			if (RenderResources::binaryShaderCache().loadFromCache(shaderToLoad.objectLabel, DefaultShadersVersion, shaderToLoad.shaderProgram.get(), shaderToLoad.introspection)) {
+				// Shader is already compiled
+				continue;
 			}
 
 			// If the UBO is smaller than 64kb and fixed batch size is disabled, batched shaders need to be compiled twice to determine safe `BATCH_SIZE` define value
@@ -311,8 +307,6 @@ namespace nCine
 			// The first compilation of a batched shader needs the introspection
 			const bool hasLinked = shaderToLoad.shaderProgram->link(compileTwice ? GLShaderProgram::Introspection::Enabled : shaderToLoad.introspection);
 			FATAL_ASSERT(hasLinked);
-			
-			entry.BatchSize = GLShaderProgram::DefaultBatchSize;
 
 			if (compileTwice) {
 				GLShaderUniformBlocks blocks(shaderToLoad.shaderProgram.get(), Material::InstancesBlockName, nullptr);
@@ -324,6 +318,7 @@ namespace nCine
 					LOGD_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderToLoad.objectLabel, size, block->alignAmount(), batchSize);
 
 					shaderToLoad.shaderProgram->reset();
+					shaderToLoad.shaderProgram->setBatchSize(batchSize);
 					formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, batchSize);
 
 #if defined(WITH_EMBEDDED_SHADERS)
@@ -338,12 +333,10 @@ namespace nCine
 
 					const bool hasLinked2 = shaderToLoad.shaderProgram->link(shaderToLoad.introspection);
 					FATAL_ASSERT(hasLinked2);
-
-					entry.BatchSize = batchSize;
 				}
 			}
 
-			RenderResources::binaryShaderCache().saveToCache(shaderToLoad.objectLabel, &entry, shaderToLoad.shaderProgram.get());
+			RenderResources::binaryShaderCache().saveToCache(shaderToLoad.objectLabel, DefaultShadersVersion, shaderToLoad.shaderProgram.get());
 		}
 
 		registerDefaultBatchedShaders();

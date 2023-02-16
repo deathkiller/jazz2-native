@@ -95,13 +95,8 @@ namespace nCine
 		bool link(Introspection introspection);
 		void use();
 		bool validate();
-		
-		/// Loads a shader program from a binary representation
-		bool loadBinary(unsigned int binaryFormat, const void* buffer, int bufferSize, int batchSize, Introspection introspection);
-		/// Returns the length in bytes of the binary representation of the shader program
-		int binaryLength() const;
-		/// Retrieves the binary representation of the shader program, if it is linked
-		bool saveBinary(int bufferSize, unsigned int &binaryFormat, void* buffer) const;
+
+		bool finalizeAfterLinking(Introspection introspection);
 
 		inline unsigned int numAttributes() const {
 			return attributeLocations_.size();

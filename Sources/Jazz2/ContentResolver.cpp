@@ -1083,9 +1083,9 @@ namespace Jazz2
 		_precompiledShaders[(int)PrecompiledShader::CombineWithWaterLow] = CompileShader("CombineWithWaterLow", Shaders::CombineVs, Shaders::CombineWithWaterLowFs);
 
 		_precompiledShaders[(int)PrecompiledShader::TexturedBackground] = CompileShader("TexturedBackground", Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundFs);
-		_precompiledShaders[(int)PrecompiledShader::TexturedBackgroundCircle] = CompileShader("TexturedBackground", Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundCircleFs);
+		_precompiledShaders[(int)PrecompiledShader::TexturedBackgroundCircle] = CompileShader("TexturedBackgroundCircle", Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundCircleFs);
 
-		_precompiledShaders[(int)PrecompiledShader::Colorized] = CompileShader("Colorize", Shader::DefaultVertex::SPRITE, Shaders::ColorizedFs);
+		_precompiledShaders[(int)PrecompiledShader::Colorized] = CompileShader("Colorized", Shader::DefaultVertex::SPRITE, Shaders::ColorizedFs);
 		_precompiledShaders[(int)PrecompiledShader::BatchedColorized] = CompileShader("BatchedColorized", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::ColorizedFs, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(int)PrecompiledShader::Colorized]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedColorized]);
 
