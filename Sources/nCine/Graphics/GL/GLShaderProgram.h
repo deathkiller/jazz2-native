@@ -1,5 +1,8 @@
 #pragma once
 
+#define NCINE_INCLUDE_OPENGL
+#include "../../CommonHeaders.h"
+
 #include "GLUniform.h"
 #include "GLUniformBlock.h"
 #include "GLAttribute.h"

@@ -43,7 +43,7 @@ namespace nCine
 		}
 
 		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
-#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_UNIX)
 		const bool isSupported = gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::ARB_GET_PROGRAM_BINARY) ||
 								 gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::OES_GET_PROGRAM_BINARY);
 #else
@@ -54,20 +54,17 @@ namespace nCine
 			return;
 		}
 
-#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_UNIX)
 		if (gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::OES_GET_PROGRAM_BINARY)) {
-#	if defined(DEATH_TARGET_UNIX)
-			_glGetProgramBinary = (glGetProgramBinary_t*)eglGetProcAddress("glGetProgramBinaryOES");
-			_glProgramBinary = (glProgramBinary_t*)eglGetProcAddress("glProgramBinaryOES");
-#	else
 			_glGetProgramBinary = glGetProgramBinaryOES;
 			_glProgramBinary = glProgramBinaryOES;
-#	endif
+			_glProgramBinaryLength = GL_PROGRAM_BINARY_LENGTH_OES;
 		} else
 #endif
 		{
 			_glGetProgramBinary = glGetProgramBinary;
 			_glProgramBinary = glProgramBinary;
+			_glProgramBinaryLength = GL_PROGRAM_BINARY_LENGTH;
 		}
 
 		const IGfxCapabilities::GlInfoStrings& infoStrings = gfxCaps.glInfoStrings();
@@ -188,15 +185,7 @@ namespace nCine
 		}
 
 		GLint length = 0;
-#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
-		if (gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::OES_GET_PROGRAM_BINARY)) {
-			glGetProgramiv(program->glHandle(), GL_PROGRAM_BINARY_LENGTH_OES, &length);
-		} else
-#endif
-		{
-			glGetProgramiv(program->glHandle(), GL_PROGRAM_BINARY_LENGTH, &length);
-		}
-
+		glGetProgramiv(program->glHandle(), _glProgramBinaryLength, &length);
 		if (length <= 0) {
 			return false;
 		}
