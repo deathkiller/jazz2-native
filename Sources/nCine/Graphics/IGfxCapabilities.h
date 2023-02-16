@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../Common.h"
+
 namespace nCine
 {
 	/// The interface class to query runtime OpenGL device capabilities
@@ -58,7 +60,7 @@ namespace nCine
 			OES_GET_PROGRAM_BINARY,
 #endif
 			EXT_TEXTURE_COMPRESSION_S3TC,
-#if defined(WITH_OPENGLES)
+#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 			OES_COMPRESSED_ETC1_RGB8_TEXTURE,
 #endif
 			AMD_COMPRESSED_ATC_TEXTURE,

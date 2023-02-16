@@ -180,7 +180,7 @@ namespace nCine
 		LOGI_X("GL_OES_get_program_binary: %d", glExtensions_[(int)GLExtensions::OES_GET_PROGRAM_BINARY]);
 #endif
 		LOGI_X("GL_EXT_texture_compression_s3tc: %d", glExtensions_[(int)GLExtensions::EXT_TEXTURE_COMPRESSION_S3TC]);
-#if defined(WITH_OPENGLES)
+#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		LOGI_X("GL_OES_compressed_ETC1_RGB8_texture: %d", glExtensions_[(int)GLExtensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE]);
 #endif
 		LOGI_X("GL_AMD_compressed_ATC_texture: %d", glExtensions_[(int)GLExtensions::AMD_COMPRESSED_ATC_TEXTURE]);
