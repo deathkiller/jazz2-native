@@ -23,7 +23,7 @@ namespace nCine
 		struct RenderingSettings
 		{
 			RenderingSettings()
-				: batchingEnabled(true), batchingWithIndices(false), cullingEnabled(true), minBatchSize(4), maxBatchSize(500) { }
+				: batchingEnabled(true), batchingWithIndices(false), cullingEnabled(true), minBatchSize(4), maxBatchSize(585) { }
 
 			/// True if batching is enabled
 			bool batchingEnabled;

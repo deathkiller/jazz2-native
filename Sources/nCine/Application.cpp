@@ -419,6 +419,8 @@ namespace nCine
 
 		frameTimer_ = std::make_unique<FrameTimer>(appCfg_.frameTimerLogInterval, 0.2f);
 
+		LOGI("Creating rendering resources...");
+
 		// Create a minimal set of render resources before compiling the first shader
 		RenderResources::createMinimal(); // they are required for rendering even without a scenegraph
 	

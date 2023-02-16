@@ -13,6 +13,7 @@
 #endif
 
 #include "nCine/IAppEventHandler.h"
+#include "nCine/Graphics/BinaryShaderCache.h"
 #include "nCine/Graphics/RenderResources.h"
 #include "nCine/Input/IInputEventHandler.h"
 #include "nCine/IO/FileSystem.h"
@@ -450,8 +451,8 @@ void GameEventHandler::RefreshCache()
 		if (!fs::IsReadableFile(animsPath)) {
 			animsPath = fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "AnimsSw.j2a"_s));
 		}
-		int64_t animsCached = s->ReadValue<int64_t>();
-		int64_t animsModified = fs::LastModificationTime(animsPath).Ticks;
+		uint64_t animsCached = s->ReadValue<uint64_t>();
+		uint64_t animsModified = fs::LastModificationTime(animsPath).Ticks;
 		if (animsModified != 0 && animsCached != animsModified) {
 			goto RecreateCache;
 		}
@@ -497,8 +498,8 @@ RecreateCache:
 	so->WriteValue<uint8_t>(ContentResolver::CacheIndexFile);
 	so->WriteValue<uint16_t>(Compatibility::JJ2Anims::CacheVersion);
 	so->WriteValue<uint8_t>(0x00);					// Flags
-	int64_t animsModified = fs::LastModificationTime(animsPath).Ticks;
-	so->WriteValue<int64_t>(animsModified);
+	uint64_t animsModified = fs::LastModificationTime(animsPath).Ticks;
+	so->WriteValue<uint64_t>(animsModified);
 	so->WriteValue<uint16_t>((uint16_t)EventType::Count);
 
 	RenderResources::binaryShaderCache().prune();

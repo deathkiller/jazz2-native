@@ -122,18 +122,19 @@ namespace nCine
 		}
 
 #if defined(DEATH_TARGET_WINDOWS)
-		static FileSystem::FileDate NativeTimeToFileDate(const SYSTEMTIME* sysTime, int64_t ticks)
+		static FileSystem::FileDate NativeTimeToFileDate(const FILETIME* fileTime)
 		{
+			SYSTEMTIME sysTime;
+			::FileTimeToSystemTime(fileTime, &sysTime);
+
 			FileSystem::FileDate date = { };
-
-			date.Year = sysTime->wYear;
-			date.Month = sysTime->wMonth;
-			date.Day = sysTime->wDay;
-			date.Hour = sysTime->wHour;
-			date.Minute = sysTime->wMinute;
-			date.Second = sysTime->wSecond;
-			date.Ticks = ticks;
-
+			date.Year = sysTime.wYear;
+			date.Month = sysTime.wMonth;
+			date.Day = sysTime.wDay;
+			date.Hour = sysTime.wHour;
+			date.Minute = sysTime.wMinute;
+			date.Second = sysTime.wSecond;
+			date.Ticks = static_cast<uint64_t>(fileTime->dwLowDateTime) | (static_cast<uint64_t>(fileTime->dwHighDateTime) << 32);
 			return date;
 		}
 
@@ -285,7 +286,7 @@ namespace nCine
 			date.Hour = local->tm_hour;
 			date.Minute = local->tm_min;
 			date.Second = local->tm_sec;
-			date.Ticks = static_cast<int64_t>(*t);
+			date.Ticks = static_cast<uint64_t>(*t);
 
 			return date;
 		}
@@ -1638,9 +1639,7 @@ namespace nCine
 #	endif
 		FILETIME fileTime;
 		if (::GetFileTime(hFile, nullptr, nullptr, &fileTime)) {
-			SYSTEMTIME sysTime;
-			::FileTimeToSystemTime(&fileTime, &sysTime);
-			date = NativeTimeToFileDate(&sysTime, *(int64_t*)&fileTime);
+			date = NativeTimeToFileDate(&fileTime);
 		}
 		::CloseHandle(hFile);
 #else
@@ -1673,9 +1672,7 @@ namespace nCine
 #	endif
 		FILETIME fileTime;
 		if (::GetFileTime(hFile, nullptr, &fileTime, nullptr)) {
-			SYSTEMTIME sysTime;
-			::FileTimeToSystemTime(&fileTime, &sysTime);
-			date = NativeTimeToFileDate(&sysTime, *(int64_t*)&fileTime);
+			date = NativeTimeToFileDate(&fileTime);
 		}
 		::CloseHandle(hFile);
 #else

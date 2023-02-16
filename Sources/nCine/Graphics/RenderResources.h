@@ -3,7 +3,6 @@
 #define NCINE_INCLUDE_OPENGL
 #include "../CommonHeaders.h"
 
-#include "BinaryShaderCache.h"
 #include "Material.h"
 #include "../Primitives/Matrix4x4.h"
 #include "GL/GLShaderUniforms.h"
@@ -104,7 +103,9 @@ namespace nCine
 		static void setDefaultAttributesParameters(GLShaderProgram& shaderProgram);
 
 	private:
-		static constexpr uint64_t DefaultShadersVersion = 1ull | (1ull << 63);
+#if defined(WITH_EMBEDDED_SHADERS)
+		static constexpr uint64_t EmbeddedShadersVersion = 1ull | (1ull << 63);
+#endif
 
 		static std::unique_ptr<BinaryShaderCache> binaryShaderCache_;
 		static std::unique_ptr<RenderBuffersManager> buffersManager_;

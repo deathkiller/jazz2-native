@@ -60,7 +60,7 @@ namespace nCine
 			int32_t Minute;
 			int32_t Second;
 
-			int64_t Ticks;
+			uint64_t Ticks;
 		};
 
 		enum class EnumerationOptions
