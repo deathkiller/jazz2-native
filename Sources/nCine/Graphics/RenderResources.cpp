@@ -1,4 +1,5 @@
 #include "RenderResources.h"
+#include "BinaryShaderCache.h"
 #include "RenderBuffersManager.h"
 #include "RenderVaoPool.h"
 #include "RenderCommandPool.h"
@@ -185,8 +186,6 @@ namespace nCine
 
 	void RenderResources::createMinimal()
 	{
-		LOGI("Creating a minimal set of rendering resources...");
-
 		// `createMinimal()` cannot be called after `create()`
 		ASSERT(binaryShaderCache_ == nullptr);
 		ASSERT(buffersManager_ == nullptr);
@@ -196,14 +195,10 @@ namespace nCine
 		binaryShaderCache_ = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
 		buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.vboSize, appCfg.iboSize);
 		vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
-		
-		LOGI("Minimal rendering resources created");
 	}
 	
 	void RenderResources::create()
 	{
-		LOGI("Creating rendering resources...");
-	
 		// `create()` can be called after `createMinimal()`
 
 		const AppConfiguration& appCfg = theApplication().appConfiguration();
@@ -222,25 +217,8 @@ namespace nCine
 		currentCamera_ = defaultCamera_.get();
 
 		ShaderLoad shadersToLoad[] = {
-#if !defined(WITH_EMBEDDED_SHADERS)
-			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE)], "sprite_vs.glsl", "sprite_fs.glsl", GLShaderProgram::Introspection::Enabled, "Sprite" },
-			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE_GRAY)], "sprite_vs.glsl", "sprite_gray_fs.glsl", GLShaderProgram::Introspection::Enabled, "Sprite_Gray" },
-			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE_NO_TEXTURE)], "sprite_notexture_vs.glsl", "sprite_notexture_fs.glsl", GLShaderProgram::Introspection::Enabled, "Sprite_NoTexture" },
-			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::MESH_SPRITE)], "meshsprite_vs.glsl", "sprite_fs.glsl", GLShaderProgram::Introspection::Enabled, "MeshSprite" },
-			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::MESH_SPRITE_GRAY)], "meshsprite_vs.glsl", "sprite_gray_fs.glsl", GLShaderProgram::Introspection::Enabled, "MeshSprite_Gray" },
-			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::MESH_SPRITE_NO_TEXTURE)], "meshsprite_notexture_vs.glsl", "sprite_notexture_fs.glsl", GLShaderProgram::Introspection::Enabled, "MeshSprite_NoTexture" },
-			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::TEXTNODE_ALPHA)], "textnode_vs.glsl", "textnode_alpha_fs.glsl", GLShaderProgram::Introspection::Enabled, "TextNode_Alpha" },
-			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::TEXTNODE_RED)], "textnode_vs.glsl", "textnode_red_fs.glsl", GLShaderProgram::Introspection::Enabled, "TextNode_Red" },
-			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_SPRITES)], "batched_sprites_vs.glsl", "sprite_fs.glsl", GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites" },
-			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_SPRITES_GRAY)], "batched_sprites_vs.glsl", "sprite_gray_fs.glsl", GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_Gray" },
-			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_SPRITES_NO_TEXTURE)], "batched_sprites_notexture_vs.glsl", "sprite_notexture_fs.glsl", GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_NoTexture" },
-			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_MESH_SPRITES)], "batched_meshsprites_vs.glsl", "sprite_fs.glsl", GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites" },
-			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_MESH_SPRITES_GRAY)], "batched_meshsprites_vs.glsl", "sprite_gray_fs.glsl", GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_Gray" },
-			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_MESH_SPRITES_NO_TEXTURE)], "batched_meshsprites_notexture_vs.glsl", "sprite_notexture_fs.glsl", GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_NoTexture" },
-			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_TEXTNODES_ALPHA)], "batched_textnodes_vs.glsl", "textnode_alpha_fs.glsl", GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Alpha" },
-			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_TEXTNODES_RED)], "batched_textnodes_vs.glsl", "textnode_red_fs.glsl", GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Red" }
-#else
-			// Skipping the initial new line character of the raw string literal
+#if defined(WITH_EMBEDDED_SHADERS)
+						// Skipping the initial new line character of the raw string literal
 			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE)], ShaderStrings::sprite_vs + 1, ShaderStrings::sprite_fs + 1, GLShaderProgram::Introspection::Enabled, "Sprite" },
 			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE_GRAY)], ShaderStrings::sprite_vs + 1, ShaderStrings::sprite_gray_fs + 1, GLShaderProgram::Introspection::Enabled, "Sprite_Gray" },
 			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE_NO_TEXTURE)], ShaderStrings::sprite_notexture_vs + 1, ShaderStrings::sprite_notexture_fs + 1, GLShaderProgram::Introspection::Enabled, "Sprite_NoTexture" },
@@ -257,6 +235,23 @@ namespace nCine
 			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_MESH_SPRITES_NO_TEXTURE)], ShaderStrings::batched_meshsprites_notexture_vs + 1, ShaderStrings::sprite_notexture_fs + 1, GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_NoTexture" },
 			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_TEXTNODES_ALPHA)], ShaderStrings::batched_textnodes_vs + 1, ShaderStrings::textnode_alpha_fs + 1, GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Alpha" },
 			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_TEXTNODES_RED)], ShaderStrings::batched_textnodes_vs + 1, ShaderStrings::textnode_red_fs + 1, GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Red" }
+#else
+			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE)], "sprite_vs.glsl", "sprite_fs.glsl", GLShaderProgram::Introspection::Enabled, "Sprite" },
+			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE_GRAY)], "sprite_vs.glsl", "sprite_gray_fs.glsl", GLShaderProgram::Introspection::Enabled, "Sprite_Gray" },
+			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::SPRITE_NO_TEXTURE)], "sprite_notexture_vs.glsl", "sprite_notexture_fs.glsl", GLShaderProgram::Introspection::Enabled, "Sprite_NoTexture" },
+			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::MESH_SPRITE)], "meshsprite_vs.glsl", "sprite_fs.glsl", GLShaderProgram::Introspection::Enabled, "MeshSprite" },
+			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::MESH_SPRITE_GRAY)], "meshsprite_vs.glsl", "sprite_gray_fs.glsl", GLShaderProgram::Introspection::Enabled, "MeshSprite_Gray" },
+			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::MESH_SPRITE_NO_TEXTURE)], "meshsprite_notexture_vs.glsl", "sprite_notexture_fs.glsl", GLShaderProgram::Introspection::Enabled, "MeshSprite_NoTexture" },
+			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::TEXTNODE_ALPHA)], "textnode_vs.glsl", "textnode_alpha_fs.glsl", GLShaderProgram::Introspection::Enabled, "TextNode_Alpha" },
+			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::TEXTNODE_RED)], "textnode_vs.glsl", "textnode_red_fs.glsl", GLShaderProgram::Introspection::Enabled, "TextNode_Red" },
+			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_SPRITES)], "batched_sprites_vs.glsl", "sprite_fs.glsl", GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites" },
+			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_SPRITES_GRAY)], "batched_sprites_vs.glsl", "sprite_gray_fs.glsl", GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_Gray" },
+			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_SPRITES_NO_TEXTURE)], "batched_sprites_notexture_vs.glsl", "sprite_notexture_fs.glsl", GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_NoTexture" },
+			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_MESH_SPRITES)], "batched_meshsprites_vs.glsl", "sprite_fs.glsl", GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites" },
+			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_MESH_SPRITES_GRAY)], "batched_meshsprites_vs.glsl", "sprite_gray_fs.glsl", GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_Gray" },
+			{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_MESH_SPRITES_NO_TEXTURE)], "batched_meshsprites_notexture_vs.glsl", "sprite_notexture_fs.glsl", GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_NoTexture" },
+			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_TEXTNODES_ALPHA)], "batched_textnodes_vs.glsl", "textnode_alpha_fs.glsl", GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Alpha" },
+			//{ RenderResources::defaultShaderPrograms_[static_cast<int>(Material::ShaderProgramType::BATCHED_TEXTNODES_RED)], "batched_textnodes_vs.glsl", "textnode_red_fs.glsl", GLShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Red" }
 #endif
 		};
 
@@ -270,8 +265,16 @@ namespace nCine
 		for (unsigned int i = 0; i < countof(shadersToLoad); i++) {
 			const ShaderLoad& shaderToLoad = shadersToLoad[i];
 
+#if defined(WITH_EMBEDDED_SHADERS)
+			constexpr uint64_t shaderVersion = EmbeddedShadersVersion;
+#else
+			String vertexPath = fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.vertexShader) });
+			String fragmentPath = fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.fragmentShader) });
+			uint64_t shaderVersion = std::max(fs::LastModificationTime(vertexPath).Ticks, fs::LastModificationTime(fragmentPath).Ticks);
+#endif
+
 			shaderToLoad.shaderProgram = std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate);
-			if (RenderResources::binaryShaderCache().loadFromCache(shaderToLoad.objectLabel, DefaultShadersVersion, shaderToLoad.shaderProgram.get(), shaderToLoad.introspection)) {
+			if (binaryShaderCache_->loadFromCache(shaderToLoad.objectLabel, shaderVersion, shaderToLoad.shaderProgram.get(), shaderToLoad.introspection)) {
 				// Shader is already compiled
 				continue;
 			}
@@ -297,8 +300,8 @@ namespace nCine
 			const bool vertexCompiled = shaderToLoad.shaderProgram->attachShaderFromStrings(GL_VERTEX_SHADER, vertexStrings);
 			const bool fragmentCompiled = shaderToLoad.shaderProgram->attachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);
 #else
-			const bool vertexCompiled = shaderToLoad.shaderProgram->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.vertexShader) }).data());
-			const bool fragmentCompiled = shaderToLoad.shaderProgram->attachShaderFromFile(GL_FRAGMENT_SHADER, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.fragmentShader) }).data());
+			const bool vertexCompiled = shaderToLoad.shaderProgram->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, vertexPath);
+			const bool fragmentCompiled = shaderToLoad.shaderProgram->attachShaderFromFile(GL_FRAGMENT_SHADER, fragmentPath);
 #endif
 			ASSERT(vertexCompiled);
 			ASSERT(fragmentCompiled);
@@ -325,8 +328,8 @@ namespace nCine
 					const bool vertexCompiled2 = shaderToLoad.shaderProgram->attachShaderFromStrings(GL_VERTEX_SHADER, vertexStrings);
 					const bool fragmentCompiled2 = shaderToLoad.shaderProgram->attachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);
 #else
-					const bool vertexCompiled2 = shaderToLoad.shaderProgram->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.vertexShader) }).data());
-					const bool fragmentCompiled2 = shaderToLoad.shaderProgram->attachShaderFromFile(GL_FRAGMENT_SHADER, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.fragmentShader) }).data());
+					const bool vertexCompiled2 = shaderToLoad.shaderProgram->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, vertexPath);
+					const bool fragmentCompiled2 = shaderToLoad.shaderProgram->attachShaderFromFile(GL_FRAGMENT_SHADER, fragmentPath);
 #endif
 					ASSERT(vertexCompiled2);
 					ASSERT(fragmentCompiled2);
@@ -336,7 +339,7 @@ namespace nCine
 				}
 			}
 
-			RenderResources::binaryShaderCache().saveToCache(shaderToLoad.objectLabel, DefaultShadersVersion, shaderToLoad.shaderProgram.get());
+			binaryShaderCache_->saveToCache(shaderToLoad.objectLabel, shaderVersion, shaderToLoad.shaderProgram.get());
 		}
 
 		registerDefaultBatchedShaders();
@@ -345,8 +348,6 @@ namespace nCine
 		int width = theApplication().width();
 		int height = theApplication().height();
 		defaultCamera_->setOrthoProjection(width * (-0.5f), width * (+0.5f), height * (+0.5f), height * (-0.5f));
-
-		LOGI("Rendering resources created");
 	}
 
 	void RenderResources::dispose()

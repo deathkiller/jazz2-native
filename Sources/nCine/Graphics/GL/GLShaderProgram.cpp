@@ -1,6 +1,7 @@
 #include "GLShaderProgram.h"
 #include "GLShader.h"
 #include "GLDebug.h"
+#include "../BinaryShaderCache.h"
 #include "../RenderResources.h"
 #include "../RenderVaoPool.h"
 #include "../IGfxCapabilities.h"

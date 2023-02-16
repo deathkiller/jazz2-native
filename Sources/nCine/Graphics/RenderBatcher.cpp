@@ -52,7 +52,7 @@ namespace nCine
 
 			// Should split if material sort key (that takes into account shader program, textures and blending) or primitive type differs
 			// GL_LINE_STRIP is split always, because it cannot be batched
-			const bool shouldSplit = command->lowerMaterialSortKey() != prevCommand->lowerMaterialSortKey() || prevPrimitive != primitive || primitive == GL_LINE_STRIP;
+			const bool shouldSplit = (command->lowerMaterialSortKey() != prevCommand->lowerMaterialSortKey() || prevPrimitive != primitive || primitive == GL_LINE_STRIP);
 
 			// Also collect the very last command if it can be batched with the previous one
 			unsigned int endSplit = (i == srcQueue.size() - 1 && !shouldSplit ? i + 1 : i);
@@ -63,10 +63,16 @@ namespace nCine
 				if (batchedShader && (endSplit - lastSplit) >= minBatchSize) {
 					// Split point for the maximum batch size
 					while (lastSplit < endSplit) {
+						unsigned int currentMaxBatchSize = maxBatchSize;
+						const int shaderBatchSize = batchedShader->batchSize();
+						if (shaderBatchSize > 0 && currentMaxBatchSize > shaderBatchSize) {
+							currentMaxBatchSize = shaderBatchSize;
+						}
+
 						const unsigned int batchSize = endSplit - lastSplit;
 						unsigned int nextSplit = endSplit;
-						if (batchSize > maxBatchSize) {
-							nextSplit = lastSplit + maxBatchSize;
+						if (batchSize > currentMaxBatchSize) {
+							nextSplit = lastSplit + currentMaxBatchSize;
 						} else if (batchSize < minBatchSize) {
 							break;
 						}
