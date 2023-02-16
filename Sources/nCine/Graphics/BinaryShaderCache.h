@@ -1,8 +1,5 @@
 #pragma once
 
-#define NCINE_INCLUDE_OPENGL
-#include "../CommonHeaders.h"
-
 #include "GL/GLShaderProgram.h"
 
 #include <Containers/String.h>
@@ -12,17 +9,6 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	struct BinaryShaderEntry
-	{
-		uint64_t ShaderVersion;
-		GLShaderProgram* Program;
-
-		int32_t BatchSize;
-		uint32_t BinaryFormat;
-		int32_t BufferLength;
-		const uint8_t* Buffer;
-	};
-
 	/// The class that manages the cache of binary OpenGL shader programs
 	class BinaryShaderCache
 	{
@@ -54,11 +40,9 @@ namespace nCine
 		/// Sets a new directory as the cache for binary shaders
 		bool setPath(const StringView& path);
 
-
-
 	private:
-		using glGetProgramBinary_t = void(GLuint program, GLsizei bufSize, GLsizei* length, GLenum* binaryFormat, void* binary);
-		using glProgramBinary_t = void(GLuint program, GLenum binaryFormat, const void* binary, GLsizei length);
+		using glGetProgramBinary_t = void(__stdcall*)(GLuint program, GLsizei bufSize, GLsizei* length, GLenum* binaryFormat, void* binary);
+		using glProgramBinary_t = void(__stdcall*)(GLuint program, GLenum binaryFormat, const void* binary, GLsizei length);
 
 		/// A flag that indicates if the OpenGL context supports binary shaders and the cache is available
 		bool isAvailable_;
@@ -69,8 +53,9 @@ namespace nCine
 		/// The cache directory containing the binary shaders
 		String path_;
 
-		glGetProgramBinary_t* _glGetProgramBinary;
-		glProgramBinary_t* _glProgramBinary;
+		glGetProgramBinary_t _glGetProgramBinary;
+		glProgramBinary_t _glProgramBinary;
+		GLenum _glProgramBinaryLength;
 
 		static std::size_t base64Decode(const StringView& src, uint8_t* dst, std::size_t dstLength);
 		static std::size_t base64Encode(const uint8_t* src, std::size_t srcLength, char* dst, std::size_t dstLength);
