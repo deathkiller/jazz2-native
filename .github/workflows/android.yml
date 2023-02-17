@@ -39,7 +39,7 @@ jobs:
           ARM ) architecture="arm64-v8a;armeabi-v7a"
                 universalApk="ON" ;;
           x64 ) architecture="x86_64"
-                   universalApk="OFF" ;;
+                universalApk="OFF" ;;
           * ) exit 1 ;;
         esac
         
