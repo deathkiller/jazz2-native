@@ -179,9 +179,7 @@ elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	find_package(OpenGL REQUIRED)
 	if(NCINE_ARM_PROCESSOR)
 		include(check_atomic)
-		if(NOT APPLE)
-			find_package(OpenGLES2)
-		endif()
+		find_package(OpenGLES2)
 	endif()
 	# Look for both GLFW and SDL2 to make the fallback logic work
 	find_package(GLFW)

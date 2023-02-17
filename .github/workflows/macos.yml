@@ -52,7 +52,7 @@ jobs:
 
     - name: 'Build'
       run: |
-        make -j $(nproc) -C ./_build/
+        make -j 2 -C ./_build/
 
     - name: 'Create Package'
       run: |
