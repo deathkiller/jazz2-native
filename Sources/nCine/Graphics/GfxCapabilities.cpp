@@ -7,6 +7,32 @@
 #include <cstdio> // for sscanf()
 #include <cstring> // for checkGLExtension()
 
+#if defined(DEATH_TARGET_APPLE)
+#	pragma message("[Debug] DEATH_TARGET_APPLE is ON")
+#else
+#	pragma message("[Debug] DEATH_TARGET_APPLE is OFF")
+#endif
+#if defined(DEATH_TARGET_ARM)
+#	pragma message("[Debug] DEATH_TARGET_ARM is ON")
+#else
+#	pragma message("[Debug] DEATH_TARGET_ARM is OFF")
+#endif
+#if defined(WITH_OPENGLES)
+#	pragma message("[Debug] WITH_OPENGLES is ON")
+#else
+#	pragma message("[Debug] WITH_OPENGLES is OFF")
+#endif
+#if defined(GL_ES_VERSION_3_0)
+#	pragma message("[Debug] GL_ES_VERSION_3_0 is ON")
+#else
+#	pragma message("[Debug] GL_ES_VERSION_3_0 is OFF")
+#endif
+#if defined(GL_ES_VERSION_3_1)
+#	pragma message("[Debug] GL_ES_VERSION_3_1 is ON")
+#else
+#	pragma message("[Debug] GL_ES_VERSION_3_1 is OFF")
+#endif
+
 namespace nCine
 {
 	GfxCapabilities::GfxCapabilities()
@@ -92,7 +118,7 @@ namespace nCine
 		glGetIntegerv(GL_MAX_VERTEX_UNIFORM_BLOCKS, &glIntValues_[(int)GLIntValues::MAX_VERTEX_UNIFORM_BLOCKS]);
 		glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &glIntValues_[(int)GLIntValues::MAX_FRAGMENT_UNIFORM_BLOCKS]);
 		glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &glIntValues_[(int)GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT]);
-#if !defined(DEATH_TARGET_EMSCRIPTEN) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_1))
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM)) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_1))
 		glGetIntegerv(GL_MAX_VERTEX_ATTRIB_STRIDE, &glIntValues_[(int)GLIntValues::MAX_VERTEX_ATTRIB_STRIDE]);
 #endif
 		glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &glIntValues_[(int)GLIntValues::MAX_COLOR_ATTACHMENTS]);
@@ -167,7 +193,7 @@ namespace nCine
 		LOGI_X("GL_MAX_VERTEX_UNIFORM_BLOCKS: %d", glIntValues_[(int)GLIntValues::MAX_VERTEX_UNIFORM_BLOCKS]);
 		LOGI_X("GL_MAX_FRAGMENT_UNIFORM_BLOCKS: %d", glIntValues_[(int)GLIntValues::MAX_FRAGMENT_UNIFORM_BLOCKS]);
 		LOGI_X("GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT: %d", glIntValues_[(int)GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT]);
-#if !defined(DEATH_TARGET_EMSCRIPTEN) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_1))
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM)) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_1))
 		LOGI_X("GL_MAX_VERTEX_ATTRIB_STRIDE: %d", glIntValues_[(int)GLIntValues::MAX_VERTEX_ATTRIB_STRIDE]);
 #endif
 		LOGI_X("GL_MAX_COLOR_ATTACHMENTS: %d", glIntValues_[(int)GLIntValues::MAX_COLOR_ATTACHMENTS]);
