@@ -436,11 +436,13 @@ namespace nCine
 			}
 		}
 
+#if !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
 		if (type_ == Type::WithTexture && depthStencilFormat_ != DepthStencilFormat::None &&
 			!theApplication().appConfiguration().withGlDebugContext) {
 			const GLenum invalidAttachment = depthStencilFormatToGLAttachment(depthStencilFormat_);
 			fbo_->invalidate(1, &invalidAttachment);
 		}
+#endif
 
 		if (clearMode_ == ClearMode::ThisFrameOnly) {
 			clearMode_ = ClearMode::Never;

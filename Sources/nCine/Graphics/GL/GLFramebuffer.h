@@ -44,7 +44,9 @@ namespace nCine
 
 		void attachTexture(GLTexture& texture, GLenum attachment);
 		void detachTexture(GLenum attachment);
+#if !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
 		void invalidate(GLsizei numAttachments, const GLenum* attachments);
+#endif
 
 		bool isStatusComplete();
 
