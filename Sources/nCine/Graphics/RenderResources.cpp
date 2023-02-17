@@ -11,6 +11,7 @@
 #include "../../Common.h"
 
 #include <cstddef>	// for `offsetof()`
+#include <cstring>
 
 #if defined(WITH_EMBEDDED_SHADERS)
 #	include "shader_strings.h"
@@ -23,6 +24,15 @@ namespace nCine
 	namespace
 	{
 		constexpr char BatchSizeFormatString[] = "#define BATCH_SIZE (%d)\n#line 0\n";
+
+		struct ShaderLoad
+		{
+			std::unique_ptr<GLShaderProgram>& shaderProgram;
+			const char* vertexShader;
+			const char* fragmentShader;
+			GLShaderProgram::Introspection introspection;
+			const char* shaderName;
+		};
 	}
 
 	std::unique_ptr<BinaryShaderCache> RenderResources::binaryShaderCache_;
@@ -48,12 +58,8 @@ namespace nCine
 
 	GLShaderProgram* RenderResources::batchedShader(const GLShaderProgram* shader)
 	{
-		GLShaderProgram* batchedShader = nullptr;
 		auto it = batchedShaders_.find(shader);
-		if (it != batchedShaders_.end()) {
-			batchedShader = it->second;
-		}
-		return batchedShader;
+		return (it != batchedShaders_.end() ? it->second : nullptr);
 	}
 
 	bool RenderResources::registerBatchedShader(const GLShaderProgram* shader, GLShaderProgram* batchedShader)
@@ -89,63 +95,49 @@ namespace nCine
 
 	bool RenderResources::removeCameraUniformData(GLShaderProgram* shaderProgram)
 	{
-		bool hasRemoved = false;
-		if (!cameraUniformDataMap_.empty()) {
-			hasRemoved = cameraUniformDataMap_.erase(shaderProgram);
-		}
-		return hasRemoved;
+		return cameraUniformDataMap_.erase(shaderProgram);
 	}
 
 	void RenderResources::setDefaultAttributesParameters(GLShaderProgram& shaderProgram)
 	{
-		if (shaderProgram.numAttributes() > 0) {
-			GLVertexFormat::Attribute* positionAttribute = shaderProgram.attribute(Material::PositionAttributeName);
-			GLVertexFormat::Attribute* texCoordsAttribute = shaderProgram.attribute(Material::TexCoordsAttributeName);
-			GLVertexFormat::Attribute* meshIndexAttribute = shaderProgram.attribute(Material::MeshIndexAttributeName);
+		if (shaderProgram.numAttributes() <= 0) {
+			return;
+		}
 
-			// The stride check avoid overwriting VBO parameters for custom mesh shaders attributes
-			if (positionAttribute != nullptr && texCoordsAttribute != nullptr && meshIndexAttribute != nullptr) {
-				if (positionAttribute->stride() == 0) {
-					positionAttribute->setVboParameters(sizeof(VertexFormatPos2Tex2Index), reinterpret_cast<void*>(offsetof(VertexFormatPos2Tex2Index, position)));
-				}
-				if (texCoordsAttribute->stride() == 0) {
-					texCoordsAttribute->setVboParameters(sizeof(VertexFormatPos2Tex2Index), reinterpret_cast<void*>(offsetof(VertexFormatPos2Tex2Index, texcoords)));
-				}
-				if (meshIndexAttribute->stride() == 0) {
-					meshIndexAttribute->setVboParameters(sizeof(VertexFormatPos2Tex2Index), reinterpret_cast<void*>(offsetof(VertexFormatPos2Tex2Index, drawindex)));
-				}
-			} else if (positionAttribute != nullptr && texCoordsAttribute == nullptr && meshIndexAttribute != nullptr) {
-				if (positionAttribute->stride() == 0) {
-					positionAttribute->setVboParameters(sizeof(VertexFormatPos2Index), reinterpret_cast<void*>(offsetof(VertexFormatPos2Index, position)));
-				}
-				if (meshIndexAttribute->stride() == 0) {
-					meshIndexAttribute->setVboParameters(sizeof(VertexFormatPos2Index), reinterpret_cast<void*>(offsetof(VertexFormatPos2Index, drawindex)));
-				}
-			} else if (positionAttribute != nullptr && texCoordsAttribute != nullptr && meshIndexAttribute == nullptr) {
-				if (positionAttribute->stride() == 0) {
-					positionAttribute->setVboParameters(sizeof(VertexFormatPos2Tex2), reinterpret_cast<void*>(offsetof(VertexFormatPos2Tex2, position)));
-				}
-				if (texCoordsAttribute->stride() == 0) {
-					texCoordsAttribute->setVboParameters(sizeof(VertexFormatPos2Tex2), reinterpret_cast<void*>(offsetof(VertexFormatPos2Tex2, texcoords)));
-				}
-			} else if (positionAttribute != nullptr && texCoordsAttribute == nullptr && meshIndexAttribute == nullptr) {
-				if (positionAttribute->stride() == 0) {
-					positionAttribute->setVboParameters(sizeof(VertexFormatPos2), reinterpret_cast<void*>(offsetof(VertexFormatPos2, position)));
-				}
+		GLVertexFormat::Attribute* positionAttribute = shaderProgram.attribute(Material::PositionAttributeName);
+		GLVertexFormat::Attribute* texCoordsAttribute = shaderProgram.attribute(Material::TexCoordsAttributeName);
+		GLVertexFormat::Attribute* meshIndexAttribute = shaderProgram.attribute(Material::MeshIndexAttributeName);
+
+		// The stride check avoid overwriting VBO parameters for custom mesh shaders attributes
+		if (positionAttribute != nullptr && texCoordsAttribute != nullptr && meshIndexAttribute != nullptr) {
+			if (positionAttribute->stride() == 0) {
+				positionAttribute->setVboParameters(sizeof(VertexFormatPos2Tex2Index), reinterpret_cast<void*>(offsetof(VertexFormatPos2Tex2Index, position)));
+			}
+			if (texCoordsAttribute->stride() == 0) {
+				texCoordsAttribute->setVboParameters(sizeof(VertexFormatPos2Tex2Index), reinterpret_cast<void*>(offsetof(VertexFormatPos2Tex2Index, texcoords)));
+			}
+			if (meshIndexAttribute->stride() == 0) {
+				meshIndexAttribute->setVboParameters(sizeof(VertexFormatPos2Tex2Index), reinterpret_cast<void*>(offsetof(VertexFormatPos2Tex2Index, drawindex)));
+			}
+		} else if (positionAttribute != nullptr && texCoordsAttribute == nullptr && meshIndexAttribute != nullptr) {
+			if (positionAttribute->stride() == 0) {
+				positionAttribute->setVboParameters(sizeof(VertexFormatPos2Index), reinterpret_cast<void*>(offsetof(VertexFormatPos2Index, position)));
+			}
+			if (meshIndexAttribute->stride() == 0) {
+				meshIndexAttribute->setVboParameters(sizeof(VertexFormatPos2Index), reinterpret_cast<void*>(offsetof(VertexFormatPos2Index, drawindex)));
+			}
+		} else if (positionAttribute != nullptr && texCoordsAttribute != nullptr && meshIndexAttribute == nullptr) {
+			if (positionAttribute->stride() == 0) {
+				positionAttribute->setVboParameters(sizeof(VertexFormatPos2Tex2), reinterpret_cast<void*>(offsetof(VertexFormatPos2Tex2, position)));
+			}
+			if (texCoordsAttribute->stride() == 0) {
+				texCoordsAttribute->setVboParameters(sizeof(VertexFormatPos2Tex2), reinterpret_cast<void*>(offsetof(VertexFormatPos2Tex2, texcoords)));
+			}
+		} else if (positionAttribute != nullptr && texCoordsAttribute == nullptr && meshIndexAttribute == nullptr) {
+			if (positionAttribute->stride() == 0) {
+				positionAttribute->setVboParameters(sizeof(VertexFormatPos2), reinterpret_cast<void*>(offsetof(VertexFormatPos2, position)));
 			}
 		}
-	}
-
-	namespace
-	{
-		struct ShaderLoad
-		{
-			std::unique_ptr<GLShaderProgram>& shaderProgram;
-			const char* vertexShader;
-			const char* fragmentShader;
-			GLShaderProgram::Introspection introspection;
-			const char* objectLabel;
-		};
 	}
 
 	void RenderResources::setCurrentCamera(Camera* camera)
@@ -156,8 +148,8 @@ namespace nCine
 	void RenderResources::updateCameraUniforms()
 	{
 		// The buffer is shared among every shader program. There is no need to call `setFloatVector()` as `setDirty()` is enough.
-		memcpy(cameraUniformsBuffer_, currentCamera_->projection().Data(), 64);
-		memcpy(cameraUniformsBuffer_ + 64, currentCamera_->view().Data(), 64);
+		std::memcpy(cameraUniformsBuffer_, currentCamera_->projection().Data(), 64);
+		std::memcpy(cameraUniformsBuffer_ + 64, currentCamera_->view().Data(), 64);
 		for (auto i = cameraUniformDataMap_.begin(); i != cameraUniformDataMap_.end(); ++i) {
 			CameraUniformData& cameraUniformData = i->second;
 
@@ -274,29 +266,41 @@ namespace nCine
 #endif
 
 			shaderToLoad.shaderProgram = std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate);
-			if (binaryShaderCache_->loadFromCache(shaderToLoad.objectLabel, shaderVersion, shaderToLoad.shaderProgram.get(), shaderToLoad.introspection)) {
-				// Shader is already compiled
+			if (binaryShaderCache_->loadFromCache(shaderToLoad.shaderName, shaderVersion, shaderToLoad.shaderProgram.get(), shaderToLoad.introspection)) {
+				// Shader is already compiled and up-to-date
 				continue;
 			}
 
 			// If the UBO is smaller than 64kb and fixed batch size is disabled, batched shaders need to be compiled twice to determine safe `BATCH_SIZE` define value
-			const bool compileTwice = (maxUniformBlockSize < 64 * 1024 && appCfg.fixedBatchSize <= 0 && shaderToLoad.introspection == GLShaderProgram::Introspection::NoUniformsInBlocks);
+			bool compileTwice = false;
 
 			vertexStrings[0] = nullptr;
 			vertexStrings[1] = nullptr;
 			if (appCfg.fixedBatchSize > 0 && shaderToLoad.introspection == GLShaderProgram::Introspection::NoUniformsInBlocks) {
+				// If fixed batch size is used, it's compiled only once with specified batch size
+				shaderToLoad.shaderProgram->setBatchSize(appCfg.fixedBatchSize);
+
 				formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, appCfg.fixedBatchSize);
 				vertexStrings[0] = sourceString;
-			} else if (compileTwice) {
+#if defined(WITH_EMBEDDED_SHADERS)
+				vertexStrings[1] = shaderToLoad.vertexShader;
+#endif
+			} else if (shaderToLoad.introspection == GLShaderProgram::Introspection::NoUniformsInBlocks && maxUniformBlockSize < 64 * 1024) {
+				compileTwice = true;
+
 				// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
 				formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, 1);
 				vertexStrings[0] = sourceString;
+#if defined(WITH_EMBEDDED_SHADERS)
+				vertexStrings[1] = shaderToLoad.vertexShader;
+#endif
+			} else {
+#if defined(WITH_EMBEDDED_SHADERS)
+				vertexStrings[0] = shaderToLoad.vertexShader;
+#endif
 			}
 			
 #if defined(WITH_EMBEDDED_SHADERS)
-			// The vertex shader source string can be either the first one or the second one, if the first defines the `BATCH_SIZE`
-			vertexStrings[compileTwice ? 1 : 0] = shaderToLoad.vertexShader;
-
 			const bool vertexCompiled = shaderToLoad.shaderProgram->attachShaderFromStrings(GL_VERTEX_SHADER, vertexStrings);
 			const bool fragmentCompiled = shaderToLoad.shaderProgram->attachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);
 #else
@@ -306,47 +310,49 @@ namespace nCine
 			ASSERT(vertexCompiled);
 			ASSERT(fragmentCompiled);
 			
-			shaderToLoad.shaderProgram->setObjectLabel(shaderToLoad.objectLabel);
-			// The first compilation of a batched shader needs the introspection
-			const bool hasLinked = shaderToLoad.shaderProgram->link(compileTwice ? GLShaderProgram::Introspection::Enabled : shaderToLoad.introspection);
-			FATAL_ASSERT(hasLinked);
+			shaderToLoad.shaderProgram->setObjectLabel(shaderToLoad.shaderName);
 
 			if (compileTwice) {
+				const bool hasLinked = shaderToLoad.shaderProgram->link(GLShaderProgram::Introspection::Enabled);
+				FATAL_ASSERT(hasLinked);
+
 				GLShaderUniformBlocks blocks(shaderToLoad.shaderProgram.get(), Material::InstancesBlockName, nullptr);
 				GLUniformBlockCache* block = blocks.uniformBlock(Material::InstancesBlockName);
-				ASSERT(block != nullptr);
 				if (block != nullptr) {
 					const int size = block->size() - block->alignAmount();
 					const int batchSize = maxUniformBlockSize / size;
-					LOGD_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderToLoad.objectLabel, size, block->alignAmount(), batchSize);
+					LOGD_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderToLoad.shaderName, size, block->alignAmount(), batchSize);
 
 					shaderToLoad.shaderProgram->reset();
 					shaderToLoad.shaderProgram->setBatchSize(batchSize);
 					formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, batchSize);
 
 #if defined(WITH_EMBEDDED_SHADERS)
-					const bool vertexCompiled2 = shaderToLoad.shaderProgram->attachShaderFromStrings(GL_VERTEX_SHADER, vertexStrings);
-					const bool fragmentCompiled2 = shaderToLoad.shaderProgram->attachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);
+					const bool vertexFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromStrings(GL_VERTEX_SHADER, vertexStrings);
+					const bool fragmentFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);
 #else
-					const bool vertexCompiled2 = shaderToLoad.shaderProgram->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, vertexPath);
-					const bool fragmentCompiled2 = shaderToLoad.shaderProgram->attachShaderFromFile(GL_FRAGMENT_SHADER, fragmentPath);
+					const bool vertexFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, vertexPath);
+					const bool fragmentFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromFile(GL_FRAGMENT_SHADER, fragmentPath);
 #endif
-					ASSERT(vertexCompiled2);
-					ASSERT(fragmentCompiled2);
+					ASSERT(vertexFinalCompiled);
+					ASSERT(fragmentFinalCompiled);
 
-					const bool hasLinked2 = shaderToLoad.shaderProgram->link(shaderToLoad.introspection);
-					FATAL_ASSERT(hasLinked2);
+					const bool hasLinkedFinal = shaderToLoad.shaderProgram->link(shaderToLoad.introspection);
+					FATAL_ASSERT(hasLinkedFinal);
 				}
+			} else {
+				const bool hasLinked = shaderToLoad.shaderProgram->link(shaderToLoad.introspection);
+				FATAL_ASSERT(hasLinked);
 			}
 
-			binaryShaderCache_->saveToCache(shaderToLoad.objectLabel, shaderVersion, shaderToLoad.shaderProgram.get());
+			binaryShaderCache_->saveToCache(shaderToLoad.shaderName, shaderVersion, shaderToLoad.shaderProgram.get());
 		}
 
 		registerDefaultBatchedShaders();
 
 		// Calculating a default projection matrix for all shader programs
-		int width = theApplication().width();
-		int height = theApplication().height();
+		const int width = theApplication().width();
+		const int height = theApplication().height();
 		defaultCamera_->setOrthoProjection(width * (-0.5f), width * (+0.5f), height * (+0.5f), height * (-0.5f));
 	}
 
