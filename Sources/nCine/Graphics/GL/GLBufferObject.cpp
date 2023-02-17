@@ -67,7 +67,7 @@ namespace nCine
 		GL_LOG_ERRORS();
 	}
 
-#if !defined(WITH_OPENGLES)
+#if !defined(WITH_OPENGLES) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
 	void GLBufferObject::bufferStorage(GLsizeiptr size, const GLvoid* data, GLbitfield flags)
 	{
 		TracyGpuZone("glBufferStorage");

@@ -26,7 +26,7 @@ namespace nCine
 
 		void bufferData(GLsizeiptr size, const GLvoid* data, GLenum usage);
 		void bufferSubData(GLintptr offset, GLsizeiptr size, const GLvoid* data);
-#if !defined(WITH_OPENGLES)
+#if !defined(WITH_OPENGLES) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
 		void bufferStorage(GLsizeiptr size, const GLvoid* data, GLbitfield flags);
 #endif
 
