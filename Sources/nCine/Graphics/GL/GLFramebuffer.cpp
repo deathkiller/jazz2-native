@@ -115,12 +115,14 @@ namespace nCine
 		GL_LOG_ERRORS();
 	}
 
+#if !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
 	void GLFramebuffer::invalidate(GLsizei numAttachments, const GLenum* attachments)
 	{
 		bind(GL_FRAMEBUFFER);
 		glInvalidateFramebuffer(GL_FRAMEBUFFER, numAttachments, attachments);
 		GL_LOG_ERRORS();
 	}
+#endif
 
 	bool GLFramebuffer::isStatusComplete()
 	{

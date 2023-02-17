@@ -7,32 +7,6 @@
 #include <cstdio> // for sscanf()
 #include <cstring> // for checkGLExtension()
 
-#if defined(DEATH_TARGET_APPLE)
-#	pragma message("[Debug] DEATH_TARGET_APPLE is ON")
-#else
-#	pragma message("[Debug] DEATH_TARGET_APPLE is OFF")
-#endif
-#if defined(DEATH_TARGET_ARM)
-#	pragma message("[Debug] DEATH_TARGET_ARM is ON")
-#else
-#	pragma message("[Debug] DEATH_TARGET_ARM is OFF")
-#endif
-#if defined(WITH_OPENGLES)
-#	pragma message("[Debug] WITH_OPENGLES is ON")
-#else
-#	pragma message("[Debug] WITH_OPENGLES is OFF")
-#endif
-#if defined(GL_ES_VERSION_3_0)
-#	pragma message("[Debug] GL_ES_VERSION_3_0 is ON")
-#else
-#	pragma message("[Debug] GL_ES_VERSION_3_0 is OFF")
-#endif
-#if defined(GL_ES_VERSION_3_1)
-#	pragma message("[Debug] GL_ES_VERSION_3_1 is ON")
-#else
-#	pragma message("[Debug] GL_ES_VERSION_3_1 is OFF")
-#endif
-
 namespace nCine
 {
 	GfxCapabilities::GfxCapabilities()
