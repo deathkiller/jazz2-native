@@ -8,18 +8,49 @@
 # - Try to find OpenGLES and EGL
 # Once done this will define
 #
-#  OPENGLES2_FOUND        - system has OpenGLES
-#  OPENGLES2_INCLUDE_DIR  - the GL include directory
-#  OPENGLES2_LIBRARIES    - Link these to use OpenGLES
+#	OPENGLES2_FOUND				- system has OpenGLES
+#	OPENGLES2_INCLUDE_DIR	- the GL include directory
+#	OPENGLES2_LIBRARIES		- Link these to use OpenGLES
 #
-#  EGL_FOUND        - system has EGL
-#  EGL_INCLUDE_DIR  - the EGL include directory
-#  EGL_LIBRARIES    - Link these to use EGL
+#	EGL_FOUND				- system has EGL
+#	EGL_INCLUDE_DIR	- the EGL include directory
+#	EGL_LIBRARIES		- Link these to use EGL
 
 # Win32, Apple, and Android are not tested!
 # Linux tested and works
 
 set(OPENGLES2_LIBRARIES)
+
+macro(create_search_paths PREFIX)
+	foreach(dir ${${PREFIX}_PREFIX_PATH})
+		set(${PREFIX}_INC_SEARCH_PATH ${${PREFIX}_INC_SEARCH_PATH} ${dir}/include ${dir}/include/${PREFIX} ${dir}/Headers)
+		set(${PREFIX}_LIB_SEARCH_PATH ${${PREFIX}_LIB_SEARCH_PATH} ${dir}/lib ${dir}/lib/${PREFIX} ${dir}/Libs)
+	endforeach()
+	set(${PREFIX}_FRAMEWORK_SEARCH_PATH ${${PREFIX}_PREFIX_PATH})
+endmacro()
+
+macro(findpkg_framework fwk)
+	if(APPLE)
+		set(${fwk}_FRAMEWORK_PATH
+			${${fwk}_FRAMEWORK_SEARCH_PATH}
+			${CMAKE_FRAMEWORK_PATH}
+			~/Library/Frameworks
+			/Library/Frameworks
+			/System/Library/Frameworks
+			/Network/Library/Frameworks
+			/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS3.0.sdk/System/Library/Frameworks/
+		)
+		foreach(dir ${${fwk}_FRAMEWORK_PATH})
+			set(fwkpath ${dir}/${fwk}.framework)
+			if(EXISTS ${fwkpath})
+				set(${fwk}_FRAMEWORK_INCLUDES ${${fwk}_FRAMEWORK_INCLUDES} ${fwkpath}/Headers ${fwkpath}/PrivateHeaders)
+				if(NOT ${fwk}_LIBRARY_FWK)
+					SET(${fwk}_LIBRARY_FWK "-framework ${fwk}")
+				endif()
+			endif()
+		endforeach()
+	endif()
+endmacro()
 
 if(WIN32)
 	if(CYGWIN)
