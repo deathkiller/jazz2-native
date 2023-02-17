@@ -15,9 +15,19 @@ jobs:
       matrix:
         include:
         - BuildType: Release
+          Platform: ARM64
           Backend: GLFW
 
         - BuildType: Release
+          Platform: ARM64
+          Backend: SDL2
+          
+        - BuildType: Release
+          Platform: x64
+          Backend: GLFW
+
+        - BuildType: Release
+          Platform: x64
           Backend: SDL2
 
     runs-on: 'macos-latest'
@@ -30,9 +40,15 @@ jobs:
 
     - name: 'Configure CMake'
       run: |
+        case "${{ matrix.Platform }}" in
+          ARM64 ) architecture="arm64" ;;
+          x64 ) architecture="x86_64" ;;
+          * ) exit 1 ;;
+        esac
+        
         rm -f ./Content/Translations/*.po
         
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }}
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D CMAKE_OSX_ARCHITECTURES="$architecture" -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }}
 
     - name: 'Build'
       run: |
@@ -47,5 +63,5 @@ jobs:
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3
       with:
-        name: Jazz2_MacOS_${{ matrix.Backend }}
+        name: Jazz2_MacOS_${{ matrix.Platform }}_${{ matrix.Backend }}
         path: ./_package/
