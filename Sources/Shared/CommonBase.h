@@ -198,6 +198,9 @@
 #	if defined(__BMI__)
 #		define DEATH_TARGET_BMI1
 #	endif
+#	if defined(__BMI2__)
+#		define DEATH_TARGET_BMI2
+#	endif
 
 // There doesn't seem to be any equivalent on MSVC, https://github.com/kimwalisch/libpopcnt assumes POPCNT is on x86 MSVC
 // always, and LZCNT has encoding compatible with BSR so if not available it'll not crash but produce wrong results, sometimes.
@@ -219,6 +222,9 @@
 #		endif
 #		if !defined(DEATH_TARGET_CLANG_CL) || defined(__BMI__)
 #			define DEATH_TARGET_BMI1
+#		endif
+#		if !defined(DEATH_TARGET_CLANG_CL) || defined(__BMI2__)
+#			define DEATH_TARGET_BMI2
 #		endif
 #	endif
 #endif

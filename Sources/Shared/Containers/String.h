@@ -869,7 +869,8 @@ namespace Death::Containers
 		   for the size, which is more than enough in this case.
 
 		   On LE the layout is as follows (bits inside a byte are flipped for
-		   clarity as well):
+		   clarity as well). A useful property of this layout is that the SSO
+		   data are pointer-aligned as well:
 
 			+-------------------------------+---------+
 			|             string            | si | 1G |
@@ -883,7 +884,10 @@ namespace Death::Containers
 			|  8B/4B  |  8B/4B  |  56b/24b  | 6b | 2b |
 			+---------+---------+-----------+---------+
 
-		   On BE it's like this:
+		   On BE it's like this. In this case it's however not possible to
+		   have both the global/SSO bits in the same positions *and* the SSO
+		   data aligned. Having consistent access to the G0/G1 bits made more
+		   sense from the implementation perspective, so that won.
 
 			+---------+-------------------------------+
 			| G1 | si |             string            |

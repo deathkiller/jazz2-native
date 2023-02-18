@@ -28,10 +28,10 @@
 	available with just the @ref DEATH_ENABLE_AVX, @ref DEATH_ENABLE_AVX_F16C,
 	@ref DEATH_ENABLE_AVX_FMA or @ref DEATH_ENABLE_AVX2 function attributes
 	instead of having to specify `-mavx` or `-mavx2` for the whole compilation
-	unit. This however can't reliably be done for `-mlzcnt`, `-mbmi`, `-mf16c` or
-	`-mfma` because then it could not be freely combined with other instruction
-	sets, only used alone. You have to enable these instructions globally in order
-	to use them on GCC 4.8.
+	unit. This however can't reliably be done for `-mlzcnt`, `-mbmi`, `-mbmi2`,
+	`-mf16c` or `-mfma` because then it could not be freely combined with other
+	instruction sets, only used alone. You have to enable these instructions
+	globally in order to use them on GCC 4.8.
 
 	As AVX-512 is supported only since GCC 4.9, which doesn't need this workaround,
 	it's not handled here.
@@ -54,8 +54,8 @@
 // instructions are included below by defining target("avx2") and directly
 // pulling in <avx2intrin.h>, and only doing that on GCC 4.8, as all other
 // compilers have everything already included from the top-level <immintrin.h>.
-// Same then goes for F16C, FMA, LZCNT and BMI1, which all also have such weird
-// interactions when pulled in together.
+// Same then goes for F16C, FMA, LZCNT and BMI1, BMI2, which all also have such
+// weird interactions when pulled in together.
 // 
 // I wonder what impact this has on optimization, but I don't care that much as
 // GCC 4.8 is mainly for backwards compatibility testing now, and not serious

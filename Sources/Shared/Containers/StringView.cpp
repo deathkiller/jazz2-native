@@ -700,7 +700,7 @@ namespace Death::Containers
 		// Calculate size of the resulting string including delimiters
 		const std::size_t delimiterSize = size();
 		std::size_t totalSize = strings.empty() ? 0 : (strings.size() - 1) * delimiterSize;
-		for (const StringView& s : strings) totalSize += s.size();
+		for (const StringView s : strings) totalSize += s.size();
 
 		// Reserve memory for the resulting string
 		String result { NoInit, totalSize };
@@ -708,7 +708,7 @@ namespace Death::Containers
 		// Join strings
 		char* out = result.data();
 		char* const end = out + totalSize;
-		for (const StringView& string : strings) {
+		for (const StringView string : strings) {
 			const std::size_t stringSize = string.size();
 			// Apparently memcpy() can't be called with null pointers, even if size is zero. I call that bullying.
 			if (stringSize) {
@@ -732,7 +732,7 @@ namespace Death::Containers
 		// Calculate size of the resulting string including delimiters
 		const std::size_t delimiterSize = size();
 		std::size_t totalSize = 0;
-		for (const StringView& string : strings) {
+		for (const StringView string : strings) {
 			if (string.empty()) continue;
 			totalSize += string.size() + delimiterSize;
 		}
@@ -744,7 +744,7 @@ namespace Death::Containers
 		// Join strings
 		char* out = result.data();
 		char* const end = out + totalSize;
-		for (const StringView& string : strings) {
+		for (const StringView string : strings) {
 			if (string.empty()) continue;
 
 			const std::size_t stringSize = string.size();

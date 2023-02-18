@@ -324,8 +324,7 @@ namespace Death::Containers
 		static_assert(std::is_trivially_copyable<T>::value && std::is_trivially_copyable<U>::value, "only trivially copyable types can use the allocator cast");
 		/* Unlike arrayInsert() etc, this is not called that often and should be as
 		   checked as possible, so it's not a debug assert */
-		DEATH_ASSERT(array.data() == nullptr ||
-			(array.deleter() == Allocator<T>::deleter && std::is_base_of<ArrayMallocAllocator<T>, Allocator<T>>::value),
+		DEATH_ASSERT(array.deleter() == Allocator<T>::deleter && (std::is_base_of<ArrayMallocAllocator<T>, Allocator<T>>::value),
 			"Containers::arrayAllocatorCast(): the array has to use the ArrayMallocAllocator or a derivative", {});
 		const std::size_t size = array.size() * sizeof(T) / sizeof(U);
 		DEATH_ASSERT(size * sizeof(U) == array.size() * sizeof(T),
