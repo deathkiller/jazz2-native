@@ -102,7 +102,7 @@ extern "C" {
 
 	@m_class{m-block m-warning}
 
-	@par SSE3, SSSE3, SSE4.1/SSE4.2, POPCNT, LZCNT, BMI1, AVX F16C and AVX FMA on MSVC
+	@par SSE3, SSSE3, SSE4.1/SSE4.2, POPCNT, LZCNT, BMI1, BMI2, AVX F16C and AVX FMA on MSVC
 		A special case worth mentioning are SSE3 and newer instructions on Windows.
 		MSVC only provides a very coarse `/arch:SSE2`, `/arch:AVX` and `/arch:AVX2`
 		for either @ref Sse2, @ref Avx or @ref Avx2, but nothing in between. That
@@ -249,8 +249,11 @@ extern "C" {
 	macro instead. There, to avoid a combinatorial explosion of cases to check,
 	you're expected to list the actual extra tags the overloads use.
 
-	On the call side, there's no difference. The created dispatcher function takes
-	@ref Features as well.
+	If some extra instruction sets are always used together (like it is above with
+	@ref Popcnt and @ref Lzcnt), you can reduce the amount of tested combinations
+	by specifying them as a single ORed argument instead.
+	On the call side, there's no difference compared to using just the base
+	instruction sets. The created dispatcher function takes @ref Features as well.
 
 	@section Cpu-usage-automatic-cached-dispatch Automatic cached dispatch
 
@@ -434,6 +437,17 @@ namespace Death::Cpu
 	};
 
 	/**
+		@brief BMI2 tag type
+		Available only on @ref DEATH_TARGET_X86 "x86". See the @ref Cpu namespace
+		and the @ref Bmi2 tag for more information.
+		@see @ref tag(), @ref features()
+	*/
+	struct Bmi2T {
+		// Explicit constructor to avoid ambiguous calls when using { }
+		constexpr explicit Bmi2T(Implementation::InitT) { }
+	};
+
+	/**
 		@brief AVX tag type
 
 		Available only on @ref DEATH_TARGET_X86 "x86". See the @ref Cpu namespace
@@ -540,12 +554,16 @@ namespace Death::Cpu
 		enum: unsigned int { Index = 1 << (2 + Implementation::ExtraTagBitOffset) };
 		static const char* name() { return "Bmi1"; }
 	};
-	template<> struct TypeTraits<AvxF16cT> {
+	template<> struct TypeTraits<Bmi2T> {
 		enum: unsigned int { Index = 1 << (3 + Implementation::ExtraTagBitOffset) };
+		static const char* name() { return "Bmi2"; }
+	};
+	template<> struct TypeTraits<AvxF16cT> {
+		enum: unsigned int { Index = 1 << (4 + Implementation::ExtraTagBitOffset) };
 		static const char* name() { return "AvxF16c"; }
 	};
 	template<> struct TypeTraits<AvxFmaT> {
-		enum: unsigned int { Index = 1 << (4 + Implementation::ExtraTagBitOffset) };
+		enum: unsigned int { Index = 1 << (5 + Implementation::ExtraTagBitOffset) };
 		static const char* name() { return "AvxFma"; }
 	};
 #endif
@@ -697,7 +715,7 @@ namespace Death::Cpu
 		instructions. Available only on @ref DEATH_TARGET_X86 "x86". This instruction
 		set is treated as an *extra*, i.e. is neither a superset of nor implied by any
 		other instruction set. See @ref Cpu-usage-extra for more information.
-		@see @ref Lzcnt, @ref Bmi1, @ref DEATH_TARGET_POPCNT, @ref DEATH_ENABLE_POPCNT
+		@see @ref Lzcnt, @ref Bmi1, @ref Bmi2, @ref DEATH_TARGET_POPCNT, @ref DEATH_ENABLE_POPCNT
 	*/
 	constexpr PopcntT Popcnt { Implementation::Init };
 
@@ -713,7 +731,7 @@ namespace Death::Cpu
 		instruction which has a slightly different behavior. To avoid wrong results if
 		it isn't available, prefer to always detect its presence with
 		@ref runtimeFeatures() instead of a compile-time check.
-		@see @ref Popcnt, @ref Bmi1, @ref DEATH_TARGET_LZCNT, @ref DEATH_ENABLE_LZCNT
+		@see @ref Popcnt, @ref Bmi1, @ref Bmi2, @ref DEATH_TARGET_LZCNT, @ref DEATH_ENABLE_LZCNT
 	*/
 	constexpr LzcntT Lzcnt { Implementation::Init };
 
@@ -730,9 +748,19 @@ namespace Death::Cpu
 		instruction which has a slightly different behavior. To avoid wrong results if
 		it isn't available, prefer to always detect its presence with
 		@ref runtimeFeatures() instead of a compile-time check.
-		@see @ref Popcnt, @ref Lzcnt, @ref DEATH_TARGET_BMI1, @ref DEATH_ENABLE_BMI1
+		@see @ref Popcnt, @ref Lzcnt, @ref Bmi2, @ref DEATH_TARGET_BMI1, @ref DEATH_ENABLE_BMI1
 	*/
 	constexpr Bmi1T Bmi1 { Implementation::Init };
+
+	/**
+		@brief BMI2 tag
+		[BMI2](https://en.wikipedia.org/wiki/X86_Bit_manipulation_instruction_set#BMI2_(Bit_Manipulation_Instruction_Set_2))
+		instructions. Available only on @ref DEATH_TARGET_X86 "x86". This instruction
+		set is treated as an *extra*, i.e. is neither a superset of nor implied by any
+		other instruction set. See @ref Cpu-usage-extra for more information.
+		@see @ref Popcnt, @ref Lzcnt, @ref Bmi1, @ref DEATH_TARGET_BMI2, @ref DEATH_ENABLE_BMI2
+	*/
+	constexpr Bmi2T Bmi2 { Implementation::Init };
 
 	/**
 		@brief AVX tag
@@ -840,7 +868,7 @@ namespace Death::Cpu
 			BaseTagMask = (1 << ExtraTagBitOffset) - 1,
 			ExtraTagMask = 0xffffffffu & ~BaseTagMask,
 #if defined(DEATH_TARGET_X86)
-			ExtraTagCount = 5,
+			ExtraTagCount = 6,
 #else
 			ExtraTagCount = 0,
 #endif
@@ -1047,6 +1075,9 @@ namespace Death::Cpu
 #	if defined(DEATH_TARGET_BMI1)
 		| TypeTraits<Bmi1T>::Index
 #	endif
+#	if defined(DEATH_TARGET_BMI2)
+		| TypeTraits<Bmi2T>::Index
+#	endif
 #	if defined(DEATH_TARGET_AVX_FMA)
 		| TypeTraits<AvxFmaT>::Index
 #	endif
@@ -1111,6 +1142,7 @@ namespace Death::Cpu
 		-   @ref Popcnt if @ref DEATH_TARGET_POPCNT is defined
 		-   @ref Lzcnt if @ref DEATH_TARGET_LZCNT is defined
 		-   @ref Bmi1 if @ref DEATH_TARGET_BMI1 is defined
+		-   @ref Bmi2 if @ref DEATH_TARGET_BMI2 is defined
 		-   @ref AvxFma if @ref DEATH_TARGET_AVX_FMA is defined
 		-   @ref AvxF16c if @ref DEATH_TARGET_AVX_F16C is defined
 
@@ -1429,8 +1461,8 @@ namespace Death::Cpu
 
 		On @ref DEATH_TARGET_X86 "x86" returns a combination of @ref Sse2, @ref Sse3,
 		@ref Ssse3, @ref Sse41, @ref Sse42, @ref Popcnt, @ref Lzcnt, @ref Bmi1,
-		@ref Avx, @ref AvxF16c, @ref AvxFma, @ref Avx2 and @ref Avx512f based on what
-		all @ref DEATH_TARGET_SSE2 etc. preprocessor variables are defined.
+		@ref Bmi2, @ref Avx, @ref AvxF16c, @ref AvxFma, @ref Avx2 and @ref Avx512f
+		based on what all @ref DEATH_TARGET_SSE2 etc. preprocessor variables are defined.
 
 		On @ref DEATH_TARGET_ARM "ARM", returns a combination of @ref Neon,
 		@ref NeonFma and @ref NeonFp16 based on what all @ref DEATH_TARGET_NEON etc.
@@ -1472,6 +1504,9 @@ namespace Death::Cpu
 #	if defined(DEATH_TARGET_BMI1)
 			| TypeTraits<Bmi1T>::Index
 #	endif
+#	if defined(DEATH_TARGET_BMI2)
+			| TypeTraits<Bmi2T>::Index
+#	endif
 #	if defined(DEATH_TARGET_AVX)
 			| TypeTraits<AvxT>::Index
 #	endif
@@ -1511,11 +1546,11 @@ namespace Death::Cpu
 		On @ref DEATH_TARGET_X86 "x86" and GCC, Clang or MSVC uses the
 		[CPUID](https://en.wikipedia.org/wiki/CPUID) builtin to check for the
 		@ref Sse2, @ref Sse3, @ref Ssse3, @ref Sse41, @ref Sse42, @ref Popcnt,
-		@ref Lzcnt, @ref Bmi1, @ref Avx, @ref AvxF16c, @ref AvxFma, @ref Avx2 and
-		@ref Avx512f runtime features. @ref Avx needs OS support as well, if it's not
-		present, no following flags including @ref Bmi1 are checked either. On
-		compilers other than GCC, Clang and MSVC the function is @cpp constexpr @ce and
-		delegates into @ref compiledFeatures().
+		@ref Lzcnt, @ref Bmi1, @ref Bmi2, @ref Avx, @ref AvxF16c, @ref AvxFma,
+		@ref Avx2 and @ref Avx512f runtime features. @ref Avx needs OS support as well,
+		if it's not present, no following flags including @ref Bmi1 and @ref Bmi2 are
+		checked either. On compilers other than GCC, Clang and MSVC the function is
+		@cpp constexpr @ce and delegates into @ref compiledFeatures().
 
 		On @ref DEATH_TARGET_ARM "ARM" and Linux or Android API level 18+ uses
 		@m_class{m-doc-external} [getauxval()](https://man.archlinux.org/man/getauxval.3), or on ARM macOS and iOS uses @m_class{m-doc-external} [sysctlbyname()](https://developer.apple.com/documentation/kernel/1387446-sysctlbyname)
@@ -1872,12 +1907,12 @@ namespace Death::Cpu
 	*/
 #if defined(DEATH_TARGET_SSE2)
 #	define DEATH_ENABLE_SSE2
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_SSE2
 #	endif
 #elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG_CL)
 #	define DEATH_ENABLE_SSE2 __attribute__((__target__("sse2")))
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_SSE2 "sse2",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
@@ -1913,13 +1948,13 @@ namespace Death::Cpu
 	*/
 #if defined(DEATH_TARGET_SSE3)
 #	define DEATH_ENABLE_SSE3
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_SSE3
 #	endif
 #elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG_CL)
 // The -msse3 option implies -msse2 on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -msse3`)
 #	define DEATH_ENABLE_SSE3 __attribute__((__target__("sse3")))
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_SSE3 "sse3",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
@@ -1955,13 +1990,13 @@ namespace Death::Cpu
 	*/
 #if defined(DEATH_TARGET_SSSE3)
 #	define DEATH_ENABLE_SSSE3
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_SSSE3
 #	endif
 #elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG_CL)
 // The -mssse3 option implies -msse2 -msse3 on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -mssse3`)
 #	define DEATH_ENABLE_SSSE3 __attribute__((__target__("ssse3")))
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_SSSE3 "ssse3",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
@@ -1998,13 +2033,13 @@ namespace Death::Cpu
 	*/
 #if defined(DEATH_TARGET_SSE41)
 #	define DEATH_ENABLE_SSE41
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_SSE41
 #	endif
 #elif (defined(DEATH_TARGET_GCC) && __GNUC__*100 + __GNUC_MINOR__ >= 409) || defined(DEATH_TARGET_CLANG) /* also matches clang-cl */
 // The -msse4.1 option implies -msse2 -msse3 -mssse3 on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -msse4.1`)
 #	define DEATH_ENABLE_SSE41 __attribute__((__target__("sse4.1")))
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_SSE41 "sse4.1",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
@@ -2040,13 +2075,13 @@ namespace Death::Cpu
 */
 #if defined(DEATH_TARGET_SSE42)
 #	define DEATH_ENABLE_SSE42
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_SSE42
 #	endif
 #elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG_CL)
 // The -msse4.2 option implies -msse2 -msse3 -mssse3 -msse4.1 on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -msse4.2`)
 #	define DEATH_ENABLE_SSE42 __attribute__((__target__("sse4.2")))
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_SSE42 "sse4.2",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
@@ -2085,12 +2120,12 @@ namespace Death::Cpu
 	*/
 #if defined(DEATH_TARGET_POPCNT)
 #	define DEATH_ENABLE_POPCNT
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_POPCNT
 #	endif
 #elif (defined(DEATH_TARGET_GCC) && __GNUC__*100 + __GNUC_MINOR__ >= 409) || defined(DEATH_TARGET_CLANG) /* matches clang-cl */
 #	define DEATH_ENABLE_POPCNT __attribute__((__target__("popcnt")))
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_POPCNT "popcnt",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
@@ -2107,9 +2142,9 @@ namespace Death::Cpu
 		specify `-mlzcnt` for the whole compilation unit. On x86 MSVC expands to
 		nothing, as the compiler doesn't restrict use of intrinsics in any way. Unlike
 		the SSE variants and POPCNT this macro is not defined on
-		@ref DEATH_TARGET_CLANG_CL "clang-cl", as there LZCNT, BMI1, AVX and newer
-		intrinsics are provided only if enabled on compiler command line. Not defined
-		on GCC 4.8, as there it's not generally possible to enable it alongside
+		@ref DEATH_TARGET_CLANG_CL "clang-cl", as there LZCNT, BMI1, BMI2, AVX and
+		newer intrinsics are provided only if enabled on compiler command line. Not
+		defined on GCC 4.8, as there it's not generally possible to enable it alongside
 		unrelated instruction sets without running into linker errors. Not defined on
 		other compilers or architectures.
 
@@ -2117,9 +2152,9 @@ namespace Death::Cpu
 		enabled for the whole compilation unit), this macro is defined as empty on all
 		compilers.
 
-		Neither a superset nor implied by any other `DEATH_ENABLE_*` macro, so you
-		may need to specify it together with others. See
-		@ref Cpu-usage-target-attributes for more information and usage example.
+		Neither a superset nor implied by any other `DEATH_ENABLE_*` macro (not even
+		@ref DEATH_TARGET_BMI2, although the name would suggest that), so you may
+		need to specify it together with others.
 
 		@m_class{m-note m-info}
 
@@ -2132,12 +2167,12 @@ namespace Death::Cpu
 	*/
 #if defined(DEATH_TARGET_LZCNT)
 #	define DEATH_ENABLE_LZCNT
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_LZCNT
 #	endif
 #elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
 #	define DEATH_ENABLE_LZCNT __attribute__((__target__("lzcnt")))
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_LZCNT "lzcnt",
 #	endif
 #elif defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
@@ -2183,12 +2218,12 @@ namespace Death::Cpu
 	*/
 #if defined(DEATH_TARGET_BMI1)
 #	define DEATH_ENABLE_BMI1
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_BMI1
 #	endif
 #elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
 #	define DEATH_ENABLE_BMI1 __attribute__((__target__("bmi")))
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_BMI1 "bmi",
 #	endif
 #elif defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
@@ -2197,6 +2232,57 @@ namespace Death::Cpu
 // this on their own, only <immintrin.h>. Also I don't think "Actually using intrinsics on Windows already requires
 // the right /arch: settings" is correct.
 #	define DEATH_ENABLE_BMI1
+#endif
+
+	/**
+		@brief Enable BMI2 for given function
+
+		On @ref DEATH_TARGET_X86 "x86" GCC, Clang expands to
+		@cpp __attribute__((__target__("bmi2"))) @ce, allowing use of the
+		[BMI2](https://en.wikipedia.org/wiki/X86_Bit_manipulation_instruction_set#BMI2_(Bit_Manipulation_Instruction_Set_2))
+		instructions inside a function annotated with this macro without having to
+		specify `-mbmi2` for the whole compilation unit. On x86 MSVC expands to
+		nothing, as the compiler doesn't restrict use of intrinsics in any way. Unlike
+		the SSE variants and POPCNT this macro is not defined on
+		@ref DEATH_TARGET_CLANG_CL "clang-cl", as there LZCNT, BMI1, BMI2, AVX and
+		newer intrinsics are provided only if enabled on compiler command line. Not
+		defined on GCC 4.8, as there it's not generally possible to enable it alongside
+		unrelated instruction sets without running into linker errors. Not defined on
+		other compilers or architectures.
+
+		As a special case, if @ref DEATH_TARGET_BMI2 is defined (meaning BMI2 is
+		enabled for the whole compilation unit), this macro is defined as empty on all
+		compilers.
+
+		Neither a superset nor implied by any other `DEATH_ENABLE_*` macro (not even
+		@ref DEATH_TARGET_BMI1, although the name would suggest that), so you may
+		need to specify it together with others.
+
+		@m_class{m-note m-info}
+
+		@par
+			If you target GCC 4.8, you may also want to use @ref IntrinsicsAvx.h instead of
+			@cpp #include <immintrin.h> @ce to be able to access the intrinsics on this
+			compiler.
+
+		@see @relativeref{Death,Cpu::Bmi2}, @ref DEATH_ENABLE()
+	*/
+#if defined(DEATH_TARGET_BMI2)
+#	define DEATH_ENABLE_BMI2
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
+#		define _DEATH_ENABLE_BMI2
+#	endif
+#elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
+#	define DEATH_ENABLE_BMI2 __attribute__((__target__("bmi2")))
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
+#		define _DEATH_ENABLE_BMI2 "bmi2",
+#	endif
+// https://github.com/llvm/llvm-project/commit/379a1952b37247975d2df8d23498675c9c8cc730,
+// still present in Jul 2022, meaning we can only use these if __BMI2__ is defined. Funnily enough the older headers don't have
+// this on their own, only <immintrin.h>. Also I don't think "Actually using intrinsics on Windows already requires
+// the right /arch: settings" is correct.
+#elif defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
+#	define DEATH_ENABLE_BMI2
 #endif
 
 	/**
@@ -2230,13 +2316,13 @@ namespace Death::Cpu
 	*/
 #if defined(DEATH_TARGET_AVX)
 #	define DEATH_ENABLE_AVX
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_AVX
 #	endif
 #elif defined(DEATH_TARGET_GCC) /* does not match clang-cl */
 // The -mavx option implies -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -mavx`)
 #	define DEATH_ENABLE_AVX __attribute__((__target__("avx")))
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_AVX "avx",
 #	endif
 // https://github.com/llvm/llvm-project/commit/379a1952b37247975d2df8d23498675c9c8cc730,
@@ -2282,13 +2368,13 @@ namespace Death::Cpu
 	*/
 #if defined(DEATH_TARGET_AVX_F16C)
 #	define DEATH_ENABLE_AVX_F16C
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_AVX_F16C
 #	endif
 #elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
 // The -mf16c option implies -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -mavx on both GCC and Clang (verified with `echo | gcc -dM -E - -mf16c`)
 #	define DEATH_ENABLE_AVX_F16C __attribute__((__target__("f16c")))
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_AVX_F16C "f16c",
 #	endif
 // https://github.com/llvm/llvm-project/commit/379a1952b37247975d2df8d23498675c9c8cc730,
@@ -2334,13 +2420,13 @@ namespace Death::Cpu
 	*/
 #if defined(DEATH_TARGET_AVX_FMA)
 #	define DEATH_ENABLE_AVX_FMA
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_AVX_FMA
 #	endif
 #elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
 // The -mfma option implies -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -mavx on both GCC and Clang (verified with `echo | gcc -dM -E - -mf16c`)
 #	define DEATH_ENABLE_AVX_FMA __attribute__((__target__("fma")))
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_AVX_FMA "fma",
 #	endif
 // https://github.com/llvm/llvm-project/commit/379a1952b37247975d2df8d23498675c9c8cc730,
@@ -2383,13 +2469,13 @@ namespace Death::Cpu
 	*/
 #if defined(DEATH_TARGET_AVX2)
 #	define DEATH_ENABLE_AVX2
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_AVX2
 #	endif
 #elif defined(DEATH_TARGET_GCC) /* does not match clang-cl */
 // The -mavx2 option implies -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -mavx on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -mavx2`)
 #	define DEATH_ENABLE_AVX2 __attribute__((__target__("avx2")))
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_AVX2 "avx2",
 #	endif
 // https://github.com/llvm/llvm-project/commit/379a1952b37247975d2df8d23498675c9c8cc730,
@@ -2425,13 +2511,13 @@ namespace Death::Cpu
 	*/
 #if defined(DEATH_TARGET_AVX512F)
 #	define DEATH_ENABLE_AVX512F
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_AVX512F
 #	endif
 #elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 409 || defined(DEATH_TARGET_CLANG)) /* does not match clang-cl */
 // The -mavx512 option implies -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -mavx -mavx2 on both GCC and Clang, so no need to specify those as well (verified with `echo | gcc -dM -E - -mavx512f`)
 #	define DEATH_ENABLE_AVX512F __attribute__((__target__("avx512f")))
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_AVX512F "avx512f",
 #	endif
 // https://github.com/llvm/llvm-project/commit/379a1952b37247975d2df8d23498675c9c8cc730,
@@ -2468,7 +2554,7 @@ namespace Death::Cpu
 	*/
 #if defined(DEATH_TARGET_NEON)
 #	define DEATH_ENABLE_NEON
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_NEON
 #	endif
 // https://github.com/android/ndk/issues/1066 is the only reported (and ignored) issue I found, feels strange that people would
@@ -2476,7 +2562,7 @@ namespace Death::Cpu
 // investigation. Too bad most ARM platforms ditched GCC, where this works properly.
 #elif defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG)
 #	define DEATH_ENABLE_NEON __attribute__((__target__("fpu=neon")))
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_NEON "fpu=neon",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
@@ -2507,13 +2593,13 @@ namespace Death::Cpu
 	*/
 #if defined(DEATH_TARGET_NEON_FMA)
 #	define DEATH_ENABLE_NEON_FMA
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_NEON_FMA
 #	endif
 // See DEATH_ENABLE_NEON above for details about Clang
 #elif defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG)
 #	define DEATH_ENABLE_NEON_FMA __attribute__((__target__("fpu=neon-vfpv4")))
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_NEON_FMA "fpu=neon-vfpv4",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
@@ -2543,13 +2629,13 @@ namespace Death::Cpu
 	*/
 #if defined(DEATH_TARGET_NEON_FP16)
 #	define DEATH_ENABLE_NEON_FP16
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_NEON_FP16
 #	endif
 // See DEATH_ENABLE_NEON above for details about Clang
 #elif defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG)
 #	define DEATH_ENABLE_NEON_FP16 __attribute__((__target__("arch=armv8.2-a+fp16")))
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_NEON_FP16 "arch=armv8.2-a+fp16",
 #	endif
 #elif defined(DEATH_TARGET_MSVC)
@@ -2579,21 +2665,21 @@ namespace Death::Cpu
 	*/
 #if defined(DEATH_TARGET_SIMD128)
 #	define DEATH_ENABLE_SIMD128
-#	if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+#	if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #		define _DEATH_ENABLE_SIMD128
 #	endif
 #endif
 #endif
 
-// GCC and Clang before version 8 treat __attribute__((target("foo"))) __attribute__((target("bar"))) as if only "bar" was specified,
-// thus it's not possible to just put several DEATH_ENABLE_ macros after each other. Instead, the only accepted form is
-// __attribute__((target("foo,bar"))). Fortunately, string literal concatenation works here, thus with some extra macro
-// trickery we can produce __attribute__((target("foo" "," "bar"))). The pieces are _DEATH_ENABLE_* variants defined
-// if and only if a corresponding DEATH_ENABLE_* macro is defined. These can however be empty, thus it's not possible
-// to just join them all with "," in between. Instead, the macros themselves have a trailing comma after the string
-// literal (thus "foo",), which causes the empty macros be filtered out when passed one after another (without commas)
-// from _DEATH_ENABLEn to _DEATH_ENABLE_CONCATENATE().
-#if defined(DEATH_TARGET_GCC) && (!defined(DEATH_TARGET_CLANG) || __clang_major__ < 8)
+// GCC before version 12 and Clang before version 8 treat DEATH_ENABLE_ macros after each other. Clang since version 8 then treats
+// that as if only "foo" was specified, which is different but also wrong (I didn't bother finding a commit backing this) and it's
+// still broken in Clang 15. Instead, the only accepted form is __attribute__((target("foo,bar"))). Fortunately, string literal
+// concatenation works here, thus with some extra macro trickery we can produce __attribute__((target("foo" "," "bar"))).
+// The pieces are _DEATH_ENABLE_* variants defined if and only if a corresponding DEATH_ENABLE_* macro is defined. These can
+// however be empty, thus it's not possible to just join them all with "," in between. Instead, the macros themselves have a trailing
+// comma after the string literal (thus "foo",), which causes the empty macros be filtered out when passed one after another
+// (without commas) from _DEATH_ENABLEn to _DEATH_ENABLE_CONCATENATE().
+#if (defined(DEATH_TARGET_GCC) && __GNUC__ < 12) || defined(DEATH_TARGET_CLANG)
 #define _DEATH_ENABLE_CONCATENATE0(unused)
 #define _DEATH_ENABLE_CONCATENATE1(v0, unused)								\
 	__attribute__((__target__(v0)))
@@ -2661,11 +2747,11 @@ namespace Death::Cpu
 		_DEATH_ENABLE_ ## v5												\
 		_DEATH_ENABLE_ ## v6												\
 	)
-// None of this is needed for Clang, fortunately, so here the whole thing expands to just DEATH_ENABLE_FOO DEATH_ENABLE_BAR.
-// I hope GCC eventually fixes this as well, so keeping both variants so I can drop the GCC-specific one in the future.
-// As another future-proof this also gets used for any compilers other than MSVC. MSVC's preprocessor won't be able
-// to perform the delayed expansion so DEATH_ENABLE()
-#elif defined(DEATH_TARGET_CLANG) || !defined(DEATH_TARGET_MSVC)
+// None of this is needed for GCC 12+, fortunately, so here the whole thing expands to just DEATH_ENABLE_FOO DEATH_ENABLE_BAR.
+// I hope Clang eventually fixes this as well, thus keeping both variants so I can drop the nasty one in the future.
+// As another future-proof this also gets used for any compilers other than MSVC. MSVC's preprocessor isn't able to perform
+// the delayed expansion without / Zc:preprocessor, fortunately DEATH_ENABLE() isn't needed there at all.
+#elif defined(DEATH_TARGET_GCC) || !defined(DEATH_TARGET_MSVC)
 // Using _DEATH_HELPER_PASTE2() instead of _DEATH_HELPER_PASTE() here, as that's enough to make that work and it's less
 // work for the preprocessor. Concatenating directly doesn't work, unlike in the above case for GCC.
 #define _DEATH_ENABLE1(v0)													\
@@ -2724,18 +2810,19 @@ namespace Death::Cpu
 		@ref Cpu-usage-target-attributes for more information and an example.
 
 		When multiple `DEATH_ENABLE_*` macros are specified one after another, Clang
-		before version 8 and GCC would pick only the last specified, ignoring the
-		others. There the macro expands into a single combined
-		@cpp __attribute__((__target__(...))) @ce attribute. For other compilers except
-		MSVC it's just a shorthand for multiple `DEATH_ENABLE_*` macros one after
-		another. On MSVC expands to nothing --- there the functions aren't annotated in
-		anyway and moreover the default preprocessor behavior would make this extremely
-		tricky to implement.
+		8+ would pick only the first specified, and Clang before version 8 and GCC
+		before version 12 only the last specified, ignoring the others. There the macro
+		expands into a single combined @cpp __attribute__((__target__(...))) @ce
+		attribute. For GCC 12+ and other compilers except MSVC it's just a shorthand
+		for multiple `DEATH_ENABLE_*` macros one after another. On MSVC expands to
+		nothing --- there the functions aren't annotated in anyway and moreover the
+		default preprocessor behavior would make this extremely tricky to implement.
 
-		@attention Due to the way the attributes are combined on Clang < 8 and GCC, in
-			certain cases the macro may silently accept even arguments that don't have
-			a corresponding `DEATH_ENABLE_*` macro defined. To prevent portability
-			issues, pay extra attention to have a matching @cpp #ifdef @ce guard.
+		@attention Due to the way the attributes are combined Clang and GCC before
+			version 12, in certain cases the macro may silently accept even arguments
+			that don't have a corresponding `DEATH_ENABLE_*` macro defined. To
+			prevent portability issues, pay extra attention to have a matching
+			@cpp #ifdef @ce guard.
 	*/
 #if !defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_CLANG_CL)
 #	define DEATH_ENABLE(...) _DEATH_HELPER_PICK(__VA_ARGS__, _DEATH_ENABLE8, _DEATH_ENABLE7, _DEATH_ENABLE6, _DEATH_ENABLE5, _DEATH_ENABLE4, _DEATH_ENABLE3, _DEATH_ENABLE2, _DEATH_ENABLE1, )(__VA_ARGS__)
@@ -2832,6 +2919,7 @@ namespace Death::Cpu
 				// https://en.wikipedia.org/wiki/CPUID#EAX=7,_ECX=0:_Extended_Features
 				Implementation::cpuid(cpuid.data, 7, 0);
 				if (cpuid.e.bx & (1 << 3)) out |= TypeTraits<Bmi1T>::Index;
+				if (cpuid.e.bx & (1 << 8)) out |= TypeTraits<Bmi2T>::Index;
 				if (cpuid.e.bx & (1 << 5)) out |= TypeTraits<Avx2T>::Index;
 			}
 
