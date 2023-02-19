@@ -63,9 +63,6 @@ namespace nCine
 		glProgramBinary_t _glProgramBinary;
 		GLenum _glProgramBinaryLength;
 
-		static std::size_t base64Decode(const StringView& src, uint8_t* dst, std::size_t dstLength);
-		static std::size_t base64Encode(const uint8_t* src, std::size_t srcLength, char* dst, std::size_t dstLength);
-
 		/// Deleted copy constructor
 		BinaryShaderCache(const BinaryShaderCache&) = delete;
 		/// Deleted assignment operator
