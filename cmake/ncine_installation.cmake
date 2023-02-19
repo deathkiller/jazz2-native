@@ -65,7 +65,7 @@ elseif(APPLE)
 	set(CPACK_BUNDLE_PLIST "${CMAKE_BINARY_DIR}/Info.plist")
 
 	file(RELATIVE_PATH RELPATH_TO_BIN "${CMAKE_INSTALL_PREFIX}/MacOS" "${CMAKE_INSTALL_PREFIX}/Resources")
-	file(WRITE ${CMAKE_BINARY_DIR}/bundle_executable "#!/usr/bin/env sh\ncd \"$(dirname \"$0\")\" \ncd ${RELPATH_TO_BIN} && ./${CPACK_EXECUTABLE_NAME}")
+	file(WRITE ${CMAKE_BINARY_DIR}/bundle_executable "#!/usr/bin/env sh\ncd \"$(dirname \"$0\")\" \ncd ${RELPATH_TO_BIN} && ./${CPACK_EXECUTABLE_NAME} \"$@\"")
 	install(FILES "${CMAKE_BINARY_DIR}/bundle_executable" DESTINATION "../MacOS/" RENAME ${CPACK_BUNDLE_NAME}
 		PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
