@@ -320,25 +320,34 @@ namespace nCine
 				GLUniformBlockCache* block = blocks.uniformBlock(Material::InstancesBlockName);
 				if (block != nullptr) {
 					const int size = block->size() - block->alignAmount();
-					const int batchSize = maxUniformBlockSize / size;
-					LOGD_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderToLoad.shaderName, size, block->alignAmount(), batchSize);
+					int batchSize = maxUniformBlockSize / size;
+					LOGI_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderToLoad.shaderName, size, block->alignAmount(), batchSize);
 
-					shaderToLoad.shaderProgram->reset();
-					shaderToLoad.shaderProgram->setBatchSize(batchSize);
-					formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, batchSize);
+					bool hasLinkedFinal = false;
+					while (batchSize > 0) {
+						shaderToLoad.shaderProgram->reset();
+						shaderToLoad.shaderProgram->setBatchSize(batchSize);
+						formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, batchSize);
 
 #if defined(WITH_EMBEDDED_SHADERS)
-					const bool vertexFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromStrings(GL_VERTEX_SHADER, vertexStrings);
-					const bool fragmentFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);
+						const bool vertexFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromStrings(GL_VERTEX_SHADER, vertexStrings);
+						const bool fragmentFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);
 #else
-					const bool vertexFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, vertexPath);
-					const bool fragmentFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromFile(GL_FRAGMENT_SHADER, fragmentPath);
+						const bool vertexFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, vertexPath);
+						const bool fragmentFinalCompiled = shaderToLoad.shaderProgram->attachShaderFromFile(GL_FRAGMENT_SHADER, fragmentPath);
 #endif
-					ASSERT(vertexFinalCompiled);
-					ASSERT(fragmentFinalCompiled);
+						if (vertexFinalCompiled && fragmentFinalCompiled) {
+							hasLinkedFinal = shaderToLoad.shaderProgram->link(shaderToLoad.introspection);
+							if (hasLinkedFinal) {
+								break;
+							}
+						}
 
-					const bool hasLinkedFinal = shaderToLoad.shaderProgram->link(shaderToLoad.introspection);
-					FATAL_ASSERT(hasLinkedFinal);
+						batchSize--;
+						LOGW_X("Failed to compile the shader, recompiling with batch size: %i", batchSize);
+					}
+
+					FATAL_ASSERT_MSG_X(hasLinkedFinal, "Failed to compile shader \"%s\"", shaderToLoad.shaderName);
 				}
 			} else {
 				const bool hasLinked = shaderToLoad.shaderProgram->link(shaderToLoad.introspection);
