@@ -1156,8 +1156,23 @@ namespace Jazz2
 			if (block != nullptr) {
 				const int size = block->size() - block->alignAmount();
 				batchSize = maxUniformBlockSize / size;
-				LOGD_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderName, size, block->alignAmount(), batchSize);
-				shader->loadFromMemory(shaderName, introspection, vertex, fragment, batchSize);
+				LOGI_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderName, size, block->alignAmount(), batchSize);
+				
+				bool hasLinked = false;
+				while (batchSize > 0) {
+					hasLinked = shader->loadFromMemory(shaderName, introspection, vertex, fragment, batchSize);
+					if (hasLinked) {
+						break;
+					}
+
+					batchSize--;
+					LOGW_X("Failed to compile the shader, recompiling with batch size: %i", batchSize);
+				}
+
+				if (!hasLinked) {
+					// Don't save to cache if it cannot be linked
+					return shader;
+				}
 			}
 		}
 
@@ -1200,7 +1215,22 @@ namespace Jazz2
 				const int size = block->size() - block->alignAmount();
 				batchSize = maxUniformBlockSize / size;
 				LOGD_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderName, size, block->alignAmount(), batchSize);
-				shader->loadFromMemory(shaderName, introspection, vertex, fragment, batchSize);
+
+				bool hasLinked = false;
+				while (batchSize > 0) {
+					hasLinked = shader->loadFromMemory(shaderName, introspection, vertex, fragment, batchSize);
+					if (hasLinked) {
+						break;
+					}
+
+					batchSize--;
+					LOGW_X("Failed to compile the shader, recompiling with batch size: %i", batchSize);
+				}
+
+				if (!hasLinked) {
+					// Don't save to cache if it cannot be linked
+					return shader;
+				}
 			}
 		}
 
