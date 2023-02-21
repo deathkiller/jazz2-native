@@ -1154,9 +1154,9 @@ namespace Jazz2
 			GLUniformBlockCache* block = blocks.uniformBlock(Material::InstancesBlockName);
 			ASSERT(block != nullptr);
 			if (block != nullptr) {
-				const int size = block->size() - block->alignAmount();
-				batchSize = maxUniformBlockSize / size;
-				LOGI_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderName, size, block->alignAmount(), batchSize);
+				batchSize = maxUniformBlockSize / block->size();
+				LOGI_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderName,
+					block->size() - block->alignAmount(), block->alignAmount(), batchSize);
 				
 				bool hasLinked = false;
 				while (batchSize > 0) {
@@ -1212,9 +1212,9 @@ namespace Jazz2
 			GLUniformBlockCache* block = blocks.uniformBlock(Material::InstancesBlockName);
 			ASSERT(block != nullptr);
 			if (block != nullptr) {
-				const int size = block->size() - block->alignAmount();
-				batchSize = maxUniformBlockSize / size;
-				LOGD_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderName, size, block->alignAmount(), batchSize);
+				batchSize = maxUniformBlockSize / block->size();
+				LOGI_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderName,
+					block->size() - block->alignAmount(), block->alignAmount(), batchSize);
 
 				bool hasLinked = false;
 				while (batchSize > 0) {
