@@ -319,9 +319,9 @@ namespace nCine
 				GLShaderUniformBlocks blocks(shaderToLoad.shaderProgram.get(), Material::InstancesBlockName, nullptr);
 				GLUniformBlockCache* block = blocks.uniformBlock(Material::InstancesBlockName);
 				if (block != nullptr) {
-					const int size = block->size() - block->alignAmount();
-					int batchSize = maxUniformBlockSize / size;
-					LOGI_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderToLoad.shaderName, size, block->alignAmount(), batchSize);
+					int batchSize = maxUniformBlockSize / block->size();
+					LOGI_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderToLoad.shaderName,
+						block->size() - block->alignAmount(), block->alignAmount(), batchSize);
 
 					bool hasLinkedFinal = false;
 					while (batchSize > 0) {
