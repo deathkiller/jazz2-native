@@ -48,7 +48,7 @@ namespace Jazz2::UI
 		}
 
 		wchar_t pipeName[32];
-		for (int i = 0; i < 10; i++) {
+		for (int32_t i = 0; i < 10; i++) {
 			wsprintfW(pipeName, L"\\\\.\\pipe\\discord-ipc-%i", i);
 
 			_hPipe = CreateFile(pipeName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -104,8 +104,8 @@ namespace Jazz2::UI
 		}
 
 		bool isConnected = false;
-		for (int j = 0; j < countof(RpcPaths); j++) {
-			for (int i = 0; i < 10; i++) {
+		for (int32_t j = 0; j < countof(RpcPaths); j++) {
+			for (int32_t i = 0; i < 10; i++) {
 				formatString(addr.sun_path, sizeof(addr.sun_path), RpcPaths[j].data(), tempPath.data(), i);
 				if (::connect(_sockFd, (struct sockaddr*)&addr, sizeof(addr)) >= 0) {
 					isConnected = true;
@@ -145,7 +145,7 @@ namespace Jazz2::UI
 			_hEventWrite = NULL;
 		}
 #else
-		int sockFd = _sockFd;
+		int32_t sockFd = _sockFd;
 		if (sockFd >= 0) {
 			_sockFd = -1;
 			_thread.Abort();
@@ -179,7 +179,7 @@ namespace Jazz2::UI
 		pid_t processId = ::getpid();
 #endif
 		char buffer[1024];
-		int bufferOffset = formatString(buffer, sizeof(buffer), "{\"cmd\":\"SET_ACTIVITY\",\"nonce\":%i,\"args\":{\"pid\":%i,\"activity\":{", ++_nonce, processId);
+		int32_t bufferOffset = formatString(buffer, sizeof(buffer), "{\"cmd\":\"SET_ACTIVITY\",\"nonce\":%i,\"args\":{\"pid\":%i,\"activity\":{", ++_nonce, processId);
 
 		if (!richPresence.State.empty()) {
 			bufferOffset += formatString(buffer + bufferOffset, sizeof(buffer) - bufferOffset, "\"state\":\"%s\",", richPresence.State.data());
@@ -245,9 +245,9 @@ namespace Jazz2::UI
 			return false;
 		}
 
-		int bytesTotal = 0;
+		int32_t bytesTotal = 0;
 		while (bytesTotal < bufferSize) {
-			int bytesWritten = ::write(_sockFd, buffer + bytesTotal, bufferSize - bytesTotal);
+			int32_t bytesWritten = ::write(_sockFd, buffer + bytesTotal, bufferSize - bytesTotal);
 			if (bytesWritten < 0) {
 				return false;
 			}
@@ -263,7 +263,7 @@ namespace Jazz2::UI
 
 		// Handshake
 		char buffer[2048];
-		int bufferSize = formatString(buffer, sizeof(buffer), "{\"v\":1,\"client_id\":\"%s\"}", client->_clientId.data());
+		int32_t bufferSize = formatString(buffer, sizeof(buffer), "{\"v\":1,\"client_id\":\"%s\"}", client->_clientId.data());
 		client->WriteFrame(Opcodes::Handshake, buffer, bufferSize);
 
 #if defined(DEATH_TARGET_WINDOWS)
@@ -336,10 +336,10 @@ namespace Jazz2::UI
 		}
 #else
 		while (client->_sockFd >= 0) {
-			int bytesRead = ::read(client->_sockFd, buffer, sizeof(buffer));
+			int32_t bytesRead = ::read(client->_sockFd, buffer, sizeof(buffer));
 			if (bytesRead <= 0) {
 				LOGE_X("Failed to read from socket: %i", bytesRead);
-				int sockFd = client->_sockFd;
+				int32_t sockFd = client->_sockFd;
 				if (sockFd >= 0) {
 					client->_sockFd = -1;
 					::close(sockFd);
@@ -356,7 +356,7 @@ namespace Jazz2::UI
 			switch (opcode) {
 				case Opcodes::Handshake:
 				case Opcodes::Close: {
-					int sockFd = client->_sockFd;
+					int32_t sockFd = client->_sockFd;
 					if (sockFd >= 0) {
 						client->_sockFd = -1;
 						::close(sockFd);

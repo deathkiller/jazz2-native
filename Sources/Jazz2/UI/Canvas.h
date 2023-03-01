@@ -30,7 +30,7 @@ namespace Jazz2::UI
 
 	private:
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
-		int _renderCommandsCount;
+		int32_t _renderCommandsCount;
 		RenderQueue* _currentRenderQueue;
 	};
 }

@@ -39,7 +39,7 @@ namespace Jazz2::UI
 #endif
 
 		// Mark Fire button as already pressed to avoid some issues
-		_pressedActions = (1 << (int)PlayerActions::Fire) | (1 << ((int)PlayerActions::Fire + 16));
+		_pressedActions = (1 << (int32_t)PlayerActions::Fire) | (1 << ((int32_t)PlayerActions::Fire + 16));
 	}
 
 	Cinematics::~Cinematics()
@@ -68,7 +68,7 @@ namespace Jazz2::UI
 
 		UpdatePressedActions();
 
-		if ((_pressedActions & ((1 << (int)PlayerActions::Fire) | (1 << (16 + (int)PlayerActions::Fire)))) == (1 << (int)PlayerActions::Fire)) {
+		if ((_pressedActions & ((1 << (int32_t)PlayerActions::Fire) | (1 << (16 + (int32_t)PlayerActions::Fire)))) == (1 << (int32_t)PlayerActions::Fire)) {
 			if (_callback != nullptr && _callback(_root, false)) {
 				_callback = nullptr;
 				_framesLeft = 0;
@@ -76,18 +76,18 @@ namespace Jazz2::UI
 		}
 	}
 
-	void Cinematics::OnInitializeViewport(int width, int height)
+	void Cinematics::OnInitializeViewport(int32_t width, int32_t height)
 	{
 		constexpr float defaultRatio = (float)DefaultWidth / DefaultHeight;
 		float currentRatio = (float)width / height;
 
-		int w, h;
+		int32_t w, h;
 		if (currentRatio > defaultRatio) {
 			w = std::min(DefaultWidth, width);
-			h = (int)(w / currentRatio);
+			h = (int32_t)(w / currentRatio);
 		} else if (currentRatio < defaultRatio) {
 			h = std::min(DefaultHeight, height);
-			w = (int)(h * currentRatio);
+			w = (int32_t)(h * currentRatio);
 		} else {
 			w = std::min(DefaultWidth, width);
 			h = std::min(DefaultHeight, height);
@@ -163,7 +163,7 @@ namespace Jazz2::UI
 		uint32_t totalOffset = s->GetPosition();
 
 		while (totalOffset < s->GetSize()) {
-			for (int i = 0; i < countof(_decompressedStreams); i++) {
+			for (int32_t i = 0; i < countof(_decompressedStreams); i++) {
 				uint32_t bytesLeft = s->ReadValue<uint32_t>();
 				totalOffset += 4 + bytesLeft;
 
@@ -177,13 +177,13 @@ namespace Jazz2::UI
 			}
 		}
 
-		for (int i = 0; i < countof(_decompressedStreams); i++) {
+		for (int32_t i = 0; i < countof(_decompressedStreams); i++) {
 			// Stream 3 contains pixel data and is probably compressed with higher ratio
 			_decompressedStreams[i].resize_for_overwrite(currentOffsets[i] * (i == 3 ? 8 : 3));
 
 		Retry:
-			int compressedSize = currentOffsets[i] - 2;
-			int decompressedSize = _decompressedStreams[i].size();
+			int32_t compressedSize = currentOffsets[i] - 2;
+			int32_t decompressedSize = _decompressedStreams[i].size();
 			auto result = CompressionUtils::Inflate(compressedStreams[i].begin() + 2, compressedSize, _decompressedStreams[i].begin(), decompressedSize);
 			if (result == DecompressionResult::BufferTooSmall) {
 				_decompressedStreams[i].resize_for_overwrite(_decompressedStreams[i].size() * 2);
@@ -203,12 +203,12 @@ namespace Jazz2::UI
 		}
 
 		// Read pixels into the buffer
-		for (int y = 0; y < _height; y++) {
+		for (int32_t y = 0; y < _height; y++) {
 			uint8_t c;
-			int x = 0;
+			int32_t x = 0;
 			while ((c = ReadValue<uint8_t>(0)) != 0x80) {
 				if (c < 0x80) {
-					int u;
+					int32_t u;
 					if (c == 0x00) {
 						u = ReadValue<uint16_t>(0);
 					} else {
@@ -216,12 +216,12 @@ namespace Jazz2::UI
 					}
 
 					// Read specified number of pixels in row
-					for (int i = 0; i < u; i++) {
+					for (int32_t i = 0; i < u; i++) {
 						_buffer[y * _width + x] = ReadValue<uint8_t>(3);
 						x++;
 					}
 				} else {
-					int u;
+					int32_t u;
 					if (c == 0x81) {
 						u = ReadValue<uint16_t>(0);
 					} else {
@@ -229,8 +229,8 @@ namespace Jazz2::UI
 					}
 
 					// Copy specified number of pixels from previous frame
-					int n = ReadValue<uint16_t>(1) + (ReadValue<uint8_t>(2) + y - 127) * _width;
-					for (int i = 0; i < u; i++) {
+					int32_t n = ReadValue<uint16_t>(1) + (ReadValue<uint8_t>(2) + y - 127) * _width;
+					for (int32_t i = 0; i < u; i++) {
 						_buffer[y * _width + x] = _lastBuffer[n];
 						x++;
 						n++;
@@ -240,7 +240,7 @@ namespace Jazz2::UI
 		}
 
 		// Apply current palette to indices
-		for (int i = 0; i < _width * _height; i++) {
+		for (int32_t i = 0; i < _width * _height; i++) {
 			_currentFrame[i] = _palette[_buffer[i]];
 		}
 
@@ -259,26 +259,26 @@ namespace Jazz2::UI
 		if (_pressedKeys[(uint32_t)KeySym::RETURN] || _pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Fire)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Fire)] ||
 			_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Jump)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Jump)] ||
 			_pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)KeySym::BACK]) {
-			_pressedActions |= (1 << (int)PlayerActions::Fire);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Fire);
 		}
 
 		// Try to get 8 connected joysticks
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
-		int jc = 0;
-		for (int i = 0; i < IInputManager::MaxNumJoysticks && jc < countof(joyStates); i++) {
+		int32_t jc = 0;
+		for (int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < countof(joyStates); i++) {
 			if (input.isJoyMapped(i)) {
 				joyStates[jc++] = &input.joyMappedState(i);
 			}
 		}
 
-		/*ButtonName jb;*/ int ji1, ji2;
+		/*ButtonName jb;*/ int32_t ji1, ji2;
 		/*jb =*/ ControlScheme::Gamepad(0, PlayerActions::Jump, ji1);
 		/*jb =*/ ControlScheme::Gamepad(0, PlayerActions::Fire, ji2);
 		if (ji1 == ji2) ji2 = -1;
 
 		if ((ji1 >= 0 && ji1 < jc && (joyStates[ji1]->isButtonPressed(ButtonName::A) || joyStates[ji1]->isButtonPressed(ButtonName::B) || joyStates[ji1]->isButtonPressed(ButtonName::X) || joyStates[ji1]->isButtonPressed(ButtonName::START))) ||
 			(ji2 >= 0 && ji2 < jc && (joyStates[ji2]->isButtonPressed(ButtonName::A) || joyStates[ji2]->isButtonPressed(ButtonName::B) || joyStates[ji2]->isButtonPressed(ButtonName::X) || joyStates[ji2]->isButtonPressed(ButtonName::START)))) {
-			_pressedActions |= (1 << (int)PlayerActions::Fire);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Fire);
 		}
 	}
 

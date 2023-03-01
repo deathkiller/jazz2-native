@@ -28,9 +28,9 @@ namespace Jazz2
 	class ILevelHandler
 	{
 	public:
-		static constexpr int MainPlaneZ = 500;
-		static constexpr int SpritePlaneZ = MainPlaneZ + 10;
-		static constexpr int PlayerZ = MainPlaneZ + 20;
+		static constexpr int32_t MainPlaneZ = 500;
+		static constexpr int32_t SpritePlaneZ = MainPlaneZ + 10;
+		static constexpr int32_t PlayerZ = MainPlaneZ + 20;
 
 		ILevelHandler() { }
 
@@ -75,21 +75,21 @@ namespace Jazz2
 		virtual void RollbackToCheckpoint() = 0;
 		virtual void ActivateSugarRush() = 0;
 		virtual void ShowLevelText(const StringView& text) = 0;
-		virtual void ShowCoins(int count) = 0;
-		virtual void ShowGems(int count) = 0;
-		virtual StringView GetLevelText(uint32_t textId, int index = -1, uint32_t delimiter = 0) = 0;
+		virtual void ShowCoins(int32_t count) = 0;
+		virtual void ShowGems(int32_t count) = 0;
+		virtual StringView GetLevelText(uint32_t textId, int32_t index = -1, uint32_t delimiter = 0) = 0;
 		virtual void OverrideLevelText(uint32_t textId, const StringView& value) = 0;
 		virtual void LimitCameraView(float left, float width) = 0;
 		virtual void ShakeCameraView(float duration) = 0;
 		virtual void SetWeather(WeatherType type, uint8_t intensity) = 0;
 		virtual bool BeginPlayMusic(const StringView& path, bool setDefault = false, bool forceReload = false) = 0;
 
-		virtual bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads = true) = 0;
-		virtual bool PlayerActionPressed(int index, PlayerActions action, bool includeGamepads, bool& isGamepad) = 0;
-		virtual bool PlayerActionHit(int index, PlayerActions action, bool includeGamepads = true) = 0;
-		virtual bool PlayerActionHit(int index, PlayerActions action, bool includeGamepads, bool& isGamepad) = 0;
-		virtual float PlayerHorizontalMovement(int index) = 0;
-		virtual float PlayerVerticalMovement(int index) = 0;
+		virtual bool PlayerActionPressed(int32_t index, PlayerActions action, bool includeGamepads = true) = 0;
+		virtual bool PlayerActionPressed(int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) = 0;
+		virtual bool PlayerActionHit(int32_t index, PlayerActions action, bool includeGamepads = true) = 0;
+		virtual bool PlayerActionHit(int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) = 0;
+		virtual float PlayerHorizontalMovement(int32_t index) = 0;
+		virtual float PlayerVerticalMovement(int32_t index) = 0;
 
 		float Gravity;
 	};

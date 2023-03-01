@@ -21,7 +21,7 @@ namespace Jazz2::UI
 			setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 		}
 
-		virtual void Initialize(int width, int height, int targetWidth, int targetHeight);
+		virtual void Initialize(int32_t width, int32_t height, int32_t targetWidth, int32_t targetHeight);
 		virtual void Register();
 
 		bool OnDraw(RenderQueue& renderQueue) override;
@@ -78,7 +78,7 @@ namespace Jazz2::UI
 		{
 		}
 
-		void Initialize(int width, int height, int targetWidth, int targetHeight) override;
+		void Initialize(int32_t width, int32_t height, int32_t targetWidth, int32_t targetHeight) override;
 		void Register() override;
 
 		SceneNode* GetClippedNode() const {
