@@ -159,8 +159,8 @@ namespace Jazz2::UI
 		float right = adjustedView.X + adjustedView.W;
 		float bottom = adjustedView.Y + adjustedView.H;
 
-		int charOffset = 0;
-		int charOffsetShadow = 0;
+		int32_t charOffset = 0;
+		int32_t charOffsetShadow = 0;
 		char stringBuffer[32];
 
 		auto& players = _levelHandler->GetPlayers();
@@ -182,7 +182,7 @@ namespace Jazz2::UI
 			DrawElement(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1.0f, MainLayer, Alignment::BottomRight, Colorf::White);
 
 			if (_levelHandler->IsReforged()) {
-				for (int i = 0; i < player->_health; i++) {
+				for (int32_t i = 0; i < player->_health; i++) {
 					stringBuffer[i] = '|';
 				}
 				stringBuffer[player->_health] = '\0';
@@ -220,7 +220,7 @@ namespace Jazz2::UI
 				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
 					Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 			} else {
-				for (int i = 0; i < player->_health; i++) {
+				for (int32_t i = 0; i < player->_health; i++) {
 					DrawElement("Heart"_s, -1, view.X + view.W - 4.0f - (i * 16.0f), view.Y + 4.0f, MainLayer, Alignment::TopRight, Colorf::White);
 				}
 
@@ -247,11 +247,11 @@ namespace Jazz2::UI
 				StringView currentWeaponString = GetCurrentWeapon(player, weapon, pos);
 
 				StringView ammoCount;
-				if (player->_weaponAmmo[(int)weapon] == UINT16_MAX) {
+				if (player->_weaponAmmo[(int32_t)weapon] == UINT16_MAX) {
 					ammoCount = "x\u221E"_s;
 				} else {
 					stringBuffer[0] = 'x';
-					i32tos(player->_weaponAmmo[(int)weapon] / 256, stringBuffer + 1);
+					i32tos(player->_weaponAmmo[(int32_t)weapon] / 256, stringBuffer + 1);
 					ammoCount = stringBuffer;
 				}
 				_smallFont->DrawString(this, ammoCount, charOffsetShadow, right - 40.0f, bottom - 2.0f + 1.0f, FontShadowLayer,
@@ -301,7 +301,7 @@ namespace Jazz2::UI
 
 			// FPS
 			if (PreferencesCache::ShowPerformanceMetrics) {
-				i32tos((int)std::round(theApplication().averageFps()), stringBuffer);
+				i32tos((int32_t)std::round(theApplication().averageFps()), stringBuffer);
 				_smallFont->DrawString(this, stringBuffer, charOffset, view.W - 4.0f, view.Y + 2.0f, FontLayer,
 					Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 			}
@@ -370,27 +370,27 @@ namespace Jazz2::UI
 		_touchButtonsTimer = 1200.0f;
 
 		if (event.type == TouchEventType::Down || event.type == TouchEventType::PointerDown) {
-			int pointerIndex = event.findPointerIndex(event.actionIndex);
+			int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x * (float)ViewSize.X;
 				float y = event.pointers[pointerIndex].y * (float)ViewSize.Y;
-				for (int i = 0; i < TouchButtonsCount; i++) {
+				for (int32_t i = 0; i < TouchButtonsCount; i++) {
 					auto& button = _touchButtons[i];
 					if (button.Action != PlayerActions::None) {
 						if (button.CurrentPointerId == -1 && IsOnButton(button, x, y)) {
 							button.CurrentPointerId = event.actionIndex;
-							overrideActions |= (1 << (int)button.Action);
+							overrideActions |= (1 << (int32_t)button.Action);
 						}
 					}
 				}
 			}
 		} else if (event.type == TouchEventType::Move) {
-			for (int i = 0; i < TouchButtonsCount; i++) {
+			for (int32_t i = 0; i < TouchButtonsCount; i++) {
 				auto& button = _touchButtons[i];
 				if (button.Action != PlayerActions::None) {
 					if (button.CurrentPointerId != -1) {
 						bool isPressed = false;
-						int pointerIndex = event.findPointerIndex(button.CurrentPointerId);
+						int32_t pointerIndex = event.findPointerIndex(button.CurrentPointerId);
 						if (pointerIndex != -1) {
 							float x = event.pointers[pointerIndex].x * (float)ViewSize.X;
 							float y = event.pointers[pointerIndex].y * (float)ViewSize.Y;
@@ -399,7 +399,7 @@ namespace Jazz2::UI
 
 						if (!isPressed) {
 							button.CurrentPointerId = -1;
-							overrideActions &= ~(1 << (int)button.Action);
+							overrideActions &= ~(1 << (int32_t)button.Action);
 						}
 					} else {
 						// Only some buttons should allow roll-over (only when the player's on foot)
@@ -407,12 +407,12 @@ namespace Jazz2::UI
 						bool canPlayerMoveVertically = (!players.empty() && players[0]->CanMoveVertically());
 						if ((button.Align & AllowRollover) != AllowRollover && !canPlayerMoveVertically) continue;
 
-						for (int j = 0; j < event.count; j++) {
+						for (int32_t j = 0; j < event.count; j++) {
 							float x = event.pointers[j].x * (float)ViewSize.X;
 							float y = event.pointers[j].y * (float)ViewSize.Y;
 							if (IsOnButton(button, x, y)) {
 								button.CurrentPointerId = event.pointers[j].id;
-								overrideActions |= (1 << (int)button.Action);
+								overrideActions |= (1 << (int32_t)button.Action);
 								break;
 							}
 						}
@@ -420,20 +420,20 @@ namespace Jazz2::UI
 				}
 			}
 		} else if (event.type == TouchEventType::Up) {
-			for (int i = 0; i < TouchButtonsCount; i++) {
+			for (int32_t i = 0; i < TouchButtonsCount; i++) {
 				auto& button = _touchButtons[i];
 				if (button.CurrentPointerId != -1) {
 					button.CurrentPointerId = -1;
-					overrideActions &= ~(1 << (int)button.Action);
+					overrideActions &= ~(1 << (int32_t)button.Action);
 				}
 			}
 
 		} else if (event.type == TouchEventType::PointerUp) {
-			for (int i = 0; i < TouchButtonsCount; i++) {
+			for (int32_t i = 0; i < TouchButtonsCount; i++) {
 				auto& button = _touchButtons[i];
 				if (button.CurrentPointerId == event.actionIndex) {
 					button.CurrentPointerId = -1;
-					overrideActions &= ~(1 << (int)button.Action);
+					overrideActions &= ~(1 << (int32_t)button.Action);
 				}
 			}
 		}
@@ -449,7 +449,7 @@ namespace Jazz2::UI
 		_levelTextTime = 0.0f;
 	}
 
-	void HUD::ShowCoins(int count)
+	void HUD::ShowCoins(int32_t count)
 	{
 		constexpr float StillTime = 120.0f;
 		constexpr float TransitionTime = 60.0f;
@@ -471,7 +471,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	void HUD::ShowGems(int count)
+	void HUD::ShowGems(int32_t count)
 	{
 		constexpr float StillTime = 120.0f;
 		constexpr float TransitionTime = 60.0f;
@@ -510,7 +510,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	void HUD::DrawLevelText(int& charOffset)
+	void HUD::DrawLevelText(int32_t& charOffset)
 	{
 		constexpr float StillTime = 350.0f;
 		constexpr float TransitionTime = 100.0f;
@@ -529,7 +529,7 @@ namespace Jazz2::UI
 			offset = 0;
 		}
 
-		int charOffsetShadow = charOffset;
+		int32_t charOffsetShadow = charOffset;
 		_smallFont->DrawString(this, _levelText, charOffsetShadow, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.04f + 2.5f, FontShadowLayer,
 			Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 1.0f, 0.72f, 0.8f, 0.8f);
 
@@ -542,7 +542,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	void HUD::DrawCoins(int& charOffset)
+	void HUD::DrawCoins(int32_t& charOffset)
 	{
 		constexpr float StillTime = 120.0f;
 		constexpr float TransitionTime = 60.0f;
@@ -574,7 +574,7 @@ namespace Jazz2::UI
 		char stringBuffer[32];
 		snprintf(stringBuffer, countof(stringBuffer), "x%i", _coins);
 
-		int charOffsetShadow = charOffset;
+		int32_t charOffsetShadow = charOffset;
 		_smallFont->DrawString(this, stringBuffer, charOffsetShadow, ViewSize.X * 0.5f, ViewSize.Y * 0.92f + 2.5f + offset, FontShadowLayer,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * alpha), 1.0f, 0.0f, 0.0f, 0.0f);
 
@@ -588,7 +588,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	void HUD::DrawGems(int& charOffset)
+	void HUD::DrawGems(int32_t& charOffset)
 	{
 		constexpr float StillTime = 120.0f;
 		constexpr float TransitionTime = 60.0f;
@@ -621,7 +621,7 @@ namespace Jazz2::UI
 		char stringBuffer[32];
 		snprintf(stringBuffer, countof(stringBuffer), "x%i", _gems);
 
-		int charOffsetShadow = charOffset;
+		int32_t charOffsetShadow = charOffset;
 		_smallFont->DrawString(this, stringBuffer, charOffsetShadow, ViewSize.X * 0.5f, ViewSize.Y * 0.92f + 2.5f + offset, FontShadowLayer,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * alpha), 1.0f, 0.0f, 0.0f, 0.0f);
 
@@ -635,7 +635,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	void HUD::DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, float angle)
+	void HUD::DrawElement(const StringView& name, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, float angle)
 	{
 		auto it = _graphics->find(String::nullTerminatedView(name));
 		if (it == _graphics->end()) {
@@ -643,7 +643,7 @@ namespace Jazz2::UI
 		}
 
 		if (frame < 0) {
-			frame = it->second.FrameOffset + ((int)(AnimTime * it->second.FrameCount / it->second.AnimDuration) % it->second.FrameCount);
+			frame = it->second.FrameOffset + ((int32_t)(AnimTime * it->second.FrameCount / it->second.AnimDuration) % it->second.FrameCount);
 		}
 
 		GenericGraphicResource* base = it->second.Base;
@@ -651,8 +651,8 @@ namespace Jazz2::UI
 		Vector2f adjustedPos = ApplyAlignment(align, Vector2f(x - ViewSize.X * 0.5f, ViewSize.Y * 0.5f - y), size);
 
 		Vector2i texSize = base->TextureDiffuse->size();
-		int col = frame % base->FrameConfiguration.X;
-		int row = frame / base->FrameConfiguration.X;
+		int32_t col = frame % base->FrameConfiguration.X;
+		int32_t row = frame / base->FrameConfiguration.X;
 		Vector4f texCoords = Vector4f(
 			float(base->FrameDimensions.X) / float(texSize.X),
 			float(base->FrameDimensions.X * col) / float(texSize.X),
@@ -666,7 +666,7 @@ namespace Jazz2::UI
 		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending, angle);
 	}
 
-	void HUD::DrawElementClipped(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY)
+	void HUD::DrawElementClipped(const StringView& name, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY)
 	{
 		auto it = _graphics->find(String::nullTerminatedView(name));
 		if (it == _graphics->end()) {
@@ -674,7 +674,7 @@ namespace Jazz2::UI
 		}
 
 		if (frame < 0) {
-			frame = it->second.FrameOffset + ((int)(AnimTime * it->second.FrameCount / it->second.AnimDuration) % it->second.FrameCount);
+			frame = it->second.FrameOffset + ((int32_t)(AnimTime * it->second.FrameCount / it->second.AnimDuration) % it->second.FrameCount);
 		}
 
 		GenericGraphicResource* base = it->second.Base;
@@ -683,8 +683,8 @@ namespace Jazz2::UI
 			ViewSize.Y * 0.5f - y - (1.0f - clipY) * 0.5f * base->FrameDimensions.Y), size);
 
 		Vector2i texSize = base->TextureDiffuse->size();
-		int col = frame % base->FrameConfiguration.X;
-		int row = frame / base->FrameConfiguration.X;
+		int32_t col = frame % base->FrameConfiguration.X;
+		int32_t row = frame / base->FrameConfiguration.X;
 		Vector4f texCoords = Vector4f(
 			float(base->FrameDimensions.X) / float(texSize.X),
 			float(base->FrameDimensions.X * col) / float(texSize.X),
@@ -715,7 +715,7 @@ namespace Jazz2::UI
 			offset.X += 6;
 		}
 
-		if ((player->_weaponUpgrades[(int)weapon] & 0x01) != 0) {
+		if ((player->_weaponUpgrades[(int32_t)weapon] & 0x01) != 0) {
 			switch (weapon) {
 				default:
 				case WeaponType::Blaster:
@@ -801,7 +801,7 @@ namespace Jazz2::UI
 		_weaponWheelRenderCommandsCount = 0;
 
 		float requestedAngle;
-		int requestedIndex;
+		int32_t requestedIndex;
 		if (h == 0.0f && v == 0.0f) {
 			requestedAngle = NAN;
 			requestedIndex = -1;
@@ -816,7 +816,7 @@ namespace Jazz2::UI
 				adjustedAngle -= fTwoPi;
 			}
 
-			requestedIndex = (int)(_weaponWheelCount * adjustedAngle / fTwoPi);
+			requestedIndex = (int32_t)(_weaponWheelCount * adjustedAngle / fTwoPi);
 		}
 
 		float alpha = _weaponWheelAnim / WeaponWheelAnimDuration;
@@ -831,7 +831,7 @@ namespace Jazz2::UI
 		}
 
 		float angle = -fPiOver2;
-		for (int i = 0, j = 0; i < countof(player->_weaponAmmo); i++) {
+		for (int32_t i = 0, j = 0; i < countof(player->_weaponAmmo); i++) {
 			if (player->_weaponAmmo[i] != 0) {
 				float x = cosf(angle) * distance;
 				float y = sinf(angle) * distance;
@@ -864,7 +864,7 @@ namespace Jazz2::UI
 						ammoCount = stringBuffer;
 					}
 
-					int charOffset = 0;
+					int32_t charOffset = 0;
 					_smallFont->DrawString(this, ammoCount, charOffset, center.X + cosf(angle) * distance * 1.4f, center.Y + sinf(angle) * distance * 1.4f, FontLayer,
 						Alignment::Center, isSelected ? Colorf(0.62f, 0.44f, 0.34f, 0.5f * alpha) : Colorf(0.45f, 0.45f, 0.45f, 0.48f * alpha), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 				}
@@ -925,11 +925,11 @@ namespace Jazz2::UI
 		return (weaponCount > 0);
 	}
 
-	int HUD::GetWeaponCount(Actors::Player* player)
+	int32_t HUD::GetWeaponCount(Actors::Player* player)
 	{
-		int weaponCount = 0;
+		int32_t weaponCount = 0;
 
-		for (int i = 0; i < countof(player->_weaponAmmo); i++) {
+		for (int32_t i = 0; i < countof(player->_weaponAmmo); i++) {
 			if (player->_weaponAmmo[i] != 0) {
 				weaponCount++;
 			}
@@ -953,9 +953,9 @@ namespace Jazz2::UI
 		y = -y;
 
 		float angleRange = std::min(maxAngle - minAngle, fRadAngle360);
-		int segmentNum = std::clamp((int)std::round(powf(std::max(width, height), 0.65f) * 3.5f * angleRange / fRadAngle360), 4, 128);
+		int32_t segmentNum = std::clamp((int32_t)std::round(powf(std::max(width, height), 0.65f) * 3.5f * angleRange / fRadAngle360), 4, 128);
 		float angleStep = angleRange / (segmentNum - 1);
-		int vertexCount = segmentNum + 2;
+		int32_t vertexCount = segmentNum + 2;
 		float angle = minAngle;
 
 		Vertex* vertices = &_weaponWheelVertices[_weaponWheelVerticesCount];
@@ -969,14 +969,14 @@ namespace Jazz2::UI
 		constexpr float Mult = 2.2f;
 
 		{
-			int j = 0;
+			int32_t j = 0;
 			vertices[j].X = x + cosf(angle) * (width * Mult - 0.5f);
 			vertices[j].Y = y + sinf(angle) * (height * Mult - 0.5f);
 			vertices[j].U = 0.0f;
 			vertices[j].V = 0.0f;
 		}
 
-		for (int i = 1; i < vertexCount - 1; i++) {
+		for (int32_t i = 1; i < vertexCount - 1; i++) {
 			vertices[i].X = x + cosf(angle) * (width - 0.5f);
 			vertices[i].Y = y + sinf(angle) * (height - 0.5f);
 			vertices[i].U = 0.15f + (0.7f * (float)(i - 1) / (vertexCount - 3));
@@ -988,7 +988,7 @@ namespace Jazz2::UI
 		{
 			angle -= angleStep;
 
-			int j = vertexCount - 1;
+			int32_t j = vertexCount - 1;
 			vertices[j].X = x + cosf(angle) * (width * Mult - 0.5f);
 			vertices[j].Y = y + sinf(angle) * (height * Mult - 0.5f);
 			vertices[j].U = 1.0f;
@@ -1141,23 +1141,23 @@ namespace Jazz2::UI
 		}
 
 		auto mapings = ControlScheme::GetMappings();
-		AuraLight l = KeyToAuraLight(mapings[(int)PlayerActions::Up].Key1);
-		if (l != AuraLight::Unknown) colors[(int)l] = Color(100, 100, 100);
-		l = KeyToAuraLight(mapings[(int)PlayerActions::Down].Key1);
-		if (l != AuraLight::Unknown) colors[(int)l] = Color(100, 100, 100);
-		l = KeyToAuraLight(mapings[(int)PlayerActions::Left].Key1);
-		if (l != AuraLight::Unknown) colors[(int)l] = Color(100, 100, 100);
-		l = KeyToAuraLight(mapings[(int)PlayerActions::Right].Key1);
-		if (l != AuraLight::Unknown) colors[(int)l] = Color(100, 100, 100);
+		AuraLight l = KeyToAuraLight(mapings[(int32_t)PlayerActions::Up].Key1);
+		if (l != AuraLight::Unknown) colors[(int32_t)l] = Color(100, 100, 100);
+		l = KeyToAuraLight(mapings[(int32_t)PlayerActions::Down].Key1);
+		if (l != AuraLight::Unknown) colors[(int32_t)l] = Color(100, 100, 100);
+		l = KeyToAuraLight(mapings[(int32_t)PlayerActions::Left].Key1);
+		if (l != AuraLight::Unknown) colors[(int32_t)l] = Color(100, 100, 100);
+		l = KeyToAuraLight(mapings[(int32_t)PlayerActions::Right].Key1);
+		if (l != AuraLight::Unknown) colors[(int32_t)l] = Color(100, 100, 100);
 
-		l = KeyToAuraLight(mapings[(int)PlayerActions::Fire].Key1);
-		if (l != AuraLight::Unknown) colors[(int)l] = Color(160, 10, 10);
-		l = KeyToAuraLight(mapings[(int)PlayerActions::Jump].Key1);
-		if (l != AuraLight::Unknown) colors[(int)l] = Color(10, 80, 160);
-		l = KeyToAuraLight(mapings[(int)PlayerActions::Run].Key1);
-		if (l != AuraLight::Unknown) colors[(int)l] = Color(10, 170, 10);
-		l = KeyToAuraLight(mapings[(int)PlayerActions::ChangeWeapon].Key1);
-		if (l != AuraLight::Unknown) colors[(int)l] = Color(150, 140, 10);
+		l = KeyToAuraLight(mapings[(int32_t)PlayerActions::Fire].Key1);
+		if (l != AuraLight::Unknown) colors[(int32_t)l] = Color(160, 10, 10);
+		l = KeyToAuraLight(mapings[(int32_t)PlayerActions::Jump].Key1);
+		if (l != AuraLight::Unknown) colors[(int32_t)l] = Color(10, 80, 160);
+		l = KeyToAuraLight(mapings[(int32_t)PlayerActions::Run].Key1);
+		if (l != AuraLight::Unknown) colors[(int32_t)l] = Color(10, 170, 10);
+		l = KeyToAuraLight(mapings[(int32_t)PlayerActions::ChangeWeapon].Key1);
+		if (l != AuraLight::Unknown) colors[(int32_t)l] = Color(150, 140, 10);
 
 		rgbLights.Update(colors);
 #endif

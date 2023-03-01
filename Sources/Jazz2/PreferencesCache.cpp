@@ -60,7 +60,7 @@ namespace Jazz2
 		fs::MountAsPersistent("/Persistent"_s);
 		_configPath = "/Persistent/Jazz2.config"_s;
 
-		for (int i = 0; i < config.argc(); i++) {
+		for (int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
 			if (arg == "/reset-config"_s) {
 				resetConfig = true;
@@ -71,7 +71,7 @@ namespace Jazz2
 		bool overrideConfigPath = false;
 
 #	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
-		for (int i = 0; i < config.argc(); i++) {
+		for (int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
 			if (arg == "/config"_s) {
 				if (i + 1 < config.argc()) {
@@ -179,7 +179,7 @@ namespace Jazz2
 						// Controls
 						auto mappings = UI::ControlScheme::GetMappings();
 						uint8_t controlMappingCount = uc.ReadValue<uint8_t>();
-						for (int i = 0; i < controlMappingCount; i++) {
+						for (int32_t i = 0; i < controlMappingCount; i++) {
 							KeySym key1 = (KeySym)uc.ReadValue<uint8_t>();
 							KeySym key2 = (KeySym)uc.ReadValue<uint8_t>();
 							uint8_t gamepadIndex = uc.ReadValue<uint8_t>();
@@ -194,13 +194,13 @@ namespace Jazz2
 							}
 						}
 						// Reset primary Menu action, because it's hardcoded
-						mappings[(int)PlayerActions::Menu].Key1 = KeySym::ESCAPE;
+						mappings[(int32_t)PlayerActions::Menu].Key1 = KeySym::ESCAPE;
 
 						// Episode End
 						uint16_t episodeEndSize = uc.ReadValue<uint16_t>();
 						uint16_t episodeEndCount = uc.ReadValue<uint16_t>();
 
-						for (int i = 0; i < episodeEndCount; i++) {
+						for (int32_t i = 0; i < episodeEndCount; i++) {
 							uint8_t nameLength = uc.ReadValue<uint8_t>();
 							String episodeName = String(NoInit, nameLength);
 							uc.Read(episodeName.data(), nameLength);
@@ -221,7 +221,7 @@ namespace Jazz2
 						uint16_t episodeContinueSize = uc.ReadValue<uint16_t>();
 						uint16_t episodeContinueCount = uc.ReadValue<uint16_t>();
 
-						for (int i = 0; i < episodeContinueCount; i++) {
+						for (int32_t i = 0; i < episodeContinueCount; i++) {
 							uint8_t nameLength = uc.ReadValue<uint8_t>();
 							String episodeName = String(NoInit, nameLength);
 							uc.Read(episodeName.data(), nameLength);
@@ -254,7 +254,7 @@ namespace Jazz2
 		}
 
 		// Override some settings by command-line arguments
-		for (int i = 0; i < config.argc(); i++) {
+		for (int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
 			if (arg == "/bypass-cache"_s) {
 				BypassCache = true;
@@ -333,7 +333,7 @@ namespace Jazz2
 		// Controls
 		auto mappings = UI::ControlScheme::GetMappings();
 		co.WriteValue<uint8_t>((uint8_t)mappings.size());
-		for (int i = 0; i < mappings.size(); i++) {
+		for (int32_t i = 0; i < mappings.size(); i++) {
 			auto& mapping = mappings[i];
 			co.WriteValue<uint8_t>((uint8_t)mapping.Key1);
 			co.WriteValue<uint8_t>((uint8_t)mapping.Key2);

@@ -291,7 +291,7 @@ namespace Jazz2
 		ContentResolver& operator=(const ContentResolver&) = delete;
 
 		GenericGraphicResource* RequestGraphicsAura(const StringView& path, uint16_t paletteOffset);
-		static void ReadImageFromFile(std::unique_ptr<IFileStream>& s, uint8_t* data, int width, int height, int channelCount);
+		static void ReadImageFromFile(std::unique_ptr<IFileStream>& s, uint8_t* data, int32_t width, int32_t height, int32_t channelCount);
 		
 		std::unique_ptr<Shader> CompileShader(const char* shaderName, Shader::DefaultVertex vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled);
 		std::unique_ptr<Shader> CompileShader(const char* shaderName, const char* vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled);
@@ -305,8 +305,8 @@ namespace Jazz2
 		uint32_t _palettes[PaletteCount * ColorsPerPalette];
 		HashMap<String, std::unique_ptr<Metadata>> _cachedMetadata;
 		HashMap<Pair<String, uint16_t>, std::unique_ptr<GenericGraphicResource>> _cachedGraphics;
-		std::unique_ptr<UI::Font> _fonts[(int)FontType::Count];
-		std::unique_ptr<Shader> _precompiledShaders[(int)PrecompiledShader::Count];
+		std::unique_ptr<UI::Font> _fonts[(int32_t)FontType::Count];
+		std::unique_ptr<Shader> _precompiledShaders[(int32_t)PrecompiledShader::Count];
 
 #if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 		String _contentPath;

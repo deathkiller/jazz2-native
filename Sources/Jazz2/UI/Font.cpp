@@ -30,15 +30,15 @@ namespace Jazz2::UI
 				return;
 			}
 
-			int w = texLoader->width();
-			int h = texLoader->height();
+			int32_t w = texLoader->width();
+			int32_t h = texLoader->height();
 			auto pixels = (uint32_t*)texLoader->pixels();
 
 			/*uint8_t flags =*/ s->ReadValue<uint8_t>();
 			uint16_t width = s->ReadValue<uint16_t>();
 			uint16_t height = s->ReadValue<uint16_t>();
 			uint8_t cols = s->ReadValue<uint8_t>();
-			int rows = h / height;
+			int32_t rows = h / height;
 			int16_t spacing = s->ReadValue<int16_t>();
 			uint8_t asciiFirst = s->ReadValue<uint8_t>();
 			uint8_t asciiCount = s->ReadValue<uint8_t>();
@@ -46,7 +46,7 @@ namespace Jazz2::UI
 			uint8_t widths[128];
 			s->Read(widths, asciiCount);
 
-			int i = 0;
+			int32_t i = 0;
 			for (; i < asciiCount; i++) {
 				_asciiChars[i + asciiFirst] = Rectf(
 					(float)(i % cols) / cols,
@@ -56,12 +56,12 @@ namespace Jazz2::UI
 				);
 			}
 
-			int unicodeCharCount = asciiCount + s->ReadValue<int32_t>();
+			int32_t unicodeCharCount = asciiCount + s->ReadValue<int32_t>();
 			for (; i < unicodeCharCount; i++) {
 				char c[4] = { };
 				s->Read(c, 1);
 
-				int remainingBytes =
+				int32_t remainingBytes =
 					((c[0] & 240) == 240) ? 3 : (
 					((c[0] & 224) == 224) ? 2 : (
 					((c[0] & 192) == 192) ? 1 : -1
@@ -85,7 +85,7 @@ namespace Jazz2::UI
 			_charSize = Vector2i(width, height);
 			_baseSpacing = spacing;
 
-			for (int i = 0; i < w * h; i++) {
+			for (int32_t i = 0; i < w * h; i++) {
 				uint32_t color = palette[pixels[i] & 0xff];
 				pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
 			}
@@ -108,7 +108,7 @@ namespace Jazz2::UI
 		float charSpacingPre = charSpacing;
 		float scalePre = scale;
 
-		int idx = 0;
+		int32_t idx = 0;
 		do {
 			std::pair<char32_t, std::size_t> cursor = Utf8::NextChar(text, idx);
 
@@ -161,7 +161,7 @@ namespace Jazz2::UI
 		return Vector2f(ceilf(totalWidth), ceilf(totalHeight));
 	}
 
-	void Font::DrawString(Canvas* canvas, const StringView& text, int& charOffset, float x, float y, uint16_t z, Alignment align, Colorf color, float scale, float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
+	void Font::DrawString(Canvas* canvas, const StringView& text, int32_t& charOffset, float x, float y, uint16_t z, Alignment align, Colorf color, float scale, float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
 		size_t textLength = text.size();
 		if (textLength == 0 || _charSize.Y <= 0) {
@@ -172,7 +172,7 @@ namespace Jazz2::UI
 		float phase = canvas->AnimTime * speed * 16.0f;
 
 		// Maximum number of lines - center and right alignment starts to glitch if text has more lines, but it should be enough in most cases
-		constexpr int MaxLines = 16;
+		constexpr int32_t MaxLines = 16;
 
 		// Preprocessing
 		float totalWidth = 0.0f, lastWidth = 0.0f, totalHeight = 0.0f;
@@ -180,8 +180,8 @@ namespace Jazz2::UI
 		float charSpacingPre = charSpacing;
 		float scalePre = scale;
 
-		int idx = 0;
-		int line = 0;
+		int32_t idx = 0;
+		int32_t line = 0;
 		do {
 			std::pair<char32_t, std::size_t> cursor = Utf8::NextChar(text, idx);
 
@@ -301,7 +301,7 @@ namespace Jazz2::UI
 								cursor = Utf8::NextChar(text, idx);
 								if (cursor.first == 'x') {
 									idx = cursor.second;
-									int paramLength = 0;
+									int32_t paramLength = 0;
 									char param[9];
 									do {
 										cursor = Utf8::NextChar(text, idx);
@@ -340,7 +340,7 @@ namespace Jazz2::UI
 						cursor = Utf8::NextChar(text, idx);
 						if (cursor.first == ':') {
 							idx = cursor.second;
-							int paramLength = 0;
+							int32_t paramLength = 0;
 							char param[9];
 							do {
 								cursor = Utf8::NextChar(text, idx);
@@ -401,7 +401,7 @@ namespace Jazz2::UI
 					pos.X = std::round(pos.X + uvRect.W * scale * 0.5f);
 					pos.Y = std::round(pos.Y - uvRect.H * scale * 0.5f);
 
-					int charWidth = _charSize.X;
+					int32_t charWidth = _charSize.X;
 					if (charWidth > uvRect.W) {
 						charWidth--;
 					}

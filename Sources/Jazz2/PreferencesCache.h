@@ -64,8 +64,8 @@ namespace Jazz2
 		uint8_t Unused1;
 		int32_t Score;
 		uint16_t Unused2;
-		uint16_t Ammo[(int)WeaponType::Count];
-		uint8_t WeaponUpgrades[(int)WeaponType::Count];
+		uint16_t Ammo[(int32_t)WeaponType::Count];
+		uint8_t WeaponUpgrades[(int32_t)WeaponType::Count];
 	};
 
 	struct EpisodeContinuationStateWithLevel {

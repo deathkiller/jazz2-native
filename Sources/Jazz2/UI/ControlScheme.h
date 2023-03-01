@@ -29,24 +29,24 @@ namespace Jazz2::UI
 		friend class Menu::RemapControlsSection;
 
 	public:
-		static constexpr int MaxSupportedPlayers = 1;
-		static constexpr int MaxConnectedGamepads = 4;
+		static constexpr int32_t MaxSupportedPlayers = 1;
+		static constexpr int32_t MaxConnectedGamepads = 4;
 
 		static void Reset();
 
-		static KeySym Key1(int playerIndex, PlayerActions action)
+		static KeySym Key1(int32_t playerIndex, PlayerActions action)
 		{
-			return _mappings[playerIndex * (int)PlayerActions::Count + (int)action].Key1;
+			return _mappings[playerIndex * (int32_t)PlayerActions::Count + (int)action].Key1;
 		}
 
-		static KeySym Key2(int playerIndex, PlayerActions action)
+		static KeySym Key2(int32_t playerIndex, PlayerActions action)
 		{
-			return _mappings[playerIndex * (int)PlayerActions::Count + (int)action].Key2;
+			return _mappings[playerIndex * (int32_t)PlayerActions::Count + (int)action].Key2;
 		}
 
-		static ButtonName Gamepad(int playerIndex, PlayerActions action, int& gamepadIndex)
+		static ButtonName Gamepad(int32_t playerIndex, PlayerActions action, int& gamepadIndex)
 		{
-			auto& mapping = _mappings[playerIndex * (int)PlayerActions::Count + (int)action];
+			auto& mapping = _mappings[playerIndex * (int32_t)PlayerActions::Count + (int)action];
 			gamepadIndex = mapping.GamepadIndex;
 			return mapping.GamepadButton;
 		}

@@ -8,9 +8,9 @@ namespace nCine
 	class IAppEventHandler;
 }
 
-std::unique_ptr<nCine::IAppEventHandler> createAppEventHandler();
+std::unique_ptr<nCine::IAppEventHandler> CreateAppEventHandler();
 
-void android_main(struct android_app *state)
+void android_main(struct android_app* state)
 {
-	nCine::AndroidApplication::start(state, createAppEventHandler);
+	nCine::AndroidApplication::start(state, CreateAppEventHandler);
 }

@@ -119,8 +119,8 @@ namespace Jazz2::UI
 		std::memcpy(_lastColors, colors, sizeof(_lastColors));
 
 		ChromaSDK::Keyboard::CUSTOM_EFFECT_TYPE param = { };
-		for (int i = COLORS_LIMITED_SIZE; i < ColorsSize; i++) {
-			int idx = KeyLayout[i - COLORS_LIMITED_SIZE];
+		for (int32_t i = COLORS_LIMITED_SIZE; i < ColorsSize; i++) {
+			int32_t idx = KeyLayout[i - COLORS_LIMITED_SIZE];
 			param.Color[idx / KEYBOARD_WIDTH][idx % KEYBOARD_WIDTH] = colors[i].Abgr();
 		}
 
@@ -137,7 +137,7 @@ namespace Jazz2::UI
 		std::memcpy(_lastColors, colors, sizeof(_lastColors));
 
 		uint32_t buffer[KEYBOARD_WIDTH * KEYBOARD_HEIGHT] { };
-		for (int i = COLORS_LIMITED_SIZE; i < ColorsSize; i++) {
+		for (int32_t i = COLORS_LIMITED_SIZE; i < ColorsSize; i++) {
 			buffer[KeyLayout[i - COLORS_LIMITED_SIZE]] = colors[i].Abgr();
 		}
 
@@ -151,12 +151,12 @@ namespace Jazz2::UI
 
 		request.append(R"(,"param":[)");
 
-		for (int i = 0; i < KEYBOARD_HEIGHT; i++) {
+		for (int32_t i = 0; i < KEYBOARD_HEIGHT; i++) {
 			if (i > 0) {
 				request.append(",");
 			}
 			request.append("[");
-			for (int j = 0; j < KEYBOARD_WIDTH; j++) {
+			for (int32_t j = 0; j < KEYBOARD_WIDTH; j++) {
 				if (j > 0) {
 					request.append(",");
 				}
@@ -182,7 +182,7 @@ namespace Jazz2::UI
 		}
 
 		bool isEmpty = true;
-		for (int i = 0; i < ColorsSize; i++) {
+		for (int32_t i = 0; i < ColorsSize; i++) {
 			if (_lastColors[i] != Color(0, 0, 0, 0)) {
 				isEmpty = false;
 				break;
@@ -202,7 +202,7 @@ namespace Jazz2::UI
 		}
 
 		bool isEmpty = true;
-		for (int i = 0; i < ColorsSize; i++) {
+		for (int32_t i = 0; i < ColorsSize; i++) {
 			if (_lastColors[i] != Color(0, 0, 0, 0)) {
 				isEmpty = false;
 				break;
@@ -233,7 +233,7 @@ namespace Jazz2::UI
 	}
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-	EM_BOOL RgbLights::emscriptenOnOpen(int eventType, const EmscriptenWebSocketOpenEvent* websocketEvent, void* userData)
+	EM_BOOL RgbLights::emscriptenOnOpen(int32_t eventType, const EmscriptenWebSocketOpenEvent* websocketEvent, void* userData)
 	{
 		constexpr char Response[] = R"({"title":"Jazz² Resurrection","description":"Jazz² Resurrection","author":{"name":"Dan R.","contact":"http://deat.tk/jazz2/"},"device_supported":["keyboard","mouse"],"category":"game","ext":"Aura™ Service"})";
 
@@ -247,7 +247,7 @@ namespace Jazz2::UI
 		return EM_TRUE;
 	}
 
-	EM_BOOL RgbLights::emscriptenOnError(int eventType, const EmscriptenWebSocketErrorEvent* websocketEvent, void* userData)
+	EM_BOOL RgbLights::emscriptenOnError(int32_t eventType, const EmscriptenWebSocketErrorEvent* websocketEvent, void* userData)
 	{
 		RgbLights* _this = reinterpret_cast<RgbLights*>(userData);
 
@@ -260,7 +260,7 @@ namespace Jazz2::UI
 		return EM_TRUE;
 	}
 
-	EM_BOOL RgbLights::emscriptenOnClose(int eventType, const EmscriptenWebSocketCloseEvent* websocketEvent, void* userData)
+	EM_BOOL RgbLights::emscriptenOnClose(int32_t eventType, const EmscriptenWebSocketCloseEvent* websocketEvent, void* userData)
 	{
 		RgbLights* _this = reinterpret_cast<RgbLights*>(userData);
 
@@ -273,7 +273,7 @@ namespace Jazz2::UI
 		return EM_TRUE;
 	}
 
-	EM_BOOL RgbLights::emscriptenOnMessage(int eventType, const EmscriptenWebSocketMessageEvent* websocketEvent, void* userData)
+	EM_BOOL RgbLights::emscriptenOnMessage(int32_t eventType, const EmscriptenWebSocketMessageEvent* websocketEvent, void* userData)
 	{
 		// Server usually doesn't send anything back
 		return EM_TRUE;

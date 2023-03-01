@@ -83,7 +83,7 @@ namespace Jazz2
 		}
 
 		// Process carry overs
-		for (int i = 0; i < countof(levelInit.PlayerCarryOvers); i++) {
+		for (int32_t i = 0; i < countof(levelInit.PlayerCarryOvers); i++) {
 			if (levelInit.PlayerCarryOvers[i].Type == PlayerType::None) {
 				continue;
 			}
@@ -254,7 +254,7 @@ namespace Jazz2
 			}
 		}
 
-		for (int i = (int)_playingSounds.size() - 1; i >= 0; i--) {
+		for (int32_t i = (int32_t)_playingSounds.size() - 1; i >= 0; i--) {
 			if (_playingSounds[i]->isStopped()) {
 				_playingSounds.erase(&_playingSounds[i]);
 			} else {
@@ -300,7 +300,7 @@ namespace Jazz2
 					levelInit.LastExitType = _nextLevelType;
 					levelInit.LastEpisodeName = _episodeName;
 
-					for (int i = 0; i < _players.size(); i++) {
+					for (int32_t i = 0; i < _players.size(); i++) {
 						levelInit.PlayerCarryOvers[i] = _players[i]->PrepareLevelCarryOver();
 					}
 
@@ -312,20 +312,20 @@ namespace Jazz2
 			if (_difficulty != GameDifficulty::Multiplayer) {
 				if (!_players.empty()) {
 					auto& pos = _players[0]->GetPos();
-					int tx1 = (int)pos.X / Tiles::TileSet::DefaultTileSize;
-					int ty1 = (int)pos.Y / Tiles::TileSet::DefaultTileSize;
-					int tx2 = tx1;
-					int ty2 = ty1;
+					int32_t tx1 = (int32_t)pos.X / Tiles::TileSet::DefaultTileSize;
+					int32_t ty1 = (int32_t)pos.Y / Tiles::TileSet::DefaultTileSize;
+					int32_t tx2 = tx1;
+					int32_t ty2 = ty1;
 
 					tx1 -= ActivateTileRange;
 					ty1 -= ActivateTileRange;
 					tx2 += ActivateTileRange;
 					ty2 += ActivateTileRange;
 
-					int tx1d = tx1 - 4;
-					int ty1d = ty1 - 4;
-					int tx2d = tx2 + 4;
-					int ty2d = ty2 + 4;
+					int32_t tx1d = tx1 - 4;
+					int32_t ty1d = ty1 - 4;
+					int32_t tx2d = tx2 + 4;
+					int32_t ty2d = ty2 + 4;
 
 					for (auto& actor : _actors) {
 						if ((actor->_state & (Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator)) != Actors::ActorState::None) {
@@ -352,8 +352,8 @@ namespace Jazz2
 
 			// Weather
 			if (_weatherType != WeatherType::None) {
-				int weatherIntensity = std::max((int)(_weatherIntensity * timeMult), 1);
-				for (int i = 0; i < weatherIntensity; i++) {
+				uint32_t weatherIntensity = std::max((uint32_t)(_weatherIntensity * timeMult), 1u);
+				for (int32_t i = 0; i < weatherIntensity; i++) {
 					TileMap::DebrisFlags debrisFlags;
 					if ((_weatherType & WeatherType::OutdoorsOnly) == WeatherType::OutdoorsOnly) {
 						debrisFlags = TileMap::DebrisFlags::Disappear;
@@ -393,9 +393,9 @@ namespace Jazz2
 
 							debris.Time = 180.0f;
 
-							int curAnimFrame = it->second.FrameOffset + Random().Next(0, it->second.FrameCount);
-							int col = curAnimFrame % resBase->FrameConfiguration.X;
-							int row = curAnimFrame / resBase->FrameConfiguration.X;
+							uint32_t curAnimFrame = it->second.FrameOffset + Random().Next(0, it->second.FrameCount);
+							uint32_t col = curAnimFrame % resBase->FrameConfiguration.X;
+							uint32_t row = curAnimFrame / resBase->FrameConfiguration.X;
 							debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
 							debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
 							debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
@@ -432,9 +432,9 @@ namespace Jazz2
 
 							debris.Time = 180.0f;
 
-							int curAnimFrame = it->second.FrameOffset + Random().Next(0, it->second.FrameCount);
-							int col = curAnimFrame % resBase->FrameConfiguration.X;
-							int row = curAnimFrame / resBase->FrameConfiguration.X;
+							uint32_t curAnimFrame = it->second.FrameOffset + Random().Next(0, it->second.FrameCount);
+							uint32_t col = curAnimFrame % resBase->FrameConfiguration.X;
+							uint32_t row = curAnimFrame / resBase->FrameConfiguration.X;
 							debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
 							debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
 							debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
@@ -488,18 +488,18 @@ namespace Jazz2
 		_lightingView->setClearColor(_ambientColor.W, 0.0f, 0.0f, 1.0f);
 	}
 
-	void LevelHandler::OnInitializeViewport(int width, int height)
+	void LevelHandler::OnInitializeViewport(int32_t width, int32_t height)
 	{
 		constexpr float defaultRatio = (float)DefaultWidth / DefaultHeight;
 		float currentRatio = (float)width / height;
 
-		int w, h;
+		int32_t w, h;
 		if (currentRatio > defaultRatio) {
 			w = std::min(DefaultWidth, width);
-			h = (int)(w / currentRatio);
+			h = (int32_t)(w / currentRatio);
 		} else if (currentRatio < defaultRatio) {
 			h = std::min(DefaultHeight, height);
-			w = (int)(h * currentRatio);
+			w = (int32_t)(h * currentRatio);
 		} else {
 			w = std::min(DefaultWidth, width);
 			h = std::min(DefaultHeight, height);
@@ -626,7 +626,7 @@ namespace Jazz2
 										   (_cheatsBuffer[2] == (char)KeySym::A && _cheatsBuffer[3] == (char)KeySym::M && _cheatsBuffer[4] == (char)KeySym::M && _cheatsBuffer[5] == (char)KeySym::O)) {
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
-									for (int i = 0; i < (int)WeaponType::Count; i++) {
+									for (int32_t i = 0; i < (int32_t)WeaponType::Count; i++) {
 										_players[0]->AddAmmo((WeaponType)i, 99);
 									}
 								} else if (_cheatsBuffer[2] == (char)KeySym::R && _cheatsBuffer[3] == (char)KeySym::U && _cheatsBuffer[4] == (char)KeySym::S && _cheatsBuffer[5] == (char)KeySym::H) {
@@ -647,7 +647,7 @@ namespace Jazz2
 								if (_cheatsBuffer[2] == (char)KeySym::P && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::W && _cheatsBuffer[5] == (char)KeySym::E && _cheatsBuffer[6] == (char)KeySym::R) {
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
-									for (int i = 0; i < (int)WeaponType::Count; i++) {
+									for (int32_t i = 0; i < (int32_t)WeaponType::Count; i++) {
 										_players[0]->AddWeaponUpgrade((WeaponType)i, 0x01);
 									}
 								} else if (_cheatsBuffer[2] == (char)KeySym::C && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::I && _cheatsBuffer[5] == (char)KeySym::N && _cheatsBuffer[6] == (char)KeySym::S) {
@@ -711,7 +711,7 @@ namespace Jazz2
 	{
 		auto it = _commonResources->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _commonResources->Sounds.end()) {
-			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
+			int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int32_t)it->second.Buffers.size()) : 0);
 			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(it->second.Buffers[idx].get()));
 			player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
 			player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
@@ -1055,7 +1055,7 @@ namespace Jazz2
 
 		auto it = _commonResources->Sounds.find(String::nullTerminatedView("SugarRush"_s));
 		if (it != _commonResources->Sounds.end()) {
-			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
+			int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int32_t)it->second.Buffers.size()) : 0);
 			_sugarRushMusic = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(it->second.Buffers[idx].get()));
 			_sugarRushMusic->setPosition(Vector3f(0.0f, 0.0f, 100.0f));
 			_sugarRushMusic->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
@@ -1074,17 +1074,17 @@ namespace Jazz2
 		_hud->ShowLevelText(text);
 	}
 
-	void LevelHandler::ShowCoins(int count)
+	void LevelHandler::ShowCoins(int32_t count)
 	{
 		_hud->ShowCoins(count);
 	}
 
-	void LevelHandler::ShowGems(int count)
+	void LevelHandler::ShowGems(int32_t count)
 	{
 		_hud->ShowGems(count);
 	}
 
-	StringView LevelHandler::GetLevelText(uint32_t textId, int index, uint32_t delimiter)
+	StringView LevelHandler::GetLevelText(uint32_t textId, int32_t index, uint32_t delimiter)
 	{
 		if (textId >= _levelTexts.size()) {
 			return { };
@@ -1094,9 +1094,9 @@ namespace Jazz2
 		size_t textSize = text.size();
 
 		if (textSize > 0 && index >= 0) {
-			int delimiterCount = 0;
-			int start = 0;
-			int idx = 0;
+			int32_t delimiterCount = 0;
+			int32_t start = 0;
+			int32_t idx = 0;
 			do {
 				std::pair<char32_t, std::size_t> cursor = Death::Utf8::NextChar(text, idx);
 
@@ -1137,21 +1137,21 @@ namespace Jazz2
 		_levelTexts[textId] = value;
 	}
 
-	bool LevelHandler::PlayerActionPressed(int index, PlayerActions action, bool includeGamepads)
+	bool LevelHandler::PlayerActionPressed(int32_t index, PlayerActions action, bool includeGamepads)
 	{
 		bool isGamepad;
 		return PlayerActionPressed(index, action, includeGamepads, isGamepad);
 	}
 
-	bool LevelHandler::PlayerActionPressed(int index, PlayerActions action, bool includeGamepads, bool& isGamepad)
+	bool LevelHandler::PlayerActionPressed(int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
 	{
 		if (index != 0) {
 			return false;
 		}
 
 		isGamepad = false;
-		if ((_pressedActions & (1ull << (int)action)) != 0) {
-			isGamepad = (_pressedActions & (1ull << (16 + (int)action))) != 0;
+		if ((_pressedActions & (1ull << (int32_t)action)) != 0) {
+			isGamepad = (_pressedActions & (1ull << (16 + (int32_t)action))) != 0;
 			return true;
 		}
 
@@ -1167,51 +1167,51 @@ namespace Jazz2
 		return false;
 	}
 
-	bool LevelHandler::PlayerActionHit(int index, PlayerActions action, bool includeGamepads)
+	bool LevelHandler::PlayerActionHit(int32_t index, PlayerActions action, bool includeGamepads)
 	{
 		bool isGamepad;
 		return PlayerActionHit(index, action, includeGamepads, isGamepad);
 	}
 
-	bool LevelHandler::PlayerActionHit(int index, PlayerActions action, bool includeGamepads, bool& isGamepad)
+	bool LevelHandler::PlayerActionHit(int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad)
 	{
 		if (index != 0) {
 			return false;
 		}
 
 		isGamepad = false;
-		if ((_pressedActions & ((1ull << (int)action) | (1ull << (32 + (int)action)))) == (1ull << (int)action)) {
-			isGamepad = (_pressedActions & (1ull << (16 + (int)action))) != 0;
+		if ((_pressedActions & ((1ull << (int32_t)action) | (1ull << (32 + (int32_t)action)))) == (1ull << (int32_t)action)) {
+			isGamepad = (_pressedActions & (1ull << (16 + (int32_t)action))) != 0;
 			return true;
 		}
 
 		return false;
 	}
 
-	float LevelHandler::PlayerHorizontalMovement(int index)
+	float LevelHandler::PlayerHorizontalMovement(int32_t index)
 	{
 		if (index != 0) {
 			return 0.0f;
 		}
 
-		if ((_pressedActions & (1ull << (int)PlayerActions::Right)) != 0) {
+		if ((_pressedActions & (1ull << (int32_t)PlayerActions::Right)) != 0) {
 			return 1.0f;
-		} else if ((_pressedActions & (1ull << (int)PlayerActions::Left)) != 0) {
+		} else if ((_pressedActions & (1ull << (int32_t)PlayerActions::Left)) != 0) {
 			return -1.0f;
 		}
 
 		return (_playerFrozenEnabled ? _playerFrozenMovement.X : _playerRequiredMovement.X);
 	}
 
-	float LevelHandler::PlayerVerticalMovement(int index)
+	float LevelHandler::PlayerVerticalMovement(int32_t index)
 	{
 		if (index != 0) {
 			return 0.0f;
 		}
 
-		if ((_pressedActions & (1ull << (int)PlayerActions::Up)) != 0) {
+		if ((_pressedActions & (1ull << (int32_t)PlayerActions::Up)) != 0) {
 			return -1.0f;
-		} else if ((_pressedActions & (1ull << (int)PlayerActions::Down)) != 0) {
+		} else if ((_pressedActions & (1ull << (int32_t)PlayerActions::Down)) != 0) {
 			return 1.0f;
 		}
 
@@ -1452,32 +1452,32 @@ namespace Jazz2
 		_pressedActions = ((_pressedActions & 0xffffffffu) << 32);
 
 		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Up)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Up)]) {
-			_pressedActions |= (1 << (int)PlayerActions::Up);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Up);
 		}
 		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Down)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Down)]) {
-			_pressedActions |= (1 << (int)PlayerActions::Down);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Down);
 		}
 		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Left)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Left)]) {
-			_pressedActions |= (1 << (int)PlayerActions::Left);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Left);
 		}
 		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Right)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Right)]) {
-			_pressedActions |= (1 << (int)PlayerActions::Right);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Right);
 		}
 		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Fire)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Fire)]) {
-			_pressedActions |= (1 << (int)PlayerActions::Fire);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Fire);
 		}
 		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Jump)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Jump)]) {
-			_pressedActions |= (1 << (int)PlayerActions::Jump);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Jump);
 		}
 		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Run)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Run)]) {
-			_pressedActions |= (1 << (int)PlayerActions::Run);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Run);
 		}
 		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::ChangeWeapon)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::ChangeWeapon)]) {
-			_pressedActions |= (1 << (int)PlayerActions::ChangeWeapon);
+			_pressedActions |= (1 << (int32_t)PlayerActions::ChangeWeapon);
 		}
 		// Allow Android Back button as menu key
 		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Menu)] || (PreferencesCache::UseNativeBackButton && _pressedKeys[(uint32_t)KeySym::BACK])) {
-			_pressedActions |= (1 << (int)PlayerActions::Menu);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Menu);
 		}
 
 		// Use numeric key to switch weapons for the first player
@@ -1500,30 +1500,30 @@ namespace Jazz2
 
 		// Try to get 8 connected joysticks
 		const JoyMappedState* joyStates[UI::ControlScheme::MaxConnectedGamepads];
-		int jc = 0;
-		for (int i = 0; i < IInputManager::MaxNumJoysticks && jc < countof(joyStates); i++) {
+		int32_t jc = 0;
+		for (int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < countof(joyStates); i++) {
 			if (input.isJoyMapped(i)) {
 				joyStates[jc++] = &input.joyMappedState(i);
 			}
 		}
 
-		ButtonName jb; int ji1, ji2, ji3, ji4;
+		ButtonName jb; int32_t ji1, ji2, ji3, ji4;
 
 		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Up, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Up);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Up);
 		}
 		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Down, ji2);
 		if (ji2 >= 0 && ji2 < jc && joyStates[ji2]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Down);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Down);
 		}
 		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Left, ji3);
 		if (ji3 >= 0 && ji3 < jc && joyStates[ji3]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Left);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Left);
 		}
 		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Right, ji4);
 		if (ji4 >= 0 && ji4 < jc && joyStates[ji4]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Right);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Right);
 		}
 
 		// Use analog controls only if all movement buttons are mapped to the same joystick
@@ -1538,23 +1538,23 @@ namespace Jazz2
 
 		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Jump, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Jump) | (1 << (16 + (int)PlayerActions::Jump));
+			_pressedActions |= (1 << (int32_t)PlayerActions::Jump) | (1 << (16 + (int32_t)PlayerActions::Jump));
 		}
 		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Run, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Run) | (1 << (16 + (int)PlayerActions::Run));
+			_pressedActions |= (1 << (int32_t)PlayerActions::Run) | (1 << (16 + (int32_t)PlayerActions::Run));
 		}
 		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Fire, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Fire) | (1 << (16 + (int)PlayerActions::Fire));
+			_pressedActions |= (1 << (int32_t)PlayerActions::Fire) | (1 << (16 + (int32_t)PlayerActions::Fire));
 		}
 		jb = UI::ControlScheme::Gamepad(0, PlayerActions::ChangeWeapon, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::ChangeWeapon) | (1 << (16 + (int)PlayerActions::ChangeWeapon));
+			_pressedActions |= (1 << (int32_t)PlayerActions::ChangeWeapon) | (1 << (16 + (int32_t)PlayerActions::ChangeWeapon));
 		}
 		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Menu, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Menu) | (1 << (16 + (int)PlayerActions::Menu));
+			_pressedActions |= (1 << (int32_t)PlayerActions::Menu) | (1 << (16 + (int32_t)PlayerActions::Menu));
 		}
 
 		// Also apply overriden actions (by touch controls)
@@ -1609,7 +1609,7 @@ namespace Jazz2
 #endif
 
 		// Mark Menu button as already pressed to avoid some issues
-		_pressedActions |= (1ull << (int)PlayerActions::Menu) | (1ull << (32 + (int)PlayerActions::Menu));
+		_pressedActions |= (1ull << (int32_t)PlayerActions::Menu) | (1ull << (32 + (int32_t)PlayerActions::Menu));
 	}
 
 	bool LevelHandler::LightingRenderer::OnDraw(RenderQueue& renderQueue)
@@ -1658,7 +1658,7 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::BlurRenderPass::Initialize(Texture* source, int width, int height, const Vector2f& direction)
+	void LevelHandler::BlurRenderPass::Initialize(Texture* source, int32_t width, int32_t height, const Vector2f& direction)
 	{
 		_source = source;
 		_downsampleOnly = (direction.X <= std::numeric_limits<float>::epsilon() && direction.Y <= std::numeric_limits<float>::epsilon());
@@ -1722,7 +1722,7 @@ namespace Jazz2
 		return true;
 	}
 
-	void LevelHandler::CombineRenderer::Initialize(int width, int height)
+	void LevelHandler::CombineRenderer::Initialize(int32_t width, int32_t height)
 	{
 		_size = Vector2f(static_cast<float>(width), static_cast<float>(height));
 

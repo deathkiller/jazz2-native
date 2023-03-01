@@ -831,13 +831,13 @@ void GameEventHandler::CheckUpdates()
 		default: deviceType = "Unknown"; break;
 	}
 	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i (%s)||7|%i",
-		(int)((osVersion >> 48) & 0xffffu), (int)((osVersion >> 32) & 0xffffu), (int)(osVersion & 0xffffffffu), deviceType, arch);
+		(int32_t)((osVersion >> 48) & 0xffffu), (int32_t)((osVersion >> 32) & 0xffffu), (int32_t)(osVersion & 0xffffffffu), deviceType, arch);
 #else
 	HMODULE hNtdll = ::GetModuleHandle(L"ntdll.dll");
 	bool isWine = (hNtdll != nullptr && ::GetProcAddress(hNtdll, "wine_get_host_version") != nullptr);
 	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength,
-		isWine ? "|Windows %i.%i.%i (Wine)||3" : "|Windows %i.%i.%i||3|%i",
-		(int)((osVersion >> 48) & 0xffffu), (int)((osVersion >> 32) & 0xffffu), (int)(osVersion & 0xffffffffu), arch);
+		isWine ? "|Windows %i.%i.%i (Wine)||3|%i" : "|Windows %i.%i.%i||3|%i",
+		(int32_t)((osVersion >> 48) & 0xffffu), (int32_t)((osVersion >> 32) & 0xffffu), (int32_t)(osVersion & 0xffffffffu), arch);
 #endif
 #else
 	constexpr char DeviceDesc[] = "||||"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
@@ -882,8 +882,8 @@ void GameEventHandler::SaveEpisodeEnd(const std::unique_ptr<LevelInitialization>
 
 		episodeEnd->Lives = firstPlayer->Lives;
 		episodeEnd->Score = firstPlayer->Score;
-		memcpy(episodeEnd->Ammo, firstPlayer->Ammo, sizeof(firstPlayer->Ammo));
-		memcpy(episodeEnd->WeaponUpgrades, firstPlayer->WeaponUpgrades, sizeof(firstPlayer->WeaponUpgrades));
+		std::memcpy(episodeEnd->Ammo, firstPlayer->Ammo, sizeof(firstPlayer->Ammo));
+		std::memcpy(episodeEnd->WeaponUpgrades, firstPlayer->WeaponUpgrades, sizeof(firstPlayer->WeaponUpgrades));
 
 		PreferencesCache::Save();
 	}
@@ -919,11 +919,11 @@ void GameEventHandler::SaveEpisodeContinue(const std::unique_ptr<LevelInitializa
 			episodeContinue->State.Flags |= EpisodeContinuationFlags::CheatsUsed;
 		}
 
-		episodeContinue->State.DifficultyAndPlayerType = ((int)pendingLevelChange->Difficulty & 0x0f) | (((int)firstPlayer->Type & 0x0f) << 4);
+		episodeContinue->State.DifficultyAndPlayerType = ((int32_t)pendingLevelChange->Difficulty & 0x0f) | (((int32_t)firstPlayer->Type & 0x0f) << 4);
 		episodeContinue->State.Lives = firstPlayer->Lives;
 		episodeContinue->State.Score = firstPlayer->Score;
-		memcpy(episodeContinue->State.Ammo, firstPlayer->Ammo, sizeof(firstPlayer->Ammo));
-		memcpy(episodeContinue->State.WeaponUpgrades, firstPlayer->WeaponUpgrades, sizeof(firstPlayer->WeaponUpgrades));
+		std::memcpy(episodeContinue->State.Ammo, firstPlayer->Ammo, sizeof(firstPlayer->Ammo));
+		std::memcpy(episodeContinue->State.WeaponUpgrades, firstPlayer->WeaponUpgrades, sizeof(firstPlayer->WeaponUpgrades));
 
 		PreferencesCache::TutorialCompleted = true;
 		PreferencesCache::Save();
@@ -1018,7 +1018,7 @@ void GameEventHandler::UpdateRichPresence(const std::unique_ptr<LevelInitializat
 }
 
 #if defined(DEATH_TARGET_ANDROID)
-std::unique_ptr<IAppEventHandler> createAppEventHandler()
+std::unique_ptr<IAppEventHandler> CreateAppEventHandler()
 {
 	return std::make_unique<GameEventHandler>();
 }

@@ -172,11 +172,11 @@ namespace Jazz2
 		_cachedMetadata.clear();
 		_cachedGraphics.clear();
 
-		for (int i = 0; i < (int)FontType::Count; i++) {
+		for (int32_t i = 0; i < (int32_t)FontType::Count; i++) {
 			_fonts[i] = nullptr;
 		}
 
-		for (int i = 0; i < (int)PrecompiledShader::Count; i++) {
+		for (int32_t i = 0; i < (int32_t)PrecompiledShader::Count; i++) {
 			_precompiledShaders[i] = nullptr;
 		}
 	}
@@ -435,8 +435,8 @@ namespace Jazz2
 					return nullptr;
 				}
 
-				int w = texLoader->width();
-				int h = texLoader->height();
+				int32_t w = texLoader->width();
+				int32_t h = texLoader->height();
 				auto pixels = (uint32_t*)texLoader->pixels();
 				const uint32_t* palette = _palettes + paletteOffset;
 				bool linearSampling = false;
@@ -460,7 +460,7 @@ namespace Jazz2
 				if (needsMask) {
 					graphics->Mask = std::make_unique<uint8_t[]>(w * h);
 
-					for (int i = 0; i < w * h; i++) {
+					for (int32_t i = 0; i < w * h; i++) {
 						// Save original alpha value for collision checking
 						graphics->Mask[i] = ((pixels[i] >> 24) & 0xff);
 						if (palette != nullptr) {
@@ -469,7 +469,7 @@ namespace Jazz2
 						}
 					}
 				} else if (palette != nullptr) {
-					for (int i = 0; i < w * h; i++) {
+					for (int32_t i = 0; i < w * h; i++) {
 						uint32_t color = palette[pixels[i] & 0xff];
 						pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
 					}
@@ -623,7 +623,7 @@ namespace Jazz2
 		return _cachedGraphics.emplace(Pair(String(path), paletteOffset), std::move(graphics)).first->second.get();
 	}
 
-	void ContentResolver::ReadImageFromFile(std::unique_ptr<IFileStream>& s, uint8_t* data, int width, int height, int channelCount)
+	void ContentResolver::ReadImageFromFile(std::unique_ptr<IFileStream>& s, uint8_t* data, int32_t width, int32_t height, int32_t channelCount)
 	{
 		typedef union {
 			struct {
@@ -645,19 +645,19 @@ namespace Jazz2
 
 		rgba_t index[64] { };
 		rgba_t px;
-		int run = 0;
-		int px_len = width * height * channelCount;
+		int32_t run = 0;
+		int32_t px_len = width * height * channelCount;
 
 		px.rgba.r = 0;
 		px.rgba.g = 0;
 		px.rgba.b = 0;
 		px.rgba.a = 255;
 
-		for (int px_pos = 0; px_pos < px_len; px_pos += channelCount) {
+		for (int32_t px_pos = 0; px_pos < px_len; px_pos += channelCount) {
 			if (run > 0) {
 				run--;
 			} else {
-				int b1 = s->ReadValue<uint8_t>();
+				int32_t b1 = s->ReadValue<uint8_t>();
 
 				if (b1 == QOI_OP_RGB) {
 					px.rgba.r = s->ReadValue<uint8_t>();
@@ -675,8 +675,8 @@ namespace Jazz2
 					px.rgba.g += ((b1 >> 2) & 0x03) - 2;
 					px.rgba.b += (b1 & 0x03) - 2;
 				} else if ((b1 & QOI_MASK_2) == QOI_OP_LUMA) {
-					int b2 = s->ReadValue<uint8_t>();
-					int vg = (b1 & 0x3f) - 32;
+					int32_t b2 = s->ReadValue<uint8_t>();
+					int32_t vg = (b1 & 0x3f) - 32;
 					px.rgba.r += vg - 8 + ((b2 >> 4) & 0x0f);
 					px.rgba.g += vg;
 					px.rgba.b += vg - 8 + (b2 & 0x0f);
@@ -739,7 +739,7 @@ namespace Jazz2
 					_cachedMetadata.clear();
 					_cachedGraphics.clear();
 
-					for (int i = 0; i < (int)FontType::Count; i++) {
+					for (int32_t i = 0; i < (int32_t)FontType::Count; i++) {
 						_fonts[i] = nullptr;
 					}
 				}
@@ -756,8 +756,8 @@ namespace Jazz2
 		std::unique_ptr<uint8_t[]> mask = std::make_unique<uint8_t[]>(maskSize * 8);
 		for (uint32_t j = 0; j < maskSize; j++) {
 			uint8_t idx = uc.ReadValue<uint8_t>();
-			for (int k = 0; k < 8; k++) {
-				int pixelIdx = 8 * j + k;
+			for (uint32_t k = 0; k < 8; k++) {
+				uint32_t pixelIdx = 8 * j + k;
 				mask[pixelIdx] = (((idx >> k) & 0x01) != 0);
 			}
 		}
@@ -786,13 +786,13 @@ namespace Jazz2
 		// Caption Tile
 		std::unique_ptr<Color[]> captionTile = nullptr;
 		if (captionTileId > 0) {
-			int tw = (width / TileSet::DefaultTileSize);
-			int tx = (captionTileId % tw) * TileSet::DefaultTileSize;
-			int ty = (captionTileId / tw) * TileSet::DefaultTileSize;
+			int32_t tw = (width / TileSet::DefaultTileSize);
+			int32_t tx = (captionTileId % tw) * TileSet::DefaultTileSize;
+			int32_t ty = (captionTileId / tw) * TileSet::DefaultTileSize;
 			if (tx + TileSet::DefaultTileSize <= width && ty + TileSet::DefaultTileSize <= height) {
 				captionTile = std::make_unique<Color[]>(TileSet::DefaultTileSize * TileSet::DefaultTileSize / 3);
-				for (int y = 0; y < TileSet::DefaultTileSize / 3; y++) {
-					for (int x = 0; x < TileSet::DefaultTileSize; x++) {
+				for (int32_t y = 0; y < TileSet::DefaultTileSize / 3; y++) {
+					for (int32_t x = 0; x < TileSet::DefaultTileSize; x++) {
 						Color c1 = Color(pixels[((ty + y * 3) * width) + tx + x]);
 						Color c2 = Color(pixels[((ty + y * 3 + 1) * width) + tx + x]);
 						Color c3 = Color(pixels[((ty + y * 3 + 2) * width) + tx + x]);
@@ -809,7 +809,7 @@ namespace Jazz2
 	{
 		// Try "Content" directory first, then "Cache" directory
 		return (fs::IsReadableFile(fs::JoinPath({ GetContentPath(), "Episodes"_s, episodeName, levelName + ".j2l"_s })) || 
-			fs::IsReadableFile(fs::JoinPath({ GetCachePath(), "Episodes"_s, episodeName, levelName + ".j2l"_s })));
+				fs::IsReadableFile(fs::JoinPath({ GetCachePath(), "Episodes"_s, episodeName, levelName + ".j2l"_s })));
 	}
 
 	bool ContentResolver::LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty)
@@ -898,7 +898,7 @@ namespace Jazz2
 					_cachedMetadata.clear();
 					_cachedGraphics.clear();
 
-					for (int i = 0; i < (int)FontType::Count; i++) {
+					for (int32_t i = 0; i < (int32_t)FontType::Count; i++) {
 						_fonts[i] = nullptr;
 					}
 				}
@@ -912,7 +912,7 @@ namespace Jazz2
 
 		// Extra Tilesets
 		uint8_t extraTilesetCount = uc.ReadValue<uint8_t>();
-		for (int i = 0; i < extraTilesetCount; i++) {
+		for (uint32_t i = 0; i < extraTilesetCount; i++) {
 			uint8_t tilesetFlags = uc.ReadValue<uint8_t>();
 
 			nameSize = uc.ReadValue<uint8_t>();
@@ -935,7 +935,7 @@ namespace Jazz2
 		uint8_t textEventStringsCount = uc.ReadValue<uint8_t>();
 		SmallVector<String, 0> levelTexts;
 		levelTexts.reserve(textEventStringsCount);
-		for (int i = 0; i < textEventStringsCount; i++) {
+		for (uint32_t i = 0; i < textEventStringsCount; i++) {
 			uint16_t textLength = uc.ReadValue<uint16_t>();
 			String& text = levelTexts.emplace_back(NoInit, textLength);
 			uc.Read(text.data(), textLength);
@@ -946,7 +946,7 @@ namespace Jazz2
 
 		// Layers
 		uint8_t layerCount = uc.ReadValue<uint8_t>();
-		for (int i = 0; i < layerCount; i++) {
+		for (uint32_t i = 0; i < layerCount; i++) {
 			tileMap->ReadLayerConfiguration(uc);
 		}
 
@@ -971,7 +971,7 @@ namespace Jazz2
 				_cachedMetadata.clear();
 				_cachedGraphics.clear();
 
-				for (int i = 0; i < (int)FontType::Count; i++) {
+				for (int32_t i = 0; i < (int32_t)FontType::Count; i++) {
 					_fonts[i] = nullptr;
 				}
 			}
@@ -1036,11 +1036,10 @@ namespace Jazz2
 			// "Source" directory must be case in-sensitive
 			fullPath = fs::FindPathCaseInsensitive(fs::JoinPath(GetSourcePath(), path));
 		}
-		if (fs::IsReadableFile(fullPath)) {
-			return std::make_unique<AudioStreamPlayer>(fullPath);
-		} else {
+		if (!fs::IsReadableFile(fullPath)) {
 			return nullptr;
 		}
+		return std::make_unique<AudioStreamPlayer>(fullPath);
 	}
 
 	UI::Font* ContentResolver::GetFont(FontType fontType)
@@ -1049,7 +1048,7 @@ namespace Jazz2
 			return nullptr;
 		}
 
-		auto& font = _fonts[(int)fontType];
+		auto& font = _fonts[(int32_t)fontType];
 		if (font == nullptr) {
 			switch (fontType) {
 				case FontType::Small: font = std::make_unique<UI::Font>(fs::JoinPath({ GetContentPath(), "Animations"_s, "UI"_s, "font_small.png"_s }), _palettes); break;
@@ -1067,59 +1066,59 @@ namespace Jazz2
 			return nullptr;
 		}
 
-		return _precompiledShaders[(int)shader].get();
+		return _precompiledShaders[(int32_t)shader].get();
 	}
 
 	void ContentResolver::CompileShaders()
 	{
-		_precompiledShaders[(int)PrecompiledShader::Lighting] = CompileShader("Lighting", Shaders::LightingVs, Shaders::LightingFs);
-		_precompiledShaders[(int)PrecompiledShader::BatchedLighting] = CompileShader("BatchedLighting", Shaders::BatchedLightingVs, Shaders::LightingFs, Shader::Introspection::NoUniformsInBlocks);
-		_precompiledShaders[(int)PrecompiledShader::Lighting]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedLighting]);
+		_precompiledShaders[(int32_t)PrecompiledShader::Lighting] = CompileShader("Lighting", Shaders::LightingVs, Shaders::LightingFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::BatchedLighting] = CompileShader("BatchedLighting", Shaders::BatchedLightingVs, Shaders::LightingFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(int32_t)PrecompiledShader::Lighting]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedLighting]);
 
-		_precompiledShaders[(int)PrecompiledShader::Blur] = CompileShader("Blur", Shader::DefaultVertex::SPRITE, Shaders::BlurFs);
-		_precompiledShaders[(int)PrecompiledShader::Downsample] = CompileShader("Downsample", Shader::DefaultVertex::SPRITE, Shaders::DownsampleFs);
-		_precompiledShaders[(int)PrecompiledShader::Combine] = CompileShader("Combine", Shaders::CombineVs, Shaders::CombineFs);
-		_precompiledShaders[(int)PrecompiledShader::CombineWithWater] = CompileShader("CombineWithWater", Shaders::CombineVs, Shaders::CombineWithWaterFs);
-		_precompiledShaders[(int)PrecompiledShader::CombineWithWaterLow] = CompileShader("CombineWithWaterLow", Shaders::CombineVs, Shaders::CombineWithWaterLowFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::Blur] = CompileShader("Blur", Shader::DefaultVertex::SPRITE, Shaders::BlurFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::Downsample] = CompileShader("Downsample", Shader::DefaultVertex::SPRITE, Shaders::DownsampleFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::Combine] = CompileShader("Combine", Shaders::CombineVs, Shaders::CombineFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::CombineWithWater] = CompileShader("CombineWithWater", Shaders::CombineVs, Shaders::CombineWithWaterFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::CombineWithWaterLow] = CompileShader("CombineWithWaterLow", Shaders::CombineVs, Shaders::CombineWithWaterLowFs);
 
-		_precompiledShaders[(int)PrecompiledShader::TexturedBackground] = CompileShader("TexturedBackground", Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundFs);
-		_precompiledShaders[(int)PrecompiledShader::TexturedBackgroundCircle] = CompileShader("TexturedBackgroundCircle", Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundCircleFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::TexturedBackground] = CompileShader("TexturedBackground", Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::TexturedBackgroundCircle] = CompileShader("TexturedBackgroundCircle", Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundCircleFs);
 
-		_precompiledShaders[(int)PrecompiledShader::Colorized] = CompileShader("Colorized", Shader::DefaultVertex::SPRITE, Shaders::ColorizedFs);
-		_precompiledShaders[(int)PrecompiledShader::BatchedColorized] = CompileShader("BatchedColorized", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::ColorizedFs, Shader::Introspection::NoUniformsInBlocks);
-		_precompiledShaders[(int)PrecompiledShader::Colorized]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedColorized]);
+		_precompiledShaders[(int32_t)PrecompiledShader::Colorized] = CompileShader("Colorized", Shader::DefaultVertex::SPRITE, Shaders::ColorizedFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::BatchedColorized] = CompileShader("BatchedColorized", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::ColorizedFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(int32_t)PrecompiledShader::Colorized]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedColorized]);
 
-		_precompiledShaders[(int)PrecompiledShader::Tinted] = CompileShader("Tinted", Shader::DefaultVertex::SPRITE, Shaders::TintedFs);
-		_precompiledShaders[(int)PrecompiledShader::BatchedTinted] = CompileShader("BatchedTinted", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::TintedFs, Shader::Introspection::NoUniformsInBlocks);
-		_precompiledShaders[(int)PrecompiledShader::Tinted]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedTinted]);
+		_precompiledShaders[(int32_t)PrecompiledShader::Tinted] = CompileShader("Tinted", Shader::DefaultVertex::SPRITE, Shaders::TintedFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::BatchedTinted] = CompileShader("BatchedTinted", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::TintedFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(int32_t)PrecompiledShader::Tinted]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedTinted]);
 
-		_precompiledShaders[(int)PrecompiledShader::Outline] = CompileShader("Outline", Shader::DefaultVertex::SPRITE, Shaders::OutlineFs);
-		_precompiledShaders[(int)PrecompiledShader::BatchedOutline] = CompileShader("BatchedOutline", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::OutlineFs, Shader::Introspection::NoUniformsInBlocks);
-		_precompiledShaders[(int)PrecompiledShader::Outline]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedOutline]);
+		_precompiledShaders[(int32_t)PrecompiledShader::Outline] = CompileShader("Outline", Shader::DefaultVertex::SPRITE, Shaders::OutlineFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::BatchedOutline] = CompileShader("BatchedOutline", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::OutlineFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(int32_t)PrecompiledShader::Outline]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedOutline]);
 
-		_precompiledShaders[(int)PrecompiledShader::WhiteMask] = CompileShader("WhiteMask", Shader::DefaultVertex::SPRITE, Shaders::WhiteMaskFs);
-		_precompiledShaders[(int)PrecompiledShader::BatchedWhiteMask] = CompileShader("BatchedWhiteMask", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::WhiteMaskFs, Shader::Introspection::NoUniformsInBlocks);
-		_precompiledShaders[(int)PrecompiledShader::WhiteMask]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedWhiteMask]);
+		_precompiledShaders[(int32_t)PrecompiledShader::WhiteMask] = CompileShader("WhiteMask", Shader::DefaultVertex::SPRITE, Shaders::WhiteMaskFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::BatchedWhiteMask] = CompileShader("BatchedWhiteMask", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::WhiteMaskFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(int32_t)PrecompiledShader::WhiteMask]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedWhiteMask]);
 
-		_precompiledShaders[(int)PrecompiledShader::PartialWhiteMask] = CompileShader("PartialWhiteMask", Shader::DefaultVertex::SPRITE, Shaders::PartialWhiteMaskFs);
-		_precompiledShaders[(int)PrecompiledShader::BatchedPartialWhiteMask] = CompileShader("BatchedPartialWhiteMask", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::PartialWhiteMaskFs, Shader::Introspection::NoUniformsInBlocks);
-		_precompiledShaders[(int)PrecompiledShader::PartialWhiteMask]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedPartialWhiteMask]);
+		_precompiledShaders[(int32_t)PrecompiledShader::PartialWhiteMask] = CompileShader("PartialWhiteMask", Shader::DefaultVertex::SPRITE, Shaders::PartialWhiteMaskFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::BatchedPartialWhiteMask] = CompileShader("BatchedPartialWhiteMask", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::PartialWhiteMaskFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(int32_t)PrecompiledShader::PartialWhiteMask]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedPartialWhiteMask]);
 
-		_precompiledShaders[(int)PrecompiledShader::FrozenMask] = CompileShader("FrozenMask", Shader::DefaultVertex::SPRITE, Shaders::FrozenMaskFs);
-		_precompiledShaders[(int)PrecompiledShader::BatchedFrozenMask] = CompileShader("BatchedFrozenMask", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::FrozenMaskFs, Shader::Introspection::NoUniformsInBlocks);
-		_precompiledShaders[(int)PrecompiledShader::FrozenMask]->registerBatchedShader(*_precompiledShaders[(int)PrecompiledShader::BatchedFrozenMask]);
+		_precompiledShaders[(int32_t)PrecompiledShader::FrozenMask] = CompileShader("FrozenMask", Shader::DefaultVertex::SPRITE, Shaders::FrozenMaskFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::BatchedFrozenMask] = CompileShader("BatchedFrozenMask", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::FrozenMaskFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(int32_t)PrecompiledShader::FrozenMask]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedFrozenMask]);
 
 #if defined(ALLOW_RESCALE_SHADERS)
-		_precompiledShaders[(int)PrecompiledShader::ResizeHQ2x] = CompileShader("ResizeHQ2x", Shaders::ResizeHQ2xVs, Shaders::ResizeHQ2xFs);
-		_precompiledShaders[(int)PrecompiledShader::Resize3xBrz] = CompileShader("Resize3xBrz", Shaders::Resize3xBrzVs, Shaders::Resize3xBrzFs);
-		_precompiledShaders[(int)PrecompiledShader::ResizeCrtScanlines] = CompileShader("ResizeCrtScanlines", Shaders::ResizeCrtScanlinesVs, Shaders::ResizeCrtScanlinesFs);
-		_precompiledShaders[(int)PrecompiledShader::ResizeCrtShadowMask] = CompileShader("ResizeCrtShadowMask", Shaders::ResizeCrtVs, Shaders::ResizeCrtShadowMaskFs);
-		_precompiledShaders[(int)PrecompiledShader::ResizeCrtApertureGrille] = CompileShader("ResizeCrtApertureGrille", Shaders::ResizeCrtVs, Shaders::ResizeCrtApertureGrilleFs);
-		_precompiledShaders[(int)PrecompiledShader::ResizeMonochrome] = CompileShader("ResizeMonochrome", Shaders::ResizeMonochromeVs, Shaders::ResizeMonochromeFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::ResizeHQ2x] = CompileShader("ResizeHQ2x", Shaders::ResizeHQ2xVs, Shaders::ResizeHQ2xFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::Resize3xBrz] = CompileShader("Resize3xBrz", Shaders::Resize3xBrzVs, Shaders::Resize3xBrzFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::ResizeCrtScanlines] = CompileShader("ResizeCrtScanlines", Shaders::ResizeCrtScanlinesVs, Shaders::ResizeCrtScanlinesFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::ResizeCrtShadowMask] = CompileShader("ResizeCrtShadowMask", Shaders::ResizeCrtVs, Shaders::ResizeCrtShadowMaskFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::ResizeCrtApertureGrille] = CompileShader("ResizeCrtApertureGrille", Shaders::ResizeCrtVs, Shaders::ResizeCrtApertureGrilleFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::ResizeMonochrome] = CompileShader("ResizeMonochrome", Shaders::ResizeMonochromeVs, Shaders::ResizeMonochromeFs);
 #endif
-		_precompiledShaders[(int)PrecompiledShader::Antialiasing] = CompileShader("Antialiasing", Shaders::AntialiasingVs, Shaders::AntialiasingFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::Antialiasing] = CompileShader("Antialiasing", Shaders::AntialiasingVs, Shaders::AntialiasingFs);
 
-		_precompiledShaders[(int)PrecompiledShader::Transition] = CompileShader("Transition", Shaders::TransitionVs, Shaders::TransitionFs);
+		_precompiledShaders[(int32_t)PrecompiledShader::Transition] = CompileShader("Transition", Shaders::TransitionVs, Shaders::TransitionFs);
 	}
 
 	std::unique_ptr<Shader> ContentResolver::CompileShader(const char* shaderName, Shader::DefaultVertex vertex, const char* fragment, Shader::Introspection introspection)
@@ -1132,12 +1131,12 @@ namespace Jazz2
 		const AppConfiguration& appCfg = theApplication().appConfiguration();
 		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
 		// Clamping the value as some drivers report a maximum size similar to SSBO one
-		const int maxUniformBlockSize = std::clamp(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
+		const int32_t maxUniformBlockSize = std::clamp(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
 
 		// If the UBO is smaller than 64kb and fixed batch size is disabled, batched shaders need to be compiled twice to determine safe `BATCH_SIZE` define value
 		const bool compileTwice = (maxUniformBlockSize < 64 * 1024 && appCfg.fixedBatchSize <= 0 && introspection == Shader::Introspection::NoUniformsInBlocks);
 
-		int batchSize;
+		int32_t batchSize;
 		if (appCfg.fixedBatchSize > 0 && introspection == Shader::Introspection::NoUniformsInBlocks) {
 			batchSize = appCfg.fixedBatchSize;
 		} else if (compileTwice) {
@@ -1190,12 +1189,12 @@ namespace Jazz2
 		const AppConfiguration& appCfg = theApplication().appConfiguration();
 		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
 		// Clamping the value as some drivers report a maximum size similar to SSBO one
-		const int maxUniformBlockSize = std::clamp(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
+		const int32_t maxUniformBlockSize = std::clamp(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
 
 		// If the UBO is smaller than 64kb and fixed batch size is disabled, batched shaders need to be compiled twice to determine safe `BATCH_SIZE` define value
 		const bool compileTwice = (maxUniformBlockSize < 64 * 1024 && appCfg.fixedBatchSize <= 0 && introspection == Shader::Introspection::NoUniformsInBlocks);
 
-		int batchSize;
+		int32_t batchSize;
 		if (appCfg.fixedBatchSize > 0 && introspection == Shader::Introspection::NoUniformsInBlocks) {
 			batchSize = appCfg.fixedBatchSize;
 		} else if (compileTwice) {
@@ -1242,7 +1241,7 @@ namespace Jazz2
 	{
 		uint32_t texels[64 * 64];
 
-		for (int i = 0; i < countof(texels); i++) {
+		for (uint32_t i = 0; i < countof(texels); i++) {
 			texels[i] = Random().Fast(0, INT32_MAX) | 0xff000000;
 		}
 
@@ -1256,34 +1255,34 @@ namespace Jazz2
 
 	void ContentResolver::RecreateGemPalettes()
 	{
-		constexpr int GemColorCount = 4;
-		constexpr int Expansion = 32;
+		constexpr int32_t GemColorCount = 4;
+		constexpr int32_t Expansion = 32;
 
-		constexpr int PaletteStops[] = {
+		constexpr int32_t PaletteStops[] = {
 			55, 52, 48, 15, 15,
 			87, 84, 80, 15, 15,
 			39, 36, 32, 15, 15,
 			95, 92, 88, 15, 15
 		};
 
-		constexpr int StopsPerGem = (countof(PaletteStops) / GemColorCount) - 1;
+		constexpr int32_t StopsPerGem = (countof(PaletteStops) / GemColorCount) - 1;
 
 		// Start to fill palette texture from the second row (right after base palette)
-		int src = 0, dst = ColorsPerPalette;
-		for (int color = 0; color < GemColorCount; color++, src++) {
+		int32_t src = 0, dst = ColorsPerPalette;
+		for (int32_t color = 0; color < GemColorCount; color++, src++) {
 			// Compress 2 gem color gradients to single palette row
-			for (int i = 0; i < StopsPerGem; i++) {
+			for (int32_t i = 0; i < StopsPerGem; i++) {
 				// Base Palette is in first row of "palettes" array
 				uint32_t from = _palettes[PaletteStops[src++]];
 				uint32_t to = _palettes[PaletteStops[src]];
 
-				int r = (from & 0xff) * 8, dr = ((to & 0xff) * 8) - r;
-				int g = ((from >> 8) & 0xff) * 8, dg = (((to >> 8) & 0xff) * 8) - g;
-				int b = ((from >> 16) & 0xff) * 8, db = (((to >> 16) & 0xff) * 8) - b;
-				int a = (from & 0xff000000);
+				int32_t r = (from & 0xff) * 8, dr = ((to & 0xff) * 8) - r;
+				int32_t g = ((from >> 8) & 0xff) * 8, dg = (((to >> 8) & 0xff) * 8) - g;
+				int32_t b = ((from >> 16) & 0xff) * 8, db = (((to >> 16) & 0xff) * 8) - b;
+				int32_t a = (from & 0xff000000);
 				r *= Expansion; g *= Expansion; b *= Expansion;
 
-				for (int j = 0; j < Expansion; j++) {
+				for (int32_t j = 0; j < Expansion; j++) {
 					_palettes[dst] = ((r / (8 * Expansion)) & 0xff) | (((g / (8 * Expansion)) & 0xff) << 8) |
 									 (((b / (8 * Expansion)) & 0xff) << 16) | a;
 					r += dr; g += dg; b += db;
@@ -1325,8 +1324,8 @@ namespace Jazz2
 					return;
 				}
 
-				int w = texLoader->width();
-				int h = texLoader->height();
+				int32_t w = texLoader->width();
+				int32_t h = texLoader->height();
 				auto pixels = (uint32_t*)texLoader->pixels();
 				const uint32_t* palette = _palettes;
 				bool needsMask = true;
