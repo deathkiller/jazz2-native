@@ -749,6 +749,45 @@ void GameEventHandler::RefreshCacheLevels()
 void GameEventHandler::CheckUpdates()
 {
 #if !defined(NCINE_DEBUG)
+#if defined(DEATH_TARGET_X86)
+	int arch = 1;
+#elif defined(DEATH_TARGET_ARM)
+	int arch = 2;
+#elif defined(DEATH_TARGET_POWERPC)
+	int arch = 3;
+#elif defined(DEATH_TARGET_WASM)
+	int arch = 4;
+#else
+	int arch = 0;
+#endif
+#if defined(DEATH_TARGET_32BIT)
+	arch |= 0x100;
+#endif
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+	arch |= 0x200;
+#endif
+#if defined(DEATH_TARGET_AVX)
+	arch |= 0x400;
+#endif
+#if defined(DEATH_TARGET_AVX2)
+	arch |= 0x800;
+#endif
+#if defined(DEATH_TARGET_AVX512F)
+	arch |= 0x1000;
+#endif
+#if defined(DEATH_TARGET_NEON)
+	arch |= 0x2000;
+#endif
+#if defined(DEATH_TARGET_SIMD128)
+	arch |= 0x4000;
+#endif
+#if defined(DEATH_TARGET_CYGWIN)
+	arch |= 0x100000;
+#endif
+#if defined(DEATH_TARGET_MINGW)
+	arch |= 0x200000;
+#endif
+
 #if defined(DEATH_TARGET_ANDROID)
 	auto sdkVersion = AndroidJniHelper::SdkVersion();
 	auto androidId = AndroidJniWrap_Secure::AndroidId();
@@ -756,16 +795,15 @@ void GameEventHandler::CheckUpdates()
 	auto deviceModel = AndroidJniClass_Version::deviceModel();
 	String device = (deviceModel.empty() ? deviceManufacturer : (deviceModel.hasPrefix(deviceManufacturer) ? deviceModel : deviceManufacturer + " "_s + deviceModel));
 	char DeviceDesc[64];
-	int DeviceDescLength = formatString(DeviceDesc, countof(DeviceDesc), "%s|Android %i|%s|2", androidId.data(), sdkVersion, device.data());
+	int DeviceDescLength = formatString(DeviceDesc, countof(DeviceDesc), "%s|Android %i|%s|2|%i", androidId.data(), sdkVersion, device.data(), arch);
 #elif defined(DEATH_TARGET_APPLE)
 	char DeviceDesc[64]; int DeviceDescLength;
-	if (::gethostname(DeviceDesc, countof(DeviceDesc) - (sizeof("|macOS||5") - 1)) == 0) {
+	if (::gethostname(DeviceDesc, countof(DeviceDesc)) == 0) {
 		DeviceDescLength = std::strlen(DeviceDesc);
 	} else {
 		DeviceDescLength = 0;
 	}
-	std::memcpy(DeviceDesc + DeviceDescLength, "|macOS||5", sizeof("|macOS||5") - 1);
-	DeviceDescLength += sizeof("|macOS||5") - 1;
+	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength, "|macOS||5|%i", arch);
 #elif defined(DEATH_TARGET_UNIX)
 	char DeviceDesc[64]; int DeviceDescLength;
 	if (::gethostname(DeviceDesc, countof(DeviceDesc)) == 0) {
@@ -774,8 +812,8 @@ void GameEventHandler::CheckUpdates()
 		DeviceDescLength = 0;
 	}
 	String unixVersion = Environment::GetUnixVersion();
-	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength, "|%s||4",
-		unixVersion.empty() ? "Unix" : unixVersion.data());
+	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength, "|%s||4|%i",
+		unixVersion.empty() ? "Unix" : unixVersion.data(), arch);
 #elif defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_WINDOWS_RT)
 	auto osVersion = Environment::WindowsVersion;
 	char DeviceDesc[64]; DWORD DeviceDescLength = countof(DeviceDesc);
@@ -792,17 +830,17 @@ void GameEventHandler::CheckUpdates()
 		case DeviceType::Xbox: deviceType = "Xbox"; break;
 		default: deviceType = "Unknown"; break;
 	}
-	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i (%s)||7",
-		(int)((osVersion >> 48) & 0xffffu), (int)((osVersion >> 32) & 0xffffu), (int)(osVersion & 0xffffffffu), deviceType);
+	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i (%s)||7|%i",
+		(int)((osVersion >> 48) & 0xffffu), (int)((osVersion >> 32) & 0xffffu), (int)(osVersion & 0xffffffffu), deviceType, arch);
 #else
 	HMODULE hNtdll = ::GetModuleHandle(L"ntdll.dll");
 	bool isWine = (hNtdll != nullptr && ::GetProcAddress(hNtdll, "wine_get_host_version") != nullptr);
 	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength,
-		isWine ? "|Windows %i.%i.%i (Wine)||3" : "|Windows %i.%i.%i||3",
-		(int)((osVersion >> 48) & 0xffffu), (int)((osVersion >> 32) & 0xffffu), (int)(osVersion & 0xffffffffu));
+		isWine ? "|Windows %i.%i.%i (Wine)||3" : "|Windows %i.%i.%i||3|%i",
+		(int)((osVersion >> 48) & 0xffffu), (int)((osVersion >> 32) & 0xffffu), (int)(osVersion & 0xffffffffu), arch);
 #endif
 #else
-	constexpr char DeviceDesc[] = "|||"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
+	constexpr char DeviceDesc[] = "||||"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
 #endif
 
 	String url = "http://deat.tk/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + Http::EncodeBase64(DeviceDesc, DeviceDesc + DeviceDescLength);

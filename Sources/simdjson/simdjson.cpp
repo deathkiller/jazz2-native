@@ -1,4 +1,4 @@
-/* auto-generated on 2022-11-23 10:31:42 -0500. Do not edit! */
+/* auto-generated on 2023-02-27 23:41:52 -0500. Do not edit! */
 /* begin file src/simdjson.cpp */
 #include "simdjson.h"
 
@@ -3987,7 +3987,9 @@ simdjson_inline void json_structural_indexer::step<64>(const uint8_t *block, buf
 
 simdjson_inline void json_structural_indexer::next(const simd::simd8x64<uint8_t>& in, const json_block& block, size_t idx) {
   uint64_t unescaped = in.lteq(0x1F);
+#if SIMDJSON_UTF8VALIDATION
   checker.check_next_input(in);
+#endif
   indexer.write(uint32_t(idx-64), prev_structurals); // Output *last* iteration's structurals to the parser
   prev_structurals = block.structural_start();
   unescaped_chars_error |= block.non_quote_inside_string(unescaped);
@@ -5147,7 +5149,6 @@ simdjson_warn_unused error_code dom_parser_implementation::parse(const uint8_t *
 // redefining SIMDJSON_IMPLEMENTATION to "fallback"
 // #define SIMDJSON_IMPLEMENTATION fallback
 /* end file include/simdjson/fallback/begin.h */
-
 namespace simdjson {
 namespace fallback {
 
@@ -7577,7 +7578,7 @@ public:
     // it helps tremendously.
     if (bits == 0)
         return;
-#if defined(SIMDJSON_PREFER_REVERSE_BITS)
+#if SIMDJSON_PREFER_REVERSE_BITS
     /**
      * ARM lacks a fast trailing zero instruction, but it has a fast
      * bit reversal instruction and a fast leading zero instruction.
@@ -7781,7 +7782,9 @@ simdjson_inline void json_structural_indexer::step<64>(const uint8_t *block, buf
 
 simdjson_inline void json_structural_indexer::next(const simd::simd8x64<uint8_t>& in, const json_block& block, size_t idx) {
   uint64_t unescaped = in.lteq(0x1F);
+#if SIMDJSON_UTF8VALIDATION
   checker.check_next_input(in);
+#endif
   indexer.write(uint32_t(idx-64), prev_structurals); // Output *last* iteration's structurals to the parser
   prev_structurals = block.structural_start();
   unescaped_chars_error |= block.non_quote_inside_string(unescaped);
@@ -9969,7 +9972,7 @@ public:
     // it helps tremendously.
     if (bits == 0)
         return;
-#if defined(SIMDJSON_PREFER_REVERSE_BITS)
+#if SIMDJSON_PREFER_REVERSE_BITS
     /**
      * ARM lacks a fast trailing zero instruction, but it has a fast
      * bit reversal instruction and a fast leading zero instruction.
@@ -10173,7 +10176,9 @@ simdjson_inline void json_structural_indexer::step<64>(const uint8_t *block, buf
 
 simdjson_inline void json_structural_indexer::next(const simd::simd8x64<uint8_t>& in, const json_block& block, size_t idx) {
   uint64_t unescaped = in.lteq(0x1F);
+#if SIMDJSON_UTF8VALIDATION
   checker.check_next_input(in);
+#endif
   indexer.write(uint32_t(idx-64), prev_structurals); // Output *last* iteration's structurals to the parser
   prev_structurals = block.structural_start();
   unescaped_chars_error |= block.non_quote_inside_string(unescaped);
@@ -12277,7 +12282,7 @@ public:
     // it helps tremendously.
     if (bits == 0)
         return;
-#if defined(SIMDJSON_PREFER_REVERSE_BITS)
+#if SIMDJSON_PREFER_REVERSE_BITS
     /**
      * ARM lacks a fast trailing zero instruction, but it has a fast
      * bit reversal instruction and a fast leading zero instruction.
@@ -12481,7 +12486,9 @@ simdjson_inline void json_structural_indexer::step<64>(const uint8_t *block, buf
 
 simdjson_inline void json_structural_indexer::next(const simd::simd8x64<uint8_t>& in, const json_block& block, size_t idx) {
   uint64_t unescaped = in.lteq(0x1F);
+#if SIMDJSON_UTF8VALIDATION
   checker.check_next_input(in);
+#endif
   indexer.write(uint32_t(idx-64), prev_structurals); // Output *last* iteration's structurals to the parser
   prev_structurals = block.structural_start();
   unescaped_chars_error |= block.non_quote_inside_string(unescaped);
@@ -14620,7 +14627,7 @@ public:
     // it helps tremendously.
     if (bits == 0)
         return;
-#if defined(SIMDJSON_PREFER_REVERSE_BITS)
+#if SIMDJSON_PREFER_REVERSE_BITS
     /**
      * ARM lacks a fast trailing zero instruction, but it has a fast
      * bit reversal instruction and a fast leading zero instruction.
@@ -14824,7 +14831,9 @@ simdjson_inline void json_structural_indexer::step<64>(const uint8_t *block, buf
 
 simdjson_inline void json_structural_indexer::next(const simd::simd8x64<uint8_t>& in, const json_block& block, size_t idx) {
   uint64_t unescaped = in.lteq(0x1F);
+#if SIMDJSON_UTF8VALIDATION
   checker.check_next_input(in);
+#endif
   indexer.write(uint32_t(idx-64), prev_structurals); // Output *last* iteration's structurals to the parser
   prev_structurals = block.structural_start();
   unescaped_chars_error |= block.non_quote_inside_string(unescaped);

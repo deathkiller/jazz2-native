@@ -82,11 +82,7 @@ namespace nCine
 
 	String BinaryShaderCache::getCachedShaderPath(const char* shaderName)
 	{
-		if (!isAvailable_) {
-			return { };
-		}
-
-		if (shaderName == nullptr) {
+		if (!isAvailable_ || shaderName == nullptr) {
 			return { };
 		}
 

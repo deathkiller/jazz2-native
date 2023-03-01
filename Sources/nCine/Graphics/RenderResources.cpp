@@ -351,7 +351,7 @@ namespace nCine
 				}
 			} else {
 				const bool hasLinked = shaderToLoad.shaderProgram->link(shaderToLoad.introspection);
-				FATAL_ASSERT(hasLinked);
+				FATAL_ASSERT_MSG_X(hasLinked, "Failed to compile shader \"%s\"", shaderToLoad.shaderName);
 			}
 
 			binaryShaderCache_->saveToCache(shaderToLoad.shaderName, shaderVersion, shaderToLoad.shaderProgram.get());
