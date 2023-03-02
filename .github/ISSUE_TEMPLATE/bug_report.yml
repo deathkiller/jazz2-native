@@ -1,0 +1,49 @@
+name: Bug report
+description: Report a bug in Jazz² Resurrection
+labels:
+  - bug
+body:
+
+- type: markdown
+  attributes:
+    value: |
+      - Write a descriptive issue title above.
+      - Search [open](https://github.com/godotengine/godot/issues) and [closed](https://github.com/godotengine/godot/issues?q=is%3Aissue+is%3Aclosed) issues to ensure it has not already been reported.
+      - Verify that you are using the latest stable or development version of Jazz² Resurrection.
+
+- type: input
+  attributes:
+    label: Jazz² Resurrection version
+    description: >
+      Specify the Git commit hash if using a development or non-official build.
+      If you use a custom build, please test if your issue is reproducible in official builds too.
+    placeholder: "1.7.0"
+  validations:
+    required: true
+
+- type: input
+  attributes:
+    label: System information
+    description: |
+      Specify the OS version, and when relevant hardware information.
+      For graphics-related issues, specify the GPU model and driver version.
+    placeholder: Windows 10, Intel HD Graphics 620 (27.20.100.9616)
+  validations:
+    required: true
+
+- type: textarea
+  attributes:
+    label: Issue description
+    description: |
+      Describe your issue briefly. What doesn't work, and how do you expect it to work instead?
+      You can include images or videos with drag and drop, and format code blocks or logs with <code>```</code> tags.
+  validations:
+    required: true
+
+- type: textarea
+  attributes:
+    label: Steps to reproduce
+    description: |
+      List of steps or sample code that reproduces the issue. Having reproducible issues is a prerequisite for contributors to be able to solve them.
+  validations:
+    required: true
