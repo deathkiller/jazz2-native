@@ -58,7 +58,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement("MenuLine"_s, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		center.Y = topLine + (bottomLine - topLine) * 0.4f;
-		int charOffset = 0;
+		int32_t charOffset = 0;
 
 		_root->DrawStringShadow(_("Import Episodes"), charOffset, center.X, topLine - 21.0f - 34.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
@@ -92,7 +92,7 @@ namespace Jazz2::UI::Menu
 	void ImportSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
 		if (event.type == TouchEventType::Down) {
-			int pointerIndex = event.findPointerIndex(event.actionIndex);
+			int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 				if (y < 80.0f) {
@@ -111,10 +111,10 @@ namespace Jazz2::UI::Menu
 		auto _this = reinterpret_cast<ImportSection*>(context);
 		_this->_fileCount--;
 
-		int offset = 180;	// Skip header
+		int32_t offset = 180;	// Skip header
 		if (data != nullptr && length >= 262 && fs::GetExtension(name) == "j2l"_s && *(uint32_t*)&data[offset] == 0x4C56454C) {
 			offset += 4 + 4;
-			int nameLength = 0;
+			int32_t nameLength = 0;
 			while (data[offset + nameLength] != '\0' && nameLength < 32) {
 				nameLength++;
 			}
@@ -127,7 +127,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void ImportSection::FileCountCallback(void* context, int fileCount)
+	void ImportSection::FileCountCallback(void* context, int32_t fileCount)
 	{
 		auto _this = reinterpret_cast<ImportSection*>(context);
 		_this->_fileCount = fileCount;
@@ -165,10 +165,10 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	bool ImportSection::HasAllLevels(const StringView* levelNames, int count)
+	bool ImportSection::HasAllLevels(const StringView* levelNames, int32_t count)
 	{
 		bool hasAll = true;
-		for (int i = 0; i < count; i++) {
+		for (int32_t i = 0; i < count; i++) {
 			if (_foundLevels.find(String::nullTerminatedView(levelNames[i])) == _foundLevels.end()) {
 				hasAll = false;
 				break;

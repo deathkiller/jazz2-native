@@ -80,7 +80,7 @@ namespace Jazz2::UI::Menu
 						if (_selectedIndex > 0) {
 							_selectedIndex--;
 						} else {
-							_selectedIndex = (int)(_items.size() - 1);
+							_selectedIndex = (int32_t)(_items.size() - 1);
 						}
 						EnsureVisibleSelected();
 					} else if (_root->ActionHit(PlayerActions::Down)) {
@@ -119,12 +119,12 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement("MenuLine"_s, 0, centerX, TopLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 		_root->DrawElement("MenuLine"_s, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		int charOffset = 0;
+		int32_t charOffset = 0;
 		_root->DrawStringShadow(_("Play Story"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 	}
 
-	void EpisodeSelectSection::OnDrawEmptyText(Canvas* canvas, int& charOffset)
+	void EpisodeSelectSection::OnDrawEmptyText(Canvas* canvas, int32_t& charOffset)
 	{
 		Vector2i viewSize = canvas->ViewSize;
 
@@ -132,7 +132,7 @@ namespace Jazz2::UI::Menu
 			Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.8f, 0.88f);
 	}
 
-	void EpisodeSelectSection::OnDrawItem(Canvas* canvas, ListViewItem& item, int& charOffset, bool isSelected)
+	void EpisodeSelectSection::OnDrawItem(Canvas* canvas, ListViewItem& item, int32_t& charOffset, bool isSelected)
 	{
 		float centerX = canvas->ViewSize.X * 0.5f;
 
@@ -172,9 +172,9 @@ namespace Jazz2::UI::Menu
 					}
 				}
 			} else {
-				int prevEpisodeIndex = -1;
+				int32_t prevEpisodeIndex = -1;
 				if (!item.Item.Description.PreviousEpisode.empty()) {
-					for (int j = 0; j < _items.size(); j++) {
+					for (int32_t j = 0; j < _items.size(); j++) {
 						if (item.Item.Description.PreviousEpisode == _items[j].Item.Description.Name) {
 							prevEpisodeIndex = j;
 							break;
@@ -242,9 +242,9 @@ namespace Jazz2::UI::Menu
 		ScrollableMenuSection::OnTouchEvent(event, viewSize);
 	}
 
-	void EpisodeSelectSection::OnTouchUp(int newIndex, const Vector2i& viewSize, const Vector2i& touchPos)
+	void EpisodeSelectSection::OnTouchUp(int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos)
 	{
-		int halfW = viewSize.X / 2;
+		int32_t halfW = viewSize.X / 2;
 		if (std::abs(touchPos.X - halfW) < 150) {
 			if (_selectedIndex == newIndex) {
 				bool onExpand = (_touchLast.X > halfW + 100.0f && (_items[newIndex].Item.Flags & EpisodeDataFlags::CanContinue) == EpisodeDataFlags::CanContinue);

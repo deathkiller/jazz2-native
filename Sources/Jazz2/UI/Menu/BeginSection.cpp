@@ -27,16 +27,16 @@ namespace Jazz2::UI::Menu
 	{
 #if defined(SHAREWARE_DEMO_ONLY)
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
-		_items[(int)Item::Import].Name = _("Import Episodes");
+		_items[(int32_t)Item::Import].Name = _("Import Episodes");
 #	endif
 #else
-		_items[(int)Item::PlayEpisodes].Name = _("Play Story");
-		_items[(int)Item::PlayCustomLevels].Name = _("Play Custom Levels");
+		_items[(int32_t)Item::PlayEpisodes].Name = _("Play Story");
+		_items[(int32_t)Item::PlayCustomLevels].Name = _("Play Custom Levels");
 #endif
-		_items[(int)Item::Options].Name = _("Options");
-		_items[(int)Item::About].Name = _("About");
+		_items[(int32_t)Item::Options].Name = _("Options");
+		_items[(int32_t)Item::About].Name = _("About");
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
-		_items[(int)Item::Quit].Name = _("Quit");
+		_items[(int32_t)Item::Quit].Name = _("Quit");
 #endif
 	}
 
@@ -48,9 +48,9 @@ namespace Jazz2::UI::Menu
 
 #if defined(SHAREWARE_DEMO_ONLY)
 		if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None) {
-			_items[(int)Item::PlayEpisodes].Name = _("Play Story");
+			_items[(int32_t)Item::PlayEpisodes].Name = _("Play Story");
 		} else {
-			_items[(int)Item::PlayEpisodes].Name = _("Play Shareware Demo");
+			_items[(int32_t)Item::PlayEpisodes].Name = _("Play Shareware Demo");
 		}
 #endif
 
@@ -91,10 +91,10 @@ namespace Jazz2::UI::Menu
 			ExecuteSelected();
 		} else if (_root->ActionHit(PlayerActions::Menu)) {
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
-			if (_selectedIndex != (int)Item::Quit) {
+			if (_selectedIndex != (int32_t)Item::Quit) {
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				_animation = 0.0f;
-				_selectedIndex = (int)Item::Quit;
+				_selectedIndex = (int32_t)Item::Quit;
 			}
 #endif
 		} else if (_root->ActionHit(PlayerActions::Up)) {
@@ -107,13 +107,13 @@ namespace Jazz2::UI::Menu
 					goto SkipDisabledOnUp;
 				}
 			} else {
-				_selectedIndex = (int)Item::Count - 1;
+				_selectedIndex = (int32_t)Item::Count - 1;
 			}
 		} else if (_root->ActionHit(PlayerActions::Down)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 		SkipDisabledOnDown:
-			if (_selectedIndex < (int)Item::Count - 1) {
+			if (_selectedIndex < (int32_t)Item::Count - 1) {
 				_selectedIndex++;
 				if (_items[_selectedIndex].Y <= DisabledItem) {
 					goto SkipDisabledOnDown;
@@ -127,8 +127,8 @@ namespace Jazz2::UI::Menu
 	void BeginSection::OnDraw(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
-		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f * (1.0f - 0.048f * (int)Item::Count));
-		int charOffset = 0;
+		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f * (1.0f - 0.048f * (int32_t)Item::Count));
+		int32_t charOffset = 0;
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		bool isPlayable = true;
@@ -185,11 +185,11 @@ namespace Jazz2::UI::Menu
 		}
 #endif
 
-		for (int i = 0; i < (int)Item::Count; i++) {
+		for (int32_t i = 0; i < (int32_t)Item::Count; i++) {
 			_items[i].Y = center.Y;
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-			if (i <= (int)Item::Options && !isPlayable) {
+			if (i <= (int32_t)Item::Options && !isPlayable) {
 				if (i != 0 && (!hideSecondItem || i != 1)) {
 					if (_selectedIndex == i) {
 						_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (_items[i].Name.size() + 3) * 0.5f, 4.0f, true);
@@ -216,14 +216,14 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
-			center.Y += 34.0f + 32.0f * (1.0f - 0.15f * (int)Item::Count);
+			center.Y += 34.0f + 32.0f * (1.0f - 0.15f * (int32_t)Item::Count);
 		}
 	}
 
 	void BeginSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
 		if (event.type == TouchEventType::Down) {
-			int pointerIndex = event.findPointerIndex(event.actionIndex);
+			int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
@@ -236,7 +236,7 @@ namespace Jazz2::UI::Menu
 				}
 #endif
 
-				for (int i = 0; i < (int)Item::Count; i++) {
+				for (int32_t i = 0; i < (int32_t)Item::Count; i++) {
 					float itemHeight = (!isPlayable && i == 0 ? 60.0f : 22.0f);
 					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].Y) < itemHeight) {
 						if (_selectedIndex == i) {
@@ -264,7 +264,7 @@ namespace Jazz2::UI::Menu
 #endif
 
 		switch (_selectedIndex) {
-			case (int)Item::PlayEpisodes:
+			case (int32_t)Item::PlayEpisodes:
 				if (isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 #if defined(SHAREWARE_DEMO_ONLY)
@@ -299,30 +299,30 @@ namespace Jazz2::UI::Menu
 #endif
 				break;
 #if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
-			case (int)Item::Import:
+			case (int32_t)Item::Import:
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				_root->SwitchToSection<ImportSection>();
 				break;
 #else
-			case (int)Item::PlayCustomLevels:
+			case (int32_t)Item::PlayCustomLevels:
 				if (isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 					_root->SwitchToSection<CustomLevelSelectSection>();
 				}
 				break;
 #endif
-			case (int)Item::Options:
+			case (int32_t)Item::Options:
 				if (isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 					_root->SwitchToSection<OptionsSection>();
 				}
 				break;
-			case (int)Item::About:
+			case (int32_t)Item::About:
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				_root->SwitchToSection<AboutSection>();
 				break;
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
-			case (int)Item::Quit: theApplication().quit(); break;
+			case (int32_t)Item::Quit: theApplication().quit(); break;
 #endif
 		}
 	}

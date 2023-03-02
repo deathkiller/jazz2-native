@@ -4,8 +4,8 @@ namespace Jazz2::UI::Menu
 {
 	RescaleModeSection::RescaleModeSection()
 	{
-		int currentMode = (int)(PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask);
-		for (int i = 0; i <= (int)RescaleMode::Monochrome; i++) {
+		int32_t currentMode = (int32_t)(PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask);
+		for (int32_t i = 0; i <= (int32_t)RescaleMode::Monochrome; i++) {
 			if (currentMode == _items.size()) {
 				_selectedIndex = currentMode;
 			}
@@ -35,12 +35,12 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement("MenuLine"_s, 0, centerX, TopLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 		_root->DrawElement("MenuLine"_s, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		int charOffset = 0;
+		int32_t charOffset = 0;
 		_root->DrawStringShadow(_("Select Rescale Mode"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 	}
 
-	void RescaleModeSection::OnDrawItem(Canvas* canvas, ListViewItem& item, int& charOffset, bool isSelected)
+	void RescaleModeSection::OnDrawItem(Canvas* canvas, ListViewItem& item, int32_t& charOffset, bool isSelected)
 	{
 		float centerX = canvas->ViewSize.X * 0.5f;
 

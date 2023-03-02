@@ -114,7 +114,7 @@ namespace Jazz2::UI::Menu
 
 		pos.X = std::round(pos.X * 0.35f);
 
-		int charOffset = 0;
+		int32_t charOffset = 0;
 
 		_root->DrawStringShadow(_("Reimplementation of the game \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] released in 1998. Supports various\nversions of the game (Shareware Demo, Holiday Hare '98, The Secret Files and\nChristmas Chronicles). Also, it partially supports some features of JJ2+ extension.\nFor more information, visit the official website: \f[c:0x707070]http://deat.tk/jazz2/\f[c]"),
 			charOffset, viewSize.X * 0.5f, pos.Y - 22.0f, IMenuContainer::FontLayer,
@@ -143,7 +143,7 @@ namespace Jazz2::UI::Menu
 	void AboutSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
 		if (event.type == TouchEventType::Down) {
-			int pointerIndex = event.findPointerIndex(event.actionIndex);
+			int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 				if (y < 80.0f) {

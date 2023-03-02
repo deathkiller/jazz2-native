@@ -7,9 +7,9 @@ namespace Jazz2::UI::Menu
 	PauseSection::PauseSection()
 		: _selectedIndex(0), _animation(0.0f)
 	{
-		_items[(int)Item::Resume].Name = _("Resume");
-		_items[(int)Item::Options].Name = _("Options");
-		_items[(int)Item::Exit].Name = _("Save & Exit");
+		_items[(int32_t)Item::Resume].Name = _("Resume");
+		_items[(int32_t)Item::Options].Name = _("Options");
+		_items[(int32_t)Item::Exit].Name = _("Save & Exit");
 	}
 
 	void PauseSection::OnShow(IMenuContainer* root)
@@ -37,12 +37,12 @@ namespace Jazz2::UI::Menu
 			if (_selectedIndex > 0) {
 				_selectedIndex--;
 			} else {
-				_selectedIndex = (int)Item::Count - 1;
+				_selectedIndex = (int32_t)Item::Count - 1;
 			}
 		} else if (_root->ActionHit(PlayerActions::Down)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
-			if (_selectedIndex < (int)Item::Count - 1) {
+			if (_selectedIndex < (int32_t)Item::Count - 1) {
 				_selectedIndex++;
 			} else {
 				_selectedIndex = 0;
@@ -53,10 +53,10 @@ namespace Jazz2::UI::Menu
 	void PauseSection::OnDraw(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
-		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f * (1.0f - 0.048f * (int)Item::Count));
-		int charOffset = 0;
+		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f * (1.0f - 0.048f * (int32_t)Item::Count));
+		int32_t charOffset = 0;
 
-		for (int i = 0; i < (int)Item::Count; i++) {
+		for (int32_t i = 0; i < (int32_t)Item::Count; i++) {
 			_items[i].TouchY = center.Y;
 
 			if (_selectedIndex == i) {
@@ -71,19 +71,19 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
-			center.Y += 34.0f + 32.0f * (1.0f - 0.15f * (int)Item::Count);
+			center.Y += 34.0f + 32.0f * (1.0f - 0.15f * (int32_t)Item::Count);
 		}
 	}
 
 	void PauseSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
 		if (event.type == TouchEventType::Down) {
-			int pointerIndex = event.findPointerIndex(event.actionIndex);
+			int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 
-				for (int i = 0; i < (int)Item::Count; i++) {
+				for (int32_t i = 0; i < (int32_t)Item::Count; i++) {
 					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 22.0f) {
 						if (_selectedIndex == i) {
 							ExecuteSelected();
@@ -104,13 +104,13 @@ namespace Jazz2::UI::Menu
 		_root->PlaySfx("MenuSelect"_s, 0.6f);
 
 		switch (_selectedIndex) {
-			case (int)Item::Resume:
+			case (int32_t)Item::Resume:
 				if (auto ingameMenu = dynamic_cast<InGameMenu*>(_root)) {
 					ingameMenu->ResumeGame();
 				}
 				break;
-			case (int)Item::Options: _root->SwitchToSection<OptionsSection>(); break;
-			case (int)Item::Exit:
+			case (int32_t)Item::Options: _root->SwitchToSection<OptionsSection>(); break;
+			case (int32_t)Item::Exit:
 				if (auto ingameMenu = dynamic_cast<InGameMenu*>(_root)) {
 					ingameMenu->GoToMainMenu();
 				}

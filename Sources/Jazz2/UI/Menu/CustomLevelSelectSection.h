@@ -29,14 +29,14 @@ namespace Jazz2::UI::Menu
 		static constexpr float BottomLine = 42.0f;
 
 		SmallVector<ItemData> _items;
-		int _selectedIndex;
+		int32_t _selectedIndex;
 		float _animation;
 		float _y;
 		float _height;
 		Vector2f _touchStart;
 		Vector2f _touchLast;
 		float _touchTime;
-		int _pressedCount;
+		int32_t _pressedCount;
 		float _noiseCooldown;
 
 		void ExecuteSelected();

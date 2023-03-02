@@ -80,7 +80,7 @@ namespace Jazz2::UI::Menu
 						if (_selectedIndex > 0) {
 							_selectedIndex--;
 						} else {
-							_selectedIndex = (int)(_items.size() - 1);
+							_selectedIndex = (int32_t)(_items.size() - 1);
 						}
 						EnsureVisibleSelected();
 						_pressedCount = std::min(_pressedCount + 6, 10);
@@ -120,7 +120,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement("MenuLine"_s, 0, centerX, TopLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 		_root->DrawElement("MenuLine"_s, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		int charOffset = 0;
+		int32_t charOffset = 0;
 		_root->DrawStringShadow(_("Play Custom Levels"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 	}
@@ -128,7 +128,7 @@ namespace Jazz2::UI::Menu
 	void CustomLevelSelectSection::OnDrawClipped(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
-		int charOffset = 0;
+		int32_t charOffset = 0;
 
 		if (_items.empty()) {
 			_root->DrawStringShadow(_("No custom level found!"), charOffset, viewSize.X * 0.5f, viewSize.Y * 0.55f, IMenuContainer::FontLayer,
@@ -146,7 +146,7 @@ namespace Jazz2::UI::Menu
 		float column1 = viewSize.X * 0.25f;
 		float column2 = viewSize.X * 0.52f;
 
-		for (int i = 0; i < _items.size(); i++) {
+		for (int32_t i = 0; i < _items.size(); i++) {
 			_items[i].Y = center.Y;
 
 			if (center.Y > TopLine - ItemHeight && center.Y < bottomLine + ItemHeight) {
@@ -184,7 +184,7 @@ namespace Jazz2::UI::Menu
 	{
 		switch (event.type) {
 			case TouchEventType::Down: {
-				int pointerIndex = event.findPointerIndex(event.actionIndex);
+				int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 				if (pointerIndex != -1) {
 					float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 					if (y < 80.0f) {
@@ -201,7 +201,7 @@ namespace Jazz2::UI::Menu
 			}
 			case TouchEventType::Move: {
 				if (_touchStart != Vector2f::Zero) {
-					int pointerIndex = event.findPointerIndex(event.actionIndex);
+					int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 					if (pointerIndex != -1) {
 						Vector2f touchMove = Vector2f(event.pointers[pointerIndex].x * (float)viewSize.X, event.pointers[pointerIndex].y * (float)viewSize.Y);
 						_y += touchMove.Y - _touchLast.Y;
@@ -218,7 +218,7 @@ namespace Jazz2::UI::Menu
 				}
 
 				float halfW = viewSize.X * 0.5f;
-				for (int i = 0; i < _items.size(); i++) {
+				for (int32_t i = 0; i < _items.size(); i++) {
 					if (std::abs(_touchLast.X - halfW) < 150.0f && std::abs(_touchLast.Y - _items[i].Y) < 22.0f) {
 						if (_selectedIndex == i) {
 							ExecuteSelected();

@@ -47,6 +47,7 @@
 #	include <cstdlib> // for `__argc` and `__argv`
 #endif
 
+#include <Cpu.h>
 #include <Environment.h>
 #include <IO/HttpRequest.h>
 
@@ -751,12 +752,30 @@ void GameEventHandler::CheckUpdates()
 #if !defined(NCINE_DEBUG)
 #if defined(DEATH_TARGET_X86)
 	int arch = 1;
+	Cpu::Features cpuFeatures = Cpu::runtimeFeatures();
+	if (cpuFeatures & Cpu::Avx) {
+		arch |= 0x400;
+	}
+	if (cpuFeatures & Cpu::Avx2) {
+		arch |= 0x800;
+	}
+	if (cpuFeatures & Cpu::Avx512f) {
+		arch |= 0x1000;
+	}
 #elif defined(DEATH_TARGET_ARM)
 	int arch = 2;
+	Cpu::Features cpuFeatures = Cpu::runtimeFeatures();
+	if (cpuFeatures & Cpu::Neon) {
+		arch |= 0x2000;
+	}
 #elif defined(DEATH_TARGET_POWERPC)
 	int arch = 3;
 #elif defined(DEATH_TARGET_WASM)
 	int arch = 4;
+	Cpu::Features cpuFeatures = Cpu::runtimeFeatures();
+	if (cpuFeatures & Cpu::Simd128) {
+		arch |= 0x4000;
+	}
 #else
 	int arch = 0;
 #endif
@@ -766,26 +785,11 @@ void GameEventHandler::CheckUpdates()
 #if defined(DEATH_TARGET_BIG_ENDIAN)
 	arch |= 0x200;
 #endif
-#if defined(DEATH_TARGET_AVX)
-	arch |= 0x400;
-#endif
-#if defined(DEATH_TARGET_AVX2)
-	arch |= 0x800;
-#endif
-#if defined(DEATH_TARGET_AVX512F)
-	arch |= 0x1000;
-#endif
-#if defined(DEATH_TARGET_NEON)
-	arch |= 0x2000;
-#endif
-#if defined(DEATH_TARGET_SIMD128)
-	arch |= 0x4000;
-#endif
 #if defined(DEATH_TARGET_CYGWIN)
-	arch |= 0x100000;
+	arch |= 0x200000;
 #endif
 #if defined(DEATH_TARGET_MINGW)
-	arch |= 0x200000;
+	arch |= 0x400000;
 #endif
 
 #if defined(DEATH_TARGET_ANDROID)
@@ -805,6 +809,10 @@ void GameEventHandler::CheckUpdates()
 	}
 	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength, "|macOS||5|%i", arch);
 #elif defined(DEATH_TARGET_UNIX)
+#	if defined(DEATH_TARGET_CLANG)
+	arch |= 0x100000;
+#	endif
+
 	char DeviceDesc[64]; int DeviceDescLength;
 	if (::gethostname(DeviceDesc, countof(DeviceDesc)) == 0) {
 		DeviceDescLength = std::strlen(DeviceDesc);
@@ -815,13 +823,17 @@ void GameEventHandler::CheckUpdates()
 	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength, "|%s||4|%i",
 		unixVersion.empty() ? "Unix" : unixVersion.data(), arch);
 #elif defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_WINDOWS_RT)
+#	if defined(DEATH_TARGET_CLANG)
+	arch |= 0x100000;
+#	endif
+
 	auto osVersion = Environment::WindowsVersion;
 	char DeviceDesc[64]; DWORD DeviceDescLength = countof(DeviceDesc);
 	if (!::GetComputerNameA(DeviceDesc, &DeviceDescLength)) {
 		DeviceDescLength = 0;
 	}
 	
-#if defined(DEATH_TARGET_WINDOWS_RT)
+#	if defined(DEATH_TARGET_WINDOWS_RT)
 	const char* deviceType;
 	switch (Environment::CurrentDeviceType) {
 		case DeviceType::Desktop: deviceType = "Desktop"; break;
@@ -832,13 +844,13 @@ void GameEventHandler::CheckUpdates()
 	}
 	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i (%s)||7|%i",
 		(int32_t)((osVersion >> 48) & 0xffffu), (int32_t)((osVersion >> 32) & 0xffffu), (int32_t)(osVersion & 0xffffffffu), deviceType, arch);
-#else
+#	else
 	HMODULE hNtdll = ::GetModuleHandle(L"ntdll.dll");
 	bool isWine = (hNtdll != nullptr && ::GetProcAddress(hNtdll, "wine_get_host_version") != nullptr);
 	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength,
 		isWine ? "|Windows %i.%i.%i (Wine)||3|%i" : "|Windows %i.%i.%i||3|%i",
 		(int32_t)((osVersion >> 48) & 0xffffu), (int32_t)((osVersion >> 32) & 0xffffu), (int32_t)(osVersion & 0xffffffffu), arch);
-#endif
+#	endif
 #else
 	constexpr char DeviceDesc[] = "||||"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
 #endif

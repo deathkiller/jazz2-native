@@ -36,7 +36,7 @@ namespace Jazz2::UI::Menu
 		_mediumFont = resolver.GetFont(FontType::Medium);
 
 		// Mark Menu button as already pressed to avoid some issues
-		_pressedActions = (1 << (int)PlayerActions::Menu) | (1 << ((int)PlayerActions::Menu + 16));
+		_pressedActions = (1 << (int32_t)PlayerActions::Menu) | (1 << ((int32_t)PlayerActions::Menu + 16));
 
 		SwitchToSection<PauseSection>();
 
@@ -57,7 +57,7 @@ namespace Jazz2::UI::Menu
 		_owner->UpdatePressedActions();
 
 		// Destroy stopped players
-		for (int i = (int)_owner->_playingSounds.size() - 1; i >= 0; i--) {
+		for (int32_t i = (int32_t)_owner->_playingSounds.size() - 1; i >= 0; i--) {
 			if (_owner->_playingSounds[i]->state() == IAudioPlayer::PlayerState::Stopped) {
 				_owner->_playingSounds.erase(&_owner->_playingSounds[i]);
 			} else {
@@ -85,7 +85,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void InGameMenu::OnInitializeViewport(int width, int height)
+	void InGameMenu::OnInitializeViewport(int32_t width, int32_t height)
 	{
 		if (!_sections.empty()) {
 			auto& lastSection = _sections.back();
@@ -104,8 +104,8 @@ namespace Jazz2::UI::Menu
 
 		Vector2i center = ViewSize / 2;
 
-		int charOffset = 0;
-		int charOffsetShadow = 0;
+		int32_t charOffset = 0;
+		int32_t charOffsetShadow = 0;
 
 		constexpr float logoScale = 1.0f;
 		constexpr float logoTextScale = 1.0f;
@@ -260,7 +260,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void InGameMenu::DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending)
+	void InGameMenu::DrawElement(const StringView& name, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending)
 	{
 		auto it = _graphics->find(String::nullTerminatedView(name));
 		if (it == _graphics->end()) {
@@ -268,7 +268,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (frame < 0) {
-			frame = it->second.FrameOffset + ((int)(_canvasBackground->AnimTime * it->second.FrameCount / it->second.AnimDuration) % it->second.FrameCount);
+			frame = it->second.FrameOffset + ((int32_t)(_canvasBackground->AnimTime * it->second.FrameCount / it->second.AnimDuration) % it->second.FrameCount);
 		}
 
 		Canvas* currentCanvas = GetActiveCanvas();
@@ -277,8 +277,8 @@ namespace Jazz2::UI::Menu
 		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - currentCanvas->ViewSize.X * 0.5f, currentCanvas->ViewSize.Y * 0.5f - y), size);
 
 		Vector2i texSize = base->TextureDiffuse->size();
-		int col = frame % base->FrameConfiguration.X;
-		int row = frame / base->FrameConfiguration.X;
+		int32_t col = frame % base->FrameConfiguration.X;
+		int32_t row = frame / base->FrameConfiguration.X;
 		Vector4f texCoords = Vector4f(
 			float(base->FrameDimensions.X) / float(texSize.X),
 			float(base->FrameDimensions.X * col) / float(texSize.X),
@@ -323,7 +323,7 @@ namespace Jazz2::UI::Menu
 		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
 		Canvas* currentCanvas = GetActiveCanvas();
-		int charOffsetShadow = charOffset;
+		int32_t charOffsetShadow = charOffset;
 		_smallFont->DrawString(currentCanvas, text, charOffsetShadow, x, y + 2.8f * scale, FontShadowLayer,
 			align, Colorf(0.0f, 0.0f, 0.0f, 0.29f), scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
 		_smallFont->DrawString(currentCanvas, text, charOffset, x, y, z,
@@ -334,7 +334,7 @@ namespace Jazz2::UI::Menu
 	{
 		auto it = _sounds->find(String::nullTerminatedView(identifier));
 		if (it != _sounds->end()) {
-			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
+			int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int32_t)it->second.Buffers.size()) : 0);
 			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(it->second.Buffers[idx].get()));
 			player->setPosition(Vector3f(0.0f, 0.0f, 100.0f));
 			player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
@@ -358,12 +358,12 @@ namespace Jazz2::UI::Menu
 
 	bool InGameMenu::ActionPressed(PlayerActions action)
 	{
-		return ((_pressedActions & (1 << (int)action)) == (1 << (int)action));
+		return ((_pressedActions & (1 << (int32_t)action)) == (1 << (int32_t)action));
 	}
 
 	bool InGameMenu::ActionHit(PlayerActions action)
 	{
-		return ((_pressedActions & ((1 << (int)action) | (1 << (16 + (int)action)))) == (1 << (int)action));
+		return ((_pressedActions & ((1 << (int32_t)action) | (1 << (16 + (int32_t)action)))) == (1 << (int32_t)action));
 	}
 
 	void InGameMenu::UpdatePressedActions()
@@ -374,57 +374,57 @@ namespace Jazz2::UI::Menu
 		_pressedActions = ((_pressedActions & 0xffff) << 16);
 
 		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Up)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Up)]) {
-			_pressedActions |= (1 << (int)PlayerActions::Up);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Up);
 		}
 		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Down)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Down)]) {
-			_pressedActions |= (1 << (int)PlayerActions::Down);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Down);
 		}
 		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Left)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Left)]) {
-			_pressedActions |= (1 << (int)PlayerActions::Left);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Left);
 		}
 		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Right)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Right)]) {
-			_pressedActions |= (1 << (int)PlayerActions::Right);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Right);
 		}
 		// Also allow Return (Enter) as confirm key
 		if (pressedKeys[(uint32_t)KeySym::RETURN] || pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Fire)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Fire)] ||
 			pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Jump)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Jump)]) {
-			_pressedActions |= (1 << (int)PlayerActions::Fire);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Fire);
 		}
 		// Allow Android Back button as menu key
 		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Menu)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Menu)] || (PreferencesCache::UseNativeBackButton && pressedKeys[(uint32_t)KeySym::BACK])) {
-			_pressedActions |= (1 << (int)PlayerActions::Menu);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Menu);
 		}
 		// Use ChangeWeapon action as Delete key
 		if (pressedKeys[(uint32_t)KeySym::DELETE]) {
-			_pressedActions |= (1 << (int)PlayerActions::ChangeWeapon);
+			_pressedActions |= (1 << (int32_t)PlayerActions::ChangeWeapon);
 		}
 
 		// Try to get 8 connected joysticks
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
-		int jc = 0;
-		for (int i = 0; i < IInputManager::MaxNumJoysticks && jc < countof(joyStates); i++) {
+		int32_t jc = 0;
+		for (int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < countof(joyStates); i++) {
 			if (input.isJoyMapped(i)) {
 				joyStates[jc++] = &input.joyMappedState(i);
 			}
 		}
 
-		ButtonName jb; int ji1, ji2, ji3, ji4;
+		ButtonName jb; int32_t ji1, ji2, ji3, ji4;
 
 		jb = ControlScheme::Gamepad(0, PlayerActions::Up, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Up);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Up);
 		}
 		jb = ControlScheme::Gamepad(0, PlayerActions::Down, ji2);
 		if (ji2 >= 0 && ji2 < jc && joyStates[ji2]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Down);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Down);
 		}
 		jb = ControlScheme::Gamepad(0, PlayerActions::Left, ji3);
 		if (ji3 >= 0 && ji3 < jc && joyStates[ji3]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Left);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Left);
 		}
 		jb = ControlScheme::Gamepad(0, PlayerActions::Right, ji4);
 		if (ji4 >= 0 && ji4 < jc && joyStates[ji4]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int)PlayerActions::Right);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Right);
 		}
 
 		// Use analog controls only if all movement buttons are mapped to the same joystick
@@ -433,14 +433,14 @@ namespace Jazz2::UI::Menu
 			float y = joyStates[ji1]->axisValue(AxisName::LY);
 
 			if (x < -0.6f) {
-				_pressedActions |= (1 << (int)PlayerActions::Left);
+				_pressedActions |= (1 << (int32_t)PlayerActions::Left);
 			} else if (x > 0.6f) {
-				_pressedActions |= (1 << (int)PlayerActions::Right);
+				_pressedActions |= (1 << (int32_t)PlayerActions::Right);
 			}
 			if (y < -0.6f) {
-				_pressedActions |= (1 << (int)PlayerActions::Up);
+				_pressedActions |= (1 << (int32_t)PlayerActions::Up);
 			} else if (y > 0.6f) {
-				_pressedActions |= (1 << (int)PlayerActions::Down);
+				_pressedActions |= (1 << (int32_t)PlayerActions::Down);
 			}
 		}
 
@@ -450,17 +450,17 @@ namespace Jazz2::UI::Menu
 
 		if ((ji1 >= 0 && ji1 < jc && (joyStates[ji1]->isButtonPressed(ButtonName::A) || joyStates[ji1]->isButtonPressed(ButtonName::X))) ||
 			(ji2 >= 0 && ji2 < jc && (joyStates[ji2]->isButtonPressed(ButtonName::A) || joyStates[ji2]->isButtonPressed(ButtonName::X)))) {
-			_pressedActions |= (1 << (int)PlayerActions::Fire);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Fire);
 		}
 
 		if ((ji1 >= 0 && ji1 < jc && (joyStates[ji1]->isButtonPressed(ButtonName::B) || joyStates[ji1]->isButtonPressed(ButtonName::START))) ||
 			(ji2 >= 0 && ji2 < jc && (joyStates[ji2]->isButtonPressed(ButtonName::B) || joyStates[ji2]->isButtonPressed(ButtonName::START)))) {
-			_pressedActions |= (1 << (int)PlayerActions::Menu);
+			_pressedActions |= (1 << (int32_t)PlayerActions::Menu);
 		}
 
 		jb = ControlScheme::Gamepad(0, PlayerActions::ChangeWeapon, ji1);
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(ButtonName::Y)) {
-			_pressedActions |= (1 << (int)PlayerActions::ChangeWeapon);
+			_pressedActions |= (1 << (int32_t)PlayerActions::ChangeWeapon);
 		}
 	}
 }

@@ -29,8 +29,8 @@ namespace Jazz2::UI::Menu
 			float TouchY;
 		};
 
-		ItemData _items[(int)Item::Count];
-		int _selectedIndex;
+		ItemData _items[(int32_t)Item::Count];
+		int32_t _selectedIndex;
 		float _animation;
 		float _transition;
 		bool _isDirty;

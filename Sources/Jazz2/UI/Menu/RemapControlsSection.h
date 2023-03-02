@@ -10,7 +10,7 @@ namespace Jazz2::UI::Menu
 	class RemapControlsSection : public MenuSection
 	{
 	public:
-		static constexpr int PossibleButtons = 3;
+		static constexpr int32_t PossibleButtons = 3;
 
 		RemapControlsSection();
 		~RemapControlsSection() override;
@@ -21,9 +21,9 @@ namespace Jazz2::UI::Menu
 		void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) override;
 
 	private:
-		int _selectedIndex;
-		int _selectedColumn;
-		int _currentPlayerIndex;
+		int32_t _selectedIndex;
+		int32_t _selectedColumn;
+		int32_t _currentPlayerIndex;
 		float _animation;
 		bool _isDirty;
 		bool _waitForInput;
