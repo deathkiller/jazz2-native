@@ -7,9 +7,9 @@ namespace Jazz2::UI::Menu
 	GameplayEnhancementsSection::GameplayEnhancementsSection()
 		: _selectedIndex(0), _animation(0.0f), _transition(0.0f), _isDirty(false), _isInGame(false)
 	{
-		_items[(int)Item::Reforged].Name = _("Reforged Mode");
-		_items[(int)Item::LedgeClimb].Name = _("Ledge Climbing");
-		_items[(int)Item::WeaponWheel].Name = _("Weapon Wheel");
+		_items[(int32_t)Item::Reforged].Name = _("Reforged Mode");
+		_items[(int32_t)Item::LedgeClimb].Name = _("Ledge Climbing");
+		_items[(int32_t)Item::WeaponWheel].Name = _("Weapon Wheel");
 	}
 
 	GameplayEnhancementsSection::~GameplayEnhancementsSection()
@@ -50,12 +50,12 @@ namespace Jazz2::UI::Menu
 			if (_selectedIndex > 0) {
 				_selectedIndex--;
 			} else {
-				_selectedIndex = (int)Item::Count - 1;
+				_selectedIndex = (int32_t)Item::Count - 1;
 			}
 		} else if (_root->ActionHit(PlayerActions::Down)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
-			if (_selectedIndex < (int)Item::Count - 1) {
+			if (_selectedIndex < (int32_t)Item::Count - 1) {
 				_selectedIndex++;
 			} else {
 				_selectedIndex = 0;
@@ -75,8 +75,8 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement("MenuLine"_s, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 		_root->DrawElement("MenuLine"_s, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		center.Y = topLine + (bottomLine - topLine) * 0.35f / (int)Item::Count;
-		int charOffset = 0;
+		center.Y = topLine + (bottomLine - topLine) * 0.35f / (int32_t)Item::Count;
+		int32_t charOffset = 0;
 
 		_root->DrawStringShadow(_("Enhancements"), charOffset, center.X, 131.0f - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
@@ -84,7 +84,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawStringShadow(_("You can enable enhancements that were added to this remake."), charOffset, center.X, topLine - 21.0f - 4.0f, IMenuContainer::FontLayer - 2,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.2f + 0.3f * _transition), 0.76f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
-		for (int i = 0; i < (int)Item::Count; i++) {
+		for (int32_t i = 0; i < (int32_t)Item::Count; i++) {
 			_items[i].TouchY = center.Y;
 
 			if (_selectedIndex == i) {
@@ -108,9 +108,9 @@ namespace Jazz2::UI::Menu
 			bool enabled = false;
 			switch (i) {
 				default:
-				case (int)Item::Reforged: enabled = PreferencesCache::EnableReforged; break;
-				case (int)Item::LedgeClimb: enabled = PreferencesCache::EnableLedgeClimb; break;
-				case (int)Item::WeaponWheel:
+				case (int32_t)Item::Reforged: enabled = PreferencesCache::EnableReforged; break;
+				case (int32_t)Item::LedgeClimb: enabled = PreferencesCache::EnableLedgeClimb; break;
+				case (int32_t)Item::WeaponWheel:
 					customText = (PreferencesCache::WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount
 						? _("Enabled With Ammo Count")
 						: (PreferencesCache::WeaponWheel == WeaponWheelStyle::Enabled ? _("Enabled") : _("Disabled")));
@@ -120,14 +120,14 @@ namespace Jazz2::UI::Menu
 			_root->DrawStringShadow(!customText.empty() ? customText : (enabled ? _("Enabled") : _("Disabled")), charOffset, center.X, center.Y + 22.0f, IMenuContainer::FontLayer - 10,
 				Alignment::Center, (_selectedIndex == i ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
 
-			center.Y += (bottomLine - topLine) * 0.9f / (int)Item::Count;
+			center.Y += (bottomLine - topLine) * 0.9f / (int32_t)Item::Count;
 		}
 	}
 
 	void GameplayEnhancementsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
 		if (event.type == TouchEventType::Down) {
-			int pointerIndex = event.findPointerIndex(event.actionIndex);
+			int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
@@ -138,7 +138,7 @@ namespace Jazz2::UI::Menu
 					return;
 				}
 
-				for (int i = 0; i < (int)Item::Count; i++) {
+				for (int32_t i = 0; i < (int32_t)Item::Count; i++) {
 					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 22.0f) {
 						if (_selectedIndex == i) {
 							ExecuteSelected();
@@ -157,15 +157,15 @@ namespace Jazz2::UI::Menu
 	void GameplayEnhancementsSection::ExecuteSelected()
 	{
 		switch (_selectedIndex) {
-			case (int)Item::Reforged:
+			case (int32_t)Item::Reforged:
 				if (_isInGame) {
 					return;
 				}
 				PreferencesCache::EnableReforged = !PreferencesCache::EnableReforged;
 				break;
 
-			case (int)Item::LedgeClimb: PreferencesCache::EnableLedgeClimb = !PreferencesCache::EnableLedgeClimb; break;
-			case (int)Item::WeaponWheel:
+			case (int32_t)Item::LedgeClimb: PreferencesCache::EnableLedgeClimb = !PreferencesCache::EnableLedgeClimb; break;
+			case (int32_t)Item::WeaponWheel:
 				PreferencesCache::WeaponWheel = (PreferencesCache::WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount
 						? WeaponWheelStyle::Disabled
 						: (PreferencesCache::WeaponWheel == WeaponWheelStyle::Enabled ? WeaponWheelStyle::EnabledWithAmmoCount : WeaponWheelStyle::Enabled));

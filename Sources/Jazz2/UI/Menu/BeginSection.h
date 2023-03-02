@@ -37,8 +37,8 @@ namespace Jazz2::UI::Menu
 
 		static constexpr float DisabledItem = -1024.0f;
 
-		ItemData _items[(int)Item::Count];
-		int _selectedIndex;
+		ItemData _items[(int32_t)Item::Count];
+		int32_t _selectedIndex;
 		float _animation;
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		String _sourcePath;

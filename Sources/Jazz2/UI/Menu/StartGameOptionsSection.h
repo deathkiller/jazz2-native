@@ -33,14 +33,14 @@ namespace Jazz2::UI::Menu
 		String _levelName;
 		String _previousEpisodeName;
 
-		ItemData _items[(int)Item::Count];
-		int _selectedIndex;
+		ItemData _items[(int32_t)Item::Count];
+		int32_t _selectedIndex;
 
-		int _availableCharacters;
-		int _selectedPlayerType;
-		int _selectedDifficulty;
-		int _lastPlayerType;
-		int _lastDifficulty;
+		int32_t _availableCharacters;
+		int32_t _selectedPlayerType;
+		int32_t _selectedDifficulty;
+		int32_t _lastPlayerType;
+		int32_t _lastDifficulty;
 		float _imageTransition;
 
 		float _animation;

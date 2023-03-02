@@ -9,7 +9,7 @@ namespace Jazz2::UI::Menu
 {
 	RemapControlsSection::RemapControlsSection()
 		: _selectedIndex(0), _selectedColumn(0), _currentPlayerIndex(0), _animation(0.0f), _isDirty(false), _waitForInput(false),
-			_timeout(0.0f), _prevKeyPressed((unsigned int)KeySym::COUNT), _prevJoyPressed(8 * JoyMappedState::NumButtons)
+			_timeout(0.0f), _prevKeyPressed((uint32_t)KeySym::COUNT), _prevJoyPressed(8 * JoyMappedState::NumButtons)
 	{
 	}
 
@@ -49,9 +49,9 @@ namespace Jazz2::UI::Menu
 			switch (_selectedColumn) {
 				case 0: // Keyboard
 				case 1:
-					for (int key = 0; key < (int)KeySym::COUNT; key++) {
+					for (int32_t key = 0; key < (int32_t)KeySym::COUNT; key++) {
 						if (keyState.isKeyDown((KeySym)key) && !_prevKeyPressed[key] && !KeyToName((KeySym)key).empty()) {
-							auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int)PlayerActions::Count + _selectedIndex];
+							auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int32_t)PlayerActions::Count + _selectedIndex];
 
 							if (_selectedColumn == 0) {
 								if (mapping.Key1 != (KeySym)key) {
@@ -74,12 +74,12 @@ namespace Jazz2::UI::Menu
 					break;
 
 				case 2: // Gamepad
-					for (int i = 0, jc = 0; i < IInputManager::MaxNumJoysticks && jc < ControlScheme::MaxConnectedGamepads && _waitForInput; i++) {
+					for (int32_t i = 0, jc = 0; i < IInputManager::MaxNumJoysticks && jc < ControlScheme::MaxConnectedGamepads && _waitForInput; i++) {
 						if (input.isJoyMapped(i)) {
 							auto& joyState = input.joyMappedState(i);
-							for (int j = 0; j < JoyMappedState::NumButtons; j++) {
+							for (int32_t j = 0; j < JoyMappedState::NumButtons; j++) {
 								if (joyState.isButtonPressed((ButtonName)j) && !_prevJoyPressed[jc * JoyMappedState::NumButtons + j]) {
-									auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int)PlayerActions::Count + _selectedIndex];
+									auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int32_t)PlayerActions::Count + _selectedIndex];
 
 									if (mapping.GamepadIndex != jc || mapping.GamepadButton != (ButtonName)j) {
 										mapping.GamepadIndex = jc;
@@ -110,7 +110,7 @@ namespace Jazz2::UI::Menu
 			_root->LeaveSection();
 			return;
 		} else if (_root->ActionHit(PlayerActions::Fire)) {
-			if (_selectedIndex == (int)PlayerActions::Menu && _selectedColumn == 0) {
+			if (_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0) {
 				return;
 			}
 
@@ -122,13 +122,13 @@ namespace Jazz2::UI::Menu
 			RefreshPreviousState();
 			return;
 		} else if (_root->ActionHit(PlayerActions::ChangeWeapon)) {
-			if (_selectedIndex == (int)PlayerActions::Menu && _selectedColumn == 0) {
+			if (_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0) {
 				return;
 			}
 
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 
-			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int)PlayerActions::Count + _selectedIndex];
+			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int32_t)PlayerActions::Count + _selectedIndex];
 			switch (_selectedColumn) {
 				case 0:
 					if (mapping.Key1 != KeySym::UNKNOWN) {
@@ -158,12 +158,12 @@ namespace Jazz2::UI::Menu
 			if (_selectedIndex > 0) {
 				_selectedIndex--;
 			} else {
-				_selectedIndex = (int)PlayerActions::Count - 1;
+				_selectedIndex = (int32_t)PlayerActions::Count - 1;
 			}
 		} else if (_root->ActionHit(PlayerActions::Down)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
-			if (_selectedIndex < (int)PlayerActions::Count - 1) {
+			if (_selectedIndex < (int32_t)PlayerActions::Count - 1) {
 				_selectedIndex++;
 			} else {
 				_selectedIndex = 0;
@@ -200,7 +200,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement("MenuLine"_s, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 		_root->DrawElement("MenuLine"_s, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		int charOffset = 0;
+		int32_t charOffset = 0;
 		_root->DrawStringShadow(_("Remap Controls"), charOffset, center.X * 0.3f, 110.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Colorf(0.5f, 0.5f, 0.5f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.8f, 0.88f);
 
@@ -211,7 +211,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawStringShadow(_("Gamepad"), charOffset, center.X * (0.9f + 2 * 0.34f), 110.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 
-		int n = (int)PlayerActions::Count;
+		int32_t n = (int32_t)PlayerActions::Count;
 
 		float topItem = topLine - 5.0f;
 		float bottomItem = bottomLine + 5.0f;
@@ -220,7 +220,7 @@ namespace Jazz2::UI::Menu
 
 		topItem += itemSpacing;
 
-		for (int i = 0; i < n; i++) {
+		for (int32_t i = 0; i < n; i++) {
 			StringView name;
 			switch ((PlayerActions)i) {
 				case PlayerActions::Up: name = _("Up"); break;
@@ -234,12 +234,12 @@ namespace Jazz2::UI::Menu
 				case PlayerActions::Menu: name = _("Back"); break;
 			}
 
-			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int)PlayerActions::Count + i];
+			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int32_t)PlayerActions::Count + i];
 
 			_root->DrawStringShadow(name, charOffset, center.X * 0.3f, topItem, IMenuContainer::FontLayer, Alignment::Left,
 				_selectedIndex == i && _waitForInput ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor, 0.8f);
 
-			for (int j = 0; j < PossibleButtons; j++) {
+			for (int32_t j = 0; j < PossibleButtons; j++) {
 				StringView value;
 				bool hasCollision = false;
 				switch (j) {
@@ -292,7 +292,7 @@ namespace Jazz2::UI::Menu
 							if (!buttonName.empty()) {
 								_root->DrawElement(buttonName, 0, center.X * (0.9f + j * 0.34f) + 3, topItem, IMenuContainer::MainLayer, Alignment::Center, Colorf::White);
 
-								for (int i = 0; i < mapping.GamepadIndex + 1; i++) {
+								for (int32_t i = 0; i < mapping.GamepadIndex + 1; i++) {
 									stringBuffer[i] = '1';
 								}
 								stringBuffer[mapping.GamepadIndex + 1] = '\0';
@@ -316,7 +316,7 @@ namespace Jazz2::UI::Menu
 						if (_waitForInput) {
 							color = Colorf(0.62f, 0.44f, 0.34f, 0.5f);
 						} else {
-							color = (_selectedIndex == (int)PlayerActions::Menu && _selectedColumn == 0 ? Font::TransparentRandomColor : Font::RandomColor);
+							color = (_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0 ? Font::TransparentRandomColor : Font::RandomColor);
 						}
 
 						_root->DrawStringShadow(value, charOffset, center.X * (0.9f + j * 0.34f), topItem, IMenuContainer::MainLayer - 10,
@@ -335,7 +335,7 @@ namespace Jazz2::UI::Menu
 	void RemapControlsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
 		if (event.type == TouchEventType::Down) {
-			int pointerIndex = event.findPointerIndex(event.actionIndex);
+			int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 				if (y < 80.0f) {
@@ -354,16 +354,16 @@ namespace Jazz2::UI::Menu
 		_prevKeyPressed.ClearAll();
 		_prevJoyPressed.ClearAll();
 
-		for (int key = 0; key < (int)KeySym::COUNT; key++) {
+		for (int32_t key = 0; key < (int32_t)KeySym::COUNT; key++) {
 			if (keyState.isKeyDown((KeySym)key)) {
 				_prevKeyPressed.Set(key);
 			}
 		}
 
-		for (int i = 0, jc = 0; i < IInputManager::MaxNumJoysticks && jc < ControlScheme::MaxConnectedGamepads && _waitForInput; i++) {
+		for (int32_t i = 0, jc = 0; i < IInputManager::MaxNumJoysticks && jc < ControlScheme::MaxConnectedGamepads && _waitForInput; i++) {
 			if (input.isJoyMapped(i)) {
 				auto& joyState = input.joyMappedState(i);
-				for (int j = 0; j < JoyMappedState::NumButtons; j++) {
+				for (int32_t j = 0; j < JoyMappedState::NumButtons; j++) {
 					if (joyState.isButtonPressed((ButtonName)j)) {
 						_prevJoyPressed.Set(jc * JoyMappedState::NumButtons + j);
 					}
@@ -384,7 +384,7 @@ namespace Jazz2::UI::Menu
 		return false;
 	}
 
-	bool RemapControlsSection::HasCollision(int gamepadIndex, ButtonName gamepadButton)
+	bool RemapControlsSection::HasCollision(int32_t gamepadIndex, ButtonName gamepadButton)
 	{
 		// TODO: Collisions
 		return false;

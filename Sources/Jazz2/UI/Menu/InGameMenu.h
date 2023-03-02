@@ -18,14 +18,14 @@ namespace Jazz2::UI::Menu
 	class InGameMenu : public IMenuContainer
 	{
 	public:
-		static constexpr int DefaultWidth = 720;
-		static constexpr int DefaultHeight = 405;
+		static constexpr int32_t DefaultWidth = 720;
+		static constexpr int32_t DefaultHeight = 405;
 
 		InGameMenu(LevelHandler* root);
 		~InGameMenu();
 
 		void OnTouchEvent(const nCine::TouchEvent& event);
-		void OnInitializeViewport(int width, int height);
+		void OnInitializeViewport(int32_t width, int32_t height);
 
 		void SwitchToSectionDirect(std::unique_ptr<MenuSection> section) override;
 		void LeaveSection() override;
@@ -38,13 +38,13 @@ namespace Jazz2::UI::Menu
 			return _canvasBackground->ViewSize;
 		}
 
-		void DrawElement(const StringView& name, int frame, float x, float y, uint16_t z, Alignment align, const Colorf& color,
+		void DrawElement(const StringView& name, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color,
 			float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false) override;
 		void DrawElement(const StringView& name, float x, float y, uint16_t z, Alignment align, const Colorf& color,
 			const Vector2f& size, const Vector4f& texCoords) override;
 		void DrawSolid(float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool additiveBlending = false) override;
 		Vector2f MeasureString(const StringView& text, float scale = 1.0f, float charSpacing = 1.0f, float lineSpacing = 1.0f) override;
-		void DrawStringShadow(const StringView& text, int& charOffset, float x, float y, uint16_t z, Alignment align, const Colorf& color,
+		void DrawStringShadow(const StringView& text, int32_t& charOffset, float x, float y, uint16_t z, Alignment align, const Colorf& color,
 			float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f,
 			float speed = 0.4f, float charSpacing = 1.0f, float lineSpacing = 1.0f) override;
 		void PlaySfx(const StringView& identifier, float gain = 1.0f) override;

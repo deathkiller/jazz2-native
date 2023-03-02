@@ -37,10 +37,10 @@ namespace Jazz2::UI::Menu
 		float _transitionTime;
 		bool _shouldStart;
 
-		void OnTouchUp(int newIndex, const Vector2i& viewSize, const Vector2i& touchPos) override;
+		void OnTouchUp(int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos) override;
 		void OnExecuteSelected() override;
-		void OnDrawEmptyText(Canvas* canvas, int& charOffset) override;
-		void OnDrawItem(Canvas* canvas, ListViewItem& item, int& charOffset, bool isSelected) override;
+		void OnDrawEmptyText(Canvas* canvas, int32_t& charOffset) override;
+		void OnDrawItem(Canvas* canvas, ListViewItem& item, int32_t& charOffset, bool isSelected) override;
 
 		void OnAfterTransition();
 		void AddEpisode(const StringView& episodeFile);

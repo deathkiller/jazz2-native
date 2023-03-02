@@ -6,9 +6,9 @@ namespace Jazz2::UI::Menu
 	SoundsOptionsSection::SoundsOptionsSection()
 		: _selectedIndex(0), _animation(0.0f), _isDirty(false)
 	{
-		_items[(int)Item::MasterVolume].Name = _("Master Volume");
-		_items[(int)Item::SfxVolume].Name = _("SFX Volume");
-		_items[(int)Item::MusicVolume].Name = _("Music Volume");
+		_items[(int32_t)Item::MasterVolume].Name = _("Master Volume");
+		_items[(int32_t)Item::SfxVolume].Name = _("SFX Volume");
+		_items[(int32_t)Item::MusicVolume].Name = _("Music Volume");
 	}
 
 	SoundsOptionsSection::~SoundsOptionsSection()
@@ -42,12 +42,12 @@ namespace Jazz2::UI::Menu
 			if (_selectedIndex > 0) {
 				_selectedIndex--;
 			} else {
-				_selectedIndex = (int)Item::Count - 1;
+				_selectedIndex = (int32_t)Item::Count - 1;
 			}
 		} else if (_root->ActionHit(PlayerActions::Down)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
-			if (_selectedIndex < (int)Item::Count - 1) {
+			if (_selectedIndex < (int32_t)Item::Count - 1) {
 				_selectedIndex++;
 			} else {
 				_selectedIndex = 0;
@@ -56,9 +56,9 @@ namespace Jazz2::UI::Menu
 			float* value;
 			switch (_selectedIndex) {
 				default:
-				case (int)Item::MasterVolume: value = &PreferencesCache::MasterVolume; break;
-				case (int)Item::SfxVolume: value = &PreferencesCache::SfxVolume; break;
-				case (int)Item::MusicVolume: value = &PreferencesCache::MusicVolume; break;
+				case (int32_t)Item::MasterVolume: value = &PreferencesCache::MasterVolume; break;
+				case (int32_t)Item::SfxVolume: value = &PreferencesCache::SfxVolume; break;
+				case (int32_t)Item::MusicVolume: value = &PreferencesCache::MusicVolume; break;
 			}
 
 			*value = std::clamp(*value + (_root->ActionHit(PlayerActions::Left) ? -0.03f : 0.03f), 0.0f, 1.0f);
@@ -83,7 +83,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement("MenuLine"_s, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 		_root->DrawElement("MenuLine"_s, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
-		center.Y = topLine + (bottomLine - topLine) * 0.35f / (int)Item::Count;
+		center.Y = topLine + (bottomLine - topLine) * 0.35f / (int32_t)Item::Count;
 		int charOffset = 0;
 
 		_root->DrawStringShadow(_("Sounds"), charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
@@ -91,7 +91,7 @@ namespace Jazz2::UI::Menu
 
 		char stringBuffer[34];
 
-		for (int i = 0; i < (int)Item::Count; i++) {
+		for (int i = 0; i < (int32_t)Item::Count; i++) {
 			_items[i].TouchY = center.Y;
 
 			if (_selectedIndex == i) {
@@ -114,9 +114,9 @@ namespace Jazz2::UI::Menu
 			int currentBlockCount;
 			switch (i) {
 				default:
-				case (int)Item::MasterVolume: currentBlockCount = (int)std::round(PreferencesCache::MasterVolume * BlockCount); break;
-				case (int)Item::SfxVolume: currentBlockCount = (int)std::round(PreferencesCache::SfxVolume * BlockCount); break;
-				case (int)Item::MusicVolume: currentBlockCount = (int)std::round(PreferencesCache::MusicVolume * BlockCount); break;
+				case (int32_t)Item::MasterVolume: currentBlockCount = (int32_t)std::round(PreferencesCache::MasterVolume * BlockCount); break;
+				case (int32_t)Item::SfxVolume: currentBlockCount = (int32_t)std::round(PreferencesCache::SfxVolume * BlockCount); break;
+				case (int32_t)Item::MusicVolume: currentBlockCount = (int32_t)std::round(PreferencesCache::MusicVolume * BlockCount); break;
 			}
 
 			for (int i = 0; i < BlockCount; i++) {
@@ -136,7 +136,7 @@ namespace Jazz2::UI::Menu
 				Alignment::Left, (_selectedIndex == i ? Font::RandomColor : Font::DefaultColor), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 
 
-			center.Y += (bottomLine - topLine) * 0.9f / (int)Item::Count;
+			center.Y += (bottomLine - topLine) * 0.9f / (int32_t)Item::Count;
 		}
 	}
 
@@ -154,15 +154,15 @@ namespace Jazz2::UI::Menu
 					return;
 				}
 
-				for (int i = 0; i < (int)Item::Count; i++) {
+				for (int i = 0; i < (int32_t)Item::Count; i++) {
 					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 30.0f) {
 						if (_selectedIndex == i) {
 							float* value;
 							switch (_selectedIndex) {
 								default:
-								case (int)Item::MasterVolume: value = &PreferencesCache::MasterVolume; break;
-								case (int)Item::SfxVolume: value = &PreferencesCache::SfxVolume; break;
-								case (int)Item::MusicVolume: value = &PreferencesCache::MusicVolume; break;
+								case (int32_t)Item::MasterVolume: value = &PreferencesCache::MasterVolume; break;
+								case (int32_t)Item::SfxVolume: value = &PreferencesCache::SfxVolume; break;
+								case (int32_t)Item::MusicVolume: value = &PreferencesCache::MusicVolume; break;
 							}
 
 							*value = std::clamp(*value + (x < 0.5f ? -0.03f : 0.03f), 0.0f, 1.0f);

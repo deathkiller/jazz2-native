@@ -24,7 +24,7 @@ namespace Jazz2::UI::Menu
 		bool _isDirty;
 		SelectedZone _selectedZone;
 		Vector2f _lastPos;
-		int _lastPointerId;
+		int32_t _lastPointerId;
 
 		void DrawOutlinedSolid(float x, float y, uint16_t z, Alignment align, const Vector2f& size);
 	};
