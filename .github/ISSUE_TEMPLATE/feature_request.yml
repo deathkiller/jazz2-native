@@ -1,0 +1,39 @@
+name: Feature request
+description: Request a feature to be added or improved in Jazz² Resurrection
+labels:
+  - enhancement
+body:
+
+- type: markdown
+  attributes:
+    value: |
+      - Write a descriptive issue title above.
+      - Search [open](https://github.com/godotengine/godot/issues) and [closed](https://github.com/godotengine/godot/issues?q=is%3Aissue+is%3Aclosed) issues to ensure it has not already been requested.
+      - Verify that you are using the latest stable or development version of Jazz² Resurrection.
+
+- type: input
+  attributes:
+    label: Jazz² Resurrection version
+    description: >
+      Specify the Git commit hash if using a development or non-official build.
+      If you use a custom build, please test if your issue is reproducible in official builds too.
+    placeholder: "1.7.0"
+  validations:
+    required: true
+
+- type: textarea
+  attributes:
+    label: Problem or limitation
+    description: |
+      Describe the problem or limitation you're encountering and why a new feature is needed.
+      You can include images or videos with drag and drop, and format code blocks or logs with <code>```</code> tags.
+  validations:
+    required: true
+
+- type: textarea
+  attributes:
+    label: Proposed solution
+    description: |
+      Describe a solution to resolve the problem you've outlined above.
+  validations:
+    required: true
