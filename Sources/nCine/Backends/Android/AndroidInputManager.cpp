@@ -820,6 +820,7 @@ namespace nCine
 
 				if (!motionRange.IsNull()) {
 					const float minValue = motionRange.getMin();
+					const float maxValue = motionRange.getMax();
 					const float rangeValue = motionRange.getRange();
 					
 					if (numAxes < AndroidJoystickState::MaxAxes) {
@@ -834,7 +835,7 @@ namespace nCine
 						}
 					}
 #if defined(NCINE_LOG)
-					sprintf(&deviceInfoString[strlen(deviceInfoString)], " %d:%d (%.2f to %.2f)", numAxes, axis, minValue, minValue + rangeValue);
+					sprintf(&deviceInfoString[strlen(deviceInfoString)], " %d:%d (%.2f to %.2f > %.2f)", numAxes, axis, minValue, maxValue, rangeValue);
 #endif
 					if (axis != AMOTION_EVENT_AXIS_HAT_X && axis != AMOTION_EVENT_AXIS_HAT_Y) {
 						numAxesMapped++;
