@@ -195,12 +195,20 @@ namespace Jazz2::UI
 					_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 3.0f, bottom - 17.0f, FontLayer,
 						Alignment::BottomLeft, Font::RandomColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
 
-					stringBuffer[0] = 'x';
-					i32tos(player->_lives, stringBuffer + 1);
-					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
-						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
-					_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
-						Alignment::BottomLeft, Font::DefaultColor);
+					if (player->_lives < UINT8_MAX) {
+						stringBuffer[0] = 'x';
+						i32tos(player->_lives, stringBuffer + 1);
+						
+						_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
+							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+						_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
+							Alignment::BottomLeft, Font::DefaultColor);
+					} else {
+						_smallFont->DrawString(this, "x\u221E", charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
+							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+						_smallFont->DrawString(this, "x\u221E", charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
+							Alignment::BottomLeft, Font::DefaultColor);
+					}
 				} else {
 					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 3.0f - 0.5f, bottom - 4.0f + 0.5f, FontShadowLayer,
 						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
@@ -225,12 +233,19 @@ namespace Jazz2::UI
 				}
 
 				if (player->_lives > 0) {
-					stringBuffer[0] = 'x';
-					i32tos(player->_lives, stringBuffer + 1);
-					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
-						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
-					_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
-						Alignment::BottomLeft, Font::DefaultColor);
+					if (player->_lives < UINT8_MAX) {
+						stringBuffer[0] = 'x';
+						i32tos(player->_lives, stringBuffer + 1);
+						_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
+							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+						_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
+							Alignment::BottomLeft, Font::DefaultColor);
+					} else {
+						_smallFont->DrawString(this, "x\u221E", charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
+							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+						_smallFont->DrawString(this, "x\u221E", charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
+							Alignment::BottomLeft, Font::DefaultColor);
+					}
 				}
 
 				snprintf(stringBuffer, countof(stringBuffer), "%08i", player->_score);

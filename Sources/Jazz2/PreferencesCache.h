@@ -99,6 +99,7 @@ namespace Jazz2
 		static bool EnableDiscordIntegration;
 		static bool TutorialCompleted;
 		static bool AllowCheats;
+		static bool AllowCheatsLives;
 		static bool AllowCheatsUnlock;
 		static Vector2f TouchLeftPadding;
 		static Vector2f TouchRightPadding;

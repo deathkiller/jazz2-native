@@ -39,6 +39,7 @@ namespace Jazz2
 	bool PreferencesCache::EnableDiscordIntegration = false;
 	bool PreferencesCache::TutorialCompleted = false;
 	bool PreferencesCache::AllowCheats = false;
+	bool PreferencesCache::AllowCheatsLives = false;
 	bool PreferencesCache::AllowCheatsUnlock = false;
 	Vector2f PreferencesCache::TouchLeftPadding;
 	Vector2f PreferencesCache::TouchRightPadding;
@@ -260,6 +261,8 @@ namespace Jazz2
 				BypassCache = true;
 			} else if (arg == "/cheats"_s) {
 				AllowCheats = true;
+			} else if (arg == "/cheats-lives"_s) {
+				AllowCheatsLives = true;
 			} else if (arg == "/cheats-unlock"_s) {
 				AllowCheatsUnlock = true;
 			} else if (arg == "/fullscreen"_s) {

@@ -337,6 +337,11 @@ namespace Jazz2::UI::Menu
 			levelInit.LastExitType = ExitType::Warp | ExitType::Frozen;
 		}
 
+		if (PreferencesCache::AllowCheatsLives) {
+			levelInit.PlayerCarryOvers[0].Lives = UINT8_MAX;
+			levelInit.CheatsUsed = true;
+		}
+
 		_root->ChangeLevel(std::move(levelInit));
 	}
 

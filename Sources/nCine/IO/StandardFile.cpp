@@ -209,16 +209,17 @@ namespace nCine
 		filePointer_ = _fdopen(fd, modeInternal);
 #elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
 		const wchar_t* modeInternal;
+		int shareMode;
 		switch (mode) {
-			case FileAccessMode::Read: modeInternal = L"rb"; break;
-			case FileAccessMode::Write: modeInternal = L"wb"; break;
-			case FileAccessMode::Read | FileAccessMode::Write: modeInternal = L"r+b"; break;
+			case FileAccessMode::Read: modeInternal = L"rb"; shareMode = _SH_DENYNO; break;
+			case FileAccessMode::Write: modeInternal = L"wb"; shareMode = _SH_DENYWR; break;
+			case FileAccessMode::Read | FileAccessMode::Write: modeInternal = L"r+b"; shareMode = _SH_DENYWR; break;
 			default:
 				LOGE_X("Cannot open the file \"%s\", wrong open mode", filename_.data());
 				return;
 		}
 
-		_wfopen_s(&filePointer_, Utf8::ToUtf16(filename_), modeInternal);
+		filePointer_ = _wfsopen(Utf8::ToUtf16(filename_), modeInternal, shareMode);
 #else
 		const char* modeInternal;
 		switch (mode) {

@@ -1,10 +1,10 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-01-27 16:39+0100\n"
+"POT-Creation-Date: 2023-03-09 18:28+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
-"Language-Team: Traducere în limba română: 1NSH4N3\n"
+"Language-Team: Traducere în limba română: 1NSH4N3 & Akfiz\n"
 "Language: ro_RO\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -24,7 +24,7 @@ msgid ""
 "Spaz ate the dopefish."
 msgstr ""
 "\n"
-"Spaz a mâncat \"peștele stupid\" (dopefish)"
+"Spaz a mâncat peștele."
 
 #: .fake/Translations/flash/01_diam1.j2l.h:2
 msgctxt "flash/01_diam1"
@@ -33,7 +33,7 @@ msgid ""
 "Find the gopher."
 msgstr ""
 "\n"
-"Găsește  \"Popândăul\"."
+"Găsește popândăul."
 
 #: .fake/Translations/flash/01_diam1.j2l.h:3
 msgctxt "flash/01_diam1"
@@ -52,7 +52,7 @@ msgid ""
 "Hoo Hah!"
 msgstr ""
 "\n"
-"Mark poartă chiloți.\n"
+"Mark poartă boxeri.\n"
 "Hoo Hah!"
 
 #: .fake/Translations/flash/01_diam1.j2l.h:5
@@ -63,8 +63,8 @@ msgid ""
 "Always has!"
 msgstr ""
 "\n"
-"Nick iubește ce este strălucitor.\n"
-"Ca întotdeauna!"
+"Nick iubește tot ce este strălucitor.\n"
+"Mereu a iubit!"
 
 #: .fake/Translations/flash/02_diam3.j2l.h:1
 msgctxt "flash/02_diam3"
@@ -91,7 +91,7 @@ msgid ""
 "Beware of chainsaw schmalz."
 msgstr ""
 "\n"
-"Feriți-vă de \"chainsaw schmalz\"."
+"Feriți-vă de drujbele schmalz."
 
 #: .fake/Translations/flash/02_diam3.j2l.h:4
 msgctxt "flash/02_diam3"
@@ -118,7 +118,7 @@ msgid ""
 "Craig is still a doofus!"
 msgstr ""
 "\n"
-"Craig e tot un prostănac!"
+"Craig e tot un clown!"
 
 #: .fake/Translations/flash/05_medivo1.j2l.h:3
 msgctxt "flash/05_medivo1"
@@ -137,8 +137,8 @@ msgid ""
 "To Clear Your Path"
 msgstr ""
 "\n"
-"Sari cu fundul pe O Ladă Argintie \n"
-"Pentru a vă elibera calea"
+"Sari cu fundul pe o cutie argintie \n"
+"Pentru a iți elibera calea"
 
 #: .fake/Translations/flash/bonus_garglair.j2l.h:2
 msgctxt "flash/bonus_garglair"
@@ -156,7 +156,7 @@ msgid ""
 "Melt the Spring..."
 msgstr ""
 "\n"
-"Topește Arcul..."
+"Topește trambulina..."
 
 #: .fake/Translations/flash/bonus_garglair.j2l.h:4
 msgctxt "flash/bonus_garglair"
@@ -165,7 +165,7 @@ msgid ""
 "Leh is a Camper"
 msgstr ""
 "\n"
-"Leh este un \"Camper\""
+"Leh este un camper"
 
 #: .fake/Translations/monk/01_jung1.j2l.h:1
 msgctxt "monk/01_jung1"
@@ -176,7 +176,7 @@ msgid ""
 msgstr ""
 "\n"
 "Bolovanii în cădere pot\n"
-"să vă dea dureri de cap."
+"să iți dea dureri de cap."
 
 #: .fake/Translations/monk/01_jung1.j2l.h:2
 msgctxt "monk/01_jung1"
@@ -226,8 +226,8 @@ msgid ""
 " you can go even faster."
 msgstr ""
 "\n"
-"Barele de metal  te învârt ca să \n"
-"poți duce și mai repede."
+"Bările de metal te învârt ca să \n"
+"te poți duce și mai repede."
 
 #: .fake/Translations/prince/01_castle1.j2l.h:2
 msgctxt "prince/01_castle1"
@@ -264,7 +264,7 @@ msgid ""
 "bonus warp devices."
 msgstr ""
 "\n"
-"Colectează monede pentru a activa \n"
+"Colectează monedele pentru a activa \n"
 "dispozitive de teleportare in zonele bonus."
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:1
@@ -283,7 +283,7 @@ msgid ""
 "Craig is king doofus."
 msgstr ""
 "\n"
-"Craig este regele prostănac."
+"Craig este regele clown."
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:3
 msgctxt "prince/02_castle1n"
@@ -294,7 +294,7 @@ msgid ""
 msgstr ""
 "\n"
 "Pentru a o învinge pe regină \n"
-"împușc-o de pe marginea platformei."
+"împușc-o până cade de pe marginea platformei."
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:4
 msgctxt "prince/02_castle1n"
@@ -326,7 +326,7 @@ msgid ""
 "these blocks to break them!"
 msgstr ""
 "\n"
-"Apasă în jos și sari dedesubt de\n"
+"Apasă în jos și sari sub\n"
 "aceste blocuri pentru a le sparge!"
 
 #: .fake/Translations/prince/02_castle1n.j2l.h:7
@@ -338,7 +338,7 @@ msgid ""
 msgstr ""
 "\n"
 "Sparge cu fundul cutia de metal \n"
-"pentru a deschide blocurile cu chei!"
+"pentru a deschide cuburile cu chei!"
 
 #: .fake/Translations/prince/03_carrot1.j2l.h:1
 msgctxt "prince/03_carrot1"
@@ -356,7 +356,7 @@ msgid ""
 "This spring is frozen."
 msgstr ""
 "\n"
-"Acest arc este înghețat."
+"Această trambulină este înghețată."
 
 #: .fake/Translations/prince/04_carrot1n.j2l.h:1
 msgctxt "prince/04_carrot1n"
@@ -375,7 +375,7 @@ msgid ""
 "special ammo for a short time."
 msgstr ""
 "\n"
-"Scuturile îți vor oferi nelimitat muniție \n"
+"Scuturile îți vor oferi muniție nelimitată \n"
 "specială pentru o perioadă scurtă de timp."
 
 #: .fake/Translations/prince/04_carrot1n.j2l.h:4
@@ -386,7 +386,7 @@ msgid ""
 "the life of a shield."
 msgstr ""
 "\n"
-"Cronometrele vor adăuga timp la\n"
+"Cronometrele iți vor adăuga timp la\n"
 "durata de viață a unui scut."
 
 #: .fake/Translations/prince/04_carrot1n.j2l.h:5
@@ -396,7 +396,7 @@ msgid ""
 "This schwartzenguard is toast!"
 msgstr ""
 "\n"
-"Acest \"schwartzenguard\" este prăjit!"
+"Acest schwartzenguard este prăjit!"
 
 #: .fake/Translations/prince/06_labrat2.j2l.h:1
 msgctxt "prince/06_labrat2"
@@ -409,7 +409,7 @@ msgstr ""
 "\n"
 "\n"
 "Nu mă poți învinge, Jazz!\n"
-"Pregătește-te să înfrunți superbotul meu!"
+"Pregătește-te să înfrunți super robotul meu!"
 
 #: .fake/Translations/prince/06_labrat2.j2l.h:2
 msgctxt "prince/06_labrat2"
@@ -430,7 +430,7 @@ msgid ""
 "Run into them at full speed!"
 msgstr ""
 "\n"
-"Aceste blocuri sunt blocuri de viteză.\n"
+"Aceste cuburi sunt cuburi de viteză.\n"
 "Alergă în ele cu toată viteza!"
 
 #: .fake/Translations/prince/trainer.j2l.h:1
@@ -441,7 +441,7 @@ msgid ""
 " This is a training level."
 msgstr ""
 "\n"
-"Bine ați venit la Jazz Jackrabbit 2. \n"
+"Bine ai venit la Jazz Jackrabbit 2. \n"
 " Acesta este un nivel de antrenament."
 
 #: .fake/Translations/prince/trainer.j2l.h:2
@@ -452,7 +452,7 @@ msgid ""
 "points and surprises."
 msgstr ""
 "\n"
-"Colectează bunătăți pentru\n"
+"Colectează bunătățuri pentru\n"
 "puncte și surprize."
 
 #: .fake/Translations/prince/trainer.j2l.h:3
@@ -463,7 +463,7 @@ msgid ""
 "again to do a special move."
 msgstr ""
 "\n"
-"După ce ați sărit, apăsați butonul de salt\n"
+"După ce ai sărit, apasă pe butonul de sărit\n"
 "din nou pentru a face o mișcare specială."
 
 #: .fake/Translations/prince/trainer.j2l.h:4
@@ -483,8 +483,8 @@ msgid ""
 "to stomp with your butt."
 msgstr ""
 "\n"
-"Când sunteți în aer, apăsați în\n"
-" jos pentru a da cu fundul."
+"Când ești în aer, apasă în\n"
+" jos pentru a sparge cu fundul."
 
 #: .fake/Translations/prince/trainer.j2l.h:6
 msgctxt "prince/trainer"
@@ -494,7 +494,7 @@ msgid ""
 " Check the walls."
 msgstr ""
 "\n"
-"Secretele abundă în Jazz 2. \n"
+"Secretele sunt abundente în Jazz 2. \n"
 " Verifică pereții."
 
 #: .fake/Translations/prince/trainer.j2l.h:7
@@ -516,7 +516,7 @@ msgid ""
 "an extra life."
 msgstr ""
 "\n"
-"Colectează nestemate pentru \n"
+"Colectează pietre prețioase pentru \n"
 "o viață în plus."
 
 #: .fake/Translations/prince/trainer.j2l.h:9
@@ -527,8 +527,8 @@ msgid ""
 "as one gem."
 msgstr ""
 "\n"
-"Nestematele roșii se consideră\n"
-"ca o singură nestemata."
+"Pietrele prețioase roșii se consideră\n"
+"ca o singură piatră prețioasă."
 
 #: .fake/Translations/prince/trainer.j2l.h:10
 msgctxt "prince/trainer"
@@ -538,8 +538,8 @@ msgid ""
 "as five gems."
 msgstr ""
 "\n"
-"Nestematele verzi se consideră\n"
-"ca cinci nestemate."
+"Pietrele prețioase verzi se consideră\n"
+"ca cinci pietre prețioase."
 
 #: .fake/Translations/prince/trainer.j2l.h:11
 msgctxt "prince/trainer"
@@ -549,8 +549,8 @@ msgid ""
 "as ten gems."
 msgstr ""
 "\n"
-"Nestematele albastre se \n"
-"consideră ca zece nestemate."
+"Pietrele prețioase albastre se consideră \n"
+"ca zece pietre prețioase."
 
 #: .fake/Translations/prince/trainer.j2l.h:12
 msgctxt "prince/trainer"
@@ -569,8 +569,8 @@ msgid ""
 "spot if you lose a life."
 msgstr ""
 "\n"
-"Punctele de control vă salvează\n"
-"locul în caz că pierdeți o viață."
+"Punctele de salvare iți salvează\n"
+"progresul în cazul în care pierzi o viață."
 
 #: .fake/Translations/prince/trainer.j2l.h:14
 msgctxt "prince/trainer"
@@ -581,7 +581,7 @@ msgid ""
 msgstr ""
 "\n"
 "Colectează monede pentru \n"
-"a debloca camere bonus."
+"a debloca camerele bonus."
 
 #: .fake/Translations/prince/trainer.j2l.h:15
 msgctxt "prince/trainer"
@@ -612,7 +612,7 @@ msgid ""
 "Buttstomp the manhole cover!"
 msgstr ""
 "\n"
-"Spargeți cu fundul capacul de canal!"
+"Sparge cu fundul capacul de canal!"
 
 #: .fake/Translations/rescue/03_psych1.j2l.h:1
 msgctxt "rescue/03_psych1"
@@ -633,8 +633,8 @@ msgid ""
 "so go up and around!"
 msgstr ""
 "\n"
-"Nu poți să te dai cu fundul de pământ\n"
-"așa că mergi în sus și ocolește!"
+"Nu poți să le spargi cu fundul\n"
+"așa că mergi în sus și ocoleștele!"
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:2
 msgctxt "secretf/01_easter1"
@@ -664,8 +664,8 @@ msgid ""
 "to clear your path."
 msgstr ""
 "\n"
-"Găsiți lada pentru\n"
-"a vă elibera calea."
+"Găsește cutia pentru\n"
+"a iți elibera calea."
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:5
 msgctxt "secretf/01_easter1"
@@ -691,7 +691,7 @@ msgid ""
 msgstr ""
 "\n"
 "Doar Spaz poate ajunge la\n"
-"camera din stânga.\n"
+"camera sus în stânga.\n"
 "S-ar putea să aibă nevoie de ceva\n"
 "pe care să stea."
 
@@ -722,7 +722,7 @@ msgid ""
 "Sloping Tunnel Entrance"
 msgstr ""
 "\n"
-"Intrarea Îclinată a Tunelului"
+"Intrarea înclinată a tunelului"
 
 #: .fake/Translations/secretf/02_easter2.j2l.h:2
 msgctxt "secretf/02_easter2"
@@ -733,7 +733,7 @@ msgid ""
 msgstr ""
 "\n"
 "Pentru a accesa tunelurile de mai sus\n"
-"găsiți teleportarea de acces."
+"găsește zona de teleportare."
 
 #: .fake/Translations/secretf/02_easter2.j2l.h:3
 msgctxt "secretf/02_easter2"
@@ -765,8 +765,8 @@ msgid ""
 "your climbing blocks appear"
 msgstr ""
 "\n"
-"Găsește lada pentru a face\n"
-"blocurile de cățărare să apară"
+"Găsește cutia pentru a face\n"
+"cuburile de cățărare să apară"
 
 #: .fake/Translations/secretf/03_easter3.j2l.h:3
 msgctxt "secretf/03_easter3"
@@ -776,8 +776,8 @@ msgid ""
 "free's some enemies :)"
 msgstr ""
 "\n"
-"Călcând în picioare această ladă\n"
-"se eliberează și niște inamici :)"
+"Săritul cu fundul pe această cutie\n"
+"eliberează și niște inamici :)"
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:1
 msgctxt "secretf/04_haunted1"
@@ -795,7 +795,7 @@ msgid ""
 "Silver Crates can't be broken underwater..."
 msgstr ""
 "\n"
-"Lăzile Argintii nu pot fi sparte sub apă..."
+"Cutiile argintii nu pot fi sparte sub apă..."
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:4
 msgctxt "secretf/04_haunted1"
@@ -804,7 +804,7 @@ msgid ""
 "Water Level control crate above."
 msgstr ""
 "\n"
-"Nivelul Apei controlează lada de deasupra."
+"Nivelul apei controlează cutia de deasupra."
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:5
 msgctxt "secretf/04_haunted1"
@@ -813,7 +813,7 @@ msgid ""
 "Stomping crates can be good and bad..."
 msgstr ""
 "\n"
-"A călca în picioare lăzi poate fi bun și rău..."
+"Săritul cu fundul pe o cutie poate fi bun și rău..."
 
 #: .fake/Translations/secretf/04_haunted1.j2l.h:7
 msgctxt "secretf/04_haunted1"
@@ -852,8 +852,8 @@ msgid ""
 "those who stomp..."
 msgstr ""
 "\n"
-"Cerul de sus va răsplăti pe cei\n"
-"care vor călca în picioare..."
+"Cerul de sus îi va răsplăti pe cei\n"
+"care vor sări cu fundul..."
 
 #: .fake/Translations/secretf/07_town1.j2l.h:3
 msgctxt "secretf/07_town1"
@@ -894,8 +894,8 @@ msgid ""
 msgstr ""
 "\n"
 "Folosește-ți mișcările speciale pentru a te ridica în curenții de aer!\n"
-"Pentru Jazz, apăsați Ghemuiți și Săriți.\n"
-"Pentru Spaz, apăsați Sari de două ori!"
+"Pentru Jazz, apasă în jos și sări.\n"
+"Pentru Spaz, sări de două ori!"
 
 #: .fake/Translations/secretf/08_town2.j2l.h:1
 msgctxt "secretf/08_town2"
@@ -904,7 +904,7 @@ msgid ""
 "Find the crate and the gems are yours!"
 msgstr ""
 "\n"
-"Găsește lada și nestemate sunt ale tale!"
+"Găsește cutia și pietrele prețioase sunt ale tale!"
 
 #: .fake/Translations/secretf/08_town2.j2l.h:2
 msgctxt "secretf/08_town2"
@@ -913,7 +913,7 @@ msgid ""
 "Springs Don't Work When Frozen..."
 msgstr ""
 "\n"
-"Arcurile Nu Funcționează Când Sunt Înghețate..."
+"Trambulinele nu funcționează când sunt înghețate..."
 
 #: .fake/Translations/secretf/08_town2.j2l.h:3
 msgctxt "secretf/08_town2"
@@ -922,7 +922,7 @@ msgid ""
 "Collecting 20 coins is more rewarding..."
 msgstr ""
 "\n"
-"Colectând 20 de monede este mult mai răsplătitor..."
+"Să colectezi 20 de monede este mult mai răsplătitor..."
 
 #: .fake/Translations/secretf/09_town3.j2l.h:1
 msgctxt "secretf/09_town3"
@@ -931,7 +931,7 @@ msgid ""
 "Find the crate to clear the blocks...."
 msgstr ""
 "\n"
-"Găsește lada pentru a elimina blocurile...."
+"Găsește cutia pentru a elimina cuburile...."
 
 #: .fake/Translations/secretf/09_town3.j2l.h:2
 msgctxt "secretf/09_town3"
@@ -952,7 +952,7 @@ msgid ""
 "look to the tallest building."
 msgstr ""
 "\n"
-"Pentru a îndepărta blocurile\n"
+"Pentru a îndepărta cuburile\n"
 "uită-te la cea mai înaltă clădire."
 
 #: .fake/Translations/secretf/09_town3.j2l.h:4
@@ -982,8 +982,8 @@ msgid ""
 "password: BUNNYLOVER\n"
 msgstr ""
 "\n"
-"Du-te la www.project2.com\n"
-"utilizați\n"
+"Intră pe www.project2.com\n"
+"utilizează\n"
 "parola: BUNNYLOVER\n"
 
 #: .fake/Translations/share/01_share1.j2l.h:1
@@ -993,7 +993,7 @@ msgid ""
 "Shoot these blocks!"
 msgstr ""
 "\n"
-"Trage în aceste blocuri!"
+"Trage în aceste cuburi!"
 
 #: .fake/Translations/share/01_share1.j2l.h:2
 msgctxt "share/01_share1"
@@ -1003,7 +1003,7 @@ msgid ""
 "to stomp with your butt."
 msgstr ""
 "\n"
-"Când sunteți în aer, apăsați în\n"
+"Când ești în aer, apasă în\n"
 "jos pentru a lovi cu fundul."
 
 #: .fake/Translations/share/01_share1.j2l.h:3
@@ -1014,8 +1014,8 @@ msgid ""
 "the secret metal crate."
 msgstr ""
 "\n"
-"Pentru a trece de această zonă, calcă \n"
-"în picioare lada de metal secretă."
+"Pentru a trece de această zonă, lovește\n"
+"cu fundul cutia de metal secretă."
 
 #: .fake/Translations/share/01_share1.j2l.h:4
 msgctxt "share/01_share1"
@@ -1025,7 +1025,7 @@ msgid ""
 "through this secret warp!"
 msgstr ""
 "\n"
-"Ai nevoie de 20 monede pentru a trece \n"
+"Ai nevoie de 20 de monede pentru a trece \n"
 "prin această teleportare secretă!"
 
 #: .fake/Translations/share/01_share1.j2l.h:5
@@ -1047,7 +1047,7 @@ msgid ""
 "you might find a surprise!"
 msgstr ""
 "\n"
-"Calcă în picioare locul potrivit și\n"
+"Lovește cu fundul locul potrivit și\n"
 "s-ar putea să găsești o surpriză!"
 
 #: .fake/Translations/share/01_share1.j2l.h:7
@@ -1058,8 +1058,8 @@ msgid ""
 "bombs or baddies!"
 msgstr ""
 "\n"
-"Unele lăzi conțin\n"
-"bombe sau răutăți!"
+"Unele cutii conțin\n"
+"bombe sau lucruri rele!"
 
 #: .fake/Translations/share/02_share2.j2l.h:1
 msgctxt "share/02_share2"
@@ -1069,7 +1069,7 @@ msgid ""
 "through this secret warp!"
 msgstr ""
 "\n"
-"Ai nevoie de 20 monede pentru a trece \n"
+"Ai nevoie de 20 de monede pentru a trece \n"
 "prin această teleportare secretă!"
 
 #: .fake/Translations/share/02_share2.j2l.h:2
@@ -1081,7 +1081,7 @@ msgid ""
 msgstr ""
 "\n"
 "Un aruncător de flăcări funcționează\n"
-"bine împotriva insectelor urâte."
+"bine împotriva insectelor enervante."
 
 #: .fake/Translations/share/02_share2.j2l.h:3
 msgctxt "share/02_share2"
@@ -1102,7 +1102,7 @@ msgid ""
 "turn you into a frog."
 msgstr ""
 "\n"
-"Ferește-te de vrăjitoare! Ea te poate\n"
+"Ai grijă la vrăjitoare! Ea te poate\n"
 "transforma într-o broască."
 
 #: .fake/Translations/share/03_share3.j2l.h:2
@@ -1126,7 +1126,7 @@ msgid ""
 "for M O R E!"
 msgstr ""
 "\n"
-"Ai reușit! Ăsta e sfârșitul \n"
+"Ai reușit! Ăsta este sfârșitul \n"
 "versiunii shareware.\n"
 "Acum verifică informațiile de comandă\n"
 "pentru MAI MULTE!"
@@ -1149,8 +1149,8 @@ msgid ""
 "in the pathways!"
 msgstr ""
 "\n"
-"Puteți sparge cu fundul prin\n"
-"unele dintre punctele slabe\n"
+"Poți sparge cu fundul prin\n"
+"unele din punctele slabe\n"
 "din drumuri!"
 
 #: .fake/Translations/xmas99/01_xmas1.j2l.h:3
@@ -1162,8 +1162,8 @@ msgid ""
 "certain weapon."
 msgstr ""
 "\n"
-"Unele blocuri pot fi\n"
-"doar sparte cu o\n"
+"Unele cuburi pot fi\n"
+"sparte doar cu o\n"
 "anumită armă."
 
 #: .fake/Translations/xmas99/01_xmas1.j2l.h:4
@@ -1210,8 +1210,8 @@ msgid ""
 "in the pathways!"
 msgstr ""
 "\n"
-"Puteți sparge cu fundul prin\n"
-"unele dintre punctele slabe\n"
+"Poți sparge cu fundul prin\n"
+"unele din punctele slabe\n"
 "din drumuri!"
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:3
@@ -1222,8 +1222,8 @@ msgid ""
 "can be rewarding."
 msgstr ""
 "\n"
-"Lovirea blocurilor de deasupra ta\n"
-"poate fi răsplătitor."
+"Lovirea cuburilor de deasupra ta\n"
+"poate fi răsplătitoare."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:6
 msgctxt "xmas99/02_xmas2"
@@ -1232,8 +1232,8 @@ msgid ""
 "Gem Trail Entry Crate."
 msgstr ""
 "\n"
-"Lada de Intrare în\n"
-"Traseul Nestematelor."
+"Cutia de intrare în\n"
+"traseul pietrelor prețioase."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:7
 msgctxt "xmas99/02_xmas2"
@@ -1244,9 +1244,9 @@ msgid ""
 "and stomp the Entry Crate."
 msgstr ""
 "\n"
-"Intrarea în Traseul Nestematelor.\n"
-"Urcați-vă în vârful copacilor pentru a găsi\n"
-"și călcați în picioare Lada de Intrare."
+"Intrarea în traseul pietrelor prețioase.\n"
+"Urcă-te în vârful copacilor pentru a găsi\n"
+"și lovi cu fundul cutia de intrare."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:14
 msgctxt "xmas99/02_xmas2"
@@ -1277,7 +1277,7 @@ msgstr ""
 "\n"
 "Michelle:\n"
 "Mi-ai schimbat viața în atât de multe feluri.\n"
-"Îți dedic acest proiect.\n"
+"Îți dedic ție acest proiect.\n"
 "Te iubesc foarte mult."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:16
@@ -1293,7 +1293,7 @@ msgstr ""
 "\n"
 "\n"
 "Kassi Nicole:\n"
-"Un milion de lucruri pe care doresc să-ți spun\n"
+"Am un milion de lucruri pe care doresc să ți le spun\n"
 "Dar cuvintele mele duc mereu la același sfârșit\n"
 "Te iubesc, te iubesc."
 
@@ -1304,7 +1304,7 @@ msgid ""
 "Please use your TNT wisely."
 msgstr ""
 "\n"
-"Te rog să îți folosești TNT-ul\n"
+"Te rog să îți folosești dinamita\n"
 " cu înțelepciune."
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:2
@@ -1347,7 +1347,7 @@ msgid ""
 msgstr ""
 "\n"
 "Robert și Craig:\n"
-"Arcurile RULESC! :)"
+"Trambulinele sunt cele mai mișto! :)"
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:6
 msgctxt "xmas99/03_xmas3"
@@ -1408,53 +1408,53 @@ msgstr ""
 "\f[c:0x9e7056]nCine\f[c] și următoarele biblioteci:\n"
 "%s"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:32
-#: Sources/Jazz2/UI/Menu/ImportSection.cpp:67
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:30
+#: Sources/Jazz2/UI/Menu/ImportSection.cpp:63
 msgid "Import Episodes"
-msgstr "Importați episoadele"
+msgstr "Importează episoade"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:35
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:53
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:126
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:33
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:51
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:123
 msgid "Play Story"
 msgstr "Joacă Povestea"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:36
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:130
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:34
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:124
 msgid "Play Custom Levels"
 msgstr "Joacă Niveluri Customizate"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:38
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:36
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:28
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:13
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:11
 msgid "Options"
 msgstr "Opțiuni"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:39
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:37
 msgid "About"
 msgstr "Despre"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:41
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:39
 msgid "Quit"
 msgstr "Ieșire"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:55
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:53
 msgid "Play Shareware Demo"
 msgstr "Joacă Versiunea Demo"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:150
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:148
 msgid "Access to external storage has been granted!"
 msgstr "Accesul la memoria externă a fost acordat!"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:152
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:150
 msgid ""
 "\f[c:0x337233]Restart the game to read \f[c:0x9e7056]Jazz Jackrabbit "
 "2\f[c:0x337233] files correctly."
 msgstr ""
-"\f[c:0x337233]Reporniți jocul pentru a citi corect fișierele "
+"\f[c:0x337233]Repornește jocul pentru a citi corect fișierele "
 "\f[c:0x9e7056]Jazz Jackrabbit 2."
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:157
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:155
 msgid ""
 "\f[c:0x704a4a]This game requires original \f[c:0x9e7056]Jazz Jackrabbit "
 "2\f[c:0x704a4a] files!"
@@ -1462,37 +1462,37 @@ msgstr ""
 "\f[c:0x704a4a]Acest joc necesită fișierele originale \f[c:0x9e7056]Jazz "
 "Jackrabbit 2!"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:159
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:157
 msgid "Make sure Jazz Jackrabbit 2 files are present in following path:"
 msgstr ""
-"Fiți siguri că fișierele Jazz Jackrabbit 2 sunt prezente în următoarea cale:"
+"Asigură-te că fișierele Jazz Jackrabbit 2 sunt prezente în următorul fișier:"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:166
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:164
 msgid "Allow access to external storage"
-msgstr "Permiteți accesul la stocarea externă"
+msgstr "Permite accesul la stocarea externă"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:12
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:212
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:11
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:204
 msgid "Remap Controls"
 msgstr "Reconficurează Controlul"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:13
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:44
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:12
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:41
 msgid "Touch Controls"
 msgstr "Comenzi Tactile"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:15
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:14
 msgid "Native Back Button"
 msgstr "Butonul Nativ de Întoarcere"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:47
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:46
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:14
 msgid "Controls"
-msgstr "Controale"
+msgstr "Controluri"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:121
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:87
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:110
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:113
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
@@ -1500,60 +1500,60 @@ msgstr "Controale"
 msgid "Enabled"
 msgstr "Activat"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:121
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:125
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:87
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:105
 msgid "Disabled"
 msgstr "Dezactivat"
 
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:140
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:134
 msgid "No custom level found!"
 msgstr "Nu s-a găsit niciun nivel customizat!"
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:134
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:131
 msgid "No episode found!"
-msgstr "Nici un episod găsit!"
+msgstr "Nu s-a găsit niciun episod!"
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:172
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:173
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:169
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:170
 msgid "Restart episode"
-msgstr "Reporniți episodul"
+msgstr "Repornește episodul"
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:194
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:191
 #, c-format
 msgid "You must complete \"%s\" first!"
 msgstr "Trebuie să finalizezi mai întâi \"%s\"!"
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:197
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:194
 msgid "Episode is locked!"
 msgstr "Episodul este blocat!"
 
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:15
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:10
 msgid "Reforged Mode"
 msgstr "Modul Re-Fabricat"
 
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:16
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:11
 msgid "Ledge Climbing"
-msgstr "Cățărare pe margini"
+msgstr "Cățărare pe Margini"
 
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:17
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:12
 msgid "Weapon Wheel"
-msgstr "Roata pentru arme"
+msgstr "Roata Pentru Arme"
 
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:86
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:81
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:17
 msgid "Enhancements"
 msgstr "Îmbunătățiri"
 
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:89
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:84
 msgid "You can enable enhancements that were added to this remake."
-msgstr "Puteți activa îmbunătățirile care au fost adăugate la acestă refacere."
+msgstr "Poți activa îmbunătățirile care au fost adăugate la acestă refacere."
 
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:115
 msgid "Enabled With Ammo Count"
-msgstr ""
+msgstr "Activat cu Număr Gloanțe"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:18
 #: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:48
@@ -1573,14 +1573,14 @@ msgid "Scripting"
 msgstr "Scripturi"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:29
-#: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:65
+#: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:63
 msgid "Refresh Cache"
-msgstr "Reîncărcați memoria cache"
+msgstr "Reîncarcă Memoria Cache"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:11
 msgid "Gameplay"
-msgstr "Joc"
+msgstr "Gameplay"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:14
 msgid "Rescale Mode"
@@ -1588,7 +1588,7 @@ msgstr "Moduri de Redimensionare"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:21
 msgid "Fullscreen"
-msgstr "Ecran complet"
+msgstr "Ecran Complet"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:24
 msgid "Antialiasing"
@@ -1600,15 +1600,15 @@ msgstr "Calitatea Grafică"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:26
 msgid "Show Player Trails"
-msgstr "Arată traseele jucătorilor"
+msgstr "Arată Urmele Jucătorilor"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:27
 msgid "Keep Aspect Ratio In Cinematics"
-msgstr "Păstrați raportul de aspect în cinematică"
+msgstr "Păstrează Raportul de Aspect în Cinematice"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:28
 msgid "Performance Metrics"
-msgstr "Indicatori de performanță"
+msgstr "Indicatori de Performanță"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:59
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:12
@@ -1623,109 +1623,109 @@ msgstr "Scăzută"
 msgid "High"
 msgstr "Înaltă"
 
-#: Sources/Jazz2/UI/Menu/ImportSection.cpp:70
+#: Sources/Jazz2/UI/Menu/ImportSection.cpp:66
 msgid "Select files of your original game to unlock additional episodes"
 msgstr ""
 "Selectează fișiere din jocul original pentru a debloca episoade suplimentare"
 
-#: Sources/Jazz2/UI/Menu/ImportSection.cpp:76
+#: Sources/Jazz2/UI/Menu/ImportSection.cpp:72
 msgid "Processing of selected files..."
 msgstr "Se procesează fișierele selectate..."
 
-#: Sources/Jazz2/UI/Menu/ImportSection.cpp:79
+#: Sources/Jazz2/UI/Menu/ImportSection.cpp:75
 msgid "Waiting for files..."
 msgstr "În așteptare pentru fișiere..."
 
-#: Sources/Jazz2/UI/Menu/ImportSection.cpp:85
+#: Sources/Jazz2/UI/Menu/ImportSection.cpp:81
 msgid "No files were selected!"
 msgstr "Nu a fost selectat nici un fișier!"
 
-#: Sources/Jazz2/UI/Menu/ImportSection.cpp:90
+#: Sources/Jazz2/UI/Menu/ImportSection.cpp:86
 msgid "No new episodes were imported!"
 msgstr "Niciun episod nou nu a fost importat!"
 
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:13
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:92
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:89
 msgid "Sounds"
-msgstr "Sunete"
+msgstr "Sunet"
 
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:12
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:10
 msgid "Resume"
 msgstr "Reluare activitate"
 
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:14
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:12
 msgid "Save & Exit"
 msgstr "Salvează și Ieși"
 
-#: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:68
+#: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:66
 msgid "Processing of files in \f[c:0x9e7056]\"Source\"\f[c] directory..."
-msgstr "Procesarea fișierelor \f[c:0x9e7056]\"Source\"\f[c] din directorul..."
+msgstr "Procesarea fișierelor \f[c:0x9e7056]\"Sursa\"\f[c] din directorul..."
 
-#: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:71
+#: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:69
 msgid "Newly added levels and episodes will be available soon."
 msgstr "Nivelurile și episoadele nou adăugate vor fi disponibile în curând."
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:215
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:217
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:207
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:209
 #, c-format
 msgid "Key %i"
 msgstr "Tastă %i"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:219
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:211
 msgid "Gamepad"
 msgstr "Controler"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:234
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:226
 msgid "Up"
 msgstr "Sus"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:235
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:227
 msgid "Down"
 msgstr "Jos"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:236
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:228
 msgid "Left"
 msgstr "Stânga"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:237
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:229
 msgid "Right"
 msgstr "Dreapta"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:238
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:230
 msgid "Fire"
 msgstr "Trage"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:239
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:231
 msgid "Jump"
-msgstr "Sari"
+msgstr "Sări"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:240
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:232
 msgid "Run"
 msgstr "Fugi"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:241
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:233
 msgid "Change Weapon"
 msgstr "Schimbă Arma"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:242
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:234
 msgid "Back"
 msgstr "Înapoi"
 
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:16
 msgid "None / Pixel-perfect"
-msgstr "Nici unul / Pixel-perfect"
+msgstr "Nimic / Pixel-perfect"
 
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:20
 msgid "CRT Scanlines"
-msgstr "Linii de scanare CRT"
+msgstr "Linii de Scanare CRT"
 
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:21
 msgid "CRT Shadow Mask"
-msgstr "Mască si umbre CRT"
+msgstr "Mască de Umbră CRT"
 
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
 msgid "CRT Aperture Grille"
-msgstr "Grilă de deschidere CRT"
+msgstr "Grilă de Deschidere CRT"
 
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:23
 msgid "Monochrome"
@@ -1735,11 +1735,11 @@ msgstr "Monocrom"
 msgid "Select Rescale Mode"
 msgstr "Alege Modul de Redimensionare"
 
-#: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:31
+#: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:30
 msgid "Error"
 msgstr "Eroare"
 
-#: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:36
+#: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:35
 msgid ""
 "\f[c:0x704a4a]Cannot load specified level!\f[c]\n"
 "\n"
@@ -1751,42 +1751,42 @@ msgstr ""
 "Asigură-te că toate fișierele necesare\n"
 "sunt accesibile și încearcă din nou."
 
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:12
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:9
 msgid "Master Volume"
 msgstr "Volum Principal"
 
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:13
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:10
 msgid "SFX Volume"
 msgstr "Volum SFX (Efecte)"
 
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:14
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:11
 msgid "Music Volume"
 msgstr "Volum Muzică"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:23
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:12
 msgid "Character"
 msgstr "Caracter"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:24
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:13
 msgid "Difficulty"
 msgstr "Dificultate"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:25
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:14
 msgid "Start"
 msgstr "Start"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:202
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:191
 msgid "Easy"
 msgstr "Usor"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:202
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:191
 msgid "Medium"
 msgstr "Mediu"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:202
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:191
 msgid "Hard"
 msgstr "Greu"
 
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:47
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:44
 msgid "You can adjust position of the touch zones by drag and drop."
-msgstr "Poți ajusta poziția zonelor tactile prin tragere și fixare."
+msgstr "Poți ajusta poziția zonelor tactile prin a le trage și fixa."

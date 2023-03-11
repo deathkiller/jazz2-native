@@ -2076,7 +2076,7 @@ namespace Jazz2::Actors
 
 		SetPlayerTransition(AnimState::TransitionDeath, false, true, SpecialMoveType::None, [this]() {
 			if (_lives > 1 || _levelHandler->Difficulty() == GameDifficulty::Multiplayer) {
-				if (_lives > 1) {
+				if (_lives > 1 && _lives < UINT8_MAX) {
 					_lives--;
 				}
 
@@ -3023,7 +3023,7 @@ namespace Jazz2::Actors
 
 	bool Player::AddHealth(int amount)
 	{
-		const int HealthLimit = 5;
+		constexpr int HealthLimit = 5;
 
 		if (_health >= HealthLimit) {
 			return false;
@@ -3043,11 +3043,17 @@ namespace Jazz2::Actors
 		return true;
 	}
 
-	void Player::AddLives(int count)
+	bool Player::AddLives(int count)
 	{
-		_lives += count;
+		constexpr int LivesLimit = 99;
 
+		if (_lives >= LivesLimit) {
+			return false;
+		}
+
+		_lives = std::min(_lives + count, LivesLimit);
 		PlaySfx("PickupOneUp"_s);
+		return true;
 	}
 
 	void Player::AddCoins(int count)

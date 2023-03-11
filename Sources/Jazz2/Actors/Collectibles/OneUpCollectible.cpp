@@ -22,8 +22,8 @@ namespace Jazz2::Actors::Collectibles
 
 	void OneUpCollectible::OnCollect(Player* player)
 	{
-		player->AddLives(1);
-
-		CollectibleBase::OnCollect(player);
+		if (player->AddLives(1)) {
+			CollectibleBase::OnCollect(player);
+		}
 	}
 }
