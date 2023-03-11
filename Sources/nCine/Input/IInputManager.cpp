@@ -41,8 +41,6 @@ namespace nCine
 
 	void JoystickGuid::fromString(const StringView& string)
 	{
-		char component[9];
-
 		if (string.empty()) {
 			fromType(JoystickGuidType::Unknown);
 		} else if (string == "default"_s) {
@@ -52,16 +50,15 @@ namespace nCine
 		} else if (string == "xinput"_s) {
 			fromType(JoystickGuidType::Xinput);
 		} else {
-			if (string.size() != 32) {
+			if (string.size() != sizeof(data) * 2) {
 				fromType(JoystickGuidType::Unknown);
 			} else {
-				uint32_t* guid32 = (uint32_t*)data;
-				unsigned int offset = 0;
-				for (unsigned int i = 0; i < sizeof(data) / sizeof(uint32_t); i++) {
-					memcpy(component, string.data() + offset, 8);
-					component[8] = '\0';
-					guid32[i] = strtoul(component, nullptr, 16);
-					offset += 8;
+				char component[3];
+				component[2] = '\0';
+				for (uint32_t i = 0, j = 0; i < sizeof(data); i++) {
+					component[0] = string[j++];
+					component[1] = string[j++];
+					data[i] = std::strtoul(component, nullptr, 16);
 				}
 			}
 		}
