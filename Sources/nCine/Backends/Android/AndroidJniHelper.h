@@ -87,13 +87,11 @@ namespace nCine
 	public:
 		explicit AndroidJniClass_MotionRange(jobject javaObject);
 		float getMin() const;
-		float getMax() const;
 		float getRange() const;
 		
 	private:
 		static jclass javaClass_;
 		static jmethodID midGetMin_;
-		static jmethodID midGetMax_;
 		static jmethodID midGetRange_;
 	};
 
