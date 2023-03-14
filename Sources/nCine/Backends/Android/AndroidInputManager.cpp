@@ -820,7 +820,6 @@ namespace nCine
 
 				if (!motionRange.IsNull()) {
 					const float minValue = motionRange.getMin();
-					const float maxValue = motionRange.getMax();
 					const float rangeValue = motionRange.getRange();
 					
 					if (numAxes < AndroidJoystickState::MaxAxes) {
@@ -835,7 +834,7 @@ namespace nCine
 						}
 					}
 #if defined(NCINE_LOG)
-					sprintf(&deviceInfoString[strlen(deviceInfoString)], " %d:%d (%.2f to %.2f > %.2f)", numAxes, axis, minValue, maxValue, rangeValue);
+					sprintf(&deviceInfoString[strlen(deviceInfoString)], " %d:%d (%.2f to %.2f)", numAxes, axis, minValue, minValue + rangeValue);
 #endif
 					if (axis != AMOTION_EVENT_AXIS_HAT_X && axis != AMOTION_EVENT_AXIS_HAT_Y) {
 						numAxesMapped++;
@@ -875,9 +874,12 @@ namespace nCine
 					buttonMask |= 0x800 | 0x1000 | 0x2000 | 0x4000;
 				}
 
-				uint16_t* guid16 = (uint16_t*)joyState.guid_.data;
-				guid16[6] = (uint16_t)buttonMask;
-				guid16[7] = axisMask;
+				LOGI("Creating input device GUID...");
+
+				joyState.guid_.data[12] = buttonMask & 0xff;
+				joyState.guid_.data[13] = (buttonMask >> 8) & 0xff;
+				joyState.guid_.data[14] = axisMask & 0xff;
+				joyState.guid_.data[15] = (axisMask >> 8) & 0xff;
 			}
 		}
 	}
