@@ -364,6 +364,7 @@
     <ClInclude Include="Jazz2\UI\Menu\IMenuContainer.h" />
     <ClInclude Include="Jazz2\UI\Menu\ImportSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\InGameMenu.h" />
+    <ClInclude Include="Jazz2\UI\Menu\InputDiagnosticsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\LanguageSelectSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\MainMenu.h" />
     <ClInclude Include="Jazz2\UI\Menu\MenuSection.h" />
@@ -699,6 +700,7 @@
     <ClCompile Include="Jazz2\UI\Menu\GraphicsOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\ImportSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\InGameMenu.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\InputDiagnosticsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\LanguageSelectSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\MainMenu.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\OptionsSection.cpp" />

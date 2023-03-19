@@ -7,6 +7,7 @@ namespace Jazz2::UI::Menu
 	enum class ControlsOptionsItemType {
 		RemapControls,
 		TouchControls,
+		InputDiagnostics,
 #if defined(DEATH_TARGET_ANDROID)
 		UseNativeBackButton,
 #endif

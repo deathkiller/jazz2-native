@@ -1,6 +1,7 @@
 ﻿#include "ControlsOptionsSection.h"
 #include "RemapControlsSection.h"
 #include "TouchControlsOptionsSection.h"
+#include "InputDiagnosticsSection.h"
 #include "../../PreferencesCache.h"
 
 namespace Jazz2::UI::Menu
@@ -10,6 +11,7 @@ namespace Jazz2::UI::Menu
 	{
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::RemapControls, _("Remap Controls") });
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::TouchControls, _("Touch Controls") });
+		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::InputDiagnostics, _("Input Diagnostics") });
 #if defined(DEATH_TARGET_ANDROID)
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::UseNativeBackButton, _("Native Back Button"), true });
 #endif
@@ -96,6 +98,7 @@ namespace Jazz2::UI::Menu
 		switch (_items[_selectedIndex].Item.Type) {
 			case ControlsOptionsItemType::RemapControls: _root->SwitchToSection<RemapControlsSection>(); break;
 			case ControlsOptionsItemType::TouchControls: _root->SwitchToSection<TouchControlsOptionsSection>(); break;
+			case ControlsOptionsItemType::InputDiagnostics: _root->SwitchToSection<InputDiagnosticsSection>(); break;
 #if defined(DEATH_TARGET_ANDROID)
 			case ControlsOptionsItemType::UseNativeBackButton:
 				PreferencesCache::UseNativeBackButton = !PreferencesCache::UseNativeBackButton;
