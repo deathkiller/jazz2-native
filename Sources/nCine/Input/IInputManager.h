@@ -108,6 +108,10 @@ namespace nCine
 		void addJoyMappingsFromStrings(const char** mappingStrings);
 		/// Returns the current number of valid joystick mappings
 		unsigned int numJoyMappings() const;
+		/// Returns true if mapping exists for specified joystick by GUID
+		bool hasMappingByGuid(const JoystickGuid& guid) const;
+		/// Returns true if mapping exists for specified joystick by name
+		bool hasMappingByName(const char* name) const;
 
 		/// Returns current mouse cursor mode
 		inline Cursor cursor() const {
