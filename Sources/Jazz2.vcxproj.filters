@@ -1290,6 +1290,9 @@
     <ClInclude Include="nCine\Graphics\BinaryShaderCache.h">
       <Filter>Header Files\nCine\Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\InputDiagnosticsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2164,6 +2167,9 @@
     </ClCompile>
     <ClCompile Include="nCine\Graphics\BinaryShaderCache.cpp">
       <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\InputDiagnosticsSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

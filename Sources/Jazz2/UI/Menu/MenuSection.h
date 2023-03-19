@@ -36,6 +36,11 @@ namespace Jazz2::UI::Menu
 		virtual void OnDrawOverlay(Canvas* canvas) { }
 		virtual void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) = 0;
 
+		virtual bool IsGamepadNavigationEnabled() const
+		{
+			return true;
+		}
+
 	protected:
 		IMenuContainer* _root;
 	};

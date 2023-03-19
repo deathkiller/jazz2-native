@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-03-09 18:28+0100\n"
+"POT-Creation-Date: 2023-03-19 23:01+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Traducere în limba română: 1NSH4N3 & Akfiz\n"
@@ -1471,26 +1471,31 @@ msgstr ""
 msgid "Allow access to external storage"
 msgstr "Permite accesul la stocarea externă"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:11
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:12
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:204
 msgid "Remap Controls"
 msgstr "Reconficurează Controlul"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:12
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:13
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:41
 msgid "Touch Controls"
 msgstr "Comenzi Tactile"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:14
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:59
+msgid "Input Diagnostics"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:16
 msgid "Native Back Button"
 msgstr "Butonul Nativ de Întoarcere"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:46
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:48
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:14
 msgid "Controls"
 msgstr "Controluri"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:87
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:89
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:116
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:110
@@ -1500,7 +1505,7 @@ msgstr "Controluri"
 msgid "Enabled"
 msgstr "Activat"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:87
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:89
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:116
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
@@ -1643,6 +1648,10 @@ msgstr "Nu a fost selectat nici un fișier!"
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:86
 msgid "No new episodes were imported!"
 msgstr "Niciun episod nou nu a fost importat!"
+
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:74
+msgid "No gamepads are detected!"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:13
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:89

@@ -399,6 +399,13 @@ namespace Jazz2::UI::Menu
 			_pressedActions |= (1 << (int32_t)PlayerActions::ChangeWeapon);
 		}
 
+		if (!_sections.empty()) {
+			auto& lastSection = _sections.back();
+			if (!lastSection->IsGamepadNavigationEnabled()) {
+				return;
+			}
+		}
+
 		// Try to get 8 connected joysticks
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		int32_t jc = 0;

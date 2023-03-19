@@ -249,6 +249,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GraphicsOptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ImportSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/InGameMenu.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/InputDiagnosticsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/LanguageSelectSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MainMenu.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/OptionsSection.cpp
