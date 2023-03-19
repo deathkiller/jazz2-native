@@ -84,12 +84,13 @@ namespace Jazz2::UI::Menu
 
 		const JoystickState& rawState = input.joystickState(_selectedIndex);
 		const JoyMappedState& mappedState = input.joyMappedState(_selectedIndex);
+		const char* joyName = input.joyName(_selectedIndex);
 		int32_t numAxes = input.joyNumAxes(_selectedIndex);
 		int32_t numButtons = input.joyNumButtons(_selectedIndex);
 		int32_t numHats = input.joyNumHats(_selectedIndex);
 
 		char buffer[128];
-		formatString(buffer, sizeof(buffer), "%s (%i axes, %i buttons, %i hats)", input.joyName(_selectedIndex), numAxes, numButtons, numHats);
+		formatString(buffer, sizeof(buffer), "%s (%i axes, %i buttons, %i hats)", joyName, numAxes, numButtons, numHats);
 
 		size_t joyNameStringLength = strlen(buffer);
 		float xMultiplier = joyNameStringLength * 0.5f;
@@ -110,9 +111,10 @@ namespace Jazz2::UI::Menu
 		} else if (joyGuid == JoystickGuidType::Xinput) {
 			formatString(buffer, sizeof(buffer), "GUID: xinput");
 		} else {
-			formatString(buffer, sizeof(buffer), "GUID: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+			formatString(buffer, sizeof(buffer), "GUID: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%s",
 				joyGuid.data[0], joyGuid.data[1], joyGuid.data[2], joyGuid.data[3], joyGuid.data[4], joyGuid.data[5], joyGuid.data[6], joyGuid.data[7],
-				joyGuid.data[8], joyGuid.data[9], joyGuid.data[10], joyGuid.data[11], joyGuid.data[12], joyGuid.data[13], joyGuid.data[14], joyGuid.data[15]);
+				joyGuid.data[8], joyGuid.data[9], joyGuid.data[10], joyGuid.data[11], joyGuid.data[12], joyGuid.data[13], joyGuid.data[14], joyGuid.data[15],
+				input.hasMappingByGuid(joyGuid) ? "" : (input.hasMappingByName(joyName) ? " (similar mapping)" : " (no mapping)"));
 		}
 
 		_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f, TopLine + 40.0f, IMenuContainer::FontLayer,

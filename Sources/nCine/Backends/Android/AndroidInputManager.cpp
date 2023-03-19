@@ -874,8 +874,6 @@ namespace nCine
 					buttonMask |= 0x800 | 0x1000 | 0x2000 | 0x4000;
 				}
 
-				LOGI("Creating input device GUID...");
-
 				joyState.guid_.data[12] = buttonMask & 0xff;
 				joyState.guid_.data[13] = (buttonMask >> 8) & 0xff;
 				joyState.guid_.data[14] = axisMask & 0xff;

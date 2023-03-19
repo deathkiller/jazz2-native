@@ -112,6 +112,16 @@ namespace nCine
 		return joyMapping_.numMappings();
 	}
 
+	bool IInputManager::hasMappingByGuid(const JoystickGuid& guid) const
+	{
+		return (joyMapping_.findMappingByGuid(guid) != -1);
+	}
+
+	bool IInputManager::hasMappingByName(const char* name) const
+	{
+		return (joyMapping_.findMappingByName(name) != -1);
+	}
+
 	void IInputManager::setCursor(Cursor cursor)
 	{
 #if defined(WITH_IMGUI)

@@ -83,6 +83,9 @@ namespace nCine
 		const JoyMappedStateImpl& joyMappedState(int joyId) const;
 		void deadZoneNormalize(Vector2f& joyVector, float deadZoneValue) const;
 		static JoystickGuid createJoystickGuid(uint16_t bus, uint16_t vendor, uint16_t product, uint16_t version, const StringView& name, uint8_t driverSignature, uint8_t driverData);
+		
+		int findMappingByGuid(const JoystickGuid& guid) const;
+		int findMappingByName(const char* name) const;
 
 	private:
 		static const unsigned int MaxNameLength = 64;
@@ -140,8 +143,6 @@ namespace nCine
 		IInputEventHandler* inputEventHandler_;
 
 		void checkConnectedJoystics();
-		int findMappingByGuid(const JoystickGuid& guid);
-		int findMappingByName(const char* name);
 		bool parseMappingFromString(const char* mappingString, MappedJoystick& map);
 		bool parsePlatformKeyword(const char* start, const char* end) const;
 		bool parsePlatformName(const char* start, const char* end) const;

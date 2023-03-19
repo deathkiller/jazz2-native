@@ -533,7 +533,7 @@ namespace nCine
 		}
 	}
 
-	int JoyMapping::findMappingByGuid(const JoystickGuid& guid)
+	int JoyMapping::findMappingByGuid(const JoystickGuid& guid) const
 	{
 		int index = -1;
 
@@ -548,7 +548,7 @@ namespace nCine
 		return index;
 	}
 
-	int JoyMapping::findMappingByName(const char* name)
+	int JoyMapping::findMappingByName(const char* name) const
 	{
 		int index = -1;
 
