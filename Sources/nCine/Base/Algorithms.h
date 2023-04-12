@@ -203,9 +203,9 @@ namespace nCine
 		{
 			if (first != last) {
 				Iterator p = prev(last);
-				swap(*first, *p);
+				std::swap(*first, *p);
 				Iterator q = partition(first, p, comp);
-				swap(*q, *p);
+				std::swap(*q, *p);
 				quicksort(first, q, BidirectionalIteratorTag());
 				quicksort(next(q), last, BidirectionalIteratorTag());
 			}

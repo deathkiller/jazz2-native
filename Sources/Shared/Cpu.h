@@ -49,10 +49,7 @@ extern "C" {
 
 	The @ref Cpu namespace contains tags such as @ref Cpu::Avx2, @ref Cpu::Sse2,
 	@ref Cpu::Neon or @ref Cpu::Simd128. These tags behave similarly to enum values
-	and their combination result in @ref Cpu::Features, which is similar to the
-	@ref Containers::EnumSet class --- they support the same bitwise operations,
-	can be tested for subsets and supersets, and are printable with
-	@ref Utility::Debug.
+	and their combination result in @ref Cpu::Features.
 
 	The most advanced base CPU instruction set enabled at compile time is then
 	exposed through the @ref Cpu::DefaultBase variable, which is an alias to one of
