@@ -32,4 +32,9 @@
 #	endif
 #endif
 
+// Undefine obsolete redirections
+#if defined(GetCurrentTime)
+#	undef GetCurrentTime
+#endif
+
 #endif
