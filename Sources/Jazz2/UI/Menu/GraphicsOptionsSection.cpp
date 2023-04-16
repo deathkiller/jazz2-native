@@ -99,7 +99,7 @@ namespace Jazz2::UI::Menu
 				case GraphicsOptionsItemType::ShowPerformanceMetrics: enabled = PreferencesCache::ShowPerformanceMetrics; break;
 				case GraphicsOptionsItemType::KeepAspectRatioInCinematics: enabled = PreferencesCache::KeepAspectRatioInCinematics; break;
 				case GraphicsOptionsItemType::ShowPlayerTrails: enabled = PreferencesCache::ShowPlayerTrails; break;
-				case GraphicsOptionsItemType::LowGraphicsQuality: customText = (enabled ? _("Low") : _("High")); break;
+				case GraphicsOptionsItemType::LowGraphicsQuality: enabled = PreferencesCache::LowGraphicsQuality; customText = (enabled ? _("Low") : _("High")); break;
 			}
 
 			_root->DrawStringShadow(!customText.empty() ? customText : (enabled ? _("Enabled") : _("Disabled")), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
