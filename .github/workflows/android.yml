@@ -81,6 +81,7 @@ jobs:
 
   # Testing builds with workarounds
   Workarounds:
+    if: ${{ false }}  # Temporarily disabled, it will be removed in the future as it's no longer needed.
     strategy:
       fail-fast: false
       matrix:
