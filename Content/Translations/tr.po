@@ -1474,7 +1474,7 @@ msgstr "Dokunmatik Kontrol Ayarları"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:14
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:59
 msgid "Input Diagnostics"
-msgstr ""
+msgstr "Giriş Tanılama"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:16
 msgid "Native Back Button"
@@ -1548,7 +1548,7 @@ msgstr "Bu versiyona eklenmiş geliştirmeleri aktive edebilirsin."
 
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:115
 msgid "Enabled With Ammo Count"
-msgstr ""
+msgstr "Mermi ile Etkin"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:18
 #: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:48
@@ -1640,7 +1640,7 @@ msgstr "Hiçbir yeni bölüm içeriye alınmadı!"
 
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:74
 msgid "No gamepads are detected!"
-msgstr ""
+msgstr "Oyun kolu algılanmadı!"
 
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:13
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:89
