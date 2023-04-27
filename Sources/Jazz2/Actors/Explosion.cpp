@@ -88,7 +88,9 @@ namespace Jazz2::Actors
 				_renderer.Initialize(ActorRendererType::FrozenMask);
 				_renderer.CurrentFrame = _renderer.FirstFrame + Random().Fast(0, _renderer.FrameCount);
 				_renderer.setAlphaF(1.0f);
-				_speed = Vector2f(Random().FastFloat(0.5f, 2.0f) * (Random().NextBool() ? -1.0f : 1.0f), Random().FastFloat(-4.0f, -1.0f));
+				float speedX = Random().FastFloat(0.5f, 2.0f);
+				_renderer.AnimDuration /= speedX * 0.7f;
+				_speed = Vector2f(speedX * (Random().NextBool() ? -1.0f : 1.0f), Random().FastFloat(-4.0f, -1.0f));
 				_elasticity = 0.2f;
 				SetFacingLeft(_speed.X < 0.0f);
 				break;

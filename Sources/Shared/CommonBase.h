@@ -103,6 +103,10 @@
 #	define DEATH_TARGET_APPLE_CLANG
 #endif
 
+#if defined(__INTEL_LLVM_COMPILER)
+#	define DEATH_TARGET_INTEL_LLVM
+#endif
+
 #if defined(_MSC_VER)
 #	define DEATH_TARGET_MSVC
 #	if _MSC_VER <= 1900
@@ -396,6 +400,13 @@
 #	define DEATH_NEVER_INLINE __declspec(noinline)
 #else
 #	define DEATH_NEVER_INLINE
+#endif
+
+/** @brief Hint for compiler that for the lifetime of the pointer, no other pointer will be used to access the object it points to */
+#if defined(__cplusplus)
+#	define DEATH_RESTRICT __restrict
+#else
+#	define DEATH_RESTRICT restrict
 #endif
 
 /** @brief Passthrough */

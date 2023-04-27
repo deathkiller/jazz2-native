@@ -5,8 +5,6 @@
 
 #include "../../../nCine/Application.h"
 #include "../../../nCine/Graphics/RenderQueue.h"
-#include "../../../nCine/Graphics/Viewport.h"
-#include "../../../nCine/Input/IInputManager.h"
 #include "../../../nCine/Audio/AudioReaderMpt.h"
 #include "../../../nCine/Base/Random.h"
 
@@ -31,10 +29,9 @@ namespace Jazz2::UI::Menu
 		PrepareTexturedBackground();
 
 		Metadata* metadata = resolver.RequestMetadata("UI/MainMenu"_s);
-		if (metadata != nullptr) {
-			_graphics = &metadata->Graphics;
-			_sounds = &metadata->Sounds;
-		}
+		ASSERT_MSG(metadata != nullptr, "Cannot load required metadata");
+		_graphics = &metadata->Graphics;
+		_sounds = &metadata->Sounds;
 
 		_smallFont = resolver.GetFont(FontType::Small);
 		_mediumFont = resolver.GetFont(FontType::Medium);

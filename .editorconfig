@@ -8,7 +8,7 @@ root = true
 
 # Indentation and spacing
 indent_size = 4
-indent_style = space
+indent_style = tab
 tab_width = 4
 
 # New line preferences
@@ -166,8 +166,7 @@ insert_final_newline = false
 
 #### C++ Coding Conventions ####
 
-#cpp_generate_documentation_comments = doxygen_slash_star
-cpp_generate_documentation_comments = doxygen_triple_slash
+cpp_generate_documentation_comments = doxygen_slash_star
 
 cpp_indent_braces = false
 cpp_indent_multi_line_relative_to = innermost_parenthesis

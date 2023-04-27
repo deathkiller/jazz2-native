@@ -19,12 +19,12 @@ namespace Death::Utf8
 #if defined(DEATH_TARGET_WINDOWS)
 
 	// Widens UTF-8 string to UTF-16
-	bool ToUtf16(const char* text, int size, wchar_t* outputBuffer, int outputBufferSize);
+	bool ToUtf16(const char* text, std::int32_t size, wchar_t* outputBuffer, std::int32_t outputBufferSize);
 
-	Containers::Array<wchar_t> ToUtf16(const char* text, int size);
+	Containers::Array<wchar_t> ToUtf16(const char* text, std::int32_t size);
 
 	inline Containers::Array<wchar_t> ToUtf16(const Containers::StringView& text) {
-		return ToUtf16(text.data(), (int)text.size());
+		return ToUtf16(text.data(), (std::int32_t)text.size());
 	}
 
 	template<class T, class R = Containers::Array<wchar_t>, class = typename std::enable_if<std::is_same<typename std::decay<T>::type, const char*>::value || std::is_same<typename std::decay<T>::type, char*>::value>::type>
@@ -33,16 +33,16 @@ namespace Death::Utf8
 	}
 
 	// Narrows UTF-16 string to UTF-8
-	bool FromUtf16(const wchar_t* text, int size, char* outputBuffer, int outputBufferSize);
+	bool FromUtf16(const wchar_t* text, std::int32_t size, char* outputBuffer, std::int32_t outputBufferSize);
 
-	Containers::String FromUtf16(const wchar_t* text, int size);
+	Containers::String FromUtf16(const wchar_t* text, std::int32_t size);
 
 	inline Containers::String FromUtf16(const Containers::ArrayView<const wchar_t>& text) {
-		return FromUtf16(text.data(), (int)text.size());
+		return FromUtf16(text.data(), (std::int32_t)text.size());
 	}
 
 	inline Containers::String FromUtf16(const std::wstring& text) {
-		return FromUtf16(text.c_str(), (int)text.size());
+		return FromUtf16(text.c_str(), (std::int32_t)text.size());
 	}
 
 	template<class T, class R = Containers::String, class = typename std::enable_if<std::is_same<typename std::decay<T>::type, const wchar_t*>::value || std::is_same<typename std::decay<T>::type, wchar_t*>::value>::type>
