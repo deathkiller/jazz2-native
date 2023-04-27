@@ -33,33 +33,13 @@ using namespace nCine;
 namespace Jazz2
 {
 	LevelHandler::LevelHandler(IRootController* root, const LevelInitialization& levelInit)
-		:
-		_root(root),
-		_eventSpawner(this),
-		_levelFileName(levelInit.LevelName),
-		_episodeName(levelInit.EpisodeName),
-		_difficulty(levelInit.Difficulty),
-		_isReforged(levelInit.IsReforged),
-		_cheatsUsed(levelInit.CheatsUsed),
-		_cheatsBufferLength(0),
-		_nextLevelType(ExitType::None),
-		_nextLevelTime(0.0f),
-		_elapsedFrames(0.0f),
-		_checkpointFrames(0.0f),
-		_shakeDuration(0.0f),
-		_waterLevel(FLT_MAX),
-		_ambientLightTarget(1.0f),
-		_weatherType(WeatherType::None),
-		_downsamplePass(this),
-		_blurPass1(this),
-		_blurPass2(this),
-		_blurPass3(this),
-		_blurPass4(this),
-		_pressedKeys((uint32_t)KeySym::COUNT),
-		_pressedActions(0),
-		_overrideActions(0),
-		_playerFrozenEnabled(false),
-		_lastPressedNumericKey(-1)
+		: _root(root), _eventSpawner(this), _levelFileName(levelInit.LevelName), _episodeName(levelInit.EpisodeName),
+			_difficulty(levelInit.Difficulty), _isReforged(levelInit.IsReforged), _cheatsUsed(levelInit.CheatsUsed), _cheatsBufferLength(0),
+			_nextLevelType(ExitType::None), _nextLevelTime(0.0f), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
+			_shakeDuration(0.0f), _waterLevel(FLT_MAX), _ambientLightTarget(1.0f), _weatherType(WeatherType::None),
+			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
+			_pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0), _overrideActions(0), _playerFrozenEnabled(false),
+			_lastPressedNumericKey(-1)
 	{
 		constexpr float DefaultGravity = 0.3f;
 

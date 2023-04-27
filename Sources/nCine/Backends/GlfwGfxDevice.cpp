@@ -241,7 +241,7 @@ namespace nCine
 
 	void GlfwGfxDevice::initGraphics()
 	{
-#if GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 3
+#if (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		glfwInitHint(GLFW_JOYSTICK_HAT_BUTTONS, GLFW_FALSE);
 #endif
 		glfwSetErrorCallback(errorCallback);

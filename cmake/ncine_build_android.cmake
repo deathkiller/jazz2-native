@@ -256,6 +256,12 @@ if(NCINE_BUILD_ANDROID)
 	add_custom_target(ncine_android ALL)
 	set_target_properties(ncine_android PROPERTIES FOLDER "Android")
 	add_dependencies(ncine_android ${NCINE_APP})
+	
+	# Disable automatic path conversion for generated sources on MSYS2 when running CMake to configure the Android build
+	if(MSYS)
+		set(MSYS2_DISABLE_PATH_CONV ${CMAKE_COMMAND} -E env MSYS2_ARG_CONV_EXCL=-DGENERATED_SOURCES=)
+		set(MSYS2_UNSET_PATH_CONV ${CMAKE_COMMAND} -E env --unset=MSYS2_ARG_CONV_EXCL)
+	endif()
 
 	foreach(ARCHITECTURE ${NCINE_NDK_ARCHITECTURES})
 		set(ANDROID_BINARY_DIR ${CMAKE_BINARY_DIR}/android/app/build/${NCINE_APP}/${ARCHITECTURE})
@@ -264,11 +270,11 @@ if(NCINE_BUILD_ANDROID)
 			list(APPEND ANDROID_ARCH_ARGS ${ANDROID_ARM_ARGS})
 		endif()
 		add_custom_command(OUTPUT ${ANDROID_BINARY_DIR}/${ANDROID_LIBNAME} ${ANDROID_BINARY_DIR}/libncine_main.a
-			COMMAND ${CMAKE_COMMAND} -H${CMAKE_BINARY_DIR}/android/app/src/main/cpp/ -B${ANDROID_BINARY_DIR}
+			COMMAND ${MSYS2_DISABLE_PATH_CONV} ${CMAKE_COMMAND} -H${CMAKE_BINARY_DIR}/android/app/src/main/cpp/ -B${ANDROID_BINARY_DIR}
 				-DCMAKE_TOOLCHAIN_FILE=${NDK_DIR}/build/cmake/android.toolchain.cmake
 				-DANDROID_PLATFORM=${GRADLE_MINSDK_VERSION} -DANDROID_ABI=${ARCHITECTURE}
 				${RESET_FLAGS_ARGS} ${ANDROID_PASSTHROUGH_ARGS} ${ANDROID_CMAKE_ARGS} ${ANDROID_ARCH_ARGS}
-			COMMAND ${CMAKE_COMMAND} --build ${ANDROID_BINARY_DIR}
+			COMMAND ${MSYS2_UNSET_PATH_CONV} ${CMAKE_COMMAND} --build ${ANDROID_BINARY_DIR}
 			COMMENT "Compiling the Android library for ${ARCHITECTURE}")
 		add_custom_target(ncine_android_${ARCHITECTURE} DEPENDS ${ANDROID_BINARY_DIR}/${ANDROID_LIBNAME} ${ANDROID_BINARY_DIR}/libncine_main.a)
 		set_target_properties(ncine_android_${ARCHITECTURE} PROPERTIES FOLDER "Android")

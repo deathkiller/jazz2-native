@@ -24,7 +24,9 @@ namespace Death::Utf8
 		} else if ((character & 0xf8) == 0xf0) {
 			end += 4;
 			mask = 0x07;
-		} else return { U'\xffffffff', cursor + 1 };
+		} else {
+			return { U'\xffffffff', cursor + 1 };
+		}
 
 		// Unexpected end
 		if (text.size() < end) return { U'\xffffffff', cursor + 1 };
@@ -44,12 +46,12 @@ namespace Death::Utf8
 
 #if defined(DEATH_TARGET_WINDOWS)
 
-	bool ToUtf16(const char* text, int size, wchar_t* outputBuffer, int outputBufferSize)
+	bool ToUtf16(const char* text, std::int32_t size, wchar_t* outputBuffer, std::int32_t outputBufferSize)
 	{
 		return (::MultiByteToWideChar(CP_UTF8, 0, text, size, outputBuffer, outputBufferSize) != 0);
 	}
 
-	Containers::Array<wchar_t> ToUtf16(const char* text, int size)
+	Containers::Array<wchar_t> ToUtf16(const char* text, std::int32_t size)
 	{
 		// MBtoWC counts the trailing \0 into the size, which we have to cut. It also can't be called with a zero
 		// size for some stupid reason, in that case just set the result size to zero. We can't just `return {}`,
@@ -60,24 +62,24 @@ namespace Death::Utf8
 		Containers::Array<wchar_t> result { Containers::NoInit, lengthNeeded + 1 };
 		result[lengthNeeded] = L'\0';
 
-		if (size) ::MultiByteToWideChar(CP_UTF8, 0, text, size, result.data(), (int)lengthNeeded);
+		if (size != 0) ::MultiByteToWideChar(CP_UTF8, 0, text, size, result.data(), (std::int32_t)lengthNeeded);
 		// Return the size without the null terminator
 		return Containers::Array<wchar_t>(result.release(), lengthNeeded);
 	}
 
-	bool FromUtf16(const wchar_t* text, int size, char* outputBuffer, int outputBufferSize)
+	bool FromUtf16(const wchar_t* text, std::int32_t size, char* outputBuffer, std::int32_t outputBufferSize)
 	{
 		return (::WideCharToMultiByte(CP_UTF8, 0, text, size, outputBuffer, outputBufferSize, NULL, NULL) != 0);
 	}
 
-	Containers::String FromUtf16(const wchar_t* text, int size)
+	Containers::String FromUtf16(const wchar_t* text, std::int32_t size)
 	{
-		if (!size) return { };
+		if (size == 0) return { };
 
 		// WCtoMB counts the trailing \0 into the size, which we have to cut. Containers::String takes
 		// care of allocating extra for the null terminator so we don't need to do that explicitly.
 		Containers::String result { Containers::NoInit, std::size_t(WideCharToMultiByte(CP_UTF8, 0, text, size, nullptr, 0, nullptr, nullptr) - (size == -1 ? 1 : 0)) };
-		WideCharToMultiByte(CP_UTF8, 0, text, size, result.data(), (int)result.size(), nullptr, nullptr);
+		::WideCharToMultiByte(CP_UTF8, 0, text, size, result.data(), (std::int32_t)result.size(), nullptr, nullptr);
 		return result;
 	}
 
