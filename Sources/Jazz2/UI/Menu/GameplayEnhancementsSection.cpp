@@ -95,9 +95,9 @@ namespace Jazz2::UI::Menu
 				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
 					Alignment::Center, (_selectedIndex == 0 && _isInGame ? Font::TransparentRandomColor : Font::RandomColor), size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
-				_root->DrawStringShadow("<"_s, charOffset, center.X - 60.0f - 30.0f * size, center.Y + 22.0f, IMenuContainer::FontLayer + 20,
+				_root->DrawStringShadow("<"_s, charOffset, center.X - 110.0f - 30.0f * size, center.Y + 22.0f, IMenuContainer::FontLayer + 20,
 					Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);
-				_root->DrawStringShadow(">"_s, charOffset, center.X + 70.0f + 30.0f * size, center.Y + 22.0f, IMenuContainer::FontLayer + 20,
+				_root->DrawStringShadow(">"_s, charOffset, center.X + 120.0f + 30.0f * size, center.Y + 22.0f, IMenuContainer::FontLayer + 20,
 					Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, 1.1f, 0.4f, 0.4f);
 			} else {
 				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
