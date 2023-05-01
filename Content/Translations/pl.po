@@ -11,7 +11,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 "
 "|| n%100>14) ? 1 : 2);\n"
-"X-Generator: Poedit 3.3\n"
+"X-Generator: Poedit 3.2.2\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
 "X-Poedit-SearchPath-0: Sources/Jazz2\n"
@@ -1487,7 +1487,7 @@ msgstr "Sterowanie dotykowe"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:14
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:56
 msgid "Input Diagnostics"
-msgstr ""
+msgstr "Diagnostyka sterowania"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:16
 msgid "Native Back Button"
@@ -1561,7 +1561,7 @@ msgstr "Możesz włączyć ulepszenia, które zostały dodane do tej rekreacji."
 
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:115
 msgid "Enabled With Ammo Count"
-msgstr ""
+msgstr "Włączono + Wyświetlanie ilości amunicji"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:18
 #: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:48
@@ -1653,7 +1653,7 @@ msgstr "Nie zaimportowano żadnych nowych odcinków!"
 
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:71
 msgid "No gamepads are detected!"
-msgstr ""
+msgstr "Nie wykryto żadnych kontrolerów"
 
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:13
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:89
