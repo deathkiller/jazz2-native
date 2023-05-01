@@ -1653,7 +1653,7 @@ msgstr "Nie zaimportowano żadnych nowych odcinków!"
 
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:71
 msgid "No gamepads are detected!"
-msgstr "Nie wykryto żadnych kontrolerów"
+msgstr "Nie wykryto żadnych kontrolerów!"
 
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:13
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:89
