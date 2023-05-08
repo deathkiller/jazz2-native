@@ -379,6 +379,7 @@ namespace nCine
 #endif
 
 		theServiceLocator().registerIndexer(std::make_unique<ArrayIndexer>());
+		LOGW("DEBUG initCommon() 0");
 #if defined(WITH_AUDIO)
 		if (appCfg_.withAudio) {
 			theServiceLocator().registerAudioDevice(std::make_unique<ALAudioDevice>());
@@ -389,9 +390,16 @@ namespace nCine
 			theServiceLocator().registerThreadPool(std::make_unique<ThreadPool>());
 		}
 #endif
+		LOGW("DEBUG initCommon() 1");
+
 		theServiceLocator().registerGfxCapabilities(std::make_unique<GfxCapabilities>());
 		const auto& gfxCapabilities = theServiceLocator().gfxCapabilities();
+
+		LOGW("DEBUG initCommon() 2");
+
 		GLDebug::init(gfxCapabilities);
+
+		LOGW("DEBUG initCommon() 3");
 
 #if defined(DEATH_TARGET_ANDROID) && !(defined(WITH_FIXED_BATCH_SIZE) && WITH_FIXED_BATCH_SIZE > 0)
 		const StringView vendor = gfxCapabilities.glInfoStrings().vendor;
@@ -411,11 +419,14 @@ namespace nCine
 #if defined(WITH_RENDERDOC)
 		RenderDocCapture::init();
 #endif
+		LOGW("DEBUG initCommon() 4");
 
 		// Swapping frame now for a cleaner API trace capture when debugging
 		gfxDevice_->update();
 		FrameMark;
 		TracyGpuCollect;
+
+		LOGW("DEBUG initCommon() 5");
 
 		frameTimer_ = std::make_unique<FrameTimer>(appCfg_.frameTimerLogInterval, 0.2f);
 

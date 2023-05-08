@@ -332,11 +332,6 @@
 #	define DEATH_SOURCE_LOCATION_BUILTINS_SUPPORTED
 #endif
 
-// Internal macro implementation
-#define _DEATH_HELPER_PASTE2(a, b) a ## b
-#define _DEATH_HELPER_PASTE(a, b) _DEATH_HELPER_PASTE2(a, b)
-#define _DEATH_HELPER_STR(x) #x
-
 /** @brief Deprecation mark */
 #if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
 #	define DEATH_DEPRECATED(message) __attribute((deprecated(message)))
@@ -450,3 +445,14 @@
 #		define DEATH_ASSERT_UNREACHABLE() assert(!"Unreachable code")
 #	endif
 #endif
+
+// Internal macro implementation
+#define __DEATH_PASTE(a, b) a ## b
+#define __DEATH_HELPER_STR(x) #x
+#define __DEATH_LINE_STRING_IMPLEMENTATION(...) __DEATH_HELPER_STR(__VA_ARGS__)
+
+/** @brief Paste two tokens together */
+#define DEATH_PASTE(a, b) __DEATH_PASTE(a, b)
+
+/** @brief Line number as a string */
+#define DEATH_LINE_STRING __DEATH_LINE_STRING_IMPLEMENTATION(__LINE__)
