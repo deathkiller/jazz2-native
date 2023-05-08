@@ -25,8 +25,6 @@ namespace nCine
 			return;
 		}
 
-		LOGW("DEBUG BinaryShaderCache() 1");
-
 		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
 #if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_UNIX)
 		const bool isSupported = gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::ARB_GET_PROGRAM_BINARY) ||
@@ -38,8 +36,6 @@ namespace nCine
 			LOGW_X("GL_ARB_get_program_binary extensions not supported, binary shader cache is disabled");
 			return;
 		}
-
-		LOGW("DEBUG BinaryShaderCache() 2");
 
 #if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_UNIX)
 		if (gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::OES_GET_PROGRAM_BINARY)) {
@@ -56,8 +52,6 @@ namespace nCine
 
 		const IGfxCapabilities::GlInfoStrings& infoStrings = gfxCaps.glInfoStrings();
 
-		LOGW("DEBUG BinaryShaderCache() 3");
-
 		// For a stable hash, the OpenGL strings need to be copied so that padding bytes can be set to zero
 		char platformString[512];
 		std::memset(platformString, 0, sizeof(platformString));
@@ -68,8 +62,6 @@ namespace nCine
 #endif
 		platformHash_ += fasthash64(platformString, strnlen(platformString, sizeof(platformString)), HashSeed);
 
-		LOGW("DEBUG BinaryShaderCache() 4");
-
 		std::memset(platformString, 0, sizeof(platformString));
 #if defined(DEATH_TARGET_WINDOWS)
 		strncpy_s(platformString, infoStrings.glVersion, sizeof(platformString));
@@ -78,20 +70,14 @@ namespace nCine
 #endif
 		platformHash_ += fasthash64(platformString, strnlen(platformString, sizeof(platformString)), HashSeed);
 
-		LOGW("DEBUG BinaryShaderCache() 5");
-
 		path_ = path;
 		fs::CreateDirectories(path_);
-
-		LOGW("DEBUG BinaryShaderCache() 6");
 
 		bufferSize = 64 * 1024;
 		bufferPtr = std::make_unique<uint8_t[]>(bufferSize);
 
 		const bool pathExists = fs::IsDirectory(path_);
 		isAvailable_ = (isSupported && pathExists);
-
-		LOGW("DEBUG BinaryShaderCache() 7");
 	}
 
 	String BinaryShaderCache::getCachedShaderPath(const char* shaderName)
