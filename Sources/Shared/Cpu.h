@@ -2749,52 +2749,52 @@ namespace Death::Cpu
 // As another future-proof this also gets used for any compilers other than MSVC. MSVC's preprocessor isn't able to perform
 // the delayed expansion without / Zc:preprocessor, fortunately DEATH_ENABLE() isn't needed there at all.
 #elif defined(DEATH_TARGET_GCC) || !defined(DEATH_TARGET_MSVC)
-// Using _DEATH_HELPER_PASTE2() instead of _DEATH_HELPER_PASTE() here, as that's enough to make that work and it's less
+// Using __DEATH_PASTE() instead of DEATH_PASTE() here, as that's enough to make that work and it's less
 // work for the preprocessor. Concatenating directly doesn't work, unlike in the above case for GCC.
 #define _DEATH_ENABLE1(v0)													\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v0)
+	__DEATH_PASTE(DEATH_ENABLE_, v0)
 #define _DEATH_ENABLE2(v0, v1)												\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v0)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v1)
+	__DEATH_PASTE(DEATH_ENABLE_, v0)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v1)
 #define _DEATH_ENABLE3(v0, v1, v2)											\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v0)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v1)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v2)
+	__DEATH_PASTE(DEATH_ENABLE_, v0)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v1)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v2)
 #define _DEATH_ENABLE4(v0, v1, v2, v3)										\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v0)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v1)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v2)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v3)
+	__DEATH_PASTE(DEATH_ENABLE_, v0)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v1)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v2)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v3)
 #define _DEATH_ENABLE5(v0, v1, v2, v3, v4)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v0)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v1)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v2)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v3)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v4)
+	__DEATH_PASTE(DEATH_ENABLE_, v0)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v1)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v2)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v3)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v4)
 #define _DEATH_ENABLE6(v0, v1, v2, v3, v4, v5)								\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v0)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v1)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v2)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v3)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v4)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v5)
+	__DEATH_PASTE(DEATH_ENABLE_, v0)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v1)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v2)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v3)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v4)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v5)
 #define _DEATH_ENABLE7(v0, v1, v2, v3, v4, v5, v6)							\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v0)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v1)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v2)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v3)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v4)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v5)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v6)
+	__DEATH_PASTE(DEATH_ENABLE_, v0)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v1)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v2)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v3)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v4)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v5)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v6)
 #define _DEATH_ENABLE8(v0, v1, v2, v3, v4, v5, v6, v7)						\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v0)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v1)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v2)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v3)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v4)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v5)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v6)									\
-	_DEATH_HELPER_PASTE2(DEATH_ENABLE_, v7)
+	__DEATH_PASTE(DEATH_ENABLE_, v0)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v1)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v2)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v3)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v4)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v5)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v6)										\
+	__DEATH_PASTE(DEATH_ENABLE_, v7)
 #endif
 
 	/**

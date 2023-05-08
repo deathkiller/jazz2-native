@@ -21,6 +21,7 @@ namespace nCine
 		for (unsigned int i = 0; i < MaxProgramBinaryFormats; i++) {
 			programBinaryFormats_[i] = -1;
 		}
+		LOGW("DEBUG GfxCapabilities() 1");
 		init();
 	}
 
@@ -64,7 +65,11 @@ namespace nCine
 	void GfxCapabilities::init()
 	{
 		const char* version = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+
+		LOGW("DEBUG GfxCapabilities() 2");
+
 		if (version != nullptr) {
+			LOGW_X("DEBUG GfxCapabilities() 2a %s", version);
 #if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 #	if defined(DEATH_TARGET_MSVC)
 			sscanf_s(version, "OpenGL ES %2d.%2d", &glMajorVersion_, &glMinorVersion_);
@@ -80,10 +85,14 @@ namespace nCine
 #endif
 		}
 
+		LOGW("DEBUG GfxCapabilities() 3");
+
 		glInfoStrings_.vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
 		glInfoStrings_.renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 		glInfoStrings_.glVersion = reinterpret_cast<const char*>(glGetString(GL_VERSION));
 		glInfoStrings_.glslVersion = reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION));
+
+		LOGW("DEBUG GfxCapabilities() 4");
 
 		glGetIntegerv(GL_MAX_TEXTURE_SIZE, &glIntValues_[(int)GLIntValues::MAX_TEXTURE_SIZE]);
 		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &glIntValues_[(int)GLIntValues::MAX_TEXTURE_IMAGE_UNITS]);
@@ -96,6 +105,8 @@ namespace nCine
 		glGetIntegerv(GL_MAX_VERTEX_ATTRIB_STRIDE, &glIntValues_[(int)GLIntValues::MAX_VERTEX_ATTRIB_STRIDE]);
 #endif
 		glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &glIntValues_[(int)GLIntValues::MAX_COLOR_ATTACHMENTS]);
+
+		LOGW("DEBUG GfxCapabilities() 5");
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		const char* ExtensionNames[(int)GLExtensions::Count] = {
@@ -115,22 +126,30 @@ namespace nCine
 #endif
 		checkGLExtensions(ExtensionNames, glExtensions_, (int)GLExtensions::Count);
 
+		LOGW("DEBUG GfxCapabilities() 6");
+
 #if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_UNIX)
 		if (hasExtension(GLExtensions::OES_GET_PROGRAM_BINARY)) {
+			LOGW("DEBUG GfxCapabilities() 7a");
 			glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS_OES, &glIntValues_[(int)GLIntValues::NUM_PROGRAM_BINARY_FORMATS]);
 			ASSERT(glIntValues_[(int)GLIntValues::NUM_PROGRAM_BINARY_FORMATS] <= MaxProgramBinaryFormats);
 			glGetIntegerv(GL_PROGRAM_BINARY_FORMATS_OES, programBinaryFormats_);
 		} else
 #endif
 		if (hasExtension(GLExtensions::ARB_GET_PROGRAM_BINARY)) {
+			LOGW("DEBUG GfxCapabilities() 7b");
 			glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS, &glIntValues_[(int)GLIntValues::NUM_PROGRAM_BINARY_FORMATS]);
 			ASSERT(glIntValues_[(int)GLIntValues::NUM_PROGRAM_BINARY_FORMATS] <= MaxProgramBinaryFormats);
 			glGetIntegerv(GL_PROGRAM_BINARY_FORMATS, programBinaryFormats_);
 		}
 
+		LOGW("DEBUG GfxCapabilities() 8");
+
 #if defined(NCINE_LOG)
 		logGLInfo();
+		LOGW("DEBUG GfxCapabilities() 9");
 		logGLCaps();
+		LOGW("DEBUG GfxCapabilities() 10");
 		//logGLExtensions();
 #endif
 	}
@@ -192,15 +211,25 @@ namespace nCine
 
 	void GfxCapabilities::checkGLExtensions(const char* extensionNames[], bool results[], unsigned int numExtensionsToCheck) const
 	{
+		LOGW("DEBUG checkGLExtensions() 1");
+
 		GLint numExtensions;
 		glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
 		if (numExtensions <= 0) {
+			LOGW("DEBUG checkGLExtensions() 2a");
 			return;
 		}
 
+		LOGW("DEBUG checkGLExtensions() 2b");
+
 		for (GLuint i = 0; i < static_cast<GLuint>(numExtensions); i++) {
+			LOGW_X("DEBUG checkGLExtensions() 3 %i", i);
+
 			const char* extension = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i));
 			const size_t extLength = strlen(extension);
+
+			LOGW_X("DEBUG checkGLExtensions() 4 %i %i", i, extLength);
+			LOGW_X("DEBUG checkGLExtensions() 5 %i %s", i, extension);
 
 			for (unsigned int j = 0; j < numExtensionsToCheck; j++) {
 				const size_t nameLength = strlen(extensionNames[j]);
@@ -208,6 +237,8 @@ namespace nCine
 					results[j] = true;
 				}
 			}
+
+			LOGW_X("DEBUG checkGLExtensions() 6 %i", i);
 		}
 	}
 }
