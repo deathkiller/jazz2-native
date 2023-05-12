@@ -63,7 +63,7 @@ namespace Jazz2::Actors::Weapons
 		_renderer.setRotation(angle);
 		_renderer.setDrawEnabled(false);
 
-		_noise = PlaySfx("Fire"_s, 0.8f);
+		_noise = PlaySfx("Fire"_s, 0.8f, 1.2f);
 	}
 
 	void ShieldLightningShot::OnUpdate(float timeMult)

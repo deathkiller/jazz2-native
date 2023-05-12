@@ -8,7 +8,7 @@
 #	define NCINE_APP_NAME "Jazz² Resurrection"
 #endif
 #if !defined(NCINE_VERSION)
-#	define NCINE_VERSION "1.9.0"
+#	define NCINE_VERSION "1.9.1"
 #endif
 
 // Prefer local version of shared libraries in CMake build

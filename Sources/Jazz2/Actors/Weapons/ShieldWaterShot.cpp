@@ -25,7 +25,7 @@ namespace Jazz2::Actors::Weapons
 
 		async_await RequestMetadataAsync("Weapon/ShieldWater"_s);
 
-		_timeLeft = 28;
+		_timeLeft = 35;
 		_strength = 2;
 
 		SetAnimation(AnimState::Idle);

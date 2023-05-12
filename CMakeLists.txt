@@ -10,7 +10,7 @@ set(NCINE_APP_DESCRIPTION "Open-source reimplementation of Jazz Jackrabbit 2")
 set(NCINE_APP_DESCRIPTION_FULL "Jazz² Resurrection is reimplementation of the game Jazz Jackrabbit 2 released in 1998. Supports various versions of the game (Shareware Demo, Holiday Hare '98, The Secret Files and Christmas Chronicles). Also, it partially supports some features of JJ2+ extension and MLLE.\n\nFurther information can be found here: http://deat.tk/jazz2/")
 set(NCINE_APP_VENDOR "Dan R.")
 set(NCINE_REVERSE_DNS "jazz2.resurrection")
-set(NCINE_VERSION "1.9.0")
+set(NCINE_VERSION "1.9.1")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 get_filename_component(PARENT_SOURCE_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)

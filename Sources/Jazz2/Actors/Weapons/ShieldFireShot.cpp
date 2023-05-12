@@ -56,7 +56,7 @@ namespace Jazz2::Actors::Weapons
 		_renderer.setAlphaF(0.8f);
 		_renderer.setDrawEnabled(false);
 
-		PlaySfx("Fire"_s);
+		PlaySfx("Fire"_s, 0.8f);
 
 		//auto noise = PlaySfx("Noise"_s);
 		//if (noise != nullptr) {
