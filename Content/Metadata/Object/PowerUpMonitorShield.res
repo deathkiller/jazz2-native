@@ -21,7 +21,7 @@
 			"Path": "Object/powerup_shield_lightning.aura",
 			"FrameRate": 6
 		},
-				"ShieldLaser": {
+		"ShieldLaser": {
 			"Path": "Object/powerup_shield_laser.aura",
 			"FrameRate": 6
 		}

@@ -2560,15 +2560,15 @@ namespace Jazz2::Actors
 						if (_inWater) {
 							return false;
 						}
-						FireWeapon<Weapons::ShieldFireShot, WeaponType::Blaster>(40.0f, 1.0f);
+						FireWeapon<Weapons::ShieldFireShot, WeaponType::Blaster>(10.0f, 0.0f);
 						break;
 					}
 					case ShieldType::Water: {
-						FireWeapon<Weapons::ShieldWaterShot, WeaponType::Blaster>(40.0f, 1.0f);
+						FireWeapon<Weapons::ShieldWaterShot, WeaponType::Blaster>(8.0f, 0.0f);
 						break;
 					}
 					case ShieldType::Lightning: {
-						FireWeapon<Weapons::ShieldLightningShot, WeaponType::Blaster>(40.0f, 1.0f);
+						FireWeapon<Weapons::ShieldLightningShot, WeaponType::Blaster>(10.0f, 0.0f);
 						break;
 					}
 					default: {
