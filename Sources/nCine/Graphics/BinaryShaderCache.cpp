@@ -183,8 +183,6 @@ namespace nCine
 
 	void BinaryShaderCache::prune()
 	{
-		uint8_t inputBuffer[64];
-
 		fs::Directory dir(path_);
 		while (const StringView shaderPath = dir.GetNext()) {
 			if (fs::GetExtension(shaderPath) != "shader"_s) {

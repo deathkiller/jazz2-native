@@ -727,7 +727,7 @@ namespace nCine
 			arrayAppend(preferred, std::move(langId));
 		}
 #elif defined(DEATH_TARGET_WINDOWS)
-		if (Environment::IsWindows10) {
+		if (Environment::IsWindows10()) {
 			// Get list of all preferred UI languages on Windows 10
 			ULONG numberOfLanguages = 0;
 			ULONG bufferSize = 0;

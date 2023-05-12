@@ -77,6 +77,9 @@ if(WIN32)
 		# Override output executable name
 		set_target_properties(${NCINE_APP} PROPERTIES OUTPUT_NAME "Jazz2")
 		
+		# Link to Windows Sockets 2 library for HTTP requests
+		target_link_libraries(${NCINE_APP} PRIVATE ws2_32)
+		
 		# Try to use VC-LTL library
 		if(NOT VC_LTL_Root)
 			if(EXISTS "${NCINE_ROOT}/Libs/VC-LTL/_msvcrt.h")
@@ -222,7 +225,11 @@ else() # GCC and LLVM
 	if(NCINE_DYNAMIC_LIBRARY)
 		target_compile_options(${NCINE_APP} PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
 	endif()
-
+	
+	if(MINGW OR MSYS)
+		target_link_options(${NCINE_APP} PUBLIC -municode)
+	endif()
+	
 	# Only in debug - preserve debug information
 	if(EMSCRIPTEN)
 		target_compile_options(${NCINE_APP} PUBLIC $<$<CONFIG:Debug>:-g>)
@@ -263,7 +270,7 @@ else() # GCC and LLVM
 	if(NCINE_WITH_TRACY)
 		target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:-g -fno-omit-frame-pointer -rdynamic>)
 		if(MINGW OR MSYS)
-			target_link_libraries(${NCINE_APP} PRIVATE ws2_32 dbghelp)
+			target_link_libraries(${NCINE_APP} PRIVATE dbghelp)
 		elseif(NOT ANDROID AND NOT APPLE)
 			target_link_libraries(${NCINE_APP} PRIVATE dl)
 		endif()

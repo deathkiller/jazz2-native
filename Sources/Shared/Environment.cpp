@@ -16,15 +16,15 @@ namespace winrtWSP = winrt::Windows::System::Profile;
 namespace Death::Environment
 {
 #if defined(DEATH_TARGET_WINDOWS_RT)
-	static uint64_t GetWindowsVersion()
+	static std::uint64_t GetWindowsVersion()
 	{
 		winrt::hstring versionString = winrtWSP::AnalyticsInfo::VersionInfo().DeviceFamilyVersion();
 		wchar_t* versionStringEnd;
-		uint64_t version = wcstoull(versionString.begin(), &versionStringEnd, 10);
+		std::uint64_t version = wcstoull(versionString.begin(), &versionStringEnd, 10);
 
-		uint64_t major = (version & 0xFFFF000000000000L) >> 48;
-		uint64_t minor = (version & 0x0000FFFF00000000L) >> 32;
-		uint64_t build = (version & 0x00000000FFFF0000L) >> 16;
+		std::uint64_t major = (version & 0xFFFF000000000000L) >> 48;
+		std::uint64_t minor = (version & 0x0000FFFF00000000L) >> 32;
+		std::uint64_t build = (version & 0x00000000FFFF0000L) >> 16;
 
 		return build | ((minor & 0xFFFFull) << 32) | ((major & 0xFFFFull) << 48);
 	}
@@ -45,10 +45,10 @@ namespace Death::Environment
 		}
 	}
 
-	const uint64_t WindowsVersion = GetWindowsVersion();
+	const std::uint64_t WindowsVersion = GetWindowsVersion();
 	const DeviceType CurrentDeviceType = GetDeviceType();
 #elif defined(DEATH_TARGET_WINDOWS)
-	static uint64_t GetWindowsVersion()
+	static std::uint64_t GetWindowsVersion()
 	{
 		using _RtlGetNtVersionNumbers = void (WINAPI*)(LPDWORD major, LPDWORD minor, LPDWORD build);
 
@@ -69,11 +69,11 @@ namespace Death::Environment
 		return (build & 0xFFFFFFFFull) | ((minor & 0xFFFFull) << 32) | ((major & 0xFFFFull) << 48);
 	}
 
-	const uint64_t WindowsVersion = GetWindowsVersion();
+	const std::uint64_t WindowsVersion = GetWindowsVersion();
 
 	bool GetProcessPath(HANDLE hProcess, wchar_t* szFilename, DWORD dwSize)
 	{
-		if (IsWindowsVista() && ::QueryFullProcessImageName(hProcess, NULL, szFilename, &dwSize)) {
+		if (IsWindowsVista() && ::QueryFullProcessImageName(hProcess, 0, szFilename, &dwSize)) {
 			return true;
 		}
 

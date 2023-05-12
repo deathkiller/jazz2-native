@@ -20,11 +20,11 @@
 // Add missing interlocked functions
 #if defined(InterlockedAnd) && defined(InterlockedOr)
 static_assert(sizeof(long) == sizeof(unsigned), "\"long\" and \"unsigned\" size mismatch");
-DEATH_ALWAYS_INLINE unsigned InterlockedAnd(_Inout_ _Interlocked_operand_ unsigned volatile* Destination, _In_ unsigned Value)
+DEATH_ALWAYS_INLINE unsigned InterlockedAnd(_Inout_ unsigned volatile* Destination, _In_ unsigned Value)
 {
 	return (unsigned)_InterlockedAnd((volatile long*)Destination, (long)Value);
 }
-DEATH_ALWAYS_INLINE unsigned InterlockedOr(_Inout_ _Interlocked_operand_ unsigned volatile* Destination, _In_ unsigned Value)
+DEATH_ALWAYS_INLINE unsigned InterlockedOr(_Inout_ unsigned volatile* Destination, _In_ unsigned Value)
 {
 	return (unsigned)_InterlockedOr((volatile long*)Destination, (long)Value);
 }

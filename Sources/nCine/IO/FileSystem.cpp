@@ -63,7 +63,9 @@ namespace nCine
 {
 	namespace
 	{
+#if !defined(DEATH_TARGET_WINDOWS)
 		static char buffer[FileSystem::MaxPathLength];
+#endif
 
 		static size_t GetPathRootLength(const StringView& path)
 		{
