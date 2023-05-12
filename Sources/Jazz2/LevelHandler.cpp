@@ -636,6 +636,14 @@ namespace Jazz2
 									_players[0]->AddCoins(5);
 								}
 								break;
+							case 8:
+								if (_cheatsBuffer[2] == (char)KeySym::S && _cheatsBuffer[3] == (char)KeySym::H && _cheatsBuffer[4] == (char)KeySym::I && _cheatsBuffer[5] == (char)KeySym::E && _cheatsBuffer[6] == (char)KeySym::L && _cheatsBuffer[7] == (char)KeySym::D) {
+									_cheatsBufferLength = 0;
+									_cheatsUsed = true;
+									ShieldType shieldType = (ShieldType)(((int32_t)_players[0]->GetActiveShield() + 1) % (int32_t)ShieldType::Count);
+									_players[0]->SetShield(shieldType, 30.0f * FrameTimer::FramesPerSecond);
+								}
+								break;
 						}
 					}
 				}

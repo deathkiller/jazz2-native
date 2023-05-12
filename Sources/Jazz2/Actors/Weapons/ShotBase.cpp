@@ -61,7 +61,7 @@ namespace Jazz2::Actors::Weapons
 	void ShotBase::OnUpdate(float timeMult)
 	{
 		_timeLeft -= timeMult;
-		if (_timeLeft <= 0) {
+		if (_timeLeft <= 0.0f) {
 			DecreaseHealth(INT32_MAX);
 		}
 	}

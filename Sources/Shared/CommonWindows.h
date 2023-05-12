@@ -61,6 +61,20 @@ DEATH_ALWAYS_INLINE HWND CreateDialog(HINSTANCE hInstance, LPCTSTR pTemplate, HW
 }
 #endif
 
+#if defined(CreateDirectory)
+#	undef CreateDirectory
+DEATH_ALWAYS_INLINE BOOL CreateDirectory(LPCWSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes) {
+	return ::CreateDirectoryW(lpPathName, lpSecurityAttributes);
+}
+#endif
+
+#if defined(CreateFile)
+#	undef CreateFile
+DEATH_ALWAYS_INLINE HANDLE CreateFile(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) {
+	return ::CreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+}
+#endif
+
 #if defined(CreateFont)
 #	undef CreateFont
 DEATH_ALWAYS_INLINE HFONT CreateFont(int cHeight, int cWidth, int cEscapement, int cOrientation, int cWeight, DWORD bItalic, DWORD bUnderline, DWORD bStrikeOut, DWORD iCharSet, DWORD iOutPrecision, DWORD iClipPrecision, DWORD iQuality, DWORD iPitchAndFamily, LPCTSTR pszFaceName) {
@@ -84,6 +98,13 @@ DEATH_ALWAYS_INLINE HWND CreateWindowEx(DWORD dwExStyle, LPCWSTR lpClassName, LP
 	return ::CreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
 }
 #	endif
+#endif
+
+#if defined(DeleteFile)
+#	undef DeleteFile
+DEATH_ALWAYS_INLINE BOOL DeleteFile(LPCWSTR lpFileName) {
+	return ::DeleteFileW(lpFileName);
+}
 #endif
 
 #if defined(DrawText)
@@ -209,6 +230,13 @@ DEATH_ALWAYS_INLINE ATOM RegisterClass(CONST WNDCLASSW* lpWndClass) {
 #	undef RegisterClassEx
 DEATH_ALWAYS_INLINE ATOM RegisterClassEx(CONST WNDCLASSEXW* lpWndClass) {
 	return ::RegisterClassExW(lpWndClass);
+}
+#endif
+
+#if defined(RemoveDirectory)
+#	undef RemoveDirectory
+DEATH_ALWAYS_INLINE BOOL RemoveDirectory(LPCWSTR lpPathName) {
+	return ::RemoveDirectoryW(lpPathName);
 }
 #endif
 

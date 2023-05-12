@@ -1293,6 +1293,18 @@
     <ClInclude Include="Jazz2\UI\Menu\InputDiagnosticsSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Compatibility\JJ2Data.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\ShieldWaterShot.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\ShieldFireShot.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Weapons\ShieldLightningShot.h">
+      <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2170,6 +2182,18 @@
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\InputDiagnosticsSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Compatibility\JJ2Data.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\ShieldFireShot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\ShieldLightningShot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Weapons\ShieldWaterShot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

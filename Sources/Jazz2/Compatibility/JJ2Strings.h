@@ -36,7 +36,7 @@ namespace Jazz2::Compatibility
 		{
 		}
 
-		void Open(const StringView& path);
+		bool Open(const StringView& path);
 
 		void Convert(const String& targetPath, std::function<JJ2Level::LevelToken(const StringView&)> levelTokenConversion);
 

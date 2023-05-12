@@ -2,9 +2,9 @@
 
 namespace Jazz2::Shaders
 {
-	constexpr uint64_t Version = 1;
+	constexpr uint64_t Version = 2;
 
-	constexpr char LightingVs[] = R"(
+	constexpr char LightingVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -29,7 +29,7 @@ void main() {
 }
 )";
 
-	constexpr char BatchedLightingVs[] = R"(
+	constexpr char BatchedLightingVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -64,7 +64,7 @@ void main() {
 }
 )";
 
-	constexpr char LightingFs[] = R"(
+	constexpr char LightingFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -108,7 +108,7 @@ void main() {
 }
 )";
 
-	constexpr char BlurFs[] = R"(
+	constexpr char BlurFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -133,7 +133,7 @@ void main() {
 }
 )";
 
-	constexpr char DownsampleFs[] = R"(
+	constexpr char DownsampleFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -153,7 +153,7 @@ void main() {
 }
 )";
 
-	constexpr char CombineVs[] = R"(
+	constexpr char CombineVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -181,7 +181,7 @@ void main() {
 }
 )";
 
-	constexpr char CombineFs[] = R"(
+	constexpr char CombineFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -237,7 +237,7 @@ void main() {
 }
 )";
 
-	constexpr char CombineWithWaterFs[] = R"(
+	constexpr char CombineWithWaterFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -398,7 +398,7 @@ void main() {
 }
 )";
 
-	constexpr char CombineWithWaterLowFs[] = R"(
+	constexpr char CombineWithWaterLowFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -480,7 +480,7 @@ void main() {
 }
 )";
 
-	constexpr char TexturedBackgroundFs[] = R"(
+	constexpr char TexturedBackgroundFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision highp float;
 #endif
@@ -566,7 +566,7 @@ void main() {
 }
 )";
 
-	constexpr char TexturedBackgroundCircleFs[] = R"(
+	constexpr char TexturedBackgroundCircleFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision highp float;
 #endif
@@ -659,7 +659,7 @@ void main() {
 }
 )";
 
-	constexpr char ColorizedFs[] = R"(
+	constexpr char ColorizedFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -679,7 +679,7 @@ void main() {
 }
 )";
 
-	constexpr char TintedFs[] = R"(
+	constexpr char TintedFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -697,7 +697,7 @@ void main() {
 }
 )";
 
-	constexpr char OutlineFs[] = R"(
+	constexpr char OutlineFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -731,7 +731,7 @@ void main() {
 }
 )";
 
-	constexpr char WhiteMaskFs[] = R"(
+	constexpr char WhiteMaskFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -749,7 +749,7 @@ void main() {
 }
 )";
 
-	constexpr char PartialWhiteMaskFs[] = R"(
+	constexpr char PartialWhiteMaskFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -767,7 +767,7 @@ void main() {
 }
 )";
 
-	constexpr char FrozenMaskFs[] = R"(
+	constexpr char FrozenMaskFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -808,7 +808,183 @@ void main() {
 }
 )";
 
-	constexpr char ResizeHQ2xVs[] = R"(
+	constexpr char ShieldVs[] = "#line " DEATH_LINE_STRING "\n" R"(
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+out vec4 vTexCoords;
+out vec4 vColor;
+out vec2 vPos;
+
+void main() {
+	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = texRect;
+	vColor = color;
+	vPos = aPosition * vec2(2.0);
+}
+)";
+
+	constexpr char BatchedShieldVs[] = "#line " DEATH_LINE_STRING "\n" R"(
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+struct Instance
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+layout (std140) uniform InstancesBlock
+{
+#ifndef BATCH_SIZE
+	#define BATCH_SIZE (585) // 64 Kb / 112 b
+#endif
+	Instance[BATCH_SIZE] instances;
+} block;
+
+out vec4 vTexCoords;
+out vec4 vColor;
+out vec2 vPos;
+
+#define i block.instances[gl_VertexID / 6]
+
+void main() {
+	vec2 aPosition = vec2(-0.5 + float(((gl_VertexID + 2) / 3) % 2), -0.5 + float(((gl_VertexID + 1) / 3) % 2));
+	vec4 position = vec4(aPosition.x * i.spriteSize.x, aPosition.y * i.spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * i.modelMatrix * position;
+	vTexCoords = i.texRect;
+	vColor = i.color;
+	vPos = aPosition * vec2(2.0);
+}
+)";
+
+	constexpr char ShieldFireFs[] = "#line " DEATH_LINE_STRING "\n" R"(
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform sampler2D uTexture;
+
+in vec4 vTexCoords;
+in vec4 vColor;
+in vec2 vPos;
+out vec4 fragColor;
+
+#define PI 3.1415926
+
+float aastep(float threshold, float value) {
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value); 
+}
+
+float triangleWave(float x, float period) {
+  float p = x / period;
+  float f = fract(p);
+  return abs(f - 0.5) * 2.0;
+}
+
+void main() {
+	vec2 scale = vColor.xy;
+	vec2 shift1 = vTexCoords.xy;
+	vec2 shift2 = vTexCoords.zw;
+	float darkness = vColor.z;
+	float alpha = vColor.w;
+
+	float dist = length(vPos);
+	if (dist > 1.0) {
+		fragColor = vec4(0.0, 0.0, 0.0, 0.0);
+		return;
+	}
+
+	vec3 v = vec3(vPos.x, vPos.y, sqrt(1.0 - vPos.x * vPos.x - vPos.y * vPos.y));
+	vec3 n = normalize(v);
+	float b = dot(n, vec3(0.0, 0.0, 1.0));
+	vec2 q = vec2(0.5 - 0.5 * atan(n.z, n.x) / PI, -acos(vPos.y) / PI);
+
+	float isNearBorder = 1.0 - aastep(0.96, dist);
+
+	float mask1 = texture(uTexture, mod(shift1 + (q * scale), 1.0)).r;
+	float maskNormalized1 = max(1.0 - (abs(triangleWave(shift2.y + 0.5, 2.0) - mask1) * 6.0), 0.0);
+
+	float mask2 = texture(uTexture, mod(shift2 + (q * scale), 1.0)).r;
+	float maskNormalized2 = max(1.0 - (abs(triangleWave(shift1.x, 1.333) - mask2) * 6.0), 0.0);
+
+	float maskSum = min(maskNormalized1 + maskNormalized2, 1.0);
+
+	fragColor = vec4(mix(vec3(1.0, 0.3, 0.0), vec3(1.0, 1.0, 1.0), max((maskSum * 2.0) - 1.0, 0.0)) * darkness, min(maskSum * b * isNearBorder * 1.3 + 0.1, 1.0) * alpha);
+}
+)";
+
+	constexpr char ShieldLightningFs[] = "#line " DEATH_LINE_STRING "\n" R"(
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform sampler2D uTexture;
+
+in vec4 vTexCoords;
+in vec4 vColor;
+in vec2 vPos;
+out vec4 fragColor;
+
+#define PI 3.1415926
+
+float aastep(float threshold, float value) {
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value); 
+}
+
+float triangleWave(float x, float period) {
+  float p = x / period;
+  float f = fract(p);
+  return abs(f - 0.5) * 2.0;
+}
+
+void main() {
+	vec2 scale = vColor.xy;
+	vec2 shift1 = vTexCoords.xy;
+	vec2 shift2 = vTexCoords.zw;
+	float darkness = vColor.z;
+	float alpha = vColor.w;
+
+	float dist = length(vPos);
+	if (dist > 1.0) {
+		fragColor = vec4(0.0, 0.0, 0.0, 0.0);
+		return;
+	}
+
+	vec3 v = vec3(vPos.x, vPos.y, sqrt(1.0 - vPos.x * vPos.x - vPos.y * vPos.y));
+	vec3 n = normalize(v);
+	float b = dot(n, vec3(0.0, 0.0, 1.0));
+	vec2 q = vec2(0.5 - 0.5 * atan(n.z, n.x) / PI, -acos(vPos.y) / PI);
+
+	float isNearBorder = 1.0 - aastep(0.96, dist);
+
+	float mask = texture(uTexture, mod(shift1 + (q * scale), 1.0)).r;
+	float maskNormalized = max(1.0 - (abs(triangleWave(shift2.y + 0.5, 2.0) - mask) * 8.0), 0.0);
+
+	float isVeryNearBorder = 1.0 - aastep(0.024, abs(dist - 0.94));
+	float maskSum = max(maskNormalized, isVeryNearBorder);
+
+	fragColor = vec4(mix(vec3(0.1, 1.0, 0.0), vec3(1.0, 1.0, 1.0), max((maskSum * 2.0) - 1.0, 0.0)) * darkness, min(maskSum * b * isNearBorder * 1.3 + 0.1, 1.0) * alpha);
+}
+)";
+
+	constexpr char ResizeHQ2xVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -852,7 +1028,7 @@ void main() {
 }
 )";
 
-	constexpr char ResizeHQ2xFs[] = R"(
+	constexpr char ResizeHQ2xFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -911,7 +1087,7 @@ void main() {
 }
 )";
 
-	constexpr char Resize3xBrzVs[] = R"(
+	constexpr char Resize3xBrzVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -957,7 +1133,7 @@ void main() {
 }
 )";
 
-	constexpr char Resize3xBrzFs[] = R"(
+	constexpr char Resize3xBrzFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -1210,7 +1386,7 @@ void main() {
 }
 )";
 
-	constexpr char ResizeCrtScanlinesVs[] = R"(
+	constexpr char ResizeCrtScanlinesVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -1238,7 +1414,7 @@ void main() {
 }
 )";
 
-	constexpr char ResizeCrtScanlinesFs[] = R"(
+	constexpr char ResizeCrtScanlinesFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -1285,7 +1461,7 @@ void main() {
 }
 )";
 
-	constexpr char ResizeCrtVs[] = R"(
+	constexpr char ResizeCrtVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -1313,7 +1489,7 @@ void main() {
 }
 )";
 
-	constexpr char ResizeCrtShadowMaskFs[] = R"(
+	constexpr char ResizeCrtShadowMaskFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -1521,7 +1697,7 @@ void main() {
 }
 )";
 
-	constexpr char ResizeCrtApertureGrilleFs[] = R"(
+	constexpr char ResizeCrtApertureGrilleFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -1727,7 +1903,7 @@ void main() {
 }
 )";
 
-	constexpr char ResizeMonochromeVs[] = R"(
+	constexpr char ResizeMonochromeVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -1753,7 +1929,7 @@ void main() {
 }
 )";
 
-	constexpr char ResizeMonochromeFs[] = R"(
+	constexpr char ResizeMonochromeFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -1794,7 +1970,7 @@ void main() {
 }
 )";
 
-	constexpr char AntialiasingVs[] = R"(
+	constexpr char AntialiasingVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -1820,7 +1996,7 @@ void main() {
 }
 )";
 
-	constexpr char AntialiasingFs[] = R"(
+	constexpr char AntialiasingFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -1875,7 +2051,7 @@ void main() {
 }
 )";
 
-	constexpr char TransitionVs[] = R"(
+	constexpr char TransitionVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -1903,7 +2079,7 @@ void main() {
 }
 )";
 
-	constexpr char TransitionFs[] = R"(
+	constexpr char TransitionFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif

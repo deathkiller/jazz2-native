@@ -59,20 +59,16 @@ namespace Jazz2::Compatibility
 			m.Add("Common"_s, "explosion_large"_s);
 			m.Add("Common"_s, "smoke_circling_gray"_s);
 			m.Add("Common"_s, "smoke_circling_brown"_s);
-			m.Add("Unknown"_s, "bubble"_s);
+			m.Add("Weapon"_s, "shield_water"_s);
 
 			//m.Add("Unknown"_s, "brown_thing"_s);
 			m.DiscardItems(1);
 
 			m.Add("Common"_s, "explosion_pepper"_s);
-
-			//m.Add("Unknown"_s, "bullet_maybe_electro"_s);
-			m.Add("Weapon"_s, "bullet_maybe_electro"_s);
-			//m.Add("Unknown"_s, "bullet_maybe_electro_trail"_s);
-			m.Add("Weapon"_s, "bullet_maybe_electro_trail"_s);
-
+			m.Add("Weapon"_s, "shield_lightning"_s);
+			m.Add("Weapon"_s, "shield_lightning_trail"_s);
 			m.Add("Unknown"_s, "flame_red"_s);
-			m.Add("Weapon"_s, "bullet_shield_fireball"_s);
+			m.Add("Weapon"_s, "shield_fire"_s);
 			m.Add("Unknown"_s, "flare_diag_downleft"_s);
 			m.Add("Unknown"_s, "flare_hor"_s);
 			m.Add("Weapon"_s, "bullet_blaster"_s);
@@ -801,7 +797,7 @@ namespace Jazz2::Compatibility
 			m.Add("Object"_s, "container_barrel_shrapnel_2"_s);
 			m.Add("Object"_s, "container_barrel_shrapnel_3"_s);
 			m.Add("Object"_s, "container_barrel_shrapnel_4"_s);
-			m.Add("Object"_s, "powerup_shield_bubble"_s);
+			m.Add("Object"_s, "powerup_shield_water"_s);
 			m.Add("Pickup"_s, "food_burger"_s);
 			m.Add("Pickup"_s, "food_cake"_s);
 			m.Add("Pickup"_s, "food_candy"_s);
@@ -1271,8 +1267,8 @@ namespace Jazz2::Compatibility
 			bool isFull = ((version & JJ2Version::SharewareDemo) != JJ2Version::SharewareDemo);
 
 			// set 0 (all)
-			m.Add("Weapon"_s, "bullet_shield_bubble_1"_s);
-			m.Add("Weapon"_s, "bullet_shield_bubble_2"_s);
+			m.Add("Weapon"_s, "shield_water_1"_s);
+			m.Add("Weapon"_s, "shield_water_2"_s);
 			m.Add("Weapon"_s, "bullet_bouncer_upgraded_1"_s);
 			m.Add("Weapon"_s, "bullet_bouncer_upgraded_2"_s);
 			m.Add("Weapon"_s, "bullet_bouncer_upgraded_3"_s);
@@ -1284,8 +1280,8 @@ namespace Jazz2::Compatibility
 			m.Add("Weapon"_s, "ricochet_bullet_1"_s);
 			m.Add("Weapon"_s, "ricochet_bullet_2"_s);
 			m.Add("Weapon"_s, "ricochet_bullet_3"_s);
-			m.Add("Weapon"_s, "bullet_shield_fire_1"_s);
-			m.Add("Weapon"_s, "bullet_shield_fire_2"_s);
+			m.Add("Weapon"_s, "shield_fire_noise_1"_s);
+			m.Add("Weapon"_s, "shield_fire_noise_2"_s);
 			m.Add("Weapon"_s, "bullet_bouncer_1"_s);
 			m.Add("Weapon"_s, "bullet_blaster_jazz_1"_s);
 			m.Add("Weapon"_s, "bullet_blaster_jazz_2"_s);
@@ -1368,7 +1364,7 @@ namespace Jazz2::Compatibility
 			m.Add("Birdy"_s, "fly_2"_s);
 			m.Add("Weapon"_s, "bouncer"_s);
 			m.Add("Common"_s, "blub1"_s);
-			m.Add("Weapon"_s, "shield_bubble_bullet"_s);
+			m.Add("Weapon"_s, "shield_water_bullet"_s);
 			m.Add("Weapon"_s, "shield_fire_bullet"_s);
 			m.Add("Common"_s, "ambient_fire"_s);
 			m.Add("Object"_s, "container_barrel_break"_s);
@@ -1446,9 +1442,9 @@ namespace Jazz2::Compatibility
 			m.Add("Common"_s, "char_revup"_s);
 			m.Add("Common"_s, "ringgun1"_s);
 			m.Add("Common"_s, "ringgun2"_s);
-			m.Add("Weapon"_s, "shield_fire_noise"_s);
-			m.Add("Weapon"_s, "shield_lightning_noise"_s);
+			m.Add("Weapon"_s, "shield_lightning_noise_1"_s);
 			m.Add("Weapon"_s, "shield_lightning_noise_2"_s);
+			m.Add("Weapon"_s, "shield_lightning_noise_3"_s);
 			m.Add("Common"_s, "shldof3"_s);
 			m.Add("Common"_s, "slip"_s);
 			m.Add("Common"_s, "splat_1"_s);

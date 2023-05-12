@@ -5,6 +5,8 @@
 #include "../Weapons/ShotBase.h"
 #include "../Weapons/TNT.h"
 
+#include "../../../nCine/Base/FrameTimer.h"
+
 namespace Jazz2::Actors::Solid
 {
 	PowerUpShieldMonitor::PowerUpShieldMonitor()
@@ -80,10 +82,8 @@ namespace Jazz2::Actors::Solid
 
 	void PowerUpShieldMonitor::DestroyAndApplyToPlayer(Player* player)
 	{
-		// TODO: Shields
-		//player->SetShield(_shieldType, 30.0f);
-
-		DecreaseHealth(INT32_MAX, player);
-		PlaySfx("Break"_s);
+		if (player->SetShield(_shieldType, 30.0f * FrameTimer::FramesPerSecond)) {			PlaySfx("Break"_s);
+			DecreaseHealth(INT32_MAX, player);
+		}
 	}
 }

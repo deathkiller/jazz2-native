@@ -89,9 +89,6 @@ namespace Jazz2::Actors
 		bool CanBreakSolidObjects() const;
 		bool CanMoveVertically() const;
 
-		void OnUpdate(float timeMult) override;
-		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
-
 		bool OnLevelChanging(ExitType exitType);
 		void ReceiveLevelCarryOver(ExitType exitType, const PlayerCarryOver& carryOver);
 		PlayerCarryOver PrepareLevelCarryOver();
@@ -114,6 +111,13 @@ namespace Jazz2::Actors
 		void MorphTo(PlayerType type);
 		void MorphRevert();
 		bool SetDizzyTime(float time);
+
+		ShieldType GetActiveShield() const {
+			return _activeShield;
+		}
+
+		bool SetShield(ShieldType shieldType, float time);
+		bool IncreaseShieldTime(float time);
 		bool SpawnBird(uint8_t type, Vector2f pos);
 		bool DisableControllable(float timeout);
 		void SetCheckpoint(Vector2f pos, float ambientLight);
@@ -211,6 +215,9 @@ namespace Jazz2::Actors
 		std::shared_ptr<ActorBase> _activeModifierDecor;
 		Array<LightEmitter> _trail;
 		Vector2f _trailLastPos;
+		ShieldType _activeShield;
+		float _activeShieldTime;
+		std::unique_ptr<RenderCommand> _shieldRenderCommands[2];
 
 		float _weaponCooldown;
 		WeaponType _currentWeapon;
@@ -225,7 +232,10 @@ namespace Jazz2::Actors
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		bool OnTileDeactivated() override;
 		bool OnPerish(ActorBase* collider) override;
+		void OnUpdate(float timeMult) override;
 		void OnUpdateHitbox() override;
+		bool OnDraw(RenderQueue& renderQueue) override;
+		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 		void OnHitFloor(float timeMult) override;

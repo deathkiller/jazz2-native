@@ -1,6 +1,8 @@
 ﻿#include "Stopwatch.h"
 #include "../Player.h"
 
+#include "../../../nCine/Base/FrameTimer.h"
+
 namespace Jazz2::Actors::Collectibles
 {
 	Stopwatch::Stopwatch()
@@ -21,9 +23,8 @@ namespace Jazz2::Actors::Collectibles
 
 	void Stopwatch::OnCollect(Player* player)
 	{
-		// TODO
-		//if (player->IncreaseShieldTime(10.0f)) {
+		if (player->IncreaseShieldTime(10.0f * FrameTimer::FramesPerSecond)) {
 			CollectibleBase::OnCollect(player);
-		//}
+		}
 	}
 }

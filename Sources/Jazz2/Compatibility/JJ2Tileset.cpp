@@ -1,5 +1,6 @@
 ﻿#include "JJ2Tileset.h"
 #include "JJ2Anims.h"
+#include "JJ2Block.h"
 
 #include "../../nCine/IO/CompressionUtils.h"
 #include "../../nCine/IO/GrowableMemoryFile.h"

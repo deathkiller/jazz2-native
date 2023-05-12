@@ -6,6 +6,7 @@
 #include "../Solid/GemCrate.h"
 #include "../Weapons/ShotBase.h"
 #include "../Weapons/FreezerShot.h"
+#include "../Weapons/ShieldFireShot.h"
 #include "../Weapons/Thunderbolt.h"
 #include "../Weapons/ToasterShot.h"
 
@@ -125,6 +126,10 @@ namespace Jazz2::Actors::Enemies
 
 				if (auto toasterShot = dynamic_cast<Weapons::ToasterShot*>(shotBase)) {
 					DecreaseHealth(INT32_MAX, toasterShot);
+					return true;
+				}
+				if (auto shieldFireShot = dynamic_cast<Weapons::ShieldFireShot*>(shotBase)) {
+					DecreaseHealth(INT32_MAX, shieldFireShot);
 					return true;
 				}
 

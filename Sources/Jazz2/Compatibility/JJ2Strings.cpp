@@ -36,10 +36,10 @@ static constexpr uint32_t DefaultFontColors[] = {
 
 namespace Jazz2::Compatibility
 {
-	void JJ2Strings::Open(const StringView& path)
+	bool JJ2Strings::Open(const StringView& path)
 	{
 		auto s = fs::Open(path, FileAccessMode::Read);
-		ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
+		RETURNF_ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
 
 		Name = fs::GetFileNameWithoutExtension(path);
 		lowercaseInPlace(Name);
@@ -99,6 +99,8 @@ namespace Jazz2::Compatibility
 				k += size;
 			}
 		}
+
+		return true;
 	}
 
 	void JJ2Strings::Convert(const String& targetPath, std::function<JJ2Level::LevelToken(const StringView&)> levelTokenConversion)

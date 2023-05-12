@@ -1,6 +1,7 @@
 ﻿#include "Spring.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
+#include "../Weapons/ShieldFireShot.h"
 #include "../Weapons/ToasterShot.h"
 
 namespace Jazz2::Actors::Environment
@@ -163,7 +164,9 @@ namespace Jazz2::Actors::Environment
 	bool Spring::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (_state == State::Frozen) {
-			if (auto toasterShot = dynamic_cast<Weapons::ToasterShot*>(other.get())) {
+			ActorBase* actorBase = other.get();
+			if (dynamic_cast<Weapons::ToasterShot*>(actorBase) != nullptr ||
+				dynamic_cast<Weapons::ShieldFireShot*>(actorBase) != nullptr) {
 				_state = State::Heated;
 				SetState(ActorState::CanBeFrozen, true);
 			}

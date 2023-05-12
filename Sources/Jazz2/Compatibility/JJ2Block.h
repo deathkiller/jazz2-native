@@ -32,6 +32,11 @@ namespace Jazz2::Compatibility
 			return (_offset == INT32_MAX);
 		}
 
+		int32_t GetLength()
+		{
+			return _length;
+		}
+
 	private:
 		std::unique_ptr<uint8_t[]> _buffer;
 		int32_t _length;
