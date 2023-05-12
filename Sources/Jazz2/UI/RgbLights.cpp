@@ -1,5 +1,6 @@
 ﻿#include "RgbLights.h"
 
+#include <cstring>
 #include <string>
 
 #define COLORS_LIMITED_SIZE 4
