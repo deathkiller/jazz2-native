@@ -193,6 +193,10 @@ namespace Jazz2
 		BatchedPartialWhiteMask,
 		FrozenMask,
 		BatchedFrozenMask,
+		ShieldFire,
+		BatchedShieldFire,
+		ShieldLightning,
+		BatchedShieldLightning,
 
 #if defined(ALLOW_RESCALE_SHADERS)
 		ResizeHQ2x,

@@ -271,6 +271,9 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/PepperShot.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/RFShot.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/SeekerShot.h
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ShieldFireShot.h
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ShieldLightningShot.h
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ShieldWaterShot.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ShotBase.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/Thunderbolt.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ToasterShot.h
@@ -282,6 +285,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Anims.h
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Anims.Palettes.h
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Block.h
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Data.h
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Episode.h
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Event.h
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Level.h

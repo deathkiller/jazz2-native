@@ -327,6 +327,15 @@
 		},
 		"Shield": {
 			"Path": "Common/player_shield.aura"
+		},
+		"ShieldFire": {
+			"Path": "Common/shield_fire.aura"
+		},
+		"ShieldWater": {
+			"Path": "Common/shield_water.aura"
+		},
+		"ShieldLightning": {
+			"Path": "Common/shield_lightning.aura"
 		}
 	},
 

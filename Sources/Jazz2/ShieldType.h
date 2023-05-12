@@ -10,6 +10,8 @@ namespace Jazz2
 		Fire,
 		Water,
 		Lightning,
-		Laser
+		Laser,
+
+		Count
 	};
 }

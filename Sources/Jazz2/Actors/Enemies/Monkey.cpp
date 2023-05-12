@@ -20,7 +20,6 @@ namespace Jazz2::Actors::Enemies
 	void Monkey::Preload(const ActorActivationDetails& details)
 	{
 		PreloadMetadataAsync("Enemy/Monkey"_s);
-		PreloadMetadataAsync("Weapon/Toaster"_s);
 	}
 
 	Task<bool> Monkey::OnActivatedAsync(const ActorActivationDetails& details)

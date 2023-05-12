@@ -19,12 +19,16 @@
 #include "Weapons/PepperShot.h"
 #include "Weapons/RFShot.h"
 #include "Weapons/SeekerShot.h"
+#include "Weapons/ShieldFireShot.h"
+#include "Weapons/ShieldLightningShot.h"
+#include "Weapons/ShieldWaterShot.h"
 #include "Weapons/ToasterShot.h"
 #include "Weapons/TNT.h"
 #include "Weapons/Thunderbolt.h"
 
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Base/FrameTimer.h"
+#include "../../nCine/Graphics/RenderQueue.h"
 
 #include <Containers/GrowableArray.h>
 
@@ -69,6 +73,9 @@ namespace Jazz2::Actors
 		_lastPoleTime(0.0f),
 		_inTubeTime(0.0f),
 		_dizzyTime(0.0f),
+		_activeShield(ShieldType::None),
+		_activeShieldTime(0.0f),
+		_weaponCooldown(0.0f),
 		_weaponAllowed(true),
 		_weaponWheelState(WeaponWheelState::Hidden)
 	{
@@ -409,6 +416,14 @@ namespace Jazz2::Actors
 		// Dizziness
 		if (_dizzyTime > 0.0f) {
 			_dizzyTime -= timeMult;
+		}
+
+		// Shield
+		if (_activeShieldTime > 0.0f) {
+			_activeShieldTime -= timeMult;
+			if (_activeShieldTime <= 0.0f) {
+				_activeShield = ShieldType::None;
+			}
 		}
 
 		// Sugar Rush
@@ -952,6 +967,203 @@ namespace Jazz2::Actors
 		}
 	}
 
+	bool Player::OnDraw(RenderQueue& renderQueue)
+	{
+		switch (_activeShield) {
+			case ShieldType::Fire: {
+				auto it = _metadata->Graphics.find(String::nullTerminatedView("ShieldFire"_s));
+				if (it != _metadata->Graphics.end()) {
+					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
+					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
+
+					{
+						auto& command = _shieldRenderCommands[0];
+						if (command == nullptr) {
+							command = std::make_unique<RenderCommand>();
+							command->material().setBlendingEnabled(true);
+						}
+
+						if (command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldFire))) {
+							command->material().reserveUniformsDataMemory();
+							command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+							command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+
+							GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+							if (textureUniform && textureUniform->intValue(0) != 0) {
+								textureUniform->setIntValue(0); // GL_TEXTURE0
+							}
+						}
+
+						float frames = _levelHandler->ElapsedFrames();
+
+						auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(frames * -0.008f, frames * 0.006f - sinf(frames * 0.006f), -sinf(frames * 0.015f), frames * 0.006f);
+						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(70.0f * shieldScale, 70.0f * shieldScale);
+						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
+
+						command->setTransformation(Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f));
+						command->setLayer(_renderer.layer() - 4);
+						command->material().setTexture(*it->second.Base->TextureDiffuse.get());
+
+						renderQueue.addCommand(command.get());
+					}
+					{
+						auto& command = _shieldRenderCommands[1];
+						if (command == nullptr) {
+							command = std::make_unique<RenderCommand>();
+							command->material().setBlendingEnabled(true);
+						}
+
+						if (command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldFire))) {
+							command->material().reserveUniformsDataMemory();
+							command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+							command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+
+							GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+							if (textureUniform && textureUniform->intValue(0) != 0) {
+								textureUniform->setIntValue(0); // GL_TEXTURE0
+							}
+						}
+
+						float frames = _levelHandler->ElapsedFrames();
+
+						auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(frames * 0.006f, sinf(frames * 0.006f), sinf(frames * 0.015f), frames * -0.006f);
+						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(70.0f * shieldScale, 70.0f * shieldScale);
+						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 1.0f, 1.0f * shieldAlpha);
+
+						command->setTransformation(Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f));
+						command->setLayer(_renderer.layer() + 4);
+						command->material().setTexture(*it->second.Base->TextureDiffuse.get());
+
+						renderQueue.addCommand(command.get());
+					}
+				}
+				break;
+			}
+			case ShieldType::Water: {
+				auto it = _metadata->Graphics.find(String::nullTerminatedView("ShieldWater"_s));
+				if (it != _metadata->Graphics.end()) {
+					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
+					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
+
+					auto& command = _shieldRenderCommands[1];
+					if (command == nullptr) {
+						command = std::make_unique<RenderCommand>();
+						command->material().setBlendingEnabled(true);
+					}
+
+					if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
+						command->material().reserveUniformsDataMemory();
+						command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+						command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+
+						GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+						if (textureUniform && textureUniform->intValue(0) != 0) {
+							textureUniform->setIntValue(0); // GL_TEXTURE0
+						}
+					}
+
+					float frames = _levelHandler->ElapsedFrames();
+
+					Vector2i texSize = it->second.Base->TextureDiffuse->size();
+					int curAnimFrame = it->second.FrameOffset + ((int)(frames * 0.24f) % it->second.FrameCount);
+					int col = curAnimFrame % it->second.Base->FrameConfiguration.X;
+					int row = curAnimFrame / it->second.Base->FrameConfiguration.X;
+					float texScaleX = (float(it->second.Base->FrameDimensions.X) / float(texSize.X));
+					float texBiasX = (float(it->second.Base->FrameDimensions.X * col) / float(texSize.X));
+					float texScaleY = (float(it->second.Base->FrameDimensions.Y) / float(texSize.Y));
+					float texBiasY = (float(it->second.Base->FrameDimensions.Y * row) / float(texSize.Y));
+
+					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+					instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
+					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(it->second.Base->FrameDimensions.X * shieldScale, it->second.Base->FrameDimensions.Y * shieldScale);
+					instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(1.0f, 1.0f, 1.0f, shieldAlpha);
+
+					command->setTransformation(Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f));
+					command->setLayer(_renderer.layer() + 4);
+					command->material().setTexture(*it->second.Base->TextureDiffuse.get());
+
+					renderQueue.addCommand(command.get());
+				}
+				break;
+			}
+			case ShieldType::Lightning: {
+				auto it = _metadata->Graphics.find(String::nullTerminatedView("ShieldLightning"_s));
+				if (it != _metadata->Graphics.end()) {
+					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
+					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
+
+					{
+						auto& command = _shieldRenderCommands[0];
+						if (command == nullptr) {
+							command = std::make_unique<RenderCommand>();
+							command->material().setBlendingEnabled(true);
+						}
+
+						if (command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldLightning))) {
+							command->material().reserveUniformsDataMemory();
+							command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+							command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+
+							GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+							if (textureUniform && textureUniform->intValue(0) != 0) {
+								textureUniform->setIntValue(0); // GL_TEXTURE0
+							}
+						}
+
+						float frames = _levelHandler->ElapsedFrames();
+
+						auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(frames * -0.008f, frames * 0.006f - sinf(frames * 0.006f), -sinf(frames * 0.015f), frames * 0.006f);
+						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(70.0f * shieldScale, 70.0f * shieldScale);
+						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
+
+						command->setTransformation(Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f));
+						command->setLayer(_renderer.layer() - 4);
+						command->material().setTexture(*it->second.Base->TextureDiffuse.get());
+
+						renderQueue.addCommand(command.get());
+					}
+					{
+						auto& command = _shieldRenderCommands[1];
+						if (command == nullptr) {
+							command = std::make_unique<RenderCommand>();
+							command->material().setBlendingEnabled(true);
+						}
+
+						if (command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldLightning))) {
+							command->material().reserveUniformsDataMemory();
+							command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+							command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+
+							GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+							if (textureUniform && textureUniform->intValue(0) != 0) {
+								textureUniform->setIntValue(0); // GL_TEXTURE0
+							}
+						}
+
+						float frames = _levelHandler->ElapsedFrames();
+
+						auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(frames * 0.006f, sinf(frames * 0.006f), sinf(frames * 0.015f), frames * -0.006f);
+						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(70.0f * shieldScale, 70.0f * shieldScale);
+						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 1.0f, shieldAlpha);
+
+						command->setTransformation(Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f));
+						command->setLayer(_renderer.layer() + 4);
+						command->material().setTexture(*it->second.Base->TextureDiffuse.get());
+
+						renderQueue.addCommand(command.get());
+					}
+				}
+				break;
+			}
+		}
+
+		return ActorBase::OnDraw(renderQueue);
+	}
+
 	void Player::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
 		auto& light = lights.emplace_back();
@@ -1046,7 +1258,7 @@ namespace Jazz2::Actors
 				return true;
 			}
 		} else if (auto enemy = dynamic_cast<Enemies::EnemyBase*>(other.get())) {
-			if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f /*|| _shieldTime > 0.0f*/) {
+			if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f || _activeShieldTime > 0.0f) {
 				if (!enemy->IsInvulnerable()) {
 					enemy->DecreaseHealth(4, this);
 					handled = true;
@@ -1077,9 +1289,9 @@ namespace Jazz2::Actors
 				}
 
 				// Decrease remaining shield time by 5 secs
-				/*if (_shieldTime > 0.0f) {
-					_shieldTime = std::max(1.0f, _shieldTime - 5.0f * FrameTimer::FramesPerSecond);
-				}*/
+				if (_activeShieldTime > 20.0f) {
+					_activeShieldTime = _activeShieldTime - (5.0f * FrameTimer::FramesPerSecond);
+				}
 			} else if (enemy->CanHurtPlayer()) {
 				TakeDamage(1, 4 * (_pos.X > enemy->GetPos().X ? 1.0f : -1.0f));
 			}
@@ -2343,8 +2555,28 @@ namespace Jazz2::Actors
 
 		switch (weaponType) {
 			case WeaponType::Blaster:
-				FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(40.0f, 1.0f);
-				PlaySfx("WeaponBlaster"_s);
+				switch (_activeShield) {
+					case ShieldType::Fire: {
+						if (_inWater) {
+							return false;
+						}
+						FireWeapon<Weapons::ShieldFireShot, WeaponType::Blaster>(40.0f, 1.0f);
+						break;
+					}
+					case ShieldType::Water: {
+						FireWeapon<Weapons::ShieldWaterShot, WeaponType::Blaster>(40.0f, 1.0f);
+						break;
+					}
+					case ShieldType::Lightning: {
+						FireWeapon<Weapons::ShieldLightningShot, WeaponType::Blaster>(40.0f, 1.0f);
+						break;
+					}
+					default: {
+						FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(40.0f, 1.0f);
+						PlaySfx("WeaponBlaster"_s);
+						break;
+					}
+				}
 				ammoDecrease = 0;
 				break;
 
@@ -3259,6 +3491,24 @@ namespace Jazz2::Actors
 		bool wasNotDizzy = (_dizzyTime <= 0.0f);
 		_dizzyTime = time;
 		return wasNotDizzy;
+	}
+
+	bool Player::SetShield(ShieldType shieldType, float time)
+	{
+		_activeShield = shieldType;
+		_activeShieldTime = (shieldType != ShieldType::None ? time : 0.0f);
+		return true;
+	}
+
+	bool Player::IncreaseShieldTime(float time)
+	{
+		if (_activeShieldTime <= 0.0f) {
+			return false;
+		}
+
+		_activeShieldTime += time;
+		PlaySfx("PickupGem"_s);
+		return true;
 	}
 
 	bool Player::SpawnBird(uint8_t type, Vector2f pos)

@@ -4,6 +4,7 @@
 #include "TurtleShell.h"
 #include "../Explosion.h"
 #include "../Player.h"
+#include "../Weapons/ShieldFireShot.h"
 #include "../Weapons/Thunderbolt.h"
 #include "../Weapons/ToasterShot.h"
 
@@ -113,9 +114,9 @@ namespace Jazz2::Actors::Enemies
 			if (player->GetSpecialMove() != Player::SpecialMoveType::None) {
 				shouldDestroy = true;
 			}
-		} else if (auto toasterShot = dynamic_cast<Weapons::ToasterShot*>(collider)) {
-			shouldDestroy = true;
-		} else if (auto thunderbolt = dynamic_cast<Weapons::Thunderbolt*>(collider)) {
+		} else if (dynamic_cast<Weapons::ToasterShot*>(collider) != nullptr || 
+					dynamic_cast<Weapons::ShieldFireShot*>(collider) != nullptr ||
+					dynamic_cast<Weapons::Thunderbolt*>(collider) != nullptr) {
 			shouldDestroy = true;
 		}
 

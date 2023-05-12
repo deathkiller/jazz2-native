@@ -206,6 +206,9 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/PepperShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/RFShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/SeekerShot.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ShieldFireShot.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ShieldLightningShot.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ShieldWaterShot.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ShotBase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/Thunderbolt.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/ToasterShot.cpp
@@ -216,6 +219,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/EventConverter.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Anims.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Block.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Data.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Episode.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Level.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Strings.cpp

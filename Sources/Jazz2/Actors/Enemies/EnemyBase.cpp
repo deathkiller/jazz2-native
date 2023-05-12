@@ -3,6 +3,7 @@
 #include "../../Events/EventMap.h"
 #include "../../Tiles/TileMap.h"
 #include "../Weapons/ShotBase.h"
+#include "../Weapons/ShieldFireShot.h"
 #include "../Weapons/ToasterShot.h"
 #include "../Weapons/Thunderbolt.h"
 #include "../Weapons/TNT.h"
@@ -226,7 +227,8 @@ namespace Jazz2::Actors::Enemies
 		float x = _pos.X - res->Base->Hotspot.X;
 		float y = _pos.Y - res->Base->Hotspot.Y;
 
-		if (auto toasterShot = dynamic_cast<Weapons::ToasterShot*>(collider)) {
+		if (dynamic_cast<Weapons::ToasterShot*>(collider) != nullptr ||
+			dynamic_cast<Weapons::ShieldFireShot*>(collider) != nullptr) {
 			constexpr int DebrisSize = 3;
 
 			Vector2i texSize = res->Base->TextureDiffuse->size();
