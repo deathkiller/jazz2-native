@@ -641,7 +641,7 @@ namespace Jazz2
 									_cheatsBufferLength = 0;
 									_cheatsUsed = true;
 									ShieldType shieldType = (ShieldType)(((int32_t)_players[0]->GetActiveShield() + 1) % (int32_t)ShieldType::Count);
-									_players[0]->SetShield(shieldType, 30.0f * FrameTimer::FramesPerSecond);
+									_players[0]->SetShield(shieldType, 600.0f * FrameTimer::FramesPerSecond);
 								}
 								break;
 						}

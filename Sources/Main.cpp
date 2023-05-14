@@ -51,6 +51,7 @@
 #include <Environment.h>
 #include <IO/HttpRequest.h>
 
+using namespace Death::IO;
 using namespace nCine;
 using namespace Jazz2;
 using namespace Jazz2::UI;

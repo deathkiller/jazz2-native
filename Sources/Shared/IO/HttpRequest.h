@@ -39,7 +39,7 @@
 #	include <unistd.h>
 #endif
 
-namespace Death::Http
+namespace Death::IO::Http
 {
 	enum class InternetProtocol : std::uint8_t {
 		V4,
@@ -56,8 +56,8 @@ namespace Death::Http
 	};
 
 	struct HttpVersion final {
-		uint16_t major;
-		uint16_t minor;
+		std::uint16_t major;
+		std::uint16_t minor;
 	};
 
 	struct Status final

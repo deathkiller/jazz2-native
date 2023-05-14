@@ -404,6 +404,26 @@
 #	define DEATH_RESTRICT restrict
 #endif
 
+/** @brief Hint for compiler to assume a condition */
+#if !defined(DEATH_ASSUME)
+#	if defined(DEATH_TARGET_CLANG)
+#		define DEATH_ASSUME(condition) __builtin_assume(condition)
+#	elif defined(DEATH_TARGET_MSVC)
+#		define DEATH_ASSUME(condition) __assume(condition)
+#	elif defined(DEATH_TARGET_GCC)
+#		if __GNUC__ >= 13
+#			define DEATH_ASSUME(condition) __attribute__((assume(condition)))
+#		else
+#			define DEATH_ASSUME(condition)							\
+				do {												\
+					if(!(condition)) __builtin_unreachable();		\
+				} while(false)
+#		endif
+#	else
+#		define DEATH_ASSUME(condition) do {} while(false)
+#	endif
+#endif
+
 /** @brief Passthrough */
 #define DEATH_PASSTHROUGH(...) __VA_ARGS__
 /** @brief No-op */
