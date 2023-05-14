@@ -51,7 +51,6 @@
 #include <Environment.h>
 #include <IO/HttpRequest.h>
 
-using namespace Death::IO;
 using namespace nCine;
 using namespace Jazz2;
 using namespace Jazz2::UI;
@@ -855,7 +854,7 @@ void GameEventHandler::CheckUpdates()
 #else
 	constexpr char DeviceDesc[] = "||||"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
 #endif
-
+	using namespace Death::IO;
 	String url = "http://deat.tk/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + Http::EncodeBase64(DeviceDesc, DeviceDesc + DeviceDescLength);
 	Http::Request req(url, Http::InternetProtocol::V4);
 	Http::Response resp = req.Send("GET"_s, std::chrono::seconds(10));
