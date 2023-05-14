@@ -92,14 +92,14 @@ namespace nCine
 			return fileSize_;
 		}
 
-		template<typename T>
+		template<typename T, typename std::enable_if<std::is_trivially_constructible<T>::value>::type* = nullptr>
 		inline T ReadValue() {
 			T buffer;
 			Read(&buffer, sizeof(T));
 			return buffer;
 		}
 
-		template<typename T>
+		template<typename T, typename std::enable_if<std::is_trivially_constructible<T>::value>::type* = nullptr>
 		inline void WriteValue(const T& value) {
 			Write(&value, sizeof(T));
 		}
