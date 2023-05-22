@@ -163,7 +163,7 @@ namespace Death::IO
 			LOGI("File \"%s\" opened", _path.data());
 
 			// Calculating file size
-			fileSize_ = ::lseek(_fileDescriptor, 0L, SEEK_END);
+			_size = ::lseek(_fileDescriptor, 0L, SEEK_END);
 			::lseek(_fileDescriptor, 0L, SEEK_SET);
 		}
 	}
@@ -200,19 +200,19 @@ namespace Death::IO
 				modeInternal = "r+b";
 				break;
 			default:
-				LOGE("Cannot open the file \"%s\", wrong open mode", filename_.data());
+				LOGE("Cannot open the file \"%s\", wrong open mode", _path.data());
 				return;
 		}
 
-		HANDLE hFile = ::CreateFile2FromAppW(Utf8::ToUtf16(filename_), desireAccess, FILE_SHARE_READ, creationDisposition, nullptr);
+		HANDLE hFile = ::CreateFile2FromAppW(Utf8::ToUtf16(_path), desireAccess, FILE_SHARE_READ, creationDisposition, nullptr);
 		if (hFile == nullptr || hFile == INVALID_HANDLE_VALUE) {
 			DWORD error = ::GetLastError();
-			LOGE("Cannot open the file \"%s\" - failed with error 0x%08X", filename_.data(), error);
+			LOGE("Cannot open the file \"%s\" - failed with error 0x%08X", _path.data(), error);
 			return;
 		}
 		// Automatically transfers ownership of the Win32 file handle to the file descriptor
 		std::int32_t fd = _open_osfhandle(reinterpret_cast<std::intptr_t>(hFile), openFlag);
-		_filePtr = _fdopen(fd, modeInternal);
+		_handle = _fdopen(fd, modeInternal);
 #elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
 		const wchar_t* modeInternal;
 		std::int32_t shareMode;
@@ -237,7 +237,7 @@ namespace Death::IO
 				return;
 		}
 
-		_filePtr = ::fopen(_name.data(), modeInternal);
+		_handle = ::fopen(_path.data(), modeInternal);
 #endif
 
 		if (_handle == nullptr) {

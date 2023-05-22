@@ -1332,7 +1332,7 @@ namespace Death::IO
 
 #if defined(DEATH_TARGET_WINDOWS)
 		Array<wchar_t> fullPath = Utf8::ToUtf16(path);
-		// Don't use IsDirectory() to avoid calling Utf8::ToUtf16() twice
+		// Don't use DirectoryExists() to avoid calling Utf8::ToUtf16() twice
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
 		if (::GetFileAttributesExFromAppW(fullPath, GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
@@ -1407,7 +1407,7 @@ namespace Death::IO
 		}
 		return true;
 #else
-		if (IsDirectory(path)) {
+		if (DirectoryExists(path)) {
 			return true;
 		}
 
@@ -1833,7 +1833,7 @@ namespace Death::IO
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		return false;
 #elif defined(DEATH_TARGET_WINDOWS_RT)
-		if (!IsDirectory(path)) {
+		if (!DirectoryExists(path)) {
 			return false;
 		}
 		Array<wchar_t> nullTerminatedPath = Utf8::ToUtf16(path);
@@ -1845,7 +1845,7 @@ namespace Death::IO
 		}
 		return (INT_PTR)::ShellExecuteW(NULL, nullptr, Utf8::ToUtf16(path), nullptr, nullptr, SW_SHOWNORMAL) > 32;
 #elif defined(DEATH_TARGET_UNIX)
-		if (!IsDirectory(path)) {
+		if (!DirectoryExists(path)) {
 			return false;
 		}
 

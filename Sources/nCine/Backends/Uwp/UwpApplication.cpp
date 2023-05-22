@@ -3,7 +3,6 @@
 #include "UwpInputManager.h"
 #include "../../IAppEventHandler.h"
 #include "../../Input/IInputManager.h"
-#include "../../IO/FileSystem.h"
 #include "../../../Common.h"
 
 #include <winrt/Windows.Foundation.Metadata.h>
@@ -14,8 +13,10 @@
 #include <winrt/Windows.Graphics.Display.h>
 
 #include <Utf8.h>
+#include <IO/FileSystem.h>
 
 using namespace Death;
+using namespace Death::IO;
 
 namespace nCine
 {
@@ -187,7 +188,7 @@ namespace nCine
 
 		gfxDevice_->setWindowTitle(appCfg_.windowTitle.data());
 		if (!appCfg_.windowIconFilename.empty()) {
-			String windowIconFilePath = fs::CombinePath(fs::GetDataPath(), appCfg_.windowIconFilename);
+			String windowIconFilePath = fs::CombinePath(GetDataPath(), appCfg_.windowIconFilename);
 			if (fs::IsReadableFile(windowIconFilePath)) {
 				gfxDevice_->setWindowIcon(windowIconFilePath);
 			}

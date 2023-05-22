@@ -4,9 +4,6 @@
 
 #include <CommonWindows.h>
 
-#ifdef GetCurrentTime
-#	undef GetCurrentTime
-#endif
 #include <winrt/base.h>
 #include <winrt/Windows.ApplicationModel.Core.h>
 
