@@ -137,13 +137,13 @@ namespace Death::IO
 
 	bool AndroidAssetStream::TryOpen(const char* path)
 	{
-		DEATH_ASSERT(path != nullptr, nullptr, "path is nullptr");
+		DEATH_ASSERT(path != nullptr, false, "path is nullptr");
 		return (TryOpenFile(path) || TryOpenDirectory(path));
 	}
 
 	bool AndroidAssetStream::TryOpenFile(const char* path)
 	{
-		DEATH_ASSERT(path != nullptr, nullptr, "path is nullptr");
+		DEATH_ASSERT(path != nullptr, false, "path is nullptr");
 		const char* strippedPath = TryGetAssetPath(path);
 		if (strippedPath == nullptr) {
 			return false;
@@ -160,7 +160,7 @@ namespace Death::IO
 
 	bool AndroidAssetStream::TryOpenDirectory(const char* path)
 	{
-		DEATH_ASSERT(path != nullptr, nullptr, "path is nullptr");
+		DEATH_ASSERT(path != nullptr, false, "path is nullptr");
 		const char* strippedPath = TryGetAssetPath(path);
 		if (strippedPath == nullptr) {
 			return false;
@@ -183,7 +183,7 @@ namespace Death::IO
 
 	off_t AndroidAssetStream::GetLength(const char* path)
 	{
-		DEATH_ASSERT(path != nullptr, nullptr, "path is nullptr");
+		DEATH_ASSERT(path != nullptr, 0, "path is nullptr");
 
 		off_t assetLength = 0;
 		const char* strippedPath = TryGetAssetPath(path);
@@ -258,7 +258,7 @@ namespace Death::IO
 		// An asset file can only be read
 		if (mode != FileAccessMode::Read) {
 			LOGE("Cannot open the file \"%s\", wrong open mode", _path.data());
-			return 
+			return;
 		}
 
 		_asset = AAssetManager_open(_assetManager, _path.data(), AASSET_MODE_UNKNOWN);

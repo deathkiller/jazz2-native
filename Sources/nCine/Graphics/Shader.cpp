@@ -12,7 +12,7 @@
 #if defined(WITH_EMBEDDED_SHADERS)
 #	include "shader_strings.h"
 #else
-#	include <IO/FileSystem.h>	// for GetDataPath()
+#	include <IO/FileSystem.h>
 #endif
 
 using namespace Death::Containers::Literals;
