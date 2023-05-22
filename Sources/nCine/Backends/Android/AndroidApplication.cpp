@@ -205,7 +205,7 @@ namespace nCine
 		StringView externalPath = externalDataPath();
 		if (!externalPath.empty()) {
 			__logFile = fs::Open(fs::CombinePath(externalPath, "Jazz2.log"_s), FileAccessMode::Write);
-			if (!__logFile->IsOpened()) {
+			if (!__logFile->IsValid()) {
 				__logFile = nullptr;
 				LOGW("Cannot create log file, using Android log instead");
 			}

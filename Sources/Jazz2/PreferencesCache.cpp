@@ -103,7 +103,7 @@ namespace Jazz2
 			auto localConfigPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 			if (_configPath != localConfigPath) {
 				auto configFileWritable = fs::Open(localConfigPath, FileAccessMode::Read | FileAccessMode::Write);
-				if (configFileWritable->IsOpened()) {
+				if (configFileWritable->IsValid()) {
 					configFileWritable->Close();
 					_configPath = localConfigPath;
 				}

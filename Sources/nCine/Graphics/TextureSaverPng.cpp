@@ -46,7 +46,7 @@
 //	//ASSERT(properties.format == Format::RGB8 || properties.format == Format::RGBA8);
 //
 //	LOGI("Saving \"%s\"", fileHandle->filename());
-//	if (fileHandle->IsOpened() == false)
+//	if (fileHandle->IsValid() == false)
 //		return false;
 //
 //	png_structp pngPtr = nullptr;

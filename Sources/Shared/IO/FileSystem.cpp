@@ -1940,13 +1940,8 @@ namespace Death::IO
 	{
 #if defined(DEATH_TARGET_UNIX)
 		int flags, prot;
-		struct stat st;
 		switch (mode) {
 			case FileAccessMode::Read:
-				// Explicitly fail if opening directories for reading on Unix to prevent silent errors
-				if (::fstat(fd, &st) == 0 && S_ISDIR(st.st_mode)) {
-					return { };
-				}
 				flags = O_RDONLY;
 				prot = PROT_READ;
 				break;
@@ -1962,6 +1957,14 @@ namespace Death::IO
 		const int fd = ::open(String::nullTerminatedView(path).data(), flags);
 		if (fd == -1) {
 			LOGE("Cannot open the file \"%s\"", String::nullTerminatedView(path).data());
+			return { };
+		}
+
+		// Explicitly fail if opening directories for reading on Unix to prevent silent errors
+		struct stat sb;
+		if (::fstat(fd, &sb) == 0 && S_ISDIR(sb.st_mode)) {
+			LOGE("Cannot open the file \"%s\"", String::nullTerminatedView(path).data());
+			::close(fd);
 			return { };
 		}
 
@@ -2017,15 +2020,15 @@ namespace Death::IO
 			data = nullptr;
 		} else {
 			if (!(hMap = ::CreateFileMappingW(hFile, nullptr, protect, 0, 0, nullptr))) {
-				::CloseHandle(hFile);
 				LOGE("Cannot open the file \"%s\"", String::nullTerminatedView(path).data());
+				::CloseHandle(hFile);
 				return { };
 			}
 
 			if (!(data = reinterpret_cast<char*>(::MapViewOfFile(hMap, mapDesiredAccess, 0, 0, 0)))) {
+				LOGE("Cannot open the file \"%s\"", String::nullTerminatedView(path).data());
 				::CloseHandle(hMap);
 				::CloseHandle(hFile);
-				LOGE("Cannot open the file \"%s\"", String::nullTerminatedView(path).data());
 				return { };
 			}
 		}
