@@ -130,11 +130,6 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Input/JoyMappingDb.h
 	${NCINE_SOURCE_DIR}/nCine/Input/Keys.h
 	${NCINE_SOURCE_DIR}/nCine/IO/CompressionUtils.h
-	${NCINE_SOURCE_DIR}/nCine/IO/FileSystem.h
-	${NCINE_SOURCE_DIR}/nCine/IO/GrowableMemoryFile.h
-	${NCINE_SOURCE_DIR}/nCine/IO/IFileStream.h
-	${NCINE_SOURCE_DIR}/nCine/IO/MemoryFile.h
-	${NCINE_SOURCE_DIR}/nCine/IO/StandardFile.h
 	${NCINE_SOURCE_DIR}/nCine/Primitives/AABB.h
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Color.h
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Colorf.h
