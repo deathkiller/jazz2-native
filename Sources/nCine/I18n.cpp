@@ -1,7 +1,6 @@
 #include "I18n.h"
 #include "../Common.h"
 #include "Base/Algorithms.h"
-#include "IO/FileSystem.h"
 
 #include <stdarg.h>
 
@@ -17,8 +16,10 @@
 #include <Environment.h>
 #include <Utf8.h>
 #include <Containers/GrowableArray.h>
+#include <IO/FileSystem.h>
 
 using namespace Death;
+using namespace Death::IO;
 
 namespace nCine
 {

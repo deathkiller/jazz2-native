@@ -1,5 +1,4 @@
 #include "AppConfiguration.h"
-#include "IO/FileSystem.h"
 #include "../Common.h"
 
 #include <Utf8.h>
