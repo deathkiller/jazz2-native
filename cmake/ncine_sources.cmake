@@ -90,11 +90,6 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Input/IInputManager.cpp
 	${NCINE_SOURCE_DIR}/nCine/Input/JoyMapping.cpp
 	${NCINE_SOURCE_DIR}/nCine/IO/CompressionUtils.cpp
-	${NCINE_SOURCE_DIR}/nCine/IO/FileSystem.cpp
-	${NCINE_SOURCE_DIR}/nCine/IO/GrowableMemoryFile.cpp
-	${NCINE_SOURCE_DIR}/nCine/IO/IFileStream.cpp
-	${NCINE_SOURCE_DIR}/nCine/IO/MemoryFile.cpp
-	${NCINE_SOURCE_DIR}/nCine/IO/StandardFile.cpp
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Color.cpp
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Colorf.cpp
 )

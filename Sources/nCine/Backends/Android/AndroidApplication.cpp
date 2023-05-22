@@ -5,12 +5,13 @@
 #include "../../ServiceLocator.h"
 #include "EglGfxDevice.h"
 #include "AndroidInputManager.h"
-#include "../../IO/FileSystem.h"
-#include "../../IO/AssetFile.h"
 #include "AndroidJniHelper.h"
 #include "../../tracy.h"
 
-namespace nc = nCine;
+#include <IO/AndroidAssetStream.h>
+#include <IO/FileSystem.h>
+
+using namespace Death::IO;
 
 #if defined(DEATH_LOG)
 std::unique_ptr<Death::IO::Stream> __logFile;
@@ -19,13 +20,13 @@ std::unique_ptr<Death::IO::Stream> __logFile;
 /// Processes the next application command
 void engine_handle_cmd(struct android_app* state, int32_t cmd)
 {
-	nc::AndroidApplication::processCommand(state, cmd);
+	nCine::AndroidApplication::processCommand(state, cmd);
 }
 
 /// Parses the next input event
 int32_t engine_handle_input(struct android_app* state, AInputEvent* event)
 {
-	return static_cast<int32_t>(nc::AndroidInputManager::parseEvent(event));
+	return static_cast<int32_t>(nCine::AndroidInputManager::parseEvent(event));
 }
 
 namespace nCine
@@ -212,7 +213,7 @@ namespace nCine
 #endif
 
 		AndroidJniHelper::AttachJVM(state_);
-		AssetFile::InitializeAssetManager(state_);
+		AndroidAssetStream::InitializeAssetManager(state_);
 
 		appEventHandler_ = createAppEventHandler_();
 		// Only `OnPreInit()` can modify the application configuration

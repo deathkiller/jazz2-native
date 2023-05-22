@@ -516,7 +516,6 @@ endif()
 if(NCINE_BUILD_ANDROID)
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/nCine/Backends/Android/AndroidApplication.h
-		${NCINE_SOURCE_DIR}/nCine/IO/AssetFile.h
 	)
 endif()
 
@@ -533,7 +532,6 @@ if(ANDROID)
 		${NCINE_SOURCE_DIR}/nCine/Backends/Android/AndroidJniHelper.cpp
 		${NCINE_SOURCE_DIR}/nCine/Backends/Android/AndroidKeys.cpp
 		${NCINE_SOURCE_DIR}/nCine/Backends/Android/EglGfxDevice.cpp
-		${NCINE_SOURCE_DIR}/nCine/IO/AssetFile.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.cpp
 	)
 elseif(WINDOWS_PHONE OR WINDOWS_STORE)
