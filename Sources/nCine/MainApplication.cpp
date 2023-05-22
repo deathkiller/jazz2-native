@@ -1,7 +1,8 @@
 #include "MainApplication.h"
 #include "IAppEventHandler.h"
-#include "IO/FileSystem.h"
 #include "../Common.h"
+
+#include <IO/FileSystem.h>
 
 #if defined(WITH_SDL)
 #	include "Backends/SdlGfxDevice.h"
@@ -20,6 +21,8 @@
 
 #include "tracy.h"
 
+using namespace Death::IO;
+
 #if defined(DEATH_LOG) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 
 #if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
@@ -27,8 +30,6 @@
 #endif
 
 #include <Utf8.h>
-
-using namespace Death::IO;
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 

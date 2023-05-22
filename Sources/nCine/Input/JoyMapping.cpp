@@ -7,9 +7,11 @@
 #include <cstdlib>	// for strtoul()
 
 #include <Containers/SmallVector.h>
+#include <Containers/StringView.h>
 #include <IO/FileSystem.h>
 
 using namespace Death::Containers;
+using namespace Death::Containers::Literals;
 using namespace Death::IO;
 
 namespace nCine

@@ -45,7 +45,6 @@ extern "C"
 #include "Application.h"
 #include "Base/Random.h"
 #include "IAppEventHandler.h"
-#include "IO/FileSystem.h"
 #include "ArrayIndexer.h"
 #include "Graphics/GfxCapabilities.h"
 #include "Graphics/RenderResources.h"
@@ -60,6 +59,8 @@ extern "C"
 #include "ServiceLocator.h"
 #include "tracy.h"
 #include "tracy_opengl.h"
+
+#include <IO/FileSystem.h>
 
 #if defined(WITH_AUDIO)
 #	include "Audio/ALAudioDevice.h"
@@ -76,6 +77,8 @@ extern "C"
 #if defined(WITH_RENDERDOC)
 #	include "Graphics/RenderDocCapture.h"
 #endif
+
+using namespace Death::IO;
 
 #if defined(DEATH_LOG)
 
