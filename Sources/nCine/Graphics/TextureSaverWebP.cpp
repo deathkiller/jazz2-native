@@ -34,7 +34,7 @@
 //	//ASSERT(properties.format == Format::RGB8 || properties.format == Format::RGBA8);
 //
 //	LOGI("Saving \"%s\"", fileHandle->filename());
-//	if (fileHandle->IsOpened() == false)
+//	if (fileHandle->IsValid() == false)
 //		return false;
 //
 //	// Flip pixels data vertically if the corresponding flag is true

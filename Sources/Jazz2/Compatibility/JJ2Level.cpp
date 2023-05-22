@@ -973,7 +973,7 @@ namespace Jazz2::Compatibility
 
 			if (lastStringIdx >= 0) {
 				auto so = fs::Open(targetPath + ".h"_s, FileAccessMode::Write);
-				ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
+				ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
 
 				for (int i = 0; i <= lastStringIdx; i++) {
 					String& text = _textEventStrings[i];

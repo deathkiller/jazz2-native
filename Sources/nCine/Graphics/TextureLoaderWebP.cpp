@@ -13,7 +13,7 @@
 //	LOGI("Loading \"%s\"", fileHandle_->filename());
 //
 //	// Loading the whole file in memory
-//	RETURN_ASSERT_MSG(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->GetPath());
+//	RETURN_ASSERT_MSG(fileHandle_->IsValid(), "File \"%s\" cannot be opened", fileHandle_->GetPath());
 //	const long int fileSize = fileHandle_->size();
 //	std::unique_ptr<unsigned char[]> fileBuffer = std::make_unique<unsigned char[]>(fileSize);
 //	fileHandle_->read(fileBuffer.get(), fileSize);

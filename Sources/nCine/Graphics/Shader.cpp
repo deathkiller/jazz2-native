@@ -13,10 +13,10 @@
 #	include "shader_strings.h"
 #else
 #	include <IO/FileSystem.h>
+using namespace Death::IO;
 #endif
 
 using namespace Death::Containers::Literals;
-using namespace Death::IO;
 
 namespace nCine
 {
