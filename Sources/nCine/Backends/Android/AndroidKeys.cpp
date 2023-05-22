@@ -120,7 +120,7 @@ namespace nCine
 			case AKEYCODE_BUTTON_MODE:			return KeySym::BUTTON_MODE;
 #if __ANDROID_API__ >= 13
 			case AKEYCODE_ESCAPE:				return KeySym::ESCAPE;
-			case AKEYCODE_FORWARD_DEL:			return KeySym::DELETE;
+			case AKEYCODE_FORWARD_DEL:			return KeySym::Delete;
 			case AKEYCODE_CTRL_LEFT:			return KeySym::LCTRL;
 			case AKEYCODE_CTRL_RIGHT:			return KeySym::RCTRL;
 			case AKEYCODE_CAPS_LOCK:			return KeySym::CAPS_LOCK;

@@ -145,7 +145,7 @@ namespace nCine
 			batchCommand->setType(refCommand->type());
 		}
 		instancesBlock = batchCommand->material().uniformBlock(Material::InstancesBlockName);
-		FATAL_ASSERT_MSG_X(instancesBlock != nullptr, "Batched shader does not have an %s uniform block", Material::InstancesBlockName);
+		FATAL_ASSERT_MSG(instancesBlock != nullptr, "Batched shader does not have an %s uniform block", Material::InstancesBlockName);
 
 		const unsigned long nonBlockUniformsSize = batchCommand->material().shaderProgram()->uniformsSize();
 		// Determine how much memory is needed by uniform blocks that are not for instances

@@ -177,7 +177,7 @@
 //	{
 //		int major, minor, patch;
 //		apiVersion(&major, &minor, &patch);
-//		LOGI_X("RenderDoc API: %d.%d.%d", major, minor, patch);
+//		LOGI("RenderDoc API: %d.%d.%d", major, minor, patch);
 //	}
 //}
 //

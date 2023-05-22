@@ -4,14 +4,14 @@
 #include "JJ2Version.h"
 #include "AnimSetMapping.h"
 
-#include "../../nCine/IO/FileSystem.h"
-
 #include <memory>
 
 #include <Containers/SmallVector.h>
 #include <Containers/StringView.h>
+#include <IO/Stream.h>
 
 using namespace Death::Containers;
+using namespace Death::IO;
 using namespace nCine;
 
 namespace Jazz2::Compatibility
@@ -23,7 +23,7 @@ namespace Jazz2::Compatibility
 
 		static bool Convert(const StringView& path, const StringView& targetPath, bool isPlus);
 
-		static void WriteImageToFileInternal(std::unique_ptr<IFileStream>& so, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount);
+		static void WriteImageToFileInternal(std::unique_ptr<Stream>& so, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount);
 
 	private:
 		static constexpr int32_t AddBorder = 1;

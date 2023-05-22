@@ -8,7 +8,7 @@ namespace nCine
 	class AudioLoaderWav : public IAudioLoader
 	{
 	public:
-		explicit AudioLoaderWav(std::unique_ptr<IFileStream> fileHandle);
+		explicit AudioLoaderWav(std::unique_ptr<Death::IO::Stream> fileHandle);
 
 		std::unique_ptr<IAudioReader> createReader() override;
 

@@ -43,7 +43,7 @@ namespace Death::Containers
 		};
 
 		template<class T> inline void arrayConstruct(DefaultInitT, T*, T*, typename std::enable_if<
-		std::is_trivially_constructible<T>::value
+			std::is_trivially_constructible<T>::value
 		>::type* = nullptr) {
 			// Nothing to do
 		}
@@ -71,8 +71,8 @@ namespace Death::Containers
 		template<class T> struct AllocatorTraits {
 			enum : std::size_t {
 				Offset = alignof(T) < sizeof(std::size_t) ? sizeof(std::size_t) :
-				(alignof(T) < Implementation::DefaultAllocationAlignment ?
-					alignof(T) : Implementation::DefaultAllocationAlignment)
+					(alignof(T) < Implementation::DefaultAllocationAlignment ?
+						alignof(T) : Implementation::DefaultAllocationAlignment)
 			};
 		};
 	}
@@ -311,7 +311,7 @@ namespace Death::Containers
 		type without having to use a different deleter, losing the growable property in
 		the process.
 
-		Equivalently to to @ref arrayCast(), the size of the new array is calculated as
+		Equivalently to @ref arrayCast(), the size of the new array is calculated as
 		@cpp view.size()*sizeof(T)/sizeof(U) @ce. Expects that both types are
 		trivially copyable and [standard layout](http://en.cppreference.com/w/cpp/concept/StandardLayoutType)
 		and the total byte size doesn't change.
@@ -319,16 +319,22 @@ namespace Death::Containers
 	template<class U, class T> Array<U> arrayAllocatorCast(Array<T>&& array);
 
 	template<class U, template<class> class Allocator, class T> Array<U> arrayAllocatorCast(Array<T>&& array) {
-		static_assert(std::is_standard_layout<T>::value, "the source type is not standard layout");
-		static_assert(std::is_standard_layout<U>::value, "the target type is not standard layout");
-		static_assert(std::is_trivially_copyable<T>::value && std::is_trivially_copyable<U>::value, "only trivially copyable types can use the allocator cast");
-		/* Unlike arrayInsert() etc, this is not called that often and should be as
-		   checked as possible, so it's not a debug assert */
-		DEATH_ASSERT(array.deleter() == Allocator<T>::deleter && (std::is_base_of<ArrayMallocAllocator<T>, Allocator<T>>::value),
-			"Containers::arrayAllocatorCast(): the array has to use the ArrayMallocAllocator or a derivative", {});
+		static_assert(std::is_standard_layout<T>::value, "The source type is not standard layout");
+		static_assert(std::is_standard_layout<U>::value, "The target type is not standard layout");
+		static_assert(std::is_trivially_copyable<T>::value && std::is_trivially_copyable<U>::value, "Only trivially copyable types can use the allocator cast");
+		
+		// If the array is default-constructed or just generally empty with the default deleter, just pass it through without changing anything.
+		// This behavior is consistent with calling `arrayResize(array, 0)`, `arrayReserve(array, 0)` and such, which also just pass empty arrays
+		// through without affecting their deleter.
+		if (array.isEmpty() && !array.data() && !array.deleter())
+			return {};
+
+		// Unlike arrayInsert() etc, this is not called that often and should be as checked as possible, so it's not a debug assert
+		DEATH_ASSERT(array.deleter() == Allocator<T>::deleter && (std::is_base_of<ArrayMallocAllocator<T>, Allocator<T>>::value), {},
+			"Containers::arrayAllocatorCast(): The array has to use the ArrayMallocAllocator or a derivative");
 		const std::size_t size = array.size() * sizeof(T) / sizeof(U);
-		DEATH_ASSERT(size * sizeof(U) == array.size() * sizeof(T),
-			"Containers::arrayAllocatorCast(): can't reinterpret" << array.size() << sizeof(T) << Utility::Debug::nospace << "-byte items into a" << sizeof(U) << Utility::Debug::nospace << "-byte type", {});
+		DEATH_ASSERT(size * sizeof(U) == array.size() * sizeof(T), {},
+			"Containers::arrayAllocatorCast(): Can't reinterpret %zu %zu-byte items into a %zu-byte type", array.size(), sizeof(T), sizeof(U));
 		return Array<U>{reinterpret_cast<U*>(array.release()), size, Allocator<U>::deleter};
 	}
 
@@ -527,7 +533,7 @@ namespace Death::Containers
 			std::is_trivially_copyable<T>::value
 		>::type* = nullptr) {
 			// Apparently memcpy() can't be called with null pointers, even if size is zero. I call that bullying.
-			if (count) std::memcpy(dst, src, count * sizeof(T));
+			if (count != 0) std::memcpy(dst, src, count * sizeof(T));
 		}
 
 		template<class T> inline void arrayMoveConstruct(T* src, T* dst, const std::size_t count, typename std::enable_if<!
@@ -548,7 +554,7 @@ namespace Death::Containers
 			std::is_trivially_copyable<T>::value
 		>::type* = nullptr) {
 			// Apparently memcpy() can't be called with null pointers, even if size is zero. I call that bullying.
-			if (count) std::memcpy(dst, src, count * sizeof(T));
+			if (count != 0) std::memcpy(dst, src, count * sizeof(T));
 		}
 
 		template<class T> inline void arrayMoveAssign(T* src, T* dst, const std::size_t count, typename std::enable_if<!
@@ -564,7 +570,7 @@ namespace Death::Containers
 			std::is_trivially_copyable<T>::value
 		>::type* = nullptr) {
 			// Apparently memcpy() can't be called with null pointers, even if size is zero. I call that bullying.
-			if (count) std::memcpy(dst, src, count * sizeof(T));
+			if (count != 0) std::memcpy(dst, src, count * sizeof(T));
 		}
 
 		template<class T> inline void arrayCopyConstruct(const T* src, T* dst, const std::size_t count, typename std::enable_if<!
@@ -651,7 +657,7 @@ namespace Death::Containers
 	template<class T, class Allocator> std::size_t arrayReserve(Array<T>& array, const std::size_t capacity) {
 		// Direct access & value caching to speed up debug builds
 		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-		const bool hasGrowingDeleter = arrayGuts.deleter == Allocator::deleter;
+		const bool hasGrowingDeleter = (arrayGuts.deleter == Allocator::deleter);
 
 		// If the capacity is large enough, nothing to do (even if we have the array allocated by something different)
 		const std::size_t currentCapacity = arrayCapacity<T, Allocator>(array);
@@ -671,7 +677,7 @@ namespace Death::Containers
 	template<class T, class Allocator> void arrayResize(Array<T>& array, NoInitT, const std::size_t size) {
 		// Direct access & value caching to speed up debug builds
 		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-		const bool hasGrowingDeleter = arrayGuts.deleter == Allocator::deleter;
+		const bool hasGrowingDeleter = (arrayGuts.deleter == Allocator::deleter);
 
 		// New size is the same as the old one, nothing to do
 		if (arrayGuts.size == size) return;
@@ -847,10 +853,10 @@ namespace Death::Containers
 		template<class T, class Allocator> T* arrayGrowAtBy(Array<T>& array, const std::size_t index, const std::size_t count) {
 			// Direct access & caching to speed up debug builds
 			auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-			DEATH_ASSERT(index <= arrayGuts.size, "Containers::arrayInsert(): can't insert at index" << index << "into an array of size" << arrayGuts.size, arrayGuts.data);
+			DEATH_ASSERT(index <= arrayGuts.size, arrayGuts.data, "Containers::arrayInsert(): Can't insert at index %zu into an array of size %zu", index, arrayGuts.size);
 
 			// No values to add, early exit
-			if (!count)
+			if (count == 0)
 				return arrayGuts.data + index;
 
 			// For arrays with an unknown deleter we'll always move-allocate to a new place, the parts before and after
@@ -960,7 +966,7 @@ namespace Death::Containers
 	template<class T, class Allocator> void arrayRemove(Array<T>& array, const std::size_t index, const std::size_t count) {
 		// Direct access to speed up debug builds
 		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-		DEATH_ASSERT(index + count <= arrayGuts.size, "Containers::arrayRemove(): can't remove" << count << "elements at index" << index << "from an array of size" << arrayGuts.size, );
+		DEATH_ASSERT(index + count <= arrayGuts.size, , "Containers::arrayRemove(): Can't remove %zu elements at index %zu from an array of size %zu", count, index, arrayGuts.size);
 
 		// Nothing to remove, yay!
 		if (!count) return;
@@ -984,7 +990,7 @@ namespace Death::Containers
 	template<class T, class Allocator> void arrayRemoveUnordered(Array<T>& array, const std::size_t index, const std::size_t count) {
 		// Direct access to speed up debug builds
 		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-		DEATH_ASSERT(index + count <= arrayGuts.size, "Containers::arrayRemoveUnordered(): can't remove" << count << "elements at index" << index << "from an array of size" << arrayGuts.size, );
+		DEATH_ASSERT(index + count <= arrayGuts.size, , "Containers::arrayRemoveUnordered(): Can't remove %zu elements at index %zu from an array of size %zu", count, index, arrayGuts.size);
 
 		// Nothing to remove, yay!
 		if (!count) return;
@@ -1009,7 +1015,7 @@ namespace Death::Containers
 	template<class T, class Allocator> void arrayRemoveSuffix(Array<T>& array, const std::size_t count) {
 		// Direct access to speed up debug builds
 		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
-		DEATH_ASSERT(count <= arrayGuts.size, "Containers::arrayRemoveSuffix(): can't remove" << count << "elements from an array of size" << arrayGuts.size, );
+		DEATH_ASSERT(count <= arrayGuts.size, , "Containers::arrayRemoveSuffix(): Can't remove %zu elements from an array of size %zu", count, arrayGuts.size);
 
 		// Nothing to remove, yay!
 		if (!count) return;

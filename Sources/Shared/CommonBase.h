@@ -1,9 +1,5 @@
 #pragma once
 
-#if (!defined(DEATH_ASSERT) || !defined(DEATH_CONSTEXPR_ASSERT)) && !defined(NDEBUG)
-#	include <cassert>
-#endif
-
 #if defined(__EMSCRIPTEN__)
 #	define DEATH_TARGET_EMSCRIPTEN
 #elif defined(_WIN32)
@@ -428,43 +424,6 @@
 #define DEATH_PASSTHROUGH(...) __VA_ARGS__
 /** @brief No-op */
 #define DEATH_NOOP(...)
-
-// Assertions
-/** @brief Assertion macro */
-#if !defined(DEATH_ASSERT)
-#	if defined(DEATH_NO_ASSERT) || defined(NDEBUG)
-#		define DEATH_ASSERT(condition, message, returnValue) do {} while(false)
-#	else
-#		define DEATH_ASSERT(condition, message, returnValue) assert(condition)
-#	endif
-#endif
-
-/** @brief Constexpr assertion macro */
-#if !defined(DEATH_CONSTEXPR_ASSERT)
-#	if defined(DEATH_NO_ASSERT) || defined(NDEBUG)
-#		define DEATH_CONSTEXPR_ASSERT(condition, message) static_cast<void>(0)
-#	else
-#		define DEATH_CONSTEXPR_ASSERT(condition, message)					\
-			static_cast<void>((condition) ? 0 : ([&]() {					\
-				assert(!#condition);										\
-			}(), 0))
-#	endif
-#endif
-
-/** @brief Assert that the code is unreachable */
-#if !defined(DEATH_ASSERT_UNREACHABLE)
-#	if defined(DEATH_NO_ASSERT) || defined(NDEBUG)
-#		if defined(DEATH_TARGET_GCC)
-#			define DEATH_ASSERT_UNREACHABLE() __builtin_unreachable()
-#		elif defined(DEATH_TARGET_MSVC)
-#			define DEATH_ASSERT_UNREACHABLE() __assume(0)
-#		else
-#			define DEATH_ASSERT_UNREACHABLE() std::abort()
-#		endif
-#	else
-#		define DEATH_ASSERT_UNREACHABLE() assert(!"Unreachable code")
-#	endif
-#endif
 
 // Internal macro implementation
 #define __DEATH_PASTE(a, b) a ## b

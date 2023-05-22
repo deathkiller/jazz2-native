@@ -11,7 +11,7 @@ namespace nCine
 	class TextureLoaderQoi : public ITextureLoader
 	{
 	public:
-		explicit TextureLoaderQoi(std::unique_ptr<IFileStream> fileHandle);
+		explicit TextureLoaderQoi(std::unique_ptr<Death::IO::Stream> fileHandle);
 	};
 }
 

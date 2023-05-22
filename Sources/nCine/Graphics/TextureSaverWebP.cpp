@@ -33,7 +33,7 @@
 //	//FATAL_ASSERT(properties.pixels != nullptr);
 //	//ASSERT(properties.format == Format::RGB8 || properties.format == Format::RGBA8);
 //
-//	LOGI_X("Saving \"%s\"", fileHandle->filename());
+//	LOGI("Saving \"%s\"", fileHandle->filename());
 //	if (fileHandle->IsOpened() == false)
 //		return false;
 //

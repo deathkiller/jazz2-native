@@ -1,8 +1,11 @@
 ﻿#include "JJ2Strings.h"
 
 #include "../../nCine/Base/Algorithms.h"
-#include "../../nCine/IO/FileSystem.h"
 
+#include <IO/FileSystem.h>
+
+using namespace Death::Containers::Literals;
+using namespace Death::IO;
 using namespace nCine;
 
 static constexpr uint16_t Windows1250_Utf8[256] = {
@@ -39,7 +42,7 @@ namespace Jazz2::Compatibility
 	bool JJ2Strings::Open(const StringView& path)
 	{
 		auto s = fs::Open(path, FileAccessMode::Read);
-		RETURNF_ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
+		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
 		Name = fs::GetFileNameWithoutExtension(path);
 		lowercaseInPlace(Name);
@@ -106,7 +109,7 @@ namespace Jazz2::Compatibility
 	void JJ2Strings::Convert(const String& targetPath, std::function<JJ2Level::LevelToken(const StringView&)> levelTokenConversion)
 	{
 		auto so = fs::Open(targetPath, FileAccessMode::Write);
-		ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
+		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
 
 		so->Write("\xEF\xBB\xBF// Common\n", sizeof("\xEF\xBB\xBF// Common\n") - 1);
 

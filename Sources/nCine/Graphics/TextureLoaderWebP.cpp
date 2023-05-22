@@ -10,10 +10,10 @@
 //TextureLoaderWebP::TextureLoaderWebP(std::unique_ptr<IFile> fileHandle)
 //    : ITextureLoader(std::move(fileHandle))
 //{
-//	LOGI_X("Loading \"%s\"", fileHandle_->filename());
+//	LOGI("Loading \"%s\"", fileHandle_->filename());
 //
 //	// Loading the whole file in memory
-//	RETURN_ASSERT_MSG_X(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->filename());
+//	RETURN_ASSERT_MSG(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->GetPath());
 //	const long int fileSize = fileHandle_->size();
 //	std::unique_ptr<unsigned char[]> fileBuffer = std::make_unique<unsigned char[]>(fileSize);
 //	fileHandle_->read(fileBuffer.get(), fileSize);
@@ -24,7 +24,7 @@
 //		RETURN_MSG("Cannot read WebP header");
 //	}
 //
-//	LOGI_X("Header found: w:%d h:%d", width_, height_);
+//	LOGI("Header found: w:%d h:%d", width_, height_);
 //
 //	WebPBitstreamFeatures features;
 //	if (WebPGetFeatures(fileBuffer.get(), fileSize, &features) != VP8_STATUS_OK)
@@ -33,7 +33,7 @@
 //		RETURN_MSG("Cannot retrieve WebP features from headers");
 //	}
 //
-//	LOGI_X("Bitstream features found: alpha:%d animation:%d format:%d",
+//	LOGI("Bitstream features found: alpha:%d animation:%d format:%d",
 //	       features.has_alpha, features.has_animation, features.format);
 //
 //	mipMapCount_ = 1; // No MIP Mapping

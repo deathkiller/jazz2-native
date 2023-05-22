@@ -1,15 +1,19 @@
 #include "AudioReaderWav.h"
 #include "AudioLoaderWav.h"
-#include "../IO/IFileStream.h"
+#include "../../Common.h"
 
 #include <cstring>
 
+#include <IO/FileStream.h>
+
+using namespace Death::IO;
+
 namespace nCine
 {
-	AudioReaderWav::AudioReaderWav(std::unique_ptr<IFileStream> fileHandle)
+	AudioReaderWav::AudioReaderWav(std::unique_ptr<Stream> fileHandle)
 		: fileHandle_(std::move(fileHandle))
 	{
-		ASSERT(fileHandle_->IsOpened());
+		ASSERT(fileHandle_->IsValid());
 	}
 
 	unsigned long int AudioReaderWav::read(void* buffer, unsigned long int bufferSize) const
@@ -31,9 +35,14 @@ namespace nCine
 
 	void AudioReaderWav::rewind() const
 	{
-		if (fileHandle_->Ptr()) {
-			::clearerr(fileHandle_->Ptr());
+		if (fileHandle_->GetType() == Stream::Type::File) {
+			auto s = static_cast<FileStream*>(fileHandle_.get());
+			auto handle = s->GetHandle();
+			if (handle != nullptr) {
+				::clearerr(handle);
+			}
 		}
+
 		fileHandle_->Seek(AudioLoaderWav::HeaderSize, SeekOrigin::Begin);
 	}
 }

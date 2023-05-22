@@ -4,7 +4,6 @@
 
 #include "../../nCine/Graphics/ITextureLoader.h"
 #include "../../nCine/Graphics/RenderQueue.h"
-#include "../../nCine/IO/IFileStream.h"
 #include "../../nCine/Base/Random.h"
 
 #include <Utf8.h>

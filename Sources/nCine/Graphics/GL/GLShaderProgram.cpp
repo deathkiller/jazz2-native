@@ -14,7 +14,7 @@
 namespace nCine
 {
 	GLuint GLShaderProgram::boundProgram_ = 0;
-#if defined(NCINE_LOG)
+#if defined(DEATH_LOG)
 	char GLShaderProgram::infoLogString_[MaxInfoLogLength];
 #endif
 
@@ -279,13 +279,13 @@ namespace nCine
 		GLint status;
 		glGetProgramiv(glHandle_, GL_LINK_STATUS, &status);
 		if (status == GL_FALSE) {
-#if defined(NCINE_LOG)
+#if defined(DEATH_LOG)
 			if (shouldLogOnErrors_) {
 				GLint length = 0;
 				glGetProgramiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
 				if (length > 0) {
 					glGetProgramInfoLog(glHandle_, MaxInfoLogLength, &length, infoLogString_);
-					LOGW_X("%s", infoLogString_);
+					LOGW("%s", infoLogString_);
 				}
 			}
 #endif
@@ -352,7 +352,7 @@ namespace nCine
 				GLUniform& uniform = uniforms_.emplace_back(glHandle_, indices[i]);
 				uniformsSize_ += uniform.memorySize();
 
-				LOGD_X("Shader program %u - uniform %d : \"%s\"", glHandle_, uniform.location(), uniform.name());
+				LOGD("Shader program %u - uniform %d : \"%s\"", glHandle_, uniform.location(), uniform.name());
 			}
 		}
 		GL_LOG_ERRORS();
@@ -368,7 +368,7 @@ namespace nCine
 			GLUniformBlock& uniformBlock = uniformBlocks_.emplace_back(glHandle_, i, discover);
 			uniformBlocksSize_ += uniformBlock.size();
 
-			LOGD_X("Shader program %u - uniform block %u : \"%s\" (%d bytes with %u align)", glHandle_, uniformBlock.index(), uniformBlock.name(), uniformBlock.size(), uniformBlock.alignAmount());
+			LOGD("Shader program %u - uniform block %u : \"%s\" (%d bytes with %u align)", glHandle_, uniformBlock.index(), uniformBlock.name(), uniformBlock.size(), uniformBlock.alignAmount());
 		}
 		GL_LOG_ERRORS();
 	}
@@ -382,7 +382,7 @@ namespace nCine
 		for (int i = 0; i < count; i++) {
 			GLAttribute& attribute = attributes_.emplace_back(glHandle_, i);
 
-			LOGD_X("Shader program %u - attribute %d : \"%s\"", glHandle_, attribute.location(), attribute.name());
+			LOGD("Shader program %u - attribute %d : \"%s\"", glHandle_, attribute.location(), attribute.name());
 		}
 		GL_LOG_ERRORS();
 	}
@@ -392,7 +392,7 @@ namespace nCine
 		ZoneScoped;
 		const unsigned int count = (unsigned int)attributes_.size();
 		if (count > GLVertexFormat::MaxAttributes) {
-			LOGW_X("More active attributes (%d) than supported by the vertex format class (%d)", count, GLVertexFormat::MaxAttributes);
+			LOGW("More active attributes (%d) than supported by the vertex format class (%d)", count, GLVertexFormat::MaxAttributes);
 		}
 		for (unsigned int i = 0; i < attributes_.size(); i++) {
 			const GLAttribute& attribute = attributes_[i];

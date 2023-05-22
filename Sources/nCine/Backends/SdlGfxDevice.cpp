@@ -172,7 +172,7 @@ namespace nCine
 		}
 #endif
 		const int err = SDL_Init(SDL_INIT_VIDEO);
-		FATAL_ASSERT_MSG_X(!err, "SDL_Init(SDL_INIT_VIDEO) failed: %s", SDL_GetError());
+		FATAL_ASSERT_MSG(!err, "SDL_Init(SDL_INIT_VIDEO) failed: %s", SDL_GetError());
 	}
 
 	void SdlGfxDevice::initDevice(bool isResizable)
@@ -219,7 +219,7 @@ namespace nCine
 
 		// Creating a window with SDL2
 		windowHandle_ = SDL_CreateWindow("", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width_, height_, flags);
-		FATAL_ASSERT_MSG_X(windowHandle_, "SDL_CreateWindow failed: %s", SDL_GetError());
+		FATAL_ASSERT_MSG(windowHandle_, "SDL_CreateWindow failed: %s", SDL_GetError());
 		SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
 		initGLViewport();
 
@@ -231,14 +231,14 @@ namespace nCine
 		}
 
 		glContextHandle_ = SDL_GL_CreateContext(windowHandle_);
-		FATAL_ASSERT_MSG_X(glContextHandle_, "SDL_GL_CreateContext failed: %s", SDL_GetError());
+		FATAL_ASSERT_MSG(glContextHandle_, "SDL_GL_CreateContext failed: %s", SDL_GetError());
 
 		const int interval = displayMode_.hasVSync() ? 1 : 0;
 		SDL_GL_SetSwapInterval(interval);
 
 #if defined(WITH_GLEW)
 		const GLenum err = glewInit();
-		FATAL_ASSERT_MSG_X(err == GLEW_OK, "GLEW error: %s", glewGetErrorString(err));
+		FATAL_ASSERT_MSG(err == GLEW_OK, "GLEW error: %s", glewGetErrorString(err));
 
 		glContextInfo_.debugContext = (glContextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output"));
 #endif

@@ -1,15 +1,16 @@
 #include "JoyMapping.h"
 #include "IInputManager.h"
 #include "IInputEventHandler.h"
-#include "../IO/FileSystem.h"
 #include "../Primitives/Vector2.h"
 
-#include <cstring> // for memcpy()
-#include <cstdlib> // for strtoul()
+#include <cstring>	// for memcpy()
+#include <cstdlib>	// for strtoul()
 
 #include <Containers/SmallVector.h>
+#include <IO/FileSystem.h>
 
 using namespace Death::Containers;
+using namespace Death::IO;
 
 namespace nCine
 {
@@ -139,7 +140,7 @@ namespace nCine
 			mappingStrings++;
 		}
 
-		LOGI_X("Parsed %u strings for %u mappings", numStrings, mappings_.size());
+		LOGI("Parsed %u strings for %u mappings", numStrings, mappings_.size());
 
 		checkConnectedJoystics();
 	}
@@ -186,7 +187,7 @@ namespace nCine
 
 	void JoyMapping::addMappingsFromFile(const StringView& filename)
 	{
-		std::unique_ptr<IFileStream> fileHandle = fs::Open(filename, FileAccessMode::Read);
+		std::unique_ptr<Stream> fileHandle = fs::Open(filename, FileAccessMode::Read);
 		const long int fileSize = fileHandle->GetSize();
 		if (fileSize == 0) {
 			return;
@@ -218,7 +219,7 @@ namespace nCine
 
 		} while (strchr(buffer, '\n') && (buffer = strchr(buffer, '\n') + 1) < fileBuffer.get() + fileSize);
 
-		LOGI_X("Joystick mapping file parsed: %u mappings in %u lines", numParsed, fileLine);
+		LOGI("Joystick mapping file parsed: %u mappings in %u lines", numParsed, fileLine);
 
 		fileBuffer.reset(nullptr);
 
@@ -382,7 +383,7 @@ namespace nCine
 				mapping.desc = mappings_[index].desc;
 
 				const uint8_t* g = joyGuid.data;
-				LOGI_X("Joystick mapping found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), also known as \"%s\"", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId, mappings_[index].name);
+				LOGI("Joystick mapping found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), also known as \"%s\"", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId, mappings_[index].name);
 			}
 		}
 
@@ -390,7 +391,7 @@ namespace nCine
 		// Never search by name on Android, it can lead to wrong mapping
 		if (!mapping.isValid) {
 			const uint8_t* g = joyGuid.data;
-			LOGI_X("Joystick mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), using Android default mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
+			LOGI("Joystick mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), using Android default mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
 			
 			mapping.isValid = true;
 
@@ -420,7 +421,7 @@ namespace nCine
 				mapping.desc = mappings_[index].desc;
 
 				const uint8_t* g = joyGuid.data;
-				LOGI_X("Joystick mapping found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d)", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
+				LOGI("Joystick mapping found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d)", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
 			}
 		}
 
@@ -439,7 +440,7 @@ namespace nCine
 					mapping.desc = mappings_[index].desc;
 
 					const uint8_t* g = joyGuid.data;
-					LOGI_X("Joystick mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), using XInput mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
+					LOGI("Joystick mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), using XInput mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
 				}
 			}
 		}

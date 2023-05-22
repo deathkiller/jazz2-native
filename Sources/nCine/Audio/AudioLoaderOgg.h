@@ -12,7 +12,7 @@ namespace nCine
 	class AudioLoaderOgg : public IAudioLoader
 	{
 	public:
-		explicit AudioLoaderOgg(std::unique_ptr<IFileStream> fileHandle);
+		explicit AudioLoaderOgg(std::unique_ptr<Death::IO::Stream> fileHandle);
 		~AudioLoaderOgg() override;
 
 		std::unique_ptr<IAudioReader> createReader() override;

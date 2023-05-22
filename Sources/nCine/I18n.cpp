@@ -1,4 +1,5 @@
 #include "I18n.h"
+#include "../Common.h"
 #include "Base/Algorithms.h"
 #include "IO/FileSystem.h"
 
@@ -535,7 +536,7 @@ namespace nCine
 		return LoadFromFile(fs::Open(path, FileAccessMode::Read));
 	}
 
-	bool I18n::LoadFromFile(const std::unique_ptr<IFileStream>& fileHandle)
+	bool I18n::LoadFromFile(const std::unique_ptr<Stream>& fileHandle)
 	{
 		uint32_t fileSize = fileHandle->GetSize();
 		if (fileSize < 32 || fileSize > 16 * 1024 * 1024) {

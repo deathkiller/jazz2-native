@@ -4,13 +4,13 @@
 #include "UI/ControlScheme.h"
 
 #include "../nCine/IO/CompressionUtils.h"
-#include "../nCine/IO/GrowableMemoryFile.h"
-#include "../nCine/IO/MemoryFile.h"
-#include "../nCine/IO/FileSystem.h"
 
 #include <Environment.h>
+#include <IO/FileSystem.h>
+#include <IO/MemoryStream.h>
 
 using namespace Death::Containers::Literals;
+using namespace Death::IO;
 
 namespace Jazz2
 {
@@ -88,19 +88,19 @@ namespace Jazz2
 
 		// If config path is not overriden and portable config doesn't exist, use common path for current user
 		if (!overrideConfigPath && !fs::IsReadableFile(_configPath)) {
-			_configPath = fs::JoinPath(fs::GetSavePath("Jazz² Resurrection"_s), "Jazz2.config"_s);
+			_configPath = fs::CombinePath(fs::GetSavePath("Jazz² Resurrection"_s), "Jazz2.config"_s);
 
 #	if defined(DEATH_TARGET_ANDROID)
 			// Save config file to external path if possible
 			auto& resolver = ContentResolver::Get();
-			auto externalConfigPath = fs::JoinPath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
+			auto externalConfigPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 			if (!fs::IsReadableFile(_configPath) || fs::IsReadableFile(externalConfigPath)) {
 				_configPath = externalConfigPath;
 			}
 #	elif defined(DEATH_TARGET_WINDOWS_RT)
 			// Save config file next to `Source` directory (e.g., on external drive) if possible
 			auto& resolver = ContentResolver::Get();
-			auto localConfigPath = fs::JoinPath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
+			auto localConfigPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 			if (_configPath != localConfigPath) {
 				auto configFileWritable = fs::Open(localConfigPath, FileAccessMode::Read | FileAccessMode::Write);
 				if (configFileWritable->IsOpened()) {
@@ -131,7 +131,7 @@ namespace Jazz2
 
 					auto result = CompressionUtils::Inflate(compressedBuffer.get(), compressedSize, uncompressedBuffer.get(), uncompressedSize);
 					if (result == DecompressionResult::Success) {
-						MemoryFile uc(uncompressedBuffer.get(), uncompressedSize);
+						MemoryStream uc(uncompressedBuffer.get(), uncompressedSize);
 
 						BoolOptions boolOptions = (BoolOptions)uc.ReadValue<uint64_t>();
 
@@ -287,7 +287,7 @@ namespace Jazz2
 		fs::CreateDirectories(fs::GetDirectoryName(_configPath));
 
 		auto so = fs::Open(_configPath, FileAccessMode::Write);
-		if (!so->IsOpened()) {
+		if (!so->IsValid()) {
 			return;
 		}
 
@@ -295,7 +295,7 @@ namespace Jazz2
 		so->WriteValue<uint8_t>(ContentResolver::ConfigFile);
 		so->WriteValue<uint8_t>(FileVersion);
 
-		GrowableMemoryFile co(10 * 1024);
+		MemoryStream co(10 * 1024);
 
 		BoolOptions boolOptions = BoolOptions::None;
 		if (EnableFullscreen) boolOptions |= BoolOptions::EnableFullscreen;
@@ -430,8 +430,8 @@ namespace Jazz2
 				if (language == "en"_s) {
 					break;
 				}
-				if (i18n.LoadFromFile(fs::JoinPath({ resolver.GetContentPath(), "Translations"_s, language + ".mo"_s })) ||
-					i18n.LoadFromFile(fs::JoinPath({ resolver.GetCachePath(), "Translations"_s, language + ".mo"_s }))) {
+				if (i18n.LoadFromFile(fs::CombinePath({ resolver.GetContentPath(), "Translations"_s, language + ".mo"_s })) ||
+					i18n.LoadFromFile(fs::CombinePath({ resolver.GetCachePath(), "Translations"_s, language + ".mo"_s }))) {
 					std::memcpy(PreferencesCache::Language, language.data(), language.size());
 					std::memset(PreferencesCache::Language + language.size(), 0, sizeof(PreferencesCache::Language) - language.size());
 					break;
@@ -443,8 +443,8 @@ namespace Jazz2
 				if (baseLanguage == "en"_s) {
 					break;
 				}
-				if (i18n.LoadFromFile(fs::JoinPath({ resolver.GetContentPath(), "Translations"_s, baseLanguage + ".mo"_s })) ||
-					i18n.LoadFromFile(fs::JoinPath({ resolver.GetCachePath(), "Translations"_s, baseLanguage + ".mo"_s }))) {
+				if (i18n.LoadFromFile(fs::CombinePath({ resolver.GetContentPath(), "Translations"_s, baseLanguage + ".mo"_s })) ||
+					i18n.LoadFromFile(fs::CombinePath({ resolver.GetCachePath(), "Translations"_s, baseLanguage + ".mo"_s }))) {
 					std::memcpy(PreferencesCache::Language, baseLanguage.data(), baseLanguage.size());
 					std::memset(PreferencesCache::Language + baseLanguage.size(), 0, sizeof(PreferencesCache::Language) - baseLanguage.size());
 					break;

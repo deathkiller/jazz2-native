@@ -23,9 +23,9 @@ namespace Jazz2::Scripting
 		if (ctx != nullptr) {
 			const char* sectionName;
 			int lineNumber = ctx->GetLineNumber(0, nullptr, &sectionName);
-			LOGW_X("%s (called from \"%s:%i\")", sourceName, sectionName, lineNumber);
+			LOGW("%s (called from \"%s:%i\")", sourceName, sectionName, lineNumber);
 		} else {
-			LOGW_X("%s", sourceName);
+			LOGW("%s", sourceName);
 		}
 	}
 
@@ -3308,19 +3308,19 @@ namespace Jazz2::Scripting
 		_this->_levelHandler->ShowLevelText(text);
 	}
 	void jjPrint(const String& text, bool timestamp) {
-		LOGW_X("%s", text.data());
+		LOGW("%s", text.data());
 	}
 	void jjDebug(const String& text, bool timestamp) {
-		LOGD_X("%s", text.data());
+		LOGD("%s", text.data());
 	}
 	void jjChat(const String& text, bool teamchat) {
-		LOGW_X("%s", text.data());
+		LOGW("%s", text.data());
 	}
 	void jjConsole(const String& text, bool sendToAll) {
-		LOGW_X("%s", text.data());
+		LOGW("%s", text.data());
 	}
 	void jjSpy(const String& text) {
-		LOGD_X("%s", text.data());
+		LOGD("%s", text.data());
 	}
 
 	// TODO
@@ -3804,7 +3804,7 @@ namespace Jazz2::Scripting
 	// Without namespace for shorter log messages
 	static void asScript(String& msg)
 	{
-		LOGI_X("%s", msg.data());
+		LOGI("%s", msg.data());
 	}
 
 	static float asFractionf(float v)
@@ -3917,7 +3917,7 @@ namespace Jazz2::Scripting
 		//return ConstructPath(includePath, path);
 
 		auto sourcePath = ContentResolver::Get().GetSourcePath();
-		return fs::JoinPath(sourcePath, includePath);
+		return fs::CombinePath(sourcePath, includePath);
 	}
 
 	void LevelScriptLoader::OnProcessPragma(const StringView& content, ScriptContextType& contextType)
@@ -4044,7 +4044,7 @@ namespace Jazz2::Scripting
 				ctx->SetArgFloat(0, timeMult);
 				int r = ctx->Execute();
 				if (r == asEXECUTION_EXCEPTION) {
-					LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+					LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 					// Don't call the method again if an exception occurs
 					_onLevelUpdate = nullptr;
 				}
@@ -4087,7 +4087,7 @@ namespace Jazz2::Scripting
 
 			int r = ctx->Execute();
 			if (r == asEXECUTION_EXCEPTION) {
-				LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+				LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 			}
 
 			_engine->ReturnContext(ctx);
@@ -4114,7 +4114,7 @@ namespace Jazz2::Scripting
 				ctx->SetArgByte(1, eventParams[1]);
 				int r = ctx->Execute();
 				if (r == asEXECUTION_EXCEPTION) {
-					LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+					LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 				}
 
 				_engine->ReturnContext(ctx);
@@ -4133,14 +4133,14 @@ namespace Jazz2::Scripting
 			ctx->Prepare(func);
 			int r = ctx->Execute();
 			if (r == asEXECUTION_EXCEPTION) {
-				LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+				LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 			}
 
 			_engine->ReturnContext(ctx);
 			return;
 		}*/
 
-		LOGW_X("Callback function \"%s\" was not found in the script. Please correct the code and try again.", funcName);
+		LOGW("Callback function \"%s\" was not found in the script. Please correct the code and try again.", funcName);
 	}
 
 	void LevelScriptLoader::RegisterBuiltInFunctions(asIScriptEngine* engine)
@@ -7062,7 +7062,7 @@ namespace Jazz2::Scripting
 	{
 		int column; const char* sectionName;
 		int lineNumber = ctx->GetExceptionLineNumber(&column, &sectionName);
-		__WriteLog(LogLevel::Error, "%s (%i, %i): An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", sectionName, lineNumber, column, ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+		DEATH_LOG_CALLBACK(LogLevel::Error, "%s (%i, %i): An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", sectionName, lineNumber, column, ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 	}
 
 	Actors::ActorBase* LevelScriptLoader::CreateActorInstance(const StringView& typeName)

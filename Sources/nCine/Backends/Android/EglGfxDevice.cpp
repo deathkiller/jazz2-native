@@ -249,7 +249,7 @@ namespace nCine
 		eglGetConfigAttrib(display_, config_, EGL_STENCIL_SIZE, &stencil);
 		eglGetConfigAttrib(display_, config_, EGL_SAMPLES, &samples);
 
-		LOGI_X("Surface configuration is size:%dx%d, RGBA:%d%d%d%d, depth:%d, stencil:%d, samples:%d", width_, height_, red, green, blue, alpha, depth, stencil, samples);
+		LOGI("Surface configuration is size:%dx%d, RGBA:%d%d%d%d, depth:%d, stencil:%d, samples:%d", width_, height_, red, green, blue, alpha, depth, stencil, samples);
 	}
 
 	void EglGfxDevice::updateMonitors()

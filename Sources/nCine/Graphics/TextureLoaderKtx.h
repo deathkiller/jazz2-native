@@ -9,7 +9,7 @@ namespace nCine
 	class TextureLoaderKtx : public ITextureLoader
 	{
 	public:
-		explicit TextureLoaderKtx(std::unique_ptr<IFileStream> fileHandle);
+		explicit TextureLoaderKtx(std::unique_ptr<Death::IO::Stream> fileHandle);
 
 	private:
 		static const int KtxIdentifierLength = 12;

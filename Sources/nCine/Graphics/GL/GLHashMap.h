@@ -69,7 +69,7 @@ namespace nCine
 					break;
 #endif
 				default:
-					FATAL_MSG_X("No available case to handle buffer object target: 0x%x", key);
+					FATAL_MSG("No available case to handle buffer object target: 0x%x", key);
 					break;
 			}
 
@@ -104,7 +104,7 @@ namespace nCine
 					break;
 #endif
 				default:
-					FATAL_MSG_X("No available case to handle texture target: 0x%x", key);
+					FATAL_MSG("No available case to handle texture target: 0x%x", key);
 					break;
 			}
 

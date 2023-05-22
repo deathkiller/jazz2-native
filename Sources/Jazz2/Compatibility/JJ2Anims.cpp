@@ -3,7 +3,9 @@
 #include "JJ2Block.h"
 #include "AnimSetMapping.h"
 
-#include "../../nCine/IO/FileSystem.h"
+#include <IO/FileSystem.h>
+
+using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
@@ -14,7 +16,7 @@ namespace Jazz2::Compatibility
 		SmallVector<SampleSection, 0> samples;
 
 		auto s = fs::Open(path, FileAccessMode::Read);
-		ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
+		ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
 		bool seemsLikeCC = false;
 
@@ -46,7 +48,7 @@ namespace Jazz2::Compatibility
 		for (int32_t i = 0; i < setCount; i++) {
 			if (s->GetPosition() >= s->GetSize()) {
 				isStreamComplete = false;
-				LOGW_X("Stream should contain %i sets, but found %i sets instead!", setCount, i);
+				LOGW("Stream should contain %i sets, but found %i sets instead!", setCount, i);
 				break;
 			}
 
@@ -70,7 +72,7 @@ namespace Jazz2::Compatibility
 			JJ2Block sampleDataBlock(s, sampleDataBlockLenC, sampleDataBlockLenU);
 
 			if (magicANIM != 0x4D494E41) {
-				LOGD_X("Header for set %i is incorrect (bad magic value), skipping", i);
+				LOGD("Header for set %i is incorrect (bad magic value), skipping", i);
 				continue;
 			}
 
@@ -253,7 +255,7 @@ namespace Jazz2::Compatibility
 
 				if (totalSize > chunkSize + 12) {
 					// Sample data is probably aligned to X bytes since the next sample doesn't always appear right after the first ends.
-					LOGW_X("Adjusting read offset of sample %i in set %i by %i bytes.", j, i, (totalSize - chunkSize - 12));
+					LOGW("Adjusting read offset of sample %i in set %i by %i bytes.", j, i, (totalSize - chunkSize - 12));
 
 					sampleDataBlock.DiscardBytes(totalSize - chunkSize - 12);
 				}
@@ -293,7 +295,7 @@ namespace Jazz2::Compatibility
 			}
 		} else {
 			version = JJ2Version::Unknown;
-			LOGE_X("Could not determine the version, header size: %u bytes", headerLen);
+			LOGE("Could not determine the version, header size: %u bytes", headerLen);
 		}
 
 		ImportAnimations(targetPath, version, anims);
@@ -363,9 +365,9 @@ namespace Jazz2::Compatibility
 				ASSERT(!entry->Name.empty());
 				continue;
 			} else {
-				fs::CreateDirectories(fs::JoinPath(targetPath, entry->Category));
+				fs::CreateDirectories(fs::CombinePath(targetPath, entry->Category));
 
-				filename = fs::JoinPath(entry->Category, entry->Name + ".aura"_s);
+				filename = fs::CombinePath(entry->Category, entry->Name + ".aura"_s);
 			}
 
 			int stride = sizeX * anim.FrameConfigurationX;
@@ -429,7 +431,7 @@ namespace Jazz2::Compatibility
 			}
 
 			// TODO: Use single channel instead
-			String fullPath = fs::JoinPath(targetPath, filename);
+			String fullPath = fs::CombinePath(targetPath, filename);
 			WriteImageToFile(fullPath, pixels.get(), sizeX, sizeY, 4, &anim, entry);
 
 			/*if (!string.IsNullOrEmpty(data.Name) && !data.SkipNormalMap) {
@@ -467,13 +469,13 @@ namespace Jazz2::Compatibility
 				ASSERT(!entry->Name.empty());
 				continue;
 			} else {
-				fs::CreateDirectories(fs::JoinPath(targetPath, entry->Category));
+				fs::CreateDirectories(fs::CombinePath(targetPath, entry->Category));
 
-				filename = fs::JoinPath(entry->Category, entry->Name + ".wav"_s);
+				filename = fs::CombinePath(entry->Category, entry->Name + ".wav"_s);
 			}
 
-			auto so = fs::Open(fs::JoinPath(targetPath, filename), FileAccessMode::Write);
-			ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
+			auto so = fs::Open(fs::CombinePath(targetPath, filename), FileAccessMode::Write);
+			ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
 
 			// TODO: The modulo here essentially clips the sample to 8- or 16-bit.
 			// There are some samples (at least the Rapier random noise) that at least get reported as 24-bit
@@ -516,7 +518,7 @@ namespace Jazz2::Compatibility
 	void JJ2Anims::WriteImageToFile(const StringView& targetPath, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount, AnimSection* anim, AnimSetMapping::Entry* entry)
 	{
 		auto so = fs::Open(targetPath, FileAccessMode::Write);
-		ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
+		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
 
 		uint8_t flags = 0x00;
 		if (entry != nullptr) {
@@ -579,7 +581,7 @@ namespace Jazz2::Compatibility
 		WriteImageToFileInternal(so, data, width, height, channelCount);
 	}
 
-	void JJ2Anims::WriteImageToFileInternal(std::unique_ptr<IFileStream>& so, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount)
+	void JJ2Anims::WriteImageToFileInternal(std::unique_ptr<Stream>& so, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount)
 	{
 		typedef union {
 			struct {

@@ -314,7 +314,7 @@ namespace nCine
 
 #if defined(WITH_GLEW)
 		const GLenum err = glewInit();
-		FATAL_ASSERT_MSG_X(err == GLEW_OK, "GLEW error: %s", glewGetErrorString(err));
+		FATAL_ASSERT_MSG(err == GLEW_OK, "GLEW error: %s", glewGetErrorString(err));
 
 		glContextInfo_.debugContext = (glContextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output"));
 #endif
@@ -406,7 +406,7 @@ namespace nCine
 
 	void GlfwGfxDevice::errorCallback(int error, const char* description)
 	{
-		LOGE_X("GLFW error %d: \"%s\"", error, description);
+		LOGE("GLFW error %d: \"%s\"", error, description);
 	}
 }
 

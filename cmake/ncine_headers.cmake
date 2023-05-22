@@ -1,4 +1,5 @@
 set(HEADERS
+	${NCINE_SOURCE_DIR}/Shared/Asserts.h
 	${NCINE_SOURCE_DIR}/Shared/Common.h
 	${NCINE_SOURCE_DIR}/Shared/CommonBase.h
 	${NCINE_SOURCE_DIR}/Shared/CommonWindows.h
@@ -19,7 +20,12 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Containers/String.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringStlView.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringView.h
+	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.h
+	${NCINE_SOURCE_DIR}/Shared/IO/FileStream.h
+	${NCINE_SOURCE_DIR}/Shared/IO/FileSystem.h
 	${NCINE_SOURCE_DIR}/Shared/IO/HttpRequest.h
+	${NCINE_SOURCE_DIR}/Shared/IO/MemoryStream.h
+	${NCINE_SOURCE_DIR}/Shared/IO/Stream.h
 )
 
 list(APPEND HEADERS

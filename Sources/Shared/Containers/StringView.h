@@ -162,7 +162,7 @@ namespace Death::Containers
 		 * The @ref BasicStringView(std::nullptr_t) overload (which is a
 		 * default constructor) is additionally @cpp constexpr @ce.
 		 */
-		/*implicit*/ BasicStringView(T* data, StringViewFlags extraFlags = { }) noexcept : BasicStringView { data, extraFlags, nullptr } { }
+		DEATH_CONSTEXPR14 /*implicit*/ BasicStringView(T* data, StringViewFlags extraFlags = { }) noexcept : BasicStringView { data, extraFlags, nullptr } { }
 
 		/**
 		 * @brief Construct a view on an external type / from an external representation
@@ -791,12 +791,11 @@ namespace Death::Containers
 
 	namespace Literals
 	{
-		/** @relatesalso Death::Containers::BasicStringView
+		/**
+			@relatesalso Death::Containers::BasicStringView
 			@brief String view literal
 
-			The returned instance has both @ref StringViewFlags::Global and
-			@ref StringViewFlags::NullTerminated set. See
-			@ref Containers-BasicStringView-usage for more information.
+			The returned instance has both @ref StringViewFlags::Global and @ref StringViewFlags::NullTerminated set.
 		*/
 		constexpr StringView operator"" _s(const char* data, std::size_t size) {
 			// Using plain bit ops instead of EnumSet to speed up debug builds

@@ -24,7 +24,7 @@ namespace Jazz2::Compatibility
 	void EventConverter::Add(JJ2Event originalEvent, const ConversionFunction& converter)
 	{
 		if (_converters.contains(originalEvent)) {
-			LOGW_X("Converter for event %u is already defined", (uint32_t)originalEvent);
+			LOGW("Converter for event %u is already defined", (uint32_t)originalEvent);
 		}
 
 		_converters[originalEvent] = converter;

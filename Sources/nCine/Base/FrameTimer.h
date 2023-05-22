@@ -35,6 +35,10 @@ namespace nCine
 		inline float frameInterval() const {
 			return frameStart_.secondsSince();
 		}
+		/// Returns the interval in ticks since the last call to `addFrame()`
+		inline uint64_t frameIntervalAsTicks() const {
+			return frameStart_.timeSince().ticks();
+		}
 		/// Returns the average FPS during the update interval
 		inline float averageFps() const {
 			return fps_;

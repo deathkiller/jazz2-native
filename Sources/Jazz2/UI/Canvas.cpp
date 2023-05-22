@@ -1,7 +1,6 @@
 ﻿#include "Canvas.h"
 
 #include "../../nCine/Graphics/RenderQueue.h"
-#include "../../nCine/IO/IFileStream.h"
 #include "../../nCine/Base/Random.h"
 
 namespace Jazz2::UI

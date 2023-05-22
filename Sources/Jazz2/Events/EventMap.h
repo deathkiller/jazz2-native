@@ -4,7 +4,7 @@
 #include "../GameDifficulty.h"
 #include "../PitType.h"
 
-#include "../../nCine/IO/IFileStream.h"
+#include <IO/Stream.h>
 
 namespace Jazz2::Events
 {
@@ -31,7 +31,7 @@ namespace Jazz2::Events
 		int GetWarpByPosition(float x, float y);
 		Vector2f GetWarpTarget(uint32_t id);
 
-		void ReadEvents(IFileStream& s, const std::unique_ptr<Tiles::TileMap>& tileMap, GameDifficulty difficulty);
+		void ReadEvents(Stream& s, const std::unique_ptr<Tiles::TileMap>& tileMap, GameDifficulty difficulty);
 		void AddWarpTarget(uint16_t id, int x, int y);
 		void AddSpawnPosition(uint8_t typeMask, int x, int y);
 

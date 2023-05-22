@@ -3,45 +3,47 @@
 
 #if defined(WITH_VORBIS)
 
+using namespace Death::IO;
+
 namespace nCine
 {
 	namespace
 	{
 		size_t fileRead(void* ptr, size_t size, size_t nmemb, void* datasource)
 		{
-			IFileStream* file = static_cast<IFileStream*>(datasource);
+			Stream* file = static_cast<Stream*>(datasource);
 			return file->Read(ptr, size * nmemb);
 		}
 
 		int fileSeek(void* datasource, ogg_int64_t offset, int whence)
 		{
-			IFileStream* file = static_cast<IFileStream*>(datasource);
+			Stream* file = static_cast<Stream*>(datasource);
 			return file->Seek(offset, (SeekOrigin)whence);
 		}
 
 		int fileClose(void* datasource)
 		{
-			IFileStream* file = static_cast<IFileStream*>(datasource);
+			Stream* file = static_cast<Stream*>(datasource);
 			file->Close();
 			return 0;
 		}
 
 		long fileTell(void* datasource)
 		{
-			IFileStream* file = static_cast<IFileStream*>(datasource);
+			Stream* file = static_cast<Stream*>(datasource);
 			return file->GetPosition();
 		}
 
 		const ov_callbacks fileCallbacks = { fileRead, fileSeek, fileClose, fileTell };
 	}
 
-	AudioLoaderOgg::AudioLoaderOgg(std::unique_ptr<IFileStream> fileHandle)
+	AudioLoaderOgg::AudioLoaderOgg(std::unique_ptr<Stream> fileHandle)
 		: IAudioLoader(std::move(fileHandle))
 	{
-		LOGD_X("Loading \"%s\"", fileHandle_->GetFileName().data());
+		LOGD("Loading \"%s\"", fileHandle_->GetPath().data());
 
 #if defined(DEATH_TARGET_ANDROID)
-		if (fileHandle_->GetType() == IFileStream::FileType::Asset) {
+		if (fileHandle_->GetType() == Stream::Type::AndroidAsset) {
 			fileHandle_->Open(FileAccessMode::Read | FileAccessMode::FileDescriptor);
 		} else
 #endif
@@ -58,7 +60,7 @@ namespace nCine
 		int result = ov_open_callbacks(fileHandle_.get(), &oggFile_, nullptr, 0, fileCallbacks);
 #endif
 		if (result != 0) {
-			LOGE_X("Cannot open \"%s\" with ov_open_callbacks()", fileHandle_->GetFileName().data());
+			LOGE("Cannot open \"%s\" with ov_open_callbacks()", fileHandle_->GetPath().data());
 			fileHandle_->Close();
 			return;
 		}
@@ -82,15 +84,15 @@ namespace nCine
 		duration_ = float(ov_time_total(&oggFile_, -1));
 #endif
 
-		RETURN_ASSERT_MSG_X(numChannels_ == 1 || numChannels_ == 2, "Unsupported number of channels: %d", numChannels_);
-		LOGD_X("Duration: %.2fs, channels: %d, frequency: %dHz", duration_, numChannels_, frequency_);
+		RETURN_ASSERT_MSG(numChannels_ == 1 || numChannels_ == 2, "Unsupported number of channels: %d", numChannels_);
+		LOGD("Duration: %.2fs, channels: %d, frequency: %dHz", duration_, numChannels_, frequency_);
 
 		hasLoaded_ = true;
 	}
 
 	AudioLoaderOgg::~AudioLoaderOgg()
 	{
-		// Checking if the ownership of the `IFileStream` pointer has been transferred to a reader
+		// Checking if the ownership of the `Stream` pointer has been transferred to a reader
 		if (fileHandle_ != nullptr) {
 #if defined(WITH_VORBIS_DYNAMIC)
 			AudioReaderOgg::_ov_clear(&oggFile_);

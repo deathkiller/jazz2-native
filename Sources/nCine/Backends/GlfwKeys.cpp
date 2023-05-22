@@ -67,7 +67,7 @@ namespace nCine
 			case GLFW_KEY_X:				return KeySym::X;
 			case GLFW_KEY_Y:				return KeySym::Y;
 			case GLFW_KEY_Z:				return KeySym::Z;
-			case GLFW_KEY_DELETE:			return KeySym::DELETE;
+			case GLFW_KEY_DELETE:			return KeySym::Delete;
 
 			case GLFW_KEY_KP_0:				return KeySym::KP0;
 			case GLFW_KEY_KP_1:				return KeySym::KP1;
@@ -208,7 +208,7 @@ namespace nCine
 			case KeySym::X:						return GLFW_KEY_X;
 			case KeySym::Y:						return GLFW_KEY_Y;
 			case KeySym::Z:						return GLFW_KEY_Z;
-			case KeySym::DELETE:				return GLFW_KEY_DELETE;
+			case KeySym::Delete:				return GLFW_KEY_DELETE;
 
 			case KeySym::KP0:					return GLFW_KEY_KP_0;
 			case KeySym::KP1:					return GLFW_KEY_KP_1;

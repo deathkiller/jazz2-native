@@ -6,14 +6,17 @@
 
 #include "../../nCine/Base/Algorithms.h"
 #include "../../nCine/IO/CompressionUtils.h"
-#include "../../nCine/IO/FileSystem.h"
+
+#include <IO/FileSystem.h>
+
+using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
 	bool JJ2Level::Open(const StringView& path, bool strictParser)
 	{
 		auto s = fs::Open(path, FileAccessMode::Read);
-		RETURNF_ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
+		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
 		// Skip copyright notice
 		s->Seek(180, SeekOrigin::Current);
@@ -330,7 +333,7 @@ namespace Jazz2::Compatibility
 	void JJ2Level::LoadMlleData(JJ2Block& block, uint32_t version, const StringView& path, bool strictParser)
 	{
 		if (version > 0x106) {
-			LOGW_X("MLLE stream version 0x%x in level \"%s\" is not supported", version, LevelName.data());
+			LOGW("MLLE stream version 0x%x in level \"%s\" is not supported", version, LevelName.data());
 			return;
 		}
 
@@ -502,7 +505,7 @@ namespace Jazz2::Compatibility
 	void JJ2Level::Convert(const String& targetPath, const EventConverter& eventConverter, const std::function<LevelToken(const StringView&)>& levelTokenConversion)
 	{
 		auto so = fs::Open(targetPath, FileAccessMode::Write);
-		ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
+		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
 
 		so->WriteValue<uint64_t>(0x2095A59FF0BFBBEF);
 		so->WriteValue<uint8_t>(ContentResolver::LevelFile);
@@ -560,7 +563,7 @@ namespace Jazz2::Compatibility
 		}
 		so->WriteValue<uint16_t>(flags);
 
-		GrowableMemoryFile co(1024 * 1024);
+		MemoryStream co(1024 * 1024);
 
 		String formattedName = JJ2Strings::RecodeString(DisplayName, true);
 		co.WriteValue<uint8_t>((uint8_t)formattedName.size());
@@ -956,7 +959,7 @@ namespace Jazz2::Compatibility
 		so->WriteValue<int32_t>(co.GetSize());
 		so->Write(compressedBuffer.get(), compressedSize);
 
-#if defined(NCINE_DEBUG)
+#if defined(DEATH_DEBUG)
 		/*auto episodeName = fs::GetFileName(fs::GetDirectoryName(targetPath));
 		if (episodeName != "unknown"_s) {
 			int lastStringIdx = -1;
@@ -1012,7 +1015,7 @@ namespace Jazz2::Compatibility
 		_levelTokenTextIds.push_back(textId);
 	}
 
-	void JJ2Level::WriteLevelName(GrowableMemoryFile& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion)
+	void JJ2Level::WriteLevelName(MemoryStream& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion)
 	{
 		if (!value.empty()) {
 			MutableStringView adjustedValue = value;

@@ -2,10 +2,14 @@
 #include "GLDebug.h"
 #include "../RenderResources.h"
 #include "../../Application.h"
-#include "../../IO/FileSystem.h"
 #include "../../../Common.h"
 
 #include <string>
+
+#include <IO/FileSystem.h>
+
+using namespace Death::Containers::Literals;
+using namespace Death::IO;
 
 namespace nCine
 {
@@ -28,7 +32,7 @@ namespace nCine
 #endif
 	}
 
-#if defined(NCINE_LOG)
+#if defined(DEATH_LOG)
 	char GLShader::infoLogString_[MaxInfoLogLength];
 #endif
 
@@ -86,8 +90,8 @@ namespace nCine
 
 		String fileSource;
 		if (!filename.empty()) {
-			std::unique_ptr<IFileStream> fileHandle = fs::Open(filename, FileAccessMode::Read);
-			if (!fileHandle->IsOpened()) {
+			std::unique_ptr<Stream> fileHandle = fs::Open(filename, FileAccessMode::Read);
+			if (!fileHandle->IsValid()) {
 				return false;
 			}
 			
@@ -132,7 +136,7 @@ namespace nCine
 		GLint status = GL_FALSE;
 		glGetShaderiv(glHandle_, GL_COMPILE_STATUS, &status);
 		if (status == GL_FALSE) {
-#if defined(NCINE_LOG)
+#if defined(DEATH_LOG)
 			if (logOnErrors) {
 				GLint length = 0;
 				glGetShaderiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
@@ -140,7 +144,7 @@ namespace nCine
 					glGetShaderInfoLog(glHandle_, MaxInfoLogLength, &length, infoLogString_);
 					// Trim whitespace - driver messages usually contain newline(s) at the end
 					*(MutableStringView(infoLogString_).trimmed().end()) = '\0';
-					LOGW_X("Shader: %s", infoLogString_);
+					LOGW("Shader: %s", infoLogString_);
 				}
 			}
 #endif

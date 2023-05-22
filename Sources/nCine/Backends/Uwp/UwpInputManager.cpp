@@ -398,7 +398,7 @@ namespace nCine
 			case winrtWS::VirtualKey::X:				return KeySym::X;
 			case winrtWS::VirtualKey::Y:				return KeySym::Y;
 			case winrtWS::VirtualKey::Z:				return KeySym::Z;
-			case winrtWS::VirtualKey::Delete:			return KeySym::DELETE;
+			case winrtWS::VirtualKey::Delete:			return KeySym::Delete;
 
 			case winrtWS::VirtualKey::NumberPad0:		return KeySym::KP0;
 			case winrtWS::VirtualKey::NumberPad1:		return KeySym::KP1;

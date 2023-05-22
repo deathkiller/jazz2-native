@@ -5,9 +5,11 @@
 
 #if defined(WITH_OPENMPT)
 
+using namespace Death::IO;
+
 namespace nCine
 {
-	AudioLoaderMpt::AudioLoaderMpt(std::unique_ptr<IFileStream> fileHandle)
+	AudioLoaderMpt::AudioLoaderMpt(std::unique_ptr<Stream> fileHandle)
 		: IAudioLoader(std::move(fileHandle))
 	{
 		IAudioDevice& device = theServiceLocator().audioDevice();

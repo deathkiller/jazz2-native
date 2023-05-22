@@ -102,9 +102,9 @@ namespace nCine
 			threadInfo_.startFunction = startFunction;
 			threadInfo_.threadArg = arg;
 			const int error = pthread_create(&tid_, nullptr, WrapperFunction, &threadInfo_);
-			FATAL_ASSERT_MSG_X(!error, "Error in pthread_create(): %d", error);
+			FATAL_ASSERT_MSG(!error, "Error in pthread_create(): %d", error);
 		} else {
-			LOGW_X("Thread %u is already running", tid_);
+			LOGW("Thread %u is already running", tid_);
 		}
 	}
 

@@ -139,7 +139,7 @@ namespace nCine
 	bool GlfwInputManager::isJoyPresent(int joyId) const
 	{
 		ASSERT(joyId >= 0);
-		ASSERT_MSG_X(GLFW_JOYSTICK_1 + joyId <= GLFW_JOYSTICK_LAST,
+		ASSERT_MSG(GLFW_JOYSTICK_1 + joyId <= GLFW_JOYSTICK_LAST,
 					 "joyId is %d and the maximum is %d", joyId, GLFW_JOYSTICK_LAST - GLFW_JOYSTICK_1);
 		return (glfwJoystickPresent(GLFW_JOYSTICK_1 + joyId) != 0);
 	}
@@ -378,7 +378,7 @@ namespace nCine
 		joyConnectionEvent_.joyId = joyId;
 
 		if (event == GLFW_CONNECTED) {
-#if defined(NCINE_LOG)
+#if defined(DEATH_LOG)
 			int numButtons = -1;
 			int numAxes = -1;
 			int numHats = -1;
@@ -394,7 +394,7 @@ namespace nCine
 			const char* guid = nullptr;
 #	endif
 			glfwGetJoystickAxes(joy, &numAxes);
-			LOGI_X("Joystick %d \"%s\" (%s) has been connected - %d axes, %d buttons, %d hats",
+			LOGI("Joystick %d \"%s\" (%s) has been connected - %d axes, %d buttons, %d hats",
 			       joyId, glfwGetJoystickName(joy), guid, numAxes, numButtons, numHats);
 #endif
 			updateJoystickStates();
@@ -405,7 +405,7 @@ namespace nCine
 			}
 		} else if (event == GLFW_DISCONNECTED) {
 			joyEventsSimulator_.resetJoystickState(joyId);
-			LOGI_X("Joystick %d has been disconnected", joyId);
+			LOGI("Joystick %d has been disconnected", joyId);
 			if (inputEventHandler_ != nullptr) {
 				inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
 				joyMapping_.onJoyDisconnected(joyConnectionEvent_);

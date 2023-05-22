@@ -187,7 +187,7 @@ namespace nCine
 
 		gfxDevice_->setWindowTitle(appCfg_.windowTitle.data());
 		if (!appCfg_.windowIconFilename.empty()) {
-			String windowIconFilePath = fs::JoinPath(fs::GetDataPath(), appCfg_.windowIconFilename);
+			String windowIconFilePath = fs::CombinePath(fs::GetDataPath(), appCfg_.windowIconFilename);
 			if (fs::IsReadableFile(windowIconFilePath)) {
 				gfxDevice_->setWindowIcon(windowIconFilePath);
 			}

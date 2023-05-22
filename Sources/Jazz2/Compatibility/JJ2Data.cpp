@@ -2,8 +2,11 @@
 #include "JJ2Block.h"
 
 #include "../../nCine/Base/Algorithms.h"
-#include "../../nCine/IO/FileSystem.h"
 
+#include <IO/FileSystem.h>
+
+using namespace Death::Containers::Literals;
+using namespace Death::IO;
 using namespace nCine;
 
 namespace Jazz2::Compatibility
@@ -11,7 +14,7 @@ namespace Jazz2::Compatibility
 	bool JJ2Data::Open(const StringView& path, bool strictParser)
 	{
 		auto s = fs::Open(path, FileAccessMode::Read);
-		RETURNF_ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
+		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
 		uint32_t magic = s->ReadValue<uint32_t>();
 		RETURNF_ASSERT_MSG(magic == 0x42494C50 /*PLIB*/, "Invalid magic string");
@@ -66,8 +69,8 @@ namespace Jazz2::Compatibility
 				// TODO
 			}
 
-			auto so = fs::Open(fs::JoinPath(targetPath, item.Filename), FileAccessMode::Write);
-			ASSERT_MSG_X(so->IsOpened(), "Cannot open file \"%s\" for writing", item.Filename.data());
+			auto so = fs::Open(fs::CombinePath(targetPath, item.Filename), FileAccessMode::Write);
+			ASSERT_MSG(so->IsValid(), "Cannot open file \"%s\" for writing", item.Filename.data());
 
 			so->Write(item.Blob.get(), item.Size);
 		}

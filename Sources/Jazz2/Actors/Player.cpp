@@ -159,7 +159,7 @@ namespace Jazz2::Actors
 
 	void Player::OnUpdate(float timeMult)
 	{
-#if defined(NCINE_DEBUG)
+#if defined(DEATH_DEBUG)
 		if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::ChangeWeapon)) {
 			float moveDistance = (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Run) ? 400.0f : 100.0f);
 			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::Left)) {
@@ -1289,7 +1289,7 @@ namespace Jazz2::Actors
 				}
 
 				// Decrease remaining shield time by 5 secs
-				if (_activeShieldTime > 20.0f) {
+				if (_activeShieldTime > 70.0f) {
 					_activeShieldTime = _activeShieldTime - (5.0f * FrameTimer::FramesPerSecond);
 				}
 			} else if (enemy->CanHurtPlayer()) {
@@ -2671,6 +2671,11 @@ namespace Jazz2::Actors
 
 	bool Player::OnLevelChanging(ExitType exitType)
 	{
+		// Deactivate any shield
+		if (_activeShieldTime > 70.0f) {
+			_activeShieldTime = 70.0f;
+		}
+
 		if (_spawnedBird != nullptr) {
 			_spawnedBird->FlyAway();
 			_spawnedBird = nullptr;

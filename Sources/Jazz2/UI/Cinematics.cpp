@@ -125,15 +125,15 @@ namespace Jazz2::UI
 	{
 		// Try "Content" directory first, then "Source" directory
 		auto& resolver = ContentResolver::Get();
-		String fullPath = fs::JoinPath({ resolver.GetContentPath(), "Cinematics"_s, path + ".j2v" });
+		String fullPath = fs::CombinePath({ resolver.GetContentPath(), "Cinematics"_s, path + ".j2v" });
 		if (!fs::IsReadableFile(fullPath)) {
-			fullPath = fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), path + ".j2v"));
+			fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), path + ".j2v"));
 		}
 		if (!fs::IsReadableFile(fullPath)) {
 			return false;
 		}
 
-		std::unique_ptr<IFileStream> s = fs::Open(fullPath, FileAccessMode::Read);
+		std::unique_ptr<Stream> s = fs::Open(fullPath, FileAccessMode::Read);
 		if (s->GetSize() < 32 || s->GetSize() > 64 * 1024 * 1024) {
 			return false;
 		}
@@ -187,7 +187,7 @@ namespace Jazz2::UI
 			auto result = CompressionUtils::Inflate(compressedStreams[i].begin() + 2, compressedSize, _decompressedStreams[i].begin(), decompressedSize);
 			if (result == DecompressionResult::BufferTooSmall) {
 				_decompressedStreams[i].resize_for_overwrite(_decompressedStreams[i].size() * 2);
-				LOGI_X("Cinematics stream %i was larger than expected, resizing buffer to %i", i, _decompressedStreams[i].size());
+				LOGI("Cinematics stream %i was larger than expected, resizing buffer to %i", i, _decompressedStreams[i].size());
 				goto Retry;
 			}
 		}

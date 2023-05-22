@@ -2,10 +2,14 @@
 #include "IGfxCapabilities.h"
 #include "../ServiceLocator.h"
 #include "../Base/Algorithms.h"
-#include "../IO/FileSystem.h"
-#include "../IO/IFileStream.h"
 #include "../Base/HashFunctions.h"
 #include "../../Common.h"
+
+#include <IO/FileSystem.h>
+#include <IO/Stream.h>
+
+using namespace Death::Containers::Literals;
+using namespace Death::IO;
 
 namespace nCine
 {
@@ -14,14 +18,14 @@ namespace nCine
 		constexpr uint64_t HashSeed = 0x01000193811C9DC5;
 
 		unsigned int bufferSize = 0;
-		std::unique_ptr<uint8_t[]> bufferPtr;
+		std::unique_ptr<std::uint8_t[]> bufferPtr;
 	}
 
 	BinaryShaderCache::BinaryShaderCache(const StringView& path)
 		: isAvailable_(false), platformHash_(0)
 	{
 		if (path.empty()) {
-			LOGD_X("Binary shader cache is disabled");
+			LOGD("Binary shader cache is disabled");
 			return;
 		}
 
@@ -33,7 +37,7 @@ namespace nCine
 		const bool isSupported = gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::ARB_GET_PROGRAM_BINARY);
 #endif
 		if (!isSupported) {
-			LOGW_X("GL_ARB_get_program_binary extensions not supported, binary shader cache is disabled");
+			LOGW("GL_ARB_get_program_binary extensions not supported, binary shader cache is disabled");
 			return;
 		}
 
@@ -74,9 +78,9 @@ namespace nCine
 		fs::CreateDirectories(path_);
 
 		bufferSize = 64 * 1024;
-		bufferPtr = std::make_unique<uint8_t[]>(bufferSize);
+		bufferPtr = std::make_unique<std::uint8_t[]>(bufferSize);
 
-		const bool pathExists = fs::IsDirectory(path_);
+		const bool pathExists = fs::DirectoryExists(path_);
 		isAvailable_ = (isSupported && pathExists);
 	}
 
@@ -91,45 +95,45 @@ namespace nCine
 			return { };
 		}
 
-		uint64_t shaderNameHash = fasthash64(shaderName, shaderNameLength, 0x01000193811C9DC5);
+		std::uint64_t shaderNameHash = fasthash64(shaderName, shaderNameLength, 0x01000193811C9DC5);
 
 		char outputBuffer[48];
 		formatString(outputBuffer, sizeof(outputBuffer), "%016llx%016llx.shader", shaderNameHash, platformHash_);
-		return fs::JoinPath(path_, outputBuffer);
+		return fs::CombinePath(path_, outputBuffer);
 	}
 
-	bool BinaryShaderCache::loadFromCache(const char* shaderName, uint64_t shaderVersion, GLShaderProgram* program, GLShaderProgram::Introspection introspection)
+	bool BinaryShaderCache::loadFromCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program, GLShaderProgram::Introspection introspection)
 	{
 		String cachePath = getCachedShaderPath(shaderName);
 		if (cachePath.empty()) {
 			return false;
 		}
 
-		std::unique_ptr<IFileStream> fileHandle = fs::Open(cachePath, FileAccessMode::Read);
-		const long int fileSize = fileHandle->GetSize();
+		std::unique_ptr<Stream> fileHandle = fs::Open(cachePath, FileAccessMode::Read);
+		const std::int32_t fileSize = fileHandle->GetSize();
 		if (fileSize <= 28 || fileSize > 8 * 1024 * 1024) {
 			return false;
 		}
 
 		if (bufferSize < fileSize) {
 			bufferSize = fileSize;
-			bufferPtr = std::make_unique<uint8_t[]>(bufferSize);
+			bufferPtr = std::make_unique<std::uint8_t[]>(bufferSize);
 		}
 
 		fileHandle->Read(bufferPtr.get(), fileSize);
 		fileHandle->Close();
 
-		uint64_t signature = *(uint64_t*)&bufferPtr[0];
-		uint64_t cachedShaderVersion = *(uint64_t*)&bufferPtr[8];
+		std::uint64_t signature = *(std::uint64_t*)&bufferPtr[0];
+		std::uint64_t cachedShaderVersion = *(std::uint64_t*)&bufferPtr[8];
 
 		// Shader version must be the same
 		if (signature != 0x20AA8C9FF0BFBBEF || cachedShaderVersion != shaderVersion) {
 			return false;
 		}
 
-		int32_t batchSize = *(int32_t*)&bufferPtr[16];
-		uint32_t binaryFormat = *(uint32_t*)&bufferPtr[20];
-		int32_t bufferLength = *(int32_t*)&bufferPtr[24];
+		std::int32_t batchSize = *(std::int32_t*)&bufferPtr[16];
+		std::uint32_t binaryFormat = *(std::uint32_t*)&bufferPtr[20];
+		std::int32_t bufferLength = *(std::int32_t*)&bufferPtr[24];
 		void* buffer = &bufferPtr[28];
 
 		if (bufferLength <= 0 || bufferLength > fileSize - 28) {
@@ -141,7 +145,7 @@ namespace nCine
 		return program->finalizeAfterLinking(introspection);
 	}
 
-	bool BinaryShaderCache::saveToCache(const char* shaderName, uint64_t shaderVersion, GLShaderProgram* program)
+	bool BinaryShaderCache::saveToCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program)
 	{
 		String cachePath = getCachedShaderPath(shaderName);
 		if (cachePath.empty()) {
@@ -156,7 +160,7 @@ namespace nCine
 
 		if (bufferSize < length) {
 			bufferSize = length;
-			bufferPtr = std::make_unique<uint8_t[]>(bufferSize);
+			bufferPtr = std::make_unique<std::uint8_t[]>(bufferSize);
 		} 
 
 		length = 0;
@@ -166,16 +170,16 @@ namespace nCine
 			return false;
 		}
 
-		std::unique_ptr<IFileStream> fileHandle = fs::Open(cachePath, FileAccessMode::Write);
-		if (!fileHandle->IsOpened()) {
+		std::unique_ptr<Stream> fileHandle = fs::Open(cachePath, FileAccessMode::Write);
+		if (!fileHandle->IsValid()) {
 			return false;
 		}
 
-		fileHandle->WriteValue<uint64_t>(0x20AA8C9FF0BFBBEF);
-		fileHandle->WriteValue<uint64_t>(shaderVersion);
-		fileHandle->WriteValue<int32_t>(program->batchSize());
-		fileHandle->WriteValue<uint32_t>(binaryFormat);
-		fileHandle->WriteValue<int32_t>(length);
+		fileHandle->WriteValue<std::uint64_t>(0x20AA8C9FF0BFBBEF);
+		fileHandle->WriteValue<std::uint64_t>(shaderVersion);
+		fileHandle->WriteValue<std::int32_t>(program->batchSize());
+		fileHandle->WriteValue<std::uint32_t>(binaryFormat);
+		fileHandle->WriteValue<std::int32_t>(length);
 		fileHandle->Write(bufferPtr.get(), length);
 
 		return true;
@@ -199,7 +203,7 @@ namespace nCine
 			std::memcpy(componentString, &filename[16], 16);
 			componentString[16] = '\0';
 
-			uint64_t platformHash = strtoull(componentString, nullptr, 16);
+			std::uint64_t platformHash = strtoull(componentString, nullptr, 16);
 			if (platformHash != platformHash_) {
 				fs::RemoveFile(shaderPath);
 			}
@@ -214,10 +218,9 @@ namespace nCine
 		}
 	}
 
-	/*! \return True if the path is a writable directory */
 	bool BinaryShaderCache::setPath(const StringView& path)
 	{
-		if (!fs::IsDirectory(path) || !fs::IsWritable(path)) {
+		if (!fs::DirectoryExists(path) || !fs::IsWritable(path)) {
 			return false;
 		}
 

@@ -26,7 +26,7 @@ namespace nCine
 
 	void GLShaderUniformBlocks::bind()
 	{
-#if defined(NCINE_DEBUG)
+#if defined(DEATH_DEBUG)
 		static const int offsetAlignment = theServiceLocator().gfxCapabilities().value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 #endif
 		if (uboParams_.object) {
@@ -36,7 +36,7 @@ namespace nCine
 			for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
 				uniformBlockCache.setBlockBinding(uniformBlockCache.index());
 				const GLintptr offset = static_cast<GLintptr>(uboParams_.offset) + moreOffset;
-#if defined(NCINE_DEBUG)
+#if defined(DEATH_DEBUG)
 				ASSERT(offset % offsetAlignment == 0);
 #endif
 				uboParams_.object->bindBufferRange(uniformBlockCache.bindingIndex(), offset, uniformBlockCache.usedSize());
@@ -82,7 +82,7 @@ namespace nCine
 		if (shaderProgram_ != nullptr) {
 			uniformBlockCache = uniformBlockCaches_.find(String::nullTerminatedView(name));
 		} else {
-			LOGE_X("Cannot find uniform block \"%s\", no shader program associated", name);
+			LOGE("Cannot find uniform block \"%s\", no shader program associated", name);
 		}
 		return uniformBlockCache;
 	}
@@ -161,7 +161,7 @@ namespace nCine
 		}
 
 		if (importedCount > UniformBlockCachesHashSize) {
-			LOGW_X("More imported uniform blocks (%d) than hashmap buckets (%d)", importedCount, UniformBlockCachesHashSize);
+			LOGW("More imported uniform blocks (%d) than hashmap buckets (%d)", importedCount, UniformBlockCachesHashSize);
 		}
 	}
 }

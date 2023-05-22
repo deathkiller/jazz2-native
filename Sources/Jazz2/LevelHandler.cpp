@@ -194,7 +194,7 @@ namespace Jazz2
 
 		_levelTexts = std::move(levelTexts);
 
-#if defined(WITH_ANGELSCRIPT) || defined(NCINE_LOG)
+#if defined(WITH_ANGELSCRIPT) || defined(DEATH_LOG)
 		// TODO: Allow script signing
 		if (PreferencesCache::AllowUnsignedScripts) {
 			const StringView foundDot = fullPath.findLastOr('.', fullPath.end());
@@ -203,7 +203,7 @@ namespace Jazz2
 #	if defined(WITH_ANGELSCRIPT)
 				_scripts = std::make_unique<Scripting::LevelScriptLoader>(this, scriptPath);
 #	else
-				LOGW_X("Level requires scripting, but scripting support is disabled in this build");
+				LOGW("Level requires scripting, but scripting support is disabled in this build");
 #	endif
 			}
 		}
@@ -219,7 +219,7 @@ namespace Jazz2
 		if (PlayerActionHit(0, PlayerActions::Menu) && _pauseMenu == nullptr && _nextLevelType == ExitType::None) {
 			PauseGame();
 		}
-#if defined(NCINE_DEBUG)
+#if defined(DEATH_DEBUG)
 		if (PlayerActionPressed(0, PlayerActions::ChangeWeapon) && PlayerActionHit(0, PlayerActions::Jump)) {
 			_cheatsUsed = true;
 			BeginLevelChange(ExitType::Warp | ExitType::FastTransition, nullptr);

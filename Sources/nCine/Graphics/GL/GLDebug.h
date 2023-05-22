@@ -5,7 +5,7 @@
 
 #if ENABLE_GL_LOGGING
 #	include "../../../Common.h"
-#	define GL_LOG_ERRORS() do { GLenum __err = glGetError(); if (__err != GL_NO_ERROR) { LOGW_X("OpenGL returned error: %i", __err); } } while (false)
+#	define GL_LOG_ERRORS() do { GLenum __err = glGetError(); if (__err != GL_NO_ERROR) { LOGW("OpenGL returned error: %i", __err); } } while (false)
 #else
 #	define GL_LOG_ERRORS() do { } while (false)
 #endif

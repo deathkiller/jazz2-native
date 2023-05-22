@@ -16,9 +16,9 @@ namespace Death::Containers
 	}
 
 	static_assert(std::size_t(LargeSizeMask) == Implementation::StringViewSizeMask,
-		"reserved bits should be the same in String and StringView");
+		"Reserved bits should be the same in String and StringView");
 	static_assert(std::size_t(LargeSizeMask) == (std::size_t(StringViewFlags::Global) | (std::size_t(Implementation::SmallStringBit) << (sizeof(std::size_t) - 1) * 8)),
-		"small string and global view bits should cover both reserved bits");
+		"Small string and global view bits should cover both reserved bits");
 
 	String String::nullTerminatedView(StringView view) {
 		if ((view.flags() & StringViewFlags::NullTerminated) == StringViewFlags::NullTerminated) {
@@ -118,8 +118,8 @@ namespace Death::Containers
 	{
 		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus worth checking even in release
-		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), "Containers::String: string expected to be smaller than 2^" << sizeof(std::size_t) * 8 - 2 << "bytes, got" << size, );
-		DEATH_ASSERT(data || !size, "Containers::String: received a null string of size" << size, );
+		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
+		DEATH_ASSERT(data || size == 0, , "Containers::String: Received a null string of size %zu", size);
 
 		construct(data, size);
 	}
@@ -138,12 +138,12 @@ namespace Death::Containers
 	{
 		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus worth checking even in release
-		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), "Containers::String: string expected to be smaller than 2^" << sizeof(std::size_t) * 8 - 2 << "bytes, got" << size, );
-		DEATH_ASSERT(data || !size, "Containers::String: received a null string of size" << size, );
+		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
+		DEATH_ASSERT(data || size == 0, , "Containers::String: Received a null string of size %zu", size);
 
 		_large.data = new char[size + 1];
 		// Apparently memcpy() can't be called with null pointers, even if size is zero. I call that bullying.
-		if (size) std::memcpy(_large.data, data, size);
+		if (size != 0) std::memcpy(_large.data, data, size);
 		_large.data[size] = '\0';
 		_large.size = size;
 		_large.deleter = nullptr;
@@ -186,8 +186,8 @@ namespace Death::Containers
 		// Compared to StringView construction which happens a lot this shouldn't, the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus worth checking even in release; but most importantly checking for null
 		// termination outweighs potential speed issues
-		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), "Containers::String: string expected to be smaller than 2^" << sizeof(std::size_t) * 8 - 2 << "bytes, got" << size, );
-		DEATH_ASSERT(data && !data[size], "Containers::String: can only take ownership of a non-null null-terminated array", );
+		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
+		DEATH_ASSERT(data && !data[size], , "Containers::String: Can only take ownership of a non-null null-terminated array");
 
 		_large.data = data;
 		_large.size = size;
@@ -204,7 +204,7 @@ namespace Death::Containers
 	String::String(ValueInitT, const std::size_t size) : _large {} {
 		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus  worth checking even in release
-		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), "Containers::String: string expected to be smaller than 2^" << sizeof(std::size_t) * 8 - 2 << "bytes, got" << size, );
+		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
 
 		if (size < Implementation::SmallStringSize) {
 			// Everything already zero-init'd in the constructor init list
@@ -220,7 +220,7 @@ namespace Death::Containers
 	{
 		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus worth checking even in release
-		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), "Containers::String: string expected to be smaller than 2^" << sizeof(std::size_t) * 8 - 2 << "bytes, got" << size, );
+		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
 
 		construct(NoInit, size);
 	}
@@ -336,8 +336,8 @@ namespace Death::Containers
 
 	auto String::deleter() const -> Deleter {
 		// Unlikely to be called very often, so a non-debug assert is fine
-		DEATH_ASSERT(!(_small.size & Implementation::SmallStringBit),
-			"Containers::String::deleter(): cannot call on a SSO instance", {});
+		DEATH_ASSERT(!(_small.size & Implementation::SmallStringBit), {},
+			"Containers::String::deleter(): Cannot call on a SSO instance");
 		return _large.deleter;
 	}
 
@@ -384,7 +384,7 @@ namespace Death::Containers
 	}
 
 	char& String::front() {
-		DEATH_ASSERT(size(), "Containers::String::front(): string is empty", *begin());
+		DEATH_ASSERT(size(), *begin(), "Containers::String::front(): String is empty");
 		return *begin();
 	}
 
@@ -393,7 +393,7 @@ namespace Death::Containers
 	}
 
 	char& String::back() {
-		DEATH_ASSERT(size(), "Containers::String::back(): string is empty", *(end() - 1));
+		DEATH_ASSERT(size(), *(end() - 1), "Containers::String::back(): String is empty");
 		return *(end() - 1);
 	}
 
@@ -763,8 +763,8 @@ namespace Death::Containers
 
 	char* String::release() {
 		// Unlikely to be called very often, so a non-debug assert is fine
-		DEATH_ASSERT(!(_small.size & Implementation::SmallStringBit),
-			"Containers::String::release(): cannot call on a SSO instance", {});
+		DEATH_ASSERT(!(_small.size & Implementation::SmallStringBit), {},
+			"Containers::String::release(): Cannot call on a SSO instance");
 		char* data = _large.data;
 
 		// Create a zero-size small string to fullfil the guarantee of data() being always non-null and null-terminated.

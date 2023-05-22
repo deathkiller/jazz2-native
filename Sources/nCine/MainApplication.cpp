@@ -20,13 +20,15 @@
 
 #include "tracy.h"
 
-#if defined(NCINE_LOG) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_LOG) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 
 #if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
 #	define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 #endif
 
 #include <Utf8.h>
+
+using namespace Death::IO;
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
@@ -122,7 +124,7 @@ static bool EnableVirtualTerminalProcessing()
 	return true;
 }
 
-#elif defined(NCINE_LOG) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
+#elif defined(DEATH_LOG) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
 
 #include <unistd.h>
 
@@ -174,7 +176,7 @@ namespace nCine
 #endif
 		app.shutdownCommon();
 
-#if defined(NCINE_LOG) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_LOG) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		if (__showLogConsole) {
 			DestroyLogConsole();
 		}
@@ -191,7 +193,7 @@ namespace nCine
 #endif
 		wasSuspended_ = shouldSuspend();
 
-#if defined(NCINE_LOG)
+#if defined(DEATH_LOG)
 #	if defined(DEATH_TARGET_APPLE)
 		__hasVirtualTerminal = isatty(1);
 #	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
@@ -244,7 +246,7 @@ namespace nCine
 #endif
 		gfxDevice_->setWindowTitle(appCfg_.windowTitle.data());
 		if (!appCfg_.windowIconFilename.empty()) {
-			String windowIconFilePath = fs::JoinPath(fs::GetDataPath(), appCfg_.windowIconFilename);
+			String windowIconFilePath = fs::CombinePath(theApplication().GetDataPath(), appCfg_.windowIconFilename);
 			if (fs::IsReadableFile(windowIconFilePath)) {
 				gfxDevice_->setWindowIcon(windowIconFilePath);
 			}

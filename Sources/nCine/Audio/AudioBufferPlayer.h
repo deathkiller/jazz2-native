@@ -1,7 +1,6 @@
 #pragma once
 
 #include "IAudioPlayer.h"
-#include "../IO/IFileStream.h"
 
 namespace nCine
 {

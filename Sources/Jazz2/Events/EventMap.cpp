@@ -263,7 +263,7 @@ namespace Jazz2::Events
 		return Vector2f(-1.0f, -1.0f);
 	}
 
-	void EventMap::ReadEvents(IFileStream& s, const std::unique_ptr<Tiles::TileMap>& tileMap, GameDifficulty difficulty)
+	void EventMap::ReadEvents(Stream& s, const std::unique_ptr<Tiles::TileMap>& tileMap, GameDifficulty difficulty)
 	{
 		_eventLayout.resize(_layoutSize.X * _layoutSize.Y);
 		_eventLayoutForRollback.resize(_layoutSize.X * _layoutSize.Y);

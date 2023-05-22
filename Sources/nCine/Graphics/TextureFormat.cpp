@@ -2,7 +2,7 @@
 #include "../ServiceLocator.h"
 #include "../../Common.h"
 
-#ifdef DEATH_TARGET_ANDROID
+#if defined(DEATH_TARGET_ANDROID)
 #	include <android/api-level.h>
 #endif
 
@@ -16,8 +16,7 @@ namespace nCine
 	}
 
 	TextureFormat::TextureFormat(GLenum internalFormat, GLenum type)
-		: internalFormat_(internalFormat), format_(-1),
-		type_(-1), isCompressed_(false)
+		: internalFormat_(internalFormat), format_(-1), type_(-1), isCompressed_(false)
 	{
 		findExternalFormat();
 		checkFormatSupport();
@@ -235,7 +234,7 @@ namespace nCine
 #	endif
 #endif
 			default:
-				FATAL_MSG_X("MIP maps not supported for internal format: 0x%x", internalFormat);
+				FATAL_MSG("MIP maps not supported for internal format: 0x%x", internalFormat);
 				break;
 		}
 
@@ -282,9 +281,9 @@ namespace nCine
 			found = oesCompressedFormat();
 #endif
 
-		FATAL_ASSERT_MSG_X(found, "Unknown internal format: 0x%x", internalFormat_);
+		FATAL_ASSERT_MSG(found, "Unknown internal format: 0x%x", internalFormat_);
 
-		LOGD_X("Internal format: 0x%x - type: 0x%x", internalFormat_, type_);
+		//LOGD("Internal format: 0x%x - type: 0x%x", internalFormat_, type_);
 	}
 
 	bool TextureFormat::integerFormat()

@@ -3,6 +3,10 @@
 #include "../Common.h"
 
 #include <Utf8.h>
+#include <IO/FileSystem.h>
+
+using namespace Death::Containers::Literals;
+using namespace Death::IO;
 
 namespace nCine
 {
@@ -70,12 +74,12 @@ namespace nCine
 
 	const String& AppConfiguration::dataPath() const
 	{
-		return fs::_dataPath;
+		return dataPath_;
 	}
 
 	String& AppConfiguration::dataPath()
 	{
-		return fs::_dataPath;
+		return dataPath_;
 	}
 
 #if defined(DEATH_TARGET_WINDOWS)

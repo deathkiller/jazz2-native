@@ -31,8 +31,8 @@ namespace nCine
 
 		String getCachedShaderPath(const char* shaderName);
 
-		bool loadFromCache(const char* shaderName, uint64_t shaderVersion, GLShaderProgram* program, GLShaderProgram::Introspection introspection);
-		bool saveToCache(const char* shaderName, uint64_t shaderVersion, GLShaderProgram* program);
+		bool loadFromCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program, GLShaderProgram::Introspection introspection);
+		bool saveToCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program);
 
 		/// Deletes all binary shaders that not belong to this platform from the cache directory
 		void prune();

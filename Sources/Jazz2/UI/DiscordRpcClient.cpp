@@ -309,7 +309,7 @@ namespace Jazz2::UI
 						}
 
 						//if (bytesRead > frameSize + 8) {
-						//	LOGW_X("Partial read (%i bytes left)", bytesRead - (frameSize + 8));
+						//	LOGW("Partial read (%i bytes left)", bytesRead - (frameSize + 8));
 						//}
 					}
 
@@ -338,7 +338,7 @@ namespace Jazz2::UI
 		while (client->_sockFd >= 0) {
 			int32_t bytesRead = ::read(client->_sockFd, buffer, sizeof(buffer));
 			if (bytesRead <= 0) {
-				LOGE_X("Failed to read from socket: %i", bytesRead);
+				LOGE("Failed to read from socket: %i", bytesRead);
 				int32_t sockFd = client->_sockFd;
 				if (sockFd >= 0) {
 					client->_sockFd = -1;
@@ -370,7 +370,7 @@ namespace Jazz2::UI
 			}
 
 			//if (bytesRead > frameSize + 8) {
-			//	LOGW_X("Partial read (%i bytes left)", bytesRead - (frameSize + 8));
+			//	LOGW("Partial read (%i bytes left)", bytesRead - (frameSize + 8));
 			//}
 		}
 #endif

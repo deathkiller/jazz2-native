@@ -2,14 +2,17 @@
 #include "../ContentResolver.h"
 
 #include "../../nCine/Base/Algorithms.h"
-#include "../../nCine/IO/FileSystem.h"
+
+#include <IO/FileSystem.h>
+
+using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
 	bool JJ2Episode::Open(const StringView& path)
 	{
 		auto s = fs::Open(path, FileAccessMode::Read);
-		RETURNF_ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
+		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
 		Name = fs::GetFileNameWithoutExtension(path);
 		lowercaseInPlace(Name);
@@ -101,7 +104,7 @@ namespace Jazz2::Compatibility
 	void JJ2Episode::Convert(const String& targetPath, std::function<JJ2Level::LevelToken(const StringView&)> levelTokenConversion, std::function<String(JJ2Episode*)> episodeNameConversion, std::function<Pair<String, String>(JJ2Episode*)> episodePrevNext)
 	{
 		auto so = fs::Open(targetPath, FileAccessMode::Write);
-		ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
+		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
 
 		so->WriteValue<uint64_t>(0x2095A59FF0BFBBEF);
 		so->WriteValue<uint8_t>(ContentResolver::EpisodeFile);

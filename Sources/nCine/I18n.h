@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Base/HashMap.h"
-#include "IO/IFileStream.h"
 
 #include <optional>
 
@@ -9,9 +8,11 @@
 #include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
+#include <IO/Stream.h>
 
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;
+using namespace Death::IO;
 
 namespace nCine
 {
@@ -52,7 +53,7 @@ namespace nCine
 
 		void Unload();
 		bool LoadFromFile(const StringView& path);
-		bool LoadFromFile(const std::unique_ptr<IFileStream>& fileHandle);
+		bool LoadFromFile(const std::unique_ptr<Stream>& fileHandle);
 
 		const char* LookupTranslation(const char* msgid, uint32_t* resultLength);
 		const char* LookupPlural(int n, const char* translation, uint32_t translationLength);
