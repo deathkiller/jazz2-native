@@ -44,11 +44,11 @@ namespace nCine
 			if (object->type_ == T::sType()) {
 				return static_cast<T*>(object);
 			} else { // Cannot cast
-				LOGF_X("Object %u is of type %u instead of %u", id, object->type_, T::sType());
+				LOGF("Object %u is of type %u instead of %u", id, object->type_, T::sType());
 				return nullptr;
 			}
 		} else {
-			LOGW_X("Object %u not found", id);
+			LOGW("Object %u not found", id);
 			return nullptr;
 		}
 	}

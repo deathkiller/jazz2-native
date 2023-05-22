@@ -21,7 +21,7 @@
 
 namespace nCine
 {
-#if defined(NCINE_DEBUG)
+#if defined(DEATH_DEBUG)
 	namespace
 	{
 		/// The string used to output OpenGL debug group information
@@ -363,7 +363,7 @@ namespace nCine
 		}
 
 		ZoneScoped;
-#if defined(NCINE_DEBUG)
+#if defined(DEATH_DEBUG)
 		// TODO: GLDebug
 		/*if (type_ == Type::SCREEN)
 			formatString(debugString, sizeof(debugString), "Draw screen viewport (0x%lx)", uintptr_t(this));
@@ -378,7 +378,7 @@ namespace nCine
 		{
 			ZoneScopedN("OnDrawViewport");
 			theApplication().appEventHandler_->OnDrawViewport(*this);
-			//LOGD_X("IAppEventHandler::OnDrawViewport() invoked with viewport 0x%lx", uintptr_t(this));
+			//LOGD("IAppEventHandler::OnDrawViewport() invoked with viewport 0x%lx", uintptr_t(this));
 		}
 
 		if (type_ == Type::WithTexture) {

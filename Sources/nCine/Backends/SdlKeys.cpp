@@ -83,7 +83,7 @@ namespace nCine
 			case SDLK_x:				return KeySym::X;
 			case SDLK_y:				return KeySym::Y;
 			case SDLK_z:				return KeySym::Z;
-			case SDLK_DELETE:			return KeySym::DELETE;
+			case SDLK_DELETE:			return KeySym::Delete;
 
 			case SDLK_KP_0:				return KeySym::KP0;
 			case SDLK_KP_1:				return KeySym::KP1;
@@ -252,7 +252,7 @@ namespace nCine
 			case KeySym::X:					return SDLK_x;
 			case KeySym::Y:					return SDLK_y;
 			case KeySym::Z:					return SDLK_z;
-			case KeySym::DELETE:			return SDLK_DELETE;
+			case KeySym::Delete:			return SDLK_DELETE;
 
 			case KeySym::KP0:				return SDLK_KP_0;
 			case KeySym::KP1:				return SDLK_KP_1;
@@ -400,7 +400,7 @@ namespace nCine
 			case KeySym::X:					return SDL_SCANCODE_X;
 			case KeySym::Y:					return SDL_SCANCODE_Y;
 			case KeySym::Z:					return SDL_SCANCODE_Z;
-			case KeySym::DELETE:			return SDL_SCANCODE_DELETE;
+			case KeySym::Delete:			return SDL_SCANCODE_DELETE;
 
 			case KeySym::KP0:				return SDL_SCANCODE_KP_0;
 			case KeySym::KP1:				return SDL_SCANCODE_KP_1;

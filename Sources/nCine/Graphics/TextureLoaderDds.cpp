@@ -1,13 +1,15 @@
 #include "TextureLoaderDds.h"
 
+using namespace Death::IO;
+
 namespace nCine
 {
-	TextureLoaderDds::TextureLoaderDds(std::unique_ptr<IFileStream> fileHandle)
+	TextureLoaderDds::TextureLoaderDds(std::unique_ptr<Stream> fileHandle)
 		: ITextureLoader(std::move(fileHandle))
 	{
 		DdsHeader header;
 
-		RETURN_ASSERT_MSG_X(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->GetFileName().data());
+		RETURN_ASSERT_MSG(fileHandle_->IsValid(), "File \"%s\" cannot be opened", fileHandle_->GetPath().data());
 		const bool headerRead = readHeader(header);
 		RETURN_ASSERT_MSG(headerRead, "DDS header cannot be read");
 		const bool formatParsed = parseFormat(header);
@@ -22,14 +24,14 @@ namespace nCine
 		fileHandle_->Read(&header, 128);
 
 		// Checking for the header presence
-		if (IFileStream::int32FromLE(header.dwMagic) == 0x20534444) { // "DDS "
+		if (Stream::Uint32FromLE(header.dwMagic) == 0x20534444) { // "DDS "
 			RETURNF_MSG("Not a DDS file");
 		}
 
 		headerSize_ = 128;
-		width_ = IFileStream::int32FromLE(header.dwWidth);
-		height_ = IFileStream::int32FromLE(header.dwHeight);
-		mipMapCount_ = IFileStream::int32FromLE(header.dwMipMapCount);
+		width_ = Stream::Uint32FromLE(header.dwWidth);
+		height_ = Stream::Uint32FromLE(header.dwHeight);
+		mipMapCount_ = Stream::Uint32FromLE(header.dwMipMapCount);
 
 		if (mipMapCount_ == 0) {
 			mipMapCount_ = 1;
@@ -42,14 +44,14 @@ namespace nCine
 	{
 		GLenum internalFormat = GL_RGB; // to suppress uninitialized variable warning
 
-		const uint32_t flags = IFileStream::int32FromLE(header.ddspf.dwFlags);
+		const uint32_t flags = Stream::Uint32FromLE(header.ddspf.dwFlags);
 
 		// Texture contains compressed RGB data, dwFourCC contains valid data
 		if (flags & DDPF_FOURCC) {
-			const uint32_t fourCC = IFileStream::int32FromLE(header.ddspf.dwFourCC);
+			const uint32_t fourCC = Stream::Uint32FromLE(header.ddspf.dwFourCC);
 
 			const char* fourCCchars = reinterpret_cast<const char*>(&fourCC);
-			LOGI_X("FourCC: \"%c%c%c%c\" (0x%x)", fourCCchars[0], fourCCchars[1], fourCCchars[2], fourCCchars[3], fourCC);
+			LOGI("FourCC: \"%c%c%c%c\" (0x%x)", fourCCchars[0], fourCCchars[1], fourCCchars[2], fourCCchars[3], fourCC);
 
 			// Parsing the FourCC format
 			switch (fourCC) {
@@ -77,7 +79,7 @@ namespace nCine
 					break;
 #endif
 				default:
-					RETURNF_MSG_X("Unsupported FourCC compression code: %u", fourCC);
+					RETURNF_MSG("Unsupported FourCC compression code: %u", fourCC);
 					break;
 			}
 
@@ -86,13 +88,13 @@ namespace nCine
 			// Texture contains uncompressed data
 			GLenum type = GL_UNSIGNED_BYTE;
 
-			const uint32_t bitCount = IFileStream::int32FromLE(header.ddspf.dwRGBBitCount);
-			const uint32_t redMask = IFileStream::int32FromLE(header.ddspf.dwRBitMask);
-			const uint32_t greenMask = IFileStream::int32FromLE(header.ddspf.dwGBitMask);
-			const uint32_t blueMask = IFileStream::int32FromLE(header.ddspf.dwBBitMask);
-			const uint32_t alphaMask = IFileStream::int32FromLE(header.ddspf.dwABitMask);
+			const uint32_t bitCount = Stream::Uint32FromLE(header.ddspf.dwRGBBitCount);
+			const uint32_t redMask = Stream::Uint32FromLE(header.ddspf.dwRBitMask);
+			const uint32_t greenMask = Stream::Uint32FromLE(header.ddspf.dwGBitMask);
+			const uint32_t blueMask = Stream::Uint32FromLE(header.ddspf.dwBBitMask);
+			const uint32_t alphaMask = Stream::Uint32FromLE(header.ddspf.dwABitMask);
 
-			LOGI_X("Pixel masks (%ubit): R:0x%x G:0x%x B:0x%x A:0x%x", bitCount, redMask, greenMask, blueMask, alphaMask);
+			LOGI("Pixel masks (%ubit): R:0x%x G:0x%x B:0x%x A:0x%x", bitCount, redMask, greenMask, blueMask, alphaMask);
 
 			// Texture contains uncompressed RGB data
 			// dwRGBBitCount and the RGB masks (dwRBitMask, dwRBitMask, dwRBitMask) contain valid data
@@ -132,7 +134,7 @@ namespace nCine
 				// dwRGBBitCount contains the alpha channel bitcount; dwABitMask contains valid data
 				internalFormat = GL_R8;
 			} else {
-				RETURNF_MSG_X("Unsupported DDS uncompressed pixel format: %u", flags);
+				RETURNF_MSG("Unsupported DDS uncompressed pixel format: %u", flags);
 			}
 
 			loadPixels(internalFormat, type);
@@ -143,12 +145,12 @@ namespace nCine
 		}
 
 		if (mipMapCount_ > 1) {
-			LOGI_X("MIP Maps: %d", mipMapCount_);
+			LOGI("MIP Maps: %d", mipMapCount_);
 			mipDataOffsets_ = std::make_unique<unsigned long[]>(mipMapCount_);
 			mipDataSizes_ = std::make_unique<unsigned long[]>(mipMapCount_);
 			unsigned long dataSizesSum = TextureFormat::calculateMipSizes(internalFormat, width_, height_, mipMapCount_, mipDataOffsets_.get(), mipDataSizes_.get());
 			if (dataSizesSum != dataSize_) {
-				LOGW_X("The sum of MIP maps size (%ld) is different than texture total data (%ld)", dataSizesSum, dataSize_);
+				LOGW("The sum of MIP maps size (%ld) is different than texture total data (%ld)", dataSizesSum, dataSize_);
 			}
 		}
 

@@ -6,15 +6,13 @@
 
 #include "ITextureLoader.h"
 
-#include <cstdint>
-
 namespace nCine
 {
 	/// PKM texture loader
 	class TextureLoaderPkm : public ITextureLoader
 	{
 	public:
-		explicit TextureLoaderPkm(std::unique_ptr<IFileStream> fileHandle);
+		explicit TextureLoaderPkm(std::unique_ptr<Death::IO::Stream> fileHandle);
 
 	private:
 		/// Header for the PKM header

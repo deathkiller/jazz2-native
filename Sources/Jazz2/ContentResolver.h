@@ -12,14 +12,17 @@
 #include "../nCine/Graphics/Sprite.h"
 #include "../nCine/Graphics/Texture.h"
 #include "../nCine/Graphics/Viewport.h"
-#include "../nCine/IO/FileSystem.h"
-#include "../nCine/IO/IFileStream.h"
 #include "../nCine/Base/HashMap.h"
 
 #include <Containers/Pair.h>
 #include <Containers/SmallVector.h>
+#include <Containers/StringView.h>
+#include <IO/FileSystem.h>
+#include <IO/Stream.h>
 
 using namespace Death::Containers;
+using namespace Death::Containers::Literals;
+using namespace Death::IO;
 using namespace nCine;
 
 #define ALLOW_RESCALE_SHADERS
@@ -295,13 +298,13 @@ namespace Jazz2
 		ContentResolver& operator=(const ContentResolver&) = delete;
 
 		GenericGraphicResource* RequestGraphicsAura(const StringView& path, uint16_t paletteOffset);
-		static void ReadImageFromFile(std::unique_ptr<IFileStream>& s, uint8_t* data, int32_t width, int32_t height, int32_t channelCount);
+		static void ReadImageFromFile(std::unique_ptr<Stream>& s, uint8_t* data, int32_t width, int32_t height, int32_t channelCount);
 		
 		std::unique_ptr<Shader> CompileShader(const char* shaderName, Shader::DefaultVertex vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled);
 		std::unique_ptr<Shader> CompileShader(const char* shaderName, const char* vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled);
 		
 		void RecreateGemPalettes();
-#if defined(NCINE_DEBUG)
+#if defined(DEATH_DEBUG)
 		void MigrateGraphics(const StringView& path);
 #endif
 

@@ -94,7 +94,7 @@ namespace nCine
 	{
 		const bool hasLoaded = loadFromMemory(bufferPtr, bufferSize);
 		if (!hasLoaded) {
-			LOGE_X("Texture cannot be loaded");
+			LOGE("Texture cannot be loaded");
 		}
 	}
 
@@ -103,7 +103,7 @@ namespace nCine
 	{
 		const bool hasLoaded = loadFromFile(filename);
 		if (!hasLoaded) {
-			LOGE_X("Texture \"%s\" cannot be loaded", filename);
+			LOGE("Texture \"%s\" cannot be loaded", filename);
 		}
 	}
 
@@ -354,8 +354,8 @@ namespace nCine
 	{
 		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
 		const int maxTextureSize = gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_TEXTURE_SIZE);
-		FATAL_ASSERT_MSG_X(texLoader.width() <= maxTextureSize, "Texture width %d is bigger than device maximum %d", texLoader.width(), maxTextureSize);
-		FATAL_ASSERT_MSG_X(texLoader.height() <= maxTextureSize, "Texture height %d is bigger than device maximum %d", texLoader.height(), maxTextureSize);
+		FATAL_ASSERT_MSG(texLoader.width() <= maxTextureSize, "Texture width %d is bigger than device maximum %d", texLoader.width(), maxTextureSize);
+		FATAL_ASSERT_MSG(texLoader.height() <= maxTextureSize, "Texture height %d is bigger than device maximum %d", texLoader.height(), maxTextureSize);
 
 		glTexture_->texParameteri(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexture_->texParameteri(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

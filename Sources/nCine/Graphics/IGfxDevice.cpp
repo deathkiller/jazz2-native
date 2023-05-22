@@ -19,12 +19,12 @@ namespace nCine
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 	EM_BOOL IGfxDevice::emscriptenHandleResize(int eventType, const EmscriptenUiEvent* event, void* userData)
 	{
-#	if defined(NCINE_LOG)
+#	if defined(DEATH_LOG)
 		double cssWidth = 0.0;
 		double cssHeight = 0.0;
 		emscripten_get_element_css_size("canvas", &cssWidth, &cssHeight);
 		float pixelRatio2 = emscripten_get_device_pixel_ratio();
-		LOGI_X("Canvas was resized to %ix%i (canvas size is %ix%i; ratio is %f)", (int)(event->windowInnerWidth * pixelRatio2), (int)(event->windowInnerHeight * pixelRatio2), (int)cssWidth, (int)cssHeight, pixelRatio2);
+		LOGI("Canvas was resized to %ix%i (canvas size is %ix%i; ratio is %f)", (int)(event->windowInnerWidth * pixelRatio2), (int)(event->windowInnerHeight * pixelRatio2), (int)cssWidth, (int)cssHeight, pixelRatio2);
 #	endif
 		if (event->windowInnerWidth > 0 && event->windowInnerHeight > 0) {
 			float pixelRatio = emscripten_get_device_pixel_ratio();
@@ -36,12 +36,12 @@ namespace nCine
 
 	EM_BOOL IGfxDevice::emscriptenHandleFullscreen(int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData)
 	{
-#	if defined(NCINE_LOG)
+#	if defined(DEATH_LOG)
 		double cssWidth = 0.0;
 		double cssHeight = 0.0;
 		emscripten_get_element_css_size("canvas", &cssWidth, &cssHeight);
 		float pixelRatio2 = emscripten_get_device_pixel_ratio();
-		LOGI_X("Canvas was resized to %ix%i (canvas size is %ix%i; ratio is %f)", (int)(event->elementWidth * pixelRatio2), (int)(event->elementHeight * pixelRatio2), (int)cssWidth, (int)cssHeight, pixelRatio2);
+		LOGI("Canvas was resized to %ix%i (canvas size is %ix%i; ratio is %f)", (int)(event->elementWidth * pixelRatio2), (int)(event->elementHeight * pixelRatio2), (int)cssWidth, (int)cssHeight, pixelRatio2);
 #	endif
 		IGfxDevice* gfxDevice = reinterpret_cast<IGfxDevice*>(userData);
 		gfxDevice->isFullscreen_ = event->isFullscreen;

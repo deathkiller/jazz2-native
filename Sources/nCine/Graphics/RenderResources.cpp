@@ -16,8 +16,11 @@
 #if defined(WITH_EMBEDDED_SHADERS)
 #	include "shader_strings.h"
 #else
-#	include "../IO/FileSystem.h"	// for GetDataPath()
+#	include <IO/FileSystem.h>
 #endif
+
+using namespace Death::Containers::Literals;
+using namespace Death::IO;
 
 namespace nCine
 {
@@ -260,9 +263,9 @@ namespace nCine
 #if defined(WITH_EMBEDDED_SHADERS)
 			constexpr uint64_t shaderVersion = EmbeddedShadersVersion;
 #else
-			String vertexPath = fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.vertexShader) });
-			String fragmentPath = fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, StringView(shaderToLoad.fragmentShader) });
-			uint64_t shaderVersion = std::max(fs::LastModificationTime(vertexPath).Ticks, fs::LastModificationTime(fragmentPath).Ticks);
+			String vertexPath = fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, StringView(shaderToLoad.vertexShader) });
+			String fragmentPath = fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, StringView(shaderToLoad.fragmentShader) });
+			uint64_t shaderVersion = std::max(fs::GetLastModificationTime(vertexPath).Ticks, fs::GetLastModificationTime(fragmentPath).Ticks);
 #endif
 
 			shaderToLoad.shaderProgram = std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate);
@@ -320,7 +323,7 @@ namespace nCine
 				GLUniformBlockCache* block = blocks.uniformBlock(Material::InstancesBlockName);
 				if (block != nullptr) {
 					int batchSize = maxUniformBlockSize / block->size();
-					LOGI_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderToLoad.shaderName,
+					LOGI("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderToLoad.shaderName,
 						block->size() - block->alignAmount(), block->alignAmount(), batchSize);
 
 					bool hasLinkedFinal = false;
@@ -344,14 +347,14 @@ namespace nCine
 						}
 
 						batchSize--;
-						LOGW_X("Failed to compile the shader, recompiling with batch size: %i", batchSize);
+						LOGW("Failed to compile the shader, recompiling with batch size: %i", batchSize);
 					}
 
-					FATAL_ASSERT_MSG_X(hasLinkedFinal, "Failed to compile shader \"%s\"", shaderToLoad.shaderName);
+					FATAL_ASSERT_MSG(hasLinkedFinal, "Failed to compile shader \"%s\"", shaderToLoad.shaderName);
 				}
 			} else {
 				const bool hasLinked = shaderToLoad.shaderProgram->link(shaderToLoad.introspection);
-				FATAL_ASSERT_MSG_X(hasLinked, "Failed to compile shader \"%s\"", shaderToLoad.shaderName);
+				FATAL_ASSERT_MSG(hasLinked, "Failed to compile shader \"%s\"", shaderToLoad.shaderName);
 			}
 
 			binaryShaderCache_->saveToCache(shaderToLoad.shaderName, shaderVersion, shaderToLoad.shaderProgram.get());

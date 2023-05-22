@@ -3,7 +3,7 @@
 #include "Compatibility/JJ2Anims.Palettes.h"
 #include "LevelHandler.h"
 #include "Tiles/TileSet.h"
-#if defined(NCINE_DEBUG)
+#if defined(DEATH_DEBUG)
 #	include "Compatibility/JJ2Anims.h"
 #endif
 
@@ -11,8 +11,6 @@
 #include "../nCine/AppConfiguration.h"
 #include "../nCine/ServiceLocator.h"
 #include "../nCine/IO/CompressionUtils.h"
-#include "../nCine/IO/IFileStream.h"
-#include "../nCine/IO/MemoryFile.h"
 #include "../nCine/Graphics/ITextureLoader.h"
 #include "../nCine/Graphics/RenderResources.h"
 #include "../nCine/Base/Random.h"
@@ -25,6 +23,7 @@
 #endif
 
 #include <Containers/StringStlView.h>
+#include <IO/MemoryStream.h>
 
 #define SIMDJSON_EXCEPTIONS 0
 #include "../simdjson/simdjson.h"
@@ -65,43 +64,43 @@ namespace Jazz2
 		// If `MANAGE_EXTERNAL_STORAGE` permission is granted, try to use also alternative paths
 		if (AndroidJniWrap_Activity::hasExternalStoragePermission()) {
 			String externalStorage = fs::GetExternalStorage();
-			String externalPath = fs::JoinPath(externalStorage, "Games/Jazz² Resurrection/"_s);
-			_sourcePath = fs::JoinPath(externalPath, "Source/"_s);
-			if (!fs::IsDirectory(_sourcePath)) {
-				externalPath = fs::JoinPath(externalStorage, "Games/Jazz2 Resurrection/"_s);
-				_sourcePath = fs::JoinPath(externalPath, "Source/"_s);
-				if (!fs::IsDirectory(_sourcePath)) {
-					externalPath = fs::JoinPath(externalStorage, "Download/Jazz² Resurrection/"_s);
-					_sourcePath = fs::JoinPath(externalPath, "Source/"_s);
-					if (!fs::IsDirectory(_sourcePath)) {
-						externalPath = fs::JoinPath(externalStorage, "Download/Jazz2 Resurrection/"_s);
-						_sourcePath = fs::JoinPath(externalPath, "Source/"_s);
-						if (!fs::IsDirectory(_sourcePath)) {
+			String externalPath = fs::CombinePath(externalStorage, "Games/Jazz² Resurrection/"_s);
+			_sourcePath = fs::CombinePath(externalPath, "Source/"_s);
+			if (!fs::DirectoryExists(_sourcePath)) {
+				externalPath = fs::CombinePath(externalStorage, "Games/Jazz2 Resurrection/"_s);
+				_sourcePath = fs::CombinePath(externalPath, "Source/"_s);
+				if (!fs::DirectoryExists(_sourcePath)) {
+					externalPath = fs::CombinePath(externalStorage, "Download/Jazz² Resurrection/"_s);
+					_sourcePath = fs::CombinePath(externalPath, "Source/"_s);
+					if (!fs::DirectoryExists(_sourcePath)) {
+						externalPath = fs::CombinePath(externalStorage, "Download/Jazz2 Resurrection/"_s);
+						_sourcePath = fs::CombinePath(externalPath, "Source/"_s);
+						if (!fs::DirectoryExists(_sourcePath)) {
 							auto& app = static_cast<AndroidApplication&>(theApplication());
 							StringView dataPath = app.externalDataPath();
-							_sourcePath = fs::JoinPath(dataPath, "Source/"_s);
-							if (fs::IsDirectory(_sourcePath)) {
+							_sourcePath = fs::CombinePath(dataPath, "Source/"_s);
+							if (fs::DirectoryExists(_sourcePath)) {
 								externalPath = dataPath;
 							} else {
-								externalPath = fs::JoinPath(externalStorage, "Games/Jazz² Resurrection/"_s);
-								_sourcePath = fs::JoinPath(externalPath, "Source/"_s);
+								externalPath = fs::CombinePath(externalStorage, "Games/Jazz² Resurrection/"_s);
+								_sourcePath = fs::CombinePath(externalPath, "Source/"_s);
 							}
 						}
 					}
 				}
 			}
-			_cachePath = fs::JoinPath(externalPath, "Cache/"_s);
+			_cachePath = fs::CombinePath(externalPath, "Cache/"_s);
 		} else {
 			auto& app = static_cast<AndroidApplication&>(theApplication());
 			StringView dataPath = app.externalDataPath();
-			_cachePath = fs::JoinPath(dataPath, "Cache/"_s);
-			_sourcePath = fs::JoinPath(dataPath, "Source/"_s);
+			_cachePath = fs::CombinePath(dataPath, "Cache/"_s);
+			_sourcePath = fs::CombinePath(dataPath, "Source/"_s);
 		}
 #elif defined(DEATH_TARGET_APPLE)
 		// Returns local application data directory on Apple
 		const String& appData = fs::GetSavePath("Jazz² Resurrection"_s);
-		_cachePath = fs::JoinPath(appData, "Cache/"_s);
-		_sourcePath = fs::JoinPath(appData, "Source/"_s);
+		_cachePath = fs::CombinePath(appData, "Cache/"_s);
+		_sourcePath = fs::CombinePath(appData, "Source/"_s);
 #elif defined(DEATH_TARGET_UNIX)
 #	if defined(NCINE_OVERRIDE_CONTENT_PATH)
 		_contentPath = NCINE_OVERRIDE_CONTENT_PATH;
@@ -111,12 +110,12 @@ namespace Jazz2
 #		endif
 		_contentPath = "/usr/share/" NCINE_LINUX_PACKAGE "/Content/";
 #	endif
-		if (fs::IsDirectory(_contentPath)) {
+		if (fs::DirectoryExists(_contentPath)) {
 			// Shared Content exists, try to use standard XDG paths
 			auto localStorage = fs::GetLocalStorage();
 			if (!localStorage.empty()) {
-				_cachePath = fs::JoinPath(localStorage, "Jazz² Resurrection/Cache/"_s);
-				_sourcePath = fs::JoinPath(localStorage, "Jazz² Resurrection/Source/"_s);
+				_cachePath = fs::CombinePath(localStorage, "Jazz² Resurrection/Cache/"_s);
+				_sourcePath = fs::CombinePath(localStorage, "Jazz² Resurrection/Source/"_s);
 			} else {
 				_cachePath = "Cache/"_s;
 				_sourcePath = "Source/"_s;
@@ -136,17 +135,17 @@ namespace Jazz2
 
 			for (char letter = 'D'; letter <= 'F'; letter++) {
 				PathTemplate1[4] = letter;
-				_sourcePath = fs::JoinPath(PathTemplate1, "Source\\"_s);
-				if (fs::IsDirectory(_sourcePath)) {
-					_cachePath = fs::JoinPath(PathTemplate1, "Cache\\"_s);
+				_sourcePath = fs::CombinePath(PathTemplate1, "Source\\"_s);
+				if (fs::DirectoryExists(_sourcePath)) {
+					_cachePath = fs::CombinePath(PathTemplate1, "Cache\\"_s);
 					found = true;
 					break;
 				}
 
 				PathTemplate2[4] = letter;
-				_sourcePath = fs::JoinPath(PathTemplate2, "Source\\"_s);
-				if (fs::IsDirectory(_sourcePath)) {
-					_cachePath = fs::JoinPath(PathTemplate2, "Cache\\"_s);
+				_sourcePath = fs::CombinePath(PathTemplate2, "Source\\"_s);
+				if (fs::DirectoryExists(_sourcePath)) {
+					_cachePath = fs::CombinePath(PathTemplate2, "Cache\\"_s);
 					found = true;
 					break;
 				}
@@ -156,8 +155,8 @@ namespace Jazz2
 		if (!found) {
 			// Returns local application data directory on Windows RT
 			const String& appData = fs::GetSavePath("Jazz² Resurrection"_s);
-			_cachePath = fs::JoinPath(appData, "Cache\\"_s);
-			_sourcePath = fs::JoinPath(appData, "Source\\"_s);
+			_cachePath = fs::CombinePath(appData, "Cache\\"_s);
+			_sourcePath = fs::CombinePath(appData, "Source\\"_s);
 		}
 		_contentPath = "Content\\"_s;
 #endif
@@ -245,7 +244,7 @@ namespace Jazz2
 		}
 
 		// Try to load it
-		auto s = fs::Open(fs::JoinPath({ GetContentPath(), "Metadata"_s, pathNormalized + ".res"_s }), FileAccessMode::Read);
+		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Metadata"_s, pathNormalized + ".res"_s }), FileAccessMode::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit
@@ -370,9 +369,9 @@ namespace Jazz2
 						std::string_view assetPath;
 						if (assetPathItem.get(assetPath) == SUCCESS && !assetPath.empty()) {
 							auto assetPathNormalized = fs::ToNativeSeparators(assetPath);
-							String fullPath = fs::JoinPath({ GetContentPath(), "Animations"_s, assetPathNormalized });
+							String fullPath = fs::CombinePath({ GetContentPath(), "Animations"_s, assetPathNormalized });
 							if (!fs::IsReadableFile(fullPath)) {
-								fullPath = fs::JoinPath({ GetCachePath(), "Animations"_s, assetPathNormalized });
+								fullPath = fs::CombinePath({ GetCachePath(), "Animations"_s, assetPathNormalized });
 								if (!fs::IsReadableFile(fullPath)) {
 									continue;
 								}
@@ -408,7 +407,7 @@ namespace Jazz2
 			return RequestGraphicsAura(pathNormalized, paletteOffset);
 		}
 
-		auto s = fs::Open(fs::JoinPath({ GetContentPath(), "Animations"_s, pathNormalized + ".res"_s }), FileAccessMode::Read);
+		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Animations"_s, pathNormalized + ".res"_s }), FileAccessMode::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit, also if not found try to use cache
@@ -427,7 +426,7 @@ namespace Jazz2
 			std::unique_ptr<GenericGraphicResource> graphics = std::make_unique<GenericGraphicResource>();
 			graphics->Flags |= GenericGraphicResourceFlags::Referenced;
 
-			String fullPath = fs::JoinPath({ GetContentPath(), "Animations"_s, pathNormalized });
+			String fullPath = fs::CombinePath({ GetContentPath(), "Animations"_s, pathNormalized });
 			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
 			if (texLoader->hasLoaded()) {
 				auto texFormat = texLoader->texFormat().internalFormat();
@@ -500,7 +499,7 @@ namespace Jazz2
 				graphics->Coldspot = GetVector2iFromJson(doc["Coldspot"], Vector2i(InvalidValue, InvalidValue));
 				graphics->Gunspot = GetVector2iFromJson(doc["Gunspot"], Vector2i(InvalidValue, InvalidValue));
 
-#if defined(NCINE_DEBUG)
+#if defined(DEATH_DEBUG)
 				MigrateGraphics(pathNormalized);
 #endif
 				return _cachedGraphics.emplace(Pair(String(pathNormalized), paletteOffset), std::move(graphics)).first->second.get();
@@ -513,9 +512,9 @@ namespace Jazz2
 	GenericGraphicResource* ContentResolver::RequestGraphicsAura(const StringView& path, uint16_t paletteOffset)
 	{
 		// Try "Content" directory first, then "Cache" directory
-		String fullPath = fs::JoinPath({ GetContentPath(), "Animations"_s, path });
+		String fullPath = fs::CombinePath({ GetContentPath(), "Animations"_s, path });
 		if (!fs::IsReadableFile(fullPath)) {
-			fullPath = fs::JoinPath({ GetCachePath(), "Animations"_s, path });
+			fullPath = fs::CombinePath({ GetCachePath(), "Animations"_s, path });
 		}
 
 		auto s = fs::Open(fullPath, FileAccessMode::Read);
@@ -623,7 +622,7 @@ namespace Jazz2
 		return _cachedGraphics.emplace(Pair(String(path), paletteOffset), std::move(graphics)).first->second.get();
 	}
 
-	void ContentResolver::ReadImageFromFile(std::unique_ptr<IFileStream>& s, uint8_t* data, int32_t width, int32_t height, int32_t channelCount)
+	void ContentResolver::ReadImageFromFile(std::unique_ptr<Stream>& s, uint8_t* data, int32_t width, int32_t height, int32_t channelCount)
 	{
 		typedef union {
 			struct {
@@ -694,13 +693,13 @@ namespace Jazz2
 	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(const StringView& path, uint16_t captionTileId, bool applyPalette, const uint8_t* paletteRemapping)
 	{
 		// Try "Content" directory first, then "Cache" directory
-		String fullPath = fs::JoinPath({ GetContentPath(), "Tilesets"_s, path + ".j2t"_s });
+		String fullPath = fs::CombinePath({ GetContentPath(), "Tilesets"_s, path + ".j2t"_s });
 		if (!fs::IsReadableFile(fullPath)) {
-			fullPath = fs::JoinPath({ GetCachePath(), "Tilesets"_s, path + ".j2t"_s });
+			fullPath = fs::CombinePath({ GetCachePath(), "Tilesets"_s, path + ".j2t"_s });
 		}
 
 		auto s = fs::Open(fullPath, FileAccessMode::Read);
-		if (!s->IsOpened()) {
+		if (!s->IsValid()) {
 			return nullptr;
 		}
 
@@ -726,7 +725,7 @@ namespace Jazz2
 		if (result != DecompressionResult::Success) {
 			return nullptr;
 		}
-		MemoryFile uc(uncompressedBuffer.get(), uncompressedSize);
+		MemoryStream uc(uncompressedBuffer.get(), uncompressedSize);
 
 		// Palette
 		if (applyPalette) {
@@ -808,21 +807,21 @@ namespace Jazz2
 	bool ContentResolver::LevelExists(const StringView& episodeName, const StringView& levelName)
 	{
 		// Try "Content" directory first, then "Cache" directory
-		return (fs::IsReadableFile(fs::JoinPath({ GetContentPath(), "Episodes"_s, episodeName, levelName + ".j2l"_s })) || 
-				fs::IsReadableFile(fs::JoinPath({ GetCachePath(), "Episodes"_s, episodeName, levelName + ".j2l"_s })));
+		return (fs::IsReadableFile(fs::CombinePath({ GetContentPath(), "Episodes"_s, episodeName, levelName + ".j2l"_s })) || 
+				fs::IsReadableFile(fs::CombinePath({ GetCachePath(), "Episodes"_s, episodeName, levelName + ".j2l"_s })));
 	}
 
 	bool ContentResolver::LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty)
 	{
 		// Try "Content" directory first, then "Cache" directory
 		auto pathNormalized = fs::ToNativeSeparators(path);
-		String fullPath = fs::JoinPath({ GetContentPath(), "Episodes"_s, pathNormalized + ".j2l"_s });
+		String fullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, pathNormalized + ".j2l"_s });
 		if (!fs::IsReadableFile(fullPath)) {
-			fullPath = fs::JoinPath({ GetCachePath(), "Episodes"_s, pathNormalized + ".j2l"_s });
+			fullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, pathNormalized + ".j2l"_s });
 		}
 
 		auto s = fs::Open(fullPath, FileAccessMode::Read);
-		RETURNF_ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
+		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
 		uint64_t signature = s->ReadValue<uint64_t>();
 		uint8_t fileType = s->ReadValue<uint8_t>();
@@ -841,7 +840,7 @@ namespace Jazz2
 
 		auto result = CompressionUtils::Inflate(compressedBuffer.get(), compressedSize, uncompressedBuffer.get(), uncompressedSize);
 		RETURNF_ASSERT_MSG(result == DecompressionResult::Success, "File cannot be uncompressed");
-		MemoryFile uc(uncompressedBuffer.get(), uncompressedSize);
+		MemoryStream uc(uncompressedBuffer.get(), uncompressedSize);
 
 		// Read metadata
 		uint8_t nameSize = uc.ReadValue<uint8_t>();
@@ -983,9 +982,9 @@ namespace Jazz2
 
 	std::optional<Episode> ContentResolver::GetEpisode(const StringView& name)
 	{
-		String fullPath = fs::JoinPath({ GetContentPath(), "Episodes"_s, name + ".j2e"_s });
+		String fullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, name + ".j2e"_s });
 		if (!fs::IsReadableFile(fullPath)) {
-			fullPath = fs::JoinPath({ GetCachePath(), "Episodes"_s, name + ".j2e"_s });
+			fullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, name + ".j2e"_s });
 		}
 		return GetEpisodeByPath(fullPath);
 	}
@@ -1031,10 +1030,10 @@ namespace Jazz2
 
 	std::unique_ptr<AudioStreamPlayer> ContentResolver::GetMusic(const StringView& path)
 	{
-		String fullPath = fs::JoinPath({ GetContentPath(), "Music"_s, path });
+		String fullPath = fs::CombinePath({ GetContentPath(), "Music"_s, path });
 		if (!fs::IsReadableFile(fullPath)) {
 			// "Source" directory must be case in-sensitive
-			fullPath = fs::FindPathCaseInsensitive(fs::JoinPath(GetSourcePath(), path));
+			fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(GetSourcePath(), path));
 		}
 		if (!fs::IsReadableFile(fullPath)) {
 			return nullptr;
@@ -1051,8 +1050,8 @@ namespace Jazz2
 		auto& font = _fonts[(int32_t)fontType];
 		if (font == nullptr) {
 			switch (fontType) {
-				case FontType::Small: font = std::make_unique<UI::Font>(fs::JoinPath({ GetContentPath(), "Animations"_s, "UI"_s, "font_small.png"_s }), _palettes); break;
-				case FontType::Medium: font = std::make_unique<UI::Font>(fs::JoinPath({ GetContentPath(), "Animations"_s, "UI"_s, "font_medium.png"_s }), _palettes); break;
+				case FontType::Small: font = std::make_unique<UI::Font>(fs::CombinePath({ GetContentPath(), "Animations"_s, "UI"_s, "font_small.png"_s }), _palettes); break;
+				case FontType::Medium: font = std::make_unique<UI::Font>(fs::CombinePath({ GetContentPath(), "Animations"_s, "UI"_s, "font_medium.png"_s }), _palettes); break;
 				default: return nullptr;
 			}
 		}
@@ -1162,7 +1161,7 @@ namespace Jazz2
 			ASSERT(block != nullptr);
 			if (block != nullptr) {
 				batchSize = maxUniformBlockSize / block->size();
-				LOGI_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderName,
+				LOGI("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderName,
 					block->size() - block->alignAmount(), block->alignAmount(), batchSize);
 				
 				bool hasLinked = false;
@@ -1173,7 +1172,7 @@ namespace Jazz2
 					}
 
 					batchSize--;
-					LOGW_X("Failed to compile the shader, recompiling with batch size: %i", batchSize);
+					LOGW("Failed to compile the shader, recompiling with batch size: %i", batchSize);
 				}
 
 				if (!hasLinked) {
@@ -1220,7 +1219,7 @@ namespace Jazz2
 			ASSERT(block != nullptr);
 			if (block != nullptr) {
 				batchSize = maxUniformBlockSize / block->size();
-				LOGI_X("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderName,
+				LOGI("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderName,
 					block->size() - block->alignAmount(), block->alignAmount(), batchSize);
 
 				bool hasLinked = false;
@@ -1231,7 +1230,7 @@ namespace Jazz2
 					}
 
 					batchSize--;
-					LOGW_X("Failed to compile the shader, recompiling with batch size: %i", batchSize);
+					LOGW("Failed to compile the shader, recompiling with batch size: %i", batchSize);
 				}
 
 				if (!hasLinked) {
@@ -1300,15 +1299,15 @@ namespace Jazz2
 		}
 	}
 
-#if defined(NCINE_DEBUG)
+#if defined(DEATH_DEBUG)
 	void ContentResolver::MigrateGraphics(const StringView& path)
 	{
-		String auraPath = fs::JoinPath({ GetContentPath(), "Animations"_s, path.exceptSuffix(4) + ".aura"_s });
-		if (fs::IsFile(auraPath)) {
+		String auraPath = fs::CombinePath({ GetContentPath(), "Animations"_s, path.exceptSuffix(4) + ".aura"_s });
+		if (fs::FileExists(auraPath)) {
 			return;
 		}
 
-		auto s = fs::Open(fs::JoinPath({ GetContentPath(), "Animations"_s, path + ".res"_s }), FileAccessMode::Read);
+		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Animations"_s, path + ".res"_s }), FileAccessMode::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit, also if not found try to use cache
@@ -1324,7 +1323,7 @@ namespace Jazz2
 		ondemand::parser parser;
 		ondemand::document doc;
 		if (parser.iterate(buffer.get(), fileSize, fileSize + simdjson::SIMDJSON_PADDING).get(doc) == SUCCESS) {
-			String fullPath = fs::JoinPath({ GetContentPath(), "Animations"_s, path });
+			String fullPath = fs::CombinePath({ GetContentPath(), "Animations"_s, path });
 			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
 			if (texLoader->hasLoaded()) {
 				auto texFormat = texLoader->texFormat().internalFormat();
@@ -1369,7 +1368,7 @@ namespace Jazz2
 
 				// Write to .aura file
 				auto so = fs::Open(auraPath, FileAccessMode::Write);
-				ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
+				ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
 
 				uint8_t flags = 0x80;
 				if (palette == nullptr) {

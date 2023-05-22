@@ -3,6 +3,7 @@
 
 #include "AudioBuffer.h"
 #include "IAudioLoader.h"
+#include "../../Common.h"
 
 namespace nCine
 {
@@ -28,7 +29,7 @@ namespace nCine
 		alGetError();
 		alGenBuffers(1, &bufferId_);
 		const ALenum error = alGetError();
-		FATAL_ASSERT_MSG_X(error == AL_NO_ERROR, "alGenBuffers failed: 0x%x", error);
+		FATAL_ASSERT_MSG(error == AL_NO_ERROR, "alGenBuffers failed: 0x%x", error);
 	}
 
 	AudioBuffer::AudioBuffer(const unsigned char* bufferPtr, unsigned long int bufferSize)
@@ -45,7 +46,7 @@ namespace nCine
 	{
 		const bool hasLoaded = loadFromFile(filename);
 		if (!hasLoaded) {
-			LOGE_X("Audio file \"%s\" cannot be loaded", filename.data());
+			LOGE("Audio file \"%s\" cannot be loaded", filename.data());
 		}
 	}
 
@@ -140,7 +141,7 @@ namespace nCine
 		// On iOS `alBufferDataStatic()` could be used instead
 		alBufferData(bufferId_, format, bufferPtr, bufferSize, frequency_);
 		const ALenum error = alGetError();
-		//RETURNF_ASSERT_MSG_X(error == AL_NO_ERROR, "alBufferData failed: 0x%x", error);
+		//RETURNF_ASSERT_MSG(error == AL_NO_ERROR, "alBufferData failed: 0x%x", error);
 
 		numSamples_ = bufferSize / (numChannels_ * bytesPerSample_);
 		duration_ = float(numSamples_) / frequency_;
@@ -150,9 +151,9 @@ namespace nCine
 
 	bool AudioBuffer::load(IAudioLoader& audioLoader)
 	{
-		//RETURNF_ASSERT_MSG_X(audioLoader.bytesPerSample() == 1 || audioLoader.bytesPerSample() == 2,
+		//RETURNF_ASSERT_MSG(audioLoader.bytesPerSample() == 1 || audioLoader.bytesPerSample() == 2,
 		//                     "Unsupported number of bytes per sample: %d", audioLoader.bytesPerSample());
-		//RETURNF_ASSERT_MSG_X(audioLoader.numChannels() == 1 || audioLoader.numChannels() == 2,
+		//RETURNF_ASSERT_MSG(audioLoader.numChannels() == 1 || audioLoader.numChannels() == 2,
 		//                     "Unsupported number of channels: %d", audioLoader.numChannels());
 
 		bytesPerSample_ = audioLoader.bytesPerSample();

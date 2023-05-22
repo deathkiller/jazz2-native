@@ -45,7 +45,7 @@
 //	//FATAL_ASSERT(properties.pixels != nullptr);
 //	//ASSERT(properties.format == Format::RGB8 || properties.format == Format::RGBA8);
 //
-//	LOGI_X("Saving \"%s\"", fileHandle->filename());
+//	LOGI("Saving \"%s\"", fileHandle->filename());
 //	if (fileHandle->IsOpened() == false)
 //		return false;
 //
@@ -56,7 +56,7 @@
 //	pngPtr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 //	if (pngPtr == nullptr)
 //	{
-//		LOGE_X("Could not allocate write struct");
+//		LOGE("Could not allocate write struct");
 //		freePngMemory(pngPtr, infoPtr);
 //		return false;
 //	}
@@ -65,7 +65,7 @@
 //	infoPtr = png_create_info_struct(pngPtr);
 //	if (infoPtr == nullptr)
 //	{
-//		LOGE_X("Could not allocate info struct");
+//		LOGE("Could not allocate info struct");
 //		freePngMemory(pngPtr, infoPtr);
 //		return false;
 //	}

@@ -115,6 +115,7 @@ namespace nCine
 
 		int argc_;
 		NativeArgument* argv_;
+		String dataPath_;
 
 		friend class MainApplication;
 	};

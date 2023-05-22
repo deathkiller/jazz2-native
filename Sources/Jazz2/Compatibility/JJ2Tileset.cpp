@@ -3,14 +3,18 @@
 #include "JJ2Block.h"
 
 #include "../../nCine/IO/CompressionUtils.h"
-#include "../../nCine/IO/GrowableMemoryFile.h"
+
+#include <IO/FileSystem.h>
+#include <IO/MemoryStream.h>
+
+using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
 	bool JJ2Tileset::Open(const StringView& path, bool strictParser)
 	{
 		auto s = fs::Open(path, FileAccessMode::Read);
-		RETURNF_ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
+		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
 		// Skip copyright notice
 		s->Seek(180, SeekOrigin::Current);
@@ -166,7 +170,7 @@ namespace Jazz2::Compatibility
 		int height = ((_tileCount - 1) / TilesPerRow + 1) * BlockSize;
 
 		auto so = fs::Open(targetPath, FileAccessMode::Write);
-		ASSERT_MSG(so->IsOpened(), "Cannot open file for writing");
+		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
 
 		constexpr uint8_t flags = 0x20 | 0x40; // Mask and palette included
 
@@ -178,7 +182,7 @@ namespace Jazz2::Compatibility
 		so->WriteValue<uint32_t>(width);
 		so->WriteValue<uint32_t>(height);
 
-		GrowableMemoryFile co(1024 * 1024);
+		MemoryStream co(1024 * 1024);
 
 		// Palette
 		uint32_t palette[countof(_palette)];

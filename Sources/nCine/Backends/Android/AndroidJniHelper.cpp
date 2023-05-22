@@ -92,7 +92,7 @@ namespace nCine
 
 				// Cache the value of SDK version to avoid going through JNI in the future
 				sdkVersion_ = AndroidJniClass_Version::sdkInt();
-				LOGI_X("Android API version - NDK: %d, JNI: %d", __ANDROID_API__, sdkVersion_);
+				LOGI("Android API version - NDK: %d, JNI: %d", __ANDROID_API__, sdkVersion_);
 			}
 		}
 	}
@@ -155,7 +155,7 @@ namespace nCine
 		ASSERT(name != nullptr);
 		jclass javaClass = AndroidJniHelper::jniEnv->FindClass(name);
 		if (javaClass == nullptr) {
-			LOGE_X("Cannot find Java class \"%s\"", name);
+			LOGE("Cannot find Java class \"%s\"", name);
 		}
 		return javaClass;
 	}
@@ -168,7 +168,7 @@ namespace nCine
 		if (javaClass != nullptr) {
 			mid = AndroidJniHelper::jniEnv->GetStaticMethodID(javaClass, name, signature);
 			if (mid == nullptr) {
-				LOGE_X("Cannot get static method \"%s()\" with signature \"%s\"", name, signature);
+				LOGE("Cannot get static method \"%s()\" with signature \"%s\"", name, signature);
 			}
 		} else {
 			LOGE("Cannot get static methods before finding the Java class");
@@ -184,7 +184,7 @@ namespace nCine
 		if (javaClass != nullptr) {
 			mid = AndroidJniHelper::jniEnv->GetMethodID(javaClass, name, signature);
 			if (mid == nullptr) {
-				LOGE_X("Cannot get method \"%s()\" with signature \"%s\"", name, signature);
+				LOGE("Cannot get method \"%s()\" with signature \"%s\"", name, signature);
 			}
 		} else {
 			LOGE("Cannot get methods before finding the Java class");
@@ -200,7 +200,7 @@ namespace nCine
 		if (javaClass != nullptr) {
 			fid = AndroidJniHelper::jniEnv->GetStaticFieldID(javaClass, name, signature);
 			if (fid == nullptr) {
-				LOGE_X("Cannot get static field \"%s\" with signature \"%s\"", name, signature);
+				LOGE("Cannot get static field \"%s\" with signature \"%s\"", name, signature);
 			}
 		} else {
 			LOGE("Cannot get static fields before finding the Java class");

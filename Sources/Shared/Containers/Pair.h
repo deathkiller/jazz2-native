@@ -190,11 +190,11 @@ namespace Death::Containers
 		}
 
 		/** @brief First element */
-		F& first()& {
+		DEATH_CONSTEXPR14 F& first()& {
 			return _first;
 		}
 		// Not F&& because that'd cause nasty dangling reference issues in common code.
-		F first()&& {
+		DEATH_CONSTEXPR14 F first()&& {
 			return std::move(_first);
 		}
 		constexpr const F& first() const& {
@@ -202,11 +202,11 @@ namespace Death::Containers
 		}
 
 		/** @brief Second element */
-		S& second()& {
+		DEATH_CONSTEXPR14 S& second()& {
 			return _second;
 		}
 		// Not S&& because that'd cause nasty dangling reference issues in common code.
-		S second()&& {
+		DEATH_CONSTEXPR14 S second()&& {
 			return std::move(_second);
 		}
 		constexpr const S& second() const& {

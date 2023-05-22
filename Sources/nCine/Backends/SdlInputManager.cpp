@@ -64,7 +64,7 @@ namespace nCine
 			sdlJoysticks_[i] = SDL_JoystickOpen(i);
 			if (sdlJoysticks_[i]) {
 				SDL_Joystick* sdlJoy = sdlJoysticks_[i];
-				LOGI_X("Joystick %d \"%s\" - %d hats, %d axes, %d buttons, %d balls",
+				LOGI("Joystick %d \"%s\" - %d hats, %d axes, %d buttons, %d balls",
 					   i, SDL_JoystickName(sdlJoy), SDL_JoystickNumHats(sdlJoy), SDL_JoystickNumAxes(sdlJoy), SDL_JoystickNumButtons(sdlJoy), SDL_JoystickNumBalls(sdlJoy));
 			}
 		}
@@ -269,7 +269,7 @@ namespace nCine
 	bool SdlInputManager::isJoyPresent(int joyId) const
 	{
 		ASSERT(joyId >= 0);
-		ASSERT_MSG_X(joyId < int(MaxNumJoysticks), "joyId is %d and the maximum is %u", joyId, MaxNumJoysticks - 1);
+		ASSERT_MSG(joyId < int(MaxNumJoysticks), "joyId is %d and the maximum is %u", joyId, MaxNumJoysticks - 1);
 
 		return (sdlJoysticks_[joyId] && SDL_JoystickGetAttached(sdlJoysticks_[joyId]));
 	}
@@ -399,11 +399,11 @@ namespace nCine
 			joyConnectionEvent_.joyId = deviceIndex;
 			sdlJoysticks_[deviceIndex] = SDL_JoystickOpen(deviceIndex);
 
-#if defined(NCINE_LOG) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_LOG) && !defined(DEATH_TARGET_EMSCRIPTEN)
 			SDL_Joystick* joy = sdlJoysticks_[deviceIndex];
 			const SDL_JoystickGUID joystickGuid = SDL_JoystickGetGUID(joy);
 			SDL_JoystickGetGUIDString(joystickGuid, joyGuidString_, 33);
-			LOGI_X("Joystick %d \"%s\" (%s) has been connected - %d hats, %d axes, %d buttons, %d balls",
+			LOGI("Joystick %d \"%s\" (%s) has been connected - %d hats, %d axes, %d buttons, %d balls",
 				   deviceIndex, SDL_JoystickName(joy), joyGuidString_, SDL_JoystickNumHats(joy), SDL_JoystickNumAxes(joy), SDL_JoystickNumButtons(joy), SDL_JoystickNumBalls(joy));
 #endif
 			joyMapping_.onJoyConnected(joyConnectionEvent_);
@@ -422,7 +422,7 @@ namespace nCine
 				sdlJoysticks_[i] = sdlJoysticks_[i + 1];
 			sdlJoysticks_[MaxNumJoysticks - 1] = nullptr;
 
-			LOGI_X("Joystick %d has been disconnected", deviceIndex);
+			LOGI("Joystick %d has been disconnected", deviceIndex);
 			inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
 			joyMapping_.onJoyDisconnected(joyConnectionEvent_);
 		}

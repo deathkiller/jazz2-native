@@ -4,7 +4,6 @@
 #include "../Actors/Environment/IceBlock.h"
 
 #include "../../nCine/Graphics/RenderQueue.h"
-#include "../../nCine/IO/IFileStream.h"
 #include "../../nCine/Base/Random.h"
 
 namespace Jazz2::Tiles
@@ -21,7 +20,7 @@ namespace Jazz2::Tiles
 		_renderCommands.reserve(128);
 
 		if (tileSetPart.Data == nullptr) {
-			LOGE_X("Cannot load main tileset \"%s\"", tileSetPath.data());
+			LOGE("Cannot load main tileset \"%s\"", tileSetPath.data());
 		}
 	}
 
@@ -813,11 +812,11 @@ namespace Jazz2::Tiles
 		tileSetPart.Count = count;
 
 		if (tileSetPart.Data == nullptr) {
-			LOGE_X("Cannot load extra tileset \"%s\"", tileSetPath.data());
+			LOGE("Cannot load extra tileset \"%s\"", tileSetPath.data());
 		}
 	}
 
-	void TileMap::ReadLayerConfiguration(IFileStream& s)
+	void TileMap::ReadLayerConfiguration(Stream& s)
 	{
 		LayerType layerType = (LayerType)s.ReadValue<uint8_t>();
 		uint16_t layerFlags = s.ReadValue<uint16_t>();
@@ -909,7 +908,7 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	void TileMap::ReadAnimatedTiles(IFileStream& s)
+	void TileMap::ReadAnimatedTiles(Stream& s)
 	{
 		int16_t count = s.ReadValue<int16_t>();
 

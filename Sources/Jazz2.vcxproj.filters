@@ -196,6 +196,9 @@
     <Filter Include="Header Files\Shared\IO">
       <UniqueIdentifier>{0bf9b192-885e-4de8-a0a3-b8b346fa6b8e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Shared\IO">
+      <UniqueIdentifier>{e4b4004b-eae4-4a74-853e-4d4318310b74}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -582,22 +585,7 @@
     <ClInclude Include="nCine\Base\BitArray.h">
       <Filter>Header Files\nCine\Base</Filter>
     </ClInclude>
-    <ClInclude Include="nCine\IO\StandardFile.h">
-      <Filter>Header Files\nCine\IO</Filter>
-    </ClInclude>
-    <ClInclude Include="nCine\IO\AssetFile.h">
-      <Filter>Header Files\nCine\IO</Filter>
-    </ClInclude>
     <ClInclude Include="nCine\IO\EmscriptenLocalFile.h">
-      <Filter>Header Files\nCine\IO</Filter>
-    </ClInclude>
-    <ClInclude Include="nCine\IO\FileSystem.h">
-      <Filter>Header Files\nCine\IO</Filter>
-    </ClInclude>
-    <ClInclude Include="nCine\IO\IFileStream.h">
-      <Filter>Header Files\nCine\IO</Filter>
-    </ClInclude>
-    <ClInclude Include="nCine\IO\MemoryFile.h">
       <Filter>Header Files\nCine\IO</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Actors\Environment\Spring.h">
@@ -694,9 +682,6 @@
       <Filter>Header Files\Jazz2\Compatibility</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Compatibility\JJ2Block.h">
-      <Filter>Header Files\Jazz2\Compatibility</Filter>
-    </ClInclude>
-    <ClInclude Include="Jazz2\Compatibility\JJ2DefaultPalette.h">
       <Filter>Header Files\Jazz2\Compatibility</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Compatibility\JJ2Episode.h">
@@ -1026,9 +1011,6 @@
     <ClInclude Include="nCine\IO\CompressionUtils.h">
       <Filter>Header Files\nCine\IO</Filter>
     </ClInclude>
-    <ClInclude Include="nCine\IO\GrowableMemoryFile.h">
-      <Filter>Header Files\nCine\IO</Filter>
-    </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\ImportSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
@@ -1305,6 +1287,24 @@
     <ClInclude Include="Jazz2\Actors\Weapons\ShieldLightningShot.h">
       <Filter>Header Files\Jazz2\Actors\Weapons</Filter>
     </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\MemoryStream.h">
+      <Filter>Header Files\Shared\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\Stream.h">
+      <Filter>Header Files\Shared\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\AndroidAssetStream.h">
+      <Filter>Header Files\Shared\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\FileStream.h">
+      <Filter>Header Files\Shared\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\FileSystem.h">
+      <Filter>Header Files\Shared\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Asserts.h">
+      <Filter>Header Files\Shared</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1448,13 +1448,7 @@
     <ClCompile Include="nCine\Primitives\Colorf.cpp">
       <Filter>Source Files\nCine\Primitives</Filter>
     </ClCompile>
-    <ClCompile Include="nCine\IO\AssetFile.cpp">
-      <Filter>Source Files\nCine\IO</Filter>
-    </ClCompile>
     <ClCompile Include="nCine\IO\EmscriptenLocalFile.cpp">
-      <Filter>Source Files\nCine\IO</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\IO\FileSystem.cpp">
       <Filter>Source Files\nCine\IO</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Graphics\Geometry.cpp">
@@ -1534,9 +1528,6 @@
     </ClCompile>
     <ClCompile Include="nCine\Audio\IAudioPlayer.cpp">
       <Filter>Source Files\nCine\Audio</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\IO\IFileStream.cpp">
-      <Filter>Source Files\nCine\IO</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Graphics\IGfxDevice.cpp">
       <Filter>Source Files\nCine\Graphics</Filter>
@@ -1673,14 +1664,8 @@
     <ClCompile Include="nCine\Input\JoyMapping.cpp">
       <Filter>Source Files\nCine\Input</Filter>
     </ClCompile>
-    <ClCompile Include="nCine\IO\MemoryFile.cpp">
-      <Filter>Source Files\nCine\IO</Filter>
-    </ClCompile>
     <ClCompile Include="nCine\Threading\ThreadPool.cpp">
       <Filter>Source Files\nCine\Threading</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\IO\StandardFile.cpp">
-      <Filter>Source Files\nCine\IO</Filter>
     </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\Utf8.cpp">
       <Filter>Source Files\Shared</Filter>
@@ -1952,9 +1937,6 @@
     <ClCompile Include="nCine\IO\CompressionUtils.cpp">
       <Filter>Source Files\nCine\IO</Filter>
     </ClCompile>
-    <ClCompile Include="nCine\IO\GrowableMemoryFile.cpp">
-      <Filter>Source Files\nCine\IO</Filter>
-    </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\ImportSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
@@ -2194,6 +2176,18 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Weapons\ShieldWaterShot.cpp">
       <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\MemoryStream.cpp">
+      <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\AndroidAssetStream.cpp">
+      <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\FileStream.cpp">
+      <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\FileSystem.cpp">
+      <Filter>Source Files\Shared\IO</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

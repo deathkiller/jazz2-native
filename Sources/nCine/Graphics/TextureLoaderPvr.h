@@ -10,7 +10,7 @@ namespace nCine
 	class TextureLoaderPvr : public ITextureLoader
 	{
 	public:
-		explicit TextureLoaderPvr(std::unique_ptr<IFileStream> fileHandle);
+		explicit TextureLoaderPvr(std::unique_ptr<Death::IO::Stream> fileHandle);
 
 	private:
 		/// Header for the PVR3 format

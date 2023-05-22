@@ -4,9 +4,11 @@
 
 #include <cstring>
 
+using namespace nCine;
+
 namespace Jazz2::Compatibility
 {
-	JJ2Block::JJ2Block(const std::unique_ptr<IFileStream>& s, int32_t length, int32_t uncompressedLength)
+	JJ2Block::JJ2Block(const std::unique_ptr<Stream>& s, int32_t length, int32_t uncompressedLength)
 		: _length(0), _offset(0)
 	{
 		std::unique_ptr<uint8_t[]> tmpBuffer = std::make_unique<uint8_t[]>(length);

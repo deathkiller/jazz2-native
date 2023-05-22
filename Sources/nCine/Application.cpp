@@ -77,14 +77,14 @@ extern "C"
 #	include "Graphics/RenderDocCapture.h"
 #endif
 
-#if defined(NCINE_LOG)
+#if defined(DEATH_LOG)
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <Utf8.h>
 #elif defined(DEATH_TARGET_ANDROID)
 #	include <stdarg.h>
 #	include <android/log.h>
-extern std::unique_ptr<nCine::IFileStream> __logFile;
+extern std::unique_ptr<Death::IO::Stream> __logFile;
 #else
 #	include <cstdarg>
 #endif
@@ -106,9 +106,9 @@ inline int __strncpy(char* dest, int destSize, const char* source, int count)
 	return count;
 }
 
-void __WriteLog(LogLevel level, const char* fmt, ...)
+void DEATH_LOG_CALLBACK(LogLevel level, const char* fmt, ...)
 {
-	constexpr int MaxEntryLength = 4 * 1024;
+	constexpr std::int32_t MaxEntryLength = 4 * 1024;
 	char logEntry[MaxEntryLength];
 
 #if defined(DEATH_TARGET_ANDROID)
@@ -126,7 +126,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 
 	va_list args;
 	va_start(args, fmt);
-	/*unsigned int length =*/ vsnprintf(logEntry, MaxEntryLength, fmt, args);
+	/*std::int32_t length =*/ vsnprintf(logEntry, MaxEntryLength, fmt, args);
 	va_end(args);
 
 	__android_log_write(priority, "jazz2", logEntry);
@@ -158,7 +158,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 
 	va_list args;
 	va_start(args, fmt);
-	unsigned int length = vsnprintf(logEntry + 4, MaxEntryLength - 4, fmt, args) + 4;
+	std::int32_t length = vsnprintf(logEntry + 4, MaxEntryLength - 4, fmt, args) + 4;
 	va_end(args);
 
 	if (length >= MaxEntryLength - 2) {
@@ -189,7 +189,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 
 	va_list args;
 	va_start(args, fmt);
-	unsigned int length = vsnprintf(logEntry, MaxEntryLength, fmt, args);
+	std::int32_t length = vsnprintf(logEntry, MaxEntryLength, fmt, args);
 	va_end(args);
 
 	// Colorize the output
@@ -199,7 +199,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 	constexpr bool hasVirtualTerminal = true;
 #	endif
 
-	unsigned int logMsgFuncLength = 0;
+	std::int32_t logMsgFuncLength = 0;
 	while (true) {
 		if (logEntry[logMsgFuncLength] == '\0') {
 			logMsgFuncLength = -1;
@@ -212,7 +212,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 	}
 	logMsgFuncLength++; // Skip '>' character
 
-	unsigned int length2 = 0;
+	std::int32_t length2 = 0;
 	if (logMsgFuncLength > 0) {
 		if (hasVirtualTerminal) {
 			length2 += __strncpy(logEntryWithColors, MaxEntryLength - 1, Faint, countof(Faint) - 1);
@@ -272,7 +272,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 
 #	if defined(DEATH_TARGET_WINDOWS)
 	} else {
-#		if defined(NCINE_DEBUG)
+#		if defined(DEATH_DEBUG)
 		logEntry[0] = '[';
 		switch (level) {
 			case LogLevel::Fatal:	logEntry[1] = 'F'; break;
@@ -286,7 +286,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 
 		va_list args;
 		va_start(args, fmt);
-		unsigned int length = vsnprintf(logEntry + 4, MaxEntryLength - 4, fmt, args) + 4;
+		std::int32_t length = vsnprintf(logEntry + 4, MaxEntryLength - 4, fmt, args) + 4;
 		va_end(args);
 
 		if (length >= MaxEntryLength - 2) {
@@ -316,7 +316,7 @@ void __WriteLog(LogLevel level, const char* fmt, ...)
 
 	va_list argsTracy;
 	va_start(argsTracy, fmt);
-	unsigned int lengthTracy = vsnprintf(logEntry, MaxEntryLength, fmt, argsTracy);
+	std::int32_t lengthTracy = vsnprintf(logEntry, MaxEntryLength, fmt, argsTracy);
 	va_end(argsTracy);
 
 	TracyMessageC(logEntry, lengthTracy, colorTracy);
@@ -401,9 +401,9 @@ namespace nCine
 		if (vendor == "Imagination Technologies"_s && (renderer == "PowerVR Rogue GE8300"_s || renderer == "PowerVR Rogue GE8320"_s)) {
 			const StringView vendorPrefix = vendor.findOr(' ', vendor.end());
 			if (renderer.hasPrefix(vendor.prefix(vendorPrefix.begin()))) {
-				LOGW_X("Detected %s: Using fixed batch size", renderer.data());
+				LOGW("Detected %s: Using fixed batch size", renderer.data());
 			} else {
-				LOGW_X("Detected %s %s: Using fixed batch size", vendor.data(), renderer.data());
+				LOGW("Detected %s %s: Using fixed batch size", vendor.data(), renderer.data());
 			}
 			appCfg_.fixedBatchSize = 10;
 		}
@@ -419,6 +419,9 @@ namespace nCine
 		TracyGpuCollect;
 
 		frameTimer_ = std::make_unique<FrameTimer>(appCfg_.frameTimerLogInterval, 0.2f);
+#if defined(DEATH_TARGET_WINDOWS)
+		_waitableTimer = ::CreateWaitableTimer(NULL, TRUE, NULL);
+#endif
 
 		LOGI("Creating rendering resources...");
 
@@ -545,10 +548,24 @@ namespace nCine
 		TracyGpuCollect;
 
 		if (appCfg_.frameLimit > 0) {
+#if defined(DEATH_TARGET_WINDOWS)
+			const std::uint64_t clockFreq = static_cast<std::uint64_t>(clock().frequency());
+			const std::uint64_t frameTimeDuration = (clockFreq / static_cast<std::uint64_t>(appCfg_.frameLimit));
+			const std::uint64_t remainingTime = frameTimeDuration - frameTimer_->frameIntervalAsTicks();
+			if (remainingTime > 0) {
+				LARGE_INTEGER dueTime;
+				dueTime.QuadPart = -(LONGLONG)((10000000ULL * remainingTime) / clockFreq);
+
+				::SetWaitableTimer(_waitableTimer, &dueTime, 0, 0, 0, FALSE);
+				::WaitForSingleObject(_waitableTimer, 1000);
+				::CancelWaitableTimer(_waitableTimer);
+			}
+#else
 			const float frameTimeDuration = 1.0f / static_cast<float>(appCfg_.frameLimit);
 			while (frameTimer_->frameInterval() < frameTimeDuration) {
 				Timer::sleep(0.0f);
 			}
+#endif
 		}
 	}
 
@@ -557,20 +574,24 @@ namespace nCine
 		ZoneScoped;
 		appEventHandler_->OnShutdown();
 		LOGI("IAppEventHandler::OnShutdown() invoked");
-		appEventHandler_.reset(nullptr);
+		appEventHandler_.reset();
 
 #if defined(WITH_RENDERDOC)
 		RenderDocCapture::removeHooks();
 #endif
 
-		rootNode_.reset(nullptr);
+		rootNode_.reset();
 		RenderResources::dispose();
-		frameTimer_.reset(nullptr);
-		inputManager_.reset(nullptr);
-		gfxDevice_.reset(nullptr);
+		frameTimer_.reset();
+		inputManager_.reset();
+		gfxDevice_.reset();
+
+#if defined(DEATH_TARGET_WINDOWS)
+		::CloseHandle(_waitableTimer);
+#endif
 
 		if (!theServiceLocator().indexer().empty()) {
-			LOGW_X("The object indexer is not empty, %u object(s) left", theServiceLocator().indexer().size());
+			LOGW("The object indexer is not empty, %u object(s) left", theServiceLocator().indexer().size());
 			//theServiceLocator().indexer().logReport();
 		}
 
@@ -603,7 +624,7 @@ namespace nCine
 			appEventHandler_->OnResume();
 		}
 		const TimeStamp suspensionDuration = frameTimer_->resume();
-		LOGD_X("Suspended for %.3f seconds", suspensionDuration.seconds());
+		LOGD("Suspended for %.3f seconds", suspensionDuration.seconds());
 #if defined(NCINE_PROFILING)
 		profileStartTime_ += suspensionDuration;
 #endif

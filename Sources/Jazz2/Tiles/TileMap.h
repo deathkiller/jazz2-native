@@ -4,7 +4,7 @@
 #include "../PitType.h"
 #include "TileSet.h"
 
-#include "../../nCine/IO/IFileStream.h"
+#include <IO/Stream.h>
 
 namespace Jazz2
 {
@@ -155,8 +155,8 @@ namespace Jazz2::Tiles
 		SuspendType GetTileSuspendState(float x, float y);
 
 		void AddTileSet(const StringView& tileSetPath, uint16_t offset, uint16_t count, const uint8_t* paletteRemapping = nullptr);
-		void ReadLayerConfiguration(IFileStream& s);
-		void ReadAnimatedTiles(IFileStream& s);
+		void ReadLayerConfiguration(Stream& s);
+		void ReadAnimatedTiles(Stream& s);
 		void SetTileEventFlags(int x, int y, EventType tileEvent, uint8_t* tileParams);
 
 		Color* GetCaptionTile() const

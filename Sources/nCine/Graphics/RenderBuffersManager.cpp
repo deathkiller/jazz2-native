@@ -64,7 +64,7 @@ namespace nCine
 
 	RenderBuffersManager::Parameters RenderBuffersManager::acquireMemory(BufferTypes type, unsigned long bytes, unsigned int alignment)
 	{
-		FATAL_ASSERT_MSG_X(bytes <= specs_[(int)type].maxSize, "Trying to acquire %lu bytes when the maximum for buffer type \"%s\" is %lu",
+		FATAL_ASSERT_MSG(bytes <= specs_[(int)type].maxSize, "Trying to acquire %lu bytes when the maximum for buffer type \"%s\" is %lu",
 						   bytes, bufferTypeToString(type), specs_[(int)type].maxSize);
 
 		// Accepting a custom alignment only if it is a multiple of the specification one

@@ -7,15 +7,15 @@
 #include "EventConverter.h"
 #include "../WeatherType.h"
 
-#include "../../nCine/IO/GrowableMemoryFile.h"
-
 #include <functional>
 
 #include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
+#include <IO/MemoryStream.h>
 
 using namespace Death::Containers;
+using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
@@ -162,7 +162,7 @@ namespace Jazz2::Compatibility
 		void LoadLayers(JJ2Block& dictBlock, int dictLength, JJ2Block& layoutBlock, bool strictParser);
 		void LoadMlleData(JJ2Block& block, uint32_t version, const StringView& path, bool strictParser);
 
-		static void WriteLevelName(GrowableMemoryFile& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion = nullptr);
+		static void WriteLevelName(MemoryStream& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion = nullptr);
 		static bool StringHasSuffixIgnoreCase(const StringView& value, const StringView& suffix);
 	};
 }

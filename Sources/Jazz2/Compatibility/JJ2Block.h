@@ -1,16 +1,19 @@
 ﻿#pragma once
 
 #include "../../Common.h"
-#include "../../nCine/IO/IFileStream.h"
 
-using namespace nCine;
+#include <Containers/StringView.h>
+#include <IO/Stream.h>
+
+using namespace Death::Containers;
+using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
 	class JJ2Block
 	{
 	public:
-		JJ2Block(const std::unique_ptr<IFileStream>& s, int32_t length, int32_t uncompressedLength = 0);
+		JJ2Block(const std::unique_ptr<Stream>& s, int32_t length, int32_t uncompressedLength = 0);
 
 		void SeekTo(int32_t offset);
 		void DiscardBytes(int32_t length);

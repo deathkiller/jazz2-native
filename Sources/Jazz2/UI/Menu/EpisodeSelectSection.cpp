@@ -13,7 +13,7 @@ namespace Jazz2::UI::Menu
 		auto& resolver = ContentResolver::Get();
 
 		// Search both "Content/Episodes/" and "Cache/Episodes/"
-		fs::Directory dir(fs::JoinPath(resolver.GetContentPath(), "Episodes"_s), fs::EnumerationOptions::SkipDirectories);
+		fs::Directory dir(fs::CombinePath(resolver.GetContentPath(), "Episodes"_s), fs::EnumerationOptions::SkipDirectories);
 		while (true) {
 			StringView item = dir.GetNext();
 			if (item == nullptr) {
@@ -23,7 +23,7 @@ namespace Jazz2::UI::Menu
 			AddEpisode(item);
 		}
 
-		fs::Directory dirCache(fs::JoinPath(resolver.GetCachePath(), "Episodes"_s), fs::EnumerationOptions::SkipDirectories);
+		fs::Directory dirCache(fs::CombinePath(resolver.GetCachePath(), "Episodes"_s), fs::EnumerationOptions::SkipDirectories);
 		while (true) {
 			StringView item = dirCache.GetNext();
 			if (item == nullptr) {

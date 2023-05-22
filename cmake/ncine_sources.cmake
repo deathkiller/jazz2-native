@@ -5,6 +5,10 @@ set(SOURCES
 	${NCINE_SOURCE_DIR}/Shared/Containers/SmallVector.cpp
 	${NCINE_SOURCE_DIR}/Shared/Containers/String.cpp
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringView.cpp
+	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.cpp
+	${NCINE_SOURCE_DIR}/Shared/IO/FileStream.cpp
+	${NCINE_SOURCE_DIR}/Shared/IO/FileSystem.cpp
+	${NCINE_SOURCE_DIR}/Shared/IO/MemoryStream.cpp
 )
 
 list(APPEND SOURCES

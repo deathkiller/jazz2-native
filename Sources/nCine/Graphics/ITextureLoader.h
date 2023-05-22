@@ -2,17 +2,16 @@
 
 #include "TextureFormat.h"
 #include "../Primitives/Vector2.h"
-#include "../IO/IFileStream.h"
+
+#include <IO/Stream.h>
 
 namespace nCine
 {
-	class IFileStream;
-
 	/// Texture loader interface class
 	class ITextureLoader
 	{
 	public:
-		virtual ~ITextureLoader() {}
+		virtual ~ITextureLoader() { }
 
 		/// Returns true if the texture has been correctly loaded
 		inline bool hasLoaded() const {
@@ -55,13 +54,13 @@ namespace nCine
 		/// Returns the proper texture loader according to the memory buffer name extension
 		static std::unique_ptr<ITextureLoader> createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// Returns the proper texture loader according to the file extension
-		static std::unique_ptr<ITextureLoader> createFromFile(const StringView& filename);
+		static std::unique_ptr<ITextureLoader> createFromFile(const Death::Containers::StringView& filename);
 
 	protected:
 		/// A flag indicating if the loading process has been successful
 		bool hasLoaded_;
 		/// Texture file handle
-		std::unique_ptr<IFileStream> fileHandle_;
+		std::unique_ptr<Death::IO::Stream> fileHandle_;
 
 		int width_;
 		int height_;
@@ -75,9 +74,9 @@ namespace nCine
 
 		/// An empty constructor only used by `TextureLoaderRaw`
 		ITextureLoader();
-		explicit ITextureLoader(std::unique_ptr<IFileStream> fileHandle);
+		explicit ITextureLoader(std::unique_ptr<Death::IO::Stream> fileHandle);
 
-		static std::unique_ptr<ITextureLoader> createLoader(std::unique_ptr<IFileStream> fileHandle, const StringView& filename);
+		static std::unique_ptr<ITextureLoader> createLoader(std::unique_ptr<Death::IO::Stream> fileHandle, const Death::Containers::StringView& filename);
 		/// Loads pixel data from a texture file holding either compressed or uncompressed data
 		void loadPixels(GLenum internalFormat);
 		/// Loads pixel data from a texture file holding either compressed or uncompressed data, overriding pixel type
@@ -88,8 +87,8 @@ namespace nCine
 	class InvalidTextureLoader : public ITextureLoader
 	{
 	public:
-		explicit InvalidTextureLoader(std::unique_ptr<IFileStream> fileHandle)
-			: ITextureLoader(std::move(fileHandle)) {}
+		explicit InvalidTextureLoader(std::unique_ptr<Death::IO::Stream> fileHandle)
+			: ITextureLoader(std::move(fileHandle)) { }
 	};
 
 }

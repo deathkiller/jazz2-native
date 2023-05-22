@@ -16,7 +16,6 @@
 #include "nCine/Graphics/BinaryShaderCache.h"
 #include "nCine/Graphics/RenderResources.h"
 #include "nCine/Input/IInputEventHandler.h"
-#include "nCine/IO/FileSystem.h"
 #include "nCine/Threading/Thread.h"
 
 #include "Jazz2/IRootController.h"
@@ -35,7 +34,7 @@
 #include "Jazz2/Compatibility/JJ2Tileset.h"
 #include "Jazz2/Compatibility/EventConverter.h"
 
-#if defined(NCINE_LOG) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
+#if defined(DEATH_LOG) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
 #	include "TermLogo.h"
 #endif
 
@@ -49,6 +48,7 @@
 
 #include <Cpu.h>
 #include <Environment.h>
+#include <IO/FileSystem.h>
 #include <IO/HttpRequest.h>
 
 using namespace nCine;
@@ -124,7 +124,7 @@ void GameEventHandler::OnPreInit(AppConfiguration& config)
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	auto& resolver = ContentResolver::Get();
-	config.shaderCachePath = fs::JoinPath(resolver.GetCachePath(), "Shaders"_s);
+	config.shaderCachePath = fs::CombinePath(resolver.GetCachePath(), "Shaders"_s);
 #endif
 }
 
@@ -154,7 +154,7 @@ void GameEventHandler::OnInit()
 		theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
 	}
 
-	String mappingsPath = fs::JoinPath(resolver.GetContentPath(), "gamecontrollerdb.txt"_s);
+	String mappingsPath = fs::CombinePath(resolver.GetContentPath(), "gamecontrollerdb.txt"_s);
 	if (fs::IsReadableFile(mappingsPath)) {
 		theApplication().inputManager().addJoyMappingsFromFile(mappingsPath);
 	}
@@ -175,8 +175,8 @@ void GameEventHandler::OnInit()
 		if (PreferencesCache::Language[0] != '\0') {
 			auto& resolver = ContentResolver::Get();
 			auto& i18n = I18n::Get();
-			if (!i18n.LoadFromFile(fs::JoinPath({ resolver.GetContentPath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }))) {
-				i18n.LoadFromFile(fs::JoinPath({ resolver.GetCachePath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }));
+			if (!i18n.LoadFromFile(fs::CombinePath({ resolver.GetContentPath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }))) {
+				i18n.LoadFromFile(fs::CombinePath({ resolver.GetCachePath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }));
 			}
 		}
 
@@ -204,8 +204,8 @@ void GameEventHandler::OnInit()
 	if (PreferencesCache::Language[0] != '\0') {
 		auto& resolver = ContentResolver::Get();
 		auto& i18n = I18n::Get();
-		if (!i18n.LoadFromFile(fs::JoinPath({ resolver.GetContentPath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }))) {
-			i18n.LoadFromFile(fs::JoinPath({ resolver.GetCachePath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }));
+		if (!i18n.LoadFromFile(fs::CombinePath({ resolver.GetContentPath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }))) {
+			i18n.LoadFromFile(fs::CombinePath({ resolver.GetCachePath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }));
 		}
 	}
 
@@ -227,7 +227,7 @@ void GameEventHandler::OnInit()
 	Vector2i res = theApplication().resolution();
 	_currentHandler->OnInitializeViewport(res.X, res.Y);
 
-	LOGI_X("Rendering resolution: %ix%i", res.X, res.Y);
+	LOGI("Rendering resolution: %ix%i", res.X, res.Y);
 }
 
 void GameEventHandler::OnFrameStart()
@@ -341,7 +341,7 @@ void GameEventHandler::OnResizeWindow(int width, int height)
 
 	PreferencesCache::EnableFullscreen = theApplication().gfxDevice().isFullscreen();
 
-	LOGI_X("Rendering resolution: %ix%i", width, height);
+	LOGI("Rendering resolution: %ix%i", width, height);
 }
 
 void GameEventHandler::OnShutdown()
@@ -428,7 +428,7 @@ void GameEventHandler::RefreshCache()
 
 	// Check cache state
 	{
-		auto s = fs::Open(fs::JoinPath({ resolver.GetCachePath(), "Animations"_s, "cache.index"_s }), FileAccessMode::Read);
+		auto s = fs::Open(fs::CombinePath({ resolver.GetCachePath(), "Animations"_s, "cache.index"_s }), FileAccessMode::Read);
 		if (s->GetSize() < 16) {
 			goto RecreateCache;
 		}
@@ -448,12 +448,12 @@ void GameEventHandler::RefreshCache()
 			return;
 		}
 
-		String animsPath = fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "Anims.j2a"_s));
+		String animsPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "Anims.j2a"_s));
 		if (!fs::IsReadableFile(animsPath)) {
-			animsPath = fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "AnimsSw.j2a"_s));
+			animsPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "AnimsSw.j2a"_s));
 		}
 		uint64_t animsCached = s->ReadValue<uint64_t>();
-		uint64_t animsModified = fs::LastModificationTime(animsPath).Ticks;
+		uint64_t animsModified = fs::GetLastModificationTime(animsPath).Ticks;
 		if (animsModified != 0 && animsCached != animsModified) {
 			goto RecreateCache;
 		}
@@ -472,20 +472,20 @@ void GameEventHandler::RefreshCache()
 
 RecreateCache:
 	// "Source" directory must be case in-sensitive
-	String animsPath = fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "Anims.j2a"_s));
+	String animsPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "Anims.j2a"_s));
 	if (!fs::IsReadableFile(animsPath)) {
-		animsPath = fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "AnimsSw.j2a"_s));
+		animsPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "AnimsSw.j2a"_s));
 		if (!fs::IsReadableFile(animsPath)) {
-			LOGE_X("Cannot open \"…%sSource%sAnims.j2a\" file! Make sure Jazz Jackrabbit 2 files are present in \"%s\" directory.", fs::PathSeparator, fs::PathSeparator, resolver.GetSourcePath().data());
+			LOGE("Cannot open \"…%sSource%sAnims.j2a\" file! Make sure Jazz Jackrabbit 2 files are present in \"%s\" directory.", fs::PathSeparator, fs::PathSeparator, resolver.GetSourcePath().data());
 			_flags |= Flags::IsVerified;
 			return;
 		}
 	}
 
-	String animationsPath = fs::JoinPath(resolver.GetCachePath(), "Animations"_s);
+	String animationsPath = fs::CombinePath(resolver.GetCachePath(), "Animations"_s);
 	fs::RemoveDirectoryRecursive(animationsPath);
 	if (!Compatibility::JJ2Anims::Convert(animsPath, animationsPath, false)) {
-		LOGE_X("Provided Jazz Jackrabbit 2 version is not supported. Make sure supported Jazz Jackrabbit 2 version is present in \"%s\" directory.", resolver.GetSourcePath().data());
+		LOGE("Provided Jazz Jackrabbit 2 version is not supported. Make sure supported Jazz Jackrabbit 2 version is present in \"%s\" directory.", resolver.GetSourcePath().data());
 		_flags |= Flags::IsVerified;
 		return;
 	}
@@ -493,13 +493,13 @@ RecreateCache:
 	RefreshCacheLevels();
 
 	// Create cache index
-	auto so = fs::Open(fs::JoinPath({ resolver.GetCachePath(), "Animations"_s, "cache.index"_s }), FileAccessMode::Write);
+	auto so = fs::Open(fs::CombinePath({ resolver.GetCachePath(), "Animations"_s, "cache.index"_s }), FileAccessMode::Write);
 
 	so->WriteValue<uint64_t>(0x2095A59FF0BFBBEF);	// Signature
 	so->WriteValue<uint8_t>(ContentResolver::CacheIndexFile);
 	so->WriteValue<uint16_t>(Compatibility::JJ2Anims::CacheVersion);
 	so->WriteValue<uint8_t>(0x00);					// Flags
-	uint64_t animsModified = fs::LastModificationTime(animsPath).Ticks;
+	uint64_t animsModified = fs::GetLastModificationTime(animsPath).Ticks;
 	so->WriteValue<uint64_t>(animsModified);
 	so->WriteValue<uint16_t>((uint16_t)EventType::Count);
 
@@ -515,7 +515,7 @@ void GameEventHandler::RefreshCacheLevels()
 
 	Compatibility::EventConverter eventConverter;
 
-	bool hasChristmasChronicles = fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::JoinPath(resolver.GetSourcePath(), "xmas99.j2e"_s)));
+	bool hasChristmasChronicles = fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "xmas99.j2e"_s)));
 	const HashMap<String, Pair<String, String>> knownLevels = {
 		{ "trainer"_s, { "prince"_s, { } } },
 		{ "castle1"_s, { "prince"_s, "01"_s } },
@@ -655,7 +655,7 @@ void GameEventHandler::RefreshCacheLevels()
 		}
 	};
 
-	String episodesPath = fs::JoinPath(resolver.GetCachePath(), "Episodes"_s);
+	String episodesPath = fs::CombinePath(resolver.GetCachePath(), "Episodes"_s);
 	fs::RemoveDirectoryRecursive(episodesPath);
 	fs::CreateDirectories(episodesPath);
 
@@ -677,7 +677,7 @@ void GameEventHandler::RefreshCacheLevels()
 					continue;
 				}
 
-				String fullPath = fs::JoinPath(episodesPath, (episode.Name == "xmas98"_s ? "xmas99"_s : StringView(episode.Name)) + ".j2e"_s);
+				String fullPath = fs::CombinePath(episodesPath, (episode.Name == "xmas98"_s ? "xmas99"_s : StringView(episode.Name)) + ".j2e"_s);
 				episode.Convert(fullPath, LevelTokenConversion, EpisodeNameConversion, EpisodePrevNext);
 			}
 		} else if (extension == "j2l"_s) {
@@ -690,12 +690,12 @@ void GameEventHandler::RefreshCacheLevels()
 					auto it = knownLevels.find(level.LevelName);
 					if (it != knownLevels.end()) {
 						if (it->second.second().empty()) {
-							fullPath = fs::JoinPath({ episodesPath, it->second.first(), level.LevelName + ".j2l"_s });
+							fullPath = fs::CombinePath({ episodesPath, it->second.first(), level.LevelName + ".j2l"_s });
 						} else {
-							fullPath = fs::JoinPath({ episodesPath, it->second.first(), it->second.second() + "_"_s + level.LevelName + ".j2l"_s });
+							fullPath = fs::CombinePath({ episodesPath, it->second.first(), it->second.second() + "_"_s + level.LevelName + ".j2l"_s });
 						}
 					} else {
-						fullPath = fs::JoinPath({ episodesPath, "unknown"_s, level.LevelName + ".j2l"_s });
+						fullPath = fs::CombinePath({ episodesPath, "unknown"_s, level.LevelName + ".j2l"_s });
 					}
 
 					fs::CreateDirectories(fs::GetDirectoryName(fullPath));
@@ -717,13 +717,13 @@ void GameEventHandler::RefreshCacheLevels()
 				}
 			}
 		}
-#if defined(NCINE_DEBUG)
+#if defined(DEATH_DEBUG)
 		/*else if (extension == "j2s"_s) {
 			// Episode
 			Compatibility::JJ2Strings strings;
 			strings.Open(item);
 
-			String fullPath = fs::JoinPath({ resolver.GetCachePath(), "Translations"_s, strings.Name + ".h"_s });
+			String fullPath = fs::CombinePath({ resolver.GetCachePath(), "Translations"_s, strings.Name + ".h"_s });
 			fs::CreateDirectories(fs::GetDirectoryName(fullPath));
 			strings.Convert(fullPath, LevelTokenConversion);
 		}*/
@@ -731,17 +731,17 @@ void GameEventHandler::RefreshCacheLevels()
 	}
 
 	// Convert only used tilesets
-	String tilesetsPath = fs::JoinPath(resolver.GetCachePath(), "Tilesets"_s);
+	String tilesetsPath = fs::CombinePath(resolver.GetCachePath(), "Tilesets"_s);
 	fs::RemoveDirectoryRecursive(tilesetsPath);
 	fs::CreateDirectories(tilesetsPath);
 
 	for (auto& pair : usedTilesets) {
-		String tilesetPath = fs::JoinPath(resolver.GetSourcePath(), pair.first + ".j2t"_s);
+		String tilesetPath = fs::CombinePath(resolver.GetSourcePath(), pair.first + ".j2t"_s);
 		auto adjustedPath = fs::FindPathCaseInsensitive(tilesetPath);
 		if (fs::IsReadableFile(adjustedPath)) {
 			Compatibility::JJ2Tileset tileset;
 			if (tileset.Open(adjustedPath, false)) {
-				tileset.Convert(fs::JoinPath({ tilesetsPath, pair.first + ".j2t"_s }));
+				tileset.Convert(fs::CombinePath({ tilesetsPath, pair.first + ".j2t"_s }));
 			}
 		}
 	}
@@ -749,7 +749,7 @@ void GameEventHandler::RefreshCacheLevels()
 
 void GameEventHandler::CheckUpdates()
 {
-#if !defined(NCINE_DEBUG)
+#if !defined(DEATH_DEBUG)
 #if defined(DEATH_TARGET_X86)
 	int arch = 1;
 	Cpu::Features cpuFeatures = Cpu::runtimeFeatures();
@@ -1051,7 +1051,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdSh
 #else
 int main(int argc, char** argv)
 {
-#if defined(NCINE_LOG) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
+#if defined(DEATH_LOG) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
 	bool hasVirtualTerminal = isatty(1);
 	if (hasVirtualTerminal) {
 		const char* term = ::getenv("TERM");

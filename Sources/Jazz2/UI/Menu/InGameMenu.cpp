@@ -339,7 +339,7 @@ namespace Jazz2::UI::Menu
 
 			player->play();
 		} else {
-			LOGE_X("Sound effect \"%s\" was not found", identifier.data());
+			LOGE("Sound effect \"%s\" was not found", identifier.data());
 		}
 	}
 
@@ -392,7 +392,7 @@ namespace Jazz2::UI::Menu
 			_pressedActions |= (1 << (int32_t)PlayerActions::Menu);
 		}
 		// Use ChangeWeapon action as Delete key
-		if (pressedKeys[(uint32_t)KeySym::DELETE]) {
+		if (pressedKeys[(uint32_t)KeySym::Delete]) {
 			_pressedActions |= (1 << (int32_t)PlayerActions::ChangeWeapon);
 		}
 

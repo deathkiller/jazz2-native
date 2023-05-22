@@ -446,7 +446,7 @@ namespace Jazz2::UI::Menu
 			case KeySym::X: return "X"_s;
 			case KeySym::Y: return "Y"_s;
 			case KeySym::Z: return "Z"_s;
-			case KeySym::DELETE: return "Del"_s;
+			case KeySym::Delete: return "Del"_s;
 
 			case KeySym::KP0: return "0 (N)"_s;
 			case KeySym::KP1: return "1 (N)"_s;

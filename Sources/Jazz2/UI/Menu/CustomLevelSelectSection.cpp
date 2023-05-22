@@ -5,7 +5,10 @@
 #include "../../../nCine/Base/Algorithms.h"
 #include "../../../nCine/Base/FrameTimer.h"
 #include "../../../nCine/IO/CompressionUtils.h"
-#include "../../../nCine/IO/MemoryFile.h"
+
+#include <IO/MemoryStream.h>
+
+using namespace Death::IO;
 
 namespace Jazz2::UI::Menu
 {
@@ -15,7 +18,7 @@ namespace Jazz2::UI::Menu
 		auto& resolver = ContentResolver::Get();
 
 		// Search both "Content/Episodes/" and "Cache/Episodes/"
-		fs::Directory dir(fs::JoinPath({ resolver.GetContentPath(), "Episodes"_s, "unknown"_s }), fs::EnumerationOptions::SkipDirectories);
+		fs::Directory dir(fs::CombinePath({ resolver.GetContentPath(), "Episodes"_s, "unknown"_s }), fs::EnumerationOptions::SkipDirectories);
 		while (true) {
 			StringView item = dir.GetNext();
 			if (item == nullptr) {
@@ -25,7 +28,7 @@ namespace Jazz2::UI::Menu
 			AddLevel(item);
 		}
 
-		fs::Directory dirCache(fs::JoinPath({ resolver.GetCachePath(), "Episodes"_s, "unknown"_s }), fs::EnumerationOptions::SkipDirectories);
+		fs::Directory dirCache(fs::CombinePath({ resolver.GetCachePath(), "Episodes"_s, "unknown"_s }), fs::EnumerationOptions::SkipDirectories);
 		while (true) {
 			StringView item = dirCache.GetNext();
 			if (item == nullptr) {
@@ -260,7 +263,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		auto s = fs::Open(levelFile, FileAccessMode::Read);
-		RETURN_ASSERT_MSG(s->IsOpened(), "Cannot open file for reading");
+		RETURN_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
 		uint64_t signature = s->ReadValue<uint64_t>();
 		uint8_t fileType = s->ReadValue<uint8_t>();
@@ -280,7 +283,7 @@ namespace Jazz2::UI::Menu
 
 		auto result = CompressionUtils::Inflate(compressedBuffer.get(), compressedSize, uncompressedBuffer.get(), uncompressedSize);
 		RETURN_ASSERT_MSG(result == DecompressionResult::Success, "File cannot be uncompressed");
-		MemoryFile uc(uncompressedBuffer.get(), uncompressedSize);
+		MemoryStream uc(uncompressedBuffer.get(), uncompressedSize);
 
 		// Read metadata
 		uint8_t nameSize = uc.ReadValue<uint8_t>();

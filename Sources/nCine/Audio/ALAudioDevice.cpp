@@ -19,13 +19,13 @@ namespace nCine
 #endif
 	{
 		device_ = alcOpenDevice(nullptr);
-		RETURN_ASSERT_MSG_X(device_ != nullptr, "alcOpenDevice failed: 0x%x", alGetError());
+		RETURN_ASSERT_MSG(device_ != nullptr, "alcOpenDevice failed: 0x%x", alGetError());
 		deviceName_ = alcGetString(device_, ALC_DEVICE_SPECIFIER);
 
 		context_ = alcCreateContext(device_, nullptr);
 		if (context_ == nullptr) {
 			alcCloseDevice(device_);
-			RETURN_MSG_X("alcCreateContext failed: 0x%x", alGetError());
+			RETURN_MSG("alcCreateContext failed: 0x%x", alGetError());
 		}
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -40,14 +40,14 @@ namespace nCine
 		if (!alcMakeContextCurrent(context_)) {
 			alcDestroyContext(context_);
 			alcCloseDevice(device_);
-			RETURN_MSG_X("alcMakeContextCurrent failed: 0x%x", alGetError());
+			RETURN_MSG("alcMakeContextCurrent failed: 0x%x", alGetError());
 		}
 
 		alGetError();
 		alGenSources(MaxSources, sources_);
 		const ALenum error = alGetError();
 		if (error != AL_NO_ERROR) {
-			LOGE_X("alGenSources failed: 0x%x", error);
+			LOGE("alGenSources failed: 0x%x", error);
 		}
 
 		for (int i = MaxSources - 1; i >= 0; i--) {
@@ -86,7 +86,7 @@ namespace nCine
 		alcDestroyContext(context_);
 
 		ALCboolean result = alcCloseDevice(device_);
-		FATAL_ASSERT_MSG_X(result, "alcCloseDevice failed: %d", alGetError());
+		FATAL_ASSERT_MSG(result, "alcCloseDevice failed: %d", alGetError());
 	}
 
 	void ALAudioDevice::setGain(ALfloat gain)
@@ -256,17 +256,17 @@ namespace nCine
 			if (FAILED(hr)) {
 				hr = ::CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr,  CLSCTX_ALL, IID_PPV_ARGS(&pEnumerator_));
 				if (FAILED(hr)) {
-					LOGE_X("CoCreateInstance() failed: 0x%08x", hr);
+					LOGE("CoCreateInstance() failed: 0x%08x", hr);
 				}
 			}
 		} else if (FAILED(hr)) {
-			LOGE_X("CoCreateInstance() failed: 0x%08x", hr);
+			LOGE("CoCreateInstance() failed: 0x%08x", hr);
 		}
 
 		if (pEnumerator_ != nullptr) {
 			HRESULT hr = pEnumerator_->RegisterEndpointNotificationCallback(this);
 			if (FAILED(hr)) {
-				LOGE_X("RegisterEndpointNotificationCallback() failed: 0x%08x", hr);
+				LOGE("RegisterEndpointNotificationCallback() failed: 0x%08x", hr);
 			}
 		}
 	}

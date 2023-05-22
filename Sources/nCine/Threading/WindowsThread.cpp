@@ -104,7 +104,7 @@ namespace nCine
 			handle_ = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0, WrapperFunction, &threadInfo_, 0, nullptr));
 			FATAL_ASSERT_MSG(handle_, "_beginthreadex() failed");
 		} else {
-			LOGW_X("Thread %u is already running", handle_);
+			LOGW("Thread %u is already running", handle_);
 		}
 	}
 

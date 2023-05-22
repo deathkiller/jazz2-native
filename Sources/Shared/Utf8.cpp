@@ -5,7 +5,7 @@ namespace Death::Utf8
 {
 	std::pair<char32_t, std::size_t> NextChar(const Containers::ArrayView<const char> text, std::size_t cursor)
 	{
-		DEATH_ASSERT(cursor < text.size(), "Utf8::NextChar(): Cursor out of range", {});
+		DEATH_ASSERT(cursor < text.size(), {}, "Utf8::NextChar(): Cursor out of range");
 
 		std::uint32_t character = text[cursor];
 		std::size_t end = cursor;

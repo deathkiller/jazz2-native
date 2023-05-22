@@ -12,13 +12,13 @@
 #	endif
 #endif
 
-#include "../IO/IFileStream.h"
-
 #if defined(WITH_OPENMPT_DYNAMIC) && (defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_APPLE))
 #	include <dlfcn.h>
 #endif
 
 #include <cstring>
+
+using namespace Death::IO;
 
 namespace nCine
 {
@@ -32,10 +32,10 @@ namespace nCine
 	AudioReaderMpt::openmpt_module_set_repeat_count_t* AudioReaderMpt::_openmpt_module_set_repeat_count = nullptr;
 #endif
 
-	AudioReaderMpt::AudioReaderMpt(std::unique_ptr<IFileStream> fileHandle, int frequency)
+	AudioReaderMpt::AudioReaderMpt(std::unique_ptr<Stream> fileHandle, int frequency)
 		: _fileHandle(std::move(fileHandle)), _frequency(frequency), _module(nullptr)
 	{
-		ASSERT(_fileHandle->IsOpened());
+		ASSERT(_fileHandle->IsValid());
 
 #if defined(WITH_OPENMPT_DYNAMIC)
 		if (TryLoadLibrary()) {
@@ -171,7 +171,7 @@ namespace nCine
 
 	void AudioReaderMpt::InternalLog(const char* message, void* user)
 	{
-		LOGI_X("%s", message);
+		LOGI("%s", message);
 	}
 }
 

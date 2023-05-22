@@ -16,7 +16,7 @@ namespace nCine
 		alGetError();
 		alGenBuffers(NumBuffers, buffersIds_.data());
 		const ALenum error = alGetError();
-		ASSERT_MSG_X(error == AL_NO_ERROR, "alGenBuffers failed: 0x%x", error);
+		ASSERT_MSG(error == AL_NO_ERROR, "alGenBuffers failed: 0x%x", error);
 		memBuffer_ = std::make_unique<char[]>(BufferSize);
 	}
 
@@ -36,7 +36,7 @@ namespace nCine
 	{
 		const bool hasLoaded = loadFromFile(filename);
 		if (!hasLoaded) {
-			LOGE_X("Audio file \"%s\" cannot be loaded", filename.data());
+			LOGE("Audio file \"%s\" cannot be loaded", filename.data());
 		}
 	}
 
@@ -189,7 +189,7 @@ namespace nCine
 		} else {
 			bytesPerSample_ = 0;
 			numChannels_ = 0;
-			RETURN_MSG_X("Audio stream with %i channels is not supported", numChannels_);
+			RETURN_MSG("Audio stream with %i channels is not supported", numChannels_);
 		}
 
 		frequency_ = audioLoader.frequency();

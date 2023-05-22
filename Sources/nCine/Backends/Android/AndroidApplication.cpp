@@ -12,8 +12,8 @@
 
 namespace nc = nCine;
 
-#if defined(NCINE_LOG)
-std::unique_ptr<nCine::IFileStream> __logFile;
+#if defined(DEATH_LOG)
+std::unique_ptr<Death::IO::Stream> __logFile;
 #endif
 
 /// Processes the next application command
@@ -199,11 +199,11 @@ namespace nCine
 	{
 		profileStartTime_ = TimeStamp::now();
 
-#if defined(NCINE_LOG)
+#if defined(DEATH_LOG)
 		// Try to open log file as early as possible
 		StringView externalPath = externalDataPath();
 		if (!externalPath.empty()) {
-			__logFile = fs::Open(fs::JoinPath(externalPath, "Jazz2.log"_s), FileAccessMode::Write);
+			__logFile = fs::Open(fs::CombinePath(externalPath, "Jazz2.log"_s), FileAccessMode::Write);
 			if (!__logFile->IsOpened()) {
 				__logFile = nullptr;
 				LOGW("Cannot create log file, using Android log instead");

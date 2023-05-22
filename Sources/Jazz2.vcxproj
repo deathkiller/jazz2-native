@@ -109,7 +109,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WIN32;NCINE_DEBUG;NCINE_LOG;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_LOG;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -133,7 +133,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ANGELSCRIPT;NCINE_LOG;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_LOG;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ANGELSCRIPT;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -158,7 +158,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ANGELSCRIPT;NCINE_DEBUG;NCINE_LOG;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_LOG;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ANGELSCRIPT;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -182,7 +182,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ANGELSCRIPT;NCINE_LOG;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_LOG;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ANGELSCRIPT;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -222,6 +222,12 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Environment.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\HttpRequest.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringStlView.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Asserts.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\AndroidAssetStream.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\FileStream.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\FileSystem.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\MemoryStream.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\Stream.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Jazz2\Actors\ActorBase.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
@@ -323,7 +329,6 @@
     <ClInclude Include="Jazz2\Compatibility\JJ2Anims.Palettes.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Block.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Data.h" />
-    <ClInclude Include="Jazz2\Compatibility\JJ2DefaultPalette.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Episode.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Event.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Level.h" />
@@ -512,14 +517,8 @@
     <ClInclude Include="nCine\Input\Keys.h" />
     <ClInclude Include="nCine\Backends\Qt5InputManager.h" />
     <ClInclude Include="nCine\Backends\SdlInputManager.h" />
-    <ClInclude Include="nCine\IO\AssetFile.h" />
     <ClInclude Include="nCine\IO\CompressionUtils.h" />
     <ClInclude Include="nCine\IO\EmscriptenLocalFile.h" />
-    <ClInclude Include="nCine\IO\FileSystem.h" />
-    <ClInclude Include="nCine\IO\GrowableMemoryFile.h" />
-    <ClInclude Include="nCine\IO\IFileStream.h" />
-    <ClInclude Include="nCine\IO\MemoryFile.h" />
-    <ClInclude Include="nCine\IO\StandardFile.h" />
     <ClInclude Include="nCine\MainApplication.h" />
     <ClInclude Include="nCine\Primitives\AABB.h" />
     <ClInclude Include="nCine\Primitives\Color.h" />
@@ -580,6 +579,10 @@
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\String.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\StringView.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Environment.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\AndroidAssetStream.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\FileStream.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\FileSystem.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\MemoryStream.cpp" />
     <ClCompile Include="Jazz2\Actors\ActorBase.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.cpp" />
@@ -826,14 +829,8 @@
     <ClCompile Include="nCine\Backends\Qt5Keys.cpp" />
     <ClCompile Include="nCine\Backends\SdlInputManager.cpp" />
     <ClCompile Include="nCine\Backends\SdlKeys.cpp" />
-    <ClCompile Include="nCine\IO\AssetFile.cpp" />
     <ClCompile Include="nCine\IO\CompressionUtils.cpp" />
     <ClCompile Include="nCine\IO\EmscriptenLocalFile.cpp" />
-    <ClCompile Include="nCine\IO\FileSystem.cpp" />
-    <ClCompile Include="nCine\IO\GrowableMemoryFile.cpp" />
-    <ClCompile Include="nCine\IO\IFileStream.cpp" />
-    <ClCompile Include="nCine\IO\MemoryFile.cpp" />
-    <ClCompile Include="nCine\IO\StandardFile.cpp" />
     <ClCompile Include="nCine\MainApplication.cpp" />
     <ClCompile Include="nCine\Primitives\Color.cpp" />
     <ClCompile Include="nCine\Primitives\Colorf.cpp" />

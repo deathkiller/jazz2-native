@@ -6,6 +6,10 @@
 
 #include <memory>
 
+#if defined(DEATH_TARGET_WINDOWS)
+#	include <CommonWindows.h>
+#endif
+
 namespace nCine
 {
 	class FrameTimer;
@@ -134,6 +138,10 @@ namespace nCine
 			return hasFocus_;
 		}
 
+		inline const String& GetDataPath() const {
+			return appCfg_.dataPath();
+		}
+
 	protected:
 		bool isSuspended_;
 		bool autoSuspension_;
@@ -143,6 +151,9 @@ namespace nCine
 		RenderingSettings renderingSettings_;
 #if defined(NCINE_PROFILING)
 		float timings_[(int)Timings::Count];
+#endif
+#if defined(DEATH_TARGET_WINDOWS)
+		HANDLE _waitableTimer;
 #endif
 
 		TimeStamp profileStartTime_;

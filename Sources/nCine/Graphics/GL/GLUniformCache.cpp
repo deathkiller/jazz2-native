@@ -259,7 +259,7 @@ namespace nCine
 				glUniform1iv(location, 1, reinterpret_cast<const GLint*>(dataPointer_));
 				break;
 			default:
-				LOGW_X("No available case to handle type: %u", uniform_->type());
+				LOGW("No available case to handle type: %u", uniform_->type());
 				break;
 		}
 
@@ -270,7 +270,7 @@ namespace nCine
 	bool GLUniformCache::checkFloat() const
 	{
 		if (uniform_->basicType() != GL_FLOAT) {
-			LOGE_X("Uniform \"%s\" is not floating point", uniform_->name());
+			LOGE("Uniform \"%s\" is not floating point", uniform_->name());
 			return false;
 		} else {
 			return true;
@@ -291,7 +291,7 @@ namespace nCine
 			&& uniform_->basicType() != GL_SAMPLER_BUFFER
 #endif
 		) {
-			LOGE_X("Uniform \"%s\" is not integer", uniform_->name());
+			LOGE("Uniform \"%s\" is not integer", uniform_->name());
 			return false;
 		} else {
 			return true;
@@ -301,7 +301,7 @@ namespace nCine
 	bool GLUniformCache::checkComponents(unsigned int requiredComponents) const
 	{
 		if (uniform_->numComponents() != requiredComponents) {
-			LOGE_X("Uniform \"%s\" has %u components, not %u", uniform_->name(), uniform_->numComponents(), requiredComponents);
+			LOGE("Uniform \"%s\" has %u components, not %u", uniform_->name(), uniform_->numComponents(), requiredComponents);
 			return false;
 		} else {
 			return true;

@@ -235,7 +235,7 @@ namespace nCine
 	bool AndroidInputManager::isJoyPresent(int joyId) const
 	{
 		ASSERT(joyId >= 0);
-		ASSERT_MSG_X(joyId < int(MaxNumJoysticks), "joyId is %d and the maximum is %u", joyId, MaxNumJoysticks - 1);
+		ASSERT_MSG(joyId < int(MaxNumJoysticks), "joyId is %d and the maximum is %u", joyId, MaxNumJoysticks - 1);
 
 		return (joystickStates_[joyId].deviceId_ != -1);
 	}
@@ -409,7 +409,7 @@ namespace nCine
 				}
 			}
 		} else {
-			LOGW_X("No available joystick id for device %d, dropping button event", deviceId);
+			LOGW("No available joystick id for device %d, dropping button event", deviceId);
 		}
 
 		return true;
@@ -613,7 +613,7 @@ namespace nCine
 		for (unsigned int i = 0; i < MaxNumJoysticks; i++) {
 			const int deviceId = joystickStates_[i].deviceId_;
 			if (deviceId > -1 && !isDeviceConnected(deviceId)) {
-				LOGI_X("Joystick %d (device %d) \"%s\" has been disconnected", i, deviceId, joystickStates_[i].name_);
+				LOGI("Joystick %d (device %d) \"%s\" has been disconnected", i, deviceId, joystickStates_[i].name_);
 				joystickStates_[i].deviceId_ = -1;
 
 				if (inputEventHandler_ != nullptr && joystickStates_[i].guid_.isValid()) {
@@ -677,7 +677,7 @@ namespace nCine
 			deviceInfo(deviceId, joyId);
 
 			const uint8_t* g = joystickStates_[joyId].guid_.data;
-			LOGI_X("Device %d, \"%s\" (%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x), has been connected as joystick %d - %d axes, %d buttons",
+			LOGI("Device %d, \"%s\" (%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x), has been connected as joystick %d - %d axes, %d buttons",
 				deviceId, joystickStates_[joyId].name_, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], joyId, joystickStates_[joyId].numAxes_, joystickStates_[joyId].numButtons_);
 			
 			joystickStates_[joyId].deviceId_ = deviceId;
@@ -750,7 +750,7 @@ namespace nCine
 			};
 
 			int buttonMask = 0;
-#if defined(NCINE_LOG)
+#if defined(DEATH_LOG)
 			std::memset(deviceInfoString, 0, MaxStringLength);
 #endif
 			for (int i = 0; i < maxButtons; i++) {
@@ -765,7 +765,7 @@ namespace nCine
 
 				if (hasKey) {
 					joyState.buttonsMapping_[i] = (int)ButtonNames[i];
-#if defined(NCINE_LOG)
+#if defined(DEATH_LOG)
 					sprintf(&deviceInfoString[strlen(deviceInfoString)], " %d:%d", (int)ButtonNames[i], keyCode);
 #endif
 					buttonMask |= ButtonMasks[i];
@@ -775,8 +775,8 @@ namespace nCine
 				}
 			}
 			joyState.numButtons_ = numFoundButtons;
-#if defined(NCINE_LOG)
-			LOGI_X("Device (%d, %d) - Buttons%s", deviceId, joyId, deviceInfoString);
+#if defined(DEATH_LOG)
+			LOGI("Device (%d, %d) - Buttons%s", deviceId, joyId, deviceInfoString);
 #endif
 
 			joyState.hasDPad_ = true;
@@ -792,7 +792,7 @@ namespace nCine
 				for (int i = 0; i < countof(buttonsToCheck); i++) {
 					if (!checkedButtons[i]) {
 						joyState.hasDPad_ = false;
-						LOGI_X("Device (%d, %d) - D-Pad not detected", deviceId, joyId);
+						LOGI("Device (%d, %d) - D-Pad not detected", deviceId, joyId);
 						break;
 					}
 				}
@@ -801,13 +801,13 @@ namespace nCine
 					const bool hasKey = AndroidJniClass_KeyCharacterMap::deviceHasKey(button);
 					if (!hasKey) {
 						joyState.hasDPad_ = false;
-						LOGI_X("Device (%d, %d) - D-Pad not detected", deviceId, joyId);
+						LOGI("Device (%d, %d) - D-Pad not detected", deviceId, joyId);
 						break;
 					}
 				}
 			}
 
-#if defined(NCINE_LOG)
+#if defined(DEATH_LOG)
 			std::memset(deviceInfoString, 0, MaxStringLength);
 #endif
 			joyState.hasHatAxes_ = true;
@@ -833,7 +833,7 @@ namespace nCine
 							joyState.axesRangeValues_[numAxes] = 2.0f;
 						}
 					}
-#if defined(NCINE_LOG)
+#if defined(DEATH_LOG)
 					sprintf(&deviceInfoString[strlen(deviceInfoString)], " %d:%d (%.2f to %.2f)", numAxes, axis, minValue, minValue + rangeValue);
 #endif
 					if (axis != AMOTION_EVENT_AXIS_HAT_X && axis != AMOTION_EVENT_AXIS_HAT_Y) {
@@ -843,12 +843,12 @@ namespace nCine
 				} else {
 					if ((axis == AMOTION_EVENT_AXIS_HAT_X || axis == AMOTION_EVENT_AXIS_HAT_Y) && joyState.hasHatAxes_) {
 						joyState.hasHatAxes_ = false;
-						LOGI_X("Device (%d, %d) - Axis hats not detected", deviceId, joyId);
+						LOGI("Device (%d, %d) - Axis hats not detected", deviceId, joyId);
 					}
 				}
 			}
-#if defined(NCINE_LOG)
-			LOGI_X("Device (%d, %d) - Axes%s", deviceId, joyId, deviceInfoString);
+#if defined(DEATH_LOG)
+			LOGI("Device (%d, %d) - Axes%s", deviceId, joyId, deviceInfoString);
 #endif
 			joyState.numAxes_ = numAxes;
 			joyState.numAxesMapped_ = numAxesMapped;

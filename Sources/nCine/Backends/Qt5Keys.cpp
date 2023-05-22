@@ -80,7 +80,7 @@ namespace nCine
 			case Qt::Key_X:					return KeySym::X;
 			case Qt::Key_Y:					return KeySym::Y;
 			case Qt::Key_Z:					return KeySym::Z;
-			case Qt::Key_Delete:			return KeySym::DELETE;
+			case Qt::Key_Delete:			return KeySym::Delete;
 
 			case Qt::Key_Enter:				return KeySym::KP_ENTER;
 
@@ -236,7 +236,7 @@ namespace nCine
 			case KeySym::X:					return Qt::Key_x;
 			case KeySym::Y:					return Qt::Key_y;
 			case KeySym::Z:					return Qt::Key_z;
-			case KeySym::DELETE:			return Qt::Key_DELETE;
+			case KeySym::Delete:			return Qt::Key_DELETE;
 
 			case KeySym::KP0:				return Qt::Key_KP_0;
 			case KeySym::KP1:				return Qt::Key_KP_1;
@@ -385,7 +385,7 @@ namespace nCine
 			case KeySym::X:					return SDL_SCANCODE_X;
 			case KeySym::Y:					return SDL_SCANCODE_Y;
 			case KeySym::Z:					return SDL_SCANCODE_Z;
-			case KeySym::DELETE:			return SDL_SCANCODE_DELETE;
+			case KeySym::Delete:			return SDL_SCANCODE_DELETE;
 
 			case KeySym::KP0:				return SDL_SCANCODE_KP_0;
 			case KeySym::KP1:				return SDL_SCANCODE_KP_1;

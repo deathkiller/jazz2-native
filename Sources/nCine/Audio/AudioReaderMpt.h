@@ -5,7 +5,6 @@
 #if defined(WITH_OPENMPT)
 
 #include "IAudioReader.h"
-#include "../IO/IFileStream.h"
 
 #if !defined(CMAKE_BUILD) && defined(__has_include)
 #	if __has_include("../../../Libs/Includes/libopenmpt/libopenmpt.h")
@@ -20,6 +19,8 @@
 
 #include <memory>
 
+#include <IO/Stream.h>
+
 namespace nCine
 {
 	class IFile;
@@ -27,7 +28,7 @@ namespace nCine
 	class AudioReaderMpt : public IAudioReader
 	{
 	public:
-		AudioReaderMpt(std::unique_ptr<IFileStream> fileHandle, int frequency);
+		AudioReaderMpt(std::unique_ptr<Death::IO::Stream> fileHandle, int frequency);
 		~AudioReaderMpt();
 
 		unsigned long int read(void* buffer, unsigned long int bufferSize) const override;
@@ -36,7 +37,7 @@ namespace nCine
 
 	private:
 		/// Audio file handle
-		std::unique_ptr<IFileStream> _fileHandle;
+		std::unique_ptr<Death::IO::Stream> _fileHandle;
 		int _frequency;
 		openmpt_module* _module;
 

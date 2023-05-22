@@ -11,7 +11,7 @@ namespace nCine
 	class AudioLoaderMpt : public IAudioLoader
 	{
 	public:
-		explicit AudioLoaderMpt(std::unique_ptr<IFileStream> fileHandle);
+		explicit AudioLoaderMpt(std::unique_ptr<Death::IO::Stream> fileHandle);
 
 		std::unique_ptr<IAudioReader> createReader() override;
 	};

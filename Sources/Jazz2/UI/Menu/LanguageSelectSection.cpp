@@ -13,7 +13,7 @@ namespace Jazz2::UI::Menu
 		defaultLanguage.Item.DisplayName = "English"_s;
 
 		// Search both "Content/Translations/" and "Cache/Translations/"
-		fs::Directory dir(fs::JoinPath(resolver.GetContentPath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories);
+		fs::Directory dir(fs::CombinePath(resolver.GetContentPath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories);
 		while (true) {
 			StringView item = dir.GetNext();
 			if (item == nullptr) {
@@ -23,7 +23,7 @@ namespace Jazz2::UI::Menu
 			AddLanguage(item);
 		}
 
-		fs::Directory dirCache(fs::JoinPath(resolver.GetCachePath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories);
+		fs::Directory dirCache(fs::CombinePath(resolver.GetCachePath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories);
 		while (true) {
 			StringView item = dirCache.GetNext();
 			if (item == nullptr) {

@@ -1,9 +1,5 @@
 #pragma once
 
-#if defined(_WIN32) && defined(DELETE)
-#undef DELETE
-#endif
-
 namespace nCine {
 
 	enum class KeySym
@@ -62,7 +58,7 @@ namespace nCine {
 		X,
 		Y,
 		Z,
-		DELETE,
+		Delete,
 
 		KP0,
 		KP1,

@@ -248,7 +248,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		int r = ctx->Execute();
 		bool result;
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 			result = true;
 		} else {
 			result = (ctx->GetReturnByte() != 0);
@@ -274,7 +274,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		int r = ctx->Execute();
 		bool result;
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 			result = true;
 		} else {
 			result = (ctx->GetReturnByte() != 0);
@@ -298,7 +298,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->SetObject(_obj);
 		int r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
 		engine->ReturnContext(ctx);
@@ -323,7 +323,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		int r = ctx->Execute();
 		bool result;
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 			result = true;
 		} else {
 			result = (ctx->GetReturnByte() != 0);
@@ -348,7 +348,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->SetArgFloat(0, timeMult);
 		int r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
 		engine->ReturnContext(ctx);
@@ -369,7 +369,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->SetObject(_obj);
 		int r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
 		engine->ReturnContext(ctx);
@@ -391,7 +391,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 					int r = ctx->Execute();
 					bool result;
 					if (r == asEXECUTION_EXCEPTION) {
-						LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+						LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 						result = true;
 					} else {
 						result = (ctx->GetReturnByte() != 0);
@@ -419,7 +419,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 					int r = ctx->Execute();
 					bool result;
 					if (r == asEXECUTION_EXCEPTION) {
-						LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+						LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 						result = true;
 					} else {
 						result = (ctx->GetReturnByte() != 0);
@@ -459,7 +459,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->SetArgFloat(0, timeMult);
 		int r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
 		engine->ReturnContext(ctx);
@@ -479,7 +479,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->SetArgFloat(0, timeMult);
 		int r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
 		engine->ReturnContext(ctx);
@@ -499,7 +499,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->SetArgFloat(0, timeMult);
 		int r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
 		engine->ReturnContext(ctx);
@@ -518,7 +518,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->SetObject(_obj);
 		int r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
 		engine->ReturnContext(ctx);
@@ -540,7 +540,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->SetObject(_obj);
 		int r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
 		engine->ReturnContext(ctx);
@@ -684,7 +684,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		int r = ctx->Execute();
 		bool result;
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE_X("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 			result = true;
 		} else {
 			result = (ctx->GetReturnByte() != 0);

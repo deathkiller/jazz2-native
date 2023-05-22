@@ -23,6 +23,7 @@
 #pragma once
 
 #include "../CommonBase.h"
+#include "../Asserts.h"
 
 #include <cstddef>
 #include <initializer_list>
@@ -59,17 +60,17 @@ namespace Death::Containers
 
 		template<class U, std::size_t size, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
 		constexpr /*implicit*/ ArrayView(U(&data)[size]) noexcept : _data { data }, _size { size } {
-			static_assert(sizeof(T) == sizeof(U), "type sizes are not compatible");
+			static_assert(sizeof(T) == sizeof(U), "Type sizes are not compatible");
 		}
 
 		template<class U, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
 		constexpr /*implicit*/ ArrayView(ArrayView<U> view) noexcept : _data { view }, _size { view.size() } {
-			static_assert(sizeof(T) == sizeof(U), "type sizes are not compatible");
+			static_assert(sizeof(T) == sizeof(U), "Type sizes are not compatible");
 		}
 
 		template<std::size_t size, class U, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
 		constexpr /*implicit*/ ArrayView(StaticArrayView<size, U> view) noexcept : _data { view }, _size { size } {
-			static_assert(sizeof(U) == sizeof(T), "type sizes are not compatible");
+			static_assert(sizeof(U) == sizeof(T), "Type sizes are not compatible");
 		}
 
 		template<class U, class = decltype(Implementation::ArrayViewConverter<T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ ArrayView(U&& other) noexcept : ArrayView { Implementation::ArrayViewConverter<T, typename std::decay<U&&>::type>::from(std::forward<U>(other)) } {}
@@ -300,19 +301,19 @@ namespace Death::Containers
 	}
 
 	template<class U, class T> ArrayView<U> arrayCast(ArrayView<T> view) {
-		static_assert(std::is_standard_layout<T>::value, "the source type is not standard layout");
-		static_assert(std::is_standard_layout<U>::value, "the target type is not standard layout");
+		static_assert(std::is_standard_layout<T>::value, "The source type is not standard layout");
+		static_assert(std::is_standard_layout<U>::value, "The target type is not standard layout");
 		const std::size_t size = view.size() * sizeof(T) / sizeof(U);
-		//DEATH_ASSERT(size * sizeof(U) == view.size() * sizeof(T),
-		//	"Containers::arrayCast(): can't reinterpret" << view.size() << sizeof(T) << Utility::Debug::nospace << "-byte items into a" << sizeof(U) << Utility::Debug::nospace << "-byte type", {});
+		DEATH_ASSERT(size * sizeof(U) == view.size() * sizeof(T), {},
+			"Containers::arrayCast(): Can't reinterpret %zu %zu-byte items into a %zu-byte type", view.size(), sizeof(T), sizeof(U));
 		return { reinterpret_cast<U*>(view.begin()), size };
 	}
 
 	template<class U> ArrayView<U> arrayCast(ArrayView<const void> view) {
-		static_assert(std::is_standard_layout<U>::value, "the target type is not standard layout");
+		static_assert(std::is_standard_layout<U>::value, "The target type is not standard layout");
 		const std::size_t size = view.size() / sizeof(U);
-		//DEATH_ASSERT(size * sizeof(U) == view.size(),
-		//	"Containers::arrayCast(): can't reinterpret" << view.size() << "bytes into a" << sizeof(U) << Utility::Debug::nospace << "-byte type", {});
+		DEATH_ASSERT(size * sizeof(U) == view.size(), {},
+			"Containers::arrayCast(): Can't reinterpret %zu bytes into a %zu-byte type", view.size(), sizeof(U));
 		return { reinterpret_cast<U*>(view.data()), size };
 	}
 
@@ -365,7 +366,7 @@ namespace Death::Containers
 
 		template<class U, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
 		constexpr /*implicit*/ StaticArrayView(StaticArrayView<size_, U> view) noexcept : _data { view } {
-			static_assert(sizeof(T) == sizeof(U), "type sizes are not compatible");
+			static_assert(sizeof(T) == sizeof(U), "Type sizes are not compatible");
 		}
 
 		template<class U, class = decltype(Implementation::StaticArrayViewConverter<size_, T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ StaticArrayView(U&& other) noexcept : StaticArrayView { Implementation::StaticArrayViewConverter<size_, T, typename std::decay<U&&>::type>::from(std::forward<U>(other)) } {}
@@ -481,10 +482,10 @@ namespace Death::Containers
 	}
 
 	template<class U, std::size_t size, class T> StaticArrayView<size * sizeof(T) / sizeof(U), U> arrayCast(StaticArrayView<size, T> view) {
-		static_assert(std::is_standard_layout<T>::value, "the source type is not standard layout");
-		static_assert(std::is_standard_layout<U>::value, "the target type is not standard layout");
+		static_assert(std::is_standard_layout<T>::value, "The source type is not standard layout");
+		static_assert(std::is_standard_layout<U>::value, "The target type is not standard layout");
 		constexpr const std::size_t newSize = size * sizeof(T) / sizeof(U);
-		static_assert(newSize * sizeof(U) == size * sizeof(T), "type sizes are not compatible");
+		static_assert(newSize * sizeof(U) == size * sizeof(T), "Type sizes are not compatible");
 		return StaticArrayView<newSize, U>{reinterpret_cast<U*>(view.begin())};
 	}
 
@@ -493,59 +494,59 @@ namespace Death::Containers
 	}
 
 	template<class T> T& ArrayView<T>::front() const {
-		DEATH_ASSERT(_size, "Containers::ArrayView::front(): view is empty", _data[0]);
+		DEATH_ASSERT(_size, _data[0], "Containers::ArrayView::front(): View is empty");
 		return _data[0];
 	}
 
 	template<class T> T& ArrayView<T>::back() const {
-		DEATH_ASSERT(_size, "Containers::ArrayView::back(): view is empty", _data[_size - 1]);
+		DEATH_ASSERT(_size, _data[_size - 1], "Containers::ArrayView::back(): View is empty");
 		return _data[_size - 1];
 	}
 
 	template<class T> constexpr ArrayView<T> ArrayView<T>::slice(T* begin, T* end) const {
 		return DEATH_CONSTEXPR_ASSERT(_data <= begin && begin <= end && end <= _data + _size,
-				"Containers::ArrayView::slice(): slice is out of range"),
+				"Containers::ArrayView::slice(): Slice is out of range"),
 			ArrayView<T>{begin, std::size_t(end - begin)};
 	}
 
 	template<class T> constexpr ArrayView<T> ArrayView<T>::slice(std::size_t begin, std::size_t end) const {
 		return DEATH_CONSTEXPR_ASSERT(begin <= end && end <= _size,
-				"Containers::ArrayView::slice(): slice is out of range"),
+				"Containers::ArrayView::slice(): Slice is out of range"),
 			ArrayView<T>{_data + begin, end - begin};
 	}
 
 	template<std::size_t size_, class T> T& StaticArrayView<size_, T>::front() const {
-		static_assert(size_, "view is empty");
+		static_assert(size_, "View is empty");
 		return _data[0];
 	}
 
 	template<std::size_t size_, class T> T& StaticArrayView<size_, T>::back() const {
-		static_assert(size_, "view is empty");
+		static_assert(size_, "View is empty");
 		return _data[size_ - 1];
 	}
 
 	template<class T> template<std::size_t viewSize> constexpr StaticArrayView<viewSize, T> ArrayView<T>::slice(T* begin) const {
 		return DEATH_CONSTEXPR_ASSERT(_data <= begin && begin + viewSize <= _data + _size,
-				"Containers::ArrayView::slice(): slice is out of range"),
+				"Containers::ArrayView::slice(): Slice is out of range"),
 			StaticArrayView<viewSize, T>{begin};
 	}
 
 	template<class T> template<std::size_t viewSize> constexpr StaticArrayView<viewSize, T> ArrayView<T>::slice(std::size_t begin) const {
 		return DEATH_CONSTEXPR_ASSERT(begin + viewSize <= _size,
-				"Containers::ArrayView::slice(): slice is out of range"),
+				"Containers::ArrayView::slice(): Slice is out of range"),
 			StaticArrayView<viewSize, T>{_data + begin};
 	}
 
 	template<class T> template<std::size_t begin_, std::size_t end_> constexpr StaticArrayView<end_ - begin_, T> ArrayView<T>::slice() const {
-		static_assert(begin_ < end_, "fixed-size slice needs to have a positive size");
+		static_assert(begin_ < end_, "Fixed-size slice needs to have a positive size");
 		return DEATH_CONSTEXPR_ASSERT(end_ <= _size,
-				"Containers::ArrayView::slice(): slice is out of range"),
+				"Containers::ArrayView::slice(): Slice is out of range"),
 			StaticArrayView<end_ - begin_, T>{_data + begin_};
 	}
 
 	template<std::size_t size_, class T> template<std::size_t begin_, std::size_t end_> constexpr StaticArrayView<end_ - begin_, T> StaticArrayView<size_, T>::slice() const {
-		static_assert(begin_ < end_, "fixed-size slice needs to have a positive size");
-		static_assert(end_ <= size_, "slice out of bounds");
+		static_assert(begin_ < end_, "Fixed-size slice needs to have a positive size");
+		static_assert(end_ <= size_, "Slice out of bounds");
 		return StaticArrayView<end_ - begin_, T>{_data + begin_};
 	}
 }

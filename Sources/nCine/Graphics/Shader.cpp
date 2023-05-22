@@ -5,14 +5,18 @@
 #include "GL/GLShaderProgram.h"
 #include "RenderResources.h"
 #include "BinaryShaderCache.h"
+#include "../Application.h"
 #include "../tracy.h"
 #include "../../Common.h"
 
 #if defined(WITH_EMBEDDED_SHADERS)
 #	include "shader_strings.h"
 #else
-#	include "../IO/FileSystem.h" // for GetDataPath()
+#	include <IO/FileSystem.h>	// for GetDataPath()
 #endif
+
+using namespace Death::Containers::Literals;
+using namespace Death::IO;
 
 namespace nCine
 {
@@ -61,7 +65,7 @@ namespace nCine
 			: loadFromFile(shaderName, introspection, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
-			LOGE_X("Shader \"%s\" cannot be loaded", shaderName);
+			LOGE("Shader \"%s\" cannot be loaded", shaderName);
 		}
 	}
 
@@ -73,7 +77,7 @@ namespace nCine
 			: loadFromFile(shaderName, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
-			LOGE_X("Shader \"%s\" cannot be loaded", shaderName);
+			LOGE("Shader \"%s\" cannot be loaded", shaderName);
 		}
 	}
 
@@ -90,7 +94,7 @@ namespace nCine
 			: loadFromFile(shaderName, introspection, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
-			LOGE_X("Shader \"%s\" cannot be loaded", shaderName);
+			LOGE("Shader \"%s\" cannot be loaded", shaderName);
 		}
 	}
 
@@ -102,7 +106,7 @@ namespace nCine
 			: loadFromFile(shaderName, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
-			LOGE_X("Shader \"%s\" cannot be loaded", shaderName);
+			LOGE("Shader \"%s\" cannot be loaded", shaderName);
 		}
 	}
 
@@ -119,7 +123,7 @@ namespace nCine
 			: loadFromFile(shaderName, introspection, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
-			LOGE_X("Shader \"%s\" cannot be loaded", shaderName);
+			LOGE("Shader \"%s\" cannot be loaded", shaderName);
 		}
 	}
 
@@ -131,7 +135,7 @@ namespace nCine
 			: loadFromFile(shaderName, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
-			LOGE_X("Shader \"%s\" cannot be loaded", shaderName);
+			LOGE("Shader \"%s\" cannot be loaded", shaderName);
 		}
 	}
 
@@ -454,9 +458,9 @@ namespace nCine
 			char sourceString[48];
 			formatString(sourceString, sizeof(sourceString), BatchSizeFormatString, batchSize);
 			const char* vertexStrings[2] = { sourceString, nullptr };
-			return glShaderProgram_->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, vertexShader }));
+			return glShaderProgram_->attachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, vertexShader }));
 		} else {
-			return glShaderProgram_->attachShaderFromFile(GL_VERTEX_SHADER, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, vertexShader }));
+			return glShaderProgram_->attachShaderFromFile(GL_VERTEX_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, vertexShader }));
 		}
 #else
 		const char* vertexShader = nullptr;
@@ -526,7 +530,7 @@ namespace nCine
 			//	fragmentShader = "textnode_red_fs.glsl"_s;
 			//	break;
 		}
-		return glShaderProgram_->attachShaderFromFile(GL_FRAGMENT_SHADER, fs::JoinPath({ fs::GetDataPath(), "Shaders"_s, fragmentShader }));
+		return glShaderProgram_->attachShaderFromFile(GL_FRAGMENT_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, fragmentShader }));
 #else
 		const char* fragmentShader = nullptr;
 		// Skipping the initial new line character of the raw string literal

@@ -1,9 +1,10 @@
 #pragma once
 
 #include "IAudioReader.h"
-#include "../IO/IFileStream.h"
 
 #include <memory>
+
+#include <IO/Stream.h>
 
 namespace nCine
 {
@@ -11,7 +12,7 @@ namespace nCine
 	class IAudioLoader
 	{
 	public:
-		virtual ~IAudioLoader() {}
+		virtual ~IAudioLoader() { }
 
 		/// Returns true if the audio has been correctly loaded
 		inline bool hasLoaded() const {
@@ -48,7 +49,7 @@ namespace nCine
 		/// Returns the proper audio loader according to the memory buffer name extension
 		static std::unique_ptr<IAudioLoader> createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/// Returns the proper audio loader according to the file extension
-		static std::unique_ptr<IAudioLoader> createFromFile(const StringView& filename);
+		static std::unique_ptr<IAudioLoader> createFromFile(const Death::Containers::StringView& filename);
 
 		/// Returns the proper audio reader according to the loader instance
 		virtual std::unique_ptr<IAudioReader> createReader() = 0;
@@ -57,7 +58,7 @@ namespace nCine
 		/// A flag indicating if the loading process has been successful
 		bool hasLoaded_;
 		/// Audio file handle
-		std::unique_ptr<IFileStream> fileHandle_;
+		std::unique_ptr<Death::IO::Stream> fileHandle_;
 
 		/// Number of bytes per sample
 		int bytesPerSample_;
@@ -71,22 +72,19 @@ namespace nCine
 		/// Duration in seconds
 		float duration_;
 
-		explicit IAudioLoader(std::unique_ptr<IFileStream> fileHandle);
+		explicit IAudioLoader(std::unique_ptr<Death::IO::Stream> fileHandle);
 
-		static std::unique_ptr<IAudioLoader> createLoader(std::unique_ptr<IFileStream> fileHandle, const StringView& filename);
+		static std::unique_ptr<IAudioLoader> createLoader(std::unique_ptr<Death::IO::Stream> fileHandle, const Death::Containers::StringView& filename);
 	};
 
 	/// A class created when the audio file extension is not recognized
 	class InvalidAudioLoader : public IAudioLoader
 	{
 	public:
-		explicit InvalidAudioLoader(std::unique_ptr<IFileStream> fileHandle)
-			: IAudioLoader(std::move(fileHandle)) {}
+		explicit InvalidAudioLoader(std::unique_ptr<Death::IO::Stream> fileHandle)
+			: IAudioLoader(std::move(fileHandle)) { }
 
-		std::unique_ptr<IAudioReader> createReader() override
-		{
-			// TODO
-			//return std::make_unique<InvalidAudioReader>();
+		std::unique_ptr<IAudioReader> createReader() override {
 			return nullptr;
 		}
 	};

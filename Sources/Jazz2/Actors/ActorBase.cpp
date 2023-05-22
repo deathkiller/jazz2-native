@@ -444,7 +444,7 @@ namespace Jazz2::Actors
 
 		auto it = _metadata->Graphics.find(String::nullTerminatedView(identifier));
 		if (it == _metadata->Graphics.end()) {
-			LOGE_X("No animation found for \"%s\"", identifier.data());
+			LOGE("No animation found for \"%s\"", identifier.data());
 			return;
 		}
 
@@ -473,7 +473,7 @@ namespace Jazz2::Actors
 		AnimationCandidate candidates[AnimationCandidatesCount];
 		int count = FindAnimationCandidates(state, candidates);
 		if (count == 0) {
-			//LOGE_X("No animation found for state 0x%08x", state);
+			//LOGE("No animation found for state 0x%08x", state);
 			return false;
 		}
 

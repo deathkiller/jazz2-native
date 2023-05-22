@@ -5,7 +5,6 @@
 #if defined(WITH_VORBIS)
 
 #include "IAudioReader.h"
-#include "../IO/IFileStream.h"
 
 #define OV_EXCLUDE_STATIC_CALLBACKS
 
@@ -35,6 +34,8 @@
 #	include <CommonWindows.h>
 #endif
 
+#include <IO/Stream.h>
+
 namespace nCine
 {
 	class AudioLoaderOgg;
@@ -45,7 +46,7 @@ namespace nCine
 		friend class AudioLoaderOgg;
 
 	public:
-		AudioReaderOgg(std::unique_ptr<IFileStream> fileHandle, const OggVorbis_File& oggFile);
+		AudioReaderOgg(std::unique_ptr<Death::IO::Stream> fileHandle, const OggVorbis_File& oggFile);
 		~AudioReaderOgg() override;
 
 		unsigned long int read(void* buffer, unsigned long int bufferSize) const override;
@@ -53,7 +54,7 @@ namespace nCine
 
 	private:
 		/// Audio file handle
-		std::unique_ptr<IFileStream> fileHandle_;
+		std::unique_ptr<Death::IO::Stream> fileHandle_;
 		/// Vorbisfile handle
 		mutable OggVorbis_File oggFile_;
 

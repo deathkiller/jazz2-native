@@ -12,7 +12,7 @@
 #	endif
 #endif
 
-#include "../IO/IFileStream.h"
+using namespace Death::IO;
 
 namespace nCine
 {
@@ -28,10 +28,10 @@ namespace nCine
 	AudioReaderOgg::ov_time_total_t* AudioReaderOgg::_ov_time_total = nullptr;
 #endif
 
-	AudioReaderOgg::AudioReaderOgg(std::unique_ptr<IFileStream> fileHandle, const OggVorbis_File& oggFile)
+	AudioReaderOgg::AudioReaderOgg(std::unique_ptr<Stream> fileHandle, const OggVorbis_File& oggFile)
 		: fileHandle_(std::move(fileHandle)), oggFile_(oggFile)
 	{
-		ASSERT(fileHandle_->IsOpened());
+		ASSERT(fileHandle_->IsValid());
 	}
 
 	AudioReaderOgg::~AudioReaderOgg()
@@ -63,7 +63,7 @@ namespace nCine
 #else
 				ov_clear(&oggFile_);
 #endif
-				FATAL_MSG_X("Error decoding at bitstream %d", bitStream);
+				FATAL_MSG("Error decoding at bitstream %d", bitStream);
 			}
 
 			// Reset the static variable at the end of a decoding process

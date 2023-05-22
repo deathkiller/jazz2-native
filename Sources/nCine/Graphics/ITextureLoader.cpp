@@ -15,7 +15,11 @@
 #	include "TextureLoaderQoi.h"
 #endif
 
-#include "../IO/FileSystem.h"
+#include <IO/FileSystem.h>
+
+using namespace Death::Containers;
+using namespace Death::Containers::Literals;
+using namespace Death::IO;
 
 namespace nCine
 {
@@ -24,7 +28,7 @@ namespace nCine
 	{
 	}
 
-	ITextureLoader::ITextureLoader(std::unique_ptr<IFileStream> fileHandle)
+	ITextureLoader::ITextureLoader(std::unique_ptr<Stream> fileHandle)
 		: hasLoaded_(false), fileHandle_(std::move(fileHandle)), width_(0), height_(0), headerSize_(0), dataSize_(0), mipMapCount_(1)
 	{
 	}
@@ -57,18 +61,18 @@ namespace nCine
 
 	std::unique_ptr<ITextureLoader> ITextureLoader::createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
-		LOGI_X("Loading from memory: 0x%lx, %lu bytes", bufferPtr, bufferSize);
+		LOGI("Loading from memory: 0x%lx, %lu bytes", bufferPtr, bufferSize);
 		return createLoader(fs::CreateFromMemory(bufferPtr, bufferSize), { });
 	}
 
 	std::unique_ptr<ITextureLoader> ITextureLoader::createFromFile(const StringView& filename)
 	{
-		LOGD_X("Loading from file \"%s\"", filename.data());
+		LOGD("Loading from file \"%s\"", filename.data());
 		// Creating a handle from IFile static method to detect assets file
 		return createLoader(fs::Open(filename, FileAccessMode::Read), filename);
 	}
 
-	std::unique_ptr<ITextureLoader> ITextureLoader::createLoader(std::unique_ptr<IFileStream> fileHandle, const StringView& filename)
+	std::unique_ptr<ITextureLoader> ITextureLoader::createLoader(std::unique_ptr<Stream> fileHandle, const StringView& filename)
 	{
 		auto extension = fs::GetExtension(filename);
 		if (extension == "dds"_s) {
@@ -99,7 +103,7 @@ namespace nCine
 		}
 #endif
 
-		LOGF_X("Unknown extension: %s", extension.data());
+		LOGF("Unknown extension: %s", extension.data());
 		fileHandle.reset(nullptr);
 		return std::make_unique<InvalidTextureLoader>(std::move(fileHandle));
 	}
@@ -111,7 +115,7 @@ namespace nCine
 
 	void ITextureLoader::loadPixels(GLenum internalFormat, GLenum type)
 	{
-		LOGD_X("Loading \"%s\"", fileHandle_->GetFileName().data());
+		LOGD("Loading \"%s\"", fileHandle_->GetPath().data());
 		if (type) { // overriding pixel type
 			texFormat_ = TextureFormat(internalFormat, type);
 		} else {
@@ -119,7 +123,7 @@ namespace nCine
 		}
 
 		// If the file has not been already opened by a header reader method
-		if (!fileHandle_->IsOpened()) {
+		if (!fileHandle_->IsValid()) {
 			fileHandle_->Open(FileAccessMode::Read);
 		}
 

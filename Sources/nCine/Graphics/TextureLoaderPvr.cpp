@@ -1,14 +1,16 @@
 #include "TextureLoaderPvr.h"
 #include "../../Common.h"
 
+using namespace Death::IO;
+
 namespace nCine
 {
-	TextureLoaderPvr::TextureLoaderPvr(std::unique_ptr<IFileStream> fileHandle)
+	TextureLoaderPvr::TextureLoaderPvr(std::unique_ptr<Stream> fileHandle)
 		: ITextureLoader(std::move(fileHandle))
 	{
 		Pvr3Header header;
 
-		RETURN_ASSERT_MSG_X(fileHandle_->IsOpened(), "File \"%s\" cannot be opened", fileHandle_->GetFileName().data());
+		RETURN_ASSERT_MSG(fileHandle_->IsValid(), "File \"%s\" cannot be opened", fileHandle_->GetPath().data());
 		const bool headerRead = readHeader(header);
 		RETURN_ASSERT_MSG(headerRead, "PVR header cannot be read");
 		const bool formatParsed = parseFormat(header);
@@ -23,11 +25,11 @@ namespace nCine
 		fileHandle_->Read(&header, 52);
 
 		// Checking for the header presence ("PVR"03)
-		RETURNF_ASSERT_MSG(IFileStream::int32FromLE(header.version) == 0x03525650, "Not a PVR3 file");
+		RETURNF_ASSERT_MSG(Stream::Uint32FromLE(header.version) == 0x03525650, "Not a PVR3 file");
 
-		headerSize_ = 52 + IFileStream::int32FromLE(header.metaDataSize);
-		width_ = IFileStream::int32FromLE(header.width);
-		height_ = IFileStream::int32FromLE(header.height);
+		headerSize_ = 52 + Stream::Uint32FromLE(header.metaDataSize);
+		width_ = Stream::Uint32FromLE(header.width);
+		height_ = Stream::Uint32FromLE(header.height);
 		mipMapCount_ = header.numMipmaps;
 
 		if (mipMapCount_ == 0) {
@@ -40,11 +42,11 @@ namespace nCine
 	{
 		GLenum internalFormat = GL_RGB8; // to suppress uninitialized variable warning
 
-		uint64_t pixelFormat = IFileStream::int64FromLE(header.pixelFormat);
+		uint64_t pixelFormat = Stream::Uint64FromLE(header.pixelFormat);
 
 		// Texture contains compressed data, most significant 4 bytes have been set to zero
 		if (pixelFormat < 0x0000000100000000ULL) {
-			LOGI_X("Compressed format: %u", pixelFormat);
+			LOGI("Compressed format: %u", pixelFormat);
 
 			// Parsing the pixel format
 			switch (pixelFormat) {
@@ -138,7 +140,7 @@ namespace nCine
 #	endif
 #endif
 				default:
-					RETURNF_MSG_X("Unsupported PVR3 compressed format: 0x%llx", pixelFormat);
+					RETURNF_MSG("Unsupported PVR3 compressed format: 0x%llx", pixelFormat);
 					break;
 			}
 
@@ -147,7 +149,7 @@ namespace nCine
 			// Texture contains uncompressed data
 			GLenum type = GL_UNSIGNED_BYTE;
 
-			LOGI_X("Uncompressed format: %c%c%c%c (%u, %u, %u, %u)",
+			LOGI("Uncompressed format: %c%c%c%c (%u, %u, %u, %u)",
 				   reinterpret_cast<char*>(&pixelFormat)[0], reinterpret_cast<char*>(&pixelFormat)[1],
 				   reinterpret_cast<char*>(&pixelFormat)[2], reinterpret_cast<char*>(&pixelFormat)[3],
 				   reinterpret_cast<unsigned char*>(&pixelFormat)[4], reinterpret_cast<unsigned char*>(&pixelFormat)[5],
@@ -189,7 +191,7 @@ namespace nCine
 					internalFormat = GL_R8;
 					break;
 				default:
-					RETURNF_MSG_X("Unsupported PVR3 uncompressed format: 0x%llx", pixelFormat);
+					RETURNF_MSG("Unsupported PVR3 uncompressed format: 0x%llx", pixelFormat);
 					break;
 			}
 
@@ -197,12 +199,12 @@ namespace nCine
 		}
 
 		if (mipMapCount_ > 1) {
-			LOGI_X("MIP Maps: %d", mipMapCount_);
+			LOGI("MIP Maps: %d", mipMapCount_);
 			mipDataOffsets_ = std::make_unique<unsigned long[]>(mipMapCount_);
 			mipDataSizes_ = std::make_unique<unsigned long[]>(mipMapCount_);
 			unsigned long dataSizesSum = TextureFormat::calculateMipSizes(internalFormat, width_, height_, mipMapCount_, mipDataOffsets_.get(), mipDataSizes_.get());
 			if (dataSizesSum != dataSize_) {
-				LOGW_X("The sum of MIP maps size (%ld) is different than texture total data (%ld)", dataSizesSum, dataSize_);
+				LOGW("The sum of MIP maps size (%ld) is different than texture total data (%ld)", dataSizesSum, dataSize_);
 			}
 		}
 

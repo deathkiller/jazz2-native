@@ -2,9 +2,9 @@
 
 #include "ScriptLoader.h"
 #include "../ContentResolver.h"
-#include "../../nCine/IO/FileSystem.h"
 
 #include <Containers/GrowableArray.h>
+#include <IO/FileSystem.h>
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #   if defined(_M_X64)
@@ -24,6 +24,8 @@
 #   endif
 #endif
 
+using namespace Death::IO;
+
 namespace Jazz2::Scripting
 {
 	ScriptLoader::ScriptLoader()
@@ -34,7 +36,7 @@ namespace Jazz2::Scripting
 		_engine = asCreateScriptEngine();
 		_engine->SetEngineProperty(asEP_PROPERTY_ACCESSOR_MODE, 2); // Required to allow chained assignment to properties
 		_engine->SetEngineProperty(asEP_COMPILER_WARNINGS, true);
-#if !defined(NCINE_DEBUG)
+#if !defined(DEATH_DEBUG)
 		_engine->SetEngineProperty(asEP_BUILD_WITHOUT_LINE_CUES, true);
 #endif
 		_engine->SetUserData(this, EngineToOwner);
@@ -942,9 +944,9 @@ namespace Jazz2::Scripting
 	void ScriptLoader::Message(const asSMessageInfo& msg)
 	{
 		switch (msg.type) {
-			case asMSGTYPE_ERROR: __WriteLog(LogLevel::Error, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
-			case asMSGTYPE_WARNING: __WriteLog(LogLevel::Warning, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
-			default: __WriteLog(LogLevel::Info, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
+			case asMSGTYPE_ERROR: DEATH_LOG_CALLBACK(LogLevel::Error, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
+			case asMSGTYPE_WARNING: DEATH_LOG_CALLBACK(LogLevel::Warning, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
+			default: DEATH_LOG_CALLBACK(LogLevel::Info, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
 		}
 	}
 }

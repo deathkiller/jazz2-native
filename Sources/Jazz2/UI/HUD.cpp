@@ -5,7 +5,6 @@
 #include "../Actors/Enemies/Bosses/BossBase.h"
 
 #include "../../nCine/Graphics/RenderQueue.h"
-#include "../../nCine/IO/IFileStream.h"
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Application.h"
 
@@ -1234,7 +1233,7 @@ namespace Jazz2::UI
 			case KeySym::X: return AuraLight::X;
 			case KeySym::Y: return AuraLight::Y;
 			case KeySym::Z: return AuraLight::Z;
-			case KeySym::DELETE: return AuraLight::Delete;
+			case KeySym::Delete: return AuraLight::Delete;
 
 			case KeySym::KP0: return AuraLight::NumZero;
 			case KeySym::KP1: return AuraLight::NumOne;
