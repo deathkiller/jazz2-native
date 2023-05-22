@@ -60,6 +60,7 @@ extern "C"
 #include "tracy.h"
 #include "tracy_opengl.h"
 
+#include <Containers/StringView.h>
 #include <IO/FileSystem.h>
 
 #if defined(WITH_AUDIO)
@@ -78,6 +79,7 @@ extern "C"
 #	include "Graphics/RenderDocCapture.h"
 #endif
 
+using namespace Death::Containers::Literals;
 using namespace Death::IO;
 
 #if defined(DEATH_LOG)
@@ -144,8 +146,9 @@ void DEATH_LOG_CALLBACK(LogLevel level, const char* fmt, ...)
 			default:				levelIdentifier = "D"; break;
 		}
 
-		fprintf(__logFile->Ptr(), "[%s] %s\n", levelIdentifier, logEntry);
-		fflush(__logFile->Ptr());
+		FileStream* s = static_cast<FileStream*>(__logFile.get());
+		fprintf(s->GetHandle(), "[%s] %s\n", levelIdentifier, logEntry);
+		fflush(s->GetHandle());
 	}
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 	logEntry[0] = '[';

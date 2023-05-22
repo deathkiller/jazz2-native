@@ -48,7 +48,6 @@ namespace Death::IO
 		}
 	}
 
-	/*! This method will close a file both normally opened or fopened */
 	void FileStream::Close()
 	{
 		if (_fileDescriptor >= 0) {
