@@ -9,6 +9,7 @@
 namespace Death::IO
 {
 	AAssetManager* AndroidAssetStream::_assetManager = nullptr;
+	const char* AndroidAssetStream::_internalDataPath = nullptr;
 
 	AndroidAssetStream::AndroidAssetStream(const Containers::String& path)
 		: _asset(nullptr), _fileDescriptor(-1), _startOffset(0L), _shouldCloseOnDestruction(true)
