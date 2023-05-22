@@ -89,6 +89,7 @@ using namespace Death::IO;
 #elif defined(DEATH_TARGET_ANDROID)
 #	include <stdarg.h>
 #	include <android/log.h>
+#	include <IO/FileStream.h>
 extern std::unique_ptr<Death::IO::Stream> __logFile;
 #else
 #	include <cstdarg>
