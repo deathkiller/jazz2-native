@@ -54,7 +54,11 @@ if(NOT TARGET libopenmpt::libopenmpt)
 			INTERFACE_INCLUDE_DIRECTORIES ${LIBOPENMPT_INCLUDE_DIR})
 			
 		if(EMSCRIPTEN)
-			target_compile_definitions(libopenmpt_src PRIVATE "LIBOPENMPT_BUILD" "MPT_WITH_ZLIB" "MPT_WITH_VORBIS" "MPT_WITH_VORBISFI")
+			target_compile_definitions(libopenmpt_src PRIVATE "LIBOPENMPT_BUILD" "MPT_WITH_ZLIB" "MPT_WITH_MPG123" "MPT_WITH_VORBIS" "MPT_WITH_VORBISFI" "MPT_BUILD_WASM")
+		
+			set_target_properties(libopenmpt_src PROPERTIES
+				INTERFACE_COMPILE_OPTIONS "SHELL:-s USE_ZLIB=1 -s USE_MPG123=1 -s USE_OGG=1 -s USE_VORBIS=1"
+				INTERFACE_LINK_OPTIONS "SHELL:-s USE_ZLIB=1 -s USE_MPG123=1 -s USE_OGG=1 -s USE_VORBIS=1")
 		else()
 			target_compile_definitions(libopenmpt_src PRIVATE "LIBOPENMPT_BUILD" "MPT_WITH_ZLIB")
 		endif()
