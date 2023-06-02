@@ -119,7 +119,12 @@ void GameEventHandler::OnPreInit(AppConfiguration& config)
 	PreferencesCache::Initialize(config);
 
 	config.windowTitle = NCINE_APP_NAME;
-	config.withVSync = PreferencesCache::EnableVsync;
+	if (PreferencesCache::MaxFps == PreferencesCache::UseVsync) {
+		config.withVSync = true;
+	} else {
+		config.withVSync = false;
+		config.frameLimit = PreferencesCache::MaxFps;
+	}
 	config.resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)

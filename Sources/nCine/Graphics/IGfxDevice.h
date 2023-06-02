@@ -160,9 +160,9 @@ namespace nCine
 		inline virtual void flashWindow() const { }
 
 		/// Returns the OpenGL context creation attributes
-		inline const GLContextInfo &glContextInfo() const { return glContextInfo_; }
+		inline const GLContextInfo& glContextInfo() const { return glContextInfo_; }
 		/// Returns display mode
-		inline const DisplayMode &displayMode() const { return displayMode_; }
+		inline const DisplayMode& displayMode() const { return displayMode_; }
 
 		/// Returns the number of connected monitors
 		unsigned int numMonitors() const;
@@ -176,9 +176,9 @@ namespace nCine
 		inline const Monitor& monitor() const { return monitor(windowMonitorIndex()); }
 
 		/// Returns the current video mode for the specified monitor
-		virtual const VideoMode &currentVideoMode(unsigned int monitorIndex) const = 0;
+		virtual const VideoMode& currentVideoMode(unsigned int monitorIndex) const = 0;
 		/// Returns the current video mode for the monitor that hosts the window
-		inline const VideoMode &currentVideoMode() const { return currentVideoMode(windowMonitorIndex()); }
+		inline const VideoMode& currentVideoMode() const { return currentVideoMode(windowMonitorIndex()); }
 		/// Sets the video mode that will be used in full screen by the monitor that hosts the window
 		/*! \note Call this method <b>before>/b> enabling full screen */
 		inline virtual bool setVideoMode(unsigned int modeIndex) { return false; }

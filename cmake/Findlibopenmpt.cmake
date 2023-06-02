@@ -28,14 +28,14 @@ find_library(LIBOPENMPT_LIBRARY DOC "Path to libopenmpt library"
 mark_as_advanced(LIBOPENMPT_LIBRARY)
 
 if(NOT TARGET libopenmpt::libopenmpt)
-	if(LIBOPENMPT_INCLUDE_DIR AND LIBOPENMPT_LIBRARY)
+	if(NOT EMSCRIPTEN AND LIBOPENMPT_INCLUDE_DIR AND LIBOPENMPT_LIBRARY)
 		add_library(libopenmpt::libopenmpt SHARED IMPORTED)
 		set_target_properties(libopenmpt::libopenmpt PROPERTIES
 			IMPORTED_LOCATION ${LIBOPENMPT_LIBRARY}
 			INTERFACE_INCLUDE_DIRECTORIES ${LIBOPENMPT_INCLUDE_DIR})
 	elseif(NCINE_DOWNLOAD_DEPENDENCIES)
 		# Try to build `libopenmpt` from source
-		set(LIBOPENMPT_URL "https://github.com/OpenMPT/openmpt/archive/libopenmpt-0.6.6.tar.gz")
+		set(LIBOPENMPT_URL "https://github.com/OpenMPT/openmpt/archive/libopenmpt-0.7.1.tar.gz")
 		message(STATUS "Downloading dependencies from \"${LIBOPENMPT_URL}\"...")
 		
 		include(FetchContent)
@@ -52,13 +52,18 @@ if(NOT TARGET libopenmpt::libopenmpt)
 		set(LIBOPENMPT_INCLUDE_DIR "${libopenmpt_git_SOURCE_DIR}/libopenmpt/")
 		set_target_properties(libopenmpt_src PROPERTIES
 			INTERFACE_INCLUDE_DIRECTORIES ${LIBOPENMPT_INCLUDE_DIR})
-		target_compile_definitions(libopenmpt_src PRIVATE "LIBOPENMPT_BUILD" "MPT_WITH_ZLIB")
+			
+		if(EMSCRIPTEN)
+			target_compile_definitions(libopenmpt_src PRIVATE "LIBOPENMPT_BUILD" "MPT_WITH_ZLIB" "MPT_WITH_VORBIS" "MPT_WITH_VORBISFI")
+		else()
+			target_compile_definitions(libopenmpt_src PRIVATE "LIBOPENMPT_BUILD" "MPT_WITH_ZLIB")
+		endif()
 		
 		if(MSVC)
 			# Build with Multiple Processes and force UTF-8
 			target_compile_options(libopenmpt_src PRIVATE /MP /utf-8)
 			# Extra optimizations in release
-			target_compile_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:/fp:fast /O2 /Oi /Qpar /Gy>)
+			target_compile_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:/O2 /Oi /Qpar /Gy>)
 			target_link_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:/OPT:REF /OPT:NOICF>)
 			# Specifies the architecture for code generation (IA32, SSE, SSE2, AVX, AVX2, AVX512)
 			if(NCINE_ARCH_EXTENSIONS)
@@ -70,8 +75,6 @@ if(NOT TARGET libopenmpt::libopenmpt)
 				target_link_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:/LTCG>)
 			endif()
 		else()
-			target_compile_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:-ffast-math>)
-			
 			if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 				if(NCINE_LINKTIME_OPTIMIZATION AND NOT (MINGW OR MSYS OR ANDROID))
 					target_compile_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:-flto=auto>)

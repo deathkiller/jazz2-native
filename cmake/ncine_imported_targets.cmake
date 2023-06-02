@@ -7,7 +7,7 @@ if(NCINE_DOWNLOAD_DEPENDENCIES)
 				set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/raw/1.6.1-macos/jazz2-libraries-macos.tar.gz")
 			endif()
 		else()
-			set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/1.5.2.tar.gz")
+			set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/2.0.0.tar.gz")
 		endif()
 		message(STATUS "Downloading dependencies from \"${NCINE_LIBS_URL}\"...")
 
@@ -108,12 +108,11 @@ if(EMSCRIPTEN)
 			set(VORBIS_FOUND 1)
 		endif()
 		
-		if(NCINE_WITH_OPENMPT AND EXISTS "${EXTERNAL_EMSCRIPTEN_DIR}/libopenmpt.a")
-			add_library(libopenmpt::libopenmpt STATIC IMPORTED)
-			set_target_properties(libopenmpt::libopenmpt PROPERTIES
-				IMPORTED_LOCATION "${EXTERNAL_EMSCRIPTEN_DIR}/libopenmpt.a"
-				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}/libopenmpt/")
-			set(OPENMPT_FOUND 1)
+		if(NCINE_WITH_OPENMPT)
+			find_package(libopenmpt)
+			if(TARGET libopenmpt::libopenmpt)
+				set(OPENMPT_FOUND 1)
+			endif()
 		endif()
 	endif()
 

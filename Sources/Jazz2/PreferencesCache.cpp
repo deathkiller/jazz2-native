@@ -17,7 +17,7 @@ namespace Jazz2
 	UnlockableEpisodes PreferencesCache::UnlockedEpisodes = UnlockableEpisodes::None;
 	RescaleMode PreferencesCache::ActiveRescaleMode = RescaleMode::None;
 	bool PreferencesCache::EnableFullscreen = false;
-	bool PreferencesCache::EnableVsync = true;
+	std::int32_t PreferencesCache::MaxFps = PreferencesCache::UseVsync;
 	bool PreferencesCache::ShowPerformanceMetrics = false;
 	bool PreferencesCache::KeepAspectRatioInCinematics = false;
 	bool PreferencesCache::ShowPlayerTrails = true;
@@ -271,7 +271,16 @@ namespace Jazz2
 				EnableFullscreen = false;
 			} else if (arg == "/no-vsync"_s) {
 				// V-Sync can be turned off only with command-line parameter
-				EnableVsync = false;
+				if (MaxFps == UseVsync) {
+					MaxFps = UnlimitedFps;
+				}
+			} else if (arg.hasPrefix("/max-fps:"_s)) {
+				// Max. FPS can be set only with command-line parameter
+				char* end;
+				unsigned long paramValue = strtoul(arg.exceptPrefix("/max-fps:"_s).data(), &end, 10);
+				if (paramValue > 0) {
+					MaxFps = std::max(paramValue, 30ul);
+				}
 			} else if (arg == "/no-rgb"_s) {
 				EnableRgbLights = false;
 			} else if (arg == "/no-rescale"_s) {
