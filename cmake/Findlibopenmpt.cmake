@@ -52,9 +52,9 @@ if(NOT TARGET libopenmpt::libopenmpt)
 		set(LIBOPENMPT_INCLUDE_DIR "${libopenmpt_git_SOURCE_DIR}/libopenmpt/")
 		set_target_properties(libopenmpt_src PROPERTIES
 			INTERFACE_INCLUDE_DIRECTORIES ${LIBOPENMPT_INCLUDE_DIR})
-			
+
 		if(EMSCRIPTEN)
-			target_compile_definitions(libopenmpt_src PRIVATE "LIBOPENMPT_BUILD" "MPT_WITH_ZLIB" "MPT_WITH_MPG123" "MPT_WITH_VORBIS" "MPT_WITH_VORBISFI" "MPT_BUILD_WASM")
+			target_compile_definitions(libopenmpt_src PRIVATE "LIBOPENMPT_BUILD" "MPT_WITH_ZLIB" "MPT_WITH_MPG123" "MPT_WITH_VORBIS" "MPT_WITH_VORBISFILE" "MPT_BUILD_WASM")
 		
 			set_target_properties(libopenmpt_src PROPERTIES
 				INTERFACE_COMPILE_OPTIONS "SHELL:-s USE_ZLIB=1 -s USE_MPG123=1 -s USE_OGG=1 -s USE_VORBIS=1"
@@ -114,7 +114,7 @@ if(NOT TARGET libopenmpt::libopenmpt)
 		list(APPEND LIBOPENMPT_SOURCES "${libopenmpt_git_SOURCE_DIR}/libopenmpt/libopenmpt_impl.cpp")
 		list(APPEND LIBOPENMPT_SOURCES "${libopenmpt_git_SOURCE_DIR}/libopenmpt/libopenmpt_ext_impl.cpp")
 		target_sources(libopenmpt_src PRIVATE ${LIBOPENMPT_SOURCES})
-		target_include_directories(libopenmpt_src PRIVATE "${libopenmpt_git_SOURCE_DIR}" "${libopenmpt_git_SOURCE_DIR}/common" "${libopenmpt_git_SOURCE_DIR}/src")
+		target_include_directories(libopenmpt_src PRIVATE "${libopenmpt_git_SOURCE_DIR}" "${libopenmpt_git_SOURCE_DIR}/common" "${libopenmpt_git_SOURCE_DIR}/src" "${EXTERNAL_INCLUDES_DIR}")
 		file(WRITE "${libopenmpt_git_SOURCE_DIR}/common/svn_version.h" "#pragma once\n#define OPENMPT_VERSION_REVISION 0")
 
 		add_library(libopenmpt::libopenmpt ALIAS libopenmpt_src)
