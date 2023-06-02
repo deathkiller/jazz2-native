@@ -811,9 +811,9 @@ namespace Jazz2::Actors
 											_canDoubleJump = false;
 											_isFreefall = false;
 
-											_internalForceY = (_levelHandler->IsReforged() ? -1.15f : -0.9f);
+											_internalForceY = (_levelHandler->IsReforged() ? -1.15f : -0.88f) - 0.1f * (1.0f - timeMult);
 											_speed.Y = -0.6f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
-											_speed.X *= 0.4f;
+											_speed.X = std::clamp(_speed.X * 0.4f, -1.0f, 1.0f);
 
 											PlaySfx("DoubleJump"_s);
 

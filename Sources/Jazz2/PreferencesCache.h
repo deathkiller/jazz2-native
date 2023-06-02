@@ -78,12 +78,15 @@ namespace Jazz2
 	class PreferencesCache
 	{
 	public:
+		static constexpr std::int32_t UnlimitedFps = 0;
+		static constexpr std::int32_t UseVsync = -1;
+
 		static UnlockableEpisodes UnlockedEpisodes;
 
 		// Graphics
 		static RescaleMode ActiveRescaleMode;
 		static bool EnableFullscreen;
-		static bool EnableVsync;
+		static std::int32_t MaxFps;
 		static bool ShowPerformanceMetrics;
 		static bool KeepAspectRatioInCinematics;
 		static bool ShowPlayerTrails;
