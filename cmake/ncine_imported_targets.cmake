@@ -32,9 +32,7 @@ set(EXTERNAL_INCLUDES_DIR "${NCINE_LIBS}/Includes/" CACHE PATH "Set the path to 
 
 if(EMSCRIPTEN)
 	set(EXTERNAL_EMSCRIPTEN_DIR "${NCINE_LIBS}/Emscripten/" CACHE PATH "Set the path to the Emscripten libraries directory")
-	if(NOT IS_DIRECTORY ${EXTERNAL_EMSCRIPTEN_DIR})
-		message(STATUS "Emscripten libraries directory not found at: ${EXTERNAL_EMSCRIPTEN_DIR}")
-	else()
+	if(IS_DIRECTORY ${EXTERNAL_EMSCRIPTEN_DIR})
 		message(STATUS "Emscripten libraries directory: ${EXTERNAL_EMSCRIPTEN_DIR}")
 	endif()
 

@@ -223,29 +223,6 @@ struct disjunction<> : std::false_type {};
 template <typename T>
 struct negation : std::integral_constant<bool, !T::value> {};
 
-template <typename T>
-struct is_trivially_destructible
-    : std::integral_constant<bool, __has_trivial_destructor(T) &&
-      std::is_destructible<T>::value> {};
-
-template <typename T>
-struct is_trivially_default_constructible
-    : std::integral_constant<bool, __has_trivial_constructor(T) &&
-                                   std::is_default_constructible<T>::value &&
-      is_trivially_destructible<T>::value> {};
-
-template <typename T>
-struct is_trivially_copy_constructible
-    : std::integral_constant<bool, __has_trivial_copy(T) &&
-                                   std::is_copy_constructible<T>::value &&
-      is_trivially_destructible<T>::value> {};
-
-template <typename T>
-struct is_trivially_copy_assignable
-    : std::integral_constant<
-          bool, __has_trivial_assign(typename std::remove_reference<T>::type) &&
-      phmap::is_copy_assignable<T>::value> {};
-
 // -----------------------------------------------------------------------------
 // C++14 "_t" trait aliases
 // -----------------------------------------------------------------------------
@@ -645,83 +622,85 @@ namespace phmap {
 namespace base_internal {
 
 namespace {
-template <typename T>
+
 #ifdef PHMAP_HAVE_EXCEPTIONS
-[[noreturn]] void Throw(const T& error) {
-    throw error;
-}
+  #define PHMAP_THROW_IMPL(e) throw e
 #else
-[[noreturn]] void Throw(const T&) {
-    std::abort();
-}
+  #define PHMAP_THROW_IMPL(e) do { (void)(e); std::abort(); } while(0)
 #endif
 }  // namespace
 
 static inline void ThrowStdLogicError(const std::string& what_arg) {
-  Throw(std::logic_error(what_arg));
+  PHMAP_THROW_IMPL(std::logic_error(what_arg));
 }
 static inline void ThrowStdLogicError(const char* what_arg) {
-  Throw(std::logic_error(what_arg));
+  PHMAP_THROW_IMPL(std::logic_error(what_arg));
 }
 static inline void ThrowStdInvalidArgument(const std::string& what_arg) {
-  Throw(std::invalid_argument(what_arg));
+  PHMAP_THROW_IMPL(std::invalid_argument(what_arg));
 }
 static inline void ThrowStdInvalidArgument(const char* what_arg) {
-  Throw(std::invalid_argument(what_arg));
+  PHMAP_THROW_IMPL(std::invalid_argument(what_arg));
 }
 
 static inline void ThrowStdDomainError(const std::string& what_arg) {
-  Throw(std::domain_error(what_arg));
+  PHMAP_THROW_IMPL(std::domain_error(what_arg));
 }
 static inline void ThrowStdDomainError(const char* what_arg) {
-  Throw(std::domain_error(what_arg));
+  PHMAP_THROW_IMPL(std::domain_error(what_arg));
 }
 
 static inline void ThrowStdLengthError(const std::string& what_arg) {
-  Throw(std::length_error(what_arg));
+  PHMAP_THROW_IMPL(std::length_error(what_arg));
 }
 static inline void ThrowStdLengthError(const char* what_arg) {
-  Throw(std::length_error(what_arg));
+  PHMAP_THROW_IMPL(std::length_error(what_arg));
 }
 
 static inline void ThrowStdOutOfRange(const std::string& what_arg) {
-  Throw(std::out_of_range(what_arg));
+  PHMAP_THROW_IMPL(std::out_of_range(what_arg));
 }
 static inline void ThrowStdOutOfRange(const char* what_arg) {
-  Throw(std::out_of_range(what_arg));
+  PHMAP_THROW_IMPL(std::out_of_range(what_arg));
 }
 
 static inline void ThrowStdRuntimeError(const std::string& what_arg) {
-  Throw(std::runtime_error(what_arg));
+  PHMAP_THROW_IMPL(std::runtime_error(what_arg));
 }
 static inline void ThrowStdRuntimeError(const char* what_arg) {
-  Throw(std::runtime_error(what_arg));
+  PHMAP_THROW_IMPL(std::runtime_error(what_arg));
 }
 
 static inline void ThrowStdRangeError(const std::string& what_arg) {
-  Throw(std::range_error(what_arg));
+  PHMAP_THROW_IMPL(std::range_error(what_arg));
 }
 static inline void ThrowStdRangeError(const char* what_arg) {
-  Throw(std::range_error(what_arg));
+  PHMAP_THROW_IMPL(std::range_error(what_arg));
 }
 
 static inline void ThrowStdOverflowError(const std::string& what_arg) {
-  Throw(std::overflow_error(what_arg));
+  PHMAP_THROW_IMPL(std::overflow_error(what_arg));
 }
+    
 static inline void ThrowStdOverflowError(const char* what_arg) {
-  Throw(std::overflow_error(what_arg));
+  PHMAP_THROW_IMPL(std::overflow_error(what_arg));
 }
 
 static inline void ThrowStdUnderflowError(const std::string& what_arg) {
-  Throw(std::underflow_error(what_arg));
+  PHMAP_THROW_IMPL(std::underflow_error(what_arg));
 }
+    
 static inline void ThrowStdUnderflowError(const char* what_arg) {
-  Throw(std::underflow_error(what_arg));
+  PHMAP_THROW_IMPL(std::underflow_error(what_arg));
 }
-
-static inline void ThrowStdBadFunctionCall() { Throw(std::bad_function_call()); }
-
-static inline void ThrowStdBadAlloc() { Throw(std::bad_alloc()); }
+    
+static inline void ThrowStdBadFunctionCall() {
+  PHMAP_THROW_IMPL(std::bad_function_call());
+}
+    
+static inline void ThrowStdBadAlloc() {
+  PHMAP_THROW_IMPL(std::bad_alloc());
+}
 
 }  // namespace base_internal
 }  // namespace phmap
@@ -1808,9 +1787,10 @@ protected:
 // Also, we should be checking is_trivially_copyable here, which is not
 // supported now, so we use is_trivially_* traits instead.
 template <typename T,
-          bool unused = phmap::is_trivially_copy_constructible<T>::value&&
-              phmap::is_trivially_copy_assignable<typename std::remove_cv<
-                  T>::type>::value&& std::is_trivially_destructible<T>::value>
+          bool unused =
+          std::is_trivially_copy_constructible<T>::value &&
+          std::is_trivially_copy_assignable<typename std::remove_cv<T>::type>::value &&
+          std::is_trivially_destructible<T>::value>
 class optional_data;
 
 // Trivially copyable types
@@ -2067,7 +2047,7 @@ public:
     optional(const optional& src) = default;
 
     // Move constructor, standard semantics
-    optional(optional&& src) = default;
+    optional(optional&& src) noexcept = default;
 
     // Constructs a non-empty `optional` direct-initialized value of type `T` from
     // the arguments `std::forward<Args>(args)...`  within the `optional`.
@@ -2207,7 +2187,7 @@ public:
     optional& operator=(const optional& src) = default;
 
     // Move assignment operator, standard semantics
-    optional& operator=(optional&& src) = default;
+    optional& operator=(optional&& src) noexcept = default;
 
     // Value assignment operators
     template <
@@ -4147,180 +4127,6 @@ public:
         : internal_layout::LayoutType<sizeof...(Ts), Ts...>(sizes...) {}
 };
 
-}  // namespace priv
-}  // namespace phmap
-
-// ---------------------------------------------------------------------------
-//  compressed_tuple.h
-// ---------------------------------------------------------------------------
-
-#ifdef _MSC_VER
-    // We need to mark these classes with this declspec to ensure that
-    // CompressedTuple happens.
-    #define PHMAP_INTERNAL_COMPRESSED_TUPLE_DECLSPEC __declspec(empty_bases)
-#else  // _MSC_VER
-    #define PHMAP_INTERNAL_COMPRESSED_TUPLE_DECLSPEC
-#endif  // _MSC_VER
-
-namespace phmap {
-namespace priv {
-
-template <typename... Ts>
-class CompressedTuple;
-
-namespace internal_compressed_tuple {
-
-template <typename D, size_t I>
-struct Elem;
-template <typename... B, size_t I>
-struct Elem<CompressedTuple<B...>, I>
-    : std::tuple_element<I, std::tuple<B...>> {};
-template <typename D, size_t I>
-using ElemT = typename Elem<D, I>::type;
-
-// ---------------------------------------------------------------------------
-// Use the __is_final intrinsic if available. Where it's not available, classes
-// declared with the 'final' specifier cannot be used as CompressedTuple
-// elements.
-// TODO(sbenza): Replace this with std::is_final in C++14.
-// ---------------------------------------------------------------------------
-template <typename T>
-constexpr bool IsFinal() {
-#if defined(__clang__) || defined(__GNUC__)
-    return __is_final(T);
-#else
-    return false;
-#endif
-}
-
-template <typename T>
-constexpr bool ShouldUseBase() {
-#ifdef __INTEL_COMPILER
-    // avoid crash in Intel compiler
-    // assertion failed at: "shared/cfe/edgcpfe/lower_init.c", line 7013
-    return false; 
-#else
-    return std::is_class<T>::value && std::is_empty<T>::value && !IsFinal<T>();
-#endif
-}
-
-// The storage class provides two specializations:
-//  - For empty classes, it stores T as a base class.
-//  - For everything else, it stores T as a member.
-// ------------------------------------------------
-template <typename D, size_t I, bool = ShouldUseBase<ElemT<D, I>>()>
-struct Storage 
-{
-    using T = ElemT<D, I>;
-    T value;
-    constexpr Storage() = default;
-    explicit constexpr Storage(T&& v) : value(phmap::forward<T>(v)) {}
-    constexpr const T& get() const& { return value; }
-    T& get() & { return value; }
-    constexpr const T&& get() const&& { return phmap::move(*this).value; }
-    T&& get() && { return std::move(*this).value; }
-};
-
-template <typename D, size_t I>
-struct PHMAP_INTERNAL_COMPRESSED_TUPLE_DECLSPEC Storage<D, I, true>
-    : ElemT<D, I> 
-{
-    using T = internal_compressed_tuple::ElemT<D, I>;
-    constexpr Storage() = default;
-    explicit constexpr Storage(T&& v) : T(phmap::forward<T>(v)) {}
-    constexpr const T& get() const& { return *this; }
-    T& get() & { return *this; }
-    constexpr const T&& get() const&& { return phmap::move(*this); }
-    T&& get() && { return std::move(*this); }
-};
-
-template <typename D, typename I>
-struct PHMAP_INTERNAL_COMPRESSED_TUPLE_DECLSPEC CompressedTupleImpl;
-
-template <typename... Ts, size_t... I>
-struct PHMAP_INTERNAL_COMPRESSED_TUPLE_DECLSPEC
-    CompressedTupleImpl<CompressedTuple<Ts...>, phmap::index_sequence<I...>>
-    // We use the dummy identity function through std::integral_constant to
-    // convince MSVC of accepting and expanding I in that context. Without it
-    // you would get:
-    //   error C3548: 'I': parameter pack cannot be used in this context
-    : Storage<CompressedTuple<Ts...>,
-              std::integral_constant<size_t, I>::value>... 
-{
-    constexpr CompressedTupleImpl() = default;
-    explicit constexpr CompressedTupleImpl(Ts&&... args)
-        : Storage<CompressedTuple<Ts...>, I>(phmap::forward<Ts>(args))... {}
-};
-
-}  // namespace internal_compressed_tuple
-
-// ---------------------------------------------------------------------------
-// Helper class to perform the Empty Base Class Optimization.
-// Ts can contain classes and non-classes, empty or not. For the ones that
-// are empty classes, we perform the CompressedTuple. If all types in Ts are
-// empty classes, then CompressedTuple<Ts...> is itself an empty class.
-//
-// To access the members, use member .get<N>() function.
-//
-// Eg:
-//   phmap::priv::CompressedTuple<int, T1, T2, T3> value(7, t1, t2,
-//                                                                    t3);
-//   assert(value.get<0>() == 7);
-//   T1& t1 = value.get<1>();
-//   const T2& t2 = value.get<2>();
-//   ...
-//
-// https://en.cppreference.com/w/cpp/language/ebo
-// ---------------------------------------------------------------------------
-template <typename... Ts>
-class PHMAP_INTERNAL_COMPRESSED_TUPLE_DECLSPEC CompressedTuple
-    : private internal_compressed_tuple::CompressedTupleImpl<
-          CompressedTuple<Ts...>, phmap::index_sequence_for<Ts...>> 
-{
-private:
-    template <int I>
-        using ElemT = internal_compressed_tuple::ElemT<CompressedTuple, I>;
-
-public:
-    constexpr CompressedTuple() = default;
-    explicit constexpr CompressedTuple(Ts... base)
-        : CompressedTuple::CompressedTupleImpl(phmap::forward<Ts>(base)...) {}
-
-    template <int I>
-        ElemT<I>& get() & {
-        return internal_compressed_tuple::Storage<CompressedTuple, I>::get();
-    }
-
-    template <int I>
-        constexpr const ElemT<I>& get() const& {
-        return internal_compressed_tuple::Storage<CompressedTuple, I>::get();
-    }
-
-    template <int I>
-        ElemT<I>&& get() && {
-        return std::move(*this)
-            .internal_compressed_tuple::template Storage<CompressedTuple, I>::get();
-    }
-
-    template <int I>
-        constexpr const ElemT<I>&& get() const&& {
-        return phmap::move(*this)
-            .internal_compressed_tuple::template Storage<CompressedTuple, I>::get();
-    }
-};
-
-// Explicit specialization for a zero-element tuple
-// (needed to avoid ambiguous overloads for the default constructor).
-// ---------------------------------------------------------------------------
-template <>
-class PHMAP_INTERNAL_COMPRESSED_TUPLE_DECLSPEC CompressedTuple<> {};
-
-}  // namespace priv
-}  // namespace phmap
-
-
-namespace phmap {
-namespace priv {
 
 #ifdef _MSC_VER
     #pragma warning(push)  
@@ -4785,7 +4591,7 @@ public:
         DoNothing(mutex_type&, phmap::try_to_lock_t) {}
         template<class T> explicit DoNothing(T&&) {}
         DoNothing& operator=(const DoNothing&) { return *this; }
-        DoNothing& operator=(DoNothing&&) { return *this; }
+        DoNothing& operator=(DoNothing&&) noexcept { return *this; }
         void swap(DoNothing &) {}
         bool owns_lock() const noexcept { return true; }
     };
@@ -4816,13 +4622,13 @@ public:
             m_->try_lock(); 
         }
 
-        WriteLock(WriteLock &&o) :
+        WriteLock(WriteLock &&o) noexcept :
             m_(std::move(o.m_)), locked_(std::move(o.locked_)) {
             o.locked_ = false;
             o.m_      = nullptr;
         }
 
-        WriteLock& operator=(WriteLock&& other) {
+        WriteLock& operator=(WriteLock&& other) noexcept {
             WriteLock temp(std::move(other));
             swap(temp);
             return *this;
@@ -4894,13 +4700,13 @@ public:
             m_->try_lock_shared(); 
         }
 
-        ReadLock(ReadLock &&o) :
+        ReadLock(ReadLock &&o) noexcept :
             m_(std::move(o.m_)), locked_(std::move(o.locked_)) {
             o.locked_ = false;
             o.m_      = nullptr;
         }
 
-        ReadLock& operator=(ReadLock&& other) {
+        ReadLock& operator=(ReadLock&& other) noexcept {
             ReadLock temp(std::move(other));
             swap(temp);
             return *this;
