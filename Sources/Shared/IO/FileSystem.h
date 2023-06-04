@@ -15,6 +15,9 @@
 #	elif defined(DEATH_TARGET_ANDROID)
 using DIR = struct DIR;
 using AAssetDir = struct AAssetDir;
+#	elif defined(__FreeBSD__)
+struct _dirdesc;
+using DIR = struct _dirdesc;
 #	else
 struct __dirstream;
 using DIR = struct __dirstream;
@@ -128,7 +131,7 @@ namespace Death::IO
 		static Containers::StringView GetFileNameWithoutExtension(const Containers::StringView& path);
 		/** @brief Returns the extension as lower-case string without dot or empty string if it is not found */
 		static Containers::String GetExtension(const Containers::StringView& path);
-		/** @brief Converts path to native separators */
+		/** @brief Converts path using forward slashes to native separators */
 #if defined(DEATH_TARGET_WINDOWS)
 		static Containers::String ToNativeSeparators(Containers::String path);
 #else
