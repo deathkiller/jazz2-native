@@ -56,10 +56,31 @@ namespace Jazz2
 	}
 
 	ContentResolver::ContentResolver()
-		: _isLoading(false), _cachedMetadata(64), _cachedGraphics(128)
+		: _isLoading(false), _cachedMetadata(64), _cachedGraphics(128), _palettes {}
 	{
-		std::memset(_palettes, 0, sizeof(_palettes));
+		InitializePaths();
+	}
 
+	ContentResolver::~ContentResolver()
+	{
+	}
+
+	void ContentResolver::Release()
+	{
+		_cachedMetadata.clear();
+		_cachedGraphics.clear();
+
+		for (int32_t i = 0; i < (int32_t)FontType::Count; i++) {
+			_fonts[i] = nullptr;
+		}
+
+		for (int32_t i = 0; i < (int32_t)PrecompiledShader::Count; i++) {
+			_precompiledShaders[i] = nullptr;
+		}
+	}
+
+	void ContentResolver::InitializePaths()
+	{
 #if defined(DEATH_TARGET_ANDROID)
 		// If `MANAGE_EXTERNAL_STORAGE` permission is granted, try to use also alternative paths
 		if (AndroidJniWrap_Activity::hasExternalStoragePermission()) {
@@ -93,39 +114,51 @@ namespace Jazz2
 		} else {
 			auto& app = static_cast<AndroidApplication&>(theApplication());
 			StringView dataPath = app.externalDataPath();
-			_cachePath = fs::CombinePath(dataPath, "Cache/"_s);
 			_sourcePath = fs::CombinePath(dataPath, "Source/"_s);
+			_cachePath = fs::CombinePath(dataPath, "Cache/"_s);
 		}
 #elif defined(DEATH_TARGET_APPLE)
 		// Returns local application data directory on Apple
 		const String& appData = fs::GetSavePath("Jazz² Resurrection"_s);
-		_cachePath = fs::CombinePath(appData, "Cache/"_s);
 		_sourcePath = fs::CombinePath(appData, "Source/"_s);
+		_cachePath = fs::CombinePath(appData, "Cache/"_s);
 #elif defined(DEATH_TARGET_UNIX)
-#	if defined(NCINE_OVERRIDE_CONTENT_PATH)
+#	if defined(NCINE_PACKAGED_CONTENT_PATH)
+		_contentPath = "Content/"_s;
+#	elif defined(NCINE_OVERRIDE_CONTENT_PATH)
 		_contentPath = NCINE_OVERRIDE_CONTENT_PATH;
 #	else
-#		if !defined(NCINE_LINUX_PACKAGE)
-#			define NCINE_LINUX_PACKAGE "Jazz² Resurrection"
-#		endif
 		_contentPath = "/usr/share/" NCINE_LINUX_PACKAGE "/Content/";
 #	endif
+#	if defined(NCINE_PACKAGED_CONTENT_PATH)
+		// If Content is packaged with binaries, always use standard XDG paths for everything else
+		auto localStorage = fs::GetLocalStorage();
+		if (!localStorage.empty()) {
+			_sourcePath = fs::CombinePath(localStorage, NCINE_LINUX_PACKAGE, "Source/"_s);
+			_cachePath = fs::CombinePath(localStorage, NCINE_LINUX_PACKAGE, "Cache/"_s);
+		} else {
+			_sourcePath = "Source/"_s;
+			_cachePath = "Cache/"_s;
+		}
+#	else
 		if (fs::DirectoryExists(_contentPath)) {
 			// Shared Content exists, try to use standard XDG paths
 			auto localStorage = fs::GetLocalStorage();
 			if (!localStorage.empty()) {
-				_cachePath = fs::CombinePath(localStorage, "Jazz² Resurrection/Cache/"_s);
+				// TODO: Change "Jazz² Resurrection" to NCINE_LINUX_PACKAGE
 				_sourcePath = fs::CombinePath(localStorage, "Jazz² Resurrection/Source/"_s);
+				_cachePath = fs::CombinePath(localStorage, "Jazz² Resurrection/Cache/"_s);
 			} else {
-				_cachePath = "Cache/"_s;
 				_sourcePath = "Source/"_s;
+				_cachePath = "Cache/"_s;
 			}
 		} else {
 			// Fallback to relative paths
 			_contentPath = "Content/"_s;
-			_cachePath = "Cache/"_s;
 			_sourcePath = "Source/"_s;
+			_cachePath = "Cache/"_s;
 		}
+#	endif
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 		bool found = false;
 		if (Environment::CurrentDeviceType == DeviceType::Xbox) {
@@ -155,29 +188,11 @@ namespace Jazz2
 		if (!found) {
 			// Returns local application data directory on Windows RT
 			const String& appData = fs::GetSavePath("Jazz² Resurrection"_s);
-			_cachePath = fs::CombinePath(appData, "Cache\\"_s);
 			_sourcePath = fs::CombinePath(appData, "Source\\"_s);
+			_cachePath = fs::CombinePath(appData, "Cache\\"_s);
 		}
 		_contentPath = "Content\\"_s;
 #endif
-	}
-
-	ContentResolver::~ContentResolver()
-	{
-	}
-
-	void ContentResolver::Release()
-	{
-		_cachedMetadata.clear();
-		_cachedGraphics.clear();
-
-		for (int32_t i = 0; i < (int32_t)FontType::Count; i++) {
-			_fonts[i] = nullptr;
-		}
-
-		for (int32_t i = 0; i < (int32_t)PrecompiledShader::Count; i++) {
-			_precompiledShaders[i] = nullptr;
-		}
 	}
 
 	void ContentResolver::BeginLoading()

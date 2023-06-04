@@ -9,27 +9,41 @@ find_path(LIBOPENMPT_INCLUDE_DIR DOC "Path to libopenmpt include directory"
 )
 mark_as_advanced(LIBOPENMPT_INCLUDE_DIR)
 
-find_library(LIBOPENMPT_LIBRARY DOC "Path to libopenmpt library"
-	NAMES libopenmpt openmpt
-	NAMES_PER_DIR
-	PATH_SUFFIXES
-	lib64
-	lib
-	libx32
-	lib/x64
-	x86_64-w64-mingw32/lib
-	PATHS
-	/sw
-	/opt/local
-	/opt/csw
-	/opt
-	${NCINE_LIBS}/Linux/${CMAKE_SYSTEM_PROCESSOR}/
-)
-mark_as_advanced(LIBOPENMPT_LIBRARY)
+if(EMSCRIPTEN)
+	if(EXISTS "${NCINE_LIBS}/Emscripten/libopenmpt.a")
+		set(LIBOPENMPT_LIBRARY "${NCINE_LIBS}/Emscripten/libopenmpt.a")
+		mark_as_advanced(LIBOPENMPT_LIBRARY)
+	endif()
+else()
+	find_library(LIBOPENMPT_LIBRARY DOC "Path to libopenmpt library"
+		NAMES libopenmpt openmpt
+		NAMES_PER_DIR
+		PATH_SUFFIXES
+		lib64
+		lib
+		libx32
+		lib/x64
+		x86_64-w64-mingw32/lib
+		PATHS
+		/sw
+		/opt/local
+		/opt/csw
+		/opt
+		${NCINE_LIBS}/Linux/${CMAKE_SYSTEM_PROCESSOR}/
+	)
+	mark_as_advanced(LIBOPENMPT_LIBRARY)
+endif()
 
 if(NOT TARGET libopenmpt::libopenmpt)
-	if(NOT EMSCRIPTEN AND LIBOPENMPT_INCLUDE_DIR AND LIBOPENMPT_LIBRARY)
-		add_library(libopenmpt::libopenmpt SHARED IMPORTED)
+	if(LIBOPENMPT_INCLUDE_DIR AND LIBOPENMPT_LIBRARY)
+		if(EMSCRIPTEN)
+			add_library(libopenmpt::libopenmpt STATIC IMPORTED)
+			set(LIBOPENMPT_STATIC TRUE)
+			mark_as_advanced(LIBOPENMPT_STATIC)
+		else()
+			add_library(libopenmpt::libopenmpt SHARED IMPORTED)
+		endif()
+		
 		set_target_properties(libopenmpt::libopenmpt PROPERTIES
 			IMPORTED_LOCATION ${LIBOPENMPT_LIBRARY}
 			INTERFACE_INCLUDE_DIRECTORIES ${LIBOPENMPT_INCLUDE_DIR})
