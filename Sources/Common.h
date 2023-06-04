@@ -10,6 +10,9 @@
 #if !defined(NCINE_VERSION)
 #	define NCINE_VERSION "1.9.1"
 #endif
+#if !defined(NCINE_LINUX_PACKAGE)
+#	define NCINE_LINUX_PACKAGE NCINE_APP_NAME
+#endif
 
 // Prefer local version of shared libraries in CMake build
 #if defined(CMAKE_BUILD) && defined(__has_include)

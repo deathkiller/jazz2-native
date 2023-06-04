@@ -292,10 +292,11 @@ namespace Jazz2
 
 	private:
 		ContentResolver();
-		/// Deleted copy constructor
+
 		ContentResolver(const ContentResolver&) = delete;
-		/// Deleted assignment operator
 		ContentResolver& operator=(const ContentResolver&) = delete;
+
+		void InitializePaths();
 
 		GenericGraphicResource* RequestGraphicsAura(const StringView& path, uint16_t paletteOffset);
 		static void ReadImageFromFile(std::unique_ptr<Stream>& s, uint8_t* data, int32_t width, int32_t height, int32_t channelCount);

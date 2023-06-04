@@ -88,7 +88,11 @@ namespace Jazz2
 
 		// If config path is not overriden and portable config doesn't exist, use common path for current user
 		if (!overrideConfigPath && !fs::IsReadableFile(_configPath)) {
+#	if defined(DEATH_TARGET_UNIX) && defined(NCINE_PACKAGED_CONTENT_PATH)
+			_configPath = fs::CombinePath(fs::GetSavePath(NCINE_LINUX_PACKAGE), "Jazz2.config"_s);
+#	else
 			_configPath = fs::CombinePath(fs::GetSavePath("Jazz² Resurrection"_s), "Jazz2.config"_s);
+#	endif
 
 #	if defined(DEATH_TARGET_ANDROID)
 			// Save config file to external path if possible

@@ -4,7 +4,6 @@ if(POLICY CMP0127)
 endif()
 
 # nCine options
-option(DEATH_LOG "Enable runtime logging" ON)
 option(NCINE_PROFILING "Enable runtime profiling" OFF)
 option(NCINE_DOWNLOAD_DEPENDENCIES "Download all build dependencies" ON)
 option(NCINE_LINKTIME_OPTIMIZATION "Compile the game with link time optimization when in release" ON)
@@ -56,26 +55,12 @@ option(NCINE_WITH_WEBP "Enable WebP image file support" OFF)
 option(NCINE_WITH_AUDIO "Enable OpenAL support and thus sound" ON)
 option(NCINE_WITH_VORBIS "Enable Ogg Vorbis audio file support" ON)
 option(NCINE_WITH_OPENMPT "Enable module (libopenmpt) audio file support" ON)
-#option(NCINE_WITH_LUA "Enable Lua scripting integration" OFF)
-#if(NCINE_WITH_LUA)
-#	option(NCINE_WITH_SCRIPTING_API "Enable Lua scripting API" OFF)
-#endif()
 option(NCINE_WITH_ANGELSCRIPT "Enable AngelScript scripting support" OFF)
 
-#option(NCINE_WITH_ALLOCATORS "Enable the custom memory allocators" OFF)
-#option(NCINE_WITH_IMGUI "Enable the integration with Dear ImGui" OFF)
-#option(NCINE_WITH_NUKLEAR "Enable the integration with Nuklear" OFF)
 option(NCINE_WITH_TRACY "Enable integration with Tracy frame profiler" OFF)
 option(NCINE_WITH_RENDERDOC "Enable integration with RenderDoc" OFF)
 
 set(NCINE_DATA_DIR "${CMAKE_SOURCE_DIR}/Content" CACHE PATH "Set path to the game data directory")
-
-#if(NCINE_WITH_ALLOCATORS)
-#	option(NCINE_RECORD_ALLOCATIONS "Record a timestamp of every allocation and deallocation" OFF)
-#	option(NCINE_OVERRIDE_NEW "Override global new and delete operators to use custom allocators" OFF)
-#	option(NCINE_USE_FREELIST "Use free list custom allocator instead of malloc()/free()" OFF)
-#	set(NCINE_FREELIST_BUFFER "33554432" CACHE STRING "Size in bytes of free list allocator buffer")
-#endif()
 
 if(NCINE_WITH_RENDERDOC)
 	set(RENDERDOC_DIR "" CACHE PATH "Set path to RenderDoc directory")
@@ -93,6 +78,8 @@ endif()
 #set(NCINE_WITH_FIXED_BATCH_SIZE "0" CACHE PATH "Set custom fixed batch size (unsafe)")
 
 # Shared library options
+option(DEATH_LOG "Enable runtime logging" ON)
+
 # Check if we can use IFUNC for CPU dispatch. Linux with glibc and Android with API 18+ has it,
 # but e.g. Alpine Linux with musl doesn't, and on Android with API < 30 we don't get AT_HWCAP passed
 # into the resolver and can't call getauxval() ourselves because it's too early at that point,
