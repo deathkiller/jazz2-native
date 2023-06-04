@@ -56,7 +56,7 @@ namespace Jazz2
 	}
 
 	ContentResolver::ContentResolver()
-		: _isLoading(false), _cachedMetadata(64), _cachedGraphics(128), _palettes {}
+		: _isLoading(false), _cachedMetadata(64), _cachedGraphics(128), _palettes{}
 	{
 		InitializePaths();
 	}

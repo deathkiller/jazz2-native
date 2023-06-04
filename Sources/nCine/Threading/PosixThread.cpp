@@ -16,6 +16,10 @@
 #	include <mach/thread_policy.h>
 #endif
 
+#if defined(__FreeBSD__)
+#	include <pthread_np.h>
+#endif
+
 #if defined(WITH_TRACY)
 #	include "common/TracySystem.hpp"
 #endif
@@ -187,7 +191,7 @@ namespace nCine
 
 	long int Thread::Self()
 	{
-#if defined(DEATH_TARGET_APPLE)
+#if defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
 		return reinterpret_cast<long int>(pthread_self());
 #else
 		return static_cast<long int>(pthread_self());

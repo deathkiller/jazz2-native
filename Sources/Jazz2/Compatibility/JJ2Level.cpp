@@ -424,12 +424,16 @@ namespace Jazz2::Compatibility
 				i32tos(i / 8, numberBuffer);
 
 				StringView foundDot = path.findLastOr('.', path.end());
-				String extraLayersPath = path.prefix(foundDot.begin()) + "-MLLE-Data-"_s + numberBuffer + ".j2l"_s;
+				String extraLayersPath = fs::FindPathCaseInsensitive(path.prefix(foundDot.begin()) + "-MLLE-Data-"_s + numberBuffer + ".j2l"_s);
 
 				JJ2Level extraLayersFile;
 				if (extraLayersFile.Open(extraLayersPath, strictParser)) {
 					for (int j = 0; j < 8 && (i + j) < layerCount; j++) {
 						_layers.emplace_back(std::move(extraLayersFile._layers[j]));
+					}
+				} else {
+					for (int j = 0; j < 8 && (i + j) < layerCount; j++) {
+						_layers.emplace_back(LayerSection{});
 					}
 				}
 			}
@@ -738,7 +742,11 @@ namespace Jazz2::Compatibility
 		// Layers
 		int layerCount = 0;
 		for (int i = 0; i < _layers.size(); i++) {
-			if (_layers[i].Used) {
+			auto& layer = _layers[i];
+			if (layer.Width == 0 || layer.Height == 0) {
+				layer.Used = false;
+			}
+			if (layer.Used) {
 				layerCount++;
 			}
 		}
@@ -949,7 +957,7 @@ namespace Jazz2::Compatibility
 				}
 			}
 		}
-		
+
 		int32_t compressedSize = CompressionUtils::GetMaxDeflatedSize(co.GetSize());
 		std::unique_ptr<uint8_t[]> compressedBuffer = std::make_unique<uint8_t[]>(compressedSize);
 		compressedSize = CompressionUtils::Deflate(co.GetBuffer(), co.GetSize(), compressedBuffer.get(), compressedSize);

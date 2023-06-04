@@ -394,7 +394,7 @@ namespace nCine
 		if (!mapping.isValid) {
 			const uint8_t* g = joyGuid.data;
 			LOGI("Joystick mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), using Android default mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
-			
+
 			mapping.isValid = true;
 
 			for (int i = 0; i < countof(AndroidAxisNameMapping); i++) {
@@ -402,7 +402,7 @@ namespace nCine
 				mapping.desc.axes[i].min = -1.0f;
 				mapping.desc.axes[i].max = 1.0f;
 			}
-			
+
 			constexpr int AndroidButtonCount = (int)ButtonName::MISC1;
 			for (int i = 0; i < AndroidButtonCount; i++) {
 				mapping.desc.buttons[i] = (ButtonName)i;
@@ -429,9 +429,10 @@ namespace nCine
 
 		if (!mapping.isValid) {
 #	if defined(DEATH_TARGET_UNIX)
-			// Razer Keyboards and Mice on Linux are incorrectly recognized as joystick in some cases, don't assign XInput mapping to them
+			// Razer keyboards and mice, and VMware virtual devices on Linux/BSD are incorrectly recognized as joystick in some cases, don't assign XInput mapping to them
 			const StringView joyNameView = joyName;
-			bool isBlacklisted = (joyNameView.contains("Razer "_s) && (joyNameView.contains("Keyboard"_s) || joyNameView.contains("DeathAdder"_s)));
+			bool isBlacklisted = (joyNameView.contains("Razer "_s) && (joyNameView.contains("Keyboard"_s) || joyNameView.contains("DeathAdder"_s))) ||
+				(joyNameView == "VMware Virtual USB Mouse"_s);
 #	else
 			bool isBlacklisted = false;
 #	endif
