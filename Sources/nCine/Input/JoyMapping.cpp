@@ -230,6 +230,10 @@ namespace nCine
 
 	void JoyMapping::onJoyButtonPressed(const JoyButtonEvent& event)
 	{
+#if defined(NCINE_INPUT_DEBUGGING)
+		LOGI("Button pressed - joyId: %d, buttonId: %d", event.joyId, event.buttonId);
+#endif
+
 		if (inputEventHandler_ == nullptr) {
 			return;
 		}
@@ -241,6 +245,9 @@ namespace nCine
 			mappedButtonEvent_.buttonName = mapping.desc.buttons[event.buttonId];
 			if (mappedButtonEvent_.buttonName != ButtonName::UNKNOWN) {
 				const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
+#if defined(NCINE_INPUT_DEBUGGING)
+				LOGI("Button press mapped as button %d", buttonId);
+#endif
 				mappedJoyStates_[event.joyId].buttons_[buttonId] = true;
 				inputEventHandler_->OnJoyMappedButtonPressed(mappedButtonEvent_);
 			} else {
@@ -250,16 +257,30 @@ namespace nCine
 					mappedAxisEvent_.joyId = event.joyId;
 					mappedAxisEvent_.axisName = axisName;
 					mappedAxisEvent_.value = 1.0f;
-
+#if defined(NCINE_INPUT_DEBUGGING)
+					LOGI("Button press mapped as axis %d", static_cast<int>(axisName));
+#endif
 					mappedJoyStates_[event.joyId].axesValues_[static_cast<int>(axisName)] = mappedAxisEvent_.value;
 					inputEventHandler_->OnJoyMappedAxisMoved(mappedAxisEvent_);
+				} else {
+#if defined(NCINE_INPUT_DEBUGGING)
+					LOGW("Button release has incorrect mapping");
+#endif
 				}
 			}
+		} else {
+#if defined(NCINE_INPUT_DEBUGGING)
+			LOGW("Button press has no mapping");
+#endif
 		}
 	}
 
 	void JoyMapping::onJoyButtonReleased(const JoyButtonEvent& event)
 	{
+#if defined(NCINE_INPUT_DEBUGGING)
+		LOGI("Button released - joyId: %d, buttonId: %d", event.joyId, event.buttonId);
+#endif
+
 		if (inputEventHandler_ == nullptr) {
 			return;
 		}
@@ -271,6 +292,9 @@ namespace nCine
 			mappedButtonEvent_.buttonName = mapping.desc.buttons[event.buttonId];
 			if (mappedButtonEvent_.buttonName != ButtonName::UNKNOWN) {
 				const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
+#if defined(NCINE_INPUT_DEBUGGING)
+				LOGI("Button release mapped as button %d", buttonId);
+#endif
 				mappedJoyStates_[event.joyId].buttons_[buttonId] = false;
 				inputEventHandler_->OnJoyMappedButtonReleased(mappedButtonEvent_);
 			} else {
@@ -280,16 +304,30 @@ namespace nCine
 					mappedAxisEvent_.joyId = event.joyId;
 					mappedAxisEvent_.axisName = axisName;
 					mappedAxisEvent_.value = 0.0f;
-
+#if defined(NCINE_INPUT_DEBUGGING)
+					LOGI("Button release mapped as axis %d", static_cast<int>(axisName));
+#endif
 					mappedJoyStates_[event.joyId].axesValues_[static_cast<int>(axisName)] = mappedAxisEvent_.value;
 					inputEventHandler_->OnJoyMappedAxisMoved(mappedAxisEvent_);
+				} else {
+#if defined(NCINE_INPUT_DEBUGGING)
+					LOGW("Button release has incorrect mapping");
+#endif
 				}
 			}
+		} else {
+#if defined(NCINE_INPUT_DEBUGGING)
+			LOGW("Button release has no mapping");
+#endif
 		}
 	}
 
 	void JoyMapping::onJoyHatMoved(const JoyHatEvent& event)
 	{
+#if defined(NCINE_INPUT_DEBUGGING)
+		LOGI("Hat moved - joyId: %d, hatId: %d, hatState: 0x%02x", event.joyId, event.hatId, event.hatState);
+#endif
+
 		if (inputEventHandler_ == nullptr) {
 			return;
 		}
@@ -303,31 +341,46 @@ namespace nCine
 			const unsigned char oldHatState = mappedJoyStates_[event.joyId].lastHatState_;
 			const unsigned char newHatState = event.hatState;
 
-			const unsigned char firstHatValue = HatState::UP;
-			const unsigned char lastHatValue = HatState::LEFT;
-			for (unsigned char hatValue = firstHatValue; hatValue <= lastHatValue; hatValue *= 2) {
+			constexpr unsigned char FirstHatValue = HatState::UP;
+			constexpr unsigned char LastHatValue = HatState::LEFT;
+			for (unsigned char hatValue = FirstHatValue; hatValue <= LastHatValue; hatValue *= 2) {
 				if ((oldHatState & hatValue) != (newHatState & hatValue)) {
 					int hatIndex = hatStateToIndex(hatValue);
-
 					mappedButtonEvent_.buttonName = mapping.desc.hats[hatIndex];
 					if (mappedButtonEvent_.buttonName != ButtonName::UNKNOWN) {
 						const int buttonId = static_cast<int>(mappedButtonEvent_.buttonName);
 						if (newHatState & hatValue) {
+#if defined(NCINE_INPUT_DEBUGGING)
+							LOGI("Hat move mapped as button press %d", buttonId);
+#endif
 							mappedJoyStates_[event.joyId].buttons_[buttonId] = true;
 							inputEventHandler_->OnJoyMappedButtonPressed(mappedButtonEvent_);
 						} else {
+#if defined(NCINE_INPUT_DEBUGGING)
+							LOGI("Hat move mapped as button release %d", buttonId);
+#endif
 							mappedJoyStates_[event.joyId].buttons_[buttonId] = false;
 							inputEventHandler_->OnJoyMappedButtonReleased(mappedButtonEvent_);
 						}
 					}
 				}
-				mappedJoyStates_[event.joyId].lastHatState_ = event.hatState;
 			}
+			mappedJoyStates_[event.joyId].lastHatState_ = event.hatState;
+		} else {
+#if defined(NCINE_INPUT_DEBUGGING)
+			if (!mapping.isValid || event.hatId != 0) {
+				LOGW("Hat move has no mapping");
+			}
+#endif
 		}
 	}
 
 	void JoyMapping::onJoyAxisMoved(const JoyAxisEvent& event)
 	{
+#if defined(NCINE_INPUT_DEBUGGING)
+		LOGI("Axis moved - joyId: %d, axisId: %d, value: %f", event.joyId, event.axisId, event.value);
+#endif
+
 		if (inputEventHandler_ == nullptr) {
 			return;
 		}
@@ -342,6 +395,9 @@ namespace nCine
 			if (mappedAxisEvent_.axisName != AxisName::UNKNOWN) {
 				const float value = (event.value + 1.0f) * 0.5f;
 				mappedAxisEvent_.value = axis.min + value * (axis.max - axis.min);
+#if defined(NCINE_INPUT_DEBUGGING)
+				LOGI("Axis move mapped as axis %d (value: %f, normalized: %f, min: %f, max: %f)", static_cast<int>(axisName), mappedAxisEvent_.value, value, axis.min, axis.max);
+#endif
 				mappedJoyStates_[event.joyId].axesValues_[static_cast<int>(axis.name)] = mappedAxisEvent_.value;
 				inputEventHandler_->OnJoyMappedAxisMoved(mappedAxisEvent_);
 
@@ -360,18 +416,36 @@ namespace nCine
 						mappedButtonEvent_.buttonName = buttonName;
 						mappedJoyStates_[event.joyId].buttons_[buttonId] = isPressed;
 						if (isPressed) {
+#if defined(NCINE_INPUT_DEBUGGING)
+							LOGI("Axis move mapped as button press %d", static_cast<int>(buttonName));
+#endif
 							inputEventHandler_->OnJoyMappedButtonPressed(mappedButtonEvent_);
 						} else {
+#if defined(NCINE_INPUT_DEBUGGING)
+							LOGI("Axis move mapped as button release %d", static_cast<int>(buttonName));
+#endif
 							inputEventHandler_->OnJoyMappedButtonReleased(mappedButtonEvent_);
 						}
 					}
 				}
+			} else {
+#if defined(NCINE_INPUT_DEBUGGING)
+				LOGW("Axis move has incorrect mapping");
+#endif
 			}
+		} else {
+#if defined(NCINE_INPUT_DEBUGGING)
+			LOGW("Axis move has no mapping");
+#endif
 		}
 	}
 
 	bool JoyMapping::onJoyConnected(const JoyConnectionEvent& event)
 	{
+#if defined(NCINE_INPUT_DEBUGGING)
+		LOGI("Controller connected - joyId: %d", event.joyId);
+#endif
+
 		const char* joyName = inputManager_->joyName(event.joyId);
 		const JoystickGuid joyGuid = inputManager_->joyGuid(event.joyId);
 
@@ -432,7 +506,7 @@ namespace nCine
 			// Razer keyboards and mice, and VMware virtual devices on Linux/BSD are incorrectly recognized as joystick in some cases, don't assign XInput mapping to them
 			const StringView joyNameView = joyName;
 			bool isBlacklisted = (joyNameView.contains("Razer "_s) && (joyNameView.contains("Keyboard"_s) || joyNameView.contains("DeathAdder"_s))) ||
-				(joyNameView == "VMware Virtual USB Mouse"_s);
+									(joyNameView == "VMware Virtual USB Mouse"_s);
 #	else
 			bool isBlacklisted = false;
 #	endif
@@ -454,6 +528,10 @@ namespace nCine
 
 	void JoyMapping::onJoyDisconnected(const JoyConnectionEvent& event)
 	{
+#if defined(NCINE_INPUT_DEBUGGING)
+		LOGI("Controller disconnected - joyId: %d", event.joyId);
+#endif
+
 #if defined(WITH_SDL)
 		// Compacting the array of mapping indices
 		for (int i = event.joyId; i < MaxNumJoysticks - 1; i++) {
