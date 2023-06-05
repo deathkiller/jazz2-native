@@ -494,12 +494,12 @@ namespace Death::Containers
 	}
 
 	template<class T> T& ArrayView<T>::front() const {
-		DEATH_ASSERT(_size, _data[0], "Containers::ArrayView::front(): View is empty");
+		DEATH_ASSERT(_size != 0, _data[0], "Containers::ArrayView::front(): View is empty");
 		return _data[0];
 	}
 
 	template<class T> T& ArrayView<T>::back() const {
-		DEATH_ASSERT(_size, _data[_size - 1], "Containers::ArrayView::back(): View is empty");
+		DEATH_ASSERT(_size != 0, _data[_size - 1], "Containers::ArrayView::back(): View is empty");
 		return _data[_size - 1];
 	}
 
@@ -516,12 +516,12 @@ namespace Death::Containers
 	}
 
 	template<std::size_t size_, class T> T& StaticArrayView<size_, T>::front() const {
-		static_assert(size_, "View is empty");
+		static_assert(size_ != 0, "View is empty");
 		return _data[0];
 	}
 
 	template<std::size_t size_, class T> T& StaticArrayView<size_, T>::back() const {
-		static_assert(size_, "View is empty");
+		static_assert(size_ != 0, "View is empty");
 		return _data[size_ - 1];
 	}
 

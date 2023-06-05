@@ -81,7 +81,7 @@ jobs:
 
   # Testing builds with workarounds
   Workarounds:
-    if: ${{ false }}  # Temporarily disabled, it will be removed in the future as it's no longer needed.
+    #if: ${{ false }}  # Temporarily disabled, it will be removed in the future as it's no longer needed.
     strategy:
       fail-fast: false
       matrix:
@@ -117,7 +117,8 @@ jobs:
           * ) exit 1 ;;
         esac
         
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_BUILD_ANDROID=ON -D NCINE_UNIVERSAL_APK="$universalApk" -D NCINE_NDK_ARCHITECTURES="$architecture" -D NCINE_DEBUG=ON -D NCINE_WITH_FIXED_BATCH_SIZE=10
+        #cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_BUILD_ANDROID=ON -D NCINE_UNIVERSAL_APK="$universalApk" -D NCINE_NDK_ARCHITECTURES="$architecture" -D DEATH_DEBUG=ON -D NCINE_WITH_FIXED_BATCH_SIZE=10
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_BUILD_ANDROID=ON -D NCINE_UNIVERSAL_APK="$universalApk" -D NCINE_NDK_ARCHITECTURES="$architecture" -D DEATH_DEBUG=ON -D NCINE_INPUT_DEBUGGING=ON
 
     - name: 'Build'
       run: |
