@@ -584,7 +584,7 @@ namespace nCine
 		//*guid16++ = crc16(0, name.data(), name.size());
 		*guid16++ = 0;
 
-		if (vendor && product) {
+		if (vendor != 0 && product != 0) {
 			*guid16++ = vendor;
 			*guid16++ = 0;
 			*guid16++ = product;
@@ -595,7 +595,7 @@ namespace nCine
 		} else {
 			size_t availableSpace = sizeof(guid.data) - 4;
 
-			if (driverSignature) {
+			if (driverSignature != 0) {
 				availableSpace -= 2;
 				guid.data[14] = driverSignature;
 				guid.data[15] = driverData;

@@ -134,8 +134,8 @@ namespace Jazz2
 		// If Content is packaged with binaries, always use standard XDG paths for everything else
 		auto localStorage = fs::GetLocalStorage();
 		if (!localStorage.empty()) {
-			_sourcePath = fs::CombinePath(localStorage, NCINE_LINUX_PACKAGE, "Source/"_s);
-			_cachePath = fs::CombinePath(localStorage, NCINE_LINUX_PACKAGE, "Cache/"_s);
+			_sourcePath = fs::CombinePath(localStorage, StringView(NCINE_LINUX_PACKAGE), "Source/"_s);
+			_cachePath = fs::CombinePath(localStorage, StringView(NCINE_LINUX_PACKAGE), "Cache/"_s);
 		} else {
 			_sourcePath = "Source/"_s;
 			_cachePath = "Cache/"_s;
