@@ -466,6 +466,12 @@ namespace nCine
 #if defined(DEATH_TARGET_ANDROID)
 		// Never search by name on Android, it can lead to wrong mapping
 		if (!mapping.isValid) {
+			const StringView joyNameView = joyName;
+			// Don't assign Android default mapping to internal NVIDIA Shield devices
+			if (joyNameView == "virtual-search"_s || joyNameView == "shield-ask-remote"_s) {
+				return false;
+			}
+
 			const uint8_t* g = joyGuid.data;
 			LOGI("Joystick mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), using Android default mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
 
@@ -505,20 +511,18 @@ namespace nCine
 #	if defined(DEATH_TARGET_UNIX)
 			// Razer keyboards and mice, and VMware virtual devices on Linux/BSD are incorrectly recognized as joystick in some cases, don't assign XInput mapping to them
 			const StringView joyNameView = joyName;
-			bool isBlacklisted = (joyNameView.contains("Razer "_s) && (joyNameView.contains("Keyboard"_s) || joyNameView.contains("DeathAdder"_s))) ||
-									(joyNameView == "VMware Virtual USB Mouse"_s);
-#	else
-			bool isBlacklisted = false;
+			if ((joyNameView.contains("Razer "_s) && (joyNameView.contains("Keyboard"_s) || joyNameView.contains("DeathAdder"_s))) ||
+				(joyNameView == "VMware Virtual USB Mouse"_s)) {
+				return false;
+			}
 #	endif
-			if (!isBlacklisted) {
-				const int index = findMappingByGuid(JoystickGuidType::Xinput);
-				if (index != -1) {
-					mapping.isValid = true;
-					mapping.desc = mappings_[index].desc;
+			const int index = findMappingByGuid(JoystickGuidType::Xinput);
+			if (index != -1) {
+				mapping.isValid = true;
+				mapping.desc = mappings_[index].desc;
 
-					const uint8_t* g = joyGuid.data;
-					LOGI("Joystick mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), using XInput mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
-				}
+				const uint8_t* g = joyGuid.data;
+				LOGI("Joystick mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), using XInput mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
 			}
 		}
 #endif
