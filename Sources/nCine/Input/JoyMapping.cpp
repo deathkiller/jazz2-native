@@ -396,7 +396,7 @@ namespace nCine
 				const float value = (event.value + 1.0f) * 0.5f;
 				mappedAxisEvent_.value = axis.min + value * (axis.max - axis.min);
 #if defined(NCINE_INPUT_DEBUGGING)
-				LOGI("Axis move mapped as axis %d (value: %f, normalized: %f, min: %f, max: %f)", static_cast<int>(axisName), mappedAxisEvent_.value, value, axis.min, axis.max);
+				LOGI("Axis move mapped as axis %d (value: %f, normalized: %f, min: %f, max: %f)", static_cast<int>(axis.name), mappedAxisEvent_.value, value, axis.min, axis.max);
 #endif
 				mappedJoyStates_[event.joyId].axesValues_[static_cast<int>(axis.name)] = mappedAxisEvent_.value;
 				inputEventHandler_->OnJoyMappedAxisMoved(mappedAxisEvent_);
