@@ -42,6 +42,7 @@ jobs:
 
     - name: 'Build'
       run: |
+        export DEVKITPRO=/opt/devkitpro/
         make -j $(nproc) -C ./_build/
 
     - name: 'Create Package'
