@@ -93,8 +93,8 @@ if(EMSCRIPTEN)
 	endif()
 
 	if(NCINE_WITH_AUDIO)
-		add_library(OpenAL::AL INTERFACE IMPORTED)
-		set_target_properties(OpenAL::AL PROPERTIES
+		add_library(OpenAL::OpenAL INTERFACE IMPORTED)
+		set_target_properties(OpenAL::OpenAL PROPERTIES
 			INTERFACE_LINK_OPTIONS "SHELL:-lopenal")
 		set(OPENAL_FOUND 1)
 
@@ -271,8 +271,8 @@ if(ANDROID)
 	endif()
 
 	if(NCINE_WITH_AUDIO AND EXISTS "${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libopenal.so")
-		add_library(OpenAL::AL SHARED IMPORTED)
-		set_target_properties(OpenAL::AL PROPERTIES
+		add_library(OpenAL::OpenAL SHARED IMPORTED)
+		set_target_properties(OpenAL::OpenAL PROPERTIES
 			IMPORTED_LOCATION "${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/libopenal.so"
 			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}/AL/")
 		set(OPENAL_FOUND 1)
@@ -417,8 +417,8 @@ elseif(MSVC OR MINGW OR MSYS)
 	endif()
 
 	if(NCINE_WITH_AUDIO AND EXISTS "${MSVC_LIBDIR}/OpenAL32.lib" AND EXISTS "${MSVC_BINDIR}/OpenAL32.dll")
-		add_library(OpenAL::AL SHARED IMPORTED)
-		set_target_properties(OpenAL::AL PROPERTIES
+		add_library(OpenAL::OpenAL SHARED IMPORTED)
+		set_target_properties(OpenAL::OpenAL PROPERTIES
 			IMPORTED_IMPLIB "${MSVC_LIBDIR}/OpenAL32.lib"
 			IMPORTED_LOCATION "${MSVC_BINDIR}/OpenAL32.dll"
 			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}/AL/")
@@ -527,8 +527,8 @@ elseif(MSVC OR MINGW OR MSYS)
 #
 #	if(OPENAL_FOUND)
 #		set_msys_dll(OPENAL libopenal-1)
-#		add_library(OpenAL::AL SHARED IMPORTED)
-#		set_target_properties(OpenAL::AL PROPERTIES
+#		add_library(OpenAL::OpenAL SHARED IMPORTED)
+#		set_target_properties(OpenAL::OpenAL PROPERTIES
 #			IMPORTED_IMPLIB "${OPENAL_LIBRARY}"
 #			IMPORTED_LOCATION "${OPENAL_DLL_LIBRARY}"
 #			IMPORTED_LOCATION "${OPENAL_LIB_PATH}/${OPENAL_LIB_NAME}.dll"
@@ -622,9 +622,9 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	endif()
 
 	if(OPENAL_FOUND)
-		if(NOT TARGET OpenAL::AL)
-			add_library(OpenAL::AL ${LIBRARY_LINKAGE} IMPORTED)
-			set_target_properties(OpenAL::AL PROPERTIES
+		if(NOT TARGET OpenAL::OpenAL)
+			add_library(OpenAL::OpenAL ${LIBRARY_LINKAGE} IMPORTED)
+			set_target_properties(OpenAL::OpenAL PROPERTIES
 				IMPORTED_LOCATION "${OPENAL_LIBRARY}"
 				INTERFACE_INCLUDE_DIRECTORIES "${OPENAL_INCLUDE_DIR}")
 		endif()
@@ -719,7 +719,7 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		endif()
 
 		if(OPENAL_FOUND)
-			set_target_properties(OpenAL::AL PROPERTIES
+			set_target_properties(OpenAL::OpenAL PROPERTIES
 				IMPORTED_LOCATION "${OPENAL_LIBRARY}/openal")
 
 			if(VORBIS_FOUND)
