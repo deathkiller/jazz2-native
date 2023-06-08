@@ -17,6 +17,9 @@ jobs:
         - BuildType: Release
 
     runs-on: 'ubuntu-latest'
+    container: 
+      image: devkitpro/devkita64:latest
+      options: --user root
 
     steps:
     - name: 'Checkout Repository'
@@ -24,25 +27,14 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: 'Create Build Environment'
-      run: |
-        sudo apt-get update -y
-        sudo apt-get install -y cmake curl
-        wget https://apt.devkitpro.org/install-devkitpro-pacman
-        chmod +x ./install-devkitpro-pacman
-        sudo ./install-devkitpro-pacman
-        sudo dkp-pacman -S devkit-env devkitA64 devkita64-cmake devkita64-rules devkitpro-keyring dkp-cmake-common-utils general-tools libnx switch-cmake switch-glad switch-glm switch-libdrm_nouveau switch-libogg switch-libvorbis switch-mesa switch-mpg123 switch-openal-soft switch-pkg-config switch-sdl2 switch-tools switch-zlib uam --noconfirm
-        
     - name: 'Configure CMake'
       run: |
         rm -f ./Content/Translations/*.po
         
-        export DEVKITPRO=/opt/devkitpro/
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Switch.cmake -D NCINE_PREFERRED_BACKEND=SDL2 -D NCINE_WITH_GLEW=OFF
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Switch.cmake -D NCINE_PREFERRED_BACKEND=SDL2 -D NCINE_WITH_GLEW=OFF -D DEATH_LOGGING=OFF
 
     - name: 'Build'
       run: |
-        export DEVKITPRO=/opt/devkitpro/
         make -j $(nproc) -C ./_build/
 
     - name: 'Create Package'
