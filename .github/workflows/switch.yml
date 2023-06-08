@@ -1,0 +1,56 @@
+name: 'Switch'
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    types: [ opened, synchronize ]
+  workflow_dispatch:
+
+jobs:
+  Build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+
+    runs-on: 'ubuntu-latest'
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: 'Create Build Environment'
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y cmake curl
+        wget https://apt.devkitpro.org/install-devkitpro-pacman
+        chmod +x ./install-devkitpro-pacman
+        sudo ./install-devkitpro-pacman
+        sudo dkp-pacman -S devkit-env devkitA64 devkita64-cmake devkita64-rules devkitpro-keyring dkp-cmake-common-utils general-tools libnx switch-cmake switch-glad switch-glm switch-libdrm_nouveau switch-libogg switch-libvorbis switch-mesa switch-mpg123 switch-openal-soft switch-pkg-config switch-sdl2 switch-tools switch-zlib uam --noconfirm
+        
+    - name: 'Configure CMake'
+      run: |
+        rm -f ./Content/Translations/*.po
+        
+        export DEVKITPRO=/opt/devkitpro/
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Switch.cmake -D NCINE_PREFERRED_BACKEND=SDL2 -D NCINE_WITH_GLEW=OFF
+
+    - name: 'Build'
+      run: |
+        make -j $(nproc) -C ./_build/
+
+    - name: 'Create Package'
+      run: |
+        mkdir ./_package/
+        cp -f ./_build/jazz2.nro ./_package/jazz2.nro
+        
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v3
+      with:
+        name: Jazz2_Switch
+        path: ./_package/
