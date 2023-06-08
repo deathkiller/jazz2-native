@@ -44,7 +44,7 @@
 // Return false macros
 #define RETURNF_MSG(fmt, ...) do { LOGE(fmt, ##__VA_ARGS__); return false; } while (false)
 
-#if defined(DEATH_LOG)
+#if defined(DEATH_LOGGING)
 #	if defined(_MSC_VER)
 #		define BREAK() __debugbreak()
 #	else
@@ -99,7 +99,7 @@
 	} while (false)
 
 // Non-fatal assert macros
-#if defined(DEATH_LOG)
+#if defined(DEATH_LOGGING)
 #	define ASSERT_MSG(x, fmt, ...) \
 		do \
 		{ \
@@ -122,4 +122,18 @@
 #else
 #	define ASSERT_MSG(x, fmt, ...) do { } while (false)
 #	define ASSERT(x) do { } while (false)
+#endif
+
+#if defined(DEATH_TARGET_SWITCH)
+// `strnlen` is missing in libnx
+inline std::size_t strnlen(const char* s, std::size_t maxlen)
+{
+	std::size_t i;
+	for (i = 0; i < maxlen; i++, s++) {
+		if (*s == '\0') {
+			break;
+		}
+	}
+	return i;
+}
 #endif

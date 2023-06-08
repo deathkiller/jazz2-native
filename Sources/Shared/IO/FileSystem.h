@@ -10,7 +10,7 @@
 
 #if !defined(DEATH_TARGET_WINDOWS)
 #	include <climits> // for `PATH_MAX`
-#	if defined(DEATH_TARGET_APPLE)
+#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH)
 #		include <dirent.h>
 #	elif defined(DEATH_TARGET_ANDROID)
 using DIR = struct DIR;
@@ -106,7 +106,7 @@ namespace Death::IO
 #endif
 		};
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH)
 		// Windows is already case in-sensitive
 		DEATH_ALWAYS_INLINE static const Containers::StringView& FindPathCaseInsensitive(const Containers::StringView& path) {
 			return path;

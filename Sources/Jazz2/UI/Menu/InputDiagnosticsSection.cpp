@@ -60,7 +60,7 @@ namespace Jazz2::UI::Menu
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		int32_t jc = 0;
 		for (int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < countof(joyStates); i++) {
-			if (input.isJoyMapped(i)) {
+			if (input.isJoyPresent(i)) {
 				jc++;
 			}
 		}

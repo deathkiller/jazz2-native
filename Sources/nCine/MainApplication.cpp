@@ -18,12 +18,15 @@
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 #	include <emscripten/emscripten.h>
 #endif
+#if defined(DEATH_TARGET_SWITCH)
+#	include <switch.h>
+#endif
 
 #include "tracy.h"
 
 using namespace Death::IO;
 
-#if defined(DEATH_LOG) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_LOGGING) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 
 #if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
 #	define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
@@ -125,7 +128,7 @@ static bool EnableVirtualTerminalProcessing()
 	return true;
 }
 
-#elif defined(DEATH_LOG) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
+#elif defined(DEATH_LOGGING) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
 
 #include <unistd.h>
 
@@ -164,6 +167,19 @@ namespace nCine
 		}
 #endif
 
+#if defined(DEATH_TARGET_SWITCH)
+		socketInitializeDefault();
+		nxlinkStdio();
+		romfsInit();
+
+		// Initialize the default gamepad
+		padConfigureInput(1, HidNpadStyleSet_NpadStandard);
+		PadState pad;
+		padInitializeDefault(&pad);
+
+		hidInitializeTouchScreen();
+#endif
+
 		MainApplication& app = static_cast<MainApplication&>(theApplication());
 		app.init(createAppEventHandler, argc, argv);
 
@@ -177,7 +193,12 @@ namespace nCine
 #endif
 		app.shutdownCommon();
 
-#if defined(DEATH_LOG) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_SWITCH)
+		romfsExit();
+		socketExit();
+#endif
+
+#if defined(DEATH_LOGGING) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		if (__showLogConsole) {
 			DestroyLogConsole();
 		}
@@ -194,7 +215,7 @@ namespace nCine
 #endif
 		wasSuspended_ = shouldSuspend();
 
-#if defined(DEATH_LOG)
+#if defined(DEATH_LOGGING)
 #	if defined(DEATH_TARGET_APPLE)
 		__hasVirtualTerminal = isatty(1);
 #	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)

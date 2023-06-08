@@ -19,7 +19,7 @@ namespace Jazz2::UI::Menu
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::EnableDiscordIntegration, _("Discord Integration"), true });
 #endif
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::EnableRgbLights, _("Razer Chroma™"), true });
 #endif
 #if defined(WITH_ANGELSCRIPT)
@@ -96,7 +96,7 @@ namespace Jazz2::UI::Menu
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 				case GameplayOptionsItemType::EnableDiscordIntegration: enabled = PreferencesCache::EnableDiscordIntegration; break;
 #endif
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
 				case GameplayOptionsItemType::EnableRgbLights: enabled = PreferencesCache::EnableRgbLights; break;
 #endif
 #if defined(WITH_ANGELSCRIPT)
@@ -138,7 +138,7 @@ namespace Jazz2::UI::Menu
 				_animation = 0.0f;
 				break;
 #endif
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
 			case GameplayOptionsItemType::EnableRgbLights:
 				PreferencesCache::EnableRgbLights = !PreferencesCache::EnableRgbLights;
 				if (!PreferencesCache::EnableRgbLights) {

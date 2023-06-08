@@ -19,7 +19,7 @@ namespace nCine
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 	EM_BOOL IGfxDevice::emscriptenHandleResize(int eventType, const EmscriptenUiEvent* event, void* userData)
 	{
-#	if defined(DEATH_LOG)
+#	if defined(DEATH_LOGGING)
 		double cssWidth = 0.0;
 		double cssHeight = 0.0;
 		emscripten_get_element_css_size("canvas", &cssWidth, &cssHeight);
@@ -36,7 +36,7 @@ namespace nCine
 
 	EM_BOOL IGfxDevice::emscriptenHandleFullscreen(int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData)
 	{
-#	if defined(DEATH_LOG)
+#	if defined(DEATH_LOGGING)
 		double cssWidth = 0.0;
 		double cssHeight = 0.0;
 		emscripten_get_element_css_size("canvas", &cssWidth, &cssHeight);

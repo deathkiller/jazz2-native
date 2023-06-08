@@ -378,7 +378,7 @@ namespace nCine
 		joyConnectionEvent_.joyId = joyId;
 
 		if (event == GLFW_CONNECTED) {
-#if defined(DEATH_LOG)
+#if defined(DEATH_LOGGING)
 			int numButtons = -1;
 			int numAxes = -1;
 			int numHats = -1;

@@ -82,7 +82,7 @@ extern "C"
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
 
-#if defined(DEATH_LOG)
+#if defined(DEATH_LOGGING)
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <Utf8.h>
@@ -93,6 +93,9 @@ using namespace Death::IO;
 extern std::unique_ptr<Death::IO::Stream> __logFile;
 #else
 #	include <cstdarg>
+#	if defined(DEATH_TARGET_SWITCH)
+#		include <switch.h>
+#	endif
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
@@ -112,7 +115,7 @@ inline int __strncpy(char* dest, int destSize, const char* source, int count)
 	return count;
 }
 
-void DEATH_LOG_CALLBACK(LogLevel level, const char* fmt, ...)
+void DEATH_LOGGING(LogLevel level, const char* fmt, ...)
 {
 	constexpr std::int32_t MaxEntryLength = 4 * 1024;
 	char logEntry[MaxEntryLength];
@@ -151,7 +154,7 @@ void DEATH_LOG_CALLBACK(LogLevel level, const char* fmt, ...)
 		fprintf(s->GetHandle(), "[%s] %s\n", levelIdentifier, logEntry);
 		fflush(s->GetHandle());
 	}
-#elif defined(DEATH_TARGET_WINDOWS_RT)
+#elif defined(DEATH_TARGET_WINDOWS_RT) || defined(DEATH_TARGET_SWITCH)
 	logEntry[0] = '[';
 	switch (level) {
 		case LogLevel::Fatal:	logEntry[1] = 'F'; break;
@@ -172,10 +175,15 @@ void DEATH_LOG_CALLBACK(LogLevel level, const char* fmt, ...)
 		length = MaxEntryLength - 2;
 	}
 
+#	if defined(DEATH_TARGET_SWITCH)
+	// Don't include new line here
+	svcOutputDebugString(logEntry, length);
+#	else
 	logEntry[length++] = '\n';
 	logEntry[length] = '\0';
 
 	::OutputDebugString(Death::Utf8::ToUtf16(logEntry));
+#	endif
 #else
 	constexpr char Reset[] = "\033[0m";
 	constexpr char Bold[] = "\033[1m";

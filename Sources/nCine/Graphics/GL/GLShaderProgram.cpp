@@ -14,7 +14,7 @@
 namespace nCine
 {
 	GLuint GLShaderProgram::boundProgram_ = 0;
-#if defined(DEATH_LOG)
+#if defined(DEATH_LOGGING)
 	char GLShaderProgram::infoLogString_[MaxInfoLogLength];
 #endif
 
@@ -279,7 +279,7 @@ namespace nCine
 		GLint status;
 		glGetProgramiv(glHandle_, GL_LINK_STATUS, &status);
 		if (status == GL_FALSE) {
-#if defined(DEATH_LOG)
+#if defined(DEATH_LOGGING)
 			if (shouldLogOnErrors_) {
 				GLint length = 0;
 				glGetProgramiv(glHandle_, GL_INFO_LOG_LENGTH, &length);

@@ -15,7 +15,7 @@
 
 namespace nCine
 {
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
 
 	/// A class representing the CPU affinity mask for a thread
 	class ThreadAffinityMask
@@ -74,7 +74,7 @@ namespace nCine
 		/// Joins the thread
 		void* Join();
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
 #	if !defined(DEATH_TARGET_APPLE)
 		/// Sets the thread name
 		void SetName(const char* name);
@@ -84,10 +84,12 @@ namespace nCine
 		static void SetSelfName(const char* name);
 #endif
 
+#if !defined(DEATH_TARGET_SWITCH)
 		/// Gets the thread priority
 		int GetPriority() const;
 		/// Sets the thread priority
 		void SetPriority(int priority);
+#endif
 
 		/// Returns the calling thread id
 		static long int Self();
@@ -100,7 +102,7 @@ namespace nCine
 		/// Asks the thread for termination
 		void Abort();
 
-#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
 		/// Gets the thread affinity mask
 		ThreadAffinityMask GetAffinityMask() const;
 		/// Sets the thread affinity mask

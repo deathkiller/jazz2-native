@@ -100,7 +100,7 @@ namespace nCine
 
 		const char* ExtensionNames[] = {
 			"GL_KHR_debug", "GL_ARB_texture_storage", "GL_ARB_get_program_binary",
-#if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_UNIX)
+#if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
 			"GL_OES_get_program_binary",
 #endif
 #if defined(DEATH_TARGET_EMSCRIPTEN)
@@ -118,7 +118,7 @@ namespace nCine
 
 		checkGLExtensions(ExtensionNames, glExtensions_, (int)GLExtensions::Count);
 
-#if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_UNIX)
+#if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
 		if (hasExtension(GLExtensions::OES_GET_PROGRAM_BINARY)) {
 			glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS_OES, &glIntValues_[(int)GLIntValues::NUM_PROGRAM_BINARY_FORMATS]);
 			ASSERT(glIntValues_[(int)GLIntValues::NUM_PROGRAM_BINARY_FORMATS] <= MaxProgramBinaryFormats);
@@ -131,7 +131,7 @@ namespace nCine
 			glGetIntegerv(GL_PROGRAM_BINARY_FORMATS, programBinaryFormats_);
 		}
 
-#if defined(DEATH_LOG)
+#if defined(DEATH_LOGGING)
 		logGLInfo();
 		logGLCaps();
 		//logGLExtensions();
@@ -179,7 +179,7 @@ namespace nCine
 		LOGI("GL_KHR_debug: %d", glExtensions_[(int)GLExtensions::KHR_DEBUG]);
 		LOGI("GL_ARB_texture_storage: %d", glExtensions_[(int)GLExtensions::ARB_TEXTURE_STORAGE]);
 		LOGI("GL_ARB_get_program_binary: %d", glExtensions_[(int)GLExtensions::ARB_GET_PROGRAM_BINARY]);
-#if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_UNIX)
+#if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
 		LOGI("GL_OES_get_program_binary: %d", glExtensions_[(int)GLExtensions::OES_GET_PROGRAM_BINARY]);
 #endif
 		LOGI("GL_EXT_texture_compression_s3tc: %d", glExtensions_[(int)GLExtensions::EXT_TEXTURE_COMPRESSION_S3TC]);

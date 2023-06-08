@@ -261,6 +261,8 @@ namespace Jazz2
 			return _contentPath;
 #elif defined(DEATH_TARGET_ANDROID)
 			return "asset::"_s;
+#elif defined(DEATH_TARGET_SWITCH)
+			return "romfs:/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 			return "Content\\"_s;
 #else
@@ -269,7 +271,7 @@ namespace Jazz2
 		}
 
 		StringView GetCachePath() const {
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 			return _cachePath;
 #elif defined(DEATH_TARGET_WINDOWS)
 			return "Cache\\"_s;
@@ -279,7 +281,7 @@ namespace Jazz2
 		}
 
 		StringView GetSourcePath() const {
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH)|| defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 			return _sourcePath;
 #elif defined(DEATH_TARGET_WINDOWS)
 			return "Source\\"_s;
@@ -319,7 +321,7 @@ namespace Jazz2
 #if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 		String _contentPath;
 #endif
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 		String _cachePath;
 		String _sourcePath;
 #endif

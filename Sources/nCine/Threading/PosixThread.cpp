@@ -20,6 +20,10 @@
 #	include <pthread_np.h>
 #endif
 
+#if defined(DEATH_TARGET_SWITCH)
+#	include <switch.h>
+#endif
+
 #if defined(WITH_TRACY)
 #	include "common/TracySystem.hpp"
 #endif
@@ -31,7 +35,7 @@ namespace nCine
 		const unsigned int MaxThreadNameLength = 16;
 	}
 
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
 
 	void ThreadAffinityMask::Zero()
 	{
@@ -84,8 +88,10 @@ namespace nCine
 
 	unsigned int Thread::GetProcessorCount()
 	{
+#if defined(DEATH_TARGET_SWITCH)
+		return svcGetCurrentProcessorNumber();
+#else
 		unsigned int numProcs = 0;
-
 		long int confRet = -1;
 #if defined(_SC_NPROCESSORS_ONLN)
 		confRet = sysconf(_SC_NPROCESSORS_ONLN);
@@ -96,8 +102,8 @@ namespace nCine
 		if (confRet > 0) {
 			numProcs = static_cast<unsigned int>(confRet);
 		}
-
 		return numProcs;
+#endif
 	}
 
 	void Thread::Run(ThreadFunctionPtr startFunction, void* arg)
@@ -123,7 +129,7 @@ namespace nCine
 		return pRetVal;
 	}
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
 #if !defined(DEATH_TARGET_APPLE)
 	void Thread::SetName(const char* name)
 	{
@@ -167,6 +173,7 @@ namespace nCine
 	}
 #endif
 
+#if !defined(DEATH_TARGET_SWITCH)
 	int Thread::GetPriority() const
 	{
 		if (tid_ == 0) return 0;
@@ -188,10 +195,11 @@ namespace nCine
 			pthread_setschedparam(tid_, policy, &param);
 		}
 	}
+#endif
 
 	long int Thread::Self()
 	{
-#if defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
+#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(__FreeBSD__)
 		return reinterpret_cast<long int>(pthread_self());
 #else
 		return static_cast<long int>(pthread_self());
@@ -216,7 +224,7 @@ namespace nCine
 		}
 	}
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
 	ThreadAffinityMask Thread::GetAffinityMask() const
 	{
 		ThreadAffinityMask affinityMask;

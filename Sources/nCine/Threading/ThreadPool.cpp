@@ -22,7 +22,7 @@ namespace nCine
 
 		for (unsigned int i = 0; i < numThreads_; i++) {
 			threads_.emplace_back(WorkerFunction, &threadStruct_);
-#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_ANDROID)
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_SWITCH)
 			threads_.back().SetAffinityMask(ThreadAffinityMask(i));
 #endif
 		}
