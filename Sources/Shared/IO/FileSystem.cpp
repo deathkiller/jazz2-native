@@ -37,6 +37,9 @@
 #	if defined(DEATH_TARGET_ANDROID)
 #		include "AndroidAssetStream.h"
 #	endif
+#	if defined(DEATH_TARGET_SWITCH)
+#		include <alloca.h>
+#	endif
 #endif
 
 #if defined(DEATH_TARGET_APPLE)
@@ -285,14 +288,49 @@ namespace Death::IO
 			return date;
 		}
 
+#if !defined(DEATH_TARGET_SWITCH)
 		static std::int32_t DeleteDirectoryInternalCallback(const char* fpath, const struct stat* sb, std::int32_t typeflag, struct FTW* ftwbuf)
 		{
 			return ::remove(fpath);
 		}
+#endif
 
 		static bool DeleteDirectoryInternal(const StringView& path)
 		{
+#if defined(DEATH_TARGET_SWITCH)
+			// `nftw` is missing in libnx
+			auto nullTerminatedPath = String::nullTerminatedView(path);
+			DIR* d = ::opendir(nullTerminatedPath.data());
+			std::int32_t r = -1;
+			if (d != nullptr) {
+				r = 0;
+				struct dirent* p;
+				while (r == 0 && (p = ::readdir(d)) != nullptr) {
+					if (strcmp(p->d_name, ".") == 0 || strcmp(p->d_name, "..") == 0) {
+						continue;
+					}
+
+					String fileName = FileSystem::CombinePath(path, p->d_name);
+					struct stat sb;
+					if (::lstat(fileName.data(), &sb) == 0) {
+						if (S_ISDIR(sb.st_mode)) {
+							DeleteDirectoryInternal(fileName);
+						} else {
+							r = ::unlink(fileName.data());
+						}
+					}
+				}
+				::closedir(d);
+			}
+
+			if (r == 0) {
+				r = ::rmdir(nullTerminatedPath.data());
+			}
+
+			return (r == 0);
+#else
 			return ::nftw(String::nullTerminatedView(path).data(), DeleteDirectoryInternalCallback, 64, FTW_DEPTH | FTW_PHYS) == 0;
+#endif
 		}
 
 #	if defined(DEATH_TARGET_UNIX)
@@ -325,8 +363,8 @@ namespace Death::IO
 
 		static void TryCloseAllFileDescriptors()
 		{
-			DIR* dir = ::opendir("/proc/self/fd/");
-			if (dir == nullptr) {
+			DIR* d = ::opendir("/proc/self/fd/");
+			if (d == nullptr) {
 				const long fd_max = ::sysconf(_SC_OPEN_MAX);
 				long fd;
 				for (fd = 0; fd <= fd_max; fd++) {
@@ -335,9 +373,9 @@ namespace Death::IO
 				return;
 			}
 
-			std::int32_t dfd = ::dirfd(dir);
+			std::int32_t dfd = ::dirfd(d);
 			struct dirent* ent;
-			while ((ent = ::readdir(dir))) {
+			while ((ent = ::readdir(d)) != nullptr) {
 				if (ent->d_name[0] >= '0' && ent->d_name[0] <= '9') {
 					const char* p = &ent->d_name[1];
 					std::int32_t fd = ent->d_name[0] - '0';
@@ -350,7 +388,7 @@ namespace Death::IO
 					::close(fd);
 				}
 			}
-			::closedir(dir);
+			::closedir(d);
 		}
 #	endif
 #endif
@@ -579,7 +617,7 @@ namespace Death::IO
 #endif
 	}
 
-#if !defined(DEATH_TARGET_WINDOWS)
+#if !defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_SWITCH)
 	String FileSystem::FindPathCaseInsensitive(const StringView& path)
 	{
 		if (Exists(path)) {
@@ -752,6 +790,9 @@ namespace Death::IO
 			return { };
 		}
 		return Utf8::FromUtf16(buffer);
+#elif defined(DEATH_TARGET_SWITCH)
+		// TODO: `realpath` is missing in libnx
+		return returnedPath;
 #else
 #	if defined(DEATH_TARGET_ANDROID)
 		if (returnedPath.hasPrefix(AndroidAssetStream::Prefix)) {
@@ -888,6 +929,9 @@ namespace Death::IO
 			return { };
 		}
 		return Utf8::FromUtf16(buffer);
+#elif defined(DEATH_TARGET_SWITCH)
+		// TODO: `realpath` is missing in libnx
+		return path;
 #else
 #	if defined(DEATH_TARGET_ANDROID)
 		if (path.hasPrefix(AndroidAssetStream::Prefix)) {
@@ -1421,7 +1465,7 @@ namespace Death::IO
 		String fullPath = String { nullTerminatedPath };
 		bool slashWasLast = true;
 		struct stat sb;
-		for (std::int32_t i = 0; i < fullPath.size(); i++) {
+		for (std::size_t i = 0; i < fullPath.size(); i++) {
 			if (fullPath[i] == '\0') {
 				break;
 			}

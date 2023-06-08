@@ -29,6 +29,7 @@ find_path(GLFW_INCLUDE_DIR NAMES glfw3.h DOC "Path to GLFW include directory"
   /usr/include/
   /usr/local/include/
   # By default headers are under GL subfolder
+  /include/GLFW/
   /usr/include/GLFW
   /usr/local/include/GLFW
   ${GLFW_ROOT_DIR}/include/ # added by ptr
@@ -37,7 +38,7 @@ find_path(GLFW_INCLUDE_DIR NAMES glfw3.h DOC "Path to GLFW include directory"
 mark_as_advanced(GLFW_INCLUDE_DIR)
 
 find_library(GLFW_LIBRARY DOC "Absolute path to GLFW library"
-  NAMES glfw glfw3 glfw3.lib
+  NAMES glfw glfw3 glfw3.lib libglfw3
   HINTS
   $ENV{GLFW_ROOT}
   PATH_SUFFIXES lib/win32 #For finding the library file under the root of the glfw expanded archive, typically on Windows.

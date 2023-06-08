@@ -73,6 +73,9 @@ if(NOT TARGET libopenmpt::libopenmpt)
 			target_compile_options(libopenmpt_src PUBLIC "SHELL:-s USE_ZLIB=1 -s USE_MPG123=1 -s USE_OGG=1 -s USE_VORBIS=1")
 			target_link_options(libopenmpt_src PUBLIC "SHELL:-s USE_ZLIB=1 -s USE_MPG123=1 -s USE_OGG=1 -s USE_VORBIS=1")
 		else()
+			find_package(ZLIB)
+
+			# TODO: Add MPT_WITH_MPG123 and MPT_WITH_VORBIS support
 			target_compile_definitions(libopenmpt_src PRIVATE "LIBOPENMPT_BUILD" "MPT_WITH_ZLIB")
 		endif()
 		
@@ -127,7 +130,8 @@ if(NOT TARGET libopenmpt::libopenmpt)
 		list(APPEND LIBOPENMPT_SOURCES "${libopenmpt_git_SOURCE_DIR}/libopenmpt/libopenmpt_impl.cpp")
 		list(APPEND LIBOPENMPT_SOURCES "${libopenmpt_git_SOURCE_DIR}/libopenmpt/libopenmpt_ext_impl.cpp")
 		target_sources(libopenmpt_src PRIVATE ${LIBOPENMPT_SOURCES})
-		target_include_directories(libopenmpt_src PRIVATE "${libopenmpt_git_SOURCE_DIR}" "${libopenmpt_git_SOURCE_DIR}/common" "${libopenmpt_git_SOURCE_DIR}/src")
+		target_include_directories(libopenmpt_src PRIVATE "${libopenmpt_git_SOURCE_DIR}" "${libopenmpt_git_SOURCE_DIR}/common" "${libopenmpt_git_SOURCE_DIR}/src" "${ZLIB_INCLUDE_DIRS}")
+
 		file(WRITE "${libopenmpt_git_SOURCE_DIR}/common/svn_version.h" "#pragma once\n#define OPENMPT_VERSION_REVISION 0")
 
 		add_library(libopenmpt::libopenmpt ALIAS libopenmpt_src)

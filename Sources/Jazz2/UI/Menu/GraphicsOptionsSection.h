@@ -6,7 +6,7 @@ namespace Jazz2::UI::Menu
 {
 	enum class GraphicsOptionsItemType {
 		RescaleMode,
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 		Fullscreen,
 #endif
 		Antialiasing,

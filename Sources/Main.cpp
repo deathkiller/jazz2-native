@@ -34,7 +34,7 @@
 #include "Jazz2/Compatibility/JJ2Tileset.h"
 #include "Jazz2/Compatibility/EventConverter.h"
 
-#if defined(DEATH_LOG) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
+#if defined(DEATH_LOGGING) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
 #	include "TermLogo.h"
 #endif
 
@@ -49,7 +49,10 @@
 #include <Cpu.h>
 #include <Environment.h>
 #include <IO/FileSystem.h>
-#include <IO/HttpRequest.h>
+
+#if !defined(DEATH_DEBUG)
+#	include <IO/HttpRequest.h>
+#endif
 
 using namespace nCine;
 using namespace Jazz2;
@@ -125,7 +128,9 @@ void GameEventHandler::OnPreInit(AppConfiguration& config)
 		config.withVSync = false;
 		config.frameLimit = PreferencesCache::MaxFps;
 	}
+#if !defined(DEATH_TARGET_SWITCH)
 	config.resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
+#endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	auto& resolver = ContentResolver::Get();
@@ -142,13 +147,13 @@ void GameEventHandler::OnInit()
 
 	auto& resolver = ContentResolver::Get();
 	
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_IOS)
+#if defined(DEATH_TARGET_ANDROID)
 	theApplication().setAutoSuspension(true);
 
 	if (AndroidJniWrap_Activity::hasExternalStoragePermission()) {
 		_flags |= Flags::HasExternalStoragePermission;
 	}
-#else
+#elif !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 	// Xbox is always fullscreen
 	if (PreferencesCache::EnableFullscreen || Environment::CurrentDeviceType == DeviceType::Xbox) {
@@ -374,7 +379,7 @@ void GameEventHandler::OnResume()
 
 void GameEventHandler::OnKeyPressed(const KeyboardEvent& event)
 {
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 	// Allow Alt+Enter to switch fullscreen
 	if (event.sym == KeySym::RETURN && (event.mod & KeyMod::MASK) == KeyMod::LALT) {
 #	if defined(DEATH_TARGET_WINDOWS_RT)
@@ -813,6 +818,9 @@ void GameEventHandler::CheckUpdates()
 		DeviceDescLength = 0;
 	}
 	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength, "|macOS||5|%i", arch);
+#elif defined(DEATH_TARGET_SWITCH)
+	char DeviceDesc[64];
+	int DeviceDescLength = formatString(DeviceDesc, countof(DeviceDesc), "|Nintendo Switch||2|%i", arch);
 #elif defined(DEATH_TARGET_UNIX)
 #	if defined(DEATH_TARGET_CLANG)
 	arch |= 0x100000;
@@ -1056,7 +1064,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdSh
 #else
 int main(int argc, char** argv)
 {
-#if defined(DEATH_LOG) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
+#if defined(DEATH_LOGGING) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
 	bool hasVirtualTerminal = isatty(1);
 	if (hasVirtualTerminal) {
 		const char* term = ::getenv("TERM");

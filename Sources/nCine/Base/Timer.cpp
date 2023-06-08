@@ -7,6 +7,9 @@
 #	include <synchapi.h>
 #else
 #	include <unistd.h>
+#	if defined(DEATH_TARGET_SWITCH)
+#		include <switch.h>
+#	endif
 #endif
 
 namespace nCine
@@ -42,12 +45,15 @@ namespace nCine
 
 	void Timer::sleep(float seconds)
 	{
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_SWITCH)
+		const std::int64_t nanoseconds = static_cast<std::int64_t>(seconds) * 1000000000;
+		svcSleepThread(nanoseconds);
+#elif defined(DEATH_TARGET_WINDOWS)
 		const unsigned int milliseconds = static_cast<unsigned int>(seconds) * 1000;
 		::SleepEx(milliseconds, FALSE);
 #else
 		const unsigned int microseconds = static_cast<unsigned int>(seconds) * 1000000;
-		usleep(microseconds);
+		::usleep(microseconds);
 #endif
 	}
 }

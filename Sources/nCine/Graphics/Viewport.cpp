@@ -22,11 +22,11 @@
 namespace nCine
 {
 #if defined(DEATH_DEBUG)
-	namespace
+	/*namespace
 	{
 		/// The string used to output OpenGL debug group information
 		static char debugString[64];
-	}
+	}*/
 #endif
 
 	GLenum depthStencilFormatToGLFormat(Viewport::DepthStencilFormat format)

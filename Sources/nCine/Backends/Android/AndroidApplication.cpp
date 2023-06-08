@@ -13,7 +13,7 @@
 
 using namespace Death::IO;
 
-#if defined(DEATH_LOG)
+#if defined(DEATH_LOGGING)
 std::unique_ptr<Death::IO::Stream> __logFile;
 #endif
 
@@ -200,7 +200,7 @@ namespace nCine
 	{
 		profileStartTime_ = TimeStamp::now();
 
-#if defined(DEATH_LOG)
+#if defined(DEATH_LOGGING)
 		// Try to open log file as early as possible
 		StringView externalPath = externalDataPath();
 		if (!externalPath.empty()) {

@@ -25,7 +25,7 @@ namespace Jazz2
 	bool PreferencesCache::EnableReforged = true;
 	bool PreferencesCache::EnableLedgeClimb = true;
 	WeaponWheelStyle PreferencesCache::WeaponWheel = WeaponWheelStyle::Enabled;
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
 	bool PreferencesCache::EnableRgbLights = true;
 #else
 	bool PreferencesCache::EnableRgbLights = false;
@@ -71,7 +71,7 @@ namespace Jazz2
 		_configPath = "Jazz2.config"_s;
 		bool overrideConfigPath = false;
 
-#	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
+#	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 		for (int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
 			if (arg == "/config"_s) {
@@ -88,7 +88,11 @@ namespace Jazz2
 
 		// If config path is not overriden and portable config doesn't exist, use common path for current user
 		if (!overrideConfigPath && !fs::IsReadableFile(_configPath)) {
-#	if defined(DEATH_TARGET_UNIX) && defined(NCINE_PACKAGED_CONTENT_PATH)
+#	if defined(DEATH_TARGET_SWITCH)
+			// Save config file next to `Source` directory
+			auto& resolver = ContentResolver::Get();
+			_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
+#	elif defined(DEATH_TARGET_UNIX) && defined(NCINE_PACKAGED_CONTENT_PATH)
 			_configPath = fs::CombinePath(fs::GetSavePath(NCINE_LINUX_PACKAGE), "Jazz2.config"_s);
 #	else
 			_configPath = fs::CombinePath(fs::GetSavePath("Jazz² Resurrection"_s), "Jazz2.config"_s);
@@ -139,7 +143,7 @@ namespace Jazz2
 
 						BoolOptions boolOptions = (BoolOptions)uc.ReadValue<uint64_t>();
 
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 						EnableFullscreen = ((boolOptions & BoolOptions::EnableFullscreen) == BoolOptions::EnableFullscreen);
 #endif
 						ShowPerformanceMetrics = ((boolOptions & BoolOptions::ShowPerformanceMetrics) == BoolOptions::ShowPerformanceMetrics);

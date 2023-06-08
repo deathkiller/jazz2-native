@@ -12,7 +12,7 @@ namespace Jazz2::UI::Menu
 		: _isDirty(false)
 	{
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::RescaleMode, _("Rescale Mode") });
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 		// Xbox is always fullscreen
 		if (Environment::CurrentDeviceType != DeviceType::Xbox)
@@ -92,7 +92,7 @@ namespace Jazz2::UI::Menu
 			StringView customText;
 			bool enabled = false;
 			switch (item.Item.Type) {
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 				case GraphicsOptionsItemType::Fullscreen: enabled = PreferencesCache::EnableFullscreen; break;
 #endif
 				case GraphicsOptionsItemType::Antialiasing: enabled = (PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing; break;
@@ -114,7 +114,7 @@ namespace Jazz2::UI::Menu
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				_root->SwitchToSection<RescaleModeSection>();
 				break;
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 			case GraphicsOptionsItemType::Fullscreen:
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 				// Xbox is always fullscreen

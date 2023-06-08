@@ -1,4 +1,4 @@
-if(NCINE_DOWNLOAD_DEPENDENCIES)
+if(NCINE_DOWNLOAD_DEPENDENCIES AND NOT EMSCRIPTEN AND NOT NINTENDO_SWITCH)
 	if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.14.0")
 		if(APPLE)
 			if(NCINE_ARM_PROCESSOR)
@@ -185,7 +185,9 @@ elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	if(NCINE_WITH_GLEW)
 		find_package(GLEW)
 	endif()
-	find_package(OpenGL REQUIRED)
+	if(NOT NINTENDO_SWITCH)
+		find_package(OpenGL REQUIRED)
+	endif()
 	if(NCINE_ARM_PROCESSOR)
 		include(check_atomic)
 		find_package(OpenGLES2)
@@ -201,6 +203,12 @@ elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	endif()
 	if(NCINE_WITH_AUDIO)
 		find_package(OpenAL)
+
+		if(NINTENDO_SWITCH)
+			# This flag is not set correctly by the toolchain
+			set(OPENAL_FOUND 1)
+		endif()
+
 		if(NCINE_WITH_VORBIS)
 			find_package(Vorbis)
 		endif()
@@ -556,6 +564,9 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 				list(APPEND LIBRARY_FILE ${LIBRARY})
 			endif()
 		endforeach()
+		if(NOT LIBRARY_FILE AND EXTRA_LIBRARIES)
+			list(POP_FRONT EXTRA_LIBRARIES LIBRARY_FILE)
+		endif()
 		set(${PREFIX}_EXTRA_LIBRARIES ${EXTRA_LIBRARIES} PARENT_SCOPE)
 		set(${PREFIX}_LIBRARY_FILE ${LIBRARY_FILE} PARENT_SCOPE)
 	endfunction()
@@ -567,50 +578,59 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			INTERFACE_LINK_LIBRARIES atomic)
 	endif()
 
+	if(NINTENDO_SWITCH)
+		# Nintendo Switch supports only static linking
+		set(LIBRARY_LINKAGE STATIC)
+	else()
+		set(LIBRARY_LINKAGE SHARED)
+	endif()
+
 	if(OPENGLES2_FOUND)
-		add_library(EGL::EGL SHARED IMPORTED)
+		add_library(EGL::EGL ${LIBRARY_LINKAGE} IMPORTED)
 		set_target_properties(EGL::EGL PROPERTIES
 			IMPORTED_LOCATION "${EGL_LIBRARIES}"
 			INTERFACE_INCLUDE_DIRECTORIES "${EGL_INCLUDE_DIR}")
 
-		add_library(OpenGLES2::GLES2 SHARED IMPORTED)
+		add_library(OpenGLES2::GLES2 ${LIBRARY_LINKAGE} IMPORTED)
 		set_target_properties(OpenGLES2::GLES2 PROPERTIES
 			IMPORTED_LOCATION "${OPENGLES2_LIBRARIES}"
 			INTERFACE_INCLUDE_DIRECTORIES "${OPENGLES2_INCLUDE_DIR}")
 	endif()
 
-	if(GLFW_FOUND)
-		add_library(GLFW::GLFW SHARED IMPORTED)
+	if(GLFW_FOUND AND NOT TARGET GLFW::GLFW)
+		add_library(GLFW::GLFW ${LIBRARY_LINKAGE} IMPORTED)
 		set_target_properties(GLFW::GLFW PROPERTIES
 			IMPORTED_LOCATION "${GLFW_LIBRARY}" # On macOS it's a list
 			INTERFACE_COMPILE_DEFINITIONS "GLFW_NO_GLU"
 			INTERFACE_INCLUDE_DIRECTORIES "${GLFW_INCLUDE_DIR}")
 	endif()
 
-	if(SDL2_FOUND)
+	if(SDL2_FOUND AND NOT TARGET SDL2::SDL2)
 		split_extra_libraries(SDL2 "${SDL2_LIBRARY}")
-		add_library(SDL2::SDL2 SHARED IMPORTED)
+		add_library(SDL2::SDL2 ${LIBRARY_LINKAGE} IMPORTED)
 		set_target_properties(SDL2::SDL2 PROPERTIES
 			IMPORTED_LOCATION "${SDL2_LIBRARY_FILE}" # On macOS it's a list
 			INTERFACE_INCLUDE_DIRECTORIES "${SDL2_INCLUDE_DIR}"
 			INTERFACE_LINK_LIBRARIES "${SDL2_EXTRA_LIBRARIES}")
 	endif()
 
-	if(WEBP_FOUND)
-		add_library(WebP::WebP SHARED IMPORTED)
+	if(WEBP_FOUND AND NOT TARGET WebP::WebP)
+		add_library(WebP::WebP ${LIBRARY_LINKAGE} IMPORTED)
 		set_target_properties(WebP::WebP PROPERTIES
 			IMPORTED_LOCATION "${WEBP_LIBRARY}"
 			INTERFACE_INCLUDE_DIRECTORIES "${WEBP_INCLUDE_DIR}")
 	endif()
 
 	if(OPENAL_FOUND)
-		add_library(OpenAL::AL SHARED IMPORTED)
-		set_target_properties(OpenAL::AL PROPERTIES
-			IMPORTED_LOCATION "${OPENAL_LIBRARY}"
-			INTERFACE_INCLUDE_DIRECTORIES "${OPENAL_INCLUDE_DIR}")
+		if(NOT TARGET OpenAL::AL)
+			add_library(OpenAL::AL ${LIBRARY_LINKAGE} IMPORTED)
+			set_target_properties(OpenAL::AL PROPERTIES
+				IMPORTED_LOCATION "${OPENAL_LIBRARY}"
+				INTERFACE_INCLUDE_DIRECTORIES "${OPENAL_INCLUDE_DIR}")
+		endif()
 
-		if(VORBIS_FOUND)
-			add_library(Vorbis::Vorbisfile SHARED IMPORTED)
+		if(VORBIS_FOUND AND NOT TARGET Vorbis::Vorbisfile)
+			add_library(Vorbis::Vorbisfile ${LIBRARY_LINKAGE} IMPORTED)
 			set_target_properties(Vorbis::Vorbisfile PROPERTIES
 				IMPORTED_LOCATION "${VORBISFILE_LIBRARY}"
 				INTERFACE_INCLUDE_DIRECTORIES "${VORBIS_INCLUDE_DIR}"
@@ -626,8 +646,8 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		endif()
 	endif()
 
-	if(LUA_FOUND)
-		add_library(Lua::Lua SHARED IMPORTED)
+	if(LUA_FOUND AND NOT TARGET Lua::Lua)
+		add_library(Lua::Lua ${LIBRARY_LINKAGE} IMPORTED)
 		set_target_properties(Lua::Lua PROPERTIES
 			IMPORTED_LOCATION "${LUA_LIBRARY}"
 			INTERFACE_INCLUDE_DIRECTORIES "${LUA_INCLUDE_DIR}")
@@ -636,7 +656,7 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	if(NCINE_WITH_ANGELSCRIPT)
 		find_library(ANGELSCRIPT_LIBRARY libangelscript.so PATHS /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 ${NCINE_LIBS}/Linux/${CMAKE_SYSTEM_PROCESSOR}/)
 		if(EXISTS ${ANGELSCRIPT_LIBRARY})
-			add_library(AngelScript::AngelScript SHARED IMPORTED)
+			add_library(AngelScript::AngelScript ${LIBRARY_LINKAGE} IMPORTED)
 			set_target_properties(AngelScript::AngelScript PROPERTIES
 				IMPORTED_LOCATION "${ANGELSCRIPT_LIBRARY}"
 				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}")
