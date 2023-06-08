@@ -31,6 +31,7 @@ jobs:
       run: |
         rm -f ./Content/Translations/*.po
         
+        git config --global --add safe.directory '*'
         cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Switch.cmake -D NCINE_PREFERRED_BACKEND=SDL2 -D NCINE_WITH_GLEW=OFF -D DEATH_LOGGING=OFF
 
     - name: 'Build'
@@ -40,7 +41,7 @@ jobs:
     - name: 'Create Package'
       run: |
         mkdir ./_package/
-        cp -f ./_build/jazz2.nro ./_package/jazz2.nro
+        cp -f ./_build/jazz2.nro ./_package/Jazz2.nro
         
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3
