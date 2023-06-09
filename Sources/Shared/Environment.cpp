@@ -70,19 +70,6 @@ namespace Death::Environment
 	}
 
 	const std::uint64_t WindowsVersion = GetWindowsVersion();
-
-	bool GetProcessPath(HANDLE hProcess, wchar_t* szFilename, DWORD dwSize)
-	{
-		if (IsWindowsVista() && ::QueryFullProcessImageName(hProcess, 0, szFilename, &dwSize)) {
-			return true;
-		}
-
-		if (::GetModuleFileNameEx(hProcess, NULL, szFilename, dwSize)) {
-			return true;
-		}
-
-		return false;
-	}
 #elif defined(DEATH_TARGET_UNIX)
 	Containers::String GetUnixVersion()
 	{

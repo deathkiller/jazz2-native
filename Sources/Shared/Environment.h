@@ -42,8 +42,6 @@ namespace Death::Environment
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
 	extern const DeviceType CurrentDeviceType;
-#else
-	bool GetProcessPath(HANDLE hProcess, wchar_t* szFilename, DWORD dwSize);
 #endif
 
 	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTime()
