@@ -492,6 +492,10 @@ RecreateCache:
 		}
 	}
 
+#if defined(DEATH_TARGET_SWITCH)
+	LOGI("RefreshCache anims started");
+#endif
+
 	String animationsPath = fs::CombinePath(resolver.GetCachePath(), "Animations"_s);
 	fs::RemoveDirectoryRecursive(animationsPath);
 	if (!Compatibility::JJ2Anims::Convert(animsPath, animationsPath, false)) {
@@ -499,6 +503,10 @@ RecreateCache:
 		_flags |= Flags::IsVerified;
 		return;
 	}
+
+#if defined(DEATH_TARGET_SWITCH)
+	LOGI("RefreshCache anims done");
+#endif
 
 	RefreshCacheLevels();
 

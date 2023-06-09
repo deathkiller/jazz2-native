@@ -284,6 +284,10 @@ namespace Jazz2::Compatibility
 
 		ImportAnimations(targetPath, version, anims);
 		ImportAudioSamples(targetPath, version, samples);
+
+#if defined(DEATH_TARGET_SWITCH)
+		LOGI("JJ2Anims::Convert done");
+#endif
 		return true;
 	}
 
