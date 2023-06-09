@@ -198,12 +198,11 @@ namespace nCine
 
 	void AndroidApplication::preInit()
 	{
-		profileStartTime_ = TimeStamp::now();
-
 #if defined(DEATH_LOGGING)
 		// Try to open log file as early as possible
 		StringView externalPath = externalDataPath();
 		if (!externalPath.empty()) {
+			// TODO: Hardcoded path
 			__logFile = fs::Open(fs::CombinePath(externalPath, "Jazz2.log"_s), FileAccessMode::Write);
 			if (!__logFile->IsValid()) {
 				__logFile = nullptr;
@@ -211,6 +210,7 @@ namespace nCine
 			}
 		}
 #endif
+		profileStartTime_ = TimeStamp::now();
 
 		AndroidJniHelper::AttachJVM(state_);
 		AndroidAssetStream::InitializeAssetManager(state_);

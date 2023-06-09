@@ -24,9 +24,15 @@
 
 #include "tracy.h"
 
+using namespace Death::Containers::Literals;
 using namespace Death::IO;
 
-#if defined(DEATH_LOGGING) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_LOGGING) && defined(DEATH_TARGET_SWITCH)
+
+#	include <IO/FileStream.h>
+std::unique_ptr<Death::IO::Stream> __logFile;
+
+#elif defined(DEATH_LOGGING) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 
 #if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
 #	define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
@@ -150,7 +156,27 @@ namespace nCine
 			return EXIT_FAILURE;
 		}
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_SWITCH)
+		socketInitializeDefault();
+		nxlinkStdio();
+		romfsInit();
+
+		// Initialize the default gamepad
+		padConfigureInput(1, HidNpadStyleSet_NpadStandard);
+		PadState pad;
+		padInitializeDefault(&pad);
+		hidInitializeTouchScreen();
+
+#	if defined(DEATH_LOGGING)
+		// Try to open log file as early as possible
+		// TODO: Hardcoded path
+		fs::CreateDirectories("sdmc:/Games/Jazz2/"_s);
+		__logFile = fs::Open("sdmc:/Games/Jazz2/Jazz2.log"_s, FileAccessMode::Write);
+		if (!__logFile->IsValid()) {
+			__logFile = nullptr;
+		}
+#	endif
+#elif defined(DEATH_TARGET_WINDOWS)
 		// Force set current directory, so everything is loaded correctly, because it's not usually intended
 		wchar_t pBuf[MAX_PATH];
 		DWORD pBufLength = ::GetModuleFileName(nullptr, pBuf, countof(pBuf));
@@ -165,19 +191,6 @@ namespace nCine
 				::SetCurrentDirectory(pBuf);
 			}
 		}
-#endif
-
-#if defined(DEATH_TARGET_SWITCH)
-		socketInitializeDefault();
-		nxlinkStdio();
-		romfsInit();
-
-		// Initialize the default gamepad
-		padConfigureInput(1, HidNpadStyleSet_NpadStandard);
-		PadState pad;
-		padInitializeDefault(&pad);
-
-		hidInitializeTouchScreen();
 #endif
 
 		MainApplication& app = static_cast<MainApplication&>(theApplication());

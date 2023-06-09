@@ -51,7 +51,7 @@ extern "C"
 #include "Graphics/RenderQueue.h"
 #include "Graphics/ScreenViewport.h"
 #include "Graphics/GL/GLDebug.h"
-#include "Base/Timer.h" // for `sleep()`
+#include "Base/Timer.h"
 #include "Base/FrameTimer.h"
 #include "Graphics/SceneNode.h"
 #include "Input/IInputManager.h"
@@ -89,8 +89,6 @@ using namespace Death::IO;
 #elif defined(DEATH_TARGET_ANDROID)
 #	include <stdarg.h>
 #	include <android/log.h>
-#	include <IO/FileStream.h>
-extern std::unique_ptr<Death::IO::Stream> __logFile;
 #else
 #	include <cstdarg>
 #	if defined(DEATH_TARGET_SWITCH)
@@ -98,6 +96,10 @@ extern std::unique_ptr<Death::IO::Stream> __logFile;
 #	endif
 #endif
 
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_SWITCH)
+#	include <IO/FileStream.h>
+extern std::unique_ptr<Death::IO::Stream> __logFile;
+#endif
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 extern bool __showLogConsole;
 #endif
@@ -117,7 +119,7 @@ inline int __strncpy(char* dest, int destSize, const char* source, int count)
 
 void DEATH_LOGGING(LogLevel level, const char* fmt, ...)
 {
-	constexpr std::int32_t MaxEntryLength = 4 * 1024;
+	constexpr std::int32_t MaxEntryLength = 4096;
 	char logEntry[MaxEntryLength];
 
 #if defined(DEATH_TARGET_ANDROID)
@@ -154,7 +156,29 @@ void DEATH_LOGGING(LogLevel level, const char* fmt, ...)
 		fprintf(s->GetHandle(), "[%s] %s\n", levelIdentifier, logEntry);
 		fflush(s->GetHandle());
 	}
-#elif defined(DEATH_TARGET_WINDOWS_RT) || defined(DEATH_TARGET_SWITCH)
+#elif defined(DEATH_TARGET_SWITCH)
+	va_list args;
+	va_start(args, fmt);
+	std::int32_t length = vsnprintf(logEntry, MaxEntryLength, fmt, args);
+	va_end(args);
+
+	svcOutputDebugString(logEntry, length);
+
+	if (__logFile != nullptr) {
+		const char* levelIdentifier;
+		switch (level) {
+			case LogLevel::Fatal:	levelIdentifier = "F"; break;
+			case LogLevel::Error:	levelIdentifier = "E"; break;
+			case LogLevel::Warning:	levelIdentifier = "W"; break;
+			case LogLevel::Info:	levelIdentifier = "I"; break;
+			default:				levelIdentifier = "D"; break;
+		}
+
+		FileStream* s = static_cast<FileStream*>(__logFile.get());
+		fprintf(s->GetHandle(), "[%s] %s\n", levelIdentifier, logEntry);
+		fflush(s->GetHandle());
+	}
+#elif defined(DEATH_TARGET_WINDOWS_RT)
 	logEntry[0] = '[';
 	switch (level) {
 		case LogLevel::Fatal:	logEntry[1] = 'F'; break;
@@ -175,15 +199,10 @@ void DEATH_LOGGING(LogLevel level, const char* fmt, ...)
 		length = MaxEntryLength - 2;
 	}
 
-#	if defined(DEATH_TARGET_SWITCH)
-	// Don't include new line here
-	svcOutputDebugString(logEntry, length);
-#	else
 	logEntry[length++] = '\n';
 	logEntry[length] = '\0';
 
 	::OutputDebugString(Death::Utf8::ToUtf16(logEntry));
-#	endif
 #else
 	constexpr char Reset[] = "\033[0m";
 	constexpr char Bold[] = "\033[1m";

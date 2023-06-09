@@ -271,8 +271,11 @@ namespace Jazz2
 		}
 
 		StringView GetCachePath() const {
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 			return _cachePath;
+#elif defined(DEATH_TARGET_SWITCH)
+			// Switch has some issues with UTF-8 characters, so use "Jazz2" instead
+			return "sdmc:/Games/Jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 			return "Cache\\"_s;
 #else
@@ -281,8 +284,11 @@ namespace Jazz2
 		}
 
 		StringView GetSourcePath() const {
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH)|| defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 			return _sourcePath;
+#elif defined(DEATH_TARGET_SWITCH)
+			// Switch has some issues with UTF-8 characters, so use "Jazz2" instead
+			return "sdmc:/Games/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 			return "Source\\"_s;
 #else
@@ -321,7 +327,7 @@ namespace Jazz2
 #if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 		String _contentPath;
 #endif
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 		String _cachePath;
 		String _sourcePath;
 #endif

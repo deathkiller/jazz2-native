@@ -118,8 +118,15 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
   * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
 * Build the project with *CMake*
 
+### Nintendo Switch
+* Install [devkitPro toolchain](https://devkitpro.org/wiki/devkitPro_pacman)
+* Build the project with *CMake* and devkitPro toolchain
+```bash
+cmake -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Switch.cmake -D NCINE_PREFERRED_BACKEND=SDL2 -D NCINE_WITH_GLEW=OFF
+```
+
 ### Web (Emscripten)
-* Install Emscripten SDK (preferably to `../emsdk/`)
+* Install [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html) (preferably to `../emsdk/`)
 ```bash
 cd ..
 git clone https://github.com/emscripten-core/emsdk.git
@@ -136,6 +143,9 @@ cd emsdk
 * Build dependencies will be downloaded automatically by *CMake*
   * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `.\Libs\`
 * Run *CMake* to create [Microsoft Visual Studio 2019](https://www.visualstudio.com/) (or newer) solution
+```bash
+cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION="10.0"
+```
 
 
 ## License

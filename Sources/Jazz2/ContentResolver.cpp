@@ -122,13 +122,6 @@ namespace Jazz2
 		const String& appData = fs::GetSavePath("Jazz² Resurrection"_s);
 		_sourcePath = fs::CombinePath(appData, "Source/"_s);
 		_cachePath = fs::CombinePath(appData, "Cache/"_s);
-#elif defined(DEATH_TARGET_SWITCH)
-		StringView appData = "sdmc:/Games/Jazz2/"_s;
-		if (!fs::DirectoryExists(appData)) {
-			appData = "sdmc:/Games/Jazz² Resurrection/"_s;
-		}
-		_sourcePath = fs::CombinePath(appData, "Source/"_s);
-		_cachePath = fs::CombinePath(appData, "Cache/"_s);
 #elif defined(DEATH_TARGET_UNIX)
 #	if defined(NCINE_PACKAGED_CONTENT_PATH)
 		_contentPath = "Content/"_s;
