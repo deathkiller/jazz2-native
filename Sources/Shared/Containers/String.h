@@ -271,7 +271,7 @@ namespace Death::Containers
 		 * @ref String(const char*, std::size_t, Deleter).
 		 */
 		// Gets ambigous when calling String{ptr, 0}. FFS, zero as null pointer was deprecated in C++11 already, why is this still a problem?!
-		template<class T> String(typename std::enable_if<std::is_convertible<T, Deleter>::value && !std::is_convertible<T, std::size_t>::value, const char*>::type data, T deleter) noexcept : String { deleter, nullptr, const_cast<char*>(data) } {}
+		template<class T, class = typename std::enable_if<std::is_convertible<T, Deleter>::value && !std::is_convertible<T, std::size_t>::value, const char*>::type> String(const char* data, T deleter) noexcept : String { deleter, nullptr, const_cast<char*>(data) } {}
 
 		/**
 		 * @brief Taking ownership of a null pointer is not allowed

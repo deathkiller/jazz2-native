@@ -88,16 +88,8 @@ namespace Jazz2::Compatibility
 				infoBlock.DiscardBytes(4);
 
 				if (anim.FrameCount > 0) {
-					/*if (setAnims.Count == 0) {
-						throw new InvalidDataException("Set has frames but no anims");
-					}*/
-
-					//int16_t lastColdspotX = 0, lastColdspotY = 0;
-					//int16_t lastHotspotX = 0, lastHotspotY = 0;
-					//int16_t lastGunspotX = 0, lastGunspotY = 0;
-
-					for (uint16_t j = 0; j < anim.FrameCount; j++) {
-						AnimFrameSection& frame = anim.Frames[j];
+					for (uint16_t k = 0; k < anim.FrameCount; k++) {
+						AnimFrameSection& frame = anim.Frames[k];
 
 						frame.SizeX = frameDataBlock.ReadInt16();
 						frame.SizeY = frameDataBlock.ReadInt16();
@@ -128,10 +120,6 @@ namespace Jazz2::Compatibility
 							anim.AdjustedSizeY
 						);
 
-						//lastColdspotX = frame.ColdspotX; lastColdspotY = frame.ColdspotY;
-						//lastHotspotX = frame.HotspotX; lastHotspotY = frame.HotspotY;
-						//lastGunspotX = frame.GunspotX; lastGunspotY = frame.GunspotY;
-
 						int32_t dpos = (frame.ImageAddr + 4);
 
 						imageDataBlock.SeekTo(dpos - 4);
@@ -151,10 +139,6 @@ namespace Jazz2::Compatibility
 
 						while (pxRead < pxTotal) {
 							uint8_t op = imageDataBlock.ReadByte();
-							//if (op == 0) {
-							//    Console.WriteLine("[" + i + ":" + j + "] Next image operation should probably not be 0x00.");
-							//}
-
 							if (op < 0x80) {
 								// Skip the given number of pixels, writing them with the transparent color 0, array should be already zeroed
 								pxRead += op;
@@ -198,7 +182,7 @@ namespace Jazz2::Compatibility
 				seemsLikeCC = true;
 			}
 
-			for (uint16_t j = 0; j < sndCount; ++j) {
+			for (uint16_t j = 0; j < sndCount; j++) {
 				SampleSection& sample = samples.emplace_back();
 				sample.IdInSet = j;
 				sample.Set = i;
@@ -323,14 +307,14 @@ namespace Jazz2::Compatibility
 				continue;
 			}
 
-			int sizeX = (anim.AdjustedSizeX + AddBorder * 2);
-			int sizeY = (anim.AdjustedSizeY + AddBorder * 2);
+			int32_t sizeX = (anim.AdjustedSizeX + AddBorder * 2);
+			int32_t sizeY = (anim.AdjustedSizeY + AddBorder * 2);
 			// Determine the frame configuration to use.
 			// Each asset must fit into a 4096 by 4096 texture,
 			// as that is the smallest texture size we have decided to support.
 			if (anim.FrameCount > 1) {
-				int rows = std::max(1, (int)std::ceil(sqrt(anim.FrameCount * sizeX / sizeY)));
-				int columns = std::max(1, (int)std::ceil(anim.FrameCount * 1.0 / rows));
+				int32_t rows = std::max(1, (int32_t)std::ceil(sqrt(anim.FrameCount * sizeX / sizeY)));
+				int32_t columns = std::max(1, (int32_t)std::ceil(anim.FrameCount * 1.0 / rows));
 
 				// Do a bit of optimization, as the above algorithm ends occasionally with some extra space
 				// (it is careful with not underestimating the required space)
@@ -366,23 +350,22 @@ namespace Jazz2::Compatibility
 				continue;
 			} else {
 				fs::CreateDirectories(fs::CombinePath(targetPath, entry->Category));
-
 				filename = fs::CombinePath(entry->Category, entry->Name + ".aura"_s);
 			}
 
-			int stride = sizeX * anim.FrameConfigurationX;
+			int32_t stride = sizeX * anim.FrameConfigurationX;
 			std::unique_ptr<uint8_t[]> pixels = std::make_unique<uint8_t[]>(stride * sizeY * anim.FrameConfigurationY * 4);
 
-			for (int j = 0; j < anim.Frames.size(); j++) {
+			for (int32_t j = 0; j < anim.Frames.size(); j++) {
 				auto& frame = anim.Frames[j];
 
-				int offsetX = anim.NormalizedHotspotX + frame.HotspotX;
-				int offsetY = anim.NormalizedHotspotY + frame.HotspotY;
+				int32_t offsetX = anim.NormalizedHotspotX + frame.HotspotX;
+				int32_t offsetY = anim.NormalizedHotspotY + frame.HotspotY;
 
-				for (int y = 0; y < frame.SizeY; y++) {
-					for (int x = 0; x < frame.SizeX; x++) {
-						int targetX = (j % anim.FrameConfigurationX) * sizeX + offsetX + x + AddBorder;
-						int targetY = (j / anim.FrameConfigurationX) * sizeY + offsetY + y + AddBorder;
+				for (int32_t y = 0; y < frame.SizeY; y++) {
+					for (int32_t x = 0; x < frame.SizeX; x++) {
+						int32_t targetX = (j % anim.FrameConfigurationX) * sizeX + offsetX + x + AddBorder;
+						int32_t targetY = (j / anim.FrameConfigurationX) * sizeY + offsetY + y + AddBorder;
 						uint8_t colorIdx = frame.ImageData[frame.SizeX * y + x];
 
 						// Apply palette fixes

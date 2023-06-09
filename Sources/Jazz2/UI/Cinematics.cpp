@@ -29,7 +29,7 @@ namespace Jazz2::UI
 			return;
 		}
 
-#ifdef WITH_OPENMPT
+#if defined(WITH_OPENMPT)
 		_music = resolver.GetMusic(path + ".j2b"_s);
 		if (_music != nullptr) {
 			_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);

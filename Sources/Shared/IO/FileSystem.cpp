@@ -33,24 +33,21 @@
 #	if defined(__linux__)
 #		include <sys/sendfile.h>
 #	endif
-#
-#	if defined(DEATH_TARGET_ANDROID)
-#		include "AndroidAssetStream.h"
-#	endif
-#	if defined(DEATH_TARGET_SWITCH)
-#		include <alloca.h>
+#	if defined(__FreeBSD__)
+#		include <sys/types.h>
+#		include <sys/sysctl.h>
 #	endif
 #endif
 
-#if defined(DEATH_TARGET_APPLE)
+#if defined(DEATH_TARGET_ANDROID)
+#	include "AndroidAssetStream.h"
+#elif defined(DEATH_TARGET_APPLE)
 #	include <mach-o/dyld.h>
-#endif
-
-#if defined(DEATH_TARGET_EMSCRIPTEN)
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
 #	include <emscripten/emscripten.h>
-#endif
-
-#if defined(DEATH_TARGET_WINDOWS_RT)
+#elif defined(DEATH_TARGET_SWITCH)
+#	include <alloca.h>
+#elif defined(DEATH_TARGET_WINDOWS_RT)
 #	include <winrt/Windows.Foundation.h>
 #	include <winrt/Windows.Storage.h>
 #	include <winrt/Windows.System.h>
@@ -298,35 +295,44 @@ namespace Death::IO
 		static bool DeleteDirectoryInternal(const StringView& path)
 		{
 #if defined(DEATH_TARGET_SWITCH)
-			// `nftw` is missing in libnx
+			// nftw() is missing in libnx
+			LOGI("DeleteDirectoryInternal 01");
 			auto nullTerminatedPath = String::nullTerminatedView(path);
 			DIR* d = ::opendir(nullTerminatedPath.data());
+			LOGI("DeleteDirectoryInternal 02 %s", nullTerminatedPath.data());
 			std::int32_t r = -1;
 			if (d != nullptr) {
 				r = 0;
 				struct dirent* p;
 				while (r == 0 && (p = ::readdir(d)) != nullptr) {
+					LOGI("DeleteDirectoryInternal 03 %s", p->d_name);
 					if (strcmp(p->d_name, ".") == 0 || strcmp(p->d_name, "..") == 0) {
 						continue;
 					}
 
 					String fileName = FileSystem::CombinePath(path, p->d_name);
 					struct stat sb;
+					LOGI("DeleteDirectoryInternal 04 %s", fileName.data());
 					if (::lstat(fileName.data(), &sb) == 0) {
+						LOGI("DeleteDirectoryInternal 05");
 						if (S_ISDIR(sb.st_mode)) {
+							LOGI("DeleteDirectoryInternal 06");
 							DeleteDirectoryInternal(fileName);
 						} else {
+							LOGI("DeleteDirectoryInternal 07");
 							r = ::unlink(fileName.data());
 						}
 					}
 				}
+				LOGI("DeleteDirectoryInternal 08 %i", r);
 				::closedir(d);
 			}
 
 			if (r == 0) {
+				LOGI("DeleteDirectoryInternal 09");
 				r = ::rmdir(nullTerminatedPath.data());
 			}
-
+			LOGI("DeleteDirectoryInternal 10 %i", r);
 			return (r == 0);
 #else
 			return ::nftw(String::nullTerminatedView(path).data(), DeleteDirectoryInternalCallback, 64, FTW_DEPTH | FTW_PHYS) == 0;
@@ -785,13 +791,13 @@ namespace Death::IO
 		String returnedPath = CombinePath(first, second);
 #if defined(DEATH_TARGET_WINDOWS)
 		wchar_t buffer[MaxPathLength];
-		const wchar_t* resolvedPath = _wfullpath(buffer, Utf8::ToUtf16(returnedPath), countof(buffer));
+		const wchar_t* resolvedPath = _wfullpath(buffer, Utf8::ToUtf16(returnedPath), arraySize(buffer));
 		if (resolvedPath == nullptr) {
 			return { };
 		}
 		return Utf8::FromUtf16(buffer);
 #elif defined(DEATH_TARGET_SWITCH)
-		// TODO: `realpath` is missing in libnx
+		// TODO: realpath() is missing in libnx
 		return returnedPath;
 #else
 #	if defined(DEATH_TARGET_ANDROID)
@@ -924,13 +930,13 @@ namespace Death::IO
 
 #if defined(DEATH_TARGET_WINDOWS)
 		wchar_t buffer[MaxPathLength];
-		const wchar_t* resolvedPath = _wfullpath(buffer, Utf8::ToUtf16(path), countof(buffer));
+		const wchar_t* resolvedPath = _wfullpath(buffer, Utf8::ToUtf16(path), arraySize(buffer));
 		if (resolvedPath == nullptr) {
 			return { };
 		}
 		return Utf8::FromUtf16(buffer);
 #elif defined(DEATH_TARGET_SWITCH)
-		// TODO: `realpath` is missing in libnx
+		// TODO: realpath() is missing in libnx
 		return path;
 #else
 #	if defined(DEATH_TARGET_ANDROID)
@@ -964,6 +970,16 @@ namespace Death::IO
 			return { };
 		}
 		return path;
+#elif defined(__FreeBSD__)
+		Array<char> path;
+		std::size_t size;
+		const std::int32_t mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
+		sysctl(mib, 4, nullptr, &size, NULL, 0);
+		arrayResize(path, NoInit, size + 1);
+		sysctl(mib, 4, path, &size, NULL, 0);
+		path[size] = '\0';
+		const auto deleter = path.deleter();
+		return String { path.release(), size, deleter };
 #elif defined(DEATH_TARGET_UNIX)
 		// Reallocate like hell until we have enough place to store the path. Can't use lstat because
 		// the /proc/self/exe symlink is not a real symlink and so stat::st_size returns 0.
@@ -981,9 +997,9 @@ namespace Death::IO
 		const auto deleter = path.deleter();
 		return String { path.release(), std::size_t(size), deleter };
 #elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		wchar_t path[MaxPathLength];
+		wchar_t path[MaxPathLength + 1];
 		// Returns size *without* the null terminator
-		const std::size_t size = ::GetModuleFileNameW(nullptr, path, countof(path));
+		const std::size_t size = ::GetModuleFileNameW(nullptr, path, arraySize(path));
 		return Utf8::FromUtf16(arrayView(path, size));
 #else
 		return { };
