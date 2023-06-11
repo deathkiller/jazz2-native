@@ -296,43 +296,33 @@ namespace Death::IO
 		{
 #if defined(DEATH_TARGET_SWITCH)
 			// nftw() is missing in libnx
-			LOGI("DeleteDirectoryInternal 01");
 			auto nullTerminatedPath = String::nullTerminatedView(path);
 			DIR* d = ::opendir(nullTerminatedPath.data());
-			LOGI("DeleteDirectoryInternal 02 %s", nullTerminatedPath.data());
 			std::int32_t r = -1;
 			if (d != nullptr) {
 				r = 0;
 				struct dirent* p;
 				while (r == 0 && (p = ::readdir(d)) != nullptr) {
-					LOGI("DeleteDirectoryInternal 03 %s", p->d_name);
 					if (strcmp(p->d_name, ".") == 0 || strcmp(p->d_name, "..") == 0) {
 						continue;
 					}
 
 					String fileName = FileSystem::CombinePath(path, p->d_name);
 					struct stat sb;
-					LOGI("DeleteDirectoryInternal 04 %s", fileName.data());
 					if (::lstat(fileName.data(), &sb) == 0) {
-						LOGI("DeleteDirectoryInternal 05");
 						if (S_ISDIR(sb.st_mode)) {
-							LOGI("DeleteDirectoryInternal 06");
 							DeleteDirectoryInternal(fileName);
 						} else {
-							LOGI("DeleteDirectoryInternal 07");
 							r = ::unlink(fileName.data());
 						}
 					}
 				}
-				LOGI("DeleteDirectoryInternal 08 %i", r);
 				::closedir(d);
 			}
 
 			if (r == 0) {
-				LOGI("DeleteDirectoryInternal 09");
 				r = ::rmdir(nullTerminatedPath.data());
 			}
-			LOGI("DeleteDirectoryInternal 10 %i", r);
 			return (r == 0);
 #else
 			return ::nftw(String::nullTerminatedView(path).data(), DeleteDirectoryInternalCallback, 64, FTW_DEPTH | FTW_PHYS) == 0;
@@ -999,7 +989,7 @@ namespace Death::IO
 #elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		wchar_t path[MaxPathLength + 1];
 		// Returns size *without* the null terminator
-		const std::size_t size = ::GetModuleFileNameW(nullptr, path, arraySize(path));
+		const std::size_t size = ::GetModuleFileNameW(NULL, path, static_cast<DWORD>(arraySize(path)));
 		return Utf8::FromUtf16(arrayView(path, size));
 #else
 		return { };
