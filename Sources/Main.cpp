@@ -492,10 +492,6 @@ RecreateCache:
 		}
 	}
 
-#if defined(DEATH_TARGET_SWITCH)
-	LOGI("RefreshCache anims started");
-#endif
-
 	String animationsPath = fs::CombinePath(resolver.GetCachePath(), "Animations"_s);
 	fs::RemoveDirectoryRecursive(animationsPath);
 	if (!Compatibility::JJ2Anims::Convert(animsPath, animationsPath, false)) {
@@ -503,10 +499,6 @@ RecreateCache:
 		_flags |= Flags::IsVerified;
 		return;
 	}
-
-#if defined(DEATH_TARGET_SWITCH)
-	LOGI("RefreshCache anims done");
-#endif
 
 	RefreshCacheLevels();
 
@@ -675,37 +667,19 @@ void GameEventHandler::RefreshCacheLevels()
 		}
 	};
 
-#if defined(DEATH_TARGET_SWITCH)
-	LOGI("RefreshCacheLevels 01");
-#endif
 	String episodesPath = fs::CombinePath(resolver.GetCachePath(), "Episodes"_s);
-#if defined(DEATH_TARGET_SWITCH)
-	LOGI("RefreshCacheLevels 02");
-#endif
 	fs::RemoveDirectoryRecursive(episodesPath);
-#if defined(DEATH_TARGET_SWITCH)
-	LOGI("RefreshCacheLevels 03");
-#endif
 	fs::CreateDirectories(episodesPath);
 
-#if defined(DEATH_TARGET_SWITCH)
-	LOGI("RefreshCacheLevels 04");
-#endif
 	HashMap<String, bool> usedTilesets;
 
 	fs::Directory dir(fs::FindPathCaseInsensitive(resolver.GetSourcePath()), fs::EnumerationOptions::SkipDirectories);
-#if defined(DEATH_TARGET_SWITCH)
-	LOGI("RefreshCacheLevels 05");
-#endif
 	while (true) {
 		StringView item = dir.GetNext();
 		if (item == nullptr) {
 			break;
 		}
 
-#if defined(DEATH_TARGET_SWITCH)
-		LOGI("RefreshCacheLevels 06 %s", item.data());
-#endif
 		auto extension = fs::GetExtension(item);
 		if (extension == "j2e"_s || extension == "j2pe"_s) {
 			// Episode
@@ -768,9 +742,6 @@ void GameEventHandler::RefreshCacheLevels()
 #endif
 	}
 
-#if defined(DEATH_TARGET_SWITCH)
-	LOGI("RefreshCacheLevels 07");
-#endif
 	// Convert only used tilesets
 	String tilesetsPath = fs::CombinePath(resolver.GetCachePath(), "Tilesets"_s);
 	fs::RemoveDirectoryRecursive(tilesetsPath);
@@ -786,9 +757,6 @@ void GameEventHandler::RefreshCacheLevels()
 			}
 		}
 	}
-#if defined(DEATH_TARGET_SWITCH)
-	LOGI("RefreshCacheLevels 08");
-#endif
 }
 
 void GameEventHandler::CheckUpdates()
