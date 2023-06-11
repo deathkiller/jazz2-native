@@ -302,7 +302,12 @@ else() # GCC and LLVM
 		target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Debug>:-fvar-tracking-assignments>)
 
 		# Extra optimizations in release
-		target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:-Ofast -funsafe-loop-optimizations -ftree-loop-if-convert-stores>)
+		if(NINTENDO_SWITCH)
+			# -Ofast is crashing on Nintendo Switch for some reason, use -O2 instead
+			target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:-O2 -funsafe-loop-optimizations -ftree-loop-if-convert-stores>)
+		else()
+			target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:-Ofast -funsafe-loop-optimizations -ftree-loop-if-convert-stores>)
+		endif()
 
 		if(NCINE_LINKTIME_OPTIMIZATION AND NOT (MINGW OR MSYS OR ANDROID))
 			target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:-flto=auto>)
