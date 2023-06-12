@@ -60,10 +60,6 @@ namespace Death::IO
 {
 	namespace
 	{
-#if !defined(DEATH_TARGET_WINDOWS)
-		static char buffer[FileSystem::MaxPathLength];
-#endif
-
 		static std::size_t GetPathRootLength(const StringView& path)
 		{
 			if (path.empty()) return 0;
@@ -74,8 +70,8 @@ namespace Death::IO
 
 			std::size_t i = 0;
 			std::size_t pathLength = path.size();
-			std::size_t volumeSeparatorLength = 2;  // Length to the colon "C:"
-			std::size_t uncRootLength = 2;          // Length to the start of the server name "\\"
+			std::size_t volumeSeparatorLength = 2;		// Length to the colon "C:"
+			std::size_t uncRootLength = 2;				// Length to the start of the server name "\\"
 
 			bool extendedSyntax = path.hasPrefix(ExtendedPathPrefix);
 			bool extendedUncSyntax = path.hasPrefix(UncExtendedPathPrefix);
@@ -113,9 +109,23 @@ namespace Death::IO
 					i++;
 				}
 			}
-
+			
 			return i;
 #else
+#	if defined(DEATH_TARGET_ANDROID)
+			if (path.hasPrefix(AndroidAssetStream::Prefix)) {
+				return AndroidAssetStream::Prefix.size();
+			}
+#	elif defined(DEATH_TARGET_SWITCH)
+			constexpr StringView RomfsPrefix = "romfs:/"_s;
+			constexpr StringView SdmcPrefix = "sdmc:/"_s;
+			if (path.hasPrefix(RomfsPrefix)) {
+				return RomfsPrefix.size();
+			}
+			if (path.hasPrefix(SdmcPrefix)) {
+				return SdmcPrefix.size();
+			}
+#	endif
 			return (path[0] == '/' || path[0] == '\\' ? 1 : 0);
 #endif
 		}
@@ -126,7 +136,7 @@ namespace Death::IO
 			SYSTEMTIME sysTime;
 			::FileTimeToSystemTime(fileTime, &sysTime);
 
-			FileSystem::FileDate date = { };
+			FileSystem::FileDate date { };
 			date.Year = sysTime.wYear;
 			date.Month = sysTime.wMonth;
 			date.Day = sysTime.wDay;
@@ -271,7 +281,7 @@ namespace Death::IO
 
 		static FileSystem::FileDate NativeTimeToFileDate(const time_t* t)
 		{
-			FileSystem::FileDate date = { };
+			FileSystem::FileDate date { };
 
 			struct tm* local = localtime(t);
 			date.Year = local->tm_year + 1900;
@@ -285,16 +295,16 @@ namespace Death::IO
 			return date;
 		}
 
-#if !defined(DEATH_TARGET_SWITCH)
+#	if !defined(DEATH_TARGET_SWITCH)
 		static std::int32_t DeleteDirectoryInternalCallback(const char* fpath, const struct stat* sb, std::int32_t typeflag, struct FTW* ftwbuf)
 		{
 			return ::remove(fpath);
 		}
-#endif
+#	endif
 
 		static bool DeleteDirectoryInternal(const StringView& path)
 		{
-#if defined(DEATH_TARGET_SWITCH)
+#	if defined(DEATH_TARGET_SWITCH)
 			// nftw() is missing in libnx
 			auto nullTerminatedPath = String::nullTerminatedView(path);
 			DIR* d = ::opendir(nullTerminatedPath.data());
@@ -309,7 +319,7 @@ namespace Death::IO
 
 					String fileName = FileSystem::CombinePath(path, p->d_name);
 					struct stat sb;
-					if (::lstat(fileName.data(), &sb) == 0) {
+					if (CallStat(fileName.data(), &sb)) {
 						if (S_ISDIR(sb.st_mode)) {
 							DeleteDirectoryInternal(fileName);
 						} else {
@@ -324,9 +334,9 @@ namespace Death::IO
 				r = ::rmdir(nullTerminatedPath.data());
 			}
 			return (r == 0);
-#else
+#	else
 			return ::nftw(String::nullTerminatedView(path).data(), DeleteDirectoryInternalCallback, 64, FTW_DEPTH | FTW_PHYS) == 0;
-#endif
+#	endif
 		}
 
 #	if defined(DEATH_TARGET_UNIX)
@@ -340,6 +350,7 @@ namespace Death::IO
 			do {
 				tempfd = ::open("/dev/null", O_RDWR | O_NOCTTY);
 			} while (tempfd == -1 && errno == EINTR);
+
 			if (tempfd == -1) {
 				return false;
 			}
@@ -691,17 +702,11 @@ namespace Death::IO
 		std::size_t firstSize = first.size();
 		std::size_t secondSize = second.size();
 
-		if (firstSize == 0 || (secondSize != 0 && (second[0] == '/' || second[0] == '\\'
-#if defined(DEATH_TARGET_WINDOWS)
-			// Absolute filename on Windows
-			|| (secondSize > 2 && second[1] == ':' && (second[2] == '/' || second[2] == '\\'))
-#endif
-			))) {
-			return second;
-		}
-
 		if (secondSize == 0) {
 			return first;
+		}
+		if (firstSize == 0 || GetPathRootLength(second) > 0) {
+			return second;
 		}
 
 #	if defined(DEATH_TARGET_ANDROID)
@@ -735,7 +740,7 @@ namespace Death::IO
 			if (pathSize == 0) {
 				continue;
 			}
-			if (paths[i][0] == '/' || paths[i][0] == '\\') {
+			if (GetPathRootLength(paths[i]) > 0) {
 				resultSize = 0;
 				startIdx = i;
 			}
@@ -776,34 +781,6 @@ namespace Death::IO
 		return CombinePath(Containers::arrayView(paths));
 	}
 
-	String FileSystem::CombinePathAsAbsolute(const StringView& first, const StringView& second)
-	{
-		String returnedPath = CombinePath(first, second);
-#if defined(DEATH_TARGET_WINDOWS)
-		wchar_t buffer[MaxPathLength];
-		const wchar_t* resolvedPath = _wfullpath(buffer, Utf8::ToUtf16(returnedPath), arraySize(buffer));
-		if (resolvedPath == nullptr) {
-			return { };
-		}
-		return Utf8::FromUtf16(buffer);
-#elif defined(DEATH_TARGET_SWITCH)
-		// TODO: realpath() is missing in libnx
-		return returnedPath;
-#else
-#	if defined(DEATH_TARGET_ANDROID)
-		if (returnedPath.hasPrefix(AndroidAssetStream::Prefix)) {
-			return returnedPath;
-		}
-#	endif
-
-		const char* resolvedPath = ::realpath(returnedPath.data(), buffer);
-		if (resolvedPath == nullptr) {
-			buffer[0] = '\0';
-		}
-		return buffer;
-#endif
-	}
-
 	StringView FileSystem::GetDirectoryName(const StringView& path)
 	{
 		if (path.empty()) return { };
@@ -817,15 +794,6 @@ namespace Death::IO
 		if (i <= pathRootLength) return { };
 		// Try to get the last path separator
 		while (i > pathRootLength && path[--i] != '/' && path[i] != '\\');
-		// Return nothing if only filename was specified as relative path
-		if (pathRootLength == 0 && i == 0) {
-#if defined(DEATH_TARGET_ANDROID)
-			if (path != AndroidAssetStream::Prefix && path.hasPrefix(AndroidAssetStream::Prefix)) {
-				return AndroidAssetStream::Prefix;
-			}
-#endif
-			return { };
-		}
 
 		return path.slice(0, i);
 	}
@@ -863,7 +831,7 @@ namespace Death::IO
 		for (char c : fileName.prefix(foundDot.begin())) {
 			if (c != '.') {
 				initialDots = false;
-				break; 
+				break;
 			}
 		}
 		if (initialDots) return fileName;
@@ -920,21 +888,133 @@ namespace Death::IO
 
 #if defined(DEATH_TARGET_WINDOWS)
 		wchar_t buffer[MaxPathLength];
-		const wchar_t* resolvedPath = _wfullpath(buffer, Utf8::ToUtf16(path), arraySize(buffer));
-		if (resolvedPath == nullptr) {
+		DWORD length = ::GetFullPathNameW(Utf8::ToUtf16(path), static_cast<DWORD>(arraySize(buffer)), buffer, nullptr);
+		if (length == 0) {
 			return { };
 		}
-		return Utf8::FromUtf16(buffer);
+		return Utf8::FromUtf16(buffer, length);
 #elif defined(DEATH_TARGET_SWITCH)
-		// TODO: realpath() is missing in libnx
-		return path;
+		// realpath() is missing in libnx
+		char left[MaxPathLength];
+		char nextToken[MaxPathLength];
+		char result[MaxPathLength];
+		std::size_t resultLength = 0;
+		std::int32_t symlinks = 0;
+
+		std::size_t pathRootLength = GetPathRootLength(path);
+		if (pathRootLength > 0) {
+			strncpy(result, path.data(), pathRootLength);
+			resultLength = pathRootLength;
+			if (path.size() == pathRootLength) {
+				return String { result, resultLength };
+			}
+
+			strncpy(left, path.data() + pathRootLength, sizeof(left));
+		} else {
+			if (::getcwd(result, sizeof(result)) == nullptr) {
+				return "."_s;
+			}
+			resultLength = strlen(result);
+			strncpy(left, path.data(), sizeof(left));
+		}
+		std::size_t leftLength = strnlen(left, sizeof(left));
+		if (leftLength >= sizeof(left) || resultLength >= MaxPathLength) {
+			// Path is too long
+			return path;
+		}
+
+		while (leftLength != 0) {
+			char* p = strchr(left, '/');
+			char* s = (p != nullptr ? p : left + leftLength);
+			std::size_t nextTokenLength = s - left;
+			if (nextTokenLength >= sizeof(nextToken)) {
+				// Path is too long
+				return path;
+			}
+			std::memcpy(nextToken, left, nextTokenLength);
+			nextToken[nextTokenLength] = '\0';
+			leftLength -= nextTokenLength;
+			if (p != nullptr) {
+				std::memmove(left, s + 1, leftLength + 1);
+			}
+			if (result[resultLength - 1] != '/') {
+				if (resultLength + 1 >= MaxPathLength) {
+					return path;
+				}
+				result[resultLength++] = '/';
+			}
+			if (nextToken[0] == '\0' || strcmp(nextToken, ".") == 0) {
+				continue;
+			}
+			if (strcmp(nextToken, "..") == 0) {
+				if (resultLength > 1) {
+					result[resultLength - 1] = '\0';
+					char* q = strrchr(result, '/') + 1;
+					resultLength = q - result;
+				}
+				continue;
+			}
+
+			if (resultLength + nextTokenLength >= sizeof(result)) {
+				// Path is too long
+				return path;
+			}
+			std::memcpy(result + resultLength, nextToken, nextTokenLength);
+			resultLength += nextTokenLength;
+			result[resultLength] = '\0';
+
+			struct stat sb;
+			if (!CallStat(result, sb)) {
+				if (errno == ENOENT && p == nullptr) {
+					return String { result, resultLength };
+				}
+				return { };
+			}
+			if (S_ISLNK(sb.st_mode)) {
+				if (++symlinks > 8) {
+					// Too many symlinks
+					return { };
+				}
+				ssize_t symlinkLength = ::readlink(result, nextToken, sizeof(nextToken) - 1);
+				if (symlinkLength < 0) {
+					// Cannot resolve the symlink
+					return { };
+				}
+				nextToken[symlinkLength] = '\0';
+				if (nextToken[0] == '/') {
+					resultLength = 1;
+				} else if (resultLength > 1) {
+					result[resultLength - 1] = '\0';
+					char* q = strrchr(result, '/') + 1;
+					resultLength = q - result;
+				}
+
+				if (p != nullptr) {
+					if (nextToken[symlinkLength - 1] != '/') {
+						if (static_cast<std::size_t>(symlinkLength) + 1 >= sizeof(nextToken)) {
+							// Path is too long
+							return { };
+						}
+						nextToken[symlinkLength++] = '/';
+					}
+					strncpy(nextToken + symlinkLength, left, sizeof(nextToken) - symlinkLength);
+				}
+				strncpy(left, nextToken, sizeof(left));
+				leftLength = strnlen(left, sizeof(left));
+			}
+		}
+
+		if (resultLength > 1 && result[resultLength - 1] == '/') {
+			resultLength--;
+		}
+		return String { result, resultLength };
 #else
 #	if defined(DEATH_TARGET_ANDROID)
 		if (path.hasPrefix(AndroidAssetStream::Prefix)) {
 			return path;
 		}
 #	endif
-
+		char buffer[MaxPathLength];
 		const char* resolvedPath = ::realpath(String::nullTerminatedView(path).data(), buffer);
 		if (resolvedPath == nullptr) {
 			return { };
@@ -1005,6 +1085,7 @@ namespace Death::IO
 		::GetCurrentDirectoryW(MaxPathLength, buffer);
 		return Utf8::FromUtf16(buffer);
 #else
+		char buffer[MaxPathLength];
 		if (::getcwd(buffer, MaxPathLength) != nullptr) {
 			return buffer;
 		} else {
@@ -1304,7 +1385,7 @@ namespace Death::IO
 			return false;
 		}
 #	endif
-
+		char buffer[MaxPathLength];
 		std::size_t pathLength = std::min((std::size_t)MaxPathLength - 1, path.size());
 		strncpy(buffer, path.data(), pathLength);
 		buffer[pathLength] = '\0';
@@ -1356,7 +1437,7 @@ namespace Death::IO
 			return false;
 		}
 #	endif
-
+		char buffer[MaxPathLength];
 		std::size_t pathLength = std::min((std::size_t)MaxPathLength - 1, path.size());
 		strncpy(buffer, nullTerminatedPath.data(), pathLength);
 		buffer[pathLength] = '\0';
@@ -1623,7 +1704,7 @@ namespace Death::IO
 		if ((source = ::open(String::nullTerminatedView(oldPath).data(), O_RDONLY)) == -1) {
 			return false;
 		}
-		fstat(source, &sb);
+		::fstat(source, &sb);
 		if ((dest = ::open(String::nullTerminatedView(newPath).data(), O_WRONLY | O_CREAT, sb.st_mode)) == -1) {
 			::close(source);
 			return false;

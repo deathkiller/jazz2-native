@@ -120,9 +120,6 @@ namespace Death::IO
 		static Containers::String CombinePath(const Containers::ArrayView<const Containers::StringView> paths);
 		static Containers::String CombinePath(const std::initializer_list<Containers::StringView> paths);
 
-		/** @brief Returns the absolute path after joining together two path components */
-		static Containers::String CombinePathAsAbsolute(const Containers::StringView& first, const Containers::StringView& second);
-
 		/** @brief Returns the path up to, but not including, the final separator */
 		static Containers::StringView GetDirectoryName(const Containers::StringView& path);
 		/** @brief Returns the path component after the final separator */
