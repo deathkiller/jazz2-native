@@ -26,7 +26,9 @@ namespace Jazz2::Actors::Bosses
 		static constexpr int StatePrepairingToAttack = 3;
 		static constexpr int StateAttacking = 4;
 
-		static constexpr int ChainLength = 5 * 3;
+		static constexpr int NormalChainLength = 5 * 3;
+		static constexpr int HardChainLength = 6 * 3;
+		static constexpr int MaxChainLength = HardChainLength;
 
 		class BollyPart : public EnemyBase
 		{
@@ -66,7 +68,7 @@ namespace Jazz2::Actors::Bosses
 		uint8_t _endText;
 		std::shared_ptr<BollyPart> _bottom;
 		//std::shared_ptr<BollyPart> _turret;
-		std::shared_ptr<BollyPart> _chain[ChainLength];
+		std::shared_ptr<BollyPart> _chain[MaxChainLength];
 		Vector2f _originPos;
 		float _noiseCooldown;
 		int _rocketsLeft;

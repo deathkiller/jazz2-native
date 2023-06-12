@@ -807,7 +807,7 @@ void GameEventHandler::CheckUpdates()
 #if defined(DEATH_TARGET_ANDROID)
 	auto sanitizeName = [](char* dst, std::size_t dstMaxLength, std::size_t& dstLength, const StringView& name) {
 		for (const char& c : name) {
-			if (dstLength >= dstMaxLength) {
+			if (c == '\0' || dstLength >= dstMaxLength) {
 				break;
 			}
 			if (isalnum(c) || c == ' ' || c == '.' || c == ',' || c == ':' || c == '_' || c == '-' || c == '+' || c == '/' || c == '*' ||
@@ -916,9 +916,9 @@ void GameEventHandler::SaveEpisodeEnd(const std::unique_ptr<LevelInitialization>
 		return;
 	}
 
-	int playerCount = 0;
+	std::size_t playerCount = 0;
 	PlayerCarryOver* firstPlayer = nullptr;
-	for (int i = 0; i < countof(pendingLevelChange->PlayerCarryOvers); i++) {
+	for (std::size_t i = 0; i < arraySize(pendingLevelChange->PlayerCarryOvers); i++) {
 		if (pendingLevelChange->PlayerCarryOvers[i].Type != PlayerType::None) {
 			firstPlayer = &pendingLevelChange->PlayerCarryOvers[i];
 			playerCount++;
@@ -954,9 +954,9 @@ void GameEventHandler::SaveEpisodeContinue(const std::unique_ptr<LevelInitializa
 		return;
 	}
 
-	int playerCount = 0;
+	std::size_t playerCount = 0;
 	PlayerCarryOver* firstPlayer = nullptr;
-	for (int i = 0; i < countof(pendingLevelChange->PlayerCarryOvers); i++) {
+	for (std::size_t i = 0; i < arraySize(pendingLevelChange->PlayerCarryOvers); i++) {
 		if (pendingLevelChange->PlayerCarryOvers[i].Type != PlayerType::None) {
 			firstPlayer = &pendingLevelChange->PlayerCarryOvers[i];
 			playerCount++;
@@ -1096,7 +1096,7 @@ int main(int argc, char** argv)
 	if (hasVirtualTerminal) {
 		const char* term = ::getenv("TERM");
 		if (term != nullptr && strcmp(term, "xterm-256color") == 0) {
-			fwrite(TermLogo, sizeof(unsigned char), countof(TermLogo), stdout);
+			fwrite(TermLogo, sizeof(unsigned char), arraySize(TermLogo), stdout);
 		}
 	}
 #endif
