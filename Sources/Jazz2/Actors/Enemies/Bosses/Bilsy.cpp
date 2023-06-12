@@ -75,24 +75,48 @@ namespace Jazz2::Actors::Bosses
 		switch (_state) {
 			case StateWaiting: {
 				if (_stateTime <= 0.0f) {
-					_state = StateTransition;
-					SetTransition((AnimState)1073741826, false, [this]() {
-						PlaySfx("ThrowFireball"_s);
+					bool isFacingPlayer;
+					if (_levelHandler->Difficulty() < GameDifficulty::Hard) {
+						bool found = false;
+						Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
 
-						std::shared_ptr<Fireball> fireball = std::make_shared<Fireball>();
-						uint8_t fireballParams[2] = { _theme, (uint8_t)(IsFacingLeft() ? 1 : 0) };
-						fireball->OnActivated({
-							.LevelHandler = _levelHandler,
-							.Pos = Vector3i((int)_pos.X + (IsFacingLeft() ? -26 : 26), (int)_pos.Y - 20, _renderer.layer() + 2),
-							.Params = fireballParams
-						});
-						_levelHandler->AddActor(fireball);
+						auto& players = _levelHandler->GetPlayers();
+						for (auto player : players) {
+							Vector2f newPos = player->GetPos();
+							if ((_pos - newPos).SqrLength() < (_pos - targetPos).SqrLength()) {
+								targetPos = newPos;
+								found = true;
+							}
+						}
 
-						SetTransition((AnimState)1073741827, false, [this]() {
-							_state = StateWaiting2;
-							_stateTime = 30.0f;
+						isFacingPlayer = (found && (targetPos.X < _pos.X) == IsFacingLeft());
+					} else {
+						isFacingPlayer = true;
+					}
+
+					if (isFacingPlayer) {
+						_state = StateTransition;
+						SetTransition((AnimState)1073741826, false, [this]() {
+							PlaySfx("ThrowFireball"_s);
+
+							std::shared_ptr<Fireball> fireball = std::make_shared<Fireball>();
+							uint8_t fireballParams[2] = { _theme, (uint8_t)(IsFacingLeft() ? 1 : 0) };
+							fireball->OnActivated({
+								.LevelHandler = _levelHandler,
+								.Pos = Vector3i((int)_pos.X + (IsFacingLeft() ? -26 : 26), (int)_pos.Y - 20, _renderer.layer() + 2),
+								.Params = fireballParams
+							});
+							_levelHandler->AddActor(fireball);
+
+							SetTransition((AnimState)1073741827, false, [this]() {
+								_state = StateWaiting2;
+								_stateTime = 30.0f;
+							});
 						});
-					});
+					} else {
+						_state = StateWaiting2;
+						_stateTime = 30.0f;
+					}
 				}
 				break;
 			}
@@ -101,6 +125,10 @@ namespace Jazz2::Actors::Bosses
 					SetState(ActorState::CanBeFrozen, false);
 
 					PlaySfx("Disappear"_s, 0.8f);
+
+					if (_levelHandler->Difficulty() < GameDifficulty::Hard) {
+						_canHurtPlayer = false;
+					}
 
 					_state = StateTransition;
 					SetTransition((AnimState)1073741825, false, [this]() {
@@ -170,6 +198,10 @@ namespace Jazz2::Actors::Bosses
 		_state = StateTransition;
 		SetTransition((AnimState)1073741824, false, [this]() {
 			SetState(ActorState::CanBeFrozen, true);
+
+			if (_levelHandler->Difficulty() < GameDifficulty::Hard) {
+				_canHurtPlayer = true;
+			}
 
 			_state = StateWaiting;
 			_stateTime = 30.0f;
