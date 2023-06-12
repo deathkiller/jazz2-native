@@ -438,11 +438,11 @@ namespace Death::Containers
 		return arrayAppend<T, Allocator<T>>(array, values);
 	}
 
-	template<class T, class Allocator = ArrayAllocator<T>> inline ArrayView<T> arrayAppend(Array<T>& array, std::initializer_list<T> values) {
+	template<class T, class Allocator = ArrayAllocator<T>> inline ArrayView<T> arrayAppend(Array<T>& array, std::initializer_list<typename std::common_type<T>::type> values) {
 		return arrayAppend<T, Allocator>(array, arrayView(values));
 	}
 
-	template<template<class> class Allocator, class T> inline ArrayView<T> arrayAppend(Array<T>& array, std::initializer_list<T> values) {
+	template<template<class> class Allocator, class T> inline ArrayView<T> arrayAppend(Array<T>& array, std::initializer_list<typename std::common_type<T>::type> values) {
 		return arrayAppend<T, Allocator<T>>(array, values);
 	}
 
@@ -480,11 +480,11 @@ namespace Death::Containers
 		return arrayInsert<T, Allocator<T>>(array, index, values);
 	}
 
-	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T>  arrayInsert(Array<T>& array, std::size_t index, std::initializer_list<T> values) {
+	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, std::initializer_list<typename std::common_type<T>::type> values) {
 		return arrayInsert<T, Allocator>(array, index, arrayView(values));
 	}
 
-	template<template<class> class Allocator, class T> inline ArrayView<T>  arrayInsert(Array<T>& array, std::size_t index, std::initializer_list<T> values) {
+	template<template<class> class Allocator, class T> inline ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, std::initializer_list<typename std::common_type<T>::type> values) {
 		return arrayInsert<T, Allocator<T>>(array, index, values);
 	}
 

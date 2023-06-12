@@ -763,7 +763,7 @@ void GameEventHandler::CheckUpdates()
 {
 #if !defined(DEATH_DEBUG)
 #if defined(DEATH_TARGET_X86)
-	int arch = 1;
+	std::int32_t arch = 1;
 	Cpu::Features cpuFeatures = Cpu::runtimeFeatures();
 	if (cpuFeatures & Cpu::Avx) {
 		arch |= 0x400;
@@ -775,21 +775,21 @@ void GameEventHandler::CheckUpdates()
 		arch |= 0x1000;
 	}
 #elif defined(DEATH_TARGET_ARM)
-	int arch = 2;
+	std::int32_t arch = 2;
 	Cpu::Features cpuFeatures = Cpu::runtimeFeatures();
 	if (cpuFeatures & Cpu::Neon) {
 		arch |= 0x2000;
 	}
 #elif defined(DEATH_TARGET_POWERPC)
-	int arch = 3;
+	std::int32_t arch = 3;
 #elif defined(DEATH_TARGET_WASM)
-	int arch = 4;
+	std::int32_t arch = 4;
 	Cpu::Features cpuFeatures = Cpu::runtimeFeatures();
 	if (cpuFeatures & Cpu::Simd128) {
 		arch |= 0x4000;
 	}
 #else
-	int arch = 0;
+	std::int32_t arch = 0;
 #endif
 #if defined(DEATH_TARGET_32BIT)
 	arch |= 0x100;
@@ -805,37 +805,62 @@ void GameEventHandler::CheckUpdates()
 #endif
 
 #if defined(DEATH_TARGET_ANDROID)
+	auto sanitizeName = [](char* dst, std::size_t dstMaxLength, std::size_t& dstLength, const StringView& name) {
+		for (const char& c : name) {
+			if (dstLength >= dstMaxLength) {
+				break;
+			}
+			if (isalnum(c) || c == ' ' || c == '.' || c == ',' || c == ':' || c == '_' || c == '-' || c == '+' || c == '/' || c == '*' ||
+				c == '!' || c == '(' || c == ')' || c == '[' || c == ']' || c == '@' || c == '&' || c == '#' || c == '\'' || c == '"') {
+				dst[dstLength++] = c;
+			}
+		}
+	};
+
 	auto sdkVersion = AndroidJniHelper::SdkVersion();
 	auto androidId = AndroidJniWrap_Secure::AndroidId();
 	auto deviceManufacturer = AndroidJniClass_Version::deviceManufacturer();
 	auto deviceModel = AndroidJniClass_Version::deviceModel();
-	String device = (deviceModel.empty() ? deviceManufacturer : (deviceModel.hasPrefix(deviceManufacturer) ? deviceModel : deviceManufacturer + " "_s + deviceModel));
+
+	char deviceName[32];
+	std::size_t deviceNameLength = 0;
+	if (deviceModel.empty()) {
+		sanitizeName(deviceName, arraySize(deviceName) - 1, deviceNameLength, deviceManufacturer);
+	} else if (deviceModel.hasPrefix(deviceManufacturer)) {
+		sanitizeName(deviceName, arraySize(deviceName) - 1, deviceNameLength, deviceModel);
+	} else {
+		sanitizeName(deviceName, arraySize(deviceName) - 8, deviceNameLength, deviceManufacturer);
+		deviceName[deviceNameLength++] = ' ';
+		sanitizeName(deviceName, arraySize(deviceName) - 1, deviceNameLength, deviceModel);
+	}
+	deviceName[deviceNameLength] = '\0';
+
 	char DeviceDesc[64];
-	int DeviceDescLength = formatString(DeviceDesc, countof(DeviceDesc), "%s|Android %i|%s|2|%i", androidId.data(), sdkVersion, device.data(), arch);
+	std::int32_t DeviceDescLength = formatString(DeviceDesc, arraySize(DeviceDesc), "%s|Android %i|%s|2|%i", androidId.data(), sdkVersion, deviceName, arch);
 #elif defined(DEATH_TARGET_APPLE)
-	char DeviceDesc[64]; int DeviceDescLength;
-	if (::gethostname(DeviceDesc, countof(DeviceDesc)) == 0) {
+	char DeviceDesc[64]; std::int32_t DeviceDescLength;
+	if (::gethostname(DeviceDesc, arraySize(DeviceDesc)) == 0) {
 		DeviceDescLength = std::strlen(DeviceDesc);
 	} else {
 		DeviceDescLength = 0;
 	}
-	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength, "|macOS||5|%i", arch);
+	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength, "|macOS||5|%i", arch);
 #elif defined(DEATH_TARGET_SWITCH)
 	char DeviceDesc[64];
-	int DeviceDescLength = formatString(DeviceDesc, countof(DeviceDesc), "|Nintendo Switch||2|%i", arch);
+	std::int32_t DeviceDescLength = formatString(DeviceDesc, arraySize(DeviceDesc), "|Nintendo Switch||9|%i", arch);
 #elif defined(DEATH_TARGET_UNIX)
 #	if defined(DEATH_TARGET_CLANG)
 	arch |= 0x100000;
 #	endif
 
-	char DeviceDesc[64]; int DeviceDescLength;
-	if (::gethostname(DeviceDesc, countof(DeviceDesc)) == 0) {
+	char DeviceDesc[64]; std::int32_t DeviceDescLength;
+	if (::gethostname(DeviceDesc, arraySize(DeviceDesc)) == 0) {
 		DeviceDescLength = std::strlen(DeviceDesc);
 	} else {
 		DeviceDescLength = 0;
 	}
 	String unixVersion = Environment::GetUnixVersion();
-	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength, "|%s||4|%i",
+	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength, "|%s||4|%i",
 		unixVersion.empty() ? "Unix" : unixVersion.data(), arch);
 #elif defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_WINDOWS_RT)
 #	if defined(DEATH_TARGET_CLANG)
@@ -843,7 +868,7 @@ void GameEventHandler::CheckUpdates()
 #	endif
 
 	auto osVersion = Environment::WindowsVersion;
-	char DeviceDesc[64]; DWORD DeviceDescLength = countof(DeviceDesc);
+	char DeviceDesc[64]; DWORD DeviceDescLength = arraySize(DeviceDesc);
 	if (!::GetComputerNameA(DeviceDesc, &DeviceDescLength)) {
 		DeviceDescLength = 0;
 	}
@@ -857,28 +882,28 @@ void GameEventHandler::CheckUpdates()
 		case DeviceType::Xbox: deviceType = "Xbox"; break;
 		default: deviceType = "Unknown"; break;
 	}
-	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i (%s)||7|%i",
-		(int32_t)((osVersion >> 48) & 0xffffu), (int32_t)((osVersion >> 32) & 0xffffu), (int32_t)(osVersion & 0xffffffffu), deviceType, arch);
+	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength, "|Windows %i.%i.%i (%s)||7|%i",
+		(std::int32_t)((osVersion >> 48) & 0xffffu), (std::int32_t)((osVersion >> 32) & 0xffffu), (std::int32_t)(osVersion & 0xffffffffu), deviceType, arch);
 #	else
 	HMODULE hNtdll = ::GetModuleHandle(L"ntdll.dll");
 	bool isWine = (hNtdll != nullptr && ::GetProcAddress(hNtdll, "wine_get_host_version") != nullptr);
-	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, countof(DeviceDesc) - DeviceDescLength,
+	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength,
 		isWine ? "|Windows %i.%i.%i (Wine)||3|%i" : "|Windows %i.%i.%i||3|%i",
-		(int32_t)((osVersion >> 48) & 0xffffu), (int32_t)((osVersion >> 32) & 0xffffu), (int32_t)(osVersion & 0xffffffffu), arch);
+		(std::int32_t)((osVersion >> 48) & 0xffffu), (std::int32_t)((osVersion >> 32) & 0xffffu), (std::int32_t)(osVersion & 0xffffffffu), arch);
 #	endif
 #else
-	constexpr char DeviceDesc[] = "||||"; int DeviceDescLength = sizeof(DeviceDesc) - 1;
+	constexpr char DeviceDesc[] = "||||"; std::int32_t DeviceDescLength = sizeof(DeviceDesc) - 1;
 #endif
 	using namespace Death::IO;
 	String url = "http://deat.tk/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + Http::EncodeBase64(DeviceDesc, DeviceDesc + DeviceDescLength);
 	Http::Request req(url, Http::InternetProtocol::V4);
 	Http::Response resp = req.Send("GET"_s, std::chrono::seconds(10));
-	if (resp.status.code == Http::Status::Ok && !resp.body.empty() && resp.body.size() < sizeof(_newestVersion) - 1) {
-		uint64_t currentVersion = parseVersion(NCINE_VERSION);
-		uint64_t latestVersion = parseVersion(StringView(reinterpret_cast<char*>(resp.body.data()), resp.body.size()));
+	if (resp.Status.Code == Http::Status::Ok && !resp.Body.empty() && resp.Body.size() < sizeof(_newestVersion) - 1) {
+		std::uint64_t currentVersion = parseVersion(NCINE_VERSION);
+		std::uint64_t latestVersion = parseVersion(StringView(reinterpret_cast<char*>(resp.Body.data()), resp.Body.size()));
 		if (currentVersion < latestVersion) {
-			std::memcpy(_newestVersion, resp.body.data(), resp.body.size());
-			_newestVersion[resp.body.size()] = '\0';
+			std::memcpy(_newestVersion, resp.Body.data(), resp.Body.size());
+			_newestVersion[resp.Body.size()] = '\0';
 		}
 	}
 #endif
