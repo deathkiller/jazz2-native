@@ -63,8 +63,7 @@ namespace Death::IO::Http
 		std::uint16_t Minor;
 	};
 
-	struct Status final
-	{
+	struct HttpStatus final	{
 		// RFC 7231, 6. Response Status Codes
 		enum Code : std::uint16_t {
 			Continue = 100,
@@ -136,7 +135,7 @@ namespace Death::IO::Http
 			ResponseCorrupted = 1000
 		};
 
-		HttpVersion HttpVersion;
+		HttpVersion Version;
 		std::uint16_t Code;
 		Containers::String Reason;
 	};
@@ -144,7 +143,7 @@ namespace Death::IO::Http
 	using HeaderField = std::pair<Containers::String, Containers::String>;
 
 	struct Response final {
-		Status Status;
+		HttpStatus Status;
 		Containers::SmallVector<HeaderField, 0> HeaderFields;
 		Containers::SmallVector<std::uint8_t, 0> Body;
 	};
@@ -611,34 +610,34 @@ namespace Death::IO::Http
 		auto i = begin;
 
 		if (i == end || *i++ != 'H') {
-			return { i, HttpVersion{0, 0} };
+			return { i, HttpVersion { 0, 0 } };
 		}
 		if (i == end || *i++ != 'T') {
-			return { i, HttpVersion{0, 0} };
+			return { i, HttpVersion { 0, 0 } };
 		}
 		if (i == end || *i++ != 'T') {
-			return { i, HttpVersion{0, 0} };
+			return { i, HttpVersion { 0, 0 } };
 		}
 		if (i == end || *i++ != 'P') {
-			return { i, HttpVersion{0, 0} };
+			return { i, HttpVersion { 0, 0 } };
 		}
 		if (i == end || *i++ != '/') {
-			return { i, HttpVersion{0, 0} };
+			return { i, HttpVersion { 0, 0 } };
 		}
 		if (i == end) {
-			return { i, HttpVersion{0, 0} };
+			return { i, HttpVersion { 0, 0 } };
 		}
 		const auto majorVersion = DigitToUint<std::uint16_t>(*i++);
 
 		if (i == end || *i++ != '.') {
-			return { i, HttpVersion{0, 0} };
+			return { i, HttpVersion { 0, 0 } };
 		}
 		if (i == end) {
-			return { i, HttpVersion{0, 0} };
+			return { i, HttpVersion { 0, 0 } };
 		}
 		const auto minorVersion = DigitToUint<std::uint16_t>(*i++);
 
-		return { i, HttpVersion{majorVersion, minorVersion} };
+		return { i, HttpVersion { majorVersion, minorVersion } };
 	}
 
 	// RFC 7230, 3.1.2. Status Line
@@ -763,7 +762,7 @@ namespace Death::IO::Http
 
 	// RFC 7230, 3.1.2. Status Line
 	template <class Iterator>
-	std::pair<Iterator, Status> ParseStatusLine(const Iterator begin, const Iterator end)
+	std::pair<Iterator, HttpStatus> ParseStatusLine(const Iterator begin, const Iterator end)
 	{
 		const auto httpVersionResult = ParseHttpVersion(begin, end);
 		auto i = httpVersionResult.first;
@@ -789,7 +788,7 @@ namespace Death::IO::Http
 			return { i, { } };
 		}
 
-		return { i, Status {
+		return { i, HttpStatus {
 			httpVersionResult.second,
 			statusCodeResult.second,
 			std::move(reasonPhraseResult.second)
@@ -887,7 +886,7 @@ namespace Death::IO::Http
 	inline void EncodeHtml(const Uri& uri, const Containers::StringView& method, const Containers::ArrayView<uint8_t>& body, const Containers::SmallVectorImpl<HeaderField>& headerFields, Containers::SmallVectorImpl<std::uint8_t>& targetBuffer)
 	{
 		// RFC 7230, 5.3. Request Target
-		const Containers::String requestTarget = uri.Path + (uri.Query.empty() ? String { } : "?"_s + uri.Query);
+		const Containers::String requestTarget = uri.Path + (uri.Query.empty() ? Containers::String { } : "?"_s + uri.Query);
 		const auto headerData = EncodeRequestLine(method, requestTarget) +
 			// RFC 7230, 5.4. Host
 			"Host: " + uri.Host + "\r\n" +
@@ -927,7 +926,7 @@ namespace Death::IO::Http
 			const auto stopTime = std::chrono::steady_clock::now() + timeout;
 
 			if (uri.Scheme != "http") {
-				return { Status::NotImplemented };
+				return { HttpStatus::NotImplemented };
 			}
 
 			addrinfo hints = { };
@@ -938,7 +937,7 @@ namespace Death::IO::Http
 
 			addrinfo* info;
 			if (getaddrinfo(uri.Host.data(), port, &hints, &info) != 0) {
-				return { Status::ServiceUnavailable };
+				return { HttpStatus::ServiceUnavailable };
 			}
 
 			const std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> addressInfo { info, freeaddrinfo };
@@ -955,7 +954,7 @@ namespace Death::IO::Http
 			};
 
 			if (!socket.Connect(addressInfo->ai_addr, static_cast<socklen_t>(addressInfo->ai_addrlen), (timeout.count() >= 0 ? getRemainingMilliseconds(stopTime) : -1))) {
-				return { Status::ServiceUnavailable };
+				return { HttpStatus::ServiceUnavailable };
 			}
 
 			auto remaining = requestData.size();
@@ -1058,7 +1057,7 @@ namespace Death::IO::Http
 										break;
 									}
 									if (!std::equal(crlf.begin(), crlf.end(), responseData.begin())) {
-										return { Status::ResponseCorrupted };
+										return { HttpStatus::ResponseCorrupted };
 									}
 
 									removeCrlfAfterChunk = false;
