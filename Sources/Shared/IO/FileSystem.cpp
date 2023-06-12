@@ -319,7 +319,7 @@ namespace Death::IO
 
 					String fileName = FileSystem::CombinePath(path, p->d_name);
 					struct stat sb;
-					if (CallStat(fileName.data(), &sb)) {
+					if (CallStat(fileName.data(), sb)) {
 						if (S_ISDIR(sb.st_mode)) {
 							DeleteDirectoryInternal(fileName);
 						} else {
@@ -917,7 +917,7 @@ namespace Death::IO
 			resultLength = strlen(result);
 			strncpy(left, path.data(), sizeof(left));
 		}
-		std::size_t leftLength = strnlen(left, sizeof(left));
+		std::size_t leftLength = strlen(left);
 		if (leftLength >= sizeof(left) || resultLength >= MaxPathLength) {
 			// Path is too long
 			return path;
@@ -970,6 +970,8 @@ namespace Death::IO
 				}
 				return { };
 			}
+#	if !defined(DEATH_TARGET_SWITCH)
+			// readlink() is missing in libnx
 			if (S_ISLNK(sb.st_mode)) {
 				if (++symlinks > 8) {
 					// Too many symlinks
@@ -1000,8 +1002,9 @@ namespace Death::IO
 					strncpy(nextToken + symlinkLength, left, sizeof(nextToken) - symlinkLength);
 				}
 				strncpy(left, nextToken, sizeof(left));
-				leftLength = strnlen(left, sizeof(left));
+				leftLength = strlen(left);
 			}
+#	endif
 		}
 
 		if (resultLength > 1 && result[resultLength - 1] == '/') {

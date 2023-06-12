@@ -868,7 +868,7 @@ void GameEventHandler::CheckUpdates()
 #	endif
 
 	auto osVersion = Environment::WindowsVersion;
-	char DeviceDesc[64]; DWORD DeviceDescLength = arraySize(DeviceDesc);
+	char DeviceDesc[64]; DWORD DeviceDescLength = (DWORD)arraySize(DeviceDesc);
 	if (!::GetComputerNameA(DeviceDesc, &DeviceDescLength)) {
 		DeviceDescLength = 0;
 	}
@@ -898,7 +898,7 @@ void GameEventHandler::CheckUpdates()
 	String url = "http://deat.tk/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + Http::EncodeBase64(DeviceDesc, DeviceDesc + DeviceDescLength);
 	Http::Request req(url, Http::InternetProtocol::V4);
 	Http::Response resp = req.Send("GET"_s, std::chrono::seconds(10));
-	if (resp.Status.Code == Http::Status::Ok && !resp.Body.empty() && resp.Body.size() < sizeof(_newestVersion) - 1) {
+	if (resp.Status.Code == Http::HttpStatus::Ok && !resp.Body.empty() && resp.Body.size() < sizeof(_newestVersion) - 1) {
 		std::uint64_t currentVersion = parseVersion(NCINE_VERSION);
 		std::uint64_t latestVersion = parseVersion(StringView(reinterpret_cast<char*>(resp.Body.data()), resp.Body.size()));
 		if (currentVersion < latestVersion) {
