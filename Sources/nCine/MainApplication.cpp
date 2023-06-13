@@ -52,27 +52,27 @@ static bool CreateLogConsole(const StringView& title)
 	if (::AttachConsole(ATTACH_PARENT_PROCESS)) {
 		HANDLE consoleHandleOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
 		if (consoleHandleOut != INVALID_HANDLE_VALUE) {
-			freopen_s(&fDummy, "CONOUT$", "w", stdout);
-			setvbuf(stdout, NULL, _IONBF, 0);
+			::freopen_s(&fDummy, "CONOUT$", "w", stdout);
+			::setvbuf(stdout, NULL, _IONBF, 0);
 		}
 
 		HANDLE consoleHandleError = ::GetStdHandle(STD_ERROR_HANDLE);
 		if (consoleHandleError != INVALID_HANDLE_VALUE) {
-			freopen_s(&fDummy, "CONOUT$", "w", stderr);
-			setvbuf(stderr, NULL, _IONBF, 0);
+			::freopen_s(&fDummy, "CONOUT$", "w", stderr);
+			::setvbuf(stderr, NULL, _IONBF, 0);
 		}
 
 		HANDLE consoleHandleIn = ::GetStdHandle(STD_INPUT_HANDLE);
 		if (consoleHandleIn != INVALID_HANDLE_VALUE) {
-			freopen_s(&fDummy, "CONIN$", "r", stdin);
-			setvbuf(stdin, NULL, _IONBF, 0);
+			::freopen_s(&fDummy, "CONIN$", "r", stdin);
+			::setvbuf(stdin, NULL, _IONBF, 0);
 		}
 
 		return true;
 	} else if (::AllocConsole()) {
-		freopen_s(&fDummy, "CONOUT$", "w", stdout);
-		freopen_s(&fDummy, "CONOUT$", "w", stderr);
-		freopen_s(&fDummy, "CONIN$", "r", stdin);
+		::freopen_s(&fDummy, "CONOUT$", "w", stdout);
+		::freopen_s(&fDummy, "CONOUT$", "w", stderr);
+		::freopen_s(&fDummy, "CONIN$", "r", stdin);
 
 		HANDLE hConOut = ::CreateFile(L"CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		HANDLE hConIn = ::CreateFile(L"CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -179,7 +179,7 @@ namespace nCine
 #elif defined(DEATH_TARGET_WINDOWS)
 		// Force set current directory, so everything is loaded correctly, because it's not usually intended
 		wchar_t pBuf[MAX_PATH];
-		DWORD pBufLength = ::GetModuleFileName(nullptr, pBuf, countof(pBuf));
+		DWORD pBufLength = ::GetModuleFileName(NULL, pBuf, countof(pBuf));
 		if (pBufLength > 0) {
 			wchar_t* lastSlash = wcsrchr(pBuf, L'\\');
 			if (lastSlash == nullptr) {
@@ -240,14 +240,14 @@ namespace nCine
 			}
 		}
 		if (__showLogConsole) {
-			CreateLogConsole(NCINE_APP_NAME ": Console");
+			CreateLogConsole(NCINE_APP_NAME " Console");
 			__hasVirtualTerminal = EnableVirtualTerminalProcessing();
 		} else {
 			__hasVirtualTerminal = false;
 		}
 #	elif defined(DEATH_TARGET_UNIX)
-		setvbuf(stdout, nullptr, _IONBF, 0);
-		setvbuf(stderr, nullptr, _IONBF, 0);
+		::setvbuf(stdout, nullptr, _IONBF, 0);
+		::setvbuf(stderr, nullptr, _IONBF, 0);
 
 		// Xcode's console reports that it is a TTY, but it doesn't support colors, but TERM is not defined
 		__hasVirtualTerminal = isatty(1) && std::getenv("TERM");
@@ -353,7 +353,7 @@ namespace nCine
 					SdlInputManager::parseEvent(event);
 					break;
 			}
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
 			if (shouldSuspend()) {
 				SDL_WaitEvent(&event);
 				SDL_PushEvent(&event);
@@ -362,16 +362,16 @@ namespace nCine
 					SDL_PushEvent(&event);
 				}
 			}
-#endif
+#	endif
 		}
 	}
 #elif defined(WITH_GLFW)
 	void MainApplication::processEvents()
 	{
 		// GLFW does not seem to correctly handle Emscripten focus and blur events
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
 		setFocus(GlfwInputManager::hasFocus());
-#endif
+#	endif
 
 		if (shouldSuspend()) {
 			glfwWaitEvents();

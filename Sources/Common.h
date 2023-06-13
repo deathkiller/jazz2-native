@@ -8,7 +8,7 @@
 #	define NCINE_APP_NAME "Jazz² Resurrection"
 #endif
 #if !defined(NCINE_VERSION)
-#	define NCINE_VERSION "1.9.1"
+#	define NCINE_VERSION "2.0.0"
 #endif
 #if !defined(NCINE_LINUX_PACKAGE)
 #	define NCINE_LINUX_PACKAGE NCINE_APP_NAME
