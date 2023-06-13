@@ -936,6 +936,7 @@ namespace Death::IO
 			leftLength -= nextTokenLength;
 			if (p != nullptr) {
 				std::memmove(left, s + 1, leftLength + 1);
+				leftLength--;
 			}
 			if (result[resultLength - 1] != '/') {
 				if (resultLength + 1 >= MaxPathLength) {

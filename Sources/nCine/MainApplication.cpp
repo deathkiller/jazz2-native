@@ -206,15 +206,15 @@ namespace nCine
 #endif
 		app.shutdownCommon();
 
-#if defined(DEATH_TARGET_SWITCH)
-		romfsExit();
-		socketExit();
-#endif
-
 #if defined(DEATH_LOGGING) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		if (__showLogConsole) {
 			DestroyLogConsole();
 		}
+#endif
+#if defined(DEATH_TARGET_SWITCH)
+		romfsExit();
+		socketExit();
+		svcExitProcess();
 #endif
 
 		return EXIT_SUCCESS;
