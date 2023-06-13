@@ -40,7 +40,7 @@ namespace nCine
 
 		// Force set current directory, so everything is loaded correctly, because it's not usually intended
 		wchar_t pBuf[MAX_PATH];
-		DWORD pBufLength = ::GetModuleFileName(nullptr, pBuf, countof(pBuf));
+		DWORD pBufLength = ::GetModuleFileName(NULL, pBuf, countof(pBuf));
 		if (pBufLength > 0) {
 			wchar_t* lastSlash = wcsrchr(pBuf, L'\\');
 			if (lastSlash == nullptr) {
