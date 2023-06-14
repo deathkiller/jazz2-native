@@ -214,9 +214,7 @@ namespace nCine
 #if defined(DEATH_TARGET_SWITCH)
 		romfsExit();
 		socketExit();
-		svcExitProcess();
 #endif
-
 		return EXIT_SUCCESS;
 	}
 

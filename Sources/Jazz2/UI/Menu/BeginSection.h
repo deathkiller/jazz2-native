@@ -24,7 +24,7 @@ namespace Jazz2::UI::Menu
 #endif
 			Options,
 			About,
-#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS)
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 			Quit,
 #endif
 			Count
