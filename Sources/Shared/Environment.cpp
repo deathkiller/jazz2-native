@@ -1,6 +1,8 @@
 #include "Environment.h"
 
-#if defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_SWITCH)
+#	include <switch.h>
+#elif defined(DEATH_TARGET_WINDOWS_RT)
 #	include <winrt/Windows.System.Profile.h>
 namespace winrtWSP = winrt::Windows::System::Profile;
 #elif defined(DEATH_TARGET_WINDOWS)
@@ -15,7 +17,17 @@ namespace winrtWSP = winrt::Windows::System::Profile;
 
 namespace Death::Environment
 {
-#if defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_SWITCH)
+	std::uint32_t GetSwitchVersion()
+	{
+		return hosversionGet();
+	}
+
+	bool HasSwitchAtmosphere()
+	{
+		return hosversionIsAtmosphere();
+	}
+#elif defined(DEATH_TARGET_WINDOWS_RT)
 	static std::uint64_t GetWindowsVersion()
 	{
 		winrt::hstring versionString = winrtWSP::AnalyticsInfo::VersionInfo().DeviceFamilyVersion();

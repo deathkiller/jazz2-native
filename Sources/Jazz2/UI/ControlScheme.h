@@ -30,7 +30,12 @@ namespace Jazz2::UI
 
 	public:
 		static constexpr int32_t MaxSupportedPlayers = 1;
+#if defined(DEATH_TARGET_SWITCH)
+		// TODO: Game is crashing on Switch if more than 1 gamepad is used
+		static constexpr int32_t MaxConnectedGamepads = 1;
+#else
 		static constexpr int32_t MaxConnectedGamepads = 4;
+#endif
 
 		static void Reset();
 
