@@ -554,7 +554,7 @@ namespace nCine
 
 	const JoyMappedStateImpl& JoyMapping::joyMappedState(int joyId) const
 	{
-		if (joyId < 0 || joyId > MaxNumJoysticks) {
+		if (joyId < 0 || joyId >= MaxNumJoysticks) {
 			return nullMappedJoyState_;
 		} else {
 			return mappedJoyStates_[joyId];
@@ -750,7 +750,7 @@ namespace nCine
 
 	bool JoyMapping::parsePlatformName(const char* start, const char* end) const
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WINDOWS_RT)
 		return false;
 #else
 #	if defined(DEATH_TARGET_WINDOWS)
@@ -863,7 +863,7 @@ namespace nCine
 
 	int JoyMapping::hatStateToIndex(unsigned char hatState) const
 	{
-		int hatIndex = -1;
+		int hatIndex;
 
 		switch (hatState) {
 			case 1: hatIndex = 0; break;

@@ -846,8 +846,12 @@ void GameEventHandler::CheckUpdates()
 	}
 	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength, "|macOS||5|%i", arch);
 #elif defined(DEATH_TARGET_SWITCH)
+	std::uint32_t switchVersion = Environment::GetSwitchVersion();
+	bool isAtmosphere = Environment::HasSwitchAtmosphere();
+
 	char DeviceDesc[64];
-	std::int32_t DeviceDescLength = formatString(DeviceDesc, arraySize(DeviceDesc), "|Nintendo Switch||9|%i", arch);
+	std::int32_t DeviceDescLength = formatString(DeviceDesc, arraySize(DeviceDesc), "|Nintendo Switch %u.%u.%u%s||9|%i",
+		((switchVersion >> 16) & 0xFF), ((switchVersion >> 8) & 0xFF), (switchVersion & 0xFF), isAtmosphere ? " (Atmosphère)" : "", arch);
 #elif defined(DEATH_TARGET_UNIX)
 #	if defined(DEATH_TARGET_CLANG)
 	arch |= 0x100000;
