@@ -82,6 +82,8 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 * Copy contents of original *Jazz Jackrabbit 2* directory to `/Games/Jazz2/Source/` on SD card
 * Run the newly installed application with enabled full RAM access
 
+*Cache is recreated during intro cinematics on the first startup, so it can't be skipped. It may take more time, so white screen could be shown longer than expected.*
+
 ### Web (Emscripten)
 * Go to http://deat.tk/jazz2/wasm/
 * Import episodes from original *Jazz Jackrabbit 2* directory in main menu to unlock additional content
