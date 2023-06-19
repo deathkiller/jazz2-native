@@ -220,6 +220,16 @@ namespace nCine
 		return atoi(buffer);
 	}
 	
+	String AndroidJniClass_Version::deviceBrand()
+	{
+		char buffer[PROP_VALUE_MAX];
+		int length = __system_property_get("ro.product.brand", buffer);
+		if (length <= 0) {
+			return { };
+		}
+		return String(buffer);
+	}
+	
 	String AndroidJniClass_Version::deviceManufacturer()
 	{
 		char buffer[PROP_VALUE_MAX];

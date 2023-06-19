@@ -214,6 +214,18 @@ namespace nCine
 
 		AndroidJniHelper::AttachJVM(state_);
 		AndroidAssetStream::InitializeAssetManager(state_);
+		
+#if defined(DEATH_TARGET_ARM)
+#	if defined(DEATH_TARGET_32BIT)
+		LOGI("Running on %s %s (%s) as armeabi-v7a application", AndroidJniClass_Version::deviceBrand().data(), AndroidJniClass_Version::deviceModel().data(), AndroidJniClass_Version::deviceManufacturer().data());
+#	else
+		LOGI("Running on %s %s (%s) as arm64-v8a application", AndroidJniClass_Version::deviceBrand().data(), AndroidJniClass_Version::deviceModel().data(), AndroidJniClass_Version::deviceManufacturer().data());
+#	endif
+#elif defined(DEATH_TARGET_X86)
+		LOGI("Running on %s %s (%s) as x86 application", AndroidJniClass_Version::deviceBrand().data(), AndroidJniClass_Version::deviceModel().data(), AndroidJniClass_Version::deviceManufacturer().data());
+#else
+		LOGI("Running on %s %s (%s)", AndroidJniClass_Version::deviceBrand().data(), AndroidJniClass_Version::deviceModel().data(), AndroidJniClass_Version::deviceManufacturer().data());
+#endif
 
 		appEventHandler_ = createAppEventHandler_();
 		// Only `OnPreInit()` can modify the application configuration
