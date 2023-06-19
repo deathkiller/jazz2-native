@@ -467,8 +467,8 @@ namespace nCine
 		// Never search by name on Android, it can lead to wrong mapping
 		if (!mapping.isValid) {
 			const StringView joyNameView = joyName;
-			// Don't assign Android default mapping to internal NVIDIA Shield devices
-			if (joyNameView == "virtual-search"_s || joyNameView == "shield-ask-remote"_s) {
+			// Don't assign Android default mapping to internal NVIDIA Shield devices and WSA devices
+			if (joyNameView == "virtual-search"_s || joyNameView == "shield-ask-remote"_s || joyNameView == "virtual_keyboard"_s) {
 				return false;
 			}
 

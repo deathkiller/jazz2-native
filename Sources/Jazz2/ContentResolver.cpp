@@ -84,33 +84,50 @@ namespace Jazz2
 #if defined(DEATH_TARGET_ANDROID)
 		// If `MANAGE_EXTERNAL_STORAGE` permission is granted, try to use also alternative paths
 		if (AndroidJniWrap_Activity::hasExternalStoragePermission()) {
+			constexpr StringView ExternalPaths[] = {
+				"Games/Jazz² Resurrection/"_s,
+				"Games/Jazz2 Resurrection/"_s,
+				"Download/Jazz² Resurrection/"_s,
+				"Download/Jazz2 Resurrection/"_s
+			};
+
+			bool found = false;
 			String externalStorage = fs::GetExternalStorage();
-			String externalPath = fs::CombinePath(externalStorage, "Games/Jazz² Resurrection/"_s);
-			_sourcePath = fs::CombinePath(externalPath, "Source/"_s);
-			if (!fs::DirectoryExists(_sourcePath)) {
-				externalPath = fs::CombinePath(externalStorage, "Games/Jazz2 Resurrection/"_s);
+			for (std::size_t i = 0; i < arraySize(ExternalPaths); i++) {
+				String externalPath = fs::CombinePath(externalStorage, ExternalPaths[i]);
 				_sourcePath = fs::CombinePath(externalPath, "Source/"_s);
-				if (!fs::DirectoryExists(_sourcePath)) {
-					externalPath = fs::CombinePath(externalStorage, "Download/Jazz² Resurrection/"_s);
-					_sourcePath = fs::CombinePath(externalPath, "Source/"_s);
-					if (!fs::DirectoryExists(_sourcePath)) {
-						externalPath = fs::CombinePath(externalStorage, "Download/Jazz2 Resurrection/"_s);
-						_sourcePath = fs::CombinePath(externalPath, "Source/"_s);
-						if (!fs::DirectoryExists(_sourcePath)) {
-							auto& app = static_cast<AndroidApplication&>(theApplication());
-							StringView dataPath = app.externalDataPath();
-							_sourcePath = fs::CombinePath(dataPath, "Source/"_s);
-							if (fs::DirectoryExists(_sourcePath)) {
-								externalPath = dataPath;
-							} else {
-								externalPath = fs::CombinePath(externalStorage, "Games/Jazz² Resurrection/"_s);
-								_sourcePath = fs::CombinePath(externalPath, "Source/"_s);
-							}
-						}
-					}
+				if (fs::DirectoryExists(_sourcePath)) {
+					_cachePath = fs::CombinePath(externalPath, "Cache/"_s);
+					found = true;
+					break;
 				}
 			}
-			_cachePath = fs::CombinePath(externalPath, "Cache/"_s);
+
+			if (!found) {
+				String deviceBrand = AndroidJniClass_Version::deviceBrand();
+				String deviceModel = AndroidJniClass_Version::deviceModel();
+				if (deviceBrand == "Windows"_s && deviceModel == "Subsystem for Android(TM)"_s) {
+					// Set special paths if Windows Subsystem for Android™ is used
+					String externalStorageWindows = fs::CombinePath(externalStorage, "Windows/Saved Games/"_s);
+					if (fs::DirectoryExists(externalStorageWindows)) {
+						if (fs::DirectoryExists(fs::CombinePath(externalStorageWindows, "Jazz2 Resurrection/Source/"_s)) &&
+							!fs::DirectoryExists(fs::CombinePath(externalStorageWindows, "Jazz² Resurrection/Source/"_s))) {
+							_sourcePath = fs::CombinePath(externalStorageWindows, "Jazz2 Resurrection/Source/"_s);
+							_cachePath = fs::CombinePath(externalStorageWindows, "Jazz2 Resurrection/Cache/"_s);
+						} else {
+							_sourcePath = fs::CombinePath(externalStorageWindows, "Jazz² Resurrection/Source/"_s);
+							_cachePath = fs::CombinePath(externalStorageWindows, "Jazz² Resurrection/Cache/"_s);
+						}
+						found = true;
+					}
+				}
+
+				if (!found) {
+					String externalPath = fs::CombinePath(externalStorage, ExternalPaths[0]);
+					_sourcePath = fs::CombinePath(externalPath, "Source/"_s);
+					_cachePath = fs::CombinePath(externalPath, "Cache/"_s);
+				}
+			}
 		} else {
 			auto& app = static_cast<AndroidApplication&>(theApplication());
 			StringView dataPath = app.externalDataPath();
