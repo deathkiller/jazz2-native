@@ -806,14 +806,19 @@ void GameEventHandler::CheckUpdates()
 
 #if defined(DEATH_TARGET_ANDROID)
 	auto sanitizeName = [](char* dst, std::size_t dstMaxLength, std::size_t& dstLength, const StringView& name) {
-		for (const char& c : name) {
+		bool wasSpace = true;
+		for (char c : name) {
 			if (c == '\0' || dstLength >= dstMaxLength) {
 				break;
 			}
 			if (isalnum(c) || c == ' ' || c == '.' || c == ',' || c == ':' || c == '_' || c == '-' || c == '+' || c == '/' || c == '*' ||
 				c == '!' || c == '(' || c == ')' || c == '[' || c == ']' || c == '@' || c == '&' || c == '#' || c == '\'' || c == '"') {
+				if (wasSpace && c >= 'a' && c <= 'z') {
+					c &= ~0x20;
+				}
 				dst[dstLength++] = c;
 			}
+			wasSpace = (c == ' ');
 		}
 	};
 
