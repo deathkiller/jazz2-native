@@ -142,11 +142,12 @@ namespace nCine
 				break;
 
 			case APP_CMD_START:
-				if (theAndroidApplication().isInitialized() == false) {
+				if (!theAndroidApplication().isInitialized()) {
 					theAndroidApplication().preInit();
 					LOGI("APP_CMD_START event received (first start)");
+				} else {
+					LOGI("APP_CMD_START event received");
 				}
-				LOGI("APP_CMD_START event received");
 				break;
 			case APP_CMD_RESUME:
 				LOGW("APP_CMD_RESUME event received");

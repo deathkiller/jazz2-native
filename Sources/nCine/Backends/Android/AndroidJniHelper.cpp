@@ -69,7 +69,6 @@ namespace nCine
 		} else {
 			const int getEnvStatus = javaVM_->GetEnv(reinterpret_cast<void**>(&jniEnv), JNI_VERSION_1_6);
 			if (getEnvStatus == JNI_EDETACHED) {
-				LOGW("GetEnv() cannot attach the JVM");
 				if (javaVM_->AttachCurrentThread(&jniEnv, nullptr) != 0) {
 					LOGW("AttachCurrentThread() cannot attach the JVM");
 				} else {
@@ -82,7 +81,7 @@ namespace nCine
 			}
 			
 			if (jniEnv == nullptr) {
-				LOGE("JNIEnv pointer is null");
+				LOGE("JNIEnv pointer is nullptr");
 			} else {
 				InitializeClasses();
 				AndroidJniWrap_Activity::init(state);
