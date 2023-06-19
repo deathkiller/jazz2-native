@@ -77,6 +77,7 @@ namespace nCine
 	{
 	public:
 		static int sdkInt();
+		static String deviceBrand();
 		static String deviceManufacturer();
 		static String deviceModel();
 	};
