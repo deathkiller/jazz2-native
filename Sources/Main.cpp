@@ -837,10 +837,10 @@ void GameEventHandler::CheckUpdates()
 	}
 	deviceName[deviceNameLength] = '\0';
 
-	char DeviceDesc[96];
+	char DeviceDesc[128];
 	std::int32_t DeviceDescLength = formatString(DeviceDesc, arraySize(DeviceDesc), "%s|Android %i|%s|2|%i", androidId.data(), sdkVersion, deviceName, arch);
 #elif defined(DEATH_TARGET_APPLE)
-	char DeviceDesc[96]; std::int32_t DeviceDescLength;
+	char DeviceDesc[128]; std::int32_t DeviceDescLength;
 	if (::gethostname(DeviceDesc, arraySize(DeviceDesc)) == 0) {
 		DeviceDescLength = std::strlen(DeviceDesc);
 	} else {
@@ -851,7 +851,7 @@ void GameEventHandler::CheckUpdates()
 	std::uint32_t switchVersion = Environment::GetSwitchVersion();
 	bool isAtmosphere = Environment::HasSwitchAtmosphere();
 
-	char DeviceDesc[96];
+	char DeviceDesc[128];
 	std::int32_t DeviceDescLength = formatString(DeviceDesc, arraySize(DeviceDesc), "|Nintendo Switch %u.%u.%u%s||9|%i",
 		((switchVersion >> 16) & 0xFF), ((switchVersion >> 8) & 0xFF), (switchVersion & 0xFF), isAtmosphere ? " (Atmosphère)" : "", arch);
 #elif defined(DEATH_TARGET_UNIX)
@@ -859,7 +859,7 @@ void GameEventHandler::CheckUpdates()
 	arch |= 0x100000;
 #	endif
 
-	char DeviceDesc[96]; std::int32_t DeviceDescLength;
+	char DeviceDesc[128]; std::int32_t DeviceDescLength;
 	if (::gethostname(DeviceDesc, arraySize(DeviceDesc)) == 0) {
 		DeviceDescLength = std::strlen(DeviceDesc);
 	} else {
@@ -874,7 +874,7 @@ void GameEventHandler::CheckUpdates()
 #	endif
 
 	auto osVersion = Environment::WindowsVersion;
-	char DeviceDesc[96]; DWORD DeviceDescLength = (DWORD)arraySize(DeviceDesc);
+	char DeviceDesc[128]; DWORD DeviceDescLength = (DWORD)arraySize(DeviceDesc);
 	if (!::GetComputerNameA(DeviceDesc, &DeviceDescLength)) {
 		DeviceDescLength = 0;
 	}
