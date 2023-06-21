@@ -103,7 +103,7 @@ namespace nCine
 		void deadZoneNormalize(Vector2f& joyVector, float deadZoneValue) const;
 
 		/// Adds joystick mapping configurations from a text file
-		void addJoyMappingsFromFile(const StringView& filename);
+		void addJoyMappingsFromFile(const StringView& path);
 		/// Adds joystick mapping configurations from a strings array terminated by a `nullptr`
 		void addJoyMappingsFromStrings(const char** mappingStrings);
 		/// Returns the current number of valid joystick mappings

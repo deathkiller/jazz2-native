@@ -97,9 +97,9 @@ namespace nCine
 		return joyMapping_.deadZoneNormalize(joyVector, deadZoneValue);
 	}
 
-	void IInputManager::addJoyMappingsFromFile(const StringView& filename)
+	void IInputManager::addJoyMappingsFromFile(const StringView& path)
 	{
-		joyMapping_.addMappingsFromFile(filename);
+		joyMapping_.addMappingsFromFile(path);
 	}
 
 	void IInputManager::addJoyMappingsFromStrings(const char** mappingStrings)
