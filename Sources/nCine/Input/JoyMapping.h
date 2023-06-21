@@ -67,7 +67,7 @@ namespace nCine
 
 		bool addMappingFromString(const char* mappingString);
 		void addMappingsFromStrings(const char** mappingStrings);
-		void addMappingsFromFile(const StringView& filename);
+		void addMappingsFromFile(const StringView& path);
 		inline unsigned int numMappings() const {
 			return (unsigned int)mappings_.size();
 		}

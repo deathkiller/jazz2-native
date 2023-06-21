@@ -142,7 +142,7 @@ namespace nCine
 			mappingStrings++;
 		}
 
-		LOGI("Parsed %u strings for %u mappings", numStrings, mappings_.size());
+		LOGI("Found %u mappings in %u lines", mappings_.size(), numStrings);
 
 		checkConnectedJoystics();
 	}
@@ -187,9 +187,9 @@ namespace nCine
 		checkConnectedJoystics();
 	}
 
-	void JoyMapping::addMappingsFromFile(const StringView& filename)
+	void JoyMapping::addMappingsFromFile(const StringView& path)
 	{
-		std::unique_ptr<Stream> fileHandle = fs::Open(filename, FileAccessMode::Read);
+		std::unique_ptr<Stream> fileHandle = fs::Open(path, FileAccessMode::Read);
 		const long int fileSize = fileHandle->GetSize();
 		if (fileSize == 0) {
 			return;
@@ -221,7 +221,7 @@ namespace nCine
 
 		} while (strchr(buffer, '\n') && (buffer = strchr(buffer, '\n') + 1) < fileBuffer.get() + fileSize);
 
-		LOGI("Joystick mapping file parsed: %u mappings in %u lines", numParsed, fileLine);
+		LOGI("Joystick mapping file \"%s\" parsed: %u mappings in %u lines", String::nullTerminatedView(path).data(), numParsed, fileLine);
 
 		fileBuffer.reset(nullptr);
 
