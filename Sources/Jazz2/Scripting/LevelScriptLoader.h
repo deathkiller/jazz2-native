@@ -3,6 +3,7 @@
 #if defined(WITH_ANGELSCRIPT)
 
 #include "ScriptLoader.h"
+#include "JJ2PlusDefinitions.h"
 #include "../ILevelHandler.h"
 
 namespace Jazz2::Scripting
@@ -33,6 +34,70 @@ namespace Jazz2::Scripting
 		asIScriptFunction* _onLevelUpdate;
 		int32_t _onLevelUpdateLastFrame;
 		HashMap<int, asITypeInfo*> _eventTypeToTypeInfo;
+
+		// Global scripting variables
+		static constexpr int FLAG_HFLIPPED_TILE = 0x1000;
+		static constexpr int FLAG_VFLIPPED_TILE = 0x2000;
+		static constexpr int FLAG_ANIMATED_TILE = 0x4000;
+
+		jjPAL jjPalette;
+		jjPAL jjBackupPalette;
+
+		int jjObjectCount = 0;
+		int jjObjectMax = 0;
+
+		int32_t gameMode = 0;
+		int32_t customMode = 0;
+		int32_t partyMode = 0;
+
+		uint32_t gameTicksSpentWhileActive = 0;
+		int32_t renderFrame = 0;
+
+		bool versionTSF = true;
+		bool isServer = false;
+		bool jjDeactivatingBecauseOfDeath = false;
+
+		int32_t DifficultyForNextLevel = 0;
+		int32_t DifficultyAtLevelStart = 0;
+
+		uint32_t numberOfTiles = 0;
+
+		bool parLowDetail = false;
+		int32_t colorDepth = 0;
+		int32_t checkedMaxSubVideoWidth = 0;
+		int32_t checkedMaxSubVideoHeight = 0;
+		int32_t realVideoW = 0;
+		int32_t realVideoH = 0;
+		int32_t subVideoW = 0;
+		int32_t subVideoH = 0;
+
+		bool snowing = false;
+		bool snowingOutdoors = false;
+		uint8_t snowingIntensity = 0;
+		int32_t snowingType = 0;
+
+		int32_t maxScore = 0;
+
+		int32_t waterLightMode = 0;
+		int32_t waterInteraction = 0;
+
+		uint8_t ChatKey = 0;
+
+		bool soundEnabled = false;
+		bool soundFXActive = false;
+		bool musicActive = false;
+		int32_t soundFXVolume = false;
+		int32_t musicVolume = false;
+		int32_t levelEcho = 0;
+
+		bool warpsTransmuteCoins = false;
+		bool delayGeneratedCrateOrigins = false;
+
+		bool g_levelHasFood = false;
+		int32_t enforceAmbientLighting = 0;
+
+		LevelScriptLoader(const LevelScriptLoader&) = delete;
+		LevelScriptLoader& operator=(const LevelScriptLoader&) = delete;
 
 		Actors::ActorBase* CreateActorInstance(const StringView& typeName);
 

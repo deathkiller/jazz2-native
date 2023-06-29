@@ -296,6 +296,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventMap.h
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventSpawner.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/FindAngelScript.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusDefinitions.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScriptLoader.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterRef.h

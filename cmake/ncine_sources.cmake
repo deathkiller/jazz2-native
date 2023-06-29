@@ -225,6 +225,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Tileset.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventMap.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventSpawner.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusDefinitions.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScriptLoader.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterRef.cpp

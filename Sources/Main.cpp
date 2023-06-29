@@ -805,8 +805,22 @@ void GameEventHandler::CheckUpdates()
 #endif
 
 #if defined(DEATH_TARGET_ANDROID)
-	auto sanitizeName = [](char* dst, std::size_t dstMaxLength, std::size_t& dstLength, const StringView& name) {
+	auto sanitizeName = [](char* dst, std::size_t dstMaxLength, std::size_t& dstLength, const StringView& name, bool isBrand) {
 		bool wasSpace = true;
+		std::size_t lowercaseLength = 0;
+
+		if (isBrand) {
+			for (char c : name) {
+				if (c == '\0' || c == ' ') {
+					break;
+				}
+				lowercaseLength++;
+			}
+			if (lowercaseLength < 5 || name[0] < 'A' || name[0] > 'Z' || name[lowercaseLength - 1] < 'A' || name[lowercaseLength - 1] > 'Z') {
+				lowercaseLength = 0;
+			}
+		}
+		
 		for (char c : name) {
 			if (c == '\0' || dstLength >= dstMaxLength) {
 				break;
@@ -815,6 +829,12 @@ void GameEventHandler::CheckUpdates()
 				c == '!' || c == '(' || c == ')' || c == '[' || c == ']' || c == '@' || c == '&' || c == '#' || c == '\'' || c == '"') {
 				if (wasSpace && c >= 'a' && c <= 'z') {
 					c &= ~0x20;
+					if (lowercaseLength > 0) {
+						lowercaseLength--;
+					}
+				} else if (lowercaseLength > 0) {
+					c |= 0x20;
+					lowercaseLength--;
 				}
 				dst[dstLength++] = c;
 			}
@@ -830,15 +850,15 @@ void GameEventHandler::CheckUpdates()
 	char deviceName[64];
 	std::size_t deviceNameLength = 0;
 	if (deviceModel.empty()) {
-		sanitizeName(deviceName, arraySize(deviceName) - 1, deviceNameLength, deviceBrand);
+		sanitizeName(deviceName, arraySize(deviceName) - 1, deviceNameLength, deviceBrand, false);
 	} else if (deviceModel.hasPrefix(deviceBrand)) {
-		sanitizeName(deviceName, arraySize(deviceName) - 1, deviceNameLength, deviceModel);
+		sanitizeName(deviceName, arraySize(deviceName) - 1, deviceNameLength, deviceModel, true);
 	} else {
 		if (!deviceBrand.empty()) {
-			sanitizeName(deviceName, arraySize(deviceName) - 8, deviceNameLength, deviceBrand);
+			sanitizeName(deviceName, arraySize(deviceName) - 8, deviceNameLength, deviceBrand, true);
 			deviceName[deviceNameLength++] = ' ';
 		}
-		sanitizeName(deviceName, arraySize(deviceName) - 1, deviceNameLength, deviceModel);
+		sanitizeName(deviceName, arraySize(deviceName) - 1, deviceNameLength, deviceModel, false);
 	}
 	deviceName[deviceNameLength] = '\0';
 
