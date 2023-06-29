@@ -1305,6 +1305,9 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Asserts.h">
       <Filter>Header Files\Shared</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\JJ2PlusDefinitions.h">
+      <Filter>Header Files\Jazz2\Scripting</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2188,6 +2191,9 @@
     </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\IO\FileSystem.cpp">
       <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\JJ2PlusDefinitions.cpp">
+      <Filter>Source Files\Jazz2\Scripting</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
