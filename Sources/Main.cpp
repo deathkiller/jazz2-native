@@ -833,7 +833,9 @@ void GameEventHandler::CheckUpdates()
 						lowercaseLength--;
 					}
 				} else if (lowercaseLength > 0) {
-					c |= 0x20;
+					if (c >= 'A' && c <= 'Z') {
+						c |= 0x20;
+					}
 					lowercaseLength--;
 				}
 				dst[dstLength++] = c;
