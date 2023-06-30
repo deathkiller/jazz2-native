@@ -92,7 +92,7 @@ namespace Death::Containers
 		else delete[] _large.data;
 	}
 
-	inline Containers::Pair<const char*, std::size_t> String::dataInternal() const {
+	inline Pair<const char*, std::size_t> String::dataInternal() const {
 		if (_small.size & Implementation::SmallStringBit)
 			return { _small.data, _small.size & ~SmallSizeMask };
 		return { _large.data, _large.size & ~LargeSizeMask };
@@ -172,7 +172,7 @@ namespace Death::Containers
 	}
 
 	String::String(AllocatedInitT, const String& other) {
-		const Containers::Pair<const char*, std::size_t> data = other.dataInternal();
+		const Pair<const char*, std::size_t> data = other.dataInternal();
 		const std::size_t sizePlusOne = data.second() + 1;
 		_large.size = data.second();
 		_large.data = new char[sizePlusOne];
@@ -234,7 +234,7 @@ namespace Death::Containers
 	}
 
 	String::String(const String& other) {
-		const Containers::Pair<const char*, std::size_t> data = other.dataInternal();
+		const Pair<const char*, std::size_t> data = other.dataInternal();
 		construct(data.first(), data.second());
 	}
 
@@ -252,7 +252,7 @@ namespace Death::Containers
 	String& String::operator=(const String& other) {
 		destruct();
 
-		const Containers::Pair<const char*, std::size_t> data = other.dataInternal();
+		const Pair<const char*, std::size_t> data = other.dataInternal();
 		construct(data.first(), data.second());
 		return *this;
 	}
@@ -266,22 +266,22 @@ namespace Death::Containers
 	}
 
 	String::operator ArrayView<const char>() const noexcept {
-		const Containers::Pair<const char*, std::size_t> data = dataInternal();
+		const Pair<const char*, std::size_t> data = dataInternal();
 		return { data.first(), data.second() };
 	}
 
 	String::operator ArrayView<const void>() const noexcept {
-		const Containers::Pair<const char*, std::size_t> data = dataInternal();
+		const Pair<const char*, std::size_t> data = dataInternal();
 		return { data.first(), data.second() };
 	}
 
 	String::operator ArrayView<char>() noexcept {
-		const Containers::Pair<const char*, std::size_t> data = dataInternal();
+		const Pair<const char*, std::size_t> data = dataInternal();
 		return { const_cast<char*>(data.first()), data.second() };
 	}
 
 	String::operator ArrayView<void>() noexcept {
-		const Containers::Pair<const char*, std::size_t> data = dataInternal();
+		const Pair<const char*, std::size_t> data = dataInternal();
 		return { const_cast<char*>(data.first()), data.second() };
 	}
 
@@ -515,6 +515,14 @@ namespace Death::Containers
 		return StringView { *this }.split(delimiter);
 	}
 
+	Array<MutableStringView> String::split(const StringView delimiter) {
+		return MutableStringView { *this }.split(delimiter);
+	}
+
+	Array<StringView> String::split(const StringView delimiter) const {
+		return StringView { *this }.split(delimiter);
+	}
+
 	Array<MutableStringView> String::splitWithoutEmptyParts(const char delimiter) {
 		return MutableStringView { *this }.splitWithoutEmptyParts(delimiter);
 	}
@@ -544,6 +552,14 @@ namespace Death::Containers
 	}
 
 	StaticArray<3, StringView> String::partition(const char separator) const {
+		return StringView { *this }.partition(separator);
+	}
+
+	StaticArray<3, MutableStringView> String::partition(const StringView separator) {
+		return MutableStringView { *this }.partition(separator);
+	}
+
+	StaticArray<3, StringView> String::partition(const StringView separator) const {
 		return StringView { *this }.partition(separator);
 	}
 

@@ -49,7 +49,6 @@ namespace Death::Containers
 		Array<BasicStringView<T>> parts;
 		T* const end = this->end();
 		T* oldpos = _data;
-
 		while (oldpos < end) {
 			T* pos = static_cast<T*>(std::memchr(oldpos, delimiter, end - oldpos));
 			// Not sure why memchr can't just do this, it would make much more sense
@@ -81,7 +80,30 @@ namespace Death::Containers
 			// If the substring is larger or no match was found, fail
 			return { };
 		}
+	}
 
+	template<class T> Array<BasicStringView<T>> BasicStringView<T>::split(const StringView delimiter) const {
+		const char* const delimiterData = delimiter.data();
+		const std::size_t delimiterSize = delimiter.size();
+		DEATH_ASSERT(delimiterSize, {}, "Containers::StringView::split(): delimiter is empty");
+
+		Array<BasicStringView<T>> parts;
+		const char* const end = this->end();
+		const char* oldpos = _data;
+		const char* pos;
+		while (oldpos < end && (pos = Implementation::stringFindString(oldpos, end - oldpos, delimiterData, delimiterSize))) {
+			arrayAppend(parts, slice(const_cast<T*>(oldpos), const_cast<T*>(pos)));
+			oldpos = pos + delimiterSize;
+		}
+
+		if (!empty())
+			arrayAppend(parts, suffix(const_cast<T*>(oldpos)));
+
+		return parts;
+	}
+
+	namespace Implementation
+	{
 		const char* stringFindLastString(const char* const data, const std::size_t size, const char* const substring, const std::size_t substringSize) {
 			// If the substring is not larger than the string we search in
 			if (substringSize <= size) {
@@ -636,7 +658,7 @@ namespace Death::Containers
 		}
 	}
 
-	template<class T> Array<BasicStringView<T>> BasicStringView<T>::splitOnAnyWithoutEmptyParts(const Containers::StringView delimiters) const {
+	template<class T> Array<BasicStringView<T>> BasicStringView<T>::splitOnAnyWithoutEmptyParts(const StringView delimiters) const {
 		Array<BasicStringView<T>> parts;
 		const char* const characters = delimiters._data;
 		const std::size_t characterCount = delimiters.size();
@@ -681,7 +703,7 @@ namespace Death::Containers
 #if !defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_CLANG_CL) || _MSC_VER >= 1930 /* MSVC 2022 works */
 		return splitOnAnyWithoutEmptyParts(Whitespace);
 #else
-		using namespace Containers::Literals;
+		using namespace Literals;
 		return splitOnAnyWithoutEmptyParts(WHITESPACE_MACRO_BECAUSE_MSVC_IS_STUPID);
 #endif
 	}
@@ -693,6 +715,18 @@ namespace Death::Containers
 			pos ? prefix(pos) : *this,
 			pos ? slice(pos, pos + 1) : exceptPrefix(size),
 			pos ? suffix(pos + 1) : exceptPrefix(size)
+		};
+	}
+
+	template<class T> StaticArray<3, BasicStringView<T>> BasicStringView<T>::partition(const StringView separator) const {
+		const char* const separatorData = separator.data();
+		const std::size_t separatorSize = separator.size();
+		const std::size_t size = this->size();
+		T* const pos = const_cast<T*>(Implementation::stringFindString(_data, size, separatorData, separatorSize));
+		return {
+			pos ? prefix(pos) : *this,
+			pos ? slice(pos, pos + separatorSize) : exceptPrefix(size),
+			pos ? suffix(pos + separatorSize) : exceptPrefix(size)
 		};
 	}
 
@@ -809,7 +843,7 @@ namespace Death::Containers
 #if !defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_CLANG_CL) || _MSC_VER >= 1930 /* MSVC 2022 works */
 		return trimmed(Whitespace);
 #else
-		using namespace Containers::Literals;
+		using namespace Literals;
 		return trimmed(WHITESPACE_MACRO_BECAUSE_MSVC_IS_STUPID);
 #endif
 	}
@@ -818,7 +852,7 @@ namespace Death::Containers
 #if !defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_CLANG_CL) || _MSC_VER >= 1930 /* MSVC 2022 works */
 		return trimmedPrefix(Whitespace);
 #else
-		using namespace Containers::Literals;
+		using namespace Literals;
 		return trimmedPrefix(WHITESPACE_MACRO_BECAUSE_MSVC_IS_STUPID);
 #endif
 	}
@@ -827,7 +861,7 @@ namespace Death::Containers
 #if !defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_CLANG_CL) || _MSC_VER >= 1930 /* MSVC 2022 works */
 		return trimmedSuffix(Whitespace);
 #else
-		using namespace Containers::Literals;
+		using namespace Literals;
 		return trimmedSuffix(WHITESPACE_MACRO_BECAUSE_MSVC_IS_STUPID);
 #endif
 	}

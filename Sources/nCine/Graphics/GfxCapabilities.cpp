@@ -98,6 +98,14 @@ namespace nCine
 #endif
 		glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &glIntValues_[(int)GLIntValues::MAX_COLOR_ATTACHMENTS]);
 
+		// MAX_UNIFORM_BLOCK_SIZE is sometimes not reported correctly, so try to adjust it here
+		glIntValues_[(int)GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] = glIntValues_[(int)GLIntValues::MAX_UNIFORM_BLOCK_SIZE];
+		if (glIntValues_[(int)GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] > 64 * 1024) {
+			glIntValues_[(int)GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] = 64 * 1024;
+		} else if (glIntValues_[(int)GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] <= 0) {
+			glIntValues_[(int)GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] = 16 * 1024;
+		}
+
 		const char* ExtensionNames[] = {
 			"GL_KHR_debug", "GL_ARB_texture_storage", "GL_ARB_get_program_binary",
 #if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
@@ -165,7 +173,11 @@ namespace nCine
 		LOGI("--- OpenGL device capabilities ---");
 		LOGI("GL_MAX_TEXTURE_SIZE: %d", glIntValues_[(int)GLIntValues::MAX_TEXTURE_SIZE]);
 		LOGI("GL_MAX_TEXTURE_IMAGE_UNITS: %d", glIntValues_[(int)GLIntValues::MAX_TEXTURE_IMAGE_UNITS]);
-		LOGI("GL_MAX_UNIFORM_BLOCK_SIZE: %d", glIntValues_[(int)GLIntValues::MAX_UNIFORM_BLOCK_SIZE]);
+		if (glIntValues_[(int)GLIntValues::MAX_UNIFORM_BLOCK_SIZE] != glIntValues_[(int)GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED]) {
+			LOGI("GL_MAX_UNIFORM_BLOCK_SIZE: %d (%d)", glIntValues_[(int)GLIntValues::MAX_UNIFORM_BLOCK_SIZE], glIntValues_[(int)GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED]);
+		} else {
+			LOGI("GL_MAX_UNIFORM_BLOCK_SIZE: %d", glIntValues_[(int)GLIntValues::MAX_UNIFORM_BLOCK_SIZE]);
+		}
 		LOGI("GL_MAX_UNIFORM_BUFFER_BINDINGS: %d", glIntValues_[(int)GLIntValues::MAX_UNIFORM_BUFFER_BINDINGS]);
 		LOGI("GL_MAX_VERTEX_UNIFORM_BLOCKS: %d", glIntValues_[(int)GLIntValues::MAX_VERTEX_UNIFORM_BLOCKS]);
 		LOGI("GL_MAX_FRAGMENT_UNIFORM_BLOCKS: %d", glIntValues_[(int)GLIntValues::MAX_FRAGMENT_UNIFORM_BLOCKS]);
