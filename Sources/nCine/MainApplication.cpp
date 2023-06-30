@@ -134,7 +134,7 @@ static bool EnableVirtualTerminalProcessing()
 	return true;
 }
 
-#elif defined(DEATH_LOGGING) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
+#elif defined(DEATH_LOGGING) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX))
 
 #include <unistd.h>
 
@@ -229,6 +229,19 @@ namespace nCine
 #if defined(DEATH_LOGGING)
 #	if defined(DEATH_TARGET_APPLE)
 		__hasVirtualTerminal = isatty(1);
+#	elif defined(DEATH_TARGET_EMSCRIPTEN)
+		char* userAgent = (char*)EM_ASM_PTR({
+			return (typeof navigator !== 'undefined' && navigator !== null &&
+					typeof navigator.userAgent !== 'undefined' && navigator.userAgent !== null
+						? stringToNewUTF8(navigator.userAgent) : 0);
+		});
+		if (userAgent != nullptr) {
+			// Only Chrome supports ANSI escape sequences for now
+			__hasVirtualTerminal = (::strcasestr(userAgent, "chrome") != nullptr);
+			free(userAgent);
+		} else {
+			__hasVirtualTerminal = false;
+		}
 #	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		__showLogConsole = false;
 		for (int i = 0; i < argc; i++) {

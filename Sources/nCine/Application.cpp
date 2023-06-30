@@ -103,7 +103,7 @@ extern std::unique_ptr<Death::IO::Stream> __logFile;
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 extern bool __showLogConsole;
 #endif
-#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
+#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 extern bool __hasVirtualTerminal;
 #endif
 
@@ -227,10 +227,10 @@ void DEATH_LOGGING(LogLevel level, const char* fmt, ...)
 	va_end(args);
 
 	// Colorize the output
-#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS)
 	const bool hasVirtualTerminal = __hasVirtualTerminal;
 #	else
-	constexpr bool hasVirtualTerminal = true;
+	constexpr bool hasVirtualTerminal = false;
 #	endif
 
 	std::int32_t logMsgFuncLength = 0;
@@ -252,21 +252,27 @@ void DEATH_LOGGING(LogLevel level, const char* fmt, ...)
 			length2 += __strncpy(logEntryWithColors, MaxEntryLength - 1, Faint, countof(Faint) - 1);
 			if (level == LogLevel::Error || level == LogLevel::Fatal) {
 				length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Red, countof(Red) - 1);
-			}
-#	if !defined(DEATH_TARGET_EMSCRIPTEN)
-			else if (level == LogLevel::Warning) {
+			} else if (level == LogLevel::Warning) {
 				length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Yellow, countof(Yellow) - 1);
-			} else {
+			}
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+			else if (level == LogLevel::Debug) {
+#	else
+			else {
+#	endif
 				length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, DarkGray, countof(DarkGray) - 1);
 			}
-#	endif
 		}
 
 		length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, logEntry, logMsgFuncLength);
 	}
 
 	if (hasVirtualTerminal) {
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+		if (level != LogLevel::Warning && level != LogLevel::Debug) {
+#	else
 		if (level != LogLevel::Debug) {
+#	endif
 			length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Reset, countof(Reset) - 1);
 		}
 		if (level == LogLevel::Error || level == LogLevel::Fatal) {
@@ -274,13 +280,16 @@ void DEATH_LOGGING(LogLevel level, const char* fmt, ...)
 			if (level == LogLevel::Fatal) {
 				length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, countof(Bold) - 1);
 			}
-		} else if (level == LogLevel::Warning) {
-#	if !defined(DEATH_TARGET_EMSCRIPTEN)
-			length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightYellow, countof(BrightYellow) - 1);
-#	else
-			length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, countof(Bold) - 1);
-#	endif
 		}
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+		else if (level == LogLevel::Info || level == LogLevel::Warning) {
+			length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, countof(Bold) - 1);
+		}
+#	else
+		else if (level == LogLevel::Warning) {
+			length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightYellow, countof(BrightYellow) - 1);
+		}
+#	endif
 	}
 
 	length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, logEntry + logMsgFuncLength, length - logMsgFuncLength);
