@@ -338,6 +338,20 @@ namespace Death::Containers
 		Array<BasicStringView<T>> split(char delimiter) const;
 
 		/**
+		 * @brief Split on given substring
+		 *
+		 * If @p delimiter is not found, returns a single-item array containing
+		 * the full input string. If the string is empty, returns an empty
+		 * array. The function uses @ref slice() internally, meaning it
+		 * propagates the @ref flags() as appropriate.
+		 *
+		 * Note that this function looks for the whole delimiter. If you want
+		 * to split on any character from a set, use
+		 * @ref splitOnAnyWithoutEmptyParts() instead.
+		 */
+		Array<BasicStringView<T>> split(StringView delimiter) const;
+
+		/**
 		 * @brief Split on given character, removing empty parts
 		 *
 		 * If @p delimiter is not found, returns a single-item array containing
@@ -345,6 +359,11 @@ namespace Death::Containers
 		 * @p delimiter characters, returns an empty array. The function uses
 		 * @ref slice() internally, meaning it propagates the @ref flags() as
 		 * appropriate.
+		 *
+		 * If you have just a single delimiter character,
+		 * @ref split(char) const is more efficient. If you need to split on a
+		 * multi-character delimiter, use @ref split(StringView) const instead.
+		 * @see @ref splitOnWhitespaceWithoutEmptyParts() const
 		 */
 		Array<BasicStringView<T>> splitWithoutEmptyParts(char delimiter) const;
 
@@ -368,7 +387,7 @@ namespace Death::Containers
 		Array<BasicStringView<T>> splitOnWhitespaceWithoutEmptyParts() const;
 
 		/**
-		 * @brief Partition
+		 * @brief Partition on a character
 		 *
 		 * Equivalent to Python's @m_class{m-doc-external} [str.partition()](https://docs.python.org/3/library/stdtypes.html#str.partition).
 		 * Splits @p string at the first occurrence of @p separator. First
@@ -382,6 +401,14 @@ namespace Death::Containers
 		 * the view always points to existing memory.
 		 */
 		StaticArray<3, BasicStringView<T>> partition(char separator) const;
+
+		/**
+		 * @brief Partition on a substring
+		 *
+		 * Like @ref partition(char) const, but looks for a whole substring
+		 * instead of a single character.
+		 */
+		StaticArray<3, BasicStringView<T>> partition(StringView separator) const;
 
 		/**
 		 * @brief Join strings with this view as the delimiter

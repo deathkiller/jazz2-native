@@ -154,10 +154,10 @@ namespace Death::Containers
 		 * size, it's either stored allocated or in a SSO.
 		 */
 		/*implicit*/ String(StringView view);
-		/*implicit*/ String(Containers::ArrayView<const char> view);
+		/*implicit*/ String(ArrayView<const char> view);
 		// Without these there's ambiguity between StringView / ArrayView and char*
 		/*implicit*/ String(MutableStringView view);
-		/*implicit*/ String(Containers::ArrayView<char> view);
+		/*implicit*/ String(ArrayView<char> view);
 
 		/**
 		 * @brief Construct from a null-terminated C string
@@ -185,10 +185,10 @@ namespace Death::Containers
 		 * Compared to @ref String(StringView) the data is always allocated.
 		 */
 		explicit String(AllocatedInitT, StringView view);
-		explicit String(AllocatedInitT, Containers::ArrayView<const char> view);
+		explicit String(AllocatedInitT, ArrayView<const char> view);
 		// Without these there's ambiguity between StringView / ArrayView and char*
 		explicit String(AllocatedInitT, MutableStringView view);
-		explicit String(AllocatedInitT, Containers::ArrayView<char> view);
+		explicit String(AllocatedInitT, ArrayView<char> view);
 
 		/**
 		 * @brief Create a string instance bypassing SSO
@@ -552,10 +552,18 @@ namespace Death::Containers
 		/**
 		 * @brief Split on given character
 		 *
-		 * Equivalent to @ref BasicStringView::split().
+		 * Equivalent to @ref BasicStringView::split(char) const.
 		 */
 		Array<MutableStringView> split(char delimiter);
 		Array<StringView> split(char delimiter) const;
+
+		/**
+		 * @brief Split on given substring
+		 *
+		 * Equivalent to @ref BasicStringView::split(StringView) const.
+		 */
+		Array<MutableStringView> split(StringView delimiter);
+		Array<StringView> split(StringView delimiter) const;
 
 		/**
 		 * @brief Split on given character, removing empty parts
@@ -584,11 +592,21 @@ namespace Death::Containers
 		/**
 		 * @brief Partition
 		 *
-		 * Equivalent to @ref BasicStringView::partition(). The last returned
+		 * Equivalent to @ref BasicStringView::partition(char) const. The last returned
 		 * value has always @ref StringViewFlags::NullTerminated set.
 		 */
 		StaticArray<3, MutableStringView> partition(char separator);
 		StaticArray<3, StringView> partition(char separator) const;
+
+		/**
+		 * @brief Partition
+		 *
+		 * Equivalent to @ref BasicStringView::partition(StringView) const. The
+		 * last returned value has always @ref StringViewFlag::NullTerminated
+		 * set.
+		 */
+		StaticArray<3, MutableStringView> partition(StringView separator);
+		StaticArray<3, StringView> partition(StringView separator) const;
 
 		/**
 		 * @brief Join strings with this view as the delimiter
@@ -852,7 +870,7 @@ namespace Death::Containers
 		void construct(NoInitT, std::size_t size);
 		void construct(const char* data, std::size_t size);
 		void destruct();
-		Containers::Pair<const char*, std::size_t> dataInternal() const;
+		Pair<const char*, std::size_t> dataInternal() const;
 
 		/* Small string optimization. Following size restrictions from
 		   StringView (which uses the top two bits for marking global and

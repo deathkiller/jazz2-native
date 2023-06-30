@@ -16,10 +16,7 @@ namespace nCine
 	RenderBatcher::RenderBatcher()
 	{
 		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
-		const unsigned int maxUniformBlockSize = static_cast<unsigned int>(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE));
-
-		// Clamping the value as some drivers report a maximum size similar to SSBO one
-		UboMaxSize = (maxUniformBlockSize <= 64 * 1024 ? maxUniformBlockSize : 64 * 1024);
+		UboMaxSize = static_cast<unsigned int>(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED));
 
 		// Create the first buffer right away
 		createBuffer(UboMaxSize);

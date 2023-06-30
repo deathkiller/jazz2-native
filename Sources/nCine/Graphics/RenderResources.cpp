@@ -251,8 +251,7 @@ namespace nCine
 		};
 
 		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
-		// Clamping the value as some drivers report a maximum size similar to SSBO one
-		const int maxUniformBlockSize = std::clamp(gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
+		const int maxUniformBlockSize = gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
 
 		char sourceString[48];
 		const char *vertexStrings[3] = { nullptr, nullptr, nullptr };
