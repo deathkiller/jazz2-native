@@ -225,7 +225,7 @@ namespace Jazz2::Events
 		}, T::Preload };
 	}
 
-	void EventSpawner::PreloadEvent(EventType type, uint8_t* spawnParams)
+	void EventSpawner::PreloadEvent(EventType type, std::uint8_t* spawnParams)
 	{
 		auto it = _spawnableEvents.find(type);
 		if (it == _spawnableEvents.end() || it->second.PreloadFunction == nullptr) {
@@ -238,12 +238,12 @@ namespace Jazz2::Events
 		it->second.PreloadFunction(details);
 	}
 
-	std::shared_ptr<ActorBase> EventSpawner::SpawnEvent(EventType type, uint8_t* spawnParams, ActorState flags, int x, int y, int z)
+	std::shared_ptr<ActorBase> EventSpawner::SpawnEvent(EventType type, std::uint8_t* spawnParams, ActorState flags, std::int32_t x, std::int32_t y, std::int32_t z)
 	{
 		return SpawnEvent(type, spawnParams, flags, Vector3i(x * 32 + 16, y * 32 + 16, (int)z));
 	}
 
-	std::shared_ptr<ActorBase> EventSpawner::SpawnEvent(EventType type, uint8_t* spawnParams, ActorState flags, const Vector3i& pos)
+	std::shared_ptr<ActorBase> EventSpawner::SpawnEvent(EventType type, std::uint8_t* spawnParams, ActorState flags, const Vector3i& pos)
 	{
 		auto it = _spawnableEvents.find(type);
 		if (it == _spawnableEvents.end() || it->second.CreateFunction == nullptr) {
@@ -258,5 +258,4 @@ namespace Jazz2::Events
 		details.Params = spawnParams;
 		return it->second.CreateFunction(details);
 	}
-
 }

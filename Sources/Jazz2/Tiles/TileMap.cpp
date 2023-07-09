@@ -8,7 +8,7 @@
 
 namespace Jazz2::Tiles
 {
-	TileMap::TileMap(LevelHandler* levelHandler, const StringView& tileSetPath, uint16_t captionTileId, PitType pitType, bool applyPalette)
+	TileMap::TileMap(LevelHandler* levelHandler, const StringView& tileSetPath, std::uint16_t captionTileId, PitType pitType, bool applyPalette)
 		: _levelHandler(levelHandler), _sprLayerIndex(-1), _pitType(pitType), _renderCommandsCount(0), _collapsingTimer(0.0f),
 			_triggerState(TriggerCount), _texturedBackgroundLayer(-1), _texturedBackgroundPass(this)
 	{
@@ -132,7 +132,7 @@ namespace Jazz2::Tiles
 		return true;
 	}
 
-	bool TileMap::IsTileEmpty(int tx, int ty)
+	bool TileMap::IsTileEmpty(std::int32_t tx, std::int32_t ty)
 	{
 		if (_sprLayerIndex == -1) {
 			return true;
@@ -150,7 +150,7 @@ namespace Jazz2::Tiles
 		}
 
 		LayerTile& tile = _layers[_sprLayerIndex].Layout[ty * layoutSize.X + tx];
-		int tileId = ResolveTileID(tile);
+		std::int32_t tileId = ResolveTileID(tile);
 		TileSet* tileSet = ResolveTileSet(tileId);
 		return (tileSet == nullptr || tileSet->IsTileMaskEmpty(tileId));
 	}
@@ -163,8 +163,8 @@ namespace Jazz2::Tiles
 
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
 
-		int limitRightPx = layoutSize.X * TileSet::DefaultTileSize;
-		int limitBottomPx = layoutSize.Y * TileSet::DefaultTileSize;
+		std::int32_t limitRightPx = layoutSize.X * TileSet::DefaultTileSize;
+		std::int32_t limitBottomPx = layoutSize.Y * TileSet::DefaultTileSize;
 
 		// Consider out-of-level coordinates as solid walls
 		if (aabb.L < 0 || aabb.R >= limitRightPx) {
@@ -175,30 +175,30 @@ namespace Jazz2::Tiles
 		}
 
 		// Check all covered tiles for collisions; if all are empty, no need to do pixel collision checking
-		int hx1 = std::max((int)aabb.L, 0);
-		int hx2 = std::min((int)std::ceil(aabb.R), limitRightPx - 1);
-		int hy1 = std::max((int)aabb.T, 0);
-		int hy2 = std::min((int)std::ceil(aabb.B), limitBottomPx - 1);
+		std::int32_t hx1 = std::max((std::int32_t)aabb.L, 0);
+		std::int32_t hx2 = std::min((std::int32_t)std::ceil(aabb.R), limitRightPx - 1);
+		std::int32_t hy1 = std::max((std::int32_t)aabb.T, 0);
+		std::int32_t hy2 = std::min((std::int32_t)std::ceil(aabb.B), limitBottomPx - 1);
 
 		if (hy2 <= 0) {
 			hy1 = 0;
 			hy2 = 1;
 		}
 
-		int hx1t = hx1 / TileSet::DefaultTileSize;
-		int hx2t = hx2 / TileSet::DefaultTileSize;
-		int hy1t = hy1 / TileSet::DefaultTileSize;
-		int hy2t = hy2 / TileSet::DefaultTileSize;
+		std::int32_t hx1t = hx1 / TileSet::DefaultTileSize;
+		std::int32_t hx2t = hx2 / TileSet::DefaultTileSize;
+		std::int32_t hy1t = hy1 / TileSet::DefaultTileSize;
+		std::int32_t hy2t = hy2 / TileSet::DefaultTileSize;
 
 		auto sprLayerLayout = _layers[_sprLayerIndex].Layout.get();
 
-		for (int y = hy1t; y <= hy2t; y++) {
-			for (int x = hx1t; x <= hx2t; x++) {
+		for (std::int32_t y = hy1t; y <= hy2t; y++) {
+			for (std::int32_t x = hx1t; x <= hx2t; x++) {
 			RecheckTile:
 				LayerTile& tile = sprLayerLayout[y * layoutSize.X + x];
 
 				if (tile.DestructType == TileDestructType::Weapon && (params.DestructType & TileDestructType::Weapon) == TileDestructType::Weapon) {
-					if ((tile.TileParams & (1 << (uint16_t)params.UsedWeaponType)) != 0) {
+					if ((tile.TileParams & (1 << (std::uint16_t)params.UsedWeaponType)) != 0) {
 						if (AdvanceDestructibleTileAnimation(tile, x, y, params.WeaponStrength, "SceneryDestruct"_s)) {
 							params.TilesDestroyed++;
 							if (params.WeaponStrength <= 0) {
@@ -208,8 +208,8 @@ namespace Jazz2::Tiles
 							}
 						}
 					} else if (params.UsedWeaponType == WeaponType::Freezer && tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2)) {
-						int tx = x * TileSet::DefaultTileSize + TileSet::DefaultTileSize / 2;
-						int ty = y * TileSet::DefaultTileSize + TileSet::DefaultTileSize / 2;
+						std::int32_t tx = x * TileSet::DefaultTileSize + TileSet::DefaultTileSize / 2;
+						std::int32_t ty = y * TileSet::DefaultTileSize + TileSet::DefaultTileSize / 2;
 
 						bool iceBlockFound = false;
 						_levelHandler->FindCollisionActorsByAABB(nullptr, AABBf(tx - 1.0f, ty - 1.0f, tx + 1.0f, ty + 1.0f), [&iceBlockFound](Actors::ActorBase* actor) -> bool {
@@ -238,13 +238,13 @@ namespace Jazz2::Tiles
 						return false;
 					}
 				} else if (tile.DestructType == TileDestructType::Special && (params.DestructType & TileDestructType::Special) == TileDestructType::Special) {
-					int amount = 1;
+					std::int32_t amount = 1;
 					if (AdvanceDestructibleTileAnimation(tile, x, y, amount, "SceneryDestruct"_s)) {
 						params.TilesDestroyed++;
 						goto RecheckTile;
 					}
 				} else if (tile.DestructType == TileDestructType::Speed && (params.DestructType & TileDestructType::Speed) == TileDestructType::Speed) {
-					int amount = 1;
+					std::int32_t amount = 1;
 					if (tile.TileParams <= params.Speed && AdvanceDestructibleTileAnimation(tile, x, y, amount, "SceneryDestruct"_s)) {
 						params.TilesDestroyed++;
 						goto RecheckTile;
@@ -266,27 +266,27 @@ namespace Jazz2::Tiles
 
 				if ((params.DestructType & TileDestructType::IgnoreSolidTiles) != TileDestructType::IgnoreSolidTiles &&
 					tile.HasSuspendType == SuspendType::None && ((tile.Flags & LayerTileFlags::OneWay) != LayerTileFlags::OneWay || params.Downwards)) {
-					int tileId = ResolveTileID(tile);
+					std::int32_t tileId = ResolveTileID(tile);
 					TileSet* tileSet = ResolveTileSet(tileId);
 					if (tileSet == nullptr || tileSet->IsTileMaskEmpty(tileId)) {
 						continue;
 					}
 
-					int tx = x * TileSet::DefaultTileSize;
-					int ty = y * TileSet::DefaultTileSize;
+					std::int32_t tx = x * TileSet::DefaultTileSize;
+					std::int32_t ty = y * TileSet::DefaultTileSize;
 
-					int left = std::max(hx1 - tx, 0);
-					int right = std::min(hx2 - tx, TileSet::DefaultTileSize - 1);
-					int top = std::max(hy1 - ty, 0);
-					int bottom = std::min(hy2 - ty, TileSet::DefaultTileSize - 1);
+					std::int32_t left = std::max(hx1 - tx, 0);
+					std::int32_t right = std::min(hx2 - tx, TileSet::DefaultTileSize - 1);
+					std::int32_t top = std::max(hy1 - ty, 0);
+					std::int32_t bottom = std::min(hy2 - ty, TileSet::DefaultTileSize - 1);
 
 					if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
-						int left2 = left;
+						std::int32_t left2 = left;
 						left = (TileSet::DefaultTileSize - 1 - right);
 						right = (TileSet::DefaultTileSize - 1 - left2);
 					}
 					if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
-						int top2 = top;
+						std::int32_t top2 = top;
 						top = (TileSet::DefaultTileSize - 1 - bottom);
 						bottom = (TileSet::DefaultTileSize - 1 - top2);
 					}
@@ -294,9 +294,9 @@ namespace Jazz2::Tiles
 					top *= TileSet::DefaultTileSize;
 					bottom *= TileSet::DefaultTileSize;
 
-					uint8_t* mask = tileSet->GetTileMask(tileId);
-					for (int ry = top; ry <= bottom; ry += TileSet::DefaultTileSize) {
-						for (int rx = left; rx <= right; rx++) {
+					std::uint8_t* mask = tileSet->GetTileMask(tileId);
+					for (std::int32_t ry = top; ry <= bottom; ry += TileSet::DefaultTileSize) {
+						for (std::int32_t rx = left; rx <= right; rx++) {
 							if (mask[ry | rx]) {
 								return false;
 							}
@@ -317,8 +317,8 @@ namespace Jazz2::Tiles
 
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
 
-		int limitRightPx = layoutSize.X * TileSet::DefaultTileSize;
-		int limitBottomPx = layoutSize.Y * TileSet::DefaultTileSize;
+		std::int32_t limitRightPx = layoutSize.X * TileSet::DefaultTileSize;
+		std::int32_t limitBottomPx = layoutSize.Y * TileSet::DefaultTileSize;
 
 		// Consider out-of-level coordinates as solid walls
 		if (aabb.L < 0 || aabb.R >= limitRightPx) {
@@ -329,31 +329,31 @@ namespace Jazz2::Tiles
 		}
 
 		// Check all covered tiles for collisions; if all are empty, no need to do pixel collision checking
-		int hx1 = std::max((int)aabb.L, 0);
-		int hx2 = std::min((int)std::ceil(aabb.R), limitRightPx - 1);
-		int hy1 = std::max((int)aabb.T, 0);
-		int hy2 = std::min((int)std::ceil(aabb.B), limitBottomPx - 1);
+		std::int32_t hx1 = std::max((std::int32_t)aabb.L, 0);
+		std::int32_t hx2 = std::min((std::int32_t)std::ceil(aabb.R), limitRightPx - 1);
+		std::int32_t hy1 = std::max((std::int32_t)aabb.T, 0);
+		std::int32_t hy2 = std::min((std::int32_t)std::ceil(aabb.B), limitBottomPx - 1);
 
 		if (hy2 <= 0) {
 			hy1 = 0;
 			hy2 = 1;
 		}
 
-		int hx1t = hx1 / TileSet::DefaultTileSize;
-		int hx2t = hx2 / TileSet::DefaultTileSize;
-		int hy1t = hy1 / TileSet::DefaultTileSize;
-		int hy2t = hy2 / TileSet::DefaultTileSize;
+		std::int32_t hx1t = hx1 / TileSet::DefaultTileSize;
+		std::int32_t hx2t = hx2 / TileSet::DefaultTileSize;
+		std::int32_t hy1t = hy1 / TileSet::DefaultTileSize;
+		std::int32_t hy2t = hy2 / TileSet::DefaultTileSize;
 
 		auto sprLayerLayout = _layers[_sprLayerIndex].Layout.get();
 
-		for (int y = hy1t; y <= hy2t; y++) {
-			for (int x = hx1t; x <= hx2t; x++) {
+		for (std::int32_t y = hy1t; y <= hy2t; y++) {
+			for (std::int32_t x = hx1t; x <= hx2t; x++) {
 			RecheckTile:
 				LayerTile& tile = sprLayerLayout[y * layoutSize.X + x];
 
 				if (tile.DestructType == TileDestructType::Weapon && (params.DestructType & TileDestructType::Weapon) == TileDestructType::Weapon) {
 					if (tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2) &&
-						((tile.TileParams & (1 << (uint16_t)params.UsedWeaponType)) != 0 || params.UsedWeaponType == WeaponType::Freezer)) {
+						((tile.TileParams & (1 << (std::uint16_t)params.UsedWeaponType)) != 0 || params.UsedWeaponType == WeaponType::Freezer)) {
 						return true;
 					}
 				} else if (tile.DestructType == TileDestructType::Special && (params.DestructType & TileDestructType::Special) == TileDestructType::Special) {
@@ -380,27 +380,27 @@ namespace Jazz2::Tiles
 
 				if ((params.DestructType & TileDestructType::IgnoreSolidTiles) != TileDestructType::IgnoreSolidTiles &&
 					tile.HasSuspendType == SuspendType::None && ((tile.Flags & LayerTileFlags::OneWay) != LayerTileFlags::OneWay || params.Downwards)) {
-					int tileId = ResolveTileID(tile);
+					std::int32_t tileId = ResolveTileID(tile);
 					TileSet* tileSet = ResolveTileSet(tileId);
 					if (tileSet == nullptr || tileSet->IsTileMaskEmpty(tileId)) {
 						continue;
 					}
 
-					int tx = x * TileSet::DefaultTileSize;
-					int ty = y * TileSet::DefaultTileSize;
+					std::int32_t tx = x * TileSet::DefaultTileSize;
+					std::int32_t ty = y * TileSet::DefaultTileSize;
 
-					int left = std::max(hx1 - tx, 0);
-					int right = std::min(hx2 - tx, TileSet::DefaultTileSize - 1);
-					int top = std::max(hy1 - ty, 0);
-					int bottom = std::min(hy2 - ty, TileSet::DefaultTileSize - 1);
+					std::int32_t left = std::max(hx1 - tx, 0);
+					std::int32_t right = std::min(hx2 - tx, TileSet::DefaultTileSize - 1);
+					std::int32_t top = std::max(hy1 - ty, 0);
+					std::int32_t bottom = std::min(hy2 - ty, TileSet::DefaultTileSize - 1);
 
 					if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
-						int left2 = left;
+						std::int32_t left2 = left;
 						left = (TileSet::DefaultTileSize - 1 - right);
 						right = (TileSet::DefaultTileSize - 1 - left2);
 					}
 					if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
-						int top2 = top;
+						std::int32_t top2 = top;
 						top = (TileSet::DefaultTileSize - 1 - bottom);
 						bottom = (TileSet::DefaultTileSize - 1 - top2);
 					}
@@ -408,9 +408,9 @@ namespace Jazz2::Tiles
 					top *= TileSet::DefaultTileSize;
 					bottom *= TileSet::DefaultTileSize;
 
-					uint8_t* mask = tileSet->GetTileMask(tileId);
-					for (int ry = top; ry <= bottom; ry += TileSet::DefaultTileSize) {
-						for (int rx = left; rx <= right; rx++) {
+					std::uint8_t* mask = tileSet->GetTileMask(tileId);
+					for (std::int32_t ry = top; ry <= bottom; ry += TileSet::DefaultTileSize) {
+						for (std::int32_t rx = left; rx <= right; rx++) {
 							if (mask[ry | rx]) {
 								return false;
 							}
@@ -426,8 +426,8 @@ namespace Jazz2::Tiles
 	bool TileMap::IsTileHurting(float x, float y)
 	{
 		// TODO: Implement all JJ2+ parameters (directional hurt events)
-		int tx = (int)x / TileSet::DefaultTileSize;
-		int ty = (int)y / TileSet::DefaultTileSize;
+		std::int32_t tx = (std::int32_t)x / TileSet::DefaultTileSize;
+		std::int32_t ty = (std::int32_t)y / TileSet::DefaultTileSize;
 
 		if (tx < 0 || ty < 0 || _sprLayerIndex == -1) {
 			return false;
@@ -443,7 +443,7 @@ namespace Jazz2::Tiles
 			return false;
 		}
 		// TODO: Some tiles have Hurt event with empty mask
-		//int tileId = ResolveTileID(tile);
+		//std::int32_t tileId = ResolveTileID(tile);
 		//TileSet* tileSet = ResolveTileSet(tileId);
 		//return (tileSet == nullptr || tileSet->IsTileMaskEmpty(tileId));
 		return true;
@@ -451,14 +451,14 @@ namespace Jazz2::Tiles
 
 	SuspendType TileMap::GetTileSuspendState(float x, float y)
 	{
-		constexpr int Tolerance = 4;
+		constexpr std::int32_t Tolerance = 4;
 
 		if (x < 0 || y < 0 || _sprLayerIndex == -1) {
 			return SuspendType::None;
 		}
 
-		int tx = (int)x / TileSet::DefaultTileSize;
-		int ty = (int)y / TileSet::DefaultTileSize;
+		std::int32_t tx = (std::int32_t)x / TileSet::DefaultTileSize;
+		std::int32_t ty = (std::int32_t)y / TileSet::DefaultTileSize;
 
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
 		if (tx >= layoutSize.X || ty >= layoutSize.Y) {
@@ -471,16 +471,16 @@ namespace Jazz2::Tiles
 			return SuspendType::None;
 		}
 
-		int tileId = ResolveTileID(tile);
+		std::int32_t tileId = ResolveTileID(tile);
 		TileSet* tileSet = ResolveTileSet(tileId);
 		if (tileSet == nullptr) {
 			return SuspendType::None;
 		}
 
-		uint8_t* mask = tileSet->GetTileMask(tileId);
+		std::uint8_t* mask = tileSet->GetTileMask(tileId);
 
-		int rx = (int)x & 31;
-		int ry = (int)y & 31;
+		std::int32_t rx = (std::int32_t)x & 31;
+		std::int32_t ry = (std::int32_t)y & 31;
 
 		if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
 			rx = (TileSet::DefaultTileSize - 1 - rx);
@@ -489,10 +489,10 @@ namespace Jazz2::Tiles
 			ry = (TileSet::DefaultTileSize - 1 - ry);
 		}
 
-		int top = std::max(ry - Tolerance, 0) << 5;
-		int bottom = std::min(ry + Tolerance, TileSet::DefaultTileSize - 1) << 5;
+		std::int32_t top = std::max(ry - Tolerance, 0) << 5;
+		std::int32_t bottom = std::min(ry + Tolerance, TileSet::DefaultTileSize - 1) << 5;
 
-		for (int ti = bottom | rx; ti >= top; ti -= TileSet::DefaultTileSize) {
+		for (std::int32_t ti = bottom | rx; ti >= top; ti -= TileSet::DefaultTileSize) {
 			if (mask[ti]) {
 				return tile.HasSuspendType;
 			}
@@ -501,13 +501,13 @@ namespace Jazz2::Tiles
 		return SuspendType::None;
 	}
 
-	bool TileMap::AdvanceDestructibleTileAnimation(LayerTile& tile, int tx, int ty, int& amount, const StringView& soundName)
+	bool TileMap::AdvanceDestructibleTileAnimation(LayerTile& tile, std::int32_t tx, std::int32_t ty, std::int32_t& amount, const StringView& soundName)
 	{
 		AnimatedTile& anim = _animatedTiles[tile.DestructAnimation];
-		int max = (int)(anim.Tiles.size() - 2);
+		std::int32_t max = (std::int32_t)(anim.Tiles.size() - 2);
 		if (amount > 0 && tile.DestructFrameIndex < max) {
 			// Tile not destroyed yet, advance counter by one
-			int current = std::min(amount, max - tile.DestructFrameIndex);
+			std::int32_t current = std::min(amount, max - tile.DestructFrameIndex);
 
 			tile.DestructFrameIndex += current;
 			tile.TileID = anim.Tiles[tile.DestructFrameIndex].TileID;
@@ -540,11 +540,11 @@ namespace Jazz2::Tiles
 
 		const Vector2i& layoutSize = _layers[_sprLayerIndex].LayoutSize;
 
-		for (int i = 0; i < _activeCollapsingTiles.size(); i++) {
+		for (std::int32_t i = 0; i < _activeCollapsingTiles.size(); i++) {
 			Vector2i tilePos = _activeCollapsingTiles[i];
 			auto& tile = _layers[_sprLayerIndex].Layout[tilePos.X + tilePos.Y * layoutSize.X];
 			if (tile.TileParams == 0) {
-				int amount = 1;
+				std::int32_t amount = 1;
 				if (!AdvanceDestructibleTileAnimation(tile, tilePos.X, tilePos.Y, amount, "SceneryCollapse"_s)) {
 					tile.DestructType = TileDestructType::None;
 					_activeCollapsingTiles.erase(_activeCollapsingTiles.begin() + i);
@@ -646,14 +646,14 @@ namespace Jazz2::Tiles
 			float remY = fmodf(yt, (float)TileSet::DefaultTileSize);
 
 			// Calculate the index (on the layer map) of the first tile that needs to be drawn to the position determined earlier
-			int tileX, tileY, tileAbsX, tileAbsY;
+			std::int32_t tileX, tileY, tileAbsX, tileAbsY;
 
 			// Get the actual tile coords on the layer layout
 			if (xt > 0) {
-				tileAbsX = (int)std::floor(xt / (float)TileSet::DefaultTileSize);
+				tileAbsX = (std::int32_t)std::floor(xt / (float)TileSet::DefaultTileSize);
 				tileX = tileAbsX % tileCount.X;
 			} else {
-				tileAbsX = (int)std::ceil(xt / (float)TileSet::DefaultTileSize);
+				tileAbsX = (std::int32_t)std::ceil(xt / (float)TileSet::DefaultTileSize);
 				tileX = tileAbsX % tileCount.X;
 				while (tileX < 0) {
 					tileX += tileCount.X;
@@ -661,10 +661,10 @@ namespace Jazz2::Tiles
 			}
 
 			if (yt > 0) {
-				tileAbsY = (int)std::floor(yt / (float)TileSet::DefaultTileSize);
+				tileAbsY = (std::int32_t)std::floor(yt / (float)TileSet::DefaultTileSize);
 				tileY = tileAbsY % tileCount.Y;
 			} else {
-				tileAbsY = (int)std::ceil(yt / (float)TileSet::DefaultTileSize);
+				tileAbsY = (std::int32_t)std::ceil(yt / (float)TileSet::DefaultTileSize);
 				tileY = tileAbsY % tileCount.Y;
 				while (tileY < 0) {
 					tileY += tileCount.Y;
@@ -677,13 +677,13 @@ namespace Jazz2::Tiles
 			y1 -= remY - (float)TileSet::DefaultTileSize;
 
 			// Save the tile Y at the left border so that we can roll back to it at the start of every row iteration
-			int tileYs = tileY;
+			std::int32_t tileYs = tileY;
 
 			// Calculate the last coordinates we want to draw to
 			float x3 = x1 + (TileSet::DefaultTileSize * 2) + viewSize.X;
 			float y3 = y1 + (TileSet::DefaultTileSize * 2) + viewSize.Y;
 
-			int tile_xo = -1;
+			std::int32_t tile_xo = -1;
 			for (float x2 = x1; x2 < x3; x2 += TileSet::DefaultTileSize) {
 				tileX = (tileX + 1) % tileCount.X;
 				tile_xo++;
@@ -694,7 +694,7 @@ namespace Jazz2::Tiles
 					}
 				}
 				tileY = tileYs;
-				int tile_yo = -1;
+				std::int32_t tile_yo = -1;
 				for (float y2 = y1; y2 < y3; y2 += TileSet::DefaultTileSize) {
 					tileY = (tileY + 1) % tileCount.Y;
 					tile_yo++;
@@ -708,7 +708,7 @@ namespace Jazz2::Tiles
 						}
 					}
 
-					int tileId = ResolveTileID(tile);
+					std::int32_t tileId = ResolveTileID(tile);
 					if (tileId == 0 || tile.Alpha == 0) {
 						continue;
 					}
@@ -761,7 +761,7 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	float TileMap::TranslateCoordinate(float coordinate, float speed, float offset, int viewSize, bool isY)
+	float TileMap::TranslateCoordinate(float coordinate, float speed, float offset, std::int32_t viewSize, bool isY)
 	{
 		// Coordinate: the "vanilla" coordinate of the tile on the layer if the layer was fixed to the sprite layer with same
 		// speed and no other options. Think of its position in JCS.
@@ -771,7 +771,7 @@ namespace Jazz2::Tiles
 
 		// `HardcodedOffsetY` (literal 70) is the same as in `DrawLayer`, it's the offscreen offset of the first tile to draw.
 		// Don't touch unless absolutely necessary.
-		int alignment = ((isY ? (viewSize - 200) : (viewSize - 320)) / 2) + HardcodedOffset;
+		std::int32_t alignment = ((isY ? (viewSize - 200) : (viewSize - 320)) / 2) + HardcodedOffset;
 		return (coordinate * speed + offset + alignment * (speed - 1.0f));
 	}
 
@@ -804,7 +804,7 @@ namespace Jazz2::Tiles
 		return command;
 	}
 
-	void TileMap::AddTileSet(const StringView& tileSetPath, uint16_t offset, uint16_t count, const uint8_t* paletteRemapping)
+	void TileMap::AddTileSet(const StringView& tileSetPath, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping)
 	{
 		auto& tileSetPart = _tileSets.emplace_back();
 		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, 0, false, paletteRemapping);
@@ -818,11 +818,11 @@ namespace Jazz2::Tiles
 
 	void TileMap::ReadLayerConfiguration(Stream& s)
 	{
-		LayerType layerType = (LayerType)s.ReadValue<uint8_t>();
-		uint16_t layerFlags = s.ReadValue<uint16_t>();
+		LayerType layerType = (LayerType)s.ReadValue<std::uint8_t>();
+		std::uint16_t layerFlags = s.ReadValue<std::uint16_t>();
 
 		if (layerType == LayerType::Sprite) {
-			_sprLayerIndex = (int)_layers.size();
+			_sprLayerIndex = (std::int32_t)_layers.size();
 		}
 
 		TileMapLayer& newLayer = _layers.emplace_back();
@@ -833,7 +833,7 @@ namespace Jazz2::Tiles
 		newLayer.Visible = ((layerFlags & 0x08) == 0x08);
 
 		if (layerType != LayerType::Sprite) {
-			uint8_t combinedSpeedModels = s.ReadValue<uint8_t>();
+			std::uint8_t combinedSpeedModels = s.ReadValue<std::uint8_t>();
 			newLayer.Description.SpeedModelX = (LayerSpeedModel)(combinedSpeedModels & 0x0f);
 			newLayer.Description.SpeedModelY = (LayerSpeedModel)((combinedSpeedModels >> 4) & 0x0f);
 
@@ -846,25 +846,25 @@ namespace Jazz2::Tiles
 			newLayer.Description.RepeatX = ((layerFlags & 0x01) == 0x01);
 			newLayer.Description.RepeatY = ((layerFlags & 0x02) == 0x02);
 			int16_t depth = s.ReadValue<int16_t>();
-			newLayer.Description.Depth = (uint16_t)(ILevelHandler::MainPlaneZ - depth);
+			newLayer.Description.Depth = (std::uint16_t)(ILevelHandler::MainPlaneZ - depth);
 			newLayer.Description.UseInherentOffset = ((layerFlags & 0x04) == 0x04);
 
-			newLayer.Description.RendererType = (LayerRendererType)s.ReadValue<uint8_t>();
-			uint8_t r = s.ReadValue<uint8_t>();
-			uint8_t g = s.ReadValue<uint8_t>();
-			uint8_t b = s.ReadValue<uint8_t>();
-			uint8_t a = s.ReadValue<uint8_t>();
+			newLayer.Description.RendererType = (LayerRendererType)s.ReadValue<std::uint8_t>();
+			std::uint8_t r = s.ReadValue<std::uint8_t>();
+			std::uint8_t g = s.ReadValue<std::uint8_t>();
+			std::uint8_t b = s.ReadValue<std::uint8_t>();
+			std::uint8_t a = s.ReadValue<std::uint8_t>();
 
 			if (newLayer.Description.RendererType == LayerRendererType::Tinted) {
 				// TODO: Tinted color is precomputed from palette here
-				const uint32_t* palettes = ContentResolver::Get().GetPalettes();
-				uint32_t color = palettes[r];
+				const std::uint32_t* palettes = ContentResolver::Get().GetPalettes();
+				std::uint32_t color = palettes[r];
 				newLayer.Description.Color = Vector4f((color & 0x000000ff) / 255.0f, ((color >> 8) & 0x000000ff) / 255.0f, ((color >> 16) & 0x000000ff) / 255.0f, a * ((color >> 24) & 0x000000ff) / (255.0f * 255.0f));
 			} else {
 				newLayer.Description.Color = Vector4f(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
 
 				if (newLayer.Description.RendererType >= LayerRendererType::Sky) {
-					_texturedBackgroundLayer = (int)_layers.size() - 1;
+					_texturedBackgroundLayer = (std::int32_t)_layers.size() - 1;
 				}
 			}
 		} else {
@@ -876,7 +876,7 @@ namespace Jazz2::Tiles
 			newLayer.Description.AutoSpeedY = 0.0f;
 			newLayer.Description.RepeatX = false;
 			newLayer.Description.RepeatY = false;
-			newLayer.Description.Depth = (uint16_t)(ILevelHandler::MainPlaneZ - 50);
+			newLayer.Description.Depth = (std::uint16_t)(ILevelHandler::MainPlaneZ - 50);
 			newLayer.Description.UseInherentOffset = false;
 			newLayer.Description.SpeedModelX = LayerSpeedModel::Default;
 			newLayer.Description.SpeedModelY = LayerSpeedModel::Default;
@@ -887,11 +887,11 @@ namespace Jazz2::Tiles
 
 		newLayer.Layout = std::make_unique<LayerTile[]>(width * height);
 
-		for (int i = 0; i < (width * height); i++) {
-			uint8_t tileFlags = s.ReadValue<uint8_t>();
-			uint16_t tileIdx = s.ReadValue<uint16_t>();
+		for (std::int32_t i = 0; i < (width * height); i++) {
+			std::uint8_t tileFlags = s.ReadValue<std::uint8_t>();
+			std::uint16_t tileIdx = s.ReadValue<std::uint16_t>();
 
-			uint8_t tileModifier = (uint8_t)(tileFlags >> 4);
+			std::uint8_t tileModifier = (std::uint8_t)(tileFlags >> 4);
 
 			LayerTile& tile = newLayer.Layout[i];
 			tile.TileID = tileIdx;
@@ -914,8 +914,8 @@ namespace Jazz2::Tiles
 
 		_animatedTiles.reserve(count);
 
-		for (int i = 0; i < count; i++) {
-			uint8_t frameCount = s.ReadValue<uint8_t>();
+		for (std::int32_t i = 0; i < count; i++) {
+			std::uint8_t frameCount = s.ReadValue<std::uint8_t>();
 			if (frameCount == 0) {
 				continue;
 			}
@@ -923,25 +923,25 @@ namespace Jazz2::Tiles
 			AnimatedTile& animTile = _animatedTiles.emplace_back();
 
 			// FrameDuration is multiplied by 16 before saving, so divide it here back
-			animTile.FrameDuration = s.ReadValue<uint16_t>() / 16.0f;
-			animTile.Delay = s.ReadValue<uint16_t>();
+			animTile.FrameDuration = s.ReadValue<std::uint16_t>() / 16.0f;
+			animTile.Delay = s.ReadValue<std::uint16_t>();
 
 			// TODO: delayJitter
-			/*uint16_t delayJitter =*/ s.ReadValue<uint16_t>();
+			/*std::uint16_t delayJitter =*/ s.ReadValue<std::uint16_t>();
 
-			animTile.PingPong = s.ReadValue<uint8_t>();
-			animTile.PingPongDelay = s.ReadValue<uint16_t>();
+			animTile.PingPong = s.ReadValue<std::uint8_t>();
+			animTile.PingPongDelay = s.ReadValue<std::uint16_t>();
 
-			for (int j = 0; j < frameCount; j++) {
+			for (std::int32_t j = 0; j < frameCount; j++) {
 				auto& frame = animTile.Tiles.emplace_back();
 				// TODO: flags
-				/*uint8_t flag =*/ s.ReadValue<uint8_t>();
-				frame.TileID = s.ReadValue<uint16_t>();
+				/*std::uint8_t flag =*/ s.ReadValue<std::uint8_t>();
+				frame.TileID = s.ReadValue<std::uint16_t>();
 			}
 		}
 	}
 
-	void TileMap::SetTileEventFlags(int x, int y, EventType tileEvent, uint8_t* tileParams)
+	void TileMap::SetTileEventFlags(std::int32_t x, std::int32_t y, EventType tileEvent, std::uint8_t* tileParams)
 	{
 		auto& tile = _layers[_sprLayerIndex].Layout[x + y * _layers[_sprLayerIndex].LayoutSize.X];
 
@@ -977,7 +977,7 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	void TileMap::SetTileDestructibleEventParams(LayerTile& tile, TileDestructType type, uint16_t tileParams)
+	void TileMap::SetTileDestructibleEventParams(LayerTile& tile, TileDestructType type, std::uint16_t tileParams)
 	{
 		if ((tile.Flags & LayerTileFlags::Animated) != LayerTileFlags::Animated) {
 			return;
@@ -995,13 +995,13 @@ namespace Jazz2::Tiles
 	{
 		auto& spriteLayer = _layers[_sprLayerIndex];
 		if ((debris.Flags & DebrisFlags::Disappear) == DebrisFlags::Disappear && debris.Depth <= spriteLayer.Description.Depth) {
-			int x = (int)debris.Pos.X / TileSet::DefaultTileSize;
-			int y = (int)debris.Pos.Y / TileSet::DefaultTileSize;
+			std::int32_t x = (std::int32_t)debris.Pos.X / TileSet::DefaultTileSize;
+			std::int32_t y = (std::int32_t)debris.Pos.Y / TileSet::DefaultTileSize;
 			if (x < 0 || y < 0 || x >= spriteLayer.LayoutSize.X || y >= spriteLayer.LayoutSize.Y) {
 				return;
 			}
 
-			int tileId = ResolveTileID(spriteLayer.Layout[x + y * spriteLayer.LayoutSize.X]);
+			std::int32_t tileId = ResolveTileID(spriteLayer.Layout[x + y * spriteLayer.LayoutSize.X]);
 			TileSet* tileSet = ResolveTileSet(tileId);
 			if (tileSet != nullptr) {
 				if (tileSet->IsTileFilled(tileId)) {
@@ -1020,10 +1020,10 @@ namespace Jazz2::Tiles
 		_debrisList.push_back(debris);
 	}
 
-	void TileMap::CreateTileDebris(int tileId, int x, int y)
+	void TileMap::CreateTileDebris(std::int32_t tileId, std::int32_t x, std::int32_t y)
 	{
 		constexpr float SpeedMultiplier[] = { -2, 2, -1, 1 };
-		constexpr int QuarterSize = TileSet::DefaultTileSize / 2;
+		constexpr std::int32_t QuarterSize = TileSet::DefaultTileSize / 2;
 
 		// Tile #0 is always empty
 		if (tileId == 0) {
@@ -1035,7 +1035,7 @@ namespace Jazz2::Tiles
 			return;
 		}
 
-		uint16_t z = _layers[_sprLayerIndex].Description.Depth + 80;
+		std::uint16_t z = _layers[_sprLayerIndex].Description.Depth + 80;
 
 		Vector2i texSize = tileSet->TextureDiffuse->size();
 		float texScaleX = float(QuarterSize) / float(texSize.X);
@@ -1053,7 +1053,7 @@ namespace Jazz2::Tiles
 			texScaleY *= -1;
 		}*/
 
-		for (int i = 0; i < 4; i++) {
+		for (std::int32_t i = 0; i < 4; i++) {
 			DestructibleDebris& debris = _debrisList.emplace_back();
 			debris.Pos = Vector2f(x * TileSet::DefaultTileSize + (i % 2) * QuarterSize, y * TileSet::DefaultTileSize + (i / 2) * QuarterSize);
 			debris.Depth = z;
@@ -1081,21 +1081,21 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	void TileMap::CreateParticleDebris(const GraphicResource* res, Vector3f pos, Vector2f force, int currentFrame, bool isFacingLeft)
+	void TileMap::CreateParticleDebris(const GraphicResource* res, Vector3f pos, Vector2f force, std::int32_t currentFrame, bool isFacingLeft)
 	{
-		constexpr int DebrisSize = 3;
+		constexpr std::int32_t DebrisSize = 3;
 
 		float x = pos.X - res->Base->Hotspot.X;
 		float y = pos.Y - res->Base->Hotspot.Y;
 		Vector2i texSize = res->Base->TextureDiffuse->size();
 
-		for (int fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
-			for (int fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
+		for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
+			for (std::int32_t fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
 				float currentSize = DebrisSize * Random().FastFloat(0.2f, 1.1f);
 
 				DestructibleDebris& debris = _debrisList.emplace_back();
 				debris.Pos = Vector2f(x + (isFacingLeft ? res->Base->FrameDimensions.X - fx : fx), y + fy);
-				debris.Depth = (uint16_t)pos.Z;
+				debris.Depth = (std::uint16_t)pos.Z;
 				debris.Size = Vector2f(currentSize, currentSize);
 				debris.Speed = Vector2f(force.X + ((fx - res->Base->FrameDimensions.X / 2) + Random().FastFloat(-2.0f, 2.0f)) * (isFacingLeft ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 8.0f) / res->Base->FrameDimensions.X,
 						force.Y - 1.0f * Random().FastFloat(2.2f, 4.0f));
@@ -1122,18 +1122,18 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	void TileMap::CreateSpriteDebris(const GraphicResource* res, Vector3f pos, int count)
+	void TileMap::CreateSpriteDebris(const GraphicResource* res, Vector3f pos, std::int32_t count)
 	{
 		float x = pos.X - res->Base->Hotspot.X;
 		float y = pos.Y - res->Base->Hotspot.Y;
 		Vector2i texSize = res->Base->TextureDiffuse->size();
 
-		for (int i = 0; i < count; i++) {
+		for (std::int32_t i = 0; i < count; i++) {
 			float speedX = Random().FastFloat(-1.0f, 1.0f) * Random().FastFloat(0.2f, 0.8f) * count;
 
 			DestructibleDebris& debris = _debrisList.emplace_back();
 			debris.Pos = Vector2f(x, y);
-			debris.Depth = (uint16_t)pos.Z;
+			debris.Depth = (std::uint16_t)pos.Z;
 			debris.Size = Vector2f((float)res->Base->FrameDimensions.X, (float)res->Base->FrameDimensions.Y);
 			debris.Speed = Vector2f(speedX, -1.0f * Random().FastFloat(2.2f, 4.0f));
 			debris.Acceleration = Vector2f(0.0f, 0.2f);
@@ -1148,9 +1148,9 @@ namespace Jazz2::Tiles
 
 			debris.Time = 560.0f;
 
-			int curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
-			int col = curAnimFrame % res->Base->FrameConfiguration.X;
-			int row = curAnimFrame / res->Base->FrameConfiguration.X;
+			std::int32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
+			std::int32_t col = curAnimFrame % res->Base->FrameConfiguration.X;
+			std::int32_t row = curAnimFrame / res->Base->FrameConfiguration.X;
 			debris.TexScaleX = (float(res->Base->FrameDimensions.X) / float(texSize.X));
 			debris.TexBiasX = (float(res->Base->FrameDimensions.X * col) / float(texSize.X));
 			debris.TexScaleY = (float(res->Base->FrameDimensions.Y) / float(texSize.Y));
@@ -1163,8 +1163,8 @@ namespace Jazz2::Tiles
 
 	void TileMap::UpdateDebris(float timeMult)
 	{
-		int size = (int)_debrisList.size();
-		for (int i = 0; i < size; i++) {
+		std::int32_t size = (std::int32_t)_debrisList.size();
+		for (std::int32_t i = 0; i < size; i++) {
 			DestructibleDebris& debris = _debrisList[i];
 
 			if (debris.Scale <= 0.0f || debris.Alpha <= 0.0f) {
@@ -1264,12 +1264,12 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	bool TileMap::GetTrigger(uint8_t triggerId)
+	bool TileMap::GetTrigger(std::uint8_t triggerId)
 	{
 		return _triggerState[triggerId];
 	}
 
-	void TileMap::SetTrigger(uint8_t triggerId, bool newState)
+	void TileMap::SetTrigger(std::uint8_t triggerId, bool newState)
 	{
 		if (_triggerState[triggerId] == newState) {
 			return;
@@ -1279,8 +1279,8 @@ namespace Jazz2::Tiles
 
 		// Go through all tiles and update any that are influenced by this trigger
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
-		int n = layoutSize.X * layoutSize.Y;
-		for (int i = 0; i < n; i++) {
+		std::int32_t n = layoutSize.X * layoutSize.Y;
+		for (std::int32_t i = 0; i < n; i++) {
 			LayerTile& tile = _layers[_sprLayerIndex].Layout[i];
 			if (tile.DestructType == TileDestructType::Trigger && tile.TileParams == triggerId) {
 				if (_animatedTiles[tile.DestructAnimation].Tiles.size() > 1) {
@@ -1327,7 +1327,7 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	TileSet* TileMap::ResolveTileSet(int& tileId)
+	TileSet* TileMap::ResolveTileSet(std::int32_t& tileId)
 	{
 		for (auto& tileSetPart : _tileSets) {
 			if (tileId < tileSetPart.Count) {
@@ -1347,8 +1347,8 @@ namespace Jazz2::Tiles
 
 		if (notInitialized) {
 			Vector2i layoutSize = _owner->_layers[_owner->_texturedBackgroundLayer].LayoutSize;
-			int width = layoutSize.X * TileSet::DefaultTileSize;
-			int height = layoutSize.Y * TileSet::DefaultTileSize;
+			std::int32_t width = layoutSize.X * TileSet::DefaultTileSize;
+			std::int32_t height = layoutSize.Y * TileSet::DefaultTileSize;
 
 			_camera = std::make_unique<Camera>();
 			_camera->setOrthoProjection(0, width, 0, height);
@@ -1362,9 +1362,9 @@ namespace Jazz2::Tiles
 			_target->setWrap(SamplerWrapping::Repeat);
 
 			// Prepare render commands
-			int renderCommandCount = (width * height) / (TileSet::DefaultTileSize * TileSet::DefaultTileSize);
+			std::int32_t renderCommandCount = (width * height) / (TileSet::DefaultTileSize * TileSet::DefaultTileSize);
 			_renderCommands.reserve(renderCommandCount);
-			for (int i = 0; i < renderCommandCount; i++) {
+			for (std::int32_t i = 0; i < renderCommandCount; i++) {
 				std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
 				command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE);
 				command->material().reserveUniformsDataMemory();
@@ -1398,14 +1398,14 @@ namespace Jazz2::Tiles
 		Vector2i layoutSize = layer.LayoutSize;
 		Vector2i targetSize = _target->size();
 
-		int renderCommandIndex = 0;
+		std::int32_t renderCommandIndex = 0;
 		bool isAnimated = false;
 
-		for (int y = 0; y < layoutSize.Y; y++) {
-			for (int x = 0; x < layoutSize.X; x++) {
+		for (std::int32_t y = 0; y < layoutSize.Y; y++) {
+			for (std::int32_t x = 0; x < layoutSize.X; x++) {
 				LayerTile& tile = layer.Layout[x + y * layer.LayoutSize.X];
 
-				int tileId = _owner->ResolveTileID(tile);
+				std::int32_t tileId = _owner->ResolveTileID(tile);
 				if (tileId == 0) {
 					continue;
 				}
@@ -1453,7 +1453,7 @@ namespace Jazz2::Tiles
 
 		if (!isAnimated && _alreadyRendered) {
 			// If it's not animated, it can be rendered only once
-			for (int i = Viewport::chain().size() - 1; i >= 0; i--) {
+			for (std::int32_t i = Viewport::chain().size() - 1; i >= 0; i--) {
 				auto& item = Viewport::chain()[i];
 				if (item == _view.get()) {
 					Viewport::chain().erase(&item);

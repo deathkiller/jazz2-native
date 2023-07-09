@@ -14,17 +14,17 @@ namespace Jazz2::Events
 
 	Vector2f EventMap::GetSpawnPosition(PlayerType type)
 	{
-		int targetCount = 0;
+		std::int32_t targetCount = 0;
 		for (auto& target : _spawnPoints) {
-			if ((target.PlayerTypeMask & (1 << ((int)type - 1))) != 0) {
+			if ((target.PlayerTypeMask & (1 << ((std::int32_t)type - 1))) != 0) {
 				targetCount++;
 			}
 		}
 
 		if (targetCount > 0) {
-			int selectedTarget = nCine::Random().Next(0, targetCount);
+			std::int32_t selectedTarget = nCine::Random().Next(0, targetCount);
 			for (auto& target : _spawnPoints) {
-				if ((target.PlayerTypeMask & (1 << ((int)type - 1))) == 0) {
+				if ((target.PlayerTypeMask & (1 << ((std::int32_t)type - 1))) == 0) {
 					continue;
 				}
 				if (selectedTarget == 0) {
@@ -44,9 +44,9 @@ namespace Jazz2::Events
 
 	void EventMap::RollbackToCheckpoint()
 	{
-		for (int y = 0; y < _layoutSize.Y; y++) {
-			for (int x = 0; x < _layoutSize.X; x++) {
-				int tileID = y * _layoutSize.X + x;
+		for (std::int32_t y = 0; y < _layoutSize.Y; y++) {
+			for (std::int32_t x = 0; x < _layoutSize.X; x++) {
+				std::int32_t tileID = y * _layoutSize.X + x;
 				EventTile& tile = _eventLayout[tileID];
 				EventTile& tilePrev = _eventLayoutForRollback[tileID];
 
@@ -72,7 +72,7 @@ namespace Jazz2::Events
 		}
 	}
 
-	void EventMap::StoreTileEvent(int x, int y, EventType eventType, Actors::ActorState eventFlags, uint8_t* tileParams)
+	void EventMap::StoreTileEvent(std::int32_t x, std::int32_t y, EventType eventType, Actors::ActorState eventFlags, std::uint8_t* tileParams)
 	{
 		if (eventType == EventType::Empty && (x < 0 || y < 0 || x >= _layoutSize.X || y >= _layoutSize.Y)) {
 			return;
@@ -128,8 +128,8 @@ namespace Jazz2::Events
 					// Generator is active and is ready to spawn new actor
 					generator.TimeLeft = generator.Delay * FrameTimer::FramesPerSecond;
 
-					int x = generator.EventPos % _layoutSize.X;
-					int y = generator.EventPos / _layoutSize.X;
+					std::int32_t x = generator.EventPos % _layoutSize.X;
+					std::int32_t y = generator.EventPos / _layoutSize.X;
 
 					generator.SpawnedActor = _levelHandler->EventSpawner()->SpawnEvent(generator.Event,
 						generator.EventParams, Actors::ActorState::IsFromGenerator, x, y, ILevelHandler::SpritePlaneZ);
@@ -147,20 +147,20 @@ namespace Jazz2::Events
 		}
 	}
 
-	void EventMap::ActivateEvents(int tx1, int ty1, int tx2, int ty2, bool allowAsync)
+	void EventMap::ActivateEvents(std::int32_t tx1, std::int32_t ty1, std::int32_t tx2, std::int32_t ty2, bool allowAsync)
 	{
 		auto tiles = _levelHandler->TileMap();
 		if (tiles == nullptr) {
 			return;
 		}
 
-		int x1 = std::max(0, tx1);
-		int x2 = std::min(_layoutSize.X - 1, tx2);
-		int y1 = std::max(0, ty1);
-		int y2 = std::min(_layoutSize.Y - 1, ty2);
+		std::int32_t x1 = std::max(0, tx1);
+		std::int32_t x2 = std::min(_layoutSize.X - 1, tx2);
+		std::int32_t y1 = std::max(0, ty1);
+		std::int32_t y2 = std::min(_layoutSize.Y - 1, ty2);
 
-		for (int x = x1; x <= x2; x++) {
-			for (int y = y1; y <= y2; y++) {
+		for (std::int32_t x = x1; x <= x2; x++) {
+			for (std::int32_t y = y1; y <= y2; y++) {
 				auto& tile = _eventLayout[x + y * _layoutSize.X];
 				if (!tile.IsEventActive && tile.Event != EventType::Empty) {
 					tile.IsEventActive = true;
@@ -183,34 +183,34 @@ namespace Jazz2::Events
 		}
 
 		if (!_checkpointCreated) {
-			// Create checkpoint after first call to ActivateEvents() to avoid duplication of objects that are spawned near player spawn
+			// Create checkpostd::int32_t after first call to ActivateEvents() to avoid duplication of objects that are spawned near player spawn
 			std::memcpy(_eventLayoutForRollback.data(), _eventLayout.data(), _eventLayout.size() * sizeof(EventTile));
 			_checkpointCreated = true;
 		}
 	}
 
-	void EventMap::Deactivate(int x, int y)
+	void EventMap::Deactivate(std::int32_t x, std::int32_t y)
 	{
 		if (HasEventByPosition(x, y)) {
 			_eventLayout[x + y * _layoutSize.X].IsEventActive = false;
 		}
 	}
 
-	void EventMap::ResetGenerator(int tx, int ty)
+	void EventMap::ResetGenerator(std::int32_t tx, std::int32_t ty)
 	{
 		// Linked actor was deactivated, but not destroyed
 		// Reset its generator, so it can be respawned immediately
-		uint32_t generatorIdx = *(uint32_t*)_eventLayout[tx + ty * _layoutSize.X].EventParams;
+		std::uint32_t generatorIdx = *(std::uint32_t*)_eventLayout[tx + ty * _layoutSize.X].EventParams;
 		_generators[generatorIdx].TimeLeft = 0.0f;
 		_generators[generatorIdx].SpawnedActor = nullptr;
 	}
 
-	EventType EventMap::GetEventByPosition(float x, float y, uint8_t** eventParams)
+	EventType EventMap::GetEventByPosition(float x, float y, std::uint8_t** eventParams)
 	{
-		return GetEventByPosition((int)x / Tiles::TileSet::DefaultTileSize, (int)y / Tiles::TileSet::DefaultTileSize, eventParams);
+		return GetEventByPosition((std::int32_t)x / Tiles::TileSet::DefaultTileSize, (std::int32_t)y / Tiles::TileSet::DefaultTileSize, eventParams);
 	}
 
-	EventType EventMap::GetEventByPosition(int x, int y, uint8_t** eventParams)
+	EventType EventMap::GetEventByPosition(std::int32_t x, std::int32_t y, std::uint8_t** eventParams)
 	{
 		if (y > _layoutSize.Y) {
 			return (_pitType == PitType::InstantDeathPit ? EventType::ModifierDeath : EventType::Empty);
@@ -223,16 +223,16 @@ namespace Jazz2::Events
 		return EventType::Empty;
 	}
 
-	bool EventMap::HasEventByPosition(int x, int y)
+	bool EventMap::HasEventByPosition(std::int32_t x, std::int32_t y)
 	{
 		return (x >= 0 && y >= 0 && y < _layoutSize.Y && x < _layoutSize.X && _eventLayout[x + y * _layoutSize.X].Event != EventType::Empty);
 	}
 
-	int EventMap::GetWarpByPosition(float x, float y)
+	std::int32_t EventMap::GetWarpByPosition(float x, float y)
 	{
-		int tx = (int)x / Tiles::TileSet::DefaultTileSize;
-		int ty = (int)y / Tiles::TileSet::DefaultTileSize;
-		uint8_t* eventParams;
+		std::int32_t tx = (std::int32_t)x / Tiles::TileSet::DefaultTileSize;
+		std::int32_t ty = (std::int32_t)y / Tiles::TileSet::DefaultTileSize;
+		std::uint8_t* eventParams;
 		if (GetEventByPosition(tx, ty, &eventParams) == EventType::WarpOrigin) {
 			return eventParams[0];
 		} else {
@@ -240,16 +240,16 @@ namespace Jazz2::Events
 		}
 	}
 
-	Vector2f EventMap::GetWarpTarget(uint32_t id)
+	Vector2f EventMap::GetWarpTarget(std::uint32_t id)
 	{
-		int targetCount = 0;
+		std::int32_t targetCount = 0;
 		for (auto& target : _warpTargets) {
 			if (target.Id == id) {
 				targetCount++;
 			}
 		}
 
-		int selectedTarget = nCine::Random().Next(0, targetCount);
+		std::int32_t selectedTarget = nCine::Random().Next(0, targetCount);
 		for (auto& target : _warpTargets) {
 			if (target.Id != id) {
 				continue;
@@ -268,7 +268,7 @@ namespace Jazz2::Events
 		_eventLayout.resize(_layoutSize.X * _layoutSize.Y);
 		_eventLayoutForRollback.resize(_layoutSize.X * _layoutSize.Y);
 
-		uint8_t difficultyBit;
+		std::uint8_t difficultyBit;
 		switch (difficulty) {
 			case GameDifficulty::Easy:
 				difficultyBit = 4;
@@ -284,20 +284,20 @@ namespace Jazz2::Events
 				break;
 		}
 
-		for (int y = 0; y < _layoutSize.Y; y++) {
-			for (int x = 0; x < _layoutSize.X; x++) {
-				uint16_t eventType = s.ReadValue<uint16_t>();
-				uint8_t eventFlags = s.ReadValue<uint8_t>();
-				uint8_t eventParams[16];
+		for (std::int32_t y = 0; y < _layoutSize.Y; y++) {
+			for (std::int32_t x = 0; x < _layoutSize.X; x++) {
+				std::uint16_t eventType = s.ReadValue<std::uint16_t>();
+				std::uint8_t eventFlags = s.ReadValue<std::uint8_t>();
+				std::uint8_t eventParams[16];
 
 				// ToDo: Remove inlined constants
 
 				// Flag 0x02: Generator
-				uint8_t generatorFlags, generatorDelay;
+				std::uint8_t generatorFlags, generatorDelay;
 				if ((eventFlags & 0x02) != 0) {
 					//eventFlags ^= 0x02;
-					generatorFlags = s.ReadValue<uint8_t>();
-					generatorDelay = s.ReadValue<uint8_t>();
+					generatorFlags = s.ReadValue<std::uint8_t>();
+					generatorDelay = s.ReadValue<std::uint8_t>();
 				} else {
 					generatorFlags = 0;
 					generatorDelay = 0;
@@ -316,7 +316,7 @@ namespace Jazz2::Events
 				// Flag 0x02: Generator
 				if ((eventFlags & 0x02) != 0) {
 					if ((EventType)eventType != EventType::Empty && (eventFlags & (0x01 << difficultyBit)) != 0 && (eventFlags & 0x80) == 0) {
-						uint32_t generatorIdx = (uint32_t)_generators.size();
+						std::uint32_t generatorIdx = (std::uint32_t)_generators.size();
 						float timeLeft = ((generatorFlags & 0x01) != 0 ? generatorDelay : 0.0f);
 
 						GeneratorInfo& generator = _generators.emplace_back();
@@ -326,7 +326,7 @@ namespace Jazz2::Events
 						generator.Delay = generatorDelay;
 						generator.TimeLeft = timeLeft;
 
-						*(uint32_t*)eventParams = generatorIdx;
+						*(std::uint32_t*)eventParams = generatorIdx;
 						StoreTileEvent(x, y, EventType::Generator, actorFlags, eventParams);
 					}
 					continue;
@@ -381,14 +381,14 @@ namespace Jazz2::Events
 		}
 	}
 
-	void EventMap::AddWarpTarget(uint16_t id, int x, int y)
+	void EventMap::AddWarpTarget(std::uint16_t id, std::int32_t x, std::int32_t y)
 	{
 		WarpTarget& target = _warpTargets.emplace_back();
 		target.Id = id;
-		target.Pos = Vector2f(x * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2, y * Tiles::TileSet::DefaultTileSize + 12 + Tiles::TileSet::DefaultTileSize / 2);
+		target.Pos = Vector2f(x * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2, y * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2);
 	}
 
-	void EventMap::AddSpawnPosition(uint8_t typeMask, int x, int y)
+	void EventMap::AddSpawnPosition(std::uint8_t typeMask, std::int32_t x, std::int32_t y)
 	{
 		if (typeMask == 0) {
 			return;
