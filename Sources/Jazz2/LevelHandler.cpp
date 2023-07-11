@@ -39,7 +39,7 @@ namespace Jazz2
 			_shakeDuration(0.0f), _waterLevel(FLT_MAX), _ambientLightTarget(1.0f), _weatherType(WeatherType::None),
 			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
 			_pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0), _overrideActions(0), _playerFrozenEnabled(false),
-			_lastPressedNumericKey(-1)
+			_lastPressedNumericKey(UINT32_MAX)
 	{
 		constexpr float DefaultGravity = 0.3f;
 
@@ -332,7 +332,7 @@ namespace Jazz2
 
 			// Weather
 			if (_weatherType != WeatherType::None) {
-				uint32_t weatherIntensity = std::max((uint32_t)(_weatherIntensity * timeMult), 1u);
+				int32_t weatherIntensity = std::max((int32_t)(_weatherIntensity * timeMult), 1);
 				for (int32_t i = 0; i < weatherIntensity; i++) {
 					TileMap::DebrisFlags debrisFlags;
 					if ((_weatherType & WeatherType::OutdoorsOnly) == WeatherType::OutdoorsOnly) {
@@ -359,8 +359,8 @@ namespace Jazz2
 
 							TileMap::DestructibleDebris debris = { };
 							debris.Pos = debrisPos;
-							debris.Depth = MainPlaneZ - 100 + 200 * scale;
-							debris.Size = Vector2f(resBase->FrameDimensions.X, resBase->FrameDimensions.Y);
+							debris.Depth = MainPlaneZ - 100 + (uint16_t)(200 * scale);
+							debris.Size = Vector2f((float)resBase->FrameDimensions.X, (float)resBase->FrameDimensions.Y);
 							debris.Speed = Vector2f(speedX, speedY);
 							debris.Acceleration = Vector2f(0.0f, 0.0f);
 
@@ -398,8 +398,8 @@ namespace Jazz2
 
 							TileMap::DestructibleDebris debris = { };
 							debris.Pos = debrisPos;
-							debris.Depth = MainPlaneZ - 100 + 200 * scale;
-							debris.Size = Vector2f(resBase->FrameDimensions.X, resBase->FrameDimensions.Y);
+							debris.Depth = MainPlaneZ - 100 + (uint16_t)(200 * scale);
+							debris.Size = Vector2f((float)resBase->FrameDimensions.X, (float)resBase->FrameDimensions.Y);
 							debris.Speed = Vector2f(speedX, speedY);
 							debris.Acceleration = Vector2f(accel, -std::abs(accel));
 
@@ -1079,7 +1079,7 @@ namespace Jazz2
 		}
 
 		StringView text = _levelTexts[textId];
-		size_t textSize = text.size();
+		int32_t textSize = (int32_t)text.size();
 
 		if (textSize > 0 && index >= 0) {
 			int32_t delimiterCount = 0;
@@ -1097,7 +1097,7 @@ namespace Jazz2
 					delimiterCount++;
 				}
 
-				idx = cursor.second;
+				idx = (int32_t)cursor.second;
 			} while (idx < textSize);
 
 			if (delimiterCount == index) {
@@ -1345,7 +1345,7 @@ namespace Jazz2
 		device.updateListener(Vector3f(_cameraPos.X, _cameraPos.Y, 0.0f), Vector3f(speed.X, speed.Y, 0.0f));
 	}
 
-	void LevelHandler::LimitCameraView(float left, float width)
+	void LevelHandler::LimitCameraView(int left, int width)
 	{
 		_levelBounds.X = left;
 		if (width > 0.0f) {
@@ -1359,7 +1359,7 @@ namespace Jazz2
 			_viewBoundsTarget = _viewBounds;
 		} else {
 			Rectf bounds = Rectf((float)_levelBounds.X, (float)_levelBounds.Y, (float)_levelBounds.W, (float)_levelBounds.H);
-			float viewWidth = _view->size().X;
+			float viewWidth = (float)_view->size().X;
 			if (bounds.W < viewWidth) {
 				bounds.X -= (viewWidth - bounds.W);
 				bounds.W = viewWidth;
@@ -1431,7 +1431,7 @@ namespace Jazz2
 		}
 #endif
 
-		return false;
+		return result;
 	}
 
 	void LevelHandler::UpdatePressedActions()
@@ -1482,7 +1482,7 @@ namespace Jazz2
 				}
 			}
 			if (!found) {
-				_lastPressedNumericKey = -1;
+				_lastPressedNumericKey = UINT32_MAX;
 			}
 		}
 

@@ -84,7 +84,7 @@ namespace Jazz2::Actors::Solid
 
 			int n = Random().Next(4, 7);
 			for (int i = 0; i < n; i++) {
-				uint8_t weaponType = (uint8_t)weaponTypes[Random().Next(0, weaponTypes.size())];
+				uint8_t weaponType = (uint8_t)weaponTypes[Random().Next(0, (uint32_t)weaponTypes.size())];
 				AddContent(EventType::Ammo, 1, &weaponType, sizeof(weaponType));
 			}
 		}

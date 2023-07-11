@@ -188,7 +188,7 @@ namespace Jazz2
 						// Controls
 						auto mappings = UI::ControlScheme::GetMappings();
 						uint8_t controlMappingCount = uc.ReadValue<uint8_t>();
-						for (int32_t i = 0; i < controlMappingCount; i++) {
+						for (uint32_t i = 0; i < controlMappingCount; i++) {
 							KeySym key1 = (KeySym)uc.ReadValue<uint8_t>();
 							KeySym key2 = (KeySym)uc.ReadValue<uint8_t>();
 							uint8_t gamepadIndex = uc.ReadValue<uint8_t>();
@@ -209,7 +209,7 @@ namespace Jazz2
 						uint16_t episodeEndSize = uc.ReadValue<uint16_t>();
 						uint16_t episodeEndCount = uc.ReadValue<uint16_t>();
 
-						for (int32_t i = 0; i < episodeEndCount; i++) {
+						for (uint32_t i = 0; i < episodeEndCount; i++) {
 							uint8_t nameLength = uc.ReadValue<uint8_t>();
 							String episodeName = String(NoInit, nameLength);
 							uc.Read(episodeName.data(), nameLength);
@@ -230,7 +230,7 @@ namespace Jazz2
 						uint16_t episodeContinueSize = uc.ReadValue<uint16_t>();
 						uint16_t episodeContinueCount = uc.ReadValue<uint16_t>();
 
-						for (int32_t i = 0; i < episodeContinueCount; i++) {
+						for (uint32_t i = 0; i < episodeContinueCount; i++) {
 							uint8_t nameLength = uc.ReadValue<uint8_t>();
 							String episodeName = String(NoInit, nameLength);
 							uc.Read(episodeName.data(), nameLength);
@@ -353,7 +353,7 @@ namespace Jazz2
 		// Controls
 		auto mappings = UI::ControlScheme::GetMappings();
 		co.WriteValue<uint8_t>((uint8_t)mappings.size());
-		for (int32_t i = 0; i < mappings.size(); i++) {
+		for (std::size_t i = 0; i < mappings.size(); i++) {
 			auto& mapping = mappings[i];
 			co.WriteValue<uint8_t>((uint8_t)mapping.Key1);
 			co.WriteValue<uint8_t>((uint8_t)mapping.Key2);

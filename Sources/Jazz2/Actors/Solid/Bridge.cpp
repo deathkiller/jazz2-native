@@ -176,7 +176,7 @@ namespace Jazz2::Actors::Solid
 
 				auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 				instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(_currentAnimation->Base->FrameDimensions.X, _currentAnimation->Base->FrameDimensions.Y);
+				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue((float)_currentAnimation->Base->FrameDimensions.X, (float)_currentAnimation->Base->FrameDimensions.Y);
 				instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 
 				auto& pos = _pieces[i].Pos;

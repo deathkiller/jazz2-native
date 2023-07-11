@@ -72,7 +72,7 @@ namespace Jazz2::Actors::Environment
 					Tiles::TileMap::DestructibleDebris debris = { };
 					debris.Pos = _pos;
 					debris.Depth = _renderer.layer();
-					debris.Size = Vector2f(size.X, size.Y);
+					debris.Size = Vector2f((float)size.X, (float)size.Y);
 					debris.Speed = Vector2f(speedX, speedY);
 					debris.Acceleration = Vector2f(0.0f, accel);
 

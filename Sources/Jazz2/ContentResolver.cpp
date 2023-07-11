@@ -36,7 +36,7 @@ static Vector2i GetVector2iFromJson(simdjson_result<T> value, Vector2i defaultVa
 	ondemand::array itemArray;
 	ondemand::array_iterator itemIterator;
 	if (value.get(itemArray) == SUCCESS && itemArray.begin().get(itemIterator) == SUCCESS) {
-		int64_t x, y;
+		int64_t x = 0, y = 0;
 		bool xf = (*itemIterator).get(x) == SUCCESS;
 		++itemIterator;
 		bool yf = (*itemIterator).get(y) == SUCCESS;

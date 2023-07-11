@@ -248,7 +248,7 @@ namespace Jazz2::Tiles
 		{
 			std::int32_t tileId = tile.TileID;
 			if ((tile.Flags & LayerTileFlags::Animated) == LayerTileFlags::Animated) {
-				if (tileId >= _animatedTiles.size()) {
+				if (tileId >= (std::int32_t)_animatedTiles.size()) {
 					return 0;
 				}
 				auto& animTile = _animatedTiles[tileId];

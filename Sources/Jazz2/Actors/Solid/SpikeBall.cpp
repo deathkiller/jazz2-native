@@ -64,7 +64,7 @@ namespace Jazz2::Actors::Solid
 		}
 
 		float scale = 1.0f;
-		MoveInstantly(GetPhasePosition(_pieces.size(), &scale), MoveType::Absolute | MoveType::Force);
+		MoveInstantly(GetPhasePosition((int)_pieces.size(), &scale), MoveType::Absolute | MoveType::Force);
 
 		for (int i = 0; i < _pieces.size(); i++) {
 			_pieces[i].Pos = GetPhasePosition(i, &_pieces[i].Scale);
@@ -111,7 +111,7 @@ namespace Jazz2::Actors::Solid
 
 					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 					instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(chainAnim.Base->FrameDimensions.X, chainAnim.Base->FrameDimensions.Y);
+					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue((float)chainAnim.Base->FrameDimensions.X, (float)chainAnim.Base->FrameDimensions.Y);
 					if (_shade) {
 						instanceBlock->uniform(Material::ColorUniformName)->setFloatVector((scale < 1.0f ? Colorf(scale, scale, scale, 1.0f) : Colorf::White).Data());
 					} else {

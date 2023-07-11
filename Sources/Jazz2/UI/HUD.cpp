@@ -388,7 +388,7 @@ namespace Jazz2::UI
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x * (float)ViewSize.X;
 				float y = event.pointers[pointerIndex].y * (float)ViewSize.Y;
-				for (int32_t i = 0; i < TouchButtonsCount; i++) {
+				for (uint32_t i = 0; i < TouchButtonsCount; i++) {
 					auto& button = _touchButtons[i];
 					if (button.Action != PlayerActions::None) {
 						if (button.CurrentPointerId == -1 && IsOnButton(button, x, y)) {
@@ -399,7 +399,7 @@ namespace Jazz2::UI
 				}
 			}
 		} else if (event.type == TouchEventType::Move) {
-			for (int32_t i = 0; i < TouchButtonsCount; i++) {
+			for (uint32_t i = 0; i < TouchButtonsCount; i++) {
 				auto& button = _touchButtons[i];
 				if (button.Action != PlayerActions::None) {
 					if (button.CurrentPointerId != -1) {
@@ -421,7 +421,7 @@ namespace Jazz2::UI
 						bool canPlayerMoveVertically = (!players.empty() && players[0]->CanMoveVertically());
 						if ((button.Align & AllowRollover) != AllowRollover && !canPlayerMoveVertically) continue;
 
-						for (int32_t j = 0; j < event.count; j++) {
+						for (uint32_t j = 0; j < event.count; j++) {
 							float x = event.pointers[j].x * (float)ViewSize.X;
 							float y = event.pointers[j].y * (float)ViewSize.Y;
 							if (IsOnButton(button, x, y)) {
@@ -434,7 +434,7 @@ namespace Jazz2::UI
 				}
 			}
 		} else if (event.type == TouchEventType::Up) {
-			for (int32_t i = 0; i < TouchButtonsCount; i++) {
+			for (uint32_t i = 0; i < TouchButtonsCount; i++) {
 				auto& button = _touchButtons[i];
 				if (button.CurrentPointerId != -1) {
 					button.CurrentPointerId = -1;
@@ -443,7 +443,7 @@ namespace Jazz2::UI
 			}
 
 		} else if (event.type == TouchEventType::PointerUp) {
-			for (int32_t i = 0; i < TouchButtonsCount; i++) {
+			for (uint32_t i = 0; i < TouchButtonsCount; i++) {
 				auto& button = _touchButtons[i];
 				if (button.CurrentPointerId == event.actionIndex) {
 					button.CurrentPointerId = -1;

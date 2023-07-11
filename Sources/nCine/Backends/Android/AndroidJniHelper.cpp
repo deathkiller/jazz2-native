@@ -1,6 +1,7 @@
 #include "AndroidJniHelper.h"
 #include "AndroidApplication.h"
 #include "../../../Common.h"
+#include "../../Base/Algorithms.h"
 #include "../../Base/Timer.h"
 
 #include <cstring>
@@ -293,12 +294,12 @@ namespace nCine
 
 		if (strDeviceName) {
 			const char* deviceName = AndroidJniHelper::jniEnv->GetStringUTFChars(strDeviceName, 0);
-			strncpy(destination, deviceName, maxStringSize);
+			copyStringFirst(destination, maxStringSize, deviceName);
 			destination[maxStringSize - 1] = '\0';
 			AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strDeviceName, deviceName);
 			AndroidJniHelper::jniEnv->DeleteLocalRef(strDeviceName);
 		} else {
-			strncpy(destination, static_cast<const char*>("Unknown"), maxStringSize);
+			copyStringFirst(destination, maxStringSize, static_cast<const char*>("Unknown"));
 		}
 		return (int(length) < maxStringSize) ? int(length) : maxStringSize;
 	}
@@ -310,7 +311,7 @@ namespace nCine
 
 		if (strDeviceDescriptor) {
 			const char* deviceName = AndroidJniHelper::jniEnv->GetStringUTFChars(strDeviceDescriptor, 0);
-			strncpy(destination, deviceName, maxStringSize);
+			copyStringFirst(destination, maxStringSize, deviceName);
 			destination[maxStringSize - 1] = '\0';
 			AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strDeviceDescriptor, deviceName);
 			AndroidJniHelper::jniEnv->DeleteLocalRef(strDeviceDescriptor);
@@ -507,12 +508,12 @@ namespace nCine
 
 		if (strDisplayName) {
 			const char* displayName = AndroidJniHelper::jniEnv->GetStringUTFChars(strDisplayName, 0);
-			strncpy(destination, displayName, maxStringSize);
+			copyStringFirst(destination, maxStringSize, displayName);
 			destination[maxStringSize - 1] = '\0';
 			AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strDisplayName, displayName);
 			AndroidJniHelper::jniEnv->DeleteLocalRef(strDisplayName);
 		} else {
-			strncpy(destination, static_cast<const char*>("Unknown"), maxStringSize);
+			copyStringFirst(destination, maxStringSize, static_cast<const char*>("Unknown"));
 		}
 		return (int(length) < maxStringSize) ? int(length) : maxStringSize;
 	}

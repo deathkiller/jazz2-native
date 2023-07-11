@@ -77,7 +77,7 @@ namespace nCine
 
 	bool GLUniformBlockCache::copyData(unsigned int destIndex, const GLubyte* src, unsigned int numBytes)
 	{
-		if (destIndex + numBytes > size() || numBytes == 0 || src == nullptr || dataPointer_ == nullptr) {
+		if (destIndex + numBytes > (unsigned int)size() || numBytes == 0 || src == nullptr || dataPointer_ == nullptr) {
 			return false;
 		}
 		memcpy(&dataPointer_[destIndex], src, numBytes);

@@ -776,6 +776,9 @@ namespace nCine
 			}
 			joyState.numButtons_ = numFoundButtons;
 #if defined(DEATH_LOGGING)
+			if (numFoundButtons == 0) {
+				sprintf(&deviceInfoString[strlen(deviceInfoString)], " not detected");
+			}
 			LOGI("Device (%d, %d) - Buttons%s", deviceId, joyId, deviceInfoString);
 #endif
 
@@ -848,6 +851,9 @@ namespace nCine
 				}
 			}
 #if defined(DEATH_LOGGING)
+			if (numAxes == 0) {
+				sprintf(&deviceInfoString[strlen(deviceInfoString)], " not detected");
+			}
 			LOGI("Device (%d, %d) - Axes%s", deviceId, joyId, deviceInfoString);
 #endif
 			joyState.numAxes_ = numAxes;
