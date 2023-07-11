@@ -1,5 +1,3 @@
-#pragma once
-
 #if defined(WITH_ANGELSCRIPT)
 
 #include "JJ2PlusDefinitions.h"

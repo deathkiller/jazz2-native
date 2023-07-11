@@ -74,7 +74,7 @@ namespace Jazz2::Compatibility
 			LevelEntry& levelEntry = LevelTexts.emplace_back(String(levelName));
 			lowercaseInPlace(levelEntry.Name);
 
-			uint8_t unknown = s->ReadValue<uint8_t>();
+			/*uint8_t unknown =*/ s->ReadValue<uint8_t>();
 			counts.emplace_back(s->ReadValue<uint8_t>());
 			offsets.emplace_back(s->ReadValue<uint16_t>());
 		}

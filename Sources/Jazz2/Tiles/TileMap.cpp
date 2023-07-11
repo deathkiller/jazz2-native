@@ -348,7 +348,6 @@ namespace Jazz2::Tiles
 
 		for (std::int32_t y = hy1t; y <= hy2t; y++) {
 			for (std::int32_t x = hx1t; x <= hx2t; x++) {
-			RecheckTile:
 				LayerTile& tile = sprLayerLayout[y * layoutSize.X + x];
 
 				if (tile.DestructType == TileDestructType::Weapon && (params.DestructType & TileDestructType::Weapon) == TileDestructType::Weapon) {

@@ -22,12 +22,12 @@ namespace Jazz2::Compatibility
 		uint32_t signature = s->ReadValue<uint32_t>();
 		RETURNF_ASSERT_MSG(signature == 0xBEBAADDE, "Invalid signature");
 
-		uint32_t version = s->ReadValue<uint32_t>();
+		/*uint32_t version =*/ s->ReadValue<uint32_t>();
 
 		uint32_t recordedSize = s->ReadValue<uint32_t>();
 		RETURNF_ASSERT_MSG(!strictParser || s->GetSize() == recordedSize, "Unexpected file size");
 
-		uint32_t recordedCRC = s->ReadValue<uint32_t>();
+		/*uint32_t recordedCRC =*/ s->ReadValue<uint32_t>();
 		int32_t headerBlockPackedSize = s->ReadValue<int32_t>();
 		int32_t headerBlockUnpackedSize = s->ReadValue<int32_t>();
 
@@ -40,7 +40,7 @@ namespace Jazz2::Compatibility
 
 			uint32_t type = headerBlock.ReadUInt32();
 			uint32_t offset = headerBlock.ReadUInt32();
-			uint32_t fileCRC = headerBlock.ReadUInt32();
+			/*uint32_t fileCRC =*/ headerBlock.ReadUInt32();
 			int32_t filePackedSize = headerBlock.ReadInt32();
 			int32_t fileUnpackedSize = headerBlock.ReadInt32();
 

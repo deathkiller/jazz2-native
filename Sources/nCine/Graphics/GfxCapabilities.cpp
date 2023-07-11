@@ -46,7 +46,7 @@ namespace nCine
 	int GfxCapabilities::arrayValue(GLArrayIntValues valueName, unsigned int index) const
 	{
 		int value = 0;
-		if (valueName == GLArrayIntValues::PROGRAM_BINARY_FORMATS && index < glIntValues_[(int)GLIntValues::NUM_PROGRAM_BINARY_FORMATS]) {
+		if (valueName == GLArrayIntValues::PROGRAM_BINARY_FORMATS && index < (unsigned int)glIntValues_[(int)GLIntValues::NUM_PROGRAM_BINARY_FORMATS]) {
 			value = programBinaryFormats_[index];
 		}
 		return value;

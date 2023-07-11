@@ -99,7 +99,7 @@ namespace nCine
 		}
 
 		unsigned char& byte = _storage[BIT_CHAR(bit)];
-		byte ^= (-value ^ byte) & BIT_IN_CHAR(bit);
+		byte ^= (-(unsigned char)value ^ byte) & BIT_IN_CHAR(bit);
 	}
 
 	void BitArray::Reset(const uint32_t bit)
