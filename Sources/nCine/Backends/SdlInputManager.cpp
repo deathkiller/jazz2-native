@@ -1,6 +1,7 @@
 #if defined(WITH_SDL)
 
 #include "SdlInputManager.h"
+#include "../Base/Algorithms.h"
 #include "../Input/IInputEventHandler.h"
 #include "../Input/JoyMapping.h"
 #include "../Application.h"

@@ -695,7 +695,6 @@ namespace nCine
 			CFArrayRef prefArray = (CFArrayRef)preferences;
 			int n = CFArrayGetCount(prefArray);
 			char buffer[256];
-			size_t size = 0;
 
 			for (int i = 0; i < n; i++) {
 				CFTypeRef element = CFArrayGetValueAtIndex(prefArray, i);

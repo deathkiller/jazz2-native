@@ -103,7 +103,6 @@ namespace Jazz2::Actors::Weapons
 				float dy = Random().FastFloat(-3.0f, 3.0f);
 
 				constexpr float currentSize = 1.0f;
-				int currentFrame = _renderer.CurrentFrame;
 
 				Tiles::TileMap::DestructibleDebris debris = { };
 				debris.Pos = Vector2f(_pos.X + dx, _pos.Y + dy);

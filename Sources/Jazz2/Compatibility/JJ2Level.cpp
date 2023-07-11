@@ -114,7 +114,7 @@ namespace Jazz2::Compatibility
 
 		LoadLayerMetadata(block, strictParser);
 
-		uint16_t staticTilesCount = block.ReadUInt16();
+		/*uint16_t staticTilesCount =*/ block.ReadUInt16();
 		//ASSERT_MSG(!strictParser || GetMaxSupportedTiles() - _animCount == staticTilesCount, "Tile count mismatch");
 
 		LoadStaticTileData(block, strictParser);

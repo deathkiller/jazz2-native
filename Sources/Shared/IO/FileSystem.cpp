@@ -899,7 +899,9 @@ namespace Death::IO
 		char nextToken[MaxPathLength];
 		char result[MaxPathLength];
 		std::size_t resultLength = 0;
+#	if !defined(DEATH_TARGET_SWITCH)
 		std::int32_t symlinks = 0;
+#	endif
 
 		std::size_t pathRootLength = GetPathRootLength(path);
 		if (pathRootLength > 0) {
