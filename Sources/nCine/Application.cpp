@@ -43,6 +43,7 @@ extern "C"
 #endif
 
 #include "Application.h"
+#include "Base/Algorithms.h"
 #include "Base/Random.h"
 #include "IAppEventHandler.h"
 #include "ArrayIndexer.h"
@@ -106,16 +107,6 @@ extern bool __showLogConsole;
 #if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 extern bool __hasVirtualTerminal;
 #endif
-
-inline int __strncpy(char* dest, int destSize, const char* source, int count)
-{
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
-	strncpy_s(dest, destSize, source, count);
-#else
-	::strncpy(dest, source, std::min(destSize, count));
-#endif
-	return count;
-}
 
 void DEATH_LOGGING(LogLevel level, const char* fmt, ...)
 {
@@ -249,22 +240,22 @@ void DEATH_LOGGING(LogLevel level, const char* fmt, ...)
 	std::int32_t length2 = 0;
 	if (logMsgFuncLength > 0) {
 		if (hasVirtualTerminal) {
-			length2 += __strncpy(logEntryWithColors, MaxEntryLength - 1, Faint, countof(Faint) - 1);
+			length2 += nCine::copyStringFirst(logEntryWithColors, MaxEntryLength - 1, Faint, countof(Faint) - 1);
 			if (level == LogLevel::Error || level == LogLevel::Fatal) {
-				length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Red, countof(Red) - 1);
+				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Red, countof(Red) - 1);
 			} else if (level == LogLevel::Warning) {
-				length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Yellow, countof(Yellow) - 1);
+				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Yellow, countof(Yellow) - 1);
 			}
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 			else if (level == LogLevel::Debug) {
 #	else
 			else {
 #	endif
-				length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, DarkGray, countof(DarkGray) - 1);
+				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, DarkGray, countof(DarkGray) - 1);
 			}
 		}
 
-		length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, logEntry, logMsgFuncLength);
+		length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, logEntry, logMsgFuncLength);
 	}
 
 	if (hasVirtualTerminal) {
@@ -273,30 +264,30 @@ void DEATH_LOGGING(LogLevel level, const char* fmt, ...)
 #	else
 		if (level != LogLevel::Debug) {
 #	endif
-			length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Reset, countof(Reset) - 1);
+			length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Reset, countof(Reset) - 1);
 		}
 		if (level == LogLevel::Error || level == LogLevel::Fatal) {
-			length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightRed, countof(BrightRed) - 1);
+			length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightRed, countof(BrightRed) - 1);
 			if (level == LogLevel::Fatal) {
-				length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, countof(Bold) - 1);
+				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, countof(Bold) - 1);
 			}
 		}
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 		else if (level == LogLevel::Info || level == LogLevel::Warning) {
-			length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, countof(Bold) - 1);
+			length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Bold, countof(Bold) - 1);
 		}
 #	else
 		else if (level == LogLevel::Warning) {
-			length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightYellow, countof(BrightYellow) - 1);
+			length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightYellow, countof(BrightYellow) - 1);
 		}
 #	endif
 	}
 
-	length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, logEntry + logMsgFuncLength, length - logMsgFuncLength);
+	length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, logEntry + logMsgFuncLength, length - logMsgFuncLength);
 
 	if (hasVirtualTerminal) {
 		if (level == LogLevel::Debug || level == LogLevel::Warning || level == LogLevel::Error || level == LogLevel::Fatal) {
-			length2 += __strncpy(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Reset, countof(Reset) - 1);
+			length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Reset, countof(Reset) - 1);
 		}
 	}
 

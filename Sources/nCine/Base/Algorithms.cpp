@@ -12,6 +12,38 @@
 
 namespace nCine
 {
+	int copyStringFirst(char* dest, int destSize, const char* source, int count)
+	{
+		if (destSize == 0) {
+			return 0;
+		}
+
+		std::int32_t n = 0;
+		while (destSize > 0) {
+			if (count == 0) {
+				*dest = '\0';
+				return n;
+			}
+
+			*dest = *source;
+			if (*dest == '\0') {
+				return n;
+			}
+
+			destSize--;
+			count--;
+			dest++;
+			source++;
+			n++;
+		}
+
+		// Not enough space
+		dest--;
+		n--;
+		*dest = '\0';
+		return n;
+	}
+
 	int formatString(char* buffer, size_t maxLen, const char* format, ...)
 	{
 		va_list args;

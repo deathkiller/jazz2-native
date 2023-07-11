@@ -363,6 +363,13 @@ namespace nCine
 		}
 	}
 
+	int copyStringFirst(char* dest, int destSize, const char* source, int count = -1);
+
+	template <std::size_t N>
+	inline int copyStringFirst(char(&dest)[N], const char* source, int count = -1) {
+		return copyStringFirst(dest, N, source, count);
+	}
+
 	int formatString(char* buffer, size_t maxLen, const char* format, ...);
 
 	void u32tos(uint32_t value, char* buffer);

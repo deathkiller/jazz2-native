@@ -1867,11 +1867,11 @@ namespace Death::IO
 #if defined(DEATH_TARGET_WINDOWS)
 		DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
 		if (attrs != INVALID_FILE_ATTRIBUTES) {
-			if ((mode & Permission::Write) == Permission::Write && (attrs & FILE_ATTRIBUTE_READONLY)) {
+			if ((mode & Permission::Write) == Permission::Write && (attrs & FILE_ATTRIBUTE_READONLY) == FILE_ATTRIBUTE_READONLY) {
 				// Adding the write permission
 				attrs &= ~FILE_ATTRIBUTE_READONLY;
 				return ::SetFileAttributesW(Utf8::ToUtf16(path), attrs);
-			} else if ((mode & Permission::Write) == Permission::Write == 0 && (attrs & FILE_ATTRIBUTE_READONLY) == 0) {
+			} else if ((mode & Permission::Write) != Permission::Write && (attrs & FILE_ATTRIBUTE_READONLY) != FILE_ATTRIBUTE_READONLY) {
 				// Removing the write permission
 				attrs |= FILE_ATTRIBUTE_READONLY;
 				return ::SetFileAttributesW(Utf8::ToUtf16(path), attrs);
@@ -1905,7 +1905,7 @@ namespace Death::IO
 		DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
 		if (attrs != INVALID_FILE_ATTRIBUTES) {
 			// Adding the write permission
-			if ((mode & Permission::Write) == Permission::Write && (attrs & FILE_ATTRIBUTE_READONLY)) {
+			if ((mode & Permission::Write) == Permission::Write && (attrs & FILE_ATTRIBUTE_READONLY) == FILE_ATTRIBUTE_READONLY) {
 				attrs &= ~FILE_ATTRIBUTE_READONLY;
 				return ::SetFileAttributesW(Utf8::ToUtf16(path), attrs);
 			}
@@ -1938,7 +1938,7 @@ namespace Death::IO
 		DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
 		if (attrs != INVALID_FILE_ATTRIBUTES) {
 			// Removing the write permission
-			if ((mode & Permission::Write) == Permission::Write && (attrs & FILE_ATTRIBUTE_READONLY) == 0) {
+			if ((mode & Permission::Write) == Permission::Write && (attrs & FILE_ATTRIBUTE_READONLY) != FILE_ATTRIBUTE_READONLY) {
 				attrs |= FILE_ATTRIBUTE_READONLY;
 				return ::SetFileAttributesW(Utf8::ToUtf16(path), attrs);
 			}

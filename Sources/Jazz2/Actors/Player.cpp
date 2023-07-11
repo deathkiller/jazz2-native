@@ -298,7 +298,7 @@ namespace Jazz2::Actors
 							Tiles::TileMap::DestructibleDebris debris = { };
 							debris.Pos = _pos;
 							debris.Depth = _renderer.layer() - 2;
-							debris.Size = Vector2f(size.X, size.Y);
+							debris.Size = Vector2f((float)size.X, (float)size.Y);
 							debris.Speed = Vector2f::Zero;
 							debris.Acceleration = Vector2f::Zero;
 
@@ -448,7 +448,7 @@ namespace Jazz2::Actors
 							Tiles::TileMap::DestructibleDebris debris = { };
 							debris.Pos = _pos;
 							debris.Depth = _renderer.layer() - 2;
-							debris.Size = Vector2f(size.X, size.Y);
+							debris.Size = Vector2f((float)size.X, (float)size.Y);
 							debris.Speed = Vector2f(speedX, Random().FastFloat(-4.0f, -2.2f));
 							debris.Acceleration = Vector2f(0.0f, 0.2f);
 
@@ -549,13 +549,13 @@ namespace Jazz2::Actors
 		if (areaWaterBlock != -1) {
 			if (_inShallowWater == -1) {
 				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, areaWaterBlock, _renderer.layer() + 2), Explosion::Type::WaterSplash);
-				_levelHandler->PlayCommonSfx("WaterSplash"_s, Vector3f(_pos.X, areaWaterBlock, 0.0f), 0.7f, 0.5f);
+				_levelHandler->PlayCommonSfx("WaterSplash"_s, Vector3f(_pos.X, (float)areaWaterBlock, 0.0f), 0.7f, 0.5f);
 			}
 
 			_inShallowWater = areaWaterBlock;
 		} else if (_inShallowWater != -1) {
 			Explosion::Create(_levelHandler, Vector3i((int)_pos.X, _inShallowWater, _renderer.layer() + 2), Explosion::Type::WaterSplash);
-			_levelHandler->PlayCommonSfx("WaterSplash"_s, Vector3f(_pos.X, _inShallowWater, 0.0f), 1.0f, 0.5f);
+			_levelHandler->PlayCommonSfx("WaterSplash"_s, Vector3f(_pos.X, (float)_inShallowWater, 0.0f), 1.0f, 0.5f);
 
 			_inShallowWater = -1;
 		}
@@ -1178,7 +1178,7 @@ namespace Jazz2::Actors
 			light.RadiusFar = 110.0f;
 		}
 
-		for (int i = 0; i < _trail.size(); i++) {
+		for (int i = 0; i < (int)_trail.size(); i++) {
 			lights.emplace_back(_trail[i]);
 		}
 	}
@@ -1400,7 +1400,7 @@ namespace Jazz2::Actors
 				PlaySfx("Land"_s, 0.8f);
 
 				if (Random().NextFloat() < 0.6f) {
-					Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y + 20.0f, _renderer.layer() - 2), Explosion::Type::TinyDark);
+					Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y + 20, _renderer.layer() - 2), Explosion::Type::TinyDark);
 				}
 			}
 		} else {
@@ -1953,7 +1953,7 @@ namespace Jazz2::Actors
 				SetAnimation(AnimState::Jump);
 
 				float y = _levelHandler->WaterLevel();
-				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, y, _renderer.layer() + 2), Explosion::Type::WaterSplash);
+				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)y, _renderer.layer() + 2), Explosion::Type::WaterSplash);
 				_levelHandler->PlayCommonSfx("WaterSplash"_s, Vector3f(_pos.X, y, 0.0f), 1.0f, 0.5f);
 			}
 		} else {
@@ -1965,7 +1965,7 @@ namespace Jazz2::Actors
 				EndDamagingMove();
 
 				float y = _levelHandler->WaterLevel();
-				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, y, _renderer.layer() + 2), Explosion::Type::WaterSplash);
+				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)y, _renderer.layer() + 2), Explosion::Type::WaterSplash);
 				_levelHandler->PlayCommonSfx("WaterSplash"_s, Vector3f(_pos.X, y, 0.0f), 0.7f, 0.5f);
 			}
 
@@ -3038,7 +3038,7 @@ namespace Jazz2::Actors
 			if (horizontal) {
 				// To prevent stucking
 				for (int i = -1; i > -6; i--) {
-					if (MoveInstantly(Vector2f(_speed.X, i), MoveType::Relative)) {
+					if (MoveInstantly(Vector2f(_speed.X, (float)i), MoveType::Relative)) {
 						break;
 					}
 				}
@@ -3051,7 +3051,7 @@ namespace Jazz2::Actors
 
 				SetPlayerTransition(AnimState::Dash | AnimState::Jump, true, true, SpecialMoveType::None);
 			} else {
-				MoveInstantly(Vector2f(0, sign * 16), MoveType::Relative | MoveType::Force);
+				MoveInstantly(Vector2f(0.0f, sign * 16.0f), MoveType::Relative | MoveType::Force);
 
 				_speed.Y = 4.0f * sign + lastSpeed * 1.4f;
 				_externalForce.Y = 1.3f * sign;

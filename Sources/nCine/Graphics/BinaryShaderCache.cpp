@@ -17,7 +17,7 @@ namespace nCine
 	{
 		constexpr uint64_t HashSeed = 0x01000193811C9DC5;
 
-		unsigned int bufferSize = 0;
+		std::int32_t bufferSize = 0;
 		std::unique_ptr<std::uint8_t[]> bufferPtr;
 	}
 
@@ -59,20 +59,12 @@ namespace nCine
 		// For a stable hash, the OpenGL strings need to be copied so that padding bytes can be set to zero
 		char platformString[512];
 		std::memset(platformString, 0, sizeof(platformString));
-#if defined(DEATH_TARGET_WINDOWS)
-		strncpy_s(platformString, infoStrings.renderer, sizeof(platformString));
-#else
-		strncpy(platformString, infoStrings.renderer, sizeof(platformString));
-#endif
-		platformHash_ += fasthash64(platformString, strnlen(platformString, sizeof(platformString)), HashSeed);
+		int platformStringLength = copyStringFirst(platformString, infoStrings.renderer);
+		platformHash_ += fasthash64(platformString, platformStringLength, HashSeed);
 
 		std::memset(platformString, 0, sizeof(platformString));
-#if defined(DEATH_TARGET_WINDOWS)
-		strncpy_s(platformString, infoStrings.glVersion, sizeof(platformString));
-#else
-		strncpy(platformString, infoStrings.glVersion, sizeof(platformString));
-#endif
-		platformHash_ += fasthash64(platformString, strnlen(platformString, sizeof(platformString)), HashSeed);
+		platformStringLength = copyStringFirst(platformString, infoStrings.glVersion);
+		platformHash_ += fasthash64(platformString, platformStringLength, HashSeed);
 
 		path_ = path;
 		fs::CreateDirectories(path_);

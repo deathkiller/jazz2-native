@@ -148,13 +148,7 @@ namespace nCine
 				keyboardEvent_.mod = SdlKeys::keyModMaskToEnumMask(event.key.keysym.mod);
 				break;
 			case SDL_TEXTINPUT: {
-#if defined(DEATH_TARGET_WINDOWS)
-				strncpy_s(textInputEvent_.text, event.text.text, 4);
-#else
-				size_t textLength = std::min(sizeof(textInputEvent_.text) - 1, strlen(event.text.text));
-				strncpy(textInputEvent_.text, event.text.text, textLength);
-				textInputEvent_.text[textLength] = '\0';
-#endif
+				copyStringFirst(textInputEvent_.text, event.text.text, 4);
 				break;
 			}
 			case SDL_MOUSEBUTTONDOWN:

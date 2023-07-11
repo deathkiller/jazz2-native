@@ -1305,10 +1305,10 @@ namespace Jazz2::Tiles
 
 		auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
-		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(viewSize.X, viewSize.Y);
+		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue((float)viewSize.X, (float)viewSize.Y);
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
-		command->material().uniform("uViewSize")->setFloatValue(viewSize.X, viewSize.Y);
+		command->material().uniform("uViewSize")->setFloatValue((float)viewSize.X, (float)viewSize.Y);
 		command->material().uniform("uCameraPos")->setFloatVector(viewCenter.Data());
 		command->material().uniform("uShift")->setFloatValue(x, y);
 		command->material().uniform("uHorizonColor")->setFloatVector(layer.Description.Color.Data());
@@ -1351,7 +1351,7 @@ namespace Jazz2::Tiles
 			std::int32_t height = layoutSize.Y * TileSet::DefaultTileSize;
 
 			_camera = std::make_unique<Camera>();
-			_camera->setOrthoProjection(0, width, 0, height);
+			_camera->setOrthoProjection(0.0f, (float)width, 0.0f, (float)height);
 			_camera->setView(0, 0, 0, 1);
 			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);

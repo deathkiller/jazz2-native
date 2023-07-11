@@ -166,7 +166,7 @@ namespace Jazz2::Actors::Solid
 		float angle = _renderer.rotation() - fPiOver2;
 		float rx = cosf(angle);
 		float ry = sinf(angle);
-		float radius = _currentAnimation->Base->FrameDimensions.Y;
+		float radius = (float)_currentAnimation->Base->FrameDimensions.Y;
 		TileCollisionParams params = { TileDestructType::None, true };
 
 		if (_fallTime > 20) {

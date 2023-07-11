@@ -365,7 +365,7 @@ namespace Jazz2::Compatibility
 		int32_t waterLayer = block.ReadInt32();
 		// TODO: How water and ambient lighting should interact in the level (None, Global, Lagunicus)
 		uint8_t waterLighting = block.ReadByte();
-		_waterLevel = block.ReadFloat();
+		_waterLevel = (uint16_t)block.ReadFloat();
 		uint32_t waterGradientStart = block.ReadUInt32();
 		uint32_t waterGradientStop = block.ReadUInt32();
 
