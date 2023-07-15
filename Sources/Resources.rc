@@ -1,126 +1,40 @@
-﻿// Microsoft Visual C++ generated resource script.
-//
+﻿#include <windows.h>
+#include "Resources.h"
 
-#include "resources.h"
-
-#define APSTUDIO_READONLY_SYMBOLS
-/////////////////////////////////////////////////////////////////////////////
-//
-// Generated from the TEXTINCLUDE 2 resource.
-//
-#include <windows.h>
-
-/////////////////////////////////////////////////////////////////////////////
-#undef APSTUDIO_READONLY_SYMBOLS
-
-#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEUD)
 LANGUAGE LANG_NEUTRAL, SUBLANG_DEFAULT
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Version
-//
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 2, 0, 0, 0
-PRODUCTVERSION 2, 0, 0, 0
-FILEFLAGSMASK 0x3fL
+ FILEVERSION 2, 0, 0, 0
+ PRODUCTVERSION 2, 0, 0, 0
+ FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
 #ifdef _DEBUG
-FILEFLAGS 0x1L
+ FILEFLAGS VS_FF_DEBUG
 #else
-FILEFLAGS 0x0L
+ FILEFLAGS 0x0L
 #endif
-FILEOS 0x40004L
-FILETYPE 0x1L
-FILESUBTYPE 0x0L
-BEGIN
-BLOCK "StringFileInfo"
-BEGIN
-BLOCK "000004b0"
-BEGIN
-VALUE "CompanyName", "Dan R."
-VALUE "FileVersion", "2.0.0.0"
-VALUE "InternalName", "Jazz2"
-VALUE "LegalCopyright", "© 2016-2023 Dan R."
-VALUE "OriginalFilename", "Jazz2.exe"
-VALUE "ProductName", "Jazz² Resurrection"
-VALUE "ProductVersion", "2.0.0.0"
-VALUE "FileDescription", "Jazz² Resurrection: Open-source reimplementation of Jazz Jackrabbit 2"
-END
-END
-BLOCK "VarFileInfo"
-BEGIN
-VALUE "Translation", 0x0, 1200
-END
-END
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE VFT_APP
+ FILESUBTYPE VFT2_UNKNOWN
+{
+	BLOCK "StringFileInfo"
+	{
+		BLOCK "000004b0"
+		{
+			VALUE "CompanyName", "Dan R."
+			VALUE "FileVersion", "2.0.0.0"
+			VALUE "InternalName", "Jazz2"
+			VALUE "LegalCopyright", "© 2016-2023 Dan R."
+			VALUE "OriginalFilename", "Jazz2.exe"
+			VALUE "ProductName", "Jazz² Resurrection"
+			VALUE "ProductVersion", "2.0.0.0"
+			VALUE "FileDescription", "Jazz² Resurrection: Open-source reimplementation of Jazz Jackrabbit 2"
+		}
+	}
+	BLOCK "VarFileInfo"
+	{
+		VALUE "Translation", 0x0, 1200
+	}
+}
 
-#ifdef APSTUDIO_INVOKED
-/////////////////////////////////////////////////////////////////////////////
-//
-// TEXTINCLUDE
-//
-
-1 TEXTINCLUDE
-BEGIN
-"resource.h\0"
-END
-
-2 TEXTINCLUDE
-BEGIN
-"#include ""afxres.h""\r\n"
-"\0"
-END
-
-3 TEXTINCLUDE
-BEGIN
-"\r\n"
-"\0"
-END
-
-#endif    // APSTUDIO_INVOKED
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Icon
-//
-
-// Icon with lowest ID value placed first to ensure application icon
-// remains consistent on all systems.
-GLFW_ICON           ICON                    ".\\Icons\\Main.ico"
-LOG_ICON            ICON                    ".\\Icons\\Log.ico"
-
-#endif
-
-/////////////////////////////////////////////////////////////////////////////
-// Neutral resources
-
-#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CSY)
-LANGUAGE LANG_NEUTRAL, SUBLANG_DEFAULT
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// String Table
-//
-
-#endif
-
-#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CSY)
-LANGUAGE LANG_CZECH, SUBLANG_DEFAULT
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// String Table
-//
-
-#endif
-
-#ifndef APSTUDIO_INVOKED
-/////////////////////////////////////////////////////////////////////////////
-//
-// Generated from the TEXTINCLUDE 3 resource.
-//
-
-
-/////////////////////////////////////////////////////////////////////////////
-#endif    // not APSTUDIO_INVOKED
-
+GLFW_ICON				ICON		".\\Icons\\Main.ico"
+LOG_ICON				ICON		".\\Icons\\Log.ico"
