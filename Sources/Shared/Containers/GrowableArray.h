@@ -1,5 +1,5 @@
 // Copyright © 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016,
-//             2017, 2018, 2019, 2020, 2021, 2022
+//             2017, 2018, 2019, 2020, 2021, 2022, 2023
 //           Vladimír Vondruš <mosra@centrum.cz> and contributors
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -27,18 +27,48 @@
 
 #include "Array.h"
 
+// No __has_feature() on GCC: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=60512
+// Using a dedicated macro instead: https://stackoverflow.com/a/34814667
+#if defined(__has_feature)
+#	if __has_feature(address_sanitizer)
+#		define _DEATH_CONTAINERS_SANITIZER_ENABLED
+#	endif
+#endif
+#if defined(__SANITIZE_ADDRESS__)
+#	define _DEATH_CONTAINERS_SANITIZER_ENABLED
+#endif
+
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+// https://github.com/llvm/llvm-project/blob/main/compiler-rt/include/sanitizer/common_interface_defs.h
+extern "C" void __sanitizer_annotate_contiguous_container(const void* beg, const void* end, const void* old_mid, const void* new_mid)
+	// Declaration of this function in <vector> in MSVC 2022 14.35 and earlier STL includes a noexcept for some strange unexplained reason,
+	// which makes the signature differ from Clang's. See the PR comment here:
+	//	https://github.com/microsoft/STL/pull/2071/commits/daa4db9bf10400678438d9c6b33630c7947e469e
+	// However, it got then subsequently removed, again without any additional explanation:
+	//	https://github.com/microsoft/STL/pull/3164/commits/9f503ca22bcc32cd885184ea754ec4223759c431
+	// The STL repo has unfortunately no tags or any mapping to actual releases so it's impossible to know which MSVC version contains this change.
+	// If you get a build error at this declaration with MSVC > 2022 14.35 (_MSC_VER > 1935), let me know so I can update the ifdef logic.
+	//
+	// The difference in noexcept is only a problem with `/std:c++17` (where noexcept becomes a part of the function signature) *and* with
+	// the `/permissive-` flag set, or `/std:c++20` alone (where the flag is implicitly enabled).
+#	if defined(DEATH_TARGET_DINKUMWARE)
+	noexcept
+#	endif
+	;
+#endif
+
 namespace Death::Containers
 {
 	namespace Implementation
 	{
 		enum : std::size_t {
 			DefaultAllocationAlignment =
-			// Emscripten has __STDCPP_DEFAULT_NEW_ALIGNMENT__ set to 16 but actually does just 8, so don't use this macro there:
-			// https://github.com/emscripten-core/emscripten/issues/10072
+				// Emscripten has __STDCPP_DEFAULT_NEW_ALIGNMENT__ set to 16 but actually does just 8, so don't use this macro there:
+				// https://github.com/emscripten-core/emscripten/issues/10072
 #if defined(__STDCPP_DEFAULT_NEW_ALIGNMENT__) && !defined(DEATH_TARGET_EMSCRIPTEN)
-			__STDCPP_DEFAULT_NEW_ALIGNMENT__
+				__STDCPP_DEFAULT_NEW_ALIGNMENT__
 #else
-			2 * sizeof(std::size_t)
+				2 * sizeof(std::size_t)
 #endif
 		};
 
@@ -71,23 +101,22 @@ namespace Death::Containers
 		template<class T> struct AllocatorTraits {
 			enum : std::size_t {
 				Offset = alignof(T) < sizeof(std::size_t) ? sizeof(std::size_t) :
-					(alignof(T) < Implementation::DefaultAllocationAlignment ?
-						alignof(T) : Implementation::DefaultAllocationAlignment)
+				(alignof(T) < Implementation::DefaultAllocationAlignment ?
+					alignof(T) : Implementation::DefaultAllocationAlignment)
 			};
 		};
 	}
 
-	 /**
-		 @brief New-based allocator for growable arrays
+	/**
+		@brief New-based allocator for growable arrays
 
-		 An @ref ArrayAllocator that allocates and deallocates memory using the C++
-		 @cpp new[] @ce / @cpp delete[] @ce constructs, reserving an extra space
-		 * *before* to store array capacity.
+		An @ref ArrayAllocator that allocates and deallocates memory using the C++
+		@cpp new[] @ce / @cpp delete[] @ce constructs, reserving an extra space
+		* *before* to store array capacity.
 
-		 All reallocation operations expect that @p T is nothrow move-constructible.
-	 */
-	template<class T> struct ArrayNewAllocator
-	{
+		All reallocation operations expect that @p T is nothrow move-constructible.
+	*/
+	template<class T> struct ArrayNewAllocator {
 		typedef T Type;
 
 		enum : std::size_t {
@@ -246,7 +275,7 @@ namespace Death::Containers
 		 * store its capacity.
 		 */
 		static void deallocate(T* data) {
-			if (data) std::free(reinterpret_cast<char*>(data) - AllocationOffset);
+			if (data != nullptr) std::free(reinterpret_cast<char*>(data) - AllocationOffset);
 		}
 
 		/**
@@ -318,11 +347,12 @@ namespace Death::Containers
 	*/
 	template<class U, class T> Array<U> arrayAllocatorCast(Array<T>&& array);
 
+	/** @overload */
 	template<class U, template<class> class Allocator, class T> Array<U> arrayAllocatorCast(Array<T>&& array) {
 		static_assert(std::is_standard_layout<T>::value, "The source type is not standard layout");
 		static_assert(std::is_standard_layout<U>::value, "The target type is not standard layout");
 		static_assert(std::is_trivially_copyable<T>::value && std::is_trivially_copyable<U>::value, "Only trivially copyable types can use the allocator cast");
-		
+
 		// If the array is default-constructed or just generally empty with the default deleter, just pass it through without changing anything.
 		// This behavior is consistent with calling `arrayResize(array, 0)`, `arrayReserve(array, 0)` and such, which also just pass empty arrays
 		// through without affecting their deleter.
@@ -352,170 +382,648 @@ namespace Death::Containers
 	*/
 	template<class T, class Allocator = ArrayAllocator<T>> bool arrayIsGrowable(Array<T>& array);
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class T> class Allocator, class T> inline bool arrayIsGrowable(Array<T>& array) {
 		return arrayIsGrowable<T, Allocator<T>>(array);
 	}
 
+	/**
+		@brief Array capacity
+
+		For a growable array using given @p Allocator returns its capacity, otherwise
+		returns @ref Array::size().
+
+		This function is equivalent to calling @relativeref{std::vector,capacity()} on
+		a @ref std::vector.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> std::size_t arrayCapacity(Array<T>& array);
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class T> class Allocator, class T> inline std::size_t arrayCapacity(Array<T>& array) {
 		return arrayCapacity<T, Allocator<T>>(array);
 	}
 
+	/**
+		@brief Reserve given capacity in an array
+		@return New capacity of the array
+
+		If @p array capacity is already large enough, the function returns the current
+		capacity. Otherwise the memory is reallocated to desired @p capacity, with the
+		@ref Array::size() staying the same, and @p capacity returned back. Note that
+		in case the array is non-growable of sufficient size, it's kept as such,
+		without being reallocated to a growable version.
+
+		Complexity is at most @f$ \mathcal{O}(n) @f$ in the size of the original
+		container, @f$ \mathcal{O}(1) @f$ if the capacity is already large enough or
+		if the reallocation can be done in-place. On top of what the @p Allocator (or
+		the default @ref ArrayAllocator) itself needs, @p T is required to be nothrow
+		move-constructible and move-assignable.
+
+		This function is equivalent to calling @relativeref{std::vector,reserve()} on
+		a @ref std::vector.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> std::size_t arrayReserve(Array<T>& array, std::size_t capacity);
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class T> class Allocator, class T> inline std::size_t arrayReserve(Array<T>& array, std::size_t capacity) {
 		return arrayReserve<T, Allocator<T>>(array, capacity);
 	}
 
+	/**
+		@brief Resize an array to given size, default-initializing new elements
+
+		If the array is growable and capacity is large enough, calls a destructor on
+		elements that get cut off the end (if any, and if @p T is not trivially
+		destructible, in which case nothing is done) and returns. Otherwise, the memory
+		is reallocated to desired @p size. After that, new elements at the end of the
+		array are default-initialized using placement-new (and nothing done for trivial
+		types). Note that in case the array is non-growable of exactly the requested
+		size, it's kept as such, without being reallocated to a growable version.
+
+		Complexity is at most @f$ \mathcal{O}(n) @f$ in the size of the new container,
+		@f$ \mathcal{O}(1) @f$ if current container size is already exactly of given
+		size. On top of what the @p Allocator (or the default @ref ArrayAllocator)
+		itself needs, @p T is required to be nothrow move-constructible and
+		default-constructible.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> void arrayResize(Array<T>& array, DefaultInitT, std::size_t size);
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T> inline void arrayResize(Array<T>& array, DefaultInitT, std::size_t size) {
 		arrayResize<T, Allocator<T>>(array, DefaultInit, size);
 	}
 
+	/**
+		@brief Resize an array to given size, value-initializing new elements
+
+		Similar to @ref arrayResize(Array<T>&, DefaultInitT, std::size_t) except that
+		the new elements at the end are not default-initialized, but value-initialized
+		(i.e., trivial types zero-initialized and default constructor called
+		otherwise).
+
+		On top of what the @p Allocator (or the default @ref ArrayAllocator) itself
+		needs, @p T is required to be nothrow move-constructible and
+		default-constructible.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> void arrayResize(Array<T>& array, ValueInitT, std::size_t size);
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T> inline void arrayResize(Array<T>& array, ValueInitT, std::size_t size) {
 		arrayResize<T, Allocator<T>>(array, ValueInit, size);
 	}
 
+	/**
+		@brief Resize an array to given size, value-initializing new elements
+
+		Alias to @ref arrayResize(Array<T>&, ValueInitT, std::size_t).
+
+		This function is equivalent to calling @relativeref{std::vector,resize()} on
+		a @ref std::vector.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> inline void arrayResize(Array<T>& array, std::size_t size) {
 		return arrayResize<T, Allocator>(array, ValueInit, size);
 	}
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T> inline void arrayResize(Array<T>& array, std::size_t size) {
 		arrayResize<T, Allocator<T>>(array, size);
 	}
 
+	/**
+		@brief Resize an array to given size, keeping new elements uninitialized
+
+		Similar to @ref arrayResize(Array<T>&, DefaultInitT, std::size_t) except that
+		the new elements at the end are not default-initialized, but left in an
+		uninitialized state instead. I.e., placement-new is meant to be used on *all*
+		newly added elements with a non-trivially-copyable @p T.
+
+		On top of what the @p Allocator (or the default @ref ArrayAllocator) itself
+		needs, @p T is required to be nothrow move-constructible.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> void arrayResize(Array<T>& array, NoInitT, std::size_t size);
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T> inline void arrayResize(Array<T>& array, NoInitT, std::size_t size) {
 		arrayResize<T, Allocator<T>>(array, NoInit, size);
 	}
 
+	/**
+		@brief Resize an array to given size, constructing new elements using provided arguments
+
+		Similar to @ref arrayResize(Array<T>&, ValueInitT, std::size_t) except that
+		the new elements at the end are constructed using placement-new with provided
+		@p args.
+
+		On top of what the @p Allocator (or the default @ref ArrayAllocator) itself
+		needs, @p T is required to be nothrow move-constructible and constructible from
+		provided @p args.
+	*/
 	template<class T, class ...Args> void arrayResize(Array<T>& array, DirectInitT, std::size_t size, Args&&... args);
 
+	/**
+		@overload
+	*/
 	template<class T, class Allocator, class ...Args> void arrayResize(Array<T>& array, DirectInitT, std::size_t size, Args&&... args);
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T, class ...Args> inline void arrayResize(Array<T>& array, DirectInitT, std::size_t size, Args&&... args) {
 		arrayResize<T, Allocator<T>>(array, DirectInit, size, std::forward<Args>(args)...);
 	}
 
+	/**
+		@brief Resize an array to given size, copy-constructing new elements using the provided value
+
+		Calls @ref arrayResize(Array<T>&, DirectInitT, std::size_t, Args&&... args)
+		with @p value.
+
+		This function is equivalent to calling @relativeref{std::vector,resize()} on
+		a @ref std::vector.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> inline void arrayResize(Array<T>& array, std::size_t size, const typename std::common_type<T>::type& value) {
 		arrayResize<T, Allocator>(array, DirectInit, size, value);
 	}
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T> inline void arrayResize(Array<T>& array, std::size_t size, const typename std::common_type<T>::type& value) {
 		arrayResize<T, Allocator<T>>(array, size, value);
 	}
 
+	/**
+		@brief Copy-append an item to an array
+		@return Reference to the newly appended item
+
+		If the array is not growable or the capacity is not large enough, the array
+		capacity is grown first according to rules described in the
+		@ref ArrayAllocator::grow() "grow()" function of a particular allocator. Then,
+		@p value is copy-constructed at the end of the array and @ref Array::size()
+		increased by 1.
+
+		Amortized complexity is @f$ \mathcal{O}(1) @f$ providing the allocator growth
+		ratio is exponential. On top of what the @p Allocator (or the default
+		@ref ArrayAllocator) itself needs, @p T is required to be nothrow
+		move-constructible and copy-constructible.
+
+		This function is equivalent to calling @relativeref{std::vector,push_back()} on
+		a @ref std::vector.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> T& arrayAppend(Array<T>& array, const typename std::common_type<T>::type& value);
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T> inline T& arrayAppend(Array<T>& array, const typename std::common_type<T>::type& value) {
 		return arrayAppend<T, Allocator<T>>(array, value);
 	}
 
+	/**
+		@brief In-place append an item to an array
+		@return Reference to the newly appended item
+
+		Similar to @ref arrayAppend(Array<T>&, const typename std::common_type<T>::type&)
+		except that the new element is constructed using placement-new with provided
+		@p args.
+
+		On top of what the @p Allocator (or the default @ref ArrayAllocator) itself
+		needs, @p T is required to be nothrow move-constructible and constructible from
+		provided @p args.
+
+		This function is equivalent to calling @relativeref{std::vector,emplace_back()}
+		on a @ref std::vector.
+	*/
 	template<class T, class ...Args> T& arrayAppend(Array<T>& array, InPlaceInitT, Args&&... args);
 
+	/**
+		@overload
+	*/
 	template<class T, class Allocator, class ...Args> T& arrayAppend(Array<T>& array, InPlaceInitT, Args&&... args);
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T, class ...Args> inline T& arrayAppend(Array<T>& array, InPlaceInitT, Args&&... args) {
 		return arrayAppend<T, Allocator<T>>(array, InPlaceInit, std::forward<Args>(args)...);
 	}
 
+	/**
+		@brief Move-append an item to an array
+		@return Reference to the newly appended item
+
+		Calls @ref arrayAppend(Array<T>&, InPlaceInitT, Args&&... args) with @p value.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> inline T& arrayAppend(Array<T>& array, typename std::common_type<T>::type&& value) {
 		return arrayAppend<T, Allocator>(array, InPlaceInit, std::move(value));
 	}
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T> inline T& arrayAppend(Array<T>& array, typename std::common_type<T>::type&& value) {
 		return arrayAppend<T, Allocator<T>>(array, InPlaceInit, std::move(value));
 	}
 
-	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T> arrayAppend(Array<T>& array, ArrayView<const T> values);
+	/**
+		@brief Copy-append a list of items to an array
+		@return View on the newly appended items
 
-	template<template<class> class Allocator, class T> inline ArrayView<T> arrayAppend(Array<T>& array, ArrayView<const T> values) {
+		Like @ref arrayAppend(Array<T>&, const typename std::common_type<T>::type&),
+		but inserting multiple values at once.
+
+		On top of what the @p Allocator (or the default @ref ArrayAllocator) itself
+		needs, @p T is required to be nothrow move-constructible and
+		copy-constructible.
+	*/
+	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T> arrayAppend(Array<T>& array, typename std::common_type<ArrayView<const T>>::type values);
+
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
+	template<template<class> class Allocator, class T> inline ArrayView<T> arrayAppend(Array<T>& array, typename std::common_type<ArrayView<const T>>::type values) {
 		return arrayAppend<T, Allocator<T>>(array, values);
 	}
 
+	/**
+		@overload
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> inline ArrayView<T> arrayAppend(Array<T>& array, std::initializer_list<typename std::common_type<T>::type> values) {
 		return arrayAppend<T, Allocator>(array, arrayView(values));
 	}
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T> inline ArrayView<T> arrayAppend(Array<T>& array, std::initializer_list<typename std::common_type<T>::type> values) {
 		return arrayAppend<T, Allocator<T>>(array, values);
 	}
 
+	/**
+		@brief Append given count of uninitialized values to an array
+		@return View on the newly appended items
+
+		A lower-level variant of @ref arrayAppend(Array<T>&, typename std::common_type<ArrayView<const T>>::type)
+		where the new values are meant to be initialized in-place after, instead of
+		being copied from a pre-existing location. The new values are always
+		uninitialized --- i.e., placement-new is meant to be used on *all* inserted
+		elements with a non-trivially-copyable @p T.
+
+		On top of what the @p Allocator (or the default @ref ArrayAllocator) itself
+		needs, @p T is required to be nothrow move-constructible.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T> arrayAppend(Array<T>& array, NoInitT, std::size_t count);
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T> inline ArrayView<T> arrayAppend(Array<T>& array, NoInitT, std::size_t count) {
 		return arrayAppend<T, Allocator<T>>(array, NoInit, count);
 	}
 
+	/**
+		@brief Copy-insert an item into an array
+		@return Reference to the newly inserted item
+
+		Expects that @p index is not larger than @ref Array::size(). If the array is
+		not growable or the capacity is not large enough, the array capacity is grown
+		first according to rules described in the
+		@ref ArrayAllocator::grow() "grow()" function of a particular allocator. Then,
+		items starting at @p index are moved one item forward, @p value is copied to
+		@p index and @ref Array::size() is increased by 1.
+
+		Amortized complexity is @f$ \mathcal{O}(n) @f$. On top of what the @p Allocator
+		(or the default @ref ArrayAllocator) itself needs, @p T is required to be
+		nothrow move-constructible, nothrow move-assignable and copy-constructible.
+
+		This function is equivalent to calling @relativeref{std::vector,insert()} on
+		a @ref std::vector.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> T& arrayInsert(Array<T>& array, std::size_t index, const typename std::common_type<T>::type& value);
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T> T& arrayInsert(Array<T>& array, std::size_t index, const typename std::common_type<T>::type& value) {
 		return arrayInsert<T, Allocator<T>>(array, index, value);
 	}
 
+	/**
+		@brief In-place insert an item into an array
+		@return Reference to the newly inserted item
+
+		Similar to @ref arrayInsert(Array<T>&, std::size_t, const typename std::common_type<T>::type&)
+		except that the new element is constructed using placement-new with provided
+		@p args.
+
+		On top of what the @p Allocator (or the default @ref ArrayAllocator) itself
+		needs, @p T is required to be nothrow move-constructible, nothrow
+		move-assignable and constructible from provided @p args.
+
+		This function is equivalent to calling @relativeref{std::vector,emplace()}
+		on a @ref std::vector.
+	*/
 	template<class T, class ...Args> T& arrayInsert(Array<T>& array, std::size_t index, InPlaceInitT, Args&&... args);
 
+	/**
+		@overload
+	*/
 	template<class T, class Allocator, class ...Args> T& arrayInsert(Array<T>& array, std::size_t index, InPlaceInitT, Args&&... args);
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T, class ...Args> T& arrayInsert(Array<T>& array, std::size_t index, InPlaceInitT, Args&&... args) {
 		return arrayInsert<T, Allocator<T>>(array, index, std::forward<Args>(args)...);
 	}
 
+	/**
+		@brief Move-insert an item into an array
+		@return Reference to the newly appended item
+
+		Calls @ref arrayInsert(Array<T>&, std::size_t, InPlaceInitT, Args&&... args)
+		with @p value.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> inline T& arrayInsert(Array<T>& array, std::size_t index, typename std::common_type<T>::type&& value) {
 		return arrayInsert<T, Allocator>(array, index, InPlaceInit, std::move(value));
 	}
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T> inline T& arrayInsert(Array<T>& array, std::size_t index, typename std::common_type<T>::type&& value) {
 		return arrayInsert<T, Allocator<T>>(array, index, InPlaceInit, std::move(value));
 	}
 
-	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, ArrayView<const T> values);
+	/**
+		@brief Copy-insert a list of items into an array
+		@return View on the newly appended items
 
-	template<template<class> class Allocator, class T> inline ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, ArrayView<const T> values) {
+		Like @ref arrayInsert(Array<T>&, std::size_t, const typename std::common_type<T>::type&),
+		but inserting multiple values at once.
+
+		Amortized complexity is @f$ \mathcal{O}(m + n) @f$, where @f$ m @f$ is the
+		number of items being inserted and @f$ n @f$ is the existing array size. On top
+		of what the @p Allocator (or the default @ref ArrayAllocator) itself needs,
+		@p T is required to be nothrow move-constructible, nothrow move-assignable and
+		copy-constructible.
+	*/
+	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, typename std::common_type<ArrayView<const T>>::type values);
+
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
+	template<template<class> class Allocator, class T> inline ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, typename std::common_type<ArrayView<const T>>::type values) {
 		return arrayInsert<T, Allocator<T>>(array, index, values);
 	}
 
-	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, std::initializer_list<typename std::common_type<T>::type> values) {
+	/**
+		@overload
+	*/
+	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T>  arrayInsert(Array<T>& array, std::size_t index, std::initializer_list<typename std::common_type<T>::type> values) {
 		return arrayInsert<T, Allocator>(array, index, arrayView(values));
 	}
 
-	template<template<class> class Allocator, class T> inline ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, std::initializer_list<typename std::common_type<T>::type> values) {
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
+	template<template<class> class Allocator, class T> inline ArrayView<T>  arrayInsert(Array<T>& array, std::size_t index, std::initializer_list<typename std::common_type<T>::type> values) {
 		return arrayInsert<T, Allocator<T>>(array, index, values);
 	}
 
+	/**
+		@brief Insert given count of uninitialized values into an array
+		@return View on the newly appended items
+
+		A lower-level variant of @ref arrayInsert(Array<T>&, std::size_t, typename std::common_type<ArrayView<const T>>::type)
+		where the new values are meant to be initialized in-place after, instead of
+		being copied from a pre-existing location. Independently of whether the array
+		was reallocated to fit the new items or the items were just shifted around
+		because the capacity was large enough, the new values are always uninitialized
+		--- i.e., placement-new is meant to be used on *all* inserted elements with a
+		non-trivially-copyable @p T.
+
+		Amortized complexity is @f$ \mathcal{O}(n) @f$, where @f$ n @f$ is the existing
+		array size. On top of what the @p Allocator (or the default @ref ArrayAllocator)
+		itself needs, @p T is required to be nothrow move-constructible and nothrow
+		move-assignable.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, NoInitT, std::size_t count);
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T> inline ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, NoInitT, std::size_t count) {
 		return arrayInsert<T, Allocator<T>>(array, index, NoInit, count);
 	}
 
+	/**
+		@brief Remove an element from an array
+
+		Expects that @cpp index + count @ce is not larger than @ref Array::size(). If
+		the array is not growable, all elements except the removed ones are reallocated
+		to a growable version. Otherwise, items starting at @cpp index + count @ce are
+		moved @cpp count @ce items backward and the @ref Array::size() is decreased by
+		@p count.
+
+		Amortized complexity is @f$ \mathcal{O}(m + n) @f$ where @f$ m @f$ is the
+		number of items being removed and @f$ n @f$ is the array size after removal. On
+		top of what the @p Allocator (or the default @ref ArrayAllocator) itself needs,
+		@p T is required to be nothrow move-constructible and nothrow move-assignable.
+
+		This function is equivalent to calling @relativeref{std::vector,erase()} on a
+		@ref std::vector.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> void arrayRemove(Array<T>& array, std::size_t index, std::size_t count = 1);
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T> inline void arrayRemove(Array<T>& array, std::size_t index, std::size_t count = 1) {
 		arrayRemove<T, Allocator<T>>(array, index, count);
 	}
 
+	/**
+		@brief Remove an element from an unordered array
+
+		A variant of @ref arrayRemove() that is more efficient in case the order of
+		items in the array doesn't have to be preserved. Expects that
+		@cpp index + count @ce is not larger than @ref Array::size(). If the array is
+		not growable, all elements except the removed ones are reallocated to a
+		growable version. Otherwise, the last @cpp min(count, array.size() - index - count) @ce
+		items are moved over the items at @p index and the @ref Array::size() is
+		decreased by @p count.
+
+		Amortized complexity is @f$ \mathcal{O}(m) @f$ where @f$ m @f$ is the number of
+		items being removed. On top of what the @p Allocator (or the default
+		@ref ArrayAllocator) itself needs, @p T is required to be nothrow
+		move-constructible and nothrow move-assignable.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> void arrayRemoveUnordered(Array<T>& array, std::size_t index, std::size_t count = 1);
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T> inline void arrayRemoveUnordered(Array<T>& array, std::size_t index, std::size_t count = 1) {
 		arrayRemoveUnordered<T, Allocator<T>>(array, index, count);
 	}
 
+	/**
+		@brief Remove a suffix from an array
+
+		Expects that @p count is not larger than @ref Array::size(). If the array is
+		not growable, all its elements except the removed suffix are reallocated to a
+		growable version. Otherwise, a destructor is called on removed elements and the
+		@ref Array::size() is decreased by @p count.
+
+		Amortized complexity is @f$ \mathcal{O}(m) @f$ where @f$ m @f$ is the number of
+		items removed. On top of what the @p Allocator (or the default
+		@ref ArrayAllocator) itself needs, @p T is required to be nothrow
+		move-constructible.
+
+		With @p count set to @cpp 1 @ce, this function is equivalent to calling
+		@relativeref{std::vector,pop_back()} on a @ref std::vector.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> void arrayRemoveSuffix(Array<T>& array, std::size_t count = 1);
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T> inline void arrayRemoveSuffix(Array<T>& array, std::size_t count = 1) {
 		arrayRemoveSuffix<T, Allocator<T>>(array, count);
 	}
 
+	/**
+		@brief Convert an array back to non-growable
+
+		Allocates a @ref NoInit array that's exactly large enough to fit
+		@ref Array::size() elements, move-constructs the elements there and frees the
+		old memory using @ref Array::deleter(). If the array is not growable using
+		given @p Allocator, it's assumed to be already as small as possible, and
+		nothing is done.
+
+		Complexity is at most @f$ \mathcal{O}(n) @f$ in the size of the container,
+		@f$ \mathcal{O}(1) @f$ if the array is already non-growable. No constraints
+		on @p T from @p Allocator (or the default @ref ArrayAllocator) apply here but
+		@p T is required to be nothrow move-constructible.
+
+		This function is equivalent to calling @relativeref{std::vector,shrink_to_fit()}
+		on a @ref std::vector.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> void arrayShrink(Array<T>& array, NoInitT = NoInit);
 
+	/**
+		@brief Convert an array back to non-growable using a default initialization
+
+		Allocates a @ref DefaultInit array that's exactly large enough to fit
+		@ref Array::size() elements, move-assigns the elements there and frees the old
+		memory using @ref Array::deleter(). If the array is not growable using
+		given @p Allocator, it's assumed to be already as small as possible, and
+		nothing is done.
+
+		Complexity is at most @f$ \mathcal{O}(n) @f$ in the size of the container,
+		@f$ \mathcal{O}(1) @f$ if the array is already non-growable. No constraints on
+		@p T from @p Allocator (or the default @ref ArrayAllocator) apply here but @p T
+		is required to be default-constructible and nothrow move-assignable.
+
+		Compared to @ref arrayShrink(Array<T>&, NoInitT), the resulting array instance
+		always has a default (@cpp nullptr @ce) deleter. This is useful when it's not
+		possible to use custom deleters, such as in plugin implementations.
+	*/
 	template<class T, class Allocator = ArrayAllocator<T>> void arrayShrink(Array<T>& array, DefaultInitT);
 
+	/**
+		@overload
+
+		Convenience overload allowing to specify just the allocator template, with
+		array type being inferred.
+	*/
 	template<template<class> class Allocator, class T> inline void arrayShrink(Array<T>& array) {
 		arrayShrink<T, Allocator<T>>(array);
 	}
@@ -671,6 +1179,14 @@ namespace Death::Containers
 			array = Array<T> { newArray, arrayGuts.size, Allocator::deleter };
 		} else Allocator::reallocate(arrayGuts.data, arrayGuts.size, capacity);
 
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+		__sanitizer_annotate_contiguous_container(
+			Allocator::base(arrayGuts.data),
+			arrayGuts.data + capacity,
+			arrayGuts.data + capacity, // ASan assumes this for new allocations
+			arrayGuts.data + arrayGuts.size);
+#endif
+
 		return capacity;
 	}
 
@@ -691,6 +1207,14 @@ namespace Death::Containers
 				arrayGuts.size < size ? arrayGuts.size : size);
 			array = Array<T> { newArray, size, Allocator::deleter };
 
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+			__sanitizer_annotate_contiguous_container(
+				Allocator::base(arrayGuts.data),
+				arrayGuts.data + arrayGuts.size,
+				arrayGuts.data + arrayGuts.size,
+				arrayGuts.data + arrayGuts.size);
+#endif
+
 		// ... or the desired size is larger than the capacity. In that case make use of the reallocate() function that might be able to grow in-place.
 		} else if (Allocator::capacity(array) < size) {
 			Allocator::reallocate(arrayGuts.data,
@@ -699,11 +1223,26 @@ namespace Death::Containers
 				arrayGuts.size < size ? arrayGuts.size : size, size);
 			arrayGuts.size = size;
 
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+			__sanitizer_annotate_contiguous_container(
+				Allocator::base(arrayGuts.data),
+				arrayGuts.data + arrayGuts.size,
+				arrayGuts.data + arrayGuts.size,
+				arrayGuts.data + arrayGuts.size);
+#endif
+
 		// Otherwise call a destructor on the extra elements. If we get here, we have our growable deleter and didn't
 		// need to reallocate (which would make this unnecessary).
 		} else {
 			Implementation::arrayDestruct<T>(arrayGuts.data + size, arrayGuts.data + arrayGuts.size);
 			// This is a NoInit resize, so not constructing the new elements, only updating the size
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+			__sanitizer_annotate_contiguous_container(
+				Allocator::base(arrayGuts.data),
+				arrayGuts.data + Allocator::capacity(array),
+				arrayGuts.data + arrayGuts.size,
+				arrayGuts.data + size);
+#endif
 			arrayGuts.size = size;
 		}
 	}
@@ -740,14 +1279,16 @@ namespace Death::Containers
 			auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
 
 			// No values to add, early exit
-			if (!count)
+			if (count == 0)
 				return arrayGuts.data + arrayGuts.size;
 
 			// For arrays with an unknown deleter we'll always copy-allocate to a new place. Not using reallocate() as we don't
 			// know where the original memory comes from.
 			const std::size_t desiredCapacity = arrayGuts.size + count;
 			std::size_t capacity;
-
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+			T* oldMid = nullptr;
+#endif
 			if (arrayGuts.deleter != Allocator::deleter) {
 				capacity = Allocator::grow(nullptr, desiredCapacity);
 				T* const newArray = Allocator::allocate(capacity);
@@ -760,11 +1301,24 @@ namespace Death::Containers
 				if (arrayGuts.size + count > capacity) {
 					capacity = Allocator::grow(arrayGuts.data, desiredCapacity);
 					Allocator::reallocate(arrayGuts.data, arrayGuts.size, capacity);
+				} else {
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+					oldMid = arrayGuts.data + arrayGuts.size;
+#endif
 				}
 			}
 
 			// Increase array size and return the previous end pointer
 			T* const it = arrayGuts.data + arrayGuts.size;
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+			__sanitizer_annotate_contiguous_container(
+				Allocator::base(arrayGuts.data),
+				arrayGuts.data + capacity,
+				// For a new allocation, ASan assumes the previous middle pointer is at the end of the array. If we grew an existing
+				// allocation, the previous middle is set what __sanitier_acc() received as a middle value before.
+				oldMid ? oldMid : arrayGuts.data + capacity,
+				arrayGuts.data + arrayGuts.size + count);
+#endif
 			arrayGuts.size += count;
 			return it;
 		}
@@ -781,7 +1335,7 @@ namespace Death::Containers
 		return *it;
 	}
 
-	template<class T, class Allocator> inline ArrayView<T> arrayAppend(Array<T>& array, const ArrayView<const T> values) {
+	template<class T, class Allocator> inline ArrayView<T> arrayAppend(Array<T>& array, const typename std::common_type<ArrayView<const T>>::type values) {
 		// Direct access & caching to speed up debug builds
 		const std::size_t valueCount = values.size();
 
@@ -815,7 +1369,7 @@ namespace Death::Containers
 			// Compared to the non-trivially-copyable variant below, just delegate to memmove() and assume it can figure
 			// out how to copy from back to front more efficiently that we ever could.
 			// Same as with memcpy(), apparently memmove() can't be called with null pointers, even if size is zero. I call that bullying.
-			if (count) std::memmove(dst, src, count * sizeof(T));
+			if (count != 0) std::memmove(dst, src, count * sizeof(T));
 		}
 
 		template<class T> inline void arrayShiftForward(T* const src, T* const dst, const std::size_t count, typename std::enable_if<!
@@ -840,7 +1394,7 @@ namespace Death::Containers
 			}
 
 			// Move-assign overlapping elements, going backwards to avoid overwriting values that are yet to be moved.
-			// This loop is never entered if nonOverlappingCount >= count.
+						// This loop is never entered if nonOverlappingCount >= count.
 			for (T* assignSrc = src + count - nonOverlappingCount, *assignDst = dst + count - nonOverlappingCount; assignSrc > src; --assignSrc, --assignDst)
 				*(assignDst - 1) = std::move(*(assignSrc - 1));
 
@@ -863,7 +1417,9 @@ namespace Death::Containers
 			// index separately. Not using reallocate() as we don't know where the original memory comes from.
 			const std::size_t desiredCapacity = arrayGuts.size + count;
 			std::size_t capacity;
-
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+			T* oldMid = nullptr;
+#endif
 			bool needsShiftForward = false;
 			if (arrayGuts.deleter != Allocator::deleter) {
 				capacity = Allocator::grow(nullptr, desiredCapacity);
@@ -879,6 +1435,10 @@ namespace Death::Containers
 				if (arrayGuts.size + count > capacity) {
 					capacity = Allocator::grow(arrayGuts.data, desiredCapacity);
 					Allocator::reallocate(arrayGuts.data, arrayGuts.size, capacity);
+				} else {
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+					oldMid = arrayGuts.data + arrayGuts.size;
+#endif
 				}
 
 				needsShiftForward = true;
@@ -886,6 +1446,15 @@ namespace Death::Containers
 
 			// Increase array size and return the position at index
 			T* const it = arrayGuts.data + index;
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+			__sanitizer_annotate_contiguous_container(
+				Allocator::base(arrayGuts.data),
+				arrayGuts.data + capacity,
+				// For a new allocation, ASan assumes the previous middle pointer is at the end of the array. If we grew an existing
+				// allocation, the previous middle is set what __sanitier_acc() received as a middle value before.
+				oldMid ? oldMid : arrayGuts.data + capacity,
+				arrayGuts.data + arrayGuts.size + count);
+#endif
 
 			// Perform a shift of elements after index. Needs to be done after the ASan annotation is updated, otherwise it'll
 			// trigger a failure due to outdated bounds information.
@@ -909,7 +1478,7 @@ namespace Death::Containers
 		return *it;
 	}
 
-	template<class T, class Allocator> inline ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, const ArrayView<const T> values) {
+	template<class T, class Allocator> inline ArrayView<T> arrayInsert(Array<T>& array, std::size_t index, const typename std::common_type<ArrayView<const T>>::type values) {
 		// Direct access & caching to speed up debug builds
 		const std::size_t valueCount = values.size();
 
@@ -943,7 +1512,7 @@ namespace Death::Containers
 			// Compared to the non-trivially-copyable variant below, just delegate to memmove() and assume it can figure
 			// out how to copy from front to back more efficiently that we ever could.
 			// Same as with memcpy(), apparently memmove() can't be called with null pointers, even if size is zero. I call that bullying.
-			if (moveCount) std::memmove(dst, src, moveCount * sizeof(T));
+			if (moveCount != 0) std::memmove(dst, src, moveCount * sizeof(T));
 		}
 
 		template<class T> inline void arrayShiftBackward(T* const src, T* const dst, const std::size_t moveCount, std::size_t destructCount, typename std::enable_if<!
@@ -969,7 +1538,7 @@ namespace Death::Containers
 		DEATH_ASSERT(index + count <= arrayGuts.size, , "Containers::arrayRemove(): Can't remove %zu elements at index %zu from an array of size %zu", count, index, arrayGuts.size);
 
 		// Nothing to remove, yay!
-		if (!count) return;
+		if (count == 0) return;
 
 		// If we don't have our own deleter, we need to reallocate in order to store the capacity. Move the parts before
 		// and after the index separately, which will also cause the removed elements to be properly destructed, so nothing
@@ -980,9 +1549,24 @@ namespace Death::Containers
 			Implementation::arrayMoveConstruct<T>(arrayGuts.data + index + count, newArray + index, arrayGuts.size - index - count);
 			array = Array<T> { newArray, arrayGuts.size - count, Allocator::deleter };
 
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+			__sanitizer_annotate_contiguous_container(
+				Allocator::base(arrayGuts.data),
+				arrayGuts.data + arrayGuts.size,
+				arrayGuts.data + arrayGuts.size,
+				arrayGuts.data + arrayGuts.size);
+#endif
+
 		// Otherwise shift the elements after index backward
 		} else {
 			Implementation::arrayShiftBackward(arrayGuts.data + index + count, arrayGuts.data + index, arrayGuts.size - index - count, count);
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+			__sanitizer_annotate_contiguous_container(
+				Allocator::base(arrayGuts.data),
+				arrayGuts.data + Allocator::capacity(arrayGuts.data),
+				arrayGuts.data + arrayGuts.size,
+				arrayGuts.data + arrayGuts.size - count);
+#endif
 			arrayGuts.size -= count;
 		}
 	}
@@ -993,7 +1577,7 @@ namespace Death::Containers
 		DEATH_ASSERT(index + count <= arrayGuts.size, , "Containers::arrayRemoveUnordered(): Can't remove %zu elements at index %zu from an array of size %zu", count, index, arrayGuts.size);
 
 		// Nothing to remove, yay!
-		if (!count) return;
+		if (count == 0) return;
 
 		// If we don't have our own deleter, we need to reallocate in order to store the capacity. Move the parts before
 		// and after the index separately, which will also cause the removed elements to be properly destructed, so nothing
@@ -1004,10 +1588,25 @@ namespace Death::Containers
 			Implementation::arrayMoveConstruct<T>(arrayGuts.data + index + count, newArray + index, arrayGuts.size - index - count);
 			array = Array<T> { newArray, arrayGuts.size - count, Allocator::deleter };
 
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+			__sanitizer_annotate_contiguous_container(
+				Allocator::base(arrayGuts.data),
+				arrayGuts.data + arrayGuts.size,
+				arrayGuts.data + arrayGuts.size,
+				arrayGuts.data + arrayGuts.size);
+#endif
+
 		// Otherwise move the last count elements over the ones at index, or less if there's not that many after the removed range
 		} else {
 			const std::size_t moveCount = std::min(count, arrayGuts.size - count - index);
 			Implementation::arrayShiftBackward(arrayGuts.data + arrayGuts.size - moveCount, arrayGuts.data + index, moveCount, count);
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+			__sanitizer_annotate_contiguous_container(
+				Allocator::base(arrayGuts.data),
+				arrayGuts.data + Allocator::capacity(arrayGuts.data),
+				arrayGuts.data + arrayGuts.size,
+				arrayGuts.data + arrayGuts.size - count);
+#endif
 			arrayGuts.size -= count;
 		}
 	}
@@ -1018,7 +1617,7 @@ namespace Death::Containers
 		DEATH_ASSERT(count <= arrayGuts.size, , "Containers::arrayRemoveSuffix(): Can't remove %zu elements from an array of size %zu", count, arrayGuts.size);
 
 		// Nothing to remove, yay!
-		if (!count) return;
+		if (count == 0) return;
 
 		// If we don't have our own deleter, we need to reallocate in order to store the capacity. That'll also cause the excessive
 		// elements to be properly destructed, so nothing else needs to be done. Not using reallocate() as we don't know where the original memory comes from.
@@ -1027,9 +1626,24 @@ namespace Death::Containers
 			Implementation::arrayMoveConstruct<T>(arrayGuts.data, newArray, arrayGuts.size - count);
 			array = Array<T> { newArray, arrayGuts.size - count, Allocator::deleter };
 
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+			__sanitizer_annotate_contiguous_container(
+				Allocator::base(arrayGuts.data),
+				arrayGuts.data + arrayGuts.size,
+				arrayGuts.data + arrayGuts.size,
+				arrayGuts.data + arrayGuts.size);
+#endif
+
 		// Otherwise call the destructor on the excessive elements and update the size
 		} else {
 			Implementation::arrayDestruct<T>(arrayGuts.data + arrayGuts.size - count, arrayGuts.data + arrayGuts.size);
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+			__sanitizer_annotate_contiguous_container(
+				Allocator::base(arrayGuts.data),
+				arrayGuts.data + Allocator::capacity(arrayGuts.data),
+				arrayGuts.data + arrayGuts.size,
+				arrayGuts.data + arrayGuts.size - count);
+#endif
 			arrayGuts.size -= count;
 		}
 	}
@@ -1046,10 +1660,14 @@ namespace Death::Containers
 		Array<T> newArray { NoInit, arrayGuts.size };
 		Implementation::arrayMoveConstruct<T>(arrayGuts.data, newArray, arrayGuts.size);
 		array = std::move(newArray);
+
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+		// Nothing to do (not annotating the arrays with default deleter)
+#endif
 	}
 
 	template<class T, class Allocator> void arrayShrink(Array<T>& array, DefaultInitT) {
-		// Direct access to speed up debug builds */
+		// Direct access to speed up debug builds
 		auto& arrayGuts = reinterpret_cast<Implementation::ArrayGuts<T>&>(array);
 
 		// If not using our growing allocator, assume the array size equals its capacity and do nothing
@@ -1060,5 +1678,13 @@ namespace Death::Containers
 		Array<T> newArray { DefaultInit, arrayGuts.size };
 		Implementation::arrayMoveAssign<T>(arrayGuts.data, newArray, arrayGuts.size);
 		array = std::move(newArray);
+
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+		// Nothing to do (not annotating the arrays with default deleter)
+#endif
 	}
 }
+
+#if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
+#	undef _DEATH_CONTAINERS_SANITIZER_ENABLED
+#endif

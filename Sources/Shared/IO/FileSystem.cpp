@@ -42,6 +42,7 @@
 #if defined(DEATH_TARGET_ANDROID)
 #	include "AndroidAssetStream.h"
 #elif defined(DEATH_TARGET_APPLE)
+#	include <objc/objc-runtime.h>
 #	include <mach-o/dyld.h>
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
 #	include <emscripten/emscripten.h>
@@ -1967,7 +1968,17 @@ namespace Death::IO
 
 	bool FileSystem::LaunchDirectoryAsync(const StringView& path)
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_APPLE)
+		Class nsStringClass = objc_getClass("NSString");
+		Class nsUrlClass = objc_getClass("NSURL");
+		Class nsWorkspaceClass = objc_getClass("NSWorkspace");
+		if (nsStringClass != nullptr && nsUrlClass != nullptr && nsWorkspaceClass != nullptr) {
+			id pathString = ((id(*)(Class, SEL, const char*))objc_msgSend)(nsStringClass, sel_getUid("stringWithUTF8String:"), String::nullTerminatedView(path).data());
+			id pathUrl = ((id(*)(Class, SEL, id))objc_msgSend)(nsUrlClass, sel_getUid("fileURLWithPath:"), pathString);
+			id workspaceInstance = ((id(*)(Class, SEL))objc_msgSend)(nsWorkspaceClass, sel_getUid("sharedWorkspace"));
+			((id(*)(id, SEL, id))objc_msgSend)(workspaceInstance, sel_getUid("openURL:"), pathUrl);
+			return true;
+		}
 		return false;
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 		if (!DirectoryExists(path)) {
