@@ -3,6 +3,8 @@
 
 #include "../../../nCine/Application.h"
 
+#include <Utf8.h>
+
 namespace Jazz2::UI::Menu
 {
 	InputDiagnosticsSection::InputDiagnosticsSection()
@@ -90,7 +92,7 @@ namespace Jazz2::UI::Menu
 		char buffer[128];
 		formatString(buffer, sizeof(buffer), "%s (%i axes, %i buttons, %i hats)", joyName, numAxes, numButtons, numHats);
 
-		size_t joyNameStringLength = strlen(buffer);
+		size_t joyNameStringLength = Utf8::GetLength(buffer);
 		float xMultiplier = joyNameStringLength * 0.5f;
 		float easing = IMenuContainer::EaseOutElastic(_animation);
 		float x = center.X * 0.4f + xMultiplier - easing * xMultiplier;

@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-03-19 22:59+0100\n"
-"PO-Revision-Date: 2023-03-19 23:02+0100\n"
+"POT-Creation-Date: 2023-07-15 15:14+0200\n"
+"PO-Revision-Date: 2023-07-15 15:21+0200\n"
 "Last-Translator: \n"
 "Language-Team: Překlad do češtiny: Dan R. (http://deat.tk/jazz2/)\n"
 "Language: cs\n"
@@ -10,7 +10,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n>=2 && n<=4 ? 1 : 2);\n"
-"X-Generator: Poedit 3.2.2\n"
+"X-Generator: Poedit 3.3.2\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
 "X-Poedit-SearchPath-0: Sources/Jazz2\n"
@@ -1413,7 +1413,7 @@ msgid "Play Story"
 msgstr "Hrát příběh"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:34
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:124
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:127
 msgid "Play Custom Levels"
 msgstr "Hrát vlastní úrovně"
 
@@ -1475,7 +1475,7 @@ msgid "Touch Controls"
 msgstr "Dotykové ovládací prvky"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:14
-#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:59
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:54
 msgid "Input Diagnostics"
 msgstr "Diagnostika ovládání"
 
@@ -1491,9 +1491,9 @@ msgstr "Ovládání"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:89
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:116
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:110
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:113
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:121
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:105
 msgid "Enabled"
 msgstr "Povoleno"
@@ -1501,12 +1501,12 @@ msgstr "Povoleno"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:89
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:116
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:121
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:105
 msgid "Disabled"
 msgstr "Zakázáno"
 
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:134
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:137
 msgid "No custom level found!"
 msgstr "Nebyly nalezeny žádné vlastní úrovně!"
 
@@ -1571,11 +1571,15 @@ msgid "Scripting"
 msgstr "Skripty"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:29
+msgid "Browse \"Source\" Directory"
+msgstr "Otevřít složku \"Source\""
+
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:32
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:63
 msgid "Refresh Cache"
 msgstr "Obnovit cache"
 
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:64
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:11
 msgid "Gameplay"
 msgstr "Hra"
@@ -1641,7 +1645,7 @@ msgstr "Nebyly vybrány žádné soubory!"
 msgid "No new episodes were imported!"
 msgstr "Nebyly importovány žádné nové epizody!"
 
-#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:74
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:69
 msgid "No gamepads are detected!"
 msgstr "Nebyly detekovány žádné gamepady!"
 
@@ -1660,7 +1664,7 @@ msgstr "Uložit & Ukončit"
 
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:66
 msgid "Processing of files in \f[c:0x9e7056]\"Source\"\f[c] directory..."
-msgstr "Zpracování souborů v adresáři \f[c:0x9e7056]\"Source\"\f[c]..."
+msgstr "Zpracování souborů ve složce \f[c:0x9e7056]\"Source\"\f[c]..."
 
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:69
 msgid "Newly added levels and episodes will be available soon."

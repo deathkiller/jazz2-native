@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-05-01 20:38+0200\n"
+"POT-Creation-Date: 2023-07-15 15:15+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Przetłumaczone na język polski: Patrxgt\n"
@@ -11,7 +11,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 "
 "|| n%100>14) ? 1 : 2);\n"
-"X-Generator: Poedit 3.3\n"
+"X-Generator: Poedit 3.3.2\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
 "X-Poedit-SearchPath-0: Sources/Jazz2\n"
@@ -1424,7 +1424,7 @@ msgid "Play Story"
 msgstr "Tryb fabularny"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:34
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:124
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:127
 msgid "Play Custom Levels"
 msgstr "Poziomy społeczności"
 
@@ -1485,7 +1485,7 @@ msgid "Touch Controls"
 msgstr "Sterowanie dotykowe"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:14
-#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:56
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:54
 msgid "Input Diagnostics"
 msgstr "Diagnostyka sterowania"
 
@@ -1501,9 +1501,9 @@ msgstr "Sterowanie"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:89
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:116
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:110
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:113
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:121
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:105
 msgid "Enabled"
 msgstr "Włączono"
@@ -1511,12 +1511,12 @@ msgstr "Włączono"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:89
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:116
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:121
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:105
 msgid "Disabled"
 msgstr "Wyłączono"
 
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:134
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:137
 msgid "No custom level found!"
 msgstr "Nie znaleziono żadnych poziomów społeczności!"
 
@@ -1581,11 +1581,15 @@ msgid "Scripting"
 msgstr "Skrypty"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:29
+msgid "Browse \"Source\" Directory"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:32
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:63
 msgid "Refresh Cache"
 msgstr "Odśwież pamięć podręczną"
 
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:64
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:11
 msgid "Gameplay"
 msgstr "Rozgrywka"
@@ -1651,7 +1655,7 @@ msgstr "Nie wybrano żadnych plików!"
 msgid "No new episodes were imported!"
 msgstr "Nie zaimportowano żadnych nowych odcinków!"
 
-#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:71
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:69
 msgid "No gamepads are detected!"
 msgstr "Nie wykryto żadnych kontrolerów!"
 

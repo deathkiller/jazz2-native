@@ -16,6 +16,9 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_ANGELSCRIPT)
 		AllowUnsignedScripts,
 #endif
+#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_UNIX)
+		BrowseSourceDirectory,
+#endif
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		RefreshCache,
 #endif
