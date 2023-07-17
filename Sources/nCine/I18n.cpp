@@ -19,7 +19,7 @@
 #include <IO/FileSystem.h>
 
 using namespace Death;
-using namespace Death::IO;
+using namespace Death::Containers::Literals;
 
 namespace nCine
 {
@@ -57,18 +57,18 @@ namespace nCine
 
 	struct ValueToken : public I18n::ExpressionToken
 	{
-		ValueToken(const int value)
+		ValueToken(std::int32_t value)
 			: _value(value)
 		{
 		}
 
-		int operator()(int n) const override
+		std::int32_t operator()(std::int32_t n) const override
 		{
 			return _value;
 		}
 
 	protected:
-		int _value;
+		std::int32_t _value;
 	};
 
 	struct VariableToken : public I18n::ExpressionToken
@@ -77,7 +77,7 @@ namespace nCine
 		{
 		}
 
-		int operator()(int n) const override
+		std::int32_t operator()(std::int32_t n) const override
 		{
 			return n;
 		}
@@ -86,9 +86,7 @@ namespace nCine
 	struct BinaryExpressionToken : public I18n::ExpressionToken
 	{
 		BinaryExpressionToken(ExpressionToken* left, ExpressionToken* right)
-			:
-			_left(left),
-			_right(right)
+			: _left(left), _right(right)
 		{
 		}
 
@@ -110,7 +108,7 @@ namespace nCine
 		{
 		}
 
-		int operator()(int n) const override
+		std::int32_t operator()(std::int32_t n) const override
 		{
 			return (*this->_left)(n) * (*this->_right)(n);
 		}
@@ -123,7 +121,7 @@ namespace nCine
 		{
 		}
 
-		int operator()(int n) const override
+		std::int32_t operator()(std::int32_t n) const override
 		{
 			return (*this->_left)(n) / (*this->_right)(n);
 		}
@@ -136,7 +134,7 @@ namespace nCine
 		{
 		}
 
-		int operator()(int n) const override
+		std::int32_t operator()(std::int32_t n) const override
 		{
 			return (*this->_left)(n) % (*this->_right)(n);
 		}
@@ -149,7 +147,7 @@ namespace nCine
 		{
 		}
 
-		int operator()(int n) const override
+		std::int32_t operator()(std::int32_t n) const override
 		{
 			return (*this->_left)(n) + (*this->_right)(n);
 		}
@@ -162,7 +160,7 @@ namespace nCine
 		{
 		}
 
-		int operator()(int n) const override
+		std::int32_t operator()(std::int32_t n) const override
 		{
 			return (*this->_left)(n) - (*this->_right)(n);
 		}
@@ -175,7 +173,7 @@ namespace nCine
 		{
 		}
 
-		int operator()(int n) const override
+		std::int32_t operator()(std::int32_t n) const override
 		{
 			return (*this->_left)(n) != 0 && (*this->_right)(n) != 0;
 		}
@@ -188,7 +186,7 @@ namespace nCine
 		{
 		}
 
-		int operator()(int n) const override
+		std::int32_t operator()(std::int32_t n) const override
 		{
 			return (*this->_left)(n) != 0 || (*this->_right)(n) != 0;
 		}
@@ -201,7 +199,7 @@ namespace nCine
 		{
 		}
 
-		int operator()(int n) const override
+		std::int32_t operator()(std::int32_t n) const override
 		{
 			return (*this->_left)(n) == (*this->_right)(n);
 		}
@@ -214,7 +212,7 @@ namespace nCine
 		{
 		}
 
-		int operator()(int n) const override
+		std::int32_t operator()(std::int32_t n) const override
 		{
 			return (*this->_left)(n) != (*this->_right)(n);
 		}
@@ -227,7 +225,7 @@ namespace nCine
 		{
 		}
 
-		int operator()(int n) const override
+		std::int32_t operator()(std::int32_t n) const override
 		{
 			return (*this->_left)(n) < (*this->_right)(n);
 		}
@@ -240,7 +238,7 @@ namespace nCine
 		{
 		}
 
-		int operator()(int n) const override
+		std::int32_t operator()(std::int32_t n) const override
 		{
 			return (*this->_left)(n) <= (*this->_right)(n);
 		}
@@ -253,7 +251,7 @@ namespace nCine
 		{
 		}
 
-		int operator()(int n) const override
+		std::int32_t operator()(std::int32_t n) const override
 		{
 			return (*this->_left)(n) >= (*this->_right)(n);
 		}
@@ -266,7 +264,7 @@ namespace nCine
 		{
 		}
 
-		int operator()(int n) const override
+		std::int32_t operator()(std::int32_t n) const override
 		{
 			return (*this->_left)(n) > (*this->_right)(n);
 		}
@@ -275,10 +273,7 @@ namespace nCine
 	struct TernaryExpressionToken : public I18n::ExpressionToken
 	{
 		TernaryExpressionToken(ExpressionToken* comparison, ExpressionToken* left, ExpressionToken* right)
-			:
-			_comparison(comparison),
-			_left(left),
-			_right(right)
+			: _comparison(comparison), _left(left), _right(right)
 		{
 		}
 
@@ -289,7 +284,7 @@ namespace nCine
 			delete _right;
 		}
 
-		int operator()(int n) const override
+		std::int32_t operator()(std::int32_t n) const override
 		{
 			return (*this->_comparison)(n) ? (*this->_left)(n) : (*this->_right)(n);
 		}
@@ -303,7 +298,7 @@ namespace nCine
 	I18n::ExpressionToken* I18n::Evaluator::ParseNumber(const char*& s, bool negative)
 	{
 		char* endPtr;
-		int value = strtol(s, &endPtr, 10);
+		std::int32_t value = strtol(s, &endPtr, 10);
 		s = endPtr;
 
 		if (negative) {
@@ -504,15 +499,15 @@ namespace nCine
 	}
 
 	I18n::I18n()
-		: _fileSize(0), _stringCount(0), _origTable(nullptr), _transTable(nullptr), _hashSize(0), _hashTable(nullptr), _pluralExp(nullptr), _pluralCount(0)
+		: _fileSize(0), _stringCount(0), _origTable(nullptr), _transTable(nullptr), _hashSize(0), _hashTable(nullptr), _pluralExpression(nullptr)
 	{
 	}
 
 	I18n::~I18n()
 	{
-		if (_pluralExp != nullptr) {
-			delete _pluralExp;
-			_pluralExp = nullptr;
+		if (_pluralExpression != nullptr) {
+			delete _pluralExpression;
+			_pluralExpression = nullptr;
 		}
 	}
 
@@ -526,9 +521,9 @@ namespace nCine
 		_hashSize = 0;
 		_hashTable = nullptr;
 
-		if (_pluralExp != nullptr) {
-			delete _pluralExp;
-			_pluralExp = nullptr;
+		if (_pluralExpression != nullptr) {
+			delete _pluralExpression;
+			_pluralExpression = nullptr;
 		}
 	}
 
@@ -539,7 +534,7 @@ namespace nCine
 
 	bool I18n::LoadFromFile(const std::unique_ptr<Stream>& fileHandle)
 	{
-		uint32_t fileSize = fileHandle->GetSize();
+		std::uint32_t fileSize = fileHandle->GetSize();
 		if (fileSize < 32 || fileSize > 16 * 1024 * 1024) {
 			return false;
 		}
@@ -549,8 +544,8 @@ namespace nCine
 		_file[fileSize] = '\0';
 		_fileSize = fileSize;
 
-		constexpr uint32_t SignatureLE = 0x950412de;
-		constexpr uint32_t SignatureBE = 0xde120495;
+		constexpr std::uint32_t SignatureLE = 0x950412de;
+		constexpr std::uint32_t SignatureBE = 0xde120495;
 		MoFileHeader* data = (MoFileHeader*)_file.get();
 		if (!(data->Signature == SignatureLE || data->Signature == SignatureBE) || data->StringCount <= 0 ||
 			data->OrigTableOffset + data->StringCount > fileSize || data->TransTableOffset + data->StringCount > fileSize ||
@@ -564,28 +559,32 @@ namespace nCine
 		_origTable = (const StringDesc*)((char*)data + data->OrigTableOffset);
 		_transTable = (const StringDesc*)((char*)data + data->TransTableOffset);
 		_hashSize = data->HashTableSize;
-		_hashTable = (_hashSize > 2 ? (const uint32_t*)((char*)data + data->HashTableOffset) : nullptr);
+		_hashTable = (_hashSize > 2 ? (const std::uint32_t*)((char*)data + data->HashTableOffset) : nullptr);
 
-		uint32_t entryLength;
+		if (_pluralExpression != nullptr) {
+			delete _pluralExpression;
+		}
+
+		std::uint32_t entryLength;
 		const char* nullEntry = LookupTranslation("", &entryLength);
-		ExtractPluralExpression(nullEntry, &_pluralExp, &_pluralCount);
+		_pluralExpression = ExtractPluralExpression(nullEntry);
 
 		return true;
 	}
 
-	const char* I18n::LookupTranslation(const char* msgid, uint32_t* resultLength)
+	const char* I18n::LookupTranslation(const char* msgid, std::uint32_t* resultLength)
 	{
 		if (_hashTable != nullptr) {
 			// Use the hashing table
-			constexpr uint32_t HashWordBits = 32;
+			constexpr std::uint32_t HashWordBits = 32;
 
 			const char* str = msgid;
-			uint32_t hashValue = 0;
-			uint32_t len = 0;
+			std::uint32_t hashValue = 0;
+			std::uint32_t len = 0;
 			while (*str != '\0') {
 				hashValue <<= 4;
-				hashValue += (uint8_t)*str++;
-				uint32_t g = hashValue & ((uint32_t) 0xf << (HashWordBits - 4));
+				hashValue += (std::uint8_t)*str++;
+				std::uint32_t g = hashValue & (0x0fu << (HashWordBits - 4));
 				if (g != 0) {
 					hashValue ^= g >> (HashWordBits - 8);
 					hashValue ^= g;
@@ -593,11 +592,11 @@ namespace nCine
 				len++;
 			}
 
-			uint32_t idx = hashValue % _hashSize;
-			uint32_t incr = 1 + (hashValue % (_hashSize - 2));
+			std::uint32_t idx = hashValue % _hashSize;
+			std::uint32_t incr = 1 + (hashValue % (_hashSize - 2));
 
 			while (true) {
-				uint32_t nstr = _hashTable[idx];
+				std::uint32_t nstr = _hashTable[idx];
 				if (nstr == 0) {
 					// Hash table entry is empty
 					return nullptr;
@@ -622,14 +621,14 @@ namespace nCine
 			}
 		} else {
 			// Binary search in the sorted array of messages
-			size_t bottom = 0;
-			size_t top = _stringCount;
+			std::size_t bottom = 0;
+			std::size_t top = _stringCount;
 			while (bottom < top) {
-				size_t idx = (bottom + top) / 2;
+				std::size_t idx = (bottom + top) / 2;
 				if (_origTable[idx].Offset >= _fileSize) {
 					return nullptr;
 				}
-				int cmpVal = std::strcmp(msgid, (_file.get() + _origTable[idx].Offset));
+				std::int32_t cmpVal = std::strcmp(msgid, (_file.get() + _origTable[idx].Offset));
 				if (cmpVal < 0) {
 					top = idx;
 				} else if (cmpVal > 0) {
@@ -647,9 +646,9 @@ namespace nCine
 		return nullptr;
 	}
 
-	const char* I18n::LookupPlural(int n, const char* translation, uint32_t translationLength)
+	const char* I18n::LookupPlural(std::int32_t n, const char* translation, uint32_t translationLength)
 	{
-		int index = (*_pluralExp)(n);
+		std::int32_t index = (*_pluralExpression)(n);
 
 		const char* p = translation;
 		while (index-- > 0) {
@@ -664,7 +663,7 @@ namespace nCine
 
 	StringView I18n::GetTranslationDescription()
 	{
-		uint32_t entryLength;
+		std::uint32_t entryLength;
 		const char* nullEntry = LookupTranslation("", &entryLength);
 		if (nullEntry != nullptr) {
 			StringView translationInfo = StringView(nullEntry, entryLength);
@@ -693,10 +692,10 @@ namespace nCine
 		CFTypeRef preferences = CFPreferencesCopyAppValue(CFSTR("AppleLanguages"), kCFPreferencesCurrentApplication);
 		if (preferences != nullptr && CFGetTypeID(preferences) == CFArrayGetTypeID()) {
 			CFArrayRef prefArray = (CFArrayRef)preferences;
-			int n = CFArrayGetCount(prefArray);
+			std::int32_t n = CFArrayGetCount(prefArray);
 			char buffer[256];
 
-			for (int i = 0; i < n; i++) {
+			for (std::int32_t i = 0; i < n; i++) {
 				CFTypeRef element = CFArrayGetValueAtIndex(prefArray, i);
 				if (element != nullptr && CFGetTypeID(element) == CFStringGetTypeID() && CFStringGetCString((CFStringRef)element, buffer, sizeof(buffer), kCFStringEncodingASCII)) {
 					String langId = String(buffer);
@@ -766,11 +765,11 @@ namespace nCine
 	{
 		StringView baseLanguage = TryRemoveLanguageSpecifiers(langId);
 
-		size_t bottom = 0;
-		size_t top = countof(SupportedLanguages);
+		std::size_t bottom = 0;
+		std::size_t top = arraySize(SupportedLanguages);
 		while (bottom < top) {
-			size_t index = (bottom + top) / 2;
-			int cmpVal = std::strncmp(langId.data(), SupportedLanguages[index].Identifier, baseLanguage.size());
+			std::size_t index = (bottom + top) / 2;
+			std::int32_t cmpVal = strncmp(langId.data(), SupportedLanguages[index].Identifier, baseLanguage.size());
 			if (cmpVal < 0) {
 				top = index;
 			} else if (cmpVal > 0) {
@@ -789,54 +788,39 @@ namespace nCine
 		return (suffix != nullptr ? langId.prefix(suffix.begin()) : langId);
 	}
 
-	void I18n::ExtractPluralExpression(const char* nullEntry, const ExpressionToken** pluralExp, uint32_t* pluralCount)
+	const I18n::ExpressionToken* I18n::ExtractPluralExpression(const char* nullEntry)
 	{
-		// Destroy previous evaluator
-		if (*pluralExp != nullptr) {
-			delete *pluralExp;
-		}
-
 		if (nullEntry != nullptr) {
 			const char* plural = strstr(nullEntry, "plural=");
-			const char* nplurals = strstr(nullEntry, "nplurals=");
-			if (plural != nullptr && nplurals != nullptr) {
-				nplurals += 9;
-				while (*nplurals != '\0' && std::isspace(*nplurals)) {
-					nplurals++;
-				}
-				char* endp;
-				*pluralCount = strtoul(nplurals, &endp, 10);
-				if (nplurals != endp) {
-					plural += 7;
-					*pluralExp = Evaluator::Parse(plural);
-					if (*pluralExp != nullptr) {
-						return;
-					}
+			if (plural != nullptr) {
+				plural += arraySize("plural=") - 1;
+				const ExpressionToken* parsedExpression = Evaluator::Parse(plural);
+				if (parsedExpression != nullptr) {
+					return parsedExpression;
 				}
 			}
 		}
 
-		*pluralExp = new CompareNotEqualsToken(new VariableToken(), new ValueToken(1));
-		*pluralCount = 2;
+		return new CompareNotEqualsToken(new VariableToken(), new ValueToken(1));
 	}
 
 	String _f(const char* text, ...)
 	{
-		uint32_t resultLength;
+		std::uint32_t resultLength;
 		const char* translated = I18n::Get().LookupTranslation(text, &resultLength);
 		const char* format = (translated != nullptr ? translated : text);
 
 		va_list args;
 		va_start(args, text);
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
-		const int totalChars = _vscprintf(format, args);
+		const std::int32_t totalChars = _vscprintf(format, args);
 		String result(NoInit, totalChars);
 		vsnprintf_s(result.data(), totalChars + 1, totalChars, format, args);
 		va_end(args);
 		return result;
 #else
 		// TODO: Quickfix strange bug on Linux
-		//const int totalChars = ::vsnprintf(nullptr, 0, format, args);
+		//const std::int32_t totalChars = ::vsnprintf(nullptr, 0, format, args);
 		//String result(NoInit, totalChars);
 		//::vsnprintf(result.data(), totalChars + 1, format, args);
 
@@ -849,7 +833,7 @@ namespace nCine
 
 	String _fn(const char* singular, const char* plural, int n, ...)
 	{
-		uint32_t resultLength;
+		std::uint32_t resultLength;
 		const char* translated = I18n::Get().LookupTranslation(singular, &resultLength);
 		const char* format;
 		if (translated != nullptr) {
@@ -861,14 +845,14 @@ namespace nCine
 		va_list args;
 		va_start(args, n);
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
-		const int totalChars = _vscprintf(format, args);
+		const std::int32_t totalChars = _vscprintf(format, args);
 		String result(NoInit, totalChars);
 		vsnprintf_s(result.data(), totalChars + 1, totalChars, format, args);
 		va_end(args);
 		return result;
 #else
 		// TODO: Quickfix strange bug on Linux
-		//const int totalChars = ::vsnprintf(nullptr, 0, format, args);
+		//const std::int32_t totalChars = ::vsnprintf(nullptr, 0, format, args);
 		//String result(NoInit, totalChars);
 		//::vsnprintf(result.data(), totalChars + 1, format, args);
 

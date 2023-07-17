@@ -11,7 +11,6 @@
 #include <IO/Stream.h>
 
 using namespace Death::Containers;
-using namespace Death::Containers::Literals;
 using namespace Death::IO;
 
 namespace nCine
@@ -24,7 +23,7 @@ namespace nCine
 		struct ExpressionToken
 		{
 			virtual ~ExpressionToken() { };
-			virtual int operator()(int n) const = 0;
+			virtual std::int32_t operator()(std::int32_t n) const = 0;
 		};
 
 		class Evaluator
@@ -55,8 +54,8 @@ namespace nCine
 		bool LoadFromFile(const StringView& path);
 		bool LoadFromFile(const std::unique_ptr<Stream>& fileHandle);
 
-		const char* LookupTranslation(const char* msgid, uint32_t* resultLength);
-		const char* LookupPlural(int n, const char* translation, uint32_t translationLength);
+		const char* LookupTranslation(const char* msgid, std::uint32_t* resultLength);
+		const char* LookupPlural(std::int32_t n, const char* translation, std::uint32_t translationLength);
 
 		StringView GetTranslationDescription();
 
@@ -73,60 +72,59 @@ namespace nCine
 
 		struct MoFileHeader
 		{
-			uint32_t Signature;
+			std::uint32_t Signature;
 			// The revision number of the file format
-			uint32_t Revision;
+			std::uint32_t Revision;
 
 			// The number of strings pairs
-			uint32_t StringCount;
+			std::uint32_t StringCount;
 			// Offset of table with start offsets of original strings
-			uint32_t OrigTableOffset;
+			std::uint32_t OrigTableOffset;
 			// Offset of table with start offsets of translated strings
-			uint32_t TransTableOffset;
+			std::uint32_t TransTableOffset;
 			// Size of hash table
-			uint32_t HashTableSize;
+			std::uint32_t HashTableSize;
 			// Offset of first hash table entry
-			uint32_t HashTableOffset;
+			std::uint32_t HashTableOffset;
 		};
 
 		struct StringDesc
 		{
 			// Length of addressed string, not including the trailing NULL
-			uint32_t Length;
+			std::uint32_t Length;
 			// Offset of string in file
-			uint32_t Offset;
+			std::uint32_t Offset;
 		};
 
 		std::unique_ptr<char[]> _file;
-		uint32_t _fileSize;
-		uint32_t _stringCount;
+		std::uint32_t _fileSize;
+		std::uint32_t _stringCount;
 		const StringDesc* _origTable;
 		const StringDesc* _transTable;
-		uint32_t _hashSize;
-		const uint32_t* _hashTable;
-		const ExpressionToken* _pluralExp;
-		uint32_t _pluralCount;
+		std::uint32_t _hashSize;
+		const std::uint32_t* _hashTable;
+		const ExpressionToken* _pluralExpression;
 
-		static void ExtractPluralExpression(const char* nullEntry, const ExpressionToken** pluralExp, uint32_t* pluralCount);
+		static const ExpressionToken* ExtractPluralExpression(const char* nullEntry);
 	};
 
 	inline StringView _(const char* text)
 	{
-		uint32_t resultLength;
+		std::uint32_t resultLength;
 		const char* result = I18n::Get().LookupTranslation(text, &resultLength);
 		return StringView(result != nullptr ? result : text);
 	}
 	
 	inline StringView _x(const StringView& context, const char* text)
 	{
-		uint32_t resultLength;
+		std::uint32_t resultLength;
 		const char* result = I18n::Get().LookupTranslation(String(&I18n::ContextSeparator, 1).join({ context, StringView(text) }).data(), &resultLength);
 		return (result != nullptr ? result : text);
 	}
 
 	inline StringView _n(const char* singular, const char* plural, int n)
 	{
-		uint32_t resultLength;
+		std::uint32_t resultLength;
 		const char* result = I18n::Get().LookupTranslation(singular, &resultLength);
 		if (result != nullptr) {
 			return I18n::Get().LookupPlural(n, result, resultLength);
@@ -136,7 +134,7 @@ namespace nCine
 
 	inline StringView _nx(const StringView& context, const char* singular, const char* plural, int n)
 	{
-		uint32_t resultLength;
+		std::uint32_t resultLength;
 		const char* result = I18n::Get().LookupTranslation(String(&I18n::ContextSeparator, 1).join({ context, StringView(singular) }).data(), &resultLength);
 		if (result != nullptr) {
 			return I18n::Get().LookupPlural(n, result, resultLength);
@@ -145,5 +143,5 @@ namespace nCine
 	}
 
 	String _f(const char* text, ...);
-	String _fn(const char* singular, const char* plural, int n, ...);
+	String _fn(const char* singular, const char* plural, std::int32_t n, ...);
 }

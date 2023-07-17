@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-03-19 23:01+0100\n"
+"POT-Creation-Date: 2023-07-15 15:15+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Türkçe çeviri: Consul\n"
@@ -10,7 +10,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Poedit 3.2.2\n"
+"X-Generator: Poedit 3.3.2\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
 "X-Poedit-SearchPath-0: Sources/Jazz2\n"
@@ -1411,7 +1411,7 @@ msgid "Play Story"
 msgstr "Hikaye Modu"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:34
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:124
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:127
 msgid "Play Custom Levels"
 msgstr "Özel Bölüm Seç"
 
@@ -1472,7 +1472,7 @@ msgid "Touch Controls"
 msgstr "Dokunmatik Kontrol Ayarları"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:14
-#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:59
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:54
 msgid "Input Diagnostics"
 msgstr "Giriş Tanılama"
 
@@ -1488,9 +1488,9 @@ msgstr "Kontrol Ayarları"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:89
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:116
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:110
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:113
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:121
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:105
 msgid "Enabled"
 msgstr "Açık"
@@ -1498,12 +1498,12 @@ msgstr "Açık"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:89
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:116
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:121
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:105
 msgid "Disabled"
 msgstr "Kapalı"
 
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:134
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:137
 msgid "No custom level found!"
 msgstr "Özel bölüm bulunamadı!"
 
@@ -1568,11 +1568,15 @@ msgid "Scripting"
 msgstr "Komutlama"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:29
+msgid "Browse \"Source\" Directory"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:32
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:63
 msgid "Refresh Cache"
 msgstr "Önbelleği Yenile"
 
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:64
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:11
 msgid "Gameplay"
 msgstr "Oyun Ayarları"
@@ -1638,7 +1642,7 @@ msgstr "Hiçbir dosya seçilmedi!"
 msgid "No new episodes were imported!"
 msgstr "Hiçbir yeni bölüm içeriye alınmadı!"
 
-#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:74
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:69
 msgid "No gamepads are detected!"
 msgstr "Oyun kolu algılanmadı!"
 

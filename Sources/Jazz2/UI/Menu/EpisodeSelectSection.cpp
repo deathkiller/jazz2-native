@@ -5,6 +5,8 @@
 #include "../../../nCine/Base/Algorithms.h"
 #include "../../../nCine/Base/FrameTimer.h"
 
+#include <Utf8.h>
+
 namespace Jazz2::UI::Menu
 {
 	EpisodeSelectSection::EpisodeSelectSection()
@@ -138,7 +140,7 @@ namespace Jazz2::UI::Menu
 
 		if ((item.Item.Flags & EpisodeDataFlags::IsMissing) == EpisodeDataFlags::IsMissing) {
 			if (isSelected) {
-				_root->DrawElement("MenuGlow"_s, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (item.Item.Description.DisplayName.size() + 3) * 0.5f, 4.0f, true);
+				_root->DrawElement("MenuGlow"_s, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (Utf8::GetLength(item.Item.Description.DisplayName) + 3) * 0.5f, 4.0f, true);
 			}
 
 			_root->DrawStringShadow(item.Item.Description.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer,
@@ -150,7 +152,7 @@ namespace Jazz2::UI::Menu
 				float expandedAnimation2 = std::min(_expandedAnimation * 6.0f, 1.0f);
 				float expandedAnimation3 = (expandedAnimation2 * expandedAnimation2 * (3.0f - 2.0f * expandedAnimation2));
 
-				_root->DrawElement("MenuGlow"_s, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (item.Item.Description.DisplayName.size() + 3) * 0.5f * size, 4.0f * size, true);
+				_root->DrawElement("MenuGlow"_s, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(item.Item.Description.DisplayName) + 3) * 0.5f * size, 4.0f * size, true);
 
 				Colorf nameColor = Font::RandomColor;
 				nameColor.SetAlpha(0.5f - expandedAnimation3 * 0.15f);
@@ -182,7 +184,7 @@ namespace Jazz2::UI::Menu
 					}
 				}
 
-				_root->DrawElement("MenuGlow"_s, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (item.Item.Description.DisplayName.size() + 3) * 0.5f * size, 4.0f * size, true);
+				_root->DrawElement("MenuGlow"_s, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(item.Item.Description.DisplayName) + 3) * 0.5f * size, 4.0f * size, true);
 
 				_root->DrawStringShadow(item.Item.Description.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
 					Alignment::Center, Font::TransparentRandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);

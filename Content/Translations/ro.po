@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-03-19 23:01+0100\n"
+"POT-Creation-Date: 2023-07-15 15:15+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Traducere în limba română: 1NSH4N3 & Akfiz\n"
@@ -11,7 +11,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n==0 || (n!=1 && n%100>=1 && "
 "n%100<=19) ? 1 : 2);\n"
-"X-Generator: Poedit 3.2.2\n"
+"X-Generator: Poedit 3.3.2\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
 "X-Poedit-SearchPath-0: Sources/Jazz2\n"
@@ -1420,7 +1420,7 @@ msgid "Play Story"
 msgstr "Joacă Povestea"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:34
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:124
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:127
 msgid "Play Custom Levels"
 msgstr "Joacă Niveluri Customizate"
 
@@ -1482,7 +1482,7 @@ msgid "Touch Controls"
 msgstr "Comenzi Tactile"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:14
-#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:59
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:54
 msgid "Input Diagnostics"
 msgstr ""
 
@@ -1498,9 +1498,9 @@ msgstr "Controluri"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:89
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:116
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:110
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:113
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:121
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:105
 msgid "Enabled"
 msgstr "Activat"
@@ -1508,12 +1508,12 @@ msgstr "Activat"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:89
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:116
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:120
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:121
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:105
 msgid "Disabled"
 msgstr "Dezactivat"
 
-#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:134
+#: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:137
 msgid "No custom level found!"
 msgstr "Nu s-a găsit niciun nivel customizat!"
 
@@ -1578,11 +1578,15 @@ msgid "Scripting"
 msgstr "Scripturi"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:29
+msgid "Browse \"Source\" Directory"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:32
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:63
 msgid "Refresh Cache"
 msgstr "Reîncarcă Memoria Cache"
 
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:64
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:11
 msgid "Gameplay"
 msgstr "Gameplay"
@@ -1649,7 +1653,7 @@ msgstr "Nu a fost selectat nici un fișier!"
 msgid "No new episodes were imported!"
 msgstr "Niciun episod nou nu a fost importat!"
 
-#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:74
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:69
 msgid "No gamepads are detected!"
 msgstr ""
 

@@ -9,6 +9,8 @@
 #	include "../DiscordRpcClient.h"
 #endif
 
+#include <Utf8.h>
+
 namespace Jazz2::UI::Menu
 {
 	GameplayOptionsSection::GameplayOptionsSection()
@@ -24,6 +26,9 @@ namespace Jazz2::UI::Menu
 #endif
 #if defined(WITH_ANGELSCRIPT)
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::AllowUnsignedScripts, _("Scripting"), true });
+#endif
+#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_UNIX)
+		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::BrowseSourceDirectory, _("Browse \"Source\" Directory") });
 #endif
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::RefreshCache, _("Refresh Cache") });
@@ -74,7 +79,7 @@ namespace Jazz2::UI::Menu
 		if (isSelected) {
 			float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
-			_root->DrawElement("MenuGlow"_s, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (item.Item.DisplayName.size() + 3) * 0.5f * size, 4.0f * size, true);
+			_root->DrawElement("MenuGlow"_s, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(item.Item.DisplayName) + 3) * 0.5f * size, 4.0f * size, true);
 
 			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
 				Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
@@ -129,7 +134,7 @@ namespace Jazz2::UI::Menu
 			case GameplayOptionsItemType::Enhancements: _root->SwitchToSection<GameplayEnhancementsSection>(); break;
 			case GameplayOptionsItemType::Language: _root->SwitchToSection<LanguageSelectSection>(); break;
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
-			case GameplayOptionsItemType::EnableDiscordIntegration:
+			case GameplayOptionsItemType::EnableDiscordIntegration: {
 				PreferencesCache::EnableDiscordIntegration = !PreferencesCache::EnableDiscordIntegration;
 				if (!PreferencesCache::EnableDiscordIntegration) {
 					DiscordRpcClient::Get().Disconnect();
@@ -137,9 +142,10 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 				_animation = 0.0f;
 				break;
+			}
 #endif
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
-			case GameplayOptionsItemType::EnableRgbLights:
+			case GameplayOptionsItemType::EnableRgbLights: {
 				PreferencesCache::EnableRgbLights = !PreferencesCache::EnableRgbLights;
 				if (!PreferencesCache::EnableRgbLights) {
 					RgbLights::Get().Clear();
@@ -147,13 +153,28 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 				_animation = 0.0f;
 				break;
+			}
 #endif
 #if defined(WITH_ANGELSCRIPT)
-			case GameplayOptionsItemType::AllowUnsignedScripts:
+			case GameplayOptionsItemType::AllowUnsignedScripts: {
 				PreferencesCache::AllowUnsignedScripts = !PreferencesCache::AllowUnsignedScripts;
 				_isDirty = true;
 				_animation = 0.0f;
 				break;
+			}
+#endif
+#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_UNIX)
+			case GameplayOptionsItemType::BrowseSourceDirectory: {
+				auto& resolver = ContentResolver::Get();
+				String sourcePath = fs::GetAbsolutePath(resolver.GetSourcePath());
+				if (sourcePath.empty()) {
+					// If `Source` directory doesn't exist, GetAbsolutePath() will fail
+					sourcePath = resolver.GetSourcePath();
+				}
+				fs::CreateDirectories(sourcePath);
+				fs::LaunchDirectoryAsync(sourcePath);
+				break;
+			}
 #endif
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 			case GameplayOptionsItemType::RefreshCache: _root->SwitchToSection<RefreshCacheSection>(); break;

@@ -3,6 +3,18 @@
 
 namespace Death::Utf8
 {
+	std::size_t GetLength(const Containers::StringView& text)
+	{
+		std::size_t size = text.size();
+		std::size_t result = 0;
+		for (std::size_t i = 0; i < size; i++) {
+			if ((text[i] & 0xC0) != 0x80) {
+				result++;
+			}
+		}
+		return result;
+	}
+
 	std::pair<char32_t, std::size_t> NextChar(const Containers::ArrayView<const char> text, std::size_t cursor)
 	{
 		DEATH_ASSERT(cursor < text.size(), {}, "Utf8::NextChar(): Cursor out of range");

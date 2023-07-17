@@ -555,9 +555,7 @@ namespace Death::Containers
 	*/
 	template<class T, class ...Args> void arrayResize(Array<T>& array, DirectInitT, std::size_t size, Args&&... args);
 
-	/**
-		@overload
-	*/
+	/** @overload */
 	template<class T, class Allocator, class ...Args> void arrayResize(Array<T>& array, DirectInitT, std::size_t size, Args&&... args);
 
 	/**
@@ -640,9 +638,7 @@ namespace Death::Containers
 	*/
 	template<class T, class ...Args> T& arrayAppend(Array<T>& array, InPlaceInitT, Args&&... args);
 
-	/**
-		@overload
-	*/
+	/** @overload */
 	template<class T, class Allocator, class ...Args> T& arrayAppend(Array<T>& array, InPlaceInitT, Args&&... args);
 
 	/**
@@ -698,9 +694,7 @@ namespace Death::Containers
 		return arrayAppend<T, Allocator<T>>(array, values);
 	}
 
-	/**
-		@overload
-	*/
+	/** @overload */
 	template<class T, class Allocator = ArrayAllocator<T>> inline ArrayView<T> arrayAppend(Array<T>& array, std::initializer_list<typename std::common_type<T>::type> values) {
 		return arrayAppend<T, Allocator>(array, arrayView(values));
 	}
@@ -787,9 +781,7 @@ namespace Death::Containers
 	*/
 	template<class T, class ...Args> T& arrayInsert(Array<T>& array, std::size_t index, InPlaceInitT, Args&&... args);
 
-	/**
-		@overload
-	*/
+	/** @overload */
 	template<class T, class Allocator, class ...Args> T& arrayInsert(Array<T>& array, std::size_t index, InPlaceInitT, Args&&... args);
 
 	/**
@@ -848,9 +840,7 @@ namespace Death::Containers
 		return arrayInsert<T, Allocator<T>>(array, index, values);
 	}
 
-	/**
-		@overload
-	*/
+	/** @overload */
 	template<class T, class Allocator = ArrayAllocator<T>> ArrayView<T>  arrayInsert(Array<T>& array, std::size_t index, std::initializer_list<typename std::common_type<T>::type> values) {
 		return arrayInsert<T, Allocator>(array, index, arrayView(values));
 	}
@@ -1394,7 +1384,7 @@ namespace Death::Containers
 			}
 
 			// Move-assign overlapping elements, going backwards to avoid overwriting values that are yet to be moved.
-						// This loop is never entered if nonOverlappingCount >= count.
+			// This loop is never entered if nonOverlappingCount >= count.
 			for (T* assignSrc = src + count - nonOverlappingCount, *assignDst = dst + count - nonOverlappingCount; assignSrc > src; --assignSrc, --assignDst)
 				*(assignDst - 1) = std::move(*(assignSrc - 1));
 
