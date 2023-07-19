@@ -8,7 +8,7 @@ namespace Death::Utf8
 		std::size_t size = text.size();
 		std::size_t result = 0;
 		for (std::size_t i = 0; i < size; i++) {
-			if ((text[i] & 0xC0) != 0x80) {
+			if ((text[i] & 0xc0) != 0x80) {
 				result++;
 			}
 		}
@@ -43,7 +43,7 @@ namespace Death::Utf8
 		// Unexpected end
 		if (text.size() < end) return { U'\xffffffff', cursor + 1 };
 
-		char32_t result = character & mask;
+		char32_t result = (character & mask);
 		for (std::size_t i = cursor + 1; i != end; ++i) {
 			// Garbage in the sequence
 			if ((text[i] & 0xc0) != 0x80)

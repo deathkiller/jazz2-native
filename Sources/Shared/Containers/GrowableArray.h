@@ -29,13 +29,15 @@
 
 // No __has_feature() on GCC: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=60512
 // Using a dedicated macro instead: https://stackoverflow.com/a/34814667
-#if defined(__has_feature)
-#	if __has_feature(address_sanitizer)
+#if !defined(DEATH_CONTAINERS_NO_SANITIZER_ANNOTATIONS)
+#	if defined(__has_feature)
+#		if __has_feature(address_sanitizer)
+#			define _DEATH_CONTAINERS_SANITIZER_ENABLED
+#		endif
+#	endif
+#	if defined(__SANITIZE_ADDRESS__)
 #		define _DEATH_CONTAINERS_SANITIZER_ENABLED
 #	endif
-#endif
-#if defined(__SANITIZE_ADDRESS__)
-#	define _DEATH_CONTAINERS_SANITIZER_ENABLED
 #endif
 
 #if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
@@ -44,14 +46,14 @@ extern "C" void __sanitizer_annotate_contiguous_container(const void* beg, const
 	// Declaration of this function in <vector> in MSVC 2022 14.35 and earlier STL includes a noexcept for some strange unexplained reason,
 	// which makes the signature differ from Clang's. See the PR comment here:
 	//	https://github.com/microsoft/STL/pull/2071/commits/daa4db9bf10400678438d9c6b33630c7947e469e
-	// However, it got then subsequently removed, again without any additional explanation:
+	// It got then subsequently removed, but without any additional explanation in the commit message nor links
+	// to corresponding bug reports and the STL repo has no tags or mapping to actual releases:
 	//	https://github.com/microsoft/STL/pull/3164/commits/9f503ca22bcc32cd885184ea754ec4223759c431
-	// The STL repo has unfortunately no tags or any mapping to actual releases so it's impossible to know which MSVC version contains this change.
-	// If you get a build error at this declaration with MSVC > 2022 14.35 (_MSC_VER > 1935), let me know so I can update the ifdef logic.
-	//
+	// So I only accidentally discovered that this commit is in 14.36:
+	//  https://developercommunity.visualstudio.com/t/__sanitizer_annotate_contiguous_containe/10119696
 	// The difference in noexcept is only a problem with `/std:c++17` (where noexcept becomes a part of the function signature) *and* with
 	// the `/permissive-` flag set, or `/std:c++20` alone (where the flag is implicitly enabled).
-#	if defined(DEATH_TARGET_DINKUMWARE)
+#	if defined(CORRADE_TARGET_DINKUMWARE) && _MSC_VER < 1936
 	noexcept
 #	endif
 	;

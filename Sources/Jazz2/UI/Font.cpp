@@ -63,10 +63,20 @@ namespace Jazz2::UI
 				int32_t remainingBytes =
 					((c[0] & 240) == 240) ? 3 : (
 					((c[0] & 224) == 224) ? 2 : (
-					((c[0] & 192) == 192) ? 1 : -1
+					((c[0] & 192) == 192) ? 1 : 0
 				));
-				if (remainingBytes == -1) {
-					return;
+				if (remainingBytes == 0) {
+					// Placeholder for unknown characters
+					uint8_t charWidth = s->ReadValue<uint8_t>();
+					if (c[0] == 0) {
+						_asciiChars[0] = Rectf(
+							(float)(i % cols) / cols,
+							(float)(i / cols) / rows,
+							charWidth,
+							height - 1
+						);
+					}
+					continue;
 				}
 
 				s->Read(c + 1, remainingBytes);
@@ -140,7 +150,7 @@ namespace Jazz2::UI
 					if (it != _unicodeChars.end()) {
 						uvRect = it->second;
 					} else {
-						uvRect = Rectf();
+						uvRect = _asciiChars[0];
 					}
 				}
 
@@ -215,7 +225,7 @@ namespace Jazz2::UI
 					if (it != _unicodeChars.end()) {
 						uvRect = it->second;
 					} else {
-						uvRect = Rectf();
+						uvRect = _asciiChars[0];
 					}
 				}
 
@@ -375,7 +385,7 @@ namespace Jazz2::UI
 					if (it != _unicodeChars.end()) {
 						uvRect = it->second;
 					} else {
-						uvRect = Rectf();
+						uvRect = _asciiChars[0];
 					}
 				}
 

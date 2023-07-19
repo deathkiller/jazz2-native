@@ -116,7 +116,7 @@ namespace Jazz2::UI::Menu
 
 		int32_t charOffset = 0;
 
-		_root->DrawStringShadow(_("Reimplementation of the game \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] released in 1998. Supports various\nversions of the game (Shareware Demo, Holiday Hare '98, The Secret Files and\nChristmas Chronicles). Also, it partially supports some features of JJ2+ extension.\nFor more information, visit the official website: \f[c:0x707070]http://deat.tk/jazz2/\f[c]"),
+		_root->DrawStringShadow(_f("Reimplementation of the game \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] released in 1998. Supports various\nversions of the game (Shareware Demo, Holiday Hare '98, The Secret Files and\nChristmas Chronicles). Also, it partially supports some features of JJ2+ extension.\nFor more information, visit the official website: %s", "\f[c:0x707070]http://deat.tk/jazz2/\f[c]"),
 			charOffset, viewSize.X * 0.5f, pos.Y - 22.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Font::DefaultColor, 0.7f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 
@@ -125,7 +125,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawStringShadow("Dan R."_s, charOffset, pos.X + 25.0f, pos.Y + 45.0f + 20.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 1.0f, 0.4f, 0.75f, 0.75f, 0.6f, 0.9f);
 
-		_root->DrawStringShadow("&  Contributors: \f[c:0xd0705d]JJ2+ Team\f[c], \f[c:0x707070]Bioxxdevil\f[c], \f[c:0x707070]roox\f[c], \f[c:0x707070]tunip3\f[c]"_s, charOffset, pos.X + 22.0f + 70.0f, pos.Y + 45.0f + 20.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow("&  Contributors: \f[c:0xd0705d]JJ2+ Team\f[c], \f[c:0x707070]Bioxxdevil\f[c], \f[c:0x707070]roox\f[c], \f[c:0x707070]tunip3\f[c], ..."_s, charOffset, pos.X + 22.0f + 70.0f, pos.Y + 45.0f + 20.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.8f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f);
 
 		_root->DrawStringShadow(I18n::Get().GetTranslationDescription(),
