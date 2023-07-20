@@ -35,7 +35,7 @@ namespace Jazz2::Scripting
 	static void CleanupTypeInfoArrayCache(asITypeInfo* type)
 	{
 		SArrayCache* cache = reinterpret_cast<SArrayCache*>(type->GetUserData(ARRAY_CACHE));
-		if (cache) {
+		if (cache != nullptr) {
 			cache->~SArrayCache();
 			asFreeMem(cache);
 		}
@@ -45,9 +45,9 @@ namespace Jazz2::Scripting
 	{
 		// Allocate the memory
 		void* mem = asAllocMem(sizeof(CScriptArray));
-		if (mem == 0) {
+		if (mem == nullptr) {
 			asIScriptContext* ctx = asGetActiveContext();
-			if (ctx) {
+			if (ctx != nullptr) {
 				ctx->SetException("Out of memory");
 			}
 			return nullptr;
@@ -63,9 +63,9 @@ namespace Jazz2::Scripting
 	{
 		// Allocate the memory
 		void* mem = asAllocMem(sizeof(CScriptArray));
-		if (mem == 0) {
+		if (mem == nullptr) {
 			asIScriptContext* ctx = asGetActiveContext();
-			if (ctx) {
+			if (ctx != nullptr) {
 				ctx->SetException("Out of memory");
 			}
 			return nullptr;
@@ -81,9 +81,9 @@ namespace Jazz2::Scripting
 	{
 		// Allocate the memory
 		void* mem = asAllocMem(sizeof(CScriptArray));
-		if (mem == 0) {
+		if (mem == nullptr) {
 			asIScriptContext* ctx = asGetActiveContext();
-			if (ctx) {
+			if (ctx != nullptr) {
 				ctx->SetException("Out of memory");
 			}
 			return nullptr;
@@ -112,6 +112,7 @@ namespace Jazz2::Scripting
 		int typeId = ti->GetSubTypeId();
 		if (typeId == asTYPEID_VOID)
 			return false;
+
 		if ((typeId & asTYPEID_MASK_OBJECT) && !(typeId & asTYPEID_OBJHANDLE)) {
 			asITypeInfo* subtype = ti->GetEngine()->GetTypeInfoById(typeId);
 			asDWORD flags = subtype->GetFlags();
@@ -163,8 +164,9 @@ namespace Jazz2::Scripting
 			}
 
 			// If the object type is not garbage collected then the array also doesn't need to be
-			if (!(flags & asOBJ_GC))
+			if (!(flags & asOBJ_GC)) {
 				dontGarbageCollect = true;
+			}
 		} else if (!(typeId & asTYPEID_OBJHANDLE)) {
 			// Arrays with primitives cannot form circular references,
 			// thus there is no need to garbage collect them
@@ -301,8 +303,7 @@ namespace Jazz2::Scripting
 	CScriptArray& CScriptArray::operator=(const CScriptArray& other)
 	{
 		// Only perform the copy if the array types are the same
-		if (&other != this &&
-			other.GetArrayObjectType() == GetArrayObjectType()) {
+		if (&other != this && other.GetArrayObjectType() == GetArrayObjectType()) {
 			// Make sure the arrays are of the same size
 			Resize(other.buffer->numElements);
 
@@ -316,7 +317,7 @@ namespace Jazz2::Scripting
 	CScriptArray::CScriptArray(asITypeInfo* ti, void* buf)
 	{
 		// The object type should be the template instance of the array
-		ASSERT(ti && StringView(ti->GetName()) == "array"_s);
+		ASSERT(ti != nullptr && StringView(ti->GetName()) == "array"_s);
 
 		refCount = 1;
 		gcFlag = false;
@@ -329,10 +330,11 @@ namespace Jazz2::Scripting
 		asIScriptEngine* engine = ti->GetEngine();
 
 		// Determine element size
-		if (subTypeId & asTYPEID_MASK_OBJECT)
+		if (subTypeId & asTYPEID_MASK_OBJECT) {
 			elementSize = sizeof(asPWORD);
-		else
+		} else {
 			elementSize = engine->GetSizeOfPrimitiveType(subTypeId);
+		}
 
 		// Determine the initial size from the buffer
 		asUINT length = *(asUINT*)buf;
@@ -348,14 +350,16 @@ namespace Jazz2::Scripting
 			CreateBuffer(&buffer, length);
 
 			// Copy the values of the primitive type into the internal buffer
-			if (length > 0)
+			if (length > 0) {
 				memcpy(At(0), (((asUINT*)buf) + 1), length * elementSize);
+			}
 		} else if (ti->GetSubTypeId() & asTYPEID_OBJHANDLE) {
 			CreateBuffer(&buffer, length);
 
 			// Copy the handles into the internal buffer
-			if (length > 0)
+			if (length > 0) {
 				memcpy(At(0), (((asUINT*)buf) + 1), length * elementSize);
+			}
 
 			// With object handles it is safe to clear the memory in the received buffer
 			// instead of increasing the ref count. It will save time both by avoiding the
@@ -369,8 +373,9 @@ namespace Jazz2::Scripting
 			subTypeId &= ~asTYPEID_OBJHANDLE;
 
 			// Copy the handles into the internal buffer
-			if (length > 0)
+			if (length > 0) {
 				memcpy(buffer->data, (((asUINT*)buf) + 1), length * elementSize);
+			}
 
 			// For ref types we can do the same as for handles, as they are
 			// implicitly stored as handles.
@@ -393,14 +398,15 @@ namespace Jazz2::Scripting
 		}
 
 		// Notify the GC of the successful creation
-		if (objType->GetFlags() & asOBJ_GC)
+		if (objType->GetFlags() & asOBJ_GC) {
 			objType->GetEngine()->NotifyGarbageCollectorOfNewObject(this, objType);
+		}
 	}
 
 	CScriptArray::CScriptArray(asUINT length, asITypeInfo* ti)
 	{
 		// The object type should be the template instance of the array
-		ASSERT(ti && StringView(ti->GetName()) == "array"_s);
+		ASSERT(ti != nullptr && StringView(ti->GetName()) == "array"_s);
 
 		refCount = 1;
 		gcFlag = false;
@@ -411,10 +417,11 @@ namespace Jazz2::Scripting
 		Precache();
 
 		// Determine element size
-		if (subTypeId & asTYPEID_MASK_OBJECT)
+		if (subTypeId & asTYPEID_MASK_OBJECT) {
 			elementSize = sizeof(asPWORD);
-		else
+		} else {
 			elementSize = objType->GetEngine()->GetSizeOfPrimitiveType(subTypeId);
+		}
 
 		// Make sure the array size isn't too large for us to handle
 		if (!CheckMaxSize(length)) {
@@ -425,8 +432,9 @@ namespace Jazz2::Scripting
 		CreateBuffer(&buffer, length);
 
 		// Notify the GC of the successful creation
-		if (objType->GetFlags() & asOBJ_GC)
+		if (objType->GetFlags() & asOBJ_GC) {
 			objType->GetEngine()->NotifyGarbageCollectorOfNewObject(this, objType);
+		}
 	}
 
 	CScriptArray::CScriptArray(const CScriptArray& other)
@@ -441,8 +449,9 @@ namespace Jazz2::Scripting
 
 		elementSize = other.elementSize;
 
-		if (objType->GetFlags() & asOBJ_GC)
+		if (objType->GetFlags() & asOBJ_GC) {
 			objType->GetEngine()->NotifyGarbageCollectorOfNewObject(this, objType);
+		}
 
 		CreateBuffer(&buffer, 0);
 
@@ -453,7 +462,7 @@ namespace Jazz2::Scripting
 	CScriptArray::CScriptArray(asUINT length, void* defVal, asITypeInfo* ti)
 	{
 		// The object type should be the template instance of the array
-		ASSERT(ti && StringView(ti->GetName()) == "array"_s);
+		ASSERT(ti != nullptr && StringView(ti->GetName()) == "array"_s);
 
 		refCount = 1;
 		gcFlag = false;
@@ -464,10 +473,11 @@ namespace Jazz2::Scripting
 		Precache();
 
 		// Determine element size
-		if (subTypeId & asTYPEID_MASK_OBJECT)
+		if (subTypeId & asTYPEID_MASK_OBJECT) {
 			elementSize = sizeof(asPWORD);
-		else
+		} else {
 			elementSize = objType->GetEngine()->GetSizeOfPrimitiveType(subTypeId);
+		}
 
 		// Make sure the array size isn't too large for us to handle
 		if (!CheckMaxSize(length)) {
@@ -478,12 +488,14 @@ namespace Jazz2::Scripting
 		CreateBuffer(&buffer, length);
 
 		// Notify the GC of the successful creation
-		if (objType->GetFlags() & asOBJ_GC)
+		if (objType->GetFlags() & asOBJ_GC) {
 			objType->GetEngine()->NotifyGarbageCollectorOfNewObject(this, objType);
+		}
 
 		// Initialize the elements with the default value
-		for (asUINT n = 0; n < GetSize(); n++)
+		for (asUINT n = 0; n < GetSize(); n++) {
 			SetValue(n, defVal);
+		}
 	}
 
 	void CScriptArray::SetValue(asUINT index, void* value)
@@ -491,7 +503,7 @@ namespace Jazz2::Scripting
 		// At() will take care of the out-of-bounds checking, though
 		// if called from the application then nothing will be done
 		void* ptr = At(index);
-		if (ptr == 0) return;
+		if (ptr == nullptr) return;
 
 		if ((subTypeId & ~asTYPEID_MASK_SEQNBR) && !(subTypeId & asTYPEID_OBJHANDLE)) {
 			asITypeInfo* subType = objType->GetSubType();
@@ -501,7 +513,7 @@ namespace Jazz2::Scripting
 				// TODO: Move the lookup of the opHndlAssign method to Precache() so it is only done once
 				String decl = StringView(subType->GetName()) + "& opHndlAssign(const "_s + StringView(subType->GetName()) + "&in)"_s;
 				asIScriptFunction* func = subType->GetMethodByDecl(decl.data());
-				if (func) {
+				if (func != nullptr) {
 					// TODO: Reuse active context if existing
 					asIScriptEngine* engine = objType->GetEngine();
 					asIScriptContext* ctx = engine->RequestContext();
@@ -515,39 +527,41 @@ namespace Jazz2::Scripting
 					// opHndlAssign doesn't exist, so try ordinary value assign instead
 					objType->GetEngine()->AssignScriptObject(ptr, value, subType);
 				}
-			} else
+			} else {
 				objType->GetEngine()->AssignScriptObject(ptr, value, subType);
+			}
 		} else if (subTypeId & asTYPEID_OBJHANDLE) {
 			void* tmp = *(void**)ptr;
 			*(void**)ptr = *(void**)value;
 			objType->GetEngine()->AddRefScriptObject(*(void**)value, objType->GetSubType());
-			if (tmp)
+			if (tmp != nullptr)
 				objType->GetEngine()->ReleaseScriptObject(tmp, objType->GetSubType());
 		} else if (subTypeId == asTYPEID_BOOL ||
 				 subTypeId == asTYPEID_INT8 ||
-				 subTypeId == asTYPEID_UINT8)
+				 subTypeId == asTYPEID_UINT8) {
 			*(char*)ptr = *(char*)value;
-		else if (subTypeId == asTYPEID_INT16 ||
-				 subTypeId == asTYPEID_UINT16)
+		} else if (subTypeId == asTYPEID_INT16 ||
+				 subTypeId == asTYPEID_UINT16) {
 			*(short*)ptr = *(short*)value;
-		else if (subTypeId == asTYPEID_INT32 ||
+		} else if (subTypeId == asTYPEID_INT32 ||
 				 subTypeId == asTYPEID_UINT32 ||
 				 subTypeId == asTYPEID_FLOAT ||
-				 subTypeId > asTYPEID_DOUBLE) // enums have a type id larger than doubles
+				 subTypeId > asTYPEID_DOUBLE) { // enums have a type id larger than doubles
 			*(int*)ptr = *(int*)value;
-		else if (subTypeId == asTYPEID_INT64 ||
+		} else if (subTypeId == asTYPEID_INT64 ||
 				 subTypeId == asTYPEID_UINT64 ||
-				 subTypeId == asTYPEID_DOUBLE)
+				 subTypeId == asTYPEID_DOUBLE) {
 			*(double*)ptr = *(double*)value;
+		}
 	}
 
 	CScriptArray::~CScriptArray()
 	{
-		if (buffer) {
+		if (buffer != nullptr) {
 			DeleteBuffer(buffer);
 			buffer = 0;
 		}
-		if (objType) objType->Release();
+		if (objType != nullptr) objType->Release();
 	}
 
 	asUINT CScriptArray::GetSize() const
@@ -570,13 +584,13 @@ namespace Jazz2::Scripting
 
 		// Allocate memory for the buffer
 		SArrayBuffer* newBuffer = reinterpret_cast<SArrayBuffer*>(asAllocMem(sizeof(SArrayBuffer) - 1 + elementSize * maxElements));
-		if (newBuffer) {
+		if (newBuffer != nullptr) {
 			newBuffer->numElements = buffer->numElements;
 			newBuffer->maxElements = maxElements;
 		} else {
 			// Out of memory
 			asIScriptContext* ctx = asGetActiveContext();
-			if (ctx) {
+			if (ctx != nullptr) {
 				ctx->SetException("Out of memory");
 			}
 			return;
@@ -606,7 +620,7 @@ namespace Jazz2::Scripting
 			return;
 		}
 
-		if (buffer == 0 || start > buffer->numElements) {
+		if (buffer == nullptr || start > buffer->numElements) {
 			// If this is called from a script we raise a script exception
 			asIScriptContext* ctx = asGetActiveContext();
 			if (ctx) {
@@ -655,13 +669,13 @@ namespace Jazz2::Scripting
 		if (buffer->maxElements < buffer->numElements + delta) {
 			// Allocate memory for the buffer
 			SArrayBuffer* newBuffer = reinterpret_cast<SArrayBuffer*>(asAllocMem(sizeof(SArrayBuffer) - 1 + elementSize * (buffer->numElements + delta)));
-			if (newBuffer) {
+			if (newBuffer != nullptr) {
 				newBuffer->numElements = buffer->numElements + delta;
 				newBuffer->maxElements = newBuffer->numElements;
 			} else {
 				// Out of memory
 				asIScriptContext* ctx = asGetActiveContext();
-				if (ctx) {
+				if (ctx != nullptr) {
 					ctx->SetException("Out of memory");
 				}
 				return;
@@ -826,10 +840,10 @@ namespace Jazz2::Scripting
 	// Return a pointer to the array element. Returns 0 if the index is out of bounds
 	const void* CScriptArray::At(asUINT index) const
 	{
-		if (buffer == 0 || index >= buffer->numElements) {
+		if (buffer == nullptr || index >= buffer->numElements) {
 			// If this is called from a script we raise a script exception
 			asIScriptContext* ctx = asGetActiveContext();
-			if (ctx) {
+			if (ctx != nullptr) {
 				ctx->SetException("Index out of bounds");
 			}
 			return 0;
@@ -857,14 +871,14 @@ namespace Jazz2::Scripting
 	{
 		*buf = reinterpret_cast<SArrayBuffer*>(asAllocMem(sizeof(SArrayBuffer) - 1 + elementSize * numElements));
 
-		if (*buf) {
+		if ((*buf) != nullptr) {
 			(*buf)->numElements = numElements;
 			(*buf)->maxElements = numElements;
 			Construct(*buf, 0, numElements);
 		} else {
 			// Oops, out of memory
 			asIScriptContext* ctx = asGetActiveContext();
-			if (ctx) {
+			if (ctx != nullptr) {
 				ctx->SetException("Out of memory");
 			}
 		}
@@ -990,14 +1004,14 @@ namespace Jazz2::Scripting
 		if (subTypeId & ~asTYPEID_MASK_SEQNBR) {
 			// Try to reuse the active context
 			cmpContext = asGetActiveContext();
-			if (cmpContext) {
+			if (cmpContext != nullptr) {
 				if (cmpContext->GetEngine() == objType->GetEngine() && cmpContext->PushState() >= 0) {
 					isNested = true;
 				} else {
-					cmpContext = 0;
+					cmpContext = nullptr;
 				}
 			}
-			if (cmpContext == 0) {
+			if (cmpContext == nullptr) {
 				// TODO: Ideally this context would be retrieved from a pool, so we don't have to
 				//       create a new one everytime. We could keep a context with the array object
 				//       but that would consume a lot of resources as each context is quite heavy.
@@ -1014,7 +1028,7 @@ namespace Jazz2::Scripting
 				break;
 			}
 
-		if (cmpContext) {
+		if (cmpContext != nullptr) {
 			if (isNested) {
 				asEContextState state = cmpContext->GetState();
 				cmpContext->PopState();
@@ -1059,7 +1073,7 @@ namespace Jazz2::Scripting
 			}
 
 			// Execute object opEquals if available
-			if (cache && cache->eqFunc) {
+			if (cache != nullptr && cache->eqFunc != nullptr) {
 				// TODO: Add proper error handling
 				r = ctx->Prepare(cache->eqFunc); ASSERT(r >= 0);
 
@@ -1080,7 +1094,7 @@ namespace Jazz2::Scripting
 			}
 
 			// Execute object opCmp if available
-			if (cache && cache->cmpFunc) {
+			if (cache != nullptr && cache->cmpFunc != nullptr) {
 				// TODO: Add proper error handling
 				r = ctx->Prepare(cache->cmpFunc); ASSERT(r >= 0);
 
@@ -1145,12 +1159,12 @@ namespace Jazz2::Scripting
 		SArrayCache* cache = 0;
 		if (subTypeId & ~asTYPEID_MASK_SEQNBR) {
 			cache = reinterpret_cast<SArrayCache*>(objType->GetUserData(ARRAY_CACHE));
-			if (!cache || (cache->cmpFunc == 0 && cache->eqFunc == 0)) {
+			if (cache == nullptr || (cache->cmpFunc == 0 && cache->eqFunc == 0)) {
 				asIScriptContext* ctx = asGetActiveContext();
 				asITypeInfo* subType = objType->GetEngine()->GetTypeInfoById(subTypeId);
 
 				// Throw an exception
-				if (ctx) {
+				if (ctx != nullptr) {
 					char tmp[512];
 
 					if (cache && cache->eqFuncReturnCode == asMULTIPLE_FUNCTIONS) {
@@ -1179,14 +1193,14 @@ namespace Jazz2::Scripting
 		if (subTypeId & ~asTYPEID_MASK_SEQNBR) {
 			// Try to reuse the active context
 			cmpContext = asGetActiveContext();
-			if (cmpContext) {
+			if (cmpContext != nullptr) {
 				if (cmpContext->GetEngine() == objType->GetEngine() && cmpContext->PushState() >= 0) {
 					isNested = true;
 				} else {
-					cmpContext = 0;
+					cmpContext = nullptr;
 				}
 			}
-			if (cmpContext == 0) {
+			if (cmpContext == nullptr) {
 				// TODO: Ideally this context would be retrieved from a pool, so we don't have to
 				//       create a new one everytime. We could keep a context with the array object
 				//       but that would consume a lot of resources as each context is quite heavy.
@@ -1206,7 +1220,7 @@ namespace Jazz2::Scripting
 			}
 		}
 
-		if (cmpContext) {
+		if (cmpContext != nullptr) {
 			if (isNested) {
 				asEContextState state = cmpContext->GetState();
 				cmpContext->PopState();
@@ -1295,12 +1309,12 @@ namespace Jazz2::Scripting
 		// Subtype isn't primitive and doesn't have opCmp
 		SArrayCache* cache = reinterpret_cast<SArrayCache*>(objType->GetUserData(ARRAY_CACHE));
 		if (subTypeId & ~asTYPEID_MASK_SEQNBR) {
-			if (!cache || cache->cmpFunc == 0) {
+			if (cache == nullptr || cache->cmpFunc == 0) {
 				asIScriptContext* ctx = asGetActiveContext();
 				asITypeInfo* subType = objType->GetEngine()->GetTypeInfoById(subTypeId);
 
 				// Throw an exception
-				if (ctx) {
+				if (ctx != nullptr) {
 					char tmp[512];
 
 					if (cache && cache->cmpFuncReturnCode == asMULTIPLE_FUNCTIONS) {
@@ -1349,14 +1363,14 @@ namespace Jazz2::Scripting
 
 			// Try to reuse the active context
 			cmpContext = asGetActiveContext();
-			if (cmpContext) {
+			if (cmpContext != nullptr) {
 				if (cmpContext->GetEngine() == objType->GetEngine() && cmpContext->PushState() >= 0) {
 					isNested = true;
 				} else {
-					cmpContext = 0;
+					cmpContext = nullptr;
 				}
 			}
-			if (cmpContext == 0) {
+			if (cmpContext == nullptr) {
 				cmpContext = objType->GetEngine()->RequestContext();
 			}
 			// Do the sorting
@@ -1398,7 +1412,7 @@ namespace Jazz2::Scripting
 			std::sort((void**)GetArrayItemPointer(start), (void**)GetArrayItemPointer(end), customLess);
 
 			// Clean up
-			if (cmpContext) {
+			if (cmpContext != nullptr) {
 				if (isNested) {
 					asEContextState state = cmpContext->GetState();
 					cmpContext->PopState();
@@ -1458,14 +1472,14 @@ namespace Jazz2::Scripting
 
 		// Try to reuse the active context
 		cmpContext = asGetActiveContext();
-		if (cmpContext) {
+		if (cmpContext != nullptr) {
 			if (cmpContext->GetEngine() == objType->GetEngine() && cmpContext->PushState() >= 0) {
 				isNested = true;
 			} else {
 				cmpContext = 0;
 			}
 		}
-		if (cmpContext == 0) {
+		if (cmpContext == nullptr) {
 			cmpContext = objType->GetEngine()->RequestContext();
 		}
 
@@ -1497,7 +1511,7 @@ namespace Jazz2::Scripting
 			}
 		}
 
-		if (cmpContext) {
+		if (cmpContext != nullptr) {
 			if (isNested) {
 				asEContextState state = cmpContext->GetState();
 				cmpContext->PopState();
@@ -1597,7 +1611,7 @@ namespace Jazz2::Scripting
 
 		// First check if a cache already exists for this array type
 		SArrayCache* cache = reinterpret_cast<SArrayCache*>(objType->GetUserData(ARRAY_CACHE));
-		if (cache) return;
+		if (cache != nullptr) return;
 
 		// We need to make sure the cache is created only once, even
 		// if multiple threads reach the same point at the same time
@@ -1606,16 +1620,16 @@ namespace Jazz2::Scripting
 		// Now that we got the lock, we need to check again to make sure the
 		// cache wasn't created while we were waiting for the lock
 		cache = reinterpret_cast<SArrayCache*>(objType->GetUserData(ARRAY_CACHE));
-		if (cache) {
+		if (cache != nullptr) {
 			asReleaseExclusiveLock();
 			return;
 		}
 
 		// Create the cache
 		cache = reinterpret_cast<SArrayCache*>(asAllocMem(sizeof(SArrayCache)));
-		if (!cache) {
+		if (cache == nullptr) {
 			asIScriptContext* ctx = asGetActiveContext();
-			if (ctx) {
+			if (ctx != nullptr) {
 				ctx->SetException("Out of memory");
 			}
 			asReleaseExclusiveLock();
@@ -1627,7 +1641,7 @@ namespace Jazz2::Scripting
 		bool mustBeConst = (subTypeId & asTYPEID_HANDLETOCONST) ? true : false;
 
 		asITypeInfo* subType = objType->GetEngine()->GetTypeInfoById(subTypeId);
-		if (subType) {
+		if (subType != nullptr) {
 			for (asUINT i = 0; i < subType->GetMethodCount(); i++) {
 				asIScriptFunction* func = subType->GetMethodByIndex(i);
 

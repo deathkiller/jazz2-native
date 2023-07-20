@@ -431,7 +431,7 @@ namespace Jazz2::Scripting
 	{
 		if (m_valueObj != nullptr && m_typeId != 0) {
 			asIScriptContext* ctx = asGetActiveContext();
-			if (ctx) {
+			if (ctx != nullptr) {
 				FreeValue(ctx->GetEngine());
 			} else {
 				// Must not hold an object when destroyed, as then the object will never be freed
