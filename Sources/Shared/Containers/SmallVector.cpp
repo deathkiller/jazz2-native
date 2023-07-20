@@ -26,18 +26,18 @@ namespace Death::Containers
 
 	static_assert(sizeof(SmallVector<void*, 0>) ==
 					  sizeof(unsigned) * 2 + sizeof(void*),
-				  "wasted space in SmallVector size 0");
+				  "Wasted space in SmallVector size 0");
 	static_assert(alignof(SmallVector<Struct16B, 0>) >= alignof(Struct16B),
-				  "wrong alignment for 16-byte aligned T");
+				  "Wrong alignment for 16-byte aligned T");
 	static_assert(alignof(SmallVector<Struct32B, 0>) >= alignof(Struct32B),
-				  "wrong alignment for 32-byte aligned T");
+				  "Wrong alignment for 32-byte aligned T");
 	static_assert(sizeof(SmallVector<Struct16B, 0>) >= alignof(Struct16B),
-				  "missing padding for 16-byte aligned T");
+				  "Missing padding for 16-byte aligned T");
 	static_assert(sizeof(SmallVector<Struct32B, 0>) >= alignof(Struct32B),
-				  "missing padding for 32-byte aligned T");
+				  "Missing padding for 32-byte aligned T");
 	static_assert(sizeof(SmallVector<void*, 1>) ==
 					  sizeof(unsigned) * 2 + sizeof(void*) * 2,
-				  "wasted space in SmallVector size 1");
+				  "Wasted space in SmallVector size 1");
 
 	static_assert(sizeof(SmallVector<char, 0>) ==
 					  sizeof(void*) * 2 + sizeof(void*),
@@ -45,7 +45,6 @@ namespace Death::Containers
 
 	/// Report that MinSize doesn't fit into this vector's size type. Throws
 	/// std::length_error or calls report_fatal_error.
-	static void report_size_overflow(size_t MinSize, size_t MaxSize);
 	static void report_size_overflow(size_t MinSize, size_t MaxSize) {
 		//std::string Reason = "SmallVector unable to grow. Requested capacity (" +
 		//	std::to_string(MinSize) +
@@ -53,22 +52,21 @@ namespace Death::Containers
 		//	std::to_string(MaxSize) + ")";
 		//throw std::length_error(Reason);
 
-#if defined(__cpp_exceptions)
-		throw std::length_error("SmallVector capacity unable to grow");
+#if (defined(_CPPUNWIND) || defined(__EXCEPTIONS)) && !defined(DEATH_SUPPRESS_EXCEPTIONS)
+		throw std::length_error("Containers::SmallVector capacity unable to grow");
 #endif
 	}
 
 	/// Report that this vector is already at maximum capacity. Throws
 	/// std::length_error or calls report_fatal_error.
-	static void report_at_maximum_capacity(size_t MaxSize);
 	static void report_at_maximum_capacity(size_t MaxSize) {
 		//std::string Reason =
 		//	"SmallVector capacity unable to grow. Already at maximum size " +
 		//	std::to_string(MaxSize);
 		//throw std::length_error(Reason);
 
-#if defined(__cpp_exceptions)
-		throw std::length_error("SmallVector capacity already at maximum size");
+#if (defined(_CPPUNWIND) || defined(__EXCEPTIONS)) && !defined(DEATH_SUPPRESS_EXCEPTIONS)
+		throw std::length_error("Containers::SmallVector capacity already at maximum size");
 #endif
 	}
 
@@ -150,9 +148,9 @@ namespace Death::Containers
 
 	// Assertions to ensure this #if stays in sync with SmallVectorSizeType.
 	static_assert(sizeof(SmallVectorSizeType<char>) == sizeof(uint64_t),
-				  "Expected SmallVectorBase<uint64_t> variant to be in use.");
+				  "Expected Containers::SmallVectorBase<uint64_t> variant to be in use.");
 #else
 	static_assert(sizeof(SmallVectorSizeType<char>) == sizeof(uint32_t),
-				  "Expected SmallVectorBase<uint32_t> variant to be in use.");
+				  "Expected Containers::SmallVectorBase<uint32_t> variant to be in use.");
 #endif
 }

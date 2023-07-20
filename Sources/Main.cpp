@@ -873,7 +873,8 @@ void GameEventHandler::CheckUpdates()
 	} else {
 		DeviceDescLength = 0;
 	}
-	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength, "|macOS||5|%i", arch);
+	String appleVersion = Environment::GetAppleVersion();
+	DeviceDescLength += formatString(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength, "|macOS %s||5|%i", appleVersion.data(), arch);
 #elif defined(DEATH_TARGET_SWITCH)
 	std::uint32_t switchVersion = Environment::GetSwitchVersion();
 	bool isAtmosphere = Environment::HasSwitchAtmosphere();

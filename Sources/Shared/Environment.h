@@ -2,7 +2,7 @@
 
 #include "CommonWindows.h"
 
-#if defined(DEATH_TARGET_UNIX)
+#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 #	include "Containers/String.h"
 #endif
 
@@ -21,9 +21,13 @@ namespace Death
 
 namespace Death::Environment
 {
-#if defined(DEATH_TARGET_SWITCH)
+#if defined(DEATH_TARGET_APPLE)
+	Containers::String GetAppleVersion();
+#elif defined(DEATH_TARGET_SWITCH)
 	std::uint32_t GetSwitchVersion();
 	bool HasSwitchAtmosphere();
+#elif defined(DEATH_TARGET_UNIX)
+	Containers::String GetUnixVersion();
 #elif defined(DEATH_TARGET_WINDOWS)
 	extern const std::uint64_t WindowsVersion;
 
@@ -58,7 +62,5 @@ namespace Death::Environment
 	{
 		return QueryUnbiasedInterruptTime() / 10000LL;
 	}
-#elif defined(DEATH_TARGET_UNIX)
-	Containers::String GetUnixVersion();
 #endif
 }

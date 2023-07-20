@@ -23,8 +23,8 @@ namespace Jazz2::Scripting
 
 	CScriptHandle::CScriptHandle()
 	{
-		m_ref = 0;
-		m_type = 0;
+		m_ref = nullptr;
+		m_type = nullptr;
 	}
 
 	CScriptHandle::CScriptHandle(const CScriptHandle& other)
@@ -47,8 +47,8 @@ namespace Jazz2::Scripting
 	// directly as it requires an active script context
 	CScriptHandle::CScriptHandle(void* ref, int typeId)
 	{
-		m_ref = 0;
-		m_type = 0;
+		m_ref = nullptr;
+		m_type = nullptr;
 
 		Assign(ref, typeId);
 	}
@@ -60,20 +60,20 @@ namespace Jazz2::Scripting
 
 	void CScriptHandle::ReleaseHandle()
 	{
-		if (m_ref && m_type) {
+		if (m_ref != nullptr && m_type != nullptr) {
 			asIScriptEngine* engine = m_type->GetEngine();
 			engine->ReleaseScriptObject(m_ref, m_type);
 
 			engine->Release();
 
-			m_ref = 0;
-			m_type = 0;
+			m_ref = nullptr;
+			m_type = nullptr;
 		}
 	}
 
 	void CScriptHandle::AddRefHandle()
 	{
-		if (m_ref && m_type) {
+		if (m_ref != nullptr && m_type != nullptr) {
 			asIScriptEngine* engine = m_type->GetEngine();
 			engine->AddRefScriptObject(m_ref, m_type);
 
@@ -114,7 +114,7 @@ namespace Jazz2::Scripting
 
 	int CScriptHandle::GetTypeId() const
 	{
-		if (m_type == 0) return 0;
+		if (m_type == nullptr) return 0;
 
 		return m_type->GetTypeId() | asTYPEID_OBJHANDLE;
 	}
@@ -142,7 +142,7 @@ namespace Jazz2::Scripting
 		asITypeInfo* type = engine->GetTypeInfoById(typeId);
 
 		// If the argument is another CScriptHandle, we should copy the content instead
-		if (type && strcmp(type->GetName(), "ref") == 0) {
+		if (type != nullptr && strcmp(type->GetName(), "ref") == 0) {
 			CScriptHandle* r = (CScriptHandle*)ref;
 			ref = r->m_ref;
 			type = r->m_type;
@@ -173,7 +173,7 @@ namespace Jazz2::Scripting
 	{
 		// Null handles are received as reference to a null handle
 		if (typeId == 0)
-			ref = 0;
+			ref = nullptr;
 
 		// Dereference handles to get the object
 		if (typeId & asTYPEID_OBJHANDLE) {
@@ -194,8 +194,8 @@ namespace Jazz2::Scripting
 	void CScriptHandle::Cast(void** outRef, int typeId)
 	{
 		// If we hold a null handle, then just return null
-		if (m_type == 0) {
-			*outRef = 0;
+		if (m_type == nullptr) {
+			*outRef = nullptr;
 			return;
 		}
 
@@ -207,7 +207,7 @@ namespace Jazz2::Scripting
 		asIScriptEngine* engine = m_type->GetEngine();
 		asITypeInfo* type = engine->GetTypeInfoById(typeId);
 
-		*outRef = 0;
+		*outRef = nullptr;
 
 		// RefCastObject will increment the refCount of the returned object if successful
 		engine->RefCastObject(m_ref, m_type, type, outRef);
@@ -216,11 +216,11 @@ namespace Jazz2::Scripting
 	void CScriptHandle::EnumReferences(asIScriptEngine* inEngine)
 	{
 		// If we're holding a reference, we'll notify the garbage collector of it
-		if (m_ref)
+		if (m_ref != nullptr)
 			inEngine->GCEnumCallback(m_ref);
 
 		// The object type itself is also garbage collected
-		if (m_type)
+		if (m_type != nullptr)
 			inEngine->GCEnumCallback(m_type);
 	}
 
