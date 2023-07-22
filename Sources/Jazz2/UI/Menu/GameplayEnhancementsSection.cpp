@@ -9,8 +9,11 @@ namespace Jazz2::UI::Menu
 	GameplayEnhancementsSection::GameplayEnhancementsSection()
 		: _selectedIndex(0), _animation(0.0f), _transition(0.0f), _isDirty(false), _isInGame(false)
 	{
+		// TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 		_items[(int32_t)Item::Reforged].Name = _("Reforged Mode");
+		// TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 		_items[(int32_t)Item::LedgeClimb].Name = _("Ledge Climbing");
+		// TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 		_items[(int32_t)Item::WeaponWheel].Name = _("Weapon Wheel");
 	}
 
@@ -83,6 +86,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawStringShadow(_("Enhancements"), charOffset, center.X, 131.0f - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
+		// TRANSLATORS: Header in Options > Gameplay > Enhancements section
 		_root->DrawStringShadow(_("You can enable enhancements that were added to this remake."), charOffset, center.X, topLine - 21.0f - 4.0f, IMenuContainer::FontLayer - 2,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.2f + 0.3f * _transition), 0.76f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
@@ -114,6 +118,7 @@ namespace Jazz2::UI::Menu
 				case (int32_t)Item::LedgeClimb: enabled = PreferencesCache::EnableLedgeClimb; break;
 				case (int32_t)Item::WeaponWheel:
 					customText = (PreferencesCache::WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount
+						// TRANSLATORS: Option for Weapon Wheel item in Options > Gameplay > Enhancements section
 						? _("Enabled With Ammo Count")
 						: (PreferencesCache::WeaponWheel == WeaponWheelStyle::Enabled ? _("Enabled") : _("Disabled")));
 					break;

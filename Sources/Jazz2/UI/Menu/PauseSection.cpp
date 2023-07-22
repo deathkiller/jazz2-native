@@ -9,8 +9,11 @@ namespace Jazz2::UI::Menu
 	PauseSection::PauseSection()
 		: _selectedIndex(0), _animation(0.0f)
 	{
+		// TRANSLATORS: Menu item in main menu
 		_items[(int32_t)Item::Resume].Name = _("Resume");
+		// TRANSLATORS: Menu item in main menu
 		_items[(int32_t)Item::Options].Name = _("Options");
+		// TRANSLATORS: Menu item in main menu
 		_items[(int32_t)Item::Exit].Name = _("Save & Exit");
 	}
 

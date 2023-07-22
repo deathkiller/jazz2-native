@@ -116,10 +116,12 @@ namespace Jazz2::UI::Menu
 
 		int32_t charOffset = 0;
 
+		// TRANSLATORS: Main information in About section
 		_root->DrawStringShadow(_f("Reimplementation of the game \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] released in 1998. Supports various\nversions of the game (Shareware Demo, Holiday Hare '98, The Secret Files and\nChristmas Chronicles). Also, it partially supports some features of JJ2+ extension.\nFor more information, visit the official website: %s", "\f[c:0x707070]http://deat.tk/jazz2/\f[c]"),
 			charOffset, viewSize.X * 0.5f, pos.Y - 22.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Font::DefaultColor, 0.7f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 
+		// TRANSLATORS: Header in About section
 		_root->DrawStringShadow(_("Created By"), charOffset, pos.X, pos.Y + 42.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.85f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f);
 		_root->DrawStringShadow("Dan R."_s, charOffset, pos.X + 25.0f, pos.Y + 45.0f + 20.0f, IMenuContainer::FontLayer,
@@ -132,6 +134,7 @@ namespace Jazz2::UI::Menu
 			charOffset, pos.X + 25.0f, pos.Y + 45.0f + 44.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.74f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 
+		// TRANSLATORS: Bottom information in About section
 		_root->DrawStringShadow(_f("This project uses modified \f[c:0x9e7056]nCine\f[c] game engine and following libraries:\n%s", ADDITIONAL_INFO), charOffset, viewSize.X * 0.5f, pos.Y + 54.0f + pos.Y * 0.4f, IMenuContainer::FontLayer,
 			Alignment::Top, Font::DefaultColor, 0.76f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 

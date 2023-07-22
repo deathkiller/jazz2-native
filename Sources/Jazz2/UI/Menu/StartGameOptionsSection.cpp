@@ -11,8 +11,11 @@ namespace Jazz2::UI::Menu
 			_availableCharacters(3), _selectedPlayerType(0), _selectedDifficulty(1), _lastPlayerType(0), _lastDifficulty(0),
 			_imageTransition(1.0f), _animation(0.0f), _transitionTime(0.0f), _shouldStart(false)
 	{
+		// TRANSLATORS: Menu item to select player character (Jazz, Spaz, Lori)
 		_items[(int32_t)Item::Character].Name = _("Character");
+		// TRANSLATORS: Menu item to select difficulty
 		_items[(int32_t)Item::Difficulty].Name = _("Difficulty");
+		// TRANSLATORS: Menu item to start selected episode/level
 		_items[(int32_t)Item::Start].Name = _("Start");
 	}
 
