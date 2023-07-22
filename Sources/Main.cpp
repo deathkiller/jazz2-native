@@ -867,8 +867,9 @@ void GameEventHandler::CheckUpdates()
 	char DeviceDesc[128];
 	std::int32_t DeviceDescLength = formatString(DeviceDesc, arraySize(DeviceDesc), "%s|Android %i|%s|2|%i", androidId.data(), sdkVersion, deviceName, arch);
 #elif defined(DEATH_TARGET_APPLE)
-	char DeviceDesc[128]; std::int32_t DeviceDescLength;
+	char DeviceDesc[256] { }; std::int32_t DeviceDescLength;
 	if (::gethostname(DeviceDesc, arraySize(DeviceDesc)) == 0) {
+		DeviceDesc[arraySize(DeviceDesc) - 1] = '\0';
 		DeviceDescLength = std::strlen(DeviceDesc);
 	} else {
 		DeviceDescLength = 0;
@@ -887,8 +888,9 @@ void GameEventHandler::CheckUpdates()
 	arch |= 0x100000;
 #	endif
 
-	char DeviceDesc[128]; std::int32_t DeviceDescLength;
+	char DeviceDesc[256] { }; std::int32_t DeviceDescLength;
 	if (::gethostname(DeviceDesc, arraySize(DeviceDesc)) == 0) {
+		DeviceDesc[arraySize(DeviceDesc) - 1] = '\0';
 		DeviceDescLength = std::strlen(DeviceDesc);
 	} else {
 		DeviceDescLength = 0;
@@ -902,7 +904,7 @@ void GameEventHandler::CheckUpdates()
 #	endif
 
 	auto osVersion = Environment::WindowsVersion;
-	char DeviceDesc[128]; DWORD DeviceDescLength = (DWORD)arraySize(DeviceDesc);
+	char DeviceDesc[256]; DWORD DeviceDescLength = (DWORD)arraySize(DeviceDesc);
 	if (!::GetComputerNameA(DeviceDesc, &DeviceDescLength)) {
 		DeviceDescLength = 0;
 	}
