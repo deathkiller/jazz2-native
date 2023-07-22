@@ -1582,7 +1582,7 @@ msgstr "Skrypty"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:31
 msgid "Browse \"Source\" Directory"
-msgstr ""
+msgstr "Przeglądaj katalog z danymi gry"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:34
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:63

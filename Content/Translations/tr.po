@@ -1569,7 +1569,7 @@ msgstr "Komutlama"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:31
 msgid "Browse \"Source\" Directory"
-msgstr ""
+msgstr "\"Source\" Dizinine Gözat"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:34
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:63
