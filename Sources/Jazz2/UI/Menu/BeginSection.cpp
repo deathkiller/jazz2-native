@@ -29,15 +29,21 @@ namespace Jazz2::UI::Menu
 	{
 #if defined(SHAREWARE_DEMO_ONLY)
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
+		// TRANSLATORS: Menu item in main menu (Emscripten only)
 		_items[(int32_t)Item::Import].Name = _("Import Episodes");
 #	endif
 #else
+		// TRANSLATORS: Menu item in main menu
 		_items[(int32_t)Item::PlayEpisodes].Name = _("Play Story");
+		// TRANSLATORS: Menu item in main menu
 		_items[(int32_t)Item::PlayCustomLevels].Name = _("Play Custom Levels");
 #endif
+		// TRANSLATORS: Menu item in main menu
 		_items[(int32_t)Item::Options].Name = _("Options");
+		// TRANSLATORS: Menu item in main menu
 		_items[(int32_t)Item::About].Name = _("About");
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
+		// TRANSLATORS: Menu item in main menu
 		_items[(int32_t)Item::Quit].Name = _("Quit");
 #endif
 	}
@@ -52,6 +58,7 @@ namespace Jazz2::UI::Menu
 		if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None) {
 			_items[(int32_t)Item::PlayEpisodes].Name = _("Play Story");
 		} else {
+			// TRANSLATORS: Menu item in main menu (Emscripten only)
 			_items[(int32_t)Item::PlayEpisodes].Name = _("Play Shareware Demo");
 		}
 #endif
@@ -163,6 +170,7 @@ namespace Jazz2::UI::Menu
 
 #	if defined(DEATH_TARGET_ANDROID)
 					if (AndroidJniHelper::SdkVersion() >= 30 && (flags & IRootController::Flags::HasExternalStoragePermission) != IRootController::Flags::HasExternalStoragePermission) {
+						// TRANSLATORS: Menu item in main menu (Android 11+ only)
 						auto grantPermissionText = _("Allow access to external storage");
 						if (_selectedIndex == 0) {
 							float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;

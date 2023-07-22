@@ -168,6 +168,7 @@ namespace Jazz2::UI::Menu
 					if (_expanded) {
 						float expandedAnimation4 = IMenuContainer::EaseOutElastic(_expandedAnimation) * 0.8f;
 
+						// TRANSLATORS: Menu subitem in Play Story section
 						Vector2f textSize = _root->MeasureString(_("Restart episode"), 0.8f, 0.8f);
 						_root->DrawStringShadow(_("Restart episode"), charOffset, expandX + textSize.X * 0.5f - 2.0f, item.Y, IMenuContainer::FontLayer + 22,
 							Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f * std::min(1.0f, 0.4f + expandedAnimation3)), expandedAnimation4, 0.4f, 0.6f, 0.6f, 0.6f, 0.8f);
@@ -190,9 +191,11 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::TransparentRandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 				if (prevEpisodeIndex != -1) {
+					// TRANSLATORS: Information in Play Story section that episode is locked because the previous episode is not complete
 					_root->DrawStringShadow(_f("You must complete \"%s\" first!", _items[prevEpisodeIndex].Item.Description.DisplayName.data()), charOffset, centerX, item.Y, IMenuContainer::FontLayer + 20,
 						Alignment::Center, Colorf(0.66f, 0.42f, 0.32f, std::min(0.5f, 0.2f + 2.0f * _animation)), 0.7f * size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				} else {
+					// TRANSLATORS: Information in Play Story section that episode is locked
 					_root->DrawStringShadow(_("Episode is locked!"), charOffset, centerX, item.Y, IMenuContainer::FontLayer + 20,
 						Alignment::Center, Colorf(0.66f, 0.42f, 0.32f, std::min(0.5f, 0.2f + 2.0f * _animation)), 0.7f * size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				}

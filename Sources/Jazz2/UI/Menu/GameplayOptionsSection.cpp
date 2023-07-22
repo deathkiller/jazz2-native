@@ -16,21 +16,28 @@ namespace Jazz2::UI::Menu
 	GameplayOptionsSection::GameplayOptionsSection()
 		: _isDirty(false)
 	{
+		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::Enhancements, _("Enhancements") });
+		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::Language, _("Language") });
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::EnableDiscordIntegration, _("Discord Integration"), true });
 #endif
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
+		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::EnableRgbLights, _("Razer Chroma™"), true });
 #endif
 #if defined(WITH_ANGELSCRIPT)
+		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::AllowUnsignedScripts, _("Scripting"), true });
 #endif
 #if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_UNIX)
+		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::BrowseSourceDirectory, _("Browse \"Source\" Directory") });
 #endif
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
+		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::RefreshCache, _("Refresh Cache") });
 #endif
 	}

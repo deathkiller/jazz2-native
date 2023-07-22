@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-07-19 12:26+0200\n"
-"PO-Revision-Date: 2023-07-19 12:26+0200\n"
+"POT-Creation-Date: 2023-07-23 00:26+0200\n"
+"PO-Revision-Date: 2023-07-23 00:26+0200\n"
 "Last-Translator: \n"
 "Language-Team: Překlad do češtiny: Dan R. (http://deat.tk/jazz2/)\n"
 "Language: cs\n"
@@ -1367,7 +1367,8 @@ msgstr ""
 "Prosím navštivte\n"
 "www.project2.com"
 
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:119
+#. TRANSLATORS: Main information in About section
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:120
 #, c-format
 msgid ""
 "Reimplementation of the game \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] released "
@@ -1385,11 +1386,13 @@ msgstr ""
 "funkce.\n"
 "Pro více informací můžete navštívit oficiální webové stránky: %s"
 
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:123
+#. TRANSLATORS: Header in About section
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:125
 msgid "Created By"
 msgstr "Vytvořil"
 
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:135
+#. TRANSLATORS: Bottom information in About section
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:138
 #, c-format
 msgid ""
 "This project uses modified \f[c:0x9e7056]nCine\f[c] game engine and "
@@ -1400,45 +1403,52 @@ msgstr ""
 "knihovny:\n"
 "%s"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:32
+#. TRANSLATORS: Menu item in main menu (Emscripten only)
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:33
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:63
 msgid "Import Episodes"
 msgstr "Importovat epizody"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:35
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:53
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:37
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:59
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:125
 msgid "Play Story"
 msgstr "Hrát příběh"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:36
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:39
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:127
 msgid "Play Custom Levels"
 msgstr "Hrát vlastní úrovně"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:38
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:30
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:13
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:42
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:34
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:15
 msgid "Options"
 msgstr "Nastavení"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:39
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:44
 msgid "About"
 msgstr "O aplikaci"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:41
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:47
 msgid "Quit"
 msgstr "Ukončit"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:55
+#. TRANSLATORS: Menu item in main menu (Emscripten only)
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:62
 msgid "Play Shareware Demo"
 msgstr "Hrát Shareware Demo"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:150
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:157
 msgid "Access to external storage has been granted!"
 msgstr "Přístup k externímu úložišti byl povolen!"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:152
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:159
 msgid ""
 "\f[c:0x337233]Restart the game to read \f[c:0x9e7056]Jazz Jackrabbit "
 "2\f[c:0x337233] files correctly."
@@ -1446,7 +1456,7 @@ msgstr ""
 "\f[c:0x337233]Restartujte hru, aby bylo možné správně přečíst soubory "
 "\f[c:0x9e7056]Jazz Jackrabbit 2\f[c:0x337233]."
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:157
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:164
 msgid ""
 "\f[c:0x704a4a]This game requires original \f[c:0x9e7056]Jazz Jackrabbit "
 "2\f[c:0x704a4a] files!"
@@ -1454,54 +1464,60 @@ msgstr ""
 "\f[c:0x704a4a]Tato hra vyžaduje originální soubory \f[c:0x9e7056]Jazz "
 "Jackrabbit 2\f[c:0x704a4a]!"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:159
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:166
 msgid "Make sure Jazz Jackrabbit 2 files are present in following path:"
 msgstr ""
 "Ujistěte se, že soubory Jazz Jackrabbit 2 jsou přístupné v tomto umístění:"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:166
+#. TRANSLATORS: Menu item in main menu (Android 11+ only)
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:174
 msgid "Allow access to external storage"
 msgstr "Povolit přístup k externímu uložišti"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:14
+#. TRANSLATORS: Menu item in Options > Controls section
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:15
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:204
 msgid "Remap Controls"
 msgstr "Přenastavit ovládání"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:15
+#. TRANSLATORS: Menu item in Options > Controls section
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:17
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:41
 msgid "Touch Controls"
 msgstr "Dotykové ovládací prvky"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:16
+#. TRANSLATORS: Menu item in Options > Controls section
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:19
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:56
 msgid "Input Diagnostics"
 msgstr "Diagnostika ovládání"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:18
+#. TRANSLATORS: Menu item in Options > Controls section (Android only)
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:22
 msgid "Native Back Button"
 msgstr "Nativní tlačítko Zpět"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:50
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:16
+#. TRANSLATORS: Menu item in Options section
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:54
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:20
 msgid "Controls"
 msgstr "Ovládání"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:91
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:122
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:115
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:123
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:106
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:95
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:123
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:127
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:122
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:125
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:130
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:113
 msgid "Enabled"
 msgstr "Povoleno"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:91
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:118
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:122
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:123
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:106
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:95
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:123
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:127
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:130
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:113
 msgid "Disabled"
 msgstr "Zakázáno"
 
@@ -1513,134 +1529,159 @@ msgstr "Nebyly nalezeny žádné vlastní úrovně!"
 msgid "No episode found!"
 msgstr "Nebyly nalezeny žádné epizody!"
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:171
+#. TRANSLATORS: Menu subitem in Play Story section
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:172
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:173
 msgid "Restart episode"
 msgstr "Smazat postup"
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:193
+#. TRANSLATORS: Information in Play Story section that episode is locked because the previous episode is not complete
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:195
 #, c-format
 msgid "You must complete \"%s\" first!"
 msgstr "Nejprve musíte dokončit \"%s\"!"
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:196
+#. TRANSLATORS: Information in Play Story section that episode is locked
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:199
 msgid "Episode is locked!"
 msgstr "Epizoda je zamčena!"
 
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:12
+#. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:13
 msgid "Reforged Mode"
 msgstr "Reforged Mode"
 
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:13
+#. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:15
 msgid "Ledge Climbing"
 msgstr "Povolit šplhání"
 
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:14
+#. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:17
 msgid "Weapon Wheel"
 msgstr "Kolečko zbraní"
 
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:83
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:19
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:86
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:20
 msgid "Enhancements"
 msgstr "Vylepšení"
 
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:86
+#. TRANSLATORS: Header in Options > Gameplay > Enhancements section
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:90
 msgid "You can enable enhancements that were added to this remake."
 msgstr "Zde můžete zapnout jednotlivá vylepšení přidaná do hry."
 
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:117
+#. TRANSLATORS: Option for Weapon Wheel item in Options > Gameplay > Enhancements section
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:122
 msgid "Enabled With Ammo Count"
 msgstr "Povoleno s počtem munice"
 
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:20
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:22
 #: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:48
 msgid "Language"
 msgstr "Jazyk"
 
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:22
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:25
 msgid "Discord Integration"
 msgstr "Integrace Discordu"
 
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:25
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:29
 msgid "Razer Chroma™"
 msgstr "Razer Chroma™"
 
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:28
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:33
 msgid "Scripting"
 msgstr "Skripty"
 
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:31
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:37
 msgid "Browse \"Source\" Directory"
 msgstr "Otevřít složku \"Source\""
 
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:34
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:41
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:63
 msgid "Refresh Cache"
 msgstr "Obnovit cache"
 
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:66
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:13
+#. TRANSLATORS: Menu item in Options section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:73
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:14
 msgid "Gameplay"
 msgstr "Hra"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:15
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:16
 msgid "Rescale Mode"
 msgstr "Režim škálování"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:22
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:24
 msgid "Fullscreen"
 msgstr "Celá obrazovka"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:25
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:28
 msgid "Antialiasing"
 msgstr "Antialiasing"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:26
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:30
 msgid "Graphics Quality"
 msgstr "Kvalita grafiky"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:27
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:32
 msgid "Show Player Trails"
 msgstr "Zobrazit stopy hráčů"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:28
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:34
 msgid "Keep Aspect Ratio In Cinematics"
 msgstr "Zachovat poměr stran u filmů"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:29
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:36
 msgid "Performance Metrics"
 msgstr "Metrika výkonu"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:60
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:14
+#. TRANSLATORS: Menu item in Options section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:67
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:16
 msgid "Graphics"
 msgstr "Grafika"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:103
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:110
 msgid "Low"
 msgstr "Nízká"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:103
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:110
 msgid "High"
 msgstr "Vysoká"
 
-#: Sources/Jazz2/UI/Menu/ImportSection.cpp:66
+#. TRANSLATORS: Header in Import Episodes section
+#: Sources/Jazz2/UI/Menu/ImportSection.cpp:67
 msgid "Select files of your original game to unlock additional episodes"
 msgstr "Vyberte soubory vaší původní hry pro odemknutí dalších epizod"
 
-#: Sources/Jazz2/UI/Menu/ImportSection.cpp:72
+#: Sources/Jazz2/UI/Menu/ImportSection.cpp:73
 msgid "Processing of selected files..."
 msgstr "Zpracování vybraných souborů..."
 
-#: Sources/Jazz2/UI/Menu/ImportSection.cpp:75
+#: Sources/Jazz2/UI/Menu/ImportSection.cpp:76
 msgid "Waiting for files..."
 msgstr "Čekání na soubory..."
 
-#: Sources/Jazz2/UI/Menu/ImportSection.cpp:81
+#: Sources/Jazz2/UI/Menu/ImportSection.cpp:82
 msgid "No files were selected!"
 msgstr "Nebyly vybrány žádné soubory!"
 
-#: Sources/Jazz2/UI/Menu/ImportSection.cpp:86
+#: Sources/Jazz2/UI/Menu/ImportSection.cpp:87
 msgid "No new episodes were imported!"
 msgstr "Nebyly importovány žádné nové epizody!"
 
@@ -1648,16 +1689,19 @@ msgstr "Nebyly importovány žádné nové epizody!"
 msgid "No gamepads are detected!"
 msgstr "Nebyly detekovány žádné gamepady!"
 
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:15
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:91
+#. TRANSLATORS: Menu item in Options section
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:18
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:94
 msgid "Sounds"
 msgstr "Zvuky"
 
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:12
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:13
 msgid "Resume"
 msgstr "Pokračovat"
 
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:14
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:17
 msgid "Save & Exit"
 msgstr "Uložit & Ukončit"
 
@@ -1679,63 +1723,77 @@ msgstr "Klávesa %i"
 msgid "Gamepad"
 msgstr "Gamepad"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:226
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:227
 msgid "Up"
 msgstr "Nahoru"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:227
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:229
 msgid "Down"
 msgstr "Dolů"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:228
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:231
 msgid "Left"
 msgstr "Doleva"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:229
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:233
 msgid "Right"
 msgstr "Doprava"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:230
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:235
 msgid "Fire"
 msgstr "Střelba"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:231
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:237
 msgid "Jump"
 msgstr "Skok"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:232
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:239
 msgid "Run"
 msgstr "Běh"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:233
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:241
 msgid "Change Weapon"
 msgstr "Změnit zbraň"
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:234
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:243
 msgid "Back"
 msgstr "Zpět"
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:18
+#. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:19
 msgid "None / Pixel-perfect"
 msgstr "Žádný / Pixel-perfect"
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
+#. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:26
 msgid "CRT Scanlines"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:23
+#. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:28
 msgid "CRT Shadow Mask"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:24
+#. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:30
 msgid "CRT Aperture Grille"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:25
+#. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:32
 msgid "Monochrome"
 msgstr "Monochrome"
 
-#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:41
+#: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:48
 msgid "Select Rescale Mode"
 msgstr "Vybrat režim škálování"
 
@@ -1755,42 +1813,49 @@ msgstr ""
 "Ujistěte se, že všechny potřebné soubory\n"
 "jsou přístupné, a zkuste to znovu."
 
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:11
+#. TRANSLATORS: Menu item in Options > Sounds section
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:12
 msgid "Master Volume"
 msgstr "Hlavní hlasitost"
 
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:12
+#. TRANSLATORS: Menu item in Options > Sounds section
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:14
 msgid "SFX Volume"
 msgstr "Hlasitost zvukových efektů"
 
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:13
+#. TRANSLATORS: Menu item in Options > Sounds section
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:16
 msgid "Music Volume"
 msgstr "Hlasitost hudby"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:14
+#. TRANSLATORS: Menu item to select player character (Jazz, Spaz, Lori)
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:15
 msgid "Character"
 msgstr "Postava"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:15
+#. TRANSLATORS: Menu item to select difficulty
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:17
 msgid "Difficulty"
 msgstr "Obtížnost"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:16
+#. TRANSLATORS: Menu item to start selected episode/level
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:19
 msgid "Start"
 msgstr "Spustit hru"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:193
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:196
 msgid "Easy"
 msgstr "Lehká"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:193
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:196
 msgid "Medium"
 msgstr "Střední"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:193
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:196
 msgid "Hard"
 msgstr "Těžká"
 
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:44
+#. TRANSLATORS: Header in Options > Controls > Touch Controls section
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:45
 msgid "You can adjust position of the touch zones by drag and drop."
 msgstr "Pozice zón dotyku můžete upravit přetažením."

@@ -223,14 +223,23 @@ namespace Jazz2::UI::Menu
 		for (int32_t i = 0; i < n; i++) {
 			StringView name;
 			switch ((PlayerActions)i) {
+				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 				case PlayerActions::Up: name = _("Up"); break;
+				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 				case PlayerActions::Down: name = _("Down"); break;
+				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 				case PlayerActions::Left: name = _("Left"); break;
+				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 				case PlayerActions::Right: name = _("Right"); break;
+				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 				case PlayerActions::Fire: name = _("Fire"); break;
+				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 				case PlayerActions::Jump: name = _("Jump"); break;
+				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 				case PlayerActions::Run: name = _("Run"); break;
+				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 				case PlayerActions::ChangeWeapon: name = _("Change Weapon"); break;
+				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 				case PlayerActions::Menu: name = _("Back"); break;
 			}
 

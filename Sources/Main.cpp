@@ -513,8 +513,6 @@ RecreateCache:
 	so->WriteValue<uint64_t>(animsModified);
 	so->WriteValue<uint16_t>((uint16_t)EventType::Count);
 
-	RenderResources::binaryShaderCache().prune();
-
 	LOGI("Cache was recreated");
 	_flags |= Flags::IsVerified | Flags::IsPlayable;
 }
@@ -757,6 +755,9 @@ void GameEventHandler::RefreshCacheLevels()
 			}
 		}
 	}
+	
+	LOGI("Pruning binary shader cache...");
+	RenderResources::binaryShaderCache().prune();
 }
 
 void GameEventHandler::CheckUpdates()

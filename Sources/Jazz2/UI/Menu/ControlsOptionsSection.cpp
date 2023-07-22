@@ -11,10 +11,14 @@ namespace Jazz2::UI::Menu
 	ControlsOptionsSection::ControlsOptionsSection()
 		: _isDirty(false)
 	{
+		// TRANSLATORS: Menu item in Options > Controls section
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::RemapControls, _("Remap Controls") });
+		// TRANSLATORS: Menu item in Options > Controls section
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::TouchControls, _("Touch Controls") });
+		// TRANSLATORS: Menu item in Options > Controls section
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::InputDiagnostics, _("Input Diagnostics") });
 #if defined(DEATH_TARGET_ANDROID)
+		// TRANSLATORS: Menu item in Options > Controls section (Android only)
 		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::UseNativeBackButton, _("Native Back Button"), true });
 #endif
 	}

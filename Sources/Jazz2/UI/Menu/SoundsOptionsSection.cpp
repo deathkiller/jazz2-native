@@ -8,8 +8,11 @@ namespace Jazz2::UI::Menu
 	SoundsOptionsSection::SoundsOptionsSection()
 		: _selectedIndex(0), _animation(0.0f), _isDirty(false)
 	{
+		// TRANSLATORS: Menu item in Options > Sounds section
 		_items[(int32_t)Item::MasterVolume].Name = _("Master Volume");
+		// TRANSLATORS: Menu item in Options > Sounds section
 		_items[(int32_t)Item::SfxVolume].Name = _("SFX Volume");
+		// TRANSLATORS: Menu item in Options > Sounds section
 		_items[(int32_t)Item::MusicVolume].Name = _("Music Volume");
 	}
 
