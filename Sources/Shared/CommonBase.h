@@ -60,14 +60,19 @@
 #	define DEATH_CXX_STANDARD __cplusplus
 #endif
 
-#include <ciso646>
+// <ciso646> is deprecated and replaced by <version> in C++20
+#if DEATH_CXX_STANDARD >= 202002L
+#	include <version>
+#else
+#	include <ciso646>
+#endif
 #if defined(_LIBCPP_VERSION)
 #	define DEATH_TARGET_LIBCXX
 #elif defined(_CPPLIB_VER)
 #	define DEATH_TARGET_DINKUMWARE
 #elif defined(__GLIBCXX__)
 #	define DEATH_TARGET_LIBSTDCXX
-// GCC's <ciso646> provides the __GLIBCXX__ macro only since 6.1, so on older versions we'll try to get it from bits/c++config.h
+// GCC's <ciso646> provides the __GLIBCXX__ macro only since 6.1, so on older versions we'll try to get it from <bits/c++config.h>
 #elif defined(__has_include)
 #	if __has_include(<bits/c++config.h>)
 #		include <bits/c++config.h>
@@ -80,7 +85,7 @@
 #elif defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 5
 #	define DEATH_TARGET_LIBSTDCXX
 #else
-// Otherwise no idea.
+// Otherwise no idea
 #endif
 
 #if defined(__GNUC__)

@@ -7,6 +7,7 @@
 #include "../../nCine/Base/HashMap.h"
 
 #include <memory>
+#include <new>
 
 #if !defined(DEATH_TARGET_ANDROID) && !defined(_WIN32_WCE) && !defined(__psp2__)
 #	include <locale.h>		// setlocale()

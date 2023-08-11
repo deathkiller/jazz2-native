@@ -53,7 +53,7 @@ extern "C" void __sanitizer_annotate_contiguous_container(const void* beg, const
 	//  https://developercommunity.visualstudio.com/t/__sanitizer_annotate_contiguous_containe/10119696
 	// The difference in noexcept is only a problem with `/std:c++17` (where noexcept becomes a part of the function signature) *and* with
 	// the `/permissive-` flag set, or `/std:c++20` alone (where the flag is implicitly enabled).
-#	if defined(CORRADE_TARGET_DINKUMWARE) && _MSC_VER < 1936
+#	if defined(DEATH_TARGET_DINKUMWARE) && _MSC_VER < 1936
 	noexcept
 #	endif
 	;

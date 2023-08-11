@@ -4,6 +4,8 @@
 #include "RegisterArray.h"
 #include "../../Common.h"
 
+#include <new>
+
 using namespace Death::Containers::Literals;
 
 namespace Jazz2::Scripting

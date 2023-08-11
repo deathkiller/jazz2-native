@@ -4,6 +4,7 @@
 #include "../../Common.h"
 
 #include <cstring>
+#include <new>
 
 namespace Jazz2::Scripting
 {
