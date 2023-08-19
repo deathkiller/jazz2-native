@@ -819,15 +819,14 @@ namespace nCine
 		va_end(args);
 		return result;
 #else
-		// TODO: Quickfix strange bug on Linux
-		//const std::int32_t totalChars = ::vsnprintf(nullptr, 0, format, args);
-		//String result(NoInit, totalChars);
-		//::vsnprintf(result.data(), totalChars + 1, format, args);
-
-		char buffer[2048];
-		::vsnprintf(buffer, sizeof(buffer), format, args);
+		va_list argsCopy;
+		va_copy(argsCopy, args);
+		const std::int32_t totalChars = ::vsnprintf(nullptr, 0, format, argsCopy);
+		va_end(argsCopy);
+		String result(NoInit, totalChars);
+		::vsnprintf(result.data(), totalChars + 1, format, args);
 		va_end(args);
-		return buffer;
+		return result;
 #endif
 	}
 
@@ -851,15 +850,14 @@ namespace nCine
 		va_end(args);
 		return result;
 #else
-		// TODO: Quickfix strange bug on Linux
-		//const std::int32_t totalChars = ::vsnprintf(nullptr, 0, format, args);
-		//String result(NoInit, totalChars);
-		//::vsnprintf(result.data(), totalChars + 1, format, args);
-
-		char buffer[2048];
-		::vsnprintf(buffer, sizeof(buffer), format, args);
+		va_list argsCopy;
+		va_copy(argsCopy, args);
+		const std::int32_t totalChars = ::vsnprintf(nullptr, 0, format, argsCopy);
+		va_end(argsCopy);
+		String result(NoInit, totalChars);
+		::vsnprintf(result.data(), totalChars + 1, format, args);
 		va_end(args);
-		return buffer;
+		return result;
 #endif
 	}
 }
