@@ -14,7 +14,11 @@ android {
 		versionCode @GRADLE_VERSIONCODE@
 		versionName "@GRADLE_VERSION@"
 	}
-
+	
+	buildFeatures {
+		buildConfig = true 
+	}
+	
 	buildTypes {
 		release {
 			minifyEnabled true
