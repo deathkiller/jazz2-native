@@ -24,7 +24,7 @@ jobs:
 
     steps:
     - name: 'Checkout Repository'
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -50,7 +50,7 @@ jobs:
     - name: 'Build'
       run: |
         make -j $(nproc) -C ./_build/
-        export JAVA_HOME=$JAVA_HOME_11_X64
+        export JAVA_HOME=$JAVA_HOME_17_X64
         cd ./_build/android/
         gradle assemble${{ matrix.BuildType }}
 
@@ -99,7 +99,7 @@ jobs:
 
     steps:
     - name: 'Checkout Repository'
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -124,7 +124,7 @@ jobs:
     - name: 'Build'
       run: |
         make -j $(nproc) -C ./_build/
-        export JAVA_HOME=$JAVA_HOME_11_X64
+        export JAVA_HOME=$JAVA_HOME_17_X64
         cd ./_build/android/
         gradle assemble${{ matrix.BuildType }}
 
