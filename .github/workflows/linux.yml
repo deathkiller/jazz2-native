@@ -78,6 +78,7 @@ jobs:
         cp -f ./_build/*.deb ./_package/jazz2.deb
         cp -f ./_build/*.rpm ./_package/jazz2.rpm
         cp -f -r ./Content/ ./_package/Content/
+        cp -f ./LICENSE ./_package/LICENSE
         
         case "${{ matrix.CC }}" in
           gcc ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}" ;;

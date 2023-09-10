@@ -42,6 +42,7 @@ jobs:
       run: |
         mkdir ./_package/
         cp -f ./_build/jazz2.nro ./_package/Jazz2.nro
+        cp -f ./LICENSE ./_package/LICENSE
         
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3

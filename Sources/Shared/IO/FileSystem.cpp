@@ -1701,7 +1701,11 @@ namespace Death::IO
 			return false;
 		}
 
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+		constexpr std::size_t BufferSize = 8 * 1024;
+#	else
 		constexpr std::size_t BufferSize = 128 * 1024;
+#	endif
 		char buffer[BufferSize];
 
 		std::int32_t source, dest;
