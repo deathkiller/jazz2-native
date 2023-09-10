@@ -45,12 +45,12 @@ jobs:
         
         rm -f ./Content/Translations/*.po
         
-        export JAVA_HOME=$JAVA_HOME_17_X64
+        export JAVA_HOME=$JAVA_HOME_11_X64
         cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_BUILD_ANDROID=ON -D NCINE_UNIVERSAL_APK="$universalApk" -D NCINE_NDK_ARCHITECTURES="$architecture"
 
     - name: 'Build'
       run: |
-        export JAVA_HOME=$JAVA_HOME_17_X64
+        export JAVA_HOME=$JAVA_HOME_11_X64
         make -j $(nproc) -C ./_build/
         cd ./_build/android/
         gradle assemble${{ matrix.BuildType }}
@@ -121,13 +121,13 @@ jobs:
         
         rm -f ./Content/Translations/*.po
         
-        export JAVA_HOME=$JAVA_HOME_17_X64
+        export JAVA_HOME=$JAVA_HOME_11_X64
         #cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_BUILD_ANDROID=ON -D NCINE_UNIVERSAL_APK="$universalApk" -D NCINE_NDK_ARCHITECTURES="$architecture" -D DEATH_DEBUG=ON -D NCINE_WITH_FIXED_BATCH_SIZE=10
         cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_BUILD_ANDROID=ON -D NCINE_UNIVERSAL_APK="$universalApk" -D NCINE_NDK_ARCHITECTURES="$architecture" -D DEATH_DEBUG=ON -D NCINE_INPUT_DEBUGGING=ON
 
     - name: 'Build'
       run: |
-        export JAVA_HOME=$JAVA_HOME_17_X64
+        export JAVA_HOME=$JAVA_HOME_11_X64
         make -j $(nproc) -C ./_build/
         cd ./_build/android/
         gradle assemble${{ matrix.BuildType }}
