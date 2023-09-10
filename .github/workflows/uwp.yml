@@ -72,6 +72,7 @@ jobs:
         mkdir _package
         Move-Item -Path "$cerPath" -Destination ".\_package\Jazz2.cer"
         Move-Item -Path "$msixbundlePath" -Destination ".\_package\Jazz2.msixbundle"
+        Move-Item -Path ".\LICENSE" -Destination ".\_package\LICENSE"
         
         if ('${{ matrix.ArchExts }}') { $artifactPath = 'Jazz2_UWP_${{ matrix.Platform }}_${{ matrix.ArchExts }}' } else { $artifactPath = 'Jazz2_UWP_${{ matrix.Platform }}' }
         Add-Content -Path $env:GITHUB_ENV -Value "artifactPath=$artifactPath"

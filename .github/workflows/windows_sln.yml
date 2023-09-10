@@ -55,6 +55,7 @@ jobs:
         Move-Item -Path ".\_build\Jazz2.pdb" -Destination ".\_package\Jazz2.pdb"
         Move-Item -Path ".\Content\" -Destination ".\_package\Content\"
         Move-Item -Path ".\Sources\nCine\Shaders\" -Destination ".\_package\Content\Shaders\"
+        Move-Item -Path ".\LICENSE" -Destination ".\_package\LICENSE"
         
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3

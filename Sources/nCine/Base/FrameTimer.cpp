@@ -43,7 +43,7 @@ namespace nCine
 			fps_ = static_cast<float>(logNumFrames_) / logInterval_;
 #if defined(DEATH_LOGGING) && defined(DEATH_DEBUG)
 			const float msPerFrame = (logInterval_ * 1000.0f) / static_cast<float>(logNumFrames_);
-			LOGD("%lu frames in %.0f seconds = %f FPS (%.3fms per frame)", logNumFrames_, logInterval_, fps_, msPerFrame);
+			LOGD("%lu frames in %.0f seconds = %.1f FPS (%.2fms per frame)", logNumFrames_, logInterval_, fps_, msPerFrame);
 #endif
 			logNumFrames_ = 0L;
 			lastLogUpdate_ = frameStart_;

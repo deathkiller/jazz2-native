@@ -380,8 +380,8 @@ void GameEventHandler::OnResume()
 void GameEventHandler::OnKeyPressed(const KeyboardEvent& event)
 {
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
-	// Allow Alt+Enter to switch fullscreen
-	if (event.sym == KeySym::RETURN && (event.mod & KeyMod::MASK) == KeyMod::LALT) {
+	// Allow F11 and Alt+Enter to switch fullscreen
+	if (event.sym == KeySym::F11 || (event.sym == KeySym::RETURN && (event.mod & KeyMod::MASK) == KeyMod::LALT)) {
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 		// Xbox is always fullscreen
 		if (Environment::CurrentDeviceType == DeviceType::Xbox) {

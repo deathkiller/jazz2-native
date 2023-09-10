@@ -60,7 +60,8 @@ jobs:
       run: |
         make package -C ./_build/
         mkdir ./_package/
-        cp ./_build/*.dmg ./_package/
+        cp -f ./_build/*.dmg ./_package/
+        cp -f ./LICENSE ./_package/LICENSE
         
     - name: 'Upload Package'
       uses: actions/upload-artifact@v3
