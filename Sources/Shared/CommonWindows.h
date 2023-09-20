@@ -135,6 +135,13 @@ DEATH_ALWAYS_INLINE HWND FindWindow(LPCWSTR lpClassName, LPCWSTR lpWindowName) {
 }
 #endif
 
+#if defined(FormatMessage)
+#	undef FormatMessage
+DEATH_ALWAYS_INLINE DWORD FormatMessage(DWORD dwFlags, LPCVOID lpSource, DWORD dwMessageId, DWORD dwLanguageId, LPTSTR lpBuffer, DWORD nSize, va_list* Arguments) {
+	return ::FormatMessageW(dwFlags, lpSource, dwMessageId, dwLanguageId, lpBuffer, nSize, Arguments);
+}
+#endif
+
 #if defined(GetCharWidth)
 #	undef GetCharWidth
 DEATH_ALWAYS_INLINE BOOL GetCharWidth(HDC hdc, UINT iFirst, UINT iLast, LPINT lpBuffer) {

@@ -944,9 +944,9 @@ namespace Jazz2::Scripting
 	void ScriptLoader::Message(const asSMessageInfo& msg)
 	{
 		switch (msg.type) {
-			case asMSGTYPE_ERROR: DEATH_LOGGING(LogLevel::Error, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
-			case asMSGTYPE_WARNING: DEATH_LOGGING(LogLevel::Warning, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
-			default: DEATH_LOGGING(LogLevel::Info, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
+			case asMSGTYPE_ERROR: DEATH_TRACE(TraceLevel::Error, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
+			case asMSGTYPE_WARNING: DEATH_TRACE(TraceLevel::Warning, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
+			default: DEATH_TRACE(TraceLevel::Info, "%s (%i, %i): %s", msg.section, msg.row, msg.col, msg.message); break;
 		}
 	}
 }

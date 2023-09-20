@@ -22,10 +22,10 @@
 
 #pragma once
 
+#include "Array.h"
+
 #include <cstdlib>
 #include <cstring>
-
-#include "Array.h"
 
 // No __has_feature() on GCC: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=60512
 // Using a dedicated macro instead: https://stackoverflow.com/a/34814667

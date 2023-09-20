@@ -1,13 +1,13 @@
 #include "StringView.h"
+#include "Array.h"
+#include "ArrayView.h"
+#include "GrowableArray.h"
+#include "StaticArray.h"
+#include "String.h"
+#include "../Cpu.h"
 
 #include <cstring>
 #include <string>
-
-#include "Array.h"
-#include "ArrayView.h"
-#include "String.h"
-#include "GrowableArray.h"
-#include "../Cpu.h"
 
 #if (defined(DEATH_ENABLE_SSE2) || defined(DEATH_ENABLE_AVX)) && defined(DEATH_ENABLE_BMI1)
 #	include "../IntrinsicsAvx.h"
@@ -21,13 +21,13 @@
 
 namespace Death::Containers
 {
-	template<class T> BasicStringView<T>::BasicStringView(T* const data, const StringViewFlags flags, std::nullptr_t) noexcept : BasicStringView { data,
+	template<class T> BasicStringView<T>::BasicStringView(T* const data, const StringViewFlags flags, std::nullptr_t) noexcept : BasicStringView{data,
 		data ? std::strlen(data) : 0,
-		flags | (data ? StringViewFlags::NullTerminated : StringViewFlags::Global) } {}
+		flags | (data ? StringViewFlags::NullTerminated : StringViewFlags::Global)} {}
 
-	template<class T> BasicStringView<T>::BasicStringView(String& string) noexcept : BasicStringView { string.data(), string.size(), string.viewFlags() } {}
+	template<class T> BasicStringView<T>::BasicStringView(String& string) noexcept : BasicStringView{string.data(), string.size(), string.viewFlags()} {}
 
-	template<> template<> BasicStringView<const char>::BasicStringView(const String& string) noexcept : BasicStringView { string.data(), string.size(), string.viewFlags() } {}
+	template<> template<> BasicStringView<const char>::BasicStringView(const String& string) noexcept : BasicStringView{string.data(), string.size(), string.viewFlags()} {}
 
 	template<class T> Array<BasicStringView<T>> BasicStringView<T>::split(const char delimiter) const {
 		Array<BasicStringView<T>> parts;

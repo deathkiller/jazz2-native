@@ -1308,6 +1308,12 @@
     <ClInclude Include="Jazz2\Scripting\JJ2PlusDefinitions.h">
       <Filter>Header Files\Jazz2\Scripting</Filter>
     </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\StaticArray.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\Tags.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

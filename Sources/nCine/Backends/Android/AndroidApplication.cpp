@@ -13,7 +13,7 @@
 
 using namespace Death::IO;
 
-#if defined(DEATH_LOGGING)
+#if defined(DEATH_TRACE)
 std::unique_ptr<Death::IO::Stream> __logFile;
 #endif
 
@@ -199,7 +199,7 @@ namespace nCine
 
 	void AndroidApplication::preInit()
 	{
-#if defined(DEATH_LOGGING)
+#if defined(DEATH_TRACE)
 		// Try to open log file as early as possible
 		StringView externalPath = externalDataPath();
 		if (!externalPath.empty()) {

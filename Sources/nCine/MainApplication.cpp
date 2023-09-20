@@ -27,12 +27,12 @@
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
 
-#if defined(DEATH_LOGGING) && defined(DEATH_TARGET_SWITCH)
+#if defined(DEATH_TRACE) && defined(DEATH_TARGET_SWITCH)
 
 #	include <IO/FileStream.h>
 std::unique_ptr<Death::IO::Stream> __logFile;
 
-#elif defined(DEATH_LOGGING) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#elif defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 
 #if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
 #	define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
@@ -134,7 +134,7 @@ static bool EnableVirtualTerminalProcessing()
 	return true;
 }
 
-#elif defined(DEATH_LOGGING) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX))
+#elif defined(DEATH_TRACE) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX))
 
 #include <unistd.h>
 
@@ -167,7 +167,7 @@ namespace nCine
 		padInitializeDefault(&pad);
 		hidInitializeTouchScreen();
 
-#	if defined(DEATH_LOGGING)
+#	if defined(DEATH_TRACE)
 		// Try to open log file as early as possible
 		// TODO: Hardcoded path
 		fs::CreateDirectories("sdmc:/Games/Jazz2/"_s);
@@ -206,7 +206,7 @@ namespace nCine
 #endif
 		app.shutdownCommon();
 
-#if defined(DEATH_LOGGING) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		if (__showLogConsole) {
 			DestroyLogConsole();
 		}
@@ -226,7 +226,7 @@ namespace nCine
 #endif
 		wasSuspended_ = shouldSuspend();
 
-#if defined(DEATH_LOGGING)
+#if defined(DEATH_TRACE)
 #	if defined(DEATH_TARGET_APPLE)
 		__hasVirtualTerminal = isatty(1);
 #	elif defined(DEATH_TARGET_EMSCRIPTEN)

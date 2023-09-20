@@ -27,6 +27,7 @@
 #include <float.h>
 
 #include <Utf8.h>
+#include <Containers/StaticArray.h>
 
 using namespace nCine;
 
@@ -194,7 +195,7 @@ namespace Jazz2
 
 		_levelTexts = std::move(levelTexts);
 
-#if defined(WITH_ANGELSCRIPT) || defined(DEATH_LOGGING)
+#if defined(WITH_ANGELSCRIPT) || defined(DEATH_TRACE)
 		// TODO: Allow script signing
 		if (PreferencesCache::AllowUnsignedScripts) {
 			const StringView foundDot = fullPath.findLastOr('.', fullPath.end());

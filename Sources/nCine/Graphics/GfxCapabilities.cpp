@@ -139,7 +139,7 @@ namespace nCine
 			glGetIntegerv(GL_PROGRAM_BINARY_FORMATS, programBinaryFormats_);
 		}
 
-#if defined(DEATH_LOGGING)
+#if defined(DEATH_TRACE)
 		logGLInfo();
 		logGLCaps();
 		//logGLExtensions();
