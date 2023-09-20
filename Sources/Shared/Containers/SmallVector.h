@@ -25,8 +25,8 @@ namespace Death::Containers
 	///
 	/// The template parameter specifies the type which should be used to hold the
 	/// Size and Capacity of the SmallVector, so it can be adjusted.
-	/// Using 32 bit size is desirable to shrink the size of the SmallVector.
-	/// Using 64 bit size is desirable for cases like SmallVector<char>, where a
+	/// Using 32-bit size is desirable to shrink the size of the SmallVector.
+	/// Using 64-bit size is desirable for cases like SmallVector<char>, where a
 	/// 32 bit size would limit the vector to ~4GB. SmallVectors are used for
 	/// buffering bitcode output - which can exceed 4GB.
 	template<class Size_T> class SmallVectorBase
@@ -36,23 +36,23 @@ namespace Death::Containers
 		Size_T Size = 0, Capacity;
 
 		/// The maximum value of the Size_T used.
-		static constexpr size_t SizeTypeMax() {
+		static constexpr std::size_t SizeTypeMax() {
 			return std::numeric_limits<Size_T>::max();
 		}
 
 		SmallVectorBase() = delete;
-		SmallVectorBase(void* FirstEl, size_t TotalCapacity)
+		SmallVectorBase(void* FirstEl, std::size_t TotalCapacity)
 			: BeginX(FirstEl), Capacity((Size_T)TotalCapacity) {}
 
 		/// This is a helper for \a grow() that's out of line to reduce code
 		/// duplication.  This function will report a fatal error if it can't grow at
 		/// least to \p MinSize.
-		void* mallocForGrow(void* FirstEl, size_t MinSize, size_t TSize, size_t& NewCapacity);
+		void* mallocForGrow(void* FirstEl, std::size_t MinSize, std::size_t TSize, std::size_t& NewCapacity);
 
 		/// This is an implementation of the grow() method which only works
 		/// on POD-like data types and is out of line to reduce code duplication.
 		/// This function will report a fatal error if it cannot increase capacity.
-		void grow_pod(void* FirstEl, size_t MinSize, size_t TSize);
+		void grow_pod(void* FirstEl, std::size_t MinSize, std::size_t TSize);
 
 		/// If vector was first created with capacity 0, getFirstEl() points to the
 		/// memory right after, an area unallocated. If a subsequent allocation,
@@ -64,13 +64,13 @@ namespace Death::Containers
 		/// space, and happens to allocate precisely at BeginX.
 		/// This is unlikely to be called often, but resolves a memory leak when the
 		/// situation does occur.
-		void* replaceAllocation(void* NewElts, size_t TSize, size_t NewCapacity, size_t VSize = 0);
+		void* replaceAllocation(void* NewElts, std::size_t TSize, std::size_t NewCapacity, std::size_t VSize = 0);
 
 	public:
-		size_t size() const {
+		std::size_t size() const {
 			return Size;
 		}
-		size_t capacity() const {
+		std::size_t capacity() const {
 			return Capacity;
 		}
 
@@ -83,14 +83,14 @@ namespace Death::Containers
 		/// capacity for.
 		///
 		/// This does not construct or destroy any elements in the vector.
-		void set_size(size_t N) {
+		void set_size(std::size_t N) {
 			assert(N <= capacity());
 			Size = (Size_T)N;
 		}
 	};
 
 	template<class T>
-	using SmallVectorSizeType = typename std::conditional<sizeof(T) < 4 && sizeof(void*) >= 8, uint64_t, uint32_t>::type;
+	using SmallVectorSizeType = typename std::conditional<sizeof(T) < 4 && sizeof(void*) >= 8, std::uint64_t, std::uint32_t>::type;
 
 	/// Figure out the offset of the first element.
 	template<class T, typename = void> struct SmallVectorAlignmentAndSize {
@@ -118,9 +118,9 @@ namespace Death::Containers
 		}
 		// Space after 'FirstEl' is clobbered, do not add any instance vars after it.
 
-		SmallVectorTemplateCommon(size_t Size) : Base(getFirstEl(), Size) {}
+		SmallVectorTemplateCommon(std::size_t Size) : Base(getFirstEl(), Size) {}
 
-		void grow_pod(size_t MinSize, size_t TSize) {
+		void grow_pod(std::size_t MinSize, std::size_t TSize) {
 			Base::grow_pod(getFirstEl(), MinSize, TSize);
 		}
 
@@ -159,7 +159,7 @@ namespace Death::Containers
 
 		/// Return true unless Elt will be invalidated by resizing the vector to
 		/// NewSize.
-		bool isSafeToReferenceAfterResize(const void* Elt, size_t NewSize) {
+		bool isSafeToReferenceAfterResize(const void* Elt, std::size_t NewSize) {
 			// Past the end.
 			if (!isReferenceToStorage(Elt))
 				return true;
@@ -173,7 +173,7 @@ namespace Death::Containers
 		}
 
 		/// Check whether Elt will be invalidated by resizing the vector to NewSize.
-		void assertSafeToReferenceAfterResize(const void* Elt, size_t NewSize) {
+		void assertSafeToReferenceAfterResize(const void* Elt, std::size_t NewSize) {
 			assert(isSafeToReferenceAfterResize(Elt, NewSize) &&
 				   "Attempting to reference an element of the vector in an operation "
 				   "that invalidates it");
@@ -181,7 +181,7 @@ namespace Death::Containers
 
 		/// Check whether Elt will be invalidated by increasing the size of the
 		/// vector by N.
-		void assertSafeToAdd(const void* Elt, size_t N = 1) {
+		void assertSafeToAdd(const void* Elt, std::size_t N = 1) {
 			this->assertSafeToReferenceAfterResize(Elt, this->size() + N);
 		}
 
@@ -214,13 +214,13 @@ namespace Death::Containers
 		/// Reserve enough space to add one element, and return the updated element
 		/// pointer in case it was a reference to the storage.
 		template<class U>
-		static const T* reserveForParamAndGetAddressImpl(U* This, const T& Elt, size_t N) {
-			size_t NewSize = This->size() + N;
+		static const T* reserveForParamAndGetAddressImpl(U* This, const T& Elt, std::size_t N) {
+			std::size_t NewSize = This->size() + N;
 			if (NewSize <= This->capacity())
 				return &Elt;
 
 			bool ReferencesStorage = false;
-			int64_t Index = -1;
+			std::int64_t Index = -1;
 			if (!U::TakesParamByValue) {
 				if (This->isReferenceToStorage(&Elt)) {
 					ReferencesStorage = true;
@@ -232,8 +232,8 @@ namespace Death::Containers
 		}
 
 	public:
-		using size_type = size_t;
-		using difference_type = ptrdiff_t;
+		using size_type = std::size_t;
+		using difference_type = std::ptrdiff_t;
 		using value_type = T;
 		using iterator = T*;
 		using const_iterator = const T*;
@@ -285,7 +285,7 @@ namespace Death::Containers
 			return std::min(this->SizeTypeMax(), size_type(-1) / sizeof(T));
 		}
 
-		size_t capacity_in_bytes() const {
+		std::size_t capacity_in_bytes() const {
 			return capacity() * sizeof(T);
 		}
 
@@ -345,7 +345,7 @@ namespace Death::Containers
 			static constexpr bool TakesParamByValue = false;
 			using ValueParamT = const T&;
 
-			SmallVectorTemplateBase(size_t Size) : SmallVectorTemplateCommon<T>(Size) {}
+			SmallVectorTemplateBase(std::size_t Size) : SmallVectorTemplateCommon<T>(Size) {}
 
 			static void destroy_range(T* S, T* E) {
 				while (S != E) {
@@ -371,28 +371,28 @@ namespace Death::Containers
 			/// Grow the allocated memory (without initializing new elements), doubling
 			/// the size of the allocated memory. Guarantees space for at least one more
 			/// element, or MinSize more elements if specified.
-			void grow(size_t MinSize = 0);
+			void grow(std::size_t MinSize = 0);
 
 			/// Create a new allocation big enough for \p MinSize and pass back its size
 			/// in \p NewCapacity. This is the first section of \a grow().
-			T* mallocForGrow(size_t MinSize, size_t& NewCapacity);
+			T* mallocForGrow(std::size_t MinSize, std::size_t& NewCapacity);
 
 			/// Move existing elements over to the new allocation \p NewElts, the middle
 			/// section of \a grow().
 			void moveElementsForGrow(T* NewElts);
 
 			/// Transfer ownership of the allocation, finishing up \a grow().
-			void takeAllocationForGrow(T* NewElts, size_t NewCapacity);
+			void takeAllocationForGrow(T* NewElts, std::size_t NewCapacity);
 
 			/// Reserve enough space to add one element, and return the updated element
 			/// pointer in case it was a reference to the storage.
-			const T* reserveForParamAndGetAddress(const T& Elt, size_t N = 1) {
+			const T* reserveForParamAndGetAddress(const T& Elt, std::size_t N = 1) {
 				return this->reserveForParamAndGetAddressImpl(this, Elt, N);
 			}
 
 			/// Reserve enough space to add one element, and return the updated element
 			/// pointer in case it was a reference to the storage.
-			T* reserveForParamAndGetAddress(T& Elt, size_t N = 1) {
+			T* reserveForParamAndGetAddress(T& Elt, std::size_t N = 1) {
 				return const_cast<T*>(
 					this->reserveForParamAndGetAddressImpl(this, Elt, N));
 			}
@@ -404,9 +404,9 @@ namespace Death::Containers
 				return V;
 			}
 
-			void growAndAssign(size_t NumElts, const T& Elt) {
+			void growAndAssign(std::size_t NumElts, const T& Elt) {
 				// Grow manually in case Elt is an internal reference.
-				size_t NewCapacity;
+				std::size_t NewCapacity;
 				T* NewElts = mallocForGrow(NumElts, NewCapacity);
 				std::uninitialized_fill_n(NewElts, NumElts, Elt);
 				this->destroy_range(this->begin(), this->end());
@@ -416,7 +416,7 @@ namespace Death::Containers
 
 			template<typename... ArgTypes> T& growAndEmplaceBack(ArgTypes &&... Args) {
 				// Grow manually in case one of Args is an internal reference.
-				size_t NewCapacity;
+				std::size_t NewCapacity;
 				T* NewElts = mallocForGrow(0, NewCapacity);
 				::new ((void*)(NewElts + this->size())) T(std::forward<ArgTypes>(Args)...);
 				moveElementsForGrow(NewElts);
@@ -446,8 +446,8 @@ namespace Death::Containers
 
 	// Define this out-of-line to dissuade the C++ compiler from inlining it.
 	template<typename T, bool TriviallyCopyable>
-	void SmallVectorTemplateBase<T, TriviallyCopyable>::grow(size_t MinSize) {
-		size_t NewCapacity;
+	void SmallVectorTemplateBase<T, TriviallyCopyable>::grow(std::size_t MinSize) {
+		std::size_t NewCapacity;
 		T* NewElts = mallocForGrow(MinSize, NewCapacity);
 		moveElementsForGrow(NewElts);
 		takeAllocationForGrow(NewElts, NewCapacity);
@@ -455,7 +455,7 @@ namespace Death::Containers
 
 	template<typename T, bool TriviallyCopyable>
 	T* SmallVectorTemplateBase<T, TriviallyCopyable>::mallocForGrow(
-		size_t MinSize, size_t& NewCapacity) {
+		std::size_t MinSize, std::size_t& NewCapacity) {
 		return static_cast<T*>(
 			SmallVectorBase<SmallVectorSizeType<T>>::mallocForGrow(
 				this->getFirstEl(), MinSize, sizeof(T), NewCapacity));
@@ -474,8 +474,7 @@ namespace Death::Containers
 
 	// Define this out-of-line to dissuade the C++ compiler from inlining it.
 	template<typename T, bool TriviallyCopyable>
-	void SmallVectorTemplateBase<T, TriviallyCopyable>::takeAllocationForGrow(
-		T* NewElts, size_t NewCapacity) {
+	void SmallVectorTemplateBase<T, TriviallyCopyable>::takeAllocationForGrow(T* NewElts, std::size_t NewCapacity) {
 		// If this wasn't grown from the inline copy, deallocate the old space.
 		if (!this->isSmall())
 			free(this->begin());
@@ -503,7 +502,7 @@ namespace Death::Containers
 		/// parameters by value.
 		using ValueParamT = std::conditional_t<TakesParamByValue, T, const T&>;
 
-		SmallVectorTemplateBase(size_t Size) : SmallVectorTemplateCommon<T>(Size) {}
+		SmallVectorTemplateBase(std::size_t Size) : SmallVectorTemplateCommon<T>(Size) {}
 
 		// No need to do a destroy loop for POD's.
 		static void destroy_range(T*, T*) {}
@@ -540,19 +539,19 @@ namespace Death::Containers
 
 		/// Double the size of the allocated memory, guaranteeing space for at
 		/// least one more element or MinSize if specified.
-		void grow(size_t MinSize = 0) {
+		void grow(std::size_t MinSize = 0) {
 			this->grow_pod(MinSize, sizeof(T));
 		}
 
 		/// Reserve enough space to add one element, and return the updated element
 		/// pointer in case it was a reference to the storage.
-		const T* reserveForParamAndGetAddress(const T& Elt, size_t N = 1) {
+		const T* reserveForParamAndGetAddress(const T& Elt, std::size_t N = 1) {
 			return this->reserveForParamAndGetAddressImpl(this, Elt, N);
 		}
 
 		/// Reserve enough space to add one element, and return the updated element
 		/// pointer in case it was a reference to the storage.
-		T* reserveForParamAndGetAddress(T& Elt, size_t N = 1) {
+		T* reserveForParamAndGetAddress(T& Elt, std::size_t N = 1) {
 			return const_cast<T*>(
 				this->reserveForParamAndGetAddressImpl(this, Elt, N));
 		}
@@ -562,7 +561,7 @@ namespace Death::Containers
 			return V;
 		}
 
-		void growAndAssign(size_t NumElts, T Elt) {
+		void growAndAssign(std::size_t NumElts, T Elt) {
 			// Elt has been copied in case it's an internal reference, side-stepping
 			// reference invalidation problems without losing the realloc optimization.
 			this->set_size(0);
@@ -819,7 +818,7 @@ namespace Death::Containers
 			assert(this->isReferenceToStorage(I) && "Insertion iterator is out of bounds.");
 
 			// Grow if necessary.
-			size_t Index = I - this->begin();
+			std::size_t Index = I - this->begin();
 			std::remove_reference_t<ArgType>* EltPtr =
 				this->reserveForParamAndGetAddress(Elt);
 			I = this->begin() + Index;
@@ -851,7 +850,7 @@ namespace Death::Containers
 
 		iterator insert(iterator I, size_type NumToInsert, ValueParamT Elt) {
 			// Convert iterator to elt# to avoid invalidating iterator when we reserve()
-			size_t InsertElt = I - this->begin();
+			std::size_t InsertElt = I - this->begin();
 
 			if (I == this->end()) {  // Important special case for empty vector.
 				append(NumToInsert, Elt);
@@ -871,7 +870,7 @@ namespace Death::Containers
 			// range than there are being inserted, we can use a simple approach to
 			// insertion.  Since we already reserved space, we know that this won't
 			// reallocate the vector.
-			if (size_t(this->end() - I) >= NumToInsert) {
+			if (std::size_t(this->end() - I) >= NumToInsert) {
 				T* OldEnd = this->end();
 				append(std::move_iterator<iterator>(this->end() - NumToInsert),
 					   std::move_iterator<iterator>(this->end()));
@@ -894,7 +893,7 @@ namespace Death::Containers
 			// Move over the elements that we're about to overwrite.
 			T* OldEnd = this->end();
 			this->set_size(this->size() + NumToInsert);
-			size_t NumOverwritten = OldEnd - I;
+			std::size_t NumOverwritten = OldEnd - I;
 			this->uninitialized_move(I, OldEnd, this->end() - NumOverwritten);
 
 			// If we just moved the element we're inserting, be sure to update
@@ -916,7 +915,7 @@ namespace Death::Containers
 			std::input_iterator_tag>::value>>
 			iterator insert(iterator I, ItTy From, ItTy To) {
 			// Convert iterator to elt# to avoid invalidating iterator when we reserve()
-			size_t InsertElt = I - this->begin();
+			std::size_t InsertElt = I - this->begin();
 
 			if (I == this->end()) {  // Important special case for empty vector.
 				append(From, To);
@@ -928,7 +927,7 @@ namespace Death::Containers
 			// Check that the reserve that follows doesn't invalidate the iterators.
 			this->assertSafeToAddRange(From, To);
 
-			size_t NumToInsert = std::distance(From, To);
+			std::size_t NumToInsert = std::distance(From, To);
 
 			// Ensure there is enough space.
 			reserve(this->size() + NumToInsert);
@@ -940,7 +939,7 @@ namespace Death::Containers
 			// range than there are being inserted, we can use a simple approach to
 			// insertion.  Since we already reserved space, we know that this won't
 			// reallocate the vector.
-			if (size_t(this->end() - I) >= NumToInsert) {
+			if (std::size_t(this->end() - I) >= NumToInsert) {
 				T* OldEnd = this->end();
 				append(std::move_iterator<iterator>(this->end() - NumToInsert),
 					   std::move_iterator<iterator>(this->end()));
@@ -958,7 +957,7 @@ namespace Death::Containers
 			// Move over the elements that we're about to overwrite.
 			T* OldEnd = this->end();
 			this->set_size(this->size() + NumToInsert);
-			size_t NumOverwritten = OldEnd - I;
+			std::size_t NumOverwritten = OldEnd - I;
 			this->uninitialized_move(I, OldEnd, this->end() - NumOverwritten);
 
 			// Replace the overwritten part.
@@ -1027,20 +1026,20 @@ namespace Death::Containers
 		RHS.reserve(this->size());
 
 		// Swap the shared elements.
-		size_t NumShared = this->size();
+		std::size_t NumShared = this->size();
 		if (NumShared > RHS.size()) NumShared = RHS.size();
 		for (size_type i = 0; i != NumShared; ++i)
 			std::swap((*this)[i], RHS[i]);
 
 		// Copy over the extra elts.
 		if (this->size() > RHS.size()) {
-			size_t EltDiff = this->size() - RHS.size();
+			std::size_t EltDiff = this->size() - RHS.size();
 			this->uninitialized_copy(this->begin() + NumShared, this->end(), RHS.end());
 			RHS.set_size(RHS.size() + EltDiff);
 			this->destroy_range(this->begin() + NumShared, this->end());
 			this->set_size(NumShared);
 		} else if (RHS.size() > this->size()) {
-			size_t EltDiff = RHS.size() - this->size();
+			std::size_t EltDiff = RHS.size() - this->size();
 			this->uninitialized_copy(RHS.begin() + NumShared, RHS.end(), this->end());
 			this->set_size(this->size() + EltDiff);
 			this->destroy_range(RHS.begin() + NumShared, RHS.end());
@@ -1055,8 +1054,8 @@ namespace Death::Containers
 
 		// If we already have sufficient space, assign the common elements, then
 		// destroy any excess.
-		size_t RHSSize = RHS.size();
-		size_t CurSize = this->size();
+		std::size_t RHSSize = RHS.size();
+		std::size_t CurSize = this->size();
 		if (CurSize >= RHSSize) {
 			// Assign common elements.
 			iterator NewEnd;
@@ -1108,8 +1107,8 @@ namespace Death::Containers
 
 		// If we already have sufficient space, assign the common elements, then
 		// destroy any excess.
-		size_t RHSSize = RHS.size();
-		size_t CurSize = this->size();
+		std::size_t RHSSize = RHS.size();
+		std::size_t CurSize = this->size();
 		if (CurSize >= RHSSize) {
 			// Assign common elements.
 			iterator NewEnd = this->begin();
@@ -1181,7 +1180,7 @@ namespace Death::Containers
 		// 1. There is at least one inlined element.
 		// 2. `sizeof(SmallVector<T>) <= kPreferredSmallVectorSizeof` unless
 		// it contradicts 1.
-		static constexpr size_t kPreferredSmallVectorSizeof = 64;
+		static constexpr std::size_t kPreferredSmallVectorSizeof = 64;
 
 		// static_assert that sizeof(T) is not "too big".
 		//
@@ -1213,10 +1212,10 @@ namespace Death::Containers
 			"sure you really want that much inline storage.");
 
 		// Discount the size of the header itself when calculating the maximum inline bytes.
-		static constexpr size_t PreferredInlineBytes =
+		static constexpr std::size_t PreferredInlineBytes =
 			kPreferredSmallVectorSizeof - sizeof(SmallVector<T, 0>);
-		static constexpr size_t NumElementsThatFit = PreferredInlineBytes / sizeof(T);
-		static constexpr size_t value =
+		static constexpr std::size_t NumElementsThatFit = PreferredInlineBytes / sizeof(T);
+		static constexpr std::size_t value =
 			NumElementsThatFit == 0 ? 1 : NumElementsThatFit;
 	};
 
@@ -1248,12 +1247,12 @@ namespace Death::Containers
 			this->destroy_range(this->begin(), this->end());
 		}
 
-		explicit SmallVector(size_t Size)
+		explicit SmallVector(std::size_t Size)
 			: SmallVectorImpl<T>(N) {
 			this->resize(Size);
 		}
 
-		SmallVector(size_t Size, const T& Value)
+		SmallVector(std::size_t Size, const T& Value)
 			: SmallVectorImpl<T>(N) {
 			this->assign(Size, Value);
 		}
@@ -1326,7 +1325,7 @@ namespace Death::Containers
 	};
 
 	template<typename T, unsigned N>
-	inline size_t capacity_in_bytes(const SmallVector<T, N>& X) {
+	inline std::size_t capacity_in_bytes(const SmallVector<T, N>& X) {
 		return X.capacity_in_bytes();
 	}
 
@@ -1349,9 +1348,9 @@ namespace Death::Containers
 	}
 
 	// Explicit instantiations
-	extern template class SmallVectorBase<uint32_t>;
+	extern template class SmallVectorBase<std::uint32_t>;
 #if SIZE_MAX > UINT32_MAX
-	extern template class SmallVectorBase<uint64_t>;
+	extern template class SmallVectorBase<std::uint64_t>;
 #endif
 }
 

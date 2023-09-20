@@ -80,7 +80,7 @@ namespace Death::Containers
 		 *
 		 * A default-constructed instance has @ref StringViewFlags::Global set.
 		 */
-		constexpr /*implicit*/ BasicStringView(std::nullptr_t = nullptr) noexcept : _data {}, _sizePlusFlags { std::size_t(StringViewFlags::Global) } {}
+		constexpr /*implicit*/ BasicStringView(std::nullptr_t = nullptr) noexcept : _data{}, _sizePlusFlags{std::size_t(StringViewFlags::Global)} {}
 
 		/**
 		 * @brief Construct from a C string of known size
@@ -101,10 +101,10 @@ namespace Death::Containers
 		 * global and null-terminated --- for those, the recommended way is to
 		 * use the @link operator""_s() @endlink literal instead.
 		 */
-		constexpr /*implicit*/ BasicStringView(T* data, std::size_t size, StringViewFlags flags = {}) noexcept : _data { data }, _sizePlusFlags {
+		constexpr /*implicit*/ BasicStringView(T* data, std::size_t size, StringViewFlags flags = {}) noexcept : _data{data}, _sizePlusFlags{
 			// This ends up being called from BasicStringView(T*, Flags), so basically on every implicit conversion
 			// from a C string, thus the release build perf aspect wins over safety
-			(size | (std::size_t(flags) & Implementation::StringViewSizeMask)) } { }
+			(size | (std::size_t(flags) & Implementation::StringViewSizeMask))} { }
 
 		/**
 		 * @brief Construct from a @ref String
@@ -141,10 +141,10 @@ namespace Death::Containers
 		// It's also explicitly disallowing T[] arguments (which are implicitly convertible to an ArrayView), because those should be picking the T*
 		// overload and rely on strlen(), consistently with how C string literals work; and disallowing construction from a StringView
 		// because it'd get preferred over the implicit copy constructor.
-		template<class U, class = typename std::enable_if<!std::is_array<typename std::remove_reference<U&&>::type>::value && !std::is_same<typename std::decay<U&&>::type, BasicStringView<T>>::value, decltype(ArrayView<T>{std::declval<U&&>()})>::type> constexpr /*implicit*/ BasicStringView(U&& data, StringViewFlags flags = { }) noexcept: BasicStringView{flags, ArrayView<T>(data)} { }
+		template<class U, class = typename std::enable_if<!std::is_array<typename std::remove_reference<U&&>::type>::value && !std::is_same<typename std::decay<U&&>::type, BasicStringView<T>>::value, decltype(ArrayView<T>{std::declval<U&&>()})>::type> constexpr /*implicit*/ BasicStringView(U&& data, StringViewFlags flags = { }) noexcept : BasicStringView{flags, ArrayView<T>(data)} {}
 
 		/** @brief Construct a @ref StringView from a @ref MutableStringView */
-		template<class U, class = typename std::enable_if<std::is_same<const U, T>::value>::type> constexpr /*implicit*/ BasicStringView(BasicStringView<U> mutable_) noexcept : _data { mutable_._data }, _sizePlusFlags { mutable_._sizePlusFlags } { }
+		template<class U, class = typename std::enable_if<std::is_same<const U, T>::value>::type> constexpr /*implicit*/ BasicStringView(BasicStringView<U> mutable_) noexcept : _data{mutable_._data}, _sizePlusFlags{mutable_._sizePlusFlags} {}
 
 		/**
 		 * @brief Construct from a null-terminated C string
@@ -162,7 +162,7 @@ namespace Death::Containers
 		 * The @ref BasicStringView(std::nullptr_t) overload (which is a
 		 * default constructor) is additionally @cpp constexpr @ce.
 		 */
-		DEATH_CONSTEXPR14 /*implicit*/ BasicStringView(T* data, StringViewFlags extraFlags = { }) noexcept : BasicStringView { data, extraFlags, nullptr } { }
+		DEATH_CONSTEXPR14 /*implicit*/ BasicStringView(T* data, StringViewFlags extraFlags = { }) noexcept : BasicStringView {data, extraFlags, nullptr} {}
 
 		/**
 		 * @brief Construct a view on an external type / from an external representation
@@ -170,7 +170,7 @@ namespace Death::Containers
 		// There's no restriction that would disallow creating StringView from e.g. std::string<T>&& because that would break uses like
 		// `consume(foo());`, where `consume()` expects a view but `foo()` returns a std::vector. Besides that, to simplify the implementation,
 		// there's no const-adding conversion. Instead, the implementer is supposed to add an ArrayViewConverter variant for that.
-		template<class U, class = decltype(Implementation::StringViewConverter<T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ BasicStringView(U&& other) noexcept : BasicStringView { Implementation::StringViewConverter<T, typename std::decay<U&&>::type>::from(std::forward<U>(other)) } { }
+		template<class U, class = decltype(Implementation::StringViewConverter<T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ BasicStringView(U&& other) noexcept : BasicStringView{Implementation::StringViewConverter<T, typename std::decay<U&&>::type>::from(std::forward<U>(other))} {}
 
 		/**
 		* @brief Convert the view to external representation
@@ -363,7 +363,6 @@ namespace Death::Containers
 		 * If you have just a single delimiter character,
 		 * @ref split(char) const is more efficient. If you need to split on a
 		 * multi-character delimiter, use @ref split(StringView) const instead.
-		 * @see @ref splitOnWhitespaceWithoutEmptyParts() const
 		 */
 		Array<BasicStringView<T>> splitWithoutEmptyParts(char delimiter) const;
 
@@ -828,7 +827,6 @@ namespace Death::Containers
 			// Using plain bit ops instead of EnumSet to speed up debug builds
 			return StringView { data, size, StringViewFlags(std::size_t(StringViewFlags::Global) | std::size_t(StringViewFlags::NullTerminated)) };
 		}
-
 	}
 
 	template<class T> constexpr T& BasicStringView<T>::front() const {

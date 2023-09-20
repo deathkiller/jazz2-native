@@ -46,12 +46,12 @@ namespace Death::Containers
 	template<class T> class Reference
 	{
 	public:
-		constexpr /*implicit*/ Reference(T& reference) noexcept : _reference { &reference } {}
+		constexpr /*implicit*/ Reference(T& reference) noexcept : _reference{&reference} {}
 
 		/**
 		 * @brief Construct a reference from external representation
 		 */
-		template<class U, class = decltype(Implementation::ReferenceConverter<T, U>::from(std::declval<U>()))> constexpr /*implicit*/ Reference(U other) noexcept : Reference { Implementation::ReferenceConverter<T, U>::from(other) } { }
+		template<class U, class = decltype(Implementation::ReferenceConverter<T, U>::from(std::declval<U>()))> constexpr /*implicit*/ Reference(U other) noexcept : Reference{Implementation::ReferenceConverter<T, U>::from(other)} { }
 
 		/**
 		 * @brief Construction from r-value references is not allowed
@@ -65,7 +65,7 @@ namespace Death::Containers
 		 *
 		 * Expects that @p T is a base of @p U.
 		 */
-		template<class U, class = typename std::enable_if<std::is_base_of<T, U>::value>::type> constexpr /*implicit*/ Reference(Reference<U> other) noexcept : _reference { other._reference } { }
+		template<class U, class = typename std::enable_if<std::is_base_of<T, U>::value>::type> constexpr /*implicit*/ Reference(Reference<U> other) noexcept : _reference{other._reference} { }
 
 		/**
 		 * @brief Convert the reference to external representation

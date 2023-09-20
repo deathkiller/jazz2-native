@@ -54,26 +54,26 @@ namespace Death::Containers
 	public:
 		typedef T Type;
 
-		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept : _data {}, _size {} {}
+		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept : _data{}, _size {} {}
 
 		constexpr /*implicit*/ ArrayView(T* data, std::size_t size) noexcept : _data(data), _size(size) {}
 
 		template<class U, std::size_t size, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
-		constexpr /*implicit*/ ArrayView(U(&data)[size]) noexcept : _data { data }, _size { size } {
+		constexpr /*implicit*/ ArrayView(U(&data)[size]) noexcept : _data{data}, _size{size} {
 			static_assert(sizeof(T) == sizeof(U), "Type sizes are not compatible");
 		}
 
 		template<class U, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
-		constexpr /*implicit*/ ArrayView(ArrayView<U> view) noexcept : _data { view }, _size { view.size() } {
+		constexpr /*implicit*/ ArrayView(ArrayView<U> view) noexcept : _data{view}, _size{view.size()} {
 			static_assert(sizeof(T) == sizeof(U), "Type sizes are not compatible");
 		}
 
 		template<std::size_t size, class U, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
-		constexpr /*implicit*/ ArrayView(StaticArrayView<size, U> view) noexcept : _data { view }, _size { size } {
+		constexpr /*implicit*/ ArrayView(StaticArrayView<size, U> view) noexcept : _data{view}, _size{size} {
 			static_assert(sizeof(U) == sizeof(T), "Type sizes are not compatible");
 		}
 
-		template<class U, class = decltype(Implementation::ArrayViewConverter<T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ ArrayView(U&& other) noexcept : ArrayView { Implementation::ArrayViewConverter<T, typename std::decay<U&&>::type>::from(std::forward<U>(other)) } {}
+		template<class U, class = decltype(Implementation::ArrayViewConverter<T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ ArrayView(U&& other) noexcept : ArrayView{Implementation::ArrayViewConverter<T, typename std::decay<U&&>::type>::from(std::forward<U>(other))} {}
 
 		template<class U, class = decltype(Implementation::ArrayViewConverter<T, U>::to(std::declval<ArrayView<T>>()))> constexpr /*implicit*/ operator U() const {
 			return Implementation::ArrayViewConverter<T, U>::to(*this);
@@ -172,7 +172,7 @@ namespace Death::Containers
 	public:
 		typedef void Type;
 
-		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept : _data {}, _size {} {}
+		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept : _data{}, _size{} {}
 
 		constexpr /*implicit*/ ArrayView(void* data, std::size_t size) noexcept : _data(data), _size(size) {}
 
@@ -188,9 +188,9 @@ namespace Death::Containers
 
 		template<std::size_t size, class T
 			, class = typename std::enable_if<!std::is_const<T>::value>::type
-		> constexpr /*implicit*/ ArrayView(const StaticArrayView<size, T>& array) noexcept : _data { array }, _size { size * sizeof(T) } {}
+		> constexpr /*implicit*/ ArrayView(const StaticArrayView<size, T>& array) noexcept : _data{array}, _size{size * sizeof(T)} {}
 
-		template<class T, class = decltype(Implementation::ErasedArrayViewConverter<typename std::decay<T&&>::type>::from(std::declval<T&&>()))> constexpr /*implicit*/ ArrayView(T&& other) noexcept : ArrayView { Implementation::ErasedArrayViewConverter<typename std::decay<T&&>::type>::from(other) } {}
+		template<class T, class = decltype(Implementation::ErasedArrayViewConverter<typename std::decay<T&&>::type>::from(std::declval<T&&>()))> constexpr /*implicit*/ ArrayView(T&& other) noexcept : ArrayView{Implementation::ErasedArrayViewConverter<typename std::decay<T&&>::type>::from(other)} {}
 
 #if !defined(DEATH_MSVC2019_COMPATIBILITY)
 		constexpr explicit operator bool() const {
@@ -233,7 +233,7 @@ namespace Death::Containers
 	public:
 		typedef const void Type;
 
-		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept : _data {}, _size {} {}
+		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept : _data{}, _size{} {}
 
 		constexpr /*implicit*/ ArrayView(const void* data, std::size_t size) noexcept : _data(data), _size(size) {}
 
@@ -241,13 +241,13 @@ namespace Death::Containers
 
 		template<class T, std::size_t size> constexpr /*implicit*/ ArrayView(T(&data)[size]) noexcept : _data(data), _size(size * sizeof(T)) {}
 
-		constexpr /*implicit*/ ArrayView(ArrayView<void> array) noexcept : _data { array }, _size { array.size() } {}
+		constexpr /*implicit*/ ArrayView(ArrayView<void> array) noexcept : _data{array}, _size{array.size()} {}
 
 		template<class T> constexpr /*implicit*/ ArrayView(ArrayView<T> array) noexcept : _data(array), _size(array.size() * sizeof(T)) {}
 
-		template<std::size_t size, class T> constexpr /*implicit*/ ArrayView(const StaticArrayView<size, T>& array) noexcept : _data { array }, _size { size * sizeof(T) } {}
+		template<std::size_t size, class T> constexpr /*implicit*/ ArrayView(const StaticArrayView<size, T>& array) noexcept : _data{array}, _size{size * sizeof(T)} {}
 
-		template<class T, class = decltype(Implementation::ErasedArrayViewConverter<const T>::from(std::declval<const T&>()))> constexpr /*implicit*/ ArrayView(const T& other) noexcept : ArrayView { Implementation::ErasedArrayViewConverter<const T>::from(other) } {}
+		template<class T, class = decltype(Implementation::ErasedArrayViewConverter<const T>::from(std::declval<const T&>()))> constexpr /*implicit*/ ArrayView(const T& other) noexcept : ArrayView{Implementation::ErasedArrayViewConverter<const T>::from(other)} {}
 
 #if !defined(DEATH_MSVC2019_COMPATIBILITY)
 		constexpr explicit operator bool() const {
@@ -356,20 +356,20 @@ namespace Death::Containers
 			Size = size_
 		};
 
-		constexpr /*implicit*/ StaticArrayView(std::nullptr_t = nullptr) noexcept : _data {} {}
+		constexpr /*implicit*/ StaticArrayView(std::nullptr_t = nullptr) noexcept : _data{} {}
 
 		template<class U, class = typename std::enable_if<std::is_pointer<U>::value && !std::is_same<U, T(&)[size_]>::value>::type> constexpr explicit StaticArrayView(U data)
 			noexcept : _data(data) {}
 
 		template<class U, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
-		constexpr /*implicit*/ StaticArrayView(U(&data)[size_]) noexcept : _data { data } {}
+		constexpr /*implicit*/ StaticArrayView(U(&data)[size_]) noexcept : _data{data} {}
 
 		template<class U, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
-		constexpr /*implicit*/ StaticArrayView(StaticArrayView<size_, U> view) noexcept : _data { view } {
+		constexpr /*implicit*/ StaticArrayView(StaticArrayView<size_, U> view) noexcept : _data{view} {
 			static_assert(sizeof(T) == sizeof(U), "Type sizes are not compatible");
 		}
 
-		template<class U, class = decltype(Implementation::StaticArrayViewConverter<size_, T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ StaticArrayView(U&& other) noexcept : StaticArrayView { Implementation::StaticArrayViewConverter<size_, T, typename std::decay<U&&>::type>::from(std::forward<U>(other)) } {}
+		template<class U, class = decltype(Implementation::StaticArrayViewConverter<size_, T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ StaticArrayView(U&& other) noexcept : StaticArrayView{Implementation::StaticArrayViewConverter<size_, T, typename std::decay<U&&>::type>::from(std::forward<U>(other))} {}
 
 		template<class U, class = decltype(Implementation::StaticArrayViewConverter<size_, T, U>::to(std::declval<StaticArrayView<size_, T>>()))> constexpr /*implicit*/ operator U() const {
 			return Implementation::StaticArrayViewConverter<size_, T, U>::to(*this);
@@ -546,7 +546,7 @@ namespace Death::Containers
 
 	template<std::size_t size_, class T> template<std::size_t begin_, std::size_t end_> constexpr StaticArrayView<end_ - begin_, T> StaticArrayView<size_, T>::slice() const {
 		static_assert(begin_ < end_, "Fixed-size slice needs to have a positive size");
-		static_assert(end_ <= size_, "Slice out of bounds");
+		static_assert(end_ <= size_, "Slice out of range");
 		return StaticArrayView<end_ - begin_, T>{_data + begin_};
 	}
 }

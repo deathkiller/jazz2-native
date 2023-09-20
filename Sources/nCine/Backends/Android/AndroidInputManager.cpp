@@ -750,7 +750,7 @@ namespace nCine
 			};
 
 			int buttonMask = 0;
-#if defined(DEATH_LOGGING)
+#if defined(DEATH_TRACE)
 			std::memset(deviceInfoString, 0, MaxStringLength);
 #endif
 			for (int i = 0; i < maxButtons; i++) {
@@ -765,7 +765,7 @@ namespace nCine
 
 				if (hasKey) {
 					joyState.buttonsMapping_[i] = (int)ButtonNames[i];
-#if defined(DEATH_LOGGING)
+#if defined(DEATH_TRACE)
 					sprintf(&deviceInfoString[strlen(deviceInfoString)], " %d:%d", (int)ButtonNames[i], keyCode);
 #endif
 					buttonMask |= ButtonMasks[i];
@@ -775,7 +775,7 @@ namespace nCine
 				}
 			}
 			joyState.numButtons_ = numFoundButtons;
-#if defined(DEATH_LOGGING)
+#if defined(DEATH_TRACE)
 			if (numFoundButtons == 0) {
 				sprintf(&deviceInfoString[strlen(deviceInfoString)], " not detected");
 			}
@@ -810,7 +810,7 @@ namespace nCine
 				}
 			}
 
-#if defined(DEATH_LOGGING)
+#if defined(DEATH_TRACE)
 			std::memset(deviceInfoString, 0, MaxStringLength);
 #endif
 			joyState.hasHatAxes_ = true;
@@ -836,7 +836,7 @@ namespace nCine
 							joyState.axesRangeValues_[numAxes] = 2.0f;
 						}
 					}
-#if defined(DEATH_LOGGING)
+#if defined(DEATH_TRACE)
 					sprintf(&deviceInfoString[strlen(deviceInfoString)], " %d:%d (%.2f to %.2f)", numAxes, axis, minValue, minValue + rangeValue);
 #endif
 					if (axis != AMOTION_EVENT_AXIS_HAT_X && axis != AMOTION_EVENT_AXIS_HAT_Y) {
@@ -850,7 +850,7 @@ namespace nCine
 					}
 				}
 			}
-#if defined(DEATH_LOGGING)
+#if defined(DEATH_TRACE)
 			if (numAxes == 0) {
 				sprintf(&deviceInfoString[strlen(deviceInfoString)], " not detected");
 			}

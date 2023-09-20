@@ -58,7 +58,7 @@ namespace nCine
 
 	private:
 		static constexpr unsigned int MaxShaderSourceLength = 32 * 1024;
-#if defined(DEATH_LOGGING)
+#if defined(DEATH_TRACE)
 		static constexpr unsigned int MaxInfoLogLength = 512;
 		static char infoLogString_[MaxInfoLogLength];
 #endif

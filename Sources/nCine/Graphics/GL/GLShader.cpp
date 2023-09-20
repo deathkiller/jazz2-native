@@ -32,7 +32,7 @@ namespace nCine
 #endif
 	}
 
-#if defined(DEATH_LOGGING)
+#if defined(DEATH_TRACE)
 	char GLShader::infoLogString_[MaxInfoLogLength];
 #endif
 
@@ -136,7 +136,7 @@ namespace nCine
 		GLint status = GL_FALSE;
 		glGetShaderiv(glHandle_, GL_COMPILE_STATUS, &status);
 		if (status == GL_FALSE) {
-#if defined(DEATH_LOGGING)
+#if defined(DEATH_TRACE)
 			if (logOnErrors) {
 				GLint length = 0;
 				glGetShaderiv(glHandle_, GL_INFO_LOG_LENGTH, &length);

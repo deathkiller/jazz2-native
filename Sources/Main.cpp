@@ -34,7 +34,7 @@
 #include "Jazz2/Compatibility/JJ2Tileset.h"
 #include "Jazz2/Compatibility/EventConverter.h"
 
-#if defined(DEATH_LOGGING) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
+#if defined(DEATH_TRACE) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
 #	include "TermLogo.h"
 #endif
 
@@ -1128,7 +1128,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdSh
 #else
 int main(int argc, char** argv)
 {
-#if defined(DEATH_LOGGING) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
+#if defined(DEATH_TRACE) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
 	bool hasVirtualTerminal = isatty(1);
 	if (hasVirtualTerminal) {
 		const char* term = ::getenv("TERM");

@@ -51,7 +51,7 @@ jobs:
         $certPath = Join-Path -Path $currentDirectory -ChildPath "_cert.pfx"
         [IO.File]::WriteAllBytes("$certPath", $certBytes)
         
-        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION="10.0" -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS="${{ matrix.ArchExts }}" -D NCINE_STRIP_BINARIES=ON -D NCINE_UWP_CERTIFICATE_PATH="$certPath" -D NCINE_UWP_CERTIFICATE_PASSWORD="${{ secrets.UWP_CERTIFICATE_PASSWORD }}" -D DEATH_LOGGING=OFF
+        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION="10.0" -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS="${{ matrix.ArchExts }}" -D NCINE_STRIP_BINARIES=ON -D NCINE_UWP_CERTIFICATE_PATH="$certPath" -D NCINE_UWP_CERTIFICATE_PASSWORD="${{ secrets.UWP_CERTIFICATE_PASSWORD }}" -D DEATH_TRACE=OFF
 
     - name: 'Build'
       run: |

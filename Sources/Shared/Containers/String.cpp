@@ -1,9 +1,10 @@
 #include "String.h"
+#include "Array.h"
+#include "Pair.h"
+#include "StaticArray.h"
 
 #include <string>
 #include <cstring>
-
-#include "Pair.h"
 
 namespace Death::Containers
 {
@@ -104,15 +105,15 @@ namespace Death::Containers
 		_small.size = Implementation::SmallStringBit;
 	}
 
-	String::String(const StringView view) : String { view._data, view._sizePlusFlags & ~Implementation::StringViewSizeMask } {}
+	String::String(const StringView view) : String{view._data, view._sizePlusFlags & ~Implementation::StringViewSizeMask} {}
 
-	String::String(const MutableStringView view) : String { view._data, view._sizePlusFlags & ~Implementation::StringViewSizeMask } {}
+	String::String(const MutableStringView view) : String{view._data, view._sizePlusFlags & ~Implementation::StringViewSizeMask} {}
 
-	String::String(const ArrayView<const char> view) : String { view.data(), view.size() } {}
+	String::String(const ArrayView<const char> view) : String{view.data(), view.size()} {}
 
-	String::String(const ArrayView<char> view) : String { view.data(), view.size() } {}
+	String::String(const ArrayView<char> view) : String{view.data(), view.size()} {}
 
-	String::String(const char* const data) : String { data, data ? std::strlen(data) : 0 } {}
+	String::String(const char* const data) : String{data, data ? std::strlen(data) : 0} {}
 
 	String::String(const char* const data, const std::size_t size)
 	{
@@ -124,21 +125,21 @@ namespace Death::Containers
 		construct(data, size);
 	}
 
-	String::String(AllocatedInitT, const StringView view) : String { AllocatedInit, view._data, view._sizePlusFlags & ~Implementation::StringViewSizeMask } {}
+	String::String(AllocatedInitT, const StringView view) : String{AllocatedInit, view._data, view._sizePlusFlags & ~Implementation::StringViewSizeMask} {}
 
-	String::String(AllocatedInitT, const MutableStringView view) : String { AllocatedInit, view._data, view._sizePlusFlags & ~Implementation::StringViewSizeMask } {}
+	String::String(AllocatedInitT, const MutableStringView view) : String{AllocatedInit, view._data, view._sizePlusFlags & ~Implementation::StringViewSizeMask} {}
 
-	String::String(AllocatedInitT, const ArrayView<const char> view) : String { AllocatedInit, view.data(), view.size() } {}
+	String::String(AllocatedInitT, const ArrayView<const char> view) : String{AllocatedInit, view.data(), view.size()} {}
 
-	String::String(AllocatedInitT, const ArrayView<char> view) : String { AllocatedInit, view.data(), view.size() } {}
+	String::String(AllocatedInitT, const ArrayView<char> view) : String{AllocatedInit, view.data(), view.size()} {}
 
-	String::String(AllocatedInitT, const char* const data) : String { AllocatedInit, data, data ? std::strlen(data) : 0 } {}
+	String::String(AllocatedInitT, const char* const data) : String{AllocatedInit, data, data ? std::strlen(data) : 0} {}
 
 	String::String(AllocatedInitT, const char* const data, const std::size_t size)
 	{
 		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus worth checking even in release
-		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
+		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
 		DEATH_ASSERT(data || size == 0, , "Containers::String: Received a null string of size %zu", size);
 
 		_large.data = new char[size + 1];
@@ -194,14 +195,14 @@ namespace Death::Containers
 		_large.deleter = deleter;
 	}
 
-	String::String(void(*deleter)(char*, std::size_t), std::nullptr_t, char* const data) noexcept : String {
+	String::String(void(*deleter)(char*, std::size_t), std::nullptr_t, char* const data) noexcept : String{
 		data,
 		// If data is null, strlen() would crash before reaching our assert inside the delegated-to constructor
 		data ? std::strlen(data) : 0,
 		deleter
 	} {}
 
-	String::String(ValueInitT, const std::size_t size) : _large {} {
+	String::String(ValueInitT, const std::size_t size) : _large{} {
 		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus  worth checking even in release
 		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
@@ -225,7 +226,7 @@ namespace Death::Containers
 		construct(NoInit, size);
 	}
 
-	String::String(DirectInitT, const std::size_t size, const char c) : String { NoInit, size } {
+	String::String(DirectInitT, const std::size_t size, const char c) : String{NoInit, size} {
 		std::memset(size < Implementation::SmallStringSize ? _small.data : _large.data, c, size);
 	}
 

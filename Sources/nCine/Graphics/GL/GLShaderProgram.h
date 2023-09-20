@@ -141,7 +141,7 @@ namespace nCine
 		static constexpr int UniformBlocksInitialSize = 4;
 		static constexpr int AttributesInitialSize = 4;
 
-#if defined(DEATH_LOGGING)
+#if defined(DEATH_TRACE)
 		static constexpr unsigned int MaxInfoLogLength = 512;
 		static char infoLogString_[MaxInfoLogLength];
 #endif

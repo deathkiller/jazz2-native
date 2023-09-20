@@ -22,13 +22,12 @@
 
 #pragma once
 
+#include "../CommonBase.h"
+#include "StringView.h" /* needs to be included for comparison operators */
+
 #include <cstddef>
 #include <type_traits>
 #include <string>
-
-#include "../CommonBase.h"
-#include "StringView.h" /* needs to be included for comparison operators */
-#include "Array.h"
 
 namespace Death::Containers
 {
@@ -62,8 +61,7 @@ namespace Death::Containers
 	/**
 		@brief Allocated initialization tag type
 
-		Used to distinguish @ref String construction that bypasses small string
-		optimization.
+		Used to distinguish @ref String construction that bypasses small string optimization.
 	*/
 	struct AllocatedInitT {
 		struct Init {};
@@ -239,7 +237,6 @@ namespace Death::Containers
 		 * default-constructed value alongside the array pointer and size. It
 		 * effectively means @cpp delete[] nullptr @ce gets called when
 		 * destructing a moved-out instance (which is a no-op).
-		 * @see @ref Containers-String-usage-wrapping
 		 */
 		explicit String(char* data, std::size_t size, Deleter deleter) noexcept;
 
@@ -250,7 +247,7 @@ namespace Death::Containers
 		 * @ref String(char*, std::size_t, Deleter).
 		 */
 		// Gets ambigous when calling String{ptr, 0}. FFS, zero as null pointerwas deprecated in C++11 already, why is this still a problem?!
-		template<class T> String(typename std::enable_if<std::is_convertible<T, Deleter>::value && !std::is_convertible<T, std::size_t>::value, char*>::type data, T deleter) noexcept : String { deleter, nullptr, data } {}
+		template<class T> String(typename std::enable_if<std::is_convertible<T, Deleter>::value && !std::is_convertible<T, std::size_t>::value, char*>::type data, T deleter) noexcept : String{deleter, nullptr, data} {}
 
 		/**
 		 * @brief Take ownership of an immutable external data array
@@ -262,7 +259,7 @@ namespace Death::Containers
 		 * copy, it's the user responsibility to avoid mutating the data in any
 		 * way.
 		 */
-		explicit String(const char* data, std::size_t size, Deleter deleter) noexcept : String { const_cast<char*>(data), size, deleter } {}
+		explicit String(const char* data, std::size_t size, Deleter deleter) noexcept : String{const_cast<char*>(data), size, deleter} {}
 
 		/**
 		 * @brief Take ownership of an external data array with implicit size
@@ -271,7 +268,7 @@ namespace Death::Containers
 		 * @ref String(const char*, std::size_t, Deleter).
 		 */
 		// Gets ambigous when calling String{ptr, 0}. FFS, zero as null pointer was deprecated in C++11 already, why is this still a problem?!
-		template<class T, class = typename std::enable_if<std::is_convertible<T, Deleter>::value && !std::is_convertible<T, std::size_t>::value, const char*>::type> String(const char* data, T deleter) noexcept : String { deleter, nullptr, const_cast<char*>(data) } {}
+		template<class T, class = typename std::enable_if<std::is_convertible<T, Deleter>::value && !std::is_convertible<T, std::size_t>::value, const char*>::type> String(const char* data, T deleter) noexcept : String{deleter, nullptr, const_cast<char*>(data)} {}
 
 		/**
 		 * @brief Taking ownership of a null pointer is not allowed
@@ -319,13 +316,12 @@ namespace Death::Containers
 		// There's no restriction that would disallow creating StringView from e.g. std::string<T>&& because that would break uses like
 		// `consume(foo());`, where `consume()` expects a view but `foo()` returns a std::vector. Besides that, to simplify the implementation,
 		// there's no const-adding conversion. Instead, the implementer is supposed to add an ArrayViewConverter variant for that.
-		template<class T, class = decltype(Implementation::StringConverter<typename std::decay<T&&>::type>::from(std::declval<T&&>()))> /*implicit*/ String(T&& other) noexcept : String { Implementation::StringConverter<typename std::decay<T&&>::type>::from(std::forward<T>(other)) } {}
+		template<class T, class = decltype(Implementation::StringConverter<typename std::decay<T&&>::type>::from(std::declval<T&&>()))> /*implicit*/ String(T&& other) noexcept : String{Implementation::StringConverter<typename std::decay<T&&>::type>::from(std::forward<T>(other))} {}
 
 		/**
 		 * @brief Destructor
 		 *
-		 * Calls @ref deleter() on the owned @ref data(); in case of a SSO does
-		 * nothing.
+		 * Calls @ref deleter() on the owned @ref data(); in case of a SSO does nothing.
 		 */
 		~String();
 

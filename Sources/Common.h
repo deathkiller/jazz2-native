@@ -44,7 +44,7 @@
 // Return false macros
 #define RETURNF_MSG(fmt, ...) do { LOGE(fmt, ##__VA_ARGS__); return false; } while (false)
 
-#if defined(DEATH_LOGGING)
+#if defined(DEATH_TRACE)
 #	if defined(_MSC_VER)
 #		define BREAK() __debugbreak()
 #	else
@@ -99,7 +99,7 @@
 	} while (false)
 
 // Non-fatal assert macros
-#if defined(DEATH_LOGGING)
+#if defined(DEATH_TRACE)
 #	define ASSERT_MSG(x, fmt, ...) \
 		do \
 		{ \

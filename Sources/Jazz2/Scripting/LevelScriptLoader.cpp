@@ -3279,7 +3279,7 @@ namespace Jazz2::Scripting
 	{
 		int column; const char* sectionName;
 		int lineNumber = ctx->GetExceptionLineNumber(&column, &sectionName);
-		DEATH_LOGGING(LogLevel::Error, "%s (%i, %i): An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", sectionName, lineNumber, column, ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+		DEATH_TRACE(TraceLevel::Error, "%s (%i, %i): An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", sectionName, lineNumber, column, ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 	}
 
 	Actors::ActorBase* LevelScriptLoader::CreateActorInstance(const StringView& typeName)
