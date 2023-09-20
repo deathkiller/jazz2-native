@@ -102,9 +102,9 @@ namespace Death::Containers
 			// MSVC doesn't seem to be affected by the emplaceConstructorExplicitInCopyInitialization() bug in GCC and Clang, so I can use {} here I think.
 			_first{}, _second{}
 #else
-			Pair { ValueInit }
+			Pair{ValueInit}
 #endif
-		{ }
+		{}
 
 		/** @brief Constructor */
 		constexpr /*implicit*/ Pair(const F& first, const S& second) noexcept(std::is_nothrow_copy_constructible<F>::value && std::is_nothrow_copy_constructible<S>::value) :
@@ -114,7 +114,8 @@ namespace Death::Containers
 #else
 			_first{first}, _second{second}
 #endif
-		{ }
+		{}
+
 		/** @overload */
 		constexpr /*implicit*/ Pair(const F& first, S&& second) noexcept(std::is_nothrow_copy_constructible<F>::value && std::is_nothrow_move_constructible<S>::value) :
 			// Can't use {} on GCC 4.8, see constructHelpers.h for details and PairTest::copyMoveConstructPlainStruct() for a test.
@@ -123,7 +124,8 @@ namespace Death::Containers
 #else
 			_first{first}, _second{std::move(second)}
 #endif
-		{ }
+		{}
+
 		/** @overload */
 		constexpr /*implicit*/ Pair(F&& first, const S& second) noexcept(std::is_nothrow_move_constructible<F>::value && std::is_nothrow_copy_constructible<S>::value) :
 			// Can't use {} on GCC 4.8, see constructHelpers.h for details and PairTest::copyMoveConstructPlainStruct() for a test.
@@ -132,7 +134,8 @@ namespace Death::Containers
 #else
 			_first{std::move(first)}, _second{second}
 #endif
-		{ }
+		{}
+
 		/** @overload */
 		constexpr /*implicit*/ Pair(F&& first, S&& second) noexcept(std::is_nothrow_move_constructible<F>::value && std::is_nothrow_move_constructible<S>::value) :
 			// Can't use {} on GCC 4.8, see constructHelpers.h for details and PairTest::copyMoveConstructPlainStruct() for a test.
@@ -141,7 +144,30 @@ namespace Death::Containers
 #else
 			_first{std::move(first)}, _second{std::move(second)}
 #endif
-		{ }
+		{}
+
+		/** @brief Copy-construct a pair from another of different type */
+		template<class OtherF, class OtherS, class = typename std::enable_if<std::is_constructible<F, const OtherF&>::value&& std::is_constructible<S, const OtherS&>::value>::type> constexpr explicit Pair(const Pair<OtherF, OtherS>& other) noexcept(std::is_nothrow_constructible<F, const OtherF&>::value && std::is_nothrow_constructible<S, const OtherS&>::value) :
+			// Explicit T() to avoid warnings for int-to-float conversion etc., as that's a desirable use case here (and the constructor
+			// is explicit because of that). Using () instead of {} alone doesn't help as Clang still warns for float-to-double conversion.
+			// Can't use {} on GCC 4.8, see constructHelpers.h for details and PairTest::copyMoveConstructPlainStruct() for a test.
+#if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
+			_first(F(other._first)), _second(S(other._second))
+#else
+			_first{F(other._first)}, _second{S(other._second)}
+#endif
+		{}
+
+		/** @brief Move-construct a pair from another of different type */
+		template<class OtherF, class OtherS, class = typename std::enable_if<std::is_constructible<F, OtherF&&>::value&& std::is_constructible<S, OtherS&&>::value>::type> constexpr explicit Pair(Pair<OtherF, OtherS>&& other) noexcept(std::is_nothrow_constructible<F, OtherF&&>::value && std::is_nothrow_constructible<S, OtherS&&>::value) :
+			// Explicit T() to avoid conversion warnings, similar to above; GCC 4.8 special case also similarly to above although
+			// copyMoveConstructPlainStruct() cannot really test it (see there for details).
+#if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
+			_first(F(std::move(other._first))), _second(S(std::move(other._second)))
+#else
+			_first{F(std::move(other._first))}, _second{S(std::move(other._second))}
+#endif
+		{}
 
 		/** @brief Copy-construct a pair from external representation */
 		template<class T, class = decltype(Implementation::PairConverter<F, S, T>::from(std::declval<const T&>()))> /*implicit*/ Pair(const T& other) noexcept(std::is_nothrow_copy_constructible<F>::value && std::is_nothrow_copy_constructible<S>::value) : Pair{Implementation::PairConverter<F, S, T>::from(other)} {}

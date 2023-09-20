@@ -78,7 +78,7 @@ endif()
 #set(NCINE_WITH_FIXED_BATCH_SIZE "0" CACHE PATH "Set custom fixed batch size (unsafe)")
 
 # Shared library options
-option(DEATH_TRACE "Enable runtime tracing" ON)
+option(DEATH_TRACE "Enable runtime event tracing" ON)
 
 # Check if we can use IFUNC for CPU dispatch. Linux with glibc and Android with API 18+ has it,
 # but e.g. Alpine Linux with musl doesn't, and on Android with API < 30 we don't get AT_HWCAP passed
