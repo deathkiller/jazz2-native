@@ -1021,7 +1021,7 @@ namespace Jazz2::Tiles
 
 	void TileMap::CreateTileDebris(std::int32_t tileId, std::int32_t x, std::int32_t y)
 	{
-		constexpr float SpeedMultiplier[] = { -2, 2, -1, 1 };
+		static const float SpeedMultiplier[] = { -2, 2, -1, 1 };
 		constexpr std::int32_t QuarterSize = TileSet::DefaultTileSize / 2;
 
 		// Tile #0 is always empty

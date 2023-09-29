@@ -89,10 +89,12 @@ using namespace Death::IO;
 #	include <Utf8.h>
 #elif defined(DEATH_TARGET_ANDROID)
 #	include <stdarg.h>
+#	include <time.h>
 #	include <android/log.h>
 #else
 #	include <cstdarg>
 #	if defined(DEATH_TARGET_SWITCH)
+#		include <time.h>
 #		include <switch.h>
 #	endif
 #endif
@@ -143,8 +145,17 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 			default:					levelIdentifier = "D"; break;
 		}
 
+		struct timespec currentTime;
+		clock_gettime(CLOCK_REALTIME, &currentTime);
+
+		time_t seconds = currentTime.tv_sec;
+		long milliseconds = (currentTime.tv_nsec / 1000000) % 1000;
+
+		struct tm localTime;
+		localtime_r(&seconds, &localTime);
+
 		FileStream* s = static_cast<FileStream*>(__logFile.get());
-		fprintf(s->GetHandle(), "[%s] %s\n", levelIdentifier, logEntry);
+		fprintf(s->GetHandle(), "%02d:%02d:%02d.%03ld [%s] %s\n", localTime.tm_hour, localTime.tm_min, localTime.tm_sec, milliseconds, levelIdentifier, logEntry);
 		fflush(s->GetHandle());
 	}
 #elif defined(DEATH_TARGET_SWITCH)
@@ -165,8 +176,17 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 			default:					levelIdentifier = "D"; break;
 		}
 
+		struct timespec currentTime;
+		clock_gettime(CLOCK_REALTIME, &currentTime);
+
+		time_t seconds = currentTime.tv_sec;
+		long milliseconds = (currentTime.tv_nsec / 1000000) % 1000;
+
+		struct tm localTime;
+		localtime_r(&seconds, &localTime);
+
 		FileStream* s = static_cast<FileStream*>(__logFile.get());
-		fprintf(s->GetHandle(), "[%s] %s\n", levelIdentifier, logEntry);
+		fprintf(s->GetHandle(), "%02d:%02d:%02d.%03ld [%s] %s\n", localTime.tm_hour, localTime.tm_min, localTime.tm_sec, milliseconds, levelIdentifier, logEntry);
 		fflush(s->GetHandle());
 	}
 #elif defined(DEATH_TARGET_WINDOWS_RT)
@@ -195,14 +215,14 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 
 	::OutputDebugString(Death::Utf8::ToUtf16(logEntry));
 #else
-	constexpr char Reset[] = "\033[0m";
-	constexpr char Bold[] = "\033[1m";
-	constexpr char Faint[] = "\033[2m";
-	constexpr char Red[] = "\033[31m";
-	constexpr char Yellow[] = "\033[33m";
-	constexpr char DarkGray[] = "\033[90m";
-	constexpr char BrightRed[] = "\033[91m";
-	constexpr char BrightYellow[] = "\033[93m";
+	static const char Reset[] = "\033[0m";
+	static const char Bold[] = "\033[1m";
+	static const char Faint[] = "\033[2m";
+	static const char Red[] = "\033[31m";
+	static const char Yellow[] = "\033[33m";
+	static const char DarkGray[] = "\033[90m";
+	static const char BrightRed[] = "\033[91m";
+	static const char BrightYellow[] = "\033[93m";
 
 #	if defined(DEATH_TARGET_WINDOWS)
 	if (__showLogConsole) {

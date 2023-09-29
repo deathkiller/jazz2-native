@@ -26,7 +26,7 @@ namespace Death::Containers
 	}
 
 	static_assert(sizeof(SmallVector<void*, 0>) == sizeof(unsigned) * 2 + sizeof(void*),
-				  "Wasted space in SmallVector size 0");
+				  "Wasted space in Containers::SmallVector size 0");
 	static_assert(alignof(SmallVector<Struct16B, 0>) >= alignof(Struct16B),
 				  "Wrong alignment for 16-byte aligned T");
 	static_assert(alignof(SmallVector<Struct32B, 0>) >= alignof(Struct32B),
@@ -36,7 +36,7 @@ namespace Death::Containers
 	static_assert(sizeof(SmallVector<Struct32B, 0>) >= alignof(Struct32B),
 				  "Missing padding for 32-byte aligned T");
 	static_assert(sizeof(SmallVector<void*, 1>) == sizeof(unsigned) * 2 + sizeof(void*) * 2,
-				  "Wasted space in SmallVector size 1");
+				  "Wasted space in Containers::SmallVector size 1");
 
 	static_assert(sizeof(SmallVector<char, 0>) == sizeof(void*) * 2 + sizeof(void*),
 				  "1 byte elements have word-sized type for size and capacity");

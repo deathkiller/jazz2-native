@@ -75,10 +75,9 @@ namespace Death::Containers
 		// If the size is small enough for SSO, use that. Not using <= because we need to store the null terminator as well.
 		if (size < Implementation::SmallStringSize) {
 			// Apparently memcpy() can't be called with null pointers, even if size is zero. I call that bullying.
-			if (size) std::memcpy(_small.data, data, size);
-
-			// Otherwise allocate. Assuming the size is small enough -- this should have been checked in the caller already.
+			if (size != 0) std::memcpy(_small.data, data, size);
 		} else {
+			// Otherwise allocate. Assuming the size is small enough -- this should have been checked in the caller already.
 			std::memcpy(_large.data, data, size);
 		}
 	}
@@ -116,10 +115,13 @@ namespace Death::Containers
 	String::String(const char* const data) : String{data, data ? std::strlen(data) : 0} {}
 
 	String::String(const char* const data, const std::size_t size)
+		: _large{}
 	{
+#if defined(DEATH_TARGET_32BIT)
 		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus worth checking even in release
 		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
+#endif
 		DEATH_ASSERT(data || size == 0, , "Containers::String: Received a null string of size %zu", size);
 
 		construct(data, size);
@@ -136,6 +138,7 @@ namespace Death::Containers
 	String::String(AllocatedInitT, const char* const data) : String{AllocatedInit, data, data ? std::strlen(data) : 0} {}
 
 	String::String(AllocatedInitT, const char* const data, const std::size_t size)
+		: _large{}
 	{
 		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus worth checking even in release
@@ -150,7 +153,8 @@ namespace Death::Containers
 		_large.deleter = nullptr;
 	}
 
-	String::String(AllocatedInitT, String&& other) {
+	String::String(AllocatedInitT, String&& other)
+	{
 		// Allocate a copy if the other is a SSO
 		if (other.isSmall()) {
 			const std::size_t sizePlusOne = (other._small.size & ~SmallSizeMask) + 1;
@@ -172,7 +176,8 @@ namespace Death::Containers
 		other._large.deleter = nullptr;
 	}
 
-	String::String(AllocatedInitT, const String& other) {
+	String::String(AllocatedInitT, const String& other)
+	{
 		const Pair<const char*, std::size_t> data = other.dataInternal();
 		const std::size_t sizePlusOne = data.second() + 1;
 		_large.size = data.second();
@@ -183,6 +188,7 @@ namespace Death::Containers
 	}
 
 	String::String(char* const data, const std::size_t size, void(*deleter)(char*, std::size_t)) noexcept
+		: _large{}
 	{
 		// Compared to StringView construction which happens a lot this shouldn't, the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus worth checking even in release; but most importantly checking for null
@@ -202,7 +208,9 @@ namespace Death::Containers
 		deleter
 	} {}
 
-	String::String(ValueInitT, const std::size_t size) : _large{} {
+	String::String(ValueInitT, const std::size_t size)
+		: _large{}
+	{
 		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus  worth checking even in release
 		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
