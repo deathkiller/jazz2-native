@@ -125,7 +125,7 @@ namespace Death::Containers
 
 		explicit Array(std::size_t size) : Array{ValueInit, size} {}
 
-		explicit Array(T* data, std::size_t size, D deleter = Implementation::DefaultDeleter<D> {}()) : _data{data}, _size{size}, _deleter(deleter) {}
+		explicit Array(T* data, std::size_t size, D deleter = Implementation::DefaultDeleter<D>{}()) : _data{data}, _size{size}, _deleter(deleter) {}
 
 		~Array() {
 			Implementation::CallDeleter<T, D>{}(_deleter, _data, _size);

@@ -1060,7 +1060,7 @@ namespace Death::IO
 #elif defined(DEATH_TARGET_UNIX)
 		// Reallocate like hell until we have enough place to store the path. Can't use lstat because
 		// the /proc/self/exe symlink is not a real symlink and so stat::st_size returns 0.
-		constexpr const char self[] = "/proc/self/exe";
+		static const char self[] = "/proc/self/exe";
 		Array<char> path;
 		arrayResize(path, NoInit, 4);
 		ssize_t size;

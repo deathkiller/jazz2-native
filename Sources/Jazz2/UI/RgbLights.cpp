@@ -236,7 +236,7 @@ namespace Jazz2::UI
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 	EM_BOOL RgbLights::emscriptenOnOpen(int32_t eventType, const EmscriptenWebSocketOpenEvent* websocketEvent, void* userData)
 	{
-		constexpr char Response[] = R"({"title":"Jazz² Resurrection","description":"Jazz² Resurrection","author":{"name":"Dan R.","contact":"http://deat.tk/jazz2/"},"device_supported":["keyboard","mouse"],"category":"game","ext":"Aura™ Service"})";
+		static const char Response[] = R"({"title":"Jazz² Resurrection","description":"Jazz² Resurrection","author":{"name":"Dan R.","contact":"http://deat.tk/jazz2/"},"device_supported":["keyboard","mouse"],"category":"game","ext":"Aura™ Service"})";
 
 		EMSCRIPTEN_RESULT result = emscripten_websocket_send_utf8_text(websocketEvent->socket, Response);
 		if (result) {

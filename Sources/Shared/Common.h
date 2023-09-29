@@ -2,7 +2,7 @@
 
 #include "CommonBase.h"
 
-// Always define fixed width integer types (int8_t, int16_t, int32_t, int64_t, ...)
+// Always define fixed width integer types (std::int8_t, std::int16_t, std::int32_t, std::int64_t, ...)
 #include <cstddef>
 #include <cstdint>
 
@@ -19,11 +19,11 @@
 namespace Death::Implementation
 {
 	// Used as an approximation of std::underlying_type<T>
-	template<int S> struct __EnumTypeForSize;
-	template<> struct __EnumTypeForSize<1> { typedef int8_t Type; };
-	template<> struct __EnumTypeForSize<2> { typedef int16_t Type; };
-	template<> struct __EnumTypeForSize<4> { typedef int32_t Type; };
-	template<> struct __EnumTypeForSize<8> { typedef int64_t Type; };
+	template<std::int32_t S> struct __EnumTypeForSize;
+	template<> struct __EnumTypeForSize<1> { typedef std::int8_t Type; };
+	template<> struct __EnumTypeForSize<2> { typedef std::int16_t Type; };
+	template<> struct __EnumTypeForSize<4> { typedef std::int32_t Type; };
+	template<> struct __EnumTypeForSize<8> { typedef std::int64_t Type; };
 	template<class T> struct __EnumSizedInteger { typedef typename __EnumTypeForSize<sizeof(T)>::Type Type; };
 }
 

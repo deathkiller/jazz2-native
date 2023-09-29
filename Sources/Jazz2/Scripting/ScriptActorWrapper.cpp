@@ -56,7 +56,7 @@ namespace Jazz2::Scripting
 
 	void ScriptActorWrapper::RegisterFactory(asIScriptEngine* engine, asIScriptModule* module)
 	{
-		constexpr char AsLibrary[] = R"(
+		static const char AsLibrary[] = R"(
 shared abstract class )" AsClassName R"(
 {
 	// Allow scripts to create instances
