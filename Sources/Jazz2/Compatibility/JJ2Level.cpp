@@ -127,23 +127,23 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadStaticTileData(JJ2Block& block, bool strictParser)
 	{
-		int tileCount = GetMaxSupportedTiles();
+		std::int32_t tileCount = GetMaxSupportedTiles();
 		_staticTiles = std::make_unique<TilePropertiesSection[]>(tileCount);
 
-		for (int i = 0; i < tileCount; ++i) {
-			int tileEvent = block.ReadInt32();
+		for (std::int32_t i = 0; i < tileCount; ++i) {
+			std::uint32_t tileEvent = block.ReadUInt32();
 
 			auto& tile = _staticTiles[i];
-			tile.Event.EventType = (JJ2Event)(uint8_t)(tileEvent & 0x000000FF);
-			tile.Event.Difficulty = (uint8_t)((tileEvent & 0x0000C000) >> 14);
+			tile.Event.EventType = (JJ2Event)(std::uint8_t)(tileEvent & 0x000000FF);
+			tile.Event.Difficulty = (std::uint8_t)((tileEvent & 0x0000C000) >> 14);
 			tile.Event.Illuminate = ((tileEvent & 0x00002000) >> 13 == 1);
-			tile.Event.TileParams = (uint32_t)(((tileEvent >> 12) & 0x000FFFF0) | ((tileEvent >> 8) & 0x0000000F));
+			tile.Event.TileParams = (std::uint32_t)(((tileEvent >> 12) & 0x000FFFF0) | ((tileEvent >> 8) & 0x0000000F));
 		}
-		for (int i = 0; i < tileCount; ++i) {
-			_staticTiles[i].Flipped = block.ReadBool();
+		for (std::int32_t i = 0; i < tileCount; ++i) {
+			_staticTiles[i].Flipped = block.ReadBool(); // TODO: IsEachTileFlipped
 		}
 
-		for (int i = 0; i < tileCount; ++i) {
+		for (std::int32_t i = 0; i < tileCount; ++i) {
 			_staticTiles[i].Type = block.ReadByte();
 		}
 	}
@@ -152,16 +152,16 @@ namespace Jazz2::Compatibility
 	{
 		_animatedTiles = std::make_unique<AnimatedTileSection[]>(_animCount);
 
-		for (int i = 0; i < _animCount; i++) {
+		for (std::int32_t i = 0; i < _animCount; i++) {
 			auto& tile = _animatedTiles[i];
 			tile.Delay = block.ReadUInt16();
 			tile.DelayJitter = block.ReadUInt16();
 			tile.ReverseDelay = block.ReadUInt16();
-			tile.IsReverse = block.ReadBool();
+			tile.IsPingPong = block.ReadBool();
 			tile.Speed = block.ReadByte(); // 0-70
 			tile.FrameCount = block.ReadByte();
 
-			for (int j = 0; j < 64; j++) {
+			for (std::int32_t j = 0; j < 64; j++) {
 				tile.Frames[j] = block.ReadUInt16();
 			}
 		}
@@ -188,7 +188,7 @@ namespace Jazz2::Compatibility
 			_layers[i].Width = block.ReadInt32();
 		}
 
-		// This is related to how data is presented in the file; the above is a WYSIWYG version, solely shown on the UI
+		// This is related to how data is presented in the file, the above is a WYSIWYG version, solely shown on the UI
 		for (int i = 0; i < JJ2LayerCount; i++) {
 			_layers[i].InternalWidth = block.ReadInt32();
 		}
@@ -683,44 +683,54 @@ namespace Jazz2::Compatibility
 					adjustedText += token.Level;
 				}
 
-				co.WriteValue<uint16_t>((uint16_t)adjustedText.size());
+				co.WriteValue<std::uint16_t>((std::uint16_t)adjustedText.size());
 				co.Write(adjustedText.data(), adjustedText.size());
 			} else {
 				String formattedText = JJ2Strings::RecodeString(text);
-				co.WriteValue<uint16_t>((uint16_t)formattedText.size());
+				co.WriteValue<std::uint16_t>((std::uint16_t)formattedText.size());
 				co.Write(formattedText.data(), formattedText.size());
 			}
 		}
 
-		uint16_t lastTilesetTileIndex = (uint16_t)(maxTiles - _animCount);
+		std::uint16_t lastTilesetTileIndex = (std::uint16_t)(maxTiles - _animCount);
 
 		// Animated Tiles
 		co.WriteValue<uint16_t>(_animCount);
-		for (int i = 0; i < _animCount; i++) {
+		for (std::int32_t i = 0; i < _animCount; i++) {
 			auto& tile = _animatedTiles[i];
-			co.WriteValue<uint8_t>(tile.FrameCount);
-			co.WriteValue<uint16_t>((uint16_t)(tile.Speed == 0 ? 0 : 16 * 50 / tile.Speed));
-			co.WriteValue<uint16_t>(tile.Delay);
-			co.WriteValue<uint16_t>(tile.DelayJitter);
-			co.WriteValue<uint8_t>(tile.IsReverse ? 1 : 0);
-			co.WriteValue<uint16_t>(tile.ReverseDelay);
+			co.WriteValue<std::uint8_t>(tile.FrameCount);
+			co.WriteValue<std::uint16_t>((std::uint16_t)(tile.Speed == 0 ? 0 : 16 * 50 / tile.Speed));
+			co.WriteValue<std::uint16_t>(tile.Delay);
+			co.WriteValue<std::uint16_t>(tile.DelayJitter);
+			co.WriteValue<std::uint8_t>(tile.IsPingPong ? 1 : 0);
+			co.WriteValue<std::uint16_t>(tile.ReverseDelay);
 
-			for (int j = 0; j < tile.FrameCount; j++) {
+			for (std::int32_t j = 0; j < tile.FrameCount; j++) {
 				// Max. tiles is either 0x0400 or 0x1000 and doubles as a mask to separate flipped tiles.
 				// In J2L, each flipped tile had a separate entry in the tile list, probably to make
 				// the dictionary concept easier to handle.
 				bool flipX = false, flipY = false;
 				uint16_t tileIdx = tile.Frames[j];
-				if ((tileIdx & maxTiles) > 0) {
+				if ((tileIdx & maxTiles) != 0) {
 					flipX = true;
-					tileIdx -= maxTiles;
+					tileIdx &= ~maxTiles;
+				}
+				if ((tileIdx & 0x2000) != 0) {
+					flipY = true;
+					tileIdx &= ~0x2000;
 				}
 
 				if (tileIdx >= lastTilesetTileIndex) {
-					tileIdx = _animatedTiles[tileIdx - lastTilesetTileIndex].Frames[0];
+					std::uint16_t animIndex = tileIdx - lastTilesetTileIndex;
+					if (animIndex < _animCount) {
+						tileIdx = _animatedTiles[animIndex].Frames[0];
+					} else {
+						LOGE("Animated tile references undefined tile %u in level \"%s\" (max. tile count is %u, anim. count is %u)", tileIdx, LevelName.data(), maxTiles, _animCount);
+						tileIdx = 0;
+					}
 				}
 
-				uint8_t tileFlags = 0x00;
+				std::uint8_t tileFlags = 0x00;
 				if (flipX) {
 					tileFlags |= 0x01; // Flip X
 				}
@@ -728,20 +738,20 @@ namespace Jazz2::Compatibility
 					tileFlags |= 0x02; // Flip Y
 				}
 
-				if (_staticTiles[tile.Frames[j]].Type == 1) {
+				if (_staticTiles[tileIdx].Type == 1) {
 					tileFlags |= 0x10; // Legacy Translucent
-				} else if (_staticTiles[tile.Frames[j]].Type == 3) {
+				} else if (_staticTiles[tileIdx].Type == 3) {
 					tileFlags |= 0x20; // Invisible
 				}
 
-				co.WriteValue<uint8_t>(tileFlags);
-				co.WriteValue<uint16_t>(tileIdx);
+				co.WriteValue<std::uint8_t>(tileFlags);
+				co.WriteValue<std::uint16_t>(tileIdx);
 			}
 		}
 
 		// Layers
-		int layerCount = 0;
-		for (int i = 0; i < _layers.size(); i++) {
+		std::int32_t layerCount = 0;
+		for (std::int32_t i = 0; i < _layers.size(); i++) {
 			auto& layer = _layers[i];
 			if (layer.Width == 0 || layer.Height == 0) {
 				layer.Used = false;
@@ -752,7 +762,7 @@ namespace Jazz2::Compatibility
 		}
 
 		co.WriteValue<uint8_t>(layerCount);
-		for (int i = 0; i < _layers.size(); i++) {
+		for (std::int32_t i = 0; i < _layers.size(); i++) {
 			auto& layer = _layers[i];
 			if (layer.Used) {
 				bool isSky = (i == 7);

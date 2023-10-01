@@ -164,39 +164,40 @@ namespace Jazz2::Compatibility
 	void JJ2Tileset::Convert(const String& targetPath) const
 	{
 		// Rearrange tiles from '10 tiles per row' to '30 tiles per row'
-		constexpr int TilesPerRow = 30;
+		constexpr std::int32_t TilesPerRow = 30;
 
-		int width = TilesPerRow * BlockSize;
-		int height = ((_tileCount - 1) / TilesPerRow + 1) * BlockSize;
+		std::int32_t width = TilesPerRow * BlockSize;
+		std::int32_t height = ((_tileCount - 1) / TilesPerRow + 1) * BlockSize;
 
 		auto so = fs::Open(targetPath, FileAccessMode::Write);
 		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
 
-		constexpr uint8_t flags = 0x20 | 0x40; // Mask and palette included
+		constexpr std::uint8_t flags = 0x20 | 0x40; // Mask and palette included
 
-		so->WriteValue<uint64_t>(0xB8EF8498E2BFBBEF);
-		so->WriteValue<uint32_t>(0x0002208F | (flags << 24)); // Version 2 is reserved for sprites (or bigger images)
+		so->WriteValue<std::uint64_t>(0xB8EF8498E2BFBBEF);
+		so->WriteValue<std::uint32_t>(0x0002208F | (flags << 24)); // Version 2 is reserved for sprites (or bigger images)
 
 		// TODO: Use single channel instead
-		so->WriteValue<uint8_t>(4);
-		so->WriteValue<uint32_t>(width);
-		so->WriteValue<uint32_t>(height);
+		so->WriteValue<std::uint8_t>(4);
+		so->WriteValue<std::uint32_t>(width);
+		so->WriteValue<std::uint32_t>(height);
+		so->WriteValue<std::uint16_t>(_tileCount);
 
 		MemoryStream co(1024 * 1024);
 
 		// Palette
-		uint32_t palette[countof(_palette)];
+		std::uint32_t palette[countof(_palette)];
 		std::memcpy(palette, _palette, sizeof(_palette));
 
 		bool hasAlphaChannel = false;
-		for (int i = 1; i < countof(palette); i++) {
+		for (std::int32_t i = 1; i < countof(palette); i++) {
 			if ((palette[i] & 0xff000000) != 0) {
 				hasAlphaChannel = true;
 				break;
 			}
 		}
 		if (!hasAlphaChannel) {
-			for (int i = 1; i < countof(palette); i++) {
+			for (std::int32_t i = 1; i < countof(palette); i++) {
 				palette[i] |= 0xff000000;
 			}
 		}
@@ -204,32 +205,32 @@ namespace Jazz2::Compatibility
 		co.Write(palette, sizeof(palette));
 
 		// Mask
-		co.WriteValue<uint32_t>(_tileCount * sizeof(_tiles[0].Mask));
-		for (int i = 0; i < _tileCount; i++) {
+		co.WriteValue<std::uint32_t>(_tileCount * sizeof(_tiles[0].Mask));
+		for (std::int32_t i = 0; i < _tileCount; i++) {
 			auto& tile = _tiles[i];
 			co.Write(tile.Mask, sizeof(tile.Mask));
 		}
 
 		// Compress palette and mask
-		int32_t compressedSize = CompressionUtils::GetMaxDeflatedSize(co.GetSize());
-		std::unique_ptr<uint8_t[]> compressedBuffer = std::make_unique<uint8_t[]>(compressedSize);
+		std::int32_t compressedSize = CompressionUtils::GetMaxDeflatedSize(co.GetSize());
+		std::unique_ptr<uint8_t[]> compressedBuffer = std::make_unique<std::uint8_t[]>(compressedSize);
 		compressedSize = CompressionUtils::Deflate(co.GetBuffer(), co.GetSize(), compressedBuffer.get(), compressedSize);
 		ASSERT(compressedSize > 0);
 
-		so->WriteValue<int32_t>(compressedSize);
-		so->WriteValue<int32_t>(co.GetSize());
+		so->WriteValue<std::int32_t>(compressedSize);
+		so->WriteValue<std::int32_t>(co.GetSize());
 		so->Write(compressedBuffer.get(), compressedSize);
 
 		// Image
-		std::unique_ptr<uint8_t[]> pixels = std::make_unique<uint8_t[]>(width * height * 4);
+		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * 4);
 
-		for (int i = 0; i < _tileCount; i++) {
+		for (std::int32_t i = 0; i < _tileCount; i++) {
 			auto& tile = _tiles[i];
 
-			int ox = (i % TilesPerRow) * BlockSize;
-			int oy = (i / TilesPerRow) * BlockSize;
-			for (int y = 0; y < BlockSize; y++) {
-				for (int x = 0; x < BlockSize; x++) {
+			std::int32_t ox = (i % TilesPerRow) * BlockSize;
+			std::int32_t oy = (i / TilesPerRow) * BlockSize;
+			for (std::int32_t y = 0; y < BlockSize; y++) {
+				for (std::int32_t x = 0; x < BlockSize; x++) {
 					auto& src = tile.Image[y * BlockSize + x];
 
 					pixels[(width * (oy + y) + ox + x) * 4] = src;

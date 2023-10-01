@@ -57,12 +57,16 @@ namespace Jazz2::Tiles
 			while (animTile.FramesLeft <= 0.0f) {
 				if (animTile.Forwards) {
 					if (animTile.CurrentTileIdx == animTile.Tiles.size() - 1) {
-						if (animTile.PingPong) {
+						if (animTile.IsPingPong) {
 							animTile.Forwards = false;
 							animTile.FramesLeft += (animTile.FrameDuration * (1 + animTile.PingPongDelay));
 						} else {
 							animTile.CurrentTileIdx = 0;
-							animTile.FramesLeft += (animTile.FrameDuration * (1 + animTile.Delay));
+							std::int32_t delayFrames = 1 + animTile.Delay;
+							if (animTile.DelayJitter > 0) {
+								delayFrames += Random().Next(0, animTile.DelayJitter + 1);
+							}
+							animTile.FramesLeft += animTile.FrameDuration * delayFrames;
 						}
 					} else {
 						animTile.CurrentTileIdx++;
@@ -72,7 +76,11 @@ namespace Jazz2::Tiles
 					if (animTile.CurrentTileIdx == 0) {
 						// Reverse only occurs on ping pong mode so no need to check for that here
 						animTile.Forwards = true;
-						animTile.FramesLeft += (animTile.FrameDuration * (1 + animTile.Delay));
+						std::int32_t delayFrames = 1 + animTile.Delay;
+						if (animTile.DelayJitter > 0) {
+							delayFrames += Random().Next(0, animTile.DelayJitter + 1);
+						}
+						animTile.FramesLeft += animTile.FrameDuration * delayFrames;
 					} else {
 						animTile.CurrentTileIdx--;
 						animTile.FramesLeft += animTile.FrameDuration;
@@ -924,11 +932,9 @@ namespace Jazz2::Tiles
 			// FrameDuration is multiplied by 16 before saving, so divide it here back
 			animTile.FrameDuration = s.ReadValue<std::uint16_t>() / 16.0f;
 			animTile.Delay = s.ReadValue<std::uint16_t>();
+			animTile.DelayJitter = s.ReadValue<std::uint16_t>();
 
-			// TODO: delayJitter
-			/*std::uint16_t delayJitter =*/ s.ReadValue<std::uint16_t>();
-
-			animTile.PingPong = s.ReadValue<std::uint8_t>();
+			animTile.IsPingPong = s.ReadValue<std::uint8_t>();
 			animTile.PingPongDelay = s.ReadValue<std::uint16_t>();
 
 			for (std::int32_t j = 0; j < frameCount; j++) {
@@ -1338,6 +1344,20 @@ namespace Jazz2::Tiles
 		}
 
 		return nullptr;
+	}
+
+	std::int32_t TileMap::ResolveTileID(LayerTile& tile)
+	{
+		std::int32_t tileId = tile.TileID;
+		if ((tile.Flags & LayerTileFlags::Animated) == LayerTileFlags::Animated) {
+			if (tileId >= (std::int32_t)_animatedTiles.size()) {
+				return 0;
+			}
+			auto& animTile = _animatedTiles[tileId];
+			tileId = animTile.Tiles[animTile.CurrentTileIdx].TileID;
+		}
+
+		return tileId;
 	}
 
 	void TileMap::TexturedBackgroundPass::Initialize()

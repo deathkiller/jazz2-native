@@ -86,13 +86,14 @@ namespace Jazz2::Tiles
 
 	struct AnimatedTile {
 		SmallVector<AnimatedTileFrame, 0> Tiles;
-		std::int32_t Delay;
-		bool PingPong;
+		std::int16_t Delay;
+		std::int16_t DelayJitter;
 		std::int32_t PingPongDelay;
 		std::int32_t CurrentTileIdx;
-		bool Forwards;
 		float FrameDuration;
 		float FramesLeft;
+		bool IsPingPong;
+		bool Forwards;
 	};
 
 	class TileMap : public SceneNode
@@ -243,18 +244,6 @@ namespace Jazz2::Tiles
 		void RenderTexturedBackground(RenderQueue& renderQueue, TileMapLayer& layer, float x, float y);
 
 		TileSet* ResolveTileSet(std::int32_t& tileId);
-
-		inline std::int32_t ResolveTileID(LayerTile& tile)
-		{
-			std::int32_t tileId = tile.TileID;
-			if ((tile.Flags & LayerTileFlags::Animated) == LayerTileFlags::Animated) {
-				if (tileId >= (std::int32_t)_animatedTiles.size()) {
-					return 0;
-				}
-				auto& animTile = _animatedTiles[tileId];
-				tileId = animTile.Tiles[animTile.CurrentTileIdx].TileID;
-			}
-			return tileId;
-		}
+		std::int32_t ResolveTileID(LayerTile& tile);
 	};
 }

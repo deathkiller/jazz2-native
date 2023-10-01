@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CommonBase.h"
 
@@ -33,7 +33,7 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #	if defined(DEATH_TARGET_GCC)
 #		define __DEATH_LOG_FUNCTION __PRETTY_FUNCTION__
 #	elif defined(DEATH_TARGET_MSVC)
-#		define __DEATH_LOG_FUNCTION __FUNCTION__
+#		define __DEATH_LOG_FUNCTION __FUNCTION__ "()"
 #	else
 #		define __DEATH_LOG_FUNCTION __func__
 #	endif
