@@ -746,6 +746,7 @@ namespace Jazz2
 		uint8_t channelCount = s->ReadValue<uint8_t>();
 		uint32_t width = s->ReadValue<uint32_t>();
 		uint32_t height = s->ReadValue<uint32_t>();
+		uint16_t tileCount = s->ReadValue<uint16_t>();
 
 		// Read compressed palette and mask
 		int32_t compressedSize = s->ReadValue<int32_t>();
@@ -834,7 +835,7 @@ namespace Jazz2
 			}
 		}
 
-		return std::make_unique<Tiles::TileSet>(std::move(textureDiffuse), std::move(mask), maskSize * 8, std::move(captionTile));
+		return std::make_unique<Tiles::TileSet>(tileCount, std::move(textureDiffuse), std::move(mask), maskSize * 8, std::move(captionTile));
 	}
 
 	bool ContentResolver::LevelExists(const StringView& episodeName, const StringView& levelName)

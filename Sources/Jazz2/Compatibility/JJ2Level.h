@@ -128,7 +128,7 @@ namespace Jazz2::Compatibility
 			uint16_t Delay;
 			uint16_t DelayJitter;
 			uint16_t ReverseDelay;
-			bool IsReverse;
+			bool IsPingPong;
 			uint8_t Speed;
 			uint8_t FrameCount;
 			uint16_t Frames[64];
