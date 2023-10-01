@@ -30,7 +30,7 @@ enum class TraceLevel {
 
 void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 
-#	if defined(DEATH_TARGET_GCC)
+#	if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_LOG_FUNCTION __PRETTY_FUNCTION__
 #	elif defined(DEATH_TARGET_MSVC)
 #		define __DEATH_LOG_FUNCTION __FUNCTION__ "()"
