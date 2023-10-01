@@ -140,7 +140,7 @@ namespace Jazz2::Compatibility
 			tile.Event.TileParams = (std::uint32_t)(((tileEvent >> 12) & 0x000FFFF0) | ((tileEvent >> 8) & 0x0000000F));
 		}
 		for (std::int32_t i = 0; i < tileCount; ++i) {
-			_staticTiles[i].Flipped = block.ReadBool(); // TODO: IsEachTileFlipped
+			_staticTiles[i].Flipped = block.ReadBool();
 		}
 
 		for (std::int32_t i = 0; i < tileCount; ++i) {
