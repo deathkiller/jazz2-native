@@ -2,6 +2,7 @@
 
 #include "Stream.h"
 #include "../Common.h"
+#include "../Containers/DateTime.h"
 #include "../Containers/String.h"
 #include "../Containers/StringView.h"
 
@@ -192,10 +193,12 @@ namespace Death::IO
 
 		/** @brief Returns the file size in bytes */
 		static std::int64_t GetFileSize(const Containers::StringView& path);
+		/** @brief Returns the creation time of the file or directory (if available) */
+		static Containers::DateTime GetCreationTime(const Containers::StringView& path);
 		/** @brief Returns the last time the file or directory was modified */
-		static FileDate GetLastModificationTime(const Containers::StringView& path);
+		static Containers::DateTime GetLastModificationTime(const Containers::StringView& path);
 		/** @brief Returns the last time the file or directory was accessed */
-		static FileDate GetLastAccessTime(const Containers::StringView& path);
+		static Containers::DateTime GetLastAccessTime(const Containers::StringView& path);
 
 		/** @brief Returns the file or directory permissions in a mask */
 		static Permission GetPermissions(const Containers::StringView& path);

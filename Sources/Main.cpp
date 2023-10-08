@@ -462,8 +462,8 @@ void GameEventHandler::RefreshCache()
 		if (!fs::IsReadableFile(animsPath)) {
 			animsPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "AnimsSw.j2a"_s));
 		}
-		uint64_t animsCached = s->ReadValue<uint64_t>();
-		uint64_t animsModified = fs::GetLastModificationTime(animsPath).Ticks;
+		int64_t animsCached = s->ReadValue<int64_t>();
+		int64_t animsModified = fs::GetLastModificationTime(animsPath).GetValue();
 		if (animsModified != 0 && animsCached != animsModified) {
 			goto RecreateCache;
 		}
@@ -509,8 +509,8 @@ RecreateCache:
 	so->WriteValue<uint8_t>(ContentResolver::CacheIndexFile);
 	so->WriteValue<uint16_t>(Compatibility::JJ2Anims::CacheVersion);
 	so->WriteValue<uint8_t>(0x00);					// Flags
-	uint64_t animsModified = fs::GetLastModificationTime(animsPath).Ticks;
-	so->WriteValue<uint64_t>(animsModified);
+	int64_t animsModified = fs::GetLastModificationTime(animsPath).GetValue();
+	so->WriteValue<int64_t>(animsModified);
 	so->WriteValue<uint16_t>((uint16_t)EventType::Count);
 
 	LOGI("Cache was recreated");

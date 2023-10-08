@@ -23,7 +23,6 @@
 #	include <pwd.h>
 #	include <dirent.h>
 #	include <fcntl.h>
-#	include <time.h>
 #	include <ftw.h>
 #
 #	if defined(DEATH_TARGET_UNIX)
@@ -132,22 +131,6 @@ namespace Death::IO
 		}
 
 #if defined(DEATH_TARGET_WINDOWS)
-		static FileSystem::FileDate NativeTimeToFileDate(const FILETIME* fileTime)
-		{
-			SYSTEMTIME sysTime;
-			::FileTimeToSystemTime(fileTime, &sysTime);
-
-			FileSystem::FileDate date { };
-			date.Year = sysTime.wYear;
-			date.Month = sysTime.wMonth;
-			date.Day = sysTime.wDay;
-			date.Hour = sysTime.wHour;
-			date.Minute = sysTime.wMinute;
-			date.Second = sysTime.wSecond;
-			date.Ticks = static_cast<std::uint64_t>(fileTime->dwLowDateTime) | (static_cast<std::uint64_t>(fileTime->dwHighDateTime) << 32);
-			return date;
-		}
-
 		static bool DeleteDirectoryInternal(const ArrayView<wchar_t>& path, bool recursive, std::int32_t depth)
 		{
 			if (recursive) {
@@ -278,22 +261,6 @@ namespace Death::IO
 				currentMode &= ~S_IXUSR;
 
 			return currentMode;
-		}
-
-		static FileSystem::FileDate NativeTimeToFileDate(const time_t* t)
-		{
-			FileSystem::FileDate date { };
-
-			struct tm* local = localtime(t);
-			date.Year = local->tm_year + 1900;
-			date.Month = local->tm_mon + 1;
-			date.Day = local->tm_mday;
-			date.Hour = local->tm_hour;
-			date.Minute = local->tm_min;
-			date.Second = local->tm_sec;
-			date.Ticks = static_cast<uint64_t>(*t);
-
-			return date;
 		}
 
 #	if !defined(DEATH_TARGET_SWITCH)
@@ -1182,7 +1149,6 @@ namespace Death::IO
 			return AndroidAssetStream::TryOpenDirectory(nullTerminatedPath.data());
 		}
 #	endif
-
 		struct stat sb;
 		if (CallStat(nullTerminatedPath.data(), sb)) {
 			return (sb.st_mode & S_IFMT) == S_IFDIR;
@@ -1208,7 +1174,6 @@ namespace Death::IO
 			return AndroidAssetStream::TryOpenFile(nullTerminatedPath.data());
 		}
 #	endif
-
 		struct stat sb;
 		if (CallStat(nullTerminatedPath.data(), sb)) {
 			return (sb.st_mode & S_IFMT) == S_IFREG;
@@ -1234,7 +1199,6 @@ namespace Death::IO
 			return AndroidAssetStream::TryOpen(nullTerminatedPath.data());
 		}
 #	endif
-
 		struct stat sb;
 		return CallStat(nullTerminatedPath.data(), sb);
 #endif
@@ -1257,7 +1221,6 @@ namespace Death::IO
 			return AndroidAssetStream::TryOpen(nullTerminatedPath.data());
 		}
 #	endif
-
 		struct stat sb;
 		if (CallStat(nullTerminatedPath.data(), sb)) {
 			return (sb.st_mode & S_IRUSR);
@@ -1283,7 +1246,6 @@ namespace Death::IO
 			return false;
 		}
 #	endif
-
 		struct stat sb;
 		if (CallStat(nullTerminatedPath.data(), sb)) {
 			return (sb.st_mode & S_IWUSR);
@@ -1318,7 +1280,6 @@ namespace Death::IO
 			return AndroidAssetStream::TryOpenDirectory(nullTerminatedPath.data());
 		}
 #	endif
-
 		return (::access(nullTerminatedPath.data(), X_OK) == 0);
 #endif
 	}
@@ -1340,7 +1301,6 @@ namespace Death::IO
 			return AndroidAssetStream::TryOpenFile(nullTerminatedPath.data());
 		}
 #	endif
-
 		struct stat sb;
 		if (CallStat(nullTerminatedPath.data(), sb)) {
 			return (sb.st_mode & S_IFMT) == S_IFREG && (sb.st_mode & S_IRUSR);
@@ -1366,7 +1326,6 @@ namespace Death::IO
 			return false;
 		}
 #	endif
-
 		struct stat sb;
 		if (CallStat(nullTerminatedPath.data(), sb)) {
 			return (sb.st_mode & S_IFMT) == S_IFREG && (sb.st_mode & S_IWUSR);
@@ -1633,7 +1592,6 @@ namespace Death::IO
 			return false;
 		}
 #	endif
-
 		return (::unlink(nullTerminatedPath.data()) == 0);
 #endif
 	}
@@ -1652,7 +1610,6 @@ namespace Death::IO
 			return false;
 		}
 #	endif
-
 		return (::rename(nullTerminatedOldPath.data(), nullTerminatedNewPath.data()) == 0);
 #endif
 	}
@@ -1758,7 +1715,6 @@ namespace Death::IO
 			return static_cast<std::int64_t>(AndroidAssetStream::GetLength(nullTerminatedPath.data()));
 		}
 #	endif
-
 		struct stat sb;
 		if (!CallStat(nullTerminatedPath.data(), sb)) {
 			return -1;
@@ -1767,11 +1723,49 @@ namespace Death::IO
 #endif
 	}
 
-	FileSystem::FileDate FileSystem::GetLastModificationTime(const StringView& path)
+	DateTime FileSystem::GetCreationTime(const StringView& path)
 	{
 		if (path.empty()) return { };
 
-		FileDate date = { };
+		DateTime date;
+#if defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+		HANDLE hFile = ::CreateFileFromAppW(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+#	else
+		HANDLE hFile = ::CreateFileW(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+#	endif
+		FILETIME fileTime;
+		if (::GetFileTime(hFile, &fileTime, nullptr, nullptr)) {
+			date = DateTime(fileTime);
+		}
+		::CloseHandle(hFile);
+#elif defined(DEATH_TARGET_APPLE) && defined(_DARWIN_FEATURE_64_BIT_INODE)
+		struct stat sb;
+		if (CallStat(String::nullTerminatedView(path).data(), sb)) {
+			date = DateTime(sb.st_birthtimespec.tv_sec);
+			date.SetMillisecond(sb.st_birthtimespec.tv_nsec / 1000000);
+		}
+#else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
+#	if defined(DEATH_TARGET_ANDROID)
+		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
+			return date;
+		}
+#	endif
+		struct stat sb;
+		if (CallStat(nullTerminatedPath.data(), sb)) {
+			// Creation time is not available on Linux, return the last change of inode instead
+			date = DateTime(sb.st_ctime);
+		}
+#endif
+		return date;
+	}
+
+	DateTime FileSystem::GetLastModificationTime(const StringView& path)
+	{
+		if (path.empty()) return { };
+
+		DateTime date;
 #if defined(DEATH_TARGET_WINDOWS)
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 		HANDLE hFile = ::CreateFileFromAppW(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
@@ -1780,9 +1774,15 @@ namespace Death::IO
 #	endif
 		FILETIME fileTime;
 		if (::GetFileTime(hFile, nullptr, nullptr, &fileTime)) {
-			date = NativeTimeToFileDate(&fileTime);
+			date = DateTime(fileTime);
 		}
 		::CloseHandle(hFile);
+#elif defined(DEATH_TARGET_APPLE) && defined(_DARWIN_FEATURE_64_BIT_INODE)
+		struct stat sb;
+		if (CallStat(String::nullTerminatedView(path).data(), sb)) {
+			date = DateTime(sb.st_mtimespec.tv_sec);
+			date.SetMillisecond(sb.st_mtimespec.tv_nsec / 1000000);
+		}
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
@@ -1790,21 +1790,19 @@ namespace Death::IO
 			return date;
 		}
 #	endif
-
 		struct stat sb;
 		if (CallStat(nullTerminatedPath.data(), sb)) {
-			date = NativeTimeToFileDate(&sb.st_mtime);
+			date = DateTime(sb.st_mtime);
 		}
 #endif
-
 		return date;
 	}
 
-	FileSystem::FileDate FileSystem::GetLastAccessTime(const StringView& path)
+	DateTime FileSystem::GetLastAccessTime(const StringView& path)
 	{
 		if (path.empty()) return { };
 
-		FileDate date = { };
+		DateTime date;
 #if defined(DEATH_TARGET_WINDOWS)
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 		HANDLE hFile = ::CreateFileFromAppW(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
@@ -1813,9 +1811,15 @@ namespace Death::IO
 #	endif
 		FILETIME fileTime;
 		if (::GetFileTime(hFile, nullptr, &fileTime, nullptr)) {
-			date = NativeTimeToFileDate(&fileTime);
+			date = DateTime(fileTime);
 		}
 		::CloseHandle(hFile);
+#elif defined(DEATH_TARGET_APPLE) && defined(_DARWIN_FEATURE_64_BIT_INODE)
+		struct stat sb;
+		if (CallStat(String::nullTerminatedView(path).data(), sb)) {
+			date = DateTime(sb.st_atimespec.tv_sec);
+			date.SetMillisecond(sb.st_atimespec.tv_nsec / 1000000);
+		}
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
@@ -1823,13 +1827,11 @@ namespace Death::IO
 			return date;
 		}
 #	endif
-
 		struct stat sb;
 		if (CallStat(nullTerminatedPath.data(), sb)) {
-			date = NativeTimeToFileDate(&sb.st_atime);
+			date = DateTime(sb.st_atime);
 		}
 #endif
-
 		return date;
 	}
 
@@ -1858,7 +1860,6 @@ namespace Death::IO
 			}
 		}
 #	endif
-
 		struct stat sb;
 		if (!CallStat(nullTerminatedPath.data(), sb)) {
 			return Permission::None;
@@ -1893,7 +1894,6 @@ namespace Death::IO
 			return false;
 		}
 #	endif
-
 		struct stat sb;
 		if (!CallStat(nullTerminatedPath.data(), sb)) {
 			return false;
@@ -1926,7 +1926,6 @@ namespace Death::IO
 			return false;
 		}
 #	endif
-
 		struct stat sb;
 		if (!CallStat(nullTerminatedPath.data(), sb)) {
 			return false;
@@ -1959,7 +1958,6 @@ namespace Death::IO
 			return false;
 		}
 #	endif
-
 		struct stat sb;
 		if (!CallStat(nullTerminatedPath.data(), sb)) {
 			return false;
