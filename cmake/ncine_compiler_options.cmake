@@ -1,6 +1,8 @@
 target_compile_features(${NCINE_APP} PUBLIC cxx_std_20)
 set_target_properties(${NCINE_APP} PROPERTIES CXX_EXTENSIONS OFF)
 
+include(CheckStructHasMember)
+
 target_compile_definitions(${NCINE_APP} PUBLIC "NCINE_VERSION=\"${NCINE_VERSION}\"")
 if(NCINE_OVERRIDE_CONTENT_PATH)
 	message(STATUS "Using overriden `Content` path: ${NCINE_OVERRIDE_CONTENT_PATH}")
@@ -19,6 +21,11 @@ if(DEATH_CPU_USE_RUNTIME_DISPATCH)
 endif()
 if(DEATH_CPU_USE_IFUNC)
 	target_compile_definitions(${NCINE_APP} PUBLIC "DEATH_CPU_USE_IFUNC")
+endif()
+
+check_struct_has_member("struct tm" tm_gmtoff time.h DEATH_USE_GMTOFF_IN_TM)
+if(DEATH_USE_GMTOFF_IN_TM)
+	target_compile_definitions(${NCINE_APP} PUBLIC "DEATH_USE_GMTOFF_IN_TM")
 endif()
 
 if(DEATH_DEBUG)

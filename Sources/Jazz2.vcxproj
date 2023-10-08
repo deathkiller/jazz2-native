@@ -573,6 +573,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\CommonWindows.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StaticArray.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Tags.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\DateTime.h" />
     <ClInclude Include="simdjson\simdjson.h" />
   </ItemGroup>
   <ItemGroup>
@@ -870,6 +871,7 @@
     <ClCompile Include="Jazz2\Tiles\TileMap.cpp" />
     <ClCompile Include="Jazz2\Tiles\TileSet.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\Containers\DateTime.cpp" />
     <ClCompile Include="simdjson\simdjson.cpp" />
   </ItemGroup>
   <ItemGroup>
