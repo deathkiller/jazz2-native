@@ -100,8 +100,8 @@ namespace Death::Containers
 		{
 			// Struct tm doesn't always have the tm_gmtoff field, define this if it does
 #if defined(DEATH_USE_GMTOFF_IN_TM)
-			static std::atomic<int> _gmtoffset { INT_MAX }; // Invalid timezone
-			if (_gmtoffset == INT_MAX) {
+			static std::atomic<std::int32_t> _gmtoffset { INT32_MAX }; // Invalid timezone
+			if (_gmtoffset == INT32_MAX) {
 				time_t t = time(nullptr);
 				struct tm tm;
 				GetLocalTm(&t, &tm);
@@ -122,12 +122,17 @@ namespace Death::Containers
 			ftime(&tb);
 			return tb.timezone * 60;
 #elif defined(DEATH_TARGET_MSVC)
+#	if !defined(DEATH_TARGET_WINDOWS_RT)
 			// In any case we must initialize the time zone before using it, try to do it only once
 			static bool _tzSet = (_tzset(), true);
+#	endif
 
 			long t;
 			_get_timezone(&t);
 			return t;
+#elif defined(DEATH_TARGET_SWITCH)
+			// This doesn't seem to be supported on Switch
+			return 0;
 #else
 			// In any case we must initialize the time zone before using it, try to do it only once
 			static bool _tzSet = (tzset(), true);
@@ -423,7 +428,7 @@ namespace Death::Containers
 					}
 					case 'Z': {		// Timezone name
 						// TODO: Named timezones are not supported, skip it for now
-						while (j < inputLength && isalpha(input[j])) {
+						while (j < inputLength && ((input[j] >= 'a' && input[j] <= 'z') || (input[j] >= 'A' && input[j] <= 'Z'))) {
 							j++;
 						}
 						break;
