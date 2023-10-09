@@ -100,6 +100,7 @@ extern \"C\" int(*fooDispatcher())() {
 int foo() __attribute__((ifunc(\"fooDispatcher\")));
 int main() { return foo() - 42; }\
 		" _DEATH_CPU_CAN_USE_IFUNC)
+	set(CMAKE_REQUIRED_QUIET OFF)
 	if(_DEATH_CPU_CAN_USE_IFUNC)
 		set(_DEATH_CPU_USE_IFUNC_DEFAULT ON)
 		# On GCC 4.8, if --coverage or -fprofile-arcs is enabled, the ifunc dispatchers cause a segfault.

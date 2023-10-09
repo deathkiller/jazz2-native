@@ -13,6 +13,12 @@
 #	include <atomic>
 #endif
 
+#if defined(DEATH_TARGET_SWITCH) || (defined(__MINGW32_TOOLCHAIN__) && defined(__STRICT_ANSI__))
+// These two are excluded from headers for some reason, define them here
+extern "C" void tzset(void);
+extern long _timezone;
+#endif
+
 #define MONTHS_IN_YEAR 12
 #define SEC_PER_MIN 60
 #define MIN_PER_HOUR 60
@@ -125,22 +131,18 @@ namespace Death::Containers
 #	if !defined(DEATH_TARGET_WINDOWS_RT)
 			// In any case we must initialize the time zone before using it, try to do it only once
 			static bool _tzSet = (_tzset(), true);
+			(void)_tzSet;
 #	endif
 
 			long t;
 			_get_timezone(&t);
 			return t;
-#elif defined(DEATH_TARGET_SWITCH)
-			// This doesn't seem to be supported on Switch
-			return 0;
 #else
 			// In any case we must initialize the time zone before using it, try to do it only once
 			static bool _tzSet = (tzset(), true);
+			(void)_tzSet;
 
-#	if defined(DEATH_TARGET_MINGW)
-#		if defined(__MINGW32_TOOLCHAIN__) && defined(__STRICT_ANSI__)
-			extern long _timezone;
-#		endif
+#	if defined(DEATH_TARGET_MINGW) || defined(DEATH_TARGET_SWITCH)
 			return _timezone;
 #	else // Unknown platform - assume it has timezone variable
 			return timezone;
