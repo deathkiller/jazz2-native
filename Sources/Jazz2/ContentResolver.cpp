@@ -30,7 +30,7 @@
 
 using namespace simdjson;
 
-template<typename T>
+template<class T>
 static Vector2i GetVector2iFromJson(simdjson_result<T> value, Vector2i defaultValue = Vector2i::Zero)
 {
 	ondemand::array itemArray;
@@ -56,7 +56,7 @@ namespace Jazz2
 	}
 
 	ContentResolver::ContentResolver()
-		: _isLoading(false), _cachedMetadata(64), _cachedGraphics(128), _palettes{}
+		: _isHeadless(false), _isLoading(false), _cachedMetadata(64), _cachedGraphics(128), _palettes{}
 	{
 		InitializePaths();
 	}
@@ -77,6 +77,16 @@ namespace Jazz2
 		for (int32_t i = 0; i < (int32_t)PrecompiledShader::Count; i++) {
 			_precompiledShaders[i] = nullptr;
 		}
+	}
+
+	bool ContentResolver::IsHeadless() const
+	{
+		return _isHeadless;
+	}
+
+	void ContentResolver::SetHeadless(bool value)
+	{
+		_isHeadless = value;
 	}
 
 	void ContentResolver::InitializePaths()
@@ -379,42 +389,45 @@ namespace Jazz2
 				}
 			}
 
-			ondemand::object sounds;
-			if (doc["Sounds"].get(sounds) == SUCCESS) {
-				size_t count;
-				if (sounds.count_fields().get(count) == SUCCESS) {
-					metadata->Sounds.reserve(count);
-				}
-
-				for (auto it : sounds) {
-					std::string_view key;
-					ondemand::object value;
-					ondemand::array assetPaths;
-					bool isEmpty;
-					if (it.unescaped_key().get(key) != SUCCESS || it.value().get(value) != SUCCESS || key.empty() ||
-						value["Paths"].get(assetPaths) != SUCCESS || assetPaths.is_empty().get(isEmpty) != SUCCESS || isEmpty) {
-						continue;
+			if (!_isHeadless) {
+				// Don't load sounds in headless mode
+				ondemand::object sounds;
+				if (doc["Sounds"].get(sounds) == SUCCESS) {
+					size_t count;
+					if (sounds.count_fields().get(count) == SUCCESS) {
+						metadata->Sounds.reserve(count);
 					}
 
-					SoundResource sound;
-
-					for (auto assetPathItem : assetPaths) {
-						std::string_view assetPath;
-						if (assetPathItem.get(assetPath) == SUCCESS && !assetPath.empty()) {
-							auto assetPathNormalized = fs::ToNativeSeparators(assetPath);
-							String fullPath = fs::CombinePath({ GetContentPath(), "Animations"_s, assetPathNormalized });
-							if (!fs::IsReadableFile(fullPath)) {
-								fullPath = fs::CombinePath({ GetCachePath(), "Animations"_s, assetPathNormalized });
-								if (!fs::IsReadableFile(fullPath)) {
-									continue;
-								}
-							}
-							sound.Buffers.emplace_back(std::make_unique<AudioBuffer>(fullPath));
+					for (auto it : sounds) {
+						std::string_view key;
+						ondemand::object value;
+						ondemand::array assetPaths;
+						bool isEmpty;
+						if (it.unescaped_key().get(key) != SUCCESS || it.value().get(value) != SUCCESS || key.empty() ||
+							value["Paths"].get(assetPaths) != SUCCESS || assetPaths.is_empty().get(isEmpty) != SUCCESS || isEmpty) {
+							continue;
 						}
-					}
 
-					if (!sound.Buffers.empty()) {
-						metadata->Sounds.emplace(key, std::move(sound));
+						SoundResource sound;
+
+						for (auto assetPathItem : assetPaths) {
+							std::string_view assetPath;
+							if (assetPathItem.get(assetPath) == SUCCESS && !assetPath.empty()) {
+								auto assetPathNormalized = fs::ToNativeSeparators(assetPath);
+								String fullPath = fs::CombinePath({ GetContentPath(), "Animations"_s, assetPathNormalized });
+								if (!fs::IsReadableFile(fullPath)) {
+									fullPath = fs::CombinePath({ GetCachePath(), "Animations"_s, assetPathNormalized });
+									if (!fs::IsReadableFile(fullPath)) {
+										continue;
+									}
+								}
+								sound.Buffers.emplace_back(std::make_unique<AudioBuffer>(fullPath));
+							}
+						}
+
+						if (!sound.Buffers.empty()) {
+							metadata->Sounds.emplace(key, std::move(sound));
+						}
 					}
 				}
 			}
@@ -469,7 +482,7 @@ namespace Jazz2
 
 				int32_t w = texLoader->width();
 				int32_t h = texLoader->height();
-				auto pixels = (uint32_t*)texLoader->pixels();
+				uint32_t* pixels = (uint32_t*)texLoader->pixels();
 				const uint32_t* palette = _palettes + paletteOffset;
 				bool linearSampling = false;
 				bool needsMask = true;
@@ -507,10 +520,13 @@ namespace Jazz2
 					}
 				}
 
-				graphics->TextureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, w, h);
-				graphics->TextureDiffuse->loadFromTexels((unsigned char*)pixels, 0, 0, w, h);
-				graphics->TextureDiffuse->setMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
-				graphics->TextureDiffuse->setMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
+				if (!_isHeadless) {
+					// Don't load textures in headless mode, only collision masks
+					graphics->TextureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, w, h);
+					graphics->TextureDiffuse->loadFromTexels((unsigned char*)pixels, 0, 0, w, h);
+					graphics->TextureDiffuse->setMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
+					graphics->TextureDiffuse->setMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
+				}
 
 				// TODO: Use FrameDuration instead
 				double animDuration;
@@ -623,10 +639,13 @@ namespace Jazz2
 			}
 		}
 
-		graphics->TextureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, width, height);
-		graphics->TextureDiffuse->loadFromTexels((unsigned char*)pixels.get(), 0, 0, width, height);
-		graphics->TextureDiffuse->setMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
-		graphics->TextureDiffuse->setMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
+		if (!_isHeadless) {
+			// Don't load textures in headless mode, only collision masks
+			graphics->TextureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, width, height);
+			graphics->TextureDiffuse->loadFromTexels((unsigned char*)pixels.get(), 0, 0, width, height);
+			graphics->TextureDiffuse->setMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
+			graphics->TextureDiffuse->setMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
+		}
 
 		// AnimDuration is multiplied by 256 before saving, so divide it here back
 		graphics->AnimDuration = animDuration / 256.0f;
@@ -795,41 +814,46 @@ namespace Jazz2
 			}
 		}
 
-		// Image
-		std::unique_ptr<uint32_t[]> pixels = std::make_unique<uint32_t[]>(width * height);
-		ReadImageFromFile(s, (uint8_t*)pixels.get(), width, height, channelCount);
+		std::unique_ptr<Texture> textureDiffuse;
+		std::unique_ptr<Color[]> captionTile;
 
-		if (paletteRemapping != nullptr) {
-			for (uint32_t i = 0; i < width * height; i++) {
-				uint32_t color = _palettes[paletteRemapping[pixels[i] & 0xff]];
-				pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
+		if (!_isHeadless) {
+			// Don't load textures in headless mode, only collision masks
+			// Texture
+			std::unique_ptr<uint32_t[]> pixels = std::make_unique<uint32_t[]>(width * height);
+			ReadImageFromFile(s, (uint8_t*)pixels.get(), width, height, channelCount);
+
+			if (paletteRemapping != nullptr) {
+				for (uint32_t i = 0; i < width * height; i++) {
+					uint32_t color = _palettes[paletteRemapping[pixels[i] & 0xff]];
+					pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
+				}
+			} else {
+				for (uint32_t i = 0; i < width * height; i++) {
+					uint32_t color = _palettes[pixels[i] & 0xff];
+					pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
+				}
 			}
-		} else {
-			for (uint32_t i = 0; i < width * height; i++) {
-				uint32_t color = _palettes[pixels[i] & 0xff];
-				pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
-			}
-		}
 
-		std::unique_ptr<Texture> textureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, width, height);
-		textureDiffuse->loadFromTexels((unsigned char*)pixels.get(), 0, 0, width, height);
-		textureDiffuse->setMinFiltering(SamplerFilter::Nearest);
-		textureDiffuse->setMagFiltering(SamplerFilter::Nearest);
+			textureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, width, height);
+			textureDiffuse->loadFromTexels((unsigned char*)pixels.get(), 0, 0, width, height);
+			textureDiffuse->setMinFiltering(SamplerFilter::Nearest);
+			textureDiffuse->setMagFiltering(SamplerFilter::Nearest);
 
-		// Caption Tile
-		std::unique_ptr<Color[]> captionTile = nullptr;
-		if (captionTileId > 0) {
-			int32_t tw = (width / TileSet::DefaultTileSize);
-			int32_t tx = (captionTileId % tw) * TileSet::DefaultTileSize;
-			int32_t ty = (captionTileId / tw) * TileSet::DefaultTileSize;
-			if (tx + TileSet::DefaultTileSize <= width && ty + TileSet::DefaultTileSize <= height) {
-				captionTile = std::make_unique<Color[]>(TileSet::DefaultTileSize * TileSet::DefaultTileSize / 3);
-				for (int32_t y = 0; y < TileSet::DefaultTileSize / 3; y++) {
-					for (int32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-						Color c1 = Color(pixels[((ty + y * 3) * width) + tx + x]);
-						Color c2 = Color(pixels[((ty + y * 3 + 1) * width) + tx + x]);
-						Color c3 = Color(pixels[((ty + y * 3 + 2) * width) + tx + x]);
-						captionTile[y * TileSet::DefaultTileSize + x] = Color((c1.B() + c2.B() + c3.B()) / 3, (c1.G() + c2.G() + c3.G()) / 3, (c1.R() + c2.R() + c3.R()) / 3);
+			// Caption Tile
+			if (captionTileId > 0) {
+				int32_t tw = (width / TileSet::DefaultTileSize);
+				int32_t tx = (captionTileId % tw) * TileSet::DefaultTileSize;
+				int32_t ty = (captionTileId / tw) * TileSet::DefaultTileSize;
+				if (tx + TileSet::DefaultTileSize <= width && ty + TileSet::DefaultTileSize <= height) {
+					captionTile = std::make_unique<Color[]>(TileSet::DefaultTileSize * TileSet::DefaultTileSize / 3);
+					for (int32_t y = 0; y < TileSet::DefaultTileSize / 3; y++) {
+						for (int32_t x = 0; x < TileSet::DefaultTileSize; x++) {
+							Color c1 = Color(pixels[((ty + y * 3) * width) + tx + x]);
+							Color c2 = Color(pixels[((ty + y * 3 + 1) * width) + tx + x]);
+							Color c3 = Color(pixels[((ty + y * 3 + 2) * width) + tx + x]);
+							captionTile[y * TileSet::DefaultTileSize + x] = Color((c1.B() + c2.B() + c3.B()) / 3, (c1.G() + c2.G() + c3.G()) / 3, (c1.R() + c2.R() + c3.R()) / 3);
+						}
 					}
 				}
 			}
@@ -1064,6 +1088,11 @@ namespace Jazz2
 
 	std::unique_ptr<AudioStreamPlayer> ContentResolver::GetMusic(const StringView& path)
 	{
+		// Don't load sounds in headless mode
+		if (_isHeadless) {
+			return nullptr;
+		}
+
 		String fullPath = fs::CombinePath({ GetContentPath(), "Music"_s, path });
 		if (!fs::IsReadableFile(fullPath)) {
 			// "Source" directory must be case in-sensitive

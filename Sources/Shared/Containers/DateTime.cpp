@@ -201,10 +201,260 @@ namespace Death::Containers
 			return (n > 1);
 		}
 
+		template<class T, class U>
+		std::size_t TranslateFromUnicodeFormat(T* dest, std::size_t destLength, const U* src, std::size_t srcLength)
+		{
+			static const char* formatchars =
+				"dghHmMsSy"
+#if defined(DEATH_TARGET_WINDOWS)
+				"t"
+#else
+				"EcLawD"
+#endif
+				;
+
+			U chLast = '\0';
+			std::size_t lastCount = 0;
+			std::size_t j = 0;
+
+			for (std::size_t i = 0; /* Handled inside the loop */; i++) {
+				if (i < srcLength) {
+					if (src[i] == chLast) {
+						lastCount++;
+						continue;
+					}
+
+					if (src[i] >= 'A' && src[i] <= 'z' && strchr(formatchars, (char)src[i])) {
+						chLast = src[i];
+						lastCount = 1;
+						continue;
+					}
+				}
+
+				if (lastCount > 0) {
+					switch (chLast) {
+						case 'd':
+							switch (lastCount) {
+								case 1:
+								case 2:
+									dest[j++] = '%'; dest[j++] = 'd';
+									break;
+#if defined(DEATH_TARGET_WINDOWS)
+								case 3:
+									dest[j++] = '%'; dest[j++] = 'a';
+									break;
+								case 4:
+									dest[j++] = '%'; dest[j++] = 'A';
+									break;
+#endif
+							}
+							break;
+#if !defined(DEATH_TARGET_WINDOWS)
+						case 'D':
+							switch (lastCount) {
+								case 1:
+								case 2:
+								case 3:
+									dest[j++] = '%'; dest[j++] = 'j';
+									break;
+							}
+							break;
+						case 'w':
+							switch (lastCount) {
+								case 1:
+								case 2:
+									dest[j++] = '%'; dest[j++] = 'W';
+									break;
+							}
+							break;
+						case 'E':
+							switch (lastCount) {
+								case 1:
+								case 2:
+								case 3:
+									dest[j++] = '%'; dest[j++] = 'a';
+									break;
+								case 4:
+									dest[j++] = '%'; dest[j++] = 'A';
+									break;
+								case 5:
+								case 6:
+									// No "narrow form" in strftime(), use abbreviation instead
+									dest[j++] = '%'; dest[j++] = 'a';
+									break;
+							}
+							break;
+						case 'c':
+							switch (lastCount) {
+								case 1:
+									// First day of week as numeric value
+									dest[j++] = '1';
+									break;
+								case 3:
+									dest[j++] = '%'; dest[j++] = 'a';
+									break;
+								case 4:
+									dest[j++] = '%'; dest[j++] = 'A';
+									break;
+								case 5:
+									// No "narrow form" in strftime(), use abbreviation instead
+									dest[j++] = '%'; dest[j++] = 'a';
+									break;
+							}
+							break;
+						case 'L':
+							switch (lastCount) {
+								case 1:
+								case 2:
+									dest[j++] = '%'; dest[j++] = 'm';
+									break;
+								case 3:
+									dest[j++] = '%'; dest[j++] = 'b';
+									break;
+								case 4:
+									dest[j++] = '%'; dest[j++] = 'B';
+									break;
+								case 5:
+									//No "narrow form" in strftime(), use abbreviation instead
+									dest[j++] = '%'; dest[j++] = 'b';
+									break;
+							}
+							break;
+#endif
+						case 'M':
+							switch (lastCount) {
+								case 1:
+								case 2:
+									dest[j++] = '%'; dest[j++] = 'm';
+									break;
+								case 3:
+									dest[j++] = '%'; dest[j++] = 'n';
+									break;
+								case 4:
+									dest[j++] = '%'; dest[j++] = 'B';
+									break;
+								case 5:
+									// No "narrow form" in strftime(), use abbreviation instead
+									dest[j++] = '%'; dest[j++] = 'b';
+									break;
+							}
+							break;
+						case 'y':
+							switch (lastCount) {
+								case 1:
+								case 2:
+									dest[j++] = '%'; dest[j++] = 'y';
+									break;
+								case 4:
+									dest[j++] = '%'; dest[j++] = 'Y';
+									break;
+							}
+							break;
+						case 'H':
+							switch (lastCount) {
+								case 1:
+								case 2:
+									dest[j++] = '%'; dest[j++] = 'H';
+									break;
+							}
+							break;
+						case 'h':
+							switch (lastCount) {
+								case 1:
+								case 2:
+									dest[j++] = '%'; dest[j++] = 'I';
+									break;
+							}
+							break;
+						case 'm':
+							switch (lastCount) {
+								case 1:
+								case 2:
+									dest[j++] = '%'; dest[j++] = 'M';
+									break;
+							}
+							break;
+						case 's':
+							switch (lastCount) {
+								case 1:
+								case 2:
+									dest[j++] = '%'; dest[j++] = 'S';
+									break;
+							}
+							break;
+						case 'g':
+							// This format is not supported in strftime(), ignore it
+							break;
+#if !defined(DEATH_TARGET_WINDOWS)
+						case 'a':
+							dest[j++] = '%'; dest[j++] = 'p';
+							break;
+#else
+						case 't':
+							switch (lastCount) {
+								case 1:
+								case 2:
+									dest[j++] = '%'; dest[j++] = 'p';
+									break;
+							}
+							break;
+#endif
+					}
+
+					chLast = '\0';
+					lastCount = 0;
+				}
+
+				if (i >= srcLength) {
+					break;
+				}
+
+				if (i + 1 < srcLength && src[i] == '\'' && src[i + 1] == '\'') {
+					dest[j++] = '\'';
+					i++;
+					continue;
+				}
+
+				bool isEndQuote = false;
+				if (src[i] == '\'') {
+					i++;
+					while (i < srcLength) {
+						if (i + 1 < srcLength && src[i] == '\'' && src[i + 1] == '\'') {
+							dest[j++] = '\'';
+							i += 2;
+							continue;
+						}
+
+						if (src[i] == '\'') {
+							isEndQuote = true;
+							break;
+						}
+
+						dest[j++] = (T)src[i];
+						i++;
+					}
+				}
+
+				if (i >= srcLength) {
+					break;
+				}
+
+				if (!isEndQuote) {
+					if (src[i] == '%') {
+						dest[j++] = '%';
+					}
+
+					dest[j++] = (T)src[i];
+				}
+			}
+
+			return j;
+		}
+
 		template<class T>
 		static bool TryParseFormat(DateTime& result, const T* input, std::size_t inputLength, const T* format, std::size_t formatLength, std::size_t* endIndex)
 		{
-			std::int32_t msec = 0, sec = 0, min = 0, hour = 0, wday = -1, yday = 0, mday = 0, mon = -1, year = 0, timeZone = 0, num;
+			std::int32_t msec = 0, sec = 0, min = 0, hour = 0, wday = -1, yday = 0, day = 0, mon = -1, year = 0, timeZone = 0, num;
 			bool haveWDay = false, haveYDay = false, haveDay = false, haveMon = false, haveYear = false, haveHour = false,
 				haveMin = false, haveSec = false, haveMsec = false, hourIsIn12hFormat = false, isPM = false, haveTimeZone = false;
 
@@ -255,18 +505,71 @@ namespace Death::Containers
 				}
 
 				switch (format[i]) {
+					case 'c': {		// Locale default date and time representation
+						DateTime dt;
+						T format2[64];
+						bool success2 = false;
+#if defined(DEATH_TARGET_WINDOWS)
+						wchar_t buffer[64];
+						std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SSHORTDATE, buffer, countof(buffer));
+						if (bufferLength > 0) {
+							if (buffer[bufferLength - 1] == '\0') {
+								bufferLength--;
+							}
+							buffer[bufferLength++] = ' ';
+							std::int32_t timeLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_STIMEFORMAT, buffer + bufferLength, countof(buffer) - bufferLength);
+							if (timeLength > 0) {
+								bufferLength += timeLength;
+								if (buffer[bufferLength - 1] == '\0') {
+									bufferLength--;
+								}
+								std::size_t format2Length = TranslateFromUnicodeFormat(format2, countof(format2), buffer, bufferLength);
+								if (format2Length > 0) {
+									success2 = TryParseFormat(dt, input + j, inputLength - j, format2, format2Length, endIndex);
+								}
+							}
+						}
+#endif
+						if (!success2) {
+							std::size_t format2Length = 0;	// yyyy/mm/dd HH:MM:SS
+							format2[format2Length++] = '%'; format2[format2Length++] = 'Y'; format2[format2Length++] = '/';
+							format2[format2Length++] = '%'; format2[format2Length++] = 'm'; format2[format2Length++] = '/';
+							format2[format2Length++] = '%'; format2[format2Length++] = 'd'; format2[format2Length++] = ' ';
+							format2[format2Length++] = '%'; format2[format2Length++] = 'H'; format2[format2Length++] = ':';
+							format2[format2Length++] = '%'; format2[format2Length++] = 'M'; format2[format2Length++] = ':';
+							format2[format2Length++] = '%'; format2[format2Length++] = 'S';
+							if (!TryParseFormat(dt, input + j, inputLength - j, format2, format2Length, endIndex)) {
+								return false;
+							}
+						}
+
+						j = *endIndex;
+
+						const DateTime::Tm tm = dt.Partitioned();
+
+						haveDay = haveMon = haveYear = haveHour = haveMin = haveSec = true;
+
+						hour = tm.Hour;
+						min = tm.Minute;
+						sec = tm.Second;
+
+						year = tm.Year;
+						mon = tm.Month;
+						day = tm.Day;
+						break;
+					}
 					case 'd':		// Day of a month (01-31)
 					case 'e': {		// Day of a month (1-31) (GNU extension)
-						if (!Implementation::GetNumericToken(input, inputLength, j, width, &num) || num < 1 || num > 31) {
+						if (!GetNumericToken(input, inputLength, j, width, &num) || num < 1 || num > 31) {
 							return false;
 						}
 
 						haveDay = true;
-						mday = num;
+						day = num;
 						break;
 					}
 					case 'H': {		// Hour in 24h format (00-23)
-						if (!Implementation::GetNumericToken(input, inputLength, j, width, &num) || num > 23) {
+						if (!GetNumericToken(input, inputLength, j, width, &num) || num > 23) {
 							return false;
 						}
 
@@ -275,7 +578,7 @@ namespace Death::Containers
 						break;
 					}
 					case 'I': {		// Hour in 12h format (01-12)
-						if (!Implementation::GetNumericToken(input, inputLength, j, width, &num) || num == 0 || num > 12) {
+						if (!GetNumericToken(input, inputLength, j, width, &num) || num == 0 || num > 12) {
 							return false;
 						}
 
@@ -285,7 +588,7 @@ namespace Death::Containers
 						break;
 					}
 					case 'j': {		// Day of the year
-						if (!Implementation::GetNumericToken(input, inputLength, j, width, &num) || num == 0 || num > 366) {
+						if (!GetNumericToken(input, inputLength, j, width, &num) || num == 0 || num > 366) {
 							return false;
 						}
 
@@ -294,7 +597,7 @@ namespace Death::Containers
 						break;
 					}
 					case 'l': {		// Milliseconds (0-999)
-						if (!Implementation::GetNumericToken(input, inputLength, j, width, &num)) {
+						if (!GetNumericToken(input, inputLength, j, width, &num)) {
 							return false;
 						}
 
@@ -303,7 +606,7 @@ namespace Death::Containers
 						break;
 					}
 					case 'm': {		// Month as a number (01-12)
-						if (!Implementation::GetNumericToken(input, inputLength, j, width, &num) || num == 0 || num > 12) {
+						if (!GetNumericToken(input, inputLength, j, width, &num) || num == 0 || num > 12) {
 							return false;
 						}
 
@@ -312,7 +615,7 @@ namespace Death::Containers
 						break;
 					}
 					case 'M': {		// Minute as a decimal number (00-59)
-						if (!Implementation::GetNumericToken(input, inputLength, j, width, &num) || num > 59) {
+						if (!GetNumericToken(input, inputLength, j, width, &num) || num > 59) {
 							return false;
 						}
 
@@ -333,8 +636,7 @@ namespace Death::Containers
 						break;
 					}
 					case 'S': {		// Second as a decimal number (00-61)
-						if (!Implementation::GetNumericToken(input, inputLength, j, width, &num) || num > 61) {
-							// no match
+						if (!GetNumericToken(input, inputLength, j, width, &num) || num > 61) {
 							return false;
 						}
 
@@ -343,8 +645,7 @@ namespace Death::Containers
 						break;
 					}
 					case 'w': {		// Weekday as a number (0-6), Sunday = 0
-						if (!Implementation::GetNumericToken(input, inputLength, j, width, &num) || wday > 6) {
-							// no match
+						if (!GetNumericToken(input, inputLength, j, width, &num) || wday > 6) {
 							return false;
 						}
 
@@ -352,9 +653,96 @@ namespace Death::Containers
 						wday = num;
 						break;
 					}
+					case 'x': {		// Locale default date representation
+						DateTime dt;
+						T format2[64];
+						bool success2 = false;
+#if defined(DEATH_TARGET_WINDOWS)
+						wchar_t buffer[64];
+						std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SSHORTDATE, buffer, countof(buffer));
+						if (bufferLength > 0) {
+							if (buffer[bufferLength - 1] == '\0') {
+								bufferLength--;
+							}
+							std::size_t format2Length = TranslateFromUnicodeFormat(format2, countof(format2), buffer, bufferLength);
+							if (format2Length > 0) {
+								success2 = TryParseFormat(dt, input + j, inputLength - j, format2, format2Length, endIndex);
+								if (!success2) {
+									std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SLONGDATE, buffer, countof(buffer));
+									if (bufferLength > 0) {
+										if (buffer[bufferLength - 1] == '\0') {
+											bufferLength--;
+										}
+										format2Length = TranslateFromUnicodeFormat(format2, countof(format2), buffer, bufferLength);
+										if (format2Length > 0) {
+											success2 = TryParseFormat(dt, input + j, inputLength - j, format2, format2Length, endIndex);
+										}
+									}
+								}
+							}
+						}
+#endif
+						if (!success2) {
+							std::size_t format2Length = 0;	// yyyy/mm/dd
+							format2[format2Length++] = '%'; format2[format2Length++] = 'Y'; format2[format2Length++] = '/';
+							format2[format2Length++] = '%'; format2[format2Length++] = 'm'; format2[format2Length++] = '/';
+							format2[format2Length++] = '%'; format2[format2Length++] = 'd';
+							if (!TryParseFormat(dt, input + j, inputLength - j, format2, format2Length, endIndex)) {
+								return false;
+							}
+						}
+
+						j = *endIndex;
+
+						const DateTime::Tm tm = dt.Partitioned();
+
+						haveDay = haveMon = haveYear = true;
+
+						year = tm.Year;
+						mon = tm.Month;
+						day = tm.Day;
+						break;
+					}
+					case 'X': {		// Locale default time representation
+						DateTime dt;
+						T format2[64];
+						bool success2 = false;
+#if defined(DEATH_TARGET_WINDOWS)
+						wchar_t buffer[64];
+						std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_STIMEFORMAT, buffer, countof(buffer));
+						if (bufferLength > 0) {
+							if (buffer[bufferLength - 1] == '\0') {
+								bufferLength--;
+							}
+							std::size_t format2Length = TranslateFromUnicodeFormat(format2, countof(format2), buffer, bufferLength);
+							if (format2Length > 0) {
+								success2 = TryParseFormat(dt, input + j, inputLength - j, format2, format2Length, endIndex);
+							}
+						}
+#endif
+						if (!success2) {
+							std::size_t format2Length = 0;	// HH:MM:SS
+							format2[format2Length++] = '%'; format2[format2Length++] = 'H'; format2[format2Length++] = ':';
+							format2[format2Length++] = '%'; format2[format2Length++] = 'M'; format2[format2Length++] = ':';
+							format2[format2Length++] = '%'; format2[format2Length++] = 'S';
+							if (!TryParseFormat(dt, input + j, inputLength - j, format2, format2Length, endIndex)) {
+								return false;
+							}
+						}
+
+						j = *endIndex;
+
+						const DateTime::Tm tm = dt.Partitioned();
+
+						haveHour = haveMin = haveSec = true;
+
+						hour = tm.Hour;
+						min = tm.Minute;
+						sec = tm.Second;
+						break;
+					}
 					case 'y': {		// Year without century (00-99)
-						if (!Implementation::GetNumericToken(input, inputLength, j, width, &num) || num > 99) {
-							// no match
+						if (!GetNumericToken(input, inputLength, j, width, &num) || num > 99) {
 							return false;
 						}
 
@@ -363,8 +751,7 @@ namespace Death::Containers
 						break;
 					}
 					case 'Y': {		// Year with century
-						if (!Implementation::GetNumericToken(input, inputLength, j, width, &num)) {
-							// no match
+						if (!GetNumericToken(input, inputLength, j, width, &num)) {
 							return false;
 						}
 
@@ -397,7 +784,7 @@ namespace Death::Containers
 						std::size_t numScannedDigits;
 
 						std::int32_t hours;
-						if (!Implementation::GetNumericToken(input, inputLength, j, 2, &hours, &numScannedDigits) || numScannedDigits != 2) {
+						if (!GetNumericToken(input, inputLength, j, 2, &hours, &numScannedDigits) || numScannedDigits != 2) {
 							return false;
 						}
 
@@ -410,7 +797,7 @@ namespace Death::Containers
 
 						// Optionally followed by exactly 2 digits for minutes (MM)
 						std::int32_t minutes = 0;
-						if (!Implementation::GetNumericToken(input, inputLength, j, 2, &minutes, &numScannedDigits) || numScannedDigits != 2) {
+						if (!GetNumericToken(input, inputLength, j, 2, &minutes, &numScannedDigits) || numScannedDigits != 2) {
 							if (mustHaveMinutes || numScannedDigits) {
 								return false;
 							}
@@ -442,7 +829,7 @@ namespace Death::Containers
 						break;
 					}
 					case '\0': {
-						LOGE("Unexpected format end in DateTime::TryParse()");
+						LOGD("Unexpected format end in DateTime::TryParse()");
 						return false;
 					}
 					default: {
@@ -466,20 +853,20 @@ namespace Death::Containers
 			}
 
 			if (haveDay) {
-				if (mday > Implementation::GetNumberOfDaysInMonth(tm.Month, tm.Year)) {
+				if (day > GetNumberOfDaysInMonth(tm.Month, tm.Year)) {
 					return false;
 				}
 
-				tm.Day = mday;
+				tm.Day = day;
 			} else if (haveYDay) {
-				bool isLeap = Implementation::IsLeapYear(tm.Year);
+				bool isLeap = IsLeapYear(tm.Year);
 				if (yday > (isLeap ? 366 : 365)) {
 					return false;
 				}
 
 				std::int32_t month = 0;
-				while (yday - Implementation::DaysInMonth[isLeap][month] > 0) {
-					yday -= Implementation::DaysInMonth[isLeap][month];
+				while (yday - DaysInMonth[isLeap][month] > 0) {
+					yday -= DaysInMonth[isLeap][month];
 					month++;
 				}
 

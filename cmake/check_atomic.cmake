@@ -79,4 +79,5 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STRE
 			message(FATAL_ERROR "Can't find the library required to compile atomic code")
 		endif()
 	endif()
+	set(CMAKE_REQUIRED_QUIET OFF)
 endif()

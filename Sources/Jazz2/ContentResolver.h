@@ -228,9 +228,14 @@ namespace Jazz2
 		static constexpr int32_t ColorsPerPalette = 256;
 		static constexpr int32_t InvalidValue = INT_MAX;
 
+		static ContentResolver& Get();
+
 		~ContentResolver();
 		
 		void Release();
+
+		bool IsHeadless() const;
+		void SetHeadless(bool value);
 
 		void BeginLoading();
 		void EndLoading();
@@ -296,8 +301,6 @@ namespace Jazz2
 #endif
 		}
 
-		static ContentResolver& Get();
-
 	private:
 		ContentResolver();
 
@@ -317,6 +320,7 @@ namespace Jazz2
 		void MigrateGraphics(const StringView& path);
 #endif
 
+		bool _isHeadless;
 		bool _isLoading;
 		uint32_t _palettes[PaletteCount * ColorsPerPalette];
 		HashMap<String, std::unique_ptr<Metadata>> _cachedMetadata;
