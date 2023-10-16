@@ -38,6 +38,13 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Menu item in main menu
 		_items[(int32_t)Item::PlayCustomLevels].Name = _("Play Custom Levels");
 #endif
+
+#if defined(WITH_MULTIPLAYER)
+		// TODO: Multiplayer
+		_items[(int32_t)Item::TODO_ConnectTo].Name = _("Connect To Server");
+		_items[(int32_t)Item::TODO_CreateServer].Name = _("Create Server");
+#endif
+
 		// TRANSLATORS: Menu item in main menu
 		_items[(int32_t)Item::Options].Name = _("Options");
 		// TRANSLATORS: Menu item in main menu
@@ -321,6 +328,19 @@ namespace Jazz2::UI::Menu
 				}
 				break;
 #endif
+
+#if defined(WITH_MULTIPLAYER)
+			// TODO: Multiplayer
+			case (int32_t)Item::TODO_ConnectTo:
+				// TODO: Hardcoded address and port
+				_root->ConnectToServer("127.0.0.1", 10666);
+				break;
+			case (int32_t)Item::TODO_CreateServer:
+				// TODO: Hardcoded address and port
+				_root->CreateServer(10666);
+				break;
+#endif
+
 			case (int32_t)Item::Options:
 				if (isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);

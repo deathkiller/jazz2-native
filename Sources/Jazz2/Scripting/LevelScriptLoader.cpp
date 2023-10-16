@@ -3453,11 +3453,11 @@ namespace Jazz2::Scripting
 		}
 
 		uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] { };
-		actor->OnActivated({
-			.LevelHandler = _this->_levelHandler,
-			.Pos = Vector3i(x, y, ILevelHandler::MainPlaneZ),
-			.Params = spawnParams
-		});
+		actor->OnActivated(Actors::ActorActivationDetails(
+			_this->_levelHandler,
+			Vector3i(x, y, ILevelHandler::MainPlaneZ),
+			spawnParams
+		));
 		_this->_levelHandler->AddActor(std::shared_ptr<Actors::ActorBase>(actor));
 	}
 
@@ -3475,11 +3475,11 @@ namespace Jazz2::Scripting
 		int size = eventParams.GetSize();
 		std::memcpy(spawnParams, eventParams.At(0), size);
 
-		actor->OnActivated({
-			.LevelHandler = _this->_levelHandler,
-			.Pos = Vector3i(x, y, ILevelHandler::MainPlaneZ),
-			.Params = spawnParams
-		});
+		actor->OnActivated(Actors::ActorActivationDetails(
+			_this->_levelHandler,
+			Vector3i(x, y, ILevelHandler::MainPlaneZ),
+			spawnParams
+		));
 		_this->_levelHandler->AddActor(std::shared_ptr<Actors::ActorBase>(actor));
 	}
 

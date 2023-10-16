@@ -184,11 +184,11 @@ namespace Jazz2::Actors::Bosses
 
 		std::shared_ptr<SpikeBall> spikeBall = std::make_shared<SpikeBall>();
 		uint8_t spikeBallParams[1] = { (uint8_t)(IsFacingLeft() ? 1 : 0) };
-		spikeBall->OnActivated({
-			.LevelHandler = _levelHandler,
-			.Pos = Vector3i((int)_pos.X, (int)_pos.Y - 32, _renderer.layer() + 2),
-			.Params = spikeBallParams
-		});
+		spikeBall->OnActivated(ActorActivationDetails(
+			_levelHandler,
+			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y - 32, _renderer.layer() + 2),
+			spikeBallParams
+		));
 		_levelHandler->AddActor(spikeBall);
 
 		_shots--;

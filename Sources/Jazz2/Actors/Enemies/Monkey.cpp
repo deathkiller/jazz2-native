@@ -98,11 +98,11 @@ namespace Jazz2::Actors::Enemies
 								std::shared_ptr<Banana> banana = std::make_shared<Banana>();
 								uint8_t bananaParams[1];
 								bananaParams[0] = (IsFacingLeft() ? 1 : 0);
-								banana->OnActivated({
-									.LevelHandler = _levelHandler,
-									.Pos = Vector3i((int)_pos.X + (IsFacingLeft() ? -8.0f : 8.0f), (int)_pos.Y - 8.0f, _renderer.layer() + 2),
-									.Params = bananaParams
-								});
+								banana->OnActivated(ActorActivationDetails(
+									_levelHandler,
+									Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -8.0f : 8.0f), (std::int32_t)_pos.Y - 8.0f, _renderer.layer() + 2),
+									bananaParams
+								));
 								_levelHandler->AddActor(banana);
 
 								SetTransition((AnimState)1073741827, false, [this]() {
@@ -122,11 +122,11 @@ namespace Jazz2::Actors::Enemies
 							std::shared_ptr<Banana> banana = std::make_shared<Banana>();
 							uint8_t bananaParams[1];
 							bananaParams[0] = (IsFacingLeft() ? 1 : 0);
-							banana->OnActivated({
-								.LevelHandler = _levelHandler,
-								.Pos = Vector3i((int)_pos.X + (IsFacingLeft() ? -42.0f : 42.0f), (int)_pos.Y - 8.0f, _renderer.layer() + 2),
-								.Params = bananaParams
-							});
+							banana->OnActivated(ActorActivationDetails(
+								_levelHandler,
+								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -42.0f : 42.0f), (std::int32_t)_pos.Y - 8.0f, _renderer.layer() + 2),
+								bananaParams
+							));
 							_levelHandler->AddActor(banana);
 
 							SetTransition((AnimState)1073741827, false);

@@ -163,20 +163,20 @@ namespace Jazz2::Actors::Environment
 							std::shared_ptr<ActorBase> sharedOwner = _owner->shared_from_this();
 
 							std::shared_ptr<Weapons::BlasterShot> shot1 = std::make_shared<Weapons::BlasterShot>();
-							shot1->OnActivated({
-								.LevelHandler = _levelHandler,
-								.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2),
-								.Params = shotParams
-							});
+							shot1->OnActivated(ActorActivationDetails(
+								_levelHandler,
+								Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2),
+								shotParams
+							));
 							shot1->OnFire(sharedOwner, _pos, _speed, 0.0f, IsFacingLeft());
 							_levelHandler->AddActor(shot1);
 
 							std::shared_ptr<Weapons::BlasterShot> shot2 = std::make_shared<Weapons::BlasterShot>();
-							shot2->OnActivated({
-								.LevelHandler = _levelHandler,
-								.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2),
-								.Params = shotParams
-							});
+							shot2->OnActivated(ActorActivationDetails(
+								_levelHandler,
+								Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2),
+								shotParams
+							));
 							shot2->OnFire(sharedOwner, _pos, _speed, IsFacingLeft() ? -0.18f : 0.18f, IsFacingLeft());
 							_levelHandler->AddActor(shot2);
 

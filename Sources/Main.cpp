@@ -34,6 +34,14 @@
 #include "Jazz2/Compatibility/JJ2Tileset.h"
 #include "Jazz2/Compatibility/EventConverter.h"
 
+#if defined(WITH_MULTIPLAYER)
+#	include "Jazz2/Multiplayer/NetworkManager.h"
+#	include "Jazz2/Multiplayer/INetworkHandler.h"
+#	include "Jazz2/Multiplayer/MultiLevelHandler.h"
+#	include "Jazz2/Multiplayer/PacketTypes.h"
+using namespace Jazz2::Multiplayer;
+#endif
+
 #if defined(DEATH_TRACE) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
 #	include "TermLogo.h"
 #endif
@@ -58,18 +66,18 @@ using namespace nCine;
 using namespace Jazz2;
 using namespace Jazz2::UI;
 
-enum class PendingState {
-	None,
-	MainMenu,
-	MainMenuAfterIntro,
-	LevelChange
-};
-
-class GameEventHandler : public IAppEventHandler, public IInputEventHandler, public Jazz2::IRootController
+class GameEventHandler : public IAppEventHandler, public IInputEventHandler, public IRootController
+#if defined(WITH_MULTIPLAYER)
+	, public INetworkHandler
+#endif
 {
 public:
-	static constexpr int DefaultWidth = 720;
-	static constexpr int DefaultHeight = 405;
+	static constexpr std::int32_t DefaultWidth = 720;
+	static constexpr std::int32_t DefaultHeight = 405;
+
+#if defined(WITH_MULTIPLAYER)
+	static constexpr std::uint32_t MultiplayerProtocolVersion = 1;
+#endif
 
 	void OnPreInit(AppConfiguration& config) override;
 	void OnInit() override;
@@ -84,8 +92,19 @@ public:
 	void OnKeyReleased(const KeyboardEvent& event) override;
 	void OnTouchEvent(const TouchEvent& event) override;
 
+	void InvokeAsync(const std::function<void()>& callback) override;
+	void InvokeAsync(std::function<void()>&& callback) override;
 	void GoToMainMenu(bool afterIntro) override;
 	void ChangeLevel(LevelInitialization&& levelInit) override;
+
+#if defined(WITH_MULTIPLAYER)
+	bool ConnectToServer(const char* address, std::uint16_t port) override;
+	bool CreateServer(std::uint16_t port) override;
+
+	bool OnPeerConnected(const Peer& peer, std::uint32_t clientData) override;
+	void OnPeerDisconnected(const Peer& peer, std::uint32_t reason) override;
+	void OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t* data, std::size_t dataLength) override;
+#endif
 
 	Flags GetFlags() const override {
 		return _flags;
@@ -103,18 +122,21 @@ public:
 
 private:
 	Flags _flags;
-	std::unique_ptr<Jazz2::IStateHandler> _currentHandler;
-	PendingState _pendingState;
-	std::unique_ptr<LevelInitialization> _pendingLevelChange;
+	std::unique_ptr<IStateHandler> _currentHandler;
+	SmallVector<std::function<void()>> _pendingCallbacks;
 	char _newestVersion[20];
+#if defined(WITH_MULTIPLAYER)
+	std::unique_ptr<NetworkManager> _networkManager;
+#endif
 
+	void SetStateHandler(std::unique_ptr<IStateHandler>&& handler);
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	void RefreshCache();
 	void CheckUpdates();
 #endif
-	static void SaveEpisodeEnd(const std::unique_ptr<LevelInitialization>& pendingLevelChange);
-	static void SaveEpisodeContinue(const std::unique_ptr<LevelInitialization>& pendingLevelChange);
-	static void UpdateRichPresence(const std::unique_ptr<LevelInitialization>& levelInit);
+	static void SaveEpisodeEnd(const LevelInitialization& pendingLevelChange);
+	static void SaveEpisodeContinue(const LevelInitialization& pendingLevelChange);
+	static void UpdateRichPresence(const LevelInitialization& levelInit);
 };
 
 void GameEventHandler::OnPreInit(AppConfiguration& config)
@@ -141,7 +163,6 @@ void GameEventHandler::OnPreInit(AppConfiguration& config)
 void GameEventHandler::OnInit()
 {
 	_flags = Flags::None;
-	_pendingState = PendingState::None;
 
 	std::memset(_newestVersion, 0, sizeof(_newestVersion));
 
@@ -175,7 +196,7 @@ void GameEventHandler::OnInit()
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	// If threading support is enabled, refresh cache during intro cinematics and don't allow skip until it's completed
 	Thread thread([](void* arg) {
-		auto handler = reinterpret_cast<GameEventHandler*>(arg);
+		auto handler = static_cast<GameEventHandler*>(arg);
 #	if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 		if (PreferencesCache::EnableDiscordIntegration) {
 			DiscordRpcClient::Get().Connect("591586859960762378"_s);
@@ -194,7 +215,7 @@ void GameEventHandler::OnInit()
 		handler->CheckUpdates();
 	}, this);
 
-	_currentHandler = std::make_unique<Cinematics>(this, "intro"_s, [thread](IRootController* root, bool endOfStream) mutable {
+	SetStateHandler(std::make_unique<Cinematics>(this, "intro"_s, [thread](IRootController* root, bool endOfStream) mutable {
 		if ((root->GetFlags() & Jazz2::IRootController::Flags::IsVerified) != Jazz2::IRootController::Flags::IsVerified) {
 			return false;
 		}
@@ -202,7 +223,7 @@ void GameEventHandler::OnInit()
 		thread.Join();
 		root->GoToMainMenu(endOfStream);
 		return true;
-	});
+	}));
 #else
 	// Building without threading support is not recommended, so it can look ugly
 #	if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
@@ -227,109 +248,24 @@ void GameEventHandler::OnInit()
 	CheckUpdates();
 #	endif
 
-	_currentHandler = std::make_unique<Cinematics>(this, "intro"_s, [](IRootController* root, bool endOfStream) {
+	SetStateHandler(std::make_unique<Cinematics>(this, "intro"_s, [](IRootController* root, bool endOfStream) {
 		root->GoToMainMenu(endOfStream);
 		return true;
-	});
+	}));
 #endif
 
-	Viewport::chain().clear();
 	Vector2i res = theApplication().resolution();
-	_currentHandler->OnInitializeViewport(res.X, res.Y);
-
 	LOGI("Rendering resolution: %ix%i", res.X, res.Y);
 }
 
 void GameEventHandler::OnFrameStart()
 {
-	if (_pendingState != PendingState::None) {
-		switch (_pendingState) {
-			case PendingState::MainMenu:
-				_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
-				UpdateRichPresence(nullptr);
-				break;
-			case PendingState::MainMenuAfterIntro:
-				_currentHandler = std::make_unique<Menu::MainMenu>(this, true);
-				UpdateRichPresence(nullptr);
-				break;
-			case PendingState::LevelChange:
-				if (_pendingLevelChange->LevelName.empty()) {
-					// Next level not specified, so show main menu
-					_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
-					UpdateRichPresence(nullptr);
-				} else if (_pendingLevelChange->LevelName == ":end"_s) {
-					// End of episode
-					SaveEpisodeEnd(_pendingLevelChange);
-
-					PreferencesCache::RemoveEpisodeContinue(_pendingLevelChange->LastEpisodeName);
-
-					std::optional<Episode> lastEpisode = ContentResolver::Get().GetEpisode(_pendingLevelChange->LastEpisodeName);
-					if (lastEpisode.has_value()) {
-						// Redirect to next episode
-						std::optional<Episode> nextEpisode = ContentResolver::Get().GetEpisode(lastEpisode->NextEpisode);
-						if (nextEpisode.has_value()) {
-							_pendingLevelChange->EpisodeName = lastEpisode->NextEpisode;
-							_pendingLevelChange->LevelName = nextEpisode->FirstLevel;
-						}
-					}
-
-					if (_pendingLevelChange->LevelName != ":end"_s) {
-						UpdateRichPresence(_pendingLevelChange);
-						_currentHandler = std::make_unique<LevelHandler>(this, *_pendingLevelChange.get());
-					} else {
-						UpdateRichPresence(nullptr);
-						_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
-					}
-				} else if (_pendingLevelChange->LevelName == ":credits"_s) {
-					// End of game
-					SaveEpisodeEnd(_pendingLevelChange);
-
-					PreferencesCache::RemoveEpisodeContinue(_pendingLevelChange->LastEpisodeName);
-
-					_currentHandler = std::make_unique<Cinematics>(this, "ending"_s, [](IRootController* root, bool endOfStream) {
-						root->GoToMainMenu(false);
-						return true;
-					});
-				} else {
-					SaveEpisodeContinue(_pendingLevelChange);
-					UpdateRichPresence(_pendingLevelChange);
-
-#if defined(SHAREWARE_DEMO_ONLY)
-					// Check if specified episode is unlocked, used only if compiled with SHAREWARE_DEMO_ONLY
-					bool isEpisodeLocked = (_pendingLevelChange->EpisodeName == "unknown"_s) ||
-						(_pendingLevelChange->EpisodeName == "prince"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::FormerlyAPrince) == UnlockableEpisodes::None) ||
-						(_pendingLevelChange->EpisodeName == "rescue"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::JazzInTime) == UnlockableEpisodes::None) ||
-						(_pendingLevelChange->EpisodeName == "flash"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::Flashback) == UnlockableEpisodes::None) ||
-						(_pendingLevelChange->EpisodeName == "monk"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::FunkyMonkeys) == UnlockableEpisodes::None) ||
-						((_pendingLevelChange->EpisodeName == "xmas98"_s || _pendingLevelChange->EpisodeName == "xmas99"_s) && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::ChristmasChronicles) == UnlockableEpisodes::None) ||
-						(_pendingLevelChange->EpisodeName == "secretf"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::TheSecretFiles) == UnlockableEpisodes::None);
-
-					if (isEpisodeLocked) {
-						_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
-					} else
-#endif
-					_currentHandler = std::make_unique<LevelHandler>(this, *_pendingLevelChange.get());
-				}
-
-				if (auto levelHandler = dynamic_cast<LevelHandler*>(_currentHandler.get())) {
-					if (!levelHandler->IsLoaded()) {
-						// If level cannot be loaded, go back to main menu
-						_currentHandler = std::make_unique<Menu::MainMenu>(this, false);
-						if (auto mainMenu = dynamic_cast<Menu::MainMenu*>(_currentHandler.get())) {
-							mainMenu->SwitchToSection<Menu::SimpleMessageSection>(Menu::SimpleMessageSection::Message::CannotLoadLevel);
-							UpdateRichPresence(nullptr);
-						}
-					}
-				}
-
-				_pendingLevelChange = nullptr;
-				break;
+	if (!_pendingCallbacks.empty()) {
+		for (std::size_t i = 0; i < _pendingCallbacks.size(); i++) {
+			_pendingCallbacks[i]();
 		}
-		_pendingState = PendingState::None;
-
-		Viewport::chain().clear();
-		Vector2i res = theApplication().resolution();
-		_currentHandler->OnInitializeViewport(res.X, res.Y);
+		LOGD("%i async callbacks executed", _pendingCallbacks.size());
+		_pendingCallbacks.clear();
 	}
 
 	_currentHandler->OnBeginFrame();
@@ -357,6 +293,9 @@ void GameEventHandler::OnResizeWindow(int width, int height)
 void GameEventHandler::OnShutdown()
 {
 	_currentHandler = nullptr;
+#if defined(WITH_MULTIPLAYER)
+	_networkManager = nullptr;
+#endif
 
 	ContentResolver::Get().Release();
 }
@@ -413,16 +352,234 @@ void GameEventHandler::OnTouchEvent(const TouchEvent& event)
 	_currentHandler->OnTouchEvent(event);
 }
 
+void GameEventHandler::InvokeAsync(const std::function<void()>& callback)
+{
+	_pendingCallbacks.emplace_back(callback);
+	LOGD("Callback queued for async execution");
+}
+
+void GameEventHandler::InvokeAsync(std::function<void()>&& callback)
+{
+	_pendingCallbacks.emplace_back(std::move(callback));
+	LOGD("Callback queued for async execution");
+}
+
 void GameEventHandler::GoToMainMenu(bool afterIntro)
 {
-	_pendingState = (afterIntro ? PendingState::MainMenuAfterIntro : PendingState::MainMenu);
+	InvokeAsync([this, afterIntro]() {
+#if defined(WITH_MULTIPLAYER)
+		_networkManager = nullptr;
+#endif
+
+		SetStateHandler(std::make_unique<Menu::MainMenu>(this, afterIntro));
+		UpdateRichPresence({});
+	});
 }
 
 void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 {
-	// Level will be changed in the next frame
-	_pendingLevelChange = std::make_unique<LevelInitialization>(std::move(levelInit));
-	_pendingState = PendingState::LevelChange;
+	InvokeAsync([this, levelInit = std::move(levelInit)]() mutable {
+		std::unique_ptr<IStateHandler> newHandler;
+		if (levelInit.LevelName.empty()) {
+			// Next level not specified, so show main menu
+			newHandler = std::make_unique<Menu::MainMenu>(this, false);
+		} else if (levelInit.LevelName == ":end"_s) {
+			// End of episode
+			SaveEpisodeEnd(levelInit);
+
+			PreferencesCache::RemoveEpisodeContinue(levelInit.LastEpisodeName);
+
+			std::optional<Episode> lastEpisode = ContentResolver::Get().GetEpisode(levelInit.LastEpisodeName);
+			if (lastEpisode.has_value()) {
+				// Redirect to next episode
+				std::optional<Episode> nextEpisode = ContentResolver::Get().GetEpisode(lastEpisode->NextEpisode);
+				if (nextEpisode.has_value()) {
+					levelInit.EpisodeName = lastEpisode->NextEpisode;
+					levelInit.LevelName = nextEpisode->FirstLevel;
+				}
+			}
+
+			if (levelInit.LevelName != ":end"_s) {
+				newHandler = std::make_unique<LevelHandler>(this, levelInit);
+			} else {
+				newHandler = std::make_unique<Menu::MainMenu>(this, false);
+			}
+		} else if (levelInit.LevelName == ":credits"_s) {
+			// End of game
+			SaveEpisodeEnd(levelInit);
+
+			PreferencesCache::RemoveEpisodeContinue(levelInit.LastEpisodeName);
+
+			newHandler = std::make_unique<Cinematics>(this, "ending"_s, [](IRootController* root, bool endOfStream) {
+				root->GoToMainMenu(false);
+				return true;
+			});
+		} else {
+			SaveEpisodeContinue(levelInit);
+
+#if defined(SHAREWARE_DEMO_ONLY)
+			// Check if specified episode is unlocked, used only if compiled with SHAREWARE_DEMO_ONLY
+			bool isEpisodeLocked = (levelInit.EpisodeName == "unknown"_s) ||
+				(levelInit.EpisodeName == "prince"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::FormerlyAPrince) == UnlockableEpisodes::None) ||
+				(levelInit.EpisodeName == "rescue"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::JazzInTime) == UnlockableEpisodes::None) ||
+				(levelInit.EpisodeName == "flash"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::Flashback) == UnlockableEpisodes::None) ||
+				(levelInit.EpisodeName == "monk"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::FunkyMonkeys) == UnlockableEpisodes::None) ||
+				((levelInit.EpisodeName == "xmas98"_s || levelInit.EpisodeName == "xmas99"_s) && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::ChristmasChronicles) == UnlockableEpisodes::None) ||
+				(levelInit.EpisodeName == "secretf"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::TheSecretFiles) == UnlockableEpisodes::None);
+
+			if (isEpisodeLocked) {
+				newHandler = std::make_unique<Menu::MainMenu>(this, false);
+			} else
+#endif
+				newHandler = std::make_unique<LevelHandler>(this, levelInit);
+		}
+
+		if (auto levelHandler = static_cast<LevelHandler*>(newHandler.get())) {
+			if (!levelHandler->IsLoaded()) {
+				// If level cannot be loaded, go back to main menu
+				newHandler = std::make_unique<Menu::MainMenu>(this, false);
+				if (auto mainMenu = static_cast<Menu::MainMenu*>(newHandler.get())) {
+					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(Menu::SimpleMessageSection::Message::CannotLoadLevel);
+					UpdateRichPresence({});
+				}
+			} else {
+				UpdateRichPresence(levelInit);
+			}
+		} else {
+			UpdateRichPresence({});
+		}
+
+		SetStateHandler(std::move(newHandler));
+	});
+}
+
+#if defined(WITH_MULTIPLAYER)
+bool GameEventHandler::ConnectToServer(const char* address, std::uint16_t port)
+{
+	if (_networkManager == nullptr) {
+		_networkManager = std::make_unique<NetworkManager>();
+	}
+
+	return _networkManager->CreateClient(this, address, port, 0xCA000000 | MultiplayerProtocolVersion);
+}
+
+bool GameEventHandler::CreateServer(std::uint16_t port)
+{
+	if (_networkManager == nullptr) {
+		_networkManager = std::make_unique<NetworkManager>();
+	}
+
+	if (!_networkManager->CreateServer(this, port)) {
+		return false;
+	}
+
+	InvokeAsync([this]() {
+		LevelInitialization levelInit("unknown", "arace1", GameDifficulty::Multiplayer, true, false, PlayerType::Jazz);
+		SetStateHandler(std::make_unique<MultiLevelHandler>(this, _networkManager.get(), levelInit));
+	});
+
+	return true;
+}
+
+bool GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32_t clientData)
+{
+	LOGI("Peer connected");
+
+	if (_networkManager->GetState() == NetworkState::Listening) {
+		if ((clientData & 0xFF000000) != 0xCA000000 || (clientData & 0x00FFFFFF) > MultiplayerProtocolVersion) {
+			// Connected client is newer than server, reject it
+			return false;
+		}
+	} else {
+		// TODO: Auth packet
+		std::uint8_t data[] = { (std::uint8_t)ClientPacketType::Auth, 0x01, 0x02, 0x03, 0x04 };
+		_networkManager->SendToPeer(peer, NetworkChannel::Main, data, sizeof(data));
+	}
+
+	return true;
+}
+
+void GameEventHandler::OnPeerDisconnected(const Peer& peer, std::uint32_t reason)
+{
+	LOGI("Peer disconnected");
+
+	if (_networkManager != nullptr && _networkManager->GetState() != NetworkState::Listening) {
+		// TODO: Show error message only if not initiated by the player
+		GoToMainMenu(false);
+	}
+}
+
+void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t* data, std::size_t dataLength)
+{
+	if (auto multiLevelHandler = dynamic_cast<MultiLevelHandler*>(_currentHandler.get())) {
+		if (multiLevelHandler->OnPacketReceived(peer, channelId, data, dataLength)) {
+			return;
+		}
+	}
+
+	if (_networkManager->GetState() == NetworkState::Listening) {
+		auto packetType = (ClientPacketType)data[0];
+		switch (packetType) {
+			case ClientPacketType::Ping: {
+				std::uint8_t data[] = { (std::uint8_t)ServerPacketType::Pong };
+				_networkManager->SendToPeer(peer, NetworkChannel::Main, data, sizeof(data));
+				break;
+			}
+			case ClientPacketType::Auth: {
+				// TODO: Move this to MultiLevelHandler
+				std::uint8_t flags = 0;
+				if (PreferencesCache::EnableReforged) {
+					flags |= 0x01;
+				}
+
+				String episodeName = "unknown"_s;
+				String levelName = "arace1"_s;
+
+				MemoryStream packet(10 + episodeName.size() + levelName.size());
+				packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::LoadLevel);
+				packet.WriteValue<std::uint8_t>(flags);
+				packet.WriteVariableUint32(episodeName.size());
+				packet.Write(episodeName.data(), episodeName.size());
+				packet.WriteVariableUint32(levelName.size());
+				packet.Write(levelName.data(), levelName.size());
+
+				_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+				break;
+			}
+		}
+
+	} else {
+		auto packetType = (ServerPacketType)data[0];
+		switch (packetType) {
+			case ServerPacketType::LoadLevel: {
+				MemoryStream packet(data + 1, dataLength - 1);
+				std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+				std::uint32_t episodeLength = packet.ReadVariableUint32();
+				String episodeName = String(NoInit, episodeLength);
+				packet.Read(episodeName.data(), episodeLength);
+				std::uint32_t levelLength = packet.ReadVariableUint32();
+				String levelName = String(NoInit, levelLength);
+				packet.Read(levelName.data(), levelLength);
+
+				InvokeAsync([this, flags, episodeName = std::move(episodeName), levelName = std::move(levelName)]() {
+					bool isReforged = (flags & 0x01) != 0;
+					LevelInitialization levelInit(episodeName, levelName, GameDifficulty::Multiplayer, isReforged);
+					SetStateHandler(std::make_unique<MultiLevelHandler>(this, _networkManager.get(), levelInit));
+				});
+				break;
+			}
+		}
+	}
+}
+#endif
+
+void GameEventHandler::SetStateHandler(std::unique_ptr<IStateHandler>&& handler)
+{
+	_currentHandler = std::move(handler);
+
+	Viewport::chain().clear();
+	Vector2i res = theApplication().resolution();
+	_currentHandler->OnInitializeViewport(res.X, res.Y);
 }
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -947,25 +1104,25 @@ void GameEventHandler::CheckUpdates()
 }
 #endif
 
-void GameEventHandler::SaveEpisodeEnd(const std::unique_ptr<LevelInitialization>& pendingLevelChange)
+void GameEventHandler::SaveEpisodeEnd(const LevelInitialization& pendingLevelChange)
 {
-	if (pendingLevelChange->LastEpisodeName.empty()) {
+	if (pendingLevelChange.LastEpisodeName.empty()) {
 		return;
 	}
 
 	std::size_t playerCount = 0;
-	PlayerCarryOver* firstPlayer = nullptr;
-	for (std::size_t i = 0; i < arraySize(pendingLevelChange->PlayerCarryOvers); i++) {
-		if (pendingLevelChange->PlayerCarryOvers[i].Type != PlayerType::None) {
-			firstPlayer = &pendingLevelChange->PlayerCarryOvers[i];
+	const PlayerCarryOver* firstPlayer = nullptr;
+	for (std::size_t i = 0; i < arraySize(pendingLevelChange.PlayerCarryOvers); i++) {
+		if (pendingLevelChange.PlayerCarryOvers[i].Type != PlayerType::None) {
+			firstPlayer = &pendingLevelChange.PlayerCarryOvers[i];
 			playerCount++;
 		}
 	}
 
 	if (playerCount == 1) {
-		auto episodeEnd = PreferencesCache::GetEpisodeEnd(pendingLevelChange->LastEpisodeName, true);
+		auto episodeEnd = PreferencesCache::GetEpisodeEnd(pendingLevelChange.LastEpisodeName, true);
 		episodeEnd->Flags = EpisodeContinuationFlags::IsCompleted;
-		if (pendingLevelChange->CheatsUsed) {
+		if (pendingLevelChange.CheatsUsed) {
 			episodeEnd->Flags |= EpisodeContinuationFlags::CheatsUsed;
 		}
 
@@ -978,37 +1135,37 @@ void GameEventHandler::SaveEpisodeEnd(const std::unique_ptr<LevelInitialization>
 	}
 }
 
-void GameEventHandler::SaveEpisodeContinue(const std::unique_ptr<LevelInitialization>& pendingLevelChange)
+void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& pendingLevelChange)
 {
-	if (pendingLevelChange->EpisodeName.empty() || pendingLevelChange->LevelName.empty() ||
-		pendingLevelChange->EpisodeName == "unknown"_s ||
-		(pendingLevelChange->EpisodeName == "prince"_s && pendingLevelChange->LevelName == "trainer"_s)) {
+	if (pendingLevelChange.EpisodeName.empty() || pendingLevelChange.LevelName.empty() ||
+		pendingLevelChange.EpisodeName == "unknown"_s ||
+		(pendingLevelChange.EpisodeName == "prince"_s && pendingLevelChange.LevelName == "trainer"_s)) {
 		return;
 	}
 
-	std::optional<Episode> currentEpisode = ContentResolver::Get().GetEpisode(pendingLevelChange->EpisodeName);
-	if (!currentEpisode.has_value() || currentEpisode->FirstLevel == pendingLevelChange->LevelName) {
+	std::optional<Episode> currentEpisode = ContentResolver::Get().GetEpisode(pendingLevelChange.EpisodeName);
+	if (!currentEpisode.has_value() || currentEpisode->FirstLevel == pendingLevelChange.LevelName) {
 		return;
 	}
 
 	std::size_t playerCount = 0;
-	PlayerCarryOver* firstPlayer = nullptr;
-	for (std::size_t i = 0; i < arraySize(pendingLevelChange->PlayerCarryOvers); i++) {
-		if (pendingLevelChange->PlayerCarryOvers[i].Type != PlayerType::None) {
-			firstPlayer = &pendingLevelChange->PlayerCarryOvers[i];
+	const PlayerCarryOver* firstPlayer = nullptr;
+	for (std::size_t i = 0; i < arraySize(pendingLevelChange.PlayerCarryOvers); i++) {
+		if (pendingLevelChange.PlayerCarryOvers[i].Type != PlayerType::None) {
+			firstPlayer = &pendingLevelChange.PlayerCarryOvers[i];
 			playerCount++;
 		}
 	}
 
 	if (playerCount == 1) {
-		auto episodeContinue = PreferencesCache::GetEpisodeContinue(pendingLevelChange->EpisodeName, true);
-		episodeContinue->LevelName = pendingLevelChange->LevelName;
+		auto episodeContinue = PreferencesCache::GetEpisodeContinue(pendingLevelChange.EpisodeName, true);
+		episodeContinue->LevelName = pendingLevelChange.LevelName;
 		episodeContinue->State.Flags = EpisodeContinuationFlags::None;
-		if (pendingLevelChange->CheatsUsed) {
+		if (pendingLevelChange.CheatsUsed) {
 			episodeContinue->State.Flags |= EpisodeContinuationFlags::CheatsUsed;
 		}
 
-		episodeContinue->State.DifficultyAndPlayerType = ((int32_t)pendingLevelChange->Difficulty & 0x0f) | (((int32_t)firstPlayer->Type & 0x0f) << 4);
+		episodeContinue->State.DifficultyAndPlayerType = ((int32_t)pendingLevelChange.Difficulty & 0x0f) | (((int32_t)firstPlayer->Type & 0x0f) << 4);
 		episodeContinue->State.Lives = firstPlayer->Lives;
 		episodeContinue->State.Score = firstPlayer->Score;
 		std::memcpy(episodeContinue->State.Ammo, firstPlayer->Ammo, sizeof(firstPlayer->Ammo));
@@ -1022,7 +1179,7 @@ void GameEventHandler::SaveEpisodeContinue(const std::unique_ptr<LevelInitializa
 	}
 }
 
-void GameEventHandler::UpdateRichPresence(const std::unique_ptr<LevelInitialization>& levelInit)
+void GameEventHandler::UpdateRichPresence(const LevelInitialization& levelInit)
 {
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 	if (!PreferencesCache::EnableDiscordIntegration || !DiscordRpcClient::Get().IsSupported()) {
@@ -1030,53 +1187,53 @@ void GameEventHandler::UpdateRichPresence(const std::unique_ptr<LevelInitializat
 	}
 
 	DiscordRpcClient::RichPresence richPresence;
-	if (levelInit == nullptr) {
+	if (levelInit.LevelName.empty()) {
 		richPresence.State = "Resting in main menu"_s;
 		richPresence.LargeImage = "main-transparent"_s;
 	} else {
-		if (levelInit->EpisodeName == "prince"_s) {
-			if (levelInit->LevelName == "01_castle1"_s || levelInit->LevelName == "02_castle1n"_s) {
+		if (levelInit.EpisodeName == "prince"_s) {
+			if (levelInit.LevelName == "01_castle1"_s || levelInit.LevelName == "02_castle1n"_s) {
 				richPresence.LargeImage = "level-prince-01"_s;
-			} else if (levelInit->LevelName == "03_carrot1"_s || levelInit->LevelName == "04_carrot1n"_s) {
+			} else if (levelInit.LevelName == "03_carrot1"_s || levelInit.LevelName == "04_carrot1n"_s) {
 				richPresence.LargeImage = "level-prince-02"_s;
-			} else if (levelInit->LevelName == "05_labrat1"_s || levelInit->LevelName == "06_labrat2"_s || levelInit->LevelName == "bonus_labrat3"_s) {
+			} else if (levelInit.LevelName == "05_labrat1"_s || levelInit.LevelName == "06_labrat2"_s || levelInit.LevelName == "bonus_labrat3"_s) {
 				richPresence.LargeImage = "level-prince-03"_s;
 			}
-		} else if (levelInit->EpisodeName == "rescue"_s) {
-			if (levelInit->LevelName == "01_colon1"_s || levelInit->LevelName == "02_colon2"_s) {
+		} else if (levelInit.EpisodeName == "rescue"_s) {
+			if (levelInit.LevelName == "01_colon1"_s || levelInit.LevelName == "02_colon2"_s) {
 				richPresence.LargeImage = "level-rescue-01"_s;
-			} else if (levelInit->LevelName == "03_psych1"_s || levelInit->LevelName == "04_psych2"_s || levelInit->LevelName == "bonus_psych3"_s) {
+			} else if (levelInit.LevelName == "03_psych1"_s || levelInit.LevelName == "04_psych2"_s || levelInit.LevelName == "bonus_psych3"_s) {
 				richPresence.LargeImage = "level-rescue-02"_s;
-			} else if (levelInit->LevelName == "05_beach"_s || levelInit->LevelName == "06_beach2"_s) {
+			} else if (levelInit.LevelName == "05_beach"_s || levelInit.LevelName == "06_beach2"_s) {
 				richPresence.LargeImage = "level-rescue-03"_s;
 			}
-		} else if (levelInit->EpisodeName == "flash"_s) {
-			if (levelInit->LevelName == "01_diam1"_s || levelInit->LevelName == "02_diam3"_s) {
+		} else if (levelInit.EpisodeName == "flash"_s) {
+			if (levelInit.LevelName == "01_diam1"_s || levelInit.LevelName == "02_diam3"_s) {
 				richPresence.LargeImage = "level-flash-01"_s;
-			} else if (levelInit->LevelName == "03_tube1"_s || levelInit->LevelName == "04_tube2"_s || levelInit->LevelName == "bonus_tube3"_s) {
+			} else if (levelInit.LevelName == "03_tube1"_s || levelInit.LevelName == "04_tube2"_s || levelInit.LevelName == "bonus_tube3"_s) {
 				richPresence.LargeImage = "level-flash-02"_s;
-			} else if (levelInit->LevelName == "05_medivo1"_s || levelInit->LevelName == "06_medivo2"_s || levelInit->LevelName == "bonus_garglair"_s) {
+			} else if (levelInit.LevelName == "05_medivo1"_s || levelInit.LevelName == "06_medivo2"_s || levelInit.LevelName == "bonus_garglair"_s) {
 				richPresence.LargeImage = "level-flash-03"_s;
 			}
-		} else if (levelInit->EpisodeName == "monk"_s) {
-			if (levelInit->LevelName == "01_jung1"_s || levelInit->LevelName == "02_jung2"_s) {
+		} else if (levelInit.EpisodeName == "monk"_s) {
+			if (levelInit.LevelName == "01_jung1"_s || levelInit.LevelName == "02_jung2"_s) {
 				richPresence.LargeImage = "level-monk-01"_s;
-			} else if (levelInit->LevelName == "03_hell"_s || levelInit->LevelName == "04_hell2"_s) {
+			} else if (levelInit.LevelName == "03_hell"_s || levelInit.LevelName == "04_hell2"_s) {
 				richPresence.LargeImage = "level-monk-02"_s;
-			} else if (levelInit->LevelName == "05_damn"_s || levelInit->LevelName == "06_damn2"_s) {
+			} else if (levelInit.LevelName == "05_damn"_s || levelInit.LevelName == "06_damn2"_s) {
 				richPresence.LargeImage = "level-monk-03"_s;
 			}
-		} else if (levelInit->EpisodeName == "secretf"_s) {
-			if (levelInit->LevelName == "01_easter1"_s || levelInit->LevelName == "02_easter2"_s || levelInit->LevelName == "03_easter3"_s) {
+		} else if (levelInit.EpisodeName == "secretf"_s) {
+			if (levelInit.LevelName == "01_easter1"_s || levelInit.LevelName == "02_easter2"_s || levelInit.LevelName == "03_easter3"_s) {
 				richPresence.LargeImage = "level-secretf-01"_s;
-			} else if (levelInit->LevelName == "04_haunted1"_s || levelInit->LevelName == "05_haunted2"_s || levelInit->LevelName == "06_haunted3"_s) {
+			} else if (levelInit.LevelName == "04_haunted1"_s || levelInit.LevelName == "05_haunted2"_s || levelInit.LevelName == "06_haunted3"_s) {
 				richPresence.LargeImage = "level-secretf-02"_s;
-			} else if (levelInit->LevelName == "07_town1"_s || levelInit->LevelName == "08_town2"_s || levelInit->LevelName == "09_town3"_s) {
+			} else if (levelInit.LevelName == "07_town1"_s || levelInit.LevelName == "08_town2"_s || levelInit.LevelName == "09_town3"_s) {
 				richPresence.LargeImage = "level-secretf-03"_s;
 			}
-		} else if (levelInit->EpisodeName == "xmas98"_s || levelInit->EpisodeName == "xmas99"_s) {
+		} else if (levelInit.EpisodeName == "xmas98"_s || levelInit.EpisodeName == "xmas99"_s) {
 			richPresence.LargeImage = "level-xmas"_s;
-		} else if (levelInit->EpisodeName == "share"_s) {
+		} else if (levelInit.EpisodeName == "share"_s) {
 			richPresence.LargeImage = "level-share"_s;
 		}
 
@@ -1084,7 +1241,7 @@ void GameEventHandler::UpdateRichPresence(const std::unique_ptr<LevelInitializat
 			richPresence.Details = "Playing as "_s;
 			richPresence.LargeImage = "main-transparent"_s;
 
-			switch (levelInit->PlayerCarryOvers[0].Type) {
+			switch (levelInit.PlayerCarryOvers[0].Type) {
 				default:
 				case PlayerType::Jazz: richPresence.SmallImage = "playing-jazz"_s; break;
 				case PlayerType::Spaz: richPresence.SmallImage = "playing-spaz"_s; break;
@@ -1094,7 +1251,7 @@ void GameEventHandler::UpdateRichPresence(const std::unique_ptr<LevelInitializat
 			richPresence.Details = "Playing episode as "_s;
 		}
 
-		switch (levelInit->PlayerCarryOvers[0].Type) {
+		switch (levelInit.PlayerCarryOvers[0].Type) {
 			default:
 			case PlayerType::Jazz: richPresence.Details += "Jazz"_s; break;
 			case PlayerType::Spaz: richPresence.Details += "Spaz"_s; break;

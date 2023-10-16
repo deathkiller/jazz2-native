@@ -185,11 +185,11 @@ namespace Jazz2::Actors::Bosses
 
 					std::shared_ptr<Fireball> fireball = std::make_shared<Fireball>();
 					uint8_t fireballParams[1] = { (uint8_t)(IsFacingLeft() ? 1 : 0) };
-					fireball->OnActivated({
-						.LevelHandler = _levelHandler,
-						.Pos = Vector3i((int)_pos.X + (IsFacingLeft() ? -26 : 26), (int)_pos.Y - 14, _renderer.layer() + 2),
-						.Params = fireballParams
-					});
+					fireball->OnActivated(ActorActivationDetails(
+						_levelHandler,
+						Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -26 : 26), (std::int32_t)_pos.Y - 14, _renderer.layer() + 2),
+						fireballParams
+					));
 					_levelHandler->AddActor(fireball);
 
 					SetTransition((AnimState)674, false, [this]() {
@@ -323,11 +323,11 @@ namespace Jazz2::Actors::Bosses
 		SetTransition((AnimState)16, false, [this]() {
 			std::shared_ptr<Bullet> bullet = std::make_shared<Bullet>();
 			uint8_t fireballParams[1] = { (uint8_t)(IsFacingLeft() ? 1 : 0) };
-			bullet->OnActivated({
-				.LevelHandler = _levelHandler,
-				.Pos = Vector3i((int)_pos.X + (IsFacingLeft() ? -24 : 24), (int)_pos.Y + 2, _renderer.layer() + 2),
-				.Params = fireballParams
-			});
+			bullet->OnActivated(ActorActivationDetails(
+				_levelHandler,
+				Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -24 : 24), (std::int32_t)_pos.Y + 2, _renderer.layer() + 2),
+				fireballParams
+			));
 			_levelHandler->AddActor(bullet);
 
 			_shots--;

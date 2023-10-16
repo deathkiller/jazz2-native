@@ -79,10 +79,10 @@ namespace Jazz2::Actors::Enemies
 					Vector2f bulletPos = Vector2f(_pos.X + (IsFacingLeft() ? -24.0f : 24.0f), _pos.Y);
 
 					std::shared_ptr<MagicBullet> magicBullet = std::make_shared<MagicBullet>(this);
-					magicBullet->OnActivated({
-						.LevelHandler = _levelHandler,
-						.Pos = Vector3i((int)bulletPos.X, (int)bulletPos.Y, _renderer.layer() + 1)
-					});
+					magicBullet->OnActivated(ActorActivationDetails(
+						_levelHandler,
+						Vector3i((std::int32_t)bulletPos.X, (std::int32_t)bulletPos.Y, _renderer.layer() + 1)
+					));
 					_levelHandler->AddActor(magicBullet);
 
 					Explosion::Create(_levelHandler, Vector3i((int)bulletPos.X, (int)bulletPos.Y, _renderer.layer() + 2), Explosion::Type::TinyDark);

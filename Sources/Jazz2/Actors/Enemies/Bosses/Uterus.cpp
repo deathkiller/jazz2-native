@@ -71,10 +71,10 @@ namespace Jazz2::Actors::Bosses
 		for (int i = 0; i < countof(_shields); i++) {
 			_shields[i] = std::make_shared<ShieldPart>();
 			_shields[i]->Phase = (fTwoPi * i / countof(_shields));
-			_shields[i]->OnActivated({
-				.LevelHandler = _levelHandler,
-				.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 2)
-			});
+			_shields[i]->OnActivated(ActorActivationDetails(
+				_levelHandler,
+				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2)
+			));
 			_levelHandler->AddActor(_shields[i]);
 		}
 		return true;
@@ -105,10 +105,10 @@ namespace Jazz2::Actors::Bosses
 
 					// TODO: Implement Crab spawn animation
 					std::shared_ptr<Enemies::Crab> crab = std::make_shared<Enemies::Crab>();
-					crab->OnActivated({
-						.LevelHandler = _levelHandler,
-						.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 4)
-					});
+					crab->OnActivated(ActorActivationDetails(
+						_levelHandler,
+						Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 4)
+					));
 					crab->AddExternalForce(force, 0.0f);
 					_levelHandler->AddActor(crab);
 

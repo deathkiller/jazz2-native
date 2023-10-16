@@ -71,6 +71,7 @@ namespace Jazz2
 		virtual void BeginLevelChange(ExitType exitType, const StringView& nextLevel) = 0;
 		virtual void HandleGameOver() = 0;
 		virtual bool HandlePlayerDied(const std::shared_ptr<Actors::ActorBase>& player) = 0;
+		virtual void HandlePlayerWarped(const std::shared_ptr<Actors::ActorBase>& player, const Vector2f& prevPos, bool fast) = 0;
 		virtual void SetCheckpoint(Vector2f pos) = 0;
 		virtual void RollbackToCheckpoint() = 0;
 		virtual void ActivateSugarRush() = 0;

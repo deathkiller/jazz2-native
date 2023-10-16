@@ -86,11 +86,11 @@ namespace Jazz2::Actors::Bosses
 
 								std::shared_ptr<Fireball> fireball = std::make_shared<Fireball>();
 								uint8_t fireballParams[1] = { (uint8_t)(IsFacingLeft() ? 1 : 0) };
-								fireball->OnActivated({
-									.LevelHandler = _levelHandler,
-									.Pos = Vector3i((int)(_pos.X + x), (int)(_pos.Y + y), _renderer.layer() - 2),
-									.Params = fireballParams
-								});
+								fireball->OnActivated(ActorActivationDetails(
+									_levelHandler,
+									Vector3i((std::int32_t)(_pos.X + x), (std::int32_t)(_pos.Y + y), _renderer.layer() - 2),
+									fireballParams
+								));
 								_levelHandler->AddActor(fireball);
 
 								SetTransition(AnimState::TransitionShootToIdle, false, [this]() {

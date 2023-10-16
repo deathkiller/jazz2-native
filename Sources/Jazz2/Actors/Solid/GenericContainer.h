@@ -16,7 +16,7 @@ namespace Jazz2::Actors::Solid
 			int Count;
 			uint8_t EventParams[16];
 
-			ContainerContent(EventType eventType, int count, uint8_t* eventParams, int eventParamsSize)
+			ContainerContent(EventType eventType, int count, const uint8_t* eventParams, int eventParamsSize)
 			{
 				Type = eventType;
 				Count = count;
@@ -32,7 +32,7 @@ namespace Jazz2::Actors::Solid
 
 		bool OnPerish(ActorBase* collider) override;
 
-		void AddContent(EventType eventType, int count, uint8_t* eventParams, int eventParamsSize);
+		void AddContent(EventType eventType, int count, const uint8_t* eventParams, int eventParamsSize);
 		void SpawnContent();
 	};
 }

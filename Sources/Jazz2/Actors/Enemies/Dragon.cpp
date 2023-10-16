@@ -89,11 +89,11 @@ namespace Jazz2::Actors::Enemies
 							std::shared_ptr<Fire> fire = std::make_shared<Fire>();
 							uint8_t fireParams[1];
 							fireParams[0] = (IsFacingLeft() ? 1 : 0);
-							fire->OnActivated({
-								.LevelHandler = _levelHandler,
-								.Pos = Vector3i((int)_pos.X + (IsFacingLeft() ? -14.0f : 14.0f), (int)_pos.Y - 6.0f, _renderer.layer() + 2),
-								.Params = fireParams
-							});
+							fire->OnActivated(ActorActivationDetails(
+								_levelHandler,
+								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -14.0f : 14.0f), (std::int32_t)_pos.Y - 6.0f, _renderer.layer() + 2),
+								fireParams
+							));
 							_levelHandler->AddActor(fire);
 
 							_attackTime = 10.0f;
@@ -119,7 +119,7 @@ namespace Jazz2::Actors::Enemies
 		CreateDeathDebris(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
-		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2), Explosion::Type::Tiny);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2), Explosion::Type::Tiny);
 
 		TryGenerateRandomDrop();
 

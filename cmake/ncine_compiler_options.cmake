@@ -1,4 +1,4 @@
-target_compile_features(${NCINE_APP} PUBLIC cxx_std_20)
+target_compile_features(${NCINE_APP} PUBLIC cxx_std_17)
 set_target_properties(${NCINE_APP} PROPERTIES CXX_EXTENSIONS OFF)
 
 include(CheckStructHasMember)

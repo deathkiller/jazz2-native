@@ -22,7 +22,7 @@ namespace Death::IO
 
 		bool IsValid() const override;
 
-		const std::uint8_t* GetBuffer() const {
+		DEATH_ALWAYS_INLINE const std::uint8_t* GetBuffer() const {
 			return _buffer.data();
 		}
 

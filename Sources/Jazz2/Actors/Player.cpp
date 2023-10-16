@@ -128,7 +128,8 @@ namespace Jazz2::Actors
 		_weaponAmmo[(int)WeaponType::Blaster] = UINT16_MAX;
 		_weaponAmmoCheckpoint[(int)WeaponType::Blaster] = UINT16_MAX;
 
-		SetState(ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjects | ActorState::IsSolidObject, true);
+		SetState(ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjects |
+			ActorState::IsSolidObject | ActorState::ExcludeSimilar, true);
 
 		_health = 5;
 		_maxHealth = _health;
@@ -1289,8 +1290,8 @@ namespace Jazz2::Actors
 				}
 
 				// Decrease remaining shield time by 5 secs
-				if (_activeShieldTime > 70.0f) {
-					_activeShieldTime = _activeShieldTime - (5.0f * FrameTimer::FramesPerSecond);
+				if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
+					_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
 				}
 			} else if (enemy->CanHurtPlayer()) {
 				TakeDamage(1, 4 * (_pos.X > enemy->GetPos().X ? 1.0f : -1.0f));
@@ -2303,11 +2304,11 @@ namespace Jazz2::Actors
 				// Spawn corpse
 				std::shared_ptr<PlayerCorpse> corpse = std::make_shared<PlayerCorpse>();
 				uint8_t playerParams[2] = { (uint8_t)_playerType, (uint8_t)(IsFacingLeft() ? 1 : 0) };
-				corpse->OnActivated({
-					.LevelHandler = _levelHandler,
-					.Pos = Vector3i(_pos.X, _pos.Y, _renderer.layer() - 40),
-					.Params = playerParams
-				});
+				corpse->OnActivated(ActorActivationDetails(
+					_levelHandler,
+					Vector3i(_pos.X, _pos.Y, _renderer.layer() - 40),
+					playerParams
+				));
 				_levelHandler->AddActor(corpse);
 
 				SetAnimation(AnimState::Idle);
@@ -2393,11 +2394,11 @@ namespace Jazz2::Actors
 
 		std::shared_ptr<T> shot = std::make_shared<T>();
 		uint8_t shotParams[1] = { _weaponUpgrades[(int)weaponType] };
-		shot->OnActivated({
-			.LevelHandler = _levelHandler,
-			.Pos = initialPos,
-			.Params = shotParams
-		});
+		shot->OnActivated(ActorActivationDetails(
+			_levelHandler,
+			initialPos,
+			shotParams
+		));
 		shot->OnFire(shared_from_this(), gunspotPos, _speed, angle, IsFacingLeft());
 		_levelHandler->AddActor(shot);
 
@@ -2415,47 +2416,47 @@ namespace Jazz2::Actors
 
 		if ((_weaponUpgrades[(int)WeaponType::RF] & 0x1) != 0) {
 			std::shared_ptr<Weapons::RFShot> shot1 = std::make_shared<Weapons::RFShot>();
-			shot1->OnActivated({
-				.LevelHandler = _levelHandler,
-				.Pos = initialPos,
-				.Params = shotParams
-			});
+			shot1->OnActivated(ActorActivationDetails(
+				_levelHandler,
+				initialPos,
+				shotParams
+			));
 			shot1->OnFire(shared_from_this(), gunspotPos, _speed, angle - 0.3f, IsFacingLeft());
 			_levelHandler->AddActor(shot1);
 
 			std::shared_ptr<Weapons::RFShot> shot2 = std::make_shared<Weapons::RFShot>();
-			shot2->OnActivated({
-				.LevelHandler = _levelHandler,
-				.Pos = initialPos,
-				.Params = shotParams
-			});
+			shot2->OnActivated(ActorActivationDetails(
+				_levelHandler,
+				initialPos,
+				shotParams
+			));
 			shot2->OnFire(shared_from_this(), gunspotPos, _speed, angle, IsFacingLeft());
 			_levelHandler->AddActor(shot2);
 
 			std::shared_ptr<Weapons::RFShot> shot3 = std::make_shared<Weapons::RFShot>();
-			shot3->OnActivated({
-				.LevelHandler = _levelHandler,
-				.Pos = initialPos,
-				.Params = shotParams
-			});
+			shot3->OnActivated(ActorActivationDetails(
+				_levelHandler,
+				initialPos,
+				shotParams
+			));
 			shot3->OnFire(shared_from_this(), gunspotPos, _speed, angle + 0.3f, IsFacingLeft());
 			_levelHandler->AddActor(shot3);
 		} else {
 			std::shared_ptr<Weapons::RFShot> shot1 = std::make_shared<Weapons::RFShot>();
-			shot1->OnActivated({
-				.LevelHandler = _levelHandler,
-				.Pos = initialPos,
-				.Params = shotParams
-			});
+			shot1->OnActivated(ActorActivationDetails(
+				_levelHandler,
+				initialPos,
+				shotParams
+			));
 			shot1->OnFire(shared_from_this(), gunspotPos, _speed, angle - 0.22f, IsFacingLeft());
 			_levelHandler->AddActor(shot1);
 
 			std::shared_ptr<Weapons::RFShot> shot2 = std::make_shared<Weapons::RFShot>();
-			shot2->OnActivated({
-				.LevelHandler = _levelHandler,
-				.Pos = initialPos,
-				.Params = shotParams
-			});
+			shot2->OnActivated(ActorActivationDetails(
+				_levelHandler,
+				initialPos,
+				shotParams
+			));
 			shot2->OnFire(shared_from_this(), gunspotPos, _speed, angle + 0.22f, IsFacingLeft());
 			_levelHandler->AddActor(shot2);
 		}
@@ -2473,20 +2474,20 @@ namespace Jazz2::Actors
 		uint8_t shotParams[1] = { _weaponUpgrades[(int)WeaponType::Pepper] };
 
 		std::shared_ptr<Weapons::PepperShot> shot1 = std::make_shared<Weapons::PepperShot>();
-		shot1->OnActivated({
-			.LevelHandler = _levelHandler,
-			.Pos = initialPos,
-			.Params = shotParams
-		});
+		shot1->OnActivated(ActorActivationDetails(
+			_levelHandler,
+			initialPos,
+			shotParams
+		));
 		shot1->OnFire(shared_from_this(), gunspotPos, _speed, angle - Random().NextFloat(-0.2f, 0.2f), IsFacingLeft());
 		_levelHandler->AddActor(shot1);
 
 		std::shared_ptr<Weapons::PepperShot> shot2 = std::make_shared<Weapons::PepperShot>();
-		shot2->OnActivated({
-			.LevelHandler = _levelHandler,
-			.Pos = initialPos,
-			.Params = shotParams
-		});
+		shot2->OnActivated(ActorActivationDetails(
+			_levelHandler,
+			initialPos,
+			shotParams
+		));
 		shot2->OnFire(shared_from_this(), gunspotPos, _speed, angle + Random().NextFloat(-0.2f, 0.2f), IsFacingLeft());
 		_levelHandler->AddActor(shot2);
 
@@ -2496,10 +2497,10 @@ namespace Jazz2::Actors
 	void Player::FireWeaponTNT()
 	{
 		std::shared_ptr<Weapons::TNT> tnt = std::make_shared<Weapons::TNT>();
-		tnt->OnActivated({
-			.LevelHandler = _levelHandler,
-			.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2)
-		});
+		tnt->OnActivated(ActorActivationDetails(
+			_levelHandler,
+			Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2)
+		));
 		tnt->OnFire(shared_from_this());
 		_levelHandler->AddActor(tnt);
 
@@ -2520,11 +2521,11 @@ namespace Jazz2::Actors
 
 		std::shared_ptr<Weapons::Thunderbolt> shot = std::make_shared<Weapons::Thunderbolt>();
 		uint8_t shotParams[1] = { _weaponUpgrades[(int)WeaponType::Thunderbolt] };
-		shot->OnActivated({
-			.LevelHandler = _levelHandler,
-			.Pos = initialPos,
-			.Params = shotParams
-		});
+		shot->OnActivated(ActorActivationDetails(
+			_levelHandler,
+			initialPos,
+			shotParams
+		));
 		shot->OnFire(shared_from_this(), gunspotPos, _speed, angle, IsFacingLeft());
 		_levelHandler->AddActor(shot);
 
@@ -2894,12 +2895,13 @@ namespace Jazz2::Actors
 	void Player::WarpToPosition(Vector2f pos, bool fast)
 	{
 		if (fast) {
-			bool hideTrail = (_pos - pos).Length() > 250.0f;
+			Vector2f posPrev = _pos;
+			bool hideTrail = (posPrev - pos).Length() > 250.0f;
 			MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 			if (hideTrail) {
 				_trailLastPos = _pos;
 			}
-			_levelHandler->WarpCameraToTarget(shared_from_this(), true);
+			_levelHandler->HandlePlayerWarped(shared_from_this(), posPrev, true);
 		} else {
 			EndDamagingMove();
 			SetState(ActorState::IsInvulnerable, true);
@@ -2922,14 +2924,12 @@ namespace Jazz2::Actors
 			PlayPlayerSfx("WarpIn"_s);
 
 			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpInFreefall : AnimState::TransitionWarpIn, false, true, SpecialMoveType::None, [this, pos]() {
-				Vector2f posOld = _pos;
+				Vector2f posPrev = _pos;
 				MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 				_trailLastPos = _pos;
 				PlayPlayerSfx("WarpOut"_s);
 
-				if (Vector2f(posOld.X - pos.X, posOld.Y - pos.Y).Length() > 250) {
-					_levelHandler->WarpCameraToTarget(shared_from_this());
-				}
+				_levelHandler->HandlePlayerWarped(shared_from_this(), posPrev, false);
 
 				_isFreefall |= CanFreefall();
 				SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this]() {
@@ -3524,11 +3524,11 @@ namespace Jazz2::Actors
 
 		_spawnedBird = std::make_shared<Environment::Bird>();
 		uint8_t birdParams[2] = { type, (uint8_t)_playerIndex };
-		_spawnedBird->OnActivated({
-			.LevelHandler = _levelHandler,
-			.Pos = Vector3i((int)pos.X, (int)pos.Y, _renderer.layer() + 80),
-			.Params = birdParams
-		});
+		_spawnedBird->OnActivated(ActorActivationDetails(
+			_levelHandler,
+			Vector3i((int)pos.X, (int)pos.Y, _renderer.layer() + 80),
+			birdParams
+		));
 		_levelHandler->AddActor(_spawnedBird);
 		return true;
 	}

@@ -3,6 +3,8 @@
 #include "../Common.h"
 #include "LevelInitialization.h"
 
+#include <functional>
+
 namespace Jazz2
 {
 	class IRootController
@@ -25,8 +27,15 @@ namespace Jazz2
 		IRootController() { }
 		virtual ~IRootController() { }
 
+		virtual void InvokeAsync(const std::function<void()>& callback) = 0;
+		virtual void InvokeAsync(std::function<void()>&& callback) = 0;
 		virtual void GoToMainMenu(bool afterIntro) = 0;
 		virtual void ChangeLevel(LevelInitialization&& levelInit) = 0;
+
+#if defined(WITH_MULTIPLAYER)
+		virtual bool ConnectToServer(const char* address, std::uint16_t port) = 0;
+		virtual bool CreateServer(std::uint16_t port) = 0;
+#endif
 
 		virtual Flags GetFlags() const = 0;
 		virtual const char* GetNewestVersion() const = 0;
@@ -34,9 +43,7 @@ namespace Jazz2
 		virtual void RefreshCacheLevels() = 0;
 		
 	private:
-		/// Deleted copy constructor
 		IRootController(const IRootController&) = delete;
-		/// Deleted assignment operator
 		IRootController& operator=(const IRootController&) = delete;
 
 	};

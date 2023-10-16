@@ -40,12 +40,28 @@ namespace Jazz2
 		PlayerCarryOver PlayerCarryOvers[MaxPlayerCount];
 
 		LevelInitialization()
-			: PlayerCarryOvers { }
+			: PlayerCarryOvers{}
 		{
 		}
 
+		LevelInitialization(const StringView& episode, const StringView& level, GameDifficulty difficulty, bool isReforged)
+			: PlayerCarryOvers{}
+		{
+			LevelName = level;
+			EpisodeName = episode;
+			Difficulty = difficulty;
+			IsReforged = isReforged;
+			CheatsUsed = false;
+
+			LastExitType = ExitType::None;
+
+			for (int i = 0; i < MaxPlayerCount; i++) {
+				PlayerCarryOvers[i].Type = PlayerType::None;
+			}
+		}
+
 		LevelInitialization(const StringView& episode, const StringView& level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, PlayerType playerType)
-			: PlayerCarryOvers { }
+			: PlayerCarryOvers{}
 		{
 			LevelName = level;
 			EpisodeName = episode;
@@ -64,7 +80,7 @@ namespace Jazz2
 		}
 
 		LevelInitialization(const StringView& episode, const StringView& level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, const PlayerType* playerTypes, int playerCount)
-			: PlayerCarryOvers { }
+			: PlayerCarryOvers{}
 		{
 			LevelName = level;
 			EpisodeName = episode;

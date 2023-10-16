@@ -12,6 +12,13 @@ namespace Jazz2::Scripting
 }
 #endif
 
+#if defined(WITH_MULTIPLAYER)
+namespace Jazz2::Multiplayer
+{
+	class MultiLevelHandler;
+}
+#endif
+
 namespace Jazz2::UI
 {
 	class HUD;
@@ -42,6 +49,9 @@ namespace Jazz2::Actors
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::ScriptPlayerWrapper;
 		friend class Scripting::jjPLAYER;
+#endif
+#if defined(WITH_MULTIPLAYER)
+		friend class Multiplayer::MultiLevelHandler;
 #endif
 		friend class Environment::SwingingVine;
 		friend class Solid::PinballBumper;

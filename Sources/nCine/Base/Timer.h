@@ -28,8 +28,8 @@ namespace nCine
 		/// Returns total accumulated time in seconds
 		float total() const;
 
-		/// Puts the current thread to sleep for the specified number of seconds
-		static void sleep(float seconds);
+		/// Puts the current thread to sleep for the specified number of milliseconds
+		static void sleep(std::uint32_t milliseconds);
 
 	private:
 		bool isRunning_;

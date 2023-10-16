@@ -61,11 +61,11 @@ namespace Jazz2::Actors::Enemies
 							std::shared_ptr<BulletSpit> bulletSpit = std::make_shared<BulletSpit>();
 							uint8_t bulletSpitParams[1];
 							bulletSpitParams[0] = (IsFacingLeft() ? 1 : 0);
-							bulletSpit->OnActivated({
-								.LevelHandler = _levelHandler,
-								.Pos = Vector3i((int)_pos.X + (IsFacingLeft() ? -42.0f : 42.0f), (int)_pos.Y - 6.0f, _renderer.layer() + 2),
-								.Params = bulletSpitParams
-							});
+							bulletSpit->OnActivated(ActorActivationDetails(
+								_levelHandler,
+								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -42.0f : 42.0f), (std::int32_t)_pos.Y - 6.0f, _renderer.layer() + 2),
+								bulletSpitParams
+							));
 							_levelHandler->AddActor(bulletSpit);
 
 							SetAnimation(AnimState::Walk);

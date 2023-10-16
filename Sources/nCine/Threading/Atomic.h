@@ -58,13 +58,13 @@ namespace nCine
 		inline int32_t operator++() {
 			return fetchAdd(1) + 1;
 		}
-		inline int32_t operator++(int) {
+		inline int32_t operator++(int32_t) {
 			return fetchAdd(1);
 		}
 		inline int32_t operator--() {
 			return fetchSub(1) - 1;
 		}
-		inline int32_t operator--(int) {
+		inline int32_t operator--(int32_t) {
 			return fetchSub(1);
 		}
 

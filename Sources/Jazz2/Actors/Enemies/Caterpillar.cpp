@@ -69,10 +69,10 @@ namespace Jazz2::Actors::Enemies
 					SetAnimation((AnimState)5);
 					SetTransition((AnimState)4, true, [this]() {
 						std::shared_ptr<Smoke> smoke = std::make_shared<Smoke>();
-						smoke->OnActivated({
-							.LevelHandler = _levelHandler,
-							.Pos = Vector3i((int)_pos.X - 26, (int)_pos.Y - 18, _renderer.layer() + 20),
-						});
+						smoke->OnActivated(ActorActivationDetails(
+							_levelHandler,
+							Vector3i((std::int32_t)_pos.X - 26, (std::int32_t)_pos.Y - 18, _renderer.layer() + 20)
+						));
 						_levelHandler->AddActor(smoke);
 
 						_smokesLeft--;
