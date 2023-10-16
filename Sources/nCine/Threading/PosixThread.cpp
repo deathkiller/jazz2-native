@@ -169,7 +169,7 @@ namespace nCine
 	void Thread::SetName(const char* name)
 	{
 		if (_sharedBlock == nullptr || _sharedBlock->_handle == 0) {
-			return 0;
+			return;
 		}
 
 		const auto nameLength = strnlen(name, MaxThreadNameLength);
@@ -287,13 +287,15 @@ namespace nCine
 #		else
 		pthread_getaffinity_np(_sharedBlock->_handle, sizeof(cpu_set_t), &affinityMask.cpuSet_);
 #		endif
+
+		return affinityMask;
 	}
 
 	void Thread::SetAffinityMask(ThreadAffinityMask affinityMask)
 	{
 		if (_sharedBlock == nullptr || _sharedBlock->_handle == 0) {
 			LOGW("Cannot set the affinity mask for a not yet created thread");
-			return affinityMask;
+			return;
 		}
 
 #		if defined(DEATH_TARGET_APPLE)
