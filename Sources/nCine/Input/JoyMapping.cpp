@@ -512,6 +512,7 @@ namespace nCine
 			// Razer keyboards and mice, and VMware virtual devices on Linux/BSD are incorrectly recognized as joystick in some cases, don't assign XInput mapping to them
 			const StringView joyNameView = joyName;
 			if ((joyNameView.contains("Razer "_s) && (joyNameView.contains("Keyboard"_s) || joyNameView.contains("DeathAdder"_s))) ||
+				(joyNameView == "SynPS/2 Synaptics TouchPad"_s) ||
 				(joyNameView == "VMware Virtual USB Mouse"_s)) {
 				return false;
 			}

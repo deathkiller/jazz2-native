@@ -70,7 +70,7 @@ jobs:
           'x86' { $arch = 'Win32' } 
           'x64' {
             $arch = 'x64'
-            if(($archext -eq 'SSE') -or ($archext -eq 'SSE2')) {
+            if(($archexts -eq 'SSE') -or ($archexts -eq 'SSE2')) {
               $archexts = ''
             }
           } 
