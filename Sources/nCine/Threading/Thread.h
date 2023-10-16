@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Atomic.h"
+
 #include <CommonWindows.h>
 
 #if defined(DEATH_TARGET_WINDOWS)
@@ -64,15 +66,61 @@ namespace nCine
 		/// A default constructor for an object without the associated function
 		Thread();
 		/// Creates a thread around a function and runs it
-		Thread(ThreadFunctionPtr startFunction, void* arg);
+		Thread(ThreadFunctionPtr threadFunc, void* threadArg);
+
+		~Thread();
+
+		Thread(const Thread& other)
+		{
+			// Copy constructor
+			_sharedBlock = other._sharedBlock;
+
+			if (_sharedBlock != nullptr) {
+				_sharedBlock->_refCount.fetchAdd(1);
+			}
+		}
+
+		Thread& operator=(const Thread& other)
+		{
+			Detach();
+
+			// Copy assignment
+			_sharedBlock = other._sharedBlock;
+
+			if (_sharedBlock != nullptr) {
+				_sharedBlock->_refCount.fetchAdd(1);
+			}
+
+			return *this;
+		}
+
+		Thread(Thread&& other) noexcept
+		{
+			// Move constructor
+			_sharedBlock = other._sharedBlock;
+			other._sharedBlock = nullptr;
+		}
+
+		Thread& operator=(Thread&& other) noexcept
+		{
+			Detach();
+
+			// Move assignment
+			_sharedBlock = other._sharedBlock;
+			other._sharedBlock = nullptr;
+
+			return *this;
+		}
 
 		/// Returns the number of processors in the machine
 		static unsigned int GetProcessorCount();
 
 		/// Spawns a new thread if the object hasn't one already associated
-		void Run(ThreadFunctionPtr startFunction, void* arg);
+		void Run(ThreadFunctionPtr threadFunc, void* threadArg);
 		/// Joins the thread
 		void* Join();
+
+		void Detach();
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
 #	if !defined(DEATH_TARGET_APPLE)
@@ -111,22 +159,22 @@ namespace nCine
 #endif
 
 	private:
-		/// The structure wrapping the information for thread creation
-		struct ThreadInfo
+		struct SharedBlock
 		{
-			ThreadInfo()
-				: startFunction(nullptr), threadArg(nullptr) {}
-			ThreadFunctionPtr startFunction;
-			void* threadArg;
+			Atomic32 _refCount;
+#if defined(DEATH_TARGET_WINDOWS)
+			HANDLE _handle;
+#else
+			pthread_t _handle;
+#endif
+			ThreadFunctionPtr _threadFunc;
+			void* _threadArg;
 		};
 
-#if defined(DEATH_TARGET_WINDOWS)
-		HANDLE handle_;
-#else
-		pthread_t tid_;
-#endif
+		Thread(SharedBlock* sharedBlock);
 
-		ThreadInfo threadInfo_;
+		SharedBlock* _sharedBlock;
+
 		/// The wrapper start function for thread creation
 #if defined(DEATH_TARGET_WINDOWS)
 #	if defined(DEATH_TARGET_MINGW)

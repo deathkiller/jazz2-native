@@ -232,10 +232,7 @@ namespace Jazz2::Events
 			return;
 		}
 
-		ActorActivationDetails details;
-		details.LevelHandler = _levelHandler;
-		details.Params = spawnParams;
-		it->second.PreloadFunction(details);
+		it->second.PreloadFunction(ActorActivationDetails(_levelHandler, {}, spawnParams));
 	}
 
 	std::shared_ptr<ActorBase> EventSpawner::SpawnEvent(EventType type, std::uint8_t* spawnParams, ActorState flags, std::int32_t x, std::int32_t y, std::int32_t z)
@@ -250,12 +247,9 @@ namespace Jazz2::Events
 			return nullptr;
 		}
 
-		ActorActivationDetails details;
-		details.LevelHandler = _levelHandler;
-		details.Pos = pos;
+		ActorActivationDetails details(_levelHandler, pos, spawnParams);
 		details.State = flags;
 		details.Type = type;
-		details.Params = spawnParams;
 		return it->second.CreateFunction(details);
 	}
 }

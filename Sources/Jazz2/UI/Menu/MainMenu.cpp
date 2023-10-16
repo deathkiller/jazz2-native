@@ -326,6 +326,18 @@ namespace Jazz2::UI::Menu
 		_root->ChangeLevel(std::move(levelInit));
 	}
 
+#if defined(WITH_MULTIPLAYER)
+	bool MainMenu::ConnectToServer(const char* address, std::uint16_t port)
+	{
+		return _root->ConnectToServer(address, port);
+	}
+
+	bool MainMenu::CreateServer(std::uint16_t port)
+	{
+		return _root->CreateServer(port);
+	}
+#endif
+
 	void MainMenu::ApplyPreferencesChanges(ChangedPreferencesType type)
 	{
 		if ((type & ChangedPreferencesType::Graphics) == ChangedPreferencesType::Graphics) {

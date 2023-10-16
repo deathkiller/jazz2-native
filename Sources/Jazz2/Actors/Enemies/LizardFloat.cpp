@@ -66,11 +66,11 @@ namespace Jazz2::Actors::Enemies
 		_copter = std::make_shared<Environment::Copter>();
 		uint8_t copterParams[1];
 		copterParams[0] = 1;
-		_copter->OnActivated({
-			.LevelHandler = _levelHandler,
-			.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2),
-			.Params = copterParams
-		});
+		_copter->OnActivated(ActorActivationDetails(
+			_levelHandler,
+			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2),
+			copterParams
+		));
 		_levelHandler->AddActor(_copter);
 
 		async_return true;
@@ -121,11 +121,11 @@ namespace Jazz2::Actors::Enemies
 					uint8_t bombParams[2];
 					bombParams[0] = (uint8_t)(_theme + 1);
 					bombParams[1] = (IsFacingLeft() ? 1 : 0);
-					bomb->OnActivated({
-						.LevelHandler = _levelHandler,
-						.Pos = Vector3i((int)_pos.X + (IsFacingLeft() ? -30.0f : 30.0f), (int)_pos.Y - 10.0f, _renderer.layer() + 2),
-						.Params = bombParams
-					});
+					bomb->OnActivated(ActorActivationDetails(
+						_levelHandler,
+						Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -30.0f : 30.0f), (std::int32_t)_pos.Y - 10.0f, _renderer.layer() + 2),
+						bombParams
+					));
 					_levelHandler->AddActor(bomb);
 
 					SetTransition(AnimState::TransitionAttackEnd, false);
@@ -183,14 +183,14 @@ namespace Jazz2::Actors::Enemies
 			lizardParams[0] = _theme;
 			lizardParams[1] = 1;
 			lizardParams[2] = (IsFacingLeft() ? 1 : 0);
-			lizard->OnActivated({
-				.LevelHandler = _levelHandler,
-				.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()),
-				.Params = lizardParams
-			});
+			lizard->OnActivated(ActorActivationDetails(
+				_levelHandler,
+				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()),
+				lizardParams
+			));
 			_levelHandler->AddActor(lizard);
 
-			Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 2), Explosion::Type::SmokeGray);
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2), Explosion::Type::SmokeGray);
 		}
 
 		return EnemyBase::OnPerish(collider);

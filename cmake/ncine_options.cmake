@@ -138,3 +138,10 @@ option(DEATH_CPU_USE_RUNTIME_DISPATCH "Build with runtime dispatch for CPU-depen
 
 # Jazz² Resurrection options
 option(SHAREWARE_DEMO_ONLY "Show only Shareware Demo episode" OFF)
+
+if(EMSCRIPTEN)
+	# Multiplayer is not supported on Emscripten yet
+	set(WITH_MULTIPLAYER OFF)
+else()
+	option(WITH_MULTIPLAYER "Enable multiplayer support" OFF)
+endif()

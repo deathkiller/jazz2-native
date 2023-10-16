@@ -1,15 +1,14 @@
 ﻿#include "TileMap.h"
 
 #include "../LevelHandler.h"
-#include "../Actors/Environment/IceBlock.h"
 
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Base/Random.h"
 
 namespace Jazz2::Tiles
 {
-	TileMap::TileMap(LevelHandler* levelHandler, const StringView& tileSetPath, std::uint16_t captionTileId, PitType pitType, bool applyPalette)
-		: _levelHandler(levelHandler), _sprLayerIndex(-1), _pitType(pitType), _renderCommandsCount(0), _collapsingTimer(0.0f),
+	TileMap::TileMap(ITileMapOwner* owner, const StringView& tileSetPath, std::uint16_t captionTileId, PitType pitType, bool applyPalette)
+		: _owner(owner), _sprLayerIndex(-1), _pitType(pitType), _renderCommandsCount(0), _collapsingTimer(0.0f),
 			_triggerState(TriggerCount), _texturedBackgroundLayer(-1), _texturedBackgroundPass(this)
 	{
 		auto& tileSetPart = _tileSets.emplace_back();
@@ -218,31 +217,7 @@ namespace Jazz2::Tiles
 					} else if (params.UsedWeaponType == WeaponType::Freezer && tile.DestructFrameIndex < (_animatedTiles[tile.DestructAnimation].Tiles.size() - 2)) {
 						std::int32_t tx = x * TileSet::DefaultTileSize + TileSet::DefaultTileSize / 2;
 						std::int32_t ty = y * TileSet::DefaultTileSize + TileSet::DefaultTileSize / 2;
-
-						bool iceBlockFound = false;
-						_levelHandler->FindCollisionActorsByAABB(nullptr, AABBf(tx - 1.0f, ty - 1.0f, tx + 1.0f, ty + 1.0f), [&iceBlockFound](Actors::ActorBase* actor) -> bool {
-							if ((actor->GetState() & Actors::ActorState::IsDestroyed) != Actors::ActorState::None) {
-								return true;
-							}
-
-							Actors::Environment::IceBlock* iceBlock = dynamic_cast<Actors::Environment::IceBlock*>(actor);
-							if (iceBlock != nullptr) {
-								iceBlock->ResetTimeLeft();
-								iceBlockFound = true;
-								return false;
-							}
-
-							return true;
-						});
-
-						if (!iceBlockFound) {
-							std::shared_ptr<Actors::Environment::IceBlock> iceBlock = std::make_shared<Actors::Environment::IceBlock>();
-							iceBlock->OnActivated({
-								.LevelHandler = _levelHandler,
-								.Pos = Vector3i(tx - 1, ty - 2, ILevelHandler::MainPlaneZ)
-							});
-							_levelHandler->AddActor(iceBlock);
-						}
+						_owner->OnTileFrozen(tx, ty);
 						return false;
 					}
 				} else if (tile.DestructType == TileDestructType::Special && (params.DestructType & TileDestructType::Special) == TileDestructType::Special) {
@@ -508,6 +483,13 @@ namespace Jazz2::Tiles
 		return SuspendType::None;
 	}
 
+	bool TileMap::AdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount)
+	{
+		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+		LayerTile& tile = _layers[_sprLayerIndex].Layout[tx + ty * layoutSize.X];
+		return AdvanceDestructibleTileAnimation(tile, tx, ty, amount, {});
+	}
+
 	bool TileMap::AdvanceDestructibleTileAnimation(LayerTile& tile, std::int32_t tx, std::int32_t ty, std::int32_t& amount, const StringView& soundName)
 	{
 		AnimatedTile& anim = _animatedTiles[tile.DestructAnimation];
@@ -520,7 +502,7 @@ namespace Jazz2::Tiles
 			tile.TileID = anim.Tiles[tile.DestructFrameIndex].TileID;
 			if (tile.DestructFrameIndex >= max) {
 				if (!soundName.empty()) {
-					_levelHandler->PlayCommonSfx(soundName, Vector3f(tx * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2),
+					_owner->PlayCommonSfx(soundName, Vector3f(tx * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2),
 						ty * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2), 0.0f));
 				}
 				CreateTileDebris(anim.Tiles[anim.Tiles.size() - 1].TileID, tx, ty);
@@ -528,9 +510,7 @@ namespace Jazz2::Tiles
 
 			amount -= current;
 
-#if MULTIPLAYER && SERVER
-			((LevelHandler)levelHandler).OnAdvanceDestructibleTileAnimation(tx, ty, current);
-#endif
+			_owner->OnAdvanceDestructibleTileAnimation(tx, ty, current);
 			return true;
 		}
 		return false;
@@ -571,8 +551,8 @@ namespace Jazz2::Tiles
 			return;
 		}
 
-		Vector2i viewSize = _levelHandler->GetViewSize();
-		Vector2f viewCenter = _levelHandler->GetCameraPos();
+		Vector2i viewSize = _owner->GetViewSize();
+		Vector2f viewCenter = _owner->GetCameraPos();
 
 		Vector2i tileCount = layer.LayoutSize;
 		Vector2i tileSize = Vector2i(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
@@ -1303,8 +1283,8 @@ namespace Jazz2::Tiles
 			return;
 		}
 
-		Vector2i viewSize = _levelHandler->GetViewSize();
-		Vector2f viewCenter = _levelHandler->GetCameraPos();
+		Vector2i viewSize = _owner->GetViewSize();
+		Vector2f viewCenter = _owner->GetCameraPos();
 
 		auto command = &_texturedBackgroundPass._outputRenderCommand;
 

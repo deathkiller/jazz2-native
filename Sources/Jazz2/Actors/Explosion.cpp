@@ -19,11 +19,11 @@ namespace Jazz2::Actors
 		std::shared_ptr<Explosion> explosion = std::make_shared<Explosion>();
 		uint8_t explosionParams[2];
 		*(uint16_t*)&explosionParams[0] = (uint16_t)type;
-		explosion->OnActivated({
-			.LevelHandler = levelHandler,
-			.Pos = pos,
-			.Params = explosionParams
-		});
+		explosion->OnActivated(ActorActivationDetails(
+			levelHandler,
+			pos,
+			explosionParams
+		));
 		levelHandler->AddActor(explosion);
 	}
 

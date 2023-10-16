@@ -56,11 +56,11 @@ namespace Jazz2::Actors::Bosses
 
 		_bottom = std::make_shared<BollyPart>();
 		uint8_t bottomParams[1] = { 1 };
-		_bottom->OnActivated({
-			.LevelHandler = _levelHandler,
-			.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 2),
-			.Params = bottomParams
-		});
+		_bottom->OnActivated(ActorActivationDetails(
+			_levelHandler,
+			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2),
+			bottomParams
+		));
 		_levelHandler->AddActor(_bottom);
 
 		/*_turret = std::make_shared<BollyPart>();
@@ -76,11 +76,11 @@ namespace Jazz2::Actors::Bosses
 		for (int32_t i = 0; i < chainLength; i++) {
 			_chain[i] = std::make_shared<BollyPart>();
 			uint8_t chainParams[1] = { (uint8_t)((i % 3) == 2 ? 3 : 4) };
-			_chain[i]->OnActivated({
-				.LevelHandler = _levelHandler,
-				.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - ((i % 3) == 2 ? 2 : 4)),
-				.Params = chainParams
-			});
+			_chain[i]->OnActivated(ActorActivationDetails(
+				_levelHandler,
+				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - ((i % 3) == 2 ? 2 : 4)),
+				chainParams
+			));
 			_levelHandler->AddActor(_chain[i]);
 		}
 
@@ -274,10 +274,10 @@ namespace Jazz2::Actors::Bosses
 			Vector2f diff = (targetPos - _pos).Normalized();
 
 			std::shared_ptr<Rocket> rocket = std::make_shared<Rocket>();
-			rocket->OnActivated({
-				.LevelHandler = _levelHandler,
-				.Pos = Vector3i((int)_pos.X + (IsFacingLeft() ? 10 : -10), (int)_pos.Y + 10, _renderer.layer() - 4)
-			});
+			rocket->OnActivated(ActorActivationDetails(
+				_levelHandler,
+				Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? 10 : -10), (std::int32_t)_pos.Y + 10, _renderer.layer() - 4)
+			));
 			rocket->_renderer.setRotation(atan2f(diff.Y, diff.X));
 			_levelHandler->AddActor(rocket);
 		}

@@ -199,6 +199,12 @@
     <Filter Include="Source Files\Shared\IO">
       <UniqueIdentifier>{e4b4004b-eae4-4a74-853e-4d4318310b74}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Jazz2\Multiplayer">
+      <UniqueIdentifier>{e6c68c6e-edbd-4024-90a5-9cfb436da67f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Multiplayer">
+      <UniqueIdentifier>{66756cef-10ce-4ae3-ade6-87422c5ddb2e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1314,8 +1320,29 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Tags.h">
       <Filter>Header Files\Shared\Containers</Filter>
     </ClInclude>
-    <ClInclude Include="Shared\Containers\DateTime.h">
-      <Filter>Header Files\Shared\Containers</Filter>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\DateTime.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\NetworkManager.h">
+      <Filter>Header Files\Jazz2\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\MultiLevelHandler.h">
+      <Filter>Header Files\Jazz2\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\PacketTypes.h">
+      <Filter>Header Files\Jazz2\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\INetworkHandler.h">
+      <Filter>Header Files\Jazz2\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\Peer.h">
+      <Filter>Header Files\Jazz2\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\RemoteActor.h">
+      <Filter>Header Files\Jazz2\Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Tiles\ITileMapOwner.h">
+      <Filter>Header Files\Jazz2\Tiles</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2206,6 +2233,15 @@
     </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\DateTime.cpp">
       <Filter>Source Files\Shared\Containers</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\MultiLevelHandler.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\NetworkManager.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\RemoteActor.cpp">
+      <Filter>Source Files\Jazz2\Actors</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

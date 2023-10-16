@@ -19,7 +19,7 @@ namespace Jazz2::Actors::Solid
 		return SolidObjectBase::OnPerish(collider);
 	}
 
-	void GenericContainer::AddContent(EventType eventType, int count, uint8_t* eventParams, int eventParamsSize)
+	void GenericContainer::AddContent(EventType eventType, int count, const uint8_t* eventParams, int eventParamsSize)
 	{
 		if (count <= 0) {
 			return;

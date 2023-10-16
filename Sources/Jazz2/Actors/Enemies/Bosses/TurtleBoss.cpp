@@ -84,10 +84,10 @@ namespace Jazz2::Actors::Bosses
 					SetAnimation(AnimState::Idle);
 					SetTransition((AnimState)1073741824, false, [this]() {
 						_mace = std::make_shared<Mace>();
-						_mace->OnActivated({
-							.LevelHandler = _levelHandler,
-							.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 2)
-						});
+						_mace->OnActivated(ActorActivationDetails(
+							_levelHandler,
+							Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2)
+						));
 						_levelHandler->AddActor(_mace);
 
 						SetTransition((AnimState)1073741825, false, [this]() {
@@ -158,11 +158,11 @@ namespace Jazz2::Actors::Bosses
 		*(float*)&shellParams[0] = _speed.X * 1.1f;
 		*(float*)&shellParams[4] = shellSpeedY;
 		shellParams[8] = 2;
-		shell->OnActivated({
-			.LevelHandler = _levelHandler,
-			.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()),
-			.Params = shellParams
-		});
+		shell->OnActivated(ActorActivationDetails(
+			_levelHandler,
+			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()),
+			shellParams
+		));
 		_levelHandler->AddActor(shell);
 
 		Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2), Explosion::Type::SmokeGray);

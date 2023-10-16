@@ -65,11 +65,11 @@ namespace Jazz2::Actors::Enemies
 		} else {
 			std::shared_ptr<Sucker> sucker = std::make_shared<Sucker>();
 			uint8_t suckerParams[1] = { (uint8_t)_lastHitDir };
-			sucker->OnActivated({
-				.LevelHandler = _levelHandler,
-				.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()),
-				.Params = suckerParams
-			});
+			sucker->OnActivated(ActorActivationDetails(
+				_levelHandler,
+				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()),
+				suckerParams
+			));
 			_levelHandler->AddActor(sucker);
 		}
 

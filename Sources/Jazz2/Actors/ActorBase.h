@@ -23,6 +23,13 @@ namespace Jazz2
 	class LevelHandler;
 }
 
+#if defined(WITH_MULTIPLAYER)
+namespace Jazz2::Multiplayer
+{
+	class MultiLevelHandler;
+}
+#endif
+
 namespace Jazz2::Actors
 {
 	class Player;
@@ -30,63 +37,65 @@ namespace Jazz2::Actors
 	enum class ActorState {
 		None = 0x00,
 
-		/// @brief Actor is created from event map, this flag is used automatically by event system
+		/** @brief Actor is created from event map, this flag is used automatically by event system */
 		IsCreatedFromEventMap = 0x01,
-		/// @brief Actor is created by generator, this flag is used automatically by event system
+		/** @brief Actor is created by generator, this flag is used automatically by event system */
 		IsFromGenerator = 0x02,
 
-		/// @brief Actor should be illuminated
+		/** @brief Actor should be illuminated */
 		Illuminated = 0x04,
 
-		/// @brief Actor should be created asynchronously, not to block main thread
+		/** @brief Actor should be created asynchronously, not to block main thread */
 		Async = 0x08,
 
-		/// @brief Mask of all instantiation flags that can be used in @ref ActorActivationDetails
+		/** @brief Mask of all instantiation flags that can be used in @ref ActorActivationDetails */
 		InstantiationFlags = IsCreatedFromEventMap | IsFromGenerator | Illuminated | Async,
 
-		/// @brief This flag is set automatically after call to @ref ActorBase::OnActivatedAsync()
+		/** @brief This flag is set automatically after call to @ref ActorBase::OnActivatedAsync() */
 		Initialized = 0x0100,
 
 		// Actor instance flags
-		/// @brief Actor is invulnerable
+		/** @brief Actor is invulnerable */
 		IsInvulnerable = 0x0200,
-		/// @brief Actor is standing on the ground and can jump
+		/** @brief Actor is standing on the ground and can jump */
 		CanJump = 0x0400,
-		/// @brief Actor can be frozen
+		/** @brief Actor can be frozen */
 		CanBeFrozen = 0x0800,
-		/// @brief Actor is facing left
+		/** @brief Actor is facing left */
 		IsFacingLeft = 0x1000,
-		/// @brief Actor triggers TNT explosion
+		/** @brief Actor triggers TNT explosion */
 		TriggersTNT = 0x2000,
-		/// @brief Actor should be preserved when state is rolled back to checkpoint
+		/** @brief Actor should be preserved when state is rolled back to checkpoint */
 		PreserveOnRollback = 0x4000,
 
 		// Collision flags
-		/// @brief Collide with tiles
+		/** @brief Collide with tiles */
 		CollideWithTileset = 0x10000,
-		/// @brief Collide with other non-solid actors, @ref ActorBase::OnHandleCollision() will be called for each collision
+		/** @brief Collide with other non-solid actors, @ref ActorBase::OnHandleCollision() will be called for each collision */
 		CollideWithOtherActors = 0x20000,
-		/// @brief Collide with solid objects
+		/** @brief Collide with solid objects */
 		CollideWithSolidObjects = 0x40000,
-		/// @brief Don't add object to collision tree at all (cannot be changed during object lifetime)
+		/** @brief Don't add object to collision tree at all (cannot be changed during object lifetime) */
 		ForceDisableCollisions = 0x80000,
 
-		/// @brief Check collisions at the end of current frame, should be used if position or size changed
+		/** @brief Check collisions at the end of current frame, should be used if position or size changed */
 		IsDirty = 0x100000,
-		/// @brief Remove object at the end of current frame
+		/** @brief Remove object at the end of current frame */
 		IsDestroyed = 0x200000,
 
-		/// @brief Apply gravitation
+		/** @brief Apply gravitation */
 		ApplyGravitation = 0x400000,
-		/// @brief Marks object as solid, so other objects with @ref CollideWithSolidObjects will collide with it
+		/** @brief Marks object as solid, so other objects with @ref CollideWithSolidObjects will collide with it */
 		IsSolidObject = 0x800000,
-		/// @brief Check collisions only with hitbox
+		/** @brief Check collisions only with hitbox */
 		SkipPerPixelCollisions = 0x1000000,
 
-		/// @brief Don't use full hitbox for collisions with tiles, also exclude upper part of hitbox when falling down
+		/** @brief Don't use full hitbox for collisions with tiles, also exclude upper part of hitbox when falling down */
 		CollideWithTilesetReduced = 0x2000000,
-		/// @brief Collide with other solid object only if it's above center of the other hitbox
+		/** @brief Collide with other solid object only if it's above center of the other hitbox */
 		CollideWithSolidObjectsBelow = 0x4000000,
+		/** @brief Ignore solid collisions agains similar objects that have this flag */
+		ExcludeSimilar = 0x8000000,
 	};
 
 	DEFINE_ENUM_OPERATORS(ActorState);
@@ -96,7 +105,12 @@ namespace Jazz2::Actors
 		Vector3i Pos;
 		ActorState State;
 		EventType Type;
-		uint8_t* Params;
+		const uint8_t* Params;
+
+		ActorActivationDetails(ILevelHandler* levelHandler, const Vector3i& pos, const uint8_t* params = nullptr)
+			: LevelHandler(levelHandler), Pos(pos), State(ActorState::None), Type(EventType::Empty), Params(params)
+		{
+		}
 	};
 
 	enum class MoveType {
@@ -118,6 +132,9 @@ namespace Jazz2::Actors
 	class ActorBase : public std::enable_shared_from_this<ActorBase>
 	{
 		friend class Jazz2::LevelHandler;
+#if defined(WITH_MULTIPLAYER)
+		friend class Jazz2::Multiplayer::MultiLevelHandler;
+#endif
 
 	public:
 		ActorBase();
@@ -182,26 +199,23 @@ namespace Jazz2::Actors
 
 		public:
 			ActorRenderer(ActorBase* owner)
-				:
-				BaseSprite(nullptr, nullptr, 0.0f, 0.0f), AnimPaused(false),
-				FrameConfiguration(), FrameDimensions(), LoopMode(AnimationLoopMode::Loop),
-				FirstFrame(0), FrameCount(0), AnimDuration(0.0f), AnimTime(0.0f), CurrentFrame(0), Hotspot(),
-				_owner(owner), _rendererType((ActorRendererType)-1), _rendererTransition(0.0f)
+				: BaseSprite(nullptr, nullptr, 0.0f, 0.0f), AnimPaused(false), FrameConfiguration(), FrameDimensions(),
+					LoopMode(AnimationLoopMode::Loop), FirstFrame(0), FrameCount(0), AnimDuration(0.0f), AnimTime(0.0f),
+					CurrentFrame(0), Hotspot(), _owner(owner), _rendererType((ActorRendererType)-1), _rendererTransition(0.0f)
 			{
 				type_ = ObjectType::Sprite;
 				Initialize(ActorRendererType::Default);
 			}
 
 			bool AnimPaused;
-
 			Vector2i FrameConfiguration;
 			Vector2i FrameDimensions;
 			AnimationLoopMode LoopMode;
-			int FirstFrame;
-			int FrameCount;
+			std::int32_t FirstFrame;
+			std::int32_t FrameCount;
 			float AnimDuration;
 			float AnimTime;
-			int CurrentFrame;
+			std::int32_t CurrentFrame;
 			Vector2i Hotspot;
 
 			void Initialize(ActorRendererType type);
@@ -280,8 +294,10 @@ namespace Jazz2::Actors
 		std::shared_ptr<AudioBufferPlayer> PlaySfx(const StringView& identifier, float gain = 1.0f, float pitch = 1.0f);
 		void SetAnimation(const StringView& identifier);
 		bool SetAnimation(AnimState state);
-		bool SetTransition(const StringView& identifier, bool cancellable, const std::function<void()>& callback = []() { });
-		bool SetTransition(AnimState state, bool cancellable, const std::function<void()>& callback = []() { });
+		bool SetTransition(const StringView& identifier, bool cancellable, const std::function<void()>& callback = nullptr);
+		bool SetTransition(const StringView& identifier, bool cancellable, std::function<void()>&& callback);
+		bool SetTransition(AnimState state, bool cancellable, const std::function<void()>& callback = nullptr);
+		bool SetTransition(AnimState state, bool cancellable, std::function<void()>&& callback);
 		void CancelTransition();
 		void ForceCancelTransition();
 		virtual void OnAnimationStarted();

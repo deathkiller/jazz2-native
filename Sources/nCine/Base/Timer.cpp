@@ -43,16 +43,15 @@ namespace nCine
 			: static_cast<float>(accumulatedTime_) / clock().frequency();
 	}
 
-	void Timer::sleep(float seconds)
+	void Timer::sleep(std::uint32_t milliseconds)
 	{
 #if defined(DEATH_TARGET_SWITCH)
-		const std::int64_t nanoseconds = static_cast<std::int64_t>(seconds) * 1000000000;
+		const std::int64_t nanoseconds = static_cast<std::int64_t>(milliseconds) * 1000000;
 		svcSleepThread(nanoseconds);
 #elif defined(DEATH_TARGET_WINDOWS)
-		const unsigned int milliseconds = static_cast<unsigned int>(seconds) * 1000;
-		::SleepEx(milliseconds, FALSE);
+		::SleepEx(static_cast<DWORD>(milliseconds), FALSE);
 #else
-		const unsigned int microseconds = static_cast<unsigned int>(seconds) * 1000000;
+		const unsigned int microseconds = static_cast<unsigned int>(milliseconds) * 1000;
 		::usleep(microseconds);
 #endif
 	}

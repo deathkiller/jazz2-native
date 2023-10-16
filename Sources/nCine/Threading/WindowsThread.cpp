@@ -13,13 +13,17 @@ namespace nCine
 	namespace
 	{
 #if !defined(PTW32_VERSION) && !defined(__WINPTHREADS_VERSION)
-		const unsigned int MaxThreadNameLength = 256;
+		constexpr unsigned int MaxThreadNameLength = 256;
 
 		void SetThreadName(HANDLE handle, const char* name)
 		{
-			if (handle == NULL) return;
+			if (handle == NULL) {
+				return;
+			}
 
-#	if defined(NTDDI_WIN10_RS2) && NTDDI_VERSION >= NTDDI_WIN10_RS2
+// Don't use SetThreadDescription() yet, because the functions was introduced in Windows 10, version 1607
+//#	if defined(NTDDI_WIN10_RS2) && NTDDI_VERSION >= NTDDI_WIN10_RS2
+#if 0
 			wchar_t buffer[MaxThreadNameLength];
 			size_t charsConverted;
 			mbstowcs_s(&charsConverted, buffer, name, MaxThreadNameLength);
@@ -29,8 +33,7 @@ namespace nCine
 			constexpr DWORD MS_VC_EXCEPTION = 0x406D1388;
 
 #		pragma pack(push, 8)
-			struct THREADNAME_INFO
-			{
+			struct THREADNAME_INFO {
 				DWORD dwType;
 				LPCSTR szName;
 				DWORD dwThreadID;
@@ -38,7 +41,7 @@ namespace nCine
 			};
 #		pragma pack(pop)
 
-			const DWORD threadId = (handle != reinterpret_cast<HANDLE>(-1)) ? GetThreadId(handle) : GetCurrentThreadId();
+			const DWORD threadId = (handle == reinterpret_cast<HANDLE>(-1) ? ::GetCurrentThreadId() : ::GetThreadId(handle));
 			THREADNAME_INFO info;
 			info.dwType = 0x1000;
 			info.szName = name;
@@ -46,7 +49,7 @@ namespace nCine
 			info.dwFlags = 0;
 
 			__try {
-				RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), reinterpret_cast<ULONG_PTR*>(&info));
+				::RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), reinterpret_cast<ULONG_PTR*>(&info));
 			} __except (EXCEPTION_EXECUTE_HANDLER) {
 			}
 #	endif
@@ -75,49 +78,84 @@ namespace nCine
 	}
 
 	Thread::Thread()
-		: handle_(NULL)
+		: _sharedBlock(nullptr)
 	{
 	}
 
-	Thread::Thread(ThreadFunctionPtr startFunction, void* arg)
-		: handle_(NULL)
+	Thread::Thread(ThreadFunctionPtr threadFunc, void* threadArg)
+		: Thread()
 	{
-		Run(startFunction, arg);
+		Run(threadFunc, threadArg);
+	}
+
+	Thread::Thread(SharedBlock* sharedBlock)
+		: _sharedBlock(sharedBlock)
+	{
+	}
+
+	Thread::~Thread()
+	{
+		Detach();
 	}
 
 	unsigned int Thread::GetProcessorCount()
 	{
-		unsigned int numProcs = 0;
-
 		SYSTEM_INFO si;
-		GetSystemInfo(&si);
-		numProcs = si.dwNumberOfProcessors;
-
-		return numProcs;
+		::GetSystemInfo(&si);
+		return si.dwNumberOfProcessors;
 	}
 
-	void Thread::Run(ThreadFunctionPtr startFunction, void* arg)
+	void Thread::Run(ThreadFunctionPtr threadFunc, void* threadArg)
 	{
-		if (handle_ == NULL) {
-			threadInfo_.startFunction = startFunction;
-			threadInfo_.threadArg = arg;
-			handle_ = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0, WrapperFunction, &threadInfo_, 0, nullptr));
-			FATAL_ASSERT_MSG(handle_, "_beginthreadex() failed");
-		} else {
-			LOGW("Thread %u is already running", handle_);
+		if (_sharedBlock != nullptr) {
+			LOGW("Thread %u is already running", _sharedBlock->_handle);
+			return;
+		}
+
+		_sharedBlock = new SharedBlock();
+		_sharedBlock->_refCount = 2;	// Ref. count is decreased in WrapperFunction()
+		_sharedBlock->_threadFunc = threadFunc;
+		_sharedBlock->_threadArg = threadArg;
+		_sharedBlock->_handle = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0, Thread::WrapperFunction, _sharedBlock, 0, nullptr));
+		if (_sharedBlock->_handle == NULL) {
+			DWORD error = ::GetLastError();
+			delete _sharedBlock;
+			_sharedBlock = nullptr;
+			FATAL_MSG("_beginthreadex() failed with error 0x%08x", error);
 		}
 	}
 
 	void* Thread::Join()
 	{
-		::WaitForSingleObject(handle_, INFINITE);
-		handle_ = NULL;
+		if (_sharedBlock != nullptr) {
+			::WaitForSingleObject(_sharedBlock->_handle, INFINITE);
+			//::CloseHandle(_sharedBlock->_handle);
+			//_sharedBlock->_handle = NULL;
+		}
 		return nullptr;
+	}
+
+	void Thread::Detach()
+	{
+		if (_sharedBlock == nullptr) {
+			return;
+		}
+
+		// This returns the value before decrementing
+		int32_t refCount = _sharedBlock->_refCount.fetchSub(1);
+		if (refCount == 1) {
+			::CloseHandle(_sharedBlock->_handle);
+			delete _sharedBlock;
+		}
+
+		_sharedBlock = nullptr;
 	}
 
 	void Thread::SetName(const char* name)
 	{
-		SetThreadName(handle_, name);
+		if (_sharedBlock != nullptr) {
+			SetThreadName(_sharedBlock->_handle, name);
+		}
 	}
 
 	void Thread::SetSelfName(const char* name)
@@ -131,13 +169,13 @@ namespace nCine
 
 	int Thread::GetPriority() const
 	{
-		return (handle_ != NULL ? ::GetThreadPriority(handle_) : 0);
+		return (_sharedBlock != nullptr ? ::GetThreadPriority(_sharedBlock->_handle) : 0);
 	}
 
 	void Thread::SetPriority(int priority)
 	{
-		if (handle_ != 0) {
-			::SetThreadPriority(handle_, priority);
+		if (_sharedBlock != nullptr) {
+			::SetThreadPriority(_sharedBlock->_handle, priority);
 		}
 	}
 
@@ -160,19 +198,20 @@ namespace nCine
 	void Thread::Abort()
 	{
 #if !defined(DEATH_TARGET_WINDOWS_RT)
-		// TerminateThread() is not supported on WinRT
-		::TerminateThread(handle_, 0);
+		if (_sharedBlock != nullptr) {
+			// TerminateThread() is not supported on WinRT
+			::TerminateThread(_sharedBlock->_handle, 0);
+		}
 #endif
-		handle_ = NULL;
 	}
 
 	ThreadAffinityMask Thread::GetAffinityMask() const
 	{
 		ThreadAffinityMask affinityMask;
 
-		if (handle_ != NULL) {
-			affinityMask.affinityMask_ = ::SetThreadAffinityMask(handle_, ~0);
-			::SetThreadAffinityMask(handle_, affinityMask.affinityMask_);
+		if (_sharedBlock != nullptr) {
+			affinityMask.affinityMask_ = ::SetThreadAffinityMask(_sharedBlock->_handle, ~0);
+			::SetThreadAffinityMask(_sharedBlock->_handle, affinityMask.affinityMask_);
 		} else {
 			LOGW("Cannot get the affinity for a thread that has not been created yet");
 		}
@@ -182,8 +221,8 @@ namespace nCine
 
 	void Thread::SetAffinityMask(ThreadAffinityMask affinityMask)
 	{
-		if (handle_ != NULL)
-			::SetThreadAffinityMask(handle_, affinityMask.affinityMask_);
+		if (_sharedBlock != nullptr)
+			::SetThreadAffinityMask(_sharedBlock->_handle, affinityMask.affinityMask_);
 		else {
 			LOGW("Cannot set the affinity mask for a not yet created thread");
 		}
@@ -191,9 +230,13 @@ namespace nCine
 
 	unsigned int Thread::WrapperFunction(void* arg)
 	{
-		ThreadInfo* threadInfo = static_cast<ThreadInfo*>(arg);
-		threadInfo->startFunction(threadInfo->threadArg);
+		Thread t(static_cast<SharedBlock*>(arg));
+		ThreadFunctionPtr threadFunc = t._sharedBlock->_threadFunc;
+		void* threadArg = t._sharedBlock->_threadArg;
+		t.Detach();
 
+		threadFunc(threadArg);
+		_endthreadex(0);
 		return 0;
 	}
 }

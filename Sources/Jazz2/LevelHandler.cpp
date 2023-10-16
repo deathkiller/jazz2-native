@@ -23,6 +23,7 @@
 #include "Actors/Player.h"
 #include "Actors/SolidObjectBase.h"
 #include "Actors/Enemies/Bosses/BossBase.h"
+#include "Actors/Environment/IceBlock.h"
 
 #include <float.h>
 
@@ -79,11 +80,11 @@ namespace Jazz2
 
 			std::shared_ptr<Actors::Player> player = std::make_shared<Actors::Player>();
 			uint8_t playerParams[2] = { (uint8_t)levelInit.PlayerCarryOvers[i].Type, (uint8_t)i };
-			player->OnActivated({
-				.LevelHandler = this,
-				.Pos = Vector3i(spawnPosition.X + (i * 30), spawnPosition.Y - (i * 30), PlayerZ - i),
-				.Params = playerParams
-			});
+			player->OnActivated(Actors::ActorActivationDetails(
+				this,
+				Vector3i(spawnPosition.X + (i * 30), spawnPosition.Y - (i * 30), PlayerZ - i),
+				playerParams
+			));
 
 			Actors::Player* ptr = player.get();
 			_players.push_back(ptr);
@@ -773,11 +774,14 @@ namespace Jazz2
 		// Check for solid objects
 		if (self->GetState(Actors::ActorState::CollideWithSolidObjects)) {
 			Actors::ActorBase* colliderActor = nullptr;
-			FindCollisionActorsByAABB(self, aabb, [&](Actors::ActorBase* actor) -> bool {
+			FindCollisionActorsByAABB(self, aabb, [self, &colliderActor, &params](Actors::ActorBase* actor) -> bool {
 				if ((actor->GetState() & (Actors::ActorState::IsSolidObject | Actors::ActorState::IsDestroyed)) != Actors::ActorState::IsSolidObject) {
 					return true;
 				}
-
+				if (self->GetState(Actors::ActorState::ExcludeSimilar) && actor->GetState(Actors::ActorState::ExcludeSimilar)) {
+					// If both objects have ExcludeSimilar, ignore it
+					return true;
+				}
 				if (self->GetState(Actors::ActorState::CollideWithSolidObjectsBelow) &&
 					self->AABBInner.B > (actor->AABBInner.T + actor->AABBInner.B) * 0.5f) {
 					return true;
@@ -981,6 +985,18 @@ namespace Jazz2
 
 		// Single player can respawn immediately
 		return true;
+	}
+
+	void LevelHandler::HandlePlayerWarped(const std::shared_ptr<Actors::ActorBase>& player, const Vector2f& prevPos, bool fast)
+	{
+		if (fast) {
+			WarpCameraToTarget(player, true);
+		} else {
+			Vector2f pos = player->GetPos();
+			if (Vector2f(prevPos.X - pos.X, prevPos.Y - pos.Y).Length() > 250.0f) {
+				WarpCameraToTarget(player);
+			}
+		}
 	}
 
 	void LevelHandler::SetCheckpoint(Vector2f pos)
@@ -1205,6 +1221,34 @@ namespace Jazz2
 		}
 
 		return (_playerFrozenEnabled ? _playerFrozenMovement.Y : _playerRequiredMovement.Y);
+	}
+
+	void LevelHandler::OnTileFrozen(std::int32_t x, std::int32_t y)
+	{
+		bool iceBlockFound = false;
+		FindCollisionActorsByAABB(nullptr, AABBf(x - 1.0f, y - 1.0f, x + 1.0f, y + 1.0f), [&iceBlockFound](Actors::ActorBase* actor) -> bool {
+			if ((actor->GetState() & Actors::ActorState::IsDestroyed) != Actors::ActorState::None) {
+				return true;
+			}
+
+			Actors::Environment::IceBlock* iceBlock = dynamic_cast<Actors::Environment::IceBlock*>(actor);
+			if (iceBlock != nullptr) {
+				iceBlock->ResetTimeLeft();
+				iceBlockFound = true;
+				return false;
+			}
+
+			return true;
+		});
+
+		if (!iceBlockFound) {
+			std::shared_ptr<Actors::Environment::IceBlock> iceBlock = std::make_shared<Actors::Environment::IceBlock>();
+			iceBlock->OnActivated(Actors::ActorActivationDetails(
+				this,
+				Vector3i(x - 1, y - 2, ILevelHandler::MainPlaneZ)
+			));
+			AddActor(iceBlock);
+		}
 	}
 
 	void LevelHandler::ResolveCollisions(float timeMult)
@@ -1663,6 +1707,7 @@ namespace Jazz2
 
 		if (notInitialized) {
 			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
+			_target->setWrap(SamplerWrapping::ClampToEdge);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_view->setRootNode(this);
 			_view->setCamera(_camera.get());

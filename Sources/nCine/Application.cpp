@@ -218,8 +218,6 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	static const char Reset[] = "\033[0m";
 	static const char Bold[] = "\033[1m";
 	static const char Faint[] = "\033[2m";
-	static const char Red[] = "\033[31m";
-	static const char Yellow[] = "\033[33m";
 	static const char DarkGray[] = "\033[90m";
 	static const char BrightRed[] = "\033[91m";
 	static const char BrightYellow[] = "\033[93m";
@@ -262,17 +260,15 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 		if (hasVirtualTerminal) {
 			length2 += nCine::copyStringFirst(logEntryWithColors, MaxEntryLength - 1, Faint, countof(Faint) - 1);
 			if (level == TraceLevel::Error || level == TraceLevel::Fatal) {
-				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Red, countof(Red) - 1);
+				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightRed, countof(BrightRed) - 1);
 			} else if (level == TraceLevel::Warning) {
-				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, Yellow, countof(Yellow) - 1);
+				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, BrightYellow, countof(BrightYellow) - 1);
 			}
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 			else if (level == TraceLevel::Debug) {
-#	else
-			else {
-#	endif
 				length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, DarkGray, countof(DarkGray) - 1);
 			}
+#	endif
 		}
 
 		length2 += nCine::copyStringFirst(logEntryWithColors + length2, MaxEntryLength - length2 - 1, logEntry, logMsgFuncLength);
@@ -617,7 +613,7 @@ namespace nCine
 #else
 			const float frameTimeDuration = 1.0f / static_cast<float>(appCfg_.frameLimit);
 			while (frameTimer_->frameInterval() < frameTimeDuration) {
-				Timer::sleep(0.0f);
+				Timer::sleep(0);
 			}
 #endif
 		}

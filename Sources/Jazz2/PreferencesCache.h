@@ -5,8 +5,6 @@
 #include "../nCine/AppConfiguration.h"
 #include "../nCine/Base/HashMap.h"
 
-#include <Containers/Reference.h>
-
 using namespace nCine;
 
 namespace Jazz2

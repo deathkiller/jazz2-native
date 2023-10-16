@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "ITileMapOwner.h"
 #include "../ILevelHandler.h"
 #include "../PitType.h"
 #include "TileSet.h"
@@ -141,7 +142,7 @@ namespace Jazz2::Tiles
 			DebrisFlags Flags;
 		};
 
-		TileMap(LevelHandler* levelHandler, const StringView& tileSetPath, std::uint16_t captionTileId, PitType pitType, bool applyPalette);
+		TileMap(ITileMapOwner* owner, const StringView& tileSetPath, std::uint16_t captionTileId, PitType pitType, bool applyPalette);
 
 		Vector2i Size();
 		Vector2i LevelBounds();
@@ -154,6 +155,7 @@ namespace Jazz2::Tiles
 		bool CanBeDestroyed(const AABBf& aabb, TileCollisionParams& params);
 		bool IsTileHurting(float x, float y);
 		SuspendType GetTileSuspendState(float x, float y);
+		bool AdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount);
 
 		void AddTileSet(const StringView& tileSetPath, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping = nullptr);
 		void ReadLayerConfiguration(Stream& s);
@@ -212,7 +214,7 @@ namespace Jazz2::Tiles
 			bool _alreadyRendered;
 		};
 
-		LevelHandler* _levelHandler;
+		ITileMapOwner* _owner;
 		std::int32_t _sprLayerIndex;
 		PitType _pitType;
 
