@@ -21,13 +21,13 @@ namespace nCine
 				return;
 			}
 
-// Don't use SetThreadDescription() yet, because the functions was introduced in Windows 10, version 1607
+// Don't use SetThreadDescription() yet, because the function was introduced in Windows 10, version 1607
 //#	if defined(NTDDI_WIN10_RS2) && NTDDI_VERSION >= NTDDI_WIN10_RS2
 #if 0
 			wchar_t buffer[MaxThreadNameLength];
 			size_t charsConverted;
 			mbstowcs_s(&charsConverted, buffer, name, MaxThreadNameLength);
-			const HANDLE threadHandle = (handle != reinterpret_cast<HANDLE>(-1)) ? handle : GetCurrentThread();
+			const HANDLE threadHandle = (handle != reinterpret_cast<HANDLE>(-1)) ? handle : ::GetCurrentThread();
 			::SetThreadDescription(threadHandle, buffer);
 #	elif !defined(DEATH_TARGET_MINGW)
 			constexpr DWORD MS_VC_EXCEPTION = 0x406D1388;

@@ -481,7 +481,7 @@ namespace Jazz2::Actors
 			_currentTransitionState = AnimState::Idle;
 
 			if (_currentTransitionCallback != nullptr) {
-				auto oldCallback = _currentTransitionCallback;
+				auto oldCallback = std::move(_currentTransitionCallback);
 				_currentTransitionCallback = nullptr;
 				oldCallback();
 			}
@@ -511,7 +511,7 @@ namespace Jazz2::Actors
 		}
 
 		if (_currentTransitionCallback != nullptr) {
-			auto oldCallback = _currentTransitionCallback;
+			auto oldCallback = std::move(_currentTransitionCallback);
 			_currentTransitionCallback = nullptr;
 			oldCallback();
 		}
@@ -541,7 +541,7 @@ namespace Jazz2::Actors
 		}
 
 		if (_currentTransitionCallback != nullptr) {
-			auto oldCallback = _currentTransitionCallback;
+			auto oldCallback = std::move(_currentTransitionCallback);
 			_currentTransitionCallback = nullptr;
 			oldCallback();
 		}
@@ -568,7 +568,7 @@ namespace Jazz2::Actors
 		}
 
 		if (_currentTransitionCallback != nullptr) {
-			auto oldCallback = _currentTransitionCallback;
+			auto oldCallback = std::move(_currentTransitionCallback);
 			_currentTransitionCallback = nullptr;
 			oldCallback();
 		}
@@ -596,7 +596,7 @@ namespace Jazz2::Actors
 		}
 
 		if (_currentTransitionCallback != nullptr) {
-			auto oldCallback = _currentTransitionCallback;
+			auto oldCallback = std::move(_currentTransitionCallback);
 			_currentTransitionCallback = nullptr;
 			oldCallback();
 		}
@@ -616,7 +616,7 @@ namespace Jazz2::Actors
 	{
 		if (_currentTransitionState != AnimState::Idle && _currentTransitionCancellable) {
 			if (_currentTransitionCallback != nullptr) {
-				auto oldCallback = _currentTransitionCallback;
+				auto oldCallback = std::move(_currentTransitionCallback);
 				_currentTransitionCallback = nullptr;
 				oldCallback();
 			}
@@ -653,7 +653,7 @@ namespace Jazz2::Actors
 			RefreshAnimation();
 
 			if (_currentTransitionCallback != nullptr) {
-				auto oldCallback = _currentTransitionCallback;
+				auto oldCallback = std::move(_currentTransitionCallback);
 				_currentTransitionCallback = nullptr;
 				oldCallback();
 			}
