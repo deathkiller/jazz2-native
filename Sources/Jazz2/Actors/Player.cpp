@@ -2154,11 +2154,8 @@ namespace Jazz2::Actors
 				break;
 			}
 			case EventType::TriggerZone: { // Trigger ID, Turn On, Switch
-				auto tiles = _levelHandler->TileMap();
-				if (tiles != nullptr) {
-					// TODO: Implement Switch parameter
-					tiles->SetTrigger(p[0], p[1] != 0);
-				}
+				// TODO: Implement Switch parameter
+				_levelHandler->SetTrigger(p[0], p[1] != 0);
 				break;
 			}
 
@@ -2250,6 +2247,17 @@ namespace Jazz2::Actors
 		return SetTransition(state, cancellable, callback);
 	}
 
+	bool Player::SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, std::function<void()>&& callback)
+	{
+		if (removeControl) {
+			_controllable = false;
+			_controllableTimeout = 0.0f;
+		}
+
+		_currentSpecialMove = specialMove;
+		return SetTransition(state, cancellable, std::move(callback));
+	}
+
 	bool Player::CanFreefall()
 	{
 		AABBf aabb = AABBf(_pos.X - 14, _pos.Y + 8 - 12, _pos.X + 14, _pos.Y + 8 + 12 + 100);
@@ -2313,7 +2321,7 @@ namespace Jazz2::Actors
 
 				SetAnimation(AnimState::Idle);
 
-				if (_levelHandler->HandlePlayerDied(shared_from_this())) {
+				if (_levelHandler->HandlePlayerDied(std::static_pointer_cast<Player>(shared_from_this()))) {
 					// Reset health
 					_health = _maxHealth;
 
@@ -2513,7 +2521,6 @@ namespace Jazz2::Actors
 			return false;
 		}
 
-		// NOTE: cooldownBase and cooldownUpgrade cannot be template parameters in Emscripten
 		Vector3i initialPos;
 		Vector2f gunspotPos;
 		float angle;
@@ -2553,6 +2560,10 @@ namespace Jazz2::Actors
 		}
 
 		uint16_t ammoDecrease = 256;
+
+		if (!_levelHandler->HandlePlayerFireWeapon(std::static_pointer_cast<Player>(shared_from_this()), weaponType, ammoDecrease)) {
+			return false;
+		}
 
 		switch (weaponType) {
 			case WeaponType::Blaster:
@@ -2901,7 +2912,7 @@ namespace Jazz2::Actors
 			if (hideTrail) {
 				_trailLastPos = _pos;
 			}
-			_levelHandler->HandlePlayerWarped(shared_from_this(), posPrev, true);
+			_levelHandler->HandlePlayerWarped(std::static_pointer_cast<Player>(shared_from_this()), posPrev, true);
 		} else {
 			EndDamagingMove();
 			SetState(ActorState::IsInvulnerable, true);
@@ -2929,7 +2940,7 @@ namespace Jazz2::Actors
 				_trailLastPos = _pos;
 				PlayPlayerSfx("WarpOut"_s);
 
-				_levelHandler->HandlePlayerWarped(shared_from_this(), posPrev, false);
+				_levelHandler->HandlePlayerWarped(std::static_pointer_cast<Player>(shared_from_this()), posPrev, false);
 
 				_isFreefall |= CanFreefall();
 				SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this]() {

@@ -59,9 +59,10 @@ namespace Jazz2::Multiplayer
 		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, uint8_t* eventParams) override;
 		void BeginLevelChange(ExitType exitType, const StringView& nextLevel) override;
 		void HandleGameOver() override;
-		bool HandlePlayerDied(const std::shared_ptr<Actors::ActorBase>& player) override;
-		void HandlePlayerWarped(const std::shared_ptr<Actors::ActorBase>& player, const Vector2f& prevPos, bool fast) override;
-		void SetCheckpoint(Vector2f pos) override;
+		bool HandlePlayerDied(std::shared_ptr<Actors::Player> player) override;
+		bool HandlePlayerFireWeapon(std::shared_ptr<Actors::Player> player, WeaponType& weaponType, std::uint16_t& ammoDecrease) override;
+		void HandlePlayerWarped(std::shared_ptr<Actors::Player> player, const Vector2f& prevPos, bool fast) override;
+		void SetCheckpoint(const Vector2f& pos) override;
 		void RollbackToCheckpoint() override;
 		void ActivateSugarRush() override;
 		void ShowLevelText(const StringView& text) override;
@@ -71,6 +72,7 @@ namespace Jazz2::Multiplayer
 		void OverrideLevelText(uint32_t textId, const StringView& value) override;
 		void LimitCameraView(int left, int width) override;
 		void ShakeCameraView(float duration) override;
+		void SetTrigger(std::uint8_t triggerId, bool newState) override;
 		void SetWeather(WeatherType type, uint8_t intensity) override;
 		bool BeginPlayMusic(const StringView& path, bool setDefault = false, bool forceReload = false) override;
 
@@ -83,6 +85,7 @@ namespace Jazz2::Multiplayer
 
 		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override;
 
+		bool OnPeerDisconnected(const Peer& peer);
 		bool OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t* data, std::size_t dataLength);
 
 	private:
@@ -114,6 +117,7 @@ namespace Jazz2::Multiplayer
 			PressedRight = 0x800,
 			PressedJump = 0x1000,
 			PressedRun = 0x2000,
+			PressedFire = 0x4000,
 
 			JustWarped = 0x10000
 		};
@@ -121,13 +125,13 @@ namespace Jazz2::Multiplayer
 		DEFINE_PRIVATE_ENUM_OPERATORS(PlayerFlags);
 
 		struct PlayerState {
-			StateFrame StateBuffer[4];
+			StateFrame StateBuffer[8];
 			std::int32_t StateBufferPos;
 			PlayerFlags Flags;
+			std::uint64_t WarpSeqNum;
 			float WarpTimeLeft;
 
 			PlayerState() {}
-
 			PlayerState(const Vector2f& pos);
 		};
 
@@ -141,7 +145,8 @@ namespace Jazz2::Multiplayer
 		HashMap<std::uint8_t, PlayerState> _playerStates; // Server: Per (remote) player state
 		HashMap<std::uint32_t, std::shared_ptr<Actors::RemoteActor>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
 		std::uint32_t _lastPlayerIndex;	// Server: last assigned ID, Client: ID assigned by server
-		bool _justWarped; // Client: set to true from HandlePlayerWarped()
+		std::uint64_t _seqNum; // Client: sequence number of the last update
+		std::uint64_t _seqNumWarped; // Client: set to _seqNum from HandlePlayerWarped() when warped
 
 		void OnLevelLoaded(const StringView& fullPath, const StringView& name, const StringView& nextLevel, const StringView& secretLevel,
 			std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap,

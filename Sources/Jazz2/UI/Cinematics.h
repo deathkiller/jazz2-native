@@ -22,6 +22,7 @@ namespace Jazz2::UI
 		static constexpr int DefaultHeight = 405;
 
 		Cinematics(IRootController* root, const String& path, const std::function<bool(IRootController*, bool)>& callback);
+		Cinematics(IRootController* root, const String& path, std::function<bool(IRootController*, bool)>&& callback);
 		~Cinematics() override;
 
 		void OnBeginFrame() override;
@@ -32,8 +33,6 @@ namespace Jazz2::UI
 		void OnTouchEvent(const TouchEvent& event) override;
 
 	private:
-		IRootController* _root;
-
 		class CinematicsCanvas : public SceneNode
 		{
 		public:
@@ -52,6 +51,7 @@ namespace Jazz2::UI
 			RenderCommand _renderCommand;
 		};
 
+		IRootController* _root;
 		UI::UpscaleRenderPass _upscalePass;
 		std::unique_ptr<CinematicsCanvas> _canvas;
 		std::unique_ptr<AudioStreamPlayer> _music;
@@ -70,7 +70,8 @@ namespace Jazz2::UI
 		BitArray _pressedKeys;
 		uint32_t _pressedActions;
 
-		bool LoadFromFile(const String& path);
+		void Initialize(const String& path);
+		bool LoadCinematicsFromFile(const String& path);
 		void PrepareNextFrame();
 		void UpdatePressedActions();
 

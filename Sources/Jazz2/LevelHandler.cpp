@@ -975,7 +975,7 @@ namespace Jazz2
 		_root->GoToMainMenu(false);
 	}
 
-	bool LevelHandler::HandlePlayerDied(const std::shared_ptr<Actors::ActorBase>& player)
+	bool LevelHandler::HandlePlayerDied(std::shared_ptr<Actors::Player> player)
 	{
 		if (_activeBoss != nullptr) {
 			if (_activeBoss->OnPlayerDied()) {
@@ -987,7 +987,12 @@ namespace Jazz2
 		return true;
 	}
 
-	void LevelHandler::HandlePlayerWarped(const std::shared_ptr<Actors::ActorBase>& player, const Vector2f& prevPos, bool fast)
+	bool LevelHandler::HandlePlayerFireWeapon(std::shared_ptr<Actors::Player> player, WeaponType& weaponType, std::uint16_t& ammoDecrease)
+	{
+		return true;
+	}
+
+	void LevelHandler::HandlePlayerWarped(std::shared_ptr<Actors::Player> player, const Vector2f& prevPos, bool fast)
 	{
 		if (fast) {
 			WarpCameraToTarget(player, true);
@@ -999,7 +1004,7 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::SetCheckpoint(Vector2f pos)
+	void LevelHandler::SetCheckpoint(const Vector2f& pos)
 	{
 		_checkpointFrames = ElapsedFrames();
 
@@ -1425,6 +1430,16 @@ namespace Jazz2
 		if (_shakeDuration < duration) {
 			_shakeDuration = duration;
 		}
+	}
+
+	bool LevelHandler::GetTrigger(std::uint8_t triggerId)
+	{
+		return _tileMap->GetTrigger(triggerId);
+	}
+
+	void LevelHandler::SetTrigger(std::uint8_t triggerId, bool newState)
+	{
+		_tileMap->SetTrigger(triggerId, newState);
 	}
 
 	void LevelHandler::SetWeather(WeatherType type, uint8_t intensity)
