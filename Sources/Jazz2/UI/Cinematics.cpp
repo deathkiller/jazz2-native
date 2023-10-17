@@ -15,31 +15,16 @@ namespace Jazz2::UI
 {
 	Cinematics::Cinematics(IRootController* root, const String& path, const std::function<bool(IRootController*, bool)>& callback)
 		: _root(root), _callback(callback), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0),
-			_currentOffsets { }, _pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0)
+			_currentOffsets{}, _pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0)
 	{
-		theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection"_s);
+		Initialize(path);
+	}
 
-		_canvas = std::make_unique<CinematicsCanvas>(this);
-
-		auto& resolver = ContentResolver::Get();
-
-		// Try to load cinematics file
-		if (!LoadFromFile(path)) {
-			_framesLeft = 0;
-			return;
-		}
-
-#if defined(WITH_OPENMPT)
-		_music = resolver.GetMusic(path + ".j2b"_s);
-		if (_music != nullptr) {
-			_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
-			_music->setSourceRelative(true);
-			_music->play();
-		}
-#endif
-
-		// Mark Fire button as already pressed to avoid some issues
-		_pressedActions = (1 << (int32_t)PlayerActions::Fire) | (1 << ((int32_t)PlayerActions::Fire + 16));
+	Cinematics::Cinematics(IRootController* root, const String& path, std::function<bool(IRootController*, bool)>&& callback)
+		: _root(root), _callback(std::move(callback)), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0),
+			_currentOffsets{}, _pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0)
+	{
+		Initialize(path);
 	}
 
 	Cinematics::~Cinematics()
@@ -121,7 +106,33 @@ namespace Jazz2::UI
 		}
 	}
 
-	bool Cinematics::LoadFromFile(const String& path)
+	void Cinematics::Initialize(const String& path)
+	{
+		theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection"_s);
+
+		_canvas = std::make_unique<CinematicsCanvas>(this);
+
+		auto& resolver = ContentResolver::Get();
+
+		if (!LoadCinematicsFromFile(path)) {
+			_framesLeft = 0;
+			return;
+		}
+
+#if defined(WITH_OPENMPT)
+		_music = resolver.GetMusic(path + ".j2b"_s);
+		if (_music != nullptr) {
+			_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+			_music->setSourceRelative(true);
+			_music->play();
+		}
+#endif
+
+		// Mark Fire button as already pressed to avoid some issues
+		_pressedActions = (1 << (int32_t)PlayerActions::Fire) | (1 << ((int32_t)PlayerActions::Fire + 16));
+	}
+
+	bool Cinematics::LoadCinematicsFromFile(const String& path)
 	{
 		// Try "Content" directory first, then "Source" directory
 		auto& resolver = ContentResolver::Get();

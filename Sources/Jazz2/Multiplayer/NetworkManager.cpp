@@ -213,7 +213,7 @@ namespace Jazz2::Multiplayer
 						LOGE("enet_host_service() returned %i", result);
 						break;
 					}
-					Timer::sleep(10);
+					Timer::sleep(4);
 					continue;
 				}
 
@@ -267,7 +267,7 @@ namespace Jazz2::Multiplayer
 					LOGE("enet_host_service() returned %i", result);
 					break;
 				}
-				Timer::sleep(10);
+				Timer::sleep(4);
 				continue;
 			}
 

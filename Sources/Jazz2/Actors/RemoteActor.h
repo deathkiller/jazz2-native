@@ -21,8 +21,8 @@ namespace Jazz2::Actors
 
 		static constexpr std::int64_t ServerDelay = 64;
 
-		StateFrame _stateBuffer[4];
-		std::int32_t _stateBufferPos = 0;
+		StateFrame _stateBuffer[8];
+		std::int32_t _stateBufferPos;
 		AnimState _lastAnim;
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

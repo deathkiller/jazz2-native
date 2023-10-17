@@ -67,15 +67,12 @@ namespace Jazz2::Actors::Solid
 
 	bool TriggerCrate::OnPerish(ActorBase* collider)
 	{
-		auto tiles = _levelHandler->TileMap();
-		if (tiles != nullptr) {
-			if (_newState == TriggerCrateState::Toggle) {
-				// Toggle
-				tiles->SetTrigger(_triggerId, !tiles->GetTrigger(_triggerId));
-			} else {
-				// Turn off/on
-				tiles->SetTrigger(_triggerId, _newState == TriggerCrateState::On);
-			}
+		if (_newState == TriggerCrateState::Toggle) {
+			// Toggle
+			_levelHandler->SetTrigger(_triggerId, !_levelHandler->GetTrigger(_triggerId));
+		} else {
+			// Turn off/on
+			_levelHandler->SetTrigger(_triggerId, _newState == TriggerCrateState::On);
 		}
 
 		PlaySfx("Break"_s);

@@ -44,6 +44,7 @@ namespace Jazz2::Multiplayer
 		UpdateAllActors,
 
 		PlayerMoveInstantly,
+		PlayerAckWarped,
 		PlayerActivateForce,
 		PlayerAddHealth,
 		PlayerRefreshAmmo,

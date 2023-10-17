@@ -119,9 +119,10 @@ namespace Jazz2
 		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, uint8_t* eventParams) override;
 		void BeginLevelChange(ExitType exitType, const StringView& nextLevel) override;
 		void HandleGameOver() override;
-		bool HandlePlayerDied(const std::shared_ptr<Actors::ActorBase>& player) override;
-		void HandlePlayerWarped(const std::shared_ptr<Actors::ActorBase>& player, const Vector2f& prevPos, bool fast) override;
-		void SetCheckpoint(Vector2f pos) override;
+		bool HandlePlayerDied(std::shared_ptr<Actors::Player> player) override;
+		bool HandlePlayerFireWeapon(std::shared_ptr<Actors::Player> player, WeaponType& weaponType, std::uint16_t& ammoDecrease) override;
+		void HandlePlayerWarped(std::shared_ptr<Actors::Player> player, const Vector2f& prevPos, bool fast) override;
+		void SetCheckpoint(const Vector2f& pos) override;
 		void RollbackToCheckpoint() override;
 		void ActivateSugarRush() override;
 		void ShowLevelText(const StringView& text) override;
@@ -131,6 +132,8 @@ namespace Jazz2
 		void OverrideLevelText(uint32_t textId, const StringView& value) override;
 		void LimitCameraView(int left, int width) override;
 		void ShakeCameraView(float duration) override;
+		bool GetTrigger(std::uint8_t triggerId) override;
+		void SetTrigger(std::uint8_t triggerId, bool newState) override;
 		void SetWeather(WeatherType type, uint8_t intensity) override;
 		bool BeginPlayMusic(const StringView& path, bool setDefault = false, bool forceReload = false) override;
 

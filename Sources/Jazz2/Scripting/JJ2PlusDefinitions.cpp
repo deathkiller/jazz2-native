@@ -1994,16 +1994,14 @@ namespace Jazz2::Scripting
 
 		auto ctx = asGetActiveContext();
 		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		auto tileMap = _this->_levelHandler->TileMap();
-		return tileMap->GetTrigger(id);
+		return _this->_levelHandler->GetTrigger(id);
 	}
 	bool LevelScriptLoader::set_jjTriggers(uint8_t id, bool value) {
 		//noop();
 
 		auto ctx = asGetActiveContext();
 		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		auto tileMap = _this->_levelHandler->TileMap();
-		tileMap->SetTrigger(id, value);
+		_this->_levelHandler->SetTrigger(id, value);
 		return value;
 	}
 	bool LevelScriptLoader::jjSwitchTrigger(uint8_t id) {
@@ -2011,9 +2009,8 @@ namespace Jazz2::Scripting
 
 		auto ctx = asGetActiveContext();
 		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		auto tileMap = _this->_levelHandler->TileMap();
-		tileMap->SetTrigger(id, !tileMap->GetTrigger(id));
-		return tileMap->GetTrigger(id);
+		_this->_levelHandler->SetTrigger(id, !_this->_levelHandler->GetTrigger(id));
+		return _this->_levelHandler->GetTrigger(id);
 	}
 
 	bool isNumberedASFunctionEnabled(uint8_t id) {

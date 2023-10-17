@@ -474,7 +474,7 @@ bool GameEventHandler::CreateServer(std::uint16_t port)
 	}
 
 	InvokeAsync([this]() {
-		LevelInitialization levelInit("unknown", "arace1", GameDifficulty::Multiplayer, true, false, PlayerType::Jazz);
+		LevelInitialization levelInit("unknown", "race3", GameDifficulty::Multiplayer, true, false, PlayerType::Jazz);
 		SetStateHandler(std::make_unique<MultiLevelHandler>(this, _networkManager.get(), levelInit));
 	});
 
@@ -502,6 +502,12 @@ bool GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32_t clientDat
 void GameEventHandler::OnPeerDisconnected(const Peer& peer, std::uint32_t reason)
 {
 	LOGI("Peer disconnected");
+
+	if (auto multiLevelHandler = dynamic_cast<MultiLevelHandler*>(_currentHandler.get())) {
+		if (multiLevelHandler->OnPeerDisconnected(peer)) {
+			return;
+		}
+	}
 
 	if (_networkManager != nullptr && _networkManager->GetState() != NetworkState::Listening) {
 		// TODO: Show error message only if not initiated by the player
@@ -533,7 +539,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				}
 
 				String episodeName = "unknown"_s;
-				String levelName = "arace1"_s;
+				String levelName = "race3"_s;
 
 				MemoryStream packet(10 + episodeName.size() + levelName.size());
 				packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::LoadLevel);
