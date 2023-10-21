@@ -879,12 +879,12 @@ namespace nCine
 
 	void JoyMapping::trimSpaces(const char** start, const char** end) const
 	{
-		while (**start == ' ') {
+		while (**start == ' ' || **end == '\t') {
 			(*start)++;
 		}
 
 		(*end)--;
-		while (**end == ' ') {
+		while (**end == ' ' || **end == '\t') {
 			(*end)--;
 		}
 		(*end)++;

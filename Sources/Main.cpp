@@ -214,6 +214,9 @@ void GameEventHandler::OnInit()
 		handler->RefreshCache();
 		handler->CheckUpdates();
 	}, this);
+#	if defined(DEATH_DEBUG)
+	thread.SetName("Parallel initialization");
+#	endif
 
 	SetStateHandler(std::make_unique<Cinematics>(this, "intro"_s, [thread](IRootController* root, bool endOfStream) mutable {
 		if ((root->GetFlags() & Jazz2::IRootController::Flags::IsVerified) != Jazz2::IRootController::Flags::IsVerified) {
