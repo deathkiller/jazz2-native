@@ -32,7 +32,7 @@ namespace nCine
 {
 	namespace
 	{
-		const unsigned int MaxThreadNameLength = 16;
+		const std::uint32_t MaxThreadNameLength = 16;
 	}
 
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
@@ -46,7 +46,7 @@ namespace nCine
 #	endif
 	}
 
-	void ThreadAffinityMask::Set(int cpuNum)
+	void ThreadAffinityMask::Set(std::int32_t cpuNum)
 	{
 #	if defined(DEATH_TARGET_APPLE)
 		affinityTag_ |= 1 << cpuNum;
@@ -55,7 +55,7 @@ namespace nCine
 #	endif
 	}
 
-	void ThreadAffinityMask::Clear(int cpuNum)
+	void ThreadAffinityMask::Clear(std::int32_t cpuNum)
 	{
 #	if defined(DEATH_TARGET_APPLE)
 		affinityTag_ &= ~(1 << cpuNum);
@@ -64,7 +64,7 @@ namespace nCine
 #	endif
 	}
 
-	bool ThreadAffinityMask::IsSet(int cpuNum)
+	bool ThreadAffinityMask::IsSet(std::int32_t cpuNum)
 	{
 #	if defined(DEATH_TARGET_APPLE)
 		return ((affinityTag_ >> cpuNum) & 1) != 0;
@@ -80,7 +80,7 @@ namespace nCine
 	{
 	}
 
-	Thread::Thread(ThreadFunctionPtr threadFunc, void* threadArg)
+	Thread::Thread(ThreadFuncDelegate threadFunc, void* threadArg)
 		: Thread()
 	{
 		Run(threadFunc, threadArg);
@@ -96,27 +96,22 @@ namespace nCine
 		Detach();
 	}
 
-	unsigned int Thread::GetProcessorCount()
+	std::uint32_t Thread::GetProcessorCount()
 	{
 #if defined(DEATH_TARGET_SWITCH)
 		return svcGetCurrentProcessorNumber();
 #else
-		unsigned int numProcs = 0;
 		long int confRet = -1;
 #	if defined(_SC_NPROCESSORS_ONLN)
 		confRet = sysconf(_SC_NPROCESSORS_ONLN);
 #	elif defined(_SC_NPROC_ONLN)
 		confRet = sysconf(_SC_NPROC_ONLN);
 #	endif
-
-		if (confRet > 0) {
-			numProcs = static_cast<unsigned int>(confRet);
-		}
-		return numProcs;
+		return (confRet > 0 ? static_cast<std::uint32_t>(confRet) : 0);
 #endif
 	}
 
-	void Thread::Run(ThreadFunctionPtr threadFunc, void* threadArg)
+	void Thread::Run(ThreadFuncDelegate threadFunc, void* threadArg)
 	{
 		if (_sharedBlock != nullptr) {
 			LOGW("Thread %u is already running", _sharedBlock->_handle);
@@ -131,19 +126,19 @@ namespace nCine
 		if (error != 0) {
 			delete _sharedBlock;
 			_sharedBlock = nullptr;
-			FATAL_MSG("pthread_create() failed with error %d", error);
+			FATAL_MSG("pthread_create() failed with error %i", error);
 		}
 	}
 
-	void* Thread::Join()
+	bool Thread::Join()
 	{
-		void* pRetVal = nullptr;
 		if (_sharedBlock != nullptr && _sharedBlock->_handle != 0) {
 			if (pthread_join(_sharedBlock->_handle, &pRetVal) == 0) {
 				_sharedBlock->_handle = 0;
+				return true;
 			}
 		}
-		return pRetVal;
+		return false;
 	}
 	
 	void Thread::Detach()
@@ -211,7 +206,7 @@ namespace nCine
 #endif
 
 #if !defined(DEATH_TARGET_SWITCH)
-	int Thread::GetPriority() const
+	std::int32_t Thread::GetPriority() const
 	{
 		if (_sharedBlock == nullptr || _sharedBlock->_handle == 0) {
 			return 0;
@@ -223,7 +218,7 @@ namespace nCine
 		return param.sched_priority;
 	}
 
-	void Thread::SetPriority(int priority)
+	void Thread::SetPriority(std::int32_t priority)
 	{
 		if (_sharedBlock == nullptr || _sharedBlock->_handle == 0) {
 			return;
@@ -238,18 +233,18 @@ namespace nCine
 	}
 #endif
 
-	long int Thread::Self()
+	std::uint32_t Thread::GetCurrentId()
 	{
 #if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(__FreeBSD__)
-		return reinterpret_cast<long int>(pthread_self());
+		return reinterpret_cast<std::uint32_t>(pthread_self());
 #else
-		return static_cast<long int>(pthread_self());
+		return static_cast<std::uint32_t>(pthread_self());
 #endif
 	}
 
-	[[noreturn]] void Thread::Exit(void* retVal)
+	[[noreturn]] void Thread::Exit()
 	{
-		pthread_exit(retVal);
+		pthread_exit(nullptr);
 	}
 
 	void Thread::YieldExecution()
@@ -258,13 +253,13 @@ namespace nCine
 	}
 
 #if !defined(DEATH_TARGET_ANDROID)
-	void Thread::Abort()
+	bool Thread::Abort()
 	{
 		if (_sharedBlock == nullptr || _sharedBlock->_handle == 0) {
-			return;
+			return false;
 		}
 
-		pthread_cancel(_sharedBlock->_handle);
+		return (pthread_cancel(_sharedBlock->_handle) == 0);
 	}
 
 #	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
@@ -312,8 +307,8 @@ namespace nCine
 	void* Thread::WrapperFunction(void* arg)
 	{
 		Thread t(static_cast<SharedBlock*>(arg));
-		ThreadFunctionPtr threadFunc = t._sharedBlock->_threadFunc;
-		void* threadArg = t._sharedBlock->_threadArg;
+		auto threadFunc = t._sharedBlock->_threadFunc;
+		auto threadArg = t._sharedBlock->_threadArg;
 		t.Detach();
 
 		threadFunc(threadArg);

@@ -19,11 +19,11 @@ namespace nCine
 		/// Creates a thread pool with as many threads as available processors
 		ThreadPool();
 		/// Creates a thread pool with a specified number of threads
-		explicit ThreadPool(unsigned int numThreads);
+		explicit ThreadPool(std::size_t numThreads);
 		~ThreadPool() override;
 
 		/// Enqueues a command request for a worker thread
-		void EnqueueCommand(std::unique_ptr<IThreadCommand> threadCommand) override;
+		void EnqueueCommand(std::unique_ptr<IThreadCommand>&& threadCommand) override;
 
 	private:
 		struct ThreadStruct
@@ -39,7 +39,7 @@ namespace nCine
 		Mutex queueMutex_;
 		CondVariable queueCV_;
 		Mutex quitMutex_;
-		unsigned int numThreads_;
+		std::size_t numThreads_;
 
 		ThreadStruct threadStruct_;
 		static void WorkerFunction(void* arg);

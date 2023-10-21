@@ -191,8 +191,8 @@ namespace Death::IO
 #	else
 									if (!::RemoveDirectoryW(bufferExtended)) {
 #	endif
-										DWORD err = ::GetLastError();
-										if (err != ERROR_PATH_NOT_FOUND) {
+										DWORD error = ::GetLastError();
+										if (error != ERROR_PATH_NOT_FOUND) {
 											// Cannot remove symbolic link
 										}
 									}
@@ -376,8 +376,8 @@ namespace Death::IO
 				FS.mkdir(p);
 				FS.mount(IDBFS, { }, p);
 
-				FS.syncfs(true, function(err) {
-					callback(err ? 0 : 1);
+				FS.syncfs(true, function(error) {
+					callback(error ? 0 : 1);
 				});
 			});
 		});
@@ -1477,8 +1477,9 @@ namespace Death::IO
 				if (attrs == INVALID_FILE_ATTRIBUTES) {
 					if (!::CreateDirectoryW(fullPath, NULL)) {
 #	endif
-						DWORD err = ::GetLastError();
-						if (err != ERROR_ALREADY_EXISTS) {
+						DWORD error = ::GetLastError();
+						if (error != ERROR_ALREADY_EXISTS) {
+							LOGW("Cannot create directory \"%s\" with error %u (0x%08x)", fullPath.data(), error, error);
 							return false;
 						}
 					}
@@ -1496,8 +1497,9 @@ namespace Death::IO
 #	else
 			if (!::CreateDirectoryW(fullPath, NULL)) {
 #	endif
-				DWORD err = ::GetLastError();
-				if (err != ERROR_ALREADY_EXISTS) {
+				DWORD error = ::GetLastError();
+				if (error != ERROR_ALREADY_EXISTS) {
+					LOGW("Cannot create directory \"%s\" with error %u (0x%08x)", fullPath.data(), error, error);
 					return false;
 				}
 			}
@@ -2075,20 +2077,20 @@ namespace Death::IO
 #if defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 	void FileSystem::MapDeleter::operator()(const char* const data, const std::size_t size)
 	{
-#if defined(DEATH_TARGET_UNIX)
+#	if defined(DEATH_TARGET_UNIX)
 		if (data != nullptr) ::munmap(const_cast<char*>(data), size);
 		if (_fd != 0) ::close(_fd);
-#elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		if (data != nullptr) ::UnmapViewOfFile(data);
 		if (_hMap != nullptr) ::CloseHandle(_hMap);
 		if (_hFile != NULL) ::CloseHandle(_hFile);
 		static_cast<void>(size);
-#endif
+#	endif
 	}
 
 	std::optional<Array<char, FileSystem::MapDeleter>> FileSystem::OpenAsMemoryMapped(const StringView& path, FileAccessMode mode)
 	{
-#if defined(DEATH_TARGET_UNIX)
+#	if defined(DEATH_TARGET_UNIX)
 		int flags, prot;
 		switch (mode) {
 			case FileAccessMode::Read:
@@ -2100,20 +2102,20 @@ namespace Death::IO
 				prot = PROT_READ | PROT_WRITE;
 				break;
 			default:
-				LOGE("Cannot open the file \"%s\", wrong open mode", String::nullTerminatedView(path).data());
+				LOGE("Cannot open file \"%s\" - Invalid mode (%u)", String::nullTerminatedView(path).data(), (std::uint32_t)mode);
 				return { };
 		}
 
 		const int fd = ::open(String::nullTerminatedView(path).data(), flags);
 		if (fd == -1) {
-			LOGE("Cannot open the file \"%s\"", String::nullTerminatedView(path).data());
+			LOGE("Cannot open file \"%s\"", String::nullTerminatedView(path).data());
 			return { };
 		}
 
 		// Explicitly fail if opening directories for reading on Unix to prevent silent errors
 		struct stat sb;
 		if (::fstat(fd, &sb) == 0 && S_ISDIR(sb.st_mode)) {
-			LOGE("Cannot open the file \"%s\"", String::nullTerminatedView(path).data());
+			LOGE("Cannot open file \"%s\"", String::nullTerminatedView(path).data());
 			::close(fd);
 			return { };
 		}
@@ -2122,7 +2124,7 @@ namespace Death::IO
 		const std::size_t size = ::lseek(fd, 0, SEEK_END);
 		::lseek(fd, currentPos, SEEK_SET);
 
-		// Map the file. Can't call mmap() with a zero size, so if the file is empty just set the pointer to null -- but for consistency keep
+		// Can't call mmap() with a zero size, so if the file is empty just set the pointer to null - but for consistency keep
 		// the fd open and let it be handled by the deleter. Array guarantees that deleter gets called even in case of a null data.
 		char* data;
 		if (size == 0) {
@@ -2133,7 +2135,7 @@ namespace Death::IO
 		}
 
 		return Array<char, MapDeleter>{ data, size, MapDeleter { fd }};
-#elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		DWORD fileDesiredAccess, shareMode, protect, mapDesiredAccess;
 		switch (mode) {
 			case FileAccessMode::Read:
@@ -2149,13 +2151,14 @@ namespace Death::IO
 				mapDesiredAccess = FILE_MAP_ALL_ACCESS;
 				break;
 			default:
-				LOGE("Cannot open the file \"%s\", wrong open mode", String::nullTerminatedView(path).data());
+				LOGE("Cannot open file \"%s\" - Invalid mode (%u)", String::nullTerminatedView(path).data(), (std::uint32_t)mode);
 				return { };
 		}
 
 		HANDLE hFile = ::CreateFileW(Utf8::ToUtf16(path), fileDesiredAccess, shareMode, nullptr, OPEN_EXISTING, 0, nullptr);
 		if (hFile == INVALID_HANDLE_VALUE) {
-			LOGE("Cannot open the file \"%s\"", String::nullTerminatedView(path).data());
+			DWORD error = ::GetLastError();
+			LOGE("Cannot open file \"%s\" with error %u (0x%08x)", String::nullTerminatedView(path).data(), error, error);
 			return { };
 		}
 
@@ -2170,13 +2173,15 @@ namespace Death::IO
 			data = nullptr;
 		} else {
 			if (!(hMap = ::CreateFileMappingW(hFile, nullptr, protect, 0, 0, nullptr))) {
-				LOGE("Cannot open the file \"%s\"", String::nullTerminatedView(path).data());
+				DWORD error = ::GetLastError();
+				LOGE("Cannot open file \"%s\" with error %u (0x%08x)", String::nullTerminatedView(path).data(), error, error);
 				::CloseHandle(hFile);
 				return { };
 			}
 
 			if (!(data = reinterpret_cast<char*>(::MapViewOfFile(hMap, mapDesiredAccess, 0, 0, 0)))) {
-				LOGE("Cannot open the file \"%s\"", String::nullTerminatedView(path).data());
+				DWORD error = ::GetLastError();
+				LOGE("Cannot open file \"%s\" with error %u (0x%08x)", String::nullTerminatedView(path).data(), error, error);
 				::CloseHandle(hMap);
 				::CloseHandle(hFile);
 				return { };
@@ -2184,7 +2189,7 @@ namespace Death::IO
 		}
 
 		return Containers::Array<char, MapDeleter>{ data, size, MapDeleter { hFile, hMap }};
-#endif
+#	endif
 	}
 #endif
 
@@ -2217,10 +2222,9 @@ namespace Death::IO
 		if (!DirectoryExists(_savePath)) {
 			// Trying to create the data directory
 			if (!CreateDirectories(_savePath)) {
-				LOGE("Cannot create directory: %s", _savePath.data());
 				_savePath = { };
 			}
-	}
+		}
 #elif defined(DEATH_TARGET_APPLE)
 		// Not delegating into GetHomeDirectory() as the (admittedly rare) error message would have a confusing source
 		const char* home = ::getenv("HOME");

@@ -8,12 +8,14 @@
 
 #include <utility>
 
+#include <Utf8.h>
+
 namespace nCine
 {
 	namespace
 	{
 #if !defined(PTW32_VERSION) && !defined(__WINPTHREADS_VERSION)
-		constexpr unsigned int MaxThreadNameLength = 256;
+		constexpr std::uint32_t MaxThreadNameLength = 256;
 
 		void SetThreadName(HANDLE handle, const char* name)
 		{
@@ -21,15 +23,18 @@ namespace nCine
 				return;
 			}
 
-// Don't use SetThreadDescription() yet, because the function was introduced in Windows 10, version 1607
-//#	if defined(NTDDI_WIN10_RS2) && NTDDI_VERSION >= NTDDI_WIN10_RS2
-#if 0
-			wchar_t buffer[MaxThreadNameLength];
-			size_t charsConverted;
-			mbstowcs_s(&charsConverted, buffer, name, MaxThreadNameLength);
-			const HANDLE threadHandle = (handle != reinterpret_cast<HANDLE>(-1)) ? handle : ::GetCurrentThread();
-			::SetThreadDescription(threadHandle, buffer);
-#	elif !defined(DEATH_TARGET_MINGW)
+			using _SetThreadDescription = HRESULT(WINAPI*)(HANDLE hThread, PCWSTR lpThreadDescription);
+
+			static auto setThreadDescription = reinterpret_cast<_SetThreadDescription>(::GetProcAddress(::GetModuleHandle(L"kernel32.dll"), "SetThreadDescription"));		
+			if (setThreadDescription != nullptr) {
+				wchar_t buffer[MaxThreadNameLength];
+				Death::Utf8::ToUtf16(buffer, name);
+				const HANDLE threadHandle = (handle != reinterpret_cast<HANDLE>(-1)) ? handle : ::GetCurrentThread();
+				::SetThreadDescription(threadHandle, buffer);
+				return;
+			}
+
+#	if !defined(DEATH_TARGET_MINGW)
 			constexpr DWORD MS_VC_EXCEPTION = 0x406D1388;
 
 #		pragma pack(push, 8)
@@ -41,11 +46,10 @@ namespace nCine
 			};
 #		pragma pack(pop)
 
-			const DWORD threadId = (handle == reinterpret_cast<HANDLE>(-1) ? ::GetCurrentThreadId() : ::GetThreadId(handle));
 			THREADNAME_INFO info;
 			info.dwType = 0x1000;
 			info.szName = name;
-			info.dwThreadID = threadId;
+			info.dwThreadID = (handle == reinterpret_cast<HANDLE>(-1) ? ::GetCurrentThreadId() : ::GetThreadId(handle));
 			info.dwFlags = 0;
 
 			__try {
@@ -62,17 +66,17 @@ namespace nCine
 		affinityMask_ = 0LL;
 	}
 
-	void ThreadAffinityMask::Set(int cpuNum)
+	void ThreadAffinityMask::Set(std::int32_t cpuNum)
 	{
 		affinityMask_ |= 1LL << cpuNum;
 	}
 
-	void ThreadAffinityMask::Clear(int cpuNum)
+	void ThreadAffinityMask::Clear(std::int32_t cpuNum)
 	{
 		affinityMask_ &= ~(1LL << cpuNum);
 	}
 
-	bool ThreadAffinityMask::IsSet(int cpuNum)
+	bool ThreadAffinityMask::IsSet(std::int32_t cpuNum)
 	{
 		return ((affinityMask_ >> cpuNum) & 1LL) != 0;
 	}
@@ -82,7 +86,7 @@ namespace nCine
 	{
 	}
 
-	Thread::Thread(ThreadFunctionPtr threadFunc, void* threadArg)
+	Thread::Thread(ThreadFuncDelegate threadFunc, void* threadArg)
 		: Thread()
 	{
 		Run(threadFunc, threadArg);
@@ -98,14 +102,14 @@ namespace nCine
 		Detach();
 	}
 
-	unsigned int Thread::GetProcessorCount()
+	std::uint32_t Thread::GetProcessorCount()
 	{
 		SYSTEM_INFO si;
 		::GetSystemInfo(&si);
 		return si.dwNumberOfProcessors;
 	}
 
-	void Thread::Run(ThreadFunctionPtr threadFunc, void* threadArg)
+	void Thread::Run(ThreadFuncDelegate threadFunc, void* threadArg)
 	{
 		if (_sharedBlock != nullptr) {
 			LOGW("Thread %u is already running", _sharedBlock->_handle);
@@ -125,14 +129,9 @@ namespace nCine
 		}
 	}
 
-	void* Thread::Join()
+	bool Thread::Join()
 	{
-		if (_sharedBlock != nullptr) {
-			::WaitForSingleObject(_sharedBlock->_handle, INFINITE);
-			//::CloseHandle(_sharedBlock->_handle);
-			//_sharedBlock->_handle = NULL;
-		}
-		return nullptr;
+		return (_sharedBlock != nullptr && ::WaitForSingleObject(_sharedBlock->_handle, INFINITE) == WAIT_OBJECT_0);
 	}
 
 	void Thread::Detach()
@@ -167,27 +166,26 @@ namespace nCine
 #endif
 	}
 
-	int Thread::GetPriority() const
+	std::int32_t Thread::GetPriority() const
 	{
 		return (_sharedBlock != nullptr ? ::GetThreadPriority(_sharedBlock->_handle) : 0);
 	}
 
-	void Thread::SetPriority(int priority)
+	void Thread::SetPriority(std::int32_t priority)
 	{
 		if (_sharedBlock != nullptr) {
 			::SetThreadPriority(_sharedBlock->_handle, priority);
 		}
 	}
 
-	long int Thread::Self()
+	std::uint32_t Thread::GetCurrentId()
 	{
-		return ::GetCurrentThreadId();
+		return static_cast<std::uint32_t>(::GetCurrentThreadId());
 	}
 
-	[[noreturn]] void Thread::Exit(void* retVal)
+	[[noreturn]] void Thread::Exit()
 	{
 		_endthreadex(0);
-		*static_cast<unsigned int*>(retVal) = 0;
 	}
 
 	void Thread::YieldExecution()
@@ -195,14 +193,14 @@ namespace nCine
 		::Sleep(0);
 	}
 
-	void Thread::Abort()
+	bool Thread::Abort()
 	{
-#if !defined(DEATH_TARGET_WINDOWS_RT)
-		if (_sharedBlock != nullptr) {
-			// TerminateThread() is not supported on WinRT
-			::TerminateThread(_sharedBlock->_handle, 0);
-		}
-#endif
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		// TerminateThread() is not supported on WinRT
+		return false;
+#else
+		return (_sharedBlock != nullptr && ::TerminateThread(_sharedBlock->_handle, 1));
+#endif;
 	}
 
 	ThreadAffinityMask Thread::GetAffinityMask() const
@@ -231,8 +229,8 @@ namespace nCine
 	unsigned int Thread::WrapperFunction(void* arg)
 	{
 		Thread t(static_cast<SharedBlock*>(arg));
-		ThreadFunctionPtr threadFunc = t._sharedBlock->_threadFunc;
-		void* threadArg = t._sharedBlock->_threadArg;
+		auto threadFunc = t._sharedBlock->_threadFunc;
+		auto threadArg = t._sharedBlock->_threadArg;
 		t.Detach();
 
 		threadFunc(threadArg);

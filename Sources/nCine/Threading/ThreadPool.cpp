@@ -10,7 +10,7 @@ namespace nCine
 	{
 	}
 
-	ThreadPool::ThreadPool(unsigned int numThreads)
+	ThreadPool::ThreadPool(std::size_t numThreads)
 		: threads_(numThreads), numThreads_(numThreads)
 	{
 		threadStruct_.queue = &queue_;
@@ -20,11 +20,8 @@ namespace nCine
 
 		quitMutex_.Lock();
 
-		for (unsigned int i = 0; i < numThreads_; i++) {
+		for (std::size_t i = 0; i < numThreads_; i++) {
 			threads_.emplace_back(WorkerFunction, &threadStruct_);
-#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_SWITCH)
-			threads_.back().SetAffinityMask(ThreadAffinityMask(i));
-#endif
 		}
 	}
 
@@ -33,12 +30,12 @@ namespace nCine
 		threadStruct_.shouldQuit = true;
 		queueCV_.Broadcast();
 
-		for (unsigned int i = 0; i < numThreads_; i++) {
+		for (std::size_t i = 0; i < numThreads_; i++) {
 			threads_[i].Join();
 		}
 	}
 
-	void ThreadPool::EnqueueCommand(std::unique_ptr<IThreadCommand> threadCommand)
+	void ThreadPool::EnqueueCommand(std::unique_ptr<IThreadCommand>&& threadCommand)
 	{
 		ASSERT(threadCommand);
 
@@ -52,7 +49,7 @@ namespace nCine
 	{
 		ThreadStruct* threadStruct = static_cast<ThreadStruct*>(arg);
 
-		LOGD("Worker thread %u is starting", Thread::Self());
+		LOGD("Worker thread %u is starting", Thread::GetCurrentId());
 
 		while (true) {
 			threadStruct->queueMutex->Lock();
@@ -69,11 +66,11 @@ namespace nCine
 			threadStruct->queue->pop_front();
 			threadStruct->queueMutex->Unlock();
 
-			LOGD("Worker thread %u is executing its command", Thread::Self());
+			LOGD("Worker thread %u is executing its command", Thread::GetCurrentId());
 			threadCommand->Execute();
 		}
 
-		LOGD("Worker thread %u is exiting", Thread::Self());
+		LOGD("Worker thread %u is exiting", Thread::GetCurrentId());
 	}
 
 }

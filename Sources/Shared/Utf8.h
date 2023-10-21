@@ -31,39 +31,51 @@ namespace Death::Utf8
 	/**
 		@brief Widen a UTF-8 string to UTF-16 for use with Windows Unicode APIs
 	*/
-	bool ToUtf16(const char* text, std::int32_t size, wchar_t* outputBuffer, std::int32_t outputBufferSize);
+	std::int32_t ToUtf16(wchar_t* destination, std::int32_t destinationSize, const char* source, std::int32_t sourceSize = -1);
 
 	/** @overload */
-	Containers::Array<wchar_t> ToUtf16(const char* text, std::int32_t size);
+	template<std::int32_t size>
+	std::int32_t ToUtf16(wchar_t (&destination)[size], const char* source, std::int32_t sourceSize = -1) {
+		return ToUtf16(destination, size, source, sourceSize);
+	}
 
 	/** @overload */
-	inline Containers::Array<wchar_t> ToUtf16(const Containers::StringView& text) {
-		return ToUtf16(text.data(), static_cast<std::int32_t>(text.size()));
+	Containers::Array<wchar_t> ToUtf16(const char* source, std::int32_t sourceSize);
+
+	/** @overload */
+	inline Containers::Array<wchar_t> ToUtf16(const Containers::StringView& source) {
+		return ToUtf16(source.data(), static_cast<std::int32_t>(source.size()));
 	}
 
 	/** @overload */
 	template<class T, class R = Containers::Array<wchar_t>, class = typename std::enable_if<std::is_same<typename std::decay<T>::type, const char*>::value || std::is_same<typename std::decay<T>::type, char*>::value>::type>
-	inline R ToUtf16(T&& text) {
-		return ToUtf16(text, -1);
+	inline R ToUtf16(T&& source) {
+		return ToUtf16(source, -1);
 	}
 
 	/**
 		@brief Narrow a UTF-16 string to UTF-8 for use with Windows Unicode APIs
 	*/
-	bool FromUtf16(const wchar_t* text, std::int32_t size, char* outputBuffer, std::int32_t outputBufferSize);
+	std::int32_t FromUtf16(char* destination, std::int32_t destinationSize, const wchar_t* source, std::int32_t sourceSize = -1);
 
 	/** @overload */
-	Containers::String FromUtf16(const wchar_t* text, std::int32_t size);
+	template<std::int32_t size>
+	std::int32_t FromUtf16(char (&destination)[size], const wchar_t* source, std::int32_t sourceSize = -1) {
+		return FromUtf16(destination, size, source, sourceSize);
+	}
 
 	/** @overload */
-	inline Containers::String FromUtf16(const Containers::ArrayView<const wchar_t>& text) {
-		return FromUtf16(text.data(), static_cast<std::int32_t>(text.size()));
+	Containers::String FromUtf16(const wchar_t* source, std::int32_t sourceSize);
+
+	/** @overload */
+	inline Containers::String FromUtf16(const Containers::ArrayView<const wchar_t>& source) {
+		return FromUtf16(source.data(), static_cast<std::int32_t>(source.size()));
 	}
 
 	/** @overload */
 	template<class T, class R = Containers::String, class = typename std::enable_if<std::is_same<typename std::decay<T>::type, const wchar_t*>::value || std::is_same<typename std::decay<T>::type, wchar_t*>::value>::type>
-	inline R FromUtf16(T&& text) {
-		return FromUtf16(text, -1);
+	inline R FromUtf16(T&& source) {
+		return FromUtf16(source, -1);
 	}
 
 #endif
