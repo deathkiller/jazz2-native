@@ -49,7 +49,7 @@ namespace nCine
 	{
 		ThreadStruct* threadStruct = static_cast<ThreadStruct*>(arg);
 
-		LOGD("Worker thread %u is starting", Thread::GetCurrentId());
+		LOGD("Worker thread %llu is starting", Thread::GetCurrentId());
 
 		while (true) {
 			threadStruct->queueMutex->Lock();
@@ -66,11 +66,11 @@ namespace nCine
 			threadStruct->queue->pop_front();
 			threadStruct->queueMutex->Unlock();
 
-			LOGD("Worker thread %u is executing its command", Thread::GetCurrentId());
+			LOGD("Worker thread %llu is executing its command", Thread::GetCurrentId());
 			threadCommand->Execute();
 		}
 
-		LOGD("Worker thread %u is exiting", Thread::GetCurrentId());
+		LOGD("Worker thread %llu is exiting", Thread::GetCurrentId());
 	}
 
 }

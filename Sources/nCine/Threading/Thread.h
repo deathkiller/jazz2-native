@@ -140,7 +140,7 @@ namespace nCine
 #endif
 
 		/** @brief Returns the calling thread ID */
-		static std::uint32_t GetCurrentId();
+		static std::uintptr_t GetCurrentId();
 		/** @brief Terminates the calling thread */
 		[[noreturn]] static void Exit();
 		/** @brief Yields the calling thread in favour of another one with the same priority */

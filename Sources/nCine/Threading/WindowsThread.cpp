@@ -178,9 +178,9 @@ namespace nCine
 		}
 	}
 
-	std::uint32_t Thread::GetCurrentId()
+	std::uintptr_t Thread::GetCurrentId()
 	{
-		return static_cast<std::uint32_t>(::GetCurrentThreadId());
+		return static_cast<std::uintptr_t>(::GetCurrentThreadId());
 	}
 
 	[[noreturn]] void Thread::Exit()

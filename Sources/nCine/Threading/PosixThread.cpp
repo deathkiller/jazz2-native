@@ -233,12 +233,12 @@ namespace nCine
 	}
 #endif
 
-	std::uint32_t Thread::GetCurrentId()
+	std::uintptr_t Thread::GetCurrentId()
 	{
 #if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(__FreeBSD__)
-		return reinterpret_cast<std::uint32_t>(pthread_self());
+		return reinterpret_cast<std::uintptr_t>(pthread_self());
 #else
-		return static_cast<std::uint32_t>(pthread_self());
+		return static_cast<std::uintptr_t>(pthread_self());
 #endif
 	}
 
