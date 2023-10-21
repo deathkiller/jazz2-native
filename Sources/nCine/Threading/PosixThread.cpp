@@ -133,7 +133,7 @@ namespace nCine
 	bool Thread::Join()
 	{
 		if (_sharedBlock != nullptr && _sharedBlock->_handle != 0) {
-			if (pthread_join(_sharedBlock->_handle, &pRetVal) == 0) {
+			if (pthread_join(_sharedBlock->_handle, nullptr) == 0) {
 				_sharedBlock->_handle = 0;
 				return true;
 			}
