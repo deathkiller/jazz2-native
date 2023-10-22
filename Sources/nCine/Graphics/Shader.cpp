@@ -22,7 +22,7 @@ namespace nCine
 {
 	namespace
 	{
-		constexpr char BatchSizeFormatString[] = "#define BATCH_SIZE (%d)\n#line 0\n";
+		static const char BatchSizeFormatString[] = "#define BATCH_SIZE (%d)\n#line 0\n";
 
 		GLShaderProgram::Introspection shaderToShaderProgramIntrospection(Shader::Introspection introspection)
 		{

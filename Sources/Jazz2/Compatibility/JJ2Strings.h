@@ -40,6 +40,6 @@ namespace Jazz2::Compatibility
 
 		void Convert(const String& targetPath, std::function<JJ2Level::LevelToken(const StringView&)> levelTokenConversion);
 
-		static String RecodeString(const StringView& text, bool plain = false, bool escaped = false);
+		static String RecodeString(const StringView& text, bool stripFormatting = false, bool escaped = false);
 	};
 }

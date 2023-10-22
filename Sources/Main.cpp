@@ -693,7 +693,7 @@ void GameEventHandler::RefreshCacheLevels()
 
 	bool hasChristmasChronicles = fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "xmas99.j2e"_s)));
 	const HashMap<String, Pair<String, String>> knownLevels = {
-		{ "trainer"_s, { "prince"_s, { } } },
+		{ "trainer"_s, { "prince"_s, {} } },
 		{ "castle1"_s, { "prince"_s, "01"_s } },
 		{ "castle1n"_s, { "prince"_s, "02"_s } },
 		{ "carrot1"_s, { "prince"_s, "03"_s } },
@@ -745,46 +745,46 @@ void GameEventHandler::RefreshCacheLevels()
 		{ "town3"_s, { "secretf"_s, "09"_s } },
 
 		// Holiday Hare '17
-		{ "hh17_level00"_s, { "hh17"_s, { } } },
-		{ "hh17_level01"_s, { "hh17"_s, { } } },
-		{ "hh17_level01_save"_s, { "hh17"_s, { } } },
-		{ "hh17_level02"_s, { "hh17"_s, { } } },
-		{ "hh17_level02_save"_s, { "hh17"_s, { } } },
-		{ "hh17_level03"_s, { "hh17"_s, { } } },
-		{ "hh17_level03_save"_s, { "hh17"_s, { } } },
-		{ "hh17_level04"_s, { "hh17"_s, { } } },
-		{ "hh17_level04_save"_s, { "hh17"_s, { } } },
-		{ "hh17_level05"_s, { "hh17"_s, { } } },
-		{ "hh17_level05_save"_s, { "hh17"_s, { } } },
-		{ "hh17_level06"_s, { "hh17"_s, { } } },
-		{ "hh17_level06_save"_s, { "hh17"_s, { } } },
-		{ "hh17_level07"_s, { "hh17"_s, { } } },
-		{ "hh17_level07_save"_s, { "hh17"_s, { } } },
-		{ "hh17_ending"_s, { "hh17"_s, { } } },
-		{ "hh17_guardian"_s, { "hh17"_s, { } } },
+		{ "hh17_level00"_s, { "hh17"_s, {} } },
+		{ "hh17_level01"_s, { "hh17"_s, {} } },
+		{ "hh17_level01_save"_s, { "hh17"_s, {} } },
+		{ "hh17_level02"_s, { "hh17"_s, {} } },
+		{ "hh17_level02_save"_s, { "hh17"_s, {} } },
+		{ "hh17_level03"_s, { "hh17"_s, {} } },
+		{ "hh17_level03_save"_s, { "hh17"_s, {} } },
+		{ "hh17_level04"_s, { "hh17"_s, {} } },
+		{ "hh17_level04_save"_s, { "hh17"_s, {} } },
+		{ "hh17_level05"_s, { "hh17"_s, {} } },
+		{ "hh17_level05_save"_s, { "hh17"_s, {} } },
+		{ "hh17_level06"_s, { "hh17"_s, {} } },
+		{ "hh17_level06_save"_s, { "hh17"_s, {} } },
+		{ "hh17_level07"_s, { "hh17"_s, {} } },
+		{ "hh17_level07_save"_s, { "hh17"_s, {} } },
+		{ "hh17_ending"_s, { "hh17"_s, {} } },
+		{ "hh17_guardian"_s, { "hh17"_s, {} } },
 
 		// Holiday Hare '18
-		{ "hh18_level01"_s, { "hh18"_s, { } } },
-		{ "hh18_level02"_s, { "hh18"_s, { } } },
-		{ "hh18_level03"_s, { "hh18"_s, { } } },
-		{ "hh18_level04"_s, { "hh18"_s, { } } },
-		{ "hh18_level05"_s, { "hh18"_s, { } } },
-		{ "hh18_level06"_s, { "hh18"_s, { } } },
-		{ "hh18_level07"_s, { "hh18"_s, { } } },
-		{ "hh18_save01"_s, { "hh18"_s, { } } },
-		{ "hh18_save02"_s, { "hh18"_s, { } } },
-		{ "hh18_save03"_s, { "hh18"_s, { } } },
-		{ "hh18_save04"_s, { "hh18"_s, { } } },
-		{ "hh18_save05"_s, { "hh18"_s, { } } },
-		{ "hh18_save06"_s, { "hh18"_s, { } } },
-		{ "hh18_save07"_s, { "hh18"_s, { } } },
-		{ "hh18_ending"_s, { "hh18"_s, { } } },
-		{ "hh18_guardian"_s, { "hh18"_s, { } } },
+		{ "hh18_level01"_s, { "hh18"_s, {} } },
+		{ "hh18_level02"_s, { "hh18"_s, {} } },
+		{ "hh18_level03"_s, { "hh18"_s, {} } },
+		{ "hh18_level04"_s, { "hh18"_s, {} } },
+		{ "hh18_level05"_s, { "hh18"_s, {} } },
+		{ "hh18_level06"_s, { "hh18"_s, {} } },
+		{ "hh18_level07"_s, { "hh18"_s, {} } },
+		{ "hh18_save01"_s, { "hh18"_s, {} } },
+		{ "hh18_save02"_s, { "hh18"_s, {} } },
+		{ "hh18_save03"_s, { "hh18"_s, {} } },
+		{ "hh18_save04"_s, { "hh18"_s, {} } },
+		{ "hh18_save05"_s, { "hh18"_s, {} } },
+		{ "hh18_save06"_s, { "hh18"_s, {} } },
+		{ "hh18_save07"_s, { "hh18"_s, {} } },
+		{ "hh18_ending"_s, { "hh18"_s, {} } },
+		{ "hh18_guardian"_s, { "hh18"_s, {} } },
 
 		// Special names
-		{ "end"_s, { { }, ":end"_s } },
-		{ "endepis"_s, { { }, ":end"_s } },
-		{ "ending"_s, { { }, ":credits"_s } }
+		{ "end"_s, { {}, ":end"_s } },
+		{ "endepis"_s, { {}, ":end"_s } },
+		{ "ending"_s, { {}, ":credits"_s } }
 	};
 
 	auto LevelTokenConversion = [&knownLevels](const StringView& levelToken) -> Compatibility::JJ2Level::LevelToken {
@@ -795,7 +795,7 @@ void GameEventHandler::RefreshCacheLevels()
 			}
 			return { it->second.first(), (it->second.second()[0] == ':' ? it->second.second() : (it->second.second() + "_"_s + levelToken)) };
 		}
-		return { { }, levelToken };
+		return { {}, levelToken };
 	};
 
 	auto EpisodeNameConversion = [](Compatibility::JJ2Episode* episode) -> String {
@@ -819,15 +819,15 @@ void GameEventHandler::RefreshCacheLevels()
 
 	auto EpisodePrevNext = [](Compatibility::JJ2Episode* episode) -> Pair<String, String> {
 		if (episode->Name == "prince"_s) {
-			return { { }, "rescue"_s };
+			return { {}, "rescue"_s };
 		} else if (episode->Name == "rescue"_s) {
 			return { "prince"_s, "flash"_s };
 		} else if (episode->Name == "flash"_s) {
 			return { "rescue"_s, "monk"_s };
 		} else if (episode->Name == "monk"_s) {
-			return { "flash"_s, { } };
+			return { "flash"_s, {} };
 		} else {
-			return { { }, { } };
+			return { {}, {} };
 		}
 	};
 

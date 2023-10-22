@@ -44,7 +44,7 @@ namespace Jazz2::UI
 		/// Deleted assignment operator
 		DiscordRpcClient& operator=(const DiscordRpcClient&) = delete;
 
-		enum class Opcodes : uint32_t {
+		enum class Opcodes : std::uint32_t {
 			Handshake,
 			Frame,
 			Close,
@@ -61,10 +61,10 @@ namespace Jazz2::UI
 		int _sockFd;
 #endif
 		Thread _thread;
-		int _nonce;
+		std::int32_t _nonce;
 		String _clientId;
 
-		bool WriteFrame(Opcodes opcode, const char* buffer, uint32_t bufferSize);
+		bool WriteFrame(Opcodes opcode, const char* buffer, std::uint32_t bufferSize);
 
 		static void OnBackgroundThread(void* args);
 	};

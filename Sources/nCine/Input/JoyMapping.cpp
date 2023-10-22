@@ -755,15 +755,15 @@ namespace nCine
 		return false;
 #else
 #	if defined(DEATH_TARGET_WINDOWS)
-		constexpr char platformName[] = "Windows";
+		static const char platformName[] = "Windows";
 #	elif defined(DEATH_TARGET_ANDROID)
-		constexpr char platformName[] = "Android";
+		static const char platformName[] = "Android";
 #	elif defined(DEATH_TARGET_IOS)
-		constexpr char platformName[] = "iOS";
+		static const char platformName[] = "iOS";
 #	elif defined(DEATH_TARGET_APPLE)
-		constexpr char platformName[] = "Mac OS X";
+		static const char platformName[] = "Mac OS X";
 #	else
-		constexpr char platformName[] = "Linux";
+		static const char platformName[] = "Linux";
 #	endif
 
 		return (strncmp(start, platformName, end - start) == 0);
