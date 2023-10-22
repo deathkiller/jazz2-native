@@ -172,7 +172,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	String JJ2Strings::RecodeString(const StringView& text, bool plain, bool escaped)
+	String JJ2Strings::RecodeString(const StringView& text, bool stripFormatting, bool escaped)
 	{
 		if (text.empty()) {
 			return { };
@@ -190,7 +190,7 @@ namespace Jazz2::Compatibility
 
 			if (current == '@') {
 				// New line
-				if (!plain) {
+				if (!stripFormatting) {
 					if (escaped) {
 						buffer[j++] = '\\';
 						buffer[j++] = 'n';
@@ -203,7 +203,7 @@ namespace Jazz2::Compatibility
 			} else if (current == '\xA7' && (std::isdigit(text[i + 1]) || text[i + 1] == '/')) {
 				// Char spacing (§)
 				i++;
-				if (!plain) {
+				if (!stripFormatting) {
 					if (escaped) {
 						buffer[j++] = '\\';
 						buffer[j++] = 'f';
@@ -246,7 +246,7 @@ namespace Jazz2::Compatibility
 					colorEmitted = false;
 				}
 			} else {
-				if (!plain && !colorEmitted) {
+				if (!stripFormatting && !colorEmitted) {
 					colorEmitted = true;
 					if (escaped) {
 						buffer[j++] = '\\';

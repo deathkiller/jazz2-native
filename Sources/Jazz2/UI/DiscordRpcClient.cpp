@@ -10,6 +10,8 @@
 #	include <sys/un.h>
 #endif
 
+#include <Threading/Interlocked.h>
+
 using namespace Death::Containers::Literals;
 
 namespace Jazz2::UI
@@ -48,8 +50,8 @@ namespace Jazz2::UI
 		}
 
 		wchar_t pipeName[32];
-		for (int32_t i = 0; i < 10; i++) {
-			wsprintfW(pipeName, L"\\\\.\\pipe\\discord-ipc-%i", i);
+		for (std::int32_t i = 0; i < 10; i++) {
+			swprintf_s(pipeName, L"\\\\.\\pipe\\discord-ipc-%i", i);
 
 			_hPipe = CreateFile(pipeName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
 				NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
@@ -104,8 +106,8 @@ namespace Jazz2::UI
 		}
 
 		bool isConnected = false;
-		for (int32_t j = 0; j < countof(RpcPaths); j++) {
-			for (int32_t i = 0; i < 10; i++) {
+		for (std::int32_t j = 0; j < countof(RpcPaths); j++) {
+			for (std::int32_t i = 0; i < 10; i++) {
 				formatString(addr.sun_path, sizeof(addr.sun_path), RpcPaths[j].data(), tempPath.data(), i);
 				if (::connect(_sockFd, (struct sockaddr*)&addr, sizeof(addr)) >= 0) {
 					isConnected = true;
@@ -130,7 +132,7 @@ namespace Jazz2::UI
 	void DiscordRpcClient::Disconnect()
 	{
 #if defined(DEATH_TARGET_WINDOWS)
-		HANDLE pipe = (HANDLE)InterlockedExchangePointer(&_hPipe, NULL);
+		HANDLE pipe = Interlocked::ExchangePointer(&_hPipe, NULL);
 		if (pipe != NULL) {
 			::CancelIoEx(pipe, NULL);
 			::CloseHandle(pipe);
@@ -179,7 +181,7 @@ namespace Jazz2::UI
 		pid_t processId = ::getpid();
 #endif
 		char buffer[1024];
-		int32_t bufferOffset = formatString(buffer, sizeof(buffer), "{\"cmd\":\"SET_ACTIVITY\",\"nonce\":%i,\"args\":{\"pid\":%i,\"activity\":{", ++_nonce, processId);
+		std::int32_t bufferOffset = formatString(buffer, sizeof(buffer), "{\"cmd\":\"SET_ACTIVITY\",\"nonce\":%i,\"args\":{\"pid\":%i,\"activity\":{", ++_nonce, processId);
 
 		if (!richPresence.State.empty()) {
 			bufferOffset += formatString(buffer + bufferOffset, sizeof(buffer) - bufferOffset, "\"state\":\"%s\",", richPresence.State.data());
@@ -231,11 +233,11 @@ namespace Jazz2::UI
 		return true;
 	}
 
-	bool DiscordRpcClient::WriteFrame(Opcodes opcode, const char* buffer, uint32_t bufferSize)
+	bool DiscordRpcClient::WriteFrame(Opcodes opcode, const char* buffer, std::uint32_t bufferSize)
 	{
 		char frameHeader[8];
-		*(uint32_t*)&frameHeader[0] = (uint32_t)opcode;
-		*(uint32_t*)&frameHeader[4] = bufferSize;
+		*(std::uint32_t*)&frameHeader[0] = (std::uint32_t)opcode;
+		*(std::uint32_t*)&frameHeader[4] = bufferSize;
 
 #if defined(DEATH_TARGET_WINDOWS)
 		DWORD bytesWritten = 0;
@@ -245,9 +247,9 @@ namespace Jazz2::UI
 			return false;
 		}
 
-		int32_t bytesTotal = 0;
+		std::int32_t bytesTotal = 0;
 		while (bytesTotal < bufferSize) {
-			int32_t bytesWritten = ::write(_sockFd, buffer + bytesTotal, bufferSize - bytesTotal);
+			std::int32_t bytesWritten = ::write(_sockFd, buffer + bytesTotal, bufferSize - bytesTotal);
 			if (bytesWritten < 0) {
 				return false;
 			}
@@ -263,7 +265,7 @@ namespace Jazz2::UI
 
 		// Handshake
 		char buffer[2048];
-		int32_t bufferSize = formatString(buffer, sizeof(buffer), "{\"v\":1,\"client_id\":\"%s\"}", client->_clientId.data());
+		std::int32_t bufferSize = formatString(buffer, sizeof(buffer), "{\"v\":1,\"client_id\":\"%s\"}", client->_clientId.data());
 		client->WriteFrame(Opcodes::Handshake, buffer, bufferSize);
 
 #if defined(DEATH_TARGET_WINDOWS)
@@ -273,7 +275,7 @@ namespace Jazz2::UI
 		if (!::ReadFile(client->_hPipe, buffer, sizeof(buffer), &bytesRead, &ov)) {
 			DWORD error = ::GetLastError();
 			if (error == ERROR_BROKEN_PIPE) {
-				HANDLE pipe = (HANDLE)InterlockedExchangePointer(&client->_hPipe, NULL);
+				HANDLE pipe = Interlocked::ExchangePointer(&client->_hPipe, NULL);
 				if (pipe != NULL) {
 					::CloseHandle(client->_hPipe);
 				}
@@ -287,8 +289,8 @@ namespace Jazz2::UI
 			switch (dwEvent) {
 				case WAIT_OBJECT_0: {
 					if (bytesRead > 0) {
-						Opcodes opcode = (Opcodes)*(uint32_t*)&buffer[0];
-						uint32_t frameSize = *(uint32_t*)&buffer[4];
+						Opcodes opcode = (Opcodes)*(std::uint32_t*)&buffer[0];
+						std::uint32_t frameSize = *(std::uint32_t*)&buffer[4];
 						if (frameSize >= sizeof(buffer)) {
 							continue;
 						}
@@ -296,7 +298,7 @@ namespace Jazz2::UI
 						switch (opcode) {
 							case Opcodes::Handshake:
 							case Opcodes::Close: {
-								HANDLE pipe = (HANDLE)InterlockedExchangePointer(&client->_hPipe, NULL);
+								HANDLE pipe = Interlocked::ExchangePointer(&client->_hPipe, NULL);
 								if (pipe != NULL) {
 									::CloseHandle(client->_hPipe);
 								}
@@ -316,7 +318,7 @@ namespace Jazz2::UI
 					if (!::ReadFile(client->_hPipe, buffer, sizeof(buffer), &bytesRead, &ov)) {
 						DWORD error = ::GetLastError();
 						if (error == ERROR_BROKEN_PIPE) {
-							HANDLE pipe = (HANDLE)InterlockedExchangePointer(&client->_hPipe, NULL);
+							HANDLE pipe = Interlocked::ExchangePointer(&client->_hPipe, NULL);
 							if (pipe != NULL) {
 								::CloseHandle(client->_hPipe);
 							}
@@ -328,7 +330,7 @@ namespace Jazz2::UI
 				case WAIT_OBJECT_0 + 1: {
 					if (!client->_pendingFrame.empty()) {
 						client->WriteFrame(Opcodes::Frame, client->_pendingFrame.data(), client->_pendingFrame.size());
-						client->_pendingFrame = String();
+						client->_pendingFrame = { };
 					}
 					break;
 				}
@@ -336,10 +338,10 @@ namespace Jazz2::UI
 		}
 #else
 		while (client->_sockFd >= 0) {
-			int32_t bytesRead = ::read(client->_sockFd, buffer, sizeof(buffer));
+			std::int32_t bytesRead = ::read(client->_sockFd, buffer, sizeof(buffer));
 			if (bytesRead <= 0) {
 				LOGE("Failed to read from socket: %i", bytesRead);
-				int32_t sockFd = client->_sockFd;
+				std::int32_t sockFd = client->_sockFd;
 				if (sockFd >= 0) {
 					client->_sockFd = -1;
 					::close(sockFd);
@@ -347,8 +349,8 @@ namespace Jazz2::UI
 				break;
 			}
 
-			Opcodes opcode = (Opcodes)*(uint32_t*)&buffer[0];
-			uint32_t frameSize = *(uint32_t*)&buffer[4];
+			Opcodes opcode = (Opcodes)*(std::uint32_t*)&buffer[0];
+			std::uint32_t frameSize = *(std::uint32_t*)&buffer[4];
 			if (frameSize >= sizeof(buffer)) {
 				continue;
 			}
@@ -356,7 +358,7 @@ namespace Jazz2::UI
 			switch (opcode) {
 				case Opcodes::Handshake:
 				case Opcodes::Close: {
-					int32_t sockFd = client->_sockFd;
+					std::int32_t sockFd = client->_sockFd;
 					if (sockFd >= 0) {
 						client->_sockFd = -1;
 						::close(sockFd);

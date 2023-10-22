@@ -582,6 +582,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StaticArray.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Tags.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\DateTime.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Threading\Interlocked.h" />
     <ClInclude Include="simdjson\simdjson.h" />
   </ItemGroup>
   <ItemGroup>

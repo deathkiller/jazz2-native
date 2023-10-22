@@ -23,7 +23,14 @@ using namespace Death::Containers::Literals;
 
 namespace nCine
 {
-	static constexpr I18n::LanguageInfo SupportedLanguages[] = {
+	struct LanguageInfo
+	{
+		const char* Identifier;
+		const StringView Name;
+	};
+
+	/** @brief List of all supported languages */
+	static constexpr LanguageInfo SupportedLanguages[] = {
 		{ "af", "Afrikaans"_s },
 		{ "be", "БЕЛАРУСКАЯ"_s },
 		{ "bg", "БЪЛГАРСКИ"_s },
@@ -511,22 +518,6 @@ namespace nCine
 		}
 	}
 
-	void I18n::Unload()
-	{
-		_file = nullptr;
-		_fileSize = 0;
-		_stringCount = 0;
-		_origTable = nullptr;
-		_transTable = nullptr;
-		_hashSize = 0;
-		_hashTable = nullptr;
-
-		if (_pluralExpression != nullptr) {
-			delete _pluralExpression;
-			_pluralExpression = nullptr;
-		}
-	}
-
 	bool I18n::LoadFromFile(const StringView& path)
 	{
 		return LoadFromFile(fs::Open(path, FileAccessMode::Read));
@@ -536,6 +527,7 @@ namespace nCine
 	{
 		std::uint32_t fileSize = fileHandle->GetSize();
 		if (fileSize < 32 || fileSize > 16 * 1024 * 1024) {
+			LOGE("File \"%s\" is corrupted", fileHandle->GetPath().data());
 			return false;
 		}
 
@@ -546,11 +538,11 @@ namespace nCine
 
 		constexpr std::uint32_t SignatureLE = 0x950412de;
 		constexpr std::uint32_t SignatureBE = 0xde120495;
-		MoFileHeader* data = (MoFileHeader*)_file.get();
+		MoFileHeader* data = reinterpret_cast<MoFileHeader*>(_file.get());
 		if (!(data->Signature == SignatureLE || data->Signature == SignatureBE) || data->StringCount <= 0 ||
 			data->OrigTableOffset + data->StringCount > fileSize || data->TransTableOffset + data->StringCount > fileSize ||
 			data->HashTableOffset + data->HashTableSize > fileSize) {
-			LOGE("Invalid \".mo\" file");
+			LOGE("File \"%s\" is corrupted", fileHandle->GetPath().data());
 			Unload();
 			return false;
 		}
@@ -572,6 +564,22 @@ namespace nCine
 		return true;
 	}
 
+	void I18n::Unload()
+	{
+		_file = nullptr;
+		_fileSize = 0;
+		_stringCount = 0;
+		_origTable = nullptr;
+		_transTable = nullptr;
+		_hashSize = 0;
+		_hashTable = nullptr;
+
+		if (_pluralExpression != nullptr) {
+			delete _pluralExpression;
+			_pluralExpression = nullptr;
+		}
+	}
+
 	const char* I18n::LookupTranslation(const char* msgid, std::uint32_t* resultLength)
 	{
 		if (_hashTable != nullptr) {
@@ -584,7 +592,7 @@ namespace nCine
 			while (*str != '\0') {
 				hashValue <<= 4;
 				hashValue += (std::uint8_t)*str++;
-				std::uint32_t g = hashValue & (0x0fu << (HashWordBits - 4));
+				std::uint32_t g = hashValue & (0x0Fu << (HashWordBits - 4));
 				if (g != 0) {
 					hashValue ^= g >> (HashWordBits - 8);
 					hashValue ^= g;
@@ -603,8 +611,8 @@ namespace nCine
 				}
 				nstr--;
 
-				// Compare `msgid` with the original string at index `nstr`. We compare the lengths with `>=`, not `==`,
-				// because plural entries are represented by strings with an embedded NULL.
+				// Compare `msgid` with the original string at index `nstr`.
+				// We compare the lengths with `>=`, not `==`, because plural entries are represented by strings with an embedded NULL.
 				if (nstr < _stringCount && _origTable[nstr].Length >= len && (std::strcmp(msgid, _file.get() + _origTable[nstr].Offset) == 0)) {
 					if (_transTable[nstr].Offset >= _fileSize) {
 						return nullptr;
@@ -620,7 +628,7 @@ namespace nCine
 				}
 			}
 		} else {
-			// Binary search in the sorted array of messages
+			// Binary search in the sorted array of messages if hashing table is not available
 			std::size_t bottom = 0;
 			std::size_t top = _stringCount;
 			while (bottom < top) {
@@ -801,6 +809,7 @@ namespace nCine
 			}
 		}
 
+		// Use default rule (n != 1)
 		return new CompareNotEqualsToken(new VariableToken(), new ValueToken(1));
 	}
 
@@ -830,7 +839,7 @@ namespace nCine
 #endif
 	}
 
-	String _fn(const char* singular, const char* plural, int n, ...)
+	String _fn(const char* singular, const char* plural, std::int32_t n, ...)
 	{
 		std::uint32_t resultLength;
 		const char* translated = I18n::Get().LookupTranslation(singular, &resultLength);

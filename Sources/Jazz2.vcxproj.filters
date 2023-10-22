@@ -205,6 +205,9 @@
     <Filter Include="Source Files\Jazz2\Multiplayer">
       <UniqueIdentifier>{66756cef-10ce-4ae3-ade6-87422c5ddb2e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Shared\Threading">
+      <UniqueIdentifier>{5e949f82-18ce-4137-97f1-bbcc7d2285c9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1343,6 +1346,12 @@
     </ClInclude>
     <ClInclude Include="Jazz2\Tiles\ITileMapOwner.h">
       <Filter>Header Files\Jazz2\Tiles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\Backends\enet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Threading\Interlocked.h">
+      <Filter>Header Files\Shared\Threading</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

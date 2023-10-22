@@ -19,6 +19,9 @@ namespace Death::Containers
 {
 	class TimeSpan;
 
+	/**
+		@brief Represents an instant in time, typically expressed as a date and time of day
+	*/
 	class DateTime
 	{
 	public:
@@ -73,6 +76,9 @@ namespace Death::Containers
 			NZDT = GMT13				// Daylight Saving Time
 		};
 
+		/**
+			@brief Represents a timezone that can be used by timezone conversions in @ref DateTime
+		*/
 		class TimeZone
 		{
 		public:
@@ -90,6 +96,9 @@ namespace Death::Containers
 			std::int32_t _offset;
 		};
 
+		/**
+			@brief Describes a date and time represented by @ref DateTime
+		*/
 		struct Tm
 		{
 			std::int32_t Millisecond, Second, Minute, Hour, Day, DayOfYear, Month, Year;
@@ -229,37 +238,46 @@ namespace Death::Containers
 		inline bool IsInStdRange() const;
 	};
 
+	/**
+		@brief Represents a time interval
+	*/
 	class TimeSpan
 	{
 	public:
-		static TimeSpan Milliseconds(std::int64_t milliseconds)
+		/** @brief Returns @ref TimeSpan that represents a specified number of milliseconds */
+		static TimeSpan FromMilliseconds(std::int64_t milliseconds)
 		{
 			return TimeSpan(0, 0, 0, milliseconds);
 		}
 
-		static TimeSpan Seconds(std::int64_t seconds)
+		/** @brief Returns @ref TimeSpan that represents a specified number of seconds */
+		static TimeSpan FromSeconds(std::int64_t seconds)
 		{
 			return TimeSpan(0, 0, seconds);
 		}
 
-		static TimeSpan Minutes(std::int32_t minutes)
+		/** @brief Returns @ref TimeSpan that represents a specified number of minutes */
+		static TimeSpan FromMinutes(std::int32_t minutes)
 		{
 			return TimeSpan(0, minutes, 0);
 		}
 
-		static TimeSpan Hours(std::int32_t hours)
+		/** @brief Returns @ref TimeSpan that represents a specified number of hours */
+		static TimeSpan FromHours(std::int32_t hours)
 		{
 			return TimeSpan(hours, 0, 0);
 		}
 
-		static TimeSpan Days(std::int32_t days)
+		/** @brief Returns @ref TimeSpan that represents a specified number of days */
+		static TimeSpan FromDays(std::int32_t days)
 		{
-			return Hours(24 * days);
+			return FromHours(24 * days);
 		}
 
-		static TimeSpan Weeks(std::int32_t days)
+		/** @brief Returns @ref TimeSpan that represents a specified number of weeks */
+		static TimeSpan FromWeeks(std::int32_t days)
 		{
-			return Days(7 * days);
+			return FromDays(7 * days);
 		}
 
 		TimeSpan() { }
