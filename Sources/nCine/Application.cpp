@@ -1,5 +1,13 @@
 ﻿#include "../Common.h"
 
+#if defined(DEATH_TARGET_WINDOWS)
+extern "C"
+{
+	_declspec(dllexport) unsigned long int NvOptimusEnablement = 0x00000001;
+	_declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 0x00000001;
+};
+#endif
+
 #if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #	pragma comment(lib, "opengl32.lib")
 #	if defined(_M_X64)
@@ -33,13 +41,6 @@
 #	else
 #		error Unsupported architecture
 #	endif
-
-extern "C"
-{
-	_declspec(dllexport) unsigned long int NvOptimusEnablement = 0x00000001;
-	_declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
-};
-
 #endif
 
 #include "Application.h"

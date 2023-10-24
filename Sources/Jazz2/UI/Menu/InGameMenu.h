@@ -31,7 +31,7 @@ namespace Jazz2::UI::Menu
 		void LeaveSection() override;
 		void ChangeLevel(Jazz2::LevelInitialization&& levelInit) override;
 #if defined(WITH_MULTIPLAYER)
-		bool ConnectToServer(const char* address, std::uint16_t port) override;
+		bool ConnectToServer(const StringView& address, std::uint16_t port) override;
 		bool CreateServer(std::uint16_t port) override;
 #endif
 		void ApplyPreferencesChanges(ChangedPreferencesType type) override;

@@ -39,6 +39,7 @@ namespace Jazz2
 		virtual Tiles::TileMap* TileMap() = 0;
 
 		virtual GameDifficulty Difficulty() const = 0;
+		virtual bool IsPausable() const = 0;
 		virtual bool IsReforged() const = 0;
 		virtual Recti LevelBounds() const = 0;
 		virtual float ElapsedFrames() const = 0;

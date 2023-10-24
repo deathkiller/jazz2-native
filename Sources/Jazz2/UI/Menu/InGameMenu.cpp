@@ -235,7 +235,7 @@ namespace Jazz2::UI::Menu
 	}
 
 #if defined(WITH_MULTIPLAYER)
-	bool InGameMenu::ConnectToServer(const char* address, std::uint16_t port)
+	bool InGameMenu::ConnectToServer(const StringView& address, std::uint16_t port)
 	{
 		return _root->_root->ConnectToServer(address, port);
 	}
@@ -264,6 +264,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		if ((type & ChangedPreferencesType::Language) == ChangedPreferencesType::Language) {
+			// All sections have to be recreated to load new language
 			_sections.clear();
 			SwitchToSection<PauseSection>();
 		}

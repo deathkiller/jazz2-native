@@ -47,14 +47,14 @@ namespace Death::Containers
 		 * string view with this flag set doesn't need to have a copy allocated in
 		 * order to ensure it stays in scope.
 		 */
-		Global = std::size_t { 1 } << (sizeof(std::size_t) * 8 - 1),
+		Global = std::size_t{1} << (sizeof(std::size_t) * 8 - 1),
 
 		/**
 		 * The referenced string is null-terminated. A string view with this flag
 		 * set doesn't need to have a null-terminated copy allocated in order to
 		 * pass to an API that expects only null-terminated strings.
 		 */
-		 NullTerminated = std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2)
+		 NullTerminated = std::size_t{1} << (sizeof(std::size_t) * 8 - 2)
 	};
 
 	DEFINE_ENUM_OPERATORS(StringViewFlags);
@@ -75,12 +75,15 @@ namespace Death::Containers
 	template<class T> class BasicStringView
 	{
 	public:
+		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either a StringView or std::size_t */
+		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ BasicStringView(U) noexcept : _data{}, _sizePlusFlags{std::size_t(StringViewFlags::Global)} {}
+
 		/**
 		 * @brief Default constructor
 		 *
 		 * A default-constructed instance has @ref StringViewFlags::Global set.
 		 */
-		constexpr /*implicit*/ BasicStringView(std::nullptr_t = nullptr) noexcept : _data{}, _sizePlusFlags{std::size_t(StringViewFlags::Global)} {}
+		constexpr /*implicit*/ BasicStringView() noexcept : _data{}, _sizePlusFlags{std::size_t(StringViewFlags::Global)} {}
 
 		/**
 		 * @brief Construct from a C string of known size
@@ -104,7 +107,7 @@ namespace Death::Containers
 		constexpr /*implicit*/ BasicStringView(T* data, std::size_t size, StringViewFlags flags = {}) noexcept : _data{data}, _sizePlusFlags{
 			// This ends up being called from BasicStringView(T*, Flags), so basically on every implicit conversion
 			// from a C string, thus the release build perf aspect wins over safety
-			(size | (std::size_t(flags) & Implementation::StringViewSizeMask))} { }
+			(size | (std::size_t(flags) & Implementation::StringViewSizeMask))} {}
 
 		/**
 		 * @brief Construct from a @ref String
@@ -141,7 +144,7 @@ namespace Death::Containers
 		// It's also explicitly disallowing T[] arguments (which are implicitly convertible to an ArrayView), because those should be picking the T*
 		// overload and rely on strlen(), consistently with how C string literals work; and disallowing construction from a StringView
 		// because it'd get preferred over the implicit copy constructor.
-		template<class U, class = typename std::enable_if<!std::is_array<typename std::remove_reference<U&&>::type>::value && !std::is_same<typename std::decay<U&&>::type, BasicStringView<T>>::value, decltype(ArrayView<T>{std::declval<U&&>()})>::type> constexpr /*implicit*/ BasicStringView(U&& data, StringViewFlags flags = { }) noexcept : BasicStringView{flags, ArrayView<T>(data)} {}
+		template<class U, class = typename std::enable_if<!std::is_array<typename std::remove_reference<U&&>::type>::value && !std::is_same<typename std::decay<U&&>::type, BasicStringView<T>>::value && !std::is_same<typename std::decay<U&&>::type, std::nullptr_t>::value, decltype(ArrayView<T>{std::declval<U&&>()})>::type> constexpr /*implicit*/ BasicStringView(U&& data, StringViewFlags flags = {}) noexcept: BasicStringView{flags, ArrayView<T>(data)} {}
 
 		/** @brief Construct a @ref StringView from a @ref MutableStringView */
 		template<class U, class = typename std::enable_if<std::is_same<const U, T>::value>::type> constexpr /*implicit*/ BasicStringView(BasicStringView<U> mutable_) noexcept : _data{mutable_._data}, _sizePlusFlags{mutable_._sizePlusFlags} {}
@@ -162,7 +165,7 @@ namespace Death::Containers
 		 * The @ref BasicStringView(std::nullptr_t) overload (which is a
 		 * default constructor) is additionally @cpp constexpr @ce.
 		 */
-		DEATH_CONSTEXPR14 /*implicit*/ BasicStringView(T* data, StringViewFlags extraFlags = { }) noexcept : BasicStringView {data, extraFlags, nullptr} {}
+		template<class U, class = typename std::enable_if<std::is_pointer<U>::value && std::is_convertible<const U&, T*>::value>::type> /*implicit*/ BasicStringView(U data, StringViewFlags extraFlags = {}) noexcept : BasicStringView{data, extraFlags, nullptr} {}
 
 		/**
 		 * @brief Construct a view on an external type / from an external representation
@@ -283,7 +286,7 @@ namespace Death::Containers
 		 * is @cpp nullptr @ce, returns zero-sized @cpp nullptr @ce view.
 		 */
 		constexpr BasicStringView<T> prefix(T* end) const {
-			return end ? slice(_data, end) : BasicStringView<T> {};
+			return end ? slice(_data, end) : BasicStringView<T>{};
 		}
 
 		/**
@@ -761,13 +764,13 @@ namespace Death::Containers
 
 		// Called from BasicStringView(U&&, StringViewFlags), see its comment for details; arguments in a flipped order to avoid accidental
 		// ambiguity. The ArrayView type is a template to avoid having to include ArrayView.h.
-		template<class U, class = typename std::enable_if<std::is_same<T, U>::value>::type> constexpr explicit BasicStringView(StringViewFlags flags, ArrayView<U> data) noexcept : BasicStringView { data.data(), data.size(), flags } {}
+		template<class U, class = typename std::enable_if<std::is_same<T, U>::value>::type> constexpr explicit BasicStringView(StringViewFlags flags, ArrayView<U> data) noexcept : BasicStringView{data.data(), data.size(), flags} {}
 
 		// Used by the char* constructor, delinlined because it calls into std::strlen()
 		explicit BasicStringView(T* data, StringViewFlags flags, std::nullptr_t) noexcept;
 
 		// Used by slice() to skip unneeded checks in the public constexpr constructor
-		constexpr explicit BasicStringView(T* data, std::size_t sizePlusFlags, std::nullptr_t) noexcept : _data { data }, _sizePlusFlags { sizePlusFlags } {}
+		constexpr explicit BasicStringView(T* data, std::size_t sizePlusFlags, std::nullptr_t) noexcept : _data{data}, _sizePlusFlags{sizePlusFlags} {}
 
 		T* _data;
 		std::size_t _sizePlusFlags;
@@ -825,7 +828,7 @@ namespace Death::Containers
 		*/
 		constexpr StringView operator"" _s(const char* data, std::size_t size) {
 			// Using plain bit ops instead of EnumSet to speed up debug builds
-			return StringView { data, size, StringViewFlags(std::size_t(StringViewFlags::Global) | std::size_t(StringViewFlags::NullTerminated)) };
+			return StringView{data, size, StringViewFlags(std::size_t(StringViewFlags::Global) | std::size_t(StringViewFlags::NullTerminated))};
 		}
 	}
 
@@ -966,7 +969,7 @@ namespace Death::Containers
 		template<> struct ArrayViewConverter<const char, BasicStringView<const char>> {
 			static ArrayView<const char> from(const BasicStringView<const char>& other);
 		};
-		template<class T> struct ErasedArrayViewConverter<BasicStringView<T>> : ArrayViewConverter<T, BasicStringView<T>> { };
-		template<class T> struct ErasedArrayViewConverter<const BasicStringView<T>> : ArrayViewConverter<T, BasicStringView<T>> { };
+		template<class T> struct ErasedArrayViewConverter<BasicStringView<T>> : ArrayViewConverter<T, BasicStringView<T>> {};
+		template<class T> struct ErasedArrayViewConverter<const BasicStringView<T>> : ArrayViewConverter<T, BasicStringView<T>> {};
 	}
 }

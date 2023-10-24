@@ -52,7 +52,6 @@ namespace nCine
 		glMajorVersion_(3),
 		glMinorVersion_(3),
 #endif
-		argc_(0),
 		argv_(nullptr)
 	{
 #if defined(DEATH_TARGET_ANDROID)
@@ -81,21 +80,8 @@ namespace nCine
 		return dataPath_;
 	}
 
-#if defined(DEATH_TARGET_WINDOWS)
-	const String AppConfiguration::argv(int index) const
-	{
-		if (index < argc_) {
-			return Death::Utf8::FromUtf16(argv_[index]);
-		}
-		return { };
-	}
-#else
 	const StringView AppConfiguration::argv(int index) const
 	{
-		if (index < argc_) {
-			return argv_[index];
-		}
-		return { };
+		return argv_[index];
 	}
-#endif
 }

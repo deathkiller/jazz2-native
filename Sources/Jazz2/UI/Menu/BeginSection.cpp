@@ -333,7 +333,7 @@ namespace Jazz2::UI::Menu
 			// TODO: Multiplayer
 			case (int32_t)Item::TODO_ConnectTo:
 				// TODO: Hardcoded address and port
-				_root->ConnectToServer("127.0.0.1", 10666);
+				_root->ConnectToServer("127.0.0.1"_s, 7438);
 				break;
 			case (int32_t)Item::TODO_CreateServer:
 				// TODO: Hardcoded address and port

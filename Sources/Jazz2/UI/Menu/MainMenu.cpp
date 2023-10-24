@@ -66,6 +66,30 @@ namespace Jazz2::UI::Menu
 		_canvasOverlay->setParent(nullptr);
 	}
 
+	void MainMenu::Reset()
+	{
+		bool shouldSwitch = false;
+		while (!_sections.empty()) {
+			if (_sections.size() == 1 && dynamic_cast<BeginSection*>(_sections.back().get())) {
+				if (shouldSwitch) {
+					auto& lastSection = _sections.back();
+					lastSection->OnShow(this);
+
+					if (_canvasBackground->ViewSize != Vector2i::Zero) {
+						Recti clipRectangle = lastSection->GetClipRectangle(_canvasBackground->ViewSize);
+						_upscalePass.SetClipRectangle(clipRectangle);
+					}
+				}
+				return;
+			}
+
+			_sections.pop_back();
+			shouldSwitch = true;
+		}
+		
+		SwitchToSection<BeginSection>();
+	}
+
 	void MainMenu::OnBeginFrame()
 	{
 		float timeMult = theApplication().timeMult();
@@ -327,7 +351,7 @@ namespace Jazz2::UI::Menu
 	}
 
 #if defined(WITH_MULTIPLAYER)
-	bool MainMenu::ConnectToServer(const char* address, std::uint16_t port)
+	bool MainMenu::ConnectToServer(const StringView& address, std::uint16_t port)
 	{
 		return _root->ConnectToServer(address, port);
 	}
@@ -353,6 +377,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		if ((type & ChangedPreferencesType::Language) == ChangedPreferencesType::Language) {
+			// All sections have to be recreated to load new language
 			_sections.clear();
 			SwitchToSection<BeginSection>();
 		}

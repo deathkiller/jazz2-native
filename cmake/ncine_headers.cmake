@@ -331,6 +331,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/InGameMenu.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/InputDiagnosticsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/LanguageSelectSection.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/LoadingSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MainMenu.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/OptionsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PauseSection.h

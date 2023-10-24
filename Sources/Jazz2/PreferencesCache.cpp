@@ -14,6 +14,9 @@ using namespace Death::IO;
 
 namespace Jazz2
 {
+#if defined(WITH_MULTIPLAYER)
+	String PreferencesCache::InitialState;
+#endif
 	UnlockableEpisodes PreferencesCache::UnlockedEpisodes = UnlockableEpisodes::None;
 	RescaleMode PreferencesCache::ActiveRescaleMode = RescaleMode::None;
 	bool PreferencesCache::EnableFullscreen = false;
@@ -296,6 +299,11 @@ namespace Jazz2
 			} else if (arg == "/mute"_s) {
 				MasterVolume = 0.0f;
 			}
+#if defined(WITH_MULTIPLAYER)
+			else if (InitialState.empty() && (arg == "/server"_s || arg.hasPrefix("/connect:"_s))) {
+				InitialState = arg;
+			}
+#endif
 		}
 	}
 

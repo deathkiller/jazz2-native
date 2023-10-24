@@ -216,17 +216,20 @@ namespace Jazz2
 	{
 		float timeMult = theApplication().timeMult();
 
-		UpdatePressedActions();
+		if (_pauseMenu == nullptr) {
+			UpdatePressedActions();
 
-		if (PlayerActionHit(0, PlayerActions::Menu) && _pauseMenu == nullptr && _nextLevelType == ExitType::None) {
-			PauseGame();
-		}
+			if (PlayerActionHit(0, PlayerActions::Menu) && _nextLevelType == ExitType::None) {
+				PauseGame();
+			}
 #if defined(DEATH_DEBUG)
-		if (PlayerActionPressed(0, PlayerActions::ChangeWeapon) && PlayerActionHit(0, PlayerActions::Jump)) {
-			_cheatsUsed = true;
-			BeginLevelChange(ExitType::Warp | ExitType::FastTransition, nullptr);
-		}
+			if (PreferencesCache::AllowCheats && PlayerActionPressed(0, PlayerActions::ChangeWeapon) && PlayerActionHit(0, PlayerActions::Jump)) {
+				_cheatsUsed = true;
+				BeginLevelChange(ExitType::Warp | ExitType::FastTransition, nullptr);
+			}
 #endif
+		}
+
 #if defined(WITH_AUDIO)
 		// Destroy stopped players and resume music after Sugar Rush
 		if (_sugarRushMusic != nullptr && _sugarRushMusic->isStopped()) {
@@ -245,7 +248,7 @@ namespace Jazz2
 		}
 #endif
 
-		if (_pauseMenu == nullptr) {
+		if (!IsPausable() || _pauseMenu == nullptr) {
 			if (_nextLevelType != ExitType::None) {
 				_nextLevelTime -= timeMult;
 
@@ -291,7 +294,7 @@ namespace Jazz2
 				}
 			}
 
-			if (_difficulty != GameDifficulty::Multiplayer) {
+			if (/*_difficulty != GameDifficulty::Multiplayer*/true) {
 				if (!_players.empty()) {
 					auto& pos = _players[0]->GetPos();
 					int32_t tx1 = (int32_t)pos.X / Tiles::TileSet::DefaultTileSize;
@@ -1613,22 +1616,26 @@ namespace Jazz2
 	{
 		// Show in-game pause menu
 		_pauseMenu = std::make_shared<UI::Menu::InGameMenu>(this);
-		// Prevent updating of all level objects
-		_rootNode->setUpdateEnabled(false);
+		if (IsPausable()) {
+			// Prevent updating of all level objects
+			_rootNode->setUpdateEnabled(false);
+		}
 
 #if defined(WITH_AUDIO)
 		// Use low-pass filter on music and pause all SFX
 		if (_music != nullptr) {
 			_music->setLowPass(0.1f);
 		}
-		for (auto& sound : _playingSounds) {
-			if (sound->isPlaying()) {
-				sound->pause();
+		if (IsPausable()) {
+			for (auto& sound : _playingSounds) {
+				if (sound->isPlaying()) {
+					sound->pause();
+				}
 			}
-		}
-		// If Sugar Rush music is playing, pause it and play normal music instead
-		if (_sugarRushMusic != nullptr && _music != nullptr) {
-			_music->play();
+			// If Sugar Rush music is playing, pause it and play normal music instead
+			if (_sugarRushMusic != nullptr && _music != nullptr) {
+				_music->play();
+			}
 		}
 #endif
 	}

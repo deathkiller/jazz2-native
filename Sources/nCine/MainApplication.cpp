@@ -17,13 +17,15 @@
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 #	include <emscripten/emscripten.h>
-#endif
-#if defined(DEATH_TARGET_SWITCH)
+#elif defined(DEATH_TARGET_SWITCH)
 #	include <switch.h>
+#elif defined(DEATH_TARGET_WINDOWS)
+#	include <Utf8.h>
 #endif
 
 #include "tracy.h"
 
+using namespace Death;
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
 
@@ -44,6 +46,7 @@ extern "C" IMAGE_DOS_HEADER __ImageBase;
 
 bool __showLogConsole;
 bool __hasVirtualTerminal;
+Array<wchar_t> __consolePrompt;
 
 static bool CreateLogConsole(const StringView& title)
 {
@@ -66,6 +69,51 @@ static bool CreateLogConsole(const StringView& title)
 		if (consoleHandleIn != INVALID_HANDLE_VALUE) {
 			::freopen_s(&fDummy, "CONIN$", "r", stdin);
 			::setvbuf(stdin, NULL, _IONBF, 0);
+		}
+
+		// Try to get command prompt to be able to reprint it when the game exits
+		CONSOLE_SCREEN_BUFFER_INFO csbi;
+		if (::GetConsoleScreenBufferInfo(consoleHandleOut, &csbi)) {
+			DWORD dwConsoleColumnWidth = (DWORD)(csbi.srWindow.Right - csbi.srWindow.Left + 1);
+			SHORT xEnd = csbi.dwCursorPosition.X;
+			SHORT yEnd = csbi.dwCursorPosition.Y;
+			if (xEnd != 0 || yEnd != 0) {
+				DWORD dwNumberOfChars;
+				SHORT yBegin = yEnd;
+				if (dwConsoleColumnWidth > 16) {
+					Array<wchar_t> tmp(NoInit, dwConsoleColumnWidth);
+					while (yBegin > 0) {
+						COORD dwReadCoord = { 0, yBegin };
+						if (!::ReadConsoleOutputCharacter(consoleHandleOut, tmp.data(), dwConsoleColumnWidth, dwReadCoord, &dwNumberOfChars)) {
+							break;
+						}
+
+						for (DWORD i = dwNumberOfChars - 8; i < dwNumberOfChars; i++) {
+							wchar_t wchar = tmp[i];
+							if (wchar != L' ') {
+								yBegin--;
+								continue;
+							}
+						}
+
+						if (yBegin < yEnd) {
+							yBegin++;
+						}
+						break;
+					}
+				}
+
+				DWORD promptLength = (yEnd - yBegin) * dwConsoleColumnWidth + xEnd;
+				__consolePrompt = Array<wchar_t>(NoInit, promptLength);
+				COORD dwPromptCoord = { 0, yEnd };
+				if (::ReadConsoleOutputCharacter(consoleHandleOut, __consolePrompt.data(), promptLength, dwPromptCoord, &dwNumberOfChars)) {
+					if (::SetConsoleCursorPosition(consoleHandleOut, dwPromptCoord)) {
+						::FillConsoleOutputCharacter(consoleHandleOut, L' ', promptLength, dwPromptCoord, &dwNumberOfChars);
+					}
+				} else {
+					__consolePrompt = {};
+				}
+			}
 		}
 
 		return true;
@@ -98,21 +146,20 @@ static bool CreateLogConsole(const StringView& title)
 
 static void DestroyLogConsole()
 {
-	// The "Enter" key is only sent if the console window is in focus
-	if (::GetConsoleWindow() == ::GetForegroundWindow()) {
-		// Send the "Enter" key to the console to release the command prompt
-		INPUT ip;
-		ip.type = INPUT_KEYBOARD;
-		ip.ki.wScan = 0;
-		ip.ki.time = 0;
-		ip.ki.dwExtraInfo = 0;
-
-		ip.ki.wVk = 0x0D; // virtual-key code for the "Enter" key
-		ip.ki.dwFlags = 0; // 0 for key press
-		::SendInput(1, &ip, sizeof(INPUT));
-
-		ip.ki.dwFlags = KEYEVENTF_KEYUP; // `KEYEVENTF_KEYUP` for key release
-		::SendInput(1, &ip, sizeof(INPUT));
+	if (!__consolePrompt.empty()) {
+		HANDLE consoleHandleOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
+		if (consoleHandleOut != INVALID_HANDLE_VALUE) {
+			CONSOLE_SCREEN_BUFFER_INFO csbi;
+			if (::GetConsoleScreenBufferInfo(consoleHandleOut, &csbi)) {
+				DWORD xEnd = csbi.dwCursorPosition.X;
+				DWORD yEnd = csbi.dwCursorPosition.Y;
+				if (xEnd != 0 || yEnd != 0) {
+					DWORD dwNumberOfCharsWritten;
+					::WriteConsole(consoleHandleOut, L"\r\n", countof(L"\r\n") - 1, &dwNumberOfCharsWritten, NULL);
+					::WriteConsole(consoleHandleOut, __consolePrompt.data(), (DWORD)__consolePrompt.size(), &dwNumberOfCharsWritten, NULL);
+				}
+			}
+		}
 	}
 
 	::FreeConsole();
@@ -120,18 +167,14 @@ static void DestroyLogConsole()
 
 static bool EnableVirtualTerminalProcessing()
 {
-	HANDLE hOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
-	if (hOut == INVALID_HANDLE_VALUE) {
+	HANDLE consoleHandleOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
+	if (consoleHandleOut == INVALID_HANDLE_VALUE) {
 		return false;
 	}
+
 	DWORD dwMode = 0;
-	if (!::GetConsoleMode(hOut, &dwMode)) {
-		return false;
-	}
-	if (!::SetConsoleMode(hOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
-		return false;
-	}
-	return true;
+	return (::GetConsoleMode(consoleHandleOut, &dwMode) &&
+			::SetConsoleMode(consoleHandleOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING));
 }
 
 #elif defined(DEATH_TRACE) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX))
@@ -228,7 +271,8 @@ namespace nCine
 
 #if defined(DEATH_TRACE)
 #	if defined(DEATH_TARGET_APPLE)
-		__hasVirtualTerminal = isatty(1);
+		// Xcode's console reports that it is a TTY, but it doesn't support colors, TERM is not defined in this case
+		__hasVirtualTerminal = isatty(1) && ::getenv("TERM");
 #	elif defined(DEATH_TARGET_EMSCRIPTEN)
 		char* userAgent = (char*)EM_ASM_PTR({
 			return (typeof navigator !== 'undefined' && navigator !== null &&
@@ -244,14 +288,14 @@ namespace nCine
 		}
 #	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		__showLogConsole = false;
-		for (int i = 0; i < argc; i++) {
+		for (std::int32_t i = 0; i < argc; i++) {
 			if (wcscmp(argv[i], L"/log") == 0) {
 				__showLogConsole = true;
 				break;
 			}
 		}
 		if (__showLogConsole) {
-			CreateLogConsole(NCINE_APP_NAME " Console");
+			CreateLogConsole(NCINE_APP_NAME " [Console]");
 			__hasVirtualTerminal = EnableVirtualTerminalProcessing();
 		} else {
 			__hasVirtualTerminal = false;
@@ -259,17 +303,24 @@ namespace nCine
 #	elif defined(DEATH_TARGET_UNIX)
 		::setvbuf(stdout, nullptr, _IONBF, 0);
 		::setvbuf(stderr, nullptr, _IONBF, 0);
-
-		// Xcode's console reports that it is a TTY, but it doesn't support colors, but TERM is not defined
-		__hasVirtualTerminal = isatty(1) && std::getenv("TERM");
+		__hasVirtualTerminal = isatty(1);
 #	endif
 #endif
 
 		appEventHandler_ = createAppEventHandler();
 
 		// Only `OnPreInit()` can modify the application configuration
-		appCfg_.argc_ = argc;
-		appCfg_.argv_ = argv;
+#if defined(DEATH_TARGET_WINDOWS)
+		appCfg_.argv_ = Array<String>(argc - 1);
+		for (std::int32_t i = 1; i < argc; i++) {
+			appCfg_.argv_[i - 1] = Utf8::FromUtf16(argv[i]);
+		}
+#else
+		appCfg_.argv_ = Array<StringView>(argc - 1);
+		for (std::int32_t i = 1; i < argc; i++) {
+			appCfg_.argv_[i - 1] = argv[i];
+		}
+#endif
 		appEventHandler_->OnPreInit(appCfg_);
 		LOGI("IAppEventHandler::OnPreInit() invoked");
 

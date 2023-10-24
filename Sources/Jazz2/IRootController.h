@@ -33,7 +33,7 @@ namespace Jazz2
 		virtual void ChangeLevel(LevelInitialization&& levelInit) = 0;
 
 #if defined(WITH_MULTIPLAYER)
-		virtual bool ConnectToServer(const char* address, std::uint16_t port) = 0;
+		virtual bool ConnectToServer(const StringView& address, std::uint16_t port) = 0;
 		virtual bool CreateServer(std::uint16_t port) = 0;
 #endif
 

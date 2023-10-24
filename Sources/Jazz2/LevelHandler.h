@@ -80,6 +80,10 @@ namespace Jazz2
 			return _difficulty;
 		}
 
+		bool IsPausable() const override {
+			return true;
+		}
+
 		bool IsReforged() const override {
 			return _isReforged;
 		}

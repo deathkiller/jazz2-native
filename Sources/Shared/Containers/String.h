@@ -165,7 +165,8 @@ namespace Death::Containers
 		 * @cpp nullptr @ce --- in that case an empty string is constructed.
 		 * Depending on the size, it's either stored allocated or in a SSO.
 		 */
-		/*implicit*/ String(const char* data);
+		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either a String or std::size_t */
+		template<class T, class = typename std::enable_if<std::is_convertible<T, const char*>::value && !std::is_convertible<T, std::size_t>::value>::type> /*implicit*/ String(T data) : String{nullptr, nullptr, nullptr, data} {}
 
 		/**
 		 * @brief Construct from a sized C string
@@ -860,6 +861,8 @@ namespace Death::Containers
 		char* release();
 
 	private:
+		// Delegated to from the (templated) String(const char*). THREE extra nullptr arguments to avoid accidental ambiguous overloads.
+		explicit String(std::nullptr_t, std::nullptr_t, std::nullptr_t, const char* data);
 		// Delegated to from the (templated) String(char*, Deleter). Argument order shuffled together with a null parameter to avoid accidental ambiguous overloads.
 		explicit String(Deleter deleter, std::nullptr_t, char* data) noexcept;
 

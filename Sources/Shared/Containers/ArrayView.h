@@ -54,7 +54,10 @@ namespace Death::Containers
 	public:
 		typedef T Type;
 
-		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept : _data{}, _size {} {}
+		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either a ArrayView or std::size_t */
+		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
+
+		constexpr /*implicit*/ ArrayView() noexcept : _data{}, _size{} {}
 
 		constexpr /*implicit*/ ArrayView(T* data, std::size_t size) noexcept : _data(data), _size(size) {}
 
@@ -172,7 +175,10 @@ namespace Death::Containers
 	public:
 		typedef void Type;
 
-		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept : _data{}, _size{} {}
+		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either a ArrayView or std::size_t */
+		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
+
+		constexpr /*implicit*/ ArrayView() noexcept : _data{}, _size{} {}
 
 		constexpr /*implicit*/ ArrayView(void* data, std::size_t size) noexcept : _data(data), _size(size) {}
 
@@ -233,7 +239,10 @@ namespace Death::Containers
 	public:
 		typedef const void Type;
 
-		constexpr /*implicit*/ ArrayView(std::nullptr_t = nullptr) noexcept : _data{}, _size{} {}
+		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either a ArrayView or std::size_t */
+		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
+
+		constexpr /*implicit*/ ArrayView() noexcept : _data{}, _size{} {}
 
 		constexpr /*implicit*/ ArrayView(const void* data, std::size_t size) noexcept : _data(data), _size(size) {}
 
@@ -356,7 +365,10 @@ namespace Death::Containers
 			Size = size_
 		};
 
-		constexpr /*implicit*/ StaticArrayView(std::nullptr_t = nullptr) noexcept : _data{} {}
+		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either a ArrayView or std::size_t */
+		template<class U, class = U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ StaticArrayView(U) noexcept : _data{} {}
+
+		constexpr /*implicit*/ StaticArrayView() noexcept : _data{} {}
 
 		template<class U, class = typename std::enable_if<std::is_pointer<U>::value && !std::is_same<U, T(&)[size_]>::value>::type> constexpr explicit StaticArrayView(U data)
 			noexcept : _data(data) {}
