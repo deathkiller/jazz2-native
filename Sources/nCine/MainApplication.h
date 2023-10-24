@@ -4,6 +4,12 @@
 
 namespace nCine
 {
+#if defined(DEATH_TARGET_WINDOWS)
+	typedef wchar_t* NativeArgument;
+#else
+	typedef char* NativeArgument;
+#endif
+
 #if defined(WITH_QT5)
 	class Qt5Widget;
 #endif

@@ -35,6 +35,10 @@ namespace Jazz2::Multiplayer
 		MultiLevelHandler(IRootController* root, NetworkManager* networkManager, const LevelInitialization& levelInit);
 		~MultiLevelHandler() override;
 
+		bool IsPausable() const override {
+			return false;
+		}
+
 		float GetAmbientLight() const override;
 		void SetAmbientLight(float value) override;
 

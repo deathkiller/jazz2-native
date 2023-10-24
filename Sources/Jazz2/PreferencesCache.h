@@ -79,6 +79,9 @@ namespace Jazz2
 		static constexpr std::int32_t UnlimitedFps = 0;
 		static constexpr std::int32_t UseVsync = -1;
 
+#if defined(WITH_MULTIPLAYER)
+		static String InitialState;
+#endif
 		static UnlockableEpisodes UnlockedEpisodes;
 
 		// Graphics
@@ -148,9 +151,7 @@ namespace Jazz2
 
 		static constexpr float TouchPaddingMultiplier = 0.003f;
 
-		/// Deleted copy constructor
 		PreferencesCache(const PreferencesCache&) = delete;
-		/// Deleted assignment operator
 		PreferencesCache& operator=(const PreferencesCache&) = delete;
 
 		static String _configPath;

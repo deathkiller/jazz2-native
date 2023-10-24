@@ -161,7 +161,7 @@ namespace Jazz2::Actors
 	void Player::OnUpdate(float timeMult)
 	{
 #if defined(DEATH_DEBUG)
-		if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::ChangeWeapon)) {
+		if (PreferencesCache::AllowCheats && _levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::ChangeWeapon)) {
 			float moveDistance = (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Run) ? 400.0f : 100.0f);
 			if (_levelHandler->PlayerActionHit(_playerIndex, PlayerActions::Left)) {
 				MoveInstantly(Vector2f(-moveDistance, 0.0f), MoveType::Relative | MoveType::Force);

@@ -1353,6 +1353,9 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Threading\Interlocked.h">
       <Filter>Header Files\Shared\Threading</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\LoadingSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2251,6 +2254,9 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\RemoteActor.cpp">
       <Filter>Source Files\Jazz2\Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\LoadingSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

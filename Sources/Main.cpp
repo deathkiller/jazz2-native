@@ -25,6 +25,7 @@
 #include "Jazz2/UI/Cinematics.h"
 #include "Jazz2/UI/ControlScheme.h"
 #include "Jazz2/UI/Menu/MainMenu.h"
+#include "Jazz2/UI/Menu/LoadingSection.h"
 #include "Jazz2/UI/Menu/SimpleMessageSection.h"
 
 #include "Jazz2/Compatibility/JJ2Anims.h"
@@ -76,6 +77,7 @@ public:
 	static constexpr std::int32_t DefaultHeight = 405;
 
 #if defined(WITH_MULTIPLAYER)
+	static constexpr std::uint16_t MultiplayerDefaultPort = 7438;
 	static constexpr std::uint32_t MultiplayerProtocolVersion = 1;
 #endif
 
@@ -98,7 +100,7 @@ public:
 	void ChangeLevel(LevelInitialization&& levelInit) override;
 
 #if defined(WITH_MULTIPLAYER)
-	bool ConnectToServer(const char* address, std::uint16_t port) override;
+	bool ConnectToServer(const StringView& address, std::uint16_t port) override;
 	bool CreateServer(std::uint16_t port) override;
 
 	bool OnPeerConnected(const Peer& peer, std::uint32_t clientData) override;
@@ -134,9 +136,11 @@ private:
 	void RefreshCache();
 	void CheckUpdates();
 #endif
+	static void WriteCacheDescriptor(const StringView& path, std::uint64_t currentVersion, std::int64_t animsModified);
 	static void SaveEpisodeEnd(const LevelInitialization& pendingLevelChange);
 	static void SaveEpisodeContinue(const LevelInitialization& pendingLevelChange);
 	static void UpdateRichPresence(const LevelInitialization& levelInit);
+	static bool TryParseAddressAndPort(const StringView& input, String& address, std::uint16_t& port);
 };
 
 void GameEventHandler::OnPreInit(AppConfiguration& config)
@@ -218,11 +222,40 @@ void GameEventHandler::OnInit()
 	thread.SetName("Parallel initialization");
 #	endif
 
+#	if defined(WITH_MULTIPLAYER)
+	if (PreferencesCache::InitialState == "/server"_s) {
+		thread.Join();
+
+		auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
+		mainMenu->SwitchToSection<Menu::LoadingSection>(_("Creating server..."));
+		SetStateHandler(std::move(mainMenu));
+
+		// TODO: Hardcoded port
+		CreateServer(MultiplayerDefaultPort);
+	} else if (PreferencesCache::InitialState.hasPrefix("/connect:"_s)) {
+		thread.Join();
+
+		String address; std::uint16_t port;
+		if (TryParseAddressAndPort(PreferencesCache::InitialState.exceptPrefix(9), address, port)) {
+			if (port == 0) {
+				port = MultiplayerDefaultPort;
+			}
+
+			auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
+			mainMenu->SwitchToSection<Menu::LoadingSection>(_f("Connecting to %s:%u...", address.data(), port));
+			SetStateHandler(std::move(mainMenu));
+
+			ConnectToServer(address.data(), (std::uint16_t)port);
+			return;
+		}
+	}
+#	endif
+
 	SetStateHandler(std::make_unique<Cinematics>(this, "intro"_s, [thread](IRootController* root, bool endOfStream) mutable {
 		if ((root->GetFlags() & Jazz2::IRootController::Flags::IsVerified) != Jazz2::IRootController::Flags::IsVerified) {
 			return false;
 		}
-		
+
 		thread.Join();
 		root->GoToMainMenu(endOfStream);
 		return true;
@@ -249,6 +282,33 @@ void GameEventHandler::OnInit()
 #	else
 	RefreshCache();
 	CheckUpdates();
+#	endif
+
+#	if defined(WITH_MULTIPLAYER)
+	if (PreferencesCache::InitialState == "/server"_s) {
+		LOGI("Starting server on port %u...", MultiplayerDefaultPort);
+
+		auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
+		mainMenu->SwitchToSection<Menu::LoadingSection>(_("Creating server..."));
+		SetStateHandler(std::move(mainMenu));
+
+		// TODO: Hardcoded port
+		CreateServer(MultiplayerDefaultPort);
+	} else if (PreferencesCache::InitialState.hasPrefix("/connect:"_s)) {
+		String address; std::uint16_t port;
+		if (TryParseAddressAndPort(PreferencesCache::InitialState.exceptPrefix(9), address, port)) {
+			if (port == 0) {
+				port = MultiplayerDefaultPort;
+			}
+
+			auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
+			mainMenu->SwitchToSection<Menu::LoadingSection>(_f("Connecting to %s:%u...", address.data(), port));
+			SetStateHandler(std::move(mainMenu));
+
+			ConnectToServer(address.data(), (std::uint16_t)port);
+			return;
+		}
+	}
 #	endif
 
 	SetStateHandler(std::make_unique<Cinematics>(this, "intro"_s, [](IRootController* root, bool endOfStream) {
@@ -373,9 +433,12 @@ void GameEventHandler::GoToMainMenu(bool afterIntro)
 #if defined(WITH_MULTIPLAYER)
 		_networkManager = nullptr;
 #endif
-
-		SetStateHandler(std::make_unique<Menu::MainMenu>(this, afterIntro));
-		UpdateRichPresence({});
+		if (auto mainMenu = dynamic_cast<Menu::MainMenu*>(_currentHandler.get())) {
+			mainMenu->Reset();
+		} else {
+			SetStateHandler(std::make_unique<Menu::MainMenu>(this, afterIntro));
+			UpdateRichPresence({});
+		}
 	});
 }
 
@@ -457,8 +520,10 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 }
 
 #if defined(WITH_MULTIPLAYER)
-bool GameEventHandler::ConnectToServer(const char* address, std::uint16_t port)
+bool GameEventHandler::ConnectToServer(const StringView& address, std::uint16_t port)
 {
+	LOGI("Connecting to %s:%u...", address, port);
+
 	if (_networkManager == nullptr) {
 		_networkManager = std::make_unique<NetworkManager>();
 	}
@@ -468,6 +533,8 @@ bool GameEventHandler::ConnectToServer(const char* address, std::uint16_t port)
 
 bool GameEventHandler::CreateServer(std::uint16_t port)
 {
+	LOGI("Creating server on port %u...", port);
+
 	if (_networkManager == nullptr) {
 		_networkManager = std::make_unique<NetworkManager>();
 	}
@@ -600,23 +667,26 @@ void GameEventHandler::RefreshCache()
 		return;
 	}
 
+	constexpr std::uint64_t currentVersion = parseVersion({ NCINE_VERSION, countof(NCINE_VERSION) - 1 });
+
 	auto& resolver = ContentResolver::Get();
+	auto cachePath = fs::CombinePath({ resolver.GetCachePath(), "Animations"_s, "cache.index"_s });
 
 	// Check cache state
 	{
-		auto s = fs::Open(fs::CombinePath({ resolver.GetCachePath(), "Animations"_s, "cache.index"_s }), FileAccessMode::Read);
+		auto s = fs::Open(cachePath, FileAccessMode::Read);
 		if (s->GetSize() < 16) {
 			goto RecreateCache;
 		}
 
-		uint64_t signature = s->ReadValue<uint64_t>();
-		uint8_t fileType = s->ReadValue<uint8_t>();
-		uint16_t version = s->ReadValue<uint16_t>();
+		std::uint64_t signature = s->ReadValue<std::uint64_t>();
+		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
+		std::uint16_t version = s->ReadValue<std::uint16_t>();
 		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::CacheIndexFile || version != Compatibility::JJ2Anims::CacheVersion) {
 			goto RecreateCache;
 		}
 
-		uint8_t flags = s->ReadValue<uint8_t>();
+		std::uint8_t flags = s->ReadValue<std::uint8_t>();
 		if ((flags & 0x01) == 0x01) {
 			// Don't overwrite cache
 			LOGI("Cache is protected");
@@ -628,20 +698,39 @@ void GameEventHandler::RefreshCache()
 		if (!fs::IsReadableFile(animsPath)) {
 			animsPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "AnimsSw.j2a"_s));
 		}
-		int64_t animsCached = s->ReadValue<int64_t>();
-		int64_t animsModified = fs::GetLastModificationTime(animsPath).GetValue();
+		std::int64_t animsCached = s->ReadValue<std::int64_t>();
+		std::int64_t animsModified = fs::GetLastModificationTime(animsPath).GetValue();
 		if (animsModified != 0 && animsCached != animsModified) {
 			goto RecreateCache;
 		}
 
 		// If some events were added, recreate cache
-		uint16_t eventTypeCount = s->ReadValue<uint16_t>();
-		if (eventTypeCount != (uint16_t)EventType::Count) {
+		std::uint16_t eventTypeCount = s->ReadValue<std::uint16_t>();
+		if (eventTypeCount != (std::uint16_t)EventType::Count) {
 			goto RecreateCache;
 		}
 
 		// Cache is up-to-date
-		LOGI("Cache is already up-to-date");
+		std::uint64_t lastVersion = s->ReadValue<std::uint64_t>();
+
+		// Close the file, so it can be writable for possible update
+		s = nullptr;
+
+		if (currentVersion != lastVersion) {
+			if ((lastVersion & 0xFFFFFFFFULL) == 0x0FFFFFFFULL) {
+				LOGI("Cache is already up-to-date, but created in experimental build v%i.%i.0", (lastVersion >> 48) & 0xFFFFULL, (lastVersion >> 32) & 0xFFFFULL);
+			} else {
+				LOGI("Cache is already up-to-date, but created in different build v%i.%i.%i", (lastVersion >> 48) & 0xFFFFULL, (lastVersion >> 32) & 0xFFFFULL, lastVersion & 0xFFFFFFFFULL);
+			}
+
+			WriteCacheDescriptor(cachePath, currentVersion, animsModified);
+
+			LOGI("Pruning binary shader cache...");
+			RenderResources::binaryShaderCache().prune();
+		} else {
+			LOGI("Cache is already up-to-date");
+		}
+
 		_flags |= Flags::IsVerified | Flags::IsPlayable;
 		return;
 	}
@@ -668,18 +757,13 @@ RecreateCache:
 
 	RefreshCacheLevels();
 
-	// Create cache index
-	auto so = fs::Open(fs::CombinePath({ resolver.GetCachePath(), "Animations"_s, "cache.index"_s }), FileAccessMode::Write);
-
-	so->WriteValue<uint64_t>(0x2095A59FF0BFBBEF);	// Signature
-	so->WriteValue<uint8_t>(ContentResolver::CacheIndexFile);
-	so->WriteValue<uint16_t>(Compatibility::JJ2Anims::CacheVersion);
-	so->WriteValue<uint8_t>(0x00);					// Flags
-	int64_t animsModified = fs::GetLastModificationTime(animsPath).GetValue();
-	so->WriteValue<int64_t>(animsModified);
-	so->WriteValue<uint16_t>((uint16_t)EventType::Count);
-
 	LOGI("Cache was recreated");
+	std::int64_t animsModified = fs::GetLastModificationTime(animsPath).GetValue();
+	WriteCacheDescriptor(cachePath, currentVersion, animsModified);
+
+	LOGI("Pruning binary shader cache...");
+	RenderResources::binaryShaderCache().prune();
+
 	_flags |= Flags::IsVerified | Flags::IsPlayable;
 }
 
@@ -921,9 +1005,18 @@ void GameEventHandler::RefreshCacheLevels()
 			}
 		}
 	}
-	
-	LOGI("Pruning binary shader cache...");
-	RenderResources::binaryShaderCache().prune();
+}
+
+void GameEventHandler::WriteCacheDescriptor(const StringView& path, std::uint64_t currentVersion, std::int64_t animsModified)
+{
+	auto so = fs::Open(path, FileAccessMode::Write);
+	so->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
+	so->WriteValue<std::uint8_t>(ContentResolver::CacheIndexFile);
+	so->WriteValue<std::uint16_t>(Compatibility::JJ2Anims::CacheVersion);
+	so->WriteValue<std::uint8_t>(0x00);				// Flags
+	so->WriteValue<std::int64_t>(animsModified);
+	so->WriteValue<std::uint16_t>((std::uint16_t)EventType::Count);
+	so->WriteValue<std::uint64_t>(currentVersion);
 }
 
 void GameEventHandler::CheckUpdates()
@@ -1102,7 +1195,7 @@ void GameEventHandler::CheckUpdates()
 	Http::Request req(url, Http::InternetProtocol::V4);
 	Http::Response resp = req.Send("GET"_s, std::chrono::seconds(10));
 	if (resp.Status.Code == Http::HttpStatus::Ok && !resp.Body.empty() && resp.Body.size() < sizeof(_newestVersion) - 1) {
-		std::uint64_t currentVersion = parseVersion(NCINE_VERSION);
+		constexpr std::uint64_t currentVersion = parseVersion({ NCINE_VERSION, countof(NCINE_VERSION) - 1 });
 		std::uint64_t latestVersion = parseVersion(StringView(reinterpret_cast<char*>(resp.Body.data()), resp.Body.size()));
 		if (currentVersion < latestVersion) {
 			std::memcpy(_newestVersion, resp.Body.data(), resp.Body.size());
@@ -1270,6 +1363,23 @@ void GameEventHandler::UpdateRichPresence(const LevelInitialization& levelInit)
 
 	DiscordRpcClient::Get().SetRichPresence(richPresence);
 #endif
+}
+
+bool GameEventHandler::TryParseAddressAndPort(const StringView& input, String& address, std::uint16_t& port)
+{
+	auto portSep = input.findLast(':');
+	if (portSep == nullptr) {
+		return false;
+	}
+
+	address = String(input.prefix(portSep.begin()));
+	if (address.empty()) {
+		return false;
+	}
+
+	auto portString = input.suffix(portSep.begin() + 1);
+	port = (std::uint16_t)stou32(portString.data(), portString.size());
+	return true;
 }
 
 #if defined(DEATH_TARGET_ANDROID)

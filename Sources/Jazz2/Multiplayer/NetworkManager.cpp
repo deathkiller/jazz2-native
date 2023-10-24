@@ -18,6 +18,8 @@
 // Undefine it again after include
 #undef far
 
+#include <Containers/String.h>
+
 #define MAX_CLIENTS 64
 
 namespace Jazz2::Multiplayer
@@ -39,7 +41,7 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	bool NetworkManager::CreateClient(INetworkHandler* handler, const char* address, std::uint16_t port, std::uint32_t clientData)
+	bool NetworkManager::CreateClient(INetworkHandler* handler, const StringView& address, std::uint16_t port, std::uint32_t clientData)
 	{
 		if (!_initialized || _host != nullptr) {
 			return false;
@@ -53,7 +55,7 @@ namespace Jazz2::Multiplayer
 		_state = NetworkState::Connecting;
 
 		ENetAddress addr = { };
-		enet_address_set_host(&addr, address);
+		enet_address_set_host(&addr, String::nullTerminatedView(address).data());
 		addr.port = port;
 
 		ENetPeer* peer = enet_host_connect(_host, &addr, (std::size_t)NetworkChannel::Count, clientData);

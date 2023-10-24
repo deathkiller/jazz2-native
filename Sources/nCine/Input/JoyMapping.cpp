@@ -4,7 +4,6 @@
 #include "../Primitives/Vector2.h"
 
 #include <cstring>	// for memcpy()
-#include <cstdlib>	// for strtoul()
 
 #include <Containers/SmallVector.h>
 #include <Containers/StringView.h>

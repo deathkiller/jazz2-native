@@ -179,6 +179,10 @@ namespace nCine
 
 	void BinaryShaderCache::prune()
 	{
+		if (path_.empty()) {
+			return;
+		}
+
 		fs::Directory dir(path_);
 		while (const StringView shaderPath = dir.GetNext()) {
 			if (fs::GetExtension(shaderPath) != "shader"_s) {
@@ -186,17 +190,20 @@ namespace nCine
 			}
 
 			StringView filename = fs::GetFileNameWithoutExtension(shaderPath);
+
+			bool shouldRemove;
 			if (filename.size() != 32) {
-				fs::RemoveFile(shaderPath);
-				continue;
+				shouldRemove = true;
+			} else {
+				char componentString[17];
+				std::memcpy(componentString, &filename[16], 16);
+				componentString[16] = '\0';
+
+				std::uint64_t platformHash = strtoull(componentString, nullptr, 16);
+				shouldRemove = (platformHash != platformHash_);
 			}
 
-			char componentString[17];
-			std::memcpy(componentString, &filename[16], 16);
-			componentString[16] = '\0';
-
-			std::uint64_t platformHash = strtoull(componentString, nullptr, 16);
-			if (platformHash != platformHash_) {
+			if (shouldRemove) {
 				fs::RemoveFile(shaderPath);
 			}
 		}
@@ -204,8 +211,16 @@ namespace nCine
 
 	void BinaryShaderCache::clear()
 	{
+		if (path_.empty()) {
+			return;
+		}
+
 		fs::Directory dir(path_);
 		while (const StringView shaderPath = dir.GetNext()) {
+			if (fs::GetExtension(shaderPath) != "shader"_s) {
+				continue;
+			}
+
 			fs::RemoveFile(shaderPath);
 		}
 	}

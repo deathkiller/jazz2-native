@@ -27,7 +27,7 @@ namespace Death::Containers
 			out._large.size |= std::size_t(view.flags() & StringViewFlags::Global);
 			return out;
 		}
-		return String { view };
+		return String{view};
 	}
 
 	String String::nullTerminatedView(AllocatedInitT, StringView view) {
@@ -36,7 +36,7 @@ namespace Death::Containers
 			out._large.size |= std::size_t(view.flags() & StringViewFlags::Global);
 			return out;
 		}
-		return String { AllocatedInit, view };
+		return String{AllocatedInit, view};
 	}
 
 	String String::nullTerminatedGlobalView(StringView view) {
@@ -45,7 +45,7 @@ namespace Death::Containers
 			out._large.size |= std::size_t(StringViewFlags::Global);
 			return out;
 		}
-		return String { view };
+		return String{view};
 	}
 
 	String String::nullTerminatedGlobalView(AllocatedInitT, StringView view) {
@@ -54,7 +54,7 @@ namespace Death::Containers
 			out._large.size |= std::size_t(StringViewFlags::Global);
 			return out;
 		}
-		return String { AllocatedInit, view };
+		return String{AllocatedInit, view};
 	}
 
 	inline void String::construct(NoInitT, const std::size_t size) {
@@ -112,7 +112,7 @@ namespace Death::Containers
 
 	String::String(const ArrayView<char> view) : String{view.data(), view.size()} {}
 
-	String::String(const char* const data) : String{data, data ? std::strlen(data) : 0} {}
+	String::String(std::nullptr_t, std::nullptr_t, std::nullptr_t, const char* const data) : String{data, data ? std::strlen(data) : 0} {}
 
 	String::String(const char* const data, const std::size_t size)
 		: _large{}
@@ -120,7 +120,7 @@ namespace Death::Containers
 #if defined(DEATH_TARGET_32BIT)
 		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus worth checking even in release
-		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
+		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
 #endif
 		DEATH_ASSERT(data || size == 0, , "Containers::String: Received a null string of size %zu", size);
 
@@ -193,7 +193,7 @@ namespace Death::Containers
 		// Compared to StringView construction which happens a lot this shouldn't, the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus worth checking even in release; but most importantly checking for null
 		// termination outweighs potential speed issues
-		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
+		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
 		DEATH_ASSERT(data && !data[size], , "Containers::String: Can only take ownership of a non-null null-terminated array");
 
 		_large.data = data;
@@ -213,7 +213,7 @@ namespace Death::Containers
 	{
 		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus  worth checking even in release
-		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
+		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
 
 		if (size < Implementation::SmallStringSize) {
 			// Everything already zero-init'd in the constructor init list
@@ -229,7 +229,7 @@ namespace Death::Containers
 	{
 		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus worth checking even in release
-		DEATH_ASSERT(size < std::size_t { 1 } << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
+		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
 
 		construct(NoInit, size);
 	}
@@ -299,11 +299,11 @@ namespace Death::Containers
 		if (_small.size & Implementation::SmallStringBit) {
 			const std::size_t size = _small.size & ~SmallSizeMask;
 			// Allocate the output including a null terminator at the end, but don't include it in the size
-			out = Array<char> { Array<char>{NoInit, size + 1}.release(), size };
+			out = Array<char>{Array<char>{NoInit, size + 1}.release(), size};
 			out[size] = '\0';
 			std::memcpy(out.data(), _small.data, size);
 		} else {
-			out = Array<char> { _large.data, _large.size & ~LargeSizeMask, deleter() };
+			out = Array<char>{_large.data, _large.size & ~LargeSizeMask, deleter()};
 		}
 
 		// Same as in release(). Create a zero-size small string to fullfil the guarantee of data() being always non-null
@@ -461,119 +461,119 @@ namespace Death::Containers
 	}
 
 	MutableStringView String::slice(char* const begin, char* const end) {
-		return MutableStringView { *this }.slice(begin, end);
+		return MutableStringView{*this}.slice(begin, end);
 	}
 
 	StringView String::slice(const char* const begin, const char* const end) const {
-		return StringView { *this }.slice(begin, end);
+		return StringView{*this}.slice(begin, end);
 	}
 
 	MutableStringView String::slice(const std::size_t begin, const std::size_t end) {
-		return MutableStringView { *this }.slice(begin, end);
+		return MutableStringView{*this}.slice(begin, end);
 	}
 
 	StringView String::slice(const std::size_t begin, const std::size_t end) const {
-		return StringView { *this }.slice(begin, end);
+		return StringView{*this}.slice(begin, end);
 	}
 
 	MutableStringView String::prefix(char* const end) {
-		return MutableStringView { *this }.prefix(end);
+		return MutableStringView{*this}.prefix(end);
 	}
 
 	StringView String::prefix(const char* const end) const {
-		return StringView { *this }.prefix(end);
+		return StringView{*this}.prefix(end);
 	}
 
 	MutableStringView String::suffix(char* const begin) {
-		return MutableStringView { *this }.suffix(begin);
+		return MutableStringView{*this}.suffix(begin);
 	}
 
 	StringView String::suffix(const char* const begin) const {
-		return StringView { *this }.suffix(begin);
+		return StringView{*this}.suffix(begin);
 	}
 
 	MutableStringView String::prefix(const std::size_t count) {
-		return MutableStringView { *this }.prefix(count);
+		return MutableStringView{*this}.prefix(count);
 	}
 
 	StringView String::prefix(const std::size_t count) const {
-		return StringView { *this }.prefix(count);
+		return StringView{*this}.prefix(count);
 	}
 
 	MutableStringView String::exceptPrefix(const std::size_t count) {
-		return MutableStringView { *this }.exceptPrefix(count);
+		return MutableStringView{*this}.exceptPrefix(count);
 	}
 
 	StringView String::exceptPrefix(const std::size_t count) const {
-		return StringView { *this }.exceptPrefix(count);
+		return StringView{*this}.exceptPrefix(count);
 	}
 
 	MutableStringView String::exceptSuffix(const std::size_t count) {
-		return MutableStringView { *this }.exceptSuffix(count);
+		return MutableStringView{*this}.exceptSuffix(count);
 	}
 
 	StringView String::exceptSuffix(const std::size_t count) const {
-		return StringView { *this }.exceptSuffix(count);
+		return StringView{*this}.exceptSuffix(count);
 	}
 
 	Array<MutableStringView> String::split(const char delimiter) {
-		return MutableStringView { *this }.split(delimiter);
+		return MutableStringView{*this}.split(delimiter);
 	}
 
 	Array<StringView> String::split(const char delimiter) const {
-		return StringView { *this }.split(delimiter);
+		return StringView{*this}.split(delimiter);
 	}
 
 	Array<MutableStringView> String::split(const StringView delimiter) {
-		return MutableStringView { *this }.split(delimiter);
+		return MutableStringView{*this}.split(delimiter);
 	}
 
 	Array<StringView> String::split(const StringView delimiter) const {
-		return StringView { *this }.split(delimiter);
+		return StringView{*this}.split(delimiter);
 	}
 
 	Array<MutableStringView> String::splitWithoutEmptyParts(const char delimiter) {
-		return MutableStringView { *this }.splitWithoutEmptyParts(delimiter);
+		return MutableStringView{*this}.splitWithoutEmptyParts(delimiter);
 	}
 
 	Array<StringView> String::splitWithoutEmptyParts(const char delimiter) const {
-		return StringView { *this }.splitWithoutEmptyParts(delimiter);
+		return StringView{*this}.splitWithoutEmptyParts(delimiter);
 	}
 
 	Array<MutableStringView> String::splitOnAnyWithoutEmptyParts(const StringView delimiters) {
-		return MutableStringView { *this }.splitOnAnyWithoutEmptyParts(delimiters);
+		return MutableStringView{*this}.splitOnAnyWithoutEmptyParts(delimiters);
 	}
 
 	Array<StringView> String::splitOnAnyWithoutEmptyParts(const StringView delimiters) const {
-		return StringView { *this }.splitOnAnyWithoutEmptyParts(delimiters);
+		return StringView{*this}.splitOnAnyWithoutEmptyParts(delimiters);
 	}
 
 	Array<MutableStringView> String::splitOnWhitespaceWithoutEmptyParts() {
-		return MutableStringView { *this }.splitOnWhitespaceWithoutEmptyParts();
+		return MutableStringView{*this}.splitOnWhitespaceWithoutEmptyParts();
 	}
 
 	Array<StringView> String::splitOnWhitespaceWithoutEmptyParts() const {
-		return StringView { *this }.splitOnWhitespaceWithoutEmptyParts();
+		return StringView{*this}.splitOnWhitespaceWithoutEmptyParts();
 	}
 
 	StaticArray<3, MutableStringView> String::partition(const char separator) {
-		return MutableStringView { *this }.partition(separator);
+		return MutableStringView{*this}.partition(separator);
 	}
 
 	StaticArray<3, StringView> String::partition(const char separator) const {
-		return StringView { *this }.partition(separator);
+		return StringView{*this}.partition(separator);
 	}
 
 	StaticArray<3, MutableStringView> String::partition(const StringView separator) {
-		return MutableStringView { *this }.partition(separator);
+		return MutableStringView{*this}.partition(separator);
 	}
 
 	StaticArray<3, StringView> String::partition(const StringView separator) const {
-		return StringView { *this }.partition(separator);
+		return StringView{*this}.partition(separator);
 	}
 
 	String String::join(const ArrayView<const StringView> strings) const {
-		return StringView { *this }.join(strings);
+		return StringView{*this}.join(strings);
 	}
 
 	String String::join(const std::initializer_list<StringView> strings) const {
@@ -582,7 +582,7 @@ namespace Death::Containers
 	}
 
 	String String::joinWithoutEmptyParts(const ArrayView<const StringView> strings) const {
-		return StringView { *this }.joinWithoutEmptyParts(strings);
+		return StringView{*this}.joinWithoutEmptyParts(strings);
 	}
 
 	String String::joinWithoutEmptyParts(const std::initializer_list<StringView> strings) const {
@@ -591,199 +591,199 @@ namespace Death::Containers
 	}
 
 	bool String::hasPrefix(const StringView prefix) const {
-		return StringView { *this }.hasPrefix(prefix);
+		return StringView{*this}.hasPrefix(prefix);
 	}
 
 	bool String::hasPrefix(const char prefix) const {
-		return StringView { *this }.hasPrefix(prefix);
+		return StringView{*this}.hasPrefix(prefix);
 	}
 
 	bool String::hasSuffix(const StringView suffix) const {
-		return StringView { *this }.hasSuffix(suffix);
+		return StringView{*this}.hasSuffix(suffix);
 	}
 
 	bool String::hasSuffix(const char suffix) const {
-		return StringView { *this }.hasSuffix(suffix);
+		return StringView{*this}.hasSuffix(suffix);
 	}
 
 	MutableStringView String::exceptPrefix(const StringView prefix) {
-		return MutableStringView { *this }.exceptPrefix(prefix);
+		return MutableStringView{*this}.exceptPrefix(prefix);
 	}
 
 	StringView String::exceptPrefix(const StringView prefix) const {
-		return StringView { *this }.exceptPrefix(prefix);
+		return StringView{*this}.exceptPrefix(prefix);
 	}
 
 	MutableStringView String::exceptSuffix(const StringView suffix) {
-		return MutableStringView { *this }.exceptSuffix(suffix);
+		return MutableStringView{*this}.exceptSuffix(suffix);
 	}
 
 	StringView String::exceptSuffix(const StringView suffix) const {
-		return StringView { *this }.exceptSuffix(suffix);
+		return StringView{*this}.exceptSuffix(suffix);
 	}
 
 	MutableStringView String::trimmed(const StringView characters) {
-		return MutableStringView { *this }.trimmed(characters);
+		return MutableStringView{*this}.trimmed(characters);
 	}
 
 	StringView String::trimmed(const StringView characters) const {
-		return StringView { *this }.trimmed(characters);
+		return StringView{*this}.trimmed(characters);
 	}
 
 	MutableStringView String::trimmed() {
-		return MutableStringView { *this }.trimmed();
+		return MutableStringView{*this}.trimmed();
 	}
 
 	StringView String::trimmed() const {
-		return StringView { *this }.trimmed();
+		return StringView{*this}.trimmed();
 	}
 
 	MutableStringView String::trimmedPrefix(const StringView characters) {
-		return MutableStringView { *this }.trimmedPrefix(characters);
+		return MutableStringView{*this}.trimmedPrefix(characters);
 	}
 
 	StringView String::trimmedPrefix(const StringView characters) const {
-		return StringView { *this }.trimmedPrefix(characters);
+		return StringView{*this}.trimmedPrefix(characters);
 	}
 
 	MutableStringView String::trimmedPrefix() {
-		return MutableStringView { *this }.trimmedPrefix();
+		return MutableStringView{*this}.trimmedPrefix();
 	}
 
 	StringView String::trimmedPrefix() const {
-		return StringView { *this }.trimmedPrefix();
+		return StringView{*this}.trimmedPrefix();
 	}
 
 	MutableStringView String::trimmedSuffix(const StringView characters) {
-		return MutableStringView { *this }.trimmedSuffix(characters);
+		return MutableStringView{*this}.trimmedSuffix(characters);
 	}
 
 	StringView String::trimmedSuffix(const StringView characters) const {
-		return StringView { *this }.trimmedSuffix(characters);
+		return StringView{*this}.trimmedSuffix(characters);
 	}
 
 	MutableStringView String::trimmedSuffix() {
-		return MutableStringView { *this }.trimmedSuffix();
+		return MutableStringView{*this}.trimmedSuffix();
 	}
 
 	StringView String::trimmedSuffix() const {
-		return StringView { *this }.trimmedSuffix();
+		return StringView{*this}.trimmedSuffix();
 	}
 
 	MutableStringView String::find(const StringView substring) {
 		// Calling straight into the concrete implementation to reduce call stack depth
-		return MutableStringView { *this }.findOr(substring, nullptr);
+		return MutableStringView{*this}.findOr(substring, nullptr);
 	}
 
 	StringView String::find(const StringView substring) const {
 		// Calling straight into the concrete implementation to reduce call stack depth
-		return StringView { *this }.findOr(substring, nullptr);
+		return StringView{*this}.findOr(substring, nullptr);
 	}
 
 	MutableStringView String::find(const char character) {
 		// Calling straight into the concrete implementation to reduce call stack depth
-		return MutableStringView { *this }.findOr(character, nullptr);
+		return MutableStringView{*this}.findOr(character, nullptr);
 	}
 
 	StringView String::find(const char character) const {
 		// Calling straight into the concrete implementation to reduce call stack depth
-		return StringView { *this }.findOr(character, nullptr);
+		return StringView{*this}.findOr(character, nullptr);
 	}
 
 	MutableStringView String::findOr(const StringView substring, char* const fail) {
-		return MutableStringView { *this }.findOr(substring, fail);
+		return MutableStringView{*this}.findOr(substring, fail);
 	}
 
 	StringView String::findOr(const StringView substring, const char* const fail) const {
-		return StringView { *this }.findOr(substring, fail);
+		return StringView{*this}.findOr(substring, fail);
 	}
 
 	MutableStringView String::findOr(const char character, char* const fail) {
-		return MutableStringView { *this }.findOr(character, fail);
+		return MutableStringView{*this}.findOr(character, fail);
 	}
 
 	StringView String::findOr(const char character, const char* const fail) const {
-		return StringView { *this }.findOr(character, fail);
+		return StringView{*this}.findOr(character, fail);
 	}
 
 	MutableStringView String::findLast(const StringView substring) {
 		// Calling straight into the concrete implementation to reduce call stack depth
-		return MutableStringView { *this }.findLastOr(substring, nullptr);
+		return MutableStringView{*this}.findLastOr(substring, nullptr);
 	}
 
 	StringView String::findLast(const StringView substring) const {
 		// Calling straight into the concrete implementation to reduce call stack depth
-		return StringView { *this }.findLastOr(substring, nullptr);
+		return StringView{*this}.findLastOr(substring, nullptr);
 	}
 
 	MutableStringView String::findLast(const char character) {
 		// Calling straight into the concrete implementation to reduce call stack depth
-		return MutableStringView { *this }.findLastOr(character, nullptr);
+		return MutableStringView{*this}.findLastOr(character, nullptr);
 	}
 
 	StringView String::findLast(const char character) const {
 		/* Calling straight into the concrete implementation to reduce call stack depth */
-		return StringView { *this }.findLastOr(character, nullptr);
+		return StringView{*this}.findLastOr(character, nullptr);
 	}
 
 	MutableStringView String::findLastOr(const StringView substring, char* const fail) {
-		return MutableStringView { *this }.findLastOr(substring, fail);
+		return MutableStringView{*this}.findLastOr(substring, fail);
 	}
 
 	StringView String::findLastOr(const StringView substring, const char* const fail) const {
-		return StringView { *this }.findLastOr(substring, fail);
+		return StringView{*this}.findLastOr(substring, fail);
 	}
 
 	MutableStringView String::findLastOr(const char character, char* const fail) {
-		return MutableStringView { *this }.findLastOr(character, fail);
+		return MutableStringView{*this}.findLastOr(character, fail);
 	}
 
 	StringView String::findLastOr(const char character, const char* const fail) const {
-		return StringView { *this }.findLastOr(character, fail);
+		return StringView{*this}.findLastOr(character, fail);
 	}
 
 	bool String::contains(const StringView substring) const {
-		return StringView { *this }.contains(substring);
+		return StringView{*this}.contains(substring);
 	}
 
 	bool String::contains(const char character) const {
-		return StringView { *this }.contains(character);
+		return StringView{*this}.contains(character);
 	}
 
 	MutableStringView String::findAny(const StringView characters) {
-		return MutableStringView { *this }.findAny(characters);
+		return MutableStringView{*this}.findAny(characters);
 	}
 
 	StringView String::findAny(const StringView characters) const {
-		return StringView { *this }.findAny(characters);
+		return StringView{*this}.findAny(characters);
 	}
 
 	MutableStringView String::findAnyOr(const StringView characters, char* fail) {
-		return MutableStringView { *this }.findAnyOr(characters, fail);
+		return MutableStringView{*this}.findAnyOr(characters, fail);
 	}
 
 	StringView String::findAnyOr(const StringView characters, const char* fail) const {
-		return StringView { *this }.findAnyOr(characters, fail);
+		return StringView{*this}.findAnyOr(characters, fail);
 	}
 
 	MutableStringView String::findLastAny(const StringView characters) {
-		return MutableStringView { *this }.findLastAny(characters);
+		return MutableStringView{*this}.findLastAny(characters);
 	}
 
 	StringView String::findLastAny(const StringView characters) const {
-		return StringView { *this }.findLastAny(characters);
+		return StringView{*this}.findLastAny(characters);
 	}
 
 	MutableStringView String::findLastAnyOr(const StringView characters, char* fail) {
-		return MutableStringView { *this }.findLastAnyOr(characters, fail);
+		return MutableStringView{*this}.findLastAnyOr(characters, fail);
 	}
 
 	StringView String::findLastAnyOr(const StringView characters, const char* fail) const {
-		return StringView { *this }.findLastAnyOr(characters, fail);
+		return StringView{*this}.findLastAnyOr(characters, fail);
 	}
 
 	bool String::containsAny(const StringView substring) const {
-		return StringView { *this }.containsAny(substring);
+		return StringView{*this}.containsAny(substring);
 	}
 
 	char* String::release() {
@@ -802,11 +802,11 @@ namespace Death::Containers
 	namespace Implementation
 	{
 		String StringConverter<std::string>::from(const std::string& other) {
-			return String { other.data(), other.size() };
+			return String{other.data(), other.size()};
 		}
 
 		std::string StringConverter<std::string>::to(const String& other) {
-			return std::string { other.data(), other.size() };
+			return std::string{other.data(), other.size()};
 		}
 	}
 }

@@ -8,6 +8,7 @@
 #include "../../nCine/Threading/ThreadSync.h"
 
 #include <Containers/SmallVector.h>
+#include <Containers/StringView.h>
 
 struct _ENetHost;
 
@@ -39,7 +40,7 @@ namespace Jazz2::Multiplayer
 		NetworkManager();
 		~NetworkManager();
 
-		bool CreateClient(INetworkHandler* handler, const char* address, std::uint16_t port, std::uint32_t clientData);
+		bool CreateClient(INetworkHandler* handler, const StringView& address, std::uint16_t port, std::uint32_t clientData);
 		bool CreateServer(INetworkHandler* handler, std::uint16_t port);
 		void Dispose();
 

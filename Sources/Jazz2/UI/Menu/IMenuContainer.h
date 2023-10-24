@@ -42,7 +42,7 @@ namespace Jazz2::UI::Menu
 		virtual void LeaveSection() = 0;
 		virtual void ChangeLevel(Jazz2::LevelInitialization&& levelInit) = 0;
 #if defined(WITH_MULTIPLAYER)
-		virtual bool ConnectToServer(const char* address, std::uint16_t port) = 0;
+		virtual bool ConnectToServer(const StringView& address, std::uint16_t port) = 0;
 		virtual bool CreateServer(std::uint16_t port) = 0;
 #endif
 		virtual void ApplyPreferencesChanges(ChangedPreferencesType type) = 0;
