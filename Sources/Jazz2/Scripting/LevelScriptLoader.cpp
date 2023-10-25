@@ -3329,14 +3329,14 @@ namespace Jazz2::Scripting
 	{
 		auto ctx = asGetActiveContext();
 		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		return _this->_levelHandler->_tileMap->LevelBounds().X;
+		return _this->_levelHandler->_tileMap->GetLevelBounds().X;
 	}
 
 	int LevelScriptLoader::asGetLevelHeight()
 	{
 		auto ctx = asGetActiveContext();
 		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
-		return _this->_levelHandler->_tileMap->LevelBounds().Y;
+		return _this->_levelHandler->_tileMap->GetLevelBounds().Y;
 	}
 
 	float LevelScriptLoader::asGetElapsedFrames()

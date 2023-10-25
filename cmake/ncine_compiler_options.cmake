@@ -1,5 +1,6 @@
 target_compile_features(${NCINE_APP} PUBLIC cxx_std_17)
 set_target_properties(${NCINE_APP} PROPERTIES CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 include(CheckStructHasMember)
 

@@ -337,7 +337,7 @@ namespace Jazz2::UI::Menu
 				break;
 			case (int32_t)Item::TODO_CreateServer:
 				// TODO: Hardcoded address and port
-				_root->CreateServer(10666);
+				_root->CreateServer(7438);
 				break;
 #endif
 

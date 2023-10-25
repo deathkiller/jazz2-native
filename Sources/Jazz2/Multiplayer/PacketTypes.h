@@ -15,6 +15,7 @@ namespace Jazz2::Multiplayer
 		LevelReady,
 
 		PlayerUpdate,
+		PlayerKeyPress,
 		PlayerRefreshAnimation,
 		PlayerFireWeapon,
 		PlayerDied,

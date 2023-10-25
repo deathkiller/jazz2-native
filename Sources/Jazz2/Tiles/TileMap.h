@@ -142,10 +142,13 @@ namespace Jazz2::Tiles
 			DebrisFlags Flags;
 		};
 
-		TileMap(ITileMapOwner* owner, const StringView& tileSetPath, std::uint16_t captionTileId, PitType pitType, bool applyPalette);
+		TileMap(const StringView& tileSetPath, std::uint16_t captionTileId, bool applyPalette);
 
-		Vector2i Size();
-		Vector2i LevelBounds();
+		void SetOwner(ITileMapOwner* owner);
+		Vector2i GetSize() const;
+		Vector2i GetLevelBounds() const;
+		PitType GetPitType() const;
+		void SetPitType(PitType value);
 
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;

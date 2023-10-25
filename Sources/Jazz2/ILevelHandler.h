@@ -34,6 +34,8 @@ namespace Jazz2
 
 		ILevelHandler() : Gravity(0.0f) { }
 
+		virtual bool Initialize(const LevelInitialization& levelInit) = 0;
+
 		virtual Events::EventSpawner* EventSpawner() = 0;
 		virtual Events::EventMap* EventMap() = 0;
 		virtual Tiles::TileMap* TileMap() = 0;

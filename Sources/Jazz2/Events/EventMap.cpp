@@ -7,9 +7,29 @@
 
 namespace Jazz2::Events
 {
-	EventMap::EventMap(ILevelHandler* levelHandler, Vector2i layoutSize, PitType pitType)
-		: _levelHandler(levelHandler), _layoutSize(layoutSize), _checkpointCreated(false), _pitType(pitType)
+	EventMap::EventMap(const Vector2i& layoutSize)
+		: _levelHandler(nullptr), _layoutSize(layoutSize), _checkpointCreated(false), _pitType(PitType::FallForever)
 	{
+	}
+
+	void EventMap::SetLevelHandler(ILevelHandler* levelHandler)
+	{
+		_levelHandler = levelHandler;
+	}
+
+	Vector2i EventMap::GetSize() const
+	{
+		return _layoutSize;
+	}
+
+	PitType EventMap::GetPitType() const
+	{
+		return _pitType;
+	}
+
+	void EventMap::SetPitType(PitType value)
+	{
+		_pitType = value;
 	}
 
 	Vector2f EventMap::GetSpawnPosition(PlayerType type)
@@ -290,7 +310,7 @@ namespace Jazz2::Events
 				std::uint8_t eventFlags = s.ReadValue<std::uint8_t>();
 				std::uint8_t eventParams[16];
 
-				// ToDo: Remove inlined constants
+				// TODO: Remove inlined constants
 
 				// Flag 0x02: Generator
 				std::uint8_t generatorFlags, generatorDelay;

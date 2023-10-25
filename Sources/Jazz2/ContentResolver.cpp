@@ -869,29 +869,29 @@ namespace Jazz2
 				fs::IsReadableFile(fs::CombinePath({ GetCachePath(), "Episodes"_s, episodeName, levelName + ".j2l"_s })));
 	}
 
-	bool ContentResolver::LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty)
+	bool ContentResolver::TryLoadLevel(const StringView& path, GameDifficulty difficulty, LevelDescriptor& descriptor)
 	{
 		// Try "Content" directory first, then "Cache" directory
 		auto pathNormalized = fs::ToNativeSeparators(path);
-		String fullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, pathNormalized + ".j2l"_s });
-		if (!fs::IsReadableFile(fullPath)) {
-			fullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, pathNormalized + ".j2l"_s });
+		descriptor.FullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, pathNormalized + ".j2l"_s });
+		if (!fs::IsReadableFile(descriptor.FullPath)) {
+			descriptor.FullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, pathNormalized + ".j2l"_s });
 		}
 
-		auto s = fs::Open(fullPath, FileAccessMode::Read);
+		auto s = fs::Open(descriptor.FullPath, FileAccessMode::Read);
 		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
-		uint64_t signature = s->ReadValue<uint64_t>();
-		uint8_t fileType = s->ReadValue<uint8_t>();
+		std::uint64_t signature = s->ReadValue<std::uint64_t>();
+		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 		RETURNF_ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && fileType == LevelFile, "File has invalid signature");
 
-		uint16_t flags = s->ReadValue<uint16_t>();
+		std::uint16_t flags = s->ReadValue<std::uint16_t>();
 
 		// Read compressed data
-		int32_t compressedSize = s->ReadValue<int32_t>();
-		int32_t uncompressedSize = s->ReadValue<int32_t>();
-		std::unique_ptr<uint8_t[]> compressedBuffer = std::make_unique<uint8_t[]>(compressedSize);
-		std::unique_ptr<uint8_t[]> uncompressedBuffer = std::make_unique<uint8_t[]>(uncompressedSize);
+		std::int32_t compressedSize = s->ReadValue<std::int32_t>();
+		std::int32_t uncompressedSize = s->ReadValue<std::int32_t>();
+		std::unique_ptr<std::uint8_t[]> compressedBuffer = std::make_unique<std::uint8_t[]>(compressedSize);
+		std::unique_ptr<std::uint8_t[]> uncompressedBuffer = std::make_unique<std::uint8_t[]>(uncompressedSize);
 		s->Read(compressedBuffer.get(), compressedSize);
 
 		s->Close();
@@ -901,41 +901,41 @@ namespace Jazz2
 		MemoryStream uc(uncompressedBuffer.get(), uncompressedSize);
 
 		// Read metadata
-		uint8_t nameSize = uc.ReadValue<uint8_t>();
-		String name(NoInit, nameSize);
-		uc.Read(name.data(), nameSize);
+		std::uint8_t stringSize = uc.ReadValue<std::uint8_t>();
+		descriptor.DisplayName = String(NoInit, stringSize);
+		uc.Read(descriptor.DisplayName.data(), stringSize);
 
-		nameSize = uc.ReadValue<uint8_t>();
-		String nextLevel(NoInit, nameSize);
-		uc.Read(nextLevel.data(), nameSize);
+		stringSize = uc.ReadValue<std::uint8_t>();
+		descriptor.NextLevel = String(NoInit, stringSize);
+		uc.Read(descriptor.NextLevel.data(), stringSize);
 
-		nameSize = uc.ReadValue<uint8_t>();
-		String secretLevel(NoInit, nameSize);
-		uc.Read(secretLevel.data(), nameSize);
+		stringSize = uc.ReadValue<std::uint8_t>();
+		descriptor.SecretLevel = String(NoInit, stringSize);
+		uc.Read(descriptor.SecretLevel.data(), stringSize);
 
-		nameSize = uc.ReadValue<uint8_t>();
-		String bonusLevel(NoInit, nameSize);
-		uc.Read(bonusLevel.data(), nameSize);
+		stringSize = uc.ReadValue<std::uint8_t>();
+		descriptor.BonusLevel = String(NoInit, stringSize);
+		uc.Read(descriptor.BonusLevel.data(), stringSize);
 
 		// Default Tileset
-		nameSize = uc.ReadValue<uint8_t>();
-		String defaultTileset(NoInit, nameSize);
-		uc.Read(defaultTileset.data(), nameSize);
+		stringSize = uc.ReadValue<std::uint8_t>();
+		String defaultTileset(NoInit, stringSize);
+		uc.Read(defaultTileset.data(), stringSize);
 
 		// Default Music
-		nameSize = uc.ReadValue<uint8_t>();
-		String defaultMusic(NoInit, nameSize);
-		uc.Read(defaultMusic.data(), nameSize);
+		stringSize = uc.ReadValue<std::uint8_t>();
+		descriptor.MusicPath = String(NoInit, stringSize);
+		uc.Read(descriptor.MusicPath.data(), stringSize);
 
-		uint32_t rawAmbientColor = uc.ReadValue<uint32_t>();
-		Vector4f ambientColor = Vector4f((rawAmbientColor & 0xff) / 255.0f, ((rawAmbientColor >> 8) & 0xff) / 255.0f,
+		uint32_t rawAmbientColor = uc.ReadValue<std::uint32_t>();
+		descriptor.AmbientColor = Vector4f((rawAmbientColor & 0xff) / 255.0f, ((rawAmbientColor >> 8) & 0xff) / 255.0f,
 			((rawAmbientColor >> 16) & 0xff) / 255.0f, ((rawAmbientColor >> 24) & 0xff) / 255.0f);
 
-		WeatherType defaultWeatherType = (WeatherType)uc.ReadValue<uint8_t>();
-		uint8_t defaultWeatherIntensity = uc.ReadValue<uint8_t>();
-		uint16_t waterLevel = uc.ReadValue<uint16_t>();
+		descriptor.WeatherType = (WeatherType)uc.ReadValue<std::uint8_t>();
+		descriptor.WeatherIntensity = uc.ReadValue<std::uint8_t>();
+		descriptor.WaterLevel = uc.ReadValue<std::uint16_t>();
 
-		uint16_t captionTileId = uc.ReadValue<uint16_t>();
+		std::uint16_t captionTileId = uc.ReadValue<std::uint16_t>();
 
 		PitType pitType;
 		if ((flags & 0x01) == 0x01) {
@@ -946,74 +946,71 @@ namespace Jazz2
 
 		bool hasCustomPalette = ((flags & 0x04) == 0x04);
 		if (hasCustomPalette) {
-			uint32_t newPalette[ColorsPerPalette];
-			uc.Read(newPalette, ColorsPerPalette * sizeof(uint32_t));
+			std::uint32_t newPalette[ColorsPerPalette];
+			uc.Read(newPalette, ColorsPerPalette * sizeof(std::uint32_t));
 
-			if (std::memcmp(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t)) != 0) {
+			if (std::memcmp(_palettes, newPalette, ColorsPerPalette * sizeof(std::uint32_t)) != 0) {
 				// Palettes differs, drop all cached resources, so it will be reloaded with new palette
 				if (_isLoading) {
 					_cachedMetadata.clear();
 					_cachedGraphics.clear();
 
-					for (int32_t i = 0; i < (int32_t)FontType::Count; i++) {
+					for (std::int32_t i = 0; i < (std::int32_t)FontType::Count; i++) {
 						_fonts[i] = nullptr;
 					}
 				}
 
-				std::memcpy(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t));
+				std::memcpy(_palettes, newPalette, ColorsPerPalette * sizeof(std::uint32_t));
 				RecreateGemPalettes();
 			}
 		}
 
-		std::unique_ptr<Tiles::TileMap> tileMap = std::make_unique<Tiles::TileMap>(levelHandler, defaultTileset, captionTileId, pitType, !hasCustomPalette);
+		descriptor.TileMap = std::make_unique<Tiles::TileMap>(defaultTileset, captionTileId, !hasCustomPalette);
+		descriptor.TileMap->SetPitType(pitType);
 
 		// Extra Tilesets
-		uint8_t extraTilesetCount = uc.ReadValue<uint8_t>();
-		for (uint32_t i = 0; i < extraTilesetCount; i++) {
-			uint8_t tilesetFlags = uc.ReadValue<uint8_t>();
+		std::uint8_t extraTilesetCount = uc.ReadValue<std::uint8_t>();
+		for (std::uint32_t i = 0; i < extraTilesetCount; i++) {
+			std::uint8_t tilesetFlags = uc.ReadValue<std::uint8_t>();
 
-			nameSize = uc.ReadValue<uint8_t>();
-			String extraTileset = String(NoInit, nameSize);
-			uc.Read(extraTileset.data(), nameSize);
+			stringSize = uc.ReadValue<std::uint8_t>();
+			String extraTileset = String(NoInit, stringSize);
+			uc.Read(extraTileset.data(), stringSize);
 
-			uint16_t offset = uc.ReadValue<uint16_t>();
-			uint16_t count = uc.ReadValue<uint16_t>();
+			std::uint16_t offset = uc.ReadValue<std::uint16_t>();
+			std::uint16_t count = uc.ReadValue<std::uint16_t>();
 
-			uint8_t paletteRemapping[ColorsPerPalette];
+			std::uint8_t paletteRemapping[ColorsPerPalette];
 			bool hasPaletteRemapping = ((tilesetFlags & 0x01) == 0x01);
 			if (hasPaletteRemapping) {
 				uc.Read(paletteRemapping, sizeof(paletteRemapping));
 			}
 
-			tileMap->AddTileSet(extraTileset, offset, count, hasPaletteRemapping ? paletteRemapping : nullptr);
+			descriptor.TileMap->AddTileSet(extraTileset, offset, count, hasPaletteRemapping ? paletteRemapping : nullptr);
 		}
 
 		// Text Event Strings
-		uint8_t textEventStringsCount = uc.ReadValue<uint8_t>();
-		SmallVector<String, 0> levelTexts;
-		levelTexts.reserve(textEventStringsCount);
-		for (uint32_t i = 0; i < textEventStringsCount; i++) {
-			uint16_t textLength = uc.ReadValue<uint16_t>();
-			String& text = levelTexts.emplace_back(NoInit, textLength);
+		std::uint8_t textEventStringsCount = uc.ReadValue<std::uint8_t>();
+		descriptor.LevelTexts.reserve(textEventStringsCount);
+		for (std::uint32_t i = 0; i < textEventStringsCount; i++) {
+			std::uint16_t textLength = uc.ReadValue<std::uint16_t>();
+			String& text = descriptor.LevelTexts.emplace_back(NoInit, textLength);
 			uc.Read(text.data(), textLength);
 		}
 
 		// Animated Tiles
-		tileMap->ReadAnimatedTiles(uc);
+		descriptor.TileMap->ReadAnimatedTiles(uc);
 
 		// Layers
-		uint8_t layerCount = uc.ReadValue<uint8_t>();
-		for (uint32_t i = 0; i < layerCount; i++) {
-			tileMap->ReadLayerConfiguration(uc);
+		std::uint8_t layerCount = uc.ReadValue<std::uint8_t>();
+		for (std::uint32_t i = 0; i < layerCount; i++) {
+			descriptor.TileMap->ReadLayerConfiguration(uc);
 		}
 
 		// Events
-		std::unique_ptr<Events::EventMap> eventMap = std::make_unique<Events::EventMap>(levelHandler, tileMap->Size(), pitType);
-		eventMap->ReadEvents(uc, tileMap, difficulty);
-
-		// TODO: Bonus level
-		levelHandler->OnLevelLoaded(fullPath, name, nextLevel, secretLevel, tileMap, eventMap, defaultMusic, ambientColor,
-			defaultWeatherType, defaultWeatherIntensity, waterLevel, levelTexts);
+		descriptor.EventMap = std::make_unique<Events::EventMap>(descriptor.TileMap->GetSize());
+		descriptor.EventMap->SetPitType(pitType);
+		descriptor.EventMap->ReadEvents(uc, descriptor.TileMap, difficulty);
 
 		return true;
 	}

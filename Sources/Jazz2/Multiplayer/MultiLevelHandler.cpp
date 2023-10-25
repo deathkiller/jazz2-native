@@ -39,13 +39,24 @@ using namespace nCine;
 
 namespace Jazz2::Multiplayer
 {
-	MultiLevelHandler::MultiLevelHandler(IRootController* root, NetworkManager* networkManager, const LevelInitialization& levelInit)
-		: LevelHandler(root, levelInit), _networkManager(networkManager), _updateTimeLeft(1.0f), _initialUpdateSent(false), _seqNum(0), _seqNumWarped(0)
+	MultiLevelHandler::MultiLevelHandler(IRootController* root, NetworkManager* networkManager)
+		: LevelHandler(root), _networkManager(networkManager), _updateTimeLeft(1.0f), _initialUpdateSent(false),
+			_lastPlayerIndex(-1), _seqNum(0), _seqNumWarped(0)
 	{
 		_isServer = (networkManager->GetState() == NetworkState::Listening);
+	}
 
-		_lastPlayerIndex = -1;
-		for (int32_t i = 0; i < countof(levelInit.PlayerCarryOvers); i++) {
+	MultiLevelHandler::~MultiLevelHandler()
+	{
+	}
+
+	bool MultiLevelHandler::Initialize(const LevelInitialization& levelInit)
+	{
+		if (!LevelHandler::Initialize(levelInit)) {
+			return false;
+		}
+
+		for (std::int32_t i = 0; i < countof(levelInit.PlayerCarryOvers); i++) {
 			if (levelInit.PlayerCarryOvers[i].Type != PlayerType::None) {
 				_lastPlayerIndex = i;
 			}
@@ -55,10 +66,7 @@ namespace Jazz2::Multiplayer
 		resolver.PreloadMetadataAsync("Interactive/PlayerJazz"_s);
 		resolver.PreloadMetadataAsync("Interactive/PlayerSpaz"_s);
 		resolver.PreloadMetadataAsync("Interactive/PlayerLori"_s);
-	}
-
-	MultiLevelHandler::~MultiLevelHandler()
-	{
+		return true;
 	}
 
 	float MultiLevelHandler::GetAmbientLight() const
@@ -71,15 +79,17 @@ namespace Jazz2::Multiplayer
 		LevelHandler::SetAmbientLight(value);
 	}
 
-	void MultiLevelHandler::OnLevelLoaded(const StringView& fullPath, const StringView& name, const StringView& nextLevel, const StringView& secretLevel, std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap, const StringView& musicPath, const Vector4f& ambientColor, WeatherType weatherType, uint8_t weatherIntensity, uint16_t waterLevel, SmallVectorImpl<String>& levelTexts)
-	{
-		// TODO
-		//LevelHandler::OnLevelLoaded(fullPath, name, nextLevel,secretLevel, tileMap, eventMap, musicPath, ambientColor, weatherType, weatherIntensity, waterLevel, levelTexts);
-	}
-
 	void MultiLevelHandler::OnBeginFrame()
 	{
 		LevelHandler::OnBeginFrame();
+
+		if ((_pressedActions & 0xffffffffu) != ((_pressedActions >> 32) & 0xffffffffu)) {
+			MemoryStream packet(9);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)ClientPacketType::PlayerKeyPress);
+			packet.WriteVariableUint32(_lastPlayerIndex);
+			packet.WriteVariableUint32((std::uint32_t)(_pressedActions & 0xffffffffu));
+			_networkManager->SendToPeer(nullptr, NetworkChannel::UnreliableUpdates, packet.GetBuffer(), packet.GetSize());
+		}
 	}
 
 	void MultiLevelHandler::OnEndFrame()
@@ -117,7 +127,7 @@ namespace Jazz2::Multiplayer
 					auto it = _playerStates.find(player->_playerIndex);
 					if (it != _playerStates.end()) {
 						// Remote players
-						UpdatePlayerLocalPos(player, it->second);
+						UpdatePlayerLocalPos(player, it->second, timeMult);
 						pos = player->_pos;
 
 						if (it->second.WarpTimeLeft > 0.0f) {
@@ -139,8 +149,8 @@ namespace Jazz2::Multiplayer
 					}
 
 					packet.WriteVariableUint32(player->_playerIndex);
-					packet.WriteValue<std::int32_t>((std::int32_t)(pos.X * 256.0f));
-					packet.WriteValue<std::int32_t>((std::int32_t)(pos.Y * 256.0f));
+					packet.WriteValue<std::int32_t>((std::int32_t)(pos.X * 512.0f));
+					packet.WriteValue<std::int32_t>((std::int32_t)(pos.Y * 512.0f));
 					packet.WriteVariableUint32((std::uint32_t)(player->_currentTransitionState != AnimState::Idle ? player->_currentTransitionState : player->_currentAnimationState));
 
 					std::uint8_t flags = 0;
@@ -176,36 +186,14 @@ namespace Jazz2::Multiplayer
 						flags |= PlayerFlags::JustWarped;
 					}
 
-					if (PlayerActionPressed(0, PlayerActions::Up)) {
-						flags |= PlayerFlags::PressedUp;
-					}
-					if (PlayerActionPressed(0, PlayerActions::Down)) {
-						flags |= PlayerFlags::PressedDown;
-					}
-					if (PlayerActionPressed(0, PlayerActions::Left)) {
-						flags |= PlayerFlags::PressedLeft;
-					}
-					if (PlayerActionPressed(0, PlayerActions::Right)) {
-						flags |= PlayerFlags::PressedRight;
-					}
-					if (PlayerActionPressed(0, PlayerActions::Jump)) {
-						flags |= PlayerFlags::PressedJump;
-					}
-					if (PlayerActionPressed(0, PlayerActions::Run)) {
-						flags |= PlayerFlags::PressedRun;
-					}
-					if (PlayerActionPressed(0, PlayerActions::Fire)) {
-						flags |= PlayerFlags::PressedFire;
-					}
-
 					MemoryStream packet(20);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)ClientPacketType::PlayerUpdate);
 					packet.WriteVariableUint32(_lastPlayerIndex);
 					packet.WriteVariableUint64(now);
-					packet.WriteValue<std::int32_t>((std::int32_t)(player->_pos.X * 256.0f));
-					packet.WriteValue<std::int32_t>((std::int32_t)(player->_pos.Y * 256.0f));
-					packet.WriteValue<std::int16_t>((std::int16_t)(player->_speed.X * 256.0f));
-					packet.WriteValue<std::int16_t>((std::int16_t)(player->_speed.Y * 256.0f));
+					packet.WriteValue<std::int32_t>((std::int32_t)(player->_pos.X * 512.0f));
+					packet.WriteValue<std::int32_t>((std::int32_t)(player->_pos.Y * 512.0f));
+					packet.WriteValue<std::int16_t>((std::int16_t)(player->_speed.X * 512.0f));
+					packet.WriteValue<std::int16_t>((std::int16_t)(player->_speed.Y * 512.0f));
 					packet.WriteVariableUint32((std::uint32_t)flags);
 
 					if (_seqNumWarped != 0) {
@@ -379,18 +367,7 @@ namespace Jazz2::Multiplayer
 		if (index > 0) {
 			auto it = _playerStates.find(index);
 			if (it != _playerStates.end()) {
-				PlayerFlags mask;
-				switch (action) {
-					case PlayerActions::Up: mask = PlayerFlags::PressedUp; break;
-					case PlayerActions::Down: mask = PlayerFlags::PressedDown; break;
-					case PlayerActions::Left: mask = PlayerFlags::PressedLeft; break;
-					case PlayerActions::Right: mask = PlayerFlags::PressedRight; break;
-					case PlayerActions::Jump: mask = PlayerFlags::PressedJump; break;
-					case PlayerActions::Run: mask = PlayerFlags::PressedRun; break;
-					case PlayerActions::Fire: mask = PlayerFlags::PressedFire; break;
-					default: return false;
-				}
-				return (it->second.Flags & mask) == mask;
+				return (it->second.PressedKeys & (1ull << (int32_t)action)) != 0;
 			}
 		}
 
@@ -402,19 +379,8 @@ namespace Jazz2::Multiplayer
 		if (index > 0) {
 			auto it = _playerStates.find(index);
 			if (it != _playerStates.end()) {
-				PlayerFlags mask;
-				switch (action) {
-					case PlayerActions::Up: mask = PlayerFlags::PressedUp; break;
-					case PlayerActions::Down: mask = PlayerFlags::PressedDown; break;
-					case PlayerActions::Left: mask = PlayerFlags::PressedLeft; break;
-					case PlayerActions::Right: mask = PlayerFlags::PressedRight; break;
-					case PlayerActions::Jump: mask = PlayerFlags::PressedJump; break;
-					case PlayerActions::Run: mask = PlayerFlags::PressedRun; break;
-					case PlayerActions::Fire: mask = PlayerFlags::PressedFire; break;
-					default: return false;
-				}
 				isGamepad = false;
-				return (it->second.Flags & mask) == mask;
+				return (it->second.PressedKeys & (1ull << (int32_t)action)) != 0;
 			}
 		}
 
@@ -426,18 +392,8 @@ namespace Jazz2::Multiplayer
 		if (index > 0) {
 			auto it = _playerStates.find(index);
 			if (it != _playerStates.end()) {
-				PlayerFlags mask;
-				switch (action) {
-					case PlayerActions::Up: mask = PlayerFlags::PressedUp; break;
-					case PlayerActions::Down: mask = PlayerFlags::PressedDown; break;
-					case PlayerActions::Left: mask = PlayerFlags::PressedLeft; break;
-					case PlayerActions::Right: mask = PlayerFlags::PressedRight; break;
-					case PlayerActions::Jump: mask = PlayerFlags::PressedJump; break;
-					case PlayerActions::Run: mask = PlayerFlags::PressedRun; break;
-					case PlayerActions::Fire: mask = PlayerFlags::PressedFire; break;
-					default: return false;
-				}
-				return (it->second.Flags & mask) == mask;
+				// TODO
+				return (it->second.PressedKeys & (1ull << (int32_t)action)) != 0;
 			}
 		}
 
@@ -449,19 +405,9 @@ namespace Jazz2::Multiplayer
 		if (index > 0) {
 			auto it = _playerStates.find(index);
 			if (it != _playerStates.end()) {
-				PlayerFlags mask;
-				switch (action) {
-					case PlayerActions::Up: mask = PlayerFlags::PressedUp; break;
-					case PlayerActions::Down: mask = PlayerFlags::PressedDown; break;
-					case PlayerActions::Left: mask = PlayerFlags::PressedLeft; break;
-					case PlayerActions::Right: mask = PlayerFlags::PressedRight; break;
-					case PlayerActions::Jump: mask = PlayerFlags::PressedJump; break;
-					case PlayerActions::Run: mask = PlayerFlags::PressedRun; break;
-					case PlayerActions::Fire: mask = PlayerFlags::PressedFire; break;
-					default: return false;
-				}
+				// TODO
 				isGamepad = false;
-				return (it->second.Flags & mask) == mask;
+				return (it->second.PressedKeys & (1ull << (int32_t)action)) != 0;
 			}
 		}
 
@@ -473,9 +419,9 @@ namespace Jazz2::Multiplayer
 		if (index > 0) {
 			auto it = _playerStates.find(index);
 			if (it != _playerStates.end()) {
-				if ((it->second.Flags & PlayerFlags::PressedLeft) != PlayerFlags::None) {
+				if ((it->second.PressedKeys & (1ull << (int32_t)PlayerActions::Left)) != 0) {
 					return -1.0f;
-				} else if ((it->second.Flags & PlayerFlags::PressedRight) != PlayerFlags::None) {
+				} else if ((it->second.PressedKeys & (1ull << (int32_t)PlayerActions::Right)) != 0) {
 					return 1.0f;
 				} else {
 					return 0.0f;
@@ -491,9 +437,9 @@ namespace Jazz2::Multiplayer
 		if (index > 0) {
 			auto it = _playerStates.find(index);
 			if (it != _playerStates.end()) {
-				if ((it->second.Flags & PlayerFlags::PressedUp) != PlayerFlags::None) {
+				if ((it->second.PressedKeys & (1ull << (int32_t)PlayerActions::Up)) != 0) {
 					return -1.0f;
-				} else if ((it->second.Flags & PlayerFlags::PressedDown) != PlayerFlags::None) {
+				} else if ((it->second.PressedKeys & (1ull << (int32_t)PlayerActions::Down)) != 0) {
 					return 1.0f;
 				} else {
 					return 0.0f;
@@ -514,6 +460,37 @@ namespace Jazz2::Multiplayer
 			packet.WriteVariableInt32(amount);
 
 			_networkManager->SendToAll(NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+		}
+	}
+
+	void MultiLevelHandler::AttachComponents(LevelDescriptor&& descriptor)
+	{
+		LevelHandler::AttachComponents(std::move(descriptor));
+
+		if (!_isServer) {
+			Vector2i size = _eventMap->GetSize();
+			for (std::int32_t y = 0; y < size.Y; y++) {
+				for (std::int32_t x = 0; x < size.X; x++) {
+					std::uint8_t* eventParams;
+					switch (_eventMap->GetEventByPosition(x, y, &eventParams)) {
+						case EventType::WarpOrigin:
+						case EventType::ModifierDeath:
+						case EventType::ModifierLimitCameraView:
+						case EventType::AreaEndOfLevel:
+						case EventType::AreaCallback:
+						case EventType::AreaActivateBoss:
+						case EventType::AreaFlyOff:
+						case EventType::AreaRevertMorph:
+						case EventType::AreaMorphToFrog:
+						case EventType::AreaNoFire:
+						case EventType::TriggerZone:
+						case EventType::RollingRockTrigger:
+							// These events are handled on server-side only
+							_eventMap->StoreTileEvent(x, y, EventType::Empty);
+							break;
+					}
+				}
+			}	
 		}
 	}
 
@@ -583,7 +560,7 @@ namespace Jazz2::Multiplayer
 					_players.push_back(ptr);
 
 					_peerStates[peer] = PeerState(ptr);
-					_playerStates[playerIndex] = PlayerState(player->_pos);
+					_playerStates[playerIndex] = PlayerState(player->_pos, player->_speed);
 
 					AddActor(player);
 
@@ -667,10 +644,10 @@ namespace Jazz2::Multiplayer
 						return true;
 					}
 
-					float posX = packet.ReadValue<std::int32_t>() / 256.0f;
-					float posY = packet.ReadValue<std::int32_t>() / 256.0f;
-					float speedX = packet.ReadValue<std::int16_t>() / 256.0f;
-					float speedY = packet.ReadValue<std::int16_t>() / 256.0f;
+					float posX = packet.ReadValue<std::int32_t>() / 512.0f;
+					float posY = packet.ReadValue<std::int32_t>() / 512.0f;
+					float speedX = packet.ReadValue<std::int16_t>() / 512.0f;
+					float speedY = packet.ReadValue<std::int16_t>() / 512.0f;
 					PlayerFlags flags = (PlayerFlags)packet.ReadVariableUint32();
 
 					bool justWarped = (flags & PlayerFlags::JustWarped) == PlayerFlags::JustWarped;
@@ -712,9 +689,12 @@ namespace Jazz2::Multiplayer
 							it2->second.WarpTimeLeft = 90.0f;
 						}
 					} else if (it2->second.WarpTimeLeft <= 0.0f) {
-						float posDist = (Vector2f(posX, posY) - player->_pos).SqrLength();
-						if (posDist > 92 * 92) {
-							LOGW("Player %i position mismatch by %i pixels", playerIndex, (std::int32_t)sqrt(posDist));
+						constexpr float MaxDeviation = 256.0f;
+
+						float posDiffSqr = (Vector2f(posX, posY) - player->_pos).SqrLength();
+						float speedSqr = std::max(player->_speed.SqrLength(), Vector2f(speedX, speedY).SqrLength());
+						if (posDiffSqr > speedSqr + (MaxDeviation * MaxDeviation)) {
+							LOGW("Player %i position mismatch by %i pixels (speed: %0.2f)", playerIndex, (std::int32_t)sqrt(posDiffSqr), sqrt(speedSqr));
 
 							posX = player->_pos.X;
 							posY = player->_pos.Y;
@@ -722,16 +702,15 @@ namespace Jazz2::Multiplayer
 							MemoryStream packet2(13);
 							packet2.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::PlayerMoveInstantly);
 							packet2.WriteVariableUint32(player->_playerIndex);
-							packet2.WriteValue<std::int32_t>((std::int32_t)(posX * 256.0f));
-							packet2.WriteValue<std::int32_t>((std::int32_t)(posY * 256.0f));
-							packet2.WriteValue<std::int32_t>((std::int32_t)(player->_speed.X * 256.0f));
-							packet2.WriteValue<std::int32_t>((std::int32_t)(player->_speed.Y * 256.0f));
+							packet2.WriteValue<std::int32_t>((std::int32_t)(posX * 512.0f));
+							packet2.WriteValue<std::int32_t>((std::int32_t)(posY * 512.0f));
+							packet2.WriteValue<std::int16_t>((std::int16_t)(player->_speed.X * 512.0f));
+							packet2.WriteValue<std::int16_t>((std::int16_t)(player->_speed.Y * 512.0f));
 
 							_networkManager->SendToPeer(peer, NetworkChannel::Main, packet2.GetBuffer(), packet2.GetSize());
 						}
 					}
 
-					player->_speed = Vector2f(speedX, speedY);
 					player->SetFacingLeft((flags & PlayerFlags::IsFacingLeft) != PlayerFlags::None);
 					player->_renderer.setDrawEnabled((flags & PlayerFlags::IsVisible) != PlayerFlags::None);
 					player->_isActivelyPushing = (flags & PlayerFlags::IsActivelyPushing) != PlayerFlags::None;
@@ -739,7 +718,19 @@ namespace Jazz2::Multiplayer
 
 					it->second.LastUpdated = now;
 
-					OnRemotePlayerPosReceived(it2->second, Vector2f(posX, posY), flags);
+					OnRemotePlayerPosReceived(it2->second, Vector2f(posX, posY), Vector2f(speedX, speedY), flags);
+					return true;
+				}
+				case ClientPacketType::PlayerKeyPress: {
+					MemoryStream packet(data + 1, dataLength - 1);
+					std::uint32_t playerIndex = packet.ReadVariableUint32();
+
+					auto it = _playerStates.find(playerIndex);
+					if (it == _playerStates.end()) {
+						return true;
+					}
+
+					it->second.PressedKeys = packet.ReadVariableUint32();
 					return true;
 				}
 				case ClientPacketType::PlayerFireWeapon: {
@@ -827,8 +818,8 @@ namespace Jazz2::Multiplayer
 					std::uint32_t actorCount = packet.ReadVariableUint32();
 					for (std::uint32_t i = 0; i < actorCount; i++) {
 						std::uint32_t index = packet.ReadVariableUint32();
-						float posX = packet.ReadValue<std::int32_t>() / 256.0f;
-						float posY = packet.ReadValue<std::int32_t>() / 256.0f;
+						float posX = packet.ReadValue<std::int32_t>() / 512.0f;
+						float posY = packet.ReadValue<std::int32_t>() / 512.0f;
 						std::uint32_t anim = packet.ReadVariableUint32();
 						std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 
@@ -861,10 +852,10 @@ namespace Jazz2::Multiplayer
 						return true;
 					}
 
-					float posX = packet.ReadValue<std::int32_t>() / 256.0f;
-					float posY = packet.ReadValue<std::int32_t>() / 256.0f;
-					float speedX = packet.ReadValue<std::int32_t>() / 256.0f;
-					float speedY = packet.ReadValue<std::int32_t>() / 256.0f;
+					float posX = packet.ReadValue<std::int32_t>() / 512.0f;
+					float posY = packet.ReadValue<std::int32_t>() / 512.0f;
+					float speedX = packet.ReadValue<std::int16_t>() / 512.0f;
+					float speedY = packet.ReadValue<std::int16_t>() / 512.0f;
 
 					_players[0]->_speed = Vector2f(speedX, speedY);
 					_players[0]->MoveInstantly(Vector2f(posX, posY), Actors::MoveType::Absolute);
@@ -927,10 +918,10 @@ namespace Jazz2::Multiplayer
 		return LevelHandler::BeginPlayMusic(path, setDefault, forceReload);
 	}
 
-	void MultiLevelHandler::UpdatePlayerLocalPos(Actors::Player* player, const PlayerState& playerState)
+	void MultiLevelHandler::UpdatePlayerLocalPos(Actors::Player* player, PlayerState& playerState, float timeMult)
 	{
-		if (playerState.WarpTimeLeft > 0.0f) {
-			// Don't interpolate if warping is in progress
+		if (playerState.WarpTimeLeft > 0.0f || !player->_controllable || !player->GetState(Actors::ActorState::CollideWithTileset)) {
+			// Don't interpolate if warping is in progress or if collisions with tileset are disabled (when climbing or in tube)
 			return;
 		}
 
@@ -959,21 +950,45 @@ namespace Jazz2::Multiplayer
 			}
 
 			Vector2f pos;
+			Vector2f speed;
 			std::int64_t timeRange = (playerState.StateBuffer[nextIdx].Time - playerState.StateBuffer[prevIdx].Time);
 			if (timeRange > 0) {
 				float lerp = (float)(renderTime - playerState.StateBuffer[prevIdx].Time) / timeRange;
 				pos = playerState.StateBuffer[prevIdx].Pos + (playerState.StateBuffer[nextIdx].Pos - playerState.StateBuffer[prevIdx].Pos) * lerp;
+				speed = playerState.StateBuffer[prevIdx].Speed + (playerState.StateBuffer[nextIdx].Speed - playerState.StateBuffer[prevIdx].Speed) * lerp;
 			} else {
 				pos = playerState.StateBuffer[nextIdx].Pos;
+				speed = playerState.StateBuffer[nextIdx].Speed;
 			}
 
-			// TODO
-			//player->MoveInstantly(pos, Actors::MoveType::Absolute);
-			player->MoveInstantly(Vector2f(lerp(player->_pos.X, pos.X, 0.1f), lerp(player->_pos.Y, pos.Y, 0.1f)), Actors::MoveType::Absolute);
+			constexpr float BaseDeviation = 2.0f;
+			constexpr float DeviationTimeMax = 90.0f;
+			constexpr float DeviationTimeCutoff = 40.0f;
+
+			float devSqr = (player->_pos - pos).SqrLength();
+			float speedSqr = std::max(player->_speed.SqrLength(), speed.SqrLength());
+			if (devSqr > speedSqr + (BaseDeviation * BaseDeviation)) {
+				playerState.DeviationTime += timeMult;
+				if (playerState.DeviationTime > DeviationTimeMax) {
+					LOGW("Deviation of player %i was high for too long (deviation: %0.2fpx, speed: %0.2f)", player->_playerIndex, sqrt(devSqr), sqrt(speedSqr));
+					playerState.DeviationTime = 0.0f;
+					player->MoveInstantly(pos, Actors::MoveType::Absolute);
+					return;
+				}
+			} else {
+				playerState.DeviationTime = 0.0f;
+			}
+
+			float alpha = std::clamp(playerState.DeviationTime - DeviationTimeCutoff, 0.0f, DeviationTimeMax - DeviationTimeCutoff) / (DeviationTimeMax - DeviationTimeCutoff);
+			if (alpha > 0.01f) {
+				player->MoveInstantly(Vector2f(lerp(player->_pos.X, pos.X, alpha), lerp(player->_pos.Y, pos.Y, alpha)), Actors::MoveType::Absolute);
+				player->_speed = Vector2f(lerp(player->_speed.X, speed.X, alpha), lerp(player->_speed.Y, speed.Y, alpha));
+				LOGW("Deviation of player %i is high (alpha: %0.1f, deviation: %0.2fpx, speed: %0.2f)", player->_playerIndex, alpha, sqrt(devSqr), sqrt(speedSqr));
+			}
 		}
 	}
 
-	void MultiLevelHandler::OnRemotePlayerPosReceived(PlayerState& playerState, const Vector2f& pos, PlayerFlags flags)
+	void MultiLevelHandler::OnRemotePlayerPosReceived(PlayerState& playerState, const Vector2f& pos, const Vector2f speed, PlayerFlags flags)
 	{
 		Clock& c = nCine::clock();
 		std::int64_t now = c.now() * 1000 / c.frequency();
@@ -982,6 +997,7 @@ namespace Jazz2::Multiplayer
 			// Player is still visible, enable interpolation
 			playerState.StateBuffer[playerState.StateBufferPos].Time = now;
 			playerState.StateBuffer[playerState.StateBufferPos].Pos = pos;
+			playerState.StateBuffer[playerState.StateBufferPos].Speed = speed;
 		} else {
 			// Player just warped, reset state buffer to disable interpolation
 			std::int32_t stateBufferPrevPos = playerState.StateBufferPos - 1;
@@ -993,8 +1009,10 @@ namespace Jazz2::Multiplayer
 
 			playerState.StateBuffer[stateBufferPrevPos].Time = renderTime;
 			playerState.StateBuffer[stateBufferPrevPos].Pos = pos;
+			playerState.StateBuffer[stateBufferPrevPos].Speed = speed;
 			playerState.StateBuffer[playerState.StateBufferPos].Time = renderTime;
 			playerState.StateBuffer[playerState.StateBufferPos].Pos = pos;
+			playerState.StateBuffer[playerState.StateBufferPos].Speed = speed;
 		}
 
 		playerState.StateBufferPos++;
@@ -1005,14 +1023,15 @@ namespace Jazz2::Multiplayer
 		playerState.Flags = (flags & ~PlayerFlags::JustWarped);
 	}
 
-	MultiLevelHandler::PlayerState::PlayerState(const Vector2f& pos)
-		: StateBufferPos(0), Flags(PlayerFlags::None), WarpSeqNum(0), WarpTimeLeft(0.0f)
+	MultiLevelHandler::PlayerState::PlayerState(const Vector2f& pos, const Vector2f& speed)
+		: StateBufferPos(0), Flags(PlayerFlags::None), PressedKeys(0), WarpSeqNum(0), WarpTimeLeft(0.0f), DeviationTime(0.0f)
 	{
 		Clock& c = nCine::clock();
 		std::uint64_t now = c.now() * 1000 / c.frequency();
 		for (std::int32_t i = 0; i < countof(StateBuffer); i++) {
 			StateBuffer[i].Time = now - countof(StateBuffer) + i;
-			StateBuffer[i].Pos = Vector2f(pos.X, pos.Y);
+			StateBuffer[i].Pos = pos;
+			StateBuffer[i].Pos = speed;
 		}
 	}
 }

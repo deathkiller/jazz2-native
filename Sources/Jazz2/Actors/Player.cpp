@@ -2294,6 +2294,7 @@ namespace Jazz2::Actors
 		_lastPoleTime = 0.0f;
 		_isAttachedToPole = false;
 		SetModifier(Modifier::None);
+		SetShield(ShieldType::None, 0.0f);
 
 		SetPlayerTransition(AnimState::TransitionDeath, false, true, SpecialMoveType::None, [this]() {
 			if (_lives > 1 || _levelHandler->Difficulty() == GameDifficulty::Multiplayer) {
