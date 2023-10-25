@@ -931,7 +931,7 @@ namespace Jazz2
 		descriptor.AmbientColor = Vector4f((rawAmbientColor & 0xff) / 255.0f, ((rawAmbientColor >> 8) & 0xff) / 255.0f,
 			((rawAmbientColor >> 16) & 0xff) / 255.0f, ((rawAmbientColor >> 24) & 0xff) / 255.0f);
 
-		descriptor.WeatherType = (WeatherType)uc.ReadValue<std::uint8_t>();
+		descriptor.Weather = (WeatherType)uc.ReadValue<std::uint8_t>();
 		descriptor.WeatherIntensity = uc.ReadValue<std::uint8_t>();
 		descriptor.WaterLevel = uc.ReadValue<std::uint16_t>();
 

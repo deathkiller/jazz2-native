@@ -191,7 +191,7 @@ namespace Jazz2
 		_ambientColor = descriptor.AmbientColor;
 		_ambientLightTarget = descriptor.AmbientColor.W;
 
-		_weatherType = descriptor.WeatherType;
+		_weatherType = descriptor.Weather;
 		_weatherIntensity = descriptor.WeatherIntensity;
 		_waterLevel = descriptor.WaterLevel;
 

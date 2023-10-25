@@ -34,7 +34,7 @@ namespace Jazz2
 		std::unique_ptr<Events::EventMap> EventMap;
 		String MusicPath;
 		Vector4f AmbientColor;
-		WeatherType WeatherType;
+		WeatherType Weather;
 		std::uint8_t WeatherIntensity;
 		std::uint16_t WaterLevel;
 		SmallVector<String, 0> LevelTexts;
