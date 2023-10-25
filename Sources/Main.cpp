@@ -136,9 +136,10 @@ private:
 	void RefreshCache();
 	void CheckUpdates();
 #endif
+	bool SetLevelHandler(const LevelInitialization& levelInit);
 	static void WriteCacheDescriptor(const StringView& path, std::uint64_t currentVersion, std::int64_t animsModified);
-	static void SaveEpisodeEnd(const LevelInitialization& pendingLevelChange);
-	static void SaveEpisodeContinue(const LevelInitialization& pendingLevelChange);
+	static void SaveEpisodeEnd(const LevelInitialization& levelInit);
+	static void SaveEpisodeContinue(const LevelInitialization& levelInit);
 	static void UpdateRichPresence(const LevelInitialization& levelInit);
 	static bool TryParseAddressAndPort(const StringView& input, String& address, std::uint16_t& port);
 };
@@ -466,7 +467,13 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 			}
 
 			if (levelInit.LevelName != ":end"_s) {
-				newHandler = std::make_unique<LevelHandler>(this, levelInit);
+				if (SetLevelHandler(levelInit)) {
+					UpdateRichPresence(levelInit);
+				} else {
+					auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
+					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(Menu::SimpleMessageSection::Message::CannotLoadLevel);
+					newHandler = std::move(mainMenu);
+				}
 			} else {
 				newHandler = std::make_unique<Menu::MainMenu>(this, false);
 			}
@@ -497,32 +504,28 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 				newHandler = std::make_unique<Menu::MainMenu>(this, false);
 			} else
 #endif
-				newHandler = std::make_unique<LevelHandler>(this, levelInit);
+			{
+				if (SetLevelHandler(levelInit)) {
+					UpdateRichPresence(levelInit);
+				} else {
+					auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
+					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(Menu::SimpleMessageSection::Message::CannotLoadLevel);
+					newHandler = std::move(mainMenu);
+				}
+			}
 		}
 
-		if (auto levelHandler = static_cast<LevelHandler*>(newHandler.get())) {
-			if (!levelHandler->IsLoaded()) {
-				// If level cannot be loaded, go back to main menu
-				newHandler = std::make_unique<Menu::MainMenu>(this, false);
-				if (auto mainMenu = static_cast<Menu::MainMenu*>(newHandler.get())) {
-					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(Menu::SimpleMessageSection::Message::CannotLoadLevel);
-					UpdateRichPresence({});
-				}
-			} else {
-				UpdateRichPresence(levelInit);
-			}
-		} else {
+		if (newHandler != nullptr) {
+			SetStateHandler(std::move(newHandler));
 			UpdateRichPresence({});
 		}
-
-		SetStateHandler(std::move(newHandler));
 	});
 }
 
 #if defined(WITH_MULTIPLAYER)
 bool GameEventHandler::ConnectToServer(const StringView& address, std::uint16_t port)
 {
-	LOGI("Connecting to %s:%u...", address, port);
+	LOGI("Connecting to %s:%u...", address.data(), port);
 
 	if (_networkManager == nullptr) {
 		_networkManager = std::make_unique<NetworkManager>();
@@ -545,7 +548,9 @@ bool GameEventHandler::CreateServer(std::uint16_t port)
 
 	InvokeAsync([this]() {
 		LevelInitialization levelInit("unknown", "race3", GameDifficulty::Multiplayer, true, false, PlayerType::Jazz);
-		SetStateHandler(std::make_unique<MultiLevelHandler>(this, _networkManager.get(), levelInit));
+		auto levelHandler = std::make_unique<MultiLevelHandler>(this, _networkManager.get());
+		levelHandler->Initialize(levelInit);
+		SetStateHandler(std::move(levelHandler));
 	});
 
 	return true;
@@ -640,7 +645,9 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				InvokeAsync([this, flags, episodeName = std::move(episodeName), levelName = std::move(levelName)]() {
 					bool isReforged = (flags & 0x01) != 0;
 					LevelInitialization levelInit(episodeName, levelName, GameDifficulty::Multiplayer, isReforged);
-					SetStateHandler(std::make_unique<MultiLevelHandler>(this, _networkManager.get(), levelInit));
+					auto levelHandler = std::make_unique<MultiLevelHandler>(this, _networkManager.get());
+					levelHandler->Initialize(levelInit);
+					SetStateHandler(std::move(levelHandler));
 				});
 				break;
 			}
@@ -1007,18 +1014,6 @@ void GameEventHandler::RefreshCacheLevels()
 	}
 }
 
-void GameEventHandler::WriteCacheDescriptor(const StringView& path, std::uint64_t currentVersion, std::int64_t animsModified)
-{
-	auto so = fs::Open(path, FileAccessMode::Write);
-	so->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
-	so->WriteValue<std::uint8_t>(ContentResolver::CacheIndexFile);
-	so->WriteValue<std::uint16_t>(Compatibility::JJ2Anims::CacheVersion);
-	so->WriteValue<std::uint8_t>(0x00);				// Flags
-	so->WriteValue<std::int64_t>(animsModified);
-	so->WriteValue<std::uint16_t>((std::uint16_t)EventType::Count);
-	so->WriteValue<std::uint64_t>(currentVersion);
-}
-
 void GameEventHandler::CheckUpdates()
 {
 #if !defined(DEATH_DEBUG)
@@ -1206,25 +1201,47 @@ void GameEventHandler::CheckUpdates()
 }
 #endif
 
-void GameEventHandler::SaveEpisodeEnd(const LevelInitialization& pendingLevelChange)
+bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 {
-	if (pendingLevelChange.LastEpisodeName.empty()) {
+	auto levelHandler = std::make_unique<LevelHandler>(this);
+	if (!levelHandler->Initialize(levelInit)) {
+		return false;
+	}
+	SetStateHandler(std::move(levelHandler));
+	return true;
+}
+
+void GameEventHandler::WriteCacheDescriptor(const StringView& path, std::uint64_t currentVersion, std::int64_t animsModified)
+{
+	auto so = fs::Open(path, FileAccessMode::Write);
+	so->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
+	so->WriteValue<std::uint8_t>(ContentResolver::CacheIndexFile);
+	so->WriteValue<std::uint16_t>(Compatibility::JJ2Anims::CacheVersion);
+	so->WriteValue<std::uint8_t>(0x00);				// Flags
+	so->WriteValue<std::int64_t>(animsModified);
+	so->WriteValue<std::uint16_t>((std::uint16_t)EventType::Count);
+	so->WriteValue<std::uint64_t>(currentVersion);
+}
+
+void GameEventHandler::SaveEpisodeEnd(const LevelInitialization& levelInit)
+{
+	if (levelInit.LastEpisodeName.empty()) {
 		return;
 	}
 
 	std::size_t playerCount = 0;
 	const PlayerCarryOver* firstPlayer = nullptr;
-	for (std::size_t i = 0; i < arraySize(pendingLevelChange.PlayerCarryOvers); i++) {
-		if (pendingLevelChange.PlayerCarryOvers[i].Type != PlayerType::None) {
-			firstPlayer = &pendingLevelChange.PlayerCarryOvers[i];
+	for (std::size_t i = 0; i < arraySize(levelInit.PlayerCarryOvers); i++) {
+		if (levelInit.PlayerCarryOvers[i].Type != PlayerType::None) {
+			firstPlayer = &levelInit.PlayerCarryOvers[i];
 			playerCount++;
 		}
 	}
 
 	if (playerCount == 1) {
-		auto episodeEnd = PreferencesCache::GetEpisodeEnd(pendingLevelChange.LastEpisodeName, true);
+		auto episodeEnd = PreferencesCache::GetEpisodeEnd(levelInit.LastEpisodeName, true);
 		episodeEnd->Flags = EpisodeContinuationFlags::IsCompleted;
-		if (pendingLevelChange.CheatsUsed) {
+		if (levelInit.CheatsUsed) {
 			episodeEnd->Flags |= EpisodeContinuationFlags::CheatsUsed;
 		}
 
@@ -1237,37 +1254,37 @@ void GameEventHandler::SaveEpisodeEnd(const LevelInitialization& pendingLevelCha
 	}
 }
 
-void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& pendingLevelChange)
+void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 {
-	if (pendingLevelChange.EpisodeName.empty() || pendingLevelChange.LevelName.empty() ||
-		pendingLevelChange.EpisodeName == "unknown"_s ||
-		(pendingLevelChange.EpisodeName == "prince"_s && pendingLevelChange.LevelName == "trainer"_s)) {
+	if (levelInit.EpisodeName.empty() || levelInit.LevelName.empty() ||
+		levelInit.EpisodeName == "unknown"_s ||
+		(levelInit.EpisodeName == "prince"_s && levelInit.LevelName == "trainer"_s)) {
 		return;
 	}
 
-	std::optional<Episode> currentEpisode = ContentResolver::Get().GetEpisode(pendingLevelChange.EpisodeName);
-	if (!currentEpisode.has_value() || currentEpisode->FirstLevel == pendingLevelChange.LevelName) {
+	std::optional<Episode> currentEpisode = ContentResolver::Get().GetEpisode(levelInit.EpisodeName);
+	if (!currentEpisode.has_value() || currentEpisode->FirstLevel == levelInit.LevelName) {
 		return;
 	}
 
 	std::size_t playerCount = 0;
 	const PlayerCarryOver* firstPlayer = nullptr;
-	for (std::size_t i = 0; i < arraySize(pendingLevelChange.PlayerCarryOvers); i++) {
-		if (pendingLevelChange.PlayerCarryOvers[i].Type != PlayerType::None) {
-			firstPlayer = &pendingLevelChange.PlayerCarryOvers[i];
+	for (std::size_t i = 0; i < arraySize(levelInit.PlayerCarryOvers); i++) {
+		if (levelInit.PlayerCarryOvers[i].Type != PlayerType::None) {
+			firstPlayer = &levelInit.PlayerCarryOvers[i];
 			playerCount++;
 		}
 	}
 
 	if (playerCount == 1) {
-		auto episodeContinue = PreferencesCache::GetEpisodeContinue(pendingLevelChange.EpisodeName, true);
-		episodeContinue->LevelName = pendingLevelChange.LevelName;
+		auto episodeContinue = PreferencesCache::GetEpisodeContinue(levelInit.EpisodeName, true);
+		episodeContinue->LevelName = levelInit.LevelName;
 		episodeContinue->State.Flags = EpisodeContinuationFlags::None;
-		if (pendingLevelChange.CheatsUsed) {
+		if (levelInit.CheatsUsed) {
 			episodeContinue->State.Flags |= EpisodeContinuationFlags::CheatsUsed;
 		}
 
-		episodeContinue->State.DifficultyAndPlayerType = ((int32_t)pendingLevelChange.Difficulty & 0x0f) | (((int32_t)firstPlayer->Type & 0x0f) << 4);
+		episodeContinue->State.DifficultyAndPlayerType = ((int32_t)levelInit.Difficulty & 0x0f) | (((int32_t)firstPlayer->Type & 0x0f) << 4);
 		episodeContinue->State.Lives = firstPlayer->Lives;
 		episodeContinue->State.Score = firstPlayer->Score;
 		std::memcpy(episodeContinue->State.Ammo, firstPlayer->Ammo, sizeof(firstPlayer->Ammo));

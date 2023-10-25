@@ -340,6 +340,7 @@
     <ClInclude Include="Jazz2\ExitType.h" />
     <ClInclude Include="Jazz2\GameDifficulty.h" />
     <ClInclude Include="Jazz2\IRootController.h" />
+    <ClInclude Include="Jazz2\LevelDescriptor.h" />
     <ClInclude Include="Jazz2\LightEmitter.h" />
     <ClInclude Include="Jazz2\Multiplayer\Backends\enet.h" />
     <ClInclude Include="Jazz2\Multiplayer\INetworkHandler.h" />

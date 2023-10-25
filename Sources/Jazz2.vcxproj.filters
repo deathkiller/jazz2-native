@@ -1356,6 +1356,9 @@
     <ClInclude Include="Jazz2\UI\Menu\LoadingSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\LevelDescriptor.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

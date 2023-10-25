@@ -3,6 +3,7 @@
 #include "../Common.h"
 #include "AnimState.h"
 #include "GameDifficulty.h"
+#include "LevelDescriptor.h"
 #include "WeaponType.h"
 #include "UI/Font.h"
 
@@ -29,8 +30,6 @@ using namespace nCine;
 
 namespace Jazz2
 {
-	class LevelHandler;
-
 	namespace Tiles
 	{
 		class TileSet;
@@ -246,7 +245,7 @@ namespace Jazz2
 
 		std::unique_ptr<Tiles::TileSet> RequestTileSet(const StringView& path, uint16_t captionTileId, bool applyPalette, const uint8_t* paletteRemapping = nullptr);
 		bool LevelExists(const StringView& episodeName, const StringView& levelName);
-		bool LoadLevel(LevelHandler* levelHandler, const StringView& path, GameDifficulty difficulty);
+		bool TryLoadLevel(const StringView& path, GameDifficulty difficulty, LevelDescriptor& descriptor);
 		void ApplyDefaultPalette();
 
 		std::optional<Episode> GetEpisode(const StringView& name);

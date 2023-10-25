@@ -34,16 +34,32 @@ using namespace nCine;
 
 namespace Jazz2
 {
-	LevelHandler::LevelHandler(IRootController* root, const LevelInitialization& levelInit)
-		: _root(root), _eventSpawner(this), _levelFileName(levelInit.LevelName), _episodeName(levelInit.EpisodeName),
-			_difficulty(levelInit.Difficulty), _isReforged(levelInit.IsReforged), _cheatsUsed(levelInit.CheatsUsed), _cheatsBufferLength(0),
-			_nextLevelType(ExitType::None), _nextLevelTime(0.0f), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
+	LevelHandler::LevelHandler(IRootController* root)
+		: _root(root), _eventSpawner(this), _difficulty(GameDifficulty::Default), _isReforged(false), _cheatsUsed(false),
+			_cheatsBufferLength(0), _nextLevelType(ExitType::None), _nextLevelTime(0.0f), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
 			_shakeDuration(0.0f), _waterLevel(FLT_MAX), _ambientLightTarget(1.0f), _weatherType(WeatherType::None),
 			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
 			_pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0), _overrideActions(0), _playerFrozenEnabled(false),
 			_lastPressedNumericKey(UINT32_MAX)
 	{
+	}
+
+	LevelHandler::~LevelHandler()
+	{
+		// Remove nodes from UpscaleRenderPass
+		_combineRenderer->setParent(nullptr);
+		_hud->setParent(nullptr);
+	}
+
+	bool LevelHandler::Initialize(const LevelInitialization& levelInit)
+	{
 		constexpr float DefaultGravity = 0.3f;
+
+		_levelFileName = levelInit.LevelName;
+		_episodeName = levelInit.EpisodeName;
+		_difficulty = levelInit.Difficulty;
+		_isReforged = levelInit.IsReforged;
+		_cheatsUsed = levelInit.CheatsUsed;
 
 		if (_isReforged) {
 			Gravity = DefaultGravity;
@@ -59,10 +75,13 @@ namespace Jazz2
 		_rootNode = std::make_unique<SceneNode>();
 		_rootNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
-		if (!ContentResolver::Get().LoadLevel(this, "/"_s.joinWithoutEmptyParts({ _episodeName, _levelFileName }), _difficulty)) {
-			LOGE("Cannot load specified level");
-			return;
+		LevelDescriptor descriptor;
+		if (!resolver.TryLoadLevel("/"_s.joinWithoutEmptyParts({ _episodeName, _levelFileName }), _difficulty, descriptor)) {
+			LOGE("Cannot load level \"%s/%s\"", _episodeName.data(), _levelFileName.data());
+			return false;
 		}
+
+		AttachComponents(std::move(descriptor));
 
 		// Process carry overs
 		for (int32_t i = 0; i < countof(levelInit.PlayerCarryOvers); i++) {
@@ -113,13 +132,7 @@ namespace Jazz2
 		_eventMap->PreloadEventsAsync();
 
 		resolver.EndLoading();
-	}
-
-	LevelHandler::~LevelHandler()
-	{
-		// Remove nodes from UpscaleRenderPass
-		_combineRenderer->setParent(nullptr);
-		_hud->setParent(nullptr);
+		return true;
 	}
 
 	Recti LevelHandler::LevelBounds() const
@@ -152,39 +165,41 @@ namespace Jazz2
 		_ambientLightTarget = value;
 	}
 
-	void LevelHandler::OnLevelLoaded(const StringView& fullPath, const StringView& name, const StringView& nextLevel, const StringView& secretLevel, std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap, const StringView& musicPath, const Vector4f& ambientColor, WeatherType weatherType, uint8_t weatherIntensity, uint16_t waterLevel, SmallVectorImpl<String>& levelTexts)
+	void LevelHandler::AttachComponents(LevelDescriptor&& descriptor)
 	{
-		if (!name.empty()) {
-			theApplication().gfxDevice().setWindowTitle(StringView(NCINE_APP_NAME " - ") + name);
+		if (!descriptor.DisplayName.empty()) {
+			theApplication().gfxDevice().setWindowTitle(StringView(NCINE_APP_NAME " - ", countof(NCINE_APP_NAME " - ") - 1) + descriptor.DisplayName);
 		} else {
-			theApplication().gfxDevice().setWindowTitle(NCINE_APP_NAME);
+			theApplication().gfxDevice().setWindowTitle({ NCINE_APP_NAME, countof(NCINE_APP_NAME) - 1 });
 		}
 
-		_defaultNextLevel = nextLevel;
-		_defaultSecretLevel = secretLevel;
+		_defaultNextLevel = std::move(descriptor.NextLevel);
+		_defaultSecretLevel = std::move(descriptor.SecretLevel);
 
-		_tileMap = std::move(tileMap);
+		_tileMap = std::move(descriptor.TileMap);
+		_tileMap->SetOwner(this);
 		_tileMap->setParent(_rootNode.get());
 
-		_eventMap = std::move(eventMap);
+		_eventMap = std::move(descriptor.EventMap);
+		_eventMap->SetLevelHandler(this);
 
-		Vector2i levelBounds = _tileMap->LevelBounds();
+		Vector2i levelBounds = _tileMap->GetLevelBounds();
 		_levelBounds = Recti(0, 0, levelBounds.X, levelBounds.Y);
 		_viewBounds = Rectf((float)_levelBounds.X, (float)_levelBounds.Y, (float)_levelBounds.W, (float)_levelBounds.H);
 		_viewBoundsTarget = _viewBounds;		
 
-		_ambientColor = ambientColor;
-		_ambientLightTarget = ambientColor.W;
+		_ambientColor = descriptor.AmbientColor;
+		_ambientLightTarget = descriptor.AmbientColor.W;
 
-		_weatherType = weatherType;
-		_weatherIntensity = weatherIntensity;
-		_waterLevel = waterLevel;
+		_weatherType = descriptor.WeatherType;
+		_weatherIntensity = descriptor.WeatherIntensity;
+		_waterLevel = descriptor.WaterLevel;
 
 #if defined(WITH_AUDIO)
-		if (!musicPath.empty()) {
-			_music = ContentResolver::Get().GetMusic(musicPath);
+		if (!descriptor.MusicPath.empty()) {
+			_music = ContentResolver::Get().GetMusic(descriptor.MusicPath);
 			if (_music != nullptr) {
-				_musicCurrentPath = musicPath;
+				_musicCurrentPath = std::move(descriptor.MusicPath);
 				_musicDefaultPath = _musicCurrentPath;
 				_music->setLooping(true);
 				_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
@@ -194,13 +209,13 @@ namespace Jazz2
 		}
 #endif
 
-		_levelTexts = std::move(levelTexts);
+		_levelTexts = std::move(descriptor.LevelTexts);
 
 #if defined(WITH_ANGELSCRIPT) || defined(DEATH_TRACE)
 		// TODO: Allow script signing
 		if (PreferencesCache::AllowUnsignedScripts) {
-			const StringView foundDot = fullPath.findLastOr('.', fullPath.end());
-			String scriptPath = (foundDot == fullPath.end() ? StringView(fullPath) : fullPath.prefix(foundDot.begin())) + ".j2as"_s;
+			const StringView foundDot = descriptor.FullPath.findLastOr('.', descriptor.FullPath.end());
+			String scriptPath = (foundDot == descriptor.FullPath.end() ? StringView(descriptor.FullPath) : descriptor.FullPath.prefix(foundDot.begin())) + ".j2as"_s;
 			if (fs::IsReadableFile(scriptPath)) {
 #	if defined(WITH_ANGELSCRIPT)
 				_scripts = std::make_unique<Scripting::LevelScriptLoader>(this, scriptPath);
@@ -1404,7 +1419,7 @@ namespace Jazz2
 		if (width > 0.0f) {
 			_levelBounds.W = width;
 		} else {
-			_levelBounds.W = _tileMap->LevelBounds().X - left;
+			_levelBounds.W = _tileMap->GetLevelBounds().X - left;
 		}
 
 		if (left == 0 && width == 0) {

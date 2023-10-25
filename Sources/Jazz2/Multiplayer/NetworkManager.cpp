@@ -85,7 +85,7 @@ namespace Jazz2::Multiplayer
 		addr.port = port;
 
 		_host = enet_host_create(&addr, MAX_CLIENTS, (std::size_t)NetworkChannel::Count, 0, 0);
-		RETURNF_ASSERT_MSG(_host != nullptr, "Failed to create server");
+		RETURNF_ASSERT_MSG(_host != nullptr, "Failed to create a server");
 
 		_handler = handler;
 		_state = NetworkState::Listening;
@@ -267,7 +267,26 @@ namespace Jazz2::Multiplayer
 			if (result <= 0) {
 				if (result < 0) {
 					LOGE("enet_host_service() returned %i", result);
-					break;
+
+					// Server failed, try to recreate it
+					_this->_lock.Lock();
+
+					for (auto& peer : _this->_peers) {
+						handler->OnPeerDisconnected(peer, 0);
+					}
+					_this->_peers.clear();
+
+					ENetAddress addr = _this->_host->address;
+					enet_host_destroy(_this->_host);
+					host = enet_host_create(&addr, MAX_CLIENTS, (std::size_t)NetworkChannel::Count, 0, 0);
+					_this->_host = host;
+
+					_this->_lock.Unlock();
+
+					if (host == nullptr) {
+						LOGE("Failed to recreate the server");
+						break;
+					}
 				}
 				Timer::sleep(4);
 				continue;

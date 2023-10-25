@@ -3,6 +3,7 @@
 #include "ILevelHandler.h"
 #include "IStateHandler.h"
 #include "IRootController.h"
+#include "LevelDescriptor.h"
 #include "WeatherType.h"
 #include "Events/EventMap.h"
 #include "Events/EventSpawner.h"
@@ -47,7 +48,6 @@ namespace Jazz2
 
 	class LevelHandler : public ILevelHandler, public IStateHandler, public Tiles::ITileMapOwner
 	{
-		friend class ContentResolver;
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::LevelScriptLoader;
 #endif
@@ -59,12 +59,10 @@ namespace Jazz2
 		static constexpr int32_t DefaultHeight = 405;
 		static constexpr int32_t ActivateTileRange = 26;
 
-		LevelHandler(IRootController* root, const LevelInitialization& levelInit);
+		LevelHandler(IRootController* root);
 		~LevelHandler() override;
 
-		bool IsLoaded() const {
-			return (_tileMap != nullptr && _eventMap != nullptr);
-		}
+		bool Initialize(const LevelInitialization& levelInit) override;
 
 		Events::EventSpawner* EventSpawner() override {
 			return &_eventSpawner;
@@ -153,6 +151,8 @@ namespace Jazz2
 
 		Vector2f GetCameraPos() const override { return _cameraPos; }
 		Vector2i GetViewSize() const override { return _view->size(); }
+
+		virtual void AttachComponents(LevelDescriptor&& descriptor);
 
 	protected:
 		IRootController* _root;
@@ -308,10 +308,6 @@ namespace Jazz2
 		Vector2f _playerFrozenMovement;
 		bool _playerFrozenEnabled;
 		uint32_t _lastPressedNumericKey;
-
-		void OnLevelLoaded(const StringView& fullPath, const StringView& name, const StringView& nextLevel, const StringView& secretLevel,
-			std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap,
-			const StringView& musicPath, const Vector4f& ambientColor, WeatherType weatherType, uint8_t weatherIntensity, uint16_t waterLevel, SmallVectorImpl<String>& levelTexts);
 
 		void ResolveCollisions(float timeMult);
 		void InitializeCamera();

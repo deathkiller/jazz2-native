@@ -7,8 +7,8 @@
 
 namespace Jazz2::Tiles
 {
-	TileMap::TileMap(ITileMapOwner* owner, const StringView& tileSetPath, std::uint16_t captionTileId, PitType pitType, bool applyPalette)
-		: _owner(owner), _sprLayerIndex(-1), _pitType(pitType), _renderCommandsCount(0), _collapsingTimer(0.0f),
+	TileMap::TileMap(const StringView& tileSetPath, std::uint16_t captionTileId, bool applyPalette)
+		: _owner(nullptr), _sprLayerIndex(-1), _pitType(PitType::FallForever), _renderCommandsCount(0), _collapsingTimer(0.0f),
 			_triggerState(TriggerCount), _texturedBackgroundLayer(-1), _texturedBackgroundPass(this)
 	{
 		auto& tileSetPart = _tileSets.emplace_back();
@@ -23,7 +23,12 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	Vector2i TileMap::Size()
+	void TileMap::SetOwner(ITileMapOwner* owner)
+	{
+		_owner = owner;
+	}
+
+	Vector2i TileMap::GetSize() const
 	{
 		if (_sprLayerIndex == -1) {
 			return Vector2i();
@@ -32,7 +37,7 @@ namespace Jazz2::Tiles
 		return _layers[_sprLayerIndex].LayoutSize;
 	}
 
-	Vector2i TileMap::LevelBounds()
+	Vector2i TileMap::GetLevelBounds() const
 	{
 		if (_sprLayerIndex == -1) {
 			return Vector2i();
@@ -40,6 +45,16 @@ namespace Jazz2::Tiles
 
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
 		return Vector2i(layoutSize.X * TileSet::DefaultTileSize, layoutSize.Y * TileSet::DefaultTileSize);
+	}
+
+	PitType TileMap::GetPitType() const
+	{
+		return _pitType;
+	}
+
+	void TileMap::SetPitType(PitType value)
+	{
+		_pitType = value;
 	}
 
 	void TileMap::OnUpdate(float timeMult)

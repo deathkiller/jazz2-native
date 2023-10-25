@@ -32,8 +32,10 @@ namespace Jazz2::Multiplayer
 #endif
 
 	public:
-		MultiLevelHandler(IRootController* root, NetworkManager* networkManager, const LevelInitialization& levelInit);
+		MultiLevelHandler(IRootController* root, NetworkManager* networkManager);
 		~MultiLevelHandler() override;
+
+		bool Initialize(const LevelInitialization& levelInit) override;
 
 		bool IsPausable() const override {
 			return false;
@@ -89,6 +91,8 @@ namespace Jazz2::Multiplayer
 
 		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override;
 
+		void AttachComponents(LevelDescriptor&& descriptor) override;
+
 		bool OnPeerDisconnected(const Peer& peer);
 		bool OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t* data, std::size_t dataLength);
 
@@ -104,6 +108,7 @@ namespace Jazz2::Multiplayer
 		struct StateFrame {
 			std::int64_t Time;
 			Vector2f Pos;
+			Vector2f Speed;
 		};
 
 		enum class PlayerFlags {
@@ -115,15 +120,7 @@ namespace Jazz2::Multiplayer
 			IsVisible = 0x20,
 			IsActivelyPushing = 0x40,
 
-			PressedUp = 0x100,
-			PressedDown = 0x200,
-			PressedLeft = 0x400,
-			PressedRight = 0x800,
-			PressedJump = 0x1000,
-			PressedRun = 0x2000,
-			PressedFire = 0x4000,
-
-			JustWarped = 0x10000
+			JustWarped = 0x100
 		};
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(PlayerFlags);
@@ -132,11 +129,13 @@ namespace Jazz2::Multiplayer
 			StateFrame StateBuffer[8];
 			std::int32_t StateBufferPos;
 			PlayerFlags Flags;
+			std::uint32_t PressedKeys;
 			std::uint64_t WarpSeqNum;
 			float WarpTimeLeft;
+			float DeviationTime;
 
 			PlayerState() {}
-			PlayerState(const Vector2f& pos);
+			PlayerState(const Vector2f& pos, const Vector2f& speed);
 		};
 
 		static constexpr std::int64_t ServerDelay = 64;
@@ -152,12 +151,8 @@ namespace Jazz2::Multiplayer
 		std::uint64_t _seqNum; // Client: sequence number of the last update
 		std::uint64_t _seqNumWarped; // Client: set to _seqNum from HandlePlayerWarped() when warped
 
-		void OnLevelLoaded(const StringView& fullPath, const StringView& name, const StringView& nextLevel, const StringView& secretLevel,
-			std::unique_ptr<Tiles::TileMap>& tileMap, std::unique_ptr<Events::EventMap>& eventMap,
-			const StringView& musicPath, const Vector4f& ambientColor, WeatherType weatherType, uint8_t weatherIntensity, uint16_t waterLevel, SmallVectorImpl<String>& levelTexts);
-
-		void UpdatePlayerLocalPos(Actors::Player* player, const PlayerState& playerState);
-		void OnRemotePlayerPosReceived(PlayerState& playerState, const Vector2f& pos, PlayerFlags flags);
+		void UpdatePlayerLocalPos(Actors::Player* player, PlayerState& playerState, float timeMult);
+		void OnRemotePlayerPosReceived(PlayerState& playerState, const Vector2f& pos, const Vector2f speed, PlayerFlags flags);
 	};
 }
 
