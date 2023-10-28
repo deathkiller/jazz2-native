@@ -413,13 +413,14 @@ namespace Jazz2::Actors
 		}
 	}
 
-	void ActorBase::CreateSpriteDebris(const StringView& identifier, int count)
+	void ActorBase::CreateSpriteDebris(AnimState state, int count)
 	{
 		auto tilemap = _levelHandler->TileMap();
 		if (tilemap != nullptr && _metadata != nullptr) {
-			auto it = _metadata->Graphics.find(String::nullTerminatedView(identifier));
-			if (it != _metadata->Graphics.end()) {
-				tilemap->CreateSpriteDebris(&it->second, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), count);
+			AnimationCandidate candidates[5];
+			if (FindAnimationCandidates(state, candidates) > 0) {
+				// TODO: Random
+				tilemap->CreateSpriteDebris(candidates[0].Resource, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), count);
 			}
 		}
 	}
@@ -429,29 +430,10 @@ namespace Jazz2::Actors
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _metadata->Sounds.end()) {
 			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
-			return _levelHandler->PlaySfx(it->second.Buffers[idx].get(), Vector3f(_pos.X, _pos.Y, 0.0f), false, gain, pitch);
+			return _levelHandler->PlaySfx(&it->second.Buffers[idx]->Buffer, Vector3f(_pos.X, _pos.Y, 0.0f), false, gain, pitch);
 		} else {
 			return nullptr;
 		}
-	}
-
-	void ActorBase::SetAnimation(const StringView& identifier)
-	{
-		if (_metadata == nullptr) {
-			LOGE("No metadata loaded");
-			return;
-		}
-
-		auto it = _metadata->Graphics.find(String::nullTerminatedView(identifier));
-		if (it == _metadata->Graphics.end()) {
-			LOGE("No animation found for \"%s\"", identifier.data());
-			return;
-		}
-
-		_currentAnimation = &it->second;
-		_currentAnimationState = AnimState::Idle;
-
-		RefreshAnimation();
 	}
 
 	bool ActorBase::SetAnimation(AnimState state)
@@ -490,66 +472,6 @@ namespace Jazz2::Actors
 		int index = (count > 1 ? nCine::Random().Next(0, count) : 0);
 		_currentAnimation = candidates[index].Resource;
 		_currentAnimationState = state;
-
-		RefreshAnimation();
-
-		return true;
-	}
-
-	bool ActorBase::SetTransition(const StringView& identifier, bool cancellable, const std::function<void()>& callback)
-	{
-		if (_metadata == nullptr) {
-			return false;
-		}
-
-		auto it = _metadata->Graphics.find(String::nullTerminatedView(identifier));
-		if (it == _metadata->Graphics.end()) {
-			if (callback != nullptr) {
-				callback();
-			}
-			return false;
-		}
-
-		if (_currentTransitionCallback != nullptr) {
-			auto oldCallback = std::move(_currentTransitionCallback);
-			_currentTransitionCallback = nullptr;
-			oldCallback();
-		}
-
-		_currentTransition = &it->second;
-		_currentTransitionState = AnimState::TransitionByName;
-		_currentTransitionCancellable = cancellable;
-		_currentTransitionCallback = callback;
-
-		RefreshAnimation();
-
-		return true;
-	}
-
-	bool ActorBase::SetTransition(const StringView& identifier, bool cancellable, std::function<void()>&& callback)
-	{
-		if (_metadata == nullptr) {
-			return false;
-		}
-
-		auto it = _metadata->Graphics.find(String::nullTerminatedView(identifier));
-		if (it == _metadata->Graphics.end()) {
-			if (callback != nullptr) {
-				callback();
-			}
-			return false;
-		}
-
-		if (_currentTransitionCallback != nullptr) {
-			auto oldCallback = std::move(_currentTransitionCallback);
-			_currentTransitionCallback = nullptr;
-			oldCallback();
-		}
-
-		_currentTransition = &it->second;
-		_currentTransitionState = AnimState::TransitionByName;
-		_currentTransitionCancellable = cancellable;
-		_currentTransitionCallback = std::move(callback);
 
 		RefreshAnimation();
 
@@ -1158,8 +1080,8 @@ namespace Jazz2::Actors
 		}
 
 		int i = 0;
-		auto it = _metadata->Graphics.begin();
-		while (it != _metadata->Graphics.end()) {
+		auto it = _metadata->Animations.begin();
+		while (it != _metadata->Animations.end()) {
 			if (i >= AnimationCandidatesCount) {
 				break;
 			}

@@ -25,7 +25,7 @@ namespace Jazz2::Actors::Collectibles
 
 		async_await RequestMetadataAsync("Object/GemGiant"_s);
 
-		SetAnimation("GemGiant"_s);
+		SetAnimation(AnimState::Default);
 
 		_renderer.setAlphaF(0.7f);
 

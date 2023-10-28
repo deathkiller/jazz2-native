@@ -21,7 +21,7 @@ static constexpr uint8_t KeyLayout[] = {
 namespace Jazz2::UI
 {
 	HUD::HUD(LevelHandler* levelHandler)
-		: _levelHandler(levelHandler), _graphics(nullptr), _levelTextTime(-1.0f), _coins(0), _gems(0), _coinsTime(-1.0f), _gemsTime(-1.0f),
+		: _levelHandler(levelHandler), _animations(nullptr), _levelTextTime(-1.0f), _coins(0), _gems(0), _coinsTime(-1.0f), _gemsTime(-1.0f),
 			_activeBossTime(0.0f), _touchButtonsTimer(0.0f), _rgbAmbientLight(0.0f), _rgbHealthLast(0.0f), _weaponWheelAnim(0.0f),
 			_weaponWheelShown(false), _lastWeaponWheelIndex(-1), _rgbLightsTime(0.0f), _transitionState(TransitionState::None),
 			_transitionTime(0.0f)
@@ -30,7 +30,7 @@ namespace Jazz2::UI
 
 		Metadata* metadata = resolver.RequestMetadata("UI/HUD"_s);
 		if (metadata != nullptr) {
-			_graphics = &metadata->Graphics;
+			_animations = &metadata->Animations;
 		}
 
 		_smallFont = resolver.GetFont(FontType::Small);
@@ -142,7 +142,7 @@ namespace Jazz2::UI
 	{
 		Canvas::OnDraw(renderQueue);
 
-		if (_graphics == nullptr) {
+		if (_animations == nullptr) {
 			return false;
 		}
 
@@ -273,8 +273,8 @@ namespace Jazz2::UI
 				_smallFont->DrawString(this, ammoCount, charOffset, right - 40.0f, bottom - 2.0f, FontLayer,
 					Alignment::BottomLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 
-				auto it = _graphics->find(String::nullTerminatedView(currentWeaponString));
-				if (it != _graphics->end()) {
+				auto it = _animations->find(String::nullTerminatedView(currentWeaponString));
+				if (it != _animations->end()) {
 					if (it->second.Base->FrameDimensions.Y < 20) {
 						pos.Y -= std::round((20 - it->second.Base->FrameDimensions.Y) * 0.5f);
 					}
@@ -651,8 +651,8 @@ namespace Jazz2::UI
 
 	void HUD::DrawElement(const StringView& name, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, float angle)
 	{
-		auto it = _graphics->find(String::nullTerminatedView(name));
-		if (it == _graphics->end()) {
+		auto it = _animations->find(String::nullTerminatedView(name));
+		if (it == _animations->end()) {
 			return;
 		}
 
@@ -682,8 +682,8 @@ namespace Jazz2::UI
 
 	void HUD::DrawElementClipped(const StringView& name, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY)
 	{
-		auto it = _graphics->find(String::nullTerminatedView(name));
-		if (it == _graphics->end()) {
+		auto it = _animations->find(String::nullTerminatedView(name));
+		if (it == _animations->end()) {
 			return;
 		}
 
@@ -782,8 +782,8 @@ namespace Jazz2::UI
 			return;
 		}
 
-		auto it = _graphics->find(String::nullTerminatedView("WeaponWheel"_s));
-		if (it == _graphics->end()) {
+		auto it = _animations->find(String::nullTerminatedView("WeaponWheel"_s));
+		if (it == _animations->end()) {
 			return;
 		}
 
@@ -1056,8 +1056,8 @@ namespace Jazz2::UI
 		info.Height = h * LevelHandler::DefaultWidth * 0.5f;
 
 		if (!identifier.empty()) {
-			auto it = _graphics->find(String::nullTerminatedView(identifier));
-			info.Graphics = (it != _graphics->end() ? &it->second : nullptr);
+			auto it = _animations->find(String::nullTerminatedView(identifier));
+			info.Graphics = (it != _animations->end() ? &it->second : nullptr);
 		} else {
 			info.Graphics = nullptr;
 		}

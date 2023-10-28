@@ -109,7 +109,7 @@ namespace Jazz2::Actors::Collectibles
 				break;
 		}
 
-		SetAnimation("Food"_s);
+		SetAnimation(AnimState::Default);
 		SetFacingDirection();
 
 		async_return true;

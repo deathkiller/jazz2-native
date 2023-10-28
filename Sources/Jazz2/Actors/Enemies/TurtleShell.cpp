@@ -63,7 +63,7 @@ namespace Jazz2::Actors::Enemies
 				break;
 		}
 
-		SetAnimation(AnimState::Idle);
+		SetAnimation(AnimState::Default);
 
 		_canHurtPlayer = false;
 		_friction = _levelHandler->Gravity * 0.05f;

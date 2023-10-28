@@ -35,7 +35,8 @@ namespace Jazz2
 		class TileSet;
 	}
 
-	enum class AnimationLoopMode {
+	enum class AnimationLoopMode
+	{
 		// The animation is played once an then remains in its last frame.
 		Once,
 		// The animation is looped: When reaching the last frame, it begins again at the first one.
@@ -44,7 +45,8 @@ namespace Jazz2
 		FixedSingle
 	};
 
-	enum class GenericGraphicResourceFlags {
+	enum class GenericGraphicResourceFlags
+	{
 		None = 0x00,
 
 		Referenced = 0x01
@@ -52,9 +54,8 @@ namespace Jazz2
 
 	DEFINE_ENUM_OPERATORS(GenericGraphicResourceFlags);
 
-	class GenericGraphicResource
+	struct GenericGraphicResource
 	{
-	public:
 		GenericGraphicResourceFlags Flags;
 		//GenericGraphicResourceAsyncFinalize AsyncFinalize;
 
@@ -64,24 +65,27 @@ namespace Jazz2
 		Vector2i FrameDimensions;
 		Vector2i FrameConfiguration;
 		float AnimDuration;
-		int32_t FrameCount;
+		std::int32_t FrameCount;
 		Vector2i Hotspot;
 		Vector2i Coldspot;
 		Vector2i Gunspot;
+
+		GenericGraphicResource();
 	};
 
-	class GraphicResource
+	struct GraphicResource
 	{
-	public:
 		GenericGraphicResource* Base;
 		//GraphicResourceAsyncFinalize AsyncFinalize;
 
 		SmallVector<AnimState, 4> State;
 		//std::unique_ptr<Material> Material;
 		float AnimDuration;
-		int32_t FrameCount;
-		int32_t FrameOffset;
+		std::int32_t FrameCount;
+		std::int32_t FrameOffset;
 		AnimationLoopMode LoopMode;
+
+		GraphicResource();
 
 		bool HasState(AnimState state)
 		{
@@ -94,10 +98,28 @@ namespace Jazz2
 		}
 	};
 
-	class SoundResource
+	enum class GenericSoundResourceFlags
 	{
-	public:
-		SmallVector<std::unique_ptr<AudioBuffer>, 1> Buffers;
+		None = 0x00,
+
+		Referenced = 0x01
+	};
+
+	DEFINE_ENUM_OPERATORS(GenericSoundResourceFlags);
+
+	struct GenericSoundResource
+	{
+		AudioBuffer Buffer;
+		GenericSoundResourceFlags Flags;
+
+		GenericSoundResource(const StringView& path);
+	};
+
+	struct SoundResource
+	{
+		SmallVector<GenericSoundResource*, 1> Buffers;
+
+		SoundResource();
 	};
 
 	enum class MetadataFlags {
@@ -109,22 +131,18 @@ namespace Jazz2
 
 	DEFINE_ENUM_OPERATORS(MetadataFlags);
 
-	class Metadata
+	struct Metadata
 	{
-	public:
 		MetadataFlags Flags;
-
-		HashMap<String, GraphicResource> Graphics;
+		HashMap<String, GraphicResource> Animations;
 		HashMap<String, SoundResource> Sounds;
 		Vector2i BoundingBox;
 
-		Metadata()
-			: Flags(MetadataFlags::None)
-		{
-		}
+		Metadata();
 	};
 
-	enum class TileDestructType {
+	enum class TileDestructType
+	{
 		None = 0x00,
 
 		Weapon = 0x01,
@@ -138,39 +156,44 @@ namespace Jazz2
 
 	DEFINE_ENUM_OPERATORS(TileDestructType);
 
-	struct TileCollisionParams {
+	struct TileCollisionParams
+	{
 		TileDestructType DestructType;
 		bool Downwards;
 		WeaponType UsedWeaponType;
-		int32_t WeaponStrength;
+		std::int32_t WeaponStrength;
 		float Speed;
-		/*out*/ int32_t TilesDestroyed;
+		/*out*/ std::int32_t TilesDestroyed;
 	};
 
-	enum class SuspendType {
+	enum class SuspendType
+	{
 		None,
 		Vine,
 		Hook,
 		SwingingVine
 	};
 
-	struct Episode {
+	struct Episode
+	{
 		String Name;
 		String DisplayName;
 		String FirstLevel;
 		String PreviousEpisode;
 		String NextEpisode;
-		uint16_t Position;
+		std::uint16_t Position;
 	};
 
-	enum class FontType {
+	enum class FontType
+	{
 		Small,
 		Medium,
 
 		Count
 	};
 
-	enum class PrecompiledShader {
+	enum class PrecompiledShader
+	{
 		Lighting,
 		BatchedLighting,
 
@@ -218,20 +241,24 @@ namespace Jazz2
 	class ContentResolver
 	{
 	public:
-		static constexpr uint8_t LevelFile = 1;
-		static constexpr uint8_t EpisodeFile = 2;
-		static constexpr uint8_t CacheIndexFile = 3;
-		static constexpr uint8_t ConfigFile = 4;
+		static constexpr std::uint8_t LevelFile = 1;
+		static constexpr std::uint8_t EpisodeFile = 2;
+		static constexpr std::uint8_t CacheIndexFile = 3;
+		static constexpr std::uint8_t ConfigFile = 4;
 
-		static constexpr int32_t PaletteCount = 256;
-		static constexpr int32_t ColorsPerPalette = 256;
-		static constexpr int32_t InvalidValue = INT_MAX;
+		static constexpr std::int32_t PaletteCount = 256;
+		static constexpr std::int32_t ColorsPerPalette = 256;
+		static constexpr std::int32_t InvalidValue = INT_MAX;
 
 		static ContentResolver& Get();
 
 		~ContentResolver();
 		
 		void Release();
+
+		StringView GetContentPath() const;
+		StringView GetCachePath() const;
+		StringView GetSourcePath() const;
 
 		bool IsHeadless() const;
 		void SetHeadless(bool value);
@@ -256,48 +283,8 @@ namespace Jazz2
 		void CompileShaders();
 		static std::unique_ptr<Texture> GetNoiseTexture();
 
-		const uint32_t* GetPalettes() const {
+		const std::uint32_t* GetPalettes() const {
 			return _palettes;
-		}
-
-		StringView GetContentPath() const {
-#if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
-			return _contentPath;
-#elif defined(DEATH_TARGET_ANDROID)
-			return "asset::"_s;
-#elif defined(DEATH_TARGET_SWITCH)
-			return "romfs:/"_s;
-#elif defined(DEATH_TARGET_WINDOWS)
-			return "Content\\"_s;
-#else
-			return "Content/"_s;
-#endif
-		}
-
-		StringView GetCachePath() const {
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
-			return _cachePath;
-#elif defined(DEATH_TARGET_SWITCH)
-			// Switch has some issues with UTF-8 characters, so use "Jazz2" instead
-			return "sdmc:/Games/Jazz2/Cache/"_s;
-#elif defined(DEATH_TARGET_WINDOWS)
-			return "Cache\\"_s;
-#else
-			return "Cache/"_s;
-#endif
-		}
-
-		StringView GetSourcePath() const {
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
-			return _sourcePath;
-#elif defined(DEATH_TARGET_SWITCH)
-			// Switch has some issues with UTF-8 characters, so use "Jazz2" instead
-			return "sdmc:/Games/Jazz2/Source/"_s;
-#elif defined(DEATH_TARGET_WINDOWS)
-			return "Source\\"_s;
-#else
-			return "Source/"_s;
-#endif
 		}
 
 	private:
@@ -324,6 +311,7 @@ namespace Jazz2
 		uint32_t _palettes[PaletteCount * ColorsPerPalette];
 		HashMap<String, std::unique_ptr<Metadata>> _cachedMetadata;
 		HashMap<Pair<String, uint16_t>, std::unique_ptr<GenericGraphicResource>> _cachedGraphics;
+		HashMap<String, std::unique_ptr<GenericSoundResource>> _cachedSounds;
 		std::unique_ptr<UI::Font> _fonts[(int32_t)FontType::Count];
 		std::unique_ptr<Shader> _precompiledShaders[(int32_t)PrecompiledShader::Count];
 

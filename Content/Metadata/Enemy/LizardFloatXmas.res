@@ -22,12 +22,14 @@
 		},
 		"Copter": {
 			"Path": "Lizard/xmas_copter.aura",
-			"FrameRate": 20
+			"FrameRate": 20,
+			"States": [ 1 ]
 		},
 		
 		"Bomb": {
 			"Path": "Lizard/xmas_bomb.aura",
-			"FrameRate": 8
+			"FrameRate": 8,
+			"States": [ 2 ]
 		}
 	},
 	

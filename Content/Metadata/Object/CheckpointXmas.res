@@ -15,7 +15,7 @@
 			"FrameOffset": 13,
 			"FrameCount": 1,
 			"FrameRate": 0,
-			"States": [ 0 ]
+			"States": [ 1 ]
 		},
 		"TransitionActivate": {
 			"Path": "Object/checkpoint_xmas.aura",

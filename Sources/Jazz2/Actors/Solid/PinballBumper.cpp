@@ -25,10 +25,7 @@ namespace Jazz2::Actors::Solid
 
 		async_await RequestMetadataAsync("Object/PinballBumper"_s);
 
-		switch (theme) {
-			case 0: SetAnimation((AnimState)0); break;
-			case 1: SetAnimation((AnimState)1); break;
-		}
+		SetAnimation((AnimState)theme);
 
 		async_return true;
 	}

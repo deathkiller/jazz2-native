@@ -3,8 +3,7 @@
 
 	"Animations": {
 		"Idle": {
-			"Path": "Turtle/xmas_shell_reverse.aura",
-			"States": [ 0 ]
+			"Path": "Turtle/xmas_shell_reverse.aura"
 		}
 	},
 

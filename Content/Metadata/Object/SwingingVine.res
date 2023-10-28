@@ -3,8 +3,7 @@
 
 	"Animations": {
 		"Vine": {
-			"Path": "Object/vine.aura",
-			"States": [ 0 ]
+			"Path": "Object/vine.aura"
 		}
 	}
 }

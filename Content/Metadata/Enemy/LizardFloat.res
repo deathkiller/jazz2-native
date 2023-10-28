@@ -22,11 +22,13 @@
 		},
 		"Copter": {
 			"Path": "Lizard/copter.aura",
-			"FrameRate": 20
+			"FrameRate": 20,
+			"States": [ 1 ]
 		},
 		
 		"Bomb": {
-			"Path": "Lizard/bomb.aura"
+			"Path": "Lizard/bomb.aura",
+			"States": [ 2 ]
 		}
 	},
 	

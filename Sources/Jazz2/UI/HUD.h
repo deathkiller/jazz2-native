@@ -82,7 +82,7 @@ namespace Jazz2::UI
 		static constexpr int32_t WeaponWheelMaxVertices = 512;
 		
 		LevelHandler* _levelHandler;
-		HashMap<String, GraphicResource>* _graphics;
+		HashMap<String, GraphicResource>* _animations;
 		std::shared_ptr<Actors::Player> _attachedPlayer;
 		Font* _smallFont;
 

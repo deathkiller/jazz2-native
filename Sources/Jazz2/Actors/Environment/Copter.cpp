@@ -27,7 +27,7 @@ namespace Jazz2::Actors::Environment
 
 		async_await RequestMetadataAsync("Enemy/LizardFloat"_s);
 
-		SetAnimation("Copter"_s);
+		SetAnimation((AnimState)1);
 
 		_originPos = _pos;
 

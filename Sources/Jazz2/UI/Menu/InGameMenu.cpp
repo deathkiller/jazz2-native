@@ -26,7 +26,7 @@ namespace Jazz2::UI::Menu
 
 		Metadata* metadata = resolver.RequestMetadata("UI/MainMenu"_s);
 		ASSERT_MSG(metadata != nullptr, "Cannot load required metadata");
-		_graphics = &metadata->Graphics;
+		_animations = &metadata->Animations;
 		_sounds = &metadata->Sounds;
 
 		_smallFont = resolver.GetFont(FontType::Small);
@@ -272,8 +272,8 @@ namespace Jazz2::UI::Menu
 
 	void InGameMenu::DrawElement(const StringView& name, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending)
 	{
-		auto it = _graphics->find(String::nullTerminatedView(name));
-		if (it == _graphics->end()) {
+		auto it = _animations->find(String::nullTerminatedView(name));
+		if (it == _animations->end()) {
 			return;
 		}
 
@@ -304,8 +304,8 @@ namespace Jazz2::UI::Menu
 
 	void InGameMenu::DrawElement(const StringView& name, float x, float y, uint16_t z, Alignment align, const Colorf& color, const Vector2f& size, const Vector4f& texCoords)
 	{
-		auto it = _graphics->find(String::nullTerminatedView(name));
-		if (it == _graphics->end()) {
+		auto it = _animations->find(String::nullTerminatedView(name));
+		if (it == _animations->end()) {
 			return;
 		}
 
@@ -345,7 +345,7 @@ namespace Jazz2::UI::Menu
 		auto it = _sounds->find(String::nullTerminatedView(identifier));
 		if (it != _sounds->end()) {
 			int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int32_t)it->second.Buffers.size()) : 0);
-			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(it->second.Buffers[idx].get()));
+			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(&it->second.Buffers[idx]->Buffer));
 			player->setPosition(Vector3f(0.0f, 0.0f, 100.0f));
 			player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
 			player->setSourceRelative(true);

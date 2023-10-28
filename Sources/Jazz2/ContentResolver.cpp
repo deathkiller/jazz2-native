@@ -49,6 +49,28 @@ static Vector2i GetVector2iFromJson(simdjson_result<T> value, Vector2i defaultVa
 
 namespace Jazz2
 {
+	GenericGraphicResource::GenericGraphicResource()
+	{
+	}
+
+	GraphicResource::GraphicResource()
+	{
+	}
+
+	GenericSoundResource::GenericSoundResource(const StringView& path)
+		: Buffer(path)
+	{
+	}
+
+	SoundResource::SoundResource()
+	{
+	}
+
+	Metadata::Metadata()
+		: Flags(MetadataFlags::None)
+	{
+	}
+
 	ContentResolver& ContentResolver::Get()
 	{
 		static ContentResolver current;
@@ -69,6 +91,7 @@ namespace Jazz2
 	{
 		_cachedMetadata.clear();
 		_cachedGraphics.clear();
+		_cachedSounds.clear();
 
 		for (int32_t i = 0; i < (int32_t)FontType::Count; i++) {
 			_fonts[i] = nullptr;
@@ -77,6 +100,49 @@ namespace Jazz2
 		for (int32_t i = 0; i < (int32_t)PrecompiledShader::Count; i++) {
 			_precompiledShaders[i] = nullptr;
 		}
+	}
+
+	StringView ContentResolver::GetContentPath() const
+	{
+#if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
+		return _contentPath;
+#elif defined(DEATH_TARGET_ANDROID)
+		return "asset::"_s;
+#elif defined(DEATH_TARGET_SWITCH)
+		return "romfs:/"_s;
+#elif defined(DEATH_TARGET_WINDOWS)
+		return "Content\\"_s;
+#else
+		return "Content/"_s;
+#endif
+	}
+
+	StringView ContentResolver::GetCachePath() const
+	{
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
+		return _cachePath;
+#elif defined(DEATH_TARGET_SWITCH)
+		// Switch has some issues with UTF-8 characters, so use "Jazz2" instead
+		return "sdmc:/Games/Jazz2/Cache/"_s;
+#elif defined(DEATH_TARGET_WINDOWS)
+		return "Cache\\"_s;
+#else
+		return "Cache/"_s;
+#endif
+	}
+
+	StringView ContentResolver::GetSourcePath() const
+	{
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
+		return _sourcePath;
+#elif defined(DEATH_TARGET_SWITCH)
+		// Switch has some issues with UTF-8 characters, so use "Jazz2" instead
+		return "sdmc:/Games/Jazz2/Source/"_s;
+#elif defined(DEATH_TARGET_WINDOWS)
+		return "Source\\"_s;
+#else
+		return "Source/"_s;
+#endif
 	}
 
 	bool ContentResolver::IsHeadless() const
@@ -234,18 +300,33 @@ namespace Jazz2
 		for (auto& resource : _cachedGraphics) {
 			resource.second->Flags &= ~GenericGraphicResourceFlags::Referenced;
 		}
+		for (auto& resource : _cachedSounds) {
+			resource.second->Flags &= ~GenericSoundResourceFlags::Referenced;
+		}
 	}
 
 	void ContentResolver::EndLoading()
 	{
+#if defined(DEATH_DEBUG)
+		std::int32_t metadataKept = 0, metadataReleased = 0;
+		std::int32_t animationsKept = 0, animationsReleased = 0;
+		std::int32_t soundsKept = 0, soundsReleased = 0;
+#endif
+
 		// Release unreferenced metadata
 		{
 			auto it = _cachedMetadata.begin();
 			while (it != _cachedMetadata.end()) {
 				if ((it->second->Flags & MetadataFlags::Referenced) != MetadataFlags::Referenced) {
 					it = _cachedMetadata.erase(it);
+#if defined(DEATH_DEBUG)
+					metadataReleased++;
+#endif
 				} else {
 					++it;
+#if defined(DEATH_DEBUG)
+					metadataKept++;
+#endif
 				}
 			}
 		}
@@ -256,11 +337,40 @@ namespace Jazz2
 			while (it != _cachedGraphics.end()) {
 				if ((it->second->Flags & GenericGraphicResourceFlags::Referenced) != GenericGraphicResourceFlags::Referenced) {
 					it = _cachedGraphics.erase(it);
+#if defined(DEATH_DEBUG)
+					animationsReleased++;
+#endif
 				} else {
 					++it;
+#if defined(DEATH_DEBUG)
+					animationsKept++;
+#endif
 				}
 			}
 		}
+
+		// Released unreferenced sounds
+		{
+			auto it = _cachedSounds.begin();
+			while (it != _cachedSounds.end()) {
+				if ((it->second->Flags & GenericSoundResourceFlags::Referenced) != GenericSoundResourceFlags::Referenced) {
+					it = _cachedSounds.erase(it);
+#if defined(DEATH_DEBUG)
+					soundsReleased++;
+#endif
+				} else {
+					++it;
+#if defined(DEATH_DEBUG)
+					soundsKept++;
+#endif
+				}
+			}
+		}
+
+#if defined(DEATH_DEBUG)
+		LOGW("Metadata: %i|%i, Animations: %i|%i, Sounds: %i|%i", metadataKept, metadataReleased,
+			animationsKept, animationsReleased, soundsKept, soundsReleased);
+#endif
 
 		_isLoading = false;
 	}
@@ -279,8 +389,14 @@ namespace Jazz2
 			// Already loaded - Mark as referenced
 			it->second->Flags |= MetadataFlags::Referenced;
 
-			for (auto& resource : it->second->Graphics) {
+			for (auto& resource : it->second->Animations) {
 				resource.second.Base->Flags |= GenericGraphicResourceFlags::Referenced;
+			}
+
+			for (auto& resource : it->second->Sounds) {
+				for (auto& base : resource.second.Buffers) {
+					base->Flags |= GenericSoundResourceFlags::Referenced;
+				}
 			}
 
 			return it->second.get();
@@ -298,6 +414,8 @@ namespace Jazz2
 		s->Read(buffer.get(), fileSize);
 		buffer[fileSize] = '\0';
 
+		bool multipleAnimsNoStatesWarning = false;
+
 		std::unique_ptr<Metadata> metadata = std::make_unique<Metadata>();
 		metadata->Flags |= MetadataFlags::Referenced;
 
@@ -310,7 +428,7 @@ namespace Jazz2
 			if (doc["Animations"].get(animations) == SUCCESS) {
 				size_t count;
 				if (animations.count_fields().get(count) == SUCCESS) {
-					metadata->Graphics.reserve(count);
+					metadata->Animations.reserve(count);
 				}
 
 				for (auto it : animations) {
@@ -326,7 +444,7 @@ namespace Jazz2
 
 					//bool keepIndexed = false;
 
-					uint64_t flags;
+					std::uint64_t flags;
 					if (value["Flags"].get(flags) == SUCCESS) {
 						if ((flags & 0x01) == 0x01) {
 							graphics.LoopMode = AnimationLoopMode::Once;
@@ -337,7 +455,7 @@ namespace Jazz2
 					}
 
 					// TODO: Implement true indexed sprites
-					uint64_t paletteOffset;
+					std::uint64_t paletteOffset;
 					if (value["PaletteOffset"].get(paletteOffset) != SUCCESS) {
 						paletteOffset = 0;
 					}
@@ -347,7 +465,7 @@ namespace Jazz2
 						continue;
 					}
 
-					int64_t frameOffset;
+					std::int64_t frameOffset;
 					if (value["FrameOffset"].get(frameOffset) != SUCCESS) {
 						frameOffset = 0;
 					}
@@ -356,7 +474,7 @@ namespace Jazz2
 					graphics.AnimDuration = graphics.Base->AnimDuration;
 					graphics.FrameCount = graphics.Base->FrameCount;
 
-					int64_t frameCount;
+					std::int64_t frameCount;
 					if (value["FrameCount"].get(frameCount) == SUCCESS) {
 						graphics.FrameCount = (int32_t)frameCount;
 					} else {
@@ -372,11 +490,18 @@ namespace Jazz2
 					ondemand::array states;
 					if (value["States"].get(states) == SUCCESS) {
 						for (auto stateItem : states) {
-							int64_t state;
+							std::int64_t state;
 							if (stateItem.get(state) == SUCCESS) {
 								graphics.State.push_back((AnimState)state);
 							}
 						}
+					} else if (count > 1) {
+						if (!multipleAnimsNoStatesWarning) {
+							multipleAnimsNoStatesWarning = true;
+							LOGW("Multiple animations defined but no states specified in file \"%s\"", path.data());
+						}
+					} else {
+						graphics.State.push_back(AnimState::Default);
 					}
 
 					// If no bounding box is provided, use the first sprite
@@ -385,7 +510,7 @@ namespace Jazz2
 						metadata->BoundingBox = graphics.Base->FrameDimensions - Vector2i(2, 2);
 					}
 
-					metadata->Graphics.emplace(key, std::move(graphics));
+					metadata->Animations.emplace(key, std::move(graphics));
 				}
 			}
 
@@ -414,14 +539,22 @@ namespace Jazz2
 							std::string_view assetPath;
 							if (assetPathItem.get(assetPath) == SUCCESS && !assetPath.empty()) {
 								auto assetPathNormalized = fs::ToNativeSeparators(assetPath);
-								String fullPath = fs::CombinePath({ GetContentPath(), "Animations"_s, assetPathNormalized });
-								if (!fs::IsReadableFile(fullPath)) {
-									fullPath = fs::CombinePath({ GetCachePath(), "Animations"_s, assetPathNormalized });
+								auto it = _cachedSounds.find(assetPathNormalized);
+								if (it != _cachedSounds.end()) {
+									it->second->Flags |= GenericSoundResourceFlags::Referenced;
+									sound.Buffers.emplace_back(it->second.get());
+								} else {
+									String fullPath = fs::CombinePath({ GetContentPath(), "Animations"_s, assetPathNormalized });
 									if (!fs::IsReadableFile(fullPath)) {
-										continue;
+										fullPath = fs::CombinePath({ GetCachePath(), "Animations"_s, assetPathNormalized });
+										if (!fs::IsReadableFile(fullPath)) {
+											continue;
+										}
 									}
+									auto res = _cachedSounds.emplace(assetPathNormalized, std::make_unique<GenericSoundResource>(fullPath));
+									res.first->second->Flags |= GenericSoundResourceFlags::Referenced;
+									sound.Buffers.emplace_back(res.first->second.get());
 								}
-								sound.Buffers.emplace_back(std::make_unique<AudioBuffer>(fullPath));
 							}
 						}
 
@@ -788,6 +921,9 @@ namespace Jazz2
 			if (std::memcmp(_palettes, newPalette, ColorsPerPalette * sizeof(uint32_t)) != 0) {
 				// Palettes differs, drop all cached resources, so it will be reloaded with new palette
 				if (_isLoading) {
+#if defined(DEATH_DEBUG)
+					LOGW("Releasing all animations because of different palette - Metadata: 0|%i, Animations: 0|%i", (std::int32_t)_cachedMetadata.size(), (std::int32_t)_cachedGraphics.size());
+#endif
 					_cachedMetadata.clear();
 					_cachedGraphics.clear();
 

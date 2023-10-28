@@ -129,7 +129,7 @@ namespace Jazz2::Actors::Enemies
 		_time = 500.0f;
 
 		async_await RequestMetadataAsync("Enemy/Caterpillar"_s);
-		SetAnimation("Smoke"_s);
+		SetAnimation((AnimState)7);
 
 		async_return true;
 	}

@@ -65,7 +65,6 @@ namespace Jazz2::Scripting
 		r = engine->RegisterObjectMethod(AsClassName, "void WarpTo(float, float)", asMETHOD(ScriptPlayerWrapper, asWarpTo), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod(AsClassName, "void MoveBy(float, float)", asMETHOD(ScriptPlayerWrapper, asMoveBy), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod(AsClassName, "void PlaySfx(const string &in, float = 1.0, float = 1.0)", asMETHOD(ScriptPlayerWrapper, asPlaySfx), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod(AsClassName, "void SetAnimation(const string &in)", asMETHOD(ScriptPlayerWrapper, asSetAnimation), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod(AsClassName, "void SetAnimation(int)", asMETHOD(ScriptPlayerWrapper, asSetAnimationState), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
 		r = engine->RegisterObjectMethod(AsClassName, "void MorphTo(int)", asMETHOD(ScriptPlayerWrapper, asMorphTo), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
@@ -224,13 +223,6 @@ namespace Jazz2::Scripting
 	{
 		if (_player != nullptr) {
 			_player->PlayPlayerSfx(identifier, gain, pitch);
-		}
-	}
-
-	void ScriptPlayerWrapper::asSetAnimation(const String& identifier)
-	{
-		if (_player != nullptr) {
-			_player->SetAnimation(identifier);
 		}
 	}
 

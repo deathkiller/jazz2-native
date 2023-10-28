@@ -8,26 +8,26 @@ namespace Jazz2::Actors
 	{
 	public:
 		enum class Type {
-			Tiny = 0,
-			TinyBlue = 1,
-			TinyDark = 2,
-			Small = 3,
-			SmallDark = 4,
-			Large = 5,
+			Tiny,
+			TinyBlue,
+			TinyDark,
+			Small,
+			SmallDark,
+			Large,
 
-			SmokeBrown = 6,
-			SmokeGray = 7,
-			SmokeWhite = 8,
-			SmokePoof = 9,
+			SmokeBrown,
+			SmokeGray,
+			SmokeWhite,
+			SmokePoof,
 
-			WaterSplash = 10,
+			WaterSplash,
 
-			Pepper = 11,
-			RF = 12,
+			Pepper,
+			RF,
 
-			IceShrapnel = 13,
+			Generator,
 
-			Generator = 20,
+			IceShrapnel,
 		};
 
 		Explosion();

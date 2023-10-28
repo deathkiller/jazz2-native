@@ -30,20 +30,14 @@ namespace Jazz2::Actors::Environment
 
 		switch (_cost) {
 			case 10:
-				SetAnimation("Bonus10"_s);
-				break;
 			case 20:
-				SetAnimation("Bonus20"_s);
-				break;
 			case 50:
-				SetAnimation("Bonus50"_s);
-				break;
 			case 100:
-				SetAnimation("Bonus100"_s);
+				SetAnimation((AnimState)_cost);
 				break;
 			default:
 				// TODO: Show rabbit + coins needed, if (showAnim)
-				SetAnimation("BonusGeneric"_s);
+				SetAnimation(AnimState::Default);
 				break;
 		}
 

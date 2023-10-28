@@ -28,7 +28,7 @@ namespace Jazz2::Actors::Collectibles
 			case PlayerType::Lori: async_await RequestMetadataAsync("Collectible/FastFireLori"_s); break;
 		}
 
-		SetAnimation("FastFire"_s);
+		SetAnimation(AnimState::Default);
 
 		SetFacingDirection();
 

@@ -36,32 +36,19 @@ namespace Jazz2::Actors
 
 		async_await RequestMetadataAsync("Common/Explosions"_s);
 
-		switch (_type) {
-			default:
-			case Type::Tiny: SetAnimation("Tiny"_s); break;
-			case Type::TinyBlue: SetAnimation("TinyBlue"_s); break;
-			case Type::TinyDark: SetAnimation("TinyDark"_s); break;
-			case Type::Small: SetAnimation("Small"_s); break;
-			case Type::SmallDark: SetAnimation("SmallDark"_s); break;
-			case Type::Large: {
-				SetAnimation("Large"_s);
+		// IceShrapnels are randomized below
+		if (_type != Type::IceShrapnel) {
+			SetAnimation((AnimState)_type);
+		}
 
+		switch (_type) {
+			case Type::Large: {
 				_lightIntensity = 0.8f;
 				_lightBrightness = 0.9f;
 				_lightRadiusFar = 55.0f;
 				break;
 			}
-
-			case Type::SmokeBrown: SetAnimation("SmokeBrown"_s); break;
-			case Type::SmokeGray: SetAnimation("SmokeGray"_s); break;
-			case Type::SmokeWhite: SetAnimation("SmokeWhite"_s); break;
-			case Type::SmokePoof: SetAnimation("SmokePoof"_s); break;
-
-			case Type::WaterSplash: SetAnimation("WaterSplash"_s); break;
-
 			case Type::Pepper: {
-				SetAnimation("Pepper"_s);
-
 				_lightIntensity = 0.5f;
 				_lightBrightness = 0.2f;
 				_lightRadiusNear = 7.0f;
@@ -69,18 +56,13 @@ namespace Jazz2::Actors
 				break;
 			}
 			case Type::RF: {
-				SetAnimation("RF"_s);
-
 				_lightIntensity = 0.8f;
 				_lightBrightness = 0.9f;
 				_lightRadiusFar = 50.0f;
 				break;
 			}
 			case Type::IceShrapnel: {
-				constexpr StringView IceShrapnels[] = {
-					"IceShrapnel1"_s, "IceShrapnel2"_s, "IceShrapnel3"_s, "IceShrapnel4"_s
-				};
-				SetAnimation(IceShrapnels[Random().Fast(0, countof(IceShrapnels))]);
+				SetAnimation((AnimState)((std::uint32_t)Type::IceShrapnel + Random().Fast(0, 4)));
 
 				SetState(ActorState::CollideWithTileset | ActorState::ApplyGravitation | ActorState::SkipPerPixelCollisions, true);
 				SetState(ActorState::ForceDisableCollisions, false);
@@ -95,10 +77,7 @@ namespace Jazz2::Actors
 				SetFacingLeft(_speed.X < 0.0f);
 				break;
 			}
-
 			case Type::Generator: {
-				SetAnimation("Generator"_s);
-
 				// Apply random orientation
 				_renderer.setRotation(Random().NextFloat(0.0f, 4.0f * fPiOver2));
 				SetFacingLeft(Random().NextFloat() < 0.5f);

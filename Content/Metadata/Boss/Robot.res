@@ -40,31 +40,40 @@
 		},
 		
 		"Shrapnel1": {
-			"Path": "Robot/shrapnel_1.aura"
+			"Path": "Robot/shrapnel_1.aura",
+			"States": [ 100 ]
 		},
 		"Shrapnel2": {
-			"Path": "Robot/shrapnel_2.aura"
+			"Path": "Robot/shrapnel_2.aura",
+			"States": [ 101 ]
 		},
 		"Shrapnel3": {
-			"Path": "Robot/shrapnel_3.aura"
+			"Path": "Robot/shrapnel_3.aura",
+			"States": [ 102 ]
 		},
 		"Shrapnel4": {
-			"Path": "Robot/shrapnel_4.aura"
+			"Path": "Robot/shrapnel_4.aura",
+			"States": [ 103 ]
 		},
 		"Shrapnel5": {
-			"Path": "Robot/shrapnel_5.aura"
+			"Path": "Robot/shrapnel_5.aura",
+			"States": [ 104 ]
 		},
 		"Shrapnel6": {
-			"Path": "Robot/shrapnel_6.aura"
+			"Path": "Robot/shrapnel_6.aura",
+			"States": [ 105 ]
 		},
 		"Shrapnel7": {
-			"Path": "Robot/shrapnel_7.aura"
+			"Path": "Robot/shrapnel_7.aura",
+			"States": [ 106 ]
 		},
 		"Shrapnel8": {
-			"Path": "Robot/shrapnel_8.aura"
+			"Path": "Robot/shrapnel_8.aura",
+			"States": [ 107 ]
 		},
 		"Shrapnel9": {
-			"Path": "Robot/shrapnel_9.aura"
+			"Path": "Robot/shrapnel_9.aura",
+			"States": [ 108 ]
 		}
 	},
 	

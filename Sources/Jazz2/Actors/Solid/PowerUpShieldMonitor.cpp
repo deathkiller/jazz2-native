@@ -15,7 +15,14 @@ namespace Jazz2::Actors::Solid
 
 	void PowerUpShieldMonitor::Preload(const ActorActivationDetails& details)
 	{
-		PreloadMetadataAsync("Object/PowerUpMonitorShield"_s);
+		ShieldType shieldType = (ShieldType)details.Params[0];
+		switch (shieldType) {
+			case ShieldType::Fire: PreloadMetadataAsync("Object/PowerUp/ShieldFire"_s); break;
+			case ShieldType::Water: PreloadMetadataAsync("Object/PowerUp/ShieldWater"_s); break;
+			case ShieldType::Laser: PreloadMetadataAsync("Object/PowerUp/ShieldLaser"_s); break;
+			case ShieldType::Lightning: PreloadMetadataAsync("Object/PowerUp/ShieldLightning"_s); break;
+			default: PreloadMetadataAsync("Object/PowerUp/Empty"_s); break;
+		}
 	}
 
 	Task<bool> PowerUpShieldMonitor::OnActivatedAsync(const ActorActivationDetails& details)
@@ -25,16 +32,15 @@ namespace Jazz2::Actors::Solid
 		SetState(ActorState::TriggersTNT, true);
 		Movable = true;
 
-		async_await RequestMetadataAsync("Object/PowerUpMonitorShield"_s);
-
 		switch (_shieldType) {
-			case ShieldType::Fire: SetAnimation("ShieldFire"_s); break;
-			case ShieldType::Water: SetAnimation("ShieldWater"_s); break;
-			case ShieldType::Laser: SetAnimation("ShieldLaser"_s); break;
-			case ShieldType::Lightning: SetAnimation("ShieldLightning"_s); break;
-
-			default: SetAnimation("Empty"_s); break;
+			case ShieldType::Fire: async_await RequestMetadataAsync("Object/PowerUp/ShieldFire"_s); break;
+			case ShieldType::Water: async_await RequestMetadataAsync("Object/PowerUp/ShieldWater"_s); break;
+			case ShieldType::Laser: async_await RequestMetadataAsync("Object/PowerUp/ShieldLaser"_s); break;
+			case ShieldType::Lightning: async_await RequestMetadataAsync("Object/PowerUp/ShieldLightning"_s); break;
+			default: async_await RequestMetadataAsync("Object/PowerUp/Empty"_s); break;
 		}
+
+		SetAnimation(AnimState::Default);
 
 		async_return true;
 	}

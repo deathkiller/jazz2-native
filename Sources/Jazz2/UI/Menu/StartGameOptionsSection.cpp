@@ -26,7 +26,7 @@ namespace Jazz2::UI::Menu
 		_animation = 0.0f;
 
 		if (auto mainMenu = dynamic_cast<MainMenu*>(_root)) {
-			_availableCharacters = (mainMenu->_graphics->find(String::nullTerminatedView("MenuDifficultyLori"_s)) != mainMenu->_graphics->end() ? 3 : 2);
+			_availableCharacters = (mainMenu->_animations->find(String::nullTerminatedView("MenuDifficultyLori"_s)) != mainMenu->_animations->end() ? 3 : 2);
 		}
 	}
 

@@ -3,10 +3,12 @@
 
 	"Animations": {
 		"Platform": {
-			"Path": "Platform/sonic.aura"
+			"Path": "Platform/sonic.aura",
+			"States": [ 0 ]
 		},
 		"Chain": {
-			"Path": "Platform/sonic_chain.aura"
+			"Path": "Platform/sonic_chain.aura",
+			"States": [ 1 ]
 		}
 	}
 }

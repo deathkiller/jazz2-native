@@ -15,7 +15,19 @@ namespace Jazz2::Actors::Solid
 
 	void AmmoCrate::Preload(const ActorActivationDetails& details)
 	{
-		PreloadMetadataAsync("Object/CrateContainer"_s);
+		WeaponType weaponType = (WeaponType)details.Params[0];
+		switch (weaponType) {
+			case WeaponType::Bouncer: PreloadMetadataAsync("Object/Crate/AmmoBouncer"_s); break;
+			case WeaponType::Freezer: PreloadMetadataAsync("Object/Crate/AmmoFreezer"_s); break;
+			case WeaponType::Seeker: PreloadMetadataAsync("Object/Crate/AmmoSeeker"_s); break;
+			case WeaponType::RF: PreloadMetadataAsync("Object/Crate/AmmoRF"_s); break;
+			case WeaponType::Toaster: PreloadMetadataAsync("Object/Crate/AmmoToaster"_s); break;
+			case WeaponType::TNT: PreloadMetadataAsync("Object/Crate/AmmoTNT"_s); break;
+			case WeaponType::Pepper: PreloadMetadataAsync("Object/Crate/AmmoPepper"_s); break;
+			case WeaponType::Electro: PreloadMetadataAsync("Object/Crate/AmmoElectro"_s); break;
+			//case WeaponType::Thunderbolt: TODO
+			default: PreloadMetadataAsync("Object/Crate/Generic"_s); break;
+		}
 	}
 
 	Task<bool> AmmoCrate::OnActivatedAsync(const ActorActivationDetails& details)
@@ -27,20 +39,20 @@ namespace Jazz2::Actors::Solid
 			AddContent(EventType::Ammo, 5, &details.Params[0], 1);
 		}
 
-		async_await RequestMetadataAsync("Object/CrateContainer"_s);
-
 		switch (weaponType) {
-			case WeaponType::Bouncer: SetAnimation("CrateAmmoBouncer"_s); break;
-			case WeaponType::Freezer: SetAnimation("CrateAmmoFreezer"_s); break;
-			case WeaponType::Seeker:SetAnimation("CrateAmmoSeeker"_s); break;
-			case WeaponType::RF: SetAnimation("CrateAmmoRF"_s); break;
-			case WeaponType::Toaster: SetAnimation("CrateAmmoToaster"_s); break;
-			case WeaponType::TNT:SetAnimation("CrateAmmoTNT"_s); break;
-			case WeaponType::Pepper: SetAnimation("CrateAmmoPepper"_s); break;
-			case WeaponType::Electro: SetAnimation("CrateAmmoElectro"_s); break;
-			case WeaponType::Thunderbolt: SetAnimation("CrateAmmoThunderbolt"_s); break;
-			default: SetAnimation(AnimState::Idle); break;
+			case WeaponType::Bouncer: async_await RequestMetadataAsync("Object/Crate/AmmoBouncer"_s); break;
+			case WeaponType::Freezer: async_await RequestMetadataAsync("Object/Crate/AmmoFreezer"_s); break;
+			case WeaponType::Seeker: async_await RequestMetadataAsync("Object/Crate/AmmoSeeker"_s); break;
+			case WeaponType::RF: async_await RequestMetadataAsync("Object/Crate/AmmoRF"_s); break;
+			case WeaponType::Toaster: async_await RequestMetadataAsync("Object/Crate/AmmoToaster"_s); break;
+			case WeaponType::TNT: async_await RequestMetadataAsync("Object/Crate/AmmoTNT"_s); break;
+			case WeaponType::Pepper: async_await RequestMetadataAsync("Object/Crate/AmmoPepper"_s); break;
+			case WeaponType::Electro: async_await RequestMetadataAsync("Object/Crate/AmmoElectro"_s); break;
+			//case WeaponType::Thunderbolt: TODO
+			default: async_await RequestMetadataAsync("Object/Crate/Generic"_s); break;
 		}
+
+		SetAnimation(AnimState::Idle);
 
 		async_return true;
 	}
@@ -101,8 +113,8 @@ namespace Jazz2::Actors::Solid
 				AddContent(EventType::Ammo, 1, &weaponType, sizeof(weaponType));
 			}
 
-			CreateSpriteDebris("CrateShrapnel1"_s, 3);
-			CreateSpriteDebris("CrateShrapnel2"_s, 2);
+			CreateSpriteDebris((AnimState)1, 3);
+			CreateSpriteDebris((AnimState)2, 2);
 
 			_frozenTimeLeft = std::min(1.0f, _frozenTimeLeft);
 			SetTransition(AnimState::TransitionDeath, false, [this, collider]() {
@@ -111,8 +123,8 @@ namespace Jazz2::Actors::Solid
 			SpawnContent();
 			return true;
 		} else {
-			CreateSpriteDebris("CrateAmmoShrapnel1"_s, 3);
-			CreateSpriteDebris("CrateAmmoShrapnel2"_s, 2);
+			CreateSpriteDebris((AnimState)1, 3);
+			CreateSpriteDebris((AnimState)2, 2);
 
 			return GenericContainer::OnPerish(collider);
 		}

@@ -65,7 +65,7 @@ namespace Jazz2::Actors::Solid
 			case BridgeType::Lab: async_await RequestMetadataAsync("Bridge/Lab"_s); _widths = PieceWidthsLab; _widthsCount = countof(PieceWidthsLab); _widthOffset = 12; break;
 		}
 
-		SetAnimation("Piece"_s);
+		SetAnimation(AnimState::Default);
 
 		int widthCovered = _widths[0] / 2 - _widthOffset;
 		for (int i = 0; widthCovered <= _bridgeWidth + 4; i++) {

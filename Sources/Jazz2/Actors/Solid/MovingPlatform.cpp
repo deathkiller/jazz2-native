@@ -63,7 +63,7 @@ namespace Jazz2::Actors::Solid
 			case PlatformType::SpikeBall: async_await RequestMetadataAsync("MovingPlatform/SpikeBall"_s); break;
 		}
 
-		SetAnimation("Platform"_s);
+		SetAnimation((AnimState)0);
 
 		for (int i = 0; i < length; i++) {
 			ChainPiece& piece = _pieces.emplace_back();
@@ -209,9 +209,9 @@ namespace Jazz2::Actors::Solid
 	bool MovingPlatform::OnDraw(RenderQueue& renderQueue)
 	{
 		if (!_pieces.empty()) {
-			auto it = _metadata->Graphics.find(String::nullTerminatedView("Chain"_s));
-			if (it != _metadata->Graphics.end()) {
-				auto& chainAnim = it->second;
+			AnimationCandidate candidates[5];
+			if (FindAnimationCandidates((AnimState)1, candidates) > 0) {
+				auto& chainAnim = *candidates[0].Resource;
 				Vector2i texSize = chainAnim.Base->TextureDiffuse->size();
 
 				for (int i = 0; i < _pieces.size(); i++) {

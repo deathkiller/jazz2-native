@@ -90,10 +90,8 @@ namespace Jazz2
 		TransitionAttack = 0x4F000001,
 		TransitionAttackEnd = 0x4F000002,
 
-		// Alias for setting transition by name instead by AnimState
-		TransitionByName = -2,
-
 		Uninitialized = -1,
+		Default = 0
 	};
 
 	DEFINE_ENUM_OPERATORS(AnimState);

@@ -22,14 +22,7 @@ namespace Jazz2::Actors::Environment
 		uint8_t theme = details.Params[0];
 
 		async_await RequestMetadataAsync("Object/Moth"_s);
-
-		switch (theme) {
-			default:
-			case 0: SetAnimation("Pink"_s); break;
-			case 1: SetAnimation("Gray"_s); break;
-			case 2: SetAnimation("Green"_s); break;
-			case 3: SetAnimation("Purple"_s); break;
-		}
+		SetAnimation((AnimState)theme);
 
 		_renderer.AnimPaused = true;
 

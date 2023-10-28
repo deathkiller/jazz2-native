@@ -15,7 +15,20 @@ namespace Jazz2::Actors::Solid
 
 	void PowerUpWeaponMonitor::Preload(const ActorActivationDetails& details)
 	{
-		PreloadMetadataAsync("Object/PowerUpMonitor"_s);
+		WeaponType weaponType = (WeaponType)details.Params[0];
+		switch (weaponType) {
+			case WeaponType::Blaster: PreloadMetadataAsync("Object/PowerUp/Blaster"_s); break;
+			case WeaponType::Bouncer: PreloadMetadataAsync("Object/PowerUp/Bouncer"_s); break;
+			case WeaponType::Freezer: PreloadMetadataAsync("Object/PowerUp/Freezer"_s); break;
+			case WeaponType::Seeker: PreloadMetadataAsync("Object/PowerUp/Seeker"_s); break;
+			case WeaponType::RF: PreloadMetadataAsync("Object/PowerUp/RF"_s); break;
+			case WeaponType::Toaster: PreloadMetadataAsync("Object/PowerUp/Toaster"_s); break;
+			//case WeaponType::TNT: TODO
+			case WeaponType::Pepper: PreloadMetadataAsync("Object/PowerUp/Pepper"_s); break;
+			case WeaponType::Electro: PreloadMetadataAsync("Object/PowerUp/Electro"_s); break;
+			//case WeaponType::Thunderbolt: TODO
+			default: PreloadMetadataAsync("Object/PowerUp/Empty"_s); break;
+		}
 	}
 
 	Task<bool> PowerUpWeaponMonitor::OnActivatedAsync(const ActorActivationDetails& details)
@@ -25,30 +38,31 @@ namespace Jazz2::Actors::Solid
 		SetState(ActorState::TriggersTNT, true);
 		Movable = true;
 
-		async_await RequestMetadataAsync("Object/PowerUpMonitor"_s);
-
 		switch (_weaponType) {
-			default:
-			case WeaponType::Blaster: {
-				auto& players = _levelHandler->GetPlayers();
-				PlayerType playerType = (!players.empty() ? players[0]->GetPlayerType() : PlayerType::Jazz);
-				switch (playerType) {
-					default:
-					case PlayerType::Jazz: SetAnimation("BlasterJazz"_s); break;
-					case PlayerType::Spaz: SetAnimation("BlasterSpaz"_s); break;
-					case PlayerType::Lori: SetAnimation("BlasterLori"_s); break;
-				}
-				break;
+			case WeaponType::Blaster: async_await RequestMetadataAsync("Object/PowerUp/Blaster"_s); break;
+			case WeaponType::Bouncer: async_await RequestMetadataAsync("Object/PowerUp/Bouncer"_s); break;
+			case WeaponType::Freezer: async_await RequestMetadataAsync("Object/PowerUp/Freezer"_s); break;
+			case WeaponType::Seeker: async_await RequestMetadataAsync("Object/PowerUp/Seeker"_s); break;
+			case WeaponType::RF: async_await RequestMetadataAsync("Object/PowerUp/RF"_s); break;
+			case WeaponType::Toaster: async_await RequestMetadataAsync("Object/PowerUp/Toaster"_s); break;
+			//case WeaponType::TNT: TODO
+			case WeaponType::Pepper: async_await RequestMetadataAsync("Object/PowerUp/Pepper"_s); break;
+			case WeaponType::Electro: async_await RequestMetadataAsync("Object/PowerUp/Electro"_s); break;
+			//case WeaponType::Thunderbolt: TODO
+			default: async_await RequestMetadataAsync("Object/PowerUp/Empty"_s); break;
+		}
+
+		if (_weaponType == WeaponType::Blaster) {
+			auto& players = _levelHandler->GetPlayers();
+			PlayerType playerType = (!players.empty() ? players[0]->GetPlayerType() : PlayerType::Jazz);
+			switch (playerType) {
+				case PlayerType::Jazz: 
+				case PlayerType::Spaz:
+				case PlayerType::Lori: SetAnimation((AnimState)playerType); break;
+				default: SetAnimation((AnimState)PlayerType::Jazz); break;
 			}
-			case WeaponType::Bouncer: SetAnimation("Bouncer"_s); break;
-			case WeaponType::Freezer: SetAnimation("Freezer"_s); break;
-			case WeaponType::Seeker:SetAnimation("Seeker"_s); break;
-			case WeaponType::RF: SetAnimation("RF"_s); break;
-			case WeaponType::Toaster: SetAnimation("Toaster"_s); break;
-			case WeaponType::TNT:SetAnimation("TNT"_s); break;
-			case WeaponType::Pepper: SetAnimation("Pepper"_s); break;
-			case WeaponType::Electro: SetAnimation("Electro"_s); break;
-			case WeaponType::Thunderbolt: SetAnimation("Thunderbolt"_s); break;
+		} else {
+			SetAnimation(AnimState::Default);
 		}
 
 		async_return true;

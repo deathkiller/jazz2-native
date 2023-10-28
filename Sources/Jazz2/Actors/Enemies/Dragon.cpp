@@ -136,7 +136,7 @@ namespace Jazz2::Actors::Enemies
 		SetFacingLeft(details.Params[0] != 0);
 
 		async_await RequestMetadataAsync("Weapon/Toaster"_s);
-		SetAnimation("Fire"_s);
+		SetAnimation(AnimState::Default);
 
 		constexpr float BaseSpeed = 1.6f;
 		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * (BaseSpeed + Random().NextFloat(0.0f, 0.2f));

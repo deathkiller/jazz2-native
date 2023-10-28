@@ -10,10 +10,12 @@
 			"States": [ 1 ]
 		},
 		"Bone": {
-			"Path": "Skeleton/bone.aura"
+			"Path": "Skeleton/bone.aura",
+			"States": [ 2 ]
 		},
 		"Skull": {
-			"Path": "Skeleton/skull.aura"
+			"Path": "Skeleton/skull.aura",
+			"States": [ 3 ]
 		}
 	}
 }

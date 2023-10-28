@@ -170,7 +170,6 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		r = engine->RegisterObjectMethod(AsClassNameInternal, "void TryStandardMovement(float)", asMETHOD(ScriptActorWrapper, asTryStandardMovement), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod(AsClassNameInternal, "void RequestMetadata(const string &in)", asMETHOD(ScriptActorWrapper, asRequestMetadata), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod(AsClassNameInternal, "void PlaySfx(const string &in, float, float)", asMETHOD(ScriptActorWrapper, asPlaySfx), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod(AsClassNameInternal, "void SetAnimation(const string &in)", asMETHOD(ScriptActorWrapper, asSetAnimation), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 		r = engine->RegisterObjectMethod(AsClassNameInternal, "void SetAnimation(int)", asMETHOD(ScriptActorWrapper, asSetAnimationState), asCALL_THISCALL); RETURN_ASSERT(r >= 0);
 
 		r = module->AddScriptSection("__" AsClassName, AsLibrary, countof(AsLibrary) - 1, 0); RETURN_ASSERT(r >= 0);
@@ -595,11 +594,6 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 	void ScriptActorWrapper::asPlaySfx(const String& identifier, float gain, float pitch)
 	{
 		PlaySfx(identifier, gain, pitch);
-	}
-
-	void ScriptActorWrapper::asSetAnimation(const String& identifier)
-	{
-		SetAnimation(identifier);
 	}
 
 	void ScriptActorWrapper::asSetAnimationState(int state)

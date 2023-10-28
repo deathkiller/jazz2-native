@@ -18,7 +18,7 @@ namespace Jazz2::Actors::Environment
 
 		async_await RequestMetadataAsync("Object/SignEol"_s);
 
-		SetAnimation("SignEol"_s);
+		SetAnimation(AnimState::Default);
 
 		async_return true;
 	}

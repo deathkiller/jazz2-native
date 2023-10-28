@@ -37,7 +37,7 @@ namespace Jazz2::Actors::Environment
 			case 2: async_await RequestMetadataAsync("Enemy/LizardFloatXmas"_s); break;
 		}
 
-		SetAnimation("Bomb"_s);
+		SetAnimation((AnimState)2);
 
 		async_return true;
 	}

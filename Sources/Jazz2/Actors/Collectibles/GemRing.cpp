@@ -93,8 +93,8 @@ namespace Jazz2::Actors::Collectibles
 	bool GemRing::OnDraw(RenderQueue& renderQueue)
 	{
 		if (!_pieces.empty()) {
-			auto it = _metadata->Graphics.find(String::nullTerminatedView("GemRed"_s));
-			if (it != _metadata->Graphics.end()) {
+			auto it = _metadata->Animations.find(String::nullTerminatedView("GemRed"_s));
+			if (it != _metadata->Animations.end()) {
 				auto& chainAnim = it->second;
 				Vector2i texSize = chainAnim.Base->TextureDiffuse->size();
 

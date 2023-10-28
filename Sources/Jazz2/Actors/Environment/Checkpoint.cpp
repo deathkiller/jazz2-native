@@ -37,13 +37,12 @@ namespace Jazz2::Actors::Environment
 			default:
 				async_await RequestMetadataAsync("Object/Checkpoint"_s);
 				break;
-
 			case 1: // Xmas
 				async_await RequestMetadataAsync("Object/CheckpointXmas"_s);
 				break;
 		}
 
-		SetAnimation(_activated ? "Opened"_s : "Closed"_s);
+		SetAnimation((AnimState)(_activated ? 1 : 0));
 
 		if (GetState(ActorState::ApplyGravitation)) {
 			OnUpdateHitbox();
@@ -75,7 +74,7 @@ namespace Jazz2::Actors::Environment
 		if (auto player = dynamic_cast<Player*>(other.get())) {
 			_activated = true;
 
-			SetAnimation("Opened"_s);
+			SetAnimation((AnimState)1);
 			SetTransition(AnimState::TransitionActivate, false);
 
 			PlaySfx("TransitionActivate"_s);

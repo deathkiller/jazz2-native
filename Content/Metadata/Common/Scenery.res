@@ -3,10 +3,12 @@
 
 	"Animations": {
 		"Snow": {
-			"Path": "Common/snow.aura"
+			"Path": "Common/snow.aura",
+			"States": [ 0 ]
 		},
 		"Rain": {
-			"Path": "Common/rain.aura"
+			"Path": "Common/rain.aura",
+			"States": [ 1 ]
 		}
 	},
 

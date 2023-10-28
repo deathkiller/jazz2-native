@@ -3,8 +3,7 @@
 
 	"Animations": {
 		"Idle": {
-			"Path": "Turtle/shell_reverse.aura",
-			"States": [ 0 ]
+			"Path": "Turtle/shell_reverse.aura"
 		}
 	},
 

@@ -21,7 +21,7 @@ namespace Jazz2::Actors::Environment
 
 		async_await RequestMetadataAsync("Object/Airboard"_s);
 
-		SetAnimation("Airboard"_s);
+		SetAnimation(AnimState::Default);
 
 		async_return true;
 	}

@@ -34,7 +34,7 @@ namespace Jazz2::Actors::Solid
 			case 1: async_await RequestMetadataAsync("Object/PushBoxCrate"); break;
 		}
 
-		SetAnimation("PushBox"_s);
+		SetAnimation(AnimState::Default);
 
 		async_return true;
 	}

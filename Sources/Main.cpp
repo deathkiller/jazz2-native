@@ -732,8 +732,8 @@ void GameEventHandler::RefreshCache()
 
 			WriteCacheDescriptor(cachePath, currentVersion, animsModified);
 
-			LOGI("Pruning binary shader cache...");
-			RenderResources::binaryShaderCache().prune();
+			std::uint32_t filesRemoved = RenderResources::binaryShaderCache().prune();
+			LOGI("Pruning binary shader cache (removed %u files)...", filesRemoved);
 		} else {
 			LOGI("Cache is already up-to-date");
 		}
@@ -768,8 +768,8 @@ RecreateCache:
 	std::int64_t animsModified = fs::GetLastModificationTime(animsPath).GetValue();
 	WriteCacheDescriptor(cachePath, currentVersion, animsModified);
 
-	LOGI("Pruning binary shader cache...");
-	RenderResources::binaryShaderCache().prune();
+	std::uint32_t filesRemoved = RenderResources::binaryShaderCache().prune();
+	LOGI("Pruning binary shader cache (removed %u files)...", filesRemoved);
 
 	_flags |= Flags::IsVerified | Flags::IsPlayable;
 }
@@ -998,6 +998,7 @@ void GameEventHandler::RefreshCacheLevels()
 	}
 
 	// Convert only used tilesets
+	LOGI("Converting used tilesets...");
 	String tilesetsPath = fs::CombinePath(resolver.GetCachePath(), "Tilesets"_s);
 	fs::RemoveDirectoryRecursive(tilesetsPath);
 	fs::CreateDirectories(tilesetsPath);

@@ -57,7 +57,7 @@ namespace Jazz2::Actors::Solid
 			SetState(ActorState::IsSolidObject, true);
 		}
 
-		SetAnimation("Pole"_s);
+		SetAnimation(AnimState::Default);
 
 		async_return true;
 	}

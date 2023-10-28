@@ -369,8 +369,8 @@ namespace Jazz2
 
 					WeatherType realWeatherType = (_weatherType & ~WeatherType::OutdoorsOnly);
 					if (realWeatherType == WeatherType::Rain) {
-						auto it = _commonResources->Graphics.find(String::nullTerminatedView("Rain"_s));
-						if (it != _commonResources->Graphics.end()) {
+						auto it = _commonResources->Animations.find(String::nullTerminatedView("Rain"_s));
+						if (it != _commonResources->Animations.end()) {
 							auto& resBase = it->second.Base;
 							Vector2i texSize = resBase->TextureDiffuse->size();
 							float scale = Random().FastFloat(0.4f, 1.1f);
@@ -407,8 +407,8 @@ namespace Jazz2
 							_tileMap->CreateDebris(debris);
 						}
 					} else {
-						auto it = _commonResources->Graphics.find(String::nullTerminatedView("Snow"_s));
-						if (it != _commonResources->Graphics.end()) {
+						auto it = _commonResources->Animations.find(String::nullTerminatedView("Snow"_s));
+						if (it != _commonResources->Animations.end()) {
 							auto& resBase = it->second.Base;
 							Vector2i texSize = resBase->TextureDiffuse->size();
 							float scale = Random().FastFloat(0.4f, 1.1f);
@@ -720,7 +720,7 @@ namespace Jazz2
 		auto it = _commonResources->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _commonResources->Sounds.end()) {
 			int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int32_t)it->second.Buffers.size()) : 0);
-			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(it->second.Buffers[idx].get()));
+			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(&it->second.Buffers[idx]->Buffer));
 			player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
 			player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
 
@@ -1084,7 +1084,7 @@ namespace Jazz2
 		auto it = _commonResources->Sounds.find(String::nullTerminatedView("SugarRush"_s));
 		if (it != _commonResources->Sounds.end()) {
 			int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int32_t)it->second.Buffers.size()) : 0);
-			_sugarRushMusic = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(it->second.Buffers[idx].get()));
+			_sugarRushMusic = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(&it->second.Buffers[idx]->Buffer));
 			_sugarRushMusic->setPosition(Vector3f(0.0f, 0.0f, 100.0f));
 			_sugarRushMusic->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
 			_sugarRushMusic->setSourceRelative(true);

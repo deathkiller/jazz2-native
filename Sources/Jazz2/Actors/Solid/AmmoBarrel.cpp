@@ -93,10 +93,10 @@ namespace Jazz2::Actors::Solid
 
 		CreateParticleDebris();
 
-		CreateSpriteDebris("BarrelShrapnel1"_s, 3);
-		CreateSpriteDebris("BarrelShrapnel2"_s, 3);
-		CreateSpriteDebris("BarrelShrapnel3"_s, 2);
-		CreateSpriteDebris("BarrelShrapnel4"_s, 1);
+		CreateSpriteDebris((AnimState)1, 3);
+		CreateSpriteDebris((AnimState)2, 3);
+		CreateSpriteDebris((AnimState)3, 2);
+		CreateSpriteDebris((AnimState)4, 1);
 
 		return GenericContainer::OnPerish(collider);
 	}
