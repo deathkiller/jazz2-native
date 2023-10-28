@@ -21,22 +21,19 @@ namespace Jazz2::Actors::Collectibles
 			default:
 			case 0: // Red (+1)
 				_scoreValue = 100;
-				SetAnimation("GemRed"_s);
 				break;
 			case 1: // Green (+5)
 				_scoreValue = 500;
-				SetAnimation("GemGreen"_s);
 				break;
 			case 2: // Blue (+10)
 				_scoreValue = 1000;
-				SetAnimation("GemBlue"_s);
 				break;
 			case 3: // Purple
 				_scoreValue = 100;
-				SetAnimation("GemPurple"_s);
 				break;
 		}
 
+		SetAnimation((AnimState)_gemType);
 		SetFacingDirection();
 
 		_renderer.setAlphaF(0.7f);

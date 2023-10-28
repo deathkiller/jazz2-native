@@ -14,23 +14,20 @@ namespace Jazz2::Actors::Collectibles
 		async_await CollectibleBase::OnActivatedAsync(details);
 
 		uint8_t coinType = details.Params[0];
-
-		async_await RequestMetadataAsync("Collectible/Coins"_s);
-
 		switch (coinType) {
 			default:
 			case 0: // Silver
 				_coinValue = 1;
 				_scoreValue = 500;
-				SetAnimation("CoinSilver"_s);
 				break;
 			case 1: // Gold
 				_coinValue = 5;
 				_scoreValue = 1000;
-				SetAnimation("CoinGold"_s);
 				break;
 		}
 
+		async_await RequestMetadataAsync("Collectible/Coins"_s);
+		SetAnimation((AnimState)coinType);
 		SetFacingDirection();
 
 		async_return true;

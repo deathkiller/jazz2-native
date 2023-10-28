@@ -26,7 +26,7 @@ namespace Jazz2::Actors::Environment
 		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::ApplyGravitation, false);
 
 		async_await RequestMetadataAsync("Object/IceBlock"_s);
-		SetAnimation("IceBlock"_s);
+		SetAnimation(AnimState::Default);
 
 		_renderer.Initialize(ActorRendererType::FrozenMask);
 

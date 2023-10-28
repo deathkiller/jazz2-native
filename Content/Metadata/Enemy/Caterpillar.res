@@ -36,7 +36,8 @@
 
 		"Smoke": {
 			"Path": "Caterpillar/smoke.aura",
-			"FrameRate": 5
+			"FrameRate": 5,
+			"States": [ 7 ]
 		}
 	},
 	"Sounds": {

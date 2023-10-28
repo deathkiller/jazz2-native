@@ -157,7 +157,7 @@ namespace Jazz2::UI::Menu
 		std::unique_ptr<MenuClippedCanvas> _canvasClipped;
 		std::unique_ptr<MenuOverlayCanvas> _canvasOverlay;
 		ActiveCanvas _activeCanvas;
-		HashMap<String, GraphicResource>* _graphics;
+		HashMap<String, GraphicResource>* _animations;
 		Font* _smallFont;
 		Font* _mediumFont;
 

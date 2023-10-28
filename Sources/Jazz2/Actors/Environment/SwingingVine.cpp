@@ -32,7 +32,7 @@ namespace Jazz2::Actors::Environment
 
 		async_await RequestMetadataAsync("Object/SwingingVine"_s);
 
-		SetAnimation("Vine"_s);
+		SetAnimation(AnimState::Default);
 
 		_renderer.AnimPaused = true;
 

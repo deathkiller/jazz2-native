@@ -17,7 +17,7 @@ namespace Jazz2::Actors::Collectibles
 
 		async_await RequestMetadataAsync("Collectible/CarrotInvincible"_s);
 
-		SetAnimation("Carrot"_s);
+		SetAnimation(AnimState::Default);
 		SetFacingDirection();
 
 		async_return true;

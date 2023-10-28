@@ -289,13 +289,10 @@ namespace Jazz2::Actors
 		void HandleFrozenStateChange(ActorBase* shot);
 
 		void CreateParticleDebris();
-		void CreateSpriteDebris(const StringView& identifier, int count);
+		void CreateSpriteDebris(AnimState state, int count);
 
 		std::shared_ptr<AudioBufferPlayer> PlaySfx(const StringView& identifier, float gain = 1.0f, float pitch = 1.0f);
-		void SetAnimation(const StringView& identifier);
 		bool SetAnimation(AnimState state);
-		bool SetTransition(const StringView& identifier, bool cancellable, const std::function<void()>& callback = nullptr);
-		bool SetTransition(const StringView& identifier, bool cancellable, std::function<void()>&& callback);
 		bool SetTransition(AnimState state, bool cancellable, const std::function<void()>& callback = nullptr);
 		bool SetTransition(AnimState state, bool cancellable, std::function<void()>&& callback);
 		void CancelTransition();
@@ -333,13 +330,12 @@ namespace Jazz2::Actors
 				}
 				void await_resume() { }
 			};
-			return awaitable { this, path };
+			return awaitable{this, path};
 		}
 #else
 		void RequestMetadataAsync(const StringView& path)
 		{
-			auto metadata = ContentResolver::Get().RequestMetadata(path);
-			_metadata = metadata;
+			_metadata = ContentResolver::Get().RequestMetadata(path);
 		}
 #endif
 
@@ -358,9 +354,7 @@ namespace Jazz2::Actors
 		}
 
 	private:
-		/// Deleted copy constructor
 		ActorBase(const ActorBase&) = delete;
-		/// Deleted assignment operator
 		ActorBase& operator=(const ActorBase&) = delete;
 
 		ActorState _state;

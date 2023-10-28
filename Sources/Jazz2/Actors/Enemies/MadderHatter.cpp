@@ -108,8 +108,8 @@ namespace Jazz2::Actors::Enemies
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
 		if (_frozenTimeLeft <= 0.0f) {
-			CreateSpriteDebris("Cup"_s, 1);
-			CreateSpriteDebris("Hat"_s, 1);
+			CreateSpriteDebris((AnimState)2, 1); // Cup
+			CreateSpriteDebris((AnimState)3, 1); // Hat
 		}
 
 		TryGenerateRandomDrop();

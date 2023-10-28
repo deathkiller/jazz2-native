@@ -31,7 +31,7 @@ namespace Jazz2::Actors::Solid
 
 		async_await RequestMetadataAsync("Object/TriggerCrate"_s);
 
-		SetAnimation("Crate"_s);
+		SetAnimation(AnimState::Default);
 
 		async_return true;
 	}

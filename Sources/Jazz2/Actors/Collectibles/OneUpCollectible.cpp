@@ -15,7 +15,7 @@ namespace Jazz2::Actors::Collectibles
 
 		async_await RequestMetadataAsync("Collectible/OneUp"_s);
 
-		SetAnimation("OneUp"_s);
+		SetAnimation(AnimState::Default);
 
 		async_return true;
 	}

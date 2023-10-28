@@ -291,8 +291,8 @@ namespace Jazz2::Actors
 
 					auto tilemap = _levelHandler->TileMap();
 					if (tilemap != nullptr) {
-						auto it = _metadata->Graphics.find(String::nullTerminatedView("Shield"_s));
-						if (it != _metadata->Graphics.end()) {
+						auto it = _metadata->Animations.find(String::nullTerminatedView("Shield"_s));
+						if (it != _metadata->Animations.end()) {
 							Vector2i texSize = it->second.Base->TextureDiffuse->size();
 							Vector2i size = it->second.Base->FrameDimensions;
 
@@ -438,8 +438,8 @@ namespace Jazz2::Actors
 
 					auto tilemap = _levelHandler->TileMap();
 					if (tilemap != nullptr) {
-						auto it = _metadata->Graphics.find(String::nullTerminatedView("SugarRush"_s));
-						if (it != _metadata->Graphics.end()) {
+						auto it = _metadata->Animations.find(String::nullTerminatedView("SugarRush"_s));
+						if (it != _metadata->Animations.end()) {
 							Vector2i texSize = it->second.Base->TextureDiffuse->size();
 							Vector2i size = it->second.Base->FrameDimensions;
 							Vector2i frameConf = it->second.Base->FrameConfiguration;
@@ -972,8 +972,8 @@ namespace Jazz2::Actors
 	{
 		switch (_activeShield) {
 			case ShieldType::Fire: {
-				auto it = _metadata->Graphics.find(String::nullTerminatedView("ShieldFire"_s));
-				if (it != _metadata->Graphics.end()) {
+				auto it = _metadata->Animations.find(String::nullTerminatedView("ShieldFire"_s));
+				if (it != _metadata->Animations.end()) {
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
 
@@ -1043,8 +1043,8 @@ namespace Jazz2::Actors
 				break;
 			}
 			case ShieldType::Water: {
-				auto it = _metadata->Graphics.find(String::nullTerminatedView("ShieldWater"_s));
-				if (it != _metadata->Graphics.end()) {
+				auto it = _metadata->Animations.find(String::nullTerminatedView("ShieldWater"_s));
+				if (it != _metadata->Animations.end()) {
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
 
@@ -1090,8 +1090,8 @@ namespace Jazz2::Actors
 				break;
 			}
 			case ShieldType::Lightning: {
-				auto it = _metadata->Graphics.find(String::nullTerminatedView("ShieldLightning"_s));
-				if (it != _metadata->Graphics.end()) {
+				auto it = _metadata->Animations.find(String::nullTerminatedView("ShieldLightning"_s));
+				if (it != _metadata->Animations.end()) {
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
 
@@ -1615,7 +1615,7 @@ namespace Jazz2::Actors
 					constexpr StringView IdleBored[] = {
 						"IdleBored1"_s, "IdleBored2"_s, "IdleBored3"_s, "IdleBored4"_s, "IdleBored5"_s
 					};
-					int maxIdx;
+					std::int32_t maxIdx;
 					switch (_playerType) {
 						case PlayerType::Jazz: maxIdx = 5; break;
 						case PlayerType::Spaz: maxIdx = 4; break;
@@ -1623,8 +1623,8 @@ namespace Jazz2::Actors
 						default: maxIdx = 0; break;
 					}
 					if (maxIdx > 0) {
-						int selectedIdx = Random().Fast(0, maxIdx);
-						if (SetTransition(IdleBored[selectedIdx], true)) {
+						std::int32_t selectedIdx = Random().Fast(0, maxIdx);
+						if (SetTransition((AnimState)(536870944 + selectedIdx), true)) {
 							PlaySfx(IdleBored[selectedIdx]);
 						}
 					}
@@ -2230,7 +2230,7 @@ namespace Jazz2::Actors
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _metadata->Sounds.end()) {
 			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
-			return _levelHandler->PlaySfx(it->second.Buffers[idx].get(), Vector3f(0.0f, 0.0f, 0.0f), true, gain, pitch);
+			return _levelHandler->PlaySfx(&it->second.Buffers[idx]->Buffer, Vector3f(0.0f, 0.0f, 0.0f), true, gain, pitch);
 		} else {
 			return nullptr;
 		}

@@ -10,6 +10,7 @@ set(SOURCES
 	${NCINE_SOURCE_DIR}/Shared/IO/FileStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/FileSystem.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/MemoryStream.cpp
+	${NCINE_SOURCE_DIR}/Shared/IO/Stream.cpp
 )
 
 list(APPEND SOURCES

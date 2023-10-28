@@ -116,14 +116,9 @@ namespace Jazz2::Actors::Bosses
 	{
 		EnemyBase::OnHealthChanged(collider);
 
-		constexpr StringView Shrapnels[] = {
-			"Shrapnel1"_s, "Shrapnel2"_s, "Shrapnel3"_s,
-			"Shrapnel4"_s, "Shrapnel5"_s, "Shrapnel6"_s,
-			"Shrapnel7"_s, "Shrapnel8"_s, "Shrapnel9"_s
-		};
-		int n = Random().Next(1, 4);
-		for (int i = 0; i < n; i++) {
-			CreateSpriteDebris(Shrapnels[Random().Fast(0, countof(Shrapnels))], 1);
+		std::int32_t n = Random().Next(1, 4);
+		for (std::int32_t i = 0; i < n; i++) {
+			CreateSpriteDebris((AnimState)Random().Fast(100, 109), 1);
 		}
 
 		PlaySfx("Shrapnel"_s);
@@ -133,13 +128,8 @@ namespace Jazz2::Actors::Bosses
 	{
 		CreateParticleDebris();
 
-		constexpr StringView Shrapnels[] = {
-			"Shrapnel1"_s, "Shrapnel2"_s, "Shrapnel3"_s,
-			"Shrapnel4"_s, "Shrapnel5"_s, "Shrapnel6"_s,
-			"Shrapnel7"_s, "Shrapnel8"_s, "Shrapnel9"_s
-		};
-		for (int i = 0; i < 8; i++) {
-			CreateSpriteDebris(Shrapnels[Random().Fast(0, countof(Shrapnels))], 1);
+		for (std::int32_t i = 0; i < 8; i++) {
+			CreateSpriteDebris((AnimState)Random().Fast(100, 109), 1);
 		}
 
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));

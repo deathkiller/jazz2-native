@@ -387,6 +387,15 @@ namespace Death::IO
 	String FileSystem::_savePath;
 
 	FileSystem::Directory::Directory(const StringView& path, EnumerationOptions options)
+		: _fileNamePart(nullptr)
+#if defined(DEATH_TARGET_WINDOWS)
+			, _firstFile(true), _hFindFile(NULL)
+#else
+#	if defined(DEATH_TARGET_ANDROID)
+			, _assetDir(nullptr)
+#	endif
+			, _dirStream(nullptr)
+#endif
 	{
 		Open(path, options);
 	}
@@ -451,31 +460,31 @@ namespace Death::IO
 		return (_hFindFile != NULL && _hFindFile != INVALID_HANDLE_VALUE);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
+		if (!nullTerminatedPath.empty()) {
 #	if defined(DEATH_TARGET_ANDROID)
-		const char* assetPath = AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data());
-		if (assetPath != nullptr) {
-			// It probably supports only files
-			if ((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles) {
+			const char* assetPath = AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data());
+			if (assetPath != nullptr) {
+				// It probably supports only files
+				if ((_options & EnumerationOptions::SkipFiles) != EnumerationOptions::SkipFiles) {
+					_assetDir = AndroidAssetStream::OpenDirectory(assetPath);
+					if (_assetDir != nullptr) {
+						std::size_t pathLength = path.size();
+						std::memcpy(_path, path.data(), pathLength);
+						if (_path[pathLength - 1] == '/' || _path[pathLength - 1] == '\\') {
+							_path[pathLength - 1] = '/';
+							_path[pathLength] = '\0';
+							_fileNamePart = _path + pathLength;
+						} else {
+							_path[pathLength] = '/';
+							_path[pathLength + 1] = '\0';
+							_fileNamePart = _path + pathLength + 1;
+						}
+						return true;
+					}
+				}
 				return false;
 			}
-			_assetDir = AndroidAssetStream::OpenDirectory(assetPath);
-			if (_assetDir != nullptr) {
-				std::size_t pathLength = path.size();
-				std::memcpy(_path, path.data(), pathLength);
-				if (_path[pathLength - 1] == '/' || _path[pathLength - 1] == '\\') {
-					_path[pathLength - 1] = '/';
-					_path[pathLength] = '\0';
-					_fileNamePart = _path + pathLength;
-				} else {
-					_path[pathLength] = '/';
-					_path[pathLength + 1] = '\0';
-					_fileNamePart = _path + pathLength + 1;
-				}
-				return true;
-			}
-		} else
 #	endif
-		if (!nullTerminatedPath.empty()) {
 			_dirStream = ::opendir(nullTerminatedPath.data());
 			if (_dirStream != nullptr) {
 				String absPath = GetAbsolutePath(path);

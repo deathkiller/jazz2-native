@@ -3,8 +3,7 @@
 
 	"Animations": {
 		"Idle": {
-			"Path": "TurtleBoss/shell.aura",
-			"States": [ 0 ]
+			"Path": "TurtleBoss/shell.aura"
 		}
 	},
 

@@ -28,7 +28,7 @@ namespace Jazz2::Actors
 				break;
 		}
 
-		SetAnimation("Corpse"_s);
+		SetAnimation((AnimState)536870912);
 
 		async_return true;
 	}

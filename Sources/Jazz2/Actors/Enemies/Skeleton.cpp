@@ -65,7 +65,7 @@ namespace Jazz2::Actors::Enemies
 
 	void Skeleton::OnHealthChanged(ActorBase* collider)
 	{
-		CreateSpriteDebris("Bone"_s, Random().Next(1, 3));
+		CreateSpriteDebris((AnimState)2, Random().Next(1, 3)); // Bone
 
 		EnemyBase::OnHealthChanged(collider);
 	}
@@ -78,8 +78,8 @@ namespace Jazz2::Actors::Enemies
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
 		if (_frozenTimeLeft <= 0.0f) {
-			CreateSpriteDebris("Skull"_s, 1);
-			CreateSpriteDebris("Bone"_s, Random().Next(9, 12));
+			CreateSpriteDebris((AnimState)2, Random().Next(9, 12)); // Bone
+			CreateSpriteDebris((AnimState)2, 1); // Skull
 		}
 
 		TryGenerateRandomDrop();

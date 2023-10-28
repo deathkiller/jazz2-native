@@ -45,7 +45,7 @@ namespace Jazz2::Actors::Collectibles
 			case WeaponType::Thunderbolt: async_await RequestMetadataAsync("Collectible/AmmoThunderbolt"_s); break;
 		}
 
-		SetAnimation("Ammo"_s);
+		SetAnimation(AnimState::Default);
 
 		SetFacingDirection();
 

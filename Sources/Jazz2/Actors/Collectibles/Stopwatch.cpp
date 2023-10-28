@@ -15,7 +15,7 @@ namespace Jazz2::Actors::Collectibles
 
 		async_await RequestMetadataAsync("Collectible/Stopwatch"_s);
 
-		SetAnimation("Stopwatch"_s);
+		SetAnimation(AnimState::Default);
 		SetFacingDirection();
 
 		async_return true;

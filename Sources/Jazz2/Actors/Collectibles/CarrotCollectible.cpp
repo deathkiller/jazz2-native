@@ -24,7 +24,7 @@ namespace Jazz2::Actors::Collectibles
 			_scoreValue = 200;
 			async_await RequestMetadataAsync("Collectible/Carrot"_s);
 		}
-		SetAnimation("Carrot"_s);
+		SetAnimation(AnimState::Default);
 		SetFacingDirection();
 
 		async_return true;

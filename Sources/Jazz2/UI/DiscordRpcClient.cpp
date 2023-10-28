@@ -75,7 +75,7 @@ namespace Jazz2::UI
 			return true;
 		}
 
-		constexpr StringView RpcPaths[] = {
+		static const StringView RpcPaths[] = {
 			"%s/discord-ipc-%i"_s,
 			"%s/app/com.discordapp.Discord/discord-ipc-%i"_s,
 			"%s/snap.discord-canary/discord-ipc-%i"_s,
@@ -147,9 +147,8 @@ namespace Jazz2::UI
 			_hEventWrite = NULL;
 		}
 #else
-		int32_t sockFd = _sockFd;
+		int32_t sockFd = Interlocked::Exchange(&_sockFd, -1);
 		if (sockFd >= 0) {
-			_sockFd = -1;
 			_thread.Abort();
 			::close(sockFd);
 		}

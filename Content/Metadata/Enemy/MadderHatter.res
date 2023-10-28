@@ -27,10 +27,12 @@
 			"States": [ 1073741826 ]
 		},
 		"Cup": {
-			"Path": "MadderHatter/cup.aura"
+			"Path": "MadderHatter/cup.aura",
+			"States": [ 2 ]
 		},
 		"Hat": {
-			"Path": "MadderHatter/hat.aura"
+			"Path": "MadderHatter/hat.aura",
+			"States": [ 3 ]
 		}
 	},
 

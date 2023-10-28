@@ -332,12 +332,12 @@ namespace Jazz2::Compatibility
 			// TODO: Hardcoded name
 			bool applyToasterPowerUpFix = (entry->Category == "Object"_s && entry->Name == "powerup_upgrade_toaster"_s);
 			if (applyToasterPowerUpFix) {
-				LOGI("Applying \"Toaster PowerUp\" palette fix.");
+				LOGI("Applying \"Toaster PowerUp\" palette fix");
 			}
 
 			bool applyVineFix = (entry->Category == "Object" && entry->Name == "vine");
 			if (applyVineFix) {
-				LOGI("Applying \"Vine\" palette fix.");
+				LOGI("Applying \"Vine\" palette fix");
 			}
 
 			String filename;

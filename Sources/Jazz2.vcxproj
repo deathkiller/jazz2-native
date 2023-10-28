@@ -598,6 +598,7 @@
     <ClCompile Include="$(ExtensionLibraryPath)\IO\FileStream.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\IO\FileSystem.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\IO\MemoryStream.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\Stream.cpp" />
     <ClCompile Include="Jazz2\Actors\ActorBase.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.cpp" />

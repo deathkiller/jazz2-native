@@ -3,10 +3,12 @@
 
 	"Animations": {
 		"Platform": {
-			"Path": "Platform/spike.aura"
+			"Path": "Platform/spike.aura",
+			"States": [ 0 ]
 		},
 		"Chain": {
-			"Path": "Platform/spike_chain.aura"
+			"Path": "Platform/spike_chain.aura",
+			"States": [ 1 ]
 		}
 	}
 }

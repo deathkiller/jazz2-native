@@ -19,7 +19,7 @@ namespace Jazz2::Actors::Environment
 
 		async_await RequestMetadataAsync("Object/SteamNote"_s);
 
-		SetAnimation("SteamNote"_s);
+		SetAnimation(AnimState::Default);
 
 		PlaySfx("Appear"_s, 0.4f);
 

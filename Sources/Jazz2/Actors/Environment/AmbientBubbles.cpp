@@ -56,8 +56,8 @@ namespace Jazz2::Actors::Environment
 
 		auto tilemap = _levelHandler->TileMap();
 		if (tilemap != nullptr) {
-			auto it = _metadata->Graphics.find(String::nullTerminatedView("AmbientBubbles"_s));
-			if (it != _metadata->Graphics.end()) {
+			auto it = _metadata->Animations.find(String::nullTerminatedView("AmbientBubbles"_s));
+			if (it != _metadata->Animations.end()) {
 				Vector2i texSize = it->second.Base->TextureDiffuse->size();
 				Vector2i size = it->second.Base->FrameDimensions;
 				Vector2i frameConf = it->second.Base->FrameConfiguration;
