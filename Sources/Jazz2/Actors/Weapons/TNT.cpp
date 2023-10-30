@@ -14,6 +14,8 @@
 
 #include "../../../nCine/Base/Random.h"
 
+using namespace Jazz2::Tiles;
+
 namespace Jazz2::Actors::Weapons
 {
 	TNT::TNT()

@@ -155,6 +155,7 @@ list(APPEND HEADERS
 list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Common.h
 	${NCINE_SOURCE_DIR}/TermLogo.h
+	${NCINE_SOURCE_DIR}/Jazz2/AnimationLoopMode.h
 	${NCINE_SOURCE_DIR}/Jazz2/AnimState.h
 	${NCINE_SOURCE_DIR}/Jazz2/ContentResolver.h
 	${NCINE_SOURCE_DIR}/Jazz2/ContentResolver.Shaders.h
@@ -172,7 +173,9 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/PlayerActions.h
 	${NCINE_SOURCE_DIR}/Jazz2/PlayerType.h
 	${NCINE_SOURCE_DIR}/Jazz2/PreferencesCache.h
+	${NCINE_SOURCE_DIR}/Jazz2/Resources.h
 	${NCINE_SOURCE_DIR}/Jazz2/ShieldType.h
+	${NCINE_SOURCE_DIR}/Jazz2/SuspendType.h
 	${NCINE_SOURCE_DIR}/Jazz2/WeaponType.h
 	${NCINE_SOURCE_DIR}/Jazz2/WeatherType.h
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/ActorBase.h
@@ -309,6 +312,9 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/ScriptActorWrapper.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/ScriptLoader.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/ScriptPlayerWrapper.h
+	${NCINE_SOURCE_DIR}/Jazz2/Tiles/ITileMapOwner.h
+	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileCollisionParams.h
+	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileDestructType.h
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileMap.h
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileSet.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Canvas.h

@@ -1,5 +1,9 @@
 ﻿#pragma once
 
+#include "../nCine/Primitives/Vector2.h"
+
+using namespace nCine;
+
 namespace Jazz2
 {
 	enum class LightTypeType {

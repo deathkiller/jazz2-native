@@ -4,6 +4,8 @@
 #include "../Enemies/EnemyBase.h"
 #include "../Weapons/BlasterShot.h"
 
+using namespace Jazz2::Tiles;
+
 namespace Jazz2::Actors::Environment
 {
 	Bird::Bird()

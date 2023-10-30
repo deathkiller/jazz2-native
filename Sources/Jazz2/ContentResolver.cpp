@@ -49,28 +49,6 @@ static Vector2i GetVector2iFromJson(simdjson_result<T> value, Vector2i defaultVa
 
 namespace Jazz2
 {
-	GenericGraphicResource::GenericGraphicResource()
-	{
-	}
-
-	GraphicResource::GraphicResource()
-	{
-	}
-
-	GenericSoundResource::GenericSoundResource(const StringView& path)
-		: Buffer(path)
-	{
-	}
-
-	SoundResource::SoundResource()
-	{
-	}
-
-	Metadata::Metadata()
-		: Flags(MetadataFlags::None)
-	{
-	}
-
 	ContentResolver& ContentResolver::Get()
 	{
 		static ContentResolver current;

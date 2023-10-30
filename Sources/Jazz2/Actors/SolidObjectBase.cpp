@@ -1,6 +1,7 @@
 ﻿#include "SolidObjectBase.h"
 #include "../ILevelHandler.h"
 
+using namespace Jazz2::Tiles;
 using namespace nCine;
 
 namespace Jazz2::Actors

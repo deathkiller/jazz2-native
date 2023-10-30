@@ -79,8 +79,8 @@ namespace Jazz2::UI
 	class RgbLights
 	{
 	public:
-		static constexpr int32_t ColorsSize = AURA_COLORS_SIZE;
-		static constexpr int32_t RefreshRate = (int32_t)(FrameTimer::FramesPerSecond / (1000 / AURA_REFRESH_INTERVAL));
+		static constexpr std::int32_t ColorsSize = AURA_COLORS_SIZE;
+		static constexpr std::int32_t RefreshRate = (std::int32_t)(FrameTimer::FramesPerSecond / (1000 / AURA_REFRESH_INTERVAL));
 
 		RgbLights();
 		~RgbLights();
@@ -93,9 +93,7 @@ namespace Jazz2::UI
 		static RgbLights& Get();
 
 	private:
-		/// Deleted copy constructor
 		RgbLights(const RgbLights&) = delete;
-		/// Deleted assignment operator
 		RgbLights& operator=(const RgbLights&) = delete;
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
@@ -108,15 +106,15 @@ namespace Jazz2::UI
 		RzCreateKeyboardEffect _CreateKeyboardEffect;
 		Color _lastColors[ColorsSize];
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
-		uint32_t _updateCount;
+		std::uint32_t _updateCount;
 		EMSCRIPTEN_WEBSOCKET_T _ws;
 		bool _isConnected;
 		Color _lastColors[ColorsSize];
 
-		static EM_BOOL emscriptenOnOpen(int eventType, const EmscriptenWebSocketOpenEvent* websocketEvent, void* userData);
-		static EM_BOOL emscriptenOnError(int eventType, const EmscriptenWebSocketErrorEvent* websocketEvent, void* userData);
-		static EM_BOOL emscriptenOnClose(int eventType, const EmscriptenWebSocketCloseEvent* websocketEvent, void* userData);
-		static EM_BOOL emscriptenOnMessage(int eventType, const EmscriptenWebSocketMessageEvent* websocketEvent, void* userData);
+		static EM_BOOL emscriptenOnOpen(std::int32_t eventType, const EmscriptenWebSocketOpenEvent* websocketEvent, void* userData);
+		static EM_BOOL emscriptenOnError(std::int32_t eventType, const EmscriptenWebSocketErrorEvent* websocketEvent, void* userData);
+		static EM_BOOL emscriptenOnClose(std::int32_t eventType, const EmscriptenWebSocketCloseEvent* websocketEvent, void* userData);
+		static EM_BOOL emscriptenOnMessage(std::int32_t eventType, const EmscriptenWebSocketMessageEvent* websocketEvent, void* userData);
 #endif
 	};
 }

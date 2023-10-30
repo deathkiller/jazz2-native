@@ -208,6 +208,9 @@
     <Filter Include="Header Files\Shared\Threading">
       <UniqueIdentifier>{5e949f82-18ce-4137-97f1-bbcc7d2285c9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Jazz2\Multiplayer\Backends">
+      <UniqueIdentifier>{8e8a53f2-8324-4eaa-ab44-82141d569c85}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1347,9 +1350,6 @@
     <ClInclude Include="Jazz2\Tiles\ITileMapOwner.h">
       <Filter>Header Files\Jazz2\Tiles</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Multiplayer\Backends\enet.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="$(ExtensionLibraryPath)\Threading\Interlocked.h">
       <Filter>Header Files\Shared\Threading</Filter>
     </ClInclude>
@@ -1358,6 +1358,24 @@
     </ClInclude>
     <ClInclude Include="Jazz2\LevelDescriptor.h">
       <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\Backends\enet.h">
+      <Filter>Header Files\Jazz2\Multiplayer\Backends</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Resources.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\SuspendType.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\AnimationLoopMode.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Tiles\TileCollisionParams.h">
+      <Filter>Header Files\Jazz2\Tiles</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Tiles\TileDestructType.h">
+      <Filter>Header Files\Jazz2\Tiles</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2263,6 +2281,9 @@
     </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\IO\Stream.cpp">
       <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Resources.cpp">
+      <Filter>Source Files\Jazz2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

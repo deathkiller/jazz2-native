@@ -3,6 +3,7 @@
 #include "ActorBase.h"
 #include "../LevelInitialization.h"
 #include "../ShieldType.h"
+#include "../SuspendType.h"
 
 #if defined(WITH_ANGELSCRIPT)
 namespace Jazz2::Scripting

@@ -4,6 +4,8 @@
 #include "../Player.h"
 #include "../Explosion.h"
 
+using namespace Jazz2::Tiles;
+
 namespace Jazz2::Actors::Weapons
 {
 	RFShot::RFShot()

@@ -1,4 +1,5 @@
 ﻿#include "ActorBase.h"
+#include "../ContentResolver.h"
 #include "../ILevelHandler.h"
 #include "../Events/EventMap.h"
 #include "../Tiles/TileMap.h"
@@ -17,6 +18,7 @@
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Base/FrameTimer.h"
 
+using namespace Jazz2::Tiles;
 using namespace nCine;
 
 namespace Jazz2::Actors
@@ -1096,6 +1098,23 @@ namespace Jazz2::Actors
 
 		return i;
 	}
+
+	void ActorBase::PreloadMetadataAsync(const StringView& path)
+	{
+		ContentResolver::Get().PreloadMetadataAsync(path);
+	}
+
+	void ActorBase::RequestMetadata(const StringView& path)
+	{
+		_metadata = ContentResolver::Get().RequestMetadata(path);
+	}
+	
+#if !defined(WITH_COROUTINES)
+	void ActorBase::RequestMetadataAsync(const StringView& path)
+	{
+		_metadata = ContentResolver::Get().RequestMetadata(path);
+	}
+#endif
 
 	void ActorBase::UpdateFrozenState(float timeMult)
 	{

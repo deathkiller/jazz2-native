@@ -20,18 +20,21 @@
 #	define DEATH_TARGET_UNIX
 #endif
 
-// First two is GCC/Clang for 32/64 bit, second two is MSVC 32/64bit
+// First two is GCC/Clang for 32/64-bit, second two is MSVC 32/64-bit
 #if defined(__i386) || defined(__x86_64) || defined(_M_IX86) || defined(_M_X64)
 #	define DEATH_TARGET_X86
 
-// First two is GCC/Clang for 32/64 bit, second two is MSVC 32/64bit. MSVC doesn't have ARM64 support in the compiler yet,
-// though there are some signs of it in headers (http://stackoverflow.com/a/37251625/6108877).
+// First two is GCC/Clang for 32/64-bit, second two is MSVC 32/64-bit.
 #elif defined(__arm__) || defined(__aarch64__) || defined(_M_ARM) || defined(_M_ARM64)
 #	define DEATH_TARGET_ARM
 
 // First two is GCC/Clang, third is MSVC. Not sure about 64-bit MSVC.
 #elif defined(__powerpc__) || defined(__powerpc64__) || defined(_M_PPC)
 #	define DEATH_TARGET_POWERPC
+
+// This is for both RISC-V 32-bit and 64-bit.
+#elif defined(__riscv)
+#	define DEATH_TARGET_RISCV
 
 // WebAssembly (on Emscripten). Old pure asm.js toolchains did not define this, recent Emscripten does that even with `-s WASM=0`.
 #elif defined(__wasm__)
@@ -40,7 +43,7 @@
 #endif
 
 // Sanity checks. This might happen when using Emscripten-compiled code with native compilers, at which point we should just die.
-#if defined(DEATH_TARGET_EMSCRIPTEN) && (defined(DEATH_TARGET_X86) || defined(DEATH_TARGET_ARM) || defined(DEATH_TARGET_POWERPC))
+#if defined(DEATH_TARGET_EMSCRIPTEN) && (defined(DEATH_TARGET_X86) || defined(DEATH_TARGET_ARM) || defined(DEATH_TARGET_POWERPC) || defined(DEATH_TARGET_RISCV))
 #	error DEATH_TARGET_X86 / _ARM / _POWERPC defined on Emscripten
 #endif
 
@@ -373,11 +376,18 @@
 #	define DEATH_THREAD_LOCAL thread_local
 #endif
 
-/** @brief C++14 constexpr annotation */
+/** @brief C++14 constexpr annotation (if C++14 or newer standard is enabled and the compiler implements C++14 relaxed constexpr rules) */
 #if DEATH_CXX_STANDARD >= 201402 && !defined(DEATH_MSVC2015_COMPATIBILITY)
 #	define DEATH_CONSTEXPR14 constexpr
 #else
 #	define DEATH_CONSTEXPR14
+#endif
+
+/** @brief C++20 constexpr annotation (if C++20 or newer standard is enabled and the compiler implements all C++20 constexpr additions) */
+#if DEATH_CXX_STANDARD >= 202002 && __cpp_constexpr >= 201907
+#	define DEATH_CONSTEXPR20 constexpr
+#else
+#	define DEATH_CONSTEXPR20
 #endif
 
 /** @brief Always inline a function */

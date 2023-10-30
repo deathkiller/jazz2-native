@@ -20,7 +20,7 @@ namespace Jazz2::UI
 		KeySym Key1;
 		KeySym Key2;
 
-		int GamepadIndex;
+		std::int32_t GamepadIndex;
 		ButtonName GamepadButton;
 	};
 
@@ -29,29 +29,29 @@ namespace Jazz2::UI
 		friend class Menu::RemapControlsSection;
 
 	public:
-		static constexpr int32_t MaxSupportedPlayers = 1;
+		static constexpr std::int32_t MaxSupportedPlayers = 1;
 #if defined(DEATH_TARGET_SWITCH)
 		// TODO: Game is crashing on Switch if more than 1 gamepad is used
-		static constexpr int32_t MaxConnectedGamepads = 1;
+		static constexpr std::int32_t MaxConnectedGamepads = 1;
 #else
-		static constexpr int32_t MaxConnectedGamepads = 4;
+		static constexpr std::int32_t MaxConnectedGamepads = 4;
 #endif
 
 		static void Reset();
 
-		static KeySym Key1(int32_t playerIndex, PlayerActions action)
+		static KeySym Key1(std::int32_t playerIndex, PlayerActions action)
 		{
-			return _mappings[playerIndex * (int32_t)PlayerActions::Count + (int)action].Key1;
+			return _mappings[playerIndex * (std::int32_t)PlayerActions::Count + (std::int32_t)action].Key1;
 		}
 
-		static KeySym Key2(int32_t playerIndex, PlayerActions action)
+		static KeySym Key2(std::int32_t playerIndex, PlayerActions action)
 		{
-			return _mappings[playerIndex * (int32_t)PlayerActions::Count + (int)action].Key2;
+			return _mappings[playerIndex * (std::int32_t)PlayerActions::Count + (std::int32_t)action].Key2;
 		}
 
-		static ButtonName Gamepad(int32_t playerIndex, PlayerActions action, int& gamepadIndex)
+		static ButtonName Gamepad(std::int32_t playerIndex, PlayerActions action, std::int32_t& gamepadIndex)
 		{
-			auto& mapping = _mappings[playerIndex * (int32_t)PlayerActions::Count + (int)action];
+			auto& mapping = _mappings[playerIndex * (std::int32_t)PlayerActions::Count + (std::int32_t)action];
 			gamepadIndex = mapping.GamepadIndex;
 			return mapping.GamepadButton;
 		}
@@ -62,11 +62,9 @@ namespace Jazz2::UI
 		}
 
 	private:
-		/// Deleted copy constructor
 		ControlScheme(const ControlScheme&) = delete;
-		/// Deleted assignment operator
 		ControlScheme& operator=(const ControlScheme&) = delete;
 
-		static ControlSchemeMapping _mappings[MaxSupportedPlayers * (int)PlayerActions::Count];
+		static ControlSchemeMapping _mappings[MaxSupportedPlayers * (std::int32_t)PlayerActions::Count];
 	};
 }

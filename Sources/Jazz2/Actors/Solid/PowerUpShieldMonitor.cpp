@@ -17,10 +17,21 @@ namespace Jazz2::Actors::Solid
 	{
 		ShieldType shieldType = (ShieldType)details.Params[0];
 		switch (shieldType) {
-			case ShieldType::Fire: PreloadMetadataAsync("Object/PowerUp/ShieldFire"_s); break;
-			case ShieldType::Water: PreloadMetadataAsync("Object/PowerUp/ShieldWater"_s); break;
-			case ShieldType::Laser: PreloadMetadataAsync("Object/PowerUp/ShieldLaser"_s); break;
-			case ShieldType::Lightning: PreloadMetadataAsync("Object/PowerUp/ShieldLightning"_s); break;
+			case ShieldType::Fire:
+				PreloadMetadataAsync("Object/PowerUp/ShieldFire"_s);
+				PreloadMetadataAsync("Weapon/ShieldFire"_s);
+				break;
+			case ShieldType::Water:
+				PreloadMetadataAsync("Object/PowerUp/ShieldWater"_s);
+				PreloadMetadataAsync("Weapon/ShieldWater"_s);
+				break;
+			case ShieldType::Laser:
+				PreloadMetadataAsync("Object/PowerUp/ShieldLaser"_s);
+				break;
+			case ShieldType::Lightning:
+				PreloadMetadataAsync("Object/PowerUp/ShieldLightning"_s);
+				PreloadMetadataAsync("Weapon/ShieldLightning"_s);
+				break;
 			default: PreloadMetadataAsync("Object/PowerUp/Empty"_s); break;
 		}
 	}

@@ -16,8 +16,9 @@
 #include "../../nCine/Base/FrameTimer.h"
 #include "../../nCine/Base/Random.h"
 
-using namespace nCine;
 using namespace Jazz2::Actors;
+using namespace Jazz2::Tiles;
+using namespace nCine;
 
 #define AsClassName "ActorBase"
 #define AsClassNameInternal "ActorBaseInternal"

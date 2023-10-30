@@ -347,7 +347,9 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 		logEntry[length++] = '\n';
 		logEntry[length] = '\0';
 
-		::OutputDebugString(Death::Utf8::ToUtf16(logEntry));
+		wchar_t logEntryW[MaxEntryLength];
+		Death::Utf8::ToUtf16(logEntryW, logEntry, length);
+		::OutputDebugString(logEntryW);
 #		endif
 	}
 #	endif
