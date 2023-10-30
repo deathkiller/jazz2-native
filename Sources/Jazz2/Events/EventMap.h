@@ -6,6 +6,13 @@
 
 #include <IO/Stream.h>
 
+using namespace Death::IO;
+
+namespace Jazz2::Tiles
+{
+	class TileMap;
+}
+
 namespace Jazz2::Events
 {
 	class EventMap

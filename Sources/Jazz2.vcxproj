@@ -324,6 +324,7 @@
     <ClInclude Include="Jazz2\Actors\Weapons\Thunderbolt.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\TNT.h" />
     <ClInclude Include="Jazz2\Actors\Weapons\ToasterShot.h" />
+    <ClInclude Include="Jazz2\AnimationLoopMode.h" />
     <ClInclude Include="Jazz2\Compatibility\AnimSetMapping.h" />
     <ClInclude Include="Jazz2\Compatibility\EventConverter.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Anims.h" />
@@ -352,6 +353,7 @@
     <ClInclude Include="Jazz2\PlayerActions.h" />
     <ClInclude Include="Jazz2\PlayerType.h" />
     <ClInclude Include="Jazz2\PreferencesCache.h" />
+    <ClInclude Include="Jazz2\Resources.h" />
     <ClInclude Include="Jazz2\Scripting\FindAngelScript.h" />
     <ClInclude Include="Jazz2\Scripting\JJ2PlusDefinitions.h" />
     <ClInclude Include="Jazz2\Scripting\LevelScriptLoader.h" />
@@ -363,7 +365,10 @@
     <ClInclude Include="Jazz2\Scripting\ScriptLoader.h" />
     <ClInclude Include="Jazz2\Scripting\ScriptPlayerWrapper.h" />
     <ClInclude Include="Jazz2\ShieldType.h" />
+    <ClInclude Include="Jazz2\SuspendType.h" />
     <ClInclude Include="Jazz2\Tiles\ITileMapOwner.h" />
+    <ClInclude Include="Jazz2\Tiles\TileCollisionParams.h" />
+    <ClInclude Include="Jazz2\Tiles\TileDestructType.h" />
     <ClInclude Include="Jazz2\UI\Alignment.h" />
     <ClInclude Include="Jazz2\UI\Canvas.h" />
     <ClInclude Include="Jazz2\UI\Cinematics.h" />
@@ -706,6 +711,7 @@
     <ClCompile Include="Jazz2\Multiplayer\MultiLevelHandler.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\NetworkManager.cpp" />
     <ClCompile Include="Jazz2\PreferencesCache.cpp" />
+    <ClCompile Include="Jazz2\Resources.cpp" />
     <ClCompile Include="Jazz2\Scripting\JJ2PlusDefinitions.cpp" />
     <ClCompile Include="Jazz2\Scripting\LevelScriptLoader.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterArray.cpp" />

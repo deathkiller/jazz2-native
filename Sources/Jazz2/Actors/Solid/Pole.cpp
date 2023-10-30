@@ -5,6 +5,8 @@
 #include "../Weapons/Thunderbolt.h"
 #include "../Weapons/TNT.h"
 
+using namespace Jazz2::Tiles;
+
 namespace Jazz2::Actors::Solid
 {
 	Pole::Pole()

@@ -1,4 +1,5 @@
 ﻿#include "Player.h"
+#include "../ContentResolver.h"
 #include "../ILevelHandler.h"
 #include "../Events/EventMap.h"
 #include "../Tiles/TileMap.h"
@@ -31,6 +32,8 @@
 #include "../../nCine/Graphics/RenderQueue.h"
 
 #include <Containers/GrowableArray.h>
+
+using namespace Jazz2::Tiles;
 
 namespace Jazz2::Actors
 {

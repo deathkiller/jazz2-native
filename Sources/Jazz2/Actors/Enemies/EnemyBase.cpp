@@ -16,6 +16,8 @@
 
 #include <numeric>
 
+using namespace Jazz2::Tiles;
+
 namespace Jazz2::Actors::Enemies
 {
 	EnemyBase::EnemyBase()

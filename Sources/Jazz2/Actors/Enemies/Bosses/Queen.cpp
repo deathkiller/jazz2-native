@@ -7,6 +7,8 @@
 
 #include <float.h>
 
+using namespace Jazz2::Tiles;
+
 namespace Jazz2::Actors::Bosses
 {
 	Queen::Queen()

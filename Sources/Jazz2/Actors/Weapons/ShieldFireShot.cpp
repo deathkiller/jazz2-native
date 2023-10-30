@@ -8,6 +8,8 @@
 #include "../../../nCine/Base/Random.h"
 #include "../../../nCine/CommonConstants.h"
 
+using namespace Jazz2::Tiles;
+
 namespace Jazz2::Actors::Weapons
 {
 	ShieldFireShot::ShieldFireShot()

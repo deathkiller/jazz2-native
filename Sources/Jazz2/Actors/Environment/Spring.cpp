@@ -4,6 +4,8 @@
 #include "../Weapons/ShieldFireShot.h"
 #include "../Weapons/ToasterShot.h"
 
+using namespace Jazz2::Tiles;
+
 namespace Jazz2::Actors::Environment
 {
 	Spring::Spring()

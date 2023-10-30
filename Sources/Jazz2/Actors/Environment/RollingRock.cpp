@@ -3,6 +3,8 @@
 #include "../../Events/EventMap.h"
 #include "../Player.h"
 
+using namespace Jazz2::Tiles;
+
 namespace Jazz2::Actors::Environment
 {
 	RollingRock::RollingRock()

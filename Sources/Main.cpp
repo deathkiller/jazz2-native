@@ -172,7 +172,7 @@ void GameEventHandler::OnInit()
 	std::memset(_newestVersion, 0, sizeof(_newestVersion));
 
 	auto& resolver = ContentResolver::Get();
-	
+
 #if defined(DEATH_TARGET_ANDROID)
 	theApplication().setAutoSuspension(true);
 

@@ -3,9 +3,15 @@
 #include "ITileMapOwner.h"
 #include "../ILevelHandler.h"
 #include "../PitType.h"
+#include "../SuspendType.h"
 #include "TileSet.h"
 
+#include "../../nCine/Graphics/Camera.h"
+#include "../../nCine/Graphics/Viewport.h"
+
 #include <IO/Stream.h>
+
+using namespace Death::IO;
 
 namespace Jazz2
 {

@@ -1,12 +1,17 @@
 ﻿#pragma once
 
-#include "../ContentResolver.h"
 #include "../EventType.h"
 #include "../LightEmitter.h"
+#include "../Resources.h"
+#include "../Tiles/TileCollisionParams.h"
 
 #include "../../nCine/Base/Task.h"
 #include "../../nCine/Primitives/AABB.h"
 #include "../../nCine/Audio/AudioBufferPlayer.h"
+#include "../../nCine/Graphics/BaseSprite.h"
+#include "../../nCine/Graphics/SceneNode.h"
+
+#include <Containers/StringView.h>
 
 // If coroutines are not supported, load resources synchronously
 #if defined(WITH_COROUTINES)
@@ -16,6 +21,8 @@
 #	define async_return return
 #	define async_await
 #endif
+
+using namespace Death::Containers::Literals;
 
 namespace Jazz2
 {
@@ -156,10 +163,10 @@ namespace Jazz2::Actors
 		int GetMaxHealth();
 		void DecreaseHealth(int amount = 1, ActorBase* collider = nullptr);
 
-		bool MoveInstantly(const Vector2f& pos, MoveType type, TileCollisionParams& params);
+		bool MoveInstantly(const Vector2f& pos, MoveType type, Tiles::TileCollisionParams& params);
 		bool MoveInstantly(const Vector2f& pos, MoveType type)
 		{
-			TileCollisionParams params = { TileDestructType::None, _speed.Y >= 0.0f };
+			Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, _speed.Y >= 0.0f };
 			return MoveInstantly(pos, type, params);
 		}
 
@@ -283,7 +290,7 @@ namespace Jazz2::Actors
 
 		virtual void OnTriggeredEvent(EventType eventType, uint8_t* eventParams);
 
-		void TryStandardMovement(float timeMult, TileCollisionParams& params);
+		void TryStandardMovement(float timeMult, Tiles::TileCollisionParams& params);
 		void UpdateHitbox(int w, int h);
 		void UpdateFrozenState(float timeMult);
 		void HandleFrozenStateChange(ActorBase* shot);
@@ -302,15 +309,8 @@ namespace Jazz2::Actors
 
 		int FindAnimationCandidates(AnimState state, AnimationCandidate candidates[AnimationCandidatesCount]);
 
-		static void PreloadMetadataAsync(const StringView& path)
-		{
-			ContentResolver::Get().PreloadMetadataAsync(path);
-		}
-
-		void RequestMetadata(const StringView& path)
-		{
-			_metadata = ContentResolver::Get().RequestMetadata(path);
-		}
+		static void PreloadMetadataAsync(const StringView& path);
+		void RequestMetadata(const StringView& path);
 
 #if defined(WITH_COROUTINES)
 		auto RequestMetadataAsync(const StringView& path)
@@ -333,10 +333,7 @@ namespace Jazz2::Actors
 			return awaitable{this, path};
 		}
 #else
-		void RequestMetadataAsync(const StringView& path)
-		{
-			_metadata = ContentResolver::Get().RequestMetadata(path);
-		}
+		void RequestMetadataAsync(const StringView& path);
 #endif
 
 		constexpr void SetState(ActorState flags) noexcept

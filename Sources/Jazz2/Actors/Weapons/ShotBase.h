@@ -38,7 +38,7 @@ namespace Jazz2::Actors::Weapons
 		void OnUpdate(float timeMult) override;
 		virtual void OnRicochet();
 
-		void TryMovement(float timeMult, TileCollisionParams& params);
+		void TryMovement(float timeMult, Tiles::TileCollisionParams& params);
 
 	private:
 		TimeStamp _lastRicochetTime;

@@ -60,7 +60,14 @@ namespace Death::Utf8
 
 	std::int32_t ToUtf16(wchar_t* destination, std::int32_t destinationSize, const char* source, std::int32_t sourceSize)
 	{
-		return ::MultiByteToWideChar(CP_UTF8, 0, source, sourceSize, destination, destinationSize);
+		if (sourceSize == 0) return 0;
+
+		std::int32_t length = ::MultiByteToWideChar(CP_UTF8, 0, source, sourceSize, destination, destinationSize);
+		if (length > 0 && sourceSize == -1) {
+			length--;	// Return the size without the null terminator
+		}
+		destination[length] = L'\0';
+		return length;
 	}
 
 	Containers::Array<wchar_t> ToUtf16(const char* source, std::int32_t sourceSize)
@@ -81,7 +88,14 @@ namespace Death::Utf8
 
 	std::int32_t FromUtf16(char* destination, std::int32_t destinationSize, const wchar_t* source, std::int32_t sourceSize)
 	{
-		return ::WideCharToMultiByte(CP_UTF8, 0, source, sourceSize, destination, destinationSize, NULL, NULL);
+		if (sourceSize == 0) return 0;
+
+		std::int32_t length = ::WideCharToMultiByte(CP_UTF8, 0, source, sourceSize, destination, destinationSize, NULL, NULL);
+		if (length > 0 && sourceSize == -1) {
+			length--;	// Return the size without the null terminator
+		}
+		destination[length] = '\0';
+		return length;
 	}
 
 	Containers::String FromUtf16(const wchar_t* source, std::int32_t sourceSize)
