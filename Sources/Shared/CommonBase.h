@@ -384,7 +384,7 @@
 #endif
 
 /** @brief C++20 constexpr annotation (if C++20 or newer standard is enabled and the compiler implements all C++20 constexpr additions) */
-#if DEATH_CXX_STANDARD >= 202002 && __cpp_constexpr >= 201907
+#if __cpp_constexpr >= 201907
 #	define DEATH_CONSTEXPR20 constexpr
 #else
 #	define DEATH_CONSTEXPR20

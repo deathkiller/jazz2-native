@@ -392,6 +392,7 @@
     <ClInclude Include="Jazz2\UI\Menu\LanguageSelectSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\LoadingSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\MainMenu.h" />
+    <ClInclude Include="Jazz2\UI\Menu\MenuResources.h" />
     <ClInclude Include="Jazz2\UI\Menu\MenuSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\OptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\PauseSection.h" />

@@ -55,7 +55,7 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		if (found) {
-			if (_currentTransitionState == AnimState::Idle) {
+			if (_currentTransition == nullptr) {
 				if (!_attacking) {
 					if (_stateTime <= 0.0f) {
 						bool willFaceLeft = (_pos.X > targetPos.X);

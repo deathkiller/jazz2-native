@@ -217,6 +217,7 @@ namespace Jazz2::Actors
 		float _invulnerableBlinkTime;
 		float _jumpTime;
 		float _idleTime;
+		float _hitFloorTime;
 		float _keepRunningTime;
 		float _lastPoleTime;
 		Vector2i _lastPolePos;

@@ -340,6 +340,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/LanguageSelectSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/LoadingSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MainMenu.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MenuResources.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/OptionsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PauseSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RefreshCacheSection.h

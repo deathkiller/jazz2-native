@@ -63,7 +63,7 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		if (_currentTransitionState == AnimState::Idle && std::abs(_speed.X) > 0 && GetState(ActorState::CanJump)) {
+		if (_currentTransition == nullptr && std::abs(_speed.X) > 0 && GetState(ActorState::CanJump)) {
 			if (!CanMoveToPosition(_speed.X * 4, 0)) {
 				if (_stuck) {
 					MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative | MoveType::Force);
@@ -77,7 +77,7 @@ namespace Jazz2::Actors::Enemies
 			}
 		}
 
-		if (_currentTransitionState == AnimState::Idle && _frozenTimeLeft <= 0.0f) {
+		if (_currentTransition == nullptr && _frozenTimeLeft <= 0.0f) {
 			if (_cycleTimer < 0.0f) {
 				_cycle++;
 				if (_cycle == 12) {

@@ -99,7 +99,7 @@ namespace Jazz2::UI
 		}
 
 		// Prepare render command
-#if defined(ALLOW_RESCALE_SHADERS)
+#if !defined(DISABLE_RESCALE_SHADERS)
 		switch (PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask) {
 			case RescaleMode::HQ2x: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeHQ2x); break;
 			case RescaleMode::_3xBrz: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::Resize3xBrz); break;
@@ -139,7 +139,7 @@ namespace Jazz2::UI
 	bool UpscaleRenderPass::OnDraw(RenderQueue& renderQueue)
 	{
 		auto instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
-#if defined(ALLOW_RESCALE_SHADERS)
+#if !defined(DISABLE_RESCALE_SHADERS)
 		if (_resizeShader != nullptr) {
 			// TexRectUniformName is reused for input texture size
 			Vector2i size = _target->size();

@@ -56,18 +56,18 @@ namespace Jazz2::Actors::Environment
 
 		auto tilemap = _levelHandler->TileMap();
 		if (tilemap != nullptr) {
-			auto it = _metadata->Animations.find(String::nullTerminatedView("AmbientBubbles"_s));
-			if (it != _metadata->Animations.end()) {
-				Vector2i texSize = it->second.Base->TextureDiffuse->size();
-				Vector2i size = it->second.Base->FrameDimensions;
-				Vector2i frameConf = it->second.Base->FrameConfiguration;
+			auto* res = _metadata->FindAnimation(AnimState::Default); // AmbientBubbles
+			if (res != nullptr) {
+				Vector2i texSize = res->Base->TextureDiffuse->size();
+				Vector2i size = res->Base->FrameDimensions;
+				Vector2i frameConf = res->Base->FrameConfiguration;
 
 				for (int i = 0; i < count; i++) {
 					float scale = Random().NextFloat(0.3f, 1.0f);
 					float speedX = Random().NextFloat(-0.5f, 0.5f) * scale;
 					float speedY = Random().NextFloat(-3.0f, -2.0f) * scale;
 					float accel = Random().NextFloat(-0.008f, -0.001f) * scale;
-					int frame = it->second.FrameOffset + Random().Next(0, it->second.FrameCount);
+					int frame = res->FrameOffset + Random().Next(0, res->FrameCount);
 
 					Tiles::TileMap::DestructibleDebris debris = { };
 					debris.Pos = _pos;
@@ -87,7 +87,7 @@ namespace Jazz2::Actors::Environment
 					debris.TexScaleY = (size.Y / float(texSize.Y));
 					debris.TexBiasY = ((float)(frame / frameConf.X) / frameConf.Y);
 
-					debris.DiffuseTexture = it->second.Base->TextureDiffuse.get();
+					debris.DiffuseTexture = res->Base->TextureDiffuse.get();
 
 					tilemap->CreateDebris(debris);
 				}

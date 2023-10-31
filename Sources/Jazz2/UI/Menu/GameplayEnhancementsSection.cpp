@@ -1,8 +1,11 @@
 ﻿#include "GameplayEnhancementsSection.h"
 #include "InGameMenu.h"
+#include "MenuResources.h"
 #include "../../PreferencesCache.h"
 
 #include <Utf8.h>
+
+using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
@@ -75,10 +78,10 @@ namespace Jazz2::UI::Menu
 
 		float topLine = 131.0f + 34.0f * IMenuContainer::EaseOutCubic(_transition);
 		float bottomLine = viewSize.Y - 42.0f;
-		_root->DrawElement("MenuDim"_s, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
+		_root->DrawElement(MenuDim, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
 			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement("MenuLine"_s, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement("MenuLine"_s, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		center.Y = topLine + (bottomLine - topLine) * 0.35f / (int32_t)Item::Count;
 		int32_t charOffset = 0;
@@ -96,7 +99,7 @@ namespace Jazz2::UI::Menu
 			if (_selectedIndex == i) {
 				float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
-				_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(_items[i].Name) + 3) * 0.5f * size, 4.0f * size, true);
+				_root->DrawElement(MenuGlow, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(_items[i].Name) + 3) * 0.5f * size, 4.0f * size, true);
 
 				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
 					Alignment::Center, (_selectedIndex == 0 && _isInGame ? Font::TransparentRandomColor : Font::RandomColor), size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);

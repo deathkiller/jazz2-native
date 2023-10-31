@@ -69,7 +69,7 @@ namespace Jazz2::Actors::Enemies
 					PlaySfx("Noise"_s);
 				}
 			} else {
-				if (_currentTransitionState != AnimState::Idle) {
+				if (_currentTransition != nullptr) {
 					return;
 				}
 
@@ -85,7 +85,7 @@ namespace Jazz2::Actors::Enemies
 				});
 			}
 		} else {
-			if (_attacking && _currentTransitionState == AnimState::Idle) {
+			if (_attacking && _currentTransition == nullptr) {
 				Vector2f direction = (_pos - _originPos);
 				float length = direction.Length();
 				if (length < 2.0f) {
@@ -136,7 +136,7 @@ namespace Jazz2::Actors::Enemies
 
 		for (auto& player : _levelHandler->GetPlayers()) {
 			targetPos = player->GetPos();
-			float visionDistance = (_currentAnimationState == AnimState::Idle ? VisionDistanceIdle : VisionDistanceAttacking);
+			float visionDistance = (_currentAnimation->State == AnimState::Idle ? VisionDistanceIdle : VisionDistanceAttacking);
 			if ((_originPos - targetPos).Length() < visionDistance) {
 				return true;
 			}

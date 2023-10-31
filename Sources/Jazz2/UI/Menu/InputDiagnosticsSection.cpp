@@ -1,9 +1,12 @@
 ﻿#include "InputDiagnosticsSection.h"
+#include "MenuResources.h"
 #include "../ControlScheme.h"
 
 #include "../../../nCine/Application.h"
 
 #include <Utf8.h>
+
+using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
@@ -48,9 +51,9 @@ namespace Jazz2::UI::Menu
 		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
 
 		constexpr float TopLine = 131.0f;
-		_root->DrawElement("MenuDim"_s, center.X, TopLine - 2.0f, IMenuContainer::BackgroundLayer,
+		_root->DrawElement(MenuDim, center.X, TopLine - 2.0f, IMenuContainer::BackgroundLayer,
 			Alignment::Top, Colorf::Black, Vector2f(680.0f, 200.0f), Vector4f(1.0f, 0.0f, 0.7f, 0.0f));
-		_root->DrawElement("MenuLine"_s, 0, center.X, TopLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 0, center.X, TopLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int32_t charOffset = 0;
 		_root->DrawStringShadow(_("Input Diagnostics"), charOffset, center.X, TopLine - 21.0f, IMenuContainer::FontLayer,
@@ -98,7 +101,7 @@ namespace Jazz2::UI::Menu
 		float x = center.X * 0.4f + xMultiplier - easing * xMultiplier;
 		float size = 0.85f + easing * 0.12f;
 
-		_root->DrawElement("MenuGlow"_s, 0, center.X * 0.4f + (joyNameStringLength + 3) * 3.2f, TopLine + 20.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), 0.6f * (joyNameStringLength + 3), 6.0f, true);
+		_root->DrawElement(MenuGlow, 0, center.X * 0.4f + (joyNameStringLength + 3) * 3.2f, TopLine + 20.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), 0.6f * (joyNameStringLength + 3), 6.0f, true);
 
 		_root->DrawStringShadow(buffer, charOffset, x, TopLine + 20.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::RandomColor, size, 0.4f, 0.6f, 0.6f, 0.6f, 0.88f);

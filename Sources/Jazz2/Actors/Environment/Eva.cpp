@@ -27,7 +27,7 @@ namespace Jazz2::Actors::Environment
 	{
 		ActorBase::OnUpdate(timeMult);
 
-		if (_currentTransitionState == AnimState::Idle) {
+		if (_currentTransition == nullptr) {
 			if (_animationTime <= 0.0f) {
 				SetTransition(AnimState::TransitionIdleBored, true);
 				_animationTime = Random().NextFloat(160.0f, 200.0f);

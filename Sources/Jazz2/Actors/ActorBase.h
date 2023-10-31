@@ -195,11 +195,6 @@ namespace Jazz2::Actors
 		}
 
 	protected:
-		struct AnimationCandidate {
-			const String* Identifier;
-			GraphicResource* Resource;
-		};
-
 		class ActorRenderer : public BaseSprite
 		{
 			friend class ActorBase;
@@ -268,8 +263,6 @@ namespace Jazz2::Actors
 		ActorRenderer _renderer;
 		GraphicResource* _currentAnimation;
 		GraphicResource* _currentTransition;
-		AnimState _currentAnimationState;
-		AnimState _currentTransitionState;
 		bool _currentTransitionCancellable;
 
 		void SetFacingLeft(bool value);
@@ -306,8 +299,6 @@ namespace Jazz2::Actors
 		void ForceCancelTransition();
 		virtual void OnAnimationStarted();
 		virtual void OnAnimationFinished();
-
-		int FindAnimationCandidates(AnimState state, AnimationCandidate candidates[AnimationCandidatesCount]);
 
 		static void PreloadMetadataAsync(const StringView& path);
 		void RequestMetadata(const StringView& path);

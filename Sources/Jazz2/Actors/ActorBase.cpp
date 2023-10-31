@@ -39,8 +39,6 @@ namespace Jazz2::Actors
 		_renderer(this),
 		_currentAnimation(nullptr),
 		_currentTransition(nullptr),
-		_currentAnimationState(AnimState::Uninitialized),
-		_currentTransitionState(AnimState::Idle),
 		_currentTransitionCancellable(false),
 		CollisionProxyID(Collisions::NullNode)
 	{
@@ -65,7 +63,7 @@ namespace Jazz2::Actors
 		_renderer.setFlippedX(value);
 		
 		// Recalculate hotspot
-		GraphicResource* res = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
+		GraphicResource* res = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
 		if (res != nullptr) {
 			_renderer.Hotspot.X = -((res->Base->FrameDimensions.X / 2) - (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X));
 			_renderer.Hotspot.Y = -((res->Base->FrameDimensions.Y / 2) - res->Base->Hotspot.Y);
@@ -408,21 +406,20 @@ namespace Jazz2::Actors
 
 	void ActorBase::CreateParticleDebris()
 	{
-		auto tilemap = _levelHandler->TileMap();
+		auto* tilemap = _levelHandler->TileMap();
 		if (tilemap != nullptr) {
-			tilemap->CreateParticleDebris(_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation,
+			tilemap->CreateParticleDebris(_currentTransition != nullptr ? _currentTransition : _currentAnimation,
 				Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), Vector2f::Zero, _renderer.CurrentFrame, IsFacingLeft());
 		}
 	}
 
 	void ActorBase::CreateSpriteDebris(AnimState state, int count)
 	{
-		auto tilemap = _levelHandler->TileMap();
+		auto* tilemap = _levelHandler->TileMap();
 		if (tilemap != nullptr && _metadata != nullptr) {
-			AnimationCandidate candidates[5];
-			if (FindAnimationCandidates(state, candidates) > 0) {
-				// TODO: Random
-				tilemap->CreateSpriteDebris(candidates[0].Resource, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), count);
+			auto* res = _metadata->FindAnimation(state);
+			if (res != nullptr) {
+				tilemap->CreateSpriteDebris(res, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), count);
 			}
 		}
 	}
@@ -445,24 +442,22 @@ namespace Jazz2::Actors
 			return false;
 		}
 
-		if (_currentTransitionState != AnimState::Idle && !_currentTransitionCancellable) {
+		if (_currentTransition != nullptr && !_currentTransitionCancellable) {
 			return false;
 		}
 
-		if (_currentAnimation != nullptr && _currentAnimation->HasState(state)) {
-			_currentAnimationState = state;
+		if (_currentAnimation != nullptr && _currentAnimation->State == state) {
 			return false;
 		}
 
-		AnimationCandidate candidates[AnimationCandidatesCount];
-		int count = FindAnimationCandidates(state, candidates);
-		if (count == 0) {
+		auto* anim = _metadata->FindAnimation(state);
+		if (anim == nullptr) {
 			//LOGE("No animation found for state 0x%08x", state);
 			return false;
 		}
 
-		if (_currentTransitionState != AnimState::Idle) {
-			_currentTransitionState = AnimState::Idle;
+		if (_currentTransition != nullptr) {
+			_currentTransition = nullptr;
 
 			if (_currentTransitionCallback != nullptr) {
 				auto oldCallback = std::move(_currentTransitionCallback);
@@ -471,10 +466,7 @@ namespace Jazz2::Actors
 			}
 		}
 
-		int index = (count > 1 ? nCine::Random().Next(0, count) : 0);
-		_currentAnimation = candidates[index].Resource;
-		_currentAnimationState = state;
-
+		_currentAnimation = anim;
 		RefreshAnimation();
 
 		return true;
@@ -482,9 +474,8 @@ namespace Jazz2::Actors
 
 	bool ActorBase::SetTransition(AnimState state, bool cancellable, const std::function<void()>& callback)
 	{
-		AnimationCandidate candidates[AnimationCandidatesCount];
-		int count = FindAnimationCandidates(state, candidates);
-		if (count == 0) {
+		auto* anim = _metadata->FindAnimation(state);
+		if (anim == nullptr) {
 			if (callback != nullptr) {
 				callback();
 			}
@@ -497,12 +488,9 @@ namespace Jazz2::Actors
 			oldCallback();
 		}
 
-		int index = (count > 1 ? nCine::Random().Next(0, count) : 0);
-		_currentTransition = candidates[index].Resource;
-		_currentTransitionState = state;
+		_currentTransition = anim;
 		_currentTransitionCancellable = cancellable;
 		_currentTransitionCallback = callback;
-
 		RefreshAnimation();
 
 		return true;
@@ -510,9 +498,8 @@ namespace Jazz2::Actors
 
 	bool ActorBase::SetTransition(AnimState state, bool cancellable, std::function<void()>&& callback)
 	{
-		AnimationCandidate candidates[AnimationCandidatesCount];
-		int count = FindAnimationCandidates(state, candidates);
-		if (count == 0) {
+		auto* anim = _metadata->FindAnimation(state);
+		if (anim == nullptr) {
 			if (callback != nullptr) {
 				callback();
 			}
@@ -525,12 +512,9 @@ namespace Jazz2::Actors
 			oldCallback();
 		}
 
-		int index = (count > 1 ? nCine::Random().Next(0, count) : 0);
-		_currentTransition = candidates[index].Resource;
-		_currentTransitionState = state;
+		_currentTransition = anim;
 		_currentTransitionCancellable = cancellable;
-		_currentTransitionCallback = std::move(callback);
-		
+		_currentTransitionCallback = std::move(callback);		
 		RefreshAnimation();
 
 		return true;
@@ -538,30 +522,26 @@ namespace Jazz2::Actors
 
 	void ActorBase::CancelTransition()
 	{
-		if (_currentTransitionState != AnimState::Idle && _currentTransitionCancellable) {
+		if (_currentTransition != nullptr && _currentTransitionCancellable) {
 			if (_currentTransitionCallback != nullptr) {
 				auto oldCallback = std::move(_currentTransitionCallback);
 				_currentTransitionCallback = nullptr;
 				oldCallback();
 			}
 
-			_currentTransitionState = AnimState::Idle;
-
+			_currentTransition = nullptr;
 			RefreshAnimation();
 		}
 	}
 
 	void ActorBase::ForceCancelTransition()
 	{
-		if (_currentTransitionState == AnimState::Idle) {
-			return;
+		if (_currentTransition != nullptr) {
+			_currentTransition = nullptr;
+			_currentTransitionCancellable = true;
+			_currentTransitionCallback = nullptr;
+			RefreshAnimation();
 		}
-
-		_currentTransitionCancellable = true;
-		_currentTransitionCallback = nullptr;
-		_currentTransitionState = AnimState::Idle;
-
-		RefreshAnimation();
 	}
 
 	void ActorBase::OnAnimationStarted()
@@ -571,8 +551,8 @@ namespace Jazz2::Actors
 
 	void ActorBase::OnAnimationFinished()
 	{
-		if (_currentTransitionState != AnimState::Idle) {
-			_currentTransitionState = AnimState::Idle;
+		if (_currentTransition != nullptr) {
+			_currentTransition = nullptr;
 
 			RefreshAnimation();
 
@@ -598,8 +578,8 @@ namespace Jazz2::Actors
 			return IsCollidingWithAngled(other);
 		}
 
-		GraphicResource* res1 = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
-		GraphicResource* res2 = (other->_currentTransitionState != AnimState::Idle ? other->_currentTransition : other->_currentAnimation);
+		GraphicResource* res1 = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
+		GraphicResource* res2 = (other->_currentTransition != nullptr ? other->_currentTransition : other->_currentAnimation);
 		if (res1 == nullptr || res2 == nullptr) {
 			if (res1 != nullptr) {
 				return IsCollidingWith(other->AABBInner);
@@ -760,7 +740,7 @@ namespace Jazz2::Actors
 			return IsCollidingWithAngled(aabb);
 		}
 
-		GraphicResource* res = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
+		GraphicResource* res = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
 		if (res == nullptr) {
 			return false;
 		}
@@ -818,8 +798,8 @@ namespace Jazz2::Actors
 
 	bool ActorBase::IsCollidingWithAngled(ActorBase* other)
 	{
-		GraphicResource* res1 = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
-		GraphicResource* res2 = (other->_currentTransitionState != AnimState::Idle ? other->_currentTransition : other->_currentAnimation);
+		GraphicResource* res1 = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
+		GraphicResource* res2 = (other->_currentTransition != nullptr ? other->_currentTransition : other->_currentAnimation);
 		if (res1 == nullptr || res2 == nullptr) {
 			return false;
 		}
@@ -918,7 +898,7 @@ namespace Jazz2::Actors
 
 	bool ActorBase::IsCollidingWithAngled(const AABBf& aabb)
 	{
-		GraphicResource* res = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
+		GraphicResource* res = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
 		if (res == nullptr) {
 			return false;
 		}
@@ -993,7 +973,7 @@ namespace Jazz2::Actors
 		}
 
 		if ((_state & ActorState::SkipPerPixelCollisions) != ActorState::SkipPerPixelCollisions) {
-			GraphicResource* res = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
+			GraphicResource* res = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
 			if (res == nullptr) {
 				return;
 			}
@@ -1036,7 +1016,7 @@ namespace Jazz2::Actors
 
 	void ActorBase::RefreshAnimation()
 	{
-		GraphicResource* res = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
+		GraphicResource* res = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
 		if (res == nullptr) {
 			return;
 		}
@@ -1072,31 +1052,6 @@ namespace Jazz2::Actors
 		if ((_state & ActorState::ForceDisableCollisions) != ActorState::ForceDisableCollisions) {
 			_state |= ActorState::IsDirty;
 		}
-	}
-
-	int ActorBase::FindAnimationCandidates(AnimState state, AnimationCandidate candidates[AnimationCandidatesCount])
-	{
-		if (_metadata == nullptr) {
-			LOGE("No metadata loaded");
-			return 0;
-		}
-
-		int i = 0;
-		auto it = _metadata->Animations.begin();
-		while (it != _metadata->Animations.end()) {
-			if (i >= AnimationCandidatesCount) {
-				break;
-			}
-
-			if (it->second.HasState(state)) {
-				candidates[i].Identifier = &it->first;
-				candidates[i].Resource = &it->second;
-				i++;
-			}
-			++it;
-		}
-
-		return i;
 	}
 
 	void ActorBase::PreloadMetadataAsync(const StringView& path)

@@ -690,6 +690,11 @@ if(SHAREWARE_DEMO_ONLY)
 	target_compile_definitions(${NCINE_APP} PUBLIC "SHAREWARE_DEMO_ONLY")
 endif()
 
+if(DISABLE_RESCALE_SHADERS)
+	message(STATUS "Building the game with disabled rescaling options")
+	target_compile_definitions(${NCINE_APP} PUBLIC "DISABLE_RESCALE_SHADERS")
+endif()
+
 if(WITH_MULTIPLAYER)
 	message(STATUS "Building the game with multiplayer support")
 	target_compile_definitions(${NCINE_APP} PUBLIC "WITH_MULTIPLAYER")

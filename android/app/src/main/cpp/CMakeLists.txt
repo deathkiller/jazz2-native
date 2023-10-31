@@ -1,6 +1,30 @@
 cmake_minimum_required(VERSION 3.7)
 project(nCine-Android-${ANDROID_ABI})
 
+# Check if we can use IFUNC for CPU dispatch. This part is already in `ncine_options.cmake`, but we need to check it also against Android NDK toolchain.
+if(DEATH_CPU_USE_RUNTIME_DISPATCH)
+	include(CheckCXXSourceCompiles)
+	set(CMAKE_REQUIRED_QUIET ON)
+	check_cxx_source_compiles("\
+int fooImplementation() { return 42; }
+#if defined(__ANDROID_API__) && __ANDROID_API__ < 30
+#error need Android API 30+ to have AT_HWCAP passed into the resolver
+#endif
+extern \"C\" int(*fooDispatcher())() {
+	return fooImplementation;
+}
+int foo() __attribute__((ifunc(\"fooDispatcher\")));
+int main() { return foo() - 42; }\
+		" _DEATH_CPU_CAN_USE_IFUNC)
+	set(CMAKE_REQUIRED_QUIET OFF)
+	if(_DEATH_CPU_CAN_USE_IFUNC)
+		# DEATH_CPU_USE_RUNTIME_DISPATCH is already enabled
+		set(DEATH_CPU_USE_IFUNC ON)
+	else()
+		set(DEATH_CPU_USE_RUNTIME_DISPATCH OFF)
+	endif()
+endif()
+
 include(ncine_imported_targets)
 
 if(NCINE_DYNAMIC_LIBRARY)

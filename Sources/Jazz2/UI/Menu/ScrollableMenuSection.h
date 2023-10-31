@@ -1,8 +1,11 @@
 ﻿#pragma once
 
 #include "MenuSection.h"
+#include "MenuResources.h"
 
 #include "../../../nCine/Base/FrameTimer.h"
+
+using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
@@ -188,11 +191,11 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (_items[0].Y < TopLine + ItemHeight / 2) {
-			_root->DrawElement("MenuGlow"_s, 0, center.X, TopLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
+			_root->DrawElement(MenuGlow, 0, center.X, TopLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
 		}
 		int itemHeight = _items[_items.size() - 1].Height - ItemHeight * 4 / 5 + ItemHeight / 2;
 		if (_items[_items.size() - 1].Y > bottomLine - itemHeight / 2) {
-			_root->DrawElement("MenuGlow"_s, 0, center.X, bottomLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
+			_root->DrawElement(MenuGlow, 0, center.X, bottomLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
 		}
 	}
 

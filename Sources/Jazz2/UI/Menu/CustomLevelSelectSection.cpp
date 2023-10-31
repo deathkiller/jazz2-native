@@ -1,6 +1,7 @@
 ﻿#include "CustomLevelSelectSection.h"
 #include "StartGameOptionsSection.h"
 #include "MainMenu.h"
+#include "MenuResources.h"
 #include "../../PreferencesCache.h"
 #include "../../../nCine/Base/Algorithms.h"
 #include "../../../nCine/Base/FrameTimer.h"
@@ -9,6 +10,7 @@
 #include <IO/MemoryStream.h>
 
 using namespace Death::IO;
+using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
@@ -118,10 +120,10 @@ namespace Jazz2::UI::Menu
 		Vector2i viewSize = canvas->ViewSize;
 		float centerX = viewSize.X * 0.5f;
 		float bottomLine = viewSize.Y - BottomLine;
-		_root->DrawElement("MenuDim"_s, centerX, (TopLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
+		_root->DrawElement(MenuDim, centerX, (TopLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
 			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - TopLine + 2.0f), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement("MenuLine"_s, 0, centerX, TopLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement("MenuLine"_s, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 0, centerX, TopLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int32_t charOffset = 0;
 		_root->DrawStringShadow(_("Play Custom Levels"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
@@ -176,10 +178,10 @@ namespace Jazz2::UI::Menu
 		_height = center.Y - (TopLine + _y);
 
 		if (_items[0].Y < TopLine + ItemHeight / 2) {
-			_root->DrawElement("MenuGlow"_s, 0, center.X, TopLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
+			_root->DrawElement(MenuGlow, 0, center.X, TopLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
 		}
 		if (_items[_items.size() - 1].Y > bottomLine - ItemHeight / 2) {
-			_root->DrawElement("MenuGlow"_s, 0, center.X, bottomLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
+			_root->DrawElement(MenuGlow, 0, center.X, bottomLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
 		}
 	}
 

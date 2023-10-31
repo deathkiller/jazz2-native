@@ -41,7 +41,7 @@ namespace Jazz2::Actors::Solid
 				if (auto player = dynamic_cast<Player*>(actor)) {
 					_cooldown = 10.0f;
 
-					SetTransition(_currentAnimationState | (AnimState)0x200, true);
+					SetTransition(_currentAnimation->State | (AnimState)0x200, true);
 					PlaySfx("Hit"_s, 0.8f);
 
 					constexpr float forceMult = 24.0f;
