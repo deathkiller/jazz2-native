@@ -20,6 +20,7 @@ int main() { return foo() - 42; }\
 		set(DEATH_CPU_USE_IFUNC ON)
 	else()
 		set(DEATH_CPU_USE_RUNTIME_DISPATCH OFF)
+		message(STATUS "GNU IFUNC is not supported on Android ${ANDROID_PLATFORM}")
 	endif()
 endif()
 
