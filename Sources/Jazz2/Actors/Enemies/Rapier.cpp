@@ -49,7 +49,7 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		if (_currentTransitionState == AnimState::Idle) {
+		if (_currentTransition == nullptr) {
 			if (_attackTime > 0.0f) {
 				_attackTime -= timeMult;
 			} else {
@@ -101,7 +101,7 @@ namespace Jazz2::Actors::Enemies
 		if (tilemap != nullptr) {
 			constexpr int DebrisSize = 2;
 
-			GraphicResource* res = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
+			GraphicResource* res = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
 			Vector2i texSize = res->Base->TextureDiffuse->size();
 
 			float x = _pos.X - res->Base->Hotspot.X;

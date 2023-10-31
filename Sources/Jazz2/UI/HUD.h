@@ -65,6 +65,7 @@ namespace Jazz2::UI
 			Vertex(float x, float y, float u, float v)
 				: X(x), Y(y), U(u), V(v) {}
 		};
+
 		static constexpr uint32_t VertexBytes = sizeof(Vertex);
 		static constexpr uint32_t VertexFloats = VertexBytes / sizeof(float);
 
@@ -82,7 +83,7 @@ namespace Jazz2::UI
 		static constexpr int32_t WeaponWheelMaxVertices = 512;
 		
 		LevelHandler* _levelHandler;
-		HashMap<String, GraphicResource>* _animations;
+		Metadata* _metadata;
 		std::shared_ptr<Actors::Player> _attachedPlayer;
 		Font* _smallFont;
 
@@ -115,16 +116,16 @@ namespace Jazz2::UI
 		void DrawCoins(int32_t& charOffset);
 		void DrawGems(int32_t& charOffset);
 
-		void DrawElement(const StringView& name, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, float angle = 0.0f);
-		void DrawElementClipped(const StringView& name, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY);
-		StringView GetCurrentWeapon(Actors::Player* player, WeaponType weapon, Vector2f& offset);
+		void DrawElement(AnimState state, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, float angle = 0.0f);
+		void DrawElementClipped(AnimState state, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY);
+		AnimState GetCurrentWeapon(Actors::Player* player, WeaponType weapon, Vector2f& offset);
 
 		void DrawWeaponWheel(Actors::Player* player);
 		bool PrepareWeaponWheel(Actors::Player* player, int& weaponCount);
 		static int32_t GetWeaponCount(Actors::Player* player);
 		void DrawWeaponWheelSegment(float x, float y, float width, float height, uint16_t z, float minAngle, float maxAngle, const Texture& texture, const Colorf& color);
 
-		TouchButtonInfo CreateTouchButton(PlayerActions action, const StringView& identifier, Alignment align, float x, float y, float w, float h);
+		TouchButtonInfo CreateTouchButton(PlayerActions action, AnimState state, Alignment align, float x, float y, float w, float h);
 		bool IsOnButton(const TouchButtonInfo& button, float x, float y);
 
 		void UpdateRgbLights(float timeMult, Actors::Player* player);

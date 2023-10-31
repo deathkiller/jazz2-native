@@ -46,7 +46,7 @@ namespace Jazz2::Actors::Enemies
 
 		switch (_state) {
 			case StateIdle: {
-				if (_currentTransitionState == AnimState::Idle) {
+				if (_currentTransition == nullptr) {
 					// InhaleStart
 					SetTransition((AnimState)1, true, [this]() {
 						// Inhale

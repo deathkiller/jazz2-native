@@ -1,4 +1,5 @@
 ﻿#include "GameplayOptionsSection.h"
+#include "MenuResources.h"
 #include "GameplayEnhancementsSection.h"
 #include "LanguageSelectSection.h"
 #include "RefreshCacheSection.h"
@@ -10,6 +11,8 @@
 #endif
 
 #include <Utf8.h>
+
+using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
@@ -64,10 +67,10 @@ namespace Jazz2::UI::Menu
 		Vector2i viewSize = canvas->ViewSize;
 		float centerX = viewSize.X * 0.5f;
 		float bottomLine = viewSize.Y - BottomLine;
-		_root->DrawElement("MenuDim"_s, centerX, (TopLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
+		_root->DrawElement(MenuDim, centerX, (TopLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
 			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - TopLine + 2.0f), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement("MenuLine"_s, 0, centerX, TopLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement("MenuLine"_s, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 0, centerX, TopLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int32_t charOffset = 0;
 		_root->DrawStringShadow(_("Gameplay"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
@@ -86,7 +89,7 @@ namespace Jazz2::UI::Menu
 		if (isSelected) {
 			float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
-			_root->DrawElement("MenuGlow"_s, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(item.Item.DisplayName) + 3) * 0.5f * size, 4.0f * size, true);
+			_root->DrawElement(MenuGlow, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(item.Item.DisplayName) + 3) * 0.5f * size, 4.0f * size, true);
 
 			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
 				Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
@@ -123,7 +126,7 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
 
 				Vector2f textSize = _root->MeasureString(_("Enabled"), 0.8f);
-				_root->DrawElement("Uac"_s, 0, ceil(centerX - textSize.X * 0.5f - 6.0f), item.Y + 22.0f - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Center, Colorf::White);
+				_root->DrawElement(Uac, 0, ceil(centerX - textSize.X * 0.5f - 6.0f), item.Y + 22.0f - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Center, Colorf::White);
 			} else
 #endif
 			{

@@ -65,7 +65,7 @@ namespace Jazz2::UI
 
 	private:
 		std::unique_ptr<SceneNode> _node;
-#if defined(ALLOW_RESCALE_SHADERS)
+#if !defined(DISABLE_RESCALE_SHADERS)
 		Shader* _resizeShader;
 #endif
 		RenderCommand _renderCommand;

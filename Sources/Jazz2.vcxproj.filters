@@ -1377,6 +1377,9 @@
     <ClInclude Include="Jazz2\Tiles\TileDestructType.h">
       <Filter>Header Files\Jazz2\Tiles</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\MenuResources.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

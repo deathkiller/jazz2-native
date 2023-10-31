@@ -224,7 +224,7 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		GraphicResource* res = (_currentTransitionState != AnimState::Idle ? _currentTransition : _currentAnimation);
+		GraphicResource* res = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
 		Texture* texture = res->Base->TextureDiffuse.get();
 		float x = _pos.X - res->Base->Hotspot.X;
 		float y = _pos.Y - res->Base->Hotspot.Y;

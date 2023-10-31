@@ -151,7 +151,7 @@ namespace Jazz2::Multiplayer
 					packet.WriteVariableUint32(player->_playerIndex);
 					packet.WriteValue<std::int32_t>((std::int32_t)(pos.X * 512.0f));
 					packet.WriteValue<std::int32_t>((std::int32_t)(pos.Y * 512.0f));
-					packet.WriteVariableUint32((std::uint32_t)(player->_currentTransitionState != AnimState::Idle ? player->_currentTransitionState : player->_currentAnimationState));
+					packet.WriteVariableUint32((std::uint32_t)(player->_currentTransition != nullptr ? player->_currentTransition->State : player->_currentAnimation->State));
 
 					std::uint8_t flags = 0;
 					if (player->IsFacingLeft()) {

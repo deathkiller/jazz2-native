@@ -1,7 +1,10 @@
 ﻿#include "TouchControlsOptionsSection.h"
+#include "MenuResources.h"
 #include "../../PreferencesCache.h"
 #include "../HUD.h"
 #include "../../LevelHandler.h"
+
+using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
@@ -33,9 +36,9 @@ namespace Jazz2::UI::Menu
 		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
 
 		constexpr float topLine = 131.0f;
-		_root->DrawElement("MenuDim"_s, center.X, topLine - 2.0f, IMenuContainer::BackgroundLayer,
+		_root->DrawElement(MenuDim, center.X, topLine - 2.0f, IMenuContainer::BackgroundLayer,
 			Alignment::Top, Colorf::Black, Vector2f(680.0f, 200.0f), Vector4f(1.0f, 0.0f, 0.7f, 0.0f));
-		_root->DrawElement("MenuLine"_s, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int32_t charOffset = 0;
 		_root->DrawStringShadow(_("Touch Controls"), charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,

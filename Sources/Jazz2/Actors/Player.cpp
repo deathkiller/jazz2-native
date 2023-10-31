@@ -72,6 +72,7 @@ namespace Jazz2::Actors
 		_invulnerableBlinkTime(0.0f),
 		_jumpTime(0.0f),
 		_idleTime(0.0f),
+		_hitFloorTime(0.0f),
 		_keepRunningTime(0.0f),
 		_lastPoleTime(0.0f),
 		_inTubeTime(0.0f),
@@ -292,12 +293,12 @@ namespace Jazz2::Actors
 				if (_shieldSpawnTime <= 0.0f) {
 					_shieldSpawnTime += 1.0f;
 
-					auto tilemap = _levelHandler->TileMap();
+					auto* tilemap = _levelHandler->TileMap();
 					if (tilemap != nullptr) {
-						auto it = _metadata->Animations.find(String::nullTerminatedView("Shield"_s));
-						if (it != _metadata->Animations.end()) {
-							Vector2i texSize = it->second.Base->TextureDiffuse->size();
-							Vector2i size = it->second.Base->FrameDimensions;
+						auto* res = _metadata->FindAnimation((AnimState)536870928); // Shield
+						if (res != nullptr) {
+							Vector2i texSize = res->Base->TextureDiffuse->size();
+							Vector2i size = res->Base->FrameDimensions;
 
 							Tiles::TileMap::DestructibleDebris debris = { };
 							debris.Pos = _pos;
@@ -318,14 +319,14 @@ namespace Jazz2::Actors
 							debris.TexScaleY = (size.Y / float(texSize.Y));
 							debris.TexBiasY = 0.0f;
 
-							debris.DiffuseTexture = it->second.Base->TextureDiffuse.get();
+							debris.DiffuseTexture = res->Base->TextureDiffuse.get();
 							debris.Flags = Tiles::TileMap::DebrisFlags::AdditiveBlending;
 
 							tilemap->CreateDebris(debris);
 						}
 					}
 				}
-			} else if (_currentTransitionState != AnimState::Hurt) {
+			} else if (_currentTransition == nullptr || _currentTransition->State != AnimState::Hurt) {
 				if (_invulnerableBlinkTime > 0.0f) {
 					_invulnerableBlinkTime -= timeMult;
 				} else {
@@ -399,16 +400,16 @@ namespace Jazz2::Actors
 
 			if (_fireFramesLeft <= 0.0f) {
 				// Play post-fire animation
-				if ((_currentAnimationState & (AnimState::Walk | AnimState::Run | AnimState::Dash | AnimState::Crouch | AnimState::Buttstomp | AnimState::Swim | AnimState::Airboard | AnimState::Lift | AnimState::Spring)) == AnimState::Idle &&
-					_currentTransitionState != AnimState::TransitionRunToIdle && _currentTransitionState != AnimState::TransitionDashToIdle &&
+				if ((_currentAnimation->State & (AnimState::Walk | AnimState::Run | AnimState::Dash | AnimState::Crouch | AnimState::Buttstomp | AnimState::Swim | AnimState::Airboard | AnimState::Lift | AnimState::Spring)) == AnimState::Idle &&
+					(_currentTransition == nullptr || (_currentTransition->State != AnimState::TransitionRunToIdle && _currentTransition->State != AnimState::TransitionDashToIdle)) &&
 					!_isAttachedToPole) {
 
-					if ((_currentAnimationState & AnimState::Hook) == AnimState::Hook) {
+					if ((_currentAnimation->State & AnimState::Hook) == AnimState::Hook) {
 						SetTransition(AnimState::TransitionHookShootToHook, false);
-					} else if ((_currentAnimationState & AnimState::Copter) == AnimState::Copter) {
+					} else if ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
 						SetAnimation(AnimState::Copter);
 						SetTransition(AnimState::TransitionCopterShootToCopter, false);
-					} else if ((_currentAnimationState & AnimState::Fall) == AnimState::Fall) {
+					} else if ((_currentAnimation->State & AnimState::Fall) == AnimState::Fall) {
 						SetTransition(AnimState::TransitionFallShootToFall, false);
 					} else {
 						SetTransition(AnimState::TransitionShootToIdle, false);
@@ -439,14 +440,14 @@ namespace Jazz2::Actors
 				if (_sugarRushStarsTime <= 0.0f) {
 					_sugarRushStarsTime = Random().FastFloat(2.0f, 8.0f);
 
-					auto tilemap = _levelHandler->TileMap();
+					auto* tilemap = _levelHandler->TileMap();
 					if (tilemap != nullptr) {
-						auto it = _metadata->Animations.find(String::nullTerminatedView("SugarRush"_s));
-						if (it != _metadata->Animations.end()) {
-							Vector2i texSize = it->second.Base->TextureDiffuse->size();
-							Vector2i size = it->second.Base->FrameDimensions;
-							Vector2i frameConf = it->second.Base->FrameConfiguration;
-							int frame = it->second.FrameOffset + Random().Next(0, it->second.FrameCount);
+						auto* res = _metadata->FindAnimation((AnimState)536870913); // SugarRush
+						if (res != nullptr) {
+							Vector2i texSize = res->Base->TextureDiffuse->size();
+							Vector2i size = res->Base->FrameDimensions;
+							Vector2i frameConf = res->Base->FrameConfiguration;
+							int frame = res->FrameOffset + Random().Next(0, res->FrameCount);
 							float speedX = Random().FastFloat(-4.0f, 4.0f);
 
 							Tiles::TileMap::DestructibleDebris debris = { };
@@ -470,7 +471,7 @@ namespace Jazz2::Actors
 							debris.TexScaleY = (size.Y / float(texSize.Y));
 							debris.TexBiasY = ((float)(frame / frameConf.X) / frameConf.Y);
 
-							debris.DiffuseTexture = it->second.Base->TextureDiffuse.get();
+							debris.DiffuseTexture = res->Base->TextureDiffuse.get();
 
 							tilemap->CreateDebris(debris);
 						}
@@ -506,7 +507,7 @@ namespace Jazz2::Actors
 		}
 
 		if (_copterSound != nullptr) {
-			if ((_currentAnimationState & AnimState::Copter) == AnimState::Copter) {
+			if ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
 				_copterSound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
 			} else {
 				_copterSound->stop();
@@ -592,7 +593,7 @@ namespace Jazz2::Actors
 			float playerMovement = _levelHandler->PlayerHorizontalMovement(_playerIndex);
 			float playerMovementVelocity = std::abs(playerMovement);
 			if (canWalk && playerMovementVelocity > 0.5f) {
-				SetAnimation(_currentAnimationState & ~(AnimState::Lookup | AnimState::Crouch));
+				SetAnimation(_currentAnimation->State & ~(AnimState::Lookup | AnimState::Crouch));
 
 				if (_dizzyTime > 0.0f) {
 					SetFacingLeft(playerMovement > 0.0f);
@@ -654,6 +655,10 @@ namespace Jazz2::Actors
 			}
 		}
 
+		if (_hitFloorTime > 0.0f) {
+			_hitFloorTime -= timeMult;
+		}
+
 		if (!_controllable || !_controllableExternal) {
 			// Weapons are automatically disabled if player is not controllable
 			if (_currentWeapon != WeaponType::Thunderbolt || _fireFramesLeft <= 0.0f) {
@@ -688,13 +693,13 @@ namespace Jazz2::Actors
 					if ((GetState(ActorState::CanJump) || (_suspendType != SuspendType::None && _suspendType != SuspendType::SwingingVine)) && !_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
 						_wasUpPressed = true;
 
-						SetAnimation(AnimState::Lookup | (_currentAnimationState & AnimState::Hook));
+						SetAnimation(AnimState::Lookup | (_currentAnimation->State & AnimState::Hook));
 					}
 				}
 			} else if (_wasUpPressed) {
 				_wasUpPressed = false;
 
-				SetAnimation(_currentAnimationState & ~AnimState::Lookup);
+				SetAnimation(_currentAnimation->State & ~AnimState::Lookup);
 			}
 
 			// Crouch
@@ -739,7 +744,7 @@ namespace Jazz2::Actors
 			} else if (_wasDownPressed) {
 				_wasDownPressed = false;
 
-				SetAnimation(_currentAnimationState & ~AnimState::Crouch);
+				SetAnimation(_currentAnimation->State & ~AnimState::Crouch);
 			}
 
 			// Jump
@@ -750,7 +755,7 @@ namespace Jazz2::Actors
 					if (_suspendType == SuspendType::None && _jumpTime <= 0.0f) {
 						if (_isLifting && GetState(ActorState::CanJump) && _currentSpecialMove == SpecialMoveType::None) {
 							SetState(ActorState::CanJump, false);
-							SetAnimation(_currentAnimationState & (~AnimState::Lookup & ~AnimState::Crouch));
+							SetAnimation(_currentAnimation->State & (~AnimState::Lookup & ~AnimState::Crouch));
 							PlaySfx("Jump"_s);
 							_carryingObject = nullptr;
 
@@ -770,7 +775,7 @@ namespace Jazz2::Actors
 						} else {
 							switch (_playerType) {
 								case PlayerType::Jazz: {
-									if ((_currentAnimationState & AnimState::Crouch) == AnimState::Crouch) {
+									if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
 										_controllable = false;
 										SetAnimation(AnimState::Uppercut);
 										SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Uppercut, [this]() {
@@ -780,10 +785,10 @@ namespace Jazz2::Actors
 											SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Uppercut);
 										});
 									} else {
-										if (_speed.Y > 0.01f && !GetState(ActorState::CanJump) && (_currentAnimationState & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
+										if (_speed.Y > 0.01f && !GetState(ActorState::CanJump) && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
 											SetState(ActorState::ApplyGravitation, false);
 											_speed.Y = 1.5f;
-											if ((_currentAnimationState & AnimState::Copter) != AnimState::Copter) {
+											if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
 												SetAnimation(AnimState::Copter);
 											}
 											_copterFramesLeft = 70.0f;
@@ -799,7 +804,7 @@ namespace Jazz2::Actors
 									break;
 								}
 								case PlayerType::Spaz: {
-									if ((_currentAnimationState & AnimState::Crouch) == AnimState::Crouch) {
+									if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
 										_controllable = false;
 										SetAnimation(AnimState::Uppercut);
 										SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Sidekick, [this]() {
@@ -827,7 +832,7 @@ namespace Jazz2::Actors
 									break;
 								}
 								case PlayerType::Lori: {
-									if ((_currentAnimationState & AnimState::Crouch) == AnimState::Crouch) {
+									if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
 										_controllable = false;
 										SetAnimation(AnimState::Uppercut);
 										SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Sidekick, [this]() {
@@ -836,10 +841,10 @@ namespace Jazz2::Actors
 											SetState(ActorState::ApplyGravitation, false);
 										});
 									} else {
-										if (_speed.Y > 0.01f && !GetState(ActorState::CanJump) && (_currentAnimationState & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
+										if (_speed.Y > 0.01f && !GetState(ActorState::CanJump) && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
 											SetState(ActorState::ApplyGravitation, false);
 											_speed.Y = 1.5f;
-											if ((_currentAnimationState & AnimState::Copter) != AnimState::Copter) {
+											if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
 												SetAnimation(AnimState::Copter);
 											}
 											_copterFramesLeft = 70.0f;
@@ -875,7 +880,7 @@ namespace Jazz2::Actors
 					} else if (_currentSpecialMove == SpecialMoveType::None && !_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Down)) {
 						SetState(ActorState::CanJump, false);
 						_isFreefall = false;
-						SetAnimation(_currentAnimationState & (~AnimState::Lookup & ~AnimState::Crouch));
+						SetAnimation(_currentAnimation->State & (~AnimState::Lookup & ~AnimState::Crouch));
 						if (_jumpTime <= 0.0f) {
 							PlaySfx("Jump"_s);
 						}
@@ -913,15 +918,15 @@ namespace Jazz2::Actors
 		// Fire
 		bool weaponInUse = false;
 		if (_weaponAllowed && areaWeaponAllowed && _levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Fire)) {
-			if (!_isLifting && _suspendType != SuspendType::SwingingVine && (_currentAnimationState & AnimState::Push) != AnimState::Push && _pushFramesLeft <= 0.0f) {
+			if (!_isLifting && _suspendType != SuspendType::SwingingVine && (_currentAnimation->State & AnimState::Push) != AnimState::Push && _pushFramesLeft <= 0.0f) {
 				if (_playerType == PlayerType::Frog) {
-					if (_currentTransitionState == AnimState::Idle && std::abs(_speed.X) < 0.1f && std::abs(_speed.Y) < 0.1f && std::abs(_externalForce.X) < 0.1f && std::abs(_externalForce.Y) < 0.1f) {
+					if (_currentTransition == nullptr && std::abs(_speed.X) < 0.1f && std::abs(_speed.Y) < 0.1f && std::abs(_externalForce.X) < 0.1f && std::abs(_externalForce.Y) < 0.1f) {
 						PlaySfx("Tongue"_s, 0.8f);
 
 						_controllable = false;
 						_controllableTimeout = 120.0f;
 
-						SetTransition(_currentAnimationState | AnimState::Shoot, false, [this]() {
+						SetTransition(_currentAnimation->State | AnimState::Shoot, false, [this]() {
 							_controllable = true;
 							_controllableTimeout = 0.0f;
 						});
@@ -932,11 +937,11 @@ namespace Jazz2::Actors
 					bool weaponCooledDown = (_weaponCooldown <= 0.0f);
 					weaponInUse = FireCurrentWeapon(_currentWeapon);
 					if (weaponInUse) {
-						if (_currentTransitionState == AnimState::Spring || _currentTransitionState == AnimState::TransitionShootToIdle) {
+						if (_currentTransition != nullptr && (_currentTransition->State == AnimState::Spring || _currentTransition->State == AnimState::TransitionShootToIdle)) {
 							ForceCancelTransition();
 						}
 
-						SetAnimation(_currentAnimationState | AnimState::Shoot);
+						SetAnimation(_currentAnimation->State | AnimState::Shoot);
 						// Rewind the animation, if it should be played only once
 						if (weaponCooledDown && _currentAnimation->LoopMode == AnimationLoopMode::Once) {
 							_renderer.AnimTime = 0.0f;
@@ -975,8 +980,8 @@ namespace Jazz2::Actors
 	{
 		switch (_activeShield) {
 			case ShieldType::Fire: {
-				auto it = _metadata->Animations.find(String::nullTerminatedView("ShieldFire"_s));
-				if (it != _metadata->Animations.end()) {
+				auto* res = _metadata->FindAnimation((AnimState)536870929); // ShieldFire
+				if (res != nullptr) {
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
 
@@ -1007,7 +1012,7 @@ namespace Jazz2::Actors
 
 						command->setTransformation(Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f));
 						command->setLayer(_renderer.layer() - 4);
-						command->material().setTexture(*it->second.Base->TextureDiffuse.get());
+						command->material().setTexture(*res->Base->TextureDiffuse.get());
 
 						renderQueue.addCommand(command.get());
 					}
@@ -1038,7 +1043,7 @@ namespace Jazz2::Actors
 
 						command->setTransformation(Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f));
 						command->setLayer(_renderer.layer() + 4);
-						command->material().setTexture(*it->second.Base->TextureDiffuse.get());
+						command->material().setTexture(*res->Base->TextureDiffuse.get());
 
 						renderQueue.addCommand(command.get());
 					}
@@ -1046,8 +1051,8 @@ namespace Jazz2::Actors
 				break;
 			}
 			case ShieldType::Water: {
-				auto it = _metadata->Animations.find(String::nullTerminatedView("ShieldWater"_s));
-				if (it != _metadata->Animations.end()) {
+				auto* res = _metadata->FindAnimation((AnimState)536870930); // ShieldWater
+				if (res != nullptr) {
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
 
@@ -1070,31 +1075,31 @@ namespace Jazz2::Actors
 
 					float frames = _levelHandler->ElapsedFrames();
 
-					Vector2i texSize = it->second.Base->TextureDiffuse->size();
-					int curAnimFrame = it->second.FrameOffset + ((int)(frames * 0.24f) % it->second.FrameCount);
-					int col = curAnimFrame % it->second.Base->FrameConfiguration.X;
-					int row = curAnimFrame / it->second.Base->FrameConfiguration.X;
-					float texScaleX = (float(it->second.Base->FrameDimensions.X) / float(texSize.X));
-					float texBiasX = (float(it->second.Base->FrameDimensions.X * col) / float(texSize.X));
-					float texScaleY = (float(it->second.Base->FrameDimensions.Y) / float(texSize.Y));
-					float texBiasY = (float(it->second.Base->FrameDimensions.Y * row) / float(texSize.Y));
+					Vector2i texSize = res->Base->TextureDiffuse->size();
+					int curAnimFrame = res->FrameOffset + ((int)(frames * 0.24f) % res->FrameCount);
+					int col = curAnimFrame % res->Base->FrameConfiguration.X;
+					int row = curAnimFrame / res->Base->FrameConfiguration.X;
+					float texScaleX = (float(res->Base->FrameDimensions.X) / float(texSize.X));
+					float texBiasX = (float(res->Base->FrameDimensions.X * col) / float(texSize.X));
+					float texScaleY = (float(res->Base->FrameDimensions.Y) / float(texSize.Y));
+					float texBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.Y));
 
 					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 					instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(it->second.Base->FrameDimensions.X * shieldScale, it->second.Base->FrameDimensions.Y * shieldScale);
+					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(res->Base->FrameDimensions.X * shieldScale, res->Base->FrameDimensions.Y * shieldScale);
 					instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(1.0f, 1.0f, 1.0f, shieldAlpha);
 
 					command->setTransformation(Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f));
 					command->setLayer(_renderer.layer() + 4);
-					command->material().setTexture(*it->second.Base->TextureDiffuse.get());
+					command->material().setTexture(*res->Base->TextureDiffuse.get());
 
 					renderQueue.addCommand(command.get());
 				}
 				break;
 			}
 			case ShieldType::Lightning: {
-				auto it = _metadata->Animations.find(String::nullTerminatedView("ShieldLightning"_s));
-				if (it != _metadata->Animations.end()) {
+				auto* res = _metadata->FindAnimation((AnimState)536870931); // ShieldLightning
+				if (res != nullptr) {
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
 
@@ -1125,7 +1130,7 @@ namespace Jazz2::Actors
 
 						command->setTransformation(Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f));
 						command->setLayer(_renderer.layer() - 4);
-						command->material().setTexture(*it->second.Base->TextureDiffuse.get());
+						command->material().setTexture(*res->Base->TextureDiffuse.get());
 
 						renderQueue.addCommand(command.get());
 					}
@@ -1149,14 +1154,14 @@ namespace Jazz2::Actors
 
 						float frames = _levelHandler->ElapsedFrames();
 
-						auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+						auto* instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(frames * 0.006f, sinf(frames * 0.006f), sinf(frames * 0.015f), frames * -0.006f);
 						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(70.0f * shieldScale, 70.0f * shieldScale);
 						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 1.0f, shieldAlpha);
 
 						command->setTransformation(Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f));
 						command->setLayer(_renderer.layer() + 4);
-						command->material().setTexture(*it->second.Base->TextureDiffuse.get());
+						command->material().setTexture(*res->Base->TextureDiffuse.get());
 
 						renderQueue.addCommand(command.get());
 					}
@@ -1189,7 +1194,7 @@ namespace Jazz2::Actors
 
 	bool Player::OnPerish(ActorBase* collider)
 	{
-		if (_currentTransitionState == AnimState::TransitionDeath) {
+		if (_currentTransition != nullptr && _currentTransition->State == AnimState::TransitionDeath) {
 			return false;
 		}
 
@@ -1202,24 +1207,17 @@ namespace Jazz2::Actors
 
 			// Load original metadata
 			switch (_playerType) {
-				case PlayerType::Jazz:
-					RequestMetadata("Interactive/PlayerJazz"_s);
-					break;
-				case PlayerType::Spaz:
-					RequestMetadata("Interactive/PlayerSpaz"_s);
-					break;
-				case PlayerType::Lori:
-					RequestMetadata("Interactive/PlayerLori"_s);
-					break;
-				case PlayerType::Frog:
-					RequestMetadata("Interactive/PlayerFrog"_s);
-					break;
+				case PlayerType::Jazz: RequestMetadata("Interactive/PlayerJazz"_s); break;
+				case PlayerType::Spaz: RequestMetadata("Interactive/PlayerSpaz"_s); break;
+				case PlayerType::Lori: RequestMetadata("Interactive/PlayerLori"_s); break;
+				case PlayerType::Frog: RequestMetadata("Interactive/PlayerFrog"_s); break;
 			}
 
 			// Refresh animation state
+			AnimState prevState = _currentAnimation->State;
 			_currentSpecialMove = SpecialMoveType::None;
 			_currentAnimation = nullptr;
-			SetAnimation(_currentAnimationState);
+			SetAnimation(prevState);
 
 			// Morph to original type with animation and then trigger death
 			SetPlayerTransition(AnimState::TransitionFromFrog, false, true, SpecialMoveType::None, [this]() {
@@ -1254,7 +1252,7 @@ namespace Jazz2::Actors
 			if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f) {
 				other->DecreaseHealth(INT32_MAX, this);
 
-				if ((_currentAnimationState & AnimState::Buttstomp) == AnimState::Buttstomp) {
+				if ((_currentAnimation->State & AnimState::Buttstomp) == AnimState::Buttstomp) {
 					removeSpecialMove = true;
 					_speed.Y *= -0.6f;
 					SetState(ActorState::CanJump, true);
@@ -1277,7 +1275,7 @@ namespace Jazz2::Actors
 						}
 						_speed.Y *= -0.5f;
 					}
-					if ((_currentAnimationState & AnimState::Buttstomp) == AnimState::Buttstomp) {
+					if ((_currentAnimation->State & AnimState::Buttstomp) == AnimState::Buttstomp) {
 						removeSpecialMove = true;
 						_speed.Y *= -0.6f;
 						SetState(ActorState::CanJump, true);
@@ -1301,7 +1299,7 @@ namespace Jazz2::Actors
 			}
 		} else if (auto spring = dynamic_cast<Environment::Spring*>(other.get())) {
 			// Collide only with hitbox
-			if (_controllableExternal && _currentTransitionState != AnimState::TransitionLedgeClimb && _springCooldown <= 0.0f && spring->AABBInner.Overlaps(AABBInner)) {
+			if (_controllableExternal && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionLedgeClimb) && _springCooldown <= 0.0f && spring->AABBInner.Overlaps(AABBInner)) {
 				Vector2 force = spring->Activate();
 				int sign = ((force.X + force.Y) > std::numeric_limits<float>::epsilon() ? 1 : -1);
 				if (std::abs(force.X) > 0.0f) {
@@ -1367,7 +1365,7 @@ namespace Jazz2::Actors
 
 			handled = true;
 		} else if (auto bonusWarp = dynamic_cast<Environment::BonusWarp*>(other.get())) {
-			if (_currentTransitionState == AnimState::Idle || _currentTransitionCancellable) {
+			if (_currentTransition == nullptr || _currentTransitionCancellable) {
 				auto cost = bonusWarp->GetCost();
 				if (cost <= _coins) {
 					_coins -= cost;
@@ -1400,7 +1398,8 @@ namespace Jazz2::Actors
 		if (_levelHandler->TileMap()->IsTileHurting(_pos.X, _pos.Y + 24)) {
 			TakeDamage(1, _speed.X * 0.25f);
 		} else if (!_inWater && _activeModifier == Modifier::None) {
-			if (!GetState(ActorState::CanJump)) {
+			if (_hitFloorTime <= 0.0f && !GetState(ActorState::CanJump)) {
+				_hitFloorTime = 30.0f;
 				PlaySfx("Land"_s, 0.8f);
 
 				if (Random().NextFloat() < 0.6f) {
@@ -1439,16 +1438,12 @@ namespace Jazz2::Actors
 			TakeDamage(1, _speed.X * 0.25f);
 		} else {
 			if (PreferencesCache::EnableLedgeClimb && _isActivelyPushing && _suspendType == SuspendType::None && _activeModifier == Modifier::None && !GetState(ActorState::CanJump) &&
-				!_inWater && _currentSpecialMove == SpecialMoveType::None && _currentTransitionState != AnimState::TransitionUppercutEnd &&
+				!_inWater && _currentSpecialMove == SpecialMoveType::None && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionUppercutEnd) &&
 				_speed.Y >= -1.0f && _externalForce.Y >= 0.0f && _copterFramesLeft <= 0.0f && _keepRunningTime <= 0.0f) {
 
-				// Character supports ledge climbing
-				AnimationCandidate candidates[AnimationCandidatesCount];
-				int count = FindAnimationCandidates(AnimState::TransitionLedgeClimb, candidates);
-				bool canClimb = (count > 0);
-
-				if (canClimb) {
-					const int MaxTolerancePixels = 6;
+				// Check if the character supports ledge climbing
+				if (_metadata->FindAnimation(AnimState::TransitionLedgeClimb)) {
+					constexpr std::int32_t MaxTolerancePixels = 6;
 
 					SetState(ActorState::CollideWithTilesetReduced, false);
 
@@ -1506,6 +1501,7 @@ namespace Jazz2::Actors
 								_pushFramesLeft = 0.0f;
 								_fireFramesLeft = 0.0f;
 								_copterFramesLeft = 0.0f;
+								_hitFloorTime = 60.0f;
 
 								_speed.Y = 0.0f;
 
@@ -1535,7 +1531,7 @@ namespace Jazz2::Actors
 			return;
 		}
 
-		AnimState oldState = _currentAnimationState;
+		AnimState oldState = _currentAnimation->State;
 		AnimState newState;
 		if (_inWater) {
 			newState = AnimState::Swim;
@@ -1558,7 +1554,7 @@ namespace Jazz2::Actors
 			}
 		} else {
 			// Only certain ones don't need to be preserved from earlier state, others should be set as expected
-			AnimState composite = (_currentAnimationState & (AnimState)0xFFF83F60);
+			AnimState composite = (_currentAnimation->State & (AnimState)0xFFF83F60);
 
 			if (_isActivelyPushing == _wasActivelyPushing) {
 				float absSpeedX = std::abs(_speed.X);
@@ -1614,7 +1610,7 @@ namespace Jazz2::Actors
 			if (_idleTime > 600.0f) {
 				_idleTime = 0.0f;
 
-				if (_currentTransitionState == AnimState::Idle) {
+				if (_currentTransition == nullptr) {
 					constexpr StringView IdleBored[] = {
 						"IdleBored1"_s, "IdleBored2"_s, "IdleBored3"_s, "IdleBored4"_s, "IdleBored5"_s
 					};
@@ -1675,7 +1671,7 @@ namespace Jazz2::Actors
 					SetTransition(AnimState::TransitionIdleToJump, true);
 				} else if (newState != AnimState::Idle) {
 					_inLedgeTransition = false;
-					if (_currentTransitionState == AnimState::TransitionLedge) {
+					if (_currentTransition != nullptr && _currentTransition->State == AnimState::TransitionLedge) {
 						CancelTransition();
 					}
 				} else if (!_inLedgeTransition && _carryingObject == nullptr && std::abs(_speed.X) < 1.0f && std::abs(_speed.Y) < 1.0f) {
@@ -1751,18 +1747,18 @@ namespace Jazz2::Actors
 		if (_currentSpecialMove == SpecialMoveType::Buttstomp && (GetState(ActorState::CanJump) || _suspendType != SuspendType::None || _carryingObject != nullptr)) {
 			EndDamagingMove();
 			if (_suspendType == SuspendType::None && !_isSpring) {
-				int tx = (int)_pos.X / 32;
-				int ty = ((int)_pos.Y + 24) / 32;
+				std::int32_t tx = (std::int32_t)_pos.X / 32;
+				std::int32_t ty = ((std::int32_t)_pos.Y + 24) / 32;
 
-				uint8_t* eventParams;
+				std::uint8_t* eventParams;
 				if (_levelHandler->EventMap()->GetEventByPosition(tx, ty, &eventParams) == EventType::GemStomp) {
 					_levelHandler->EventMap()->StoreTileEvent(tx, ty, EventType::Empty);
 
-					for (int i = 0; i < 8; i++) {
+					for (std::int32_t i = 0; i < 8; i++) {
 						float fx = Random().NextFloat(-16.0f, 16.0f);
 						float fy = Random().NextFloat(-12.0f, 0.2f);
 
-						uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { };
+						std::uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { };
 						std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, spawnParams, ActorState::None, Vector3i((int)(_pos.X + fx * 2.0f), (int)(_pos.Y + fy * 4.0f), _renderer.layer() - 10));
 						if (actor != nullptr) {
 							actor->AddExternalForce(fx, fy);
@@ -1785,12 +1781,12 @@ namespace Jazz2::Actors
 		}
 
 		// Uppercut
-		if (_currentSpecialMove == SpecialMoveType::Uppercut && _currentTransitionState == AnimState::Idle && ((_currentAnimationState & AnimState::Uppercut) == AnimState::Uppercut) && _speed.Y > -2) {
+		if (_currentSpecialMove == SpecialMoveType::Uppercut && _currentTransition == nullptr && ((_currentAnimation->State & AnimState::Uppercut) == AnimState::Uppercut) && _speed.Y > -2) {
 			EndDamagingMove();
 		}
 
 		// Sidekick
-		if (_currentSpecialMove == SpecialMoveType::Sidekick && _currentTransitionState == AnimState::Idle && std::abs(_speed.X) < 0.01f) {
+		if (_currentSpecialMove == SpecialMoveType::Sidekick && _currentTransition == nullptr && std::abs(_speed.X) < 0.01f) {
 			EndDamagingMove();
 			_controllable = true;
 			if (_suspendType == SuspendType::None) {
@@ -1802,17 +1798,17 @@ namespace Jazz2::Actors
 		if (_activeModifier != Modifier::Copter && _activeModifier != Modifier::LizardCopter) {
 			// TODO: Is this still needed?
 			bool cancelCopter;
-			if ((_currentAnimationState & AnimState::Copter) == AnimState::Copter) {
+			if ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
 				cancelCopter = (GetState(ActorState::CanJump) || _suspendType != SuspendType::None || _copterFramesLeft <= 0.0f);
 
 				_copterFramesLeft -= timeMult;
 			} else {
-				cancelCopter = ((_currentAnimationState & AnimState::Fall) == AnimState::Fall && _copterFramesLeft > 0.0f);
+				cancelCopter = ((_currentAnimation->State & AnimState::Fall) == AnimState::Fall && _copterFramesLeft > 0.0f);
 			}
 
 			if (cancelCopter) {
 				_copterFramesLeft = 0.0f;
-				SetAnimation(_currentAnimationState & ~AnimState::Copter);
+				SetAnimation(_currentAnimation->State & ~AnimState::Copter);
 				if (!_isAttachedToPole) {
 					SetState(ActorState::ApplyGravitation, true);
 				}
@@ -1836,7 +1832,7 @@ namespace Jazz2::Actors
 			return;
 		}
 
-		AnimState currentState = _currentAnimationState;
+		AnimState currentState = _currentAnimation->State;
 
 		SuspendType newSuspendState = tiles->GetTileSuspendState(_pos.X, _pos.Y - 1.0f);
 
@@ -1942,7 +1938,7 @@ namespace Jazz2::Actors
 				}
 
 				// Adjust swimming animation speed
-				if (_currentTransitionState == AnimState::Idle) {
+				if (_currentTransition == nullptr) {
 					_renderer.AnimDuration = std::max(_currentAnimation->AnimDuration + 1.0f - Vector2f(_speed.X, _speed.Y).Length() * 0.26f, 0.4f);
 				}
 
@@ -1957,7 +1953,7 @@ namespace Jazz2::Actors
 				SetAnimation(AnimState::Jump);
 
 				float y = _levelHandler->WaterLevel();
-				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)y, _renderer.layer() + 2), Explosion::Type::WaterSplash);
+				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)y, _renderer.layer() + 2), Explosion::Type::WaterSplash);
 				_levelHandler->PlayCommonSfx("WaterSplash"_s, Vector3f(_pos.X, y, 0.0f), 1.0f, 0.5f);
 			}
 		} else {
@@ -1974,7 +1970,7 @@ namespace Jazz2::Actors
 			}
 
 			// Adjust walking animation speed
-			if (_currentAnimationState == AnimState::Walk && _currentTransitionState == AnimState::Idle) {
+			if (_currentAnimation->State == AnimState::Walk && _currentTransition == nullptr) {
 				_renderer.AnimDuration = _currentAnimation->AnimDuration * (1.4f - 0.4f * std::min(std::abs(_speed.X), MaxRunningSpeed) / MaxRunningSpeed);
 			}
 		}
@@ -1999,7 +1995,7 @@ namespace Jazz2::Actors
 				break;
 			}
 			case EventType::WarpOrigin: { // Warp ID, Fast, Set Lap
-				if (_currentTransitionState == AnimState::Idle || _currentTransitionState == (AnimState::Dash | AnimState::Jump) || _currentTransitionCancellable) {
+				if (_currentTransition == nullptr || _currentTransition->State == (AnimState::Dash | AnimState::Jump) || _currentTransitionCancellable) {
 					Vector2f c = events->GetWarpTarget(p[0]);
 					if (c.X >= 0.0f && c.Y >= 0.0f) {
 						WarpToPosition(c, p[1] != 0);
@@ -2175,7 +2171,7 @@ namespace Jazz2::Actors
 		// float events, so checking for a wider box is necessary.
 		constexpr float ExtendedHitbox = 2.0f;
 
-		if (_currentTransitionState != AnimState::TransitionLedgeClimb) {
+		if (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionLedgeClimb) {
 			if (_currentSpecialMove != SpecialMoveType::Buttstomp) {
 				if ((events->GetEventByPosition(_pos.X, _pos.Y, &p) == EventType::AreaFloatUp) ||
 					(events->GetEventByPosition(AABBInner.L - ExtendedHitbox, AABBInner.T - ExtendedHitbox, &p) == EventType::AreaFloatUp) ||
@@ -2541,7 +2537,7 @@ namespace Jazz2::Actors
 		_levelHandler->AddActor(shot);
 
 		_weaponCooldown = 12.0f - (_weaponUpgrades[(int)WeaponType::Blaster] * 0.1f);
-		if (!_inWater && (_currentAnimationState & AnimState::Lookup) != AnimState::Lookup) {
+		if (!_inWater && (_currentAnimation->State & AnimState::Lookup) != AnimState::Lookup) {
 			AddExternalForce(IsFacingLeft() ? 0.1f : -0.1f, 0.0f);
 		}
 
@@ -2656,30 +2652,30 @@ namespace Jazz2::Actors
 
 	void Player::GetFirePointAndAngle(Vector3i& initialPos, Vector2f& gunspotPos, float& angle)
 	{
-		if (_currentTransitionState == AnimState::Spring || _currentTransitionState == AnimState::TransitionShootToIdle) {
+		if (_currentTransition != nullptr && (_currentTransition->State == AnimState::Spring || _currentTransition->State == AnimState::TransitionShootToIdle)) {
 			ForceCancelTransition();
 		}
 
-		SetAnimation(_currentAnimationState | AnimState::Shoot);
+		SetAnimation(_currentAnimation->State | AnimState::Shoot);
 
-		initialPos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() - 2);
+		initialPos = Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2);
 		gunspotPos = _pos;
 
 		if (_inWater) {
 			angle = _renderer.rotation();
 
-			int size = (_currentAnimation->Base->FrameDimensions.X / 2);
+			std::int32_t size = (_currentAnimation->Base->FrameDimensions.X / 2);
 			gunspotPos.X += (cosf(angle) * size) * (IsFacingLeft() ? -1.0f : 1.0f);
 			gunspotPos.Y += (sinf(angle) * size) * (IsFacingLeft() ? -1.0f : 1.0f) - (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);
 		} else {
 			gunspotPos.X += (_currentAnimation->Base->Hotspot.X - _currentAnimation->Base->Gunspot.X) * (IsFacingLeft() ? 1 : -1);
 			gunspotPos.Y -= (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);
 
-			if ((_currentAnimationState & AnimState::Lookup) == AnimState::Lookup) {
-				initialPos.X = (int)gunspotPos.X;
+			if ((_currentAnimation->State & AnimState::Lookup) == AnimState::Lookup) {
+				initialPos.X = (std::int32_t)gunspotPos.X;
 				angle = (IsFacingLeft() ? fRadAngle90 : fRadAngle270);
 			} else {
-				initialPos.Y = (int)gunspotPos.Y;
+				initialPos.Y = (std::int32_t)gunspotPos.Y;
 				angle = 0.0f;
 			}
 		}
@@ -2736,8 +2732,8 @@ namespace Jazz2::Actors
 					_internalForceY = 0.0f;
 				} else {
 					// Refresh animation state, because UpdateAnimation() is not called when _controllable is false
-					AnimState oldState = _currentAnimationState;
-					AnimState newState = (_currentAnimationState & (AnimState)0xFFF83F60);
+					AnimState oldState = _currentAnimation->State;
+					AnimState newState = (oldState & (AnimState)0xFFF83F60);
 					if (std::abs(_speed.X) > std::numeric_limits<float>::epsilon()) {
 						newState |= AnimState::Walk;
 					}
@@ -2776,8 +2772,8 @@ namespace Jazz2::Actors
 					_internalForceY = 0.0f;
 				} else {
 					// Refresh animation state, because UpdateAnimation() is not called when _controllable is false
-					AnimState oldState = _currentAnimationState;
-					AnimState newState = (_currentAnimationState & (AnimState)0xFFF83F60);
+					AnimState oldState = _currentAnimation->State;
+					AnimState newState = (oldState & (AnimState)0xFFF83F60);
 					if (std::abs(_speed.X) > std::numeric_limits<float>::epsilon()) {
 						newState |= AnimState::Walk;
 					}
@@ -2855,9 +2851,9 @@ namespace Jazz2::Actors
 
 	void Player::ReceiveLevelCarryOver(ExitType exitType, const PlayerCarryOver& carryOver)
 	{
-		_lives = (int)carryOver.Lives;
+		_lives = (std::int32_t)carryOver.Lives;
 		_score = carryOver.Score;
-		_foodEaten = (int)carryOver.FoodEaten;
+		_foodEaten = (std::int32_t)carryOver.FoodEaten;
 		_currentWeapon = carryOver.CurrentWeapon;
 
 		std::memcpy(_weaponAmmo, carryOver.Ammo, sizeof(_weaponAmmo));
@@ -2865,8 +2861,8 @@ namespace Jazz2::Actors
 		std::memcpy(_weaponUpgrades, carryOver.WeaponUpgrades, sizeof(_weaponUpgrades));
 		std::memcpy(_weaponUpgradesCheckpoint, carryOver.WeaponUpgrades, sizeof(_weaponUpgradesCheckpoint));
 
-		_weaponAmmo[(int)WeaponType::Blaster] = UINT16_MAX;
-		_weaponAmmoCheckpoint[(int)WeaponType::Blaster] = UINT16_MAX;
+		_weaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+		_weaponAmmoCheckpoint[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
 
 		ExitType exitTypeMasked = (exitType & ExitType::TypeMask);
 		if (exitTypeMasked == ExitType::Warp || exitTypeMasked == ExitType::Bonus || exitTypeMasked == ExitType::Boss) {
@@ -2885,7 +2881,7 @@ namespace Jazz2::Actors
 		}
 
 		// Preload all weapons
-		for (int i = 0; i < countof(_weaponAmmo); i++) {
+		for (std::int32_t i = 0; i < countof(_weaponAmmo); i++) {
 			if (_weaponAmmo[i] != 0) {
 				PreloadMetadataAsync("Weapon/"_s + WeaponNames[i]);
 			}
@@ -2896,9 +2892,9 @@ namespace Jazz2::Actors
 	{
 		PlayerCarryOver carryOver;
 		carryOver.Type = _playerType;
-		carryOver.Lives = (_lives > UINT8_MAX ? UINT8_MAX : (uint8_t)_lives);
+		carryOver.Lives = (_lives > UINT8_MAX ? UINT8_MAX : (std::uint8_t)_lives);
 		carryOver.Score = _score;
-		carryOver.FoodEaten = (_foodEaten > UINT8_MAX ? UINT8_MAX : (uint8_t)_foodEaten);
+		carryOver.FoodEaten = (_foodEaten > UINT8_MAX ? UINT8_MAX : (std::uint8_t)_foodEaten);
 		carryOver.CurrentWeapon = _currentWeapon;
 
 		std::memcpy(carryOver.Ammo, _weaponAmmo, sizeof(_weaponAmmo));
@@ -2922,7 +2918,7 @@ namespace Jazz2::Actors
 			SetState(ActorState::IsInvulnerable, true);
 			SetState(ActorState::ApplyGravitation, false);
 
-			SetAnimation(_currentAnimationState & ~(AnimState::Uppercut | AnimState::Buttstomp));
+			SetAnimation(_currentAnimation->State & ~(AnimState::Uppercut | AnimState::Buttstomp));
 
 			_speed.X = 0.0f;
 			_speed.Y = 0.0f;
@@ -2962,8 +2958,8 @@ namespace Jazz2::Actors
 			return;
 		}
 		
-		int x = (int)_pos.X / Tiles::TileSet::DefaultTileSize;
-		int y = (int)_pos.Y / Tiles::TileSet::DefaultTileSize;
+		std::int32_t x = (std::int32_t)_pos.X / Tiles::TileSet::DefaultTileSize;
+		std::int32_t y = (std::int32_t)_pos.Y / Tiles::TileSet::DefaultTileSize;
 
 		if (_lastPoleTime > 0.0f && _lastPolePos.X == x && _lastPolePos.Y == y) {
 			return;
@@ -2986,8 +2982,8 @@ namespace Jazz2::Actors
 		float ty = y * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2;
 
 		if (_levelHandler->IsReforged()) {
-			auto events = _levelHandler->EventMap();
-			uint8_t* p;
+			auto* events = _levelHandler->EventMap();
+			std::uint8_t* p;
 			if (horizontal) {
 				if (events->GetEventByPosition(x, (_pos.Y < ty ? y - 1 : y + 1), &p) == EventType::ModifierHPole) {
 					ty = _pos.Y;
@@ -3020,7 +3016,7 @@ namespace Jazz2::Actors
 		_fireFramesLeft = 0.0f;
 		_copterFramesLeft = 0.0f;
 
-		SetAnimation(_currentAnimationState & ~(AnimState::Uppercut /*| AnimState::Sidekick*/ | AnimState::Buttstomp));
+		SetAnimation(_currentAnimation->State & ~(AnimState::Uppercut /*| AnimState::Sidekick*/ | AnimState::Buttstomp));
 
 		AnimState poleAnim = (horizontal ? AnimState::TransitionPoleHSlow : AnimState::TransitionPoleVSlow);
 		SetPlayerTransition(poleAnim, false, true, SpecialMoveType::None, [this, horizontal, positive, lastSpeed]() {
@@ -3049,10 +3045,10 @@ namespace Jazz2::Actors
 
 			PlaySfx("Pole"_s, 1.0f, 0.6f);
 		} else {
-			int sign = (positive ? 1 : -1);
+			std::int32_t sign = (positive ? 1 : -1);
 			if (horizontal) {
 				// To prevent stucking
-				for (int i = -1; i > -6; i--) {
+				for (std::int32_t i = -1; i > -6; i--) {
 					if (MoveInstantly(Vector2f(_speed.X, (float)i), MoveType::Relative)) {
 						break;
 					}
@@ -3166,7 +3162,7 @@ namespace Jazz2::Actors
 		}
 
 		// Cancel active climbing and copter
-		if (_currentTransitionState == AnimState::TransitionLedgeClimb) {
+		if (_currentTransition != nullptr && _currentTransition->State == AnimState::TransitionLedgeClimb) {
 			ForceCancelTransition();
 			MoveInstantly(Vector2f(IsFacingLeft() ? 6.0f : -6.0f, 0.0f), MoveType::Relative | MoveType::Force);
 		} else if (_activeModifier == Modifier::Copter || _activeModifier == Modifier::LizardCopter) {
@@ -3248,7 +3244,7 @@ namespace Jazz2::Actors
 	void Player::EndDamagingMove()
 	{
 		SetState(ActorState::ApplyGravitation, true);
-		SetAnimation(_currentAnimationState & ~(AnimState::Uppercut | AnimState::Buttstomp));
+		SetAnimation(_currentAnimation->State & ~(AnimState::Uppercut | AnimState::Buttstomp));
 
 		if (_currentSpecialMove == SpecialMoveType::Uppercut) {
 			if (_suspendType == SuspendType::None) {
@@ -3297,7 +3293,7 @@ namespace Jazz2::Actors
 
 	bool Player::AddLives(int count)
 	{
-		constexpr int LivesLimit = 99;
+		constexpr std::int32_t LivesLimit = 99;
 
 		if (_lives >= LivesLimit) {
 			return false;
@@ -3357,16 +3353,16 @@ namespace Jazz2::Actors
 
 	bool Player::AddAmmo(WeaponType weaponType, int16_t count)
 	{
-		constexpr int16_t Multiplier = 256;
-		constexpr int16_t AmmoLimit = 99 * Multiplier;
+		constexpr std::int16_t Multiplier = 256;
+		constexpr std::int16_t AmmoLimit = 99 * Multiplier;
 
-		if (weaponType >= WeaponType::Count || _weaponAmmo[(int)weaponType] < 0 || _weaponAmmo[(int)weaponType] >= AmmoLimit) {
+		if (weaponType >= WeaponType::Count || _weaponAmmo[(std::int32_t)weaponType] < 0 || _weaponAmmo[(std::int32_t)weaponType] >= AmmoLimit) {
 			return false;
 		}
 
-		bool switchTo = (_weaponAmmo[(int)weaponType] == 0);
+		bool switchTo = (_weaponAmmo[(std::int32_t)weaponType] == 0);
 
-		_weaponAmmo[(int)weaponType] = std::min((int16_t)(_weaponAmmo[(int)weaponType] + count * Multiplier), AmmoLimit);
+		_weaponAmmo[(std::int32_t)weaponType] = std::min((int16_t)(_weaponAmmo[(std::int32_t)weaponType] + count * Multiplier), AmmoLimit);
 
 		if (switchTo) {
 			_currentWeapon = weaponType;
@@ -3391,21 +3387,21 @@ namespace Jazz2::Actors
 
 	void Player::AddWeaponUpgrade(WeaponType weaponType, uint8_t upgrade)
 	{
-		_weaponUpgrades[(int)weaponType] |= upgrade;
+		_weaponUpgrades[(std::int32_t)weaponType] |= upgrade;
 	}
 
 	bool Player::AddFastFire(int count)
 	{
-		const int FastFireLimit = 9;
+		const std::int32_t FastFireLimit = 9;
 
-		int current = (_weaponUpgrades[(int)WeaponType::Blaster] >> 1);
+		std::int32_t current = (_weaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
 		if (current >= FastFireLimit) {
 			return false;
 		}
 
 		current = std::min(current + count, FastFireLimit);
 
-		_weaponUpgrades[(int)WeaponType::Blaster] = (uint8_t)((_weaponUpgrades[(int)WeaponType::Blaster] & 0x1) | (current << 1));
+		_weaponUpgrades[(std::int32_t)WeaponType::Blaster] = (std::uint8_t)((_weaponUpgrades[(std::int32_t)WeaponType::Blaster] & 0x1) | (current << 1));
 
 		PlaySfx("PickupAmmo"_s);
 
@@ -3424,25 +3420,17 @@ namespace Jazz2::Actors
 
 		// Load new metadata
 		switch (type) {
-			case PlayerType::Jazz:
-				RequestMetadata("Interactive/PlayerJazz");
-				break;
-			case PlayerType::Spaz:
-				RequestMetadata("Interactive/PlayerSpaz");
-				break;
-			case PlayerType::Lori:
-				RequestMetadata("Interactive/PlayerLori");
-				break;
-			case PlayerType::Frog:
-				RequestMetadata("Interactive/PlayerFrog");
-				break;
+			case PlayerType::Jazz: RequestMetadata("Interactive/PlayerJazz"); break;
+			case PlayerType::Spaz: RequestMetadata("Interactive/PlayerSpaz"); break;
+			case PlayerType::Lori: RequestMetadata("Interactive/PlayerLori"); break;
+			case PlayerType::Frog: RequestMetadata("Interactive/PlayerFrog"); break;
 		}
 
 		// Refresh animation state
 		if ((_currentSpecialMove == SpecialMoveType::None) ||
 			(_currentSpecialMove == SpecialMoveType::Buttstomp && (type == PlayerType::Jazz || type == PlayerType::Spaz || type == PlayerType::Lori))) {
 			_currentAnimation = nullptr;
-			SetAnimation(_currentAnimationState);
+			SetAnimation(_currentAnimation->State);
 		} else {
 			_currentAnimation = nullptr;
 			SetAnimation(AnimState::Fall);
@@ -3493,11 +3481,11 @@ namespace Jazz2::Actors
 				_controllableTimeout = 0.0f;
 			});
 		} else {
-			Explosion::Create(_levelHandler, Vector3i((int)(_pos.X - 12.0f), (int)(_pos.Y - 6.0f), _renderer.layer() + 4), Explosion::Type::SmokeBrown);
-			Explosion::Create(_levelHandler, Vector3i((int)(_pos.X - 8.0f), (int)(_pos.Y + 28.0f), _renderer.layer() + 4), Explosion::Type::SmokeBrown);
-			Explosion::Create(_levelHandler, Vector3i((int)(_pos.X + 12.0f), (int)(_pos.Y + 10.0f), _renderer.layer() + 4), Explosion::Type::SmokeBrown);
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X - 12.0f), (std::int32_t)(_pos.Y - 6.0f), _renderer.layer() + 4), Explosion::Type::SmokeBrown);
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X - 8.0f), (std::int32_t)(_pos.Y + 28.0f), _renderer.layer() + 4), Explosion::Type::SmokeBrown);
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + 12.0f), (std::int32_t)(_pos.Y + 10.0f), _renderer.layer() + 4), Explosion::Type::SmokeBrown);
 
-			Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)(_pos.Y + 12.0f), _renderer.layer() + 6), Explosion::Type::SmokeBrown);
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)(_pos.Y + 12.0f), _renderer.layer() + 6), Explosion::Type::SmokeBrown);
 		}
 	}
 
@@ -3538,10 +3526,10 @@ namespace Jazz2::Actors
 		}
 
 		_spawnedBird = std::make_shared<Environment::Bird>();
-		uint8_t birdParams[2] = { type, (uint8_t)_playerIndex };
+		std::uint8_t birdParams[2] = { type, (std::uint8_t)_playerIndex };
 		_spawnedBird->OnActivated(ActorActivationDetails(
 			_levelHandler,
-			Vector3i((int)pos.X, (int)pos.Y, _renderer.layer() + 80),
+			Vector3i((std::int32_t)pos.X, (std::int32_t)pos.Y, _renderer.layer() + 80),
 			birdParams
 		));
 		_levelHandler->AddActor(_spawnedBird);

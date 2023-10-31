@@ -72,7 +72,7 @@ namespace Jazz2::Actors::Enemies
 	{
 		EnemyBase::OnAnimationFinished();
 
-		if (_currentTransitionState == AnimState::Idle) {
+		if (_currentTransition == nullptr) {
 			bool found = false;
 			Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
 

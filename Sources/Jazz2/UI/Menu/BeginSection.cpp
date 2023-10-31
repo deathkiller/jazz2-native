@@ -1,4 +1,5 @@
 ﻿#include "BeginSection.h"
+#include "MenuResources.h"
 #include "CustomLevelSelectSection.h"
 #include "EpisodeSelectSection.h"
 #include "StartGameOptionsSection.h"
@@ -21,6 +22,8 @@
 #	include "../../../nCine/Backends/Android/AndroidApplication.h"
 #	include "../../../nCine/Backends/Android/AndroidJniHelper.h"
 #endif
+
+using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
@@ -156,7 +159,7 @@ namespace Jazz2::UI::Menu
 				isPlayable = false;
 
 				if (_selectedIndex == 0) {
-					_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y * 0.96f - 8.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.12f), 26.0f, 12.0f, true);
+					_root->DrawElement(MenuGlow, 0, center.X, center.Y * 0.96f - 8.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.12f), 26.0f, 12.0f, true);
 				}
 
 #	if defined(DEATH_TARGET_ANDROID)
@@ -209,7 +212,7 @@ namespace Jazz2::UI::Menu
 			if (i <= (int32_t)Item::Options && !isPlayable) {
 				if (i != 0 && (!hideSecondItem || i != 1)) {
 					if (_selectedIndex == i) {
-						_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (Utf8::GetLength(_items[i].Name) + 3) * 0.5f, 4.0f, true);
+						_root->DrawElement(MenuGlow, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (Utf8::GetLength(_items[i].Name) + 3) * 0.5f, 4.0f, true);
 					}
 
 					_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
@@ -224,7 +227,7 @@ namespace Jazz2::UI::Menu
 			if (_selectedIndex == i) {
 				float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
-				_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(_items[i].Name) + 3) * 0.5f * size, 4.0f * size, true);
+				_root->DrawElement(MenuGlow, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(_items[i].Name) + 3) * 0.5f * size, 4.0f * size, true);
 
 				_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
 					Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);

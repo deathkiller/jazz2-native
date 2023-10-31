@@ -13,8 +13,6 @@
 #include <Containers/SmallVector.h>
 #include <Containers/String.h>
 
-#define ALLOW_RESCALE_SHADERS
-
 using namespace Death::Containers;
 using namespace nCine;
 
@@ -32,8 +30,6 @@ namespace Jazz2
 	struct GenericGraphicResource
 	{
 		GenericGraphicResourceFlags Flags;
-		//GenericGraphicResourceAsyncFinalize AsyncFinalize;
-
 		std::unique_ptr<Texture> TextureDiffuse;
 		std::unique_ptr<Texture> TextureNormal;
 		std::unique_ptr<uint8_t[]> Mask;
@@ -45,32 +41,21 @@ namespace Jazz2
 		Vector2i Coldspot;
 		Vector2i Gunspot;
 
-		GenericGraphicResource();
+		GenericGraphicResource() noexcept;
 	};
 
 	struct GraphicResource
 	{
 		GenericGraphicResource* Base;
-		//GraphicResourceAsyncFinalize AsyncFinalize;
-
-		SmallVector<AnimState, 4> State;
-		//std::unique_ptr<Material> Material;
+		AnimState State;
 		float AnimDuration;
 		std::int32_t FrameCount;
 		std::int32_t FrameOffset;
 		AnimationLoopMode LoopMode;
 
-		GraphicResource();
+		GraphicResource() noexcept;
 
-		bool HasState(AnimState state)
-		{
-			for (auto& current : State) {
-				if (state == current) {
-					return true;
-				}
-			}
-			return false;
-		}
+		bool operator<(const GraphicResource& p) const noexcept;
 	};
 
 	enum class GenericSoundResourceFlags
@@ -87,14 +72,14 @@ namespace Jazz2
 		AudioBuffer Buffer;
 		GenericSoundResourceFlags Flags;
 
-		GenericSoundResource(const StringView& path);
+		GenericSoundResource(const StringView& path) noexcept;
 	};
 
 	struct SoundResource
 	{
 		SmallVector<GenericSoundResource*, 1> Buffers;
 
-		SoundResource();
+		SoundResource() noexcept;
 	};
 
 	enum class MetadataFlags {
@@ -109,11 +94,13 @@ namespace Jazz2
 	struct Metadata
 	{
 		MetadataFlags Flags;
-		HashMap<String, GraphicResource> Animations;
+		SmallVector<GraphicResource, 0> Animations;
 		HashMap<String, SoundResource> Sounds;
 		Vector2i BoundingBox;
 
-		Metadata();
+		Metadata() noexcept;
+
+		GraphicResource* FindAnimation(AnimState state) noexcept;
 	};
 	
 	struct Episode
@@ -125,7 +112,7 @@ namespace Jazz2
 		String NextEpisode;
 		std::uint16_t Position;
 
-		Episode();
+		Episode() noexcept;
 	};
 
 	enum class FontType
@@ -167,7 +154,7 @@ namespace Jazz2
 		ShieldLightning,
 		BatchedShieldLightning,
 
-#if defined(ALLOW_RESCALE_SHADERS)
+#if !defined(DISABLE_RESCALE_SHADERS)
 		ResizeHQ2x,
 		Resize3xBrz,
 		ResizeCrtScanlines,

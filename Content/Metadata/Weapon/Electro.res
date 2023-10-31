@@ -7,7 +7,8 @@
 			"States": [ 0 ]
 		},
 		"Particle": {
-			"Path": "Weapon/electro.aura"
+			"Path": "Weapon/electro.aura",
+			"States": [ 1 ]
 		}
 	},
 

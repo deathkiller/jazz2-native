@@ -1,7 +1,10 @@
 ﻿#include "LanguageSelectSection.h"
 #include "MainMenu.h"
+#include "MenuResources.h"
 #include "../../PreferencesCache.h"
 #include "../../../nCine/I18n.h"
+
+using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
@@ -39,10 +42,10 @@ namespace Jazz2::UI::Menu
 		Vector2i viewSize = canvas->ViewSize;
 		float centerX = viewSize.X * 0.5f;
 		float bottomLine = viewSize.Y - BottomLine;
-		_root->DrawElement("MenuDim"_s, centerX, (TopLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
+		_root->DrawElement(MenuDim, centerX, (TopLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
 			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - TopLine + 2.0f), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement("MenuLine"_s, 0, centerX, TopLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement("MenuLine"_s, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 0, centerX, TopLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int32_t charOffset = 0;
 		_root->DrawStringShadow(_("Language"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
@@ -64,7 +67,7 @@ namespace Jazz2::UI::Menu
 				realNameLength = item.Item.DisplayName.size();
 			}
 
-			_root->DrawElement("MenuGlow"_s, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (realNameLength + 3) * 0.5f * size, 4.0f * size, true);
+			_root->DrawElement(MenuGlow, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (realNameLength + 3) * 0.5f * size, 4.0f * size, true);
 
 			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
 				Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);

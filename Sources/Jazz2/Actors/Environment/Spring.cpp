@@ -22,7 +22,7 @@ namespace Jazz2::Actors::Environment
 
 		_cooldown = (_delay > 0 ? _delay : 6.0f);
 
-		SetTransition(_currentAnimationState | (AnimState)0x200, false);
+		SetTransition(_currentAnimation->State | (AnimState)0x200, false);
 		switch (_orientation) {
 			case Orientation::Bottom:
 				PlaySfx("Vertical"_s);

@@ -34,6 +34,14 @@ using namespace nCine;
 
 namespace Jazz2
 {
+	namespace Resources
+	{
+		static constexpr AnimState Snow = (AnimState)0;
+		static constexpr AnimState Rain = (AnimState)1;
+	}
+
+	using namespace Jazz2::Resources;
+
 	LevelHandler::LevelHandler(IRootController* root)
 		: _root(root), _eventSpawner(this), _difficulty(GameDifficulty::Default), _isReforged(false), _cheatsUsed(false),
 			_cheatsBufferLength(0), _nextLevelType(ExitType::None), _nextLevelTime(0.0f), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
@@ -61,11 +69,8 @@ namespace Jazz2
 		_isReforged = levelInit.IsReforged;
 		_cheatsUsed = levelInit.CheatsUsed;
 
-		if (_isReforged) {
-			Gravity = DefaultGravity;
-		} else {
-			Gravity = DefaultGravity * 0.8f;
-		}
+		// Higher gravity in Reforged mode
+		Gravity = (_isReforged ? DefaultGravity : DefaultGravity * 0.8f);
 
 		auto& resolver = ContentResolver::Get();
 		resolver.BeginLoading();
@@ -84,7 +89,7 @@ namespace Jazz2
 		AttachComponents(std::move(descriptor));
 
 		// Process carry overs
-		for (int32_t i = 0; i < countof(levelInit.PlayerCarryOvers); i++) {
+		for (std::int32_t i = 0; i < countof(levelInit.PlayerCarryOvers); i++) {
 			if (levelInit.PlayerCarryOvers[i].Type == PlayerType::None) {
 				continue;
 			}
@@ -98,7 +103,7 @@ namespace Jazz2
 			}
 
 			std::shared_ptr<Actors::Player> player = std::make_shared<Actors::Player>();
-			uint8_t playerParams[2] = { (uint8_t)levelInit.PlayerCarryOvers[i].Type, (uint8_t)i };
+			std::uint8_t playerParams[2] = { (std::uint8_t)levelInit.PlayerCarryOvers[i].Type, (std::uint8_t)i };
 			player->OnActivated(Actors::ActorActivationDetails(
 				this,
 				Vector3i(spawnPosition.X + (i * 30), spawnPosition.Y - (i * 30), PlayerZ - i),
@@ -254,7 +259,7 @@ namespace Jazz2
 			}
 		}
 
-		for (int32_t i = (int32_t)_playingSounds.size() - 1; i >= 0; i--) {
+		for (std::int32_t i = (std::int32_t)_playingSounds.size() - 1; i >= 0; i--) {
 			if (_playingSounds[i]->isStopped()) {
 				_playingSounds.erase(&_playingSounds[i]);
 			} else {
@@ -369,9 +374,9 @@ namespace Jazz2
 
 					WeatherType realWeatherType = (_weatherType & ~WeatherType::OutdoorsOnly);
 					if (realWeatherType == WeatherType::Rain) {
-						auto it = _commonResources->Animations.find(String::nullTerminatedView("Rain"_s));
-						if (it != _commonResources->Animations.end()) {
-							auto& resBase = it->second.Base;
+						auto* res = _commonResources->FindAnimation(Rain);
+						if (res != nullptr) {
+							auto& resBase = res->Base;
 							Vector2i texSize = resBase->TextureDiffuse->size();
 							float scale = Random().FastFloat(0.4f, 1.1f);
 							float speedX = Random().FastFloat(2.2f, 2.7f) * scale;
@@ -393,7 +398,7 @@ namespace Jazz2
 
 							debris.Time = 180.0f;
 
-							uint32_t curAnimFrame = it->second.FrameOffset + Random().Next(0, it->second.FrameCount);
+							uint32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
 							uint32_t col = curAnimFrame % resBase->FrameConfiguration.X;
 							uint32_t row = curAnimFrame / resBase->FrameConfiguration.X;
 							debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
@@ -407,9 +412,9 @@ namespace Jazz2
 							_tileMap->CreateDebris(debris);
 						}
 					} else {
-						auto it = _commonResources->Animations.find(String::nullTerminatedView("Snow"_s));
-						if (it != _commonResources->Animations.end()) {
-							auto& resBase = it->second.Base;
+						auto* res = _commonResources->FindAnimation(Snow);
+						if (res != nullptr) {
+							auto& resBase = res->Base;
 							Vector2i texSize = resBase->TextureDiffuse->size();
 							float scale = Random().FastFloat(0.4f, 1.1f);
 							float speedX = Random().FastFloat(-1.6f, -1.2f) * scale;
@@ -432,7 +437,7 @@ namespace Jazz2
 
 							debris.Time = 180.0f;
 
-							uint32_t curAnimFrame = it->second.FrameOffset + Random().Next(0, it->second.FrameCount);
+							uint32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
 							uint32_t col = curAnimFrame % resBase->FrameConfiguration.X;
 							uint32_t row = curAnimFrame / resBase->FrameConfiguration.X;
 							debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
@@ -1356,7 +1361,7 @@ namespace Jazz2
 			return;
 		}
 
-		auto targetObj = _players[0];
+		auto* targetObj = _players[0];
 
 		// View Bounds Animation
 		if (_viewBounds != _viewBoundsTarget) {

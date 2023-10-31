@@ -1,4 +1,5 @@
 ﻿#include "AboutSection.h"
+#include "MenuResources.h"
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 #	define _i1 "WebGL"
@@ -88,6 +89,8 @@
 
 #define ADDITIONAL_INFO _i1 _i2 _i3 _i4 _i5 _i6 _i7 _i8 _i9 _i10 _i11 _i12 _i13
 
+using namespace Jazz2::UI::Menu::Resources;
+
 namespace Jazz2::UI::Menu
 {
 	AboutSection::AboutSection()
@@ -109,7 +112,7 @@ namespace Jazz2::UI::Menu
 		Vector2f pos = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
 		pos.Y = std::round(std::max(150.0f, pos.Y * 0.86f));
 
-		_root->DrawElement("MenuDim"_s, pos.X, pos.Y + 24.0f - 2.0f, IMenuContainer::BackgroundLayer,
+		_root->DrawElement(MenuDim, pos.X, pos.Y + 24.0f - 2.0f, IMenuContainer::BackgroundLayer,
 			Alignment::Top, Colorf::Black, Vector2f(680.0f, 200.0f), Vector4f(1.0f, 0.0f, 0.7f, 0.0f));
 
 		pos.X = std::round(pos.X * 0.35f);
@@ -138,7 +141,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawStringShadow(_f("This project uses modified \f[c:0x9e7056]nCine\f[c] game engine and following libraries:\n%s", ADDITIONAL_INFO), charOffset, viewSize.X * 0.5f, pos.Y + 54.0f + pos.Y * 0.4f, IMenuContainer::FontLayer,
 			Alignment::Top, Font::DefaultColor, 0.76f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 
-		_root->DrawElement("MenuLine"_s, 0, viewSize.X * 0.5f, pos.Y + 24.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 0, viewSize.X * 0.5f, pos.Y + 24.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		pos.Y = viewSize.Y - 100.0f;
 	}

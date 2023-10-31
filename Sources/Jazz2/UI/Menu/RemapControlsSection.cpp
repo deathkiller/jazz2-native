@@ -1,9 +1,12 @@
 ﻿#include "RemapControlsSection.h"
+#include "MenuResources.h"
 #include "../ControlScheme.h"
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/Application.h"
 #include "../../../nCine/Base/FrameTimer.h"
+
+using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
@@ -195,10 +198,10 @@ namespace Jazz2::UI::Menu
 		char stringBuffer[16];
 		constexpr float topLine = 131.0f;
 		float bottomLine = viewSize.Y - 42.0f;
-		_root->DrawElement("MenuDim"_s, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
+		_root->DrawElement(MenuDim, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
 			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement("MenuLine"_s, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement("MenuLine"_s, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int32_t charOffset = 0;
 		_root->DrawStringShadow(_("Remap Controls"), charOffset, center.X * 0.3f, 110.0f, IMenuContainer::FontLayer,
@@ -277,28 +280,29 @@ namespace Jazz2::UI::Menu
 							}
 							hasCollision = HasCollision(mapping.GamepadIndex, mapping.GamepadButton);
 
-							StringView buttonName;
+							AnimState buttonName;
 							switch (mapping.GamepadButton) {
-								case ButtonName::A: buttonName = "GamepadA"_s; break;
-								case ButtonName::B: buttonName = "GamepadB"_s; break;
-								case ButtonName::X: buttonName = "GamepadX"_s; break;
-								case ButtonName::Y: buttonName = "GamepadY"_s; break;
-								case ButtonName::BACK: buttonName = "GamepadBack"_s; break;
-								case ButtonName::GUIDE: buttonName = "GamepadBigButton"_s; break;
-								case ButtonName::START: buttonName = "GamepadStart"_s; break;
-								case ButtonName::LSTICK: buttonName = "GamepadLeftStick"_s; break;
-								case ButtonName::RSTICK: buttonName = "GamepadRightStick"_s; break;
-								case ButtonName::LBUMPER: buttonName = "GamepadLeftShoulder"_s; break;
-								case ButtonName::RBUMPER: buttonName = "GamepadRightShoulder"_s; break;
-								case ButtonName::LTRIGGER: buttonName = "GamepadLeftTrigger"_s; break;
-								case ButtonName::RTRIGGER: buttonName = "GamepadRightTrigger"_s; break;
-								case ButtonName::DPAD_UP: buttonName = "GamepadDPadUp"_s; break;
-								case ButtonName::DPAD_DOWN: buttonName = "GamepadDPadDown"_s; break;
-								case ButtonName::DPAD_LEFT: buttonName = "GamepadDPadLeft"_s; break;
-								case ButtonName::DPAD_RIGHT: buttonName = "GamepadDPadRight"_s; break;
+								case ButtonName::A: buttonName = GamepadA; break;
+								case ButtonName::B: buttonName = GamepadB; break;
+								case ButtonName::X: buttonName = GamepadX; break;
+								case ButtonName::Y: buttonName = GamepadY; break;
+								case ButtonName::BACK: buttonName = GamepadBack; break;
+								case ButtonName::GUIDE: buttonName = GamepadBigButton; break;
+								case ButtonName::START: buttonName = GamepadStart; break;
+								case ButtonName::LSTICK: buttonName = GamepadLeftStick; break;
+								case ButtonName::RSTICK: buttonName = GamepadRightStick; break;
+								case ButtonName::LBUMPER: buttonName = GamepadLeftShoulder; break;
+								case ButtonName::RBUMPER: buttonName = GamepadRightShoulder; break;
+								case ButtonName::LTRIGGER: buttonName = GamepadLeftTrigger; break;
+								case ButtonName::RTRIGGER: buttonName = GamepadRightTrigger; break;
+								case ButtonName::DPAD_UP: buttonName = GamepadDPadUp; break;
+								case ButtonName::DPAD_DOWN: buttonName = GamepadDPadDown; break;
+								case ButtonName::DPAD_LEFT: buttonName = GamepadDPadLeft; break;
+								case ButtonName::DPAD_RIGHT: buttonName = GamepadDPadRight; break;
+								default: buttonName = AnimState::Default; break;
 							}
 
-							if (!buttonName.empty()) {
+							if (buttonName != AnimState::Default) {
 								_root->DrawElement(buttonName, 0, center.X * (0.9f + j * 0.34f) + 3, topItem, IMenuContainer::MainLayer, Alignment::Center, Colorf::White);
 
 								for (int32_t i = 0; i < mapping.GamepadIndex + 1; i++) {

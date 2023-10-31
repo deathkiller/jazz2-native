@@ -93,31 +93,30 @@ namespace Jazz2::Actors::Collectibles
 	bool GemRing::OnDraw(RenderQueue& renderQueue)
 	{
 		if (!_pieces.empty()) {
-			auto it = _metadata->Animations.find(String::nullTerminatedView("GemRed"_s));
-			if (it != _metadata->Animations.end()) {
-				auto& chainAnim = it->second;
-				Vector2i texSize = chainAnim.Base->TextureDiffuse->size();
+			auto* res = _metadata->FindAnimation(AnimState::Default); // GemRed
+			if (res != nullptr) {
+				Vector2i texSize = res->Base->TextureDiffuse->size();
 
 				for (int i = 0; i < _pieces.size(); i++) {
 					auto command = _pieces[i].Command.get();
 
-					int curAnimFrame = chainAnim.FrameOffset + (i % chainAnim.FrameCount);
-					int col = curAnimFrame % chainAnim.Base->FrameConfiguration.X;
-					int row = curAnimFrame / chainAnim.Base->FrameConfiguration.X;
-					float texScaleX = (float(chainAnim.Base->FrameDimensions.X) / float(texSize.X));
-					float texBiasX = (float(chainAnim.Base->FrameDimensions.X * col) / float(texSize.X));
-					float texScaleY = (float(chainAnim.Base->FrameDimensions.Y) / float(texSize.Y));
-					float texBiasY = (float(chainAnim.Base->FrameDimensions.Y * row) / float(texSize.Y));
+					int curAnimFrame = res->FrameOffset + (i % res->FrameCount);
+					int col = curAnimFrame % res->Base->FrameConfiguration.X;
+					int row = curAnimFrame / res->Base->FrameConfiguration.X;
+					float texScaleX = (float(res->Base->FrameDimensions.X) / float(texSize.X));
+					float texBiasX = (float(res->Base->FrameDimensions.X * col) / float(texSize.X));
+					float texScaleY = (float(res->Base->FrameDimensions.Y) / float(texSize.Y));
+					float texBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.Y));
 
 					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 					instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(chainAnim.Base->FrameDimensions.X * _pieces[i].Scale, chainAnim.Base->FrameDimensions.Y * _pieces[i].Scale);
+					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(res->Base->FrameDimensions.X * _pieces[i].Scale, res->Base->FrameDimensions.Y * _pieces[i].Scale);
 					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(1.0f, 1.0f, 1.0f, 0.7f).Data());
 
 					auto& pos = _pieces[i].Pos;
 					command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f).RotateZ(_pieces[i].Angle));
 					command->setLayer(_renderer.layer() - 2);
-					command->material().setTexture(*chainAnim.Base->TextureDiffuse.get());
+					command->material().setTexture(*res->Base->TextureDiffuse.get());
 
 					renderQueue.addCommand(command);
 				}

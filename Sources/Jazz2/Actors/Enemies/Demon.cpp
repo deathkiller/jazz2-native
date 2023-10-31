@@ -45,7 +45,7 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		if (_currentTransitionState == AnimState::Idle) {
+		if (_currentTransition == nullptr) {
 			if (_attacking) {
 				if (_attackTime <= 0.0f) {
 					_attacking = false;

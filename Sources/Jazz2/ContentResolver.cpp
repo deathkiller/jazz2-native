@@ -367,12 +367,12 @@ namespace Jazz2
 			// Already loaded - Mark as referenced
 			it->second->Flags |= MetadataFlags::Referenced;
 
-			for (auto& resource : it->second->Animations) {
-				resource.second.Base->Flags |= GenericGraphicResourceFlags::Referenced;
+			for (const auto& resource : it->second->Animations) {
+				resource.Base->Flags |= GenericGraphicResourceFlags::Referenced;
 			}
 
-			for (auto& resource : it->second->Sounds) {
-				for (auto& base : resource.second.Buffers) {
+			for (const auto& [key, resource] : it->second->Sounds) {
+				for (const auto& base : resource.Buffers) {
 					base->Flags |= GenericSoundResourceFlags::Referenced;
 				}
 			}
@@ -410,10 +410,10 @@ namespace Jazz2
 				}
 
 				for (auto it : animations) {
-					std::string_view key, assetPath;
+					// TODO: Keys are not used
+					std::string_view assetPath;
 					ondemand::object value;
-					if (it.unescaped_key().get(key) != SUCCESS || it.value().get(value) != SUCCESS || key.empty() ||
-						value["Path"].get(assetPath) != SUCCESS || assetPath.empty()) {
+					if (it.value().get(value) != SUCCESS || value["Path"].get(assetPath) != SUCCESS || assetPath.empty()) {
 						continue;
 					}
 
@@ -465,12 +465,28 @@ namespace Jazz2
 						graphics.AnimDuration = (frameRate <= 0 ? -1.0f : (1.0f / (float)frameRate) * 5.0f);
 					}
 
+					// If no bounding box is provided, use the first sprite
+					if (metadata->BoundingBox == Vector2i(InvalidValue, InvalidValue)) {
+						// TODO: Remove this bounding box reduction
+						metadata->BoundingBox = graphics.Base->FrameDimensions - Vector2i(2, 2);
+					}
+
 					ondemand::array states;
 					if (value["States"].get(states) == SUCCESS) {
 						for (auto stateItem : states) {
 							std::int64_t state;
 							if (stateItem.get(state) == SUCCESS) {
-								graphics.State.push_back((AnimState)state);
+#if defined(DEATH_DEBUG)
+								// Additional checks only for Debug configuration
+								for (const auto& anim : metadata->Animations) {
+									if (anim.State == (AnimState)state) {
+										LOGW("Animation state %u defined twice in file \"%s\"", (std::uint32_t)state, path.data());
+										break;
+									}
+								}
+#endif
+								graphics.State = (AnimState)state;
+								metadata->Animations.push_back(graphics);
 							}
 						}
 					} else if (count > 1) {
@@ -479,17 +495,13 @@ namespace Jazz2
 							LOGW("Multiple animations defined but no states specified in file \"%s\"", path.data());
 						}
 					} else {
-						graphics.State.push_back(AnimState::Default);
+						graphics.State = AnimState::Default;
+						metadata->Animations.push_back(graphics);
 					}
-
-					// If no bounding box is provided, use the first sprite
-					if (metadata->BoundingBox == Vector2i(InvalidValue, InvalidValue)) {
-						// TODO: Remove this bounding box reduction
-						metadata->BoundingBox = graphics.Base->FrameDimensions - Vector2i(2, 2);
-					}
-
-					metadata->Animations.emplace(key, std::move(graphics));
 				}
+
+				// Animation states must be sorted, so binary search can be used
+				std::sort(metadata->Animations.begin(), metadata->Animations.end());
 			}
 
 			if (!_isHeadless) {
@@ -512,7 +524,6 @@ namespace Jazz2
 						}
 
 						SoundResource sound;
-
 						for (auto assetPathItem : assetPaths) {
 							std::string_view assetPath;
 							if (assetPathItem.get(assetPath) == SUCCESS && !assetPath.empty()) {
@@ -1289,7 +1300,7 @@ namespace Jazz2
 		_precompiledShaders[(int32_t)PrecompiledShader::BatchedShieldLightning] = CompileShader("BatchedShieldFire", Shaders::BatchedShieldVs, Shaders::ShieldLightningFs, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(int32_t)PrecompiledShader::ShieldLightning]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedShieldLightning]);
 
-#if defined(ALLOW_RESCALE_SHADERS)
+#if !defined(DISABLE_RESCALE_SHADERS)
 		_precompiledShaders[(int32_t)PrecompiledShader::ResizeHQ2x] = CompileShader("ResizeHQ2x", Shaders::ResizeHQ2xVs, Shaders::ResizeHQ2xFs);
 		_precompiledShaders[(int32_t)PrecompiledShader::Resize3xBrz] = CompileShader("Resize3xBrz", Shaders::Resize3xBrzVs, Shaders::Resize3xBrzFs);
 		_precompiledShaders[(int32_t)PrecompiledShader::ResizeCrtScanlines] = CompileShader("ResizeCrtScanlines", Shaders::ResizeCrtScanlinesVs, Shaders::ResizeCrtScanlinesFs);
