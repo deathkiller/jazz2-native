@@ -2,6 +2,7 @@
 
 #if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
 
+#include "MenuResources.h"
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/Base/Algorithms.h"
