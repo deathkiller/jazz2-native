@@ -7,6 +7,8 @@
 #include "../../../nCine/Base/Algorithms.h"
 #include "../../../nCine/IO/EmscriptenLocalFile.h"
 
+using namespace Jazz2::UI::Menu::Resources;
+
 namespace Jazz2::UI::Menu
 {
 	ImportSection::ImportSection()
@@ -52,10 +54,10 @@ namespace Jazz2::UI::Menu
 
 		constexpr float topLine = 131.0f + 34.0f;
 		float bottomLine = viewSize.Y - 42.0f;
-		_root->DrawElement("MenuDim"_s, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
+		_root->DrawElement(MenuDim, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
 			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement("MenuLine"_s, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement("MenuLine"_s, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		center.Y = topLine + (bottomLine - topLine) * 0.4f;
 		int32_t charOffset = 0;
@@ -109,7 +111,7 @@ namespace Jazz2::UI::Menu
 
 	void ImportSection::FileDataCallback(void* context, std::unique_ptr<char[]> data, size_t length, const StringView& name)
 	{
-		auto _this = reinterpret_cast<ImportSection*>(context);
+		auto* _this = reinterpret_cast<ImportSection*>(context);
 		_this->_fileCount--;
 
 		int32_t offset = 180;	// Skip header
@@ -130,7 +132,7 @@ namespace Jazz2::UI::Menu
 
 	void ImportSection::FileCountCallback(void* context, int32_t fileCount)
 	{
-		auto _this = reinterpret_cast<ImportSection*>(context);
+		auto* _this = reinterpret_cast<ImportSection*>(context);
 		_this->_fileCount = fileCount;
 		if (fileCount <= 0) {
 			_this->_state = State::NothingSelected;
@@ -139,12 +141,12 @@ namespace Jazz2::UI::Menu
 
 	void ImportSection::CheckFoundLevels()
 	{
-		constexpr StringView FormerlyAPrinceLevels[] = { "Dungeon Dilemma"_s, "Knight Cap"_s, "Tossed Salad"_s, "Carrot Juice"_s, "Weirder Science"_s, "Loose Screws"_s };
-		constexpr StringView JazzInTimeLevels[] = { "Victorian Secret"_s, "Colonial Chaos"_s, "Purple Haze Maze"_s, "Funky Grooveathon"_s, "Beach Bunny Bingo"_s, "Marinated Rabbit"_s };
-		constexpr StringView FlashbackLevels[] = { "A Diamondus Forever"_s, "Fourteen Carrot"_s, "Electric Boogaloo"_s, "Voltage Village"_s, "Medieval Kineval"_s, "Hare Scare"_s };
-		constexpr StringView FunkyMonkeysLevels[] = { "Thriller Gorilla"_s, "Jungle Jump"_s, "A Cold Day In Heck"_s, "Rabbit Roast"_s, "Burnin Biscuits"_s, "Bad Pitt"_s };
-		constexpr StringView ChristmasChroniclesLevels[] = { "Snow Bunnies"_s, "Dashing thru the snow.."_s, "Tinsel Town"_s };
-		constexpr StringView TheSecretFilesLevels[] = { "Easter Bunny"_s, "Spring Chickens"_s, "Scrambled Eggs"_s, "Ghostly Antics"_s, "Skeletons Turf"_s, "Graveyard Shift"_s, "Turtle Town"_s, "Suburbia Commando"_s, "Urban Brawl"_s };
+		static const StringView FormerlyAPrinceLevels[] = { "Dungeon Dilemma"_s, "Knight Cap"_s, "Tossed Salad"_s, "Carrot Juice"_s, "Weirder Science"_s, "Loose Screws"_s };
+		static const StringView JazzInTimeLevels[] = { "Victorian Secret"_s, "Colonial Chaos"_s, "Purple Haze Maze"_s, "Funky Grooveathon"_s, "Beach Bunny Bingo"_s, "Marinated Rabbit"_s };
+		static const StringView FlashbackLevels[] = { "A Diamondus Forever"_s, "Fourteen Carrot"_s, "Electric Boogaloo"_s, "Voltage Village"_s, "Medieval Kineval"_s, "Hare Scare"_s };
+		static const StringView FunkyMonkeysLevels[] = { "Thriller Gorilla"_s, "Jungle Jump"_s, "A Cold Day In Heck"_s, "Rabbit Roast"_s, "Burnin Biscuits"_s, "Bad Pitt"_s };
+		static const StringView ChristmasChroniclesLevels[] = { "Snow Bunnies"_s, "Dashing thru the snow.."_s, "Tinsel Town"_s };
+		static const StringView TheSecretFilesLevels[] = { "Easter Bunny"_s, "Spring Chickens"_s, "Scrambled Eggs"_s, "Ghostly Antics"_s, "Skeletons Turf"_s, "Graveyard Shift"_s, "Turtle Town"_s, "Suburbia Commando"_s, "Urban Brawl"_s };
 
 		UnlockableEpisodes unlockedEpisodes = PreferencesCache::UnlockedEpisodes;
 		if (HasAllLevels(FormerlyAPrinceLevels, countof(FormerlyAPrinceLevels))) unlockedEpisodes |= UnlockableEpisodes::FormerlyAPrince;

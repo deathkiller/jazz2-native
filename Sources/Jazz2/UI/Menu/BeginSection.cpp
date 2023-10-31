@@ -184,18 +184,18 @@ namespace Jazz2::UI::Menu
 						auto grantPermissionText = _("Allow access to external storage");
 						if (_selectedIndex == 0) {
 							float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
-							_root->DrawElement("MenuGlow"_s, 0, center.X, center.Y * 0.96f + 48.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(grantPermissionText) + 1) * 0.5f * size, 4.0f * size, true);
+							_root->DrawElement(MenuGlow, 0, center.X, center.Y * 0.96f + 48.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(grantPermissionText) + 1) * 0.5f * size, 4.0f * size, true);
 							_root->DrawStringShadow(grantPermissionText, charOffset, center.X + 12.0f, center.Y * 0.96f + 48.0f, IMenuContainer::FontLayer,
 								Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.8f);
 
 							Vector2f grantPermissionSize = _root->MeasureString(grantPermissionText, size, 0.8f);
-							_root->DrawElement("Uac"_s, 0, ceil(center.X - grantPermissionSize.X * 0.5f - 6.0f), center.Y * 0.96f + 48.0f + round(sinf(canvas->AnimTime * 4.6f * fPi)), IMenuContainer::MainLayer + 10, Alignment::Center, Colorf::White, 1.0f, 1.0f);
+							_root->DrawElement(Uac, 0, ceil(center.X - grantPermissionSize.X * 0.5f - 6.0f), center.Y * 0.96f + 48.0f + round(sinf(canvas->AnimTime * 4.6f * fPi)), IMenuContainer::MainLayer + 10, Alignment::Center, Colorf::White, 1.0f, 1.0f);
 						} else {
 							_root->DrawStringShadow(grantPermissionText, charOffset, center.X + 12.0f, center.Y * 0.96f + 48.0f, IMenuContainer::FontLayer,
 								Alignment::Center, Font::DefaultColor, 0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.84f);
 
 							Vector2f grantPermissionSize = _root->MeasureString(grantPermissionText, 0.9f, 0.84f);
-							_root->DrawElement("Uac"_s, 0, ceil(center.X - grantPermissionSize.X * 0.5f - 6.0f), center.Y * 0.96f + 48.0f, IMenuContainer::MainLayer + 10, Alignment::Center, Colorf::White, 1.0f, 1.0f);
+							_root->DrawElement(Uac, 0, ceil(center.X - grantPermissionSize.X * 0.5f - 6.0f), center.Y * 0.96f + 48.0f, IMenuContainer::MainLayer + 10, Alignment::Center, Colorf::White, 1.0f, 1.0f);
 						}
 						hideSecondItem = true;
 					}

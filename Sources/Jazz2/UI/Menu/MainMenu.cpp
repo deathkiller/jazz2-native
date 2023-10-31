@@ -257,7 +257,7 @@ namespace Jazz2::UI::Menu
 		if (!sourcePath.empty() && sourcePath.hasPrefix("\\\\?\\"_s) && sourcePath.exceptPrefix(5).hasPrefix(":\\Games\\"_s)) {
 			_owner->DrawStringShadow("·"_s, charOffset, bottomLeft.X + 116.0f, bottomLeft.Y, IMenuContainer::FontLayer,
 				Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.8f, 0.46f, 0.8f);
-			_owner->DrawElement("Storage"_s, -1, bottomLeft.X + 146.0f, bottomLeft.Y - 3.0f, IMenuContainer::FontLayer, Alignment::BottomRight, Colorf(1.0f, 1.0f, 1.0f, std::max(_owner->_logoTransition - 0.6f, 0.0f) * 2.5f));
+			_owner->DrawElement(Storage, -1, bottomLeft.X + 146.0f, bottomLeft.Y - 3.0f, IMenuContainer::FontLayer, Alignment::BottomRight, Colorf(1.0f, 1.0f, 1.0f, std::max(_owner->_logoTransition - 0.6f, 0.0f) * 2.5f));
 			_owner->DrawStringShadow(sourcePath.slice(4, 7), charOffset, bottomLeft.X + 150.0f, bottomLeft.Y, IMenuContainer::FontLayer,
 				Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 		}
