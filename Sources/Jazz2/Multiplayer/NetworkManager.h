@@ -3,6 +3,7 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "Peer.h"
+#include "Reason.h"
 #include "../../Common.h"
 #include "../../nCine/Threading/Thread.h"
 #include "../../nCine/Threading/ThreadSync.h"
@@ -48,10 +49,14 @@ namespace Jazz2::Multiplayer
 
 		void SendToPeer(const Peer& peer, NetworkChannel channel, const std::uint8_t* data, std::size_t dataLength);
 		void SendToAll(NetworkChannel channel, const std::uint8_t* data, std::size_t dataLength);
+		void KickClient(const Peer& peer, Reason reason);
 
 	private:
 		NetworkManager(const NetworkManager&) = delete;
 		NetworkManager& operator=(const NetworkManager&) = delete;
+
+		static constexpr std::size_t MaxPeerCount = 64;
+		static constexpr std::uint32_t ProcessingIntervalMs = 4;
 
 		bool _initialized;
 		_ENetHost* _host;

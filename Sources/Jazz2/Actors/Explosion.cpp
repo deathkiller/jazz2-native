@@ -6,19 +6,15 @@
 namespace Jazz2::Actors
 {
 	Explosion::Explosion()
-		:
-		_lightBrightness(0.0f),
-		_lightIntensity(0.0f),
-		_lightRadiusNear(0.0f),
-		_lightRadiusFar(0.0f)
+		: _lightBrightness(0.0f), _lightIntensity(0.0f), _lightRadiusNear(0.0f), _lightRadiusFar(0.0f)
 	{
 	}
 
 	void Explosion::Create(ILevelHandler* levelHandler, const Vector3i& pos, Type type)
 	{
 		std::shared_ptr<Explosion> explosion = std::make_shared<Explosion>();
-		uint8_t explosionParams[2];
-		*(uint16_t*)&explosionParams[0] = (uint16_t)type;
+		std::uint8_t explosionParams[2];
+		*(std::uint16_t*)&explosionParams[0] = (uint16_t)type;
 		explosion->OnActivated(ActorActivationDetails(
 			levelHandler,
 			pos,
@@ -29,7 +25,7 @@ namespace Jazz2::Actors
 
 	Task<bool> Explosion::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_type = (Type)*(uint16_t*)&details.Params[0];
+		_type = (Type)*(std::uint16_t*)&details.Params[0];
 
 		SetState(ActorState::ForceDisableCollisions, true);
 		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);

@@ -9,8 +9,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Environment
 {
 	Spring::Spring()
-		:
-		_cooldown(0.0f)
+		: _cooldown(0.0f)
 	{
 	}
 

@@ -314,46 +314,7 @@ namespace Jazz2
 				}
 			}
 
-			if (/*_difficulty != GameDifficulty::Multiplayer*/true) {
-				if (!_players.empty()) {
-					auto& pos = _players[0]->GetPos();
-					int32_t tx1 = (int32_t)pos.X / Tiles::TileSet::DefaultTileSize;
-					int32_t ty1 = (int32_t)pos.Y / Tiles::TileSet::DefaultTileSize;
-					int32_t tx2 = tx1;
-					int32_t ty2 = ty1;
-
-					tx1 -= ActivateTileRange;
-					ty1 -= ActivateTileRange;
-					tx2 += ActivateTileRange;
-					ty2 += ActivateTileRange;
-
-					int32_t tx1d = tx1 - 4;
-					int32_t ty1d = ty1 - 4;
-					int32_t tx2d = tx2 + 4;
-					int32_t ty2d = ty2 + 4;
-
-					for (auto& actor : _actors) {
-						if ((actor->_state & (Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator)) != Actors::ActorState::None) {
-							Vector2i originTile = actor->_originTile;
-							if (originTile.X < tx1d || originTile.Y < ty1d || originTile.X > tx2d || originTile.Y > ty2d) {
-								if (actor->OnTileDeactivated()) {
-									if ((actor->_state & Actors::ActorState::IsFromGenerator) == Actors::ActorState::IsFromGenerator) {
-										_eventMap->ResetGenerator(originTile.X, originTile.Y);
-									}
-
-									_eventMap->Deactivate(originTile.X, originTile.Y);
-
-									actor->_state |= Actors::ActorState::IsDestroyed;
-								}
-							}
-						}
-					}
-
-					_eventMap->ActivateEvents(tx1, ty1, tx2, ty2, true);
-				}
-
-				_eventMap->ProcessGenerators(timeMult);
-			}
+			ProcessEvents(timeMult);
 
 			// Weather
 			if (_weatherType != WeatherType::None) {
@@ -472,7 +433,7 @@ namespace Jazz2
 	{
 		float timeMult = theApplication().timeMult();
 
-		if (_pauseMenu == nullptr) {
+		if (!IsPausable() || _pauseMenu == nullptr) {
 			ResolveCollisions(timeMult);
 
 			// Ambient Light Transition
@@ -702,7 +663,7 @@ namespace Jazz2
 		_actors.emplace_back(actor);
 	}
 
-	std::shared_ptr<AudioBufferPlayer> LevelHandler::PlaySfx(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch)
+	std::shared_ptr<AudioBufferPlayer> LevelHandler::PlaySfx(Actors::ActorBase* self, const StringView& identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch)
 	{
 		auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(buffer));
 		player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
@@ -1279,17 +1240,68 @@ namespace Jazz2
 		}
 	}
 
+	void LevelHandler::BeforeActorDestroyed(Actors::ActorBase* actor)
+	{
+		// Nothing to do here
+	}
+
+	void LevelHandler::ProcessEvents(float timeMult)
+	{
+		if (!_players.empty()) {
+			std::size_t playerCount = _players.size();
+			SmallVector<AABBi, 2> playerZones;
+			playerZones.reserve(playerCount * 2);
+			for (std::size_t i = 0; i < playerCount; i++) {
+				auto pos = _players[i]->GetPos();
+				std::int32_t tx = (std::int32_t)pos.X / TileSet::DefaultTileSize;
+				std::int32_t ty = (std::int32_t)pos.Y / TileSet::DefaultTileSize;
+
+				const auto& activationRange = playerZones.emplace_back(tx - ActivateTileRange, ty - ActivateTileRange, tx + ActivateTileRange, ty + ActivateTileRange);
+				playerZones.emplace_back(activationRange.L - 4, activationRange.T - 4, activationRange.R + 4, activationRange.B + 4);
+			}
+
+			for (auto& actor : _actors) {
+				if ((actor->_state & (Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator)) != Actors::ActorState::None) {
+					Vector2i originTile = actor->_originTile;
+					bool isInside = false;
+					for (std::size_t i = 1; i < playerZones.size(); i += 2) {
+						if (playerZones[i].Contains(originTile)) {
+							isInside = true;
+							break;
+						}
+					}
+
+					if (!isInside && actor->OnTileDeactivated()) {
+						if ((actor->_state & Actors::ActorState::IsFromGenerator) == Actors::ActorState::IsFromGenerator) {
+							_eventMap->ResetGenerator(originTile.X, originTile.Y);
+						}
+
+						_eventMap->Deactivate(originTile.X, originTile.Y);
+						actor->_state |= Actors::ActorState::IsDestroyed;
+					}
+				}
+			}
+
+			for (std::size_t i = 0; i < playerZones.size(); i += 2) {
+				const auto& activationZone = playerZones[i];
+				_eventMap->ActivateEvents(activationZone.L, activationZone.T, activationZone.R, activationZone.B, true);
+			}
+		}
+
+		_eventMap->ProcessGenerators(timeMult);
+	}
+
 	void LevelHandler::ResolveCollisions(float timeMult)
 	{
 		auto it = _actors.begin();
 		while (it != _actors.end()) {
 			Actors::ActorBase* actor = it->get();
 			if (actor->GetState(Actors::ActorState::IsDestroyed)) {
+				BeforeActorDestroyed(actor);
 				if (actor->CollisionProxyID != Collisions::NullNode) {
 					_collisions.DestroyProxy(actor->CollisionProxyID);
 					actor->CollisionProxyID = Collisions::NullNode;
 				}
-
 				it = _actors.erase(it);
 				continue;
 			}

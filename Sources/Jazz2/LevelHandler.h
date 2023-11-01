@@ -110,7 +110,7 @@ namespace Jazz2
 
 		void AddActor(std::shared_ptr<Actors::ActorBase> actor) override;
 
-		std::shared_ptr<AudioBufferPlayer> PlaySfx(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain = 1.0f, float pitch = 1.0f) override;
+		std::shared_ptr<AudioBufferPlayer> PlaySfx(Actors::ActorBase* self, const StringView& identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch) override;
 		std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
 		void WarpCameraToTarget(const std::shared_ptr<Actors::ActorBase>& actor, bool fast = false) override;
 		bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, Tiles::TileCollisionParams& params, Actors::ActorBase** collider) override;
@@ -308,6 +308,9 @@ namespace Jazz2
 		Vector2f _playerFrozenMovement;
 		bool _playerFrozenEnabled;
 		uint32_t _lastPressedNumericKey;
+
+		virtual void BeforeActorDestroyed(Actors::ActorBase* actor);
+		virtual void ProcessEvents(float timeMult);
 
 		void ResolveCollisions(float timeMult);
 		void InitializeCamera();

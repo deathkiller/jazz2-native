@@ -34,12 +34,12 @@ namespace Jazz2::UI::Menu
 		virtual ~IMenuContainer() { }
 
 		template<typename T, typename... Params>
-		void SwitchToSection(Params&&... args)
+		T* SwitchToSection(Params&&... args)
 		{
-			SwitchToSectionDirect(std::make_unique<T>(std::forward<Params>(args)...));
+			return static_cast<T*>(SwitchToSectionDirect(std::make_unique<T>(std::forward<Params>(args)...)));
 		}
 
-		virtual void SwitchToSectionDirect(std::unique_ptr<MenuSection> section) = 0;
+		virtual MenuSection* SwitchToSectionDirect(std::unique_ptr<MenuSection> section) = 0;
 		virtual void LeaveSection() = 0;
 		virtual void ChangeLevel(Jazz2::LevelInitialization&& levelInit) = 0;
 #if defined(WITH_MULTIPLAYER)

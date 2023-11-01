@@ -17,6 +17,7 @@
 #include "../nCine/Base/HashMap.h"
 
 #include <Containers/Pair.h>
+#include <Containers/Reference.h>
 #include <Containers/SmallVector.h>
 #include <Containers/StringView.h>
 #include <IO/FileSystem.h>
@@ -84,6 +85,13 @@ namespace Jazz2
 		}
 
 	private:
+		struct StringRefEqualTo
+		{
+			inline bool operator()(const Reference<String>& a, const Reference<String>& b) const noexcept {
+				return a.get() == b.get();
+			}
+		};
+
 		ContentResolver();
 
 		ContentResolver(const ContentResolver&) = delete;
@@ -105,7 +113,7 @@ namespace Jazz2
 		bool _isHeadless;
 		bool _isLoading;
 		uint32_t _palettes[PaletteCount * ColorsPerPalette];
-		HashMap<String, std::unique_ptr<Metadata>> _cachedMetadata;
+		HashMap<Reference<String>, std::unique_ptr<Metadata>, FNV1aHashFunc<String>, StringRefEqualTo> _cachedMetadata;
 		HashMap<Pair<String, uint16_t>, std::unique_ptr<GenericGraphicResource>> _cachedGraphics;
 		HashMap<String, std::unique_ptr<GenericSoundResource>> _cachedSounds;
 		std::unique_ptr<UI::Font> _fonts[(int32_t)FontType::Count];

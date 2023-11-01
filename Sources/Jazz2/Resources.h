@@ -93,6 +93,7 @@ namespace Jazz2
 
 	struct Metadata
 	{
+		String Path;
 		MetadataFlags Flags;
 		SmallVector<GraphicResource, 0> Animations;
 		HashMap<String, SoundResource> Sounds;

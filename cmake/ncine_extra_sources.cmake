@@ -701,16 +701,19 @@ if(WITH_MULTIPLAYER)
 	
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/RemoteActor.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ConnectionResult.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/INetworkHandler.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MultiLevelHandler.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManager.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/PacketTypes.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Peer.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Reason.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Backends/enet.h
 	)
 
 	list(APPEND SOURCES
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/RemoteActor.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ConnectionResult.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MultiLevelHandler.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManager.cpp
 	)

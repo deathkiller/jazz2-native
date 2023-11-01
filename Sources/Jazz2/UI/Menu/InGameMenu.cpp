@@ -195,7 +195,7 @@ namespace Jazz2::UI::Menu
 		return true;
 	}
 
-	void InGameMenu::SwitchToSectionDirect(std::unique_ptr<MenuSection> section)
+	MenuSection* InGameMenu::SwitchToSectionDirect(std::unique_ptr<MenuSection> section)
 	{
 		if (!_sections.empty()) {
 			auto& lastSection = _sections.back();
@@ -209,6 +209,8 @@ namespace Jazz2::UI::Menu
 			Recti clipRectangle = currentSection->GetClipRectangle(_canvasBackground->ViewSize);
 			_root->_upscalePass.SetClipRectangle(clipRectangle);
 		}
+
+		return currentSection.get();
 	}
 
 	void InGameMenu::LeaveSection()
