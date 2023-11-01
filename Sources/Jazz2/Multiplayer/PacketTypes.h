@@ -32,6 +32,7 @@ namespace Jazz2::Multiplayer
 
 		LoadLevel,
 		PlaySfx,
+		PlayCommonSfx,
 		ShowMessage,
 		OverrideLevelText,
 		SetTrigger,

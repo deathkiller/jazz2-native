@@ -1380,6 +1380,9 @@
     <ClInclude Include="Jazz2\UI\Menu\MenuResources.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\Reason.h">
+      <Filter>Header Files\Jazz2\Multiplayer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

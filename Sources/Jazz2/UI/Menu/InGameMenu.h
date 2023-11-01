@@ -28,7 +28,7 @@ namespace Jazz2::UI::Menu
 		void OnTouchEvent(const nCine::TouchEvent& event);
 		void OnInitializeViewport(int32_t width, int32_t height);
 
-		void SwitchToSectionDirect(std::unique_ptr<MenuSection> section) override;
+		MenuSection* SwitchToSectionDirect(std::unique_ptr<MenuSection> section) override;
 		void LeaveSection() override;
 		void ChangeLevel(Jazz2::LevelInitialization&& levelInit) override;
 #if defined(WITH_MULTIPLAYER)

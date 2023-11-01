@@ -848,7 +848,7 @@ namespace Death::IO
 	{
 		// Take ownership first if not already (e.g., directly from `String::nullTerminatedView()`)
 		if (!path.isSmall() && path.deleter()) {
-			path = String { path };
+			path = String{path};
 		}
 		for (char& c : path) {
 			if (c == '/') {

@@ -476,11 +476,27 @@ namespace Death::Containers
 		return StringView{*this}.slice(begin, end);
 	}
 
-	MutableStringView String::prefix(char* const end) {
+	MutableStringView String::sliceSizePointerInternal(char* const begin, const std::size_t size) {
+		return MutableStringView{*this}.sliceSize(begin, size);
+	}
+
+	StringView String::sliceSizePointerInternal(const char* const begin, const std::size_t size) const {
+		return StringView{*this}.sliceSize(begin, size);
+	}
+
+	MutableStringView String::sliceSize(const std::size_t begin, const std::size_t size) {
+		return MutableStringView{*this}.sliceSize(begin, size);
+	}
+
+	StringView String::sliceSize(const std::size_t begin, const std::size_t size) const {
+		return StringView{*this}.sliceSize(begin, size);
+	}
+
+	MutableStringView String::prefixPointerInternal(char* const end) {
 		return MutableStringView{*this}.prefix(end);
 	}
 
-	StringView String::prefix(const char* const end) const {
+	StringView String::prefixPointerInternal(const char* const end) const {
 		return StringView{*this}.prefix(end);
 	}
 

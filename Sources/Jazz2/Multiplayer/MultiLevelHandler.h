@@ -54,7 +54,7 @@ namespace Jazz2::Multiplayer
 
 		void AddActor(std::shared_ptr<Actors::ActorBase> actor) override;
 
-		std::shared_ptr<AudioBufferPlayer> PlaySfx(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain = 1.0f, float pitch = 1.0f) override;
+		std::shared_ptr<AudioBufferPlayer> PlaySfx(Actors::ActorBase* self, const StringView& identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch) override;
 		std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
 		void WarpCameraToTarget(const std::shared_ptr<Actors::ActorBase>& actor, bool fast = false) override;
 		bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, TileCollisionParams& params, Actors::ActorBase** collider) override;
@@ -96,6 +96,10 @@ namespace Jazz2::Multiplayer
 		bool OnPeerDisconnected(const Peer& peer);
 		bool OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t* data, std::size_t dataLength);
 
+	protected:
+		void BeforeActorDestroyed(Actors::ActorBase* actor) override;
+		void ProcessEvents(float timeMult) override;
+
 	private:
 		struct PeerState {
 			Actors::Player* Player;
@@ -134,7 +138,7 @@ namespace Jazz2::Multiplayer
 			float WarpTimeLeft;
 			float DeviationTime;
 
-			PlayerState() {}
+			PlayerState();
 			PlayerState(const Vector2f& pos, const Vector2f& speed);
 		};
 
@@ -147,9 +151,11 @@ namespace Jazz2::Multiplayer
 		HashMap<Peer, PeerState> _peerStates; // Server: Per peer state
 		HashMap<std::uint8_t, PlayerState> _playerStates; // Server: Per (remote) player state
 		HashMap<std::uint32_t, std::shared_ptr<Actors::RemoteActor>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
-		std::uint32_t _lastPlayerIndex;	// Server: last assigned ID, Client: ID assigned by server
+		HashMap<Actors::ActorBase*, std::uint32_t> _remotingActors; // Server: Local Actor created by server -> Actor ID
+		std::uint32_t _lastSpawnedActorId;	// Server: last assigned actor/player ID, Client: ID assigned by server
 		std::uint64_t _seqNum; // Client: sequence number of the last update
 		std::uint64_t _seqNumWarped; // Client: set to _seqNum from HandlePlayerWarped() when warped
+		bool _suppressRemoting; // Server: if true, actor will not be automatically remoted to other players
 
 		void UpdatePlayerLocalPos(Actors::Player* player, PlayerState& playerState, float timeMult);
 		void OnRemotePlayerPosReceived(PlayerState& playerState, const Vector2f& pos, const Vector2f speed, PlayerFlags flags);

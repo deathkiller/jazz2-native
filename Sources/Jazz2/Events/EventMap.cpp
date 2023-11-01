@@ -169,7 +169,7 @@ namespace Jazz2::Events
 
 	void EventMap::ActivateEvents(std::int32_t tx1, std::int32_t ty1, std::int32_t tx2, std::int32_t ty2, bool allowAsync)
 	{
-		auto tiles = _levelHandler->TileMap();
+		auto* tiles = _levelHandler->TileMap();
 		if (tiles == nullptr) {
 			return;
 		}

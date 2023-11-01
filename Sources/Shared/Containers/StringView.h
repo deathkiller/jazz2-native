@@ -207,9 +207,7 @@ namespace Death::Containers
 		 * @ref flags() and @ref StringViewFlags::NullTerminated to check for
 		 * the presence of a null terminator.
 		 */
-		constexpr T* data() const {
-			return _data;
-		}
+		constexpr T* data() const { return _data; }
 
 		/**
 		 * @brief String size
@@ -230,22 +228,14 @@ namespace Death::Containers
 		/**
 		 * @brief Pointer to the first byte
 		 */
-		constexpr T* begin() const {
-			return _data;
-		}
-		constexpr T* cbegin() const {
-			return _data;
-		}
+		constexpr T* begin() const { return _data; }
+		constexpr T* cbegin() const { return _data; }
 
 		/**
 		 * @brief Pointer to (one item after) the last byte
 		 */
-		constexpr T* end() const {
-			return _data + (_sizePlusFlags & ~Implementation::StringViewSizeMask);
-		}
-		constexpr T* cend() const {
-			return _data + (_sizePlusFlags & ~Implementation::StringViewSizeMask);
-		}
+		constexpr T* end() const { return _data + (_sizePlusFlags & ~Implementation::StringViewSizeMask); }
+		constexpr T* cend() const { return _data + (_sizePlusFlags & ~Implementation::StringViewSizeMask); }
 
 		/**
 		 * @brief First byte
@@ -262,9 +252,7 @@ namespace Death::Containers
 		constexpr T& back() const;
 
 		/** @brief Element access */
-		constexpr T& operator[](std::size_t i) const {
-			return _data[i];
-		}
+		constexpr T& operator[](std::size_t i) const;
 
 		/**
 		 * @brief View slice
@@ -280,13 +268,27 @@ namespace Death::Containers
 		constexpr BasicStringView<T> slice(std::size_t begin, std::size_t end) const;
 
 		/**
+		 * @brief View slice of given size
+		 *
+		 * Equivalent to @cpp data.slice(begin, begin + size) @ce.
+		 */
+		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr BasicStringView<T> sliceSize(U begin, std::size_t size) const {
+			return slice(begin, begin + size);
+		}
+
+		/** @overload */
+		constexpr BasicStringView<T> sliceSize(std::size_t begin, std::size_t size) const {
+			return slice(begin, begin + size);
+		}
+
+		/**
 		 * @brief View prefix until a pointer
 		 *
 		 * Equivalent to @cpp string.slice(string.begin(), end) @ce. If @p end
 		 * is @cpp nullptr @ce, returns zero-sized @cpp nullptr @ce view.
 		 */
-		constexpr BasicStringView<T> prefix(T* end) const {
-			return end ? slice(_data, end) : BasicStringView<T>{};
+		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr BasicStringView<T> prefix(U end) const {
+			return static_cast<T*>(end) ? slice(_data, end) : BasicStringView<T>{};
 		}
 
 		/**
@@ -830,6 +832,10 @@ namespace Death::Containers
 			// Using plain bit ops instead of EnumSet to speed up debug builds
 			return StringView{data, size, StringViewFlags(std::size_t(StringViewFlags::Global) | std::size_t(StringViewFlags::NullTerminated))};
 		}
+	}
+
+	template<class T> constexpr T& BasicStringView<T>::operator[](const std::size_t i) const {
+		return _data[i];
 	}
 
 	template<class T> constexpr T& BasicStringView<T>::front() const {

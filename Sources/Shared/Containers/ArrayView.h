@@ -52,108 +52,231 @@ namespace Death::Containers
 	template<class T> class ArrayView
 	{
 	public:
+		/** @brief Element type */
 		typedef T Type;
 
-		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either a ArrayView or std::size_t */
+		/**
+		 * @brief Default constructor
+		 *
+		 * Creates an empty @cpp nullptr @ce view. Copy a non-empty @ref Array
+		 * or @ref ArrayView onto the instance to make it useful.
+		 */
 		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
 
 		constexpr /*implicit*/ ArrayView() noexcept : _data{}, _size{} {}
 
+		/**
+		 * @brief Construct a view on an array with explicit size
+		 * @param data      Data pointer
+		 * @param size      Data size
+		 *
+		 * @see @ref arrayView(T*, std::size_t)
+		 */
 		constexpr /*implicit*/ ArrayView(T* data, std::size_t size) noexcept : _data(data), _size(size) {}
 
+		/**
+		* @brief Construct a view on a fixed-size array
+		* @param data      Fixed-size array
+		*
+		* Enabled only if @cpp T* @ce is implicitly convertible to @cpp U* @ce.
+		* Expects that both types have the same size.
+		*/
 		template<class U, std::size_t size, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
 		constexpr /*implicit*/ ArrayView(U(&data)[size]) noexcept : _data{data}, _size{size} {
 			static_assert(sizeof(T) == sizeof(U), "Type sizes are not compatible");
 		}
 
+		/**
+		* @brief Construct a view on an @ref ArrayView
+		*
+		* Enabled only if @cpp T* @ce is implicitly convertible to @cpp U* @ce.
+		* Expects that both types have the same size.
+		*/
 		template<class U, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
 		constexpr /*implicit*/ ArrayView(ArrayView<U> view) noexcept : _data{view}, _size{view.size()} {
 			static_assert(sizeof(T) == sizeof(U), "Type sizes are not compatible");
 		}
 
+		/**
+		* @brief Construct a view on a @ref StaticArrayView
+		*
+		* Enabled only if @cpp T* @ce is implicitly convertible to @cpp U* @ce.
+		* Expects that both types have the same size.
+		*/
 		template<std::size_t size, class U, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
 		constexpr /*implicit*/ ArrayView(StaticArrayView<size, U> view) noexcept : _data{view}, _size{size} {
 			static_assert(sizeof(U) == sizeof(T), "Type sizes are not compatible");
 		}
 
+		/** @brief Construct a view on an external type / from an external representation */
 		template<class U, class = decltype(Implementation::ArrayViewConverter<T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ ArrayView(U&& other) noexcept : ArrayView{Implementation::ArrayViewConverter<T, typename std::decay<U&&>::type>::from(std::forward<U>(other))} {}
-
+		
+		/** @brief Convert the view to external representation */
 		template<class U, class = decltype(Implementation::ArrayViewConverter<T, U>::to(std::declval<ArrayView<T>>()))> constexpr /*implicit*/ operator U() const {
 			return Implementation::ArrayViewConverter<T, U>::to(*this);
 		}
 
 #if !defined(DEATH_MSVC2019_COMPATIBILITY)
-		constexpr explicit operator bool() const {
-			return _data;
-		}
+		/** @brief Whether the view is non-empty */
+		constexpr explicit operator bool() const { return _data; }
 #endif
 
-		constexpr /*implicit*/ operator T* () const {
-			return _data;
-		}
+		/** @brief Conversion to the underlying type */
+		constexpr /*implicit*/ operator T*() const { return _data; }
 
-		constexpr T* data() const {
-			return _data;
-		}
+		/** @brief View data */
+		constexpr T* data() const { return _data; }
 
-		constexpr std::size_t size() const {
-			return _size;
-		}
+		/** @brief View size */
+		constexpr std::size_t size() const { return _size; }
 
-		constexpr bool empty() const {
-			return !_size;
-		}
+		/** @brief Whether the view is empty */
+		constexpr bool empty() const { return !_size; }
 
-		constexpr T* begin() const {
-			return _data;
-		}
-		constexpr T* cbegin() const {
-			return _data;
-		}
+		/** @brief Pointer to the first element */
+		constexpr T* begin() const { return _data; }
+		/** @overload */
+		constexpr T* cbegin() const { return _data; } 
 
-		constexpr T* end() const {
-			return _data + _size;
-		}
-		constexpr T* cend() const {
-			return _data + _size;
-		}
+		/** @brief Pointer to (one item after) the last element */
+		constexpr T* end() const { return _data + _size; }
+		/** @overload */
+		constexpr T* cend() const { return _data + _size; }
 
-		T& front() const;
+		/**
+		 * @brief First element
+		 *
+		 * Expects there is at least one element.
+		 */
+		constexpr T& front() const;
 
-		T& back() const;
+		/**
+		 * @brief Last element
+		 *
+		 * Expects there is at least one element.
+		 */
+		constexpr T& back() const;
 
+		/**
+		 * @brief Element access
+		 *
+		 * Expects that @p i is less than @ref size().
+		 */
+		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> constexpr T& operator[](U i) const;
+
+		/**
+		 * @brief View slice
+		 *
+		 * Both arguments are expected to be in range.
+		 */
 		constexpr ArrayView<T> slice(T* begin, T* end) const;
-
+		/** @overload */
 		constexpr ArrayView<T> slice(std::size_t begin, std::size_t end) const;
 
-		template<std::size_t viewSize> constexpr StaticArrayView<viewSize, T> slice(T* begin) const;
+		/**
+		 * @brief View slice of given size
+		 *
+		 * Equivalent to @cpp data.slice(begin, begin + size) @ce.
+		 */
+		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr ArrayView<T> sliceSize(U begin, std::size_t size) const {
+			return slice(begin, begin + size);
+		}
+		/** @overload */
+		constexpr ArrayView<T> sliceSize(std::size_t begin, std::size_t size) const {
+			return slice(begin, begin + size);
+		}
 
+		/**
+		 * @brief Fixed-size view slice
+		 *
+		 * Both @p begin and @cpp begin + size_ @ce are expected to be in
+		 * range.
+		 */
+		template<std::size_t size_, class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr StaticArrayView<size_, T> slice(U begin) const;
+		/** @overload */
 		template<std::size_t viewSize> constexpr StaticArrayView<viewSize, T> slice(std::size_t begin) const;
 
+		/**
+		 * @brief Fixed-size view slice
+		 *
+		 * At compile time expects that @cpp begin < end_ @ce, at runtime that
+		 * @p end_ is not larger than @ref size().
+		 */
 		template<std::size_t begin_, std::size_t end_> constexpr StaticArrayView<end_ - begin_, T> slice() const;
 
-		constexpr ArrayView<T> prefix(T* end) const {
-			return end ? slice(_data, end) : nullptr;
+		/**
+		* @brief Fixed-size view slice of given size
+		*
+		* Expects that `begin_ + size_` is not larger than @ref size().
+		*/
+		template<std::size_t begin_, std::size_t size_> constexpr StaticArrayView<size_, T> sliceSize() const {
+			return slice<begin_, begin_ + size_>();
 		}
 
-		constexpr ArrayView<T> prefix(std::size_t end) const {
-			return slice(0, end);
+		/**
+		 * @brief View prefix until a pointer
+		 *
+		 * Equivalent to @cpp data.slice(data.begin(), end) @ce. If @p end is
+		 * @cpp nullptr @ce, returns zero-sized @cpp nullptr @ce array.
+		 */
+		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr ArrayView<T> prefix(U end) const {
+			return static_cast<T*>(end) ? slice(_data, end) : nullptr;
 		}
 
-		template<std::size_t end_> constexpr StaticArrayView<end_, T> prefix() const {
-			return slice<0, end_>();
-		}
-
+		/**
+		 * @brief View suffix after a pointer
+		 *
+		 * Equivalent to @cpp data.slice(begin, data.end()) @ce. If @p begin is
+		 * @cpp nullptr @ce and the original array isn't, returns zero-sized
+		 * @cpp nullptr @ce array.
+		 */
 		constexpr ArrayView<T> suffix(T* begin) const {
 			return _data && !begin ? nullptr : slice(begin, _data + _size);
 		}
 
-		constexpr ArrayView<T> suffix(std::size_t begin) const {
-			return slice(begin, _size);
+		/**
+		 * @brief View on the first @p size items
+		 *
+		 * Equivalent to @cpp data.slice(0, size) @ce.
+		 */
+		constexpr ArrayView<T> prefix(std::size_t size) const {
+			return slice(0, size);
 		}
 
-		constexpr ArrayView<T> except(std::size_t count) const {
-			return slice(0, _size - count);
+		/**
+		 * @brief Fixed-size view on the first @p size_ items
+		 *
+		 * Equivalent to @cpp data.slice<0, size_>() @ce.
+		 */
+		template<std::size_t size_> constexpr StaticArrayView<size_, T> prefix() const {
+			return slice<0, size_>();
+		}
+
+		/**
+		 * @brief Fixed-size view on the last @p size_ items
+		 *
+		 * Equivalent to @cpp data.slice<size_>(data.size() - size_) @ce.
+		 */
+		template<std::size_t size_> constexpr StaticArrayView<size_, T> suffix() const {
+			return slice<size_>(_size - size_);
+		}
+
+		/**
+		 * @brief View except the first @p size items
+		 *
+		 * Equivalent to @cpp data.slice(size, data.size()) @ce.
+		 */
+		constexpr ArrayView<T> exceptPrefix(std::size_t size) const {
+			return slice(size, _size);
+		}
+
+		/**
+		 * @brief View except the last @p size items
+		 *
+		 * Equivalent to @cpp data.slice(0, data.size() - size) @ce.
+		 */
+		constexpr ArrayView<T> exceptSuffix(std::size_t size) const {
+			return slice(0, _size - size);
 		}
 
 	private:
@@ -173,52 +296,74 @@ namespace Death::Containers
 	template<> class ArrayView<void>
 	{
 	public:
+		/** @brief Element type */
 		typedef void Type;
 
-		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either a ArrayView or std::size_t */
+		/**
+		 * @brief Default constructor
+		 *
+		 * Creates an empty @cpp nullptr @ce view. Copy a non-empty @ref Array
+		 * or @ref ArrayView onto the instance to make it useful.
+		 */
 		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
 
 		constexpr /*implicit*/ ArrayView() noexcept : _data{}, _size{} {}
 
+		/**
+		 * @brief Construct a view on a type-erased array with explicit length
+		 * @param data      Data pointer
+		 * @param size      Data size in bytes
+		 */
 		constexpr /*implicit*/ ArrayView(void* data, std::size_t size) noexcept : _data(data), _size(size) {}
 
+		/**
+		 * @brief Construct a view on a typed array with explicit length
+		 * @param data      Data pointer
+		 * @param size      Data size
+		 *
+		 * Size is recalculated to size in bytes.
+		 */
 		template<class T> constexpr /*implicit*/ ArrayView(T* data, std::size_t size) noexcept : _data(data), _size(size * sizeof(T)) {}
 
+		/**
+		 * @brief Construct a view on a fixed-size array
+		 * @param data      Fixed-size array
+		 *
+		 * Size in bytes is calculated automatically.
+		 */
 		template<class T, std::size_t size
 			, class = typename std::enable_if<!std::is_const<T>::value>::type
 		> constexpr /*implicit*/ ArrayView(T(&data)[size]) noexcept : _data(data), _size(size * sizeof(T)) {}
 
+		/** @brief Construct a void view on any @ref ArrayView */
 		template<class T
 			, class = typename std::enable_if<!std::is_const<T>::value>::type
 		> constexpr /*implicit*/ ArrayView(ArrayView<T> array) noexcept : _data(array), _size(array.size() * sizeof(T)) {}
 
+		/** @brief Construct a void view on any @ref StaticArrayView */
 		template<std::size_t size, class T
 			, class = typename std::enable_if<!std::is_const<T>::value>::type
 		> constexpr /*implicit*/ ArrayView(const StaticArrayView<size, T>& array) noexcept : _data{array}, _size{size * sizeof(T)} {}
 
+		/** @brief Construct a view on an external type / from an external representation */
 		template<class T, class = decltype(Implementation::ErasedArrayViewConverter<typename std::decay<T&&>::type>::from(std::declval<T&&>()))> constexpr /*implicit*/ ArrayView(T&& other) noexcept : ArrayView{Implementation::ErasedArrayViewConverter<typename std::decay<T&&>::type>::from(other)} {}
 
 #if !defined(DEATH_MSVC2019_COMPATIBILITY)
-		constexpr explicit operator bool() const {
-			return _data;
-		}
+		/** @brief Whether the view is non-empty */
+		constexpr explicit operator bool() const { return _data; }
 #endif
 
-		constexpr /*implicit*/ operator void* () const {
-			return _data;
-		}
+		/** @brief Conversion to the underlying type */
+		constexpr /*implicit*/ operator void*() const { return _data; }
 
-		constexpr void* data() const {
-			return _data;
-		}
+		/** @brief View data */
+		constexpr void* data() const { return _data; }
 
-		constexpr std::size_t size() const {
-			return _size;
-		}
+		/** @brief View size */
+		constexpr std::size_t size() const { return _size; }
 
-		constexpr bool empty() const {
-			return !_size;
-		}
+		/** @brief Whether the view is empty */
+		constexpr bool empty() const { return !_size; }
 
 	private:
 		void* _data;
@@ -237,78 +382,136 @@ namespace Death::Containers
 	template<> class ArrayView<const void>
 	{
 	public:
+		/** @brief Element type */
 		typedef const void Type;
 
-		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either a ArrayView or std::size_t */
+		/**
+		 * @brief Default constructor
+		 *
+		 * Creates an empty @cpp nullptr @ce view. Copy a non-empty @ref Array
+		 * or @ref ArrayView onto the instance to make it useful.
+		 */
 		template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ ArrayView(U) noexcept : _data{}, _size{} {}
 
 		constexpr /*implicit*/ ArrayView() noexcept : _data{}, _size{} {}
 
+		/**
+		 * @brief Construct a view on a type-erased array array with explicit length
+		 * @param data      Data pointer
+		 * @param size      Data size in bytes
+		 */
 		constexpr /*implicit*/ ArrayView(const void* data, std::size_t size) noexcept : _data(data), _size(size) {}
 
+		/**
+		 * @brief Constructor a view on a typed array with explicit length
+		 * @param data      Data pointer
+		 * @param size      Data size
+		 *
+		 * Size is recalculated to size in bytes.
+		 */
 		template<class T> constexpr /*implicit*/ ArrayView(const T* data, std::size_t size) noexcept : _data(data), _size(size * sizeof(T)) {}
 
+		/**
+		 * @brief Construct a view on a fixed-size array
+		 * @param data      Fixed-size array
+		 *
+		 * Size in bytes is calculated automatically.
+		 */
 		template<class T, std::size_t size> constexpr /*implicit*/ ArrayView(T(&data)[size]) noexcept : _data(data), _size(size * sizeof(T)) {}
 
+		/** @brief Construct a const void view on an @ref ArrayView<void> */
 		constexpr /*implicit*/ ArrayView(ArrayView<void> array) noexcept : _data{array}, _size{array.size()} {}
-
+		
+		/** @brief Construct a const void view on any @ref ArrayView */
 		template<class T> constexpr /*implicit*/ ArrayView(ArrayView<T> array) noexcept : _data(array), _size(array.size() * sizeof(T)) {}
 
+		/** @brief Construct a const void view on any @ref StaticArrayView */
 		template<std::size_t size, class T> constexpr /*implicit*/ ArrayView(const StaticArrayView<size, T>& array) noexcept : _data{array}, _size{size * sizeof(T)} {}
 
+		/** @brief Construct a view on an external type / from an external representation */
 		template<class T, class = decltype(Implementation::ErasedArrayViewConverter<const T>::from(std::declval<const T&>()))> constexpr /*implicit*/ ArrayView(const T& other) noexcept : ArrayView{Implementation::ErasedArrayViewConverter<const T>::from(other)} {}
 
 #if !defined(DEATH_MSVC2019_COMPATIBILITY)
-		constexpr explicit operator bool() const {
-			return _data;
-		}
+		/** @brief Whether the view is non-empty */
+		constexpr explicit operator bool() const { return _data; }
 #endif
 
-		constexpr /*implicit*/ operator const void* () const {
-			return _data;
-		}
+		/** @brief Conversion to the underlying type */
+		constexpr /*implicit*/ operator const void*() const { return _data; }
 
-		constexpr const void* data() const {
-			return _data;
-		}
+		/** @brief View data */
+		constexpr const void* data() const { return _data; }
 
-		constexpr std::size_t size() const {
-			return _size;
-		}
+		/** @brief View size */
+		constexpr std::size_t size() const { return _size; }
 
-		constexpr bool empty() const {
-			return !_size;
-		}
+		/** @brief Whether the view is empty */
+		constexpr bool empty() const { return !_size; }
 
 	private:
 		const void* _data;
 		std::size_t _size;
 	};
 
+	/**
+		@brief Make a view on an array of specific length
+
+		Convenience alternative to @ref ArrayView::ArrayView(T*, std::size_t).
+	*/
 	template<class T> constexpr ArrayView<T> arrayView(T* data, std::size_t size) {
 		return ArrayView<T>{data, size};
 	}
 
+	/**
+		@brief Make a view on fixed-size array
+
+		Convenience alternative to @ref ArrayView::ArrayView(U(&)[size]).
+	*/
 	template<std::size_t size, class T> constexpr ArrayView<T> arrayView(T(&data)[size]) {
 		return ArrayView<T>{data};
 	}
 
+	/**
+		@brief Make a view on an initializer list
+
+		Not present as a constructor in order to avoid accidental dangling references
+		with r-value initializer lists.
+	*/
 	template<class T> ArrayView<const T> arrayView(std::initializer_list<T> list) {
 		return ArrayView<const T>{list.begin(), list.size()};
 	}
 
+	/**
+		@brief Make a view on @ref StaticArrayView
+
+		Convenience alternative to @ref ArrayView::ArrayView(StaticArrayView<size, U>).
+	*/
 	template<std::size_t size, class T> constexpr ArrayView<T> arrayView(StaticArrayView<size, T> view) {
 		return ArrayView<T>{view};
 	}
 
+	/**
+		@brief Make a view on a view
+
+		Equivalent to the implicit @ref ArrayView copy constructor --- it shouldn't be
+		an error to call @ref arrayView() on itself.
+	*/
 	template<class T> constexpr ArrayView<T> arrayView(ArrayView<T> view) {
 		return view;
 	}
 
+	/** @brief Make a view on an external type / from an external representation */
 	template<class T, class U = decltype(Implementation::ErasedArrayViewConverter<typename std::remove_reference<T&&>::type>::from(std::declval<T&&>()))> constexpr U arrayView(T&& other) {
 		return Implementation::ErasedArrayViewConverter<typename std::remove_reference<T&&>::type>::from(std::forward<T>(other));
 	}
 
+	/**
+		@brief Reinterpret-cast an array view
+
+		Size of the new array is calculated as @cpp view.size()*sizeof(T)/sizeof(U) @ce.
+		Expects that both types are [standard layout](http://en.cppreference.com/w/cpp/concept/StandardLayoutType)
+		and the total byte size doesn't change.
+	*/
 	template<class U, class T> ArrayView<U> arrayCast(ArrayView<T> view) {
 		static_assert(std::is_standard_layout<T>::value, "The source type is not standard layout");
 		static_assert(std::is_standard_layout<U>::value, "The target type is not standard layout");
@@ -318,6 +521,13 @@ namespace Death::Containers
 		return { reinterpret_cast<U*>(view.begin()), size };
 	}
 
+	/**
+		@brief Reinterpret-cast a void array view
+
+		Size of the new array is calculated as @cpp view.size()/sizeof(U) @ce.
+		Expects that the target type is [standard layout](http://en.cppreference.com/w/cpp/concept/StandardLayoutType)
+		and the total byte size doesn't change.
+	*/
 	template<class U> ArrayView<U> arrayCast(ArrayView<const void> view) {
 		static_assert(std::is_standard_layout<U>::value, "The target type is not standard layout");
 		const std::size_t size = view.size() / sizeof(U);
@@ -326,19 +536,23 @@ namespace Death::Containers
 		return { reinterpret_cast<U*>(view.data()), size };
 	}
 
+	/** @overload */
 	template<class U> ArrayView<U> arrayCast(ArrayView<void> view) {
 		auto out = arrayCast<const U>(ArrayView<const void>{view});
 		return ArrayView<U>{const_cast<U*>(out.data()), out.size()};
 	}
 
+	/** @brief Array view size */
 	template<class T> constexpr std::size_t arraySize(ArrayView<T> view) {
 		return view.size();
 	}
 
+	/** @overload */
 	template<std::size_t size_, class T> constexpr std::size_t arraySize(StaticArrayView<size_, T>) {
 		return size_;
 	}
 
+	/** @overload */
 	template<std::size_t size_, class T> constexpr std::size_t arraySize(T(&)[size_]) {
 		return size_;
 	}
@@ -359,140 +573,259 @@ namespace Death::Containers
 	template<std::size_t size_, class T> class StaticArrayView
 	{
 	public:
+		/** @brief Element type */
 		typedef T Type;
 
 		enum : std::size_t {
 			Size = size_
 		};
 
-		/* To avoid ambiguity in certain cases of passing 0 to overloads that take either a ArrayView or std::size_t */
+		/**
+		 * @brief Default constructor
+		 *
+		 * Creates a @cpp nullptr @ce view. Copy a non-empty @ref StaticArray
+		 * or @ref StaticArrayView onto the instance to make it useful.
+		 */
 		template<class U, class = U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> constexpr /*implicit*/ StaticArrayView(U) noexcept : _data{} {}
 
 		constexpr /*implicit*/ StaticArrayView() noexcept : _data{} {}
 
+		/**
+		* @brief Construct a static view on an array
+		* @param data      Data pointer
+		*
+		* The pointer is assumed to contain at least @ref Size elements, but
+		* it can't be checked in any way. Use @ref StaticArrayView(U(&)[size_])
+		* or fixed-size slicing from an @ref ArrayView / @ref Array for more
+		* safety.
+		*/
 		template<class U, class = typename std::enable_if<std::is_pointer<U>::value && !std::is_same<U, T(&)[size_]>::value>::type> constexpr explicit StaticArrayView(U data)
 			noexcept : _data(data) {}
 
+		/**
+		* @brief Construct a static view on a fixed-size array
+		* @param data      Fixed-size array
+		*
+		* Enabled only if @cpp T* @ce is implicitly convertible to @cpp U* @ce.
+		* Expects that both types have the same size.
+		*/
 		template<class U, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
 		constexpr /*implicit*/ StaticArrayView(U(&data)[size_]) noexcept : _data{data} {}
 
+		/**
+		 * @brief Construct a static view on an @ref StaticArrayView
+		 *
+		 * Enabled only if @cpp T* @ce is implicitly convertible to @cpp U* @ce.
+		 * Expects that both types have the same size.
+		 */
 		template<class U, class = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
 		constexpr /*implicit*/ StaticArrayView(StaticArrayView<size_, U> view) noexcept : _data{view} {
 			static_assert(sizeof(T) == sizeof(U), "Type sizes are not compatible");
 		}
 
+		/** @brief Construct a view on an external type / from an external representation */
 		template<class U, class = decltype(Implementation::StaticArrayViewConverter<size_, T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ StaticArrayView(U&& other) noexcept : StaticArrayView{Implementation::StaticArrayViewConverter<size_, T, typename std::decay<U&&>::type>::from(std::forward<U>(other))} {}
 
+		/** @brief Convert the view to external representation */
 		template<class U, class = decltype(Implementation::StaticArrayViewConverter<size_, T, U>::to(std::declval<StaticArrayView<size_, T>>()))> constexpr /*implicit*/ operator U() const {
 			return Implementation::StaticArrayViewConverter<size_, T, U>::to(*this);
 		}
 
 #if !defined(DEATH_MSVC2019_COMPATIBILITY)
-		constexpr explicit operator bool() const {
-			return _data;
-		}
+		/** @brief Whether the view is non-empty */
+		constexpr explicit operator bool() const { return _data; }
 #endif
 
-		constexpr /*implicit*/ operator T* () const {
-			return _data;
-		}
+		/** @brief Conversion to the underlying type */
+		constexpr /*implicit*/ operator T*() const { return _data; }
 
-		constexpr T* data() const {
-			return _data;
-		}
+		/** @brief View data */
+		constexpr T* data() const { return _data; }
 
-		constexpr std::size_t size() const {
-			return size_;
-		}
+		/** @brief View size */
+		constexpr std::size_t size() const { return size_; }
 
-		constexpr bool empty() const {
-			return !size_;
-		}
+		/** @brief Whether the view is empty */
+		constexpr bool empty() const { return !size_; }
 
-		constexpr T* begin() const {
-			return _data;
-		}
-		constexpr T* cbegin() const {
-			return _data;
-		}
+		/**
+		 * @brief Pointer to the first element
+		 *
+		 * @see @ref front(), @ref operator[]()
+		 */
+		constexpr T* begin() const { return _data; }
+		/** @overload */
+		constexpr T* cbegin() const { return _data; }
 
-		constexpr T* end() const {
-			return _data + size_;
-		}
-		constexpr T* cend() const {
-			return _data + size_;
-		}
+		/** @brief Pointer to (one item after) the last element */
+		constexpr T* end() const { return _data + size_; }
+		/** @overload */
+		constexpr T* cend() const { return _data + size_; }
 
-		T& front() const;
+		/**
+		 * @brief First element
+		 *
+		 * Expects there is at least one element.
+		 */
+		constexpr T& front() const;
 
-		T& back() const;
+		/**
+		 * @brief Last element
+		 *
+		 * Expects there is at least one element.
+		 */
+		constexpr T& back() const;
 
+		/**
+		 * @brief Element access
+		 * @m_since_latest
+		 *
+		 * Expects that @p i is less than @ref size().
+		 * @see @ref front(), @ref back()
+		 */
+		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> constexpr T& operator[](U i) const;
+
+		/** @copydoc ArrayView::slice(T*, T*) const */
 		constexpr ArrayView<T> slice(T* begin, T* end) const {
 			return ArrayView<T>(*this).slice(begin, end);
 		}
+		/** @overload */
 		constexpr ArrayView<T> slice(std::size_t begin, std::size_t end) const {
 			return ArrayView<T>(*this).slice(begin, end);
 		}
 
+		/** @copydoc ArrayView::sliceSize(T*, std::size_t) const */
+		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr ArrayView<T> sliceSize(U begin, std::size_t size) const {
+			return ArrayView<T>(*this).sliceSize(begin, size);
+		}
+		/** @overload */
+		constexpr ArrayView<T> sliceSize(std::size_t begin, std::size_t size) const {
+			return ArrayView<T>(*this).sliceSize(begin, size);
+		}
+
+		/** @copydoc ArrayView::slice(T*) const */
 		template<std::size_t viewSize> constexpr StaticArrayView<viewSize, T> slice(T* begin) const {
 			return ArrayView<T>(*this).template slice<viewSize>(begin);
 		}
+		/** @overload */
 		template<std::size_t viewSize> constexpr StaticArrayView<viewSize, T> slice(std::size_t begin) const {
 			return ArrayView<T>(*this).template slice<viewSize>(begin);
 		}
 
+		/**
+		* @brief Fixed-size view slice
+		*
+		* Expects (at compile time) that @cpp begin_ < end_ @ce and @p end_ is
+		* not larger than @ref Size.
+		*/
 		template<std::size_t begin_, std::size_t end_> constexpr StaticArrayView<end_ - begin_, T> slice() const;
 
+		/**
+		 * @brief Fixed-size view slice of given size
+		 *
+		 * Expects (at compile time) that @cpp begin_ + size_ @ce is not larger
+		 * than @ref Size.
+		 */
+		template<std::size_t begin_, std::size_t size__> constexpr StaticArrayView<size__, T> sliceSize() const {
+			return slice<begin_, begin_ + size__>();
+		}
+
+		/** @copydoc ArrayView::prefix(T*) const */
 		constexpr ArrayView<T> prefix(T* end) const {
 			return ArrayView<T>(*this).prefix(end);
 		}
-		constexpr ArrayView<T> prefix(std::size_t end) const {
-			return ArrayView<T>(*this).prefix(end);
-		}
 
-		template<std::size_t end_> constexpr StaticArrayView<end_, T> prefix() const {
-			return slice<0, end_>();
-		}
-
+		/** @copydoc ArrayView::suffix(T*) const */
 		constexpr ArrayView<T> suffix(T* begin) const {
 			return ArrayView<T>(*this).suffix(begin);
 		}
-		constexpr ArrayView<T> suffix(std::size_t begin) const {
-			return ArrayView<T>(*this).suffix(begin);
+
+		/** @copydoc ArrayView::prefix(std::size_t) const */
+		constexpr ArrayView<T> prefix(std::size_t size) const {
+			return ArrayView<T>(*this).prefix(size);
 		}
 
-		template<std::size_t begin_> constexpr StaticArrayView<size_ - begin_, T> suffix() const {
-			return slice<begin_, size_>();
+		/**
+		 * @brief Fixed-size view on the first @p size_ items
+		 *
+		 * Equivalent to @cpp data.slice<0, size_>() @ce.
+		 */
+		template<std::size_t size__> constexpr StaticArrayView<size__, T> prefix() const {
+			return slice<0, size__>();
 		}
 
-		constexpr ArrayView<T> except(std::size_t count) const {
-			return ArrayView<T>(*this).except(count);
+		/** @copydoc ArrayView::exceptPrefix(std::size_t) const */
+		constexpr ArrayView<T> exceptPrefix(std::size_t size__) const {
+			return ArrayView<T>(*this).exceptPrefix(size__);
 		}
 
-		template<std::size_t count> constexpr StaticArrayView<size_ - count, T> except() const {
-			return slice<0, size_ - count>();
+		/**
+		 * @brief Fixed-size view except the first @p size__ items
+		 *
+		 * Equivalent to @cpp data.slice<size__, Size>() @ce.
+		 */
+		template<std::size_t size__> constexpr StaticArrayView<size_ - size__, T> exceptPrefix() const {
+			return slice<size__, size_>();
+		}
+
+		/** @copydoc ArrayView::exceptSuffix(std::size_t) const */
+		constexpr ArrayView<T> exceptSuffix(std::size_t size) const {
+			return ArrayView<T>(*this).exceptSuffix(size);
+		}
+
+		/**
+		 * @brief Fixed-size view except the last @p size__ items
+		 *
+		 * Equivalent to @cpp data.slice<0, Size - size__>() @ce.
+		 */
+		template<std::size_t size__> constexpr StaticArrayView<size_ - size__, T> exceptSuffix() const {
+			return slice<0, size_ - size__>();
 		}
 
 	private:
 		T* _data;
 	};
 
+	/**
+		@brief Make a static view on an array
+
+		Convenience alternative to @ref StaticArrayView::StaticArrayView(T*).
+	*/
 	template<std::size_t size, class T> constexpr StaticArrayView<size, T> staticArrayView(T* data) {
 		return StaticArrayView<size, T>{data};
 	}
 
+	/**
+		@brief Make a static view on a fixed-size array
+
+		Convenience alternative to @ref StaticArrayView::StaticArrayView(U(&)[size_]).
+	*/
 	template<std::size_t size, class T> constexpr StaticArrayView<size, T> staticArrayView(T(&data)[size]) {
 		return StaticArrayView<size, T>{data};
 	}
 
+	/**
+		@brief Make a static view on a view
+
+		Equivalent to the implicit @ref StaticArrayView copy constructor --- it
+		shouldn't be an error to call @ref staticArrayView() on itself.
+	*/
 	template<std::size_t size, class T> constexpr StaticArrayView<size, T> staticArrayView(StaticArrayView<size, T> view) {
 		return view;
 	}
 
+	/** @brief Make a static view on an external type / from an external representation */
 	template<class T, class U = decltype(Implementation::ErasedStaticArrayViewConverter<typename std::remove_reference<T&&>::type>::from(std::declval<T&&>()))> constexpr U staticArrayView(T&& other) {
 		return Implementation::ErasedStaticArrayViewConverter<typename std::remove_reference<T&&>::type>::from(std::forward<T>(other));
 	}
 
+	/**
+		@brief Reinterpret-cast a static array view
+
+		Size of the new array is calculated as @cpp view.size()*sizeof(T)/sizeof(U) @ce.
+		Expects that both types are [standard layout](http://en.cppreference.com/w/cpp/concept/StandardLayoutType)
+		and the total byte size doesn't change.
+	*/
 	template<class U, std::size_t size, class T> StaticArrayView<size * sizeof(T) / sizeof(U), U> arrayCast(StaticArrayView<size, T> view) {
 		static_assert(std::is_standard_layout<T>::value, "The source type is not standard layout");
 		static_assert(std::is_standard_layout<U>::value, "The target type is not standard layout");
@@ -501,59 +834,62 @@ namespace Death::Containers
 		return StaticArrayView<newSize, U>{reinterpret_cast<U*>(view.begin())};
 	}
 
+	/**
+		@brief Reinterpret-cast a statically sized array
+
+		Calls @ref arrayCast(StaticArrayView<size, T>) with the argument converted to
+		@ref StaticArrayView of the same type and size.
+	*/
 	template<class U, std::size_t size, class T> StaticArrayView<size * sizeof(T) / sizeof(U), U> arrayCast(T(&data)[size]) {
 		return arrayCast<U>(StaticArrayView<size, T>{data});
 	}
 
-	template<class T> T& ArrayView<T>::front() const {
-		DEATH_ASSERT(_size != 0, _data[0], "Containers::ArrayView::front(): View is empty");
+	template<class T> constexpr T& ArrayView<T>::front() const {
 		return _data[0];
 	}
 
-	template<class T> T& ArrayView<T>::back() const {
-		DEATH_ASSERT(_size != 0, _data[_size - 1], "Containers::ArrayView::back(): View is empty");
+	template<class T> constexpr T& ArrayView<T>::back() const {
 		return _data[_size - 1];
 	}
 
+	template<class T> template<class U, class> constexpr T& ArrayView<T>::operator[](const U i) const {
+		return _data[i];
+	}
+
 	template<class T> constexpr ArrayView<T> ArrayView<T>::slice(T* begin, T* end) const {
-		return DEATH_CONSTEXPR_ASSERT(_data <= begin && begin <= end && end <= _data + _size,
-				"Containers::ArrayView::slice(): Slice is out of range"),
-			ArrayView<T>{begin, std::size_t(end - begin)};
+		return ArrayView<T>{begin, std::size_t(end - begin)};
 	}
 
 	template<class T> constexpr ArrayView<T> ArrayView<T>::slice(std::size_t begin, std::size_t end) const {
-		return DEATH_CONSTEXPR_ASSERT(begin <= end && end <= _size,
-				"Containers::ArrayView::slice(): Slice is out of range"),
-			ArrayView<T>{_data + begin, end - begin};
+		return ArrayView<T>{_data + begin, end - begin};
 	}
 
-	template<std::size_t size_, class T> T& StaticArrayView<size_, T>::front() const {
+	template<std::size_t size_, class T> constexpr T& StaticArrayView<size_, T>::front() const {
 		static_assert(size_ != 0, "View is empty");
 		return _data[0];
 	}
 
-	template<std::size_t size_, class T> T& StaticArrayView<size_, T>::back() const {
+	template<std::size_t size_, class T> constexpr T& StaticArrayView<size_, T>::back() const {
 		static_assert(size_ != 0, "View is empty");
 		return _data[size_ - 1];
 	}
 
-	template<class T> template<std::size_t viewSize> constexpr StaticArrayView<viewSize, T> ArrayView<T>::slice(T* begin) const {
-		return DEATH_CONSTEXPR_ASSERT(_data <= begin && begin + viewSize <= _data + _size,
-				"Containers::ArrayView::slice(): Slice is out of range"),
-			StaticArrayView<viewSize, T>{begin};
+	template<std::size_t size_, class T> template<class U, class> constexpr T& StaticArrayView<size_, T>::operator[](const U i) const {
+		return _data[i];
 	}
 
-	template<class T> template<std::size_t viewSize> constexpr StaticArrayView<viewSize, T> ArrayView<T>::slice(std::size_t begin) const {
-		return DEATH_CONSTEXPR_ASSERT(begin + viewSize <= _size,
-				"Containers::ArrayView::slice(): Slice is out of range"),
-			StaticArrayView<viewSize, T>{_data + begin};
+	template<class T> template<std::size_t size_, class U, class> constexpr StaticArrayView<size_, T> ArrayView<T>::slice(const U begin) const {
+		return StaticArrayView<size_, T>{begin};
+	}
+
+	template<class T> template<std::size_t size_> constexpr StaticArrayView<size_, T> ArrayView<T>::slice(std::size_t begin) const {
+		static_assert(begin + size_ <= _size, "Slice needs to have a positive size");
+		return StaticArrayView<size_, T>{_data + begin};
 	}
 
 	template<class T> template<std::size_t begin_, std::size_t end_> constexpr StaticArrayView<end_ - begin_, T> ArrayView<T>::slice() const {
 		static_assert(begin_ < end_, "Fixed-size slice needs to have a positive size");
-		return DEATH_CONSTEXPR_ASSERT(end_ <= _size,
-				"Containers::ArrayView::slice(): Slice is out of range"),
-			StaticArrayView<end_ - begin_, T>{_data + begin_};
+		return StaticArrayView<end_ - begin_, T>{_data + begin_};
 	}
 
 	template<std::size_t size_, class T> template<std::size_t begin_, std::size_t end_> constexpr StaticArrayView<end_ - begin_, T> StaticArrayView<size_, T>::slice() const {

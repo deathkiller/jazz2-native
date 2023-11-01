@@ -56,7 +56,7 @@ namespace Jazz2
 	}
 
 	ContentResolver::ContentResolver()
-		: _isHeadless(false), _isLoading(false), _cachedMetadata(64), _cachedGraphics(128), _palettes{}
+		: _isHeadless(false), _isLoading(false), _cachedMetadata(64), _cachedGraphics(256), _cachedSounds(192), _palettes{}
 	{
 		InitializePaths();
 	}
@@ -361,8 +361,8 @@ namespace Jazz2
 
 	Metadata* ContentResolver::RequestMetadata(const StringView& path)
 	{
-		auto pathNormalized = fs::ToNativeSeparators(path);
-		auto it = _cachedMetadata.find(String::nullTerminatedView(pathNormalized));
+		String pathNormalized = fs::ToNativeSeparators(path);
+		auto it = _cachedMetadata.find(pathNormalized);
 		if (it != _cachedMetadata.end()) {
 			// Already loaded - Mark as referenced
 			it->second->Flags |= MetadataFlags::Referenced;
@@ -395,6 +395,7 @@ namespace Jazz2
 		bool multipleAnimsNoStatesWarning = false;
 
 		std::unique_ptr<Metadata> metadata = std::make_unique<Metadata>();
+		metadata->Path = std::move(pathNormalized);
 		metadata->Flags |= MetadataFlags::Referenced;
 
 		ondemand::parser parser;
@@ -555,7 +556,7 @@ namespace Jazz2
 			}
 		}
 
-		return _cachedMetadata.emplace(pathNormalized, std::move(metadata)).first->second.get();
+		return _cachedMetadata.emplace(metadata->Path, std::move(metadata)).first->second.get();
 	}
 
 	GenericGraphicResource* ContentResolver::RequestGraphics(const StringView& path, uint16_t paletteOffset)

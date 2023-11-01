@@ -23,10 +23,6 @@ namespace Jazz2::Actors
 			_stateBuffer[i].Pos = Vector2f(details.Pos.X, details.Pos.Y);
 		}
 
-		async_await RequestMetadataAsync("Interactive/PlayerJazz"_s);
-
-		SetAnimation(AnimState::Idle);
-
 		async_return true;
 	}
 
@@ -69,6 +65,12 @@ namespace Jazz2::Actors
 		}
 
 		ActorBase::OnUpdate(timeMult);
+	}
+
+	void RemoteActor::AssignMetadata(const StringView& path, AnimState anim)
+	{
+		RequestMetadata(path);
+		SetAnimation(anim);
 	}
 
 	void RemoteActor::SyncWithServer(const Vector2f& pos, AnimState anim, bool isVisible, bool isFacingLeft)

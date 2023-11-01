@@ -429,7 +429,7 @@ namespace Jazz2::Actors
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _metadata->Sounds.end()) {
 			int idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (int)it->second.Buffers.size()) : 0);
-			return _levelHandler->PlaySfx(&it->second.Buffers[idx]->Buffer, Vector3f(_pos.X, _pos.Y, 0.0f), false, gain, pitch);
+			return _levelHandler->PlaySfx(this, identifier, &it->second.Buffers[idx]->Buffer, Vector3f(_pos.X, _pos.Y, 0.0f), false, gain, pitch);
 		} else {
 			return nullptr;
 		}
