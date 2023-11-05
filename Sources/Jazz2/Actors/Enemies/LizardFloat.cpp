@@ -6,6 +6,7 @@
 #include "../Environment/Bomb.h"
 #include "../Environment/Copter.h"
 #include "../Player.h"
+#include "../Solid/PushableBox.h"
 #include "../Weapons/TNT.h"
 
 #include "../../../nCine/Base/Random.h"
@@ -16,9 +17,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	LizardFloat::LizardFloat()
-		:
-		_attackTime(200.0f),
-		_moveTime(100.0f)
+		: _attackTime(200.0f), _moveTime(100.0f)
 	{
 	}
 
@@ -168,7 +167,8 @@ namespace Jazz2::Actors::Enemies
 			if (player->GetSpecialMove() != Player::SpecialMoveType::None) {
 				shouldDestroy = true;
 			}
-		} else if (auto tnt = dynamic_cast<Weapons::TNT*>(collider)) {
+		} else if (dynamic_cast<Weapons::TNT*>(collider) != nullptr ||
+					dynamic_cast<Solid::PushableBox*>(collider) != nullptr) {
 			shouldDestroy = true;
 		}
 

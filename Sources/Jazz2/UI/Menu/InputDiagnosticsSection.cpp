@@ -29,17 +29,29 @@ namespace Jazz2::UI::Menu
 
 		auto& input = theApplication().inputManager();
 
+		bool shouldExit = false;
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		int32_t jc = 0;
 		for (int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < countof(joyStates); i++) {
 			if (input.isJoyMapped(i)) {
-				joyStates[jc++] = &input.joyMappedState(i);
+				joyStates[jc] = &input.joyMappedState(i);
+				if (joyStates[jc]->isButtonPressed(ButtonName::START) && joyStates[jc]->isButtonPressed(ButtonName::BACK)) {
+					shouldExit = true;
+				}
+
+				jc++;
 			}
 		}
 		_itemCount = jc;
 
 		if (_itemCount > 0 && _selectedIndex >= _itemCount) {
 			_selectedIndex = _itemCount - 1;
+		}
+
+		if (shouldExit) {
+			_root->PlaySfx("MenuSelect"_s, 0.5f);
+			_root->LeaveSection();
+			return;
 		}
 
 		OnHandleInput();
@@ -200,6 +212,13 @@ namespace Jazz2::UI::Menu
 				sy += 15.0f;
 			}
 		}
+
+		_root->DrawElement(GamepadBack, 0, center.X - 37.0f, viewSize.Y - 18.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.9f, 0.9f);
+		_root->DrawStringShadow("+"_s, charOffset, center.X - 28.0f, viewSize.Y - 18.0f, IMenuContainer::FontLayer,
+			Alignment::Left, Font::DefaultColor, 0.6f, 0.4f, 0.0f, 1.0f, 0.6f, 0.88f);
+		_root->DrawElement(GamepadStart, 0, center.X - 11.0f, viewSize.Y - 18.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.9f, 0.9f);
+		_root->DrawStringShadow("to exit"_s, charOffset, center.X, viewSize.Y - 17.0f, IMenuContainer::FontLayer,
+			Alignment::Left, Font::DefaultColor, 0.8f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 	}
 
 	void InputDiagnosticsSection::OnHandleInput()

@@ -104,9 +104,9 @@ namespace Jazz2::Actors::Enemies
 
 		bool success;
 		TileCollisionParams params = { TileDestructType::None, true };
-		AABBf aabbAbove = AABBf(x < 0.0f ? AABBInner.L - 8.0f - x : AABBInner.R, AABBInner.T, x < 0.0f ? AABBInner.L : AABBInner.R + 8.0f + x, AABBInner.B - 2.0f);
+		AABBf aabbAbove = AABBf(x < 0.0f ? AABBInner.L - 8.0f + x : AABBInner.R, AABBInner.T, x < 0.0f ? AABBInner.L : AABBInner.R + 8.0f + x, AABBInner.B - 2.0f);
 		if (_levelHandler->IsPositionEmpty(this, aabbAbove, params)) {
-			AABBf aabbBelow = AABBf(x < 0.0f ? AABBInner.L - 8.0f - x : AABBInner.R + 2.0f, AABBInner.B, x < 0.0f ? AABBInner.L - 2.0f : AABBInner.R + 8.0f + x, AABBInner.B + 8.0f);
+			AABBf aabbBelow = AABBf(x < 0.0f ? AABBInner.L - 8.0f + x : AABBInner.R + 2.0f, AABBInner.B, x < 0.0f ? AABBInner.L - 2.0f : AABBInner.R + 8.0f + x, AABBInner.B + 8.0f);
 			success = !_levelHandler->IsPositionEmpty(this, aabbBelow, params);
 		} else {
 			success = false;
