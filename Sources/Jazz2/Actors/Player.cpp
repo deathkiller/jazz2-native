@@ -714,14 +714,13 @@ namespace Jazz2::Actors
 					_suspendTime = 4.0f;
 
 					SetState(ActorState::ApplyGravitation, true);
-				} else if (!_wasDownPressed && _dizzyTime <= 0.0f) {
+				} else if (_dizzyTime <= 0.0f) {
 					if (GetState(ActorState::CanJump)) {
 						if (!_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
 							_wasDownPressed = true;
-
 							SetAnimation(AnimState::Crouch);
 						}
-					} else if (_playerType != PlayerType::Frog) {
+					} else if (!_wasDownPressed && _playerType != PlayerType::Frog) {
 						_wasDownPressed = true;
 
 						_controllable = false;
