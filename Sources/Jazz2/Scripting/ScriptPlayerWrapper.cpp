@@ -74,7 +74,7 @@ namespace Jazz2::Scripting
 	ScriptPlayerWrapper* ScriptPlayerWrapper::Factory(int playerIndex)
 	{
 		auto ctx = asGetActiveContext();
-		auto owner = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
+		auto owner = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(ScriptLoader::EngineToOwner));
 
 		void* mem = asAllocMem(sizeof(ScriptPlayerWrapper));
 		return new(mem) ScriptPlayerWrapper(owner, playerIndex);

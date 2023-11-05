@@ -27,7 +27,9 @@ namespace nCine
 		: frequency_(0UL), baseCount_(0ULL)
 	{
 #if defined(DEATH_TARGET_WINDOWS)
-		if (::QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&frequency_))) {
+		LARGE_INTEGER li;
+		if (::QueryPerformanceFrequency(&li)) {
+			frequency_ = li.LowPart;
 			hasPerfCounter_ = true;
 		} else {
 			frequency_ = 1000L;
@@ -38,7 +40,6 @@ namespace nCine
 #	else
 		mach_timebase_info_data_t info;
 		mach_timebase_info(&info);
-
 		frequency_ = (info.denom * 1.0e9L) / info.numer;
 #	endif
 #else

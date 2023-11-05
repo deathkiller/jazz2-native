@@ -11,10 +11,11 @@ using namespace Death::Containers;
 namespace nCine
 {
 	using hash_t = uint32_t;
+	using hash64_t = uint64_t;
 	const hash_t NullHash = static_cast<hash_t>(~0);
 
 	/// Hash function returning always the first hashmap bucket, for debug purposes
-	template <class K>
+	template<class K>
 	class FixedHashFunc
 	{
 	public:
@@ -24,7 +25,7 @@ namespace nCine
 	};
 
 	/// Hash function returning the modulo of the key, for debug purposes
-	template <class K, unsigned int Value>
+	template<class K, unsigned int Value>
 	class ModuloHashFunc
 	{
 	public:
@@ -35,7 +36,7 @@ namespace nCine
 
 	/// Hash function returning the key unchanged
 	/*! The key type should be convertible to `hash_t.` */
-	template <class K>
+	template<class K>
 	class IdentityHashFunc
 	{
 	public:
@@ -45,7 +46,7 @@ namespace nCine
 	};
 
 	/// Shift-Add-XOR hash function
-	template <class K>
+	template<class K>
 	class SaxHashFunc
 	{
 	public:
@@ -64,7 +65,7 @@ namespace nCine
 	/*!
 	 * \note Specialized version of the function for C-style strings
 	 */
-	template <>
+	template<>
 	class SaxHashFunc<char*>
 	{
 	public:
@@ -83,7 +84,7 @@ namespace nCine
 	/*!
 	 * \note Specialized version of the function for String objects
 	 */
-	template <>
+	template<>
 	class SaxHashFunc<String>
 	{
 	public:
@@ -102,7 +103,7 @@ namespace nCine
 	/*!
 	 * For more information: http://en.wikipedia.org/wiki/Jenkins_hash_function
 	 */
-	template <class K>
+	template<class K>
 	class JenkinsHashFunc
 	{
 	public:
@@ -129,7 +130,7 @@ namespace nCine
 	 *
 	 * For more information: http://en.wikipedia.org/wiki/Jenkins_hash_function
 	 */
-	template <>
+	template<>
 	class JenkinsHashFunc<char*>
 	{
 	public:
@@ -156,7 +157,7 @@ namespace nCine
 	 *
 	 * For more information: http://en.wikipedia.org/wiki/Jenkins_hash_function
 	 */
-	template <>
+	template<>
 	class JenkinsHashFunc<String>
 	{
 	public:
@@ -181,7 +182,7 @@ namespace nCine
 	/*!
 	 * For more information: http://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
 	 */
-	template <class K>
+	template<class K>
 	class FNV1aHashFunc
 	{
 	public:
@@ -210,7 +211,7 @@ namespace nCine
 	 *
 	 * For more information: http://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
 	 */
-	template <>
+	template<>
 	class FNV1aHashFunc<char*>
 	{
 	public:
@@ -240,7 +241,7 @@ namespace nCine
 	 *
 	 * For more information: http://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
 	 */
-	template <>
+	template<>
 	class FNV1aHashFunc<String>
 	{
 	public:
@@ -281,7 +282,7 @@ namespace nCine
 	/*!
 	 * For more information: https://github.com/ztanml/fast-hash
 	 */
-	template <class K>
+	template<class K>
 	class FastHashFunc
 	{
 	public:
@@ -303,7 +304,7 @@ namespace nCine
 	 *
 	 * For more information: https://github.com/ztanml/fast-hash
 	 */
-	template <>
+	template<>
 	class FastHashFunc<const char*>
 	{
 	public:
@@ -322,7 +323,7 @@ namespace nCine
 	 *
 	 * For more information: https://github.com/ztanml/fast-hash
 	 */
-	template <>
+	template<>
 	class FastHashFunc<String>
 	{
 	public:
@@ -333,5 +334,54 @@ namespace nCine
 
 	private:
 		static const uint32_t Seed = 0x811C9DC5;
+	};
+
+	/// CityHash
+	std::uint64_t CityHash64(const char* s, std::size_t len);
+
+	std::uint64_t CityHash64WithSeed(const char* s, std::size_t len, std::uint64_t seed);
+
+	std::uint64_t CityHash64WithSeeds(const char* s, std::size_t len, std::uint64_t seed0, std::uint64_t seed1);
+
+	std::uint32_t CityHash32(const char* s, std::size_t len);
+
+	template<class K>
+	class CityHash32Func
+	{
+	public:
+		hash_t operator()(const K& key) const
+		{
+			return CityHash32(reinterpret_cast<const char*>(&key), sizeof(K));
+		}
+	};
+
+	template<>
+	class CityHash32Func<String>
+	{
+	public:
+		hash_t operator()(const String& string) const
+		{
+			return CityHash32(string.data(), string.size());
+		}
+	};
+
+	template<class K>
+	class CityHash64Func
+	{
+	public:
+		hash64_t operator()(const K& key) const
+		{
+			return CityHash64(reinterpret_cast<const char*>(&key), sizeof(K));
+		}
+	};
+
+	template<>
+	class CityHash64Func<String>
+	{
+	public:
+		hash64_t operator()(const String& string) const
+		{
+			return CityHash64(string.data(), string.size());
+		}
 	};
 }

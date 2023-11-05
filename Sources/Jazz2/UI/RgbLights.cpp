@@ -242,7 +242,7 @@ namespace Jazz2::UI
 		if (result) {
 			LOGE("Response failed: %i", result);
 		} else {
-			RgbLights* _this = reinterpret_cast<RgbLights*>(userData);
+			RgbLights* _this = static_cast<RgbLights*>(userData);
 			_this->_isConnected = true;
 		}
 		return EM_TRUE;
@@ -250,7 +250,7 @@ namespace Jazz2::UI
 
 	EM_BOOL RgbLights::emscriptenOnError(std::int32_t eventType, const EmscriptenWebSocketErrorEvent* websocketEvent, void* userData)
 	{
-		RgbLights* _this = reinterpret_cast<RgbLights*>(userData);
+		RgbLights* _this = static_cast<RgbLights*>(userData);
 
 		_this->_isConnected = false;
 		if (_this->_ws != NULL) {
@@ -263,7 +263,7 @@ namespace Jazz2::UI
 
 	EM_BOOL RgbLights::emscriptenOnClose(std::int32_t eventType, const EmscriptenWebSocketCloseEvent* websocketEvent, void* userData)
 	{
-		RgbLights* _this = reinterpret_cast<RgbLights*>(userData);
+		RgbLights* _this = static_cast<RgbLights*>(userData);
 
 		_this->_isConnected = false;
 		if (_this->_ws != NULL) {

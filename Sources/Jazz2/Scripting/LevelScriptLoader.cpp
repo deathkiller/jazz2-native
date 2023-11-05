@@ -3292,10 +3292,10 @@ namespace Jazz2::Scripting
 			return nullptr;
 		}
 
-		asIScriptObject* obj = reinterpret_cast<asIScriptObject*>(_engine->CreateScriptObject(typeInfo));
+		asIScriptObject* obj = static_cast<asIScriptObject*>(_engine->CreateScriptObject(typeInfo));
 
 		// Get the pointer to the C++ side of the ActorBase class
-		ScriptActorWrapper* obj2 = *reinterpret_cast<ScriptActorWrapper**>(obj->GetAddressOfProperty(0));
+		ScriptActorWrapper* obj2 = *static_cast<ScriptActorWrapper**>(obj->GetAddressOfProperty(0));
 
 		// Increase the reference count to the C++ object, as this is what will be used to control the life time of the object from the application side 
 		obj2->AddRef();
@@ -3314,63 +3314,63 @@ namespace Jazz2::Scripting
 	uint8_t LevelScriptLoader::asGetDifficulty()
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		return (uint8_t)_this->_levelHandler->_difficulty;
 	}
 
 	bool LevelScriptLoader::asIsReforged()
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		return (uint8_t)_this->_levelHandler->_isReforged;
 	}
 
 	int LevelScriptLoader::asGetLevelWidth()
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		return _this->_levelHandler->_tileMap->GetLevelBounds().X;
 	}
 
 	int LevelScriptLoader::asGetLevelHeight()
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		return _this->_levelHandler->_tileMap->GetLevelBounds().Y;
 	}
 
 	float LevelScriptLoader::asGetElapsedFrames()
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		return _this->_levelHandler->_elapsedFrames;
 	}
 
 	float LevelScriptLoader::asGetAmbientLight()
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		return _this->_levelHandler->_ambientLightTarget;
 	}
 
 	void LevelScriptLoader::asSetAmbientLight(float value)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		_this->_levelHandler->_ambientLightTarget = value;
 	}
 
 	float LevelScriptLoader::asGetWaterLevel()
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		return _this->_levelHandler->_waterLevel;
 	}
 
 	void LevelScriptLoader::asSetWaterLevel(float value)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		_this->_levelHandler->_waterLevel = value;
 	}
 
@@ -3382,7 +3382,7 @@ namespace Jazz2::Scripting
 	void LevelScriptLoader::asRegisterSpawnable(int eventType, const String& typeName)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 
 		asITypeInfo* typeInfo = _this->_module->GetTypeInfoByName(typeName.data());
 		if (typeInfo == nullptr) {
@@ -3403,8 +3403,8 @@ namespace Jazz2::Scripting
 			if (_this != nullptr) {
 				auto it = _this->_eventTypeToTypeInfo.find((int)details.Type);
 				if (it != _this->_eventTypeToTypeInfo.end()) {
-					asIScriptObject* obj = reinterpret_cast<asIScriptObject*>(_this->_engine->CreateScriptObject(it->second));
-					ScriptActorWrapper* obj2 = *reinterpret_cast<ScriptActorWrapper**>(obj->GetAddressOfProperty(0));
+					asIScriptObject* obj = static_cast<asIScriptObject*>(_this->_engine->CreateScriptObject(it->second));
+					ScriptActorWrapper* obj2 = *static_cast<ScriptActorWrapper**>(obj->GetAddressOfProperty(0));
 					obj2->AddRef();
 					obj->Release();
 					obj2->OnActivated(details);
@@ -3418,7 +3418,7 @@ namespace Jazz2::Scripting
 	void LevelScriptLoader::asSpawnEvent(int eventType, int x, int y)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 
 		uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] { };
 		auto actor = _this->_levelHandler->EventSpawner()->SpawnEvent((EventType)eventType, spawnParams, Actors::ActorState::None, Vector3i(x, y, ILevelHandler::MainPlaneZ));
@@ -3430,7 +3430,7 @@ namespace Jazz2::Scripting
 	void LevelScriptLoader::asSpawnEventParams(int eventType, int x, int y, const CScriptArray& eventParams)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 
 		uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] { };
 		int size = eventParams.GetSize();
@@ -3445,7 +3445,7 @@ namespace Jazz2::Scripting
 	void LevelScriptLoader::asSpawnType(const String& typeName, int x, int y)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 
 		auto actor = _this->CreateActorInstance(typeName);
 		if (actor == nullptr) {
@@ -3464,7 +3464,7 @@ namespace Jazz2::Scripting
 	void LevelScriptLoader::asSpawnTypeParams(const String& typeName, int x, int y, const CScriptArray& eventParams)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 
 		auto actor = _this->CreateActorInstance(typeName);
 		if (actor == nullptr) {
@@ -3486,21 +3486,21 @@ namespace Jazz2::Scripting
 	void LevelScriptLoader::asChangeLevel(int exitType, const String& path)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		_this->_levelHandler->BeginLevelChange((ExitType)exitType, path);
 	}
 
 	void LevelScriptLoader::asShowLevelText(const String& text)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		_this->_levelHandler->ShowLevelText(text);
 	}
 
 	void LevelScriptLoader::asSetWeather(uint8_t weatherType, uint8_t intensity)
 	{
 		auto ctx = asGetActiveContext();
-		auto _this = reinterpret_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
+		auto _this = static_cast<LevelScriptLoader*>(ctx->GetEngine()->GetUserData(EngineToOwner));
 		_this->_levelHandler->SetWeather((WeatherType)weatherType, intensity);
 	}
 }

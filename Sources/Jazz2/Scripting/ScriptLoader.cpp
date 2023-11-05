@@ -920,7 +920,7 @@ namespace Jazz2::Scripting
 	asIScriptContext* ScriptLoader::RequestContextCallback(asIScriptEngine* engine, void* param)
 	{
 		// Check if there is a free context available in the pool
-		auto _this = reinterpret_cast<ScriptLoader*>(param);
+		auto _this = static_cast<ScriptLoader*>(param);
 		if (!_this->_contextPool.empty()) {
 			return _this->_contextPool.pop_back_val();
 		} else {
@@ -937,7 +937,7 @@ namespace Jazz2::Scripting
 		ctx->Unprepare();
 
 		// Place the context into the pool for when it will be needed again
-		auto _this = reinterpret_cast<ScriptLoader*>(param);
+		auto _this = static_cast<ScriptLoader*>(param);
 		_this->_contextPool.push_back(ctx);
 	}
 

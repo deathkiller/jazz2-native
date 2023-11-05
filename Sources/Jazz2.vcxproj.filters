@@ -211,6 +211,9 @@
     <Filter Include="Header Files\Jazz2\Multiplayer\Backends">
       <UniqueIdentifier>{8e8a53f2-8324-4eaa-ab44-82141d569c85}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Shared\Base">
+      <UniqueIdentifier>{0fd6dab6-c92b-45ba-a620-98604d239e84}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1383,6 +1386,12 @@
     <ClInclude Include="Jazz2\Multiplayer\Reason.h">
       <Filter>Header Files\Jazz2\Multiplayer</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\ConnectionResult.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Base\Unaligned.h">
+      <Filter>Header Files\Shared\Base</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2290,6 +2299,9 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Resources.cpp">
       <Filter>Source Files\Jazz2</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\ConnectionResult.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

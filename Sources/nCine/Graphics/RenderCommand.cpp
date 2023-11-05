@@ -23,7 +23,7 @@ namespace nCine
 	{
 		const uint64_t upper = static_cast<uint64_t>(layerSortKey()) << 32;
 		const uint32_t lower = material_.sortKey();
-		materialSortKey_ = upper + lower;
+		materialSortKey_ = upper | lower;
 	}
 
 	void RenderCommand::issue()

@@ -260,7 +260,7 @@ namespace Jazz2::UI
 
 	void DiscordRpcClient::OnBackgroundThread(void* args)
 	{
-		DiscordRpcClient* client = reinterpret_cast<DiscordRpcClient*>(args);
+		DiscordRpcClient* client = static_cast<DiscordRpcClient*>(args);
 
 		// Handshake
 		char buffer[2048];

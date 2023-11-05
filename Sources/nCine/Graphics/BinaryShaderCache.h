@@ -37,7 +37,7 @@ namespace nCine
 		/// Deletes all binary shaders that not belong to this platform from the cache directory
 		std::uint32_t prune();
 		/// Deletes all binary shaders from the cache directory
-		std::uint32_t clear();
+		bool clear();
 
 		/// Returns the current cache directory for binary shaders
 		inline const StringView path() {

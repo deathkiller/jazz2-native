@@ -447,7 +447,7 @@ namespace nCine
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 	void MainApplication::emscriptenStep()
 	{
-		reinterpret_cast<MainApplication&>(theApplication()).run();
+		static_cast<MainApplication&>(theApplication()).run();
 	}
 #endif
 }

@@ -112,7 +112,7 @@ namespace Jazz2::UI::Menu
 
 	void ImportSection::FileDataCallback(void* context, std::unique_ptr<char[]> data, size_t length, const StringView& name)
 	{
-		auto* _this = reinterpret_cast<ImportSection*>(context);
+		auto* _this = static_cast<ImportSection*>(context);
 		_this->_fileCount--;
 
 		int32_t offset = 180;	// Skip header
@@ -133,7 +133,7 @@ namespace Jazz2::UI::Menu
 
 	void ImportSection::FileCountCallback(void* context, int32_t fileCount)
 	{
-		auto* _this = reinterpret_cast<ImportSection*>(context);
+		auto* _this = static_cast<ImportSection*>(context);
 		_this->_fileCount = fileCount;
 		if (fileCount <= 0) {
 			_this->_state = State::NothingSelected;

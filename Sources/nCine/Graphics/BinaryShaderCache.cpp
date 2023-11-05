@@ -15,8 +15,6 @@ namespace nCine
 {
 	namespace
 	{
-		constexpr uint64_t HashSeed = 0x01000193811C9DC5;
-
 		std::int32_t bufferSize = 0;
 		std::unique_ptr<std::uint8_t[]> bufferPtr;
 	}
@@ -56,17 +54,12 @@ namespace nCine
 
 		const IGfxCapabilities::GlInfoStrings& infoStrings = gfxCaps.glInfoStrings();
 
-		// For a stable hash, the OpenGL strings need to be copied so that padding bytes can be set to zero
-		char platformString[512];
-		std::memset(platformString, 0, sizeof(platformString));
-		int platformStringLength = copyStringFirst(platformString, infoStrings.renderer);
-		platformHash_ += fasthash64(platformString, platformStringLength, HashSeed);
+		platformHash_ += CityHash64(infoStrings.renderer, strlen(infoStrings.renderer));
+		platformHash_ += CityHash64(infoStrings.glVersion, strlen(infoStrings.glVersion));
 
-		std::memset(platformString, 0, sizeof(platformString));
-		platformStringLength = copyStringFirst(platformString, infoStrings.glVersion);
-		platformHash_ += fasthash64(platformString, platformStringLength, HashSeed);
-
-		path_ = path;
+		char platformHashString[24];
+		std::int32_t platformHashLength = formatString(platformHashString, sizeof(platformHashString), "%016llx", platformHash_);
+		path_ = fs::CombinePath(path, { platformHashString, (std::size_t)platformHashLength });
 		fs::CreateDirectories(path_);
 
 		bufferSize = 64 * 1024;
@@ -78,20 +71,15 @@ namespace nCine
 
 	String BinaryShaderCache::getCachedShaderPath(const char* shaderName)
 	{
-		if (!isAvailable_ || shaderName == nullptr) {
+		if (!isAvailable_ || shaderName == nullptr || shaderName[0] == '\0') {
 			return { };
 		}
 
-		std::size_t shaderNameLength = strlen(shaderName);
-		if (shaderNameLength == 0) {
-			return { };
-		}
+		std::uint64_t shaderNameHash = CityHash64(shaderName, strlen(shaderName));
 
-		std::uint64_t shaderNameHash = fasthash64(shaderName, shaderNameLength, 0x01000193811C9DC5);
-
-		char outputBuffer[48];
-		formatString(outputBuffer, sizeof(outputBuffer), "%016llx%016llx.shader", shaderNameHash, platformHash_);
-		return fs::CombinePath(path_, outputBuffer);
+		char filename[32];
+		std::int32_t filenameLength = formatString(filename, sizeof(filename), "%016llx.shader", shaderNameHash);
+		return fs::CombinePath(path_, { filename, (std::size_t)filenameLength });
 	}
 
 	bool BinaryShaderCache::loadFromCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program, GLShaderProgram::Introspection introspection)
@@ -179,28 +167,18 @@ namespace nCine
 
 	std::uint32_t BinaryShaderCache::prune()
 	{
+		auto platformHashString = fs::GetFileName(path_);
+
 		std::uint32_t filesRemoved = 0;
-		fs::Directory dir(path_);
+		fs::Directory dir(fs::GetDirectoryName(path_));
 		while (const StringView shaderPath = dir.GetNext()) {
-			if (fs::GetExtension(shaderPath) != "shader"_s) {
-				continue;
-			}
-
-			StringView filename = fs::GetFileNameWithoutExtension(shaderPath);
-
-			bool shouldRemove;
-			if (filename.size() != 32) {
-				shouldRemove = true;
-			} else {
-				char componentString[17];
-				std::memcpy(componentString, &filename[16], 16);
-				componentString[16] = '\0';
-
-				std::uint64_t platformHash = strtoull(componentString, nullptr, 16);
-				shouldRemove = (platformHash != platformHash_);
-			}
-
-			if (shouldRemove) {
+			if (fs::DirectoryExists(shaderPath)) {
+				StringView filename = fs::GetFileName(shaderPath);
+				if (filename != platformHashString) {
+					fs::RemoveDirectoryRecursive(shaderPath);
+					filesRemoved++;
+				}
+			} else if (fs::GetExtension(shaderPath) == "shader"_s) {
 				fs::RemoveFile(shaderPath);
 				filesRemoved++;
 			}
@@ -209,20 +187,11 @@ namespace nCine
 		return filesRemoved;
 	}
 
-	std::uint32_t BinaryShaderCache::clear()
+	bool BinaryShaderCache::clear()
 	{
-		std::uint32_t filesRemoved = 0;
-		fs::Directory dir(path_);
-		while (const StringView shaderPath = dir.GetNext()) {
-			if (fs::GetExtension(shaderPath) != "shader"_s) {
-				continue;
-			}
-
-			fs::RemoveFile(shaderPath);
-			filesRemoved++;
-		}
-
-		return filesRemoved;
+		bool success = fs::RemoveDirectoryRecursive(path_);
+		fs::CreateDirectories(path_);
+		return success;
 	}
 
 	bool BinaryShaderCache::setPath(const StringView& path)
