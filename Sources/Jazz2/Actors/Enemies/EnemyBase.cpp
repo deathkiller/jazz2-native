@@ -97,8 +97,7 @@ namespace Jazz2::Actors::Enemies
 			return false;
 		}
 
-		bool tilesetReduced = GetState(ActorState::CollideWithTilesetReduced);
-		bool skipPerPixelCollisions = GetState(ActorState::SkipPerPixelCollisions);
+		ActorState prevState = GetState();
 		SetState(ActorState::CollideWithTilesetReduced, false);
 		SetState(ActorState::SkipPerPixelCollisions, true);
 
@@ -111,9 +110,8 @@ namespace Jazz2::Actors::Enemies
 		} else {
 			success = false;
 		}
-
-		SetState(ActorState::CollideWithTilesetReduced, tilesetReduced);
-		SetState(ActorState::SkipPerPixelCollisions, skipPerPixelCollisions);
+		
+		SetState(prevState);
 
 		return success;
 	}
