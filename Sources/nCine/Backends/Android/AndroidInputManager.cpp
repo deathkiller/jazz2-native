@@ -856,6 +856,21 @@ namespace nCine
 			}
 			LOGI("Device (%d, %d) - Axes%s", deviceId, joyId, deviceInfoString);
 #endif
+			if (numAxes >= 4) {
+				// Android sometimes returns strange range for the first axis, all other axes are fine
+				if (std::abs(joyState.axesMinValues_[0]) < 0.01f && joyState.axesRangeValues_[0] > 128.0f &&
+					std::abs(joyState.axesMinValues_[1]) < 0.01f && joyState.axesRangeValues_[1] > 128.0f &&
+					joyState.axesMinValues_[2] == -1.0f && joyState.axesRangeValues_[2] == 2.0f &&
+					joyState.axesMinValues_[3] == -1.0f && joyState.axesRangeValues_[3] == 2.0f) {
+					LOGW("Device (%d, %d) - Axis %d:%d reported strange range %.2f, using %.2f to %.2f instead", deviceId, joyId, 0, joyState.axesMapping_[0], joyState.axesRangeValues_[0], -1.0f, 1.0f);
+					LOGW("Device (%d, %d) - Axis %d:%d reported strange range %.2f, using %.2f to %.2f instead", deviceId, joyId, 1, joyState.axesMapping_[1], joyState.axesRangeValues_[1], -1.0f, 1.0f);
+					joyState.axesMinValues_[0] = -1.0f;
+					joyState.axesRangeValues_[0] = 2.0f;
+					joyState.axesMinValues_[1] = -1.0f;
+					joyState.axesRangeValues_[1] = 2.0f;
+				}
+			}
+
 			joyState.numAxes_ = numAxes;
 			joyState.numAxesMapped_ = numAxesMapped;
 
