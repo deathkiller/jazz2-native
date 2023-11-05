@@ -28,7 +28,7 @@ namespace nCine
 #	endif
 		if (event->windowInnerWidth > 0 && event->windowInnerHeight > 0) {
 			float pixelRatio = emscripten_get_device_pixel_ratio();
-			IGfxDevice* gfxDevice = reinterpret_cast<IGfxDevice*>(userData);
+			IGfxDevice* gfxDevice = static_cast<IGfxDevice*>(userData);
 			gfxDevice->setResolutionInternal(static_cast<int>(event->windowInnerWidth * pixelRatio), static_cast<int>(event->windowInnerHeight * pixelRatio));
 		}
 		return 1;
@@ -43,7 +43,7 @@ namespace nCine
 		float pixelRatio2 = emscripten_get_device_pixel_ratio();
 		LOGI("Canvas was resized to %ix%i (canvas size is %ix%i; ratio is %f)", (int)(event->elementWidth * pixelRatio2), (int)(event->elementHeight * pixelRatio2), (int)cssWidth, (int)cssHeight, pixelRatio2);
 #	endif
-		IGfxDevice* gfxDevice = reinterpret_cast<IGfxDevice*>(userData);
+		IGfxDevice* gfxDevice = static_cast<IGfxDevice*>(userData);
 		gfxDevice->isFullscreen_ = event->isFullscreen;
 
 		if (event->elementWidth > 0 && event->elementHeight > 0) {

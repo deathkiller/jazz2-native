@@ -144,7 +144,7 @@ namespace nCine
 
 	size_t AudioReaderMpt::stream_read_func(void* stream, void* dst, size_t bytes)
 	{
-		AudioReaderMpt* _this = reinterpret_cast<AudioReaderMpt*>(stream);
+		AudioReaderMpt* _this = static_cast<AudioReaderMpt*>(stream);
 		return _this->_fileHandle->Read(dst, (unsigned long)bytes);
 	}
 
@@ -158,14 +158,14 @@ namespace nCine
 			case OPENMPT_STREAM_SEEK_END: origin = SeekOrigin::End; break;
 		}
 
-		AudioReaderMpt* _this = reinterpret_cast<AudioReaderMpt*>(stream);
+		AudioReaderMpt* _this = static_cast<AudioReaderMpt*>(stream);
 		_this->_fileHandle->Seek((int32_t)offset, origin);
 		return 0;
 	}
 
 	int64_t AudioReaderMpt::stream_tell_func(void* stream)
 	{
-		AudioReaderMpt* _this = reinterpret_cast<AudioReaderMpt*>(stream);
+		AudioReaderMpt* _this = static_cast<AudioReaderMpt*>(stream);
 		return _this->_fileHandle->GetPosition();
 	}
 

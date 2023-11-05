@@ -416,7 +416,7 @@ namespace nCine
 #ifdef DEATH_TARGET_EMSCRIPTEN
 	EM_BOOL GlfwInputManager::emscriptenHandleTouch(int eventType, const EmscriptenTouchEvent* event, void* userData)
 	{
-		GlfwInputManager* inputManager = reinterpret_cast<GlfwInputManager*>(userData);
+		GlfwInputManager* inputManager = static_cast<GlfwInputManager*>(userData);
 
 		double cssWidth = 0.0;
 		double cssHeight = 0.0;
