@@ -3,7 +3,7 @@
 #include <Base/Unaligned.h>
 
 #if defined(DEATH_TARGET_APPLE)
-#	ínclude <libkern/OSByteOrder.h>
+#	include <libkern/OSByteOrder.h>
 #endif
 
 namespace nCine
