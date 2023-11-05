@@ -58,13 +58,19 @@ namespace nCine
 	}
 
 	// CityHash
+#if defined(__has_builtin)
+#	define DEATH_HAS_BUILTIN(x) __has_builtin(x)
+#else
+#	define DEATH_HAS_BUILTIN(x) 0
+#endif
+
 	inline std::uint32_t ByteSwap32(std::uint32_t value)
 	{
 #if defined(DEATH_TARGET_MSVC)
 		return _byteswap_ulong(value);
 #elif defined(DEATH_TARGET_APPLE)
-		return OSSwapInt32(value);
-#elif __has_builtin(__builtin_bswap32) || defined(DEATH_TARGET_GCC)
+		return _OSSwapInt32(value);
+#elif DEATH_HAS_BUILTIN(__builtin_bswap32) || defined(DEATH_TARGET_GCC)
 		return __builtin_bswap32(value);
 #else
 		return (((value & std::uint32_t{0xFF}) << 24) |
@@ -79,8 +85,8 @@ namespace nCine
 #if defined(DEATH_TARGET_MSVC)
 		return _byteswap_uint64(value);
 #elif defined(DEATH_TARGET_APPLE)
-		return OSSwapInt64(value);
-#elif __has_builtin(__builtin_bswap64) || defined(DEATH_TARGET_GCC)
+		return _OSSwapInt64(value);
+#elif DEATH_HAS_BUILTIN(__builtin_bswap64) || defined(DEATH_TARGET_GCC)
 		return __builtin_bswap64(value);
 #else
 		return (((value & std::uint64_t{0xFF}) << 56) |
