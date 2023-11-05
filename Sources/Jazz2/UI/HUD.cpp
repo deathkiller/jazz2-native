@@ -72,7 +72,7 @@ namespace Jazz2::UI
 	HUD::HUD(LevelHandler* levelHandler)
 		: _levelHandler(levelHandler), _metadata(nullptr), _levelTextTime(-1.0f), _coins(0), _gems(0), _coinsTime(-1.0f), _gemsTime(-1.0f),
 			_activeBossTime(0.0f), _touchButtonsTimer(0.0f), _rgbAmbientLight(0.0f), _rgbHealthLast(0.0f), _weaponWheelAnim(0.0f),
-			_weaponWheelShown(false), _lastWeaponWheelIndex(-1), _rgbLightsTime(0.0f), _transitionState(TransitionState::None),
+			_weaponWheelShown(false), _lastWeaponWheelIndex(-1), _rgbLightsAnim(0.0f), _rgbLightsTime(0.0f), _transitionState(TransitionState::None),
 			_transitionTime(0.0f)
 	{
 		auto& resolver = ContentResolver::Get();
@@ -1152,12 +1152,10 @@ namespace Jazz2::UI
 			return;
 		}
 
+		_rgbLightsAnim += 0.06f;
 		_rgbLightsTime += RgbLights::RefreshRate;
 
 		float health = std::clamp((float)player->_health / player->_maxHealth, 0.0f, 1.0f);
-		if (std::abs(health - _rgbHealthLast) < 0.001f && _rgbAmbientLight == _levelHandler->_ambientColor.W) {
-			return;
-		}
 
 		_rgbHealthLast = lerp(_rgbHealthLast, health, 0.2f);
 		_rgbAmbientLight = _levelHandler->_ambientColor.W;
@@ -1167,12 +1165,11 @@ namespace Jazz2::UI
 
 		Color* captionTile = _levelHandler->_tileMap->GetCaptionTile();
 		if (captionTile != nullptr) {
-			uint8_t colorMultiplier = (uint8_t)(0.2f * 255.0f * _rgbAmbientLight);
 			for (int32_t i = 0; i < countof(KeyLayout); i++) {
 				int32_t x = KeyLayout[i] % AURA_KEYBOARD_WIDTH;
 				int32_t y = KeyLayout[i] / AURA_KEYBOARD_WIDTH;
 				Color tileColor = captionTile[y * 32 + x];
-				colors[AURA_COLORS_LIMITED_SIZE + i] = Color(tileColor.R() * colorMultiplier / 255, tileColor.G() * colorMultiplier / 255, tileColor.B() * colorMultiplier / 255);
+				colors[AURA_COLORS_LIMITED_SIZE + i] = ApplyRgbGradientAlpha(tileColor, x, y, _rgbLightsAnim, _rgbAmbientLight);
 			}
 		}
 
@@ -1213,6 +1210,22 @@ namespace Jazz2::UI
 
 		rgbLights.Update(colors);
 #endif
+	}
+
+	Color HUD::ApplyRgbGradientAlpha(Color color, std::int32_t x, std::int32_t y, float animProgress, float ambientLight)
+	{
+		constexpr std::int32_t Width = AURA_KEYBOARD_WIDTH;
+		constexpr std::int32_t Height = AURA_KEYBOARD_HEIGHT;
+		constexpr float AnimationMult = 0.11f;
+		constexpr std::int32_t Spacing = 1;
+
+		float ambientLightLower = std::clamp(ambientLight, 0.0f, 0.5f) * 2.0f;
+		float ambientLightUpper = (std::clamp(ambientLight, 0.5f, 0.8f) - 0.5f) * 2.0f;
+
+		float distance = sqrtf(powf((float)(Width - x), 2) + powf((float)(Height - y), 2));
+		float value = cosf(AnimationMult * distance / (0.1f * Spacing) + animProgress);
+		float alpha = lerp(powf((value + 1) * 0.5f, 12.0f) * ambientLightLower, 0.8f, ambientLightUpper);
+		return Color(std::clamp((std::uint32_t)(color.R() * alpha), 0u, 255u), std::clamp((std::uint32_t)(color.G() * alpha), 0u, 255u), std::clamp((std::uint32_t)(color.B() * alpha), 0u, 255u));
 	}
 
 	AuraLight HUD::KeyToAuraLight(KeySym key)

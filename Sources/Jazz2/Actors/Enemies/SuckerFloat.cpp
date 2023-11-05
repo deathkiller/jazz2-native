@@ -3,14 +3,15 @@
 #include "../../Tiles/TileMap.h"
 #include "Sucker.h"
 #include "../Player.h"
+#include "../Solid/PushableBox.h"
+#include "../Weapons/TNT.h"
 
 #include "../../../nCine/Base/Random.h"
 
 namespace Jazz2::Actors::Enemies
 {
 	SuckerFloat::SuckerFloat()
-		:
-		_phase(0.0f)
+		: _phase(0.0f)
 	{
 	}
 
@@ -55,6 +56,9 @@ namespace Jazz2::Actors::Enemies
 			if (player->GetSpecialMove() != Player::SpecialMoveType::None) {
 				shouldDestroy = true;
 			}
+		} else if (dynamic_cast<Weapons::TNT*>(collider) != nullptr ||
+					dynamic_cast<Solid::PushableBox*>(collider) != nullptr) {
+			shouldDestroy = true;
 		}
 
 		if (shouldDestroy) {

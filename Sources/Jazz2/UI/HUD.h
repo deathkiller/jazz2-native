@@ -105,6 +105,7 @@ namespace Jazz2::UI
 		std::unique_ptr<Vertex[]> _weaponWheelVertices;
 		int32_t _weaponWheelVerticesCount;
 		int32_t _lastWeaponWheelIndex;
+		float _rgbLightsAnim;
 		float _rgbLightsTime;
 		TransitionState _transitionState;
 		float _transitionTime;
@@ -129,6 +130,7 @@ namespace Jazz2::UI
 		bool IsOnButton(const TouchButtonInfo& button, float x, float y);
 
 		void UpdateRgbLights(float timeMult, Actors::Player* player);
+		static Color ApplyRgbGradientAlpha(Color color, std::int32_t x, std::int32_t y, float animProgress, float ambientLight);
 		static AuraLight KeyToAuraLight(KeySym key);
 	};
 }
