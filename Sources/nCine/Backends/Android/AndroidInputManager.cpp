@@ -857,7 +857,7 @@ namespace nCine
 			LOGI("Device (%d, %d) - Axes%s", deviceId, joyId, deviceInfoString);
 #endif
 			if (numAxes >= 4) {
-				// Android sometimes returns strange range for the first axis, all other axes are fine
+				// Android sometimes returns strange range for the first two axes, all other axes are fine
 				if (std::abs(joyState.axesMinValues_[0]) < 0.01f && joyState.axesRangeValues_[0] > 128.0f &&
 					std::abs(joyState.axesMinValues_[1]) < 0.01f && joyState.axesRangeValues_[1] > 128.0f &&
 					joyState.axesMinValues_[2] == -1.0f && joyState.axesRangeValues_[2] == 2.0f &&
