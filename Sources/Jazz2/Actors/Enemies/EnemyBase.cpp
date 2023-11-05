@@ -21,12 +21,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Enemies
 {
 	EnemyBase::EnemyBase()
-		:
-		CanCollideWithAmmo(true),
-		_canHurtPlayer(true),
-		_scoreValue(0),
-		_lastHitDir(LastHitDirection::None),
-		_blinkingTimeout(0.0f)
+		: CanCollideWithAmmo(true), _canHurtPlayer(true), _scoreValue(0), _lastHitDir(LastHitDirection::None), _blinkingTimeout(0.0f)
 	{
 		SetState(ActorState::TriggersTNT, true);
 	}

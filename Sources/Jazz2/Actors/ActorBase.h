@@ -290,6 +290,7 @@ namespace Jazz2::Actors
 
 		void CreateParticleDebris();
 		void CreateSpriteDebris(AnimState state, int count);
+		virtual float GetIceShrapnelScale() const;
 
 		std::shared_ptr<AudioBufferPlayer> PlaySfx(const StringView& identifier, float gain = 1.0f, float pitch = 1.0f);
 		bool SetAnimation(AnimState state);

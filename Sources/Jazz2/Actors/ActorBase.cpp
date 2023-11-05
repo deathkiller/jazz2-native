@@ -424,6 +424,11 @@ namespace Jazz2::Actors
 		}
 	}
 
+	float ActorBase::GetIceShrapnelScale() const
+	{
+		return 1.0f;
+	}
+
 	std::shared_ptr<AudioBufferPlayer> ActorBase::PlaySfx(const StringView& identifier, float gain, float pitch)
 	{
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
@@ -1083,11 +1088,12 @@ namespace Jazz2::Actors
 				_renderer.AnimPaused = false;
 				_renderer.Initialize(ActorRendererType::Default);
 
+				float scale = GetIceShrapnelScale();
 				for (int i = 0; i < 10; i++) {
-					Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+					Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel, scale);
 				}
 
-				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite);
+				Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite, scale);
 
 				_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 			}

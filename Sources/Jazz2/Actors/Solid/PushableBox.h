@@ -15,5 +15,6 @@ namespace Jazz2::Actors::Solid
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
+		float GetIceShrapnelScale() const override;
 	};
 }
