@@ -108,7 +108,7 @@ namespace Jazz2::Actors::Solid
 
 		if (_type != PlatformType::SpikeBall) {
 			auto& players = _levelHandler->GetPlayers();
-			for (auto& player : players) {
+			for (auto* player : players) {
 				if (player->GetCarryingObject() == this) {
 					AABBf aabb3 = aabb;
 					aabb3.T -= 4.0f;

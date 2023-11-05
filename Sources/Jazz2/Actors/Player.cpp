@@ -1705,7 +1705,7 @@ namespace Jazz2::Actors
 			_pushFramesLeft -= timeMult;
 		}
 
-		if (GetState(ActorState::CanJump) && _controllable && _controllableExternal && _isActivelyPushing && std::abs(_speed.X) > std::numeric_limits<float>::epsilon()) {
+		if (GetState(ActorState::CanJump) && _controllable && _controllableExternal && _isActivelyPushing && std::abs(_speed.X) > 0.0f) {
 			AABBf hitbox = AABBInner + Vector2f(_speed.X < 0.0f ? -2.0f : 2.0f, 0.0f);
 			TileCollisionParams params = { TileDestructType::None, false };
 			ActorBase* collider;
@@ -1714,7 +1714,7 @@ namespace Jazz2::Actors
 					SetState(ActorState::IsSolidObject, false);
 					float pushSpeedX = solidObject->Push(_speed.X < 0, timeMult);
 					if (std::abs(pushSpeedX) > 0.0f) {
-						_speed.X = pushSpeedX * 1.2f;
+						_speed.X = pushSpeedX * 1.2f * timeMult;
 						_pushFramesLeft = 3.0f;
 					}
 					SetState(ActorState::IsSolidObject, true);

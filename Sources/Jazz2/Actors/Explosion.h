@@ -32,7 +32,7 @@ namespace Jazz2::Actors
 
 		Explosion();
 
-		static void Create(ILevelHandler* levelHandler, const Vector3i& pos, Type type);
+		static void Create(ILevelHandler* levelHandler, const Vector3i& pos, Type type, float scale = 1.0f);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
@@ -47,5 +47,6 @@ namespace Jazz2::Actors
 		float _lightIntensity;
 		float _lightRadiusNear;
 		float _lightRadiusFar;
+		float _scale;
 	};
 }
