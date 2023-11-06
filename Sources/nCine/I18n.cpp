@@ -527,7 +527,9 @@ namespace nCine
 	{
 		std::uint32_t fileSize = fileHandle->GetSize();
 		if (fileSize < 32 || fileSize > 16 * 1024 * 1024) {
-			LOGE("File \"%s\" is corrupted", fileHandle->GetPath().data());
+			if (fileSize > 0) {
+				LOGE("Translation \"%s\" is corrupted", fileHandle->GetPath().data());
+			}
 			return false;
 		}
 
@@ -542,7 +544,7 @@ namespace nCine
 		if (!(data->Signature == SignatureLE || data->Signature == SignatureBE) || data->StringCount <= 0 ||
 			data->OrigTableOffset + data->StringCount > fileSize || data->TransTableOffset + data->StringCount > fileSize ||
 			data->HashTableOffset + data->HashTableSize > fileSize) {
-			LOGE("File \"%s\" is corrupted", fileHandle->GetPath().data());
+			LOGE("Translation \"%s\" is corrupted", fileHandle->GetPath().data());
 			Unload();
 			return false;
 		}
