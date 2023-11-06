@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
 "POT-Creation-Date: 2023-11-05 15:00+0100\n"
 "PO-Revision-Date: \n"
-"Last-Translator: \n"
+"Last-Translator: Hexaae <hexaae@gmail.com>\n"
 "Language-Team: Traduzione Italiana: Hexaae\n"
 "Language: it\n"
 "MIME-Version: 1.0\n"
@@ -1430,11 +1430,11 @@ msgstr "Gioco Personalizzato"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:47
 msgid "Connect To Server"
-msgstr ""
+msgstr "Connettiti al server"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:48
 msgid "Create Server"
-msgstr ""
+msgstr "Crea server"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:52
@@ -1505,7 +1505,7 @@ msgstr "Controlli touch"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:22
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:59
 msgid "Input Diagnostics"
-msgstr ""
+msgstr "Diagnostica immissione"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:25
@@ -1616,7 +1616,7 @@ msgstr "Scriptaggio"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:40
 msgid "Browse \"Source\" Directory"
-msgstr ""
+msgstr "Sfoglia cartella \"Source\""
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:44
@@ -1638,7 +1638,7 @@ msgstr "Modalità ridimensionamento"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:27
 msgid "Fullscreen"
-msgstr "Pieno schermo"
+msgstr "Schermo pieno"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:31
@@ -1703,7 +1703,7 @@ msgstr "Nessuno nuovo episodio è stato importato!"
 
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:74
 msgid "No gamepads are detected!"
-msgstr ""
+msgstr "Nessun gamepad rilevato!"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:21
@@ -1863,12 +1863,12 @@ msgstr ""
 
 #: Sources/Main.cpp:260 Sources/Main.cpp:322
 msgid "Creating server..."
-msgstr ""
+msgstr "Creazione server..."
 
 #: Sources/Main.cpp:275 Sources/Main.cpp:335
 #, c-format
 msgid "Connecting to %s:%u..."
-msgstr ""
+msgstr "Connessione con %s:%u..."
 
 #: Sources/Main.cpp:503 Sources/Main.cpp:541
 msgid ""
@@ -1891,6 +1891,10 @@ msgid ""
 "\n"
 "Your client version is not compatible with the server."
 msgstr ""
+"\f[c:0x704a4a]Impossibile connettersi al server!\f[c]\n"
+"\n"
+"\n"
+"La tua versione del client non è compatibile con il server."
 
 #: Sources/Main.cpp:634
 msgid ""
@@ -1900,6 +1904,11 @@ msgid ""
 "Server capacity is full.\n"
 "Please try it later."
 msgstr ""
+"\f[c:0x704a4a]Impossibile connettersi al server!\f[c]\n"
+"\n"
+"\n"
+"Il server è pieno.\n"
+"Prego riprova dopo."
 
 #: Sources/Main.cpp:635
 msgid ""
@@ -1909,6 +1918,11 @@ msgid ""
 "Server is not in a state where it can process your request.\n"
 "Please try again in a few seconds."
 msgstr ""
+"\f[c:0x704a4a]Impossibile connettersi al server!\f[c]\n"
+"\n"
+"\n"
+"Il server non è in uno stato idoneo a processare la tua richiesta.\n"
+"Prego, riprova tra alcuni secondi."
 
 #: Sources/Main.cpp:636
 msgid ""
@@ -1918,6 +1932,11 @@ msgid ""
 "Server is shutting down.\n"
 "Please try it later."
 msgstr ""
+"\f[c:0x704a4a]La connessione è stata chiusa!\f[c]\n"
+"\n"
+"\n"
+"Il server è in chiusura.\n"
+"Prego, riprova più tardi."
 
 #: Sources/Main.cpp:637
 msgid ""
@@ -1927,6 +1946,11 @@ msgid ""
 "Please try it again and if the problem persists,\n"
 "check your network connection."
 msgstr ""
+"\f[c:0x704a4a]La connessione è stata persa!\f[c]\n"
+"\n"
+"\n"
+"Prego, riprova e se il problema persiste,\n"
+"controlla la tua connessione di rete."
 
 #: Sources/Main.cpp:638
 msgid ""
@@ -1935,6 +1959,10 @@ msgid ""
 "\n"
 "The server is not responding for connection request."
 msgstr ""
+"\f[c:0x704a4a]Impossibile connettersi al server!\f[c]\n"
+"\n"
+"\n"
+"Il server is non risponde alle richieste di connessione."
 
 #: Sources/Main.cpp:639
 msgid ""
@@ -1944,6 +1972,11 @@ msgid ""
 "You have been \f[c:0x907050]kicked\f[c] off the server.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:0x704a4a]La connessione è stata chiusa!\f[c]\n"
+"\n"
+"\n"
+"Sei stato \f[c:0x907050]buttato fuori\f[c] dal server.\n"
+"Contatta gli amministratori per maggiori informazioni."
 
 #: Sources/Main.cpp:640
 msgid ""
@@ -1953,6 +1986,11 @@ msgid ""
 "You have been \f[c:0x725040]banned\f[c] off the server.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:0x704a4a]La connessione è stata chiusa!\f[c]\n"
+"\n"
+"\n"
+"Sei stato \f[c:0x725040]bannato\f[c] dal server.\n"
+"Contatta gli amministratori per maggiori informazioni."
 
 #~ msgid "Error"
 #~ msgstr "Errore"
