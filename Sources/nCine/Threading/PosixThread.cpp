@@ -159,10 +159,9 @@ namespace nCine
 		_sharedBlock = nullptr;
 	}
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
-#	if !defined(DEATH_TARGET_APPLE)
 	void Thread::SetName(const char* name)
 	{
+#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
 		if (_sharedBlock == nullptr || _sharedBlock->_handle == 0) {
 			return;
 		}
@@ -176,34 +175,33 @@ namespace nCine
 			buffer[MaxThreadNameLength - 1] = '\0';
 			pthread_setname_np(_sharedBlock->_handle, name);
 		}
+#endif
 	}
-#	endif
 
 	void Thread::SetSelfName(const char* name)
 	{
-#	if defined(WITH_TRACY)
+#if defined(WITH_TRACY)
 		tracy::SetThreadName(name);
-#	else
+#elif !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
 		const auto nameLength = strnlen(name, MaxThreadNameLength);
 		if (nameLength <= MaxThreadNameLength - 1) {
-#		if !defined(DEATH_TARGET_APPLE)
+#	if !defined(DEATH_TARGET_APPLE)
 			pthread_setname_np(pthread_self(), name);
-#		else
+#	else
 			pthread_setname_np(name);
-#		endif
+#	endif
 		} else {
 			char buffer[MaxThreadNameLength];
 			memcpy(buffer, name, MaxThreadNameLength - 1);
 			buffer[MaxThreadNameLength - 1] = '\0';
-#		if !defined(DEATH_TARGET_APPLE)
+#	if !defined(DEATH_TARGET_APPLE)
 			pthread_setname_np(pthread_self(), name);
-#		else
+#	else
 			pthread_setname_np(name);
-#		endif
-		}
 #	endif
-	}
+		}
 #endif
+	}
 
 #if !defined(DEATH_TARGET_SWITCH)
 	std::int32_t Thread::GetPriority() const

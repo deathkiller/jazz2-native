@@ -122,15 +122,11 @@ namespace nCine
 		/** @brief Detaches the running thread from the object */
 		void Detach();
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
-#	if !defined(DEATH_TARGET_APPLE)
-		/** @brief Sets the thread name */
+		/** @brief Sets the thread name (not supported on Apple, Emscripten and Switch) */
 		void SetName(const char* name);
-#	endif
 
-		/** @brief Sets the calling thread name */
+		/** @brief Sets the calling thread name (not supported on Emscripten and Switch) */
 		static void SetSelfName(const char* name);
-#endif
 
 #if !defined(DEATH_TARGET_SWITCH)
 		/** @brief Gets the thread priority */
