@@ -88,7 +88,7 @@ namespace nCine
 		SmallVectorImpl<RenderCommand*>* transparents = batchingEnabled ? &transparentBatchedQueue_ : &transparentQueue_;
 
 		if (batchingEnabled) {
-			ZoneScopedN("Batching");
+			ZoneScopedNC("Batching", 0x81A861);
 			// Always create batches after sorting
 			RenderResources::renderBatcher().createBatches(opaqueQueue_, opaqueBatchedQueue_);
 			RenderResources::renderBatcher().createBatches(transparentQueue_, transparentBatchedQueue_);
@@ -96,7 +96,7 @@ namespace nCine
 
 		// Avoid GPU stalls by uploading to VBOs, IBOs and UBOs before drawing
 		if (!opaques->empty()) {
-			ZoneScopedN("Commit opaques");
+			ZoneScopedNC("Commit opaques", 0x81A861);
 #if defined(DEATH_DEBUG)
 			formatString(debugString, sizeof(debugString), "Commit %u opaque command(s) for viewport 0x%lx", (uint32_t)opaques->size(), uintptr_t(RenderResources::currentViewport()));
 			GLDebug::ScopedGroup scoped(debugString);
@@ -107,7 +107,7 @@ namespace nCine
 		}
 
 		if (!transparents->empty()) {
-			ZoneScopedN("Commit transparents");
+			ZoneScopedNC("Commit transparents", 0x81A861);
 #if defined(DEATH_DEBUG)
 			formatString(debugString, sizeof(debugString), "Commit %u transparent command(s) for viewport 0x%lx", (uint32_t)transparents->size(), uintptr_t(RenderResources::currentViewport()));
 			GLDebug::ScopedGroup scoped(debugString);

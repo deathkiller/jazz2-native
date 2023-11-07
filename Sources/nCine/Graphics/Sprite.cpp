@@ -49,7 +49,7 @@ namespace nCine
 
 	void Sprite::init()
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 		/*if (texture_ != nullptr && texture_->name() != nullptr){
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(texture_->name(), nctl::strnlen(texture_->name(), Object::MaxNameLength));

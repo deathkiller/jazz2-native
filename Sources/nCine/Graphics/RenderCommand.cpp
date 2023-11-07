@@ -28,7 +28,7 @@ namespace nCine
 
 	void RenderCommand::issue()
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 
 		if (geometry_.numVertices_ == 0 && geometry_.numIndices_ == 0) {
 			return;
@@ -73,7 +73,7 @@ namespace nCine
 			return;
 		}
 
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 
 		const Camera::ProjectionValues cameraValues = RenderResources::currentCamera()->projectionValues();
 		modelMatrix_[3][2] = calculateDepth(layer_, cameraValues.near, cameraValues.far);
@@ -84,7 +84,7 @@ namespace nCine
 				? instanceBlock->uniform(Material::ModelMatrixUniformName)
 				: material_.uniform(Material::ModelMatrixUniformName);
 			if (matrixUniform) {
-				ZoneScopedN("Set model matrix");
+				//ZoneScopedNC("Set model matrix", 0x81A861);
 				matrixUniform->setFloatVector(modelMatrix_.Data());
 			}
 		}
@@ -94,7 +94,7 @@ namespace nCine
 
 	void RenderCommand::commitCameraTransformation()
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 
 		RenderResources::CameraUniformData* cameraUniformData = RenderResources::findCameraUniformData(material_.shaderProgram_);
 		if (cameraUniformData == nullptr) {

@@ -336,7 +336,7 @@ namespace nCine
 
 	void SceneNode::transform()
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 
 		if (parent_ != nullptr && layer_ == 0) {
 			absLayer_ = parent_->absLayer_;

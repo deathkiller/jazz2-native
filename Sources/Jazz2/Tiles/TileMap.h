@@ -149,6 +149,7 @@ namespace Jazz2::Tiles
 		};
 
 		TileMap(const StringView& tileSetPath, std::uint16_t captionTileId, bool applyPalette);
+		~TileMap();
 
 		void SetOwner(ITileMapOwner* owner);
 		Vector2i GetSize() const;

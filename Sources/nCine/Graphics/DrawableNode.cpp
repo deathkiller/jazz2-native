@@ -178,7 +178,7 @@ namespace nCine
 
 	void DrawableNode::updateAabb()
 	{
-		ZoneScoped;
+		//ZoneScopedC(0x81A861);
 
 		const float width = absWidth();
 		const float height = absHeight();

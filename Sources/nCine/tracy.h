@@ -1,4 +1,4 @@
-#ifdef WITH_TRACY
+#if defined(WITH_TRACY)
 
 	#include "tracy/Tracy.hpp"
 	#include "tracy/TracyC.h"

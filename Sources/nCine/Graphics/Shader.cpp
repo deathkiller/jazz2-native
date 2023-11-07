@@ -151,7 +151,7 @@ namespace nCine
 
 	bool Shader::loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment, int batchSize)
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, strlen(shaderName));
@@ -188,7 +188,7 @@ namespace nCine
 
 	bool Shader::loadFromMemory(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment, int batchSize)
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, strlen(shaderName));
@@ -217,7 +217,7 @@ namespace nCine
 
 	bool Shader::loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment, int batchSize)
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, strlen(shaderName));
@@ -254,7 +254,7 @@ namespace nCine
 
 	bool Shader::loadFromFile(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment, int batchSize)
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, strlen(shaderName));
@@ -291,7 +291,7 @@ namespace nCine
 
 	bool Shader::loadFromFile(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment, int batchSize)
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, strlen(shaderName));
@@ -320,7 +320,7 @@ namespace nCine
 
 	bool Shader::loadFromFile(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment, int batchSize)
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, strlen(shaderName));
@@ -357,7 +357,7 @@ namespace nCine
 
 	bool Shader::loadFromCache(const char* shaderName, uint64_t shaderVersion, Introspection introspection)
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
 			ZoneText(shaderName, strlen(shaderName));

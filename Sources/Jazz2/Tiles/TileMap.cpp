@@ -2,6 +2,7 @@
 
 #include "../LevelHandler.h"
 
+#include "../../nCine/tracy.h"
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Base/Random.h"
 
@@ -21,6 +22,11 @@ namespace Jazz2::Tiles
 		if (tileSetPart.Data == nullptr) {
 			LOGE("Cannot load main tileset \"%s\"", tileSetPath.data());
 		}
+	}
+
+	TileMap::~TileMap()
+	{
+		TracyPlot("TileMap Render Commands", 0LL);
 	}
 
 	void TileMap::SetOwner(ITileMapOwner* owner)
@@ -59,6 +65,8 @@ namespace Jazz2::Tiles
 
 	void TileMap::OnUpdate(float timeMult)
 	{
+		ZoneScopedC(0xA09359);
+
 		SceneNode::OnUpdate(timeMult);
 
 		// Update animated tiles
@@ -141,6 +149,8 @@ namespace Jazz2::Tiles
 
 	bool TileMap::OnDraw(RenderQueue& renderQueue)
 	{
+		ZoneScopedC(0xA09359);
+
 		SceneNode::OnDraw(renderQueue);
 
 		_renderCommandsCount = 0;
@@ -150,6 +160,8 @@ namespace Jazz2::Tiles
 		}
 
 		DrawDebris(renderQueue);
+
+		TracyPlot("TileMap Render Commands", static_cast<int64_t>(_renderCommandsCount));
 
 		return true;
 	}
@@ -533,6 +545,8 @@ namespace Jazz2::Tiles
 
 	void TileMap::AdvanceCollapsingTileTimers(float timeMult)
 	{
+		ZoneScopedC(0xA09359);
+
 		_collapsingTimer -= timeMult;
 		if (_collapsingTimer > 0.0f) {
 			return;
@@ -562,6 +576,8 @@ namespace Jazz2::Tiles
 
 	void TileMap::DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer)
 	{
+		ZoneScopedNC("Layer", 0xA09359);
+
 		if (!layer.Visible) {
 			return;
 		}
@@ -1163,6 +1179,8 @@ namespace Jazz2::Tiles
 
 	void TileMap::UpdateDebris(float timeMult)
 	{
+		ZoneScopedC(0xA09359);
+
 		std::int32_t size = (std::int32_t)_debrisList.size();
 		for (std::int32_t i = 0; i < size; i++) {
 			DestructibleDebris& debris = _debrisList[i];
@@ -1239,6 +1257,8 @@ namespace Jazz2::Tiles
 
 	void TileMap::DrawDebris(RenderQueue& renderQueue)
 	{
+		ZoneScopedNC("Debris", 0xA09359);
+
 		for (auto& debris : _debrisList) {
 			auto command = RentRenderCommand(LayerRendererType::Default);
 

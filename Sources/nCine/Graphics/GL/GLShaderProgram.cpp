@@ -318,7 +318,7 @@ namespace nCine
 		static GLuint uniformIndices[NumIndices];
 		static GLint blockIndices[NumIndices];
 
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 		GLint uniformCount = 0;
 		glGetProgramiv(glHandle_, GL_ACTIVE_UNIFORMS, &uniformCount);
 
@@ -360,7 +360,7 @@ namespace nCine
 
 	void GLShaderProgram::discoverUniformBlocks(GLUniformBlock::DiscoverUniforms discover)
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 		GLint count;
 		glGetProgramiv(glHandle_, GL_ACTIVE_UNIFORM_BLOCKS, &count);
 
@@ -375,7 +375,7 @@ namespace nCine
 
 	void GLShaderProgram::discoverAttributes()
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 		GLint count;
 		glGetProgramiv(glHandle_, GL_ACTIVE_ATTRIBUTES, &count);
 
@@ -389,7 +389,7 @@ namespace nCine
 
 	void GLShaderProgram::initVertexFormat()
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 		const unsigned int count = (unsigned int)attributes_.size();
 		if (count > GLVertexFormat::MaxAttributes) {
 			LOGW("More active attributes (%d) than supported by the vertex format class (%d)", count, GLVertexFormat::MaxAttributes);

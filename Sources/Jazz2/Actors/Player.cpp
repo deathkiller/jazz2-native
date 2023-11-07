@@ -27,6 +27,7 @@
 #include "Weapons/TNT.h"
 #include "Weapons/Thunderbolt.h"
 
+#include "../../nCine/tracy.h"
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Base/FrameTimer.h"
 #include "../../nCine/Graphics/RenderQueue.h"
@@ -164,6 +165,8 @@ namespace Jazz2::Actors
 
 	void Player::OnUpdate(float timeMult)
 	{
+		ZoneScoped;
+
 #if defined(DEATH_DEBUG)
 		if (PreferencesCache::AllowCheats && _levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::ChangeWeapon)) {
 			float moveDistance = (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Run) ? 400.0f : 100.0f);
@@ -1245,6 +1248,8 @@ namespace Jazz2::Actors
 
 	bool Player::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
+		ZoneScoped;
+
 		bool handled = false;
 		bool removeSpecialMove = false;
 		if (auto turtleShell = dynamic_cast<Enemies::TurtleShell*>(other.get())) {
