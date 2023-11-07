@@ -11,6 +11,7 @@
 #include "../nCine/MainApplication.h"
 #include "../nCine/IAppEventHandler.h"
 #include "../nCine/ServiceLocator.h"
+#include "../nCine/tracy.h"
 #include "../nCine/Input/IInputEventHandler.h"
 #include "../nCine/Graphics/Camera.h"
 #include "../nCine/Graphics/Sprite.h"
@@ -57,10 +58,14 @@ namespace Jazz2
 		// Remove nodes from UpscaleRenderPass
 		_combineRenderer->setParent(nullptr);
 		_hud->setParent(nullptr);
+
+		TracyPlot("Actors", 0LL);
 	}
 
 	bool LevelHandler::Initialize(const LevelInitialization& levelInit)
 	{
+		ZoneScopedC(0x4876AF);
+
 		constexpr float DefaultGravity = 0.3f;
 
 		_levelFileName = levelInit.LevelName;
@@ -172,6 +177,8 @@ namespace Jazz2
 
 	void LevelHandler::AttachComponents(LevelDescriptor&& descriptor)
 	{
+		ZoneScopedC(0x4876AF);
+
 		if (!descriptor.DisplayName.empty()) {
 			theApplication().gfxDevice().setWindowTitle(StringView(NCINE_APP_NAME " - ", countof(NCINE_APP_NAME " - ") - 1) + descriptor.DisplayName);
 		} else {
@@ -234,6 +241,8 @@ namespace Jazz2
 
 	void LevelHandler::OnBeginFrame()
 	{
+		ZoneScopedC(0x4876AF);
+
 		float timeMult = theApplication().timeMult();
 
 		if (_pauseMenu == nullptr) {
@@ -431,6 +440,8 @@ namespace Jazz2
 
 	void LevelHandler::OnEndFrame()
 	{
+		ZoneScopedC(0x4876AF);
+
 		float timeMult = theApplication().timeMult();
 
 		if (!IsPausable() || _pauseMenu == nullptr) {
@@ -452,10 +463,14 @@ namespace Jazz2
 		}
 
 		_lightingView->setClearColor(_ambientColor.W, 0.0f, 0.0f, 1.0f);
+
+		TracyPlot("Actors", static_cast<int64_t>(_actors.size()));
 	}
 
 	void LevelHandler::OnInitializeViewport(int32_t width, int32_t height)
 	{
+		ZoneScopedC(0x4876AF);
+
 		constexpr float defaultRatio = (float)DefaultWidth / DefaultHeight;
 		float currentRatio = (float)width / height;
 
@@ -1247,6 +1262,8 @@ namespace Jazz2
 
 	void LevelHandler::ProcessEvents(float timeMult)
 	{
+		ZoneScopedC(0x4876AF);
+
 		if (!_players.empty()) {
 			std::size_t playerCount = _players.size();
 			SmallVector<AABBi, 2> playerZones;
@@ -1293,6 +1310,8 @@ namespace Jazz2
 
 	void LevelHandler::ResolveCollisions(float timeMult)
 	{
+		ZoneScopedC(0x4876AF);
+
 		auto it = _actors.begin();
 		while (it != _actors.end()) {
 			Actors::ActorBase* actor = it->get();
@@ -1369,6 +1388,8 @@ namespace Jazz2
 
 	void LevelHandler::UpdateCamera(float timeMult)
 	{
+		ZoneScopedC(0x4876AF);
+
 		if (_players.empty()) {
 			return;
 		}
@@ -1531,6 +1552,8 @@ namespace Jazz2
 
 	void LevelHandler::UpdatePressedActions()
 	{
+		ZoneScopedC(0x4876AF);
+
 		auto& input = theApplication().inputManager();
 		_pressedActions = ((_pressedActions & 0xffffffffu) << 32);
 

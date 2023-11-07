@@ -263,7 +263,7 @@ namespace nCine
 
 	void MainApplication::init(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, NativeArgument* argv)
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 #if defined(NCINE_PROFILING)
 		profileStartTime_ = TimeStamp::now();
 #endif

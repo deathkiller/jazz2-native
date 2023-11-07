@@ -359,11 +359,11 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	uint32_t colorTracy;
 	// clang-format off
 	switch (level) {
-		case TraceLevel::Fatal:		colorTracy = 0xec3e40; break;
-		case TraceLevel::Error:		colorTracy = 0xff9b2b; break;
-		case TraceLevel::Warning:	colorTracy = 0xf5d800; break;
-		case TraceLevel::Info:		colorTracy = 0x01a46d; break;
-		default:					colorTracy = 0x377fc7; break;
+		case TraceLevel::Fatal:		colorTracy = 0xEC3E40; break;
+		case TraceLevel::Error:		colorTracy = 0xD85050; break;
+		case TraceLevel::Warning:	colorTracy = 0xEBC77A; break;
+		case TraceLevel::Info:		colorTracy = 0xD2D2D2; break;
+		default:					colorTracy = 0x969696; break;
 	}
 	// clang-format on
 
@@ -421,7 +421,7 @@ namespace nCine
 	void Application::initCommon()
 	{
 		TracyGpuContext;
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 		// This timestamp is needed to initialize random number generator
 		profileStartTime_ = TimeStamp::now();
 
@@ -497,7 +497,7 @@ namespace nCine
 		timings_[(int)Timings::InitCommon] = profileStartTime_.secondsSince();
 #endif
 		{
-			ZoneScopedN("onInit");
+			ZoneScopedNC("onInit", 0x81A861);
 #if defined(NCINE_PROFILING)
 			profileStartTime_ = TimeStamp::now();
 #endif
@@ -523,7 +523,7 @@ namespace nCine
 #endif
 
 		{
-			ZoneScopedN("OnFrameStart");
+			ZoneScopedNC("OnFrameStart", 0x81A861);
 #if defined(NCINE_PROFILING)
 			profileStartTime_ = TimeStamp::now();
 #endif
@@ -534,9 +534,9 @@ namespace nCine
 		}
 
 		if (appCfg_.withScenegraph) {
-			ZoneScopedN("SceneGraph");
+			ZoneScopedNC("SceneGraph", 0x81A861);
 			{
-				ZoneScopedN("Update");
+				ZoneScopedNC("Update", 0x81A861);
 #if defined(NCINE_PROFILING)
 				profileStartTime_ = TimeStamp::now();
 #endif
@@ -547,7 +547,7 @@ namespace nCine
 			}
 
 			{
-				ZoneScopedN("OnPostUpdate");
+				ZoneScopedNC("OnPostUpdate", 0x81A861);
 #if defined(NCINE_PROFILING)
 				profileStartTime_ = TimeStamp::now();
 #endif
@@ -558,7 +558,7 @@ namespace nCine
 			}
 
 			{
-				ZoneScopedN("Visit");
+				ZoneScopedNC("Visit", 0x81A861);
 #if defined(NCINE_PROFILING)
 				profileStartTime_ = TimeStamp::now();
 #endif
@@ -569,7 +569,7 @@ namespace nCine
 			}
 
 			{
-				ZoneScopedN("Draw");
+				ZoneScopedNC("Draw", 0x81A861);
 #if defined(NCINE_PROFILING)
 				profileStartTime_ = TimeStamp::now();
 #endif
@@ -586,7 +586,7 @@ namespace nCine
 		}
 
 		{
-			ZoneScopedN("OnFrameEnd");
+			ZoneScopedNC("OnFrameEnd", 0x81A861);
 #if defined(NCINE_PROFILING)
 			profileStartTime_ = TimeStamp::now();
 #endif
@@ -601,6 +601,7 @@ namespace nCine
 		TracyGpuCollect;
 
 		if (appCfg_.frameLimit > 0) {
+			FrameMarkStart("Frame limiting");
 #if defined(DEATH_TARGET_WINDOWS)
 			const std::uint64_t clockFreq = static_cast<std::uint64_t>(clock().frequency());
 			const std::uint64_t frameTimeDuration = (clockFreq / static_cast<std::uint64_t>(appCfg_.frameLimit));
@@ -619,12 +620,13 @@ namespace nCine
 				Timer::sleep(0);
 			}
 #endif
+			FrameMarkEnd("Frame limiting");
 		}
 	}
 
 	void Application::shutdownCommon()
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 		appEventHandler_->OnShutdown();
 		LOGI("IAppEventHandler::OnShutdown() invoked");
 		appEventHandler_.reset();

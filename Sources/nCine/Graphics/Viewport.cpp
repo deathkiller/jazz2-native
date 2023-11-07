@@ -247,7 +247,7 @@ namespace nCine
 
 	void Viewport::calculateCullingRect()
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 
 		const int width = (width_ != 0) ? width_ : viewportRect_.W;
 		const int height = (height_ != 0) ? height_ : viewportRect_.H;
@@ -317,7 +317,7 @@ namespace nCine
 
 		calculateCullingRect();
 		if (rootNode_ != nullptr) {
-			ZoneScoped;
+			ZoneScopedC(0x81A861);
 			if (rootNode_->lastFrameUpdated() < theApplication().numFrames()) {
 				rootNode_->OnUpdate(theApplication().timeMult());
 			}
@@ -333,7 +333,7 @@ namespace nCine
 		RenderResources::setCurrentViewport(this);
 
 		if (rootNode_ != nullptr) {
-			ZoneScoped;
+			ZoneScopedC(0x81A861);
 			unsigned int visitOrderIndex = 0;
 			rootNode_->OnVisit(*renderQueue_, visitOrderIndex);
 		}
@@ -346,7 +346,7 @@ namespace nCine
 		RenderResources::setCurrentViewport(this);
 
 		if (!renderQueue_->empty()) {
-			ZoneScoped;
+			ZoneScopedC(0x81A861);
 			renderQueue_->sortAndCommit();
 		}
 
@@ -362,7 +362,7 @@ namespace nCine
 			nextViewport->draw(nextIndex + 1);
 		}
 
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 #if defined(DEATH_DEBUG)
 		// TODO: GLDebug
 		/*if (type_ == Type::SCREEN)
@@ -376,7 +376,7 @@ namespace nCine
 
 		RenderResources::setCurrentViewport(this);
 		{
-			ZoneScopedN("OnDrawViewport");
+			ZoneScopedNC("OnDrawViewport", 0x81A861);
 			theApplication().appEventHandler_->OnDrawViewport(*this);
 			//LOGD("IAppEventHandler::OnDrawViewport() invoked with viewport 0x%lx", uintptr_t(this));
 		}

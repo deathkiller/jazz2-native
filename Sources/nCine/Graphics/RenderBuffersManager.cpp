@@ -101,7 +101,7 @@ namespace nCine
 
 	void RenderBuffersManager::flushUnmap()
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 		GLDebug::ScopedGroup scoped("RenderBuffersManager::flushUnmap()");
 
 		for (ManagedBuffer& buffer : buffers_) {
@@ -129,7 +129,7 @@ namespace nCine
 
 	void RenderBuffersManager::remap()
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 		GLDebug::ScopedGroup scoped("RenderBuffersManager::remap()");
 
 		for (ManagedBuffer& buffer : buffers_) {
@@ -148,7 +148,7 @@ namespace nCine
 
 	void RenderBuffersManager::createBuffer(const BufferSpecifications& specs)
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 		ManagedBuffer& managedBuffer = buffers_.emplace_back();
 		managedBuffer.type = specs.type;
 		managedBuffer.size = specs.maxSize;

@@ -13,6 +13,7 @@
 #endif
 
 #include "nCine/IAppEventHandler.h"
+#include "nCine/tracy.h"
 #include "nCine/Graphics/BinaryShaderCache.h"
 #include "nCine/Graphics/RenderResources.h"
 #include "nCine/Input/IInputEventHandler.h"
@@ -146,6 +147,8 @@ private:
 
 void GameEventHandler::OnPreInit(AppConfiguration& config)
 {
+	ZoneScopedC(0x888888);
+
 	PreferencesCache::Initialize(config);
 
 	config.windowTitle = NCINE_APP_NAME;
@@ -167,6 +170,8 @@ void GameEventHandler::OnPreInit(AppConfiguration& config)
 
 void GameEventHandler::OnInit()
 {
+	ZoneScopedC(0x888888);
+
 	_flags = Flags::None;
 
 	std::memset(_newestVersion, 0, sizeof(_newestVersion));
@@ -201,6 +206,8 @@ void GameEventHandler::OnInit()
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	// If threading support is enabled, refresh cache during intro cinematics and don't allow skip until it's completed
 	Thread thread([](void* arg) {
+		Thread::SetSelfName("Parallel initialization");
+
 		auto handler = static_cast<GameEventHandler*>(arg);
 #	if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 		if (PreferencesCache::EnableDiscordIntegration) {
@@ -219,9 +226,6 @@ void GameEventHandler::OnInit()
 		handler->RefreshCache();
 		handler->CheckUpdates();
 	}, this);
-#	if defined(DEATH_DEBUG)
-	thread.SetName("Parallel initialization");
-#	endif
 
 #	if defined(WITH_MULTIPLAYER)
 	if (PreferencesCache::InitialState == "/server"_s) {
@@ -325,6 +329,8 @@ void GameEventHandler::OnInit()
 void GameEventHandler::OnFrameStart()
 {
 	if (!_pendingCallbacks.empty()) {
+		ZoneScopedNC("Pending callbacks", 0x888888);
+
 		for (std::size_t i = 0; i < _pendingCallbacks.size(); i++) {
 			_pendingCallbacks[i]();
 		}
@@ -356,6 +362,8 @@ void GameEventHandler::OnResizeWindow(int width, int height)
 
 void GameEventHandler::OnShutdown()
 {
+	ZoneScopedC(0x888888);
+
 	_currentHandler = nullptr;
 #if defined(WITH_MULTIPLAYER)
 	_networkManager = nullptr;
@@ -431,6 +439,8 @@ void GameEventHandler::InvokeAsync(std::function<void()>&& callback)
 void GameEventHandler::GoToMainMenu(bool afterIntro)
 {
 	InvokeAsync([this, afterIntro]() {
+		ZoneScopedNC("GameEventHandler::GoToMainMenu", 0x888888);
+
 #if defined(WITH_MULTIPLAYER)
 		_networkManager = nullptr;
 #endif
@@ -446,6 +456,8 @@ void GameEventHandler::GoToMainMenu(bool afterIntro)
 void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 {
 	InvokeAsync([this, levelInit = std::move(levelInit)]() mutable {
+		ZoneScopedNC("GameEventHandler::ChangeLevel", 0x888888);
+
 		std::unique_ptr<IStateHandler> newHandler;
 		if (levelInit.LevelName.empty()) {
 			// Next level not specified, so show main menu
@@ -699,6 +711,8 @@ void GameEventHandler::SetStateHandler(std::unique_ptr<IStateHandler>&& handler)
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 void GameEventHandler::RefreshCache()
 {
+	ZoneScopedC(0x888888);
+
 	if (PreferencesCache::BypassCache) {
 		LOGI("Cache is bypassed by command-line parameter");
 		_flags |= Flags::IsVerified | Flags::IsPlayable;
@@ -807,6 +821,8 @@ RecreateCache:
 
 void GameEventHandler::RefreshCacheLevels()
 {
+	ZoneScopedC(0x888888);
+
 	LOGI("Searching for levels...");
 
 	auto& resolver = ContentResolver::Get();
@@ -1049,6 +1065,8 @@ void GameEventHandler::RefreshCacheLevels()
 void GameEventHandler::CheckUpdates()
 {
 #if !defined(DEATH_DEBUG)
+	ZoneScopedC(0x888888);
+
 #if defined(DEATH_TARGET_X86)
 	std::int32_t arch = 1;
 	Cpu::Features cpuFeatures = Cpu::runtimeFeatures();

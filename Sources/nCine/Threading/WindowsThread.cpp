@@ -5,6 +5,7 @@
 #if defined(DEATH_TARGET_WINDOWS)
 
 #include "../../Common.h"
+#include "../tracy.h"
 
 #include <utility>
 

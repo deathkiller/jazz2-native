@@ -123,7 +123,7 @@ namespace nCine
 
 	void Texture::init(const char* name, Format format, int mipMapCount, int width, int height)
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 
 		if (width == width_ && height == height_ && mipMapCount == mipMapLevels_ && format == format_) {
 			return;
@@ -164,7 +164,7 @@ namespace nCine
 	/*! \note It needs a `bufferName` with a valid file extension as it loads compressed data from a file in memory */
 	bool Texture::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 
 		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromMemory(bufferPtr, bufferSize);
 		if (!texLoader->hasLoaded()) {
@@ -188,7 +188,7 @@ namespace nCine
 
 	bool Texture::loadFromFile(const StringView& filename)
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 
 		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(filename);
 		if (!texLoader->hasLoaded()) {

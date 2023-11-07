@@ -90,18 +90,26 @@ include(ncine_extra_sources)
 include(ncine_generated_sources)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
+set(PATH_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/Sources")
 foreach(FILE ${HEADERS} ${SOURCES}) 
 	get_filename_component(PARENT_DIR "${FILE}" DIRECTORY)
-	string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/Sources" "" GROUP "${PARENT_DIR}")
-	string(REPLACE "/" "\\" GROUP "${GROUP}")
+	string(LENGTH "${PATH_PREFIX}" PATH_PREFIX_LENGTH)
+	string(SUBSTRING "${PARENT_DIR}" 0 ${PATH_PREFIX_LENGTH} PATH_START)
+	if(PATH_START STREQUAL "${PATH_PREFIX}")
+		string(SUBSTRING "${PARENT_DIR}" ${PATH_PREFIX_LENGTH} -1 GROUP)
+		string(REPLACE "/" "\\" GROUP "${GROUP}")
 
-	# Group into "Source Files" and "Header Files"
-	if ("${FILE}" MATCHES ".*\\.cpp")
-		set(GROUP "Source Files${GROUP}")
-	elseif("${FILE}" MATCHES ".*\\.h")
-		set(GROUP "Header Files${GROUP}")
+		# Group into "Source Files" and "Header Files"
+		if("${FILE}" MATCHES ".*\\.cpp")
+			set(GROUP "Source Files${GROUP}")
+		elseif("${FILE}" MATCHES ".*\\.h")
+			set(GROUP "Header Files${GROUP}")
+		endif()
+	else()
+		# Path doesn't have common prefix, put it into "Dependencies"
+		set(GROUP "Dependencies")
 	endif()
+
 	source_group("${GROUP}" FILES "${FILE}")
 endforeach()
 

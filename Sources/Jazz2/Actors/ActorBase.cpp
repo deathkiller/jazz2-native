@@ -14,6 +14,7 @@
 #	pragma message("WITH_COROUTINES is not defined, building without asynchronous loading support")
 #endif
 
+#include "../../nCine/tracy.h"
 #include "../../nCine/Primitives/Matrix4x4.h"
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Base/FrameTimer.h"
@@ -182,6 +183,8 @@ namespace Jazz2::Actors
 
 	void ActorBase::TryStandardMovement(float timeMult, TileCollisionParams& params)
 	{
+		ZoneScoped;
+
 		if (_unstuckCooldown > 0.0f) {
 			_unstuckCooldown -= timeMult;
 		}

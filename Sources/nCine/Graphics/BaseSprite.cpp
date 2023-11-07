@@ -110,7 +110,7 @@ namespace nCine
 
 	void BaseSprite::updateRenderCommand()
 	{
-		ZoneScoped;
+		ZoneScopedC(0x81A861);
 
 		if (dirtyBits_.test(DirtyBitPositions::TransformationBit)) {
 			renderCommand_.setTransformation(worldMatrix_);

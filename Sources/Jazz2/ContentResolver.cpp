@@ -10,6 +10,7 @@
 #include "../nCine/Application.h"
 #include "../nCine/AppConfiguration.h"
 #include "../nCine/ServiceLocator.h"
+#include "../nCine/tracy.h"
 #include "../nCine/IO/CompressionUtils.h"
 #include "../nCine/Graphics/ITextureLoader.h"
 #include "../nCine/Graphics/RenderResources.h"
@@ -1256,6 +1257,8 @@ namespace Jazz2
 
 	void ContentResolver::CompileShaders()
 	{
+		ZoneScoped;
+
 		_precompiledShaders[(int32_t)PrecompiledShader::Lighting] = CompileShader("Lighting", Shaders::LightingVs, Shaders::LightingFs);
 		_precompiledShaders[(int32_t)PrecompiledShader::BatchedLighting] = CompileShader("BatchedLighting", Shaders::BatchedLightingVs, Shaders::LightingFs, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(int32_t)PrecompiledShader::Lighting]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedLighting]);
