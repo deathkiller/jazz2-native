@@ -3433,8 +3433,9 @@ namespace Jazz2::Actors
 		// Refresh animation state
 		if ((_currentSpecialMove == SpecialMoveType::None) ||
 			(_currentSpecialMove == SpecialMoveType::Buttstomp && (type == PlayerType::Jazz || type == PlayerType::Spaz || type == PlayerType::Lori))) {
+			AnimState prevAnim = _currentAnimation->State;
 			_currentAnimation = nullptr;
-			SetAnimation(_currentAnimation->State);
+			SetAnimation(prevAnim);
 		} else {
 			_currentAnimation = nullptr;
 			SetAnimation(AnimState::Fall);
