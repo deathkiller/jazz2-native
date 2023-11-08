@@ -206,7 +206,7 @@ void GameEventHandler::OnInit()
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	// If threading support is enabled, refresh cache during intro cinematics and don't allow skip until it's completed
 	Thread thread([](void* arg) {
-		Thread::SetSelfName("Parallel initialization");
+		Thread::SetCurrentName("Parallel initialization");
 
 		auto handler = static_cast<GameEventHandler*>(arg);
 #	if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)

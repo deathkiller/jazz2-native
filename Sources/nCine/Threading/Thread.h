@@ -126,7 +126,7 @@ namespace nCine
 		void SetName(const char* name);
 
 		/** @brief Sets the calling thread name (not supported on Emscripten and Switch) */
-		static void SetSelfName(const char* name);
+		static void SetCurrentName(const char* name);
 
 #if !defined(DEATH_TARGET_SWITCH)
 		/** @brief Gets the thread priority */

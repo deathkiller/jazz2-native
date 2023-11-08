@@ -1329,9 +1329,6 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Tags.h">
       <Filter>Header Files\Shared\Containers</Filter>
     </ClInclude>
-    <ClInclude Include="$(ExtensionLibraryPath)\Containers\DateTime.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Jazz2\Multiplayer\NetworkManager.h">
       <Filter>Header Files\Jazz2\Multiplayer</Filter>
     </ClInclude>
@@ -1386,11 +1383,14 @@
     <ClInclude Include="Jazz2\Multiplayer\Reason.h">
       <Filter>Header Files\Jazz2\Multiplayer</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Multiplayer\ConnectionResult.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="$(ExtensionLibraryPath)\Base\Unaligned.h">
       <Filter>Header Files\Shared\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\ConnectionResult.h">
+      <Filter>Header Files\Jazz2\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\DateTime.h">
+      <Filter>Header Files\Shared\Containers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2301,7 +2301,7 @@
       <Filter>Source Files\Jazz2</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Multiplayer\ConnectionResult.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Jazz2\Multiplayer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
