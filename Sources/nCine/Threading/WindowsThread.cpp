@@ -158,7 +158,7 @@ namespace nCine
 		}
 	}
 
-	void Thread::SetSelfName(const char* name)
+	void Thread::SetCurrentName(const char* name)
 	{
 #if defined(WITH_TRACY)
 		tracy::SetThreadName(name);

@@ -170,9 +170,9 @@ namespace nCine
 				batchingWithIndices = true;
 			}
 
-			// Don't request more bytes than an instances block can hold (also protects against big `RenderingSettings::maxBatchSize` values)
+			// Don't request more bytes than a UBO can hold
 			const unsigned long currentSize = nonBlockUniformsSize + nonInstancesBlocksSize + instancesBlockSize;
-			if (currentSize + singleInstanceBlockSize > instancesBlock->size()) {
+			if (currentSize + singleInstanceBlockSize > UboMaxSize) {
 				break;
 			}
 			

@@ -801,6 +801,7 @@ namespace Jazz2::Tiles
 			_renderCommandsCount++;
 		} else {
 			command = _renderCommands.emplace_back(std::make_unique<RenderCommand>()).get();
+			_renderCommandsCount++;
 			command->material().setBlendingEnabled(true);
 		}
 

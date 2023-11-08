@@ -118,6 +118,7 @@ namespace Jazz2::UI
 		} else {
 			std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
 			command->material().setBlendingEnabled(true);
+			_renderCommandsCount++;
 			return command.get();
 		}
 	}
