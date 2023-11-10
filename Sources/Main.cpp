@@ -1480,6 +1480,15 @@ int main(int argc, char** argv)
 		}
 	}
 #endif
+#if defined(DEATH_TARGET_UNIX)
+	for (int i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "--version") == 0) {
+			// Just print current version below the logo and quit
+			fputs(NCINE_VERSION, stdout);
+			return 0;
+		}
+	}
+#endif
 
 	return MainApplication::start([]() -> std::unique_ptr<IAppEventHandler> {
 		return std::make_unique<GameEventHandler>();
