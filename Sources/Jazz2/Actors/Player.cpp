@@ -403,7 +403,7 @@ namespace Jazz2::Actors
 
 			if (_fireFramesLeft <= 0.0f) {
 				// Play post-fire animation
-				if ((_currentAnimation->State & (AnimState::Walk | AnimState::Run | AnimState::Dash | AnimState::Crouch | AnimState::Buttstomp | AnimState::Swim | AnimState::Airboard | AnimState::Lift | AnimState::Spring)) == AnimState::Idle &&
+				if ((_currentAnimation->State & (AnimState::Walk | AnimState::Run | AnimState::Dash | AnimState::Buttstomp | AnimState::Swim | AnimState::Airboard | AnimState::Lift | AnimState::Spring)) == AnimState::Idle &&
 					(_currentTransition == nullptr || (_currentTransition->State != AnimState::TransitionRunToIdle && _currentTransition->State != AnimState::TransitionDashToIdle)) &&
 					!_isAttachedToPole) {
 
@@ -414,6 +414,8 @@ namespace Jazz2::Actors
 						SetTransition(AnimState::TransitionCopterShootToCopter, false);
 					} else if ((_currentAnimation->State & AnimState::Fall) == AnimState::Fall) {
 						SetTransition(AnimState::TransitionFallShootToFall, false);
+					} else if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
+						SetAnimation(AnimState::Crouch, true);
 					} else {
 						SetTransition(AnimState::TransitionShootToIdle, false);
 					}
@@ -721,7 +723,9 @@ namespace Jazz2::Actors
 					if (GetState(ActorState::CanJump)) {
 						if (!_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
 							_wasDownPressed = true;
-							SetAnimation(AnimState::Crouch);
+							if (_fireFramesLeft <= 0.0f) {
+								SetAnimation(AnimState::Crouch);
+							}
 						}
 					} else if (!_wasDownPressed && _playerType != PlayerType::Frog) {
 						_wasDownPressed = true;

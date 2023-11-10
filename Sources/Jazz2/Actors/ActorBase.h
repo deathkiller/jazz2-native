@@ -293,7 +293,7 @@ namespace Jazz2::Actors
 		virtual float GetIceShrapnelScale() const;
 
 		std::shared_ptr<AudioBufferPlayer> PlaySfx(const StringView& identifier, float gain = 1.0f, float pitch = 1.0f);
-		bool SetAnimation(AnimState state);
+		bool SetAnimation(AnimState state, bool skipAnimation = false);
 		bool SetTransition(AnimState state, bool cancellable, const std::function<void()>& callback = nullptr);
 		bool SetTransition(AnimState state, bool cancellable, std::function<void()>&& callback);
 		void CancelTransition();
@@ -352,6 +352,6 @@ namespace Jazz2::Actors
 		bool IsCollidingWithAngled(ActorBase* other);
 		bool IsCollidingWithAngled(const AABBf& aabb);
 
-		void RefreshAnimation();
+		void RefreshAnimation(bool skipAnimation = false);
 	};
 }
