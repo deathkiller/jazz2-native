@@ -265,7 +265,7 @@ namespace nCine
 		}
 	};
 
-	template <class F, class S>
+	template<class F, class S>
 	class FNV1aHashFunc<Pair<F, S>>
 	{
 	public:
@@ -365,6 +365,16 @@ namespace nCine
 		}
 	};
 
+	template<class F, class S>
+	class CityHash32Func<Pair<F, S>>
+	{
+	public:
+		hash_t operator()(const Pair<F, S>& pair) const
+		{
+			return CityHash32Func<F>()(pair.first()) ^ CityHash32Func<S>()(pair.second());
+		}
+	};
+
 	template<class K>
 	class CityHash64Func
 	{
@@ -382,6 +392,16 @@ namespace nCine
 		hash64_t operator()(const String& string) const
 		{
 			return CityHash64(string.data(), string.size());
+		}
+	};
+
+	template<class F, class S>
+	class CityHash64Func<Pair<F, S>>
+	{
+	public:
+		hash64_t operator()(const Pair<F, S>& pair) const
+		{
+			return CityHash64Func<F>()(pair.first()) ^ CityHash64Func<S>()(pair.second());
 		}
 	};
 }

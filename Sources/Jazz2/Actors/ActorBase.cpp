@@ -443,7 +443,7 @@ namespace Jazz2::Actors
 		}
 	}
 
-	bool ActorBase::SetAnimation(AnimState state)
+	bool ActorBase::SetAnimation(AnimState state, bool skipAnimation)
 	{
 		if (_metadata == nullptr) {
 			LOGE("No metadata loaded");
@@ -475,7 +475,7 @@ namespace Jazz2::Actors
 		}
 
 		_currentAnimation = anim;
-		RefreshAnimation();
+		RefreshAnimation(skipAnimation);
 
 		return true;
 	}
@@ -1017,12 +1017,12 @@ namespace Jazz2::Actors
 				AABB.B = AABB.T + size.Y;
 			}
 		} else {
-			OnUpdateHitbox();
+			OnUpdateHitbox(); 
 			AABB = AABBInner;
 		}
 	}
 
-	void ActorBase::RefreshAnimation()
+	void ActorBase::RefreshAnimation(bool skipAnimation)
 	{
 		GraphicResource* res = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
 		if (res == nullptr) {
@@ -1041,13 +1041,12 @@ namespace Jazz2::Actors
 			_renderer.LoopMode = AnimationLoopMode::FixedSingle;
 		} else {
 			_renderer.FirstFrame = res->FrameOffset;
-
 			_renderer.LoopMode = res->LoopMode;
 		}
 
 		_renderer.FrameCount = res->FrameCount;
 		_renderer.AnimDuration = res->AnimDuration;
-		_renderer.AnimTime = 0.0f;
+		_renderer.AnimTime = (skipAnimation && res->AnimDuration >= 0.0f && _renderer.LoopMode != AnimationLoopMode::FixedSingle ? _renderer.AnimDuration : 0.0f);
 
 		_renderer.Hotspot.X = -((res->Base->FrameDimensions.X / 2) - (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X));
 		_renderer.Hotspot.Y = -((res->Base->FrameDimensions.Y / 2) - res->Base->Hotspot.Y);
