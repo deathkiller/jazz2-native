@@ -8,7 +8,7 @@
 #	define NCINE_APP_NAME "Jazz² Resurrection"
 #endif
 #if !defined(NCINE_VERSION)
-#	define NCINE_VERSION "2.2.1"
+#	define NCINE_VERSION "2.2.2"
 #endif
 #if !defined(NCINE_BUILD_YEAR)
 #	define NCINE_BUILD_YEAR "2023"
