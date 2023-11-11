@@ -61,7 +61,7 @@ namespace nCine
 					// Split point for the maximum batch size
 					while (lastSplit < endSplit) {
 						unsigned int currentMaxBatchSize = maxBatchSize;
-						const int shaderBatchSize = batchedShader->batchSize();
+						const unsigned int shaderBatchSize = batchedShader->batchSize();
 						if (shaderBatchSize > 0 && currentMaxBatchSize > shaderBatchSize) {
 							currentMaxBatchSize = shaderBatchSize;
 						}
@@ -80,7 +80,7 @@ namespace nCine
 						// Handling early splits while collecting (not enough UBO free space)
 						RenderCommand* batchCommand = collectCommands(start, end, start);
 						destQueue.push_back(batchCommand);
-						lastSplit = start - srcQueue.begin();
+						lastSplit = (unsigned int)(start - srcQueue.begin());
 					}
 				}
 
@@ -285,7 +285,7 @@ namespace nCine
 
 			if (batchedShaderHasAttributes) {
 				const unsigned int numVertices = command->geometry().numVertices();
-				const int meshIndex = it - start;
+				const int meshIndex = (int)(it - start);
 				const float* srcVtx = command->geometry().hostVertexPointer();
 				FATAL_ASSERT(srcVtx != nullptr);
 
@@ -355,7 +355,7 @@ namespace nCine
 		}
 		batchCommand->material().setBlendingEnabled(refCommand->material().isBlendingEnabled());
 		batchCommand->material().setBlendingFactors(refCommand->material().srcBlendingFactor(), refCommand->material().destBlendingFactor());
-		batchCommand->setBatchSize(nextStart - start);
+		batchCommand->setBatchSize((int)(nextStart - start));
 		batchCommand->material().uniformBlock(Material::InstancesBlockName)->setUsedSize(instancesBlockOffset);
 		batchCommand->setLayer(refCommand->layer());
 		batchCommand->setVisitOrder(refCommand->visitOrder());

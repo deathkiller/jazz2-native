@@ -373,11 +373,11 @@ namespace nCine
 		return RenderResources::binaryShaderCache().saveToCache(shaderName, shaderVersion, glShaderProgram_.get());
 	}
 
-	bool Shader::setAttribute(const char* name, int stride, unsigned long int pointer)
+	bool Shader::setAttribute(const char* name, int stride, void* pointer)
 	{
 		GLVertexFormat::Attribute* attribute = glShaderProgram_->attribute(name);
 		if (attribute != nullptr) {
-			attribute->setVboParameters(stride, reinterpret_cast<void*>(pointer));
+			attribute->setVboParameters(stride, pointer);
 		}
 		return (attribute != nullptr);
 	}

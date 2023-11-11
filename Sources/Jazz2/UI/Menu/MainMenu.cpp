@@ -248,7 +248,7 @@ namespace Jazz2::UI::Menu
 		// Copyright
 		Vector2f bottomLeft = bottomRight;
 		bottomLeft.X = 24.0f;
-		_owner->DrawStringShadow("© 2016-2023  Dan R."_s, charOffset, bottomLeft.X, bottomLeft.Y, IMenuContainer::FontLayer,
+		_owner->DrawStringShadow("© 2016-" NCINE_BUILD_YEAR "  Dan R."_s, charOffset, bottomLeft.X, bottomLeft.Y, IMenuContainer::FontLayer,
 			Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
 #if defined(DEATH_TARGET_WINDOWS_RT)

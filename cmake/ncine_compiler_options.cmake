@@ -5,6 +5,10 @@ set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 include(CheckStructHasMember)
 
 target_compile_definitions(${NCINE_APP} PUBLIC "NCINE_VERSION=\"${NCINE_VERSION}\"")
+
+string(TIMESTAMP NCINE_BUILD_YEAR "%Y") 
+target_compile_definitions(${NCINE_APP} PUBLIC "NCINE_BUILD_YEAR=\"${NCINE_BUILD_YEAR}\"")
+
 if(NCINE_OVERRIDE_CONTENT_PATH)
 	message(STATUS "Using overriden `Content` path: ${NCINE_OVERRIDE_CONTENT_PATH}")
 	target_compile_definitions(${NCINE_APP} PUBLIC "NCINE_OVERRIDE_CONTENT_PATH=\"${NCINE_OVERRIDE_CONTENT_PATH}\"")

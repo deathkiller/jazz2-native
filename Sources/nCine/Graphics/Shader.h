@@ -86,7 +86,7 @@ namespace nCine
 		bool saveToCache(const char* shaderName, uint64_t shaderVersion) const;
 
 		/// Sets the VBO stride and pointer for the specified vertex attribute
-		bool setAttribute(const char* name, int stride, unsigned long int pointer);
+		bool setAttribute(const char* name, int stride, void* pointer);
 
 		/// Returns true if the shader is linked and can therefore be used
 		bool isLinked() const;

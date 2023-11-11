@@ -40,7 +40,7 @@
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.games</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>© 2016-@CPACK_PACKAGE_VERSION_YEAR@ @CPACK_PACKAGE_VENDOR@</string>
+	<string>© 2016-@NCINE_BUILD_YEAR@ @CPACK_PACKAGE_VENDOR@</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 </dict>

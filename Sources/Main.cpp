@@ -1469,14 +1469,48 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdSh
 	}, __argc, __wargv);
 }
 #else
+#if defined(DEATH_TARGET_UNIX)
+int PrintVersion(bool logoVisible)
+{
+	if (logoVisible) {
+		static const char Copyright[] = "© 2016-" NCINE_BUILD_YEAR " Dan R.";
+		static const char Reset[] = "\033[0m";
+		static const char Bold[] = "\033[1m";
+		static const char Faint[] = "\033[2m";
+
+		constexpr std::size_t LogoWidth = 58;
+
+		char padding[(LogoWidth / 2) + 2];
+		std::size_t paddingLength = (LogoWidth - (arraySize(NCINE_APP_NAME) - 1) - 1 - (arraySize(NCINE_VERSION) - 1) + 1) / 2;
+		for (std::size_t j = 0; j < paddingLength; j++) {
+			padding[j] = ' ';
+		}
+		padding[paddingLength] = '\0';
+		fprintf(stdout, "%s%s%s %s%s%s\n", padding, Reset, NCINE_APP_NAME, Bold, NCINE_VERSION, Reset);
+
+		paddingLength = (LogoWidth - (arraySize(Copyright) - 1) + 1) / 2;
+		for (std::size_t j = 0; j < paddingLength; j++) {
+			padding[j] = ' ';
+		}
+		padding[paddingLength] = '\0';
+		fprintf(stdout, "%s%s%s%s%s\n", padding, Reset, Faint, Copyright, Reset);
+	} else {
+		fputs(NCINE_APP_NAME " " NCINE_VERSION "\n", stdout);
+	}
+	return 0;
+}
+#endif
+
 int main(int argc, char** argv)
 {
+	bool logoVisible = false;
 #if defined(DEATH_TRACE) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX))
 	bool hasVirtualTerminal = isatty(1);
 	if (hasVirtualTerminal) {
 		const char* term = ::getenv("TERM");
 		if (term != nullptr && strcmp(term, "xterm-256color") == 0) {
 			fwrite(TermLogo, sizeof(unsigned char), arraySize(TermLogo), stdout);
+			logoVisible = true;
 		}
 	}
 #endif
@@ -1484,8 +1518,7 @@ int main(int argc, char** argv)
 	for (int i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "--version") == 0) {
 			// Just print current version below the logo and quit
-			fputs(NCINE_VERSION, stdout);
-			return 0;
+			return PrintVersion(logoVisible);
 		}
 	}
 #endif
