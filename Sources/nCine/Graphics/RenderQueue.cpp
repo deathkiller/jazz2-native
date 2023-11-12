@@ -70,6 +70,9 @@ namespace nCine
 				case RenderCommand::CommandTypes::MeshSprite: return "mesh sprite";
 				case RenderCommand::CommandTypes::Particle: return "particle";
 				case RenderCommand::CommandTypes::Text: return "text";
+#	if defined(WITH_IMGUI)
+				case RenderCommand::CommandTypes::ImGui: return "imgui";
+#	endif
 				default: return "unknown";
 			}
 		}

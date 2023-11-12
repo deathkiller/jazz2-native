@@ -1392,6 +1392,24 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\DateTime.h">
       <Filter>Header Files\Shared\Containers</Filter>
     </ClInclude>
+    <ClInclude Include="nCine\Graphics\ImGuiDrawing.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\ImGuiDebugOverlay.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Input\ImGuiJoyMappedInput.h">
+      <Filter>Header Files\nCine\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Backends\ImGuiSdlInput.h">
+      <Filter>Header Files\nCine\Backends</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Backends\ImGuiGlfwInput.h">
+      <Filter>Header Files\nCine\Backends</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\IDebugOverlay.h">
+      <Filter>Header Files\nCine\Graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2302,6 +2320,21 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Multiplayer\ConnectionResult.cpp">
       <Filter>Source Files\Jazz2\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Input\ImGuiJoyMappedInput.cpp">
+      <Filter>Source Files\nCine\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Backends\ImGuiSdlInput.cpp">
+      <Filter>Source Files\nCine\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Backends\ImGuiGlfwInput.cpp">
+      <Filter>Source Files\nCine\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\ImGuiDebugOverlay.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\ImGuiDrawing.cpp">
+      <Filter>Source Files\nCine\Graphics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

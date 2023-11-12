@@ -1119,7 +1119,7 @@ namespace Death::IO
 	{
 		const char* extStorage = ::getenv("EXTERNAL_STORAGE");
 		if (extStorage == nullptr || extStorage[0] == '\0') {
-			return String { "/sdcard"_s };
+			return "/sdcard"_s;
 		}
 		return extStorage;
 	}
@@ -1138,6 +1138,14 @@ namespace Death::IO
 		}
 
 		return { };
+	}
+#elif defined(DEATH_TARGET_WINDOWS)
+	String FileSystem::GetWindowsDirectory()
+	{
+		wchar_t buffer[MaxPathLength];
+		UINT requiredLength = ::GetSystemWindowsDirectoryW(buffer, static_cast<UINT>(MaxPathLength));
+		if (requiredLength == 0 || requiredLength >= MaxPathLength) return { };
+		return Utf8::FromUtf16(buffer);
 	}
 #endif
 

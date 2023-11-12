@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Graphics/IGfxDevice.h"
+#include "Graphics/IDebugOverlay.h"
 #include "AppConfiguration.h"
 #include "Base/TimeStamp.h"
 
@@ -18,6 +19,9 @@ namespace nCine
 	class ScreenViewport;
 	class IInputManager;
 	class IAppEventHandler;
+#if defined(WITH_IMGUI)
+	class ImGuiDrawing;
+#endif
 
 	/// Main entry point and handler for nCine applications
 	class Application
@@ -41,6 +45,20 @@ namespace nCine
 			unsigned int maxBatchSize;
 		};
 
+#if defined(WITH_IMGUI)
+		/// GUI settings (for ImGui) that can be changed at run-time
+		struct GuiSettings
+		{
+			GuiSettings();
+
+			/// ImGui drawable node layer
+			uint16_t imguiLayer;
+			/// ImGui viewport
+			/*! \note The viewport should mirror the screen dimensions or mouse input would not work. Setting `nullptr` is the same as setting the screen */
+			Viewport* imguiViewport;
+		};
+#endif
+
 		enum class Timings
 		{
 			PreInit,
@@ -52,6 +70,7 @@ namespace nCine
 			PostUpdate,
 			Visit,
 			Draw,
+			ImGui,
 			FrameEnd,
 
 			Count
@@ -65,6 +84,16 @@ namespace nCine
 		inline RenderingSettings& renderingSettings() {
 			return renderingSettings_;
 		}
+#if defined(WITH_IMGUI)
+		/// Returns the run-time GUI settings
+		inline GuiSettings& guiSettings() {
+			return guiSettings_;
+		}
+		/// Returns the debug overlay object, if any
+		inline IDebugOverlay::DisplaySettings& debugOverlaySettings() {
+			return (debugOverlay_ != nullptr ? debugOverlay_->settings() : debugOverlayNullSettings_);
+		}
+#endif
 #if defined(NCINE_PROFILING)
 		/// Returns all timings
 		inline const float* timings() const {
@@ -89,10 +118,10 @@ namespace nCine
 
 		/// Returns the total number of frames already rendered
 		unsigned long int numFrames() const;
-		/// Returns the average FPS during the update interval
-		float averageFps() const;
 		/// Returns a factor that represents how long the last frame took relative to the desired frame time
 		float timeMult() const;
+		/// Returns the frame timer interface
+		const FrameTimer& frameTimer() const;
 
 		/// Returns the drawable screen width as an integer number
 		inline int width() const { return gfxDevice_->drawableWidth(); }
@@ -149,6 +178,10 @@ namespace nCine
 		bool shouldQuit_;
 		AppConfiguration appCfg_;
 		RenderingSettings renderingSettings_;
+#if defined(WITH_IMGUI)
+		GuiSettings guiSettings_;
+		IDebugOverlay::DisplaySettings debugOverlayNullSettings_;
+#endif
 #if defined(NCINE_PROFILING)
 		float timings_[(int)Timings::Count];
 #endif
@@ -163,6 +196,10 @@ namespace nCine
 		std::unique_ptr<ScreenViewport> screenViewport_;
 		std::unique_ptr<IInputManager> inputManager_;
 		std::unique_ptr<IAppEventHandler> appEventHandler_;
+#if defined(WITH_IMGUI)
+		std::unique_ptr<IDebugOverlay> debugOverlay_;
+		std::unique_ptr<ImGuiDrawing> imguiDrawing_;
+#endif
 
 		Application();
 		~Application();

@@ -164,6 +164,13 @@ DEATH_ALWAYS_INLINE int GetObject(HGDIOBJ h, int c, LPVOID pv) {
 }
 #endif
 
+#if defined(GetWindowsDirectory)
+#	undef GetWindowsDirectory
+DEATH_ALWAYS_INLINE UINT GetWindowsDirectory(LPWSTR lpBuffer, UINT uSize) {
+	return ::GetWindowsDirectoryW(lpBuffer, uSize);
+}
+#endif
+
 #if defined(LoadAccelerators)
 #	undef LoadAccelerators
 DEATH_ALWAYS_INLINE HACCEL LoadAccelerators(HINSTANCE hInstance, LPCWSTR lpTableName) {

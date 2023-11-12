@@ -55,6 +55,7 @@ endif()
 
 include(ncine_get_version)
 include(ncine_imported_targets)
+include(ncine_imgui)
 include(ncine_tracy)
 
 if(NCINE_BUILD_ANDROID)
@@ -125,6 +126,11 @@ if(OPENGL_FOUND)
 endif()
 target_sources(${NCINE_APP} PRIVATE ${SOURCES} ${HEADERS} ${SHADER_FILES} ${GENERATED_SOURCES})
 
+if(NCINE_WITH_IMGUI)
+	target_include_directories(${NCINE_APP}
+		INTERFACE $<BUILD_INTERFACE:${IMGUI_INCLUDE_ONLY_DIR}>
+		PRIVATE $<BUILD_INTERFACE:${IMGUI_INCLUDE_ONLY_DIR}>)
+endif()
 if(NCINE_WITH_TRACY)
 	target_include_directories(${NCINE_APP}
 		PUBLIC $<BUILD_INTERFACE:${TRACY_INCLUDE_ONLY_DIR}/tracy>

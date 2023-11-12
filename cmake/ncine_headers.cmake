@@ -71,6 +71,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Graphics/DrawableNode.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Geometry.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/GfxCapabilities.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/IDebugOverlay.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/IGfxCapabilities.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/IGfxDevice.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureLoader.h

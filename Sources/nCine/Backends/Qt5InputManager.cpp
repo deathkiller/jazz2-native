@@ -51,10 +51,6 @@ namespace nCine
 #if defined(WITH_IMGUI)
 		ImGuiQt5Input::init(&widget);
 #endif
-
-#if defined(WITH_NUKLEAR)
-		NuklearQt5Input::init(&widget);
-#endif
 	}
 
 	Qt5InputManager::~Qt5InputManager()

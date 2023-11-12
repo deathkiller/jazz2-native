@@ -450,12 +450,8 @@ namespace Jazz2::Actors
 			return false;
 		}
 
-		if (_currentTransition != nullptr && !_currentTransitionCancellable) {
-			return false;
-		}
-
 		if (_currentAnimation != nullptr && _currentAnimation->State == state) {
-			return false;
+			return true;
 		}
 
 		auto* anim = _metadata->FindAnimation(state);
@@ -464,18 +460,23 @@ namespace Jazz2::Actors
 			return false;
 		}
 
-		if (_currentTransition != nullptr) {
-			_currentTransition = nullptr;
+		if (_currentTransition == nullptr || _currentTransitionCancellable) {
+			if (_currentTransition != nullptr) {
+				_currentTransition = nullptr;
 
-			if (_currentTransitionCallback != nullptr) {
-				auto oldCallback = std::move(_currentTransitionCallback);
-				_currentTransitionCallback = nullptr;
-				oldCallback();
+				if (_currentTransitionCallback != nullptr) {
+					auto oldCallback = std::move(_currentTransitionCallback);
+					_currentTransitionCallback = nullptr;
+					oldCallback();
+				}
 			}
-		}
 
-		_currentAnimation = anim;
-		RefreshAnimation(skipAnimation);
+			_currentAnimation = anim;
+			RefreshAnimation(skipAnimation);
+		} else {
+			// It will be set after active transition
+			_currentAnimation = anim;
+		}
 
 		return true;
 	}

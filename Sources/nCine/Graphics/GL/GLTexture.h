@@ -64,7 +64,5 @@ namespace nCine
 		friend class GLFramebuffer;
 		friend class Qt5GfxDevice;
 		friend class ImGuiDrawing;
-		friend class NuklearDrawing;
 	};
-
 }

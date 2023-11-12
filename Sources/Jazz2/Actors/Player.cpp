@@ -3439,7 +3439,9 @@ namespace Jazz2::Actors
 			(_currentSpecialMove == SpecialMoveType::Buttstomp && (type == PlayerType::Jazz || type == PlayerType::Spaz || type == PlayerType::Lori))) {
 			AnimState prevAnim = _currentAnimation->State;
 			_currentAnimation = nullptr;
-			SetAnimation(prevAnim);
+			if (!SetAnimation(prevAnim)) {
+				SetAnimation(AnimState::Idle);
+			}
 		} else {
 			_currentAnimation = nullptr;
 			SetAnimation(AnimState::Fall);

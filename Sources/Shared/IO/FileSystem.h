@@ -154,6 +154,8 @@ namespace Death::IO
 		static Containers::String GetExternalStorage();
 #elif defined(DEATH_TARGET_UNIX)
 		static Containers::String GetLocalStorage();
+#elif defined(DEATH_TARGET_WINDOWS)
+		static Containers::String GetWindowsDirectory();
 #endif
 
 		/** @brief Returns true if the specified path is a directory */

@@ -343,7 +343,7 @@ namespace nCine
 		glTexture_->setObjectLabel(label);
 	}
 
-	/*! The pointer is an opaque handle to be used only by ImGui or Nuklear.
+	/*! The pointer is an opaque handle to be used only by ImGui.
 	 *  It is considered immutable from an user point of view and thus retrievable by a constant method. */
 	void* Texture::guiTexId() const
 	{
