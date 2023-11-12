@@ -681,7 +681,7 @@ namespace nCine
 #if defined(DEATH_TARGET_WINDOWS)
 			const std::uint64_t clockFreq = static_cast<std::uint64_t>(clock().frequency());
 			const std::uint64_t frameTimeDuration = (clockFreq / static_cast<std::uint64_t>(appCfg_.frameLimit));
-			const std::int64_t remainingTime = (std::int64_t)frameTimeDuration - (std::int64_t)frameTimer_->frameIntervalAsTicks();
+			const std::int64_t remainingTime = (std::int64_t)frameTimeDuration - (std::int64_t)frameTimer_->frameDurationAsTicks();
 			if (remainingTime > 0) {
 				LARGE_INTEGER dueTime;
 				dueTime.QuadPart = -(LONGLONG)((10000000ULL * remainingTime) / clockFreq);
@@ -691,8 +691,8 @@ namespace nCine
 				::CancelWaitableTimer(_waitableTimer);
 			}
 #else
-			const float frameTimeDuration = 1.0f / static_cast<float>(appCfg_.frameLimit);
-			while (frameTimer_->frameInterval() < frameTimeDuration) {
+			const float frameDuration = 1.0f / static_cast<float>(appCfg_.frameLimit);
+			while (frameTimer_->frameDuration() < frameDuration) {
 				Timer::sleep(0);
 			}
 #endif
