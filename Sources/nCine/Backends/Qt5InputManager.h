@@ -141,7 +141,7 @@ namespace nCine
 		float axesValuesState_[NumAxes];
 
 		char name_[MaxNameLength];
-		nctl::UniquePtr<QGamepad> gamepad_;
+		std::unique_ptr<QGamepad> gamepad_;
 
 		friend class Qt5InputManager;
 	};

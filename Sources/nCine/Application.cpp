@@ -77,6 +77,11 @@ extern "C"
 #	include "LuaStatistics.h"
 #endif
 
+#if defined(WITH_IMGUI)
+#	include "Graphics/ImGuiDrawing.h"
+#	include "Graphics/ImGuiDebugOverlay.h"
+#endif
+
 #if defined(WITH_RENDERDOC)
 #	include "Graphics/RenderDocCapture.h"
 #endif
@@ -387,6 +392,13 @@ namespace nCine
 
 	Application::~Application() = default;
 
+#if defined(WITH_IMGUI)
+	Application::GuiSettings::GuiSettings()
+		: imguiLayer(0xffff - 1024), imguiViewport(nullptr)
+	{
+	}
+#endif
+
 	Viewport& Application::screenViewport()
 	{
 		return *screenViewport_;
@@ -397,14 +409,14 @@ namespace nCine
 		return frameTimer_->totalNumberFrames();
 	}
 
-	float Application::averageFps() const
-	{
-		return frameTimer_->averageFps();
-	}
-
 	float Application::timeMult() const
 	{
 		return frameTimer_->timeMult();
+	}
+
+	const FrameTimer& Application::frameTimer() const
+	{
+		return *frameTimer_;
 	}
 
 	void Application::resizeScreenViewport(int width, int height)
@@ -489,6 +501,15 @@ namespace nCine
 			screenViewport_->setRootNode(rootNode_.get());
 		}
 
+#if defined(WITH_IMGUI)
+		imguiDrawing_ = std::make_unique<ImGuiDrawing>(appCfg_.withScenegraph);
+
+		// Debug overlay is available even when scenegraph is not
+		if (appCfg_.withDebugOverlay) {
+			debugOverlay_ = std::make_unique<ImGuiDebugOverlay>(0.5f);	// 2 updates per second
+		}
+#endif
+
 		// Initialization of the static random generator seeds
 		Random().Initialize(static_cast<uint64_t>(TimeStamp::now().ticks()), static_cast<uint64_t>(profileStartTime_.ticks()));
 
@@ -508,6 +529,10 @@ namespace nCine
 			LOGI("IAppEventHandler::OnInit() invoked");
 		}
 
+#if defined(WITH_IMGUI)
+		imguiDrawing_->buildFonts();
+#endif
+
 		// Swapping frame now for a cleaner API trace capture when debugging
 		gfxDevice_->update();
 		FrameMark;
@@ -518,6 +543,18 @@ namespace nCine
 	{
 		frameTimer_->addFrame();
 
+#if defined(WITH_IMGUI)
+		{
+			ZoneScopedN("ImGui newFrame");
+#	if defined(NCINE_PROFILING)
+			profileStartTime_ = TimeStamp::now();
+#	endif
+			imguiDrawing_->newFrame();
+#	if defined(NCINE_PROFILING)
+			timings_[(int)Timings::ImGui] = profileStartTime_.secondsSince();
+#	endif
+		}
+#endif
 #if defined(WITH_LUA)
 		LuaStatistics::update();
 #endif
@@ -532,6 +569,12 @@ namespace nCine
 			timings_[(int)Timings::FrameStart] = profileStartTime_.secondsSince();
 #endif
 		}
+
+#if defined(WITH_IMGUI)
+		if (debugOverlay_ != nullptr) {
+			debugOverlay_->update();
+		}
+#endif
 
 		if (appCfg_.withScenegraph) {
 			ZoneScopedNC("SceneGraph", 0x81A861);
@@ -568,6 +611,20 @@ namespace nCine
 #endif
 			}
 
+#if defined(WITH_IMGUI)
+			{
+				ZoneScopedN("ImGui endFrame");
+#	if defined(NCINE_PROFILING)
+				profileStartTime_ = TimeStamp::now();
+#	endif
+				RenderQueue* imguiRenderQueue = (guiSettings_.imguiViewport ? guiSettings_.imguiViewport->renderQueue_.get() : screenViewport_->renderQueue_.get());
+				imguiDrawing_->endFrame(*imguiRenderQueue);
+#	if defined(NCINE_PROFILING)
+				timings_[(int)Timings::ImGui] += profileStartTime_.secondsSince();
+#	endif
+			}
+#endif
+
 			{
 				ZoneScopedNC("Draw", 0x81A861);
 #if defined(NCINE_PROFILING)
@@ -579,6 +636,19 @@ namespace nCine
 				timings_[(int)Timings::Draw] = profileStartTime_.secondsSince();
 #endif
 			}
+		} else {
+#if defined(WITH_IMGUI)
+			{
+				ZoneScopedN("ImGui endFrame");
+#	if defined(NCINE_PROFILING)
+				profileStartTime_ = TimeStamp::now();
+#	endif
+				imguiDrawing_->endFrame();
+#	if defined(NCINE_PROFILING)
+				timings_[(int)Timings::ImGui] += profileStartTime_.secondsSince();
+#	endif
+			}
+#endif
 		}
 
 		{
@@ -596,6 +666,12 @@ namespace nCine
 #endif
 		}
 
+#if defined(WITH_IMGUI)
+		if (debugOverlay_ != nullptr) {
+			debugOverlay_->updateFrameTimings();
+		}
+#endif
+
 		gfxDevice_->update();
 		FrameMark;
 		TracyGpuCollect;
@@ -605,7 +681,7 @@ namespace nCine
 #if defined(DEATH_TARGET_WINDOWS)
 			const std::uint64_t clockFreq = static_cast<std::uint64_t>(clock().frequency());
 			const std::uint64_t frameTimeDuration = (clockFreq / static_cast<std::uint64_t>(appCfg_.frameLimit));
-			const std::uint64_t remainingTime = frameTimeDuration - frameTimer_->frameIntervalAsTicks();
+			const std::int64_t remainingTime = (std::int64_t)frameTimeDuration - (std::int64_t)frameTimer_->frameIntervalAsTicks();
 			if (remainingTime > 0) {
 				LARGE_INTEGER dueTime;
 				dueTime.QuadPart = -(LONGLONG)((10000000ULL * remainingTime) / clockFreq);
@@ -631,6 +707,10 @@ namespace nCine
 		LOGI("IAppEventHandler::OnShutdown() invoked");
 		appEventHandler_.reset();
 
+#if defined(WITH_IMGUI)
+		imguiDrawing_.reset(nullptr);
+		debugOverlay_.reset(nullptr);
+#endif
 #if defined(WITH_RENDERDOC)
 		RenderDocCapture::removeHooks();
 #endif

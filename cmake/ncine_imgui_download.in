@@ -1,0 +1,15 @@
+cmake_minimum_required(VERSION 3.5)
+
+project(imgui-download NONE)
+
+include(ExternalProject)
+ExternalProject_Add(imgui
+	GIT_REPOSITORY    https://github.com/ocornut/imgui.git
+	GIT_TAG           "${IMGUI_VERSION_TAG}"
+	GIT_SHALLOW       TRUE
+	SOURCE_DIR        "${CMAKE_BINARY_DIR}/imgui-src"
+	CONFIGURE_COMMAND ""
+	BUILD_COMMAND     ""
+	INSTALL_COMMAND   ""
+	TEST_COMMAND      ""
+)

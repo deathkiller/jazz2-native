@@ -22,6 +22,7 @@ namespace nCine
 			MeshSprite,
 			Particle,
 			Text,
+			ImGui,
 
 			Count
 		};

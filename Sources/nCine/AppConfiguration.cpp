@@ -27,7 +27,7 @@ namespace nCine
 #else
 		fixedBatchSize(0),
 #endif
-#if defined(WITH_IMGUI) || defined(WITH_NUKLEAR)
+#if defined(WITH_IMGUI)
 		vboSize(512 * 1024),
 		iboSize(128 * 1024),
 #else
@@ -36,6 +36,7 @@ namespace nCine
 #endif
 		vaoPoolSize(16),
 		renderCommandPoolSize(32),
+		withDebugOverlay(false),
 		withAudio(true),
 		withThreads(false),
 		withScenegraph(true),

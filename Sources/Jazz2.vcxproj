@@ -429,6 +429,8 @@
     <ClInclude Include="nCine\Audio\IAudioLoader.h" />
     <ClInclude Include="nCine\Audio\IAudioPlayer.h" />
     <ClInclude Include="nCine\Audio\IAudioReader.h" />
+    <ClInclude Include="nCine\Backends\ImGuiGlfwInput.h" />
+    <ClInclude Include="nCine\Backends\ImGuiSdlInput.h" />
     <ClInclude Include="nCine\Base\Algorithms.h" />
     <ClInclude Include="nCine\Base\BitArray.h" />
     <ClInclude Include="nCine\Base\BitSet.h" />
@@ -487,8 +489,11 @@
     <ClInclude Include="nCine\Graphics\GL\GLViewport.h" />
     <ClInclude Include="nCine\Backends\Qt5GfxDevice.h" />
     <ClInclude Include="nCine\Backends\SdlGfxDevice.h" />
+    <ClInclude Include="nCine\Graphics\IDebugOverlay.h" />
     <ClInclude Include="nCine\Graphics\IGfxCapabilities.h" />
     <ClInclude Include="nCine\Graphics\IGfxDevice.h" />
+    <ClInclude Include="nCine\Graphics\ImGuiDebugOverlay.h" />
+    <ClInclude Include="nCine\Graphics\ImGuiDrawing.h" />
     <ClInclude Include="nCine\Graphics\ITextureLoader.h" />
     <ClInclude Include="nCine\Graphics\ITextureSaver.h" />
     <ClInclude Include="nCine\Graphics\Material.h" />
@@ -531,6 +536,7 @@
     <ClInclude Include="nCine\Backends\GlfwInputManager.h" />
     <ClInclude Include="nCine\Input\IInputEventHandler.h" />
     <ClInclude Include="nCine\Input\IInputManager.h" />
+    <ClInclude Include="nCine\Input\ImGuiJoyMappedInput.h" />
     <ClInclude Include="nCine\Input\InputEvents.h" />
     <ClInclude Include="nCine\Input\JoyMapping.h" />
     <ClInclude Include="nCine\Input\JoyMappingDb.h" />
@@ -773,6 +779,8 @@
     <ClCompile Include="nCine\Audio\AudioStreamPlayer.cpp" />
     <ClCompile Include="nCine\Audio\IAudioLoader.cpp" />
     <ClCompile Include="nCine\Audio\IAudioPlayer.cpp" />
+    <ClCompile Include="nCine\Backends\ImGuiGlfwInput.cpp" />
+    <ClCompile Include="nCine\Backends\ImGuiSdlInput.cpp" />
     <ClCompile Include="nCine\Base\Algorithms.cpp" />
     <ClCompile Include="nCine\Base\BitArray.cpp" />
     <ClCompile Include="nCine\Base\Clock.cpp" />
@@ -815,6 +823,8 @@
     <ClCompile Include="nCine\Backends\Qt5GfxDevice.cpp" />
     <ClCompile Include="nCine\Backends\SdlGfxDevice.cpp" />
     <ClCompile Include="nCine\Graphics\IGfxDevice.cpp" />
+    <ClCompile Include="nCine\Graphics\ImGuiDebugOverlay.cpp" />
+    <ClCompile Include="nCine\Graphics\ImGuiDrawing.cpp" />
     <ClCompile Include="nCine\Graphics\ITextureLoader.cpp" />
     <ClCompile Include="nCine\Graphics\ITextureSaver.cpp" />
     <ClCompile Include="nCine\Graphics\Material.cpp" />
@@ -855,6 +865,7 @@
     <ClCompile Include="nCine\Backends\GlfwKeys.cpp" />
     <ClCompile Include="nCine\I18n.cpp" />
     <ClCompile Include="nCine\Input\IInputManager.cpp" />
+    <ClCompile Include="nCine\Input\ImGuiJoyMappedInput.cpp" />
     <ClCompile Include="nCine\Input\JoyMapping.cpp" />
     <ClCompile Include="nCine\Backends\Qt5InputManager.cpp" />
     <ClCompile Include="nCine\Backends\Qt5JoyMapping.cpp" />

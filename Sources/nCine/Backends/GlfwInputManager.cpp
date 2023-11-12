@@ -12,10 +12,6 @@
 #	include "ImGuiGlfwInput.h"
 #endif
 
-#if defined(WITH_NUKLEAR)
-#	include "NuklearGlfwInput.h"
-#endif
-
 namespace nCine
 {
 	const int IInputManager::MaxNumJoysticks = GLFW_JOYSTICK_LAST - GLFW_JOYSTICK_1 + 1;
@@ -63,29 +59,21 @@ namespace nCine
 
 		joyMapping_.init(this);
 
-#ifdef DEATH_TARGET_EMSCRIPTEN
+#if defined(DEATH_TARGET_EMSCRIPTEN)
 		emscripten_set_touchstart_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, false, GlfwInputManager::emscriptenHandleTouch);
 		emscripten_set_touchend_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, false, GlfwInputManager::emscriptenHandleTouch);
 		emscripten_set_touchmove_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, false, GlfwInputManager::emscriptenHandleTouch);
 		emscripten_set_touchcancel_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, false, GlfwInputManager::emscriptenHandleTouch);
 #endif
 
-#ifdef WITH_IMGUI
+#if defined(WITH_IMGUI)
 		ImGuiGlfwInput::init(GlfwGfxDevice::windowHandle(), true);
-#endif
-
-#ifdef WITH_NUKLEAR
-		NuklearGlfwInput::init(GlfwGfxDevice::windowHandle(), true);
 #endif
 	}
 
 	GlfwInputManager::~GlfwInputManager()
 	{
-#ifdef WITH_NUKLEAR
-		NuklearGlfwInput::shutdown();
-#endif
-
-#ifdef WITH_IMGUI
+#if defined(WITH_IMGUI)
 		ImGuiGlfwInput::shutdown();
 #endif
 	}

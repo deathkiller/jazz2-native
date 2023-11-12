@@ -160,7 +160,7 @@ namespace nCine
 		/// Sets the OpenGL object label for the texture
 		void setGLTextureLabel(const char* label);
 
-		/// Returns the user data opaque pointer for ImGui's `ImTextureID` or Nuklear's texture handle
+		/// Returns the user data opaque pointer for ImGui's `ImTextureID`
 		void* guiTexId() const;
 
 		inline static ObjectType sType() {

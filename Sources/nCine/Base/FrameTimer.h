@@ -28,11 +28,11 @@ namespace nCine
 			return totNumFrames_;
 		}
 		/// Returns the interval in seconds between the last two subsequent calls to `addFrame()`
-		inline float lastFrameInterval() const {
-			return frameInterval_;
+		inline float lastFrameDuration() const {
+			return frameDuration_;
 		}
 		/// Returns the interval in seconds since the last call to `addFrame()`
-		inline float frameInterval() const {
+		inline float currentFrameDuration() const {
 			return frameStart_.secondsSince();
 		}
 		/// Returns the interval in ticks since the last call to `addFrame()`
@@ -41,7 +41,7 @@ namespace nCine
 		}
 		/// Returns the average FPS during the update interval
 		inline float averageFps() const {
-			return fps_;
+			return avgFps_;
 		}
 
 		/// Returns a factor that represents how long the last frame took relative to the desired frame time
@@ -50,16 +50,16 @@ namespace nCine
 		}
 
 	private:
-		/// Number of seconds between two log events (user defined)
-		float logInterval_;
 		/// Number of seconds between two average FPS calculations (user defined)
-		float avgInterval_;
+		float averageInterval_;
+		/// Number of seconds between two logging events (user defined)
+		float loggingInterval_;
 
-		/// Time stamp at the beginning of a frame
+		/// Timestamp at the beginning of a frame
 		TimeStamp frameStart_;
-		/// Seconds elapsed since previous frame
-		float frameInterval_;
-		/// Time stamp at the begininng of application suspension
+		/// Last frame duration in seconds
+		float frameDuration_;
+		/// Timestamp at the begininng of application suspension
 		TimeStamp suspensionStart_;
 
 		/// Total number of frames counted
@@ -75,7 +75,7 @@ namespace nCine
 		TimeStamp lastLogUpdate_;
 
 		/// Average FPS calulated during the specified interval
-		float fps_;
+		float avgFps_;
 
 		/// Factor that represents how long the last frame took relative to the desired frame time
 		float timeMult_;

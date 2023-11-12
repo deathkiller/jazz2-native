@@ -19,11 +19,6 @@
 #	include "ImGuiSdlInput.h"
 #endif
 
-#if defined(WITH_NUKLEAR)
-#	include "SdlGfxDevice.h"
-#	include "NuklearSdlInput.h"
-#endif
-
 namespace nCine
 {
 	const int IInputManager::MaxNumJoysticks = 16;
@@ -75,18 +70,10 @@ namespace nCine
 #if defined(WITH_IMGUI)
 		ImGuiSdlInput::init(SdlGfxDevice::windowHandle());
 #endif
-
-#if defined(WITH_NUKLEAR)
-		NuklearSdlInput::init(SdlGfxDevice::windowHandle());
-#endif
 	}
 
 	SdlInputManager::~SdlInputManager()
 	{
-#if defined(WITH_NUKLEAR)
-		NuklearSdlInput::shutdown();
-#endif
-
 #if defined(WITH_IMGUI)
 		ImGuiSdlInput::shutdown();
 #endif
@@ -126,10 +113,6 @@ namespace nCine
 	{
 #if defined(WITH_IMGUI)
 		ImGuiSdlInput::processEvent(&event);
-#endif
-
-#if defined(WITH_NUKLEAR)
-		NuklearSdlInput::processEvent(&event);
 #endif
 
 		if (inputEventHandler_ == nullptr) {
@@ -362,7 +345,7 @@ namespace nCine
 	void SdlInputManager::setCursor(Cursor cursor)
 	{
 		if (cursor != cursor_) {
-			bool changeMode = true;
+			bool isChanged = true;
 			switch (cursor) {
 				case Cursor::Arrow:
 					SDL_ShowCursor(SDL_ENABLE);
@@ -374,14 +357,13 @@ namespace nCine
 					break;
 				case Cursor::HiddenLocked:
 					const int supported = SDL_SetRelativeMouseMode(SDL_TRUE);
-					changeMode = (supported == 0);
+					isChanged = (supported == 0);
 					break;
 			}
 
-			if (changeMode) {
+			if (isChanged) {
 				// Handling ImGui cursor changes
 				IInputManager::setCursor(cursor);
-
 				cursor_ = cursor;
 			}
 		}

@@ -360,7 +360,7 @@ namespace Jazz2::UI
 
 			// FPS
 			if (PreferencesCache::ShowPerformanceMetrics) {
-				i32tos((int32_t)std::round(theApplication().averageFps()), stringBuffer);
+				i32tos((int32_t)std::round(theApplication().frameTimer().averageFps()), stringBuffer);
 				_smallFont->DrawString(this, stringBuffer, charOffset, view.W - 4.0f, view.Y + 2.0f, FontLayer,
 					Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 			}
