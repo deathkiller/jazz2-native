@@ -27,16 +27,16 @@ namespace nCine
 		inline unsigned long int totalNumberFrames() const {
 			return totNumFrames_;
 		}
-		/// Returns the interval in seconds between the last two subsequent calls to `addFrame()`
+		/// Returns the last frame duration in seconds between the last two subsequent calls to `addFrame()`
 		inline float lastFrameDuration() const {
 			return frameDuration_;
 		}
-		/// Returns the interval in seconds since the last call to `addFrame()`
-		inline float currentFrameDuration() const {
+		/// Returns current frame duration in seconds since the last call to `addFrame()`
+		inline float frameDuration() const {
 			return frameStart_.secondsSince();
 		}
-		/// Returns the interval in ticks since the last call to `addFrame()`
-		inline uint64_t frameIntervalAsTicks() const {
+		/// Returns current frame duration in ticks since the last call to `addFrame()`
+		inline uint64_t frameDurationAsTicks() const {
 			return frameStart_.timeSince().ticks();
 		}
 		/// Returns the average FPS during the update interval
