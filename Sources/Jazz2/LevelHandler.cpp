@@ -173,6 +173,11 @@ namespace Jazz2
 	void LevelHandler::SetAmbientLight(float value)
 	{
 		_ambientLightTarget = value;
+
+		// Skip transition if it was changed at the beginning of level
+		if (_elapsedFrames < FrameTimer::FramesPerSecond * 0.25f) {
+			_ambientColor.W = value;
+		}
 	}
 
 	void LevelHandler::AttachComponents(LevelDescriptor&& descriptor)
@@ -182,7 +187,7 @@ namespace Jazz2
 		if (!descriptor.DisplayName.empty()) {
 			theApplication().gfxDevice().setWindowTitle(StringView(NCINE_APP_NAME " - ", countof(NCINE_APP_NAME " - ") - 1) + descriptor.DisplayName);
 		} else {
-			theApplication().gfxDevice().setWindowTitle({ NCINE_APP_NAME, countof(NCINE_APP_NAME) - 1 });
+			theApplication().gfxDevice().setWindowTitle(StringView(NCINE_APP_NAME, countof(NCINE_APP_NAME) - 1));
 		}
 
 		_defaultNextLevel = std::move(descriptor.NextLevel);
@@ -453,7 +458,7 @@ namespace Jazz2
 				if (std::abs(_ambientColor.W - _ambientLightTarget) < step) {
 					_ambientColor.W = _ambientLightTarget;
 				} else {
-					_ambientColor.W += step * ((_ambientLightTarget < _ambientColor.W) ? -1 : 1);
+					_ambientColor.W += step * ((_ambientLightTarget < _ambientColor.W) ? -1.0f : 1.0f);
 				}
 			}
 

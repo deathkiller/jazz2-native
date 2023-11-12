@@ -39,6 +39,8 @@ namespace nCine
 		: withSceneGraph_(withSceneGraph), lastFrameWidth_(0), lastFrameHeight_(0), lastLayerValue_(0)
 	{
 		ImGuiIO& io = ImGui::GetIO();
+		//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad;
+
 #if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		io.BackendRendererName = "nCine_OpenGL_ES";
 #else
@@ -165,7 +167,7 @@ namespace nCine
 
 	void ImGuiDrawing::setupRenderCmd(RenderCommand& cmd)
 	{
-		cmd.setProfilingType(RenderCommand::CommandTypes::ImGui);
+		cmd.setType(RenderCommand::CommandTypes::ImGui);
 
 		Material& material = cmd.material();
 		material.setShaderProgram(imguiShaderProgram_.get());

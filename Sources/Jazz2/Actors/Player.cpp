@@ -109,18 +109,10 @@ namespace Jazz2::Actors
 		_playerIndex = details.Params[1];
 
 		switch (_playerType) {
-			case PlayerType::Jazz:
-				async_await RequestMetadataAsync("Interactive/PlayerJazz"_s);
-				break;
-			case PlayerType::Spaz:
-				async_await RequestMetadataAsync("Interactive/PlayerSpaz"_s);
-				break;
-			case PlayerType::Lori:
-				async_await RequestMetadataAsync("Interactive/PlayerLori"_s);
-				break;
-			case PlayerType::Frog:
-				async_await RequestMetadataAsync("Interactive/PlayerFrog"_s);
-				break;
+			case PlayerType::Jazz: async_await RequestMetadataAsync("Interactive/PlayerJazz"_s); break;
+			case PlayerType::Spaz: async_await RequestMetadataAsync("Interactive/PlayerSpaz"_s); break;
+			case PlayerType::Lori: async_await RequestMetadataAsync("Interactive/PlayerLori"_s); break;
+			case PlayerType::Frog: async_await RequestMetadataAsync("Interactive/PlayerFrog"_s); break;
 		}
 
 		SetAnimation(AnimState::Fall);
@@ -1729,9 +1721,11 @@ namespace Jazz2::Actors
 				}
 			}
 		} else if (GetState(ActorState::IsSolidObject)) {
-			AABBf aabb = AABBf(AABBInner.L, AABBInner.T - 2.0f, AABBInner.R, AABBInner.T + 6.0f);
+			AABBf aabb = AABBf(AABBInner.L, AABBInner.T - 20.0f, AABBInner.R, AABBInner.T + 6.0f);
 			TileCollisionParams params = { TileDestructType::None, false };
 			ActorBase* collider;
+			ActorState prevState = GetState();
+			SetState(ActorState::CollideWithTileset, false);
 			if (!_levelHandler->IsPositionEmpty(this, aabb, params, &collider)) {
 				if (auto solidObject = dynamic_cast<SolidObjectBase*>(collider)) {
 					if (AABBInner.T >= solidObject->AABBInner.T && !_isLifting && std::abs(_speed.Y) < 1.0f) {
@@ -1744,6 +1738,7 @@ namespace Jazz2::Actors
 			} else {
 				_isLifting = false;
 			}
+			SetState(prevState);
 		} else {
 			_isLifting = false;
 		}

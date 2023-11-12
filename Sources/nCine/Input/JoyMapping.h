@@ -47,7 +47,7 @@ namespace nCine
 		}
 
 	private:
-		unsigned char buttons_[JoyMappedState::NumButtons];
+		bool buttons_[JoyMappedState::NumButtons];
 		float axesValues_[JoyMappedState::NumAxes];
 		unsigned char lastHatState_;
 

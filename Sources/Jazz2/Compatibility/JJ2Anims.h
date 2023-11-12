@@ -19,7 +19,7 @@ namespace Jazz2::Compatibility
 	class JJ2Anims // .j2a
 	{
 	public:
-		static constexpr uint16_t CacheVersion = 9;
+		static constexpr uint16_t CacheVersion = 10;
 
 		static bool Convert(const StringView& path, const StringView& targetPath, bool isPlus);
 
@@ -69,6 +69,6 @@ namespace Jazz2::Compatibility
 		static void ImportAnimations(const StringView& targetPath, JJ2Version version, SmallVectorImpl<AnimSection>& anims);
 		static void ImportAudioSamples(const StringView& targetPath, JJ2Version version, SmallVectorImpl<SampleSection>& samples);
 
-		static void WriteImageToFile(const StringView& targetPath, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount, AnimSection* anim, AnimSetMapping::Entry* entry);
+		static void WriteImageToFile(const StringView& targetPath, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry);
 	};
 }

@@ -31,6 +31,7 @@ namespace nCine
 				instances = 0;
 				batchSize = 0;
 			}
+
 			friend RenderStatistics;
 		};
 
@@ -51,6 +52,7 @@ namespace nCine
 				size = 0;
 				usedSpace = 0;
 			}
+
 			friend RenderStatistics;
 		};
 
@@ -69,6 +71,7 @@ namespace nCine
 				count = 0;
 				dataSize = 0;
 			}
+
 			friend RenderStatistics;
 		};
 
@@ -87,6 +90,7 @@ namespace nCine
 				count = 0;
 				dataSize = 0;
 			}
+
 			friend RenderStatistics;
 		};
 
@@ -109,6 +113,7 @@ namespace nCine
 				reuses = 0;
 				bindings = 0;
 			}
+
 			friend RenderStatistics;
 		};
 
@@ -129,6 +134,7 @@ namespace nCine
 				freeSize = 0;
 				retrievals = 0;
 			}
+
 			friend RenderStatistics;
 		};
 

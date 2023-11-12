@@ -56,8 +56,10 @@ namespace nCine
 		/// The initial size for the pool of render commands
 		unsigned int renderCommandPoolSize;
 
+#if defined(WITH_IMGUI)
 		/// The flag is `true` if the debug overlay is enabled
 		bool withDebugOverlay;
+#endif
 		/// The flag is `true` if the audio subsystem is enabled
 		bool withAudio;
 		/// The flag is `true` if the threading subsystem is enabled

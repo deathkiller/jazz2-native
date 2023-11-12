@@ -736,6 +736,7 @@ namespace Jazz2::Tiles
 					}
 
 					auto command = RentRenderCommand(layer.Description.RendererType);
+					command->setType(RenderCommand::CommandTypes::TileMap);
 					command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 					Vector2i texSize = tileSet->TextureDiffuse->size();
@@ -1262,6 +1263,7 @@ namespace Jazz2::Tiles
 
 		for (auto& debris : _debrisList) {
 			auto command = RentRenderCommand(LayerRendererType::Default);
+			command->setType(RenderCommand::CommandTypes::Particle);
 
 			if ((debris.Flags & DebrisFlags::AdditiveBlending) == DebrisFlags::AdditiveBlending) {
 				command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);

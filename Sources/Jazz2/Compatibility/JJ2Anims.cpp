@@ -332,12 +332,12 @@ namespace Jazz2::Compatibility
 			// TODO: Hardcoded name
 			bool applyToasterPowerUpFix = (entry->Category == "Object"_s && entry->Name == "powerup_upgrade_toaster"_s);
 			if (applyToasterPowerUpFix) {
-				LOGI("Applying \"Toaster PowerUp\" palette fix");
+				LOGI("Applying \"Toaster PowerUp\" palette fix to %i:%u", anim.Set, anim.Anim);
 			}
 
-			bool applyVineFix = (entry->Category == "Object" && entry->Name == "vine");
+			bool applyVineFix = (entry->Category == "Object"_s && entry->Name == "vine"_s);
 			if (applyVineFix) {
-				LOGI("Applying \"Vine\" palette fix");
+				LOGI("Applying \"Vine\" palette fix to %i:%u", anim.Set, anim.Anim);
 			}
 
 			String filename;
@@ -413,9 +413,16 @@ namespace Jazz2::Compatibility
 				}
 			}
 
+			bool applyLoriLiftFix = (entry->Category == "Lori"_s && (entry->Name == "lift"_s || entry->Name == "lift_start"_s || entry->Name == "lift_end"_s));
+			if (applyLoriLiftFix) {
+				LOGI("Applying \"Lori\" hotspot fix to %i:%u", anim.Set, anim.Anim);
+				anim.NormalizedHotspotX = 20;
+				anim.NormalizedHotspotY = 4;
+			}
+
 			// TODO: Use single channel instead
 			String fullPath = fs::CombinePath(targetPath, filename);
-			WriteImageToFile(fullPath, pixels.get(), sizeX, sizeY, 4, &anim, entry);
+			WriteImageToFile(fullPath, pixels.get(), sizeX, sizeY, 4, anim, entry);
 
 			/*if (!string.IsNullOrEmpty(data.Name) && !data.SkipNormalMap) {
 				PngWriter normalMap = NormalMapGenerator.FromSprite(img,
@@ -498,7 +505,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Anims::WriteImageToFile(const StringView& targetPath, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount, AnimSection* anim, AnimSetMapping::Entry* entry)
+	void JJ2Anims::WriteImageToFile(const StringView& targetPath, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry)
 	{
 		auto so = fs::Open(targetPath, FileAccessMode::Write);
 		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
@@ -530,35 +537,35 @@ namespace Jazz2::Compatibility
 
 		// Include Sprite extension
 		if (entry != nullptr) {
-			so->WriteValue<uint8_t>(anim->FrameConfigurationX);
-			so->WriteValue<uint8_t>(anim->FrameConfigurationY);
-			so->WriteValue<uint16_t>(anim->FrameCount);
-			so->WriteValue<uint16_t>((uint16_t)(anim->FrameRate == 0 ? 0 : 256 * 5 / anim->FrameRate));
+			so->WriteValue<uint8_t>(anim.FrameConfigurationX);
+			so->WriteValue<uint8_t>(anim.FrameConfigurationY);
+			so->WriteValue<uint16_t>(anim.FrameCount);
+			so->WriteValue<uint16_t>((uint16_t)(anim.FrameRate == 0 ? 0 : 256 * 5 / anim.FrameRate));
 
-			if (anim->NormalizedHotspotX != 0 || anim->NormalizedHotspotY != 0) {
-				so->WriteValue<uint16_t>(anim->NormalizedHotspotX + AddBorder);
-				so->WriteValue<uint16_t>(anim->NormalizedHotspotY + AddBorder);
+			if (anim.NormalizedHotspotX != 0 || anim.NormalizedHotspotY != 0) {
+				so->WriteValue<uint16_t>(anim.NormalizedHotspotX + AddBorder);
+				so->WriteValue<uint16_t>(anim.NormalizedHotspotY + AddBorder);
 			} else {
 				so->WriteValue<uint16_t>(UINT16_MAX);
 				so->WriteValue<uint16_t>(UINT16_MAX);
 			}
-			if (anim->Frames[0].ColdspotX != 0 || anim->Frames[0].ColdspotY != 0) {
-				so->WriteValue<uint16_t>((anim->NormalizedHotspotX + anim->Frames[0].HotspotX) - anim->Frames[0].ColdspotX + AddBorder);
-				so->WriteValue<uint16_t>((anim->NormalizedHotspotY + anim->Frames[0].HotspotY) - anim->Frames[0].ColdspotY + AddBorder);
+			if (anim.Frames[0].ColdspotX != 0 || anim.Frames[0].ColdspotY != 0) {
+				so->WriteValue<uint16_t>((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].ColdspotX + AddBorder);
+				so->WriteValue<uint16_t>((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].ColdspotY + AddBorder);
 			} else {
 				so->WriteValue<uint16_t>(UINT16_MAX);
 				so->WriteValue<uint16_t>(UINT16_MAX);
 			}
-			if (anim->Frames[0].GunspotX != 0 || anim->Frames[0].GunspotY != 0) {
-				so->WriteValue<uint16_t>((anim->NormalizedHotspotX + anim->Frames[0].HotspotX) - anim->Frames[0].GunspotX + AddBorder);
-				so->WriteValue<uint16_t>((anim->NormalizedHotspotY + anim->Frames[0].HotspotY) - anim->Frames[0].GunspotY + AddBorder);
+			if (anim.Frames[0].GunspotX != 0 || anim.Frames[0].GunspotY != 0) {
+				so->WriteValue<uint16_t>((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].GunspotX + AddBorder);
+				so->WriteValue<uint16_t>((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].GunspotY + AddBorder);
 			} else {
 				so->WriteValue<uint16_t>(UINT16_MAX);
 				so->WriteValue<uint16_t>(UINT16_MAX);
 			}
 
-			width *= anim->FrameConfigurationX;
-			height *= anim->FrameConfigurationY;
+			width *= anim.FrameConfigurationX;
+			height *= anim.FrameConfigurationY;
 		}
 
 		WriteImageToFileInternal(so, data, width, height, channelCount);
