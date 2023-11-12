@@ -138,9 +138,9 @@ namespace nCine
 		const int singleInstanceBlockSizePacked = singleInstanceBlock->size() - singleInstanceBlock->alignAmount(); // remove the uniform buffer offset alignment
 		const int singleInstanceBlockSize = singleInstanceBlockSizePacked + (16 - singleInstanceBlockSizePacked % 16) % 16; // but add the std140 vec4 layout alignment
 
-		if (commandAdded) {
-			batchCommand->setType(refCommand->type());
-		}
+#if defined(NCINE_PROFILING)
+		batchCommand->setType(refCommand->type());
+#endif
 		instancesBlock = batchCommand->material().uniformBlock(Material::InstancesBlockName);
 		FATAL_ASSERT_MSG(instancesBlock != nullptr, "Batched shader does not have an %s uniform block", Material::InstancesBlockName);
 

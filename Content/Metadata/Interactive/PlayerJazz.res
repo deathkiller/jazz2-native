@@ -261,12 +261,12 @@
 			"States": [ 131072 ]
 		},
 		"LiftStart": {
-			"Path": "Jazz/lift_jump_heavy.aura",
+			"Path": "Jazz/lift_start.aura",
 			"FrameRate": 16,
 			"States": [ 1073741859 ]
 		},
 		"LiftEnd": {
-			"Path": "Jazz/lift_jump_light.aura",
+			"Path": "Jazz/lift_end.aura",
 			"States": [ 1073741860 ]
 		},
 		"Ledge": {

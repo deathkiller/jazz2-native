@@ -20,6 +20,7 @@ namespace nCine
 			Unspecified = 0,
 			Sprite,
 			MeshSprite,
+			TileMap,
 			Particle,
 			Text,
 			ImGui,
@@ -29,15 +30,6 @@ namespace nCine
 
 		explicit RenderCommand(CommandTypes profilingType);
 		RenderCommand();
-
-		/// Returns the command type for profiling counter
-		inline CommandTypes profilingType() const {
-			return profilingType_;
-		}
-		/// Sets the command type for profiling counter
-		inline void setProfilingType(CommandTypes profilingType) {
-			profilingType_ = profilingType;
-		}
 
 		/// Returns the number of instances collected in the command or zero if instancing is not used
 		inline int numInstances() const {
@@ -98,11 +90,17 @@ namespace nCine
 
 		/// Gets the command type (for profiling purposes)
 		inline CommandTypes type() const {
+#if defined(NCINE_PROFILING)
 			return profilingType_;
+#else
+			return CommandTypes::Unspecified;
+#endif
 		}
 		/// Sets the command type (for profiling purposes)
 		inline void setType(CommandTypes type) {
+#if defined(NCINE_PROFILING)
 			profilingType_ = type;
+#endif
 		}
 
 		inline void setScissor(Recti scissorRect) {
@@ -156,11 +154,11 @@ namespace nCine
 
 		bool transformationCommitted_;
 
-		/// Command type for profiling counter
+#if defined(NCINE_PROFILING)
 		CommandTypes profilingType_;
+#endif
 
 		Recti scissorRect_;
-
 		Matrix4x4f modelMatrix_;
 		Material material_;
 		Geometry geometry_;

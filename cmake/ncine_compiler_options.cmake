@@ -106,7 +106,7 @@ if(WIN32)
 		target_link_libraries(${NCINE_APP} PRIVATE ws2_32)
 		
 		# Try to use VC-LTL library
-		if(MSVC)
+		if(DEATH_WITH_VC_LTL AND MSVC)
 			if(NOT VC_LTL_Root)
 				if(EXISTS "${NCINE_ROOT}/Libs/VC-LTL/_msvcrt.h")
 					set(VC_LTL_Root "${NCINE_ROOT}/Libs/VC-LTL")

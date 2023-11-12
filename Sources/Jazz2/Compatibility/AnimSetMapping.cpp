@@ -548,8 +548,8 @@ namespace Jazz2::Compatibility
 			m.Add("Jazz"_s, "jump"_s);
 			m.Add("Jazz"_s, "ledge"_s);
 			m.Add("Jazz"_s, "lift"_s);
-			m.Add("Jazz"_s, "lift_jump_light"_s);
-			m.Add("Jazz"_s, "lift_jump_heavy"_s);
+			m.Add("Jazz"_s, "lift_end"_s);
+			m.Add("Jazz"_s, "lift_start"_s);
 			m.Add("Jazz"_s, "lookup_start"_s);
 			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_run_diag_upright"_s);
 			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Jazz"_s, "unused_run_ver_up"_s);
@@ -687,8 +687,8 @@ namespace Jazz2::Compatibility
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "jump"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "ledge"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "lift"_s);
-			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "lift_jump_light"_s);
-			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "lift_jump_heavy"_s);
+			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "lift_end"_s);
+			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "lift_start"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "lookup_start"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "dizzy_walk"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "push"_s);
@@ -1033,8 +1033,8 @@ namespace Jazz2::Compatibility
 			m.Add("Spaz"_s, "jump"_s);
 			m.Add("Spaz"_s, "ledge"_s);
 			m.Add("Spaz"_s, "lift"_s);
-			m.Add("Spaz"_s, "lift_jump_light"_s);
-			m.Add("Spaz"_s, "lift_jump_heavy"_s);
+			m.Add("Spaz"_s, "lift_end"_s);
+			m.Add("Spaz"_s, "lift_start"_s);
 			m.Add("Spaz"_s, "lookup_start"_s);
 			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "unused_run_diag_upright"_s);
 			//m.Add(JJ2Version::BaseGame | JJ2Version::HH, "Spaz"_s, "unused_run_ver_up"_s);

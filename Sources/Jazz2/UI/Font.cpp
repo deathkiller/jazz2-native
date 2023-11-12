@@ -426,6 +426,7 @@ namespace Jazz2::UI
 					texCoords.Z *= -1;
 
 					auto command = canvas->RentRenderCommand();
+					command->setType(RenderCommand::CommandTypes::Text);
 					bool shaderChanged = (colorizeShader
 						? command->material().setShader(colorizeShader)
 						: command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE));

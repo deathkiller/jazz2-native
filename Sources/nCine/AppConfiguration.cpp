@@ -36,7 +36,9 @@ namespace nCine
 #endif
 		vaoPoolSize(16),
 		renderCommandPoolSize(32),
+#if defined(WITH_IMGUI)
 		withDebugOverlay(false),
+#endif
 		withAudio(true),
 		withThreads(false),
 		withScenegraph(true),

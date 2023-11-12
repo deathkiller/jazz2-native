@@ -61,13 +61,14 @@ namespace nCine
 				: a->idSortKey() < b->idSortKey();
 		}
 
-#if defined(DEATH_DEBUG)
+#if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 		const char* commandTypeString(const RenderCommand& command)
 		{
 			switch (command.type()) {
 				case RenderCommand::CommandTypes::Unspecified: return "unspecified";
 				case RenderCommand::CommandTypes::Sprite: return "sprite";
 				case RenderCommand::CommandTypes::MeshSprite: return "mesh sprite";
+				case RenderCommand::CommandTypes::TileMap: return "tile map";
 				case RenderCommand::CommandTypes::Particle: return "particle";
 				case RenderCommand::CommandTypes::Text: return "text";
 #	if defined(WITH_IMGUI)
@@ -127,13 +128,13 @@ namespace nCine
 		SmallVectorImpl<RenderCommand*>* opaques = batchingEnabled ? &opaqueBatchedQueue_ : &opaqueQueue_;
 		SmallVectorImpl<RenderCommand*>* transparents = batchingEnabled ? &transparentBatchedQueue_ : &transparentQueue_;
 
-#if defined(DEATH_DEBUG)
+#if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 		unsigned int commandIndex = 0;
 #endif
 		// Rendering opaque nodes front to back
 		for (RenderCommand* opaqueRenderCommand : *opaques) {
 			TracyGpuZone("Opaque");
-#if defined(DEATH_DEBUG)
+#if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 			const int numInstances = opaqueRenderCommand->numInstances();
 			const int batchSize = opaqueRenderCommand->batchSize();
 			const uint16_t layer = opaqueRenderCommand->layer();
@@ -165,7 +166,7 @@ namespace nCine
 		// Rendering transparent nodes back to front
 		for (RenderCommand* transparentRenderCommand : *transparents) {
 			TracyGpuZone("Transparent");
-#if defined(DEATH_DEBUG)
+#if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 			const int numInstances = transparentRenderCommand->numInstances();
 			const int batchSize = transparentRenderCommand->batchSize();
 			const uint16_t layer = transparentRenderCommand->layer();

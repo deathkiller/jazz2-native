@@ -27,37 +27,39 @@ namespace nCine
 		void updateFrameTimings() override;
 
 	private:
-		const float Margin = 10.0f;
-		const float Transparency = 0.5f;
+		static constexpr float Margin = 10.0f;
+		static constexpr float Transparency = 0.5f;
 
 		struct ValuesType
 		{
 			enum
 			{
-				FRAME_TIME = 0,
-				FRAME_START,
-				UPDATE_VISIT_DRAW,
-				UPDATE,
-				POST_UPDATE,
-				VISIT,
-				DRAW,
-				IMGUI,
-				FRAME_END,
-				CULLED_NODES,
-				VBO_USED,
-				IBO_USED,
-				UBO_USED,
-				SPRITE_VERTICES,
-				MESHSPRITE_VERTICES,
-				PARTICLE_VERTICES,
-				TEXT_VERTICES,
-				IMGUI_VERTICES,
-				TOTAL_VERTICES,
+				FrameTime = 0,
+				FrameStart,
+				UpdateVisitDraw,
+				Update,
+				PostUpdate,
+				Visit,
+				Draw,
+				ImGui,
+				FrameEnd,
+				CulledNodes,
+				VboUsed,
+				IboUsed,
+				UboUsed,
+				SpriteVertices,
+				MeshSpriteVertices,
+				TileMapVertices,
+				ParticleVertices,
+				TextVertices,
+				ImGuiVertices,
+				UnspecifiedVertices,
+				TotalVertices,
 #if defined(WITH_LUA)
-				LUA_USED,
-				LUA_OPERATIONS,
+				LuaUsed,
+				LuaOperations,
 #endif
-				COUNT
+				Count
 			};
 		};
 
@@ -70,7 +72,7 @@ namespace nCine
 		bool showBottomRightOverlay_;
 
 		unsigned int numValues_;
-		std::unique_ptr<float[]> plotValues_[ValuesType::COUNT];
+		std::unique_ptr<float[]> plotValues_[ValuesType::Count];
 		float maxFrameTime_;
 		float maxUpdateVisitDraw_;
 		unsigned int index_;
@@ -104,14 +106,18 @@ namespace nCine
 		void guiRecursiveChildrenNodes(SceneNode* node, unsigned int childId);
 		void guiNodeInspector();
 
+#if defined(NCINE_PROFILING)
 		void guiTopLeft();
+#endif
 		void guiTopRight();
 		void guiBottomLeft();
 		void guiBottomRight();
 		void guiPlots();
 
 		void initPlotValues();
+#if defined(NCINE_PROFILING)
 		void updateOverlayTimings();
+#endif
 
 		/// Deleted copy constructor
 		ImGuiDebugOverlay(const ImGuiDebugOverlay&) = delete;

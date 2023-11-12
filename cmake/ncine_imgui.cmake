@@ -11,20 +11,22 @@ if(NCINE_WITH_IMGUI)
 		else()
 			string(SUBSTRING ${IMGUI_VERSION_TAG} 1 -1 IMGUI_VERSION_TAG_DIR)
 		endif()
+		# Replace slashes in branch names
+		string(REPLACE "/" "-" IMGUI_VERSION_TAG_DIR ${IMGUI_VERSION_TAG_DIR})
 
 		if(IS_DIRECTORY ${CMAKE_BINARY_DIR}/imgui-${IMGUI_VERSION_TAG_DIR})
 			message(STATUS "Dear ImGui release file \"${IMGUI_VERSION_TAG}\" has been already downloaded")
 		else()
 			file(DOWNLOAD https://github.com/ocornut/imgui/archive/${IMGUI_VERSION_TAG}.tar.gz
-				${CMAKE_BINARY_DIR}/${IMGUI_VERSION_TAG}.tar.gz STATUS result)
+				${CMAKE_BINARY_DIR}/${IMGUI_VERSION_TAG_DIR}.tar.gz STATUS result)
 
 			list(GET result 0 result_code)
 			if(result_code)
 				message(WARNING "Cannot download Dear ImGui release file ${IMGUI_VERSION_TAG}")
 			else()
 				message(STATUS "Downloaded Dear ImGui release file \"${IMGUI_VERSION_TAG}\"")
-				file(ARCHIVE_EXTRACT INPUT ${CMAKE_BINARY_DIR}/${IMGUI_VERSION_TAG}.tar.gz DESTINATION ${CMAKE_BINARY_DIR})
-				file(REMOVE ${CMAKE_BINARY_DIR}/${IMGUI_VERSION_TAG}.tar.gz)
+				file(ARCHIVE_EXTRACT INPUT ${CMAKE_BINARY_DIR}/${IMGUI_VERSION_TAG_DIR}.tar.gz DESTINATION ${CMAKE_BINARY_DIR})
+				file(REMOVE ${CMAKE_BINARY_DIR}/${IMGUI_VERSION_TAG_DIR}.tar.gz)
 			endif()
 		endif()
 

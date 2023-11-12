@@ -9,8 +9,10 @@
 namespace nCine
 {
 	RenderCommand::RenderCommand(CommandTypes profilingType)
-		: materialSortKey_(0), layer_(0), numInstances_(0), batchSize_(0), transformationCommitted_(false),
-			profilingType_(profilingType), modelMatrix_(Matrix4x4f::Identity)
+		: materialSortKey_(0), layer_(0), numInstances_(0), batchSize_(0), transformationCommitted_(false), modelMatrix_(Matrix4x4f::Identity)
+#if defined(NCINE_PROFILING)
+			, profilingType_(profilingType)
+#endif
 	{
 	}
 

@@ -743,8 +743,7 @@ namespace Jazz2::Actors
 	{
 		bool perPixel = (_state & ActorState::SkipPerPixelCollisions) != ActorState::SkipPerPixelCollisions;
 		if (!perPixel) {
-			AABBf inter2 = AABBf::Intersect(aabb, AABBInner);
-			return (inter2.R > 0 && inter2.B > 0);
+			return aabb.Overlaps(AABBInner);
 		} else if (std::abs(_renderer.rotation()) > 0.1f) {
 			return IsCollidingWithAngled(aabb);
 		}
@@ -1187,6 +1186,16 @@ namespace Jazz2::Actors
 	{
 		_externalForce.X += x;
 		_externalForce.Y += y;
+	}
+
+	ActorBase::ActorRenderer::ActorRenderer(ActorBase* owner)
+		: BaseSprite(nullptr, nullptr, 0.0f, 0.0f), AnimPaused(false), FrameConfiguration(), FrameDimensions(),
+			LoopMode(AnimationLoopMode::Loop), FirstFrame(0), FrameCount(0), AnimDuration(0.0f), AnimTime(0.0f),
+			CurrentFrame(0), Hotspot(), _owner(owner), _rendererType((ActorRendererType)-1), _rendererTransition(0.0f)
+	{
+		type_ = ObjectType::Sprite;
+		renderCommand_.setType(RenderCommand::CommandTypes::Sprite);
+		Initialize(ActorRendererType::Default);
 	}
 
 	void ActorBase::ActorRenderer::Initialize(ActorRendererType type)
