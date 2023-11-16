@@ -194,11 +194,7 @@ namespace nCine
 
 		frequency_ = audioLoader.frequency();
 		numSamples_ = audioLoader.numSamples();
-		if (numSamples_ >= 0) {
-			duration_ = float(numSamples_) / frequency_;
-		} else {
-			duration_ = -1.0;
-		}
+		duration_ = (numSamples_ == UINT32_MAX ? -1.0f : float(numSamples_) / frequency_);
 
 		audioReader_ = audioLoader.createReader();
 		audioReader_->setLooping(isLooping_);

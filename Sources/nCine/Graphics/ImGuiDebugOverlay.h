@@ -63,8 +63,6 @@ namespace nCine
 			};
 		};
 
-		bool disableAppInputEvents_;
-		IInputEventHandler* appInputHandler_;
 		bool lockOverlayPositions_;
 		bool showTopLeftOverlay_;
 		bool showTopRightOverlay_;

@@ -26,7 +26,7 @@ namespace nCine
 {
 	namespace
 	{
-		static const char BatchSizeFormatString[] = "#define BATCH_SIZE (%d)\n#line 0\n";
+		static const char BatchSizeFormatString[] = "#ifndef BATCH_SIZE\n\t#define BATCH_SIZE (%d)\n#endif\n#line 0\n";
 
 		struct ShaderLoad
 		{

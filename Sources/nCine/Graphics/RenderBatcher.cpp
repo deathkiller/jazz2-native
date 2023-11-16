@@ -142,7 +142,7 @@ namespace nCine
 		batchCommand->setType(refCommand->type());
 #endif
 		instancesBlock = batchCommand->material().uniformBlock(Material::InstancesBlockName);
-		FATAL_ASSERT_MSG(instancesBlock != nullptr, "Batched shader does not have an %s uniform block", Material::InstancesBlockName);
+		FATAL_ASSERT_MSG(instancesBlock != nullptr, "Batched shader does not have an \"%s\" uniform block", Material::InstancesBlockName);
 
 		const unsigned long nonBlockUniformsSize = batchCommand->material().shaderProgram()->uniformsSize();
 		// Determine how much memory is needed by uniform blocks that are not for instances
@@ -170,9 +170,9 @@ namespace nCine
 				batchingWithIndices = true;
 			}
 
-			// Don't request more bytes than a UBO can hold
+			// Don't request more bytes than an instances block or an UBO can hold (also protects against big `RenderingSettings::maxBatchSize` values)
 			const unsigned long currentSize = nonBlockUniformsSize + nonInstancesBlocksSize + instancesBlockSize;
-			if (currentSize + singleInstanceBlockSize > UboMaxSize) {
+			if (instancesBlockSize + singleInstanceBlockSize > instancesBlock->size() || currentSize + singleInstanceBlockSize > UboMaxSize) {
 				break;
 			}
 			
@@ -342,6 +342,7 @@ namespace nCine
 
 			++it;
 		}
+		instancesBlock->setUsedSize(instancesBlockOffset);
 
 		if (batchedShaderHasAttributes) {
 			batchCommand->geometry().releaseVertexPointer();
@@ -356,7 +357,6 @@ namespace nCine
 		batchCommand->material().setBlendingEnabled(refCommand->material().isBlendingEnabled());
 		batchCommand->material().setBlendingFactors(refCommand->material().srcBlendingFactor(), refCommand->material().destBlendingFactor());
 		batchCommand->setBatchSize((int)(nextStart - start));
-		batchCommand->material().uniformBlock(Material::InstancesBlockName)->setUsedSize(instancesBlockOffset);
 		batchCommand->setLayer(refCommand->layer());
 		batchCommand->setVisitOrder(refCommand->visitOrder());
 

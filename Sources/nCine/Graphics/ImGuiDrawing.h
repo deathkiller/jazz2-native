@@ -15,6 +15,7 @@ namespace nCine
 	class GLBufferObject;
 	class RenderCommand;
 	class RenderQueue;
+	class IInputEventHandler;
 
 	/// The class the handles ImGui drawing
 	class ImGuiDrawing
@@ -43,6 +44,7 @@ namespace nCine
 		static const int UniformsBufferSize = 65;
 		unsigned char uniformsBuffer_[UniformsBufferSize];
 		std::unique_ptr<GLShaderUniforms> imguiShaderUniforms_;
+		IInputEventHandler* appInputHandler_;
 
 		int lastFrameWidth_;
 		int lastFrameHeight_;

@@ -47,7 +47,7 @@ namespace nCine
 
 		/// Returns the size of the loaded buffer in bytes
 		inline unsigned long bufferSize() const {
-			return numSamples_ * numChannels_ * bytesPerSample_;
+			return (numSamples_ == UINT32_MAX ? UINT32_MAX : (numSamples_ * numChannels_ * bytesPerSample_));
 		}
 
 		/// Returns the number of samples in the streaming buffer

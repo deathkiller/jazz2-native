@@ -2,8 +2,8 @@
 
 #include "ImGuiAndroidInput.h"
 #include "AndroidJniHelper.h"
-#include "../Application.h"
-#include "../Input/ImGuiJoyMappedInput.h"
+#include "../../Application.h"
+#include "../../Input/ImGuiJoyMappedInput.h"
 
 #include <imgui.h>
 

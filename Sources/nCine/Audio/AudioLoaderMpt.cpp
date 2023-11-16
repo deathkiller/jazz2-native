@@ -17,7 +17,7 @@ namespace nCine
 		bytesPerSample_ = 2;
 		numChannels_ = 2;
 		frequency_ = device.nativeFrequency();
-		numSamples_ = -1;
+		numSamples_ = UINT32_MAX;
 		hasLoaded_ = true;
 	}
 

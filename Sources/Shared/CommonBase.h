@@ -435,6 +435,24 @@
 #	endif
 #endif
 
+/** @brief Mark an if condition as likely to happen */
+#if (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 10) || (DEATH_CXX_STANDARD > 201703 && ((defined(DEATH_TARGET_CLANG) && !defined(DEATH_TARGET_APPLE_CLANG) && __clang_major__ >= 12) || (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926)))
+#	define DEATH_LIKELY(...) (__VA_ARGS__) [[likely]]
+#elif defined(DEATH_TARGET_GCC)
+#	define DEATH_LIKELY(...) (__builtin_expect((__VA_ARGS__), 1))
+#else
+#	define DEATH_LIKELY(...) (__VA_ARGS__)
+#endif
+
+/** @brief Mark an if condition as unlikely to happen */
+#if (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 10) || (DEATH_CXX_STANDARD > 201703 && ((defined(DEATH_TARGET_CLANG) && !defined(DEATH_TARGET_APPLE_CLANG) && __clang_major__ >= 12) || (defined(DEATH_TARGET_MSVC) && _MSC_VER >= 1926)))
+#	define DEATH_UNLIKELY(...) (__VA_ARGS__) [[unlikely]]
+#elif defined(DEATH_TARGET_GCC)
+#	define DEATH_UNLIKELY(...) (__builtin_expect((__VA_ARGS__), 0))
+#else
+#	define DEATH_UNLIKELY(...) (__VA_ARGS__)
+#endif
+
 /** @brief Passthrough */
 #define DEATH_PASSTHROUGH(...) __VA_ARGS__
 /** @brief No-op */
