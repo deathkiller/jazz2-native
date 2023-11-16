@@ -11,6 +11,7 @@
 #include "GL/GLDepthTest.h"
 #include "GL/GLCullFace.h"
 #include "../Application.h"
+#include "../Input/IInputManager.h"
 
 #include <imgui.h>
 
@@ -23,7 +24,7 @@
 #elif defined(WITH_QT5)
 #	include "../Backends/ImGuiQt5Input.h"
 #elif defined(DEATH_TARGET_ANDROID)
-#	include "../Backends/ImGuiAndroidInput.h"
+#	include "../Backends/Android/ImGuiAndroidInput.h"
 #endif
 
 #if defined(WITH_EMBEDDED_SHADERS)
@@ -36,10 +37,10 @@ using namespace Death::IO;
 namespace nCine
 {
 	ImGuiDrawing::ImGuiDrawing(bool withSceneGraph)
-		: withSceneGraph_(withSceneGraph), lastFrameWidth_(0), lastFrameHeight_(0), lastLayerValue_(0)
+		: withSceneGraph_(withSceneGraph), appInputHandler_(nullptr), lastFrameWidth_(0), lastFrameHeight_(0), lastLayerValue_(0)
 	{
 		ImGuiIO& io = ImGui::GetIO();
-		//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad;
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad;
 
 #if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		io.BackendRendererName = "nCine_OpenGL_ES";
@@ -82,9 +83,22 @@ namespace nCine
 #if defined(DEATH_TARGET_WINDOWS)
 		String systemFont = fs::CombinePath(fs::GetWindowsDirectory(), "Fonts\\SegoeUI.ttf");
 		if (fs::FileExists(systemFont)) {
-			io.Fonts->AddFontFromFileTTF(systemFont.data(), 17.0f);
+			// Include the most of european latin characters
+			static const ImWchar ranges[] = { 0x0020, 0x017E, 0 };
+			io.Fonts->AddFontFromFileTTF(systemFont.data(), 17.0f, nullptr, ranges);
 		}
 #endif
+
+		// TODO: Add these lines to "ImGui::NavUpdateCancelRequest()"
+		/*
+			if (g.NavWindow && ((g.NavWindow->Flags & ImGuiWindowFlags_Popup) || !(g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow))) {
+				if (g.NavWindow->NavLastIds[0] != 0) {
+					g.NavWindow->NavLastIds[0] = 0;
+				} else {
+					FocusWindow(NULL);
+				}
+			}
+		*/
 	}
 
 	ImGuiDrawing::~ImGuiDrawing()
@@ -143,6 +157,19 @@ namespace nCine
 	{
 		ImGui::EndFrame();
 		ImGui::Render();
+
+		ImGuiIO& io = ImGui::GetIO();
+		if (io.WantCaptureKeyboard) {
+			if (appInputHandler_ == nullptr) {
+				appInputHandler_ = IInputManager::handler();
+				IInputManager::setHandler(nullptr);
+			}
+		} else {
+			if (appInputHandler_ != nullptr) {
+				IInputManager::setHandler(appInputHandler_);
+				appInputHandler_ = nullptr;
+			}
+		}
 
 		draw(renderQueue);
 	}

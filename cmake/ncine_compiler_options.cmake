@@ -105,7 +105,7 @@ if(WIN32)
 		# Link to Windows Sockets 2 library for HTTP requests
 		target_link_libraries(${NCINE_APP} PRIVATE ws2_32)
 		
-		# Try to use VC-LTL library
+		# Try to use VC-LTL library (if not disabled)
 		if(DEATH_WITH_VC_LTL AND MSVC)
 			if(NOT VC_LTL_Root)
 				if(EXISTS "${NCINE_ROOT}/Libs/VC-LTL/_msvcrt.h")
@@ -140,6 +140,7 @@ if(EMSCRIPTEN)
 		"SHELL:-s DISABLE_EXCEPTION_CATCHING=1"
 		"SHELL:-s FORCE_FILESYSTEM=1"
 		"SHELL:-s ALLOW_MEMORY_GROWTH=1"
+		"SHELL:-s STACK_SIZE=131072" # 128 Kb
 		"SHELL:-s MALLOC='emmalloc'"
 		"SHELL:-s LZ4=1"
 		"SHELL:--bind")
@@ -214,15 +215,15 @@ endif()
 if(MSVC)
 	# Build with Multiple Processes and force UTF-8
 	target_compile_options(${NCINE_APP} PRIVATE /MP /utf-8)
-	# Always use the non debug version of the runtime library
+	# Always use the non-debug version of the runtime library
 	target_compile_options(${NCINE_APP} PUBLIC $<IF:$<BOOL:${VC_LTL_FOUND}>,/MT,/MD>)
-	# Disabling exceptions
+	# Disable exceptions
 	target_compile_definitions(${NCINE_APP} PRIVATE "_HAS_EXCEPTIONS=0")
 	target_compile_options(${NCINE_APP} PRIVATE /EHsc)
-	# Extra optimizations in release
+	# Extra optimizations in Release
 	target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:/fp:fast /O2 /Oi /Qpar /Gy>)
-	# Include PDB debug information in release
-	target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:/Zi>)
+	# Include PDB debug information in Release and enable hot reloading in Debug
+	target_compile_options(${NCINE_APP} PRIVATE $<IF:$<CONFIG:Debug>,/ZI,/Zi>)
 	target_link_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:/DEBUG:FULL>)
 	# Turn off SAFESEH because of OpenAL on x86 and also UAC
 	target_link_options(${NCINE_APP} PRIVATE /SAFESEH:NO /MANIFESTUAC:NO)
@@ -233,7 +234,7 @@ if(MSVC)
 		target_compile_options(${NCINE_APP} PRIVATE /arch:${NCINE_ARCH_EXTENSIONS})
 	endif()
 
-	# Enabling Whole Program Optimization
+	# Enable Whole Program Optimization
 	if(NCINE_LINKTIME_OPTIMIZATION)
 		target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:/GL>)
 		target_link_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:/LTCG>)
@@ -249,9 +250,8 @@ if(MSVC)
 	# "conversion from 'size_t' to '<smaller int type>', possible loss of data"
 	target_compile_options(${NCINE_APP} PUBLIC "/wd4244" "/wd4267")
 
-	# Disabling incremental linking and manifest generation
-	target_link_options(${NCINE_APP} PRIVATE $<$<CONFIG:Debug>:/MANIFEST:NO /INCREMENTAL:NO>)
-	target_link_options(${NCINE_APP} PRIVATE $<$<CONFIG:RelWithDebInfo>:/MANIFEST:NO /INCREMENTAL:NO>)
+	# Adjust incremental linking
+	target_link_options(${NCINE_APP} PRIVATE $<IF:$<CONFIG:Debug>,/INCREMENTAL,/INCREMENTAL:NO>)
 
 	if(NCINE_WITH_TRACY)
 		target_link_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:/DEBUG>)
@@ -272,13 +272,13 @@ else() # GCC and LLVM
 		target_link_options(${NCINE_APP} PUBLIC -municode)
 	endif()
 	
-	# Only in debug - preserve debug information
+	# Only in Debug - preserve debug information
 	if(EMSCRIPTEN)
 		target_compile_options(${NCINE_APP} PUBLIC $<$<CONFIG:Debug>:-g>)
 		target_link_options(${NCINE_APP} PUBLIC $<$<CONFIG:Debug>:-g>)
 	endif()
 
-	# Only in debug
+	# Only in Debug
 	if(NCINE_ADDRESS_SANITIZER)
 		# Add ASan options as public so that targets linking the library will also use them
 		if(EMSCRIPTEN)
@@ -290,7 +290,7 @@ else() # GCC and LLVM
 		endif()
 	endif()
 
-	# Only in debug
+	# Only in Debug
 	if(NCINE_UNDEFINED_SANITIZER)
 		# Add UBSan options as public so that targets linking the library will also use them
 		if(EMSCRIPTEN)
@@ -302,7 +302,7 @@ else() # GCC and LLVM
 		endif()
 	endif()
 
-	# Only in debug
+	# Only in Debug
 	if(("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang") AND NCINE_CODE_COVERAGE)
 		# Add code coverage options as public so that targets linking the library will also use them
 		target_compile_options(${NCINE_APP} PUBLIC $<$<CONFIG:Debug>:--coverage>)
@@ -329,7 +329,7 @@ else() # GCC and LLVM
 
 		target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Debug>:-fvar-tracking-assignments>)
 
-		# Extra optimizations in release
+		# Extra optimizations in Release
 		if(NINTENDO_SWITCH)
 			# -Ofast is crashing on Nintendo Switch for some reason, use -O2 instead
 			target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:-O2 -funsafe-loop-optimizations -ftree-loop-if-convert-stores>)
@@ -361,11 +361,11 @@ else() # GCC and LLVM
 		endif()
 
 		if(NOT EMSCRIPTEN)
-			# Extra optimizations in release
+			# Extra optimizations in Release
 			target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:-Ofast>)
 		endif()
 
-		# Enabling ThinLTO of Clang 4
+		# Enable ThinLTO of Clang 4
 		if(NCINE_LINKTIME_OPTIMIZATION)
 			if(EMSCRIPTEN)
 				target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:-flto>)

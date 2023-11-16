@@ -70,10 +70,9 @@ namespace nCine
 	}
 
 	ImGuiDebugOverlay::ImGuiDebugOverlay(float profileTextUpdateTime)
-		: IDebugOverlay(profileTextUpdateTime), disableAppInputEvents_(false), appInputHandler_(nullptr), lockOverlayPositions_(false),
-			showTopLeftOverlay_(true), showTopRightOverlay_(true), showBottomLeftOverlay_(true), showBottomRightOverlay_(true),
-			numValues_(80), maxFrameTime_(0.0f), maxUpdateVisitDraw_(0.0f), index_(0), plotAdditionalFrameValues_(false),
-			plotOverlayValues_(true)
+		: IDebugOverlay(profileTextUpdateTime), lockOverlayPositions_(false), showTopLeftOverlay_(true), showTopRightOverlay_(true),
+			showBottomLeftOverlay_(true), showBottomRightOverlay_(true), numValues_(80), maxFrameTime_(0.0f), maxUpdateVisitDraw_(0.0f),
+			index_(0), plotAdditionalFrameValues_(false), plotOverlayValues_(true)
 #if defined(WITH_RENDERDOC)
 			, renderDocPathTemplate_(MaxRenderDocPathLength), renderDocFileComments_(MaxRenderDocCommentsLength),
 				renderDocCapturePath_(MaxRenderDocPathLength), renderDocLastNumCaptures_(0)
@@ -84,19 +83,25 @@ namespace nCine
 
 	void ImGuiDebugOverlay::update()
 	{
-		// Application events cannot stay disabled after the interface is hidden
-		if (!settings_.showInterface)
-			disableAppInputEvents_ = false;
-
-		if (disableAppInputEvents_ && appInputHandler_ == nullptr) {
-			appInputHandler_ = IInputManager::handler();
-			IInputManager::setHandler(nullptr);
-		} else if (disableAppInputEvents_ == false && appInputHandler_) {
-			IInputManager::setHandler(appInputHandler_);
-			appInputHandler_ = nullptr;
-		}
+		// TODO: MenuBar
+		/*if (ImGui::BeginMainMenuBar()) {
+			if (ImGui::BeginMenu("File")) {
+				if (ImGui::MenuItem("Create")) {
+				}
+				if (ImGui::MenuItem("Open", "Ctrl+O")) {
+				}
+				if (ImGui::MenuItem("Save", "Ctrl+S")) {
+				}
+				if (ImGui::MenuItem("Save as..")) {
+				}
+				ImGui::EndMenu();
+			}
+			ImGui::EndMainMenuBar();
+		}*/
 
 		guiWindow();
+
+		//ImGui::ShowMetricsWindow();
 
 		if (settings_.showInfoText) {
 			const AppConfiguration& appCfg = theApplication().appConfiguration();
@@ -139,49 +144,48 @@ namespace nCine
 				plotValues_[ValuesType::Draw][index_] = timings[(int)Application::Timings::Draw] * 1000.0f;
 			}
 #endif
-			if (index_ > 0) {
-				float maxFrameTime = 0.0f, avgFrameTime = 0.0f;
+
+			float maxFrameTime = 0.0f, avgFrameTime = 0.0f;
 #if defined(NCINE_PROFILING)
-				float maxUpdateVisitDraw = 0.0f, avgUpdateVisitDraw = 0.0f;
+			float maxUpdateVisitDraw = 0.0f, avgUpdateVisitDraw = 0.0f;
 #endif
-				for (unsigned int i = 0; i < index_; i++) {
-					if (maxFrameTime < plotValues_[ValuesType::FrameTime][i]) {
-						maxFrameTime = plotValues_[ValuesType::FrameTime][i];
-					}
-					avgFrameTime += plotValues_[ValuesType::FrameTime][i];
+			for (unsigned int i = 0; i < numValues_; i++) {
+				if (maxFrameTime < plotValues_[ValuesType::FrameTime][i]) {
+					maxFrameTime = plotValues_[ValuesType::FrameTime][i];
+				}
+				avgFrameTime += plotValues_[ValuesType::FrameTime][i];
 
 #if defined(NCINE_PROFILING)
-					if (appCfg.withScenegraph) {
-						if (maxUpdateVisitDraw < plotValues_[ValuesType::UpdateVisitDraw][i]) {
-							maxUpdateVisitDraw = plotValues_[ValuesType::UpdateVisitDraw][i];
-						}
-						avgUpdateVisitDraw += plotValues_[ValuesType::UpdateVisitDraw][i];
+				if (appCfg.withScenegraph) {
+					if (maxUpdateVisitDraw < plotValues_[ValuesType::UpdateVisitDraw][i]) {
+						maxUpdateVisitDraw = plotValues_[ValuesType::UpdateVisitDraw][i];
 					}
-#endif
-				}
-
-				avgFrameTime = avgFrameTime * 2.0f / index_;
-				if (maxFrameTime < avgFrameTime) {
-					maxFrameTime = avgFrameTime;
-				}
-				if (maxFrameTime_ < maxFrameTime) {
-					maxFrameTime_ = maxFrameTime;
-				} else {
-					maxFrameTime_ = lerp(maxFrameTime_, maxFrameTime, 0.2f);
-				}
-
-#if defined(NCINE_PROFILING)
-				avgUpdateVisitDraw = avgUpdateVisitDraw * 2.0f / index_;
-				if (maxUpdateVisitDraw < avgUpdateVisitDraw) {
-					maxUpdateVisitDraw = avgUpdateVisitDraw;
-				}
-				if (maxUpdateVisitDraw_ < maxUpdateVisitDraw) {
-					maxUpdateVisitDraw_ = maxUpdateVisitDraw;
-				} else {
-					maxUpdateVisitDraw_ = lerp(maxUpdateVisitDraw_, maxUpdateVisitDraw, 0.2f);
+					avgUpdateVisitDraw += plotValues_[ValuesType::UpdateVisitDraw][i];
 				}
 #endif
 			}
+
+			avgFrameTime = avgFrameTime * 2.0f / numValues_;
+			if (maxFrameTime < avgFrameTime) {
+				maxFrameTime = avgFrameTime;
+			}
+			if (maxFrameTime_ < maxFrameTime) {
+				maxFrameTime_ = maxFrameTime;
+			} else {
+				maxFrameTime_ = lerp(maxFrameTime_, maxFrameTime, 0.2f);
+			}
+
+#if defined(NCINE_PROFILING)
+			avgUpdateVisitDraw = avgUpdateVisitDraw * 2.0f / numValues_;
+			if (maxUpdateVisitDraw < avgUpdateVisitDraw) {
+				maxUpdateVisitDraw = avgUpdateVisitDraw;
+			}
+			if (maxUpdateVisitDraw_ < maxUpdateVisitDraw) {
+				maxUpdateVisitDraw_ = maxUpdateVisitDraw;
+			} else {
+				maxUpdateVisitDraw_ = lerp(maxUpdateVisitDraw_, maxUpdateVisitDraw, 0.2f);
+			}
+#endif
 
 			if (appCfg.withScenegraph) {
 				updateOverlayTimings();
@@ -279,8 +283,6 @@ namespace nCine
 
 		const AppConfiguration& appCfg = theApplication().appConfiguration();
 
-		ImGui::Checkbox("Disable app input events", &disableAppInputEvents_);
-		ImGui::SameLine();
 		bool disableAutoSuspension = !theApplication().autoSuspension();
 		ImGui::Checkbox("Disable auto-suspension", &disableAutoSuspension);
 		theApplication().setAutoSuspension(!disableAutoSuspension);
@@ -720,7 +722,12 @@ namespace nCine
 					ImGui::Text("Buffer Id: %u", player->bufferId());
 					ImGui::Text("Channels: %d", player->numChannels());
 					ImGui::Text("Frequency: %d Hz", player->frequency());
-					ImGui::Text("Buffer Size: %lu bytes", player->bufferSize());
+					auto bufferSize = player->bufferSize();
+					if (bufferSize == UINT32_MAX) {
+						ImGui::Text("Buffer Size: Streaming");
+					} else {
+						ImGui::Text("Buffer Size: %lu bytes", bufferSize);
+					}
 					ImGui::NewLine();
 
 					ImGui::Text("State: %s", audioPlayerStateToString(player->state()));
@@ -1281,8 +1288,8 @@ namespace nCine
 
 			ImGui::Text("Culled nodes: %u", RenderStatistics::culled());
 			if (plotOverlayValues_) {
-				ImGui::SameLine();
-				ImGui::PlotLines("", plotValues_[ValuesType::CulledNodes].get(), numValues_, 0, nullptr, 0.0f, FLT_MAX);
+				ImGui::SameLine(180.0f);
+				ImGui::PlotLines("", plotValues_[ValuesType::CulledNodes].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 			}
 
 			ImGui::Text("%u/%u VAOs (%u reuses, %u bindings)", vaoPool.size, vaoPool.capacity, vaoPool.reuses, vaoPool.bindings);
@@ -1292,20 +1299,20 @@ namespace nCine
 			ImGui::Text("%.2f Kb in %u custom IBO(s)", customIbos.dataSize / 1024.0f, customIbos.count);
 			ImGui::Text("%.2f/%lu Kb in %u VBO(s)", vboBuffers.usedSpace / 1024.0f, vboBuffers.size / 1024, vboBuffers.count);
 			if (plotOverlayValues_) {
-				ImGui::SameLine();
-				ImGui::PlotLines("", plotValues_[ValuesType::VboUsed].get(), numValues_, 0, nullptr, 0.0f, vboBuffers.size / 1024.0f);
+				ImGui::SameLine(180.0f);
+				ImGui::PlotLines("", plotValues_[ValuesType::VboUsed].get(), numValues_, index_, nullptr, 0.0f, vboBuffers.size / 1024.0f);
 			}
 
 			ImGui::Text("%.2f/%lu Kb in %u IBO(s)", iboBuffers.usedSpace / 1024.0f, iboBuffers.size / 1024, iboBuffers.count);
 			if (plotOverlayValues_) {
-				ImGui::SameLine();
-				ImGui::PlotLines("", plotValues_[ValuesType::IboUsed].get(), numValues_, 0, nullptr, 0.0f, iboBuffers.size / 1024.0f);
+				ImGui::SameLine(180.0f);
+				ImGui::PlotLines("", plotValues_[ValuesType::IboUsed].get(), numValues_, index_, nullptr, 0.0f, iboBuffers.size / 1024.0f);
 			}
 
 			ImGui::Text("%.2f/%lu Kb in %u UBO(s)", uboBuffers.usedSpace / 1024.0f, uboBuffers.size / 1024, uboBuffers.count);
 			if (plotOverlayValues_) {
-				ImGui::SameLine();
-				ImGui::PlotLines("", plotValues_[ValuesType::UboUsed].get(), numValues_, 0, nullptr, 0.0f, uboBuffers.size / 1024.0f);
+				ImGui::SameLine(180.0f);
+				ImGui::PlotLines("", plotValues_[ValuesType::UboUsed].get(), numValues_, index_, nullptr, 0.0f, uboBuffers.size / 1024.0f);
 			}
 
 			ImGui::Text("Viewport chain length: %u", Viewport::chain().size());
@@ -1341,52 +1348,54 @@ namespace nCine
 				const RenderStatistics::Commands& unspecifiedCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Unspecified);
 				const RenderStatistics::Commands& allCommands = RenderStatistics::allCommands();
 
+				ImGui::Separator();
 				ImGui::Text("Sprites: %uV, %uDC (%u Tr), %uI/%uB", spriteCommands.vertices, spriteCommands.commands, spriteCommands.transparents, spriteCommands.instances, spriteCommands.batchSize);
 				if (plotOverlayValues_) {
-					ImGui::SameLine();
-					ImGui::PlotLines("", plotValues_[ValuesType::SpriteVertices].get(), numValues_, 0, nullptr, 0.0f, FLT_MAX);
+					ImGui::SameLine(230.0f);
+					ImGui::PlotLines("", plotValues_[ValuesType::SpriteVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 				}
 
 				ImGui::Text("Mesh Sprites: %uV, %uDC (%u Tr), %uI/%uB", meshspriteCommands.vertices, meshspriteCommands.commands, meshspriteCommands.transparents, meshspriteCommands.instances, meshspriteCommands.batchSize);
 				if (plotOverlayValues_) {
-					ImGui::SameLine();
-					ImGui::PlotLines("", plotValues_[ValuesType::MeshSpriteVertices].get(), numValues_, 0, nullptr, 0.0f, FLT_MAX);
+					ImGui::SameLine(230.0f);
+					ImGui::PlotLines("", plotValues_[ValuesType::MeshSpriteVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 				}
 
 				ImGui::Text("Tile Map: %uV, %uDC (%u Tr), %uI/%uB\n", tileMapCommands.vertices, tileMapCommands.commands, tileMapCommands.transparents, tileMapCommands.instances, tileMapCommands.batchSize);
 				if (plotOverlayValues_) {
-					ImGui::SameLine();
-					ImGui::PlotLines("", plotValues_[ValuesType::TileMapVertices].get(), numValues_, 0, nullptr, 0.0f, FLT_MAX);
+					ImGui::SameLine(230.0f);
+					ImGui::PlotLines("", plotValues_[ValuesType::TileMapVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 				}
 
 				ImGui::Text("Particles: %uV, %uDC (%u Tr), %uI/%uB\n", particleCommands.vertices, particleCommands.commands, particleCommands.transparents, particleCommands.instances, particleCommands.batchSize);
 				if (plotOverlayValues_) {
-					ImGui::SameLine();
-					ImGui::PlotLines("", plotValues_[ValuesType::ParticleVertices].get(), numValues_, 0, nullptr, 0.0f, FLT_MAX);
+					ImGui::SameLine(230.0f);
+					ImGui::PlotLines("", plotValues_[ValuesType::ParticleVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 				}
 
 				ImGui::Text("Text: %uV, %uDC (%u Tr), %uI/%uB", textCommands.vertices, textCommands.commands, textCommands.transparents, textCommands.instances, textCommands.batchSize);
 				if (plotOverlayValues_) {
-					ImGui::SameLine();
-					ImGui::PlotLines("", plotValues_[ValuesType::TextVertices].get(), numValues_, 0, nullptr, 0.0f, FLT_MAX);
+					ImGui::SameLine(230.0f);
+					ImGui::PlotLines("", plotValues_[ValuesType::TextVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 				}
 
 				ImGui::Text("ImGui: %uV, %uDC (%u Tr), %uI/%u", imguiCommands.vertices, imguiCommands.commands, imguiCommands.transparents, imguiCommands.instances, imguiCommands.batchSize);
 				if (plotOverlayValues_) {
-					ImGui::SameLine();
-					ImGui::PlotLines("", plotValues_[ValuesType::ImGuiVertices].get(), numValues_, 0, nullptr, 0.0f, FLT_MAX);
+					ImGui::SameLine(230.0f);
+					ImGui::PlotLines("", plotValues_[ValuesType::ImGuiVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 				}
 
 				ImGui::Text("Unspecified: %uV, %uDC (%u Tr), %uI/%u", unspecifiedCommands.vertices, unspecifiedCommands.commands, unspecifiedCommands.transparents, unspecifiedCommands.instances, unspecifiedCommands.batchSize);
 				if (plotOverlayValues_) {
-					ImGui::SameLine();
-					ImGui::PlotLines("", plotValues_[ValuesType::UnspecifiedVertices].get(), numValues_, 0, nullptr, 0.0f, FLT_MAX);
+					ImGui::SameLine(230.0f);
+					ImGui::PlotLines("", plotValues_[ValuesType::UnspecifiedVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 				}
 
+				ImGui::Separator();
 				ImGui::Text("Total: %uV, %uDC (%u Tr), %uI/%uB", allCommands.vertices, allCommands.commands, allCommands.transparents, allCommands.instances, allCommands.batchSize);
 				if (plotOverlayValues_) {
-					ImGui::SameLine();
-					ImGui::PlotLines("", plotValues_[ValuesType::TotalVertices].get(), numValues_, 0, nullptr, 0.0f, FLT_MAX);
+					ImGui::SameLine(230.0f);
+					ImGui::PlotLines("", plotValues_[ValuesType::TotalVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 				}
 			}
 
@@ -1435,13 +1444,13 @@ namespace nCine
 			ImGui::Text("Used memory: %zu Kb", LuaStatistics::usedMemory() / 1024);
 			if (plotOverlayValues_) {
 				ImGui::SameLine();
-				ImGui::PlotLines("", plotValues_[ValuesType::LuaUsed].get(), numValues_, 0, nullptr, 0.0f, FLT_MAX);
+				ImGui::PlotLines("", plotValues_[ValuesType::LuaUsed].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 			}
 
 			ImGui::Text("Operations: %d ops/s", LuaStatistics::operations());
 			if (plotOverlayValues_) {
 				ImGui::SameLine();
-				ImGui::PlotLines("", plotValues_[ValuesType::LuaOperations].get(), numValues_, 0, nullptr, 0.0f, FLT_MAX);
+				ImGui::PlotLines("", plotValues_[ValuesType::LuaOperations].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 			}
 
 			ImGui::Text("Textures: %u, Sprites: %u, Mesh sprites: %u",
@@ -1477,33 +1486,33 @@ namespace nCine
 			windowFlags |= ImGuiWindowFlags_NoMove;
 		ImGui::Begin("###Plots", nullptr, windowFlags);
 
-		ImGui::PlotLines("Frame time", plotValues_[ValuesType::FrameTime].get(), numValues_, 0, nullptr, 0.0f, maxFrameTime_, ImVec2(appWidth * 0.2f, 0.0f));
+		ImGui::PlotLines("Frame time", plotValues_[ValuesType::FrameTime].get(), numValues_, index_, nullptr, 0.0f, maxFrameTime_, ImVec2(appWidth * 0.2f, 0.0f));
 
 #if defined(NCINE_PROFILING)
 		const AppConfiguration& appCfg = theApplication().appConfiguration();
 		if (appCfg.withScenegraph) {
 			ImGui::Separator();
 			ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
-			ImGui::PlotLines("Update", plotValues_[ValuesType::Update].get(), numValues_, 0, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
+			ImGui::PlotLines("Update", plotValues_[ValuesType::Update].get(), numValues_, index_, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
 			ImGui::PopStyleColor();
 			ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(0.6f, 1.0f, 0.2f, 1.0f));
-			ImGui::PlotLines("Visit", plotValues_[ValuesType::Visit].get(), numValues_, 0, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
+			ImGui::PlotLines("Visit", plotValues_[ValuesType::Visit].get(), numValues_, index_, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
 			ImGui::PopStyleColor();
 			ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(0.2f, 0.8f, 1.0f, 1.0f));
-			ImGui::PlotLines("Draw", plotValues_[ValuesType::Draw].get(), numValues_, 0, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
+			ImGui::PlotLines("Draw", plotValues_[ValuesType::Draw].get(), numValues_, index_, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
 			ImGui::PopStyleColor();
 			ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
-			ImGui::PlotLines("Aggregated", plotValues_[ValuesType::UpdateVisitDraw].get(), numValues_, 0, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
+			ImGui::PlotLines("Aggregated", plotValues_[ValuesType::UpdateVisitDraw].get(), numValues_, index_, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
 			ImGui::PopStyleColor();
 		}
 
 		if (plotAdditionalFrameValues_) {
 			ImGui::Separator();
-			ImGui::PlotLines("onFrameStart", plotValues_[ValuesType::FrameStart].get(), numValues_, 0, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
+			ImGui::PlotLines("OnFrameStart", plotValues_[ValuesType::FrameStart].get(), numValues_, index_, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
 			if (appCfg.withScenegraph)
-				ImGui::PlotLines("onPostUpdate", plotValues_[ValuesType::PostUpdate].get(), numValues_, 0, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
-			ImGui::PlotLines("onFrameEnd", plotValues_[ValuesType::FrameEnd].get(), numValues_, 0, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
-			ImGui::PlotLines("ImGui", plotValues_[ValuesType::ImGui].get(), numValues_, 0, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
+				ImGui::PlotLines("OnPostUpdate", plotValues_[ValuesType::PostUpdate].get(), numValues_, index_, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
+			ImGui::PlotLines("OnFrameEnd", plotValues_[ValuesType::FrameEnd].get(), numValues_, index_, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
+			ImGui::PlotLines("ImGui", plotValues_[ValuesType::ImGui].get(), numValues_, index_, nullptr, 0.0f, maxUpdateVisitDraw_, ImVec2(appWidth * 0.2f, 0.0f));
 		}
 #endif
 
