@@ -25,23 +25,10 @@ using namespace nCine;
 namespace Jazz2::Actors
 {
 	ActorBase::ActorBase()
-		:
-		_state(ActorState::None),
-		_levelHandler(nullptr),
-		_internalForceY(0.0f),
-		_elasticity(0.0f),
-		_friction(1.5f),
-		_unstuckCooldown(0.0f),
-		_frozenTimeLeft(0.0f),
-		_maxHealth(1),
-		_health(1),
-		_spawnFrames(0.0f),
-		_metadata(nullptr),
-		_renderer(this),
-		_currentAnimation(nullptr),
-		_currentTransition(nullptr),
-		_currentTransitionCancellable(false),
-		CollisionProxyID(Collisions::NullNode)
+		: _state(ActorState::None), _levelHandler(nullptr), _internalForceY(0.0f), _elasticity(0.0f), _friction(1.5f),
+			_unstuckCooldown(0.0f), _frozenTimeLeft(0.0f), _maxHealth(1), _health(1), _spawnFrames(0.0f), _metadata(nullptr),
+			_renderer(this), _currentAnimation(nullptr), _currentTransition(nullptr), _currentTransitionCancellable(false),
+			CollisionProxyID(Collisions::NullNode)
 	{
 	}
 

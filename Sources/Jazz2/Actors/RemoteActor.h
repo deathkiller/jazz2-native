@@ -11,7 +11,7 @@ namespace Jazz2::Actors
 	public:
 		RemoteActor();
 
-		void AssignMetadata(const StringView& path, AnimState anim);
+		void AssignMetadata(const StringView& path, AnimState anim, ActorState state);
 		void SyncWithServer(const Vector2f& pos, AnimState anim, bool isVisible, bool isFacingLeft);
 
 	protected:

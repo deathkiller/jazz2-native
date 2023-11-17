@@ -1298,69 +1298,10 @@ namespace Jazz2::Actors
 				TakeDamage(1, 4 * (_pos.X > enemy->GetPos().X ? 1.0f : -1.0f));
 			}
 		} else if (auto spring = dynamic_cast<Environment::Spring*>(other.get())) {
-			// Collide only with hitbox
+			// Collide only with hitbox here
 			if (_controllableExternal && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionLedgeClimb) && _springCooldown <= 0.0f && spring->AABBInner.Overlaps(AABBInner)) {
-				Vector2 force = spring->Activate();
-				int sign = ((force.X + force.Y) > std::numeric_limits<float>::epsilon() ? 1 : -1);
-				if (std::abs(force.X) > 0.0f) {
-					removeSpecialMove = true;
-					_copterFramesLeft = 0.0f;
-					//speedX = force.X;
-					_speed.X = (1.0f + std::abs(force.X)) * sign;
-					_externalForce.X = force.X * 0.6f;
-					_springCooldown = 10.0f;
-					SetState(ActorState::CanJump, false);
-
-					_wasActivelyPushing = false;
-					_keepRunningTime = 100.0f;
-
-					if (!spring->KeepSpeedY) {
-						_speed.Y = 0.0f;
-						_externalForce.Y = 0.0f;
-					}
-
-					if (_inIdleTransition) {
-						_inIdleTransition = false;
-						CancelTransition();
-					}
-
-					SetPlayerTransition(AnimState::Dash | AnimState::Jump, true, false, SpecialMoveType::None);
-					_controllableTimeout = 2.0f;
-				} else if (std::abs(force.Y) > 0.0f) {
-					_copterFramesLeft = 0.0f;
-					_speed.Y = (4.0f + std::abs(force.Y)) * sign;
-					if (!GetState(ActorState::ApplyGravitation)) {
-						_externalForce.Y = force.Y * 0.14f;
-					} else if (_levelHandler->IsReforged()) {
-						_externalForce.Y = force.Y;
-					} else {
-						_externalForce.Y = force.Y * 0.8f;
-					}
-					_springCooldown = 10.0f;
-					SetState(ActorState::CanJump, false);
-
-					if (!spring->KeepSpeedX) {
-						_speed.X = 0.0f;
-						_externalForce.X = 0.0f;
-						_keepRunningTime = 0.0f;
-					}
-
-					if (_inIdleTransition) {
-						_inIdleTransition = false;
-						CancelTransition();
-					}
-
-					if (sign > 0) {
-						removeSpecialMove = false;
-						_currentSpecialMove = SpecialMoveType::Buttstomp;
-						SetAnimation(AnimState::Buttstomp);
-					} else {
-						removeSpecialMove = true;
-						_isSpring = true;
-					}
-
-					PlaySfx("Spring"_s);
-				}
+				Vector2f force = spring->Activate();
+				OnHitSpring(force, spring->KeepSpeedX, spring->KeepSpeedY, removeSpecialMove);
 			}
 
 			handled = true;
@@ -1391,6 +1332,74 @@ namespace Jazz2::Actors
 		}
 
 		return handled;
+	}
+
+	void Player::OnHitSpring(const Vector2f& force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove)
+	{
+		if (!_levelHandler->HandlePlayerSpring(this, force, keepSpeedX, keepSpeedY)) {
+			return;
+		}
+
+		std::int32_t sign = ((force.X + force.Y) > std::numeric_limits<float>::epsilon() ? 1 : -1);
+		if (std::abs(force.X) > 0.0f) {
+			removeSpecialMove = true;
+			_copterFramesLeft = 0.0f;
+			//speedX = force.X;
+			_speed.X = (1.0f + std::abs(force.X)) * sign;
+			_externalForce.X = force.X * 0.6f;
+			_springCooldown = 10.0f;
+			SetState(ActorState::CanJump, false);
+
+			_wasActivelyPushing = false;
+			_keepRunningTime = 100.0f;
+
+			if (!keepSpeedY) {
+				_speed.Y = 0.0f;
+				_externalForce.Y = 0.0f;
+			}
+
+			if (_inIdleTransition) {
+				_inIdleTransition = false;
+				CancelTransition();
+			}
+
+			SetPlayerTransition(AnimState::Dash | AnimState::Jump, true, false, SpecialMoveType::None);
+			_controllableTimeout = 2.0f;
+		} else if (std::abs(force.Y) > 0.0f) {
+			_copterFramesLeft = 0.0f;
+			_speed.Y = (4.0f + std::abs(force.Y)) * sign;
+			if (!GetState(ActorState::ApplyGravitation)) {
+				_externalForce.Y = force.Y * 0.14f;
+			} else if (_levelHandler->IsReforged()) {
+				_externalForce.Y = force.Y;
+			} else {
+				_externalForce.Y = force.Y * 0.8f;
+			}
+			_springCooldown = 10.0f;
+			SetState(ActorState::CanJump, false);
+
+			if (!keepSpeedX) {
+				_speed.X = 0.0f;
+				_externalForce.X = 0.0f;
+				_keepRunningTime = 0.0f;
+			}
+
+			if (_inIdleTransition) {
+				_inIdleTransition = false;
+				CancelTransition();
+			}
+
+			if (sign > 0) {
+				removeSpecialMove = false;
+				_currentSpecialMove = SpecialMoveType::Buttstomp;
+				SetAnimation(AnimState::Buttstomp);
+			} else {
+				removeSpecialMove = true;
+				_isSpring = true;
+			}
+
+			PlaySfx("Spring"_s);
+		}
 	}
 
 	void Player::OnHitFloor(float timeMult)
@@ -2324,7 +2333,7 @@ namespace Jazz2::Actors
 
 				SetAnimation(AnimState::Idle);
 
-				if (_levelHandler->HandlePlayerDied(std::static_pointer_cast<Player>(shared_from_this()))) {
+				if (_levelHandler->HandlePlayerDied(this)) {
 					// Reset health
 					_health = _maxHealth;
 
@@ -2564,7 +2573,7 @@ namespace Jazz2::Actors
 
 		uint16_t ammoDecrease = 256;
 
-		if (!_levelHandler->HandlePlayerFireWeapon(std::static_pointer_cast<Player>(shared_from_this()), weaponType, ammoDecrease)) {
+		if (!_levelHandler->HandlePlayerFireWeapon(this, weaponType, ammoDecrease)) {
 			return false;
 		}
 
@@ -2915,7 +2924,7 @@ namespace Jazz2::Actors
 			if (hideTrail) {
 				_trailLastPos = _pos;
 			}
-			_levelHandler->HandlePlayerWarped(std::static_pointer_cast<Player>(shared_from_this()), posPrev, true);
+			_levelHandler->HandlePlayerWarped(this, posPrev, true);
 		} else {
 			EndDamagingMove();
 			SetState(ActorState::IsInvulnerable, true);
@@ -2943,7 +2952,7 @@ namespace Jazz2::Actors
 				_trailLastPos = _pos;
 				PlayPlayerSfx("WarpOut"_s);
 
-				_levelHandler->HandlePlayerWarped(std::static_pointer_cast<Player>(shared_from_this()), posPrev, false);
+				_levelHandler->HandlePlayerWarped(this, posPrev, false);
 
 				_isFreefall |= CanFreefall();
 				SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this]() {

@@ -250,6 +250,7 @@ namespace Jazz2::Actors
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		void OnHitSpring(const Vector2f& force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove);
 		void OnHitFloor(float timeMult) override;
 		void OnHitCeiling(float timeMult) override;
 		void OnHitWall(float timeMult) override;

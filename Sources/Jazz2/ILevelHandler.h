@@ -57,7 +57,7 @@ namespace Jazz2
 
 		virtual std::shared_ptr<AudioBufferPlayer> PlaySfx(Actors::ActorBase* self, const StringView& identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain = 1.0f, float pitch = 1.0f) = 0;
 		virtual std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) = 0;
-		virtual void WarpCameraToTarget(const std::shared_ptr<Actors::ActorBase>& actor, bool fast = false) = 0;
+		virtual void WarpCameraToTarget(Actors::ActorBase* actor, bool fast = false) = 0;
 		virtual bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, Tiles::TileCollisionParams& params, Actors::ActorBase** collider) = 0;
 
 		bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, Tiles::TileCollisionParams& params)
@@ -73,9 +73,10 @@ namespace Jazz2
 		virtual void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, uint8_t* eventParams) = 0;
 		virtual void BeginLevelChange(ExitType exitType, const StringView& nextLevel) = 0;
 		virtual void HandleGameOver() = 0;
-		virtual bool HandlePlayerDied(std::shared_ptr<Actors::Player> player) = 0;
-		virtual bool HandlePlayerFireWeapon(std::shared_ptr<Actors::Player> player, WeaponType& weaponType, std::uint16_t& ammoDecrease) = 0;
-		virtual void HandlePlayerWarped(std::shared_ptr<Actors::Player> player, const Vector2f& prevPos, bool fast) = 0;
+		virtual bool HandlePlayerDied(Actors::Player* player) = 0;
+		virtual bool HandlePlayerFireWeapon(Actors::Player* player, WeaponType& weaponType, std::uint16_t& ammoDecrease) = 0;
+		virtual bool HandlePlayerSpring(Actors::Player* player, const Vector2f& force, bool keepSpeedX, bool keepSpeedY) = 0;
+		virtual void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, bool fast) = 0;
 		virtual void SetCheckpoint(const Vector2f& pos) = 0;
 		virtual void RollbackToCheckpoint() = 0;
 		virtual void ActivateSugarRush() = 0;

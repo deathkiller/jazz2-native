@@ -17,6 +17,10 @@
 #include "../nCine/Audio/AudioBufferPlayer.h"
 #include "../nCine/Audio/AudioStreamPlayer.h"
 
+#if defined(WITH_IMGUI)
+#	include <imgui.h>
+#endif
+
 namespace Jazz2
 {
 	namespace Actors
@@ -112,7 +116,7 @@ namespace Jazz2
 
 		std::shared_ptr<AudioBufferPlayer> PlaySfx(Actors::ActorBase* self, const StringView& identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch) override;
 		std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
-		void WarpCameraToTarget(const std::shared_ptr<Actors::ActorBase>& actor, bool fast = false) override;
+		void WarpCameraToTarget(Actors::ActorBase* actor, bool fast = false) override;
 		bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, Tiles::TileCollisionParams& params, Actors::ActorBase** collider) override;
 		void FindCollisionActorsByAABB(Actors::ActorBase* self, const AABBf& aabb, const std::function<bool(Actors::ActorBase*)>& callback) override;
 		void FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(Actors::ActorBase*)>& callback) override;
@@ -121,9 +125,10 @@ namespace Jazz2
 		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, uint8_t* eventParams) override;
 		void BeginLevelChange(ExitType exitType, const StringView& nextLevel) override;
 		void HandleGameOver() override;
-		bool HandlePlayerDied(std::shared_ptr<Actors::Player> player) override;
-		bool HandlePlayerFireWeapon(std::shared_ptr<Actors::Player> player, WeaponType& weaponType, std::uint16_t& ammoDecrease) override;
-		void HandlePlayerWarped(std::shared_ptr<Actors::Player> player, const Vector2f& prevPos, bool fast) override;
+		bool HandlePlayerDied(Actors::Player* player) override;
+		bool HandlePlayerFireWeapon(Actors::Player* player, WeaponType& weaponType, std::uint16_t& ammoDecrease) override;
+		bool HandlePlayerSpring(Actors::Player* player, const Vector2f& force, bool keepSpeedX, bool keepSpeedY) override;
+		void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, bool fast) override;
 		void SetCheckpoint(const Vector2f& pos) override;
 		void RollbackToCheckpoint() override;
 		void ActivateSugarRush() override;
@@ -311,6 +316,8 @@ namespace Jazz2
 
 		virtual void BeforeActorDestroyed(Actors::ActorBase* actor);
 		virtual void ProcessEvents(float timeMult);
+		virtual void ProcessQueuedNextLevel();
+		virtual void PrepareNextLevelInitialization(LevelInitialization& levelInit);
 
 		void ResolveCollisions(float timeMult);
 		void InitializeCamera();
@@ -319,5 +326,9 @@ namespace Jazz2
 
 		void PauseGame();
 		void ResumeGame();
+		
+#if defined(WITH_IMGUI)
+		ImVec2 WorldPosToScreenSpace(const Vector2f pos);
+#endif
 	};
 }

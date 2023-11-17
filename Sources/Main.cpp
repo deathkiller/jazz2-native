@@ -166,11 +166,19 @@ void GameEventHandler::OnPreInit(AppConfiguration& config)
 	auto& resolver = ContentResolver::Get();
 	config.shaderCachePath = fs::CombinePath(resolver.GetCachePath(), "Shaders"_s);
 #endif
+
+#if defined(WITH_IMGUI)
+	//config.withDebugOverlay = true;
+#endif
 }
 
 void GameEventHandler::OnInit()
 {
 	ZoneScopedC(0x888888);
+
+#if defined(WITH_IMGUI)
+	//theApplication().debugOverlaySettings().showInterface = true;
+#endif
 
 	_flags = Flags::None;
 
@@ -560,7 +568,7 @@ bool GameEventHandler::CreateServer(std::uint16_t port)
 
 	InvokeAsync([this]() {
 		// TODO: Hardcoded level
-		LevelInitialization levelInit("prince", "01_castle1", GameDifficulty::Multiplayer, true, false, PlayerType::Jazz);
+		LevelInitialization levelInit("rescue", "01_colon1", GameDifficulty::Multiplayer, true, false, PlayerType::Jazz);
 		auto levelHandler = std::make_unique<MultiLevelHandler>(this, _networkManager.get());
 		levelHandler->Initialize(levelInit);
 		SetStateHandler(std::move(levelHandler));
@@ -1253,6 +1261,17 @@ void GameEventHandler::CheckUpdates()
 
 bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 {
+#if defined(WITH_MULTIPLAYER)
+	if (levelInit.Difficulty == GameDifficulty::Multiplayer) {
+		auto levelHandler = std::make_unique<MultiLevelHandler>(this, _networkManager.get());
+		if (!levelHandler->Initialize(levelInit)) {
+			return false;
+		}
+		SetStateHandler(std::move(levelHandler));
+		return true;
+	}
+#endif
+
 	auto levelHandler = std::make_unique<LevelHandler>(this);
 	if (!levelHandler->Initialize(levelInit)) {
 		return false;
