@@ -285,47 +285,7 @@ namespace Jazz2
 		if (!IsPausable() || _pauseMenu == nullptr) {
 			if (_nextLevelType != ExitType::None) {
 				_nextLevelTime -= timeMult;
-
-				bool playersReady = true;
-				for (auto player : _players) {
-					// Exit type was already provided in BeginLevelChange()
-					playersReady &= player->OnLevelChanging(ExitType::None);
-				}
-
-				if (playersReady && _nextLevelTime <= 0.0f) {
-					StringView realNextLevel;
-					if (!_nextLevel.empty()) {
-						realNextLevel = _nextLevel;
-					} else {
-						realNextLevel = ((_nextLevelType & ExitType::TypeMask) == ExitType::Bonus ? _defaultSecretLevel : _defaultNextLevel);
-					}
-
-					LevelInitialization levelInit;
-
-					if (!realNextLevel.empty()) {
-						auto found = realNextLevel.partition('/');
-						if (found[2].empty()) {
-							levelInit.EpisodeName = _episodeName;
-							levelInit.LevelName = realNextLevel;
-						} else {
-							levelInit.EpisodeName = found[0];
-							levelInit.LevelName = found[2];
-						}
-					}
-
-					levelInit.Difficulty = _difficulty;
-					levelInit.IsReforged = _isReforged;
-					levelInit.CheatsUsed = _cheatsUsed;
-					levelInit.LastExitType = _nextLevelType;
-					levelInit.LastEpisodeName = _episodeName;
-
-					for (int32_t i = 0; i < _players.size(); i++) {
-						levelInit.PlayerCarryOvers[i] = _players[i]->PrepareLevelCarryOver();
-					}
-
-					_root->ChangeLevel(std::move(levelInit));
-					return;
-				}
+				ProcessQueuedNextLevel();
 			}
 
 			ProcessEvents(timeMult);
@@ -468,6 +428,28 @@ namespace Jazz2
 		}
 
 		_lightingView->setClearColor(_ambientColor.W, 0.0f, 0.0f, 1.0f);
+
+#if defined(WITH_IMGUI)
+		if (PreferencesCache::ShowPerformanceMetrics) {
+			ImDrawList* drawList = ImGui::GetBackgroundDrawList();
+
+			std::size_t actorsCount = _actors.size();
+			for (std::size_t i = 0; i < actorsCount; i++) {
+				auto* actor = _actors[i].get();
+
+				auto pos = WorldPosToScreenSpace(actor->_pos);
+				auto aabbMin = WorldPosToScreenSpace({ actor->AABB.L, actor->AABB.T });
+				auto aabbMax = WorldPosToScreenSpace({ actor->AABB.R, actor->AABB.B });
+				auto aabbInnerMin = WorldPosToScreenSpace({ actor->AABBInner.L, actor->AABBInner.T });
+				auto aabbInnerMax = WorldPosToScreenSpace({ actor->AABBInner.R, actor->AABBInner.B });
+
+				drawList->AddRect(ImVec2(pos.x - 2.4f, pos.y - 2.4f), ImVec2(pos.x + 2.4f, pos.y + 2.4f), ImColor(0, 0, 0, 220));
+				drawList->AddRect(ImVec2(pos.x - 1.0f, pos.y - 1.0f), ImVec2(pos.x + 1.0f, pos.y + 1.0f), ImColor(120, 255, 200, 220));
+				drawList->AddRect(aabbMin, aabbMax, ImColor(120, 200, 255, 180));
+				drawList->AddRect(aabbInnerMin, aabbInnerMax, ImColor(255, 255, 255));
+			}
+		}
+#endif
 
 		TracyPlot("Actors", static_cast<int64_t>(_actors.size()));
 	}
@@ -724,10 +706,10 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::WarpCameraToTarget(const std::shared_ptr<Actors::ActorBase>& actor, bool fast)
+	void LevelHandler::WarpCameraToTarget(Actors::ActorBase* actor, bool fast)
 	{
 		// TODO: Allow multiple cameras
-		if (_players[0] != actor.get()) {
+		if (_players[0] != actor) {
 			return;
 		}
 
@@ -979,7 +961,7 @@ namespace Jazz2
 		_root->GoToMainMenu(false);
 	}
 
-	bool LevelHandler::HandlePlayerDied(std::shared_ptr<Actors::Player> player)
+	bool LevelHandler::HandlePlayerDied(Actors::Player* player)
 	{
 		if (_activeBoss != nullptr) {
 			if (_activeBoss->OnPlayerDied()) {
@@ -991,12 +973,17 @@ namespace Jazz2
 		return true;
 	}
 
-	bool LevelHandler::HandlePlayerFireWeapon(std::shared_ptr<Actors::Player> player, WeaponType& weaponType, std::uint16_t& ammoDecrease)
+	bool LevelHandler::HandlePlayerFireWeapon(Actors::Player* player, WeaponType& weaponType, std::uint16_t& ammoDecrease)
 	{
 		return true;
 	}
 
-	void LevelHandler::HandlePlayerWarped(std::shared_ptr<Actors::Player> player, const Vector2f& prevPos, bool fast)
+	bool LevelHandler::HandlePlayerSpring(Actors::Player* player, const Vector2f& force, bool keepSpeedX, bool keepSpeedY)
+	{
+		return true;
+	}
+
+	void LevelHandler::HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, bool fast)
 	{
 		if (fast) {
 			WarpCameraToTarget(player, true);
@@ -1027,7 +1014,7 @@ namespace Jazz2
 		LimitCameraView(0, 0);
 
 		if (!_players.empty()) {
-			WarpCameraToTarget(_players[0]->shared_from_this());
+			WarpCameraToTarget(_players[0]);
 		}
 
 		if (_difficulty != GameDifficulty::Multiplayer) {
@@ -1311,6 +1298,52 @@ namespace Jazz2
 		}
 
 		_eventMap->ProcessGenerators(timeMult);
+	}
+
+	void LevelHandler::ProcessQueuedNextLevel()
+	{
+		bool playersReady = true;
+		for (auto player : _players) {
+			// Exit type was already provided in BeginLevelChange()
+			playersReady &= player->OnLevelChanging(ExitType::None);
+		}
+
+		if (playersReady && _nextLevelTime <= 0.0f) {
+			LevelInitialization levelInit;
+			PrepareNextLevelInitialization(levelInit);
+			_root->ChangeLevel(std::move(levelInit));
+		}
+	}
+
+	void LevelHandler::PrepareNextLevelInitialization(LevelInitialization& levelInit)
+	{
+		StringView realNextLevel;
+		if (!_nextLevel.empty()) {
+			realNextLevel = _nextLevel;
+		} else {
+			realNextLevel = ((_nextLevelType & ExitType::TypeMask) == ExitType::Bonus ? _defaultSecretLevel : _defaultNextLevel);
+		}
+
+		if (!realNextLevel.empty()) {
+			auto found = realNextLevel.partition('/');
+			if (found[2].empty()) {
+				levelInit.EpisodeName = _episodeName;
+				levelInit.LevelName = realNextLevel;
+			} else {
+				levelInit.EpisodeName = found[0];
+				levelInit.LevelName = found[2];
+			}
+		}
+
+		levelInit.Difficulty = _difficulty;
+		levelInit.IsReforged = _isReforged;
+		levelInit.CheatsUsed = _cheatsUsed;
+		levelInit.LastExitType = _nextLevelType;
+		levelInit.LastEpisodeName = _episodeName;
+
+		for (std::int32_t i = 0; i < _players.size(); i++) {
+			levelInit.PlayerCarryOvers[i] = _players[i]->PrepareLevelCarryOver();
+		}
 	}
 
 	void LevelHandler::ResolveCollisions(float timeMult)
@@ -1727,14 +1760,28 @@ namespace Jazz2
 		_pressedActions |= (1ull << (int32_t)PlayerActions::Menu) | (1ull << (32 + (int32_t)PlayerActions::Menu));
 	}
 
+#if defined(WITH_IMGUI)
+	ImVec2 LevelHandler::WorldPosToScreenSpace(const Vector2f pos)
+	{
+		Vector2i originalSize = _view->size();
+		Vector2f upscaledSize = _upscalePass.GetTargetSize();
+		Vector2i halfView = originalSize / 2;
+		return ImVec2(
+			(pos.X - _cameraPos.X + halfView.X) * upscaledSize.X / originalSize.X,
+			(pos.Y - _cameraPos.Y + halfView.Y) * upscaledSize.Y / originalSize.Y
+		);
+	}
+#endif
+
 	bool LevelHandler::LightingRenderer::OnDraw(RenderQueue& renderQueue)
 	{
 		_renderCommandsCount = 0;
 		_emittedLightsCache.clear();
 
 		// Collect all active light emitters
-		for (auto& actor : _owner->_actors) {
-			actor->OnEmitLights(_emittedLightsCache);
+		std::size_t actorsCount = _owner->_actors.size();
+		for (std::size_t i = 0; i < actorsCount; i++) {
+			_owner->_actors[i]->OnEmitLights(_emittedLightsCache);
 		}
 
 		for (auto& light : _emittedLightsCache) {

@@ -30,8 +30,12 @@ namespace Jazz2::UI
 			return _node.get();
 		}
 
-		Vector2i GetViewSize() {
+		Vector2i GetViewSize() const {
 			return _view->size();
+		}
+
+		Vector2f GetTargetSize() const {
+			return (_antialiasing._target != nullptr ? _antialiasing._targetSize : _targetSize);
 		}
 
 	protected:

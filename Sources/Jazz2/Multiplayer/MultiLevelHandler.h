@@ -56,7 +56,7 @@ namespace Jazz2::Multiplayer
 
 		std::shared_ptr<AudioBufferPlayer> PlaySfx(Actors::ActorBase* self, const StringView& identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch) override;
 		std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
-		void WarpCameraToTarget(const std::shared_ptr<Actors::ActorBase>& actor, bool fast = false) override;
+		void WarpCameraToTarget(Actors::ActorBase* actor, bool fast = false) override;
 		bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, TileCollisionParams& params, Actors::ActorBase** collider) override;
 		void FindCollisionActorsByAABB(Actors::ActorBase* self, const AABBf& aabb, const std::function<bool(Actors::ActorBase*)>& callback) override;
 		void FindCollisionActorsByRadius(float x, float y, float radius, const std::function<bool(Actors::ActorBase*)>& callback) override;
@@ -65,9 +65,10 @@ namespace Jazz2::Multiplayer
 		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, uint8_t* eventParams) override;
 		void BeginLevelChange(ExitType exitType, const StringView& nextLevel) override;
 		void HandleGameOver() override;
-		bool HandlePlayerDied(std::shared_ptr<Actors::Player> player) override;
-		bool HandlePlayerFireWeapon(std::shared_ptr<Actors::Player> player, WeaponType& weaponType, std::uint16_t& ammoDecrease) override;
-		void HandlePlayerWarped(std::shared_ptr<Actors::Player> player, const Vector2f& prevPos, bool fast) override;
+		bool HandlePlayerDied(Actors::Player* player) override;
+		bool HandlePlayerFireWeapon(Actors::Player* player, WeaponType& weaponType, std::uint16_t& ammoDecrease) override;
+		bool HandlePlayerSpring(Actors::Player* player, const Vector2f& force, bool keepSpeedX, bool keepSpeedY) override;
+		void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, bool fast) override;
 		void SetCheckpoint(const Vector2f& pos) override;
 		void RollbackToCheckpoint() override;
 		void ActivateSugarRush() override;
@@ -99,14 +100,22 @@ namespace Jazz2::Multiplayer
 	protected:
 		void BeforeActorDestroyed(Actors::ActorBase* actor) override;
 		void ProcessEvents(float timeMult) override;
+		void PrepareNextLevelInitialization(LevelInitialization& levelInit) override;
 
 	private:
-		struct PeerState {
+		enum class PeerState {
+			Unknown,
+			LevelLoaded,
+			LevelSynchronized
+		};
+
+		struct PeerDesc {
 			Actors::Player* Player;
+			PeerState State;
 			std::uint32_t LastUpdated;
 
-			PeerState() {}
-			PeerState(Actors::Player* player) : Player(player), LastUpdated(0) {}
+			PeerDesc() {}
+			PeerDesc(Actors::Player* player, PeerState state) : Player(player), State(state), LastUpdated(0) {}
 		};
 
 		struct StateFrame {
@@ -148,7 +157,7 @@ namespace Jazz2::Multiplayer
 		bool _isServer;
 		float _updateTimeLeft;
 		bool _initialUpdateSent;
-		HashMap<Peer, PeerState> _peerStates; // Server: Per peer state
+		HashMap<Peer, PeerDesc> _peerDesc; // Server: Per peer description
 		HashMap<std::uint8_t, PlayerState> _playerStates; // Server: Per (remote) player state
 		HashMap<std::uint32_t, std::shared_ptr<Actors::RemoteActor>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
 		HashMap<Actors::ActorBase*, std::uint32_t> _remotingActors; // Server: Local Actor created by server -> Actor ID
@@ -156,7 +165,9 @@ namespace Jazz2::Multiplayer
 		std::uint64_t _seqNum; // Client: sequence number of the last update
 		std::uint64_t _seqNumWarped; // Client: set to _seqNum from HandlePlayerWarped() when warped
 		bool _suppressRemoting; // Server: if true, actor will not be automatically remoted to other players
+		bool _ignorePackets;
 
+		void SynchronizePeers();
 		void UpdatePlayerLocalPos(Actors::Player* player, PlayerState& playerState, float timeMult);
 		void OnRemotePlayerPosReceived(PlayerState& playerState, const Vector2f& pos, const Vector2f speed, PlayerFlags flags);
 	};
