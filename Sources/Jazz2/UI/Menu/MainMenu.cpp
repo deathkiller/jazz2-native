@@ -888,16 +888,9 @@ namespace Jazz2::UI::Menu
 
 				Vector2i texSize = _owner->_tileSet->TextureDiffuse->size();
 				float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
-				float texBiasX = (tile.TileID % _owner->_tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.X);
+				float texBiasX = ((tile.TileID % _owner->_tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.X);
 				float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
-				float texBiasY = (tile.TileID / _owner->_tileSet->TilesPerRow) * TileSet::DefaultTileSize / float(texSize.Y);
-
-				if ((targetSize.X & 1) == 1) {
-					texBiasX += 0.5f / float(texSize.X);
-				}
-				if ((targetSize.Y & 1) == 1) {
-					texBiasY -= 0.5f / float(texSize.Y);
-				}
+				float texBiasY = ((tile.TileID / _owner->_tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.Y);
 
 				auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 				instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);

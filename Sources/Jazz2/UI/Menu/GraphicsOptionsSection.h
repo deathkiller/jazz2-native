@@ -10,10 +10,11 @@ namespace Jazz2::UI::Menu
 		Fullscreen,
 #endif
 		Antialiasing,
-		ShowPerformanceMetrics,
-		KeepAspectRatioInCinematics,
+		LowGraphicsQuality,
 		ShowPlayerTrails,
-		LowGraphicsQuality
+		UnalignedViewport,
+		KeepAspectRatioInCinematics,
+		ShowPerformanceMetrics
 	};
 
 	struct GraphicsOptionsItem {

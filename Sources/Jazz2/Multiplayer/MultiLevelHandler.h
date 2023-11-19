@@ -67,7 +67,7 @@ namespace Jazz2::Multiplayer
 		void HandleGameOver() override;
 		bool HandlePlayerDied(Actors::Player* player) override;
 		bool HandlePlayerFireWeapon(Actors::Player* player, WeaponType& weaponType, std::uint16_t& ammoDecrease) override;
-		bool HandlePlayerSpring(Actors::Player* player, const Vector2f& force, bool keepSpeedX, bool keepSpeedY) override;
+		bool HandlePlayerSpring(Actors::Player* player, const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY) override;
 		void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, bool fast) override;
 		void SetCheckpoint(const Vector2f& pos) override;
 		void RollbackToCheckpoint() override;

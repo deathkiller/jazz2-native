@@ -242,7 +242,7 @@ namespace Jazz2::Multiplayer
 			}
 		}
 
-#if defined(WITH_IMGUI)
+#if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
 		if (PreferencesCache::ShowPerformanceMetrics) {
 			ImDrawList* drawList = ImGui::GetBackgroundDrawList();
 
@@ -483,7 +483,7 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
-	bool MultiLevelHandler::HandlePlayerSpring(Actors::Player* player, const Vector2f& force, bool keepSpeedX, bool keepSpeedY)
+	bool MultiLevelHandler::HandlePlayerSpring(Actors::Player* player, const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY)
 	{
 		if (_isServer) {
 			for (const auto& [peer, peerDesc] : _peerDesc) {
@@ -496,19 +496,21 @@ namespace Jazz2::Multiplayer
 						flags |= 0x02;
 					}
 
-					MemoryStream packet2(10);
-					packet2.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::PlayerActivateSpring);
-					packet2.WriteVariableUint32(player->_playerIndex);
-					packet2.WriteValue<std::int16_t>((std::int16_t)(force.X * 512.0f));
-					packet2.WriteValue<std::int16_t>((std::int16_t)(force.Y * 512.0f));
-					packet2.WriteValue<std::uint8_t>(flags);
-					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet2.GetBuffer(), packet2.GetSize());
+					MemoryStream packet(18);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::PlayerActivateSpring);
+					packet.WriteVariableUint32(player->_playerIndex);
+					packet.WriteValue<std::int32_t>((std::int32_t)(pos.X * 512.0f));
+					packet.WriteValue<std::int32_t>((std::int32_t)(pos.Y * 512.0f));
+					packet.WriteValue<std::int16_t>((std::int16_t)(force.X * 512.0f));
+					packet.WriteValue<std::int16_t>((std::int16_t)(force.Y * 512.0f));
+					packet.WriteValue<std::uint8_t>(flags);
+					_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
 					break;
 				}
 			}
 		}
 
-		return LevelHandler::HandlePlayerSpring(player, force, keepSpeedX, keepSpeedY);
+		return LevelHandler::HandlePlayerSpring(player, pos, force, keepSpeedX, keepSpeedY);
 	}
 
 	void MultiLevelHandler::HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, bool fast)
@@ -1076,11 +1078,13 @@ namespace Jazz2::Multiplayer
 						return true;
 					}
 
+					float posX = packet.ReadValue<std::int32_t>() / 512.0f;
+					float posY = packet.ReadValue<std::int32_t>() / 512.0f;
 					float forceX = packet.ReadValue<std::int16_t>() / 512.0f;
 					float forceY = packet.ReadValue<std::int16_t>() / 512.0f;
 					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 					bool removeSpecialMove = false;
-					_players[0]->OnHitSpring(Vector2f(forceX, forceY), (flags & 0x01) == 0x01, (flags & 0x02) == 0x02, removeSpecialMove);
+					_players[0]->OnHitSpring(Vector2f(posX, posY), Vector2f(forceX, forceY), (flags & 0x01) == 0x01, (flags & 0x02) == 0x02, removeSpecialMove);
 					if (removeSpecialMove) {
 						_players[0]->_controllable = true;
 						_players[0]->EndDamagingMove();

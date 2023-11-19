@@ -25,6 +25,7 @@ namespace Jazz2
 	bool PreferencesCache::KeepAspectRatioInCinematics = false;
 	bool PreferencesCache::ShowPlayerTrails = true;
 	bool PreferencesCache::LowGraphicsQuality = false;
+	bool PreferencesCache::UnalignedViewport = true;
 	bool PreferencesCache::EnableReforged = true;
 	bool PreferencesCache::EnableLedgeClimb = true;
 	WeaponWheelStyle PreferencesCache::WeaponWheel = WeaponWheelStyle::Enabled;
@@ -153,6 +154,7 @@ namespace Jazz2
 						KeepAspectRatioInCinematics = ((boolOptions & BoolOptions::KeepAspectRatioInCinematics) == BoolOptions::KeepAspectRatioInCinematics);
 						ShowPlayerTrails = ((boolOptions & BoolOptions::ShowPlayerTrails) == BoolOptions::ShowPlayerTrails);
 						LowGraphicsQuality = ((boolOptions & BoolOptions::LowGraphicsQuality) == BoolOptions::LowGraphicsQuality);
+						UnalignedViewport = ((boolOptions & BoolOptions::UnalignedViewport) == BoolOptions::UnalignedViewport);
 						EnableReforged = ((boolOptions & BoolOptions::EnableReforged) == BoolOptions::EnableReforged);
 						EnableLedgeClimb = ((boolOptions & BoolOptions::EnableLedgeClimb) == BoolOptions::EnableLedgeClimb);
 						WeaponWheel = ((boolOptions & BoolOptions::EnableWeaponWheel) == BoolOptions::EnableWeaponWheel ? WeaponWheelStyle::Enabled : WeaponWheelStyle::Disabled);
@@ -328,6 +330,7 @@ namespace Jazz2
 		if (KeepAspectRatioInCinematics) boolOptions |= BoolOptions::KeepAspectRatioInCinematics;
 		if (ShowPlayerTrails) boolOptions |= BoolOptions::ShowPlayerTrails;
 		if (LowGraphicsQuality) boolOptions |= BoolOptions::LowGraphicsQuality;
+		if (UnalignedViewport) boolOptions |= BoolOptions::UnalignedViewport;
 		if (EnableReforged) boolOptions |= BoolOptions::EnableReforged;
 		if (EnableLedgeClimb) boolOptions |= BoolOptions::EnableLedgeClimb;
 		if (WeaponWheel != WeaponWheelStyle::Disabled) boolOptions |= BoolOptions::EnableWeaponWheel;

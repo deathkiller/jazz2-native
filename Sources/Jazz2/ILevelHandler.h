@@ -50,6 +50,7 @@ namespace Jazz2
 		virtual const SmallVectorImpl<std::shared_ptr<Actors::ActorBase>>& GetActors() const = 0;
 		virtual const SmallVectorImpl<Actors::Player*>& GetPlayers() const = 0;
 
+		virtual Vector2f GetCameraPos() const = 0;
 		virtual float GetAmbientLight() const = 0;
 		virtual void SetAmbientLight(float value) = 0;
 
@@ -75,7 +76,7 @@ namespace Jazz2
 		virtual void HandleGameOver() = 0;
 		virtual bool HandlePlayerDied(Actors::Player* player) = 0;
 		virtual bool HandlePlayerFireWeapon(Actors::Player* player, WeaponType& weaponType, std::uint16_t& ammoDecrease) = 0;
-		virtual bool HandlePlayerSpring(Actors::Player* player, const Vector2f& force, bool keepSpeedX, bool keepSpeedY) = 0;
+		virtual bool HandlePlayerSpring(Actors::Player* player, const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY) = 0;
 		virtual void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, bool fast) = 0;
 		virtual void SetCheckpoint(const Vector2f& pos) = 0;
 		virtual void RollbackToCheckpoint() = 0;
