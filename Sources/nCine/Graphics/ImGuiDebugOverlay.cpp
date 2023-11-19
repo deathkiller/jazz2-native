@@ -185,11 +185,11 @@ namespace nCine
 			} else {
 				maxUpdateVisitDraw_ = lerp(maxUpdateVisitDraw_, maxUpdateVisitDraw, 0.2f);
 			}
-#endif
 
 			if (appCfg.withScenegraph) {
 				updateOverlayTimings();
 			}
+#endif
 
 			index_ = (index_ + 1) % numValues_;
 			lastUpdateTime_ = TimeStamp::now();
@@ -1337,6 +1337,7 @@ namespace nCine
 			ImGui::Text("FPS: %.0f (%.2f ms - %.2fx)", theApplication().frameTimer().averageFps(), theApplication().frameTimer().lastFrameDuration() * 1000.0f, theApplication().timeMult());
 			ImGui::Text("Num Frames: %lu", theApplication().numFrames());
 
+#if defined(NCINE_PROFILING)
 			const AppConfiguration& appCfg = theApplication().appConfiguration();
 			if (appCfg.withScenegraph) {
 				const RenderStatistics::Commands& spriteCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Sprite);
@@ -1398,6 +1399,7 @@ namespace nCine
 					ImGui::PlotLines("", plotValues_[ValuesType::TotalVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 				}
 			}
+#endif
 
 			ImGui::End();
 		}
