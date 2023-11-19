@@ -9,7 +9,7 @@ namespace Jazz2::Tiles
 		// TilesPerRow is used only for rendering
 		if (TextureDiffuse != nullptr) {
 			Vector2i texSize = TextureDiffuse->size();
-			TilesPerRow = (texSize.X / DefaultTileSize);
+			TilesPerRow = (texSize.X / (DefaultTileSize + 2));
 		} else {
 			TilesPerRow = 0;
 		}

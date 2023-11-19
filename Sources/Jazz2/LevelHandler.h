@@ -101,6 +101,7 @@ namespace Jazz2
 		const SmallVectorImpl<std::shared_ptr<Actors::ActorBase>>& GetActors() const override;
 		const SmallVectorImpl<Actors::Player*>& GetPlayers() const override;
 
+		Vector2f GetCameraPos() const override { return _cameraPos; }
 		float GetAmbientLight() const override;
 		void SetAmbientLight(float value) override;
 
@@ -127,7 +128,7 @@ namespace Jazz2
 		void HandleGameOver() override;
 		bool HandlePlayerDied(Actors::Player* player) override;
 		bool HandlePlayerFireWeapon(Actors::Player* player, WeaponType& weaponType, std::uint16_t& ammoDecrease) override;
-		bool HandlePlayerSpring(Actors::Player* player, const Vector2f& force, bool keepSpeedX, bool keepSpeedY) override;
+		bool HandlePlayerSpring(Actors::Player* player, const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY) override;
 		void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, bool fast) override;
 		void SetCheckpoint(const Vector2f& pos) override;
 		void RollbackToCheckpoint() override;
@@ -154,7 +155,6 @@ namespace Jazz2
 		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override { }
 		void OnTileFrozen(std::int32_t x, std::int32_t y) override;
 
-		Vector2f GetCameraPos() const override { return _cameraPos; }
 		Vector2i GetViewSize() const override { return _view->size(); }
 
 		virtual void AttachComponents(LevelDescriptor&& descriptor);

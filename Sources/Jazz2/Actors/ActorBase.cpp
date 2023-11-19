@@ -1,6 +1,7 @@
 ﻿#include "ActorBase.h"
 #include "../ContentResolver.h"
 #include "../ILevelHandler.h"
+#include "../PreferencesCache.h"
 #include "../Events/EventMap.h"
 #include "../Tiles/TileMap.h"
 #include "../Collisions/DynamicTreeBroadPhase.h"
@@ -1035,8 +1036,13 @@ namespace Jazz2::Actors
 		_renderer.AnimDuration = res->AnimDuration;
 		_renderer.AnimTime = (skipAnimation && res->AnimDuration >= 0.0f && _renderer.LoopMode != AnimationLoopMode::FixedSingle ? _renderer.AnimDuration : 0.0f);
 
-		_renderer.Hotspot.X = -((res->Base->FrameDimensions.X / 2) - (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X));
-		_renderer.Hotspot.Y = -((res->Base->FrameDimensions.Y / 2) - res->Base->Hotspot.Y);
+		_renderer.Hotspot.X = -((res->Base->FrameDimensions.X * 0.5f) - (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X));
+		_renderer.Hotspot.Y = -((res->Base->FrameDimensions.Y * 0.5f) - res->Base->Hotspot.Y);
+
+		if (!PreferencesCache::UnalignedViewport) {
+			_renderer.Hotspot.X = std::round(_renderer.Hotspot.X);
+			_renderer.Hotspot.Y = std::round(_renderer.Hotspot.Y);
+		}
 
 		_renderer.setTexture(res->Base->TextureDiffuse.get());
 		_renderer.UpdateVisibleFrames();
@@ -1091,13 +1097,13 @@ namespace Jazz2::Actors
 
 	void ActorBase::HandleFrozenStateChange(ActorBase* shot)
 	{
-		if (auto freezerShot = dynamic_cast<Actors::Weapons::FreezerShot*>(shot)) {
+		if (auto* freezerShot = dynamic_cast<Weapons::FreezerShot*>(shot)) {
 			if (dynamic_cast<ActorBase*>(freezerShot->GetOwner()) != this) {
 				_frozenTimeLeft = freezerShot->FrozenDuration();
 				_renderer.AnimPaused = true;
 				freezerShot->DecreaseHealth(INT32_MAX);
 			}
-		} else if(auto toasterShot = dynamic_cast<Actors::Weapons::ToasterShot*>(shot)) {
+		} else if(auto* toasterShot = dynamic_cast<Weapons::ToasterShot*>(shot)) {
 			_frozenTimeLeft = std::min(1.0f, _frozenTimeLeft);
 		}
 	}
@@ -1160,8 +1166,6 @@ namespace Jazz2::Actors
 		if (free) {
 			AABBInner = aabb;
 			_pos = newPos;
-			_renderer.setPosition(std::round(newPos.X), std::round(newPos.Y));
-
 			if ((_state & ActorState::ForceDisableCollisions) != ActorState::ForceDisableCollisions) {
 				_state |= ActorState::IsDirty;
 			}
@@ -1176,9 +1180,9 @@ namespace Jazz2::Actors
 	}
 
 	ActorBase::ActorRenderer::ActorRenderer(ActorBase* owner)
-		: BaseSprite(nullptr, nullptr, 0.0f, 0.0f), AnimPaused(false), FrameConfiguration(), FrameDimensions(),
-			LoopMode(AnimationLoopMode::Loop), FirstFrame(0), FrameCount(0), AnimDuration(0.0f), AnimTime(0.0f),
-			CurrentFrame(0), Hotspot(), _owner(owner), _rendererType((ActorRendererType)-1), _rendererTransition(0.0f)
+		: BaseSprite(nullptr, nullptr, 0.0f, 0.0f), AnimPaused(false), LoopMode(AnimationLoopMode::Loop), FirstFrame(0),
+			FrameCount(0), AnimDuration(0.0f), AnimTime(0.0f), CurrentFrame(0), _owner(owner),
+			_rendererType((ActorRendererType)-1), _rendererTransition(0.0f)
 	{
 		type_ = ObjectType::Sprite;
 		renderCommand_.setType(RenderCommand::CommandTypes::Sprite);
@@ -1221,12 +1225,27 @@ namespace Jazz2::Actors
 	{
 		_owner->OnUpdate(timeMult);
 
+		Vector2f pos = _owner->_pos;
+		if (!PreferencesCache::UnalignedViewport || (_owner->_state & ActorState::IsDirty) != ActorState::IsDirty) {
+			if (!PreferencesCache::UnalignedViewport || (FrameDimensions.X & 1) == 0) {
+				pos.X = std::round(pos.X);
+			} else {
+				pos.X = std::floor(pos.X);
+			}
+			if (!PreferencesCache::UnalignedViewport || (FrameDimensions.Y & 1) == 0) {
+				pos.Y = std::round(pos.Y);
+			} else {
+				pos.Y = std::floor(pos.Y);
+			}
+		}
+		setPosition(pos.X, pos.Y);
+
 		if (IsAnimationRunning()) {
 			switch (LoopMode) {
 				case AnimationLoopMode::Loop:
 					AnimTime += timeMult * FrameTimer::SecondsPerFrame;
 					if (AnimTime > AnimDuration) {
-						int n = (int)(AnimTime / AnimDuration);
+						std::int32_t n = (std::int32_t)(AnimTime / AnimDuration);
 						AnimTime -= AnimDuration * n;
 						_owner->OnAnimationFinished();
 					}
@@ -1311,7 +1330,7 @@ namespace Jazz2::Actors
 		if (FrameCount > 0 && AnimDuration > 0.0f) {
 			// Calculate currently visible frame
 			float frameTemp = (FrameCount * AnimTime) / AnimDuration;
-			CurrentFrame = (int)frameTemp;
+			CurrentFrame = (std::int32_t)frameTemp;
 
 			// Normalize current frame when exceeding anim duration
 			if (LoopMode == AnimationLoopMode::Once || LoopMode == AnimationLoopMode::FixedSingle) {
@@ -1323,17 +1342,17 @@ namespace Jazz2::Actors
 		CurrentFrame = FirstFrame + std::clamp(CurrentFrame, 0, FrameCount - 1);
 
 		// Set current animation frame rectangle
-		int col = CurrentFrame % FrameConfiguration.X;
-		int row = CurrentFrame / FrameConfiguration.X;
+		std::int32_t col = CurrentFrame % FrameConfiguration.X;
+		std::int32_t row = CurrentFrame / FrameConfiguration.X;
 		setTexRect(Recti(FrameDimensions.X * col, FrameDimensions.Y * row, FrameDimensions.X, FrameDimensions.Y));
-		setAbsAnchorPoint((float)Hotspot.X, (float)Hotspot.Y);
+		setAbsAnchorPoint(Hotspot.X, Hotspot.Y);
 	}
 
 	int ActorBase::ActorRenderer::NormalizeFrame(int frame, int min, int max)
 	{
-		if (frame >= min && frame < max) return frame;
-
-		if (frame < min) {
+		if (frame >= min && frame < max) {
+			return frame;
+		} else if (frame < min) {
 			return max + ((frame - min) % max);
 		} else {
 			return min + (frame % (max - min));

@@ -104,9 +104,8 @@ namespace nCine
 			const Viewport* viewport = RenderResources::currentViewport();
 			overlaps = aabb_.Overlaps(viewport->cullingRect());
 		}
-		const bool notCulled = !cullingEnabled || overlaps;
 
-		if (notCulled) {
+		if (!cullingEnabled || overlaps) {
 			renderCommand_.setLayer(absLayer_);
 			renderCommand_.setVisitOrder(withVisitOrder_ ? visitOrderIndex_ : 0);
 			updateRenderCommand();

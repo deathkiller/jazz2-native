@@ -89,7 +89,7 @@ namespace nCine
 
 	BaseSprite::BaseSprite(const BaseSprite& other)
 		: DrawableNode(other), texture_(other.texture_), texRect_(other.texRect_),
-		flippedX_(other.flippedX_), flippedY_(other.flippedY_), instanceBlock_(nullptr)
+			flippedX_(other.flippedX_), flippedY_(other.flippedY_), instanceBlock_(nullptr)
 	{
 	}
 

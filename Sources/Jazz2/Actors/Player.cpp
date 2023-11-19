@@ -1301,7 +1301,7 @@ namespace Jazz2::Actors
 			// Collide only with hitbox here
 			if (_controllableExternal && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionLedgeClimb) && _springCooldown <= 0.0f && spring->AABBInner.Overlaps(AABBInner)) {
 				Vector2f force = spring->Activate();
-				OnHitSpring(force, spring->KeepSpeedX, spring->KeepSpeedY, removeSpecialMove);
+				OnHitSpring(spring->GetPos(), force, spring->KeepSpeedX, spring->KeepSpeedY, removeSpecialMove);
 			}
 
 			handled = true;
@@ -1334,14 +1334,16 @@ namespace Jazz2::Actors
 		return handled;
 	}
 
-	void Player::OnHitSpring(const Vector2f& force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove)
+	void Player::OnHitSpring(const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove)
 	{
-		if (!_levelHandler->HandlePlayerSpring(this, force, keepSpeedX, keepSpeedY)) {
+		if (!_levelHandler->HandlePlayerSpring(this, pos, force, keepSpeedX, keepSpeedY)) {
 			return;
 		}
 
 		std::int32_t sign = ((force.X + force.Y) > std::numeric_limits<float>::epsilon() ? 1 : -1);
 		if (std::abs(force.X) > 0.0f) {
+			MoveInstantly(Vector2f(_pos.X, (_pos.Y + pos.Y) * 0.5f), MoveType::Absolute);
+
 			removeSpecialMove = true;
 			_copterFramesLeft = 0.0f;
 			//speedX = force.X;
@@ -1366,6 +1368,8 @@ namespace Jazz2::Actors
 			SetPlayerTransition(AnimState::Dash | AnimState::Jump, true, false, SpecialMoveType::None);
 			_controllableTimeout = 2.0f;
 		} else if (std::abs(force.Y) > 0.0f) {
+			MoveInstantly(Vector2f((_pos.X + pos.X) * 0.5f, _pos.Y), MoveType::Absolute);
+
 			_copterFramesLeft = 0.0f;
 			_speed.Y = (4.0f + std::abs(force.Y)) * sign;
 			if (!GetState(ActorState::ApplyGravitation)) {

@@ -34,6 +34,8 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::ShowPlayerTrails, _("Show Player Trails"), true });
 		// TRANSLATORS: Menu item in Options > Graphics section
+		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::UnalignedViewport, _("Unaligned Viewport"), true });
+		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::KeepAspectRatioInCinematics, _("Keep Aspect Ratio In Cinematics"), true });
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::ShowPerformanceMetrics, _("Performance Metrics"), true });
@@ -107,10 +109,11 @@ namespace Jazz2::UI::Menu
 				case GraphicsOptionsItemType::Fullscreen: enabled = PreferencesCache::EnableFullscreen; break;
 #endif
 				case GraphicsOptionsItemType::Antialiasing: enabled = (PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing; break;
-				case GraphicsOptionsItemType::ShowPerformanceMetrics: enabled = PreferencesCache::ShowPerformanceMetrics; break;
-				case GraphicsOptionsItemType::KeepAspectRatioInCinematics: enabled = PreferencesCache::KeepAspectRatioInCinematics; break;
-				case GraphicsOptionsItemType::ShowPlayerTrails: enabled = PreferencesCache::ShowPlayerTrails; break;
 				case GraphicsOptionsItemType::LowGraphicsQuality: enabled = PreferencesCache::LowGraphicsQuality; customText = (enabled ? _("Low") : _("High")); break;
+				case GraphicsOptionsItemType::ShowPlayerTrails: enabled = PreferencesCache::ShowPlayerTrails; break;
+				case GraphicsOptionsItemType::UnalignedViewport: enabled = PreferencesCache::UnalignedViewport; break;
+				case GraphicsOptionsItemType::KeepAspectRatioInCinematics: enabled = PreferencesCache::KeepAspectRatioInCinematics; break;
+				case GraphicsOptionsItemType::ShowPerformanceMetrics: enabled = PreferencesCache::ShowPerformanceMetrics; break;
 			}
 
 			_root->DrawStringShadow(!customText.empty() ? customText : (enabled ? _("Enabled") : _("Disabled")), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
@@ -158,14 +161,9 @@ namespace Jazz2::UI::Menu
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				break;
 			}
-			case GraphicsOptionsItemType::ShowPerformanceMetrics:
-				PreferencesCache::ShowPerformanceMetrics = !PreferencesCache::ShowPerformanceMetrics;
-				_isDirty = true;
-				_animation = 0.0f;
-				_root->PlaySfx("MenuSelect"_s, 0.6f);
-				break;
-			case GraphicsOptionsItemType::KeepAspectRatioInCinematics:
-				PreferencesCache::KeepAspectRatioInCinematics = !PreferencesCache::KeepAspectRatioInCinematics;
+			case GraphicsOptionsItemType::LowGraphicsQuality:
+				PreferencesCache::LowGraphicsQuality = !PreferencesCache::LowGraphicsQuality;
+				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 				_isDirty = true;
 				_animation = 0.0f;
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
@@ -176,9 +174,20 @@ namespace Jazz2::UI::Menu
 				_animation = 0.0f;
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				break;
-			case GraphicsOptionsItemType::LowGraphicsQuality:
-				PreferencesCache::LowGraphicsQuality = !PreferencesCache::LowGraphicsQuality;
-				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
+			case GraphicsOptionsItemType::UnalignedViewport:
+				PreferencesCache::UnalignedViewport = !PreferencesCache::UnalignedViewport;
+				_isDirty = true;
+				_animation = 0.0f;
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				break;
+			case GraphicsOptionsItemType::KeepAspectRatioInCinematics:
+				PreferencesCache::KeepAspectRatioInCinematics = !PreferencesCache::KeepAspectRatioInCinematics;
+				_isDirty = true;
+				_animation = 0.0f;
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				break;
+			case GraphicsOptionsItemType::ShowPerformanceMetrics:
+				PreferencesCache::ShowPerformanceMetrics = !PreferencesCache::ShowPerformanceMetrics;
 				_isDirty = true;
 				_animation = 0.0f;
 				_root->PlaySfx("MenuSelect"_s, 0.6f);

@@ -211,7 +211,7 @@ namespace Jazz2::Actors
 			float AnimDuration;
 			float AnimTime;
 			std::int32_t CurrentFrame;
-			Vector2i Hotspot;
+			Vector2f Hotspot;
 
 			void Initialize(ActorRendererType type);
 
