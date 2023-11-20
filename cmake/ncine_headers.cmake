@@ -309,6 +309,9 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusDefinitions.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScriptLoader.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterDictionary.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterImGuiBindings.h
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterMath.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterRef.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterString.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/ScriptActorWrapper.h

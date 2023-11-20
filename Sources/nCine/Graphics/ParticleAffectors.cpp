@@ -48,10 +48,10 @@ namespace nCine
 		const ColorStep& nextStep = colorSteps_[index];
 
 		const float factor = (normalizedAge - prevStep.age) / (nextStep.age - prevStep.age);
-		const float red = prevStep.color.R() + (nextStep.color.R() - prevStep.color.R()) * factor;
-		const float green = prevStep.color.G() + (nextStep.color.G() - prevStep.color.G()) * factor;
-		const float blue = prevStep.color.B() + (nextStep.color.B() - prevStep.color.B()) * factor;
-		const float alpha = prevStep.color.A() + (nextStep.color.A() - prevStep.color.A()) * factor;
+		const float red = prevStep.color.R + (nextStep.color.R - prevStep.color.R) * factor;
+		const float green = prevStep.color.G + (nextStep.color.G - prevStep.color.G) * factor;
+		const float blue = prevStep.color.B + (nextStep.color.B - prevStep.color.B) * factor;
+		const float alpha = prevStep.color.A + (nextStep.color.A - prevStep.color.A) * factor;
 		const Colorf color(red, green, blue, alpha);
 
 		particle->setColor(color);

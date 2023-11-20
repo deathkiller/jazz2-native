@@ -231,6 +231,9 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusDefinitions.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScriptLoader.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterDictionary.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterImGuiBindings.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterMath.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterRef.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterString.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/ScriptActorWrapper.cpp

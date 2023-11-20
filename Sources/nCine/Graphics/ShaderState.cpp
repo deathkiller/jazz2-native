@@ -300,7 +300,7 @@ namespace nCine
 
 	bool ShaderState::setUniformFloat(const char* blockName, const char* name, const Colorf& color)
 	{
-		return setUniformFloat(blockName, name, color.R(), color.G(), color.B(), color.A());
+		return setUniformFloat(blockName, name, color.R, color.G, color.B, color.A);
 	}
 
 	unsigned int ShaderState::uniformBlockSize(const char* blockName)

@@ -127,7 +127,6 @@ shared abstract class )" AsClassName R"(
 
 	void RequestMetadata(const string &in path) { _obj.RequestMetadata(path); }
 	void PlaySfx(const string &in identifier, float gain = 1.0, float pitch = 1.0) { _obj.PlaySfx(identifier, gain, pitch); }
-	void SetAnimation(const string &in identifier) { _obj.SetAnimation(identifier); }
 	void SetAnimation(int state) { _obj.SetAnimation(state); }
 }
 

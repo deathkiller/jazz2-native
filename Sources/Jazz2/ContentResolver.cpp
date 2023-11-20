@@ -1052,7 +1052,7 @@ namespace Jazz2
 							Color c1 = Color(pixels[((ty + y * 3) * width) + tx + x]);
 							Color c2 = Color(pixels[((ty + y * 3 + 1) * width) + tx + x]);
 							Color c3 = Color(pixels[((ty + y * 3 + 2) * width) + tx + x]);
-							captionTile[y * TileSet::DefaultTileSize + x] = Color((c1.B() + c2.B() + c3.B()) / 3, (c1.G() + c2.G() + c3.G()) / 3, (c1.R() + c2.R() + c3.R()) / 3);
+							captionTile[y * TileSet::DefaultTileSize + x] = Color((c1.B + c2.B + c3.B) / 3, (c1.G + c2.G + c3.G) / 3, (c1.R + c2.R + c3.R) / 3);
 						}
 					}
 				}

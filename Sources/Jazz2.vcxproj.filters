@@ -1410,6 +1410,12 @@
     <ClInclude Include="nCine\Graphics\IDebugOverlay.h">
       <Filter>Header Files\nCine\Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\RegisterImGuiBindings.h">
+      <Filter>Header Files\Jazz2\Scripting</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Scripting\RegisterMath.h">
+      <Filter>Header Files\Jazz2\Scripting</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2335,6 +2341,12 @@
     </ClCompile>
     <ClCompile Include="nCine\Graphics\ImGuiDrawing.cpp">
       <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\RegisterImGuiBindings.cpp">
+      <Filter>Source Files\Jazz2\Scripting</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Scripting\RegisterMath.cpp">
+      <Filter>Source Files\Jazz2\Scripting</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

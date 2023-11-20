@@ -1,10 +1,14 @@
 ﻿#if defined(WITH_ANGELSCRIPT)
 
 #include "LevelScriptLoader.h"
+#include "RegisterMath.h"
 #include "RegisterRef.h"
 #include "RegisterString.h"
 #include "RegisterArray.h"
 #include "RegisterDictionary.h"
+#if defined(WITH_IMGUI)
+#	include "RegisterImGuiBindings.h"
+#endif
 #include "ScriptActorWrapper.h"
 #include "ScriptPlayerWrapper.h"
 
@@ -362,10 +366,14 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::RegisterBuiltInFunctions(asIScriptEngine* engine)
 	{
+		RegisterMath(engine);
 		RegisterRef(engine);
 		RegisterString(engine);
 		RegisterArray(engine);
 		RegisterDictionary(engine);
+#if defined(WITH_IMGUI)
+		RegisterImGuiBindings(engine);
+#endif
 
 		// Math functions
 		int r;

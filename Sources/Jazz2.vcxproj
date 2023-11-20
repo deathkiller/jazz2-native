@@ -362,6 +362,8 @@
     <ClInclude Include="Jazz2\Scripting\LevelScriptLoader.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterArray.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterDictionary.h" />
+    <ClInclude Include="Jazz2\Scripting\RegisterImGuiBindings.h" />
+    <ClInclude Include="Jazz2\Scripting\RegisterMath.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterRef.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterString.h" />
     <ClInclude Include="Jazz2\Scripting\ScriptActorWrapper.h" />
@@ -727,6 +729,8 @@
     <ClCompile Include="Jazz2\Scripting\LevelScriptLoader.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterArray.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterDictionary.cpp" />
+    <ClCompile Include="Jazz2\Scripting\RegisterImGuiBindings.cpp" />
+    <ClCompile Include="Jazz2\Scripting\RegisterMath.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterRef.cpp" />
     <ClCompile Include="Jazz2\Scripting\RegisterString.cpp" />
     <ClCompile Include="Jazz2\Scripting\ScriptActorWrapper.cpp" />

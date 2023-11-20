@@ -211,11 +211,11 @@ namespace nCine
 		void setColor(const Colorf& color);
 		/// Gets the node alpha
 		inline float alpha() const {
-			return color_.A();
+			return color_.A;
 		}
 		/// Gets the node absolute alpha
 		inline float absAlpha() const {
-			return absColor_.A();
+			return absColor_.A;
 		}
 		/// Sets the node alpha through an unsigned char component
 		void setAlpha(unsigned char alpha);

@@ -15,7 +15,7 @@ namespace Jazz2::Actors::Lighting
 		_brightness = details.Params[1] / 255.0f;
 		_radiusNear = (float)*(uint16_t*)&details.Params[2];
 		_radiusFar = (float)*(uint16_t*)&details.Params[4];
-		_phase = 0.6;
+		_phase = 0.6f;
 
 		SetState(ActorState::ForceDisableCollisions, true);
 		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);

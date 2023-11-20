@@ -14,102 +14,102 @@ namespace nCine
 	const Color Color::Magenta(255, 0, 255, 255);
 	const Color Color::Cyan(0, 255, 255, 255);
 
-	Color::Color(unsigned int hex)
+	Color::Color(std::uint32_t hex)
 	{
 		SetAlpha(255);
 		// The following method might set the alpha channel
 		Set(hex);
 	}
 
-	Color::Color(const unsigned int channels[NumChannels])
+	Color::Color(const std::uint32_t channels[NumChannels])
 	{
 		SetVec(channels);
 	}
 
 	Color::Color(const Colorf& color)
 	{
-		red_ = static_cast<unsigned char>(color.R() * 255);
-		green_ = static_cast<unsigned char>(color.G() * 255);
-		blue_ = static_cast<unsigned char>(color.B() * 255);
-		alpha_ = static_cast<unsigned char>(color.A() * 255);
+		R = static_cast<std::uint8_t>(color.R * 255);
+		G = static_cast<std::uint8_t>(color.G * 255);
+		B = static_cast<std::uint8_t>(color.B * 255);
+		A = static_cast<std::uint8_t>(color.A * 255);
 	}
 
-	unsigned int Color::Rgba() const
+	std::uint32_t Color::Rgba() const
 	{
-		return (red_ << 24) + (green_ << 16) + (blue_ << 8) + alpha_;
+		return (R << 24) + (G << 16) + (B << 8) + A;
 	}
 
-	unsigned int Color::Argb() const
+	std::uint32_t Color::Argb() const
 	{
-		return (alpha_ << 24) + (red_ << 16) + (green_ << 8) + blue_;
+		return (A << 24) + (R << 16) + (G << 8) + B;
 	}
 
-	unsigned int Color::Abgr() const
+	std::uint32_t Color::Abgr() const
 	{
-		return (alpha_ << 24) + (blue_ << 16) + (green_ << 8) + red_;
+		return (A << 24) + (B << 16) + (G << 8) + R;
 	}
 
-	unsigned int Color::Bgra() const
+	std::uint32_t Color::Bgra() const
 	{
-		return (blue_ << 24) + (green_ << 16) + (red_ << 8) + alpha_;
+		return (B << 24) + (G << 16) + (R << 8) + A;
 	}
 
-	void Color::Set(unsigned int red, unsigned int green, unsigned int blue)
+	void Color::Set(std::uint32_t red, std::uint32_t green, std::uint32_t blue)
 	{
-		red_ = static_cast<unsigned char>(red);
-		green_ = static_cast<unsigned char>(green);
-		blue_ = static_cast<unsigned char>(blue);
+		R = static_cast<std::uint8_t>(red);
+		G = static_cast<std::uint8_t>(green);
+		B = static_cast<std::uint8_t>(blue);
 	}
 
-	void Color::Set(unsigned int hex)
+	void Color::Set(std::uint32_t hex)
 	{
-		red_ = static_cast<unsigned char>((hex & 0xFF0000) >> 16);
-		green_ = static_cast<unsigned char>((hex & 0xFF00) >> 8);
-		blue_ = static_cast<unsigned char>(hex & 0xFF);
+		R = static_cast<std::uint8_t>((hex & 0xFF0000) >> 16);
+		G = static_cast<std::uint8_t>((hex & 0xFF00) >> 8);
+		B = static_cast<std::uint8_t>(hex & 0xFF);
 
 		if (hex > 0xFFFFFF) {
-			alpha_ = static_cast<unsigned char>((hex & 0xFF000000) >> 24);
+			A = static_cast<std::uint8_t>((hex & 0xFF000000) >> 24);
 		}
 	}
 
-	void Color::SetVec(const unsigned int channels[NumChannels])
+	void Color::SetVec(const std::uint32_t channels[NumChannels])
 	{
 		Set(channels[0], channels[1], channels[2], channels[3]);
 	}
 
-	void Color::SetAlpha(unsigned int alpha)
+	void Color::SetAlpha(std::uint32_t alpha)
 	{
-		alpha_ = static_cast<unsigned char>(alpha);
+		A = static_cast<std::uint8_t>(alpha);
 	}
 
 	Color& Color::operator=(const Colorf& color)
 	{
-		red_ = static_cast<unsigned char>(color.R() * 255.0f);
-		green_ = static_cast<unsigned char>(color.G() * 255.0f);
-		blue_ = static_cast<unsigned char>(color.B() * 255.0f);
-		alpha_ = static_cast<unsigned char>(color.A() * 255.0f);
+		R = static_cast<std::uint8_t>(color.R * 255.0f);
+		G = static_cast<std::uint8_t>(color.G * 255.0f);
+		B = static_cast<std::uint8_t>(color.B * 255.0f);
+		A = static_cast<std::uint8_t>(color.A * 255.0f);
 
 		return *this;
 	}
 
 	bool Color::operator==(const Color& color) const
 	{
-		return (red_ == color.red_ && green_ == color.green_ &&
-				blue_ == color.blue_ && alpha_ == color.alpha_);
+		return (R == color.R && G == color.G &&
+				B == color.B && A == color.A);
 	}
 
 	bool Color::operator!=(const Color& color) const
 	{
-		return (red_ != color.red_ || green_ != color.green_ ||
-				blue_ != color.blue_ || alpha_ != color.alpha_);
+		return (R != color.R || G != color.G ||
+				B != color.B || A != color.A);
 	}
 
 	Color& Color::operator+=(const Color& color)
 	{
-		for (unsigned int i = 0; i < NumChannels; i++) {
-			unsigned int channelValue = Data()[i] + color.Data()[i];
+		for (std::uint32_t i = 0; i < NumChannels; i++) {
+			std::uint32_t channelValue = Data()[i] + color.Data()[i];
 			channelValue = std::clamp(channelValue, 0U, 255U);
-			Data()[i] = static_cast<unsigned char>(channelValue);
+			Data()[i] = static_cast<std::uint8_t>(channelValue);
 		}
 
 		return *this;
@@ -117,10 +117,10 @@ namespace nCine
 
 	Color& Color::operator-=(const Color& color)
 	{
-		for (unsigned int i = 0; i < NumChannels; i++) {
-			unsigned int channelValue = Data()[i] - color.Data()[i];
+		for (std::uint32_t i = 0; i < NumChannels; i++) {
+			std::uint32_t channelValue = Data()[i] - color.Data()[i];
 			channelValue = std::clamp(channelValue, 0U, 255U);
-			Data()[i] = static_cast<unsigned char>(channelValue);
+			Data()[i] = static_cast<std::uint8_t>(channelValue);
 		}
 
 		return *this;
@@ -128,10 +128,10 @@ namespace nCine
 
 	Color& Color::operator*=(const Color& color)
 	{
-		for (unsigned int i = 0; i < NumChannels; i++) {
+		for (std::uint32_t i = 0; i < NumChannels; i++) {
 			float channelValue = Data()[i] * (color.Data()[i] / 255.0f);
 			channelValue = std::clamp(channelValue, 0.0f, 255.0f);
-			Data()[i] = static_cast<unsigned char>(channelValue);
+			Data()[i] = static_cast<std::uint8_t>(channelValue);
 		}
 
 		return *this;
@@ -139,10 +139,10 @@ namespace nCine
 
 	Color& Color::operator*=(float scalar)
 	{
-		for (unsigned int i = 0; i < NumChannels; i++) {
+		for (std::uint32_t i = 0; i < NumChannels; i++) {
 			float channelValue = Data()[i] * scalar;
 			channelValue = std::clamp(channelValue, 0.0f, 255.0f);
-			Data()[i] = static_cast<unsigned char>(channelValue);
+			Data()[i] = static_cast<std::uint8_t>(channelValue);
 		}
 
 		return *this;
@@ -152,10 +152,10 @@ namespace nCine
 	{
 		Color result;
 
-		for (unsigned int i = 0; i < NumChannels; i++) {
-			unsigned int channelValue = Data()[i] + color.Data()[i];
+		for (std::uint32_t i = 0; i < NumChannels; i++) {
+			std::uint32_t channelValue = Data()[i] + color.Data()[i];
 			channelValue = std::clamp(channelValue, 0U, 255U);
-			result.Data()[i] = static_cast<unsigned char>(channelValue);
+			result.Data()[i] = static_cast<std::uint8_t>(channelValue);
 		}
 
 		return result;
@@ -165,10 +165,10 @@ namespace nCine
 	{
 		Color result;
 
-		for (unsigned int i = 0; i < NumChannels; i++) {
-			unsigned int channelValue = Data()[i] - color.Data()[i];
+		for (std::uint32_t i = 0; i < NumChannels; i++) {
+			std::uint32_t channelValue = Data()[i] - color.Data()[i];
 			channelValue = std::clamp(channelValue, 0U, 255U);
-			result.Data()[i] = static_cast<unsigned char>(channelValue);
+			result.Data()[i] = static_cast<std::uint8_t>(channelValue);
 		}
 
 		return result;
@@ -178,10 +178,10 @@ namespace nCine
 	{
 		Color result;
 
-		for (unsigned int i = 0; i < NumChannels; i++) {
+		for (std::uint32_t i = 0; i < NumChannels; i++) {
 			float channelValue = Data()[i] * (color.Data()[i] / 255.0f);
 			channelValue = std::clamp(channelValue, 0.0f, 255.0f);
-			result.Data()[i] = static_cast<unsigned char>(channelValue);
+			result.Data()[i] = static_cast<std::uint8_t>(channelValue);
 		}
 
 		return result;
@@ -191,10 +191,10 @@ namespace nCine
 	{
 		Color result;
 
-		for (unsigned int i = 0; i < NumChannels; i++) {
+		for (std::uint32_t i = 0; i < NumChannels; i++) {
 			float channelValue = Data()[i] * scalar;
 			channelValue = std::clamp(channelValue, 0.0f, 255.0f);
-			result.Data()[i] = static_cast<unsigned char>(channelValue);
+			result.Data()[i] = static_cast<std::uint8_t>(channelValue);
 		}
 
 		return result;

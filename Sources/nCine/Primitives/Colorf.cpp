@@ -21,17 +21,17 @@ namespace nCine
 	Colorf::Colorf(const Color& color)
 	{
 		constexpr float inv = 1.0f / 255.0f;
-		red_ = static_cast<float>(color.R() * inv);
-		green_ = static_cast<float>(color.G() * inv);
-		blue_ = static_cast<float>(color.B() * inv);
-		alpha_ = static_cast<float>(color.A() * inv);
+		R = static_cast<float>(color.R * inv);
+		G = static_cast<float>(color.G * inv);
+		B = static_cast<float>(color.B * inv);
+		A = static_cast<float>(color.A * inv);
 	}
 
 	void Colorf::Set(float red, float green, float blue)
 	{
-		red_ = red;
-		green_ = green;
-		blue_ = blue;
+		R = red;
+		G = green;
+		B = blue;
 	}
 
 	void Colorf::SetVec(const float channels[NumChannels])
@@ -41,35 +41,35 @@ namespace nCine
 
 	void Colorf::SetAlpha(float alpha)
 	{
-		alpha_ = std::clamp(alpha, 0.0f, 1.0f);
+		A = std::clamp(alpha, 0.0f, 1.0f);
 	}
 
 	Colorf& Colorf::operator=(const Color& color)
 	{
 		constexpr float inv = 1.0f / 255.0f;
-		red_ = static_cast<float>(color.R() * inv);
-		green_ = static_cast<float>(color.G() * inv);
-		blue_ = static_cast<float>(color.B() * inv);
-		alpha_ = static_cast<float>(color.A() * inv);
+		R = static_cast<float>(color.R * inv);
+		G = static_cast<float>(color.G * inv);
+		B = static_cast<float>(color.B * inv);
+		A = static_cast<float>(color.A * inv);
 
 		return *this;
 	}
 
 	bool Colorf::operator==(const Colorf& color) const
 	{
-		return (red_ == color.red_ && green_ == color.green_ &&
-				blue_ == color.blue_ && alpha_ == color.alpha_);
+		return (R == color.R && G == color.G &&
+				B == color.B && A == color.A);
 	}
 
 	bool Colorf::operator!=(const Colorf& color) const
 	{
-		return (red_ != color.red_ || green_ != color.green_ ||
-				blue_ != color.blue_ || alpha_ != color.alpha_);
+		return (R != color.R || G != color.G ||
+				B != color.B || A != color.A);
 	}
 
 	Colorf& Colorf::operator+=(const Colorf& color)
 	{
-		for (unsigned int i = 0; i < NumChannels; i++) {
+		for (std::int32_t i = 0; i < NumChannels; i++) {
 			Data()[i] = Data()[i] + color.Data()[i];
 		}
 
@@ -78,7 +78,7 @@ namespace nCine
 
 	Colorf& Colorf::operator-=(const Colorf& color)
 	{
-		for (unsigned int i = 0; i < NumChannels; i++) {
+		for (std::int32_t i = 0; i < NumChannels; i++) {
 			Data()[i] = Data()[i] - color.Data()[i];
 		}
 
@@ -87,7 +87,7 @@ namespace nCine
 
 	Colorf& Colorf::operator*=(const Colorf& color)
 	{
-		for (unsigned int i = 0; i < NumChannels; i++) {
+		for (std::int32_t i = 0; i < NumChannels; i++) {
 			Data()[i] = Data()[i] * color.Data()[i];
 		}
 
@@ -96,7 +96,7 @@ namespace nCine
 
 	Colorf& Colorf::operator*=(float scalar)
 	{
-		for (unsigned int i = 0; i < NumChannels; i++) {
+		for (std::int32_t i = 0; i < NumChannels; i++) {
 			Data()[i] = Data()[i] * scalar;
 		}
 
@@ -107,7 +107,7 @@ namespace nCine
 	{
 		Colorf result;
 
-		for (unsigned int i = 0; i < NumChannels; i++) {
+		for (std::int32_t i = 0; i < NumChannels; i++) {
 			result.Data()[i] = Data()[i] + color.Data()[i];
 		}
 
@@ -118,7 +118,7 @@ namespace nCine
 	{
 		Colorf result;
 
-		for (unsigned int i = 0; i < NumChannels; i++) {
+		for (std::int32_t i = 0; i < NumChannels; i++) {
 			result.Data()[i] = Data()[i] - color.Data()[i];
 		}
 
@@ -129,7 +129,7 @@ namespace nCine
 	{
 		Colorf result;
 
-		for (unsigned int i = 0; i < NumChannels; i++) {
+		for (std::int32_t i = 0; i < NumChannels; i++) {
 			result.Data()[i] = Data()[i] * color.Data()[i];
 		}
 
@@ -140,7 +140,7 @@ namespace nCine
 	{
 		Colorf result;
 
-		for (unsigned int i = 0; i < NumChannels; i++) {
+		for (std::int32_t i = 0; i < NumChannels; i++) {
 			result.Data()[i] = Data()[i] * scalar;
 		}
 

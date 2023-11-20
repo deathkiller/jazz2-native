@@ -122,12 +122,11 @@ if(EMSCRIPTEN)
 		set(LUA_FOUND 1)
 	endif()
 	
-	if(NCINE_WITH_ANGELSCRIPT AND EXISTS "${EXTERNAL_EMSCRIPTEN_DIR}/angelscript.a")
-		add_library(AngelScript::AngelScript STATIC IMPORTED)
-		set_target_properties(AngelScript::AngelScript PROPERTIES
-			IMPORTED_LOCATION "${EXTERNAL_EMSCRIPTEN_DIR}/angelscript.a"
-			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}")
-		set(ANGELSCRIPT_FOUND 1)
+	if(NCINE_WITH_ANGELSCRIPT)
+		find_package(Angelscript)
+		if(TARGET Angelscript::Angelscript)
+			set(ANGELSCRIPT_FOUND 1)
+		endif()
 	endif()
 
 	return()
@@ -316,12 +315,11 @@ if(ANDROID)
 		set(LUA_FOUND 1)
 	endif()
 	
-	if(NCINE_WITH_ANGELSCRIPT AND EXISTS "${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/angelscript.a")
-		add_library(AngelScript::AngelScript STATIC IMPORTED)
-		set_target_properties(AngelScript::AngelScript PROPERTIES
-			IMPORTED_LOCATION "${EXTERNAL_ANDROID_DIR}/${ANDROID_ABI}/angelscript.a"
-			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}")
-		set(ANGELSCRIPT_FOUND 1)
+	if(NCINE_WITH_ANGELSCRIPT)
+		find_package(Angelscript)
+		if(TARGET Angelscript::Angelscript)
+			set(ANGELSCRIPT_FOUND 1)
+		endif()
 	endif()
 elseif(MSVC OR MINGW OR MSYS)
 	if(EXISTS "${MSVC_LIBDIR}/libdeflate.lib" AND EXISTS "${MSVC_BINDIR}/libdeflate.dll")
@@ -471,12 +469,11 @@ elseif(MSVC OR MINGW OR MSYS)
 		set(LUA_FOUND 1)
 	endif()
 	
-	if(NCINE_WITH_ANGELSCRIPT AND EXISTS "${MSVC_LIBDIR}/angelscript.lib")
-		add_library(AngelScript::AngelScript STATIC IMPORTED)
-		set_target_properties(AngelScript::AngelScript PROPERTIES
-			IMPORTED_LOCATION "${MSVC_LIBDIR}/angelscript.lib"
-			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}")
-		set(ANGELSCRIPT_FOUND 1)
+	if(NCINE_WITH_ANGELSCRIPT)
+		find_package(Angelscript)
+		if(TARGET Angelscript::Angelscript)
+			set(ANGELSCRIPT_FOUND 1)
+		endif()
 	endif()
 #elseif(MINGW OR MSYS)
 #	function(set_msys_dll PREFIX DLL_NAME)
@@ -654,12 +651,8 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	endif()
 	
 	if(NCINE_WITH_ANGELSCRIPT)
-		find_library(ANGELSCRIPT_LIBRARY libangelscript.so PATHS /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 ${NCINE_LIBS}/Linux/${CMAKE_SYSTEM_PROCESSOR}/)
-		if(EXISTS ${ANGELSCRIPT_LIBRARY})
-			add_library(AngelScript::AngelScript ${LIBRARY_LINKAGE} IMPORTED)
-			set_target_properties(AngelScript::AngelScript PROPERTIES
-				IMPORTED_LOCATION "${ANGELSCRIPT_LIBRARY}"
-				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}")
+		find_package(Angelscript)
+		if(TARGET Angelscript::Angelscript)
 			set(ANGELSCRIPT_FOUND 1)
 		endif()
 	endif()
