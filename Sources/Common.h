@@ -126,17 +126,3 @@
 #	define ASSERT_MSG(x, fmt, ...) do { } while (false)
 #	define ASSERT(x) do { } while (false)
 #endif
-
-#if defined(DEATH_TARGET_SWITCH)
-// `strnlen` is missing in libnx
-inline std::size_t strnlen(const char* s, std::size_t maxlen)
-{
-	std::size_t i;
-	for (i = 0; i < maxlen; i++, s++) {
-		if (*s == '\0') {
-			break;
-		}
-	}
-	return i;
-}
-#endif
