@@ -1697,7 +1697,7 @@ namespace Death::IO
 			return false;
 		}
 
-#	if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L
+#	if !defined(DEATH_TARGET_SWITCH) && defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L
 		// As noted in https://eklitzke.org/efficient-file-copying-on-linux, might make the file reading faster
 		::posix_fadvise(source, 0, 0, POSIX_FADV_SEQUENTIAL);
 #	endif
