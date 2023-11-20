@@ -61,7 +61,7 @@ if(NOT TARGET libopenmpt::libopenmpt)
 		FetchContent_MakeAvailable(libopenmpt_git)
 		
 		add_library(libopenmpt_src STATIC)
-		target_compile_features(libopenmpt_src PUBLIC cxx_std_20)
+		target_compile_features(libopenmpt_src PUBLIC cxx_std_17)
 		set_target_properties(libopenmpt_src PROPERTIES CXX_EXTENSIONS OFF)
 		set(LIBOPENMPT_INCLUDE_DIR "${libopenmpt_git_SOURCE_DIR}/libopenmpt/")
 		set_target_properties(libopenmpt_src PROPERTIES
@@ -82,7 +82,12 @@ if(NOT TARGET libopenmpt::libopenmpt)
 		if(MSVC)
 			# Build with Multiple Processes and force UTF-8
 			target_compile_options(libopenmpt_src PRIVATE /MP /utf-8)
-			# Extra optimizations in release
+			# Always use the non-debug version of the runtime library
+			target_compile_options(libopenmpt_src PUBLIC $<IF:$<BOOL:${VC_LTL_FOUND}>,/MT,/MD>)
+			# Disable exceptions
+			target_compile_definitions(libopenmpt_src PRIVATE "_HAS_EXCEPTIONS=0")
+			target_compile_options(libopenmpt_src PRIVATE /EHsc)
+			# Extra optimizations in Release
 			target_compile_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:/O2 /Oi /Qpar /Gy>)
 			target_link_options(libopenmpt_src PRIVATE $<$<CONFIG:Release>:/OPT:REF /OPT:NOICF>)
 			# Specifies the architecture for code generation (IA32, SSE, SSE2, AVX, AVX2, AVX512)

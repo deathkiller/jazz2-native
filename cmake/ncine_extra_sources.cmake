@@ -356,7 +356,7 @@ endif()
 
 if(ANGELSCRIPT_FOUND)
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ANGELSCRIPT")
-	target_link_libraries(${NCINE_APP} PRIVATE AngelScript::AngelScript)
+	target_link_libraries(${NCINE_APP} PRIVATE Angelscript::Angelscript)
 endif()
 
 if(NCINE_WITH_IMGUI)

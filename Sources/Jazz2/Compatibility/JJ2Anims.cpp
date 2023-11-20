@@ -385,14 +385,14 @@ namespace Jazz2::Compatibility
 							if (colorIdx == 0) {
 								a = 0;
 							} else if (frame.DrawTransparent) {
-								a = 140 * src.A() / 255;
+								a = 140 * src.A / 255;
 							} else {
-								a = src.A();
+								a = src.A;
 							}
 
-							pixels[(stride * targetY + targetX) * 4] = src.R();
-							pixels[(stride * targetY + targetX) * 4 + 1] = src.G();
-							pixels[(stride * targetY + targetX) * 4 + 2] = src.B();
+							pixels[(stride * targetY + targetX) * 4] = src.R;
+							pixels[(stride * targetY + targetX) * 4 + 1] = src.G;
+							pixels[(stride * targetY + targetX) * 4 + 2] = src.B;
 							pixels[(stride * targetY + targetX) * 4 + 3] = a;
 						} else {
 							uint8_t a;

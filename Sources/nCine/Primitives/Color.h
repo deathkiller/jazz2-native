@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Common.h>
+
 namespace nCine
 {
 	class Colorf;
@@ -8,7 +10,7 @@ namespace nCine
 	class Color
 	{
 	public:
-		static constexpr int NumChannels = 4;
+		static constexpr std::int32_t NumChannels = 4;
 
 		static const Color Black;
 		static const Color White;
@@ -19,80 +21,68 @@ namespace nCine
 		static const Color Magenta;
 		static const Color Cyan;
 
+		std::uint8_t R;
+		std::uint8_t G;
+		std::uint8_t B;
+		std::uint8_t A;
+
 		/// Default constructor (white color)
 		constexpr Color()
 			: Color(0, 0, 0, 0)
 		{
 		}
 		/// Three channels constructor
-		constexpr Color(unsigned int red, unsigned int green, unsigned int blue)
+		constexpr Color(std::uint32_t red, std::uint32_t green, std::uint32_t blue)
 			: Color(red, green, blue, 255)
 		{
 		}
 		/// Four channels constructor
-		constexpr Color(unsigned int red, unsigned int green, unsigned int blue, unsigned int alpha)
-			: red_(red), green_(green), blue_(blue), alpha_(alpha)
+		constexpr Color(std::uint32_t red, std::uint32_t green, std::uint32_t blue, std::uint32_t alpha)
+			: R(red), G(green), B(blue), A(alpha)
 		{
 		}
 		/// Three channels constructor from a hexadecimal code
-		explicit Color(unsigned int hex);
+		explicit Color(std::uint32_t hex);
 		/// Four channels constructor from an array
-		explicit Color(const unsigned int channels[NumChannels]);
+		explicit Color(const std::uint32_t channels[NumChannels]);
 		/// Constructor taking a normalized float color
 		explicit Color(const Colorf& color);
 
-		/// Gets the red channel of the color
-		inline unsigned char R() const {
-			return red_;
-		}
-		/// Gets the green channel of the color
-		inline unsigned char G() const {
-			return green_;
-		}
-		/// Gets the blue channel of the color
-		inline unsigned char B() const {
-			return blue_;
-		}
-		/// Gets the alpha channel of the color
-		inline unsigned char A() const {
-			return alpha_;
-		}
-
 		/// Returns the color as a single RGBA unsigned integer
-		unsigned int Rgba() const;
+		std::uint32_t Rgba() const;
 		/// Returns the color as a single RGBA unsigned integer
-		unsigned int Argb() const;
+		std::uint32_t Argb() const;
 		/// Returns the color as a single ABGR unsigned integer
-		unsigned int Abgr() const;
+		std::uint32_t Abgr() const;
 		/// Returns the color as a single BGRA unsigned integer
-		unsigned int Bgra() const;
+		std::uint32_t Bgra() const;
 
 		/// Gets the color array
-		inline const unsigned char* Data() const {
-			return &red_;
+		inline const std::uint8_t* Data() const {
+			return &R;
 		}
 		/// Gets the color array
-		inline unsigned char* Data() {
-			return &red_;
+		inline std::uint8_t* Data() {
+			return &R;
 		}
 
 		/// Sets four color channels
-		constexpr void Set(unsigned int red, unsigned int green, unsigned int blue, unsigned int alpha)
+		constexpr void Set(std::uint32_t red, std::uint32_t green, std::uint32_t blue, std::uint32_t alpha)
 		{
-			red_ = static_cast<unsigned char>(red);
-			green_ = static_cast<unsigned char>(green);
-			blue_ = static_cast<unsigned char>(blue);
-			alpha_ = static_cast<unsigned char>(alpha);
+			R = static_cast<std::uint8_t>(red);
+			G = static_cast<std::uint8_t>(green);
+			B = static_cast<std::uint8_t>(blue);
+			A = static_cast<std::uint8_t>(alpha);
 		}
 		/// Sets three color channels
-		void Set(unsigned int red, unsigned int green, unsigned int blue);
+		void Set(std::uint32_t red, std::uint32_t green, std::uint32_t blue);
 		/// Sets three color channels from a hexadecimal code
-		void Set(unsigned int hex);
+		void Set(std::uint32_t hex);
 		/// Sets four color channels from an array
-		void SetVec(const unsigned int channels[NumChannels]);
+		void SetVec(const std::uint32_t channels[NumChannels]);
 
 		/// Sets the alpha channel
-		void SetAlpha(unsigned int alpha);
+		void SetAlpha(std::uint32_t alpha);
 
 		/// Assignment operator from a normalized float color
 		Color& operator=(const Colorf& color);
@@ -114,12 +104,5 @@ namespace nCine
 		Color operator*(const Color& color) const;
 		/// Multiplication by a constant scalar
 		Color operator*(float scalar) const;
-
-	private:
-		unsigned char red_;
-		unsigned char green_;
-		unsigned char blue_;
-		unsigned char alpha_;
 	};
-
 }

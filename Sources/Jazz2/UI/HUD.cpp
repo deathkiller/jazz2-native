@@ -1225,7 +1225,7 @@ namespace Jazz2::UI
 		float distance = sqrtf(powf((float)(Width - x), 2) + powf((float)(Height - y), 2));
 		float value = cosf(AnimationMult * distance / (0.1f * Spacing) + animProgress);
 		float alpha = lerp(powf((value + 1) * 0.5f, 12.0f) * ambientLightLower, 0.8f, ambientLightUpper);
-		return Color(std::clamp((std::uint32_t)(color.R() * alpha), 0u, 255u), std::clamp((std::uint32_t)(color.G() * alpha), 0u, 255u), std::clamp((std::uint32_t)(color.B() * alpha), 0u, 255u));
+		return Color(std::clamp((std::uint32_t)(color.R * alpha), 0u, 255u), std::clamp((std::uint32_t)(color.G * alpha), 0u, 255u), std::clamp((std::uint32_t)(color.B * alpha), 0u, 255u));
 	}
 
 	AuraLight HUD::KeyToAuraLight(KeySym key)

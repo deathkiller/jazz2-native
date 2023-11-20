@@ -265,17 +265,17 @@ namespace Jazz2::UI
 		Shader* colorizeShader;
 		bool useRandomColor, isShadow;
 		float alpha;
-		if (color.R() == DefaultColor.R() && color.G() == DefaultColor.G() && color.B() == DefaultColor.B()) {
+		if (color.R == DefaultColor.R && color.G == DefaultColor.G && color.B == DefaultColor.B) {
 			colorizeShader = nullptr;
 			useRandomColor = false;
 			isShadow = false;
-			alpha = color.A();
+			alpha = color.A;
 			color = Colorf(1.0f, 1.0f, 1.0f, alpha);
 		} else {
 			colorizeShader = ContentResolver::Get().GetShader(PrecompiledShader::Colorized);
-			useRandomColor = (color.R() == RandomColor.R() && color.G() == RandomColor.G() && color.B() == RandomColor.B());
-			isShadow = (color.R() == 0.0f && color.G() == 0.0f && color.B() == 0.0f);
-			alpha = std::min(color.A() * 2.0f, 1.0f);
+			useRandomColor = (color.R == RandomColor.R && color.G == RandomColor.G && color.B == RandomColor.B);
+			isShadow = (color.R == 0.0f && color.G == 0.0f && color.B == 0.0f);
+			alpha = std::min(color.A * 2.0f, 1.0f);
 		}
 
 		idx = 0;
@@ -392,7 +392,7 @@ namespace Jazz2::UI
 				if (uvRect.W > 0 && uvRect.H > 0) {
 					if (useRandomColor) {
 						const Colorf& newColor = RandomColors[charOffset % countof(RandomColors)];
-						color = Colorf(newColor.R(), newColor.G(), newColor.B(), color.A());
+						color = Colorf(newColor.R, newColor.G, newColor.B, color.A);
 					}
 
 					Vector2f pos = Vector2f(originPos);

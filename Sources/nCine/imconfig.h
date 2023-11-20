@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../nCine/Primitives/Vector2.h"
 #include "../nCine/Primitives/Vector4.h"
 #include "../nCine/Primitives/Colorf.h"
 
@@ -18,5 +19,5 @@
 	constexpr ImVec4(const nCine::Vector4f &f) : x(f.X), y(f.Y), z(f.Z), w(f.W) {} \
 	operator nCine::Vector4f() const { return nCine::Vector4f(x, y, z, w); } \
 	\
-	ImVec4(const nCine::Colorf &c) : x(c.R()), y(c.G()), z(c.B()), w(c.A()) {} \
+	ImVec4(const nCine::Colorf &c) : x(c.R), y(c.G), z(c.B), w(c.A) {} \
 	operator nCine::Colorf() const { return nCine::Colorf(x, y, z, w); }

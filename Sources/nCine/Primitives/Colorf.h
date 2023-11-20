@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Common.h>
+
 #include <algorithm>
 
 namespace nCine
@@ -10,7 +12,7 @@ namespace nCine
 	class Colorf
 	{
 	public:
-		static constexpr int NumChannels = 4;
+		static constexpr std::int32_t NumChannels = 4;
 
 		static const Colorf Black;
 		static const Colorf White;
@@ -20,6 +22,11 @@ namespace nCine
 		static const Colorf Yellow;
 		static const Colorf Magenta;
 		static const Colorf Cyan;
+
+		float R;
+		float G;
+		float B;
+		float A;
 
 		/// Default constructor (white color)
 		constexpr Colorf()
@@ -33,7 +40,7 @@ namespace nCine
 		}
 		/// Four channels constructor
 		constexpr Colorf(float red, float green, float blue, float alpha)
-			: red_(red), green_(green), blue_(blue), alpha_(std::clamp(alpha, 0.0f, 1.0f))
+			: R(red), G(green), B(blue), A(std::clamp(alpha, 0.0f, 1.0f))
 		{
 		}
 		/// Four channels constructor from an array
@@ -41,38 +48,22 @@ namespace nCine
 		/// Constructor taking an unsigned char color
 		explicit Colorf(const Color& color);
 
-		/// Gets the red channel of the color
-		inline float R() const {
-			return red_;
-		}
-		/// Gets the green channel of the color
-		inline float G() const {
-			return green_;
-		}
-		/// Gets the blue channel of the color
-		inline float B() const {
-			return blue_;
-		}
-		/// Gets the alpha channel of the color
-		inline float A() const {
-			return alpha_;
-		}
 		/// Gets the color array
 		inline const float* Data() const {
-			return &red_;
+			return &R;
 		}
 		/// Gets the color array
 		inline float* Data() {
-			return &red_;
+			return &R;
 		}
 
 		/// Sets four color channels
 		constexpr void Set(float red, float green, float blue, float alpha)
 		{
-			red_ = red;
-			green_ = green;
-			blue_ = blue;
-			alpha_ = std::clamp(alpha, 0.0f, 1.0f);
+			R = red;
+			G = green;
+			B = blue;
+			A = std::clamp(alpha, 0.0f, 1.0f);
 		}
 		/// Sets three color channels
 		void Set(float red, float green, float blue);
@@ -101,12 +92,5 @@ namespace nCine
 		Colorf operator*(const Colorf& color) const;
 		/// Multiplication by a constant scalar
 		Colorf operator*(float scalar) const;
-
-	private:
-		float red_;
-		float green_;
-		float blue_;
-		float alpha_;
 	};
-
 }

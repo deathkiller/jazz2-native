@@ -314,7 +314,7 @@ namespace nCine
 	template <class T>
 	inline T Vector3<T>::Length() const
 	{
-		return sqrt(X * X + Y * Y + Z * Z);
+		return (T)sqrt(X * X + Y * Y + Z * Z);
 	}
 
 	template <class T>
