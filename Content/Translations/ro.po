@@ -1432,11 +1432,11 @@ msgstr "Joacă Niveluri Customizate"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:47
 msgid "Connect To Server"
-msgstr ""
+msgstr "Conectare la server"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:48
 msgid "Create Server"
-msgstr ""
+msgstr "Creați un server"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:52
@@ -1506,7 +1506,7 @@ msgstr "Comenzi Tactile"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:22
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:59
 msgid "Input Diagnostics"
-msgstr ""
+msgstr "Diagnosticarea intrărilor"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:25
@@ -1617,7 +1617,7 @@ msgstr "Scripturi"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:40
 msgid "Browse \"Source\" Directory"
-msgstr ""
+msgstr "Răsfoiți directorul sursa \"Source\""
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:44
@@ -1704,7 +1704,7 @@ msgstr "Niciun episod nou nu a fost importat!"
 
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:74
 msgid "No gamepads are detected!"
-msgstr ""
+msgstr "Nu sunt detectate gamepad-uri!"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:21
@@ -1863,12 +1863,12 @@ msgstr "Poți ajusta poziția zonelor tactile prin a le trage și fixa."
 
 #: Sources/Main.cpp:260 Sources/Main.cpp:322
 msgid "Creating server..."
-msgstr ""
+msgstr "Crearea serverului..."
 
 #: Sources/Main.cpp:275 Sources/Main.cpp:335
 #, c-format
 msgid "Connecting to %s:%u..."
-msgstr ""
+msgstr "Conectare la %s:%u..."
 
 #: Sources/Main.cpp:503 Sources/Main.cpp:541
 msgid ""
@@ -1891,6 +1891,10 @@ msgid ""
 "\n"
 "Your client version is not compatible with the server."
 msgstr ""
+"\f[c:0x704a4a]Nu se poate conecta la server!\f[c]\n"
+"\n"
+"\n"
+"Versiunea clientului dvs. nu este compatibilă cu serverul."
 
 #: Sources/Main.cpp:634
 msgid ""
@@ -1900,6 +1904,11 @@ msgid ""
 "Server capacity is full.\n"
 "Please try it later."
 msgstr ""
+"\f[c:0x704a4a]Nu se poate conecta la server!\f[c]\n"
+"\n"
+"\n"
+"Capacitatea serverului este completă.\n"
+"Vă rugăm să încercați mai târziu."
 
 #: Sources/Main.cpp:635
 msgid ""
@@ -1909,6 +1918,12 @@ msgid ""
 "Server is not in a state where it can process your request.\n"
 "Please try again in a few seconds."
 msgstr ""
+"\f[c:0x704a4a]Nu se poate conecta la server!\f[c]\n"
+"\n"
+"\n"
+"Serverul nu se află într-o stare în care să poată procesa cererea "
+"dumneavoastră.\n"
+"Vă rugăm să încercați din nou în câteva secunde."
 
 #: Sources/Main.cpp:636
 msgid ""
@@ -1918,6 +1933,11 @@ msgid ""
 "Server is shutting down.\n"
 "Please try it later."
 msgstr ""
+"\f[c:0x704a4a]Conexiunea a fost închisă!\f[c]\n"
+"\n"
+"\n"
+"Serverul se închide.\n"
+"Vă rugăm să încercați mai târziu."
 
 #: Sources/Main.cpp:637
 msgid ""
@@ -1927,6 +1947,11 @@ msgid ""
 "Please try it again and if the problem persists,\n"
 "check your network connection."
 msgstr ""
+"\f[c:0x704a4a]Conexiunea a fost pierdută!\f[c]\n"
+"\n"
+"\n"
+"Vă rugăm să încercați din nou și dacă problema persistă,\n"
+"verificați conexiunea de rețea."
 
 #: Sources/Main.cpp:638
 msgid ""
@@ -1935,6 +1960,10 @@ msgid ""
 "\n"
 "The server is not responding for connection request."
 msgstr ""
+"\f[c:0x704a4a]Nu se poate conecta la server!\f[c]\n"
+"\n"
+"\n"
+"Serverul nu răspunde la cererea de conectare."
 
 #: Sources/Main.cpp:639
 msgid ""
@@ -1944,6 +1973,11 @@ msgid ""
 "You have been \f[c:0x907050]kicked\f[c] off the server.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:0x704a4a]Conexiunea a fost închisă!\f[c]\n"
+"\n"
+"\n"
+"Ați fost \f[c:0x90705050]dat afară\f[c] de pe server.\n"
+"Contactați administratorii serverului pentru mai multe informații."
 
 #: Sources/Main.cpp:640
 msgid ""
@@ -1953,6 +1987,11 @@ msgid ""
 "You have been \f[c:0x725040]banned\f[c] off the server.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:0x704a4a]Conexiunea a fost închisă!\f[c]\n"
+"\n"
+"\n"
+"Ați fost \f[c:0x725040]banat\f[c] de pe server.\n"
+"Contactați administratorii serverului pentru mai multe informații."
 
 #~ msgid "Error"
 #~ msgstr "Eroare"

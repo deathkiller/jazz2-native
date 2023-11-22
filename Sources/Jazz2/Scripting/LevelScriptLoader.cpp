@@ -50,27 +50,27 @@ namespace Jazz2::Scripting
 	}
 
 	LevelScriptLoader::LevelScriptLoader(LevelHandler* levelHandler, const StringView& scriptPath)
-		:
-		_levelHandler(levelHandler),
-		_onLevelUpdate(nullptr),
-		_onLevelUpdateLastFrame(-1)
+		: _levelHandler(levelHandler), _onLevelUpdate(nullptr), _onLevelUpdateLastFrame(-1), _onDrawAmmo(nullptr),
+			_onDrawHealth(nullptr), _onDrawLives(nullptr), _onDrawPlayerTimer(nullptr), _onDrawScore(nullptr), _onDrawGameModeHUD(nullptr)
 	{
 		// Try to load the script
 		HashMap<String, bool> DefinedSymbols = {
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-			{ "TARGET_EMSCRIPTEN"_s, true },
-#elif defined(DEATH_TARGET_ANDROID)
+#if defined(DEATH_TARGET_ANDROID)
 			{ "TARGET_ANDROID"_s, true },
 #elif defined(DEATH_TARGET_APPLE)
 			{ "TARGET_APPLE"_s, true },
 #	if defined(DEATH_TARGET_IOS)
 			{ "TARGET_IOS"_s, true },
 #	endif
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
+			{ "TARGET_EMSCRIPTEN"_s, true },
 #elif defined(DEATH_TARGET_WINDOWS)
 			{ "TARGET_WINDOWS"_s, true },
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 			{ "TARGET_WINDOWS_RT"_s, true },
 #	endif
+#elif defined(DEATH_TARGET_SWITCH)
+			{ "TARGET_SWITCH"_s, true },
 #elif defined(DEATH_TARGET_UNIX)
 			{ "TARGET_UNIX"_s, true },
 #endif
@@ -90,6 +90,9 @@ namespace Jazz2::Scripting
 #endif
 #if defined(WITH_OPENMPT)
 			{ "WITH_OPENMPT"_s, true },
+#endif
+#if defined(WITH_IMGUI)
+			{ "WITH_IMGUI"_s, true },
 #endif
 #if defined(WITH_THREADS)
 			{ "WITH_THREADS"_s, true },
@@ -115,14 +118,21 @@ namespace Jazz2::Scripting
 				break;
 		}
 
-		int r = Build(); RETURN_ASSERT_MSG(r >= 0, "Cannot compile the script. Please correct the code and try again.");
+		std::int32_t r = Build(); RETURN_ASSERT_MSG(r >= 0, "Cannot compile the script. Please correct the code and try again.");
 
 		switch (_scriptContextType) {
 			case ScriptContextType::Legacy:
 				_onLevelUpdate = _module->GetFunctionByDecl("void onMain()");
+				_onDrawAmmo = _module->GetFunctionByDecl("bool onDrawAmmo(jjPLAYER@ player, jjCANVAS@ canvas)");
+				_onDrawHealth = _module->GetFunctionByDecl("bool onDrawHealth(jjPLAYER@ player, jjCANVAS@ canvas)");
+				_onDrawLives = _module->GetFunctionByDecl("bool onDrawLives(jjPLAYER@ player, jjCANVAS@ canvas)");
+				_onDrawPlayerTimer = _module->GetFunctionByDecl("bool onDrawPlayerTimer(jjPLAYER@ player, jjCANVAS@ canvas)");
+				_onDrawScore = _module->GetFunctionByDecl("bool onDrawScore(jjPLAYER@ player, jjCANVAS@ canvas)");
+				_onDrawGameModeHUD = _module->GetFunctionByDecl("bool onDrawGameModeHUD(jjPLAYER@ player, jjCANVAS@ canvas)");
 				break;
 			case ScriptContextType::Standard:
 				_onLevelUpdate = _module->GetFunctionByDecl("void onLevelUpdate(float)");
+				// TODO: Add draw callbacks
 				break;
 		}
 	}
@@ -159,7 +169,7 @@ namespace Jazz2::Scripting
 		asIScriptContext* ctx = _engine->RequestContext();
 
 		ctx->Prepare(func);
-		int r = ctx->Execute();
+		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
 			OnException(ctx);
 		}
@@ -177,7 +187,7 @@ namespace Jazz2::Scripting
 		asIScriptContext* ctx = _engine->RequestContext();
 
 		ctx->Prepare(func);
-		int r = ctx->Execute();
+		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
 			OnException(ctx);
 		}
@@ -195,7 +205,7 @@ namespace Jazz2::Scripting
 		asIScriptContext* ctx = _engine->RequestContext();
 
 		ctx->Prepare(func);
-		int r = ctx->Execute();
+		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
 			OnException(ctx);
 		}
@@ -210,7 +220,7 @@ namespace Jazz2::Scripting
 				asIScriptFunction* onPlayer = _module->GetFunctionByName("void onPlayer(jjPLAYER@)");
 
 				if (_onLevelUpdate == nullptr && onPlayer == nullptr) {
-					_onLevelUpdateLastFrame = (int32_t)_levelHandler->_elapsedFrames;
+					_onLevelUpdateLastFrame = (std::int32_t)_levelHandler->_elapsedFrames;
 					return;
 				}
 
@@ -218,11 +228,11 @@ namespace Jazz2::Scripting
 				asIScriptContext* ctx = _engine->RequestContext();
 
 				// It should update at 70 FPS instead of 60 FPS
-				int32_t currentFrame = (int32_t)(_levelHandler->_elapsedFrames * (70.0f / 60.0f));
+				std::int32_t currentFrame = (std::int32_t)(_levelHandler->_elapsedFrames * (70.0f / 60.0f));
 				while (_onLevelUpdateLastFrame <= currentFrame) {
 					if (_onLevelUpdate != nullptr) {
 						ctx->Prepare(_onLevelUpdate);
-						int r = ctx->Execute();
+						std::int32_t r = ctx->Execute();
 						if (r == asEXECUTION_EXCEPTION) {
 							OnException(ctx);
 							// Don't call the method again if an exception occurs
@@ -230,14 +240,13 @@ namespace Jazz2::Scripting
 						}
 					}
 					if (onPlayer != nullptr) {
-						for (auto player : _levelHandler->_players) {
+						for (auto* player : _levelHandler->_players) {
 							ctx->Prepare(onPlayer);
 
-							void* mem = asAllocMem(sizeof(jjPLAYER));
-							jjPLAYER* playerWrapper = new(mem) jjPLAYER(this, player);
+							jjPLAYER* playerWrapper = new(asAllocMem(sizeof(jjPLAYER))) jjPLAYER(this, player);
 							ctx->SetArgObject(0, playerWrapper);
 
-							int r = ctx->Execute();
+							std::int32_t r = ctx->Execute();
 							if (r == asEXECUTION_EXCEPTION) {
 								OnException(ctx);
 								// Don't call the method again if an exception occurs
@@ -263,7 +272,7 @@ namespace Jazz2::Scripting
 				asIScriptContext* ctx = _engine->RequestContext();
 				ctx->Prepare(_onLevelUpdate);
 				ctx->SetArgFloat(0, timeMult);
-				int r = ctx->Execute();
+				std::int32_t r = ctx->Execute();
 				if (r == asEXECUTION_EXCEPTION) {
 					LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 					// Don't call the method again if an exception occurs
@@ -286,14 +295,13 @@ namespace Jazz2::Scripting
 			ctx->Prepare(func);
 
 			jjPLAYER* playerWrapper = nullptr;
-			int paramIdx = 0;
-			int typeId = 0;
+			std::int32_t paramIdx = 0;
+			std::int32_t typeId = 0;
 			if (func->GetParam(paramIdx, &typeId) >= 0) {
 				if ((typeId & (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) == (asTYPEID_OBJHANDLE | asTYPEID_APPOBJECT)) {
 					asITypeInfo* typeInfo = _engine->GetTypeInfoById(typeId);
 					if (typeInfo->GetName() == "jjPLAYER"_s) {
-						void* mem = asAllocMem(sizeof(jjPLAYER));
-						playerWrapper = new(mem) jjPLAYER(this, _levelHandler->_players[0]);
+						playerWrapper = new(asAllocMem(sizeof(jjPLAYER))) jjPLAYER(this, _levelHandler->_players[0]);
 						ctx->SetArgObject(0, playerWrapper);
 					}
 					paramIdx++;
@@ -306,7 +314,7 @@ namespace Jazz2::Scripting
 				}
 			}
 
-			int r = ctx->Execute();
+			std::int32_t r = ctx->Execute();
 			if (r == asEXECUTION_EXCEPTION) {
 				LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 			}
@@ -362,6 +370,43 @@ namespace Jazz2::Scripting
 		}*/
 
 		LOGW("Callback function \"%s\" was not found in the script. Please correct the code and try again.", funcName);
+	}
+
+	bool LevelScriptLoader::OnDraw(UI::HUD* hud, DrawType type)
+	{
+		asIScriptFunction* func;
+		switch (type) {
+			case DrawType::WeaponAmmo: func = _onDrawAmmo; break;
+			case DrawType::Health: func = _onDrawHealth; break;
+			case DrawType::Lives: func = _onDrawLives; break;
+			case DrawType::PlayerTimer: func = _onDrawPlayerTimer; break;
+			case DrawType::Score: func = _onDrawScore; break;
+			case DrawType::GameModeHUD: func = _onDrawGameModeHUD; break;
+			default: func = nullptr; break;
+		}
+
+		bool overrideDraw = false;
+		if (func != nullptr) {
+			asIScriptContext* ctx = _engine->RequestContext();
+			ctx->Prepare(func);
+
+			jjPLAYER* playerWrapper = new(asAllocMem(sizeof(jjPLAYER))) jjPLAYER(this, _levelHandler->_players[0]);
+			ctx->SetArgObject(0, playerWrapper);
+
+			jjCANVAS* canvasWrapper = new(asAllocMem(sizeof(jjCANVAS))) jjCANVAS(); // TODO
+			ctx->SetArgObject(1, canvasWrapper);
+
+			std::int32_t r = ctx->Execute();
+			if (r == asEXECUTION_FINISHED) {
+				overrideDraw = (ctx->GetReturnByte() != 0);
+			} else if (r == asEXECUTION_EXCEPTION) {
+				OnException(ctx);
+			}
+
+			_engine->ReturnContext(ctx);
+		}
+		
+		return overrideDraw;
 	}
 
 	void LevelScriptLoader::RegisterBuiltInFunctions(asIScriptEngine* engine)

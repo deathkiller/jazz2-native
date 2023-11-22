@@ -4,6 +4,10 @@
 #include "../PreferencesCache.h"
 #include "../Actors/Enemies/Bosses/BossBase.h"
 
+#if defined(WITH_ANGELSCRIPT)
+#	include "../Scripting/LevelScriptLoader.h"
+#endif
+
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Application.h"
@@ -210,160 +214,16 @@ namespace Jazz2::UI
 		auto& players = _levelHandler->GetPlayers();
 		if (!players.empty()) {
 			Actors::Player* player = players[0];
-			PlayerType playerType = player->_playerType;
-
-			// Bottom left
-			AnimState playerIcon;
-			switch (playerType) {
-				default:
-				case PlayerType::Jazz: playerIcon = CharacterJazz; break;
-				case PlayerType::Spaz: playerIcon = CharacterSpaz; break;
-				case PlayerType::Lori: playerIcon = CharacterLori; break;
-				case PlayerType::Frog: playerIcon = CharacterFrog; break;
-			}
-
-			DrawElement(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1.0f + 1.6f, ShadowLayer, Alignment::BottomRight, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
-			DrawElement(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1.0f, MainLayer, Alignment::BottomRight, Colorf::White);
-
-			if (_levelHandler->IsReforged()) {
-				for (int32_t i = 0; i < player->_health; i++) {
-					stringBuffer[i] = '|';
-				}
-				stringBuffer[player->_health] = '\0';
-
-				if (player->_lives > 0) {
-					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 3.0f - 0.5f, bottom - 17.0f + 0.5f, FontShadowLayer,
-						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
-					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 3.0f + 0.5f, bottom - 17.0f - 0.5f, FontShadowLayer,
-						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
-					_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 3.0f, bottom - 17.0f, FontLayer,
-						Alignment::BottomLeft, Font::RandomColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
-
-					if (player->_lives < UINT8_MAX) {
-						stringBuffer[0] = 'x';
-						i32tos(player->_lives, stringBuffer + 1);
-						
-						_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
-							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
-						_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
-							Alignment::BottomLeft, Font::DefaultColor);
-					} else {
-						_smallFont->DrawString(this, "x\u221E", charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
-							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
-						_smallFont->DrawString(this, "x\u221E", charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
-							Alignment::BottomLeft, Font::DefaultColor);
-					}
-				} else {
-					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 3.0f - 0.5f, bottom - 4.0f + 0.5f, FontShadowLayer,
-						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
-					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 3.0f + 0.5f, bottom - 4.0f - 0.5f, FontShadowLayer,
-						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
-					_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 3.0f, bottom - 4.0f, FontLayer,
-						Alignment::BottomLeft, Font::RandomColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
-				}
-
-				// Top left
-				DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
-				DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f, MainLayer, Alignment::TopLeft, Colorf::White);
-
-				snprintf(stringBuffer, countof(stringBuffer), "%08i", player->_score);
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-			} else {
-				for (int32_t i = 0; i < player->_health; i++) {
-					DrawElement(Heart, -1, view.X + view.W - 4.0f - (i * 16.0f), view.Y + 4.0f, MainLayer, Alignment::TopRight, Colorf::White);
-				}
-
-				if (player->_lives > 0) {
-					if (player->_lives < UINT8_MAX) {
-						stringBuffer[0] = 'x';
-						i32tos(player->_lives, stringBuffer + 1);
-						_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
-							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
-						_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
-							Alignment::BottomLeft, Font::DefaultColor);
-					} else {
-						_smallFont->DrawString(this, "x\u221E", charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
-							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
-						_smallFont->DrawString(this, "x\u221E", charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
-							Alignment::BottomLeft, Font::DefaultColor);
-					}
-				}
-
-				snprintf(stringBuffer, countof(stringBuffer), "%08i", player->_score);
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 4.0f, view.Y + 1.0f + 1.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 4.0f, view.Y + 1.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor, 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-			}
-
-			// Bottom right
-			if (player->_weaponAllowed && playerType != PlayerType::Frog) {
-				WeaponType weapon = player->_currentWeapon;
-				Vector2f pos = Vector2f(right - 40.0f, bottom - 2.0f);
-				AnimState currentWeapon = GetCurrentWeapon(player, weapon, pos);
-
-				StringView ammoCount;
-				if (player->_weaponAmmo[(int32_t)weapon] == UINT16_MAX) {
-					ammoCount = "x\u221E"_s;
-				} else {
-					stringBuffer[0] = 'x';
-					i32tos(player->_weaponAmmo[(int32_t)weapon] / 256, stringBuffer + 1);
-					ammoCount = stringBuffer;
-				}
-				_smallFont->DrawString(this, ammoCount, charOffsetShadow, right - 40.0f, bottom - 2.0f + 1.0f, FontShadowLayer,
-					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
-				_smallFont->DrawString(this, ammoCount, charOffset, right - 40.0f, bottom - 2.0f, FontLayer,
-					Alignment::BottomLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
-
-				auto* res = _metadata->FindAnimation(currentWeapon);
-				if (res != nullptr) {
-					if (res->Base->FrameDimensions.Y < 20) {
-						pos.Y -= std::round((20 - res->Base->FrameDimensions.Y) * 0.5f);
-					}
-
-					DrawElement(currentWeapon, -1, pos.X, pos.Y + 1.6f, ShadowLayer, Alignment::BottomRight, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
-					DrawElement(currentWeapon, -1, pos.X, pos.Y, MainLayer, Alignment::BottomRight, Colorf::White);
-				}
-			}
-
-			// Active Boss (health bar)
-			if (_levelHandler->_activeBoss != nullptr && _levelHandler->_activeBoss->GetMaxHealth() != INT32_MAX) {
-				constexpr float TransitionTime = 60.0f;
-				float y, alpha;
-				if (_activeBossTime < TransitionTime) {
-					y = (TransitionTime - _activeBossTime) / 8.0f;
-					y = bottom * 0.1f - (y * y);
-					alpha = std::max(_activeBossTime / TransitionTime, 0.0f);
-				} else {
-					y = bottom * 0.1f;
-					alpha = 1.0f;
-				}
-
-				float perc = 0.08f + 0.84f * _levelHandler->_activeBoss->GetHealth() / _levelHandler->_activeBoss->GetMaxHealth();
-
-				DrawElement(BossHealthBar, 0, ViewSize.X * 0.5f, y + 2.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.1f * alpha));
-				DrawElement(BossHealthBar, 0, ViewSize.X * 0.5f, y + 1.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * alpha));
-
-				DrawElement(BossHealthBar, 0, ViewSize.X * 0.5f, y, MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alpha));
-				DrawElementClipped(BossHealthBar, 1, ViewSize.X * 0.5f, y, MainLayer + 2, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alpha), perc, 1.0f);
-			}
-
-			// Misc
+			
+			DrawHealth(view, adjustedView, player);
+			DrawScore(view, player);
+			DrawWeaponAmmo(adjustedView, player);
+			DrawActiveBoss(adjustedView);
 			DrawLevelText(charOffset);
 			DrawCoins(charOffset);
 			DrawGems(charOffset);
 
 			DrawWeaponWheel(player);
-
-			// FPS
-			if (PreferencesCache::ShowPerformanceMetrics) {
-				i32tos((int32_t)std::round(theApplication().frameTimer().averageFps()), stringBuffer);
-				_smallFont->DrawString(this, stringBuffer, charOffset, view.W - 4.0f, view.Y + 2.0f, FontLayer,
-					Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
-			}
 
 			// Touch Controls
 			if (_touchButtonsTimer > 0.0f) {
@@ -399,6 +259,13 @@ namespace Jazz2::UI
 					DrawTexture(*button.Graphics->Base->TextureDiffuse, Vector2f(x, y), TouchButtonsLayer, Vector2f(button.Width, button.Height), Vector4f(1.0f, 0.0f, -1.0f, 1.0f), Colorf::White);
 				}
 			}
+		}
+
+		// FPS
+		if (PreferencesCache::ShowPerformanceMetrics) {
+			i32tos((int32_t)std::round(theApplication().frameTimer().averageFps()), stringBuffer);
+			_smallFont->DrawString(this, stringBuffer, charOffset, view.W - 4.0f, view.Y + 2.0f, FontLayer,
+				Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 		}
 
 		if (_transitionState == TransitionState::FadeIn || _transitionState == TransitionState::FadeOut) {
@@ -567,6 +434,211 @@ namespace Jazz2::UI
 			_transitionState = TransitionState::WaitingForFadeOut;
 			_transitionTime = delay;
 		}
+	}
+
+	void HUD::DrawHealth(const Rectf& view, const Rectf& adjustedView, Actors::Player* player)
+	{
+		PlayerType playerType = player->_playerType;
+
+		float bottom = adjustedView.Y + adjustedView.H;
+
+		AnimState playerIcon;
+		switch (playerType) {
+			default:
+			case PlayerType::Jazz: playerIcon = CharacterJazz; break;
+			case PlayerType::Spaz: playerIcon = CharacterSpaz; break;
+			case PlayerType::Lori: playerIcon = CharacterLori; break;
+			case PlayerType::Frog: playerIcon = CharacterFrog; break;
+		}
+
+#if defined(WITH_ANGELSCRIPT)
+		bool shouldDrawHealth = (_levelHandler->_scripts == nullptr || !_levelHandler->_scripts->OnDraw(this, Scripting::DrawType::Health));
+		bool shouldDrawLives = (_levelHandler->_scripts == nullptr || !_levelHandler->_scripts->OnDraw(this, Scripting::DrawType::Lives));
+#else
+		constexpr bool shouldDrawHealth = true;
+		constexpr bool shouldDrawLives = true;
+#endif
+		if (shouldDrawLives) {
+			DrawElement(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1.0f + 1.6f, ShadowLayer, Alignment::BottomRight, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+			DrawElement(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1.0f, MainLayer, Alignment::BottomRight, Colorf::White);
+		}
+
+		char stringBuffer[32];
+		std::int32_t charOffset = 0;
+		std::int32_t charOffsetShadow = 0;
+
+		if (_levelHandler->IsReforged()) {
+			for (std::int32_t i = 0; i < player->_health; i++) {
+				stringBuffer[i] = '|';
+			}
+			stringBuffer[player->_health] = '\0';
+
+			if (player->_lives > 0) {
+				if (shouldDrawHealth) {
+					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 3.0f - 0.5f, bottom - 17.0f + 0.5f, FontShadowLayer,
+						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
+					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 3.0f + 0.5f, bottom - 17.0f - 0.5f, FontShadowLayer,
+						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
+					_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 3.0f, bottom - 17.0f, FontLayer,
+						Alignment::BottomLeft, Font::RandomColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
+				}
+
+				if (shouldDrawLives) {
+					if (player->_lives < UINT8_MAX) {
+						stringBuffer[0] = 'x';
+						i32tos(player->_lives, stringBuffer + 1);
+
+						_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
+							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+						_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
+							Alignment::BottomLeft, Font::DefaultColor);
+					} else {
+						_smallFont->DrawString(this, "x\u221E", charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
+							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+						_smallFont->DrawString(this, "x\u221E", charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
+							Alignment::BottomLeft, Font::DefaultColor);
+					}
+				}
+			} else {
+				if (shouldDrawHealth) {
+					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 3.0f - 0.5f, bottom - 4.0f + 0.5f, FontShadowLayer,
+						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
+					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 3.0f + 0.5f, bottom - 4.0f - 0.5f, FontShadowLayer,
+						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.42f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
+					_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 3.0f, bottom - 4.0f, FontLayer,
+						Alignment::BottomLeft, Font::RandomColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 1.1f);
+				}
+			}
+		} else {
+			if (shouldDrawHealth) {
+				for (std::int32_t i = 0; i < player->_health; i++) {
+					DrawElement(Heart, -1, view.X + view.W - 4.0f - (i * 16.0f), view.Y + 4.0f, MainLayer, Alignment::TopRight, Colorf::White);
+				}
+			}
+
+			if (shouldDrawLives) {
+				if (player->_lives > 0) {
+					if (player->_lives < UINT8_MAX) {
+						stringBuffer[0] = 'x';
+						i32tos(player->_lives, stringBuffer + 1);
+						_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
+							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+						_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
+							Alignment::BottomLeft, Font::DefaultColor);
+					} else {
+						_smallFont->DrawString(this, "x\u221E", charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
+							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+						_smallFont->DrawString(this, "x\u221E", charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
+							Alignment::BottomLeft, Font::DefaultColor);
+					}
+				}
+			}
+		}
+	}
+
+	void HUD::DrawScore(const Rectf& view, Actors::Player* player)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		if (_levelHandler->_scripts != nullptr && _levelHandler->_scripts->OnDraw(this, Scripting::DrawType::Score)) {
+			return;
+		}
+#endif
+
+		char stringBuffer[32];
+		std::int32_t charOffset = 0;
+		std::int32_t charOffsetShadow = 0;
+
+		if (_levelHandler->IsReforged()) {
+			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f, MainLayer, Alignment::TopLeft, Colorf::White);
+
+			snprintf(stringBuffer, countof(stringBuffer), "%08i", player->_score);
+			_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
+				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+			_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
+				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+		} else {
+			snprintf(stringBuffer, countof(stringBuffer), "%08i", player->_score);
+			_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 4.0f, view.Y + 1.0f + 1.0f, FontShadowLayer,
+				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+			_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 4.0f, view.Y + 1.0f, FontLayer,
+				Alignment::TopLeft, Font::DefaultColor, 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+		}
+	}
+
+	void HUD::DrawWeaponAmmo(const Rectf& adjustedView, Actors::Player* player)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		if (_levelHandler->_scripts != nullptr && _levelHandler->_scripts->OnDraw(this, Scripting::DrawType::WeaponAmmo)) {
+			return;
+		}
+#endif
+
+		if (!player->_weaponAllowed || player->_playerType == PlayerType::Frog) {
+			return;
+		}
+
+		float right = adjustedView.X + adjustedView.W;
+		float bottom = adjustedView.Y + adjustedView.H;
+
+		WeaponType weapon = player->_currentWeapon;
+		Vector2f pos = Vector2f(right - 40.0f, bottom - 2.0f);
+		AnimState currentWeaponAnim = GetCurrentWeapon(player, weapon, pos);
+
+		char stringBuffer[32];
+		StringView ammoCount;
+		if (player->_weaponAmmo[(int32_t)weapon] == UINT16_MAX) {
+			ammoCount = "x\u221E"_s;
+		} else {
+			stringBuffer[0] = 'x';
+			i32tos(player->_weaponAmmo[(int32_t)weapon] / 256, stringBuffer + 1);
+			ammoCount = stringBuffer;
+		}
+
+		std::int32_t charOffset = 0;
+		std::int32_t charOffsetShadow = 0;
+		_smallFont->DrawString(this, ammoCount, charOffsetShadow, right - 40.0f, bottom - 2.0f + 1.0f, FontShadowLayer,
+			Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+		_smallFont->DrawString(this, ammoCount, charOffset, right - 40.0f, bottom - 2.0f, FontLayer,
+			Alignment::BottomLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+
+		auto* res = _metadata->FindAnimation(currentWeaponAnim);
+		if (res != nullptr) {
+			if (res->Base->FrameDimensions.Y < 20) {
+				pos.Y -= std::round((20 - res->Base->FrameDimensions.Y) * 0.5f);
+			}
+
+			DrawElement(currentWeaponAnim, -1, pos.X, pos.Y + 1.6f, ShadowLayer, Alignment::BottomRight, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+			DrawElement(currentWeaponAnim, -1, pos.X, pos.Y, MainLayer, Alignment::BottomRight, Colorf::White);
+		}
+	}
+
+	void HUD::DrawActiveBoss(const Rectf& adjustedView)
+	{
+		if (_levelHandler->_activeBoss == nullptr || _levelHandler->_activeBoss->GetMaxHealth() == INT32_MAX) {
+			return;
+		}
+
+		float bottom = adjustedView.Y + adjustedView.H;
+
+		constexpr float TransitionTime = 60.0f;
+		float y, alpha;
+		if (_activeBossTime < TransitionTime) {
+			y = (TransitionTime - _activeBossTime) / 8.0f;
+			y = bottom * 0.1f - (y * y);
+			alpha = std::max(_activeBossTime / TransitionTime, 0.0f);
+		} else {
+			y = bottom * 0.1f;
+			alpha = 1.0f;
+		}
+
+		float perc = 0.08f + 0.84f * _levelHandler->_activeBoss->GetHealth() / _levelHandler->_activeBoss->GetMaxHealth();
+
+		DrawElement(BossHealthBar, 0, ViewSize.X * 0.5f, y + 2.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.1f * alpha));
+		DrawElement(BossHealthBar, 0, ViewSize.X * 0.5f, y + 1.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * alpha));
+
+		DrawElement(BossHealthBar, 0, ViewSize.X * 0.5f, y, MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alpha));
+		DrawElementClipped(BossHealthBar, 1, ViewSize.X * 0.5f, y, MainLayer + 2, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alpha), perc, 1.0f);
 	}
 
 	void HUD::DrawLevelText(int32_t& charOffset)

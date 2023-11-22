@@ -113,6 +113,10 @@ namespace Jazz2::UI
 		TouchButtonInfo _touchButtons[TouchButtonsCount];
 		float _touchButtonsTimer;
 
+		void DrawHealth(const Rectf& view, const Rectf& adjustedView, Actors::Player* player);
+		void DrawScore(const Rectf& view, Actors::Player* player);
+		void DrawWeaponAmmo(const Rectf& adjustedView, Actors::Player* player);
+		void DrawActiveBoss(const Rectf& adjustedView);
 		void DrawLevelText(int32_t& charOffset);
 		void DrawCoins(int32_t& charOffset);
 		void DrawGems(int32_t& charOffset);

@@ -127,7 +127,7 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("void Text(const string&in)", asFUNCTION(+[](const String& n) {
 			ImGui::TextUnformatted(n.data()); }), asCALL_CDECL);
 		// TODO
-		engine->RegisterGlobalFunction("void TextColored(const color&in, const string&in)", asFUNCTION(+[](const Colorf& c, const String& n) {
+		engine->RegisterGlobalFunction("void TextColored(const Color&in, const string&in)", asFUNCTION(+[](const Colorf& c, const String& n) {
 			ImGui::TextColored(c, n.data()); }), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void TextWrapped(const string&in)", asFUNCTION(+[](const String& n) {
 			ImGui::TextWrapped(n.data()); }), asCALL_CDECL);
@@ -254,15 +254,15 @@ namespace Jazz2::Scripting
 			return ImGui::SliderInt4(n.data(), &v.X, mn, mx); }), asCALL_CDECL);*/
 
 		// Widgets: Color Editor/Picker
-		/*engine->RegisterGlobalFunction("bool ColorEdit3(const string&in, color&inout)", asFUNCTION(+[](const String& id, Colorf& v) {
+		/*engine->RegisterGlobalFunction("bool ColorEdit3(const string&in, Color&inout)", asFUNCTION(+[](const String& id, Colorf& v) {
 			return ImGui::ColorEdit3(id.data(), &v.R); }), asCALL_CDECL);
-		engine->RegisterGlobalFunction("bool ColorEdit4(const string&in, color&inout)", asFUNCTION(+[](const String& id, Colorf& v) {
+		engine->RegisterGlobalFunction("bool ColorEdit4(const string&in, Color&inout)", asFUNCTION(+[](const String& id, Colorf& v) {
 			return ImGui::ColorEdit4(id.data(), &v.R); }), asCALL_CDECL);
-		engine->RegisterGlobalFunction("bool ColorPicker3(const string&in, color&inout)", asFUNCTION(+[](const String& id, Colorf& v) {
+		engine->RegisterGlobalFunction("bool ColorPicker3(const string&in, Color&inout)", asFUNCTION(+[](const String& id, Colorf& v) {
 			return ImGui::ColorPicker3(id.data(), &v.R); }), asCALL_CDECL);
-		engine->RegisterGlobalFunction("bool ColorPicker4(const string&in, color&inout)", asFUNCTION(+[](const String& id, Colorf& v) {
+		engine->RegisterGlobalFunction("bool ColorPicker4(const string&in, Color&inout)", asFUNCTION(+[](const String& id, Colorf& v) {
 			return ImGui::ColorPicker4(id.data(), &v.R); }), asCALL_CDECL);
-		engine->RegisterGlobalFunction("bool ColorButton(const string&in, const color&in)", asFUNCTION(+[](const String& id, const Colorf& v) {
+		engine->RegisterGlobalFunction("bool ColorButton(const string&in, const Color&in)", asFUNCTION(+[](const String& id, const Colorf& v) {
 			return ImGui::ColorButton(id.data(), v); }), asCALL_CDECL);*/
 
 		// Widgets: Trees
