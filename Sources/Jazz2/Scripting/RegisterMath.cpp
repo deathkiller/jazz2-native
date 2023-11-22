@@ -172,16 +172,16 @@ namespace Jazz2::Scripting
 
 	void RegisterMembers_Color(asIScriptEngine* engine, const char* className)
 	{
-		engine->RegisterObjectMethod(className, "color opMul(float) const", asMETHODPR(Colorf, operator*, (float) const, Colorf), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "color opMul(const color&in) const", asMETHODPR(Colorf, operator*, (const Colorf&) const, Colorf), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "color& opMulAssign(float)", asMETHODPR(Colorf, operator*=, (float), Colorf&), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "color& opMulAssign(const color&in)", asMETHODPR(Colorf, operator*=, (const Colorf&), Colorf&), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "color opAdd(const color&in) const", asMETHODPR(Colorf, operator+, (const Colorf&) const, Colorf), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "color& opAddAssign(const color&in)", asMETHODPR(Colorf, operator+=, (const Colorf&), Colorf&), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "color opSub(const color&in) const", asMETHODPR(Colorf, operator-, (const Colorf&) const, Colorf), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "color& opSubAssign(const color&in)", asMETHODPR(Colorf, operator-=, (const Colorf&), Colorf&), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "color& opAssign(const color&in)", asMETHODPR(Colorf, operator=, (const Colorf&), Colorf&), asCALL_THISCALL);
-		engine->RegisterObjectMethod(className, "bool opEquals(const color&in) const", asMETHODPR(Colorf, operator==, (const Colorf&) const, bool), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "Color opMul(float) const", asMETHODPR(Colorf, operator*, (float) const, Colorf), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "Color opMul(const Color&in) const", asMETHODPR(Colorf, operator*, (const Colorf&) const, Colorf), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "Color& opMulAssign(float)", asMETHODPR(Colorf, operator*=, (float), Colorf&), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "Color& opMulAssign(const Color&in)", asMETHODPR(Colorf, operator*=, (const Colorf&), Colorf&), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "Color opAdd(const Color&in) const", asMETHODPR(Colorf, operator+, (const Colorf&) const, Colorf), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "Color& opAddAssign(const Color&in)", asMETHODPR(Colorf, operator+=, (const Colorf&), Colorf&), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "Color opSub(const Color&in) const", asMETHODPR(Colorf, operator-, (const Colorf&) const, Colorf), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "Color& opSubAssign(const Color&in)", asMETHODPR(Colorf, operator-=, (const Colorf&), Colorf&), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "Color& opAssign(const Color&in)", asMETHODPR(Colorf, operator=, (const Colorf&), Colorf&), asCALL_THISCALL);
+		engine->RegisterObjectMethod(className, "bool opEquals(const Color&in) const", asMETHODPR(Colorf, operator==, (const Colorf&) const, bool), asCALL_THISCALL);
 
 		engine->RegisterObjectProperty(className, "float r", offsetof(Colorf, R));
 		engine->RegisterObjectProperty(className, "float g", offsetof(Colorf, G));
@@ -248,18 +248,18 @@ namespace Jazz2::Scripting
 		RegisterMembers_Vector2f(engine, "vec4");
 
 		// Color
-		engine->RegisterObjectType("color", sizeof(Colorf), asOBJ_VALUE | asGetTypeTraits<Colorf>() | asOBJ_POD | asOBJ_APP_CLASS_ALLFLOATS);
-		engine->RegisterObjectBehaviour("color", asBEHAVE_CONSTRUCT, "void f(const color&in)", asFUNCTION(+[](Vector4f* _ptr, const Colorf& v) {
+		engine->RegisterObjectType("Color", sizeof(Colorf), asOBJ_VALUE | asGetTypeTraits<Colorf>() | asOBJ_POD | asOBJ_APP_CLASS_ALLFLOATS);
+		engine->RegisterObjectBehaviour("Color", asBEHAVE_CONSTRUCT, "void f(const Color&in)", asFUNCTION(+[](Vector4f* _ptr, const Colorf& v) {
 			new(_ptr) Colorf(v); }), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectBehaviour("color", asBEHAVE_CONSTRUCT, "void f(const vec3&in, float)", asFUNCTION(+[](Vector4f* _ptr, const Vector3f& v, float a) {
+		engine->RegisterObjectBehaviour("Color", asBEHAVE_CONSTRUCT, "void f(const vec3&in, float)", asFUNCTION(+[](Vector4f* _ptr, const Vector3f& v, float a) {
 			new(_ptr) Colorf(v.X, v.Y, v.Z, a); }), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectBehaviour("color", asBEHAVE_CONSTRUCT, "void f(const vec4&in)", asFUNCTION(+[](Vector4f* _ptr, const Vector4f& v) {
+		engine->RegisterObjectBehaviour("Color", asBEHAVE_CONSTRUCT, "void f(const vec4&in)", asFUNCTION(+[](Vector4f* _ptr, const Vector4f& v) {
 			new(_ptr) Colorf(v.X, v.Y, v.Z, v.W); }), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectBehaviour("color", asBEHAVE_CONSTRUCT, "void f(float, float, float)", asFUNCTION(+[](Vector4f* _ptr, float r, float g, float b) {
+		engine->RegisterObjectBehaviour("Color", asBEHAVE_CONSTRUCT, "void f(float, float, float)", asFUNCTION(+[](Vector4f* _ptr, float r, float g, float b) {
 			new(_ptr) Colorf(r, g, b); }), asCALL_CDECL_OBJFIRST);
-		engine->RegisterObjectBehaviour("color", asBEHAVE_CONSTRUCT, "void f(float, float, float, float)", asFUNCTION(+[](Vector4f* _ptr, float r, float g, float b, float a) {
+		engine->RegisterObjectBehaviour("Color", asBEHAVE_CONSTRUCT, "void f(float, float, float, float)", asFUNCTION(+[](Vector4f* _ptr, float r, float g, float b, float a) {
 			new(_ptr) Colorf(r, g, b, a); }), asCALL_CDECL_OBJFIRST);
-		RegisterMembers_Color(engine, "color");
+		RegisterMembers_Color(engine, "Color");
 	}
 }
 

@@ -26,11 +26,7 @@ using namespace nCine;
 namespace Jazz2::Scripting
 {
 	ScriptActorWrapper::ScriptActorWrapper(LevelScriptLoader* levelScripts, asIScriptObject* obj)
-		:
-		_levelScripts(levelScripts),
-		_obj(obj),
-		_refCount(1),
-		_scoreValue(0)
+		: _levelScripts(levelScripts), _obj(obj), _refCount(1), _scoreValue(0)
 	{
 		_isDead = obj->GetWeakRefFlag();
 		_isDead->AddRef();

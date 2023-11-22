@@ -29,7 +29,9 @@
 #		include <sys/mman.h>
 #		include <sys/wait.h>
 #	endif
-#	if defined(__linux__)
+#	if defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
+#		include <copyfile.h>
+#	elif defined(__linux__)
 #		include <sys/sendfile.h>
 #	endif
 #	if defined(__FreeBSD__)
@@ -1641,7 +1643,7 @@ namespace Death::IO
 		return ::CopyFileFromAppW(Utf8::ToUtf16(oldPath), Utf8::ToUtf16(newPath), overwrite ? TRUE : FALSE);
 #elif defined(DEATH_TARGET_WINDOWS)
 		return ::CopyFileW(Utf8::ToUtf16(oldPath), Utf8::ToUtf16(newPath), overwrite ? TRUE : FALSE);
-#elif defined(__linux__)
+#else
 		auto nullTerminatedOldPath = String::nullTerminatedView(oldPath);
 		auto nullTerminatedNewPath = String::nullTerminatedView(newPath);
 #	if defined(DEATH_TARGET_ANDROID)
@@ -1654,61 +1656,47 @@ namespace Death::IO
 		}
 
 		std::int32_t source, dest;
-		off_t bytes = 0;
 		struct stat sb;
-
 		if ((source = ::open(nullTerminatedOldPath.data(), O_RDONLY)) == -1) {
 			return false;
 		}
-		fstat(source, &sb);
-		if ((dest = ::creat(nullTerminatedNewPath.data(), sb.st_mode)) == -1) {
+		::fstat(source, &sb);
+		if ((dest = ::creat(nullTerminatedNewPath.data(), O_WRONLY | O_CREAT, sb.st_mode)) == -1) {
 			::close(source);
 			return false;
 		}
 
-		const std::int32_t status = ::sendfile(dest, source, &bytes, sb.st_size);
-
-		::close(source);
-		::close(dest);
-
-		return (status != -1);
+#if defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
+		// fcopyfile works on FreeBSD and OS X 10.5+ 
+		bool success = (::fcopyfile(input, output, 0, COPYFILE_ALL) == 0);
+#elif defined(__linux__)
+		off_t offset = 0;
+		bool success = (::sendfile(dest, source, &offset, sb.st_size) == sb.st_size);
 #else
-		if (!overwrite && Exists(newPath)) {
-			return false;
-		}
-
+#	if !defined(DEATH_TARGET_SWITCH) && defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L
+		// As noted in https://eklitzke.org/efficient-file-copying-on-linux, might make the file reading faster
+		::posix_fadvise(source, 0, 0, POSIX_FADV_SEQUENTIAL);
+#	endif
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 		constexpr std::size_t BufferSize = 8 * 1024;
 #	else
 		constexpr std::size_t BufferSize = 128 * 1024;
 #	endif
 		char buffer[BufferSize];
-
-		std::int32_t source, dest;
-		size_t size = 0;
-		struct stat sb;
-
-		if ((source = ::open(String::nullTerminatedView(oldPath).data(), O_RDONLY)) == -1) {
-			return false;
-		}
-		::fstat(source, &sb);
-		if ((dest = ::open(String::nullTerminatedView(newPath).data(), O_WRONLY | O_CREAT, sb.st_mode)) == -1) {
-			::close(source);
-			return false;
-		}
-
-#	if !defined(DEATH_TARGET_SWITCH) && defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L
-		// As noted in https://eklitzke.org/efficient-file-copying-on-linux, might make the file reading faster
-		::posix_fadvise(source, 0, 0, POSIX_FADV_SEQUENTIAL);
-#	endif
-
+		std::size_t size = 0;
+		bool success = true;
 		while ((size = ::read(source, buffer, BufferSize)) > 0) {
-			::write(dest, buffer, size);
+			if (::write(dest, buffer, size) != size) {
+				success = false;
+				break;
+			}
 		}
+#endif
+
 		::close(source);
 		::close(dest);
 
-		return true;
+		return success;
 #endif
 	}
 

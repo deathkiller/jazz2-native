@@ -6,9 +6,24 @@
 #include "JJ2PlusDefinitions.h"
 #include "../ILevelHandler.h"
 
+namespace Jazz2::UI
+{
+	class HUD;
+}
+
 namespace Jazz2::Scripting
 {
 	class jjPLAYER;
+
+	enum class DrawType
+	{
+		WeaponAmmo,
+		Health,
+		Lives,
+		PlayerTimer,
+		Score,
+		GameModeHUD
+	};
 
 	class LevelScriptLoader : public ScriptLoader
 	{
@@ -24,6 +39,7 @@ namespace Jazz2::Scripting
 		void OnLevelReload();
 		void OnLevelUpdate(float timeMult);
 		void OnLevelCallback(Actors::ActorBase* initiator, uint8_t* eventParams);
+		bool OnDraw(UI::HUD* hud, DrawType type);
 
 	protected:
 		String OnProcessInclude(const StringView& includePath, const StringView& scriptPath) override;
@@ -33,6 +49,12 @@ namespace Jazz2::Scripting
 		LevelHandler* _levelHandler;
 		asIScriptFunction* _onLevelUpdate;
 		int32_t _onLevelUpdateLastFrame;
+		asIScriptFunction* _onDrawAmmo;
+		asIScriptFunction* _onDrawHealth;
+		asIScriptFunction* _onDrawLives;
+		asIScriptFunction* _onDrawPlayerTimer;
+		asIScriptFunction* _onDrawScore;
+		asIScriptFunction* _onDrawGameModeHUD;
 		HashMap<int, asITypeInfo*> _eventTypeToTypeInfo;
 
 		// Global scripting variables
