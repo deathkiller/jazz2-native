@@ -1661,14 +1661,14 @@ namespace Death::IO
 			return false;
 		}
 		::fstat(source, &sb);
-		if ((dest = ::creat(nullTerminatedNewPath.data(), O_WRONLY | O_CREAT, sb.st_mode)) == -1) {
+		if ((dest = ::creat(nullTerminatedNewPath.data(), sb.st_mode)) == -1) {
 			::close(source);
 			return false;
 		}
 
 #if defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
 		// fcopyfile works on FreeBSD and OS X 10.5+ 
-		bool success = (::fcopyfile(input, output, 0, COPYFILE_ALL) == 0);
+		bool success = (::fcopyfile(source, dest, 0, COPYFILE_ALL) == 0);
 #elif defined(__linux__)
 		off_t offset = 0;
 		bool success = (::sendfile(dest, source, &offset, sb.st_size) == sb.st_size);
