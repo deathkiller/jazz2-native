@@ -1661,18 +1661,23 @@ namespace Death::IO
 			return false;
 		}
 		::fstat(source, &sb);
+#	if defined(DEATH_TARGET_SWITCH)
+		// Switch doesn't support `creat()`
+		if ((dest = ::open(nullTerminatedNewPath.data(), O_WRONLY | O_CREAT, sb.st_mode)) == -1) {
+#	else
 		if ((dest = ::creat(nullTerminatedNewPath.data(), sb.st_mode)) == -1) {
+#	endif
 			::close(source);
 			return false;
 		}
 
-#if defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
+#	if defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
 		// fcopyfile works on FreeBSD and OS X 10.5+ 
 		bool success = (::fcopyfile(source, dest, 0, COPYFILE_ALL) == 0);
-#elif defined(__linux__)
+#	elif defined(__linux__)
 		off_t offset = 0;
 		bool success = (::sendfile(dest, source, &offset, sb.st_size) == sb.st_size);
-#else
+#	else
 #	if !defined(DEATH_TARGET_SWITCH) && defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L
 		// As noted in https://eklitzke.org/efficient-file-copying-on-linux, might make the file reading faster
 		::posix_fadvise(source, 0, 0, POSIX_FADV_SEQUENTIAL);
