@@ -15,14 +15,14 @@ namespace nCine
 			float right;
 			float top;
 			float bottom;
-			float near;
-			float far;
+			float nearClip;
+			float farClip;
 
 			ProjectionValues()
-				: left(0.0f), right(0.0f), top(0.0f), bottom(0.0f), near(-1.0f), far(1.0f) {}
+				: left(0.0f), right(0.0f), top(0.0f), bottom(0.0f), nearClip(-1.0f), farClip(1.0f) {}
 
 			ProjectionValues(float ll, float rr, float tt, float bb)
-				: left(ll), right(rr), top(tt), bottom(bb), near(-1.0f), far(1.0f) {}
+				: left(ll), right(rr), top(tt), bottom(bb), nearClip(-1.0f), farClip(1.0f) {}
 		};
 
 		struct ViewValues
