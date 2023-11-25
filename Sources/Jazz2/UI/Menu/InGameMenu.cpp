@@ -376,7 +376,9 @@ namespace Jazz2::UI::Menu
 
 	void InGameMenu::GoToMainMenu()
 	{
+#if !defined(SHAREWARE_DEMO_ONLY)
 		_root->_root->SaveCurrentStateIfAny();
+#endif
 		_root->_root->GoToMainMenu(false);
 	}
 

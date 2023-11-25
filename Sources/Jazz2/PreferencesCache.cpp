@@ -417,6 +417,11 @@ namespace Jazz2
 #endif
 	}
 
+	StringView PreferencesCache::GetDirectory()
+	{
+		return fs::GetDirectoryName(_configPath);
+	}
+
 	EpisodeContinuationState* PreferencesCache::GetEpisodeEnd(const StringView& episodeName, bool createIfNotFound)
 	{
 		auto it = _episodeEnd.find(String::nullTerminatedView(episodeName));
