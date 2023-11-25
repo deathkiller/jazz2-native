@@ -4,6 +4,10 @@
 #include "../ControlScheme.h"
 #include "BeginSection.h"
 
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+#	include "../DiscordRpcClient.h"
+#endif
+
 #include "../../../nCine/Application.h"
 #include "../../../nCine/Graphics/RenderQueue.h"
 #include "../../../nCine/Audio/AudioReaderMpt.h"
@@ -58,6 +62,8 @@ namespace Jazz2::UI::Menu
 			(1 << (int32_t)PlayerActions::Menu) | (1 << ((int32_t)PlayerActions::Menu + 16));
 
 		SwitchToSection<BeginSection>();
+
+		UpdateRichPresence();
 	}
 
 	MainMenu::~MainMenu()
@@ -353,6 +359,16 @@ namespace Jazz2::UI::Menu
 		_root->ChangeLevel(std::move(levelInit));
 	}
 
+	bool MainMenu::HasResumableState() const
+	{
+		return _root->HasResumableState();
+	}
+
+	void MainMenu::ResumeSavedState()
+	{
+		_root->ResumeSavedState();
+	}
+
 #if defined(WITH_MULTIPLAYER)
 	bool MainMenu::ConnectToServer(const StringView& address, std::uint16_t port)
 	{
@@ -591,6 +607,20 @@ namespace Jazz2::UI::Menu
 		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(ButtonName::Y)) {
 			_pressedActions |= (1 << (int32_t)PlayerActions::ChangeWeapon);
 		}
+	}
+
+	void MainMenu::UpdateRichPresence()
+	{
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+		if (!PreferencesCache::EnableDiscordIntegration || !DiscordRpcClient::Get().IsSupported()) {
+			return;
+		}
+
+		DiscordRpcClient::RichPresence richPresence;
+		richPresence.State = "Resting in main menu"_s;
+		richPresence.LargeImage = "main-transparent"_s;
+		DiscordRpcClient::Get().SetRichPresence(richPresence);
+#endif
 	}
 
 	void MainMenu::UpdateDebris(float timeMult)

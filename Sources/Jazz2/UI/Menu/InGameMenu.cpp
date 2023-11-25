@@ -237,6 +237,16 @@ namespace Jazz2::UI::Menu
 		_root->_root->ChangeLevel(std::move(levelInit));
 	}
 
+	bool InGameMenu::HasResumableState() const
+	{
+		return _root->_root->HasResumableState();
+	}
+
+	void InGameMenu::ResumeSavedState()
+	{
+		_root->_root->ResumeSavedState();
+	}
+
 #if defined(WITH_MULTIPLAYER)
 	bool InGameMenu::ConnectToServer(const StringView& address, std::uint16_t port)
 	{
@@ -366,6 +376,7 @@ namespace Jazz2::UI::Menu
 
 	void InGameMenu::GoToMainMenu()
 	{
+		_root->_root->SaveCurrentStateIfAny();
 		_root->_root->GoToMainMenu(false);
 	}
 

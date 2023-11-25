@@ -5,6 +5,11 @@
 #include "../ShieldType.h"
 #include "../SuspendType.h"
 
+namespace Death::IO
+{
+	class Stream;
+}
+
 #if defined(WITH_ANGELSCRIPT)
 namespace Jazz2::Scripting
 {
@@ -24,6 +29,8 @@ namespace Jazz2::UI
 {
 	class HUD;
 }
+
+using namespace Death::IO;
 
 namespace Jazz2::Actors
 {
@@ -103,6 +110,8 @@ namespace Jazz2::Actors
 		bool OnLevelChanging(ExitType exitType);
 		void ReceiveLevelCarryOver(ExitType exitType, const PlayerCarryOver& carryOver);
 		PlayerCarryOver PrepareLevelCarryOver();
+		void InitializeFromStream(ILevelHandler* levelHandler, Stream& src);
+		void SerializeResumableToStream(Stream& dest);
 
 		void WarpToPosition(Vector2f pos, bool fast);
 		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor = nullptr);

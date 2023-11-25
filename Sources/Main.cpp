@@ -17,6 +17,7 @@
 #include "nCine/Graphics/BinaryShaderCache.h"
 #include "nCine/Graphics/RenderResources.h"
 #include "nCine/Input/IInputEventHandler.h"
+#include "nCine/IO/CompressionUtils.h"
 #include "nCine/Threading/Thread.h"
 
 #include "Jazz2/IRootController.h"
@@ -99,6 +100,9 @@ public:
 	void InvokeAsync(std::function<void()>&& callback) override;
 	void GoToMainMenu(bool afterIntro) override;
 	void ChangeLevel(LevelInitialization&& levelInit) override;
+	bool HasResumableState() const override;
+	void ResumeSavedState() override;
+	bool SaveCurrentStateIfAny() override;
 
 #if defined(WITH_MULTIPLAYER)
 	bool ConnectToServer(const StringView& address, std::uint16_t port) override;
@@ -132,6 +136,7 @@ private:
 	std::unique_ptr<NetworkManager> _networkManager;
 #endif
 
+	void InitializeBase();
 	void SetStateHandler(std::unique_ptr<IStateHandler>&& handler);
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	void RefreshCache();
@@ -141,7 +146,6 @@ private:
 	static void WriteCacheDescriptor(const StringView& path, std::uint64_t currentVersion, std::int64_t animsModified);
 	static void SaveEpisodeEnd(const LevelInitialization& levelInit);
 	static void SaveEpisodeContinue(const LevelInitialization& levelInit);
-	static void UpdateRichPresence(const LevelInitialization& levelInit);
 	static bool TryParseAddressAndPort(const StringView& input, String& address, std::uint16_t& port);
 };
 
@@ -211,26 +215,25 @@ void GameEventHandler::OnInit()
 
 	resolver.CompileShaders();
 
+	if (PreferencesCache::ResumeOnStart) {
+		LOGI("Resuming last state due to suspended termination");
+		PreferencesCache::ResumeOnStart = false;
+		PreferencesCache::Save();
+		if (HasResumableState()) {
+			InitializeBase();
+			RefreshCache();
+			ResumeSavedState();
+			return;
+		}
+	}
+
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	// If threading support is enabled, refresh cache during intro cinematics and don't allow skip until it's completed
 	Thread thread([](void* arg) {
 		Thread::SetCurrentName("Parallel initialization");
 
 		auto handler = static_cast<GameEventHandler*>(arg);
-#	if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
-		if (PreferencesCache::EnableDiscordIntegration) {
-			DiscordRpcClient::Get().Connect("591586859960762378"_s);
-		}
-#	endif
-
-		if (PreferencesCache::Language[0] != '\0') {
-			auto& resolver = ContentResolver::Get();
-			auto& i18n = I18n::Get();
-			if (!i18n.LoadFromFile(fs::CombinePath({ resolver.GetContentPath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }))) {
-				i18n.LoadFromFile(fs::CombinePath({ resolver.GetCachePath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }));
-			}
-		}
-
+		handler->InitializeBase();
 		handler->RefreshCache();
 		handler->CheckUpdates();
 	}, this);
@@ -275,19 +278,7 @@ void GameEventHandler::OnInit()
 	}));
 #else
 	// Building without threading support is not recommended, so it can look ugly
-#	if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
-	if (PreferencesCache::EnableDiscordIntegration) {
-		DiscordRpcClient::Get().Connect("591586859960762378"_s);
-	}
-#	endif
-
-	if (PreferencesCache::Language[0] != '\0') {
-		auto& resolver = ContentResolver::Get();
-		auto& i18n = I18n::Get();
-		if (!i18n.LoadFromFile(fs::CombinePath({ resolver.GetContentPath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }))) {
-			i18n.LoadFromFile(fs::CombinePath({ resolver.GetCachePath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }));
-		}
-	}
+	InitializeBase();
 
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 	// All required files are already included in Emscripten version, so nothing is verified
@@ -382,7 +373,10 @@ void GameEventHandler::OnShutdown()
 
 void GameEventHandler::OnSuspend()
 {
-	// TODO: Save current game state on suspend
+	if (SaveCurrentStateIfAny()) {
+		PreferencesCache::ResumeOnStart = true;
+		PreferencesCache::Save();
+	}
 }
 
 void GameEventHandler::OnResume()
@@ -394,6 +388,9 @@ void GameEventHandler::OnResume()
 		_flags &= ~Flags::HasExternalStoragePermissionOnResume;
 	}
 #endif
+
+	PreferencesCache::ResumeOnStart = false;
+	PreferencesCache::Save();
 }
 
 void GameEventHandler::OnKeyPressed(const KeyboardEvent& event)
@@ -456,7 +453,6 @@ void GameEventHandler::GoToMainMenu(bool afterIntro)
 			mainMenu->Reset();
 		} else {
 			SetStateHandler(std::make_unique<Menu::MainMenu>(this, afterIntro));
-			UpdateRichPresence({});
 		}
 	});
 }
@@ -487,9 +483,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 			}
 
 			if (levelInit.LevelName != ":end"_s) {
-				if (SetLevelHandler(levelInit)) {
-					UpdateRichPresence(levelInit);
-				} else {
+				if (!SetLevelHandler(levelInit)) {
 					auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
 					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Cannot load specified level!\f[c]\n\n\nMake sure all necessary files\nare accessible and try it again."));
 					newHandler = std::move(mainMenu);
@@ -525,9 +519,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 			} else
 #endif
 			{
-				if (SetLevelHandler(levelInit)) {
-					UpdateRichPresence(levelInit);
-				} else {
+				if (!SetLevelHandler(levelInit)) {
 					auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
 					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Cannot load specified level!\f[c]\n\n\nMake sure all necessary files\nare accessible and try it again."));
 					newHandler = std::move(mainMenu);
@@ -537,9 +529,77 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 
 		if (newHandler != nullptr) {
 			SetStateHandler(std::move(newHandler));
-			UpdateRichPresence({});
 		}
 	});
+}
+
+bool GameEventHandler::HasResumableState() const
+{
+	return fs::FileExists("Jazz2.resume");
+}
+
+void GameEventHandler::ResumeSavedState()
+{
+	InvokeAsync([this]() mutable {
+		ZoneScopedNC("GameEventHandler::ResumeSavedState", 0x888888);
+
+		auto s = fs::Open("Jazz2.resume", FileAccessMode::Read);
+		if (s->IsValid()) {
+			std::uint64_t signature = s->ReadValue<std::uint64_t>();
+			std::uint8_t fileType = s->ReadValue<std::uint8_t>();
+			std::uint16_t version = s->ReadValue<std::uint16_t>();
+			if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::StateFile || version != 1) {
+				return;
+			}
+
+			std::int32_t compressedSize = s->ReadVariableInt32();
+			std::int32_t decompressedSize = s->ReadVariableInt32();
+
+			auto compressedBuffer = std::make_unique<std::uint8_t[]>(compressedSize);
+			auto decompressedBuffer = std::make_unique<std::uint8_t[]>(decompressedSize);
+
+			s->Read(compressedBuffer.get(), compressedSize);
+			auto result = CompressionUtils::Inflate(compressedBuffer.get(), compressedSize, decompressedBuffer.get(), decompressedSize);
+			if (result == DecompressionResult::Success) {
+				MemoryStream ms(decompressedBuffer.get(), decompressedSize);
+				auto levelHandler = std::make_unique<LevelHandler>(this);
+				if (levelHandler->Initialize(ms)) {
+					SetStateHandler(std::move(levelHandler));
+					return;
+				}
+			}
+		}
+
+		auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
+		mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Cannot load specified level!\f[c]\n\n\nMake sure all necessary files\nare accessible and try it again."));
+		SetStateHandler(std::move(mainMenu));
+	});
+}
+
+bool GameEventHandler::SaveCurrentStateIfAny()
+{
+	if (auto* levelHandler = dynamic_cast<LevelHandler*>(_currentHandler.get())) {
+		if (levelHandler->Difficulty() != GameDifficulty::Multiplayer) {
+			auto s = fs::Open("Jazz2.resume", FileAccessMode::Write);
+			s->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
+			s->WriteValue<std::uint8_t>(ContentResolver::StateFile);
+			s->WriteValue<std::uint16_t>(1);
+
+			MemoryStream ms(512 * 1024);
+			levelHandler->SerializeResumableToStream(ms);
+
+			std::int32_t compressedSize = CompressionUtils::GetMaxDeflatedSize(ms.GetSize());
+			std::unique_ptr<std::uint8_t[]> compressedBuffer = std::make_unique<std::uint8_t[]>(compressedSize);
+			compressedSize = CompressionUtils::Deflate(ms.GetBuffer(), ms.GetSize(), compressedBuffer.get(), compressedSize);
+
+			s->WriteVariableInt32(compressedSize);
+			s->WriteVariableInt32(ms.GetSize());
+			s->Write(compressedBuffer.get(), compressedSize);
+			return true;
+		}
+	}
+
+	return false;
 }
 
 #if defined(WITH_MULTIPLAYER)
@@ -617,7 +677,6 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 				auto newHandler = std::make_unique<Menu::MainMenu>(this, false);
 				mainMenu = newHandler.get();
 				SetStateHandler(std::move(newHandler));
-				UpdateRichPresence({});
 			}
 
 			switch (reason) {
@@ -706,6 +765,23 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 	}
 }
 #endif
+
+void GameEventHandler::InitializeBase()
+{
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+	if (PreferencesCache::EnableDiscordIntegration) {
+		DiscordRpcClient::Get().Connect("591586859960762378"_s);
+	}
+#endif
+
+	if (PreferencesCache::Language[0] != '\0') {
+		auto& resolver = ContentResolver::Get();
+		auto& i18n = I18n::Get();
+		if (!i18n.LoadFromFile(fs::CombinePath({ resolver.GetContentPath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }))) {
+			i18n.LoadFromFile(fs::CombinePath({ resolver.GetCachePath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }));
+		}
+	}
+}
 
 void GameEventHandler::SetStateHandler(std::unique_ptr<IStateHandler>&& handler)
 {
@@ -1277,6 +1353,11 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 		return false;
 	}
 	SetStateHandler(std::move(levelHandler));
+
+	if (levelInit.Difficulty != GameDifficulty::Multiplayer && fs::FileExists("Jazz2.resume")) {
+		fs::RemoveFile("Jazz2.resume");
+	}
+
 	return true;
 }
 
@@ -1365,90 +1446,6 @@ void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 		PreferencesCache::TutorialCompleted = true;
 		PreferencesCache::Save();
 	}
-}
-
-void GameEventHandler::UpdateRichPresence(const LevelInitialization& levelInit)
-{
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
-	if (!PreferencesCache::EnableDiscordIntegration || !DiscordRpcClient::Get().IsSupported()) {
-		return;
-	}
-
-	DiscordRpcClient::RichPresence richPresence;
-	if (levelInit.LevelName.empty()) {
-		richPresence.State = "Resting in main menu"_s;
-		richPresence.LargeImage = "main-transparent"_s;
-	} else {
-		if (levelInit.EpisodeName == "prince"_s) {
-			if (levelInit.LevelName == "01_castle1"_s || levelInit.LevelName == "02_castle1n"_s) {
-				richPresence.LargeImage = "level-prince-01"_s;
-			} else if (levelInit.LevelName == "03_carrot1"_s || levelInit.LevelName == "04_carrot1n"_s) {
-				richPresence.LargeImage = "level-prince-02"_s;
-			} else if (levelInit.LevelName == "05_labrat1"_s || levelInit.LevelName == "06_labrat2"_s || levelInit.LevelName == "bonus_labrat3"_s) {
-				richPresence.LargeImage = "level-prince-03"_s;
-			}
-		} else if (levelInit.EpisodeName == "rescue"_s) {
-			if (levelInit.LevelName == "01_colon1"_s || levelInit.LevelName == "02_colon2"_s) {
-				richPresence.LargeImage = "level-rescue-01"_s;
-			} else if (levelInit.LevelName == "03_psych1"_s || levelInit.LevelName == "04_psych2"_s || levelInit.LevelName == "bonus_psych3"_s) {
-				richPresence.LargeImage = "level-rescue-02"_s;
-			} else if (levelInit.LevelName == "05_beach"_s || levelInit.LevelName == "06_beach2"_s) {
-				richPresence.LargeImage = "level-rescue-03"_s;
-			}
-		} else if (levelInit.EpisodeName == "flash"_s) {
-			if (levelInit.LevelName == "01_diam1"_s || levelInit.LevelName == "02_diam3"_s) {
-				richPresence.LargeImage = "level-flash-01"_s;
-			} else if (levelInit.LevelName == "03_tube1"_s || levelInit.LevelName == "04_tube2"_s || levelInit.LevelName == "bonus_tube3"_s) {
-				richPresence.LargeImage = "level-flash-02"_s;
-			} else if (levelInit.LevelName == "05_medivo1"_s || levelInit.LevelName == "06_medivo2"_s || levelInit.LevelName == "bonus_garglair"_s) {
-				richPresence.LargeImage = "level-flash-03"_s;
-			}
-		} else if (levelInit.EpisodeName == "monk"_s) {
-			if (levelInit.LevelName == "01_jung1"_s || levelInit.LevelName == "02_jung2"_s) {
-				richPresence.LargeImage = "level-monk-01"_s;
-			} else if (levelInit.LevelName == "03_hell"_s || levelInit.LevelName == "04_hell2"_s) {
-				richPresence.LargeImage = "level-monk-02"_s;
-			} else if (levelInit.LevelName == "05_damn"_s || levelInit.LevelName == "06_damn2"_s) {
-				richPresence.LargeImage = "level-monk-03"_s;
-			}
-		} else if (levelInit.EpisodeName == "secretf"_s) {
-			if (levelInit.LevelName == "01_easter1"_s || levelInit.LevelName == "02_easter2"_s || levelInit.LevelName == "03_easter3"_s) {
-				richPresence.LargeImage = "level-secretf-01"_s;
-			} else if (levelInit.LevelName == "04_haunted1"_s || levelInit.LevelName == "05_haunted2"_s || levelInit.LevelName == "06_haunted3"_s) {
-				richPresence.LargeImage = "level-secretf-02"_s;
-			} else if (levelInit.LevelName == "07_town1"_s || levelInit.LevelName == "08_town2"_s || levelInit.LevelName == "09_town3"_s) {
-				richPresence.LargeImage = "level-secretf-03"_s;
-			}
-		} else if (levelInit.EpisodeName == "xmas98"_s || levelInit.EpisodeName == "xmas99"_s) {
-			richPresence.LargeImage = "level-xmas"_s;
-		} else if (levelInit.EpisodeName == "share"_s) {
-			richPresence.LargeImage = "level-share"_s;
-		}
-
-		if (richPresence.LargeImage.empty()) {
-			richPresence.Details = "Playing as "_s;
-			richPresence.LargeImage = "main-transparent"_s;
-
-			switch (levelInit.PlayerCarryOvers[0].Type) {
-				default:
-				case PlayerType::Jazz: richPresence.SmallImage = "playing-jazz"_s; break;
-				case PlayerType::Spaz: richPresence.SmallImage = "playing-spaz"_s; break;
-				case PlayerType::Lori: richPresence.SmallImage = "playing-lori"_s; break;
-			}
-		} else {
-			richPresence.Details = "Playing episode as "_s;
-		}
-
-		switch (levelInit.PlayerCarryOvers[0].Type) {
-			default:
-			case PlayerType::Jazz: richPresence.Details += "Jazz"_s; break;
-			case PlayerType::Spaz: richPresence.Details += "Spaz"_s; break;
-			case PlayerType::Lori: richPresence.Details += "Lori"_s; break;
-		}
-	}
-
-	DiscordRpcClient::Get().SetRichPresence(richPresence);
-#endif
 }
 
 bool GameEventHandler::TryParseAddressAndPort(const StringView& input, String& address, std::uint16_t& port)

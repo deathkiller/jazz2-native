@@ -70,7 +70,7 @@ namespace Death::IO
 
 		virtual void SetCloseOnDestruction(bool shouldCloseOnDestruction) { }
 
-		template<typename T, typename std::enable_if<std::is_trivially_constructible<T>::value>::type* = nullptr>
+		template<typename T, class = typename std::enable_if<std::is_trivially_constructible<T>::value>::type>
 		DEATH_ALWAYS_INLINE T ReadValue()
 		{
 			T buffer = { };
@@ -78,7 +78,7 @@ namespace Death::IO
 			return buffer;
 		}
 
-		template<typename T, typename std::enable_if<std::is_trivially_constructible<T>::value>::type* = nullptr>
+		template<typename T, class = typename std::enable_if<std::is_trivially_constructible<T>::value>::type>
 		DEATH_ALWAYS_INLINE void WriteValue(const T& value)
 		{
 			Write(&value, sizeof(T));

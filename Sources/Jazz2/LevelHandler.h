@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "ILevelHandler.h"
+#include "IResumable.h"
 #include "IStateHandler.h"
 #include "IRootController.h"
 #include "LevelDescriptor.h"
@@ -50,7 +51,7 @@ namespace Jazz2
 		class InGameMenu;
 	}
 
-	class LevelHandler : public ILevelHandler, public IStateHandler, public Tiles::ITileMapOwner
+	class LevelHandler : public ILevelHandler, public IStateHandler, public IResumable, public Tiles::ITileMapOwner
 	{
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::LevelScriptLoader;
@@ -67,6 +68,7 @@ namespace Jazz2
 		~LevelHandler() override;
 
 		bool Initialize(const LevelInitialization& levelInit) override;
+		bool Initialize(Stream& src) override;
 
 		Events::EventSpawner* EventSpawner() override {
 			return &_eventSpawner;
@@ -151,6 +153,8 @@ namespace Jazz2
 		bool PlayerActionHit(int32_t index, PlayerActions action, bool includeGamepads, bool& isGamepad) override;
 		float PlayerHorizontalMovement(int32_t index) override;
 		float PlayerVerticalMovement(int32_t index) override;
+
+		bool SerializeResumableToStream(Stream& dest) override;
 
 		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override { }
 		void OnTileFrozen(std::int32_t x, std::int32_t y) override;
@@ -271,6 +275,7 @@ namespace Jazz2
 		String _musicDefaultPath, _musicCurrentPath;
 		Recti _levelBounds;
 		bool _isReforged, _cheatsUsed;
+		bool _checkpointCreated;
 		char _cheatsBuffer[9];
 		uint32_t _cheatsBufferLength;
 		SmallVector<String, 0> _levelTexts;
@@ -314,6 +319,7 @@ namespace Jazz2
 		bool _playerFrozenEnabled;
 		uint32_t _lastPressedNumericKey;
 
+		virtual void OnInitialized();
 		virtual void BeforeActorDestroyed(Actors::ActorBase* actor);
 		virtual void ProcessEvents(float timeMult);
 		virtual void ProcessQueuedNextLevel();
@@ -323,6 +329,7 @@ namespace Jazz2
 		void InitializeCamera();
 		void UpdateCamera(float timeMult);
 		void UpdatePressedActions();
+		void UpdateRichPresence();
 
 		void PauseGame();
 		void ResumeGame();

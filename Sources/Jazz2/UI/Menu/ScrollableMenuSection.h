@@ -58,13 +58,7 @@ namespace Jazz2::UI::Menu
 
 	template<class TItem>
 	ScrollableMenuSection<TItem>::ScrollableMenuSection()
-		:
-		_selectedIndex(0),
-		_animation(0.0f),
-		_transitionTime(0.0f),
-		_y(0),
-		_height(0),
-		_scrollable(false)
+		: _selectedIndex(0), _animation(0.0f), _transitionTime(0.0f), _y(0), _height(0), _touchTime(0.0f), _scrollable(false)
 	{
 	}
 

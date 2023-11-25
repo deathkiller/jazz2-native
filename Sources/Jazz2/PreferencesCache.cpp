@@ -42,6 +42,7 @@ namespace Jazz2
 #endif
 	bool PreferencesCache::EnableDiscordIntegration = false;
 	bool PreferencesCache::TutorialCompleted = false;
+	bool PreferencesCache::ResumeOnStart = false;
 	bool PreferencesCache::AllowCheats = false;
 	bool PreferencesCache::AllowCheatsLives = false;
 	bool PreferencesCache::AllowCheatsUnlock = false;
@@ -165,6 +166,7 @@ namespace Jazz2
 #endif
 						EnableDiscordIntegration = ((boolOptions & BoolOptions::EnableDiscordIntegration) == BoolOptions::EnableDiscordIntegration);
 						TutorialCompleted = ((boolOptions & BoolOptions::TutorialCompleted) == BoolOptions::TutorialCompleted);
+						ResumeOnStart = ((boolOptions & BoolOptions::ResumeOnStart) == BoolOptions::ResumeOnStart);
 
 						if (WeaponWheel != WeaponWheelStyle::Disabled && (boolOptions & BoolOptions::ShowWeaponWheelAmmoCount) == BoolOptions::ShowWeaponWheelAmmoCount) {
 							WeaponWheel = WeaponWheelStyle::EnabledWithAmmoCount;
@@ -341,6 +343,7 @@ namespace Jazz2
 		if (EnableDiscordIntegration) boolOptions |= BoolOptions::EnableDiscordIntegration;
 		if (TutorialCompleted) boolOptions |= BoolOptions::TutorialCompleted;
 		if (Language[0] != '\0') boolOptions |= BoolOptions::SetLanguage;
+		if (ResumeOnStart) boolOptions |= BoolOptions::ResumeOnStart;
 		co.WriteValue<uint64_t>((uint64_t)boolOptions);
 
 		if (Language[0] != '\0') {

@@ -4,7 +4,8 @@
 
 namespace Jazz2
 {
-	enum class WeatherType : uint8_t {
+	enum class WeatherType : std::uint8_t
+	{
 		None,
 
 		Snow,

@@ -4,6 +4,10 @@
 #include "UI/HUD.h"
 #include "../Common.h"
 
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+#	include "UI/DiscordRpcClient.h"
+#endif
+
 #if defined(WITH_ANGELSCRIPT)
 #	include "Scripting/LevelScriptLoader.h"
 #endif
@@ -44,7 +48,7 @@ namespace Jazz2
 	using namespace Jazz2::Resources;
 
 	LevelHandler::LevelHandler(IRootController* root)
-		: _root(root), _eventSpawner(this), _difficulty(GameDifficulty::Default), _isReforged(false), _cheatsUsed(false),
+		: _root(root), _eventSpawner(this), _difficulty(GameDifficulty::Default), _isReforged(false), _cheatsUsed(false), _checkpointCreated(false),
 			_cheatsBufferLength(0), _nextLevelType(ExitType::None), _nextLevelTime(0.0f), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
 			_shakeDuration(0.0f), _waterLevel(FLT_MAX), _ambientLightTarget(1.0f), _weatherType(WeatherType::None),
 			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
@@ -66,16 +70,11 @@ namespace Jazz2
 	{
 		ZoneScopedC(0x4876AF);
 
-		constexpr float DefaultGravity = 0.3f;
-
 		_levelFileName = levelInit.LevelName;
 		_episodeName = levelInit.EpisodeName;
 		_difficulty = levelInit.Difficulty;
 		_isReforged = levelInit.IsReforged;
 		_cheatsUsed = levelInit.CheatsUsed;
-
-		// Higher gravity in Reforged mode
-		Gravity = (_isReforged ? DefaultGravity : DefaultGravity * 0.8f);
 
 		auto& resolver = ContentResolver::Get();
 		resolver.BeginLoading();
@@ -122,27 +121,104 @@ namespace Jazz2
 			ptr->ReceiveLevelCarryOver(levelInit.LastExitType, levelInit.PlayerCarryOvers[i]);
 		}
 
-		_commonResources = resolver.RequestMetadata("Common/Scenery"_s);
-		resolver.PreloadMetadataAsync("Common/Explosions"_s);
+		OnInitialized();
+		resolver.EndLoading();
 
-		// Create HUD
-		_hud = std::make_unique<UI::HUD>(this);
 		if ((levelInit.LastExitType & ExitType::FastTransition) != ExitType::FastTransition) {
 			_hud->BeginFadeIn();
 		}
 
-#if defined(WITH_ANGELSCRIPT)
-		if (_scripts != nullptr) {
-			_scripts->OnLevelLoad();
-			// TODO: Call this when all objects are created (first checkpoint)
-			_scripts->OnLevelBegin();
+		return true;
+	}
+
+	bool LevelHandler::Initialize(Stream& src)
+	{
+		ZoneScopedC(0x4876AF);
+
+		std::uint8_t flags = src.ReadValue<std::uint8_t>();
+
+		std::uint8_t stringSize = src.ReadValue<std::uint8_t>();
+		_episodeName = String(NoInit, stringSize);
+		src.Read(_episodeName.data(), stringSize);
+
+		stringSize = src.ReadValue<std::uint8_t>();
+		_levelFileName = String(NoInit, stringSize);
+		src.Read(_levelFileName.data(), stringSize);
+
+		_difficulty = (GameDifficulty)src.ReadValue<std::uint8_t>();
+		_isReforged = (flags & 0x01) != 0;
+		_cheatsUsed = (flags & 0x02) != 0;
+		_checkpointFrames = src.ReadValue<float>();
+
+		auto& resolver = ContentResolver::Get();
+		resolver.BeginLoading();
+
+		_noiseTexture = resolver.GetNoiseTexture();
+
+		_rootNode = std::make_unique<SceneNode>();
+		_rootNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+
+		LevelDescriptor descriptor;
+		if (!resolver.TryLoadLevel("/"_s.joinWithoutEmptyParts({ _episodeName, _levelFileName }), _difficulty, descriptor)) {
+			LOGE("Cannot load level \"%s/%s\"", _episodeName.data(), _levelFileName.data());
+			return false;
 		}
-#endif
+
+		AttachComponents(std::move(descriptor));
+
+		// All components are ready, deserialize the rest of state
+		_waterLevel = src.ReadValue<float>();
+		_weatherType = (WeatherType)src.ReadValue<std::uint8_t>();
+		_weatherIntensity = src.ReadValue<std::uint8_t>();
+
+		_tileMap->InitializeFromStream(src);
+		_eventMap->InitializeFromStream(src);
+
+		std::uint32_t playerCount = src.ReadValue<std::uint8_t>();
+		_players.reserve(playerCount);
+
+		for (std::uint32_t i = 0; i < playerCount; i++) {
+			std::shared_ptr<Actors::Player> player = std::make_shared<Actors::Player>();
+			player->InitializeFromStream(this, src);
+
+			Actors::Player* ptr = player.get();
+			_players.push_back(ptr);
+			AddActor(player);
+		}
+
+		OnInitialized();
+		resolver.EndLoading();
+
+		_hud->BeginFadeIn();
+
+		// Set it at the end, so ambient light transition is skipped
+		_elapsedFrames = _checkpointFrames;
+
+		return true;
+	}
+
+	void LevelHandler::OnInitialized()
+	{
+		constexpr float DefaultGravity = 0.3f;
+
+		// Higher gravity in Reforged mode
+		Gravity = (_isReforged ? DefaultGravity : DefaultGravity * 0.8f);
+
+		auto& resolver = ContentResolver::Get();
+		_commonResources = resolver.RequestMetadata("Common/Scenery"_s);
+		resolver.PreloadMetadataAsync("Common/Explosions"_s);
+
+		_hud = std::make_unique<UI::HUD>(this);
 
 		_eventMap->PreloadEventsAsync();
 
-		resolver.EndLoading();
-		return true;
+		UpdateRichPresence();
+
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts != nullptr) {
+			_scripts->OnLevelLoad();
+		}
+#endif
 	}
 
 	Recti LevelHandler::LevelBounds() const
@@ -1219,6 +1295,36 @@ namespace Jazz2
 		return (_playerFrozenEnabled ? _playerFrozenMovement.Y : _playerRequiredMovement.Y);
 	}
 
+	bool LevelHandler::SerializeResumableToStream(Stream& dest)
+	{
+		std::uint8_t flags = 0;
+		if (_isReforged) flags |= 0x01;
+		if (_cheatsUsed) flags |= 0x02;
+		dest.WriteValue<std::uint8_t>(flags);
+
+		dest.WriteValue((std::uint8_t)_episodeName.size());
+		dest.Write(_episodeName.data(), (std::uint32_t)_episodeName.size());
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_levelFileName.size());
+		dest.Write(_levelFileName.data(), (std::uint32_t)_levelFileName.size());
+
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_difficulty);
+		dest.WriteValue<float>(_checkpointFrames);
+		dest.WriteValue<float>(_waterLevel);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_weatherType);
+		dest.WriteValue<std::uint8_t>(_weatherIntensity);
+
+		_tileMap->SerializeResumableToStream(dest);
+		_eventMap->SerializeResumableToStream(dest);
+
+		std::size_t playerCount = _players.size();
+		dest.WriteValue<std::uint8_t>((std::uint8_t)playerCount);
+		for (std::size_t i = 0; i < playerCount; i++) {
+			_players[i]->SerializeResumableToStream(dest);
+		}
+
+		return true;
+	}
+
 	void LevelHandler::OnTileFrozen(std::int32_t x, std::int32_t y)
 	{
 		bool iceBlockFound = false;
@@ -1294,6 +1400,17 @@ namespace Jazz2
 			for (std::size_t i = 0; i < playerZones.size(); i += 2) {
 				const auto& activationZone = playerZones[i];
 				_eventMap->ActivateEvents(activationZone.L, activationZone.T, activationZone.R, activationZone.B, true);
+			}
+
+			if (!_checkpointCreated) {
+				// Create checkpoint after first call to ActivateEvents() to avoid duplication of objects that are spawned near player spawn
+				_checkpointCreated = true;
+				_eventMap->CreateCheckpointForRollback();
+#if defined(WITH_ANGELSCRIPT)
+				if (_scripts != nullptr) {
+					_scripts->OnLevelBegin();
+				}
+#endif
 			}
 		}
 
@@ -1712,6 +1829,88 @@ namespace Jazz2
 
 		// Also apply overriden actions (by touch controls)
 		_pressedActions |= _overrideActions;
+	}
+
+	void LevelHandler::UpdateRichPresence()
+	{
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+		if (!PreferencesCache::EnableDiscordIntegration || !UI::DiscordRpcClient::Get().IsSupported()) {
+			return;
+		}
+
+		UI::DiscordRpcClient::RichPresence richPresence;
+		if (_episodeName == "prince"_s) {
+			if (_levelFileName == "01_castle1"_s || _levelFileName == "02_castle1n"_s) {
+				richPresence.LargeImage = "level-prince-01"_s;
+			} else if (_levelFileName == "03_carrot1"_s || _levelFileName == "04_carrot1n"_s) {
+				richPresence.LargeImage = "level-prince-02"_s;
+			} else if (_levelFileName == "05_labrat1"_s || _levelFileName == "06_labrat2"_s || _levelFileName == "bonus_labrat3"_s) {
+				richPresence.LargeImage = "level-prince-03"_s;
+			}
+		} else if (_episodeName == "rescue"_s) {
+			if (_levelFileName == "01_colon1"_s || _levelFileName == "02_colon2"_s) {
+				richPresence.LargeImage = "level-rescue-01"_s;
+			} else if (_levelFileName == "03_psych1"_s || _levelFileName == "04_psych2"_s || _levelFileName == "bonus_psych3"_s) {
+				richPresence.LargeImage = "level-rescue-02"_s;
+			} else if (_levelFileName == "05_beach"_s || _levelFileName == "06_beach2"_s) {
+				richPresence.LargeImage = "level-rescue-03"_s;
+			}
+		} else if (_episodeName == "flash"_s) {
+			if (_levelFileName == "01_diam1"_s || _levelFileName == "02_diam3"_s) {
+				richPresence.LargeImage = "level-flash-01"_s;
+			} else if (_levelFileName == "03_tube1"_s || _levelFileName == "04_tube2"_s || _levelFileName == "bonus_tube3"_s) {
+				richPresence.LargeImage = "level-flash-02"_s;
+			} else if (_levelFileName == "05_medivo1"_s || _levelFileName == "06_medivo2"_s || _levelFileName == "bonus_garglair"_s) {
+				richPresence.LargeImage = "level-flash-03"_s;
+			}
+		} else if (_episodeName == "monk"_s) {
+			if (_levelFileName == "01_jung1"_s || _levelFileName == "02_jung2"_s) {
+				richPresence.LargeImage = "level-monk-01"_s;
+			} else if (_levelFileName == "03_hell"_s || _levelFileName == "04_hell2"_s) {
+				richPresence.LargeImage = "level-monk-02"_s;
+			} else if (_levelFileName == "05_damn"_s || _levelFileName == "06_damn2"_s) {
+				richPresence.LargeImage = "level-monk-03"_s;
+			}
+		} else if (_episodeName == "secretf"_s) {
+			if (_levelFileName == "01_easter1"_s || _levelFileName == "02_easter2"_s || _levelFileName == "03_easter3"_s) {
+				richPresence.LargeImage = "level-secretf-01"_s;
+			} else if (_levelFileName == "04_haunted1"_s || _levelFileName == "05_haunted2"_s || _levelFileName == "06_haunted3"_s) {
+				richPresence.LargeImage = "level-secretf-02"_s;
+			} else if (_levelFileName == "07_town1"_s || _levelFileName == "08_town2"_s || _levelFileName == "09_town3"_s) {
+				richPresence.LargeImage = "level-secretf-03"_s;
+			}
+		} else if (_episodeName == "xmas98"_s || _episodeName == "xmas99"_s) {
+			richPresence.LargeImage = "level-xmas"_s;
+		} else if (_episodeName == "share"_s) {
+			richPresence.LargeImage = "level-share"_s;
+		}
+
+		if (richPresence.LargeImage.empty()) {
+			richPresence.Details = "Playing as "_s;
+			richPresence.LargeImage = "main-transparent"_s;
+
+			if (!_players.empty())
+				switch (_players[0]->GetPlayerType()) {
+					default:
+					case PlayerType::Jazz: richPresence.SmallImage = "playing-jazz"_s; break;
+					case PlayerType::Spaz: richPresence.SmallImage = "playing-spaz"_s; break;
+					case PlayerType::Lori: richPresence.SmallImage = "playing-lori"_s; break;
+				}
+		} else {
+			richPresence.Details = "Playing episode as "_s;
+		}
+
+		if (!_players.empty()) {
+			switch (_players[0]->GetPlayerType()) {
+				default:
+				case PlayerType::Jazz: richPresence.Details += "Jazz"_s; break;
+				case PlayerType::Spaz: richPresence.Details += "Spaz"_s; break;
+				case PlayerType::Lori: richPresence.Details += "Lori"_s; break;
+			}
+		}
+
+		UI::DiscordRpcClient::Get().SetRichPresence(richPresence);
+#endif
 	}
 
 	void LevelHandler::PauseGame()

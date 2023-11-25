@@ -37,7 +37,7 @@ namespace nCine
 
 	}
 
-	BitArray::BitArray(uint32_t numBits)
+	BitArray::BitArray(std::uint32_t numBits)
 		: BitArray()
 	{
 		SetSize(numBits);
@@ -51,23 +51,32 @@ namespace nCine
 		}
 	}
 
+	std::int32_t BitArray::SizeInBytes() const
+	{
+		return BITS_TO_CHARS(_size);
+	}
+
 	void BitArray::SetSize(uint32_t numBits)
 	{
+		if (_size == numBits) {
+			return;
+		}
+
 		if (_storage != nullptr) {
 			delete[] _storage;
 		}
 
 		_size = numBits;
-		uint32_t numBytes = BITS_TO_CHARS(numBits);
-		_storage = new unsigned char[numBytes] { };
+		std::int32_t numBytes = BITS_TO_CHARS(numBits);
+		_storage = new std::uint8_t[numBytes]{};
 	}
 
 	void BitArray::SetAll()
 	{
-		int32_t bits;
-		unsigned char mask;
+		std::int32_t bits;
+		std::uint8_t mask;
 
-		uint32_t size = BITS_TO_CHARS(_size);
+		std::int32_t size = BITS_TO_CHARS(_size);
 		std::fill_n(_storage, size, UCHAR_MAX);
 
 		bits = _size % CHAR_BIT;
@@ -79,11 +88,11 @@ namespace nCine
 
 	void BitArray::ClearAll()
 	{
-		uint32_t size = BITS_TO_CHARS(_size);
+		std::int32_t size = BITS_TO_CHARS(_size);
 		std::fill_n(_storage, size, 0);
 	}
 
-	void BitArray::Set(const uint32_t bit)
+	void BitArray::Set(std::uint32_t bit)
 	{
 		if (bit >= _size) {
 			return;
@@ -92,32 +101,32 @@ namespace nCine
 		_storage[BIT_CHAR(bit)] |= BIT_IN_CHAR(bit);
 	}
 
-	void BitArray::Set(const uint32_t bit, bool value)
+	void BitArray::Set(std::uint32_t bit, bool value)
 	{
 		if (bit >= _size) {
 			return;
 		}
 
-		unsigned char& byte = _storage[BIT_CHAR(bit)];
-		byte ^= (-(unsigned char)value ^ byte) & BIT_IN_CHAR(bit);
+		std::uint8_t& byte = _storage[BIT_CHAR(bit)];
+		byte ^= (-(std::uint8_t)value ^ byte) & BIT_IN_CHAR(bit);
 	}
 
-	void BitArray::Reset(const uint32_t bit)
+	void BitArray::Reset(std::uint32_t bit)
 	{
 		if (bit >= _size) {
 			return;
 		}
 
-		unsigned char mask = BIT_IN_CHAR(bit);
+		std::uint8_t mask = BIT_IN_CHAR(bit);
 		_storage[BIT_CHAR(bit)] &= ~mask;
 	}
 
-	BitArrayIndex BitArray::operator()(const uint32_t bit)
+	BitArrayIndex BitArray::operator()(std::uint32_t bit)
 	{
 		return BitArrayIndex(this, bit);
 	}
 
-	bool BitArray::operator[](const uint32_t bit) const
+	bool BitArray::operator[](std::uint32_t bit) const
 	{
 		return (bit < _size ? ((_storage[BIT_CHAR(bit)] & BIT_IN_CHAR(bit)) != 0) : false);
 	}
@@ -128,7 +137,7 @@ namespace nCine
 			return false;
 		}
 
-		uint32_t size = BITS_TO_CHARS(_size);
+		std::int32_t size = BITS_TO_CHARS(_size);
 		return (std::memcmp(this->_storage, other._storage, size) == 0);
 	}
 
@@ -188,14 +197,12 @@ namespace nCine
 
 	BitArray& BitArray::operator++()
 	{
-		unsigned char maxValue;
-		unsigned char one;
-
 		if (_size == 0) {
 			return *this;
 		}
 
-		int32_t i = (_size % CHAR_BIT);
+		std::uint8_t maxValue, one;
+		std::int32_t i = (_size % CHAR_BIT);
 		if (i != 0) {
 			maxValue = UCHAR_MAX << (CHAR_BIT - i);
 			one = 1 << (CHAR_BIT - i);
@@ -219,7 +226,7 @@ namespace nCine
 		return *this;
 	}
 
-	BitArray& BitArray::operator++(int32_t)
+	BitArray& BitArray::operator++(std::int32_t)
 	{
 		++(*this);
 		return *this;
@@ -227,15 +234,12 @@ namespace nCine
 
 	BitArray& BitArray::operator--()
 	{
-		int32_t i;
-		unsigned char maxValue;
-		unsigned char one;
-
 		if (_size == 0) {
 			return *this;
 		}
 
-		i = (_size % CHAR_BIT);
+		std::uint8_t maxValue, one;
+		std::int32_t i = (_size % CHAR_BIT);
 		if (i != 0) {
 			maxValue = UCHAR_MAX << (CHAR_BIT - i);
 			one = 1 << (CHAR_BIT - i);
@@ -260,7 +264,7 @@ namespace nCine
 	}
 
 
-	BitArray& BitArray::operator--(int32_t)
+	BitArray& BitArray::operator--(std::int32_t)
 	{
 		--(*this);
 		return *this;
@@ -276,24 +280,23 @@ namespace nCine
 			return *this;
 		}
 
-		if ((_size == 0) || (src._size == 0)) {
+		if (_size == 0 || src._size == 0) {
 			return *this;
 		}
 
-		uint32_t size = BITS_TO_CHARS(_size);
+		std::int32_t size = BITS_TO_CHARS(_size);
 		std::copy(src._storage, &src._storage[size], this->_storage);
 		return *this;
 	}
 
 	BitArray& BitArray::operator&=(const BitArray& src)
 	{
-		uint32_t size = BITS_TO_CHARS(_size);
-
 		if (_size != src._size) {
 			return *this;
 		}
 
-		for (uint32_t i = 0; i < size; i++) {
+		std::int32_t size = BITS_TO_CHARS(_size);
+		for (std::int32_t i = 0; i < size; i++) {
 			_storage[i] = _storage[i] & src._storage[i];
 		}
 
@@ -302,13 +305,12 @@ namespace nCine
 
 	BitArray& BitArray::operator^=(const BitArray& src)
 	{
-		uint32_t size = BITS_TO_CHARS(_size);
-
 		if (_size != src._size) {
 			return *this;
 		}
 
-		for (uint32_t i = 0; i < size; i++) {
+		std::int32_t size = BITS_TO_CHARS(_size);
+		for (std::int32_t i = 0; i < size; i++) {
 			_storage[i] = _storage[i] ^ src._storage[i];
 		}
 
@@ -317,13 +319,12 @@ namespace nCine
 
 	BitArray& BitArray::operator|=(const BitArray& src)
 	{
-		uint32_t size = BITS_TO_CHARS(_size);
-
 		if (_size != src._size) {
 			return *this;
 		}
 
-		for (uint32_t i = 0; i < size; i++) {
+		std::int32_t size = BITS_TO_CHARS(_size);
+		for (std::int32_t i = 0; i < size; i++) {
 			_storage[i] = _storage[i] | src._storage[i];
 		}
 
@@ -332,21 +333,18 @@ namespace nCine
 
 	BitArray& BitArray::Not()
 	{
-		int32_t bits;
-		unsigned char mask;
-		uint32_t size = BITS_TO_CHARS(_size);
-
 		if (_size == 0) {
 			return *this;
 		}
 
-		for (uint32_t i = 0; i < size; i++) {
+		std::int32_t size = BITS_TO_CHARS(_size);
+		for (std::uint32_t i = 0; i < size; i++) {
 			_storage[i] = ~_storage[i];
 		}
 
-		bits = _size % CHAR_BIT;
+		std::int32_t bits = _size % CHAR_BIT;
 		if (bits != 0) {
-			mask = UCHAR_MAX << (CHAR_BIT - bits);
+			std::uint8_t mask = UCHAR_MAX << (CHAR_BIT - bits);
 			_storage[BIT_CHAR(_size - 1)] &= mask;
 		}
 
@@ -355,16 +353,15 @@ namespace nCine
 
 	BitArray& BitArray::operator<<=(const uint32_t shifts)
 	{
-		uint32_t i;
-		uint32_t chars = shifts / CHAR_BIT;
-
 		if (shifts >= _size) {
 			this->ClearAll();
 			return *this;
 		}
 
+		std::uint32_t i;
+		std::uint32_t chars = shifts / CHAR_BIT;
 		if (chars > 0) {
-			uint32_t size = BITS_TO_CHARS(_size);
+			std::uint32_t size = BITS_TO_CHARS(_size);
 
 			for (i = 0; (i + chars) < size; i++) {
 				_storage[i] = _storage[i + chars];
@@ -376,7 +373,7 @@ namespace nCine
 		}
 
 		for (i = 0; i < (shifts % CHAR_BIT); i++) {
-			for (uint32_t j = 0; j < BIT_CHAR(_size - 1); j++) {
+			for (std::uint32_t j = 0; j < BIT_CHAR(_size - 1); j++) {
 				_storage[j] <<= 1;
 
 				if (_storage[j + 1] & MS_BIT) {
@@ -390,17 +387,15 @@ namespace nCine
 		return *this;
 	}
 
-	BitArray& BitArray::operator>>=(const uint32_t shifts)
+	BitArray& BitArray::operator>>=(std::uint32_t shifts)
 	{
-		int32_t i;
-		char mask;
-		int32_t chars = shifts / CHAR_BIT;
-
 		if (shifts >= _size) {
 			this->ClearAll();
 			return *this;
 		}
 
+		std::int32_t i;
+		std::int32_t chars = shifts / CHAR_BIT;
 		if (chars > 0) {
 			for (i = BIT_CHAR(_size - 1); (i - chars) >= 0; i--) {
 				_storage[i] = _storage[i - chars];
@@ -411,8 +406,8 @@ namespace nCine
 			}
 		}
 
-		for (i = 0; i < (int32_t)(shifts % CHAR_BIT); i++) {
-			for (uint32_t j = BIT_CHAR(_size - 1); j > 0; j--) {
+		for (i = 0; i < (std::int32_t)(shifts % CHAR_BIT); i++) {
+			for (std::uint32_t j = BIT_CHAR(_size - 1); j > 0; j--) {
 				_storage[j] >>= 1;
 
 				if (_storage[j - 1] & 0x01) {
@@ -425,20 +420,20 @@ namespace nCine
 
 		i = _size % CHAR_BIT;
 		if (i != 0) {
-			mask = UCHAR_MAX << (CHAR_BIT - i);
+			std::uint8_t mask = UCHAR_MAX << (CHAR_BIT - i);
 			_storage[BIT_CHAR(_size - 1)] &= mask;
 		}
 
 		return *this;
 	}
 
-	BitArrayIndex::BitArrayIndex(BitArray* array, const uint32_t index)
+	BitArrayIndex::BitArrayIndex(BitArray* array, std::uint32_t index)
 	{
 		_bitArray = array;
 		_index = index;
 	}
 
-	void BitArrayIndex::operator=(const bool value)
+	void BitArrayIndex::operator=(bool value)
 	{
 		if (_bitArray != nullptr) {
 			_bitArray->Set(_index, value);
