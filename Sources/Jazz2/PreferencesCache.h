@@ -103,6 +103,7 @@ namespace Jazz2
 		static bool UseNativeBackButton;
 		static bool EnableDiscordIntegration;
 		static bool TutorialCompleted;
+		static bool ResumeOnStart;
 		static bool AllowCheats;
 		static bool AllowCheatsLives;
 		static bool AllowCheatsUnlock;
@@ -144,7 +145,8 @@ namespace Jazz2
 			ShowWeaponWheelAmmoCount = 0x8000,
 
 			TutorialCompleted = 0x10000,
-			SetLanguage = 0x20000
+			SetLanguage = 0x20000,
+			ResumeOnStart = 0x40000
 		};
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(BoolOptions);

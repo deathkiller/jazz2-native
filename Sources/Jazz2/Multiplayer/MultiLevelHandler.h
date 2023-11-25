@@ -90,6 +90,8 @@ namespace Jazz2::Multiplayer
 		float PlayerHorizontalMovement(int32_t index) override;
 		float PlayerVerticalMovement(int32_t index) override;
 
+		bool SerializeResumableToStream(Stream& dest) override;
+
 		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override;
 
 		void AttachComponents(LevelDescriptor&& descriptor) override;

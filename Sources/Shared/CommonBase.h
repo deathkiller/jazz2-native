@@ -20,13 +20,13 @@
 #	define DEATH_TARGET_UNIX
 #endif
 
-// First two is GCC/Clang for 32/64-bit, second two is MSVC 32/64-bit
-#if defined(__i386) || defined(__x86_64) || defined(_M_IX86) || defined(_M_X64)
-#	define DEATH_TARGET_X86
-
-// First two is GCC/Clang for 32/64-bit, second two is MSVC 32/64-bit.
-#elif defined(__arm__) || defined(__aarch64__) || defined(_M_ARM) || defined(_M_ARM64)
+// First two is GCC/Clang for 32/64-bit, second two is MSVC 32/64-bit, last one is for ARM64 Emulation Compatible.
+#if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC)
 #	define DEATH_TARGET_ARM
+
+// First two is GCC/Clang for 32/64-bit, second two is MSVC 32/64-bit
+#elif defined(__i386) || defined(__x86_64) || defined(_M_IX86) || defined(_M_X64)
+#	define DEATH_TARGET_X86
 
 // First two is GCC/Clang, third is MSVC. Not sure about 64-bit MSVC.
 #elif defined(__powerpc__) || defined(__powerpc64__) || defined(_M_PPC)
@@ -44,7 +44,7 @@
 
 // Sanity checks. This might happen when using Emscripten-compiled code with native compilers, at which point we should just die.
 #if defined(DEATH_TARGET_EMSCRIPTEN) && (defined(DEATH_TARGET_X86) || defined(DEATH_TARGET_ARM) || defined(DEATH_TARGET_POWERPC) || defined(DEATH_TARGET_RISCV))
-#	error DEATH_TARGET_X86 / _ARM / _POWERPC defined on Emscripten
+#	error DEATH_TARGET_X86 / _ARM / _POWERPC / _RISCV defined on Emscripten
 #endif
 
 // 64-bit WebAssembly macro was tested by passing -m64 to emcc

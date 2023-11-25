@@ -517,7 +517,7 @@ namespace Death::IO::Http
 	}
 
 	// RFC 5234, Appendix B.1. Core Rules
-	template <typename T, typename C, typename std::enable_if<std::is_unsigned<T>::value>::type* = nullptr>
+	template <typename T, typename C, class = typename std::enable_if<std::is_unsigned<T>::value>::type>
 	constexpr T DigitToUint(const C c)
 	{
 		// DIGIT
@@ -526,7 +526,7 @@ namespace Death::IO::Http
 	}
 
 	// RFC 5234, Appendix B.1. Core Rules
-	template <typename T, typename C, typename std::enable_if<std::is_unsigned<T>::value>::type* = nullptr>
+	template <typename T, typename C, class = typename std::enable_if<std::is_unsigned<T>::value>::type>
 	constexpr T HexDigitToUint(const C c)
 	{
 		// HEXDIG
@@ -796,7 +796,7 @@ namespace Death::IO::Http
 	}
 
 	// RFC 7230, 4.1. Chunked Transfer Coding
-	template <typename T, class Iterator, typename std::enable_if<std::is_unsigned<T>::value>::type* = nullptr>
+	template <typename T, class Iterator, class = typename std::enable_if<std::is_unsigned<T>::value>::type>
 	T StringToUint(const Iterator begin, const Iterator end)
 	{
 		T result = 0;
@@ -806,7 +806,7 @@ namespace Death::IO::Http
 		return result;
 	}
 
-	template <typename T, class Iterator, typename std::enable_if<std::is_unsigned<T>::value>::type* = nullptr>
+	template <typename T, class Iterator, class = typename std::enable_if<std::is_unsigned<T>::value>::type>
 	T HexStringToUint(const Iterator begin, const Iterator end)
 	{
 		T result = 0;

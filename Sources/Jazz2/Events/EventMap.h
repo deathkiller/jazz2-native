@@ -47,6 +47,9 @@ namespace Jazz2::Events
 		void AddWarpTarget(std::uint16_t id, std::int32_t x, std::int32_t y);
 		void AddSpawnPosition(std::uint8_t typeMask, std::int32_t x, std::int32_t y);
 
+		void InitializeFromStream(Stream& src);
+		void SerializeResumableToStream(Stream& dest);
+
 	private:
 		struct EventTile {
 			EventType Event;
@@ -84,6 +87,5 @@ namespace Jazz2::Events
 		SmallVector<GeneratorInfo, 0> _generators;
 		SmallVector<SpawnPoint, 0> _spawnPoints;
 		SmallVector<WarpTarget, 0> _warpTargets;
-		bool _checkpointCreated;
 	};
 }

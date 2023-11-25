@@ -320,7 +320,7 @@ else() # GCC and LLVM
 
 	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 		target_compile_options(${NCINE_APP} PRIVATE -fdiagnostics-color=auto)
-		target_compile_options(${NCINE_APP} PRIVATE -Wall -Wno-old-style-cast -Wno-long-long -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-variadic-macros -Wcast-align -Wno-multichar -Wno-switch -Wno-unknown-pragmas -Wno-reorder)
+		target_compile_options(${NCINE_APP} PRIVATE -Wall -Wno-old-style-cast -Wno-long-long -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-variadic-macros -Wcast-align -Wno-multichar -Wno-switch -Wno-unknown-pragmas -Wno-reorder -Wpessimizing-move -Wredundant-move)
 
 		target_link_options(${NCINE_APP} PRIVATE -Wno-free-nonheap-object)
 		if(NCINE_DYNAMIC_LIBRARY)

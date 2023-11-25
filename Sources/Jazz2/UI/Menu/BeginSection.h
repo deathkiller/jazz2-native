@@ -16,6 +16,9 @@ namespace Jazz2::UI::Menu
 
 	private:
 		enum class Item {
+#if !defined(SHAREWARE_DEMO_ONLY)
+			Continue,
+#endif
 			PlayEpisodes,
 #if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
 			Import,
@@ -38,13 +41,16 @@ namespace Jazz2::UI::Menu
 		};
 
 		struct ItemData {
+			Item Type;
 			String Name;
 			float Y;
+
+			ItemData(Item type, const StringView& name) : Type(type), Name(name), Y(0.0f) { }
 		};
 
 		static constexpr float DisabledItem = -1024.0f;
 
-		ItemData _items[(int32_t)Item::Count];
+		SmallVector<ItemData, (int32_t)Item::Count> _items;
 		int32_t _selectedIndex;
 		float _animation;
 #if !defined(DEATH_TARGET_EMSCRIPTEN)

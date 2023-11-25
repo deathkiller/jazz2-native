@@ -30,32 +30,6 @@ namespace Jazz2::UI::Menu
 	BeginSection::BeginSection()
 		: _selectedIndex(0), _animation(0.0f)
 	{
-#if defined(SHAREWARE_DEMO_ONLY)
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
-		// TRANSLATORS: Menu item in main menu (Emscripten only)
-		_items[(int32_t)Item::Import].Name = _("Import Episodes");
-#	endif
-#else
-		// TRANSLATORS: Menu item in main menu
-		_items[(int32_t)Item::PlayEpisodes].Name = _("Play Story");
-		// TRANSLATORS: Menu item in main menu
-		_items[(int32_t)Item::PlayCustomLevels].Name = _("Play Custom Levels");
-#endif
-
-#if defined(WITH_MULTIPLAYER)
-		// TODO: Multiplayer
-		_items[(int32_t)Item::TODO_ConnectTo].Name = _("Connect To Server");
-		_items[(int32_t)Item::TODO_CreateServer].Name = _("Create Server");
-#endif
-
-		// TRANSLATORS: Menu item in main menu
-		_items[(int32_t)Item::Options].Name = _("Options");
-		// TRANSLATORS: Menu item in main menu
-		_items[(int32_t)Item::About].Name = _("About");
-#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
-		// TRANSLATORS: Menu item in main menu
-		_items[(int32_t)Item::Quit].Name = _("Quit");
-#endif
 	}
 
 	void BeginSection::OnShow(IMenuContainer* root)
@@ -63,18 +37,50 @@ namespace Jazz2::UI::Menu
 		MenuSection::OnShow(root);
 
 		_animation = 0.0f;
+		_items.clear();
 
 #if defined(SHAREWARE_DEMO_ONLY)
 		if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None) {
-			_items[(int32_t)Item::PlayEpisodes].Name = _("Play Story");
+			// TRANSLATORS: Menu item in main menu
+			_items.emplace_back(ItemData { Item::PlayEpisodes, _("Play Story") });
 		} else {
 			// TRANSLATORS: Menu item in main menu (Emscripten only)
-			_items[(int32_t)Item::PlayEpisodes].Name = _("Play Shareware Demo");
+			_items.emplace_back(ItemData { Item::PlayEpisodes, _("Play Shareware Demo") });
 		}
+
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+		// TRANSLATORS: Menu item in main menu (Emscripten only)
+		_items.emplace_back(ItemData { Item::Import, _("Import Episodes") });
+#	endif
+#else
+		if (root->HasResumableState()) {
+			// TRANSLATORS: Menu item in main menu
+			_items.emplace_back(ItemData { Item::Continue, _("Continue") });
+		}
+
+		// TRANSLATORS: Menu item in main menu
+		_items.emplace_back(ItemData { Item::PlayEpisodes, _("Play Story") });
+		// TRANSLATORS: Menu item in main menu
+		_items.emplace_back(ItemData { Item::PlayCustomLevels, _("Play Custom Levels") });
+#endif
+
+#if defined(WITH_MULTIPLAYER)
+		// TODO: Multiplayer
+		_items.emplace_back(ItemData { Item::TODO_ConnectTo, _("Connect To Server") });
+		_items.emplace_back(ItemData { Item::TODO_CreateServer, _("Create Server") });
+#endif
+
+		// TRANSLATORS: Menu item in main menu
+		_items.emplace_back(ItemData { Item::Options, _("Options") });
+		// TRANSLATORS: Menu item in main menu
+		_items.emplace_back(ItemData { Item::About, _("About") });
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
+		// TRANSLATORS: Menu item in main menu
+		_items.emplace_back(ItemData { Item::Quit, _("Quit") });
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-		if (auto mainMenu = dynamic_cast<MainMenu*>(_root)) {
+		if (auto* mainMenu = dynamic_cast<MainMenu*>(_root)) {
 			IRootController::Flags flags = mainMenu->_root->GetFlags();
 			if ((flags & IRootController::Flags::IsPlayable) != IRootController::Flags::IsPlayable) {
 				auto& resolver = ContentResolver::Get();
@@ -126,13 +132,13 @@ namespace Jazz2::UI::Menu
 					goto SkipDisabledOnUp;
 				}
 			} else {
-				_selectedIndex = (int32_t)Item::Count - 1;
+				_selectedIndex = (int32_t)_items.size() - 1;
 			}
 		} else if (_root->ActionHit(PlayerActions::Down)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 		SkipDisabledOnDown:
-			if (_selectedIndex < (int32_t)Item::Count - 1) {
+			if (_selectedIndex < (int32_t)_items.size() - 1) {
 				_selectedIndex++;
 				if (_items[_selectedIndex].Y <= DisabledItem) {
 					goto SkipDisabledOnDown;
@@ -146,7 +152,7 @@ namespace Jazz2::UI::Menu
 	void BeginSection::OnDraw(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
-		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f * (1.0f - 0.048f * (int32_t)Item::Count));
+		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f * (1.0f - 0.048f * (int32_t)_items.size()));
 		int32_t charOffset = 0;
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -205,7 +211,7 @@ namespace Jazz2::UI::Menu
 		}
 #endif
 
-		for (int32_t i = 0; i < (int32_t)Item::Count; i++) {
+		for (int32_t i = 0; i < (int32_t)_items.size(); i++) {
 			_items[i].Y = center.Y;
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -236,7 +242,7 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
-			center.Y += 34.0f + 32.0f * (1.0f - 0.15f * (int32_t)Item::Count);
+			center.Y += 34.0f + 32.0f * (1.0f - 0.15f * (int32_t)_items.size());
 		}
 	}
 
@@ -250,13 +256,13 @@ namespace Jazz2::UI::Menu
 
 				bool isPlayable = true;
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-				if (auto mainMenu = dynamic_cast<MainMenu*>(_root)) {
+				if (auto* mainMenu = dynamic_cast<MainMenu*>(_root)) {
 					IRootController::Flags flags = mainMenu->_root->GetFlags();
 					isPlayable = ((flags & IRootController::Flags::IsPlayable) == IRootController::Flags::IsPlayable);
 				}
 #endif
 
-				for (int32_t i = 0; i < (int32_t)Item::Count; i++) {
+				for (int32_t i = 0; i < (int32_t)_items.size(); i++) {
 					float itemHeight = (!isPlayable && i == 0 ? 60.0f : 22.0f);
 					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].Y) < itemHeight) {
 						if (_selectedIndex == i) {
@@ -277,14 +283,21 @@ namespace Jazz2::UI::Menu
 	{
 		bool isPlayable = true;
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-		if (auto mainMenu = dynamic_cast<MainMenu*>(_root)) {
+		if (auto* mainMenu = dynamic_cast<MainMenu*>(_root)) {
 			IRootController::Flags flags = mainMenu->_root->GetFlags();
 			isPlayable = ((flags & IRootController::Flags::IsPlayable) == IRootController::Flags::IsPlayable);
 		}
 #endif
 
-		switch (_selectedIndex) {
-			case (int32_t)Item::PlayEpisodes:
+		switch (_items[_selectedIndex].Type) {
+#if !defined(SHAREWARE_DEMO_ONLY)
+			case Item::Continue:
+				if (isPlayable) {
+					_root->ResumeSavedState();
+				}
+				break;
+#endif
+			case Item::PlayEpisodes:
 				if (isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 #if defined(SHAREWARE_DEMO_ONLY)
@@ -319,12 +332,12 @@ namespace Jazz2::UI::Menu
 #endif
 				break;
 #if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
-			case (int32_t)Item::Import:
+			case Item::Import:
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				_root->SwitchToSection<ImportSection>();
 				break;
 #else
-			case (int32_t)Item::PlayCustomLevels:
+			case Item::PlayCustomLevels:
 				if (isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 					_root->SwitchToSection<CustomLevelSelectSection>();
@@ -334,28 +347,28 @@ namespace Jazz2::UI::Menu
 
 #if defined(WITH_MULTIPLAYER)
 			// TODO: Multiplayer
-			case (int32_t)Item::TODO_ConnectTo:
+			case Item::TODO_ConnectTo:
 				// TODO: Hardcoded address and port
 				_root->ConnectToServer("127.0.0.1"_s, 7438);
 				break;
-			case (int32_t)Item::TODO_CreateServer:
+			case Item::TODO_CreateServer:
 				// TODO: Hardcoded address and port
 				_root->CreateServer(7438);
 				break;
 #endif
 
-			case (int32_t)Item::Options:
+			case Item::Options:
 				if (isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 					_root->SwitchToSection<OptionsSection>();
 				}
 				break;
-			case (int32_t)Item::About:
+			case Item::About:
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				_root->SwitchToSection<AboutSection>();
 				break;
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
-			case (int32_t)Item::Quit: theApplication().quit(); break;
+			case Item::Quit: theApplication().quit(); break;
 #endif
 		}
 	}

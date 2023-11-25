@@ -20,10 +20,7 @@ namespace Jazz2
 		virtual void OnTouchEvent(const nCine::TouchEvent& event) { }
 		
 	private:
-		/// Deleted copy constructor
 		IStateHandler(const IStateHandler&) = delete;
-		/// Deleted assignment operator
 		IStateHandler& operator=(const IStateHandler&) = delete;
-
 	};
 }

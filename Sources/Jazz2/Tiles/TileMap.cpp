@@ -22,7 +22,7 @@ namespace Jazz2::Tiles
 		_renderCommands.reserve(128);
 
 		if (tileSetPart.Data == nullptr) {
-			LOGE("Cannot load main tileset \"%s\"", tileSetPath.data());
+			LOGE("Failed to load main tileset \"%s\"", tileSetPath.data());
 		}
 	}
 
@@ -39,7 +39,7 @@ namespace Jazz2::Tiles
 	Vector2i TileMap::GetSize() const
 	{
 		if (_sprLayerIndex == -1) {
-			return Vector2i();
+			return { };
 		}
 
 		return _layers[_sprLayerIndex].LayoutSize;
@@ -48,7 +48,7 @@ namespace Jazz2::Tiles
 	Vector2i TileMap::GetLevelBounds() const
 	{
 		if (_sprLayerIndex == -1) {
-			return Vector2i();
+			return { };
 		}
 
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
@@ -226,7 +226,7 @@ namespace Jazz2::Tiles
 		std::int32_t hy1t = hy1 / TileSet::DefaultTileSize;
 		std::int32_t hy2t = hy2 / TileSet::DefaultTileSize;
 
-		auto sprLayerLayout = _layers[_sprLayerIndex].Layout.get();
+		auto* sprLayerLayout = _layers[_sprLayerIndex].Layout.get();
 
 		for (std::int32_t y = hy1t; y <= hy2t; y++) {
 			for (std::int32_t x = hx1t; x <= hx2t; x++) {
@@ -356,7 +356,7 @@ namespace Jazz2::Tiles
 		std::int32_t hy1t = hy1 / TileSet::DefaultTileSize;
 		std::int32_t hy2t = hy2 / TileSet::DefaultTileSize;
 
-		auto sprLayerLayout = _layers[_sprLayerIndex].Layout.get();
+		auto* sprLayerLayout = _layers[_sprLayerIndex].Layout.get();
 
 		for (std::int32_t y = hy1t; y <= hy2t; y++) {
 			for (std::int32_t x = hx1t; x <= hx2t; x++) {
@@ -1326,6 +1326,43 @@ namespace Jazz2::Tiles
 				}
 			}
 		}
+	}
+
+	void TileMap::InitializeFromStream(Stream& src)
+	{
+		std::int32_t layoutSize = src.ReadVariableInt32();
+		if (layoutSize == -1) {
+			return;
+		}
+
+		RETURN_ASSERT_MSG(_sprLayerIndex != -1, "Sprite layer not defined");
+		
+		auto& spriteLayer = _layers[_sprLayerIndex];
+		std::int32_t realLayoutSize = spriteLayer.LayoutSize.X * spriteLayer.LayoutSize.Y;
+		RETURN_ASSERT_MSG(layoutSize == realLayoutSize, "Layout size mismatch");
+
+		for (std::int32_t i = 0; i < layoutSize; i++) {
+			spriteLayer.Layout[i].DestructFrameIndex = src.ReadVariableInt32();
+		}
+
+		src.Read(_triggerState.RawData(), _triggerState.SizeInBytes());
+	}
+
+	void TileMap::SerializeResumableToStream(Stream& dest)
+	{
+		if (_sprLayerIndex == -1) {
+			dest.WriteValue<std::int32_t>(-1);
+			return;
+		}
+
+		auto& spriteLayer = _layers[_sprLayerIndex];
+		std::int32_t layoutSize = spriteLayer.LayoutSize.X * spriteLayer.LayoutSize.Y;
+		dest.WriteVariableInt32(layoutSize);
+		for (std::int32_t i = 0; i < layoutSize; i++) {
+			dest.WriteVariableInt32(spriteLayer.Layout[i].DestructFrameIndex);
+		}
+
+		dest.Write(_triggerState.RawData(), _triggerState.SizeInBytes());
 	}
 
 	void TileMap::RenderTexturedBackground(RenderQueue& renderQueue, TileMapLayer& layer, float x, float y)

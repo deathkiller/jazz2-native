@@ -31,6 +31,9 @@ namespace Jazz2
 		virtual void InvokeAsync(std::function<void()>&& callback) = 0;
 		virtual void GoToMainMenu(bool afterIntro) = 0;
 		virtual void ChangeLevel(LevelInitialization&& levelInit) = 0;
+		virtual bool HasResumableState() const = 0;
+		virtual void ResumeSavedState() = 0;
+		virtual bool SaveCurrentStateIfAny() = 0;
 
 #if defined(WITH_MULTIPLAYER)
 		virtual bool ConnectToServer(const StringView& address, std::uint16_t port) = 0;
@@ -45,6 +48,5 @@ namespace Jazz2
 	private:
 		IRootController(const IRootController&) = delete;
 		IRootController& operator=(const IRootController&) = delete;
-
 	};
 }

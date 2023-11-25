@@ -165,6 +165,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/ExitType.h
 	${NCINE_SOURCE_DIR}/Jazz2/GameDifficulty.h
 	${NCINE_SOURCE_DIR}/Jazz2/ILevelHandler.h
+	${NCINE_SOURCE_DIR}/Jazz2/IResumable.h
 	${NCINE_SOURCE_DIR}/Jazz2/IRootController.h
 	${NCINE_SOURCE_DIR}/Jazz2/IStateHandler.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelDescriptor.h

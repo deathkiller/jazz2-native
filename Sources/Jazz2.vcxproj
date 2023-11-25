@@ -341,6 +341,7 @@
     <ClInclude Include="Jazz2\ContentResolver.Shaders.h" />
     <ClInclude Include="Jazz2\ExitType.h" />
     <ClInclude Include="Jazz2\GameDifficulty.h" />
+    <ClInclude Include="Jazz2\IResumable.h" />
     <ClInclude Include="Jazz2\IRootController.h" />
     <ClInclude Include="Jazz2\LevelDescriptor.h" />
     <ClInclude Include="Jazz2\LightEmitter.h" />

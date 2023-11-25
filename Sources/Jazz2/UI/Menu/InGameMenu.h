@@ -31,6 +31,8 @@ namespace Jazz2::UI::Menu
 		MenuSection* SwitchToSectionDirect(std::unique_ptr<MenuSection> section) override;
 		void LeaveSection() override;
 		void ChangeLevel(Jazz2::LevelInitialization&& levelInit) override;
+		bool HasResumableState() const override;
+		void ResumeSavedState() override;
 #if defined(WITH_MULTIPLAYER)
 		bool ConnectToServer(const StringView& address, std::uint16_t port) override;
 		bool CreateServer(std::uint16_t port) override;

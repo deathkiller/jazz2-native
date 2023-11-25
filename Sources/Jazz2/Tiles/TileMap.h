@@ -75,7 +75,7 @@ namespace Jazz2::Tiles
 		TileDestructType DestructType;
 		std::int32_t DestructAnimation;		// Animation index for a destructible tile that uses an animation, but doesn't animate normally
 		std::int32_t DestructFrameIndex;	// Denotes the specific frame from the above animation that is currently active
-											// Collapsible: delay ("wait" parameter); trigger: trigger id
+											// Collapsible: Delay ("wait" parameter); Trigger: Trigger ID
 	};
 
 	struct TileMapLayer {
@@ -184,6 +184,9 @@ namespace Jazz2::Tiles
 
 		bool GetTrigger(std::uint8_t triggerId);
 		void SetTrigger(std::uint8_t triggerId, bool newState);
+
+		void InitializeFromStream(Stream& src);
+		void SerializeResumableToStream(Stream& dest);
 
 		void OnInitializeViewport();
 

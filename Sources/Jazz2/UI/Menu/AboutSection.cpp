@@ -81,13 +81,25 @@
 #	define _i12 ""
 #endif
 
-#if defined(WITH_TRACY)
-#	define _i13 "\n\nTracy integration is enabled!"
+#if defined(WITH_IMGUI)
+#	define _i13 ", ImGui"
 #else
 #	define _i13 ""
 #endif
 
-#define ADDITIONAL_INFO _i1 _i2 _i3 _i4 _i5 _i6 _i7 _i8 _i9 _i10 _i11 _i12 _i13
+#if defined(DEATH_CPU_USE_RUNTIME_DISPATCH)
+#	define _i14 " (CPU Dispatch)"
+#else
+#	define _i14 ""
+#endif
+
+#if defined(WITH_TRACY)
+#	define _i15 "\n\nTracy integration is enabled!"
+#else
+#	define _i15 ""
+#endif
+
+#define ADDITIONAL_INFO _i1 _i2 _i3 _i4 _i5 _i6 _i7 _i8 _i9 _i10 _i11 _i12 _i13 _i14 _i15
 
 using namespace Jazz2::UI::Menu::Resources;
 

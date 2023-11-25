@@ -2919,6 +2919,63 @@ namespace Jazz2::Actors
 		return carryOver;
 	}
 
+	void Player::InitializeFromStream(ILevelHandler* levelHandler, Stream& src)
+	{
+		std::uint8_t playerIndex = src.ReadVariableInt32();
+		PlayerType playerType = (PlayerType)src.ReadValue<std::uint8_t>();
+		PlayerType playerTypeOriginal = (PlayerType)src.ReadValue<std::uint8_t>();
+		float checkpointPosX = src.ReadValue<float>();
+		float checkpointPosY = src.ReadValue<float>();
+
+		std::uint8_t playerParams[2] = { (std::uint8_t)playerType, (std::uint8_t)playerIndex };
+		OnActivated(Actors::ActorActivationDetails(
+			levelHandler,
+			Vector3i((std::int32_t)checkpointPosX, (std::int32_t)checkpointPosY, ILevelHandler::PlayerZ - playerIndex),
+			playerParams
+		));
+
+		_playerTypeOriginal = playerTypeOriginal;
+
+		_checkpointLight = src.ReadValue<float>();
+		_lives = src.ReadVariableInt32();
+		_coins = src.ReadVariableInt32();
+		_coinsCheckpoint = _coins;
+		_foodEaten = src.ReadVariableInt32();
+		_score = src.ReadVariableInt32();
+		_gems = src.ReadVariableInt32();
+		_gemsCheckpoint = _gems;
+
+		levelHandler->SetAmbientLight(_checkpointLight);
+
+		std::int32_t weaponCount = src.ReadVariableInt32();
+		RETURN_ASSERT_MSG(weaponCount == countof(_weaponAmmoCheckpoint), "Weapon count mismatch");
+		_currentWeapon = (WeaponType)src.ReadVariableInt32();
+		src.Read(_weaponAmmoCheckpoint, sizeof(_weaponAmmoCheckpoint));
+		src.Read(_weaponUpgradesCheckpoint, sizeof(_weaponUpgradesCheckpoint));
+
+		std::memcpy(_weaponAmmo, _weaponAmmoCheckpoint, sizeof(_weaponAmmoCheckpoint));
+		std::memcpy(_weaponUpgrades, _weaponUpgradesCheckpoint, sizeof(_weaponUpgradesCheckpoint));
+	}
+
+	void Player::SerializeResumableToStream(Stream& dest)
+	{
+		dest.WriteVariableInt32(_playerIndex);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_playerType);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_playerTypeOriginal);
+		dest.WriteValue<float>(_checkpointPos.X);
+		dest.WriteValue<float>(_checkpointPos.Y);
+		dest.WriteValue<float>(_checkpointLight);
+		dest.WriteVariableInt32(_lives);
+		dest.WriteVariableInt32(_coinsCheckpoint);
+		dest.WriteVariableInt32(_foodEaten);
+		dest.WriteVariableInt32(_score);
+		dest.WriteVariableInt32(_gemsCheckpoint);
+		dest.WriteVariableInt32(countof(_weaponAmmoCheckpoint));
+		dest.WriteVariableInt32((std::int32_t)_currentWeapon);
+		dest.Write(_weaponAmmoCheckpoint, sizeof(_weaponAmmoCheckpoint));
+		dest.Write(_weaponUpgradesCheckpoint, sizeof(_weaponUpgradesCheckpoint));
+	}
+
 	void Player::WarpToPosition(Vector2f pos, bool fast)
 	{
 		if (fast) {

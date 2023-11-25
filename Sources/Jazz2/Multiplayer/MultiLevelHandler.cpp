@@ -667,6 +667,11 @@ namespace Jazz2::Multiplayer
 		return LevelHandler::PlayerVerticalMovement(index);
 	}
 
+	bool MultiLevelHandler::SerializeResumableToStream(Stream& dest)
+	{
+		return false;
+	}
+
 	void MultiLevelHandler::OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount)
 	{
 		if (_isServer) {

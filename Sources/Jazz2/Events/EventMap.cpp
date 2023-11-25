@@ -9,7 +9,7 @@
 namespace Jazz2::Events
 {
 	EventMap::EventMap(const Vector2i& layoutSize)
-		: _levelHandler(nullptr), _layoutSize(layoutSize), _checkpointCreated(false), _pitType(PitType::FallForever)
+		: _levelHandler(nullptr), _layoutSize(layoutSize), _pitType(PitType::FallForever)
 	{
 	}
 
@@ -176,11 +176,6 @@ namespace Jazz2::Events
 	{
 		ZoneScopedC(0x9D5BA3);
 
-		auto* tiles = _levelHandler->TileMap();
-		if (tiles == nullptr) {
-			return;
-		}
-
 		std::int32_t x1 = std::max(0, tx1);
 		std::int32_t x2 = std::min(_layoutSize.X - 1, tx2);
 		std::int32_t y1 = std::max(0, ty1);
@@ -207,12 +202,6 @@ namespace Jazz2::Events
 					}
 				}
 			}
-		}
-
-		if (!_checkpointCreated) {
-			// Create checkpostd::int32_t after first call to ActivateEvents() to avoid duplication of objects that are spawned near player spawn
-			std::memcpy(_eventLayoutForRollback.data(), _eventLayout.data(), _eventLayout.size() * sizeof(EventTile));
-			_checkpointCreated = true;
 		}
 	}
 
@@ -424,5 +413,31 @@ namespace Jazz2::Events
 		SpawnPoint& target = _spawnPoints.emplace_back();
 		target.PlayerTypeMask = typeMask;
 		target.Pos = Vector2f(x * Tiles::TileSet::DefaultTileSize, y * Tiles::TileSet::DefaultTileSize - 8);
+	}
+
+	void EventMap::InitializeFromStream(Stream& src)
+	{
+		std::int32_t layoutSize = src.ReadVariableInt32();
+		std::int32_t realLayoutSize = _layoutSize.X * _layoutSize.Y;
+		RETURN_ASSERT_MSG(layoutSize == realLayoutSize, "Layout size mismatch");
+
+		for (std::int32_t i = 0; i < layoutSize; i++) {
+			EventTile& tile = _eventLayout[i];
+			tile.Event = (EventType)src.ReadVariableUint32();
+			tile.EventFlags = (Actors::ActorState)src.ReadVariableUint32();
+			src.Read(tile.EventParams, sizeof(tile.EventParams));
+		}
+	}
+
+	void EventMap::SerializeResumableToStream(Stream& dest)
+	{
+		std::int32_t layoutSize = _layoutSize.X * _layoutSize.Y;
+		dest.WriteVariableInt32(layoutSize);
+		for (std::int32_t i = 0; i < layoutSize; i++) {
+			EventTile& tile = _eventLayoutForRollback[i];
+			dest.WriteVariableUint32((std::uint32_t)tile.Event);
+			dest.WriteVariableUint32((std::uint32_t)tile.EventFlags);
+			dest.Write(tile.EventParams, sizeof(tile.EventParams)); // TODO: Optimize this
+		}
 	}
 }
