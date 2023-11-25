@@ -135,7 +135,7 @@ namespace nCine
 		void commitAll();
 
 		/// Calculates the Z-depth of command layer using the specified near and far planes
-		static float calculateDepth(uint16_t layer, float near, float far);
+		static float calculateDepth(uint16_t layer, float nearClip, float farClip);
 
 	private:
 		/// The distance on the Z axis between adjacent layers

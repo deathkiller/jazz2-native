@@ -78,7 +78,7 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 
 		const Camera::ProjectionValues cameraValues = RenderResources::currentCamera()->projectionValues();
-		modelMatrix_[3][2] = calculateDepth(layer_, cameraValues.near, cameraValues.far);
+		modelMatrix_[3][2] = calculateDepth(layer_, cameraValues.nearClip, cameraValues.farClip);
 
 		if (material_.shaderProgram_ && material_.shaderProgram_->status() == GLShaderProgram::Status::LinkedWithIntrospection) {
 			GLUniformBlockCache* instanceBlock = material_.uniformBlock(Material::InstanceBlockName);
@@ -129,9 +129,9 @@ namespace nCine
 		material_.commitUniformBlocks();
 	}
 
-	float RenderCommand::calculateDepth(uint16_t layer, float near, float far)
+	float RenderCommand::calculateDepth(uint16_t layer, float nearClip, float farClip)
 	{
 		// The layer translates to depth, from near to far
-		return near + LayerStep + (far - near - LayerStep) * layer * LayerStep;
+		return nearClip + LayerStep + (farClip - nearClip - LayerStep) * layer * LayerStep;
 	}
 }

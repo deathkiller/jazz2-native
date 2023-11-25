@@ -16,7 +16,7 @@ namespace nCine
 
 		projection_ = Matrix4x4f::Ortho(projectionValues_.left, projectionValues_.right,
 										projectionValues_.bottom, projectionValues_.top,
-										projectionValues_.near, projectionValues_.far);
+										projectionValues_.nearClip, projectionValues_.farClip);
 	}
 
 	void Camera::setOrthoProjection(float left, float right, float top, float bottom)
@@ -28,7 +28,7 @@ namespace nCine
 
 		projection_ = Matrix4x4f::Ortho(projectionValues_.left, projectionValues_.right,
 										projectionValues_.bottom, projectionValues_.top,
-										projectionValues_.near, projectionValues_.far);
+										projectionValues_.nearClip, projectionValues_.farClip);
 		updateFrameProjectionMatrix_ = theApplication().numFrames();
 	}
 
