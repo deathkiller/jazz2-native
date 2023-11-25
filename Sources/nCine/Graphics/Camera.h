@@ -3,8 +3,8 @@
 #include "../Primitives/Matrix4x4.h"
 #include "../Primitives/Rect.h"
 
-namespace nCine {
-
+namespace nCine
+{
 	/// The camera class that handles matrices for shaders
 	class Camera
 	{

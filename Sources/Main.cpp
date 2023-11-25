@@ -143,6 +143,7 @@ private:
 	void CheckUpdates();
 #endif
 	bool SetLevelHandler(const LevelInitialization& levelInit);
+	void RemoveResumableStateIfAny();
 	static void WriteCacheDescriptor(const StringView& path, std::uint64_t currentVersion, std::int64_t animsModified);
 	static void SaveEpisodeEnd(const LevelInitialization& levelInit);
 	static void SaveEpisodeContinue(const LevelInitialization& levelInit);
@@ -215,17 +216,24 @@ void GameEventHandler::OnInit()
 
 	resolver.CompileShaders();
 
+#if !defined(SHAREWARE_DEMO_ONLY)
 	if (PreferencesCache::ResumeOnStart) {
 		LOGI("Resuming last state due to suspended termination");
 		PreferencesCache::ResumeOnStart = false;
 		PreferencesCache::Save();
 		if (HasResumableState()) {
 			InitializeBase();
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+			// All required files are already included in Emscripten version, so nothing is verified
+			_flags |= Flags::IsVerified | Flags::IsPlayable;
+#	else
 			RefreshCache();
+#	endif
 			ResumeSavedState();
 			return;
 		}
 	}
+#endif
 
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	// If threading support is enabled, refresh cache during intro cinematics and don't allow skip until it's completed
@@ -234,8 +242,13 @@ void GameEventHandler::OnInit()
 
 		auto handler = static_cast<GameEventHandler*>(arg);
 		handler->InitializeBase();
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+		// All required files are already included in Emscripten version, so nothing is verified
+		handler->_flags |= Flags::IsVerified | Flags::IsPlayable;
+#	else
 		handler->RefreshCache();
 		handler->CheckUpdates();
+#	endif
 	}, this);
 
 #	if defined(WITH_MULTIPLAYER)
@@ -373,10 +386,12 @@ void GameEventHandler::OnShutdown()
 
 void GameEventHandler::OnSuspend()
 {
+#if !defined(SHAREWARE_DEMO_ONLY)
 	if (SaveCurrentStateIfAny()) {
 		PreferencesCache::ResumeOnStart = true;
 		PreferencesCache::Save();
 	}
+#endif
 }
 
 void GameEventHandler::OnResume()
@@ -389,8 +404,10 @@ void GameEventHandler::OnResume()
 	}
 #endif
 
+#if !defined(SHAREWARE_DEMO_ONLY)
 	PreferencesCache::ResumeOnStart = false;
 	PreferencesCache::Save();
+#endif
 }
 
 void GameEventHandler::OnKeyPressed(const KeyboardEvent& event)
@@ -535,7 +552,8 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 
 bool GameEventHandler::HasResumableState() const
 {
-	return fs::FileExists("Jazz2.resume");
+	auto dir = PreferencesCache::GetDirectory();
+	return (!dir.empty() && fs::FileExists(fs::CombinePath(dir, "Jazz2.resume")));
 }
 
 void GameEventHandler::ResumeSavedState()
@@ -543,7 +561,12 @@ void GameEventHandler::ResumeSavedState()
 	InvokeAsync([this]() mutable {
 		ZoneScopedNC("GameEventHandler::ResumeSavedState", 0x888888);
 
-		auto s = fs::Open("Jazz2.resume", FileAccessMode::Read);
+		auto dir = PreferencesCache::GetDirectory();
+		if (dir.empty()) {
+			return;
+		}
+
+		auto s = fs::Open(fs::CombinePath(dir, "Jazz2.resume"), FileAccessMode::Read);
 		if (s->IsValid()) {
 			std::uint64_t signature = s->ReadValue<std::uint64_t>();
 			std::uint8_t fileType = s->ReadValue<std::uint8_t>();
@@ -580,7 +603,12 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 {
 	if (auto* levelHandler = dynamic_cast<LevelHandler*>(_currentHandler.get())) {
 		if (levelHandler->Difficulty() != GameDifficulty::Multiplayer) {
-			auto s = fs::Open("Jazz2.resume", FileAccessMode::Write);
+			auto dir = PreferencesCache::GetDirectory();
+			if (dir.empty()) {
+				return false;
+			}
+
+			auto s = fs::Open(fs::CombinePath(dir, "Jazz2.resume"), FileAccessMode::Write);
 			s->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
 			s->WriteValue<std::uint8_t>(ContentResolver::StateFile);
 			s->WriteValue<std::uint16_t>(1);
@@ -600,6 +628,19 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 	}
 
 	return false;
+}
+
+void GameEventHandler::RemoveResumableStateIfAny()
+{
+	auto dir = PreferencesCache::GetDirectory();
+	if (dir.empty()) {
+		return;
+	}
+
+	auto path = fs::CombinePath(dir, "Jazz2.resume");
+	if (fs::FileExists(path)) {
+		fs::RemoveFile(path);
+	}
 }
 
 #if defined(WITH_MULTIPLAYER)
@@ -1354,9 +1395,11 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 	}
 	SetStateHandler(std::move(levelHandler));
 
-	if (levelInit.Difficulty != GameDifficulty::Multiplayer && fs::FileExists("Jazz2.resume")) {
-		fs::RemoveFile("Jazz2.resume");
+#if !defined(SHAREWARE_DEMO_ONLY)
+	if (levelInit.Difficulty != GameDifficulty::Multiplayer) {
+		RemoveResumableStateIfAny();
 	}
+#endif
 
 	return true;
 }

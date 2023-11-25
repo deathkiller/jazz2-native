@@ -119,6 +119,7 @@ namespace Jazz2
 
 		static void Initialize(const AppConfiguration& config);
 		static void Save();
+		static StringView GetDirectory();
 
 		static EpisodeContinuationState* GetEpisodeEnd(const StringView& episodeName, bool createIfNotFound = false);
 		static EpisodeContinuationStateWithLevel* GetEpisodeContinue(const StringView& episodeName, bool createIfNotFound = false);
