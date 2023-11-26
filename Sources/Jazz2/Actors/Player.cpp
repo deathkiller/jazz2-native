@@ -716,7 +716,9 @@ namespace Jazz2::Actors
 					if (GetState(ActorState::CanJump)) {
 						if (!_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
 							_wasDownPressed = true;
-							if (_fireFramesLeft <= 0.0f) {
+							if (_fireFramesLeft > 0.0f) {
+								SetAnimation(AnimState::Crouch | AnimState::Shoot);
+							} else {
 								SetAnimation(AnimState::Crouch);
 							}
 						}
