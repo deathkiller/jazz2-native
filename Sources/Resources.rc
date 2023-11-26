@@ -4,8 +4,8 @@
 LANGUAGE LANG_NEUTRAL, SUBLANG_DEFAULT
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2, 2, 2, 0
- PRODUCTVERSION 2, 2, 2, 0
+ FILEVERSION 2, 3, 0, 0
+ PRODUCTVERSION 2, 3, 0, 0
  FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
 #ifdef _DEBUG
  FILEFLAGS VS_FF_DEBUG
@@ -21,12 +21,12 @@ VS_VERSION_INFO VERSIONINFO
 		BLOCK "000004b0"
 		{
 			VALUE "CompanyName", "Dan R."
-			VALUE "FileVersion", "2.2.2.0"
+			VALUE "FileVersion", "2.3.0.0"
 			VALUE "InternalName", "Jazz2"
 			VALUE "LegalCopyright", "© 2016-2023 Dan R."
 			VALUE "OriginalFilename", "Jazz2.exe"
 			VALUE "ProductName", "Jazz² Resurrection"
-			VALUE "ProductVersion", "2.2.2.0"
+			VALUE "ProductVersion", "2.3.0.0"
 			VALUE "FileDescription", "Jazz² Resurrection: Open-source reimplementation of Jazz Jackrabbit 2"
 		}
 	}
