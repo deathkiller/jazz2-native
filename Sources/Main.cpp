@@ -63,6 +63,9 @@ using namespace Jazz2::Multiplayer;
 
 #if !defined(DEATH_DEBUG)
 #	include <IO/HttpRequest.h>
+#	if defined(DEATH_TARGET_WINDOWS)
+#		include <Utf8.h>
+#	endif
 #endif
 
 using namespace nCine;
@@ -77,6 +80,9 @@ class GameEventHandler : public IAppEventHandler, public IInputEventHandler, pub
 public:
 	static constexpr std::int32_t DefaultWidth = 720;
 	static constexpr std::int32_t DefaultHeight = 405;
+
+	static constexpr std::uint16_t StateVersion = 1;
+	static constexpr char StateFileName[] = "Jazz2.resume";
 
 #if defined(WITH_MULTIPLAYER)
 	static constexpr std::uint16_t MultiplayerDefaultPort = 7438;
@@ -502,7 +508,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 			if (levelInit.LevelName != ":end"_s) {
 				if (!SetLevelHandler(levelInit)) {
 					auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
-					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Cannot load specified level!\f[c]\n\n\nMake sure all necessary files\nare accessible and try it again."));
+					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Cannot load specified level!\f[c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
 					newHandler = std::move(mainMenu);
 				}
 			} else {
@@ -538,7 +544,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 			{
 				if (!SetLevelHandler(levelInit)) {
 					auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
-					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Cannot load specified level!\f[c]\n\n\nMake sure all necessary files\nare accessible and try it again."));
+					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Cannot load specified level!\f[c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
 					newHandler = std::move(mainMenu);
 				}
 			}
@@ -553,25 +559,21 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 bool GameEventHandler::HasResumableState() const
 {
 	auto dir = PreferencesCache::GetDirectory();
-	return (!dir.empty() && fs::FileExists(fs::CombinePath(dir, "Jazz2.resume")));
+	return fs::FileExists(fs::CombinePath(dir, StateFileName));
 }
 
 void GameEventHandler::ResumeSavedState()
 {
-	InvokeAsync([this]() mutable {
+	InvokeAsync([this]() {
 		ZoneScopedNC("GameEventHandler::ResumeSavedState", 0x888888);
 
 		auto dir = PreferencesCache::GetDirectory();
-		if (dir.empty()) {
-			return;
-		}
-
-		auto s = fs::Open(fs::CombinePath(dir, "Jazz2.resume"), FileAccessMode::Read);
+		auto s = fs::Open(fs::CombinePath(dir, StateFileName), FileAccessMode::Read);
 		if (s->IsValid()) {
 			std::uint64_t signature = s->ReadValue<std::uint64_t>();
 			std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 			std::uint16_t version = s->ReadValue<std::uint16_t>();
-			if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::StateFile || version != 1) {
+			if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::StateFile || version != StateVersion) {
 				return;
 			}
 
@@ -594,24 +596,22 @@ void GameEventHandler::ResumeSavedState()
 		}
 
 		auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
-		mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Cannot load specified level!\f[c]\n\n\nMake sure all necessary files\nare accessible and try it again."));
+		mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:0x704a4a]Cannot resume saved state!\f[c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
 		SetStateHandler(std::move(mainMenu));
 	});
 }
 
 bool GameEventHandler::SaveCurrentStateIfAny()
 {
+	ZoneScopedNC("GameEventHandler::SaveCurrentStateIfAny", 0x888888);
+
 	if (auto* levelHandler = dynamic_cast<LevelHandler*>(_currentHandler.get())) {
 		if (levelHandler->Difficulty() != GameDifficulty::Multiplayer) {
 			auto dir = PreferencesCache::GetDirectory();
-			if (dir.empty()) {
-				return false;
-			}
-
-			auto s = fs::Open(fs::CombinePath(dir, "Jazz2.resume"), FileAccessMode::Write);
+			auto s = fs::Open(fs::CombinePath(dir, StateFileName), FileAccessMode::Write);
 			s->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
 			s->WriteValue<std::uint8_t>(ContentResolver::StateFile);
-			s->WriteValue<std::uint16_t>(1);
+			s->WriteValue<std::uint16_t>(StateVersion);
 
 			MemoryStream ms(512 * 1024);
 			levelHandler->SerializeResumableToStream(ms);
@@ -633,11 +633,7 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 void GameEventHandler::RemoveResumableStateIfAny()
 {
 	auto dir = PreferencesCache::GetDirectory();
-	if (dir.empty()) {
-		return;
-	}
-
-	auto path = fs::CombinePath(dir, "Jazz2.resume");
+	auto path = fs::CombinePath(dir, StateFileName);
 	if (fs::FileExists(path)) {
 		fs::RemoveFile(path);
 	}
@@ -1212,6 +1208,8 @@ void GameEventHandler::CheckUpdates()
 	}
 #elif defined(DEATH_TARGET_POWERPC)
 	std::int32_t arch = 3;
+#elif defined(DEATH_TARGET_RISCV)
+	std::int32_t arch = 5;
 #elif defined(DEATH_TARGET_WASM)
 	std::int32_t arch = 4;
 	Cpu::Features cpuFeatures = Cpu::runtimeFeatures();
@@ -1334,11 +1332,14 @@ void GameEventHandler::CheckUpdates()
 #	endif
 
 	auto osVersion = Environment::WindowsVersion;
-	char DeviceDesc[256]; DWORD DeviceDescLength = (DWORD)arraySize(DeviceDesc);
-	if (!::GetComputerNameA(DeviceDesc, &DeviceDescLength)) {
+	wchar_t deviceNameW[128]; DWORD DeviceDescLength = (DWORD)arraySize(deviceNameW);
+	if (!::GetComputerNameW(deviceNameW, &DeviceDescLength)) {
 		DeviceDescLength = 0;
 	}
 	
+	char DeviceDesc[256];
+	DeviceDescLength = Utf8::FromUtf16(DeviceDesc, deviceNameW, DeviceDescLength);
+
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 	const char* deviceType;
 	switch (Environment::CurrentDeviceType) {

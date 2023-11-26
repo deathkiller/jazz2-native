@@ -365,6 +365,9 @@ namespace Jazz2::Actors
 		if (_jumpTime > 0.0f) {
 			_jumpTime -= timeMult;
 		}
+		if (_externalForceCooldown > 0.0f) {
+			_externalForceCooldown -= timeMult;
+		}
 		if (_springCooldown > 0.0f) {
 			_springCooldown -= timeMult;
 		}
@@ -492,14 +495,12 @@ namespace Jazz2::Actors
 		}
 
 		// Copter
-		if (_activeModifier != Modifier::None) {
-			if (_activeModifier == Modifier::Copter || _activeModifier == Modifier::LizardCopter) {
-				_copterFramesLeft -= timeMult;
-				if (_copterFramesLeft <= 0.0f) {
-					SetModifier(Modifier::None);
-				} else if (_activeModifierDecor != nullptr) {
-					_activeModifierDecor->MoveInstantly(_pos, MoveType::Absolute | MoveType::Force);
-				}
+		if (_activeModifier == Modifier::Copter || _activeModifier == Modifier::LizardCopter) {
+			_copterFramesLeft -= timeMult;
+			if (_copterFramesLeft <= 0.0f) {
+				SetModifier(Modifier::None);
+			} else if (_activeModifierDecor != nullptr) {
+				_activeModifierDecor->MoveInstantly(_pos, MoveType::Absolute | MoveType::Force);
 			}
 		}
 
@@ -786,6 +787,7 @@ namespace Jazz2::Actors
 										if (_speed.Y > 0.01f && !GetState(ActorState::CanJump) && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
 											SetState(ActorState::ApplyGravitation, false);
 											_speed.Y = 1.5f;
+											_externalForce.Y = 0.0f;
 											if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
 												SetAnimation(AnimState::Copter);
 											}
@@ -842,6 +844,7 @@ namespace Jazz2::Actors
 										if (_speed.Y > 0.01f && !GetState(ActorState::CanJump) && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
 											SetState(ActorState::ApplyGravitation, false);
 											_speed.Y = 1.5f;
+											_externalForce.Y = 0.0f;
 											if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
 												SetAnimation(AnimState::Copter);
 											}
@@ -1268,7 +1271,7 @@ namespace Jazz2::Actors
 					Explosion::Create(_levelHandler, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 2), Explosion::Type::Small);
 
 					if (_sugarRushLeft > 0.0f) {
-						if (GetState(ActorState::CanJump)) {
+						if (!_inWater && GetState(ActorState::CanJump)) {
 							_speed.Y = 3;
 							SetState(ActorState::CanJump, false);
 							_externalForce.Y = -0.6f;
@@ -1370,7 +1373,12 @@ namespace Jazz2::Actors
 		} else if (std::abs(force.Y) > 0.0f) {
 			MoveInstantly(Vector2f((_pos.X + pos.X) * 0.5f, _pos.Y), MoveType::Absolute);
 
-			_copterFramesLeft = 0.0f;
+			if (_copterFramesLeft > 0.0f) {
+				_copterFramesLeft = 0.0f;
+				SetAnimation(_currentAnimation->State & ~AnimState::Copter);
+				SetState(ActorState::ApplyGravitation, true);
+			}
+
 			_speed.Y = (4.0f + std::abs(force.Y)) * sign;
 			if (!GetState(ActorState::ApplyGravitation)) {
 				_externalForce.Y = force.Y * 0.14f;
@@ -1818,6 +1826,7 @@ namespace Jazz2::Actors
 				cancelCopter = (GetState(ActorState::CanJump) || _suspendType != SuspendType::None || _copterFramesLeft <= 0.0f);
 
 				_copterFramesLeft -= timeMult;
+				_speed.Y = std::min(_speed.Y + _levelHandler->Gravity * timeMult, 1.5f);
 			} else {
 				cancelCopter = ((_currentAnimation->State & AnimState::Fall) == AnimState::Fall && _copterFramesLeft > 0.0f);
 			}
@@ -2195,12 +2204,17 @@ namespace Jazz2::Actors
 					(events->GetEventByPosition(AABBInner.R + ExtendedHitbox, AABBInner.B + ExtendedHitbox, &p) == EventType::AreaFloatUp) ||
 					(events->GetEventByPosition(AABBInner.L - ExtendedHitbox, AABBInner.B + ExtendedHitbox, &p) == EventType::AreaFloatUp)
 				) {
-					if (GetState(ActorState::ApplyGravitation)) {
-						float gravity = _levelHandler->Gravity;
-						_externalForce.Y = -2.0f * gravity * timeMult;
-						_speed.Y = std::min(gravity * timeMult, _speed.Y);
-					} else {
-						_speed.Y = std::max(_speed.Y - _levelHandler->Gravity * timeMult, -6.0f);
+					// External force of pinball bumber has higher priority
+					if (_externalForceCooldown <= 0.0f || _speed.Y < 0.0f) {
+						if ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
+							_speed.Y = std::max(_speed.Y - _levelHandler->Gravity * timeMult * 8.0f, -6.0f);
+						} else if (GetState(ActorState::ApplyGravitation)) {
+							float gravity = _levelHandler->Gravity;
+							_externalForce.Y = -2.0f * gravity * timeMult;
+							_speed.Y = std::min(gravity * timeMult, _speed.Y);
+						} else {
+							_speed.Y = std::max(_speed.Y - _levelHandler->Gravity * timeMult, -6.0f);
+						}
 					}
 				}
 			}

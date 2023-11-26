@@ -31,14 +31,14 @@ namespace Jazz2::Actors::Weapons
 		_timeLeft = 200.0f;
 		_preexplosionTime = (int)_timeLeft / 16;
 
-		SetState(ActorState::CollideWithTileset | ActorState::ApplyGravitation, false);
+		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::CollideWithSolidObjects | ActorState::ApplyGravitation, false);
 
 
 		async_await RequestMetadataAsync("Weapon/TNT"_s);
 
 		SetAnimation(AnimState::Idle);
 
-		auto tiles = _levelHandler->TileMap();
+		auto* tiles = _levelHandler->TileMap();
 		if (tiles != nullptr) {
 			AABBf aabb = AABBf(_pos.X - 34.0f, _pos.Y - 34.0f, _pos.X + 34.0f, _pos.Y + 34.0f);
 			TileCollisionParams params = { TileDestructType::Special | TileDestructType::Weapon | TileDestructType::IgnoreSolidTiles, false, WeaponType::TNT, 8 };
@@ -75,8 +75,8 @@ namespace Jazz2::Actors::Weapons
 					}
 					return true;
 				});
-			} else if(_timeLeft < 30.0f) {
-				int fraction = (int)_timeLeft / 16;
+			} else if (_timeLeft < 30.0f) {
+				std::int32_t fraction = (std::int32_t)_timeLeft / 16;
 				if (_preexplosionTime != fraction) {
 					_preexplosionTime = fraction;
 
@@ -106,7 +106,7 @@ namespace Jazz2::Actors::Weapons
 				return true;
 			});
 
-			auto tiles = _levelHandler->TileMap();
+			auto* tiles = _levelHandler->TileMap();
 			if (tiles != nullptr) {
 				AABBf aabb = AABBf(_pos.X - 34.0f, _pos.Y - 34.0f, _pos.X + 34.0f, _pos.Y + 34.0f);
 				TileCollisionParams params = { TileDestructType::Special | TileDestructType::Weapon | TileDestructType::IgnoreSolidTiles, false, WeaponType::TNT, 8 };

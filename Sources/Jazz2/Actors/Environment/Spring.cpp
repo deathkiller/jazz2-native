@@ -104,7 +104,7 @@ namespace Jazz2::Actors::Environment
 					_strength = 1.50f;
 					break;
 				case 2: // Blue
-					_strength = (_levelHandler->IsReforged() ? 1.65f : 1.72f);
+					_strength = (_levelHandler->IsReforged() ? 1.68f : 1.72f);
 					break;
 			}
 		}

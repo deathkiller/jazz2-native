@@ -221,7 +221,7 @@ namespace Jazz2::UI::Menu
 		if (_shouldStart) {
 			Vector2i viewSize = canvas->ViewSize;
 
-			auto command = canvas->RentRenderCommand();
+			auto* command = canvas->RentRenderCommand();
 			if (command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
 				command->material().reserveUniformsDataMemory();
 				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
@@ -229,7 +229,7 @@ namespace Jazz2::UI::Menu
 
 			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+			auto* instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 			instanceBlock->uniform(Material::TexRectUniformName)->setFloatVector(Vector4f(1.0f, 0.0f, 1.0f, 0.0f).Data());
 			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(Vector2f(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y)).Data());
 			instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(0.0f, 0.0f, 0.0f, _transitionTime).Data());
@@ -315,7 +315,7 @@ namespace Jazz2::UI::Menu
 	void EpisodeSelectSection::OnAfterTransition()
 	{
 		auto& selectedItem = _items[_selectedIndex];
-		auto episodeContinue = PreferencesCache::GetEpisodeContinue(selectedItem.Item.Description.Name);
+		auto* episodeContinue = PreferencesCache::GetEpisodeContinue(selectedItem.Item.Description.Name);
 
 		PlayerType players[] = { (PlayerType)((episodeContinue->State.DifficultyAndPlayerType >> 4) & 0x0f) };
 		LevelInitialization levelInit(selectedItem.Item.Description.Name, episodeContinue->LevelName, (GameDifficulty)(episodeContinue->State.DifficultyAndPlayerType & 0x0f),
@@ -328,8 +328,8 @@ namespace Jazz2::UI::Menu
 		auto& firstPlayer = levelInit.PlayerCarryOvers[0];
 		firstPlayer.Lives = episodeContinue->State.Lives;
 		firstPlayer.Score = episodeContinue->State.Score;
-		memcpy(firstPlayer.Ammo, episodeContinue->State.Ammo, sizeof(levelInit.PlayerCarryOvers[0].Ammo));
-		memcpy(firstPlayer.WeaponUpgrades, episodeContinue->State.WeaponUpgrades, sizeof(levelInit.PlayerCarryOvers[0].WeaponUpgrades));
+		std::memcpy(firstPlayer.Ammo, episodeContinue->State.Ammo, sizeof(levelInit.PlayerCarryOvers[0].Ammo));
+		std::memcpy(firstPlayer.WeaponUpgrades, episodeContinue->State.WeaponUpgrades, sizeof(levelInit.PlayerCarryOvers[0].WeaponUpgrades));
 
 		_root->ChangeLevel(std::move(levelInit));
 	}
