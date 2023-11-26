@@ -329,6 +329,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/UI/DiscordRpcClient.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Font.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/HUD.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/LoadingHandler.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/RgbLights.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/UpscaleRenderPass.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/AboutSection.h

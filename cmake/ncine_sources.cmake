@@ -247,6 +247,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/DiscordRpcClient.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Font.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/HUD.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/LoadingHandler.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/RgbLights.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/UpscaleRenderPass.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/AboutSection.cpp
