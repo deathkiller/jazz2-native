@@ -56,6 +56,7 @@ namespace Jazz2::Actors::Solid
 						player->_speed.Y = (_levelHandler->IsReforged() ? -1.0f : -0.7f);
 						player->_externalForce.Y -= force;
 
+						player->_externalForceCooldown = 10.0f;
 						player->_controllable = true;
 						player->SetState(ActorState::CanJump, false);
 						player->EndDamagingMove();

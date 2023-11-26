@@ -207,6 +207,7 @@ namespace Jazz2::Actors
 		bool _inIdleTransition, _inLedgeTransition;
 		ActorBase* _carryingObject;
 		bool _canDoubleJump;
+		float _externalForceCooldown;
 		float _springCooldown;
 		std::shared_ptr<AudioBufferPlayer> _copterSound;
 

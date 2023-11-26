@@ -5,18 +5,22 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
-	SimpleMessageSection::SimpleMessageSection(const StringView& message)
-		: _message(message)
+	SimpleMessageSection::SimpleMessageSection(const StringView& message, bool withTransition)
+		: _message(message), _transitionTime(withTransition ? 0.0f : 1.0f)
 	{
 	}
 
-	SimpleMessageSection::SimpleMessageSection(String&& message)
-		: _message(std::move(message))
+	SimpleMessageSection::SimpleMessageSection(String&& message, bool withTransition)
+		: _message(std::move(message)), _transitionTime(withTransition ? 0.0f : 1.0f)
 	{
 	}
 
 	void SimpleMessageSection::OnUpdate(float timeMult)
 	{
+		if (_transitionTime < 1.0f) {
+			_transitionTime += 0.025f * timeMult;
+		}
+
 		if (_root->ActionHit(PlayerActions::Menu) || _root->ActionHit(PlayerActions::Fire)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_root->LeaveSection();
@@ -37,6 +41,31 @@ namespace Jazz2::UI::Menu
 		std::int32_t charOffset = 0;
 		_root->DrawStringShadow(_message, charOffset, center.X, topLine - 40.0f, IMenuContainer::FontLayer,
 			Alignment::Top, Font::DefaultColor, 0.9f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
+	}
+
+	void SimpleMessageSection::OnDrawOverlay(Canvas* canvas)
+	{
+		if (_transitionTime < 1.0f) {
+			Vector2i viewSize = canvas->ViewSize;
+
+			auto* command = canvas->RentRenderCommand();
+			if (command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
+				command->material().reserveUniformsDataMemory();
+				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			}
+
+			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			auto* instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+			instanceBlock->uniform(Material::TexRectUniformName)->setFloatVector(Vector4f(1.0f, 0.0f, 1.0f, 0.0f).Data());
+			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(Vector2f(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y)).Data());
+			instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(0.0f, 0.0f, 0.0f, _transitionTime).Data());
+
+			command->setTransformation(Matrix4x4f::Identity);
+			command->setLayer(999);
+
+			canvas->DrawRenderCommand(command);
+		}
 	}
 
 	void SimpleMessageSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)

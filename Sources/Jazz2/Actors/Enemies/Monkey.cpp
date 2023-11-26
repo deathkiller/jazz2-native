@@ -68,6 +68,11 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void Monkey::OnUpdateHitbox()
+	{
+		UpdateHitbox(30, 30);
+	}
+
 	void Monkey::OnAnimationFinished()
 	{
 		EnemyBase::OnAnimationFinished();

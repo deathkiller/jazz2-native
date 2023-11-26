@@ -28,13 +28,20 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	BeginSection::BeginSection()
-		: _selectedIndex(0), _animation(0.0f)
+		: _selectedIndex(0), _animation(0.0f), _shouldStart(false)
 	{
 	}
 
 	void BeginSection::OnShow(IMenuContainer* root)
 	{
 		MenuSection::OnShow(root);
+
+		bool isPlayable = true;
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		if (auto* mainMenu = dynamic_cast<MainMenu*>(_root)) {
+			isPlayable = ((mainMenu->_root->GetFlags() & IRootController::Flags::IsPlayable) == IRootController::Flags::IsPlayable);
+		}
+#endif
 
 		_animation = 0.0f;
 		_items.clear();
@@ -53,7 +60,7 @@ namespace Jazz2::UI::Menu
 		_items.emplace_back(ItemData { Item::Import, _("Import Episodes") });
 #	endif
 #else
-		if (root->HasResumableState()) {
+		if (isPlayable && root->HasResumableState()) {
 			// TRANSLATORS: Menu item in main menu
 			_items.emplace_back(ItemData { Item::Continue, _("Continue") });
 		}
@@ -80,28 +87,25 @@ namespace Jazz2::UI::Menu
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-		if (auto* mainMenu = dynamic_cast<MainMenu*>(_root)) {
-			IRootController::Flags flags = mainMenu->_root->GetFlags();
-			if ((flags & IRootController::Flags::IsPlayable) != IRootController::Flags::IsPlayable) {
-				auto& resolver = ContentResolver::Get();
-				_sourcePath = fs::GetAbsolutePath(resolver.GetSourcePath());
-				if (_sourcePath.empty()) {
-					// If `Source` directory doesn't exist, GetAbsolutePath() will fail
-					_sourcePath = resolver.GetSourcePath();
-				}
-#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
-				String homeDirectory = fs::GetHomeDirectory();
-				if (!homeDirectory.empty()) {
-					StringView pathSeparator = fs::PathSeparator;
-					if (!homeDirectory.hasSuffix(pathSeparator)) {
-						homeDirectory += pathSeparator;
-					}
-					if (_sourcePath.hasPrefix(homeDirectory)) {
-						_sourcePath = "~"_s + _sourcePath.exceptPrefix(homeDirectory.size() - pathSeparator.size());
-					}
-				}
-#	endif
+		if (!isPlayable) {
+			auto& resolver = ContentResolver::Get();
+			_sourcePath = fs::GetAbsolutePath(resolver.GetSourcePath());
+			if (_sourcePath.empty()) {
+				// If `Source` directory doesn't exist, GetAbsolutePath() will fail
+				_sourcePath = resolver.GetSourcePath();
 			}
+#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
+			String homeDirectory = fs::GetHomeDirectory();
+			if (!homeDirectory.empty()) {
+				StringView pathSeparator = fs::PathSeparator;
+				if (!homeDirectory.hasSuffix(pathSeparator)) {
+					homeDirectory += pathSeparator;
+				}
+				if (_sourcePath.hasPrefix(homeDirectory)) {
+					_sourcePath = "~"_s + _sourcePath.exceptPrefix(homeDirectory.size() - pathSeparator.size());
+				}
+			}
+#	endif
 		}
 #endif
 	}
@@ -112,39 +116,46 @@ namespace Jazz2::UI::Menu
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
 		}
 
-		if (_root->ActionHit(PlayerActions::Fire)) {
-			ExecuteSelected();
-		} else if (_root->ActionHit(PlayerActions::Menu)) {
+		if (!_shouldStart) {
+			if (_root->ActionHit(PlayerActions::Fire)) {
+				ExecuteSelected();
+			} else if (_root->ActionHit(PlayerActions::Menu)) {
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
-			if (_selectedIndex != (int32_t)Item::Quit) {
-				_root->PlaySfx("MenuSelect"_s, 0.6f);
-				_animation = 0.0f;
-				_selectedIndex = (int32_t)Item::Quit;
-			}
+				if (_selectedIndex != (int32_t)Item::Quit) {
+					_root->PlaySfx("MenuSelect"_s, 0.6f);
+					_animation = 0.0f;
+					_selectedIndex = (int32_t)Item::Quit;
+				}
 #endif
-		} else if (_root->ActionHit(PlayerActions::Up)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_animation = 0.0f;
-		SkipDisabledOnUp:
-			if (_selectedIndex > 0) {
-				_selectedIndex--;
-				if (_items[_selectedIndex].Y <= DisabledItem) {
-					goto SkipDisabledOnUp;
+			} else if (_root->ActionHit(PlayerActions::Up)) {
+				_root->PlaySfx("MenuSelect"_s, 0.5f);
+				_animation = 0.0f;
+			SkipDisabledOnUp:
+				if (_selectedIndex > 0) {
+					_selectedIndex--;
+					if (_items[_selectedIndex].Y <= DisabledItem) {
+						goto SkipDisabledOnUp;
+					}
+				} else {
+					_selectedIndex = (int32_t)_items.size() - 1;
 				}
-			} else {
-				_selectedIndex = (int32_t)_items.size() - 1;
+			} else if (_root->ActionHit(PlayerActions::Down)) {
+				_root->PlaySfx("MenuSelect"_s, 0.5f);
+				_animation = 0.0f;
+			SkipDisabledOnDown:
+				if (_selectedIndex < (int32_t)_items.size() - 1) {
+					_selectedIndex++;
+					if (_items[_selectedIndex].Y <= DisabledItem) {
+						goto SkipDisabledOnDown;
+					}
+				} else {
+					_selectedIndex = 0;
+				}
 			}
-		} else if (_root->ActionHit(PlayerActions::Down)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_animation = 0.0f;
-		SkipDisabledOnDown:
-			if (_selectedIndex < (int32_t)_items.size() - 1) {
-				_selectedIndex++;
-				if (_items[_selectedIndex].Y <= DisabledItem) {
-					goto SkipDisabledOnDown;
-				}
-			} else {
-				_selectedIndex = 0;
+		} else {
+			_transitionTime -= 0.025f * timeMult;
+			if (_transitionTime <= 0.0f) {
+				OnAfterTransition();
 			}
 		}
 	}
@@ -246,6 +257,31 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+	void BeginSection::OnDrawOverlay(Canvas* canvas)
+	{
+		if (_shouldStart) {
+			Vector2i viewSize = canvas->ViewSize;
+
+			auto* command = canvas->RentRenderCommand();
+			if (command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
+				command->material().reserveUniformsDataMemory();
+				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			}
+
+			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			auto* instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+			instanceBlock->uniform(Material::TexRectUniformName)->setFloatVector(Vector4f(1.0f, 0.0f, 1.0f, 0.0f).Data());
+			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(Vector2f(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y)).Data());
+			instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf(0.0f, 0.0f, 0.0f, _transitionTime).Data());
+
+			command->setTransformation(Matrix4x4f::Identity);
+			command->setLayer(999);
+
+			canvas->DrawRenderCommand(command);
+		}
+	}
+
 	void BeginSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
 		if (event.type == TouchEventType::Down) {
@@ -293,7 +329,8 @@ namespace Jazz2::UI::Menu
 #if !defined(SHAREWARE_DEMO_ONLY)
 			case Item::Continue:
 				if (isPlayable) {
-					_root->ResumeSavedState();
+					_shouldStart = true;
+					_transitionTime = 1.0f;
 				}
 				break;
 #endif
@@ -346,7 +383,7 @@ namespace Jazz2::UI::Menu
 #endif
 
 #if defined(WITH_MULTIPLAYER)
-			// TODO: Multiplayer
+				// TODO: Multiplayer
 			case Item::TODO_ConnectTo:
 				// TODO: Hardcoded address and port
 				_root->ConnectToServer("127.0.0.1"_s, 7438);
@@ -371,5 +408,16 @@ namespace Jazz2::UI::Menu
 			case Item::Quit: theApplication().quit(); break;
 #endif
 		}
+	}
+
+	void BeginSection::OnAfterTransition()
+	{
+#if !defined(SHAREWARE_DEMO_ONLY)
+		switch (_items[_selectedIndex].Type) {
+			case Item::Continue:
+				_root->ResumeSavedState();
+				break;
+		}
+#endif
 	}
 }
