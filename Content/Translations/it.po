@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-11-26 18:04+0100\n"
+"POT-Creation-Date: 2023-11-26 23:22+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Hexaae <hexaae@gmail.com>\n"
 "Language-Team: Traduzione Italiana: Hexaae\n"
@@ -1430,7 +1430,7 @@ msgstr "Importa Episodi"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:65
 msgid "Continue"
-msgstr ""
+msgstr "Continua"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:71
@@ -1663,7 +1663,7 @@ msgstr "Mostra la scia del giocatore"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:37
 msgid "Unaligned Viewport"
-msgstr ""
+msgstr "Viewport non allineata"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:39
@@ -1902,6 +1902,11 @@ msgid ""
 "Make sure all necessary files\n"
 "are accessible and try it again."
 msgstr ""
+"\f[c:0x704a4a]Impossibile continuare!\f[c]\n"
+"\n"
+"\n"
+"Assicurarsi che tutti i file necessari\n"
+"siano accessibili e riprovare."
 
 #: Sources/Main.cpp:733
 msgid ""

@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-11-26 18:05+0100\n"
+"POT-Creation-Date: 2023-11-26 22:42+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Traducere în limba română: 1NSH4N3 & Akfiz\n"
@@ -1432,7 +1432,7 @@ msgstr "Importează episoade"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:65
 msgid "Continue"
-msgstr ""
+msgstr "Continuă"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:71
@@ -1664,7 +1664,7 @@ msgstr "Arată Urmele Jucătorilor"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:37
 msgid "Unaligned Viewport"
-msgstr ""
+msgstr "Vizualizare nealiniată"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:39
@@ -1902,6 +1902,11 @@ msgid ""
 "Make sure all necessary files\n"
 "are accessible and try it again."
 msgstr ""
+"\f[c:0x704a4a]Nu se poate relua starea salvată!\f[c]\n"
+"\n"
+"\n"
+"Asigurați-vă că toate fișierele necesare\n"
+"sunt accesibile și încercați din nou."
 
 #: Sources/Main.cpp:733
 msgid ""
