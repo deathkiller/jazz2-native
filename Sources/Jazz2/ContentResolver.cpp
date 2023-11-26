@@ -652,7 +652,6 @@ namespace Jazz2
 					graphics->TextureDiffuse->setMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
 				}
 
-				// TODO: Use FrameDuration instead
 				double animDuration;
 				if (doc["Duration"].get(animDuration) != SUCCESS) {
 					animDuration = 0.0;

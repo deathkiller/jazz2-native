@@ -26,6 +26,7 @@
 #include "Jazz2/PreferencesCache.h"
 #include "Jazz2/UI/Cinematics.h"
 #include "Jazz2/UI/ControlScheme.h"
+#include "Jazz2/UI/LoadingHandler.h"
 #include "Jazz2/UI/Menu/MainMenu.h"
 #include "Jazz2/UI/Menu/LoadingSection.h"
 #include "Jazz2/UI/Menu/SimpleMessageSection.h"
@@ -287,12 +288,24 @@ void GameEventHandler::OnInit()
 #	endif
 
 	SetStateHandler(std::make_unique<Cinematics>(this, "intro"_s, [thread](IRootController* root, bool endOfStream) mutable {
-		if ((root->GetFlags() & Jazz2::IRootController::Flags::IsVerified) != Jazz2::IRootController::Flags::IsVerified) {
+		if ((root->GetFlags() & Flags::IsVerified) == Flags::IsVerified) {
+			root->GoToMainMenu(endOfStream);
+		} else if (!endOfStream) {
+			// Parallel initialization is not done yet, don't allow to skip the intro video
 			return false;
+		} else {
+			// The intro video is over, show loading screen instead
+			root->InvokeAsync([root]() {
+				static_cast<GameEventHandler*>(root)->SetStateHandler(std::make_unique<LoadingHandler>(root, [](IRootController* root) {
+					if ((root->GetFlags() & Flags::IsVerified) == Flags::IsVerified) {
+						root->GoToMainMenu(true);
+						return true;
+					}
+					return false;
+				}));
+			});
 		}
 
-		thread.Join();
-		root->GoToMainMenu(endOfStream);
 		return true;
 	}));
 #else
