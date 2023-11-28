@@ -122,11 +122,6 @@ namespace nCine
 			texFormat_ = TextureFormat(internalFormat);
 		}
 
-		// If the file has not been already opened by a header reader method
-		if (!fileHandle_->IsValid()) {
-			fileHandle_->Open(FileAccessMode::Read);
-		}
-
 		dataSize_ = fileHandle_->GetSize() - headerSize_;
 		fileHandle_->Seek(headerSize_, SeekOrigin::Current);
 

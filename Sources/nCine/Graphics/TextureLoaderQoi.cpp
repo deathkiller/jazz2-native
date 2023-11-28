@@ -5,16 +5,7 @@
 #define QOI_IMPLEMENTATION
 #define QOI_DECODE_ONLY
 #define QOI_NO_STDIO
-#if defined(__has_include)
-#	if __has_include("../../../Libs/Includes/qoi.h")
-#		define __HAS_LOCAL_QOI
-#	endif
-#endif
-#if defined(__HAS_LOCAL_QOI)
-#	include "../../../Libs/Includes/qoi.h"
-#else
-#	include <qoi.h>
-#endif
+#include <qoi.h>
 
 using namespace Death::IO;
 

@@ -7,13 +7,13 @@
 #include <Containers/SmallVector.h>
 
 #if !defined(CMAKE_BUILD) && defined(__has_include)
-#	if __has_include("../../../Libs/Includes/SDL2/SDL.h")
+#	if __has_include("SDL2/SDL.h")
 #		define __HAS_LOCAL_SDL
 #	endif
 #endif
 #if defined(__HAS_LOCAL_SDL)
-#	include "../../../Libs/Includes/SDL2/SDL_events.h"
-#	include "../../../Libs/Includes/SDL2/SDL_mouse.h"
+#	include "SDL2/SDL_events.h"
+#	include "SDL2/SDL_mouse.h"
 #else
 #	include <SDL_events.h>
 #	include <SDL_mouse.h>

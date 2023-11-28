@@ -8,10 +8,15 @@
 #include "../../nCine/Base/BitArray.h"
 #include "../../nCine/Graphics/Camera.h"
 #include "../../nCine/Graphics/Shader.h"
-#include "../../nCine/Input/InputEvents.h"
 #include "../../nCine/Audio/AudioStreamPlayer.h"
+#include "../../nCine/Input/InputEvents.h"
 
 #include <functional>
+
+#include <IO/DeflateStream.h>
+#include <IO/MemoryStream.h>
+
+using namespace Death::IO;
 
 namespace Jazz2::UI
 {
@@ -64,8 +69,8 @@ namespace Jazz2::UI
 		std::unique_ptr<uint8_t[]> _lastBuffer;
 		std::unique_ptr<uint32_t[]> _currentFrame;
 		uint32_t _palette[256];
-		SmallVector<uint8_t, 0> _decompressedStreams[4];
-		uint32_t _currentOffsets[countof(_decompressedStreams)];
+		MemoryStream _compressedStreams[4];
+		DeflateStream _decompressedStreams[4];
 
 		BitArray _pressedKeys;
 		uint32_t _pressedActions;
@@ -73,16 +78,8 @@ namespace Jazz2::UI
 		void Initialize(const String& path);
 		bool LoadCinematicsFromFile(const String& path);
 		void PrepareNextFrame();
+		void Read(int streamIndex, void* buffer, uint32_t bytes);
 		void UpdatePressedActions();
-
-		inline void Read(int streamIndex, void* buffer, uint32_t bytes) {
-			if (_currentOffsets[streamIndex] + bytes > _decompressedStreams[streamIndex].size()) {
-				memset(buffer, 0, bytes);
-			} else {
-				memcpy(buffer, &_decompressedStreams[streamIndex][_currentOffsets[streamIndex]], bytes);
-			}
-			_currentOffsets[streamIndex] += bytes;
-		}
 
 		template<typename T>
 		inline T ReadValue(int streamIndex) {

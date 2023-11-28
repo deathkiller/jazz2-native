@@ -23,7 +23,6 @@ namespace Death::IO
 		explicit AndroidAssetStream(const Containers::String& path);
 		~AndroidAssetStream() override;
 
-		void Open(FileAccessMode mode) override;
 		void Close() override;
 		std::int32_t Seek(std::int32_t offset, SeekOrigin origin) const override;
 		std::int32_t GetPosition() const override;

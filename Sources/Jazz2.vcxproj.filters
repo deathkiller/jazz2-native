@@ -1422,6 +1422,9 @@
     <ClInclude Include="Jazz2\UI\LoadingHandler.h">
       <Filter>Header Files\Jazz2\UI</Filter>
     </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\DeflateStream.h">
+      <Filter>Header Files\Shared\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2356,6 +2359,9 @@
     </ClCompile>
     <ClCompile Include="Jazz2\UI\LoadingHandler.cpp">
       <Filter>Source Files\Jazz2\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\DeflateStream.cpp">
+      <Filter>Source Files\Shared\IO</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

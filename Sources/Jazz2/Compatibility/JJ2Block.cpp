@@ -1,26 +1,23 @@
 ﻿#include "JJ2Block.h"
 
-#include "../../nCine/IO/CompressionUtils.h"
-
 #include <cstring>
 
-using namespace nCine;
+#include <IO/DeflateStream.h>
 
 namespace Jazz2::Compatibility
 {
-	JJ2Block::JJ2Block(const std::unique_ptr<Stream>& s, int32_t length, int32_t uncompressedLength)
+	JJ2Block::JJ2Block(std::unique_ptr<Stream>& s, int32_t length, int32_t uncompressedLength)
 		: _length(0), _offset(0)
 	{
-		std::unique_ptr<uint8_t[]> tmpBuffer = std::make_unique<uint8_t[]>(length);
-		s->Read(tmpBuffer.get(), length);
-
 		if (uncompressedLength > 0) {
-			_length -= 2;
+			s->Seek(2, SeekOrigin::Current);
 			_buffer = std::make_unique<uint8_t[]>(uncompressedLength);
-			auto result = CompressionUtils::Inflate(tmpBuffer.get() + 2, length, _buffer.get(), uncompressedLength);
-			_length = (result == DecompressionResult::Success ? uncompressedLength : 0);
+			DeflateStream uc(*s, length - 2);
+			uc.Read(_buffer.get(), uncompressedLength);		
+			_length = (uc.IsValid() ? uncompressedLength : 0);
 		} else {
-			_buffer = std::move(tmpBuffer);
+			_buffer = std::make_unique<uint8_t[]>(length);
+			s->Read(_buffer.get(), length);
 			_length = length;
 		}
 	}

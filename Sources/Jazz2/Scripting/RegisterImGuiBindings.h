@@ -2,7 +2,7 @@
 
 #if defined(WITH_ANGELSCRIPT) && defined(WITH_IMGUI)
 
-#include "FindAngelScript.h"
+#include <angelscript.h>
 
 namespace Jazz2::Scripting
 {

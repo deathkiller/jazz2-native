@@ -17,34 +17,26 @@
 
 namespace Death::IO
 {
-	FileStream::FileStream(const Containers::String& path)
+	FileStream::FileStream(const Containers::String& path, FileAccessMode mode)
 		: _fileDescriptor(-1), _handle(nullptr), _shouldCloseOnDestruction(true)
 	{
 		_type = Type::File;
 		_path = path;
+
+#if !defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_MINGW)
+		if ((mode & FileAccessMode::FileDescriptor) == FileAccessMode::FileDescriptor) {
+			OpenDescriptor(mode);
+		} else
+#endif
+		{
+			OpenStream(mode);
+		}
 	}
 
 	FileStream::~FileStream()
 	{
 		if (_shouldCloseOnDestruction) {
 			Close();
-		}
-	}
-
-	void FileStream::Open(FileAccessMode mode)
-	{
-		// Checking if the file is already opened
-		if (_fileDescriptor >= 0 || _handle != nullptr) {
-			LOGW("File \"%s\" is already opened", _path.data());
-		} else {
-#if !defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_MINGW)
-			if ((mode & FileAccessMode::FileDescriptor) == FileAccessMode::FileDescriptor) {
-				OpenDescriptor(mode);
-			} else
-#endif
-			{
-				OpenStream(mode);
-			}
 		}
 	}
 
@@ -71,7 +63,7 @@ namespace Death::IO
 		}
 	}
 
-	std::int32_t FileStream::Seek(std::int32_t offset, SeekOrigin origin) const
+	std::int32_t FileStream::Seek(std::int32_t offset, SeekOrigin origin)
 	{
 		std::int32_t seekValue = -1;
 
@@ -99,7 +91,7 @@ namespace Death::IO
 		return tellValue;
 	}
 
-	std::int32_t FileStream::Read(void* buffer, std::int32_t bytes) const
+	std::int32_t FileStream::Read(void* buffer, std::int32_t bytes)
 	{
 		DEATH_ASSERT(buffer != nullptr, 0, "buffer is nullptr");
 

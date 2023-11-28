@@ -3,9 +3,9 @@
 #if defined(WITH_ANGELSCRIPT)
 
 #include "../../Common.h"
-#include "FindAngelScript.h"
-
 #include "../../nCine/Base/HashMap.h"
+
+#include <angelscript.h>
 
 #include <Containers/SmallVector.h>
 #include <Containers/String.h>

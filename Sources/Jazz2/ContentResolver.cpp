@@ -11,7 +11,6 @@
 #include "../nCine/AppConfiguration.h"
 #include "../nCine/ServiceLocator.h"
 #include "../nCine/tracy.h"
-#include "../nCine/IO/CompressionUtils.h"
 #include "../nCine/Graphics/ITextureLoader.h"
 #include "../nCine/Graphics/RenderResources.h"
 #include "../nCine/Base/Random.h"
@@ -24,6 +23,7 @@
 #endif
 
 #include <Containers/StringStlView.h>
+#include <IO/DeflateStream.h>
 #include <IO/MemoryStream.h>
 
 #define SIMDJSON_EXCEPTIONS 0
@@ -892,16 +892,8 @@ namespace Jazz2
 
 		// Read compressed palette and mask
 		std::int32_t compressedSize = s->ReadValue<std::int32_t>();
-		std::int32_t uncompressedSize = s->ReadValue<std::int32_t>();
-		std::unique_ptr<uint8_t[]> compressedBuffer = std::make_unique<std::uint8_t[]>(compressedSize);
-		std::unique_ptr<uint8_t[]> uncompressedBuffer = std::make_unique<std::uint8_t[]>(uncompressedSize);
-		s->Read(compressedBuffer.get(), compressedSize);
 
-		auto result = CompressionUtils::Inflate(compressedBuffer.get(), compressedSize, uncompressedBuffer.get(), uncompressedSize);
-		if (result != DecompressionResult::Success) {
-			return nullptr;
-		}
-		MemoryStream uc(uncompressedBuffer.get(), uncompressedSize);
+		DeflateStream uc(*s, compressedSize);
 
 		// Palette
 		if (applyPalette) {
@@ -1058,6 +1050,10 @@ namespace Jazz2
 			}
 		}
 
+		if (!uc.IsValid()) {
+			return nullptr;
+		}
+
 		return std::make_unique<Tiles::TileSet>(tileCount, std::move(textureDiffuse), std::move(mask), maskSize * 8, std::move(captionTile));
 	}
 
@@ -1088,16 +1084,8 @@ namespace Jazz2
 
 		// Read compressed data
 		std::int32_t compressedSize = s->ReadValue<std::int32_t>();
-		std::int32_t uncompressedSize = s->ReadValue<std::int32_t>();
-		std::unique_ptr<std::uint8_t[]> compressedBuffer = std::make_unique<std::uint8_t[]>(compressedSize);
-		std::unique_ptr<std::uint8_t[]> uncompressedBuffer = std::make_unique<std::uint8_t[]>(uncompressedSize);
-		s->Read(compressedBuffer.get(), compressedSize);
 
-		s->Close();
-
-		auto result = CompressionUtils::Inflate(compressedBuffer.get(), compressedSize, uncompressedBuffer.get(), uncompressedSize);
-		RETURNF_ASSERT_MSG(result == DecompressionResult::Success, "File cannot be uncompressed");
-		MemoryStream uc(uncompressedBuffer.get(), uncompressedSize);
+		DeflateStream uc(*s, compressedSize);
 
 		// Read metadata
 		std::uint8_t stringSize = uc.ReadValue<std::uint8_t>();
@@ -1211,6 +1199,7 @@ namespace Jazz2
 		descriptor.EventMap->SetPitType(pitType);
 		descriptor.EventMap->ReadEvents(uc, descriptor.TileMap, difficulty);
 
+		RETURNF_ASSERT_MSG(uc.IsValid(), "File cannot be decompressed");
 		return true;
 	}
 

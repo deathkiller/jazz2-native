@@ -3,6 +3,7 @@
 #include "../../Tiles/TileMap.h"
 #include "../Player.h"
 
+#include "../../../nCine/Base/Algorithms.h"
 #include "../../../nCine/Base/Random.h"
 
 namespace Jazz2::Actors::Enemies
@@ -55,7 +56,7 @@ namespace Jazz2::Actors::Enemies
 
 					_targetPos = _originPos;
 
-					_attackTime = 90.0f;
+					_attackTime = 120.0f;
 					_attacking = false;
 				} else {
 					AttackNearestPlayer();
@@ -66,9 +67,13 @@ namespace Jazz2::Actors::Enemies
 		_anglePhase += timeMult * 0.04f;
 
 		if ((_targetPos - _lastPos).Length() > 5.0f) {
-			Vector2f speed = ((_targetPos - _lastPos).Normalized() * (_attacking ? 2.8f : 1.4f) + _lastSpeed * 1.4f) / 2.4f;
-			_lastPos.X += speed.X;
-			_lastPos.Y += speed.Y;
+			Vector2f dir = (_targetPos - _lastPos).Normalized();
+			Vector2f speed = {
+				dir.X * lerp(_lastSpeed.X, _attacking ? 2.8f : 1.4f, 1.6f * timeMult),
+				dir.Y * lerp(_lastSpeed.Y, _attacking ? 2.8f : 1.4f, 1.6f * timeMult)
+			};
+			_lastPos.X += speed.X * timeMult;
+			_lastPos.Y += speed.Y * timeMult;
 			_lastSpeed = speed;
 
 			bool willFaceLeft = (speed.X < 0.0f);

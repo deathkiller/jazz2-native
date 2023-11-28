@@ -7,7 +7,7 @@ if(NCINE_DOWNLOAD_DEPENDENCIES AND NOT EMSCRIPTEN AND NOT NINTENDO_SWITCH)
 				set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/raw/2.0.1-macos/jazz2-libraries-macos.tar.gz")
 			endif()
 		else()
-			set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/2.0.2.tar.gz")
+			set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/2.4.0.tar.gz")
 		endif()
 		message(STATUS "Downloading dependencies from \"${NCINE_LIBS_URL}\"...")
 
@@ -322,18 +322,12 @@ if(ANDROID)
 		endif()
 	endif()
 elseif(MSVC OR MINGW OR MSYS)
-	if(EXISTS "${MSVC_LIBDIR}/libdeflate.lib" AND EXISTS "${MSVC_BINDIR}/libdeflate.dll")
-		add_library(libdeflate::libdeflate SHARED IMPORTED)
-		set_target_properties(libdeflate::libdeflate PROPERTIES
-			IMPORTED_IMPLIB "${MSVC_LIBDIR}/libdeflate.lib"
-			IMPORTED_LOCATION "${MSVC_BINDIR}/libdeflate.dll"
-			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}")
-		set(LIBDEFLATE_FOUND 1)
-	elseif(EXISTS "${MSVC_LIBDIR}/zlib.lib" AND EXISTS "${MSVC_BINDIR}/zlib.dll")
+	if(EXISTS "${MSVC_LIBDIR}/zlib.lib" AND EXISTS "${MSVC_BINDIR}/zlib.dll")
 		add_library(ZLIB::ZLIB SHARED IMPORTED)
 		set_target_properties(ZLIB::ZLIB PROPERTIES
 			IMPORTED_IMPLIB "${MSVC_LIBDIR}/zlib.lib"
-			IMPORTED_LOCATION "${MSVC_BINDIR}/zlib.dll")
+			IMPORTED_LOCATION "${MSVC_BINDIR}/zlib.dll"
+			INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}/zlib/")
 		set(ZLIB_FOUND 1)
 	endif()
 

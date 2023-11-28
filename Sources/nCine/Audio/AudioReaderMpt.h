@@ -7,12 +7,12 @@
 #include "IAudioReader.h"
 
 #if !defined(CMAKE_BUILD) && defined(__has_include)
-#	if __has_include("../../../Libs/Includes/libopenmpt/libopenmpt.h")
+#	if __has_include("libopenmpt/libopenmpt.h")
 #		define __HAS_LOCAL_LIBOPENMPT
 #	endif
 #endif
 #if defined(__HAS_LOCAL_LIBOPENMPT)
-#	include "../../../Libs/Includes/libopenmpt/libopenmpt.h"
+#	include "libopenmpt/libopenmpt.h"
 #else
 #	include <libopenmpt.h>
 #endif

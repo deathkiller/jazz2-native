@@ -38,6 +38,8 @@ namespace Death::IO
 			AndroidAsset
 		};
 
+		static constexpr std::int32_t Unseekable = -1;
+
 		explicit Stream() : _type(Type::None), _size(0) { }
 		virtual ~Stream() { }
 
@@ -45,16 +47,14 @@ namespace Death::IO
 			return _type;
 		}
 
-		/** @brief Tries to open the stream */
-		virtual void Open(FileAccessMode mode) = 0;
 		/** @brief Closes the stream */
 		virtual void Close() = 0;
 		/** @brief Seeks in an opened stream */
-		virtual std::int32_t Seek(std::int32_t offset, SeekOrigin origin) const = 0;
+		virtual std::int32_t Seek(std::int32_t offset, SeekOrigin origin) = 0;
 		/** @brief Tells the seek position of an opened stream */
 		virtual std::int32_t GetPosition() const = 0;
 		/** @brief Reads a certain amount of bytes from the stream to a buffer */
-		virtual std::int32_t Read(void* buffer, std::int32_t bytes) const = 0;
+		virtual std::int32_t Read(void* buffer, std::int32_t bytes) = 0;
 		/** @brief Writes a certain amount of bytes from a buffer to the stream */
 		virtual std::int32_t Write(const void* buffer, std::int32_t bytes) = 0;
 		/** @brief Returns true if the stream has been sucessfully opened */

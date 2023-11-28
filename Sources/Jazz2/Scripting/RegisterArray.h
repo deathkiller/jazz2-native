@@ -2,7 +2,7 @@
 
 #if defined(WITH_ANGELSCRIPT)
 
-#include "FindAngelScript.h"
+#include <angelscript.h>
 
 namespace Jazz2::Scripting
 {

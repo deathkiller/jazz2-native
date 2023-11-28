@@ -25,6 +25,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringView.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/Tags.h
 	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.h
+	${NCINE_SOURCE_DIR}/Shared/IO/DeflateStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/FileStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/FileSystem.h
 	${NCINE_SOURCE_DIR}/Shared/IO/HttpRequest.h
@@ -135,7 +136,6 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Input/JoyMapping.h
 	${NCINE_SOURCE_DIR}/nCine/Input/JoyMappingDb.h
 	${NCINE_SOURCE_DIR}/nCine/Input/Keys.h
-	${NCINE_SOURCE_DIR}/nCine/IO/CompressionUtils.h
 	${NCINE_SOURCE_DIR}/nCine/Primitives/AABB.h
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Color.h
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Colorf.h
@@ -306,7 +306,6 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Version.h
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventMap.h
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventSpawner.h
-	${NCINE_SOURCE_DIR}/Jazz2/Scripting/FindAngelScript.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusDefinitions.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScriptLoader.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.h

@@ -13,7 +13,7 @@
 #endif
 #if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_WINDOWS)
 #	if defined(__HAS_LOCAL_GLFW)
-#		include "../../../Libs/Includes/GL/glfw3native.h"
+#		include "GL/glfw3native.h"
 #	else
 #		include <glfw3native.h>	// for glfwGetCocoaWindow() / glfwGetWin32Window()
 #	endif

@@ -466,10 +466,7 @@ endif()
 #	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Graphics/RenderDocCapture.cpp)
 #endif()
 
-if(LIBDEFLATE_FOUND)
-	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_LIBDEFLATE")
-	target_link_libraries(${NCINE_APP} PRIVATE libdeflate::libdeflate)
-elseif(ZLIB_FOUND)
+if(ZLIB_FOUND)
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ZLIB")
 	target_link_libraries(${NCINE_APP} PRIVATE ZLIB::ZLIB)
 endif()
@@ -544,9 +541,7 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 		"${MSVC_WINRT_BINDIR}/libGLESv2.dll"
 	)
 		
-	if(LIBDEFLATE_FOUND)
-		list(APPEND UWP_DEPENDENCIES "${MSVC_BINDIR}/libdeflate.dll")
-	elseif(ZLIB_FOUND)
+	if(ZLIB_FOUND)
 		list(APPEND UWP_DEPENDENCIES "${MSVC_BINDIR}/zlib.dll")
 	endif()
 
@@ -615,9 +610,7 @@ else()
 			list(APPEND WIN32_DEPENDENCIES "${MSVC_BINDIR}/SDL2.dll")
 		endif()
 		
-		if(LIBDEFLATE_FOUND)
-			list(APPEND WIN32_DEPENDENCIES "${MSVC_BINDIR}/libdeflate.dll")
-		elseif(ZLIB_FOUND)
+		if(ZLIB_FOUND)
 			list(APPEND WIN32_DEPENDENCIES "${MSVC_BINDIR}/zlib.dll")
 		endif()
 

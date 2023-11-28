@@ -6,7 +6,7 @@
 #include "../Input/ImGuiJoyMappedInput.h"
 
 #if defined(__HAS_LOCAL_SDL)
-#	include "../../../Libs/Includes/SDL2/SDL_syswm.h"
+#	include "SDL2/SDL_syswm.h"
 #else
 #	include <SDL_syswm.h>
 #endif

@@ -3,19 +3,7 @@
 #include "SdlGfxDevice.h"
 #include "../Graphics/ITextureLoader.h"
 
-#if defined(WITH_GLEW)
-#	define GLEW_NO_GLU
-#	if !defined(CMAKE_BUILD) && defined(__has_include)
-#		if __has_include("../../../Libs/Includes/GL/glew.h")
-#			define __HAS_LOCAL_GLEW
-#		endif
-#	endif
-#	if defined(__HAS_LOCAL_GLEW)
-#		include "../../../Libs/Includes/GL/glew.h"
-#	else
-#		include <GL/glew.h>
-#	endif
-#endif
+#include <GL/glew.h>
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 #	include <emscripten/html5.h>
