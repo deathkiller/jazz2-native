@@ -93,6 +93,65 @@ jobs:
         name: ${{ env.artifactPath }}
         path: ./_package/
         
+  Build-AppImage:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+          Platform: x64
+          Backend: SDL2
+          CC: gcc
+          CXX: g++
+
+    runs-on: 'ubuntu-latest'
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 'Create Build Environment'
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libopenmpt-dev rpm
+        
+    - name: 'Configure CMake'
+      run: |
+        export CC=${{ matrix.CC }}
+        export CXX=${{ matrix.CXX }}
+        
+        rm -f ./Content/Translations/*.po
+        
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_WITH_GLEW=OFF -D NCINE_LINUX_PACKAGE=jazz2 -D NCINE_PACKAGED_CONTENT_PATH=ON
+
+    - name: 'Build'
+      run: |
+        make -j $(nproc) -C ./_build/
+
+    - name: 'Create AppImage'
+      run: |
+        if [ ! -f linuxdeploy-x86_64.AppImage ]; then
+          curl -O --location 'https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage'
+          chmod +x linuxdeploy-x86_64.AppImage
+        fi
+        
+        mkdir -p ./_package/usr/bin/
+        cp -f ./_build/jazz2 ./_package/usr/bin/jazz2
+        cp -f -r ./Content/ ./_package/usr/bin/Content/
+        
+        LDAI_OUTPUT="jazz2.AppImage" ARCH=x86_64 ./linuxdeploy-x86_64.AppImage --appdir=./_package/ --icon-file=./Sources/Icons/256px.png --icon-filename=jazz2 --desktop-file=./_build/jazz2.desktop --executable=./_package/usr/bin/jazz2 --custom-apprun=./Sources/AppRun --output=appimage
+        
+        artifactPath="Jazz2_${{ matrix.Platform }}.AppImage"
+        echo "artifactPath=$artifactPath" >> $GITHUB_ENV
+        
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.artifactPath }}
+        path: ./_package/jazz2.AppImage
+        
   CodeQL:
     name: 'CodeQL Analyze'
     strategy:
