@@ -1,0 +1,3 @@
+#!/bin/sh
+cd "${APPDIR}"
+"${APPDIR}"/usr/bin/jazz2 /appimage-path:"${APPIMAGE}" $@
