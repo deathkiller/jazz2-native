@@ -3,7 +3,10 @@
 #include "SdlGfxDevice.h"
 #include "../Graphics/ITextureLoader.h"
 
-#include <GL/glew.h>
+#if defined(WITH_GLEW)
+#	define GLEW_NO_GLU
+#	include <GL/glew.h>
+#endif
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 #	include <emscripten/html5.h>
