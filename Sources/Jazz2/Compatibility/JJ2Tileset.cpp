@@ -2,8 +2,7 @@
 #include "JJ2Anims.h"
 #include "JJ2Block.h"
 
-#include "../../nCine/IO/CompressionUtils.h"
-
+#include <IO/DeflateStream.h>
 #include <IO/FileSystem.h>
 #include <IO/MemoryStream.h>
 
@@ -183,43 +182,39 @@ namespace Jazz2::Compatibility
 		so->WriteValue<std::uint32_t>(height);
 		so->WriteValue<std::uint16_t>(_tileCount);
 
-		MemoryStream co(1024 * 1024);
+		MemoryStream ms(1024 * 1024);
+		{
+			DeflateWriter co(ms);
 
-		// Palette
-		std::uint32_t palette[countof(_palette)];
-		std::memcpy(palette, _palette, sizeof(_palette));
+			// Palette
+			std::uint32_t palette[countof(_palette)];
+			std::memcpy(palette, _palette, sizeof(_palette));
 
-		bool hasAlphaChannel = false;
-		for (std::int32_t i = 1; i < countof(palette); i++) {
-			if ((palette[i] & 0xff000000) != 0) {
-				hasAlphaChannel = true;
-				break;
-			}
-		}
-		if (!hasAlphaChannel) {
+			bool hasAlphaChannel = false;
 			for (std::int32_t i = 1; i < countof(palette); i++) {
-				palette[i] |= 0xff000000;
+				if ((palette[i] & 0xff000000) != 0) {
+					hasAlphaChannel = true;
+					break;
+				}
+			}
+			if (!hasAlphaChannel) {
+				for (std::int32_t i = 1; i < countof(palette); i++) {
+					palette[i] |= 0xff000000;
+				}
+			}
+
+			co.Write(palette, sizeof(palette));
+
+			// Mask
+			co.WriteValue<std::uint32_t>(_tileCount * sizeof(_tiles[0].Mask));
+			for (std::int32_t i = 0; i < _tileCount; i++) {
+				auto& tile = _tiles[i];
+				co.Write(tile.Mask, sizeof(tile.Mask));
 			}
 		}
 
-		co.Write(palette, sizeof(palette));
-
-		// Mask
-		co.WriteValue<std::uint32_t>(_tileCount * sizeof(_tiles[0].Mask));
-		for (std::int32_t i = 0; i < _tileCount; i++) {
-			auto& tile = _tiles[i];
-			co.Write(tile.Mask, sizeof(tile.Mask));
-		}
-
-		// Compress palette and mask
-		std::int32_t compressedSize = CompressionUtils::GetMaxDeflatedSize(co.GetSize());
-		std::unique_ptr<uint8_t[]> compressedBuffer = std::make_unique<std::uint8_t[]>(compressedSize);
-		compressedSize = CompressionUtils::Deflate(co.GetBuffer(), co.GetSize(), compressedBuffer.get(), compressedSize);
-		ASSERT(compressedSize > 0);
-
-		so->WriteValue<std::int32_t>(compressedSize);
-		so->WriteValue<std::int32_t>(co.GetSize());
-		so->Write(compressedBuffer.get(), compressedSize);
+		so->WriteValue<std::int32_t>(ms.GetSize());
+		so->Write(ms.GetBuffer(), ms.GetSize());
 
 		// Image
 		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * 4);

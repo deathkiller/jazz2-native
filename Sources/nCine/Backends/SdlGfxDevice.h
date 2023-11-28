@@ -7,12 +7,12 @@
 #include "../Graphics/DisplayMode.h"
 
 #if !defined(CMAKE_BUILD) && defined(__has_include)
-#	if __has_include("../../../Libs/Includes/SDL2/SDL.h")
+#	if __has_include("SDL2/SDL.h")
 #		define __HAS_LOCAL_SDL
 #	endif
 #endif
 #if defined(__HAS_LOCAL_SDL)
-#	include "../../../Libs/Includes/SDL2/SDL.h"
+#	include "SDL2/SDL.h"
 #else
 #	include <SDL.h>
 #endif

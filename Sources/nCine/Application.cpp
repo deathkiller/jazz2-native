@@ -23,7 +23,6 @@ extern "C"
 #		if defined(WITH_AUDIO)
 #			pragma comment(lib, "../Libs/Windows/x64/OpenAL32.lib")
 #		endif
-#		pragma comment(lib, "../Libs/Windows/x64/libdeflate.lib")
 #	elif defined(_M_IX86)
 #		if defined(WITH_GLEW)
 #			pragma comment(lib, "../Libs/Windows/x86/glew32.lib")
@@ -37,7 +36,6 @@ extern "C"
 #		if defined(WITH_AUDIO)
 #			pragma comment(lib, "../Libs/Windows/x86/OpenAL32.lib")
 #		endif
-#		pragma comment(lib, "../Libs/Windows/x86/libdeflate.lib")
 #	else
 #		error Unsupported architecture
 #	endif

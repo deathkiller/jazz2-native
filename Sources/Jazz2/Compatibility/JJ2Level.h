@@ -162,7 +162,7 @@ namespace Jazz2::Compatibility
 		void LoadLayers(JJ2Block& dictBlock, int dictLength, JJ2Block& layoutBlock, bool strictParser);
 		void LoadMlleData(JJ2Block& block, uint32_t version, const StringView& path, bool strictParser);
 
-		static void WriteLevelName(MemoryStream& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion = nullptr);
+		static void WriteLevelName(Stream& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion = nullptr);
 		static bool StringHasSuffixIgnoreCase(const StringView& value, const StringView& suffix);
 	};
 }

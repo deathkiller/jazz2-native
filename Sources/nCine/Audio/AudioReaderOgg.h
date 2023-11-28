@@ -8,27 +8,8 @@
 
 #define OV_EXCLUDE_STATIC_CALLBACKS
 
-#if !defined(CMAKE_BUILD) && defined(__has_include)
-#	if __has_include("../../../Libs/Includes/ogg/ogg.h")
-#		define __HAS_LOCAL_OGG
-#	endif
-#endif
-#if defined(__HAS_LOCAL_OGG)
-#	include "../../../Libs/Includes/ogg/ogg.h"
-#else
-#	include <ogg/ogg.h>
-#endif
-
-#if !defined(CMAKE_BUILD) && defined(__has_include)
-#	if __has_include("../../../Libs/Includes/vorbis/vorbisfile.h")
-#		define __HAS_LOCAL_VORBIS
-#	endif
-#endif
-#if defined(__HAS_LOCAL_VORBIS)
-#	include "../../../Libs/Includes/vorbis/vorbisfile.h"
-#else
-#	include <vorbis/vorbisfile.h>
-#endif
+#include <ogg/ogg.h>
+#include <vorbis/vorbisfile.h>
 
 #if defined(WITH_VORBIS_DYNAMIC) && defined(DEATH_TARGET_WINDOWS)
 #	include <CommonWindows.h>

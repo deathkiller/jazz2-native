@@ -5,8 +5,8 @@
 #include "../Tiles/TileMap.h"
 
 #include "../../nCine/Base/Algorithms.h"
-#include "../../nCine/IO/CompressionUtils.h"
 
+#include <IO/DeflateStream.h>
 #include <IO/FileSystem.h>
 
 using namespace Death::IO;
@@ -567,415 +567,412 @@ namespace Jazz2::Compatibility
 		}
 		so->WriteValue<uint16_t>(flags);
 
-		MemoryStream co(1024 * 1024);
+		MemoryStream ms(1024 * 1024);
+		{
+			DeflateWriter co(ms);
 
-		String formattedName = JJ2Strings::RecodeString(DisplayName, true);
-		co.WriteValue<uint8_t>((uint8_t)formattedName.size());
-		co.Write(formattedName.data(), formattedName.size());
+			String formattedName = JJ2Strings::RecodeString(DisplayName, true);
+			co.WriteValue<uint8_t>((uint8_t)formattedName.size());
+			co.Write(formattedName.data(), formattedName.size());
 
-		lowercaseInPlace(NextLevel);
-		lowercaseInPlace(SecretLevel);
-		lowercaseInPlace(BonusLevel);
+			lowercaseInPlace(NextLevel);
+			lowercaseInPlace(SecretLevel);
+			lowercaseInPlace(BonusLevel);
 
-		WriteLevelName(co, NextLevel, levelTokenConversion);
-		WriteLevelName(co, SecretLevel, levelTokenConversion);
-		WriteLevelName(co, BonusLevel, levelTokenConversion);
+			WriteLevelName(co, NextLevel, levelTokenConversion);
+			WriteLevelName(co, SecretLevel, levelTokenConversion);
+			WriteLevelName(co, BonusLevel, levelTokenConversion);
 
-		// Default Tileset
-		lowercaseInPlace(Tileset);
-		if (StringHasSuffixIgnoreCase(Tileset, ".j2t"_s)) {
-			Tileset = Tileset.exceptSuffix(4);
-		}
-		co.WriteValue<uint8_t>((uint8_t)Tileset.size());
-		co.Write(Tileset.data(), Tileset.size());
-
-		// Default Music
-		lowercaseInPlace(Music);
-		if (Music.find('.') == nullptr) {
-			String music = Music + ".j2b"_s;
-			co.WriteValue<uint8_t>((uint8_t)music.size());
-			co.Write(music.data(), music.size());
-		} else {
-			co.WriteValue<uint8_t>((uint8_t)Music.size());
-			co.Write(Music.data(), Music.size());
-		}
-
-		co.WriteValue<uint8_t>(_darknessColor & 0xff);
-		co.WriteValue<uint8_t>((_darknessColor >> 8) & 0xff);
-		co.WriteValue<uint8_t>((_darknessColor >> 16) & 0xff);
-		co.WriteValue<uint8_t>((uint8_t)std::min(LightingStart * 255 / 64, 255));
-
-		co.WriteValue<uint8_t>((uint8_t)_weatherType);
-		co.WriteValue<uint8_t>(_weatherIntensity);
-		co.WriteValue<uint16_t>(_waterLevel);
-
-		// Find caption tile
-		uint16_t maxTiles = (uint16_t)GetMaxSupportedTiles();
-
-		uint16_t captionTileId = 0;
-		for (uint16_t i = 0; i < maxTiles; i++) {
-			if (_staticTiles[i].Type == 4) {
-				captionTileId = i;
-				break;
+			// Default Tileset
+			lowercaseInPlace(Tileset);
+			if (StringHasSuffixIgnoreCase(Tileset, ".j2t"_s)) {
+				Tileset = Tileset.exceptSuffix(4);
 			}
-		}
-		co.WriteValue<uint16_t>(captionTileId);
+			co.WriteValue<uint8_t>((uint8_t)Tileset.size());
+			co.Write(Tileset.data(), Tileset.size());
 
-		// Custom palette
-		if (_useLevelPalette) {
-			for (int i = 0; i < sizeof(_levelPalette); i += 3) {
-				// Expand JJ2+ RGB palette to RGBA
-				uint32_t color = (uint32_t)_levelPalette[i] | ((uint32_t)_levelPalette[i + 1] << 8) | ((uint32_t)_levelPalette[i + 2] << 16) | 0xff000000;
-				co.WriteValue<uint32_t>(color);
-			}
-		}
-
-		// Extra Tilesets
-		co.WriteValue<uint8_t>((uint8_t)ExtraTilesets.size());
-		for (auto& tileset : ExtraTilesets) {
-			uint8_t tilesetFlags = 0;
-			if (tileset.HasPaletteRemapping) {
-				tilesetFlags |= 0x01;
-			}
-			co.WriteValue<uint8_t>(tilesetFlags);
-
-			lowercaseInPlace(tileset.Name);
-			if (StringHasSuffixIgnoreCase(tileset.Name, ".j2t"_s)) {
-				tileset.Name = tileset.Name.exceptSuffix(4);
+			// Default Music
+			lowercaseInPlace(Music);
+			if (Music.find('.') == nullptr) {
+				String music = Music + ".j2b"_s;
+				co.WriteValue<uint8_t>((uint8_t)music.size());
+				co.Write(music.data(), music.size());
+			} else {
+				co.WriteValue<uint8_t>((uint8_t)Music.size());
+				co.Write(Music.data(), Music.size());
 			}
 
-			co.WriteValue<uint8_t>((uint8_t)tileset.Name.size());
-			co.Write(tileset.Name.data(), tileset.Name.size());
+			co.WriteValue<uint8_t>(_darknessColor & 0xff);
+			co.WriteValue<uint8_t>((_darknessColor >> 8) & 0xff);
+			co.WriteValue<uint8_t>((_darknessColor >> 16) & 0xff);
+			co.WriteValue<uint8_t>((uint8_t)std::min(LightingStart * 255 / 64, 255));
 
-			co.WriteValue<uint16_t>(tileset.Offset);
-			co.WriteValue<uint16_t>(tileset.Count);
+			co.WriteValue<uint8_t>((uint8_t)_weatherType);
+			co.WriteValue<uint8_t>(_weatherIntensity);
+			co.WriteValue<uint16_t>(_waterLevel);
 
-			if (tileset.HasPaletteRemapping) {
-				co.Write(tileset.PaletteRemapping, sizeof(tileset.PaletteRemapping));
-			}
-		}
+			// Find caption tile
+			uint16_t maxTiles = (uint16_t)GetMaxSupportedTiles();
 
-		// Text Event Strings
-		co.WriteValue<uint8_t>(TextEventStringsCount);
-		for (int i = 0; i < TextEventStringsCount; i++) {
-			String& text = _textEventStrings[i];
-
-			bool isLevelToken = false;
-			for (uint8_t textId : _levelTokenTextIds) {
-				if (i == textId) {
-					isLevelToken = true;
+			uint16_t captionTileId = 0;
+			for (uint16_t i = 0; i < maxTiles; i++) {
+				if (_staticTiles[i].Type == 4) {
+					captionTileId = i;
 					break;
 				}
 			}
+			co.WriteValue<uint16_t>(captionTileId);
 
-			if (isLevelToken) {
-				String adjustedText = ""_s;
-				auto levelTokens = text.split('|');
-				for (int j = 0; j < levelTokens.size(); j++) {
-					if (j != 0) {
-						adjustedText += "|"_s;
-					}
-					lowercaseInPlace(levelTokens[j]);
-					LevelToken token = levelTokenConversion(levelTokens[j]);
-					if (!token.Episode.empty()) {
-						adjustedText += token.Episode + "/"_s;
-					}
-					adjustedText += token.Level;
-				}
-
-				co.WriteValue<std::uint16_t>((std::uint16_t)adjustedText.size());
-				co.Write(adjustedText.data(), adjustedText.size());
-			} else {
-				String formattedText = JJ2Strings::RecodeString(text);
-				co.WriteValue<std::uint16_t>((std::uint16_t)formattedText.size());
-				co.Write(formattedText.data(), formattedText.size());
-			}
-		}
-
-		std::uint16_t lastTilesetTileIndex = (std::uint16_t)(maxTiles - _animCount);
-
-		// Animated Tiles
-		co.WriteValue<uint16_t>(_animCount);
-		for (std::int32_t i = 0; i < _animCount; i++) {
-			auto& tile = _animatedTiles[i];
-			co.WriteValue<std::uint8_t>(tile.FrameCount);
-			co.WriteValue<std::uint16_t>((std::uint16_t)(tile.Speed == 0 ? 0 : 16 * 50 / tile.Speed));
-			co.WriteValue<std::uint16_t>(tile.Delay);
-			co.WriteValue<std::uint16_t>(tile.DelayJitter);
-			co.WriteValue<std::uint8_t>(tile.IsPingPong ? 1 : 0);
-			co.WriteValue<std::uint16_t>(tile.ReverseDelay);
-
-			for (std::int32_t j = 0; j < tile.FrameCount; j++) {
-				// Max. tiles is either 0x0400 or 0x1000 and doubles as a mask to separate flipped tiles.
-				// In J2L, each flipped tile had a separate entry in the tile list, probably to make
-				// the dictionary concept easier to handle.
-				bool flipX = false, flipY = false;
-				uint16_t tileIdx = tile.Frames[j];
-				if ((tileIdx & maxTiles) != 0) {
-					flipX = true;
-					tileIdx &= ~maxTiles;
-				}
-				if ((tileIdx & 0x2000) != 0) {
-					flipY = true;
-					tileIdx &= ~0x2000;
-				}
-
-				if (tileIdx >= lastTilesetTileIndex) {
-					std::uint16_t animIndex = tileIdx - lastTilesetTileIndex;
-					if (animIndex < _animCount) {
-						tileIdx = _animatedTiles[animIndex].Frames[0];
-					} else {
-						LOGE("Animated tile references undefined tile %u in level \"%s\" (max. tile count is %u, anim. count is %u)", tileIdx, LevelName.data(), maxTiles, _animCount);
-						tileIdx = 0;
-					}
-				}
-
-				std::uint8_t tileFlags = 0x00;
-				if (flipX) {
-					tileFlags |= 0x01; // Flip X
-				}
-				if (flipY) {
-					tileFlags |= 0x02; // Flip Y
-				}
-
-				if (_staticTiles[tileIdx].Type == 1) {
-					tileFlags |= 0x10; // Legacy Translucent
-				} else if (_staticTiles[tileIdx].Type == 3) {
-					tileFlags |= 0x20; // Invisible
-				}
-
-				co.WriteValue<std::uint8_t>(tileFlags);
-				co.WriteValue<std::uint16_t>(tileIdx);
-			}
-		}
-
-		// Layers
-		std::int32_t layerCount = 0;
-		for (std::int32_t i = 0; i < _layers.size(); i++) {
-			auto& layer = _layers[i];
-			if (layer.Width == 0 || layer.Height == 0) {
-				layer.Used = false;
-			}
-			if (layer.Used) {
-				layerCount++;
-			}
-		}
-
-		co.WriteValue<uint8_t>(layerCount);
-		for (std::int32_t i = 0; i < _layers.size(); i++) {
-			auto& layer = _layers[i];
-			if (layer.Used) {
-				bool isSky = (i == 7);
-				bool isSprite = (i == 3);
-				co.WriteValue<uint8_t>(isSprite ? 2 : (isSky ? 1 : 0));	// Layer type
-
-				uint16_t flags = (uint16_t)(layer.Flags & (0x01 | 0x02 | 0x04)); // RepeatX, RepeatY, UseInherentOffset are mapped 1:1
-				if (layer.Visible) {
-					flags |= 0x08;
-				}
-				co.WriteValue<uint16_t>(flags);	// Layer flags
-
-				co.WriteValue<int32_t>(layer.Width);
-				co.WriteValue<int32_t>(layer.Height);
-
-				if (!isSprite) {
-					Tiles::LayerSpeedModel speedModelX, speedModelY;
-					switch (layer.SpeedModelX) {
-						case LayerSectionSpeedModel::Legacy: speedModelX = Tiles::LayerSpeedModel::AlwaysOnTop; break;
-						case LayerSectionSpeedModel::FitLevel: speedModelX = Tiles::LayerSpeedModel::FitLevel; break;
-						case LayerSectionSpeedModel::SpeedMultipliers: speedModelX = Tiles::LayerSpeedModel::SpeedMultipliers; break;
-						default: speedModelX = Tiles::LayerSpeedModel::Default; break;
-					}
-					switch (layer.SpeedModelY) {
-						case LayerSectionSpeedModel::Legacy: speedModelY = Tiles::LayerSpeedModel::AlwaysOnTop; break;
-						case LayerSectionSpeedModel::FitLevel: speedModelY = Tiles::LayerSpeedModel::FitLevel; break;
-						case LayerSectionSpeedModel::SpeedMultipliers: speedModelY = Tiles::LayerSpeedModel::SpeedMultipliers; break;
-						default: speedModelY = Tiles::LayerSpeedModel::Default; break;
-					}
-					uint8_t combinedSpeedModel = ((int)speedModelX & 0x0f) | (((int)speedModelY & 0x0f) << 4);
-					co.WriteValue<uint8_t>(combinedSpeedModel);
-
-					bool hasTexturedBackground = ((layer.Flags & 0x08) == 0x08);
-					if (isSky && !hasTexturedBackground && layer.SpeedModelX <= LayerSectionSpeedModel::Legacy && layer.SpeedModelY <= LayerSectionSpeedModel::Legacy) {
-						co.WriteValue<float>(180.0f);
-						co.WriteValue<float>(-300.0f);
-					} else {
-						co.WriteValue<float>(layer.OffsetX);
-						co.WriteValue<float>(layer.OffsetY);
-					}
-
-					float speedX = layer.SpeedX;
-					float speedY = layer.SpeedY;
-					float autoSpeedX = layer.AutoSpeedX;
-					float autoSpeedY = layer.AutoSpeedY;
-					if (layer.SpeedModelX == LayerSectionSpeedModel::FitLevel ||
-						(layer.SpeedModelX <= LayerSectionSpeedModel::Legacy && !hasTexturedBackground && std::abs(autoSpeedX) > 0.0f)) {
-						speedX = 0.0f;
-					}
-					if (layer.SpeedModelY == LayerSectionSpeedModel::FitLevel ||
-						(layer.SpeedModelY <= LayerSectionSpeedModel::Legacy && !hasTexturedBackground && std::abs(autoSpeedY) > 0.0f)) {
-						speedY = 0.0f;
-					}
-					if (layer.SpeedModelX == LayerSectionSpeedModel::FitLevel) {
-						autoSpeedX = 0.0f;
-					}
-					if (layer.SpeedModelY == LayerSectionSpeedModel::FitLevel) {
-						autoSpeedY = 0.0f;
-					}
-
-					co.WriteValue<float>(speedX);
-					co.WriteValue<float>(speedY);
-					co.WriteValue<float>(autoSpeedX);
-					co.WriteValue<float>(autoSpeedY);
-					co.WriteValue<int16_t>((int16_t)layer.Depth);
-
-					if (isSky && hasTexturedBackground) {
-						co.WriteValue<uint8_t>(layer.TexturedBackgroundType + (uint8_t)Tiles::LayerRendererType::Sky);
-						co.WriteValue<uint8_t>(layer.TexturedParams1);
-						co.WriteValue<uint8_t>(layer.TexturedParams2);
-						co.WriteValue<uint8_t>(layer.TexturedParams3);
-						co.WriteValue<uint8_t>((layer.Flags & 0x10) == 0x10 ? 255 : 0);	// ParallaxStarsEnabled
-					} else if (layer.SpriteMode == 2) {
-						co.WriteValue<uint8_t>((uint8_t)Tiles::LayerRendererType::Tinted);
-						co.WriteValue<uint8_t>(layer.SpriteParam);
-						co.WriteValue<uint8_t>(0);
-						co.WriteValue<uint8_t>(0);
-						co.WriteValue<uint8_t>(255);
-					} else {
-						co.WriteValue<uint8_t>((uint8_t)Tiles::LayerRendererType::Default);
-						co.WriteValue<uint8_t>(255);
-						co.WriteValue<uint8_t>(255);
-						co.WriteValue<uint8_t>(255);
-						co.WriteValue<uint8_t>(255);
-					}
-				}
-
-				for (int y = 0; y < layer.Height; y++) {
-					for (int x = 0; x < layer.Width; x++) {
-						uint16_t tileIdx = layer.Tiles[y * layer.InternalWidth + x];
-
-						bool flipX = false, flipY = false;
-						if ((tileIdx & 0x2000) != 0) {
-							flipY = true;
-							tileIdx -= 0x2000;
-						}
-
-						if ((tileIdx & ~(maxTiles | (maxTiles - 1))) != 0) {
-							// Fix of bug in updated Psych2.j2l
-							tileIdx = (uint16_t)((tileIdx & (maxTiles | (maxTiles - 1))) | maxTiles);
-						}
-
-						// Max. tiles is either 0x0400 or 0x1000 and doubles as a mask to separate flipped tiles.
-						// In J2L, each flipped tile had a separate entry in the tile list, probably to make
-						// the dictionary concept easier to handle.
-
-						if ((tileIdx & maxTiles) > 0) {
-							flipX = true;
-							tileIdx -= maxTiles;
-						}
-
-						bool animated = false;
-						if (tileIdx >= lastTilesetTileIndex) {
-							animated = true;
-							tileIdx -= lastTilesetTileIndex;
-						}
-
-						bool legacyTranslucent = false;
-						bool invisible = false;
-						if (!animated && tileIdx < lastTilesetTileIndex) {
-							legacyTranslucent = (_staticTiles[tileIdx].Type == 1);
-							invisible = (_staticTiles[tileIdx].Type == 3);
-						}
-
-						uint8_t tileFlags = 0;
-						if (flipX) {
-							tileFlags |= 0x01;
-						}
-						if (flipY) {
-							tileFlags |= 0x02;
-						}
-						if (animated) {
-							tileFlags |= 0x04;
-						}
-
-						if (legacyTranslucent) {
-							tileFlags |= 0x10;
-						} else if (invisible) {
-							tileFlags |= 0x20;
-						}
-
-						co.WriteValue<uint8_t>(tileFlags);
-						co.WriteValue<uint16_t>(tileIdx);
-					}
+			// Custom palette
+			if (_useLevelPalette) {
+				for (int i = 0; i < sizeof(_levelPalette); i += 3) {
+					// Expand JJ2+ RGB palette to RGBA
+					uint32_t color = (uint32_t)_levelPalette[i] | ((uint32_t)_levelPalette[i + 1] << 8) | ((uint32_t)_levelPalette[i + 2] << 16) | 0xff000000;
+					co.WriteValue<uint32_t>(color);
 				}
 			}
-		}
 
-		// Events
-		for (int y = 0; y < _layers[3].Height; y++) {
-			for (int x = 0; x < _layers[3].Width; x++) {
-				auto& tileEvent = _events[x + y * _layers[3].Width];
+			// Extra Tilesets
+			co.WriteValue<uint8_t>((uint8_t)ExtraTilesets.size());
+			for (auto& tileset : ExtraTilesets) {
+				uint8_t tilesetFlags = 0;
+				if (tileset.HasPaletteRemapping) {
+					tilesetFlags |= 0x01;
+				}
+				co.WriteValue<uint8_t>(tilesetFlags);
 
-				// TODO: Flag 0x08 not used
-				int flags = 0;
-				if (tileEvent.Illuminate) {
-					flags |= 0x04; // Illuminated
-				}
-				if (tileEvent.Difficulty != 2 /*Hard*/) {
-					flags |= 0x10; // Difficulty: Easy
-				}
-				if (tileEvent.Difficulty == 0 /*All*/) {
-					flags |= 0x20; // Difficulty: Normal
-				}
-				if (tileEvent.Difficulty != 1 /*Easy*/) {
-					flags |= 0x40; // Difficulty: Hard
-				}
-				if (tileEvent.Difficulty == 3 /*Multiplayer*/) {
-					flags |= 0x80; // Multiplayer Only
+				lowercaseInPlace(tileset.Name);
+				if (StringHasSuffixIgnoreCase(tileset.Name, ".j2t"_s)) {
+					tileset.Name = tileset.Name.exceptSuffix(4);
 				}
 
-				co.WriteValue<uint16_t>((uint16_t)tileEvent.Converted.Type);
+				co.WriteValue<uint8_t>((uint8_t)tileset.Name.size());
+				co.Write(tileset.Name.data(), tileset.Name.size());
 
-				bool allZeroes = true;
-				if (tileEvent.Converted.Type != EventType::Empty) {
-					for (int i = 0; i < countof(tileEvent.Converted.Params); i++) {
-						if (tileEvent.Converted.Params[i] != 0) {
-							allZeroes = false;
-							break;
+				co.WriteValue<uint16_t>(tileset.Offset);
+				co.WriteValue<uint16_t>(tileset.Count);
+
+				if (tileset.HasPaletteRemapping) {
+					co.Write(tileset.PaletteRemapping, sizeof(tileset.PaletteRemapping));
+				}
+			}
+
+			// Text Event Strings
+			co.WriteValue<uint8_t>(TextEventStringsCount);
+			for (int i = 0; i < TextEventStringsCount; i++) {
+				String& text = _textEventStrings[i];
+
+				bool isLevelToken = false;
+				for (uint8_t textId : _levelTokenTextIds) {
+					if (i == textId) {
+						isLevelToken = true;
+						break;
+					}
+				}
+
+				if (isLevelToken) {
+					String adjustedText = ""_s;
+					auto levelTokens = text.split('|');
+					for (int j = 0; j < levelTokens.size(); j++) {
+						if (j != 0) {
+							adjustedText += "|"_s;
 						}
+						lowercaseInPlace(levelTokens[j]);
+						LevelToken token = levelTokenConversion(levelTokens[j]);
+						if (!token.Episode.empty()) {
+							adjustedText += token.Episode + "/"_s;
+						}
+						adjustedText += token.Level;
 					}
-				}
 
-				if (allZeroes) {
-					if (tileEvent.GeneratorDelay == -1) {
-						co.WriteValue<uint8_t>(flags | 0x01 /*NoParams*/);
-					} else {
-						co.WriteValue<uint8_t>(flags | 0x01 /*NoParams*/ | 0x02 /*Generator*/);
-						co.WriteValue<uint8_t>(tileEvent.GeneratorFlags);
-						co.WriteValue<uint8_t>(tileEvent.GeneratorDelay);
-					}
+					co.WriteValue<std::uint16_t>((std::uint16_t)adjustedText.size());
+					co.Write(adjustedText.data(), adjustedText.size());
 				} else {
-					if (tileEvent.GeneratorDelay == -1) {
-						co.WriteValue<uint8_t>(flags);
-					} else {
-						co.WriteValue<uint8_t>(flags | 0x02 /*Generator*/);
-						co.WriteValue<uint8_t>(tileEvent.GeneratorFlags);
-						co.WriteValue<uint8_t>(tileEvent.GeneratorDelay);
+					String formattedText = JJ2Strings::RecodeString(text);
+					co.WriteValue<std::uint16_t>((std::uint16_t)formattedText.size());
+					co.Write(formattedText.data(), formattedText.size());
+				}
+			}
+
+			std::uint16_t lastTilesetTileIndex = (std::uint16_t)(maxTiles - _animCount);
+
+			// Animated Tiles
+			co.WriteValue<uint16_t>(_animCount);
+			for (std::int32_t i = 0; i < _animCount; i++) {
+				auto& tile = _animatedTiles[i];
+				co.WriteValue<std::uint8_t>(tile.FrameCount);
+				co.WriteValue<std::uint16_t>((std::uint16_t)(tile.Speed == 0 ? 0 : 16 * 50 / tile.Speed));
+				co.WriteValue<std::uint16_t>(tile.Delay);
+				co.WriteValue<std::uint16_t>(tile.DelayJitter);
+				co.WriteValue<std::uint8_t>(tile.IsPingPong ? 1 : 0);
+				co.WriteValue<std::uint16_t>(tile.ReverseDelay);
+
+				for (std::int32_t j = 0; j < tile.FrameCount; j++) {
+					// Max. tiles is either 0x0400 or 0x1000 and doubles as a mask to separate flipped tiles.
+					// In J2L, each flipped tile had a separate entry in the tile list, probably to make
+					// the dictionary concept easier to handle.
+					bool flipX = false, flipY = false;
+					uint16_t tileIdx = tile.Frames[j];
+					if ((tileIdx & maxTiles) != 0) {
+						flipX = true;
+						tileIdx &= ~maxTiles;
+					}
+					if ((tileIdx & 0x2000) != 0) {
+						flipY = true;
+						tileIdx &= ~0x2000;
 					}
 
-					co.Write(tileEvent.Converted.Params, sizeof(tileEvent.Converted.Params));
+					if (tileIdx >= lastTilesetTileIndex) {
+						std::uint16_t animIndex = tileIdx - lastTilesetTileIndex;
+						if (animIndex < _animCount) {
+							tileIdx = _animatedTiles[animIndex].Frames[0];
+						} else {
+							LOGE("Animated tile references undefined tile %u in level \"%s\" (max. tile count is %u, anim. count is %u)", tileIdx, LevelName.data(), maxTiles, _animCount);
+							tileIdx = 0;
+						}
+					}
+
+					std::uint8_t tileFlags = 0x00;
+					if (flipX) {
+						tileFlags |= 0x01; // Flip X
+					}
+					if (flipY) {
+						tileFlags |= 0x02; // Flip Y
+					}
+
+					if (_staticTiles[tileIdx].Type == 1) {
+						tileFlags |= 0x10; // Legacy Translucent
+					} else if (_staticTiles[tileIdx].Type == 3) {
+						tileFlags |= 0x20; // Invisible
+					}
+
+					co.WriteValue<std::uint8_t>(tileFlags);
+					co.WriteValue<std::uint16_t>(tileIdx);
+				}
+			}
+
+			// Layers
+			std::int32_t layerCount = 0;
+			for (std::int32_t i = 0; i < _layers.size(); i++) {
+				auto& layer = _layers[i];
+				if (layer.Width == 0 || layer.Height == 0) {
+					layer.Used = false;
+				}
+				if (layer.Used) {
+					layerCount++;
+				}
+			}
+
+			co.WriteValue<uint8_t>(layerCount);
+			for (std::int32_t i = 0; i < _layers.size(); i++) {
+				auto& layer = _layers[i];
+				if (layer.Used) {
+					bool isSky = (i == 7);
+					bool isSprite = (i == 3);
+					co.WriteValue<uint8_t>(isSprite ? 2 : (isSky ? 1 : 0));	// Layer type
+
+					uint16_t flags = (uint16_t)(layer.Flags & (0x01 | 0x02 | 0x04)); // RepeatX, RepeatY, UseInherentOffset are mapped 1:1
+					if (layer.Visible) {
+						flags |= 0x08;
+					}
+					co.WriteValue<uint16_t>(flags);	// Layer flags
+
+					co.WriteValue<int32_t>(layer.Width);
+					co.WriteValue<int32_t>(layer.Height);
+
+					if (!isSprite) {
+						Tiles::LayerSpeedModel speedModelX, speedModelY;
+						switch (layer.SpeedModelX) {
+							case LayerSectionSpeedModel::Legacy: speedModelX = Tiles::LayerSpeedModel::AlwaysOnTop; break;
+							case LayerSectionSpeedModel::FitLevel: speedModelX = Tiles::LayerSpeedModel::FitLevel; break;
+							case LayerSectionSpeedModel::SpeedMultipliers: speedModelX = Tiles::LayerSpeedModel::SpeedMultipliers; break;
+							default: speedModelX = Tiles::LayerSpeedModel::Default; break;
+						}
+						switch (layer.SpeedModelY) {
+							case LayerSectionSpeedModel::Legacy: speedModelY = Tiles::LayerSpeedModel::AlwaysOnTop; break;
+							case LayerSectionSpeedModel::FitLevel: speedModelY = Tiles::LayerSpeedModel::FitLevel; break;
+							case LayerSectionSpeedModel::SpeedMultipliers: speedModelY = Tiles::LayerSpeedModel::SpeedMultipliers; break;
+							default: speedModelY = Tiles::LayerSpeedModel::Default; break;
+						}
+						uint8_t combinedSpeedModel = ((int)speedModelX & 0x0f) | (((int)speedModelY & 0x0f) << 4);
+						co.WriteValue<uint8_t>(combinedSpeedModel);
+
+						bool hasTexturedBackground = ((layer.Flags & 0x08) == 0x08);
+						if (isSky && !hasTexturedBackground && layer.SpeedModelX <= LayerSectionSpeedModel::Legacy && layer.SpeedModelY <= LayerSectionSpeedModel::Legacy) {
+							co.WriteValue<float>(180.0f);
+							co.WriteValue<float>(-300.0f);
+						} else {
+							co.WriteValue<float>(layer.OffsetX);
+							co.WriteValue<float>(layer.OffsetY);
+						}
+
+						float speedX = layer.SpeedX;
+						float speedY = layer.SpeedY;
+						float autoSpeedX = layer.AutoSpeedX;
+						float autoSpeedY = layer.AutoSpeedY;
+						if (layer.SpeedModelX == LayerSectionSpeedModel::FitLevel ||
+							(layer.SpeedModelX <= LayerSectionSpeedModel::Legacy && !hasTexturedBackground && std::abs(autoSpeedX) > 0.0f)) {
+							speedX = 0.0f;
+						}
+						if (layer.SpeedModelY == LayerSectionSpeedModel::FitLevel ||
+							(layer.SpeedModelY <= LayerSectionSpeedModel::Legacy && !hasTexturedBackground && std::abs(autoSpeedY) > 0.0f)) {
+							speedY = 0.0f;
+						}
+						if (layer.SpeedModelX == LayerSectionSpeedModel::FitLevel) {
+							autoSpeedX = 0.0f;
+						}
+						if (layer.SpeedModelY == LayerSectionSpeedModel::FitLevel) {
+							autoSpeedY = 0.0f;
+						}
+
+						co.WriteValue<float>(speedX);
+						co.WriteValue<float>(speedY);
+						co.WriteValue<float>(autoSpeedX);
+						co.WriteValue<float>(autoSpeedY);
+						co.WriteValue<int16_t>((int16_t)layer.Depth);
+
+						if (isSky && hasTexturedBackground) {
+							co.WriteValue<uint8_t>(layer.TexturedBackgroundType + (uint8_t)Tiles::LayerRendererType::Sky);
+							co.WriteValue<uint8_t>(layer.TexturedParams1);
+							co.WriteValue<uint8_t>(layer.TexturedParams2);
+							co.WriteValue<uint8_t>(layer.TexturedParams3);
+							co.WriteValue<uint8_t>((layer.Flags & 0x10) == 0x10 ? 255 : 0);	// ParallaxStarsEnabled
+						} else if (layer.SpriteMode == 2) {
+							co.WriteValue<uint8_t>((uint8_t)Tiles::LayerRendererType::Tinted);
+							co.WriteValue<uint8_t>(layer.SpriteParam);
+							co.WriteValue<uint8_t>(0);
+							co.WriteValue<uint8_t>(0);
+							co.WriteValue<uint8_t>(255);
+						} else {
+							co.WriteValue<uint8_t>((uint8_t)Tiles::LayerRendererType::Default);
+							co.WriteValue<uint8_t>(255);
+							co.WriteValue<uint8_t>(255);
+							co.WriteValue<uint8_t>(255);
+							co.WriteValue<uint8_t>(255);
+						}
+					}
+
+					for (int y = 0; y < layer.Height; y++) {
+						for (int x = 0; x < layer.Width; x++) {
+							uint16_t tileIdx = layer.Tiles[y * layer.InternalWidth + x];
+
+							bool flipX = false, flipY = false;
+							if ((tileIdx & 0x2000) != 0) {
+								flipY = true;
+								tileIdx -= 0x2000;
+							}
+
+							if ((tileIdx & ~(maxTiles | (maxTiles - 1))) != 0) {
+								// Fix of bug in updated Psych2.j2l
+								tileIdx = (uint16_t)((tileIdx & (maxTiles | (maxTiles - 1))) | maxTiles);
+							}
+
+							// Max. tiles is either 0x0400 or 0x1000 and doubles as a mask to separate flipped tiles.
+							// In J2L, each flipped tile had a separate entry in the tile list, probably to make
+							// the dictionary concept easier to handle.
+
+							if ((tileIdx & maxTiles) > 0) {
+								flipX = true;
+								tileIdx -= maxTiles;
+							}
+
+							bool animated = false;
+							if (tileIdx >= lastTilesetTileIndex) {
+								animated = true;
+								tileIdx -= lastTilesetTileIndex;
+							}
+
+							bool legacyTranslucent = false;
+							bool invisible = false;
+							if (!animated && tileIdx < lastTilesetTileIndex) {
+								legacyTranslucent = (_staticTiles[tileIdx].Type == 1);
+								invisible = (_staticTiles[tileIdx].Type == 3);
+							}
+
+							uint8_t tileFlags = 0;
+							if (flipX) {
+								tileFlags |= 0x01;
+							}
+							if (flipY) {
+								tileFlags |= 0x02;
+							}
+							if (animated) {
+								tileFlags |= 0x04;
+							}
+
+							if (legacyTranslucent) {
+								tileFlags |= 0x10;
+							} else if (invisible) {
+								tileFlags |= 0x20;
+							}
+
+							co.WriteValue<uint8_t>(tileFlags);
+							co.WriteValue<uint16_t>(tileIdx);
+						}
+					}
+				}
+			}
+
+			// Events
+			for (int y = 0; y < _layers[3].Height; y++) {
+				for (int x = 0; x < _layers[3].Width; x++) {
+					auto& tileEvent = _events[x + y * _layers[3].Width];
+
+					// TODO: Flag 0x08 not used
+					int flags = 0;
+					if (tileEvent.Illuminate) {
+						flags |= 0x04; // Illuminated
+					}
+					if (tileEvent.Difficulty != 2 /*Hard*/) {
+						flags |= 0x10; // Difficulty: Easy
+					}
+					if (tileEvent.Difficulty == 0 /*All*/) {
+						flags |= 0x20; // Difficulty: Normal
+					}
+					if (tileEvent.Difficulty != 1 /*Easy*/) {
+						flags |= 0x40; // Difficulty: Hard
+					}
+					if (tileEvent.Difficulty == 3 /*Multiplayer*/) {
+						flags |= 0x80; // Multiplayer Only
+					}
+
+					co.WriteValue<uint16_t>((uint16_t)tileEvent.Converted.Type);
+
+					bool allZeroes = true;
+					if (tileEvent.Converted.Type != EventType::Empty) {
+						for (int i = 0; i < countof(tileEvent.Converted.Params); i++) {
+							if (tileEvent.Converted.Params[i] != 0) {
+								allZeroes = false;
+								break;
+							}
+						}
+					}
+
+					if (allZeroes) {
+						if (tileEvent.GeneratorDelay == -1) {
+							co.WriteValue<uint8_t>(flags | 0x01 /*NoParams*/);
+						} else {
+							co.WriteValue<uint8_t>(flags | 0x01 /*NoParams*/ | 0x02 /*Generator*/);
+							co.WriteValue<uint8_t>(tileEvent.GeneratorFlags);
+							co.WriteValue<uint8_t>(tileEvent.GeneratorDelay);
+						}
+					} else {
+						if (tileEvent.GeneratorDelay == -1) {
+							co.WriteValue<uint8_t>(flags);
+						} else {
+							co.WriteValue<uint8_t>(flags | 0x02 /*Generator*/);
+							co.WriteValue<uint8_t>(tileEvent.GeneratorFlags);
+							co.WriteValue<uint8_t>(tileEvent.GeneratorDelay);
+						}
+
+						co.Write(tileEvent.Converted.Params, sizeof(tileEvent.Converted.Params));
+					}
 				}
 			}
 		}
 
-		int32_t compressedSize = CompressionUtils::GetMaxDeflatedSize(co.GetSize());
-		std::unique_ptr<uint8_t[]> compressedBuffer = std::make_unique<uint8_t[]>(compressedSize);
-		compressedSize = CompressionUtils::Deflate(co.GetBuffer(), co.GetSize(), compressedBuffer.get(), compressedSize);
-		ASSERT(compressedSize > 0);
-
-		so->WriteValue<int32_t>(compressedSize);
-		so->WriteValue<int32_t>(co.GetSize());
-		so->Write(compressedBuffer.get(), compressedSize);
+		so->WriteValue<std::int32_t>(ms.GetSize());
+		so->Write(ms.GetBuffer(), ms.GetSize());
 
 #if defined(DEATH_DEBUG)
 		/*auto episodeName = fs::GetFileName(fs::GetDirectoryName(targetPath));
@@ -1033,7 +1030,7 @@ namespace Jazz2::Compatibility
 		_levelTokenTextIds.push_back(textId);
 	}
 
-	void JJ2Level::WriteLevelName(MemoryStream& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion)
+	void JJ2Level::WriteLevelName(Stream& so, MutableStringView value, const std::function<LevelToken(MutableStringView&)>& levelTokenConversion)
 	{
 		if (!value.empty()) {
 			MutableStringView adjustedValue = value;

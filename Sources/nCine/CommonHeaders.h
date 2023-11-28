@@ -7,28 +7,19 @@
 #		include <GLES2/gl2ext.h>
 #	elif defined(WITH_GLEW)
 #		define GLEW_NO_GLU
-#		if !defined(CMAKE_BUILD) && defined(__has_include)
-#			if __has_include("../../Libs/Includes/GL/glew.h")
-#				define __HAS_LOCAL_OPENGL
-#			endif
-#		endif
-#		if defined(__HAS_LOCAL_OPENGL)
-#			include "../../Libs/Includes/GL/glew.h"
-#		else
-#			include <GL/glew.h>
-#		endif
+#		include <GL/glew.h>
 #	elif defined(DEATH_TARGET_APPLE)
 #		define GL_SILENCE_DEPRECATION
 #		include <OpenGL/gl3.h>
 #		include <OpenGL/gl3ext.h>
 #	else
 #		if !defined(CMAKE_BUILD) && defined(__has_include)
-#			if __has_include("../../Libs/Includes/GL/glew.h")
-#				define __HAS_LOCAL_OPENGL
+#			if __has_include("GL/glew.h")
+#				define __HAS_LOCAL_GLEW
 #			endif
 #		endif
-#		if defined(__HAS_LOCAL_OPENGL)
-#			include "../../Libs/Includes/GL/glew.h"
+#		if defined(__HAS_LOCAL_GLEW)
+#			include "GL/glew.h"
 #		else
 #			define GL_GLEXT_PROTOTYPES
 #			include <GL/gl.h>
@@ -45,13 +36,13 @@
 #		include <AL/al.h>
 #	else
 #		if !defined(CMAKE_BUILD) && defined(__has_include)
-#			if __has_include("../../Libs/Includes/AL/al.h")
+#			if __has_include("AL/al.h")
 #				define __HAS_LOCAL_OPENAL
 #			endif
 #		endif
 #		if defined(__HAS_LOCAL_OPENAL)
-#			include "../../Libs/Includes/AL/al.h"
-#			include "../../Libs/Includes/AL/alext.h"
+#			include "AL/al.h"
+#			include "AL/alext.h"
 #		else
 #			include <al.h>
 #			include <alext.h>
@@ -69,18 +60,16 @@
 #		include <AL/al.h>
 #	else
 #		if !defined(CMAKE_BUILD) && defined(__has_include)
-#			if __has_include("../../Libs/Includes/AL/al.h")
+#			if __has_include("AL/al.h")
 #				define __HAS_LOCAL_OPENALC
 #			endif
 #		endif
 #		if defined(__HAS_LOCAL_OPENALC)
-#			include "../../Libs/Includes/AL/alc.h"
-#			include "../../Libs/Includes/AL/al.h"
-#			include "../../Libs/Includes/AL/alext.h"
-#			if defined(__has_include)
-#				if __has_include("../../Libs/Includes/AL/inprogext.h")
-#					include "../../Libs/Includes/AL/inprogext.h"
-#				endif
+#			include "AL/alc.h"
+#			include "AL/al.h"
+#			include "AL/alext.h"
+#			if __has_include("AL/inprogext.h")
+#				include "AL/inprogext.h"
 #			endif
 #		else
 #			include <alc.h>

@@ -1,7 +1,8 @@
 #include "TextureLoaderPng.h"
-#include "../IO/CompressionUtils.h"
 
 #include <Containers/SmallVector.h>
+#include <IO/DeflateStream.h>
+#include <IO/MemoryStream.h>
 
 using namespace Death::Containers;
 using namespace Death::IO;
@@ -99,10 +100,10 @@ namespace nCine
 					size_t dataLength = 16 + (width_ * height_ * 5);
 					auto buffer = std::make_unique<GLubyte[]>(dataLength);
 
-					int compressedSize = data.size() - 2;
-					int decompressedSize = dataLength;
-					auto result = CompressionUtils::Inflate(data.data() + 2, compressedSize, buffer.get(), decompressedSize);
-					RETURN_ASSERT_MSG(result == DecompressionResult::Success, "PNG file \"%s\" cannot be decompressed (%i)", fileHandle_->GetPath().data(), result);
+					MemoryStream ms(data.data() + 2, data.size() - 2);
+					DeflateStream uc(ms, dataLength);
+					uc.Read(buffer.get(), dataLength);
+					RETURN_ASSERT_MSG(uc.IsValid(), "PNG file \"%s\" cannot be decompressed", fileHandle_->GetPath().data());
 
 					int o = 0;
 					int pxStride = (isPaletted ? 1 : (is24Bit ? 3 : 4));

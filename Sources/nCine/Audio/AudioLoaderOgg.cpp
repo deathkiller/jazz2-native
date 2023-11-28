@@ -42,13 +42,6 @@ namespace nCine
 	{
 		LOGD("Loading \"%s\"", fileHandle_->GetPath().data());
 
-#if defined(DEATH_TARGET_ANDROID)
-		if (fileHandle_->GetType() == Stream::Type::AndroidAsset) {
-			fileHandle_->Open(FileAccessMode::Read | FileAccessMode::FileDescriptor);
-		} else
-#endif
-			fileHandle_->Open(FileAccessMode::Read);
-
 #if defined(WITH_VORBIS_DYNAMIC)
 		if (!AudioReaderOgg::TryLoadLibrary()) {
 			fileHandle_->Close();

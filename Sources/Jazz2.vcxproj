@@ -109,7 +109,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -117,7 +117,7 @@
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);$(ProjectDir)..\Libs\Includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -133,7 +133,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ANGELSCRIPT;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_ANGELSCRIPT;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -141,7 +141,7 @@
       <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);$(ProjectDir)..\Libs\Includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -158,7 +158,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -166,7 +166,7 @@
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);$(ProjectDir)..\Libs\Includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -182,7 +182,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -190,7 +190,7 @@
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);$(ProjectDir)..\Libs\Includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -358,7 +358,6 @@
     <ClInclude Include="Jazz2\PlayerType.h" />
     <ClInclude Include="Jazz2\PreferencesCache.h" />
     <ClInclude Include="Jazz2\Resources.h" />
-    <ClInclude Include="Jazz2\Scripting\FindAngelScript.h" />
     <ClInclude Include="Jazz2\Scripting\JJ2PlusDefinitions.h" />
     <ClInclude Include="Jazz2\Scripting\LevelScriptLoader.h" />
     <ClInclude Include="Jazz2\Scripting\RegisterArray.h" />
@@ -547,7 +546,6 @@
     <ClInclude Include="nCine\Input\Keys.h" />
     <ClInclude Include="nCine\Backends\Qt5InputManager.h" />
     <ClInclude Include="nCine\Backends\SdlInputManager.h" />
-    <ClInclude Include="nCine\IO\CompressionUtils.h" />
     <ClInclude Include="nCine\IO\EmscriptenLocalFile.h" />
     <ClInclude Include="nCine\MainApplication.h" />
     <ClInclude Include="nCine\Primitives\AABB.h" />
@@ -604,6 +602,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Tags.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\DateTime.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Threading\Interlocked.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\IO\DeflateStream.h" />
     <ClInclude Include="simdjson\simdjson.h" />
   </ItemGroup>
   <ItemGroup>
@@ -879,7 +878,6 @@
     <ClCompile Include="nCine\Backends\Qt5Keys.cpp" />
     <ClCompile Include="nCine\Backends\SdlInputManager.cpp" />
     <ClCompile Include="nCine\Backends\SdlKeys.cpp" />
-    <ClCompile Include="nCine\IO\CompressionUtils.cpp" />
     <ClCompile Include="nCine\IO\EmscriptenLocalFile.cpp" />
     <ClCompile Include="nCine\MainApplication.cpp" />
     <ClCompile Include="nCine\Primitives\Color.cpp" />
@@ -917,6 +915,7 @@
     <ClCompile Include="Jazz2\Tiles\TileSet.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\DateTime.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\IO\DeflateStream.cpp" />
     <ClCompile Include="simdjson\simdjson.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -2,9 +2,9 @@
 
 #if defined(WITH_ANGELSCRIPT)
 
-#include "FindAngelScript.h"
-
 #include "../../nCine/Base/HashMap.h"
+
+#include <angelscript.h>
 
 #include <Containers/String.h>
 

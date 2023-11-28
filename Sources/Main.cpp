@@ -17,7 +17,6 @@
 #include "nCine/Graphics/BinaryShaderCache.h"
 #include "nCine/Graphics/RenderResources.h"
 #include "nCine/Input/IInputEventHandler.h"
-#include "nCine/IO/CompressionUtils.h"
 #include "nCine/Threading/Thread.h"
 
 #include "Jazz2/IRootController.h"
@@ -60,6 +59,7 @@ using namespace Jazz2::Multiplayer;
 
 #include <Cpu.h>
 #include <Environment.h>
+#include <IO/DeflateStream.h>
 #include <IO/FileSystem.h>
 
 #if !defined(DEATH_DEBUG)
@@ -82,7 +82,7 @@ public:
 	static constexpr std::int32_t DefaultWidth = 720;
 	static constexpr std::int32_t DefaultHeight = 405;
 
-	static constexpr std::uint16_t StateVersion = 1;
+	static constexpr std::uint16_t StateVersion = 2;
 	static constexpr char StateFileName[] = "Jazz2.resume";
 
 #if defined(WITH_MULTIPLAYER)
@@ -586,25 +586,21 @@ void GameEventHandler::ResumeSavedState()
 			std::uint64_t signature = s->ReadValue<std::uint64_t>();
 			std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 			std::uint16_t version = s->ReadValue<std::uint16_t>();
-			if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::StateFile || version != StateVersion) {
+			if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::StateFile || version > StateVersion) {
 				return;
 			}
 
-			std::int32_t compressedSize = s->ReadVariableInt32();
-			std::int32_t decompressedSize = s->ReadVariableInt32();
+			if (version == 1) {
+				// Version 1 included compressedSize and decompressedSize, it's not needed anymore
+				std::int32_t compressedSize = s->ReadVariableInt32();
+				std::int32_t decompressedSize = s->ReadVariableInt32();
+			}
 
-			auto compressedBuffer = std::make_unique<std::uint8_t[]>(compressedSize);
-			auto decompressedBuffer = std::make_unique<std::uint8_t[]>(decompressedSize);
-
-			s->Read(compressedBuffer.get(), compressedSize);
-			auto result = CompressionUtils::Inflate(compressedBuffer.get(), compressedSize, decompressedBuffer.get(), decompressedSize);
-			if (result == DecompressionResult::Success) {
-				MemoryStream ms(decompressedBuffer.get(), decompressedSize);
-				auto levelHandler = std::make_unique<LevelHandler>(this);
-				if (levelHandler->Initialize(ms)) {
-					SetStateHandler(std::move(levelHandler));
-					return;
-				}
+			DeflateStream uc(*s);
+			auto levelHandler = std::make_unique<LevelHandler>(this);
+			if (levelHandler->Initialize(uc)) {
+				SetStateHandler(std::move(levelHandler));
+				return;
 			}
 		}
 
@@ -626,16 +622,10 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 			s->WriteValue<std::uint8_t>(ContentResolver::StateFile);
 			s->WriteValue<std::uint16_t>(StateVersion);
 
-			MemoryStream ms(512 * 1024);
-			levelHandler->SerializeResumableToStream(ms);
-
-			std::int32_t compressedSize = CompressionUtils::GetMaxDeflatedSize(ms.GetSize());
-			std::unique_ptr<std::uint8_t[]> compressedBuffer = std::make_unique<std::uint8_t[]>(compressedSize);
-			compressedSize = CompressionUtils::Deflate(ms.GetBuffer(), ms.GetSize(), compressedBuffer.get(), compressedSize);
-
-			s->WriteVariableInt32(compressedSize);
-			s->WriteVariableInt32(ms.GetSize());
-			s->Write(compressedBuffer.get(), compressedSize);
+			DeflateWriter co(*s);
+			if (!levelHandler->SerializeResumableToStream(co)) {
+				LOGE("Failed to save current state");
+			}
 			return true;
 		}
 	}
@@ -803,7 +793,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 		}
 	}
 
-	if (auto multiLevelHandler = dynamic_cast<MultiLevelHandler*>(_currentHandler.get())) {
+	if (auto* multiLevelHandler = dynamic_cast<MultiLevelHandler*>(_currentHandler.get())) {
 		if (multiLevelHandler->OnPacketReceived(peer, channelId, data, dataLength)) {
 			return;
 		}

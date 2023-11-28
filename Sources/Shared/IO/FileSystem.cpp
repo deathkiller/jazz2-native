@@ -2068,20 +2068,13 @@ namespace Death::IO
 
 	std::unique_ptr<Stream> FileSystem::Open(const String& path, FileAccessMode mode)
 	{
-		std::unique_ptr<Stream> stream;
 #if defined(DEATH_TARGET_ANDROID)
 		const char* assetName = AndroidAssetStream::TryGetAssetPath(String::nullTerminatedView(path).data());
 		if (assetName != nullptr) {
-			stream = std::make_unique<AndroidAssetStream>(assetName);
-		} else
-#endif
-		stream = std::make_unique<FileStream>(path);
-
-		if (mode != FileAccessMode::None) {
-			stream->Open(mode);
+			return std::make_unique<AndroidAssetStream>(assetName, mode);
 		}
-
-		return stream;
+#endif
+		return std::make_unique<FileStream>(path, mode);
 	}
 
 #if defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))

@@ -37,7 +37,7 @@ namespace Death::IO
 		_mode = AccessMode::None;
 	}
 
-	std::int32_t MemoryStream::Seek(std::int32_t offset, SeekOrigin origin) const
+	std::int32_t MemoryStream::Seek(std::int32_t offset, SeekOrigin origin)
 	{
 		std::int32_t seekValue;
 		switch (origin) {
@@ -68,7 +68,7 @@ namespace Death::IO
 		return _seekOffset;
 	}
 
-	std::int32_t MemoryStream::Read(void* buffer, std::int32_t bytes) const
+	std::int32_t MemoryStream::Read(void* buffer, std::int32_t bytes)
 	{
 		DEATH_ASSERT(buffer != nullptr, 0, "buffer is nullptr");
 
@@ -106,5 +106,34 @@ namespace Death::IO
 	bool MemoryStream::IsValid() const
 	{
 		return true;
+	}
+
+	void MemoryStream::ReserveCapacity(std::int32_t bytes)
+	{
+		if (_mode == AccessMode::Growable) {
+			Containers::arrayReserve(_buffer, _seekOffset + bytes);
+		}
+	}
+
+	std::int32_t MemoryStream::FetchFromStream(Stream& s, std::int32_t bytes)
+	{
+		std::int32_t bytesFetched = 0;
+
+		if (bytes > 0 && (_mode == AccessMode::Writable || _mode == AccessMode::Growable)) {
+			if (_size < _seekOffset + bytes) {
+				_size = _seekOffset + bytes;
+				Containers::arrayResize(_buffer, Containers::NoInit, _size);
+			}
+
+			std::int32_t bytesToRead = (_seekOffset + bytes > _size ? (_size - _seekOffset) : bytes);
+			while (bytesToRead > 0) {
+				std::int32_t bytesRead = s.Read(_buffer.data() + _seekOffset, bytesToRead);
+				bytesFetched += bytesRead;
+				bytesToRead -= bytesRead;
+			}
+			_seekOffset += bytesFetched;
+		}
+
+		return bytesFetched;
 	}
 }

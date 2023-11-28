@@ -16,27 +16,18 @@ namespace Death::IO
 	{
 		_type = Type::AndroidAsset;
 		_path = path;
+		
+		if ((mode & FileAccessMode::FileDescriptor) == FileAccessMode::FileDescriptor) {
+			OpenDescriptor(mode);
+		} else {
+			OpenAsset(mode);
+		}
 	}
 
 	AndroidAssetStream::~AndroidAssetStream()
 	{
 		if (_shouldCloseOnDestruction) {
 			Close();
-		}
-	}
-
-	void AndroidAssetStream::Open(FileAccessMode mode)
-	{
-		// Checking if the file is already opened
-		if (_fileDescriptor >= 0 || _asset != nullptr) {
-			LOGW("File \"%s\" is already opened", _path.data());
-		} else {
-			// Opening with a file descriptor
-			if ((mode & FileAccessMode::FileDescriptor) == FileAccessMode::FileDescriptor) {
-				OpenDescriptor(mode);
-			} else {
-				OpenAsset(mode);
-			}
 		}
 	}
 

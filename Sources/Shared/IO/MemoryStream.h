@@ -13,14 +13,16 @@ namespace Death::IO
 		MemoryStream(std::uint8_t* bufferPtr, std::int32_t bufferSize);
 		MemoryStream(const std::uint8_t* bufferPtr, std::int32_t bufferSize);
 
-		void Open(FileAccessMode mode) override { }
 		void Close() override;
-		std::int32_t Seek(std::int32_t offset, SeekOrigin origin) const override;
+		std::int32_t Seek(std::int32_t offset, SeekOrigin origin) override;
 		std::int32_t GetPosition() const override;
-		std::int32_t Read(void* buffer, std::int32_t bytes) const override;
+		std::int32_t Read(void* buffer, std::int32_t bytes) override;
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override;
 
 		bool IsValid() const override;
+
+		void ReserveCapacity(std::int32_t bytes);
+		std::int32_t FetchFromStream(Stream& s, std::int32_t bytes);
 
 		DEATH_ALWAYS_INLINE const std::uint8_t* GetBuffer() const {
 			return _buffer.data();

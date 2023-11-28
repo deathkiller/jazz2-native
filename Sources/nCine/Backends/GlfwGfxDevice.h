@@ -4,27 +4,22 @@
 
 #include "../../Common.h"
 
+#if defined(WITH_GLEW)
+#	define GLEW_NO_GLU
+#	include <GL/glew.h>
+#endif
+
 #if !defined(CMAKE_BUILD) && defined(__has_include)
-#	if __has_include("../../../Libs/Includes/GL/glew.h")
-#		define __HAS_LOCAL_GLEW
+#	if __has_include("GL/glfw3.h")
+#		define __HAS_LOCAL_GLFW
 #	endif
 #endif
-#if defined(__HAS_LOCAL_GLEW)
-#	if defined(WITH_GLEW)
-#		define GLEW_NO_GLU
-#		include "../../../Libs/Includes/GL/glew.h"
-#	endif
-#	include "../../../Libs/Includes/GL/glfw3.h"
+#if defined(__HAS_LOCAL_GLFW)
+#	include "GL/glfw3.h"
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
+#	include <GLFW/glfw3.h>
 #else
-#	if defined(WITH_GLEW)
-#		define GLEW_NO_GLU
-#		include <GL/glew.h>
-#	endif
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
-#		include <GLFW/glfw3.h>
-#	else
-#		include <glfw3.h>
-#	endif
+#	include <glfw3.h>
 #endif
 
 #include "../Primitives/Vector2.h"

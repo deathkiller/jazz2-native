@@ -3,8 +3,9 @@
 #if defined(WITH_ANGELSCRIPT)
 
 #include "../../Common.h"
-#include "FindAngelScript.h"
 #include "RegisterArray.h"
+
+#include <angelscript.h>
 
 #include <Containers/String.h>
 #include <Containers/StringView.h>

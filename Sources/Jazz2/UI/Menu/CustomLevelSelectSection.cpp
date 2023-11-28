@@ -5,8 +5,8 @@
 #include "../../PreferencesCache.h"
 #include "../../../nCine/Base/Algorithms.h"
 #include "../../../nCine/Base/FrameTimer.h"
-#include "../../../nCine/IO/CompressionUtils.h"
 
+#include <IO/DeflateStream.h>
 #include <IO/MemoryStream.h>
 
 using namespace Death::IO;
@@ -276,16 +276,8 @@ namespace Jazz2::UI::Menu
 
 		// Read compressed data
 		int32_t compressedSize = s->ReadValue<int32_t>();
-		int32_t uncompressedSize = s->ReadValue<int32_t>();
-		std::unique_ptr<uint8_t[]> compressedBuffer = std::make_unique<uint8_t[]>(compressedSize);
-		std::unique_ptr<uint8_t[]> uncompressedBuffer = std::make_unique<uint8_t[]>(uncompressedSize);
-		s->Read(compressedBuffer.get(), compressedSize);
 
-		s->Close();
-
-		auto result = CompressionUtils::Inflate(compressedBuffer.get(), compressedSize, uncompressedBuffer.get(), uncompressedSize);
-		RETURN_ASSERT_MSG(result == DecompressionResult::Success, "File cannot be uncompressed");
-		MemoryStream uc(uncompressedBuffer.get(), uncompressedSize);
+		DeflateStream uc(*s, compressedSize);
 
 		// Read metadata
 		uint8_t nameSize = uc.ReadValue<uint8_t>();
