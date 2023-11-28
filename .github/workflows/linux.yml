@@ -8,6 +8,10 @@ on:
     types: [ opened, synchronize ]
   workflow_dispatch:
 
+concurrency: 
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   Build:
     strategy:
@@ -115,7 +119,7 @@ jobs:
     - name: 'Create Build Environment'
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libopenmpt-dev rpm
+        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libopenmpt-dev fuse
         
     - name: 'Configure CMake'
       run: |
@@ -133,7 +137,7 @@ jobs:
     - name: 'Create AppImage'
       run: |
         if [ ! -f linuxdeploy-x86_64.AppImage ]; then
-          curl -O --location 'https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage'
+          curl -s -S -O --location 'https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage'
           chmod +x linuxdeploy-x86_64.AppImage
         fi
         
