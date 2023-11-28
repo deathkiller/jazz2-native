@@ -72,7 +72,7 @@
 #if defined(WITH_ZLIB)
 #	define _i11 ", zlib"
 #else
-#	define _i11 ", libdeflate"
+#	define _i11 ""
 #endif
 
 #if defined(WITH_ANGELSCRIPT)
