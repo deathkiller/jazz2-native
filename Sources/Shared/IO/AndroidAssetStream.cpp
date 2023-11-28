@@ -11,7 +11,7 @@ namespace Death::IO
 	AAssetManager* AndroidAssetStream::_assetManager = nullptr;
 	const char* AndroidAssetStream::_internalDataPath = nullptr;
 
-	AndroidAssetStream::AndroidAssetStream(const Containers::String& path)
+	AndroidAssetStream::AndroidAssetStream(const Containers::String& path, FileAccessMode mode)
 		: _asset(nullptr), _fileDescriptor(-1), _startOffset(0L), _shouldCloseOnDestruction(true)
 	{
 		_type = Type::AndroidAsset;
@@ -49,7 +49,7 @@ namespace Death::IO
 		}
 	}
 
-	std::int32_t AndroidAssetStream::Seek(std::int32_t offset, SeekOrigin origin) const
+	std::int32_t AndroidAssetStream::Seek(std::int32_t offset, SeekOrigin origin)
 	{
 		std::int32_t seekValue = -1;
 
@@ -84,7 +84,7 @@ namespace Death::IO
 		return tellValue;
 	}
 
-	std::int32_t AndroidAssetStream::Read(void* buffer, std::int32_t bytes) const
+	std::int32_t AndroidAssetStream::Read(void* buffer, std::int32_t bytes)
 	{
 		DEATH_ASSERT(buffer != nullptr, 0, "buffer is nullptr");
 

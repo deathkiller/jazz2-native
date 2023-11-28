@@ -20,13 +20,13 @@ namespace Death::IO
 	public:
 		static constexpr Containers::StringView Prefix = "asset::"_s;
 
-		explicit AndroidAssetStream(const Containers::String& path);
+		explicit AndroidAssetStream(const Containers::String& path, FileAccessMode mode);
 		~AndroidAssetStream() override;
 
 		void Close() override;
-		std::int32_t Seek(std::int32_t offset, SeekOrigin origin) const override;
+		std::int32_t Seek(std::int32_t offset, SeekOrigin origin) override;
 		std::int32_t GetPosition() const override;
-		std::int32_t Read(void* buffer, std::int32_t bytes) const override;
+		std::int32_t Read(void* buffer, std::int32_t bytes) override;
 
 		std::int32_t Write(const void* buffer, std::int32_t bytes) override {
 			return 0;
