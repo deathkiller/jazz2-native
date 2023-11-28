@@ -145,7 +145,7 @@ jobs:
         cp -f ./_build/jazz2 ./_package/usr/bin/jazz2
         cp -f -r ./Content/ ./_package/usr/bin/Content/
         
-        LDAI_OUTPUT="jazz2.AppImage" ARCH=x86_64 ./linuxdeploy-x86_64.AppImage --appdir=./_package/ --icon-file=./Sources/Icons/256px.png --icon-filename=jazz2 --desktop-file=./_build/jazz2.desktop --executable=./_package/usr/bin/jazz2 --custom-apprun=./Sources/AppRun --output=appimage
+        LDAI_OUTPUT="./_build/jazz2.AppImage" ARCH=x86_64 ./linuxdeploy-x86_64.AppImage --appdir=./_package/ --icon-file=./Sources/Icons/256px.png --icon-filename=jazz2 --desktop-file=./_build/jazz2.desktop --executable=./_package/usr/bin/jazz2 --custom-apprun=./Sources/AppRun --output=appimage
         
         artifactPath="Jazz2_${{ matrix.Platform }}.AppImage"
         echo "artifactPath=$artifactPath" >> $GITHUB_ENV
@@ -154,7 +154,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ${{ env.artifactPath }}
-        path: ./_package/jazz2.AppImage
+        path: ./_build/jazz2.AppImage
         
   CodeQL:
     name: 'CodeQL Analyze'
