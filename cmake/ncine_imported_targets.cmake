@@ -242,7 +242,7 @@ if(ANDROID)
 	set_target_properties(ZLIB::ZLIB PROPERTIES
 		IMPORTED_LOCATION "${ZLIB_LIBRARY}")
 	set(ZLIB_FOUND 1)
-	message(STATUS "Found ZLIB (static): ${ZLIB_LIBRARY}")
+	message(STATUS "Found ZLIB: ${ZLIB_LIBRARY}")
 	
 	#if(NCINE_WITH_PNG AND EXISTS "${EXTERNAL_ANDROID_DIR}/png/${ANDROID_ABI}/libpng16.a")
 	#	add_library(PNG::PNG STATIC IMPORTED)
