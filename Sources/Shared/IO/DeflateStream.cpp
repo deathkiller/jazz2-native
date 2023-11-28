@@ -1,6 +1,8 @@
 #include "DeflateStream.h"
 
-#if defined(WITH_ZLIB)
+#if !defined(WITH_ZLIB)
+#	pragma message("Death::IO::DeflateStream requires `zlib` library")
+#else
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #	if defined(_M_X64)
