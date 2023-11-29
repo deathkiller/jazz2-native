@@ -142,15 +142,16 @@ jobs:
     - name: 'Create AppImage'
       run: |
         if [ ! -f linuxdeploy-x86_64.AppImage ]; then
+          curl -s -S -O --location 'https://github.com/darealshinji/linuxdeploy-plugin-checkrt/releases/download/continuous/linuxdeploy-plugin-checkrt.sh'
           curl -s -S -O --location 'https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage'
-          chmod +x linuxdeploy-x86_64.AppImage
+          chmod a+x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-checkrt.sh
         fi
         
         mv -f ./_appdir/usr/share/jazz2/Content/ ./_appdir/usr/bin/Content/
         rm -f -r ./_appdir/usr/share/jazz2/
         rm -f -r ./_appdir/usr/share/doc/
         
-        LDAI_OUTPUT="./_build/jazz2.AppImage" ARCH=x86_64 ./linuxdeploy-x86_64.AppImage --appdir=./_appdir/ --icon-filename=jazz2 --desktop-file=./_appdir/usr/share/applications/jazz2.desktop --executable=./_appdir/usr/bin/jazz2 --custom-apprun=./Sources/AppRun --output=appimage
+        LDAI_OUTPUT="./_build/jazz2.AppImage" ARCH=x86_64 ./linuxdeploy-x86_64.AppImage --appdir=./_appdir/ --icon-filename=jazz2 --desktop-file=./_appdir/usr/share/applications/jazz2.desktop --executable=./_appdir/usr/bin/jazz2 --custom-apprun=./Sources/AppRun --output=appimage --plugin checkrt
         
         artifactPath="Jazz2_${{ matrix.Platform }}_${{ matrix.Backend }}.AppImage"
         echo "artifactPath=$artifactPath" >> $GITHUB_ENV
