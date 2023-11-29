@@ -104,6 +104,11 @@ jobs:
         include:
         - BuildType: Release
           Platform: x64
+          Backend: GLFW
+          CC: gcc
+          CXX: g++
+        - BuildType: Release
+          Platform: x64
           Backend: SDL2
           CC: gcc
           CXX: g++
@@ -147,7 +152,7 @@ jobs:
         
         LDAI_OUTPUT="./_build/jazz2.AppImage" ARCH=x86_64 ./linuxdeploy-x86_64.AppImage --appdir=./_package/ --icon-file=./Sources/Icons/256px.png --icon-filename=jazz2 --desktop-file=./_build/jazz2.desktop --executable=./_package/usr/bin/jazz2 --custom-apprun=./Sources/AppRun --output=appimage
         
-        artifactPath="Jazz2_${{ matrix.Platform }}.AppImage"
+        artifactPath="Jazz2_${{ matrix.Platform }}_${{ matrix.Backend }}.AppImage"
         echo "artifactPath=$artifactPath" >> $GITHUB_ENV
         
     - name: 'Upload Package'
