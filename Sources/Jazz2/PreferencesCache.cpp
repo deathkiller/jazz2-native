@@ -260,6 +260,11 @@ namespace Jazz2
 			} else {
 				TryLoadPreferredLanguage();
 
+				auto configDir = fs::GetDirectoryName(_configPath);
+				if (!configDir.empty()) {
+					fs::CreateDirectories(configDir);
+				}
+
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 				// Create "Source" directory on the first launch
 				auto& resolver = ContentResolver::Get();
