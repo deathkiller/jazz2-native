@@ -133,11 +133,11 @@ jobs:
         
         rm -f ./Content/Translations/*.po
         
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_WITH_GLEW=OFF -D NCINE_LINUX_PACKAGE=jazz2 -D NCINE_PACKAGED_CONTENT_PATH=ON
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_WITH_GLEW=OFF -D NCINE_LINUX_PACKAGE=jazz2 -D NCINE_PACKAGED_CONTENT_PATH=ON -D CMAKE_INSTALL_PREFIX=/usr
 
     - name: 'Build'
       run: |
-        make -j $(nproc) -C ./_build/
+        DESTDIR=./_appdir/ make install -j $(nproc) -C ./_build/
 
     - name: 'Create AppImage'
       run: |
@@ -146,11 +146,10 @@ jobs:
           chmod +x linuxdeploy-x86_64.AppImage
         fi
         
-        mkdir -p ./_package/usr/bin/
-        cp -f ./_build/jazz2 ./_package/usr/bin/jazz2
-        cp -f -r ./Content/ ./_package/usr/bin/Content/
+        mv -f ./_appdir/usr/share/jazz2/Content/ ./_appdir/usr/bin/Content/
+        rmdir ./_appdir/usr/share/jazz2/
         
-        LDAI_OUTPUT="./_build/jazz2.AppImage" ARCH=x86_64 ./linuxdeploy-x86_64.AppImage --appdir=./_package/ --icon-file=./Sources/Icons/256px.png --icon-filename=jazz2 --desktop-file=./_build/jazz2.desktop --executable=./_package/usr/bin/jazz2 --custom-apprun=./Sources/AppRun --output=appimage
+        LDAI_OUTPUT="./_build/jazz2.AppImage" ARCH=x86_64 ./linuxdeploy-x86_64.AppImage --appdir=./_appdir/ --icon-filename=jazz2 --desktop-file=./_appdir/usr/share/applications/jazz2.desktop --executable=./_appdir/usr/bin/jazz2 --custom-apprun=./Sources/AppRun --output=appimage
         
         artifactPath="Jazz2_${{ matrix.Platform }}_${{ matrix.Backend }}.AppImage"
         echo "artifactPath=$artifactPath" >> $GITHUB_ENV

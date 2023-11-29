@@ -226,7 +226,7 @@ namespace Jazz2::UI::Menu
 			_items[i].Y = center.Y;
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-			if (i <= (int32_t)Item::Options && !isPlayable) {
+			if (_items[i].Type <= Item::Options && !isPlayable) {
 				if (i != 0 && (!hideSecondItem || i != 1)) {
 					if (_selectedIndex == i) {
 						_root->DrawElement(MenuGlow, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (Utf8::GetLength(_items[i].Name) + 3) * 0.5f, 4.0f, true);
