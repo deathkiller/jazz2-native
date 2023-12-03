@@ -845,23 +845,29 @@ namespace Death::Containers
 	}
 
 	template<class T> constexpr T& ArrayView<T>::front() const {
-		return _data[0];
+		return DEATH_DEBUG_CONSTEXPR_ASSERT(_size != 0, "Containers::ArrayView::front(): View is empty"), _data[0];
 	}
 
 	template<class T> constexpr T& ArrayView<T>::back() const {
-		return _data[_size - 1];
+		return DEATH_DEBUG_CONSTEXPR_ASSERT(_size != 0, "Containers::ArrayView::back(): View is empty"), _data[_size - 1];
 	}
 
 	template<class T> template<class U, class> constexpr T& ArrayView<T>::operator[](const U i) const {
-		return _data[i];
+		return DEATH_DEBUG_CONSTEXPR_ASSERT(std::size_t(i) < _size, "Containers::ArrayView::operator[](): Index %zu out of range for %zu elements", std::size_t(i), _size),
+				_data[i];
 	}
 
 	template<class T> constexpr ArrayView<T> ArrayView<T>::slice(T* begin, T* end) const {
-		return ArrayView<T>{begin, std::size_t(end - begin)};
+		return DEATH_DEBUG_CONSTEXPR_ASSERT(_data <= begin && begin <= end && end <= _data + _size,
+					"Containers::ArrayView::slice(): Slice [%zu:%zu] out of range for %zu elements",
+					std::size_t(begin - _data), std::size_t(end - _data), _size),
+				ArrayView<T>{begin, std::size_t(end - begin)};
 	}
 
 	template<class T> constexpr ArrayView<T> ArrayView<T>::slice(std::size_t begin, std::size_t end) const {
-		return ArrayView<T>{_data + begin, end - begin};
+		return DEATH_DEBUG_CONSTEXPR_ASSERT(begin <= end && end <= _size,
+					"Containers::ArrayView::slice(): Slice [%zu:%zu] out of range for %zu elements", begin, end, _size),
+				ArrayView<T>{_data + begin, end - begin};
 	}
 
 	template<std::size_t size_, class T> constexpr T& StaticArrayView<size_, T>::front() const {
@@ -875,21 +881,29 @@ namespace Death::Containers
 	}
 
 	template<std::size_t size_, class T> template<class U, class> constexpr T& StaticArrayView<size_, T>::operator[](const U i) const {
-		return _data[i];
+		return DEATH_DEBUG_CONSTEXPR_ASSERT(std::size_t(i) < size_, "Containers::ArrayView::operator[](): Index %zu out of range for %zu elements", std::size_t(i), size_),
+				_data[i];
 	}
 
 	template<class T> template<std::size_t size_, class U, class> constexpr StaticArrayView<size_, T> ArrayView<T>::slice(const U begin) const {
-		return StaticArrayView<size_, T>{begin};
+		return DEATH_DEBUG_CONSTEXPR_ASSERT(_data <= begin && begin + size_ <= _data + _size,
+					"Containers::ArrayView::slice(): Slice [%zu:%zu] out of range for %zu elements",
+					std::size_t(begin - _data), std::size_t(begin + size_ - _data), _size),
+				StaticArrayView<size_, T>{begin};
 	}
 
 	template<class T> template<std::size_t size_> constexpr StaticArrayView<size_, T> ArrayView<T>::slice(std::size_t begin) const {
 		static_assert(begin + size_ <= _size, "Slice needs to have a positive size");
-		return StaticArrayView<size_, T>{_data + begin};
+		return DEATH_DEBUG_CONSTEXPR_ASSERT(begin + size_ <= _size,
+					"Containers::ArrayView::slice(): Slice [%zu:%zu] out of range for %zu elements", begin_, begin + size_, _size),
+				StaticArrayView<size_, T>{_data + begin};
 	}
 
 	template<class T> template<std::size_t begin_, std::size_t end_> constexpr StaticArrayView<end_ - begin_, T> ArrayView<T>::slice() const {
 		static_assert(begin_ < end_, "Fixed-size slice needs to have a positive size");
-		return StaticArrayView<end_ - begin_, T>{_data + begin_};
+		return DEATH_DEBUG_CONSTEXPR_ASSERT(end_ <= _size,
+					"Containers::ArrayView::slice(): Slice [%zu:%zu] out of range for %zu elements", begin_, end_, _size),
+				StaticArrayView<end_ - begin_, T>{_data + begin_};
 	}
 
 	template<std::size_t size_, class T> template<std::size_t begin_, std::size_t end_> constexpr StaticArrayView<end_ - begin_, T> StaticArrayView<size_, T>::slice() const {

@@ -21,22 +21,10 @@ namespace Death::IO
 	class DeflateStream : public Stream
 	{
 	public:
-		DeflateStream()
-			: _inputStream(nullptr), _inputSize(-1), _state(State::Unknown)
-		{
-			_size = INT32_MAX;
-		}
+		DeflateStream();
+		DeflateStream(Stream& inputStream, std::int32_t inputSize = -1, bool rawInflate = true);
 
-		DeflateStream(Stream& inputStream, std::int32_t inputSize = -1, bool rawInflate = true)
-			: DeflateStream()
-		{
-			Open(inputStream, inputSize, rawInflate);
-		}
-
-		~DeflateStream()
-		{
-			Close();
-		}
+		~DeflateStream();
 
 		void Open(Stream& inputStream, std::int32_t inputSize = -1, bool rawInflate = true);
 

@@ -88,7 +88,7 @@
 #endif
 
 #if defined(DEATH_CPU_USE_RUNTIME_DISPATCH)
-#	define _i14 " (CPU Dispatch)"
+#	define _i14 ", GNU IFUNC"
 #else
 #	define _i14 ""
 #endif
