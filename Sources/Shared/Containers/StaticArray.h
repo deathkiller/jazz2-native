@@ -521,6 +521,7 @@ namespace Death::Containers
 	}
 
 	template<std::size_t size_, class T> template<class U, class> const T& StaticArray<size_, T>::operator[](const U i) const {
+		DEATH_DEBUG_ASSERT(std::size_t(i) < size_, _data[0], "Containers::StaticArray::operator[](): Index %zu out of range for %zu elements", std::size_t(i), size_);
 		return _data[i];
 	}
 

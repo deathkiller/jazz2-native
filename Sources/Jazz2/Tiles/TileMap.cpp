@@ -1342,7 +1342,17 @@ namespace Jazz2::Tiles
 		RETURN_ASSERT_MSG(layoutSize == realLayoutSize, "Layout size mismatch");
 
 		for (std::int32_t i = 0; i < layoutSize; i++) {
-			spriteLayer.Layout[i].DestructFrameIndex = src.ReadVariableInt32();
+			auto& tile = spriteLayer.Layout[i];
+			tile.DestructFrameIndex = src.ReadVariableInt32();
+			if (tile.DestructFrameIndex > 0) {
+				auto& anim = _animatedTiles[tile.DestructAnimation];
+				std::int32_t max = (std::int32_t)(anim.Tiles.size() - 2);
+				if (tile.DestructFrameIndex > max) {
+					LOGW("Serialized tile %i with animation frame %i is out of range", i, tile.DestructFrameIndex);
+					tile.DestructFrameIndex = max;
+				}
+				tile.TileID = anim.Tiles[tile.DestructFrameIndex].TileID;
+			}
 		}
 
 		src.Read(_triggerState.RawData(), _triggerState.SizeInBytes());

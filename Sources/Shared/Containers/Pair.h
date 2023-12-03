@@ -47,7 +47,7 @@ namespace Death::Containers
 	*/
 	template<class F, class S> class Pair
 	{
-		static_assert(!std::is_lvalue_reference<F>::value && !std::is_lvalue_reference<S>::value, "use a Reference<T> to store a T& in a Pair");
+		static_assert(!std::is_lvalue_reference<F>::value && !std::is_lvalue_reference<S>::value, "Use a Reference<T> to store a T& in a Pair");
 
 	public:
 		typedef F FirstType;

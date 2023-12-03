@@ -122,7 +122,7 @@ namespace Death::Containers
 		// is rare but possible and thus worth checking even in release
 		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
 #endif
-		DEATH_ASSERT(data || size == 0, , "Containers::String: Received a null string of size %zu", size);
+		DEATH_ASSERT(data != nullptr || size == 0, , "Containers::String: Received a null string of size %zu", size);
 
 		construct(data, size);
 	}
@@ -143,7 +143,7 @@ namespace Death::Containers
 		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus worth checking even in release
 		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
-		DEATH_ASSERT(data || size == 0, , "Containers::String: Received a null string of size %zu", size);
+		DEATH_ASSERT(data != nullptr || size == 0, , "Containers::String: Received a null string of size %zu", size);
 
 		_large.data = new char[size + 1];
 		// Apparently memcpy() can't be called with null pointers, even if size is zero. I call that bullying.
@@ -194,7 +194,7 @@ namespace Death::Containers
 		// is rare but possible and thus worth checking even in release; but most importantly checking for null
 		// termination outweighs potential speed issues
 		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), , "Containers::String: String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size);
-		DEATH_ASSERT(data && !data[size], , "Containers::String: Can only take ownership of a non-null null-terminated array");
+		DEATH_ASSERT(data != nullptr && !data[size], , "Containers::String: Can only take ownership of a non-null null-terminated array");
 
 		_large.data = data;
 		_large.size = size;
@@ -344,8 +344,7 @@ namespace Death::Containers
 	}
 
 	auto String::deleter() const -> Deleter {
-		// Unlikely to be called very often, so a non-debug assert is fine
-		DEATH_ASSERT(!(_small.size & Implementation::SmallStringBit), {},
+		DEATH_DEBUG_ASSERT(!(_small.size & Implementation::SmallStringBit), {},
 			"Containers::String::deleter(): Cannot call on a SSO instance");
 		return _large.deleter;
 	}
@@ -393,7 +392,7 @@ namespace Death::Containers
 	}
 
 	char& String::front() {
-		DEATH_ASSERT(size(), *begin(), "Containers::String::front(): String is empty");
+		DEATH_DEBUG_ASSERT(size(), *begin(), "Containers::String::front(): String is empty");
 		return *begin();
 	}
 
@@ -402,7 +401,7 @@ namespace Death::Containers
 	}
 
 	char& String::back() {
-		DEATH_ASSERT(size(), *(end() - 1), "Containers::String::back(): String is empty");
+		DEATH_DEBUG_ASSERT(size(), *(end() - 1), "Containers::String::back(): String is empty");
 		return *(end() - 1);
 	}
 
@@ -411,12 +410,16 @@ namespace Death::Containers
 	}
 
 	char& String::operator[](std::size_t i) {
+		// Accessing the null terminator is fine
+		DEATH_DEBUG_ASSERT(i < size() + 1, _small.data[0], "Containers::String::operator[](): Index %zu out of range for %zu null-terminated bytes", i, size());
 		if (_small.size & Implementation::SmallStringBit)
 			return _small.data[i];
 		return _large.data[i];
 	}
 
 	char String::operator[](std::size_t i) const {
+		// Accessing the null terminator is fine
+		DEATH_DEBUG_ASSERT(i < size() + 1, _small.data[0], "Containers::String::operator[](): Index %zu out of range for %zu null-terminated bytes", i, size());
 		if (_small.size & Implementation::SmallStringBit)
 			return _small.data[i];
 		return _large.data[i];
@@ -803,8 +806,7 @@ namespace Death::Containers
 	}
 
 	char* String::release() {
-		// Unlikely to be called very often, so a non-debug assert is fine
-		DEATH_ASSERT(!(_small.size & Implementation::SmallStringBit), {},
+		DEATH_DEBUG_ASSERT(!(_small.size & Implementation::SmallStringBit), {},
 			"Containers::String::release(): Cannot call on a SSO instance");
 		char* data = _large.data;
 

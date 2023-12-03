@@ -74,6 +74,15 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 #	endif
 #endif
 
+/** @brief Debug-only assertion macro */
+#if !defined(DEATH_DEBUG_ASSERT)
+#	if defined(DEATH_DEBUG)
+#		define DEATH_DEBUG_ASSERT(condition, returnValue, message, ...) DEATH_ASSERT(condition, returnValue, message, __VA_ARGS__)
+#	else
+#		define DEATH_DEBUG_ASSERT(condition, returnValue, message, ...) do {} while (false)
+#	endif
+#endif
+
 /** @brief Constexpr assertion macro */
 #if !defined(DEATH_CONSTEXPR_ASSERT)
 #	if defined(DEATH_NO_ASSERT) || (!defined(DEATH_DEBUG) && !defined(DEATH_TRACE))
@@ -89,6 +98,15 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...);
 			static_cast<void>((condition) ? 0 : ([&]() {			\
 				assert(!#condition);								\
 			}(), 0))
+#	endif
+#endif
+
+/** @brief Debug-only constexpr assertion macro */
+#if !defined(DEATH_DEBUG_CONSTEXPR_ASSERT)
+#	if defined(DEATH_DEBUG)
+#		define DEATH_DEBUG_CONSTEXPR_ASSERT(condition, message, ...) DEATH_CONSTEXPR_ASSERT(condition, message, __VA_ARGS__)
+#	else
+#		define DEATH_DEBUG_CONSTEXPR_ASSERT(condition, message, ...) static_cast<void>(0)
 #	endif
 #endif
 

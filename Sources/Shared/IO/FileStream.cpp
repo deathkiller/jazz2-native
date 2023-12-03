@@ -4,11 +4,11 @@
 #include "../Asserts.h"
 #include "../Utf8.h"
 
-#if defined(DEATH_TARGET_WINDOWS_RT)
-#	include <fcntl.h>
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
 #	include <io.h>
-#elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
-#	include <io.h>
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+#		include <fcntl.h>
+#	endif
 #else
 #	include <sys/stat.h>	// For open()
 #	include <fcntl.h>		// For open()
@@ -18,19 +18,16 @@
 namespace Death::IO
 {
 	FileStream::FileStream(const Containers::String& path, FileAccessMode mode)
-		: _fileDescriptor(-1), _handle(nullptr), _shouldCloseOnDestruction(true)
+		: _shouldCloseOnDestruction(true),
+#if defined(DEATH_USE_FILE_DESCRIPTORS)
+			_fileDescriptor(-1)
+#else
+			_handle(nullptr)
+#endif
 	{
 		_type = Type::File;
 		_path = path;
-
-#if !defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_MINGW)
-		if ((mode & FileAccessMode::FileDescriptor) == FileAccessMode::FileDescriptor) {
-			OpenDescriptor(mode);
-		} else
-#endif
-		{
-			OpenStream(mode);
-		}
+		OpenStream(mode);
 	}
 
 	FileStream::~FileStream()
@@ -42,17 +39,18 @@ namespace Death::IO
 
 	void FileStream::Close()
 	{
+#if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
-#if !defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_MINGW)
-			const int retValue = ::close(_fileDescriptor);
+			const std::int32_t retValue = ::close(_fileDescriptor);
 			if (retValue < 0) {
 				LOGW("Cannot close the file \"%s\"", _path.data());
 			} else {
 				LOGI("File \"%s\" closed", _path.data());
 				_fileDescriptor = -1;
 			}
-#endif
-		} else if (_handle != nullptr) {
+		}
+#else
+		if (_handle != nullptr) {
 			const std::int32_t retValue = ::fclose(_handle);
 			if (retValue == EOF) {
 				LOGW("Cannot close the file \"%s\"", _path.data());
@@ -61,34 +59,37 @@ namespace Death::IO
 				_handle = nullptr;
 			}
 		}
+#endif
 	}
 
 	std::int32_t FileStream::Seek(std::int32_t offset, SeekOrigin origin)
 	{
 		std::int32_t seekValue = -1;
-
+#if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
-#if !defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_MINGW)
-			seekValue = ::lseek(_fileDescriptor, offset, (std::int32_t)origin);
-#endif
-		} else if (_handle != nullptr) {
-			seekValue = ::fseek(_handle, offset, (std::int32_t)origin);
+			seekValue = ::lseek(_fileDescriptor, offset, static_cast<std::int32_t>(origin));
 		}
+#else
+		if (_handle != nullptr) {
+			seekValue = ::fseek(_handle, offset, static_cast<std::int32_t>(origin));
+		}
+#endif
 		return seekValue;
 	}
 
 	std::int32_t FileStream::GetPosition() const
 	{
-		std::int32_t tellValue = -1;
-
+		std::int32_t pos = -1;
+#if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
-#if !defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_MINGW)
-			tellValue = ::lseek(_fileDescriptor, 0L, SEEK_CUR);
-#endif
-		} else if (_handle != nullptr) {
-			tellValue = ::ftell(_handle);
+			pos = ::lseek(_fileDescriptor, 0L, SEEK_CUR);
 		}
-		return tellValue;
+#else
+		if (_handle != nullptr) {
+			pos = ::ftell(_handle);
+		}
+#endif
+		return pos;
 	}
 
 	std::int32_t FileStream::Read(void* buffer, std::int32_t bytes)
@@ -96,14 +97,15 @@ namespace Death::IO
 		DEATH_ASSERT(buffer != nullptr, 0, "buffer is nullptr");
 
 		std::int32_t bytesRead = 0;
-
+#if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
-#if !defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_MINGW)
 			bytesRead = static_cast<std::int32_t>(::read(_fileDescriptor, buffer, bytes));
-#endif
-		} else if (_handle != nullptr) {
+		}
+#else
+		if (_handle != nullptr) {
 			bytesRead = static_cast<std::int32_t>(::fread(buffer, 1, bytes, _handle));
 		}
+#endif
 		return bytesRead;
 	}
 
@@ -112,62 +114,59 @@ namespace Death::IO
 		DEATH_ASSERT(buffer != nullptr, 0, "buffer is nullptr");
 
 		std::int32_t bytesWritten = 0;
-
+#if defined(DEATH_USE_FILE_DESCRIPTORS)
 		if (_fileDescriptor >= 0) {
-#if !defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_MINGW)
 			bytesWritten = static_cast<std::int32_t>(::write(_fileDescriptor, buffer, bytes));
-#endif
-		} else if (_handle != nullptr) {
+		}
+#else
+		if (_handle != nullptr) {
 			bytesWritten = static_cast<std::int32_t>(::fwrite(buffer, 1, bytes, _handle));
 		}
+#endif
 		return bytesWritten;
 	}
 
-#if !defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_MINGW)
-	void FileStream::OpenDescriptor(FileAccessMode mode)
-	{
-		std::int32_t openFlag = -1;
-
-		switch (mode) {
-			case (FileAccessMode::FileDescriptor | FileAccessMode::Read):
-				openFlag = O_RDONLY;
-				break;
-			case (FileAccessMode::FileDescriptor | FileAccessMode::Write):
-				openFlag = O_WRONLY;
-				break;
-			case (FileAccessMode::FileDescriptor | FileAccessMode::Read | FileAccessMode::Write):
-				openFlag = O_RDWR;
-				break;
-			default:
-				LOGE("Cannot open the file \"%s\", wrong open mode", _path.data());
-				break;
-		}
-
-		if (openFlag >= 0) {
-			_fileDescriptor = ::open(_path.data(), openFlag);
-
-			if (_fileDescriptor < 0) {
-				LOGE("Cannot open the file \"%s\"", _path.data());
-				return;
-			}
-
-			LOGI("File \"%s\" opened", _path.data());
-
-			// Calculating file size
-			_size = ::lseek(_fileDescriptor, 0L, SEEK_END);
-			::lseek(_fileDescriptor, 0L, SEEK_SET);
-		}
-	}
-#endif
-
 	bool FileStream::IsValid() const
 	{
-		return (_handle != nullptr || _fileDescriptor >= 0);
+#if defined(DEATH_USE_FILE_DESCRIPTORS)
+		return (_fileDescriptor >= 0);
+#else
+		return (_handle != nullptr);
+#endif
 	}
 
 	void FileStream::OpenStream(FileAccessMode mode)
 	{
-#if defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_USE_FILE_DESCRIPTORS)
+		std::int32_t openFlag;
+		switch (mode) {
+			case FileAccessMode::Read:
+				openFlag = O_RDONLY;
+				break;
+			case FileAccessMode::Write:
+				openFlag = O_WRONLY;
+				break;
+			case FileAccessMode::Read | FileAccessMode::Write:
+				openFlag = O_RDWR;
+				break;
+			default:
+				LOGE("Cannot open the file \"%s\", wrong open mode", _path.data());
+				return;
+		}
+
+		_fileDescriptor = ::open(_path.data(), openFlag);
+		if (_fileDescriptor < 0) {
+			LOGE("Cannot open the file \"%s\"", _path.data());
+			return;
+		}
+
+		LOGI("File \"%s\" opened", _path.data());
+
+		// Calculating file size
+		_size = ::lseek(_fileDescriptor, 0L, SEEK_END);
+		::lseek(_fileDescriptor, 0L, SEEK_SET);
+#else
+#	if defined(DEATH_TARGET_WINDOWS_RT)
 		DWORD desireAccess, creationDisposition;
 		std::int32_t openFlag;
 		const char* modeInternal;
@@ -204,7 +203,7 @@ namespace Death::IO
 		// Automatically transfers ownership of the Win32 file handle to the file descriptor
 		std::int32_t fd = _open_osfhandle(reinterpret_cast<std::intptr_t>(hFile), openFlag);
 		_handle = _fdopen(fd, modeInternal);
-#elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
+#	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
 		const wchar_t* modeInternal;
 		std::int32_t shareMode;
 		switch (mode) {
@@ -217,7 +216,7 @@ namespace Death::IO
 		}
 
 		_handle = _wfsopen(Utf8::ToUtf16(_path), modeInternal, shareMode);
-#else
+#	else
 		const char* modeInternal;
 		switch (mode) {
 			case FileAccessMode::Read: modeInternal = "rb"; break;
@@ -229,7 +228,7 @@ namespace Death::IO
 		}
 
 		_handle = ::fopen(_path.data(), modeInternal);
-#endif
+#	endif
 
 		if (_handle == nullptr) {
 			LOGE("Cannot open the file \"%s\"", _path.data());
@@ -242,5 +241,6 @@ namespace Death::IO
 		::fseek(_handle, 0L, SEEK_END);
 		_size = static_cast<std::int32_t>(::ftell(_handle));
 		::fseek(_handle, 0L, SEEK_SET);
+#endif
 	}
 }

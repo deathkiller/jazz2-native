@@ -18,6 +18,22 @@
 
 namespace Death::IO
 {
+	DeflateStream::DeflateStream()
+		: _inputStream(nullptr), _inputSize(-1), _state(State::Unknown)
+	{
+	}
+
+	DeflateStream::DeflateStream(Stream& inputStream, std::int32_t inputSize, bool rawInflate)
+		: DeflateStream()
+	{
+		Open(inputStream, inputSize, rawInflate);
+	}
+
+	DeflateStream::~DeflateStream()
+	{
+		Close();
+	}
+
 	std::int32_t DeflateStream::Seek(std::int32_t offset, SeekOrigin origin)
 	{
 		switch (origin) {
@@ -34,7 +50,7 @@ namespace Death::IO
 			}
 		}
 
-		return Unseekable;
+		return NotSeekable;
 	}
 
 	std::int32_t DeflateStream::GetPosition() const
@@ -77,6 +93,7 @@ namespace Death::IO
 		_inputSize = inputSize;
 		_state = State::Created;
 		_rawInflate = rawInflate;
+		_size = INT32_MAX;
 
 		_strm.zalloc = Z_NULL;
 		_strm.zfree = Z_NULL;
@@ -91,6 +108,7 @@ namespace Death::IO
 		CeaseReading();
 		_inputStream = nullptr;
 		_state = State::Unknown;
+		_size = 0;
 	}
 
 	std::int32_t DeflateStream::ReadInternal(void* ptr, std::int32_t size)
@@ -204,12 +222,12 @@ namespace Death::IO
 
 	std::int32_t DeflateWriter::Seek(std::int32_t offset, SeekOrigin origin)
 	{
-		return Unseekable;
+		return NotSeekable;
 	}
 
 	std::int32_t DeflateWriter::GetPosition() const
 	{
-		return Unseekable;
+		return NotSeekable;
 	}
 
 	std::int32_t DeflateWriter::Read(void* buffer, std::int32_t bytes)
