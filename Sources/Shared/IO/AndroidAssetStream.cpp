@@ -112,7 +112,7 @@ namespace Death::IO
 		return bytesRead;
 	}
 
-	std::int32_t AndroidAssetStream::Write(const void* buffer, std::int32_t bytes) override
+	std::int32_t AndroidAssetStream::Write(const void* buffer, std::int32_t bytes)
 	{
 		return 0;
 	}
