@@ -79,7 +79,7 @@ namespace Death::IO
 #endif
 		bool _shouldCloseOnDestruction;
 
-		void OpenAsset(FileAccessMode mode);
+		void Open(FileAccessMode mode);
 	};
 }
 

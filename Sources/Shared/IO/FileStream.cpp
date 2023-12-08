@@ -27,7 +27,7 @@ namespace Death::IO
 	{
 		_type = Type::File;
 		_path = path;
-		OpenStream(mode);
+		Open(mode);
 	}
 
 	FileStream::~FileStream()
@@ -135,7 +135,7 @@ namespace Death::IO
 #endif
 	}
 
-	void FileStream::OpenStream(FileAccessMode mode)
+	void FileStream::Open(FileAccessMode mode)
 	{
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		std::int32_t openFlag;
