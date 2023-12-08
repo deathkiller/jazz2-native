@@ -342,24 +342,15 @@ namespace nCine
 
 	inline void lowercaseInPlace(const Containers::MutableStringView string)
 	{
-		// According to https://twitter.com/MalwareMinigun/status/1087767603647377408, std::tolower() / std::toupper() causes
-		// a mutex lock and a virtual dispatch per character (!!). A proper Unicode-aware *and* locale-aware solution
-		// would involve far more than iterating over bytes anyway - multi-byte characters, composed characters
-		// (ä formed from ¨ and a), SS -> ß in German but not elsewhere etc...
 		for (char& c : string) {
-			if (c >= 'A' && c <= 'Z') {
-				c |= 0x20;
-			}
+			c += (std::uint8_t(c - 'A') < 26) << 5;
 		}
 	}
 
 	inline void uppercaseInPlace(const Containers::MutableStringView string)
 	{
-		// See above for why std::toupper() is banned here
 		for (char& c : string) {
-			if (c >= 'a' && c <= 'z') {
-				c &= ~0x20;
-			}
+			c -= (std::uint8_t(c - 'a') < 26) << 5;
 		}
 	}
 

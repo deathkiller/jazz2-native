@@ -29,7 +29,7 @@
 #		include <sys/mman.h>
 #		include <sys/wait.h>
 #	endif
-#	if defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
+#	if defined(DEATH_TARGET_APPLE)
 #		include <copyfile.h>
 #	elif defined(__linux__)
 #		include <sys/sendfile.h>
@@ -1671,22 +1671,22 @@ namespace Death::IO
 			return false;
 		}
 
-#	if defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
+#	if defined(DEATH_TARGET_APPLE)
 		// fcopyfile works on FreeBSD and OS X 10.5+ 
 		bool success = (::fcopyfile(source, dest, 0, COPYFILE_ALL) == 0);
 #	elif defined(__linux__)
 		off_t offset = 0;
 		bool success = (::sendfile(dest, source, &offset, sb.st_size) == sb.st_size);
 #	else
-#	if !defined(DEATH_TARGET_SWITCH) && defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L
+#		if !defined(DEATH_TARGET_SWITCH) && defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L
 		// As noted in https://eklitzke.org/efficient-file-copying-on-linux, might make the file reading faster
 		::posix_fadvise(source, 0, 0, POSIX_FADV_SEQUENTIAL);
-#	endif
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
+#		endif
+#		if defined(DEATH_TARGET_EMSCRIPTEN)
 		constexpr std::size_t BufferSize = 8 * 1024;
-#	else
+#		else
 		constexpr std::size_t BufferSize = 128 * 1024;
-#	endif
+#		endif
 		char buffer[BufferSize];
 		std::size_t size = 0;
 		bool success = true;
@@ -1696,7 +1696,7 @@ namespace Death::IO
 				break;
 			}
 		}
-#endif
+#	endif
 
 		::close(source);
 		::close(dest);

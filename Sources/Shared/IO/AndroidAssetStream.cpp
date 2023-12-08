@@ -21,7 +21,7 @@ namespace Death::IO
 	{
 		_type = Type::AndroidAsset;
 		_path = path;
-		OpenAsset(mode);
+		Open(mode);
 	}
 
 	AndroidAssetStream::~AndroidAssetStream()
@@ -228,7 +228,7 @@ namespace Death::IO
 		return AAssetDir_getNextFileName(assetDir);
 	}
 
-	void AndroidAssetStream::OpenAsset(FileAccessMode mode)
+	void AndroidAssetStream::Open(FileAccessMode mode)
 	{
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		// An asset file can only be read

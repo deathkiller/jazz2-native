@@ -46,7 +46,7 @@ namespace Death::IO
 #endif
 		bool _shouldCloseOnDestruction;
 
-		void OpenStream(FileAccessMode mode);
+		void Open(FileAccessMode mode);
 	};
 
 }
