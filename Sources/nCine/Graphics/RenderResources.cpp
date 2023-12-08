@@ -253,7 +253,7 @@ namespace nCine
 		const IGfxCapabilities& gfxCaps = theServiceLocator().gfxCapabilities();
 		const int maxUniformBlockSize = gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
 
-		char sourceString[48];
+		char sourceString[64];
 		const char *vertexStrings[3] = { nullptr, nullptr, nullptr };
 
 		for (unsigned int i = 0; i < countof(shadersToLoad); i++) {
