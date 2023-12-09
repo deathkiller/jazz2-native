@@ -654,7 +654,9 @@ if(WITH_MULTIPLAYER)
 	target_compile_definitions(${NCINE_APP} PUBLIC "WITH_MULTIPLAYER")
 	
 	list(APPEND HEADERS
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/RemotablePlayer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/RemoteActor.h
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/RemotePlayerOnServer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ConnectionResult.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/INetworkHandler.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MultiLevelHandler.h
@@ -666,7 +668,9 @@ if(WITH_MULTIPLAYER)
 	)
 
 	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/RemotablePlayer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/RemoteActor.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/RemotePlayerOnServer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ConnectionResult.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MultiLevelHandler.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManager.cpp

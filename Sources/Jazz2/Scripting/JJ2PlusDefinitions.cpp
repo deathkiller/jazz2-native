@@ -1088,7 +1088,7 @@ namespace Jazz2::Scripting
 	}
 	uint8_t jjPLAYER::set_lighting(uint8_t value) {
 		noop();
-		_levelScriptLoader->_levelHandler->SetAmbientLight(value / 64.0f);
+		_levelScriptLoader->_levelHandler->SetAmbientLight(nullptr, value / 64.0f);
 		return value;
 	}
 	uint8_t jjPLAYER::resetLight() {

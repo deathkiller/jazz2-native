@@ -246,7 +246,7 @@ namespace Jazz2
 		return _ambientLightTarget;
 	}
 
-	void LevelHandler::SetAmbientLight(float value)
+	void LevelHandler::SetAmbientLight(Actors::Player* player, float value)
 	{
 		_ambientLightTarget = value;
 
@@ -1031,7 +1031,7 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::HandleGameOver()
+	void LevelHandler::HandleGameOver(Actors::Player* player)
 	{
 		// TODO: Implement Game Over screen
 		_root->GoToMainMenu(false);
@@ -1049,16 +1049,6 @@ namespace Jazz2
 		return true;
 	}
 
-	bool LevelHandler::HandlePlayerFireWeapon(Actors::Player* player, WeaponType& weaponType, std::uint16_t& ammoDecrease)
-	{
-		return true;
-	}
-
-	bool LevelHandler::HandlePlayerSpring(Actors::Player* player, const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY)
-	{
-		return true;
-	}
-
 	void LevelHandler::HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, bool fast)
 	{
 		if (fast) {
@@ -1071,7 +1061,7 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::SetCheckpoint(const Vector2f& pos)
+	void LevelHandler::SetCheckpoint(Actors::Player* player, const Vector2f& pos)
 	{
 		_checkpointFrames = ElapsedFrames();
 
@@ -1084,14 +1074,12 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::RollbackToCheckpoint()
+	void LevelHandler::RollbackToCheckpoint(Actors::Player* player)
 	{
 		// Reset the camera
 		LimitCameraView(0, 0);
 
-		if (!_players.empty()) {
-			WarpCameraToTarget(_players[0]);
-		}
+		WarpCameraToTarget(player);
 
 		if (_difficulty != GameDifficulty::Multiplayer) {
 			for (auto& actor : _actors) {
@@ -1123,7 +1111,7 @@ namespace Jazz2
 #endif
 	}
 
-	void LevelHandler::ActivateSugarRush()
+	void LevelHandler::ActivateSugarRush(Actors::Player* player)
 	{
 #if defined(WITH_AUDIO)
 		if (_sugarRushMusic != nullptr) {
@@ -1151,12 +1139,12 @@ namespace Jazz2
 		_hud->ShowLevelText(text);
 	}
 
-	void LevelHandler::ShowCoins(int32_t count)
+	void LevelHandler::ShowCoins(Actors::Player* player, std::int32_t count)
 	{
 		_hud->ShowCoins(count);
 	}
 
-	void LevelHandler::ShowGems(int32_t count)
+	void LevelHandler::ShowGems(Actors::Player* player, std::int32_t count)
 	{
 		_hud->ShowGems(count);
 	}

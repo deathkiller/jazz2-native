@@ -1023,9 +1023,6 @@
     <ClInclude Include="Jazz2\UI\Menu\GameplayEnhancementsSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
-    <ClInclude Include="nCine\IO\CompressionUtils.h">
-      <Filter>Header Files\nCine\IO</Filter>
-    </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\ImportSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
@@ -1117,9 +1114,6 @@
       <Filter>Header Files\Jazz2\Scripting</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Scripting\RegisterRef.h">
-      <Filter>Header Files\Jazz2\Scripting</Filter>
-    </ClInclude>
-    <ClInclude Include="Jazz2\Scripting\FindAngelScript.h">
       <Filter>Header Files\Jazz2\Scripting</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Actors\Enemies\Sparks.h">
@@ -1424,6 +1418,12 @@
     </ClInclude>
     <ClInclude Include="$(ExtensionLibraryPath)\IO\DeflateStream.h">
       <Filter>Header Files\Shared\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\RemotePlayerOnServer.h">
+      <Filter>Header Files\Jazz2\Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\RemotablePlayer.h">
+      <Filter>Header Files\Jazz2\Actors</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2054,9 +2054,6 @@
     <ClCompile Include="Jazz2\UI\Menu\GameplayEnhancementsSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
-    <ClCompile Include="nCine\IO\CompressionUtils.cpp">
-      <Filter>Source Files\nCine\IO</Filter>
-    </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\ImportSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
@@ -2362,6 +2359,12 @@
     </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\IO\DeflateStream.cpp">
       <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\RemotePlayerOnServer.cpp">
+      <Filter>Source Files\Jazz2\Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\RemotablePlayer.cpp">
+      <Filter>Source Files\Jazz2\Actors</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

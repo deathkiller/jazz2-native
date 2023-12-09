@@ -17,7 +17,6 @@ namespace Jazz2::Multiplayer
 		PlayerUpdate,
 		PlayerKeyPress,
 		PlayerRefreshAnimation,
-		PlayerFireWeapon,
 		PlayerDied,
 
 		CreateRemotableActor,
@@ -49,6 +48,7 @@ namespace Jazz2::Multiplayer
 		PlayerAckWarped,
 		PlayerActivateForce,
 		PlayerAddHealth,
+		PlayerChangeWeapon,
 		PlayerRefreshAmmo,
 		PlayerRefreshWeaponUpgrades,
 		PlayerSetControllable,

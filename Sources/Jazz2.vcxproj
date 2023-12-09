@@ -294,7 +294,9 @@
     <ClInclude Include="Jazz2\Actors\Lighting\FlickerLight.h" />
     <ClInclude Include="Jazz2\Actors\Lighting\PulsatingRadialLight.h" />
     <ClInclude Include="Jazz2\Actors\Lighting\StaticRadialLight.h" />
+    <ClInclude Include="Jazz2\Actors\RemotablePlayer.h" />
     <ClInclude Include="Jazz2\Actors\RemoteActor.h" />
+    <ClInclude Include="Jazz2\Actors\RemotePlayerOnServer.h" />
     <ClInclude Include="Jazz2\Actors\Solid\AmmoBarrel.h" />
     <ClInclude Include="Jazz2\Actors\Solid\AmmoCrate.h" />
     <ClInclude Include="Jazz2\Actors\Solid\BarrelContainer.h" />
@@ -681,7 +683,9 @@
     <ClCompile Include="Jazz2\Actors\Lighting\FlickerLight.cpp" />
     <ClCompile Include="Jazz2\Actors\Lighting\PulsatingRadialLight.cpp" />
     <ClCompile Include="Jazz2\Actors\Lighting\StaticRadialLight.cpp" />
+    <ClCompile Include="Jazz2\Actors\RemotablePlayer.cpp" />
     <ClCompile Include="Jazz2\Actors\RemoteActor.cpp" />
+    <ClCompile Include="Jazz2\Actors\RemotePlayerOnServer.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\AmmoBarrel.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\AmmoCrate.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\BarrelContainer.cpp" />

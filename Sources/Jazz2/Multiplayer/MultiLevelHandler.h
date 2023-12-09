@@ -8,6 +8,7 @@
 namespace Jazz2::Actors
 {
 	class RemoteActor;
+	class RemotePlayerOnServer;
 }
 
 namespace Jazz2::Multiplayer
@@ -30,6 +31,7 @@ namespace Jazz2::Multiplayer
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::LevelScriptLoader;
 #endif
+		friend class Actors::RemotePlayerOnServer;
 
 	public:
 		MultiLevelHandler(IRootController* root, NetworkManager* networkManager);
@@ -42,7 +44,7 @@ namespace Jazz2::Multiplayer
 		}
 
 		float GetAmbientLight() const override;
-		void SetAmbientLight(float value) override;
+		void SetAmbientLight(Actors::Player* player, float value) override;
 
 		void OnBeginFrame() override;
 		void OnEndFrame() override;
@@ -64,17 +66,15 @@ namespace Jazz2::Multiplayer
 
 		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, uint8_t* eventParams) override;
 		void BeginLevelChange(ExitType exitType, const StringView& nextLevel) override;
-		void HandleGameOver() override;
+		void HandleGameOver(Actors::Player* player) override;
 		bool HandlePlayerDied(Actors::Player* player) override;
-		bool HandlePlayerFireWeapon(Actors::Player* player, WeaponType& weaponType, std::uint16_t& ammoDecrease) override;
-		bool HandlePlayerSpring(Actors::Player* player, const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY) override;
 		void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, bool fast) override;
-		void SetCheckpoint(const Vector2f& pos) override;
-		void RollbackToCheckpoint() override;
-		void ActivateSugarRush() override;
+		void SetCheckpoint(Actors::Player* player, const Vector2f& pos) override;
+		void RollbackToCheckpoint(Actors::Player* player) override;
+		void ActivateSugarRush(Actors::Player* player) override;
 		void ShowLevelText(const StringView& text) override;
-		void ShowCoins(int32_t count) override;
-		void ShowGems(int32_t count) override;
+		void ShowCoins(Actors::Player* player, std::int32_t count) override;
+		void ShowGems(Actors::Player* player, std::int32_t count) override;
 		StringView GetLevelText(uint32_t textId, int32_t index = -1, uint32_t delimiter = 0) override;
 		void OverrideLevelText(uint32_t textId, const StringView& value) override;
 		void LimitCameraView(int left, int width) override;
@@ -104,6 +104,12 @@ namespace Jazz2::Multiplayer
 		void ProcessEvents(float timeMult) override;
 		void PrepareNextLevelInitialization(LevelInitialization& levelInit) override;
 
+		bool HandlePlayerSpring(Actors::Player* player, const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY);
+		void HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce);
+		void HandlePlayerRefreshAmmo(Actors::Player* player, WeaponType weaponType);
+		void HandlePlayerRefreshWeaponUpgrades(Actors::Player* player, WeaponType weaponType);
+		void HandlePlayerWeaponChanged(Actors::Player* player);
+
 	private:
 		enum class PeerState {
 			Unknown,
@@ -112,18 +118,12 @@ namespace Jazz2::Multiplayer
 		};
 
 		struct PeerDesc {
-			Actors::Player* Player;
+			Actors::RemotePlayerOnServer* Player;
 			PeerState State;
 			std::uint32_t LastUpdated;
 
 			PeerDesc() {}
-			PeerDesc(Actors::Player* player, PeerState state) : Player(player), State(state), LastUpdated(0) {}
-		};
-
-		struct StateFrame {
-			std::int64_t Time;
-			Vector2f Pos;
-			Vector2f Speed;
+			PeerDesc(Actors::RemotePlayerOnServer* player, PeerState state) : Player(player), State(state), LastUpdated(0) {}
 		};
 
 		enum class PlayerFlags {
@@ -141,13 +141,10 @@ namespace Jazz2::Multiplayer
 		DEFINE_PRIVATE_ENUM_OPERATORS(PlayerFlags);
 
 		struct PlayerState {
-			StateFrame StateBuffer[8];
-			std::int32_t StateBufferPos;
 			PlayerFlags Flags;
-			std::uint32_t PressedKeys;
+			std::uint64_t PressedKeys;
 			std::uint64_t WarpSeqNum;
 			float WarpTimeLeft;
-			float DeviationTime;
 
 			PlayerState();
 			PlayerState(const Vector2f& pos, const Vector2f& speed);
@@ -170,8 +167,6 @@ namespace Jazz2::Multiplayer
 		bool _ignorePackets;
 
 		void SynchronizePeers();
-		void UpdatePlayerLocalPos(Actors::Player* player, PlayerState& playerState, float timeMult);
-		void OnRemotePlayerPosReceived(PlayerState& playerState, const Vector2f& pos, const Vector2f speed, PlayerFlags flags);
 	};
 }
 
