@@ -105,7 +105,7 @@ namespace Jazz2
 
 		Vector2f GetCameraPos() const override { return _cameraPos; }
 		float GetAmbientLight() const override;
-		void SetAmbientLight(float value) override;
+		void SetAmbientLight(Actors::Player* player, float value) override;
 
 		void OnBeginFrame() override;
 		void OnEndFrame() override;
@@ -127,17 +127,15 @@ namespace Jazz2
 
 		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, uint8_t* eventParams) override;
 		void BeginLevelChange(ExitType exitType, const StringView& nextLevel) override;
-		void HandleGameOver() override;
+		void HandleGameOver(Actors::Player* player) override;
 		bool HandlePlayerDied(Actors::Player* player) override;
-		bool HandlePlayerFireWeapon(Actors::Player* player, WeaponType& weaponType, std::uint16_t& ammoDecrease) override;
-		bool HandlePlayerSpring(Actors::Player* player, const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY) override;
 		void HandlePlayerWarped(Actors::Player* player, const Vector2f& prevPos, bool fast) override;
-		void SetCheckpoint(const Vector2f& pos) override;
-		void RollbackToCheckpoint() override;
-		void ActivateSugarRush() override;
+		void SetCheckpoint(Actors::Player* player, const Vector2f& pos) override;
+		void RollbackToCheckpoint(Actors::Player* player) override;
+		void ActivateSugarRush(Actors::Player* player) override;
 		void ShowLevelText(const StringView& text) override;
-		void ShowCoins(int32_t count) override;
-		void ShowGems(int32_t count) override;
+		void ShowCoins(Actors::Player* player, std::int32_t count) override;
+		void ShowGems(Actors::Player* player, std::int32_t count) override;
 		StringView GetLevelText(uint32_t textId, int32_t index = -1, uint32_t delimiter = 0) override;
 		void OverrideLevelText(uint32_t textId, const StringView& value) override;
 		void LimitCameraView(int left, int width) override;

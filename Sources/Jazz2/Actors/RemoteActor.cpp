@@ -78,7 +78,7 @@ namespace Jazz2::Actors
 		SetState((GetState() & ~RemotedFlags) | (state & RemotedFlags));
 	}
 
-	void RemoteActor::SyncWithServer(const Vector2f& pos, AnimState anim, bool isVisible, bool isFacingLeft)
+	void RemoteActor::SyncWithServer(const Vector2f& pos, AnimState anim, float rotation, bool isVisible, bool isFacingLeft)
 	{
 		Clock& c = nCine::clock();
 		std::int64_t now = c.now() * 1000 / c.frequency();
@@ -91,6 +91,8 @@ namespace Jazz2::Actors
 			_lastAnim = anim;
 			SetAnimation(anim);
 		}
+
+		_renderer.setRotation(rotation);
 
 		if (wasVisible) {
 			// Actor is still visible, enable interpolation

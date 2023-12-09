@@ -366,6 +366,7 @@ namespace nCine
 		if (!dirtyBits_.test(DirtyBitPositions::TransformationBit)) {
 			return;
 		}
+
 		// Calculating world and local matrices
 		localMatrix_ = Matrix4x4f::Translation(position_.X, position_.Y, 0.0f);
 		localMatrix_.RotateZ(rotation_);

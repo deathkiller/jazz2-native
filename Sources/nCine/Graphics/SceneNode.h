@@ -186,15 +186,15 @@ namespace nCine
 		/// Scales the node size both horizontally and vertically with a `Vector2f`
 		void setScale(const Vector2f& scaleFactor);
 
-		/// Gets the node rotation in degrees
+		/// Gets the node rotation in radians
 		inline float rotation() const {
 			return rotation_;
 		}
-		/// Gets the node absolute rotation in degrees
+		/// Gets the node absolute rotation in radians
 		inline float absRotation() const {
 			return absRotation_;
 		}
-		/// Sets the node rotation in degrees
+		/// Sets the node rotation in radians
 		void setRotation(float rotation);
 
 		/// Gets the node color
@@ -304,7 +304,7 @@ namespace nCine
 		Vector2f anchorPoint_;
 		/// Horizontal and vertical scale factors for node size
 		Vector2f scaleFactor_;
-		/// Degrees for clock-wise node rotation in degrees
+		/// Clock-wise node rotation in radians
 		float rotation_;
 
 		/// Node color for transparency and translucency

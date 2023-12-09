@@ -67,14 +67,14 @@ namespace Jazz2::Actors
 		friend class Weapons::Thunderbolt;
 
 	public:
-		enum class Modifier : uint8_t {
+		enum class Modifier : std::uint8_t {
 			None,
 			Airboard,
 			Copter,
 			LizardCopter
 		};
 
-		enum class SpecialMoveType : uint8_t {
+		enum class SpecialMoveType : std::uint8_t {
 			None,
 			Buttstomp,
 			Uppercut,
@@ -115,7 +115,7 @@ namespace Jazz2::Actors
 
 		void WarpToPosition(Vector2f pos, bool fast);
 		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor = nullptr);
-		bool TakeDamage(int amount, float pushForce = 0.0f);
+		virtual bool TakeDamage(std::int32_t amount, float pushForce = 0.0f);
 		void SetInvulnerability(float time, bool withCircleEffect);
 
 		void AddScore(uint32_t amount);
@@ -125,9 +125,9 @@ namespace Jazz2::Actors
 		void AddGems(int count);
 		void ConsumeFood(bool isDrinkable);
 		void ActivateSugarRush(float duration);
-		bool AddAmmo(WeaponType weaponType, int16_t count);
-		void AddWeaponUpgrade(WeaponType weaponType, uint8_t upgrade);
-		bool AddFastFire(int count);
+		virtual bool AddAmmo(WeaponType weaponType, std::int16_t count);
+		virtual void AddWeaponUpgrade(WeaponType weaponType, std::uint8_t upgrade);
+		bool AddFastFire(std::int32_t count);
 		void MorphTo(PlayerType type);
 		void MorphRevert();
 		bool SetDizzyTime(float time);
@@ -147,7 +147,7 @@ namespace Jazz2::Actors
 		}
 		void SetCarryingObject(ActorBase* actor, bool resetSpeed = false, SuspendType suspendType = SuspendType::None);
 
-		void SwitchToWeaponByIndex(uint32_t weaponIndex);
+		void SwitchToWeaponByIndex(std::uint32_t weaponIndex);
 		void GetFirePointAndAngle(Vector3i& initialPos, Vector2f& gunspotPos, float& angle);
 
 	protected:
@@ -174,7 +174,7 @@ namespace Jazz2::Actors
 		static constexpr float Acceleration = 0.2f;
 		static constexpr float Deceleration = 0.22f;
 
-		static constexpr const char* WeaponNames[(int)WeaponType::Count] = {
+		static constexpr const char* WeaponNames[(std::int32_t)WeaponType::Count] = {
 			"Blaster",
 			"Bouncer",
 			"Freezer",
@@ -187,7 +187,7 @@ namespace Jazz2::Actors
 			"Thunderbolt"
 		};
 
-		int _playerIndex;
+		std::int32_t _playerIndex;
 		bool _isActivelyPushing, _wasActivelyPushing;
 		bool _controllable;
 		bool _controllableExternal;
@@ -202,7 +202,7 @@ namespace Jazz2::Actors
 		float _copterFramesLeft, _fireFramesLeft, _pushFramesLeft, _waterCooldownLeft;
 		LevelExitingState _levelExiting;
 		bool _isFreefall, _inWater, _isLifting, _isSpring;
-		int _inShallowWater;
+		std::int32_t _inShallowWater;
 		Modifier _activeModifier;
 		bool _inIdleTransition, _inLedgeTransition;
 		ActorBase* _carryingObject;
@@ -211,13 +211,13 @@ namespace Jazz2::Actors
 		float _springCooldown;
 		std::shared_ptr<AudioBufferPlayer> _copterSound;
 
-		int _lives, _coins, _coinsCheckpoint, _foodEaten, _score;
+		std::int32_t _lives, _coins, _coinsCheckpoint, _foodEaten, _score;
 		Vector2f _checkpointPos;
 		float _checkpointLight;
 
 		float _sugarRushLeft, _sugarRushStarsTime;
 		float _shieldSpawnTime;
-		int _gems, _gemsCheckpoint, _gemsPitch;
+		std::int32_t _gems, _gemsCheckpoint, _gemsPitch;
 		float _gemsTimer;
 		float _bonusWarpTimer;
 
@@ -244,10 +244,10 @@ namespace Jazz2::Actors
 		float _weaponCooldown;
 		WeaponType _currentWeapon;
 		bool _weaponAllowed;
-		uint16_t _weaponAmmo[(int)WeaponType::Count];
-		uint16_t _weaponAmmoCheckpoint[(int)WeaponType::Count];
-		uint8_t _weaponUpgrades[(int)WeaponType::Count];
-		uint8_t _weaponUpgradesCheckpoint[(int)WeaponType::Count];
+		std::uint16_t _weaponAmmo[(std::int32_t)WeaponType::Count];
+		std::uint16_t _weaponAmmoCheckpoint[(std::int32_t)WeaponType::Count];
+		std::uint8_t _weaponUpgrades[(std::int32_t)WeaponType::Count];
+		std::uint8_t _weaponUpgradesCheckpoint[(std::int32_t)WeaponType::Count];
 		std::shared_ptr<AudioBufferPlayer> _weaponSound;
 		WeaponWheelState _weaponWheelState;
 
@@ -260,10 +260,15 @@ namespace Jazz2::Actors
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
-		void OnHitSpring(const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove);
 		void OnHitFloor(float timeMult) override;
 		void OnHitCeiling(float timeMult) override;
 		void OnHitWall(float timeMult) override;
+
+		virtual void OnHitSpring(const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove);
+		virtual void OnWaterSplash(const Vector2f& pos, bool inwards);
+
+		virtual bool FireCurrentWeapon(WeaponType weaponType);
+		virtual void SetCurrentWeapon(WeaponType weaponType);
 
 	private:
 		static constexpr float ShieldDisabled = -1000000000000.0f;
@@ -292,6 +297,5 @@ namespace Jazz2::Actors
 		void FireWeaponRF();
 		void FireWeaponTNT();
 		bool FireWeaponThunderbolt();
-		bool FireCurrentWeapon(WeaponType weaponType);
 	};
 }

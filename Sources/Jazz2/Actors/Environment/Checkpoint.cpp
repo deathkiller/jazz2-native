@@ -6,14 +6,13 @@
 namespace Jazz2::Actors::Environment
 {
 	Checkpoint::Checkpoint()
-		:
-		_activated(false)
+		: _activated(false)
 	{
 	}
 
 	void Checkpoint::Preload(const ActorActivationDetails& details)
 	{
-		uint8_t theme = details.Params[0];
+		std::uint8_t theme = details.Params[0];
 		switch (theme) {
 			case 0:
 			default:
@@ -48,7 +47,7 @@ namespace Jazz2::Actors::Environment
 			OnUpdateHitbox();
 
 			// Apply instant gravitation
-			int i = 10;
+			std::int32_t i = 10;
 			while (i-- > 0 && MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative)) {
 				// Nothing to do...
 			}
@@ -71,7 +70,7 @@ namespace Jazz2::Actors::Environment
 			return true;
 		}
 
-		if (auto player = dynamic_cast<Player*>(other.get())) {
+		if (auto* player = dynamic_cast<Player*>(other.get())) {
 			_activated = true;
 
 			SetAnimation((AnimState)1);
@@ -80,10 +79,10 @@ namespace Jazz2::Actors::Environment
 			PlaySfx("TransitionActivate"_s);
 
 			// Deactivate event in map
-			uint8_t playerParams[16] = { _theme, 1 };
+			std::uint8_t playerParams[16] = { _theme, 1 };
 			_levelHandler->EventMap()->StoreTileEvent(_originTile.X, _originTile.Y, EventType::Checkpoint, ActorState::None, playerParams);
 
-			_levelHandler->SetCheckpoint(Vector2f(_pos.X, _pos.Y));
+			_levelHandler->SetCheckpoint(player, Vector2f(_pos.X, _pos.Y));
 			return true;
 		}
 
