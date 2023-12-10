@@ -112,6 +112,7 @@ namespace Jazz2
 		String PreviousEpisode;
 		String NextEpisode;
 		std::uint16_t Position;
+		std::unique_ptr<Texture> TitleLogo;
 
 		Episode() noexcept;
 	};

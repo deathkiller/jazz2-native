@@ -73,8 +73,8 @@ namespace Jazz2
 		bool TryLoadLevel(const StringView& path, GameDifficulty difficulty, LevelDescriptor& descriptor);
 		void ApplyDefaultPalette();
 
-		std::optional<Episode> GetEpisode(const StringView& name);
-		std::optional<Episode> GetEpisodeByPath(const StringView& path);
+		std::optional<Episode> GetEpisode(const StringView& name, bool withLogo = false);
+		std::optional<Episode> GetEpisodeByPath(const StringView& path, bool withLogo = false);
 		std::unique_ptr<AudioStreamPlayer> GetMusic(const StringView& path);
 		UI::Font* GetFont(FontType fontType);
 		Shader* GetShader(PrecompiledShader shader);

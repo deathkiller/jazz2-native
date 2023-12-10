@@ -2,12 +2,17 @@
 
 #include "MenuSection.h"
 
+#if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#	include "../../../nCine/Threading/Thread.h"
+#endif
+
 namespace Jazz2::UI::Menu
 {
 	class CustomLevelSelectSection : public MenuSection
 	{
 	public:
 		CustomLevelSelectSection();
+		~CustomLevelSelectSection();
 
 		Recti GetClipRectangle(const Vector2i& viewSize) override;
 
@@ -38,9 +43,13 @@ namespace Jazz2::UI::Menu
 		float _touchTime;
 		int32_t _pressedCount;
 		float _noiseCooldown;
+#if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
+		Thread _indexingThread;
+#endif
 
 		void ExecuteSelected();
 		void EnsureVisibleSelected();
+		void AddCustomLevels();
 		void AddLevel(const StringView& levelFile);
 	};
 }

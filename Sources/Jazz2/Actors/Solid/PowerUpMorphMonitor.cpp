@@ -43,8 +43,8 @@ namespace Jazz2::Actors::Solid
 		auto& players = _levelHandler->GetPlayers();
 		for (auto& player : players) {
 			std::optional<PlayerType> playerType = GetTargetType(player->GetPlayerType());
-			if (playerType.has_value()) {
-				switch (playerType.value()) {
+			if (playerType) {
+				switch (*playerType) {
 					case PlayerType::Jazz: PreloadMetadataAsync("Interactive/PlayerJazz"_s); break;
 					case PlayerType::Spaz: PreloadMetadataAsync("Interactive/PlayerSpaz"_s); break;
 					case PlayerType::Lori: PreloadMetadataAsync("Interactive/PlayerLori"_s); break;
@@ -108,8 +108,8 @@ namespace Jazz2::Actors::Solid
 	void PowerUpMorphMonitor::DestroyAndApplyToPlayer(Player* player)
 	{
 		std::optional<PlayerType> playerType = GetTargetType(player->GetPlayerType());
-		if (playerType.has_value()) {
-			player->MorphTo(playerType.value());
+		if (playerType) {
+			player->MorphTo(*playerType);
 
 			DecreaseHealth(INT32_MAX, player);
 			PlaySfx("Break"_s);

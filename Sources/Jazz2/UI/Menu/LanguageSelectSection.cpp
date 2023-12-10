@@ -13,7 +13,7 @@ namespace Jazz2::UI::Menu
 		auto& resolver = ContentResolver::Get();
 
 		auto& defaultLanguage = _items.emplace_back();
-		defaultLanguage.Item.DisplayName = "English"_s;
+		defaultLanguage.Item.DisplayName = "English \f[c:0x707070]· en"_s;
 
 		// Search both "Content/Translations/" and "Cache/Translations/"
 		fs::Directory dir(fs::CombinePath(resolver.GetContentPath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories);

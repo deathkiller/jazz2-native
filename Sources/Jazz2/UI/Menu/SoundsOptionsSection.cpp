@@ -9,7 +9,7 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	SoundsOptionsSection::SoundsOptionsSection()
-		: _selectedIndex(0), _animation(0.0f), _isDirty(false)
+		: _selectedIndex(0), _animation(0.0f), _isDirty(false), _pressedCooldown(0.0f), _pressedCount(0)
 	{
 		// TRANSLATORS: Menu item in Options > Sounds section
 		_items[(int32_t)Item::MasterVolume].Name = _("Master Volume");
@@ -39,6 +39,9 @@ namespace Jazz2::UI::Menu
 		if (_animation < 1.0f) {
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
 		}
+		if (_pressedCooldown < 1.0f) {
+			_pressedCooldown = std::min(_pressedCooldown + timeMult * 0.008f, 1.0f);
+		}
 
 		if (_root->ActionHit(PlayerActions::Menu)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -60,20 +63,26 @@ namespace Jazz2::UI::Menu
 			} else {
 				_selectedIndex = 0;
 			}
-		} else if (_root->ActionHit(PlayerActions::Left) || _root->ActionHit(PlayerActions::Right)) {
-			float* value;
-			switch (_selectedIndex) {
-				default:
-				case (int32_t)Item::MasterVolume: value = &PreferencesCache::MasterVolume; break;
-				case (int32_t)Item::SfxVolume: value = &PreferencesCache::SfxVolume; break;
-				case (int32_t)Item::MusicVolume: value = &PreferencesCache::MusicVolume; break;
+		} else if (_root->ActionPressed(PlayerActions::Left) || _root->ActionPressed(PlayerActions::Right)) {
+			if (_pressedCooldown >= 1.0f - (_pressedCount * 0.096f) || _root->ActionHit(PlayerActions::Left) || _root->ActionHit(PlayerActions::Right)) {
+				float* value;
+				switch (_selectedIndex) {
+					default:
+					case (int32_t)Item::MasterVolume: value = &PreferencesCache::MasterVolume; break;
+					case (int32_t)Item::SfxVolume: value = &PreferencesCache::SfxVolume; break;
+					case (int32_t)Item::MusicVolume: value = &PreferencesCache::MusicVolume; break;
+				}
+
+				*value = std::clamp(*value + (_root->ActionPressed(PlayerActions::Left) ? -0.03f : 0.03f), 0.0f, 1.0f);
+
+				_root->ApplyPreferencesChanges(ChangedPreferencesType::Audio);
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				_isDirty = true;
+				_pressedCooldown = 0.0f;
+				_pressedCount = std::min(_pressedCount + 6, 10);
 			}
-
-			*value = std::clamp(*value + (_root->ActionHit(PlayerActions::Left) ? -0.03f : 0.03f), 0.0f, 1.0f);
-
-			_root->ApplyPreferencesChanges(ChangedPreferencesType::Audio);
-			_root->PlaySfx("MenuSelect"_s, 0.6f);
-			_isDirty = true;
+		} else {
+			_pressedCount = 0;
 		}
 	}
 

@@ -18,6 +18,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Containers/GrowableArray.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/Pair.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/Reference.h
+	${NCINE_SOURCE_DIR}/Shared/Containers/SequenceHelpers.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/SmallVector.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/StaticArray.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/String.h

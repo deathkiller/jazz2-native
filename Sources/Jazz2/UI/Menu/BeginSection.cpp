@@ -121,10 +121,10 @@ namespace Jazz2::UI::Menu
 				ExecuteSelected();
 			} else if (_root->ActionHit(PlayerActions::Menu)) {
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
-				if (_selectedIndex != (int32_t)Item::Quit) {
+				if (_selectedIndex != (int32_t)_items.size() - 1) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 					_animation = 0.0f;
-					_selectedIndex = (int32_t)Item::Quit;
+					_selectedIndex = (int32_t)_items.size() - 1;
 				}
 #endif
 			} else if (_root->ActionHit(PlayerActions::Up)) {
