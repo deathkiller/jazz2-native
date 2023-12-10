@@ -36,7 +36,7 @@
 #endif
 
 #if defined(WITH_SDL)
-#	define _i6 ", SDL"
+#	define _i6 ", SDL2"
 #else
 #	define _i6 ""
 #endif
@@ -87,19 +87,25 @@
 #	define _i13 ""
 #endif
 
-#if defined(DEATH_CPU_USE_RUNTIME_DISPATCH)
-#	define _i14 ", GNU IFUNC"
+#if defined(WITH_MULTIPLAYER)
+#	define _i14 ", ENet"
 #else
 #	define _i14 ""
 #endif
 
-#if defined(WITH_TRACY)
-#	define _i15 "\n\nTracy integration is enabled!"
+#if defined(DEATH_CPU_USE_RUNTIME_DISPATCH)
+#	define _i15 ", GNU IFUNC"
 #else
 #	define _i15 ""
 #endif
 
-#define ADDITIONAL_INFO _i1 _i2 _i3 _i4 _i5 _i6 _i7 _i8 _i9 _i10 _i11 _i12 _i13 _i14 _i15
+#if defined(WITH_TRACY)
+#	define _i16 "\n\nTracy integration is enabled!"
+#else
+#	define _i16 ""
+#endif
+
+#define ADDITIONAL_INFO _i1 _i2 _i3 _i4 _i5 _i6 _i7 _i8 _i9 _i10 _i11 _i12 _i13 _i14 _i15 _i16
 
 using namespace Jazz2::UI::Menu::Resources;
 

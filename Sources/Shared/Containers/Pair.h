@@ -1,6 +1,7 @@
 // Copyright © 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016,
 //             2017, 2018, 2019, 2020, 2021, 2022, 2023
 //           Vladimír Vondruš <mosra@centrum.cz> and contributors
+// Copyright © 2022 Stanislaw Halik <sthalik@misaki.pl>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -196,28 +197,20 @@ namespace Death::Containers
 		}
 
 		/** @brief First element */
-		DEATH_CONSTEXPR14 F& first()& {
-			return _first;
-		}
+		DEATH_CONSTEXPR14 F& first() & { return _first; }
+		/** @overload */
 		// Not F&& because that'd cause nasty dangling reference issues in common code.
-		DEATH_CONSTEXPR14 F first()&& {
-			return std::move(_first);
-		}
-		constexpr const F& first() const& {
-			return _first;
-		}
+		DEATH_CONSTEXPR14 F first() && { return std::move(_first); }
+		/** @overload */
+		constexpr const F& first() const & { return _first; }
 
 		/** @brief Second element */
-		DEATH_CONSTEXPR14 S& second()& {
-			return _second;
-		}
+		DEATH_CONSTEXPR14 S& second() & { return _second; }
+		/** @overload */
 		// Not S&& because that'd cause nasty dangling reference issues in common code.
-		DEATH_CONSTEXPR14 S second()&& {
-			return std::move(_second);
-		}
-		constexpr const S& second() const& {
-			return _second;
-		}
+		DEATH_CONSTEXPR14 S second() && { return std::move(_second); }
+		/** @overload */
+		constexpr const S& second() const & { return _second; }
 
 		// No const&& overloads right now. There's one theoretical use case, where an API could return a `const Pair<T>`,
 		// and then if there would be a `first() const&&` overload returning a `T` (and not `T&&`), it could get picked
@@ -225,6 +218,32 @@ namespace Death::Containers
 		// return a const value, so this isn't handled at the moment.
 
 	private:
+		// For the conversion constructor
+		template<class, class> friend class Pair;
+
+#if DEATH_CXX_STANDARD > 201402
+		// There doesn't seem to be a way to call those directly, and I can't find any practical use of std::tuple_size,
+		// tuple_element etc. on C++11 and C++14, so this is defined only for newer standards.
+		template<std::size_t index, typename std::enable_if<index == 0, F>::type* = nullptr> constexpr friend const F& get(const Pair<F, S>& value) {
+			return value._first;
+		}
+		template<std::size_t index, typename std::enable_if<index == 0, F>::type* = nullptr> DEATH_CONSTEXPR14 friend F& get(Pair<F, S>& value) {
+			return value._first;
+		}
+		template<std::size_t index, typename std::enable_if<index == 0, F>::type* = nullptr> DEATH_CONSTEXPR14 friend F&& get(Pair<F, S>&& value) {
+			return std::move(value._first);
+		}
+		template<std::size_t index, typename std::enable_if<index == 1, S>::type* = nullptr> constexpr friend const S& get(const Pair<F, S>& value) {
+			return value._second;
+		}
+		template<std::size_t index, typename std::enable_if<index == 1, S>::type* = nullptr> DEATH_CONSTEXPR14 friend S& get(Pair<F, S>& value) {
+			return value._second;
+		}
+		template<std::size_t index, typename std::enable_if<index == 1, S>::type* = nullptr> DEATH_CONSTEXPR14 friend S&& get(Pair<F, S>&& value) {
+			return std::move(value._second);
+		}
+#endif
+
 		F _first;
 		S _second;
 	};
@@ -242,3 +261,13 @@ namespace Death::Containers
 		return Implementation::DeducedPairConverter<typename std::decay<T>::type>::from(std::forward<T>(other));
 	}
 }
+
+/* C++17 structured bindings */
+#if DEATH_CXX_STANDARD > 201402
+namespace std
+{
+	template<class F, class S> struct tuple_size<Death::Containers::Pair<F, S>> : integral_constant<size_t, 2> {};
+	template<class F, class S> struct tuple_element<0, Death::Containers::Pair<F, S>> { typedef F type; };
+	template<class F, class S> struct tuple_element<1, Death::Containers::Pair<F, S>> { typedef S type; };
+}
+#endif

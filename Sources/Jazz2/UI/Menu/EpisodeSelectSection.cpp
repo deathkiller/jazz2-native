@@ -155,12 +155,18 @@ namespace Jazz2::UI::Menu
 				float expandedAnimation2 = std::min(_expandedAnimation * 6.0f, 1.0f);
 				float expandedAnimation3 = (expandedAnimation2 * expandedAnimation2 * (3.0f - 2.0f * expandedAnimation2));
 
-				_root->DrawElement(MenuGlow, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(item.Item.Description.DisplayName) + 3) * 0.5f * size, 4.0f * size, true);
+				if (item.Item.Description.TitleLogo != nullptr) {
+					Vector2i titleSize = item.Item.Description.TitleLogo->size() / 2;
+					_root->DrawTexture(*item.Item.Description.TitleLogo, centerX, item.Y + 2.2f, IMenuContainer::FontLayer + 9, Alignment::Center, Vector2f(titleSize.X, titleSize.Y) * size * (1.0f - expandedAnimation3 * 0.2f) * 1.02f, Colorf(0.0f, 0.0f, 0.0f, 0.26f - expandedAnimation3 * 0.1f));
+					_root->DrawTexture(*item.Item.Description.TitleLogo, centerX, item.Y, IMenuContainer::FontLayer + 10, Alignment::Center, Vector2f(titleSize.X, titleSize.Y) * size * (1.0f - expandedAnimation3 * 0.2f), Colorf(1.0f, 1.0f, 1.0f, 1.0f - expandedAnimation3 * 0.4f));
+				} else {
+					_root->DrawElement(MenuGlow, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(item.Item.Description.DisplayName) + 3) * 0.5f * size, 4.0f * size, true);
 
-				Colorf nameColor = Font::RandomColor;
-				nameColor.SetAlpha(0.5f - expandedAnimation3 * 0.15f);
-				_root->DrawStringShadow(item.Item.Description.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
-					Alignment::Center, nameColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+					Colorf nameColor = Font::RandomColor;
+					nameColor.SetAlpha(0.5f - expandedAnimation3 * 0.15f);
+					_root->DrawStringShadow(item.Item.Description.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
+						Alignment::Center, nameColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+				}
 
 				if ((item.Item.Flags & EpisodeDataFlags::CanContinue) == EpisodeDataFlags::CanContinue) {
 					float expandX = centerX + (item.Item.Description.DisplayName.size() + 3) * 2.8f * size + 40.0f;
@@ -341,8 +347,8 @@ namespace Jazz2::UI::Menu
 		}
 
 		auto& resolver = ContentResolver::Get();
-		std::optional<Episode> description = resolver.GetEpisodeByPath(episodeFile);
-		if (description.has_value()) {
+		std::optional<Episode> description = resolver.GetEpisodeByPath(episodeFile, true);
+		if (description) {
 #if defined(SHAREWARE_DEMO_ONLY)
 			// Check if specified episode is unlocked, used only if compiled with SHAREWARE_DEMO_ONLY
 			if (description->Name == "prince"_s && (PreferencesCache::UnlockedEpisodes & UnlockableEpisodes::FormerlyAPrince) == UnlockableEpisodes::None) return;
@@ -354,7 +360,7 @@ namespace Jazz2::UI::Menu
 #endif
 
 			auto& episode = _items.emplace_back();
-			episode.Item.Description = std::move(description.value());
+			episode.Item.Description = std::move(*description);
 			episode.Item.Flags = EpisodeDataFlags::None;
 
 			if (!resolver.LevelExists(episode.Item.Description.Name, episode.Item.Description.FirstLevel)) {

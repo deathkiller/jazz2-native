@@ -23,6 +23,7 @@
 #pragma once 
 
 #include "../CommonBase.h"
+#include "SequenceHelpers.h"
 #include "Tags.h"
 
 #include <new>
@@ -118,6 +119,33 @@ namespace Death::Containers
 		}
 
 		/**
+		 * @brief In-place construct an array by copying the elements from a fixed-size array
+		 *
+		 * Compared to @ref StaticArray(InPlaceInitT, Args&&... args) doesn't
+		 * require the elements to have explicitly specified type. The array
+		 * elements are copied to the array constructor, if you have a
+		 * non-copyable type or want to move the elements, use
+		 * @ref StaticArray(InPlaceInitT, T(&&)[size_]) instead. Same as
+		 * @ref StaticArray(const T(&)[size_]).
+		 */
+		explicit StaticArray(InPlaceInitT, const T(&data)[size_]) : StaticArray{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, data} {}
+
+#if !defined(DEATH_MSVC2017_COMPATIBILITY)
+		/**
+		* @brief In-place construct an array by moving the elements from a fixed-size array
+		*
+		* Compared to @ref StaticArray(InPlaceInitT, Args&&... args) doesn't
+		* require the elements to have explicitly specified type. Same as
+		* @ref StaticArray(T(&&)[size_]).
+		* @partialsupport Not available on
+		*      @ref DEATH_MSVC2015_COMPATIBILITY "MSVC 2015" and
+		*      @ref DEATH_MSVC2017_COMPATIBILITY "MSVC 2017" as these
+		*      compilers don't support moving arrays.
+		*/
+		explicit StaticArray(InPlaceInitT, T(&&data)[size_]) : StaticArray{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, std::move(data)} {}
+#endif
+
+		/**
 		 * @brief Construct a value-initialized array
 		 *
 		 * Alias to @ref StaticArray(ValueInitT).
@@ -130,6 +158,26 @@ namespace Death::Containers
 		 * Alias to @ref StaticArray(InPlaceInitT, Args&&... args).
 		 */
 		template<class First, class ...Next, class = typename std::enable_if<std::is_convertible<First&&, T>::value>::type> /*implicit*/ StaticArray(First&& first, Next&&... next) : StaticArray{InPlaceInit, std::forward<First>(first), std::forward<Next>(next)...} {}
+
+		/**
+		 * @brief In-place construct an array by copying the elements from a fixed-size array
+		 *
+		 * Alias to @ref StaticArray(InPlaceInitT, const T(&)[size_]).
+		 */
+		explicit StaticArray(const T(&data)[size_]) : StaticArray{InPlaceInit, data} {}
+
+#if !defined(DEATH_MSVC2017_COMPATIBILITY)
+		   /**
+			* @brief In-place construct an array by moving the elements from a fixed-size array
+			*
+			* Alias to @ref StaticArray(InPlaceInitT, T(&&)[size_]).
+			* @partialsupport Not available on
+			*      @ref DEATH_MSVC2015_COMPATIBILITY "MSVC 2015" and
+			*      @ref DEATH_MSVC2017_COMPATIBILITY "MSVC 2017" as these
+			*      compilers don't support moving arrays.
+			*/
+		explicit StaticArray(T(&&data)[size_]) : StaticArray{InPlaceInit, std::move(data)} {}
+#endif
 
 		/** @brief Copy constructor */
 		StaticArray(const StaticArray<size_, T>& other) noexcept(std::is_nothrow_copy_constructible<T>::value);
@@ -405,6 +453,25 @@ namespace Death::Containers
 		}
 
 	private:
+#if DEATH_CXX_STANDARD > 201402
+		// There doesn't seem to be a way to call those directly, and I can't find any practical use of std::tuple_size,
+		// tuple_element etc. on C++11 and C++14, so this is defined only for newer standards.
+		template<std::size_t index> friend T& get(StaticArray<size_, T>& value) {
+			return value._data[index];
+		}
+		template<std::size_t index> friend const T& get(const StaticArray<size_, T>& value) {
+			return value._data[index];
+		}
+		template<std::size_t index> friend T&& get(StaticArray<size_, T>&& value) {
+			return std::move(value._data[index]);
+		}
+#endif
+
+		template<std::size_t ...sequence> explicit StaticArray(InPlaceInitT, Implementation::Sequence<sequence...>, const T(&data)[sizeof...(sequence)]) : _data{data[sequence]...} {}
+#if !defined(DEATH_MSVC2017_COMPATIBILITY)
+		template<std::size_t ...sequence> explicit StaticArray(InPlaceInitT, Implementation::Sequence<sequence...>, T(&&data)[sizeof...(sequence)]) : _data{std::move(data[sequence])...} {}
+#endif
+
 		union {
 			T _data[size_];
 		};
@@ -584,3 +651,13 @@ namespace Death::Containers
 		template<std::size_t size, class T> struct ErasedStaticArrayViewConverter<const StaticArray<size, T>> : StaticArrayViewConverter<size, const T, StaticArray<size, T>> {};
 	}
 }
+
+/* C++17 structured bindings */
+#if DEATH_CXX_STANDARD > 201402
+namespace std
+{
+	// Note that `size` can't be used as it may conflict with std::size() in C++17
+	template<size_t size_, class T> struct tuple_size<Death::Containers::StaticArray<size_, T>> : integral_constant<size_t, size_> {};
+	template<size_t index, size_t size_, class T> struct tuple_element<index, Death::Containers::StaticArray<size_, T>> { typedef T type; };
+}
+#endif

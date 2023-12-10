@@ -783,6 +783,16 @@ namespace Death::Containers
 		}
 
 	private:
+#if DEATH_CXX_STANDARD > 201402
+		// There doesn't seem to be a way to call those directly, and I can't find any practical use of std::tuple_size,
+		// tuple_element etc. on C++11 and C++14, so this is defined only for newer standards.
+		template<std::size_t index> constexpr friend T& get(StaticArrayView<size_, T> value) {
+			return value._data[index];
+		}
+		// As the view is non-owning, a rvalue doesn't imply that its contents are able to be moved out. Thus, unlike StaticArray or Pair/Triple,
+		// it takes the view by value and has no difference in behavior depending on whether the input is T&, const T& or T&&.
+#endif
+
 		T* _data;
 	};
 
@@ -912,3 +922,13 @@ namespace Death::Containers
 		return StaticArrayView<end_ - begin_, T>{_data + begin_};
 	}
 }
+
+/* C++17 structured bindings */
+#if DEATH_CXX_STANDARD > 201402
+namespace std
+{
+	// Note that `size` can't be used as it may conflict with std::size() in C++17
+	template<size_t size_, class T> struct tuple_size<Death::Containers::StaticArrayView<size_, T>> : integral_constant<size_t, size_> {};
+	template<size_t index, size_t size_, class T> struct tuple_element<index, Death::Containers::StaticArrayView<size_, T>> { typedef T type; };
+}
+#endif

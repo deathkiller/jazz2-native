@@ -1229,7 +1229,7 @@ namespace Jazz2
 		}
 	}
 
-	std::optional<Episode> ContentResolver::GetEpisode(const StringView& name)
+	std::optional<Episode> ContentResolver::GetEpisode(const StringView& name, bool withLogo)
 	{
 		String fullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, name + ".j2e"_s });
 		if (!fs::IsReadableFile(fullPath)) {
@@ -1238,7 +1238,7 @@ namespace Jazz2
 		return GetEpisodeByPath(fullPath);
 	}
 
-	std::optional<Episode> ContentResolver::GetEpisodeByPath(const StringView& path)
+	std::optional<Episode> ContentResolver::GetEpisodeByPath(const StringView& path, bool withLogo)
 	{
 		auto s = fs::Open(path, FileAccessMode::Read);
 		if (s->GetSize() < 16) {
@@ -1273,6 +1273,20 @@ namespace Jazz2
 		nameLength = s->ReadValue<std::uint8_t>();
 		episode.NextEpisode = String(NoInit, nameLength);
 		s->Read(episode.NextEpisode.data(), nameLength);
+
+		if (withLogo && !_isHeadless) {
+			std::uint16_t titleWidth = s->ReadValue<std::uint16_t>();
+			std::uint16_t titleHeight = s->ReadValue<std::uint16_t>();
+			if (titleWidth > 0 && titleHeight > 0) {
+				std::unique_ptr<std::uint32_t[]> pixels = std::make_unique<std::uint32_t[]>(titleWidth * titleHeight);
+				ReadImageFromFile(s, (std::uint8_t*)pixels.get(), titleWidth, titleHeight, 4);
+
+				episode.TitleLogo = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, titleWidth, titleHeight);
+				episode.TitleLogo->loadFromTexels((unsigned char*)pixels.get(), 0, 0, titleWidth, titleHeight);
+				episode.TitleLogo->setMinFiltering(SamplerFilter::Nearest);
+				episode.TitleLogo->setMagFiltering(SamplerFilter::Nearest);
+			}
+		}
 
 		return episode;
 	}

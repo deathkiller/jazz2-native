@@ -509,10 +509,10 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 			PreferencesCache::RemoveEpisodeContinue(levelInit.LastEpisodeName);
 
 			std::optional<Episode> lastEpisode = ContentResolver::Get().GetEpisode(levelInit.LastEpisodeName);
-			if (lastEpisode.has_value()) {
+			if (lastEpisode) {
 				// Redirect to next episode
 				std::optional<Episode> nextEpisode = ContentResolver::Get().GetEpisode(lastEpisode->NextEpisode);
-				if (nextEpisode.has_value()) {
+				if (nextEpisode) {
 					levelInit.EpisodeName = lastEpisode->NextEpisode;
 					levelInit.LevelName = nextEpisode->FirstLevel;
 				}
@@ -1422,7 +1422,7 @@ void GameEventHandler::WriteCacheDescriptor(const StringView& path, std::uint64_
 
 void GameEventHandler::SaveEpisodeEnd(const LevelInitialization& levelInit)
 {
-	if (levelInit.LastEpisodeName.empty()) {
+	if (levelInit.LastEpisodeName.empty() || levelInit.LastEpisodeName == "unknown"_s) {
 		return;
 	}
 
@@ -1454,13 +1454,13 @@ void GameEventHandler::SaveEpisodeEnd(const LevelInitialization& levelInit)
 void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 {
 	if (levelInit.EpisodeName.empty() || levelInit.LevelName.empty() ||
-		levelInit.EpisodeName == "unknown"_s ||
+		levelInit.EpisodeName == "unknown"_s || levelInit.Difficulty == GameDifficulty::Multiplayer ||
 		(levelInit.EpisodeName == "prince"_s && levelInit.LevelName == "trainer"_s)) {
 		return;
 	}
 
 	std::optional<Episode> currentEpisode = ContentResolver::Get().GetEpisode(levelInit.EpisodeName);
-	if (!currentEpisode.has_value() || currentEpisode->FirstLevel == levelInit.LevelName) {
+	if (!currentEpisode || currentEpisode->FirstLevel == levelInit.LevelName) {
 		return;
 	}
 
@@ -1474,7 +1474,7 @@ void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 	}
 
 	if (playerCount == 1) {
-		auto episodeContinue = PreferencesCache::GetEpisodeContinue(levelInit.EpisodeName, true);
+		auto* episodeContinue = PreferencesCache::GetEpisodeContinue(levelInit.EpisodeName, true);
 		episodeContinue->LevelName = levelInit.LevelName;
 		episodeContinue->State.Flags = EpisodeContinuationFlags::None;
 		if (levelInit.CheatsUsed) {

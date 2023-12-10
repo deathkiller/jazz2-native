@@ -33,5 +33,7 @@ namespace Jazz2::UI::Menu
 		int32_t _selectedIndex;
 		float _animation;
 		bool _isDirty;
+		float _pressedCooldown;
+		int32_t _pressedCount;
 	};
 }

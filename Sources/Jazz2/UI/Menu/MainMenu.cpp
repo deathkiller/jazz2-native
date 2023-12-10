@@ -456,6 +456,14 @@ namespace Jazz2::UI::Menu
 		currentCanvas->DrawSolid(adjustedPos, z, size, color, additiveBlending);
 	}
 
+	void MainMenu::DrawTexture(const Texture& texture, float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color)
+	{
+		Canvas* currentCanvas = GetActiveCanvas();
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - currentCanvas->ViewSize.X * 0.5f, currentCanvas->ViewSize.Y * 0.5f - y), size);
+
+		currentCanvas->DrawTexture(texture, adjustedPos, z, size, Vector4f(1.0f, 0.0f, -1.0f, 1.0f), color);
+	}
+
 	Vector2f MainMenu::MeasureString(const StringView& text, float scale, float charSpacing, float lineSpacing)
 	{
 		return _smallFont->MeasureString(text, scale, charSpacing, lineSpacing);

@@ -447,6 +447,10 @@ namespace Jazz2
 
 	void PreferencesCache::RemoveEpisodeContinue(const StringView& episodeName)
 	{
+		if (episodeName.empty() || episodeName == "unknown"_s) {
+			return;
+		}
+
 		_episodeContinue.erase(String::nullTerminatedView(episodeName));
 	}
 
