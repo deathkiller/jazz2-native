@@ -155,10 +155,11 @@ namespace Jazz2::UI::Menu
 				float expandedAnimation2 = std::min(_expandedAnimation * 6.0f, 1.0f);
 				float expandedAnimation3 = (expandedAnimation2 * expandedAnimation2 * (3.0f - 2.0f * expandedAnimation2));
 
-				if (item.Item.Description.TitleLogo != nullptr) {
-					Vector2i titleSize = item.Item.Description.TitleLogo->size() / 2;
-					_root->DrawTexture(*item.Item.Description.TitleLogo, centerX, item.Y + 2.2f, IMenuContainer::FontLayer + 9, Alignment::Center, Vector2f(titleSize.X, titleSize.Y) * size * (1.0f - expandedAnimation3 * 0.2f) * 1.02f, Colorf(0.0f, 0.0f, 0.0f, 0.26f - expandedAnimation3 * 0.1f));
-					_root->DrawTexture(*item.Item.Description.TitleLogo, centerX, item.Y, IMenuContainer::FontLayer + 10, Alignment::Center, Vector2f(titleSize.X, titleSize.Y) * size * (1.0f - expandedAnimation3 * 0.2f), Colorf(1.0f, 1.0f, 1.0f, 1.0f - expandedAnimation3 * 0.4f));
+				if (item.Item.Description.TitleImage != nullptr) {
+					Vector2i titleSize = item.Item.Description.TitleImage->size() / 2;
+					_root->DrawTexture(*item.Item.Description.TitleImage, centerX, item.Y + 2.2f, IMenuContainer::FontLayer + 8, Alignment::Center, Vector2f(titleSize.X, titleSize.Y) * size * (1.0f - expandedAnimation3 * 0.2f) * 1.02f, Colorf(0.0f, 0.0f, 0.0f, 0.26f - expandedAnimation3 * 0.1f));
+					float alpha = 1.0f - expandedAnimation3 * 0.4f;
+					_root->DrawTexture(*item.Item.Description.TitleImage, centerX, item.Y, IMenuContainer::FontLayer + 10, Alignment::Center, Vector2f(titleSize.X, titleSize.Y) * size * (1.0f - expandedAnimation3 * 0.2f), Colorf(alpha, alpha, alpha, 1.0f));
 				} else {
 					_root->DrawElement(MenuGlow, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(item.Item.Description.DisplayName) + 3) * 0.5f * size, 4.0f * size, true);
 
@@ -216,10 +217,44 @@ namespace Jazz2::UI::Menu
 
 		if ((item.Item.Flags & (EpisodeDataFlags::IsCompleted | EpisodeDataFlags::IsAvailable)) == (EpisodeDataFlags::IsCompleted | EpisodeDataFlags::IsAvailable)) {
 			float size = (isSelected ? 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f : 0.7f);
-			float expandX = centerX - (item.Item.Description.DisplayName.size() + 3) * 4.0f * (isSelected ? size : 1.1f) + 10.0f;
+			float textWidth = item.Item.Description.DisplayName.size() + 3;
+			if (isSelected) {
+				if (item.Item.Description.Name == "prince"_s || item.Item.Description.Name == "share"_s) {
+					// "Formerly a Prince" & "Shareware Demo" title image is too narrow, so try to adjust it a bit
+					textWidth *= 0.8f;
+				} else if (item.Item.Description.Name == "flash"_s) {
+					// "Flashback" title image is too wide, so try to adjust it a bit
+					textWidth *= 1.5f;
+				}
+			}
+			float expandedAnimation2 = std::min(_expandedAnimation * 6.0f, 1.0f);
+			float expandX = centerX - textWidth * 4.0f * (isSelected ? (size - (expandedAnimation2 * 0.12f)) : 1.1f) + 10.0f;
 			_root->DrawElement(EpisodeComplete, 0, expandX, item.Y - 2.0f, IMenuContainer::MainLayer + (isSelected ? 20 : 10), Alignment::Right,
 				((item.Item.Flags & EpisodeDataFlags::CheatsUsed) == EpisodeDataFlags::CheatsUsed ? Colorf::Black : Colorf::White), size, size);
 		}
+	}
+
+	void EpisodeSelectSection::OnDrawClipped(Canvas* canvas)
+	{
+		if (!_items.empty()) {
+			auto& item = _items[_selectedIndex];
+			if (item.Item.Description.BackgroundImage != nullptr) {
+				Vector2f center = Vector2f(canvas->ViewSize.X * 0.5f, canvas->ViewSize.Y * 0.7f);
+				Vector2i backgroundSize = item.Item.Description.BackgroundImage->size();
+
+				float expandedAnimation2 = std::min(_expandedAnimation * 6.0f, 1.0f);
+				float expandedAnimation3 = (expandedAnimation2 * expandedAnimation2 * (3.0f - 2.0f * expandedAnimation2));
+				if (expandedAnimation3 > 0.0f) {
+					backgroundSize += expandedAnimation3 * 100;
+				}
+
+				_root->DrawSolid(center.X, center.Y, IMenuContainer::BackgroundLayer - 10, Alignment::Center, Vector2f(backgroundSize.X + 2.0f, backgroundSize.Y + 2.0f), Colorf(1.0f, 1.0f, 1.0f, 0.26f));
+				float alpha = 0.4f - expandedAnimation3 * 0.1f;
+				_root->DrawTexture(*item.Item.Description.BackgroundImage, center.X, center.Y, IMenuContainer::BackgroundLayer, Alignment::Center, Vector2f(backgroundSize.X, backgroundSize.Y), Colorf(alpha, alpha, alpha, 1.0f));
+			}
+		}
+
+		ScrollableMenuSection::OnDrawClipped(canvas);
 	}
 
 	void EpisodeSelectSection::OnDrawOverlay(Canvas* canvas)

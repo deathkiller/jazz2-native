@@ -12,12 +12,12 @@ using namespace Death::IO;
 namespace Jazz2::Compatibility
 {
 	JJ2Episode::JJ2Episode()
-		: Position(0), TitleWidth(0), TitleHeight(0)
+		: Position(0), ImageWidth(0), ImageHeight(0), TitleWidth(0), TitleHeight(0)
 	{
 	}
 
 	JJ2Episode::JJ2Episode(const String& name, const String& displayName, const String& firstLevel, int32_t position)
-		: Name(name), DisplayName(displayName), FirstLevel(firstLevel), Position(position), TitleWidth(0), TitleHeight(0)
+		: Name(name), DisplayName(displayName), FirstLevel(firstLevel), Position(position), ImageWidth(0), ImageHeight(0), TitleWidth(0), TitleHeight(0)
 	{
 	}
 
@@ -79,8 +79,8 @@ namespace Jazz2::Compatibility
 		FirstLevel = String(tmpBuffer, length);
 		lowercaseInPlace(FirstLevel);
 
-		/*int32_t width =*/ s->ReadValue<int32_t>();
-		/*int32_t height =*/ s->ReadValue<int32_t>();
+		ImageWidth = s->ReadValue<int32_t>();
+		ImageHeight = s->ReadValue<int32_t>();
 		/*int32_t unknown2 =*/ s->ReadValue<int32_t>();
 		/*int32_t unknown3 =*/ s->ReadValue<int32_t>();
 
@@ -89,15 +89,16 @@ namespace Jazz2::Compatibility
 		/*int32_t unknown4 =*/ s->ReadValue<int32_t>();
 		/*int32_t unknown5 =*/ s->ReadValue<int32_t>();
 
+		// Background image
 		{
 			int32_t imagePackedSize = s->ReadValue<int32_t>();
-			//int imageUnpackedSize = width * height;
-			//JJ2Block imageBlock(s, imagePackedSize, imageUnpackedSize);
-			//episode.image = ConvertIndicesToRgbaBitmap(width, height, imageBlock, false);
-
-			// Skip it for now
-			s->Seek(imagePackedSize, SeekOrigin::Current);
+			int imageUnpackedSize = ImageWidth * ImageHeight;
+			JJ2Block imageBlock(s, imagePackedSize, imageUnpackedSize);
+			ImageData = std::make_unique<uint8_t[]>(imageUnpackedSize);
+			imageBlock.ReadRawBytes(ImageData.get(), imageUnpackedSize);
 		}
+
+		// Title image
 		{
 			int32_t titleLightPackedSize = s->ReadValue<int32_t>();
 			int32_t titleLightUnpackedSize = TitleWidth * TitleHeight;
@@ -176,7 +177,7 @@ namespace Jazz2::Compatibility
 			so->WriteValue<uint8_t>(0);
 		}
 
-		// Write episode logo
+		// Write episode title image
 		so->WriteValue<uint16_t>((uint16_t)TitleWidth);
 		so->WriteValue<uint16_t>((uint16_t)TitleHeight);
 
@@ -198,5 +199,23 @@ namespace Jazz2::Compatibility
 		}
 
 		JJ2Anims::WriteImageToFileInternal(so, titlePixels.get(), TitleWidth, TitleHeight, 4);
+
+		// Write episode background image
+		so->WriteValue<uint16_t>((uint16_t)ImageWidth);
+		so->WriteValue<uint16_t>((uint16_t)ImageHeight);
+
+		uint32_t imagePixelsCount = ImageWidth * ImageHeight;
+		std::unique_ptr<uint8_t[]> imagePixels = std::make_unique<uint8_t[]>(imagePixelsCount * 4);
+		for (uint32_t i = 0; i < imagePixelsCount; i++) {
+			uint8_t colorIdx = ImageData[i];
+
+			const Color& src = MenuPalette[colorIdx];
+			imagePixels[i * 4] = src.R;
+			imagePixels[i * 4 + 1] = src.G;
+			imagePixels[i * 4 + 2] = src.B;
+			imagePixels[i * 4 + 3] = src.A;
+		}
+
+		JJ2Anims::WriteImageToFileInternal(so, imagePixels.get(), ImageWidth, ImageHeight, 4);
 	}
 }

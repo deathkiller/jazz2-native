@@ -23,6 +23,11 @@ namespace Jazz2::Compatibility
 		String FirstLevel;
 		String PreviousEpisode;
 		String NextEpisode;
+
+		int32_t ImageWidth;
+		int32_t ImageHeight;
+		std::unique_ptr<uint8_t[]> ImageData;
+
 		int32_t TitleWidth;
 		int32_t TitleHeight;
 		std::unique_ptr<uint8_t[]> TitleData;

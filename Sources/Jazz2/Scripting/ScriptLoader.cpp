@@ -210,7 +210,7 @@ namespace Jazz2::Scripting
 				if (!currentNamespace.empty()) {
 					currentNamespace += "::"_s;
 				}
-				currentClass = currentNamespace.slice(pos, pos + len);
+				currentNamespace += scriptContent.slice(pos, pos + len);
 
 				// Search until first { is encountered
 				while (pos < scriptSize) {
