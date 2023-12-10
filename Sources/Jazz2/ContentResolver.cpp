@@ -1229,16 +1229,16 @@ namespace Jazz2
 		}
 	}
 
-	std::optional<Episode> ContentResolver::GetEpisode(const StringView& name, bool withLogo)
+	std::optional<Episode> ContentResolver::GetEpisode(const StringView& name, bool withImages)
 	{
 		String fullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, name + ".j2e"_s });
 		if (!fs::IsReadableFile(fullPath)) {
 			fullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, name + ".j2e"_s });
 		}
-		return GetEpisodeByPath(fullPath);
+		return GetEpisodeByPath(fullPath, withImages);
 	}
 
-	std::optional<Episode> ContentResolver::GetEpisodeByPath(const StringView& path, bool withLogo)
+	std::optional<Episode> ContentResolver::GetEpisodeByPath(const StringView& path, bool withImages)
 	{
 		auto s = fs::Open(path, FileAccessMode::Read);
 		if (s->GetSize() < 16) {
@@ -1274,17 +1274,29 @@ namespace Jazz2
 		episode.NextEpisode = String(NoInit, nameLength);
 		s->Read(episode.NextEpisode.data(), nameLength);
 
-		if (withLogo && !_isHeadless) {
+		if (withImages && !_isHeadless) {
 			std::uint16_t titleWidth = s->ReadValue<std::uint16_t>();
 			std::uint16_t titleHeight = s->ReadValue<std::uint16_t>();
 			if (titleWidth > 0 && titleHeight > 0) {
 				std::unique_ptr<std::uint32_t[]> pixels = std::make_unique<std::uint32_t[]>(titleWidth * titleHeight);
 				ReadImageFromFile(s, (std::uint8_t*)pixels.get(), titleWidth, titleHeight, 4);
 
-				episode.TitleLogo = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, titleWidth, titleHeight);
-				episode.TitleLogo->loadFromTexels((unsigned char*)pixels.get(), 0, 0, titleWidth, titleHeight);
-				episode.TitleLogo->setMinFiltering(SamplerFilter::Nearest);
-				episode.TitleLogo->setMagFiltering(SamplerFilter::Nearest);
+				episode.TitleImage = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, titleWidth, titleHeight);
+				episode.TitleImage->loadFromTexels((unsigned char*)pixels.get(), 0, 0, titleWidth, titleHeight);
+				episode.TitleImage->setMinFiltering(SamplerFilter::Nearest);
+				episode.TitleImage->setMagFiltering(SamplerFilter::Nearest);
+			}
+
+			std::uint16_t backgroundWidth = s->ReadValue<std::uint16_t>();
+			std::uint16_t backgroundHeight = s->ReadValue<std::uint16_t>();
+			if (backgroundWidth > 0 && backgroundHeight > 0) {
+				std::unique_ptr<std::uint32_t[]> pixels = std::make_unique<std::uint32_t[]>(backgroundWidth * backgroundHeight);
+				ReadImageFromFile(s, (std::uint8_t*)pixels.get(), backgroundWidth, backgroundHeight, 4);
+
+				episode.BackgroundImage = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, backgroundWidth, backgroundHeight);
+				episode.BackgroundImage->loadFromTexels((unsigned char*)pixels.get(), 0, 0, backgroundWidth, backgroundHeight);
+				episode.BackgroundImage->setMinFiltering(SamplerFilter::Nearest);
+				episode.BackgroundImage->setMagFiltering(SamplerFilter::Nearest);
 			}
 		}
 
