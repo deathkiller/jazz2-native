@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#if defined(WITH_MULTIPLAYER)
+
 #include "MenuSection.h"
 
 namespace Jazz2::UI::Menu
@@ -52,3 +54,5 @@ namespace Jazz2::UI::Menu
 		void StartImageTransition();
 	};
 }
+
+#endif
