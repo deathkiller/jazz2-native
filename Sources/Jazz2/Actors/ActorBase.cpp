@@ -1323,6 +1323,11 @@ namespace Jazz2::Actors
 		}
 	}
 
+	ActorRendererType ActorBase::ActorRenderer::GetRendererType() const
+	{
+		return _rendererType;
+	}
+
 	void ActorBase::ActorRenderer::UpdateVisibleFrames()
 	{
 		// Calculate visible frames

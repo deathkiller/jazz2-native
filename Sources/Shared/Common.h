@@ -57,6 +57,7 @@ namespace Death::Cpu {
 #if defined(DEATH_CPU_USE_RUNTIME_DISPATCH) && !defined(DEATH_CPU_USE_IFUNC)
 #	define DEATH_CPU_DISPATCHER_DECLARATION(name) decltype(name) name ## Implementation(Cpu::Features);
 #	define DEATH_CPU_DISPATCHER(...) _DEATH_CPU_DISPATCHER(__VA_ARGS__)
+#	define DEATH_CPU_DISPATCHER_BASE(...) _DEATH_CPU_DISPATCHER_BASE(__VA_ARGS__)
 #	define DEATH_CPU_DISPATCHED_DECLARATION(name) (*name)
 #	define DEATH_CPU_DISPATCHED(dispatcher, ...) DEATH_CPU_DISPATCHED_POINTER(dispatcher, __VA_ARGS__) DEATH_NOOP
 #	define DEATH_CPU_MAYBE_UNUSED
@@ -65,10 +66,12 @@ namespace Death::Cpu {
 #	define DEATH_CPU_DISPATCHED_DECLARATION(name) (name)
 #	if defined(DEATH_CPU_USE_RUNTIME_DISPATCH) && defined(DEATH_CPU_USE_IFUNC)
 #		define DEATH_CPU_DISPATCHER(...) namespace { _DEATH_CPU_DISPATCHER(__VA_ARGS__) }
+#		define DEATH_CPU_DISPATCHER_BASE(...) namespace { _DEATH_CPU_DISPATCHER_BASE(__VA_ARGS__) }
 #		define DEATH_CPU_DISPATCHED(dispatcher, ...) DEATH_CPU_DISPATCHED_IFUNC(dispatcher, __VA_ARGS__) DEATH_NOOP
 #		define DEATH_CPU_MAYBE_UNUSED
 #	else
 #		define DEATH_CPU_DISPATCHER(...)
+#		define DEATH_CPU_DISPATCHER_BASE(...)
 #		define DEATH_CPU_DISPATCHED(dispatcher, ...) __VA_ARGS__ DEATH_PASSTHROUGH
 #		define DEATH_CPU_MAYBE_UNUSED DEATH_UNUSED
 #	endif

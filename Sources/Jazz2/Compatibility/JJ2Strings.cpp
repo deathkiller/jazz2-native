@@ -2,6 +2,7 @@
 
 #include "../../nCine/Base/Algorithms.h"
 
+#include <Containers/StringUtils.h>
 #include <IO/FileSystem.h>
 
 using namespace Death::Containers::Literals;
@@ -45,7 +46,7 @@ namespace Jazz2::Compatibility
 		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
 		Name = fs::GetFileNameWithoutExtension(path);
-		lowercaseInPlace(Name);
+		StringUtils::lowercaseInPlace(Name);
 
 		uint32_t offsetArraySize = s->ReadValue<uint32_t>();
 
@@ -72,7 +73,7 @@ namespace Jazz2::Compatibility
 			levelName[8] = '\0';
 
 			LevelEntry& levelEntry = LevelTexts.emplace_back(String(levelName));
-			lowercaseInPlace(levelEntry.Name);
+			StringUtils::lowercaseInPlace(levelEntry.Name);
 
 			/*uint8_t unknown =*/ s->ReadValue<uint8_t>();
 			counts.emplace_back(s->ReadValue<uint8_t>());

@@ -16,6 +16,7 @@
 #include <Environment.h>
 #include <Utf8.h>
 #include <Containers/GrowableArray.h>
+#include <Containers/StringUtils.h>
 #include <IO/FileSystem.h>
 
 using namespace Death;
@@ -747,7 +748,7 @@ namespace nCine
 					wchar_t* buffer = languages.data();
 					for (ULONG k = 0; k < numberOfLanguages; ++k) {
 						String langId = Utf8::FromUtf16(buffer);
-						lowercaseInPlace(langId);
+						StringUtils::lowercaseInPlace(langId);
 						arrayAppend(preferred, std::move(langId));
 
 						while (*buffer != L'\0') {
@@ -762,7 +763,7 @@ namespace nCine
 			wchar_t buffer[LOCALE_NAME_MAX_LENGTH];
 			if (::GetUserDefaultLocaleName(buffer, LOCALE_NAME_MAX_LENGTH)) {
 				String langId = Utf8::FromUtf16(buffer);
-				lowercaseInPlace(langId);
+				StringUtils::lowercaseInPlace(langId);
 				arrayAppend(preferred, std::move(langId));
 			}
 		}

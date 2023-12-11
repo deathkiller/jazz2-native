@@ -340,6 +340,12 @@ namespace Jazz2::Compatibility
 				LOGI("Applying \"Vine\" palette fix to %i:%u", anim.Set, anim.Anim);
 			}
 
+			bool applyFlyCarrotFix = (entry->Category == "Pickup"_s && entry->Name == "carrot_fly"_s);
+			if (applyFlyCarrotFix) {
+				// This image has 4 wrong pixels that should be transparent
+				LOGI("Applying \"Fly Carrot\" image fix to %i:%u", anim.Set, anim.Anim);
+			}
+
 			String filename;
 			if (entry->Name.empty()) {
 				/*filename = "s" + sample.Set + "_s" + sample.IdInSet + ".jri";
@@ -375,6 +381,10 @@ namespace Jazz2::Compatibility
 							}
 						} else if (applyVineFix) {
 							if (colorIdx == 128) {
+								colorIdx = 0;
+							}
+						} else if (applyFlyCarrotFix) {
+							if (colorIdx >= 68 && colorIdx <= 70) {
 								colorIdx = 0;
 							}
 						}

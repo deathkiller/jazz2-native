@@ -296,21 +296,22 @@ namespace Jazz2::Actors::Bosses
 		SetAnimation((AnimState)partType);
 
 		switch (partType) {
-			case 1:
+			case 1: // Bottom
+				SetState(ActorState::IsSolidObject, true);
 				SetState(ActorState::CollideWithOtherActors, false);
 				CanCollideWithAmmo = true;
 				Size = 0.0f;
 				break;
-			case 2:
+			case 2: // Turret
 				SetState(ActorState::CollideWithOtherActors, false);
 				CanCollideWithAmmo = false;
 				Size = 0.0f;
 				break;
-			case 3:
+			case 3: // Chain 1
 				CanCollideWithAmmo = false;
 				Size = 14.0f;
 				break;
-			case 4:
+			case 4: // Chain 2
 				CanCollideWithAmmo = false;
 				Size = 7.0f;
 				break;

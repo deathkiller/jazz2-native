@@ -133,7 +133,7 @@ namespace Jazz2::Multiplayer
 
 		_updateTimeLeft -= timeMult;
 		if (_updateTimeLeft < 0.0f) {
-			_updateTimeLeft = 4.0f;
+			_updateTimeLeft = FrameTimer::FramesPerSecond / UpdatesPerSecond;
 
 			if (!_initialUpdateSent) {
 				_initialUpdateSent = true;
@@ -148,12 +148,12 @@ namespace Jazz2::Multiplayer
 			if (_isServer) {
 				std::uint32_t actorCount = (std::uint32_t)(_players.size() + _remotingActors.size());
 
-				MemoryStream packet(5 + actorCount * 18);
+				MemoryStream packet(5 + actorCount * 19);
 				packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::UpdateAllActors);
 				packet.WriteVariableUint32(actorCount);
 
 				for (Actors::Player* player : _players) {
-					Vector2f pos;
+					/*Vector2f pos;
 					auto it = _playerStates.find(player->_playerIndex);
 					if (it != _playerStates.end()) {
 						// Remote players
@@ -176,7 +176,8 @@ namespace Jazz2::Multiplayer
 					} else {
 						// Local players
 						pos = player->_pos;
-					}
+					}*/
+					Vector2f pos = player->_pos;
 
 					packet.WriteVariableUint32(player->_playerIndex);
 					packet.WriteValue<std::int32_t>((std::int32_t)(pos.X * 512.0f));
@@ -195,6 +196,9 @@ namespace Jazz2::Multiplayer
 						flags |= 0x02;
 					}
 					packet.WriteValue<std::uint8_t>(flags);
+
+					Actors::ActorRendererType rendererType = player->_renderer.GetRendererType();
+					packet.WriteValue<std::uint8_t>((std::uint8_t)rendererType);
 				}
 
 				for (const auto& [remotingActor, remotingActorId] : _remotingActors) {
@@ -215,6 +219,9 @@ namespace Jazz2::Multiplayer
 						flags |= 0x02;
 					}
 					packet.WriteValue<std::uint8_t>(flags);
+
+					Actors::ActorRendererType rendererType = remotingActor->_renderer.GetRendererType();
+					packet.WriteValue<std::uint8_t>((std::uint8_t)rendererType);
 				}
 
 				_networkManager->SendToAll(NetworkChannel::UnreliableUpdates, packet.GetBuffer(), packet.GetSize());
@@ -358,8 +365,7 @@ namespace Jazz2::Multiplayer
 		LevelHandler::AddActor(actor);
 
 		if (!_suppressRemoting && _isServer && (actor->_currentAnimation != nullptr || actor->_currentTransition != nullptr)) {
-			++_lastSpawnedActorId;
-			std::uint32_t actorId = _lastSpawnedActorId;
+			std::uint32_t actorId = FindFreeActorId();
 			_remotingActors[actor.get()] = actorId;
 
 			const auto& metadataPath = actor->_metadata->Path;
@@ -1127,11 +1133,12 @@ namespace Jazz2::Multiplayer
 						std::uint32_t anim = packet.ReadVariableUint32();
 						float rotation = packet.ReadValue<std::uint8_t>() * fRadAngle360 / 255.0f;
 						std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+						Actors::ActorRendererType rendererType = (Actors::ActorRendererType)packet.ReadValue<std::uint8_t>();
 
 						auto it = _remoteActors.find(index);
 						if (it != _remoteActors.end()) {
 							it->second->SyncWithServer(Vector2f(posX, posY), (AnimState)anim, rotation,
-								(flags & 0x02) != 0, (flags & 0x01) != 0);
+								(flags & 0x02) != 0, (flags & 0x01) != 0, rendererType);
 						}
 					}
 					return true;
@@ -1331,14 +1338,13 @@ namespace Jazz2::Multiplayer
 				continue;
 			}
 
-			// TODO
+			// TODO: Spawn on the latest checkpoint
 			Vector2 spawnPosition = EventMap()->GetSpawnPosition(PlayerType::Jazz);
 			if (spawnPosition.X < 0.0f && spawnPosition.Y < 0.0f) {
 				continue;
 			}
 
-			++_lastSpawnedActorId;
-			std::int32_t playerIndex = _lastSpawnedActorId;
+			std::int32_t playerIndex = FindFreeActorId();
 
 			std::shared_ptr<Actors::RemotePlayerOnServer> player = std::make_shared<Actors::RemotePlayerOnServer>();
 			std::uint8_t playerParams[2] = { (std::uint8_t)PlayerType::Spaz, (std::uint8_t)playerIndex };
@@ -1441,6 +1447,12 @@ namespace Jazz2::Multiplayer
 				_networkManager->SendToPeer(otherPeer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
 			}
 		}
+	}
+
+	std::uint32_t MultiLevelHandler::FindFreeActorId()
+	{
+		// TODO
+		return ++_lastSpawnedActorId;
 	}
 
 	/*void MultiLevelHandler::UpdatePlayerLocalPos(Actors::Player* player, PlayerState& playerState, float timeMult)
@@ -1553,7 +1565,7 @@ namespace Jazz2::Multiplayer
 	}
 
 	MultiLevelHandler::PlayerState::PlayerState(const Vector2f& pos, const Vector2f& speed)
-		: Flags(PlayerFlags::None), PressedKeys(0), WarpSeqNum(0), WarpTimeLeft(0.0f)
+		: Flags(PlayerFlags::None), PressedKeys(0)/*, WarpSeqNum(0), WarpTimeLeft(0.0f)*/
 	{
 	}
 }

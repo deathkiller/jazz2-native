@@ -12,7 +12,7 @@ namespace Jazz2::Actors
 		RemoteActor();
 
 		void AssignMetadata(const StringView& path, AnimState anim, ActorState state);
-		void SyncWithServer(const Vector2f& pos, AnimState anim, float rotation, bool isVisible, bool isFacingLeft);
+		void SyncWithServer(const Vector2f& pos, AnimState anim, float rotation, bool isVisible, bool isFacingLeft, Actors::ActorRendererType rendererType);
 
 	protected:
 		struct StateFrame {

@@ -219,6 +219,7 @@ namespace Jazz2::Actors
 			bool OnDraw(RenderQueue& renderQueue) override;
 
 			bool IsAnimationRunning();
+			ActorRendererType GetRendererType() const;
 
 		protected:
 			void textureHasChanged(Texture* newTexture) override;

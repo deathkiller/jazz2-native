@@ -143,13 +143,14 @@ namespace Jazz2::Multiplayer
 		struct PlayerState {
 			PlayerFlags Flags;
 			std::uint64_t PressedKeys;
-			std::uint64_t WarpSeqNum;
-			float WarpTimeLeft;
+			//std::uint64_t WarpSeqNum;
+			//float WarpTimeLeft;
 
 			PlayerState();
 			PlayerState(const Vector2f& pos, const Vector2f& speed);
 		};
 
+		static constexpr float UpdatesPerSecond = 16.0f; // ~62 ms interval
 		static constexpr std::int64_t ServerDelay = 64;
 
 		NetworkManager* _networkManager;
@@ -167,6 +168,7 @@ namespace Jazz2::Multiplayer
 		bool _ignorePackets;
 
 		void SynchronizePeers();
+		std::uint32_t FindFreeActorId();
 	};
 }
 

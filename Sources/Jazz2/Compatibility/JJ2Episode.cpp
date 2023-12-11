@@ -5,6 +5,7 @@
 
 #include "../../nCine/Base/Algorithms.h"
 
+#include <Containers/StringUtils.h>
 #include <IO/FileSystem.h>
 
 using namespace Death::IO;
@@ -27,7 +28,7 @@ namespace Jazz2::Compatibility
 		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
 
 		Name = fs::GetFileNameWithoutExtension(path);
-		lowercaseInPlace(Name);
+		StringUtils::lowercaseInPlace(Name);
 
 		// TODO: Implement JJ2+ extended data, but I haven't seen it anywhere yet
 		// the condition of unlocking (currently only defined for 0 meaning "always unlocked"
@@ -59,7 +60,7 @@ namespace Jazz2::Compatibility
 			length++;
 		}
 		PreviousEpisode = String(tmpBuffer, length);
-		lowercaseInPlace(PreviousEpisode);
+		StringUtils::lowercaseInPlace(PreviousEpisode);
 
 		// Next Episode
 		s->Read(tmpBuffer, 32);
@@ -68,7 +69,7 @@ namespace Jazz2::Compatibility
 			length++;
 		}
 		NextEpisode = String(tmpBuffer, length);
-		lowercaseInPlace(NextEpisode);
+		StringUtils::lowercaseInPlace(NextEpisode);
 
 		// First level
 		s->Read(tmpBuffer, 32);
@@ -77,7 +78,7 @@ namespace Jazz2::Compatibility
 			length++;
 		}
 		FirstLevel = String(tmpBuffer, length);
-		lowercaseInPlace(FirstLevel);
+		StringUtils::lowercaseInPlace(FirstLevel);
 
 		ImageWidth = s->ReadValue<int32_t>();
 		ImageHeight = s->ReadValue<int32_t>();
