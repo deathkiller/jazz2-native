@@ -1,10 +1,12 @@
-﻿#include "NetworkManager.h"
+﻿#define ENET_IMPLEMENTATION
+#include "NetworkManager.h"
 
 #if defined(WITH_MULTIPLAYER)
 
 #include "INetworkHandler.h"
 #include "../../nCine/Base/Timer.h"
 
+/*
 // <mmeapi.h> included by "enet.h" still uses `far` macro
 #define far
 
@@ -17,31 +19,32 @@
 
 // Undefine it again after include
 #undef far
+*/
 
 #include <Containers/String.h>
+#include <Threading/Interlocked.h>
+
+using namespace Death;
 
 namespace Jazz2::Multiplayer
 {
+	std::int32_t NetworkManager::_initializeCount = 0;
+
 	NetworkManager::NetworkManager()
-		: _initialized(false), _host(nullptr), _state(NetworkState::None), _handler(nullptr)
+		: _host(nullptr), _state(NetworkState::None), _handler(nullptr)
 	{
-		int error = enet_initialize();
-		RETURN_ASSERT_MSG(error == 0, "Initialization failed with error %i", error);
-		_initialized = (error == 0);
+		InitializeBackend();
 	}
 
 	NetworkManager::~NetworkManager()
 	{
 		Dispose();
-
-		if (_initialized) {
-			enet_deinitialize();
-		}
+		ReleaseBackend();
 	}
 
 	bool NetworkManager::CreateClient(INetworkHandler* handler, const StringView& address, std::uint16_t port, std::uint32_t clientData)
 	{
-		if (!_initialized || _host != nullptr) {
+		if (_host != nullptr) {
 			return false;
 		}
 
@@ -72,7 +75,7 @@ namespace Jazz2::Multiplayer
 
 	bool NetworkManager::CreateServer(INetworkHandler* handler, std::uint16_t port)
 	{
-		if (!_initialized || _host != nullptr) {
+		if (_host != nullptr) {
 			return false;
 		}
 
@@ -82,6 +85,8 @@ namespace Jazz2::Multiplayer
 
 		_host = enet_host_create(&addr, MaxPeerCount, (std::size_t)NetworkChannel::Count, 0, 0);
 		RETURNF_ASSERT_MSG(_host != nullptr, "Failed to create a server");
+
+		_discovery = std::make_unique<ServerDiscovery>(handler, port);
 
 		_handler = handler;
 		_state = NetworkState::Listening;
@@ -170,6 +175,21 @@ namespace Jazz2::Multiplayer
 	void NetworkManager::KickClient(const Peer& peer, Reason reason)
 	{
 		enet_peer_disconnect_now(peer._enet, (std::uint32_t)reason);
+	}
+
+	void NetworkManager::InitializeBackend()
+	{
+		if (Interlocked::Increment(&_initializeCount) == 1) {
+			std::int32_t error = enet_initialize();
+			RETURN_ASSERT_MSG(error == 0, "enet_initialize() failed with error %i", error);
+		}
+	}
+
+	void NetworkManager::ReleaseBackend()
+	{
+		if (Interlocked::Decrement(&_initializeCount) == 0) {
+			enet_deinitialize();
+		}
 	}
 
 	void NetworkManager::OnClientThread(void* param)

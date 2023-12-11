@@ -232,7 +232,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void InGameMenu::ChangeLevel(Jazz2::LevelInitialization&& levelInit)
+	void InGameMenu::ChangeLevel(LevelInitialization&& levelInit)
 	{
 		_root->_root->ChangeLevel(std::move(levelInit));
 	}
@@ -253,9 +253,9 @@ namespace Jazz2::UI::Menu
 		return _root->_root->ConnectToServer(address, port);
 	}
 
-	bool InGameMenu::CreateServer(std::uint16_t port)
+	bool InGameMenu::CreateServer(LevelInitialization&& levelInit, std::uint16_t port)
 	{
-		return _root->_root->CreateServer(port);
+		return _root->_root->CreateServer(std::move(levelInit), port);
 	}
 #endif
 

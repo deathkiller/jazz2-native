@@ -1012,7 +1012,7 @@ namespace Jazz2::Multiplayer
 					std::uint64_t prevState = (it->second.PressedKeys & 0xffffffffu);
 					it->second.PressedKeys = packet.ReadVariableUint32() | (prevState << 32);
 
-					LOGD("Player %i pressed 0x%08x, last state was 0x%08x", playerIndex, it->second.PressedKeys & 0xffffffffu, prevState);
+					//LOGD("Player %i pressed 0x%08x, last state was 0x%08x", playerIndex, it->second.PressedKeys & 0xffffffffu, prevState);
 					return true;
 				}
 			}

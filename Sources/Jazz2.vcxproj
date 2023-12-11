@@ -355,6 +355,7 @@
     <ClInclude Include="Jazz2\Multiplayer\PacketTypes.h" />
     <ClInclude Include="Jazz2\Multiplayer\Peer.h" />
     <ClInclude Include="Jazz2\Multiplayer\Reason.h" />
+    <ClInclude Include="Jazz2\Multiplayer\ServerDiscovery.h" />
     <ClInclude Include="Jazz2\PitType.h" />
     <ClInclude Include="Jazz2\PlayerActions.h" />
     <ClInclude Include="Jazz2\PlayerType.h" />
@@ -388,6 +389,7 @@
     <ClInclude Include="Jazz2\UI\Menu\BeginSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\ControlsOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\ControlsSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\CreateServerOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\CustomLevelSelectSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\EpisodeSelectSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\GameplayEnhancementsSection.h" />
@@ -408,6 +410,7 @@
     <ClInclude Include="Jazz2\UI\Menu\RemapControlsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RescaleModeSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\ScrollableMenuSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\ServerSelectSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\SimpleMessageSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\SoundsOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\StartGameOptionsSection.h" />
@@ -730,6 +733,7 @@
     <ClCompile Include="Jazz2\Multiplayer\ConnectionResult.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\MultiLevelHandler.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\NetworkManager.cpp" />
+    <ClCompile Include="Jazz2\Multiplayer\ServerDiscovery.cpp" />
     <ClCompile Include="Jazz2\PreferencesCache.cpp" />
     <ClCompile Include="Jazz2\Resources.cpp" />
     <ClCompile Include="Jazz2\Scripting\JJ2PlusDefinitions.cpp" />
@@ -753,6 +757,7 @@
     <ClCompile Include="Jazz2\UI\Menu\AboutSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\BeginSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\ControlsOptionsSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\CreateServerOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\CustomLevelSelectSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\EpisodeSelectSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\GameplayEnhancementsSection.cpp" />
@@ -769,6 +774,7 @@
     <ClCompile Include="Jazz2\UI\Menu\RefreshCacheSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\RemapControlsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\RescaleModeSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\ServerSelectSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\SimpleMessageSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\SoundsOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\StartGameOptionsSection.cpp" />

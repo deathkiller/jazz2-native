@@ -354,7 +354,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void MainMenu::ChangeLevel(Jazz2::LevelInitialization&& levelInit)
+	void MainMenu::ChangeLevel(LevelInitialization&& levelInit)
 	{
 		_root->ChangeLevel(std::move(levelInit));
 	}
@@ -375,9 +375,9 @@ namespace Jazz2::UI::Menu
 		return _root->ConnectToServer(address, port);
 	}
 
-	bool MainMenu::CreateServer(std::uint16_t port)
+	bool MainMenu::CreateServer(LevelInitialization&& levelInit, std::uint16_t port)
 	{
-		return _root->CreateServer(port);
+		return _root->CreateServer(std::move(levelInit), port);
 	}
 #endif
 

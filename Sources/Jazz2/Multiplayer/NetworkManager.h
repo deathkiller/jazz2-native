@@ -4,6 +4,7 @@
 
 #include "Peer.h"
 #include "Reason.h"
+#include "ServerDiscovery.h"
 #include "../../Common.h"
 #include "../../nCine/Threading/Thread.h"
 #include "../../nCine/Threading/ThreadSync.h"
@@ -37,6 +38,8 @@ namespace Jazz2::Multiplayer
 
 	class NetworkManager
 	{
+		friend class ServerDiscovery;
+
 	public:
 		NetworkManager();
 		~NetworkManager();
@@ -58,13 +61,18 @@ namespace Jazz2::Multiplayer
 		static constexpr std::size_t MaxPeerCount = 64;
 		static constexpr std::uint32_t ProcessingIntervalMs = 4;
 
-		bool _initialized;
 		_ENetHost* _host;
 		Thread _thread;
 		NetworkState _state;
 		SmallVector<_ENetPeer*, 1> _peers;
 		INetworkHandler* _handler;
 		Mutex _lock;
+		std::unique_ptr<ServerDiscovery> _discovery;
+
+		static std::int32_t _initializeCount;
+
+		static void InitializeBackend();
+		static void ReleaseBackend();
 
 		static void OnClientThread(void* param);
 		static void OnServerThread(void* param);

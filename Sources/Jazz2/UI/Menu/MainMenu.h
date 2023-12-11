@@ -21,12 +21,18 @@ namespace Jazz2::UI::Menu
 	class BeginSection;
 	class RefreshCacheSection;
 	class StartGameOptionsSection;
+#if defined(WITH_MULTIPLAYER)
+	class CreateServerOptionsSection;
+#endif
 
 	class MainMenu : public IStateHandler, public IMenuContainer
 	{
 		friend class BeginSection;
 		friend class RefreshCacheSection;
 		friend class StartGameOptionsSection;
+#if defined(WITH_MULTIPLAYER)
+		friend class CreateServerOptionsSection;
+#endif
 
 	public:
 		static constexpr int32_t DefaultWidth = 720;
@@ -46,12 +52,12 @@ namespace Jazz2::UI::Menu
 
 		MenuSection* SwitchToSectionDirect(std::unique_ptr<MenuSection> section) override;
 		void LeaveSection() override;
-		void ChangeLevel(Jazz2::LevelInitialization&& levelInit) override;
+		void ChangeLevel(LevelInitialization&& levelInit) override;
 		bool HasResumableState() const override;
 		void ResumeSavedState() override;
 #if defined(WITH_MULTIPLAYER)
 		bool ConnectToServer(const StringView& address, std::uint16_t port) override;
-		bool CreateServer(std::uint16_t port) override;
+		bool CreateServer(LevelInitialization&& levelInit, std::uint16_t port) override;
 #endif
 		void ApplyPreferencesChanges(ChangedPreferencesType type) override;
 		bool ActionPressed(PlayerActions action) override;

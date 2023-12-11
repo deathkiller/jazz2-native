@@ -41,12 +41,12 @@ namespace Jazz2::UI::Menu
 
 		virtual MenuSection* SwitchToSectionDirect(std::unique_ptr<MenuSection> section) = 0;
 		virtual void LeaveSection() = 0;
-		virtual void ChangeLevel(Jazz2::LevelInitialization&& levelInit) = 0;
+		virtual void ChangeLevel(LevelInitialization&& levelInit) = 0;
 		virtual bool HasResumableState() const = 0;
 		virtual void ResumeSavedState() = 0;
 #if defined(WITH_MULTIPLAYER)
 		virtual bool ConnectToServer(const StringView& address, std::uint16_t port) = 0;
-		virtual bool CreateServer(std::uint16_t port) = 0;
+		virtual bool CreateServer(LevelInitialization&& levelInit, std::uint16_t port) = 0;
 #endif
 		virtual void ApplyPreferencesChanges(ChangedPreferencesType type) = 0;
 		virtual bool ActionPressed(PlayerActions action) = 0;

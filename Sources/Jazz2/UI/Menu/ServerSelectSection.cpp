@@ -1,53 +1,40 @@
-﻿#include "CustomLevelSelectSection.h"
+﻿#include "ServerSelectSection.h"
+
+#if defined(WITH_MULTIPLAYER)
+
 #include "StartGameOptionsSection.h"
 #include "MainMenu.h"
 #include "MenuResources.h"
 #include "../../PreferencesCache.h"
 #include "../../../nCine/Base/FrameTimer.h"
 
-#include <IO/DeflateStream.h>
-#include <IO/MemoryStream.h>
-
 using namespace Death::IO;
 using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
-	CustomLevelSelectSection::CustomLevelSelectSection()
-		: _selectedIndex(0), _animation(0.0f), _y(0.0f), _height(0.0f), _pressedCount(0), _noiseCooldown(0.0f)
+	ServerSelectSection::ServerSelectSection()
+		: _selectedIndex(0), _animation(0.0f), _y(0.0f), _height(0.0f), _pressedCount(0), _noiseCooldown(0.0f), _discovery(Multiplayer::ServerDiscovery(this))
 	{
-#if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
-		_indexingThread.Run([](void* arg) {
-			auto* section = static_cast<CustomLevelSelectSection*>(arg);
-			section->AddCustomLevels();
-		}, this);
-#else
-		AddCustomLevels();
-#endif
 	}
 
-	CustomLevelSelectSection::~CustomLevelSelectSection()
+	ServerSelectSection::~ServerSelectSection()
 	{
-#if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
-		// Indicate that indexing thread should stop
-		_selectedIndex = -1;
-		_indexingThread.Join();
-#endif
 	}
 
-	Recti CustomLevelSelectSection::GetClipRectangle(const Vector2i& viewSize)
+	Recti ServerSelectSection::GetClipRectangle(const Vector2i& viewSize)
 	{
 		return Recti(0, TopLine - 1.0f, viewSize.X, viewSize.Y - TopLine - BottomLine + 2.0f);
 	}
 
-	void CustomLevelSelectSection::OnShow(IMenuContainer* root)
+	void ServerSelectSection::OnShow(IMenuContainer* root)
 	{
 		MenuSection::OnShow(root);
 
 		_animation = 0.0f;
 	}
 
-	void CustomLevelSelectSection::OnUpdate(float timeMult)
+	void ServerSelectSection::OnUpdate(float timeMult)
 	{
 		if (_animation < 1.0f) {
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
@@ -105,7 +92,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void CustomLevelSelectSection::OnDraw(Canvas* canvas)
+	void ServerSelectSection::OnDraw(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
 		float centerX = viewSize.X * 0.5f;
@@ -116,17 +103,17 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int32_t charOffset = 0;
-		_root->DrawStringShadow(_("Play Custom Levels"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Connect to Server"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 	}
 
-	void CustomLevelSelectSection::OnDrawClipped(Canvas* canvas)
+	void ServerSelectSection::OnDrawClipped(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
 		int32_t charOffset = 0;
 
 		if (_items.empty()) {
-			_root->DrawStringShadow(_("No custom level found!"), charOffset, viewSize.X * 0.5f, viewSize.Y * 0.55f, IMenuContainer::FontLayer,
+			_root->DrawStringShadow(_("No multiplayer server found!"), charOffset, viewSize.X * 0.5f, viewSize.Y * 0.55f, IMenuContainer::FontLayer,
 				Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.8f, 0.88f);
 			return;
 		}
@@ -147,19 +134,19 @@ namespace Jazz2::UI::Menu
 
 			if (center.Y > TopLine - ItemHeight && center.Y < bottomLine + ItemHeight) {
 				if (_selectedIndex == i) {
-					float xMultiplier = _items[i].DisplayName.size() * 0.5f;
+					float xMultiplier = _items[i].Desc.EndpointString.size() * 0.5f;
 					float easing = IMenuContainer::EaseOutElastic(_animation);
 					float x = column1 + xMultiplier - easing * xMultiplier;
 					float size = 0.7f + easing * 0.12f;
 
-					_root->DrawStringShadow(_items[i].LevelName, charOffset, x, center.Y, IMenuContainer::FontLayer + 10,
+					_root->DrawStringShadow(_items[i].Desc.Name, charOffset, x, center.Y, IMenuContainer::FontLayer + 10,
 						Alignment::Left, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				} else {
-					_root->DrawStringShadow(_items[i].LevelName, charOffset, column1, center.Y, IMenuContainer::FontLayer,
+					_root->DrawStringShadow(_items[i].Desc.Name, charOffset, column1, center.Y, IMenuContainer::FontLayer,
 						Alignment::Left, Font::DefaultColor, 0.7f);
 				}
 
-				_root->DrawStringShadow(_items[i].DisplayName, charOffset, column2, center.Y, IMenuContainer::FontLayer + 10 - 2,
+				_root->DrawStringShadow(_items[i].Desc.EndpointString, charOffset, column2, center.Y, IMenuContainer::FontLayer + 10 - 2,
 					Alignment::Left, Font::DefaultColor, 0.7f);
 			}
 
@@ -176,7 +163,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void CustomLevelSelectSection::OnTouchEvent(const TouchEvent& event, const Vector2i& viewSize)
+	void ServerSelectSection::OnTouchEvent(const TouchEvent& event, const Vector2i& viewSize)
 	{
 		switch (event.type) {
 			case TouchEventType::Down: {
@@ -233,18 +220,31 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void CustomLevelSelectSection::ExecuteSelected()
+	void ServerSelectSection::OnServerFound(Multiplayer::ServerDesc&& desc)
+	{
+		for (auto& item : _items) {
+			if (item.Desc.EndpointString == desc.EndpointString) {
+				item.Desc = std::move(desc);
+				return;
+			}
+		}
+
+		_items.emplace_back(std::move(desc));
+	}
+
+	void ServerSelectSection::ExecuteSelected()
 	{
 		if (_items.empty()) {
 			return;
 		}
 
-		auto& selectedItem = _items[_selectedIndex];
 		_root->PlaySfx("MenuSelect"_s, 0.6f);
-		_root->SwitchToSection<StartGameOptionsSection>("unknown"_s, selectedItem.LevelName, nullptr);
+
+		auto& selectedItem = _items[_selectedIndex];
+		_root->ConnectToServer(selectedItem.Desc.EndpointString, selectedItem.Desc.Endpoint.port);
 	}
 
-	void CustomLevelSelectSection::EnsureVisibleSelected()
+	void ServerSelectSection::EnsureVisibleSelected()
 	{
 		float bottomLine = _root->GetViewSize().Y - BottomLine;
 		if (_items[_selectedIndex].Y < TopLine + ItemHeight * 0.5f) {
@@ -254,72 +254,10 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void CustomLevelSelectSection::AddCustomLevels()
+	ServerSelectSection::ItemData::ItemData(Multiplayer::ServerDesc&& desc)
+		: Desc(std::move(desc))
 	{
-		auto& resolver = ContentResolver::Get();
-
-		// Search both "Content/Episodes/" and "Cache/Episodes/"
-		fs::Directory dir(fs::CombinePath({ resolver.GetContentPath(), "Episodes"_s, "unknown"_s }), fs::EnumerationOptions::SkipDirectories);
-		while (_selectedIndex >= 0) {
-			StringView item = dir.GetNext();
-			if (item == nullptr) {
-				break;
-			}
-
-			AddLevel(item);
-		}
-
-		if (_selectedIndex < 0) {
-			return;
-		}
-
-		fs::Directory dirCache(fs::CombinePath({ resolver.GetCachePath(), "Episodes"_s, "unknown"_s }), fs::EnumerationOptions::SkipDirectories);
-		while (_selectedIndex >= 0) {
-			StringView item = dirCache.GetNext();
-			if (item == nullptr) {
-				break;
-			}
-
-			AddLevel(item);
-		}
-
-		if (_selectedIndex < 0) {
-			return;
-		}
-
-		quicksort(_items.begin(), _items.end(), [](const ItemData& a, const ItemData& b) -> bool {
-			return (a.LevelName < b.LevelName);
-		});
-	}
-
-	void CustomLevelSelectSection::AddLevel(const StringView& levelFile)
-	{
-		if (fs::GetExtension(levelFile) != "j2l"_s) {
-			return;
-		}
-
-		auto s = fs::Open(levelFile, FileAccessMode::Read);
-		RETURN_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
-
-		uint64_t signature = s->ReadValue<uint64_t>();
-		uint8_t fileType = s->ReadValue<uint8_t>();
-		RETURN_ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::LevelFile, "File has invalid signature");
-
-		// TODO: Level flags
-		/*uint16_t flags =*/ s->ReadValue<uint16_t>();
-
-		// Read compressed data
-		int32_t compressedSize = s->ReadValue<int32_t>();
-
-		DeflateStream uc(*s, compressedSize);
-
-		// Read metadata
-		uint8_t nameSize = uc.ReadValue<uint8_t>();
-		String name(NoInit, nameSize);
-		uc.Read(name.data(), nameSize);
-
-		auto& level = _items.emplace_back();
-		level.LevelName = fs::GetFileNameWithoutExtension(levelFile);
-		level.DisplayName = std::move(name);
 	}
 }
+
+#endif
