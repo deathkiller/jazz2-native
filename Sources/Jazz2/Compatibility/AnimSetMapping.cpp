@@ -655,7 +655,8 @@ namespace Jazz2::Compatibility
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "crouch_shoot"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "crouch_end"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "vine_walk"_s);
-			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "eol"_s);
+			//m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "eol"_s);
+			m.DiscardItems(1, JJ2Version::TSF | JJ2Version::CC);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "fall"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "buttstomp"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "fall_end"_s);
@@ -736,7 +737,8 @@ namespace Jazz2::Compatibility
 			m.DiscardItems(1);
 
 			m.Add("UI"_s, "character_art_difficulty_jazz"_s, JJ2DefaultPalette::Menu, true);
-			m.Add(JJ2Version::TSF | JJ2Version::CC, "UI"_s, "character_art_difficulty_lori"_s, JJ2DefaultPalette::Menu, true);
+			//m.Add(JJ2Version::TSF | JJ2Version::CC, "UI"_s, "character_art_difficulty_lori"_s, JJ2DefaultPalette::Menu, true);
+			m.DiscardItems(1, JJ2Version::TSF | JJ2Version::CC);
 			m.Add("UI"_s, "character_art_difficulty_spaz"_s, JJ2DefaultPalette::Menu, true);
 			//m.Add("Unimplemented"_s, "key"_s, JJ2DefaultPalette::Menu, true);
 			m.DiscardItems(1);
@@ -752,9 +754,12 @@ namespace Jazz2::Compatibility
 			//m.Add("UI"_s, "character_name_spaz"_s, JJ2DefaultPalette.Menu, skipNormalMap: true);
 			m.DiscardItems(1);
 
-			m.Add("UI"_s, "character_art_jazz"_s, JJ2DefaultPalette::Menu, true);
-			m.Add(JJ2Version::TSF | JJ2Version::CC, "UI"_s, "character_art_lori"_s, JJ2DefaultPalette::Menu, true);
-			m.Add("UI"_s, "character_art_spaz"_s, JJ2DefaultPalette::Menu, true);
+			//m.Add("UI"_s, "character_art_jazz"_s, JJ2DefaultPalette::Menu, true);
+			m.DiscardItems(1);
+			//m.Add(JJ2Version::TSF | JJ2Version::CC, "UI"_s, "character_art_lori"_s, JJ2DefaultPalette::Menu, true);
+			m.DiscardItems(1, JJ2Version::TSF | JJ2Version::CC);
+			//m.Add("UI"_s, "character_art_spaz"_s, JJ2DefaultPalette::Menu, true);
+			m.DiscardItems(1);
 			m.NextSet();
 
 			//m.Add("UI"_s, "font_medium_2"_s, JJ2DefaultPalette.Menu);

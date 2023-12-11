@@ -1295,8 +1295,8 @@ namespace Jazz2
 
 				episode.BackgroundImage = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, backgroundWidth, backgroundHeight);
 				episode.BackgroundImage->loadFromTexels((unsigned char*)pixels.get(), 0, 0, backgroundWidth, backgroundHeight);
-				episode.BackgroundImage->setMinFiltering(SamplerFilter::Nearest);
-				episode.BackgroundImage->setMagFiltering(SamplerFilter::Nearest);
+				episode.BackgroundImage->setMinFiltering(SamplerFilter::Linear);
+				episode.BackgroundImage->setMagFiltering(SamplerFilter::Linear);
 			}
 		}
 

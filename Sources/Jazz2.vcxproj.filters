@@ -1425,6 +1425,12 @@
     <ClInclude Include="Jazz2\Actors\RemotablePlayer.h">
       <Filter>Header Files\Jazz2\Actors</Filter>
     </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\SequenceHelpers.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringUtils.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2365,6 +2371,9 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\RemotablePlayer.cpp">
       <Filter>Source Files\Jazz2\Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\Containers\StringUtils.cpp">
+      <Filter>Source Files\Shared\Containers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

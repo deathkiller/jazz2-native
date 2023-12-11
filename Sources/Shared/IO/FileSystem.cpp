@@ -887,7 +887,7 @@ namespace Death::IO
 			strncpy(result, path.data(), pathRootLength);
 			resultLength = pathRootLength;
 			if (path.size() == pathRootLength) {
-				return String { result, resultLength };
+				return String{result, resultLength};
 			}
 
 			strncpy(left, path.data() + pathRootLength, sizeof(left));
@@ -992,7 +992,7 @@ namespace Death::IO
 		if (resultLength > 1 && result[resultLength - 1] == '/') {
 			resultLength--;
 		}
-		return String { result, resultLength };
+		return String{result, resultLength};
 #else
 #	if defined(DEATH_TARGET_ANDROID)
 		if (path.hasPrefix(AndroidAssetStream::Prefix)) {
@@ -1020,21 +1020,18 @@ namespace Death::IO
 		}
 
 		// Allocate proper size and get the path. The size includes a null terminator which the String handles on its own, so subtract it
-		String path { NoInit, size - 1 };
+		String path{NoInit, size - 1};
 		if (_NSGetExecutablePath(path.data(), &size) != 0) {
 			return { };
 		}
 		return path;
 #elif defined(__FreeBSD__)
-		Array<char> path;
 		std::size_t size;
-		const std::int32_t mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
-		sysctl(mib, 4, nullptr, &size, NULL, 0);
-		arrayResize(path, NoInit, size + 1);
-		sysctl(mib, 4, path, &size, NULL, 0);
-		path[size] = '\0';
-		const auto deleter = path.deleter();
-		return String { path.release(), size, deleter };
+		static const std::int32_t mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
+		sysctl(mib, 4, nullptr, &size, nullptr, 0);
+		String path{NoInit, size};
+		sysctl(mib, 4, path.data(), &size, nullptr, 0);
+		return path;
 #elif defined(DEATH_TARGET_UNIX)
 		// Reallocate like hell until we have enough place to store the path. Can't use lstat because
 		// the /proc/self/exe symlink is not a real symlink and so stat::st_size returns 0.
@@ -1050,7 +1047,7 @@ namespace Death::IO
 		// that path.size() is always larger than size - if it would be equal, we'd try once more with a larger buffer
 		path[size] = '\0';
 		const auto deleter = path.deleter();
-		return String { path.release(), std::size_t(size), deleter };
+		return String{path.release(), std::size_t(size), deleter};
 #elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		wchar_t path[MaxPathLength + 1];
 		// Returns size *without* the null terminator
@@ -1071,11 +1068,10 @@ namespace Death::IO
 		return Utf8::FromUtf16(buffer);
 #else
 		char buffer[MaxPathLength];
-		if (::getcwd(buffer, MaxPathLength) != nullptr) {
-			return buffer;
-		} else {
+		if (::getcwd(buffer, MaxPathLength) == nullptr) {
 			return { };
 		}
+		return buffer;
 #endif
 	}
 
@@ -1103,16 +1099,15 @@ namespace Death::IO
 		const char* home = ::getenv("HOME");
 		if (home != nullptr && home[0] != '\0') {
 			return home;
-		} else {
-#	if !defined(DEATH_TARGET_EMSCRIPTEN)
-			// `getpwuid()` is not yet implemented on Emscripten
-			const struct passwd* pw = ::getpwuid(getuid());
-			if (pw) {
-				return pw->pw_dir;
-			}
-#	endif
-			return { };
 		}
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+		// `getpwuid()` is not yet implemented on Emscripten
+		const struct passwd* pw = ::getpwuid(getuid());
+		if (pw != nullptr) {
+			return pw->pw_dir;
+		}
+#	endif
+		return { };
 #endif
 	}
 

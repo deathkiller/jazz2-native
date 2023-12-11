@@ -23,6 +23,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Containers/StaticArray.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/String.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringStlView.h
+	${NCINE_SOURCE_DIR}/Shared/Containers/StringUtils.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringView.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/Tags.h
 	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.h

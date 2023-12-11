@@ -56,6 +56,6 @@ namespace Jazz2::Actors::Bosses
 		float _anglePhase;
 		bool _hasShield;
 
-		void FollowNearestPlayer();
+		void FollowNearestPlayer(float timeMult);
 	};
 }

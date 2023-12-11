@@ -378,10 +378,10 @@ namespace Death::Containers
 			}
 #	endif
 
-			// `vshrn_n_u16` and `vaddvq_u8` are missing in `armeabi-v7a` on Android, so enable it only on ARM64
+			// `vshrn_n_u16` and `vaddvq_u8` are missing in `armeabi-v7a` on Android, so enable it only on ARM64.
 			// ARM64 doesn't differentiate between aligned and unaligned loads. ARM32 does, but it's not exposed in the intrinsics,
-			// only in compiler-specific ways. Since 32-bit ARM is increasingly rare, not bothering at all.
-			// https://stackoverflow.com/a/53245244
+			// only in compiler-specific ways. Since 32-bit ARM is increasingly rare (and this code doesn't work on
+			// it anyway), not bothering at all. https://stackoverflow.com/a/53245244
 			DEATH_ENABLE(NEON) DEATH_ALWAYS_INLINE const char* findCharacterSingleVectorUnaligned(Cpu::NeonT, const char* at, const uint8x16_t vn1) {
 				const uint8x16_t chunk = vld1q_u8(reinterpret_cast<const std::uint8_t*>(at));
 

@@ -238,13 +238,13 @@ namespace nCine
 	template<bool value>
 	struct destructHelpers
 	{
-		template <class T>
+		template<class T>
 		inline static void destructObject(T* ptr)
 		{
 			ptr->~T();
 		}
 
-		template <class T>
+		template<class T>
 		inline static void destructArray(T* ptr, std::uint32_t numElements)
 		{
 			for (std::uint32_t i = 0; i < numElements; i++)
@@ -260,9 +260,9 @@ namespace nCine
 			using type = T;
 		};
 
-		template <class T>
+		template<class T>
 		auto tryAddRValueReference(int)->typeIdentity<T&&>;
-		template <class T>
+		template<class T>
 		auto tryAddRValueReference(...)->typeIdentity<T>;
 	}
 
@@ -338,20 +338,6 @@ namespace nCine
 	inline std::int32_t lerp(std::int32_t a, std::int32_t b, float ratio)
 	{
 		return (std::int32_t)std::round(a + ratio * (float)(b - a));
-	}
-
-	inline void lowercaseInPlace(const Containers::MutableStringView string)
-	{
-		for (char& c : string) {
-			c += (std::uint8_t(c - 'A') < 26) << 5;
-		}
-	}
-
-	inline void uppercaseInPlace(const Containers::MutableStringView string)
-	{
-		for (char& c : string) {
-			c -= (std::uint8_t(c - 'a') < 26) << 5;
-		}
 	}
 
 	std::int32_t copyStringFirst(char* dest, std::int32_t destSize, const char* source, std::int32_t count = -1);

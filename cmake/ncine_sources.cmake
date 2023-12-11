@@ -5,6 +5,7 @@ set(SOURCES
 	${NCINE_SOURCE_DIR}/Shared/Containers/DateTime.cpp
 	${NCINE_SOURCE_DIR}/Shared/Containers/SmallVector.cpp
 	${NCINE_SOURCE_DIR}/Shared/Containers/String.cpp
+	${NCINE_SOURCE_DIR}/Shared/Containers/StringUtils.cpp
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringView.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/DeflateStream.cpp

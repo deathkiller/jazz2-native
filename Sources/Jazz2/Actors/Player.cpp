@@ -2368,8 +2368,12 @@ namespace Jazz2::Actors
 					std::memcpy(_weaponAmmo, _weaponAmmoCheckpoint, sizeof(_weaponAmmo));
 					std::memcpy(_weaponUpgrades, _weaponUpgradesCheckpoint, sizeof(_weaponUpgrades));
 
-					_levelHandler->RollbackToCheckpoint(this);
+					// Reset current weapon to Blaster if player has no ammo on checkpoint
+					if (_weaponAmmo[(int)_currentWeapon] == 0) {
+						SetCurrentWeapon(WeaponType::Blaster);
+					}
 
+					_levelHandler->RollbackToCheckpoint(this);
 				} else {
 					// Respawn is delayed
 					_renderer.setDrawEnabled(false);

@@ -1,6 +1,7 @@
 // Copyright © 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016,
 //             2017, 2018, 2019, 2020, 2021, 2022
 //           Vladimír Vondruš <mosra@centrum.cz> and contributors
+// Copyright © 2023 Robert Clausecker <fuz@FreeBSD.org>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -266,7 +267,7 @@ extern "C" {
 	dynamic linker performs a dispatch during the early startup. This is the
 	fastest variant of runtime dispatch, as it results in an equivalent of a
 	regular dynamic library function call. Assuming a dispatcher was created using
-	either @ref _DEATH_CPU_DISPATCHER() or @ref DEATH_CPU_DISPATCHER_BASE(),
+	either @ref DEATH_CPU_DISPATCHER() or @ref DEATH_CPU_DISPATCHER_BASE(),
 	it's implemented using the @ref DEATH_CPU_DISPATCHED_IFUNC() macro.
 	</li>
 	<li>
@@ -274,7 +275,7 @@ extern "C" {
 	for runtime dispatch instead. It's one additional indirection, which may have a
 	visible effect if the dispatched-to code is relatively tiny and is called from
 	within a tight loop. Assuming a dispatcher was created using
-	either @ref _DEATH_CPU_DISPATCHER() or @ref DEATH_CPU_DISPATCHER_BASE(),
+	either @ref DEATH_CPU_DISPATCHER() or @ref DEATH_CPU_DISPATCHER_BASE(),
 	it's implemented using the @ref DEATH_CPU_DISPATCHED_POINTER() macro.
 	</li>
 	<li>
@@ -287,7 +288,7 @@ extern "C" {
 	calls. This option is best suited for scenarios where it's possible to build
 	and optimize code for a single target platform. In this case it calls directly
 	to the original variants, so no macro is needed and
-	@ref _DEATH_CPU_DISPATCHER() / @ref DEATH_CPU_DISPATCHER_BASE() is not
+	@ref DEATH_CPU_DISPATCHER() / @ref DEATH_CPU_DISPATCHER_BASE() is not
 	needed either.
 
 	</li>
@@ -1173,7 +1174,7 @@ namespace Death::Cpu
 		return T { Implementation::Init };
 	}
 
-#if defined(DEATH_TARGET_ARM) && defined(__linux__) && !(defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ < 18)
+#if defined(DEATH_TARGET_ARM) && ((defined(__linux__) && !(defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ < 18)) || defined(__FreeBSD__))
 	namespace Implementation
 	{
 		// Needed for a friend declaration, implementation is at the very end of the header
@@ -1307,7 +1308,7 @@ namespace Death::Cpu
 #if (defined(DEATH_TARGET_X86) && (defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_GCC))) || (defined(DEATH_TARGET_ARM) && defined(DEATH_TARGET_APPLE))
 		friend Features runtimeFeatures();
 #endif
-#if defined(DEATH_TARGET_ARM) && defined(__linux__) && !(defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ < 18)
+#if defined(DEATH_TARGET_ARM) && ((defined(__linux__) && !(defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ < 18)) || defined(__FreeBSD__))
 		friend Features Implementation::runtimeFeatures(unsigned long);
 #endif
 
@@ -1471,7 +1472,6 @@ namespace Death::Cpu
 		On other platforms or if no known CPU instruction set is enabled, the returned
 		value is equal to @ref Scalar, which in turn is equivalent to empty (or
 		default-constructed) @ref Features.
-		@see @ref DefaultBase, @ref DefaultExtra, @ref Default
 	*/
 	constexpr Features compiledFeatures() {
 		// Clang 14 warns if zero (an int) isn't first because bitwise operations between different enums are deprecated in C++20.
@@ -1565,9 +1565,8 @@ namespace Death::Cpu
 		On other platforms or if no known CPU instruction set is detected, the returned
 		value is equal to @ref Scalar, which in turn is equivalent to empty (or
 		default-constructed) @ref Features.
-		@see @ref DefaultBase, @ref DefaultExtra, @ref Default
 	*/
-#if (defined(DEATH_TARGET_X86) && (defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_GCC))) || (defined(DEATH_TARGET_ARM) && ((defined(__linux__) && !(defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ < 18)) || defined(DEATH_TARGET_APPLE)))
+#if (defined(DEATH_TARGET_X86) && (defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_GCC))) || (defined(DEATH_TARGET_ARM) && ((defined(__linux__) && !(defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ < 18)) || defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)))
 	Features runtimeFeatures();
 #else
 	constexpr Features runtimeFeatures() {
@@ -1630,7 +1629,7 @@ namespace Death::Cpu
 	// to defer macro calls unless "the new preprocessor" is enabled it wouldn't be possible to get rid of the
 	// DEATH_CPU_SELECT() macro from there.
 #if defined(DEATH_TARGET_X86)
-	#define DEATH_CPU_DISPATCHER_BASE(function)									\
+	#define _DEATH_CPU_DISPATCHER_BASE(function)								\
 		decltype(function(Death::Cpu::Scalar)) function(Death::Cpu::Features features) {	\
 			if(features & Death::Cpu::Avx512f)									\
 				return function(Death::Cpu::Avx512f);							\
@@ -1651,7 +1650,7 @@ namespace Death::Cpu
 			return function(Death::Cpu::Scalar);								\
 		}
 #elif defined(DEATH_TARGET_ARM)
-	#define DEATH_CPU_DISPATCHER_BASE(function)									\
+	#define _DEATH_CPU_DISPATCHER_BASE(function)								\
 		decltype(function(Death::Cpu::Scalar)) function(Death::Cpu::Features features) {	\
 			if(features & Death::Cpu::NeonFp16)									\
 				return function(Death::Cpu::NeonFp16);							\
@@ -1662,14 +1661,14 @@ namespace Death::Cpu
 			return function(Death::Cpu::Scalar);								\
 		}
 #elif defined(DEATH_TARGET_WASM)
-	#define DEATH_CPU_DISPATCHER_BASE(function)									\
+	#define _DEATH_CPU_DISPATCHER_BASE(function)								\
 		decltype(function(Death::Cpu::Scalar)) function(Death::Cpu::Features features) {	\
 			if(features & Death::Cpu::Simd128)									\
 				return function(Death::Cpu::Simd128);							\
 			return function(Death::Cpu::Scalar);								\
 		}
 #else
-	#define DEATH_CPU_DISPATCHER_BASE(function)									\
+	#define _DEATH_CPU_DISPATCHER_BASE(function)								\
 		decltype(function(Death::Cpu::Scalar)) function(Death::Cpu::Features features) {	\
 			return function(Death::Cpu::Scalar);								\
 		}
@@ -1772,7 +1771,7 @@ namespace Death::Cpu
 	/**
 		@brief Create a runtime-dispatched function pointer
 
-		Assuming a @p dispatcher was defined with either @ref _DEATH_CPU_DISPATCHER()
+		Assuming a @p dispatcher was defined with either @ref DEATH_CPU_DISPATCHER()
 		or @ref DEATH_CPU_DISPATCHER_BASE(), defines a function pointer variable with
 		a signature specified in the second variadic argument. In a global constructor
 		the variable is assigned a function pointer returned by @p dispatcher for
@@ -1792,7 +1791,7 @@ namespace Death::Cpu
 		@brief Create a runtime-dispatched function via GNU IFUNC
 
 		Available only if @ref DEATH_CPU_USE_IFUNC is enabled. Assuming a
-		@p dispatcher was defined with either @ref _DEATH_CPU_DISPATCHER() or
+		@p dispatcher was defined with either @ref DEATH_CPU_DISPATCHER() or
 		@ref DEATH_CPU_DISPATCHER_BASE(), defines a function with a signature
 		specified via the third variadic argument. The signature has to match @p type.
 		The function uses the [GNU IFUNC](https://sourceware.org/glibc/wiki/GNU_IFUNC)
@@ -2948,7 +2947,7 @@ namespace Death::Cpu
 	// then used inside such resolvers. A nice consequence of that is that we don't need any other headers.
 
 	// The public Cpu::runtimeFeatures() is deinlined, calls getauxval() and passes it into this function.
-#if defined(DEATH_TARGET_ARM) && defined(__linux__) && !(defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ < 18)
+#if defined(DEATH_TARGET_ARM) && ((defined(__linux__) && !(defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ < 18)) || defined(__FreeBSD__))
 	namespace Implementation {
 		inline Features runtimeFeatures(const unsigned long caps) {
 			unsigned int out = 0;

@@ -6,6 +6,7 @@
 
 #include "../../nCine/Base/Algorithms.h"
 
+#include <Containers/StringUtils.h>
 #include <IO/DeflateStream.h>
 #include <IO/FileSystem.h>
 
@@ -22,7 +23,7 @@ namespace Jazz2::Compatibility
 		s->Seek(180, SeekOrigin::Current);
 
 		LevelName = fs::GetFileNameWithoutExtension(path);
-		lowercaseInPlace(LevelName);
+		StringUtils::lowercaseInPlace(LevelName);
 
 		JJ2Block headerBlock(s, 262 - 180);
 
@@ -575,16 +576,16 @@ namespace Jazz2::Compatibility
 			co.WriteValue<uint8_t>((uint8_t)formattedName.size());
 			co.Write(formattedName.data(), formattedName.size());
 
-			lowercaseInPlace(NextLevel);
-			lowercaseInPlace(SecretLevel);
-			lowercaseInPlace(BonusLevel);
+			StringUtils::lowercaseInPlace(NextLevel);
+			StringUtils::lowercaseInPlace(SecretLevel);
+			StringUtils::lowercaseInPlace(BonusLevel);
 
 			WriteLevelName(co, NextLevel, levelTokenConversion);
 			WriteLevelName(co, SecretLevel, levelTokenConversion);
 			WriteLevelName(co, BonusLevel, levelTokenConversion);
 
 			// Default Tileset
-			lowercaseInPlace(Tileset);
+			StringUtils::lowercaseInPlace(Tileset);
 			if (StringHasSuffixIgnoreCase(Tileset, ".j2t"_s)) {
 				Tileset = Tileset.exceptSuffix(4);
 			}
@@ -592,7 +593,7 @@ namespace Jazz2::Compatibility
 			co.Write(Tileset.data(), Tileset.size());
 
 			// Default Music
-			lowercaseInPlace(Music);
+			StringUtils::lowercaseInPlace(Music);
 			if (Music.find('.') == nullptr) {
 				String music = Music + ".j2b"_s;
 				co.WriteValue<uint8_t>((uint8_t)music.size());
@@ -641,7 +642,7 @@ namespace Jazz2::Compatibility
 				}
 				co.WriteValue<uint8_t>(tilesetFlags);
 
-				lowercaseInPlace(tileset.Name);
+				StringUtils::lowercaseInPlace(tileset.Name);
 				if (StringHasSuffixIgnoreCase(tileset.Name, ".j2t"_s)) {
 					tileset.Name = tileset.Name.exceptSuffix(4);
 				}
@@ -677,7 +678,7 @@ namespace Jazz2::Compatibility
 						if (j != 0) {
 							adjustedText += "|"_s;
 						}
-						lowercaseInPlace(levelTokens[j]);
+						StringUtils::lowercaseInPlace(levelTokens[j]);
 						LevelToken token = levelTokenConversion(levelTokens[j]);
 						if (!token.Episode.empty()) {
 							adjustedText += token.Episode + "/"_s;

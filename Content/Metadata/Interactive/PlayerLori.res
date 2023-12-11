@@ -245,7 +245,6 @@
 		},
 		"EndOfLevel": {
 			"Path": "Lori/eol.aura",
-			"FrameRate": 3,
 			"States": [ 1073741846 ]
 		},
 		"Swim": {

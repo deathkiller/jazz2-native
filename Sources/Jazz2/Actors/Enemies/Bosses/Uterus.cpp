@@ -139,7 +139,7 @@ namespace Jazz2::Actors::Bosses
 		_stateTime -= timeMult;
 
 		if (_state != StateWaiting) {
-			FollowNearestPlayer();
+			FollowNearestPlayer(timeMult);
 
 			_anglePhase += timeMult * 0.02f;
 			_renderer.setRotation(fPiOver2 + sinf(_anglePhase) * 0.2f);
@@ -192,13 +192,13 @@ namespace Jazz2::Actors::Bosses
 		return BossBase::OnPerish(collider);
 	}
 
-	void Uterus::FollowNearestPlayer()
+	void Uterus::FollowNearestPlayer(float timeMult)
 	{
 		bool found = false;
 		Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
 
 		auto& players = _levelHandler->GetPlayers();
-		for (auto& player : players) {
+		for (auto* player : players) {
 			Vector2f newPos = player->GetPos();
 			if ((_pos - newPos).Length() < (_pos - targetPos).Length()) {
 				targetPos = newPos;
@@ -212,7 +212,11 @@ namespace Jazz2::Actors::Bosses
 			Vector2f diff = (targetPos - _lastPos);
 			if (diff.Length() > 40) {
 				Vector2f speed = (Vector2f(_speed.X, _speed.Y) + diff.Normalized() * 0.4f).Normalized();
-				float mult = (_hasShield ? 0.8f : 2.0f);
+				float mult = (_hasShield ? 0.8f : 2.0f) * timeMult;
+				switch (_levelHandler->Difficulty()) {
+					case GameDifficulty::Easy: mult *= 0.8f; break;
+					case GameDifficulty::Hard: mult *= 1.1f; break;
+				}
 				_lastPos.X += speed.X * mult;
 				_lastPos.Y += speed.Y * mult;
 			}

@@ -121,6 +121,11 @@
 		"GamepadRightTrigger": {
 			"Path": "UI/gamepad_rt.aura",
 			"States": [ 56 ]
+		},
+		
+		"LoriExistsCheck": {
+			"Path": "Lori/corpse.aura",
+			"States": [ 80 ]
 		}
 	},
 

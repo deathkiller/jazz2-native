@@ -11,7 +11,12 @@ namespace Jazz2::Actors
 	public:
 		RemotePlayerOnServer();
 
+		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+
 		void SyncWithServer(const Vector2f& pos, const Vector2f& speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing);
+
+		std::int32_t GetTeamId() const;
+		void SetTeamId(std::int32_t value);
 
 	protected:
 		struct StateFrame {
@@ -24,6 +29,7 @@ namespace Jazz2::Actors
 		StateFrame _stateBuffer[8];
 		std::int32_t _stateBufferPos;
 		Vector2f _displayPos;
+		std::int32_t _teamId;
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		bool OnPerish(ActorBase* collider) override;

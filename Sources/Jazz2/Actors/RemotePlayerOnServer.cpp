@@ -2,13 +2,15 @@
 
 #if defined(WITH_MULTIPLAYER)
 
+#include "Weapons/ShotBase.h"
 #include "../Multiplayer/MultiLevelHandler.h"
 #include "../../nCine/Base/Clock.h"
+#include "../../nCine/Base/FrameTimer.h"
 
 namespace Jazz2::Actors
 {
 	RemotePlayerOnServer::RemotePlayerOnServer()
-		: _stateBufferPos(0)
+		: _stateBufferPos(0), _teamId(0)
 	{
 	}
 
@@ -69,6 +71,29 @@ namespace Jazz2::Actors
 		_renderer.setPosition(_displayPos);
 	}
 
+	bool RemotePlayerOnServer::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	{
+		// TODO: Add this also to local player on server
+		/*if (auto* shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
+			std::int32_t strength = shotBase->GetStrength();
+			// TODO: Check also local player on server
+			RemotePlayerOnServer* shotOwner = static_cast<RemotePlayerOnServer*>(shotBase->GetOwner());
+			// Ignore players in the same team
+			if (strength > 0 && _sugarRushLeft <= 0.0f && shotOwner->_teamId != _teamId) {
+				// Decrease remaining shield time by 5 secs
+				if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
+					_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
+				} else {
+					TakeDamage(strength, 4 * (_pos.X > shotBase->GetPos().X ? 1.0f : -1.0f));
+				}
+				shotBase->DecreaseHealth(INT32_MAX);
+				return true;
+			}
+		}*/
+
+		return Player::OnHandleCollision(other);
+	}
+
 	void RemotePlayerOnServer::SyncWithServer(const Vector2f& pos, const Vector2f& speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing)
 	{
 		Clock& c = nCine::clock();
@@ -106,6 +131,16 @@ namespace Jazz2::Actors
 		// TODO: Set actual pos and speed to the newest value
 		_pos = pos;
 		_speed = speed;
+	}
+
+	std::int32_t RemotePlayerOnServer::GetTeamId() const
+	{
+		return _teamId;
+	}
+
+	void RemotePlayerOnServer::SetTeamId(std::int32_t value)
+	{
+		_teamId = value;
 	}
 
 	void RemotePlayerOnServer::OnHitSpring(const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove)
