@@ -696,7 +696,7 @@ namespace nCine
 #if defined(DEATH_TARGET_ANDROID)
 		String langId = AndroidJniWrap_Activity::getPreferredLanguage();
 		if (!langId.empty()) {
-			lowercaseInPlace(langId);
+			StringUtils::lowercaseInPlace(langId);
 			arrayAppend(preferred, std::move(langId));
 		}
 #elif defined(DEATH_TARGET_APPLE)
@@ -710,7 +710,7 @@ namespace nCine
 				CFTypeRef element = CFArrayGetValueAtIndex(prefArray, i);
 				if (element != nullptr && CFGetTypeID(element) == CFStringGetTypeID() && CFStringGetCString((CFStringRef)element, buffer, sizeof(buffer), kCFStringEncodingASCII)) {
 					String langId = String(buffer);
-					lowercaseInPlace(langId);
+					StringUtils::lowercaseInPlace(langId);
 					arrayAppend(preferred, std::move(langId));
 				} else {
 					break;
@@ -734,7 +734,7 @@ namespace nCine
 			for (char& c : langId) {
 				if (c == '_') c = '-';
 			}
-			lowercaseInPlace(langId);
+			StringUtils::lowercaseInPlace(langId);
 			arrayAppend(preferred, std::move(langId));
 		}
 #elif defined(DEATH_TARGET_WINDOWS)
