@@ -1,4 +1,7 @@
 ﻿#include "CreateServerOptionsSection.h"
+
+#if defined(WITH_MULTIPLAYER)
+
 #include "MainMenu.h"
 #include "MenuResources.h"
 #include "../../PreferencesCache.h"
@@ -355,3 +358,5 @@ namespace Jazz2::UI::Menu
 		_imageTransition = 0.0f;
 	}
 }
+
+#endif
