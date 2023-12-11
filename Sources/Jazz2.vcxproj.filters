@@ -1431,6 +1431,15 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringUtils.h">
       <Filter>Header Files\Shared\Containers</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\ServerDiscovery.h">
+      <Filter>Header Files\Jazz2\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\ServerSelectSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\CreateServerOptionsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2374,6 +2383,15 @@
     </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\StringUtils.cpp">
       <Filter>Source Files\Shared\Containers</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\ServerDiscovery.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\ServerSelectSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\CreateServerOptionsSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

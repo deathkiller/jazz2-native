@@ -10,6 +10,7 @@ namespace Jazz2::Multiplayer
 	{
 		Null,
 		Ping,
+		Reserved,
 
 		Auth,
 		LevelReady,
@@ -28,6 +29,7 @@ namespace Jazz2::Multiplayer
 	{
 		Null,
 		Pong,
+		Reserved,
 
 		LoadLevel,
 		PlaySfx,

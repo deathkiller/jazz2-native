@@ -113,7 +113,7 @@ public:
 
 #if defined(WITH_MULTIPLAYER)
 	bool ConnectToServer(const StringView& address, std::uint16_t port) override;
-	bool CreateServer(std::uint16_t port) override;
+	bool CreateServer(LevelInitialization&& levelInit, std::uint16_t port) override;
 
 	ConnectionResult OnPeerConnected(const Peer& peer, std::uint32_t clientData) override;
 	void OnPeerDisconnected(const Peer& peer, Reason reason) override;
@@ -259,7 +259,8 @@ void GameEventHandler::OnInit()
 	}, this);
 
 #	if defined(WITH_MULTIPLAYER)
-	if (PreferencesCache::InitialState == "/server"_s) {
+	// TODO: Multiplayer
+	/*if (PreferencesCache::InitialState == "/server"_s) {
 		thread.Join();
 
 		auto mainMenu = std::make_unique<Menu::MainMenu>(this, false);
@@ -268,7 +269,7 @@ void GameEventHandler::OnInit()
 
 		// TODO: Hardcoded port
 		CreateServer(MultiplayerDefaultPort);
-	} else if (PreferencesCache::InitialState.hasPrefix("/connect:"_s)) {
+	} else*/ if (PreferencesCache::InitialState.hasPrefix("/connect:"_s)) {
 		thread.Join();
 
 		String address; std::uint16_t port;
@@ -654,7 +655,7 @@ bool GameEventHandler::ConnectToServer(const StringView& address, std::uint16_t 
 	return _networkManager->CreateClient(this, address, port, 0xCA000000 | MultiplayerProtocolVersion);
 }
 
-bool GameEventHandler::CreateServer(std::uint16_t port)
+bool GameEventHandler::CreateServer(LevelInitialization&& levelInit, std::uint16_t port)
 {
 	LOGI("Creating server on port %u...", port);
 
@@ -666,9 +667,7 @@ bool GameEventHandler::CreateServer(std::uint16_t port)
 		return false;
 	}
 
-	InvokeAsync([this]() {
-		// TODO: Hardcoded level
-		LevelInitialization levelInit("rescue", "01_colon1", GameDifficulty::Multiplayer, true, false, PlayerType::Jazz);
+	InvokeAsync([this, levelInit = std::move(levelInit)]() mutable {
 		auto levelHandler = std::make_unique<MultiLevelHandler>(this, _networkManager.get());
 		levelHandler->Initialize(levelInit);
 		SetStateHandler(std::move(levelHandler));

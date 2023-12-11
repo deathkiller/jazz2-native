@@ -1,4 +1,4 @@
-﻿#include "StartGameOptionsSection.h"
+﻿#include "CreateServerOptionsSection.h"
 #include "MainMenu.h"
 #include "MenuResources.h"
 #include "../../PreferencesCache.h"
@@ -9,20 +9,20 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
-	StartGameOptionsSection::StartGameOptionsSection(const StringView& episodeName, const StringView& levelName, const StringView& previousEpisodeName)
+	CreateServerOptionsSection::CreateServerOptionsSection(const StringView& episodeName, const StringView& levelName, const StringView& previousEpisodeName)
 		: _episodeName(episodeName), _levelName(levelName), _previousEpisodeName(previousEpisodeName), _selectedIndex(2),
 			_availableCharacters(3), _selectedPlayerType(0), _selectedDifficulty(1), _lastPlayerType(0), _lastDifficulty(0),
 			_imageTransition(1.0f), _animation(0.0f), _transitionTime(0.0f), _shouldStart(false)
 	{
 		// TRANSLATORS: Menu item to select player character (Jazz, Spaz, Lori)
 		_items[(int32_t)Item::Character].Name = _("Character");
-		// TRANSLATORS: Menu item to select difficulty
-		_items[(int32_t)Item::Difficulty].Name = _("Difficulty");
+		// TRANSLATORS: Menu item to select max. players
+		_items[(int32_t)Item::MaxPlayers].Name = _("Max. Players");
 		// TRANSLATORS: Menu item to start selected episode/level
 		_items[(int32_t)Item::Start].Name = _("Start");
 	}
 
-	void StartGameOptionsSection::OnShow(IMenuContainer* root)
+	void CreateServerOptionsSection::OnShow(IMenuContainer* root)
 	{
 		MenuSection::OnShow(root);
 
@@ -34,7 +34,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void StartGameOptionsSection::OnUpdate(float timeMult)
+	void CreateServerOptionsSection::OnUpdate(float timeMult)
 	{
 		if (_animation < 1.0f) {
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
@@ -61,13 +61,13 @@ namespace Jazz2::UI::Menu
 						_selectedPlayerType = _availableCharacters - 1;
 					}
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
-				} else if (_selectedIndex == 1) {
+				} /*else if (_selectedIndex == 1) {
 					if (_selectedDifficulty > 0) {
 						StartImageTransition();
 						_selectedDifficulty--;
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 					}
-				}
+				}*/
 			} else if (_root->ActionHit(PlayerActions::Right)) {
 				if (_selectedIndex == 0) {
 					if (_selectedPlayerType < _availableCharacters - 1) {
@@ -78,13 +78,13 @@ namespace Jazz2::UI::Menu
 						_selectedPlayerType = 0;
 					}
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
-				} else if (_selectedIndex == 1) {
+				} /*else if (_selectedIndex == 1) {
 					if (_selectedDifficulty < 3 - 1) {
 						StartImageTransition();
 						_selectedDifficulty++;
 						_root->PlaySfx("MenuSelect"_s, 0.4f);
 					}
-				}
+				}*/
 			} else if (_root->ActionHit(PlayerActions::Up)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_animation = 0.0f;
@@ -113,7 +113,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void StartGameOptionsSection::OnDraw(Canvas* canvas)
+	void CreateServerOptionsSection::OnDraw(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
 		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f * 0.8f);
@@ -196,7 +196,7 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.7f);
 
 				_items[i].TouchY = center.Y + 28.0f;
-		    } else if (i == 1) {
+		    } /*else if (i == 1) {
 				const StringView difficultyTypes[] = { _("Easy"), _("Medium"), _("Hard") };
 
 		        for (int32_t j = 0; j < countof(difficultyTypes); j++) {
@@ -217,7 +217,7 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.7f);
 
 				_items[i].TouchY = center.Y + 28.0f;
-			} else {
+			} else*/ {
 				_items[i].TouchY = center.Y;
 			}
 
@@ -225,7 +225,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void StartGameOptionsSection::OnDrawOverlay(Canvas* canvas)
+	void CreateServerOptionsSection::OnDrawOverlay(Canvas* canvas)
 	{
 		if (_shouldStart) {
 			auto command = canvas->RentRenderCommand();
@@ -248,7 +248,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void StartGameOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
+	void CreateServerOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
 	{
 		if (!_shouldStart && event.type == TouchEventType::Down) {
 			int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
@@ -275,7 +275,7 @@ namespace Jazz2::UI::Menu
 								}
 								break;
 							}
-							case 1: {
+							/*case 1: {
 								int32_t selectedSubitem = (x < halfWidth - 50.0f ? 0 : (x > halfWidth + 50.0f ? 2 : 1));
 								if (_selectedDifficulty != selectedSubitem) {
 									StartImageTransition();
@@ -283,7 +283,7 @@ namespace Jazz2::UI::Menu
 									_root->PlaySfx("MenuSelect"_s, 0.5f);
 								}
 								break;
-							}
+							}*/
 							default: {
 								if (_selectedIndex == i) {
 									ExecuteSelected();
@@ -302,7 +302,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void StartGameOptionsSection::ExecuteSelected()
+	void CreateServerOptionsSection::ExecuteSelected()
 	{
 		if (_selectedIndex == 2) {
 			_root->PlaySfx("MenuSelect"_s, 0.6f);
@@ -312,12 +312,10 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void StartGameOptionsSection::OnAfterTransition()
+	void CreateServerOptionsSection::OnAfterTransition()
 	{
-		bool playTutorial = (!PreferencesCache::TutorialCompleted && _episodeName == "prince"_s && _levelName == "01_castle1"_s);
-
 		PlayerType players[] = { (PlayerType)((int32_t)PlayerType::Jazz + _selectedPlayerType) };
-		LevelInitialization levelInit(_episodeName, (playTutorial ? "trainer"_s : StringView(_levelName)), (GameDifficulty)((int32_t)GameDifficulty::Easy + _selectedDifficulty),
+		LevelInitialization levelInit(_episodeName, StringView(_levelName), GameDifficulty::Multiplayer,
 			PreferencesCache::EnableReforged, false, players, countof(players));
 
 		if (!_previousEpisodeName.empty()) {
@@ -346,15 +344,11 @@ namespace Jazz2::UI::Menu
 			levelInit.LastExitType = ExitType::Warp | ExitType::Frozen;
 		}
 
-		if (PreferencesCache::AllowCheatsLives) {
-			levelInit.PlayerCarryOvers[0].Lives = UINT8_MAX;
-			levelInit.CheatsUsed = true;
-		}
-
-		_root->ChangeLevel(std::move(levelInit));
+		// TODO: Hardcoded port
+		_root->CreateServer(std::move(levelInit), 7438);
 	}
 
-	void StartGameOptionsSection::StartImageTransition()
+	void CreateServerOptionsSection::StartImageTransition()
 	{
 		_lastPlayerType = _selectedPlayerType;
 		_lastDifficulty = _selectedDifficulty;

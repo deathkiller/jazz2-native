@@ -37,7 +37,7 @@ namespace Jazz2
 
 #if defined(WITH_MULTIPLAYER)
 		virtual bool ConnectToServer(const StringView& address, std::uint16_t port) = 0;
-		virtual bool CreateServer(std::uint16_t port) = 0;
+		virtual bool CreateServer(LevelInitialization&& levelInit, std::uint16_t port) = 0;
 #endif
 
 		virtual Flags GetFlags() const = 0;

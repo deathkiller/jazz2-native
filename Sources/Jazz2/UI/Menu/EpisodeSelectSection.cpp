@@ -6,14 +6,18 @@
 #include "../../../nCine/Base/Algorithms.h"
 #include "../../../nCine/Base/FrameTimer.h"
 
+#if defined(WITH_MULTIPLAYER)
+#	include "CreateServerOptionsSection.h"
+#endif
+
 #include <Utf8.h>
 
 using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
-	EpisodeSelectSection::EpisodeSelectSection()
-		: _expandedAnimation(0.0f), _expanded(false), _shouldStart(false)
+	EpisodeSelectSection::EpisodeSelectSection(bool multiplayer)
+		: _multiplayer(multiplayer), _expandedAnimation(0.0f), _expanded(false), _shouldStart(false)
 	{
 		auto& resolver = ContentResolver::Get();
 
@@ -62,14 +66,14 @@ namespace Jazz2::UI::Menu
 				if (_root->ActionHit(PlayerActions::Fire)) {
 					OnExecuteSelected();
 				} else if (_root->ActionHit(PlayerActions::Left)) {
-					if (_expanded) {
+					if (!_multiplayer && _expanded) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_expanded = false;
 						_expandedAnimation = 0.0f;
 						EnsureVisibleSelected();
 					}
 				} else if (_root->ActionHit(PlayerActions::Right)) {
-					if ((_items[_selectedIndex].Item.Flags & EpisodeDataFlags::CanContinue) == EpisodeDataFlags::CanContinue) {
+					if (!_multiplayer && !_expanded && (_items[_selectedIndex].Item.Flags & EpisodeDataFlags::CanContinue) == EpisodeDataFlags::CanContinue) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_expanded = true;
 						EnsureVisibleSelected();
@@ -125,7 +129,13 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int32_t charOffset = 0;
-		_root->DrawStringShadow(_("Play Story"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(
+#if defined(WITH_MULTIPLAYER)
+			_multiplayer ? _("Play Story in Cooperation") : _("Play Story"),
+#else
+			_("Play Story"),
+#endif
+			charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 	}
 
@@ -169,7 +179,7 @@ namespace Jazz2::UI::Menu
 						Alignment::Center, nameColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				}
 
-				if ((item.Item.Flags & EpisodeDataFlags::CanContinue) == EpisodeDataFlags::CanContinue) {
+				if (!_multiplayer && (item.Item.Flags & EpisodeDataFlags::CanContinue) == EpisodeDataFlags::CanContinue) {
 					float expandX = centerX + (item.Item.Description.DisplayName.size() + 3) * 2.8f * size + 40.0f;
 					float moveX = expandedAnimation3 * -12.0f;
 					_root->DrawStringShadow(">"_s, charOffset, expandX + moveX, item.Y, IMenuContainer::FontLayer + 20,
@@ -334,22 +344,30 @@ namespace Jazz2::UI::Menu
 		if ((selectedItem.Item.Flags & EpisodeDataFlags::IsAvailable) == EpisodeDataFlags::IsAvailable || PreferencesCache::AllowCheatsUnlock) {
 			_root->PlaySfx("MenuSelect"_s, 0.6f);
 
+#if defined(WITH_MULTIPLAYER)
+			if (_multiplayer) {
+				_root->SwitchToSection<CreateServerOptionsSection>(selectedItem.Item.Description.Name, selectedItem.Item.Description.FirstLevel, selectedItem.Item.Description.PreviousEpisode);
+				return;
+			}
+#endif
+
 			if ((selectedItem.Item.Flags & EpisodeDataFlags::CanContinue) == EpisodeDataFlags::CanContinue) {
 				if (_expanded) {
+					// Remove saved progress and restart the episode
 					PreferencesCache::RemoveEpisodeContinue(selectedItem.Item.Description.Name);
 
 					selectedItem.Item.Flags &= ~EpisodeDataFlags::CanContinue;
 					_expandedAnimation = 0.0f;
 					_expanded = false;
-
-					_root->SwitchToSection<StartGameOptionsSection>(selectedItem.Item.Description.Name, selectedItem.Item.Description.FirstLevel, selectedItem.Item.Description.PreviousEpisode);
 				} else {
+					// Continue from the last level
 					_shouldStart = true;
 					_transitionTime = 1.0f;
+					return;
 				}
-			} else {
-				_root->SwitchToSection<StartGameOptionsSection>(selectedItem.Item.Description.Name, selectedItem.Item.Description.FirstLevel, selectedItem.Item.Description.PreviousEpisode);
 			}
+
+			_root->SwitchToSection<StartGameOptionsSection>(selectedItem.Item.Description.Name, selectedItem.Item.Description.FirstLevel, selectedItem.Item.Description.PreviousEpisode);
 		}
 	}
 

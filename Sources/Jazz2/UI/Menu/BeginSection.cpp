@@ -7,6 +7,10 @@
 #include "AboutSection.h"
 #include "MainMenu.h"
 
+#if defined(WITH_MULTIPLAYER)
+#	include "ServerSelectSection.h"
+#endif
+
 #include <Utf8.h>
 
 #if defined(SHAREWARE_DEMO_ONLY)
@@ -383,14 +387,14 @@ namespace Jazz2::UI::Menu
 #endif
 
 #if defined(WITH_MULTIPLAYER)
-				// TODO: Multiplayer
+			// TODO: Multiplayer
 			case Item::TODO_ConnectTo:
-				// TODO: Hardcoded address and port
-				_root->ConnectToServer("127.0.0.1"_s, 7438);
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				_root->SwitchToSection<ServerSelectSection>();
 				break;
 			case Item::TODO_CreateServer:
-				// TODO: Hardcoded address and port
-				_root->CreateServer(7438);
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				_root->SwitchToSection<EpisodeSelectSection>(true);
 				break;
 #endif
 
