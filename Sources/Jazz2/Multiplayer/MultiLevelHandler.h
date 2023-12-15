@@ -3,9 +3,10 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "../LevelHandler.h"
+#include "MultiplayerGameMode.h"
 #include "NetworkManager.h"
 
-namespace Jazz2::Actors
+namespace Jazz2::Actors::Multiplayer
 {
 	class RemoteActor;
 	class RemotePlayerOnServer;
@@ -13,25 +14,15 @@ namespace Jazz2::Actors
 
 namespace Jazz2::Multiplayer
 {
-	enum class MultiplayerLevelType
-	{
-		Unknown = 0,
-
-		Battle,
-		TeamBattle,
-		CaptureTheFlag,
-		Race,
-		TreasureHunt,
-		CoopStory
-	};
-	
 	class MultiLevelHandler : public LevelHandler
 	{
+		DEATH_RTTI_OBJECT(LevelHandler);
+
 		friend class ContentResolver;
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::LevelScriptLoader;
 #endif
-		friend class Actors::RemotePlayerOnServer;
+		friend class Actors::Multiplayer::RemotePlayerOnServer;
 
 	public:
 		MultiLevelHandler(IRootController* root, NetworkManager* networkManager);
@@ -95,6 +86,10 @@ namespace Jazz2::Multiplayer
 		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override;
 
 		void AttachComponents(LevelDescriptor&& descriptor) override;
+		void SpawnPlayers(const LevelInitialization& levelInit) override;
+
+		MultiplayerGameMode GetGameMode() const;
+		bool SetGameMode(MultiplayerGameMode value);
 
 		bool OnPeerDisconnected(const Peer& peer);
 		bool OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t* data, std::size_t dataLength);
@@ -118,12 +113,12 @@ namespace Jazz2::Multiplayer
 		};
 
 		struct PeerDesc {
-			Actors::RemotePlayerOnServer* Player;
+			Actors::Multiplayer::RemotePlayerOnServer* Player;
 			PeerState State;
 			std::uint32_t LastUpdated;
 
 			PeerDesc() {}
-			PeerDesc(Actors::RemotePlayerOnServer* player, PeerState state) : Player(player), State(state), LastUpdated(0) {}
+			PeerDesc(Actors::Multiplayer::RemotePlayerOnServer* player, PeerState state) : Player(player), State(state), LastUpdated(0) {}
 		};
 
 		enum class PlayerFlags {
@@ -154,12 +149,13 @@ namespace Jazz2::Multiplayer
 		static constexpr std::int64_t ServerDelay = 64;
 
 		NetworkManager* _networkManager;
+		MultiplayerGameMode _gameMode;
 		bool _isServer;
 		float _updateTimeLeft;
 		bool _initialUpdateSent;
 		HashMap<Peer, PeerDesc> _peerDesc; // Server: Per peer description
 		HashMap<std::uint8_t, PlayerState> _playerStates; // Server: Per (remote) player state
-		HashMap<std::uint32_t, std::shared_ptr<Actors::RemoteActor>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
+		HashMap<std::uint32_t, std::shared_ptr<Actors::Multiplayer::RemoteActor>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
 		HashMap<Actors::ActorBase*, std::uint32_t> _remotingActors; // Server: Local Actor created by server -> Actor ID
 		std::uint32_t _lastSpawnedActorId;	// Server: last assigned actor/player ID, Client: ID assigned by server
 		std::uint64_t _seqNum; // Client: sequence number of the last update
@@ -169,6 +165,7 @@ namespace Jazz2::Multiplayer
 
 		void SynchronizePeers();
 		std::uint32_t FindFreeActorId();
+		std::uint32_t FindFreePlayerId();
 	};
 }
 

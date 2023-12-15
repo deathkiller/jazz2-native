@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Collectibles
 {
 	class GemCollectible : public CollectibleBase
 	{
+		DEATH_RTTI_OBJECT(CollectibleBase);
+
 	public:
 		GemCollectible();
 
@@ -15,7 +17,7 @@ namespace Jazz2::Actors::Collectibles
 		}
 
 	protected:
-		uint8_t _gemType;
+		std::uint8_t _gemType;
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdateHitbox() override;

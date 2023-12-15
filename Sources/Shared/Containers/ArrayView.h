@@ -30,8 +30,10 @@
 #include <type_traits>
 #include <utility>
 
-namespace Death::Containers
-{
+namespace Death { namespace Containers {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+	// Forward declarations for the Death::Containers namespace
 	template<class> class ArrayView;
 	template<std::size_t, class> class StaticArrayView;
 
@@ -921,7 +923,7 @@ namespace Death::Containers
 		static_assert(end_ <= size_, "Slice out of range");
 		return StaticArrayView<end_ - begin_, T>{_data + begin_};
 	}
-}
+}}
 
 /* C++17 structured bindings */
 #if DEATH_CXX_STANDARD > 201402

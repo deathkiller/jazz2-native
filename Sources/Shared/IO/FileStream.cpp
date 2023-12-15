@@ -15,8 +15,9 @@
 #	include <unistd.h>		// For close()
 #endif
 
-namespace Death::IO
-{
+namespace Death { namespace IO {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	FileStream::FileStream(const Containers::String& path, FileAccessMode mode)
 		: _shouldCloseOnDestruction(true),
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
@@ -243,4 +244,4 @@ namespace Death::IO
 		::fseek(_handle, 0L, SEEK_SET);
 #endif
 	}
-}
+}}

@@ -3,6 +3,7 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "MenuSection.h"
+#include "../../Multiplayer/MultiplayerGameMode.h"
 
 namespace Jazz2::UI::Menu
 {
@@ -17,10 +18,12 @@ namespace Jazz2::UI::Menu
 		void OnDrawOverlay(Canvas* canvas) override;
 		void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) override;
 
+		void SetGameMode(Multiplayer::MultiplayerGameMode value);
+
 	private:
 		enum class Item {
 			Character,
-			MaxPlayers,
+			GameMode,
 			Start,
 
 			Count
@@ -34,6 +37,7 @@ namespace Jazz2::UI::Menu
 		String _episodeName;
 		String _levelName;
 		String _previousEpisodeName;
+		Multiplayer::MultiplayerGameMode _gameMode;
 
 		ItemData _items[(int32_t)Item::Count];
 		int32_t _selectedIndex;

@@ -37,14 +37,14 @@ namespace Jazz2::Actors::Solid
 		}
 
 		if (_cooldown <= 0.0f) {
-			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 26.0f, [this, timeMult](ActorBase* actor) {
-				if (auto player = dynamic_cast<Player*>(actor)) {
+			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 16.0f, [this, timeMult](ActorBase* actor) {
+				if (auto* player = runtime_cast<Player*>(actor)) {
 					_cooldown = 16.0f;
 
 					SetTransition(_currentAnimation->State | (AnimState)0x200, true);
 					PlaySfx("Hit"_s, 0.8f);
 
-					constexpr float forceMult = 24.0f;
+					constexpr float forceMult = /*24.0f*/12.0f;
 					Vector2f force = (player->GetPos() - _pos).Normalize() * forceMult;
 					if (!_levelHandler->IsReforged()) {
 						force.Y *= 0.7f;

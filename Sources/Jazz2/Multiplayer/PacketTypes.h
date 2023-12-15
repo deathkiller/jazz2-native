@@ -32,10 +32,12 @@ namespace Jazz2::Multiplayer
 		Reserved,
 
 		LoadLevel,
+		ChangeGameMode,
 		PlaySfx,
 		PlayCommonSfx,
 		ShowMessage,
 		OverrideLevelText,
+		SyncTileMap,
 		SetTrigger,
 		AdvanceTileAnimation,
 		RevertTileAnimation,

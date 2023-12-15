@@ -24,12 +24,14 @@
 #pragma once
 
 #include "../CommonBase.h"
-#include "Array.h"
+#include "Tags.h"
 
 #include <type_traits>
+#include <utility>
 
-namespace Death::Containers
-{
+namespace Death { namespace Containers {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	namespace Implementation
 	{
 		template<class, class, class> struct PairConverter;
@@ -260,7 +262,7 @@ namespace Death::Containers
 	template<class T> inline auto pair(T&& other) -> decltype(Implementation::DeducedPairConverter<typename std::decay<T>::type>::from(std::forward<T>(other))) {
 		return Implementation::DeducedPairConverter<typename std::decay<T>::type>::from(std::forward<T>(other));
 	}
-}
+}}
 
 /* C++17 structured bindings */
 #if DEATH_CXX_STANDARD > 201402

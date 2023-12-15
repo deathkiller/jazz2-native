@@ -58,7 +58,7 @@ namespace Jazz2::Actors::Environment
 
 	bool Moth::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto player = dynamic_cast<Player*>(other.get())) {
+		if (auto* player = runtime_cast<Player*>(other)) {
 			if (_timer <= 50.0f) {
 				_timer = 100.0f - _timer * 0.2f;
 

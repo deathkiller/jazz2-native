@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Bosses
 {
 	class BossBase : public Enemies::EnemyBase
 	{
+		DEATH_RTTI_OBJECT(Enemies::EnemyBase);
+
 	public:
 		virtual bool OnActivatedBoss() = 0;
 		virtual void OnDeactivatedBoss() { };

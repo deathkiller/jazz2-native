@@ -16,8 +16,12 @@
 #	include <zlib.h>
 #endif
 
-namespace Death::IO
-{
+namespace Death { namespace IO {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+	/**
+		@brief Read-only streaming of compressed data using the Deflate algorithm
+	*/
 	class DeflateStream : public Stream
 	{
 	public:
@@ -58,6 +62,9 @@ namespace Death::IO
 		std::int32_t ReadInternal(void* ptr, std::int32_t size);
 	};
 
+	/**
+		@brief Write-only streaming to compress written data by using the Deflate algorithm
+	*/
 	class DeflateWriter : public Stream
 	{
 	public:
@@ -90,6 +97,6 @@ namespace Death::IO
 
 		std::int32_t WriteInternal(const void* buffer, std::int32_t bytes, bool finish);
 	};
-}
+}}
 
 #endif

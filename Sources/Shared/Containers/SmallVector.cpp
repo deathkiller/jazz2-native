@@ -3,8 +3,9 @@
 #include <cstdint>
 #include <stdexcept>
 
-namespace Death::Containers
-{
+namespace Death { namespace Containers {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	// Check that no bytes are wasted and everything is well-aligned.
 	namespace
 	{
@@ -151,4 +152,4 @@ namespace Death::Containers
 	static_assert(sizeof(SmallVectorSizeType<char>) == sizeof(std::uint32_t),
 				  "Expected Containers::SmallVectorBase<std::uint32_t> variant to be in use.");
 #endif
-}
+}}

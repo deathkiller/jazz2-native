@@ -16,8 +16,9 @@
 
 #include <algorithm>
 
-namespace Death::IO
-{
+namespace Death { namespace IO {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	DeflateStream::DeflateStream()
 		: _inputStream(nullptr), _inputSize(-1), _state(State::Unknown)
 	{
@@ -286,6 +287,6 @@ namespace Death::IO
 		std::int32_t max_blocks = std::max((uncompressedSize + MinBlockSize - 1) / MinBlockSize, 1);
 		return uncompressedSize + (5 * max_blocks) + 1 + 8;
 	}
-}
+}}
 
 #endif

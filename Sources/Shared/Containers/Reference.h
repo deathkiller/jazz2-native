@@ -24,8 +24,9 @@
 
 #include <type_traits>
 
-namespace Death::Containers
-{
+namespace Death { namespace Containers {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	namespace Implementation
 	{
 		template<class, class> struct ReferenceConverter;
@@ -116,4 +117,4 @@ namespace Death::Containers
 
 		T* _reference;
 	};
-}
+}}

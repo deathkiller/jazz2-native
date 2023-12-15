@@ -91,35 +91,7 @@ namespace Jazz2
 		}
 
 		AttachComponents(std::move(descriptor));
-
-		// Process carry overs
-		for (std::int32_t i = 0; i < countof(levelInit.PlayerCarryOvers); i++) {
-			if (levelInit.PlayerCarryOvers[i].Type == PlayerType::None) {
-				continue;
-			}
-
-			Vector2 spawnPosition = _eventMap->GetSpawnPosition(levelInit.PlayerCarryOvers[i].Type);
-			if (spawnPosition.X < 0.0f && spawnPosition.Y < 0.0f) {
-				spawnPosition = _eventMap->GetSpawnPosition(PlayerType::Jazz);
-				if (spawnPosition.X < 0.0f && spawnPosition.Y < 0.0f) {
-					continue;
-				}
-			}
-
-			std::shared_ptr<Actors::Player> player = std::make_shared<Actors::Player>();
-			std::uint8_t playerParams[2] = { (std::uint8_t)levelInit.PlayerCarryOvers[i].Type, (std::uint8_t)i };
-			player->OnActivated(Actors::ActorActivationDetails(
-				this,
-				Vector3i(spawnPosition.X + (i * 30), spawnPosition.Y - (i * 30), PlayerZ - i),
-				playerParams
-			));
-
-			Actors::Player* ptr = player.get();
-			_players.push_back(ptr);
-			AddActor(player);
-
-			ptr->ReceiveLevelCarryOver(levelInit.LastExitType, levelInit.PlayerCarryOvers[i]);
-		}
+		SpawnPlayers(levelInit);		
 
 		OnInitialized();
 		resolver.EndLoading();
@@ -318,6 +290,37 @@ namespace Jazz2
 			}
 		}
 #endif
+	}
+
+	void LevelHandler::SpawnPlayers(const LevelInitialization& levelInit)
+	{
+		for (std::int32_t i = 0; i < countof(levelInit.PlayerCarryOvers); i++) {
+			if (levelInit.PlayerCarryOvers[i].Type == PlayerType::None) {
+				continue;
+			}
+
+			Vector2 spawnPosition = _eventMap->GetSpawnPosition(levelInit.PlayerCarryOvers[i].Type);
+			if (spawnPosition.X < 0.0f && spawnPosition.Y < 0.0f) {
+				spawnPosition = _eventMap->GetSpawnPosition(PlayerType::Jazz);
+				if (spawnPosition.X < 0.0f && spawnPosition.Y < 0.0f) {
+					continue;
+				}
+			}
+
+			std::shared_ptr<Actors::Player> player = std::make_shared<Actors::Player>();
+			std::uint8_t playerParams[2] = { (std::uint8_t)levelInit.PlayerCarryOvers[i].Type, (std::uint8_t)i };
+			player->OnActivated(Actors::ActorActivationDetails(
+				this,
+				Vector3i(spawnPosition.X + (i * 30), spawnPosition.Y - (i * 30), PlayerZ - i),
+				playerParams
+			));
+
+			Actors::Player* ptr = player.get();
+			_players.push_back(ptr);
+			AddActor(player);
+
+			ptr->ReceiveLevelCarryOver(levelInit.LastExitType, levelInit.PlayerCarryOvers[i]);
+		}
 	}
 
 	void LevelHandler::OnBeginFrame()
@@ -849,7 +852,7 @@ namespace Jazz2
 					return true;
 				}
 
-				Actors::SolidObjectBase* solidObject = dynamic_cast<Actors::SolidObjectBase*>(actor);
+				auto* solidObject = runtime_cast<Actors::SolidObjectBase*>(actor);
 				if (solidObject == nullptr || !solidObject->IsOneWay || params.Downwards) {
 					std::shared_ptr selfShared = self->shared_from_this();
 					std::shared_ptr actorShared = actor->shared_from_this();
@@ -1321,7 +1324,7 @@ namespace Jazz2
 				return true;
 			}
 
-			Actors::Environment::IceBlock* iceBlock = dynamic_cast<Actors::Environment::IceBlock*>(actor);
+			auto* iceBlock = runtime_cast<Actors::Environment::IceBlock*>(actor);
 			if (iceBlock != nullptr) {
 				iceBlock->ResetTimeLeft();
 				iceBlockFound = true;

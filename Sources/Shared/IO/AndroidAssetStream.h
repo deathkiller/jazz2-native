@@ -10,11 +10,14 @@
 #include <android_native_app_glue.h>	// For android_app
 #include <android/asset_manager.h>
 
-namespace Death::IO
-{
+namespace Death { namespace IO {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	using Containers::Literals::operator"" _s;
 
-	/** @brief The class dealing with Android asset files */
+	/**
+		@brief Read-only streaming directly from Android asset files
+	*/
 	class AndroidAssetStream : public Stream
 	{
 	public:
@@ -81,6 +84,6 @@ namespace Death::IO
 
 		void Open(FileAccessMode mode);
 	};
-}
+}}
 
 #endif

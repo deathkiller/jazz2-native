@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Solid
 {
 	class AmmoCrate : public GenericContainer
 	{
+		DEATH_RTTI_OBJECT(GenericContainer);
+
 	public:
 		AmmoCrate();
 

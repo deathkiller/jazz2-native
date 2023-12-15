@@ -1182,6 +1182,11 @@ namespace Jazz2
 			descriptor.TileMap->AddTileSet(extraTileset, offset, count, hasPaletteRemapping ? paletteRemapping : nullptr);
 		}
 
+		if (!descriptor.TileMap->IsValid()) {
+			// Cannot load one of required tilesets (errors already logged by TileMap)
+			return false;
+		}
+
 		// Text Event Strings
 		std::uint8_t textEventStringsCount = uc.ReadValue<std::uint8_t>();
 		descriptor.LevelTexts.reserve(textEventStringsCount);

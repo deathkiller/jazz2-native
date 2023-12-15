@@ -7,6 +7,8 @@ namespace Jazz2::Actors::Bosses
 {
 	class Uterus : public BossBase
 	{
+		DEATH_RTTI_OBJECT(BossBase);
+
 	public:
 		Uterus();
 		~Uterus();

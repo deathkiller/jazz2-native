@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Collectibles
 {
 	class Stopwatch : public CollectibleBase
 	{
+		DEATH_RTTI_OBJECT(CollectibleBase);
+
 	public:
 		Stopwatch();
 

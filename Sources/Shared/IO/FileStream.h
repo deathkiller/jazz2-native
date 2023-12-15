@@ -2,9 +2,12 @@
 
 #include "Stream.h"
 
-namespace Death::IO
-{
-	/** @brief The class handling opening, reading and closing a standard file from native filesystem */
+namespace Death { namespace IO {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+	/**
+		@brief Streaming from/to a file on a local filesystem
+	*/
 	class FileStream : public Stream
 	{
 	public:
@@ -48,6 +51,4 @@ namespace Death::IO
 
 		void Open(FileAccessMode mode);
 	};
-
-}
-
+}}

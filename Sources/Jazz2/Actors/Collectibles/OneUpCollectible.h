@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Collectibles
 {
 	class OneUpCollectible : public CollectibleBase
 	{
+		DEATH_RTTI_OBJECT(CollectibleBase);
+
 	public:
 		OneUpCollectible();
 

@@ -93,12 +93,11 @@ namespace Jazz2::Actors::Collectibles
 
 	bool CollectibleBase::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto player = dynamic_cast<Player*>(other.get())) {
+		if (auto* player = runtime_cast<Player*>(other)) {
 			OnCollect(player);
 			return true;
 		} else {
-			bool shouldDrop = _untouched && (dynamic_cast<Weapons::ShotBase*>(other.get()) != nullptr ||
-				dynamic_cast<Weapons::TNT*>(other.get()) != nullptr || dynamic_cast<Enemies::TurtleShell*>(other.get()) != nullptr);
+			bool shouldDrop = _untouched && (runtime_cast<Weapons::ShotBase*>(other) || runtime_cast<Weapons::TNT*>(other) || runtime_cast<Enemies::TurtleShell*>(other));
 			if (shouldDrop) {
 				Vector2f speed = other->GetSpeed();
 				_externalForce.X += speed.X / 2.0f * (0.9f + Random().NextFloat(0.0f, 0.2f));

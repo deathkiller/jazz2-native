@@ -44,7 +44,7 @@ namespace Jazz2::Actors::Solid
 
 	bool PushableBox::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto* shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
 			WeaponType weaponType = shotBase->GetWeaponType();
 			if (weaponType == WeaponType::Blaster || weaponType == WeaponType::RF ||
 				weaponType == WeaponType::Seeker || weaponType == WeaponType::Pepper) {

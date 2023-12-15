@@ -53,13 +53,15 @@ namespace Jazz2::Actors
 
 	class Player : public ActorBase
 	{
+		DEATH_RTTI_OBJECT(ActorBase);
+
 		friend class UI::HUD;
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::ScriptPlayerWrapper;
 		friend class Scripting::jjPLAYER;
 #endif
 #if defined(WITH_MULTIPLAYER)
-		friend class Multiplayer::MultiLevelHandler;
+		friend class Jazz2::Multiplayer::MultiLevelHandler;
 #endif
 		friend class Environment::SwingingVine;
 		friend class Solid::PinballBumper;

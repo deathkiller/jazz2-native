@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Weapons
 {
 	class TNT : public ActorBase
 	{
+		DEATH_RTTI_OBJECT(ActorBase);
+
 	public:
 		TNT();
 

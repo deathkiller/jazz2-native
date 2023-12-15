@@ -5,6 +5,10 @@
 #include "../../PreferencesCache.h"
 #include "../../../nCine/Base/FrameTimer.h"
 
+#if defined(WITH_MULTIPLAYER)
+#	include "CreateServerOptionsSection.h"
+#endif
+
 #include <IO/DeflateStream.h>
 #include <IO/MemoryStream.h>
 
@@ -13,8 +17,8 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
-	CustomLevelSelectSection::CustomLevelSelectSection()
-		: _selectedIndex(0), _animation(0.0f), _y(0.0f), _height(0.0f), _pressedCount(0), _noiseCooldown(0.0f)
+	CustomLevelSelectSection::CustomLevelSelectSection(bool multiplayer)
+		: _multiplayer(multiplayer), _selectedIndex(0), _animation(0.0f), _y(0.0f), _height(0.0f), _pressedCount(0), _noiseCooldown(0.0f)
 	{
 #if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		_indexingThread.Run([](void* arg) {
@@ -241,6 +245,13 @@ namespace Jazz2::UI::Menu
 
 		auto& selectedItem = _items[_selectedIndex];
 		_root->PlaySfx("MenuSelect"_s, 0.6f);
+
+#if defined(WITH_MULTIPLAYER)
+		if (_multiplayer) {
+			_root->SwitchToSection<CreateServerOptionsSection>("unknown"_s, selectedItem.LevelName, nullptr);
+			return;
+		}
+#endif
 		_root->SwitchToSection<StartGameOptionsSection>("unknown"_s, selectedItem.LevelName, nullptr);
 	}
 

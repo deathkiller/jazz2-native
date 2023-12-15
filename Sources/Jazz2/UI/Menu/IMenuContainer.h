@@ -41,6 +41,7 @@ namespace Jazz2::UI::Menu
 
 		virtual MenuSection* SwitchToSectionDirect(std::unique_ptr<MenuSection> section) = 0;
 		virtual void LeaveSection() = 0;
+		virtual MenuSection* GetUnderlyingSection() const = 0;
 		virtual void ChangeLevel(LevelInitialization&& levelInit) = 0;
 		virtual bool HasResumableState() const = 0;
 		virtual void ResumeSavedState() = 0;

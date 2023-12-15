@@ -7,6 +7,8 @@ namespace Jazz2::Actors::Environment
 {
 	class EndOfLevel : public ActorBase
 	{
+		DEATH_RTTI_OBJECT(ActorBase);
+
 	public:
 		EndOfLevel();
 

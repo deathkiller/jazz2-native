@@ -4,10 +4,12 @@
 
 #include "MainMenu.h"
 #include "MenuResources.h"
+#include "MultiplayerGameModeSelectSection.h"
 #include "../../PreferencesCache.h"
 
 #include <Utf8.h>
 
+using namespace Jazz2::Multiplayer;
 using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
@@ -17,12 +19,20 @@ namespace Jazz2::UI::Menu
 			_availableCharacters(3), _selectedPlayerType(0), _selectedDifficulty(1), _lastPlayerType(0), _lastDifficulty(0),
 			_imageTransition(1.0f), _animation(0.0f), _transitionTime(0.0f), _shouldStart(false)
 	{
+		if (episodeName == "unknown"_s) {
+			// Custom level
+			_gameMode = MultiplayerGameMode::Battle;
+		} else {
+			// Episode
+			_gameMode = MultiplayerGameMode::Cooperation;
+		}
+
 		// TRANSLATORS: Menu item to select player character (Jazz, Spaz, Lori)
 		_items[(int32_t)Item::Character].Name = _("Character");
-		// TRANSLATORS: Menu item to select max. players
-		_items[(int32_t)Item::MaxPlayers].Name = _("Max. Players");
-		// TRANSLATORS: Menu item to start selected episode/level
-		_items[(int32_t)Item::Start].Name = _("Start");
+		// TRANSLATORS: Menu item to select game mode
+		_items[(int32_t)Item::GameMode].Name = _("Game Mode");
+		// TRANSLATORS: Menu item to create server with selected settings
+		_items[(int32_t)Item::Start].Name = _("Create Server");
 	}
 
 	void CreateServerOptionsSection::OnShow(IMenuContainer* root)
@@ -199,28 +209,22 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.7f);
 
 				_items[i].TouchY = center.Y + 28.0f;
-		    } /*else if (i == 1) {
-				const StringView difficultyTypes[] = { _("Easy"), _("Medium"), _("Hard") };
+		    } else if (i == 1) {
+				StringView gameModeString;
+				switch (_gameMode) {
+					case MultiplayerGameMode::Battle: gameModeString = "Battle"_s; break;
+					case MultiplayerGameMode::TeamBattle: gameModeString = "Team Battle"_s; break;
+					case MultiplayerGameMode::CaptureTheFlag: gameModeString = "Capture The Flag"_s; break;
+					case MultiplayerGameMode::Race: gameModeString = "Race"_s; break;
+					case MultiplayerGameMode::TreasureHunt: gameModeString = "Treasure Hunt"_s; break;
+					case MultiplayerGameMode::Cooperation: gameModeString = "Cooperation"_s; break;
+				}
 
-		        for (int32_t j = 0; j < countof(difficultyTypes); j++) {
-		            if (_selectedDifficulty == j) {
-		                _root->DrawElement(MenuGlow, 0, center.X + (j - 1) * 100.0f, center.Y + 28.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (Utf8::GetLength(difficultyTypes[j]) + 3) * 0.4f, 2.2f, true);
-
-		                _root->DrawStringShadow(difficultyTypes[j], charOffset, center.X + (j - 1) * 100.0f, center.Y + 28.0f, IMenuContainer::FontLayer,
-							Alignment::Center, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 1.0f, 0.4f, 0.55f, 0.55f, 0.8f, 0.9f);
-		            } else {
-		                _root->DrawStringShadow(difficultyTypes[j], charOffset, center.X + (j - 1) * 100.0f, center.Y + 28.0f, IMenuContainer::FontLayer,
-							Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.9f);
-		            }
-		        }
-
-		        _root->DrawStringShadow("<"_s, charOffset, center.X - (100.0f + 40.0f), center.Y + 28.0f, IMenuContainer::FontLayer,
-					Alignment::Center, Font::DefaultColor, 0.7f);
-		        _root->DrawStringShadow(">"_s, charOffset, center.X + (100.0f + 40.0f), center.Y + 28.0f, IMenuContainer::FontLayer,
-					Alignment::Center, Font::DefaultColor, 0.7f);
+				_root->DrawStringShadow(gameModeString, charOffset, center.X, center.Y + 28.0f, IMenuContainer::FontLayer,
+					Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.9f);
 
 				_items[i].TouchY = center.Y + 28.0f;
-			} else*/ {
+			} else {
 				_items[i].TouchY = center.Y;
 			}
 
@@ -305,13 +309,28 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+	void CreateServerOptionsSection::SetGameMode(Multiplayer::MultiplayerGameMode value)
+	{
+		_gameMode = value;
+	}
+
 	void CreateServerOptionsSection::ExecuteSelected()
 	{
-		if (_selectedIndex == 2) {
-			_root->PlaySfx("MenuSelect"_s, 0.6f);
+		switch (_selectedIndex) {
+			case (int32_t)Item::GameMode: {
+				if (_episodeName == "unknown"_s) {
+					_root->PlaySfx("MenuSelect"_s, 0.6f);
+					_root->SwitchToSection<MultiplayerGameModeSelectSection>();
+				}
+				break;
+			}
+			case (int32_t)Item::Start: {
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
 
-			_shouldStart = true;
-			_transitionTime = 1.0f;
+				_shouldStart = true;
+				_transitionTime = 1.0f;
+				break;
+			}
 		}
 	}
 

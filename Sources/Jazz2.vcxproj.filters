@@ -214,6 +214,12 @@
     <Filter Include="Source Files\nCine\Backends">
       <UniqueIdentifier>{416ca28f-5529-413b-b6b9-1f5c7cdf2b0d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Jazz2\Actors\Multiplayer">
+      <UniqueIdentifier>{f0d88d86-bb58-4877-b356-365d04655da0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Actors\Multiplayer">
+      <UniqueIdentifier>{5a410bc7-e012-4efc-a75b-41bf6b0e9771}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1338,9 +1344,6 @@
     <ClInclude Include="Jazz2\Multiplayer\Peer.h">
       <Filter>Header Files\Jazz2\Multiplayer</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Actors\RemoteActor.h">
-      <Filter>Header Files\Jazz2\Actors</Filter>
-    </ClInclude>
     <ClInclude Include="Jazz2\Tiles\ITileMapOwner.h">
       <Filter>Header Files\Jazz2\Tiles</Filter>
     </ClInclude>
@@ -1419,12 +1422,6 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\DeflateStream.h">
       <Filter>Header Files\Shared\IO</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\Actors\RemotePlayerOnServer.h">
-      <Filter>Header Files\Jazz2\Actors</Filter>
-    </ClInclude>
-    <ClInclude Include="Jazz2\Actors\RemotablePlayer.h">
-      <Filter>Header Files\Jazz2\Actors</Filter>
-    </ClInclude>
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\SequenceHelpers.h">
       <Filter>Header Files\Shared\Containers</Filter>
     </ClInclude>
@@ -1438,6 +1435,27 @@
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\CreateServerOptionsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Base\TypeInfo.h">
+      <Filter>Header Files\Shared\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Multiplayer\PlayerOnServer.h">
+      <Filter>Header Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Multiplayer\RemotablePlayer.h">
+      <Filter>Header Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Multiplayer\RemoteActor.h">
+      <Filter>Header Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Multiplayer\RemotePlayerOnServer.h">
+      <Filter>Header Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Multiplayer\LocalPlayerOnServer.h">
+      <Filter>Header Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\PlayCustomSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
   </ItemGroup>
@@ -2333,9 +2351,6 @@
     <ClCompile Include="Jazz2\Multiplayer\NetworkManager.cpp">
       <Filter>Source Files\Jazz2\Multiplayer</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Actors\RemoteActor.cpp">
-      <Filter>Source Files\Jazz2\Actors</Filter>
-    </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\LoadingSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
@@ -2375,12 +2390,6 @@
     <ClCompile Include="$(ExtensionLibraryPath)\IO\DeflateStream.cpp">
       <Filter>Source Files\Shared\IO</Filter>
     </ClCompile>
-    <ClCompile Include="Jazz2\Actors\RemotePlayerOnServer.cpp">
-      <Filter>Source Files\Jazz2\Actors</Filter>
-    </ClCompile>
-    <ClCompile Include="Jazz2\Actors\RemotablePlayer.cpp">
-      <Filter>Source Files\Jazz2\Actors</Filter>
-    </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\StringUtils.cpp">
       <Filter>Source Files\Shared\Containers</Filter>
     </ClCompile>
@@ -2391,6 +2400,24 @@
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\CreateServerOptionsSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Multiplayer\PlayerOnServer.cpp">
+      <Filter>Source Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Multiplayer\RemotablePlayer.cpp">
+      <Filter>Source Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Multiplayer\RemoteActor.cpp">
+      <Filter>Source Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Multiplayer\RemotePlayerOnServer.cpp">
+      <Filter>Source Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Multiplayer\LocalPlayerOnServer.cpp">
+      <Filter>Source Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\PlayCustomSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
   </ItemGroup>

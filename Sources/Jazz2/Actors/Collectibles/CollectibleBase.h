@@ -11,6 +11,8 @@ namespace Jazz2::Actors::Collectibles
 {
 	class CollectibleBase : public ActorBase
 	{
+		DEATH_RTTI_OBJECT(ActorBase);
+
 	public:
 		CollectibleBase();
 

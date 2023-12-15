@@ -373,7 +373,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 	bool ScriptActorWrapper::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (_onHandleCollision != nullptr) {
-			if (auto otherWrapper = dynamic_cast<ScriptActorWrapper*>(other.get())) {
+			if (auto* otherWrapper = runtime_cast<ScriptActorWrapper*>(other)) {
 				asIScriptEngine* engine = _obj->GetEngine();
 				asITypeInfo* typeInfo = _levelScripts->GetMainModule()->GetTypeInfoByName(AsClassName);
 				if (typeInfo != nullptr) {
@@ -398,7 +398,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 						return true;
 					}
 				}
-			} else if (auto player = dynamic_cast<Player*>(other.get())) {
+			} else if (auto* player = runtime_cast<Player*>(other)) {
 				asIScriptEngine* engine = _obj->GetEngine();
 				asITypeInfo* typeInfo = engine->GetTypeInfoByName("Player");
 				if (typeInfo != nullptr) {
@@ -636,13 +636,12 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 
 	bool ScriptCollectibleWrapper::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto player = dynamic_cast<Player*>(other.get())) {
+		if (auto* player = runtime_cast<Player*>(other)) {
 			if (OnCollect(player)) {
 				return true;
 			}
 		} else {
-			bool shouldDrop = _untouched && (dynamic_cast<Weapons::ShotBase*>(other.get()) != nullptr ||
-				dynamic_cast<Weapons::TNT*>(other.get()) != nullptr || dynamic_cast<Enemies::TurtleShell*>(other.get()) != nullptr);
+			bool shouldDrop = _untouched && (runtime_cast<Weapons::ShotBase*>(other) || runtime_cast<Weapons::TNT*>(other) || runtime_cast<Enemies::TurtleShell*>(other));
 			if (shouldDrop) {
 				Vector2f speed = other->GetSpeed();
 				_externalForce.X += speed.X / 2.0f * (0.9f + Random().NextFloat(0.0f, 0.2f));

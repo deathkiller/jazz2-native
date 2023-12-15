@@ -120,7 +120,7 @@ namespace Jazz2::Actors::Environment
 	bool Bird::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (_attackTime > 0.0f && !other->IsInvulnerable()) {
-			if (auto enemy = dynamic_cast<Enemies::EnemyBase*>(other.get())) {
+			if (auto* enemy = runtime_cast<Enemies::EnemyBase*>(other)) {
 				enemy->DecreaseHealth(1, this);
 
 				SetAnimation(AnimState::Idle);
@@ -150,7 +150,7 @@ namespace Jazz2::Actors::Environment
 	void Bird::TryFire()
 	{
 		_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 260.0f, [this](ActorBase* actor) {
-			if (auto enemy = dynamic_cast<Enemies::EnemyBase*>(actor)) {
+			if (auto* enemy = runtime_cast<Enemies::EnemyBase*>(actor)) {
 				Vector2f newPos = enemy->GetPos();
 				if (IsFacingLeft() ? (newPos.X > _pos.X) : (newPos.X < _pos.X)) {
 					return true;

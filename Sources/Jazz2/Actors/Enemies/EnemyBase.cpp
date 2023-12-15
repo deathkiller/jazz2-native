@@ -36,14 +36,14 @@ namespace Jazz2::Actors::Enemies
 	void EnemyBase::AddScoreToCollider(ActorBase* collider)
 	{
 		if (_scoreValue > 0) {
-			if (auto player = dynamic_cast<Player*>(collider)) {
+			if (auto* player = runtime_cast<Player*>(collider)) {
 				player->AddScore(_scoreValue);
-			} else if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(collider)) {
+			} else if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(collider)) {
 				auto owner = shotBase->GetOwner();
 				if (owner != nullptr) {
 					owner->AddScore(_scoreValue);
 				}
-			} else if (auto tnt = dynamic_cast<Weapons::TNT*>(collider)) {
+			} else if (auto* tnt = runtime_cast<Weapons::TNT*>(collider)) {
 				auto owner = tnt->GetOwner();
 				if (owner != nullptr) {
 					owner->AddScore(_scoreValue);
@@ -153,10 +153,10 @@ namespace Jazz2::Actors::Enemies
 	bool EnemyBase::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (!GetState(ActorState::IsInvulnerable)) {
-			if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
+			if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
 				if (shotBase->GetStrength() > 0) {
 					Vector2f shotSpeed;
-					if (auto thunderbolt = dynamic_cast<Weapons::Thunderbolt*>(shotBase)) {
+					if (auto* thunderbolt = runtime_cast<Weapons::Thunderbolt*>(shotBase)) {
 						shotSpeed = _pos - shotBase->GetPos();
 					} else {
 						shotSpeed = shotBase->GetSpeed();
@@ -171,10 +171,10 @@ namespace Jazz2::Actors::Enemies
 				}
 				// Collision must also be processed by the shot
 				//return true;
-			} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {
+			} else if (auto* tnt = runtime_cast<Weapons::TNT*>(other)) {
 				DecreaseHealth(5, tnt);
 				return true;
-			} else if (auto pole = dynamic_cast<Solid::Pole*>(other.get())) {
+			} else if (auto* pole = runtime_cast<Solid::Pole*>(other)) {
 				bool hit;
 				switch (pole->GetFallDirection()) {
 					case Solid::Pole::FallDirection::Left: hit = (_pos.X < pole->GetPos().X); break;
@@ -186,7 +186,7 @@ namespace Jazz2::Actors::Enemies
 					DecreaseHealth(10, pole);
 					return true;
 				}
-			} else if (auto pushableBox = dynamic_cast<Solid::PushableBox*>(other.get())) {
+			} else if (auto* pushableBox = runtime_cast<Solid::PushableBox*>(other)) {
 				if (pushableBox->GetSpeed().Y > 0.0f && pushableBox->AABBInner.B < _pos.Y) {
 					_lastHitDir = LastHitDirection::Up;
 					DecreaseHealth(10, pushableBox);
@@ -222,8 +222,7 @@ namespace Jazz2::Actors::Enemies
 		float x = _pos.X - res->Base->Hotspot.X;
 		float y = _pos.Y - res->Base->Hotspot.Y;
 
-		if (dynamic_cast<Weapons::ToasterShot*>(collider) != nullptr ||
-			dynamic_cast<Weapons::ShieldFireShot*>(collider) != nullptr) {
+		if (runtime_cast<Weapons::ToasterShot*>(collider) || runtime_cast<Weapons::ShieldFireShot*>(collider)) {
 			constexpr int DebrisSize = 3;
 
 			Vector2i texSize = res->Base->TextureDiffuse->size();
@@ -260,7 +259,7 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 		
-		if (auto thunderbolt = dynamic_cast<Weapons::Thunderbolt*>(collider)) {
+		if (auto* thunderbolt = runtime_cast<Weapons::Thunderbolt*>(collider)) {
 			constexpr int DebrisSize = 3;
 
 			Vector2i texSize = res->Base->TextureDiffuse->size();

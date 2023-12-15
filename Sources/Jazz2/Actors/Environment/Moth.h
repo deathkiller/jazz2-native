@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Environment
 {
 	class Moth : public ActorBase
 	{
+		DEATH_RTTI_OBJECT(ActorBase);
+
 	public:
 		Moth();
 

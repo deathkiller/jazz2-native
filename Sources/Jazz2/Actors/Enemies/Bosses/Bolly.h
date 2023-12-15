@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Bosses
 {
 	class Bolly : public BossBase
 	{
+		DEATH_RTTI_OBJECT(BossBase);
+
 	public:
 		Bolly();
 		~Bolly();

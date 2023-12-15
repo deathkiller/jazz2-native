@@ -329,7 +329,7 @@ namespace Jazz2::Scripting
 
 		/*
 		// If known player is the initiator, try to call specific variant of the function
-		if (auto player = dynamic_cast<Actors::Player*>(initiator)) {
+		if (auto* player = runtime_cast<Actors::Player*>(initiator)) {
 			formatString(funcName, sizeof(funcName), "void onFunction%i(Player@, uint8)", eventParams[0]);
 			func = _module->GetFunctionByDecl(funcName);
 			if (func != nullptr) {
@@ -3450,7 +3450,7 @@ namespace Jazz2::Scripting
 
 	std::shared_ptr<Actors::ActorBase> LevelScriptLoader::asRegisterSpawnableCallback(const Actors::ActorActivationDetails& details)
 	{
-		if (auto levelHandler = dynamic_cast<LevelHandler*>(details.LevelHandler)) {
+		if (auto* levelHandler = runtime_cast<LevelHandler*>(details.LevelHandler)) {
 			auto _this = levelHandler->_scripts.get();
 			// Spawn() function with custom event cannot be used in OnLevelLoad(), because _scripts is not assigned yet
 			if (_this != nullptr) {

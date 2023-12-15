@@ -773,6 +773,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 			case ServerPacketType::LoadLevel: {
 				MemoryStream packet(data + 1, dataLength - 1);
 				std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+				MultiplayerGameMode gameMode = (MultiplayerGameMode)packet.ReadValue<std::uint8_t>();
 				std::uint32_t episodeLength = packet.ReadVariableUint32();
 				String episodeName = String(NoInit, episodeLength);
 				packet.Read(episodeName.data(), episodeLength);
@@ -780,10 +781,11 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				String levelName = String(NoInit, levelLength);
 				packet.Read(levelName.data(), levelLength);
 
-				InvokeAsync([this, flags, episodeName = std::move(episodeName), levelName = std::move(levelName)]() {
+				InvokeAsync([this, flags, gameMode, episodeName = std::move(episodeName), levelName = std::move(levelName)]() {
 					bool isReforged = (flags & 0x01) != 0;
 					LevelInitialization levelInit(episodeName, levelName, GameDifficulty::Multiplayer, isReforged);
 					auto levelHandler = std::make_unique<MultiLevelHandler>(this, _networkManager.get());
+					levelHandler->SetGameMode(gameMode);
 					levelHandler->Initialize(levelInit);
 					SetStateHandler(std::move(levelHandler));
 				});

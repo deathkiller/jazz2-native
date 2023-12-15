@@ -6,8 +6,9 @@
 #include <string>
 #include <cstring>
 
-namespace Death::Containers
-{
+namespace Death { namespace Containers {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	namespace
 	{
 		enum : std::size_t {
@@ -827,4 +828,4 @@ namespace Death::Containers
 			return std::string{other.data(), other.size()};
 		}
 	}
-}
+}}

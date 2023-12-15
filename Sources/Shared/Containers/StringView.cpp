@@ -19,8 +19,9 @@
 #	include <wasm_simd128.h>
 #endif
 
-namespace Death::Containers
-{
+namespace Death { namespace Containers {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	template<class T> BasicStringView<T>::BasicStringView(T* const data, const StringViewFlags flags, std::nullptr_t) noexcept : BasicStringView{data,
 		data ? std::strlen(data) : 0,
 		flags | (data ? StringViewFlags::NullTerminated : StringViewFlags::Global)} {}
@@ -995,4 +996,4 @@ namespace Death::Containers
 			return std::string { other.data(), other.size() };
 		}
 	}
-}
+}}

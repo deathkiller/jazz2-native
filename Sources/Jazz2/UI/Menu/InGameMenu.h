@@ -30,6 +30,7 @@ namespace Jazz2::UI::Menu
 
 		MenuSection* SwitchToSectionDirect(std::unique_ptr<MenuSection> section) override;
 		void LeaveSection() override;
+		MenuSection* GetUnderlyingSection() const override;
 		void ChangeLevel(LevelInitialization&& levelInit) override;
 		bool HasResumableState() const override;
 		void ResumeSavedState() override;

@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Solid
 {
 	class Bridge : public ActorBase
 	{
+		DEATH_RTTI_OBJECT(ActorBase);
+
 	public:
 		Bridge();
 		~Bridge();

@@ -4,8 +4,9 @@
 
 #include <cstring>
 
-namespace Death
-{
+namespace Death {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	/**
 		@brief Provides unaligned operations for pointers
 	*/

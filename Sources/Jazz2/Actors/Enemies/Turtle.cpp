@@ -110,14 +110,12 @@ namespace Jazz2::Actors::Enemies
 	{
 		// Animation should be paused only if enemy is frozen
 		bool shouldDestroy = (_frozenTimeLeft > 0.0f);
-		if (auto player = dynamic_cast<Player*>(collider)) {
+		if (auto* player = runtime_cast<Player*>(collider)) {
 			if (player->GetSpecialMove() != Player::SpecialMoveType::None) {
 				shouldDestroy = true;
 			}
-		} else if (dynamic_cast<Weapons::ToasterShot*>(collider) != nullptr || 
-					dynamic_cast<Weapons::ShieldFireShot*>(collider) != nullptr ||
-					dynamic_cast<Weapons::Thunderbolt*>(collider) != nullptr ||
-					dynamic_cast<Solid::PushableBox*>(collider) != nullptr) {
+		} else if (runtime_cast<Weapons::ToasterShot*>(collider) || runtime_cast<Weapons::ShieldFireShot*>(collider) ||
+					runtime_cast<Weapons::Thunderbolt*>(collider) || runtime_cast<Solid::PushableBox*>(collider)) {
 			shouldDestroy = true;
 		}
 

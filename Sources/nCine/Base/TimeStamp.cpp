@@ -26,7 +26,7 @@ namespace nCine
 
 	TimeStamp& TimeStamp::operator-=(const TimeStamp& other)
 	{
-		ASSERT(counter_ > other.counter_);
+		ASSERT(counter_ >= other.counter_);
 		counter_ -= other.counter_;
 		return *this;
 	}
@@ -38,7 +38,7 @@ namespace nCine
 
 	TimeStamp TimeStamp::operator-(const TimeStamp& other) const
 	{
-		ASSERT(counter_ > other.counter_);
+		ASSERT(counter_ >= other.counter_);
 		return TimeStamp(counter_ - other.counter_);
 	}
 

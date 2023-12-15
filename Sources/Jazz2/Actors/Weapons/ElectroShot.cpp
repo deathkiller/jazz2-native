@@ -149,7 +149,7 @@ namespace Jazz2::Actors::Weapons
 
 	bool ElectroShot::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto enemyBase = dynamic_cast<Enemies::EnemyBase*>(other.get())) {
+		if (auto* enemyBase = runtime_cast<Enemies::EnemyBase*>(other)) {
 			if (enemyBase->IsInvulnerable() || !enemyBase->CanCollideWithAmmo) {
 				return false;
 			}

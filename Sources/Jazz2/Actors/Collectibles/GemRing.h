@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Collectibles
 {
 	class GemRing : public CollectibleBase
 	{
+		DEATH_RTTI_OBJECT(CollectibleBase);
+
 	public:
 		GemRing();
 

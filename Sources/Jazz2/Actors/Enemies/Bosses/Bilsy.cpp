@@ -273,7 +273,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Bilsy::Fireball::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto player = dynamic_cast<Player*>(other.get())) {
+		if (auto* player = runtime_cast<Player*>(other)) {
 			DecreaseHealth(INT32_MAX);
 		}
 

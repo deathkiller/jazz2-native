@@ -83,7 +83,7 @@ namespace Jazz2::Actors::Solid
 			return SolidObjectBase::OnHandleCollision(other);
 		}
 
-		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
 			Player* owner = shotBase->GetOwner();
 			WeaponType weaponType = shotBase->GetWeaponType();
 			if (owner != nullptr && (weaponType == WeaponType::Blaster ||
@@ -95,13 +95,13 @@ namespace Jazz2::Actors::Solid
 				shotBase->TriggerRicochet(this);
 			}
 			return true;
-		} else if (auto tnt = dynamic_cast<Weapons::TNT*>(other.get())) {
+		} else if (auto* tnt = runtime_cast<Weapons::TNT*>(other)) {
 			Player* owner = tnt->GetOwner();
 			if (owner != nullptr) {
 				DestroyAndApplyToPlayer(owner);
 			}
 			return true;
-		} else if (auto player = dynamic_cast<Player*>(other.get())) {
+		} else if (auto* player = runtime_cast<Player*>(other)) {
 			if (player->CanBreakSolidObjects()) {
 				DestroyAndApplyToPlayer(player);
 				return true;

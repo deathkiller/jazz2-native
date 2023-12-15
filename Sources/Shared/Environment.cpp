@@ -15,8 +15,9 @@ namespace winrtWSP = winrt::Windows::System::Profile;
 #	include <cstring>
 #endif
 
-namespace Death::Environment
-{
+namespace Death { namespace Environment {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 #if defined(DEATH_TARGET_APPLE)
 	Containers::String GetAppleVersion()
 	{
@@ -173,4 +174,4 @@ namespace Death::Environment
 
 	const std::uint64_t WindowsVersion = GetWindowsVersion();
 #endif
-}
+}}

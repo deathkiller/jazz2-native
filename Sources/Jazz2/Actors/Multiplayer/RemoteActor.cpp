@@ -2,9 +2,9 @@
 
 #if defined(WITH_MULTIPLAYER)
 
-#include "../../nCine/Base/Clock.h"
+#include "../../../nCine/Base/Clock.h"
 
-namespace Jazz2::Actors
+namespace Jazz2::Actors::Multiplayer
 {
 	RemoteActor::RemoteActor()
 		: _stateBufferPos(0), _lastAnim(AnimState::Idle)

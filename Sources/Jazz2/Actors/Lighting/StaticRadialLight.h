@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Lighting
 {
 	class StaticRadialLight : public ActorBase
 	{
+		DEATH_RTTI_OBJECT(ActorBase);
+
 	public:
 		StaticRadialLight();
 

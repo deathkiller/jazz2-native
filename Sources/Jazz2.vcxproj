@@ -229,6 +229,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\MemoryStream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\IO\Stream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Base\Unaligned.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Base\TypeInfo.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Jazz2\Actors\ActorBase.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
@@ -294,9 +295,11 @@
     <ClInclude Include="Jazz2\Actors\Lighting\FlickerLight.h" />
     <ClInclude Include="Jazz2\Actors\Lighting\PulsatingRadialLight.h" />
     <ClInclude Include="Jazz2\Actors\Lighting\StaticRadialLight.h" />
-    <ClInclude Include="Jazz2\Actors\RemotablePlayer.h" />
-    <ClInclude Include="Jazz2\Actors\RemoteActor.h" />
-    <ClInclude Include="Jazz2\Actors\RemotePlayerOnServer.h" />
+    <ClInclude Include="Jazz2\Actors\Multiplayer\LocalPlayerOnServer.h" />
+    <ClInclude Include="Jazz2\Actors\Multiplayer\PlayerOnServer.h" />
+    <ClInclude Include="Jazz2\Actors\Multiplayer\RemotablePlayer.h" />
+    <ClInclude Include="Jazz2\Actors\Multiplayer\RemoteActor.h" />
+    <ClInclude Include="Jazz2\Actors\Multiplayer\RemotePlayerOnServer.h" />
     <ClInclude Include="Jazz2\Actors\Solid\AmmoBarrel.h" />
     <ClInclude Include="Jazz2\Actors\Solid\AmmoCrate.h" />
     <ClInclude Include="Jazz2\Actors\Solid\BarrelContainer.h" />
@@ -351,6 +354,7 @@
     <ClInclude Include="Jazz2\Multiplayer\ConnectionResult.h" />
     <ClInclude Include="Jazz2\Multiplayer\INetworkHandler.h" />
     <ClInclude Include="Jazz2\Multiplayer\MultiLevelHandler.h" />
+    <ClInclude Include="Jazz2\Multiplayer\MultiplayerGameMode.h" />
     <ClInclude Include="Jazz2\Multiplayer\NetworkManager.h" />
     <ClInclude Include="Jazz2\Multiplayer\PacketTypes.h" />
     <ClInclude Include="Jazz2\Multiplayer\Peer.h" />
@@ -404,8 +408,10 @@
     <ClInclude Include="Jazz2\UI\Menu\MainMenu.h" />
     <ClInclude Include="Jazz2\UI\Menu\MenuResources.h" />
     <ClInclude Include="Jazz2\UI\Menu\MenuSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\MultiplayerGameModeSelectSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\OptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\PauseSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\PlayCustomSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RefreshCacheSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RemapControlsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RescaleModeSection.h" />
@@ -688,9 +694,11 @@
     <ClCompile Include="Jazz2\Actors\Lighting\FlickerLight.cpp" />
     <ClCompile Include="Jazz2\Actors\Lighting\PulsatingRadialLight.cpp" />
     <ClCompile Include="Jazz2\Actors\Lighting\StaticRadialLight.cpp" />
-    <ClCompile Include="Jazz2\Actors\RemotablePlayer.cpp" />
-    <ClCompile Include="Jazz2\Actors\RemoteActor.cpp" />
-    <ClCompile Include="Jazz2\Actors\RemotePlayerOnServer.cpp" />
+    <ClCompile Include="Jazz2\Actors\Multiplayer\LocalPlayerOnServer.cpp" />
+    <ClCompile Include="Jazz2\Actors\Multiplayer\PlayerOnServer.cpp" />
+    <ClCompile Include="Jazz2\Actors\Multiplayer\RemotablePlayer.cpp" />
+    <ClCompile Include="Jazz2\Actors\Multiplayer\RemoteActor.cpp" />
+    <ClCompile Include="Jazz2\Actors\Multiplayer\RemotePlayerOnServer.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\AmmoBarrel.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\AmmoCrate.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\BarrelContainer.cpp" />
@@ -769,8 +777,10 @@
     <ClCompile Include="Jazz2\UI\Menu\LanguageSelectSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\LoadingSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\MainMenu.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\MultiplayerGameModeSelectSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\OptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\PauseSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\PlayCustomSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\RefreshCacheSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\RemapControlsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\RescaleModeSection.cpp" />

@@ -11,6 +11,7 @@
 #include "../../nCine/Graphics/BaseSprite.h"
 #include "../../nCine/Graphics/SceneNode.h"
 
+#include <Base/TypeInfo.h>
 #include <Containers/StringView.h>
 
 // If coroutines are not supported, load resources synchronously
@@ -138,6 +139,8 @@ namespace Jazz2::Actors
 
 	class ActorBase : public std::enable_shared_from_this<ActorBase>
 	{
+		DEATH_RTTI_OBJECT();
+
 		friend class Jazz2::LevelHandler;
 #if defined(WITH_MULTIPLAYER)
 		friend class Jazz2::Multiplayer::MultiLevelHandler;

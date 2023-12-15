@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Enemies
 {
 	class Witch : public EnemyBase
 	{
+		DEATH_RTTI_OBJECT(EnemyBase);
+
 	public:
 		Witch();
 

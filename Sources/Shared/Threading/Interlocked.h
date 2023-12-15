@@ -6,8 +6,9 @@
 #	include <intrin.h>
 #endif
 
-namespace Death
-{
+namespace Death {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	/**
 		@brief Provides atomic operations for variables that are shared by multiple threads
 	*/

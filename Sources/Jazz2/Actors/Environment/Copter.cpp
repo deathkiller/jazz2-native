@@ -71,7 +71,7 @@ namespace Jazz2::Actors::Environment
 	bool Copter::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (_state == State::Free || _state == State::Unmounted) {
-			if (auto player = dynamic_cast<Player*>(other.get())) {
+			if (auto* player = runtime_cast<Player*>(other)) {
 				if (player->SetModifier(Player::Modifier::LizardCopter, shared_from_this())) {
 					_state = State::Mounted;
 					_renderer.setAlphaF(1.0f);

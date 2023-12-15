@@ -40,8 +40,9 @@
 #	include <unistd.h>
 #endif
 
-namespace Death::IO::Http
-{
+namespace Death { namespace IO { namespace Http {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	using Containers::Literals::operator"" _s;
 
 	enum class InternetProtocol : std::uint8_t {
@@ -1096,6 +1097,6 @@ namespace Death::IO::Http
 		InternetProtocol internetProtocol;
 		Uri uri;
 	};
-}
+}}}
 
 #endif

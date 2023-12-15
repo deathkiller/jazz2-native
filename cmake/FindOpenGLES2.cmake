@@ -165,7 +165,7 @@ mark_as_advanced(
 )
 
 if(OPENGLES2_FOUND)
-	message(STATUS "Found system OpenGL ES 2 library: ${OPENGLES2_LIBRARIES}")
+	message(STATUS "Found system OpenGL|ES 2 library: ${OPENGLES2_LIBRARIES}")
 else()
 	set(OPENGLES2_LIBRARIES "")
 	set(OPENGLES2_INCLUDE_DIR "")

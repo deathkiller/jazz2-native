@@ -163,12 +163,11 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		bool shouldDestroy = (_frozenTimeLeft > 0.0f);
-		if (auto player = dynamic_cast<Player*>(collider)) {
+		if (auto* player = runtime_cast<Player*>(collider)) {
 			if (player->GetSpecialMove() != Player::SpecialMoveType::None) {
 				shouldDestroy = true;
 			}
-		} else if (dynamic_cast<Weapons::TNT*>(collider) != nullptr ||
-					dynamic_cast<Solid::PushableBox*>(collider) != nullptr) {
+		} else if (runtime_cast<Weapons::TNT*>(collider) || runtime_cast<Solid::PushableBox*>(collider)) {
 			shouldDestroy = true;
 		}
 
