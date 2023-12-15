@@ -183,7 +183,7 @@ namespace Jazz2::Actors::Environment
 							_levelHandler->AddActor(shot2);
 
 							PlaySfx("Fire"_s, 0.5f);
-							_fireCooldown = 48.0f;
+							_fireCooldown = 32.0f;
 						}
 						SetState(ActorState::CollideWithTileset, false);
 						break;

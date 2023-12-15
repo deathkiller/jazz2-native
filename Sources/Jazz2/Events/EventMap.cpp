@@ -217,6 +217,11 @@ namespace Jazz2::Events
 		// Linked actor was deactivated, but not destroyed
 		// Reset its generator, so it can be respawned immediately
 		std::uint32_t generatorIdx = *(std::uint32_t*)_eventLayout[tx + ty * _layoutSize.X].EventParams;
+		if (generatorIdx >= _generators.size()) {
+			// Do nothing if generator if wrongly configured
+			return;
+		}
+
 		_generators[generatorIdx].TimeLeft = 0.0f;
 		_generators[generatorIdx].SpawnedActor = nullptr;
 	}

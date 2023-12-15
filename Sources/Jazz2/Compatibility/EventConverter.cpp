@@ -823,7 +823,19 @@ namespace Jazz2::Compatibility
 		Add(JJ2Event::FOOD_CHEESE, ConstantParamList(EventType::Food, { (uint8_t)FoodType::Cheese }));
 
 		Add(JJ2Event::CRATE_AMMO, GetAmmoCrateConverter(0));
-		Add(JJ2Event::CRATE_AMMO_BOUNCER, GetAmmoCrateConverter(1));
+		Add(JJ2Event::CRATE_AMMO_BOUNCER, [](JJ2Level* level, uint32_t jj2Params) -> ConversionResult {
+			uint8_t eventParams[16];
+			ConvertParamInt(jj2Params, {
+				{ JJ2ParamUInt, 3 }		// Weapon
+			}, eventParams);
+
+			uint8_t type = eventParams[0] + 1;
+			if (type < 1 || type > 8) {
+				type = 1;	// Fallback to Bouncer if out of range
+			}
+
+			return { EventType::CrateAmmo, { type } };
+		});
 		Add(JJ2Event::CRATE_AMMO_FREEZER, GetAmmoCrateConverter(2));
 		Add(JJ2Event::CRATE_AMMO_SEEKER, GetAmmoCrateConverter(3));
 		Add(JJ2Event::CRATE_AMMO_RF, GetAmmoCrateConverter(4));

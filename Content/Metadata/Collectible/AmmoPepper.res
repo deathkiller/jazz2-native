@@ -3,7 +3,12 @@
 
 	"Animations": {
 		"Ammo": {
-			"Path": "Pickup/ammo_pepper.aura"
+			"Path": "Pickup/ammo_pepper.aura",
+			"States": [ 0 ]
+		},
+		"AmmoUpgraded": {
+			"Path": "Pickup/ammo_pepper_upgraded.aura",
+			"States": [ 1 ]
 		}
 	}
 }
