@@ -3,7 +3,8 @@
 
 	"Animations": {
 		"Ammo": {
-			"Path": "Pickup/ammo_thunderbolt.aura"
+			"Path": "Pickup/ammo_thunderbolt.aura",
+			"States": [ 0, 1 ]
 		}
 	}
 }
