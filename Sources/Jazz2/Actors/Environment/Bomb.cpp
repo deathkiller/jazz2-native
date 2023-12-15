@@ -64,7 +64,7 @@ namespace Jazz2::Actors::Environment
 	bool Bomb::OnPerish(ActorBase* collider)
 	{
 		_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 40.0f, [this](ActorBase* actor) {
-			if (auto player = dynamic_cast<Player*>(actor)) {
+			if (auto* player = runtime_cast<Player*>(actor)) {
 				if (!player->HasSugarRush()) {
 					bool pushLeft = (_pos.X > player->GetPos().X);
 					player->TakeDamage(1, pushLeft ? -8.0f : 8.0f);

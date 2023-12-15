@@ -388,6 +388,9 @@ namespace nCine
 		return n;
 	}
 
+	float halfToFloat(std::uint16_t value);
+	std::uint16_t floatToHalf(float value);
+
 	constexpr std::uint64_t parseVersion(const Containers::StringView& version)
 	{
 		std::size_t versionLength = version.size();

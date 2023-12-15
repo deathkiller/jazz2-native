@@ -1251,7 +1251,7 @@ namespace Jazz2::Actors
 
 		bool handled = false;
 		bool removeSpecialMove = false;
-		if (auto turtleShell = dynamic_cast<Enemies::TurtleShell*>(other.get())) {
+		if (auto* turtleShell = runtime_cast<Enemies::TurtleShell*>(other)) {
 			if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f) {
 				other->DecreaseHealth(INT32_MAX, this);
 
@@ -1262,7 +1262,7 @@ namespace Jazz2::Actors
 				}
 				return true;
 			}
-		} else if (auto enemy = dynamic_cast<Enemies::EnemyBase*>(other.get())) {
+		} else if (auto* enemy = runtime_cast<Enemies::EnemyBase*>(other)) {
 			if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f || _activeShieldTime > 0.0f) {
 				if (!enemy->IsInvulnerable()) {
 					enemy->DecreaseHealth(4, this);
@@ -1300,7 +1300,7 @@ namespace Jazz2::Actors
 			} else if (enemy->CanHurtPlayer()) {
 				TakeDamage(1, 4 * (_pos.X > enemy->GetPos().X ? 1.0f : -1.0f));
 			}
-		} else if (auto spring = dynamic_cast<Environment::Spring*>(other.get())) {
+		} else if (auto* spring = runtime_cast<Environment::Spring*>(other)) {
 			// Collide only with hitbox here
 			if (_controllableExternal && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionLedgeClimb) && _springCooldown <= 0.0f && spring->AABBInner.Overlaps(AABBInner)) {
 				Vector2f force = spring->Activate();
@@ -1308,7 +1308,7 @@ namespace Jazz2::Actors
 			}
 
 			handled = true;
-		} else if (auto bonusWarp = dynamic_cast<Environment::BonusWarp*>(other.get())) {
+		} else if (auto* bonusWarp = runtime_cast<Environment::BonusWarp*>(other)) {
 			if (_currentTransition == nullptr || _currentTransitionCancellable) {
 				auto cost = bonusWarp->GetCost();
 				if (cost <= _coins) {
@@ -1733,7 +1733,7 @@ namespace Jazz2::Actors
 			TileCollisionParams params = { TileDestructType::None, false };
 			ActorBase* collider;
 			if (!_levelHandler->IsPositionEmpty(this, hitbox, params, &collider)) {
-				if (auto solidObject = dynamic_cast<SolidObjectBase*>(collider)) {
+				if (auto* solidObject = runtime_cast<SolidObjectBase*>(collider)) {
 					SetState(ActorState::IsSolidObject, false);
 					float pushSpeedX = solidObject->Push(_speed.X < 0, timeMult);
 					if (std::abs(pushSpeedX) > 0.0f) {
@@ -1750,7 +1750,7 @@ namespace Jazz2::Actors
 			ActorState prevState = GetState();
 			SetState(ActorState::CollideWithTileset, false);
 			if (!_levelHandler->IsPositionEmpty(this, aabb, params, &collider)) {
-				if (auto solidObject = dynamic_cast<SolidObjectBase*>(collider)) {
+				if (auto* solidObject = runtime_cast<SolidObjectBase*>(collider)) {
 					if (AABBInner.T >= solidObject->AABBInner.T && !_isLifting && std::abs(_speed.Y) < 1.0f) {
 						_isLifting = true;
 						SetTransition(AnimState::TransitionLiftStart, true);
@@ -2531,7 +2531,7 @@ namespace Jazz2::Actors
 		shot2->OnFire(shared_from_this(), gunspotPos, _speed, angle + Random().NextFloat(-0.2f, 0.2f), IsFacingLeft());
 		_levelHandler->AddActor(shot2);
 
-		_weaponCooldown = 36.0f - (_weaponUpgrades[(int)WeaponType::Blaster] * 1.6f);
+		_weaponCooldown = 36.0f - (_weaponUpgrades[(int)WeaponType::Blaster] * 1.7f);
 	}
 
 	void Player::FireWeaponTNT()
@@ -2612,7 +2612,7 @@ namespace Jazz2::Actors
 						break;
 					}
 					default: {
-						FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(40.0f, 1.0f);
+						FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(40.0f, 1.9f);
 						PlaySfx("WeaponBlaster"_s);
 						break;
 					}
@@ -2620,10 +2620,10 @@ namespace Jazz2::Actors
 				ammoDecrease = 0;
 				break;
 
-			case WeaponType::Bouncer: FireWeapon<Weapons::BouncerShot, WeaponType::Bouncer>(32.0f, 0.85f); break;
+			case WeaponType::Bouncer: FireWeapon<Weapons::BouncerShot, WeaponType::Bouncer>(32.0f, 1.4f); break;
 				case WeaponType::Freezer:
 					// TODO: Add upgraded freezer
-					FireWeapon<Weapons::FreezerShot, WeaponType::Freezer>(46.0f, 0.8f);
+					FireWeapon<Weapons::FreezerShot, WeaponType::Freezer>(46.0f, 2.2f);
 					break;
 				case WeaponType::Seeker: FireWeapon<Weapons::SeekerShot, WeaponType::Seeker>(100.0f, 1.0f); break;
 				case WeaponType::RF: FireWeaponRF(); break;
@@ -2645,7 +2645,7 @@ namespace Jazz2::Actors
 
 				case WeaponType::TNT: FireWeaponTNT(); break;
 				case WeaponType::Pepper: FireWeaponPepper(); break;
-				case WeaponType::Electro: FireWeapon<Weapons::ElectroShot, WeaponType::Electro>(32.0f, 1.2f); break;
+				case WeaponType::Electro: FireWeapon<Weapons::ElectroShot, WeaponType::Electro>(32.0f, 1.4f); break;
 
 				case WeaponType::Thunderbolt: {
 					if (!FireWeaponThunderbolt()) {

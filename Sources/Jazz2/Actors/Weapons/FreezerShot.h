@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Weapons
 {
 	class FreezerShot : public ShotBase
 	{
+		DEATH_RTTI_OBJECT(ShotBase);
+
 	public:
 		FreezerShot();
 		void OnFire(const std::shared_ptr<ActorBase>& owner, Vector2f gunspotPos, Vector2f speed, float angle, bool isFacingLeft);

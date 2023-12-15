@@ -124,7 +124,7 @@ namespace Jazz2::Actors::Bosses
 	bool TurtleBoss::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
 		if (_state == StateAttacking && _stateTime <= 0.0f) {
-			if (auto mace = dynamic_cast<Mace*>(other.get())) {
+			if (auto* mace = runtime_cast<Mace*>(other)) {
 				if (mace == _mace.get()) {
 					_mace->DecreaseHealth(INT32_MAX);
 					_mace = nullptr;

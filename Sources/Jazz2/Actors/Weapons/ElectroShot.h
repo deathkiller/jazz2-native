@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Weapons
 {
 	class ElectroShot : public ShotBase
 	{
+		DEATH_RTTI_OBJECT(ShotBase);
+
 	public:
 		ElectroShot();
 

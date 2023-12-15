@@ -6,6 +6,8 @@ namespace Jazz2::Actors
 {
 	class Explosion : public ActorBase
 	{
+		DEATH_RTTI_OBJECT(ActorBase);
+
 	public:
 		enum class Type {
 			Tiny,

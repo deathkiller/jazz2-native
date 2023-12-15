@@ -15,8 +15,10 @@ struct _SYSTEMTIME;
 struct _FILETIME;
 #endif
 
-namespace Death::Containers
-{
+namespace Death { namespace Containers {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+	// Forward declarations for the Death::Containers namespace
 	class TimeSpan;
 
 	/**
@@ -485,4 +487,4 @@ namespace Death::Containers
 	{
 		return GetDays() / 7;
 	}
-}
+}}

@@ -257,7 +257,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Uterus::ShieldPart::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
 			DecreaseHealth(shotBase->GetStrength(), shotBase);
 
 			FallTime = 400.0f;

@@ -654,12 +654,15 @@ if(WITH_MULTIPLAYER)
 	target_compile_definitions(${NCINE_APP} PUBLIC "WITH_MULTIPLAYER")
 	
 	list(APPEND HEADERS
-		${NCINE_SOURCE_DIR}/Jazz2/Actors/RemotablePlayer.h
-		${NCINE_SOURCE_DIR}/Jazz2/Actors/RemoteActor.h
-		${NCINE_SOURCE_DIR}/Jazz2/Actors/RemotePlayerOnServer.h
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/LocalPlayerOnServer.h
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/PlayerOnServer.h
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemotablePlayer.h
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemoteActor.h
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemotePlayerOnServer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ConnectionResult.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/INetworkHandler.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MultiLevelHandler.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MultiplayerGameMode.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManager.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/PacketTypes.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Peer.h
@@ -667,18 +670,24 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerDiscovery.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Backends/enet.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateServerOptionsSection.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PlayCustomSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ServerSelectSection.h
 	)
 
 	list(APPEND SOURCES
-		${NCINE_SOURCE_DIR}/Jazz2/Actors/RemotablePlayer.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Actors/RemoteActor.cpp
-		${NCINE_SOURCE_DIR}/Jazz2/Actors/RemotePlayerOnServer.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/LocalPlayerOnServer.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/PlayerOnServer.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemotablePlayer.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemoteActor.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemotePlayerOnServer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ConnectionResult.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MultiLevelHandler.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManager.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerDiscovery.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateServerOptionsSection.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PlayCustomSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ServerSelectSection.cpp
 	)
 endif()

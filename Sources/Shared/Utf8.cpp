@@ -1,8 +1,9 @@
 #include "Utf8.h"
 #include "CommonWindows.h"
 
-namespace Death::Utf8
-{
+namespace Death { namespace Utf8 {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	std::size_t GetLength(const Containers::StringView& text)
 	{
 		std::size_t size = text.size();
@@ -110,4 +111,4 @@ namespace Death::Utf8
 	}
 
 #endif
-}
+}}

@@ -16,19 +16,33 @@ namespace Jazz2::Tiles
 	{
 		auto& tileSetPart = _tileSets.emplace_back();
 		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, captionTileId, applyPalette);
+		RETURN_ASSERT_MSG(tileSetPart.Data != nullptr, "Failed to load main tileset \"%s\"", tileSetPath.data());
+		
 		tileSetPart.Offset = 0;
 		tileSetPart.Count = tileSetPart.Data->TileCount;
 
 		_renderCommands.reserve(128);
-
-		if (tileSetPart.Data == nullptr) {
-			LOGE("Failed to load main tileset \"%s\"", tileSetPath.data());
-		}
 	}
 
 	TileMap::~TileMap()
 	{
 		TracyPlot("TileMap Render Commands", 0LL);
+	}
+
+	bool TileMap::IsValid() const
+	{
+		std::size_t count = _tileSets.size();
+		if (count == 0) {
+			return false;
+		}
+
+		for (std::size_t i = 0; i < count; i++) {
+			if (_tileSets[i].Data == nullptr) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	void TileMap::SetOwner(ITileMapOwner* owner)

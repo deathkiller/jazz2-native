@@ -3,9 +3,12 @@
 #include "Stream.h"
 #include "../Containers/Array.h"
 
-namespace Death::IO
-{
-	/** @brief The class creating a stream interface around a memory buffer */ 
+namespace Death { namespace IO {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+	/**
+		@brief Stream interface around a memory buffer
+	*/ 
 	class MemoryStream : public Stream
 	{
 	public:
@@ -43,4 +46,4 @@ namespace Death::IO
 		mutable std::int32_t _seekOffset;
 		AccessMode _mode;
 	};
-}
+}}

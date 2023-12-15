@@ -3,8 +3,9 @@
 
 #include <cstring>
 
-namespace Death::IO
-{
+namespace Death { namespace IO {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	MemoryStream::MemoryStream(std::int32_t initialCapacity)
 		: _seekOffset(0), _mode(AccessMode::Growable)
 	{
@@ -136,4 +137,4 @@ namespace Death::IO
 
 		return bytesFetched;
 	}
-}
+}}

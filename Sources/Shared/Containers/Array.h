@@ -32,10 +32,11 @@
 #include <type_traits>
 #include <utility>
 
-namespace Death::Containers
-{
+namespace Death { namespace Containers {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+	// Forward declarations for the Death::Containers namespace
 	template<class T, class = void(*)(T*, std::size_t)> class Array;
-	template<std::size_t, class> class StaticArray;
 
 	namespace Implementation
 	{
@@ -673,4 +674,4 @@ namespace Death::Containers
 		template<class T, class D> struct ErasedArrayViewConverter<Array<T, D>> : ArrayViewConverter<T, Array<T, D>> {};
 		template<class T, class D> struct ErasedArrayViewConverter<const Array<T, D>> : ArrayViewConverter<const T, Array<T, D>> {};
 	}
-}
+}}

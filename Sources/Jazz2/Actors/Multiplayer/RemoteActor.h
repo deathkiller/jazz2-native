@@ -2,12 +2,14 @@
 
 #if defined(WITH_MULTIPLAYER)
 
-#include "ActorBase.h"
+#include "../ActorBase.h"
 
-namespace Jazz2::Actors
+namespace Jazz2::Actors::Multiplayer
 {
 	class RemoteActor : public ActorBase
 	{
+		DEATH_RTTI_OBJECT(ActorBase);
+
 	public:
 		RemoteActor();
 

@@ -1,7 +1,8 @@
 #include "Stream.h"
 
-namespace Death::IO
-{
+namespace Death { namespace IO {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	Containers::StringView Stream::GetPath() const
 	{
 		return _path;
@@ -90,4 +91,4 @@ namespace Death::IO
 		WriteValue((std::uint8_t)valueLeft);
 		return bytesWritten;
 	}
-}
+}}

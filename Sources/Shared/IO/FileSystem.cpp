@@ -58,8 +58,9 @@
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;
 
-namespace Death::IO
-{
+namespace Death { namespace IO {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	namespace
 	{
 		static std::size_t GetPathRootLength(const StringView& path)
@@ -2267,4 +2268,4 @@ namespace Death::IO
 		}
 #endif
 	}
-}
+}}

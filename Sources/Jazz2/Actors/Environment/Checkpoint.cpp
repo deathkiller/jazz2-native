@@ -70,7 +70,7 @@ namespace Jazz2::Actors::Environment
 			return true;
 		}
 
-		if (auto* player = dynamic_cast<Player*>(other.get())) {
+		if (auto* player = runtime_cast<Player*>(other)) {
 			_activated = true;
 
 			SetAnimation((AnimState)1);

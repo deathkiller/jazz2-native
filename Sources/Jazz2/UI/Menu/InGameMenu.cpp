@@ -232,6 +232,12 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+	MenuSection* InGameMenu::GetUnderlyingSection() const
+	{
+		std::size_t count = _sections.size();
+		return (count >= 2 ? _sections[count - 2].get() : nullptr);
+	}
+
 	void InGameMenu::ChangeLevel(LevelInitialization&& levelInit)
 	{
 		_root->_root->ChangeLevel(std::move(levelInit));

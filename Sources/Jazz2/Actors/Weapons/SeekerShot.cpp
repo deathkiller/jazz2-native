@@ -106,7 +106,7 @@ namespace Jazz2::Actors::Weapons
 	bool SeekerShot::OnPerish(ActorBase* collider)
 	{
 		_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 36.0f, [this](ActorBase* actor) {
-			if (auto player = dynamic_cast<Player*>(actor)) {
+			if (auto* player = runtime_cast<Player*>(actor)) {
 				bool pushLeft = (_pos.X > player->GetPos().X);
 				player->AddExternalForce(pushLeft ? -8.0f : 8.0f, 0.0f);
 			}
@@ -139,7 +139,7 @@ namespace Jazz2::Actors::Weapons
 
 		// Max. distance is ~8 tiles
 		_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 260.0f, [this, &targetPos, &targetDistance](ActorBase* actor) {
-			if (auto enemyBase = dynamic_cast<Enemies::EnemyBase*>(actor)) {
+			if (auto* enemyBase = runtime_cast<Enemies::EnemyBase*>(actor)) {
 				if (!enemyBase->IsInvulnerable() && enemyBase->CanCollideWithAmmo) {
 					Vector2f newPos = enemyBase->GetPos();
 					float distance = (_pos - newPos).Length();

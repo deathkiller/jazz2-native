@@ -354,6 +354,12 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+	MenuSection* MainMenu::GetUnderlyingSection() const
+	{
+		std::size_t count = _sections.size();
+		return (count >= 2 ? _sections[count - 2].get() : nullptr);
+	}
+
 	void MainMenu::ChangeLevel(LevelInitialization&& levelInit)
 	{
 		_root->ChangeLevel(std::move(levelInit));

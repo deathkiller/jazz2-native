@@ -6,6 +6,8 @@ namespace Jazz2::Actors
 {
 	class PlayerCorpse : public ActorBase
 	{
+		DEATH_RTTI_OBJECT(ActorBase);
+
 	public:
 		PlayerCorpse();
 

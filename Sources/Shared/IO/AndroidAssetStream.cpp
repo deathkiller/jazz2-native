@@ -6,8 +6,9 @@
 #include <fcntl.h>			// For open()
 #include <unistd.h>			// For close()
 
-namespace Death::IO
-{
+namespace Death { namespace IO {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	AAssetManager* AndroidAssetStream::_assetManager = nullptr;
 	const char* AndroidAssetStream::_internalDataPath = nullptr;
 
@@ -278,6 +279,6 @@ namespace Death::IO
 		_size = AAsset_getLength(_asset);
 #endif
 	}
-}
+}}
 
 #endif

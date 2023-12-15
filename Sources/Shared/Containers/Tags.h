@@ -24,8 +24,9 @@
 
 #include "../CommonBase.h"
 
-namespace Death::Containers
-{
+namespace Death { namespace Containers {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	/**
 		@brief Default initialization tag type
 
@@ -104,9 +105,9 @@ namespace Death::Containers
 	constexpr ValueInitT ValueInit { ValueInitT::Init{} };
 
 	/**
-	@brief No initialization tag
+		@brief No initialization tag
 
-	Use for construction with no initialization at all.
+		Use for construction with no initialization at all.
 	*/
 	constexpr NoInitT NoInit { NoInitT::Init{} };
 
@@ -130,4 +131,5 @@ namespace Death::Containers
 		Use for construction in-place.
 	*/
 	constexpr InPlaceInitT InPlaceInit { InPlaceInitT::Init{} };
-}
+
+}}

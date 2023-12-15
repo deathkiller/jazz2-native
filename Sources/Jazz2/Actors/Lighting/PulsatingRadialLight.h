@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Lighting
 {
 	class PulsatingRadialLight : public ActorBase
 	{
+		DEATH_RTTI_OBJECT(ActorBase);
+
 	public:
 		PulsatingRadialLight();
 

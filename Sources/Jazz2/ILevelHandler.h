@@ -7,6 +7,8 @@
 
 #include "../nCine/Audio/AudioBufferPlayer.h"
 
+#include <Base/TypeInfo.h>
+
 namespace Death::IO
 {
 	class Stream;
@@ -34,6 +36,8 @@ namespace Jazz2
 
 	class ILevelHandler
 	{
+		DEATH_RTTI_OBJECT();
+
 	public:
 		static constexpr std::int32_t MainPlaneZ = 500;
 		static constexpr std::int32_t SpritePlaneZ = MainPlaneZ + 10;

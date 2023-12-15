@@ -2,9 +2,9 @@
 
 #if defined(WITH_MULTIPLAYER)
 
-#include "../../nCine/Base/Clock.h"
+#include "../../../nCine/Base/Clock.h"
 
-namespace Jazz2::Actors
+namespace Jazz2::Actors::Multiplayer
 {
 	RemotablePlayer::RemotablePlayer()
 	{
@@ -37,6 +37,16 @@ namespace Jazz2::Actors
 		}
 
 		return true;
+	}
+
+	std::uint8_t RemotablePlayer::GetTeamId() const
+	{
+		return _teamId;
+	}
+
+	void RemotablePlayer::SetTeamId(std::uint8_t value)
+	{
+		_teamId = value;
 	}
 }
 

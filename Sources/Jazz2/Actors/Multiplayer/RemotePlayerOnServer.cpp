@@ -2,15 +2,14 @@
 
 #if defined(WITH_MULTIPLAYER)
 
-#include "Weapons/ShotBase.h"
-#include "../Multiplayer/MultiLevelHandler.h"
-#include "../../nCine/Base/Clock.h"
-#include "../../nCine/Base/FrameTimer.h"
+#include "../Weapons/ShotBase.h"
+#include "../../Multiplayer/MultiLevelHandler.h"
+#include "../../../nCine/Base/Clock.h"
 
-namespace Jazz2::Actors
+namespace Jazz2::Actors::Multiplayer
 {
 	RemotePlayerOnServer::RemotePlayerOnServer()
-		: _stateBufferPos(0), _teamId(0)
+		: _stateBufferPos(0)
 	{
 	}
 
@@ -73,25 +72,7 @@ namespace Jazz2::Actors
 
 	bool RemotePlayerOnServer::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		// TODO: Add this also to local player on server
-		/*if (auto* shotBase = dynamic_cast<Weapons::ShotBase*>(other.get())) {
-			std::int32_t strength = shotBase->GetStrength();
-			// TODO: Check also local player on server
-			RemotePlayerOnServer* shotOwner = static_cast<RemotePlayerOnServer*>(shotBase->GetOwner());
-			// Ignore players in the same team
-			if (strength > 0 && _sugarRushLeft <= 0.0f && shotOwner->_teamId != _teamId) {
-				// Decrease remaining shield time by 5 secs
-				if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
-					_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
-				} else {
-					TakeDamage(strength, 4 * (_pos.X > shotBase->GetPos().X ? 1.0f : -1.0f));
-				}
-				shotBase->DecreaseHealth(INT32_MAX);
-				return true;
-			}
-		}*/
-
-		return Player::OnHandleCollision(other);
+		return PlayerOnServer::OnHandleCollision(other);
 	}
 
 	void RemotePlayerOnServer::SyncWithServer(const Vector2f& pos, const Vector2f& speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing)
@@ -133,19 +114,9 @@ namespace Jazz2::Actors
 		_speed = speed;
 	}
 
-	std::int32_t RemotePlayerOnServer::GetTeamId() const
-	{
-		return _teamId;
-	}
-
-	void RemotePlayerOnServer::SetTeamId(std::int32_t value)
-	{
-		_teamId = value;
-	}
-
 	void RemotePlayerOnServer::OnHitSpring(const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove)
 	{
-		if (!static_cast<Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerSpring(this, pos, force, keepSpeedX, keepSpeedY)) {
+		if (!static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerSpring(this, pos, force, keepSpeedX, keepSpeedY)) {
 			return;
 		}
 
@@ -158,7 +129,7 @@ namespace Jazz2::Actors
 			return false;
 		}
 
-		static_cast<Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerTakeDamage(this, amount, pushForce);
+		static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerTakeDamage(this, amount, pushForce);
 
 		return true;
 	}
@@ -169,7 +140,7 @@ namespace Jazz2::Actors
 			return false;
 		}
 
-		static_cast<Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerRefreshAmmo(this, weaponType);
+		static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerRefreshAmmo(this, weaponType);
 
 		return true;
 	}
@@ -178,7 +149,7 @@ namespace Jazz2::Actors
 	{
 		Player::AddWeaponUpgrade(weaponType, upgrade);
 
-		static_cast<Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerRefreshWeaponUpgrades(this, weaponType);
+		static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerRefreshWeaponUpgrades(this, weaponType);
 	}
 
 	bool RemotePlayerOnServer::FireCurrentWeapon(WeaponType weaponType)
@@ -189,7 +160,7 @@ namespace Jazz2::Actors
 		}
 
 		if (prevAmmo != _weaponAmmo[(std::int32_t)weaponType]) {
-			static_cast<Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerRefreshAmmo(this, weaponType);
+			static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerRefreshAmmo(this, weaponType);
 		}
 
 		return true;
@@ -199,7 +170,7 @@ namespace Jazz2::Actors
 	{
 		Player::SetCurrentWeapon(weaponType);
 
-		static_cast<Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerWeaponChanged(this);
+		static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerWeaponChanged(this);
 	}
 }
 

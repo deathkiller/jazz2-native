@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Bosses
 {
 	class TurtleBoss : public BossBase
 	{
+		DEATH_RTTI_OBJECT(BossBase);
+
 	public:
 		TurtleBoss();
 		~TurtleBoss();

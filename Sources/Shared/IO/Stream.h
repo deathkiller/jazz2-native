@@ -6,8 +6,10 @@
 #include <cstdio>		// For FILE
 #include <memory>
 
-namespace Death::IO
-{
+namespace Death { namespace IO {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+	/** @brief Defines constants for read, write, or read/write access to a file */
 	enum struct FileAccessMode {
 		None = 0,
 		Read = 0x01,
@@ -16,13 +18,16 @@ namespace Death::IO
 
 	DEFINE_ENUM_OPERATORS(FileAccessMode);
 
+	/** @brief Specifies the position in a stream to use for seeking */
 	enum class SeekOrigin {
 		Begin = SEEK_SET,
 		Current = SEEK_CUR,
 		End = SEEK_END
 	};
 
-	/** @brief Provides a generic view of a sequence of bytes */
+	/**
+		@brief Provides a generic view of a sequence of bytes
+	*/
 	class Stream
 	{
 	public:
@@ -151,4 +156,4 @@ namespace Death::IO
 		Containers::String _path;
 		std::int32_t _size;
 	};
-}
+}}

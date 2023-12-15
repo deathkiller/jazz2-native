@@ -8,8 +8,9 @@
 #	include <sys/sysctl.h>
 #endif
 
-namespace Death::Cpu
-{
+namespace Death { namespace Cpu {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	// As the types all inherit from each other, there should be no members to keep them zero-cost.
 	static_assert(sizeof(Cpu::Scalar) == 1, "");
 #if defined(DEATH_TARGET_X86)
@@ -97,4 +98,4 @@ namespace Death::Cpu
 #	endif
 	}
 #endif
-}
+}}

@@ -28,8 +28,11 @@
 #include <initializer_list>
 #include <type_traits>
 
-namespace Death::Containers
-{
+namespace Death { namespace Containers {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+	// Forward declarations for the Death::Containers namespace
+	template<std::size_t, class> class StaticArray;
 	class String;
 	template<class> class BasicStringView;
 	typedef BasicStringView<const char> StringView;
@@ -985,4 +988,4 @@ namespace Death::Containers
 		template<class T> struct ErasedArrayViewConverter<BasicStringView<T>> : ArrayViewConverter<T, BasicStringView<T>> {};
 		template<class T> struct ErasedArrayViewConverter<const BasicStringView<T>> : ArrayViewConverter<T, BasicStringView<T>> {};
 	}
-}
+}}

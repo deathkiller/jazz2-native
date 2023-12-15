@@ -25,9 +25,12 @@ using DIR = struct __dirstream;
 #	endif
 #endif
 
-namespace Death::IO
-{
-	/** @brief File system related methods */
+namespace Death { namespace IO {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+	/**
+		@brief File system related methods
+	*/
 	class FileSystem
 	{
 	public:
@@ -270,4 +273,4 @@ namespace Death::IO
 	};
 
 	using fs = FileSystem;
-}
+}}

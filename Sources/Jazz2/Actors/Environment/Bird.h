@@ -11,6 +11,8 @@ namespace Jazz2::Actors::Environment
 {
 	class Bird : public ActorBase
 	{
+		DEATH_RTTI_OBJECT(ActorBase);
+
 	public:
 		Bird();
 

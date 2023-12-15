@@ -299,8 +299,9 @@ extern "C" {
 	function declaration to make it possible to unify them under a single wrapper
 	macro in case a practical use case needs to handle more than one variant.
 */
-namespace Death::Cpu
-{
+namespace Death { namespace Cpu {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	/**
 		@brief Traits class for CPU detection tag types
 
@@ -312,7 +313,8 @@ namespace Death::Cpu
 	*/
 	template<class> struct TypeTraits;
 
-	namespace Implementation {
+	namespace Implementation
+	{
 		// A common type used in all tag constructors to avoid ambiguous calls when using { }
 		struct InitT { };
 		constexpr InitT Init{ };
@@ -2975,4 +2977,4 @@ namespace Death::Cpu
 		}
 	}
 #endif
-}
+}}

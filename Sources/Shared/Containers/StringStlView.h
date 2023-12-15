@@ -35,8 +35,9 @@
 #include "String.h"
 #include "StringView.h"
 
-namespace Death::Containers::Implementation
-{
+namespace Death { namespace Containers { namespace Implementation {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	template<> struct StringConverter<std::string_view> {
 		static String from(std::string_view other) {
 			return String{other.data(), other.size()};
@@ -61,4 +62,5 @@ namespace Death::Containers::Implementation
 			return std::string_view{other.data(), other.size()};
 		}
 	};
-}
+
+}}}

@@ -60,8 +60,9 @@ extern "C" void __sanitizer_annotate_contiguous_container(const void* beg, const
 	;
 #endif
 
-namespace Death::Containers
-{
+namespace Death { namespace Containers {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	namespace Implementation
 	{
 		enum : std::size_t {
@@ -1678,7 +1679,7 @@ namespace Death::Containers
 		// Nothing to do (not annotating the arrays with default deleter)
 #endif
 	}
-}
+}}
 
 #if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
 #	undef _DEATH_CONTAINERS_SANITIZER_ENABLED

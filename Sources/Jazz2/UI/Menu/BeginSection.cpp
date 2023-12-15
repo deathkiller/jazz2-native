@@ -1,6 +1,5 @@
 ﻿#include "BeginSection.h"
 #include "MenuResources.h"
-#include "CustomLevelSelectSection.h"
 #include "EpisodeSelectSection.h"
 #include "StartGameOptionsSection.h"
 #include "OptionsSection.h"
@@ -8,7 +7,9 @@
 #include "MainMenu.h"
 
 #if defined(WITH_MULTIPLAYER)
-#	include "ServerSelectSection.h"
+#	include "PlayCustomSection.h"
+#else
+#	include "CustomLevelSelectSection.h"
 #endif
 
 #include <Utf8.h>
@@ -71,14 +72,13 @@ namespace Jazz2::UI::Menu
 
 		// TRANSLATORS: Menu item in main menu
 		_items.emplace_back(ItemData { Item::PlayEpisodes, _("Play Story") });
+#	if defined(WITH_MULTIPLAYER)
+		// TRANSLATORS: Menu item in main menu
+		_items.emplace_back(ItemData { Item::PlayCustomLevels, _("Play Custom Game") });
+#	else
 		// TRANSLATORS: Menu item in main menu
 		_items.emplace_back(ItemData { Item::PlayCustomLevels, _("Play Custom Levels") });
-#endif
-
-#if defined(WITH_MULTIPLAYER)
-		// TODO: Multiplayer
-		_items.emplace_back(ItemData { Item::TODO_ConnectTo, _("Connect To Server") });
-		_items.emplace_back(ItemData { Item::TODO_CreateServer, _("Create Server") });
+#	endif
 #endif
 
 		// TRANSLATORS: Menu item in main menu
@@ -381,23 +381,14 @@ namespace Jazz2::UI::Menu
 			case Item::PlayCustomLevels:
 				if (isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
+#if defined(WITH_MULTIPLAYER)
+					_root->SwitchToSection<PlayCustomSection>();
+#else
 					_root->SwitchToSection<CustomLevelSelectSection>();
+#endif
 				}
 				break;
 #endif
-
-#if defined(WITH_MULTIPLAYER)
-			// TODO: Multiplayer
-			case Item::TODO_ConnectTo:
-				_root->PlaySfx("MenuSelect"_s, 0.6f);
-				_root->SwitchToSection<ServerSelectSection>();
-				break;
-			case Item::TODO_CreateServer:
-				_root->PlaySfx("MenuSelect"_s, 0.6f);
-				_root->SwitchToSection<EpisodeSelectSection>(true);
-				break;
-#endif
-
 			case Item::Options:
 				if (isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);

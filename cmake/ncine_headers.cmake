@@ -11,6 +11,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/IntrinsicsSse4.h
 	${NCINE_SOURCE_DIR}/Shared/IntrinsicsSsse3.h
 	${NCINE_SOURCE_DIR}/Shared/Utf8.h
+	${NCINE_SOURCE_DIR}/Shared/Base/TypeInfo.h
 	${NCINE_SOURCE_DIR}/Shared/Base/Unaligned.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/Array.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/ArrayView.h

@@ -53,6 +53,8 @@ namespace Jazz2
 
 	class LevelHandler : public ILevelHandler, public IStateHandler, public IResumable, public Tiles::ITileMapOwner
 	{
+		DEATH_RTTI_OBJECT(ILevelHandler);
+
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::LevelScriptLoader;
 #endif
@@ -160,6 +162,7 @@ namespace Jazz2
 		Vector2i GetViewSize() const override { return _view->size(); }
 
 		virtual void AttachComponents(LevelDescriptor&& descriptor);
+		virtual void SpawnPlayers(const LevelInitialization& levelInit);
 
 	protected:
 		IRootController* _root;

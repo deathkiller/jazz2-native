@@ -10,10 +10,7 @@
 namespace Jazz2::Actors::Bosses
 {
 	Bubba::Bubba()
-		:
-		_state(StateWaiting),
-		_stateTime(0.0f),
-		_endText(0)
+		: _state(StateWaiting), _stateTime(0.0f), _endText(0)
 	{
 	}
 
@@ -282,7 +279,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Bubba::Fireball::OnHandleCollision(std::shared_ptr<ActorBase> other)
 	{
-		if (auto player = dynamic_cast<Player*>(other.get())) {
+		if (auto* player = runtime_cast<Player*>(other)) {
 			DecreaseHealth(INT32_MAX);
 		}
 

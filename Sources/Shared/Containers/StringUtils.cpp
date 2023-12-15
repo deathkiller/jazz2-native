@@ -12,8 +12,9 @@
 #	include <wasm_simd128.h>
 #endif
 
-namespace Death::Containers::StringUtils
-{
+namespace Death { namespace Containers { namespace StringUtils {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	namespace Implementation
 	{
 		namespace
@@ -454,7 +455,6 @@ namespace Death::Containers::StringUtils
 				};
 			}
 			#endif
-
 		}
 
 		DEATH_CPU_DISPATCHER_BASE(lowercaseInPlaceImplementation)
@@ -470,7 +470,7 @@ namespace Death::Containers::StringUtils
 	String lowercase(const StringView string) {
 		// Theoretically doing the copy in the same loop as case change could be faster for *really long* strings due
 		// to cache reuse, but until that proves to be a bottleneck I'll go with the simpler solution.
-		// Not implementing through lowercase(Containers::String) as the call stack is deep enough already and we don't
+		// Not implementing through lowercase(String) as the call stack is deep enough already and we don't
 		// need the extra checks there.
 		String out{string};
 		lowercaseInPlace(out);
@@ -489,7 +489,7 @@ namespace Death::Containers::StringUtils
 	String uppercase(const StringView string) {
 		// Theoretically doing the copy in the same loop as case change could be faster for *really long* strings due
 		// to cache reuse, but until that proves to be a bottleneck I'll go with the simpler solution.
-		// Not implementing through uppercase(Containers::String) as the call stack is deep enough already and we don't
+		// Not implementing through uppercase(String) as the call stack is deep enough already and we don't
 		// need the extra checks there.
 		String out{string};
 		uppercaseInPlace(out);
@@ -538,7 +538,7 @@ namespace Death::Containers::StringUtils
 		// to a String with the size excluding the null terminator.
 		void(*const deleter)(char*, std::size_t) = output.deleter();
 		DEATH_DEBUG_ASSERT(deleter, {}, "StringUtils::replaceAll(): Invalid deleter used");
-		return Containers::String{output.release(), size - 1, deleter};
+		return String{output.release(), size - 1, deleter};
 	}
 
 	String replaceAll(String string, char search, char replace) {
@@ -551,7 +551,7 @@ namespace Death::Containers::StringUtils
 
 		// Otherwise, in the rare scenario where we'd get a non-owned string (such as String::nullTerminatedView() passed
 		// right into the function), make it owned first. Usually it'll get copied however, which already makes it owned.
-		if(!string.isSmall() && string.deleter()) string = Containers::String{string};
+		if(!string.isSmall() && string.deleter()) string = String{string};
 
 		// Replace the already-found occurence and delegate the rest further
 		string[firstFoundPosition] = replace;
@@ -566,4 +566,4 @@ namespace Death::Containers::StringUtils
 			}
 		}
 	}
-}
+}}}

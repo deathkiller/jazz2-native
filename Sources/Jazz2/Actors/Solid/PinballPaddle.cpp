@@ -37,7 +37,7 @@ namespace Jazz2::Actors::Solid
 
 		if (_cooldown <= 0.0f) {
 			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 30.0f, [this](ActorBase* actor) {
-				if (auto player = dynamic_cast<Player*>(actor)) {
+				if (auto* player = runtime_cast<Player*>(actor)) {
 					Vector2f playerPos = player->GetPos();
 					if (playerPos.Y > _pos.Y - 26.0f && playerPos.Y < _pos.Y + 10.0f) {
 						_cooldown = 10.0f;

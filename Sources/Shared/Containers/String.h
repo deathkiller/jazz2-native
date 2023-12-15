@@ -29,8 +29,10 @@
 #include <type_traits>
 #include <string>
 
-namespace Death::Containers
-{
+namespace Death { namespace Containers {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+	// Forward declarations for the Death::Containers namespace
 	template<class, class> class Pair;
 
 	namespace Implementation
@@ -975,4 +977,4 @@ namespace Death::Containers
 			Large _large;
 		};
 	};
-}
+}}

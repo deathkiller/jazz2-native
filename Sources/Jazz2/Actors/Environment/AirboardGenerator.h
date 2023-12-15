@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Environment
 {
 	class AirboardGenerator : public ActorBase
 	{
+		DEATH_RTTI_OBJECT(ActorBase);
+
 	public:
 		AirboardGenerator();
 

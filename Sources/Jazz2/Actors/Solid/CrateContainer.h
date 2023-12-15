@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Solid
 {
 	class CrateContainer : public GenericContainer
 	{
+		DEATH_RTTI_OBJECT(GenericContainer);
+
 	public:
 		CrateContainer();
 

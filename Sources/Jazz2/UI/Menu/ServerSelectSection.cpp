@@ -113,7 +113,7 @@ namespace Jazz2::UI::Menu
 		int32_t charOffset = 0;
 
 		if (_items.empty()) {
-			_root->DrawStringShadow(_("No multiplayer server found!"), charOffset, viewSize.X * 0.5f, viewSize.Y * 0.55f, IMenuContainer::FontLayer,
+			_root->DrawStringShadow(_("No servers found, but still searchin'!"), charOffset, viewSize.X * 0.5f, viewSize.Y * 0.55f, IMenuContainer::FontLayer,
 				Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.8f, 0.88f);
 			return;
 		}

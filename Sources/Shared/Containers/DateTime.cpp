@@ -32,8 +32,9 @@ extern long _timezone;
 #define DAYS_PER_4_YEARS 1461l
 #define DAYS_PER_400_YEARS 146097l
 
-namespace Death::Containers
-{
+namespace Death { namespace Containers {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	namespace Implementation
 	{
 		// The first line is for normal years, the second one is for the leap ones
@@ -1360,4 +1361,4 @@ namespace Death::Containers
 		return true;
 	}
 #endif
-}
+}}

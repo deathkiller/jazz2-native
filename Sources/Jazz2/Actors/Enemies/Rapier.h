@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Enemies
 {
 	class Rapier : public EnemyBase
 	{
+		DEATH_RTTI_OBJECT(EnemyBase);
+
 	public:
 		Rapier();
 

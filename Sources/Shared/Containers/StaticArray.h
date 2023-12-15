@@ -29,8 +29,9 @@
 #include <new>
 #include <type_traits>
 
-namespace Death::Containers
-{
+namespace Death { namespace Containers {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	/**
 		@brief Compile-time-sized array
 		@tparam size_   Array size
@@ -650,7 +651,7 @@ namespace Death::Containers
 		template<std::size_t size, class T> struct ErasedStaticArrayViewConverter<StaticArray<size, T>> : StaticArrayViewConverter<size, T, StaticArray<size, T>> {};
 		template<std::size_t size, class T> struct ErasedStaticArrayViewConverter<const StaticArray<size, T>> : StaticArrayViewConverter<size, const T, StaticArray<size, T>> {};
 	}
-}
+}}
 
 /* C++17 structured bindings */
 #if DEATH_CXX_STANDARD > 201402

@@ -146,7 +146,7 @@ namespace Jazz2::Actors::Solid
 				aabb2.B += 20.0f;
 
 				_levelHandler->GetCollidingPlayers(aabb2, [](Actors::ActorBase* actor) {
-					if (auto player = dynamic_cast<Player*>(actor)) {
+					if (auto* player = runtime_cast<Player*>(actor)) {
 						player->TakeDamage(1, 2.0f);
 					}
 					return true;
@@ -154,7 +154,7 @@ namespace Jazz2::Actors::Solid
 			}
 		} else {
 			_levelHandler->GetCollidingPlayers(aabb, [](Actors::ActorBase* actor) {
-				if (auto player = dynamic_cast<Player*>(actor)) {
+				if (auto* player = runtime_cast<Player*>(actor)) {
 					player->TakeDamage(1, 2.0f);
 				}
 				return true;

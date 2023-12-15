@@ -7,6 +7,8 @@ namespace Jazz2::Actors::Environment
 {
 	class BonusWarp : public ActorBase
 	{
+		DEATH_RTTI_OBJECT(ActorBase);
+
 	public:
 		BonusWarp();
 

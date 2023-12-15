@@ -24,8 +24,9 @@
 
 #include "../Common.h"
 
-namespace Death::Containers::Implementation
-{
+namespace Death { namespace Containers { namespace Implementation {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	template<std::size_t ...> struct Sequence {};
 
 	template<class A, class B> struct SequenceConcat;
@@ -38,4 +39,5 @@ namespace Death::Containers::Implementation
 					   typename GenerateSequence<N - N/2>::Type> {};
 	template<> struct GenerateSequence<1> { typedef Sequence<0> Type; };
 	template<> struct GenerateSequence<0> { typedef Sequence<> Type; };
-}
+
+}}}

@@ -6,6 +6,8 @@ namespace Jazz2::Actors::Solid
 {
 	class PushableBox : public SolidObjectBase
 	{
+		DEATH_RTTI_OBJECT(SolidObjectBase);
+
 	public:
 		PushableBox();
 

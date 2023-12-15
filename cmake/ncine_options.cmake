@@ -79,6 +79,7 @@ endif()
 
 # Shared library options
 option(DEATH_TRACE "Enable runtime event tracing" ON)
+option(DEATH_RUNTIME_CAST "Enable runtime_cast<T>() optimization" ON)
 option(DEATH_WITH_VC_LTL "Build with VC-LTL on Windows" ON)
 
 # Check if we can use IFUNC for CPU dispatch. Linux with glibc and Android with API 18+ has it,

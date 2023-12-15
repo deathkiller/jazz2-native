@@ -4,8 +4,9 @@
 #include "Containers/Array.h"
 #include "Containers/String.h"
 
-namespace Death::Utf8
-{
+namespace Death { namespace Utf8 {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	/**
 		@brief Number of UTF-8 characters in a string
 	*/
@@ -79,4 +80,4 @@ namespace Death::Utf8
 	}
 
 #endif
-}
+}}

@@ -26,13 +26,6 @@ namespace Jazz2::UI::Menu
 #else
 			PlayCustomLevels,
 #endif
-
-#if defined(WITH_MULTIPLAYER)
-			// TODO: Multiplayer
-			TODO_ConnectTo,
-			TODO_CreateServer,
-#endif
-
 			Options,
 			About,
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)

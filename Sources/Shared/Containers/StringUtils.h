@@ -26,8 +26,9 @@
 #include "String.h"
 #include "StringView.h"
 
-namespace Death::Containers::StringUtils
-{
+namespace Death { namespace Containers { namespace StringUtils {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	namespace Implementation
 	{
 		extern void DEATH_CPU_DISPATCHED_DECLARATION(lowercaseInPlace)(char* data, std::size_t size);
@@ -127,4 +128,4 @@ namespace Death::Containers::StringUtils
 		@brief Replace all occurrences of a character in a string with another character in-place
 	*/
 	void replaceAllInPlace(const MutableStringView string, char search, char replace);
-}
+}}}

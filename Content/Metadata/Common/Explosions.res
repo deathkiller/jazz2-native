@@ -61,6 +61,7 @@
 		},
 		"Pepper": {
 			"Path": "Common/explosion_pepper.aura",
+			"FrameRate": 20,
 			"States": [ 11 ]
 		},
 		"RF": {
