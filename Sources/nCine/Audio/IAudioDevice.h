@@ -11,11 +11,11 @@ namespace nCine
 	class IAudioDevice
 	{
 	public:
-		static constexpr unsigned int UnavailableSource = ~0U;
+		static constexpr unsigned int UnavailableSource = ~0u;
 
 		// TODO: Revise these constants
-		static constexpr float LengthToPhysical = 0.0000000005f;
-		static constexpr float VelocityToPhysical = 2.0f;
+		static constexpr float LengthToPhysical = 1.0f / 100.0f;
+		static constexpr float VelocityToPhysical = FrameTimer::FramesPerSecond / 100.0f;
 		static constexpr float ReferenceDistance = 200.0f * LengthToPhysical;
 		static constexpr float MaxDistance = 900.0f * LengthToPhysical;
 
@@ -60,6 +60,7 @@ namespace nCine
 		/// Updates players state (and buffer queue in the case of stream players)
 		virtual void updatePlayers() = 0;
 
+		virtual const Vector3f& getListenerPosition() const = 0;
 		virtual void updateListener(const Vector3f& position, const Vector3f& velocity) = 0;
 
 		virtual int nativeFrequency() = 0;
@@ -101,6 +102,7 @@ namespace nCine
 		unsigned int registerPlayer(IAudioPlayer* player) override { return UnavailableSource; }
 		void unregisterPlayer(IAudioPlayer* player) override { }
 		void updatePlayers() override {}
+		const Vector3f& getListenerPosition() const override { return Vector3f::Zero; }
 		void updateListener(const Vector3f& position, const Vector3f& velocity) override { }
 		int nativeFrequency() override { return 0; }
 	};

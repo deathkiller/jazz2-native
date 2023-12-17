@@ -212,8 +212,15 @@ namespace nCine
 		}
 	}
 
+	const Vector3f& ALAudioDevice::getListenerPosition() const
+	{
+		return _listenerPos;
+	}
+
 	void ALAudioDevice::updateListener(const Vector3f& position, const Vector3f& velocity)
 	{
+		_listenerPos = position;
+
 		alListener3f(AL_POSITION, position.X * LengthToPhysical, position.Y * -LengthToPhysical, position.Z * -LengthToPhysical);
 		alListener3f(AL_VELOCITY, velocity.X * VelocityToPhysical, velocity.Y * -VelocityToPhysical, velocity.Z * -VelocityToPhysical);
 	}

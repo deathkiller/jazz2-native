@@ -71,8 +71,8 @@ namespace nCine
 		Vector2<T> ToVector2() const;
 		Vector3<T> ToVector3() const;
 
-		template <class S>
-		friend S Dot(const Vector4<S>& v1, const Vector4<S>& v2);
+		static T Dot(const Vector4& v1, const Vector4& v2);
+		static Vector4 Lerp(const Vector4& a, const Vector4& b, float t);
 
 		/// A vector with all zero elements
 		static const Vector4 Zero;
@@ -377,13 +377,16 @@ namespace nCine
 		return Vector3<T>(X, Y, Z);
 	}
 
-	template <class S>
-	inline S Dot(const Vector4<S>& v1, const Vector4<S>& v2)
+	template <class T>
+	inline T Vector4<T>::Dot(const Vector4<T>& v1, const Vector4<T>& v2)
 	{
-		return static_cast<S>(v1.X * v2.X +
-							  v1.Y * v2.Y +
-							  v1.Z * v2.Z +
-							  v1.W * v2.W);
+		return static_cast<T>(v1.X * v2.X + v1.Y * v2.Y + v1.Z * v2.Z + v1.W * v2.W);
+	}
+
+	template <class T>
+	inline Vector4<T> Vector4<T>::Lerp(const Vector4<T>& a, const Vector4<T>& b, float t)
+	{
+		return Vector4<T>(t * (b.X - a.X) + a.X, t * (b.Y - a.Y) + a.Y, t * (b.Z - a.Z) + a.Z, t * (b.W - a.W) + a.W);
 	}
 
 	template <class T>

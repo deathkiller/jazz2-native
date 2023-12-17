@@ -2,7 +2,7 @@
 
 #include "../Common.h"
 
-// If `DEATH_NO_RUNTIME_CAST` is defined, standard dynamic_cast<>() is used in runtime_cast<T>()
+// If `DEATH_NO_RUNTIME_CAST` is defined, standard dynamic_cast<T>() is used in runtime_cast<T>()
 #if !defined(DEATH_NO_RUNTIME_CAST)
 
 #include <memory>
@@ -215,11 +215,11 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 		}
 
 		template<class Base, class ...OtherBases, class Self>
-		static const void* FindInstance(TypeId id, const Self* self) noexcept {
-			if (const void* ptr = self->Base::__FindInstance(id)) {
+		static const void* FindInstance(TypeId t, const Self* self) noexcept {
+			if (const void* ptr = self->Base::__FindInstance(t)) {
 				return ptr;
 			}
-			return FindInstance<OtherBases...>(id, self);
+			return FindInstance<OtherBases...>(t, self);
 		}
 	};
 }}}
@@ -227,10 +227,10 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 /** @brief Class annotation to enable optimized @ref runtime_cast() functionality */
 #define DEATH_RTTI_OBJECT(...)																			\
 	friend struct Death::TypeInfo::Implementation::Helpers;												\
-	virtual const void* __FindInstance(Death::TypeInfo::Implementation::TypeId id) const noexcept {		\
-		if (id == Death::TypeInfo::Implementation::Helpers::GetTypeId(this))							\
+	virtual const void* __FindInstance(Death::TypeInfo::Implementation::TypeId t) const noexcept {		\
+		if (t == Death::TypeInfo::Implementation::Helpers::GetTypeId(this))								\
 			return this;																				\
-		return Death::TypeInfo::Implementation::Helpers::FindInstance<__VA_ARGS__>(id, this);			\
+		return Death::TypeInfo::Implementation::Helpers::FindInstance<__VA_ARGS__>(t, this);			\
 	}
 
 /** @brief Safely converts pointers to classes up, down, and sideways along the inheritance hierarchy of classes annotated by @ref DEATH_RTTI_OBJECT() */

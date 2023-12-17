@@ -66,8 +66,8 @@ namespace nCine
 		Vector2 Normalized() const;
 		Vector2& Normalize();
 
-		template <class S>
-		friend S Dot(const Vector2<S>& v1, const Vector2<S>& v2);
+		static T Dot(const Vector2& v1, const Vector2& v2);
+		static Vector2 Lerp(const Vector2& a, const Vector2& b, float t);
 
 		/// A vector with all zero elements
 		static const Vector2 Zero;
@@ -306,10 +306,16 @@ namespace nCine
 		return *this;
 	}
 
-	template <class S>
-	inline S Dot(const Vector2<S>& v1, const Vector2<S>& v2)
+	template <class T>
+	inline T Vector2<T>::Dot(const Vector2<T>& v1, const Vector2<T>& v2)
 	{
-		return static_cast<S>(v1.X * v2.X + v1.Y * v2.Y);
+		return static_cast<T>(v1.X * v2.X + v1.Y * v2.Y);
+	}
+
+	template <class T>
+	inline Vector2<T> Vector2<T>::Lerp(const Vector2<T>& a, const Vector2<T>& b, float t)
+	{
+		return Vector2<T>(t * (b.X - a.X) + a.X, t * (b.Y - a.Y) + a.Y);
 	}
 
 	template <class T>
