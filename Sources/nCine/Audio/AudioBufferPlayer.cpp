@@ -91,8 +91,10 @@ namespace nCine
 
 				updateFilters();
 
+				Vector3f adjustedPos = getAdjustedPosition(device, position_, isSourceRelative_);
+
 				alSourcei(sourceId_, AL_SOURCE_RELATIVE, isSourceRelative_ ? AL_TRUE : AL_FALSE);
-				alSource3f(sourceId_, AL_POSITION, position_.X * IAudioDevice::LengthToPhysical, position_.Y * -IAudioDevice::LengthToPhysical, position_.Z * -IAudioDevice::LengthToPhysical);
+				alSource3f(sourceId_, AL_POSITION, adjustedPos.X, adjustedPos.Y, adjustedPos.Z);
 				alSourcef(sourceId_, AL_REFERENCE_DISTANCE, IAudioDevice::ReferenceDistance);
 				alSourcef(sourceId_, AL_MAX_DISTANCE, IAudioDevice::MaxDistance);
 

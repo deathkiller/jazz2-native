@@ -69,10 +69,9 @@ namespace nCine
 
 		Vector2<T> ToVector2() const;
 
-		template <class S>
-		friend S Dot(const Vector3<S>& v1, const Vector3<S>& v2);
-		template <class S>
-		friend Vector3<S> Cross(const Vector3<S>& v1, const Vector3<S>& v2);
+		static T Dot(const Vector3& v1, const Vector3& v2);
+		static Vector3 Cross(const Vector3& v1, const Vector3& v2);
+		static Vector3 Lerp(const Vector3& a, const Vector3& b, float t);
 
 		/// A vector with all zero elements
 		static const Vector3 Zero;
@@ -348,20 +347,24 @@ namespace nCine
 		return Vector2<T>(X, Y);
 	}
 
-	template <class S>
-	inline S dot(const Vector3<S>& v1, const Vector3<S>& v2)
+	template <class T>
+	inline T Vector3<T>::Dot(const Vector3<T>& v1, const Vector3<T>& v2)
 	{
-		return static_cast<S>(v1.X * v2.X +
-							  v1.Y * v2.Y +
-							  v1.Z * v2.Z);
+		return static_cast<T>(v1.X * v2.X + v1.Y * v2.Y + v1.Z * v2.Z);
 	}
 
-	template <class S>
-	inline Vector3<S> Cross(const Vector3<S>& v1, const Vector3<S>& v2)
+	template <class T>
+	inline Vector3<T> Vector3<T>::Cross(const Vector3<T>& v1, const Vector3<T>& v2)
 	{
-		return Vector3<S>(v1.Y * v2.Z - v1.Z * v2.Y,
+		return Vector3<T>(v1.Y * v2.Z - v1.Z * v2.Y,
 						  v1.Z * v2.X - v1.X * v2.Z,
 						  v1.X * v2.Y - v1.Y * v2.X);
+	}
+
+	template <class T>
+	inline Vector3<T> Vector3<T>::Lerp(const Vector3<T>& a, const Vector3<T>& b, float t)
+	{
+		return Vector3<T>(t * (b.X - a.X) + a.X, t * (b.Y - a.Y) + a.Y, t * (b.Z - a.Z) + a.Z);
 	}
 
 	template <class T>

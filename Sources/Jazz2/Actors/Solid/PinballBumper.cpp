@@ -44,7 +44,7 @@ namespace Jazz2::Actors::Solid
 					SetTransition(_currentAnimation->State | (AnimState)0x200, true);
 					PlaySfx("Hit"_s, 0.8f);
 
-					constexpr float forceMult = /*24.0f*/12.0f;
+					constexpr float forceMult = 12.0f;
 					Vector2f force = (player->GetPos() - _pos).Normalize() * forceMult;
 					if (!_levelHandler->IsReforged()) {
 						force.Y *= 0.7f;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "IAudioDevice.h"
 #include "../Base/Object.h"
 #include "../Primitives/Vector3.h"
 
@@ -142,6 +143,8 @@ namespace nCine
 		virtual void updateState() = 0;
 
 		virtual void updateFilters();
+
+		static Vector3f getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative);
 
 		friend class ALAudioDevice;
 	};

@@ -3,13 +3,14 @@
 
 #include "IAudioPlayer.h"
 #include "IAudioDevice.h"
+#include "../ServiceLocator.h"
 #include "../Primitives/Vector3.h"
 
 namespace nCine
 {
 	IAudioPlayer::IAudioPlayer(ObjectType type)
 		: Object(type), sourceId_(IAudioDevice::UnavailableSource), state_(PlayerState::Stopped), isLooping_(false),
-			isSourceRelative_(false), gain_(1.0f), pitch_(1.0f), lowPass_(1.0f), position_(0.0f, 0.0f, 0.0f), filterHandle_(0)
+		isSourceRelative_(false), gain_(1.0f), pitch_(1.0f), lowPass_(1.0f), position_(0.0f, 0.0f, 0.0f), filterHandle_(0)
 	{
 	}
 
@@ -79,7 +80,9 @@ namespace nCine
 	{
 		position_ = position;
 		if (state_ == PlayerState::Playing) {
-			alSource3f(sourceId_, AL_POSITION, position.X * IAudioDevice::LengthToPhysical, position.Y * -IAudioDevice::LengthToPhysical, position.Z * -IAudioDevice::LengthToPhysical);
+			IAudioDevice& device = theServiceLocator().audioDevice();
+			Vector3f adjustedPos = getAdjustedPosition(device, position_, isSourceRelative_);
+			alSource3f(sourceId_, AL_POSITION, adjustedPos.X, adjustedPos.Y, adjustedPos.Z);
 		}
 	}
 
@@ -103,5 +106,40 @@ namespace nCine
 			alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
 		}
 #endif
+	}
+
+	Vector3f IAudioPlayer::getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative)
+	{
+		Vector3f listenerPos;
+		Vector3f adjustedPos = Vector3f(pos.X * IAudioDevice::LengthToPhysical, pos.Y * -IAudioDevice::LengthToPhysical, pos.Z * -IAudioDevice::LengthToPhysical);
+
+		if (!isSourceRelative) {
+			listenerPos = device.getListenerPosition();
+			listenerPos.X *= IAudioDevice::LengthToPhysical;
+			listenerPos.Y *= -IAudioDevice::LengthToPhysical;
+			listenerPos.Z *= -IAudioDevice::LengthToPhysical;
+
+			adjustedPos -= listenerPos;
+		}
+
+		// Flatten depth position a little, so far away sounds that can still be seen appear louder
+		adjustedPos.Z *= 0.5f;
+
+		// Normalize audio position for smooth panning when near. Do it in physical units, so this remains constant regardless of unit changes.
+		constexpr float SmoothPanRadius = 5.0f;
+		float listenerSpaceDist = adjustedPos.Length();
+		if (listenerSpaceDist < SmoothPanRadius) {
+			float panningActive = listenerSpaceDist / SmoothPanRadius;
+			adjustedPos = Vector3f::Lerp(
+								Vector3(0.0f, 0.0f, 1.0f + (SmoothPanRadius - 1.0f) * panningActive),
+								adjustedPos,
+								panningActive);
+		}
+
+		if (!isSourceRelative) {
+			adjustedPos += listenerPos;
+		}
+
+		return adjustedPos;
 	}
 }

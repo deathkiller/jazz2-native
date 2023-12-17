@@ -57,6 +57,7 @@ namespace nCine
 		void unregisterPlayer(IAudioPlayer* player) override;
 		void updatePlayers() override;
 		
+		const Vector3f& getListenerPosition() const override;
 		void updateListener(const Vector3f& position, const Vector3f& velocity) override;
 
 		int nativeFrequency() override;
@@ -81,6 +82,8 @@ namespace nCine
 		SmallVector<ALuint, MaxSources> sourcePool_;
 		/// The array of currently active audio players
 		SmallVector<IAudioPlayer*, MaxSources> players_;
+		/// Listener position
+		Vector3f _listenerPos;
 		/// native device frequency
 		int nativeFreq_;
 
