@@ -31,14 +31,14 @@
 #	define _DEATH_WARNING_PUSH _Pragma("clang diagnostic push")
 #	define _DEATH_WARNING_POP _Pragma("clang diagnostic pop")
 #	if (__clang_major__ * 100 + __clang_minor__ >= 1100)
-#		define _DEATH_NO_OVERRIDE_WARNING _Pragma("clang diagnostic ignored -Winconsistent-missing-override") _Pragma("clang diagnostic ignored -Wsuggest-override")
+#		define _DEATH_NO_OVERRIDE_WARNING _Pragma("clang diagnostic ignored \"-Winconsistent-missing-override\"") _Pragma("clang diagnostic ignored \"-Wsuggest-override\"")
 #	elif (__clang_major__ * 100 + __clang_minor__ >= 306)
-#		define _DEATH_NO_OVERRIDE_WARNING _Pragma("clang diagnostic ignored -Winconsistent-missing-override")
+#		define _DEATH_NO_OVERRIDE_WARNING _Pragma("clang diagnostic ignored \"-Winconsistent-missing-override\"")
 #	endif
 #elif defined(DEATH_TARGET_GCC) && (__GNUC__ * 100 + __GNUC_MINOR__ >= 501)
 #	define _DEATH_WARNING_PUSH _Pragma("GCC diagnostic push")
 #	define _DEATH_WARNING_POP _Pragma("GCC diagnostic pop")
-#	define _DEATH_NO_OVERRIDE_WARNING _Pragma("GCC diagnostic ignored -Wsuggest-override")
+#	define _DEATH_NO_OVERRIDE_WARNING _Pragma("GCC diagnostic ignored \"-Wsuggest-override\"")
 #else
 #	define _DEATH_WARNING_PUSH
 #	define _DEATH_WARNING_POP
