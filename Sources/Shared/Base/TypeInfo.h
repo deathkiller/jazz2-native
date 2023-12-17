@@ -2,7 +2,7 @@
 
 #include "../Common.h"
 
-// If `DEATH_NO_RUNTIME_CAST` is defined, standard dynamic_cast<T>() is used in runtime_cast<T>()
+// If `DEATH_NO_RUNTIME_CAST` is defined, standard dynamic_cast<T>() is used instead of runtime_cast<T>()
 #if !defined(DEATH_NO_RUNTIME_CAST)
 
 #include <memory>
@@ -30,12 +30,12 @@
 #elif defined(DEATH_TARGET_CLANG)
 #	define _DEATH_WARNING_PUSH _Pragma("clang diagnostic push")
 #	define _DEATH_WARNING_POP _Pragma("clang diagnostic pop")
-#	if (__clang_major__ * 100 + __clang_minor__ >= 1100)
+#	if (__clang_major__*100 + __clang_minor__ >= 1100)
 #		define _DEATH_NO_OVERRIDE_WARNING _Pragma("clang diagnostic ignored \"-Winconsistent-missing-override\"") _Pragma("clang diagnostic ignored \"-Wsuggest-override\"")
-#	elif (__clang_major__ * 100 + __clang_minor__ >= 306)
+#	elif (__clang_major__*100 + __clang_minor__ >= 306)
 #		define _DEATH_NO_OVERRIDE_WARNING _Pragma("clang diagnostic ignored \"-Winconsistent-missing-override\"")
 #	endif
-#elif defined(DEATH_TARGET_GCC) && (__GNUC__ * 100 + __GNUC_MINOR__ >= 501)
+#elif defined(DEATH_TARGET_GCC) && (__GNUC__*100 + __GNUC_MINOR__ >= 501)
 #	define _DEATH_WARNING_PUSH _Pragma("GCC diagnostic push")
 #	define _DEATH_WARNING_POP _Pragma("GCC diagnostic pop")
 #	define _DEATH_NO_OVERRIDE_WARNING _Pragma("GCC diagnostic ignored \"-Wsuggest-override\"")
@@ -182,6 +182,7 @@ struct __ti
 };
 
 namespace Death { namespace TypeInfo { namespace Implementation {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	using TypeId = const char*;
 
@@ -198,7 +199,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 		}
 
 		/*template<class T>
-		Containers::Pair<const char*, std::size_t> GetTypeNameLength() noexcept {
+		Containers::Pair<const char*, std::size_t> GetTypeName() noexcept {
 			constexpr const char* name = __ti<T>::n();
 			std::size_t length = std::strlen(name + skip().SizeAtEnd);
 			while (name[length - 1] == ' ') length--; // MSVC sometimes adds trailing whitespaces

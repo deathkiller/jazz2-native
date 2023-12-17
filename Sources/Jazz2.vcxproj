@@ -392,7 +392,6 @@
     <ClInclude Include="Jazz2\UI\Menu\AboutSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\BeginSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\ControlsOptionsSection.h" />
-    <ClInclude Include="Jazz2\UI\Menu\ControlsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\CreateServerOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\CustomLevelSelectSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\EpisodeSelectSection.h" />

@@ -963,9 +963,6 @@
     <ClInclude Include="Jazz2\UI\ControlScheme.h">
       <Filter>Header Files\Jazz2\UI</Filter>
     </ClInclude>
-    <ClInclude Include="Jazz2\UI\Menu\ControlsSection.h">
-      <Filter>Header Files\Jazz2\UI\Menu</Filter>
-    </ClInclude>
     <ClInclude Include="Jazz2\Actors\Enemies\TurtleTough.h">
       <Filter>Header Files\Jazz2\Actors\Enemies</Filter>
     </ClInclude>
@@ -1457,6 +1454,12 @@
     </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\PlayCustomSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\MultiplayerGameMode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\MultiplayerGameModeSelectSection.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2419,6 +2422,9 @@
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\PlayCustomSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\MultiplayerGameModeSelectSection.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

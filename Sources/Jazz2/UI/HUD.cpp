@@ -204,11 +204,7 @@ namespace Jazz2::UI
 			adjustedView.W = adjustedView.W - adjustedView.X - (195.0f + PreferencesCache::TouchRightPadding.X);
 		}
 
-		float right = adjustedView.X + adjustedView.W;
-		float bottom = adjustedView.Y + adjustedView.H;
-
 		int32_t charOffset = 0;
-		int32_t charOffsetShadow = 0;
 		char stringBuffer[32];
 
 		auto& players = _levelHandler->GetPlayers();

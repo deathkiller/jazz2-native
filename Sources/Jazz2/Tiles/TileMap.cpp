@@ -1508,7 +1508,6 @@ namespace Jazz2::Tiles
 	{
 		TileMapLayer& layer = _owner->_layers[_owner->_texturedBackgroundLayer];
 		Vector2i layoutSize = layer.LayoutSize;
-		Vector2i targetSize = _target->size();
 
 		std::int32_t renderCommandIndex = 0;
 		bool isAnimated = false;
