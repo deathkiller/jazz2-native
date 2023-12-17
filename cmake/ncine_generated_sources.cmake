@@ -52,7 +52,7 @@ if(WIN32)
 		message(STATUS "Writing a resource file for executable icons")
 
 		set(RESOURCE_RC_FILE "${GENERATED_SOURCE_DIR}/resource.rc")
-		if(NOT DEATH_LOG OR WINDOWS_PHONE OR WINDOWS_STORE OR NOT EXISTS "${NCINE_SOURCE_DIR}/Icons/Log.ico")
+		if(NOT DEATH_TRACE OR WINDOWS_PHONE OR WINDOWS_STORE OR NOT EXISTS "${NCINE_SOURCE_DIR}/Icons/Log.ico")
 			file(WRITE ${RESOURCE_RC_FILE} "GLFW_ICON ICON \"Main.ico\"")
 			file(COPY "${NCINE_SOURCE_DIR}/Icons/Main.ico" DESTINATION ${GENERATED_INCLUDE_DIR})
 		else()
@@ -89,13 +89,3 @@ if(WIN32)
 
 	list(APPEND GENERATED_SOURCES "${NCINE_SOURCE_DIR}/App.manifest")
 endif()
-
-# Generate Nuklear implementation file
-#if(NCINE_WITH_NUKLEAR)
-#	set(NUKLEAR_CPP_FILE "${GENERATED_SOURCE_DIR}/nuklear.cpp")
-#	file(WRITE ${NUKLEAR_CPP_FILE} "#define NK_IMPLEMENTATION\n")
-#	file(APPEND ${NUKLEAR_CPP_FILE} "#include \"NuklearContext.h\"\n")
-#	file(APPEND ${NUKLEAR_CPP_FILE} "#include \"nuklear.h\"\n")
-
-#	list(APPEND GENERATED_SOURCES ${NUKLEAR_CPP_FILE})
-#endif()

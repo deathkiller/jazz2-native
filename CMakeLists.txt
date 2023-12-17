@@ -62,7 +62,8 @@ include(ncine_get_version)
 include(ncine_imported_targets)
 include(ncine_imgui)
 include(ncine_tracy)
-
+include(ncine_generated_sources)
+	
 if(NCINE_BUILD_ANDROID)
 	include(ncine_build_android)
 	return()
@@ -94,7 +95,6 @@ include(ncine_compiler_options)
 include(ncine_headers)
 include(ncine_sources)
 include(ncine_extra_sources)
-include(ncine_generated_sources)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(PATH_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/Sources")

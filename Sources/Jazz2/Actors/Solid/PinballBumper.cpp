@@ -47,7 +47,7 @@ namespace Jazz2::Actors::Solid
 					constexpr float forceMult = 12.0f;
 					Vector2f force = (player->GetPos() - _pos).Normalize() * forceMult;
 					if (!_levelHandler->IsReforged()) {
-						force.Y *= 0.7f;
+						force.Y *= 0.9f;
 					}
 
 					// Move the player back
