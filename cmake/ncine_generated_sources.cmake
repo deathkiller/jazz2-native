@@ -40,7 +40,9 @@ if(NCINE_EMBED_SHADERS)
 
 	list(APPEND GENERATED_SOURCES ${SHADERS_H_FILE})
 	list(APPEND GENERATED_SOURCES ${SHADERS_CPP_FILE})
-	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_EMBEDDED_SHADERS")
+	if(TARGET ${NCINE_APP}) # Disabled if NCINE_BUILD_ANDROID
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_EMBEDDED_SHADERS")
+	endif()
 	list(APPEND ANDROID_GENERATED_FLAGS WITH_EMBEDDED_SHADERS)
 
 	# Don't need to add shader files to the library target if they are embedded
@@ -74,7 +76,9 @@ if(WIN32)
 	endif()
 
 	set(PACKAGE_EXECUTABLE_NAME "Jazz2")
-	get_target_property(DEATH_DEBUG_POSTFIX ${NCINE_APP} DEBUG_POSTFIX)
+	if(TARGET ${NCINE_APP}) # Disabled if NCINE_BUILD_ANDROID
+		get_target_property(DEATH_DEBUG_POSTFIX ${NCINE_APP} DEBUG_POSTFIX)
+	endif()
 	if(NOT DEATH_DEBUG_POSTFIX)
 		set(DEATH_DEBUG_POSTFIX "d")
 	endif()
