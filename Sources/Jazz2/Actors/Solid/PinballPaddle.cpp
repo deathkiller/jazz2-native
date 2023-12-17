@@ -51,10 +51,14 @@ namespace Jazz2::Actors::Solid
 						}
 						mult = std::clamp(0.2f + mult * 1.6f, 0.4f, 1.0f);
 
-						float force = 1.9f * mult;
+						float forceY = 1.9f * mult;
+						if (!_levelHandler->IsReforged()) {
+							forceY *= 0.85f;
+						}
+
 						player->_speed.X = 0.0f;
 						player->_speed.Y = (_levelHandler->IsReforged() ? -1.0f : -0.7f);
-						player->_externalForce.Y -= force;
+						player->_externalForce.Y -= forceY;
 
 						player->_externalForceCooldown = 10.0f;
 						player->_controllable = true;

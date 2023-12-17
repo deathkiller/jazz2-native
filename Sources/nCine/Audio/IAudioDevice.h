@@ -13,7 +13,6 @@ namespace nCine
 	public:
 		static constexpr unsigned int UnavailableSource = ~0u;
 
-		// TODO: Revise these constants
 		static constexpr float LengthToPhysical = 1.0f / 100.0f;
 		static constexpr float VelocityToPhysical = FrameTimer::FramesPerSecond / 100.0f;
 		static constexpr float ReferenceDistance = 200.0f * LengthToPhysical;
