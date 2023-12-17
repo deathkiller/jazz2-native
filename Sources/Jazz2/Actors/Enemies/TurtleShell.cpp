@@ -122,7 +122,7 @@ namespace Jazz2::Actors::Enemies
 
 		if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
 			if (shotBase->GetStrength() > 0) {
-				if (auto* freezerShot = runtime_cast<Weapons::FreezerShot*>(shotBase)) {
+				if (runtime_cast<Weapons::FreezerShot*>(shotBase)) {
 					return false;
 				}
 
@@ -136,7 +136,7 @@ namespace Jazz2::Actors::Enemies
 				}
 
 				float shotSpeed;
-				if (auto* thunderbolt = runtime_cast<Weapons::Thunderbolt*>(shotBase)) {
+				if (runtime_cast<Weapons::Thunderbolt*>(shotBase)) {
 					shotSpeed = (_pos.X < shotBase->GetPos().X ? -8.0f : 8.0f);
 				} else {
 					shotSpeed = shotBase->GetSpeed().X;

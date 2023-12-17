@@ -156,7 +156,7 @@ namespace Jazz2::Actors::Enemies
 			if (auto* shotBase = runtime_cast<Weapons::ShotBase*>(other)) {
 				if (shotBase->GetStrength() > 0) {
 					Vector2f shotSpeed;
-					if (auto* thunderbolt = runtime_cast<Weapons::Thunderbolt*>(shotBase)) {
+					if (runtime_cast<Weapons::Thunderbolt*>(shotBase)) {
 						shotSpeed = _pos - shotBase->GetPos();
 					} else {
 						shotSpeed = shotBase->GetSpeed();

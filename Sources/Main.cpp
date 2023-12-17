@@ -593,8 +593,8 @@ void GameEventHandler::ResumeSavedState()
 
 			if (version == 1) {
 				// Version 1 included compressedSize and decompressedSize, it's not needed anymore
-				std::int32_t compressedSize = s->ReadVariableInt32();
-				std::int32_t decompressedSize = s->ReadVariableInt32();
+				/*std::int32_t compressedSize =*/ s->ReadVariableInt32();
+				/*std::int32_t decompressedSize =*/ s->ReadVariableInt32();
 			}
 
 			DeflateStream uc(*s);

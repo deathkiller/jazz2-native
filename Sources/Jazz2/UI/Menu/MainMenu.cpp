@@ -919,7 +919,6 @@ namespace Jazz2::UI::Menu
 	{
 		TileMapLayer& layer = _owner->_texturedBackgroundLayer;
 		Vector2i layoutSize = layer.LayoutSize;
-		Vector2i targetSize = _target->size();
 
 		int32_t renderCommandIndex = 0;
 		bool isAnimated = false;

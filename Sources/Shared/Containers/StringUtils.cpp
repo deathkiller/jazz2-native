@@ -544,7 +544,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 	String replaceAll(String string, char search, char replace) {
 		// If not even a single character is found, pass the argument through unchanged
 		const MutableStringView found = string.find(search);
-		if(!found) return std::move(string);
+		if(!found) return string;
 
 		// Convert the found pointer to an index to be able to replace even after a potential reallocation below
 		const std::size_t firstFoundPosition = found.begin() - string.begin();
