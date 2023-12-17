@@ -8,7 +8,7 @@
 namespace nCine
 {
 	/// A three component vector based on templates
-	template <class T>
+	template<class T>
 	class Vector3
 	{
 	public:
@@ -59,7 +59,7 @@ namespace nCine
 		Vector3 operator*(T s) const;
 		Vector3 operator/(T s) const;
 
-		template <class S>
+		template<class S>
 		friend Vector3<S> operator*(S s, const Vector3<S>& v);
 
 		T Length() const;
@@ -86,7 +86,7 @@ namespace nCine
 	using Vector3f = Vector3<float>;
 	using Vector3i = Vector3<int>;
 
-	template <class T>
+	template<class T>
 	inline Vector3<T>& Vector3<T>::operator=(const Vector3<T>& other) noexcept
 	{
 		X = other.X;
@@ -96,7 +96,7 @@ namespace nCine
 		return *this;
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T>& Vector3<T>::operator=(Vector3<T>&& other) noexcept
 	{
 		X = other.X;
@@ -106,7 +106,7 @@ namespace nCine
 		return *this;
 	}
 
-	template <class T>
+	template<class T>
 	inline void Vector3<T>::Set(T xx, T yy, T zz)
 	{
 		X = xx;
@@ -114,51 +114,51 @@ namespace nCine
 		Z = zz;
 	}
 
-	template <class T>
+	template<class T>
 	inline T* Vector3<T>::Data()
 	{
 		return &X;
 	}
 
-	template <class T>
+	template<class T>
 	inline const T* Vector3<T>::Data() const
 	{
 		return &X;
 	}
 
-	template <class T>
+	template<class T>
 	inline T& Vector3<T>::operator[](unsigned int index)
 	{
 		ASSERT(index < 3);
 		return (&X)[index];
 	}
 
-	template <class T>
+	template<class T>
 	inline const T& Vector3<T>::operator[](unsigned int index) const
 	{
 		ASSERT(index < 3);
 		return (&X)[index];
 	}
 
-	template <class T>
+	template<class T>
 	inline bool Vector3<T>::operator==(const Vector3& v) const
 	{
 		return (X == v.X && Y == v.Y && Z == v.Z);
 	}
 
-	template <class T>
+	template<class T>
 	inline bool Vector3<T>::operator!=(const Vector3& v) const
 	{
 		return (X != v.X || Y != v.Y || Z != v.Z);
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T> Vector3<T>::operator-() const
 	{
 		return Vector3(-X, -Y, -Z);
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T>& Vector3<T>::operator+=(const Vector3& v)
 	{
 		X += v.X;
@@ -168,7 +168,7 @@ namespace nCine
 		return *this;
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T>& Vector3<T>::operator-=(const Vector3& v)
 	{
 		X -= v.X;
@@ -178,7 +178,7 @@ namespace nCine
 		return *this;
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T>& Vector3<T>::operator*=(const Vector3& v)
 	{
 		X *= v.X;
@@ -188,7 +188,7 @@ namespace nCine
 		return *this;
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T>& Vector3<T>::operator/=(const Vector3& v)
 	{
 		X /= v.X;
@@ -198,7 +198,7 @@ namespace nCine
 		return *this;
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T>& Vector3<T>::operator+=(T s)
 	{
 		X += s;
@@ -208,7 +208,7 @@ namespace nCine
 		return *this;
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T>& Vector3<T>::operator-=(T s)
 	{
 		X -= s;
@@ -218,7 +218,7 @@ namespace nCine
 		return *this;
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T>& Vector3<T>::operator*=(T s)
 	{
 		X *= s;
@@ -228,7 +228,7 @@ namespace nCine
 		return *this;
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T>& Vector3<T>::operator/=(T s)
 	{
 		X /= s;
@@ -238,7 +238,7 @@ namespace nCine
 		return *this;
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T> Vector3<T>::operator+(const Vector3& v) const
 	{
 		return Vector3(X + v.X,
@@ -246,7 +246,7 @@ namespace nCine
 					   Z + v.Z);
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T> Vector3<T>::operator-(const Vector3& v) const
 	{
 		return Vector3(X - v.X,
@@ -254,7 +254,7 @@ namespace nCine
 					   Z - v.Z);
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T> Vector3<T>::operator*(const Vector3& v) const
 	{
 		return Vector3(X * v.X,
@@ -262,7 +262,7 @@ namespace nCine
 					   Z * v.Z);
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T> Vector3<T>::operator/(const Vector3& v) const
 	{
 		return Vector3(X / v.X,
@@ -270,7 +270,7 @@ namespace nCine
 					   Z / v.Z);
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T> Vector3<T>::operator+(T s) const
 	{
 		return Vector3(X + s,
@@ -278,7 +278,7 @@ namespace nCine
 					   Z + s);
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T> Vector3<T>::operator-(T s) const
 	{
 		return Vector3(X - s,
@@ -286,7 +286,7 @@ namespace nCine
 					   Z - s);
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T> Vector3<T>::operator*(T s) const
 	{
 		return Vector3(X * s,
@@ -294,7 +294,7 @@ namespace nCine
 					   Z * s);
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T> Vector3<T>::operator/(T s) const
 	{
 		return Vector3(X / s,
@@ -302,7 +302,7 @@ namespace nCine
 					   Z / s);
 	}
 
-	template <class S>
+	template<class S>
 	inline Vector3<S> operator*(S s, const Vector3<S>& v)
 	{
 		return Vector3<S>(s * v.X,
@@ -310,26 +310,26 @@ namespace nCine
 						  s * v.Z);
 	}
 
-	template <class T>
+	template<class T>
 	inline T Vector3<T>::Length() const
 	{
 		return (T)sqrt(X * X + Y * Y + Z * Z);
 	}
 
-	template <class T>
+	template<class T>
 	inline T Vector3<T>::SqrLength() const
 	{
 		return X * X + Y * Y + Z * Z;
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T> Vector3<T>::Normalized() const
 	{
 		const T len = Length();
 		return Vector3(X / len, Y / len, Z / len);
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T>& Vector3<T>::Normalize()
 	{
 		const T len = Length();
@@ -341,19 +341,19 @@ namespace nCine
 		return *this;
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector2<T> Vector3<T>::ToVector2() const
 	{
 		return Vector2<T>(X, Y);
 	}
 
-	template <class T>
+	template<class T>
 	inline T Vector3<T>::Dot(const Vector3<T>& v1, const Vector3<T>& v2)
 	{
 		return static_cast<T>(v1.X * v2.X + v1.Y * v2.Y + v1.Z * v2.Z);
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T> Vector3<T>::Cross(const Vector3<T>& v1, const Vector3<T>& v2)
 	{
 		return Vector3<T>(v1.Y * v2.Z - v1.Z * v2.Y,
@@ -361,19 +361,19 @@ namespace nCine
 						  v1.X * v2.Y - v1.Y * v2.X);
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector3<T> Vector3<T>::Lerp(const Vector3<T>& a, const Vector3<T>& b, float t)
 	{
 		return Vector3<T>(t * (b.X - a.X) + a.X, t * (b.Y - a.Y) + a.Y, t * (b.Z - a.Z) + a.Z);
 	}
 
-	template <class T>
+	template<class T>
 	const Vector3<T> Vector3<T>::Zero(0, 0, 0);
-	template <class T>
+	template<class T>
 	const Vector3<T> Vector3<T>::XAxis(1, 0, 0);
-	template <class T>
+	template<class T>
 	const Vector3<T> Vector3<T>::YAxis(0, 1, 0);
-	template <class T>
+	template<class T>
 	const Vector3<T> Vector3<T>::ZAxis(0, 0, 1);
 
 }

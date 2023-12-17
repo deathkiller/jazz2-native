@@ -155,7 +155,7 @@ namespace Jazz2::Multiplayer
 		bool _initialUpdateSent;
 		HashMap<Peer, PeerDesc> _peerDesc; // Server: Per peer description
 		HashMap<std::uint8_t, PlayerState> _playerStates; // Server: Per (remote) player state
-		HashMap<std::uint32_t, std::shared_ptr<Actors::Multiplayer::RemoteActor>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
+		HashMap<std::uint32_t, std::shared_ptr<Actors::ActorBase>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
 		HashMap<Actors::ActorBase*, std::uint32_t> _remotingActors; // Server: Local Actor created by server -> Actor ID
 		std::uint32_t _lastSpawnedActorId;	// Server: last assigned actor/player ID, Client: ID assigned by server
 		std::uint64_t _seqNum; // Client: sequence number of the last update
@@ -165,7 +165,9 @@ namespace Jazz2::Multiplayer
 
 		void SynchronizePeers();
 		std::uint32_t FindFreeActorId();
-		std::uint32_t FindFreePlayerId();
+		std::uint8_t FindFreePlayerId();
+
+		static bool ActorShouldBeMirrored(Actors::ActorBase* actor);
 	};
 }
 

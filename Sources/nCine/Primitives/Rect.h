@@ -7,7 +7,7 @@
 namespace nCine
 {
 	/// A template-based rectangle in a two dimensional space
-	template <class T>
+	template<class T>
 	class Rect
 	{
 	public:
@@ -94,7 +94,7 @@ namespace nCine
 	using Rectf = Rect<float>;
 	using Recti = Rect<int>;
 
-	template <class T>
+	template<class T>
 	inline Rect<T> Rect<T>::FromCenterSize(T xx, T yy, T ww, T hh)
 	{
 		return Rect(xx - static_cast<T>(ww * 0.5f),
@@ -102,7 +102,7 @@ namespace nCine
 					ww, hh);
 	}
 
-	template <class T>
+	template<class T>
 	inline Rect<T> Rect<T>::FromCenterSize(const Vector2<T>& center, const Vector2<T>& size)
 	{
 		return Rect(center.X - static_cast<T>(size.X * 0.5f),
@@ -110,37 +110,37 @@ namespace nCine
 					size.X, size.Y);
 	}
 
-	template <class T>
+	template<class T>
 	inline Rect<T> Rect<T>::FromMinMax(T minX, T minY, T maxX, T maxY)
 	{
 		return Rect(minX, minY, maxX - minX, maxY - minY);
 	}
 
-	template <class T>
+	template<class T>
 	inline Rect<T> Rect<T>::FromMinMax(const Vector2<T>& min, const Vector2<T>& max)
 	{
 		return Rect(min.X, min.Y, max.X - min.X, max.Y - min.Y);
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector2<T> Rect<T>::Center() const
 	{
 		return Vector2<T>(X + static_cast<T>(W * 0.5f), Y + static_cast<T>(H * 0.5f));
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector2<T> Rect<T>::Min() const
 	{
 		return Vector2<T>((W > T(0)) ? X : X + W, (H > T(0)) ? Y : Y + H);
 	}
 
-	template <class T>
+	template<class T>
 	inline Vector2<T> Rect<T>::Max() const
 	{
 		return Vector2<T>((W > T(0)) ? X + W : X, (H > T(0)) ? Y + H : Y);
 	}
 
-	template <class T>
+	template<class T>
 	inline void Rect<T>::Set(T xx, T yy, T ww, T hh)
 	{
 		X = xx;
@@ -149,7 +149,7 @@ namespace nCine
 		H = hh;
 	}
 
-	template <class T>
+	template<class T>
 	inline void Rect<T>::Set(const Vector2<T>& point, const Vector2<T>& size)
 	{
 		X = point.X;
@@ -158,35 +158,35 @@ namespace nCine
 		H = size.Y;
 	}
 
-	template <class T>
+	template<class T>
 	inline void Rect<T>::SetCenter(float cx, float cy)
 	{
 		X = cx - static_cast<T>(W * 0.5f);
 		Y = cy - static_cast<T>(H * 0.5f);
 	}
 
-	template <class T>
+	template<class T>
 	inline void Rect<T>::SetCenter(const Vector2<T>& center)
 	{
 		X = center.X - static_cast<T>(W * 0.5f);
 		Y = center.Y - static_cast<T>(H * 0.5f);
 	}
 
-	template <class T>
+	template<class T>
 	inline void Rect<T>::SetSize(float ww, float hh)
 	{
 		W = ww;
 		H = hh;
 	}
 
-	template <class T>
+	template<class T>
 	inline void Rect<T>::SetSize(const Vector2<T>& size)
 	{
 		W = size.X;
 		H = size.Y;
 	}
 
-	template <class T>
+	template<class T>
 	inline void Rect<T>::SetCenterSize(T xx, T yy, T ww, T hh)
 	{
 		X = xx - static_cast<T>(ww * 0.5f);
@@ -195,7 +195,7 @@ namespace nCine
 		H = hh;
 	}
 
-	template <class T>
+	template<class T>
 	inline void Rect<T>::SetCenterSize(const Vector2<T>& center, const Vector2<T>& size)
 	{
 		X = center.X - static_cast<T>(size.X * 0.5f);
@@ -204,7 +204,7 @@ namespace nCine
 		H = size.Y;
 	}
 
-	template <class T>
+	template<class T>
 	inline void Rect<T>::SetMinMax(T minX, T minY, T maxX, T maxY)
 	{
 		X = minX;
@@ -213,7 +213,7 @@ namespace nCine
 		H = maxY - minY;
 	}
 
-	template <class T>
+	template<class T>
 	inline void Rect<T>::SetMinMax(const Vector2<T>& min, const Vector2<T>& max)
 	{
 		X = min.X;
@@ -222,7 +222,7 @@ namespace nCine
 		H = max.Y - min.Y;
 	}
 
-	template <class T>
+	template<class T>
 	inline void Rect<T>::InvertSize()
 	{
 		X = X + W;
@@ -231,7 +231,7 @@ namespace nCine
 		H = -H;
 	}
 
-	template <class T>
+	template<class T>
 	inline bool Rect<T>::Contains(T px, T py) const
 	{
 		const bool xAxis = (W > T(0)) ? (px >= X && px <= X + W) : (px <= X && px >= X + W);
@@ -239,13 +239,13 @@ namespace nCine
 		return xAxis && yAxis;
 	}
 
-	template <class T>
+	template<class T>
 	inline bool Rect<T>::Contains(const Vector2<T>& p) const
 	{
 		return Contains(p.X, p.Y);
 	}
 
-	template <class T>
+	template<class T>
 	inline bool Rect<T>::Contains(const Rect& rect) const
 	{
 		const bool containsMin = Contains(rect.min());
@@ -253,7 +253,7 @@ namespace nCine
 		return (containsMin && containsMax);
 	}
 
-	template <class T>
+	template<class T>
 	inline bool Rect<T>::Overlaps(const Rect& rect) const
 	{
 		const Vector2<T> rectMin = rect.Min();
@@ -266,7 +266,7 @@ namespace nCine
 		return !disjoint;
 	}
 
-	template <class T>
+	template<class T>
 	inline void Rect<T>::Intersect(const Rect& rect)
 	{
 		const Vector2<T> rectMin = rect.Min();
@@ -291,14 +291,14 @@ namespace nCine
 		SetMinMax(newMin, newMax);
 	}
 
-	template <class T>
+	template<class T>
 	inline bool Rect<T>::operator==(const Rect& rect) const
 	{
 		return (X == rect.X && Y == rect.Y &&
 				W == rect.W && H == rect.H);
 	}
 
-	template <class T>
+	template<class T>
 	inline bool Rect<T>::operator!=(const Rect& rect) const
 	{
 		return (X != rect.X || Y != rect.Y ||

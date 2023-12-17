@@ -61,7 +61,7 @@ namespace Jazz2::Actors::Multiplayer
 				pos = _stateBuffer[nextIdx].Pos;
 			}
 
-			MoveInstantly(pos, MoveType::Absolute);
+			MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 		}
 
 		ActorBase::OnUpdate(timeMult);
@@ -78,13 +78,14 @@ namespace Jazz2::Actors::Multiplayer
 		SetState((GetState() & ~RemotedFlags) | (state & RemotedFlags));
 	}
 
-	void RemoteActor::SyncWithServer(const Vector2f& pos, AnimState anim, float rotation, bool isVisible, bool isFacingLeft, Actors::ActorRendererType rendererType)
+	void RemoteActor::SyncWithServer(const Vector2f& pos, AnimState anim, float rotation, bool isVisible, bool isFacingLeft, bool animPaused, Actors::ActorRendererType rendererType)
 	{
 		Clock& c = nCine::clock();
 		std::int64_t now = c.now() * 1000 / c.frequency();
 
 		bool wasVisible = _renderer.isDrawEnabled();
 		_renderer.setDrawEnabled(isVisible);
+		_renderer.AnimPaused = animPaused;
 		SetFacingLeft(isFacingLeft);
 
 		if (_lastAnim != anim) {

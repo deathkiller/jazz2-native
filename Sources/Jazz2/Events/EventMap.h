@@ -18,6 +18,13 @@ namespace Jazz2::Events
 	class EventMap
 	{
 	public:
+		struct EventTile {
+			EventType Event;
+			Actors::ActorState EventFlags;
+			std::uint8_t EventParams[EventSpawner::SpawnParamsSize];
+			bool IsEventActive;
+		};
+
 		EventMap(const Vector2i& layoutSize);
 
 		void SetLevelHandler(ILevelHandler* levelHandler);
@@ -37,6 +44,7 @@ namespace Jazz2::Events
 		void Deactivate(std::int32_t x, std::int32_t y);
 		void ResetGenerator(std::int32_t tx, std::int32_t ty);
 
+		const EventTile& GetEventTile(std::int32_t x, std::int32_t y) const;
 		EventType GetEventByPosition(float x, float y, std::uint8_t** eventParams);
 		EventType GetEventByPosition(std::int32_t x, std::int32_t y, std::uint8_t** eventParams);
 		bool HasEventByPosition(std::int32_t x, std::int32_t y);
@@ -51,18 +59,11 @@ namespace Jazz2::Events
 		void SerializeResumableToStream(Stream& dest);
 
 	private:
-		struct EventTile {
-			EventType Event;
-			Actors::ActorState EventFlags;
-			std::uint8_t EventParams[16];
-			bool IsEventActive;
-		};
-
 		struct GeneratorInfo {
 			std::int32_t EventPos;
 
 			EventType Event;
-			std::uint8_t EventParams[16];
+			std::uint8_t EventParams[EventSpawner::SpawnParamsSize];
 			std::uint8_t Delay;
 			float TimeLeft;
 

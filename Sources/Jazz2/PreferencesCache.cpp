@@ -140,8 +140,8 @@ namespace Jazz2
 				if (signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::ConfigFile && version <= FileVersion) {
 					if (version == 1) {
 						// Version 1 included compressedSize and decompressedSize, it's not needed anymore
-						int32_t compressedSize = s->ReadValue<int32_t>();
-						int32_t uncompressedSize = s->ReadValue<int32_t>();
+						/*int32_t compressedSize =*/ s->ReadValue<int32_t>();
+						/*int32_t uncompressedSize =*/ s->ReadValue<int32_t>();
 					}
 
 					DeflateStream uc(*s);

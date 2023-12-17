@@ -226,6 +226,11 @@ namespace Jazz2::Events
 		_generators[generatorIdx].SpawnedActor = nullptr;
 	}
 
+	const EventMap::EventTile& EventMap::GetEventTile(std::int32_t x, std::int32_t y) const
+	{
+		return _eventLayout[x + y * _layoutSize.X];
+	}
+
 	EventType EventMap::GetEventByPosition(float x, float y, std::uint8_t** eventParams)
 	{
 		return GetEventByPosition((std::int32_t)x / Tiles::TileSet::DefaultTileSize, (std::int32_t)y / Tiles::TileSet::DefaultTileSize, eventParams);
@@ -332,7 +337,7 @@ namespace Jazz2::Events
 					memset(eventParams, 0, sizeof(eventParams));
 				}
 
-				Actors::ActorState actorFlags = (Actors::ActorState)(eventFlags & 0x04);
+				Actors::ActorState actorFlags = (Actors::ActorState)(eventFlags & /*Illuminated*/0x04);
 
 				// Flag 0x02: Generator
 				if ((eventFlags & 0x02) != 0) {
