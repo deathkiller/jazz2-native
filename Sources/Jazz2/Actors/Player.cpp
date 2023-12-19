@@ -2330,8 +2330,20 @@ namespace Jazz2::Actors
 					_lives--;
 				}
 
-				// Remove fast fires
-				_weaponUpgrades[(int)WeaponType::Blaster] = (uint8_t)(_weaponUpgrades[(int)WeaponType::Blaster] & 0x1);
+				// Revert coins, gems, ammo and weapon upgrades
+				_coins = _coinsCheckpoint;
+				_gems = _gemsCheckpoint;
+
+				std::memcpy(_weaponAmmo, _weaponAmmoCheckpoint, sizeof(_weaponAmmo));
+				std::memcpy(_weaponUpgrades, _weaponUpgradesCheckpoint, sizeof(_weaponUpgrades));
+
+				// Remove all fast fires and Blaster upgrades
+				_weaponUpgrades[(std::int32_t)WeaponType::Blaster] = 0;
+
+				// Reset current weapon to Blaster if player has no ammo on checkpoint
+				if (_weaponAmmo[(std::int32_t)_currentWeapon] == 0) {
+					SetCurrentWeapon(WeaponType::Blaster);
+				}
 
 				if (_sugarRushLeft > 0.0f) {
 					_sugarRushLeft = 0.0f;
@@ -2362,17 +2374,6 @@ namespace Jazz2::Actors
 					// Return to the last save point
 					MoveInstantly(_checkpointPos, MoveType::Absolute | MoveType::Force);
 					_levelHandler->SetAmbientLight(this, _checkpointLight);
-
-					_coins = _coinsCheckpoint;
-					_gems = _gemsCheckpoint;
-
-					std::memcpy(_weaponAmmo, _weaponAmmoCheckpoint, sizeof(_weaponAmmo));
-					std::memcpy(_weaponUpgrades, _weaponUpgradesCheckpoint, sizeof(_weaponUpgrades));
-
-					// Reset current weapon to Blaster if player has no ammo on checkpoint
-					if (_weaponAmmo[(int)_currentWeapon] == 0) {
-						SetCurrentWeapon(WeaponType::Blaster);
-					}
 
 					_levelHandler->RollbackToCheckpoint(this);
 				} else {
@@ -2443,7 +2444,8 @@ namespace Jazz2::Actors
 		shot->OnFire(shared_from_this(), gunspotPos, _speed, angle, IsFacingLeft());
 		_levelHandler->AddActor(shot);
 
-		_weaponCooldown = cooldownBase - (_weaponUpgrades[(int)WeaponType::Blaster] * cooldownUpgrade);
+		std::int32_t fastFire = (_weaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
+		_weaponCooldown = cooldownBase - (fastFire * cooldownUpgrade);
 	}
 
 	void Player::FireWeaponRF()
@@ -2502,7 +2504,7 @@ namespace Jazz2::Actors
 			_levelHandler->AddActor(shot2);
 		}
 
-		_weaponCooldown = 100.0f - (_weaponUpgrades[(int)WeaponType::Blaster] * 1.0f);
+		_weaponCooldown = 120.0f;
 	}
 
 	void Player::FireWeaponPepper()
@@ -2532,7 +2534,8 @@ namespace Jazz2::Actors
 		shot2->OnFire(shared_from_this(), gunspotPos, _speed, angle + Random().NextFloat(-0.2f, 0.2f), IsFacingLeft());
 		_levelHandler->AddActor(shot2);
 
-		_weaponCooldown = 36.0f - (_weaponUpgrades[(int)WeaponType::Blaster] * 1.7f);
+		std::int32_t fastFire = (_weaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
+		_weaponCooldown = 30.0f - (fastFire * 2.7f);
 	}
 
 	void Player::FireWeaponTNT()
@@ -2545,7 +2548,7 @@ namespace Jazz2::Actors
 		tnt->OnFire(shared_from_this());
 		_levelHandler->AddActor(tnt);
 
-		_weaponCooldown = 30.0f;
+		_weaponCooldown = 60.0f;
 	}
 
 	bool Player::FireWeaponThunderbolt()
@@ -2613,7 +2616,7 @@ namespace Jazz2::Actors
 						break;
 					}
 					default: {
-						FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(40.0f, 1.9f);
+						FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(30.0f, 2.7f);
 						PlaySfx("WeaponBlaster"_s);
 						break;
 					}
@@ -2621,12 +2624,12 @@ namespace Jazz2::Actors
 				ammoDecrease = 0;
 				break;
 
-			case WeaponType::Bouncer: FireWeapon<Weapons::BouncerShot, WeaponType::Bouncer>(32.0f, 1.4f); break;
+			case WeaponType::Bouncer: FireWeapon<Weapons::BouncerShot, WeaponType::Bouncer>(30.0f, 2.7f); break;
 				case WeaponType::Freezer:
 					// TODO: Add upgraded freezer
-					FireWeapon<Weapons::FreezerShot, WeaponType::Freezer>(46.0f, 2.2f);
+					FireWeapon<Weapons::FreezerShot, WeaponType::Freezer>(30.0f, 2.7f);
 					break;
-				case WeaponType::Seeker: FireWeapon<Weapons::SeekerShot, WeaponType::Seeker>(100.0f, 1.0f); break;
+				case WeaponType::Seeker: FireWeapon<Weapons::SeekerShot, WeaponType::Seeker>(120.0f, 0.0f); break;
 				case WeaponType::RF: FireWeaponRF(); break;
 
 				case WeaponType::Toaster: {
@@ -2646,7 +2649,7 @@ namespace Jazz2::Actors
 
 				case WeaponType::TNT: FireWeaponTNT(); break;
 				case WeaponType::Pepper: FireWeaponPepper(); break;
-				case WeaponType::Electro: FireWeapon<Weapons::ElectroShot, WeaponType::Electro>(32.0f, 1.4f); break;
+				case WeaponType::Electro: FireWeapon<Weapons::ElectroShot, WeaponType::Electro>(30.0f, 2.7f); break;
 
 				case WeaponType::Thunderbolt: {
 					if (!FireWeaponThunderbolt()) {

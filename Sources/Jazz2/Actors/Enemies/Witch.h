@@ -25,6 +25,8 @@ namespace Jazz2::Actors::Enemies
 
 		class MagicBullet : public ActorBase
 		{
+			DEATH_RTTI_OBJECT(ActorBase);
+
 		public:
 			MagicBullet(Witch* owner) : _owner(owner), _time(380.0f) { }
 

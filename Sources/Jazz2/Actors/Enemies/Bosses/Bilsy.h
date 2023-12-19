@@ -27,6 +27,8 @@ namespace Jazz2::Actors::Bosses
 
 		class Fireball : public EnemyBase
 		{
+			DEATH_RTTI_OBJECT(EnemyBase);
+
 		public:
 			bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
