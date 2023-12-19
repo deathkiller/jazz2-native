@@ -23,6 +23,8 @@ namespace Jazz2::Actors::Enemies
 
 		class Fire : public EnemyBase
 		{
+			DEATH_RTTI_OBJECT(EnemyBase);
+
 		protected:
 			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 			void OnUpdate(float timeMult) override;

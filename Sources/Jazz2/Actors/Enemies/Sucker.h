@@ -18,7 +18,6 @@ namespace Jazz2::Actors::Enemies
 		void OnUpdate(float timeMult) override;
 		bool OnPerish(ActorBase* collider) override;
 
-
 	private:
 		int _cycle;
 		float _cycleTimer;

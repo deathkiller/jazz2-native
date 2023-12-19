@@ -24,6 +24,8 @@ namespace Jazz2::Actors::Enemies
 
 		class BulletSpit : public EnemyBase
 		{
+			DEATH_RTTI_OBJECT(EnemyBase);
+
 		public:
 			bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 

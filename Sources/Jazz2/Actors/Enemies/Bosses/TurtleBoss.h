@@ -31,6 +31,8 @@ namespace Jazz2::Actors::Bosses
 
 		class Mace : public EnemyBase
 		{
+			DEATH_RTTI_OBJECT(EnemyBase);
+
 		public:
 			~Mace();
 

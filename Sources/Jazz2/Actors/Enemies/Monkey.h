@@ -25,6 +25,8 @@ namespace Jazz2::Actors::Enemies
 
 		class Banana : public EnemyBase
 		{
+			DEATH_RTTI_OBJECT(EnemyBase);
+
 		protected:
 			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 			void OnUpdateHitbox() override;
