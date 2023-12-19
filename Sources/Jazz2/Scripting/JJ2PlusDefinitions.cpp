@@ -1180,13 +1180,15 @@ namespace Jazz2::Scripting
 		noop();
 
 		Vector2f pos = _player->GetPos();
-		_player->WarpToPosition(Vector2f(pos.X + xPixels, pos.Y + yPixels), true);
+		_player->WarpToPosition(Vector2f(pos.X + xPixels, pos.Y + yPixels), Actors::WarpFlags::Fast);
 		return true;
 	}
 	bool jjPLAYER::warpToTile(int32_t xTile, int32_t yTile, bool fast) {
 		noop();
 
-		_player->WarpToPosition(Vector2f(xTile * TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2, yTile * TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2), fast);
+		_player->WarpToPosition(Vector2f(xTile * TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2,
+			yTile * TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2),
+			fast ? Actors::WarpFlags::Fast : Actors::WarpFlags::Default);
 		return true;
 	}
 	bool jjPLAYER::warpToID(uint8_t warpID, bool fast) {
@@ -1195,7 +1197,7 @@ namespace Jazz2::Scripting
 		auto events = _levelScriptLoader->_levelHandler->EventMap();
 		Vector2f c = events->GetWarpTarget(warpID);
 		if (c.X >= 0.0f && c.Y >= 0.0f) {
-			_player->WarpToPosition(c, fast);
+			_player->WarpToPosition(c, fast ? Actors::WarpFlags::Fast : Actors::WarpFlags::Default);
 			return true;
 		}
 		return false;

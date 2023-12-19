@@ -62,6 +62,6 @@ namespace Jazz2::Actors::Environment
 			return;
 		}
 
-		player->WarpToPosition(targetPos, _fast);
+		player->WarpToPosition(targetPos, _fast ? WarpFlags::Fast : WarpFlags::Default);
 	}
 }

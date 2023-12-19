@@ -80,7 +80,7 @@ jobs:
         cp -f ./LICENSE ./_package/LICENSE
         
     - name: 'Upload Package'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Jazz2_Android_${{ matrix.Platform }}
         path: ./_package/
@@ -157,7 +157,7 @@ jobs:
         cp -f ./LICENSE ./_package/LICENSE
         
     - name: 'Upload Package'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Jazz2_Android_DEBUG_${{ matrix.Platform }}
         path: ./_package/

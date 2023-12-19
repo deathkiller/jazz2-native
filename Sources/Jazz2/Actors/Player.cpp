@@ -195,7 +195,6 @@ namespace Jazz2::Actors
 					_controllableTimeout = 100.0f;
 					_frozenTimeLeft = 100.0f;
 				} else {
-					SetState(ActorState::IsInvulnerable, false);
 					_controllable = true;
 				}
 			});
@@ -2021,13 +2020,15 @@ namespace Jazz2::Actors
 				if (_currentTransition == nullptr || _currentTransition->State == (AnimState::Dash | AnimState::Jump) || _currentTransitionCancellable) {
 					Vector2f c = events->GetWarpTarget(p[0]);
 					if (c.X >= 0.0f && c.Y >= 0.0f) {
-						WarpToPosition(c, p[1] != 0);
-
-#if MULTIPLAYER && SERVER
-						if (p[2] != 0) {
-							((LevelHandler)levelHandler).OnPlayerIncrementLaps(this);
+						WarpFlags flags = WarpFlags::Default;
+						if (p[1] != 0) {
+							flags |= WarpFlags::Fast;
 						}
-#endif
+						if (p[2] != 0) {
+							flags |= WarpFlags::IncrementLaps;
+						}
+
+						WarpToPosition(c, flags);
 					}
 				}
 				break;
@@ -2993,9 +2994,9 @@ namespace Jazz2::Actors
 		dest.Write(_weaponUpgradesCheckpoint, sizeof(_weaponUpgradesCheckpoint));
 	}
 
-	void Player::WarpToPosition(Vector2f pos, bool fast)
+	void Player::WarpToPosition(const Vector2f& pos, WarpFlags flags)
 	{
-		if (fast) {
+		if ((flags & WarpFlags::Fast) == WarpFlags::Fast) {
 			Vector2f posPrev = _pos;
 			bool hideTrail = (posPrev - pos).Length() > 250.0f;
 			MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
@@ -3024,7 +3025,7 @@ namespace Jazz2::Actors
 
 			PlayPlayerSfx("WarpIn"_s);
 
-			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpInFreefall : AnimState::TransitionWarpIn, false, true, SpecialMoveType::None, [this, pos]() {
+			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpInFreefall : AnimState::TransitionWarpIn, false, true, SpecialMoveType::None, [this, flags, pos]() {
 				Vector2f posPrev = _pos;
 				MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 				_trailLastPos = _pos;
@@ -3033,10 +3034,18 @@ namespace Jazz2::Actors
 				_levelHandler->HandlePlayerWarped(this, posPrev, false);
 
 				_isFreefall |= CanFreefall();
-				SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this]() {
+				SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this, flags]() {
 					SetState(ActorState::IsInvulnerable, false);
 					SetState(ActorState::ApplyGravitation, true);
-					_controllable = true;
+
+					if ((flags & WarpFlags::Freeze) == WarpFlags::Freeze) {
+						_renderer.AnimPaused = true;
+						_controllable = false;
+						_controllableTimeout = 100.0f;
+						_frozenTimeLeft = 100.0f;
+					} else {
+						_controllable = true;
+					}
 				});
 			});
 		}

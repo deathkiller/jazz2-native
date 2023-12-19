@@ -35,6 +35,7 @@ namespace Jazz2::Actors::Multiplayer
 
 		void OnHitSpring(const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove) override;
 
+		void WarpToPosition(const Vector2f& pos, WarpFlags flags) override;
 		bool TakeDamage(std::int32_t amount, float pushForce) override;
 
 		bool AddAmmo(WeaponType weaponType, std::int16_t count) override;

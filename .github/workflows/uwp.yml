@@ -82,7 +82,7 @@ jobs:
         Add-Content -Path $env:GITHUB_ENV -Value "artifactPath=$artifactPath"
         
     - name: 'Upload Package'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.artifactPath }}
         path: ./_package/

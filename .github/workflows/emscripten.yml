@@ -81,7 +81,7 @@ jobs:
     #    cp -f -r ./Content/ ./_package/Content/
     #    
     #- name: 'Upload Package'
-    #  uses: actions/upload-artifact@v3
+    #  uses: actions/upload-artifact@v4
     #  with:
     #    name: Jazz2_Emscripten_${{ matrix.CC }}_${{ matrix.Backend }}
     #    path: ./_package/

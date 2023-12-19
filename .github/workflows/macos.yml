@@ -68,7 +68,7 @@ jobs:
         cp -f ./LICENSE ./_package/LICENSE
         
     - name: 'Upload Package'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Jazz2_MacOS_${{ matrix.Platform }}_${{ matrix.Backend }}
         path: ./_package/

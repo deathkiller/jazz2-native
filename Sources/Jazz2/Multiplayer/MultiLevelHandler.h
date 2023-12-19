@@ -5,6 +5,7 @@
 #include "../LevelHandler.h"
 #include "MultiplayerGameMode.h"
 #include "NetworkManager.h"
+#include "../Actors/Player.h"
 
 namespace Jazz2::Actors::Multiplayer
 {
@@ -100,6 +101,7 @@ namespace Jazz2::Multiplayer
 		void PrepareNextLevelInitialization(LevelInitialization& levelInit) override;
 
 		bool HandlePlayerSpring(Actors::Player* player, const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY);
+		void HandlePlayerBeforeWarp(Actors::Player* player, const Vector2f& pos, Actors::WarpFlags flags);
 		void HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce);
 		void HandlePlayerRefreshAmmo(Actors::Player* player, WeaponType weaponType);
 		void HandlePlayerRefreshWeaponUpgrades(Actors::Player* player, WeaponType weaponType);

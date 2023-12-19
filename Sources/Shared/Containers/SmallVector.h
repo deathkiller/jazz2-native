@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "../CommonBase.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cstddef>

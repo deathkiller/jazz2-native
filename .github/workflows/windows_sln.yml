@@ -62,7 +62,7 @@ jobs:
         Move-Item -Path ".\LICENSE" -Destination ".\_package\LICENSE"
         
     - name: 'Upload Package'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Jazz2_Windows_${{ matrix.Platform }}_Default
         path: ./_package/
