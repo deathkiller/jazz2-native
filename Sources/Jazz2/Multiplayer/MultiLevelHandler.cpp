@@ -570,6 +570,32 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
+	void MultiLevelHandler::HandlePlayerBeforeWarp(Actors::Player* player, const Vector2f& pos, Actors::WarpFlags flags)
+	{
+		if (!_isServer) {
+			return;
+		}
+
+		if (_gameMode == MultiplayerGameMode::Race && (flags & Actors::WarpFlags::IncrementLaps) == Actors::WarpFlags::IncrementLaps) {
+			// TODO: Increment laps
+		}
+
+		if ((flags & Actors::WarpFlags::Fast) == Actors::WarpFlags::Fast) {
+			// Nothing to do, sending PlayerMoveInstantly packet is enough
+			return;
+		}
+
+		for (const auto& [peer, peerDesc] : _peerDesc) {
+			if (peerDesc.Player == player) {
+				MemoryStream packet(5);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)ServerPacketType::PlayerWarpIn);
+				packet.WriteVariableUint32(player->_playerIndex);
+				_networkManager->SendToPeer(peer, NetworkChannel::Main, packet.GetBuffer(), packet.GetSize());
+				break;
+			}
+		}
+	}
+
 	void MultiLevelHandler::HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce)
 	{
 		// TODO: Only called by RemotePlayerOnServer
@@ -1326,8 +1352,9 @@ namespace Jazz2::Multiplayer
 					float speedX = packet.ReadValue<std::int16_t>() / 512.0f;
 					float speedY = packet.ReadValue<std::int16_t>() / 512.0f;
 
-					_players[0]->_speed = Vector2f(speedX, speedY);
-					_players[0]->MoveInstantly(Vector2f(posX, posY), Actors::MoveType::Absolute | Actors::MoveType::Force);
+					_root->InvokeAsync([this, posX, posY, speedX, speedY]() {
+						static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0])->MoveRemotely(Vector2f(posX, posY), Vector2f(speedX, speedY));
+					});
 					return true;
 				}
 				case ServerPacketType::PlayerAckWarped: {
@@ -1407,6 +1434,18 @@ namespace Jazz2::Multiplayer
 							_players[0]->_controllable = true;
 							_players[0]->EndDamagingMove();
 						}
+					});
+					return true;
+				}
+				case ServerPacketType::PlayerWarpIn: {
+					MemoryStream packet(data + 1, dataLength - 1);
+					std::uint32_t playerIndex = packet.ReadVariableUint32();
+					if (_lastSpawnedActorId != playerIndex) {
+						return true;
+					}
+
+					_root->InvokeAsync([this]() {
+						static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0])->WarpIn();
 					});
 					return true;
 				}

@@ -201,21 +201,21 @@ namespace Jazz2::Scripting
 	void ScriptPlayerWrapper::asMoveTo(float x, float y)
 	{
 		if (_player != nullptr) {
-			_player->WarpToPosition(Vector2f(x, y), true);
+			_player->WarpToPosition(Vector2f(x, y), WarpFlags::Fast);
 		}
 	}
 
 	void ScriptPlayerWrapper::asWarpTo(float x, float y)
 	{
 		if (_player != nullptr) {
-			_player->WarpToPosition(Vector2f(x, y), false);
+			_player->WarpToPosition(Vector2f(x, y), WarpFlags::Default);
 		}
 	}
 
 	void ScriptPlayerWrapper::asMoveBy(float x, float y)
 	{
 		if (_player != nullptr) {
-			_player->WarpToPosition(Vector2f(_player->_pos.X + x, _player->_pos.Y + y), true);
+			_player->WarpToPosition(Vector2f(_player->_pos.X + x, _player->_pos.Y + y), WarpFlags::Fast);
 		}
 	}
 

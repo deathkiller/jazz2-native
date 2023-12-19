@@ -57,7 +57,7 @@ namespace Jazz2::Multiplayer
 		PlayerSetStats,				// TODO
 		PlayerTakeDamage,
 		PlayerActivateSpring,
-		PlayerWarpToPosition
+		PlayerWarpIn
 	};
 }
 

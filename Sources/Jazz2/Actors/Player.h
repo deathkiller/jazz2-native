@@ -51,6 +51,16 @@ namespace Jazz2::Actors
 		class Thunderbolt;
 	}
 
+	enum class WarpFlags
+	{
+		Default = 0,
+		Fast = 0x01,
+		Freeze = 0x02,
+		IncrementLaps = 0x04
+	};
+
+	DEFINE_ENUM_OPERATORS(WarpFlags);
+
 	class Player : public ActorBase
 	{
 		DEATH_RTTI_OBJECT(ActorBase);
@@ -115,7 +125,7 @@ namespace Jazz2::Actors
 		void InitializeFromStream(ILevelHandler* levelHandler, Stream& src);
 		void SerializeResumableToStream(Stream& dest);
 
-		void WarpToPosition(Vector2f pos, bool fast);
+		virtual void WarpToPosition(const Vector2f& pos, WarpFlags flags);
 		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor = nullptr);
 		virtual bool TakeDamage(std::int32_t amount, float pushForce = 0.0f);
 		void SetInvulnerability(float time, bool withCircleEffect);
@@ -269,6 +279,12 @@ namespace Jazz2::Actors
 		virtual void OnHitSpring(const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove);
 		virtual void OnWaterSplash(const Vector2f& pos, bool inwards);
 
+		std::shared_ptr<AudioBufferPlayer> PlayPlayerSfx(const StringView& identifier, float gain = 1.0f, float pitch = 1.0f);
+		bool SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, const std::function<void()>& callback = nullptr);
+		bool SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, std::function<void()>&& callback);
+		bool CanFreefall();
+		void EndDamagingMove();
+
 		virtual bool FireCurrentWeapon(WeaponType weaponType);
 		virtual void SetCurrentWeapon(WeaponType weaponType);
 
@@ -282,13 +298,8 @@ namespace Jazz2::Actors
 		void OnHandleWater();
 		void OnHandleAreaEvents(float timeMult, bool& areaWeaponAllowed, int& areaWaterBlock);
 
-		std::shared_ptr<AudioBufferPlayer> PlayPlayerSfx(const StringView& identifier, float gain = 1.0f, float pitch = 1.0f);
-		bool SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, const std::function<void()>& callback = nullptr);
-		bool SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, std::function<void()>&& callback);
 		void InitialPoleStage(bool horizontal);
 		void NextPoleStage(bool horizontal, bool positive, int stagesLeft, float lastSpeed);
-		void EndDamagingMove();
-		bool CanFreefall();
 
 		void OnPerishInner();
 

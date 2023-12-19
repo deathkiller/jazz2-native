@@ -22,12 +22,12 @@ namespace Jazz2::Actors::Multiplayer
 			_stateBuffer[i].Pos = Vector2f(details.Pos.X, details.Pos.Y);
 		}
 
-		async_return async_await Player::OnActivatedAsync(details);
+		async_return async_await PlayerOnServer::OnActivatedAsync(details);
 	}
 
 	bool RemotePlayerOnServer::OnPerish(ActorBase* collider)
 	{
-		return Player::OnPerish(collider);
+		return PlayerOnServer::OnPerish(collider);
 	}
 
 	void RemotePlayerOnServer::OnUpdate(float timeMult)
@@ -65,7 +65,7 @@ namespace Jazz2::Actors::Multiplayer
 			}
 		}
 
-		Player::OnUpdate(timeMult);
+		PlayerOnServer::OnUpdate(timeMult);
 
 		_renderer.setPosition(_displayPos);
 	}
@@ -120,12 +120,19 @@ namespace Jazz2::Actors::Multiplayer
 			return;
 		}
 
-		Player::OnHitSpring(pos, force, keepSpeedX, keepSpeedY, removeSpecialMove);
+		PlayerOnServer::OnHitSpring(pos, force, keepSpeedX, keepSpeedY, removeSpecialMove);
+	}
+
+	void RemotePlayerOnServer::WarpToPosition(const Vector2f& pos, WarpFlags flags)
+	{
+		PlayerOnServer::WarpToPosition(pos, flags);
+
+		static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerBeforeWarp(this, pos, flags);
 	}
 
 	bool RemotePlayerOnServer::TakeDamage(std::int32_t amount, float pushForce)
 	{
-		if (!Player::TakeDamage(amount, pushForce)) {
+		if (!PlayerOnServer::TakeDamage(amount, pushForce)) {
 			return false;
 		}
 
@@ -136,7 +143,7 @@ namespace Jazz2::Actors::Multiplayer
 
 	bool RemotePlayerOnServer::AddAmmo(WeaponType weaponType, std::int16_t count)
 	{
-		if (!Player::AddAmmo(weaponType, count)) {
+		if (!PlayerOnServer::AddAmmo(weaponType, count)) {
 			return false;
 		}
 
@@ -147,7 +154,7 @@ namespace Jazz2::Actors::Multiplayer
 
 	void RemotePlayerOnServer::AddWeaponUpgrade(WeaponType weaponType, std::uint8_t upgrade)
 	{
-		Player::AddWeaponUpgrade(weaponType, upgrade);
+		PlayerOnServer::AddWeaponUpgrade(weaponType, upgrade);
 
 		static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerRefreshWeaponUpgrades(this, weaponType);
 	}
@@ -155,7 +162,7 @@ namespace Jazz2::Actors::Multiplayer
 	bool RemotePlayerOnServer::FireCurrentWeapon(WeaponType weaponType)
 	{
 		std::uint16_t prevAmmo = _weaponAmmo[(std::int32_t)weaponType];
-		if (!Player::FireCurrentWeapon(weaponType)) {
+		if (!PlayerOnServer::FireCurrentWeapon(weaponType)) {
 			return false;
 		}
 
@@ -168,7 +175,7 @@ namespace Jazz2::Actors::Multiplayer
 
 	void RemotePlayerOnServer::SetCurrentWeapon(WeaponType weaponType)
 	{
-		Player::SetCurrentWeapon(weaponType);
+		PlayerOnServer::SetCurrentWeapon(weaponType);
 
 		static_cast<Jazz2::Multiplayer::MultiLevelHandler*>(_levelHandler)->HandlePlayerWeaponChanged(this);
 	}

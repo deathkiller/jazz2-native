@@ -22,12 +22,12 @@ namespace Jazz2::Actors::Multiplayer
 			_stateBuffer[i].Pos = Vector2f(details.Pos.X, details.Pos.Y);
 		}
 
-		async_return async_await Player::OnActivatedAsync(details);
+		async_return async_await PlayerOnServer::OnActivatedAsync(details);
 	}
 
 	bool LocalPlayerOnServer::OnPerish(ActorBase* collider)
 	{
-		return Player::OnPerish(collider);
+		return PlayerOnServer::OnPerish(collider);
 	}
 
 	void LocalPlayerOnServer::OnUpdate(float timeMult)
@@ -65,7 +65,7 @@ namespace Jazz2::Actors::Multiplayer
 			}
 		}
 
-		Player::OnUpdate(timeMult);
+		PlayerOnServer::OnUpdate(timeMult);
 
 		_renderer.setPosition(_displayPos);
 	}
@@ -116,12 +116,12 @@ namespace Jazz2::Actors::Multiplayer
 
 	void LocalPlayerOnServer::OnHitSpring(const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove)
 	{
-		Player::OnHitSpring(pos, force, keepSpeedX, keepSpeedY, removeSpecialMove);
+		PlayerOnServer::OnHitSpring(pos, force, keepSpeedX, keepSpeedY, removeSpecialMove);
 	}
 
 	bool LocalPlayerOnServer::TakeDamage(std::int32_t amount, float pushForce)
 	{
-		if (!Player::TakeDamage(amount, pushForce)) {
+		if (!PlayerOnServer::TakeDamage(amount, pushForce)) {
 			return false;
 		}
 		return true;
@@ -129,7 +129,7 @@ namespace Jazz2::Actors::Multiplayer
 
 	bool LocalPlayerOnServer::AddAmmo(WeaponType weaponType, std::int16_t count)
 	{
-		if (!Player::AddAmmo(weaponType, count)) {
+		if (!PlayerOnServer::AddAmmo(weaponType, count)) {
 			return false;
 		}
 		return true;
@@ -137,13 +137,13 @@ namespace Jazz2::Actors::Multiplayer
 
 	void LocalPlayerOnServer::AddWeaponUpgrade(WeaponType weaponType, std::uint8_t upgrade)
 	{
-		Player::AddWeaponUpgrade(weaponType, upgrade);
+		PlayerOnServer::AddWeaponUpgrade(weaponType, upgrade);
 	}
 
 	bool LocalPlayerOnServer::FireCurrentWeapon(WeaponType weaponType)
 	{
 		std::uint16_t prevAmmo = _weaponAmmo[(std::int32_t)weaponType];
-		if (!Player::FireCurrentWeapon(weaponType)) {
+		if (!PlayerOnServer::FireCurrentWeapon(weaponType)) {
 			return false;
 		}
 
@@ -152,7 +152,7 @@ namespace Jazz2::Actors::Multiplayer
 
 	void LocalPlayerOnServer::SetCurrentWeapon(WeaponType weaponType)
 	{
-		Player::SetCurrentWeapon(weaponType);
+		PlayerOnServer::SetCurrentWeapon(weaponType);
 	}
 }
 
