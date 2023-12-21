@@ -64,18 +64,18 @@ namespace Jazz2
 		void BeginLoading();
 		void EndLoading();
 
-		void PreloadMetadataAsync(const StringView& path);
-		Metadata* RequestMetadata(const StringView& path);
-		GenericGraphicResource* RequestGraphics(const StringView& path, uint16_t paletteOffset);
+		void PreloadMetadataAsync(const StringView path);
+		Metadata* RequestMetadata(const StringView path);
+		GenericGraphicResource* RequestGraphics(const StringView path, uint16_t paletteOffset);
 
-		std::unique_ptr<Tiles::TileSet> RequestTileSet(const StringView& path, uint16_t captionTileId, bool applyPalette, const uint8_t* paletteRemapping = nullptr);
-		bool LevelExists(const StringView& episodeName, const StringView& levelName);
-		bool TryLoadLevel(const StringView& path, GameDifficulty difficulty, LevelDescriptor& descriptor);
+		std::unique_ptr<Tiles::TileSet> RequestTileSet(const StringView path, uint16_t captionTileId, bool applyPalette, const uint8_t* paletteRemapping = nullptr);
+		bool LevelExists(const StringView episodeName, const StringView levelName);
+		bool TryLoadLevel(const StringView path, GameDifficulty difficulty, LevelDescriptor& descriptor);
 		void ApplyDefaultPalette();
 
-		std::optional<Episode> GetEpisode(const StringView& name, bool withImages = false);
-		std::optional<Episode> GetEpisodeByPath(const StringView& path, bool withImages = false);
-		std::unique_ptr<AudioStreamPlayer> GetMusic(const StringView& path);
+		std::optional<Episode> GetEpisode(const StringView name, bool withImages = false);
+		std::optional<Episode> GetEpisodeByPath(const StringView path, bool withImages = false);
+		std::unique_ptr<AudioStreamPlayer> GetMusic(const StringView path);
 		UI::Font* GetFont(FontType fontType);
 		Shader* GetShader(PrecompiledShader shader);
 		void CompileShaders();
@@ -100,7 +100,7 @@ namespace Jazz2
 
 		void InitializePaths();
 
-		GenericGraphicResource* RequestGraphicsAura(const StringView& path, uint16_t paletteOffset);
+		GenericGraphicResource* RequestGraphicsAura(const StringView path, uint16_t paletteOffset);
 		static void ReadImageFromFile(std::unique_ptr<Stream>& s, uint8_t* data, int32_t width, int32_t height, int32_t channelCount);
 		
 		std::unique_ptr<Shader> CompileShader(const char* shaderName, Shader::DefaultVertex vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled);
@@ -108,7 +108,7 @@ namespace Jazz2
 		
 		void RecreateGemPalettes();
 #if defined(DEATH_DEBUG)
-		void MigrateGraphics(const StringView& path);
+		void MigrateGraphics(const StringView path);
 #endif
 
 		bool _isHeadless;

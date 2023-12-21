@@ -2253,7 +2253,7 @@ namespace Jazz2::Actors
 		}
 	}
 
-	std::shared_ptr<AudioBufferPlayer> Player::PlayPlayerSfx(const StringView& identifier, float gain, float pitch)
+	std::shared_ptr<AudioBufferPlayer> Player::PlayPlayerSfx(const StringView identifier, float gain, float pitch)
 	{
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _metadata->Sounds.end()) {

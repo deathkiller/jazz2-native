@@ -289,7 +289,7 @@ namespace Jazz2::Actors
 		void CreateSpriteDebris(AnimState state, int count);
 		virtual float GetIceShrapnelScale() const;
 
-		std::shared_ptr<AudioBufferPlayer> PlaySfx(const StringView& identifier, float gain = 1.0f, float pitch = 1.0f);
+		std::shared_ptr<AudioBufferPlayer> PlaySfx(const StringView identifier, float gain = 1.0f, float pitch = 1.0f);
 		bool SetAnimation(AnimState state, bool skipAnimation = false);
 		bool SetTransition(AnimState state, bool cancellable, const std::function<void()>& callback = nullptr);
 		bool SetTransition(AnimState state, bool cancellable, std::function<void()>&& callback);
@@ -298,11 +298,11 @@ namespace Jazz2::Actors
 		virtual void OnAnimationStarted();
 		virtual void OnAnimationFinished();
 
-		static void PreloadMetadataAsync(const StringView& path);
-		void RequestMetadata(const StringView& path);
+		static void PreloadMetadataAsync(const StringView path);
+		void RequestMetadata(const StringView path);
 
 #if defined(WITH_COROUTINES)
-		auto RequestMetadataAsync(const StringView& path)
+		auto RequestMetadataAsync(const StringView path)
 		{
 			struct awaitable {
 				ActorBase* actor;
@@ -322,7 +322,7 @@ namespace Jazz2::Actors
 			return awaitable{this, path};
 		}
 #else
-		void RequestMetadataAsync(const StringView& path);
+		void RequestMetadataAsync(const StringView path);
 #endif
 
 		constexpr void SetState(ActorState flags) noexcept

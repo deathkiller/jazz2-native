@@ -46,7 +46,7 @@ namespace Jazz2::UI::Menu
 		virtual bool HasResumableState() const = 0;
 		virtual void ResumeSavedState() = 0;
 #if defined(WITH_MULTIPLAYER)
-		virtual bool ConnectToServer(const StringView& address, std::uint16_t port) = 0;
+		virtual bool ConnectToServer(const StringView address, std::uint16_t port) = 0;
 		virtual bool CreateServer(LevelInitialization&& levelInit, std::uint16_t port) = 0;
 #endif
 		virtual void ApplyPreferencesChanges(ChangedPreferencesType type) = 0;
@@ -60,11 +60,11 @@ namespace Jazz2::UI::Menu
 			const Colorf& color, const Vector2f& size, const Vector4f& texCoords) = 0;
 		virtual void DrawSolid(float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool additiveBlending = false) = 0;
 		virtual void DrawTexture(const Texture& texture, float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color) = 0;
-		virtual Vector2f MeasureString(const StringView& text, float scale = 1.0f, float charSpacing = 1.0f, float lineSpacing = 1.0f) = 0;
-		virtual void DrawStringShadow(const StringView& text, int32_t& charOffset, float x, float y, uint16_t z, Alignment align,
+		virtual Vector2f MeasureString(const StringView text, float scale = 1.0f, float charSpacing = 1.0f, float lineSpacing = 1.0f) = 0;
+		virtual void DrawStringShadow(const StringView text, int32_t& charOffset, float x, float y, uint16_t z, Alignment align,
 			const Colorf& color, float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f,
 			float speed = 0.4f, float charSpacing = 1.0f, float lineSpacing = 1.0f) = 0;
-		virtual void PlaySfx(const StringView& identifier, float gain = 1.0f) = 0;
+		virtual void PlaySfx(const StringView identifier, float gain = 1.0f) = 0;
 
 		static float EaseOutElastic(float t)
 		{

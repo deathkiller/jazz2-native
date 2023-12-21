@@ -33,7 +33,7 @@ namespace nCine
 		~I18n();
 
 		/** @brief Load a catalog from file in gettext MO format, previously loaded catalog will be unloaded */
-		bool LoadFromFile(const StringView& path);
+		bool LoadFromFile(const StringView path);
 		/** @brief Load a catalog from stream in gettext MO format, previously loaded catalog will be unloaded */
 		bool LoadFromFile(const std::unique_ptr<Stream>& fileHandle);
 		/** @brief Unload all loaded catalogs */
@@ -52,9 +52,9 @@ namespace nCine
 		/** @brief Returns list of user's preferred languages */
 		static Array<String> GetPreferredLanguages();
 		/** @brief Returns localized name of language by ID */
-		static StringView GetLanguageName(const StringView& langId);
+		static StringView GetLanguageName(const StringView langId);
 		/** @brief Returns language ID without any regional/territorial specifiers */
-		static StringView TryRemoveLanguageSpecifiers(const StringView& langId);
+		static StringView TryRemoveLanguageSpecifiers(const StringView langId);
 
 	private:
 		I18n(const I18n&) = delete;

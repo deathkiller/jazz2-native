@@ -10,7 +10,7 @@ namespace Death { namespace Utf8 {
 	/**
 		@brief Number of UTF-8 characters in a string
 	*/
-	std::size_t GetLength(const Containers::StringView& text);
+	std::size_t GetLength(const Containers::StringView text);
 
 	/**
 		@brief Next UTF-8 character
@@ -25,6 +25,22 @@ namespace Death { namespace Utf8 {
 	template<std::size_t size>
 	inline std::pair<char32_t, std::size_t> NextChar(const char(&text)[size], const std::size_t cursor) {
 		return NextChar(Containers::ArrayView<const char>{text, size - 1}, cursor);
+	}
+
+	/**
+		@brief Previous UTF-8 character
+
+		Returns a Unicode codepoint of a character before @p cursor and its position. If an error occurs,
+		returns position of the previous byte and @cpp 0xffffffffu @ce as the codepoint, it's then up to the caller
+		whether it gets treated as a fatal error or if the invalid character is simply skipped or replaced.
+	*/
+	std::pair<char32_t, std::size_t> PrevChar(Containers::ArrayView<const char> text, std::size_t cursor);
+
+	/** @overload */
+	/* To fix ambiguity when passing char array in */
+	template<std::size_t size>
+	inline std::pair<char32_t, std::size_t> PrevChar(const char(&text)[size], const std::size_t cursor) {
+		return PrevChar(Containers::ArrayView<const char>{text, size - 1}, cursor);
 	}
 
 #if defined(DEATH_TARGET_WINDOWS)
@@ -44,7 +60,7 @@ namespace Death { namespace Utf8 {
 	Containers::Array<wchar_t> ToUtf16(const char* source, std::int32_t sourceSize);
 
 	/** @overload */
-	inline Containers::Array<wchar_t> ToUtf16(const Containers::StringView& source) {
+	inline Containers::Array<wchar_t> ToUtf16(const Containers::StringView source) {
 		return ToUtf16(source.data(), static_cast<std::int32_t>(source.size()));
 	}
 
@@ -69,7 +85,7 @@ namespace Death { namespace Utf8 {
 	Containers::String FromUtf16(const wchar_t* source, std::int32_t sourceSize);
 
 	/** @overload */
-	inline Containers::String FromUtf16(const Containers::ArrayView<const wchar_t>& source) {
+	inline Containers::String FromUtf16(const Containers::ArrayView<const wchar_t> source) {
 		return FromUtf16(source.data(), static_cast<std::int32_t>(source.size()));
 	}
 

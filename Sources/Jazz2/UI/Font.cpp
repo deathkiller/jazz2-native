@@ -12,7 +12,7 @@ using namespace Death;
 
 namespace Jazz2::UI
 {
-	Font::Font(const StringView& path, const uint32_t* palette)
+	Font::Font(const StringView path, const uint32_t* palette)
 		: _baseSpacing(0)
 	{
 		auto s = fs::Open(path + ".font"_s, FileAccessMode::Read);
@@ -106,7 +106,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	Vector2f Font::MeasureString(const StringView& text, float scale, float charSpacing, float lineSpacing)
+	Vector2f Font::MeasureString(const StringView text, float scale, float charSpacing, float lineSpacing)
 	{
 		size_t textLength = text.size();
 		if (textLength == 0 || _charSize.Y <= 0) {
@@ -170,7 +170,7 @@ namespace Jazz2::UI
 		return Vector2f(ceilf(totalWidth), ceilf(totalHeight));
 	}
 
-	void Font::DrawString(Canvas* canvas, const StringView& text, int32_t& charOffset, float x, float y, uint16_t z, Alignment align, Colorf color, float scale, float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
+	void Font::DrawString(Canvas* canvas, const StringView text, int32_t& charOffset, float x, float y, uint16_t z, Alignment align, Colorf color, float scale, float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
 		size_t textLength = text.size();
 		if (textLength == 0 || _charSize.Y <= 0) {

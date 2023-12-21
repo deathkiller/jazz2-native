@@ -45,6 +45,56 @@ namespace Death { namespace Containers { namespace StringUtils {
 				};
 			}
 
+			DEATH_CPU_MAYBE_UNUSED typename std::decay<decltype(equalsIgnoreCase)>::type equalsIgnoreCaseImplementation(Cpu::ScalarT) {
+				return [](const char* data1, const char* data2, const std::size_t size) {
+					const auto notEqualsOneVector = [&](std::uint64_t w1, std::uint64_t w2) {
+						const std::uint64_t highMask = std::uint64_t(0x80) * std::uint64_t(0x0101010101010101);
+						const std::uint64_t loweringMask = std::uint64_t(0x20) * std::uint64_t(0x0101010101010101);
+						const std::uint64_t vecA = std::uint64_t(0x80 - 'A') * std::uint64_t(0x0101010101010101);
+						const std::uint64_t vecZ = std::uint64_t(0x80 - 'Z' - 1) * std::uint64_t(0x0101010101010101);
+
+						const std::uint64_t diff = w1 ^ w2;
+						if ((diff & 0xdfdfdfdfdfdfdfdf) != 0) {	// ~0x20 = 0xdf
+							return true;
+						}
+						//const std::uint64_t anyNonAscii = (w1 | w2) & highMask;
+						//if (anyNonAscii != 0) {
+						//	return false;
+						//}
+
+						w1 |= loweringMask;
+
+						// data[i] >= 'A' && !(data[i] >= 'Z' - 1)
+						const std::uint64_t A = w1 + vecA;
+						const std::uint64_t Z = w1 + vecZ;
+						const std::uint64_t maskLower = (A ^ Z) & highMask;
+						return (maskLower == highMask);
+					};
+
+					std::size_t i = 0;
+					for (; i + sizeof(std::uint64_t) <= size; i += sizeof(std::uint64_t)) {
+						std::uint64_t w1, w2;
+						std::memcpy(&w1, data1 + i, sizeof(w1));
+						std::memcpy(&w2, data2 + i, sizeof(w2));
+						if (notEqualsOneVector(w1, w2)) {
+							return false;
+						}
+					}
+
+					// Handle remaining less than 8 bytes
+					if (i < size) {
+						std::uint64_t w1 = 0, w2 = 0;
+						std::memcpy(&w1, data1 + i, size - i);
+						std::memcpy(&w2, data2 + i, size - i);
+						if (notEqualsOneVector(w1, w2)) {
+							return false;
+						}
+					}
+
+					return true;
+				};
+			}
+
 #if defined(DEATH_ENABLE_SSE2)
 			// The core vector algorithm was reverse-engineered from what GCC (and apparently also Clang) does for the scalar
 			// case with SSE2 optimizations enabled. It's the same count of instructions as the "obvious" case of doing two
@@ -56,7 +106,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 					// If we have less than 16 bytes, do it the stupid way, equivalent to the scalar variant and just unrolled.
 					{
 						char* j = data;
-						switch(size) {
+						switch (size) {
 							case 15: *j += (std::uint8_t(*j - 'A') < 26) << 5; ++j; DEATH_FALLTHROUGH
 							case 14: *j += (std::uint8_t(*j - 'A') < 26) << 5; ++j; DEATH_FALLTHROUGH
 							case 13: *j += (std::uint8_t(*j - 'A') < 26) << 5; ++j; DEATH_FALLTHROUGH
@@ -105,14 +155,14 @@ namespace Death { namespace Containers { namespace StringUtils {
 					char* i = reinterpret_cast<char*>(reinterpret_cast<std::uintptr_t>(data + 16) & ~0xf);
 
 					// Convert all aligned vectors using aligned load/store
-					for(; i + 16 <= end; i += 16) {
+					for (; i + 16 <= end; i += 16) {
 						const __m128i chars = _mm_load_si128(reinterpret_cast<const __m128i*>(i));
 						_mm_store_si128(reinterpret_cast<__m128i*>(i), lowercaseOneVector(chars));
 					}
 
 					// Handle remaining less than a vector with an unaligned load & store, again overlapping back
 					// with the previous already-converted elements
-					if(i < end) {
+					if (i < end) {
 						i = end - 16;
 						const __m128i chars = _mm_loadu_si128(reinterpret_cast<const __m128i*>(i));
 						_mm_storeu_si128(reinterpret_cast<__m128i*>(i), lowercaseOneVector(chars));
@@ -129,7 +179,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 					// If we have less than 16 bytes, do it the stupid way, equivalent to the scalar variant and just unrolled.
 					{
 						char* j = data;
-						switch(size) {
+						switch (size) {
 							case 15: *j -= (std::uint8_t(*j - 'a') < 26) << 5; ++j; DEATH_FALLTHROUGH
 							case 14: *j -= (std::uint8_t(*j - 'a') < 26) << 5; ++j; DEATH_FALLTHROUGH
 							case 13: *j -= (std::uint8_t(*j - 'a') < 26) << 5; ++j; DEATH_FALLTHROUGH
@@ -178,18 +228,73 @@ namespace Death { namespace Containers { namespace StringUtils {
 					char* i = reinterpret_cast<char*>(reinterpret_cast<std::uintptr_t>(data + 16) & ~0xf);
 
 					// Convert all aligned vectors using aligned load/store
-					for(; i + 16 <= end; i += 16) {
+					for (; i + 16 <= end; i += 16) {
 						const __m128i chars = _mm_load_si128(reinterpret_cast<const __m128i*>(i));
 						_mm_store_si128(reinterpret_cast<__m128i*>(i), uppercaseOneVector(chars));
 					}
 
 					// Handle remaining less than a vector with an unaligned load & store, again overlapping back
 					// with the previous already-converted elements
-					if(i < end) {
+					if (i < end) {
 						i = end - 16;
 						const __m128i chars = _mm_loadu_si128(reinterpret_cast<const __m128i*>(i));
 						_mm_storeu_si128(reinterpret_cast<__m128i*>(i), uppercaseOneVector(chars));
 					}
+				};
+			}
+
+			DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_SSE2 typename std::decay<decltype(equalsIgnoreCase)>::type equalsIgnoreCaseImplementation(Cpu::Sse2T) {
+				return [](const char* data1, const char* data2, const std::size_t size) DEATH_ENABLE_SSE2 {
+					if (size < 16)
+						return equalsIgnoreCaseImplementation(Cpu::Scalar)(data1, data2, size);
+
+					const __m128i nonAsciiMask = _mm_set1_epi8(~0x7F);
+					const __m128i loweringMask = _mm_set1_epi8(0x20);
+					const __m128i vecA = _mm_set1_epi8('a');
+					const __m128i vecZMinusA = _mm_set1_epi8('z' - 'a');
+
+					const auto notEqualsOneVector = [&](const __m128i& chars1, const __m128i& chars2) DEATH_ENABLE_SSE2 {
+						// notEquals = ~(chars1 == chars2);
+						const __m128i notEquals = _mm_andnot_si128(_mm_cmpeq_epi8(chars1, chars2), _mm_set1_epi32(-1));
+						if (_mm_movemask_epi8(_mm_cmpeq_epi8(notEquals, _mm_setzero_si128())) != 0xFFFF) {
+							// Not exact match
+							// chars1Lower = chars1 | loweringMask;
+							const __m128i chars1Lower = _mm_or_si128(chars1, loweringMask);
+							// chars2Lower = chars2 | loweringMask;
+							const __m128i chars2Lower = _mm_or_si128(chars2, loweringMask);
+							// greaterThan = ((chars1Lower - vecA) & notEquals) > vecZMinusA;
+							const __m128i greaterThan = _mm_cmpgt_epi8(_mm_and_si128(_mm_subs_epi8(chars1Lower, vecA), notEquals), vecZMinusA);
+							// if (greatedThan || (chars1Lower != chars2Lower))
+							if (_mm_movemask_epi8(greaterThan) != 0x0000 || _mm_movemask_epi8(_mm_cmpeq_epi8(chars1Lower, chars2Lower)) != 0xFFFF) {
+								return true;
+							}
+						}
+
+						return false;
+					};
+
+					std::size_t i = 0;
+					std::size_t lengthToExamine = size - 16;
+
+					do {
+						const __m128i chars1 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(data1 + i));
+						const __m128i chars2 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(data2 + i));
+						if (notEqualsOneVector(chars1, chars2)) {
+							return false;
+						}
+						i += 16;
+					} while (i <= lengthToExamine);
+
+					if (i != size) {
+						i = size - 16;
+						const __m128i chars1 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(data1 + i));
+						const __m128i chars2 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(data2 + i));
+						if (notEqualsOneVector(chars1, chars2)) {
+							return false;
+						}
+					}
+
+					return true;
 				};
 			}
 #endif
@@ -201,7 +306,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 					char* const end = data + size;
 
 					// If we have less than 32 bytes, fall back to the SSE variant
-					if(size < 32)
+					if (size < 32)
 						return lowercaseInPlaceImplementation(Cpu::Sse2)(data, size);
 
 					// Core algorithm
@@ -240,7 +345,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 					char* i = reinterpret_cast<char*>(reinterpret_cast<std::uintptr_t>(data + 32) & ~0x1f);
 
 					// Convert all aligned vectors using aligned load/store
-					for(; i + 32 <= end; i += 32) {
+					for (; i + 32 <= end; i += 32) {
 						__m256i chars = _mm256_load_si256(reinterpret_cast<const __m256i*>(i));
 						lowercaseOneVectorInPlace(chars);
 						_mm256_store_si256(reinterpret_cast<__m256i*>(i), chars);
@@ -248,7 +353,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 
 					// Handle remaining less than a vector with an unaligned load & store, again overlapping back
 					// with the previous already-converted elements
-					if(i < end) {
+					if (i < end) {
 						i = end - 32;
 						__m256i chars = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(i));
 						lowercaseOneVectorInPlace(chars);
@@ -263,7 +368,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 					char* const end = data + size;
 
 					// If we have less than 32 bytes, fall back to the SSE variant
-					if(size < 32)
+					if (size < 32)
 						return uppercaseInPlaceImplementation(Cpu::Sse2)(data, size);
 
 					// Core algorithm
@@ -297,7 +402,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 					char* i = reinterpret_cast<char*>(reinterpret_cast<std::uintptr_t>(data + 32) & ~0x1f);
 
 					// Convert all aligned vectors using aligned load/store
-					for(; i + 32 <= end; i += 32) {
+					for (; i + 32 <= end; i += 32) {
 						__m256i chars = _mm256_load_si256(reinterpret_cast<const __m256i*>(i));
 						uppercaseOneVectorInPlace(chars);
 						_mm256_store_si256(reinterpret_cast<__m256i*>(i), chars);
@@ -305,12 +410,67 @@ namespace Death { namespace Containers { namespace StringUtils {
 
 					// Handle remaining less than a vector with an unaligned load & store, again overlapping back
 					// with the previous already-converted elements
-					if(i < end) {
+					if (i < end) {
 						i = end - 32;
 						__m256i chars = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(i));
 						uppercaseOneVectorInPlace(chars);
 						_mm256_storeu_si256(reinterpret_cast<__m256i*>(i), chars);
 					}
+				};
+			}
+
+			DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_AVX2 typename std::decay<decltype(equalsIgnoreCase)>::type equalsIgnoreCaseImplementation(Cpu::Avx2T) {
+				return [](const char* data1, const char* data2, const std::size_t size) DEATH_ENABLE_AVX2 {
+					if (size < 32)
+						return equalsIgnoreCaseImplementation(Cpu::Sse2)(data1, data2, size);
+					
+					const __m256i nonAsciiMask = _mm256_set1_epi8(~0x7F);
+					const __m256i loweringMask = _mm256_set1_epi8(0x20);
+					const __m256i vecA = _mm256_set1_epi8('a');
+					const __m256i vecZMinusA = _mm256_set1_epi8('z' - 'a');
+
+					const auto notEqualsOneVector = [&](const __m256i& chars1, const __m256i& chars2) DEATH_ENABLE_AVX2 {
+						// notEquals = ~(chars1 == chars2);
+						const __m256i notEquals = _mm256_andnot_si256(_mm256_cmpeq_epi8(chars1, chars2), _mm256_set1_epi32(-1));
+						if (_mm256_testz_si256(notEquals, notEquals) == 0) {
+							// Not exact match
+							// chars1Lower = chars1 | loweringMask;
+							const __m256i chars1Lower = _mm256_or_si256(chars1, loweringMask);
+							// chars2Lower = chars2 | loweringMask;
+							const __m256i chars2Lower = _mm256_or_si256(chars2, loweringMask);
+							// greaterThan = ((chars1Lower - vecA) & notEquals) > vecZMinusA;
+							const __m256i greaterThan = _mm256_cmpgt_epi8(_mm256_and_si256(_mm256_subs_epi8(chars1Lower, vecA), notEquals), vecZMinusA);
+							// if (greatedThan || (chars1Lower != chars2Lower))
+							if (_mm256_testz_si256(greaterThan, greaterThan) == 0 || _mm256_movemask_epi8(_mm256_cmpeq_epi8(chars1Lower, chars2Lower)) != 0xFFFFFFFF) {
+								return true;
+							}
+						}
+
+						return false;
+					};
+
+					std::size_t i = 0;
+					std::size_t lengthToExamine = size - 32;
+
+					do {
+						const __m256i chars1 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(data1 + i));
+						const __m256i chars2 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(data2 + i));
+						if (notEqualsOneVector(chars1, chars2)) {
+							return false;
+						}
+						i += 32;
+					} while (i <= lengthToExamine);
+
+					if (i != size) {
+						i = size - 32;
+						const __m256i chars1 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(data1 + i));
+						const __m256i chars2 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(data2 + i));
+						if (notEqualsOneVector(chars1, chars2)) {
+							return false;
+						}
+					}
+
+					return true;
 				};
 			}
 #endif
@@ -327,7 +487,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 					// If we have less than 16 bytes, do it the stupid way, equivalent to the scalar variant and just unrolled.
 					{
 						char* j = data;
-						switch(size) {
+						switch (size) {
 							case 15: *j += (std::uint8_t(*j - 'A') < 26) << 5; ++j; DEATH_FALLTHROUGH
 							case 14: *j += (std::uint8_t(*j - 'A') < 26) << 5; ++j; DEATH_FALLTHROUGH
 							case 13: *j += (std::uint8_t(*j - 'A') < 26) << 5; ++j; DEATH_FALLTHROUGH
@@ -373,12 +533,12 @@ namespace Death { namespace Containers { namespace StringUtils {
 					char* i = reinterpret_cast<char*>(reinterpret_cast<std::uintptr_t>(data + 16) & ~0xf);
 
 					// Convert all aligned vectors
-					for(; i + 16 <= end; i += 16)
+					for (; i + 16 <= end; i += 16)
 						lowercaseOneVectorInPlace(reinterpret_cast<v128_t*>(i));
 
 					// Handle remaining less than a vector, again overlapping back with the previous
 					// already-converted elements, in an unaligned way
-					if(i < end) {
+					if (i < end) {
 						i = end - 16;
 						lowercaseOneVectorInPlace(reinterpret_cast<v128_t*>(i));
 					}
@@ -394,7 +554,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 					// If we have less than 16 bytes, do it the stupid way, equivalent to the scalar variant and just unrolled.
 					{
 						char* j = data;
-						switch(size) {
+						switch (size) {
 							case 15: *j -= (std::uint8_t(*j - 'a') < 26) << 5; ++j; DEATH_FALLTHROUGH
 							case 14: *j -= (std::uint8_t(*j - 'a') < 26) << 5; ++j; DEATH_FALLTHROUGH
 							case 13: *j -= (std::uint8_t(*j - 'a') < 26) << 5; ++j; DEATH_FALLTHROUGH
@@ -443,12 +603,12 @@ namespace Death { namespace Containers { namespace StringUtils {
 					char* i = reinterpret_cast<char*>(reinterpret_cast<std::uintptr_t>(data + 16) & ~0xf);
 
 					// Convert all aligned vectors
-					for(; i + 16 <= end; i += 16)
+					for (; i + 16 <= end; i += 16)
 						uppercaseOneVectorInPlace(reinterpret_cast<v128_t*>(i));
 
 					// Handle remaining less than a vector with an unaligned load & store, again overlapping back
 					// with the previous already-converted elements
-					if(i < end) {
+					if (i < end) {
 						i = end - 16;
 						uppercaseOneVectorInPlace(reinterpret_cast<v128_t*>(i));
 					}
@@ -464,6 +624,10 @@ namespace Death { namespace Containers { namespace StringUtils {
 		DEATH_CPU_DISPATCHER_BASE(uppercaseInPlaceImplementation)
 		DEATH_CPU_DISPATCHED(uppercaseInPlaceImplementation, void DEATH_CPU_DISPATCHED_DECLARATION(uppercaseInPlace)(char* data, std::size_t size))({
 			return uppercaseInPlaceImplementation(Cpu::DefaultBase)(data, size);
+		})
+		DEATH_CPU_DISPATCHER_BASE(equalsIgnoreCaseImplementation)
+		DEATH_CPU_DISPATCHED(equalsIgnoreCaseImplementation, bool DEATH_CPU_DISPATCHED_DECLARATION(equalsIgnoreCase)(const char* data1, const char* data2, std::size_t size))({
+			return equalsIgnoreCaseImplementation(Cpu::DefaultBase)(data1, data2, size);
 		})
 	}
 

@@ -84,11 +84,11 @@ namespace Death { namespace IO {
 		class Directory
 		{
 		public:
-			Directory(const Containers::StringView& path, EnumerationOptions options = EnumerationOptions::None);
+			Directory(const Containers::StringView path, EnumerationOptions options = EnumerationOptions::None);
 			~Directory();
 
 			/** @brief Opens a directory for traversal */
-			bool Open(const Containers::StringView& path, EnumerationOptions options = EnumerationOptions::None);
+			bool Open(const Containers::StringView path, EnumerationOptions options = EnumerationOptions::None);
 			/** @brief Closes an opened directory */
 			void Close();
 			/** @brief Returns the name of the next file inside the directory or `nullptr` */
@@ -112,44 +112,44 @@ namespace Death { namespace IO {
 
 #if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH)
 		// Windows is already case in-sensitive
-		DEATH_ALWAYS_INLINE static const Containers::StringView& FindPathCaseInsensitive(const Containers::StringView& path) {
+		DEATH_ALWAYS_INLINE static const Containers::StringView FindPathCaseInsensitive(const Containers::StringView path) {
 			return path;
 		}
 #else
-		static Containers::String FindPathCaseInsensitive(const Containers::StringView& path);
+		static Containers::String FindPathCaseInsensitive(const Containers::StringView path);
 #endif
 
 		/** @brief Combines together two path components */
-		static Containers::String CombinePath(const Containers::StringView& first, const Containers::StringView& second);
+		static Containers::String CombinePath(const Containers::StringView first, const Containers::StringView second);
 		static Containers::String CombinePath(const Containers::ArrayView<const Containers::StringView> paths);
 		static Containers::String CombinePath(const std::initializer_list<Containers::StringView> paths);
 
 		/** @brief Returns the path up to, but not including, the final separator */
-		static Containers::StringView GetDirectoryName(const Containers::StringView& path);
+		static Containers::StringView GetDirectoryName(const Containers::StringView path);
 		/** @brief Returns the path component after the final separator */
-		static Containers::StringView GetFileName(const Containers::StringView& path);
+		static Containers::StringView GetFileName(const Containers::StringView path);
 		/** @brief Returns the path component after the final separator without extension */
-		static Containers::StringView GetFileNameWithoutExtension(const Containers::StringView& path);
+		static Containers::StringView GetFileNameWithoutExtension(const Containers::StringView path);
 		/** @brief Returns the extension as lower-case string without dot or empty string if it is not found */
-		static Containers::String GetExtension(const Containers::StringView& path);
+		static Containers::String GetExtension(const Containers::StringView path);
 		/** @brief Converts path using forward slashes to native separators */
 #if defined(DEATH_TARGET_WINDOWS)
 		static Containers::String ToNativeSeparators(Containers::String path);
 #else
-		DEATH_ALWAYS_INLINE static const Containers::StringView& ToNativeSeparators(const Containers::StringView& path) {
+		DEATH_ALWAYS_INLINE static const Containers::StringView ToNativeSeparators(const Containers::StringView path) {
 			return path;
 		}
 #endif
 
 		/** @brief Returns an absolute path from a relative one */
-		static Containers::String GetAbsolutePath(const Containers::StringView& path);
+		static Containers::String GetAbsolutePath(const Containers::StringView path);
 
 		/** @brief Returns the path of executable */
 		static Containers::String GetExecutablePath();
 		/** @brief Returns the path of current working directory */
 		static Containers::String GetWorkingDirectory();
 		/** @brief Sets the current working directory, the starting point for interpreting relative paths */
-		static bool SetWorkingDirectory(const Containers::StringView& path);
+		static bool SetWorkingDirectory(const Containers::StringView path);
 		/** @brief Returns the path of the user home directory */
 		static Containers::String GetHomeDirectory();
 #if defined(DEATH_TARGET_ANDROID)
@@ -162,64 +162,64 @@ namespace Death { namespace IO {
 #endif
 
 		/** @brief Returns true if the specified path is a directory */
-		static bool DirectoryExists(const Containers::StringView& path);
+		static bool DirectoryExists(const Containers::StringView path);
 		/** @brief Returns true if the specified path is a file */
-		static bool FileExists(const Containers::StringView& path);
+		static bool FileExists(const Containers::StringView path);
 
 		/** @brief Returns true if the file or directory exists */
-		static bool Exists(const Containers::StringView& path);
+		static bool Exists(const Containers::StringView path);
 		/** @brief Returns true if the file or directory is readable */
-		static bool IsReadable(const Containers::StringView& path);
+		static bool IsReadable(const Containers::StringView path);
 		/** @brief Returns true if the file or directory is writeable */
-		static bool IsWritable(const Containers::StringView& path);
+		static bool IsWritable(const Containers::StringView path);
 		/** @brief Returns true if the file or directory is executable */
-		static bool IsExecutable(const Containers::StringView& path);
+		static bool IsExecutable(const Containers::StringView path);
 
 		/** @brief Returns true if the path is a file and is readable */
-		static bool IsReadableFile(const Containers::StringView& path);
+		static bool IsReadableFile(const Containers::StringView path);
 		/** @brief Returns true if the path is a file and is writeable */
-		static bool IsWritableFile(const Containers::StringView& path);
+		static bool IsWritableFile(const Containers::StringView path);
 
 		/** @brief Returns true if the file or directory is hidden */
-		static bool IsHidden(const Containers::StringView& path);
+		static bool IsHidden(const Containers::StringView path);
 		/** @brief Makes a file or directory hidden or not */
-		static bool SetHidden(const Containers::StringView& path, bool hidden);
+		static bool SetHidden(const Containers::StringView path, bool hidden);
 
 		/** @brief Creates a new directory */
-		static bool CreateDirectories(const Containers::StringView& path);
+		static bool CreateDirectories(const Containers::StringView path);
 		/** @brief Deletes an directory and all its content */
-		static bool RemoveDirectoryRecursive(const Containers::StringView& path);
+		static bool RemoveDirectoryRecursive(const Containers::StringView path);
 		/** @brief Deletes a file */
-		static bool RemoveFile(const Containers::StringView& path);
+		static bool RemoveFile(const Containers::StringView path);
 		/** @brief Renames or moves a file or a directory */
-		static bool Move(const Containers::StringView& oldPath, const Containers::StringView& newPath);
+		static bool Move(const Containers::StringView oldPath, const Containers::StringView newPath);
 		/** @brief Copies a file */
-		static bool Copy(const Containers::StringView& oldPath, const Containers::StringView& newPath, bool overwrite = true);
+		static bool Copy(const Containers::StringView oldPath, const Containers::StringView newPath, bool overwrite = true);
 
 		/** @brief Returns the file size in bytes */
-		static std::int64_t GetFileSize(const Containers::StringView& path);
+		static std::int64_t GetFileSize(const Containers::StringView path);
 		/** @brief Returns the creation time of the file or directory (if available) */
-		static Containers::DateTime GetCreationTime(const Containers::StringView& path);
+		static Containers::DateTime GetCreationTime(const Containers::StringView path);
 		/** @brief Returns the last time the file or directory was modified */
-		static Containers::DateTime GetLastModificationTime(const Containers::StringView& path);
+		static Containers::DateTime GetLastModificationTime(const Containers::StringView path);
 		/** @brief Returns the last time the file or directory was accessed */
-		static Containers::DateTime GetLastAccessTime(const Containers::StringView& path);
+		static Containers::DateTime GetLastAccessTime(const Containers::StringView path);
 
 		/** @brief Returns the file or directory permissions in a mask */
-		static Permission GetPermissions(const Containers::StringView& path);
+		static Permission GetPermissions(const Containers::StringView path);
 		/** @brief Sets the file or directory permissions to those of the mask */
-		static bool ChangePermissions(const Containers::StringView& path, Permission mode);
+		static bool ChangePermissions(const Containers::StringView path, Permission mode);
 		/** @brief Adds the permissions in the mask to a file or a directory */
-		static bool AddPermissions(const Containers::StringView& path, Permission mode);
+		static bool AddPermissions(const Containers::StringView path, Permission mode);
 		/** @brief Removes the permissions in the mask from a file or a directory */
-		static bool RemovePermissions(const Containers::StringView& path, Permission mode);
+		static bool RemovePermissions(const Containers::StringView path, Permission mode);
 
 		/** @brief Tries to open specified directory in operating system's file manager */
-		static bool LaunchDirectoryAsync(const Containers::StringView& path);
+		static bool LaunchDirectoryAsync(const Containers::StringView path);
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		/** @brief Mounts specified path to persistent file system (Emscripten only) */
-		static void MountAsPersistent(const Containers::StringView& path);
+		static void MountAsPersistent(const Containers::StringView path);
 
 		/** @brief Saves all changes to all persistent file systems (Emscripten only) */
 		static void SyncToPersistent();
@@ -254,14 +254,14 @@ namespace Death { namespace IO {
 #	endif
 		};
 
-		static std::optional<Containers::Array<char, MapDeleter>> OpenAsMemoryMapped(const Containers::StringView& path, FileAccessMode mode);
+		static std::optional<Containers::Array<char, MapDeleter>> OpenAsMemoryMapped(const Containers::StringView path, FileAccessMode mode);
 #endif
 
 		static std::unique_ptr<Stream> CreateFromMemory(std::uint8_t* bufferPtr, std::int32_t bufferSize);
 		static std::unique_ptr<Stream> CreateFromMemory(const std::uint8_t* bufferPtr, std::int32_t bufferSize);
 
 		/** @brief Returns application-specific writable directory for saving data */
-		static const Containers::String& GetSavePath(const Containers::StringView& applicationName);
+		static const Containers::String& GetSavePath(const Containers::StringView applicationName);
 
 	private:
 		FileSystem(const FileSystem&) = delete;
@@ -269,7 +269,7 @@ namespace Death { namespace IO {
 		
 		static Containers::String _savePath;
 
-		static void InitializeSavePath(const Containers::StringView& applicationName);
+		static void InitializeSavePath(const Containers::StringView applicationName);
 	};
 
 	using fs = FileSystem;

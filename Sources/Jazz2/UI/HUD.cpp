@@ -361,7 +361,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	void HUD::ShowLevelText(const StringView& text)
+	void HUD::ShowLevelText(const StringView text)
 	{
 		if (_levelText == text || text.empty()) {
 			return;

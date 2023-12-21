@@ -14,14 +14,14 @@
 
 namespace Jazz2::UI
 {
-	Cinematics::Cinematics(IRootController* root, const String& path, const std::function<bool(IRootController*, bool)>& callback)
+	Cinematics::Cinematics(IRootController* root, const StringView path, const std::function<bool(IRootController*, bool)>& callback)
 		: _root(root), _callback(callback), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0),
 			_pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0)
 	{
 		Initialize(path);
 	}
 
-	Cinematics::Cinematics(IRootController* root, const String& path, std::function<bool(IRootController*, bool)>&& callback)
+	Cinematics::Cinematics(IRootController* root, const StringView path, std::function<bool(IRootController*, bool)>&& callback)
 		: _root(root), _callback(std::move(callback)), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0),
 			_pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0)
 	{
@@ -107,7 +107,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	void Cinematics::Initialize(const String& path)
+	void Cinematics::Initialize(const StringView path)
 	{
 		theApplication().gfxDevice().setWindowTitle("Jazz² Resurrection"_s);
 
@@ -133,7 +133,7 @@ namespace Jazz2::UI
 		_pressedActions = (1 << (int32_t)PlayerActions::Fire) | (1 << ((int32_t)PlayerActions::Fire + 16));
 	}
 
-	bool Cinematics::LoadCinematicsFromFile(const String& path)
+	bool Cinematics::LoadCinematicsFromFile(const StringView path)
 	{
 		// Try "Content" directory first, then "Source" directory
 		auto& resolver = ContentResolver::Get();

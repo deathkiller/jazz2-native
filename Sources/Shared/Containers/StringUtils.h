@@ -35,6 +35,8 @@ namespace Death { namespace Containers { namespace StringUtils {
 		DEATH_CPU_DISPATCHER_DECLARATION(lowercaseInPlace)
 		extern void DEATH_CPU_DISPATCHED_DECLARATION(uppercaseInPlace)(char* data, std::size_t size);
 		DEATH_CPU_DISPATCHER_DECLARATION(uppercaseInPlace)
+		extern bool DEATH_CPU_DISPATCHED_DECLARATION(equalsIgnoreCase)(const char* data1, const char* data2, std::size_t size);
+		DEATH_CPU_DISPATCHER_DECLARATION(equalsIgnoreCase)
 	}
 
 	/**
@@ -94,6 +96,15 @@ namespace Death { namespace Containers { namespace StringUtils {
 		the returned instance. Makes a owned copy first if not.
 	*/
 	String uppercase(String string);
+
+	/**
+		@brief Determines whether two strings have the same value, ignoring case (ASCII characters only)
+	*/
+	inline bool equalsIgnoreCase(const StringView string1, const StringView string2) {
+		std::size_t size1 = string1.size();
+		std::size_t size2 = string2.size();
+		return (size1 == size2 && Implementation::equalsIgnoreCase(string1.data(), string2.data(), size1));
+	}
 
 	/**
 		@brief Replace first occurrence in a string
