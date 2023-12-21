@@ -27,7 +27,7 @@ namespace Jazz2::UI
 		bool OnDraw(RenderQueue& renderQueue) override;
 		void OnTouchEvent(const TouchEvent& event, uint32_t& overrideActions);
 
-		void ShowLevelText(const StringView& text);
+		void ShowLevelText(const StringView text);
 		void ShowCoins(int32_t count);
 		void ShowGems(int32_t count);
 

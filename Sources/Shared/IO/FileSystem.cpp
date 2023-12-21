@@ -63,7 +63,7 @@ namespace Death { namespace IO {
 
 	namespace
 	{
-		static std::size_t GetPathRootLength(const StringView& path)
+		static std::size_t GetPathRootLength(const StringView path)
 		{
 			if (path.empty()) return 0;
 
@@ -134,7 +134,7 @@ namespace Death { namespace IO {
 		}
 
 #if defined(DEATH_TARGET_WINDOWS)
-		static bool DeleteDirectoryInternal(const ArrayView<wchar_t>& path, bool recursive, std::int32_t depth)
+		static bool DeleteDirectoryInternal(const ArrayView<wchar_t> path, bool recursive, std::int32_t depth)
 		{
 			if (recursive) {
 				if (path.size() + 3 <= FileSystem::MaxPathLength) {
@@ -273,7 +273,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 
-		static bool DeleteDirectoryInternal(const StringView& path)
+		static bool DeleteDirectoryInternal(const StringView path)
 		{
 #	if defined(DEATH_TARGET_SWITCH)
 			// nftw() is missing in libnx
@@ -389,7 +389,7 @@ namespace Death { namespace IO {
 
 	String FileSystem::_savePath;
 
-	FileSystem::Directory::Directory(const StringView& path, EnumerationOptions options)
+	FileSystem::Directory::Directory(const StringView path, EnumerationOptions options)
 		: _fileNamePart(nullptr)
 #if defined(DEATH_TARGET_WINDOWS)
 			, _firstFile(true), _hFindFile(NULL)
@@ -408,7 +408,7 @@ namespace Death { namespace IO {
 		Close();
 	}
 
-	bool FileSystem::Directory::Open(const StringView& path, EnumerationOptions options)
+	bool FileSystem::Directory::Open(const StringView path, EnumerationOptions options)
 	{
 		Close();
 
@@ -605,7 +605,7 @@ namespace Death { namespace IO {
 	}
 
 #if !defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_SWITCH)
-	String FileSystem::FindPathCaseInsensitive(const StringView& path)
+	String FileSystem::FindPathCaseInsensitive(const StringView path)
 	{
 		if (Exists(path)) {
 			return path;
@@ -677,7 +677,7 @@ namespace Death { namespace IO {
 	}
 #endif
 
-	String FileSystem::CombinePath(const StringView& first, const StringView& second)
+	String FileSystem::CombinePath(const StringView first, const StringView second)
 	{
 		std::size_t firstSize = first.size();
 		std::size_t secondSize = second.size();
@@ -761,7 +761,7 @@ namespace Death { namespace IO {
 		return CombinePath(Containers::arrayView(paths));
 	}
 
-	StringView FileSystem::GetDirectoryName(const StringView& path)
+	StringView FileSystem::GetDirectoryName(const StringView path)
 	{
 		if (path.empty()) return { };
 
@@ -778,7 +778,7 @@ namespace Death { namespace IO {
 		return path.slice(0, i);
 	}
 
-	StringView FileSystem::GetFileName(const StringView& path)
+	StringView FileSystem::GetFileName(const StringView path)
 	{
 		if (path.empty()) return { };
 
@@ -799,7 +799,7 @@ namespace Death { namespace IO {
 		return path.slice(i, pathLength);
 	}
 
-	StringView FileSystem::GetFileNameWithoutExtension(const StringView& path)
+	StringView FileSystem::GetFileNameWithoutExtension(const StringView path)
 	{
 		StringView fileName = GetFileName(path);
 		if (fileName.empty()) return { };
@@ -818,7 +818,7 @@ namespace Death { namespace IO {
 		return fileName.prefix(foundDot.begin());
 	}
 
-	String FileSystem::GetExtension(const StringView& path)
+	String FileSystem::GetExtension(const StringView path)
 	{
 		StringView fileName = GetFileName(path);
 		if (fileName.empty()) return { };
@@ -862,7 +862,7 @@ namespace Death { namespace IO {
 	}
 #endif
 
-	String FileSystem::GetAbsolutePath(const StringView& path)
+	String FileSystem::GetAbsolutePath(const StringView path)
 	{
 		if (path.empty()) return { };
 
@@ -1076,7 +1076,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	bool FileSystem::SetWorkingDirectory(const StringView& path)
+	bool FileSystem::SetWorkingDirectory(const StringView path)
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		return false;
@@ -1147,7 +1147,7 @@ namespace Death { namespace IO {
 	}
 #endif
 
-	bool FileSystem::DirectoryExists(const StringView& path)
+	bool FileSystem::DirectoryExists(const StringView path)
 	{
 		if (path.empty()) return false;
 
@@ -1172,7 +1172,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	bool FileSystem::FileExists(const StringView& path)
+	bool FileSystem::FileExists(const StringView path)
 	{
 		if (path.empty()) return false;
 
@@ -1197,7 +1197,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	bool FileSystem::Exists(const StringView& path)
+	bool FileSystem::Exists(const StringView path)
 	{
 		if (path.empty()) return false;
 
@@ -1219,7 +1219,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	bool FileSystem::IsReadable(const StringView& path)
+	bool FileSystem::IsReadable(const StringView path)
 	{
 		if (path.empty()) return false;
 
@@ -1244,7 +1244,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	bool FileSystem::IsWritable(const StringView& path)
+	bool FileSystem::IsWritable(const StringView path)
 	{
 		if (path.empty()) return false;
 
@@ -1269,7 +1269,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	bool FileSystem::IsExecutable(const StringView& path)
+	bool FileSystem::IsExecutable(const StringView path)
 	{
 		if (path.empty()) return false;
 
@@ -1299,7 +1299,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	bool FileSystem::IsReadableFile(const StringView& path)
+	bool FileSystem::IsReadableFile(const StringView path)
 	{
 		if (path.empty()) return false;
 
@@ -1324,7 +1324,7 @@ namespace Death { namespace IO {
 		return false;
 	}
 
-	bool FileSystem::IsWritableFile(const StringView& path)
+	bool FileSystem::IsWritableFile(const StringView path)
 	{
 		if (path.empty()) return false;
 
@@ -1349,7 +1349,7 @@ namespace Death { namespace IO {
 		return false;
 	}
 
-	bool FileSystem::IsHidden(const StringView& path)
+	bool FileSystem::IsHidden(const StringView path)
 	{
 		if (path.empty()) return false;
 
@@ -1375,7 +1375,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	bool FileSystem::SetHidden(const StringView& path, bool hidden)
+	bool FileSystem::SetHidden(const StringView path, bool hidden)
 	{
 		if (path.empty()) return false;
 
@@ -1438,7 +1438,7 @@ namespace Death { namespace IO {
 		return false;
 	}
 
-	bool FileSystem::CreateDirectories(const StringView& path)
+	bool FileSystem::CreateDirectories(const StringView path)
 	{
 		if (path.empty()) return false;
 
@@ -1567,7 +1567,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	bool FileSystem::RemoveDirectoryRecursive(const StringView& path)
+	bool FileSystem::RemoveDirectoryRecursive(const StringView path)
 	{
 		if (path.empty()) return false;
 
@@ -1594,7 +1594,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	bool FileSystem::RemoveFile(const StringView& path)
+	bool FileSystem::RemoveFile(const StringView path)
 	{
 		if (path.empty()) return false;
 
@@ -1613,7 +1613,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	bool FileSystem::Move(const StringView& oldPath, const StringView& newPath)
+	bool FileSystem::Move(const StringView oldPath, const StringView newPath)
 	{
 		if (oldPath.empty() || newPath.empty()) return false;
 
@@ -1631,7 +1631,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	bool FileSystem::Copy(const StringView& oldPath, const StringView& newPath, bool overwrite)
+	bool FileSystem::Copy(const StringView oldPath, const StringView newPath, bool overwrite)
 	{
 		if (oldPath.empty() || newPath.empty()) return false;
 
@@ -1701,7 +1701,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	std::int64_t FileSystem::GetFileSize(const StringView& path)
+	std::int64_t FileSystem::GetFileSize(const StringView path)
 	{
 		if (path.empty()) return false;
 
@@ -1731,7 +1731,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	DateTime FileSystem::GetCreationTime(const StringView& path)
+	DateTime FileSystem::GetCreationTime(const StringView path)
 	{
 		if (path.empty()) return { };
 
@@ -1769,7 +1769,7 @@ namespace Death { namespace IO {
 		return date;
 	}
 
-	DateTime FileSystem::GetLastModificationTime(const StringView& path)
+	DateTime FileSystem::GetLastModificationTime(const StringView path)
 	{
 		if (path.empty()) return { };
 
@@ -1806,7 +1806,7 @@ namespace Death { namespace IO {
 		return date;
 	}
 
-	DateTime FileSystem::GetLastAccessTime(const StringView& path)
+	DateTime FileSystem::GetLastAccessTime(const StringView path)
 	{
 		if (path.empty()) return { };
 
@@ -1843,7 +1843,7 @@ namespace Death { namespace IO {
 		return date;
 	}
 
-	FileSystem::Permission FileSystem::GetPermissions(const StringView& path)
+	FileSystem::Permission FileSystem::GetPermissions(const StringView path)
 	{
 		if (path.empty()) return Permission::None;
 
@@ -1876,7 +1876,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	bool FileSystem::ChangePermissions(const StringView& path, Permission mode)
+	bool FileSystem::ChangePermissions(const StringView path, Permission mode)
 	{
 		if (path.empty()) return false;
 
@@ -1912,7 +1912,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	bool FileSystem::AddPermissions(const StringView& path, Permission mode)
+	bool FileSystem::AddPermissions(const StringView path, Permission mode)
 	{
 		if (path.empty()) return false;
 
@@ -1944,7 +1944,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	bool FileSystem::RemovePermissions(const StringView& path, Permission mode)
+	bool FileSystem::RemovePermissions(const StringView path, Permission mode)
 	{
 		if (path.empty()) return false;
 
@@ -1976,7 +1976,7 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	bool FileSystem::LaunchDirectoryAsync(const StringView& path)
+	bool FileSystem::LaunchDirectoryAsync(const StringView path)
 	{
 #if defined(DEATH_TARGET_APPLE)
 		Class nsStringClass = objc_getClass("NSString");
@@ -2043,7 +2043,7 @@ namespace Death { namespace IO {
 	}
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-	void FileSystem::MountAsPersistent(const StringView& path)
+	void FileSystem::MountAsPersistent(const StringView path)
 	{
 		// It's calling asynchronous API synchronously, so it can block main thread for a while
 		std::int32_t result = __asyncjs__MountAsPersistent(path.data(), path.size());
@@ -2087,7 +2087,7 @@ namespace Death { namespace IO {
 #	endif
 	}
 
-	std::optional<Array<char, FileSystem::MapDeleter>> FileSystem::OpenAsMemoryMapped(const StringView& path, FileAccessMode mode)
+	std::optional<Array<char, FileSystem::MapDeleter>> FileSystem::OpenAsMemoryMapped(const StringView path, FileAccessMode mode)
 	{
 #	if defined(DEATH_TARGET_UNIX)
 		int flags, prot;
@@ -2206,7 +2206,7 @@ namespace Death { namespace IO {
 		return std::make_unique<MemoryStream>(bufferPtr, bufferSize);
 	}
 
-	const String& FileSystem::GetSavePath(const StringView& applicationName)
+	const String& FileSystem::GetSavePath(const StringView applicationName)
 	{
 		if (_savePath.empty()) {
 			InitializeSavePath(applicationName);
@@ -2214,7 +2214,7 @@ namespace Death { namespace IO {
 		return _savePath;
 	}
 
-	void FileSystem::InitializeSavePath(const StringView& applicationName)
+	void FileSystem::InitializeSavePath(const StringView applicationName)
 	{
 #if defined(DEATH_TARGET_ANDROID)
 		_savePath = AndroidAssetStream::GetInternalDataPath();

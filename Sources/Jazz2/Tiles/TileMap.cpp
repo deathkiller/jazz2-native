@@ -10,7 +10,7 @@
 
 namespace Jazz2::Tiles
 {
-	TileMap::TileMap(const StringView& tileSetPath, std::uint16_t captionTileId, bool applyPalette)
+	TileMap::TileMap(const StringView tileSetPath, std::uint16_t captionTileId, bool applyPalette)
 		: _owner(nullptr), _sprLayerIndex(-1), _pitType(PitType::FallForever), _renderCommandsCount(0), _collapsingTimer(0.0f),
 			_triggerState(TriggerCount), _texturedBackgroundLayer(-1), _texturedBackgroundPass(this)
 	{
@@ -533,7 +533,7 @@ namespace Jazz2::Tiles
 		return AdvanceDestructibleTileAnimation(tile, tx, ty, amount, {});
 	}
 
-	bool TileMap::AdvanceDestructibleTileAnimation(LayerTile& tile, std::int32_t tx, std::int32_t ty, std::int32_t& amount, const StringView& soundName)
+	bool TileMap::AdvanceDestructibleTileAnimation(LayerTile& tile, std::int32_t tx, std::int32_t ty, std::int32_t& amount, const StringView soundName)
 	{
 		AnimatedTile& anim = _animatedTiles[tile.DestructAnimation];
 		std::int32_t max = (std::int32_t)(anim.Tiles.size() - 2);
@@ -840,7 +840,7 @@ namespace Jazz2::Tiles
 		return command;
 	}
 
-	void TileMap::AddTileSet(const StringView& tileSetPath, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping)
+	void TileMap::AddTileSet(const StringView tileSetPath, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping)
 	{
 		auto& tileSetPart = _tileSets.emplace_back();
 		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, 0, false, paletteRemapping);

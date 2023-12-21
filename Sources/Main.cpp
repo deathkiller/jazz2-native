@@ -112,7 +112,7 @@ public:
 	bool SaveCurrentStateIfAny() override;
 
 #if defined(WITH_MULTIPLAYER)
-	bool ConnectToServer(const StringView& address, std::uint16_t port) override;
+	bool ConnectToServer(const StringView address, std::uint16_t port) override;
 	bool CreateServer(LevelInitialization&& levelInit, std::uint16_t port) override;
 
 	ConnectionResult OnPeerConnected(const Peer& peer, std::uint32_t clientData) override;
@@ -151,10 +151,10 @@ private:
 #endif
 	bool SetLevelHandler(const LevelInitialization& levelInit);
 	void RemoveResumableStateIfAny();
-	static void WriteCacheDescriptor(const StringView& path, std::uint64_t currentVersion, std::int64_t animsModified);
+	static void WriteCacheDescriptor(const StringView path, std::uint64_t currentVersion, std::int64_t animsModified);
 	static void SaveEpisodeEnd(const LevelInitialization& levelInit);
 	static void SaveEpisodeContinue(const LevelInitialization& levelInit);
-	static bool TryParseAddressAndPort(const StringView& input, String& address, std::uint16_t& port);
+	static bool TryParseAddressAndPort(const StringView input, String& address, std::uint16_t& port);
 };
 
 void GameEventHandler::OnPreInit(AppConfiguration& config)
@@ -644,7 +644,7 @@ void GameEventHandler::RemoveResumableStateIfAny()
 }
 
 #if defined(WITH_MULTIPLAYER)
-bool GameEventHandler::ConnectToServer(const StringView& address, std::uint16_t port)
+bool GameEventHandler::ConnectToServer(const StringView address, std::uint16_t port)
 {
 	LOGI("Connecting to %s:%u...", address.data(), port);
 
@@ -1409,7 +1409,7 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 	return true;
 }
 
-void GameEventHandler::WriteCacheDescriptor(const StringView& path, std::uint64_t currentVersion, std::int64_t animsModified)
+void GameEventHandler::WriteCacheDescriptor(const StringView path, std::uint64_t currentVersion, std::int64_t animsModified)
 {
 	auto so = fs::Open(path, FileAccessMode::Write);
 	so->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
@@ -1496,7 +1496,7 @@ void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 	}
 }
 
-bool GameEventHandler::TryParseAddressAndPort(const StringView& input, String& address, std::uint16_t& port)
+bool GameEventHandler::TryParseAddressAndPort(const StringView input, String& address, std::uint16_t& port)
 {
 	auto portSep = input.findLast(':');
 	if (portSep == nullptr) {

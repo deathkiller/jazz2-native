@@ -26,8 +26,8 @@ namespace Jazz2::UI
 		static constexpr int DefaultWidth = 720;
 		static constexpr int DefaultHeight = 405;
 
-		Cinematics(IRootController* root, const String& path, const std::function<bool(IRootController*, bool)>& callback);
-		Cinematics(IRootController* root, const String& path, std::function<bool(IRootController*, bool)>&& callback);
+		Cinematics(IRootController* root, const StringView path, const std::function<bool(IRootController*, bool)>& callback);
+		Cinematics(IRootController* root, const StringView path, std::function<bool(IRootController*, bool)>&& callback);
 		~Cinematics() override;
 
 		void OnBeginFrame() override;
@@ -75,8 +75,8 @@ namespace Jazz2::UI
 		BitArray _pressedKeys;
 		uint32_t _pressedActions;
 
-		void Initialize(const String& path);
-		bool LoadCinematicsFromFile(const String& path);
+		void Initialize(const StringView path);
+		bool LoadCinematicsFromFile(const StringView path);
 		void PrepareNextFrame();
 		void Read(int streamIndex, void* buffer, uint32_t bytes);
 		void UpdatePressedActions();

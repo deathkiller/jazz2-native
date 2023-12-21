@@ -744,7 +744,7 @@ namespace Jazz2
 		_actors.emplace_back(actor);
 	}
 
-	std::shared_ptr<AudioBufferPlayer> LevelHandler::PlaySfx(Actors::ActorBase* self, const StringView& identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch)
+	std::shared_ptr<AudioBufferPlayer> LevelHandler::PlaySfx(Actors::ActorBase* self, const StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch)
 	{
 		auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(buffer));
 		player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
@@ -762,7 +762,7 @@ namespace Jazz2
 		return player;
 	}
 
-	std::shared_ptr<AudioBufferPlayer> LevelHandler::PlayCommonSfx(const StringView& identifier, const Vector3f& pos, float gain, float pitch)
+	std::shared_ptr<AudioBufferPlayer> LevelHandler::PlayCommonSfx(const StringView identifier, const Vector3f& pos, float gain, float pitch)
 	{
 		auto it = _commonResources->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _commonResources->Sounds.end()) {
@@ -994,7 +994,7 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::BeginLevelChange(ExitType exitType, const StringView& nextLevel)
+	void LevelHandler::BeginLevelChange(ExitType exitType, const StringView nextLevel)
 	{
 		if (_nextLevelType != ExitType::None) {
 			return;
@@ -1137,7 +1137,7 @@ namespace Jazz2
 #endif
 	}
 
-	void LevelHandler::ShowLevelText(const StringView& text)
+	void LevelHandler::ShowLevelText(const StringView text)
 	{
 		_hud->ShowLevelText(text);
 	}
@@ -1192,7 +1192,7 @@ namespace Jazz2
 		return text;
 	}
 
-	void LevelHandler::OverrideLevelText(uint32_t textId, const StringView& value)
+	void LevelHandler::OverrideLevelText(uint32_t textId, const StringView value)
 	{
 		if (textId >= _levelTexts.size()) {
 			if (value.empty()) {
@@ -1659,7 +1659,7 @@ namespace Jazz2
 		_weatherIntensity = intensity;
 	}
 
-	bool LevelHandler::BeginPlayMusic(const StringView& path, bool setDefault, bool forceReload)
+	bool LevelHandler::BeginPlayMusic(const StringView path, bool setDefault, bool forceReload)
 	{
 		bool result = false;
 

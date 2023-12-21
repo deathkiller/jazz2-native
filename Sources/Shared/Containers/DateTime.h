@@ -106,7 +106,7 @@ namespace Death { namespace Containers {
 			std::int32_t Millisecond, Second, Minute, Hour, Day, DayOfYear, Month, Year;
 
 			Tm();
-			Tm(const struct tm& tm, const TimeZone& tz);
+			Tm(const struct tm& tm, const TimeZone tz);
 
 			bool IsValid() const;
 
@@ -144,14 +144,14 @@ namespace Death { namespace Containers {
 		DateTime(const struct _FILETIME& ft);
 #endif
 
-		std::int32_t GetYear(const TimeZone& tz = Local) const { return Partitioned(tz).Year; }
-		std::int32_t GetMonth(const TimeZone& tz = Local) const { return Partitioned(tz).Month; }
-		std::int32_t GetDay(const TimeZone& tz = Local) const { return Partitioned(tz).Day; }
-		std::int32_t GetWeekDay(const TimeZone& tz = Local) const { return Partitioned(tz).GetWeekDay(); }
-		std::int32_t GetHour(const TimeZone& tz = Local) const { return Partitioned(tz).Hour; }
-		std::int32_t GetMinute(const TimeZone& tz = Local) const { return Partitioned(tz).Minute; }
-		std::int32_t GetSecond(const TimeZone& tz = Local) const { return Partitioned(tz).Second; }
-		std::int32_t GetMillisecond(const TimeZone& tz = Local) const { return Partitioned(tz).Millisecond; }
+		std::int32_t GetYear(const TimeZone tz = Local) const { return Partitioned(tz).Year; }
+		std::int32_t GetMonth(const TimeZone tz = Local) const { return Partitioned(tz).Month; }
+		std::int32_t GetDay(const TimeZone tz = Local) const { return Partitioned(tz).Day; }
+		std::int32_t GetWeekDay(const TimeZone tz = Local) const { return Partitioned(tz).GetWeekDay(); }
+		std::int32_t GetHour(const TimeZone tz = Local) const { return Partitioned(tz).Hour; }
+		std::int32_t GetMinute(const TimeZone tz = Local) const { return Partitioned(tz).Minute; }
+		std::int32_t GetSecond(const TimeZone tz = Local) const { return Partitioned(tz).Second; }
+		std::int32_t GetMillisecond(const TimeZone tz = Local) const { return Partitioned(tz).Millisecond; }
 
 		inline DateTime& Set(time_t timet);
 		DateTime& Set(const Tm& tm);
@@ -171,24 +171,24 @@ namespace Death { namespace Containers {
 
 		inline bool IsValid() const { return (_time != INT64_MIN); }
 
-		Tm Partitioned(const TimeZone& tz = Local) const;
+		Tm Partitioned(const TimeZone tz = Local) const;
 
 		std::int64_t GetValue() const;
 		time_t GetTicks() const;
 
-		inline DateTime ToTimezone(const TimeZone& tz, bool noDST = false) const;
-		inline DateTime FromTimezone(const TimeZone& tz, bool noDST = false) const;
+		inline DateTime ToTimezone(const TimeZone tz, bool noDST = false) const;
+		inline DateTime FromTimezone(const TimeZone tz, bool noDST = false) const;
 
-		void AdjustToTimezone(const TimeZone& tz, bool noDST = false);
-		void AdjustFromTimezone(const TimeZone& tz, bool noDST = false);
+		void AdjustToTimezone(const TimeZone tz, bool noDST = false);
+		void AdjustFromTimezone(const TimeZone tz, bool noDST = false);
 
 #if defined(DEATH_TARGET_WINDOWS)
 		struct _SYSTEMTIME ToWin32() const;
 #endif
 
-		bool TryParse(const StringView& input, const StringView& format, StringView* endParse = nullptr);
+		bool TryParse(const StringView input, const StringView format, StringView* endParse = nullptr);
 #if defined(DEATH_USE_WCHAR)
-		bool TryParse(const std::wstring_view& input, const std::wstring_view& format, std::wstring_view::const_iterator* endParse = nullptr);
+		bool TryParse(const std::wstring_view input, const std::wstring_view format, std::wstring_view::const_iterator* endParse = nullptr);
 #endif
 
 		inline DateTime& operator+=(const TimeSpan& ts);
@@ -416,14 +416,14 @@ namespace Death { namespace Containers {
 		return (time_t)(_time / 1000);
 	}
 
-	inline DateTime DateTime::ToTimezone(const DateTime::TimeZone& tz, bool noDST) const
+	inline DateTime DateTime::ToTimezone(const DateTime::TimeZone tz, bool noDST) const
 	{
 		DateTime dt(*this);
 		dt.AdjustToTimezone(tz, noDST);
 		return dt;
 	}
 
-	inline DateTime DateTime::FromTimezone(const DateTime::TimeZone& tz, bool noDST) const
+	inline DateTime DateTime::FromTimezone(const DateTime::TimeZone tz, bool noDST) const
 	{
 		DateTime dt(*this);
 		dt.AdjustFromTimezone(tz, noDST);

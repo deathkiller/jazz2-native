@@ -31,7 +31,7 @@ namespace Jazz2::UI
 		DiscordRpcClient();
 		~DiscordRpcClient();
 
-		bool Connect(const StringView& clientId);
+		bool Connect(const StringView clientId);
 		void Disconnect();
 		bool IsSupported() const;
 		bool SetRichPresence(const RichPresence& richPresence);
@@ -39,9 +39,7 @@ namespace Jazz2::UI
 		static DiscordRpcClient& Get();
 
 	private:
-		/// Deleted copy constructor
 		DiscordRpcClient(const DiscordRpcClient&) = delete;
-		/// Deleted assignment operator
 		DiscordRpcClient& operator=(const DiscordRpcClient&) = delete;
 
 		enum class Opcodes : std::uint32_t {

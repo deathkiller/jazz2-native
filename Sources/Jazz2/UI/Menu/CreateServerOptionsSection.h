@@ -10,7 +10,7 @@ namespace Jazz2::UI::Menu
 	class CreateServerOptionsSection : public MenuSection
 	{
 	public:
-		CreateServerOptionsSection(const StringView& episodeName, const StringView& levelName, const StringView& previousEpisodeName);
+		CreateServerOptionsSection(const StringView episodeName, const StringView levelName, const StringView previousEpisodeName);
 
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;

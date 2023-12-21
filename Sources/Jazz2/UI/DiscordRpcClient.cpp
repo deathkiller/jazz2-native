@@ -38,7 +38,7 @@ namespace Jazz2::UI
 		Disconnect();
 	}
 
-	bool DiscordRpcClient::Connect(const StringView& clientId)
+	bool DiscordRpcClient::Connect(const StringView clientId)
 	{
 		if (clientId.empty()) {
 			return false;

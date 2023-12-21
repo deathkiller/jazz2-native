@@ -519,7 +519,7 @@ namespace nCine
 		}
 	}
 
-	bool I18n::LoadFromFile(const StringView& path)
+	bool I18n::LoadFromFile(const StringView path)
 	{
 		return LoadFromFile(fs::Open(path, FileAccessMode::Read));
 	}
@@ -772,7 +772,7 @@ namespace nCine
 		return preferred;
 	}
 
-	StringView I18n::GetLanguageName(const StringView& langId)
+	StringView I18n::GetLanguageName(const StringView langId)
 	{
 		StringView baseLanguage = TryRemoveLanguageSpecifiers(langId);
 
@@ -793,7 +793,7 @@ namespace nCine
 		return { };
 	}
 
-	StringView I18n::TryRemoveLanguageSpecifiers(const StringView& langId)
+	StringView I18n::TryRemoveLanguageSpecifiers(const StringView langId)
 	{
 		StringView suffix = langId.findAny("-_.@"_s);
 		return (suffix != nullptr ? langId.prefix(suffix.begin()) : langId);

@@ -279,7 +279,7 @@ namespace Jazz2::Actors
 		virtual void OnHitSpring(const Vector2f& pos, const Vector2f& force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove);
 		virtual void OnWaterSplash(const Vector2f& pos, bool inwards);
 
-		std::shared_ptr<AudioBufferPlayer> PlayPlayerSfx(const StringView& identifier, float gain = 1.0f, float pitch = 1.0f);
+		std::shared_ptr<AudioBufferPlayer> PlayPlayerSfx(const StringView identifier, float gain = 1.0f, float pitch = 1.0f);
 		bool SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, const std::function<void()>& callback = nullptr);
 		bool SetPlayerTransition(AnimState state, bool cancellable, bool removeControl, SpecialMoveType specialMove, std::function<void()>&& callback);
 		bool CanFreefall();
