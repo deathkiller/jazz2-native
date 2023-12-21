@@ -347,6 +347,11 @@
 		"ShieldLightning": {
 			"Path": "Common/shield_lightning.aura",
 			"States": [ 536870931 ]
+		},
+		
+		"WeaponFlare": {
+			"Path": "Weapon/flare_hor_2.aura",
+			"States": [ 536870950 ]
 		}
 	},
 
@@ -407,6 +412,9 @@
 		},
 		"WeaponThunderbolt": {
 			"Paths": [ "Unknown/unknown_bonus1.wav" ]
+		},
+		"WeaponThunderboltStart": {
+			"Paths": [ "Cinematics/opening_shot.wav" ]
 		},
 		"HookAttach": {
 			"Paths": [ "Common/swish_9.wav" ]

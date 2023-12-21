@@ -126,6 +126,7 @@ namespace Jazz2::Actors
 		void SerializeResumableToStream(Stream& dest);
 
 		virtual void WarpToPosition(const Vector2f& pos, WarpFlags flags);
+		Modifier GetModifier() const;
 		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor = nullptr);
 		virtual bool TakeDamage(std::int32_t amount, float pushForce = 0.0f);
 		void SetInvulnerability(float time, bool withCircleEffect);
@@ -251,6 +252,9 @@ namespace Jazz2::Actors
 		Vector2f _trailLastPos;
 		ShieldType _activeShield;
 		float _activeShieldTime;
+		float _weaponFlareTime;
+		std::int32_t _weaponFlareFrame;
+		std::unique_ptr<RenderCommand> _weaponFlareCommand;
 		std::unique_ptr<RenderCommand> _shieldRenderCommands[2];
 
 		float _weaponCooldown;
@@ -305,7 +309,7 @@ namespace Jazz2::Actors
 
 		void SwitchToNextWeapon();
 		template<typename T, WeaponType weaponType>
-		void FireWeapon(float cooldownBase, float cooldownUpgrade);
+		void FireWeapon(float cooldownBase, float cooldownUpgrade, bool emitFlare = false);
 		void FireWeaponPepper();
 		void FireWeaponRF();
 		void FireWeaponTNT();

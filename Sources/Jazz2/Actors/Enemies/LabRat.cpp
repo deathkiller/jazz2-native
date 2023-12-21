@@ -169,17 +169,17 @@ namespace Jazz2::Actors::Enemies
 	void LabRat::Attack()
 	{
 		SetTransition(AnimState::TransitionAttack, false, [this]() {
-				_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
-				_isAttacking = false;
-				_canAttack = false;
+			_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
+			_isAttacking = false;
+			_canAttack = false;
 
-				_attackTime = 180.0f;
-			});
+			_attackTime = 180.0f;
+		});
 
 		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * 2.0f;
 		MoveInstantly(Vector2f(0.0f, -1.0f), MoveType::Relative);
-		_speed.Y = -1;
-		_internalForceY = -0.5f;
+		_speed.Y = (_levelHandler->IsReforged() ? -0.8f : -2.8f);
+		_internalForceY = (_levelHandler->IsReforged() ? -0.5f : -0.1f);
 		_isAttacking = true;
 		SetState(ActorState::CanJump, false);
 

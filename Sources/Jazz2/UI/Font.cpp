@@ -208,13 +208,47 @@ namespace Jazz2::UI
 				cursor = Utf8::NextChar(text, cursor.second);
 				if (cursor.first == '[') {
 					idx = cursor.second;
-					do {
-						cursor = Utf8::NextChar(text, idx);
-						if (cursor.first == ']') {
-							break;
-						}
+					cursor = Utf8::NextChar(text, idx);
+
+					if (cursor.first == 'w') {
 						idx = cursor.second;
-					} while (idx < textLength);
+						cursor = Utf8::NextChar(text, idx);
+						if (cursor.first == ':') {
+							idx = cursor.second;
+							int32_t paramLength = 0;
+							char param[9];
+							do {
+								cursor = Utf8::NextChar(text, idx);
+								if (cursor.first == ']') {
+									break;
+								}
+								if (paramLength < countof(param) - 1) {
+									param[paramLength++] = (char)cursor.first;
+								}
+								idx = cursor.second;
+							} while (idx < textLength);
+
+							if (paramLength > 0) {
+								param[paramLength] = '\0';
+								char* end = &param[paramLength];
+								unsigned long paramValue = strtoul(param, &end, 10);
+								if (param != end) {
+									charSpacing = paramValue * 0.01f;
+								}
+							}
+						} else if (cursor.first == ']') {
+							// Reset char spacing
+							charSpacing = charSpacingPre;
+						}
+					} else {
+						do {
+							if (cursor.first == ']') {
+								break;
+							}
+							idx = cursor.second;
+							cursor = Utf8::NextChar(text, idx);
+						} while (idx < textLength);
+					}
 				}
 			} else {
 				Rectf uvRect;
@@ -230,7 +264,7 @@ namespace Jazz2::UI
 				}
 
 				if (uvRect.W > 0 && uvRect.H > 0) {
-					lastWidth += (uvRect.W + _baseSpacing) * charSpacingPre * scalePre;
+					lastWidth += (uvRect.W + _baseSpacing) * charSpacing * scalePre;
 				}
 			}
 
@@ -242,6 +276,8 @@ namespace Jazz2::UI
 		}
 		lineWidths[line & (MaxLines - 1)] = lastWidth;
 		totalHeight += (_charSize.Y * scale * lineSpacing);
+
+		charSpacing = charSpacingPre;
 
 		// Rendering
 		Vector2f originPos = Vector2f(x - canvas->ViewSize.X * 0.5f, canvas->ViewSize.Y * 0.5f - y);
@@ -362,7 +398,7 @@ namespace Jazz2::UI
 								idx = cursor.second;
 							} while (idx < textLength);
 
-							if (paramLength > 0 && !useRandomColor && !isShadow) {
+							if (paramLength > 0) {
 								param[paramLength] = '\0';
 								char* end = &param[paramLength];
 								unsigned long paramValue = strtoul(param, &end, 10);

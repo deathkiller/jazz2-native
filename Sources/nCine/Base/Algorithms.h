@@ -184,30 +184,40 @@ namespace nCine
 	{
 		/// Quicksort implementation with random access iterators and custom compare function
 		template<class Iterator, class Compare>
-		inline void quicksort(Iterator first, Iterator last, RandomAccessIteratorTag, Compare comp)
+		inline void quicksort(Iterator first, Iterator last, RandomAccessIteratorTag, Compare comp, int maxRecursion)
 		{
+			if (maxRecursion <= 0) {
+				return;
+			}
+			maxRecursion--;
+
 			std::int32_t size = distance(first, last, RandomAccessIteratorTag());
 			if (size > 1) {
 				Iterator p = prev(last);
 				std::swap(*next(first, size / 2), *p);
 				Iterator q = partition(first, p, comp);
 				std::swap(*q, *p);
-				quicksort(first, q, RandomAccessIteratorTag(), comp);
-				quicksort(next(q), last, RandomAccessIteratorTag(), comp);
+				quicksort(first, q, RandomAccessIteratorTag(), comp, maxRecursion);
+				quicksort(next(q), last, RandomAccessIteratorTag(), comp, maxRecursion);
 			}
 		}
 
 		/// Quicksort implementation with bidirectional iterators and custom compare function
 		template<class Iterator, class Compare>
-		inline void quicksort(Iterator first, Iterator last, BidirectionalIteratorTag, Compare comp)
+		inline void quicksort(Iterator first, Iterator last, BidirectionalIteratorTag, Compare comp, int maxRecursion)
 		{
+			if (maxRecursion <= 0) {
+				return;
+			}
+			maxRecursion--;
+
 			if (first != last) {
 				Iterator p = prev(last);
 				std::swap(*first, *p);
 				Iterator q = partition(first, p, comp);
 				std::swap(*q, *p);
-				quicksort(first, q, BidirectionalIteratorTag());
-				quicksort(next(q), last, BidirectionalIteratorTag());
+				quicksort(first, q, BidirectionalIteratorTag(), maxRecursion);
+				quicksort(next(q), last, BidirectionalIteratorTag(), maxRecursion);
 			}
 		}
 
@@ -215,16 +225,16 @@ namespace nCine
 
 	/// Quicksort implementation with iterators and custom compare function
 	template<class Iterator, class Compare>
-	inline void quicksort(Iterator first, Iterator last, Compare comp)
+	inline void quicksort(Iterator first, Iterator last, Compare comp, int maxRecursion = INT32_MAX)
 	{
-		quicksort(first, last, IteratorTraits<Iterator>::IteratorCategory(), comp);
+		quicksort(first, last, IteratorTraits<Iterator>::IteratorCategory(), comp, maxRecursion);
 	}
 
 	/// Quicksort implementation with iterators, ascending order
 	template<class Iterator>
-	inline void quicksort(Iterator first, Iterator last)
+	inline void quicksort(Iterator first, Iterator last, int maxRecursion = INT32_MAX)
 	{
-		quicksort(first, last, IteratorTraits<Iterator>::IteratorCategory(), IsLess<typename IteratorTraits<Iterator>::ValueType>);
+		quicksort(first, last, IteratorTraits<Iterator>::IteratorCategory(), IsLess<typename IteratorTraits<Iterator>::ValueType>, maxRecursion);
 	}
 
 	/// Quicksort implementation with iterators, descending order

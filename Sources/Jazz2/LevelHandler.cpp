@@ -655,8 +655,15 @@ namespace Jazz2
 				} else if (_cheatsBufferLength < countof(_cheatsBuffer)) {
 					_cheatsBuffer[_cheatsBufferLength++] = (char)event.sym;
 
-					if (_cheatsBufferLength >= 5 && _cheatsBuffer[0] == (char)KeySym::J && _cheatsBuffer[1] == (char)KeySym::J) {
+					if (_cheatsBufferLength >= 3 && _cheatsBuffer[0] == (char)KeySym::J && _cheatsBuffer[1] == (char)KeySym::J) {
 						switch (_cheatsBufferLength) {
+							case 3:
+								if (_cheatsBuffer[2] == (char)KeySym::K) {
+									_cheatsBufferLength = 0;
+									_cheatsUsed = true;
+									_players[0]->TakeDamage(INT32_MAX);
+								}
+								break;
 							case 5:
 								if (_cheatsBuffer[2] == (char)KeySym::G && _cheatsBuffer[3] == (char)KeySym::O && _cheatsBuffer[4] == (char)KeySym::D) {
 									_cheatsBufferLength = 0;
