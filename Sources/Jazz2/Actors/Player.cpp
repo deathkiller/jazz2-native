@@ -80,6 +80,7 @@ namespace Jazz2::Actors
 		_dizzyTime(0.0f),
 		_activeShield(ShieldType::None),
 		_activeShieldTime(0.0f),
+		_weaponFlareTime(0.0f),
 		_weaponCooldown(0.0f),
 		_weaponAllowed(true),
 		_weaponWheelState(WeaponWheelState::Hidden)
@@ -415,6 +416,9 @@ namespace Jazz2::Actors
 					}
 				}
 			}
+		}
+		if (_weaponFlareTime > 0.0f) {
+			_weaponFlareTime -= timeMult;
 		}
 
 		// Dizziness
@@ -978,6 +982,61 @@ namespace Jazz2::Actors
 
 	bool Player::OnDraw(RenderQueue& renderQueue)
 	{
+		if (_weaponFlareTime > 0.0f && !_inWater && _currentTransition == nullptr && (_currentAnimation->State & AnimState::Lookup) != AnimState::Lookup) {
+			auto* res = _metadata->FindAnimation((AnimState)536870950); // WeaponFlare
+			if (res != nullptr) {
+				auto& command = _weaponFlareCommand;
+				if (command == nullptr) {
+					command = std::make_unique<RenderCommand>();
+					command->material().setBlendingEnabled(true);
+				}
+
+				if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
+					command->material().reserveUniformsDataMemory();
+					command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+					//command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+
+					GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+					if (textureUniform && textureUniform->intValue(0) != 0) {
+						textureUniform->setIntValue(0); // GL_TEXTURE0
+					}
+				}
+
+				Vector2i texSize = res->Base->TextureDiffuse->size();
+				int curAnimFrame = res->FrameOffset + (_weaponFlareFrame % res->FrameCount);
+				int col = curAnimFrame % res->Base->FrameConfiguration.X;
+				int row = curAnimFrame / res->Base->FrameConfiguration.X;
+				float texScaleX = (float(res->Base->FrameDimensions.X) / float(texSize.X));
+				float texBiasX = (float(res->Base->FrameDimensions.X * col) / float(texSize.X));
+				float texScaleY = (float(res->Base->FrameDimensions.Y) / float(texSize.Y));
+				float texBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.Y));
+				float scale = std::max(_weaponFlareTime / 8.0f, 0.4f);
+				if (_playerType == PlayerType::Spaz) {
+					scale *= 1.6f;
+				}
+
+				float gunspotPosX = _pos.X + (_currentAnimation->Base->Hotspot.X - _currentAnimation->Base->Gunspot.X - 7.0f) * (IsFacingLeft() ? 1 : -1);
+				float gunspotPosY = _pos.Y - (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);
+
+				if (IsFacingLeft()) {
+					texScaleX *= -1.0f;
+					texBiasX += 1.0f;
+				}
+
+				auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+				instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
+				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(res->Base->FrameDimensions.X, res->Base->FrameDimensions.Y * scale);
+				instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(1.0f, 1.0f, 1.0f, 1.8f);
+
+				command->setTransformation(Matrix4x4f::Translation(gunspotPosX, gunspotPosY, 0.0f));
+				command->setLayer(_renderer.layer() + 2);
+				command->material().setTexture(*res->Base->TextureDiffuse.get());
+
+				renderQueue.addCommand(command.get());
+			}
+		}
+
 		switch (_activeShield) {
 			case ShieldType::Fire: {
 				auto* res = _metadata->FindAnimation((AnimState)536870929); // ShieldFire
@@ -1973,7 +2032,7 @@ namespace Jazz2::Actors
 				_waterCooldownLeft = 20.0f;
 
 				SetState(ActorState::ApplyGravitation | ActorState::CanJump, true);
-				_externalForce.Y = -0.45f;
+				_externalForce.Y = -0.6f;
 				_renderer.setRotation(0.0f);
 
 				SetAnimation(AnimState::Jump);
@@ -2426,7 +2485,7 @@ namespace Jazz2::Actors
 	}
 
 	template<typename T, WeaponType weaponType>
-	void Player::FireWeapon(float cooldownBase, float cooldownUpgrade)
+	void Player::FireWeapon(float cooldownBase, float cooldownUpgrade, bool emitFlare)
 	{
 		// NOTE: cooldownBase and cooldownUpgrade cannot be template parameters in Emscripten
 		Vector3i initialPos;
@@ -2446,6 +2505,11 @@ namespace Jazz2::Actors
 
 		std::int32_t fastFire = (_weaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
 		_weaponCooldown = cooldownBase - (fastFire * cooldownUpgrade);
+
+		if (emitFlare) {
+			_weaponFlareFrame = (Random().Next() & 0xFFFF);
+			_weaponFlareTime = 6.0f;
+		}
 	}
 
 	void Player::FireWeaponRF()
@@ -2505,6 +2569,8 @@ namespace Jazz2::Actors
 		}
 
 		_weaponCooldown = 120.0f;
+		_weaponFlareFrame = (Random().Next() & 0xFFFF);
+		_weaponFlareTime = 6.0f;
 	}
 
 	void Player::FireWeaponPepper()
@@ -2536,6 +2602,8 @@ namespace Jazz2::Actors
 
 		std::int32_t fastFire = (_weaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
 		_weaponCooldown = 30.0f - (fastFire * 2.7f);
+		_weaponFlareFrame = (Random().Next() & 0xFFFF);
+		_weaponFlareTime = 6.0f;
 	}
 
 	void Player::FireWeaponTNT()
@@ -2573,11 +2641,13 @@ namespace Jazz2::Actors
 		_levelHandler->AddActor(shot);
 
 		_weaponCooldown = 12.0f - (_weaponUpgrades[(int)WeaponType::Blaster] * 0.1f);
+
 		if (!_inWater && (_currentAnimation->State & AnimState::Lookup) != AnimState::Lookup) {
-			AddExternalForce(IsFacingLeft() ? 0.1f : -0.1f, 0.0f);
+			AddExternalForce(IsFacingLeft() ? 2.0f : -2.0f, 0.0f);
 		}
 
 		if (_weaponSound == nullptr) {
+			PlaySfx("WeaponThunderboltStart"_s, 0.5f);
 			_weaponSound = PlaySfx("WeaponThunderbolt"_s, 1.0f);
 			if (_weaponSound != nullptr) {
 				_weaponSound->setLooping(true);
@@ -2604,7 +2674,7 @@ namespace Jazz2::Actors
 						if (_inWater) {
 							return false;
 						}
-						FireWeapon<Weapons::ShieldFireShot, WeaponType::Blaster>(10.0f, 0.0f);
+						FireWeapon<Weapons::ShieldFireShot, WeaponType::Blaster>(10.0f, 0.0f, true);
 						break;
 					}
 					case ShieldType::Water: {
@@ -2616,7 +2686,7 @@ namespace Jazz2::Actors
 						break;
 					}
 					default: {
-						FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(30.0f, 2.7f);
+						FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(30.0f, 2.7f, true);
 						PlaySfx("WeaponBlaster"_s);
 						break;
 					}
@@ -2624,12 +2694,12 @@ namespace Jazz2::Actors
 				ammoDecrease = 0;
 				break;
 
-			case WeaponType::Bouncer: FireWeapon<Weapons::BouncerShot, WeaponType::Bouncer>(30.0f, 2.7f); break;
+			case WeaponType::Bouncer: FireWeapon<Weapons::BouncerShot, WeaponType::Bouncer>(30.0f, 2.7f, true); break;
 				case WeaponType::Freezer:
 					// TODO: Add upgraded freezer
 					FireWeapon<Weapons::FreezerShot, WeaponType::Freezer>(30.0f, 2.7f);
 					break;
-				case WeaponType::Seeker: FireWeapon<Weapons::SeekerShot, WeaponType::Seeker>(120.0f, 0.0f); break;
+				case WeaponType::Seeker: FireWeapon<Weapons::SeekerShot, WeaponType::Seeker>(120.0f, 0.0f, true); break;
 				case WeaponType::RF: FireWeaponRF(); break;
 
 				case WeaponType::Toaster: {
@@ -2649,7 +2719,7 @@ namespace Jazz2::Actors
 
 				case WeaponType::TNT: FireWeaponTNT(); break;
 				case WeaponType::Pepper: FireWeaponPepper(); break;
-				case WeaponType::Electro: FireWeapon<Weapons::ElectroShot, WeaponType::Electro>(30.0f, 2.7f); break;
+				case WeaponType::Electro: FireWeapon<Weapons::ElectroShot, WeaponType::Electro>(30.0f, 2.7f, true); break;
 
 				case WeaponType::Thunderbolt: {
 					if (!FireWeaponThunderbolt()) {
@@ -3179,6 +3249,11 @@ namespace Jazz2::Actors
 
 			PlaySfx("HookAttach"_s, 0.8f, 1.2f);
 		}
+	}
+
+	Player::Modifier Player::GetModifier() const
+	{
+		return _activeModifier;
 	}
 
 	bool Player::SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor)

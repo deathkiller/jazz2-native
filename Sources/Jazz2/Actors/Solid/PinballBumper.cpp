@@ -71,17 +71,19 @@ namespace Jazz2::Actors::Solid
 
 					player->_speed.X += force.X * 0.4f;
 					player->_speed.Y += force.Y * 0.4f;
-					player->_externalForce.X += force.X * 0.04f;
-					player->_externalForce.Y += force.Y * 0.04f;
 
-					if (player->_activeModifier == Player::Modifier::None && player->_copterFramesLeft > 0.0f) {
-						player->_copterFramesLeft = 1.0f;
+					if (player->_activeModifier == Player::Modifier::None) {
+						if (player->_copterFramesLeft > 0.0f) {
+							player->_copterFramesLeft = 1.0f;
+						}
+
+						player->_externalForce.X += force.X * 0.04f;
+						player->_externalForce.Y += force.Y * 0.04f;
+						player->_externalForceCooldown = 10.0f;
+						player->_controllable = true;
+						player->SetState(ActorState::CanJump, false);
+						player->EndDamagingMove();
 					}
-
-					player->_externalForceCooldown = 10.0f;
-					player->_controllable = true;
-					player->SetState(ActorState::CanJump, false);
-					player->EndDamagingMove();
 
 					// TODO: Check this
 					player->AddScore(500);

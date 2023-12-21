@@ -43,6 +43,11 @@ namespace Jazz2::Actors::Enemies
 	{
 		EnemyBase::OnUpdate(timeMult);
 
+		float waterLevel = _levelHandler->WaterLevel();
+		if (_pos.Y < waterLevel) {
+			MoveInstantly(Vector2f(_pos.X, waterLevel), MoveType::Absolute | MoveType::Force);
+		}
+
 		if (_frozenTimeLeft > 0.0f) {
 			return;
 		}
