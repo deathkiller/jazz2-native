@@ -30,7 +30,10 @@ namespace Jazz2::Compatibility
 		uint32_t magic = headerBlock.ReadUInt32();
 		RETURNF_ASSERT_MSG(magic == 0x4C56454C /*LEVL*/, "Invalid magic string");
 
-		/*uint32_t passwordHash =*/ headerBlock.ReadUInt32();
+		// passwordHash is 3 bytes
+		headerBlock.DiscardBytes(3);
+
+		_isHidden = headerBlock.ReadBool();
 
 		DisplayName = headerBlock.ReadString(32, true);
 
@@ -553,6 +556,9 @@ namespace Jazz2::Compatibility
 		}
 		if (_useLevelPalette) {
 			flags |= 0x04;
+		}
+		if (_isHidden) {
+			flags |= 0x08;
 		}
 		if (_isMpLevel) {
 			flags |= 0x10;
