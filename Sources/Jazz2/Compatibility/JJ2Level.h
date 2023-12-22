@@ -137,7 +137,7 @@ namespace Jazz2::Compatibility
 		JJ2Version _version;
 
 		uint16_t _animCount;
-		bool _verticalMPSplitscreen, _isMpLevel;
+		bool _isHidden, _verticalMPSplitscreen, _isMpLevel;
 		bool _hasPit, _hasPitInstantDeath, _hasCTF, _hasLaps;
 		uint32_t _darknessColor;
 		WeatherType _weatherType;

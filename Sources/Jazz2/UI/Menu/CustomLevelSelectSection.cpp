@@ -298,7 +298,7 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		quicksort(_items.begin(), _items.end(), [](const ItemData& a, const ItemData& b) -> bool {
+		std::sort(_items.begin(), _items.end(), [](const ItemData& a, const ItemData& b) -> bool {
 			return (a.LevelName < b.LevelName);
 		});
 	}
@@ -316,8 +316,14 @@ namespace Jazz2::UI::Menu
 		uint8_t fileType = s->ReadValue<uint8_t>();
 		RETURN_ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::LevelFile, "File has invalid signature");
 
-		// TODO: Level flags
-		/*uint16_t flags =*/ s->ReadValue<uint16_t>();
+		uint16_t flags = s->ReadValue<uint16_t>();
+
+#if !defined(DEATH_DEBUG)
+		// Don't show hidden levels in Release build if unlock cheat is not active, but show all levels in Debug build
+		if ((flags & /*Hidden*/0x08) != 0 && !PreferencesCache::AllowCheatsUnlock) {
+			return;
+		}
+#endif
 
 		// Read compressed data
 		int32_t compressedSize = s->ReadValue<int32_t>();

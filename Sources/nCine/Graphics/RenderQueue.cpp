@@ -85,8 +85,8 @@ namespace nCine
 		const bool batchingEnabled = theApplication().renderingSettings().batchingEnabled;
 
 		// Sorting the queues with the relevant orders
-		quicksort(opaqueQueue_.begin(), opaqueQueue_.end(), descendingOrder, 256);
-		quicksort(transparentQueue_.begin(), transparentQueue_.end(), ascendingOrder, 256);
+		std::sort(opaqueQueue_.begin(), opaqueQueue_.end(), descendingOrder);
+		std::sort(transparentQueue_.begin(), transparentQueue_.end(), ascendingOrder);
 
 		SmallVectorImpl<RenderCommand*>* opaques = batchingEnabled ? &opaqueBatchedQueue_ : &opaqueQueue_;
 		SmallVectorImpl<RenderCommand*>* transparents = batchingEnabled ? &transparentBatchedQueue_ : &transparentQueue_;

@@ -58,15 +58,17 @@ namespace Jazz2::Actors::Solid
 
 						player->_speed.X = 0.0f;
 						player->_speed.Y = (_levelHandler->IsReforged() ? -1.0f : -0.7f);
-						player->_externalForce.Y -= forceY;
 
-						player->_externalForceCooldown = 10.0f;
-						player->_controllable = true;
-						player->SetState(ActorState::CanJump, false);
-						player->EndDamagingMove();
+						if (player->_activeModifier == Player::Modifier::None) {
+							if (player->_copterFramesLeft > 1.0f) {
+								player->_copterFramesLeft = 1.0f;
+							}
 
-						if (player->_copterFramesLeft > 1.0f) {
-							player->_copterFramesLeft = 1.0f;
+							player->_externalForce.Y -= forceY;
+							player->_externalForceCooldown = 10.0f;
+							player->_controllable = true;
+							player->SetState(ActorState::CanJump, false);
+							player->EndDamagingMove();
 						}
 
 						// TODO: Check this

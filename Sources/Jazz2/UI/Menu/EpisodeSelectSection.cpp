@@ -3,7 +3,6 @@
 #include "MainMenu.h"
 #include "MenuResources.h"
 #include "../../PreferencesCache.h"
-#include "../../../nCine/Base/Algorithms.h"
 #include "../../../nCine/Base/FrameTimer.h"
 
 #if defined(WITH_MULTIPLAYER)
@@ -42,7 +41,7 @@ namespace Jazz2::UI::Menu
 			AddEpisode(item);
 		}
 
-		quicksort(_items.begin(), _items.end(), [](const ListViewItem& a, const ListViewItem& b) -> bool {
+		std::sort(_items.begin(), _items.end(), [](const ListViewItem& a, const ListViewItem& b) -> bool {
 			return (a.Item.Description.Position < b.Item.Description.Position);
 		});
 	}
