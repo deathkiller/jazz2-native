@@ -223,11 +223,6 @@ namespace Death { namespace IO {
 #	endif
 		}
 #else
-		static bool CallStat(const char* path, struct stat& sb)
-		{
-			return (::lstat(path, &sb) != -1);
-		}
-
 		static FileSystem::Permission NativeModeToEnum(std::uint32_t nativeMode)
 		{
 			FileSystem::Permission mode = FileSystem::Permission::None;
@@ -290,7 +285,7 @@ namespace Death { namespace IO {
 
 					String fileName = FileSystem::CombinePath(path, p->d_name);
 					struct stat sb;
-					if (CallStat(fileName.data(), sb)) {
+					if (::lstat(fileName.data(), &sb) == 0) { // Don't follow symbolic links
 						if (S_ISDIR(sb.st_mode)) {
 							DeleteDirectoryInternal(fileName);
 						} else {
@@ -306,6 +301,7 @@ namespace Death { namespace IO {
 			}
 			return (r == 0);
 #	else
+			// Don't follow symbolic links
 			return ::nftw(String::nullTerminatedView(path).data(), DeleteDirectoryInternalCallback, 64, FTW_DEPTH | FTW_PHYS) == 0;
 #	endif
 		}
@@ -947,9 +943,9 @@ namespace Death { namespace IO {
 			result[resultLength] = '\0';
 
 			struct stat sb;
-			if (!CallStat(result, sb)) {
+			if (::lstat(result, &sb) != 0) {
 				if (errno == ENOENT && p == nullptr) {
-					return String { result, resultLength };
+					return String{result, resultLength};
 				}
 				return { };
 			}
@@ -1165,8 +1161,8 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (CallStat(nullTerminatedPath.data(), sb)) {
-			return (sb.st_mode & S_IFMT) == S_IFDIR;
+		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
+			return ((sb.st_mode & S_IFMT) == S_IFDIR);
 		}
 		return false;
 #endif
@@ -1190,8 +1186,8 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (CallStat(nullTerminatedPath.data(), sb)) {
-			return (sb.st_mode & S_IFMT) == S_IFREG;
+		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
+			return ((sb.st_mode & S_IFMT) == S_IFREG);
 		}
 		return false;
 #endif
@@ -1215,7 +1211,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		return CallStat(nullTerminatedPath.data(), sb);
+		return (::lstat(nullTerminatedPath.data(), &sb) == 0);
 #endif
 	}
 
@@ -1237,8 +1233,8 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (CallStat(nullTerminatedPath.data(), sb)) {
-			return (sb.st_mode & S_IRUSR);
+		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
+			return ((sb.st_mode & S_IRUSR) != 0);
 		}
 		return false;
 #endif
@@ -1262,8 +1258,8 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (CallStat(nullTerminatedPath.data(), sb)) {
-			return (sb.st_mode & S_IWUSR);
+		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
+			return ((sb.st_mode & S_IWUSR) != 0);
 		}
 		return false;
 #endif
@@ -1317,8 +1313,8 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (CallStat(nullTerminatedPath.data(), sb)) {
-			return (sb.st_mode & S_IFMT) == S_IFREG && (sb.st_mode & S_IRUSR);
+		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
+			return ((sb.st_mode & S_IFMT) == S_IFREG && (sb.st_mode & S_IRUSR) != 0);
 		}
 #endif
 		return false;
@@ -1342,8 +1338,8 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (CallStat(nullTerminatedPath.data(), sb)) {
-			return (sb.st_mode & S_IFMT) == S_IFREG && (sb.st_mode & S_IWUSR);
+		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
+			return ((sb.st_mode & S_IFMT) == S_IFREG && (sb.st_mode & S_IWUSR) != 0);
 		}
 #endif
 		return false;
@@ -1371,7 +1367,7 @@ namespace Death { namespace IO {
 		strncpy(buffer, path.data(), pathLength);
 		buffer[pathLength] = '\0';
 		const char* baseName = ::basename(buffer);
-		return (baseName && baseName[0] == '.');
+		return (baseName != nullptr && baseName[0] == '.');
 #endif
 	}
 
@@ -1543,7 +1539,7 @@ namespace Death { namespace IO {
 			if (fullPath[i] == '/' || fullPath[i] == '\\') {
 				if (i > 0) {
 					fullPath[i] = '\0';
-					if (!CallStat(fullPath.data(), sb)) {
+					if (::lstat(fullPath.data(), &sb) != 0) {
 						if (::mkdir(fullPath.data(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0 && errno != EEXIST) {
 							LOGW("Cannot create directory \"%s\"", fullPath.data());
 							return false;
@@ -1724,7 +1720,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (!CallStat(nullTerminatedPath.data(), sb)) {
+		if (::stat(nullTerminatedPath.data(), &sb) != 0) {
 			return -1;
 		}
 		return static_cast<std::int64_t>(sb.st_size);
@@ -1748,8 +1744,9 @@ namespace Death { namespace IO {
 		}
 		::CloseHandle(hFile);
 #elif defined(DEATH_TARGET_APPLE) && defined(_DARWIN_FEATURE_64_BIT_INODE)
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 		struct stat sb;
-		if (CallStat(String::nullTerminatedView(path).data(), sb)) {
+		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
 			date = DateTime(sb.st_birthtimespec.tv_sec);
 			date.SetMillisecond(sb.st_birthtimespec.tv_nsec / 1000000);
 		}
@@ -1761,7 +1758,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (CallStat(nullTerminatedPath.data(), sb)) {
+		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
 			// Creation time is not available on Linux, return the last change of inode instead
 			date = DateTime(sb.st_ctime);
 		}
@@ -1786,8 +1783,9 @@ namespace Death { namespace IO {
 		}
 		::CloseHandle(hFile);
 #elif defined(DEATH_TARGET_APPLE) && defined(_DARWIN_FEATURE_64_BIT_INODE)
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 		struct stat sb;
-		if (CallStat(String::nullTerminatedView(path).data(), sb)) {
+		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
 			date = DateTime(sb.st_mtimespec.tv_sec);
 			date.SetMillisecond(sb.st_mtimespec.tv_nsec / 1000000);
 		}
@@ -1799,7 +1797,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (CallStat(nullTerminatedPath.data(), sb)) {
+		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
 			date = DateTime(sb.st_mtime);
 		}
 #endif
@@ -1823,8 +1821,9 @@ namespace Death { namespace IO {
 		}
 		::CloseHandle(hFile);
 #elif defined(DEATH_TARGET_APPLE) && defined(_DARWIN_FEATURE_64_BIT_INODE)
+		auto nullTerminatedPath = String::nullTerminatedView(path);
 		struct stat sb;
-		if (CallStat(String::nullTerminatedView(path).data(), sb)) {
+		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
 			date = DateTime(sb.st_atimespec.tv_sec);
 			date.SetMillisecond(sb.st_atimespec.tv_nsec / 1000000);
 		}
@@ -1836,7 +1835,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (CallStat(nullTerminatedPath.data(), sb)) {
+		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
 			date = DateTime(sb.st_atime);
 		}
 #endif
@@ -1869,7 +1868,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (!CallStat(nullTerminatedPath.data(), sb)) {
+		if (::stat(nullTerminatedPath.data(), &sb) != 0) {
 			return Permission::None;
 		}
 		return NativeModeToEnum(sb.st_mode);
@@ -1903,7 +1902,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (!CallStat(nullTerminatedPath.data(), sb)) {
+		if (::stat(nullTerminatedPath.data(), &sb) != 0) {
 			return false;
 		}
 		const std::uint32_t currentMode = sb.st_mode;
@@ -1935,7 +1934,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (!CallStat(nullTerminatedPath.data(), sb)) {
+		if (::stat(nullTerminatedPath.data(), &sb) != 0) {
 			return false;
 		}
 		const std::uint32_t currentMode = sb.st_mode;
@@ -1967,7 +1966,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (!CallStat(nullTerminatedPath.data(), sb)) {
+		if (::stat(nullTerminatedPath.data(), &sb) != 0) {
 			return false;
 		}
 		const std::uint32_t currentMode = sb.st_mode;

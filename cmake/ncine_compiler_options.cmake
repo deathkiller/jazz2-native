@@ -12,6 +12,10 @@ target_compile_definitions(${NCINE_APP} PUBLIC "NCINE_BUILD_YEAR=\"${NCINE_BUILD
 if(NCINE_OVERRIDE_CONTENT_PATH)
 	message(STATUS "Using overriden `Content` path: ${NCINE_OVERRIDE_CONTENT_PATH}")
 	target_compile_definitions(${NCINE_APP} PUBLIC "NCINE_OVERRIDE_CONTENT_PATH=\"${NCINE_OVERRIDE_CONTENT_PATH}\"")
+elseif(NCINE_BUILD_FLATPAK)
+	set(FLATPAK_CONTENT_PATH "/app/share/${NCINE_APP_NAME}/Content/") # Must be the same as in `ncine_installation.cmake`
+	message(STATUS "Using custom `Content` path for Flatpak: ${FLATPAK_CONTENT_PATH}")
+	target_compile_definitions(${NCINE_APP} PUBLIC "NCINE_OVERRIDE_CONTENT_PATH=\"${FLATPAK_CONTENT_PATH}\"")
 elseif(NCINE_LINUX_PACKAGE)
 	message(STATUS "Using custom Linux package name: ${NCINE_LINUX_PACKAGE}")
 	target_compile_definitions(${NCINE_APP} PUBLIC "NCINE_LINUX_PACKAGE=\"${NCINE_LINUX_PACKAGE}\"")

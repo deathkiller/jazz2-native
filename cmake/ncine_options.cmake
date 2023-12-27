@@ -45,6 +45,7 @@ else()
 	elseif(UNIX AND NOT APPLE AND NOT ANDROID)
 		option(NCINE_ASSEMBLE_DEB "Assemble DEB package of the game" OFF)
 		option(NCINE_ASSEMBLE_RPM "Assemble RPM package of the game" OFF)
+		option(NCINE_BUILD_FLATPAK "Build Flatpak version of the game" OFF)
 	endif()
 endif()
 

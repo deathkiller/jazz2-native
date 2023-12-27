@@ -979,21 +979,21 @@ namespace Death { namespace Containers {
 		}
 
 		StringView StringViewConverter<const char, std::string>::from(const std::string& other) {
-			return StringView { other.data(), other.size(), StringViewFlags::NullTerminated };
+			return StringView{other.data(), other.size(), StringViewFlags::NullTerminated};
 		}
 
 		std::string StringViewConverter<const char, std::string>::to(StringView other) {
-			return std::string { other.data(), other.size() };
+			return std::string{other.data(), other.size()};
 		}
 
 		MutableStringView StringViewConverter<char, std::string>::from(std::string& other) {
-			// .data() returns a const pointer until C++17, so have to use &other[0]. It's guaranteed to return a pointer
-			// to a single null character if the string is empty.
-			return MutableStringView { &other[0], other.size(), StringViewFlags::NullTerminated };
+			// .data() returns a const pointer until C++17, so have to use &other[0]. It's guaranteed
+			// to return a pointer to a single null character if the string is empty.
+			return MutableStringView{&other[0], other.size(), StringViewFlags::NullTerminated};
 		}
 
 		std::string StringViewConverter<char, std::string>::to(MutableStringView other) {
-			return std::string { other.data(), other.size() };
+			return std::string{other.data(), other.size()};
 		}
 	}
 }}
