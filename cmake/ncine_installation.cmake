@@ -129,7 +129,7 @@ elseif(UNIX)
 	endif()
 
 	set(ICONS_INSTALL_DESTINATION "share/icons/hicolor")
-	if(EXISTS "${NCINE_SOURCE_DIR}/Icons/1024px.png")
+	if(EXISTS "${NCINE_SOURCE_DIR}/Icons/1024px.png" AND NOT NCINE_BUILD_FLATPAK) # Don't include 1024px icon in Flatpak
 		install(FILES "${NCINE_SOURCE_DIR}/Icons/1024px.png" DESTINATION "${ICONS_INSTALL_DESTINATION}/1024x1024/apps/" RENAME "${PACKAGE_NAME}.png" COMPONENT data)
 	endif()
 	if(EXISTS "${NCINE_SOURCE_DIR}/Icons/256px.png")
