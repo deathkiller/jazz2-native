@@ -98,7 +98,25 @@ namespace Death { namespace Containers { namespace StringUtils {
 	String uppercase(String string);
 
 	/**
-		@brief Determines whether two strings have the same value, ignoring case (ASCII characters only)
+		@brief Convert characters in a UTF-8 string to lowercase with slower Unicode-aware method
+
+		Allocates a copy and replaces most of the Latin, Greek, Cyrillic, Armenian, Georgian, Cherokee,
+		Glagolitic, Coptic, Deseret, Osage, Old Hungarian, Warang Citi, Medefaidrin and Adlam characters.
+		Doesn't support locale-specific replacements.
+	*/
+	String lowercaseUnicode(const StringView string);
+
+	/**
+		@brief Convert characters in a UTF-8 string to uppercase with slower Unicode-aware method
+
+		Allocates a copy and replaces most of the Latin, Greek, Cyrillic, Armenian, Georgian, Cherokee,
+		Glagolitic, Coptic, Deseret, Osage, Old Hungarian, Warang Citi, Medefaidrin and Adlam characters.
+		Doesn't support locale-specific replacements.
+	*/
+	String uppercaseUnicode(const StringView string);
+
+	/**
+		@brief Determine whether two strings have the same value, ignoring case (ASCII characters only)
 	*/
 	inline bool equalsIgnoreCase(const StringView string1, const StringView string2) {
 		std::size_t size1 = string1.size();
@@ -139,4 +157,5 @@ namespace Death { namespace Containers { namespace StringUtils {
 		@brief Replace all occurrences of a character in a string with another character in-place
 	*/
 	void replaceAllInPlace(const MutableStringView string, char search, char replace);
+
 }}}
