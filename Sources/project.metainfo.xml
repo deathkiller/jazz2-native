@@ -41,6 +41,12 @@
 	<url type="homepage">https://deat.tk/jazz2/</url>
 	<url type="bugtracker">https://github.com/deathkiller/jazz2-native/issues</url>
 	<url type="faq">https://deat.tk/jazz2/help</url>
+	
+	<screenshots>
+		<screenshot type="default">https://raw.githubusercontent.com/deathkiller/jazz2/main/Docs/01.png</screenshot>
+		<screenshot>https://raw.githubusercontent.com/deathkiller/jazz2/main/Docs/02.png</screenshot>
+		<screenshot>https://raw.githubusercontent.com/deathkiller/jazz2/main/Docs/03.png</screenshot>
+	</screenshots>
 
 	<provides>
 		<binary>jazz2</binary>
