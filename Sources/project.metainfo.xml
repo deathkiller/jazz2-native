@@ -4,7 +4,7 @@
 	<name>Jazz² Resurrection</name>
 	<summary>A re-implementation of Jazz Jackrabbit 2</summary>
 	<metadata_license>CC0-1.0</metadata_license>
-	<project_license>GPL-3.0-only</project_license>
+	<project_license>GPL-3.0+</project_license>
 	<developer id="deat.tk">
 		<name>Daniel Rajf</name>
 		<url>https://deat.tk</url>
@@ -41,11 +41,20 @@
 	<url type="homepage">https://deat.tk/jazz2/</url>
 	<url type="bugtracker">https://github.com/deathkiller/jazz2-native/issues</url>
 	<url type="faq">https://deat.tk/jazz2/help</url>
-	
+
 	<screenshots>
-		<screenshot type="default">https://raw.githubusercontent.com/deathkiller/jazz2/main/Docs/01.png</screenshot>
-		<screenshot>https://raw.githubusercontent.com/deathkiller/jazz2/main/Docs/02.png</screenshot>
-		<screenshot>https://raw.githubusercontent.com/deathkiller/jazz2/main/Docs/03.png</screenshot>
+		<screenshot type="default">
+			<image type="source" width="1440" height="810">https://raw.githubusercontent.com/deathkiller/jazz2/main/Docs/01.png</image>
+			<caption>Screenshot of Spaz in the level "Dungeon Dilemma."</caption>
+		</screenshot>
+		<screenshot>
+			<image type="source" width="1440" height="810">https://raw.githubusercontent.com/deathkiller/jazz2/main/Docs/02.png</image>
+			<caption>Screenshot of Jazz in the level "Marinated Rabbit."</caption>
+		</screenshot>
+		<screenshot>
+			<image type="source" width="1440" height="810">https://raw.githubusercontent.com/deathkiller/jazz2/main/Docs/03.png</image>
+			<caption>Screenshot of the story selection menu.</caption>
+		</screenshot>
 	</screenshots>
 
 	<provides>
