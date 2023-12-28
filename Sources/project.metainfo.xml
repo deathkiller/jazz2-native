@@ -45,15 +45,15 @@
 	<screenshots>
 		<screenshot type="default">
 			<image type="source" width="1440" height="810">https://raw.githubusercontent.com/deathkiller/jazz2/2.4.1/Docs/01.png</image>
-			<caption>Screenshot of Spaz in the level "Dungeon Dilemma".</caption>
+			<caption>Screenshot of Spaz in the level "Dungeon Dilemma"</caption>
 		</screenshot>
 		<screenshot>
 			<image type="source" width="1440" height="810">https://raw.githubusercontent.com/deathkiller/jazz2/2.4.1/Docs/02.png</image>
-			<caption>Screenshot of Jazz in the level "Marinated Rabbit".</caption>
+			<caption>Screenshot of Jazz in the level "Marinated Rabbit"</caption>
 		</screenshot>
 		<screenshot>
 			<image type="source" width="1440" height="810">https://raw.githubusercontent.com/deathkiller/jazz2/2.4.1/Docs/03.png</image>
-			<caption>Screenshot of the story selection menu.</caption>
+			<caption>Screenshot of the story selection menu</caption>
 		</screenshot>
 	</screenshots>
 
