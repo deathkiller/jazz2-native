@@ -215,9 +215,23 @@ void GameEventHandler::OnInit()
 		theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
 	}
 
+#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT)
+	// Try to load gamepad mappings from `Content` directory
 	String mappingsPath = fs::CombinePath(resolver.GetContentPath(), "gamecontrollerdb.txt"_s);
 	if (fs::IsReadableFile(mappingsPath)) {
 		theApplication().inputManager().addJoyMappingsFromFile(mappingsPath);
+	}
+#	endif
+#endif
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
+	// Try to load gamepad mappings also from config directory
+	auto configDir = PreferencesCache::GetDirectory();
+	if (!configDir.empty()) {
+		String mappingsPath2 = fs::CombinePath(configDir, "gamecontrollerdb.txt"_s);
+		if (fs::IsReadableFile(mappingsPath2)) {
+			theApplication().inputManager().addJoyMappingsFromFile(mappingsPath2);
+		}
 	}
 #endif
 
@@ -572,8 +586,8 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 
 bool GameEventHandler::HasResumableState() const
 {
-	auto dir = PreferencesCache::GetDirectory();
-	return fs::FileExists(fs::CombinePath(dir, StateFileName));
+	auto configDir = PreferencesCache::GetDirectory();
+	return fs::FileExists(fs::CombinePath(configDir, StateFileName));
 }
 
 void GameEventHandler::ResumeSavedState()
@@ -581,8 +595,8 @@ void GameEventHandler::ResumeSavedState()
 	InvokeAsync([this]() {
 		ZoneScopedNC("GameEventHandler::ResumeSavedState", 0x888888);
 
-		auto dir = PreferencesCache::GetDirectory();
-		auto s = fs::Open(fs::CombinePath(dir, StateFileName), FileAccessMode::Read);
+		auto configDir = PreferencesCache::GetDirectory();
+		auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccessMode::Read);
 		if (s->IsValid()) {
 			std::uint64_t signature = s->ReadValue<std::uint64_t>();
 			std::uint8_t fileType = s->ReadValue<std::uint8_t>();
@@ -617,8 +631,8 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 
 	if (auto* levelHandler = dynamic_cast<LevelHandler*>(_currentHandler.get())) {
 		if (levelHandler->Difficulty() != GameDifficulty::Multiplayer) {
-			auto dir = PreferencesCache::GetDirectory();
-			auto s = fs::Open(fs::CombinePath(dir, StateFileName), FileAccessMode::Write);
+			auto configDir = PreferencesCache::GetDirectory();
+			auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccessMode::Write);
 			s->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
 			s->WriteValue<std::uint8_t>(ContentResolver::StateFile);
 			s->WriteValue<std::uint16_t>(StateVersion);
@@ -636,8 +650,8 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 
 void GameEventHandler::RemoveResumableStateIfAny()
 {
-	auto dir = PreferencesCache::GetDirectory();
-	auto path = fs::CombinePath(dir, StateFileName);
+	auto configDir = PreferencesCache::GetDirectory();
+	auto path = fs::CombinePath(configDir, StateFileName);
 	if (fs::FileExists(path)) {
 		fs::RemoveFile(path);
 	}

@@ -42,7 +42,7 @@ namespace Jazz2::UI::Menu
 		_mediumFont = resolver.GetFont(FontType::Medium);
 
 #if defined(WITH_OPENMPT)
-		if (PreferencesCache::EnableReforged) {
+		if (PreferencesCache::EnableReforgedMainMenu) {
 			_music = resolver.GetMusic(Random().NextBool() ? "bonus2.j2b"_s : "bonus3.j2b"_s);
 		}
 		if (_music == nullptr) {
@@ -763,7 +763,7 @@ namespace Jazz2::UI::Menu
 		struct tm* local = localtime(&t);
 		int32_t month = local->tm_mon;
 #endif
-		bool hasXmas = (PreferencesCache::EnableReforged && (month == 11 || month == 0) && TryLoadBackgroundPreset(Preset::Xmas));
+		bool hasXmas = (PreferencesCache::EnableReforgedMainMenu && (month == 11 || month == 0) && TryLoadBackgroundPreset(Preset::Xmas));
 		if (!hasXmas &&
 			!TryLoadBackgroundPreset(Preset::Default) &&
 			!TryLoadBackgroundPreset(Preset::Carrotus) &&

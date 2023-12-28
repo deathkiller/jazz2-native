@@ -52,7 +52,22 @@
 #	define DEATH_TARGET_32BIT
 #endif
 
-// C++ standard
+/**
+	@brief C++ standard version
+
+	Expands to `__cplusplus` macro on all sane compilers; on MSVC uses `_MSVC_LANG` if defined
+	(since Visual Studio 2015 Update 3), otherwise reports C++11. The returned version is:
+
+	-   @cpp 201103 @ce when C++11 is used
+	-   @cpp 201402 @ce when C++14 is used
+	-   @cpp 201703 @ce when C++17 is used
+	-   @cpp 202002 @ce when C++20 is used
+	-   greater than @cpp 202002 @ce when C++2b is used
+
+	Note that compilers that don't have full support for given standard may not return the exact value,
+	in which case it's recommended to check that the reported value is *greater* than the previous standard,
+	for example @cpp #if DEATH_CXX_STANDARD > 201703 @ce to test whether compiling as C++20.
+*/
 #if defined(_MSC_VER)
 #	if defined(_MSVC_LANG)
 #		define DEATH_CXX_STANDARD _MSVC_LANG

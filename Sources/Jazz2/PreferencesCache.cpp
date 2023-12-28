@@ -29,7 +29,9 @@ namespace Jazz2
 #else
 	bool PreferencesCache::UnalignedViewport = false;
 #endif
-	bool PreferencesCache::EnableReforged = true;
+	bool PreferencesCache::EnableReforgedGameplay = true;
+	bool PreferencesCache::EnableReforgedHUD = true;
+	bool PreferencesCache::EnableReforgedMainMenu = true;
 	bool PreferencesCache::EnableLedgeClimb = true;
 	WeaponWheelStyle PreferencesCache::WeaponWheel = WeaponWheelStyle::Enabled;
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
@@ -156,7 +158,7 @@ namespace Jazz2
 					ShowPlayerTrails = ((boolOptions & BoolOptions::ShowPlayerTrails) == BoolOptions::ShowPlayerTrails);
 					LowGraphicsQuality = ((boolOptions & BoolOptions::LowGraphicsQuality) == BoolOptions::LowGraphicsQuality);
 					UnalignedViewport = ((boolOptions & BoolOptions::UnalignedViewport) == BoolOptions::UnalignedViewport);
-					EnableReforged = ((boolOptions & BoolOptions::EnableReforged) == BoolOptions::EnableReforged);
+					EnableReforgedGameplay = ((boolOptions & BoolOptions::EnableReforgedGameplay) == BoolOptions::EnableReforgedGameplay);
 					EnableLedgeClimb = ((boolOptions & BoolOptions::EnableLedgeClimb) == BoolOptions::EnableLedgeClimb);
 					WeaponWheel = ((boolOptions & BoolOptions::EnableWeaponWheel) == BoolOptions::EnableWeaponWheel ? WeaponWheelStyle::Enabled : WeaponWheelStyle::Disabled);
 					EnableRgbLights = ((boolOptions & BoolOptions::EnableRgbLights) == BoolOptions::EnableRgbLights);
@@ -167,6 +169,12 @@ namespace Jazz2
 					EnableDiscordIntegration = ((boolOptions & BoolOptions::EnableDiscordIntegration) == BoolOptions::EnableDiscordIntegration);
 					TutorialCompleted = ((boolOptions & BoolOptions::TutorialCompleted) == BoolOptions::TutorialCompleted);
 					ResumeOnStart = ((boolOptions & BoolOptions::ResumeOnStart) == BoolOptions::ResumeOnStart);
+
+					if (version >= 3) {
+						// These 2 new options needs to be enabled by default
+						EnableReforgedHUD = ((boolOptions & BoolOptions::EnableReforgedHUD) == BoolOptions::EnableReforgedHUD);
+						EnableReforgedMainMenu = ((boolOptions & BoolOptions::EnableReforgedMainMenu) == BoolOptions::EnableReforgedMainMenu);
+					}
 
 					if (WeaponWheel != WeaponWheelStyle::Disabled && (boolOptions & BoolOptions::ShowWeaponWheelAmmoCount) == BoolOptions::ShowWeaponWheelAmmoCount) {
 						WeaponWheel = WeaponWheelStyle::EnabledWithAmmoCount;
@@ -337,7 +345,7 @@ namespace Jazz2
 		if (ShowPlayerTrails) boolOptions |= BoolOptions::ShowPlayerTrails;
 		if (LowGraphicsQuality) boolOptions |= BoolOptions::LowGraphicsQuality;
 		if (UnalignedViewport) boolOptions |= BoolOptions::UnalignedViewport;
-		if (EnableReforged) boolOptions |= BoolOptions::EnableReforged;
+		if (EnableReforgedGameplay) boolOptions |= BoolOptions::EnableReforgedGameplay;
 		if (EnableLedgeClimb) boolOptions |= BoolOptions::EnableLedgeClimb;
 		if (WeaponWheel != WeaponWheelStyle::Disabled) boolOptions |= BoolOptions::EnableWeaponWheel;
 		if (WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount) boolOptions |= BoolOptions::ShowWeaponWheelAmmoCount;
@@ -348,6 +356,8 @@ namespace Jazz2
 		if (TutorialCompleted) boolOptions |= BoolOptions::TutorialCompleted;
 		if (Language[0] != '\0') boolOptions |= BoolOptions::SetLanguage;
 		if (ResumeOnStart) boolOptions |= BoolOptions::ResumeOnStart;
+		if (EnableReforgedHUD) boolOptions |= BoolOptions::EnableReforgedHUD;
+		if (EnableReforgedMainMenu) boolOptions |= BoolOptions::EnableReforgedMainMenu;
 		co.WriteValue<uint64_t>((uint64_t)boolOptions);
 
 		if (Language[0] != '\0') {
