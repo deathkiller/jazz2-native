@@ -95,7 +95,9 @@ namespace Jazz2
 		static bool UnalignedViewport;
 
 		// Gameplay
-		static bool EnableReforged;
+		static bool EnableReforgedGameplay;
+		static bool EnableReforgedHUD;
+		static bool EnableReforgedMainMenu;
 		static bool EnableLedgeClimb;
 		static WeaponWheelStyle WeaponWheel;
 		static bool EnableRgbLights;
@@ -136,7 +138,7 @@ namespace Jazz2
 			LowGraphicsQuality = 0x10,
 			UnalignedViewport = 0x20,
 
-			EnableReforged = 0x100,
+			EnableReforgedGameplay = 0x100,
 			EnableLedgeClimb = 0x200,
 			EnableWeaponWheel = 0x400,
 			EnableRgbLights = 0x800,
@@ -147,12 +149,15 @@ namespace Jazz2
 
 			TutorialCompleted = 0x10000,
 			SetLanguage = 0x20000,
-			ResumeOnStart = 0x40000
+			ResumeOnStart = 0x40000,
+
+			EnableReforgedHUD = 0x100000,
+			EnableReforgedMainMenu = 0x200000
 		};
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(BoolOptions);
 
-		static constexpr std::uint8_t FileVersion = 2;
+		static constexpr std::uint8_t FileVersion = 3;
 
 		static constexpr float TouchPaddingMultiplier = 0.003f;
 

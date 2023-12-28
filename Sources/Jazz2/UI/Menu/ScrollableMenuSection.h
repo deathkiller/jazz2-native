@@ -142,15 +142,17 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		int bottomLine = viewSize.Y - BottomLine;
-		int availableHeight = (bottomLine - TopLine);
+		Recti clipRect = GetClipRectangle(viewSize);
+		int topLine = clipRect.Y + 1;
+		int bottomLine = clipRect.Y + clipRect.H - 1;
+		int availableHeight = (bottomLine - topLine);
 
 		if (_height == 0) {
 			_height = ItemHeight * 2 / 3;
 
 			for (int i = 0; i < _items.size(); i++) {
 				auto& item = _items[i];
-				item.Y = _height + TopLine + _y;
+				item.Y = _height + topLine + _y;
 				OnLayoutItem(canvas, item);
 				_height += item.Height;
 			}
@@ -171,21 +173,21 @@ namespace Jazz2::UI::Menu
 			_scrollable = false;
 		}
 
-		Vector2i center = Vector2i(viewSize.X / 2, TopLine + ItemHeight / 2 + _y);
+		Vector2i center = Vector2i(viewSize.X / 2, topLine + ItemHeight / 2 + _y);
 
 		for (int i = 0; i < _items.size(); i++) {
 			auto& item = _items[i];
 			item.Y = center.Y;
 
-			if (center.Y > TopLine - ItemHeight && center.Y < bottomLine + ItemHeight) {
+			if (center.Y > topLine - ItemHeight && center.Y < bottomLine + ItemHeight) {
 				OnDrawItem(canvas, item, charOffset, _selectedIndex == i);
 			}
 
 			center.Y += item.Height;
 		}
 
-		if (_items[0].Y < TopLine + ItemHeight / 2) {
-			_root->DrawElement(MenuGlow, 0, center.X, TopLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
+		if (_items[0].Y < topLine + ItemHeight / 2) {
+			_root->DrawElement(MenuGlow, 0, center.X, topLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
 		}
 		int itemHeight = _items[_items.size() - 1].Height - ItemHeight * 4 / 5 + ItemHeight / 2;
 		if (_items[_items.size() - 1].Y > bottomLine - itemHeight / 2) {
@@ -267,11 +269,15 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+		Vector2i viewSize = _root->GetViewSize();
+		Recti clipRect = GetClipRectangle(viewSize);
+		int topLine = clipRect.Y + 1;
+		int bottomLine = clipRect.Y + clipRect.H - 1;
+
 		auto& item = _items[_selectedIndex];
-		int bottomLine = _root->GetViewSize().Y - BottomLine;
-		if (item.Y < TopLine + ItemHeight / 2) {
+		if (item.Y < topLine + ItemHeight / 2) {
 			// Scroll up
-			_y += (TopLine + ItemHeight / 2 - item.Y);
+			_y += (topLine + ItemHeight / 2 - item.Y);
 			return;
 		}
 		

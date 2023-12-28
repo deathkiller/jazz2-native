@@ -463,7 +463,7 @@ namespace Jazz2::UI
 		std::int32_t charOffset = 0;
 		std::int32_t charOffsetShadow = 0;
 
-		if (_levelHandler->IsReforged()) {
+		if (PreferencesCache::EnableReforgedHUD) {
 			for (std::int32_t i = 0; i < player->_health; i++) {
 				stringBuffer[i] = '|';
 			}
@@ -544,7 +544,7 @@ namespace Jazz2::UI
 		std::int32_t charOffset = 0;
 		std::int32_t charOffsetShadow = 0;
 
-		if (_levelHandler->IsReforged()) {
+		if (PreferencesCache::EnableReforgedHUD) {
 			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
 			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f, MainLayer, Alignment::TopLeft, Colorf::White);
 

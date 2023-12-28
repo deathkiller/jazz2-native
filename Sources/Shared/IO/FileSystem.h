@@ -180,6 +180,9 @@ namespace Death { namespace IO {
 		/** @brief Returns true if the path is a file and is writeable */
 		static bool IsWritableFile(const Containers::StringView path);
 
+		/** @brief Returns true if the path is a symbolic link */
+		static bool IsSymbolicLink(const Containers::StringView path);
+
 		/** @brief Returns true if the file or directory is hidden */
 		static bool IsHidden(const Containers::StringView path);
 		/** @brief Makes a file or directory hidden or not */

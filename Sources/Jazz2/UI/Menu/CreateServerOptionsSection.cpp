@@ -338,7 +338,7 @@ namespace Jazz2::UI::Menu
 	{
 		PlayerType players[] = { (PlayerType)((int32_t)PlayerType::Jazz + _selectedPlayerType) };
 		LevelInitialization levelInit(_episodeName, StringView(_levelName), GameDifficulty::Multiplayer,
-			PreferencesCache::EnableReforged, false, players, countof(players));
+			PreferencesCache::EnableReforgedGameplay, false, players, countof(players));
 
 		if (!_previousEpisodeName.empty()) {
 			auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(_previousEpisodeName);
@@ -362,7 +362,7 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		if (PreferencesCache::EnableReforged && _levelName == "01_xmas1"_s) {
+		if (PreferencesCache::EnableReforgedGameplay && _levelName == "01_xmas1"_s) {
 			levelInit.LastExitType = ExitType::Warp | ExitType::Frozen;
 		}
 

@@ -77,7 +77,7 @@ namespace Jazz2::Multiplayer
 			_lastSpawnedActorId = UINT8_MAX;
 
 			std::uint8_t flags = 0;
-			if (PreferencesCache::EnableReforged) {
+			if (PreferencesCache::EnableReforgedGameplay) {
 				flags |= 0x01;
 			}
 			MemoryStream packet(10 + _episodeName.size() + _levelFileName.size());
@@ -1012,7 +1012,7 @@ namespace Jazz2::Multiplayer
 			switch (packetType) {
 				case ClientPacketType::Auth: {
 					std::uint8_t flags = 0;
-					if (PreferencesCache::EnableReforged) {
+					if (PreferencesCache::EnableReforgedGameplay) {
 						flags |= 0x01;
 					}
 

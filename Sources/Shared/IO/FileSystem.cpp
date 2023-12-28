@@ -169,6 +169,7 @@ namespace Death { namespace IO {
 							std::memcpy(&bufferExtended[bufferOffset], data.cFileName, fileNameLength * sizeof(wchar_t));
 
 							if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
+								// Don't follow symbolic links
 								bool shouldRecurse = ((data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != FILE_ATTRIBUTE_REPARSE_POINT);
 								if (shouldRecurse) {
 									bufferExtended[bufferOffset + fileNameLength] = L'\0';
@@ -1340,6 +1341,31 @@ namespace Death { namespace IO {
 		struct stat sb;
 		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
 			return ((sb.st_mode & S_IFMT) == S_IFREG && (sb.st_mode & S_IWUSR) != 0);
+		}
+#endif
+		return false;
+	}
+
+	bool FileSystem::IsSymbolicLink(const StringView path)
+	{
+		if (path.empty()) return false;
+
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
+		return (::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT);
+#elif defined(DEATH_TARGET_WINDOWS)
+		const DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
+		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT);
+#else
+		auto nullTerminatedPath = String::nullTerminatedView(path);
+#	if defined(DEATH_TARGET_ANDROID)
+		if (AndroidAssetStream::TryGetAssetPath(nullTerminatedPath.data())) {
+			return false;
+		}
+#	endif
+		struct stat sb;
+		if (::lstat(nullTerminatedPath.data(), &sb) == 0) {
+			return ((sb.st_mode & S_IFMT) == S_IFLNK);
 		}
 #endif
 		return false;

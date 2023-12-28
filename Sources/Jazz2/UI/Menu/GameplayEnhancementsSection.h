@@ -1,41 +1,42 @@
 ﻿#pragma once
 
-#include "MenuSection.h"
+#include "ScrollableMenuSection.h"
 
 namespace Jazz2::UI::Menu
 {
-	class GameplayEnhancementsSection : public MenuSection
+	enum class GameplayEnhancementsItemType {
+		ReforgedGameplay,
+		ReforgedHUD,
+		ReforgedMainMenu,
+		LedgeClimb,
+		WeaponWheel
+	};
+
+	struct GameplayEnhancementsItem {
+		GameplayEnhancementsItemType Type;
+		String DisplayName;
+	};
+
+	class GameplayEnhancementsSection : public ScrollableMenuSection<GameplayEnhancementsItem>
 	{
 	public:
 		GameplayEnhancementsSection();
 		~GameplayEnhancementsSection();
 
+		Recti GetClipRectangle(const Vector2i& viewSize) override;
+
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
-		void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) override;
 
 	private:
-		enum class Item {
-			Reforged,
-			LedgeClimb,
-			WeaponWheel,
-
-			Count
-		};
-
-		struct ItemData {
-			String Name;
-			float TouchY;
-		};
-
-		ItemData _items[(int32_t)Item::Count];
-		int32_t _selectedIndex;
-		float _animation;
 		float _transition;
 		bool _isDirty;
 		bool _isInGame;
 
-		void ExecuteSelected();
+		void OnHandleInput() override;
+		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
+		void OnDrawItem(Canvas* canvas, ListViewItem& item, int32_t& charOffset, bool isSelected) override;
+		void OnExecuteSelected() override;
 	};
 }
