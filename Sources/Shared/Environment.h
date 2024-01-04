@@ -39,6 +39,10 @@ namespace Death { namespace Environment {
 		return WindowsVersion >= 0x06000100000000; // 6.1.0
 	}
 
+	DEATH_ALWAYS_INLINE bool IsWindows8() {
+		return WindowsVersion >= 0x06000300000000; // 6.3.0
+	}
+
 	DEATH_ALWAYS_INLINE bool IsWindows10() {
 		return WindowsVersion >= 0x0a0000000047ba; // 10.0.18362
 	}

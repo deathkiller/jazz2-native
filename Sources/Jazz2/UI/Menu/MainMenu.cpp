@@ -41,20 +41,8 @@ namespace Jazz2::UI::Menu
 		_smallFont = resolver.GetFont(FontType::Small);
 		_mediumFont = resolver.GetFont(FontType::Medium);
 
-#if defined(WITH_OPENMPT)
-		if (PreferencesCache::EnableReforgedMainMenu) {
-			_music = resolver.GetMusic(Random().NextBool() ? "bonus2.j2b"_s : "bonus3.j2b"_s);
-		}
-		if (_music == nullptr) {
-			_music = resolver.GetMusic("menu.j2b"_s);
-		}
-		if (_music != nullptr) {
-			_music->setLooping(true);
-			_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
-			_music->setSourceRelative(true);
-			_music->play();
-		}
-#endif
+		PlayMenuMusic();
+
 		resolver.EndLoading();
 
 		// Mark Fire and Menu button as already pressed to avoid some issues
@@ -406,6 +394,10 @@ namespace Jazz2::UI::Menu
 			_sections.clear();
 			SwitchToSection<BeginSection>();
 		}
+
+		if ((type & ChangedPreferencesType::MainMenu) == ChangedPreferencesType::MainMenu) {
+			PlayMenuMusic();
+		}
 	}
 
 	void MainMenu::DrawElement(AnimState state, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending)
@@ -518,6 +510,30 @@ namespace Jazz2::UI::Menu
 	bool MainMenu::ActionHit(PlayerActions action)
 	{
 		return ((_pressedActions & ((1 << (int32_t)action) | (1 << (16 + (int32_t)action)))) == (1 << (int32_t)action));
+	}
+
+	void MainMenu::PlayMenuMusic()
+	{
+#if defined(WITH_OPENMPT)
+		auto& resolver = ContentResolver::Get();
+
+		if (PreferencesCache::EnableReforgedMainMenu) {
+			_music = resolver.GetMusic(Random().NextBool() ? "bonus2.j2b"_s : "bonus3.j2b"_s);
+		} else {
+			_music = nullptr;
+		}
+
+;		if (_music == nullptr) {
+			_music = resolver.GetMusic("menu.j2b"_s);
+		}
+
+		if (_music != nullptr) {
+			_music->setLooping(true);
+			_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
+			_music->setSourceRelative(true);
+			_music->play();
+		}
+#endif
 	}
 
 	void MainMenu::UpdatePressedActions()

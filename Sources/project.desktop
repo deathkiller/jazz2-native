@@ -9,3 +9,4 @@ StartupWMClass=@CPACK_PACKAGE_STARTUPWMCLASS@
 Terminal=false
 Type=Application
 Categories=Game;
+Keywords=game;action;platformer;

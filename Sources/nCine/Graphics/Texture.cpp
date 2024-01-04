@@ -322,13 +322,13 @@ namespace nCine
 
 	void Texture::setWrap(SamplerWrapping wrapMode)
 	{
-		GLenum glWrap = GL_CLAMP_TO_EDGE;
+		GLenum glWrap;
 		// clang-format off
 		switch (wrapMode) {
+			default:
 			case SamplerWrapping::ClampToEdge:		glWrap = GL_CLAMP_TO_EDGE; break;
 			case SamplerWrapping::MirroredRepeat:	glWrap = GL_MIRRORED_REPEAT; break;
 			case SamplerWrapping::Repeat:			glWrap = GL_REPEAT; break;
-			default:								glWrap = GL_CLAMP_TO_EDGE; break;
 		}
 		// clang-format on
 
@@ -357,24 +357,6 @@ namespace nCine
 		FATAL_ASSERT_MSG(texLoader.width() <= maxTextureSize, "Texture width %d is bigger than device maximum %d", texLoader.width(), maxTextureSize);
 		FATAL_ASSERT_MSG(texLoader.height() <= maxTextureSize, "Texture height %d is bigger than device maximum %d", texLoader.height(), maxTextureSize);
 
-		glTexture_->texParameteri(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexture_->texParameteri(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		wrapMode_ = SamplerWrapping::ClampToEdge;
-
-		if (texLoader.mipMapCount() > 1) {
-			glTexture_->texParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexture_->texParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-			magFiltering_ = SamplerFilter::Linear;
-			minFiltering_ = SamplerFilter::LinearMipmapLinear;
-			// To prevent artifacts if the MIP map chain is not complete
-			glTexture_->texParameteri(GL_TEXTURE_MAX_LEVEL, texLoader.mipMapCount());
-		} else {
-			glTexture_->texParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexture_->texParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			magFiltering_ = SamplerFilter::Linear;
-			minFiltering_ = SamplerFilter::Linear;
-		}
-
 		const TextureFormat& texFormat = texLoader.texFormat();
 		GLenum internalFormat = texFormat.internalFormat();
 		GLenum format = texFormat.format();
@@ -395,8 +377,9 @@ namespace nCine
 					dataSize_ = 0;
 				}
 
-				if (dataSize_ == 0)
+				if (dataSize_ == 0) {
 					glTexture_->texStorage2D(texLoader.mipMapCount(), internalFormat, texLoader.width(), texLoader.height());
+				}
 			} else if (!texFormat.isCompressed()) {
 				int levelWidth = texLoader.width();
 				int levelHeight = texLoader.height();
@@ -415,6 +398,24 @@ namespace nCine
 		isCompressed_ = texFormat.isCompressed();
 		format_ = internalFormatToNc(internalFormat);
 		dataSize_ = dataSize;
+
+		glTexture_->texParameteri(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexture_->texParameteri(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		wrapMode_ = SamplerWrapping::ClampToEdge;
+
+		if (mipMapLevels_ > 1) {
+			glTexture_->texParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexture_->texParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+			magFiltering_ = SamplerFilter::Linear;
+			minFiltering_ = SamplerFilter::LinearMipmapLinear;
+			// To prevent artifacts if the MIP map chain is not complete
+			glTexture_->texParameteri(GL_TEXTURE_MAX_LEVEL, mipMapLevels_);
+		} else {
+			glTexture_->texParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexture_->texParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			magFiltering_ = SamplerFilter::Linear;
+			minFiltering_ = SamplerFilter::Linear;
+		}
 	}
 
 	void Texture::load(const ITextureLoader& texLoader)

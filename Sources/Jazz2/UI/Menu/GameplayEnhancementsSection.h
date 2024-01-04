@@ -33,6 +33,7 @@ namespace Jazz2::UI::Menu
 		float _transition;
 		bool _isDirty;
 		bool _isInGame;
+		bool _wasReforgedMainMenu;
 
 		void OnHandleInput() override;
 		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;

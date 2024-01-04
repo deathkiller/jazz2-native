@@ -256,7 +256,6 @@ namespace Death { namespace Containers { namespace StringUtils {
 					if (size < 16)
 						return equalsIgnoreCaseImplementation(Cpu::Scalar)(data1, data2, size);
 
-					const __m128i nonAsciiMask = _mm_set1_epi8(~0x7F);
 					const __m128i loweringMask = _mm_set1_epi8(0x20);
 					const __m128i vecA = _mm_set1_epi8('a');
 					const __m128i vecZMinusA = _mm_set1_epi8('z' - 'a');
@@ -432,7 +431,6 @@ namespace Death { namespace Containers { namespace StringUtils {
 					if (size < 32)
 						return equalsIgnoreCaseImplementation(Cpu::Sse2)(data1, data2, size);
 					
-					const __m256i nonAsciiMask = _mm256_set1_epi8(~0x7F);
 					const __m256i loweringMask = _mm256_set1_epi8(0x20);
 					const __m256i vecA = _mm256_set1_epi8('a');
 					const __m256i vecZMinusA = _mm256_set1_epi8('z' - 'a');

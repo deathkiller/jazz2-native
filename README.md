@@ -54,6 +54,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 
 <sup>Alternatively, you can use package repository for your Linux distribution:</sup><br>
 [![ArchLinux](https://img.shields.io/badge/Arch%20Linux-grey?logo=archlinux&logoColor=ffffff)](https://aur.archlinux.org/packages/jazz2-bin)
+[![Flathub](https://img.shields.io/flathub/v/tk.deat.Jazz2Resurrection?label=Flathub&logo=flathub&logoColor=ffffff)](https://flathub.org/apps/tk.deat.Jazz2Resurrection)
 [![NixOS](https://img.shields.io/badge/NixOS-grey?logo=nixos&logoColor=ffffff)](https://search.nixos.org/packages?channel=unstable&show=jazz2&from=0&size=50&sort=relevance&type=packages&query=jazz2)
 [![OpenSUSE](https://img.shields.io/obs/games/jazz2/openSUSE_Tumbleweed/x86_64?label=OpenSUSE&logo=opensuse&logoColor=ffffff)](https://build.opensuse.org/package/show/games/jazz2)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-grey?logo=ubuntu&logoColor=ffffff)](https://xtradeb.net/play/jazz2/)
@@ -112,6 +113,7 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
 ### Linux
 * Build dependencies will be downloaded automatically by *CMake*
   * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
+  * System libraries always have higher priority, there is no need to download them separately if your system already contains all dependencies
   * In case of build errors, install following packages (or equivalent for your distribution):<br>`libgl1-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libopenmpt-dev zlib1g-dev`
 * Build the project with *CMake*
 
@@ -126,13 +128,13 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
 * Install Gradle (preferably to `../gradle/`)
 * Build dependencies will be downloaded automatically by *CMake*
   * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
-* Build the project with *CMake*
+* Build the project with *CMake* and `NCINE_BUILD_ANDROID` option
 
 ### Nintendo Switch
 * Install [devkitPro toolchain](https://devkitpro.org/wiki/devkitPro_pacman)
 * Build the project with *CMake* and devkitPro toolchain
 ```bash
-cmake -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Switch.cmake -D NCINE_PREFERRED_BACKEND=SDL2 -D NCINE_WITH_GLEW=OFF
+cmake -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Switch.cmake -D NCINE_PREFERRED_BACKEND=SDL2
 ```
 
 ### Web (Emscripten)
@@ -145,7 +147,7 @@ cd emsdk
 ./emsdk activate latest
 ```
 * Build dependencies will be downloaded automatically by *CMake*
-  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option, then download [build dependencies](https://github.com/deathkiller/jazz2-libraries) manually to `./Libs/`
+  * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option
 * Copy required game files to `./Content/` directory – the files must be provided in advance
 * Build the project with *CMake* and Emscripten toolchain
 

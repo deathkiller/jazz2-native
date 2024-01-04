@@ -182,6 +182,7 @@ namespace Jazz2::UI::Menu
 		uint32_t _pressedActions;
 		float _touchButtonsTimer;
 
+		void PlayMenuMusic();
 		void UpdatePressedActions();
 		void UpdateRichPresence();
 		void UpdateDebris(float timeMult);
