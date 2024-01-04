@@ -46,7 +46,7 @@ namespace nCine
 
 		/// Returns a factor that represents how long the last frame took relative to the desired frame time
 		inline float timeMult() const {
-			return timeMult_;
+			return timeMults_[0];
 		}
 
 	private:
@@ -78,7 +78,6 @@ namespace nCine
 		float avgFps_;
 
 		/// Factor that represents how long the last frame took relative to the desired frame time
-		float timeMult_;
-		float timeMultPrev_;
+		float timeMults_[3];
 	};
 }

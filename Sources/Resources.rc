@@ -23,7 +23,7 @@ VS_VERSION_INFO VERSIONINFO
 			VALUE "CompanyName", "Dan R."
 			VALUE "FileVersion", "2.4.1.0"
 			VALUE "InternalName", "Jazz2"
-			VALUE "LegalCopyright", "© 2016-2023 Dan R."
+			VALUE "LegalCopyright", "© 2016-2024 Dan R."
 			VALUE "OriginalFilename", "Jazz2.exe"
 			VALUE "ProductName", "Jazz² Resurrection"
 			VALUE "ProductVersion", "2.4.1.0"

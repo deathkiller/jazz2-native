@@ -11,7 +11,7 @@
 #	define NCINE_VERSION "2.4.1"
 #endif
 #if !defined(NCINE_BUILD_YEAR)
-#	define NCINE_BUILD_YEAR "2023"
+#	define NCINE_BUILD_YEAR "2024"
 #endif
 #if !defined(NCINE_LINUX_PACKAGE)
 #	define NCINE_LINUX_PACKAGE NCINE_APP_NAME

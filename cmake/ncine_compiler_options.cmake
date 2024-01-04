@@ -275,9 +275,14 @@ else() # GCC and LLVM
 	if(NCINE_DYNAMIC_LIBRARY)
 		target_compile_options(${NCINE_APP} PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
 	endif()
-	
+
 	if(MINGW OR MSYS)
 		target_link_options(${NCINE_APP} PUBLIC -municode)
+	endif()
+
+	if(NCINE_ARCH_EXTENSIONS AND UNIX AND NOT APPLE AND NOT ANDROID)
+		message(STATUS "Specified architecture extensions for code generation: ${NCINE_ARCH_EXTENSIONS}")
+		target_compile_options(${NCINE_APP} PRIVATE -march=${NCINE_ARCH_EXTENSIONS})
 	endif()
 	
 	# Only in Debug - preserve debug information

@@ -1620,7 +1620,6 @@ namespace Jazz2
 
 				std::int32_t w = texLoader->width();
 				std::int32_t h = texLoader->height();
-				auto pixels = (std::uint32_t*)texLoader->pixels();
 				const std::uint32_t* palette = _palettes;
 				bool needsMask = true;
 

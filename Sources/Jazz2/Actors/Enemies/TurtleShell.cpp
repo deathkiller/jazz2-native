@@ -17,8 +17,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Enemies
 {
 	TurtleShell::TurtleShell()
-		:
-		_lastAngle(0.0f)
+		: _lastAngle(0.0f)
 	{
 	}
 
@@ -68,7 +67,7 @@ namespace Jazz2::Actors::Enemies
 		SetAnimation(AnimState::Default);
 
 		_canHurtPlayer = false;
-		_friction = _levelHandler->Gravity * 0.05f;
+		_friction = _levelHandler->Gravity * 0.14f;
 		_elasticity = 0.5f;
 		_health = 8;
 
@@ -97,8 +96,11 @@ namespace Jazz2::Actors::Enemies
 			_speed.X = std::max(std::abs(_speed.X) - 10.0f * _friction, 0.0f) * (_speed.X < 0.0f ? -1.0f : 1.0f);
 		}
 
-		_lastAngle = lerp(_lastAngle, _speed.X * 0.06f, timeMult * 0.2f);
-		_renderer.setRotation(_lastAngle);
+		if (_levelHandler->IsReforged()) {
+			// Enable tilting only if Reforged
+			_lastAngle = lerp(_lastAngle, _speed.X * 0.06f, timeMult * 0.2f);
+			_renderer.setRotation(_lastAngle);
+		}
 	}
 
 	void TurtleShell::OnUpdateHitbox()
@@ -142,7 +144,7 @@ namespace Jazz2::Actors::Enemies
 					shotSpeed = shotBase->GetSpeed().X;
 				}
 
-				_speed.X = std::max(4.0f, std::abs(shotSpeed)) * (shotSpeed < 0.0f ? -0.5f : 0.5f);
+				_speed.X = std::max(4.0f, std::abs(shotSpeed)) * (shotSpeed < 0.0f ? -0.6f : 0.6f);
 
 				PlaySfx("Fly"_s);
 			}

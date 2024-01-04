@@ -7,7 +7,7 @@ namespace nCine
 {
 	FrameTimer::FrameTimer(float logInterval, float avgInterval)
 		: averageInterval_(avgInterval), loggingInterval_(logInterval), frameDuration_(0.0f), lastAvgUpdate_(TimeStamp::now()),
-			totNumFrames_(0L), avgNumFrames_(0L), logNumFrames_(0L), avgFps_(0.0f), timeMult_(1.0f), timeMultPrev_(1.0f)
+			totNumFrames_(0L), avgNumFrames_(0L), logNumFrames_(0L), avgFps_(0.0f), timeMults_{1.0f, 1.0f, 1.0f}
 	{
 	}
 
@@ -22,10 +22,11 @@ namespace nCine
 		avgNumFrames_++;
 		logNumFrames_++;
 
-		// Smooth out time multiplier using last 2 frames to prevent microstuttering
-		float timeMultPrev = timeMult_;
-		timeMult_ = (timeMultPrev_ + timeMultPrev_ + timeMult_ + (std::min(frameDuration_, SecondsPerFrame * 2) / SecondsPerFrame)) * 0.25f;
-		timeMultPrev_ = timeMultPrev;
+		// Smooth out time multiplier using last 3 frames to prevent microstuttering
+		float timeMultLast = timeMults_[0];
+		timeMults_[0] = (timeMults_[2] + timeMults_[1] + timeMultLast + (std::min(frameDuration_, SecondsPerFrame * 2) / SecondsPerFrame)) * 0.25f;
+		timeMults_[2] = timeMults_[1];
+		timeMults_[1] = timeMultLast;
 
 		// Update the FPS average calculation every `avgInterval_` seconds
 		const float secsSinceLastAvgUpdate = (frameStart_ - lastAvgUpdate_).seconds();

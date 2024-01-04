@@ -151,17 +151,21 @@ namespace Death { namespace IO {
 				openFlag = O_RDWR;
 				break;
 			default:
-				LOGE("Cannot open the file \"%s\", wrong open mode", _path.data());
+				LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
 				return;
 		}
 
 		_fileDescriptor = ::open(_path.data(), openFlag);
 		if (_fileDescriptor < 0) {
-			LOGE("Cannot open the file \"%s\"", _path.data());
+			LOGE("Cannot open file \"%s\" - failed with error %i", _path.data(), errno);
 			return;
 		}
 
-		LOGI("File \"%s\" opened", _path.data());
+		switch (mode) {
+			default: LOGI("File \"%s\" opened", _path.data()); break;
+			case FileAccessMode::Write: LOGI("File \"%s\" opened for write", _path.data()); break;
+			case FileAccessMode::Read | FileAccessMode::Write: LOGI("File \"%s\" opened for read+write", _path.data()); break;
+		}
 
 		// Calculating file size
 		_size = ::lseek(_fileDescriptor, 0L, SEEK_END);
@@ -191,19 +195,23 @@ namespace Death { namespace IO {
 				modeInternal = "r+b";
 				break;
 			default:
-				LOGE("Cannot open the file \"%s\", wrong open mode", _path.data());
+				LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
 				return;
 		}
 
 		HANDLE hFile = ::CreateFile2FromAppW(Utf8::ToUtf16(_path), desireAccess, FILE_SHARE_READ, creationDisposition, nullptr);
 		if (hFile == nullptr || hFile == INVALID_HANDLE_VALUE) {
 			DWORD error = ::GetLastError();
-			LOGE("Cannot open the file \"%s\" - failed with error 0x%08X", _path.data(), error);
+			LOGE("Cannot open file \"%s\" - failed with error 0x%08X", _path.data(), error);
 			return;
 		}
 		// Automatically transfers ownership of the Win32 file handle to the file descriptor
 		std::int32_t fd = _open_osfhandle(reinterpret_cast<std::intptr_t>(hFile), openFlag);
 		_handle = _fdopen(fd, modeInternal);
+		if (_handle == nullptr) {
+			LOGE("Cannot open file \"%s\" - failed with internal error", _path.data());
+			return;
+		}
 #	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
 		const wchar_t* modeInternal;
 		std::int32_t shareMode;
@@ -212,11 +220,16 @@ namespace Death { namespace IO {
 			case FileAccessMode::Write: modeInternal = L"wb"; shareMode = _SH_DENYWR; break;
 			case FileAccessMode::Read | FileAccessMode::Write: modeInternal = L"r+b"; shareMode = _SH_DENYWR; break;
 			default:
-				LOGE("Cannot open the file \"%s\", wrong open mode", _path.data());
+				LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
 				return;
 		}
 
 		_handle = _wfsopen(Utf8::ToUtf16(_path), modeInternal, shareMode);
+		if (_handle == nullptr) {
+			DWORD error = ::GetLastError();
+			LOGE("Cannot open file \"%s\" - failed with error 0x%08X", _path.data(), error);
+			return;
+		}
 #	else
 		const char* modeInternal;
 		switch (mode) {
@@ -224,19 +237,22 @@ namespace Death { namespace IO {
 			case FileAccessMode::Write: modeInternal = "wb"; break;
 			case FileAccessMode::Read | FileAccessMode::Write: modeInternal = "r+b"; break;
 			default:
-				LOGE("Cannot open the file \"%s\", wrong open mode", _path.data());
+				LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
 				return;
 		}
 
 		_handle = ::fopen(_path.data(), modeInternal);
-#	endif
-
 		if (_handle == nullptr) {
-			LOGE("Cannot open the file \"%s\"", _path.data());
+			LOGE("Cannot open file \"%s\" - failed with error %i", _path.data(), errno);
 			return;
 		}
+#	endif
 
-		LOGI("File \"%s\" opened", _path.data());
+		switch (mode) {
+			default: LOGI("File \"%s\" opened", _path.data()); break;
+			case FileAccessMode::Write: LOGI("File \"%s\" opened for write", _path.data()); break;
+			case FileAccessMode::Read | FileAccessMode::Write: LOGI("File \"%s\" opened for read+write", _path.data()); break;
+		}
 
 		// Calculating file size
 		::fseek(_handle, 0L, SEEK_END);

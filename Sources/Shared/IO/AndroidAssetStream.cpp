@@ -234,13 +234,13 @@ namespace Death { namespace IO {
 #if defined(DEATH_USE_FILE_DESCRIPTORS)
 		// An asset file can only be read
 		if (mode != FileAccessMode::Read) {
-			LOGE("Cannot open the file \"%s\", wrong open mode", _path.data());
+			LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
 			return;
 		}
 
 		AAsset* asset = AAssetManager_open(_assetManager, _path.data(), AASSET_MODE_UNKNOWN);
 		if (asset == nullptr) {
-			LOGE("Cannot open the file \"%s\"", _path.data());
+			LOGE("Cannot open file \"%s\"", _path.data());
 			return;
 		}
 
@@ -255,7 +255,7 @@ namespace Death { namespace IO {
 		asset = nullptr;
 
 		if (_fileDescriptor < 0) {
-			LOGE("Cannot open the file \"%s\"", _path.data());
+			LOGE("Cannot open file \"%s\"", _path.data());
 			return;
 		}
 
@@ -263,13 +263,13 @@ namespace Death { namespace IO {
 #else
 		// An asset file can only be read
 		if (mode != FileAccessMode::Read) {
-			LOGE("Cannot open the file \"%s\", wrong open mode", _path.data());
+			LOGE("Cannot open file \"%s\" - wrong open mode", _path.data());
 			return;
 		}
 
 		_asset = AAssetManager_open(_assetManager, _path.data(), AASSET_MODE_UNKNOWN);
 		if (_asset == nullptr) {
-			LOGE("Cannot open the file \"%s\"", _path.data());
+			LOGE("Cannot open file \"%s\"", _path.data());
 			return;
 		}
 
