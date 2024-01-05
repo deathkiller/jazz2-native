@@ -1016,8 +1016,10 @@ namespace Jazz2::Actors
 					scale *= 1.6f;
 				}
 
-				float gunspotPosX = _pos.X + (_currentAnimation->Base->Hotspot.X - _currentAnimation->Base->Gunspot.X - 7.0f) * (IsFacingLeft() ? 1 : -1);
-				float gunspotPosY = _pos.Y - (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);
+				float gunspotPosX = _pos.X - (res->Base->FrameDimensions.X / 2)
+					+ (_currentAnimation->Base->Hotspot.X - _currentAnimation->Base->Gunspot.X - 7) * (IsFacingLeft() ? 1 : -1);
+				float gunspotPosY = _pos.Y - (res->Base->FrameDimensions.Y / 2) * scale
+					- (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);
 
 				if (IsFacingLeft()) {
 					texScaleX *= -1.0f;
@@ -1041,8 +1043,10 @@ namespace Jazz2::Actors
 			case ShieldType::Fire: {
 				auto* res = _metadata->FindAnimation((AnimState)536870929); // ShieldFire
 				if (res != nullptr) {
+					float frames = _levelHandler->ElapsedFrames();
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
+					float shieldSize = 70.0f * shieldScale;
 
 					{
 						auto& command = _shieldRenderCommands[0];
@@ -1062,14 +1066,12 @@ namespace Jazz2::Actors
 							}
 						}
 
-						float frames = _levelHandler->ElapsedFrames();
-
 						auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(frames * -0.008f, frames * 0.006f - sinf(frames * 0.006f), -sinf(frames * 0.015f), frames * 0.006f);
-						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(70.0f * shieldScale, 70.0f * shieldScale);
+						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(shieldSize, shieldSize);
 						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
 
-						command->setTransformation(Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f));
+						command->setTransformation(Matrix4x4f::Translation(_pos.X - shieldSize * 0.5f, _pos.Y - shieldSize * 0.5f, 0.0f));
 						command->setLayer(_renderer.layer() - 4);
 						command->material().setTexture(*res->Base->TextureDiffuse.get());
 
@@ -1093,14 +1095,12 @@ namespace Jazz2::Actors
 							}
 						}
 
-						float frames = _levelHandler->ElapsedFrames();
-
 						auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(frames * 0.006f, sinf(frames * 0.006f), sinf(frames * 0.015f), frames * -0.006f);
-						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(70.0f * shieldScale, 70.0f * shieldScale);
+						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(shieldSize, shieldSize);
 						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 1.0f, 1.0f * shieldAlpha);
 
-						command->setTransformation(Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f));
+						command->setTransformation(Matrix4x4f::Translation(_pos.X - shieldSize * 0.5f, _pos.Y - shieldSize * 0.5f, 0.0f));
 						command->setLayer(_renderer.layer() + 4);
 						command->material().setTexture(*res->Base->TextureDiffuse.get());
 
@@ -1112,6 +1112,7 @@ namespace Jazz2::Actors
 			case ShieldType::Water: {
 				auto* res = _metadata->FindAnimation((AnimState)536870930); // ShieldWater
 				if (res != nullptr) {
+					float frames = _levelHandler->ElapsedFrames();
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
 
@@ -1132,8 +1133,6 @@ namespace Jazz2::Actors
 						}
 					}
 
-					float frames = _levelHandler->ElapsedFrames();
-
 					Vector2i texSize = res->Base->TextureDiffuse->size();
 					int curAnimFrame = res->FrameOffset + ((int)(frames * 0.24f) % res->FrameCount);
 					int col = curAnimFrame % res->Base->FrameConfiguration.X;
@@ -1148,7 +1147,7 @@ namespace Jazz2::Actors
 					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(res->Base->FrameDimensions.X * shieldScale, res->Base->FrameDimensions.Y * shieldScale);
 					instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(1.0f, 1.0f, 1.0f, shieldAlpha);
 
-					command->setTransformation(Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f));
+					command->setTransformation(Matrix4x4f::Translation(_pos.X - res->Base->FrameDimensions.X * shieldScale * 0.5f, _pos.Y - res->Base->FrameDimensions.Y * shieldScale * 0.5f, 0.0f));
 					command->setLayer(_renderer.layer() + 4);
 					command->material().setTexture(*res->Base->TextureDiffuse.get());
 
@@ -1159,8 +1158,10 @@ namespace Jazz2::Actors
 			case ShieldType::Lightning: {
 				auto* res = _metadata->FindAnimation((AnimState)536870931); // ShieldLightning
 				if (res != nullptr) {
+					float frames = _levelHandler->ElapsedFrames();
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
+					float shieldSize = 70.0f * shieldScale + sinf(frames * 0.06f) * 4.0f;
 
 					{
 						auto& command = _shieldRenderCommands[0];
@@ -1180,14 +1181,12 @@ namespace Jazz2::Actors
 							}
 						}
 
-						float frames = _levelHandler->ElapsedFrames();
-
 						auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(frames * -0.008f, frames * 0.006f - sinf(frames * 0.006f), -sinf(frames * 0.015f), frames * 0.006f);
-						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(70.0f * shieldScale, 70.0f * shieldScale);
+						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(shieldSize, shieldSize);
 						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
 
-						command->setTransformation(Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f));
+						command->setTransformation(Matrix4x4f::Translation(_pos.X - shieldSize * 0.5f, _pos.Y - shieldSize * 0.5f, 0.0f));
 						command->setLayer(_renderer.layer() - 4);
 						command->material().setTexture(*res->Base->TextureDiffuse.get());
 
@@ -1211,14 +1210,12 @@ namespace Jazz2::Actors
 							}
 						}
 
-						float frames = _levelHandler->ElapsedFrames();
-
 						auto* instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 						instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(frames * 0.006f, sinf(frames * 0.006f), sinf(frames * 0.015f), frames * -0.006f);
-						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(70.0f * shieldScale, 70.0f * shieldScale);
+						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(shieldSize, shieldSize);
 						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 1.0f, shieldAlpha);
 
-						command->setTransformation(Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f));
+						command->setTransformation(Matrix4x4f::Translation(_pos.X - shieldSize * 0.5f, _pos.Y - shieldSize * 0.5f, 0.0f));
 						command->setLayer(_renderer.layer() + 4);
 						command->material().setTexture(*res->Base->TextureDiffuse.get());
 

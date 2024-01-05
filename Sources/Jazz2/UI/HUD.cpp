@@ -260,7 +260,7 @@ namespace Jazz2::UI
 		// FPS
 		if (PreferencesCache::ShowPerformanceMetrics) {
 			i32tos((int32_t)std::round(theApplication().frameTimer().averageFps()), stringBuffer);
-			_smallFont->DrawString(this, stringBuffer, charOffset, view.W - 4.0f, view.Y + 2.0f, FontLayer,
+			_smallFont->DrawString(this, stringBuffer, charOffset, view.W - 4.0f, view.Y + 1.0f, FontLayer,
 				Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 		}
 
@@ -775,7 +775,7 @@ namespace Jazz2::UI
 
 		GenericGraphicResource* base = res->Base;
 		Vector2f size = Vector2f(base->FrameDimensions.X * scaleX, base->FrameDimensions.Y * scaleY);
-		Vector2f adjustedPos = ApplyAlignment(align, Vector2f(x - ViewSize.X * 0.5f, ViewSize.Y * 0.5f - y), size);
+		Vector2f adjustedPos = ApplyAlignment(align, Vector2f(x, y), size);
 
 		Vector2i texSize = base->TextureDiffuse->size();
 		int32_t col = frame % base->FrameConfiguration.X;
@@ -786,9 +786,6 @@ namespace Jazz2::UI
 			float(base->FrameDimensions.Y) / float(texSize.Y),
 			float(base->FrameDimensions.Y * row) / float(texSize.Y)
 		);
-
-		texCoords.W += texCoords.Z;
-		texCoords.Z *= -1;
 
 		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending, angle);
 	}
@@ -806,8 +803,8 @@ namespace Jazz2::UI
 
 		GenericGraphicResource* base = res->Base;
 		Vector2f size = Vector2f(base->FrameDimensions.X * clipX, base->FrameDimensions.Y * clipY);
-		Vector2f adjustedPos = ApplyAlignment(align, Vector2f(x - ViewSize.X * 0.5f - (1.0f - clipX) * 0.5f * base->FrameDimensions.X,
-			ViewSize.Y * 0.5f - y - (1.0f - clipY) * 0.5f * base->FrameDimensions.Y), size);
+		Vector2f adjustedPos = ApplyAlignment(align, Vector2f(x - (1.0f - clipX) * 0.5f * base->FrameDimensions.X,
+			y - (1.0f - clipY) * 0.5f * base->FrameDimensions.Y), size);
 
 		Vector2i texSize = base->TextureDiffuse->size();
 		int32_t col = frame % base->FrameConfiguration.X;
@@ -821,9 +818,6 @@ namespace Jazz2::UI
 
 		texCoords.X *= clipX;
 		texCoords.Z *= clipY;
-
-		texCoords.W += texCoords.Z;
-		texCoords.Z *= -1;
 
 		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color);
 	}

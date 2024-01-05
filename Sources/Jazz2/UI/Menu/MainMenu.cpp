@@ -414,7 +414,7 @@ namespace Jazz2::UI::Menu
 		Canvas* currentCanvas = GetActiveCanvas();
 		GenericGraphicResource* base = res->Base;
 		Vector2f size = Vector2f(base->FrameDimensions.X * scaleX, base->FrameDimensions.Y * scaleY);
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - currentCanvas->ViewSize.X * 0.5f, currentCanvas->ViewSize.Y * 0.5f - y), size);
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
 
 		Vector2i texSize = base->TextureDiffuse->size();
 		int32_t col = frame % base->FrameConfiguration.X;
@@ -425,9 +425,6 @@ namespace Jazz2::UI::Menu
 			float(base->FrameDimensions.Y) / float(texSize.Y),
 			float(base->FrameDimensions.Y * row) / float(texSize.Y)
 		);
-
-		texCoords.W += texCoords.Z;
-		texCoords.Z *= -1;
 		
 		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending);
 	}
@@ -441,7 +438,7 @@ namespace Jazz2::UI::Menu
 
 		Canvas* currentCanvas = GetActiveCanvas();
 		GenericGraphicResource* base = res->Base;
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - currentCanvas->ViewSize.X * 0.5f, currentCanvas->ViewSize.Y * 0.5f - y), size);
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
 
 		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false);
 	}
@@ -449,7 +446,7 @@ namespace Jazz2::UI::Menu
 	void MainMenu::DrawSolid(float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool additiveBlending)
 	{
 		Canvas* currentCanvas = GetActiveCanvas();
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - currentCanvas->ViewSize.X * 0.5f, currentCanvas->ViewSize.Y * 0.5f - y), size);
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
 
 		currentCanvas->DrawSolid(adjustedPos, z, size, color, additiveBlending);
 	}
@@ -457,9 +454,9 @@ namespace Jazz2::UI::Menu
 	void MainMenu::DrawTexture(const Texture& texture, float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color)
 	{
 		Canvas* currentCanvas = GetActiveCanvas();
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - currentCanvas->ViewSize.X * 0.5f, currentCanvas->ViewSize.Y * 0.5f - y), size);
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
 
-		currentCanvas->DrawTexture(texture, adjustedPos, z, size, Vector4f(1.0f, 0.0f, -1.0f, 1.0f), color);
+		currentCanvas->DrawTexture(texture, adjustedPos, z, size, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), color);
 	}
 
 	Vector2f MainMenu::MeasureString(const StringView text, float scale, float charSpacing, float lineSpacing)
@@ -659,8 +656,8 @@ namespace Jazz2::UI::Menu
 			int32_t weatherIntensity = Random().Fast(0, (int32_t)(3 * timeMult) + 1);
 			for (int32_t i = 0; i < weatherIntensity; i++) {
 				Vector2i viewSize = _canvasOverlay->ViewSize;
-				Vector2f debrisPos = Vector2f(Random().FastFloat(viewSize.X * -0.8f, viewSize.X * 0.8f),
-					Random().NextFloat(viewSize.Y * 0.5f, viewSize.Y * 1.0f));
+				Vector2f debrisPos = Vector2f(Random().FastFloat(viewSize.X * -0.3f, viewSize.X * 1.3f),
+					Random().NextFloat(viewSize.Y * -0.5f, viewSize.Y * 0.5f));
 
 				auto* res = _metadata->FindAnimation((AnimState)1); // Snow
 				if (res != nullptr) {
@@ -675,14 +672,14 @@ namespace Jazz2::UI::Menu
 					debris.Pos = debrisPos;
 					debris.Depth = MainLayer - 100 + 200 * scale;
 					debris.Size = Vector2f(resBase->FrameDimensions.X, resBase->FrameDimensions.Y);
-					debris.Speed = Vector2f(speedX, -speedY);
+					debris.Speed = Vector2f(speedX, speedY);
 					debris.Acceleration = Vector2f(accel, std::abs(accel));
 
 					debris.Scale = scale;
 					debris.ScaleSpeed = 0.0f;
 					debris.Angle = Random().FastFloat(0.0f, fTwoPi);
-					debris.AngleSpeed = speedX * 0.02f,
-						debris.Alpha = 1.0f;
+					debris.AngleSpeed = speedX * 0.02f;
+					debris.Alpha = 1.0f;
 					debris.AlphaSpeed = 0.0f;
 
 					debris.Time = 160.0f;
@@ -761,6 +758,7 @@ namespace Jazz2::UI::Menu
 			Matrix4x4f worldMatrix = Matrix4x4f::Translation(debris.Pos.X, debris.Pos.Y, 0.0f);
 			worldMatrix.RotateZ(debris.Angle);
 			worldMatrix.Scale(debris.Scale, debris.Scale, 1.0f);
+			worldMatrix.Translate(debris.Size.X * -0.5f, debris.Size.Y * -0.5f, 0.0f);
 			command->setTransformation(worldMatrix);
 			command->setLayer(debris.Depth);
 			command->material().setTexture(*debris.DiffuseTexture);
@@ -956,7 +954,7 @@ namespace Jazz2::UI::Menu
 				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 				instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 
-				command->setTransformation(Matrix4x4f::Translation(x * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2), y * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2), 0.0f));
+				command->setTransformation(Matrix4x4f::Translation(x * TileSet::DefaultTileSize, y * TileSet::DefaultTileSize, 0.0f));
 				command->material().setTexture(*_owner->_tileSet->TextureDiffuse);
 
 				renderQueue.addCommand(command);

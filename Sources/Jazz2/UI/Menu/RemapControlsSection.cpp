@@ -205,7 +205,7 @@ namespace Jazz2::UI::Menu
 
 		int32_t charOffset = 0;
 		_root->DrawStringShadow(_("Remap Controls"), charOffset, center.X * 0.3f, 110.0f, IMenuContainer::FontLayer,
-			Alignment::Left, Colorf(0.5f, 0.5f, 0.5f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.8f, 0.88f);
+			Alignment::Left, Colorf(0.5f, 0.5f, 0.5f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.5f, 0.88f);
 
 		_root->DrawStringShadow(_f("Key %i", 1), charOffset, center.X * (0.9f + 0 * 0.34f), 110.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);

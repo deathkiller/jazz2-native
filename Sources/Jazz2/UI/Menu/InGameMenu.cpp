@@ -303,7 +303,7 @@ namespace Jazz2::UI::Menu
 		Canvas* currentCanvas = GetActiveCanvas();
 		GenericGraphicResource* base = res->Base;
 		Vector2f size = Vector2f(base->FrameDimensions.X * scaleX, base->FrameDimensions.Y * scaleY);
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - currentCanvas->ViewSize.X * 0.5f, currentCanvas->ViewSize.Y * 0.5f - y), size);
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
 
 		Vector2i texSize = base->TextureDiffuse->size();
 		int32_t col = frame % base->FrameConfiguration.X;
@@ -314,9 +314,6 @@ namespace Jazz2::UI::Menu
 			float(base->FrameDimensions.Y) / float(texSize.Y),
 			float(base->FrameDimensions.Y * row) / float(texSize.Y)
 		);
-
-		texCoords.W += texCoords.Z;
-		texCoords.Z *= -1;
 
 		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending);
 	}
@@ -330,7 +327,7 @@ namespace Jazz2::UI::Menu
 
 		Canvas* currentCanvas = GetActiveCanvas();
 		GenericGraphicResource* base = res->Base;
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - currentCanvas->ViewSize.X * 0.5f, currentCanvas->ViewSize.Y * 0.5f - y), size);
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
 
 		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false);
 	}
@@ -338,7 +335,7 @@ namespace Jazz2::UI::Menu
 	void InGameMenu::DrawSolid(float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color, bool additiveBlending)
 	{
 		Canvas* currentCanvas = GetActiveCanvas();
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - currentCanvas->ViewSize.X * 0.5f, currentCanvas->ViewSize.Y * 0.5f - y), size);
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
 
 		currentCanvas->DrawSolid(adjustedPos, z, size, color, additiveBlending);
 	}
@@ -346,9 +343,9 @@ namespace Jazz2::UI::Menu
 	void InGameMenu::DrawTexture(const Texture& texture, float x, float y, uint16_t z, Alignment align, const Vector2f& size, const Colorf& color)
 	{
 		Canvas* currentCanvas = GetActiveCanvas();
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x - currentCanvas->ViewSize.X * 0.5f, currentCanvas->ViewSize.Y * 0.5f - y), size);
+		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
 
-		currentCanvas->DrawTexture(texture, adjustedPos, z, size, Vector4f(1.0f, 0.0f, -1.0f, 1.0f), color);
+		currentCanvas->DrawTexture(texture, adjustedPos, z, size, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), color);
 	}
 
 	Vector2f InGameMenu::MeasureString(const StringView text, float scale, float charSpacing, float lineSpacing)

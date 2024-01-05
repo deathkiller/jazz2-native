@@ -230,7 +230,7 @@ namespace Jazz2::Actors::Solid
 					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 
 					auto& pos = _pieces[i].Pos;
-					command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
+					command->setTransformation(Matrix4x4f::Translation(pos.X - chainAnim->Base->FrameDimensions.X / 2, pos.Y - chainAnim->Base->FrameDimensions.Y / 2, 0.0f));
 					command->setLayer(_renderer.layer() - 2);
 					command->material().setTexture(*chainAnim->Base->TextureDiffuse.get());
 

@@ -41,7 +41,7 @@ namespace Jazz2::UI
 		if (_camera == nullptr) {
 			_camera = std::make_unique<Camera>();
 		}
-		_camera->setOrthoProjection(width * (-0.5f), width * (+0.5f), height * (-0.5f), height * (+0.5f));
+		_camera->setOrthoProjection(0.0f, width, height, 0.0f);
 		_camera->setView(0, 0, 0, 1);
 
 		if (_view == nullptr) {
@@ -66,7 +66,7 @@ namespace Jazz2::UI
 			if (_antialiasing._camera == nullptr) {
 				_antialiasing._camera = std::make_unique<Camera>();
 			}
-			_antialiasing._camera->setOrthoProjection(_targetSize.X * (-0.5f), _targetSize.X * (+0.5f), _targetSize.Y * (-0.5f), _targetSize.Y * (+0.5f));
+			_antialiasing._camera->setOrthoProjection(0.0f, _targetSize.X, _targetSize.Y, 0.0f);
 			_antialiasing._camera->setView(0, 0, 0, 1);
 
 			_antialiasing._view = std::make_unique<Viewport>(_antialiasing._target.get(), Viewport::DepthStencilFormat::None);
@@ -147,7 +147,7 @@ namespace Jazz2::UI
 		} else
 #endif
 		{
-			instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, -1.0f, 1.0f);
+			instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		}
 
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(_targetSize.Data());

@@ -2,7 +2,7 @@
 
 namespace Jazz2::Shaders
 {
-	constexpr uint64_t Version = 2;
+	constexpr uint64_t Version = 3;
 
 	constexpr char LightingVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
@@ -170,12 +170,11 @@ out vec2 vViewSize;
 out vec2 vViewSizeInv;
 
 void main() {
-	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
-	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), 1.0 - float(gl_VertexID % 2));
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
-	vTexCoords = vec2(aTexCoords.x * texRect.x + texRect.y, aTexCoords.y * texRect.z + texRect.w);
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
 	vViewSize = spriteSize;
 	vViewSizeInv = vec2(1.0) / spriteSize;
 }
@@ -331,8 +330,7 @@ float perlinNoise2D(vec2 P) {
 void main() {
 	vec3 waterColor = vec3(0.4, 0.6, 0.8);
 
-	// TODO: Remove this flip
-	vec2 uvLocal = vec2(vTexCoords.x, 1.0 - vTexCoords.y);
+	vec2 uvLocal = vTexCoords;
 	vec2 uvWorldCenter = (uCameraPos.xy * vViewSizeInv.xy);
 	vec2 uvWorld = uvLocal + uvWorldCenter;
 
@@ -345,8 +343,6 @@ void main() {
 	vec2 dis = (texture(uTextureDisplacement, disPos).xy - vec2(0.5)) * vec2(0.01);
 	
 	vec2 uv = clamp(uvLocal + (vec2(0.004 * sin(uTime * 16.0 + uvWorld.y * 20.0), 0.0) + dis) * vec2(isTexelBelow), vec2(0.0), vec2(1.0));
-	// TODO: Remove this flip
-	uv.y = 1.0 - uv.y;
 	vec4 main = texture(uTexture, uv);
 
 	// Chromatic Aberration
@@ -367,7 +363,7 @@ void main() {
 
 	float topColorBlendFac = isNearTop * isTexelBelow * 0.6;
 	main.rgb = mix(main.rgb, texture(uTexture, vec2(uvLocal.x,
-		(1.0 - (uWaterLevel - uvLocal.y + uWaterLevel) * 0.97) - waveHeight + vViewSizeInv.y
+		(uWaterLevel - uvLocal.y + uWaterLevel) * 0.97 - waveHeight + vViewSizeInv.y
 	)).rgb, vec3(topColorBlendFac));
 	main.rgb += vec3(0.2 * isVeryNearTop);
 	
@@ -432,26 +428,22 @@ vec2 noiseTexCoords(vec2 position) {
 void main() {
 	vec3 waterColor = vec3(0.4, 0.6, 0.8);
 
-	// TODO: Remove this flip
-	vec2 uvLocal = vec2(vTexCoords.x, 1.0 - vTexCoords.y);
+	vec2 uvLocal = vTexCoords;
 	vec2 uvWorldCenter = (uCameraPos.xy * vViewSizeInv.xy);
 	vec2 uvWorld = uvLocal + uvWorldCenter;
 
-	float isTexelBelow = step(uWaterLevel, uvLocal.y);
+	float isTexelBelow = 1.0 - step(uvLocal.y, uWaterLevel);
 	float isTexelAbove = 1.0 - isTexelBelow;
 
 	vec2 uv = clamp(uvLocal + vec2(0.008 * sin(uTime * 16.0 + uvWorld.y * 20.0) * isTexelBelow, 0.0), vec2(0.0), vec2(1.0));
-	// TODO: Remove this flip
-	uv.y = 1.0 - uv.y;
 	vec4 main = texture(uTexture, uv);
 
 	// Waves
 	float topDist = abs(uvLocal.y - uWaterLevel);
 	float topGradient = max(1.0 - topDist, 0.0);
-	float isNearTop = isTexelBelow * 0.2 * topGradient * topGradient;
-	float isVeryNearTop = 1.0 - step(vViewSizeInv.y * 0.8, topDist);
-	main.rgb = mix(main.rgb, waterColor, vec3(isTexelBelow * 0.4)) + vec3(isNearTop);
-	main.rgb += vec3(0.2 * isVeryNearTop);
+	float isNearTop = 0.2 * topGradient * topGradient;
+	float isVeryNearTop = 1.0 - step(vViewSizeInv.y, topDist);
+	main.rgb = mix(main.rgb, waterColor, vec3(isTexelBelow * 0.4)) + vec3((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow);
 
 	// Lighting
 	vec4 blur1 = texture(uTextureBlurHalf, uv);
@@ -825,13 +817,13 @@ out vec4 vColor;
 out vec2 vPos;
 
 void main() {
-	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vTexCoords = texRect;
 	vColor = color;
-	vPos = aPosition * vec2(2.0);
+	vPos = aPosition * vec2(2.0) - vec2(1.0);
 }
 )";
 
@@ -862,13 +854,13 @@ out vec2 vPos;
 #define i block.instances[gl_VertexID / 6]
 
 void main() {
-	vec2 aPosition = vec2(-0.5 + float(((gl_VertexID + 2) / 3) % 2), -0.5 + float(((gl_VertexID + 1) / 3) % 2));
+	vec2 aPosition = vec2(1.0 - float(((gl_VertexID + 2) / 3) % 2), 1.0 - float(((gl_VertexID + 1) / 3) % 2));
 	vec4 position = vec4(aPosition.x * i.spriteSize.x, aPosition.y * i.spriteSize.y, 0.0, 1.0);
 
 	gl_Position = uProjectionMatrix * uViewMatrix * i.modelMatrix * position;
 	vTexCoords = i.texRect;
 	vColor = i.color;
-	vPos = aPosition * vec2(2.0);
+	vPos = aPosition * vec2(2.0) - vec2(1.0);
 }
 )";
 
@@ -1003,8 +995,7 @@ out vec4 vTexCoords3;
 out vec4 vTexCoords4;
 
 void main() {
-	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
-	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
@@ -1016,15 +1007,15 @@ void main() {
 	vec2 dx = vec2(x, 0.0);
 	vec2 dy = vec2(0.0, y);
 
-	vTexCoords0.xy = aTexCoords;
-	vTexCoords1.xy = aTexCoords - dg1;
-	vTexCoords1.zw = aTexCoords - dy;
-	vTexCoords2.xy = aTexCoords - dg2;
-	vTexCoords2.zw = aTexCoords + dx;
-	vTexCoords3.xy = aTexCoords + dg1;
-	vTexCoords3.zw = aTexCoords + dy;
-	vTexCoords4.xy = aTexCoords + dg2;
-	vTexCoords4.zw = aTexCoords - dx;
+	vTexCoords0.xy = aPosition;
+	vTexCoords1.xy = aPosition - dg1;
+	vTexCoords1.zw = aPosition - dy;
+	vTexCoords2.xy = aPosition - dg2;
+	vTexCoords2.zw = aPosition + dx;
+	vTexCoords3.xy = aPosition + dg1;
+	vTexCoords3.zw = aPosition + dy;
+	vTexCoords4.xy = aPosition + dg2;
+	vTexCoords4.zw = aPosition - dx;
 }
 )";
 
@@ -1110,8 +1101,7 @@ out vec4 vTexCoords6;
 out vec4 vTexCoords7;
 
 void main() {
-	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
-	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
@@ -1119,7 +1109,7 @@ void main() {
 	float dx = 1.0 / texRect.x;
 	float dy = 1.0 / texRect.y;
 
-	vec2 texCoord = aTexCoords + vec2(0.0000001, 0.0000001);
+	vec2 texCoord = aPosition + vec2(0.0000001, 0.0000001);
 
 	vPixelCoords = texCoord * texRect.xy;
 	vTexCoords0 = texCoord;
@@ -1403,13 +1393,12 @@ out vec2 vTexCoords;
 out highp vec2 vOutputSize;
 
 void main() {
-	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
-	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
-	vPixelCoords = aTexCoords * spriteSize.xy;
-	vTexCoords = aTexCoords;
+	vPixelCoords = aPosition * spriteSize.xy;
+	vTexCoords = aPosition;
 	vOutputSize = spriteSize.xy;
 }
 )";
@@ -1478,12 +1467,11 @@ out vec2 vTexSize;
 out vec2 vViewSize;
 
 void main() {
-	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
-	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
-	vTexCoords = aTexCoords;
+	vTexCoords = aPosition;
 	vTexSize = texRect.xy;
 	vViewSize = spriteSize;
 }
@@ -1919,13 +1907,12 @@ out vec2 vPixelCoords;
 out vec2 vTexCoords;
 
 void main() {
-	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
-	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
-	vPixelCoords = aTexCoords * texRect.xy;
-	vTexCoords = aTexCoords;
+	vPixelCoords = aPosition * texRect.xy;
+	vTexCoords = aPosition;
 }
 )";
 
@@ -1986,12 +1973,11 @@ out vec2 vPixelCoords;
 out vec2 vTexSizeInv;
 
 void main() {
-	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
-	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
-	vPixelCoords = aTexCoords * texRect.xy + 0.5;
+	vPixelCoords = aPosition * texRect.xy + 0.5;
 	vTexSizeInv = 1.0 / texRect.xy;
 }
 )";
@@ -2068,12 +2054,11 @@ out vec2 vCorrection;
 out float vProgressTime;
 
 void main() {
-	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
-	vec2 aTexCoords = vec2(1.0 - float(gl_VertexID >> 1), 1.0 - float(gl_VertexID % 2));
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
-	vTexCoords = vec2(aTexCoords.x * texRect.x + texRect.y, aTexCoords.y * texRect.z + texRect.w);
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
 	vCorrection = spriteSize / vec2(max(spriteSize.x, spriteSize.y));
 	vProgressTime = color.a;
 }

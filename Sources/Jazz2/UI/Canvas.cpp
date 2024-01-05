@@ -98,12 +98,12 @@ namespace Jazz2::UI
 
 		// Sprites are aligned to center by default
 		switch (align & Alignment::HorizontalMask) {
-			case Alignment::Left: result.X += size.X * 0.5f; break;
-			case Alignment::Right: result.X -= size.X * 0.5f; break;
+			case Alignment::Center: result.X -= size.X * 0.5f; break;
+			case Alignment::Right: result.X -= size.X; break;
 		}
 		switch (align & Alignment::VerticalMask) {
-			case Alignment::Top: result.Y -= size.Y * 0.5f; break;
-			case Alignment::Bottom: result.Y += size.Y * 0.5f; break;
+			case Alignment::Center: result.Y -= size.Y * 0.5f; break;
+			case Alignment::Bottom: result.Y -= size.Y; break;
 		}
 
 		return result;

@@ -9,10 +9,10 @@ namespace nCine
 		int width = theApplication().width();
 		int height = theApplication().height();
 
-		projectionValues_.left = width * (-0.5f);
-		projectionValues_.right = width * (+0.5f);
-		projectionValues_.top = height * (+0.5f);
-		projectionValues_.bottom = height * (-0.5f);
+		projectionValues_.left = 0.0f;
+		projectionValues_.right = width;
+		projectionValues_.top = 0.0f;
+		projectionValues_.bottom = height;
 
 		projection_ = Matrix4x4f::Ortho(projectionValues_.left, projectionValues_.right,
 										projectionValues_.bottom, projectionValues_.top,
