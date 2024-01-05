@@ -181,17 +181,14 @@ namespace nCine
 
 		const float width = absWidth();
 		const float height = absHeight();
-		float rotatedWidth = width;
-		float rotatedHeight = height;
 
 		if (absRotation_ > MinRotation || absRotation_ < -MinRotation) {
-			const float sinRot = sinf(absRotation_);
-			const float cosRot = cosf(absRotation_);
-			rotatedWidth = fabsf(width * cosRot) + fabsf(height * sinRot);
-			rotatedHeight = fabsf(width * sinRot) + fabsf(height * cosRot);
+			// Calculate max size for any rotation angle, this will create larger bounding boxes but avoids using sin/cos
+			const float maxSize = width + height;
+			aabb_ = Rectf(absPosition_.X - maxSize, absPosition_.Y - maxSize, maxSize * 2, maxSize * 2);
+		} else {
+			aabb_ = Rectf(absPosition_.X, absPosition_.Y, width, height);
 		}
-
-		aabb_ = Rectf::FromCenterSize(absPosition_.X, absPosition_.Y, rotatedWidth, rotatedHeight);
 	}
 
 	void DrawableNode::updateCulling()

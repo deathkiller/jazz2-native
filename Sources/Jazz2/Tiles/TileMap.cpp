@@ -778,15 +778,12 @@ namespace Jazz2::Tiles
 					color.W *= tile.Alpha / 255.0f;
 					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(color.Data());
 
-					float x4 = x2 + (TileSet::DefaultTileSize / 2);
-					float y4 = y2 + (TileSet::DefaultTileSize / 2);
-
+					float x2r = x2, y2r = y2;
 					if (!PreferencesCache::UnalignedViewport) {
-						x4 = std::floor(x4);
-						y4 = std::floor(y4);
+						x2r = std::floor(x2r); y2r = std::floor(y2r);
 					}
 
-					command->setTransformation(Matrix4x4f::Translation(x4, y4, 0.0f));
+					command->setTransformation(Matrix4x4f::Translation(x2r, y2r, 0.0f));
 					command->setLayer(layer.Description.Depth);
 					command->material().setTexture(*tileSet->TextureDiffuse);
 
@@ -1307,6 +1304,7 @@ namespace Jazz2::Tiles
 			Matrix4x4f worldMatrix = Matrix4x4f::Translation(debris.Pos.X, debris.Pos.Y, 0.0f);
 			worldMatrix.RotateZ(debris.Angle);
 			worldMatrix.Scale(debris.Scale, debris.Scale, 1.0f);
+			worldMatrix.Translate(debris.Size.X  * -0.5f, debris.Size.Y * -0.5f, 0.0f);
 			command->setTransformation(worldMatrix);
 			command->setLayer(debris.Depth);
 			command->material().setTexture(*debris.DiffuseTexture);
@@ -1411,7 +1409,7 @@ namespace Jazz2::Tiles
 		command->material().uniform("uShift")->setFloatValue(x, y);
 		command->material().uniform("uHorizonColor")->setFloatVector(layer.Description.Color.Data());
 
-		command->setTransformation(Matrix4x4f::Translation(viewCenter.X, viewCenter.Y, 0.0f));
+		command->setTransformation(Matrix4x4f::Translation(viewCenter.X - viewSize.X * 0.5f, viewCenter.Y - viewSize.Y * 0.5f, 0.0f));
 		command->setLayer(layer.Description.Depth);
 		command->material().setTexture(*target);
 
@@ -1548,7 +1546,7 @@ namespace Jazz2::Tiles
 				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 				instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 
-				command->setTransformation(Matrix4x4f::Translation(x * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2), y * TileSet::DefaultTileSize + (TileSet::DefaultTileSize / 2), 0.0f));
+				command->setTransformation(Matrix4x4f::Translation(x * TileSet::DefaultTileSize, y * TileSet::DefaultTileSize, 0.0f));
 				command->material().setTexture(*tileSet->TextureDiffuse);
 
 				renderQueue.addCommand(command);

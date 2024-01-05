@@ -54,8 +54,7 @@ namespace Jazz2::Actors
 		// Recalculate hotspot
 		GraphicResource* res = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
 		if (res != nullptr) {
-			_renderer.Hotspot.X = -((res->Base->FrameDimensions.X / 2) - (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X));
-			_renderer.Hotspot.Y = -((res->Base->FrameDimensions.Y / 2) - res->Base->Hotspot.Y);
+			_renderer.Hotspot.X = (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X);
 		}
 	}
 
@@ -275,6 +274,7 @@ namespace Jazz2::Actors
 						// If no angle worked in the previous step, the actor is facing a wall
 						if (xDiff > CollisionCheckStep || (xDiff > 0.0f && currentElasticity > 0.0f)) {
 							_speed.X = -(currentElasticity * _speed.X);
+							_externalForce.X = 0.0f;
 						}
 						OnHitWall(timeMult);
 					}
@@ -333,6 +333,7 @@ namespace Jazz2::Actors
 					if (xDiff < std::abs(effectiveSpeedX) * 0.3f) {
 						if (xDiff > 0.0f && currentElasticity > 0.0f) {
 							_speed.X = -(currentElasticity * _speed.X);
+							_externalForce.X = 0.0f;
 						}
 
 						// Don't call OnHitWall() if OnHitFloor() or OnHitCeiling() was called this step
@@ -1036,8 +1037,8 @@ namespace Jazz2::Actors
 		_renderer.AnimDuration = res->AnimDuration;
 		_renderer.AnimTime = (skipAnimation && res->AnimDuration >= 0.0f && _renderer.LoopMode != AnimationLoopMode::FixedSingle ? _renderer.AnimDuration : 0.0f);
 
-		_renderer.Hotspot.X = -((res->Base->FrameDimensions.X * 0.5f) - (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X));
-		_renderer.Hotspot.Y = -((res->Base->FrameDimensions.Y * 0.5f) - res->Base->Hotspot.Y);
+		_renderer.Hotspot.X = (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X);
+		_renderer.Hotspot.Y = res->Base->Hotspot.Y;
 
 		if (!PreferencesCache::UnalignedViewport) {
 			_renderer.Hotspot.X = std::round(_renderer.Hotspot.X);

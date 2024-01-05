@@ -280,14 +280,14 @@ namespace Jazz2::UI
 		charSpacing = charSpacingPre;
 
 		// Rendering
-		Vector2f originPos = Vector2f(x - canvas->ViewSize.X * 0.5f, canvas->ViewSize.Y * 0.5f - y);
+		Vector2f originPos = Vector2f(x, y);
 		switch (align & Alignment::HorizontalMask) {
 			case Alignment::Center: originPos.X -= totalWidth * 0.5f; break;
 			case Alignment::Right: originPos.X -= totalWidth; break;
 		}
 		switch (align & Alignment::VerticalMask) {
-			case Alignment::Center: originPos.Y += totalHeight * 0.5f; break;
-			case Alignment::Bottom: originPos.Y += totalHeight; break;
+			case Alignment::Center: originPos.Y -= totalHeight * 0.5f; break;
+			case Alignment::Bottom: originPos.Y -= totalHeight; break;
 		}
 
 		float lineStart = originPos.X;
@@ -327,7 +327,7 @@ namespace Jazz2::UI
 					case Alignment::Center: originPos.X += (totalWidth - lineWidths[line & (MaxLines - 1)]) * 0.5f; break;
 					case Alignment::Right: originPos.X += (totalWidth - lineWidths[line & (MaxLines - 1)]); break;
 				}
-				originPos.Y -= (_charSize.Y * scale * lineSpacing);
+				originPos.Y += (_charSize.Y * scale * lineSpacing);
 			} else if (cursor.first == '\f') {
 				// Formatting
 				cursor = Utf8::NextChar(text, cursor.second);
@@ -440,11 +440,11 @@ namespace Jazz2::UI
 						}
 
 						pos.X += cosf(currentPhase) * varianceX * scale;
-						pos.Y -= sinf(currentPhase) * varianceY * scale;
+						pos.Y += sinf(currentPhase) * varianceY * scale;
 					}
 
-					pos.X = std::round(pos.X + uvRect.W * scale * 0.5f);
-					pos.Y = std::round(pos.Y - uvRect.H * scale * 0.5f);
+					pos.X = std::round(pos.X);
+					pos.Y = std::round(pos.Y);
 
 					int32_t charWidth = _charSize.X;
 					if (charWidth > uvRect.W) {
@@ -457,9 +457,6 @@ namespace Jazz2::UI
 						uvRect.H / float(texSize.Y),
 						uvRect.Y
 					);
-
-					texCoords.W += texCoords.Z;
-					texCoords.Z *= -1;
 
 					auto command = canvas->RentRenderCommand();
 					command->setType(RenderCommand::CommandTypes::Text);
@@ -485,8 +482,7 @@ namespace Jazz2::UI
 					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(charWidth * scale, uvRect.H * scale);
 					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(color.Data());
 
-					// TODO: It looks better with the "0.5f" offset
-					command->setTransformation(Matrix4x4f::Translation(pos.X - (uvRect.W - charWidth) * 0.5f * scale, pos.Y + 0.5f, 0.0f));
+					command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
 					command->setLayer(z - (charOffset & 1));
 					command->material().setTexture(*_texture.get());
 

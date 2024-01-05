@@ -104,7 +104,7 @@ namespace nCine
 
 	private:
 #if defined(WITH_EMBEDDED_SHADERS)
-		static constexpr uint64_t EmbeddedShadersVersion = 1ull | (1ull << 63);
+		static constexpr uint64_t EmbeddedShadersVersion = 2ull | (1ull << 63);
 #endif
 
 		static std::unique_ptr<BinaryShaderCache> binaryShaderCache_;

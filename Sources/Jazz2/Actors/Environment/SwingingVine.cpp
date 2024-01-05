@@ -126,7 +126,7 @@ namespace Jazz2::Actors::Environment
 				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(texSize.X, ChunkSize);
 				instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 
-				Matrix4x4f worldMatrix = Matrix4x4f::Translation(_chunkPos[i].X, _chunkPos[i].Y, 0.0f);
+				Matrix4x4f worldMatrix = Matrix4x4f::Translation(_chunkPos[i].X - texSize.X / 2, _chunkPos[i].Y - ChunkSize / 2, 0.0f);
 				worldMatrix.RotateZ(chunkAngle);
 				command->setTransformation(worldMatrix);
 				command->setLayer(_renderer.layer());

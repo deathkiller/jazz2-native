@@ -318,7 +318,7 @@ namespace Jazz2::UI
 		}
 
 		auto* instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
-		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, -1.0f, 1.0f);
+		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(frameSize.Data());
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 

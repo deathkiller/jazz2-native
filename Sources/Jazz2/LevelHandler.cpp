@@ -572,7 +572,7 @@ namespace Jazz2
 		_viewTexture->setMagFiltering(SamplerFilter::Nearest);
 		_viewTexture->setWrap(SamplerWrapping::ClampToEdge);
 
-		_camera->setOrthoProjection(w * (-0.5f), w * (+0.5f), h * (-0.5f), h * (+0.5f));
+		_camera->setOrthoProjection(0.0f, w, h, 0.0f);
 
 		auto& resolver = ContentResolver::Get();
 
@@ -639,6 +639,7 @@ namespace Jazz2
 
 		if (_pauseMenu != nullptr) {
 			_pauseMenu->OnInitializeViewport(w, h);
+			UpdateCamera(0.0f);	// Force update camera if game is paused
 		}
 	}
 
@@ -1598,7 +1599,7 @@ namespace Jazz2
 			_cameraPos.X = std::floor(_viewBounds.X + _viewBounds.W * 0.5f + _shakeOffset.X);
 		}
 		if (_viewBounds.H > halfView.Y * 2) {
-			_cameraPos.Y = std::clamp(_cameraLastPos.Y + _cameraDistanceFactor.Y, _viewBounds.Y + halfView.Y, _viewBounds.Y + _viewBounds.H - halfView.Y - 1.0f) + _shakeOffset.Y;
+			_cameraPos.Y = std::clamp(_cameraLastPos.Y + _cameraDistanceFactor.Y, _viewBounds.Y + halfView.Y - 1.0f, _viewBounds.Y + _viewBounds.H - halfView.Y - 2.0f) + _shakeOffset.Y;
 			if (!PreferencesCache::UnalignedViewport || std::abs(_cameraDistanceFactor.Y) < 1.0f) {
 				_cameraPos.Y = std::floor(_cameraPos.Y);
 			}
@@ -1606,7 +1607,7 @@ namespace Jazz2
 			_cameraPos.Y = std::floor(_viewBounds.Y + _viewBounds.H * 0.5f + _shakeOffset.Y);
 		}
 
-		_camera->setView(_cameraPos, 0.0f, 1.0f);
+		_camera->setView(_cameraPos - Vector2f(halfView.X, halfView.Y), 0.0f, 1.0f);
 
 		// Update audio listener position
 		IAudioDevice& device = theServiceLocator().audioDevice();
@@ -2038,8 +2039,8 @@ namespace Jazz2
 		if (notInitialized) {
 			_camera = std::make_unique<Camera>();
 		}
-		_camera->setOrthoProjection(width * (-0.5f), width * (+0.5f), height * (-0.5f), height * (+0.5f));
-		_camera->setView(0, 0, 0, 1);
+		_camera->setOrthoProjection(0.0f, width, height, 0.0f);
+		_camera->setView(0.0f, 0.0f, 0.0f, 1.0f);
 
 		if (notInitialized) {
 			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
@@ -2077,7 +2078,7 @@ namespace Jazz2
 		Vector2i size = _target->size();
 
 		auto instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
-		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, -1.0f, 1.0f);
+		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(static_cast<float>(size.X), static_cast<float>(size.Y));
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 

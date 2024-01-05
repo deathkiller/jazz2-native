@@ -252,8 +252,10 @@ namespace nCine
 		const int width = (width_ != 0) ? width_ : viewportRect_.W;
 		const int height = (height_ != 0) ? height_ : viewportRect_.H;
 
-		const Camera* vieportCamera = camera_ ? camera_ : RenderResources::currentCamera();
-		const Camera::ProjectionValues projValues = vieportCamera->projectionValues();
+		const Camera* vieportCamera = (camera_ != nullptr ? camera_ : RenderResources::currentCamera());
+		Camera::ProjectionValues projValues = vieportCamera->projectionValues();
+		if (projValues.top > projValues.bottom) std::swap(projValues.top, projValues.bottom);
+
 		const float projWidth = projValues.right - projValues.left;
 		const float projHeight = projValues.bottom - projValues.top;
 		cullingRect_.Set(projValues.left, projValues.top, projWidth, projHeight);
