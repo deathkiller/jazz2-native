@@ -591,7 +591,12 @@ namespace Jazz2::Actors
 
 			float playerMovement = _levelHandler->PlayerHorizontalMovement(_playerIndex);
 			float playerMovementVelocity = std::abs(playerMovement);
-			if (canWalk && playerMovementVelocity > 0.5f) {
+			if (_currentSpecialMove == SpecialMoveType::Buttstomp) {
+				_speed.X = 0.2f * playerMovement;
+				if (_levelHandler->PlayerActionPressed(_playerIndex, PlayerActions::Run)) {
+					_speed.X *= 2.6f;
+				}
+			} else if (canWalk && playerMovementVelocity > 0.5f) {
 				SetAnimation(_currentAnimation->State & ~(AnimState::Lookup | AnimState::Crouch));
 
 				if (_dizzyTime > 0.0f) {
@@ -658,7 +663,7 @@ namespace Jazz2::Actors
 			_hitFloorTime -= timeMult;
 		}
 
-		if (!_controllable || !_controllableExternal) {
+		if (!_controllable || !_controllableExternal || _currentSpecialMove == SpecialMoveType::Buttstomp) {
 			// Weapons are automatically disabled if player is not controllable
 			if (_currentWeapon != WeaponType::Thunderbolt || _fireFramesLeft <= 0.0f) {
 				if (_weaponSound != nullptr) {
@@ -726,7 +731,6 @@ namespace Jazz2::Actors
 					} else if (!_wasDownPressed && _playerType != PlayerType::Frog) {
 						_wasDownPressed = true;
 
-						_controllable = false;
 						_speed.X = 0.0f;
 						_speed.Y = 0.0f;
 						_internalForceY = 0.0f;
@@ -1849,11 +1853,11 @@ namespace Jazz2::Actors
 				}
 
 				if (_levelHandler->IsReforged()) {
+					_controllable = false;
 					SetTransition(AnimState::TransitionButtstompEnd, false, [this]() {
 						_controllable = true;
 					});
 				} else {
-					_controllable = true;
 					SetTransition(AnimState::TransitionButtstompEnd, true);
 				}
 			} else {
