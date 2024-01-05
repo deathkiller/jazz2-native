@@ -3,7 +3,9 @@
 
 #include <CommonWindows.h>
 
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+#	include <emscripten/emscripten.h>
+#elif defined(DEATH_TARGET_WINDOWS)
 #	include <synchapi.h>
 #else
 #	include <unistd.h>
@@ -45,7 +47,9 @@ namespace nCine
 
 	void Timer::sleep(std::uint32_t milliseconds)
 	{
-#if defined(DEATH_TARGET_SWITCH)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		emscripten_sleep(milliseconds);
+#elif defined(DEATH_TARGET_SWITCH)
 		const std::int64_t nanoseconds = static_cast<std::int64_t>(milliseconds) * 1000000;
 		svcSleepThread(nanoseconds);
 #elif defined(DEATH_TARGET_WINDOWS)

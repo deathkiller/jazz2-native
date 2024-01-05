@@ -249,10 +249,9 @@ namespace Jazz2::UI
 							y += PreferencesCache::TouchLeftPadding.Y;
 						}
 					}
-					x = x - ViewSize.X * 0.5f;
-					y = ViewSize.Y * 0.5f - y;
 
-					DrawTexture(*button.Graphics->Base->TextureDiffuse, Vector2f(x, y), TouchButtonsLayer, Vector2f(button.Width, button.Height), Vector4f(1.0f, 0.0f, -1.0f, 1.0f), Colorf::White);
+					DrawTexture(*button.Graphics->Base->TextureDiffuse, Vector2f(std::round(x - button.Width * 0.5f), std::round(y - button.Height * 0.5f)),
+						TouchButtonsLayer, Vector2f(button.Width, button.Height), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf::White);
 				}
 			}
 		}
