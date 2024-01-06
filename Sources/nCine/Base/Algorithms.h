@@ -260,6 +260,12 @@ namespace nCine
 		return (std::int32_t)std::round(a + ratio * (float)(b - a));
 	}
 
+	inline float lerpByTime(float a, float b, float ratio, float timeMult)
+	{
+		float normalizedRatio = 1.0f - powf(1.0f - ratio, timeMult);
+		return a + normalizedRatio * (b - a);
+	}
+
 	std::int32_t copyStringFirst(char* dest, std::int32_t destSize, const char* source, std::int32_t count = -1);
 
 	template <std::size_t size>

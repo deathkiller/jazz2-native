@@ -1570,12 +1570,16 @@ namespace Jazz2
 		// The position to focus on
 		Vector2i halfView = _view->size() / 2;
 		Vector2f focusPos = targetObj->_pos;
-		_cameraLastPos.X = lerp(_cameraLastPos.X, focusPos.X, 0.5f * timeMult);
-		_cameraLastPos.Y = lerp(_cameraLastPos.Y, focusPos.Y, 0.5f * timeMult);
+		Vector2f focusSpeed = targetObj->_speed;
 
-		Vector2f speed = targetObj->_speed;
-		_cameraDistanceFactor.X = lerp(_cameraDistanceFactor.X, speed.X * 8.0f, (std::abs(speed.X) < 2.0f ? SlowRatioX : FastRatioX) * timeMult);
-		_cameraDistanceFactor.Y = lerp(_cameraDistanceFactor.Y, speed.Y * 5.0f, (std::abs(speed.Y) < 2.0f ? SlowRatioY : FastRatioY) * timeMult);
+		Vector2f focusDiff = focusPos - _cameraLastPos;
+		_cameraDiff.X = lerpByTime(_cameraDiff.X, focusDiff.X, 0.8f, timeMult);
+		_cameraDiff.Y = lerpByTime(_cameraDiff.Y, focusDiff.Y, 0.8f, timeMult);
+
+		_cameraLastPos = focusPos;
+
+		_cameraDistanceFactor.X = lerpByTime(_cameraDistanceFactor.X, focusSpeed.X * 8.0f, (std::abs(focusSpeed.X) < 2.0f ? SlowRatioX : FastRatioX), timeMult);
+		_cameraDistanceFactor.Y = lerpByTime(_cameraDistanceFactor.Y, focusSpeed.Y * 5.0f, (std::abs(focusSpeed.Y) < 2.0f ? SlowRatioY : FastRatioY), timeMult);
 
 		if (_shakeDuration > 0.0f) {
 			_shakeDuration -= timeMult;
@@ -1591,7 +1595,7 @@ namespace Jazz2
 
 		// Clamp camera position to level bounds
 		if (_viewBounds.W > halfView.X * 2) {
-			_cameraPos.X = std::clamp(_cameraLastPos.X + _cameraDistanceFactor.X, _viewBounds.X + halfView.X, _viewBounds.X + _viewBounds.W - halfView.X) + _shakeOffset.X;
+			_cameraPos.X = std::clamp(_cameraLastPos.X + _cameraDistanceFactor.X - _cameraDiff.X, _viewBounds.X + halfView.X, _viewBounds.X + _viewBounds.W - halfView.X) + _shakeOffset.X;
 			if (!PreferencesCache::UnalignedViewport || std::abs(_cameraDistanceFactor.X) < 1.0f) {
 				_cameraPos.X = std::floor(_cameraPos.X);
 			}
@@ -1599,7 +1603,7 @@ namespace Jazz2
 			_cameraPos.X = std::floor(_viewBounds.X + _viewBounds.W * 0.5f + _shakeOffset.X);
 		}
 		if (_viewBounds.H > halfView.Y * 2) {
-			_cameraPos.Y = std::clamp(_cameraLastPos.Y + _cameraDistanceFactor.Y, _viewBounds.Y + halfView.Y - 1.0f, _viewBounds.Y + _viewBounds.H - halfView.Y - 2.0f) + _shakeOffset.Y;
+			_cameraPos.Y = std::clamp(_cameraLastPos.Y + _cameraDistanceFactor.Y - _cameraDiff.Y, _viewBounds.Y + halfView.Y - 1.0f, _viewBounds.Y + _viewBounds.H - halfView.Y - 2.0f) + _shakeOffset.Y;
 			if (!PreferencesCache::UnalignedViewport || std::abs(_cameraDistanceFactor.Y) < 1.0f) {
 				_cameraPos.Y = std::floor(_cameraPos.Y);
 			}
@@ -1611,7 +1615,7 @@ namespace Jazz2
 
 		// Update audio listener position
 		IAudioDevice& device = theServiceLocator().audioDevice();
-		device.updateListener(Vector3f(_cameraPos.X, _cameraPos.Y, 0.0f), Vector3f(speed.X, speed.Y, 0.0f));
+		device.updateListener(Vector3f(_cameraPos.X, _cameraPos.Y, 0.0f), Vector3f(focusSpeed.X, focusSpeed.Y, 0.0f));
 	}
 
 	void LevelHandler::LimitCameraView(int left, int width)
