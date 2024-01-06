@@ -287,7 +287,7 @@ namespace Jazz2::Multiplayer
 		if (PreferencesCache::ShowPerformanceMetrics) {
 			ImDrawList* drawList = ImGui::GetBackgroundDrawList();
 
-			if (_isServer) {
+			/*if (_isServer) {
 				for (Actors::Player* player : _players) {
 					char actorIdString[32];
 
@@ -350,7 +350,7 @@ namespace Jazz2::Multiplayer
 					aabbMin.y += 3.0f;
 					drawList->AddText(aabbMin, ImColor(255, 255, 255), actorIdString);
 				}
-			}
+			}*/
 		}
 #endif
 	}

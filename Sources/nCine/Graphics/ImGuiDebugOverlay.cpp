@@ -1324,6 +1324,10 @@ namespace nCine
 
 	void ImGuiDebugOverlay::guiTopRight()
 	{
+		if (!showTopRightOverlay_) {
+			return;
+		}
+
 		const ImVec2 windowPos = ImVec2(ImGui::GetIO().DisplaySize.x - Margin, Margin);
 		const ImVec2 windowPosPivot = ImVec2(1.0f, 0.0f);
 		ImGui::SetNextWindowPos(windowPos, ImGuiCond_FirstUseEver, windowPosPivot);
@@ -1331,78 +1335,77 @@ namespace nCine
 		ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 		if (lockOverlayPositions_)
 			windowFlags |= ImGuiWindowFlags_NoMove;
-		if (showTopRightOverlay_) {
-			ImGui::Begin("###Top-Right", nullptr, windowFlags);
 
-			ImGui::Text("FPS: %.0f (%.2f ms - %.2fx)", theApplication().frameTimer().averageFps(), theApplication().frameTimer().lastFrameDuration() * 1000.0f, theApplication().timeMult());
-			ImGui::Text("Num Frames: %lu", theApplication().numFrames());
+		ImGui::Begin("###Top-Right", nullptr, windowFlags);
+
+		ImGui::Text("FPS: %.0f (%.2f ms - %.2fx)", theApplication().frameTimer().averageFps(), theApplication().frameTimer().lastFrameDuration() * 1000.0f, theApplication().timeMult());
+		ImGui::Text("Num Frames: %lu", theApplication().numFrames());
 
 #if defined(NCINE_PROFILING)
-			const AppConfiguration& appCfg = theApplication().appConfiguration();
-			if (appCfg.withScenegraph) {
-				const RenderStatistics::Commands& spriteCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Sprite);
-				const RenderStatistics::Commands& meshspriteCommands = RenderStatistics::commands(RenderCommand::CommandTypes::MeshSprite);
-				const RenderStatistics::Commands& tileMapCommands = RenderStatistics::commands(RenderCommand::CommandTypes::TileMap);
-				const RenderStatistics::Commands& particleCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Particle);
-				const RenderStatistics::Commands& textCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Text);
-				const RenderStatistics::Commands& imguiCommands = RenderStatistics::commands(RenderCommand::CommandTypes::ImGui);
-				const RenderStatistics::Commands& unspecifiedCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Unspecified);
-				const RenderStatistics::Commands& allCommands = RenderStatistics::allCommands();
+		const AppConfiguration& appCfg = theApplication().appConfiguration();
+		if (appCfg.withScenegraph) {
+			const RenderStatistics::Commands& spriteCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Sprite);
+			const RenderStatistics::Commands& meshspriteCommands = RenderStatistics::commands(RenderCommand::CommandTypes::MeshSprite);
+			const RenderStatistics::Commands& tileMapCommands = RenderStatistics::commands(RenderCommand::CommandTypes::TileMap);
+			const RenderStatistics::Commands& particleCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Particle);
+			const RenderStatistics::Commands& textCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Text);
+			const RenderStatistics::Commands& imguiCommands = RenderStatistics::commands(RenderCommand::CommandTypes::ImGui);
+			const RenderStatistics::Commands& unspecifiedCommands = RenderStatistics::commands(RenderCommand::CommandTypes::Unspecified);
+			const RenderStatistics::Commands& allCommands = RenderStatistics::allCommands();
 
-				ImGui::Separator();
-				ImGui::Text("Sprites: %uV, %uDC (%u Tr), %uI/%uB", spriteCommands.vertices, spriteCommands.commands, spriteCommands.transparents, spriteCommands.instances, spriteCommands.batchSize);
-				if (plotOverlayValues_) {
-					ImGui::SameLine(230.0f);
-					ImGui::PlotLines("", plotValues_[ValuesType::SpriteVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
-				}
-
-				ImGui::Text("Mesh Sprites: %uV, %uDC (%u Tr), %uI/%uB", meshspriteCommands.vertices, meshspriteCommands.commands, meshspriteCommands.transparents, meshspriteCommands.instances, meshspriteCommands.batchSize);
-				if (plotOverlayValues_) {
-					ImGui::SameLine(230.0f);
-					ImGui::PlotLines("", plotValues_[ValuesType::MeshSpriteVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
-				}
-
-				ImGui::Text("Tile Map: %uV, %uDC (%u Tr), %uI/%uB\n", tileMapCommands.vertices, tileMapCommands.commands, tileMapCommands.transparents, tileMapCommands.instances, tileMapCommands.batchSize);
-				if (plotOverlayValues_) {
-					ImGui::SameLine(230.0f);
-					ImGui::PlotLines("", plotValues_[ValuesType::TileMapVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
-				}
-
-				ImGui::Text("Particles: %uV, %uDC (%u Tr), %uI/%uB\n", particleCommands.vertices, particleCommands.commands, particleCommands.transparents, particleCommands.instances, particleCommands.batchSize);
-				if (plotOverlayValues_) {
-					ImGui::SameLine(230.0f);
-					ImGui::PlotLines("", plotValues_[ValuesType::ParticleVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
-				}
-
-				ImGui::Text("Text: %uV, %uDC (%u Tr), %uI/%uB", textCommands.vertices, textCommands.commands, textCommands.transparents, textCommands.instances, textCommands.batchSize);
-				if (plotOverlayValues_) {
-					ImGui::SameLine(230.0f);
-					ImGui::PlotLines("", plotValues_[ValuesType::TextVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
-				}
-
-				ImGui::Text("ImGui: %uV, %uDC (%u Tr), %uI/%u", imguiCommands.vertices, imguiCommands.commands, imguiCommands.transparents, imguiCommands.instances, imguiCommands.batchSize);
-				if (plotOverlayValues_) {
-					ImGui::SameLine(230.0f);
-					ImGui::PlotLines("", plotValues_[ValuesType::ImGuiVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
-				}
-
-				ImGui::Text("Unspecified: %uV, %uDC (%u Tr), %uI/%u", unspecifiedCommands.vertices, unspecifiedCommands.commands, unspecifiedCommands.transparents, unspecifiedCommands.instances, unspecifiedCommands.batchSize);
-				if (plotOverlayValues_) {
-					ImGui::SameLine(230.0f);
-					ImGui::PlotLines("", plotValues_[ValuesType::UnspecifiedVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
-				}
-
-				ImGui::Separator();
-				ImGui::Text("Total: %uV, %uDC (%u Tr), %uI/%uB", allCommands.vertices, allCommands.commands, allCommands.transparents, allCommands.instances, allCommands.batchSize);
-				if (plotOverlayValues_) {
-					ImGui::SameLine(230.0f);
-					ImGui::PlotLines("", plotValues_[ValuesType::TotalVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
-				}
+			ImGui::Separator();
+			ImGui::Text("Sprites: %uV, %uDC (%u Tr), %uI/%uB", spriteCommands.vertices, spriteCommands.commands, spriteCommands.transparents, spriteCommands.instances, spriteCommands.batchSize);
+			if (plotOverlayValues_) {
+				ImGui::SameLine(230.0f);
+				ImGui::PlotLines("", plotValues_[ValuesType::SpriteVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
 			}
+
+			ImGui::Text("Mesh Sprites: %uV, %uDC (%u Tr), %uI/%uB", meshspriteCommands.vertices, meshspriteCommands.commands, meshspriteCommands.transparents, meshspriteCommands.instances, meshspriteCommands.batchSize);
+			if (plotOverlayValues_) {
+				ImGui::SameLine(230.0f);
+				ImGui::PlotLines("", plotValues_[ValuesType::MeshSpriteVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+			}
+
+			ImGui::Text("Tile Map: %uV, %uDC (%u Tr), %uI/%uB\n", tileMapCommands.vertices, tileMapCommands.commands, tileMapCommands.transparents, tileMapCommands.instances, tileMapCommands.batchSize);
+			if (plotOverlayValues_) {
+				ImGui::SameLine(230.0f);
+				ImGui::PlotLines("", plotValues_[ValuesType::TileMapVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+			}
+
+			ImGui::Text("Particles: %uV, %uDC (%u Tr), %uI/%uB\n", particleCommands.vertices, particleCommands.commands, particleCommands.transparents, particleCommands.instances, particleCommands.batchSize);
+			if (plotOverlayValues_) {
+				ImGui::SameLine(230.0f);
+				ImGui::PlotLines("", plotValues_[ValuesType::ParticleVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+			}
+
+			ImGui::Text("Text: %uV, %uDC (%u Tr), %uI/%uB", textCommands.vertices, textCommands.commands, textCommands.transparents, textCommands.instances, textCommands.batchSize);
+			if (plotOverlayValues_) {
+				ImGui::SameLine(230.0f);
+				ImGui::PlotLines("", plotValues_[ValuesType::TextVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+			}
+
+			ImGui::Text("ImGui: %uV, %uDC (%u Tr), %uI/%u", imguiCommands.vertices, imguiCommands.commands, imguiCommands.transparents, imguiCommands.instances, imguiCommands.batchSize);
+			if (plotOverlayValues_) {
+				ImGui::SameLine(230.0f);
+				ImGui::PlotLines("", plotValues_[ValuesType::ImGuiVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+			}
+
+			ImGui::Text("Unspecified: %uV, %uDC (%u Tr), %uI/%u", unspecifiedCommands.vertices, unspecifiedCommands.commands, unspecifiedCommands.transparents, unspecifiedCommands.instances, unspecifiedCommands.batchSize);
+			if (plotOverlayValues_) {
+				ImGui::SameLine(230.0f);
+				ImGui::PlotLines("", plotValues_[ValuesType::UnspecifiedVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+			}
+
+			ImGui::Separator();
+			ImGui::Text("Total: %uV, %uDC (%u Tr), %uI/%uB", allCommands.vertices, allCommands.commands, allCommands.transparents, allCommands.instances, allCommands.batchSize);
+			if (plotOverlayValues_) {
+				ImGui::SameLine(230.0f);
+				ImGui::PlotLines("", plotValues_[ValuesType::TotalVertices].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
+			}
+		}
 #endif
 
-			ImGui::End();
-		}
+		ImGui::End();
 	}
 
 	void ImGuiDebugOverlay::guiBottomLeft()

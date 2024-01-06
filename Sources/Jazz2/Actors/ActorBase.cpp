@@ -1040,11 +1040,6 @@ namespace Jazz2::Actors
 		_renderer.Hotspot.X = (IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X);
 		_renderer.Hotspot.Y = res->Base->Hotspot.Y;
 
-		if (!PreferencesCache::UnalignedViewport) {
-			_renderer.Hotspot.X = std::round(_renderer.Hotspot.X);
-			_renderer.Hotspot.Y = std::round(_renderer.Hotspot.Y);
-		}
-
 		_renderer.setTexture(res->Base->TextureDiffuse.get());
 		_renderer.UpdateVisibleFrames();
 
@@ -1228,16 +1223,8 @@ namespace Jazz2::Actors
 
 		Vector2f pos = _owner->_pos;
 		if (!PreferencesCache::UnalignedViewport || (_owner->_state & ActorState::IsDirty) != ActorState::IsDirty) {
-			if (!PreferencesCache::UnalignedViewport || (FrameDimensions.X & 1) == 0) {
-				pos.X = std::round(pos.X);
-			} else {
-				pos.X = std::floor(pos.X);
-			}
-			if (!PreferencesCache::UnalignedViewport || (FrameDimensions.Y & 1) == 0) {
-				pos.Y = std::round(pos.Y);
-			} else {
-				pos.Y = std::floor(pos.Y);
-			}
+			pos.X = std::floor(pos.X);
+			pos.Y = std::floor(pos.Y);
 		}
 		setPosition(pos.X, pos.Y);
 

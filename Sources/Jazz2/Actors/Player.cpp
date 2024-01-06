@@ -3047,6 +3047,11 @@ namespace Jazz2::Actors
 
 		std::memcpy(_weaponAmmo, _weaponAmmoCheckpoint, sizeof(_weaponAmmoCheckpoint));
 		std::memcpy(_weaponUpgrades, _weaponUpgradesCheckpoint, sizeof(_weaponUpgradesCheckpoint));
+
+		// Reset current weapon to Blaster if player has no ammo on checkpoint
+		if (_weaponAmmo[(std::int32_t)_currentWeapon] == 0) {
+			SetCurrentWeapon(WeaponType::Blaster);
+		}
 	}
 
 	void Player::SerializeResumableToStream(Stream& dest)
