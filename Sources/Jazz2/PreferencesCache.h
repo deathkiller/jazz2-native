@@ -93,6 +93,7 @@ namespace Jazz2
 		static bool ShowPlayerTrails;
 		static bool LowGraphicsQuality;
 		static bool UnalignedViewport;
+		static bool UnalignedParallaxLayers;
 
 		// Gameplay
 		static bool EnableReforgedGameplay;
@@ -137,6 +138,7 @@ namespace Jazz2
 			ShowPlayerTrails = 0x08,
 			LowGraphicsQuality = 0x10,
 			UnalignedViewport = 0x20,
+			UnalignedParallaxLayers = 0x40,
 
 			EnableReforgedGameplay = 0x100,
 			EnableLedgeClimb = 0x200,
