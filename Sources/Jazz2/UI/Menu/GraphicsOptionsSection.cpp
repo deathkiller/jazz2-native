@@ -109,9 +109,9 @@ namespace Jazz2::UI::Menu
 				case GraphicsOptionsItemType::Fullscreen: enabled = PreferencesCache::EnableFullscreen; break;
 #endif
 				case GraphicsOptionsItemType::Antialiasing: enabled = (PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing; break;
-				case GraphicsOptionsItemType::LowGraphicsQuality: enabled = PreferencesCache::LowGraphicsQuality; customText = (enabled ? _("Low") : _("High")); break;
+				case GraphicsOptionsItemType::LowGraphicsQuality: customText = (enabled ? _("Low") : _("High")); break;
 				case GraphicsOptionsItemType::ShowPlayerTrails: enabled = PreferencesCache::ShowPlayerTrails; break;
-				case GraphicsOptionsItemType::UnalignedViewport: enabled = PreferencesCache::UnalignedViewport; break;
+				case GraphicsOptionsItemType::UnalignedViewport: customText = (PreferencesCache::UnalignedViewport ? _("Enabled") : (PreferencesCache::UnalignedParallaxLayers ? _("Parallax Layers Only") : _("Disabled"))); break;
 				case GraphicsOptionsItemType::KeepAspectRatioInCinematics: enabled = PreferencesCache::KeepAspectRatioInCinematics; break;
 				case GraphicsOptionsItemType::ShowPerformanceMetrics: enabled = PreferencesCache::ShowPerformanceMetrics; break;
 			}
@@ -175,7 +175,14 @@ namespace Jazz2::UI::Menu
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				break;
 			case GraphicsOptionsItemType::UnalignedViewport:
-				PreferencesCache::UnalignedViewport = !PreferencesCache::UnalignedViewport;
+				if (PreferencesCache::UnalignedViewport) {
+					PreferencesCache::UnalignedViewport = false;
+					PreferencesCache::UnalignedParallaxLayers = true;
+				} else if (PreferencesCache::UnalignedParallaxLayers) {
+					PreferencesCache::UnalignedParallaxLayers = false;
+				} else {
+					PreferencesCache::UnalignedViewport = true;
+				}
 				_isDirty = true;
 				_animation = 0.0f;
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
