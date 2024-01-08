@@ -23,11 +23,16 @@ namespace nCine
 		AABB()
 			: L(0), T(0), R(0), B(0) { }
 
-		AABB(S ll, S tt, S rr, S bb)
-			: L(ll), T(tt), R(rr), B(bb) { }
+		AABB(S l, S t, S r, S b)
+			: L(l), T(t), R(r), B(b) { }
 
 		AABB(const Vector2<S>& min, const Vector2<S>& max)
 			: L(std::min(min.X, max.X)), T(std::min(min.Y, max.Y)), R(std::max(min.X, max.X)), B(std::max(min.Y, max.Y)) { }
+
+		template<class U>
+		AABB<U> As() {
+			return AABB<S>(static_cast<U>(L), static_cast<U>(T), static_cast<U>(R), static_cast<U>(B));
+		}
 
 		S GetWidth() const {
 			return R - L;

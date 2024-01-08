@@ -297,6 +297,7 @@ namespace Jazz2
 		Vector2f _cameraPos;
 		Vector2f _cameraLastPos;
 		Vector2f _cameraDistanceFactor;
+		Vector2f _cameraResponsiveness;
 		float _shakeDuration;
 		Vector2f _shakeOffset;
 		float _waterLevel;

@@ -19,8 +19,12 @@ namespace nCine
 			: X(0), Y(0), Z(0), W(0) {}
 		explicit Vector4(T s) noexcept
 			: X(s), Y(s), Z(s), W(s) {}
-		Vector4(T xx, T yy, T zz, T ww) noexcept
-			: X(xx), Y(yy), Z(zz), W(ww) {}
+		Vector4(T x, T y, T z, T w) noexcept
+			: X(x), Y(y), Z(z), W(w) {}
+		Vector4(const Vector3<T>& other, T w) noexcept
+			: X(other.X), Y(other.Y), Z(other.Z), W(w) {}
+		Vector4(Vector3<T>&& other, T w) noexcept
+			: X(other.X), Y(other.Y), Z(other.Z), W(w) {}
 		Vector4(const Vector4& other) noexcept
 			: X(other.X), Y(other.Y), Z(other.Z), W(other.W) {}
 		Vector4(Vector4&& other) noexcept
@@ -28,7 +32,7 @@ namespace nCine
 		Vector4& operator=(const Vector4& other) noexcept;
 		Vector4& operator=(Vector4&& other) noexcept;
 
-		void Set(T xx, T yy, T zz, T ww);
+		void Set(T x, T y, T z, T w);
 
 		T* Data();
 		const T* Data() const;
@@ -67,6 +71,11 @@ namespace nCine
 		T SqrLength() const;
 		Vector4 Normalized() const;
 		Vector4& Normalize();
+
+		template<class S>
+		Vector4<S> As() {
+			return Vector4<S>(static_cast<S>(X), static_cast<S>(Y), static_cast<S>(Z), static_cast<S>(W));
+		}
 
 		Vector2<T> ToVector2() const;
 		Vector3<T> ToVector3() const;
@@ -112,12 +121,12 @@ namespace nCine
 	}
 
 	template<class T>
-	inline void Vector4<T>::Set(T xx, T yy, T zz, T ww)
+	inline void Vector4<T>::Set(T x, T y, T z, T w)
 	{
-		X = xx;
-		Y = yy;
-		Z = zz;
-		W = ww;
+		X = x;
+		Y = y;
+		Z = z;
+		W = w;
 	}
 
 	template<class T>

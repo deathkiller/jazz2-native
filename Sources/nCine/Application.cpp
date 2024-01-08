@@ -676,7 +676,8 @@ namespace nCine
 
 		if (appCfg_.frameLimit > 0) {
 			FrameMarkStart("Frame limiting");
-#if defined(DEATH_TARGET_WINDOWS)
+#if 0 //defined(DEATH_TARGET_WINDOWS)
+			// TODO: This code sometimes doesn't work properly
 			const std::uint64_t clockFreq = static_cast<std::uint64_t>(clock().frequency());
 			const std::uint64_t frameTimeDuration = (clockFreq / static_cast<std::uint64_t>(appCfg_.frameLimit));
 			const std::int64_t remainingTime = (std::int64_t)frameTimeDuration - (std::int64_t)frameTimer_->frameDurationAsTicks();

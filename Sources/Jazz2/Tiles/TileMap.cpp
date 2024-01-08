@@ -602,7 +602,6 @@ namespace Jazz2::Tiles
 		Vector2f viewCenter = _owner->GetCameraPos();
 
 		Vector2i tileCount = layer.LayoutSize;
-		Vector2i tileSize = Vector2i(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 
 		// Get current layer offsets and speeds
 		float loX = layer.Description.OffsetX;
@@ -617,18 +616,16 @@ namespace Jazz2::Tiles
 			constexpr float PerspectiveSpeedY = 0.16f;
 			RenderTexturedBackground(renderQueue, layer, x1 * PerspectiveSpeedX + loX, y1 * PerspectiveSpeedY + loY);
 		} else {
-			float xt, yt; bool xAlign, yAlign;
+			float xt, yt;
 			switch (layer.Description.SpeedModelX) {
 				case LayerSpeedModel::AlwaysOnTop:
 					xt = -HardcodedOffset;
-					xAlign = false;
 					break;
 				case LayerSpeedModel::FitLevel: {
 					float progress = (float)viewCenter.X / (_layers[_sprLayerIndex].LayoutSize.X * TileSet::DefaultTileSize);
 					xt = std::clamp(progress, 0.0f, 1.0f)
 						* ((layer.LayoutSize.X * TileSet::DefaultTileSize) - viewSize.X + HardcodedOffset)
 						+ loX;
-					xAlign = !PreferencesCache::UnalignedViewport && !PreferencesCache::UnalignedParallaxLayers;
 					break;
 				}
 				case LayerSpeedModel::SpeedMultipliers: {
@@ -639,25 +636,21 @@ namespace Jazz2::Tiles
 					xt = progress
 						* ((layer.LayoutSize.X * TileSet::DefaultTileSize) - HardcodedOffset)
 						+ loX;
-					xAlign = !PreferencesCache::UnalignedViewport && !PreferencesCache::UnalignedParallaxLayers;
 					break;
 				}
 				default:
 					xt = TranslateCoordinate(x1, layer.Description.SpeedX, loX, viewSize.X, false);
-					xAlign = !PreferencesCache::UnalignedViewport && (!PreferencesCache::UnalignedParallaxLayers || layer.Description.SpeedX == 1.0f);
 					break;
 			}
 			switch (layer.Description.SpeedModelY) {
 				case LayerSpeedModel::AlwaysOnTop:
 					yt = -HardcodedOffset;
-					yAlign = false;
 					break;
 				case LayerSpeedModel::FitLevel: {
 					float progress = (float)viewCenter.Y / (_layers[_sprLayerIndex].LayoutSize.Y * TileSet::DefaultTileSize);
 					yt = std::clamp(progress, 0.0f, 1.0f)
 						* ((layer.LayoutSize.Y * TileSet::DefaultTileSize) - viewSize.Y + HardcodedOffset)
 						+ loY;
-					yAlign = !PreferencesCache::UnalignedViewport && !PreferencesCache::UnalignedParallaxLayers;
 					break;
 				}
 				case LayerSpeedModel::SpeedMultipliers: {
@@ -668,7 +661,6 @@ namespace Jazz2::Tiles
 					yt = progress
 						* ((layer.LayoutSize.Y * TileSet::DefaultTileSize) - HardcodedOffset)
 						+ loY;
-					yAlign = !PreferencesCache::UnalignedViewport && !PreferencesCache::UnalignedParallaxLayers;
 					break;
 				}
 				default:
@@ -680,7 +672,6 @@ namespace Jazz2::Tiles
 					}*/
 
 					yt = TranslateCoordinate(y1, layer.Description.SpeedY, loY, viewSize.Y, true);
-					yAlign = !PreferencesCache::UnalignedViewport && (!PreferencesCache::UnalignedParallaxLayers || layer.Description.SpeedY == 1.0f);
 					break;
 			}
 
@@ -787,8 +778,9 @@ namespace Jazz2::Tiles
 					instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(color.Data());
 
 					float x2r = x2, y2r = y2;
-					if (xAlign) x2r = std::floor(x2r);
-					if (yAlign) y2r = std::floor(y2r);
+					if (!PreferencesCache::UnalignedViewport) {
+						x2r = std::floor(x2r); y2r = std::floor(y2r);
+					}
 
 					command->setTransformation(Matrix4x4f::Translation(x2r, y2r, 0.0f));
 					command->setLayer(layer.Description.Depth);
