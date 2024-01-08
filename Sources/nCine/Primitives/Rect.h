@@ -24,8 +24,8 @@ namespace nCine
 		Rect()
 			: X(0), Y(0), W(0), H(0) { }
 		/// Constructs a rectangle from top-left point and size
-		Rect(T xx, T yy, T ww, T hh)
-			: X(xx), Y(yy), W(ww), H(hh) { }
+		Rect(T x, T y, T w, T h)
+			: X(x), Y(y), W(w), H(h) { }
 		/// Constructs a rectangle from top-left point and size as two `Vector2`
 		Rect(const Vector2<T>& point, const Vector2<T>& size)
 			: X(point.X), Y(point.Y), W(size.X), H(size.Y) { }
@@ -48,7 +48,7 @@ namespace nCine
 		Vector2<T> Max() const;
 
 		/// Sets rectangle top-left point and size
-		void Set(T xx, T yy, T ww, T hh);
+		void Set(T x, T y, T w, T h);
 		/// Sets rectangle top-left point and size as two `Vector2`
 		void Set(const Vector2<T>& point, const Vector2<T>& size);
 		/// Retains rectangle size but moves its center to another position
@@ -69,6 +69,11 @@ namespace nCine
 		void SetMinMax(T minX, T minY, T maxX, T maxY);
 		/// Sets rectangle minimum and maximum coordinates as two `Vector2`
 		void SetMinMax(const Vector2<T>& min, const Vector2<T>& max);
+
+		template<class S>
+		Rect<S> As() {
+			return Rect<S>(static_cast<S>(X), static_cast<S>(Y), static_cast<S>(W), static_cast<S>(H));
+		}
 
 		/// Inverts rectangle size and moves (x, y) to a different angle
 		void InvertSize();
@@ -141,12 +146,12 @@ namespace nCine
 	}
 
 	template<class T>
-	inline void Rect<T>::Set(T xx, T yy, T ww, T hh)
+	inline void Rect<T>::Set(T x, T y, T w, T h)
 	{
-		X = xx;
-		Y = yy;
-		W = ww;
-		H = hh;
+		X = x;
+		Y = y;
+		W = w;
+		H = h;
 	}
 
 	template<class T>

@@ -50,7 +50,7 @@ namespace Jazz2
 	LevelHandler::LevelHandler(IRootController* root)
 		: _root(root), _eventSpawner(this), _difficulty(GameDifficulty::Default), _isReforged(false), _cheatsUsed(false), _checkpointCreated(false),
 			_cheatsBufferLength(0), _nextLevelType(ExitType::None), _nextLevelTime(0.0f), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
-			_shakeDuration(0.0f), _waterLevel(FLT_MAX), _ambientLightTarget(1.0f), _weatherType(WeatherType::None),
+			_cameraResponsiveness(1.0f, 1.0f), _shakeDuration(0.0f), _waterLevel(FLT_MAX), _ambientLightTarget(1.0f), _weatherType(WeatherType::None),
 			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
 			_pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0), _overrideActions(0), _playerFrozenEnabled(false),
 			_lastPressedNumericKey(UINT32_MAX)
@@ -250,7 +250,7 @@ namespace Jazz2
 
 		Vector2i levelBounds = _tileMap->GetLevelBounds();
 		_levelBounds = Recti(0, 0, levelBounds.X, levelBounds.Y);
-		_viewBounds = Rectf((float)_levelBounds.X, (float)_levelBounds.Y, (float)_levelBounds.W, (float)_levelBounds.H);
+		_viewBounds = _levelBounds.As<float>();
 		_viewBoundsTarget = _viewBounds;		
 
 		_ambientColor = descriptor.AmbientColor;
@@ -399,7 +399,7 @@ namespace Jazz2
 							TileMap::DestructibleDebris debris = { };
 							debris.Pos = debrisPos;
 							debris.Depth = MainPlaneZ - 100 + (uint16_t)(200 * scale);
-							debris.Size = Vector2f((float)resBase->FrameDimensions.X, (float)resBase->FrameDimensions.Y);
+							debris.Size = resBase->FrameDimensions.As<float>();
 							debris.Speed = Vector2f(speedX, speedY);
 							debris.Acceleration = Vector2f(0.0f, 0.0f);
 
@@ -438,15 +438,15 @@ namespace Jazz2
 							TileMap::DestructibleDebris debris = { };
 							debris.Pos = debrisPos;
 							debris.Depth = MainPlaneZ - 100 + (uint16_t)(200 * scale);
-							debris.Size = Vector2f((float)resBase->FrameDimensions.X, (float)resBase->FrameDimensions.Y);
+							debris.Size = resBase->FrameDimensions.As<float>();
 							debris.Speed = Vector2f(speedX, speedY);
 							debris.Acceleration = Vector2f(accel, -std::abs(accel));
 
 							debris.Scale = scale;
 							debris.ScaleSpeed = 0.0f;
 							debris.Angle = Random().FastFloat(0.0f, fTwoPi);
-							debris.AngleSpeed = speedX * 0.02f,
-								debris.Alpha = 1.0f;
+							debris.AngleSpeed = speedX * 0.02f;
+							debris.Alpha = 1.0f;
 							debris.AlphaSpeed = 0.0f;
 
 							debris.Time = 180.0f;
@@ -802,15 +802,13 @@ namespace Jazz2
 
 		Vector2f focusPos = actor->_pos;
 		if (!fast) {
-			_cameraPos.X = focusPos.X;
-			_cameraPos.Y = focusPos.Y;
+			_cameraPos = focusPos;
 			_cameraLastPos = _cameraPos;
-			_cameraDistanceFactor.X = 0.0f;
-			_cameraDistanceFactor.Y = 0.0f;
+			_cameraDistanceFactor = Vector2f(0.0f, 0.0f);
+			_cameraResponsiveness = Vector2f(1.0f, 1.0f);
 		} else {
 			Vector2f diff = _cameraLastPos - _cameraPos;
-			_cameraPos.X = focusPos.X;
-			_cameraPos.Y = focusPos.Y;
+			_cameraPos = focusPos;
 			_cameraLastPos = _cameraPos + diff;
 		}
 	}
@@ -1066,7 +1064,7 @@ namespace Jazz2
 			WarpCameraToTarget(player, true);
 		} else {
 			Vector2f pos = player->GetPos();
-			if (Vector2f(prevPos.X - pos.X, prevPos.Y - pos.Y).Length() > 250.0f) {
+			if ((prevPos - pos).Length() > 250.0f) {
 				WarpCameraToTarget(player);
 			}
 		}
@@ -1518,7 +1516,7 @@ namespace Jazz2
 			return;
 		}
 
-		auto targetObj = _players[0];
+		auto* targetObj = _players[0];
 
 		// The position to focus on
 		Vector2f focusPos = targetObj->_pos;
@@ -1544,6 +1542,8 @@ namespace Jazz2
 	{
 		ZoneScopedC(0x4876AF);
 
+		constexpr float ResponsivenessChange = 0.04f;
+		constexpr float ResponsivenessMin = 0.3f;
 		constexpr float SlowRatioX = 0.3f;
 		constexpr float SlowRatioY = 0.3f;
 		constexpr float FastRatioX = 0.2f;
@@ -1571,11 +1571,33 @@ namespace Jazz2
 		Vector2i halfView = _view->size() / 2;
 		Vector2f focusPos = targetObj->_pos;
 		Vector2f focusSpeed = targetObj->_speed;
+		Vector2f focusVelocity = Vector2f(std::abs(focusSpeed.X), std::abs(focusSpeed.Y));
 
-		_cameraLastPos = focusPos;
+		// Camera responsiveness (smoothing unexpected movements)
+		if (focusVelocity.X < 1.0f) {
+			if (_cameraResponsiveness.X > ResponsivenessMin) {
+				_cameraResponsiveness.X = std::max(_cameraResponsiveness.X - ResponsivenessChange * timeMult, ResponsivenessMin);
+			}
+		} else {
+			if (_cameraResponsiveness.X < 1.0f) {
+				_cameraResponsiveness.X = std::min(_cameraResponsiveness.X + ResponsivenessChange * timeMult, 1.0f);
+			}
+		}
+		if (focusVelocity.Y < 1.0f) {
+			if (_cameraResponsiveness.Y > ResponsivenessMin) {
+				_cameraResponsiveness.Y = std::max(_cameraResponsiveness.Y - ResponsivenessChange * timeMult, ResponsivenessMin);
+			}
+		} else {
+			if (_cameraResponsiveness.Y < 1.0f) {
+				_cameraResponsiveness.Y = std::min(_cameraResponsiveness.Y + ResponsivenessChange * timeMult, 1.0f);
+			}
+		}
 
-		_cameraDistanceFactor.X = lerpByTime(_cameraDistanceFactor.X, focusSpeed.X * 8.0f, (std::abs(focusSpeed.X) < 2.0f ? SlowRatioX : FastRatioX), timeMult);
-		_cameraDistanceFactor.Y = lerpByTime(_cameraDistanceFactor.Y, focusSpeed.Y * 5.0f, (std::abs(focusSpeed.Y) < 2.0f ? SlowRatioY : FastRatioY), timeMult);
+		_cameraLastPos.X = lerpByTime(_cameraLastPos.X, focusPos.X, _cameraResponsiveness.X, timeMult);
+		_cameraLastPos.Y = lerpByTime(_cameraLastPos.Y, focusPos.Y, _cameraResponsiveness.Y, timeMult);
+
+		_cameraDistanceFactor.X = lerpByTime(_cameraDistanceFactor.X, focusSpeed.X * 8.0f, (focusVelocity.X < 2.0f ? SlowRatioX : FastRatioX), timeMult);
+		_cameraDistanceFactor.Y = lerpByTime(_cameraDistanceFactor.Y, focusSpeed.Y * 5.0f, (focusVelocity.Y < 2.0f ? SlowRatioY : FastRatioY), timeMult);
 
 		if (_shakeDuration > 0.0f) {
 			_shakeDuration -= timeMult;
@@ -1607,11 +1629,11 @@ namespace Jazz2
 			_cameraPos.Y = std::floor(_viewBounds.Y + _viewBounds.H * 0.5f + _shakeOffset.Y);
 		}
 
-		_camera->setView(_cameraPos - Vector2f(halfView.X, halfView.Y), 0.0f, 1.0f);
+		_camera->setView(_cameraPos - halfView.As<float>(), 0.0f, 1.0f);
 
 		// Update audio listener position
 		IAudioDevice& device = theServiceLocator().audioDevice();
-		device.updateListener(Vector3f(_cameraPos.X, _cameraPos.Y, 0.0f), Vector3f(focusSpeed.X, focusSpeed.Y, 0.0f));
+		device.updateListener(Vector3f(_cameraPos, 0.0f), Vector3f(focusSpeed, 0.0f));
 	}
 
 	void LevelHandler::LimitCameraView(int left, int width)
@@ -1624,10 +1646,10 @@ namespace Jazz2
 		}
 
 		if (left == 0 && width == 0) {
-			_viewBounds = Rectf((float)_levelBounds.X, (float)_levelBounds.Y, (float)_levelBounds.W, (float)_levelBounds.H);
+			_viewBounds = _levelBounds.As<float>();
 			_viewBoundsTarget = _viewBounds;
 		} else {
-			Rectf bounds = Rectf((float)_levelBounds.X, (float)_levelBounds.Y, (float)_levelBounds.W, (float)_levelBounds.H);
+			Rectf bounds = _levelBounds.As<float>();
 			float viewWidth = (float)_view->size().X;
 			if (bounds.W < viewWidth) {
 				bounds.X -= (viewWidth - bounds.W);
@@ -2077,7 +2099,7 @@ namespace Jazz2
 	{
 		Vector2i size = _target->size();
 
-		auto instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
+		auto* instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
 		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(static_cast<float>(size.X), static_cast<float>(size.Y));
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
@@ -2164,7 +2186,7 @@ namespace Jazz2
 			command.material().setTexture(4, *_owner->_noiseTexture);
 		}
 
-		auto instanceBlock = command.material().uniformBlock(Material::InstanceBlockName);
+		auto* instanceBlock = command.material().uniformBlock(Material::InstanceBlockName);
 		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(_size.X, _size.Y);
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());

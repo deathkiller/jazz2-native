@@ -17,8 +17,8 @@ namespace nCine
 			: X(0), Y(0) {}
 		explicit Vector2(T s) noexcept
 			: X(s), Y(s) {}
-		Vector2(T xx, T yy) noexcept
-			: X(xx), Y(yy) {}
+		Vector2(T x, T y) noexcept
+			: X(x), Y(y) {}
 		Vector2(const Vector2& other) noexcept
 			: X(other.X), Y(other.Y) {}
 		Vector2(Vector2&& other) noexcept
@@ -26,7 +26,7 @@ namespace nCine
 		Vector2& operator=(const Vector2& other) noexcept;
 		Vector2& operator=(Vector2&& other) noexcept;
 
-		void Set(T xx, T yy);
+		void Set(T x, T y);
 
 		T* Data();
 		const T* Data() const;
@@ -66,6 +66,11 @@ namespace nCine
 		Vector2 Normalized() const;
 		Vector2& Normalize();
 
+		template<class S>
+		Vector2<S> As() {
+			return Vector2<S>(static_cast<S>(X), static_cast<S>(Y));
+		}
+
 		static T Dot(const Vector2& v1, const Vector2& v2);
 		static Vector2 Lerp(const Vector2& a, const Vector2& b, float t);
 
@@ -99,10 +104,10 @@ namespace nCine
 	}
 
 	template<class T>
-	inline void Vector2<T>::Set(T xx, T yy)
+	inline void Vector2<T>::Set(T x, T y)
 	{
-		X = xx;
-		Y = yy;
+		X = x;
+		Y = y;
 	}
 
 	template<class T>
