@@ -22,7 +22,7 @@ namespace nCine
 			: X(x), Y(y), Z(z) {}
 		Vector3(const Vector2<T>& other, T z) noexcept
 			: X(other.X), Y(other.Y), Z(z) {}
-		Vector3(Vector2<T>&& other, T zz) noexcept
+		Vector3(Vector2<T>&& other, T z) noexcept
 			: X(other.X), Y(other.Y), Z(z) {}
 		Vector3(const Vector3& other) noexcept
 			: X(other.X), Y(other.Y), Z(other.Z) {}

@@ -21,6 +21,10 @@ namespace nCine
 			: X(s), Y(s), Z(s), W(s) {}
 		Vector4(T x, T y, T z, T w) noexcept
 			: X(x), Y(y), Z(z), W(w) {}
+		Vector4(const Vector2<T>& other, T z, T w) noexcept
+			: X(other.X), Y(other.Y), Z(z), W(w) {}
+		Vector4(Vector2<T>&& other, T z, T w) noexcept
+			: X(other.X), Y(other.Y), Z(z), W(w) {}
 		Vector4(const Vector3<T>& other, T w) noexcept
 			: X(other.X), Y(other.Y), Z(other.Z), W(w) {}
 		Vector4(Vector3<T>&& other, T w) noexcept
