@@ -189,10 +189,12 @@ namespace Jazz2::UI::Menu
 		ViewSize = _owner->_upscalePass.GetViewSize();
 
 		_owner->_activeCanvas = ActiveCanvas::Background;
-		_owner->RenderTexturedBackground(renderQueue);
+
+		if (PreferencesCache::EnableReforgedMainMenu || !_owner->RenderLegacyBackground(renderQueue)) {
+			_owner->RenderTexturedBackground(renderQueue);
+		}
 
 		Vector2i center = ViewSize / 2;
-
 		int32_t charOffset = 0;
 		int32_t charOffsetShadow = 0;
 
@@ -652,7 +654,7 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::UpdateDebris(float timeMult)
 	{
-		if (_preset == Preset::Xmas) {
+		if (_preset == Preset::Xmas && PreferencesCache::EnableReforgedMainMenu) {
 			int32_t weatherIntensity = Random().Fast(0, (int32_t)(3 * timeMult) + 1);
 			for (int32_t i = 0; i < weatherIntensity; i++) {
 				Vector2i viewSize = _canvasOverlay->ViewSize;
@@ -777,7 +779,7 @@ namespace Jazz2::UI::Menu
 		struct tm* local = localtime(&t);
 		int32_t month = local->tm_mon;
 #endif
-		bool hasXmas = (PreferencesCache::EnableReforgedMainMenu && (month == 11 || month == 0) && TryLoadBackgroundPreset(Preset::Xmas));
+		bool hasXmas = ((month == 11 || month == 0) && TryLoadBackgroundPreset(Preset::Xmas));
 		if (!hasXmas &&
 			!TryLoadBackgroundPreset(Preset::Default) &&
 			!TryLoadBackgroundPreset(Preset::Carrotus) &&
@@ -878,6 +880,146 @@ namespace Jazz2::UI::Menu
 		command->material().setTexture(*target);
 
 		renderQueue.addCommand(command);
+	}
+
+	bool MainMenu::RenderLegacyBackground(RenderQueue& renderQueue)
+	{
+		auto* res16 = _metadata->FindAnimation(Menu16);
+		auto* res32 = _metadata->FindAnimation(Menu32);
+		auto* res128 = _metadata->FindAnimation(Menu128);
+		if (res16 == nullptr || res32 == nullptr || res128 == nullptr) {
+			return false;
+		}
+
+		float animTime = _canvasBackground->AnimTime;
+		Vector2f center = (_canvasBackground->ViewSize / 2).As<float>();
+
+		// 16
+		{
+			GenericGraphicResource* base = res16->Base;
+			base->TextureDiffuse->setWrap(SamplerWrapping::Repeat);
+
+			constexpr float repeats = 96.0f;
+			float scale = (0.6f + 0.04f * sinf(animTime * 0.2f)) * repeats;
+			Vector2f size = base->FrameDimensions.As<float>() * scale;
+
+			auto command = _canvasBackground->RentRenderCommand();
+			if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
+				command->material().reserveUniformsDataMemory();
+				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				// Required to reset render command properly
+				//command->setTransformation(command->transformation());
+
+				GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+				if (textureUniform && textureUniform->intValue(0) != 0) {
+					textureUniform->setIntValue(0); // GL_TEXTURE0
+				}
+			}
+
+			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+			instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(repeats, 0.0f, repeats, 0.0f);
+			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(size.Data());
+			instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
+
+			Matrix4x4f worldMatrix = Matrix4x4f::Translation(center.X, center.Y, 0.0f);
+			worldMatrix.RotateZ(animTime * -0.2f);
+			worldMatrix.Translate(size.X * -0.5f, size.Y * -0.5f, 0.0f);
+			command->setTransformation(worldMatrix);
+			command->setLayer(100);
+			command->material().setTexture(*base->TextureDiffuse.get());
+
+			renderQueue.addCommand(command);
+		}
+		
+		// 32
+		{
+			GenericGraphicResource* base = res32->Base;
+			base->TextureDiffuse->setWrap(SamplerWrapping::Repeat);
+
+			constexpr float repeats = 56.0f;
+			float scale = (0.6f + 0.04f * sinf(animTime * 0.2f)) * repeats;
+			Vector2f size = base->FrameDimensions.As<float>() * scale;
+
+			Vector2f centerBg = center;
+			centerBg.X += 96.0f * sinf(animTime * 0.37f);
+			centerBg.Y += 96.0f * cosf(animTime * 0.31f);
+
+			auto command = _canvasBackground->RentRenderCommand();
+			if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
+				command->material().reserveUniformsDataMemory();
+				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				// Required to reset render command properly
+				//command->setTransformation(command->transformation());
+
+				GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+				if (textureUniform && textureUniform->intValue(0) != 0) {
+					textureUniform->setIntValue(0); // GL_TEXTURE0
+				}
+			}
+
+			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+			instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(repeats, 0.0f, repeats, 0.0f);
+			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(size.Data());
+			instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
+
+			Matrix4x4f worldMatrix = Matrix4x4f::Translation(centerBg.X, centerBg.Y, 0.0f);
+			worldMatrix.RotateZ(animTime * 0.4f);
+			worldMatrix.Translate(size.X * -0.5f, size.Y * -0.5f, 0.0f);
+			command->setTransformation(worldMatrix);
+			command->setLayer(110);
+			command->material().setTexture(*base->TextureDiffuse.get());
+
+			renderQueue.addCommand(command);
+		}
+		
+		// 128
+		{
+			GenericGraphicResource* base = res128->Base;
+			base->TextureDiffuse->setWrap(SamplerWrapping::Repeat);
+
+			constexpr float repeats = 20.0f;
+			float scale = (0.6f + 0.2f * sinf(animTime * 0.4f)) * repeats;
+			Vector2f size = base->FrameDimensions.As<float>() * scale;
+
+			Vector2f centerBg = center;
+			centerBg.X += 64.0f * sinf(animTime * 0.25f);
+			centerBg.Y += 64.0f * cosf(animTime * 0.32f);
+
+			auto command = _canvasBackground->RentRenderCommand();
+			if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
+				command->material().reserveUniformsDataMemory();
+				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				// Required to reset render command properly
+				//command->setTransformation(command->transformation());
+
+				GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
+				if (textureUniform && textureUniform->intValue(0) != 0) {
+					textureUniform->setIntValue(0); // GL_TEXTURE0
+				}
+			}
+
+			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+			instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(repeats, 0.0f, repeats, 0.0f);
+			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(size.Data());
+			instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
+
+			Matrix4x4f worldMatrix = Matrix4x4f::Translation(centerBg.X, centerBg.Y, 0.0f);
+			worldMatrix.RotateZ(animTime * 0.3f);
+			worldMatrix.Translate(size.X * -0.5f, size.Y * -0.5f, 0.0f);
+			command->setTransformation(worldMatrix);
+			command->setLayer(120);
+			command->material().setTexture(*base->TextureDiffuse.get());
+
+			renderQueue.addCommand(command);
+		}
+
+		DrawElement(MenuGlow, 0, center.X, 70.0f, 130, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.14f), 16.0f, 10.0f, true);
 	}
 
 	void MainMenu::TexturedBackgroundPass::Initialize()

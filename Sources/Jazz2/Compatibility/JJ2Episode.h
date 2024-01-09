@@ -33,10 +33,10 @@ namespace Jazz2::Compatibility
 		std::unique_ptr<uint8_t[]> TitleData;
 
 		JJ2Episode();
-		JJ2Episode(const String& name, const String& displayName, const String& firstLevel, int32_t position);
+		JJ2Episode(const StringView name, const StringView displayName, const StringView firstLevel, int32_t position);
 
-		bool Open(const StringView& path);
+		bool Open(const StringView path);
 
-		void Convert(const String& targetPath, std::function<JJ2Level::LevelToken(const StringView&)> levelTokenConversion = nullptr, std::function<String(JJ2Episode*)> episodeNameConversion = nullptr, std::function<Pair<String, String>(JJ2Episode*)> episodePrevNext = nullptr);
+		void Convert(const StringView targetPath, const std::function<JJ2Level::LevelToken(const StringView)>& levelTokenConversion = nullptr, const std::function<String(JJ2Episode*)>& episodeNameConversion = nullptr, const std::function<Pair<String, String>(JJ2Episode*)>& episodePrevNext = nullptr);
 	};
 }

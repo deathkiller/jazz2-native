@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 #include "../../Common.h"
+#include "AnimSetMapping.h"
+#include "JJ2Version.h"
 
 #include <Containers/SmallVector.h>
 #include <Containers/String.h>
@@ -15,17 +17,22 @@ namespace Jazz2::Compatibility
 	public:
 		struct Item {
 			String Filename;
-			uint32_t Type;
+			std::uint32_t Type;
 			std::unique_ptr<uint8_t[]> Blob;
-			int32_t Size;
+			std::int32_t Size;
 		};
+
+		SmallVector<Item, 0> Items;
 
 		JJ2Data() { }
 
-		bool Open(const StringView& path, bool strictParser);
+		bool Open(const StringView path, bool strictParser);
 
-		void Extract(const String& targetPath);
+		void Extract(const StringView targetPath);
+		void Convert(const StringView targetPath, JJ2Version version);
 
-		SmallVector<Item, 0> Items;
+	private:
+		void ConvertSfxList(const Item& item, const StringView targetPath, AnimSetMapping& animMapping);
+		void ConvertMenuImage(const Item& item, const StringView targetPath, std::int32_t width, std::int32_t height);
 	};
 }

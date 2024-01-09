@@ -2,6 +2,11 @@
 
 namespace Jazz2::Compatibility
 {
+	AnimSetMapping::AnimSetMapping(JJ2Version version)
+		: _version(version), _currentItem(0), _currentSet(0), _currentOrdinal(0)
+	{
+	}
+
 	AnimSetMapping AnimSetMapping::GetAnimMapping(JJ2Version version)
 	{
 		AnimSetMapping m(version);
@@ -1951,27 +1956,29 @@ namespace Jazz2::Compatibility
 		return m;
 	}
 
-	void AnimSetMapping::DiscardItems(int advanceBy, JJ2Version appliesTo)
+	void AnimSetMapping::DiscardItems(std::uint32_t advanceBy, JJ2Version appliesTo)
 	{
 		if ((_version & appliesTo) != JJ2Version::Unknown) {
-			for (int i = 0; i < advanceBy; i++) {
+			for (std::uint32_t i = 0; i < advanceBy; i++) {
 				Entry entry;
 				entry.Category = Discard;
 
-				int32_t key = (_currentSet << 16) | _currentItem;
+				std::int32_t key = (_currentSet << 16) | _currentItem;
 				_entries.emplace(key, std::move(entry));
 
 				_currentItem++;
+				_currentOrdinal++;
 			}
 		}
 	}
 
-	void AnimSetMapping::SkipItems(int advanceBy)
+	void AnimSetMapping::SkipItems(std::uint32_t advanceBy)
 	{
 		_currentItem += advanceBy;
+		_currentOrdinal += advanceBy;
 	}
 
-	void AnimSetMapping::NextSet(int advanceBy, JJ2Version appliesTo)
+	void AnimSetMapping::NextSet(std::uint32_t advanceBy, JJ2Version appliesTo)
 	{
 		if ((_version & appliesTo) != JJ2Version::Unknown) {
 			_currentSet += advanceBy;
@@ -1979,19 +1986,22 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void AnimSetMapping::Add(JJ2Version appliesTo, const StringView& category, const StringView& name, JJ2DefaultPalette palette, bool skipNormalMap, bool allowRealtimePalette) {
+	void AnimSetMapping::Add(JJ2Version appliesTo, const StringView& category, const StringView& name, JJ2DefaultPalette palette, bool skipNormalMap, bool allowRealtimePalette)
+	{
 		if ((_version & appliesTo) != JJ2Version::Unknown) {
 			Entry entry;
 			entry.Category = category;
 			entry.Name = name;
+			entry.Ordinal = _currentOrdinal;
 			entry.Palette = palette;
 			entry.SkipNormalMap = skipNormalMap;
 			entry.AllowRealtimePalette = allowRealtimePalette;
 
-			int32_t key = (_currentSet << 16) | _currentItem;
+			std::uint32_t key = (_currentSet << 16) | _currentItem;
 			_entries.emplace(key, std::move(entry));
 
 			_currentItem++;
+			_currentOrdinal++;
 		}
 	}
 
@@ -2000,28 +2010,41 @@ namespace Jazz2::Compatibility
 		Entry entry;
 		entry.Category = category;
 		entry.Name = name;
+		entry.Ordinal = _currentOrdinal;
 		entry.Palette = palette;
 		entry.SkipNormalMap = skipNormalMap;
 		entry.AllowRealtimePalette = allowRealtimePalette;
 
-		int32_t key = (_currentSet << 16) | _currentItem;
+		std::uint32_t key = (_currentSet << 16) | _currentItem;
 		_entries.emplace(key, std::move(entry));
 
 		_currentItem++;
+		_currentOrdinal++;
 	}
 
-	AnimSetMapping::Entry* AnimSetMapping::Get(int32_t set, int32_t item)
+	AnimSetMapping::Entry* AnimSetMapping::Get(std::uint32_t set, std::uint32_t item)
 	{
 		if (set > UINT16_MAX || item > UINT16_MAX) {
 			return nullptr;
 		}
 
-		int32_t key = (set << 16) | item;
+		std::uint32_t key = (set << 16) | item;
 		auto it = _entries.find(key);
 		if (it != _entries.end()) {
 			return &it->second;
 		} else {
 			return nullptr;
 		}
+	}
+
+	AnimSetMapping::Entry* AnimSetMapping::GetByOrdinal(std::uint32_t index)
+	{
+		for (auto& [key, entry] : _entries) {
+			if (entry.Ordinal == index) {
+				return &entry;
+			}
+		}
+
+		return nullptr;
 	}
 }

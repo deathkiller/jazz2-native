@@ -73,6 +73,7 @@ namespace nCine
 
 		static T Dot(const Vector2& v1, const Vector2& v2);
 		static Vector2 Lerp(const Vector2& a, const Vector2& b, float t);
+		static Vector2 FromAngleLength(T angle, T length);
 
 		/// A vector with all zero elements
 		static const Vector2 Zero;
@@ -321,6 +322,12 @@ namespace nCine
 	inline Vector2<T> Vector2<T>::Lerp(const Vector2<T>& a, const Vector2<T>& b, float t)
 	{
 		return Vector2<T>(t * (b.X - a.X) + a.X, t * (b.Y - a.Y) + a.Y);
+	}
+
+	template<class T>
+	inline Vector2<T> Vector2<T>::FromAngleLength(T angle, T length)
+	{
+		return Vector2<T>((T)sinf(angle) * length, (T)cosf(angle) * -length);
 	}
 
 	template<class T>

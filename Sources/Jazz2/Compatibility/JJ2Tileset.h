@@ -20,9 +20,9 @@ namespace Jazz2::Compatibility
 
         JJ2Tileset() : _version(JJ2Version::Unknown), _tileCount(0) { }
 
-        bool Open(const StringView& path, bool strictParser);
+        bool Open(const StringView path, bool strictParser);
 
-        void Convert(const String& targetPath) const;
+        void Convert(const StringView targetPath) const;
 
         int GetMaxSupportedTiles() const {
             return (_version == JJ2Version::BaseGame ? 1024 : 4096);

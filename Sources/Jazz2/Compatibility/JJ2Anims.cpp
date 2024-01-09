@@ -9,7 +9,7 @@ using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
-	bool JJ2Anims::Convert(const StringView& path, const StringView& targetPath, bool isPlus)
+	JJ2Version JJ2Anims::Convert(const StringView path, const StringView targetPath, bool isPlus)
 	{
 		JJ2Version version;
 		SmallVector<AnimSection, 0> anims;
@@ -260,7 +260,7 @@ namespace Jazz2::Compatibility
 				version = JJ2Version::TSF | JJ2Version::SharewareDemo;
 				// TODO: This version is not supported (yet)
 				LOGE("Detected Jazz Jackrabbit 2: The Secret Files Demo - This version is not supported!");
-				return false;
+				return JJ2Version::Unknown;
 			} else if (seemsLikeCC) {
 				version = JJ2Version::CC;
 				LOGI("Detected Jazz Jackrabbit 2: Christmas Chronicles");
@@ -275,7 +275,7 @@ namespace Jazz2::Compatibility
 			version = JJ2Version::PlusExtension;
 			if (!isPlus) {
 				LOGE("Detected Jazz Jackrabbit 2 Plus extension - This version is not supported!");
-				return false;
+				return JJ2Version::Unknown;
 			}
 		} else {
 			version = JJ2Version::Unknown;
@@ -284,10 +284,11 @@ namespace Jazz2::Compatibility
 
 		ImportAnimations(targetPath, version, anims);
 		ImportAudioSamples(targetPath, version, samples);
-		return true;
+
+		return version;
 	}
 
-	void JJ2Anims::ImportAnimations(const StringView& targetPath, JJ2Version version, SmallVectorImpl<AnimSection>& anims)
+	void JJ2Anims::ImportAnimations(const StringView targetPath, JJ2Version version, SmallVectorImpl<AnimSection>& anims)
 	{
 		if (anims.empty()) {
 			return;
@@ -444,7 +445,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Anims::ImportAudioSamples(const StringView& targetPath, JJ2Version version, SmallVectorImpl<SampleSection>& samples)
+	void JJ2Anims::ImportAudioSamples(const StringView targetPath, JJ2Version version, SmallVectorImpl<SampleSection>& samples)
 	{
 		if (samples.empty()) {
 			return;
@@ -515,7 +516,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Anims::WriteImageToFile(const StringView& targetPath, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry)
+	void JJ2Anims::WriteImageToFile(const StringView targetPath, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry)
 	{
 		auto so = fs::Open(targetPath, FileAccessMode::Write);
 		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");

@@ -31,15 +31,15 @@ namespace Jazz2::Compatibility
 
 		JJ2Strings() { }
 
-		JJ2Strings(const String& name)
+		JJ2Strings(const StringView name)
 			: Name(name)
 		{
 		}
 
-		bool Open(const StringView& path);
+		bool Open(const StringView path);
 
-		void Convert(const String& targetPath, std::function<JJ2Level::LevelToken(const StringView&)> levelTokenConversion);
+		void Convert(const StringView targetPath, const std::function<JJ2Level::LevelToken(const StringView)>& levelTokenConversion);
 
-		static String RecodeString(const StringView& text, bool stripFormatting = false, bool escaped = false);
+		static String RecodeString(const StringView text, bool stripFormatting = false, bool escaped = false);
 	};
 }

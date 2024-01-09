@@ -40,7 +40,7 @@ static const uint32_t DefaultFontColors[] = {
 
 namespace Jazz2::Compatibility
 {
-	bool JJ2Strings::Open(const StringView& path)
+	bool JJ2Strings::Open(const StringView path)
 	{
 		auto s = fs::Open(path, FileAccessMode::Read);
 		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
@@ -107,7 +107,7 @@ namespace Jazz2::Compatibility
 		return true;
 	}
 
-	void JJ2Strings::Convert(const String& targetPath, std::function<JJ2Level::LevelToken(const StringView&)> levelTokenConversion)
+	void JJ2Strings::Convert(const StringView targetPath, const std::function<JJ2Level::LevelToken(const StringView)>& levelTokenConversion)
 	{
 		auto so = fs::Open(targetPath, FileAccessMode::Write);
 		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
@@ -173,7 +173,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	String JJ2Strings::RecodeString(const StringView& text, bool stripFormatting, bool escaped)
+	String JJ2Strings::RecodeString(const StringView text, bool stripFormatting, bool escaped)
 	{
 		if (text.empty()) {
 			return { };

@@ -31,6 +31,7 @@
 #include "Jazz2/UI/Menu/SimpleMessageSection.h"
 
 #include "Jazz2/Compatibility/JJ2Anims.h"
+#include "Jazz2/Compatibility/JJ2Data.h"
 #include "Jazz2/Compatibility/JJ2Episode.h"
 #include "Jazz2/Compatibility/JJ2Level.h"
 #include "Jazz2/Compatibility/JJ2Strings.h"
@@ -940,10 +941,16 @@ RecreateCache:
 
 	String animationsPath = fs::CombinePath(resolver.GetCachePath(), "Animations"_s);
 	fs::RemoveDirectoryRecursive(animationsPath);
-	if (!Compatibility::JJ2Anims::Convert(animsPath, animationsPath, false)) {
+	Compatibility::JJ2Version version = Compatibility::JJ2Anims::Convert(animsPath, animationsPath);
+	if (version == Compatibility::JJ2Version::Unknown) {
 		LOGE("Provided Jazz Jackrabbit 2 version is not supported. Make sure supported Jazz Jackrabbit 2 version is present in \"%s\" directory.", resolver.GetSourcePath().data());
 		_flags |= Flags::IsVerified;
 		return;
+	}
+
+	Compatibility::JJ2Data data;
+	if (data.Open(fs::CombinePath(resolver.GetSourcePath(), "Data.j2d"_s), false)) {
+		data.Convert(resolver.GetCachePath(), version);
 	}
 
 	RefreshCacheLevels();
