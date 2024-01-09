@@ -10,7 +10,7 @@ using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
-	bool JJ2Tileset::Open(const StringView& path, bool strictParser)
+	bool JJ2Tileset::Open(const StringView path, bool strictParser)
 	{
 		auto s = fs::Open(path, FileAccessMode::Read);
 		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
@@ -160,7 +160,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Tileset::Convert(const String& targetPath) const
+	void JJ2Tileset::Convert(const StringView targetPath) const
 	{
 		// Rearrange tiles from '10 tiles per row' to '30 tiles per row'
 		constexpr std::int32_t TilesPerRow = 30;

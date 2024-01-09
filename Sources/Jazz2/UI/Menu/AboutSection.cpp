@@ -131,7 +131,7 @@ namespace Jazz2::UI::Menu
 		pos.Y = std::round(std::max(150.0f, pos.Y * 0.86f));
 
 		_root->DrawElement(MenuDim, pos.X, pos.Y + 24.0f - 2.0f, IMenuContainer::BackgroundLayer,
-			Alignment::Top, Colorf::Black, Vector2f(680.0f, 200.0f), Vector4f(1.0f, 0.0f, 0.7f, 0.0f));
+			Alignment::Top, Colorf::Black, Vector2f(680.0f, 200.0f), Vector4f(1.0f, 0.0f, -0.7f, 0.7f));
 
 		pos.X = std::round(pos.X * 0.35f);
 

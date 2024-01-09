@@ -123,6 +123,19 @@
 			"States": [ 56 ]
 		},
 		
+		"Menu16": {
+			"Path": "UI/menu16.aura",
+			"States": [ 70 ]
+		},
+		"Menu32": {
+			"Path": "UI/menu32.aura",
+			"States": [ 71 ]
+		},
+		"Menu128": {
+			"Path": "UI/menu128.aura",
+			"States": [ 72 ]
+		},
+		
 		"LoriExistsCheck": {
 			"Path": "Lori/corpse.aura",
 			"States": [ 80 ]

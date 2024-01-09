@@ -7,6 +7,7 @@
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Graphics/Viewport.h"
 #include "../../nCine/Input/IInputManager.h"
+#include "../../nCine/Audio/AudioBufferPlayer.h"
 #include "../../nCine/Audio/AudioReaderMpt.h"
 #include "../../nCine/Base/FrameTimer.h"
 
@@ -15,14 +16,14 @@
 namespace Jazz2::UI
 {
 	Cinematics::Cinematics(IRootController* root, const StringView path, const std::function<bool(IRootController*, bool)>& callback)
-		: _root(root), _callback(callback), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0),
+		: _root(root), _callback(callback), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0), _frameIndex(0),
 			_pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0)
 	{
 		Initialize(path);
 	}
 
 	Cinematics::Cinematics(IRootController* root, const StringView path, std::function<bool(IRootController*, bool)>&& callback)
-		: _root(root), _callback(std::move(callback)), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0),
+		: _root(root), _callback(std::move(callback)), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0), _frameIndex(0),
 			_pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0)
 	{
 		Initialize(path);
@@ -186,6 +187,59 @@ namespace Jazz2::UI
 			_decompressedStreams[i].Open(_compressedStreams[i]);
 		}
 
+		LoadSfxList(path);
+
+		return true;
+	}
+
+	bool Cinematics::LoadSfxList(const StringView path)
+	{
+		auto& resolver = ContentResolver::Get();
+		String fullPath = fs::CombinePath({ resolver.GetContentPath(), "Cinematics"_s, path + ".j2sfx"_s });
+		if (!fs::IsReadableFile(fullPath)) {
+			fullPath = fs::CombinePath({ resolver.GetCachePath(), "Cinematics"_s, path + ".j2sfx"_s });
+		}
+
+		auto s = fs::Open(fullPath, FileAccessMode::Read);
+		RETURNF_ASSERT_MSG(s->GetSize() > 16, "Cannot load SFX list for \"%s.j2v\"", path);
+
+		std::uint64_t signature = s->ReadValue<std::uint64_t>();
+		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
+		std::uint16_t version = s->ReadValue<std::uint16_t>();
+		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::SfxListFile || version > SfxListVersion) {
+			return false;
+		}
+
+		DeflateStream uc(*s);
+
+		std::uint32_t sampleCount = uc.ReadValue<std::uint16_t>();
+		for (std::uint32_t i = 0; i < sampleCount; i++) {
+			std::uint8_t stringSize = uc.ReadValue<std::uint8_t>();
+			String samplePath = String(NoInit, stringSize);
+			uc.Read(samplePath.data(), stringSize);
+
+			String samplePathNormalized = fs::ToNativeSeparators(samplePath);
+			String fullPath = fs::CombinePath({ resolver.GetContentPath(), "Animations"_s, samplePathNormalized });
+			if (!fs::IsReadableFile(fullPath)) {
+				fullPath = fs::CombinePath({ resolver.GetCachePath(), "Animations"_s, samplePathNormalized });
+				if (!fs::IsReadableFile(fullPath)) {
+					_sfxSamples.emplace_back(); // Sample not found
+					continue;
+				}
+			}
+
+			_sfxSamples.emplace_back(fullPath);
+		}
+
+		std::uint32_t itemCount = uc.ReadValue<std::uint16_t>();
+		for (std::uint32_t i = 0; i < itemCount; i++) {
+			auto& item = _sfxPlaylist.emplace_back();
+			item.Frame = uc.ReadVariableUint32();
+			item.Sample = uc.ReadValue<std::uint16_t>();
+			item.Gain = uc.ReadValue<std::uint8_t>() / 255.0f;
+			item.Panning = uc.ReadValue<std::int8_t>() / 127.0f;
+		}
+
 		return true;
 	}
 
@@ -243,6 +297,25 @@ namespace Jazz2::UI
 
 		// Create copy of the buffer
 		std::memcpy(_lastBuffer.get(), _buffer.get(), _width * _height);
+
+		for (std::size_t i = 0; i < _sfxPlaylist.size(); i++) {
+			if (_sfxPlaylist[i].Frame == _frameIndex) {
+				auto& item = _sfxPlaylist[i];
+				auto& sample = _sfxSamples[item.Sample];
+				if (sample.Buffer == nullptr) {
+					continue;
+				}
+
+				sample.CurrentPlayer = std::make_unique<nCine::AudioBufferPlayer>(sample.Buffer.get());
+				Vector2f localPos = Vector2f::FromAngleLength(item.Panning * 30.0f * DegToRad, 1.0f);
+				sample.CurrentPlayer->setPosition(Vector3f(localPos.X, 0, -localPos.Y));
+				sample.CurrentPlayer->setGain(_sfxPlaylist[i].Gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
+				sample.CurrentPlayer->setSourceRelative(true);
+				sample.CurrentPlayer->play();
+			}
+		}
+
+		_frameIndex++;
 	}
 
 	void Cinematics::Read(int streamIndex, void* buffer, std::uint32_t bytes)
@@ -328,5 +401,14 @@ namespace Jazz2::UI
 		renderQueue.addCommand(&_renderCommand);
 
 		return true;
+	}
+
+	Cinematics::SfxItem::SfxItem()
+	{
+	}
+
+	Cinematics::SfxItem::SfxItem(const StringView path)
+	{
+		Buffer = std::make_unique<AudioBuffer>(path);
 	}
 }

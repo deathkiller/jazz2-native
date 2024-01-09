@@ -10,7 +10,7 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	GameplayEnhancementsSection::GameplayEnhancementsSection()
-		: _transition(0.0f), _isDirty(false), _isInGame(false), _wasReforgedMainMenu(false)
+		: _transition(0.0f), _isDirty(false), _isInGame(false)
 	{
 		// TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 		_items.emplace_back(GameplayEnhancementsItem { GameplayEnhancementsItemType::ReforgedGameplay, _("Reforged Gameplay") });
@@ -29,10 +29,6 @@ namespace Jazz2::UI::Menu
 		if (_isDirty) {
 			_isDirty = false;
 			PreferencesCache::Save();
-
-			if (_wasReforgedMainMenu != PreferencesCache::EnableReforgedMainMenu) {
-				_root->ApplyPreferencesChanges(ChangedPreferencesType::MainMenu);
-			}
 		}
 	}
 
@@ -47,7 +43,6 @@ namespace Jazz2::UI::Menu
 		ScrollableMenuSection::OnShow(root);
 
 		_isInGame = (dynamic_cast<InGameMenu*>(_root) != nullptr);
-		_wasReforgedMainMenu = PreferencesCache::EnableReforgedMainMenu;
 	}
 
 	void GameplayEnhancementsSection::OnUpdate(float timeMult)
@@ -146,7 +141,10 @@ namespace Jazz2::UI::Menu
 				break;
 
 			case GameplayEnhancementsItemType::ReforgedHUD: PreferencesCache::EnableReforgedHUD = !PreferencesCache::EnableReforgedHUD; break;
-			case GameplayEnhancementsItemType::ReforgedMainMenu: PreferencesCache::EnableReforgedMainMenu = !PreferencesCache::EnableReforgedMainMenu; break;
+			case GameplayEnhancementsItemType::ReforgedMainMenu:
+				PreferencesCache::EnableReforgedMainMenu = !PreferencesCache::EnableReforgedMainMenu;
+				_root->ApplyPreferencesChanges(ChangedPreferencesType::MainMenu);
+				break;
 			case GameplayEnhancementsItemType::LedgeClimb: PreferencesCache::EnableLedgeClimb = !PreferencesCache::EnableLedgeClimb; break;
 			case GameplayEnhancementsItemType::WeaponWheel:
 				PreferencesCache::WeaponWheel = (PreferencesCache::WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount

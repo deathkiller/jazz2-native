@@ -33,5 +33,8 @@ namespace Jazz2::UI::Menu::Resources
 	static constexpr AnimState GamepadRightShoulder = (AnimState)54;
 	static constexpr AnimState GamepadRightStick = (AnimState)55;
 	static constexpr AnimState GamepadRightTrigger = (AnimState)56;
+	static constexpr AnimState Menu16 = (AnimState)70;
+	static constexpr AnimState Menu32 = (AnimState)71;
+	static constexpr AnimState Menu128 = (AnimState)72;
 	static constexpr AnimState LoriExistsCheck = (AnimState)80;
 }

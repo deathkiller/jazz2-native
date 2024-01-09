@@ -1299,7 +1299,7 @@ namespace Jazz2
 		if (_cheatsUsed) flags |= 0x02;
 		dest.WriteValue<std::uint8_t>(flags);
 
-		dest.WriteValue((std::uint8_t)_episodeName.size());
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_episodeName.size());
 		dest.Write(_episodeName.data(), (std::uint32_t)_episodeName.size());
 		dest.WriteValue<std::uint8_t>((std::uint8_t)_levelFileName.size());
 		dest.Write(_levelFileName.data(), (std::uint32_t)_levelFileName.size());

@@ -19,9 +19,9 @@ namespace Jazz2::Compatibility
 	class JJ2Anims // .j2a
 	{
 	public:
-		static constexpr uint16_t CacheVersion = 14;
+		static constexpr uint16_t CacheVersion = 15;
 
-		static bool Convert(const StringView& path, const StringView& targetPath, bool isPlus);
+		static JJ2Version Convert(const StringView path, const StringView targetPath, bool isPlus = false);
 
 		static void WriteImageToFileInternal(std::unique_ptr<Stream>& so, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount);
 
@@ -66,9 +66,9 @@ namespace Jazz2::Compatibility
 
 		JJ2Anims();
 
-		static void ImportAnimations(const StringView& targetPath, JJ2Version version, SmallVectorImpl<AnimSection>& anims);
-		static void ImportAudioSamples(const StringView& targetPath, JJ2Version version, SmallVectorImpl<SampleSection>& samples);
+		static void ImportAnimations(const StringView targetPath, JJ2Version version, SmallVectorImpl<AnimSection>& anims);
+		static void ImportAudioSamples(const StringView targetPath, JJ2Version version, SmallVectorImpl<SampleSection>& samples);
 
-		static void WriteImageToFile(const StringView& targetPath, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry);
+		static void WriteImageToFile(const StringView targetPath, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry);
 	};
 }

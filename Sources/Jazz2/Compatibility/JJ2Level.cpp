@@ -14,7 +14,7 @@ using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
-	bool JJ2Level::Open(const StringView& path, bool strictParser)
+	bool JJ2Level::Open(const StringView path, bool strictParser)
 	{
 		auto s = fs::Open(path, FileAccessMode::Read);
 		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
@@ -510,7 +510,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Level::Convert(const String& targetPath, const EventConverter& eventConverter, const std::function<LevelToken(const StringView&)>& levelTokenConversion)
+	void JJ2Level::Convert(const StringView targetPath, const EventConverter& eventConverter, const std::function<LevelToken(const StringView)>& levelTokenConversion)
 	{
 		auto so = fs::Open(targetPath, FileAccessMode::Write);
 		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
@@ -1065,7 +1065,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	bool JJ2Level::StringHasSuffixIgnoreCase(const StringView& value, const StringView& suffix)
+	bool JJ2Level::StringHasSuffixIgnoreCase(const StringView value, const StringView suffix)
 	{
 		const std::size_t size = value.size();
 		const std::size_t suffixSize = suffix.size();
