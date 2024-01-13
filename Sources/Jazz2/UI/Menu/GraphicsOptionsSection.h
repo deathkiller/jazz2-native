@@ -10,7 +10,7 @@ namespace Jazz2::UI::Menu
 		Fullscreen,
 #endif
 		Antialiasing,
-		LowGraphicsQuality,
+		LowWaterQuality,
 		ShowPlayerTrails,
 		UnalignedViewport,
 		KeepAspectRatioInCinematics,

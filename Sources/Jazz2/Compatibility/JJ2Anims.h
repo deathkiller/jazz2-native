@@ -19,7 +19,7 @@ namespace Jazz2::Compatibility
 	class JJ2Anims // .j2a
 	{
 	public:
-		static constexpr uint16_t CacheVersion = 15;
+		static constexpr uint16_t CacheVersion = 16;
 
 		static JJ2Version Convert(const StringView path, const StringView targetPath, bool isPlus = false);
 

@@ -347,6 +347,12 @@ namespace Jazz2::Compatibility
 				LOGI("Applying \"Fly Carrot\" image fix to %i:%u", anim.Set, anim.Anim);
 			}
 
+			bool playerFlareFix = ((entry->Category == "Jazz"_s || entry->Category == "Spaz"_s) && (entry->Name == "shoot_ver"_s || entry->Name == "vine_shoot_up"_s));
+			if (playerFlareFix) {
+				// This image has already applied weapon flare, remove it
+				LOGI("Applying \"Player Flare\" image fix to %i:%u", anim.Set, anim.Anim);
+			}
+
 			String filename;
 			if (entry->Name.empty()) {
 				/*filename = "s" + sample.Set + "_s" + sample.IdInSet + ".jri";
@@ -386,6 +392,10 @@ namespace Jazz2::Compatibility
 							}
 						} else if (applyFlyCarrotFix) {
 							if (colorIdx >= 68 && colorIdx <= 70) {
+								colorIdx = 0;
+							}
+						} else if (playerFlareFix) {
+							if (j == 0 && y < 14 && (colorIdx == 15 || (colorIdx >= 40 && colorIdx <= 42))) {
 								colorIdx = 0;
 							}
 						}

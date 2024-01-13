@@ -30,7 +30,7 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::Antialiasing, _("Antialiasing"), true });
 		// TRANSLATORS: Menu item in Options > Graphics section
-		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::LowGraphicsQuality, _("Graphics Quality"), true });
+		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::LowWaterQuality, _("Water Quality"), true });
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::ShowPlayerTrails, _("Show Player Trails"), true });
 		// TRANSLATORS: Menu item in Options > Graphics section
@@ -91,9 +91,9 @@ namespace Jazz2::UI::Menu
 				Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 			if (item.Item.HasBooleanValue) {
-				_root->DrawStringShadow("<"_s, charOffset, centerX - 60.0f - 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
+				_root->DrawStringShadow("<"_s, charOffset, centerX - 70.0f - 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
 					Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);
-				_root->DrawStringShadow(">"_s, charOffset, centerX + 70.0f + 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
+				_root->DrawStringShadow(">"_s, charOffset, centerX + 80.0f + 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
 					Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, 1.1f, 0.4f, 0.4f);
 			}
 		} else {
@@ -109,9 +109,9 @@ namespace Jazz2::UI::Menu
 				case GraphicsOptionsItemType::Fullscreen: enabled = PreferencesCache::EnableFullscreen; break;
 #endif
 				case GraphicsOptionsItemType::Antialiasing: enabled = (PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing; break;
-				case GraphicsOptionsItemType::LowGraphicsQuality: customText = (enabled ? _("Low") : _("High")); break;
+				case GraphicsOptionsItemType::LowWaterQuality: enabled = PreferencesCache::LowWaterQuality; customText = (enabled ? _("Low") : _("High")); break;
 				case GraphicsOptionsItemType::ShowPlayerTrails: enabled = PreferencesCache::ShowPlayerTrails; break;
-				case GraphicsOptionsItemType::UnalignedViewport: enabled = PreferencesCache::UnalignedViewport; break;
+				case GraphicsOptionsItemType::UnalignedViewport: enabled = PreferencesCache::UnalignedViewport; customText = (enabled ? _("Enabled \f[c:0xd0705d](Experimental)\f[c]") : _("Disabled")); break;
 				case GraphicsOptionsItemType::KeepAspectRatioInCinematics: enabled = PreferencesCache::KeepAspectRatioInCinematics; break;
 				case GraphicsOptionsItemType::ShowPerformanceMetrics: enabled = PreferencesCache::ShowPerformanceMetrics; break;
 			}
@@ -161,8 +161,8 @@ namespace Jazz2::UI::Menu
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				break;
 			}
-			case GraphicsOptionsItemType::LowGraphicsQuality:
-				PreferencesCache::LowGraphicsQuality = !PreferencesCache::LowGraphicsQuality;
+			case GraphicsOptionsItemType::LowWaterQuality:
+				PreferencesCache::LowWaterQuality = !PreferencesCache::LowWaterQuality;
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 				_isDirty = true;
 				_animation = 0.0f;
