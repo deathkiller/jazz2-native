@@ -76,7 +76,7 @@ namespace Jazz2::UI
 
 			GenericGraphicResource* base = loadingRes->Base;
 			Vector2f size = Vector2f(base->FrameDimensions.X, base->FrameDimensions.Y);
-			Vector2f pos = Vector2f(ViewSize.X * 0.5f - size.X - 38.0f, size.Y - ViewSize.Y * 0.5f + 30.0f);
+			Vector2f pos = Vector2f(ViewSize.X - size.X - 50.0f, ViewSize.Y - size.Y - 40.0f);
 
 			Vector2i texSize = base->TextureDiffuse->size();
 			int32_t col = frame % base->FrameConfiguration.X;
@@ -87,9 +87,6 @@ namespace Jazz2::UI
 				float(base->FrameDimensions.Y) / float(texSize.Y),
 				float(base->FrameDimensions.Y * row) / float(texSize.Y)
 			);
-
-			texCoords.W += texCoords.Z;
-			texCoords.Z *= -1;
 
 			DrawTexture(*base->TextureDiffuse.get(), pos, 960, size, texCoords, Colorf::White, false);
 		}

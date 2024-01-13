@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-12-28 11:51+0100\n"
-"PO-Revision-Date: 2023-12-28 11:53+0100\n"
+"POT-Creation-Date: 2024-01-13 16:36+0100\n"
+"PO-Revision-Date: 2024-01-13 16:37+0100\n"
 "Last-Translator: \n"
 "Language-Team: Překlad do češtiny: Dan R. (https://deat.tk/jazz2/)\n"
 "Language: cs\n"
@@ -1531,6 +1531,7 @@ msgstr "Povoleno"
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:124
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:129
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:133
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:114
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:119
 msgid "Disabled"
 msgstr "Zakázáno"
@@ -1678,8 +1679,8 @@ msgstr "Antialiasing"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:33
-msgid "Graphics Quality"
-msgstr "Kvalita grafiky"
+msgid "Water Quality"
+msgstr "Kvalita vody"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:35
@@ -1714,6 +1715,10 @@ msgstr "Nízká"
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:112
 msgid "High"
 msgstr "Vysoká"
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:114
+msgid "Enabled \f[c:0xd0705d](Experimental)\f[c]"
+msgstr "Povoleno \f[c:0xd0705d](Experimentální)\f[c]"
 
 #. TRANSLATORS: Header in Import Episodes section
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:70
@@ -1942,16 +1947,16 @@ msgstr "Těžká"
 msgid "You can adjust position of the touch zones by drag and drop."
 msgstr "Pozice zón dotyku můžete upravit přetažením."
 
-#: Sources/Main.cpp:296 Sources/Main.cpp:356
+#: Sources/Main.cpp:297 Sources/Main.cpp:357
 #, c-format
 msgid "Connecting to %s:%u..."
 msgstr "Připojování k %s:%u..."
 
-#: Sources/Main.cpp:343
+#: Sources/Main.cpp:344
 msgid "Creating server..."
 msgstr "Vytváření serveru..."
 
-#: Sources/Main.cpp:539 Sources/Main.cpp:575
+#: Sources/Main.cpp:540 Sources/Main.cpp:576
 msgid ""
 "\f[c:0x704a4a]Cannot load specified level!\f[c]\n"
 "\n"
@@ -1965,7 +1970,7 @@ msgstr ""
 "Ujistěte se, že všechny potřebné soubory\n"
 "jsou přístupné, a zkuste to znovu."
 
-#: Sources/Main.cpp:623
+#: Sources/Main.cpp:624
 msgid ""
 "\f[c:0x704a4a]Cannot resume saved state!\f[c]\n"
 "\n"
@@ -1979,7 +1984,7 @@ msgstr ""
 "Ujistěte se, že všechny potřebné soubory\n"
 "jsou přístupné, a zkuste to znovu."
 
-#: Sources/Main.cpp:736
+#: Sources/Main.cpp:737
 msgid ""
 "\f[c:0x704a4a]Cannot connect to the server!\f[c]\n"
 "\n"
@@ -1987,7 +1992,7 @@ msgid ""
 "Your client version is not compatible with the server."
 msgstr ""
 
-#: Sources/Main.cpp:737
+#: Sources/Main.cpp:738
 msgid ""
 "\f[c:0x704a4a]Cannot connect to the server!\f[c]\n"
 "\n"
@@ -1996,7 +2001,7 @@ msgid ""
 "Please try it later."
 msgstr ""
 
-#: Sources/Main.cpp:738
+#: Sources/Main.cpp:739
 msgid ""
 "\f[c:0x704a4a]Cannot connect to the server!\f[c]\n"
 "\n"
@@ -2005,7 +2010,7 @@ msgid ""
 "Please try again in a few seconds."
 msgstr ""
 
-#: Sources/Main.cpp:739
+#: Sources/Main.cpp:740
 msgid ""
 "\f[c:0x704a4a]Connection has been closed!\f[c]\n"
 "\n"
@@ -2014,7 +2019,7 @@ msgid ""
 "Please try it later."
 msgstr ""
 
-#: Sources/Main.cpp:740
+#: Sources/Main.cpp:741
 msgid ""
 "\f[c:0x704a4a]Connection has been lost!\f[c]\n"
 "\n"
@@ -2023,7 +2028,7 @@ msgid ""
 "check your network connection."
 msgstr ""
 
-#: Sources/Main.cpp:741
+#: Sources/Main.cpp:742
 msgid ""
 "\f[c:0x704a4a]Cannot connect to the server!\f[c]\n"
 "\n"
@@ -2031,7 +2036,7 @@ msgid ""
 "The server is not responding for connection request."
 msgstr ""
 
-#: Sources/Main.cpp:742
+#: Sources/Main.cpp:743
 msgid ""
 "\f[c:0x704a4a]Connection has been closed!\f[c]\n"
 "\n"
@@ -2040,7 +2045,7 @@ msgid ""
 "Contact server administrators for more information."
 msgstr ""
 
-#: Sources/Main.cpp:743
+#: Sources/Main.cpp:744
 msgid ""
 "\f[c:0x704a4a]Connection has been closed!\f[c]\n"
 "\n"

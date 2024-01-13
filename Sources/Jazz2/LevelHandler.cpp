@@ -585,7 +585,7 @@ namespace Jazz2
 			_lightingRenderer = std::make_unique<LightingRenderer>(this);
 		}
 
-		_combineWithWaterShader = resolver.GetShader(PreferencesCache::LowGraphicsQuality
+		_combineWithWaterShader = resolver.GetShader(PreferencesCache::LowWaterQuality
 			? PrecompiledShader::CombineWithWaterLow
 			: PrecompiledShader::CombineWithWater);
 
@@ -2182,7 +2182,7 @@ namespace Jazz2
 		command.material().setTexture(1, *_owner->_lightingBuffer);
 		command.material().setTexture(2, *_owner->_blurPass2.GetTarget());
 		command.material().setTexture(3, *_owner->_blurPass4.GetTarget());
-		if (viewHasWater && !PreferencesCache::LowGraphicsQuality) {
+		if (viewHasWater && !PreferencesCache::LowWaterQuality) {
 			command.material().setTexture(4, *_owner->_noiseTexture);
 		}
 

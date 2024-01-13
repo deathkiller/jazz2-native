@@ -23,7 +23,7 @@ namespace Jazz2
 	bool PreferencesCache::ShowPerformanceMetrics = false;
 	bool PreferencesCache::KeepAspectRatioInCinematics = false;
 	bool PreferencesCache::ShowPlayerTrails = true;
-	bool PreferencesCache::LowGraphicsQuality = false;
+	bool PreferencesCache::LowWaterQuality = false;
 	bool PreferencesCache::UnalignedViewport = false;
 	bool PreferencesCache::EnableReforgedGameplay = true;
 	bool PreferencesCache::EnableReforgedHUD = true;
@@ -152,7 +152,7 @@ namespace Jazz2
 					ShowPerformanceMetrics = ((boolOptions & BoolOptions::ShowPerformanceMetrics) == BoolOptions::ShowPerformanceMetrics);
 					KeepAspectRatioInCinematics = ((boolOptions & BoolOptions::KeepAspectRatioInCinematics) == BoolOptions::KeepAspectRatioInCinematics);
 					ShowPlayerTrails = ((boolOptions & BoolOptions::ShowPlayerTrails) == BoolOptions::ShowPlayerTrails);
-					LowGraphicsQuality = ((boolOptions & BoolOptions::LowGraphicsQuality) == BoolOptions::LowGraphicsQuality);
+					LowWaterQuality = ((boolOptions & BoolOptions::LowWaterQuality) == BoolOptions::LowWaterQuality);
 					UnalignedViewport = ((boolOptions & BoolOptions::UnalignedViewport) == BoolOptions::UnalignedViewport);
 					EnableReforgedGameplay = ((boolOptions & BoolOptions::EnableReforgedGameplay) == BoolOptions::EnableReforgedGameplay);
 					EnableLedgeClimb = ((boolOptions & BoolOptions::EnableLedgeClimb) == BoolOptions::EnableLedgeClimb);
@@ -339,7 +339,7 @@ namespace Jazz2
 		if (ShowPerformanceMetrics) boolOptions |= BoolOptions::ShowPerformanceMetrics;
 		if (KeepAspectRatioInCinematics) boolOptions |= BoolOptions::KeepAspectRatioInCinematics;
 		if (ShowPlayerTrails) boolOptions |= BoolOptions::ShowPlayerTrails;
-		if (LowGraphicsQuality) boolOptions |= BoolOptions::LowGraphicsQuality;
+		if (LowWaterQuality) boolOptions |= BoolOptions::LowWaterQuality;
 		if (UnalignedViewport) boolOptions |= BoolOptions::UnalignedViewport;
 		if (EnableReforgedGameplay) boolOptions |= BoolOptions::EnableReforgedGameplay;
 		if (EnableLedgeClimb) boolOptions |= BoolOptions::EnableLedgeClimb;

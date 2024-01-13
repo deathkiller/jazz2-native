@@ -95,9 +95,9 @@ namespace Jazz2::UI::Menu
 				Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 			if (item.Item.HasBooleanValue) {
-				_root->DrawStringShadow("<"_s, charOffset, centerX - 60.0f - 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
+				_root->DrawStringShadow("<"_s, charOffset, centerX - 70.0f - 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
 					Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);
-				_root->DrawStringShadow(">"_s, charOffset, centerX + 70.0f + 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
+				_root->DrawStringShadow(">"_s, charOffset, centerX + 80.0f + 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
 					Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, 1.1f, 0.4f, 0.4f);
 			}
 		} else {

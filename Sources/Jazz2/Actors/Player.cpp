@@ -986,7 +986,7 @@ namespace Jazz2::Actors
 
 	bool Player::OnDraw(RenderQueue& renderQueue)
 	{
-		if (_weaponFlareTime > 0.0f && !_inWater && _currentTransition == nullptr && (_currentAnimation->State & AnimState::Lookup) != AnimState::Lookup) {
+		if (_weaponFlareTime > 0.0f && !_inWater && _currentTransition == nullptr) {
 			auto* res = _metadata->FindAnimation((AnimState)536870950); // WeaponFlare
 			if (res != nullptr) {
 				auto& command = _weaponFlareCommand;
@@ -1015,27 +1015,47 @@ namespace Jazz2::Actors
 				float texBiasX = (float(res->Base->FrameDimensions.X * col) / float(texSize.X));
 				float texScaleY = (float(res->Base->FrameDimensions.Y) / float(texSize.Y));
 				float texBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.Y));
-				float scale = std::max(_weaponFlareTime / 8.0f, 0.4f);
-				if (_playerType == PlayerType::Spaz) {
-					scale *= 1.6f;
+
+				float scaleY = std::max(_weaponFlareTime / 8.0f, 0.4f);
+				switch (_playerType) {
+					case  PlayerType::Jazz: scaleY *= 1.1f; break;
+					case  PlayerType::Spaz: scaleY *= 1.6f; break;
+					case  PlayerType::Lori: scaleY *= 1.3f; break;
 				}
 
-				float gunspotPosX = _pos.X - (res->Base->FrameDimensions.X / 2)
-					+ (_currentAnimation->Base->Hotspot.X - _currentAnimation->Base->Gunspot.X - 7) * (IsFacingLeft() ? 1 : -1);
-				float gunspotPosY = _pos.Y - (res->Base->FrameDimensions.Y / 2) * scale
-					- (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);
+				bool lookUp = (_currentAnimation->State & AnimState::Lookup) == AnimState::Lookup;
+				std::int32_t gunspotOffsetX = (_currentAnimation->Base->Hotspot.X - _currentAnimation->Base->Gunspot.X);
+				std::int32_t gunspotOffsetY = (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);
 
-				if (IsFacingLeft()) {
-					texScaleX *= -1.0f;
-					texBiasX += 1.0f;
+				float gunspotPosX, gunspotPosY;
+				if (lookUp) {
+					gunspotPosX = _pos.X + (gunspotOffsetX) * (IsFacingLeft() ? 1 : -1);
+					gunspotPosY = _pos.Y - (gunspotOffsetY - 3) - res->Base->FrameDimensions.Y;
+				} else {
+					gunspotPosX = _pos.X + (gunspotOffsetX - 7) * (IsFacingLeft() ? 1 : -1);
+					gunspotPosY = _pos.Y - gunspotOffsetY;
+					if (IsFacingLeft()) {
+						texScaleX *= -1.0f;
+						texBiasX += 1.0f;
+					}
+				}
+
+				if (!PreferencesCache::UnalignedViewport) {
+					gunspotPosX = std::floor(gunspotPosX);
+					gunspotPosY = std::floor(gunspotPosY);
 				}
 
 				auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 				instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(res->Base->FrameDimensions.X, res->Base->FrameDimensions.Y * scale);
+				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(res->Base->FrameDimensions.X, res->Base->FrameDimensions.Y * scaleY);
 				instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(1.0f, 1.0f, 1.0f, 1.8f);
 
-				command->setTransformation(Matrix4x4f::Translation(gunspotPosX, gunspotPosY, 0.0f));
+				Matrix4x4f worldMatrix = Matrix4x4f::Translation(gunspotPosX, gunspotPosY, 0.0f);
+				if (lookUp) {
+					worldMatrix.RotateZ(-fRadAngle90);
+				}
+				worldMatrix.Translate(res->Base->FrameDimensions.X * -0.5f, res->Base->FrameDimensions.Y * scaleY * -0.5f, 0.0f);
+				command->setTransformation(worldMatrix);
 				command->setLayer(_renderer.layer() + 2);
 				command->material().setTexture(*res->Base->TextureDiffuse.get());
 
@@ -1051,6 +1071,14 @@ namespace Jazz2::Actors
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
 					float shieldSize = 70.0f * shieldScale;
+
+					float shieldPosX = _pos.X - shieldSize * 0.5f;
+					float shieldPosY = _pos.Y - shieldSize * 0.5f;
+
+					if (!PreferencesCache::UnalignedViewport) {
+						shieldPosX = std::floor(shieldPosX);
+						shieldPosY = std::floor(shieldPosY);
+					}
 
 					{
 						auto& command = _shieldRenderCommands[0];
@@ -1075,7 +1103,7 @@ namespace Jazz2::Actors
 						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(shieldSize, shieldSize);
 						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
 
-						command->setTransformation(Matrix4x4f::Translation(_pos.X - shieldSize * 0.5f, _pos.Y - shieldSize * 0.5f, 0.0f));
+						command->setTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosX, 0.0f));
 						command->setLayer(_renderer.layer() - 4);
 						command->material().setTexture(*res->Base->TextureDiffuse.get());
 
@@ -1104,7 +1132,7 @@ namespace Jazz2::Actors
 						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(shieldSize, shieldSize);
 						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 1.0f, 1.0f * shieldAlpha);
 
-						command->setTransformation(Matrix4x4f::Translation(_pos.X - shieldSize * 0.5f, _pos.Y - shieldSize * 0.5f, 0.0f));
+						command->setTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
 						command->setLayer(_renderer.layer() + 4);
 						command->material().setTexture(*res->Base->TextureDiffuse.get());
 
@@ -1146,12 +1174,20 @@ namespace Jazz2::Actors
 					float texScaleY = (float(res->Base->FrameDimensions.Y) / float(texSize.Y));
 					float texBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.Y));
 
+					float shieldPosX = _pos.X - res->Base->FrameDimensions.X * shieldScale * 0.5f;
+					float shieldPosY = _pos.Y - res->Base->FrameDimensions.Y * shieldScale * 0.5f;
+
+					if (!PreferencesCache::UnalignedViewport) {
+						shieldPosX = std::floor(shieldPosX);
+						shieldPosY = std::floor(shieldPosY);
+					}
+
 					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 					instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 					instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(res->Base->FrameDimensions.X * shieldScale, res->Base->FrameDimensions.Y * shieldScale);
 					instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(1.0f, 1.0f, 1.0f, shieldAlpha);
 
-					command->setTransformation(Matrix4x4f::Translation(_pos.X - res->Base->FrameDimensions.X * shieldScale * 0.5f, _pos.Y - res->Base->FrameDimensions.Y * shieldScale * 0.5f, 0.0f));
+					command->setTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
 					command->setLayer(_renderer.layer() + 4);
 					command->material().setTexture(*res->Base->TextureDiffuse.get());
 
@@ -1166,6 +1202,14 @@ namespace Jazz2::Actors
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
 					float shieldSize = 70.0f * shieldScale + sinf(frames * 0.06f) * 4.0f;
+
+					float shieldPosX = _pos.X - shieldSize * 0.5f;
+					float shieldPosY = _pos.Y - shieldSize * 0.5f;
+
+					if (!PreferencesCache::UnalignedViewport) {
+						shieldPosX = std::floor(shieldPosX);
+						shieldPosY = std::floor(shieldPosY);
+					}
 
 					{
 						auto& command = _shieldRenderCommands[0];
@@ -1190,7 +1234,7 @@ namespace Jazz2::Actors
 						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(shieldSize, shieldSize);
 						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
 
-						command->setTransformation(Matrix4x4f::Translation(_pos.X - shieldSize * 0.5f, _pos.Y - shieldSize * 0.5f, 0.0f));
+						command->setTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
 						command->setLayer(_renderer.layer() - 4);
 						command->material().setTexture(*res->Base->TextureDiffuse.get());
 
@@ -1219,7 +1263,7 @@ namespace Jazz2::Actors
 						instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(shieldSize, shieldSize);
 						instanceBlock->uniform(Material::ColorUniformName)->setFloatValue(2.0f, 2.0f, 1.0f, shieldAlpha);
 
-						command->setTransformation(Matrix4x4f::Translation(_pos.X - shieldSize * 0.5f, _pos.Y - shieldSize * 0.5f, 0.0f));
+						command->setTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
 						command->setLayer(_renderer.layer() + 4);
 						command->material().setTexture(*res->Base->TextureDiffuse.get());
 

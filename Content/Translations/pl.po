@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2023-12-28 11:53+0100\n"
+"POT-Creation-Date: 2024-01-13 16:37+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Przetłumaczone na język polski: Patrxgt\n"
@@ -1542,6 +1542,7 @@ msgstr "Włączono"
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:124
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:129
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:133
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:114
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:119
 msgid "Disabled"
 msgstr "Wyłączono"
@@ -1689,8 +1690,8 @@ msgstr "Wygładzanie krawędzi"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:33
-msgid "Graphics Quality"
-msgstr "Jakość grafiki"
+msgid "Water Quality"
+msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:35
@@ -1725,6 +1726,10 @@ msgstr "Brzydka"
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:112
 msgid "High"
 msgstr "Ładna"
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:114
+msgid "Enabled \f[c:0xd0705d](Experimental)\f[c]"
+msgstr ""
 
 #. TRANSLATORS: Header in Import Episodes section
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:70
@@ -1955,16 +1960,16 @@ msgstr ""
 "Możesz dostosować położenie miejsc dotykowych poprzez przeciągnięcie i "
 "puszczenie."
 
-#: Sources/Main.cpp:296 Sources/Main.cpp:356
+#: Sources/Main.cpp:297 Sources/Main.cpp:357
 #, c-format
 msgid "Connecting to %s:%u..."
 msgstr "Łączenie z %s:%u..."
 
-#: Sources/Main.cpp:343
+#: Sources/Main.cpp:344
 msgid "Creating server..."
 msgstr "Tworzenie serwera..."
 
-#: Sources/Main.cpp:539 Sources/Main.cpp:575
+#: Sources/Main.cpp:540 Sources/Main.cpp:576
 msgid ""
 "\f[c:0x704a4a]Cannot load specified level!\f[c]\n"
 "\n"
@@ -1978,7 +1983,7 @@ msgstr ""
 "Upewnij się, że wszystkie potrzebne pliki\n"
 "są na swoim miejscu i spróbuj ponownie."
 
-#: Sources/Main.cpp:623
+#: Sources/Main.cpp:624
 msgid ""
 "\f[c:0x704a4a]Cannot resume saved state!\f[c]\n"
 "\n"
@@ -1992,7 +1997,7 @@ msgstr ""
 "Upewnij się, że wszystkie niezbędne pliki\n"
 "są na swoim miejscu i spróbuj ponownie."
 
-#: Sources/Main.cpp:736
+#: Sources/Main.cpp:737
 msgid ""
 "\f[c:0x704a4a]Cannot connect to the server!\f[c]\n"
 "\n"
@@ -2004,7 +2009,7 @@ msgstr ""
 "\n"
 "Wersja klienta nie jest kompatybilna z serwerem."
 
-#: Sources/Main.cpp:737
+#: Sources/Main.cpp:738
 msgid ""
 "\f[c:0x704a4a]Cannot connect to the server!\f[c]\n"
 "\n"
@@ -2018,7 +2023,7 @@ msgstr ""
 "Serwer jest pełny.\n"
 "Spróbuj ponownie później."
 
-#: Sources/Main.cpp:738
+#: Sources/Main.cpp:739
 msgid ""
 "\f[c:0x704a4a]Cannot connect to the server!\f[c]\n"
 "\n"
@@ -2032,7 +2037,7 @@ msgstr ""
 "Serwer nie jest w stanie przetworzyć żądania.\n"
 "Spróbuj ponownie za kilka sekund."
 
-#: Sources/Main.cpp:739
+#: Sources/Main.cpp:740
 msgid ""
 "\f[c:0x704a4a]Connection has been closed!\f[c]\n"
 "\n"
@@ -2046,7 +2051,7 @@ msgstr ""
 "Serwer jest zamykany.\n"
 "Spróbuj ponownie później."
 
-#: Sources/Main.cpp:740
+#: Sources/Main.cpp:741
 msgid ""
 "\f[c:0x704a4a]Connection has been lost!\f[c]\n"
 "\n"
@@ -2060,7 +2065,7 @@ msgstr ""
 "Spróbuj ponownie i sprawdź, czy problem nadal występuje.\n"
 "Sprawdź swoje połączenie sieciowe."
 
-#: Sources/Main.cpp:741
+#: Sources/Main.cpp:742
 msgid ""
 "\f[c:0x704a4a]Cannot connect to the server!\f[c]\n"
 "\n"
@@ -2072,7 +2077,7 @@ msgstr ""
 "\n"
 "Serwer nie odpowiada na żądanie połączenia."
 
-#: Sources/Main.cpp:742
+#: Sources/Main.cpp:743
 msgid ""
 "\f[c:0x704a4a]Connection has been closed!\f[c]\n"
 "\n"
@@ -2086,7 +2091,7 @@ msgstr ""
 "Zostałeś/aś \f[c:0x907050]wykopany/a\f[c] z serwera.\n"
 "Skontaktuj się z administratorem serwera po więcej informacji."
 
-#: Sources/Main.cpp:743
+#: Sources/Main.cpp:744
 msgid ""
 "\f[c:0x704a4a]Connection has been closed!\f[c]\n"
 "\n"
