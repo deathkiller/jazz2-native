@@ -853,22 +853,16 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::RenderTexturedBackground(RenderQueue& renderQueue)
 	{
-		LOGW("Test 20");
-
 		auto target = _texturedBackgroundPass._target.get();
 		if (target == nullptr) {
 			return;
 		}
-
-		LOGW("Test 21");
 
 		Vector4f horizonColor;
 		switch (_preset) {
 			case Preset::Default: horizonColor = Vector4f(0.098f, 0.35f, 1.0f, 0.0f); break;
 			default: horizonColor = Vector4f(0.0f, 0.0f, 0.06f, 1.0f); break;
 		}
-
-		LOGW("Test 22");
 
 		Vector2i viewSize = _canvasBackground->ViewSize;
 		auto command = &_texturedBackgroundPass._outputRenderCommand;
@@ -886,22 +880,16 @@ namespace Jazz2::UI::Menu
 		command->material().setTexture(*target);
 
 		renderQueue.addCommand(command);
-
-		LOGW("Test 23");
 	}
 
 	bool MainMenu::RenderLegacyBackground(RenderQueue& renderQueue)
 	{
-		LOGW("Test 1");
-
 		auto* res16 = _metadata->FindAnimation(Menu16);
 		auto* res32 = _metadata->FindAnimation(Menu32);
 		auto* res128 = _metadata->FindAnimation(Menu128);
 		if (res16 == nullptr || res32 == nullptr || res128 == nullptr) {
 			return false;
 		}
-
-		LOGW("Test 2");
 
 		float animTime = _canvasBackground->AnimTime;
 		Vector2f center = (_canvasBackground->ViewSize / 2).As<float>();
@@ -910,8 +898,6 @@ namespace Jazz2::UI::Menu
 		{
 			GenericGraphicResource* base = res16->Base;
 			base->TextureDiffuse->setWrap(SamplerWrapping::Repeat);
-
-			LOGW("Test 3");
 
 			constexpr float repeats = 96.0f;
 			float scale = (0.6f + 0.04f * sinf(animTime * 0.2f)) * repeats;
@@ -924,15 +910,11 @@ namespace Jazz2::UI::Menu
 				// Required to reset render command properly
 				//command->setTransformation(command->transformation());
 
-				LOGW("Test 4");
-
 				GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->intValue(0) != 0) {
 					textureUniform->setIntValue(0); // GL_TEXTURE0
 				}
 			}
-
-			LOGW("Test 5");
 
 			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -941,8 +923,6 @@ namespace Jazz2::UI::Menu
 			instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(size.Data());
 			instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 
-			LOGW("Test 6");
-
 			Matrix4x4f worldMatrix = Matrix4x4f::Translation(center.X, center.Y, 0.0f);
 			worldMatrix.RotateZ(animTime * -0.2f);
 			worldMatrix.Translate(size.X * -0.5f, size.Y * -0.5f, 0.0f);
@@ -950,19 +930,13 @@ namespace Jazz2::UI::Menu
 			command->setLayer(100);
 			command->material().setTexture(*base->TextureDiffuse.get());
 
-			LOGW("Test 7");
-
 			renderQueue.addCommand(command);
-
-			LOGW("Test 8");
 		}
 		
 		// 32
 		{
 			GenericGraphicResource* base = res32->Base;
 			base->TextureDiffuse->setWrap(SamplerWrapping::Repeat);
-
-			LOGW("Test 9");
 
 			constexpr float repeats = 56.0f;
 			float scale = (0.6f + 0.04f * sinf(animTime * 0.2f)) * repeats;
@@ -971,8 +945,6 @@ namespace Jazz2::UI::Menu
 			Vector2f centerBg = center;
 			centerBg.X += 96.0f * sinf(animTime * 0.37f);
 			centerBg.Y += 96.0f * cosf(animTime * 0.31f);
-
-			LOGW("Test 10");
 
 			auto command = _canvasBackground->RentRenderCommand();
 			if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
@@ -986,8 +958,6 @@ namespace Jazz2::UI::Menu
 					textureUniform->setIntValue(0); // GL_TEXTURE0
 				}
 			}
-
-			LOGW("Test 11");
 
 			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -1003,8 +973,6 @@ namespace Jazz2::UI::Menu
 			command->setLayer(110);
 			command->material().setTexture(*base->TextureDiffuse.get());
 
-			LOGW("Test 12");
-
 			renderQueue.addCommand(command);
 		}
 		
@@ -1013,8 +981,6 @@ namespace Jazz2::UI::Menu
 			GenericGraphicResource* base = res128->Base;
 			base->TextureDiffuse->setWrap(SamplerWrapping::Repeat);
 
-			LOGW("Test 13");
-
 			constexpr float repeats = 20.0f;
 			float scale = (0.6f + 0.2f * sinf(animTime * 0.4f)) * repeats;
 			Vector2f size = base->FrameDimensions.As<float>() * scale;
@@ -1022,8 +988,6 @@ namespace Jazz2::UI::Menu
 			Vector2f centerBg = center;
 			centerBg.X += 64.0f * sinf(animTime * 0.25f);
 			centerBg.Y += 64.0f * cosf(animTime * 0.32f);
-
-			LOGW("Test 14");
 
 			auto command = _canvasBackground->RentRenderCommand();
 			if (command->material().setShaderProgramType(Material::ShaderProgramType::SPRITE)) {
@@ -1037,9 +1001,6 @@ namespace Jazz2::UI::Menu
 					textureUniform->setIntValue(0); // GL_TEXTURE0
 				}
 			}
-
-
-			LOGW("Test 15");
 
 			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -1056,13 +1017,11 @@ namespace Jazz2::UI::Menu
 			command->material().setTexture(*base->TextureDiffuse.get());
 
 			renderQueue.addCommand(command);
-
-			LOGW("Test 16");
 		}
 
 		DrawElement(MenuGlow, 0, center.X, 70.0f, 130, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.14f), 16.0f, 10.0f, true);
 
-		LOGW("Test 17");
+		return true;
 	}
 
 	void MainMenu::TexturedBackgroundPass::Initialize()
