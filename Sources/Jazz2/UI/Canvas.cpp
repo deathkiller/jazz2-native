@@ -40,7 +40,7 @@ namespace Jazz2::UI
 			command->material().reserveUniformsDataMemory();
 			command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 			// Required to reset render command properly
-			command->setTransformation(command->transformation());
+			//command->setTransformation(command->transformation());
 
 			GLUniformCache* textureUniform = command->material().uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->intValue(0) != 0) {
@@ -73,7 +73,7 @@ namespace Jazz2::UI
 			command->material().reserveUniformsDataMemory();
 			command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 			// Required to reset render command properly
-			command->setTransformation(command->transformation());
+			//command->setTransformation(command->transformation());
 		}
 
 		if (additiveBlending) {
