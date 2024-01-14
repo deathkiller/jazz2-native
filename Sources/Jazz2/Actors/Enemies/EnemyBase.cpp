@@ -175,19 +175,21 @@ namespace Jazz2::Actors::Enemies
 				DecreaseHealth(5, tnt);
 				return true;
 			} else if (auto* pole = runtime_cast<Solid::Pole*>(other)) {
-				bool hit;
-				switch (pole->GetFallDirection()) {
-					case Solid::Pole::FallDirection::Left: hit = (_pos.X < pole->GetPos().X); break;
-					case Solid::Pole::FallDirection::Right: hit = (_pos.X > pole->GetPos().X); break;
-					default: hit = false; break;
-				}
-				if (hit) {
-					_lastHitDir = LastHitDirection::Up;
-					DecreaseHealth(10, pole);
-					return true;
+				if (_levelHandler->IsReforged()) {
+					bool hit;
+					switch (pole->GetFallDirection()) {
+						case Solid::Pole::FallDirection::Left: hit = (_pos.X < pole->GetPos().X); break;
+						case Solid::Pole::FallDirection::Right: hit = (_pos.X > pole->GetPos().X); break;
+						default: hit = false; break;
+					}
+					if (hit) {
+						_lastHitDir = LastHitDirection::Up;
+						DecreaseHealth(10, pole);
+						return true;
+					}
 				}
 			} else if (auto* pushableBox = runtime_cast<Solid::PushableBox*>(other)) {
-				if (pushableBox->GetSpeed().Y > 0.0f && pushableBox->AABBInner.B < _pos.Y) {
+				if (_levelHandler->IsReforged() && pushableBox->GetSpeed().Y > 0.0f && pushableBox->AABBInner.B < _pos.Y) {
 					_lastHitDir = LastHitDirection::Up;
 					DecreaseHealth(10, pushableBox);
 					return true;

@@ -19,14 +19,14 @@ namespace Jazz2::Compatibility
 	class JJ2Anims // .j2a
 	{
 	public:
-		static constexpr uint16_t CacheVersion = 16;
+		static constexpr uint16_t CacheVersion = 17;
 
 		static JJ2Version Convert(const StringView path, const StringView targetPath, bool isPlus = false);
 
 		static void WriteImageToFileInternal(std::unique_ptr<Stream>& so, const uint8_t* data, int32_t width, int32_t height, int32_t channelCount);
 
 	private:
-		static constexpr int32_t AddBorder = 1;
+		static constexpr int32_t AddBorder = 2;
 
 		struct AnimFrameSection {
 			int16_t SizeX, SizeY;

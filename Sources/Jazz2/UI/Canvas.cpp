@@ -59,7 +59,13 @@ namespace Jazz2::UI
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(size.Data());
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(color.Data());
 
-		command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f).RotateZ(angle));
+		Matrix4x4f worldMatrix = Matrix4x4f::Translation(pos.X, pos.Y, 0.0f);
+		if (std::abs(angle) > 0.01f) {
+			worldMatrix.Translate(size.X * 0.5f, size.Y * 0.5f, 0.0f);
+			worldMatrix.RotateZ(angle);
+			worldMatrix.Translate(size.X * -0.5f, size.Y * -0.5f, 0.0f);
+		}
+		command->setTransformation(worldMatrix);
 		command->setLayer(z);
 		command->material().setTexture(texture);
 

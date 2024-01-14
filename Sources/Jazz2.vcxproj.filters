@@ -1461,6 +1461,9 @@
     <ClInclude Include="Jazz2\Multiplayer\MultiplayerGameMode.h">
       <Filter>Header Files\Jazz2\Multiplayer</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\FirstRunSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2424,6 +2427,9 @@
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\MultiplayerGameModeSelectSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\FirstRunSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
   </ItemGroup>
