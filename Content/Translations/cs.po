@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
 "POT-Creation-Date: 2024-01-14 14:14+0100\n"
-"PO-Revision-Date: 2024-01-14 14:23+0100\n"
+"PO-Revision-Date: 2024-01-14 15:36+0100\n"
 "Last-Translator: \n"
 "Language-Team: Překlad do češtiny: Dan R. (https://deat.tk/jazz2/)\n"
 "Language: cs\n"
@@ -1635,7 +1635,7 @@ msgstr ""
 "Můžete si zvolit preferovaný styl hraní.\n"
 "Tuto možnost můžete kdykoliv změnit v \f[c:0x707070]%s\f[c] > "
 "\f[c:0x707070]%s\f[c] > \f[c:0x707070]%s\f[c].\n"
-"Pro více informací můžete navštívit %s and  Discord!"
+"Pro více informací můžete navštívit %s a  Discord!"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:16

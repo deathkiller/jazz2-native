@@ -18,25 +18,6 @@ namespace Jazz2::UI::Menu
 		_items.emplace_back(FirstRunItem { FirstRunItemType::ReforgedPreset, _("Reforged"), _("I want to play the game with something new.") });
 	}
 
-	FirstRunSection::~FirstRunSection()
-	{
-		if (!_committed) {
-			// If no option has been selected, set everything to default
-			PreferencesCache::EnableReforgedGameplay = true;
-			PreferencesCache::EnableReforgedHUD = true;
-			PreferencesCache::EnableReforgedMainMenu = true;
-			PreferencesCache::EnableLedgeClimb = true;
-
-			bool isReforged = (_items[_selectedIndex].Item.Type == FirstRunItemType::ReforgedPreset);
-			if (!isReforged) {
-				// Reload default main menu music if needed
-				_root->ApplyPreferencesChanges(ChangedPreferencesType::MainMenu);
-			}
-		}
-
-		PreferencesCache::Save();
-	}
-
 	Recti FirstRunSection::GetClipRectangle(const Vector2i& viewSize)
 	{
 		float topLine = TopLine + 66.0f;
@@ -88,7 +69,7 @@ namespace Jazz2::UI::Menu
 		float centerX = canvas->ViewSize.X * 0.5f;
 
 		if (isSelected) {
-			float size = 0.8f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+			float size = 0.7f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
 			_root->DrawElement(MenuGlow, 0, centerX, item.Y + 10.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), 22.0f, 12.0f, true);
 
@@ -124,6 +105,7 @@ namespace Jazz2::UI::Menu
 		PreferencesCache::EnableReforgedGameplay = isReforged;
 		PreferencesCache::EnableReforgedHUD = isReforged;
 		PreferencesCache::EnableLedgeClimb = isReforged;
+		PreferencesCache::Save();
 
 		_committed = true;
 		_animation = 0.0f;

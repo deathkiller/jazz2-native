@@ -323,6 +323,9 @@ namespace Jazz2
 
 	void PreferencesCache::Save()
 	{
+		// `FirstRun` is true only if config file doesn't exist yet
+		FirstRun = false;
+
 		fs::CreateDirectories(fs::GetDirectoryName(_configPath));
 
 		auto so = fs::Open(_configPath, FileAccessMode::Write);
