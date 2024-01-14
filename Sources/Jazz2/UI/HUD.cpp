@@ -947,7 +947,7 @@ namespace Jazz2::UI
 
 		float alphaInner = std::min(Vector2f(h, v).Length() * easing * 1.5f - 0.6f, 1.0f);
 		if (alphaInner > 0.0f) {
-			DrawElement(WeaponWheelInner, -1, center.X, center.Y, MainLayer + 5, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alphaInner), easing, easing, true, -requestedAngle);
+			DrawElement(WeaponWheelInner, -1, center.X, center.Y, MainLayer + 5, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alphaInner), easing, easing, true, requestedAngle);
 		}
 
 		float angle = -fPiOver2;
@@ -989,9 +989,8 @@ namespace Jazz2::UI
 						Alignment::Center, isSelected ? Colorf(0.62f, 0.44f, 0.34f, 0.5f * alpha) : Colorf(0.45f, 0.45f, 0.45f, 0.48f * alpha), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 				}
 
-				float angle2 = fTwoPi - angle;
-				float angleFrom = angle2 - angleStep * 0.4f;
-				float angleTo = angle2 + angleStep * 0.4f;
+				float angleFrom = angle - angleStep * 0.4f;
+				float angleTo = angle + angleStep * 0.4f;
 
 				Colorf color1 = Colorf(0.0f, 0.0f, 0.0f, alpha * 0.3f);
 				DrawWeaponWheelSegment(center.X - distance2 - 1, center.Y - distance2 - 1, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
@@ -1067,10 +1066,6 @@ namespace Jazz2::UI
 	{
 		width *= 0.5f; x += width;
 		height *= 0.5f; y += height;
-
-		x -= ViewSize.X * 0.5f;
-		y -= ViewSize.Y * 0.5f;
-		y = -y;
 
 		float angleRange = std::min(maxAngle - minAngle, fRadAngle360);
 		int32_t segmentNum = std::clamp((int32_t)std::round(powf(std::max(width, height), 0.65f) * 3.5f * angleRange / fRadAngle360), 4, 128);

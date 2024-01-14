@@ -286,6 +286,10 @@ namespace nCine
 
 	void Texture::setMinFiltering(SamplerFilter filter)
 	{
+		if (minFiltering_ == filter) {
+			return;
+		}
+
 		GLenum glFilter = GL_NEAREST;
 		// clang-format off
 		switch (filter) {
@@ -306,6 +310,10 @@ namespace nCine
 
 	void Texture::setMagFiltering(SamplerFilter filter)
 	{
+		if (magFiltering_ == filter) {
+			return;
+		}
+
 		GLenum glFilter = GL_NEAREST;
 		// clang-format off
 		switch (filter) {
@@ -322,6 +330,10 @@ namespace nCine
 
 	void Texture::setWrap(SamplerWrapping wrapMode)
 	{
+		if (wrapMode_ == wrapMode) {
+			return;
+		}
+
 		GLenum glWrap;
 		// clang-format off
 		switch (wrapMode) {

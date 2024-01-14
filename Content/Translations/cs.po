@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-01-13 16:36+0100\n"
-"PO-Revision-Date: 2024-01-13 16:37+0100\n"
+"POT-Creation-Date: 2024-01-14 14:14+0100\n"
+"PO-Revision-Date: 2024-01-14 14:23+0100\n"
 "Last-Translator: \n"
 "Language-Team: Překlad do češtiny: Dan R. (https://deat.tk/jazz2/)\n"
 "Language: cs\n"
@@ -1442,7 +1442,10 @@ msgid "Play Custom Levels"
 msgstr "Hrát vlastní úrovně"
 
 #. TRANSLATORS: Menu item in main menu
+#. TRANSLATORS: Subheader in First Run section
+#. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:85
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:76
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:37
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:15
 msgid "Options"
@@ -1583,6 +1586,57 @@ msgstr "Nejprve musíte dokončit \"%s\"!"
 msgid "Episode is locked!"
 msgstr "Epizoda je zamčena!"
 
+#. TRANSLATORS: Menu item in First Run section
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:16
+msgid "Legacy"
+msgstr "Původní"
+
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:16
+msgid "I want to play the game the way it used to be."
+msgstr "Chci hrát hru takovou, jaká byla."
+
+#. TRANSLATORS: Menu item in First Run section
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:18
+msgid "Reforged"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:18
+msgid "I want to play the game with something new."
+msgstr "Chci hrát hru s něčím novým."
+
+#. TRANSLATORS: Header in First Run section
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:72
+msgid "Welcome to \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] reimplementation!"
+msgstr "Vítejte v reimplementaci hry \f[c:0x9e7056]Jazz Jackrabbit 2\f[c]!"
+
+#. TRANSLATORS: Menu item in Options section
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:76
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:76
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:17
+msgid "Gameplay"
+msgstr "Hra"
+
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:76
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:69
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:23
+msgid "Enhancements"
+msgstr "Vylepšení"
+
+#. TRANSLATORS: Subheader in First Run section
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:76
+#, c-format
+msgid ""
+"You can choose your preferred play style.\n"
+"This option can be changed at any time in \f[c:0x707070]%s\f[c] > "
+"\f[c:0x707070]%s\f[c] > \f[c:0x707070]%s\f[c].\n"
+"For more information, visit %s and  Discord!"
+msgstr ""
+"Můžete si zvolit preferovaný styl hraní.\n"
+"Tuto možnost můžete kdykoliv změnit v \f[c:0x707070]%s\f[c] > "
+"\f[c:0x707070]%s\f[c] > \f[c:0x707070]%s\f[c].\n"
+"Pro více informací můžete navštívit %s and  Discord!"
+
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:16
 msgid "Reforged Gameplay"
@@ -1607,12 +1661,6 @@ msgstr "Povolit šplhání"
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:24
 msgid "Weapon Wheel"
 msgstr "Kolečko zbraní"
-
-#. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:69
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:23
-msgid "Enhancements"
-msgstr "Vylepšení"
 
 #. TRANSLATORS: Header in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:73
@@ -1655,12 +1703,6 @@ msgstr "Otevřít složku \"Source\""
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:77
 msgid "Refresh Cache"
 msgstr "Obnovit cache"
-
-#. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:76
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:17
-msgid "Gameplay"
-msgstr "Hra"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:19

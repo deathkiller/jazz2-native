@@ -3,6 +3,7 @@
 #include "../../PreferencesCache.h"
 #include "../ControlScheme.h"
 #include "BeginSection.h"
+#include "FirstRunSection.h"
 
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 #	include "../DiscordRpcClient.h"
@@ -50,6 +51,10 @@ namespace Jazz2::UI::Menu
 			(1 << (int32_t)PlayerActions::Menu) | (1 << ((int32_t)PlayerActions::Menu + 16));
 
 		SwitchToSection<BeginSection>();
+
+		if (PreferencesCache::FirstRun) {
+			SwitchToSection<FirstRunSection>();
+		}
 
 		UpdateRichPresence();
 	}
@@ -897,6 +902,8 @@ namespace Jazz2::UI::Menu
 		// 16
 		{
 			GenericGraphicResource* base = res16->Base;
+			base->TextureDiffuse->setMinFiltering(SamplerFilter::Nearest);
+			base->TextureDiffuse->setMagFiltering(SamplerFilter::Nearest);
 			base->TextureDiffuse->setWrap(SamplerWrapping::Repeat);
 
 			constexpr float repeats = 96.0f;
@@ -936,6 +943,8 @@ namespace Jazz2::UI::Menu
 		// 32
 		{
 			GenericGraphicResource* base = res32->Base;
+			base->TextureDiffuse->setMinFiltering(SamplerFilter::Nearest);
+			base->TextureDiffuse->setMagFiltering(SamplerFilter::Nearest);
 			base->TextureDiffuse->setWrap(SamplerWrapping::Repeat);
 
 			constexpr float repeats = 56.0f;
@@ -979,6 +988,8 @@ namespace Jazz2::UI::Menu
 		// 128
 		{
 			GenericGraphicResource* base = res128->Base;
+			base->TextureDiffuse->setMinFiltering(SamplerFilter::Nearest);
+			base->TextureDiffuse->setMagFiltering(SamplerFilter::Nearest);
 			base->TextureDiffuse->setWrap(SamplerWrapping::Repeat);
 
 			constexpr float repeats = 20.0f;

@@ -2,7 +2,7 @@
 
 namespace Jazz2::Shaders
 {
-	constexpr uint64_t Version = 3;
+	constexpr uint64_t Version = 4;
 
 	constexpr char LightingVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
@@ -689,6 +689,8 @@ void main() {
 }
 )";
 
+	// Subtle shadow has been added in v2.5.0, previous implementation was:
+	//	fragColor = mix(color, vec4(vColor.z, vColor.z, vColor.z, vColor.w), outline - color.a);
 	constexpr char OutlineFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
@@ -718,8 +720,20 @@ void main() {
 	outline += texture(uTexture, vTexCoords + vec2(size.x, -size.y)).a;
 	outline = aastep(1.0, outline);
 
+	float outline2 = texture(uTexture, vTexCoords + vec2(-2.0 * size.x, 0)).a;
+	outline2 += texture(uTexture, vTexCoords + vec2(0, 2.0 * size.y)).a;
+	outline2 += texture(uTexture, vTexCoords + vec2(2.0 * size.x, 0)).a;
+	outline2 += texture(uTexture, vTexCoords + vec2(0, -2.0 * size.y)).a;
+	outline2 += texture(uTexture, vTexCoords + vec2(-2.0 * size.x, 2.0 * size.y)).a;
+	outline2 += texture(uTexture, vTexCoords + vec2(2.0 * size.x, 2.0 * size.y)).a;
+	outline2 += texture(uTexture, vTexCoords + vec2(-2.0 * size.x, -2.0 * size.y)).a;
+	outline2 += texture(uTexture, vTexCoords + vec2(2.0 * size.x, -2.0 * size.y)).a;
+	outline2 = aastep(1.0, outline2);
+
 	vec4 color = texture(uTexture, vTexCoords);
-	fragColor = mix(color, vec4(vColor.z, vColor.z, vColor.z, vColor.w), outline - color.a);
+	fragColor = mix(color,
+		mix(vec4(0.0, 0.0, 0.0, vColor.w * 0.5), vec4(vColor.z, vColor.z, vColor.z, vColor.w), outline),
+		max(outline, outline2) - color.a);
 }
 )";
 

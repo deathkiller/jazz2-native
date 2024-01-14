@@ -79,6 +79,7 @@ namespace Jazz2
 		static constexpr std::int32_t UnlimitedFps = 0;
 		static constexpr std::int32_t UseVsync = -1;
 
+		static bool FirstRun;
 #if defined(WITH_MULTIPLAYER)
 		static String InitialState;
 #endif

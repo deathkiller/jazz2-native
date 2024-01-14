@@ -25,23 +25,23 @@ namespace Jazz2::UI::Menu
 	protected:
 		struct ListViewItem {
 			TItem Item;
-			int Y;
-			int Height;
+			std::int32_t Y;
+			std::int32_t Height;
 
 			ListViewItem() { }
 			ListViewItem(TItem item) : Item(item) { }
 		};
 
-		static constexpr int ItemHeight = 40;
-		static constexpr int TopLine = 131;
-		static constexpr int BottomLine = 42;
+		static constexpr std::int32_t ItemHeight = 40;
+		static constexpr std::int32_t TopLine = 131;
+		static constexpr std::int32_t BottomLine = 42;
 
 		SmallVector<ListViewItem> _items;
-		int _selectedIndex;
+		std::int32_t _selectedIndex;
 		float _animation;
 		float _transitionTime;
-		int _y;
-		int _height;
+		std::int32_t _y;
+		std::int32_t _height;
 		Vector2i _touchStart;
 		Vector2i _touchLast;
 		float _touchTime;
@@ -50,10 +50,12 @@ namespace Jazz2::UI::Menu
 		void EnsureVisibleSelected();
 		virtual void OnExecuteSelected() = 0;
 		virtual void OnLayoutItem(Canvas* canvas, ListViewItem& item);
-		virtual void OnDrawEmptyText(Canvas* canvas, int& charOffset) { }
-		virtual void OnDrawItem(Canvas* canvas, ListViewItem& item, int& charOffset, bool isSelected) = 0;
+		virtual void OnDrawEmptyText(Canvas* canvas, std::int32_t& charOffset) { }
+		virtual void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) = 0;
 		virtual void OnHandleInput();
-		virtual void OnTouchUp(int newIndex, const Vector2i& viewSize, const Vector2i& touchPos);
+		virtual void OnBackPressed();
+		virtual void OnSelectionChanged(ListViewItem& item) { }
+		virtual void OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos);
 	};
 
 	template<class TItem>
@@ -98,9 +100,7 @@ namespace Jazz2::UI::Menu
 	void ScrollableMenuSection<TItem>::OnHandleInput()
 	{
 		if (_root->ActionHit(PlayerActions::Menu)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_root->LeaveSection();
-			return;
+			OnBackPressed();
 		} else if (!_items.empty()) {
 			if (_root->ActionHit(PlayerActions::Fire)) {
 				OnExecuteSelected();
@@ -112,9 +112,10 @@ namespace Jazz2::UI::Menu
 					if (_selectedIndex > 0) {
 						_selectedIndex--;
 					} else {
-						_selectedIndex = (int)(_items.size() - 1);
+						_selectedIndex = (std::int32_t)(_items.size() - 1);
 					}
 					EnsureVisibleSelected();
+					OnSelectionChanged(_items[_selectedIndex]);
 				} else if (_root->ActionHit(PlayerActions::Down)) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_animation = 0.0f;
@@ -125,16 +126,24 @@ namespace Jazz2::UI::Menu
 						_selectedIndex = 0;
 					}
 					EnsureVisibleSelected();
+					OnSelectionChanged(_items[_selectedIndex]);
 				}
 			}
 		}
 	}
 
 	template<class TItem>
+	void ScrollableMenuSection<TItem>::OnBackPressed()
+	{
+		_root->PlaySfx("MenuSelect"_s, 0.5f);
+		_root->LeaveSection();
+	}
+
+	template<class TItem>
 	void ScrollableMenuSection<TItem>::OnDrawClipped(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
-		int charOffset = 0;
+		std::int32_t charOffset = 0;
 
 		if (_items.empty()) {
 			_scrollable = false;
@@ -143,14 +152,14 @@ namespace Jazz2::UI::Menu
 		}
 
 		Recti clipRect = GetClipRectangle(viewSize);
-		int topLine = clipRect.Y + 1;
-		int bottomLine = clipRect.Y + clipRect.H - 1;
-		int availableHeight = (bottomLine - topLine);
+		std::int32_t topLine = clipRect.Y + 1;
+		std::int32_t bottomLine = clipRect.Y + clipRect.H - 1;
+		std::int32_t availableHeight = (bottomLine - topLine);
 
 		if (_height == 0) {
 			_height = ItemHeight * 2 / 3;
 
-			for (int i = 0; i < _items.size(); i++) {
+			for (std::int32_t i = 0; i < _items.size(); i++) {
 				auto& item = _items[i];
 				item.Y = _height + topLine + _y;
 				OnLayoutItem(canvas, item);
@@ -175,7 +184,7 @@ namespace Jazz2::UI::Menu
 
 		Vector2i center = Vector2i(viewSize.X / 2, topLine + ItemHeight / 2 + _y);
 
-		for (int i = 0; i < _items.size(); i++) {
+		for (std::int32_t i = 0; i < _items.size(); i++) {
 			auto& item = _items[i];
 			item.Y = center.Y;
 
@@ -189,7 +198,7 @@ namespace Jazz2::UI::Menu
 		if (_items[0].Y < topLine + ItemHeight / 2) {
 			_root->DrawElement(MenuGlow, 0, center.X, topLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
 		}
-		int itemHeight = _items[_items.size() - 1].Height - ItemHeight * 4 / 5 + ItemHeight / 2;
+		std::int32_t itemHeight = _items[_items.size() - 1].Height - ItemHeight * 4 / 5 + ItemHeight / 2;
 		if (_items[_items.size() - 1].Y > bottomLine - itemHeight / 2) {
 			_root->DrawElement(MenuGlow, 0, center.X, bottomLine, 900, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 30.0f, 5.0f);
 		}
@@ -200,16 +209,15 @@ namespace Jazz2::UI::Menu
 	{
 		switch (event.type) {
 			case TouchEventType::Down: {
-				int pointerIndex = event.findPointerIndex(event.actionIndex);
+				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 				if (pointerIndex != -1) {
-					int y = (int)(event.pointers[pointerIndex].y * viewSize.Y);
+					std::int32_t y = (std::int32_t)(event.pointers[pointerIndex].y * viewSize.Y);
 					if (y < 80) {
-						_root->PlaySfx("MenuSelect"_s, 0.5f);
-						_root->LeaveSection();
+						OnBackPressed();
 						return;
 					}
 
-					_touchStart = Vector2i((int)(event.pointers[pointerIndex].x * viewSize.X), y);
+					_touchStart = Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), y);
 					_touchLast = _touchStart;
 					_touchTime = 0.0f;
 				}
@@ -217,9 +225,9 @@ namespace Jazz2::UI::Menu
 			}
 			case TouchEventType::Move: {
 				if (_touchStart != Vector2i::Zero) {
-					int pointerIndex = event.findPointerIndex(event.actionIndex);
+					std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 					if (pointerIndex != -1) {
-						Vector2i touchMove = Vector2i((int)(event.pointers[pointerIndex].x * viewSize.X), (int)(event.pointers[pointerIndex].y * viewSize.Y));
+						Vector2i touchMove = Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), (std::int32_t)(event.pointers[pointerIndex].y * viewSize.Y));
 						if (_scrollable) {
 							_y += touchMove.Y - _touchLast.Y;
 						}
@@ -235,7 +243,7 @@ namespace Jazz2::UI::Menu
 					return;
 				}
 
-				for (int i = 0; i < _items.size(); i++) {
+				for (std::int32_t i = 0; i < _items.size(); i++) {
 					if (std::abs(_touchLast.Y - _items[i].Y) < 22) {
 						OnTouchUp(i, viewSize, _touchLast);
 						break;
@@ -247,9 +255,9 @@ namespace Jazz2::UI::Menu
 	}
 
 	template<class TItem>
-	void ScrollableMenuSection<TItem>::OnTouchUp(int newIndex, const Vector2i& viewSize, const Vector2i& touchPos)
+	void ScrollableMenuSection<TItem>::OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos)
 	{
-		int halfW = viewSize.X / 2;
+		std::int32_t halfW = viewSize.X / 2;
 		if (std::abs(touchPos.X - halfW) < 150) {
 			if (_selectedIndex == newIndex) {
 				OnExecuteSelected();
@@ -258,6 +266,7 @@ namespace Jazz2::UI::Menu
 				_animation = 0.0f;
 				_selectedIndex = newIndex;
 				EnsureVisibleSelected();
+				OnSelectionChanged(_items[_selectedIndex]);
 			}
 		}
 	}
@@ -271,8 +280,8 @@ namespace Jazz2::UI::Menu
 
 		Vector2i viewSize = _root->GetViewSize();
 		Recti clipRect = GetClipRectangle(viewSize);
-		int topLine = clipRect.Y + 1;
-		int bottomLine = clipRect.Y + clipRect.H - 1;
+		std::int32_t topLine = clipRect.Y + 1;
+		std::int32_t bottomLine = clipRect.Y + clipRect.H - 1;
 
 		auto& item = _items[_selectedIndex];
 		if (item.Y < topLine + ItemHeight / 2) {
@@ -281,7 +290,7 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 		
-		int itemHeight = item.Height - ItemHeight * 4 / 5 + ItemHeight / 2;
+		std::int32_t itemHeight = item.Height - ItemHeight * 4 / 5 + ItemHeight / 2;
 		if (item.Y > bottomLine - itemHeight) {
 			// Scroll down
 			_y += (bottomLine - itemHeight - item.Y);

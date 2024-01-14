@@ -13,6 +13,7 @@ using namespace Death::IO;
 
 namespace Jazz2
 {
+	bool PreferencesCache::FirstRun = false;
 #if defined(WITH_MULTIPLAYER)
 	String PreferencesCache::InitialState;
 #endif
@@ -262,6 +263,7 @@ namespace Jazz2
 					}
 				}
 			} else {
+				FirstRun = true;
 				TryLoadPreferredLanguage();
 
 				auto configDir = fs::GetDirectoryName(_configPath);
