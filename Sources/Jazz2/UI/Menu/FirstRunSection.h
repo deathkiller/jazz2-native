@@ -19,7 +19,6 @@ namespace Jazz2::UI::Menu
 	{
 	public:
 		FirstRunSection();
-		~FirstRunSection();
 
 		Recti GetClipRectangle(const Vector2i& viewSize) override;
 

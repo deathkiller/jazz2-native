@@ -187,7 +187,7 @@ namespace Jazz2::Actors
 
 			bool isFrozen = ((_lastExitType & ExitType::Frozen) == ExitType::Frozen);
 			_isFreefall = (isFrozen || CanFreefall());
-			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this, isFrozen]() {
+			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this, isFrozen, timeMult]() {
 				SetState(ActorState::ApplyGravitation, true);
 				if (isFrozen) {
 					SetAnimation(AnimState::Freefall);
@@ -197,6 +197,8 @@ namespace Jazz2::Actors
 					_frozenTimeLeft = 100.0f;
 				} else {
 					_controllable = true;
+					// UpdateAnimation() was probably skipped in this step, because _controllable was false, so call it here
+					UpdateAnimation(timeMult);
 				}
 			});
 
@@ -1023,20 +1025,21 @@ namespace Jazz2::Actors
 					case  PlayerType::Lori: scaleY *= 1.3f; break;
 				}
 
+				bool facingLeft = IsFacingLeft();
 				bool lookUp = (_currentAnimation->State & AnimState::Lookup) == AnimState::Lookup;
 				std::int32_t gunspotOffsetX = (_currentAnimation->Base->Hotspot.X - _currentAnimation->Base->Gunspot.X);
 				std::int32_t gunspotOffsetY = (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);
 
 				float gunspotPosX, gunspotPosY;
 				if (lookUp) {
-					gunspotPosX = _pos.X + (gunspotOffsetX) * (IsFacingLeft() ? 1 : -1);
+					gunspotPosX = _pos.X + (gunspotOffsetX) * (facingLeft ? 1 : -1);
 					gunspotPosY = _pos.Y - (gunspotOffsetY - 3) - res->Base->FrameDimensions.Y;
 				} else {
-					gunspotPosX = _pos.X + (gunspotOffsetX - 7) * (IsFacingLeft() ? 1 : -1);
+					gunspotPosX = _pos.X + (gunspotOffsetX - 7) * (facingLeft ? 1 : -1);
 					gunspotPosY = _pos.Y - gunspotOffsetY;
-					if (IsFacingLeft()) {
+					if (facingLeft) {
+						texBiasX += texScaleX;
 						texScaleX *= -1.0f;
-						texBiasX += 1.0f;
 					}
 				}
 

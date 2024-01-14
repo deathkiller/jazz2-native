@@ -1555,7 +1555,7 @@ namespace Jazz2
 
 		auto* targetObj = _players[0];
 
-		// View Bounds Animation
+		// Viewport bounds animation
 		if (_viewBounds != _viewBoundsTarget) {
 			if (std::abs(_viewBounds.X - _viewBoundsTarget.X) < 2.0f) {
 				_viewBounds = _viewBoundsTarget;
@@ -1570,7 +1570,16 @@ namespace Jazz2
 		// The position to focus on
 		Vector2i halfView = _view->size() / 2;
 		Vector2f focusPos = targetObj->_pos;
+
+		// If player doesn't move but has some speed, it's probably stuck, so reset the speed
 		Vector2f focusSpeed = targetObj->_speed;
+		if (std::abs(_cameraLastPos.X - focusPos.X) < 1.0f) {
+			focusSpeed.X = 0.0f;
+		}
+		if (std::abs(_cameraLastPos.Y - focusPos.Y) < 1.0f) {
+			focusSpeed.Y = 0.0f;
+		}
+
 		Vector2f focusVelocity = Vector2f(std::abs(focusSpeed.X), std::abs(focusSpeed.Y));
 
 		// Camera responsiveness (smoothing unexpected movements)

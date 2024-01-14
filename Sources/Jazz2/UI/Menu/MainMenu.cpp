@@ -52,7 +52,8 @@ namespace Jazz2::UI::Menu
 
 		SwitchToSection<BeginSection>();
 
-		if (PreferencesCache::FirstRun) {
+		bool isPlayable = ((_root->GetFlags() & IRootController::Flags::IsPlayable) == IRootController::Flags::IsPlayable);
+		if (PreferencesCache::FirstRun && isPlayable) {
 			SwitchToSection<FirstRunSection>();
 		}
 
