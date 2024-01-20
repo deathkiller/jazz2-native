@@ -79,18 +79,25 @@ namespace nCine
 
 		/// Queries the looping property of the player
 		inline bool isLooping() const {
-			return isLooping_;
+			return GetFlags(PlayerFlags::Looping);
 		}
 		/// Sets player looping property
-		virtual void setLooping(bool isLooping) {
-			isLooping_ = isLooping;
+		virtual void setLooping(bool value) {
+			SetFlags(PlayerFlags::Looping, value);
 		}
 		/// Queries the source relative property of the player
 		inline bool isSourceRelative() const {
-			return isSourceRelative_;
+			return GetFlags(PlayerFlags::SourceRelative);
 		}
 		/// Sets player source relative property
-		void setSourceRelative(bool isSourceRelative);
+		void setSourceRelative(bool value);
+
+		inline bool isAs2D() const {
+			return GetFlags(PlayerFlags::As2D);
+		}
+		void setAs2D(bool value) {
+			SetFlags(PlayerFlags::As2D, value);
+		}
 
 		/// Returns player gain value
 		inline float gain() const {
@@ -118,14 +125,21 @@ namespace nCine
 		void setPosition(const Vector3f& position);
 
 	protected:
+		enum class PlayerFlags {
+			None = 0,
+			Looping = 0x01,
+			SourceRelative = 0x02,
+			As2D = 0x04
+		};
+
+		DEFINE_PRIVATE_ENUM_OPERATORS(PlayerFlags);
+
 		/// The OpenAL source id
 		unsigned int sourceId_;
 		/// Current player state
 		PlayerState state_;
-		/// Looping status flag
-		bool isLooping_;
-		/// Source relative flag
-		bool isSourceRelative_;
+		/// Player flags
+		PlayerFlags flags_;
 		/// Player gain value
 		float gain_;
 		/// Player pitch value
@@ -137,6 +151,18 @@ namespace nCine
 		/// Filter handle
 		unsigned int filterHandle_;
 
+		constexpr bool GetFlags(PlayerFlags flag) const noexcept {
+			return (flags_ & flag) == flag;
+		}
+
+		constexpr void SetFlags(PlayerFlags flag, bool value) noexcept {
+			if (value) {
+				flags_ = flags_ | flag;
+			} else {
+				flags_ = flags_ & (~flag);
+			}
+		}
+
 		/// Updates the state of the player if the source has done playing
 		/*! It is called every frame by the `IAudioDevice` class and it is
 		 *  also responsible for buffer queueing/unqueueing in stream players. */
@@ -144,7 +170,7 @@ namespace nCine
 
 		virtual void updateFilters();
 
-		static Vector3f getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative);
+		static Vector3f getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D);
 
 		friend class ALAudioDevice;
 	};

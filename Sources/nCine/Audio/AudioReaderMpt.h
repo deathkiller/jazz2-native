@@ -33,7 +33,7 @@ namespace nCine
 
 		unsigned long int read(void* buffer, unsigned long int bufferSize) const override;
 		void rewind() const override;
-		void setLooping(bool isLooping) override;
+		void setLooping(bool value) override;
 
 	private:
 		/// Audio file handle

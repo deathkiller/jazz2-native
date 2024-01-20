@@ -148,12 +148,12 @@ namespace nCine
 		currentBufferId_ = 0;
 	}
 
-	void AudioStream::setLooping(bool isLooping)
+	void AudioStream::setLooping(bool value)
 	{
-		isLooping_ = isLooping;
+		isLooping_ = value;
 
 		if (audioReader_ != nullptr) {
-			audioReader_->setLooping(isLooping_);
+			audioReader_->setLooping(value);
 		}
 	}
 

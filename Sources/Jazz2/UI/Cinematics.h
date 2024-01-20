@@ -61,7 +61,6 @@ namespace Jazz2::UI
 
 		struct SfxItem {
 			std::unique_ptr<AudioBuffer> Buffer;
-			std::unique_ptr<AudioBufferPlayer> CurrentPlayer;
 
 			SfxItem();
 			SfxItem(const StringView path);
@@ -72,6 +71,7 @@ namespace Jazz2::UI
 			std::uint16_t Sample;
 			float Gain;
 			float Panning;
+			std::unique_ptr<AudioBufferPlayer> CurrentPlayer;
 		};
 
 		IRootController* _root;

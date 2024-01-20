@@ -169,7 +169,7 @@ namespace Jazz2::Compatibility
 			}
 
 			d.WriteValue<std::uint8_t>((std::uint8_t)std::max(sfx.Volume * 255 / 0x40, (std::uint32_t)UINT8_MAX));
-			d.WriteValue<std::int8_t>((std::int8_t)std::clamp(((std::int32_t)sfx.Volume - 0x20) * INT8_MAX / 0x20, -(std::int32_t)INT8_MAX, (std::int32_t)INT8_MAX));
+			d.WriteValue<std::int8_t>((std::int8_t)std::clamp(((std::int32_t)sfx.Panning - 0x20) * INT8_MAX / /*0x20*/0x40, -(std::int32_t)INT8_MAX, (std::int32_t)INT8_MAX));
 		}
 	}
 

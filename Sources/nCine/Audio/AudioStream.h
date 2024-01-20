@@ -67,7 +67,7 @@ namespace nCine
 			return isLooping_;
 		}
 		/// Sets stream looping property
-		void setLooping(bool isLooping);
+		void setLooping(bool value);
 
 	private:
 		/// Number of buffers for streaming

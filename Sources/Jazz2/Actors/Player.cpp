@@ -187,7 +187,7 @@ namespace Jazz2::Actors
 
 			bool isFrozen = ((_lastExitType & ExitType::Frozen) == ExitType::Frozen);
 			_isFreefall = (isFrozen || CanFreefall());
-			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this, isFrozen, timeMult]() {
+			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this, isFrozen]() {
 				SetState(ActorState::ApplyGravitation, true);
 				if (isFrozen) {
 					SetAnimation(AnimState::Freefall);
@@ -198,7 +198,7 @@ namespace Jazz2::Actors
 				} else {
 					_controllable = true;
 					// UpdateAnimation() was probably skipped in this step, because _controllable was false, so call it here
-					UpdateAnimation(timeMult);
+					UpdateAnimation(0.0f);
 				}
 			});
 
@@ -3171,6 +3171,8 @@ namespace Jazz2::Actors
 						_frozenTimeLeft = 100.0f;
 					} else {
 						_controllable = true;
+						// UpdateAnimation() was probably skipped in this step, because _controllable was false, so call it here
+						UpdateAnimation(0.0f);
 					}
 				});
 			});

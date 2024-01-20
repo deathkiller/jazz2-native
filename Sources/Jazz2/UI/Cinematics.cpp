@@ -306,12 +306,11 @@ namespace Jazz2::UI
 					continue;
 				}
 
-				sample.CurrentPlayer = std::make_unique<nCine::AudioBufferPlayer>(sample.Buffer.get());
-				Vector2f localPos = Vector2f::FromAngleLength(item.Panning * 30.0f * DegToRad, 1.0f);
-				sample.CurrentPlayer->setPosition(Vector3f(localPos.X, 0, -localPos.Y));
-				sample.CurrentPlayer->setGain(_sfxPlaylist[i].Gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
-				sample.CurrentPlayer->setSourceRelative(true);
-				sample.CurrentPlayer->play();
+				item.CurrentPlayer = std::make_unique<nCine::AudioBufferPlayer>(sample.Buffer.get());
+				item.CurrentPlayer->setPosition(Vector3f(item.Panning, 0.0f, 0.0f));
+				item.CurrentPlayer->setAs2D(true);
+				item.CurrentPlayer->setGain(_sfxPlaylist[i].Gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
+				item.CurrentPlayer->play();
 			}
 		}
 

@@ -403,6 +403,11 @@ namespace Jazz2::UI::Menu
 			SwitchToSection<BeginSection>();
 		}
 
+		if ((type & ChangedPreferencesType::ControlScheme) == ChangedPreferencesType::ControlScheme) {
+			// Mark all buttons as already pressed to avoid some issues
+			_pressedActions = 0xffff | (0xffff << 16);
+		}
+
 		if ((type & ChangedPreferencesType::MainMenu) == ChangedPreferencesType::MainMenu) {
 			PlayMenuMusic();
 		}

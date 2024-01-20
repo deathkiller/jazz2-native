@@ -287,6 +287,11 @@ namespace Jazz2::UI::Menu
 			_sections.clear();
 			SwitchToSection<PauseSection>();
 		}
+
+		if ((type & ChangedPreferencesType::ControlScheme) == ChangedPreferencesType::ControlScheme) {
+			// Mark all buttons as already pressed to avoid some issues
+			_pressedActions = 0xffff | (0xffff << 16);
+		}
 	}
 
 	void InGameMenu::DrawElement(AnimState state, int32_t frame, float x, float y, uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending)
