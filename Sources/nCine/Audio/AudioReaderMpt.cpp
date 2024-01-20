@@ -100,14 +100,14 @@ namespace nCine
 		}
 	}
 
-	void AudioReaderMpt::setLooping(bool isLooping)
+	void AudioReaderMpt::setLooping(bool value)
 	{
 		if (_module != nullptr) {
 			// Turn on infinite repeat if required
 #if defined(WITH_OPENMPT_DYNAMIC)
-			_openmpt_module_set_repeat_count(_module, isLooping ? -1 : 0);
+			_openmpt_module_set_repeat_count(_module, value ? -1 : 0);
 #else
-			openmpt_module_set_repeat_count(_module, isLooping ? -1 : 0);
+			openmpt_module_set_repeat_count(_module, value ? -1 : 0);
 #endif
 		}
 	}

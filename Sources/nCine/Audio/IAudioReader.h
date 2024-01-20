@@ -20,7 +20,7 @@ namespace nCine
 		virtual void rewind() const = 0;
 
 		/// Enables native stream looping if supported
-		virtual void setLooping(bool isLooping) { }
+		virtual void setLooping(bool value) { }
 	};
 
 	class InvalidAudioReader : IAudioReader

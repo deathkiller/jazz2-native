@@ -18,7 +18,8 @@ namespace Jazz2::UI::Menu
 		Graphics = 0x02,
 		Gameplay = 0x04,
 		Language = 0x08,
-		MainMenu = 0x10
+		ControlScheme = 0x10,
+		MainMenu = 0x20
 	};
 
 	DEFINE_ENUM_OPERATORS(ChangedPreferencesType);

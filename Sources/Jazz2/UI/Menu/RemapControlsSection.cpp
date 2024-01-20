@@ -70,6 +70,7 @@ namespace Jazz2::UI::Menu
 
 							_root->PlaySfx("MenuSelect"_s, 0.5f);
 							_waitForInput = false;
+							_root->ApplyPreferencesChanges(ChangedPreferencesType::ControlScheme);
 							RefreshCollisions();
 							break;
 						}
@@ -92,6 +93,7 @@ namespace Jazz2::UI::Menu
 
 									_root->PlaySfx("MenuSelect"_s, 0.5f);
 									_waitForInput = false;
+									_root->ApplyPreferencesChanges(ChangedPreferencesType::ControlScheme);
 									RefreshCollisions();
 									break;
 								}
@@ -129,28 +131,33 @@ namespace Jazz2::UI::Menu
 				return;
 			}
 
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-
+			bool assignmentRemoved = false;
 			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int32_t)PlayerActions::Count + _selectedIndex];
 			switch (_selectedColumn) {
 				case 0:
 					if (mapping.Key1 != KeySym::UNKNOWN) {
 						mapping.Key1 = KeySym::UNKNOWN;
-						_isDirty = true;
+						assignmentRemoved = true;
 					}
 					break;
 				case 1:
 					if (mapping.Key2 != KeySym::UNKNOWN) {
 						mapping.Key2 = KeySym::UNKNOWN;
-						_isDirty = true;
+						assignmentRemoved = true;
 					}
 					break;
 				case 2:
 					if (mapping.GamepadIndex != -1) {
 						mapping.GamepadIndex = -1;
-						_isDirty = true;
+						assignmentRemoved = true;
 					}
 					break;
+			}
+
+			if (assignmentRemoved) {
+				_isDirty = true;
+				_root->PlaySfx("MenuSelect"_s, 0.5f);
+				_root->ApplyPreferencesChanges(ChangedPreferencesType::ControlScheme);
 			}
 			return;
 		}

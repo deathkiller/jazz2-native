@@ -1438,7 +1438,7 @@ msgstr "Continuă"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:77
 msgid "Play Custom Game"
-msgstr ""
+msgstr "Joacă un joc personalizat"
 
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Menu item in Play Custom Game section
@@ -1478,7 +1478,7 @@ msgid ""
 "2\f[c:0x337233] files correctly."
 msgstr ""
 "\f[c:0x337233]Repornește jocul pentru a citi corect fișierele "
-"\f[c:0x9e7056]Jazz Jackrabbit 2."
+"\f[c:0x9e7056]Jazz Jackrabbit 2\f[c:0x337233]."
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:195
 msgid ""
@@ -1486,7 +1486,7 @@ msgid ""
 "2\f[c:0x704a4a] files!"
 msgstr ""
 "\f[c:0x704a4a]Acest joc necesită fișierele originale \f[c:0x9e7056]Jazz "
-"Jackrabbit 2!"
+"Jackrabbit 2\f[c:0x704a4a]!"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:197
 msgid "Make sure Jazz Jackrabbit 2 files are present in following path:"
@@ -1555,7 +1555,7 @@ msgstr "Caracter"
 #. TRANSLATORS: Menu item to select game mode
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:33
 msgid "Game Mode"
-msgstr ""
+msgstr "Modul de joc"
 
 #. TRANSLATORS: Menu item to create server with selected settings
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:35
@@ -1570,7 +1570,7 @@ msgstr "Nu s-a găsit niciun nivel customizat!"
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:133
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:21
 msgid "Play Story in Cooperation"
-msgstr ""
+msgstr "Joacă povestea în cooperare"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:145
 msgid "No episode found!"
@@ -1596,25 +1596,25 @@ msgstr "Episodul este blocat!"
 #. TRANSLATORS: Menu item in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:16
 msgid "Legacy"
-msgstr ""
+msgstr "Jocul Original"
 
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:16
 msgid "I want to play the game the way it used to be."
-msgstr ""
+msgstr "Vreau să joc așa cum era odată."
 
 #. TRANSLATORS: Menu item in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:18
 msgid "Reforged"
-msgstr ""
+msgstr "Jocul Reforjat"
 
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:18
 msgid "I want to play the game with something new."
-msgstr ""
+msgstr "Vreau să joc jocul cu ceva nou."
 
 #. TRANSLATORS: Header in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:72
 msgid "Welcome to \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] reimplementation!"
-msgstr ""
+msgstr "Bine ați venit la \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] reimplementare!"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:76
@@ -1639,21 +1639,25 @@ msgid ""
 "\f[c:0x707070]%s\f[c] > \f[c:0x707070]%s\f[c].\n"
 "For more information, visit %s and  Discord!"
 msgstr ""
+"Puteți alege stilul de joc preferat.\n"
+"Această opțiune poate fi schimbată în orice moment în \f[c:0x707070]%s\f[c] "
+"> \f[c:0x707070]%s\f[c] > \f[c:0x707070]%s\f[c].\n"
+"Pentru mai multe informații, vizitați %s și  Discord!"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:16
 msgid "Reforged Gameplay"
-msgstr ""
+msgstr "Modul de joc Reforjat"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:18
 msgid "Reforged HUD"
-msgstr ""
+msgstr "HUD Reforjat"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:20
 msgid "Reforged Main Menu"
-msgstr ""
+msgstr "Meniul Principal Reforjat"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:22
@@ -1725,7 +1729,7 @@ msgstr "Antialiasare"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:33
 msgid "Water Quality"
-msgstr ""
+msgstr "Calitatea Apei"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:35
@@ -1763,7 +1767,7 @@ msgstr "Înaltă"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:114
 msgid "Enabled \f[c:0xd0705d](Experimental)\f[c]"
-msgstr ""
+msgstr "Activat \f[c:0xd0705d](Experimental)\f[c]"
 
 #. TRANSLATORS: Header in Import Episodes section
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:70
@@ -1794,36 +1798,36 @@ msgstr "Nu sunt detectate gamepad-uri!"
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:18
 msgid "Battle"
-msgstr ""
+msgstr "Bătălie"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:20
 msgid "Team Battle"
-msgstr ""
+msgstr "Bătălie în Echipă"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:22
 msgid "Capture The Flag"
-msgstr ""
+msgstr "Capturați Steagul"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:24
 msgid "Race"
-msgstr ""
+msgstr "Cursa"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:26
 msgid "Treasure Hunt"
-msgstr ""
+msgstr "Vânătoare de Comori"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
 msgid "Cooperation"
-msgstr ""
+msgstr "Cooperare"
 
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:42
 msgid "Select Game Mode"
-msgstr ""
+msgstr "Selectați Modul de Joc"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:21
@@ -1844,7 +1848,7 @@ msgstr "Salvează și Ieși"
 #. TRANSLATORS: Menu item in Play Custom Game section
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:23
 msgid "Create Custom Server"
-msgstr ""
+msgstr "Creați un Server Personalizat"
 
 #. TRANSLATORS: Menu item in Play Custom Game section
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:25
@@ -1945,11 +1949,11 @@ msgstr "Alege Modul de Redimensionare"
 
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:106
 msgid "Connect to Server"
-msgstr ""
+msgstr "Conectare la server"
 
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:116
 msgid "No servers found, but still searchin'!"
-msgstr ""
+msgstr "Nu s-au găsit servere, dar încă mai caut!"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:15

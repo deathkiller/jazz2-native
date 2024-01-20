@@ -60,7 +60,7 @@ namespace nCine
 		void play() override;
 		void pause() override;
 		void stop() override;
-		void setLooping(bool isLooping) override;
+		void setLooping(bool value) override;
 
 		/// Updates the player state and the stream buffer queue
 		void updateState() override;
