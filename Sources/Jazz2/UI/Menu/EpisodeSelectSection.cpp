@@ -41,7 +41,7 @@ namespace Jazz2::UI::Menu
 			AddEpisode(item);
 		}
 
-		std::sort(_items.begin(), _items.end(), [](const ListViewItem& a, const ListViewItem& b) -> bool {
+		sort(_items.begin(), _items.end(), [](const ListViewItem& a, const ListViewItem& b) -> bool {
 			return (a.Item.Description.Position < b.Item.Description.Position);
 		});
 	}

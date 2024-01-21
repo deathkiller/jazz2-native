@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Iterator.h"
+#include "pdqsort/pdqsort.h"
 
 #include <algorithm>
 #include <cmath>
@@ -312,6 +313,26 @@ namespace nCine
 			length--;
 		}
 		return n;
+	}
+
+	template<class Iter, class Compare>
+	inline void sort(Iter begin, Iter end, Compare comp)
+	{
+#if defined(PREFER_STD_SORT)
+		std::sort(begin, end, comp);
+#else
+		pdqsort(begin, end, comp);
+#endif
+	}
+
+	template<class Iter>
+	inline void sort(Iter begin, Iter end)
+	{
+#if defined(PREFER_STD_SORT)
+		std::sort(begin, end);
+#else
+		pdqsort(begin, end);
+#endif
 	}
 
 	float halfToFloat(std::uint16_t value);

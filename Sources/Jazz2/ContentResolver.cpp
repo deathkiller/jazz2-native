@@ -509,7 +509,7 @@ namespace Jazz2
 				}
 
 				// Animation states must be sorted, so binary search can be used
-				std::sort(metadata->Animations.begin(), metadata->Animations.end());
+				sort(metadata->Animations.begin(), metadata->Animations.end());
 			}
 
 			if (!_isHeadless) {

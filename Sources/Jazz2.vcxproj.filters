@@ -220,6 +220,9 @@
     <Filter Include="Source Files\Jazz2\Actors\Multiplayer">
       <UniqueIdentifier>{5a410bc7-e012-4efc-a75b-41bf6b0e9771}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\nCine\Base\pdqsort">
+      <UniqueIdentifier>{a72d645b-36b7-485e-b3f6-5ec77cbd0ee2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1463,6 +1466,9 @@
     </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\FirstRunSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Base\pdqsort\pdqsort.h">
+      <Filter>Header Files\nCine\Base\pdqsort</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
