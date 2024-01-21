@@ -298,7 +298,7 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		std::sort(_items.begin(), _items.end(), [](const ItemData& a, const ItemData& b) -> bool {
+		sort(_items.begin(), _items.end(), [](const ItemData& a, const ItemData& b) -> bool {
 			return (a.LevelName < b.LevelName);
 		});
 	}

@@ -460,6 +460,7 @@
     <ClInclude Include="nCine\Base\ParallelHashMap\phmap_config.h" />
     <ClInclude Include="nCine\Base\ParallelHashMap\phmap_fwd_decl.h" />
     <ClInclude Include="nCine\Base\ParallelHashMap\phmap_utils.h" />
+    <ClInclude Include="nCine\Base\pdqsort\pdqsort.h" />
     <ClInclude Include="nCine\Base\Random.h" />
     <ClInclude Include="nCine\Base\ReverseIterator.h" />
     <ClInclude Include="nCine\Base\StaticHashMap.h" />

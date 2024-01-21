@@ -31,7 +31,7 @@ namespace nCine
 				wchar_t buffer[MaxThreadNameLength];
 				Death::Utf8::ToUtf16(buffer, name);
 				const HANDLE threadHandle = (handle != reinterpret_cast<HANDLE>(-1)) ? handle : ::GetCurrentThread();
-				::SetThreadDescription(threadHandle, buffer);
+				setThreadDescription(threadHandle, buffer);
 				return;
 			}
 
