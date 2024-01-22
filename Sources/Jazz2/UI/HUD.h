@@ -114,6 +114,7 @@ namespace Jazz2::UI
 		float _touchButtonsTimer;
 
 		void DrawHealth(const Rectf& view, const Rectf& adjustedView, Actors::Player* player);
+		void DrawHealthCarrots(float x, float y, std::int32_t health);
 		void DrawScore(const Rectf& view, Actors::Player* player);
 		void DrawWeaponAmmo(const Rectf& adjustedView, Actors::Player* player);
 		void DrawActiveBoss(const Rectf& adjustedView);

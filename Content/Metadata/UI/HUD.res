@@ -146,6 +146,10 @@
 			"Path": "Pickup/food_pizza.aura",
 			"States": [ 73 ]
 		},
+		"PickupCarrot": {
+			"Path": "Pickup/carrot_full.aura",
+			"States": [ 74 ]
+		},
 		
 		"BossHealthBar": {
 			"Path": "UI/boss_health_bar.aura",

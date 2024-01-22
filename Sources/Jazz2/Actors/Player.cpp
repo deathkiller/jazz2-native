@@ -60,7 +60,7 @@ namespace Jazz2::Actors
 		_inIdleTransition(false), _inLedgeTransition(false),
 		_carryingObject(nullptr),
 		_canDoubleJump(true),
-		_lives(0), _coins(0), _coinsCheckpoint(0), _foodEaten(0), _score(0),
+		_lives(0), _coins(0), _coinsCheckpoint(0), _foodEaten(0), _foodEatenCheckpoint(0), _score(0),
 		_checkpointLight(1.0f),
 		_sugarRushLeft(0.0f), _sugarRushStarsTime(0.0f),
 		_shieldSpawnTime(ShieldDisabled),
@@ -276,6 +276,9 @@ namespace Jazz2::Actors
 		bool areaWeaponAllowed = true;
 		int areaWaterBlock = -1;
 		OnHandleAreaEvents(timeMult, areaWeaponAllowed, areaWaterBlock);
+
+		// Force collisions every frame even if player doesn't move
+		SetState(ActorState::IsDirty, true);
 
 		// Invulnerability
 		if (_invulnerableTime > 0.0f) {
@@ -613,7 +616,7 @@ namespace Jazz2::Actors
 				if (_dizzyTime > 0.0f || _playerType == PlayerType::Frog) {
 					_speed.X = std::clamp(_speed.X + acceleration * timeMult * (IsFacingLeft() ? -1 : 1), -MaxDizzySpeed * playerMovementVelocity, MaxDizzySpeed * playerMovementVelocity);
 				} else if (_inShallowWater != -1 && _levelHandler->IsReforged() && _playerType != PlayerType::Lori) {
-					// Use lower speed in shallow water if Reforged Mode is enabled
+					// Use lower speed in shallow water if Reforged
 					// Also, exclude Lori, because she can't ledge climb or double jump (rescue/01_colon1)
 					_speed.X = std::clamp(_speed.X + acceleration * timeMult * (IsFacingLeft() ? -1 : 1), -MaxShallowWaterSpeed * playerMovementVelocity, MaxShallowWaterSpeed * playerMovementVelocity);
 				} else {
@@ -2437,6 +2440,11 @@ namespace Jazz2::Actors
 					_lives--;
 				}
 
+				// Revert food eaten only if Reforged
+				if (_levelHandler->IsReforged()) {
+					_foodEaten = _foodEatenCheckpoint;
+				}
+
 				// Revert coins, gems, ammo and weapon upgrades
 				_coins = _coinsCheckpoint;
 				_gems = _gemsCheckpoint;
@@ -3009,6 +3017,7 @@ namespace Jazz2::Actors
 		_lives = (std::int32_t)carryOver.Lives;
 		_score = carryOver.Score;
 		_foodEaten = (std::int32_t)carryOver.FoodEaten;
+		_foodEatenCheckpoint = _foodEaten;
 		_currentWeapon = carryOver.CurrentWeapon;
 
 		std::memcpy(_weaponAmmo, carryOver.Ammo, sizeof(_weaponAmmo));
@@ -3080,6 +3089,7 @@ namespace Jazz2::Actors
 		_coins = src.ReadVariableInt32();
 		_coinsCheckpoint = _coins;
 		_foodEaten = src.ReadVariableInt32();
+		_foodEatenCheckpoint = _foodEaten;
 		_score = src.ReadVariableInt32();
 		_gems = src.ReadVariableInt32();
 		_gemsCheckpoint = _gems;
@@ -3111,7 +3121,7 @@ namespace Jazz2::Actors
 		dest.WriteValue<float>(_checkpointLight);
 		dest.WriteVariableInt32(_lives);
 		dest.WriteVariableInt32(_coinsCheckpoint);
-		dest.WriteVariableInt32(_foodEaten);
+		dest.WriteVariableInt32(_foodEatenCheckpoint);
 		dest.WriteVariableInt32(_score);
 		dest.WriteVariableInt32(_gemsCheckpoint);
 		dest.WriteVariableInt32(countof(_weaponAmmoCheckpoint));
@@ -3803,6 +3813,7 @@ namespace Jazz2::Actors
 		_checkpointPos = Vector2f(pos.X, pos.Y - 20.0f);
 		_checkpointLight = ambientLight;
 		
+		_foodEatenCheckpoint = _foodEaten;
 		_coinsCheckpoint = _coins;
 		_gemsCheckpoint = _gems;
 
