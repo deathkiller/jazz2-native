@@ -224,7 +224,7 @@ namespace Jazz2::Actors
 		float _springCooldown;
 		std::shared_ptr<AudioBufferPlayer> _copterSound;
 
-		std::int32_t _lives, _coins, _coinsCheckpoint, _foodEaten, _score;
+		std::int32_t _lives, _coins, _coinsCheckpoint, _foodEaten, _foodEatenCheckpoint, _score;
 		Vector2f _checkpointPos;
 		float _checkpointLight;
 
