@@ -17,43 +17,6 @@ namespace nCine
 	template <class T> class Vector2;
 	using Vector2f = Vector2<float>;
 
-	/// Information about a mapped joystick state (implementation)
-	class JoyMappedStateImpl : public JoyMappedState
-	{
-	public:
-		JoyMappedStateImpl()
-		{
-			for (unsigned int i = 0; i < JoyMappedState::NumButtons; i++)
-				buttons_[i] = false;
-			for (unsigned int i = 0; i < JoyMappedState::NumAxes; i++)
-				axesValues_[i] = 0.0f;
-			lastHatState_ = HatState::CENTERED;
-		}
-
-		bool isButtonPressed(ButtonName name) const override
-		{
-			bool pressed = false;
-			if (name != ButtonName::UNKNOWN)
-				pressed = buttons_[static_cast<int>(name)];
-			return pressed;
-		}
-
-		float axisValue(AxisName name) const override
-		{
-			float value = 0.0f;
-			if (name != AxisName::UNKNOWN)
-				value = axesValues_[static_cast<int>(name)];
-			return value;
-		}
-
-	private:
-		bool buttons_[JoyMappedState::NumButtons];
-		float axesValues_[JoyMappedState::NumAxes];
-		unsigned char lastHatState_;
-
-		friend class JoyMapping;
-	};
-
 	class JoyMapping
 	{
 	public:
@@ -80,7 +43,7 @@ namespace nCine
 		void onJoyDisconnected(const JoyConnectionEvent& event);
 
 		bool isJoyMapped(int joyId) const;
-		const JoyMappedStateImpl& joyMappedState(int joyId) const;
+		const JoyMappedState& joyMappedState(int joyId) const;
 		void deadZoneNormalize(Vector2f& joyVector, float deadZoneValue) const;
 		static JoystickGuid createJoystickGuid(uint16_t bus, uint16_t vendor, uint16_t product, uint16_t version, const StringView& name, uint8_t driverSignature, uint8_t driverData);
 		
@@ -134,8 +97,8 @@ namespace nCine
 		SmallVector<MappedJoystick, 0> mappings_;
 		AssignedMapping assignedMappings_[MaxNumJoysticks];
 
-		static JoyMappedStateImpl nullMappedJoyState_;
-		static SmallVector<JoyMappedStateImpl, MaxNumJoysticks> mappedJoyStates_;
+		static JoyMappedState nullMappedJoyState_;
+		static SmallVector<JoyMappedState, MaxNumJoysticks> mappedJoyStates_;
 		static JoyMappedButtonEvent mappedButtonEvent_;
 		static JoyMappedAxisEvent mappedAxisEvent_;
 

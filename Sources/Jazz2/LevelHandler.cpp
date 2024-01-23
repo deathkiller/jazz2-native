@@ -52,8 +52,8 @@ namespace Jazz2
 			_cheatsBufferLength(0), _nextLevelType(ExitType::None), _nextLevelTime(0.0f), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
 			_cameraResponsiveness(1.0f, 1.0f), _shakeDuration(0.0f), _waterLevel(FLT_MAX), _ambientLightTarget(1.0f), _weatherType(WeatherType::None),
 			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
-			_pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0), _overrideActions(0), _playerFrozenEnabled(false),
-			_lastPressedNumericKey(UINT32_MAX)
+			_pressedKeys((uint32_t)KeySym::COUNT), _pressedActions(0), _pressedActionsLast(0), _overrideActions(0),
+			_playerFrozenEnabled(false)
 	{
 	}
 
@@ -1225,17 +1225,8 @@ namespace Jazz2
 
 		isGamepad = false;
 		if ((_pressedActions & (1ull << (int32_t)action)) != 0) {
-			isGamepad = (_pressedActions & (1ull << (16 + (int32_t)action))) != 0;
+			isGamepad = (_pressedActions & (1ull << (32 + (int32_t)action))) != 0;
 			return true;
-		}
-
-		if (includeGamepads) {
-			switch (action) {
-				case PlayerActions::Left: if (_playerRequiredMovement.X < -0.8f && !_playerFrozenEnabled) { isGamepad = true; return true; } break;
-				case PlayerActions::Right: if (_playerRequiredMovement.X > 0.8f && !_playerFrozenEnabled) { isGamepad = true; return true; } break;
-				case PlayerActions::Up: if (_playerRequiredMovement.Y < -0.8f && !_playerFrozenEnabled) { isGamepad = true; return true; } break;
-				case PlayerActions::Down: if (_playerRequiredMovement.Y > 0.8f && !_playerFrozenEnabled) { isGamepad = true; return true; } break;
-			}
 		}
 
 		return false;
@@ -1254,8 +1245,8 @@ namespace Jazz2
 		}
 
 		isGamepad = false;
-		if ((_pressedActions & ((1ull << (int32_t)action) | (1ull << (32 + (int32_t)action)))) == (1ull << (int32_t)action)) {
-			isGamepad = (_pressedActions & (1ull << (16 + (int32_t)action))) != 0;
+		if ((_pressedActions & (1ull << (int32_t)action)) != 0 && (_pressedActionsLast & (1ull << (int32_t)action)) == 0) {
+			isGamepad = (_pressedActions & (1ull << (32 + (int32_t)action))) != 0;
 			return true;
 		}
 
@@ -1268,12 +1259,6 @@ namespace Jazz2
 			return 0.0f;
 		}
 
-		if ((_pressedActions & (1ull << (int32_t)PlayerActions::Right)) != 0) {
-			return 1.0f;
-		} else if ((_pressedActions & (1ull << (int32_t)PlayerActions::Left)) != 0) {
-			return -1.0f;
-		}
-
 		return (_playerFrozenEnabled ? _playerFrozenMovement.X : _playerRequiredMovement.X);
 	}
 
@@ -1281,12 +1266,6 @@ namespace Jazz2
 	{
 		if (index != 0) {
 			return 0.0f;
-		}
-
-		if ((_pressedActions & (1ull << (int32_t)PlayerActions::Up)) != 0) {
-			return -1.0f;
-		} else if ((_pressedActions & (1ull << (int32_t)PlayerActions::Down)) != 0) {
-			return 1.0f;
 		}
 
 		return (_playerFrozenEnabled ? _playerFrozenMovement.Y : _playerRequiredMovement.Y);
@@ -1749,113 +1728,20 @@ namespace Jazz2
 		ZoneScopedC(0x4876AF);
 
 		auto& input = theApplication().inputManager();
-		_pressedActions = ((_pressedActions & 0xffffffffu) << 32);
+		_pressedActionsLast = _pressedActions;
 
-		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Up)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Up)]) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Up);
-		}
-		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Down)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Down)]) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Down);
-		}
-		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Left)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Left)]) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Left);
-		}
-		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Right)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Right)]) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Right);
-		}
-		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Fire)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Fire)]) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Fire);
-		}
-		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Jump)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Jump)]) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Jump);
-		}
-		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Run)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Run)]) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Run);
-		}
-		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::ChangeWeapon)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::ChangeWeapon)]) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::ChangeWeapon);
-		}
-		// Allow Android Back button as menu key
-		if (_pressedKeys[(uint32_t)UI::ControlScheme::Key1(0, PlayerActions::Menu)] || _pressedKeys[(uint32_t)UI::ControlScheme::Key2(0, PlayerActions::Menu)] || (PreferencesCache::UseNativeBackButton && _pressedKeys[(uint32_t)KeySym::BACK])) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Menu);
-		}
-
-		// Use numeric key to switch weapons for the first player
-		if (!_players.empty()) {
-			bool found = false;
-			for (uint32_t i = 0; i < 9; i++) {
-				if (_pressedKeys[(uint32_t)KeySym::N1 + i]) {
-					if (_lastPressedNumericKey != i) {
-						_lastPressedNumericKey = i;
-						_players[0]->SwitchToWeaponByIndex(i);
-					}
-					found = true;
-					break;
-				}
-			}
-			if (!found) {
-				_lastPressedNumericKey = UINT32_MAX;
-			}
-		}
-
-		// Try to get 8 connected joysticks
 		const JoyMappedState* joyStates[UI::ControlScheme::MaxConnectedGamepads];
-		int32_t jc = 0;
-		for (int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < countof(joyStates); i++) {
+		std::int32_t joyStatesCount = 0;
+		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks && joyStatesCount < countof(joyStates); i++) {
 			if (input.isJoyMapped(i)) {
-				joyStates[jc++] = &input.joyMappedState(i);
+				joyStates[joyStatesCount++] = &input.joyMappedState(i);
 			}
 		}
 
-		ButtonName jb; int32_t ji1, ji2, ji3, ji4;
-
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Up, ji1);
-		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Up);
-		}
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Down, ji2);
-		if (ji2 >= 0 && ji2 < jc && joyStates[ji2]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Down);
-		}
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Left, ji3);
-		if (ji3 >= 0 && ji3 < jc && joyStates[ji3]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Left);
-		}
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Right, ji4);
-		if (ji4 >= 0 && ji4 < jc && joyStates[ji4]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Right);
-		}
-
-		// Use analog controls only if all movement buttons are mapped to the same joystick
-		if (ji1 == ji2 && ji2 == ji3 && ji3 == ji4 && ji1 >= 0 && ji1 < jc) {
-			_playerRequiredMovement.X = joyStates[ji1]->axisValue(AxisName::LX);
-			_playerRequiredMovement.Y = joyStates[ji1]->axisValue(AxisName::LY);
-			input.deadZoneNormalize(_playerRequiredMovement, 0.1f);
-		} else {
-			_playerRequiredMovement.X = 0.0f;
-			_playerRequiredMovement.Y = 0.0f;
-		}
-
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Jump, ji1);
-		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Jump) | (1 << (16 + (int32_t)PlayerActions::Jump));
-		}
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Run, ji1);
-		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Run) | (1 << (16 + (int32_t)PlayerActions::Run));
-		}
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Fire, ji1);
-		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Fire) | (1 << (16 + (int32_t)PlayerActions::Fire));
-		}
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::ChangeWeapon, ji1);
-		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::ChangeWeapon) | (1 << (16 + (int32_t)PlayerActions::ChangeWeapon));
-		}
-		jb = UI::ControlScheme::Gamepad(0, PlayerActions::Menu, ji1);
-		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Menu) | (1 << (16 + (int32_t)PlayerActions::Menu));
-		}
+		auto processedInput = UI::ControlScheme::FetchProcessedInput(0,
+			_pressedKeys, ArrayView(joyStates, joyStatesCount), !_hud->IsWeaponWheelVisible());
+		_pressedActions = processedInput.PressedActions;
+		_playerRequiredMovement = processedInput.Movement;
 
 		// Also apply overriden actions (by touch controls)
 		_pressedActions |= _overrideActions;
@@ -1995,7 +1881,8 @@ namespace Jazz2
 #endif
 
 		// Mark Menu button as already pressed to avoid some issues
-		_pressedActions |= (1ull << (int32_t)PlayerActions::Menu) | (1ull << (32 + (int32_t)PlayerActions::Menu));
+		_pressedActions |= (1ull << (int32_t)PlayerActions::Menu);
+		_pressedActionsLast |= (1ull << (int32_t)PlayerActions::Menu);
 	}
 
 #if defined(WITH_IMGUI)

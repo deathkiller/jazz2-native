@@ -87,8 +87,8 @@ namespace nCine
 		"paddle4"
 	};
 
-	JoyMappedStateImpl JoyMapping::nullMappedJoyState_;
-	SmallVector<JoyMappedStateImpl, JoyMapping::MaxNumJoysticks> JoyMapping::mappedJoyStates_(JoyMapping::MaxNumJoysticks);
+	JoyMappedState JoyMapping::nullMappedJoyState_;
+	SmallVector<JoyMappedState, JoyMapping::MaxNumJoysticks> JoyMapping::mappedJoyStates_(JoyMapping::MaxNumJoysticks);
 	JoyMappedButtonEvent JoyMapping::mappedButtonEvent_;
 	JoyMappedAxisEvent JoyMapping::mappedAxisEvent_;
 
@@ -399,34 +399,6 @@ namespace nCine
 #endif
 				mappedJoyStates_[event.joyId].axesValues_[static_cast<int>(axis.name)] = mappedAxisEvent_.value;
 				inputEventHandler_->OnJoyMappedAxisMoved(mappedAxisEvent_);
-
-				// Map some axes also as button presses
-				ButtonName buttonName;
-				switch (mappedAxisEvent_.axisName) {
-					case AxisName::LTRIGGER: buttonName = ButtonName::LTRIGGER; break;
-					case AxisName::RTRIGGER: buttonName = ButtonName::RTRIGGER; break;
-					default: buttonName = ButtonName::UNKNOWN; break;
-				}
-				if (buttonName != ButtonName::UNKNOWN) {
-					bool isPressed = (mappedAxisEvent_.value > 0.5f);
-					const int buttonId = static_cast<int>(buttonName);
-					if (mappedJoyStates_[event.joyId].buttons_[buttonId] != isPressed) {
-						mappedButtonEvent_.joyId = event.joyId;
-						mappedButtonEvent_.buttonName = buttonName;
-						mappedJoyStates_[event.joyId].buttons_[buttonId] = isPressed;
-						if (isPressed) {
-#if defined(NCINE_INPUT_DEBUGGING)
-							LOGI("Axis move mapped as button press %d", static_cast<int>(buttonName));
-#endif
-							inputEventHandler_->OnJoyMappedButtonPressed(mappedButtonEvent_);
-						} else {
-#if defined(NCINE_INPUT_DEBUGGING)
-							LOGI("Axis move mapped as button release %d", static_cast<int>(buttonName));
-#endif
-							inputEventHandler_->OnJoyMappedButtonReleased(mappedButtonEvent_);
-						}
-					}
-				}
 			} else {
 #if defined(NCINE_INPUT_DEBUGGING)
 				LOGW("Axis move has incorrect mapping");
@@ -552,7 +524,7 @@ namespace nCine
 		return (joyId >= 0 && joyId < MaxNumJoysticks && assignedMappings_[joyId].isValid);
 	}
 
-	const JoyMappedStateImpl& JoyMapping::joyMappedState(int joyId) const
+	const JoyMappedState& JoyMapping::joyMappedState(int joyId) const
 	{
 		if (joyId < 0 || joyId >= MaxNumJoysticks) {
 			return nullMappedJoyState_;

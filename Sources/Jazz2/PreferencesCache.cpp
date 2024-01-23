@@ -52,7 +52,7 @@ namespace Jazz2
 	Vector2f PreferencesCache::TouchRightPadding;
 	char PreferencesCache::Language[6] { };
 	bool PreferencesCache::BypassCache = false;
-	float PreferencesCache::MasterVolume = 0.8f;
+	float PreferencesCache::MasterVolume = 0.7f;
 	float PreferencesCache::SfxVolume = 0.8f;
 	float PreferencesCache::MusicVolume = 0.4f;
 
@@ -198,24 +198,38 @@ namespace Jazz2
 					TouchRightPadding.Y = std::round(uc.ReadValue<int8_t>() / (TouchPaddingMultiplier * INT8_MAX));
 
 					// Controls
-					auto mappings = UI::ControlScheme::GetMappings();
-					uint8_t controlMappingCount = uc.ReadValue<uint8_t>();
-					for (uint32_t i = 0; i < controlMappingCount; i++) {
-						KeySym key1 = (KeySym)uc.ReadValue<uint8_t>();
-						KeySym key2 = (KeySym)uc.ReadValue<uint8_t>();
-						uint8_t gamepadIndex = uc.ReadValue<uint8_t>();
-						ButtonName gamepadButton = (ButtonName)uc.ReadValue<uint8_t>();
+					if (version >= 4) {
+						auto mappings = UI::ControlScheme::GetMappings();
 
-						if (i < mappings.size()) {
-							auto& mapping = mappings[i];
-							mapping.Key1 = key1;
-							mapping.Key2 = key2;
-							mapping.GamepadIndex = (gamepadIndex == 0xff ? -1 : gamepadIndex);
-							mapping.GamepadButton = gamepadButton;
+						std::uint8_t playerCount = uc.ReadValue<std::uint8_t>();
+						std::uint8_t controlMappingCount = uc.ReadValue<std::uint8_t>();
+						for (std::uint32_t i = 0; i < playerCount; i++) {
+							for (std::uint32_t j = 0; j < controlMappingCount; j++) {
+								std:uint8_t targetCount = uc.ReadValue<std::uint8_t>();
+								if (i < UI::ControlScheme::MaxSupportedPlayers && j < (std::uint32_t)PlayerActions::Count) {
+									auto& mapping = mappings[i * (std::uint32_t)PlayerActions::Count + j];
+									mapping.Targets.clear();
+
+									for (std::uint32_t k = 0; k < targetCount; k++) {
+										UI::MappingTarget target = { uc.ReadValue<std::uint32_t>() };
+										mapping.Targets.push_back(target);
+									}
+								} else {
+									uc.Seek(targetCount * sizeof(std::uint32_t), SeekOrigin::Current);
+								}
+							}
 						}
+
+						// Reset primary Menu action, because it's hardcoded
+						auto& menuMapping = mappings[(std::uint32_t)PlayerActions::Menu];
+						if (menuMapping.Targets.empty()) {
+							mappings[(std::int32_t)PlayerActions::Menu].Targets.push_back(UI::ControlScheme::CreateTarget(KeySym::ESCAPE));
+						}
+					} else {
+						// Skip old control mapping definitions
+						uint8_t controlMappingCount = uc.ReadValue<std::uint8_t>();
+						uc.Seek(controlMappingCount * sizeof(std::uint32_t), SeekOrigin::Current);
 					}
-					// Reset primary Menu action, because it's hardcoded
-					mappings[(int32_t)PlayerActions::Menu].Key1 = KeySym::ESCAPE;
 
 					// Episode End
 					uint16_t episodeEndSize = uc.ReadValue<uint16_t>();
@@ -381,13 +395,16 @@ namespace Jazz2
 
 		// Controls
 		auto mappings = UI::ControlScheme::GetMappings();
-		co.WriteValue<uint8_t>((uint8_t)mappings.size());
-		for (std::size_t i = 0; i < mappings.size(); i++) {
-			auto& mapping = mappings[i];
-			co.WriteValue<uint8_t>((uint8_t)mapping.Key1);
-			co.WriteValue<uint8_t>((uint8_t)mapping.Key2);
-			co.WriteValue<uint8_t>((uint8_t)(mapping.GamepadIndex == -1 ? 0xff : mapping.GamepadIndex));
-			co.WriteValue<uint8_t>((uint8_t)mapping.GamepadButton);
+		co.WriteValue<std::uint8_t>((std::uint8_t)UI::ControlScheme::MaxSupportedPlayers);
+		co.WriteValue<std::uint8_t>((std::uint8_t)mappings.size());
+		for (std::uint32_t i = 0; i < mappings.size(); i++) {
+			const auto& mapping = mappings[i];
+
+			std::uint8_t targetCount = (std::uint8_t)mapping.Targets.size();
+			co.WriteValue<std::uint8_t>(targetCount);
+			for (std::uint32_t k = 0; k < targetCount; k++) {
+				co.WriteValue<std::uint32_t>(mapping.Targets[k].Data);
+			}
 		}
 
 		// Episode End

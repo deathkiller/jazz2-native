@@ -325,31 +325,21 @@ namespace Jazz2::UI
 	void Cinematics::UpdatePressedActions()
 	{
 		auto& input = theApplication().inputManager();
-		_pressedActions = ((_pressedActions & 0xffff) << 16);
+		_pressedActions = ((_pressedActions & 0xFFFF) << 16);
 
-		if (_pressedKeys[(std::uint32_t)KeySym::RETURN] || _pressedKeys[(std::uint32_t)ControlScheme::Key1(0, PlayerActions::Fire)] || _pressedKeys[(std::uint32_t)ControlScheme::Key2(0, PlayerActions::Fire)] ||
-			_pressedKeys[(std::uint32_t)ControlScheme::Key1(0, PlayerActions::Jump)] || _pressedKeys[(std::uint32_t)ControlScheme::Key2(0, PlayerActions::Jump)] ||
-			_pressedKeys[(std::uint32_t)ControlScheme::Key1(0, PlayerActions::Menu)] || _pressedKeys[(std::uint32_t)ControlScheme::Key2(0, PlayerActions::Menu)] || _pressedKeys[(std::uint32_t)KeySym::BACK]) {
-			_pressedActions |= (1 << (std::int32_t)PlayerActions::Fire);
-		}
-
-		// Try to get 8 connected joysticks
-		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
-		std::int32_t jc = 0;
-		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < countof(joyStates); i++) {
+		const JoyMappedState* joyStates[UI::ControlScheme::MaxConnectedGamepads];
+		std::int32_t joyStatesCount = 0;
+		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks && joyStatesCount < countof(joyStates); i++) {
 			if (input.isJoyMapped(i)) {
-				joyStates[jc++] = &input.joyMappedState(i);
+				joyStates[joyStatesCount++] = &input.joyMappedState(i);
 			}
 		}
 
-		/*ButtonName jb;*/ std::int32_t ji1, ji2;
-		/*jb =*/ ControlScheme::Gamepad(0, PlayerActions::Jump, ji1);
-		/*jb =*/ ControlScheme::Gamepad(0, PlayerActions::Fire, ji2);
-		if (ji1 == ji2) ji2 = -1;
+		_pressedActions |= ControlScheme::FetchNativation(0, _pressedKeys, ArrayView(joyStates, joyStatesCount));
 
-		if ((ji1 >= 0 && ji1 < jc && (joyStates[ji1]->isButtonPressed(ButtonName::A) || joyStates[ji1]->isButtonPressed(ButtonName::B) || joyStates[ji1]->isButtonPressed(ButtonName::X) || joyStates[ji1]->isButtonPressed(ButtonName::START))) ||
-			(ji2 >= 0 && ji2 < jc && (joyStates[ji2]->isButtonPressed(ButtonName::A) || joyStates[ji2]->isButtonPressed(ButtonName::B) || joyStates[ji2]->isButtonPressed(ButtonName::X) || joyStates[ji2]->isButtonPressed(ButtonName::START)))) {
-			_pressedActions |= (1 << (std::int32_t)PlayerActions::Fire);
+		// Also allow Menu action as skip key
+		if (_pressedActions & (1 << (std::uint32_t)PlayerActions::Menu)) {
+			_pressedActions |= (1 << (std::uint32_t)PlayerActions::Fire);
 		}
 	}
 
