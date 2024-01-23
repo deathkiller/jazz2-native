@@ -1618,7 +1618,7 @@ msgstr "Chcę zagrać w grę z jakimiś nowościami."
 #. TRANSLATORS: Header in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:53
 msgid "Welcome to \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] reimplementation!"
-msgstr "Witaj w reimplementacji \f[c:0x9e7056]Jazz Jackrabbit 2\f[c]"
+msgstr "Witaj w reimplementacji \f[c:0x9e7056]Jazz Jackrabbit 2\f[c]!"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
@@ -1644,9 +1644,10 @@ msgid ""
 "For more information, visit %s and  Discord!"
 msgstr ""
 "Możesz wybrać preferowany przez siebie styl rozgrywki.\n"
-"To ustawienie może zostać zmienione, kiedy tylko ci się spodoba w "
-"\f[c:0x707070]%s\f[c] > \f[c:0x707070]%s\f[c] > \f[c:0x707070]%s\f[c].\n"
-"Po więcej informacji, odwiedź %s oraz  serwer Discord!"
+"To ustawienie może zostać zmienione,\n"
+"kiedy tylko ci się spodoba w \f[c:0x707070]%s\f[c] > \f[c:0x707070]%s\f[c] > "
+"\f[c:0x707070]%s\f[c].\n"
+"Po więcej informacji, odwiedź %s oraz serwer  Discord!"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:16
