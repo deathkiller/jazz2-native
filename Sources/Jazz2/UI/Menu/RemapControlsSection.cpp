@@ -351,6 +351,8 @@ namespace Jazz2::UI::Menu
 
 	void RemapControlsSection::OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos)
 	{
+		auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + newIndex];
+
 		float centerX = viewSize.X / 2;
 		float firstColumnX = centerX * (0.81f - 0.1f);
 		float columnWidth = centerX * 0.2f;
@@ -358,33 +360,35 @@ namespace Jazz2::UI::Menu
 		float x = touchPos.X - firstColumnX;
 		if (x >= 0.0f && x < columnWidth * MaxTargetCount) {
 			std::int32_t newColumn = (std::int32_t)(x / columnWidth);
-			if (_selectedIndex == newIndex && _selectedColumn == newColumn) {
-				if (_waitForInput) {
-					// If we are already waiting for input, delete the target instead
-					_waitForInput = false;
+			if (newColumn <= mapping.Targets.size()) {
+				if (_selectedIndex == newIndex && _selectedColumn == newColumn) {
+					if (_waitForInput) {
+						// If we are already waiting for input, delete the target instead
+						_waitForInput = false;
 
-					if (_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0) {
-						return;
-					}
+						if (_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0) {
+							return;
+						}
 
-					auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + _selectedIndex];
-					if (_selectedColumn < mapping.Targets.size()) {
-						mapping.Targets.erase(mapping.Targets.begin() + _selectedColumn);
+						if (_selectedColumn < mapping.Targets.size()) {
+							mapping.Targets.erase(mapping.Targets.begin() + _selectedColumn);
 
-						_isDirty = true;
-						_root->PlaySfx("MenuSelect"_s, 0.5f);
-						_root->ApplyPreferencesChanges(ChangedPreferencesType::ControlScheme);
+							_isDirty = true;
+							_root->PlaySfx("MenuSelect"_s, 0.5f);
+							_root->ApplyPreferencesChanges(ChangedPreferencesType::ControlScheme);
+						}
+					} else {
+						OnExecuteSelected();
 					}
 				} else {
-					OnExecuteSelected();
+					_root->PlaySfx("MenuSelect"_s, 0.5f);
+					_waitForInput = false;
+					_animation = 0.0f;
+					_selectedIndex = newIndex;
+					_selectedColumn = newColumn;
+					EnsureVisibleSelected();
+					OnSelectionChanged(_items[_selectedIndex]);
 				}
-			} else {
-				_root->PlaySfx("MenuSelect"_s, 0.5f);
-				_animation = 0.0f;
-				_selectedIndex = newIndex;
-				_selectedColumn = newColumn;
-				EnsureVisibleSelected();
-				OnSelectionChanged(_items[_selectedIndex]);
 			}
 		}
 	}

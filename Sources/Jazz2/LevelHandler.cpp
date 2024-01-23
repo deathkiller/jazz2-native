@@ -1745,6 +1745,17 @@ namespace Jazz2
 
 		// Also apply overriden actions (by touch controls)
 		_pressedActions |= _overrideActions;
+
+		if ((_overrideActions & (1 << (std::int32_t)PlayerActions::Right)) != 0) {
+			_playerRequiredMovement.X = 1.0f;
+		} else if ((_overrideActions & (1 << (std::int32_t)PlayerActions::Left)) != 0) {
+			_playerRequiredMovement.X = -1.0f;
+		}
+		if ((_overrideActions & (1 << (std::int32_t)PlayerActions::Down)) != 0) {
+			_playerRequiredMovement.Y = 1.0f;
+		} else if ((_overrideActions & (1 << (std::int32_t)PlayerActions::Up)) != 0) {
+			_playerRequiredMovement.Y = -1.0f;
+		}
 	}
 
 	void LevelHandler::UpdateRichPresence()
