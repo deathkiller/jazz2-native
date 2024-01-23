@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-01-14 14:35+0100\n"
+"POT-Creation-Date: 2024-01-23 22:45+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Hexaae <hexaae@gmail.com>\n"
 "Language-Team: Traduzione Italiana: Hexaae\n"
@@ -1450,7 +1450,7 @@ msgstr "Gioco Personalizzato"
 #. TRANSLATORS: Subheader in First Run section
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:85
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:76
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:37
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:15
 msgid "Options"
@@ -1499,7 +1499,7 @@ msgstr "Permetti l'accesso a un archivio esterno"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:18
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:207
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:149
 msgid "Remap Controls"
 msgstr "Riconfigura i controlli"
 
@@ -1611,26 +1611,26 @@ msgid "I want to play the game with something new."
 msgstr ""
 
 #. TRANSLATORS: Header in First Run section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:72
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:53
 msgid "Welcome to \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] reimplementation!"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:76
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:76
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:17
 msgid "Gameplay"
 msgstr "Giocabilità"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:76
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:69
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:23
 msgid "Enhancements"
 msgstr "Miglioramenti"
 
 #. TRANSLATORS: Subheader in First Run section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:76
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
 #, c-format
 msgid ""
 "You can choose your preferred play style.\n"
@@ -1858,60 +1858,56 @@ msgstr "Elaborazione dei file nella directory \f[c:0x9e7056]\"Source\"\f[c]..."
 msgid "Newly added levels and episodes will be available soon."
 msgstr "Livelli e episodi nuovi saranno presto disponibili."
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:210
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:212
-#, c-format
-msgid "Key %i"
-msgstr "Tasto %i"
-
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:214
-msgid "Gamepad"
-msgstr "Gamepad"
-
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:230
-msgid "Up"
-msgstr "Su"
-
-#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:232
-msgid "Down"
-msgstr "Giù"
-
-#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:234
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:17
 msgid "Left"
 msgstr "Sinistra"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:236
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:19
 msgid "Right"
 msgstr "Destra"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:238
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:21
+msgid "Up"
+msgstr "Su"
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:23
+msgid "Down"
+msgstr "Giù"
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:25
 msgid "Fire"
 msgstr "Fuoco"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:240
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:27
 msgid "Jump"
 msgstr "Salta"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:242
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:29
 msgid "Run"
 msgstr "Corri"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:244
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:31
 msgid "Change Weapon"
 msgstr "Cambia arma"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:246
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:33
 msgid "Back"
 msgstr "Indietro"
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:37
+#, c-format
+msgid "Weapon %i"
+msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
@@ -2137,6 +2133,13 @@ msgstr ""
 "\n"
 "Sei stato \f[c:0x725040]bannato\f[c] dal server.\n"
 "Contatta gli amministratori per maggiori informazioni."
+
+#, c-format
+#~ msgid "Key %i"
+#~ msgstr "Tasto %i"
+
+#~ msgid "Gamepad"
+#~ msgstr "Gamepad"
 
 #~ msgid "Error"
 #~ msgstr "Errore"

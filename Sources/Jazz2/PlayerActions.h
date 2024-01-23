@@ -3,17 +3,29 @@
 namespace Jazz2
 {
 	enum class PlayerActions {
-		Up,
-		Down,
 		Left,
 		Right,
+		Up,
+		Down,
 		Fire,
 		Jump,
 		Run,
 		ChangeWeapon,
 		Menu,
 
+		SwitchToBlaster,
+		SwitchToBouncer,
+		SwitchToFreezer,
+		SwitchToSeeker,
+		SwitchToRF,
+		SwitchToToaster,
+		SwitchToTNT,
+		SwitchToPepper,
+		SwitchToElectro,
+		SwitchToThunderbolt,
+
 		Count,
+		CountInMenu = SwitchToBlaster,
 
 		None = -1
 	};

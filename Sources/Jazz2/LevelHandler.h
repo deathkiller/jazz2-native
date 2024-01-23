@@ -314,12 +314,11 @@ namespace Jazz2
 		uint8_t _weatherIntensity;
 
 		BitArray _pressedKeys;
-		uint64_t _pressedActions;
+		uint64_t _pressedActions, _pressedActionsLast;
 		uint32_t _overrideActions;
 		Vector2f _playerRequiredMovement;
 		Vector2f _playerFrozenMovement;
 		bool _playerFrozenEnabled;
-		uint32_t _lastPressedNumericKey;
 
 		virtual void OnInitialized();
 		virtual void BeforeActorDestroyed(Actors::ActorBase* actor);

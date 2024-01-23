@@ -411,105 +411,22 @@ namespace Jazz2::UI::Menu
 	void InGameMenu::UpdatePressedActions()
 	{
 		auto& input = theApplication().inputManager();
-		auto& pressedKeys = _root->_pressedKeys;
+		_pressedActions = ((_pressedActions & 0xFFFF) << 16);
 
-		_pressedActions = ((_pressedActions & 0xffff) << 16);
-
-		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Up)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Up)]) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Up);
-		}
-		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Down)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Down)]) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Down);
-		}
-		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Left)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Left)]) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Left);
-		}
-		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Right)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Right)]) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Right);
-		}
-		// Also allow Return (Enter) as confirm key
-		if (pressedKeys[(uint32_t)KeySym::RETURN] || pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Fire)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Fire)] ||
-			pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Jump)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Jump)]) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Fire);
-		}
-		// Allow Android Back button as menu key
-		if (pressedKeys[(uint32_t)ControlScheme::Key1(0, PlayerActions::Menu)] || pressedKeys[(uint32_t)ControlScheme::Key2(0, PlayerActions::Menu)] || (PreferencesCache::UseNativeBackButton && pressedKeys[(uint32_t)KeySym::BACK])) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Menu);
-		}
-		// Use ChangeWeapon action as Delete key
-		if (pressedKeys[(uint32_t)KeySym::Delete]) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::ChangeWeapon);
+		const JoyMappedState* joyStates[UI::ControlScheme::MaxConnectedGamepads];
+		std::int32_t joyStatesCount = 0;
+		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks && joyStatesCount < countof(joyStates); i++) {
+			if (input.isJoyMapped(i)) {
+				joyStates[joyStatesCount++] = &input.joyMappedState(i);
+			}
 		}
 
+		bool allowGamepads = true;
 		if (!_sections.empty()) {
 			auto& lastSection = _sections.back();
-			if (!lastSection->IsGamepadNavigationEnabled()) {
-				return;
-			}
+			allowGamepads = lastSection->IsGamepadNavigationEnabled();
 		}
 
-		// Try to get 8 connected joysticks
-		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
-		int32_t jc = 0;
-		for (int32_t i = 0; i < IInputManager::MaxNumJoysticks && jc < countof(joyStates); i++) {
-			if (input.isJoyMapped(i)) {
-				joyStates[jc++] = &input.joyMappedState(i);
-			}
-		}
-
-		ButtonName jb; int32_t ji1, ji2, ji3, ji4;
-
-		jb = ControlScheme::Gamepad(0, PlayerActions::Up, ji1);
-		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Up);
-		}
-		jb = ControlScheme::Gamepad(0, PlayerActions::Down, ji2);
-		if (ji2 >= 0 && ji2 < jc && joyStates[ji2]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Down);
-		}
-		jb = ControlScheme::Gamepad(0, PlayerActions::Left, ji3);
-		if (ji3 >= 0 && ji3 < jc && joyStates[ji3]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Left);
-		}
-		jb = ControlScheme::Gamepad(0, PlayerActions::Right, ji4);
-		if (ji4 >= 0 && ji4 < jc && joyStates[ji4]->isButtonPressed(jb)) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Right);
-		}
-
-		// Use analog controls only if all movement buttons are mapped to the same joystick
-		if (ji1 == ji2 && ji2 == ji3 && ji3 == ji4 && ji1 >= 0 && ji1 < jc) {
-			float x = joyStates[ji1]->axisValue(AxisName::LX);
-			float y = joyStates[ji1]->axisValue(AxisName::LY);
-
-			if (x < -0.6f) {
-				_pressedActions |= (1 << (int32_t)PlayerActions::Left);
-			} else if (x > 0.6f) {
-				_pressedActions |= (1 << (int32_t)PlayerActions::Right);
-			}
-			if (y < -0.6f) {
-				_pressedActions |= (1 << (int32_t)PlayerActions::Up);
-			} else if (y > 0.6f) {
-				_pressedActions |= (1 << (int32_t)PlayerActions::Down);
-			}
-		}
-
-		jb = ControlScheme::Gamepad(0, PlayerActions::Jump, ji1);
-		jb = ControlScheme::Gamepad(0, PlayerActions::Fire, ji2);
-		if (ji1 == ji2) ji2 = -1;
-
-		if ((ji1 >= 0 && ji1 < jc && (joyStates[ji1]->isButtonPressed(ButtonName::A) || joyStates[ji1]->isButtonPressed(ButtonName::X))) ||
-			(ji2 >= 0 && ji2 < jc && (joyStates[ji2]->isButtonPressed(ButtonName::A) || joyStates[ji2]->isButtonPressed(ButtonName::X)))) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Fire);
-		}
-
-		if ((ji1 >= 0 && ji1 < jc && (joyStates[ji1]->isButtonPressed(ButtonName::B) || joyStates[ji1]->isButtonPressed(ButtonName::START))) ||
-			(ji2 >= 0 && ji2 < jc && (joyStates[ji2]->isButtonPressed(ButtonName::B) || joyStates[ji2]->isButtonPressed(ButtonName::START)))) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::Menu);
-		}
-
-		jb = ControlScheme::Gamepad(0, PlayerActions::ChangeWeapon, ji1);
-		if (ji1 >= 0 && ji1 < jc && joyStates[ji1]->isButtonPressed(ButtonName::Y)) {
-			_pressedActions |= (1 << (int32_t)PlayerActions::ChangeWeapon);
-		}
+		_pressedActions |= ControlScheme::FetchNativation(0, _root->_pressedKeys, ArrayView(joyStates, joyStatesCount), allowGamepads);
 	}
 }

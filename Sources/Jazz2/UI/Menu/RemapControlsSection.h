@@ -1,41 +1,46 @@
 ﻿#pragma once
 
-#include "MenuSection.h"
+#include "ScrollableMenuSection.h"
+#include "../ControlScheme.h"
 
 #include "../../../nCine/Input/InputEvents.h"
 #include "../../../nCine/Base/BitArray.h"
 
 namespace Jazz2::UI::Menu
 {
-	class RemapControlsSection : public MenuSection
+	struct RemapControlsItem {
+		PlayerActions Type;
+		String DisplayName;
+	};
+
+	class RemapControlsSection : public ScrollableMenuSection<RemapControlsItem>
 	{
 	public:
-		static constexpr int32_t PossibleButtons = 3;
+		static constexpr int32_t MaxTargetCount = 6;
 
 		RemapControlsSection();
 		~RemapControlsSection() override;
 
-		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
-		void OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize) override;
 
 	private:
-		int32_t _selectedIndex;
 		int32_t _selectedColumn;
 		int32_t _currentPlayerIndex;
-		float _animation;
 		bool _isDirty;
 		bool _waitForInput;
 		float _timeout;
-		BitArray _prevKeyPressed;
-		BitArray _prevJoyPressed;
+		BitArray _keysPressedLast;
+		JoyMappedState _joyStatesLast[ControlScheme::MaxConnectedGamepads];
 
-		void Commit();
+		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
+		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
+		void OnHandleInput() override;
+		void OnExecuteSelected() override;
+		void OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos) override;
+
 		void RefreshPreviousState();
-		void RefreshCollisions();
-		bool HasCollision(KeySym key);
-		bool HasCollision(int gamepadIndex, ButtonName gamepadButton);
+		bool HasCollision(MappingTarget target);
 		static StringView KeyToName(KeySym key);
 	};
 }

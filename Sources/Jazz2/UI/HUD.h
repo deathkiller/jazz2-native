@@ -34,6 +34,8 @@ namespace Jazz2::UI
 		void BeginFadeIn();
 		void BeginFadeOut(float delay = 0.0f);
 
+		bool IsWeaponWheelVisible() const;
+
 	private:
 		enum class TransitionState {
 			None,
@@ -55,8 +57,7 @@ namespace Jazz2::UI
 			Alignment Align;
 		};
 
-		struct Vertex
-		{
+		struct Vertex {
 			float X, Y;
 			float U, V;
 

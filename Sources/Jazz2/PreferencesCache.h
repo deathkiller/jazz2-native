@@ -158,7 +158,7 @@ namespace Jazz2
 
 		DEFINE_PRIVATE_ENUM_OPERATORS(BoolOptions);
 
-		static constexpr std::uint8_t FileVersion = 3;
+		static constexpr std::uint8_t FileVersion = 4;
 
 		static constexpr float TouchPaddingMultiplier = 0.003f;
 

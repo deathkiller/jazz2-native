@@ -432,6 +432,11 @@ namespace Jazz2::UI
 		}
 	}
 
+	bool HUD::IsWeaponWheelVisible() const
+	{
+		return (_weaponWheelAnim > 0.0f);
+	}
+
 	void HUD::DrawHealth(const Rectf& view, const Rectf& adjustedView, Actors::Player* player)
 	{
 		PlayerType playerType = player->_playerType;
@@ -1305,25 +1310,6 @@ namespace Jazz2::UI
 				colors[(int32_t)AuraLight::Tab + i] = Color(percentR * intensity / (255 * 12), percentG * intensity / (255 * 12), 0);
 			}
 		}
-
-		auto mapings = ControlScheme::GetMappings();
-		AuraLight l = KeyToAuraLight(mapings[(int32_t)PlayerActions::Up].Key1);
-		if (l != AuraLight::Unknown) colors[(int32_t)l] = Color(100, 100, 100);
-		l = KeyToAuraLight(mapings[(int32_t)PlayerActions::Down].Key1);
-		if (l != AuraLight::Unknown) colors[(int32_t)l] = Color(100, 100, 100);
-		l = KeyToAuraLight(mapings[(int32_t)PlayerActions::Left].Key1);
-		if (l != AuraLight::Unknown) colors[(int32_t)l] = Color(100, 100, 100);
-		l = KeyToAuraLight(mapings[(int32_t)PlayerActions::Right].Key1);
-		if (l != AuraLight::Unknown) colors[(int32_t)l] = Color(100, 100, 100);
-
-		l = KeyToAuraLight(mapings[(int32_t)PlayerActions::Fire].Key1);
-		if (l != AuraLight::Unknown) colors[(int32_t)l] = Color(160, 10, 10);
-		l = KeyToAuraLight(mapings[(int32_t)PlayerActions::Jump].Key1);
-		if (l != AuraLight::Unknown) colors[(int32_t)l] = Color(10, 80, 160);
-		l = KeyToAuraLight(mapings[(int32_t)PlayerActions::Run].Key1);
-		if (l != AuraLight::Unknown) colors[(int32_t)l] = Color(10, 170, 10);
-		l = KeyToAuraLight(mapings[(int32_t)PlayerActions::ChangeWeapon].Key1);
-		if (l != AuraLight::Unknown) colors[(int32_t)l] = Color(150, 140, 10);
 
 		rgbLights.Update(colors);
 #endif

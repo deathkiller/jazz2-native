@@ -1,6 +1,5 @@
 ﻿#include "RemapControlsSection.h"
 #include "MenuResources.h"
-#include "../ControlScheme.h"
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/Application.h"
@@ -11,9 +10,32 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	RemapControlsSection::RemapControlsSection()
-		: _selectedIndex(0), _selectedColumn(0), _currentPlayerIndex(0), _animation(0.0f), _isDirty(false), _waitForInput(false),
-			_timeout(0.0f), _prevKeyPressed((uint32_t)KeySym::COUNT), _prevJoyPressed(8 * JoyMappedState::NumButtons)
+		: _selectedColumn(0), _currentPlayerIndex(0), _isDirty(false), _waitForInput(false), _timeout(0.0f),
+			_keysPressedLast((uint32_t)KeySym::COUNT)
 	{
+		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+		_items.emplace_back(RemapControlsItem { PlayerActions::Left, _("Left") });
+		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+		_items.emplace_back(RemapControlsItem { PlayerActions::Right, _("Right") });
+		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+		_items.emplace_back(RemapControlsItem { PlayerActions::Up, _("Up") });
+		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+		_items.emplace_back(RemapControlsItem { PlayerActions::Down, _("Down") });
+		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+		_items.emplace_back(RemapControlsItem { PlayerActions::Fire, _("Fire") });
+		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+		_items.emplace_back(RemapControlsItem { PlayerActions::Jump, _("Jump") });
+		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+		_items.emplace_back(RemapControlsItem { PlayerActions::Run, _("Run") });
+		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+		_items.emplace_back(RemapControlsItem { PlayerActions::ChangeWeapon, _("Change Weapon") });
+		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+		_items.emplace_back(RemapControlsItem { PlayerActions::Menu, _("Back") });
+
+		for (std::int32_t i = 0; i <= (std::int32_t)PlayerActions::SwitchToThunderbolt - (std::int32_t)PlayerActions::SwitchToBlaster; i++) {
+			// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+			_items.emplace_back(RemapControlsItem { (PlayerActions)((std::int32_t)PlayerActions::SwitchToBlaster + i), _f("Weapon %i", i + 1) });
+		}
 	}
 
 	RemapControlsSection::~RemapControlsSection()
@@ -24,175 +46,88 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void RemapControlsSection::OnShow(IMenuContainer* root)
-	{
-		RefreshCollisions();
-
-		_animation = 0.0f;
-		MenuSection::OnShow(root);
-	}
-
 	void RemapControlsSection::OnUpdate(float timeMult)
 	{
-		if (_animation < 1.0f) {
-			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
-		}
+		// Move the variable to stack to fix leaving the section
+		bool waitingForInput = _waitForInput;
 
-		if (_waitForInput) {
+		ScrollableMenuSection::OnUpdate(timeMult);
+
+		if (waitingForInput) {
 			auto& input = theApplication().inputManager();
 			auto& keyState = input.keyboardState();
 
-			_timeout -= timeMult;
 			if (keyState.isKeyDown(KeySym::ESCAPE) || _timeout <= 0.0f) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_waitForInput = false;
 				return;
 			}
 
-			switch (_selectedColumn) {
-				case 0: // Keyboard
-				case 1:
-					for (int32_t key = 0; key < (int32_t)KeySym::COUNT; key++) {
-						if (keyState.isKeyDown((KeySym)key) && !_prevKeyPressed[key] && !KeyToName((KeySym)key).empty()) {
-							auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int32_t)PlayerActions::Count + _selectedIndex];
+			_timeout -= timeMult;
 
-							if (_selectedColumn == 0) {
-								if (mapping.Key1 != (KeySym)key) {
-									mapping.Key1 = (KeySym)key;
-									_isDirty = true;
-								}
-							} else {
-								if (mapping.Key2 != (KeySym)key) {
-									mapping.Key2 = (KeySym)key;
-									_isDirty = true;
-								}
+			MappingTarget newTarget;
+			const JoyMappedState* joyStates[UI::ControlScheme::MaxConnectedGamepads];
+			std::int32_t joyStatesCount = 0;
+			for (std::uint32_t i = 0; i < IInputManager::MaxNumJoysticks && joyStatesCount < countof(joyStates) && waitingForInput; i++) {
+				if (input.isJoyMapped(i)) {
+					joyStates[joyStatesCount] = &input.joyMappedState(i);
+					auto& prevState = _joyStatesLast[joyStatesCount];
+					auto& currentState = *joyStates[joyStatesCount];
+
+					for (std::int32_t j = 0; j < JoyMappedState::NumButtons && waitingForInput; j++) {
+						bool wasPressed = prevState.isButtonPressed((ButtonName)j);
+						bool isPressed = currentState.isButtonPressed((ButtonName)j);
+						if (isPressed != wasPressed && isPressed) {
+							newTarget = ControlScheme::CreateTarget(i, (ButtonName)j);
+							if (!HasCollision(newTarget)) {
+								waitingForInput = false;
 							}
-
-							_root->PlaySfx("MenuSelect"_s, 0.5f);
-							_waitForInput = false;
-							_root->ApplyPreferencesChanges(ChangedPreferencesType::ControlScheme);
-							RefreshCollisions();
-							break;
 						}
 					}
-					break;
 
-				case 2: // Gamepad
-					for (int32_t i = 0, jc = 0; i < IInputManager::MaxNumJoysticks && jc < ControlScheme::MaxConnectedGamepads && _waitForInput; i++) {
-						if (input.isJoyMapped(i)) {
-							auto& joyState = input.joyMappedState(i);
-							for (int32_t j = 0; j < JoyMappedState::NumButtons; j++) {
-								if (joyState.isButtonPressed((ButtonName)j) && !_prevJoyPressed[jc * JoyMappedState::NumButtons + j]) {
-									auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int32_t)PlayerActions::Count + _selectedIndex];
-
-									if (mapping.GamepadIndex != jc || mapping.GamepadButton != (ButtonName)j) {
-										mapping.GamepadIndex = jc;
-										mapping.GamepadButton = (ButtonName)j;
-										_isDirty = true;
-									}
-
-									_root->PlaySfx("MenuSelect"_s, 0.5f);
-									_waitForInput = false;
-									_root->ApplyPreferencesChanges(ChangedPreferencesType::ControlScheme);
-									RefreshCollisions();
-									break;
-								}
+					for (std::int32_t j = 0; j < JoyMappedState::NumAxes && waitingForInput; j++) {
+						float prevValue = prevState.axisValue((AxisName)j);
+						float currentValue = currentState.axisValue((AxisName)j);
+						bool wasPressed = std::abs(prevValue) > 0.5f;
+						bool isPressed = std::abs(currentValue) > 0.5f;
+						if (isPressed != wasPressed && isPressed) {
+							newTarget = ControlScheme::CreateTarget(i, (AxisName)j, currentValue < 0.0f);
+							if (!HasCollision(newTarget)) {
+								waitingForInput = false;
 							}
-							jc++;
 						}
 					}
-					break;
+
+					prevState = currentState;
+					joyStatesCount++;
+				}
 			}
 
-			if (_waitForInput) {
-				RefreshPreviousState();
-			}
-			return;
-		}
-
-		if (_root->ActionHit(PlayerActions::Menu)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_root->LeaveSection();
-			return;
-		} else if (_root->ActionHit(PlayerActions::Fire)) {
-			if (_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0) {
-				return;
-			}
-
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_animation = 0.0f;
-			_timeout = 30.0f * FrameTimer::FramesPerSecond;
-			_waitForInput = true;
-
-			RefreshPreviousState();
-			return;
-		} else if (_root->ActionHit(PlayerActions::ChangeWeapon)) {
-			if (_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0) {
-				return;
-			}
-
-			bool assignmentRemoved = false;
-			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int32_t)PlayerActions::Count + _selectedIndex];
-			switch (_selectedColumn) {
-				case 0:
-					if (mapping.Key1 != KeySym::UNKNOWN) {
-						mapping.Key1 = KeySym::UNKNOWN;
-						assignmentRemoved = true;
+			for (std::int32_t key = 0; key < (std::int32_t)KeySym::COUNT && waitingForInput; key++) {
+				bool isPressed = keyState.isKeyDown((KeySym)key);
+				if (isPressed != _keysPressedLast[key]) {
+					_keysPressedLast.Set(key, isPressed);
+					if (isPressed) {
+						newTarget = ControlScheme::CreateTarget((KeySym)key);
+						if (!HasCollision(newTarget)) {
+							waitingForInput = false;
+						}
 					}
-					break;
-				case 1:
-					if (mapping.Key2 != KeySym::UNKNOWN) {
-						mapping.Key2 = KeySym::UNKNOWN;
-						assignmentRemoved = true;
-					}
-					break;
-				case 2:
-					if (mapping.GamepadIndex != -1) {
-						mapping.GamepadIndex = -1;
-						assignmentRemoved = true;
-					}
-					break;
+				}
 			}
 
-			if (assignmentRemoved) {
+			if (!waitingForInput) {
+				auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + (std::int32_t)_items[_selectedIndex].Item.Type];
+				if (_selectedColumn < mapping.Targets.size()) {
+					mapping.Targets[_selectedColumn] = newTarget;
+				} else {
+					mapping.Targets.push_back(newTarget);
+				}
+
 				_isDirty = true;
+				_waitForInput = false;
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::ControlScheme);
-			}
-			return;
-		}
-
-		if (_root->ActionHit(PlayerActions::Up)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_animation = 0.0f;
-			if (_selectedIndex > 0) {
-				_selectedIndex--;
-			} else {
-				_selectedIndex = (int32_t)PlayerActions::Count - 1;
-			}
-		} else if (_root->ActionHit(PlayerActions::Down)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_animation = 0.0f;
-			if (_selectedIndex < (int32_t)PlayerActions::Count - 1) {
-				_selectedIndex++;
-			} else {
-				_selectedIndex = 0;
-			}
-		} else if (_root->ActionHit(PlayerActions::Left)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_animation = 0.0f;
-			if (_selectedColumn > 0) {
-				_selectedColumn--;
-			} else {
-				_selectedColumn = PossibleButtons - 1;
-			}
-		} else if (_root->ActionHit(PlayerActions::Right)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_animation = 0.0f;
-			if (_selectedColumn < PossibleButtons - 1) {
-				_selectedColumn++;
-			} else {
-				_selectedColumn = 0;
 			}
 		}
 	}
@@ -200,170 +135,272 @@ namespace Jazz2::UI::Menu
 	void RemapControlsSection::OnDraw(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
-		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f);
+		float centerX = viewSize.X * 0.5f;
 
 		char stringBuffer[16];
 		constexpr float topLine = 131.0f;
 		float bottomLine = viewSize.Y - 42.0f;
-		_root->DrawElement(MenuDim, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
+		_root->DrawElement(MenuDim, centerX, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
 			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement(MenuLine, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement(MenuLine, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 0, centerX, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int32_t charOffset = 0;
-		_root->DrawStringShadow(_("Remap Controls"), charOffset, center.X * 0.3f, 110.0f, IMenuContainer::FontLayer,
-			Alignment::Left, Colorf(0.5f, 0.5f, 0.5f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.5f, 0.88f);
+		_root->DrawStringShadow(_("Remap Controls"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
+			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+	}
 
-		_root->DrawStringShadow(_f("Key %i", 1), charOffset, center.X * (0.9f + 0 * 0.34f), 110.0f, IMenuContainer::FontLayer,
-			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
-		_root->DrawStringShadow(_f("Key %i", 2), charOffset, center.X * (0.9f + 1 * 0.34f), 110.0f, IMenuContainer::FontLayer,
-			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
-		_root->DrawStringShadow(_("Gamepad"), charOffset, center.X * (0.9f + 2 * 0.34f), 110.0f, IMenuContainer::FontLayer,
-			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
+	void RemapControlsSection::OnLayoutItem(Canvas* canvas, ListViewItem& item)
+	{
+		item.Height = ItemHeight * 5 / 8;
+	}
 
-		int32_t n = (int32_t)PlayerActions::Count;
+	void RemapControlsSection::OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected)
+	{
+		float centerX = canvas->ViewSize.X * 0.5f;
+		char stringBuffer[16];
 
-		float topItem = topLine - 5.0f;
-		float bottomItem = bottomLine + 5.0f;
-		float contentHeight = bottomItem - topItem;
-		float itemSpacing = contentHeight / (n + 1);
+		auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + (std::int32_t)item.Item.Type];
 
-		topItem += itemSpacing;
+		_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX * 0.3f, item.Y, IMenuContainer::FontLayer, Alignment::Left,
+			isSelected && _waitForInput ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor, 0.8f);
 
-		for (int32_t i = 0; i < n; i++) {
-			StringView name;
-			switch ((PlayerActions)i) {
-				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-				case PlayerActions::Up: name = _("Up"); break;
-				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-				case PlayerActions::Down: name = _("Down"); break;
-				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-				case PlayerActions::Left: name = _("Left"); break;
-				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-				case PlayerActions::Right: name = _("Right"); break;
-				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-				case PlayerActions::Fire: name = _("Fire"); break;
-				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-				case PlayerActions::Jump: name = _("Jump"); break;
-				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-				case PlayerActions::Run: name = _("Run"); break;
-				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-				case PlayerActions::ChangeWeapon: name = _("Change Weapon"); break;
-				// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-				case PlayerActions::Menu: name = _("Back"); break;
-			}
+		std::int32_t targetCount = (std::int32_t)mapping.Targets.size();
+		for (std::int32_t j = 0; j < targetCount; j++) {
+			StringView value;
 
-			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (int32_t)PlayerActions::Count + i];
+			std::uint32_t data = mapping.Targets[j].Data;
+			if (data & ControlScheme::GamepadMask) {
+				std::uint32_t joyIdx = (data & ControlScheme::GamepadIndexMask) >> 16;
 
-			_root->DrawStringShadow(name, charOffset, center.X * 0.3f, topItem, IMenuContainer::FontLayer, Alignment::Left,
-				_selectedIndex == i && _waitForInput ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor, 0.8f);
-
-			for (int32_t j = 0; j < PossibleButtons; j++) {
-				StringView value;
-				bool hasCollision = false;
-				switch (j) {
-					case 0:
-						if (mapping.Key1 != KeySym::UNKNOWN) {
-							value = KeyToName(mapping.Key1);
-							hasCollision = HasCollision(mapping.Key1);
-						} else {
-							value = "-";
-						}
-						break;
-					case 1:
-						if (mapping.Key2 != KeySym::UNKNOWN) {
-							value = KeyToName(mapping.Key2);
-							hasCollision = HasCollision(mapping.Key2);
-						} else {
-							value = "-";
-						}
-						break;
-					case 2:
-						if (mapping.GamepadIndex != -1) {
-							if (_selectedIndex == i && _selectedColumn == j) {
-								value = "<    >";
-							} else {
-								value = nullptr;
-							}
-							hasCollision = HasCollision(mapping.GamepadIndex, mapping.GamepadButton);
-
-							AnimState buttonName;
-							switch (mapping.GamepadButton) {
-								case ButtonName::A: buttonName = GamepadA; break;
-								case ButtonName::B: buttonName = GamepadB; break;
-								case ButtonName::X: buttonName = GamepadX; break;
-								case ButtonName::Y: buttonName = GamepadY; break;
-								case ButtonName::BACK: buttonName = GamepadBack; break;
-								case ButtonName::GUIDE: buttonName = GamepadBigButton; break;
-								case ButtonName::START: buttonName = GamepadStart; break;
-								case ButtonName::LSTICK: buttonName = GamepadLeftStick; break;
-								case ButtonName::RSTICK: buttonName = GamepadRightStick; break;
-								case ButtonName::LBUMPER: buttonName = GamepadLeftShoulder; break;
-								case ButtonName::RBUMPER: buttonName = GamepadRightShoulder; break;
-								case ButtonName::LTRIGGER: buttonName = GamepadLeftTrigger; break;
-								case ButtonName::RTRIGGER: buttonName = GamepadRightTrigger; break;
-								case ButtonName::DPAD_UP: buttonName = GamepadDPadUp; break;
-								case ButtonName::DPAD_DOWN: buttonName = GamepadDPadDown; break;
-								case ButtonName::DPAD_LEFT: buttonName = GamepadDPadLeft; break;
-								case ButtonName::DPAD_RIGHT: buttonName = GamepadDPadRight; break;
-								default: buttonName = AnimState::Default; break;
-							}
-
-							if (buttonName != AnimState::Default) {
-								_root->DrawElement(buttonName, 0, center.X * (0.9f + j * 0.34f) + 3, topItem, IMenuContainer::MainLayer, Alignment::Center, Colorf::White);
-
-								for (int32_t i = 0; i < mapping.GamepadIndex + 1; i++) {
-									stringBuffer[i] = '1';
-								}
-								stringBuffer[mapping.GamepadIndex + 1] = '\0';
-
-								_root->DrawStringShadow(stringBuffer, charOffset, center.X * (0.9f + j * 0.34f) + 4, topItem - 5, IMenuContainer::FontLayer,
-									Alignment::Left, hasCollision ? Colorf(0.5f, 0.32f, 0.32f, 1.0f) : Font::DefaultColor, 0.75f, 0.0f, 0.0f, 0.0f, 0.4f, 0.6f);
-							}
-						} else {
-							value = "-";
-						}
-						break;
-
-					default: value = nullptr; break;
+				if (isSelected && _selectedColumn == j) {
+					value = "<    >";
 				}
 
-				if (!value.empty()) {
-					if (_selectedIndex == i && _selectedColumn == j) {
-						float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.5f;
+				if (data & ControlScheme::GamepadAnalogMask) {
+					AnimState axisAnim; StringView axisName;
+					switch ((AxisName)(data & ControlScheme::ButtonMask)) {
+						case AxisName::LX: axisAnim = GamepadLeftStick; axisName = "X"_s; break;
+						case AxisName::LY: axisAnim = GamepadLeftStick; axisName = "Y"_s; break;
+						case AxisName::RX: axisAnim = GamepadLeftStick; axisName = "X"_s; break;
+						case AxisName::RY: axisAnim = GamepadRightStick; axisName = "Y"_s; break;
+						case AxisName::LTRIGGER: axisAnim = GamepadLeftTrigger; break;
+						case AxisName::RTRIGGER: axisAnim = GamepadRightTrigger; break;
+						default: axisAnim = AnimState::Default; break;
+					}
 
-						Colorf color;
-						if (_waitForInput) {
-							color = Colorf(0.62f, 0.44f, 0.34f, 0.5f);
-						} else {
-							color = (_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0 ? Font::TransparentRandomColor : Font::RandomColor);
+					if (axisAnim != AnimState::Default) {
+						_root->DrawElement(axisAnim, 0, centerX * (0.81f + j * 0.2f) + 2.0f, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf::White);
+
+						for (int32_t i = 0; i < joyIdx + 1; i++) {
+							stringBuffer[i] = '1';
 						}
+						stringBuffer[joyIdx + 1] = '\0';
 
-						_root->DrawStringShadow(value, charOffset, center.X * (0.9f + j * 0.34f), topItem, IMenuContainer::MainLayer - 10,
-							Alignment::Center, color, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
-					} else {
-						_root->DrawStringShadow(value, charOffset, center.X * (0.9f + j * 0.34f), topItem, IMenuContainer::MainLayer - 20,
-							Alignment::Center, hasCollision ? Colorf(0.5f, 0.32f, 0.32f, 1.0f) : Font::DefaultColor, 0.8f);
+						_root->DrawStringShadow(stringBuffer, charOffset, centerX * (0.81f + j * 0.2f) + 4.0f, item.Y - 5.0f, IMenuContainer::FontLayer,
+							Alignment::Left, Font::DefaultColor, 0.75f, 0.0f, 0.0f, 0.0f, 0.4f, 0.6f);
+
+						bool isNegative = (data & ControlScheme::GamepadNegativeMask) != 0;
+						stringBuffer[0] = (isNegative ? '-' : '+');
+						stringBuffer[1] = ' ';
+						if (!axisName.empty()) {
+							std::memcpy(stringBuffer + 2, axisName.data(), axisName.size());
+						}
+						stringBuffer[axisName.size() + 2] = '\0';
+
+						_root->DrawStringShadow(stringBuffer, charOffset, centerX * (0.81f + j * 0.2f) - 10.0f, item.Y + 6.0f, IMenuContainer::FontLayer,
+							Alignment::Left, Font::DefaultColor, 0.75f, 0.0f, 0.0f, 0.0f, 0.4f, 0.9f);
+					}
+				} else {
+					AnimState buttonName;
+					switch ((ButtonName)(data & ControlScheme::ButtonMask)) {
+						case ButtonName::A: buttonName = GamepadA; break;
+						case ButtonName::B: buttonName = GamepadB; break;
+						case ButtonName::X: buttonName = GamepadX; break;
+						case ButtonName::Y: buttonName = GamepadY; break;
+						case ButtonName::BACK: buttonName = GamepadBack; break;
+						case ButtonName::GUIDE: buttonName = GamepadBigButton; break;
+						case ButtonName::START: buttonName = GamepadStart; break;
+						case ButtonName::LSTICK: buttonName = GamepadLeftStick; break;
+						case ButtonName::RSTICK: buttonName = GamepadRightStick; break;
+						case ButtonName::LBUMPER: buttonName = GamepadLeftShoulder; break;
+						case ButtonName::RBUMPER: buttonName = GamepadRightShoulder; break;
+						case ButtonName::DPAD_UP: buttonName = GamepadDPadUp; break;
+						case ButtonName::DPAD_DOWN: buttonName = GamepadDPadDown; break;
+						case ButtonName::DPAD_LEFT: buttonName = GamepadDPadLeft; break;
+						case ButtonName::DPAD_RIGHT: buttonName = GamepadDPadRight; break;
+						default: buttonName = AnimState::Default; break;
+					}
+
+					if (buttonName != AnimState::Default) {
+						_root->DrawElement(buttonName, 0, centerX * (0.81f + j * 0.2f) + 2.0f, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf::White);
+
+						for (int32_t i = 0; i < joyIdx + 1; i++) {
+							stringBuffer[i] = '1';
+						}
+						stringBuffer[joyIdx + 1] = '\0';
+
+						_root->DrawStringShadow(stringBuffer, charOffset, centerX * (0.81f + j * 0.2f) + 4.0f, item.Y - 5.0f, IMenuContainer::FontLayer,
+							Alignment::Left, Font::DefaultColor, 0.75f, 0.0f, 0.0f, 0.0f, 0.4f, 0.6f);
 					}
 				}
+			} else {
+				KeySym key = (KeySym)(data & ControlScheme::ButtonMask);
+				value = KeyToName(key);
 			}
 
-			topItem += itemSpacing;
+			if (!value.empty()) {
+				if (isSelected && _selectedColumn == j) {
+					float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.5f;
+
+					Colorf color;
+					if (_waitForInput) {
+						color = Colorf(0.62f, 0.44f, 0.34f, 0.5f);
+					} else {
+						color = (_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0 ? Font::TransparentRandomColor : Font::RandomColor);
+					}
+
+					_root->DrawStringShadow(value, charOffset, centerX * (0.81f + j * 0.2f), item.Y, IMenuContainer::MainLayer - 10,
+						Alignment::Center, color, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+				} else {
+					_root->DrawStringShadow(value, charOffset, centerX * (0.81f + j * 0.2f), item.Y, IMenuContainer::MainLayer - 20,
+						Alignment::Center, Font::DefaultColor, 0.8f);
+				}
+			}
+		}
+
+		if (isSelected && _selectedColumn == targetCount) {
+			float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.5f;
+			_root->DrawStringShadow("+"_s, charOffset, centerX * (0.81f + targetCount * 0.2f) + 2.0f, item.Y, IMenuContainer::MainLayer - 10,
+				Alignment::Center, _waitForInput ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Colorf(0.44f, 0.62f, 0.34f, 0.5f), size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+		} else {
+			_root->DrawStringShadow("+"_s, charOffset, centerX * (0.81f + targetCount * 0.2f) + 2.0f, item.Y, IMenuContainer::MainLayer - 20,
+				Alignment::Center, Colorf(0.42f, 0.42f, 0.42f, 0.42f), 0.8f);
 		}
 	}
 
-	void RemapControlsSection::OnTouchEvent(const nCine::TouchEvent& event, const Vector2i& viewSize)
+	void RemapControlsSection::OnHandleInput()
 	{
-		if (event.type == TouchEventType::Down) {
-			int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
-			if (pointerIndex != -1) {
-				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
-				if (y < 80.0f) {
-					_root->PlaySfx("MenuSelect"_s, 0.5f);
-					_root->LeaveSection();
-				}
+		if (_waitForInput) {
+			return;
+		}
+
+		auto* mapping = &ControlScheme::_mappings[_currentPlayerIndex * (int32_t)PlayerActions::Count];
+
+		if (_root->ActionHit(PlayerActions::Menu)) {
+			OnBackPressed();
+		} else if (_root->ActionHit(PlayerActions::Fire)) {
+			OnExecuteSelected();
+		} else if (_root->ActionHit(PlayerActions::ChangeWeapon)) {
+			if (_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0) {
+				return;
+			}
+
+			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + _selectedIndex];
+			if (_selectedColumn < mapping.Targets.size()) {
+				mapping.Targets.erase(mapping.Targets.begin() + _selectedColumn);
+
+				_isDirty = true;
+				_root->PlaySfx("MenuSelect"_s, 0.5f);
+				_root->ApplyPreferencesChanges(ChangedPreferencesType::ControlScheme);
+			}
+		} else if (_root->ActionHit(PlayerActions::Up)) {
+			_root->PlaySfx("MenuSelect"_s, 0.5f);
+			_animation = 0.0f;
+			if (_selectedIndex > 0) {
+				_selectedIndex--;
+			} else {
+				_selectedIndex = (std::int32_t)(_items.size() - 1);
+			}
+			if (_selectedColumn > mapping[_selectedIndex].Targets.size()) {
+				_selectedColumn = mapping[_selectedIndex].Targets.size();
+			}
+			EnsureVisibleSelected();
+			OnSelectionChanged(_items[_selectedIndex]);
+		} else if (_root->ActionHit(PlayerActions::Down)) {
+			_root->PlaySfx("MenuSelect"_s, 0.5f);
+			_animation = 0.0f;
+			if (_selectedIndex < (std::int32_t)(_items.size() - 1)) {
+				_selectedIndex++;
+			} else {
+				_selectedIndex = 0;
+			}
+			if (_selectedColumn > mapping[_selectedIndex].Targets.size()) {
+				_selectedColumn = mapping[_selectedIndex].Targets.size();
+			}
+			EnsureVisibleSelected();
+			OnSelectionChanged(_items[_selectedIndex]);
+		} else if (_root->ActionHit(PlayerActions::Left)) {
+			_root->PlaySfx("MenuSelect"_s, 0.5f);
+			_animation = 0.0f;
+			if (_selectedColumn > 0) {
+				_selectedColumn--;
+			} else {
+				_selectedColumn = mapping[_selectedIndex].Targets.size();
+			}
+		} else if (_root->ActionHit(PlayerActions::Right)) {
+			_root->PlaySfx("MenuSelect"_s, 0.5f);
+			_animation = 0.0f;
+			if (_selectedColumn < mapping[_selectedIndex].Targets.size()) {
+				_selectedColumn++;
+			} else {
+				_selectedColumn = 0;
 			}
 		}
+	}
+
+	void RemapControlsSection::OnTouchUp(std::int32_t newIndex, const Vector2i& viewSize, const Vector2i& touchPos)
+	{
+		float centerX = viewSize.X / 2;
+		float firstColumnX = centerX * (0.81f - 0.1f);
+		float columnWidth = centerX * 0.2f;
+
+		float x = touchPos.X - firstColumnX;
+		if (x >= 0.0f && x < columnWidth * MaxTargetCount) {
+			std::int32_t newColumn = (std::int32_t)(x / columnWidth);
+			if (_selectedIndex == newIndex && _selectedColumn == newColumn) {
+				if (_waitForInput) {
+					// If we are already waiting for input, delete the target instead
+					_waitForInput = false;
+
+					if (_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0) {
+						return;
+					}
+
+					auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + _selectedIndex];
+					if (_selectedColumn < mapping.Targets.size()) {
+						mapping.Targets.erase(mapping.Targets.begin() + _selectedColumn);
+
+						_isDirty = true;
+						_root->PlaySfx("MenuSelect"_s, 0.5f);
+						_root->ApplyPreferencesChanges(ChangedPreferencesType::ControlScheme);
+					}
+				} else {
+					OnExecuteSelected();
+				}
+			} else {
+				_root->PlaySfx("MenuSelect"_s, 0.5f);
+				_animation = 0.0f;
+				_selectedIndex = newIndex;
+				_selectedColumn = newColumn;
+				EnsureVisibleSelected();
+				OnSelectionChanged(_items[_selectedIndex]);
+			}
+		}
+	}
+
+	void RemapControlsSection::OnExecuteSelected()
+	{
+		if (_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0) {
+			return;
+		}
+
+		_root->PlaySfx("MenuSelect"_s, 0.5f);
+		_animation = 0.0f;
+		_timeout = 20.0f * FrameTimer::FramesPerSecond;
+		_waitForInput = true;
+
+		RefreshPreviousState();
 	}
 
 	void RemapControlsSection::RefreshPreviousState()
@@ -371,42 +408,35 @@ namespace Jazz2::UI::Menu
 		auto& input = theApplication().inputManager();
 		auto& keyState = input.keyboardState();
 
-		_prevKeyPressed.ClearAll();
-		_prevJoyPressed.ClearAll();
+		_keysPressedLast.ClearAll();
 
 		for (int32_t key = 0; key < (int32_t)KeySym::COUNT; key++) {
 			if (keyState.isKeyDown((KeySym)key)) {
-				_prevKeyPressed.Set(key);
+				_keysPressedLast.Set(key);
 			}
 		}
 
-		for (int32_t i = 0, jc = 0; i < IInputManager::MaxNumJoysticks && jc < ControlScheme::MaxConnectedGamepads && _waitForInput; i++) {
+		const JoyMappedState* joyStates[UI::ControlScheme::MaxConnectedGamepads];
+		std::int32_t joyStatesCount = 0;
+		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks && joyStatesCount < countof(joyStates); i++) {
 			if (input.isJoyMapped(i)) {
-				auto& joyState = input.joyMappedState(i);
-				for (int32_t j = 0; j < JoyMappedState::NumButtons; j++) {
-					if (joyState.isButtonPressed((ButtonName)j)) {
-						_prevJoyPressed.Set(jc * JoyMappedState::NumButtons + j);
-					}
-				}
-				jc++;
+				_joyStatesLast[joyStatesCount++] = input.joyMappedState(i);
 			}
 		}
 	}
 
-	void RemapControlsSection::RefreshCollisions()
+	bool RemapControlsSection::HasCollision(MappingTarget target)
 	{
-		// TODO: Collisions
-	}
+		for (std::int32_t i = 0; i < (std::int32_t)PlayerActions::Count; i++) {
+			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + i];
+			std::int32_t targetCount = (std::int32_t)mapping.Targets.size();
+			for (std::int32_t j = 0; j < targetCount; j++) {
+				if (mapping.Targets[j].Data == target.Data) {
+					return true;
+				}
+			}
+		}
 
-	bool RemapControlsSection::HasCollision(KeySym key)
-	{
-		// TODO: Collisions
-		return false;
-	}
-
-	bool RemapControlsSection::HasCollision(int32_t gamepadIndex, ButtonName gamepadButton)
-	{
-		// TODO: Collisions
 		return false;
 	}
 

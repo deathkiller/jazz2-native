@@ -985,6 +985,12 @@ namespace Jazz2::Actors
 				if (!isGamepad || PreferencesCache::WeaponWheel == WeaponWheelStyle::Disabled) {
 					SwitchToNextWeapon();
 				}
+			} else {
+				for (std::uint32_t i = 0; i <= (std::uint32_t)PlayerActions::SwitchToThunderbolt - (std::uint32_t)PlayerActions::SwitchToBlaster; i++) {
+					if (_levelHandler->PlayerActionHit(_playerIndex, (PlayerActions)(i + (std::uint32_t)PlayerActions::SwitchToBlaster))) {
+						SwitchToWeaponByIndex(i);
+					}
+				}
 			}
 		}
 	}

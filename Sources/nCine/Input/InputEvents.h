@@ -28,9 +28,6 @@ namespace nCine
 		PADDLE2,
 		PADDLE3,
 		PADDLE4,
-		// Analog axes converted to button presses
-		LTRIGGER,
-		RTRIGGER,
 
 		COUNT
 	};
@@ -260,18 +257,43 @@ namespace nCine
 	/// Information about a mapped joystick state
 	class JoyMappedState
 	{
+		friend class JoyMapping;
+
 	public:
 		/// The number of joystick buttons with a mapping name
 		static constexpr unsigned int NumButtons = (int)ButtonName::COUNT;
 		/// The number of joystick axes with a mapping name
 		static constexpr unsigned int NumAxes = 6;
 
-		virtual ~JoyMappedState() {}
+		JoyMappedState()
+		{
+			for (unsigned int i = 0; i < NumButtons; i++)
+				buttons_[i] = false;
+			for (unsigned int i = 0; i < NumAxes; i++)
+				axesValues_[i] = 0.0f;
+			lastHatState_ = HatState::CENTERED;
+		}
 
-		/// Returns 'true' if the specified button is pressed
-		virtual bool isButtonPressed(ButtonName name) const = 0;
-		/// Returns the value of the specified axis
-		virtual float axisValue(AxisName name) const = 0;
+		bool isButtonPressed(ButtonName name) const
+		{
+			bool pressed = false;
+			if (name != ButtonName::UNKNOWN)
+				pressed = buttons_[static_cast<int>(name)];
+			return pressed;
+		}
+
+		float axisValue(AxisName name) const
+		{
+			float value = 0.0f;
+			if (name != AxisName::UNKNOWN)
+				value = axesValues_[static_cast<int>(name)];
+			return value;
+		}
+
+	private:
+		bool buttons_[JoyMappedState::NumButtons];
+		float axesValues_[JoyMappedState::NumAxes];
+		unsigned char lastHatState_;
 	};
 
 	/// Information about a joystick mapped button event

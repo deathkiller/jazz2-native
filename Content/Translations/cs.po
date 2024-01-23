@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-01-14 14:14+0100\n"
-"PO-Revision-Date: 2024-01-14 15:36+0100\n"
+"POT-Creation-Date: 2024-01-23 22:42+0100\n"
+"PO-Revision-Date: 2024-01-23 22:45+0100\n"
 "Last-Translator: \n"
 "Language-Team: Překlad do češtiny: Dan R. (https://deat.tk/jazz2/)\n"
 "Language: cs\n"
@@ -1445,7 +1445,7 @@ msgstr "Hrát vlastní úrovně"
 #. TRANSLATORS: Subheader in First Run section
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:85
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:76
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:37
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:15
 msgid "Options"
@@ -1493,7 +1493,7 @@ msgstr "Povolit přístup k externímu uložišti"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:18
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:207
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:149
 msgid "Remap Controls"
 msgstr "Přenastavit ovládání"
 
@@ -1598,33 +1598,33 @@ msgstr "Chci hrát hru takovou, jaká byla."
 #. TRANSLATORS: Menu item in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:18
 msgid "Reforged"
-msgstr ""
+msgstr "Nové"
 
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:18
 msgid "I want to play the game with something new."
 msgstr "Chci hrát hru s něčím novým."
 
 #. TRANSLATORS: Header in First Run section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:72
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:53
 msgid "Welcome to \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] reimplementation!"
 msgstr "Vítejte v reimplementaci hry \f[c:0x9e7056]Jazz Jackrabbit 2\f[c]!"
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:76
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:76
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:17
 msgid "Gameplay"
 msgstr "Hra"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:76
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:69
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:23
 msgid "Enhancements"
 msgstr "Vylepšení"
 
 #. TRANSLATORS: Subheader in First Run section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:76
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
 #, c-format
 msgid ""
 "You can choose your preferred play style.\n"
@@ -1640,17 +1640,17 @@ msgstr ""
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:16
 msgid "Reforged Gameplay"
-msgstr ""
+msgstr "Nová hratelnost"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:18
 msgid "Reforged HUD"
-msgstr ""
+msgstr "Nový HUD"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:20
 msgid "Reforged Main Menu"
-msgstr ""
+msgstr "Nové hlavní menu"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:22
@@ -1855,60 +1855,56 @@ msgstr "Zpracování souborů ve složce \f[c:0x9e7056]\"Source\"\f[c]..."
 msgid "Newly added levels and episodes will be available soon."
 msgstr "Nově přidané úrovně a epizody budou brzy k dispozici."
 
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:210
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:212
-#, c-format
-msgid "Key %i"
-msgstr "Klávesa %i"
-
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:214
-msgid "Gamepad"
-msgstr "Gamepad"
-
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:230
-msgid "Up"
-msgstr "Nahoru"
-
-#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:232
-msgid "Down"
-msgstr "Dolů"
-
-#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:234
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:17
 msgid "Left"
 msgstr "Doleva"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:236
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:19
 msgid "Right"
 msgstr "Doprava"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:238
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:21
+msgid "Up"
+msgstr "Nahoru"
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:23
+msgid "Down"
+msgstr "Dolů"
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:25
 msgid "Fire"
 msgstr "Střelba"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:240
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:27
 msgid "Jump"
 msgstr "Skok"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:242
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:29
 msgid "Run"
 msgstr "Běh"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:244
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:31
 msgid "Change Weapon"
 msgstr "Změnit zbraň"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:246
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:33
 msgid "Back"
 msgstr "Zpět"
+
+#. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:37
+#, c-format
+msgid "Weapon %i"
+msgstr "Zbraň %i"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
@@ -2095,6 +2091,13 @@ msgid ""
 "You have been \f[c:0x725040]banned\f[c] off the server.\n"
 "Contact server administrators for more information."
 msgstr ""
+
+#, c-format
+#~ msgid "Key %i"
+#~ msgstr "Klávesa %i"
+
+#~ msgid "Gamepad"
+#~ msgstr "Gamepad"
 
 #~ msgid "Error"
 #~ msgstr "Chyba"
