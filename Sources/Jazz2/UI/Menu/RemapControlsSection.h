@@ -30,6 +30,7 @@ namespace Jazz2::UI::Menu
 		bool _isDirty;
 		bool _waitForInput;
 		float _timeout;
+		float _hintAnimation;
 		BitArray _keysPressedLast;
 		JoyMappedState _joyStatesLast[ControlScheme::MaxConnectedGamepads];
 
