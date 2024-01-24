@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-01-23 22:46+0100\n"
+"POT-Creation-Date: 2024-01-24 13:44+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Traducere în limba română: 1NSH4N3 & Akfiz\n"
@@ -1500,7 +1500,7 @@ msgstr "Permite accesul la stocarea externă"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:18
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:149
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:152
 msgid "Remap Controls"
 msgstr "Reconficurează Controlul"
 
@@ -1900,6 +1900,7 @@ msgstr "Fugi"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:31
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:165
 msgid "Change Weapon"
 msgstr "Schimbă Arma"
 
@@ -1912,6 +1913,20 @@ msgstr "Înapoi"
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:37
 #, c-format
 msgid "Weapon %i"
+msgstr ""
+
+#. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:159
+msgid "Press any key or button to assign"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:165
+msgid "or"
+msgstr ""
+
+#. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:171
+msgid "to remove assignment"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section

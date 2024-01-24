@@ -11,7 +11,7 @@ namespace Jazz2::UI::Menu
 {
 	RemapControlsSection::RemapControlsSection()
 		: _selectedColumn(0), _currentPlayerIndex(0), _isDirty(false), _waitForInput(false), _timeout(0.0f),
-			_keysPressedLast((uint32_t)KeySym::COUNT)
+			_hintAnimation(0.0f), _keysPressedLast((uint32_t)KeySym::COUNT)
 	{
 		// TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 		_items.emplace_back(RemapControlsItem { PlayerActions::Left, _("Left") });
@@ -52,6 +52,10 @@ namespace Jazz2::UI::Menu
 		bool waitingForInput = _waitForInput;
 
 		ScrollableMenuSection::OnUpdate(timeMult);
+
+		if (_hintAnimation < 1.0f) {
+			_hintAnimation = std::min(_hintAnimation + timeMult * 0.1f, 1.0f);
+		}
 
 		if (waitingForInput) {
 			auto& input = theApplication().inputManager();
@@ -137,7 +141,6 @@ namespace Jazz2::UI::Menu
 		Vector2i viewSize = canvas->ViewSize;
 		float centerX = viewSize.X * 0.5f;
 
-		char stringBuffer[16];
 		constexpr float topLine = 131.0f;
 		float bottomLine = viewSize.Y - 42.0f;
 		_root->DrawElement(MenuDim, centerX, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
@@ -148,6 +151,27 @@ namespace Jazz2::UI::Menu
 		int32_t charOffset = 0;
 		_root->DrawStringShadow(_("Remap Controls"), charOffset, centerX, TopLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+
+		if (_waitForInput) {
+			Colorf textColor = Font::DefaultColor;
+			textColor.SetAlpha(_hintAnimation);
+			// TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
+			_root->DrawStringShadow(_("Press any key or button to assign"), charOffset, centerX, viewSize.Y - 18.0f * IMenuContainer::EaseOutCubic(_hintAnimation), IMenuContainer::FontLayer,
+				Alignment::Center, textColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
+		} else {
+			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + _selectedIndex];
+			if ((_selectedColumn < mapping.Targets.size() || _selectedColumn == MaxTargetCount - 1) && !(_selectedIndex == (int32_t)PlayerActions::Menu && _selectedColumn == 0)) {
+				char stringBuffer[64];
+				formatString(stringBuffer, sizeof(stringBuffer), "\f[c:0xd0705d]%s\f[c] %s ", _("Change Weapon").data(), _("or").data());
+
+				_root->DrawStringShadow(stringBuffer, charOffset, centerX - 10.0f, viewSize.Y - 18.0f, IMenuContainer::FontLayer,
+					Alignment::Right, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
+				_root->DrawElement(GamepadY, 0, centerX - 2.0f, viewSize.Y - 19.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.8f, 0.8f);
+				// TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
+				_root->DrawStringShadow(_("to remove assignment"), charOffset, centerX + 8.0f, viewSize.Y - 18.0f, IMenuContainer::FontLayer,
+					Alignment::Left, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
+			}
+		}
 	}
 
 	void RemapControlsSection::OnLayoutItem(Canvas* canvas, ListViewItem& item)
@@ -296,9 +320,8 @@ namespace Jazz2::UI::Menu
 				return;
 			}
 
-			auto& mapping = ControlScheme::_mappings[_currentPlayerIndex * (std::int32_t)PlayerActions::Count + _selectedIndex];
-			if (_selectedColumn < mapping.Targets.size()) {
-				mapping.Targets.erase(mapping.Targets.begin() + _selectedColumn);
+			if (_selectedColumn < mapping[_selectedIndex].Targets.size()) {
+				mapping[_selectedIndex].Targets.erase(mapping[_selectedIndex].Targets.begin() + _selectedColumn);
 
 				_isDirty = true;
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -312,9 +335,8 @@ namespace Jazz2::UI::Menu
 			} else {
 				_selectedIndex = (std::int32_t)(_items.size() - 1);
 			}
-			if (_selectedColumn > mapping[_selectedIndex].Targets.size()) {
-				_selectedColumn = mapping[_selectedIndex].Targets.size();
-			}
+			_selectedColumn = std::min({ _selectedColumn, (std::int32_t)mapping[_selectedIndex].Targets.size(), MaxTargetCount - 1 });
+
 			EnsureVisibleSelected();
 			OnSelectionChanged(_items[_selectedIndex]);
 		} else if (_root->ActionHit(PlayerActions::Down)) {
@@ -325,9 +347,8 @@ namespace Jazz2::UI::Menu
 			} else {
 				_selectedIndex = 0;
 			}
-			if (_selectedColumn > mapping[_selectedIndex].Targets.size()) {
-				_selectedColumn = mapping[_selectedIndex].Targets.size();
-			}
+			_selectedColumn = std::min({ _selectedColumn, (std::int32_t)mapping[_selectedIndex].Targets.size(), MaxTargetCount - 1 });
+
 			EnsureVisibleSelected();
 			OnSelectionChanged(_items[_selectedIndex]);
 		} else if (_root->ActionHit(PlayerActions::Left)) {
@@ -336,12 +357,14 @@ namespace Jazz2::UI::Menu
 			if (_selectedColumn > 0) {
 				_selectedColumn--;
 			} else {
-				_selectedColumn = mapping[_selectedIndex].Targets.size();
+				std::int32_t lastColumn = std::min((std::int32_t)mapping[_selectedIndex].Targets.size(), MaxTargetCount - 1);
+				_selectedColumn = lastColumn;
 			}
 		} else if (_root->ActionHit(PlayerActions::Right)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
-			if (_selectedColumn < mapping[_selectedIndex].Targets.size()) {
+			std::int32_t lastColumn = std::min((std::int32_t)mapping[_selectedIndex].Targets.size(), MaxTargetCount - 1);
+			if (_selectedColumn < lastColumn) {
 				_selectedColumn++;
 			} else {
 				_selectedColumn = 0;
@@ -401,6 +424,7 @@ namespace Jazz2::UI::Menu
 
 		_root->PlaySfx("MenuSelect"_s, 0.5f);
 		_animation = 0.0f;
+		_hintAnimation = 0.0f;
 		_timeout = 20.0f * FrameTimer::FramesPerSecond;
 		_waitForInput = true;
 
