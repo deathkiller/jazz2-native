@@ -33,7 +33,7 @@ jobs:
         fetch-depth: 0
         
     - name: 'Setup MSBuild'
-      uses: microsoft/setup-msbuild@v1.1
+      uses: microsoft/setup-msbuild@v1.3.2
 
     - name: 'Download Build Dependencies'
       run: |

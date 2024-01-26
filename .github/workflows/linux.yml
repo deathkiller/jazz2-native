@@ -179,7 +179,7 @@ jobs:
         fetch-depth: 0
 
     - name: 'Initialize CodeQL'
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v3
       with:
         languages: cpp
 
@@ -197,4 +197,4 @@ jobs:
         make -j $(nproc) -C ./_build/
         
     - name: 'Perform CodeQL Analysis'
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/analyze@v3
