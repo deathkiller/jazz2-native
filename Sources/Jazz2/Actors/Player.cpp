@@ -3613,7 +3613,7 @@ namespace Jazz2::Actors
 
 		bool switchTo = (_weaponAmmo[(std::int32_t)weaponType] == 0);
 
-		_weaponAmmo[(std::int32_t)weaponType] = std::min((int16_t)(_weaponAmmo[(std::int32_t)weaponType] + count * Multiplier), AmmoLimit);
+		_weaponAmmo[(std::int32_t)weaponType] = (int16_t)std::min((int32_t)_weaponAmmo[(std::int32_t)weaponType] + count * Multiplier, (int32_t)AmmoLimit);
 
 		if (switchTo) {
 			SetCurrentWeapon(weaponType);
