@@ -379,12 +379,16 @@ namespace Jazz2::UI
 			frameSize = Vector2f(viewSize.X, viewSize.X * ratio);
 		}
 
+		Vector2f frameOffset = (viewSize.As<float>() - frameSize) * 0.5f;
+		frameOffset.X = std::round(frameOffset.X);
+		frameOffset.Y = std::round(frameOffset.Y);
+
 		auto* instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
 		instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatVector(frameSize.Data());
 		instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
 
-		_renderCommand.setTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
+		_renderCommand.setTransformation(Matrix4x4f::Translation(frameOffset.X, frameOffset.Y, 0.0f));
 		_renderCommand.material().setTexture(*_owner->_texture);
 
 		renderQueue.addCommand(&_renderCommand);
