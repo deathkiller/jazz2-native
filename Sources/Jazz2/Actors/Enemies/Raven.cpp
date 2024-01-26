@@ -69,11 +69,11 @@ namespace Jazz2::Actors::Enemies
 		if ((_targetPos - _lastPos).Length() > 5.0f) {
 			Vector2f dir = (_targetPos - _lastPos).Normalized();
 			Vector2f speed = {
-				dir.X * lerp(_lastSpeed.X, _attacking ? 2.8f : 1.4f, 1.6f * timeMult),
-				dir.Y * lerp(_lastSpeed.Y, _attacking ? 2.8f : 1.4f, 1.6f * timeMult)
+				lerpByTime(_lastSpeed.X, _attacking ? 4.0f : 2.0f, 0.1f, timeMult),
+				lerpByTime(_lastSpeed.Y, _attacking ? 4.0f : 2.0f, 0.1f, timeMult)
 			};
-			_lastPos.X += speed.X * timeMult;
-			_lastPos.Y += speed.Y * timeMult;
+			_lastPos.X += dir.X * speed.X * timeMult;
+			_lastPos.Y += dir.Y * speed.Y * timeMult;
 			_lastSpeed = speed;
 
 			bool willFaceLeft = (speed.X < 0.0f);

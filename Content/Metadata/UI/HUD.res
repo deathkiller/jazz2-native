@@ -153,7 +153,7 @@
 		
 		"BossHealthBar": {
 			"Path": "UI/boss_health_bar.aura",
-			"States": [ 74 ]
+			"States": [ 75 ]
 		},
 		
 		"WeaponWheel": {

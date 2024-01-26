@@ -7,14 +7,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	LabRat::LabRat()
-		:
-		_isAttacking(false),
-		_canAttack(true),
-		_idling(false),
-		_canIdle(false),
-		_stateTime(0.0f),
-		_attackTime(0.0f),
-		_turnCooldown(0.0f)
+		: _isAttacking(false), _canAttack(true), _idling(false), _canIdle(false), _stateTime(0.0f), _attackTime(0.0f), _turnCooldown(0.0f)
 	{
 	}
 
@@ -124,7 +117,7 @@ namespace Jazz2::Actors::Enemies
 					}
 
 					bool playerFound = false;
-					_levelHandler->GetCollidingPlayers(aabb, [&playerFound](ActorBase*) -> bool {
+					_levelHandler->GetCollidingPlayers(aabb, [&playerFound](ActorBase*) {
 						playerFound = true;
 						return false;
 					});
@@ -161,8 +154,6 @@ namespace Jazz2::Actors::Enemies
 					_stateTime = Random().NextFloat(60.0f, 120.0f);
 				}
 			}
-		} else {
-			_internalForceY -= 0.08f * timeMult;
 		}
 	}
 
@@ -178,8 +169,8 @@ namespace Jazz2::Actors::Enemies
 
 		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * 2.0f;
 		MoveInstantly(Vector2f(0.0f, -1.0f), MoveType::Relative);
-		_speed.Y = (_levelHandler->IsReforged() ? -0.8f : -2.8f);
-		_internalForceY = (_levelHandler->IsReforged() ? -0.5f : -0.1f);
+		_speed.Y = (_levelHandler->IsReforged() ? -3.0f : -2.0f);
+		_internalForceY = -0.5f;
 		_isAttacking = true;
 		SetState(ActorState::CanJump, false);
 

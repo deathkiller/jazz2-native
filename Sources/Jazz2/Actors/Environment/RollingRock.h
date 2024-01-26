@@ -6,7 +6,7 @@ namespace Jazz2::Actors::Environment
 {
 	class RollingRock : public Enemies::EnemyBase
 	{
-		DEATH_RTTI_OBJECT(Enemies::EnemyBase);
+		DEATH_RUNTIME_OBJECT(Enemies::EnemyBase);
 
 	public:
 		RollingRock();

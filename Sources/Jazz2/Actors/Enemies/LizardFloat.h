@@ -11,7 +11,7 @@ namespace Jazz2::Actors::Enemies
 {
 	class LizardFloat : public EnemyBase
 	{
-		DEATH_RTTI_OBJECT(EnemyBase);
+		DEATH_RUNTIME_OBJECT(EnemyBase);
 
 	public:
 		LizardFloat();

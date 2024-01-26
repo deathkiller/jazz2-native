@@ -60,7 +60,7 @@ namespace Jazz2::UI
 		static constexpr AnimState PickupCoin = (AnimState)72;
 		static constexpr AnimState PickupFood = (AnimState)73;
 		static constexpr AnimState PickupCarrot = (AnimState)74;
-		static constexpr AnimState BossHealthBar = (AnimState)74;
+		static constexpr AnimState BossHealthBar = (AnimState)75;
 		static constexpr AnimState WeaponWheel = (AnimState)80;
 		static constexpr AnimState WeaponWheelInner = (AnimState)81;
 		static constexpr AnimState WeaponWheelDim = (AnimState)82;

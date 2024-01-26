@@ -6,7 +6,7 @@ namespace Jazz2::Actors
 {
 	class Explosion : public ActorBase
 	{
-		DEATH_RTTI_OBJECT(ActorBase);
+		DEATH_RUNTIME_OBJECT(ActorBase);
 
 	public:
 		enum class Type {

@@ -139,7 +139,7 @@ namespace Jazz2::Actors
 
 	class ActorBase : public std::enable_shared_from_this<ActorBase>
 	{
-		DEATH_RTTI_OBJECT();
+		DEATH_RUNTIME_OBJECT();
 
 		friend class Jazz2::LevelHandler;
 #if defined(WITH_MULTIPLAYER)

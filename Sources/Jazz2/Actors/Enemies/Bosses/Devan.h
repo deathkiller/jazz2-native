@@ -6,7 +6,7 @@ namespace Jazz2::Actors::Bosses
 {
 	class Devan : public BossBase
 	{
-		DEATH_RTTI_OBJECT(BossBase);
+		DEATH_RUNTIME_OBJECT(BossBase);
 
 	public:
 		Devan();

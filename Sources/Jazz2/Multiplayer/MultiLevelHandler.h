@@ -17,7 +17,7 @@ namespace Jazz2::Multiplayer
 {
 	class MultiLevelHandler : public LevelHandler
 	{
-		DEATH_RTTI_OBJECT(LevelHandler);
+		DEATH_RUNTIME_OBJECT(LevelHandler);
 
 		friend class ContentResolver;
 #if defined(WITH_ANGELSCRIPT)

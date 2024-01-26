@@ -53,7 +53,7 @@ namespace Jazz2
 
 	class LevelHandler : public ILevelHandler, public IStateHandler, public IResumable, public Tiles::ITileMapOwner
 	{
-		DEATH_RTTI_OBJECT(ILevelHandler);
+		DEATH_RUNTIME_OBJECT(ILevelHandler);
 
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::LevelScriptLoader;

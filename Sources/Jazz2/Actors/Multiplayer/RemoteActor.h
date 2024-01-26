@@ -8,7 +8,7 @@ namespace Jazz2::Actors::Multiplayer
 {
 	class RemoteActor : public ActorBase
 	{
-		DEATH_RTTI_OBJECT(ActorBase);
+		DEATH_RUNTIME_OBJECT(ActorBase);
 
 	public:
 		RemoteActor();

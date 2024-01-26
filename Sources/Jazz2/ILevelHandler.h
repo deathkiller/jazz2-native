@@ -36,7 +36,7 @@ namespace Jazz2
 
 	class ILevelHandler
 	{
-		DEATH_RTTI_OBJECT();
+		DEATH_RUNTIME_OBJECT();
 
 	public:
 		static constexpr std::int32_t MainPlaneZ = 500;

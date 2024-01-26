@@ -248,7 +248,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 }}}
 
 /** @brief Class annotation to enable optimized @ref runtime_cast() functionality */
-#define DEATH_RTTI_OBJECT(...)																			\
+#define DEATH_RUNTIME_OBJECT(...)																			\
 	_DEATH_WARNING_PUSH																					\
 	_DEATH_NO_OVERRIDE_WARNING																			\
 	friend struct Death::TypeInfo::Implementation::Helpers;												\
