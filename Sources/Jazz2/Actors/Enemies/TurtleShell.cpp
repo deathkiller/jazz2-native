@@ -67,7 +67,7 @@ namespace Jazz2::Actors::Enemies
 		SetAnimation(AnimState::Default);
 
 		_canHurtPlayer = false;
-		_friction = _levelHandler->Gravity * 0.14f;
+		_friction = _levelHandler->Gravity * 0.04f;
 		_elasticity = 0.5f;
 		_health = 8;
 
@@ -81,7 +81,7 @@ namespace Jazz2::Actors::Enemies
 
 	void TurtleShell::OnUpdate(float timeMult)
 	{
-		_speed.X = std::max(std::abs(_speed.X) - _friction, 0.0f) * (_speed.X < 0.0f ? -1.0f : 1.0f);
+		_speed.X = lerpByTime(_speed.X, 0.0f, _friction, timeMult);
 
 		double posYBefore = _pos.Y;
 

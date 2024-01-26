@@ -7,7 +7,7 @@ namespace Jazz2::Actors::Solid
 {
 	class GenericContainer : public SolidObjectBase
 	{
-		DEATH_RTTI_OBJECT(SolidObjectBase);
+		DEATH_RUNTIME_OBJECT(SolidObjectBase);
 
 	public:
 		GenericContainer();

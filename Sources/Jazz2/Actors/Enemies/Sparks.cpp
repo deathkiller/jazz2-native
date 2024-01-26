@@ -41,7 +41,7 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative | MoveType::Force);
+		MoveInstantly(_speed * timeMult, MoveType::Relative | MoveType::Force);
 
 		Vector2f targetPos;
 		auto& players = _levelHandler->GetPlayers();
@@ -52,8 +52,7 @@ namespace Jazz2::Actors::Enemies
 			if (length < 180.0f && targetPos.Y < _levelHandler->WaterLevel()) {
 				if (length > 100.0f) {
 					direction.Normalize();
-					_speed.X = (direction.X * DefaultSpeed + _speed.X) * 0.5f;
-					_speed.Y = (direction.Y * DefaultSpeed + _speed.Y) * 0.5f;
+					_speed = (direction * DefaultSpeed + _speed) * 0.5f;
 				}
 				return;
 			}

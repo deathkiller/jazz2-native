@@ -6,7 +6,7 @@ namespace Jazz2::Actors::Enemies
 {
 	class MadderHatter : public EnemyBase
 	{
-		DEATH_RTTI_OBJECT(EnemyBase);
+		DEATH_RUNTIME_OBJECT(EnemyBase);
 
 	public:
 		MadderHatter();
@@ -24,13 +24,14 @@ namespace Jazz2::Actors::Enemies
 
 		class BulletSpit : public EnemyBase
 		{
-			DEATH_RTTI_OBJECT(EnemyBase);
+			DEATH_RUNTIME_OBJECT(EnemyBase);
 
 		public:
 			bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
 
 		protected:
 			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
+			void OnUpdate(float timeMult) override;
 			void OnUpdateHitbox() override;
 			void OnHitFloor(float timeMult) override;
 			void OnHitWall(float timeMult) override;

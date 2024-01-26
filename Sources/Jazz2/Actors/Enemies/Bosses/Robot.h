@@ -6,7 +6,7 @@ namespace Jazz2::Actors::Bosses
 {
 	class Robot : public Enemies::EnemyBase
 	{
-		DEATH_RTTI_OBJECT(Enemies::EnemyBase);
+		DEATH_RUNTIME_OBJECT(Enemies::EnemyBase);
 
 	public:
 		Robot();

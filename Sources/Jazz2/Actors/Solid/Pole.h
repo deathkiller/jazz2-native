@@ -6,7 +6,7 @@ namespace Jazz2::Actors::Solid
 {
 	class Pole : public ActorBase
 	{
-		DEATH_RTTI_OBJECT(ActorBase);
+		DEATH_RUNTIME_OBJECT(ActorBase);
 
 	public:
 		enum class FallDirection {

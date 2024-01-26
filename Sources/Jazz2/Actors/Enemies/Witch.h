@@ -6,7 +6,7 @@ namespace Jazz2::Actors::Enemies
 {
 	class Witch : public EnemyBase
 	{
-		DEATH_RTTI_OBJECT(EnemyBase);
+		DEATH_RUNTIME_OBJECT(EnemyBase);
 
 	public:
 		Witch();
@@ -25,7 +25,7 @@ namespace Jazz2::Actors::Enemies
 
 		class MagicBullet : public ActorBase
 		{
-			DEATH_RTTI_OBJECT(ActorBase);
+			DEATH_RUNTIME_OBJECT(ActorBase);
 
 		public:
 			MagicBullet(Witch* owner) : _owner(owner), _time(380.0f) { }

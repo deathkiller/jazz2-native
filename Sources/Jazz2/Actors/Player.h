@@ -63,7 +63,7 @@ namespace Jazz2::Actors
 
 	class Player : public ActorBase
 	{
-		DEATH_RTTI_OBJECT(ActorBase);
+		DEATH_RUNTIME_OBJECT(ActorBase);
 
 		friend class UI::HUD;
 #if defined(WITH_ANGELSCRIPT)

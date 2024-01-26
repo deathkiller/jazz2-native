@@ -6,7 +6,7 @@ namespace Jazz2::Actors::Weapons
 {
 	class FreezerShot : public ShotBase
 	{
-		DEATH_RTTI_OBJECT(ShotBase);
+		DEATH_RUNTIME_OBJECT(ShotBase);
 
 	public:
 		FreezerShot();

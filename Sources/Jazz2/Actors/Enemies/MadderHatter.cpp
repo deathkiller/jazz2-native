@@ -125,7 +125,7 @@ namespace Jazz2::Actors::Enemies
 
 		SetFacingLeft(details.Params[0] != 0);
 		_speed.X = (IsFacingLeft() ? -6.0f : 6.0f);
-		_externalForce.Y = 0.6f;
+		_externalForce.Y = -0.4f;
 
 		_health = INT32_MAX;
 
@@ -133,6 +133,18 @@ namespace Jazz2::Actors::Enemies
 		SetAnimation((AnimState)1073741826);
 
 		async_return true;
+	}
+
+	void MadderHatter::BulletSpit::OnUpdate(float timeMult)
+	{
+		EnemyBase::OnUpdate(timeMult);
+
+		float angle = atan2f(_speed.Y, _speed.X);
+		if (IsFacingLeft()) {
+			angle -= fRadAngle180;
+		}
+
+		_renderer.setRotation(angle);
 	}
 
 	void MadderHatter::BulletSpit::OnUpdateHitbox()

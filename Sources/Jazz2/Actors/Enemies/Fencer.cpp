@@ -8,8 +8,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Fencer::Fencer()
-		:
-		_stateTime(0.0f)
+		: _stateTime(0.0f)
 	{
 	}
 
@@ -34,36 +33,36 @@ namespace Jazz2::Actors::Enemies
 
 	void Fencer::OnUpdate(float timeMult)
 	{
-		EnemyBase::OnUpdate(timeMult);
+		if (_frozenTimeLeft <= 0.0f) {
+			Vector2f targetPos;
+			if (FindNearestPlayer(targetPos)) {
+				SetFacingLeft(_pos.X > targetPos.X);
 
-		if (_frozenTimeLeft > 0.0f) {
-			return;
-		}
+				if (_stateTime <= 0.0f) {
+					if (Random().NextFloat() < 0.3f) {
+						_speed.X = (IsFacingLeft() ? -1 : 1) * 1.8f;
+					} else {
+						_speed.X = (IsFacingLeft() ? -1 : 1) * -1.2f;
+					}
 
-		Vector2f targetPos;
-		if (FindNearestPlayer(targetPos)) {
-			SetFacingLeft(_pos.X > targetPos.X);
+					MoveInstantly(Vector2f(0.0f, -4.0f), MoveType::Relative);
+					_speed.Y = (_levelHandler->IsReforged() ? -3.0f : -2.0f);
+					_internalForceY = -0.5f;
 
-			if (_stateTime <= 0.0f) {
-				if (Random().NextFloat() < 0.3f) {
-					_speed.X = (IsFacingLeft() ? -1 : 1) * 1.8f;
+					PlaySfx("Attack"_s);
+
+					SetTransition(AnimState::TransitionAttack, false, [this]() {
+						_speed.X = 0.0f;
+					});
+
+					_stateTime = Random().NextFloat(160.0f, 300.0f);
 				} else {
-					_speed.X = (IsFacingLeft() ? -1 : 1) * -1.2f;
+					_stateTime -= timeMult;
 				}
-				_speed.Y = -4.5f;
-
-				PlaySfx("Attack"_s);
-
-				SetTransition(AnimState::TransitionAttack, false, [this]() {
-					_speed.X = 0.0f;
-					_speed.Y = 0.0f;
-				});
-
-				_stateTime = Random().NextFloat(180.0f, 300.0f);
-			} else {
-				_stateTime -= timeMult;
 			}
 		}
+
+		EnemyBase::OnUpdate(timeMult);
 	}
 
 	bool Fencer::OnPerish(ActorBase* collider)

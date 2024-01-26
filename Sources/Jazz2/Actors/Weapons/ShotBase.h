@@ -14,7 +14,7 @@ namespace Jazz2::Actors::Weapons
 {
 	class ShotBase : public ActorBase
 	{
-		DEATH_RTTI_OBJECT(ActorBase);
+		DEATH_RUNTIME_OBJECT(ActorBase);
 
 	public:
 		ShotBase();

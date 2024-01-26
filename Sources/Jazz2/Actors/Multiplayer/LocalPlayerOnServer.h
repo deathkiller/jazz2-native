@@ -8,7 +8,7 @@ namespace Jazz2::Actors::Multiplayer
 {
 	class LocalPlayerOnServer : public PlayerOnServer
 	{
-		DEATH_RTTI_OBJECT(PlayerOnServer);
+		DEATH_RUNTIME_OBJECT(PlayerOnServer);
 
 	public:
 		LocalPlayerOnServer();

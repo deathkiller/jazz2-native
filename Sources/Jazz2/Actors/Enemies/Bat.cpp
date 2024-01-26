@@ -91,8 +91,8 @@ namespace Jazz2::Actors::Enemies
 				if (length < 2.0f) {
 					_attacking = false;
 					MoveInstantly(_originPos, MoveType::Absolute | MoveType::Force);
-					_speed.X = 0;
-					_speed.Y = 0;
+					_speed.X = 0.0f;
+					_speed.Y = 0.0f;
 					_noiseCooldown = 210.0f;
 					SetAnimation(AnimState::Idle);
 					SetTransition((AnimState)1073741826, false);

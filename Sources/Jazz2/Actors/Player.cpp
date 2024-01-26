@@ -56,6 +56,7 @@ namespace Jazz2::Actors
 		_isFreefall(false), _inWater(false), _isLifting(false), _isSpring(false),
 		_inShallowWater(-1),
 		_activeModifier(Modifier::None),
+		_externalForceCooldown(0.0f),
 		_springCooldown(0.0f),
 		_inIdleTransition(false), _inLedgeTransition(false),
 		_carryingObject(nullptr),
@@ -1614,7 +1615,7 @@ namespace Jazz2::Actors
 			SetPlayerTransition(AnimState::Dash | AnimState::Jump, true, false, SpecialMoveType::None);
 			_controllableTimeout = 2.0f;
 		} else if (std::abs(force.Y) > 0.0f) {
-			MoveInstantly(Vector2f((_pos.X + pos.X) * 0.5f, _pos.Y), MoveType::Absolute);
+			MoveInstantly(Vector2f(lerp(_pos.X, pos.X, 0.3f), _pos.Y), MoveType::Absolute);
 
 			if (_copterFramesLeft > 0.0f) {
 				_copterFramesLeft = 0.0f;
@@ -1775,65 +1776,67 @@ namespace Jazz2::Actors
 
 		SetAnimation(newState);
 
-		switch (oldState) {
-			case AnimState::Walk:
-				if (newState == AnimState::Idle) {
-					_inIdleTransition = true;
-					SetTransition(AnimState::TransitionRunToIdle, true, [this]() {
-						_inIdleTransition = false;
-					});
-				} else if (newState == AnimState::Dash) {
-					SetTransition(AnimState::TransitionRunToDash, true);
-				}
-				break;
-			case AnimState::Dash:
-				if (newState == AnimState::Idle) {
-					_inIdleTransition = true;
-					SetTransition(AnimState::TransitionDashToIdle, true, [this]() {
-						if (_inIdleTransition) {
-							SetTransition(AnimState::TransitionRunToIdle, true, [this]() {
-								_inIdleTransition = false;
-							});
-						}
-					});
-				}
-				break;
-			case AnimState::Fall:
-			case AnimState::Freefall:
-				if (newState == AnimState::Idle) {
-					SetTransition(AnimState::TransitionFallToIdle, true);
-				}
-				break;
-			case AnimState::Idle:
-				if (newState == AnimState::Jump) {
-					SetTransition(AnimState::TransitionIdleToJump, true);
-				} else if (newState != AnimState::Idle) {
-					_inLedgeTransition = false;
-					if (_currentTransition != nullptr && _currentTransition->State == AnimState::TransitionLedge) {
-						CancelTransition();
+		if (!_isAttachedToPole) {
+			switch (oldState) {
+				case AnimState::Walk:
+					if (newState == AnimState::Idle) {
+						_inIdleTransition = true;
+						SetTransition(AnimState::TransitionRunToIdle, true, [this]() {
+							_inIdleTransition = false;
+						});
+					} else if (newState == AnimState::Dash) {
+						SetTransition(AnimState::TransitionRunToDash, true);
 					}
-				} else if (!_inLedgeTransition && _carryingObject == nullptr && std::abs(_speed.X) < 1.0f && std::abs(_speed.Y) < 1.0f) {
-					AABBf aabbL = AABBf(AABBInner.L + 2, AABBInner.B - 10, AABBInner.L + 4, AABBInner.B + 28);
-					AABBf aabbR = AABBf(AABBInner.R - 4, AABBInner.B - 10, AABBInner.R - 2, AABBInner.B + 28);
-					TileCollisionParams params = { TileDestructType::None, true };
-					if (IsFacingLeft()
-						? (_levelHandler->IsPositionEmpty(this, aabbL, params) && !_levelHandler->IsPositionEmpty(this, aabbR, params))
-						: (!_levelHandler->IsPositionEmpty(this, aabbL, params) && _levelHandler->IsPositionEmpty(this, aabbR, params))) {
-
-						_inLedgeTransition = true;
-						if (_playerType == PlayerType::Spaz) {
-							// Spaz's and Lori's animation should be continual, so reset it in callback
-							SetTransition(AnimState::TransitionLedge, true, [this]() {
-								_inLedgeTransition = false;
-							});
-						} else {
-							SetTransition(AnimState::TransitionLedge, true);
-						}
-
-						PlaySfx("Ledge"_s);
+					break;
+				case AnimState::Dash:
+					if (newState == AnimState::Idle) {
+						_inIdleTransition = true;
+						SetTransition(AnimState::TransitionDashToIdle, true, [this]() {
+							if (_inIdleTransition) {
+								SetTransition(AnimState::TransitionRunToIdle, true, [this]() {
+									_inIdleTransition = false;
+								});
+							}
+						});
 					}
-				}
-				break;
+					break;
+				case AnimState::Fall:
+				case AnimState::Freefall:
+					if (newState == AnimState::Idle) {
+						SetTransition(AnimState::TransitionFallToIdle, true);
+					}
+					break;
+				case AnimState::Idle:
+					if (newState == AnimState::Jump) {
+						SetTransition(AnimState::TransitionIdleToJump, true);
+					} else if (newState != AnimState::Idle) {
+						_inLedgeTransition = false;
+						if (_currentTransition != nullptr && _currentTransition->State == AnimState::TransitionLedge) {
+							CancelTransition();
+						}
+					} else if (!_inLedgeTransition && _carryingObject == nullptr && std::abs(_speed.X) < 1.0f && std::abs(_speed.Y) < 1.0f) {
+						AABBf aabbL = AABBf(AABBInner.L + 2, AABBInner.B - 10, AABBInner.L + 4, AABBInner.B + 28);
+						AABBf aabbR = AABBf(AABBInner.R - 4, AABBInner.B - 10, AABBInner.R - 2, AABBInner.B + 28);
+						TileCollisionParams params = { TileDestructType::None, true };
+						if (IsFacingLeft()
+							? (_levelHandler->IsPositionEmpty(this, aabbL, params) && !_levelHandler->IsPositionEmpty(this, aabbR, params))
+							: (!_levelHandler->IsPositionEmpty(this, aabbL, params) && _levelHandler->IsPositionEmpty(this, aabbR, params))) {
+
+							_inLedgeTransition = true;
+							if (_playerType == PlayerType::Spaz) {
+								// Spaz's and Lori's animation should be continual, so reset it in callback
+								SetTransition(AnimState::TransitionLedge, true, [this]() {
+									_inLedgeTransition = false;
+								});
+							} else {
+								SetTransition(AnimState::TransitionLedge, true);
+							}
+
+							PlaySfx("Ledge"_s);
+						}
+					}
+					break;
+			}
 		}
 	}
 

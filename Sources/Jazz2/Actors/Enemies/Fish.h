@@ -6,7 +6,7 @@ namespace Jazz2::Actors::Enemies
 {
 	class Fish : public EnemyBase
 	{
-		DEATH_RTTI_OBJECT(EnemyBase);
+		DEATH_RUNTIME_OBJECT(EnemyBase);
 
 	public:
 		Fish();
