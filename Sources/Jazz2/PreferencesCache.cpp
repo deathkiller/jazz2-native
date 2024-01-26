@@ -293,6 +293,7 @@ namespace Jazz2
 			}
 		}
 
+#	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 		// Override some settings by command-line arguments
 		for (int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
@@ -326,13 +327,16 @@ namespace Jazz2
 				ActiveRescaleMode = RescaleMode::None;
 			} else if (arg == "/mute"_s) {
 				MasterVolume = 0.0f;
+			} else if (arg == "/reset-controls"_s) {
+				UI::ControlScheme::Reset();
 			}
-#if defined(WITH_MULTIPLAYER)
+#	if defined(WITH_MULTIPLAYER)
 			else if (InitialState.empty() && (arg == "/server"_s || arg.hasPrefix("/connect:"_s))) {
 				InitialState = arg;
 			}
-#endif
+#	endif
 		}
+#endif
 	}
 
 	void PreferencesCache::Save()
