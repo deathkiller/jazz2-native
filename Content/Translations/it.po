@@ -1436,7 +1436,7 @@ msgstr "Continua"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:77
 msgid "Play Custom Game"
-msgstr ""
+msgstr "Partita personalizzata"
 
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Menu item in Play Custom Game section
@@ -1554,7 +1554,7 @@ msgstr "Personaggio"
 #. TRANSLATORS: Menu item to select game mode
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:33
 msgid "Game Mode"
-msgstr ""
+msgstr "Modalità di gioco"
 
 #. TRANSLATORS: Menu item to create server with selected settings
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:35
@@ -1569,7 +1569,7 @@ msgstr "Nessun livello personalizzato trovato!"
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:133
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:21
 msgid "Play Story in Cooperation"
-msgstr ""
+msgstr "Gioca alla Storia in modalità cooperativa"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:145
 msgid "No episode found!"
@@ -1595,25 +1595,26 @@ msgstr "Episodio bloccato!"
 #. TRANSLATORS: Menu item in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:16
 msgid "Legacy"
-msgstr ""
+msgstr "Compatibilità"
 
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:16
 msgid "I want to play the game the way it used to be."
-msgstr ""
+msgstr "Voglio giocare al gioco come era una volta."
 
 #. TRANSLATORS: Menu item in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:18
 msgid "Reforged"
-msgstr ""
+msgstr "Riveduto"
 
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:18
 msgid "I want to play the game with something new."
-msgstr ""
+msgstr "Voglio giocare ma con qualcosa di nuovo."
 
 #. TRANSLATORS: Header in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:53
 msgid "Welcome to \f[c:0x9e7056]Jazz Jackrabbit 2\f[c] reimplementation!"
 msgstr ""
+"Benvenuti nella reimplementazione di \f[c:0x9e7056]Jazz Jackrabbit 2\f[c]!"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:57
@@ -1638,21 +1639,25 @@ msgid ""
 "\f[c:0x707070]%s\f[c] > \f[c:0x707070]%s\f[c].\n"
 "For more information, visit %s and  Discord!"
 msgstr ""
+"Puoi scegliere il tuo stile di gioco preferito.\n"
+"Potrai cambiare questa opzione in qualsiasi momento in \f[c:0x707070]%s\f[c] "
+"> \f[c:0x707070]%s\f[c] > \f[c:0x707070]%s\f[c].\n"
+"Per altre informazioni, visita %s e  Discord!"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:16
 msgid "Reforged Gameplay"
-msgstr ""
+msgstr "Giocabilità rivista"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:18
 msgid "Reforged HUD"
-msgstr ""
+msgstr "HUD rivisto"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:20
 msgid "Reforged Main Menu"
-msgstr ""
+msgstr "Menu principale rivisto"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:22
@@ -1724,7 +1729,7 @@ msgstr "Antialiasing"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:33
 msgid "Water Quality"
-msgstr ""
+msgstr "Qualità dell'acqua"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:35
@@ -1762,7 +1767,7 @@ msgstr "Alta"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:114
 msgid "Enabled \f[c:0xd0705d](Experimental)\f[c]"
-msgstr ""
+msgstr "Abilitata \f[c:0xd0705d](Sperimentale)\f[c]"
 
 #. TRANSLATORS: Header in Import Episodes section
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:70
@@ -1793,36 +1798,36 @@ msgstr "Nessun gamepad rilevato!"
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:18
 msgid "Battle"
-msgstr ""
+msgstr "Battaglia"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:20
 msgid "Team Battle"
-msgstr ""
+msgstr "Battaglia di gruppo"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:22
 msgid "Capture The Flag"
-msgstr ""
+msgstr "Acchiappa la bandiera"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:24
 msgid "Race"
-msgstr ""
+msgstr "Corsa"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:26
 msgid "Treasure Hunt"
-msgstr ""
+msgstr "Caccia al tesoro"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
 msgid "Cooperation"
-msgstr ""
+msgstr "Cooperazione"
 
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:42
 msgid "Select Game Mode"
-msgstr ""
+msgstr "Seleziona modalità di gioco"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:21
@@ -1843,7 +1848,7 @@ msgstr "Salva e esci"
 #. TRANSLATORS: Menu item in Play Custom Game section
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:23
 msgid "Create Custom Server"
-msgstr ""
+msgstr "Crea server personalizzato"
 
 #. TRANSLATORS: Menu item in Play Custom Game section
 #: Sources/Jazz2/UI/Menu/PlayCustomSection.cpp:25
@@ -1908,21 +1913,21 @@ msgstr "Indietro"
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:37
 #, c-format
 msgid "Weapon %i"
-msgstr ""
+msgstr "Arma %i"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:159
 msgid "Press any key or button to assign"
-msgstr ""
+msgstr "Premi un tasto o pulsante per assegnare"
 
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:165
 msgid "or"
-msgstr ""
+msgstr "o"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:171
 msgid "to remove assignment"
-msgstr ""
+msgstr "per rimuovere l'assegnazione"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:22
@@ -1955,11 +1960,11 @@ msgstr "Seleziona la modalità di ridimensionamento"
 
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:106
 msgid "Connect to Server"
-msgstr ""
+msgstr "Collegati al server"
 
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:116
 msgid "No servers found, but still searchin'!"
-msgstr ""
+msgstr "Nessun server trovato, ma sto ancora cercando!"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:15
