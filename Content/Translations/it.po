@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2024-01-24 13:44+0100\n"
+"POT-Creation-Date: 2024-01-27 09:18+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Hexaae <hexaae@gmail.com>\n"
 "Language-Team: Traduzione Italiana: Hexaae\n"
