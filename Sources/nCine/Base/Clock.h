@@ -8,9 +8,8 @@ namespace nCine
 	class Clock
 	{
 	public:
-		/// Returns elapsed time in ticks since base time
 		inline uint64_t now() const {
-			return counter() - baseCount_;
+			return counter();
 		}
 
 		/// Returns current value of the counter
@@ -19,10 +18,6 @@ namespace nCine
 		/// Returns the counter frequency in counts per second
 		inline uint32_t frequency() const {
 			return frequency_;
-		}
-		/// Retruns the counter value at initialization time
-		inline uint64_t baseCount() const {
-			return baseCount_;
 		}
 
 	private:
@@ -34,8 +29,6 @@ namespace nCine
 
 		/// Counter frequency in counts per second
 		uint32_t frequency_;
-		/// Counter value at initialization time
-		uint64_t baseCount_;
 
 		/// Private constructor
 		Clock();
