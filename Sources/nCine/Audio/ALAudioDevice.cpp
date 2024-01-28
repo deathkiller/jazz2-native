@@ -230,6 +230,24 @@ namespace nCine
 		return nativeFreq_;
 	}
 
+	void ALAudioDevice::suspendDevice()
+	{
+#if defined(ALC_SOFT_pause_device)
+		if (device_ != nullptr) {
+			alcDevicePauseSOFT(device_);
+		}
+#endif
+	}
+
+	void ALAudioDevice::resumeDevice()
+	{
+#if defined(ALC_SOFT_pause_device)
+		if (device_ != nullptr) {
+			alcDeviceResumeSOFT(device_);
+		}
+#endif
+	}
+
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 	void ALAudioDevice::recreateAudioDevice()
 	{

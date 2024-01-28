@@ -63,6 +63,9 @@ namespace nCine
 		virtual void updateListener(const Vector3f& position, const Vector3f& velocity) = 0;
 
 		virtual int nativeFrequency() = 0;
+
+		virtual void suspendDevice() = 0;
+		virtual void resumeDevice() = 0;
 	};
 
 	inline IAudioDevice::~IAudioDevice() { }
@@ -104,5 +107,8 @@ namespace nCine
 		const Vector3f& getListenerPosition() const override { return Vector3f::Zero; }
 		void updateListener(const Vector3f& position, const Vector3f& velocity) override { }
 		int nativeFrequency() override { return 0; }
+
+		void suspendDevice() override { }
+		void resumeDevice() override { }
 	};
 }

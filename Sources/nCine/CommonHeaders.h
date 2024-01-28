@@ -29,7 +29,9 @@
 #endif
 
 #if defined(NCINE_INCLUDE_OPENAL)
-#	define AL_ALEXT_PROTOTYPES
+#	if !defined(AL_ALEXT_PROTOTYPES)
+#		define AL_ALEXT_PROTOTYPES
+#	endif
 #	if defined(DEATH_TARGET_APPLE)
 #		include <OpenAL/al.h>
 #	elif defined(DEATH_TARGET_EMSCRIPTEN)
@@ -52,6 +54,9 @@
 #endif
 
 #if defined(NCINE_INCLUDE_OPENALC)
+#	if !defined(AL_ALEXT_PROTOTYPES)
+#		define AL_ALEXT_PROTOTYPES
+#	endif
 #	if defined(DEATH_TARGET_APPLE)
 #		include <OpenAL/alc.h>
 #		include <OpenAL/al.h>

@@ -225,10 +225,14 @@ namespace Jazz2::UI
 			// Touch Controls
 			if (_touchButtonsTimer > 0.0f) {
 				for (auto& button : _touchButtons) {
-					if (button.Graphics == nullptr || (PreferencesCache::UseNativeBackButton && button.Action == PlayerActions::Menu)) {
+					if (button.Graphics == nullptr) {
 						continue;
 					}
-
+#if defined(DEATH_TARGET_ANDROID)
+					if (button.Action == PlayerActions::Menu && PreferencesCache::UseNativeBackButton) {
+						continue;
+					}
+#endif
 					float x = button.Left;
 					float y = button.Top;
 					if ((button.Align & Alignment::Right) == Alignment::Right) {
