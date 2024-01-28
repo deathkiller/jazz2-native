@@ -29,6 +29,12 @@ namespace nCine
 		timeMults_[1] = timeMultLast;
 
 		// Update the FPS average calculation every `avgInterval_` seconds
+		if (frameStart_ < lastAvgUpdate_ || frameStart_ < lastLogUpdate_) {
+			LOGW("Detected time discontinuity, resetting counters");
+			lastAvgUpdate_ = frameStart_;
+			lastLogUpdate_ = frameStart_;
+		}
+
 		const float secsSinceLastAvgUpdate = (frameStart_ - lastAvgUpdate_).seconds();
 		if (averageInterval_ > 0.0f && secsSinceLastAvgUpdate > averageInterval_) {
 			avgFps_ = static_cast<float>(avgNumFrames_) / secsSinceLastAvgUpdate;

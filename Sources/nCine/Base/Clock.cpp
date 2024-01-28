@@ -24,7 +24,7 @@ namespace nCine
 	}
 
 	Clock::Clock()
-		: frequency_(0UL), baseCount_(0ULL)
+		: frequency_(0UL)
 	{
 #if defined(DEATH_TARGET_WINDOWS)
 		LARGE_INTEGER li;
@@ -51,8 +51,6 @@ namespace nCine
 			frequency_ = 1.0e6L;
 		}
 #endif
-
-		baseCount_ = counter();
 	}
 
 	uint64_t Clock::counter() const
