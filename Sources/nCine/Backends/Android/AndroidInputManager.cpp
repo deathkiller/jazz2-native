@@ -70,16 +70,10 @@ namespace nCine
 #if defined(WITH_IMGUI)
 		ImGuiAndroidInput::init(state->window);
 #endif
-#if defined(WITH_NUKLEAR)
-		NuklearAndroidInput::init();
-#endif
 	}
 
 	AndroidInputManager::~AndroidInputManager()
 	{
-#if defined(WITH_NUKLEAR)
-		NuklearAndroidInput::shutdown();
-#endif
 #if defined(WITH_IMGUI)
 		ImGuiAndroidInput::shutdown();
 #endif
@@ -204,9 +198,6 @@ namespace nCine
 
 #if defined(WITH_IMGUI)
 		isEventHandled |= ImGuiAndroidInput::processEvent(event);
-#endif
-#if defined(WITH_NUKLEAR)
-		isEventHandled |= NuklearAndroidInput::processEvent(event);
 #endif
 
 		// Checking for gamepad events first

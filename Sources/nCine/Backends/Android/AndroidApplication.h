@@ -49,8 +49,6 @@ namespace nCine
 		/// Must be called before exiting to shut down the application
 		void shutdown();
 
-		void setFocus(bool hasFocus) override;
-
 		/// Private constructor
 		AndroidApplication()
 			: Application(), isInitialized_(false), state_(nullptr), createAppEventHandler_(nullptr) {}
