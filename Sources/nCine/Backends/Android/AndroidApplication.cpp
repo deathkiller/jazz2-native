@@ -18,13 +18,13 @@ std::unique_ptr<Death::IO::Stream> __logFile;
 #endif
 
 /// Processes the next application command
-void engine_handle_cmd(struct android_app* state, int32_t cmd)
+void androidHandleCommand(struct android_app* state, int32_t cmd)
 {
 	nCine::AndroidApplication::processCommand(state, cmd);
 }
 
 /// Parses the next input event
-int32_t engine_handle_input(struct android_app* state, AInputEvent* event)
+int32_t androidHandleInput(struct android_app* state, AInputEvent* event)
 {
 	return static_cast<int32_t>(nCine::AndroidInputManager::parseEvent(event));
 }
@@ -39,24 +39,20 @@ namespace nCine
 
 	void AndroidApplication::start(struct android_app* state, std::unique_ptr<IAppEventHandler>(*createAppEventHandler)())
 	{
-		ASSERT(state);
-		ASSERT(createAppEventHandler);
-		theAndroidApplication().state_ = state;
-		theAndroidApplication().createAppEventHandler_ = createAppEventHandler;
+		ASSERT(state != nullptr);
+		ASSERT(createAppEventHandler != nullptr);
+		AndroidApplication& app = theAndroidApplication();
+		app.state_ = state;
+		app.createAppEventHandler_ = createAppEventHandler;
 
-		state->onAppCmd = engine_handle_cmd;
-		state->onInputEvent = engine_handle_input;
+		state->onAppCmd = androidHandleCommand;
+		state->onInputEvent = androidHandleInput;
 
-		while (!theApplication().shouldQuit()) {
-			int ident;
-			int events;
+		while (!app.shouldQuit()) {
+			int ident, events;
 			struct android_poll_source* source;
 
-#if WITH_NUKLEAR
-			NuklearAndroidInput::inputBegin();
-#endif
-
-			while ((ident = ALooper_pollAll(!theApplication().isSuspended() ? 0 : -1, nullptr, &events, reinterpret_cast<void**>(&source))) >= 0) {
+			while ((ident = ALooper_pollAll(app.shouldSuspend() ? -1 : 0, nullptr, &events, reinterpret_cast<void**>(&source))) >= 0) {
 				if (source != nullptr) {
 					source->process(state, source);
 				}
@@ -65,22 +61,18 @@ namespace nCine
 				}
 				if (state->destroyRequested) {
 					LOGI("android_app->destroyRequested not equal to zero");
-					theApplication().quit();
+					app.quit();
 				}
 			}
 
-#if WITH_NUKLEAR
-			NuklearAndroidInput::inputEnd();
-#endif
-
-			if (theAndroidApplication().isInitialized() && !theApplication().shouldSuspend()) {
+			if (app.isInitialized() && !app.shouldSuspend()) {
 				AndroidInputManager::updateJoystickConnections();
-				theApplication().step();
+				app.step();
 			}
 		}
 
 		AndroidJniWrap_Activity::finishAndRemoveTask();
-		theAndroidApplication().shutdown();
+		app.shutdown();
 		exit(0);
 	}
 
@@ -293,21 +285,5 @@ namespace nCine
 		AndroidJniHelper::DetachJVM();
 		Application::shutdownCommon();
 		isInitialized_ = false;
-	}
-
-	void AndroidApplication::setFocus(bool hasFocus)
-	{
-		Application::setFocus(hasFocus);
-
-		// Check if a focus event has occurred
-		if (hasFocus_ != hasFocus) {
-			hasFocus_ = hasFocus;
-			// Check if focus has been gained
-			if (hasFocus) {
-				theServiceLocator().audioDevice().unfreezePlayers();
-			} else {
-				theServiceLocator().audioDevice().freezePlayers();
-			}
-		}
 	}
 }
