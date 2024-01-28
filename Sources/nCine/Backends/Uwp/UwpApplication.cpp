@@ -203,7 +203,6 @@ namespace nCine
 	{
 		if (!_isSuspended) {
 			_isSuspended = true;
-			setSuspended(true);
 			suspend();
 		}
 	}
@@ -212,7 +211,6 @@ namespace nCine
 	{
 		if (_isSuspended) {
 			_isSuspended = false;
-			setSuspended(false);
 			resume();
 		}
 	}
@@ -221,7 +219,6 @@ namespace nCine
 	{
 		if (!_isSuspended) {
 			_isSuspended = true;
-			setSuspended(true);
 			suspend();
 		}
 	}
@@ -230,7 +227,6 @@ namespace nCine
 	{
 		if (_isSuspended) {
 			_isSuspended = false;
-			setSuspended(false);
 			resume();
 		}
 	}

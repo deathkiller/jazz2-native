@@ -415,6 +415,7 @@ namespace nCine
 					SdlInputManager::parseEvent(event);
 					break;
 			}
+
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
 			if (shouldSuspend()) {
 				SDL_WaitEvent(&event);

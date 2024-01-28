@@ -88,92 +88,117 @@ namespace nCine
 	{
 		static EglGfxDevice* eglGfxDevice = nullptr;
 		// A flag to avoid resuming if the application has not been suspended first
-		static bool isPaused = false;
+		static bool isSuspended = false;
 
 		switch (cmd) {
-			case APP_CMD_INPUT_CHANGED:
+			case APP_CMD_INPUT_CHANGED: {
 				LOGW("APP_CMD_INPUT_CHANGED event received (not handled)");
 				break;
-
-			case APP_CMD_INIT_WINDOW:
+			}
+			case APP_CMD_INIT_WINDOW: {
 				LOGI("APP_CMD_INIT_WINDOW event received");
 				if (state->window != nullptr) {
-					if (theAndroidApplication().isInitialized() == false) {
-						theAndroidApplication().init();
-						eglGfxDevice = &static_cast<EglGfxDevice&>(theApplication().gfxDevice());
-						theApplication().step();
+					AndroidApplication& app = theAndroidApplication();
+					if (!app.isInitialized()) {
+						app.init();
+						eglGfxDevice = &static_cast<EglGfxDevice&>(app.gfxDevice());
+						app.step();
 					} else {
 						eglGfxDevice->createSurface();
 						eglGfxDevice->bindContext();
 					}
 				}
 				break;
-			case APP_CMD_TERM_WINDOW:
+			}
+			case APP_CMD_TERM_WINDOW: {
 				LOGI("APP_CMD_TERM_WINDOW event received");
 				eglGfxDevice->unbindContext();
 				break;
-			case APP_CMD_WINDOW_RESIZED:
+			}
+			case APP_CMD_WINDOW_RESIZED: {
 				LOGI("APP_CMD_WINDOW_RESIZED event received");
 				eglGfxDevice->querySurfaceSize();
 				break;
-			case APP_CMD_WINDOW_REDRAW_NEEDED:
+			}
+			case APP_CMD_WINDOW_REDRAW_NEEDED: {
 				LOGI("APP_CMD_WINDOW_REDRAW_NEEDED event received");
-				theApplication().step();
+				theAndroidApplication().step();
 				break;
-
-			case APP_CMD_GAINED_FOCUS:
+			}
+			case APP_CMD_GAINED_FOCUS: {
 				LOGI("APP_CMD_GAINED_FOCUS event received");
 				AndroidInputManager::enableAccelerometerSensor();
-				theApplication().setFocus(true);
+				AndroidApplication& app = theAndroidApplication();
+				app.setFocus(true);
+				if (isSuspended && !app.shouldSuspend()) {
+					isSuspended = false;
+					app.resume();
+				}
 				break;
-			case APP_CMD_LOST_FOCUS:
+			}
+			case APP_CMD_LOST_FOCUS: {
 				LOGI("APP_CMD_LOST_FOCUS event received");
 				AndroidInputManager::disableAccelerometerSensor();
-				theApplication().setFocus(false);
-				theApplication().step();
+				AndroidApplication& app = theAndroidApplication();
+				app.setFocus(false);
+				if (!isSuspended && app.shouldSuspend()) {
+					isSuspended = true;
+					app.step();
+					app.suspend();
+				}
 				break;
-
-			case APP_CMD_CONFIG_CHANGED:
+			}
+			case APP_CMD_CONFIG_CHANGED: {
 				LOGW("APP_CMD_CONFIG_CHANGED event received (not handled)");
 				break;
-
-			case APP_CMD_LOW_MEMORY:
+			}
+			case APP_CMD_LOW_MEMORY: {
 				LOGW("APP_CMD_LOW_MEMORY event received (not handled)");
 				break;
-
-			case APP_CMD_START:
-				if (!theAndroidApplication().isInitialized()) {
-					theAndroidApplication().preInit();
-					LOGI("APP_CMD_START event received (first start)");
+			}
+			case APP_CMD_START: {
+				AndroidApplication& app = theAndroidApplication();
+				if (!app.isInitialized()) {
+					app.preInit();
+					LOGI("APP_CMD_START event received (first run)");
 				} else {
 					LOGI("APP_CMD_START event received");
 				}
 				break;
-			case APP_CMD_RESUME:
+			}
+			case APP_CMD_RESUME: {
 				LOGW("APP_CMD_RESUME event received");
-				if (isPaused) {
-					theAndroidApplication().resume();
-					isPaused = false;
+				AndroidApplication& app = theAndroidApplication();
+				app.isSuspended_ = false;
+				if (isSuspended && !app.shouldSuspend()) {
+					isSuspended = false;
+					app.resume();
 				}
 				break;
-			case APP_CMD_SAVE_STATE:
+			}
+			case APP_CMD_SAVE_STATE: {
 				LOGW("APP_CMD_SAVE_STATE event received (not handled)");
 				break;
-			case APP_CMD_PAUSE:
+			}
+			case APP_CMD_PAUSE: {
 				LOGW("APP_CMD_PAUSE event received");
-				if (!isPaused) {
-					theAndroidApplication().suspend();
-					isPaused = true;
+				AndroidApplication& app = theAndroidApplication();
+				app.isSuspended_ = true;
+				if (!isSuspended && app.shouldSuspend()) {
+					isSuspended = true;
+					app.suspend();
 				}
 				break;
-			case APP_CMD_STOP:
+			}
+			case APP_CMD_STOP: {
 				LOGW("APP_CMD_STOP event received (not handled)");
 				break;
-
-			case APP_CMD_DESTROY:
+			}
+			case APP_CMD_DESTROY: {
 				LOGI("APP_CMD_DESTROY event received");
-				theApplication().quit();
+				theAndroidApplication().quit();
 				break;
+			}
 		}
 	}
 

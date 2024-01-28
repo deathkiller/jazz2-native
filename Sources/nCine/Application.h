@@ -133,15 +133,7 @@ namespace nCine
 		/// Resizes the screen viewport, if exists
 		void resizeScreenViewport(int width, int height);
 
-		/// Returns the value of the suspension flag
-		/*! If `true` the application is suspended, it will neither update nor receive events */
-		inline bool isSuspended() const {
-			return isSuspended_;
-		}
-		/// Sets the suspension flag value
-		inline void setSuspended(bool suspended) {
-			isSuspended_ = suspended;
-		}
+		bool shouldSuspend();
 
 		/// Returns the value of the auto-suspension flag
 		/*! If `true` the application will be suspended when it loses focus */
@@ -215,8 +207,6 @@ namespace nCine
 		void suspend();
 		/// Called when the application resumes execution
 		void resume();
-
-		bool shouldSuspend();
 
 		/// Sets the focus flag
 		virtual void setFocus(bool hasFocus);
