@@ -216,9 +216,13 @@ void GameEventHandler::OnInit()
 		theApplication().inputManager().setCursor(IInputManager::Cursor::Hidden);
 	}
 
-#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT)
-	// Try to load gamepad mappings from `Content` directory
+#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
+	// Try to load gamepad mappings from `Content` directory (or from parent directory of `Source` on Android)
+#	if defined(DEATH_TARGET_ANDROID)
+	String mappingsPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "gamecontrollerdb.txt"_s);
+#	else
 	String mappingsPath = fs::CombinePath(resolver.GetContentPath(), "gamecontrollerdb.txt"_s);
+#	endif
 	if (fs::IsReadableFile(mappingsPath)) {
 		theApplication().inputManager().addJoyMappingsFromFile(mappingsPath);
 	}
@@ -402,7 +406,9 @@ void GameEventHandler::OnResizeWindow(int width, int height)
 		_currentHandler->OnInitializeViewport(width, height);
 	}
 
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 	PreferencesCache::EnableFullscreen = theApplication().gfxDevice().isFullscreen();
+#endif
 
 	LOGI("Rendering resolution: %ix%i", width, height);
 }

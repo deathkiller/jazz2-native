@@ -161,8 +161,10 @@ namespace nCine
 				break;
 			case APP_CMD_PAUSE:
 				LOGW("APP_CMD_PAUSE event received");
-				theAndroidApplication().suspend();
-				isPaused = true;
+				if (!isPaused) {
+					theAndroidApplication().suspend();
+					isPaused = true;
+				}
 				break;
 			case APP_CMD_STOP:
 				LOGW("APP_CMD_STOP event received (not handled)");

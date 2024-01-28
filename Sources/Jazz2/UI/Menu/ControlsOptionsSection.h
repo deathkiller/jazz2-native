@@ -9,7 +9,7 @@ namespace Jazz2::UI::Menu
 		TouchControls,
 		InputDiagnostics,
 #if defined(DEATH_TARGET_ANDROID)
-		UseNativeBackButton,
+		UseNativeBackButton
 #endif
 	};
 

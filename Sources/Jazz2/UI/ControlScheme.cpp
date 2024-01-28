@@ -140,11 +140,12 @@ namespace Jazz2::UI
 		normalizedLength = std::clamp(normalizedLength, 0.0f, 1.0f);
 		result.Movement.Y = std::copysign(normalizedLength, result.Movement.Y);
 
+#if defined(DEATH_TARGET_ANDROID)
 		// Allow native Android back button as menu key
 		if (PreferencesCache::UseNativeBackButton && pressedKeys[(uint32_t)KeySym::BACK]) {
 			result.PressedActions |= (1 << (int32_t)PlayerActions::Menu);
 		}
-
+#endif
 		return result;
 	}
 
@@ -214,10 +215,12 @@ namespace Jazz2::UI
 		if (pressedKeys[(uint32_t)KeySym::RETURN]) {
 			pressedActions |= (1 << (int32_t)PlayerActions::Fire);
 		}
+#if defined(DEATH_TARGET_ANDROID)
 		// Allow native Android back button as menu key
 		if (PreferencesCache::UseNativeBackButton && pressedKeys[(uint32_t)KeySym::BACK]) {
 			pressedActions |= (1 << (int32_t)PlayerActions::Menu);
 		}
+#endif
 		// Use ChangeWeapon action as delete key
 		if (pressedKeys[(uint32_t)KeySym::Delete]) {
 			pressedActions |= (1 << (int32_t)PlayerActions::ChangeWeapon);

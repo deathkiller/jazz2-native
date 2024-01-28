@@ -749,6 +749,11 @@ namespace nCine
 		if (appEventHandler_ != nullptr) {
 			appEventHandler_->OnSuspend();
 		}
+#if defined(WITH_AUDIO)
+		IAudioDevice& audioDevice = theServiceLocator().audioDevice();
+		audioDevice.suspendDevice();
+#endif
+
 		LOGI("IAppEventHandler::OnSuspend() invoked");
 	}
 
@@ -757,6 +762,11 @@ namespace nCine
 		if (appEventHandler_ != nullptr) {
 			appEventHandler_->OnResume();
 		}
+#if defined(WITH_AUDIO)
+		IAudioDevice& audioDevice = theServiceLocator().audioDevice();
+		audioDevice.resumeDevice();
+#endif
+
 		const TimeStamp suspensionDuration = frameTimer_->resume();
 		LOGD("Suspended for %.3f seconds", suspensionDuration.seconds());
 #if defined(NCINE_PROFILING)
