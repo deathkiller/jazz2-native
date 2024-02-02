@@ -11,8 +11,8 @@
 #		include <mach/mach_time.h>
 #	endif
 #else
-#	include <time.h> // for clock_gettime()
-#	include <sys/time.h> // for gettimeofday()
+#	include <time.h>		// for clock_gettime()
+#	include <sys/time.h>	// for gettimeofday()
 #endif
 
 namespace nCine

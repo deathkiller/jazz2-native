@@ -89,11 +89,7 @@ namespace nCine
 
 	uint32_t RandomGenerator::Fast(uint32_t min, uint32_t max)
 	{
-		if (min == max) {
-			return min;
-		} else {
-			return min + random(state_, increment_) % (max - min);
-		}
+		return (min == max ? min : min + random(state_, increment_) % (max - min));
 	}
 
 	float RandomGenerator::FastFloat()

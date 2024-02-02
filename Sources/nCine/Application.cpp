@@ -216,7 +216,10 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 	logEntry[length++] = '\n';
 	logEntry[length] = '\0';
 
-	::OutputDebugString(Death::Utf8::ToUtf16(logEntry));
+	wchar_t logEntryW[MaxEntryLength];
+	if (Death::Utf8::ToUtf16(logEntryW, logEntry, length) > 0) {
+		::OutputDebugString(logEntryW);
+	}
 #else
 	static const char Reset[] = "\033[0m";
 	static const char Bold[] = "\033[1m";
@@ -362,8 +365,9 @@ void DEATH_TRACE(TraceLevel level, const char* fmt, ...)
 		logEntry[length] = '\0';
 
 		wchar_t logEntryW[MaxEntryLength];
-		Death::Utf8::ToUtf16(logEntryW, logEntry, length);
-		::OutputDebugString(logEntryW);
+		if (Death::Utf8::ToUtf16(logEntryW, logEntry, length) > 0) {
+			::OutputDebugString(logEntryW);
+		}
 #		endif
 	}
 #	endif
