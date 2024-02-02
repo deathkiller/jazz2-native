@@ -18,7 +18,6 @@ set(SOURCES
 list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/AppConfiguration.cpp
 	${NCINE_SOURCE_DIR}/nCine/Application.cpp
-	${NCINE_SOURCE_DIR}/nCine/ArrayIndexer.cpp
 	${NCINE_SOURCE_DIR}/nCine/I18n.cpp
 	${NCINE_SOURCE_DIR}/nCine/ServiceLocator.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/Algorithms.cpp

@@ -40,12 +40,10 @@ set(HEADERS
 list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/AppConfiguration.h
 	${NCINE_SOURCE_DIR}/nCine/Application.h
-	${NCINE_SOURCE_DIR}/nCine/ArrayIndexer.h
 	${NCINE_SOURCE_DIR}/nCine/CommonConstants.h
 	${NCINE_SOURCE_DIR}/nCine/CommonHeaders.h
 	${NCINE_SOURCE_DIR}/nCine/I18n.h
 	${NCINE_SOURCE_DIR}/nCine/IAppEventHandler.h
-	${NCINE_SOURCE_DIR}/nCine/IIndexer.h
 	${NCINE_SOURCE_DIR}/nCine/ServiceLocator.h
 	${NCINE_SOURCE_DIR}/nCine/Audio/IAudioDevice.h
 	${NCINE_SOURCE_DIR}/nCine/Audio/IAudioLoader.h
