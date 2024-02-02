@@ -10,20 +10,8 @@ namespace nCine
 	}
 
 	ServiceLocator::ServiceLocator()
-		: indexerService_(&nullIndexer_), audioDevice_(&nullAudioDevice_), threadPool_(&nullThreadPool_), gfxCapabilities_(&nullGfxCapabilities_)
+		: audioDevice_(&nullAudioDevice_), threadPool_(&nullThreadPool_), gfxCapabilities_(&nullGfxCapabilities_)
 	{
-	}
-
-	void ServiceLocator::registerIndexer(std::unique_ptr<IIndexer> service)
-	{
-		registeredIndexer_ = std::move(service);
-		indexerService_ = registeredIndexer_.get();
-	}
-
-	void ServiceLocator::unregisterIndexer()
-	{
-		registeredIndexer_.reset(nullptr);
-		indexerService_ = &nullIndexer_;
 	}
 
 	void ServiceLocator::registerAudioDevice(std::unique_ptr<IAudioDevice> service)
@@ -65,9 +53,6 @@ namespace nCine
 	void ServiceLocator::unregisterAll()
 	{
 		LOGI("Unregistering all services");
-
-		registeredIndexer_.reset(nullptr);
-		indexerService_ = &nullIndexer_;
 
 		registeredAudioDevice_.reset(nullptr);
 		audioDevice_ = &nullAudioDevice_;

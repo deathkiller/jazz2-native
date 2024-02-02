@@ -427,7 +427,6 @@
     <ClInclude Include="Jazz2\WeatherType.h" />
     <ClInclude Include="nCine\AppConfiguration.h" />
     <ClInclude Include="nCine\Application.h" />
-    <ClInclude Include="nCine\ArrayIndexer.h" />
     <ClInclude Include="nCine\Audio\ALAudioDevice.h" />
     <ClInclude Include="nCine\Audio\AudioBuffer.h" />
     <ClInclude Include="nCine\Audio\AudioBufferPlayer.h" />
@@ -547,7 +546,6 @@
     <ClInclude Include="nCine\Graphics\Viewport.h" />
     <ClInclude Include="nCine\I18n.h" />
     <ClInclude Include="nCine\IAppEventHandler.h" />
-    <ClInclude Include="nCine\IIndexer.h" />
     <ClInclude Include="nCine\Backends\GlfwInputManager.h" />
     <ClInclude Include="nCine\Input\IInputEventHandler.h" />
     <ClInclude Include="nCine\Input\IInputManager.h" />
@@ -795,7 +793,6 @@
     <ClCompile Include="Jazz2\UI\UpscaleRenderPass.cpp" />
     <ClCompile Include="nCine\AppConfiguration.cpp" />
     <ClCompile Include="nCine\Application.cpp" />
-    <ClCompile Include="nCine\ArrayIndexer.cpp" />
     <ClCompile Include="nCine\Audio\ALAudioDevice.cpp" />
     <ClCompile Include="nCine\Audio\AudioBuffer.cpp" />
     <ClCompile Include="nCine\Audio\AudioBufferPlayer.cpp" />

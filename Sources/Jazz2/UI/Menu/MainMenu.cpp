@@ -52,10 +52,12 @@ namespace Jazz2::UI::Menu
 
 		SwitchToSection<BeginSection>();
 
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		bool isPlayable = ((_root->GetFlags() & IRootController::Flags::IsPlayable) == IRootController::Flags::IsPlayable);
 		if (PreferencesCache::FirstRun && isPlayable) {
 			SwitchToSection<FirstRunSection>();
 		}
+#endif
 
 		UpdateRichPresence();
 	}
@@ -1033,7 +1035,7 @@ namespace Jazz2::UI::Menu
 				instanceBlock->uniform(Material::TexRectUniformName)->setFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 				instanceBlock->uniform(Material::SpriteSizeUniformName)->setFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 				instanceBlock->uniform(Material::ColorUniformName)->setFloatVector(Colorf::White.Data());
-
+				
 				command->setTransformation(Matrix4x4f::Translation(x * TileSet::DefaultTileSize, y * TileSet::DefaultTileSize, 0.0f));
 				command->material().setTexture(*_owner->_tileSet->TextureDiffuse);
 

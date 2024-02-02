@@ -1,6 +1,5 @@
 #pragma once
 
-#include "IIndexer.h"
 #include "Audio/IAudioDevice.h"
 #include "Threading/IThreadPool.h"
 #include "Graphics/IGfxCapabilities.h"
@@ -12,15 +11,6 @@ namespace nCine
 	class ServiceLocator
 	{
 	public:
-		/// Returns a reference to the current indexer provider instance
-		IIndexer& indexer() {
-			return *indexerService_;
-		}
-		/// Registers an indexer service provider
-		void registerIndexer(std::unique_ptr<IIndexer> service);
-		/// Unregisters the index service provider and reinstates the null one
-		void unregisterIndexer();
-
 		/// Returns a reference to the current audio device instance
 		IAudioDevice& audioDevice() {
 			return *audioDevice_;
@@ -52,10 +42,6 @@ namespace nCine
 		void unregisterAll();
 
 	private:
-		IIndexer* indexerService_;
-		std::unique_ptr<IIndexer> registeredIndexer_;
-		NullIndexer nullIndexer_;
-
 		IAudioDevice* audioDevice_;
 		std::unique_ptr<IAudioDevice> registeredAudioDevice_;
 		NullAudioDevice nullAudioDevice_;

@@ -666,9 +666,6 @@
     <ClInclude Include="nCine\Application.h">
       <Filter>Header Files\nCine</Filter>
     </ClInclude>
-    <ClInclude Include="nCine\ArrayIndexer.h">
-      <Filter>Header Files\nCine</Filter>
-    </ClInclude>
     <ClInclude Include="nCine\CommonConstants.h">
       <Filter>Header Files\nCine</Filter>
     </ClInclude>
@@ -676,9 +673,6 @@
       <Filter>Header Files\nCine</Filter>
     </ClInclude>
     <ClInclude Include="nCine\IAppEventHandler.h">
-      <Filter>Header Files\nCine</Filter>
-    </ClInclude>
-    <ClInclude Include="nCine\IIndexer.h">
       <Filter>Header Files\nCine</Filter>
     </ClInclude>
     <ClInclude Include="nCine\MainApplication.h">
@@ -1482,9 +1476,6 @@
       <Filter>Source Files\nCine</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Application.cpp">
-      <Filter>Source Files\nCine</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\ArrayIndexer.cpp">
       <Filter>Source Files\nCine</Filter>
     </ClCompile>
     <ClCompile Include="nCine\MainApplication.cpp">

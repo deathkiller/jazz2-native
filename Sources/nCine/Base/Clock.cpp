@@ -55,32 +55,30 @@ namespace nCine
 
 	uint64_t Clock::counter() const
 	{
-		uint64_t counter = 0LL;
-
 #if defined(DEATH_TARGET_WINDOWS)
 		if (hasPerfCounter_) {
-			::QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&counter));
+			LARGE_INTEGER li;
+			::QueryPerformanceCounter(&li);
+			return li.QuadPart;
 		} else {
-			counter = ::GetTickCount();
+			return ::GetTickCount();
 		}
 #elif defined(DEATH_TARGET_APPLE)
 #	if __MAC_10_12
-		counter = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW);
+		return clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW);
 #	else
-		counter = mach_absolute_time();
+		return mach_absolute_time();
 #	endif
 #else
 		if (hasMonotonicClock_) {
 			struct timespec now;
 			clock_gettime(CLOCK_MONOTONIC, &now);
-			counter = static_cast<uint64_t>(now.tv_sec) * frequency_ + static_cast<uint64_t>(now.tv_nsec);
+			return static_cast<uint64_t>(now.tv_sec) * frequency_ + static_cast<uint64_t>(now.tv_nsec);
 		} else {
 			struct timeval now;
 			gettimeofday(&now, nullptr);
-			counter = static_cast<uint64_t>(now.tv_sec) * frequency_ + static_cast<uint64_t>(now.tv_usec);
+			return static_cast<uint64_t>(now.tv_sec) * frequency_ + static_cast<uint64_t>(now.tv_usec);
 		}
 #endif
-
-		return counter;
 	}
 }
