@@ -245,10 +245,13 @@ namespace nCine
 		}
 	}
 
-	static inline std::uint32_t as_uint32(const float x) {
+	static inline std::uint32_t as_uint32(const float x)
+	{
 		return *(std::uint32_t*)&x;
 	}
-	static inline float as_float(const std::uint32_t x) {
+
+	static inline float as_float(const std::uint32_t x)
+	{
 		return *(float*)&x;
 	}
 
