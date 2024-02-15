@@ -1447,7 +1447,7 @@ namespace Death { namespace IO {
 		buffer[pathLength] = '\0';
 		const char* baseName = ::basename(buffer);
 		if (hidden && baseName != nullptr && baseName[0] != '.') {
-			String newPath = CombinePath(GetDirectoryName(nullTerminatedPath), "."_s + baseName);
+			String newPath = CombinePath(GetDirectoryName(nullTerminatedPath), String("."_s + baseName));
 			return (::rename(nullTerminatedPath.data(), newPath.data()) == 0);
 		} else if (!hidden && baseName != nullptr && baseName[0] == '.') {
 			std::int32_t numDots = 0;
