@@ -32,8 +32,9 @@
 
 #include <float.h>
 
-#include <Utf8.h>
 #include <Containers/StaticArray.h>
+#include <Containers/StringConcatenable.h>
+#include <Utf8.h>
 
 using namespace nCine;
 
@@ -233,9 +234,9 @@ namespace Jazz2
 		ZoneScopedC(0x4876AF);
 
 		if (!descriptor.DisplayName.empty()) {
-			theApplication().gfxDevice().setWindowTitle(StringView(NCINE_APP_NAME " - ", countof(NCINE_APP_NAME " - ") - 1) + descriptor.DisplayName);
+			theApplication().gfxDevice().setWindowTitle(String(NCINE_APP_NAME " - " + descriptor.DisplayName));
 		} else {
-			theApplication().gfxDevice().setWindowTitle(StringView(NCINE_APP_NAME, countof(NCINE_APP_NAME) - 1));
+			theApplication().gfxDevice().setWindowTitle(NCINE_APP_NAME);
 		}
 
 		_defaultNextLevel = std::move(descriptor.NextLevel);
@@ -311,7 +312,7 @@ namespace Jazz2
 			std::uint8_t playerParams[2] = { (std::uint8_t)levelInit.PlayerCarryOvers[i].Type, (std::uint8_t)i };
 			player->OnActivated(Actors::ActorActivationDetails(
 				this,
-				Vector3i(spawnPosition.X + (i * 30), spawnPosition.Y - (i * 30), PlayerZ - i),
+				Vector3i((std::int32_t)spawnPosition.X + (i * 30), (std::int32_t)spawnPosition.Y - (i * 30), PlayerZ - i),
 				playerParams
 			));
 
@@ -572,7 +573,7 @@ namespace Jazz2
 		_viewTexture->setMagFiltering(SamplerFilter::Nearest);
 		_viewTexture->setWrap(SamplerWrapping::ClampToEdge);
 
-		_camera->setOrthoProjection(0.0f, w, h, 0.0f);
+		_camera->setOrthoProjection(0.0f, (float)w, (float)h, 0.0f);
 
 		auto& resolver = ContentResolver::Get();
 
@@ -1968,7 +1969,7 @@ namespace Jazz2
 		if (notInitialized) {
 			_camera = std::make_unique<Camera>();
 		}
-		_camera->setOrthoProjection(0.0f, width, height, 0.0f);
+		_camera->setOrthoProjection(0.0f, (float)width, (float)height, 0.0f);
 		_camera->setView(0.0f, 0.0f, 0.0f, 1.0f);
 
 		if (notInitialized) {

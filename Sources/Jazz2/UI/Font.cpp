@@ -6,6 +6,7 @@
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Base/Random.h"
 
+#include <Containers/StringConcatenable.h>
 #include <Utf8.h>
 
 using namespace Death;

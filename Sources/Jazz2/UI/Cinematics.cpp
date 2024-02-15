@@ -11,6 +11,7 @@
 #include "../../nCine/Audio/AudioReaderMpt.h"
 #include "../../nCine/Base/FrameTimer.h"
 
+#include <Containers/StringConcatenable.h>
 #include <IO/DeflateStream.h>
 
 namespace Jazz2::UI
@@ -122,7 +123,7 @@ namespace Jazz2::UI
 		}
 
 #if defined(WITH_OPENMPT)
-		_music = resolver.GetMusic(path + ".j2b"_s);
+		_music = resolver.GetMusic(String(path + ".j2b"_s));
 		if (_music != nullptr) {
 			_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
 			_music->setSourceRelative(true);
@@ -138,9 +139,9 @@ namespace Jazz2::UI
 	{
 		// Try "Content" directory first, then "Source" directory
 		auto& resolver = ContentResolver::Get();
-		String fullPath = fs::CombinePath({ resolver.GetContentPath(), "Cinematics"_s, path + ".j2v" });
+		String fullPath = fs::CombinePath({ resolver.GetContentPath(), "Cinematics"_s, String(path + ".j2v") });
 		if (!fs::IsReadableFile(fullPath)) {
-			fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), path + ".j2v"));
+			fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), String(path + ".j2v")));
 		}
 		if (!fs::IsReadableFile(fullPath)) {
 			return false;
@@ -195,9 +196,9 @@ namespace Jazz2::UI
 	bool Cinematics::LoadSfxList(const StringView path)
 	{
 		auto& resolver = ContentResolver::Get();
-		String fullPath = fs::CombinePath({ resolver.GetContentPath(), "Cinematics"_s, path + ".j2sfx"_s });
+		String fullPath = fs::CombinePath({ resolver.GetContentPath(), "Cinematics"_s, String(path + ".j2sfx"_s) });
 		if (!fs::IsReadableFile(fullPath)) {
-			fullPath = fs::CombinePath({ resolver.GetCachePath(), "Cinematics"_s, path + ".j2sfx"_s });
+			fullPath = fs::CombinePath({ resolver.GetCachePath(), "Cinematics"_s, String(path + ".j2sfx"_s) });
 		}
 
 		auto s = fs::Open(fullPath, FileAccessMode::Read);

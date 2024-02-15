@@ -763,7 +763,7 @@ namespace Death { namespace Containers {
 		friend bool operator<=(StringView, StringView);
 		friend bool operator>=(StringView, StringView);
 		friend bool operator>(StringView, StringView);
-		friend String operator+(StringView, StringView);
+		//friend String operator+(StringView, StringView);
 		friend String operator*(StringView, std::size_t);
 
 		// Called from BasicStringView(U&&, StringViewFlags), see its comment for details; arguments in a flipped order to avoid accidental
@@ -803,14 +803,6 @@ namespace Death { namespace Containers {
 	bool operator>=(StringView a, StringView b);
 
 	bool operator>(StringView a, StringView b);
-
-	/**
-		@brief String concatenation
-
-		For joining more than one string prefer to use @ref StringView::join() to avoid
-		needless temporary allocations.
-	*/
-	String operator+(StringView a, StringView b);
 
 	/**
 		@brief String multiplication
@@ -988,4 +980,5 @@ namespace Death { namespace Containers {
 		template<class T> struct ErasedArrayViewConverter<BasicStringView<T>> : ArrayViewConverter<T, BasicStringView<T>> {};
 		template<class T> struct ErasedArrayViewConverter<const BasicStringView<T>> : ArrayViewConverter<T, BasicStringView<T>> {};
 	}
+
 }}

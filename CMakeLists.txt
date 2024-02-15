@@ -22,7 +22,7 @@ get_filename_component(PARENT_SOURCE_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
 
 if(NOT CMAKE_GENERATOR_PLATFORM OR "${CMAKE_GENERATOR_PLATFORM}" STREQUAL "${CMAKE_SYSTEM_PROCESSOR}")
 	if(EMSCRIPTEN)
-		message(STATUS "Compiling for architecture: WASM (${CMAKE_SYSTEM_PROCESSOR})")
+		message(STATUS "Compiling for architecture: WASM (on ${CMAKE_SYSTEM_PROCESSOR} machine)")
 	elseif(NINTENDO_SWITCH)
 		message(STATUS "Compiling for architecture: ${CMAKE_SYSTEM_PROCESSOR} (Nintendo Switch)")
 	elseif(APPLE AND CMAKE_OSX_ARCHITECTURES)

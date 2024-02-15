@@ -33,6 +33,7 @@
 #include "../../nCine/Graphics/RenderQueue.h"
 
 #include <Containers/GrowableArray.h>
+#include <Containers/StringConcatenable.h>
 
 using namespace Jazz2::Tiles;
 
@@ -3056,7 +3057,7 @@ namespace Jazz2::Actors
 		// Preload all weapons
 		for (std::int32_t i = 0; i < countof(_weaponAmmo); i++) {
 			if (_weaponAmmo[i] != 0) {
-				PreloadMetadataAsync("Weapon/"_s + WeaponNames[i]);
+				PreloadMetadataAsync(String("Weapon/"_s + WeaponNames[i]));
 			}
 		}
 	}

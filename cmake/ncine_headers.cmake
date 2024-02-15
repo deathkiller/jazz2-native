@@ -23,6 +23,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Containers/SmallVector.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/StaticArray.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/String.h
+	${NCINE_SOURCE_DIR}/Shared/Containers/StringConcatenable.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringStlView.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringUtils.h
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringView.h

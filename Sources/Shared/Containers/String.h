@@ -27,7 +27,6 @@
 
 #include <cstddef>
 #include <type_traits>
-#include <string>
 
 namespace Death { namespace Containers {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
@@ -43,21 +42,6 @@ namespace Death { namespace Containers {
 		};
 
 		template<class> struct StringConverter;
-
-		template<> struct StringConverter<std::string> {
-			static String from(const std::string& other);
-			static std::string to(const String& other);
-		};
-
-		template<> struct StringViewConverter<const char, std::string> {
-			static StringView from(const std::string& other);
-			static std::string to(StringView other);
-		};
-
-		template<> struct StringViewConverter<char, std::string> {
-			static MutableStringView from(std::string& other);
-			static std::string to(MutableStringView other);
-		};
 	}
 
 	/**
@@ -328,13 +312,23 @@ namespace Death { namespace Containers {
 		 */
 		~String();
 
-		/** @brief Copy constructor */
+		/**
+		 * @brief Copy constructor
+		 *
+		 * If @p other is a SSO instance, the copy is as well, otherwise a copy is allocated using the default @cpp operator new[] @ce.
+		 * The actual string size isn't taken into account. See @ref Containers-String-usage-sso for more information.
+		 */
 		String(const String& other);
 
 		/** @brief Move constructor */
 		String(String&& other) noexcept;
 
-		/** @brief Copy assignment */
+		/**
+		 * @brief Copy assignment
+		 *
+		 * If @p other is a SSO instance, the copy is as well, otherwise a copy is allocated using the default @cpp operator new[] @ce.
+		 * The actual string size isn't taken into account. See @ref Containers-String-usage-sso for more information.
+		 */
 		String& operator=(const String& other);
 
 		/** @brief Move assignment */
@@ -371,7 +365,7 @@ namespace Death { namespace Containers {
 		 * that with custom deleters the array is not guaranteed to be actually
 		 * mutable.
 		 */
-		/*implicit*/ operator Array<char>()&&;
+		/*implicit*/ operator Array<char>() &&;
 
 		/**
 		 * @brief Convert the string to external representation
@@ -889,6 +883,7 @@ namespace Death { namespace Containers {
 
 		void construct(NoInitT, std::size_t size);
 		void construct(const char* data, std::size_t size);
+		void copyConstruct(const String& other);
 		void destruct();
 		Pair<const char*, std::size_t> dataInternal() const;
 
@@ -977,4 +972,5 @@ namespace Death { namespace Containers {
 			Large _large;
 		};
 	};
+
 }}

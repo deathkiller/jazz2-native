@@ -128,15 +128,32 @@ namespace Death { namespace Containers {
 			std::int32_t _dayOfWeek;
 		};
 
+		/** @brief Returns @ref DateTime that is set to the current date and time on this computer, expressed as the local time */
 		static DateTime Now();
+		/** @brief Returns @ref DateTime that is set to the current date and time on this computer, expressed as the UTC time */
 		static DateTime UtcNow();
 
+		/** @brief Creates invalid @ref DateTime structure */
 		DateTime() : _time(INT64_MIN) { }
 
+		/** @brief Creates @ref DateTime structure from standard @ref time_t value */
 		inline DateTime(time_t timet);
+		/** @brief Creates @ref DateTime structure from standard @ref tm structure */
 		inline DateTime(const struct tm& tm);
+		/** @brief Creates @ref DateTime structure from partitioned @ref DateTime */
 		inline DateTime(const Tm& tm);
 
+		/** 
+			@brief Creates @ref DateTime structure from individual parts
+		
+			@param year Years
+			@param month Months after the year (0-11)
+			@param day Days after the month (1-31)
+			@param hour Hours after the day (0-23)
+			@param minute Minutes after the hour (0-59)
+			@param second Seconds after the minute (0-59*)
+			@param millisec Milliseconds after the second (0-999)
+		*/
 		inline DateTime(std::int32_t year, std::int32_t month, std::int32_t day, std::int32_t hour = 0, std::int32_t minute = 0, std::int32_t second = 0, std::int32_t millisec = 0);
 
 #if defined(DEATH_TARGET_WINDOWS)
@@ -157,6 +174,17 @@ namespace Death { namespace Containers {
 		DateTime& Set(const Tm& tm);
 		DateTime& Set(const struct tm& tm);
 
+		/**
+			@brief Sets @ref DateTime structure from individual parts
+
+			@param year Years
+			@param month Months after the year (0-11)
+			@param day Days after the month (1-31)
+			@param hour Hours after the day (0-23)
+			@param minute Minutes after the hour (0-59)
+			@param second Seconds after the minute (0-59*)
+			@param millisec Milliseconds after the second (0-999)
+		*/
 		DateTime& Set(std::int32_t year, std::int32_t month, std::int32_t day, std::int32_t hour = 0, std::int32_t minute = 0, std::int32_t second = 0, std::int32_t millisec = 0);
 
 		DateTime& SetYear(std::int32_t year);
@@ -487,4 +515,5 @@ namespace Death { namespace Containers {
 	{
 		return GetDays() / 7;
 	}
+
 }}
