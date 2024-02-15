@@ -6,7 +6,7 @@
 #include "../Environment.h"
 #include "../Utf8.h"
 #include "../Containers/GrowableArray.h"
-#include "../Containers/StringBuilder.h"
+#include "../Containers/StringConcatenable.h"
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <fileapi.h>
@@ -695,7 +695,6 @@ namespace Death { namespace IO {
 
 		if (first[firstSize - 1] == '/' || first[firstSize - 1] == '\\') {
 			// Path has trailing separator
-
 			return first + second;
 		} else {
 			// Both paths have no clashing separators
