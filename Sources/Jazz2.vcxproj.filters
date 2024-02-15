@@ -1464,7 +1464,10 @@
     <ClInclude Include="nCine\Base\pdqsort\pdqsort.h">
       <Filter>Header Files\nCine\Base\pdqsort</Filter>
     </ClInclude>
-    <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringBuilder.h">
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringConcatenable.h">
+      <Filter>Header Files\Shared\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringStl.h">
       <Filter>Header Files\Shared\Containers</Filter>
     </ClInclude>
   </ItemGroup>

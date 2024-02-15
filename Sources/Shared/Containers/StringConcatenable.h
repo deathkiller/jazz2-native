@@ -127,6 +127,11 @@ namespace Death { namespace Containers {
 		}
 	};
 
+	struct StringConcatenable<MutableStringView> : StringConcatenable<StringView>
+	{
+		typedef MutableStringView type;
+	};
+
 	template<std::size_t N>
 	struct StringConcatenable<const char[N]>
 	{
