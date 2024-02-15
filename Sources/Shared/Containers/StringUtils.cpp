@@ -447,7 +447,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 							// greaterThan = ((chars1Lower - vecA) & notEquals) > vecZMinusA;
 							const __m256i greaterThan = _mm256_cmpgt_epi8(_mm256_and_si256(_mm256_subs_epi8(chars1Lower, vecA), notEquals), vecZMinusA);
 							// if (greatedThan || (chars1Lower != chars2Lower))
-							if (_mm256_testz_si256(greaterThan, greaterThan) == 0 || _mm256_movemask_epi8(_mm256_cmpeq_epi8(chars1Lower, chars2Lower)) != 0xFFFFFFFF) {
+							if (_mm256_testz_si256(greaterThan, greaterThan) == 0 || _mm256_movemask_epi8(_mm256_cmpeq_epi8(chars1Lower, chars2Lower)) != 0xFFFFFFFFu) {
 								return true;
 							}
 						}
@@ -866,7 +866,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 		do {
 			auto [c, nextIdx] = Utf8::NextChar(string, idx);
 
-			const char32_t* f = std::lower_bound(std::begin(u2l), std::end(u2l), c);
+			const char32_t* f = std::lower_bound(u2l, u2l + countof(u2l), c);
 			if (f != std::end(u2l) && *f == c) {
 				c = lc[f - u2l];
 			}
@@ -874,17 +874,17 @@ namespace Death { namespace Containers { namespace StringUtils {
 			if (c < 0x7f) {
 				arrayAppend(output, (char)c);
 			} else if (c < 0x7ff) {
-				arrayAppend(output, (char)(0xC0 | c >> 6));
-				arrayAppend(output, 0x80 | c & 0x3f);
+				arrayAppend(output, 0xC0 | (c >> 6));
+				arrayAppend(output, 0x80 | (c & 0x3f));
 			} else if (c < 0xFFFF) {
-				arrayAppend(output, (char)(0xE0 | c >> 12));
-				arrayAppend(output, 0x80 | c >> 6 & 0x3f);
-				arrayAppend(output, 0x80 | c & 0x3f);
+				arrayAppend(output, 0xE0 | (c >> 12));
+				arrayAppend(output, 0x80 | ((c >> 6) & 0x3f));
+				arrayAppend(output, 0x80 | (c & 0x3f));
 			} else {
-				arrayAppend(output, (char)(0xF0 | c >> 18));
-				arrayAppend(output, 0x80 | c >> 12 & 0x3f);
-				arrayAppend(output, 0x80 | c >> 6 & 0x3f);
-				arrayAppend(output, 0x80 | c & 0x3f);
+				arrayAppend(output, 0xF0 | (c >> 18));
+				arrayAppend(output, 0x80 | ((c >> 12) & 0x3f));
+				arrayAppend(output, 0x80 | ((c >> 6) & 0x3f));
+				arrayAppend(output, 0x80 | (c & 0x3f));
 			}
 
 			idx = nextIdx;
@@ -1090,7 +1090,7 @@ namespace Death { namespace Containers { namespace StringUtils {
 		do {
 			auto [c, nextIdx] = Utf8::NextChar(string, idx);
 
-			const char32_t* f = std::lower_bound(std::begin(l2u), std::end(l2u), c);
+			const char32_t* f = std::lower_bound(l2u, l2u + countof(l2u), c);
 			if (f != std::end(l2u) && *f == c) {
 				c = uc[f - l2u];
 			}
@@ -1098,17 +1098,17 @@ namespace Death { namespace Containers { namespace StringUtils {
 			if (c < 0x7f) {
 				arrayAppend(output, (char)c);
 			} else if (c < 0x7ff) {
-				arrayAppend(output, (char)(0xC0 | c >> 6));
-				arrayAppend(output, 0x80 | c & 0x3f);
+				arrayAppend(output, 0xC0 | (c >> 6));
+				arrayAppend(output, 0x80 | (c & 0x3f));
 			} else if (c < 0xFFFF) {
-				arrayAppend(output, (char)(0xE0 | c >> 12));
-				arrayAppend(output, 0x80 | c >> 6 & 0x3f);
-				arrayAppend(output, 0x80 | c & 0x3f);
+				arrayAppend(output, 0xE0 | (c >> 12));
+				arrayAppend(output, 0x80 | ((c >> 6) & 0x3f));
+				arrayAppend(output, 0x80 | (c & 0x3f));
 			} else {
-				arrayAppend(output, (char)(0xF0 | c >> 18));
-				arrayAppend(output, 0x80 | c >> 12 & 0x3f);
-				arrayAppend(output, 0x80 | c >> 6 & 0x3f);
-				arrayAppend(output, 0x80 | c & 0x3f);
+				arrayAppend(output, 0xF0 | (c >> 18));
+				arrayAppend(output, 0x80 | ((c >> 12) & 0x3f));
+				arrayAppend(output, 0x80 | ((c >> 6) & 0x3f));
+				arrayAppend(output, 0x80 | (c & 0x3f));
 			}
 
 			idx = nextIdx;

@@ -30,7 +30,7 @@
 	and to a C++17 @ref std::string_view.
 */
 
-#include <string>
+#include <string_view>
 
 #include "String.h"
 #include "StringView.h"
