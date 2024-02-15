@@ -1357,6 +1357,7 @@ namespace Death { namespace Containers {
 #if SIZE_MAX > UINT32_MAX
 	extern template class SmallVectorBase<std::uint64_t>;
 #endif
+
 }}
 
 namespace std

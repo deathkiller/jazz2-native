@@ -6,6 +6,7 @@
 
 #include "../../nCine/Base/Algorithms.h"
 
+#include <Containers/StringConcatenable.h>
 #include <IO/FileSystem.h>
 #include <IO/DeflateStream.h>
 
@@ -148,7 +149,7 @@ namespace Jazz2::Compatibility
 			if (sample == nullptr) {
 				d.WriteValue<std::uint8_t>(0);
 			} else {
-				String samplePath = "/"_s.join({ sample->Category, sample->Name + ".wav"_s });
+				String samplePath = sample->Category + '/' + sample->Name + ".wav"_s;
 				d.WriteValue<std::uint8_t>((std::uint8_t)samplePath.size());
 				d.Write(samplePath.data(), (std::uint32_t)samplePath.size());
 			}

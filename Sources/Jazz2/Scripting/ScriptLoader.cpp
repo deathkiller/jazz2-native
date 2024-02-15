@@ -4,6 +4,7 @@
 #include "../ContentResolver.h"
 
 #include <Containers/GrowableArray.h>
+#include <Containers/StringConcatenable.h>
 #include <IO/FileSystem.h>
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
@@ -374,12 +375,12 @@ namespace Jazz2::Scripting
 				}
 				case MetadataType::VirtualProperty: {
 					if (decl.ParentClass.empty()) {
-						asIScriptFunction* func = _module->GetFunctionByName(("get_"_s + decl.Declaration).data());
+						asIScriptFunction* func = _module->GetFunctionByName(String("get_"_s + decl.Declaration).data());
 						if (func != nullptr) {
 							auto entry = _funcMetadataMap.emplace(func->GetId(), Array<String>(NoInit, decl.Metadata.size())).first;
 							std::copy(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 						}
-						func = _module->GetFunctionByName(("set_"_s + decl.Declaration).data());
+						func = _module->GetFunctionByName(String("set_"_s + decl.Declaration).data());
 						if (func != nullptr) {
 							auto entry = _funcMetadataMap.emplace(func->GetId(), Array<String>(NoInit, decl.Metadata.size())).first;
 							std::copy(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
@@ -392,12 +393,12 @@ namespace Jazz2::Scripting
 						}
 
 						asITypeInfo* type = _engine->GetTypeInfoById(typeId);
-						asIScriptFunction* func = type->GetMethodByName(("get_" + decl.Declaration).data());
+						asIScriptFunction* func = type->GetMethodByName(String("get_" + decl.Declaration).data());
 						if (func != nullptr) {
 							auto entry = it->second.FuncMetadataMap.emplace(func->GetId(), Array<String>(NoInit, decl.Metadata.size())).first;
 							std::copy(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
 						}
-						func = type->GetMethodByName(("set_" + decl.Declaration).data());
+						func = type->GetMethodByName(String("set_" + decl.Declaration).data());
 						if (func != nullptr) {
 							auto entry = it->second.FuncMetadataMap.emplace(func->GetId(), Array<String>(NoInit, decl.Metadata.size())).first;
 							std::copy(decl.Metadata.begin(), decl.Metadata.end(), entry->second.data());
@@ -636,7 +637,7 @@ namespace Jazz2::Scripting
 		declaration = { };
 		type = MetadataType::Unknown;
 
-		std::string token;
+		StringView token;
 		asUINT len = 0;
 		asETokenClass t = asTC_WHITESPACE;
 
@@ -644,14 +645,14 @@ namespace Jazz2::Scripting
 		do {
 			pos += len;
 			t = _engine->ParseToken(&scriptContent[pos], scriptSize - pos, &len);
-			token.assign(&scriptContent[pos], len);
+			token = scriptContent.sliceSize(pos, len);
 		} while (t == asTC_WHITESPACE || t == asTC_COMMENT ||
 				  token == "private"_s || token == "protected"_s || token == "shared"_s ||
 				  token == "external"_s || token == "final"_s || token == "abstract"_s);
 
 		// We're expecting, either a class, interface, function, or variable declaration
 		if (t == asTC_KEYWORD || t == asTC_IDENTIFIER) {
-			token.assign(&scriptContent[pos], len);
+			token = scriptContent.sliceSize(pos, len);
 			if (token == "interface"_s || token == "class"_s || token == "enum"_s) {
 				do {
 					pos += len;
@@ -677,7 +678,7 @@ namespace Jazz2::Scripting
 				pos += len;
 				for (; pos < scriptSize;) {
 					t = _engine->ParseToken(&scriptContent[pos], scriptSize - pos, &len);
-					token.assign(&scriptContent[pos], len);
+					token = scriptContent.sliceSize(pos, len);
 					if (t == asTC_KEYWORD) {
 						if (token == "{"_s && nestedParenthesis == 0) {
 							if (hasParenthesis) {

@@ -41,7 +41,7 @@ namespace Jazz2
 #endif
 
 		virtual Flags GetFlags() const = 0;
-		virtual const char* GetNewestVersion() const = 0;
+		virtual StringView GetNewestVersion() const = 0;
 
 		virtual void RefreshCacheLevels() = 0;
 		

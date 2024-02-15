@@ -1,8 +1,9 @@
 #include "AppConfiguration.h"
 #include "../Common.h"
 
-#include <Utf8.h>
+#include <Containers/StringConcatenable.h>
 #include <IO/FileSystem.h>
+#include <Utf8.h>
 
 using namespace Death::Containers::Literals;
 using namespace Death::IO;

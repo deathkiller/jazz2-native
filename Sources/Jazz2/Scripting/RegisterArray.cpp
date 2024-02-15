@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <algorithm>	// std::sort
 
-#include <Containers/String.h>
+#include <Containers/StringConcatenable.h>
 
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;

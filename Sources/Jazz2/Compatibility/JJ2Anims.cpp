@@ -3,6 +3,7 @@
 #include "JJ2Block.h"
 #include "AnimSetMapping.h"
 
+#include <Containers/StringConcatenable.h>
 #include <IO/FileSystem.h>
 
 using namespace Death::IO;
@@ -363,7 +364,7 @@ namespace Jazz2::Compatibility
 				continue;
 			} else {
 				fs::CreateDirectories(fs::CombinePath(targetPath, entry->Category));
-				filename = fs::CombinePath(entry->Category, entry->Name + ".aura"_s);
+				filename = fs::CombinePath(entry->Category, String(entry->Name + ".aura"_s));
 			}
 
 			int32_t stride = sizeX * anim.FrameConfigurationX;
@@ -482,7 +483,7 @@ namespace Jazz2::Compatibility
 			} else {
 				fs::CreateDirectories(fs::CombinePath(targetPath, entry->Category));
 
-				filename = fs::CombinePath(entry->Category, entry->Name + ".wav"_s);
+				filename = fs::CombinePath(entry->Category, String(entry->Name + ".wav"_s));
 			}
 
 			auto so = fs::Open(fs::CombinePath(targetPath, filename), FileAccessMode::Write);

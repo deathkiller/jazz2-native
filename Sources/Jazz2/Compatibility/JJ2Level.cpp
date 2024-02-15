@@ -6,6 +6,7 @@
 
 #include "../../nCine/Base/Algorithms.h"
 
+#include <Containers/StringConcatenable.h>
 #include <Containers/StringUtils.h>
 #include <IO/DeflateStream.h>
 #include <IO/FileSystem.h>
@@ -428,7 +429,7 @@ namespace Jazz2::Compatibility
 				i32tos(i / 8, numberBuffer);
 
 				StringView foundDot = path.findLastOr('.', path.end());
-				String extraLayersPath = fs::FindPathCaseInsensitive(path.prefix(foundDot.begin()) + "-MLLE-Data-"_s + numberBuffer + ".j2l"_s);
+				String extraLayersPath = fs::FindPathCaseInsensitive(String(path.prefix(foundDot.begin()) + "-MLLE-Data-"_s + numberBuffer + ".j2l"_s));
 
 				JJ2Level extraLayersFile;
 				if (extraLayersFile.Open(extraLayersPath, strictParser)) {
@@ -678,7 +679,7 @@ namespace Jazz2::Compatibility
 				}
 
 				if (isLevelToken) {
-					String adjustedText = ""_s;
+					String adjustedText;
 					auto levelTokens = text.split('|');
 					for (int j = 0; j < levelTokens.size(); j++) {
 						if (j != 0) {
@@ -1049,7 +1050,7 @@ namespace Jazz2::Compatibility
 			if (levelTokenConversion != nullptr) {
 				LevelToken token = levelTokenConversion(adjustedValue);
 				if (!token.Episode.empty()) {
-					String fullName = token.Episode + "/"_s + token.Level;
+					String fullName = token.Episode + '/' + token.Level;
 					so.WriteValue<uint8_t>(fullName.size());
 					so.Write(fullName.data(), fullName.size());
 				} else {

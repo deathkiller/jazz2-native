@@ -7,7 +7,6 @@
 #include "../Cpu.h"
 
 #include <cstring>
-#include <string>
 
 #if (defined(DEATH_ENABLE_SSE2) || defined(DEATH_ENABLE_AVX)) && defined(DEATH_ENABLE_BMI1)
 #	include "../IntrinsicsAvx.h"
@@ -747,7 +746,7 @@ namespace Death { namespace Containers {
 		for (const StringView s : strings) totalSize += s.size();
 
 		// Reserve memory for the resulting string
-		String result { NoInit, totalSize };
+		String result{NoInit, totalSize};
 
 		// Join strings
 		char* out = result.data();
@@ -783,7 +782,7 @@ namespace Death { namespace Containers {
 		if (totalSize != 0) totalSize -= delimiterSize;
 
 		// Reserve memory for the resulting string
-		String result { NoInit, totalSize };
+		String result{NoInit, totalSize};
 
 		// Join strings
 		char* out = result.data();
@@ -933,26 +932,11 @@ namespace Death { namespace Containers {
 		return false;
 	}
 
-	String operator+(const StringView a, const StringView b) {
-		// Not using the size() accessor to speed up debug builds
-		const std::size_t aSize = a._sizePlusFlags & ~Implementation::StringViewSizeMask;
-		const std::size_t bSize = b._sizePlusFlags & ~Implementation::StringViewSizeMask;
-
-		String result { NoInit, aSize + bSize };
-
-		// Apparently memcpy() can't be called with null pointers, even if size is zero. I call that bullying.
-		char* out = result.data();
-		if (aSize != 0) std::memcpy(out, a._data, aSize);
-		if (bSize != 0) std::memcpy(out + aSize, b._data, bSize);
-
-		return result;
-	}
-
 	String operator*(const StringView string, const std::size_t count) {
 		// Not using the size() accessor to speed up debug builds
 		const std::size_t size = string._sizePlusFlags & ~Implementation::StringViewSizeMask;
 
-		String result { NoInit, size * count };
+		String result{NoInit, size * count};
 
 		// Apparently memcpy() can't be called with null pointers, even if size is zero. I call that bullying.
 		char* out = result.data();
@@ -977,23 +961,6 @@ namespace Death { namespace Containers {
 		ArrayView<const char> ArrayViewConverter<const char, BasicStringView<const char>>::from(const BasicStringView<const char>& other) {
 			return { other.data(), other.size() };
 		}
-
-		StringView StringViewConverter<const char, std::string>::from(const std::string& other) {
-			return StringView{other.data(), other.size(), StringViewFlags::NullTerminated};
-		}
-
-		std::string StringViewConverter<const char, std::string>::to(StringView other) {
-			return std::string{other.data(), other.size()};
-		}
-
-		MutableStringView StringViewConverter<char, std::string>::from(std::string& other) {
-			// .data() returns a const pointer until C++17, so have to use &other[0]. It's guaranteed
-			// to return a pointer to a single null character if the string is empty.
-			return MutableStringView{&other[0], other.size(), StringViewFlags::NullTerminated};
-		}
-
-		std::string StringViewConverter<char, std::string>::to(MutableStringView other) {
-			return std::string{other.data(), other.size()};
-		}
 	}
+
 }}

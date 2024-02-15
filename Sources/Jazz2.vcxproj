@@ -615,6 +615,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\DeflateStream.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\SequenceHelpers.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringUtils.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Containers\StringConcatenable.h" />
     <ClInclude Include="simdjson\simdjson.h" />
   </ItemGroup>
   <ItemGroup>

@@ -58,6 +58,7 @@ using namespace Jazz2::Multiplayer;
 #	include <cstdlib> // for `__argc` and `__argv`
 #endif
 
+#include <Containers/StringConcatenable.h>
 #include <Cpu.h>
 #include <Environment.h>
 #include <IO/DeflateStream.h>
@@ -125,8 +126,8 @@ public:
 		return _flags;
 	}
 
-	const char* GetNewestVersion() const override {
-		return (_newestVersion[0] != '\0' ? _newestVersion : nullptr);
+	StringView GetNewestVersion() const override {
+		return _newestVersion;
 	}
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -839,8 +840,8 @@ void GameEventHandler::InitializeBase()
 	if (PreferencesCache::Language[0] != '\0') {
 		auto& resolver = ContentResolver::Get();
 		auto& i18n = I18n::Get();
-		if (!i18n.LoadFromFile(fs::CombinePath({ resolver.GetContentPath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }))) {
-			i18n.LoadFromFile(fs::CombinePath({ resolver.GetCachePath(), "Translations"_s, StringView(PreferencesCache::Language) + ".mo"_s }));
+		if (!i18n.LoadFromFile(fs::CombinePath({ resolver.GetContentPath(), "Translations"_s, String(PreferencesCache::Language + ".mo"_s) }))) {
+			i18n.LoadFromFile(fs::CombinePath({ resolver.GetCachePath(), "Translations"_s, String(PreferencesCache::Language + ".mo"_s) }));
 		}
 	}
 }
@@ -1143,7 +1144,7 @@ void GameEventHandler::RefreshCacheLevels()
 					continue;
 				}
 
-				String fullPath = fs::CombinePath(episodesPath, (episode.Name == "xmas98"_s ? "xmas99"_s : StringView(episode.Name)) + ".j2e"_s);
+				String fullPath = fs::CombinePath(episodesPath, String((episode.Name == "xmas98"_s ? "xmas99"_s : StringView(episode.Name)) + ".j2e"_s));
 				episode.Convert(fullPath, LevelTokenConversion, EpisodeNameConversion, EpisodePrevNext);
 			}
 		} else if (extension == "j2l"_s) {
@@ -1156,12 +1157,12 @@ void GameEventHandler::RefreshCacheLevels()
 					auto it = knownLevels.find(level.LevelName);
 					if (it != knownLevels.end()) {
 						if (it->second.second().empty()) {
-							fullPath = fs::CombinePath({ episodesPath, it->second.first(), level.LevelName + ".j2l"_s });
+							fullPath = fs::CombinePath({ episodesPath, it->second.first(), String(level.LevelName + ".j2l"_s) });
 						} else {
-							fullPath = fs::CombinePath({ episodesPath, it->second.first(), it->second.second() + "_"_s + level.LevelName + ".j2l"_s });
+							fullPath = fs::CombinePath({ episodesPath, it->second.first(), String(it->second.second() + '_' + level.LevelName + ".j2l"_s) });
 						}
 					} else {
-						fullPath = fs::CombinePath({ episodesPath, "unknown"_s, level.LevelName + ".j2l"_s });
+						fullPath = fs::CombinePath({ episodesPath, "unknown"_s, String(level.LevelName + ".j2l"_s) });
 					}
 
 					fs::CreateDirectories(fs::GetDirectoryName(fullPath));
@@ -1178,7 +1179,7 @@ void GameEventHandler::RefreshCacheLevels()
 					auto adjustedPath = fs::FindPathCaseInsensitive(scriptPath);
 					if (fs::IsReadableFile(adjustedPath)) {
 						foundDot = fullPath.findLastOr('.', fullPath.end());
-						fs::Copy(adjustedPath, fullPath.prefix(foundDot.begin()) + ".j2as"_s);
+						fs::Copy(adjustedPath, String(fullPath.prefix(foundDot.begin()) + ".j2as"_s));
 					}
 				}
 			}
@@ -1203,12 +1204,12 @@ void GameEventHandler::RefreshCacheLevels()
 	fs::CreateDirectories(tilesetsPath);
 
 	for (auto& pair : usedTilesets) {
-		String tilesetPath = fs::CombinePath(resolver.GetSourcePath(), pair.first + ".j2t"_s);
+		String tilesetPath = fs::CombinePath(resolver.GetSourcePath(), String(pair.first + ".j2t"_s));
 		auto adjustedPath = fs::FindPathCaseInsensitive(tilesetPath);
 		if (fs::IsReadableFile(adjustedPath)) {
 			Compatibility::JJ2Tileset tileset;
 			if (tileset.Open(adjustedPath, false)) {
-				tileset.Convert(fs::CombinePath({ tilesetsPath, pair.first + ".j2t"_s }));
+				tileset.Convert(fs::CombinePath({ tilesetsPath, String(pair.first + ".j2t"_s) }));
 			}
 		}
 	}

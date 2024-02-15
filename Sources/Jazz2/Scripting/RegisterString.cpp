@@ -15,7 +15,7 @@
 
 #define AS_USE_ACCESSORS 1
 
-#include <Containers/String.h>
+#include <Containers/StringConcatenable.h>
 
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;

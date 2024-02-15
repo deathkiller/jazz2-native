@@ -1049,7 +1049,7 @@ namespace Death { namespace Containers {
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
 				Implementation::construct(*dst, std::move(*src));
 #else
-				new(dst) T { std::move(*src) };
+				new(dst) T{std::move(*src)};
 #endif
 		}
 
@@ -1084,7 +1084,7 @@ namespace Death { namespace Containers {
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) &&  __GNUC__ < 5
 				Implementation::construct(*dst, *src);
 #else
-				new(dst) T { *src };
+				new(dst) T{*src};
 #endif
 		}
 
@@ -1125,7 +1125,7 @@ namespace Death { namespace Containers {
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
 			Implementation::construct(*dst, std::move(*src));
 #else
-			new(dst) T { std::move(*src) };
+			new(dst) T{std::move(*src)};
 #endif
 		for (T* it = array, *end = array + prevSize; it < end; ++it) it->~T();
 		deallocate(array);
@@ -1172,7 +1172,7 @@ namespace Death { namespace Containers {
 		if (!hasGrowingDeleter) {
 			T* newArray = Allocator::allocate(capacity);
 			Implementation::arrayMoveConstruct<T>(arrayGuts.data, newArray, arrayGuts.size);
-			array = Array<T> { newArray, arrayGuts.size, Allocator::deleter };
+			array = Array<T>{newArray, arrayGuts.size, Allocator::deleter};
 		} else Allocator::reallocate(arrayGuts.data, arrayGuts.size, capacity);
 
 #if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
@@ -1201,7 +1201,7 @@ namespace Death { namespace Containers {
 				// Move the min of the two sizes -- if we shrink, move only what will fit in the new array; if we extend,
 				// move only what's initialized in the original and left the rest not initialized
 				arrayGuts.size < size ? arrayGuts.size : size);
-			array = Array<T> { newArray, size, Allocator::deleter };
+			array = Array<T>{newArray, size, Allocator::deleter};
 
 #if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
 			__sanitizer_annotate_contiguous_container(
@@ -1289,7 +1289,7 @@ namespace Death { namespace Containers {
 				capacity = Allocator::grow(nullptr, desiredCapacity);
 				T* const newArray = Allocator::allocate(capacity);
 				arrayMoveConstruct<T>(arrayGuts.data, newArray, arrayGuts.size);
-				array = Array<T> { newArray, arrayGuts.size, Allocator::deleter };
+				array = Array<T>{newArray, arrayGuts.size, Allocator::deleter};
 
 			// Otherwise, if there's no space anymore, reallocate, which might be able to grow in-place
 			} else {
@@ -1326,7 +1326,7 @@ namespace Death { namespace Containers {
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) &&  __GNUC__ < 5
 		Implementation::construct(*it, value);
 #else
-		new(it) T { value };
+		new(it) T{value};
 #endif
 		return *it;
 	}
@@ -1385,7 +1385,7 @@ namespace Death { namespace Containers {
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) &&  __GNUC__ < 5
 				Implementation::construct(*(constructDst - 1), std::move(*(constructSrc - 1)));
 #else
-				new(constructDst - 1) T { std::move(*(constructSrc - 1)) };
+				new(constructDst - 1) T{std::move(*(constructSrc - 1))};
 #endif
 			}
 
@@ -1422,7 +1422,7 @@ namespace Death { namespace Containers {
 				T* const newArray = Allocator::allocate(capacity);
 				arrayMoveConstruct<T>(arrayGuts.data, newArray, index);
 				arrayMoveConstruct<T>(arrayGuts.data + index, newArray + index + count, arrayGuts.size - index);
-				array = Array<T> { newArray, arrayGuts.size, Allocator::deleter };
+				array = Array<T>{newArray, arrayGuts.size, Allocator::deleter};
 
 			// Otherwise, if there's no space anymore, reallocate. which might be able to grow in-place.
 			// However we still need to shift the part after index forward.
@@ -1469,7 +1469,7 @@ namespace Death { namespace Containers {
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) &&  __GNUC__ < 5
 		Implementation::construct(*it, value);
 #else
-		new(it) T { value };
+		new(it) T{value};
 #endif
 		return *it;
 	}
@@ -1543,7 +1543,7 @@ namespace Death { namespace Containers {
 			T* const newArray = Allocator::allocate(arrayGuts.size - count);
 			Implementation::arrayMoveConstruct<T>(arrayGuts.data, newArray, index);
 			Implementation::arrayMoveConstruct<T>(arrayGuts.data + index + count, newArray + index, arrayGuts.size - index - count);
-			array = Array<T> { newArray, arrayGuts.size - count, Allocator::deleter };
+			array = Array<T>{newArray, arrayGuts.size - count, Allocator::deleter};
 
 #if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
 			__sanitizer_annotate_contiguous_container(
@@ -1582,7 +1582,7 @@ namespace Death { namespace Containers {
 			T* const newArray = Allocator::allocate(arrayGuts.size - count);
 			Implementation::arrayMoveConstruct<T>(arrayGuts.data, newArray, index);
 			Implementation::arrayMoveConstruct<T>(arrayGuts.data + index + count, newArray + index, arrayGuts.size - index - count);
-			array = Array<T> { newArray, arrayGuts.size - count, Allocator::deleter };
+			array = Array<T>{newArray, arrayGuts.size - count, Allocator::deleter};
 
 #if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
 			__sanitizer_annotate_contiguous_container(
@@ -1620,7 +1620,7 @@ namespace Death { namespace Containers {
 		if (arrayGuts.deleter != Allocator::deleter) {
 			T* const newArray = Allocator::allocate(arrayGuts.size - count);
 			Implementation::arrayMoveConstruct<T>(arrayGuts.data, newArray, arrayGuts.size - count);
-			array = Array<T> { newArray, arrayGuts.size - count, Allocator::deleter };
+			array = Array<T>{newArray, arrayGuts.size - count, Allocator::deleter};
 
 #if defined(_DEATH_CONTAINERS_SANITIZER_ENABLED)
 			__sanitizer_annotate_contiguous_container(
@@ -1653,7 +1653,7 @@ namespace Death { namespace Containers {
 			return;
 
 		// Even if we don't need to shrink, reallocating to an usual array with common deleters to avoid surprises
-		Array<T> newArray { NoInit, arrayGuts.size };
+		Array<T> newArray{NoInit, arrayGuts.size};
 		Implementation::arrayMoveConstruct<T>(arrayGuts.data, newArray, arrayGuts.size);
 		array = std::move(newArray);
 
@@ -1671,7 +1671,7 @@ namespace Death { namespace Containers {
 			return;
 
 		// Even if we don't need to shrink, reallocating to an usual array with common deleters to avoid surprises
-		Array<T> newArray { DefaultInit, arrayGuts.size };
+		Array<T> newArray{DefaultInit, arrayGuts.size};
 		Implementation::arrayMoveAssign<T>(arrayGuts.data, newArray, arrayGuts.size);
 		array = std::move(newArray);
 

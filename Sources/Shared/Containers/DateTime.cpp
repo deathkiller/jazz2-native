@@ -1102,7 +1102,7 @@ namespace Death { namespace Containers {
 	DateTime& DateTime::Set(std::int32_t year, std::int32_t month, std::int32_t day, std::int32_t hour, std::int32_t minute, std::int32_t second, std::int32_t millisec)
 	{
 		DEATH_ASSERT(month >= 0 && month < 12 && day > 0 && day <= Implementation::GetNumberOfDaysInMonth(month, year) &&
-			hour >= 0 && hour < 24 && minute >= 0 && minute < 60 && second >= 0 && second < 60 &&
+			hour >= 0 && hour < 24 && minute >= 0 && minute < 60 && second >= 0 && second < 61 /* with leap second */ &&
 			millisec >= 0 && millisec < 1000, *this, "Invalid date in DateTime::Set()");
 
 		// The range of time_t type (inclusive)
@@ -1361,4 +1361,5 @@ namespace Death { namespace Containers {
 		return true;
 	}
 #endif
+
 }}

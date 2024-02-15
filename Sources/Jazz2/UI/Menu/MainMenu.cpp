@@ -14,6 +14,8 @@
 #include "../../../nCine/Audio/AudioReaderMpt.h"
 #include "../../../nCine/Base/Random.h"
 
+#include <Containers/StringConcatenable.h>
+
 using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
@@ -239,9 +241,9 @@ namespace Jazz2::UI::Menu
 		bottomRight.X = ViewSize.X - 24.0f;
 		bottomRight.Y -= 10.0f;
 
-		const char* newestVersion = _owner->_root->GetNewestVersion();
-		if (newestVersion != nullptr && std::strcmp(newestVersion, NCINE_VERSION) != 0) {
-			String newerVersion = StringView("v" NCINE_VERSION "  › \f[c:0x9e7056]v") + newestVersion;
+		auto newestVersion = _owner->_root->GetNewestVersion();
+		if (!newestVersion.empty() && newestVersion != NCINE_VERSION) {
+			String newerVersion = "v" NCINE_VERSION "  › \f[c:0x9e7056]v" + newestVersion;
 			_owner->DrawStringShadow(newerVersion, charOffset, bottomRight.X, bottomRight.Y, IMenuContainer::FontLayer,
 				Alignment::BottomRight, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 		} else {

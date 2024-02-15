@@ -3,7 +3,6 @@
 #include "Pair.h"
 #include "StaticArray.h"
 
-#include <string>
 #include <cstring>
 
 namespace Death { namespace Containers {
@@ -243,9 +242,25 @@ namespace Death { namespace Containers {
 		destruct();
 	}
 
+	inline void String::copyConstruct(const String& other) {
+		// For predictability, in particular preserving the AllocatedInit aspect of a string in copies and not just in moves,
+		// if the original string is allocated, the copied one is as well, independently of the actual size.
+		if (other.isSmall()) {
+			std::memcpy(_small.data, other._small.data, Implementation::SmallStringSize);
+			_small.size = other._small.size;
+		} else {
+			// Excluding the potential Global bit
+			const std::size_t size = other._large.size & ~LargeSizeMask;
+			_large.data = new char[size + 1];
+			// Copies also the null terminator
+			std::memcpy(_large.data, other._large.data, size + 1);
+			_large.size = size;
+			_large.deleter = nullptr;
+		}
+	}
+
 	String::String(const String& other) {
-		const Pair<const char*, std::size_t> data = other.dataInternal();
-		construct(data.first(), data.second());
+		copyConstruct(other);
 	}
 
 	String::String(String&& other) noexcept {
@@ -261,9 +276,7 @@ namespace Death { namespace Containers {
 
 	String& String::operator=(const String& other) {
 		destruct();
-
-		const Pair<const char*, std::size_t> data = other.dataInternal();
-		construct(data.first(), data.second());
+		copyConstruct(other);
 		return *this;
 	}
 
@@ -818,14 +831,4 @@ namespace Death { namespace Containers {
 		return data;
 	}
 
-	namespace Implementation
-	{
-		String StringConverter<std::string>::from(const std::string& other) {
-			return String{other.data(), other.size()};
-		}
-
-		std::string StringConverter<std::string>::to(const String& other) {
-			return std::string{other.data(), other.size()};
-		}
-	}
 }}

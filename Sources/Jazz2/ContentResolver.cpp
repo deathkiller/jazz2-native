@@ -22,6 +22,7 @@
 #	include <Environment.h>
 #endif
 
+#include <Containers/StringConcatenable.h>
 #include <Containers/StringStlView.h>
 #include <IO/DeflateStream.h>
 #include <IO/MemoryStream.h>
@@ -388,7 +389,7 @@ namespace Jazz2
 		}
 
 		// Try to load it
-		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Metadata"_s, pathNormalized + ".res"_s }), FileAccessMode::Read);
+		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Metadata"_s, String(pathNormalized + ".res"_s) }), FileAccessMode::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit
@@ -583,7 +584,7 @@ namespace Jazz2
 			return RequestGraphicsAura(pathNormalized, paletteOffset);
 		}
 
-		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Animations"_s, pathNormalized + ".res"_s }), FileAccessMode::Read);
+		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Animations"_s, String(pathNormalized + ".res"_s) }), FileAccessMode::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit, also if not found try to use cache
@@ -874,9 +875,9 @@ namespace Jazz2
 	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(const StringView path, uint16_t captionTileId, bool applyPalette, const uint8_t* paletteRemapping)
 	{
 		// Try "Content" directory first, then "Cache" directory
-		String fullPath = fs::CombinePath({ GetContentPath(), "Tilesets"_s, path + ".j2t"_s });
+		String fullPath = fs::CombinePath({ GetContentPath(), "Tilesets"_s, String(path + ".j2t"_s) });
 		if (!fs::IsReadableFile(fullPath)) {
-			fullPath = fs::CombinePath({ GetCachePath(), "Tilesets"_s, path + ".j2t"_s });
+			fullPath = fs::CombinePath({ GetCachePath(), "Tilesets"_s, String(path + ".j2t"_s) });
 		}
 
 		auto s = fs::Open(fullPath, FileAccessMode::Read);
@@ -1066,17 +1067,17 @@ namespace Jazz2
 	bool ContentResolver::LevelExists(const StringView episodeName, const StringView levelName)
 	{
 		// Try "Content" directory first, then "Cache" directory
-		return (fs::IsReadableFile(fs::CombinePath({ GetContentPath(), "Episodes"_s, episodeName, levelName + ".j2l"_s })) || 
-				fs::IsReadableFile(fs::CombinePath({ GetCachePath(), "Episodes"_s, episodeName, levelName + ".j2l"_s })));
+		return (fs::IsReadableFile(fs::CombinePath({ GetContentPath(), "Episodes"_s, episodeName, String(levelName + ".j2l"_s) })) || 
+				fs::IsReadableFile(fs::CombinePath({ GetCachePath(), "Episodes"_s, episodeName, String(levelName + ".j2l"_s) })));
 	}
 
 	bool ContentResolver::TryLoadLevel(const StringView path, GameDifficulty difficulty, LevelDescriptor& descriptor)
 	{
 		// Try "Content" directory first, then "Cache" directory
 		auto pathNormalized = fs::ToNativeSeparators(path);
-		descriptor.FullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, pathNormalized + ".j2l"_s });
+		descriptor.FullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
 		if (!fs::IsReadableFile(descriptor.FullPath)) {
-			descriptor.FullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, pathNormalized + ".j2l"_s });
+			descriptor.FullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
 		}
 
 		auto s = fs::Open(descriptor.FullPath, FileAccessMode::Read);
@@ -1236,9 +1237,9 @@ namespace Jazz2
 
 	std::optional<Episode> ContentResolver::GetEpisode(const StringView name, bool withImages)
 	{
-		String fullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, name + ".j2e"_s });
+		String fullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, String(name + ".j2e"_s) });
 		if (!fs::IsReadableFile(fullPath)) {
-			fullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, name + ".j2e"_s });
+			fullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, String(name + ".j2e"_s) });
 		}
 		return GetEpisodeByPath(fullPath, withImages);
 	}
@@ -1589,12 +1590,12 @@ namespace Jazz2
 #if defined(DEATH_DEBUG)
 	void ContentResolver::MigrateGraphics(const StringView path)
 	{
-		String auraPath = fs::CombinePath({ GetContentPath(), "Animations"_s, path.exceptSuffix(4) + ".aura"_s });
+		String auraPath = fs::CombinePath({ GetContentPath(), "Animations"_s, String(path.exceptSuffix(4) + ".aura"_s) });
 		if (fs::FileExists(auraPath)) {
 			return;
 		}
 
-		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Animations"_s, path + ".res"_s }), FileAccessMode::Read);
+		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Animations"_s, String(path + ".res"_s) }), FileAccessMode::Read);
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit, also if not found try to use cache

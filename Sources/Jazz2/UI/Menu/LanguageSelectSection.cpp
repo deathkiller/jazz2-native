@@ -4,6 +4,8 @@
 #include "../../PreferencesCache.h"
 #include "../../../nCine/I18n.h"
 
+#include <Containers/StringConcatenable.h>
+
 using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
@@ -122,6 +124,6 @@ namespace Jazz2::UI::Menu
 
 		auto& episode = _items.emplace_back();
 		episode.Item.FileName = languageFile;
-		episode.Item.DisplayName = I18n::GetLanguageName(language) + " \f[c:0x707070]· " + language;
+		episode.Item.DisplayName = I18n::GetLanguageName(language) + " \f[c:0x707070]· "_s + language;
 	}
 }
