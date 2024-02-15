@@ -10,6 +10,7 @@
 #		include <fcntl.h>
 #	endif
 #else
+#	include <cerrno>
 #	include <sys/stat.h>	// For open()
 #	include <fcntl.h>		// For open()
 #	include <unistd.h>		// For close()

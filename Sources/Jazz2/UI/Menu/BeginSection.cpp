@@ -12,6 +12,7 @@
 #	include "CustomLevelSelectSection.h"
 #endif
 
+#include <Containers/StringConcatenable.h>
 #include <Utf8.h>
 
 #if defined(SHAREWARE_DEMO_ONLY)
