@@ -13,7 +13,8 @@
 #include <type_traits>
 
 #include "../Containers/SmallVector.h"
-#include "../Containers/String.h"
+#include "../Containers/StringConcatenable.h"
+#include "../Containers/StringStl.h"
 #include "../Containers/StringView.h"
 
 #if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_CYGWIN)
@@ -818,24 +819,21 @@ namespace Death { namespace IO { namespace Http {
 	}
 
 	// RFC 7230, 3.1.1. Request Line
-	inline std::string EncodeRequestLine(const Containers::StringView& method, const Containers::StringView& target)
+	inline Containers::String EncodeRequestLine(const Containers::StringView& method, const Containers::StringView& target)
 	{
-		return method + " " + target + " HTTP/1.1\r\n";
+		return method + ' ' + target + " HTTP/1.1\r\n"_s;
 	}
 
 	// RFC 7230, 3.2. Header Fields
-	inline std::string EncodeHeaderFields(const Containers::SmallVectorImpl<HeaderField>& headerFields)
+	inline Containers::String EncodeHeaderFields(const Containers::SmallVectorImpl<HeaderField>& headerFields)
 	{
-		std::string result;
+		Containers::String result;
 		for (const auto& headerField : headerFields) {
 			if (headerField.first.empty()) {
 				continue;
 			}
 
-			result += headerField.first;
-			result += ": ";
-			result += headerField.second;
-			result += "\r\n";
+			result += headerField.first + ": "_s + headerField.second + "\r\n"_s;
 		}
 
 		return result;
@@ -887,14 +885,14 @@ namespace Death { namespace IO { namespace Http {
 	inline void EncodeHtml(const Uri& uri, const Containers::StringView& method, const Containers::ArrayView<uint8_t>& body, const Containers::SmallVectorImpl<HeaderField>& headerFields, Containers::SmallVectorImpl<std::uint8_t>& targetBuffer)
 	{
 		// RFC 7230, 5.3. Request Target
-		const Containers::String requestTarget = uri.Path + (uri.Query.empty() ? Containers::String { } : "?"_s + uri.Query);
-		const auto headerData = EncodeRequestLine(method, requestTarget) +
+		const Containers::String requestTarget = (uri.Query.empty() ? uri.Path : (uri.Path + "?"_s + uri.Query));
+		const Containers::String headerData = EncodeRequestLine(method, requestTarget) +
 			// RFC 7230, 5.4. Host
-			"Host: " + uri.Host + "\r\n" +
+			"Host: "_s + uri.Host + "\r\n"_s +
 			// RFC 7230, 3.3.2. Content-Length
-			"Content-Length: " + std::to_string(body.size()) + "\r\n" +
+			"Content-Length: "_s + Containers::StringView(std::to_string(body.size())) + "\r\n"_s +
 			EncodeHeaderFields(headerFields) +
-			"\r\n";
+			"\r\n"_s;
 
 		auto i = targetBuffer.size();
 		targetBuffer.resize_for_overwrite(i + headerData.size() + body.size());
@@ -912,7 +910,7 @@ namespace Death { namespace IO { namespace Http {
 		{
 		}
 
-		Response Send(const Containers::StringView& method = "GET",
+		Response Send(const Containers::StringView& method = "GET"_s,
 					  const std::chrono::milliseconds timeout = std::chrono::milliseconds { -1 })
 		{
 			Containers::SmallVector<HeaderField, 0> headerFields;
@@ -926,7 +924,7 @@ namespace Death { namespace IO { namespace Http {
 		{
 			const auto stopTime = std::chrono::steady_clock::now() + timeout;
 
-			if (uri.Scheme != "http") {
+			if (uri.Scheme != "http"_s) {
 				return { HttpStatus::NotImplemented };
 			}
 
