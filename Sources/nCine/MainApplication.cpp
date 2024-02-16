@@ -310,17 +310,20 @@ namespace nCine
 		appEventHandler_ = createAppEventHandler();
 
 		// Only `OnPreInit()` can modify the application configuration
+		if (argc > 1) {
 #if defined(DEATH_TARGET_WINDOWS)
-		appCfg_.argv_ = Array<String>(argc - 1);
-		for (std::int32_t i = 1; i < argc; i++) {
-			appCfg_.argv_[i - 1] = Utf8::FromUtf16(argv[i]);
-		}
+			appCfg_.argv_ = Array<String>(argc - 1);
+			for (std::int32_t i = 1; i < argc; i++) {
+				appCfg_.argv_[i - 1] = Utf8::FromUtf16(argv[i]);
+			}
 #else
-		appCfg_.argv_ = Array<StringView>(argc - 1);
-		for (std::int32_t i = 1; i < argc; i++) {
-			appCfg_.argv_[i - 1] = argv[i];
-		}
+			appCfg_.argv_ = Array<StringView>(argc - 1);
+			for (std::int32_t i = 1; i < argc; i++) {
+				appCfg_.argv_[i - 1] = argv[i];
+			}
 #endif
+		}
+
 		appEventHandler_->OnPreInit(appCfg_);
 		LOGI("IAppEventHandler::OnPreInit() invoked");
 
