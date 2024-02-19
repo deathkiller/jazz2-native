@@ -924,7 +924,7 @@ namespace Jazz2::Multiplayer
 			std::uint8_t playerParams[2] = { (std::uint8_t)levelInit.PlayerCarryOvers[i].Type, (std::uint8_t)i };
 			player->OnActivated(Actors::ActorActivationDetails(
 				this,
-				Vector3i(spawnPosition.X + (i * 30), spawnPosition.Y - (i * 30), PlayerZ - i),
+				Vector3i((std::int32_t)spawnPosition.X + (i * 30), (std::int32_t)spawnPosition.Y - (i * 30), PlayerZ - i),
 				playerParams
 			));
 
@@ -1190,7 +1190,7 @@ namespace Jazz2::Multiplayer
 
 					// TODO: Use only lock here
 					_root->InvokeAsync([this, posX, posY, gain, pitch, identifier = std::move(identifier)]() {
-						PlayCommonSfx(identifier, Vector3f(posX, posY, 0.0f), gain, pitch);
+						PlayCommonSfx(identifier, Vector3f((float)posX, (float)posY, 0.0f), gain, pitch);
 					});
 					break;
 				}
@@ -1556,7 +1556,7 @@ namespace Jazz2::Multiplayer
 			std::uint8_t playerParams[2] = { (std::uint8_t)PlayerType::Spaz, (std::uint8_t)playerIndex };
 			player->OnActivated(Actors::ActorActivationDetails(
 				this,
-				Vector3i(spawnPosition.X, spawnPosition.Y, PlayerZ - playerIndex),
+				Vector3i((std::int32_t)spawnPosition.X, (std::int32_t)spawnPosition.Y, PlayerZ - playerIndex),
 				playerParams
 			));
 

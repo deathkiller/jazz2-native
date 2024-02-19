@@ -64,6 +64,7 @@ cmake_dependent_option(NCINE_WITH_VORBIS "Enable Ogg Vorbis audio file support" 
 cmake_dependent_option(NCINE_WITH_OPENMPT "Enable module (libopenmpt) audio file support" ON "NCINE_WITH_AUDIO" OFF)
 option(NCINE_WITH_ANGELSCRIPT "Enable AngelScript scripting support" OFF)
 option(NCINE_WITH_IMGUI "Enable integration with Dear ImGui" OFF)
+option(NCINE_WITH_BACKWARD "Enable integration with Backward for better stack traces" ON)
 option(NCINE_WITH_TRACY "Enable integration with Tracy frame profiler" OFF)
 option(NCINE_WITH_RENDERDOC "Enable integration with RenderDoc" OFF)
 

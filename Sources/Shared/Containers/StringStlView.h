@@ -56,7 +56,7 @@ namespace Death { namespace Containers { namespace Implementation {
 		}
 	};
 
-	// There's no mutable variant of std::string_view, so this goes just one direction
+	/* There's no mutable variant of std::string_view, so this goes just one direction */
 	template<> struct StringViewConverter<char, std::string_view> {
 		static std::string_view to(MutableStringView other) {
 			return std::string_view{other.data(), other.size()};

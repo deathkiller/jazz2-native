@@ -65,7 +65,7 @@ namespace Death { namespace Containers {
 		 * @ref Pair(NoInitT) variant instead.
 		 */
 #if !defined(DEATH_MSVC2015_COMPATIBILITY)
-		// Not constexpr for this joke of a compiler because I don't explicitly initialize _first and _second, which wouldn't be a default initialization if I did that.
+		/* Not constexpr for this joke of a compiler because I don't explicitly initialize _first and _second, which wouldn't be a default initialization if I did that. */
 		constexpr
 #endif
 		explicit Pair(DefaultInitT) noexcept(std::is_nothrow_constructible<F>::value && std::is_nothrow_constructible<S>::value) {}
@@ -201,7 +201,7 @@ namespace Death { namespace Containers {
 		/** @brief First element */
 		DEATH_CONSTEXPR14 F& first() & { return _first; }
 		/** @overload */
-		// Not F&& because that'd cause nasty dangling reference issues in common code.
+		/* Not F&& because that'd cause nasty dangling reference issues in common code*/
 		DEATH_CONSTEXPR14 F first() && { return std::move(_first); }
 		/** @overload */
 		constexpr const F& first() const & { return _first; }
@@ -209,7 +209,7 @@ namespace Death { namespace Containers {
 		/** @brief Second element */
 		DEATH_CONSTEXPR14 S& second() & { return _second; }
 		/** @overload */
-		// Not S&& because that'd cause nasty dangling reference issues in common code.
+		/* Not S&& because that'd cause nasty dangling reference issues in common code. */
 		DEATH_CONSTEXPR14 S second() && { return std::move(_second); }
 		/** @overload */
 		constexpr const S& second() const & { return _second; }
@@ -220,7 +220,7 @@ namespace Death { namespace Containers {
 		// return a const value, so this isn't handled at the moment.
 
 	private:
-		// For the conversion constructor
+		/* For the conversion constructor */
 		template<class, class> friend class Pair;
 
 #if DEATH_CXX_STANDARD > 201402

@@ -58,6 +58,11 @@ using namespace Jazz2::Multiplayer;
 #	include <cstdlib> // for `__argc` and `__argv`
 #endif
 
+#if defined(WITH_BACKWARD)
+#	include <backward.h>
+backward::SignalHandling sh;
+#endif
+
 #include <Containers/StringConcatenable.h>
 #include <Cpu.h>
 #include <Environment.h>

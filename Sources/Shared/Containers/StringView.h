@@ -138,14 +138,14 @@ namespace Death { namespace Containers {
 		 * The resulting view has the same size as @p data, by default no
 		 * null-termination is assumed.
 		 */
-		// This has to accept any type and then delegate to a private constructor instead of directly taking ArrayView<T>, due to how
-		// overload resolution works in copy initialization as opposed to a direct constructor/function call. If it would take ArrayView<T>
-		// directly, `Array<char> -> ArrayView<const char> -> StringView` wouldn't work because it's one custom conversion sequence more than
-		// allowed in a copy initialization, and to make that work, this class would have to replicate all ArrayView constructors including
-		// conversion from Array etc., which isn't feasible. Similar approach is chosen in Iterable and StringIterable.
-		// It's also explicitly disallowing T[] arguments (which are implicitly convertible to an ArrayView), because those should be picking the T*
-		// overload and rely on strlen(), consistently with how C string literals work; and disallowing construction from a StringView
-		// because it'd get preferred over the implicit copy constructor.
+		/* This has to accept any type and then delegate to a private constructor instead of directly taking ArrayView<T>, due to how
+		   overload resolution works in copy initialization as opposed to a direct constructor/function call. If it would take ArrayView<T>
+		   directly, `Array<char> -> ArrayView<const char> -> StringView` wouldn't work because it's one custom conversion sequence more than
+		   allowed in a copy initialization, and to make that work, this class would have to replicate all ArrayView constructors including
+		   conversion from Array etc., which isn't feasible. Similar approach is chosen in Iterable and StringIterable.
+		   It's also explicitly disallowing T[] arguments (which are implicitly convertible to an ArrayView), because those should be picking the T*
+		   overload and rely on strlen(), consistently with how C string literals work; and disallowing construction from a StringView
+		   because it'd get preferred over the implicit copy constructor. */
 		template<class U, class = typename std::enable_if<!std::is_array<typename std::remove_reference<U&&>::type>::value && !std::is_same<typename std::decay<U&&>::type, BasicStringView<T>>::value && !std::is_same<typename std::decay<U&&>::type, std::nullptr_t>::value, decltype(ArrayView<T>{std::declval<U&&>()})>::type> constexpr /*implicit*/ BasicStringView(U&& data, StringViewFlags flags = {}) noexcept: BasicStringView{flags, ArrayView<T>(data)} {}
 
 		/** @brief Construct a @ref StringView from a @ref MutableStringView */
@@ -172,15 +172,15 @@ namespace Death { namespace Containers {
 		/**
 		 * @brief Construct a view on an external type / from an external representation
 		 */
-		// There's no restriction that would disallow creating StringView from e.g. std::string<T>&& because that would break uses like
-		// `consume(foo());`, where `consume()` expects a view but `foo()` returns a std::vector. Besides that, to simplify the implementation,
-		// there's no const-adding conversion. Instead, the implementer is supposed to add an ArrayViewConverter variant for that.
+		/* There's no restriction that would disallow creating StringView from e.g. std::string<T>&& because that would break uses like
+		   `consume(foo());`, where `consume()` expects a view but `foo()` returns a std::vector. Besides that, to simplify the implementation,
+		   there's no const-adding conversion. Instead, the implementer is supposed to add an ArrayViewConverter variant for that. */
 		template<class U, class = decltype(Implementation::StringViewConverter<T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ BasicStringView(U&& other) noexcept : BasicStringView{Implementation::StringViewConverter<T, typename std::decay<U&&>::type>::from(std::forward<U>(other))} {}
 
 		/**
 		* @brief Convert the view to external representation
 		*/
-		// To simplify the implementation, there's no const-adding conversion. Instead, the implementer is supposed to add an StringViewConverter variant for that.
+		/* To simplify the implementation, there's no const-adding conversion. Instead, the implementer is supposed to add an StringViewConverter variant for that. */
 		template<class U, class = decltype(Implementation::StringViewConverter<T, U>::to(std::declval<BasicStringView<T>>()))> constexpr /*implicit*/ operator U() const {
 			return Implementation::StringViewConverter<T, U>::to(*this);
 		}
@@ -575,9 +575,9 @@ namespace Death { namespace Containers {
 		 * This function is equivalent to calling @relativeref{std::string,find()}
 		 * on a @ref std::string or a @ref std::string_view.
 		 */
-		// Technically it would be enough to have just one overload with a default value for the fail parameter. But then `find(foo, pointer)`
-		// would imply "find foo after pointer", because that's what the second parameter does in most APIs. On the other hand, naming this
-		// findOr() and documenting the custom failure handling would add extra congitive load for people looking for find() and nothing else.
+		/* Technically it would be enough to have just one overload with a default value for the fail parameter. But then `find(foo, pointer)`
+		   would imply "find foo after pointer", because that's what the second parameter does in most APIs. On the other hand, naming this
+		   findOr() and documenting the custom failure handling would add extra congitive load for people looking for find() and nothing else. */
 		BasicStringView<T> find(StringView substring) const {
 			return findOr(substring, nullptr);
 		}
@@ -588,7 +588,7 @@ namespace Death { namespace Containers {
 		 * Faster than @ref find(StringView) const if the string has just one
 		 * byte.
 		 */
-		// Technically it would be enough to have just one overload with a default value for the fail parameter, see above why it's not
+		/* Technically it would be enough to have just one overload with a default value for the fail parameter, see above why it's not */
 		BasicStringView<T> find(char character) const {
 			return findOr(character, nullptr);
 		}
@@ -635,7 +635,7 @@ namespace Death { namespace Containers {
 		 * This function is equivalent to calling @relativeref{std::string,rfind()}
 		 * on a @ref std::string or a @ref std::string_view.
 		 */
-		// Technically it would be enough to have just one overload with a default value for the fail parameter, see above why it's not
+		/* Technically it would be enough to have just one overload with a default value for the fail parameter, see above why it's not */
 		BasicStringView<T> findLast(StringView substring) const {
 			return findLastOr(substring, nullptr);
 		}
@@ -646,7 +646,7 @@ namespace Death { namespace Containers {
 		 * Faster than @ref findLast(StringView) const if the string has just
 		 * one byte.
 		 */
-		// Technically it would be enough to have just one overload with a default value for the fail parameter, see above why it's not
+		/* Technically it would be enough to have just one overload with a default value for the fail parameter, see above why it's not */
 		BasicStringView<T> findLast(char character) const {
 			return findLastOr(character, nullptr);
 		}
@@ -752,28 +752,27 @@ namespace Death { namespace Containers {
 		bool containsAny(StringView substring) const;
 
 	private:
-		// Needed for mutable/immutable conversion
+		/* Needed for mutable/immutable conversion */
 		template<class> friend class BasicStringView;
 		friend String;
 
-		// MSVC demands the export macro to be here as well
+		/* MSVC demands the export macro to be here as well */
 		friend bool operator==(StringView, StringView);
 		friend bool operator!=(StringView, StringView);
 		friend bool operator<(StringView, StringView);
 		friend bool operator<=(StringView, StringView);
 		friend bool operator>=(StringView, StringView);
 		friend bool operator>(StringView, StringView);
-		//friend String operator+(StringView, StringView);
 		friend String operator*(StringView, std::size_t);
 
-		// Called from BasicStringView(U&&, StringViewFlags), see its comment for details; arguments in a flipped order to avoid accidental
-		// ambiguity. The ArrayView type is a template to avoid having to include ArrayView.h.
+		/* Called from BasicStringView(U&&, StringViewFlags), see its comment for details; arguments in a flipped order to avoid accidental
+		   ambiguity. The ArrayView type is a template to avoid having to include ArrayView.h. */
 		template<class U, class = typename std::enable_if<std::is_same<T, U>::value>::type> constexpr explicit BasicStringView(StringViewFlags flags, ArrayView<U> data) noexcept : BasicStringView{data.data(), data.size(), flags} {}
 
-		// Used by the char* constructor, delinlined because it calls into std::strlen()
+		/* Used by the char* constructor, delinlined because it calls into std::strlen() */
 		explicit BasicStringView(T* data, StringViewFlags flags, std::nullptr_t) noexcept;
 
-		// Used by slice() to skip unneeded checks in the public constexpr constructor
+		/* Used by slice() to skip unneeded checks in the public constexpr constructor */
 		constexpr explicit BasicStringView(T* data, std::size_t sizePlusFlags, std::nullptr_t) noexcept : _data{data}, _sizePlusFlags{sizePlusFlags} {}
 
 		T* _data;
