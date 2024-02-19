@@ -30,6 +30,10 @@ endif()
 
 set(EXTERNAL_INCLUDES_DIR "${NCINE_LIBS}/Includes/" CACHE PATH "Set the path to external header files")
 
+if(NCINE_WITH_BACKWARD)
+	find_package(Backward)
+endif()
+
 if(EMSCRIPTEN)
 	set(EXTERNAL_EMSCRIPTEN_DIR "${NCINE_LIBS}/Emscripten/" CACHE PATH "Set the path to the Emscripten libraries directory")
 	if(IS_DIRECTORY ${EXTERNAL_EMSCRIPTEN_DIR})

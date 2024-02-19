@@ -32,6 +32,95 @@
 namespace Death { namespace Containers {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+	namespace Implementation
+	{
+		template<std::size_t size_, class T, bool trivial> struct StaticArrayData;
+		template<std::size_t size_, class T> struct StaticArrayData<size_, T, true> {
+			// Here we additionally deal with types that have a NoInit constructor
+			template<class U = T, typename std::enable_if<!std::is_constructible<U, NoInitT>::value>::type* = nullptr> explicit StaticArrayData(NoInitT) {}
+			template<class U = T, typename std::enable_if<std::is_constructible<U, NoInitT>::value>::type* = nullptr> explicit StaticArrayData(NoInitT) : StaticArrayData{NoInit, typename GenerateSequence<size_>::Type{}} {}
+			template<std::size_t ...sequence, class U = T, typename std::enable_if<std::is_constructible<U, NoInitT>::value>::type* = nullptr> explicit StaticArrayData(NoInitT noInit, Sequence<sequence...>) : _data{(&noInit)[0 * sequence]...} {}
+
+			// Compared to StaticArrayData<size_, T, false> it does the right thing by default. MSVC 2015, 2019 and 2022
+			// (but not 2017, _MSC_VER=191x) complains that the constexpr constructor doesn't initialize all members
+			// when used with a non-trivially-constructible type, so there has to be a non-constexpr variant that
+			// doesn't initialize trivially constructible types (and MSVC 2015 would complain if it would be constexpr),
+			// and a constexpr variant that initializes types with a constructor. Not fixable with /permissive- either.
+#if !defined(DEATH_TARGET_MSVC) || defined(DEATH_TARGET_CLANG) || (_MSC_VER >= 1910 && _MSC_VER < 1920)
+			constexpr explicit StaticArrayData(DefaultInitT) {}
+#else
+			template<class U = T, typename std::enable_if<std::is_trivially_constructible<U>::value>::type* = nullptr> explicit StaticArrayData(DefaultInitT) {}
+			template<class U = T, typename std::enable_if<!std::is_trivially_constructible<U>::value>::type* = nullptr> constexpr explicit StaticArrayData(DefaultInitT) : _data{} {}
+#endif
+
+			// Same as in StaticArrayData<size_, T, false>. The () instead of {} works around a featurebug in C++
+			// where new T{} doesn't work for an explicit defaulted constructor.
+			constexpr explicit StaticArrayData(ValueInitT) : _data() {}
+
+			// Same as in StaticArrayData<size_, T, false>
+			template<class ...Args> constexpr explicit StaticArrayData(InPlaceInitT, Args&&... args) : _data{std::forward<Args>(args)...} {}
+			template<std::size_t ...sequence> constexpr explicit StaticArrayData(InPlaceInitT, Sequence<sequence...>, const T(&data)[sizeof...(sequence)]) : _data{data[sequence]...} {}
+
+#ifndef DEATH_MSVC2017_COMPATIBILITY
+			template<std::size_t ...sequence> constexpr explicit StaticArrayData(InPlaceInitT, Sequence<sequence...>, T(&& data)[sizeof...(sequence)]) : _data{std::move(data[sequence])...} {}
+#endif
+
+			T _data[size_];
+		};
+
+		template<std::size_t size_, class T> struct StaticArrayData<size_, T, false> {
+			// Compared to StaticArrayData<size_, T, true> it does the right thing by default
+			explicit StaticArrayData(NoInitT) {}
+
+			// Compared to StaticArrayData<size_, T, true> a default constructor has to be called on the union members.
+			// If the default constructor is trivial, the StaticArrayData<size_, T, true> base was picked instead.
+			explicit StaticArrayData(DefaultInitT)
+				// GCC 5.3 is not able to initialize non-movable types inside constructor initializer list. Reported here,
+				// fixed on 10.3: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=70395
+				// In both cases, the () instead of {} works around a featurebug in C++ where new T{} doesn't work
+				// for an explicit defaulted constructor.
+#if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__*100 + __GNUC_MINOR__ >= 10003
+				: _data() {}
+#else
+			{
+				for (T& i : _data) new(&i) T();
+			}
+#endif
+
+			// Same as in StaticArrayData<size_, T, true>. The () instead of {} works around a featurebug in C++
+			// where new T{} doesn't work for an explicit defaulted constructor.
+			explicit StaticArrayData(ValueInitT) : _data() {}
+
+			// Same as in StaticArrayData<size_, T, true>
+			template<class ...Args> explicit StaticArrayData(InPlaceInitT, Args&&... args) : _data{std::forward<Args>(args)...} {}
+			template<std::size_t ...sequence> explicit StaticArrayData(InPlaceInitT, Implementation::Sequence<sequence...>, const T(&data)[sizeof...(sequence)]) : _data{data[sequence]...} {}
+
+#ifndef DEATH_MSVC2017_COMPATIBILITY
+			template<std::size_t ...sequence> explicit StaticArrayData(InPlaceInitT, Implementation::Sequence<sequence...>, T(&& data)[sizeof...(sequence)]) : _data{std::move(data[sequence])...} {}
+#endif
+
+			// Compared to StaticArrayData<size_, T, true> we need to explicitly copy/move the union members
+			StaticArrayData(const StaticArrayData<size_, T, false>& other) noexcept(std::is_nothrow_copy_constructible<T>::value);
+			StaticArrayData(StaticArrayData<size_, T, false>&& other) noexcept(std::is_nothrow_move_constructible<T>::value);
+			~StaticArrayData();
+			StaticArrayData<size_, T, false>& operator=(const StaticArrayData<size_, T, false>&) noexcept(std::is_nothrow_copy_constructible<T>::value);
+			StaticArrayData<size_, T, false>& operator=(StaticArrayData<size_, T, false>&&) noexcept(std::is_nothrow_move_constructible<T>::value);
+
+			union {
+				T _data[size_];
+			};
+		};
+
+		template<std::size_t size_, class T> using StaticArrayDataFor = StaticArrayData<size_, T,
+#if defined(DEATH_TARGET_LIBSTDCXX) && __GNUC__ < 5 && _GLIBCXX_RELEASE < 7
+			std::integral_constant<bool, __has_trivial_constructor(T)>::value
+#else
+			std::is_trivially_constructible<T>::value
+#endif
+			|| std::is_constructible<T, NoInitT>::value>;
+
+	}
+
 	/**
 		@brief Compile-time-sized array
 		@tparam size_   Array size
@@ -40,7 +129,7 @@ namespace Death { namespace Containers {
 		Like @ref Array, but with compile-time size information. Useful as a more featureful alternative to plain C arrays or @ref std::array,
 		especially when it comes to initialization. A non-owning version of this container is a @ref StaticArrayView.
 	 */
-	template<std::size_t size_, class T> class StaticArray
+	template<std::size_t size_, class T> class StaticArray : Implementation::StaticArrayDataFor<size_, T>
 	{
 	public:
 		/** @brief Element type */
@@ -59,20 +148,7 @@ namespace Death { namespace Containers {
 		 * @ref StaticArray(ValueInitT) or the @ref StaticArray(NoInitT)
 		 * variant instead.
 		 */
-#if defined(DEATH_TARGET_LIBSTDCXX) && __GNUC__ < 5 && _GLIBCXX_RELEASE < 7
-		template<class U = T, typename std::enable_if<std::integral_constant<bool, __has_trivial_constructor(U)>::value, int>::type = 0> explicit StaticArray(DefaultInitT) {}
-		template<class U = T, typename std::enable_if<!std::integral_constant<bool, __has_trivial_constructor(U)>::value, int>::type = 0> explicit StaticArray(DefaultInitT)
-#else
-		template<class U = T, typename std::enable_if<std::is_trivially_constructible<U>::value, int>::type = 0> explicit StaticArray(DefaultInitT) {}
-		template<class U = T, typename std::enable_if<!std::is_trivially_constructible<U>::value, int>::type = 0> explicit StaticArray(DefaultInitT)
-#endif
-#if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__*100 + __GNUC_MINOR__ >= 10003
-			: _data() {}
-#else
-			{
-				for(T& i: _data) new(&i) T();
-			}
-#endif
+		constexpr explicit StaticArray(DefaultInitT) : Implementation::StaticArrayDataFor<size_, T>{DefaultInit} {}
 
 		/**
 		 * @brief Construct a value-initialized array
@@ -81,7 +157,7 @@ namespace Death { namespace Containers {
 		 * (i.e., trivial types are zero-initialized, default constructor
 		 * called otherwise). This is the same as @ref StaticArray().
 		 */
-		explicit StaticArray(ValueInitT) : _data() {}
+		constexpr explicit StaticArray(ValueInitT) : Implementation::StaticArrayDataFor<size_, T>{ValueInit} {}
 
 		/**
 		* @brief Construct an array without initializing its contents
@@ -98,7 +174,7 @@ namespace Death { namespace Containers {
 		* example @ref std::uninitialized_copy()) in order to avoid calling
 		* destructors on uninitialized memory.
 		*/
-		explicit StaticArray(NoInitT) {}
+		explicit StaticArray(NoInitT) : Implementation::StaticArrayDataFor<size_, T>{NoInit} {}
 
 		/**
 		 * @brief Construct a direct-initialized array
@@ -107,6 +183,7 @@ namespace Death { namespace Containers {
 		 * and then initializes each element with placement new using forwarded
 		 * @p args.
 		 */
+		/* Not constexpr as it delegates to a NoInit constructor */
 		template<class ...Args> explicit StaticArray(DirectInitT, Args&&... args);
 
 		/**
@@ -115,7 +192,7 @@ namespace Death { namespace Containers {
 		 * The arguments are forwarded to the array constructor. Same as
 		 * @ref StaticArray(Args&&... args).
 		 */
-		template<class ...Args> explicit StaticArray(InPlaceInitT, Args&&... args) : _data{std::forward<Args>(args)...} {
+		template<class ...Args> constexpr explicit StaticArray(InPlaceInitT, Args&&... args) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, std::forward<Args>(args)...} {
 			static_assert(sizeof...(args) == size_, "Containers::StaticArray: Wrong number of initializers");
 		}
 
@@ -129,7 +206,7 @@ namespace Death { namespace Containers {
 		 * @ref StaticArray(InPlaceInitT, T(&&)[size_]) instead. Same as
 		 * @ref StaticArray(const T(&)[size_]).
 		 */
-		explicit StaticArray(InPlaceInitT, const T(&data)[size_]) : StaticArray{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, data} {}
+		constexpr explicit StaticArray(InPlaceInitT, const T(&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, data} {}
 
 #if !defined(DEATH_MSVC2017_COMPATIBILITY)
 		/**
@@ -143,7 +220,7 @@ namespace Death { namespace Containers {
 		*      @ref DEATH_MSVC2017_COMPATIBILITY "MSVC 2017" as these
 		*      compilers don't support moving arrays.
 		*/
-		explicit StaticArray(InPlaceInitT, T(&&data)[size_]) : StaticArray{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, std::move(data)} {}
+		constexpr explicit StaticArray(InPlaceInitT, T(&&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, std::move(data)} {}
 #endif
 
 		/**
@@ -151,48 +228,34 @@ namespace Death { namespace Containers {
 		 *
 		 * Alias to @ref StaticArray(ValueInitT).
 		 */
-		explicit StaticArray() : StaticArray{ValueInit} {}
+		constexpr explicit StaticArray() : Implementation::StaticArrayDataFor<size_, T>{ValueInit} {}
 
 		/**
 		 * @brief Construct an in-place-initialized array
 		 *
 		 * Alias to @ref StaticArray(InPlaceInitT, Args&&... args).
 		 */
-		template<class First, class ...Next, class = typename std::enable_if<std::is_convertible<First&&, T>::value>::type> /*implicit*/ StaticArray(First&& first, Next&&... next) : StaticArray{InPlaceInit, std::forward<First>(first), std::forward<Next>(next)...} {}
+		template<class First, class ...Next, class = typename std::enable_if<std::is_convertible<First&&, T>::value>::type> constexpr /*implicit*/ StaticArray(First&& first, Next&&... next) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, std::forward<First>(first), std::forward<Next>(next)...} {}
 
 		/**
 		 * @brief In-place construct an array by copying the elements from a fixed-size array
 		 *
 		 * Alias to @ref StaticArray(InPlaceInitT, const T(&)[size_]).
 		 */
-		explicit StaticArray(const T(&data)[size_]) : StaticArray{InPlaceInit, data} {}
+		constexpr explicit StaticArray(const T(&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, data} {}
 
 #if !defined(DEATH_MSVC2017_COMPATIBILITY)
-		   /**
-			* @brief In-place construct an array by moving the elements from a fixed-size array
-			*
-			* Alias to @ref StaticArray(InPlaceInitT, T(&&)[size_]).
-			* @partialsupport Not available on
-			*      @ref DEATH_MSVC2015_COMPATIBILITY "MSVC 2015" and
-			*      @ref DEATH_MSVC2017_COMPATIBILITY "MSVC 2017" as these
-			*      compilers don't support moving arrays.
-			*/
-		explicit StaticArray(T(&&data)[size_]) : StaticArray{InPlaceInit, std::move(data)} {}
+		/**
+		* @brief In-place construct an array by moving the elements from a fixed-size array
+		*
+		* Alias to @ref StaticArray(InPlaceInitT, T(&&)[size_]).
+		* @partialsupport Not available on
+		*      @ref DEATH_MSVC2015_COMPATIBILITY "MSVC 2015" and
+		*      @ref DEATH_MSVC2017_COMPATIBILITY "MSVC 2017" as these
+		*      compilers don't support moving arrays.
+		*/
+		constexpr explicit StaticArray(T(&&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, std::move(data)} {}
 #endif
-
-		/** @brief Copy constructor */
-		StaticArray(const StaticArray<size_, T>& other) noexcept(std::is_nothrow_copy_constructible<T>::value);
-
-		/** @brief Move constructor */
-		StaticArray(StaticArray<size_, T>&& other) noexcept(std::is_nothrow_move_constructible<T>::value);
-
-		~StaticArray();
-
-		/** @brief Copy assignment */
-		StaticArray<size_, T>& operator=(const StaticArray<size_, T>&) noexcept(std::is_nothrow_copy_constructible<T>::value);
-
-		/** @brief Move assignment */
-		StaticArray<size_, T>& operator=(StaticArray<size_, T>&&) noexcept(std::is_nothrow_move_constructible<T>::value);
 
 		/** @brief Convert to external view representation */
 		template<class U, class = decltype(Implementation::StaticArrayViewConverter<size_, T, U>::to(std::declval<StaticArrayView<size_, T>>()))> /*implicit*/ operator U() {
@@ -204,19 +267,21 @@ namespace Death { namespace Containers {
 			return Implementation::StaticArrayViewConverter<size_, const T, U>::to(*this);
 		}
 
+#if !defined(DEATH_MSVC2019_COMPATIBILITY)
+		/** @brief Whether the array is non-empty */
+		/* Disabled on MSVC w/o /permissive- to avoid ambiguous operator+() when doing pointer arithmetic. */
+		constexpr explicit operator bool() const { return true; }
+#endif
+
 		/** @brief Conversion to array type */
-		/*implicit*/ operator T*() & {
-			return _data;
-		}
+		/*implicit*/ operator T*() & { return this->_data; }
 
 		/** @overload */
-		/*implicit*/ operator const T*() const & {
-			return _data;
-		}
+		constexpr /*implicit*/ operator const T*() const & { return this->_data; }
 
 		/** @brief Array data */
-		T* data() { return _data; }
-		const T* data() const { return _data; }				/**< @overload */
+		T* data() { return this->_data; }
+		constexpr const T* data() const { return this->_data; }				/**< @overload */
 
 		/**
 		 * @brief Array size
@@ -234,22 +299,22 @@ namespace Death { namespace Containers {
 		constexpr bool empty() const { return !size_; }
 
 		/** @brief Pointer to the first element */
-		T* begin() { return _data; }
-		const T* begin() const { return _data; }			/**< @overload */
-		const T* cbegin() const { return _data; }			/**< @overload */
+		T* begin() { return this->_data; }
+		constexpr const T* begin() const { return this->_data; }			/**< @overload */
+		constexpr const T* cbegin() const { return this->_data; }			/**< @overload */
 
 		/** @brief Pointer to (one item after) the last element */
-		T* end() { return _data + size_; }
-		const T* end() const { return _data + size_; }		/**< @overload */
-		const T* cend() const { return _data + size_; }		/**< @overload */
+		T* end() { return this->_data + size_; }
+		constexpr const T* end() const { return this->_data + size_; }		/**< @overload */
+		constexpr const T* cend() const { return this->_data + size_; }		/**< @overload */
 
 		/** @brief First element */
-		T& front() { return _data[0]; }
-		const T& front() const { return _data[0]; }			/**< @overload */
+		T& front() { return this->_data[0]; }
+		constexpr const T& front() const { return this->_data[0]; }			/**< @overload */
 
 		/** @brief Last element */
-		T& back() { return _data[size_ - 1]; }
-		const T& back() const { return _data[size_ - 1]; }	/**< @overload */
+		T& back() { return this->_data[size_ - 1]; }
+		constexpr const T& back() const { return this->_data[size_ - 1]; }	/**< @overload */
 
 		/**
 		 * @brief Element access
@@ -257,7 +322,7 @@ namespace Death { namespace Containers {
 		 * Expects that @p i is less than @ref size().
 		 */
 		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> T& operator[](U i);
-		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> const T& operator[](U i) const;
+		template<class U, class = typename std::enable_if<std::is_convertible<U, std::size_t>::value>::type> constexpr const T& operator[](U i) const;
 
 		/**
 		 * @brief View on a slice
@@ -269,15 +334,15 @@ namespace Death { namespace Containers {
 			return ArrayView<T>(*this).slice(begin, end);
 		}
 		/** @overload */
-		ArrayView<const T> slice(const T* begin, const T* end) const {
+		constexpr ArrayView<const T> slice(const T* begin, const T* end) const {
 			return ArrayView<const T>(*this).slice(begin, end);
 		}
 		/** @overload */
-		ArrayView<T> slice(std::size_t begin, std::size_t end) {
+		constexpr ArrayView<T> slice(std::size_t begin, std::size_t end) {
 			return ArrayView<T>(*this).slice(begin, end);
 		}
 		/** @overload */
-		ArrayView<const T> slice(std::size_t begin, std::size_t end) const {
+		constexpr ArrayView<const T> slice(std::size_t begin, std::size_t end) const {
 			return ArrayView<const T>(*this).slice(begin, end);
 		}
 
@@ -291,7 +356,7 @@ namespace Death { namespace Containers {
 			return ArrayView<T>{*this}.sliceSize(begin, size);
 		}
 		/** @overload */
-		template<class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type> ArrayView<const T> sliceSize(const U begin, std::size_t size) const {
+		template<class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr ArrayView<const T> sliceSize(const U begin, std::size_t size) const {
 			return ArrayView<const T>{*this}.sliceSize(begin, size);
 		}
 		/** @overload */
@@ -299,7 +364,7 @@ namespace Death { namespace Containers {
 			return ArrayView<T>{*this}.sliceSize(begin, size);
 		}
 		/** @overload */
-		ArrayView<const T> sliceSize(std::size_t begin, std::size_t size) const {
+		constexpr ArrayView<const T> sliceSize(std::size_t begin, std::size_t size) const {
 			return ArrayView<const T>{*this}.sliceSize(begin, size);
 		}
 
@@ -312,7 +377,7 @@ namespace Death { namespace Containers {
 			return ArrayView<T>(*this).template slice<size__>(begin);
 		}
 		/** @overload */
-		template<std::size_t size__, class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type> StaticArrayView<size__, const T> slice(U begin) const {
+		template<std::size_t size__, class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr StaticArrayView<size__, const T> slice(U begin) const {
 			return ArrayView<const T>(*this).template slice<size__>(begin);
 		}
 		/** @overload */
@@ -320,7 +385,7 @@ namespace Death { namespace Containers {
 			return ArrayView<T>(*this).template slice<size__>(begin);
 		}
 		/** @overload */
-		template<std::size_t size__> StaticArrayView<size__, const T> slice(std::size_t begin) const {
+		template<std::size_t size__> constexpr StaticArrayView<size__, const T> slice(std::size_t begin) const {
 			return ArrayView<const T>(*this).template slice<size__>(begin);
 		}
 
@@ -333,7 +398,7 @@ namespace Death { namespace Containers {
 			return StaticArrayView<size_, T>(*this).template slice<begin_, end_>();
 		}
 		/** @overload */
-		template<std::size_t begin_, std::size_t end_> StaticArrayView<end_ - begin_, const T> slice() const {
+		template<std::size_t begin_, std::size_t end_> constexpr StaticArrayView<end_ - begin_, const T> slice() const {
 			return StaticArrayView<size_, const T>(*this).template slice<begin_, end_>();
 		}
 
@@ -346,7 +411,7 @@ namespace Death { namespace Containers {
 			return StaticArrayView<size_, T>(*this).template sliceSize<begin_, size__>();
 		}
 		/** @overload */
-		template<std::size_t begin_, std::size_t size__> StaticArrayView<size__, const T> sliceSize() const {
+		template<std::size_t begin_, std::size_t size__> constexpr StaticArrayView<size__, const T> sliceSize() const {
 			return StaticArrayView<size_, const T>(*this).template sliceSize<begin_, size__>();
 		}
 
@@ -355,13 +420,11 @@ namespace Death { namespace Containers {
 		 *
 		 * Equivalent to @ref StaticArrayView::prefix(T*) const.
 		 */
-		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type>
-		ArrayView<T> prefix(U end) {
+		template<class U, class = typename std::enable_if<std::is_convertible<U, T*>::value && !std::is_convertible<U, std::size_t>::value>::type> ArrayView<T> prefix(U end) {
 			return ArrayView<T>(*this).prefix(end);
 		}
 		/** @overload */
-		template<class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type>
-		ArrayView<const T> prefix(U end) const {
+		template<class U, class = typename std::enable_if<std::is_convertible<U, const T*>::value && !std::is_convertible<U, std::size_t>::value>::type> constexpr ArrayView<const T> prefix(U end) const {
 			return ArrayView<const T>(*this).prefix(end);
 		}
 
@@ -374,7 +437,7 @@ namespace Death { namespace Containers {
 			return ArrayView<T>(*this).suffix(begin);
 		}
 		/** @overload */
-		ArrayView<const T> suffix(const T* begin) const {
+		constexpr ArrayView<const T> suffix(const T* begin) const {
 			return ArrayView<const T>(*this).suffix(begin);
 		}
 
@@ -387,7 +450,7 @@ namespace Death { namespace Containers {
 			return ArrayView<T>(*this).prefix(size);
 		}
 		/** @overload */
-		ArrayView<const T> prefix(std::size_t size) const {
+		constexpr ArrayView<const T> prefix(std::size_t size) const {
 			return ArrayView<const T>(*this).prefix(size);
 		}
 
@@ -398,7 +461,7 @@ namespace Death { namespace Containers {
 		*/
 		template<std::size_t size__> StaticArrayView<size__, T> prefix();
 		/** @overload */
-		template<std::size_t size__> StaticArrayView<size__, const T> prefix() const;
+		template<std::size_t size__> constexpr StaticArrayView<size__, const T> prefix() const;
 
 		/**
 		 * @brief View except the first @p size items
@@ -409,7 +472,7 @@ namespace Death { namespace Containers {
 			return ArrayView<T>(*this).exceptPrefix(size);
 		}
 		/** @overload */
-		ArrayView<const T> exceptPrefix(std::size_t size) const {
+		constexpr ArrayView<const T> exceptPrefix(std::size_t size) const {
 			return ArrayView<const T>(*this).exceptPrefix(size);
 		}
 
@@ -423,7 +486,7 @@ namespace Death { namespace Containers {
 			return StaticArrayView<size_, T>(*this).template exceptPrefix<size__>();
 		}
 		/** @overload */
-		template<std::size_t size__> StaticArrayView<size_ - size__, const T> exceptPrefix() const {
+		template<std::size_t size__> constexpr StaticArrayView<size_ - size__, const T> exceptPrefix() const {
 			return StaticArrayView<size_, const T>(*this).template exceptPrefix<size__>();
 		}
 
@@ -436,7 +499,7 @@ namespace Death { namespace Containers {
 			return ArrayView<T>(*this).exceptSuffix(size);
 		}
 		/** @overload */
-		ArrayView<const T> exceptSuffix(std::size_t size) const {
+		constexpr ArrayView<const T> exceptSuffix(std::size_t size) const {
 			return ArrayView<const T>(*this).exceptSuffix(size);
 		}
 
@@ -449,7 +512,7 @@ namespace Death { namespace Containers {
 			return StaticArrayView<size_, T>(*this).template exceptSuffix<size__>();
 		}
 		/** @overload */
-		template<std::size_t size__> StaticArrayView<size_ - size__, const T> exceptSuffix() const {
+		template<std::size_t size__> constexpr StaticArrayView<size_ - size__, const T> exceptSuffix() const {
 			return StaticArrayView<size_, const T>(*this).template exceptSuffix<size__>();
 		}
 
@@ -457,25 +520,16 @@ namespace Death { namespace Containers {
 #if DEATH_CXX_STANDARD > 201402
 		// There doesn't seem to be a way to call those directly, and I can't find any practical use of std::tuple_size,
 		// tuple_element etc. on C++11 and C++14, so this is defined only for newer standards.
-		template<std::size_t index> friend T& get(StaticArray<size_, T>& value) {
+		template<std::size_t index> constexpr friend const T& get(const StaticArray<size_, T>& value) {
 			return value._data[index];
 		}
-		template<std::size_t index> friend const T& get(const StaticArray<size_, T>& value) {
+		template<std::size_t index> DEATH_CONSTEXPR14 friend T& get(StaticArray<size_, T>& value) {
 			return value._data[index];
 		}
-		template<std::size_t index> friend T&& get(StaticArray<size_, T>&& value) {
+		template<std::size_t index> DEATH_CONSTEXPR14 friend T&& get(StaticArray<size_, T>&& value) {
 			return std::move(value._data[index]);
 		}
 #endif
-
-		template<std::size_t ...sequence> explicit StaticArray(InPlaceInitT, Implementation::Sequence<sequence...>, const T(&data)[sizeof...(sequence)]) : _data{data[sequence]...} {}
-#if !defined(DEATH_MSVC2017_COMPATIBILITY)
-		template<std::size_t ...sequence> explicit StaticArray(InPlaceInitT, Implementation::Sequence<sequence...>, T(&&data)[sizeof...(sequence)]) : _data{std::move(data[sequence])...} {}
-#endif
-
-		union {
-			T _data[size_];
-		};
 	};
 
 	/**
@@ -537,60 +591,62 @@ namespace Death { namespace Containers {
 		return size_;
 	}
 
-	template<std::size_t size_, class T> template<class ...Args> StaticArray<size_, T>::StaticArray(DirectInitT, Args&&... args) : StaticArray { NoInit } {
-		for (T& i : _data) {
+	template<std::size_t size_, class T> template<class ...Args> StaticArray<size_, T>::StaticArray(DirectInitT, Args&&... args) : StaticArray{NoInit} {
+		for (T& i : this->_data) {
 			Implementation::construct(i, std::forward<Args>(args)...);
 		}
 	}
 
-	template<std::size_t size_, class T> StaticArray<size_, T>::StaticArray(const StaticArray<size_, T>& other) noexcept(std::is_nothrow_copy_constructible<T>::value) : StaticArray { NoInit } {
-		for (std::size_t i = 0; i != other.size(); ++i)
-			// Can't use {}, see the GCC 4.8-specific overload for details
+	namespace Implementation
+	{
+		template<std::size_t size_, class T> StaticArrayData<size_, T, false>::StaticArrayData(const StaticArrayData<size_, T, false>& other) noexcept(std::is_nothrow_copy_constructible<T>::value) : StaticArrayData{NoInit} {
+			for (std::size_t i = 0; i != size_; ++i)
+				// Can't use {}, see the GCC 4.8-specific overload for details
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
-			Implementation::construct(_data[i], other._data[i]);
+				Implementation::construct(_data[i], other._data[i]);
 #else
-			new(_data + i) T{other._data[i]};
+				new(_data + i) T{other._data[i]};
 #endif
-	}
+		}
 
-	template<std::size_t size_, class T> StaticArray<size_, T>::StaticArray(StaticArray<size_, T>&& other) noexcept(std::is_nothrow_move_constructible<T>::value) : StaticArray { NoInit } {
-		for (std::size_t i = 0; i != other.size(); ++i)
-			// Can't use {}, see the GCC 4.8-specific overload for details
+		template<std::size_t size_, class T> StaticArrayData<size_, T, false>::StaticArrayData(StaticArrayData<size_, T, false>&& other) noexcept(std::is_nothrow_move_constructible<T>::value) : StaticArrayData{NoInit} {
+			for (std::size_t i = 0; i != size_; ++i)
+				// Can't use {}, see the GCC 4.8-specific overload for details
 #if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 5
-			Implementation::construct(_data[i], std::move(other._data[i]));
+				Implementation::construct(_data[i], std::move(other._data[i]));
 #else
-			new(&_data[i]) T{std::move(other._data[i])};
+				new(&_data[i]) T{std::move(other._data[i])};
 #endif
-	}
+		}
 
-	template<std::size_t size_, class T> StaticArray<size_, T>::~StaticArray() {
-		for (T& i : _data) {
-			i.~T();
+		template<std::size_t size_, class T> StaticArrayData<size_, T, false>::~StaticArrayData() {
+			for (T& i : _data) {
+				i.~T();
 #if defined(DEATH_MSVC2015_COMPATIBILITY)
-			// Complains i is set but not used for trivially destructible types
-			static_cast<void>(i);
+				// Complains i is set but not used for trivially destructible types
+				static_cast<void>(i);
 #endif
+			}
+		}
+
+		template<std::size_t size_, class T> StaticArrayData<size_, T, false>& StaticArrayData<size_, T, false>::operator=(const StaticArrayData<size_, T, false>& other) noexcept(std::is_nothrow_copy_constructible<T>::value) {
+			for (std::size_t i = 0; i != size_; ++i) {
+				_data[i] = other._data[i];
+			}
+			return *this;
+		}
+
+		template<std::size_t size_, class T> StaticArrayData<size_, T, false>& StaticArrayData<size_, T, false>::operator=(StaticArrayData<size_, T, false>&& other) noexcept(std::is_nothrow_move_constructible<T>::value) {
+			using std::swap;
+			for (std::size_t i = 0; i != size_; ++i) {
+				swap(_data[i], other._data[i]);
+			}
+			return *this;
 		}
 	}
 
-	template<std::size_t size_, class T> StaticArray<size_, T>& StaticArray<size_, T>::operator=(const StaticArray<size_, T>& other) noexcept(std::is_nothrow_copy_constructible<T>::value) {
-		for (std::size_t i = 0; i != other.size(); ++i) {
-			_data[i] = other._data[i];
-		}
-		return *this;
-	}
-
-	template<std::size_t size_, class T> StaticArray<size_, T>& StaticArray<size_, T>::operator=(StaticArray<size_, T>&& other) noexcept(std::is_nothrow_move_constructible<T>::value) {
-		using std::swap;
-		for (std::size_t i = 0; i != other.size(); ++i) {
-			swap(_data[i], other._data[i]);
-		}
-		return *this;
-	}
-
-	template<std::size_t size_, class T> template<class U, class> const T& StaticArray<size_, T>::operator[](const U i) const {
-		DEATH_DEBUG_ASSERT(std::size_t(i) < size_, _data[0], "Containers::StaticArray::operator[](): Index %zu out of range for %zu elements", std::size_t(i), size_);
-		return _data[i];
+	template<std::size_t size_, class T> template<class U, class> constexpr const T& StaticArray<size_, T>::operator[](const U i) const {
+		return DEATH_DEBUG_CONSTEXPR_ASSERT(std::size_t(i) < size_, "Containers::StaticArray::operator[](): Index %zu out of range for %zu elements", std::size_t(i), size_), this->_data[i];
 	}
 
 	template<std::size_t size_, class T> template<class U, class> T& StaticArray<size_, T>::operator[](const U i) {
@@ -599,12 +655,12 @@ namespace Death { namespace Containers {
 
 	template<std::size_t size_, class T> template<std::size_t viewSize> StaticArrayView<viewSize, T> StaticArray<size_, T>::prefix() {
 		static_assert(viewSize <= size_, "Prefix size too large");
-		return StaticArrayView<viewSize, T>{_data};
+		return StaticArrayView<viewSize, T>{this->_data};
 	}
 
-	template<std::size_t size_, class T> template<std::size_t viewSize> StaticArrayView<viewSize, const T> StaticArray<size_, T>::prefix() const {
+	template<std::size_t size_, class T> template<std::size_t viewSize> constexpr StaticArrayView<viewSize, const T> StaticArray<size_, T>::prefix() const {
 		static_assert(viewSize <= size_, "Prefix size too large");
-		return StaticArrayView<viewSize, const T>{_data};
+		return StaticArrayView<viewSize, const T>{this->_data};
 	}
 
 	namespace Implementation
@@ -612,19 +668,19 @@ namespace Death { namespace Containers {
 		template<class U, std::size_t size, class T> struct ArrayViewConverter<U, StaticArray<size, T>> {
 			template<class V = U> constexpr static typename std::enable_if<std::is_convertible<T*, V*>::value, ArrayView<U>>::type from(StaticArray<size, T>& other) {
 				static_assert(sizeof(T) == sizeof(U), "Types are not compatible");
-				return { &other[0], other.size() };
+				return { other.data(), other.size() };
 			}
 		};
 		template<class U, std::size_t size, class T> struct ArrayViewConverter<const U, StaticArray<size, T>> {
 			template<class V = U> constexpr static typename std::enable_if<std::is_convertible<T*, V*>::value, ArrayView<const U>>::type from(const StaticArray<size, T>& other) {
 				static_assert(sizeof(T) == sizeof(U), "Types are not compatible");
-				return { &other[0], other.size() };
+				return { other.data(), other.size() };
 			}
 		};
 		template<class U, std::size_t size, class T> struct ArrayViewConverter<const U, StaticArray<size, const T>> {
 			template<class V = U> constexpr static typename std::enable_if<std::is_convertible<T*, V*>::value, ArrayView<const U>>::type from(const StaticArray<size, const T>& other) {
 				static_assert(sizeof(T) == sizeof(U), "Types are not compatible");
-				return { &other[0], other.size() };
+				return { other.data(), other.size() };
 			}
 		};
 		template<std::size_t size, class T> struct ErasedArrayViewConverter<StaticArray<size, T>> : ArrayViewConverter<T, StaticArray<size, T>> {};
@@ -633,19 +689,19 @@ namespace Death { namespace Containers {
 		template<class U, std::size_t size, class T> struct StaticArrayViewConverter<size, U, StaticArray<size, T>> {
 			template<class V = U> constexpr static typename std::enable_if<std::is_convertible<T*, V*>::value, StaticArrayView<size, U>>::type from(StaticArray<size, T>& other) {
 				static_assert(sizeof(T) == sizeof(U), "Types are not compatible");
-				return StaticArrayView<size, T>{&other[0]};
+				return StaticArrayView<size, T>{other.data()};
 			}
 		};
 		template<class U, std::size_t size, class T> struct StaticArrayViewConverter<size, const U, StaticArray<size, T>> {
 			template<class V = U> constexpr static typename std::enable_if<std::is_convertible<T*, V*>::value, StaticArrayView<size, const U>>::type from(const StaticArray<size, T>& other) {
 				static_assert(sizeof(T) == sizeof(U), "Types are not compatible");
-				return StaticArrayView<size, const T>(&other[0]);
+				return StaticArrayView<size, const T>(other.data());
 			}
 		};
 		template<class U, std::size_t size, class T> struct StaticArrayViewConverter<size, const U, StaticArray<size, const T>> {
 			template<class V = U> constexpr static typename std::enable_if<std::is_convertible<T*, V*>::value, StaticArrayView<size, const U>>::type from(const StaticArray<size, const T>& other) {
 				static_assert(sizeof(T) == sizeof(U), "Types are not compatible");
-				return StaticArrayView<size, const T>(&other[0]);
+				return StaticArrayView<size, const T>(other.data());
 			}
 		};
 		template<std::size_t size, class T> struct ErasedStaticArrayViewConverter<StaticArray<size, T>> : StaticArrayViewConverter<size, T, StaticArray<size, T>> {};

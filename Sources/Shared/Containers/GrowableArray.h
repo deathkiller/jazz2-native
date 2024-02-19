@@ -250,9 +250,8 @@ namespace Death { namespace Containers {
 		 * platform default allocation alignment.
 		 */
 		static T* allocate(std::size_t capacity) {
-			/* Compared to ArrayNewAllocator, here the capacity is stored in bytes
-			   so it's possible to "reinterpret" the array into a different type
-			   (as the deleter is a typeless std::free() in any case) */
+			// Compared to ArrayNewAllocator, here the capacity is stored in bytes so it's possible to "reinterpret"
+			// the array into a different type (as the deleter is a typeless std::free() in any case)
 			const std::size_t inBytes = capacity * sizeof(T) + AllocationOffset;
 			char* const memory = static_cast<char*>(std::malloc(inBytes));
 			DEATH_ASSERT(memory != nullptr, {}, "Containers::ArrayMallocAllocator: Can't allocate %zu bytes", inBytes);
