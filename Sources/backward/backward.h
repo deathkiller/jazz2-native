@@ -53,18 +53,13 @@
  // #define BACKWARD_SYSTEM_WINDOWS
  //  - specialization for Windows (Clang 9 and MSVC2017)
  //
- // #define BACKWARD_SYSTEM_UNKNOWN
- //	- placebo implementation, does nothing.
- //
-#if !(defined(BACKWARD_SYSTEM_LINUX) || defined(BACKWARD_SYSTEM_DARWIN) || defined(BACKWARD_SYSTEM_UNKNOWN) || defined(BACKWARD_SYSTEM_WINDOWS))
+#if !(defined(BACKWARD_SYSTEM_LINUX) || defined(BACKWARD_SYSTEM_DARWIN) || defined(BACKWARD_SYSTEM_WINDOWS))
 #	if defined(__linux) || defined(__linux__)
 #		define BACKWARD_SYSTEM_LINUX
 #	elif defined(DEATH_TARGET_APPLE)
 #		define BACKWARD_SYSTEM_DARWIN
 #	elif defined(DEATH_TARGET_WINDOWS)
 #		define BACKWARD_SYSTEM_WINDOWS
-#	else
-#		define BACKWARD_SYSTEM_UNKNOWN
 #	endif
 #endif
 
@@ -434,7 +429,6 @@ namespace backward {
 		struct linux_tag; // seems that I cannot call that "linux" because the name is already defined... so I am adding _tag everywhere.
 		struct darwin_tag;
 		struct windows_tag;
-		struct unknown_tag;
 
 #if defined(BACKWARD_SYSTEM_LINUX)
 		typedef linux_tag current_tag;
@@ -442,10 +436,8 @@ namespace backward {
 		typedef darwin_tag current_tag;
 #elif defined(BACKWARD_SYSTEM_WINDOWS)
 		typedef windows_tag current_tag;
-#elif defined(BACKWARD_SYSTEM_UNKNOWN)
-		typedef unknown_tag current_tag;
 #else
-#	error "May I please get my system defines?"
+#	error "Unsupported platform"
 #endif
 	} // namespace system_tag
 
@@ -1282,12 +1274,12 @@ namespace backward {
 
 	template <typename TAG> class TraceResolverImpl;
 
-#if defined(BACKWARD_SYSTEM_UNKNOWN)
+/*#if defined(BACKWARD_SYSTEM_UNKNOWN)
 
 	template<>
 	class TraceResolverImpl<system_tag::unknown_tag> : public TraceResolverImplBase {};
 
-#endif
+#endif*/
 
 #if defined(BACKWARD_SYSTEM_LINUX)
 
@@ -4458,7 +4450,7 @@ namespace backward {
 
 #endif // BACKWARD_SYSTEM_WINDOWS
 
-#if defined(BACKWARD_SYSTEM_UNKNOWN)
+/*#if defined(BACKWARD_SYSTEM_UNKNOWN)
 
 	class SignalHandling {
 	public:
@@ -4471,7 +4463,7 @@ namespace backward {
 		}
 	};
 
-#endif // BACKWARD_SYSTEM_UNKNOWN
+#endif*/
 
 } // namespace backward
 
