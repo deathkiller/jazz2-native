@@ -21,7 +21,6 @@ endif()
 if(BACKWARD_FOUND)
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_BACKWARD")
 	target_link_libraries(${NCINE_APP} PRIVATE Backward::Interface)
-	message(STATUS "Building the game with Backward integration")
 endif()
 
 if(ANGLE_FOUND OR OPENGLES2_FOUND)

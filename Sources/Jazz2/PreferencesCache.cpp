@@ -204,7 +204,7 @@ namespace Jazz2
 						std::uint8_t controlMappingCount = uc.ReadValue<std::uint8_t>();
 						for (std::uint32_t i = 0; i < playerCount; i++) {
 							for (std::uint32_t j = 0; j < controlMappingCount; j++) {
-								std:uint8_t targetCount = uc.ReadValue<std::uint8_t>();
+								std::uint8_t targetCount = uc.ReadValue<std::uint8_t>();
 								if (i < UI::ControlScheme::MaxSupportedPlayers && j < (std::uint32_t)PlayerActions::Count) {
 									auto& mapping = mappings[i * (std::uint32_t)PlayerActions::Count + j];
 									mapping.Targets.clear();
