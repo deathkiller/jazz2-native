@@ -13,7 +13,8 @@ namespace winrtWSP = winrt::Windows::System::Profile;
 #elif defined(DEATH_TARGET_APPLE)
 #	include <cstring>
 #elif defined(DEATH_TARGET_UNIX)
-#	include <stdio.h>
+#	include <cstdio>
+#	include <cstdlib>
 #	include <cstring>
 #endif
 
@@ -114,7 +115,7 @@ namespace Death { namespace Environment {
 		}
 
 		if (line != nullptr) {
-			::free(line);
+			std::free(line);
 		}
 		::fclose(fp);
 

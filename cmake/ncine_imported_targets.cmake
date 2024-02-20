@@ -31,7 +31,7 @@ endif()
 set(EXTERNAL_INCLUDES_DIR "${NCINE_LIBS}/Includes/" CACHE PATH "Set the path to external header files")
 
 if(NCINE_WITH_BACKWARD)
-	find_package(Backward)
+	find_package(Backward QUIET)
 endif()
 
 if(EMSCRIPTEN)

@@ -24,35 +24,12 @@
 #ifndef H_6B9572DA_A64B_49E6_B234_051480991C89
 #define H_6B9572DA_A64B_49E6_B234_051480991C89
 
-#ifndef __cplusplus
-#error "It's not going to compile without a C++ compiler..."
+#include <CommonBase.h>
+
+#if DEATH_CXX_STANDARD >= 201703L
+#	define BACKWARD_ATLEAST_CXX17
 #endif
 
-#if !(defined(BACKWARD_CXX11) || defined(BACKWARD_CXX98))
-#	if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1800)
-#		define BACKWARD_CXX11
-#		define BACKWARD_ATLEAST_CXX11
-#		define BACKWARD_ATLEAST_CXX98
-#		if __cplusplus >= 201703L || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
-#			define BACKWARD_ATLEAST_CXX17
-#		endif
-#	else
-#		define BACKWARD_CXX98
-#		define BACKWARD_ATLEAST_CXX98
-#	endif
-#endif
-
- // You can define one of the following (or leave it to the auto-detection):
- //
- // #define BACKWARD_SYSTEM_LINUX
- //	- specialization for linux
- //
- // #define BACKWARD_SYSTEM_DARWIN
- //	- specialization for Mac OS X 10.5 and later.
- //
- // #define BACKWARD_SYSTEM_WINDOWS
- //  - specialization for Windows (Clang 9 and MSVC2017)
- //
 #if !(defined(BACKWARD_SYSTEM_LINUX) || defined(BACKWARD_SYSTEM_DARWIN) || defined(BACKWARD_SYSTEM_WINDOWS))
 #	if defined(__linux) || defined(__linux__)
 #		define BACKWARD_SYSTEM_LINUX
@@ -79,9 +56,6 @@
 #include <vector>
 #include <exception>
 #include <iterator>
-
-#include <CommonBase.h>
-#include <Asserts.h>
 
 #if defined(BACKWARD_SYSTEM_LINUX)
 
@@ -379,7 +353,6 @@ extern "C" uintptr_t _Unwind_GetIPInfo(_Unwind_Context*, int*);
 #	include <libunwind.h>
 #endif // BACKWARD_HAS_LIBUNWIND == 1
 
-#if defined(BACKWARD_ATLEAST_CXX11)
 #include <unordered_map>
 #include <utility> // for std::swap
 namespace backward {
@@ -391,27 +364,6 @@ namespace backward {
 		using std::move;
 	} // namespace details
 } // namespace backward
-#else // NOT BACKWARD_ATLEAST_CXX11
-#define nullptr NULL
-#define override
-#include <map>
-namespace backward {
-	namespace details {
-		template<typename K, typename V>
-		struct hashtable {
-			typedef std::map<K, V> type;
-		};
-		template<typename T>
-		const T& move(const T& v) {
-			return v;
-		}
-		template<typename T>
-		T& move(T& v) {
-			return v;
-		}
-	} // namespace details
-} // namespace backward
-#endif // BACKWARD_ATLEAST_CXX11
 
 namespace backward {
 	namespace details {
@@ -514,10 +466,8 @@ namespace backward {
 			T _val;
 			bool _empty;
 
-#if defined(BACKWARD_ATLEAST_CXX11)
 			handle(const handle&) = delete;
 			handle& operator=(const handle&) = delete;
-#endif
 
 		public:
 			~handle() {
@@ -532,25 +482,13 @@ namespace backward {
 					_empty = true;
 			}
 
-#if defined(BACKWARD_ATLEAST_CXX11)
-			handle(handle&& from) : _empty(true) {
+			handle(handle&& from) noexcept : _empty(true) {
 				swap(from);
 			}
-			handle& operator=(handle&& from) {
+			handle& operator=(handle&& from) noexcept {
 				swap(from);
 				return *this;
 			}
-#else
-			explicit handle(const handle& from) : _empty(true) {
-				// some sort of poor man's move semantic.
-				swap(const_cast<handle&>(from));
-			}
-			handle& operator=(const handle& from) {
-				// some sort of poor man's move semantic.
-				swap(const_cast<handle&>(from));
-				return *this;
-			}
-#endif
 
 			void reset(T new_val) {
 				handle tmp(new_val);
@@ -3768,25 +3706,13 @@ namespace backward {
 			_file.swap(b._file);
 		}
 
-#	if defined(BACKWARD_ATLEAST_CXX11)
-		SourceFile(SourceFile&& from) : _file(nullptr) {
+		SourceFile(SourceFile&& from) noexcept : _file(nullptr) {
 			swap(from);
 		}
-		SourceFile& operator=(SourceFile&& from) {
+		SourceFile& operator=(SourceFile&& from) noexcept {
 			swap(from);
 			return *this;
 		}
-#	else
-		explicit SourceFile(const SourceFile& from) {
-			// some sort of poor man's move semantic.
-			swap(const_cast<SourceFile&>(from));
-		}
-		SourceFile& operator=(const SourceFile& from) {
-			// some sort of poor man's move semantic.
-			swap(const_cast<SourceFile&>(from));
-			return *this;
-		}
-#	endif
 
 		// Allow adding to paths gotten from BACKWARD_CXX_SOURCE_PREFIXES after loading the
 		// library; this can be useful when the library is loaded when the locations are unknown
@@ -3817,10 +3743,8 @@ namespace backward {
 			return get_mutable_paths_from_env_variable();
 		}
 
-#	if defined(BACKWARD_ATLEAST_CXX11)
 		SourceFile(const SourceFile&) = delete;
 		SourceFile& operator=(const SourceFile&) = delete;
-#	endif
 	};
 
 	class SnippetFactory {
@@ -3899,17 +3823,10 @@ namespace backward {
 				fwrite(s, sizeof * s, static_cast<size_t>(count), sink));
 		}
 
-#	if defined(BACKWARD_ATLEAST_CXX11)
-	public:
+	private:
 		cfile_streambuf(const cfile_streambuf&) = delete;
 		cfile_streambuf& operator=(const cfile_streambuf&) = delete;
-#	else
-	private:
-		cfile_streambuf(const cfile_streambuf&);
-		cfile_streambuf& operator=(const cfile_streambuf&);
-#	endif
 
-	private:
 		FILE* sink;
 		std::vector<char> buffer;
 	};
@@ -3918,7 +3835,7 @@ namespace backward {
 
 	namespace Color {
 		enum type {
-			yellow = 33, purple = 35, reset = 39
+			yellow = 33, purple = 35, reset = 39, dark = 90
 		};
 	} // namespace Color
 
@@ -3965,7 +3882,7 @@ namespace backward {
 
 	namespace Color {
 		enum type {
-			yellow = 0, purple = 0, reset = 0
+			yellow = 0, purple = 0, reset = 0, dark = 0
 		};
 	} // namespace Color
 
@@ -4061,14 +3978,19 @@ namespace backward {
 		}
 
 		void print_header(std::ostream& os, size_t thread_id) {
-			os << "Stack trace";
-			if (thread_id) {
+			os << "The application exited unexpectedly with following stack trace";
+			if (thread_id != 0) {
 				os << " in thread " << thread_id;
 			}
 			os << ":\n";
 		}
 
 		void print_trace(std::ostream& os, const ResolvedTrace& trace, Colorize& colorize) {
+			if ((std::uintptr_t)trace.addr == UINTPTR_MAX) {
+				// SKip usually the last frame on Linux
+				return;
+			}
+
 			os << "#" << std::left << std::setw(2) << trace.idx << std::right;
 			bool already_indented = true;
 
@@ -4113,12 +4035,11 @@ namespace backward {
 					colorize.set_color(color_code);
 					os << indent << ">";
 				} else {
+					colorize.set_color(Color::dark);
 					os << indent << " ";
 				}
-				os << std::setw(4) << it->first << ": " << it->second << "\n";
-				if (it->first == source_loc.line) {
-					colorize.set_color(Color::reset);
-				}
+				os << std::setw(6) << it->first << ": " << it->second << "\n";
+				colorize.set_color(Color::reset);
 			}
 		}
 
