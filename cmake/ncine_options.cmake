@@ -57,7 +57,7 @@ else()
 		option(NCINE_WITH_GLEW "Use GLEW library" ON)
 	endif()
 
-	if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
+	if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT NINTENDO_SWITCH)
 		option(NCINE_WITH_BACKWARD "Enable integration with Backward for better stack traces" ON)
 	endif()
 endif()
