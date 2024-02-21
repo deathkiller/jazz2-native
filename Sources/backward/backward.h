@@ -297,8 +297,11 @@ typedef SSIZE_T ssize_t;
 #endif
 
 #include <CommonWindows.h>
-#include <Containers/StringStl.h>
-#include <Utf8.h>
+
+#if !defined(DEATH_TARGET_32BIT)
+#	include <Containers/StringStl.h>
+#	include <Utf8.h>
+#endif
 
 #include <psapi.h>
 #include <signal.h>
