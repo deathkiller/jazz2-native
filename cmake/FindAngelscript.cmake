@@ -1,3 +1,5 @@
+include(ncine_helpers)
+
 if(NOT TARGET Angelscript::Angelscript)
 	if(NCINE_DOWNLOAD_DEPENDENCIES)
 		# Try to build `libopenmpt` from source
@@ -7,68 +9,22 @@ if(NOT TARGET Angelscript::Angelscript)
 		
 		include(FetchContent)
 		FetchContent_Declare(
-			angelscript_git
+			AngelscriptGit
 			DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 			URL ${ANGELSCRIPT_URL}
 		)
-		FetchContent_MakeAvailable(angelscript_git)
-		
-		add_library(angelscript_src STATIC)
-		target_compile_features(angelscript_src PUBLIC cxx_std_17)
-		set_target_properties(angelscript_src PROPERTIES CXX_EXTENSIONS OFF)
-		set(ANGELSCRIPT_DIR "${angelscript_git_SOURCE_DIR}/sdk/angelscript/")
-		set(ANGELSCRIPT_INCLUDE_DIR "${ANGELSCRIPT_DIR}/include/")
-		set_target_properties(angelscript_src PROPERTIES
-			INTERFACE_INCLUDE_DIRECTORIES ${ANGELSCRIPT_INCLUDE_DIR})
-			
-		target_link_libraries(angelscript_src Threads::Threads)
+		FetchContent_MakeAvailable(AngelscriptGit)
 
-		target_compile_definitions(angelscript_src PRIVATE "AS_NO_EXCEPTIONS")
-		
+		ncine_add_dependency(Angelscript STATIC)
+
+		set(ANGELSCRIPT_DIR "${angelscriptgit_SOURCE_DIR}/sdk/angelscript/")
+		set(ANGELSCRIPT_INCLUDE_DIR "${ANGELSCRIPT_DIR}/include/")
+		set_target_properties(Angelscript PROPERTIES
+			INTERFACE_INCLUDE_DIRECTORIES ${ANGELSCRIPT_INCLUDE_DIR})
+		target_link_libraries(Angelscript Threads::Threads)
+		target_compile_definitions(Angelscript PRIVATE "AS_NO_EXCEPTIONS")
 		if(MSVC)
-			# Build with Multiple Processes and force UTF-8
-			target_compile_options(angelscript_src PRIVATE /MP /utf-8)
-			# Always use the non-debug version of the runtime library
-			target_compile_options(angelscript_src PUBLIC $<IF:$<BOOL:${VC_LTL_FOUND}>,/MT,/MD>)
-			# Disable exceptions
-			target_compile_definitions(angelscript_src PRIVATE "_HAS_EXCEPTIONS=0")
-			target_compile_options(angelscript_src PRIVATE /EHsc)
-			# Extra optimizations in Release
-			target_compile_options(angelscript_src PRIVATE $<$<CONFIG:Release>:/O2 /Oi /Qpar /Gy>)
-			target_link_options(angelscript_src PRIVATE $<$<CONFIG:Release>:/OPT:REF /OPT:NOICF>)
-			# Specifies the architecture for code generation (IA32, SSE, SSE2, AVX, AVX2, AVX512)
-			if(NCINE_ARCH_EXTENSIONS)
-				target_compile_options(angelscript_src PRIVATE /arch:${NCINE_ARCH_EXTENSIONS})
-			endif()
-			# Enabling Whole Program Optimization
-			if(NCINE_LINKTIME_OPTIMIZATION)
-				target_compile_options(angelscript_src PRIVATE $<$<CONFIG:Release>:/GL>)
-				target_link_options(angelscript_src PRIVATE $<$<CONFIG:Release>:/LTCG>)
-			endif()
-			
-			target_compile_definitions(angelscript_src PRIVATE "_CRT_SECURE_NO_WARNINGS")
-		else()
-			if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-				if(NCINE_LINKTIME_OPTIMIZATION AND NOT (MINGW OR MSYS OR ANDROID))
-					target_compile_options(angelscript_src PRIVATE $<$<CONFIG:Release>:-flto=auto>)
-					target_link_options(angelscript_src PRIVATE $<$<CONFIG:Release>:-flto=auto>)
-				endif()
-			elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-				if(NOT EMSCRIPTEN)
-					# Extra optimizations in release
-					target_compile_options(angelscript_src PRIVATE $<$<CONFIG:Release>:-Ofast>)
-				endif()
-				# Enabling ThinLTO of Clang 4
-				if(NCINE_LINKTIME_OPTIMIZATION)
-					if(EMSCRIPTEN)
-						target_compile_options(angelscript_src PRIVATE $<$<CONFIG:Release>:-flto>)
-						target_link_options(angelscript_src PRIVATE $<$<CONFIG:Release>:-flto>)
-					elseif(NOT (MINGW OR MSYS OR ANDROID))
-						target_compile_options(angelscript_src PRIVATE $<$<CONFIG:Release>:-flto=thin>)
-						target_link_options(angelscript_src PRIVATE $<$<CONFIG:Release>:-flto=thin>)
-					endif()
-				endif()
-			endif()
+			target_compile_definitions(Angelscript PRIVATE "_CRT_SECURE_NO_WARNINGS")
 		endif()
 
 		set(ANGELSCRIPT_HEADERS
@@ -183,16 +139,11 @@ if(NOT TARGET Angelscript::Angelscript)
 			endif()
 		endif()
 
-		target_sources(angelscript_src PRIVATE ${ANGELSCRIPT_SOURCES} ${ANGELSCRIPT_HEADERS})
-		target_include_directories(angelscript_src PRIVATE "${ANGELSCRIPT_INCLUDE_DIR}" " ${ANGELSCRIPT_DIR}/source")
+		target_sources(Angelscript PRIVATE ${ANGELSCRIPT_SOURCES} ${ANGELSCRIPT_HEADERS})
+		target_include_directories(Angelscript PRIVATE "${ANGELSCRIPT_INCLUDE_DIR}" " ${ANGELSCRIPT_DIR}/source")
 
-		add_library(Angelscript::Angelscript ALIAS angelscript_src)
+		set(ANGELSCRIPT_FOUND TRUE)
 		set(ANGELSCRIPT_STATIC TRUE)
 		mark_as_advanced(ANGELSCRIPT_STATIC)
 	endif()
 endif()
-
-#if(NOT ANGELSCRIPT_STATIC)
-#	include(${CMAKE_ROOT}/Modules/FindPackageHandleStandardArgs.cmake)
-#	find_package_handle_standard_args(libopenmpt REQUIRED_VARS ANGELSCRIPT_LIBRARY ANGELSCRIPT_INCLUDE_DIR)
-#endif()

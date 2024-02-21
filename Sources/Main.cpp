@@ -58,11 +58,6 @@ using namespace Jazz2::Multiplayer;
 #	include <cstdlib> // for `__argc` and `__argv`
 #endif
 
-#if defined(WITH_BACKWARD)
-#	include <backward.h>
-backward::SignalHandling sh;
-#endif
-
 #include <Containers/StringConcatenable.h>
 #include <Cpu.h>
 #include <Environment.h>
@@ -1590,7 +1585,7 @@ int PrintVersion(bool logoVisible)
 			padding[j] = ' ';
 		}
 		padding[paddingLength] = '\0';
-		fprintf(stdout, "%s%s%s%s%s\n", padding, Reset, Faint, Copyright, Reset);
+		fprintf(stdout, "%s%s%s%s%s\n\n", padding, Reset, Faint, Copyright, Reset);
 	} else {
 		fputs(NCINE_APP_NAME " " NCINE_VERSION "\n", stdout);
 	}

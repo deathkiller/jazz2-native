@@ -297,6 +297,8 @@ typedef SSIZE_T ssize_t;
 #endif
 
 #include <CommonWindows.h>
+#include <Containers/StringStl.h>
+#include <Utf8.h>
 
 #include <psapi.h>
 #include <signal.h>
@@ -409,7 +411,7 @@ namespace backward {
 #	elif BACKWARD_HAS_BACKTRACE_SYMBOL == 1
 		typedef backtrace_symbol current;
 #	else
-#		error "You shall not pass, until you know what you want."
+#		error "You shall not pass, until you know what you want"
 #	endif
 #elif defined(BACKWARD_SYSTEM_DARWIN)
 		struct backtrace_symbol;
@@ -417,14 +419,14 @@ namespace backward {
 #	if BACKWARD_HAS_BACKTRACE_SYMBOL == 1
 		typedef backtrace_symbol current;
 #	else
-#		error "You shall not pass, until you know what you want."
+#		error "You shall not pass, until you know what you want"
 #	endif
 #elif defined(BACKWARD_SYSTEM_WINDOWS)
 		struct pdb_symbol;
 #	if BACKWARD_HAS_PDB_SYMBOL == 1
 		typedef pdb_symbol current;
 #	else
-#		error "You shall not pass, until you know what you want."
+#		error "You shall not pass, until you know what you want"
 #	endif
 #endif
 	} // namespace trace_resolver_tag
@@ -660,8 +662,7 @@ namespace backward {
 
 	/*************** STACK TRACE ***************/
 
-	// default implemention.
-	template <typename TAG>
+	template<typename TAG>
 	class StackTraceImpl {
 	public:
 		size_t size() const {
@@ -1090,8 +1091,7 @@ namespace backward {
 			thd_ = handle;
 		}
 
-		DEATH_NEVER_INLINE
-			size_t load_here(size_t depth = 32, void* context = nullptr, void* error_addr = nullptr) {
+		DEATH_NEVER_INLINE size_t load_here(size_t depth = 32, void* context = nullptr, void* error_addr = nullptr) {
 			set_context(static_cast<CONTEXT*>(context));
 			set_error_addr(error_addr);
 			CONTEXT localCtx; // used when no context is provided
@@ -1100,12 +1100,12 @@ namespace backward {
 				return 0;
 			}
 
-			if (!ctx_) {
+			if (ctx_ == nullptr) {
 				ctx_ = &localCtx;
 				::RtlCaptureContext(ctx_);
 			}
 
-			if (!thd_) {
+			if (thd_ == NULL) {
 				thd_ = ::GetCurrentThread();
 			}
 
@@ -1211,13 +1211,6 @@ namespace backward {
 	};
 
 	template <typename TAG> class TraceResolverImpl;
-
-/*#if defined(BACKWARD_SYSTEM_UNKNOWN)
-
-	template<>
-	class TraceResolverImpl<system_tag::unknown_tag> : public TraceResolverImplBase {};
-
-#endif*/
 
 #if defined(BACKWARD_SYSTEM_LINUX)
 
@@ -3452,9 +3445,7 @@ namespace backward {
 				filename_end = filename + strlen(filename);
 				funcname = filename_end;
 			}
-			trace.object_filename.assign(
-				filename, filename_end); // ok even if filename_end is the ending \0
-			// (then we assign entire string)
+			trace.object_filename.assign(filename, filename_end); // ok even if filename_end is the ending \0 (then we assign entire string)
 
 			if (*funcname != '\0') { // if it's not end of string
 				*funcname_end = '\0';
@@ -3492,7 +3483,7 @@ namespace backward {
 
 	class get_mod_info {
 		HANDLE process;
-		static const int buffer_length = 4096;
+		static const std::int32_t buffer_length = 4096;
 
 	public:
 		get_mod_info(HANDLE h) : process(h) {}
@@ -3540,7 +3531,7 @@ namespace backward {
 			image_type = h->FileHeader.Machine;
 		}
 
-		static const int max_sym_len = 255;
+		static const std::int32_t max_sym_len = 255;
 		struct symbol_t {
 			SYMBOL_INFO sym;
 			char buffer[max_sym_len];
@@ -3557,35 +3548,21 @@ namespace backward {
 			sym.sym.SizeOfStruct = sizeof(SYMBOL_INFO);
 			sym.sym.MaxNameLen = max_sym_len;
 
-			if (!::SymFromAddr(process, (ULONG64)t.addr, &displacement, &sym.sym)) {
-				// TODO:  error handling everywhere
-				char* lpMsgBuf;
-				DWORD dw = ::GetLastError();
-
-				if (::FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER |
-					FORMAT_MESSAGE_FROM_SYSTEM |
-					FORMAT_MESSAGE_IGNORE_INSERTS,
-					NULL, dw, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-					(char*)&lpMsgBuf, 0, NULL)) {
-					std::fprintf(stderr, "%s\n", lpMsgBuf);
-					::LocalFree(lpMsgBuf);
-				}
-
-				// abort();
+			if (::SymFromAddr(process, (ULONG64)t.addr, &displacement, &sym.sym)) {
+				::UnDecorateSymbolName(sym.sym.Name, (PSTR)name, 256, UNDNAME_COMPLETE);
+			} else {
+				name[0] = '\0';
 			}
-			::UnDecorateSymbolName(sym.sym.Name, (PSTR)name, 256, UNDNAME_COMPLETE);
 
 			DWORD offset = 0;
-			IMAGEHLP_LINE line;
-			if (::SymGetLineFromAddr(process, (ULONG64)t.addr, &offset, &line)) {
-				t.object_filename = line.FileName;
-				t.source.filename = line.FileName;
-				t.source.line = line.LineNumber;
+			IMAGEHLP_LINEW64 lineW = { sizeof(IMAGEHLP_LINEW64) };
+			if (::SymGetLineFromAddrW(process, (ULONG64)t.addr, &offset, &lineW)) {
+				t.source.filename = Death::Utf8::FromUtf16(lineW.FileName);
+				t.source.line = lineW.LineNumber;
 				t.source.col = offset;
 			}
 
 			t.source.function = name;
-			t.object_filename = "";
 			t.object_function = name;
 
 			return t;
@@ -3801,7 +3778,7 @@ namespace backward {
 
 	namespace ColorMode {
 		enum type {
-			automatic, never, always
+			never, always
 		};
 	}
 
@@ -3831,11 +3808,11 @@ namespace backward {
 		std::vector<char> buffer;
 	};
 
-#	if defined(BACKWARD_SYSTEM_LINUX)
+#	if defined(BACKWARD_SYSTEM_LINUX) || defined(BACKWARD_SYSTEM_WINDOWS)
 
 	namespace Color {
 		enum type {
-			yellow = 33, purple = 35, reset = 39, dark = 90
+			yellow = 33, purple = 35, reset = 0, bold = 1, dark = 2
 		};
 	} // namespace Color
 
@@ -3844,11 +3821,7 @@ namespace backward {
 		Colorize(std::ostream& os) : _os(os), _reset(false), _enabled(false) {}
 
 		void activate(ColorMode::type mode) {
-			_enabled = mode == ColorMode::always;
-		}
-
-		void activate(ColorMode::type mode, FILE* fp) {
-			activate(mode, fileno(fp));
+			_enabled = (mode == ColorMode::always);
 		}
 
 		void set_color(Color::type ccode) {
@@ -3869,20 +3842,16 @@ namespace backward {
 		}
 
 	private:
-		void activate(ColorMode::type mode, int fd) {
-			activate(mode == ColorMode::automatic && isatty(fd) ? ColorMode::always : mode);
-		}
-
 		std::ostream& _os;
 		bool _reset;
 		bool _enabled;
 	};
 
-#	else // ndef BACKWARD_SYSTEM_LINUX
+#	else // ndef BACKWARD_SYSTEM_LINUX || BACKWARD_SYSTEM_WINDOWS
 
 	namespace Color {
 		enum type {
-			yellow = 0, purple = 0, reset = 0, dark = 0
+			yellow = 0, purple = 0, reset = 0, bold = 0, dark = 0
 		};
 	} // namespace Color
 
@@ -3890,11 +3859,10 @@ namespace backward {
 	public:
 		Colorize(std::ostream&) {}
 		void activate(ColorMode::type) {}
-		void activate(ColorMode::type, FILE*) {}
 		void set_color(Color::type) {}
 	};
 
-#	endif // BACKWARD_SYSTEM_LINUX
+#	endif // BACKWARD_SYSTEM_LINUX || BACKWARD_SYSTEM_WINDOWS
 
 	class Printer {
 	public:
@@ -3904,18 +3872,17 @@ namespace backward {
 		bool object;
 		int inliner_context_size;
 		int trace_context_size;
-		bool reverse;
 
 		Printer()
-			: snippet(true), color_mode(ColorMode::automatic), address(false), object(false), inliner_context_size(5),
-				trace_context_size(7), reverse(false) {}
+			: snippet(true), color_mode(ColorMode::never), address(false), object(false),
+				inliner_context_size(5), trace_context_size(7) {}
 
 		template<typename ST>
 		FILE* print(ST& st, FILE* fp = stderr) {
 			cfile_streambuf obuf(fp);
 			std::ostream os(&obuf);
 			Colorize colorize(os);
-			colorize.activate(color_mode, fp);
+			colorize.activate(color_mode);
 			print_stacktrace(st, os, colorize);
 			return fp;
 		}
@@ -3933,7 +3900,7 @@ namespace backward {
 			cfile_streambuf obuf(fp);
 			std::ostream os(&obuf);
 			Colorize colorize(os);
-			colorize.activate(color_mode, fp);
+			colorize.activate(color_mode);
 			print_stacktrace(begin, end, os, thread_id, colorize);
 			return fp;
 		}
@@ -3956,17 +3923,24 @@ namespace backward {
 
 		template<typename ST>
 		void print_stacktrace(ST& st, std::ostream& os, Colorize& colorize) {
-			print_header(os, st.thread_id());
+			print_header(os, st.thread_id(), colorize);
 			_resolver.load_stacktrace(st);
-			if (reverse) {
-				for (size_t trace_idx = st.size(); trace_idx > 0; --trace_idx) {
-					print_trace(os, _resolver.resolve(st[trace_idx - 1]), colorize);
-				}
-			} else {
-				for (size_t trace_idx = 0; trace_idx < st.size(); ++trace_idx) {
-					print_trace(os, _resolver.resolve(st[trace_idx]), colorize);
+			bool failed = false;
+			for (size_t trace_idx = 0; trace_idx < st.size(); ++trace_idx) {
+				auto resolvedTrace = _resolver.resolve(st[trace_idx]);
+				print_trace(os, resolvedTrace, colorize);
+				if (resolvedTrace.object_function.empty()) {
+					failed = true;
 				}
 			}
+
+#	if defined(DEATH_TARGET_WINDOWS)
+			if (failed) {
+				colorize.set_color(Color::yellow);
+				os << "Make sure corresponding .pdb files are accessible to show full stack trace.\n";
+				colorize.set_color(Color::reset);
+			}
+#	endif
 		}
 
 		template<typename IT>
@@ -3977,8 +3951,11 @@ namespace backward {
 			}
 		}
 
-		void print_header(std::ostream& os, size_t thread_id) {
-			os << "The application exited unexpectedly with following stack trace";
+		void print_header(std::ostream& os, size_t thread_id, Colorize& colorize) {
+			colorize.set_color(Color::bold);
+			os << "The application exited unexpectedly";
+			colorize.set_color(Color::reset);
+			os << " with following stack trace";
 			if (thread_id != 0) {
 				os << " in thread " << thread_id;
 			}
@@ -3987,7 +3964,7 @@ namespace backward {
 
 		void print_trace(std::ostream& os, const ResolvedTrace& trace, Colorize& colorize) {
 			if ((std::uintptr_t)trace.addr == UINTPTR_MAX) {
-				// SKip usually the last frame on Linux
+				// Skip usually the last frame on Linux
 				return;
 			}
 
@@ -3995,7 +3972,15 @@ namespace backward {
 			bool already_indented = true;
 
 			if (!trace.source.filename.size() || object) {
-				os << "   Object \"" << trace.object_filename << "\", at " << trace.addr << ", in " << trace.object_function << "\n";
+				os << "   Object \"" << (!trace.object_filename.empty() ? trace.object_filename : "<unknown>") << "\"";
+				if (!trace.object_function.empty()) {
+					os << ", in ";
+					colorize.set_color(Color::bold);
+					os << trace.object_function << "()";
+					colorize.set_color(Color::reset);
+				}
+				os << " [0x" << trace.addr << "]";
+				os << "\n";
 				already_indented = false;
 			}
 
@@ -4004,10 +3989,9 @@ namespace backward {
 					os << "   ";
 				}
 				const ResolvedTrace::SourceLoc& inliner_loc = trace.inliners[inliner_idx - 1];
-				print_source_loc(os, " | ", inliner_loc);
+				print_source_loc(os, colorize, " | ", inliner_loc);
 				if (snippet) {
-					print_snippet(os, "    | ", inliner_loc, colorize, Color::purple,
-								  inliner_context_size);
+					print_snippet(os, "    | ", inliner_loc, colorize, Color::purple, inliner_context_size);
 				}
 				already_indented = false;
 			}
@@ -4016,10 +4000,9 @@ namespace backward {
 				if (!already_indented) {
 					os << "   ";
 				}
-				print_source_loc(os, "   ", trace.source, trace.addr);
+				print_source_loc(os, colorize, "   ", trace.source, trace.addr);
 				if (snippet) {
-					print_snippet(os, "      ", trace.source, colorize, Color::yellow,
-								  trace_context_size);
+					print_snippet(os, "      ", trace.source, colorize, Color::yellow, trace_context_size);
 				}
 			}
 		}
@@ -4043,10 +4026,16 @@ namespace backward {
 			}
 		}
 
-		void print_source_loc(std::ostream& os, const char* indent, const ResolvedTrace::SourceLoc& source_loc, void* addr = nullptr) {
-			os << indent << "Source \"" << source_loc.filename << ":" << source_loc.line << "\", in " << source_loc.function;
+		void print_source_loc(std::ostream& os, Colorize& colorize, const char* indent, const ResolvedTrace::SourceLoc& source_loc, void* addr = nullptr) {
+			os << indent << "Source \"" << source_loc.filename << ":" << source_loc.line << "\"";
+			if (!source_loc.function.empty()) {
+				os << ", in ";
+				colorize.set_color(Color::bold);
+				os << source_loc.function << "()";
+				colorize.set_color(Color::reset);
+			}
 			if (address && addr != nullptr) {
-				os << " [" << addr << "]";
+				os << " [0x" << addr << "]";
 			}
 			os << "\n";
 		}
@@ -4084,7 +4073,7 @@ namespace backward {
 			bool success = true;
 
 			const size_t stack_size = 1024 * 1024 * 8;
-			_stack_content.reset(static_cast<char*>(malloc(stack_size)));
+			_stack_content.reset(static_cast<char*>(std::malloc(stack_size)));
 			if (_stack_content) {
 				stack_t ss;
 				ss.ss_sp = _stack_content.get();
@@ -4125,6 +4114,11 @@ namespace backward {
 			return _loaded;
 		}
 
+		static ColorMode::type& color_mode() {
+			static ColorMode::type data = ColorMode::type::never;
+			return data;
+		}
+
 		static void handleSignal(int, siginfo_t* info, void* _ctx) {
 			ucontext_t* uctx = static_cast<ucontext_t*>(_ctx);
 
@@ -4156,7 +4150,7 @@ namespace backward {
 #	elif defined(DEATH_TARGET_APPLE)
 			error_addr = reinterpret_cast<void*>(uctx->uc_mcontext->__ss.__eip);
 #	else
-#		warning ":/ sorry, ain't know no nothing none not of your architecture!"
+#		warning "Unsupported CPU architecture"
 #	endif
 			if (error_addr != nullptr) {
 				st.load_from(error_addr, 32, reinterpret_cast<void*>(uctx), info->si_addr);
@@ -4165,6 +4159,7 @@ namespace backward {
 			}
 
 			Printer printer;
+			printer.color_mode = color_mode();
 			printer.address = true;
 			printer.print(st, stderr);
 
@@ -4183,15 +4178,13 @@ namespace backward {
 #	if defined(__GNUC__)
 		__attribute__((noreturn))
 #	endif
-			static void
-			sig_handler(int signo, siginfo_t* info, void* _ctx) {
+		static void sig_handler(int signo, siginfo_t* info, void* _ctx) {
 			handleSignal(signo, info, _ctx);
 
 			// try to forward the signal.
 			raise(info->si_signo);
 
 			// terminate the process immediately.
-			puts("watf? exit");
 			_exit(EXIT_FAILURE);
 		}
 	};
@@ -4252,6 +4245,11 @@ namespace backward {
 			reporter_thread_.join();
 		}
 
+		static ColorMode::type& color_mode() {
+			static ColorMode::type data = ColorMode::type::never;
+			return data;
+		}
+
 	private:
 		static CONTEXT* ctx() {
 			static CONTEXT data;
@@ -4287,13 +4285,12 @@ namespace backward {
 		// TODO: how not to hardcode these?
 		static const constexpr std::int32_t signal_skip_recs =
 #	if defined(DEATH_TARGET_CLANG)
-			// With clang, RtlCaptureContext also captures the stack frame of the
-			// current function Below that, there are 3 internal Windows functions
+			// With clang, RtlCaptureContext also captures the stack frame of the current function Below that,
+			// there are 3 internal Windows functions
 			4
 #	else
-			// With MSVC cl, RtlCaptureContext misses the stack frame of the current
-			// function The first entries during StackWalk are the 3 internal Windows
-			// functions
+			// With MSVC cl, RtlCaptureContext misses the stack frame of the current function The first entries
+			// during StackWalk are the 3 internal Windows functions
 			3
 #	endif
 			;
@@ -4332,8 +4329,8 @@ namespace backward {
 				std::memcpy(ctx(), ct, sizeof(CONTEXT));
 			}
 			::DuplicateHandle(::GetCurrentProcess(), ::GetCurrentThread(),
-							::GetCurrentProcess(), &thread_handle(), 0, FALSE,
-							DUPLICATE_SAME_ACCESS);
+								::GetCurrentProcess(), &thread_handle(),
+								0, FALSE, DUPLICATE_SAME_ACCESS);
 
 			skip_recs() = skip;
 
@@ -4357,6 +4354,7 @@ namespace backward {
 			// StackTrace also requires that the PDBs are already loaded, which is done
 			// in the constructor of TraceResolver
 			Printer printer;
+			printer.color_mode = color_mode();
 
 			StackTrace st;
 			st.set_machine_type(printer.resolver().machine_type());
@@ -4370,21 +4368,6 @@ namespace backward {
 	};
 
 #endif // BACKWARD_SYSTEM_WINDOWS
-
-/*#if defined(BACKWARD_SYSTEM_UNKNOWN)
-
-	class SignalHandling {
-	public:
-		SignalHandling(const std::vector<int>& = std::vector<int>()) {}
-		bool init() {
-			return false;
-		}
-		bool loaded() {
-			return false;
-		}
-	};
-
-#endif*/
 
 } // namespace backward
 

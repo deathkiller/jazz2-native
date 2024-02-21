@@ -1,8 +1,16 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.15)
+
+# Policies
+if(POLICY CMP0127)
+	cmake_policy(SET CMP0127 NEW)
+endif()
+if(POLICY CMP0141)
+	cmake_policy(SET CMP0141 NEW)
+endif()
 
 # Project metadata
 set(NCINE_ROOT ${CMAKE_SOURCE_DIR})
-set(NCINE_SOURCE_DIR "${NCINE_ROOT}/Sources/")
+set(NCINE_SOURCE_DIR "${NCINE_ROOT}/Sources")
 set(NCINE_APP "jazz2")
 set(NCINE_APP_NAME "Jazz² Resurrection")
 set(NCINE_APP_DESCRIPTION "Open-source reimplementation of Jazz Jackrabbit 2")
@@ -97,8 +105,9 @@ include(ncine_sources)
 include(ncine_extra_sources)
 include(ncine_generated_sources)
 
+# Organize main project files into folders
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set(PATH_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/Sources")
+set(PATH_PREFIX ${NCINE_SOURCE_DIR})
 foreach(FILE ${HEADERS} ${SOURCES}) 
 	get_filename_component(PARENT_DIR "${FILE}" DIRECTORY)
 	string(LENGTH "${PATH_PREFIX}" PATH_PREFIX_LENGTH)
@@ -128,30 +137,7 @@ foreach(SOURCE_FILE ${GENERATED_SOURCES})
 	source_group("Generated Files" FILES ${SOURCE_FILE})
 endforeach()
 
-if(OPENGL_FOUND)
-	target_link_libraries(${NCINE_APP} PRIVATE OpenGL::GL)
-endif()
 target_sources(${NCINE_APP} PRIVATE ${SOURCES} ${HEADERS} ${SHADER_FILES} ${GENERATED_SOURCES})
-
-if(NCINE_WITH_IMGUI)
-	target_include_directories(${NCINE_APP}
-		INTERFACE $<BUILD_INTERFACE:${IMGUI_INCLUDE_ONLY_DIR}>
-		PRIVATE $<BUILD_INTERFACE:${IMGUI_INCLUDE_ONLY_DIR}>)
-endif()
-if(NCINE_WITH_TRACY)
-	target_include_directories(${NCINE_APP}
-		PUBLIC $<BUILD_INTERFACE:${TRACY_INCLUDE_ONLY_DIR}/tracy>
-		PUBLIC $<INSTALL_INTERFACE:include/tracy>)
-endif()
-target_include_directories(${NCINE_APP} PRIVATE "${NCINE_SOURCE_DIR}/Shared")
-if(IS_DIRECTORY ${GENERATED_INCLUDE_DIR})
-	get_filename_component(PARENT_GENERATED_INCLUDE_DIR ${GENERATED_INCLUDE_DIR} DIRECTORY)
-	target_include_directories(${NCINE_APP}
-		INTERFACE $<BUILD_INTERFACE:${PARENT_GENERATED_INCLUDE_DIR}>
-		# Internal sources can access a generated header with or without the parent directory
-		PRIVATE $<BUILD_INTERFACE:${PARENT_GENERATED_INCLUDE_DIR}>
-		PRIVATE $<BUILD_INTERFACE:${GENERATED_INCLUDE_DIR}>)
-endif()
 
 # Windows RT uses custom packaging, enable it only for other platforms
 if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NINTENDO_SWITCH)

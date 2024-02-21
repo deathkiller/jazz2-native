@@ -21,11 +21,9 @@
 # SOFTWARE.
 #
 
+include(ncine_helpers)
 include(FindPackageHandleStandardArgs)
 include(CMakeDependentOption)
-if(POLICY CMP0127)
-	cmake_policy(SET CMP0127 NEW)
-endif()
 
 cmake_dependent_option(STACK_DETAILS_AUTO_DETECT "Auto detect backward's stack details dependencies" ON "NOT WIN32" OFF)
 
@@ -205,20 +203,8 @@ if(WIN32)
 	endif()	
 endif()
 
-set(BACKWARD_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Sources/backward/")
-
-set(BACKWARD_HAS_EXTERNAL_LIBRARIES FALSE)
-set(FIND_PACKAGE_REQUIRED_VARS BACKWARD_INCLUDE_DIR)
-if(DEFINED _BACKWARD_LIBRARIES)
-	set(BACKWARD_HAS_EXTERNAL_LIBRARIES TRUE)
-	list(APPEND FIND_PACKAGE_REQUIRED_VARS _BACKWARD_LIBRARIES)
-endif()
-
-include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Backward
-	REQUIRED_VARS ${FIND_PACKAGE_REQUIRED_VARS}
-)
-list(APPEND _BACKWARD_INCLUDE_DIRS ${BACKWARD_INCLUDE_DIR})
+#list(APPEND _BACKWARD_INCLUDE_DIRS ${BACKWARD_INCLUDE_DIR})
+list(APPEND _BACKWARD_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
 list(APPEND _BACKWARD_INCLUDE_DIRS "${NCINE_SOURCE_DIR}/Shared")
 
 set(BACKWARD_INCLUDE_DIRS ${_BACKWARD_INCLUDE_DIRS} CACHE INTERNAL "BACKWARD_INCLUDE_DIRS")
@@ -235,11 +221,11 @@ foreach(var ${BACKWARD_DEFINITIONS})
 	mark_as_advanced(${var_name})
 endforeach()
 
-add_library(backward_interface INTERFACE)
-set_target_properties(backward_interface PROPERTIES EXPORT_NAME Interface)
-target_compile_definitions(backward_interface INTERFACE ${BACKWARD_DEFINITIONS})
-target_include_directories(backward_interface INTERFACE ${BACKWARD_INCLUDE_DIRS})
-if(BACKWARD_HAS_EXTERNAL_LIBRARIES)
-	target_link_libraries(backward_interface INTERFACE ${BACKWARD_LIBRARIES})
+ncine_add_dependency(Backward INTERFACE)
+
+target_sources(Backward PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/backward.h")
+target_compile_definitions(Backward INTERFACE ${BACKWARD_DEFINITIONS})
+target_include_directories(Backward INTERFACE ${BACKWARD_INCLUDE_DIRS})
+if(BACKWARD_LIBRARIES)
+	target_link_libraries(Backward INTERFACE ${BACKWARD_LIBRARIES})
 endif()
-add_library(Backward::Interface ALIAS backward_interface)

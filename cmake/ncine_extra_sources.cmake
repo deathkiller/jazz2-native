@@ -1,3 +1,5 @@
+target_include_directories(${NCINE_APP} PRIVATE "${NCINE_SOURCE_DIR}/Shared")
+
 if(WIN32)
 	if(NOT MINGW)
 		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Threading/WindowsAtomic.cpp)
@@ -18,9 +20,13 @@ if(EMSCRIPTEN)
 	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/IO/EmscriptenLocalFile.cpp)
 endif()
 
-if(BACKWARD_FOUND)
+if(TARGET Backward)
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_BACKWARD")
-	target_link_libraries(${NCINE_APP} PRIVATE Backward::Interface)
+	target_link_libraries(${NCINE_APP} PRIVATE Backward)
+endif()
+
+if(OPENGL_FOUND)
+	target_link_libraries(${NCINE_APP} PRIVATE OpenGL::GL)
 endif()
 
 if(ANGLE_FOUND OR OPENGLES2_FOUND)
@@ -361,7 +367,7 @@ endif()
 
 if(ANGELSCRIPT_FOUND)
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ANGELSCRIPT")
-	target_link_libraries(${NCINE_APP} PRIVATE Angelscript::Angelscript)
+	target_link_libraries(${NCINE_APP} PRIVATE Angelscript)
 endif()
 
 if(NCINE_WITH_IMGUI)
@@ -410,6 +416,10 @@ if(NCINE_WITH_IMGUI)
 	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/ImGuiDebugOverlay.h)
 	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Graphics/ImGuiDebugOverlay.cpp)
 
+	target_include_directories(${NCINE_APP}
+		INTERFACE $<BUILD_INTERFACE:${IMGUI_INCLUDE_ONLY_DIR}>
+		PRIVATE $<BUILD_INTERFACE:${IMGUI_INCLUDE_ONLY_DIR}>)
+
 	if(MINGW)
 		target_link_libraries(${NCINE_APP} PRIVATE imm32 dwmapi)
 	endif()
@@ -443,6 +453,10 @@ if(NCINE_WITH_TRACY)
 		${NCINE_SOURCE_DIR}/nCine/tracy_memory.cpp
 		${TRACY_SOURCE_DIR}/public/TracyClient.cpp
 	)
+
+	target_include_directories(${NCINE_APP}
+		PUBLIC $<BUILD_INTERFACE:${TRACY_INCLUDE_ONLY_DIR}/tracy>
+		PUBLIC $<INSTALL_INTERFACE:include/tracy>)
 endif()
 
 #if(NCINE_WITH_RENDERDOC AND NOT APPLE)
