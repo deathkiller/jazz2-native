@@ -1,4 +1,268 @@
-function(ncine_add_compiler_options target)
+include_guard(DIRECTORY)
+
+function(ncine_internal_get_enabled_languages out_var)
+	# Limit flag modification to c-like code, we don't want to accidentally add incompatible flags to MSVC's RC or Swift
+	set(languages_to_process ASM C CXX OBJC OBJCXX)
+	get_property(globally_enabled_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
+	set(enabled_languages "")
+	foreach(lang ${languages_to_process})
+		if(lang IN_LIST globally_enabled_languages)
+			list(APPEND enabled_languages "${lang}")
+		endif()
+	endforeach()
+	set(${out_var} "${enabled_languages}" PARENT_SCOPE)
+endfunction()
+
+function(ncine_internal_get_configs out_var)
+	set(configs RELEASE RELWITHDEBINFO MINSIZEREL DEBUG)
+	set(${out_var} "${configs}" PARENT_SCOPE)
+endfunction()
+
+function(ncine_internal_get_target_link_types out_var)
+	set(target_link_types EXE SHARED MODULE STATIC)
+	set(${out_var} "${target_link_types}" PARENT_SCOPE)
+endfunction()
+
+function(ncine_internal_add_flags_inner flag_var_name flags IN_CACHE)
+	set(${flag_var_name} "${${flag_var_name}} ${flags}")
+	string(STRIP "${${flag_var_name}}" ${flag_var_name})
+	set(${flag_var_name} "${${flag_var_name}}" PARENT_SCOPE)
+
+	if(IN_CACHE)
+		set(mod_flags "$CACHE{${flag_var_name}} ${flags}")
+		string(STRIP "${mod_flags}" mod_flags)
+		get_property(help_text CACHE ${flag_var_name} PROPERTY HELPSTRING)
+		set(${flag_var_name} "${mod_flags}" CACHE STRING "${help_text}" FORCE)
+	endif()
+endfunction()
+
+function(ncine_internal_add_compiler_flags)
+	cmake_parse_arguments(PARSE_ARGV 0 ARGS "IN_CACHE" "FLAGS" "CONFIGS;LANGUAGES")
+
+	if(NOT ARGS_CONFIGS)
+		message(FATAL_ERROR "You must specify at least one configuration for which to add the flags")
+	endif()
+	if(NOT ARGS_FLAGS)
+		message(FATAL_ERROR "You must specify at least one flag to add")
+	endif()
+
+	if(ARGS_LANGUAGES)
+		set(enabled_languages "${arg_LANGUAGES}")
+	else()
+		ncine_internal_get_enabled_languages(enabled_languages)
+	endif()
+
+	foreach(lang ${enabled_languages})
+		foreach(config ${ARGS_CONFIGS})
+			set(flag_var_name "CMAKE_${lang}_FLAGS_${config}")
+			ncine_internal_add_flags_inner(${flag_var_name} "${arg_FLAGS}" "${arg_IN_CACHE}")
+			set(${flag_var_name} "${${flag_var_name}}" PARENT_SCOPE)
+		endforeach()
+	endforeach()
+endfunction()
+
+function(ncine_internal_add_linker_flags)
+	cmake_parse_arguments(PARSE_ARGV 0 ARGS "IN_CACHE" "FLAGS" "CONFIGS;TYPES")
+
+	if(NOT ARGS_TYPES)
+		message(FATAL_ERROR "You must specify at least one linker target type for which to add the flags")
+	endif()
+	if(NOT ARGS_CONFIGS)
+		message(FATAL_ERROR "You must specify at least one configuration for which to add the flags")
+	endif()
+	if(NOT ARGS_FLAGS)
+		message(FATAL_ERROR "You must specify at least one flag to add.")
+	endif()
+
+	foreach(config ${ARGS_CONFIGS})
+		foreach(t ${ARGS_TYPES})
+			set(flag_var_name "CMAKE_${t}_LINKER_FLAGS_${config}")
+			ncine_internal_add_flags_inner(${flag_var_name} "${arg_FLAGS}" "${arg_IN_CACHE}")
+			set(${flag_var_name} "${${flag_var_name}}" PARENT_SCOPE)
+		endforeach()
+	endforeach()
+endfunction()
+
+function(ncine_internal_remove_flags_inner flag_var_name flag_values IN_CACHE)
+	cmake_parse_arguments(ARGS "REGEX" "" "" ${ARGN})
+	set(replace_type REPLACE)
+	if(ARGS_REGEX)
+		list(PREPEND replace_type REGEX)
+	endif()
+
+	foreach(flag_value IN LISTS flag_values)
+		string(${replace_type} "${flag_value}" " " ${flag_var_name} "${${flag_var_name}}")
+	endforeach()
+	string(STRIP "${${flag_var_name}}" ${flag_var_name})
+	set(${flag_var_name} "${${flag_var_name}}" PARENT_SCOPE)
+
+	if(IN_CACHE)
+		set(mod_flags $CACHE{${flag_var_name}})
+		foreach(flag_value IN LISTS flag_values)
+			string(${replace_type} "${flag_value}" " " mod_flags "${mod_flags}")
+		endforeach()
+		string(STRIP "${mod_flags}" mod_flags)
+		get_property(help_text CACHE ${flag_var_name} PROPERTY HELPSTRING)
+		set(${flag_var_name} "${mod_flags}" CACHE STRING "${help_text}" FORCE)
+	endif()
+endfunction()
+
+function(ncine_internal_remove_compiler_flags flags)
+	cmake_parse_arguments(PARSE_ARGV 1 ARGS "IN_CACHE;REGEX" "" "CONFIGS;LANGUAGES")
+
+	if("${flags}" STREQUAL "")
+		message(WARNING "You must specify at least one flag to remove")
+		return()
+	endif()
+
+	if(ARGS_LANGUAGES)
+		set(languages "${ARGS_LANGUAGES}")
+	else()
+		ncine_internal_get_enabled_languages(languages)
+	endif()
+
+	if(ARGS_CONFIGS)
+		set(configs "${ARGS_CONFIGS}")
+	else()
+		ncine_internal_get_configs(configs)
+	endif()
+
+	if(ARGS_REGEX)
+		list(APPEND extra_options "REGEX")
+	endif()
+
+	foreach(lang ${languages})
+		set(flag_var_name "CMAKE_${lang}_FLAGS")
+		ncine_internal_remove_flags_inner(${flag_var_name} "${flags}" "${arg_IN_CACHE}" ${extra_options})
+		set(${flag_var_name} "${${flag_var_name}}" PARENT_SCOPE)
+		foreach(config ${configs})
+			set(flag_var_name "CMAKE_${lang}_FLAGS_${config}")
+			ncine_internal_remove_flags_inner(${flag_var_name} "${flags}" "${arg_IN_CACHE}" ${extra_options})
+			set(${flag_var_name} "${${flag_var_name}}" PARENT_SCOPE)
+		endforeach()
+	endforeach()
+endfunction()
+
+function(ncine_internal_replace_flags_inner flag_var_name match_string replace_string IN_CACHE)
+	if(match_string STREQUAL "" AND "${${flag_var_name}}" STREQUAL "")
+		set(${flag_var_name} "${replace_string}" PARENT_SCOPE)
+	else()
+		string(REPLACE "${match_string}" "${replace_string}" ${flag_var_name} "${${flag_var_name}}")
+		string(STRIP "${${flag_var_name}}" ${flag_var_name})
+		set(${flag_var_name} "${${flag_var_name}}" PARENT_SCOPE)
+	endif()
+
+	if(IN_CACHE)
+		get_property(help_text CACHE "${flag_var_name}" PROPERTY HELPSTRING)
+
+		if(match_string STREQUAL "" AND "$CACHE{${flag_var_name}}" STREQUAL "")
+			set(${flag_var_name} "${replace_string}" CACHE STRING "${help_text}" FORCE)
+		else()
+			set(mod_flags "$CACHE{${flag_var_name}}")
+			string(REPLACE "${match_string}" "${replace_string}" mod_flags "${mod_flags}")
+			string(STRIP "${mod_flags}" mod_flags)
+			set(${flag_var_name} "${mod_flags}" CACHE STRING "${help_text}" FORCE)
+		endif()
+	endif()
+endfunction()
+
+function(ncine_internal_replace_compiler_flags match_string replace_string)
+	cmake_parse_arguments(PARSE_ARGV 2 ARGS "IN_CACHE" "" "CONFIGS;LANGUAGES")
+
+	if(NOT ARGS_CONFIGS)
+		message(FATAL_ERROR "You must specify at least one configuration for which to replace the flags")
+	endif()
+
+	if(ARGS_LANGUAGES)
+		set(enabled_languages "${ARGS_LANGUAGES}")
+	else()
+		qt_internal_get_enabled_languages_for_flag_manipulation(enabled_languages)
+	endif()
+
+	foreach(lang ${enabled_languages})
+		foreach(config ${ARGS_CONFIGS})
+			set(flag_var_name "CMAKE_${lang}_FLAGS_${config}")
+			ncine_internal_replace_flags_inner(${flag_var_name} "${match_string}" "${replace_string}" "${arg_IN_CACHE}")
+			set(${flag_var_name} "${${flag_var_name}}" PARENT_SCOPE)
+		endforeach()
+	endforeach()
+endfunction()
+
+function(ncine_internal_replace_linker_flags match_string replace_string)
+	cmake_parse_arguments(PARSE_ARGV 2 ARGS "IN_CACHE" "" "CONFIGS;TYPES")
+
+	if(NOT ARGS_TYPES)
+		message(FATAL_ERROR "You must specify at least one linker target type for which to replace the flags")
+	endif()
+	if(NOT ARGS_CONFIGS)
+		message(FATAL_ERROR "You must specify at least one configuration for which to replace the flags")
+	endif()
+
+	foreach(config ${ARGS_CONFIGS})
+		foreach(t ${ARGS_TYPES})
+			set(flag_var_name "CMAKE_${t}_LINKER_FLAGS_${config}")
+			ncine_internal_replace_flags_inner(${flag_var_name} "${match_string}" "${replace_string}" "${ARGS_IN_CACHE}")
+			set(${flag_var_name} "${${flag_var_name}}" PARENT_SCOPE)
+		endforeach()
+	endforeach()
+endfunction()
+
+function(ncine_normalize_optimizations)
+	ncine_internal_get_enabled_languages(enabled_languages)
+	ncine_internal_get_configs(configs)
+	ncine_internal_get_target_link_types(target_link_types)
+
+	if(MSVC)
+		# Handle /INCREMENTAL flag which should not be enabled for Release configurations
+		set(flag_values "/INCREMENTAL:YES" "/INCREMENTAL:NO" "/INCREMENTAL")
+		foreach(flag_value ${flag_values})
+			ncine_internal_replace_linker_flags(
+					"${flag_value}" ""
+					CONFIGS ${configs}
+					TYPES ${target_link_types}
+					IN_CACHE)
+		endforeach()
+
+		ncine_internal_add_linker_flags(
+				FLAGS "/INCREMENTAL:NO"
+				CONFIGS RELEASE RELWITHDEBINFO MINSIZEREL
+				TYPES EXE SHARED MODULE # When linking static libraries, link.exe can't recognize this parameter, clang-cl will error out.
+				IN_CACHE)
+
+		ncine_internal_remove_compiler_flags("(^| )/EH[scra-]*( |$)" LANGUAGES CXX CONFIGS ${configs} IN_CACHE REGEX)
+	endif()
+
+	# Legacy Android toolchain file adds the `-g` flag to CMAKE_<LANG>_FLAGS, as result, our release build ends up containing debug symbols
+	if(ANDROID AND ANDROID_COMPILER_FLAGS MATCHES "(^| )-g")
+		ncine_internal_remove_compiler_flags("-g")
+		ncine_internal_add_compiler_flags(FLAGS "-g" CONFIGS DEBUG RELWITHDEBINFO)
+	endif()
+
+	# Update all relevant flags in the calling scope
+	foreach(lang ${enabled_languages})
+		set(flag_var_name "CMAKE_${lang}_FLAGS")
+		set(${flag_var_name} "${${flag_var_name}}" PARENT_SCOPE)
+
+		foreach(config ${configs})
+			set(flag_var_name "CMAKE_${lang}_FLAGS_${config}")
+			set(${flag_var_name} "${${flag_var_name}}" PARENT_SCOPE)
+		endforeach()
+	endforeach()
+
+	foreach(t ${target_link_types})
+		set(flag_var_name "CMAKE_${t}_LINKER_FLAGS")
+		set(${flag_var_name} "${${flag_var_name}}" PARENT_SCOPE)
+
+		foreach(config ${configs})
+			set(flag_var_name "CMAKE_${t}_LINKER_FLAGS_${config}")
+			set(${flag_var_name} "${${flag_var_name}}" PARENT_SCOPE)
+		endforeach()
+	endforeach()
+endfunction()
+
+function(ncine_apply_compiler_options target)
+	cmake_parse_arguments(PARSE_ARGV 1 ARGS "ALLOW_EXCEPTIONS" "" "")
+
 	get_target_property(target_type ${target} TYPE)
 	set(target_is_executable FALSE)
 	if(target_type STREQUAL "INTERFACE_LIBRARY")
@@ -41,12 +305,27 @@ function(ncine_add_compiler_options target)
 	if(MSVC)
 		# Enable parallel compilation and force UTF-8
 		target_compile_options(${target} PRIVATE /MP /utf-8)
+		# Enable standards-conforming compiler behavior
+		if(MSVC_VERSION GREATER_EQUAL 1913)
+			target_compile_options(${target} PRIVATE "/permissive-")
+		endif()
 		# Always use the non-debug version of the runtime library
 		#target_compile_options(${target} PRIVATE $<IF:$<BOOL:${VC_LTL_FOUND}>,/MT,/MD>)
 		set_property(TARGET ${target} PROPERTY MSVC_RUNTIME_LIBRARY "$<IF:$<BOOL:${VC_LTL_FOUND}>,MultiThreaded,MultiThreadedDLL>")
-		# Disable exceptions
-		target_compile_definitions(${target} PRIVATE "_HAS_EXCEPTIONS=0")
-		target_compile_options(${target} PRIVATE /EHsc)
+
+		# Exceptions
+		if(ARGS_ALLOW_EXCEPTIONS)
+			target_compile_options(${target} PRIVATE "/EHsc")
+			if((MSVC_VERSION GREATER_EQUAL 1929) AND NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"))
+				# Use the undocumented compiler flag to make our binary smaller on x64
+				# https://devblogs.microsoft.com/cppblog/making-cpp-exception-handling-smaller-x64/
+				target_compile_options(${target} PRIVATE "/d2FH4")
+			endif()
+		else()
+			target_compile_options(${target} PRIVATE "/EHs-c-" "/wd4530" "/wd4577")
+			target_compile_definitions(${target} PRIVATE "_HAS_EXCEPTIONS=0")
+		endif()
+
 		# Extra optimizations in Release
 		target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:/fp:fast /O2 /Oi /Qpar /Gy>)
 		# Include PDB debug information in Release and enable hot reloading in Debug
@@ -84,13 +363,17 @@ function(ncine_add_compiler_options target)
 		target_compile_options(${target} PUBLIC "/wd4244" "/wd4267")
 
 		# Adjust incremental linking
-		target_link_options(${target} PRIVATE $<IF:$<CONFIG:Debug>,/INCREMENTAL,/INCREMENTAL:NO>)
+		#target_link_options(${target} PRIVATE $<IF:$<CONFIG:Debug>,/INCREMENTAL,/INCREMENTAL:NO>)
 
 		if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 			target_compile_options(${target} PRIVATE -Wno-switch -Wno-unknown-pragmas -Wno-reorder-ctor -Wno-braced-scalar-init -Wno-deprecated-builtins)
 		endif()
 	else() # GCC and LLVM
-		target_compile_options(${target} PRIVATE -fno-exceptions)
+		if(ARGS_ALLOW_EXCEPTIONS)
+			target_compile_options(${target} PRIVATE "-fexceptions")
+		else()
+			target_compile_options(${target} PRIVATE "-fno-exceptions")
+		endif()
 		target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-ffast-math>)
 
 		#if(NCINE_DYNAMIC_LIBRARY)
@@ -214,5 +497,5 @@ endfunction()
 function(ncine_add_dependency target target_type)
 	set(CMAKE_FOLDER "Dependencies")
 	add_library(${target} ${target_type})
-	ncine_add_compiler_options(${target})
+	ncine_apply_compiler_options(${ARGV})
 endfunction()

@@ -3555,7 +3555,11 @@ namespace backward {
 			}
 
 			DWORD offset = 0;
+#if defined(DEATH_TARGET_32BIT)
+			IMAGEHLP_LINEW lineW = { sizeof(IMAGEHLP_LINEW) };
+#else
 			IMAGEHLP_LINEW64 lineW = { sizeof(IMAGEHLP_LINEW64) };
+#endif
 			if (::SymGetLineFromAddrW(process, (ULONG64)t.addr, &offset, &lineW)) {
 				t.source.filename = Death::Utf8::FromUtf16(lineW.FileName);
 				t.source.line = lineW.LineNumber;
@@ -3945,7 +3949,7 @@ namespace backward {
 
 		template<typename IT>
 		void print_stacktrace(IT begin, IT end, std::ostream& os, size_t thread_id, Colorize& colorize) {
-			print_header(os, thread_id);
+			print_header(os, thread_id, colorize);
 			for (; begin != end; ++begin) {
 				print_trace(os, *begin, colorize);
 			}
